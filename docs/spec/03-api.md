@@ -25,6 +25,7 @@
 - `{workspace}` คือ slug จาก URL ของหน้าเว็บ (Q1) · ทุกคำขอตรวจว่าผู้ใช้เป็นสมาชิกที่ active แล้วตั้ง `app.workspace_id` ให้ RLS ก่อนเข้าฐานข้อมูล
 - อ้างโปรเจกต์ด้วย Key และงานด้วย Issue key ให้ตรงกับ URL ที่ผู้ใช้เห็น · ถ้าเป็น Key เก่าใน `project_key_alias` ตอบ `301` พร้อม Key ใหม่
 - งานใช้ URL ระดับ Workspace (ไม่ซ้อนใต้โปรเจกต์) เพราะ Issue key บอกโปรเจกต์อยู่แล้ว และ Inbox / My Tasks / ค้นหา เรียกข้ามโปรเจกต์
+- การกระทำที่เขียนในเอกสารนี้เป็น `:action` (เช่น `:archive`, `:join-as-admin`) ในโค้ดจริงใช้ path `/action` (เช่น `p/archive`) เพราะ Express 5 ใช้ `:` เป็นตัวแปรใน path
 
 ### การยืนยันตัวตน
 
@@ -54,7 +55,8 @@ GET .../issues?status=in_progress&assignee=me&module=<id>&sprint=current&limit=5
 
 - `GET` งานหรือโปรเจกต์ตอบ `ETag: "<version>"`
 - `PATCH` ต้องส่ง `If-Match: "<version>"` · ถ้าไม่ตรงตอบ `409 conflict` พร้อมค่าล่าสุดและรายชื่อฟิลด์ที่ชน เพื่อให้หน้าจอแสดง "Due ถูกเปลี่ยนโดย Mick ขณะที่คุณกำลังแก้" (M1 › REALTIME)
-- `PATCH` ส่งเฉพาะฟิลด์ที่เปลี่ยน · ฟิลด์ที่ไม่ชนกันรวมให้อัตโนมัติไม่ต้องตอบ 409
+- `PATCH` ส่งเฉพาะฟิลด์ที่เปลี่ยน · ไม่ส่ง `If-Match` ตอบ `428`
+- **รอบแรก (apps/api) ตอบ 409 ทุกครั้งที่ version ไม่ตรง** · การรวมฟิลด์ที่ไม่ชนกันให้อัตโนมัติต้องรู้ว่าแต่ละ version แก้ฟิลด์ไหน จะทำเมื่อมี Realtime
 
 ### Error
 
@@ -280,7 +282,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET | `p/workload` | `project.workload.view` | Guest ไม่ได้ |
 | GET | `p/form-options` | `issue.create` | |
 | GET | `p/my-permissions` | `project.view` | ชุดสิทธิ์ของผู้เรียกในโปรเจกต์นี้ ใช้ซ่อนปุ่มในหน้าจอ |
-| POST | `p/:join-as-admin` | Workspace Owner / Admin | เข้าร่วมโปรเจกต์ Private เป็น Admin · Audit + แจ้ง Project Owner (ดู 04-permissions ข้อ 6) |
+| POST | `p/join-as-admin` | Workspace Owner / Admin | เข้าร่วมโปรเจกต์ Private เป็น Admin · Audit + แจ้ง Project Owner (ดู 04-permissions ข้อ 6) |
 | POST | `p/:archive` · `:restore` | `project.settings` | |
 | POST | `p/:transfer` | Project Owner | |
 | DELETE | `p/` | Project Owner หรือ Workspace Admin · ต้องส่ง `confirmKey` | soft delete 30 วัน · Audit |

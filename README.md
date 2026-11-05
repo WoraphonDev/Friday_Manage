@@ -19,6 +19,7 @@
 ## โครงสร้าง repo
 
 ```
+apps/api/         API (NestJS) + test แบบ end-to-end
 packages/db/      Schema ของ PostgreSQL (Drizzle) + RLS + test
 design/canvas/    ไฟล์หน้าจอ 51 หน้า (.dc.html) + canvas.json (ตำแหน่งและชื่อของแต่ละหน้า)
 docs/
@@ -35,4 +36,5 @@ docs/
 1. ~~ส่ง Review รอบ 2 ให้ทีม~~ · ~~ล็อก UI เป็น v1.0~~
 2. ถอดสเปกจากหน้าจอ: ~~รายการ Entity~~ → ~~ERD~~ → ~~API ของแต่ละหน้า~~ → ~~สิทธิ์ของแต่ละ Role~~ (ร่างแรก) · ดู [docs/spec](docs/spec/README.md)
 3. ~~Migration แรก + RLS~~ · ดู [packages/db](packages/db/README.md)
-4. API ตัวแรก (NestJS) แล้วต่อด้วยหน้าเว็บ ตาม [Tech Stack](docs/tech-stack.md)
+4. ~~API ตัวแรก (NestJS)~~ · ดู [apps/api](apps/api/README.md)
+5. API รอบถัดไป แล้วต่อด้วยหน้าเว็บ (Next.js) ตาม [Tech Stack](docs/tech-stack.md)

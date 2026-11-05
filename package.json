@@ -7,6 +7,9 @@
     "db:down": "docker compose down",
     "db:generate": "pnpm --filter @friday/db generate",
     "db:migrate": "pnpm --filter @friday/db migrate",
-    "test": "pnpm -r test"
+    "test": "pnpm -r --workspace-concurrency=1 test",
+    "db:dev-roles": "pnpm --filter @friday/db dev-roles",
+    "api:dev": "pnpm --filter @friday/api dev",
+    "typecheck": "pnpm -r typecheck"
   }
 }

@@ -325,6 +325,15 @@ describe('กติกาข้อมูล', () => {
     });
   });
 
+  it('ออกเลขงาน (issue_seq) ไม่ทำให้ version ของโปรเจกต์เพิ่ม แต่แก้ชื่อแล้วเพิ่ม', async () => {
+    await as(U.mick, WS1, async (c) => {
+      const seq = await c.query('UPDATE projects SET issue_seq = issue_seq + 1 WHERE id = $1 RETURNING version', [P1]);
+      expect(seq.rows[0].version).toBe(1);
+      const named = await c.query(`UPDATE projects SET name = 'ใหม่' WHERE id = $1 RETURNING version`, [P1]);
+      expect(named.rows[0].version).toBe(2);
+    });
+  });
+
   it('อนุมัติคำขอเลื่อน Due ของตัวเองไม่ได้', async () => {
     await as(U.mick, WS1, async (c) => {
       await expect(

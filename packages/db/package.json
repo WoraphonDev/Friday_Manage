@@ -8,7 +8,8 @@
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev-roles": "node scripts/dev-roles.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",

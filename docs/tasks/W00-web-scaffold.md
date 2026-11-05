@@ -29,14 +29,14 @@
 
 ## เสร็จเมื่อ
 
-- [ ] `pnpm --filter @friday/web build`, `typecheck`, `test` ผ่าน
-- [ ] เปิดทุกเส้นทางในตารางได้ (placeholder) · ยังไม่ล็อกอินถูกพาไป `/login`
-- [ ] ล็อกอินกับ API จริงในเครื่องแล้วเห็น Shell + รายชื่อโปรเจกต์ใน Sidebar
-- [ ] Storybook ไม่ต้องมี · หน้า `/dev/ui` (เฉพาะ dev) แสดงทุก component ใน UI kit
-- [ ] หน้าตรงกับไฟล์ Canvas ที่ 1440 px และ 390 px (เทียบภาพ) · ใช้ UI kit ของ W00
-- [ ] ครบทุกสถานะตาม M1: กำลังโหลด, ว่าง, Error พร้อม requestId, 403 / ไม่มีสิทธิ์ (ซ่อนปุ่มตาม `my-permissions`)
-- [ ] component test ด้วย MSW ครอบคลุมทุกข้อใน "ทำอะไร" · `pnpm --filter @friday/web typecheck test build` ผ่าน
-- [ ] ข้อความทั้งหมดอยู่ใน namespace ของงานนี้
+- [x] `pnpm --filter @friday/web build`, `typecheck`, `test` ผ่าน
+- [x] เปิดทุกเส้นทางในตารางได้ (placeholder) · ยังไม่ล็อกอินถูกพาไป `/login`
+- [x] ล็อกอินกับ API จริงในเครื่องแล้วเห็น Shell + รายชื่อโปรเจกต์ใน Sidebar
+- [x] Storybook ไม่ต้องมี · หน้า `/dev/ui` (เฉพาะ dev) แสดงทุก component ใน UI kit
+- [x] หน้าตรงกับไฟล์ Canvas ที่ 1440 px และ 390 px (เทียบภาพ) · ใช้ UI kit ของ W00
+- [x] ครบทุกสถานะตาม M1: กำลังโหลด, ว่าง, Error พร้อม requestId, 403 / ไม่มีสิทธิ์ (ซ่อนปุ่มตาม `my-permissions`)
+- [x] component test ด้วย MSW ครอบคลุมทุกข้อใน "ทำอะไร" · `pnpm --filter @friday/web typecheck test build` ผ่าน
+- [x] ข้อความทั้งหมดอยู่ใน namespace ของงานนี้
 
 ## ไม่อยู่ในงานนี้
 
@@ -45,3 +45,15 @@
 ## บันทึกผล
 
 <!-- ผู้ทำงานเขียนตอนส่งงาน: endpoint / หน้าที่เพิ่ม, สิ่งที่ต่างจากสเปกหรือหน้าจอ, คำตัดสินที่เลือกเอง, คำขอนอก lane, คำถามที่ค้าง -->
+
+- เพิ่ม `@friday/web`: Next.js 16.4.5 / React 19.3.1 / TypeScript strict, Tailwind + Radix primitives, TanStack Query, next-intl, Vitest / Testing Library / MSW · proxy `/api/v1` ไป `127.0.0.1:3001` (เปลี่ยนด้วย `API_ORIGIN`) เพื่อให้ session cookie อยู่ origin เดียวกัน
+- ใช้สี, ตัวอักษร IBM Plex Sans Thai, ระยะ, card, control และแถบสถานะจาก Canvas ใน `tokens.css` · font เก็บในแพ็กเกจ จึง build ได้โดยไม่ต้องดึง Google Fonts · UI kit รวม form, people/date picker, table/tabs, status/priority/avatar, tooltip, dialog, Drawer สองชั้น, confirm/undo toast และสถานะ M1
+- API client ส่ง cookie ทุกครั้ง, ดึง/ใช้ CSRF cookie ล่าสุดก่อน mutation (รวม FormData), รองรับ ETag/If-Match, `ApiError` + requestId/latest, 401 จำ path/query/hash ไป Login, 402 เปิด dialog ทั่วไป · cache key แยก Workspace/Project · proxy ตรวจ cookie ก่อน render และ GET /me ตรวจ session จริงอีกครั้ง
+- Shell ดึง me/workspaces/projects/notification summary จาก API จริง · สลับ Workspace พร้อม role/จำนวนแจ้งเตือน, Ctrl K ค้นหา, Ctrl 1–9 สลับ Workspace, Sidebar/มือถือ, avatar, ปุ่ม New ตามสิทธิ์ · โปรเจกต์มี 11 แท็บตาม Main.dc.html; Guest Viewer เห็น Overview/Timeline เท่านั้น และเข้า URL ของแท็บที่ไม่มีสิทธิ์ได้ Forbidden
+- สร้าง placeholder ทุก route ของ `apps/web` รวม catch-all ของ Admin/Settings/Billing · แยกสัญญา feature สำหรับ W02 / W04 / W16 พร้อมเปิด Drawer จาก `?issue=` หรือ `?new=1` · หน้า ops เป็นแอปแยกของ W20 ตาม lane เดิม
+- ข้อความของ W00 อยู่ใน `messages/th/common.json` · server โหลด namespace JSON ใหม่อัตโนมัติเพื่อให้งานหน้าอื่นไม่ต้องแก้ไฟล์กลาง · format วันที่/ช่วงวัน/MD/overdue ใช้ Asia/Bangkok และ DatePicker ใช้ `me.yearFormat`
+- `/dev/ui` แสดง UI kit และมีฟอร์มทดสอบ login เฉพาะ development (หน้า Login จริงยังเป็น placeholder W01) · production ตอบ 404 · `start` ใช้ standalone server พร้อมคัดลอก static/public assets · ตรวจ HTTP production แล้ว: หน้าแรก/CSS 200, dev UI 404, anonymous Workspace 307
+- ทดสอบ API จริงผ่าน proxy ด้วยบัญชี/Workspace/โปรเจกต์สมมติ: signup → logout → login → me/workspaces/projects/permissions สำเร็จ; smoke script ตรวจ 36 URL รวม route ย่อยและ anonymous redirect · เปิด Chrome login ผ่าน dev UI แล้วเห็นรายชื่อโปรเจกต์และ 11 แท็บจริง
+- ตรวจภาพ Chrome ที่ viewport 1440×1000 และ 390×844 พร้อมทดสอบเมนู Projects มือถือ · หลักฐานอยู่ `apps/web/qa/w00-shell-desktop.png`, `w00-shell-mobile.png`, `w00-ui-desktop.png` · ข้อมูลในภาพเป็นข้อมูลสมมติ
+- `pnpm typecheck`, `pnpm test`, `pnpm -r --if-present build` ผ่าน: Web 31 + DB 24 + API 54 = 109 tests; ข้าม 2 tests ที่ต้องใช้ไฟล์แผนจริง · จำนวนนี้เป็นของ branch W00 ที่แยกจาก T00 ซึ่งยังเป็น PR คนละงาน
+- ไม่มีคำขอนอก lane · แก้เฉพาะ `apps/web/**`, lockfile สำหรับ dependency และ checkbox/บันทึกผลของ W00

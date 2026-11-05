@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
+import { IssuePartsController } from './issue-parts.controller.js';
+import { IssuePartsService } from './issue-parts.service.js';
 
-/** Checklist และ Dependency · งาน A02 (docs/tasks/A02-*.md) · ใส่ controller / provider ของงานนี้ที่นี่ */
 @Module({
-  controllers: [],
-  providers: [],
+  controllers: [IssuePartsController],
+  providers: [IssuePartsService],
 })
 export class IssuePartsModule {}

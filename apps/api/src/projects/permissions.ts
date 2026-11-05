@@ -1,10 +1,10 @@
 import { schema, type Tx } from '@friday/db';
 import { and, eq } from 'drizzle-orm';
-import { forbidden } from '../common/errors.js';
+import { AppError, forbidden } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import type { ProjectRole } from '../common/types.js';
 
-const { projectMembers, projectRolePermissions, workspaceMembers } = schema;
+const { projectMembers, projectRolePermissions, projects, workspaceMembers } = schema;
 
 /** 10 แถวในหน้า L2 › สิทธิ์ของแต่ละ Role (docs/spec/04-permissions.md ข้อ 3.1) · ค่า = Member, Viewer */
 export const L2_PERMISSIONS = {
@@ -39,7 +39,12 @@ export interface ProjectRef {
   id: string;
   ownerUserId: string;
   visibility: 'private' | 'workspace';
+  /** ไม่ส่งมา = อ่านจากฐานข้อมูลเอง (ผู้เรียกส่วนใหญ่ส่งแถวโปรเจกต์ทั้งแถวอยู่แล้ว) */
+  archivedAt?: Date | null;
 }
+
+/** สิทธิ์ที่ยังเหลือเมื่อโปรเจกต์ถูก Archive (04-permissions ข้อ 5 › 8) · project.archive ไว้กด Restore */
+const ARCHIVED_KEEP = new Set(['project.view', 'project.workload.view', 'project.reports.view', 'project.archive']);
 
 export interface ProjectAccess {
   role: ProjectRole | null;
@@ -47,6 +52,8 @@ export interface ProjectAccess {
   /** Guest ที่เป็น Viewer: เห็นแค่ Overview, Timeline และงานที่แชร์ · ไม่เห็นชื่อคน */
   guestViewer: boolean;
   perms: Set<string>;
+  /** โปรเจกต์ถูก Archive = อ่านอย่างเดียว */
+  archived?: boolean;
 }
 
 export async function projectAccess(tx: Tx, auth: AuthInfo, tenant: TenantInfo, project: ProjectRef): Promise<ProjectAccess> {
@@ -82,7 +89,16 @@ export async function projectAccess(tx: Tx, auth: AuthInfo, tenant: TenantInfo, 
     perms.delete('project.invite');
     if (guestViewer) ['project.workload.view', 'project.reports.view'].forEach((p) => perms.delete(p));
   }
-  return { role, isOwner, guestViewer, perms };
+
+  // ข้อ 8: Archive แล้วเหลือสิทธิ์อ่านอย่างเดียว · ตัดที่นี่ที่เดียว ทุก endpoint ที่ใช้ requirePerm จึงได้กติกานี้
+  let archivedAt = project.archivedAt;
+  if (archivedAt === undefined) {
+    const [row] = await tx.select({ archivedAt: projects.archivedAt }).from(projects).where(eq(projects.id, project.id));
+    archivedAt = row?.archivedAt ?? null;
+  }
+  const archived = !!archivedAt;
+  if (archived) [...perms].forEach((p) => !ARCHIVED_KEEP.has(p) && perms.delete(p));
+  return { role, isOwner, guestViewer, perms, archived };
 }
 
 /**
@@ -114,5 +130,10 @@ export async function usersWithPerm(tx: Tx, project: ProjectRef, permission: key
 }
 
 export function requirePerm(access: ProjectAccess, permission: string) {
-  if (!access.perms.has(permission)) throw forbidden(permission);
+  if (access.perms.has(permission)) return;
+  // บอกเหตุผลให้หน้าจอแสดงแถบ "โปรเจกต์นี้ถูก Archive" แทน 403 ทั่วไป
+  if (access.archived && access.role) {
+    throw new AppError(403, 'project_archived', 'โปรเจกต์นี้ถูก Archive แล้ว ดูได้อย่างเดียว · Restore ก่อนจึงจะแก้ไขได้', { permission });
+  }
+  throw forbidden(permission);
 }

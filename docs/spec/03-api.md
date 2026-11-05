@@ -278,7 +278,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | POST | `w/projects` | `ws.project.create` | รับทุกขั้นของ Wizard (ดูตัวอย่างด้านล่าง) · ตรวจจำนวนโปรเจกต์ตามแพ็กเกจ → 402 |
 | POST | `w/projects:sample` | `ws.project.create` | โปรเจกต์ตัวอย่างที่ใช้ข้อมูลสมมติ (ห้ามใช้ข้อมูลจริงของที่ทำงาน) |
 | GET / PATCH | `p/` | ดู: `project.view` · แก้: `project.settings` | เปลี่ยน Key เพิ่ม alias อัตโนมัติ |
-| GET | `p/overview` · `p/board` · `p/timeline` · `p/gantt` · `p/calendar` · `p/backlog` | `project.view` | Guest ได้เฉพาะ `overview` และ `timeline` แบบตัดชื่อคน |
+| GET | `p/overview` · `p/board` · `p/timeline` · `p/gantt` · `p/calendar` · `p/backlog` | `project.view` | Guest ได้เฉพาะ `overview` และ `timeline` แบบตัดชื่อคน · Timeline ของ Guest แสดงทั้งแผนยกเว้น Bug และบอก `canOpen` ว่างานไหนแชร์ให้เปิดได้ |
 | GET | `p/workload` | `project.workload.view` | Guest ไม่ได้ |
 | GET | `p/form-options` | `issue.create` | |
 | GET | `p/my-permissions` | `project.view` | ชุดสิทธิ์ของผู้เรียกในโปรเจกต์นี้ ใช้ซ่อนปุ่มในหน้าจอ |
@@ -365,7 +365,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | POST | `p/issues` | `issue.create` | ดูรายละเอียดด้านล่าง · Event `issue.created` (+ `issue.assigned`) |
 | GET | `i/` | `project.view` · Guest เฉพาะงานที่ `sharedWithGuests` | รวม Sub-task, siblings, Checklist, Dependency, ไฟล์, Git, คำขอเลื่อน Due ที่รออยู่ |
 | PATCH | `i/` | `issue.edit` | ต้องมี `If-Match` · เลื่อน plan_end ออกไปโดยไม่มีสิทธิ์ `issue.change_due_directly` → `403 due_change_requires_approval` (ดู[กติกาการเปลี่ยน Due](#กติกาการเปลี่ยน-due)) · หลังมี Baseline ต้องส่ง `planChangeReason` · Event ตามฟิลด์ที่เปลี่ยน |
-| POST | `i/move` | `issue.edit` | body: `{ statusId?, sprintId?, beforeKey?, afterKey? }` ใช้ทั้ง Kanban, Backlog และ Mobile · ตรวจ WIP limit (เตือน) และกฎ Workflow (422) · Event `issue.status_changed` |
+| POST | `i/move` | `issue.edit` | body: `{ statusId?, sprintId?, afterKey?, beforeKey?, confirm? }` ใช้ทั้ง Kanban, Backlog และ Mobile · `afterKey` = การ์ดเหนือจุดวาง · `beforeKey` = การ์ดใต้จุดวาง · `statusId` เป็นคอลัมน์ของบอร์ดมาตรฐานได้ ระบบเลือกสถานะของ Workflow งานนั้นที่ผูกกับคอลัมน์ (Bug: Review → Fixed) · ตรวจ WIP limit (เตือน) และกฎ Workflow (422 · ไป Done ทั้งที่ Sub-task ไม่ครบต้องส่ง `confirm: true`) · แก้ลำดับไม่เพิ่ม version · Event `issue.status_changed` |
 | POST | `p/issues/bulk` | `issue.edit` / `issue.delete` | body: `{ keys[], set: { planEnd?, moduleId?, sprintId?, assigneeIds? } }` หรือ `{ keys[], delete: true, confirmText }` |
 | DELETE | `i/` | `issue.delete` | ลบ Sub-task ตามไปด้วย · soft delete 30 วัน |
 | POST | `i/:restore` | `issue.delete` | ใช้กับปุ่ม "เลิกทำ" และหน้า 404 |
@@ -381,9 +381,10 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET / POST | `i/test-runs` | บันทึก: `issue.edit` (BA / Tester) | ผลไม่ผ่าน → Event `test_run.failed` |
 | POST | `i/test-runs/{id}:create-bug` | `issue.create` | สร้าง Bug ใต้งานเดียวกัน กรอกขั้นตอน / หลักฐานจากผลทดสอบให้ |
 | GET | `i/git` | `project.view` | Commit และ PR ที่ผูก |
-| GET | `i/due-requests:preview?due=` | สมาชิกโปรเจกต์ | Workload ที่เปลี่ยน, งานที่รออยู่, Milestone ที่กระทบ |
+| GET | `i/due-requests:preview?due=` | `issue.edit` หรือ `due_request.approve` | วันทำการที่เพิ่ม, Workload ของ Dev ในช่วงที่เลื่อนออก (เทียบ capacity), งานที่รออยู่, Milestone / Go-live ที่กระทบ, งานแม่, ผู้อนุมัติ |
+| GET | `i/due-requests` · `w/due-requests?scope=to_approve\|mine&status=` | `project.view` (ไม่ใช่ Guest) | ประวัติของงาน · รายการรออนุมัติของฉัน (Home) |
 | POST | `i/due-requests` | `issue.edit` และไม่มี `issue.change_due_directly` | ดูด้านล่าง · Event `due_request.created` ส่งเฉพาะผู้อนุมัติ |
-| POST | `w/due-requests/{id}:approve` · `:reject` · `:cancel` | อนุมัติ: `due_request.approve` · ยกเลิก: ผู้ขอ | อนุมัติแล้วแก้ `plan_end` + เขียน `plan_change` · Event `due_request.decided` |
+| POST | `w/due-requests/{id}:approve` · `:reject` · `:cancel` | อนุมัติ: `due_request.approve` · ยกเลิก: ผู้ขอ | body: `{ note? }` · อนุมัติแล้วแก้ `plan_end` + เขียน `plan_change` · Due ถูกแก้หลังส่งคำขอ → `409 due_changed_since_request` · ตัดสินแล้ว → `409 already_decided` · Event `due_request.decided` |
 
 **ตัวอย่าง `POST p/issues`** (หน้า B)
 

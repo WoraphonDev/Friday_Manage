@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { schema, type Tx } from '@friday/db';
-import { and, asc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 import { AppError, notFound } from '../common/errors.js';
@@ -8,7 +8,9 @@ import { today } from '../common/dates.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { planEndFor, WorkCalendar } from '../projects/calendar.js';
-import { type ProjectAccess, requirePerm } from '../projects/permissions.js';
+import { type ProjectAccess, requirePerm, usersWithPerm } from '../projects/permissions.js';
+import { loadPeople } from '../common/people.js';
+import { isLegacyRank, PLAIN_RANK, rankAfter, rankBetween, spreadRanks } from './rank.js';
 import { type ProjectRow, ProjectsService } from '../projects/projects.service.js';
 
 const s = schema;
@@ -77,7 +79,21 @@ export const ListQuery = z.object({
   cursor: z.coerce.number().int().min(0).optional(),
 });
 
+/** ลากการ์ดใน Kanban / Backlog / ปุ่ม ‹ › บนมือถือ (03-api › POST i/move) */
+export const MoveIssueBody = z.object({
+  /** สถานะใหม่ · ส่งคอลัมน์ของบอร์ดมาตรฐานได้ ระบบเลือกสถานะของ Workflow งานนั้นที่ผูกกับคอลัมน์ให้ (เช่น Bug: Review → Fixed) */
+  statusId: uuid.optional(),
+  sprintId: uuid.nullable().optional(),
+  /** การ์ดที่อยู่เหนือตำแหน่งที่วาง */
+  afterKey: z.string().optional(),
+  /** การ์ดที่อยู่ใต้ตำแหน่งที่วาง */
+  beforeKey: z.string().optional(),
+  /** ยืนยันย้ายไปสถานะ Done ทั้งที่ Sub-task ยังไม่ครบ */
+  confirm: z.boolean().default(false),
+});
+
 type Issue = typeof s.issues.$inferSelect;
+type Status = typeof s.workflowStatuses.$inferSelect;
 type Warning = { code: string; message: string };
 const ISSUE_KEY = /^([A-Za-z][A-Za-z0-9]{1,9})-(\d{1,9})$/;
 const PLAN_FIELDS = ['planStart', 'planEnd', 'estimateMd'] as const;
@@ -139,11 +155,13 @@ export class IssuesService {
       if (parent) warnings.push(...outsideParent(parent, planStart, planEnd));
 
       const number = await this.nextNumber(tx, project.id);
+      const rank = await this.rankAtEnd(tx, project.id);
       const [issue] = await tx
         .insert(s.issues)
         .values({
           ...base,
           number,
+          rank,
           issueTypeId: type.id,
           parentId: parent?.id,
           moduleId,
@@ -191,9 +209,19 @@ export class IssuesService {
         .where(and(eq(s.issues.parentId, issue.id), isNull(s.issues.deletedAt)))
         .orderBy(asc(s.issues.number));
       const visibleSubs = access.guestViewer ? subtasks.filter((x) => x.sharedWithGuests) : subtasks;
+      // คำขอเลื่อน Due ที่รออยู่ (แถบ "ขอเลื่อนเป็น … · รอ … อนุมัติ" ในหน้า C / K3)
+      const [pending] = access.guestViewer
+        ? []
+        : await tx
+            .select()
+            .from(s.dueChangeRequests)
+            .where(and(eq(s.dueChangeRequests.issueId, issue.id), eq(s.dueChangeRequests.status, 'pending')));
       return {
         ...(await this.dto(tx, project, issue, access)),
         subtasks: await this.dtos(tx, project, visibleSubs, access),
+        pendingDueRequest: pending
+          ? { id: pending.id, requesterId: pending.requesterId, currentDue: pending.currentDue, requestedDue: pending.requestedDue, reasonCode: pending.reasonCode, createdAt: pending.createdAt }
+          : null,
       };
     });
   }
@@ -260,16 +288,7 @@ export class IssuesService {
       // สถานะ: ต้องอยู่ใน Workflow ของประเภทงาน · Actual Start / End ตั้งอัตโนมัติ
       if (input.statusId !== undefined && input.statusId !== issue.statusId) {
         const next = await this.checkStatus(tx, type.workflowId, input.statusId);
-        set.statusId = input.statusId;
-        const day = today();
-        if (next.category !== 'todo' && !issue.actualStart) set.actualStart = day;
-        if (next.category === 'done') {
-          set.actualEnd = day;
-          set.completedAt = new Date();
-        } else if (issue.actualEnd) {
-          set.actualEnd = null;
-          set.completedAt = null;
-        }
+        Object.assign(set, statusChange(issue, next));
       }
 
       // แผน: Size → Man-Day · Plan End คำนวณใหม่เมื่อ Man-Day / Plan Start เปลี่ยนและไม่ได้ส่ง Plan End มาเอง (จำนวน Dev ไม่มีผล)
@@ -290,9 +309,12 @@ export class IssuesService {
 
       // กติกาการเปลี่ยน Due (03-api › กติกาการเปลี่ยน Due): เลื่อนออกต้องมีสิทธิ์ · ดึงเข้าแก้ได้เลย
       if (issue.planEnd && planEnd && planEnd > issue.planEnd && !access.perms.has('issue.change_due_directly')) {
+        const people = await loadPeople(tx, await usersWithPerm(tx, project, 'due_request.approve'));
         throw new AppError(403, 'due_change_requires_approval', 'ต้องส่งคำขอเลื่อน Due ให้ PM อนุมัติ', {
           currentDue: issue.planEnd,
           requestedDue: planEnd,
+          canRequest: access.perms.has('issue.edit'),
+          approvers: [...people.values()].filter((p) => p.id !== auth.userId),
         });
       }
       if (issue.parentId) {
@@ -357,9 +379,143 @@ export class IssuesService {
   }
 
   // ---------------------------------------------------------------------------
+  // ย้ายการ์ด (Kanban, Backlog, Mobile) · If-Match ไม่บังคับ เพราะการลากเป็นการแก้ทีละฟิลด์
+  // ---------------------------------------------------------------------------
+  async move(auth: AuthInfo, tenant: TenantInfo, issueKey: string, ifMatch: string | undefined, input: z.infer<typeof MoveIssueBody>) {
+    return this.db.run(auth, tenant, async (tx) => {
+      const { project, access, issue } = await this.loadIssue(tx, auth, tenant, issueKey);
+      requirePerm(access, 'issue.edit');
+      if (ifMatch !== undefined && parseIfMatch(ifMatch) !== issue.version) throw await this.conflict(tx, project, issue, access);
+
+      const warnings: Warning[] = [];
+      const set: Partial<typeof s.issues.$inferInsert> = {};
+      const [type] = await tx.select().from(s.issueTypes).where(eq(s.issueTypes.id, issue.issueTypeId));
+      const [current] = await tx.select().from(s.workflowStatuses).where(eq(s.workflowStatuses.id, issue.statusId));
+      let target = current;
+      if (input.statusId && input.statusId !== issue.statusId) target = await this.dropStatus(tx, type.workflowId, current, input.statusId);
+
+      if (target.id !== current.id) {
+        // กฎ Workflow: ย้ายไป Done ทั้งที่ Sub-task ยังไม่ครบ ต้องยืนยัน (Kanban แสดงปุ่ม "ยืนยันย้าย")
+        if (target.category === 'done' && current.category !== 'done') {
+          const [open] = await tx
+            .select({ n: sql<number>`count(*)::int` })
+            .from(s.issues)
+            .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
+            .where(and(eq(s.issues.parentId, issue.id), isNull(s.issues.deletedAt), ne(s.workflowStatuses.category, 'done')));
+          if (open.n > 0 && !input.confirm) {
+            throw new AppError(422, 'subtasks_incomplete', `ยังมี Sub-task ที่ไม่เสร็จ ${open.n} งาน`, { open: open.n, confirmable: true });
+          }
+          if (open.n > 0) warnings.push({ code: 'subtasks_incomplete', message: `ย้ายไป ${target.name} ทั้งที่ Sub-task ยังไม่เสร็จ ${open.n} งาน` });
+        }
+        Object.assign(set, { statusId: target.id, ...statusChange(issue, target) });
+      }
+
+      if (input.sprintId !== undefined && input.sprintId !== issue.sprintId) {
+        if (issue.parentId) throw new AppError(422, 'inherited_field', 'Sub-task ใช้ Module, กลุ่มงาน และ Sprint ตามงานแม่');
+        await this.checkInProject(tx, project.id, { sprintId: input.sprintId });
+        set.sprintId = input.sprintId;
+      }
+
+      let updated = issue;
+      if (Object.keys(set).length) {
+        [updated] = await tx
+          .update(s.issues)
+          .set(set)
+          .where(and(eq(s.issues.id, issue.id), eq(s.issues.version, issue.version)))
+          .returning();
+        if (!updated) throw await this.conflict(tx, project, issue, access);
+        if (set.sprintId !== undefined) await tx.update(s.issues).set({ sprintId: set.sprintId }).where(eq(s.issues.parentId, issue.id));
+        const base = { workspaceId: tenant.workspaceId, projectId: project.id, issueId: issue.id };
+        const changes = diff(issue, updated);
+        if (changes.length) {
+          await tx.insert(s.activities).values(changes.map((c) => ({ ...base, actorId: auth.userId, verb: 'updated', field: c.field, oldValue: c.oldValue, newValue: c.newValue })));
+        }
+      }
+
+      // ลำดับในคอลัมน์ · แก้แค่ rank ไม่เพิ่ม version (migration 0004)
+      if (input.afterKey || input.beforeKey) {
+        const rank = await this.rankBetweenKeys(tx, project, issue.id, input.afterKey, input.beforeKey);
+        [updated] = await tx.update(s.issues).set({ rank }).where(eq(s.issues.id, issue.id)).returning();
+      }
+
+      // WIP limit ของคอลัมน์ปลายทาง: เตือน ไม่บล็อก
+      if (target.id !== current.id) {
+        const columnId = target.boardColumnId ?? target.id;
+        const [col] = await tx.select().from(s.workflowStatuses).where(eq(s.workflowStatuses.id, columnId));
+        if (col?.wipLimit) {
+          const [cnt] = await tx
+            .select({ n: sql<number>`count(*)::int` })
+            .from(s.issues)
+            .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
+            .where(and(eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt), sql`coalesce(${s.workflowStatuses.boardColumnId}, ${s.workflowStatuses.id}) = ${columnId}`));
+          if (cnt.n > col.wipLimit) warnings.push({ code: 'wip_exceeded', message: `คอลัมน์ ${col.name} เกิน WIP limit (${cnt.n}/${col.wipLimit})` });
+        }
+      }
+      return { ...(await this.dto(tx, project, updated, access)), warnings };
+    });
+  }
+
+  /** สถานะที่วางลงไป: ถ้าเป็นคอลัมน์ของบอร์ดมาตรฐานแต่งานใช้ Workflow อื่น (Bug) ใช้สถานะที่ผูกกับคอลัมน์นั้น */
+  private async dropStatus(tx: Tx, workflowId: string, current: Status, statusId: string): Promise<Status> {
+    const [st] = await tx.select().from(s.workflowStatuses).where(eq(s.workflowStatuses.id, statusId));
+    if (!st) throw new AppError(422, 'status_not_in_workflow', 'สถานะนี้ไม่อยู่ใน Workflow ของประเภทงานนี้');
+    if (st.workflowId === workflowId) return st;
+    // เรียงในคอลัมน์เดิม (เช่น Bug สถานะ Verified อยู่คอลัมน์ Review อยู่แล้ว) ไม่เปลี่ยนสถานะ
+    if ((current.boardColumnId ?? current.id) === st.id) return current;
+    const [mapped] = await tx
+      .select()
+      .from(s.workflowStatuses)
+      .where(and(eq(s.workflowStatuses.workflowId, workflowId), eq(s.workflowStatuses.boardColumnId, st.id)))
+      .orderBy(asc(s.workflowStatuses.sort))
+      .limit(1);
+    if (!mapped) throw new AppError(422, 'status_not_in_workflow', 'สถานะนี้ไม่อยู่ใน Workflow ของประเภทงานนี้');
+    return mapped;
+  }
+
+  private async rankBetweenKeys(tx: Tx, project: ProjectRow, selfId: string, afterKey?: string, beforeKey?: string) {
+    const load = async (key?: string) => (key ? this.findByKey(tx, project, key) : null);
+    let [after, before] = [await load(afterKey), await load(beforeKey)];
+    if (after?.id === selfId || before?.id === selfId) throw new AppError(400, 'invalid_neighbor', 'อ้างการ์ดตัวเองเป็นตำแหน่งไม่ได้');
+    const usable = (!after || !isLegacyRank(after.rank)) && (!before || !isLegacyRank(before.rank)) && (!after || !before || after.rank < before.rank);
+    if (!usable) {
+      // ค่าเก่าที่ซ้ำกัน (งานจาก Import) → จัดลำดับทั้งโปรเจกต์ใหม่ตามที่แสดงอยู่ แล้วหาค่ากึ่งกลาง
+      await this.rebalanceRanks(tx, project.id);
+      [after, before] = [await load(afterKey), await load(beforeKey)];
+    }
+    if (after && before && after.rank >= before.rank) throw new AppError(400, 'invalid_neighbor', `${afterKey} ต้องอยู่เหนือ ${beforeKey}`);
+    return rankBetween(after?.rank ?? null, before?.rank ?? null);
+  }
+
+  private async rebalanceRanks(tx: Tx, projectId: string) {
+    const rows = await tx
+      .select({ id: s.issues.id })
+      .from(s.issues)
+      .where(eq(s.issues.projectId, projectId))
+      .orderBy(sql`${s.issues.rank} collate "C"`, asc(s.issues.number));
+    if (!rows.length) return;
+    const keys = spreadRanks(rows.length);
+    const values = sql.join(
+      rows.map((r, i) => sql`(${r.id}::uuid, ${keys[i]})`),
+      sql`, `,
+    );
+    await tx.execute(sql`update ${s.issues} set rank = v.rank from (values ${values}) as v(id, rank) where ${s.issues.id} = v.id`);
+  }
+
+  /** งานใหม่ต่อท้ายลำดับ */
+  private async rankAtEnd(tx: Tx, projectId: string) {
+    const [last] = await tx
+      .select({ rank: s.issues.rank })
+      .from(s.issues)
+      .where(and(eq(s.issues.projectId, projectId), sql`${s.issues.rank} ~ ${PLAIN_RANK.source}`))
+      .orderBy(sql`${s.issues.rank} collate "C" desc`)
+      .limit(1);
+    return rankAfter(last?.rank ?? null);
+  }
+
+  // ---------------------------------------------------------------------------
   // ตัวช่วย
   // ---------------------------------------------------------------------------
-  private async loadIssue(tx: Tx, auth: AuthInfo, tenant: TenantInfo, issueKey: string) {
+  async loadIssue(tx: Tx, auth: AuthInfo, tenant: TenantInfo, issueKey: string) {
     const m = ISSUE_KEY.exec(issueKey);
     if (!m) throw notFound('งาน');
     const { project, access } = await this.projects.load(tx, auth, tenant, m[1]);
@@ -371,7 +527,7 @@ export class IssuesService {
     return { project, access, issue };
   }
 
-  private async findByKey(tx: Tx, project: ProjectRow, issueKey: string, opts: { includeDeleted?: boolean } = {}) {
+  async findByKey(tx: Tx, project: ProjectRow, issueKey: string, opts: { includeDeleted?: boolean } = {}) {
     const m = ISSUE_KEY.exec(issueKey);
     if (!m || m[1].toUpperCase() !== project.key) throw notFound('งาน');
     const [issue] = await tx
@@ -401,7 +557,7 @@ export class IssuesService {
     return st.id;
   }
 
-  private async checkStatus(tx: Tx, workflowId: string, statusId: string) {
+  async checkStatus(tx: Tx, workflowId: string, statusId: string) {
     const [st] = await tx.select().from(s.workflowStatuses).where(eq(s.workflowStatuses.id, statusId));
     if (!st || st.workflowId !== workflowId) throw new AppError(422, 'status_not_in_workflow', 'สถานะนี้ไม่อยู่ใน Workflow ของประเภทงานนี้');
     return st;
@@ -479,13 +635,13 @@ export class IssuesService {
     });
   }
 
-  private async dto(tx: Tx, project: ProjectRow, issue: Issue, access: ProjectAccess) {
+  async dto(tx: Tx, project: ProjectRow, issue: Issue, access: ProjectAccess) {
     const [one] = await this.dtos(tx, project, [issue], access);
     return one;
   }
 
   /** รูปแบบงานที่ส่งออก · Guest ที่เป็น Viewer ไม่เห็นชื่อ / id ของคน (04-permissions ข้อ 4) */
-  private async dtos(tx: Tx, project: ProjectRow, issues: Issue[], access: ProjectAccess) {
+  async dtos(tx: Tx, project: ProjectRow, issues: Issue[], access: ProjectAccess) {
     if (!issues.length) return [];
     const parent = alias(s.issues, 'parent');
     const ids = issues.map((i) => i.id);
@@ -552,8 +708,23 @@ function parseIfMatch(v: string | undefined) {
   return n;
 }
 
+/** Actual Start / End ตั้งอัตโนมัติเมื่อเปลี่ยนสถานะ */
+function statusChange(issue: Issue, next: Status): Partial<typeof s.issues.$inferInsert> {
+  const set: Partial<typeof s.issues.$inferInsert> = { statusId: next.id };
+  const day = today();
+  if (next.category !== 'todo' && !issue.actualStart) set.actualStart = day;
+  if (next.category === 'done') {
+    set.actualEnd = day;
+    set.completedAt = new Date();
+  } else if (issue.actualEnd) {
+    set.actualEnd = null;
+    set.completedAt = null;
+  }
+  return set;
+}
+
 /** Sub-task ควรอยู่ในช่วงของ Task แม่ · เตือน ไม่บล็อก */
-function outsideParent(parent: Issue, start?: string | null, end?: string | null): Warning[] {
+export function outsideParent(parent: Issue, start?: string | null, end?: string | null): Warning[] {
   const out = (parent.planStart && start && start < parent.planStart) || (parent.planEnd && end && end > parent.planEnd);
   return out ? [{ code: 'outside_parent_range', message: `วันที่อยู่นอกช่วงของงานแม่ (${parent.planStart} – ${parent.planEnd})` }] : [];
 }

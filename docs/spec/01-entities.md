@@ -4,7 +4,7 @@
 
 ดูความสัมพันธ์ทั้งหมดใน [02-erd.md](02-erd.md) · คำตัดสินด้านข้อมูลอยู่ใน [README.md](README.md#คำตัดสินด้านข้อมูล-5-พย-2569)
 
-**สถานะ:** หมวด A–H, J (เฉพาะ `notification`) และ L (เฉพาะ `audit_log`) สร้างแล้วใน `packages/db` (migration 0000–0002) · หมวดอื่นจะตามมาใน migration ถัดไป · ชื่อตารางในฐานข้อมูลเป็นพหูพจน์ (`issue` → `issues`)
+**สถานะ:** หมวด A–H, J (เฉพาะ `notification`) และ L (เฉพาะ `audit_log`) สร้างแล้วใน `packages/db` (migration 0000–0004) · หมวดอื่นจะตามมาใน migration ถัดไป · ชื่อตารางในฐานข้อมูลเป็นพหูพจน์ (`issue` → `issues`)
 
 ## ธรรมเนียมทุกตาราง
 
@@ -115,7 +115,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `activity` | ประวัติทุกการเปลี่ยนแปลง (Activity ในงาน + Recent activity ของโปรเจกต์) | workspace_id, project_id, issue_id, actor_id, actor_kind (user · automation · git · import), verb, field, old_value, new_value (jsonb), created_at | C, 1 |
 | `time_log` | บันทึกเวลา (เปิดเมื่อโปรเจกต์เปิด Time log) | issue_id, user_id, date, md, note | C, D |
 | `test_run` | ผลทดสอบแต่ละรอบ | issue_id, run_no, result (passed · failed · blocked), passed_count, total_count, environment (SIT · UAT · Production), commit_sha, note, tester_id | D, M4 |
-| `due_change_request` | คำขอเลื่อน Due | issue_id, requester_id, current_due, requested_due, reason_code, detail, impact (jsonb snapshot ตอนส่ง), status (pending · approved · rejected · cancelled), decided_by, decided_at, decided_via (in_app · line · email) | K3, G |
+| `due_change_request` | คำขอเลื่อน Due | issue_id, requester_id, current_due, requested_due, reason_code, detail, impact (jsonb snapshot ตอนส่ง), status (pending · approved · rejected · cancelled), decided_by, decided_at, decided_via (in_app · line · email), decision_note (เหตุผลของผู้อนุมัติ / ปฏิเสธ · migration 0004) | K3, G |
 
 ### ฟิลด์ของ `issue`
 

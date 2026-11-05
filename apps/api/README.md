@@ -13,7 +13,7 @@ pnpm test                                            # test ของ packages/d
 
 Nest ใช้ decorator metadata ซึ่ง esbuild / tsx ไม่สร้างให้ จึง build ด้วย SWC (`.swcrc`) และ test ด้วย `unplugin-swc` · typecheck ใช้ TypeScript 5.9 (`pnpm typecheck`)
 
-## มีอะไรแล้ว (รอบแรก)
+## มีอะไรแล้ว
 
 | กลุ่ม | Endpoint | หน้าจอ |
 |---|---|---|
@@ -24,6 +24,10 @@ Nest ใช้ decorator metadata ซึ่ง esbuild / tsx ไม่สร้�
 | งาน | `GET / POST w/{ws}/projects/{key}/issues` · `GET / PATCH w/{ws}/issues/{issueKey}` | 2, B, C, D, K1 |
 | สมาชิก | `GET w/{ws}/members` · `GET / POST w/{ws}/invitations` · `POST …/invitations/{id}/revoke` · `GET invitations/{token}` · `POST invitations/{token}/accept` · `…/decline` | H, 7, J4 |
 | Import Excel | `POST w/{ws}/import-jobs` (multipart) · `GET / PATCH w/{ws}/import-jobs/{id}` · `POST …/{id}/commit` | L3 |
+| คำขอเลื่อน Due | `GET w/{ws}/issues/{key}/due-requests/preview?due=` · `GET / POST w/{ws}/issues/{key}/due-requests` · `GET w/{ws}/due-requests?scope=to_approve\|mine` · `POST w/{ws}/due-requests/{id}/approve` · `/reject` · `/cancel` | K3, G, E |
+| Inbox | `GET me/notifications?workspace=&filter=` · `GET me/notifications/summary` · `POST me/notifications/{id}/read` · `/unread` · `/done` · `/undone` · `/snooze` · `POST me/notifications/read-all` | G, K4 |
+| Kanban | `GET w/{ws}/projects/{key}/board?type=bug&level=&assignee=me&overdue=&moduleId=&sprintId=&showOlderDone=` · `POST w/{ws}/issues/{key}/move` | 3, L1, M7 |
+| Timeline | `GET w/{ws}/projects/{key}/timeline?from&to` | 4 |
 
 กติกาที่ทำงานแล้ว (มี test ยืนยันทุกข้อใน `test/api.e2e.test.ts`):
 - Session cookie (`HttpOnly`) + CSRF แบบ double submit (`GET auth/csrf` แล้วส่ง header `x-csrf-token`) · ใส่รหัสผิด 5 ครั้งล็อก 15 นาที
@@ -37,6 +41,12 @@ Nest ใช้ decorator metadata ซึ่ง esbuild / tsx ไม่สร้�
 - เปลี่ยนสถานะแล้วตั้ง Actual Start / End อัตโนมัติ
 - Workspace Admin เข้าร่วมโปรเจกต์ Private ได้ (Audit + แจ้ง Project Owner) · Guest ที่เป็น Viewer เห็นเฉพาะงานที่แชร์และไม่เห็นข้อมูลคน
 - เชิญหลายอีเมลเข้า Workspace + โปรเจกต์ · ตอบรับได้เฉพาะบัญชีที่ถูกเชิญ · ยกเลิกแล้วลิงก์ตอบ 410 · ส่งอีเมลปิดไว้ช่วงแรก API จึงคืน `inviteUrl` ให้ผู้เชิญส่งต่อ
+- **คำขอเลื่อน Due (K3):** ส่งได้เมื่อมี `issue.edit` แต่ไม่มี `issue.change_due_directly` · ต้องเป็นการเลื่อนออก (ดึงเข้าแก้ได้เลย) · รออนุมัติได้ทีละ 1 คำขอต่องาน · `preview` คำนวณวันทำการที่เพิ่ม, Workload ของ Dev ในช่วงที่เลื่อนออก (งานอื่นในโปรเจกต์ที่ช่วงวันซ้อน × ส่วนแบ่ง Man-Day เทียบ capacity), งานที่รออยู่ (Dependency), Milestone / Go-live และรายชื่อผู้อนุมัติ · ผลนี้เก็บไว้ในคำขอ · `PATCH` ที่ถูกปฏิเสธด้วย `due_change_requires_approval` บอกรายชื่อผู้อนุมัติมาด้วย
+- อนุมัติ: ต้องมี `due_request.approve` · อนุมัติคำขอของตัวเองไม่ได้ แม้ได้รับสิทธิ์ · แก้ Plan End + Activity + `plan_changes` (source `due_request`, ใช้เหตุผลในคำขอ) · ถ้า Due ถูกแก้ไปแล้วหลังส่งคำขอตอบ `409 due_changed_since_request` · ปฏิเสธใส่เหตุผลได้ · ผู้ขอยกเลิกเองได้
+- **Inbox (G):** ผู้อนุมัติได้รับ `due_request.created` · ผู้ขอได้รับ `due_request.decided` · ผู้ทำ action เองไม่ได้รับแจ้ง · ตัวกรอง 6 แบบตามหน้า G พร้อมจำนวน · เมื่อส่ง `workspace` จะเติมสถานะล่าสุดของงานและคำขอ (`canDecide` ใช้แสดงปุ่มอนุมัติ / ปฏิเสธ) · "เตือนฉันพรุ่งนี้" = 09:00 วันถัดไป · แจ้งเตือนเขียนผ่าน friday_system หลังธุรกรรมหลัก (ยังไม่มีคิว ถ้าเขียนพลาดจะ log ไว้ ไม่ทำให้คำขอล้ม)
+- **Kanban (3):** คอลัมน์ = สถานะของ Workflow มาตรฐาน · การ์ด Bug วางตาม `board_column_id` และแสดงชื่อสถานะจริง (`?type=bug` ได้บอร์ดของ Workflow Bug) · การ์ดที่เสร็จเกิน 7 วันซ่อนไว้และบอกจำนวน (`hiddenDone`) · WIP นับทุกการ์ดในคอลัมน์ก่อนกรอง
+- **ย้ายการ์ด (`move`):** ลาก Bug ลงคอลัมน์ของบอร์ดมาตรฐาน ระบบเลือกสถานะ Bug ที่ผูกกับคอลัมน์นั้น (Review → Fixed) · ไป Done ทั้งที่ Sub-task ยังไม่ครบตอบ `422 subtasks_incomplete` จนกว่าจะส่ง `confirm: true` · เกิน WIP เตือน · ลำดับใช้ `afterKey` (การ์ดเหนือจุดวาง) / `beforeKey` (การ์ดใต้จุดวาง) แบบ fractional index · แก้ลำดับไม่เพิ่ม version (migration 0004) · งานจาก Import ที่ลำดับซ้ำกัน ลากครั้งแรกจัดลำดับใหม่ทั้งโปรเจกต์ · `If-Match` ไม่บังคับ
+- **Timeline (4):** Module › กลุ่มงาน › Task › Sub-task พร้อมช่วงวัน, ความคืบหน้ารวม (ถ่วง Man-Day ตาม `progress_method`), วันที่เลยกำหนด · Sprint, Milestone และงานที่ยังไม่มีวันที่ · `from` / `to` กรองแถว แต่ค่ารวมของ Module / กลุ่มงานคิดจากทั้งหมด · Guest ที่เป็น Viewer เห็นทั้งแผนแต่ไม่มีชื่อคน ไม่มี Bug และบอก `canOpen` ว่างานไหนแชร์ให้เปิดได้ · Guest เปิด Kanban ไม่ได้
 - Import Excel ตามหน้า L3: จับคู่คอลัมน์อัตโนมัติ 17 ช่อง · **เลขงาน = คอลัมน์ ID** (DP-39 ตรงกับ Prototype) · No. ใช้จับคู่ตอนอัปเดต · จับคู่ชื่อคนกับสมาชิก / เชิญด้วยอีเมล / ไม่ระบุ · ตรวจตามหน้า L3 (ไม่มี BA = ข้าม, ไม่มีวันที่ = Backlog, Plan Start ตรงวันหยุด, คอลัมน์ Sprint ผิดช่อง, Status ว่าง, คนที่ไม่พบ) · สร้างโปรเจกต์, Module, กลุ่มงาน, FR / Screen, งาน, Baseline v1 และวันหยุดจากชีต Holidays ในธุรกรรมเดียว
 
 ### ทดสอบกับไฟล์แผนจริง (เฉพาะในเครื่อง)
@@ -45,8 +55,8 @@ Nest ใช้ decorator metadata ซึ่ง esbuild / tsx ไม่สร้�
 REAL_PLAN_FILE="$HOME/Downloads/Development Plan 2026-11 (2026-11-05).xlsx" pnpm --filter @friday/api exec vitest run real-plan
 ```
 
-ผลล่าสุด (5 พ.ย. 2569): 334 แถว · 11 Module · 62 กลุ่มงาน · 944 MD · นำเข้า 333 งาน (ลงแผน 310 · Backlog 23 · ข้าม 1) ใช้เวลาไม่ถึง 0.5 วินาที · Plan Start ตรงวันหยุด 11 งานและคอลัมน์ Sprint ผิด 9 แถว ตรงกับ docs/review-round-2.md
+ผลล่าสุด (5 พ.ย. 2569): 334 แถว · 11 Module · 62 กลุ่มงาน · 944 MD · นำเข้า 333 งาน (ลงแผน 310 · Backlog 23 · ข้าม 1) ใช้เวลาไม่ถึง 0.5 วินาที · Plan Start ตรงวันหยุด 11 งานและคอลัมน์ Sprint ผิด 9 แถว ตรงกับ docs/review-round-2.md · Kanban 333 การ์ด ~25 ms · Timeline (11 Module, 60 กลุ่มงานที่มีงานลงแผน) ~20 ms · ลากการ์ดครั้งแรก (จัดลำดับใหม่ทั้งโปรเจกต์) ~50 ms
 
 ## ยังไม่ทำ
 
-2FA, Google / Microsoft login, ยืนยันอีเมล (ส่งอีเมลปิดไว้ช่วงแรก), ลิงก์เชิญแบบแชร์, Import โหมดอัปเดตแผนเดิม, คำขอเลื่อน Due (K3), คอมเมนต์, Checklist, ไฟล์, Kanban / Timeline / Gantt endpoints, แจ้งเตือนผ่านคิว (BullMQ), OpenAPI
+2FA, Google / Microsoft login, ยืนยันอีเมล (ส่งอีเมลปิดไว้ช่วงแรก), ลิงก์เชิญแบบแชร์, Import โหมดอัปเดตแผนเดิม, คอมเมนต์, Checklist, ไฟล์, Gantt / Calendar / Backlog endpoints, แจ้งเตือนผ่านคิว (BullMQ) และช่องทาง LINE / Email / Webhook, อนุมัติจากปุ่มใน LINE, แจ้งเตือนเหตุการณ์อื่น (มอบหมาย, สถานะเปลี่ยน, ใกล้ครบกำหนด), ตั้งค่าการแจ้งเตือน (`notification-prefs`), Realtime, OpenAPI

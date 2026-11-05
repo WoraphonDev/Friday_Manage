@@ -4,7 +4,7 @@ import { forbidden } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import type { ProjectRole } from '../common/types.js';
 
-const { projectMembers, projectRolePermissions } = schema;
+const { projectMembers, projectRolePermissions, workspaceMembers } = schema;
 
 /** 10 แถวในหน้า L2 › สิทธิ์ของแต่ละ Role (docs/spec/04-permissions.md ข้อ 3.1) · ค่า = Member, Viewer */
 export const L2_PERMISSIONS = {
@@ -83,6 +83,34 @@ export async function projectAccess(tx: Tx, auth: AuthInfo, tenant: TenantInfo, 
     if (guestViewer) ['project.workload.view', 'project.reports.view'].forEach((p) => perms.delete(p));
   }
   return { role, isOwner, guestViewer, perms };
+}
+
+/**
+ * ทุกคนในโปรเจกต์ที่มีสิทธิ์ใน L2 แถวนี้ (เช่น ผู้อนุมัติคำขอเลื่อน Due)
+ * = Project Owner + Admin + Role ที่ PM เปิดสิทธิ์นี้ให้ · เฉพาะสมาชิก Workspace ที่ active
+ */
+export async function usersWithPerm(tx: Tx, project: ProjectRef, permission: keyof typeof L2_PERMISSIONS) {
+  const overrides = await tx
+    .select({ role: projectRolePermissions.role, allowed: projectRolePermissions.allowed })
+    .from(projectRolePermissions)
+    .where(and(eq(projectRolePermissions.projectId, project.id), eq(projectRolePermissions.permission, permission)));
+  const ov = new Map(overrides.map((o) => [o.role, o.allowed]));
+  const [memberDefault, viewerDefault] = L2_PERMISSIONS[permission];
+  const roles = new Set<ProjectRole>(['admin']);
+  if (ov.get('member') ?? memberDefault) roles.add('member');
+  if (ov.get('viewer') ?? viewerDefault) roles.add('viewer');
+
+  const rows = await tx
+    .select({ userId: projectMembers.userId, role: projectMembers.role })
+    .from(projectMembers)
+    .innerJoin(
+      workspaceMembers,
+      and(eq(workspaceMembers.workspaceId, projectMembers.workspaceId), eq(workspaceMembers.userId, projectMembers.userId), eq(workspaceMembers.status, 'active')),
+    )
+    .where(eq(projectMembers.projectId, project.id));
+  const ids = new Set(rows.filter((r) => roles.has(r.role)).map((r) => r.userId));
+  ids.add(project.ownerUserId);
+  return [...ids];
 }
 
 export function requirePerm(access: ProjectAccess, permission: string) {

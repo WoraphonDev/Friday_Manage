@@ -53,6 +53,25 @@ describe.skipIf(!file)('นำเข้าไฟล์แผนจริงผ�
       expect((await agent.get(`/api/v1/w/real-${tag}/issues/DP-39`)).body.title).toMatch(/^ฟอร์มหลักประกัน 5 ประเภท/);
       // DP-40 เริ่ม 7 ธ.ค. ซึ่งเป็นวันหยุดชดเชย → นับจากวันทำงานถัดไป (docs/review-round-2.md)
       expect(issue.body.planStart).toBe('2026-12-08');
+
+      // Kanban / Timeline ของแผนทั้งไฟล์ · ลากครั้งแรกต้องจัดลำดับใหม่ทั้ง 333 งาน
+      let t = Date.now();
+      const board = await agent.get(`/api/v1/w/real-${tag}/projects/DP/board`);
+      const boardMs = Date.now() - t;
+      const cards = board.body.columns.flatMap((c: { cards: { key: string }[] }) => c.cards.map((x) => x.key));
+      expect(cards).toHaveLength(333);
+      t = Date.now();
+      const tl = await agent.get(`/api/v1/w/real-${tag}/projects/DP/timeline`);
+      const timelineMs = Date.now() - t;
+      const groups = tl.body.modules.flatMap((m: { groups: unknown[] }) => m.groups);
+      const rows = tl.body.modules.reduce((n: number, m: { taskCount: number }) => n + m.taskCount, 0);
+      expect(rows + tl.body.unscheduled.length).toBe(333);
+      t = Date.now();
+      const todo = board.body.columns[0].cards;
+      const moved = await agent.post(`/api/v1/w/real-${tag}/issues/${todo[todo.length - 1].key}/move`).set(h).send({ beforeKey: todo[0].key });
+      const moveMs = Date.now() - t;
+      expect(moved.status).toBe(200);
+      console.log({ boardMs, timelineMs, moveMs, modules: tl.body.modules.length, groups: groups.length, scheduled: rows, unscheduled: tl.body.unscheduled.length, range: tl.body.range });
     } finally {
       await app.close();
     }

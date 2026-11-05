@@ -42,6 +42,18 @@ export class WorkCalendar {
     return d;
   }
 
+  /** จำนวนวันทำงานต่อสัปดาห์ของ Workspace */
+  get daysPerWeek() {
+    return this.workDays.size || 5;
+  }
+
+  /** จำนวนวันทำการตั้งแต่ from ถึง to (นับทั้งสองวัน) · from > to ได้ 0 */
+  workingDaysIn(from: string, to: string) {
+    let n = 0;
+    for (let d = from; d <= to; d = addDays(d, 1)) if (this.isWorkingDay(d)) n++;
+    return n;
+  }
+
   /** วันทำการที่ n โดยนับ start เป็นวันที่ 1 (start ต้องเป็นวันทำการ) */
   nthWorkingDay(start: string, n: number) {
     let d = start;

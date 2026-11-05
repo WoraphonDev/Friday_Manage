@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { Auth, type AuthInfo, Tenant, type TenantInfo } from '../common/request.js';
 import { TenantGuard } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
-import { CreateIssueBody, IssuesService, ListQuery, PatchIssueBody } from './issues.service.js';
+import { CreateIssueBody, IssuesService, ListQuery, MoveIssueBody, PatchIssueBody } from './issues.service.js';
 
 @Controller('w/:ws')
 @UseGuards(TenantGuard)
@@ -37,6 +37,22 @@ export class IssuesController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const issue = await this.issues.patch(auth, tenant, issueKey, ifMatch, parse(PatchIssueBody, body));
+    res.setHeader('ETag', `"${issue.version}"`);
+    return issue;
+  }
+
+  /** Kanban / Backlog / Mobile: เปลี่ยนสถานะ, Sprint และลำดับ · ส่ง If-Match ได้ถ้าต้องการกันชน */
+  @Post('issues/:issueKey/move')
+  @HttpCode(200)
+  async move(
+    @Auth() auth: AuthInfo,
+    @Tenant() tenant: TenantInfo,
+    @Param('issueKey') issueKey: string,
+    @Headers('if-match') ifMatch: string | undefined,
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const issue = await this.issues.move(auth, tenant, issueKey, ifMatch, parse(MoveIssueBody, body));
     res.setHeader('ETag', `"${issue.version}"`);
     return issue;
   }

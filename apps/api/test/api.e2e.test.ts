@@ -503,3 +503,293 @@ describe('Import Excel (L3)', () => {
     expect(empty.body.error.code).toBe('no_table_sheet');
   });
 });
+
+describe('คำขอเลื่อน Due (K3) และ Inbox (G)', () => {
+  const ws = '/w/friday-dev';
+  let requestId = '';
+  const inbox = (c: Client, filter = 'all') => c.get(`/me/notifications?workspace=friday-dev&filter=${filter}`);
+
+  it('เตรียม: ปิดสิทธิ์แก้ Due ตรงของ Member · งานของ Kaijeaw 2 งานที่ช่วงวันต่อกัน', async () => {
+    await mick.put(`${ws}/projects/DP/role-permissions`, { role: 'member', permission: 'issue.change_due_directly', allowed: false });
+    // M = 5 MD เริ่ม พ. 25 พ.ย. → 25, 26, 27, 30 พ.ย., 1 ธ.ค. (เหมือน DP-30 ใน Prototype)
+    const a = await mick.post(`${ws}/projects/DP/issues`, { title: 'Curtailment Information + Plan Template', moduleId: creditLine, size: 'M', planStart: '2026-11-25', assigneeIds: [kaijeawId] });
+    expect(a.body).toMatchObject({ key: 'DP-5', planEnd: '2026-12-01' });
+    const b = await mick.post(`${ws}/projects/DP/issues`, { title: 'Credit / Sub / Shared Limit', moduleId: creditLine, estimateMd: 3, planStart: '2026-12-02', assigneeIds: [kaijeawId] });
+    expect(b.body).toMatchObject({ key: 'DP-6', planEnd: '2026-12-04' });
+  });
+
+  it('Member แก้ Due ตรงไม่ได้ · 403 บอกรายชื่อผู้อนุมัติให้หน้าจอเปิดฟอร์ม K3', async () => {
+    const issue = await kaijeaw.get(`${ws}/issues/DP-5`);
+    const r = await kaijeaw.patch(`${ws}/issues/DP-5`, { planEnd: '2026-12-04' }, issue.body.version);
+    expect(r.status).toBe(403);
+    expect(r.body.error.details.canRequest).toBe(true);
+    expect(r.body.error.details.approvers.map((p: { displayName: string }) => p.displayName).sort()).toEqual(['Arm', 'Mick']);
+    expect(r.body.error.details.approvers[0]).toHaveProperty('initials');
+  });
+
+  it('ผลกระทบที่ระบบคำนวณ: วันทำการที่เพิ่ม, Workload ที่ชน, Milestone และผู้อนุมัติ', async () => {
+    const r = await kaijeaw.get(`${ws}/issues/DP-5/due-requests/preview?due=2026-12-04`);
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ currentDue: '2026-12-01', requestedDue: '2026-12-04', addedWorkingDays: 3, dependents: [], goLive: { onTime: true }, parent: null });
+    // ช่วงที่เลื่อนออกไป 2–4 ธ.ค. (3 วันทำการ) · capacity 40 ชม./สัปดาห์ = 1 MD/วัน × 3 วัน
+    // DP-6: 3 MD คนเดียว อยู่ในช่วงทั้งหมด = 3 · DP-2: 3 MD แบ่ง 2 คน = 1.5 กระจาย 7 วันทำการ (1–11 ธ.ค.) ตรงช่วง 3 วัน = 0.64
+    expect(r.body.workload[0]).toMatchObject({ person: { id: kaijeawId }, otherWorkMd: 3.64, capacityMd: 3, overloaded: true });
+    expect(r.body.workload[0].overlapping.map((x: { key: string }) => x.key)).toEqual(['DP-2', 'DP-6']);
+    expect(r.body.milestones).toEqual([expect.objectContaining({ name: 'Credit Line Go-live', onTime: true })]);
+    expect(r.body.approvers.map((p: { id: string }) => p.id)).not.toContain(kaijeawId);
+
+    const earlier = await kaijeaw.get(`${ws}/issues/DP-5/due-requests/preview?due=2026-11-30`);
+    expect(earlier.body.error.code).toBe('not_a_postponement');
+  });
+
+  it('ส่งคำขอได้ทีละ 1 ต่องาน · Admin ไม่ต้องขอ · Guest ขอไม่ได้', async () => {
+    const other = await kaijeaw.post(`${ws}/issues/DP-5/due-requests`, { requestedDue: '2026-12-04', reasonCode: 'other' });
+    expect(other.body.error.details.fields[0].path).toBe('detail');
+
+    const r = await kaijeaw.post(`${ws}/issues/DP-5/due-requests`, { requestedDue: '2026-12-04', reasonCode: 'scope_added', detail: 'BA Donut ยืนยันเพิ่ม Plan Template แบบ Fleet (30 พ.ย.)' });
+    expect(r.status).toBe(201);
+    expect(r.body).toMatchObject({ status: 'pending', issueKey: 'DP-5', currentDue: '2026-12-01', requestedDue: '2026-12-04', reasonLabel: 'ขอบเขตงานเพิ่ม', requester: { displayName: 'Kaijeaw' } });
+    expect(r.body.impact.addedWorkingDays).toBe(3);
+    requestId = r.body.id;
+
+    const dup = await kaijeaw.post(`${ws}/issues/DP-5/due-requests`, { requestedDue: '2026-12-08', reasonCode: 'estimate_wrong' });
+    expect(dup.status).toBe(409);
+    expect(dup.body.error).toMatchObject({ code: 'due_request_pending', details: { id: requestId } });
+    const admin = await mick.post(`${ws}/issues/DP-5/due-requests`, { requestedDue: '2026-12-08', reasonCode: 'estimate_wrong' });
+    expect(admin.body.error.code).toBe('due_change_allowed_directly');
+    const guest = await client_.post(`${ws}/issues/DP-1/due-requests`, { requestedDue: '2026-12-31', reasonCode: 'estimate_wrong' });
+    expect(guest.status).toBe(403);
+
+    const issue = await kaijeaw.get(`${ws}/issues/DP-5`);
+    expect(issue.body.pendingDueRequest).toMatchObject({ id: requestId, requestedDue: '2026-12-04' });
+  });
+
+  it('ผู้อนุมัติเห็นคำขอใน Inbox พร้อมปุ่มอนุมัติ · ผู้ขอไม่ได้รับแจ้งเรื่องที่ตัวเองทำ', async () => {
+    const r = await inbox(mick, 'activity');
+    expect(r.status).toBe(200);
+    const item = r.body.items.find((x: { eventType: string }) => x.eventType === 'due_request.created');
+    expect(item).toMatchObject({
+      category: 'activity',
+      actor: { displayName: 'Kaijeaw' },
+      reason: 'คุณเป็นผู้อนุมัติ (Project Owner)',
+      issue: { key: 'DP-5', status: { name: 'To do' }, planEnd: '2026-12-01', moduleName: 'Credit Line' },
+      dueRequest: { id: requestId, status: 'pending', requestedDue: '2026-12-04', canDecide: true },
+    });
+    expect(item.readAt).toBeNull();
+    expect(r.body.counts.unread).toBeGreaterThanOrEqual(1);
+    expect((await inbox(arm)).body.items.some((x: { eventType: string }) => x.eventType === 'due_request.created')).toBe(true);
+    expect((await inbox(kaijeaw)).body.items).toEqual([]);
+
+    const bell = await mick.get('/me/notifications/summary');
+    expect(bell.body.workspaces).toEqual([expect.objectContaining({ slug: 'friday-dev' })]);
+    expect(bell.body.total).toBe(r.body.counts.unread);
+
+    const home = await mick.get(`${ws}/due-requests?scope=to_approve`);
+    expect(home.body.items.map((x: { id: string; canDecide: boolean }) => [x.id, x.canDecide])).toEqual([[requestId, true]]);
+    expect((await kaijeaw.get(`${ws}/due-requests?scope=to_approve`)).body.items).toEqual([]);
+  });
+
+  it('อนุมัติคำขอของตัวเองไม่ได้ แม้ได้รับสิทธิ์อนุมัติ', async () => {
+    const noPerm = await kaijeaw.post(`${ws}/due-requests/${requestId}/approve`);
+    expect(noPerm.body.error.details.permission).toBe('due_request.approve');
+    await mick.put(`${ws}/projects/DP/role-permissions`, { role: 'member', permission: 'due_request.approve', allowed: true });
+    const own = await kaijeaw.post(`${ws}/due-requests/${requestId}/approve`);
+    expect(own.body.error.code).toBe('cannot_decide_own_request');
+    await mick.put(`${ws}/projects/DP/role-permissions`, { role: 'member', permission: 'due_request.approve', allowed: false });
+  });
+
+  it('อนุมัติแล้วแก้ Due, บันทึกการแก้ไขแผนด้วยเหตุผลในคำขอ และแจ้งผู้ขอ', async () => {
+    const before = await mick.get(`${ws}/issues/DP-5`);
+    const r = await mick.post(`${ws}/due-requests/${requestId}/approve`, { note: 'โอเค ยังทัน Go-live' });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ status: 'approved', decidedBy: { displayName: 'Mick' }, decidedVia: 'in_app', decisionNote: 'โอเค ยังทัน Go-live', issue: { key: 'DP-5', planEnd: '2026-12-04', version: before.body.version + 1 } });
+    expect((await mick.get(`${ws}/issues/DP-5`)).body).toMatchObject({ planEnd: '2026-12-04', pendingDueRequest: null });
+
+    const again = await arm.post(`${ws}/due-requests/${requestId}/reject`);
+    expect(again.body.error).toMatchObject({ code: 'already_decided', details: { status: 'approved' } });
+
+    const pc = await owner.query(`SELECT source, reason, impact, new_value FROM plan_changes WHERE source = 'due_request'`);
+    expect(pc.rows).toEqual([{ source: 'due_request', reason: 'ขอบเขตงานเพิ่ม: BA Donut ยืนยันเพิ่ม Plan Template แบบ Fleet (30 พ.ย.)', impact: 'เพิ่ม 3 วันทำการ', new_value: '2026-12-04' }]);
+    const act = await owner.query(`SELECT verb FROM activities WHERE verb LIKE 'due_request%' OR verb = 'due_requested' ORDER BY created_at`);
+    expect(act.rows.map((x) => x.verb)).toEqual(['due_requested', 'due_request_approved']);
+
+    const note = (await inbox(kaijeaw)).body.items[0];
+    expect(note).toMatchObject({ eventType: 'due_request.decided', reason: 'คุณเป็นผู้ขอเลื่อน Due', dueRequest: { status: 'approved', decisionNote: 'โอเค ยังทัน Go-live', canDecide: false } });
+    // แจ้งเตือนเดิมของผู้อนุมัติแสดงผลการตัดสินล่าสุด
+    const mine = (await inbox(mick, 'activity')).body.items.find((x: { eventType: string }) => x.eventType === 'due_request.created');
+    expect(mine.dueRequest).toMatchObject({ status: 'approved', canDecide: false });
+  });
+
+  it('ปฏิเสธพร้อมเหตุผล Due ไม่เปลี่ยน · ผู้ขอยกเลิกคำขอของตัวเองได้', async () => {
+    const r1 = await kaijeaw.post(`${ws}/issues/DP-5/due-requests`, { requestedDue: '2026-12-08', reasonCode: 'waiting_input' });
+    const rej = await arm.post(`${ws}/due-requests/${r1.body.id}/reject`, { note: 'ย้ายไป Sprint หน้าแทน' });
+    expect(rej.body).toMatchObject({ status: 'rejected', decidedBy: { displayName: 'Arm' }, issue: { planEnd: '2026-12-04' } });
+    expect((await inbox(kaijeaw)).body.items[0].dueRequest).toMatchObject({ status: 'rejected', decisionNote: 'ย้ายไป Sprint หน้าแทน' });
+
+    const r2 = await kaijeaw.post(`${ws}/issues/DP-5/due-requests`, { requestedDue: '2026-12-09', reasonCode: 'estimate_wrong' });
+    expect((await mick.post(`${ws}/due-requests/${r2.body.id}/cancel`)).status).toBe(403);
+    const cancel = await kaijeaw.post(`${ws}/due-requests/${r2.body.id}/cancel`);
+    expect(cancel.body).toMatchObject({ status: 'cancelled', decidedBy: null });
+
+    const history = await kaijeaw.get(`${ws}/issues/DP-5/due-requests`);
+    expect(history.body.items.map((x: { status: string }) => x.status)).toEqual(['cancelled', 'rejected', 'approved']);
+    expect((await kaijeaw.get(`${ws}/due-requests?scope=mine&status=all`)).body.items).toHaveLength(3);
+  });
+
+  it('Due ถูกแก้หลังส่งคำขอ → อนุมัติไม่ได้ (409) ต้องตัดสินใหม่', async () => {
+    const r = await kaijeaw.post(`${ws}/issues/DP-5/due-requests`, { requestedDue: '2026-12-11', reasonCode: 'blocked_by_dependency' });
+    const issue = await mick.get(`${ws}/issues/DP-5`);
+    await mick.patch(`${ws}/issues/DP-5`, { planEnd: '2026-12-08', planChangeReason: 'Lead เลื่อนให้เอง' }, issue.body.version);
+    const ok = await mick.post(`${ws}/due-requests/${r.body.id}/approve`);
+    expect(ok.body.error).toMatchObject({ code: 'due_changed_since_request', details: { currentDue: '2026-12-08', dueWhenRequested: '2026-12-04' } });
+    expect((await mick.post(`${ws}/due-requests/${r.body.id}/reject`)).status).toBe(200);
+  });
+
+  it('Inbox: อ่าน / ทำเสร็จ / เตือนพรุ่งนี้ / อ่านทั้งหมด · แก้ของคนอื่นไม่ได้', async () => {
+    const items = (await inbox(mick)).body.items;
+    const [a, b, c] = items;
+    expect((await mick.post(`/me/notifications/${a.id}/read`)).body.readAt).not.toBeNull();
+    expect((await kaijeaw.post(`/me/notifications/${a.id}/read`)).status).toBe(404);
+
+    await mick.post(`/me/notifications/${b.id}/done`);
+    const snooze = await mick.post(`/me/notifications/${c.id}/snooze`, { preset: 'tomorrow' });
+    expect(new Date(snooze.body.snoozedUntil).getTime()).toBeGreaterThan(Date.now());
+    const after = (await inbox(mick)).body;
+    expect(after.items.map((x: { id: string }) => x.id)).not.toContain(b.id);
+    expect(after.items.map((x: { id: string }) => x.id)).not.toContain(c.id);
+    expect(after.counts.all).toBe(items.length - 2);
+
+    const unreadOnly = (await inbox(mick, 'unread')).body.items;
+    expect(unreadOnly.every((x: { readAt: string | null }) => x.readAt === null)).toBe(true);
+    await mick.post('/me/notifications/read-all', { workspace: 'friday-dev' });
+    expect((await mick.get('/me/notifications/summary')).body.total).toBe(0);
+
+    // แบ่งหน้า
+    const p1 = (await mick.get('/me/notifications?workspace=friday-dev&limit=1')).body;
+    const p2 = (await mick.get(`/me/notifications?workspace=friday-dev&limit=1&cursor=${p1.nextCursor}`)).body;
+    expect(p2.items[0].id).not.toBe(p1.items[0].id);
+  });
+});
+
+describe('Kanban (3) และ Timeline (4)', () => {
+  const ws = '/w/friday-dev';
+  let statuses: { id: string; name: string; boardColumnId: string | null }[] = [];
+  const std = (name: string) => statuses.find((x) => x.name === name && !x.boardColumnId)!.id;
+  const column = (board: { columns: { name: string; cards: { key: string }[] }[] }, name: string) =>
+    board.columns.find((c) => c.name === name)!.cards.map((c) => c.key);
+
+  it('บอร์ดมาตรฐาน: คอลัมน์ของ Workflow มาตรฐาน · การ์ด Bug วางตามคอลัมน์ที่ผูกไว้และแสดงสถานะจริง', async () => {
+    statuses = (await mick.get(`${ws}/projects/DP`)).body.statuses;
+    const bug = await mick.post(`${ws}/projects/DP/issues`, { type: 'Bug', title: 'Workflow ส่งกลับแก้ไข: สถานะไม่กลับเป็น Draft', moduleId: creditLine, severity: 'major', environment: 'sit', details: { steps: '1. LO ส่งคืน' }, assigneeIds: [kaijeawId] });
+    expect(bug.body.key).toBe('DP-7');
+
+    const r = await mick.get(`${ws}/projects/DP/board`);
+    expect(r.status).toBe(200);
+    expect(r.body.columns.map((c: { name: string }) => c.name)).toEqual(['To do', 'In progress', 'Review', 'Done']);
+    expect(column(r.body, 'Done')).toEqual(['DP-1']);
+    expect(column(r.body, 'To do')).toEqual(['DP-2', 'DP-3', 'DP-4', 'DP-5', 'DP-6', 'DP-7']);
+    const card = r.body.columns[0].cards.find((c: { key: string }) => c.key === 'DP-7');
+    expect(card).toMatchObject({ type: { name: 'Bug' }, status: { name: 'Open' }, module: { name: 'Credit Line' }, assignees: [{ id: kaijeawId, displayName: 'Kaijeaw' }] });
+    const parent = r.body.columns[3].cards[0];
+    expect(parent.subtasks).toEqual({ total: 2, done: 0 });
+    expect(r.body.bugStatusColumns).toContainEqual({ status: 'Fixed', column: 'Review' });
+  });
+
+  it('ลาก Bug ไปคอลัมน์ Review → สถานะ Fixed · บอร์ด Bug แยกคอลัมน์ตามสถานะจริง', async () => {
+    const r = await kaijeaw.post(`${ws}/issues/DP-7/move`, { statusId: std('Review') });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ status: { name: 'Fixed', category: 'in_progress' } });
+    expect(r.body.actualStart).not.toBeNull();
+    expect(column((await mick.get(`${ws}/projects/DP/board`)).body, 'Review')).toEqual(['DP-7']);
+
+    const bugBoard = (await mick.get(`${ws}/projects/DP/board?type=bug`)).body;
+    expect(bugBoard.columns.map((c: { name: string }) => c.name)).toEqual(['Open', 'In progress', 'Fixed', 'Verified', 'Closed']);
+    expect(column(bugBoard, 'Fixed')).toEqual(['DP-7']);
+    expect(bugBoard.columns.flatMap((c: { cards: unknown[] }) => c.cards)).toHaveLength(1);
+  });
+
+  it('ย้ายไป Done ทั้งที่ Sub-task ยังไม่ครบ ต้องยืนยัน', async () => {
+    await mick.post(`${ws}/issues/DP-1/move`, { statusId: std('In progress') });
+    const blocked = await mick.post(`${ws}/issues/DP-1/move`, { statusId: std('Done') });
+    expect(blocked.status).toBe(422);
+    expect(blocked.body.error).toMatchObject({ code: 'subtasks_incomplete', details: { open: 2, confirmable: true } });
+    const ok = await mick.post(`${ws}/issues/DP-1/move`, { statusId: std('Done'), confirm: true });
+    expect(ok.body.status.name).toBe('Done');
+    expect(ok.body.warnings[0].code).toBe('subtasks_incomplete');
+  });
+
+  it('เรียงลำดับในคอลัมน์ไม่ทำให้ version เพิ่ม · ตำแหน่งต้องสมเหตุสมผล', async () => {
+    const before = await mick.get(`${ws}/issues/DP-6`);
+    const r = await mick.post(`${ws}/issues/DP-6/move`, { beforeKey: 'DP-2' });
+    expect(r.body.version).toBe(before.body.version);
+    const r2 = await mick.post(`${ws}/issues/DP-4/move`, { afterKey: 'DP-6', beforeKey: 'DP-2' });
+    expect(r2.status).toBe(200);
+    expect(column((await mick.get(`${ws}/projects/DP/board`)).body, 'To do')).toEqual(['DP-6', 'DP-4', 'DP-2', 'DP-3', 'DP-5']);
+
+    const wrong = await mick.post(`${ws}/issues/DP-5/move`, { afterKey: 'DP-2', beforeKey: 'DP-6' });
+    expect(wrong.body.error.code).toBe('invalid_neighbor');
+  });
+
+  it('งานจาก Import (ลำดับเดิมซ้ำกัน) ลากครั้งแรกจัดลำดับใหม่ทั้งโปรเจกต์', async () => {
+    const before = column((await mick.get(`${ws}/projects/PLAN/board`)).body, 'To do');
+    expect(before[0]).toBe('PLAN-4');
+    const last = before[before.length - 1];
+    await mick.post(`${ws}/issues/${last}/move`, { beforeKey: 'PLAN-4' });
+    const after = column((await mick.get(`${ws}/projects/PLAN/board`)).body, 'To do');
+    expect(after).toEqual([last, ...before.slice(0, -1)]);
+    const legacy = await owner.query(`SELECT count(*)::int AS n FROM issues i JOIN projects p ON p.id = i.project_id WHERE p.key = 'PLAN' AND i.rank LIKE '%|%'`);
+    expect(legacy.rows[0].n).toBe(0);
+  });
+
+  it('เกิน WIP limit เตือนแต่ไม่บล็อก · ตัวกรองงานของฉัน / ระดับงาน', async () => {
+    await owner.query(`UPDATE workflow_statuses SET wip_limit = 1 WHERE id = $1`, [std('In progress')]);
+    await kaijeaw.post(`${ws}/issues/DP-5/move`, { statusId: std('In progress') });
+    const second = await kaijeaw.post(`${ws}/issues/DP-6/move`, { statusId: std('In progress') });
+    expect(second.body.warnings).toContainEqual(expect.objectContaining({ code: 'wip_exceeded' }));
+    const board = (await kaijeaw.get(`${ws}/projects/DP/board?assignee=me&level=task`)).body;
+    const prog = board.columns.find((c: { name: string }) => c.name === 'In progress');
+    expect(prog.wip).toEqual({ limit: 1, current: 2, exceeded: true });
+    const keys = board.columns.flatMap((c: { cards: { key: string }[] }) => c.cards.map((x) => x.key));
+    expect(keys.sort()).toEqual(['DP-1', 'DP-2', 'DP-5', 'DP-6', 'DP-7']); // ไม่มี Sub-task DP-3, DP-4
+  });
+
+  it('Guest ที่เป็น Viewer เปิดบอร์ดไม่ได้', async () => {
+    const r = await client_.get(`${ws}/projects/DP/board`);
+    expect(r.status).toBe(403);
+    expect(r.body.error.code).toBe('guest_view_limited');
+    expect((await client_.post(`${ws}/issues/DP-1/move`, { statusId: std('To do') })).status).toBe(403);
+  });
+
+  it('Timeline: Module › กลุ่มงาน › Task › Sub-task + Sprint, Milestone และงานที่ยังไม่มีวันที่', async () => {
+    const r = await mick.get(`${ws}/projects/DP/timeline`);
+    expect(r.status).toBe(200);
+    const cl = r.body.modules.find((m: { name: string }) => m.name === 'Credit Line');
+    expect(cl).toMatchObject({ start: '2026-11-25', end: '2026-12-15', taskCount: 4 });
+    expect(cl.groups).toHaveLength(1);
+    expect(cl.groups[0]).toMatchObject({ phase: null, name: 'ไม่ระบุกลุ่มงาน' });
+    const tasks = cl.groups[0].tasks;
+    expect(tasks.map((t: { key: string }) => t.key)).toEqual(['DP-5', 'DP-2', 'DP-6', 'DP-1']);
+    const dp1 = tasks.find((t: { key: string }) => t.key === 'DP-1');
+    expect(dp1).toMatchObject({ progressPct: 100, status: { category: 'done' } });
+    expect(dp1.subtasks.map((x: { key: string }) => x.key)).toEqual(['DP-3', 'DP-4']);
+    expect(dp1.assignees.map((p: { displayName: string }) => p.displayName)).toEqual(['Mick', 'Kaijeaw']);
+    expect(r.body.unscheduled.map((x: { key: string }) => x.key)).toEqual(['DP-7']);
+    expect(r.body.milestones).toEqual([expect.objectContaining({ name: 'Credit Line Go-live', date: '2027-01-26' })]);
+    expect(r.body.sprints.length).toBeGreaterThan(5);
+    expect(r.body.range).toEqual({ from: '2026-11-25', to: '2027-04-21' });
+
+    const late = await mick.get(`${ws}/projects/DP/timeline?from=2026-12-16`);
+    const keys = late.body.modules.flatMap((m: { groups: { tasks: { key: string }[] }[] }) => m.groups.flatMap((g) => g.tasks.map((t) => t.key)));
+    expect(keys).toEqual(['DP-1']); // DP-1 จบ 15 ธ.ค. แต่ Sub-task DP-4 อยู่ 16–17 ธ.ค.
+  });
+
+  it('Timeline ของ Guest: ไม่มีชื่อคน ไม่มี Bug และบอกว่างานไหนเปิดได้', async () => {
+    const r = await client_.get(`${ws}/projects/DP/timeline`);
+    expect(r.status).toBe(200);
+    const tasks = r.body.modules[0].groups[0].tasks;
+    expect(tasks[0].assignees).toBeUndefined();
+    expect(tasks.find((t: { key: string }) => t.key === 'DP-1').canOpen).toBe(true);
+    expect(tasks.find((t: { key: string }) => t.key === 'DP-2').canOpen).toBe(false);
+    expect(r.body.unscheduled).toEqual([]);
+  });
+});

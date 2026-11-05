@@ -417,6 +417,8 @@ export const dueChangeRequests = pgTable(
     decidedBy: uuid().references(() => users.id),
     decidedAt: tstz(),
     decidedVia: decidedVia(),
+    /** เหตุผลของผู้อนุมัติ / ปฏิเสธ (แสดงใน Inbox ของผู้ขอ) */
+    decisionNote: text(),
     createdAt: createdAt(),
   },
   (t) => [

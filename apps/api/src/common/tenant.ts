@@ -17,19 +17,23 @@ export class TenantGuard implements CanActivate {
 
   async canActivate(ctx: ExecutionContext) {
     const req = ctx.switchToHttp().getRequest<AppRequest>();
-    const slug = String(req.params.ws ?? '').toLowerCase();
-    const userId = req.auth!.userId;
-    const [row] = await withTenant(this.db, { userId, workspaceId: null }, (tx) =>
-      tx
-        .select({ workspaceId: workspaces.id, slug: workspaces.slug, role: workspaceMembers.role })
-        .from(workspaces)
-        .innerJoin(workspaceMembers, and(eq(workspaceMembers.workspaceId, workspaces.id), eq(workspaceMembers.userId, userId)))
-        .where(and(sql`lower(${workspaces.slug}) = ${slug}`, eq(workspaceMembers.status, 'active'), sql`${workspaces.deletedAt} is null`)),
-    );
+    const row = await resolveTenant(this.db, req.auth!.userId, String(req.params.ws ?? ''));
     if (!row) throw new AppError(404, 'workspace_not_found', 'ไม่พบ Workspace');
     req.tenant = row;
     return true;
   }
+}
+
+/** Workspace จาก slug ที่ผู้ใช้เป็นสมาชิก active (null = ไม่พบหรือไม่ใช่สมาชิก) */
+export async function resolveTenant(db: Db, userId: string, slug: string): Promise<TenantInfo | null> {
+  const [row] = await withTenant(db, { userId, workspaceId: null }, (tx) =>
+    tx
+      .select({ workspaceId: workspaces.id, slug: workspaces.slug, role: workspaceMembers.role })
+      .from(workspaces)
+      .innerJoin(workspaceMembers, and(eq(workspaceMembers.workspaceId, workspaces.id), eq(workspaceMembers.userId, userId)))
+      .where(and(sql`lower(${workspaces.slug}) = ${slug.toLowerCase()}`, eq(workspaceMembers.status, 'active'), sql`${workspaces.deletedAt} is null`)),
+  );
+  return row ?? null;
 }
 
 /** รันงานใน Workspace ปัจจุบันภายใต้ RLS */
@@ -39,5 +43,12 @@ export class TenantDb {
 
   run<T>(auth: AuthInfo, tenant: TenantInfo | null, fn: (tx: Tx) => Promise<T>): Promise<T> {
     return withTenant(this.db, { userId: auth.userId, workspaceId: tenant?.workspaceId ?? null }, fn);
+  }
+
+  /** สำหรับ route ระดับผู้ใช้ที่รับ ?workspace=slug (เช่น Inbox) · ไม่ใช่สมาชิกตอบ 404 */
+  async tenant(auth: AuthInfo, slug: string) {
+    const row = await resolveTenant(this.db, auth.userId, slug);
+    if (!row) throw new AppError(404, 'workspace_not_found', 'ไม่พบ Workspace');
+    return row;
   }
 }

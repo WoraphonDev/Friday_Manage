@@ -9,6 +9,8 @@ import { ErrorFilter } from './common/errors.js';
 import type { AppRequest } from './common/request.js';
 import { TenantDb, TenantGuard } from './common/tenant.js';
 import { DbModule } from './db/db.module.js';
+import { DueRequestsController } from './due-requests/due-requests.controller.js';
+import { DueRequestsService } from './due-requests/due-requests.service.js';
 import { ImportsController } from './imports/imports.controller.js';
 import { ImportsService } from './imports/imports.service.js';
 import { InvitationsController, WorkspaceInvitationsController } from './invitations/invitations.controller.js';
@@ -16,9 +18,14 @@ import { InvitationsService } from './invitations/invitations.service.js';
 import { IssuesController } from './issues/issues.controller.js';
 import { IssuesService } from './issues/issues.service.js';
 import { MeController } from './me/me.controller.js';
+import { NotificationsController } from './notifications/notifications.controller.js';
+import { NotificationsService } from './notifications/notifications.service.js';
+import { Notifier } from './notifications/notifier.js';
 import { ProjectsController } from './projects/projects.controller.js';
 import { ProjectsService } from './projects/projects.service.js';
 import { MembersController } from './workspaces/members.controller.js';
+import { ViewsController } from './views/views.controller.js';
+import { ViewsService } from './views/views.service.js';
 import { WorkspacesController } from './workspaces/workspaces.controller.js';
 
 @Module({
@@ -33,6 +40,9 @@ import { WorkspacesController } from './workspaces/workspaces.controller.js';
     ProjectsController,
     IssuesController,
     ImportsController,
+    DueRequestsController,
+    NotificationsController,
+    ViewsController,
   ],
   providers: [
     SessionService,
@@ -42,6 +52,10 @@ import { WorkspacesController } from './workspaces/workspaces.controller.js';
     IssuesService,
     InvitationsService,
     ImportsService,
+    Notifier,
+    DueRequestsService,
+    NotificationsService,
+    ViewsService,
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_FILTER, useClass: ErrorFilter },
   ],

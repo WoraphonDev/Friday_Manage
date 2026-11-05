@@ -119,7 +119,7 @@ API ตอบทันทีแล้วส่งงานเข้าคิว�
 |---|---|---|
 | 1 · Overview | **`GET projects/{key}/overview`** (Progress, Health, KPI, Milestone, Workload สัปดาห์นี้, Burn-up, Activity ล่าสุด) | แก้ข้อมูลโปรเจกต์ `PATCH projects/{key}` |
 | 2 · Table | **`GET projects/{key}/issues?view=table`** + `GET projects/{key}/saved-views` | Quick add `POST issues` · แก้ในแถว `PATCH issues/{key}` · เลือกหลายแถว `POST issues/bulk` · บันทึก View `POST saved-views` · Import / Export ดู L3 |
-| 3 · Kanban | **`GET projects/{key}/board`** (คอลัมน์ตาม `category` + WIP + การ์ด) | ลากการ์ด `POST issues/{key}/move` · เพิ่มคอลัมน์ = เพิ่มสถานะ (L2) |
+| 3 · Kanban | **`GET projects/{key}/board`** (คอลัมน์ของ Workflow มาตรฐาน + WIP + การ์ด · การ์ด Bug วางตาม `board_column_id` และส่งชื่อสถานะจริงมาด้วย · `?type=bug` ได้คอลัมน์ของ Workflow Bug) | ลากการ์ด `POST issues/{key}/move` · เพิ่มคอลัมน์ = เพิ่มสถานะ (L2) |
 | 4 · Timeline | **`GET projects/{key}/timeline?from&to`** (Module › Task › Sub-task + Milestone + งานไม่มีวันที่) | ลาก bar `PATCH issues/{key}` (plan_start / plan_end) · `POST milestones` |
 | 5 · Gantt | **`GET projects/{key}/gantt?from&to&baseline=v1`** (WBS, Dependency, Baseline, Critical path) | `POST issues/{key}/dependencies` · `POST projects/{key}/schedule:preview` (Auto-schedule) · `POST baselines` · `GET gantt.pdf` |
 | 6 · Calendar | **`GET projects/{key}/calendar?month=2026-12`** (งาน, Sprint, วันหยุด, วันลา) | ลากวาง `PATCH issues/{key}` · `POST me/calendar-feeds` (iCal) |

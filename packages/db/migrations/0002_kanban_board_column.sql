@@ -1,0 +1,3 @@
+ALTER TABLE "workflow_statuses" ADD COLUMN "board_column_id" uuid;--> statement-breakpoint
+ALTER TABLE "workflow_statuses" ADD CONSTRAINT "workflow_statuses_board_column_fk" FOREIGN KEY ("workspace_id","board_column_id") REFERENCES "public"."workflow_statuses"("workspace_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "workflow_statuses" ADD CONSTRAINT "workflow_statuses_not_own_column" CHECK ("workflow_statuses"."board_column_id" <> "workflow_statuses"."id");

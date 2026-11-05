@@ -19,6 +19,7 @@ pnpm test         # ทดสอบ RLS กับฐานข้อมูลจ�
 |---|---|---|
 | `0000_init.sql` | `drizzle-kit generate` จาก `src/schema` | 62 ตาราง: บัญชี, Workspace, วันหยุด, โปรเจกต์, งาน, แผน, ไฟล์, Inbox, Audit log |
 | `0001_rls.sql` | เขียนเอง (`drizzle-kit generate --custom`) | Role, ฟังก์ชันใน schema `app`, RLS policy, สิทธิ์ตาราง, trigger |
+| `0002_kanban_board_column.sql` | `drizzle-kit generate` | `workflow_statuses.board_column_id` ผูกสถานะของ Bug กับคอลัมน์บน Kanban |
 
 แก้ตาราง: แก้ `src/schema` แล้วรัน `pnpm db:generate` · **ตารางใหม่ที่มี `workspace_id` ต้องเพิ่ม policy ใน migration แบบเขียนเอง** ไม่อย่างนั้น test "ทุกตารางเปิด RLS" จะล้ม
 

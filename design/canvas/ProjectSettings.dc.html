@@ -151,6 +151,9 @@ a{color:#1D4ED8}a:hover{color:#1E3A8A}
 </div>
 </sc-for>
 <button class="btn" type="button" style="align-self:flex-start;border-style:dashed">+ เพิ่มสถานะ</button>
+<sc-if value="{{isBugWf}}" hint-placeholder-val="{{ false }}">
+<div style="border:1px solid #E4E7EB;border-radius:10px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:4px"><b>แสดงบน Kanban ในคอลัมน์</b><span>Open → To do · In progress → In progress · Fixed, Verified → Review · Closed → Done</span><span class="muted" style="font-size:12px">บอร์ดใช้คอลัมน์ของ Workflow มาตรฐาน · การ์ด Bug แสดงชื่อสถานะจริง · กรองเฉพาะ Bug แล้วบอร์ดเปลี่ยนเป็นคอลัมน์ของ Bug</span></div>
+</sc-if>
 </div>
 <div>
 <div class="lb" style="margin-bottom:8px">กฎการย้ายสถานะ</div>
@@ -329,7 +332,7 @@ class Component extends DCLogic {
     const cv = st.confirm || '';
     return {
       tabs: tabs, nav: nav, routes: routes, tlOn: tl ? 'true' : 'false', tlBg: tl ? '#1D4ED8' : '#C3CAD3', tlX: tl ? 21 : 3, tlTxt: tl ? 'เปิด' : 'ปิด (ค่าเริ่มต้น)', toggleTl: function () { self.setState({ tl: !tl }); }, statuses: statuses, wfTabs: wfTabs, rules: rules, types: types, mods: mods, perms: perms,
-      sGeneral: sec === 'general', sWorkflow: sec === 'workflow', sTypes: sec === 'types', sModules: sec === 'modules', sPerms: sec === 'perms', sNotify: sec === 'notify', sInteg: sec === 'integ', sDanger: sec === 'danger',
+      isBugWf: wf === 'bug', sGeneral: sec === 'general', sWorkflow: sec === 'workflow', sTypes: sec === 'types', sModules: sec === 'modules', sPerms: sec === 'perms', sNotify: sec === 'notify', sInteg: sec === 'integ', sDanger: sec === 'danger',
       confirmVal: cv, cantDelete: cv !== 'CLB', delOpacity: cv === 'CLB' ? 1 : 0.5,
       typeConfirm: function (e) { self.setState({ confirm: (e && e.target && e.target.value) || '' }); }
     };

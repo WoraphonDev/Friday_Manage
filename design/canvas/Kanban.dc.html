@@ -169,6 +169,7 @@ a{color:#1D4ED8}a:hover{color:#1E3A8A}
 <span role="img" aria-label="{{k.tyn}}" style="width:18px;height:18px;border-radius:4px;background:{{k.tyc}};display:inline-flex;align-items:center;justify-content:center;flex:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="{{k.tyi}}"></path></svg></span>
 <a href="{{k.href}}" draggable="false" style="font-size:12px;color:#5F6873">{{k.key}}</a>
 <span class="pill" style="background:{{k.mbg}};color:{{k.mfg}}">{{k.m}}</span>
+<sc-if value="{{k.hasSt}}" hint-placeholder-val="{{ false }}"><span class="pill" title="สถานะใน Workflow ของ Bug" style="background:#FEE2E2;color:#991B1B">{{k.st}}</span></sc-if>
 <svg class="{{k.prc}}" style="margin-left:auto" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Priority {{k.pr}}"><path d="M5 3v18h2v-7h11l-2-4 2-4H7V3z"></path></svg>
 </div>
 <sc-if value="{{k.hasParent}}" hint-placeholder-val="{{ true }}"><div class="muted" style="font-size:12px;margin-bottom:-6px">↳ {{k.parent}}</div></sc-if>
@@ -195,7 +196,7 @@ a{color:#1D4ED8}a:hover{color:#1E3A8A}
 </sc-for>
 <button class="btn" type="button" style="flex:0 0 200px;min-height:52px;border-style:dashed;justify-content:center;background:transparent;align-self:flex-start">+ Add column</button>
 </div>
-<div class="muted" style="font-size:12px">ลากการ์ดข้ามคอลัมน์เพื่อเปลี่ยนสถานะ หรือลากในคอลัมน์เดียวกันเพื่อเรียงลำดับ · ใช้ปุ่ม ‹ › บนการ์ดแทนการลากได้ (คีย์บอร์ด / มือถือ) · ย้ายไป Done ทั้งที่ Sub-task ยังไม่ครบจะมีคำเตือน · หัวคอลัมน์เป็นสีแดงเมื่อเกิน WIP limit</div>
+<div class="muted" style="font-size:12px">Bug ใช้ Workflow ของตัวเองและแสดงชื่อสถานะจริงบนการ์ด (Open → To do · In progress → In progress · Fixed, Verified → Review · Closed → Done) · ลากการ์ดข้ามคอลัมน์เพื่อเปลี่ยนสถานะ หรือลากในคอลัมน์เดียวกันเพื่อเรียงลำดับ · ใช้ปุ่ม ‹ › บนการ์ดแทนการลากได้ (คีย์บอร์ด / มือถือ) · ย้ายไป Done ทั้งที่ Sub-task ยังไม่ครบจะมีคำเตือน · หัวคอลัมน์เป็นสีแดงเมื่อเกิน WIP limit</div>
 </div>
 </main>
 </div>
@@ -214,6 +215,8 @@ class Component extends DCLogic {
     const PRC = { Urgent: 'pr-u', High: 'pr-h', Medium: 'pr-m', Low: 'pr-l' };
     const TYD = { story: ['Story', '#15803D', 'M6 3h12v18l-6-4-6 4z'], task: ['Task', '#1D4ED8', 'M5 5h14v14H5z'], bug: ['Bug', '#DC2626', 'M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14z'], spike: ['Spike', '#7C3AED', 'M13 2 4 14h7l-1 8 9-12h-7z'], sub: ['Sub-task', '#64748B', 'M8 6h8v2H8zM8 11h8v2H8zM8 16h5v2H8z'] };
     const TYK = { 'DP-525': 'bug' };
+    // Bug ใช้ Workflow ของตัวเอง · แต่ละสถานะผูกกับคอลัมน์ของบอร์ด (ตั้งที่ Project Settings › Workflow › Bug)
+    const BUGST = { todo: 'Open', prog: 'In progress', rev: 'Fixed', done: 'Closed' };
     const COLS = [['todo', 'To do', '#8A94A0', 0], ['prog', 'In progress', '#3B82F6', 8], ['rev', 'Review', '#F59E0B', 3], ['done', 'Done', '#15803D', 0]];
     const NAME = { todo: 'To do', prog: 'In progress', rev: 'Review', done: 'Done' };
     const CI = { todo: 0, prog: 1, rev: 2, done: 3 };
@@ -272,7 +275,7 @@ class Component extends DCLogic {
         const cidx = CI[cc];
         const ty = TYD[TYK[k] || 'task'];
         return {
-          key: k, tyn: ty[0], tyc: ty[1], tyi: ty[2], href: TYK[k] === 'bug' ? 'BugDetail.dc.html' : 'TaskDetail.dc.html', m: MD[d.mod][0], mbg: MD[d.mod][1] + '1A', mfg: MD[d.mod][1], parent: d.parent, hasParent: !!d.parent, t: d.t, who: d.who, ini: P[d.who][0], pc: P[d.who][1],
+          key: k, tyn: ty[0], tyc: ty[1], tyi: ty[2], hasSt: TYK[k] === 'bug', st: BUGST[cc], href: TYK[k] === 'bug' ? 'BugDetail.dc.html' : 'TaskDetail.dc.html', m: MD[d.mod][0], mbg: MD[d.mod][1] + '1A', mfg: MD[d.mod][1], parent: d.parent, hasParent: !!d.parent, t: d.t, who: d.who, ini: P[d.who][0], pc: P[d.who][1],
           pr: d.pr, prc: PRC[d.pr], due: cc === 'done' && d.flag !== 'done' ? 'เสร็จวันนี้' : (cc !== 'done' && d.flag === 'done' ? 'เปิดใหม่' : d.due),
           dueCls: 'dc ' + (cc === 'done' ? 'done' : (d.flag === 'done' ? '' : d.flag)),
           sub: d.sub, hasSub: !!d.sub, cm: d.cm, hasCm: !!d.cm, prl: d.prl, hasPr: !!d.prl,

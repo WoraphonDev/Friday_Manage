@@ -307,8 +307,12 @@ export const workflowStatuses = pgTable(
     projectId: uuid().notNull(),
     workflowId: uuid().notNull(),
     name: text().notNull(),
-    /** คอลัมน์ Kanban ผูกกับค่านี้ */
     category: statusCategory().notNull(),
+    /**
+     * คอลัมน์บน Kanban: ชี้ไปสถานะของ Workflow มาตรฐาน (null = สถานะนี้เป็นคอลัมน์เอง)
+     * เช่น Bug: Fixed, Verified → Review · ตั้งที่ Project Settings › Workflow › Bug
+     */
+    boardColumnId: uuid(),
     wipLimit: smallint(),
     sort: integer().notNull().default(0),
   },
@@ -320,6 +324,12 @@ export const workflowStatuses = pgTable(
       columns: [t.workspaceId, t.workflowId],
       foreignColumns: [workflows.workspaceId, workflows.id],
     }).onDelete('cascade'),
+    foreignKey({
+      name: 'workflow_statuses_board_column_fk',
+      columns: [t.workspaceId, t.boardColumnId],
+      foreignColumns: [t.workspaceId, t.id],
+    }),
+    check('workflow_statuses_not_own_column', sql`${t.boardColumnId} <> ${t.id}`),
   ],
 );
 

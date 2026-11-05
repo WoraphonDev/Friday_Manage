@@ -153,6 +153,7 @@ erDiagram
         uuid workflow_id FK
         text name
         text category "todo in_progress done"
+        uuid board_column_id FK "คอลัมน์บน Kanban"
         int wip_limit
     }
     issue_type {

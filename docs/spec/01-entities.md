@@ -4,6 +4,8 @@
 
 ดูความสัมพันธ์ทั้งหมดใน [02-erd.md](02-erd.md) · คำตัดสินด้านข้อมูลอยู่ใน [README.md](README.md#คำตัดสินด้านข้อมูล-5-พย-2569)
 
+**สถานะ:** หมวด A–H, J (เฉพาะ `notification`) และ L (เฉพาะ `audit_log`) สร้างแล้วใน `packages/db` (migration 0000–0002) · หมวดอื่นจะตามมาใน migration ถัดไป · ชื่อตารางในฐานข้อมูลเป็นพหูพจน์ (`issue` → `issues`)
+
 ## ธรรมเนียมทุกตาราง
 
 | เรื่อง | กติกา |
@@ -27,11 +29,11 @@
 
 | Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
 |---|---|---|---|
-| `user` | บัญชีผู้ใช้ 1 คน | email (unique), email_verified_at, display_name, first_name, last_name, phone, avatar_url, about, locale (th/en), year_format (BE/CE), timezone, password_hash (null ถ้าใช้แค่ Google), password_changed_at, failed_login_count, locked_until, status | J1–J3, I |
+| `user` | บัญชีผู้ใช้ 1 คน | email (unique), email_verified_at, display_name, first_name, last_name, phone, avatar_url, about, locale (th/en), year_format (BE/CE), timezone, password_hash (null ถ้าใช้แค่ Google), password_changed_at, failed_login_count, locked_until, disabled_at | J1–J3, I |
 | `user_identity` | วิธีล็อกอินที่ผูกกับบัญชี · 1 คนผูกได้หลายวิธี (ตามที่ตกลงไว้ว่าทำ SAML ทีหลัง) | user_id, provider (password · google · microsoft · saml · oidc), provider_subject, sso_connection_id (null ถ้าไม่ใช่ SSO) | J1, I |
 | `mfa_factor` | 2FA แบบ Authenticator | user_id, type (totp), secret_enc, backup_codes_hash[], enabled_at | J1, I |
-| `user_session` | อุปกรณ์ที่ล็อกอินอยู่ · ออกจากระบบรายเครื่องได้ | user_id, device_name, user_agent, ip, location, remember_until (30 วัน), mfa_trusted_until, last_seen_at, revoked_at | I, M1 |
-| `auth_token` | รหัส/ลิงก์ที่ใช้ครั้งเดียว | user_id, purpose (verify_email · reset_password · change_email), token_hash, expires_at, used_at | J2, J3 |
+| `user_session` | อุปกรณ์ที่ล็อกอินอยู่ · ออกจากระบบรายเครื่องได้ | user_id, token_hash, device_name, user_agent, ip, location, remember_until (30 วัน), mfa_trusted_until, last_seen_at, revoked_at | I, M1 |
+| `auth_token` | รหัส/ลิงก์ที่ใช้ครั้งเดียว | user_id, purpose (verify_email · reset_password · change_email), token_hash, new_email (เมื่อเปลี่ยนอีเมล), expires_at, used_at | J2, J3 |
 | `line_binding` | ผูก LINE ส่วนตัว · 1 บัญชี LINE ต่อ 1 ผู้ใช้ | user_id (unique), line_user_id (unique), line_display_name, bound_at, unbound_at, unbound_by (Admin ยกเลิกให้ได้) | I |
 | `line_link_code` | รหัส 6 หลักที่พิมพ์ในแชต OA (หมดอายุ 10 นาที) | user_id, code, expires_at, used_at | I |
 | `calendar_feed_token` | ลิงก์ iCal / Google Calendar ส่วนตัว | user_id, workspace_id, project_id (null = ทุกโปรเจกต์), token_hash, revoked_at | 6 |
@@ -41,9 +43,9 @@
 | Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
 |---|---|---|---|
 | `workspace` | องค์กร 1 แห่ง = 1 tenant | slug (friday.app/**slug**, unique), name, logo_url, data_region, default_locale, allow_domain_join, status (trial · active · suspended · pending_delete), deleted_at | J5, Q1, N1 |
-| `workspace_setting` | ค่าตั้งของ Workspace (1:1) | work_start (09:30), work_end (18:30), work_days, size_md_map (`{XS:1,S:3,M:5,L:8,XL:12}`), allow_project_override, safe_mode, trash_days (30/90), archive_retention_years, require_consent_on_first_login | N1 |
+| `workspace_setting` | ค่าตั้งของ Workspace (1:1) | work_start (09:30), work_end (18:30), work_days, holiday_calendar_id (ปฏิทินหลัก), size_md_map (`{XS:1,S:3,M:5,L:8,XL:12}`), allow_project_override, safe_mode, trash_days (30/90), archive_retention_years, require_consent_on_first_login | N1 |
 | `security_policy` | นโยบายความปลอดภัย (1:1) | password_min_length, password_require_special, password_rotation_days, lockout_attempts, lockout_minutes, session_idle_hours, mfa_enforcement (none · admin · all), allowed_email_domains[], ip_allowlist[] | N1 |
-| `workspace_member` | การเป็นสมาชิกของ 1 คนใน 1 Workspace | workspace_id, user_id, role (owner · admin · member · guest), status (active · deactivated), job_title, department, capacity_hours_week, work_start, work_end, work_days, last_active_at · **Guest ไม่นับ Seat** | H, I |
+| `workspace_member` | การเป็นสมาชิกของ 1 คนใน 1 Workspace | workspace_id, user_id, role (owner · admin · member · guest), status (active · deactivated), job_title, department, capacity_hours_week (เวลาทั้งหมดของคน), work_start, work_end, work_days, last_active_at, joined_at · **Guest ไม่นับ Seat** | H, I |
 | `invitation` | คำเชิญทางอีเมล | workspace_id, email, workspace_role, project_id, project_role, job_title, capacity_hours_week, message, token_hash, expires_at, invited_by, status (pending · accepted · declined · revoked · expired), accepted_user_id | H, 7, J4 |
 | `invite_link` | ลิงก์เชิญที่แชร์ได้ (หมดอายุ 1 / 7 / 30 วัน) | workspace_id, token_hash, role, expires_at, created_by, revoked_at | H, J5 |
 | `access_request` | ขอเข้าร่วม Workspace (อีเมลโดเมนเดียวกัน) หรือขอสิทธิ์เข้าโปรเจกต์ (หน้า 403) | workspace_id, user_id, project_id (null = ขอเข้า Workspace), status, decided_by, decided_at | J2, M1 |
@@ -67,7 +69,7 @@ Workspace เลือกปฏิทินหลัก + เพิ่มวั�
 
 | Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
 |---|---|---|---|
-| `project` | โปรเจกต์ | workspace_id, key (DP), name, client_name, description, color, icon, template_id, start_date, golive_date, timezone, visibility (private · workspace), owner_user_id, status (planning · active · archived), estimate_unit (man_day · hour), progress_method (count · weighted), sprint_length_weeks (null = ไม่ใช้ Sprint), holiday_calendar_id, work_start/end (override), size_md_map (override), time_log_enabled (ค่าเริ่มต้น false), issue_seq (เลขงานล่าสุด), budget_satang, hourly_rate_satang, deleted_at, version | A, L2, 1 |
+| `project` | โปรเจกต์ | workspace_id, key (DP), name, client_name, description, color, icon, template_id, start_date, golive_date, timezone, visibility (private · workspace), owner_user_id, status (planning · active · archived), estimate_unit (man_day · hour), progress_method (count · weighted), sprint_length_weeks (null = ไม่ใช้ Sprint), holiday_calendar_id, work_start/end (override), size_md_map (override), time_log_enabled (ค่าเริ่มต้น false), issue_seq (เลขงานล่าสุด), budget_satang, hourly_rate_satang, archived_at, deleted_at, version | A, L2, 1 |
 | `project_key_alias` | Key เดิมหลังเปลี่ยน Key · ใช้ redirect ลิงก์เก่า | project_id, old_key | L2 |
 | `project_scope_item` | In-scope, Out-of-scope, Deliverables, Acceptance criteria, สมมติฐาน | project_id, kind, text, sort | A, 1 |
 | `project_holiday` | วันหยุดเฉพาะโปรเจกต์ | project_id, date, name | A, L2 |
@@ -86,7 +88,7 @@ Workspace เลือกปฏิทินหลัก + เพิ่มวั�
 |---|---|---|---|
 | `issue_type` | Story / Task / Bug / Spike · เปิดปิดได้ | project_id, name, color, icon, workflow_id, required_fields[], enabled, sort | L2, K1 |
 | `workflow` | ชุดสถานะ · Bug มี Workflow ของตัวเอง (Open → Closed) | project_id, name | L2 |
-| `workflow_status` | สถานะ 1 ตัว | workflow_id, name, category (todo · in_progress · done) · **คอลัมน์ Kanban ผูกกับ category**, wip_limit, sort | L2, 3 |
+| `workflow_status` | สถานะ 1 ตัว | workflow_id, name, category (todo · in_progress · done), board_column_id (คอลัมน์บน Kanban: ชี้ไปสถานะของ Workflow มาตรฐาน · null = เป็นคอลัมน์เอง), wip_limit, sort | L2, 3 |
 | `workflow_rule` | กฎการย้ายสถานะ เช่น "ห้ามย้ายไป Done ถ้า Sub-task ยังไม่ครบ" | workflow_id, rule_type, config (jsonb), enabled | A, L2 |
 | `custom_field` | ฟิลด์ที่ทีมเพิ่มเอง (Customer request, Release version, Effort ทีมลูกค้า) | project_id, name, field_type (text · number · select · multi_select · user · date), options (jsonb), sort | L2 |
 | `issue_custom_value` | ค่าของฟิลด์ข้างบน | issue_id, field_id, value (jsonb) | C |
@@ -108,7 +110,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `issue_screen` | | issue_id, screen_id | B, O2 |
 | `issue_dependency` | Dependency ใน Gantt | predecessor_id, successor_id, type (FS · SS · FF · SF), lag_days | B, C, 5 |
 | `checklist_item` | Checklist และ Acceptance criteria | issue_id, kind (checklist · acceptance), text, done, done_by, done_at, sort | C, D, K1 |
-| `comment` | คอมเมนต์ · รองรับ @mention | issue_id, author_id, body (markdown), edited_at, deleted_at | C, D |
+| `comment` | คอมเมนต์ · รองรับ @mention | issue_id, author_id, body (markdown), edited_at, deleted_at, deleted_by (Admin ลบของคนอื่น) | C, D |
 | `comment_mention` | ใช้ส่งแจ้งเตือนและหน้า Mentions | comment_id, user_id | G, E |
 | `activity` | ประวัติทุกการเปลี่ยนแปลง (Activity ในงาน + Recent activity ของโปรเจกต์) | workspace_id, project_id, issue_id, actor_id, actor_kind (user · automation · git · import), verb, field, old_value, new_value (jsonb), created_at | C, 1 |
 | `time_log` | บันทึกเวลา (เปิดเมื่อโปรเจกต์เปิด Time log) | issue_id, user_id, date, md, note | C, D |
@@ -136,7 +138,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `plan_baseline` | Baseline v1, v2 … | project_id, version, name, source (import · manual), created_by, created_at | L3, 5 |
 | `baseline_item` | ค่าของแต่ละงานตอนตั้ง Baseline | baseline_id, issue_id, plan_start, plan_end, estimate_md, assignee_ids[] | 5, L3 |
 | `plan_change` | แท็บ "การแก้ไขแผน" · การแก้หลังมี Baseline ต้องใส่เหตุผล | project_id, issue_id, baseline_id, field, old_value, new_value, reason, impact, changed_by, changed_at, source (manual · import · due_request) | L3 |
-| `import_job` | งานนำเข้า Excel | project_id (null = โปรเจกต์ใหม่), mode (create · update), file_id, column_mapping (jsonb), person_mapping (jsonb), validation (jsonb: แถวที่ต้องแก้), status, row_total, row_imported, row_skipped, created_by | L3 |
+| `import_job` | งานนำเข้า Excel | project_id (null = โปรเจกต์ใหม่), mode (create · update), file_name, storage_key, column_mapping (jsonb), person_mapping (jsonb), validation (jsonb: แถวที่ต้องแก้), status, row_total, row_imported, row_skipped, error, created_by, completed_at | L3 |
 
 ## H. ไฟล์
 
@@ -145,7 +147,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `folder` | โฟลเดอร์ในหน้า Files | project_id, parent_id, name | 8 |
 | `file` | ไฟล์หรือลิงก์ | workspace_id, project_id, folder_id, kind (upload · link), name, mime, size_bytes, link_url, link_provider (figma · gdrive · notion), current_version_id, uploaded_by, deleted_at | 8, C, D |
 | `file_version` | Version history | file_id, version_no, storage_key (S3), size_bytes, note, uploaded_by | 8 |
-| `file_attachment` | ไฟล์ผูกกับอะไร · 1 ไฟล์ผูกได้หลายที่ (เตือนก่อนลบไฟล์ที่เป็นหลักฐาน) | file_id, target_type (issue · test_run · comment · project · requirement), target_id | 8, C, D, P3 |
+| `file_attachment` | ไฟล์ผูกกับอะไร · 1 ไฟล์ผูกได้หลายที่ (เตือนก่อนลบไฟล์ที่เป็นหลักฐาน) | file_id, target_type (issue · test_run · comment · project · requirement), target_id, created_by | 8, C, D, P3 |
 
 พื้นที่ใช้ของ Workspace = ผลรวม `file_version.size_bytes` ที่ยังไม่ถูกลบ (คำนวณ ไม่เก็บ)
 

@@ -57,6 +57,13 @@
       "when": 1793890454569,
       "tag": "0007_search_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793895117333,
+      "tag": "0008_support_access_tenant",
+      "breakpoints": true
     }
   ]
 }

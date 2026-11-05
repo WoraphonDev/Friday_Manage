@@ -19,6 +19,7 @@ const tenantTables = [
   'email_sender_configs', 'webhook_endpoints', 'project_notification_rules', 'project_notification_settings', 'report_schedules',
   'automation_rules', 'automation_runs', 'saved_views', 'saved_searches', 'api_tokens', 'data_subject_requests', 'workspace_exports',
   'subscriptions', 'billing_profiles', 'invoices', 'payments', 'tax_documents', 'wht_certificates',
+  'support_access_grants',
 ];
 const projectTables = ['project_repositories', 'project_notification_rules', 'project_notification_settings', 'report_schedules', 'automation_rules', 'automation_runs', 'saved_views', 'git_commits', 'pull_requests', 'issue_git_links'];
 const personalTables = ['line_bindings', 'line_link_codes', 'calendar_feed_tokens', 'user_notification_prefs', 'user_notification_settings', 'saved_searches', 'legal_acceptances'];
@@ -89,6 +90,7 @@ async function seedTenant(ws: string, user: string, suffix: string) {
   await insert('payments', { ...w, invoice_id: invoice, method: 'transfer', amount: 10700 });
   await insert('tax_documents', { ...w, invoice_id: invoice, doc_type: 'invoice', number: `TAX-${suffix}` });
   await insert('wht_certificates', { ...w, invoice_id: invoice, file_key: 'test.pdf', uploaded_by: user });
+  await insert('support_access_grants', { ...w, granted_by: user });
   return { ...p, installation, repository, commit, pr, link, notification, group, webhook, rule, run, view, plan, subscription, invoice };
 }
 
@@ -124,7 +126,6 @@ beforeAll(async () => {
     await insert('legal_acceptances', { user_id: user, workspace_id: ws, document_id: document });
   }
   const staff = await insert('staff_users', { email: 'staff@example.com', name: 'ทดสอบ', role: 'support' });
-  await insert('support_access_grants', { workspace_id: W.one, granted_by: U.lead });
   await insert('support_sessions', { workspace_id: W.one, staff_id: staff, ticket_no: 'T00', reason: 'ทดสอบ' });
   const flag = await insert('feature_flags', { key: 't00' });
   await insert('feature_flag_overrides', { flag_id: flag, workspace_id: W.one, enabled: true });
@@ -219,6 +220,30 @@ describe('FK กันการอ้างข้อมูลข้าม tenant
   });
 });
 
+describe('สิทธิ์ support ที่ลูกค้าควบคุมเอง (RLS แยก tenant; Owner ตรวจที่ API ของ A31)', () => {
+  it('Owner อ่าน แก้ ปิดและเปิดสิทธิ์ใหม่ผ่าน friday_app โดยไม่ข้าม RLS', async () => {
+    await as(U.lead, W.one, async (client) => {
+      expect((await client.query('SELECT workspace_id, granted_by FROM support_access_grants')).rows).toEqual([{ workspace_id: W.one, granted_by: U.lead }]);
+      const updated = await client.query(`UPDATE support_access_grants SET max_mode = 'write', notify_admins = false WHERE workspace_id = $1 RETURNING max_mode, notify_admins`, [W.one]);
+      expect(updated.rows).toEqual([{ max_mode: 'write', notify_admins: false }]);
+      expect((await client.query('DELETE FROM support_access_grants WHERE workspace_id = $1 RETURNING id', [W.one])).rowCount).toBe(1);
+      expect((await client.query('SELECT id FROM support_access_grants')).rows).toEqual([]);
+      const id = await insert('support_access_grants', { workspace_id: W.one, granted_by: U.lead }, client);
+      expect((await client.query('SELECT id, max_mode FROM support_access_grants')).rows).toEqual([{ id, max_mode: 'read' }]);
+    });
+  });
+
+  it('อ่าน แก้ หรือลบ grant ของ Workspace อื่นไม่ได้ แม้เป็นสมาชิกทั้งสองที่', async () => {
+    await as(U.lead, W.one, async (client) => {
+      expect((await client.query('SELECT id FROM support_access_grants WHERE workspace_id = $1', [W.two])).rows).toEqual([]);
+      expect((await client.query(`UPDATE support_access_grants SET max_mode = 'write' WHERE workspace_id = $1 RETURNING id`, [W.two])).rowCount).toBe(0);
+      expect((await client.query('DELETE FROM support_access_grants WHERE workspace_id = $1 RETURNING id', [W.two])).rowCount).toBe(0);
+    });
+    await expect(as(U.lead, W.one, (client) => insert('support_access_grants', { workspace_id: W.two, granted_by: U.lead }, client))).rejects.toMatchObject({ code: '42501' });
+    await expect(as(U.lead, W.one, (client) => client.query('UPDATE support_access_grants SET workspace_id = $1 WHERE workspace_id = $2', [W.two, W.one]))).rejects.toMatchObject({ code: '42501' });
+  });
+});
+
 describe('ข้อมูลระบบและหลังบ้าน Friday', () => {
   it.each(['plans', 'legal_documents'])('%s อ่านได้แม้ยังไม่มี Workspace แต่แก้ไขไม่ได้', async (table) => {
     await as(U.lead, null, async (client) => expect((await client.query(`SELECT id FROM ${table}`)).rows.length).toBeGreaterThan(0));
@@ -227,7 +252,7 @@ describe('ข้อมูลระบบและหลังบ้าน Friday
     }
   });
 
-  it.each(['staff_users', 'support_access_grants', 'support_sessions', 'feature_flags', 'feature_flag_overrides', 'announcements'])('%s ห้ามลูกค้าอ่านและเขียน', async (table) => {
+  it.each(['staff_users', 'support_sessions', 'feature_flags', 'feature_flag_overrides', 'announcements'])('%s ห้ามลูกค้าอ่านและเขียน', async (table) => {
     for (const command of [`SELECT * FROM ${table}`, `UPDATE ${table} SET id = id`, `DELETE FROM ${table}`, `INSERT INTO ${table} DEFAULT VALUES`]) {
       await expect(as(U.lead, W.one, (client) => client.query(command))).rejects.toMatchObject({ code: '42501' });
     }

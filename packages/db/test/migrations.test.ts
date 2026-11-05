@@ -17,6 +17,15 @@ const journal = JSON.parse(readFileSync(join(folder, 'meta/_journal.json'), 'utf
 beforeAll(() => admin.connect());
 afterAll(() => admin.end());
 
+function migrationsThrough(index: number) {
+  const directory = mkdtempSync(join(tmpdir(), 'friday-old-migrations-'));
+  mkdirSync(join(directory, 'meta'));
+  const entries = journal.entries.filter((entry: { idx: number }) => entry.idx <= index);
+  writeFileSync(join(directory, 'meta/_journal.json'), JSON.stringify({ ...journal, entries }));
+  for (const entry of entries) cpSync(join(folder, `${entry.tag}.sql`), join(directory, `${entry.tag}.sql`));
+  return directory;
+}
+
 async function withDatabase(fn: (client: pg.Client) => Promise<void>) {
   const name = `friday_migration_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(ownerUrl);
@@ -59,12 +68,8 @@ describe('Migration T00', () => {
   });
 
   it('อัปเกรดฐาน 0004 ที่มีข้อมูลผู้ใช้ / งาน / คอมเมนต์ / แจ้งเตือน โดยข้อมูลเดิมไม่เปลี่ยน', async () => {
-    const oldFolder = mkdtempSync(join(tmpdir(), 'friday-old-migrations-'));
+    const oldFolder = migrationsThrough(4);
     try {
-      mkdirSync(join(oldFolder, 'meta'));
-      const entries = journal.entries.filter((entry: { idx: number }) => entry.idx <= 4);
-      writeFileSync(join(oldFolder, 'meta/_journal.json'), JSON.stringify({ ...journal, entries }));
-      for (const entry of entries) cpSync(join(folder, `${entry.tag}.sql`), join(oldFolder, `${entry.tag}.sql`));
       await withDatabase(async (client) => {
         const db = drizzle(client);
         await migrate(db, { migrationsFolder: oldFolder });
@@ -89,6 +94,35 @@ describe('Migration T00', () => {
         await client.query(`INSERT INTO notification_deliveries (workspace_id, notification_id, channel, target_ref)
           SELECT workspace_id, id, 'email', 'migration@example.com' FROM notifications`);
         expect((await client.query('SELECT count(*)::int AS n FROM notification_deliveries')).rows[0].n).toBe(1);
+      });
+    } finally {
+      rmSync(oldFolder, { recursive: true, force: true });
+    }
+  });
+
+  it('อัปเกรด 0007 ให้ลูกค้าจัดการ support grant เดิมได้ โดยข้อมูลไม่เปลี่ยน', async () => {
+    const oldFolder = migrationsThrough(7);
+    try {
+      await withDatabase(async (client) => {
+        const db = drizzle(client);
+        await migrate(db, { migrationsFolder: oldFolder });
+        const user = (await client.query(`INSERT INTO users (email, display_name) VALUES ('support@example.com', 'ทดสอบ') RETURNING id`)).rows[0].id;
+        const ws = (await client.query(`INSERT INTO workspaces (slug, name) VALUES ('support-test', 'ทดสอบ') RETURNING id`)).rows[0].id;
+        await client.query(`INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`, [ws, user]);
+        await client.query(`INSERT INTO support_access_grants (workspace_id, granted_by) VALUES ($1, $2)`, [ws, user]);
+        const before = (await client.query('SELECT * FROM support_access_grants')).rows;
+        expect((await client.query(`SELECT has_table_privilege('friday_app', 'support_access_grants', 'SELECT') AS allowed`)).rows[0].allowed).toBe(false);
+        await migrate(db, { migrationsFolder: folder });
+        expect((await client.query('SELECT * FROM support_access_grants')).rows).toEqual(before);
+        await client.query('BEGIN');
+        try {
+          await client.query('SET LOCAL ROLE friday_app');
+          await client.query(`SELECT set_config('app.user_id', $1, true), set_config('app.workspace_id', $2, true)`, [user, ws]);
+          expect((await client.query('SELECT * FROM support_access_grants')).rows).toEqual(before);
+          expect((await client.query(`UPDATE support_access_grants SET max_mode = 'write' RETURNING max_mode`)).rows).toEqual([{ max_mode: 'write' }]);
+        } finally {
+          await client.query('ROLLBACK');
+        }
       });
     } finally {
       rmSync(oldFolder, { recursive: true, force: true });

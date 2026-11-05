@@ -99,6 +99,18 @@ describe('Comments / mentions / watchers', () => {
     expect((await team.lead.patch(`${path(i.key)}/comments/not-a-uuid`, { body: 'ใหม่' })).status).toBe(400);
   });
 
+  it('คอมเมนต์ mention หากันพร้อมกันได้โดยไม่ deadlock หรือสร้าง Watch ซ้ำ', async () => {
+    const i = await issue();
+    const responses = await Promise.all([
+      team.dev.post(`${path(i.key)}/comments`, { body: '@Viewer Test ช่วยตรวจ' }),
+      viewer.post(`${path(i.key)}/comments`, { body: '@Kaijeaw รับทราบ' }),
+    ]);
+    expect(responses.map((r) => r.status)).toEqual([201, 201]);
+    const { rows } = await t.owner.query('select user_id from issue_watchers where issue_id=$1 order by user_id', [i.id]);
+    expect(rows.map((r: { user_id: string }) => r.user_id)).toEqual([team.leadId, team.devId, viewerId].sort());
+    expect((await t.owner.query('select count(*)::int as n from comments where issue_id=$1', [i.id])).rows[0].n).toBe(2);
+  });
+
   it('แบ่งหน้าด้วย cursor ตามเวลาและ id แม้รายการเกิดในไมโครวินาทีเดียวกัน', async () => {
     const i = await issue();
     const ids: string[] = [];

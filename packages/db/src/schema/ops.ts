@@ -1,4 +1,4 @@
-// N. หลังบ้าน Friday · friday_app ไม่มีสิทธิ์ ตารางเหล่านี้ใช้โดย ops เท่านั้น
+// N. หลังบ้าน Friday · ยกเว้น support_access_grants ที่ลูกค้าเปิด/ปิดสิทธิ์เองผ่าน A31
 import { sql } from 'drizzle-orm';
 import { boolean, check, index, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, pk, tstz, updatedAt } from './_common.ts';
@@ -12,6 +12,7 @@ export const staffUsers = pgTable('staff_users', {
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [uniqueIndex('staff_users_email_key').on(sql`lower(${t.email})`)]);
 
+/** แยก Workspace ด้วย RLS · API ของ A31 ตรวจว่า action มาจาก Owner */
 export const supportAccessGrants = pgTable('support_access_grants', {
   id: pk(), workspaceId: workspaceId().unique(), grantedBy: uuid().notNull().references(() => users.id),
   until: tstz(), maxMode: supportMode().notNull().default('read'), notifyAdmins: boolean().notNull().default(true),

@@ -4,3 +4,6 @@ node_modules/
 .env.*
 *.xlsx
 ~$*
+dist/
+coverage/
+!.env.example

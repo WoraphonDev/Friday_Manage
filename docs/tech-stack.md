@@ -23,7 +23,7 @@
 | ใช้ทำอะไร | เลือกใช้ |
 |---|---|
 | API | NestJS (TypeScript) · REST + OpenAPI |
-| ฐานข้อมูล | PostgreSQL (Row-Level Security แยกตาม Workspace) + Prisma หรือ Drizzle |
+| ฐานข้อมูล | PostgreSQL 18 (Row-Level Security แยกตาม Workspace) + **Drizzle** (เลือก 5 พ.ย. 2569 เพราะเขียน migration เป็น SQL และคุม RLS ได้ตรง) |
 | คิวงานเบื้องหลัง (สรุปรายวัน, รายงานรายสัปดาห์, Automation, Webhook retry) | Valkey (แทน Redis) + BullMQ |
 | Realtime | WebSocket (Socket.IO) |
 | ค้นหา | PostgreSQL Full-text → OpenSearch เมื่อต้องค้นในไฟล์ / ตัดคำไทย |

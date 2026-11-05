@@ -44,4 +44,5 @@ UI ล็อกเป็น **v1.0** เมื่อ 5 พ.ย. 2569 หลั�
 1. ~~แก้ข้อความ 3 หน้าบน Canvas (UI v1.0.1)~~
 2. ~~ทำ API ของแต่ละหน้า~~ (ร่างแรก)
 3. ~~ทำตารางสิทธิ์~~ (ร่างแรก)
-4. แปลง ERD เป็น migration แรกของ PostgreSQL พร้อม RLS policy
+4. ~~migration แรกของ PostgreSQL พร้อม RLS~~ · ดู [packages/db](../../packages/db/README.md) (62 ตาราง · test RLS 23 ข้อผ่าน)
+5. API ตัวแรก (NestJS): Auth + Workspace + โปรเจกต์ + งาน ตาม [03-api.md](03-api.md)

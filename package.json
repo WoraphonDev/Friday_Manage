@@ -1,0 +1,12 @@
+{
+  "name": "friday-manage",
+  "private": true,
+  "packageManager": "pnpm@10.34.5",
+  "scripts": {
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:generate": "pnpm --filter @friday/db generate",
+    "db:migrate": "pnpm --filter @friday/db migrate",
+    "test": "pnpm -r test"
+  }
+}

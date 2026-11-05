@@ -51,4 +51,10 @@
 - ตั้ง DB test ให้รันทีละไฟล์เพื่อไม่ให้ fixture ที่ใช้ฐานจริงชนกัน · `pnpm typecheck` และ `pnpm test` ผ่าน: DB 100 + API 54 = 154 ข้อ · ข้าม 2 ข้อที่ต้องใช้ไฟล์แผนจริงซึ่งไม่มีใน repo
 - Review ก่อน merge: `support_access_grants` เป็นข้อยกเว้นของหมวด N เพราะลูกค้าต้องเปิด/ปิดสิทธิ์เองใน A31 · เพิ่ม migration `0008_support_access_tenant` ให้ `friday_app` ทำ SELECT/INSERT/UPDATE/DELETE ผ่าน `tenant_isolation` (Workspace ปัจจุบัน + สมาชิก active) โดยไม่แก้ migration ที่รันแล้ว · API ของ A31 ยังต้องตรวจ Owner และบันทึก Audit; ตาราง ops อื่นรวม `support_sessions` ยังปิดทั้งหมดสำหรับลูกค้า
 - Test เพิ่มเติมยืนยัน Owner จัดการ grant ผ่าน RLS ได้, ไม่ตั้ง context/สมาชิกไม่ active/ข้าม tenant ถูกปิดกั้น และอัปเกรดจาก 0007 โดย grant เดิมไม่เปลี่ยน · ไม่จัดรูปแบบ schema ตามคำขอผู้ใช้
+- Review รอบ 2 → migration `0009_rls_hardening` (เพิ่มอย่างเดียว):
+  - `notification_deliveries` เห็นเฉพาะแถวของ notification ตัวเอง (ตาม `own_notifications`) ส่วน Workspace Owner / Admin เห็นทั้งหมดสำหรับ `GET w/channels/deliveries` · revoke INSERT / UPDATE / DELETE จาก `friday_app` เพราะงานเบื้องหลังเป็นผู้เขียน (A25 ส่งซ้ำผ่าน `SYSTEM_DB` หรือคิว)
+  - `support_access_grants` สมาชิกอ่านสถานะได้ แต่ INSERT / UPDATE / DELETE ต้องเป็น Workspace Owner และ INSERT ต้องใส่ `granted_by` เป็นตัวเอง
+  - `verified_domains` เปลี่ยน unique ของโดเมนเป็นเฉพาะแถวที่ยืนยันแล้ว (กันการจองโดเมนคนอื่นโดยไม่ผ่าน DNS) และเพิ่ม unique `(workspace_id, lower(domain))` · A13 / A14 ต้องจัดการ error 23505 ตอนยืนยันโดเมนที่ Workspace อื่นยืนยันไปแล้ว
+- หมายเหตุสำหรับงานต่อ: `line_bindings` unique ทั้ง `user_id` และ `line_user_id` ตามสเปก แม้ยกเลิกแบบ soft (`unbound_at`) · A24 ต้อง update / ลบแถวเดิมตอนผูกใหม่ ไม่ใช่ insert ใหม่ · ตาราง billing (`subscriptions`, `invoices`, `tax_documents`) ยังให้ `friday_app` เขียนได้ ถ้า A33 ไม่ต้องเขียนผ่าน TenantDb ควรขอ revoke ในงาน DB ถัดไป
+- `pnpm typecheck` และ `pnpm test` ผ่านหลัง 0009: DB 105 + API 54 = 159 ข้อ (ข้าม 2 ข้อเดิม)
 - ไม่มี endpoint ใหม่และไม่มีคำขอนอก lane · rebase บน main ที่มี CI ของ T01 แล้ว

@@ -8,6 +8,7 @@ import { inProject, workspaceId } from './project.ts';
 import { tenantFk, tenantKey } from './saas-common.ts';
 import { deliveryStatus, digestFrequency, dueReminder, notificationChannel, quietMode, webhookFormat } from './saas-enums.ts';
 
+// ผู้รับเห็นของตัวเอง, Admin เห็นทั้ง Workspace · เขียนได้เฉพาะงานเบื้องหลัง (RLS 0009)
 export const notificationDeliveries = pgTable('notification_deliveries', {
   id: pk(), workspaceId: workspaceId(), notificationId: uuid().notNull(),
   channel: notificationChannel().notNull(), targetRef: text().notNull(),

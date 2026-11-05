@@ -55,6 +55,7 @@ export const files = pgTable(
       foreignColumns: [folders.workspaceId, folders.id],
     }),
     index('files_project_idx').on(t.projectId, t.folderId),
+    index('files_name_trgm_idx').using('gin', t.name.op('gin_trgm_ops')),
   ],
 );
 

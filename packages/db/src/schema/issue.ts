@@ -139,6 +139,8 @@ export const issues = pgTable(
       foreignColumns: [t.workspaceId, t.id],
     }).onDelete('cascade'),
     index('issues_project_idx').on(t.projectId).where(sql`${t.deletedAt} is null`),
+    index('issues_title_trgm_idx').using('gin', t.title.op('gin_trgm_ops')),
+    index('issues_description_trgm_idx').using('gin', t.description.op('gin_trgm_ops')),
     index('issues_parent_idx').on(t.parentId),
     index('issues_sprint_idx').on(t.sprintId),
     index('issues_plan_end_idx').on(t.projectId, t.planEnd),
@@ -314,6 +316,7 @@ export const comments = pgTable(
     unique('comments_workspace_id_key').on(t.workspaceId, t.id),
     inIssue('comments', t),
     index('comments_issue_idx').on(t.issueId, t.createdAt),
+    index('comments_body_trgm_idx').using('gin', t.body.op('gin_trgm_ops')),
   ],
 );
 

@@ -36,6 +36,27 @@
       "when": 1793879114501,
       "tag": "0004_due_request_note_rank",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793890371512,
+      "tag": "0005_saas_entities",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793890388263,
+      "tag": "0006_saas_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793890454569,
+      "tag": "0007_search_indexes",
+      "breakpoints": true
     }
   ]
 }

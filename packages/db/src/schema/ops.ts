@@ -12,7 +12,7 @@ export const staffUsers = pgTable('staff_users', {
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [uniqueIndex('staff_users_email_key').on(sql`lower(${t.email})`)]);
 
-/** แยก Workspace ด้วย RLS · API ของ A31 ตรวจว่า action มาจาก Owner */
+/** แยก Workspace ด้วย RLS · สมาชิกอ่านได้ แต่เขียนได้เฉพาะ Owner (RLS 0009 + API ของ A31) */
 export const supportAccessGrants = pgTable('support_access_grants', {
   id: pk(), workspaceId: workspaceId().unique(), grantedBy: uuid().notNull().references(() => users.id),
   until: tstz(), maxMode: supportMode().notNull().default('read'), notifyAdmins: boolean().notNull().default(true),

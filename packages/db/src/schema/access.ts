@@ -56,7 +56,11 @@ export const verifiedDomains = pgTable('verified_domains', {
   dnsToken: text().notNull(),
   verifiedAt: tstz(),
   createdAt: createdAt(),
-}, (t) => [uniqueIndex('verified_domains_domain_key').on(sql`lower(${t.domain})`)]);
+}, (t) => [
+  // กันซ้ำเฉพาะโดเมนที่ยืนยัน DNS แล้ว ไม่งั้น Workspace อื่นพิมพ์จองโดเมนของคนอื่นไว้ก่อนได้
+  uniqueIndex('verified_domains_domain_key').on(sql`lower(${t.domain})`).where(sql`${t.verifiedAt} IS NOT NULL`),
+  uniqueIndex('verified_domains_workspace_domain_key').on(t.workspaceId, sql`lower(${t.domain})`),
+]);
 
 export const projectTemplates = pgTable('project_templates', {
   id: pk(),

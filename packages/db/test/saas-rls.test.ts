@@ -244,6 +244,73 @@ describe('สิทธิ์ support ที่ลูกค้าควบคุ�
   });
 });
 
+describe('Review หลัง 0008 (migration 0009)', () => {
+  it('ประวัติส่งแจ้งเตือนเห็นเฉพาะของตัวเอง ส่วน Workspace Admin เห็นทั้งหมด', async () => {
+    const notification = await insert('notifications', { workspace_id: W.one, recipient_id: U.member, event_type: 'issue.assigned', payload: '{}' });
+    const delivery = await insert('notification_deliveries', { workspace_id: W.one, notification_id: notification, channel: 'email', target_ref: 'member@example.com' });
+    try {
+      await as(U.member, W.one, async (client) => {
+        expect((await client.query('SELECT id FROM notification_deliveries')).rows).toEqual([{ id: delivery }]);
+      });
+      await as(U.admin, W.one, async (client) => {
+        expect((await client.query('SELECT id FROM notification_deliveries')).rows.map((row) => row.id).sort()).toEqual([delivery, (await owner.query('SELECT id FROM notification_deliveries WHERE notification_id = $1', [one.notification])).rows[0].id].sort());
+      });
+    } finally {
+      await owner.query('DELETE FROM notifications WHERE id = $1', [notification]);
+    }
+  });
+
+  it('friday_app เขียนประวัติส่งแจ้งเตือนไม่ได้ (งานเบื้องหลังเท่านั้น)', async () => {
+    for (const command of ['UPDATE notification_deliveries SET attempts = attempts', 'DELETE FROM notification_deliveries']) {
+      await expect(as(U.lead, W.one, (client) => client.query(command))).rejects.toMatchObject({ code: '42501' });
+    }
+    await expect(as(U.lead, W.one, (client) => insert('notification_deliveries', { workspace_id: W.one, notification_id: one.notification, channel: 'line', target_ref: 'fake' }, client))).rejects.toMatchObject({ code: '42501' });
+  });
+
+  it('สมาชิกและ Admin อ่านสิทธิ์ support ได้ แต่เปิด แก้ หรือลบได้เฉพาะ Owner', async () => {
+    for (const user of [U.member, U.admin]) {
+      await as(user, W.one, async (client) => {
+        expect((await client.query('SELECT id FROM support_access_grants')).rows).toHaveLength(1);
+        expect((await client.query(`UPDATE support_access_grants SET max_mode = 'write' RETURNING id`)).rowCount).toBe(0);
+        expect((await client.query('DELETE FROM support_access_grants RETURNING id')).rowCount).toBe(0);
+      });
+      await expect(as(user, W.one, async (client) => {
+        await client.query('DELETE FROM support_access_grants WHERE workspace_id = $1', [W.one]);
+        return insert('support_access_grants', { workspace_id: W.one, granted_by: user }, client);
+      })).rejects.toMatchObject({ code: '42501' });
+    }
+  });
+
+  it('Owner เปิดสิทธิ์ support ในนามคนอื่นไม่ได้', async () => {
+    await expect(as(U.lead, W.one, async (client) => {
+      await client.query('DELETE FROM support_access_grants WHERE workspace_id = $1', [W.one]);
+      return insert('support_access_grants', { workspace_id: W.one, granted_by: U.admin }, client);
+    })).rejects.toMatchObject({ code: '42501' });
+  });
+
+  it('โดเมนที่ยังไม่ยืนยันไม่กันคนอื่น แต่ยืนยันแล้วเป็นของ Workspace เดียว', async () => {
+    const domain = 'shared-claim.example.com';
+    await owner.query('BEGIN');
+    try {
+      await insert('verified_domains', { workspace_id: W.one, domain, dns_token: 'dns-a' });
+      await insert('verified_domains', { workspace_id: W.two, domain: domain.toUpperCase(), dns_token: 'dns-b' });
+      // Workspace เดียวกันเพิ่มโดเมนซ้ำไม่ได้
+      await expect(insert('verified_domains', { workspace_id: W.one, domain: domain.toUpperCase(), dns_token: 'dns-c' })).rejects.toMatchObject({ code: '23505' });
+    } finally {
+      await owner.query('ROLLBACK');
+    }
+    await owner.query('BEGIN');
+    try {
+      const first = await insert('verified_domains', { workspace_id: W.one, domain, dns_token: 'dns-a' });
+      const second = await insert('verified_domains', { workspace_id: W.two, domain, dns_token: 'dns-b' });
+      await owner.query('UPDATE verified_domains SET verified_at = now() WHERE id = $1', [second]);
+      await expect(owner.query('UPDATE verified_domains SET verified_at = now() WHERE id = $1', [first])).rejects.toMatchObject({ code: '23505' });
+    } finally {
+      await owner.query('ROLLBACK');
+    }
+  });
+});
+
 describe('ข้อมูลระบบและหลังบ้าน Friday', () => {
   it.each(['plans', 'legal_documents'])('%s อ่านได้แม้ยังไม่มี Workspace แต่แก้ไขไม่ได้', async (table) => {
     await as(U.lead, null, async (client) => expect((await client.query(`SELECT id FROM ${table}`)).rows.length).toBeGreaterThan(0));

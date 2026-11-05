@@ -64,6 +64,13 @@
       "when": 1793895117333,
       "tag": "0008_support_access_tenant",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793895661817,
+      "tag": "0009_rls_hardening",
+      "breakpoints": true
     }
   ]
 }

@@ -104,6 +104,21 @@ textarea.in{padding:8px 10px;min-height:64px}
 </div>
 </sc-if>
 
+<sc-if value="{{sProjects}}" hint-placeholder-val="{{ false }}">
+<section class="card">
+<div class="ch"><h2>โปรเจกต์ทั้งหมด</h2></div>
+<div class="cb" style="gap:0">
+<sc-for list="{{projRows}}" as="p" hint-placeholder-count="2">
+<div class="row"><span style="width:28px;height:28px;border-radius:6px;background:{{p.c}};color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">{{p.k}}</span><b style="min-width:200px;flex:1">{{p.n}}</b><span class="muted" style="font-size:13px;min-width:60px">{{p.vis}}</span><span style="font-size:13px;min-width:90px">PM: {{p.pm}}</span><span style="font-size:13px;min-width:80px">{{p.mem}} คน</span><span style="font-size:13px;min-width:120px">{{p.st}}</span><span class="muted" style="font-size:13px;min-width:100px">{{p.last}}</span>
+<sc-if value="{{p.joined}}" hint-placeholder-val="{{ true }}"><a class="btn" href="Main.dc.html" style="min-height:30px">เปิด</a></sc-if>
+<sc-if value="{{p.notJoined}}" hint-placeholder-val="{{ false }}"><button class="btn" type="button" style="min-height:30px">เข้าร่วมในฐานะ Admin</button></sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+<div class="muted" style="font-size:12px">Owner / Admin เห็นทุกโปรเจกต์รวมถึง Private · เปิดงานในโปรเจกต์ที่ยังไม่ได้เป็นสมาชิกต้องกด "เข้าร่วมในฐานะ Admin" ซึ่งแจ้ง PM และบันทึกใน Audit log</div>
+</sc-if>
+
 <sc-if value="{{sTeams}}" hint-placeholder-val="{{ false }}">
 <section class="card">
 <div class="ch"><h2>ทีมในองค์กร</h2><div style="display:flex;gap:8px"><a class="btn" href="WorkspaceMembers.dc.html">จัดการสมาชิก</a><button class="btn pri" type="button">+ สร้างทีม</button></div></div>
@@ -397,7 +412,7 @@ class Component extends DCLogic {
     const go = function (s) { return function () { self.setState({ sec: s }); }; };
     const NV = [
       ['sec', 'ภาพรวม'], ['overview', 'แดชบอร์ด', '4', 'bad'],
-      ['sec', 'องค์กร'], ['teams', 'ทีม & โครงสร้าง'], ['std', 'ค่ามาตรฐานขององค์กร'], ['load', 'Workload รวม', '1', 'warn'],
+      ['sec', 'องค์กร'], ['projects', 'โปรเจกต์ทั้งหมด'], ['teams', 'ทีม & โครงสร้าง'], ['std', 'ค่ามาตรฐานขององค์กร'], ['load', 'Workload รวม', '1', 'warn'],
       ['sec', 'ความปลอดภัย & การกำกับ'], ['sec2', 'ความปลอดภัย & SSO'], ['audit', 'Audit Log'], ['data', 'ข้อมูล & PDPA', '1', 'warn'],
       ['sec', 'ระบบ'], ['notify', 'ช่องทางแจ้งเตือน', '1', 'warn'], ['integ', 'Integrations'], ['bill', 'แพ็กเกจ & Billing']
     ];
@@ -413,6 +428,10 @@ class Component extends DCLogic {
       ['แพ็กเกจ', 'neu', 'Jane ไม่ได้ใช้งาน 54 วัน · ปิดบัญชีเพื่อคืนที่ว่างในแพ็กเกจ?', 'ดูแพ็กเกจ', 'bill']
     ].map(function (a) { return { t: a[0], c: a[1], msg: a[2], btn: a[3], go: go(a[4]) }; });
     const wau = [5, 6, 7, 7, 8, 8, 9, 8].map(function (v, i) { return { v: v, h: v * 10, c: i === 7 ? '#1D4ED8' : '#93B4F5' }; });
+    const projRows = [
+      ['DP', '#334155', 'Development Plan 2026-11', 'Private', 'Mick', 14, 'Active · Off track', '2 นาทีที่แล้ว', true],
+      ['FG', '#57534E', 'Finance (GL) · โปรเจกต์ย่อย', 'Private', 'Arm', 4, 'Active', 'เมื่อวาน', false]
+    ].map(function (p) { return { k: p[0], c: p[1], n: p[2], vis: p[3], pm: p[4], mem: p[5], st: p[6], last: p[7], joined: p[8], notJoined: !p[8] }; });
     const teams = [['ทีม Dev', '#1D4ED8', 'Kaijeaw', 6, 30, 'Development Plan 2026-11'], ['ทีม BA', '#A21CAF', 'Donut', 7, 35, 'Development Plan 2026-11'], ['PMO', '#334155', 'Mick', 1, 5, 'ทุกโปรเจกต์']].map(function (t) { return { n: t[0], c: t[1], lead: t[2], k: t[3], cap: t[4], proj: t[5] }; });
     const hols = [['ส. 5 ธ.ค. 2569', 'วันพ่อแห่งชาติ', 'ธปท.', 'neu'], ['จ. 7 ธ.ค. 2569', 'ชดเชยวันพ่อแห่งชาติ', 'ธปท.', 'neu'], ['พฤ. 10 ธ.ค. 2569', 'วันรัฐธรรมนูญ', 'ธปท.', 'neu'], ['พฤ. 31 ธ.ค. 2569', 'วันสิ้นปี', 'ธปท.', 'neu'], ['ศ. 1 ม.ค. 2570', 'วันขึ้นปีใหม่', 'ธปท.', 'neu'], ['ศ. 8 ม.ค. 2570', 'งานเลี้ยงปีใหม่บริษัท', 'บริษัท', 'ent']].map(function (h) { return { d: h[0], n: h[1], t: h[2], c: h[3] }; });
     const sizes = [['XS', 1], ['S', 3], ['M', 5], ['L', 8], ['XL', 12]].map(function (s) { return { n: s[0], v: s[1] }; });
@@ -463,7 +482,7 @@ class Component extends DCLogic {
       nav: nav, title: TT[sec][0], desc: TT[sec][1], alerts: alerts, wau: wau, teams: teams, hols: hols, sizes: sizes, tpls: tpls,
       projLegend: projLegend, people: people, sso: sso, tfa: tfaOpts, audit: audit, auditChips: auditChips, integ: integ, plans: plans, invoices: invoices, hooks: hooks, supOn: sup ? 'true' : 'false', supBg: sup ? '#1D4ED8' : '#C3CAD3', supX: sup ? 21 : 3, supTxt: sup ? 'เปิดสิทธิ์ไว้' : 'ปิด', supPc: sup ? 'ok' : 'neu', toggleSup: function () { self.setState({ sup: !sup }); }, goAudit: go('audit'), showAdd: addOpen, addOpen: addOpen ? 'true' : 'false', toggleAdd: function () { self.setState({ add: !addOpen }); },
       safeOn: safe ? 'true' : 'false', safeBg: safe ? '#1D4ED8' : '#C3CAD3', safeX: safe ? 21 : 3, safeTxt: safe ? 'เปิดอยู่' : 'ปิด', safePc: safe ? 'ok' : 'neu', toggleSafe: function () { self.setState({ safe: !safe }); },
-      sOverview: sec === 'overview', sTeams: sec === 'teams', sStd: sec === 'std', sLoad: sec === 'load', sSec: sec === 'sec2', sAudit: sec === 'audit', sData: sec === 'data', sNotify: sec === 'notify', sInteg: sec === 'integ', sBill: sec === 'bill'
+      sOverview: sec === 'overview', sProjects: sec === 'projects', projRows: projRows, sTeams: sec === 'teams', sStd: sec === 'std', sLoad: sec === 'load', sSec: sec === 'sec2', sAudit: sec === 'audit', sData: sec === 'data', sNotify: sec === 'notify', sInteg: sec === 'integ', sBill: sec === 'bill'
     };
   }
 }

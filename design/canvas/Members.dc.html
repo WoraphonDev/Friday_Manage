@@ -221,7 +221,7 @@ a{color:#1D4ED8}a:hover{color:#1E3A8A}
 <div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="av" style="background:{{m.pc}}">{{m.ini}}</span><div style="min-width:0"><div style="font-weight:600">{{m.n}}<sc-if value="{{m.isOwner}}" hint-placeholder-val="{{ false }}"> <span class="pill s-prog">Owner</span></sc-if></div><div class="muted" style="font-size:12px">{{m.email}}</div></div></div>
 <div style="font-size:13px">{{m.pos}}</div>
 <div><select class="in" aria-label="Project role of {{m.n}}" style="min-height:32px;font-size:13px"><option>{{m.role}}</option><option>Admin</option><option>Member</option><option>Viewer</option></select></div>
-<div style="font-size:13px">5 MD/สัปดาห์</div>
+<div style="font-size:13px">40 ชม. · 5 MD/สัปดาห์</div>
 <div style="font-size:13px;font-weight:600">{{m.open}}</div>
 <div style="font-size:13px;font-weight:600" class="{{m.odCls}}">{{m.od}}</div>
 <div style="display:flex;align-items:center;gap:8px"><span style="flex:1;height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden"><span style="display:block;height:100%;width:{{m.bar}}%;background:{{m.bc}}"></span></span><span style="font-size:12px;white-space:nowrap" class="{{m.wkCls}}">{{m.wkMD}}/5 MD</span></div>
@@ -238,7 +238,7 @@ a{color:#1D4ED8}a:hover{color:#1E3A8A}
 <div style="padding:16px 18px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
 <label style="display:flex;flex-direction:column;gap:4px;flex:3 1 260px;font-size:13px;font-weight:500">อีเมล (คั่นด้วย , ได้หลายคน)<input class="in" type="email" placeholder="name@example.com, ..."></label>
 <label style="display:flex;flex-direction:column;gap:4px;flex:1 1 120px;font-size:13px;font-weight:500">Role<select class="in"><option>Member</option><option>Admin</option><option>Viewer</option></select></label>
-<label style="display:flex;flex-direction:column;gap:4px;flex:1 1 110px;font-size:13px;font-weight:500">Capacity (MD/สัปดาห์)<input class="in" type="number" value="5"></label>
+<label style="display:flex;flex-direction:column;gap:4px;flex:1 1 110px;font-size:13px;font-weight:500">Capacity (ชม./สัปดาห์)<input class="in" type="number" value="40"><span class="muted" style="font-size:12px;font-weight:400">= 5 MD · เฉพาะเวลาที่ให้โปรเจกต์นี้</span></label>
 <button class="btn pri" type="button">ส่งคำเชิญ</button>
 </div>
 <div style="border-top:1px solid #EEF0F3">

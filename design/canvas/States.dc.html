@@ -114,13 +114,21 @@ a{color:#1D4ED8}a:hover{color:#1E3A8A}
 </div></div>
 
 <div class="panel"><div class="ptitle"><span class="tag t-perm">403</span>ไม่มีสิทธิ์เข้าถึง</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap" role="group" aria-label="ดูหน้านี้ในฐานะ"><sc-for list="{{asTabs}}" as="a" hint-placeholder-count="2"><button class="btn" type="button" aria-pressed="{{a.on}}" onClick="{{a.pick}}" style="{{a.st}}">{{a.n}}</button></sc-for></div>
 <div class="frame"><div class="bar">Finance (GL) · โปรเจกต์ย่อย</div>
 <div class="center">
 <span class="ic" style="background:#FEF3C7"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg></span>
 <b style="font-size:16px">คุณยังไม่ได้เป็นสมาชิกโปรเจกต์นี้</b>
+<sc-if value="{{asMember}}" hint-placeholder-val="{{ true }}">
 <div class="muted" style="max-width:320px">โปรเจกต์นี้เป็น Private · ขอสิทธิ์จาก Admin ของโปรเจกต์ได้</div>
 <button class="btn pri" type="button">ขอสิทธิ์เข้าถึง</button>
 <div class="note">Admin: Mick, Arm · ระบบจะแจ้งใน Inbox ของ Admin</div>
+</sc-if>
+<sc-if value="{{asAdmin}}" hint-placeholder-val="{{ false }}">
+<div class="muted" style="max-width:340px">โปรเจกต์นี้เป็น Private · คุณเป็น Admin ของ Workspace จึงเข้าร่วมเป็น Admin ของโปรเจกต์ได้ทันที</div>
+<button class="btn pri" type="button">เข้าร่วมในฐานะ Admin</button>
+<div class="note">PM: Arm · ระบบจะแจ้ง PM และ Admin ของโปรเจกต์ และบันทึกใน Audit log · ชื่อคุณจะอยู่ในรายชื่อสมาชิก</div>
+</sc-if>
 </div></div></div>
 
 <div class="panel"><div class="ptitle"><span class="tag t-perm">404</span>ไม่พบงาน / งานถูกลบ</div>
@@ -168,7 +176,15 @@ a{color:#1D4ED8}a:hover{color:#1E3A8A}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2100}}'>
 class Component extends DCLogic {
-  renderVals() { return {}; }
+  renderVals() {
+    const self = this;
+    const as = (this.state && this.state.as) || 'member';
+    const asTabs = [['member', 'สมาชิกทั่วไป'], ['admin', 'Workspace Owner / Admin']].map(function (t) {
+      const on = as === t[0];
+      return { n: t[1], on: on ? 'true' : 'false', st: on ? 'background:#1B1F24;color:#fff;border-color:#1B1F24;min-height:30px;font-size:12px' : 'min-height:30px;font-size:12px', pick: function () { self.setState({ as: t[0] }); } };
+    });
+    return { asTabs: asTabs, asMember: as === 'member', asAdmin: as === 'admin' };
+  }
 }
 </script>
 </body>

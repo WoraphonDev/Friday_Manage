@@ -175,8 +175,12 @@ a{color:#1D4ED8}a:hover{color:#1E3A8A}
 <button class="btn" type="button" style="min-height:30px;font-size:12px">แก้ฟิลด์</button>
 </div>
 </sc-for>
-<div class="fld"><span class="lb">Custom fields</span>
-<div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill s-prog">BA (คน)</span><span class="pill s-prog">Dev หลายคน</span><span class="pill s-prog">Screen ID</span><span class="pill s-prog">FR / NFR</span><span class="pill s-prog">Plan / Actual Start–End</span><span class="pill s-todo">Customer request (ข้อความ)</span><span class="pill s-todo">Release version (ตัวเลือก)</span><span class="pill s-todo">Effort ทีมลูกค้า (ตัวเลข)</span><button class="btn" type="button" style="min-height:28px;font-size:12px">+ เพิ่มฟิลด์</button></div>
+<div class="fld"><span class="lb">ฟิลด์มาตรฐาน</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill s-prog">BA (คน)</span><span class="pill s-prog">Dev หลายคน</span><span class="pill s-prog">Screen ID</span><span class="pill s-prog">FR / NFR</span><span class="pill s-prog">Plan / Actual Start–End</span></div>
+<div class="muted" style="font-size:12px">มีในทุกงาน ลบไม่ได้ · ใช้คำนวณ Workload, Gantt และ Requirement Traceability</div>
+</div>
+<div class="fld"><span class="lb">Custom fields ของทีม</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill s-todo">Customer request (ข้อความ)</span><span class="pill s-todo">Release version (ตัวเลือก)</span><span class="pill s-todo">Effort ทีมลูกค้า (ตัวเลข)</span><button class="btn" type="button" style="min-height:28px;font-size:12px">+ เพิ่มฟิลด์</button></div>
 </div>
 <div class="fld"><span class="lb">Labels</span>
 <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill s-prog">frontend</span><span class="pill s-done">backend</span><span class="pill s-rev">booking</span><span class="pill s-late">hotfix</span><span class="pill s-todo">tech-debt</span><button class="btn" type="button" style="min-height:28px;font-size:12px">+ เพิ่ม Label</button></div>
@@ -210,7 +214,7 @@ a{color:#1D4ED8}a:hover{color:#1E3A8A}
 </div>
 </sc-for>
 </div></div>
-<div class="sb"><div class="muted" style="font-size:12px">Admin มีสิทธิ์ทุกอย่างเสมอ · Guest ระดับ Workspace จะเป็น Viewer หรือ Member ในโปรเจกต์ได้ตามที่เชิญ · Guest ที่เป็นลูกค้าเห็นเฉพาะ Overview, Timeline และงานที่แชร์ให้ (ไม่เห็นชื่อคน, Workload, Bug)</div></div>
+<div class="sb"><div class="muted" style="font-size:12px">Admin มีสิทธิ์ทุกอย่างเสมอ · Guest ระดับ Workspace จะเป็น Viewer หรือ Member ในโปรเจกต์ได้ตามที่เชิญ · Guest ที่เป็นลูกค้าเห็นเฉพาะ Overview, Timeline และงานที่แชร์ให้ (ไม่เห็นชื่อคน, Workload, Bug) · Guest ที่เป็น Member เชิญคนไม่ได้ แม้เปิดสิทธิ์ "เชิญสมาชิกเข้าโปรเจกต์" ให้ Member</div></div>
 </sc-if>
 
 <sc-if value="{{sInteg}}" hint-placeholder-val="{{ false }}">

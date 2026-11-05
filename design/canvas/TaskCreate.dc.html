@@ -64,7 +64,7 @@ textarea.in{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.6}
 .tb{display:flex;gap:2px;flex-wrap:wrap;border:1px solid #C9CFD6;border-bottom:0;border-radius:8px 8px 0 0;padding:4px;background:#F8F9FB}
 .tb button{min-width:32px;height:32px;border:0;background:transparent;border-radius:6px;font:inherit;font-size:13px;font-weight:600;color:#3D4550;cursor:pointer}
 .tb button:hover{background:#E4E7EB}
-.sr{display:grid;grid-template-columns:minmax(0,1fr) 130px 140px 32px;gap:8px;align-items:center}
+.sr{display:grid;grid-template-columns:minmax(0,1fr) 110px 120px 140px 32px;gap:8px;align-items:center}
 @media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.phead{padding:12px 16px 0}.prop{grid-template-columns:1fr}.sr{grid-template-columns:1fr 1fr}.dsec{padding:14px 16px}}
 </style>
 </helmet>
@@ -134,7 +134,7 @@ textarea.in{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.6}
 <tr><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3" class="muted">อยู่ภายใต้</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">Module (บังคับ)</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">Task แม่ (บังคับ) · Module สืบทอดเอง</td></tr>
 <tr><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3" class="muted">ลูก</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">มี Sub-task ได้</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">ไม่มีลูก · ใช้ Checklist แทน</td></tr>
 <tr><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3" class="muted">วันที่</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">อิสระ</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">ต้องอยู่ในช่วงของ Task แม่ (เตือนถ้าเกิน)</td></tr>
-<tr><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3" class="muted">Estimate / Progress</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">รวมจาก Sub-task อัตโนมัติ (ถ้ามี)</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">กรอกเอง</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3" class="muted">Estimate / Progress</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">รวมจาก Sub-task อัตโนมัติ (ถ้ามี)</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">เลือก Size (เติม Man-Day ให้ แก้เองได้) · Progress กรอกเอง</td></tr>
 <tr><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3" class="muted">Sprint</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">เลือกได้</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">ตาม Task แม่</td></tr>
 <tr><td style="padding:6px 8px" class="muted">เปิดดูรายละเอียด</td><td style="padding:6px 8px">Drawer ด้านขวา</td><td style="padding:6px 8px">Popup กลางจอ</td></tr>
 </tbody>
@@ -195,11 +195,12 @@ textarea.in{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.6}
 
 <sc-if value="{{isTask}}" hint-placeholder-val="{{ true }}">
 <div class="dsec">
-<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3>Sub-tasks <span class="muted" style="font-weight:500">· สร้างพร้อมกันได้เลย</span></h3><span class="hint">Estimate รวม 18 ชม.</span></div>
-<div class="sr hint" style="font-weight:600"><span>ชื่อ Sub-task</span><span>Assignee</span><span>Due</span><span></span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3>Sub-tasks <span class="muted" style="font-weight:500">· สร้างพร้อมกันได้เลย</span></h3><span class="hint">Man-Day รวม 5 MD · รวมเข้า Task แม่อัตโนมัติ</span></div>
+<div class="sr hint" style="font-weight:600"><span>ชื่อ Sub-task</span><span>Size · MD</span><span>Assignee</span><span>Due</span><span></span></div>
 <sc-for list="{{subRows}}" as="s" hint-placeholder-count="3">
 <div class="sr">
 <input class="in" type="text" value="{{s.n}}" aria-label="ชื่อ Sub-task">
+<select class="in" aria-label="Size ของ {{s.n}}"><option>{{s.sz}}</option><option>XS · 1</option><option>S · 3</option><option>M · 5</option><option>L · 8</option><option>XL · 12</option></select>
 <select class="in" aria-label="Assignee"><option>{{s.who}}</option><option>Kaijeaw</option><option>Pond</option><option>Tung</option><option>Top</option><option>Zo</option><option>P'Tum</option><option>Donut</option></select>
 <input class="in" type="date" value="{{s.d}}" aria-label="Due date">
 <button class="x" type="button" aria-label="ลบแถว">×</button>
@@ -269,7 +270,7 @@ class Component extends DCLogic {
       dateHint: 'Plan End = Plan Start + Man-Day (จ.–ศ. ไม่รวมวันหยุด ธปท.) · Actual บันทึกเองเมื่อเปลี่ยนสถานะ',
       estVal: isTask ? 3 : 1, estHint: isTask ? 'รวมจาก Sub-task อัตโนมัติเมื่อมี Sub-task' : 'นับรวมเข้า Estimate ของ Task แม่',
       descVal: isTask ? '## เป้าหมาย\nAPI ตั้งจ่ายจากระบบ HP ไปยัง Floor Plan (Interface FP/HP/KL)\n\n## Acceptance criteria\n- [ ] รับรายการตั้งจ่ายจาก HP พร้อมเลขสัญญา\n- [ ] ตรวจ Double Finance ก่อนบันทึก\n- [ ] ส่งผลกลับ HP ภายใน 1 นาที' : 'ฟอร์มหลักประกันประเภทจำนอง: เลขโฉนด ผู้จำนอง มูลค่าประเมิน และวันที่จดจำนอง ตาม SCR-107',
-      subRows: [{ n: 'Mapping ฟิลด์ HP → FP', who: 'Zo', d: '2026-12-14' }, { n: 'API ตั้งจ่าย + ตรวจ Double Finance', who: 'Pond', d: '2026-12-15' }, { n: 'ทดสอบกับ HP SIT', who: 'Donut', d: '2026-12-16' }],
+      subRows: [{ n: 'Mapping ฟิลด์ HP → FP', sz: 'XS · 1', who: 'Zo', d: '2026-12-14' }, { n: 'API ตั้งจ่าย + ตรวจ Double Finance', sz: 'S · 3', who: 'Pond', d: '2026-12-15' }, { n: 'ทดสอบกับ HP SIT', sz: 'XS · 1', who: 'Donut', d: '2026-12-16' }],
       checks: ['ตรวจเลขโฉนดซ้ำในระบบ', 'คำนวณมูลค่าตามสัดส่วน (DP-40)', 'บันทึกเป็น Draft ก่อนส่งอนุมัติ']
     };
   }

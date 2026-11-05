@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
+import { OverviewController } from './overview.controller.js';
+import { OverviewService } from './overview.service.js';
 
-/** Overview, Workload, สมาชิกโปรเจกต์ · งาน A08 (docs/tasks/A08-*.md) · ใส่ controller / provider ของงานนี้ที่นี่ */
+/** Overview และ Workload · งาน A08 · การคำนวณ Workload อยู่ใน workload.ts (A09, A10 import ได้) */
 @Module({
-  controllers: [],
-  providers: [],
+  controllers: [OverviewController],
+  providers: [OverviewService],
+  exports: [OverviewService],
 })
 export class OverviewModule {}

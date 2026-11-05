@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
+import { CommentsController } from './comments.controller.js';
+import { CommentsService } from './comments.service.js';
 
-/** คอมเมนต์, @mention, Watch, Activity · งาน A01 (docs/tasks/A01-*.md) · ใส่ controller / provider ของงานนี้ที่นี่ */
 @Module({
-  controllers: [],
-  providers: [],
+  controllers: [CommentsController],
+  providers: [CommentsService],
 })
 export class CommentsModule {}

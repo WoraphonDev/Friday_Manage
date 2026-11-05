@@ -57,3 +57,4 @@
 - ตรวจภาพ Chrome ที่ viewport 1440×1000 และ 390×844 พร้อมทดสอบเมนู Projects มือถือ · หลักฐานอยู่ `apps/web/qa/w00-shell-desktop.png`, `w00-shell-mobile.png`, `w00-ui-desktop.png` · ข้อมูลในภาพเป็นข้อมูลสมมติ
 - `pnpm typecheck`, `pnpm test`, `pnpm -r --if-present build` ผ่าน: Web 31 + DB 24 + API 54 = 109 tests; ข้าม 2 tests ที่ต้องใช้ไฟล์แผนจริง · จำนวนนี้เป็นของ branch W00 ที่แยกจาก T00 ซึ่งยังเป็น PR คนละงาน
 - ไม่มีคำขอนอก lane · แก้เฉพาะ `apps/web/**`, lockfile สำหรับ dependency และ checkbox/บันทึกผลของ W00
+- แก้หลัง merge (Select ชนลูกศร): ปรับ `Select` ใน UI kit ให้ซ่อนลูกศรของ browser แล้ววาง Chevron เอง เว้นขวา 34px · เพิ่ม `size="small"` (36px สำหรับแถบตัวกรอง) และ `prefix` (คำนำหน้าในกล่อง ค่าเป็นตัวหนาสีหลักตาม Canvas Kanban) · `className` ของ Select ไปอยู่ที่กล่องแทน `<select>` · ตรวจภาพที่ 364 px, 1440 px และฟอร์มใน /dev/ui

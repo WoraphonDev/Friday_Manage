@@ -12,6 +12,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import * as RadixTabs from "@radix-ui/react-tabs";
 import * as RadixTooltip from "@radix-ui/react-tooltip";
 import { useTranslations } from "next-intl";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Person } from "@/lib/types";
 
@@ -78,6 +79,18 @@ export const Input = forwardRef<
   );
 });
 
+type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "size"> &
+  FieldProps & {
+    /** small = 36px สำหรับแถบตัวกรอง (เท่าปุ่มใน Canvas) · default = 40px สำหรับฟอร์ม */
+    size?: "default" | "small";
+    /** คำนำหน้าในกล่องแบบ Canvas Kanban เช่น "แสดง Task + Sub-task" · ค่าที่เลือกเป็นตัวหนาสีหลัก */
+    prefix?: string;
+  };
+
+/**
+ * ใช้ <select> ของ browser (keyboard / screen reader / มือถือได้ครบ) แต่ซ่อนลูกศรเดิม
+ * เพราะลูกศรของ browser ไม่เว้นระยะจากข้อความและหน้าตาต่างกันแต่ละเครื่อง
+ */
 export function Select({
   label,
   error,
@@ -85,22 +98,40 @@ export function Select({
   id,
   className,
   children,
+  size = "default",
+  prefix,
   ...props
-}: SelectHTMLAttributes<HTMLSelectElement> & FieldProps) {
+}: SelectProps) {
   const generated = useId();
   const selectId = id ?? generated;
   return (
     <div className="field">
       {label && <label htmlFor={selectId}>{label}</label>}
-      <select
-        id={selectId}
-        className={cn("input", className)}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error || hint ? `${selectId}-description` : undefined}
-        {...props}
+      <div
+        className={cn(
+          "select",
+          size === "small" && "select-small",
+          prefix && "select-prefixed",
+          className,
+        )}
       >
-        {children}
-      </select>
+        {prefix && (
+          <span className="select-prefix" aria-hidden="true">
+            {prefix}
+          </span>
+        )}
+        <select
+          id={selectId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={
+            error || hint ? `${selectId}-description` : undefined
+          }
+          {...props}
+        >
+          {children}
+        </select>
+        <ChevronDown className="select-chevron" size={16} aria-hidden="true" />
+      </div>
       {(error || hint) && (
         <span
           id={`${selectId}-description`}

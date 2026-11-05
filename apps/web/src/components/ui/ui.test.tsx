@@ -12,6 +12,7 @@ import {
   Forbidden,
   Button,
   DatePicker,
+  Select,
   YearFormatContext,
 } from "./index";
 
@@ -31,6 +32,25 @@ describe("UI kit", () => {
         selector: 'input[aria-invalid="true"]',
       }),
     ).toHaveAttribute("aria-describedby");
+  });
+
+  it("Select ใช้ select ของ browser พร้อมคำนำหน้าและลูกศรที่ไม่ถูกอ่านซ้ำ", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderWithProviders(
+      <Select size="small" prefix="แสดง" aria-label="ระดับงาน" defaultValue="all" onChange={(e) => onChange(e.target.value)}>
+        <option value="all">Task + Sub-task</option>
+        <option value="task">Task เท่านั้น</option>
+      </Select>,
+    );
+    const select = screen.getByRole("combobox", { name: "ระดับงาน" });
+    await user.selectOptions(select, "task");
+    expect(onChange).toHaveBeenCalledWith("task");
+    const box = select.parentElement!;
+    expect(box).toHaveClass("select", "select-small", "select-prefixed");
+    // คำนำหน้าและลูกศรเป็นแค่ภาพ ชื่อที่อ่านออกเสียงมาจาก aria-label
+    expect(within(box).getByText("แสดง")).toHaveAttribute("aria-hidden", "true");
+    expect(box.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
 
   it("Combobox ค้นหาและเลือกผู้รับผิดชอบด้วย keyboard", async () => {

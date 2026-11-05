@@ -143,70 +143,73 @@ export class ProjectsService {
 
   /** A · New Project · สร้างทุกอย่างในธุรกรรมเดียว */
   async create(auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof CreateProjectBody>) {
-    if (tenant.role === 'guest') throw forbidden('ws.project.create');
-    const result = await this.db.run(auth, tenant, async (tx) => {
-      if (!(await this.keyFree(tenant.workspaceId, input.key))) throw new AppError(409, 'key_taken', 'Project Key นี้มีใน Workspace แล้ว', { key: input.key });
-
-      const [project] = await tx
-        .insert(s.projects)
-        .values({
-          workspaceId: tenant.workspaceId,
-          key: input.key,
-          name: input.name,
-          clientName: input.clientName,
-          description: input.description,
-          color: input.color,
-          startDate: input.startDate,
-          goliveDate: input.goliveDate,
-          timezone: input.timezone,
-          visibility: input.visibility,
-          ownerUserId: auth.userId,
-          sprintLengthWeeks: input.sprintLengthWeeks,
-          estimateUnit: input.estimateUnit,
-          progressMethod: input.progressMethod,
-        })
-        .returning();
-      const base = { workspaceId: tenant.workspaceId, projectId: project.id };
-      await tx.insert(s.projectMembers).values({ ...base, userId: auth.userId, role: 'admin' });
-
-      // Workflow มาตรฐาน + Workflow ของ Bug
-      const [stdWf] = await tx.insert(s.workflows).values({ ...base, name: 'มาตรฐาน' }).returning();
-      const std = await tx
-        .insert(s.workflowStatuses)
-        .values(STANDARD.map((st, i) => ({ ...base, workflowId: stdWf.id, name: st.name, category: st.category, sort: i })))
-        .returning({ id: s.workflowStatuses.id, name: s.workflowStatuses.name });
-      const col = new Map(std.map((x) => [x.name, x.id]));
-      const [bugWf] = await tx.insert(s.workflows).values({ ...base, name: 'Bug' }).returning();
-      await tx
-        .insert(s.workflowStatuses)
-        .values(BUG.map((st, i) => ({ ...base, workflowId: bugWf.id, name: st.name, category: st.category, boardColumnId: col.get(st.column), sort: i })));
-      await tx
-        .insert(s.issueTypes)
-        .values(TYPES.map((t, i) => ({ ...base, name: t.name, color: t.color, workflowId: t.bug ? bugWf.id : stdWf.id, requiredFields: t.required, sort: i })));
-
-      if (input.modules.length) {
-        await tx.insert(s.modules).values(input.modules.map((name, i) => ({ ...base, name, sort: i })));
-      }
-      if (input.milestones.length) {
-        await tx.insert(s.milestones).values(input.milestones.map((m) => ({ ...base, name: m.name, date: m.date })));
-      }
-      const sprints = sprintPlan(input.startDate, input.goliveDate, input.sprintLengthWeeks);
-      if (sprints.length) {
-        await tx.insert(s.sprints).values(sprints.map((sp) => ({ ...base, ...sp })));
-      }
-      await tx.insert(s.auditLogs).values({
-        workspaceId: tenant.workspaceId,
-        actorId: auth.userId,
-        actorKind: 'user',
-        category: 'data',
-        action: 'project.created',
-        targetType: 'project',
-        targetId: project.id,
-        summary: `${project.key} · ${project.name}`,
-      });
-      return { project, created: { modules: input.modules.length, statuses: STANDARD.length, milestones: input.milestones.length, sprints: sprints.length } };
-    });
+    const result = await this.db.run(auth, tenant, (tx) => this.createInTx(tx, auth, tenant, input));
     return { ...this.dto(result.project, 'admin', true), created: result.created };
+  }
+
+  /** สร้างโปรเจกต์ในธุรกรรมที่มีอยู่แล้ว (ใช้ร่วมกับ Import Excel) */
+  async createInTx(tx: Tx, auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof CreateProjectBody>) {
+    if (tenant.role === 'guest') throw forbidden('ws.project.create');
+    if (!(await this.keyFree(tenant.workspaceId, input.key))) throw new AppError(409, 'key_taken', 'Project Key นี้มีใน Workspace แล้ว', { key: input.key });
+
+    const [project] = await tx
+      .insert(s.projects)
+      .values({
+        workspaceId: tenant.workspaceId,
+        key: input.key,
+        name: input.name,
+        clientName: input.clientName,
+        description: input.description,
+        color: input.color,
+        startDate: input.startDate,
+        goliveDate: input.goliveDate,
+        timezone: input.timezone,
+        visibility: input.visibility,
+        ownerUserId: auth.userId,
+        sprintLengthWeeks: input.sprintLengthWeeks,
+        estimateUnit: input.estimateUnit,
+        progressMethod: input.progressMethod,
+      })
+      .returning();
+    const base = { workspaceId: tenant.workspaceId, projectId: project.id };
+    await tx.insert(s.projectMembers).values({ ...base, userId: auth.userId, role: 'admin' });
+
+    // Workflow มาตรฐาน + Workflow ของ Bug
+    const [stdWf] = await tx.insert(s.workflows).values({ ...base, name: 'มาตรฐาน' }).returning();
+    const std = await tx
+      .insert(s.workflowStatuses)
+      .values(STANDARD.map((st, i) => ({ ...base, workflowId: stdWf.id, name: st.name, category: st.category, sort: i })))
+      .returning({ id: s.workflowStatuses.id, name: s.workflowStatuses.name });
+    const col = new Map(std.map((x) => [x.name, x.id]));
+    const [bugWf] = await tx.insert(s.workflows).values({ ...base, name: 'Bug' }).returning();
+    await tx
+      .insert(s.workflowStatuses)
+      .values(BUG.map((st, i) => ({ ...base, workflowId: bugWf.id, name: st.name, category: st.category, boardColumnId: col.get(st.column), sort: i })));
+    await tx
+      .insert(s.issueTypes)
+      .values(TYPES.map((t, i) => ({ ...base, name: t.name, color: t.color, workflowId: t.bug ? bugWf.id : stdWf.id, requiredFields: t.required, sort: i })));
+
+    if (input.modules.length) {
+      await tx.insert(s.modules).values(input.modules.map((name, i) => ({ ...base, name, sort: i })));
+    }
+    if (input.milestones.length) {
+      await tx.insert(s.milestones).values(input.milestones.map((m) => ({ ...base, name: m.name, date: m.date })));
+    }
+    const sprints = sprintPlan(input.startDate, input.goliveDate, input.sprintLengthWeeks);
+    if (sprints.length) {
+      await tx.insert(s.sprints).values(sprints.map((sp) => ({ ...base, ...sp })));
+    }
+    await tx.insert(s.auditLogs).values({
+      workspaceId: tenant.workspaceId,
+      actorId: auth.userId,
+      actorKind: 'user',
+      category: 'data',
+      action: 'project.created',
+      targetType: 'project',
+      targetId: project.id,
+      summary: `${project.key} · ${project.name}`,
+    });
+    return { project, created: { modules: input.modules.length, statuses: STANDARD.length, milestones: input.milestones.length, sprints: sprints.length } };
   }
 
   async get(auth: AuthInfo, tenant: TenantInfo, key: string) {

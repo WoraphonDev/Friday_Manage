@@ -134,7 +134,7 @@ export class IssuesService {
         planStart = moved;
       }
       let planEnd = input.planEnd;
-      if (!planEnd && planStart && estimateMd) planEnd = planEndFor(cal, planStart, estimateMd, input.assigneeIds.length);
+      if (!planEnd && planStart && estimateMd) planEnd = planEndFor(cal, planStart, estimateMd);
       if (planStart && planEnd && planEnd < planStart) throw new AppError(400, 'invalid_dates', 'Plan End ต้องไม่ก่อน Plan Start');
       if (parent) warnings.push(...outsideParent(parent, planStart, planEnd));
 
@@ -272,7 +272,7 @@ export class IssuesService {
         }
       }
 
-      // แผน: Size → Man-Day · Plan End คำนวณใหม่เมื่อ Man-Day / จำนวน Dev / Plan Start เปลี่ยนและไม่ได้ส่ง Plan End มาเอง
+      // แผน: Size → Man-Day · Plan End คำนวณใหม่เมื่อ Man-Day / Plan Start เปลี่ยนและไม่ได้ส่ง Plan End มาเอง (จำนวน Dev ไม่มีผล)
       const oldAssignees = await this.assigneeIds(tx, issue.id);
       const assignees = input.assigneeIds ?? oldAssignees;
       let estimateMd = input.estimateMd !== undefined ? input.estimateMd : issue.estimateMd;
@@ -284,8 +284,8 @@ export class IssuesService {
         warnings.push({ code: 'plan_start_moved', message: `Plan Start ${input.planStart} ไม่ใช่วันทำการ เลื่อนเป็น ${planStart}` });
       }
       let planEnd = input.planEnd !== undefined ? input.planEnd : issue.planEnd;
-      const drivers = input.planStart !== undefined || estimateMd !== issue.estimateMd || assignees.length !== oldAssignees.length;
-      if (input.planEnd === undefined && drivers && planStart && estimateMd) planEnd = planEndFor(cal, planStart, estimateMd, assignees.length);
+      const drivers = input.planStart !== undefined || estimateMd !== issue.estimateMd;
+      if (input.planEnd === undefined && drivers && planStart && estimateMd) planEnd = planEndFor(cal, planStart, estimateMd);
       if (planStart && planEnd && planEnd < planStart) throw new AppError(400, 'invalid_dates', 'Plan End ต้องไม่ก่อน Plan Start');
 
       // กติกาการเปลี่ยน Due (03-api › กติกาการเปลี่ยน Due): เลื่อนออกต้องมีสิทธิ์ · ดึงเข้าแก้ได้เลย
@@ -317,6 +317,8 @@ export class IssuesService {
         throw new AppError(400, 'plan_change_reason_required', 'แก้แผนหลังตั้ง Baseline ต้องใส่เหตุผล', { fields: planChanged });
       }
 
+      // รายชื่อ Dev อยู่อีกตาราง แถวงานไม่เปลี่ยน trigger จึงไม่เพิ่ม version ให้ · ต้องเพิ่มเองเพื่อให้ If-Match ยังจับการแก้ชนกันได้
+      if (assigneesChanged) set.version = expected + 1;
       const [updated] = await tx
         .update(s.issues)
         .set(set)

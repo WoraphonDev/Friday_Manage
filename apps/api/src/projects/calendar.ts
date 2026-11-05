@@ -60,8 +60,11 @@ export function addDays(date: string, days: number) {
   return d.toISOString().slice(0, 10);
 }
 
-/** Plan End จาก Man-Day ของทั้งทีม ÷ จำนวน Dev (ปัดขึ้น) */
-export function planEndFor(cal: WorkCalendar, planStart: string, estimateMd: number, devs: number) {
-  const days = Math.max(1, Math.ceil(estimateMd / Math.max(1, devs)));
-  return cal.nthWorkingDay(planStart, days);
+/**
+ * Plan End = วันทำการที่ (Man-Day) นับ Plan Start เป็นวันแรก · ตรงกับสูตรในไฟล์แผนขององค์กร
+ * WORKDAY(Plan Start - 1, Man-Day, Holidays) · จำนวน Dev ไม่ทำให้วันจบเปลี่ยน
+ * (Man-Day ของทั้งทีมแบ่งเท่ากันต่อคนเฉพาะตอนคิด Workload) · Man-Day เศษปัดขึ้นเป็นวันเต็ม
+ */
+export function planEndFor(cal: WorkCalendar, planStart: string, estimateMd: number) {
+  return cal.nthWorkingDay(planStart, Math.max(1, Math.ceil(estimateMd)));
 }

@@ -353,7 +353,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | POST | `p/schedule:preview` | `issue.edit` | Auto-schedule คืนรายการวันที่จะเปลี่ยนโดยยังไม่บันทึก · ยืนยันด้วย `POST issues/bulk` |
 | POST | `w/import-jobs` | `ws.project.create` (ใหม่) หรือ `project.settings` (อัปเดต) | อัปโหลดไฟล์แล้วอ่านหัวคอลัมน์ · จับคู่อัตโนมัติ |
 | GET / PATCH | `w/import-jobs/{id}` | ผู้สร้าง | แก้การจับคู่คอลัมน์และคน · ระบบตรวจซ้ำทุกครั้ง |
-| POST | `w/import-jobs/{id}:commit` | ผู้สร้าง | 202 · ความคืบหน้าทาง WebSocket · ตั้ง Baseline v1 ถ้าเลือก · โหมดอัปเดตจับคู่ด้วย `excel_row_no` และเขียน `plan_change` · Event `import.completed` |
+| POST | `w/import-jobs/{id}:commit` | ผู้สร้าง | 202 · ความคืบหน้าทาง WebSocket · ตั้ง Baseline v1 ถ้าเลือก · โหมดอัปเดตจับคู่ด้วย `excel_row_no` และเขียน `plan_change` · Event `import.completed` · **รอบแรก (apps/api) ทำแบบ synchronous ตอบ 201** เพราะแผน 334 แถวใช้ไม่ถึง 1 วินาที · รองรับเฉพาะโหมดสร้างโปรเจกต์ใหม่ |
 | GET | `p/export.xlsx` | `project.view` | |
 
 ### 3.7 งาน
@@ -417,7 +417,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 }
 ```
 
-- `planEnd` ไม่ต้องส่งถ้ามี `estimateMd`: ระบบคำนวณจาก Man-Day ÷ จำนวน Dev ตามวันทำการ (ข้ามวันหยุด)
+- `planEnd` ไม่ต้องส่งถ้ามี `estimateMd`: ระบบนับ Man-Day เป็นวันทำการจาก Plan Start (ข้ามวันหยุด · จำนวน Dev ไม่มีผล)
 - `requirements` และ `screens` ส่งเป็นรหัส · ถ้ายังไม่มีในโปรเจกต์ ระบบสร้างให้
 - ตอบ `warnings` เมื่อ Plan Start ตรงวันหยุด (เลื่อนให้แล้ว) หรือ Sub-task เกินช่วงงานแม่
 

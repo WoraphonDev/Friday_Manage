@@ -121,7 +121,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 
 | กลุ่ม | ฟิลด์ |
 |---|---|
-| ตัวตน | workspace_id, project_id, number (DP-**39**), issue_type_id, parent_id (null = ระดับ Task), excel_row_no (No. จากไฟล์ ใช้จับคู่ตอน Import อัปเดต) |
+| ตัวตน | workspace_id, project_id, number (DP-**39** · นำเข้าจาก Excel ใช้คอลัมน์ **ID** ตามเลขงานใน Prototype), issue_type_id, parent_id (null = ระดับ Task), excel_row_no (คอลัมน์ **No.** ใช้จับคู่แถวตอน Import อัปเดต) |
 | ตำแหน่งในแผน | module_id, phase_id, sprint_id, rank (ลำดับใน Backlog / Kanban แบบ LexoRank) |
 | เนื้อหา | title, description (markdown), status_id, priority (urgent · high · medium · low) |
 | คน | ba_id, reviewer_id, tester_id, reporter_id, created_by · Dev อยู่ใน `issue_assignee` |
@@ -243,7 +243,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 1. **ลำดับชั้นลึกสุด 2 ระดับ:** `parent_id` ต้องชี้ไปงานที่ `parent_id IS NULL` เท่านั้น
 2. **Task ต้องมี Module · Sub-task ต้องมี Task แม่** · Sub-task สืบทอด `module_id`, `phase_id`, `sprint_id` จากแม่ เมื่อย้ายแม่ต้องย้ายลูกตามในธุรกรรมเดียวกัน
 3. **วันที่ของ Sub-task ต้องอยู่ในช่วงของ Task แม่**: เตือน ไม่บล็อก (หน้า B, M1)
-4. **Plan Start ตรงวันหยุด** ให้เลื่อนไปวันทำงานถัดไป · Plan End คำนวณจาก Man-Day ÷ จำนวน Dev ตามวันทำการ
+4. **Plan Start ตรงวันหยุด** ให้เลื่อนไปวันทำงานถัดไป · Plan End = วันทำการที่ (Man-Day) นับ Plan Start เป็นวันแรก ตรงกับสูตร `WORKDAY(Plan Start-1, Man-Day, Holidays)` ในไฟล์แผน · **จำนวน Dev ไม่ทำให้วันจบเปลี่ยน** (Man-Day ของทีมแบ่งเท่ากันต่อคนเฉพาะตอนคิด Workload)
 5. **เลขงานไม่ซ้ำในโปรเจกต์:** `UNIQUE (project_id, number)` · ออกเลขด้วย `UPDATE project SET issue_seq = issue_seq + 1 … RETURNING` ในธุรกรรมเดียวกับการสร้างงาน · ไม่นำเลขของงานที่ลบมาใช้ใหม่
 6. **Project Key ไม่ซ้ำใน Workspace:** `UNIQUE (workspace_id, key)` และต้องไม่ชนกับ `project_key_alias`
 7. **เปลี่ยน Due:** Member ต้องสร้าง `due_change_request` ถ้าสิทธิ์ `issue.change_due_directly` ปิดอยู่ · อนุมัติแล้วเขียน `plan_change` อัตโนมัติ

@@ -1,3 +1,5 @@
+import { resolve } from 'node:path';
+
 export const config = {
   port: Number(process.env.PORT ?? 3001),
   /** บัญชีที่เป็นสมาชิกของ friday_app (ถูกบังคับด้วย RLS) */
@@ -11,4 +13,7 @@ export const config = {
   lockoutAttempts: 5,
   lockoutMinutes: 15,
   timezone: 'Asia/Bangkok',
+  /** ไฟล์ที่อัปโหลด (ช่วงแรกเก็บในเครื่อง · ย้ายไป S3 ภายหลัง) */
+  uploadDir: process.env.UPLOAD_DIR ?? resolve('var/uploads'),
+  maxImportBytes: 20 * 1024 * 1024,
 };

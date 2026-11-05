@@ -1,5 +1,6 @@
 // ทดสอบ API กับ PostgreSQL จริง: pnpm db:up && pnpm db:migrate && pnpm db:dev-roles ก่อน
 import type { INestApplication } from '@nestjs/common';
+import ExcelJS from 'exceljs';
 import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -19,6 +20,11 @@ async function client() {
     get: (url: string) => agent.get(`/api/v1${url}`),
     post: (url: string, data?: object) => agent.post(`/api/v1${url}`).set(h).send(data),
     put: (url: string, data?: object) => agent.put(`/api/v1${url}`).set(h).send(data),
+    upload: (url: string, file: Buffer, name: string, fields: Record<string, string> = {}) => {
+      const r = agent.post(`/api/v1${url}`).set(h);
+      for (const [k, v] of Object.entries(fields)) r.field(k, v);
+      return r.attach('file', file, name);
+    },
     patch: (url: string, data: object, ifMatch?: string | number) => {
       const r = agent.patch(`/api/v1${url}`).set(h);
       return (ifMatch === undefined ? r : r.set('If-Match', `"${ifMatch}"`)).send(data);
@@ -158,12 +164,12 @@ describe('งาน', () => {
     expect(r.body.warnings[0].code).toBe('plan_start_moved');
   });
 
-  it('Dev 2 คนแบ่ง Man-Day ของทีม', async () => {
+  it('Dev หลายคนไม่ทำให้ Plan End สั้นลง (Man-Day ของทีมแบ่งเฉพาะตอนคิด Workload)', async () => {
     kaijeawId = await signup(kaijeaw, 'kaijeaw@example.com', 'Kaijeaw');
     await addMember('friday-dev', kaijeawId, 'member', { key: 'DP', role: 'member' });
-    const r = await mick.post('/w/friday-dev/projects/DP/issues', { title: 'Collateral framework', moduleId: creditLine, estimateMd: 8, planStart: '2026-12-01', assigneeIds: [mickId, kaijeawId] });
-    // 8 MD ÷ 2 คน = 4 วันทำการ: 1, 2, 3, 4 ธ.ค.
-    expect(r.body).toMatchObject({ key: 'DP-2', planEnd: '2026-12-04' });
+    const r = await mick.post('/w/friday-dev/projects/DP/issues', { title: 'Collateral framework', moduleId: creditLine, estimateMd: 3, planStart: '2026-12-01', assigneeIds: [mickId, kaijeawId] });
+    // 3 MD เริ่ม 1 ธ.ค. → 1, 2, 3 ธ.ค. ไม่ว่า Dev กี่คน (สูตร WORKDAY ในไฟล์แผน)
+    expect(r.body).toMatchObject({ key: 'DP-2', planEnd: '2026-12-03' });
     expect(r.body.assigneeIds).toEqual([mickId, kaijeawId]);
   });
 
@@ -205,6 +211,11 @@ describe('งาน', () => {
 });
 
 describe('แก้ไขงาน และกติกาการเปลี่ยน Due', () => {
+  it('เพิ่ม Dev แล้ว Plan End ไม่เปลี่ยน', async () => {
+    const r = await mick.patch('/w/friday-dev/issues/DP-1', { assigneeIds: [mickId, kaijeawId] }, 1);
+    expect(r.body).toMatchObject({ planEnd: '2026-12-15', version: 2 });
+  });
+
   it('ไม่ส่ง If-Match → 428 · version ไม่ตรง → 409 พร้อมค่าล่าสุด', async () => {
     const none = await kaijeaw.patch('/w/friday-dev/issues/DP-2', { title: 'x' });
     expect(none.status).toBe(428);
@@ -219,14 +230,15 @@ describe('แก้ไขงาน และกติกาการเปลี
   it('Member เลื่อน Due ออกไปไม่ได้ (ค่าเริ่มต้น) แต่ดึงเข้ามาเร็วขึ้นได้', async () => {
     const later = await kaijeaw.patch('/w/friday-dev/issues/DP-2', { planEnd: '2026-12-09' }, 2);
     expect(later.status).toBe(403);
-    expect(later.body.error).toMatchObject({ code: 'due_change_requires_approval', details: { currentDue: '2026-12-04', requestedDue: '2026-12-09' } });
-    const earlier = await kaijeaw.patch('/w/friday-dev/issues/DP-2', { planEnd: '2026-12-03' }, 2);
+    expect(later.body.error).toMatchObject({ code: 'due_change_requires_approval', details: { currentDue: '2026-12-03', requestedDue: '2026-12-09' } });
+    const earlier = await kaijeaw.patch('/w/friday-dev/issues/DP-2', { planEnd: '2026-12-02' }, 2);
     expect(earlier.status).toBe(200);
-    expect(earlier.body.planEnd).toBe('2026-12-03');
+    expect(earlier.body.planEnd).toBe('2026-12-02');
   });
 
   it('แก้ Man-Day จน Plan End เลื่อนออก ก็ต้องขออนุมัติเหมือนกัน', async () => {
-    const r = await kaijeaw.patch('/w/friday-dev/issues/DP-2', { estimateMd: 12 }, 3);
+    // 5 MD เริ่ม 1 ธ.ค. → 1, 2, 3, 4, 8 (7 หยุด) → จบ 8 ธ.ค. เลยกว่า Due เดิม
+    const r = await kaijeaw.patch('/w/friday-dev/issues/DP-2', { estimateMd: 5 }, 3);
     expect(r.body.error.code).toBe('due_change_requires_approval');
   });
 
@@ -248,14 +260,14 @@ describe('แก้ไขงาน และกติกาการเปลี
   it('เปลี่ยนสถานะแล้วตั้ง Actual Start / End อัตโนมัติ และบันทึก Activity', async () => {
     const p = await mick.get('/w/friday-dev/projects/DP');
     const st = (n: string) => p.body.statuses.find((x: { name: string; boardColumnId: string | null }) => x.name === n && !x.boardColumnId).id;
-    const prog = await mick.patch('/w/friday-dev/issues/DP-1', { statusId: st('In progress') }, 1);
+    const prog = await mick.patch('/w/friday-dev/issues/DP-1', { statusId: st('In progress') }, 2);
     expect(prog.body.actualStart).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(prog.body.actualEnd).toBeNull();
-    const done = await mick.patch('/w/friday-dev/issues/DP-1', { statusId: st('Done') }, 2);
+    const done = await mick.patch('/w/friday-dev/issues/DP-1', { statusId: st('Done') }, 3);
     expect(done.body.actualEnd).toBe(done.body.actualStart);
 
     const bugOpen = p.body.statuses.find((x: { name: string }) => x.name === 'Open').id;
-    const wrong = await mick.patch('/w/friday-dev/issues/DP-1', { statusId: bugOpen }, 3);
+    const wrong = await mick.patch('/w/friday-dev/issues/DP-1', { statusId: bugOpen }, 4);
     expect(wrong.body.error.code).toBe('status_not_in_workflow');
 
     const acts = await owner.query(`SELECT field FROM activities WHERE verb = 'updated' AND field = 'statusId'`);
@@ -265,7 +277,7 @@ describe('แก้ไขงาน และกติกาการเปลี
   it('Sub-task แก้ Module เองไม่ได้ · ความคืบหน้าของ Task ที่มี Sub-task กรอกเองไม่ได้', async () => {
     const mod = await mick.patch('/w/friday-dev/issues/DP-3', { moduleId: creditLine }, 1);
     expect(mod.body.error.code).toBe('inherited_field');
-    const prog = await mick.patch('/w/friday-dev/issues/DP-1', { progressPct: 50 }, 3);
+    const prog = await mick.patch('/w/friday-dev/issues/DP-1', { progressPct: 50 }, 4);
     expect(prog.body.error.code).toBe('progress_from_subtasks');
   });
 
@@ -331,5 +343,163 @@ describe('การเข้าถึงข้าม Workspace และโป�
     const perms = await client_.get('/w/friday-dev/projects/DP/my-permissions');
     expect(perms.body).toMatchObject({ role: 'viewer', guestViewer: true });
     expect(perms.body.permissions).not.toContain('project.workload.view');
+  });
+});
+
+describe('เชิญสมาชิก (H, J4)', () => {
+  let token = '';
+
+  it('Owner เชิญเข้า Workspace + โปรเจกต์ แล้วได้ลิงก์เชิญ (ส่งอีเมลปิดไว้ช่วงแรก)', async () => {
+    const r = await mick.post('/w/friday-dev/invitations', { emails: ['new.dev@example.com', 'kaijeaw@example.com'], projectKey: 'DP', projectRole: 'member', jobTitle: 'Backend Dev', capacityHoursWeek: 40 });
+    expect(r.status).toBe(201);
+    expect(r.body.items.map((x: { status: string }) => x.status)).toEqual(['invited', 'already_member']);
+    token = r.body.items[0].inviteUrl.split('/join/')[1];
+    const anon = await request(app.getHttpServer()).get(`/api/v1/invitations/${token}`);
+    expect(anon.body).toMatchObject({ status: 'pending', email: 'new.dev@example.com', workspace: { slug: 'friday-dev' }, invitedBy: 'Mick', project: { key: 'DP' }, projectRole: 'member' });
+  });
+
+  it('Member ที่ไม่มีสิทธิ์เชิญ → 403', async () => {
+    const proj = await kaijeaw.post('/w/friday-dev/invitations', { emails: ['x@example.com'], projectKey: 'DP' });
+    expect(proj.body.error.details.permission).toBe('project.invite');
+    const ws = await kaijeaw.post('/w/friday-dev/invitations', { emails: ['x@example.com'] });
+    expect(ws.body.error.details.permission).toBe('ws.members.manage');
+  });
+
+  it('ตอบรับได้เฉพาะบัญชีที่ถูกเชิญ แล้วเข้าโปรเจกต์ได้ทันที', async () => {
+    const wrong = await outsider.post(`/invitations/${token}/accept`);
+    expect(wrong.body.error.code).toBe('invitation_email_mismatch');
+
+    const nd = await client();
+    await signup(nd, 'new.dev@example.com', 'New Dev');
+    const ok = await nd.post(`/invitations/${token}/accept`);
+    expect(ok.status).toBe(200);
+    expect((await nd.get('/me/workspaces')).body.items.map((w: { slug: string }) => w.slug)).toEqual(['friday-dev']);
+    expect((await nd.get('/w/friday-dev/projects/DP/issues')).status).toBe(200);
+    const again = await nd.post(`/invitations/${token}/accept`);
+    expect(again.body.error.code).toBe('invitation_not_pending');
+    const note = await owner.query(`SELECT 1 FROM notifications WHERE event_type = 'member.joined' AND recipient_id = $1`, [mickId]);
+    expect(note.rowCount).toBe(1);
+  });
+
+  it('ยกเลิกคำเชิญแล้วลิงก์ใช้ไม่ได้ (410)', async () => {
+    const r = await mick.post('/w/friday-dev/invitations', { emails: ['late@example.com'] });
+    const t = r.body.items[0].inviteUrl.split('/join/')[1];
+    await mick.post(`/w/friday-dev/invitations/${r.body.items[0].invitationId}/revoke`);
+    const late = await client();
+    await signup(late, 'late@example.com', 'Late');
+    const res = await late.post(`/invitations/${t}/accept`);
+    expect(res.status).toBe(410);
+    expect(res.body.error.details.invitedBy).toBe('Mick');
+  });
+
+  it('รายชื่อสมาชิก: Guest ไม่เห็น', async () => {
+    expect((await client_.get('/w/friday-dev/members')).body.error.details.permission).toBe('ws.directory.view');
+    const list = await mick.get('/w/friday-dev/members');
+    expect(list.body.items.map((m: { displayName: string }) => m.displayName)).toContain('New Dev');
+  });
+});
+
+/** ไฟล์แผนตัวอย่าง (ข้อมูลสมมติ) ที่มีหัวคอลัมน์เหมือนไฟล์แผนจริง */
+async function planWorkbook() {
+  const wb = new ExcelJS.Workbook();
+  const t = wb.addWorksheet('Table');
+  t.addRow(['ID', 'No.', 'Module', 'Sprint', 'Module Task', 'Screen', 'FR / NFR', 'BA', 'Status', 'Dev', 'Size', 'Man-Day', 'Plan Start', 'Plan End', 'Actual Start', 'Actual End', 'Remark', 'แก้ไขบนเว็บ']);
+  const d = (x: string) => new Date(`${x}T00:00:00Z`);
+  const rows: unknown[][] = [
+    [4, 1, 'Credit Line', 'Sprint 0 : Foundation', 'Database', '-', 'NFR-09', 'Donut', 'Not Start', 'Zo', 'S', 3, d('2026-11-05'), d('2026-11-09'), null, null, null],
+    [5, 2, 'Credit Line', 'Sprint 0 : Foundation', 'Master data', '-', 'SRS', 'Donut', 'Not Start', 'Pond, Zo', 'S', 3, d('2026-11-05'), d('2026-11-09'), null, null, null],
+    [6, 3, 'Credit Line', 'Sprint 1 : หลักประกัน', 'ฟอร์มหลักประกัน', 'SCR-107', 'FR-06.2', 'Donut', 'Not Start', 'Kaijeaw', { formula: 'IF(L4<=5,"M","L")', result: 'M' }, 5, d('2026-12-07'), d('2026-12-15'), null, null, 'ใช้ร่วมกับ DP-38'],
+    [7, 4, 'Drawdown', 'Sprint 0 : Foundation', 'ไม่มี BA', '-', '-', null, 'Not Start', 'Pond', 'XS', 1, d('2026-11-05'), d('2026-11-05'), null, null, null],
+    [8, 5, 'Interface FP/HP/KL', 'Provider : Floor Plan', 'Interface ยังไม่ลงแผน', '-', '-', null, 'Not Start', null, null, null, null, null, null, null, null],
+    [9, 6, 'Drawdown', 'Database 4 tables (X, Y)', 'งานที่ Sprint ผิดช่อง', '-', '-', 'Donut', null, 'Tung', 'XS', 1, d('2026-11-10'), d('2026-11-10'), null, null, null],
+    [10, 7, 'Drawdown', 'Sprint 1 : รับข้อมูลรถ', 'Upload รถ', '-', 'FR-01.1, FR-01.2', 'Donut', 'In Progress', 'Pond', 'XS', 1, d('2026-11-10'), d('2026-11-10'), d('2026-11-10'), null, null],
+  ];
+  rows.forEach((r) => t.addRow(r));
+  const h = wb.addWorksheet('Holidays');
+  h.addRow(['วันหยุด', 'ชื่อวันหยุด']);
+  h.addRow([d('2026-12-07'), 'ชดเชยวันพ่อแห่งชาติ']);
+  h.addRow([d('2026-12-10'), 'วันรัฐธรรมนูญ']);
+  return Buffer.from(await wb.xlsx.writeBuffer());
+}
+
+describe('Import Excel (L3)', () => {
+  let jobId = '';
+
+  it('อัปโหลดแล้วจับคู่คอลัมน์ 17 ช่อง (รวม ID) และตรวจข้อมูลตามหน้า L3', async () => {
+    const r = await mick.upload('/w/friday-dev/import-jobs', await planWorkbook(), 'Plan Demo 2026 (2026-11-05).xlsx', { mode: 'create' });
+    expect(r.status).toBe(201);
+    jobId = r.body.id;
+    expect(r.body.columns.filter((c: { field: string | null }) => c.field)).toHaveLength(17);
+    expect(r.body.summary).toMatchObject({ rows: 7, modules: 3, ready: 5, backlog: 1, skipped: 1, manDay: 14, planFrom: '2026-11-05', planTo: '2026-12-15' });
+    expect(r.body.project).toEqual({ name: 'Plan Demo 2026', key: 'PD' });
+    const problems = r.body.findings.map((f: { level: string; no: number | null; problem: string }) => `${f.level}:${f.no ?? '-'}:${f.problem}`);
+    expect(problems).toEqual(
+      expect.arrayContaining([
+        'err:4:ไม่มี BA',
+        'warn:3:Plan Start 2026-12-07 ตรงวันหยุด',
+        'warn:5:ไม่มี Plan Start / End',
+        'warn:6:ไม่มีค่า Status',
+        'warn:6:คอลัมน์ Sprint เป็น "Database 4 tables (X, Y)" ดูไม่ใช่ชื่อกลุ่มงาน',
+        'warn:-:ไม่พบ "Tung" ในรายชื่อสมาชิก (1 แถว)',
+      ]),
+    );
+    const kj = r.body.people.find((p: { name: string }) => p.name === 'Kaijeaw');
+    expect(kj.target).toEqual({ userId: kaijeawId });
+  });
+
+  it('แก้การจับคู่คน / ข้อมูลโปรเจกต์ แล้วตรวจซ้ำ', async () => {
+    const bad = await mick.patch(`/w/friday-dev/import-jobs/${jobId}`, { columnMapping: { Dev: 'ไม่มีฟิลด์นี้' } });
+    expect(bad.status).toBe(400);
+    const r = await mick.patch(`/w/friday-dev/import-jobs/${jobId}`, {
+      project: { key: 'PLAN', name: 'แผนตัวอย่าง' },
+      personMapping: { donut: { email: 'donut@example.com' }, zo: { userId: kaijeawId }, pond: null },
+    });
+    expect(r.status).toBe(200);
+    expect(r.body.project).toEqual({ key: 'PLAN', name: 'แผนตัวอย่าง' });
+    const notFoundPeople = r.body.findings.filter((f: { problem: string }) => f.problem.startsWith('ไม่พบ')).map((f: { problem: string }) => f.problem);
+    expect(notFoundPeople).toEqual(['ไม่พบ "Tung" ในรายชื่อสมาชิก (1 แถว)']);
+    expect((await kaijeaw.get(`/w/friday-dev/import-jobs/${jobId}`)).status).toBe(404);
+  });
+
+  it('นำเข้าแล้วได้โปรเจกต์, งาน (เลขงาน = ID), Baseline v1 และคำเชิญ', async () => {
+    const r = await mick.post(`/w/friday-dev/import-jobs/${jobId}/commit`);
+    expect(r.status).toBe(201);
+    expect(r.body).toMatchObject({ project: { key: 'PLAN' }, imported: 6, scheduled: 5, backlog: 1, skipped: 1, baseline: true });
+    expect(r.body.invitations.map((i: { email: string; status: string }) => `${i.email}:${i.status}`)).toEqual(['donut@example.com:invited']);
+
+    const p3 = await mick.get('/w/friday-dev/issues/PLAN-6'); // No. 3 · ID 6
+    expect(p3.body).toMatchObject({ planStart: '2026-12-08', planEnd: '2026-12-15', size: 'M', estimateMd: 5, assigneeIds: [kaijeawId], description: 'ใช้ร่วมกับ DP-38' });
+    const p2 = await mick.get('/w/friday-dev/issues/PLAN-5');
+    expect(p2.body.assigneeIds).toEqual([kaijeawId]);
+    expect(p2.body.details).toMatchObject({ requirementText: 'SRS', importedPeople: { devs: ['Pond'], ba: 'Donut' } });
+    const p7 = await mick.get('/w/friday-dev/issues/PLAN-10');
+    expect(p7.body).toMatchObject({ status: { name: 'In progress' }, actualStart: '2026-11-10' });
+    expect((await mick.get('/w/friday-dev/issues/PLAN-7')).status).toBe(404);
+    expect((await mick.get('/w/friday-dev/issues/PLAN-8')).body.planStart).toBeNull();
+
+    const counts = await owner.query(`
+      SELECT (SELECT count(*)::int FROM phases ph JOIN projects p ON p.id = ph.project_id WHERE p.key = 'PLAN') AS phases,
+             (SELECT count(*)::int FROM baseline_items bi JOIN plan_baselines b ON b.id = bi.baseline_id JOIN projects p ON p.id = b.project_id WHERE p.key = 'PLAN') AS baseline,
+             (SELECT count(*)::int FROM issue_requirements ir JOIN issues i ON i.id = ir.issue_id JOIN projects p ON p.id = i.project_id WHERE p.key = 'PLAN') AS reqs,
+             (SELECT issue_seq FROM projects WHERE key = 'PLAN') AS seq`);
+    expect(counts.rows[0]).toEqual({ phases: 5, baseline: 6, reqs: 4, seq: 10 });
+
+    // หลังนำเข้า สร้างงานใหม่ได้เลขถัดจาก No. สูงสุด และแก้แผนต้องมีเหตุผลเพราะมี Baseline
+    const next = await mick.post('/w/friday-dev/projects/PLAN/issues', { title: 'งานใหม่', moduleId: p3.body.moduleId });
+    expect(next.body.key).toBe('PLAN-11');
+    const edit = await mick.patch('/w/friday-dev/issues/PLAN-6', { planEnd: '2026-12-16' }, p3.body.version);
+    expect(edit.body.error.code).toBe('plan_change_reason_required');
+
+    const again = await mick.post(`/w/friday-dev/import-jobs/${jobId}/commit`);
+    expect(again.body.error.code).toBe('import_not_editable');
+  });
+
+  it('ไฟล์ที่ไม่ใช่ .xlsx หรือไม่มีตารางงาน → 400', async () => {
+    const txt = await mick.upload('/w/friday-dev/import-jobs', Buffer.from('hello'), 'plan.csv');
+    expect(txt.body.error.code).toBe('invalid_file');
+    const wb = new ExcelJS.Workbook();
+    wb.addWorksheet('Sheet1').addRow(['a', 'b']);
+    const empty = await mick.upload('/w/friday-dev/import-jobs', Buffer.from(await wb.xlsx.writeBuffer()), 'empty.xlsx');
+    expect(empty.body.error.code).toBe('no_table_sheet');
   });
 });

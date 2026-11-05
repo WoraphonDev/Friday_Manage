@@ -47,6 +47,7 @@ UI ล็อกเป็น **v1.0** เมื่อ 5 พ.ย. 2569 หลั�
 
 1. ~~ถอดสเปก: Entity → ERD → API → สิทธิ์~~ (ร่างแรกครบ)
 2. ~~ฐานข้อมูล: migration + RLS~~ · ดู [packages/db](../../packages/db/README.md) (62 ตาราง · test RLS 24 ข้อผ่าน)
-3. ~~API ตัวแรก (NestJS): Auth + Workspace + โปรเจกต์ + งาน~~ · ดู [apps/api](../../apps/api/README.md) (test 24 ข้อผ่าน)
-4. API รอบถัดไป: เชิญสมาชิก, คำขอเลื่อน Due + Inbox, คอมเมนต์ / Checklist, Import Excel (เพื่อโหลดแผนจริง), Board / Timeline
-5. Migration ถัดไป (ทำพร้อม API ที่ใช้ตารางนั้น): ช่องทางแจ้งเตือน (LINE OA, Email, Webhook), Git, Automation, Saved view, API token, SSO, Template, PDPA, แพ็กเกจและการชำระเงิน, หลังบ้านทีม Friday
+3. ~~API ตัวแรก (NestJS): Auth + Workspace + โปรเจกต์ + งาน~~ · ดู [apps/api](../../apps/api/README.md) (test 34 ข้อผ่าน รวมรอบ 2)
+4. ~~API รอบ 2: เชิญสมาชิก + Import Excel~~ (นำเข้าแผนจริง 333 งานได้)
+5. API รอบถัดไป: คำขอเลื่อน Due + Inbox, Board (Kanban) / Timeline, คอมเมนต์ / Checklist, Import โหมดอัปเดต
+6. Migration ถัดไป (ทำพร้อม API ที่ใช้ตารางนั้น): ช่องทางแจ้งเตือน (LINE OA, Email, Webhook), Git, Automation, Saved view, API token, SSO, Template, PDPA, แพ็กเกจและการชำระเงิน, หลังบ้านทีม Friday

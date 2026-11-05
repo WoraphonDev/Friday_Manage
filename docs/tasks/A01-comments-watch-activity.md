@@ -39,9 +39,9 @@
 - เพิ่ม `GET/POST comments`, `PATCH/DELETE comments/{id}`, `GET activity`, `GET watchers` และ `POST/DELETE watch` ใต้ `w/{ws}/issues/{key}` · ทุก query ผ่าน `TenantDb.run` และตรวจสิทธิ์โปรเจกต์
 - คอมเมนต์และ Activity เรียงจากเก่าไปใหม่ แบ่งหน้าด้วย `{ items, nextCursor }` · cursor ผูกกับงานและชนิด feed ใช้เวลาเต็มจาก PostgreSQL + id เพื่อไม่ตกหล่นในมิลลิวินาทีเดียวกัน · Activity คืน `kind`, `actor`, `actorKind`, `verb`, `field`, `old`, `new` และเวลา ส่วนคอมเมนต์คืน `author`, `mentions` และสิทธิ์แก้/ลบของผู้เรียก
 - รองรับ `@ชื่อ` ตาม Canvas รวมชื่อหลายคำ/ภาษาไทย และ `@[ชื่อ](UUID)` สำหรับคนชื่อซ้ำ · mention ต้องตรงสมาชิกโปรเจกต์ที่ยัง active (รวม Project Owner) · ไม่ตีความอีเมลเป็น mention · แก้คอมเมนต์จะปรับตาราง mentions และส่ง `issue.mentioned` เฉพาะคนที่เพิ่มใหม่ ไม่เลิก Watch คนที่เคยถูก mention
-- Auto-watch ผู้เขียนและคนที่ถูก mention โดยรักษา source เดิม · กด Watch เองเปลี่ยนเป็น `manual` · Unwatch กระทำกับผู้เรียกเท่านั้นและเรียกซ้ำได้
+- Auto-watch ผู้เขียนและคนที่ถูก mention โดยรักษา source เดิมและล็อกตามลำดับ user id เพื่อกัน deadlock เมื่อ mention หากันพร้อมกัน · กด Watch เองเปลี่ยนเป็น `manual` · Unwatch กระทำกับผู้เรียกเท่านั้นและเรียกซ้ำได้
 - ลบคอมเมนต์เป็น tombstone (`body: null`, `deletionReason: author|admin`, `deletedBy`) และล้างข้อความ/mentions ที่บันทึกไว้ · แก้ของคนอื่นไม่ได้แม้เป็น Admin · Guest Viewer คุยได้เฉพาะงานที่แชร์และไม่ใช่ Bug โดยซ่อนตัวตนทีมในผู้เขียน, mentions, ผู้ลบ, watchers และค่าคนใน Activity
 - ส่ง `issue.commented` หลัง commit เฉพาะตอนสร้าง พร้อม excerpt 140 Unicode code points และ `issue.mentioned` หลัง commit · ไม่ส่งแจ้งเตือนเอง (A23)
-- ตรวจด้วย `startApp()` + `seedTeam()` ใน `comments.e2e.test.ts` 11 กรณี ครอบคลุม CRUD/เจ้าของ/Admin, mention ที่ไม่ถูกต้อง/ชื่อซ้ำ/ปิดสมาชิก, cursor และเวลาเท่ากัน, Activity, Watch, Event หลัง commit, Guest และการแยก Workspace/งาน
-- ผลตรวจ: `pnpm typecheck` ผ่านทุกแพ็กเกจ · `pnpm test` ผ่าน Web 31, DB 105, API 65 tests (มี 2 tests เดิมที่ skip) · ใช้ฐานทดสอบแยก `friday_a01` ไม่ชนงานขนาน
+- ตรวจด้วย `startApp()` + `seedTeam()` ใน `comments.e2e.test.ts` 12 กรณี ครอบคลุม CRUD/เจ้าของ/Admin, mention ที่ไม่ถูกต้อง/ชื่อซ้ำ/ปิดสมาชิก/พร้อมกัน, cursor และเวลาเท่ากัน, Activity, Watch, Event หลัง commit, Guest และการแยก Workspace/งาน
+- ผลตรวจ: `pnpm typecheck` ผ่านทุกแพ็กเกจ · `pnpm test` ผ่าน Web 31, DB 105, API 66 tests (มี 2 tests เดิมที่ skip) · ใช้ฐานทดสอบแยก `friday_a01` ไม่ชนงานขนาน
 - ไม่มีการแก้ schema หรือไฟล์กลางนอก lane

@@ -42,8 +42,8 @@ export class CommentsService {
       requirePerm(loaded.access, 'issue.comment');
       const mentioned = await this.mentions(tx, loaded.project, input.body);
       const [comment] = await tx.insert(s.comments).values({ workspaceId: tenant.workspaceId, issueId: loaded.issue.id, authorId: auth.userId, body: input.body }).returning();
-      await this.autoWatch(tx, tenant, loaded.issue.id, auth.userId, 'auto_comment');
-      await this.setMentions(tx, tenant, loaded.issue.id, comment.id, mentioned);
+      await this.setMentions(tx, tenant, comment.id, mentioned);
+      await this.autoWatch(tx, tenant, loaded.issue.id, auth.userId, mentioned);
       return { dto: (await this.commentDtos(tx, [comment], auth, loaded.access))[0], events: this.commentEvents(auth, tenant, loaded, comment, mentioned, true) };
     });
     await this.events.publish(result.events);
@@ -61,8 +61,8 @@ export class CommentsService {
       const old = await tx.select().from(s.commentMentions).where(eq(s.commentMentions.commentId, id));
       const [updated] = await tx.update(s.comments).set({ body: input.body, editedAt: new Date() }).where(eq(s.comments.id, id)).returning();
       await tx.delete(s.commentMentions).where(eq(s.commentMentions.commentId, id));
-      await this.autoWatch(tx, tenant, loaded.issue.id, auth.userId, 'auto_comment');
-      await this.setMentions(tx, tenant, loaded.issue.id, id, mentioned);
+      await this.setMentions(tx, tenant, id, mentioned);
+      await this.autoWatch(tx, tenant, loaded.issue.id, auth.userId, mentioned);
       const added = mentioned.filter((userId) => !old.some((m) => m.userId === userId));
       return { dto: (await this.commentDtos(tx, [updated], auth, loaded.access))[0], events: this.commentEvents(auth, tenant, loaded, updated, added, false) };
     });
@@ -153,6 +153,7 @@ export class CommentsService {
   }
 
   private async mentions(tx: Tx, project: Loaded['project'], body: string) {
+    if (!body.includes('@')) return [];
     const members = await tx.select({ id: s.users.id, name: s.users.displayName }).from(s.users)
       .innerJoin(s.workspaceMembers, and(eq(s.workspaceMembers.userId, s.users.id), eq(s.workspaceMembers.status, 'active')))
       .leftJoin(s.projectMembers, and(eq(s.projectMembers.projectId, project.id), eq(s.projectMembers.userId, s.users.id)))
@@ -160,13 +161,15 @@ export class CommentsService {
     return resolveMentions(body, members);
   }
 
-  private async setMentions(tx: Tx, tenant: TenantInfo, issueId: string, commentId: string, ids: string[]) {
+  private async setMentions(tx: Tx, tenant: TenantInfo, commentId: string, ids: string[]) {
     if (ids.length) await tx.insert(s.commentMentions).values(ids.map((userId) => ({ workspaceId: tenant.workspaceId, commentId, userId })));
-    for (const userId of ids) await this.autoWatch(tx, tenant, issueId, userId, 'auto_mention');
   }
 
-  private async autoWatch(tx: Tx, tenant: TenantInfo, issueId: string, userId: string, source: 'auto_comment' | 'auto_mention') {
-    await tx.insert(s.issueWatchers).values({ workspaceId: tenant.workspaceId, issueId, userId, source }).onConflictDoNothing();
+  private async autoWatch(tx: Tx, tenant: TenantInfo, issueId: string, authorId: string, mentioned: string[]) {
+    // ล็อกตามลำดับเดียวกัน ป้องกัน deadlock เมื่อสองคนคอมเมนต์ mention หากันพร้อมกัน
+    for (const userId of [...new Set([authorId, ...mentioned])].sort()) {
+      await tx.insert(s.issueWatchers).values({ workspaceId: tenant.workspaceId, issueId, userId, source: userId === authorId ? 'auto_comment' : 'auto_mention' }).onConflictDoNothing();
+    }
   }
 
   private commentEvents(auth: AuthInfo, tenant: TenantInfo, loaded: Loaded, comment: Comment, ids: string[], created: boolean): DomainEvent[] {

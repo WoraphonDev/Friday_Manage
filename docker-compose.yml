@@ -1,4 +1,4 @@
-# ฐานข้อมูลสำหรับพัฒนาในเครื่องเท่านั้น
+# ฐานข้อมูลและคิวงานสำหรับพัฒนาในเครื่องเท่านั้น
 services:
   postgres:
     image: postgres:18-alpine
@@ -15,5 +15,18 @@ services:
       interval: 2s
       timeout: 3s
       retries: 20
+  # คิวงานเบื้องหลัง (BullMQ) · ไม่เปิดก็ได้: API ใช้ QUEUE_MODE=inline เมื่อไม่มี VALKEY_URL
+  valkey:
+    image: valkey/valkey:9.0-alpine
+    ports:
+      - "63799:6379"
+    volumes:
+      - valkeydata:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
 volumes:
   pgdata:
+  valkeydata:

@@ -22,7 +22,7 @@
 
 ## เสร็จเมื่อ
 
-- [ ] CI เขียวบน PR ของงานนี้
+- [x] CI เขียวบน PR ของงานนี้
 
 ## ไม่อยู่ในงานนี้
 
@@ -38,4 +38,4 @@
 - จำกัดสิทธิ์ workflow เป็น `contents: read`, timeout 20 นาที และยกเลิก run เก่าของ branch เดียวกันเมื่อมี commit ใหม่
 - ไม่แก้สคริปต์ตั้ง environment เดิม เพราะงานนี้ยังไม่พบปัญหาบน Codex ตามเงื่อนไขของ task
 - ตรวจในเครื่อง: YAML parse ผ่าน, `bash -n` ของสคริปต์เดิมผ่าน, migration / dev roles / typecheck / build ผ่าน และ test ผ่าน 78 ข้อ (DB 24 + API 54) · ข้าม 2 ข้อที่ต้องใช้ไฟล์แผนจริงซึ่งไม่ได้เก็บใน repo
-- รอยืนยัน GitHub Actions บน PR ก่อนติ๊กเกณฑ์ CI เขียว · ไม่มีคำขอนอก lane
+- GitHub Actions ผ่านบน [PR #1](https://github.com/WoraphonDev/Friday_Manage/pull/1): [CI run #1](https://github.com/WoraphonDev/Friday_Manage/actions/runs/42046208737) ตรวจครบทุกขั้นตอนสำเร็จ · ไม่มีคำขอนอก lane

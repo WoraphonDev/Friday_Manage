@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Mobile Home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:15px;line-height:1.45}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.muted{color:#5F6873}
+.sec{display:flex;justify-content:space-between;align-items:center;padding:16px 16px 8px}
+.sec h2{margin:0;font-size:16px}
+.kp{flex:1;background:#fff;border:1px solid #E4E7EB;border-radius:12px;padding:10px 12px;text-decoration:none;color:#1B1F24;display:flex;flex-direction:column}
+.kp b{font-size:24px;line-height:1.2}
+.it{display:flex;gap:12px;align-items:center;padding:12px 16px;background:#fff;border-bottom:1px solid #EEF0F3;text-decoration:none;color:#1B1F24}
+.btn{flex:1;min-height:44px;border-radius:10px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-weight:600;cursor:pointer;color:#1B1F24}
+.btn.ok{background:#15803D;border-color:#15803D;color:#fff}
+.pc{flex:none;width:220px;background:#fff;border:1px solid #E4E7EB;border-radius:12px;padding:12px;text-decoration:none;color:#1B1F24;display:flex;flex-direction:column;gap:8px}
+.pill{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.tabb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:#5F6873;text-decoration:none;min-height:56px;position:relative}
+.tabb.on{color:#1D4ED8;font-weight:700}
+</style>
+</helmet>
+<div style="width:390px;height:844px;display:flex;flex-direction:column;background:#F6F7F9;overflow:hidden;position:relative">
+<header style="background:#fff;padding:16px 16px 12px;border-bottom:1px solid #E4E7EB;display:flex;align-items:center;gap:10px">
+<div style="flex:1;min-width:0"><div class="muted" style="font-size:13px">พ. 2 ธ.ค. 2569 · สถานะจำลอง</div><h1 style="margin:0;font-size:22px">สวัสดีตอนเช้า, Mick</h1></div>
+<a href="Search.dc.html" aria-label="ค้นหา" style="width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B1F24" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></a>
+</header>
+
+<div style="flex:1;overflow-y:auto;padding-bottom:16px">
+<div style="display:flex;gap:8px;padding:14px 16px 0">
+<a class="kp" href="MobileMyTasks.dc.html"><span class="muted" style="font-size:12px">Overdue (ทีม)</span><b style="color:#B91C1C">7</b></a>
+<a class="kp" href="MobileMyTasks.dc.html"><span class="muted" style="font-size:12px">วันนี้</span><b style="color:#B45309">2</b></a>
+<a class="kp" href="MobileInbox.dc.html"><span class="muted" style="font-size:12px">รอฉัน Review</span><b>3</b></a>
+</div>
+
+<sc-if value="{{hasReq}}" hint-placeholder-val="{{ true }}">
+<div class="sec"><h2>รอคุณอนุมัติ</h2><span class="pill" style="background:#FEF3C7;color:#92400E">{{reqCount}}</span></div>
+<sc-for list="{{reqs}}" as="r" hint-placeholder-count="1">
+<div style="margin:0 16px 10px;background:#fff;border:1px solid #FDE68A;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px">
+<div style="font-size:13px"><b>{{r.who}}</b> ขอเลื่อน Due</div>
+<a href="DueRequest.dc.html" style="font-weight:600;color:#1B1F24;text-decoration:none">{{r.t}}</a>
+<div style="display:flex;gap:8px;font-size:13px;align-items:center"><span class="muted" style="text-decoration:line-through">{{r.from}}</span><span aria-hidden="true">→</span><b>{{r.to}}</b><span class="muted">· {{r.impact}}</span></div>
+<div style="display:flex;gap:8px"><button class="btn" type="button" onClick="{{r.reject}}">ปฏิเสธ</button><button class="btn ok" type="button" onClick="{{r.approve}}">อนุมัติ</button></div>
+</div>
+</sc-for>
+</sc-if>
+<sc-if value="{{hasDone}}" hint-placeholder-val="{{ false }}"><div role="status" style="margin:10px 16px 0;background:#DCFCE7;color:#166534;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:600">{{doneMsg}}</div></sc-if>
+
+<div class="sec"><h2>วันนี้ของฉัน</h2><a href="MobileMyTasks.dc.html" style="font-size:13px">ดูทั้งหมด</a></div>
+<sc-for list="{{today}}" as="t" hint-placeholder-count="4">
+<a class="it" href="{{t.href}}">
+<span style="width:4px;align-self:stretch;border-radius:2px;background:{{t.c}}"></span>
+<div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{t.t}}</div><div class="muted" style="font-size:13px">{{t.key}} · {{t.proj}}</div></div>
+<span style="font-size:13px;font-weight:600;color:{{t.dc}};white-space:nowrap">{{t.due}}</span>
+</a>
+</sc-for>
+
+<div class="sec"><h2>โปรเจกต์</h2><a href="MobileOverview.dc.html" style="font-size:13px">ทั้งหมด 4</a></div>
+<div style="display:flex;gap:10px;overflow-x:auto;padding:0 16px 4px">
+<sc-for list="{{projects}}" as="p" hint-placeholder-count="4">
+<a class="pc" href="{{p.href}}">
+<div style="display:flex;align-items:center;gap:8px"><span style="width:28px;height:28px;border-radius:7px;background:{{p.c}};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">{{p.ab}}</span><b style="flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.n}}</b></div>
+<span class="pill" style="background:{{p.hb}};color:{{p.hf}};align-self:flex-start">{{p.h}}</span>
+<div style="height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden"><div style="height:100%;width:{{p.pct}}%;background:{{p.c}}"></div></div>
+<div class="muted" style="font-size:12px">{{p.meta}}</div>
+</a>
+</sc-for>
+</div>
+</div>
+
+<nav aria-label="เมนูหลัก" style="display:flex;background:#fff;border-top:1px solid #E4E7EB;padding-bottom:8px">
+<a class="tabb on" href="MobileHome.dc.html" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"></path></svg>Home</a>
+<a class="tabb" href="MobileMyTasks.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="m8 12 3 3 5-6"></path></svg>My Tasks</a>
+<a class="tabb" href="MobileOverview.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="7" height="7" rx="1.5"></rect><rect x="14" y="4" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>Projects</a>
+<a class="tabb" href="MobileInbox.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>Inbox<span style="position:absolute;top:6px;left:calc(50% + 4px);min-width:18px;height:18px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px">5</span></a>
+<a class="tabb" href="Profile.dc.html"><span style="width:24px;height:24px;border-radius:50%;background:#1D4ED8;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">MK</span>Profile</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { res: '' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const res = st.res || '';
+    const reqs = res ? [] : [{ who: 'Kaijeaw', t: 'DP-30 Curtailment Information + Plan Template', from: '1 ธ.ค.', to: '4 ธ.ค.', impact: 'Workload Kaijeaw สัปดาห์นี้ 18 / 5 MD', approve: function () { self.setState({ res: 'ok' }); }, reject: function () { self.setState({ res: 'no' }); } }];
+    const T = [
+      ['DP-34', 'Review · ผู้ใช้วงเงินจาก MDP (P/J) + ผูกลูกค้า FACO', 'Kaijeaw · Credit Line', '#1D4ED8', 'เลย 2 วัน', '#B91C1C', 'TaskDetail.dc.html'],
+      ['DP-91', 'Review · Export EDI: รายการ Lot, Drill-down', 'Pond · Drawdown', '#0F766E', 'เลย 7 วัน', '#B91C1C', 'TaskDetail.dc.html'],
+      ['DP-260', 'Review · Offset กับ HP: ตรวจรถจาก Chassis/Engine', 'Tung, Zo · Repayment', '#0369A1', 'วันนี้', '#B45309', 'TaskDetail.dc.html'],
+      ['DP-525', 'Bug · Workflow ส่งกลับแก้ไข ไม่กลับเป็น Draft', 'Donut mention คุณ', '#DC2626', 'ศ. 4', '#3D4550', 'BugDetail.dc.html']
+    ];
+    const today = T.map(function (t) { return { key: t[0], t: t[1], proj: t[2], c: t[3], due: t[4], dc: t[5], href: t[6] }; });
+    const projects = [
+      ['DP', 'Development Plan 2026-11', '#334155', 'Off track', '#FEE2E2', '#991B1B', 22, 'Overdue 7 · Credit Line Go-live 26 ม.ค.', 'MobileOverview.dc.html']
+    ].map(function (p) { return { ab: p[0], n: p[1], c: p[2], h: p[3], hb: p[4], hf: p[5], pct: p[6], meta: p[7], href: p[8] }; });
+    return {
+      reqs: reqs, hasReq: !res, reqCount: reqs.length, hasDone: !!res,
+      doneMsg: res === 'ok' ? 'อนุมัติแล้ว · แจ้ง Kaijeaw และอัปเดต Due ของ DP-30 เป็น 4 ธ.ค.' : 'ปฏิเสธแล้ว · Kaijeaw ได้รับแจ้งพร้อมให้เพิ่มเหตุผล',
+      today: today, projects: projects
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Members and Workload</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E4E7EB;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column}
+.navi{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 10px;border-radius:8px;color:#3D4550;text-decoration:none}
+.navi:hover{background:#F1F3F5;color:#1B1F24}
+.navi.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.sec{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:16px 10px 6px}
+.phead{background:#fff;padding:16px 24px 0;border-bottom:1px solid #E4E7EB}
+.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:10px}
+.tab{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;color:#56606B;text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+.tab:hover{color:#1B1F24}
+.tab.on{color:#1D4ED8;border-bottom-color:#1D4ED8;font-weight:600}
+.body{padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#F1F3F5}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF}
+.seg{display:inline-flex;border:1px solid #D5DAE0;border-radius:8px;overflow:hidden;background:#fff}
+.seg button{min-height:34px;padding:0 12px;border:0;background:transparent;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.chead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid #EEF0F3}
+.chead h2{margin:0;font-size:16px}
+.muted{color:#5F6873}
+.av{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;border:2px solid #fff;flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-mick{background:#1D4ED8}.p-ploy{background:#B45309}.p-ton{background:#0F766E}.p-fah{background:#7C3AED}.p-bank{background:#BE185D}
+.s-todo{background:#EEF0F3;color:#3D4550}.s-prog{background:#DBEAFE;color:#1E40AF}.s-rev{background:#FEF3C7;color:#92400E}.s-done{background:#DCFCE7;color:#166534}.s-late{background:#FEE2E2;color:#991B1B}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.subnav{display:flex;gap:4px;border-bottom:1px solid #E4E7EB}
+.subnav a{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;text-decoration:none;color:#56606B;font-weight:500;border-bottom:2px solid transparent}
+.subnav a.on{color:#1B1F24;border-bottom-color:#1B1F24;font-weight:600}
+.kp{background:#fff;border:1px solid #E4E7EB;border-radius:12px;padding:14px 16px}
+.kp .v{font-size:26px;font-weight:700;line-height:1.2}
+.wl{display:grid;grid-template-columns:190px minmax(0,1fr);align-items:end;border-bottom:1px solid #EEF0F3;padding:10px 18px}
+.bars{position:relative;height:120px;display:grid;column-gap:10px;align-items:end}
+.wb{width:100%;border:0;border-radius:4px 4px 0 0;cursor:pointer;padding:0;position:relative}
+.wb:hover{filter:brightness(.92)}
+.wb.sel{outline:2px solid #1B1F24;outline-offset:2px}
+.cap{position:absolute;left:0;right:0;border-top:2px dashed #475569;pointer-events:none}
+.mt{display:grid;grid-template-columns:minmax(220px,1.6fr) 140px 130px 90px 80px 80px 150px 90px 40px;column-gap:10px;align-items:center;min-height:56px;padding:0 18px;border-bottom:1px solid #EEF0F3}
+.mt.h{min-height:38px;font-size:12px;font-weight:600;color:#5F6873;background:#F8F9FB}
+.ico{width:32px;height:32px;border:0;background:transparent;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#3D4550;cursor:pointer;padding:0}
+.ico:hover{background:#EEF0F3}
+.in{min-height:36px;border:1px solid #D5DAE0;border-radius:8px;padding:0 10px;font:inherit;background:#fff}
+.up{color:#B91C1C}
+@media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.body{padding:16px}.phead{padding:12px 16px 0}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a href="IssueCreate.dc.html" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:#1D4ED8;color:#fff;font-weight:600;text-decoration:none">+ New</a>
+<a href="Bell.dc.html" aria-label="การแจ้งเตือน 5 รายการยังไม่อ่าน" style="position:relative;width:40px;height:40px;border-radius:8px;color:#E2E8F0;display:inline-flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #0F172A">5</span></a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div class="app">
+<aside class="side" aria-label="Workspace navigation">
+<a class="navi" href="Home.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"></path></svg>Home</a>
+<a class="navi" href="MyTasks.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="m8 12 3 3 5-6"></path></svg>My Tasks</a>
+<a class="navi" href="Inbox.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h5l1.5 3h5L16 13h5"></path><path d="M5 5h14l2 8v6H3v-6z"></path></svg>Inbox<span class="pill s-late" style="margin-left:auto">3</span></a>
+<div class="sec">Projects</div>
+<a class="navi on" href="Main.dc.html"><span class="dot" style="background:#334155"></span>Development Plan 2026-11</a>
+<a class="navi" href="NewProject.dc.html" style="color:#1D4ED8">+ New project</a>
+<div style="margin-top:auto;border-top:1px solid #E4E7EB;padding-top:10px;display:flex;flex-direction:column;gap:2px">
+<a class="navi" href="AdminConsole.dc.html">Admin Console</a>
+</div>
+</aside>
+<main class="main">
+<header class="phead">
+<div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px">
+<div style="min-width:0">
+<div class="muted" style="font-size:12px">Friday Workspace / Projects / Development Plan 2026-11</div>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+<div style="width:32px;height:32px;border-radius:8px;background:#334155;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">DP</div>
+<h1 style="margin:0;font-size:22px;line-height:1.3">Development Plan 2026-11</h1>
+<span class="pill s-prog">Active</span>
+<span class="pill s-late">Off track</span>
+<span class="muted" style="font-size:13px">5 พ.ย. 69 – 21 เม.ย. 70</span>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;margin-right:4px">
+<span class="av" title="Mick" style="background:#1D4ED8;">MK</span><span class="av" title="Kaijeaw" style="background:#B45309;margin-left:-8px;">KJ</span><span class="av" title="Pond" style="background:#0F766E;margin-left:-8px;">PD</span><span class="av" title="Tung" style="background:#7C3AED;margin-left:-8px;">TG</span><span class="av" title="Top" style="background:#BE185D;margin-left:-8px;">TP</span><span class="av" style="background:#64748B;margin-left:-8px" title="Zo, P'Tum, Ton และ BA อีก 7 คน">+9</span>
+</div>
+<button class="btn" type="button">Invite</button>
+<button class="btn" type="button" aria-label="Project menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+<button class="btn pri" type="button">+ New</button>
+</div>
+</div>
+<nav class="tabs" aria-label="Project views">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="8"><a class="{{t.cls}}" href="{{t.href}}">{{t.label}}</a></sc-for>
+</nav>
+</header>
+
+<div class="body">
+<nav class="subnav" aria-label="Members sections"><a class="on" href="#workload">Workload</a><a href="#members">Members (5)</a><a href="#invites">Invitations (2)</a></nav>
+
+<div id="workload" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<div class="seg" role="group" aria-label="Granularity"><button type="button" aria-pressed="false">Day</button><button type="button" aria-pressed="{{weekOn}}" onClick="{{setWeek}}">Week</button><button type="button" aria-pressed="{{monthOn}}" onClick="{{setMonth}}">Month</button></div>
+<button class="btn" type="button">2 พ.ย. – 27 ธ.ค. 2026</button>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<label class="btn" style="cursor:default">วัดจาก
+<select aria-label="Metric" style="border:0;font:inherit;font-weight:600;background:transparent;color:#1D4ED8"><option>Man-Day</option><option>ชั่วโมง</option><option>จำนวนงาน</option></select>
+</label>
+<label class="btn" style="cursor:default">ตำแหน่ง
+<select aria-label="Position" style="border:0;font:inherit;font-weight:600;background:transparent;color:#1D4ED8"><option>ทั้งหมด</option><option>PM</option><option>UX</option><option>Frontend</option><option>Backend</option><option>QA</option></select>
+</label>
+<label class="btn" style="cursor:default">Module
+<select aria-label="Module" style="border:0;font:inherit;font-weight:600;background:transparent;color:#1D4ED8"><option>ทุก Module</option><option>Credit Line</option><option>Drawdown</option><option>Pre-Disburse</option><option>Maintain Car After Drawdown</option><option>BFC ใบเรียกเก็บ/ใบแจ้งหนี้</option><option>Repayment รับชำระเงิน</option><option>Checkstock & Collect Car Keys</option><option>Finance (GL)</option><option>Campaign</option><option>OEM / Dealer Portal</option><option>Interface FP/HP/KL</option></select>
+</label>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
+<div class="kp"><div class="muted" style="font-size:13px">Capacity ทีม (สัปดาห์นี้)</div><div class="v">30 MD</div><div class="muted" style="font-size:12px">Dev 6 คน × 5 วันทำการ · 30 พ.ย. – 4 ธ.ค.</div></div>
+<div class="kp"><div class="muted" style="font-size:13px">มอบหมายแล้ว</div><div class="v up">41.0 MD</div><div class="muted" style="font-size:12px">Utilization 137%</div></div>
+<div class="kp"><div class="muted" style="font-size:13px">Overloaded</div><div class="v up">3 คน</div><div class="muted" style="font-size:12px">Kaijeaw 320% · Pond 260% · Tung 130% · สัปดาห์หน้า 3 คน (มีวันหยุด 2 วัน)</div></div>
+<div class="kp"><div class="muted" style="font-size:13px">งานยังไม่มี BA</div><div class="v">24</div><a href="Table.dc.html" style="font-size:12px">ยังไม่มี BA · ระบุ BA →</a></div>
+<div class="kp"><div class="muted" style="font-size:13px">คำนวณไม่ได้</div><div class="v">23</div><div class="muted" style="font-size:12px">ไม่มีวันในแผน (Interface FP/HP/KL)</div></div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<section class="card" style="flex:999 1 620px;min-width:0">
+<div class="chead">
+<h2>Workload รายคน <span class="muted" style="font-weight:500;font-size:14px">· {{unitLabel}}</span></h2>
+<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px" class="muted">
+<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#93B4F5"></span>&lt; 80%</span>
+<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#2563EB"></span>80–100%</span>
+<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#EA580C"></span>เกิน capacity</span>
+<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:16px;border-top:2px dashed #475569"></span>Capacity</span>
+</div>
+</div>
+<div class="wl" style="padding-top:8px;padding-bottom:8px;align-items:center;background:#F8F9FB">
+<div class="muted" style="font-size:12px;font-weight:600">สมาชิก</div>
+<div style="display:grid;grid-template-columns:repeat({{nCols}},minmax(0,1fr));column-gap:10px">
+<sc-for list="{{colLabels}}" as="c" hint-placeholder-count="8"><div style="text-align:center;font-size:12px;font-weight:{{c.fw}};color:{{c.c}}">{{c.l}}</div></sc-for>
+</div>
+</div>
+<sc-for list="{{people}}" as="p" hint-placeholder-count="6">
+<div class="wl">
+<div style="display:flex;align-items:center;gap:10px;align-self:center">
+<span class="av" style="background:{{p.pc}}">{{p.ini}}</span>
+<div style="min-width:0"><div style="font-weight:600">{{p.n}}</div><div class="muted" style="font-size:12px">{{p.role}}</div><div style="font-size:12px" class="{{p.avgCls}}">เฉลี่ย {{p.avg}}%</div></div>
+</div>
+<div class="bars" style="grid-template-columns:repeat({{nCols}},minmax(0,1fr))">
+<sc-for list="{{p.cols}}" as="b" hint-placeholder-count="8">
+<div style="position:relative;height:120px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center">
+<span style="font-size:11px;font-weight:600;color:{{b.tc}};margin-bottom:2px">{{b.v}}</span>
+<button class="{{b.cls}}" type="button" onClick="{{b.pick}}" aria-label="{{b.aria}}" style="height:{{b.h}}px;background:{{b.c}}"></button>
+<span class="cap" style="bottom:{{b.capY}}px"></span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<div style="padding:14px 18px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0;font-size:14px">รวมทั้งทีม</h3><span class="muted" style="font-size:12px">เส้นประ = capacity ทีม (หักวันลาแล้ว)</span></div>
+<div style="display:grid;grid-template-columns:190px minmax(0,1fr);margin-top:8px;align-items:end">
+<div class="muted" style="font-size:12px;align-self:center">Man-Day รวม / capacity</div>
+<div class="bars" style="grid-template-columns:repeat({{nCols}},minmax(0,1fr));height:100px">
+<sc-for list="{{team}}" as="b" hint-placeholder-count="8">
+<div style="position:relative;height:100px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center">
+<span style="font-size:11px;font-weight:600">{{b.v}}</span>
+<div style="width:100%;height:{{b.h}}px;background:#64748B;border-radius:4px 4px 0 0"></div>
+<span class="cap" style="bottom:{{b.capY}}px"></span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</section>
+
+<aside class="card" style="flex:1 1 300px;min-width:0" aria-label="Selected period detail">
+<div class="chead">
+<div style="display:flex;align-items:center;gap:10px"><span class="av" style="background:{{det.pc}}">{{det.ini}}</span><div><h2 style="font-size:15px">{{det.n}} · {{det.period}}</h2><div class="{{det.cls}}" style="font-size:13px;font-weight:600">{{det.v}} / {{det.cap}} MD ({{det.pct}}%)</div></div></div>
+</div>
+<div style="padding:8px 0">
+<sc-for list="{{det.tasks}}" as="k" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid #EEF0F3">
+<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{k.n}}</div><div class="muted" style="font-size:12px">{{k.key}} · {{k.h}} MD</div></div>
+<select class="in" aria-label="Reassign {{k.n}}" style="min-height:32px;font-size:12px;max-width:110px"><option>{{det.n}}</option><option>Kaijeaw</option><option>Pond</option><option>Tung</option><option>Top</option><option>Zo</option><option>P'Tum</option></select>
+</div>
+</sc-for>
+</div>
+<div style="padding:12px 16px" class="muted"><div style="font-size:12px">คลิกแท่งกราฟเพื่อดูงานในช่วงนั้น · เปลี่ยนผู้รับผิดชอบหรือลากงานไปให้คนอื่นได้ทันที<br>วิธีคิด: Man-Day ของงานกระจายเท่ากันตามวันทำการระหว่าง Plan Start–End · งานที่มีหลาย Dev แบ่ง Man-Day เท่ากันต่อคน · capacity 1 MD/คน/วัน หักวันลาและวันหยุด ธปท.</div></div>
+</aside>
+</div>
+
+<section id="members" class="card" style="overflow-x:auto">
+<div class="chead" style="min-width:1060px">
+<h2>Members <span class="muted" style="font-weight:500;font-size:14px">· 5 คน</span></h2>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<input class="in" type="search" placeholder="ค้นหาสมาชิก" aria-label="ค้นหาสมาชิก">
+<button class="btn" type="button">สิทธิ์ของแต่ละ Role</button>
+</div>
+</div>
+<div style="min-width:1060px">
+<div class="mt h"><div>สมาชิก</div><div>ตำแหน่ง</div><div>Project role</div><div>Capacity</div><div>Open</div><div>Overdue</div><div>สัปดาห์นี้</div><div>เข้าร่วม</div><div></div></div>
+<sc-for list="{{members}}" as="m" hint-placeholder-count="15">
+<div class="mt">
+<div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="av" style="background:{{m.pc}}">{{m.ini}}</span><div style="min-width:0"><div style="font-weight:600">{{m.n}}<sc-if value="{{m.isOwner}}" hint-placeholder-val="{{ false }}"> <span class="pill s-prog">Owner</span></sc-if></div><div class="muted" style="font-size:12px">{{m.email}}</div></div></div>
+<div style="font-size:13px">{{m.pos}}</div>
+<div><select class="in" aria-label="Project role of {{m.n}}" style="min-height:32px;font-size:13px"><option>{{m.role}}</option><option>Admin</option><option>Member</option><option>Viewer</option></select></div>
+<div style="font-size:13px">5 MD/สัปดาห์</div>
+<div style="font-size:13px;font-weight:600">{{m.open}}</div>
+<div style="font-size:13px;font-weight:600" class="{{m.odCls}}">{{m.od}}</div>
+<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden"><span style="display:block;height:100%;width:{{m.bar}}%;background:{{m.bc}}"></span></span><span style="font-size:12px;white-space:nowrap" class="{{m.wkCls}}">{{m.wkMD}}/5 MD</span></div>
+<div class="muted" style="font-size:13px">{{m.joined}}</div>
+<button class="ico" type="button" aria-label="ตัวเลือกของ {{m.n}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+</div>
+</sc-for>
+</div>
+</section>
+
+<div id="invites" style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<section class="card" style="flex:2 1 480px;min-width:0">
+<div class="chead"><h2>Invite members</h2></div>
+<div style="padding:16px 18px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+<label style="display:flex;flex-direction:column;gap:4px;flex:3 1 260px;font-size:13px;font-weight:500">อีเมล (คั่นด้วย , ได้หลายคน)<input class="in" type="email" placeholder="name@example.com, ..."></label>
+<label style="display:flex;flex-direction:column;gap:4px;flex:1 1 120px;font-size:13px;font-weight:500">Role<select class="in"><option>Member</option><option>Admin</option><option>Viewer</option></select></label>
+<label style="display:flex;flex-direction:column;gap:4px;flex:1 1 110px;font-size:13px;font-weight:500">Capacity (MD/สัปดาห์)<input class="in" type="number" value="5"></label>
+<button class="btn pri" type="button">ส่งคำเชิญ</button>
+</div>
+<div style="border-top:1px solid #EEF0F3">
+<div style="padding:10px 18px 4px;font-size:13px;font-weight:600">Pending invitations</div>
+<div style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid #EEF0F3;flex-wrap:wrap"><span style="flex:1;min-width:180px">kl@example.com <span class="muted" style="font-size:12px">(BA "KL" · OEM Portal)</span></span><span class="pill s-todo">Member</span><span class="muted" style="font-size:12px">ส่งเมื่อ 25 พ.ย.</span><button class="btn" type="button" style="min-height:32px">Resend</button><button class="btn" type="button" style="min-height:32px;color:#B91C1C">Cancel</button></div>
+<div style="display:flex;align-items:center;gap:10px;padding:10px 18px;flex-wrap:wrap"><span style="flex:1;min-width:180px">business-owner@example.com <span class="muted" style="font-size:12px">(เจ้าของระบบ · Guest)</span></span><span class="pill s-todo">Viewer</span><span class="muted" style="font-size:12px">ส่งเมื่อ 20 พ.ย.</span><button class="btn" type="button" style="min-height:32px">Resend</button><button class="btn" type="button" style="min-height:32px;color:#B91C1C">Cancel</button></div>
+</div>
+</section>
+<section class="card" style="flex:1 1 300px;min-width:0">
+<div class="chead"><h2>สิทธิ์ของแต่ละ Role</h2></div>
+<div style="padding:12px 18px;display:flex;flex-direction:column;gap:12px;font-size:13px">
+<div><span class="pill s-prog">Admin</span><div style="margin-top:4px">จัดการสมาชิกและสิทธิ์ ตั้งค่าโปรเจกต์ Workflow และ Module ลบงานและไฟล์ได้</div></div>
+<div><span class="pill s-done">Member</span><div style="margin-top:4px">สร้างและแก้ไขงาน คอมเมนต์ อัปโหลดไฟล์ บันทึกเวลา</div></div>
+<div><span class="pill s-todo">Viewer</span><div style="margin-top:4px">ดูทุก tab และคอมเมนต์ได้ แต่แก้ไขไม่ได้ เหมาะกับลูกค้า</div></div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+  state = { gran: 'week', sel: 'Kaijeaw-4' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const gran = st.gran || 'week';
+    const T = [['Overview','Main.dc.html'],['ภาพรวม Lead','LeadDashboard.dc.html'],['Backlog','Backlog.dc.html'],['Table','Table.dc.html'],['Kanban','Kanban.dc.html'],['Timeline','Timeline.dc.html'],['Gantt','Gantt.dc.html'],['Calendar','Calendar.dc.html'],['Members','Members.dc.html'],['Files','Files.dc.html'],['Settings','ProjectSettings.dc.html']];
+    const tabs = T.map(function (x) { return { label: x[0], href: x[1], cls: x[0] === 'Members' ? 'tab on' : 'tab' }; });
+    const D = [{"n": "Kaijeaw", "ini": "KJ", "pc": "#B45309", "role": "Dev · Credit Line, Pre-Disburse", "h": [209.6, 228.8, 136.0, 224.0, 128.0, 96.0, 96.0, 96.0], "cap": [40, 40, 40, 40, 40, 24, 40, 40], "pool": [["DP-20", "Workflow : ส่งงาน/คืนงาน/ส่งกลับแก้ไข ข้าม BD·", 0.29], ["DP-24", "Credit / Sub / Shared Limit (Product / Dealer)", 0.19], ["DP-29", "Interest Setting + Interest Program Normal / P", 0.12], ["DP-30", "Curtailment Information + Plan Template (Floor", 0.12]]}, {"n": "Pond", "ini": "PD", "pc": "#0F766E", "role": "Dev · Drawdown, Campaign", "h": [70.4, 135.2, 68.0, 36.0, 104.0, 96.0, 76.0, 56.0], "cap": [40, 40, 40, 40, 40, 24, 40, 40], "pool": [["DP-95", "เงื่อนไขระงับวงเงิน 8 ข้อ + ข้ามได้ตามช่วงอนุโ", 0.29], ["DP-94", "ตรวจวงเงินคงเหลือระดับ Credit Line / Brand / D", 0.18], ["DP-97", "วงเงินถูกระงับหลัง Confirm: เตือน + บันทึกหมาย", 0.18], ["DP-102", "Tab รายการรถ: Add Manual / Select Car, Credit ", 0.18]]}, {"n": "Tung", "ini": "TG", "pc": "#7C3AED", "role": "Dev · Repayment, Checkstock", "h": [0, 28.0, 40.0, 36.0, 52.0, 36.0, 56.0, 48.0], "cap": [40, 40, 40, 40, 40, 24, 40, 40], "pool": [["DP-258", "รับชำระด้วยเช็ค (CLQ): คืนวงเงินวันทำการถัดไป ", 0.17], ["DP-261", "สร้างไฟล์ Direct Debit (KBANK): รอบ 11/14/16 น", 0.33], ["DP-262", "อัปโหลดผล Direct Debit -> ตัดชำระอัตโนมัติ + ร", 0.33], ["DP-259", "Statement: ค้นหาเงินโอนที่ HP Upload, จองเข้าบ", 0.11]]}, {"n": "Top", "ini": "TP", "pc": "#BE185D", "role": "Dev · BFC, OEM Portal, GL", "h": [17.6, 32.8, 92.0, 36.0, 16.0, 16.0, 24.0, 20.0], "cap": [40, 40, 40, 40, 40, 24, 40, 40], "pool": [["DP-223", "ค่าปรับ/ดอกเบี้ยผิดนัด 2 แบบ: Curtailment และ ", 1.0]]}, {"n": "Zo", "ini": "ZO", "pc": "#0369A1", "role": "Dev · Database, GL", "h": [85.6, 50.4, 0, 20.0, 20.0, 16.0, 24.0, 20.0], "cap": [40, 40, 40, 40, 40, 24, 40, 40], "pool": [["DP-223", "ค่าปรับ/ดอกเบี้ยผิดนัด 2 แบบ: Curtailment และ ", 0.89], ["DP-260", "Offset กับ HP: ตรวจรถจาก Chassis/Engine, ส่งยอ", 0.11]]}, {"n": "P'Tum", "ini": "PT", "pc": "#4D7C0F", "role": "Dev · Batch", "h": [9.6, 4.8, 8.0, 40.0, 8.0, 4.0, 12.0, 8.0], "cap": [40, 40, 40, 40, 40, 24, 40, 40], "pool": [["DP-258", "รับชำระด้วยเช็ค (CLQ): คืนวงเงินวันทำการถัดไป ", 1.0]]}];
+    const WL = ['2 พ.ย.', '9 พ.ย.', '16 พ.ย.', '23 พ.ย.', '30 พ.ย.', '7 ธ.ค.', '14 ธ.ค.', '21 ธ.ค.'];
+    const WP = ['2–8 พ.ย.', '9–15 พ.ย.', '16–22 พ.ย.', '23–29 พ.ย.', '30 พ.ย.–6 ธ.ค.', '7–13 ธ.ค.', '14–20 ธ.ค.', '21–27 ธ.ค.'];
+    const isMonth = gran === 'month';
+    const agg = function (arr) { return isMonth ? [arr.slice(0, 4).reduce(function (a, b) { return a + b; }, 0), arr.slice(4).reduce(function (a, b) { return a + b; }, 0)] : arr; };
+    const labels = isMonth ? ['พฤศจิกายน', 'ธันวาคม'] : WL;
+    const periods = isMonth ? ['พฤศจิกายน 2026', 'ธ.ค. 2026 (ถึง 27 ธ.ค.)'] : WP;
+    const md = function (h) { return h / 8; }, r1 = function (x) { return Math.round(x * 10) / 10; };
+    const maxV = isMonth ? 60 : 16, H = 100;
+    let sel = st.sel || 'Kaijeaw-4';
+    const si = parseInt(sel.split('-')[1], 10);
+    if (si >= labels.length) sel = sel.split('-')[0] + '-0';
+    const colLabels = labels.map(function (l, i) { return { l: l, c: i === (isMonth ? 1 : 4) ? '#1D4ED8' : '#5F6873', fw: i === (isMonth ? 1 : 4) ? 700 : 500 }; });
+    let det = null;
+    const people = D.map(function (p) {
+      const hv = agg(p.h.map(md)).map(r1), cv = agg(p.cap.map(md)).map(r1);
+      let tot = 0, ctot = 0;
+      const cols = hv.map(function (v, i) {
+        tot += v; ctot += cv[i];
+        const pct = v / cv[i] * 100;
+        const id = p.n + '-' + i;
+        const c = pct > 100 ? '#EA580C' : (pct >= 80 ? '#2563EB' : '#93B4F5');
+        if (id === sel) {
+          det = { n: p.n, ini: p.ini, pc: p.pc, period: periods[i], v: v, cap: cv[i], pct: Math.round(pct), cls: pct > 100 ? 'up' : '',
+            tasks: p.pool.map(function (k) { return { key: k[0], n: k[1], h: r1(v * k[2]) }; }) };
+        }
+        return { v: v, h: Math.round(Math.min(v, maxV) / maxV * H), capY: Math.round(cv[i] / maxV * H), c: c, tc: pct > 100 ? '#B91C1C' : '#3D4550',
+          cls: id === sel ? 'wb sel' : 'wb', aria: p.n + ' ' + labels[i] + ' ' + v + ' Man-Day จาก ' + cv[i],
+          pick: function () { self.setState({ sel: id }); } };
+      });
+      const avg = Math.round(tot / ctot * 100);
+      return { n: p.n, ini: p.ini, pc: p.pc, role: p.role, avg: avg, avgCls: avg > 100 ? 'up' : 'muted', cols: cols };
+    });
+    const tH = agg([392.8, 480.0, 344.0, 392.0, 328.0, 264.0, 288.0, 248.0].map(md)).map(r1), tC = agg([240, 240, 240, 240, 240, 144, 240, 240].map(md)).map(r1);
+    const tMax = isMonth ? 260 : 80;
+    const team = tH.map(function (v, i) { return { v: v + '/' + tC[i], h: Math.round(v / tMax * 80), capY: Math.round(tC[i] / tMax * 80) }; });
+    const M = [["Mick", "MK", "#1D4ED8", "mick@example.com", "Lead / PM", "Admin", 3, 0, 0, "5 พ.ย.", true], ["Kaijeaw", "KJ", "#B45309", "kaijeaw@example.com", "Developer", "Member", 50, 4, 128.0, "5 พ.ย."], ["Pond", "PD", "#0F766E", "pond@example.com", "Developer", "Member", 87, 1, 104.0, "5 พ.ย."], ["Tung", "TG", "#7C3AED", "tung@example.com", "Developer", "Member", 69, 0, 52.0, "5 พ.ย."], ["Top", "TP", "#BE185D", "top@example.com", "Developer", "Member", 57, 2, 16.0, "5 พ.ย."], ["Zo", "ZO", "#0369A1", "zo@example.com", "Developer", "Member", 42, 0, 20.0, "5 พ.ย."], ["P'Tum", "PT", "#4D7C0F", "ptum@example.com", "Developer", "Member", 12, 0, 8.0, "5 พ.ย."], ["Donut", "DN", "#A21CAF", "donut@example.com", "BA", "Member", 33, 4, 0, "5 พ.ย."], ["Naa", "NA", "#C2410C", "naa@example.com", "BA", "Member", 66, 1, 0, "5 พ.ย."], ["P'Nee", "PN", "#0E7490", "pnee@example.com", "BA", "Member", 37, 2, 0, "5 พ.ย."], ["P'Oak", "PO", "#57534E", "poak@example.com", "BA", "Member", 26, 0, 0, "5 พ.ย."], ["Kookkai", "KK", "#DB2777", "kookkai@example.com", "BA", "Member", 23, 0, 0, "5 พ.ย."], ["P'Wing", "PW", "#4338CA", "pwing@example.com", "BA", "Member", 32, 0, 0, "5 พ.ย."], ["Ton", "TN", "#65A30D", "ton@example.com", "BA", "Member", 18, 0, 0, "5 พ.ย."]];
+    const members = M.map(function (m) {
+      const over = m[8] > 40; const isBA = m[4] === 'BA' || m[4] === 'Lead / PM';
+      return { n: m[0], ini: m[1], pc: m[2], email: m[3], pos: m[4], role: m[5], cap: 40, open: m[6], od: m[7], odCls: m[7] > 0 ? 'up' : 'muted',
+        wk: m[8], wkMD: Math.round(m[8] / 8 * 10) / 10, bar: Math.min(100, m[8] / 40 * 100), bc: over ? '#EA580C' : (m[8] >= 32 ? '#2563EB' : '#93B4F5'), wkCls: over ? 'up' : (isBA ? 'muted' : ''), joined: m[9], isOwner: !!m[10] };
+    });
+    return {
+      tabs: tabs, people: people, colLabels: colLabels, nCols: labels.length, team: team, members: members, det: det || { n: '', tasks: [] },
+      unitLabel: isMonth ? 'Man-Day ต่อเดือน' : 'Man-Day ต่อสัปดาห์',
+      weekOn: isMonth ? 'false' : 'true', monthOn: isMonth ? 'true' : 'false',
+      setWeek: function () { self.setState({ gran: 'week' }); }, setMonth: function () { self.setState({ gran: 'month' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

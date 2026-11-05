@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E4E7EB;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column}
+.navi{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 10px;border-radius:8px;color:#3D4550;text-decoration:none}
+.navi:hover{background:#F1F3F5;color:#1B1F24}
+.navi.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.sec{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:16px 10px 6px}
+.phead{background:#fff;padding:20px 24px;border-bottom:1px solid #E4E7EB}
+.body{padding:20px 24px;display:flex;flex-direction:column;gap:20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:0 14px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.chead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid #EEF0F3}
+.chead h2{margin:0;font-size:15px}
+.muted{color:#5F6873}
+.av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;border:2px solid #fff;flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-mick{background:#1D4ED8}.p-ploy{background:#B45309}.p-ton{background:#0F766E}.p-fah{background:#7C3AED}.p-bank{background:#BE185D}
+.s-todo{background:#EEF0F3;color:#3D4550}.s-prog{background:#DBEAFE;color:#1E40AF}.s-rev{background:#FEF3C7;color:#92400E}.s-done{background:#DCFCE7;color:#166534}.s-late{background:#FEE2E2;color:#991B1B}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.kpi{display:flex;flex-direction:column;gap:2px;padding:14px 16px;background:#fff;border:1px solid #E4E7EB;border-radius:12px;text-decoration:none;color:#1B1F24}
+.kpi:hover{border-color:#B8C0CA;color:#1B1F24}
+.kpi .v{font-size:28px;font-weight:700;line-height:1.2}
+.row{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid #EEF0F3}
+.dt{font-size:12px;font-weight:600;white-space:nowrap}
+.dt.late{color:#B91C1C}.dt.today{color:#B45309}
+.pc{display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid #E4E7EB;border-radius:12px;background:#fff;text-decoration:none;color:#1B1F24}
+.pc:hover{border-color:#94A3B8;color:#1B1F24}
+.li{display:flex;gap:10px;padding:10px 18px;border-bottom:1px solid #F1F3F5;align-items:flex-start;text-decoration:none;color:#1B1F24}
+.li:hover{background:#FAFBFC;color:#1B1F24}
+@media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.body{padding:16px}.phead{padding:16px}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a href="IssueCreate.dc.html" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:#1D4ED8;color:#fff;font-weight:600;text-decoration:none">+ New</a>
+<a href="Bell.dc.html" aria-label="การแจ้งเตือน 5 รายการยังไม่อ่าน" style="position:relative;width:40px;height:40px;border-radius:8px;color:#E2E8F0;display:inline-flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #0F172A">5</span></a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div class="app">
+<aside class="side" aria-label="Workspace navigation">
+<a class="navi on" href="Home.dc.html" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"></path></svg>Home</a>
+<a class="navi" href="MyTasks.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="m8 12 3 3 5-6"></path></svg>My Tasks<span class="pill s-todo" style="margin-left:auto">12</span></a>
+<a class="navi" href="Inbox.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h5l1.5 3h5L16 13h5"></path><path d="M5 5h14l2 8v6H3v-6z"></path></svg>Inbox<span class="pill s-late" style="margin-left:auto">3</span></a>
+<div class="sec">Projects</div>
+<a class="navi" href="Main.dc.html"><span class="dot" style="background:#334155"></span>Development Plan 2026-11</a>
+<a class="navi" href="NewProject.dc.html" style="color:#1D4ED8">+ New project</a>
+<div style="margin-top:auto;border-top:1px solid #E4E7EB;padding-top:10px;display:flex;flex-direction:column;gap:2px">
+<a class="navi" href="AdminConsole.dc.html">Admin Console</a>
+</div>
+</aside>
+<main class="main">
+<header class="phead">
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px">
+<div>
+<div class="muted" style="font-size:13px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">พุธที่ 2 ธันวาคม 2026 <span class="pill" style="background:#EEF0F3;color:#3D4550">ข้อมูลจริงจาก Development Plan 2026-11 · สถานะจำลอง ณ พ. 2 ธ.ค. 2569</span></div>
+<h1 style="margin:2px 0 0;font-size:26px">สวัสดีตอนบ่าย, Mick</h1>
+<div class="muted" style="font-size:14px">ทีมมี <b style="color:#B45309">2 งานครบกำหนดวันนี้</b> และ <b style="color:#B91C1C">7 งานเลยกำหนด</b> · มี 3 งานรอคุณ Review และ 1 คำขอเลื่อน Due</div>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<a class="btn" href="NewProject.dc.html">+ New project</a>
+<a class="btn pri" href="TaskCreate.dc.html">+ New task</a>
+</div>
+</div>
+</header>
+
+<div class="body">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px">
+<a class="kpi" href="MyTasks.dc.html"><span class="muted" style="font-size:13px;display:flex;align-items:center;gap:8px"><span class="dot" style="background:#D97706"></span>ครบกำหนดวันนี้ (ทีม)</span><span class="v" style="">2</span><span class="muted" style="font-size:12px">DP-35, DP-260</span></a>
+<a class="kpi" href="Main.dc.html"><span class="muted" style="font-size:13px;display:flex;align-items:center;gap:8px"><span class="dot" style="background:#DC2626"></span>Overdue (ทีม)</span><span class="v" style="color:#B91C1C">7</span><span class="muted" style="font-size:12px">Kaijeaw 4 · Top 2 · Pond 1</span></a>
+<a class="kpi" href="Calendar.dc.html"><span class="muted" style="font-size:13px;display:flex;align-items:center;gap:8px"><span class="dot" style="background:#2563EB"></span>ครบกำหนดสัปดาห์นี้</span><span class="v" style="">7</span><span class="muted" style="font-size:12px">ถึง ศ. 4 ธ.ค.</span></a>
+<a class="kpi" href="#review"><span class="muted" style="font-size:13px;display:flex;align-items:center;gap:8px"><span class="dot" style="background:#F59E0B"></span>รอฉัน Review</span><span class="v" style="">3</span><span class="muted" style="font-size:12px">และคำขอเลื่อน Due 1</span></a>
+<a class="kpi" href="#inbox"><span class="muted" style="font-size:13px;display:flex;align-items:center;gap:8px"><span class="dot" style="background:#7C3AED"></span>Mentions ยังไม่อ่าน</span><span class="v" style="">1</span><span class="muted" style="font-size:12px">จาก Donut</span></a>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+<div style="flex:2 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+<section class="card">
+<div class="chead"><h2>สิ่งที่รอคุณวันนี้ <span class="muted" style="font-weight:500">· อนุมัติ + Review</span></h2><a href="MyTasks.dc.html" style="font-size:13px;font-weight:500">เปิด My Tasks →</a></div>
+<sc-for list="{{today}}" as="r" hint-placeholder-count="4">
+<div class="row">
+<input type="checkbox" checked="{{r.done}}" onChange="{{r.toggle}}" aria-label="ทำเครื่องหมายว่าเสร็จ: {{r.t}}" style="width:18px;height:18px;margin:0;flex:none">
+<div style="flex:1;min-width:0">
+<div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:{{r.deco}};color:{{r.tc}}">{{r.t}}</div>
+<div style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:2px;flex-wrap:wrap" class="muted"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:{{r.pcol}}"></span>{{r.proj}}</span><span>{{r.key}}</span><span>{{r.kind}}</span></div>
+</div>
+<span class="pill {{r.sc}}">{{r.st}}</span>
+<span class="{{r.dcls}}">{{r.due}}</span>
+</div>
+</sc-for>
+<div style="padding:10px 18px" class="muted"><span style="font-size:12px">ติ๊กเพื่อปิดงาน · คลิกชื่อเพื่อเปิดรายละเอียด</span></div>
+</section>
+
+<section>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap"><h2 style="margin:0;font-size:16px">โปรเจกต์ของฉัน <span class="muted" style="font-weight:500">· 1</span></h2><div style="display:flex;gap:8px"><select class="btn" aria-label="Sort projects"><option>เรียงตาม: ใกล้ Go-live</option><option>Health</option><option>ชื่อ</option></select></div></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px">
+<sc-for list="{{projects}}" as="p" hint-placeholder-count="1">
+<a class="pc" href="{{p.href}}">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:36px;height:36px;border-radius:9px;background:{{p.c}};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none">{{p.ab}}</span>
+<div style="flex:1;min-width:0"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.n}}</div><div class="muted" style="font-size:12px">{{p.key}} · คุณเป็น {{p.role}}</div></div>
+<span class="pill {{p.hc}}">{{p.h}}</span>
+</div>
+<div>
+<div style="display:flex;justify-content:space-between;font-size:13px"><span class="muted">ความคืบหน้า</span><span style="font-weight:700">{{p.pct}}%</span></div>
+<div style="height:8px;background:#EEF0F3;border-radius:99px;overflow:hidden;margin-top:4px"><div style="width:{{p.pct}}%;height:100%;background:{{p.c}}"></div></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;font-size:12px">
+<div><div class="muted">Overdue</div><div style="font-weight:700;font-size:15px;color:{{p.odc}}">{{p.od}}</div></div>
+<div><div class="muted">งานของฉัน</div><div style="font-weight:700;font-size:15px">{{p.mine}}</div></div>
+<div><div class="muted">Go-live</div><div style="font-weight:700;font-size:13px">{{p.go}}</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;font-size:12px;border-top:1px solid #EEF0F3;padding-top:10px">
+<svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill="#1B1F24"></rect></svg>
+<span style="flex:1;min-width:0"><b>{{p.ms}}</b> <span class="muted">· {{p.msd}}</span></span>
+<span style="display:flex">
+<sc-for list="{{p.team}}" as="m" hint-placeholder-count="3"><span class="av" style="width:24px;height:24px;font-size:9px;margin-left:-6px;background:{{m.pc}}">{{m.ini}}</span></sc-for>
+</span>
+</div>
+</a>
+</sc-for>
+<a class="pc" href="NewProject.dc.html" style="border-style:dashed;align-items:center;justify-content:center;min-height:200px;color:#1D4ED8;font-weight:600">+ New project</a>
+</div>
+</section>
+
+<section class="card">
+<div class="chead"><h2>เปิดล่าสุด</h2></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px">
+<a class="btn" href="TaskDetail.dc.html" style="font-size:13px"><span class="muted">DP-39</span> ฟอร์มหลักประกัน 5 ประเภท</a>
+<a class="btn" href="Gantt.dc.html" style="font-size:13px">Gantt · Development Plan 2026-11</a>
+<a class="btn" href="LeadDashboard.dc.html" style="font-size:13px">ภาพรวม Lead</a>
+<a class="btn" href="Members.dc.html" style="font-size:13px">Workload · Development Plan 2026-11</a>
+<a class="btn" href="DueRequest.dc.html" style="font-size:13px"><span class="muted">DP-30</span> Curtailment Information</a>
+</div>
+</section>
+</div>
+
+<div style="flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:20px">
+<section class="card" id="review">
+<div class="chead"><h2>รอฉัน Review <span class="muted" style="font-weight:500">· 3</span></h2></div>
+<sc-for list="{{reviews}}" as="r" hint-placeholder-count="3">
+<a class="li" href="{{r.href}}">
+<span class="pill {{r.sc}}" style="margin-top:2px">{{r.type}}</span>
+<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">{{r.t}}</div><div class="muted" style="font-size:12px">{{r.meta}}</div></div>
+<span class="{{r.wcls}}" style="font-size:12px;white-space:nowrap">{{r.wait}}</span>
+</a>
+</sc-for>
+</section>
+
+<section class="card" id="inbox">
+<div class="chead"><h2>Inbox <span class="pill s-late">3 ใหม่</span></h2><a href="Inbox.dc.html" style="font-size:13px">ดูทั้งหมด</a></div>
+<sc-for list="{{inbox}}" as="m" hint-placeholder-count="4">
+<a class="li" href="{{m.href}}">
+<span class="av" style="width:28px;height:28px;background:{{m.pc}}">{{m.ini}}</span>
+<div style="flex:1;min-width:0;font-size:13px"><div><b>{{m.who}}</b> {{m.act}} <span style="font-weight:600">{{m.target}}</span></div><div class="muted" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">“{{m.q}}”</div><div class="muted" style="font-size:12px">{{m.when}}</div></div>
+<sc-if value="{{m.unread}}" hint-placeholder-val="{{ true }}"><span class="dot" style="background:#1D4ED8;margin-top:6px" aria-label="ยังไม่อ่าน"></span></sc-if>
+</a>
+</sc-for>
+</section>
+
+<section class="card">
+<div class="chead"><h2>30 วันข้างหน้า <span class="muted" style="font-weight:500">· Sprint, วันหยุด, กลุ่มงานที่ครบ</span></h2></div>
+<div style="padding:8px 0">
+<sc-for list="{{miles}}" as="m" hint-placeholder-count="5">
+<div style="display:flex;gap:12px;padding:8px 18px;align-items:center">
+<div style="width:46px;text-align:center;flex:none"><div style="font-size:18px;font-weight:700;line-height:1.1">{{m.d}}</div><div class="muted" style="font-size:11px">{{m.mo}}</div></div>
+<svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true" style="flex:none"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill="{{m.c}}"></rect></svg>
+<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">{{m.n}}</div><div class="muted" style="font-size:12px">{{m.p}}</div></div>
+<span class="pill s-todo">{{m.left}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section class="card">
+<div class="chead"><h2>Workload ทีมสัปดาห์นี้</h2><span style="font-size:13px;font-weight:600;color:#B91C1C">41.0 / 30 MD</span></div>
+<div style="padding:14px 18px 16px">
+<div style="display:flex;align-items:flex-end;gap:12px;height:100px;border-bottom:1px solid #D5DAE0;position:relative" role="img" aria-label="Man-Day ต่อคนสัปดาห์ 30 พ.ย. – 4 ธ.ค.: Kaijeaw 16.0, Pond 13.0, Tung 6.5, Zo 2.5, Top 2.0, P'Tum 1.0 (เส้นประ = 5 MD)">
+<span style="position:absolute;left:0;right:0;bottom:25px;border-top:2px dashed #475569"></span>
+<sc-for list="{{week}}" as="w" hint-placeholder-count="6">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px"><span style="font-size:11px;font-weight:600">{{w.v}}</span><div style="width:100%;max-width:36px;height:{{w.h}}px;background:{{w.c}};border-radius:4px 4px 0 0"></div></div>
+</sc-for>
+</div>
+<div style="display:flex;gap:12px;margin-top:6px"><sc-for list="{{week}}" as="w" hint-placeholder-count="6"><div style="flex:1;text-align:center;font-size:12px;font-weight:{{w.fw}};color:{{w.lc}}">{{w.l}}</div></sc-for></div>
+<div class="muted" style="font-size:12px;margin-top:8px">เส้นประ = capacity 5 MD ต่อคนต่อสัปดาห์ · <a href="Members.dc.html">ดู Workload ทั้งหมด</a></div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  state = { done: {} };
+  renderVals() {
+    const self = this;
+    const done = (this.state && this.state.done) || {};
+    const PCOL = { DP: '#334155' };
+    const PN = { DP: 'Development Plan 2026-11' };
+    const ST = { todo: ['รออนุมัติ', 's-todo'], prog: ['In progress', 's-prog'], rev: ['Review', 's-rev'], done: ['Done', 's-done'] };
+    const T = [["DP-30", "อนุมัติคำขอเลื่อน Due · DP-30 Curtailment Information + Plan Template", "คำขอจาก Kaijeaw", "todo", "วันนี้", "today", "Inbox.dc.html"], ["DP-91", "Review · Export EDI: รายการ Lot, Drill-down, Export เป็น Template", "Pond ส่ง Review · Drawdown", "rev", "เลย 7 วัน", "late", "TaskDetail.dc.html"], ["DP-34", "Review · ผู้ใช้วงเงินจาก MDP (P/J) + ผูกลูกค้า FACO", "Kaijeaw ส่ง Review · Credit Line", "rev", "เลย 2 วัน", "late", "TaskDetail.dc.html"], ["DP-260", "Review · Offset กับ HP: ตรวจรถจาก Chassis/Engine, ส่งยอด O/S, เทียบยอด, ตัดปิด + ใบเสร็จ, อีเมลส่วนต่าง", "Tung, Zo ส่ง Review · Repayment", "rev", "วันนี้", "today", "TaskDetail.dc.html"]];
+    const today = T.map(function (x) {
+      const d = !!done[x[0]];
+      const s = d ? 'done' : x[3];
+      return { key: x[0], proj: PN.DP, pcol: PCOL.DP, t: x[1], kind: x[2], st: ST[s][0], sc: ST[s][1], due: d ? 'เสร็จแล้ว' : x[4], dcls: d ? 'dt muted' : 'dt ' + x[5],
+        done: d, deco: d ? 'line-through' : 'none', tc: d ? '#5F6873' : '#1B1F24',
+        toggle: function () { const m = Object.assign({}, (self.state && self.state.done) || {}); m[x[0]] = !m[x[0]]; self.setState({ done: m }); } };
+    });
+    const P = {"Mick": ["MK", "#1D4ED8"], "Kaijeaw": ["KJ", "#B45309"], "Pond": ["PD", "#0F766E"], "Tung": ["TG", "#7C3AED"], "Top": ["TP", "#BE185D"], "Zo": ["ZO", "#0369A1"], "P'Tum": ["PT", "#4D7C0F"], "Ton": ["TN", "#65A30D"], "Donut": ["DN", "#A21CAF"], "Naa": ["NA", "#C2410C"], "P'Nee": ["PN", "#0E7490"], "P'Oak": ["PO", "#57534E"], "Kookkai": ["KK", "#DB2777"], "P'Wing": ["PW", "#4338CA"], "KL": ["KL", "#475569"]};
+    const tm = function (arr) { return arr.map(function (n) { return { ini: P[n][0], pc: P[n][1] }; }); };
+    const projects = [
+      { n: 'Development Plan 2026-11', key: 'DP', ab: 'DP', c: '#334155', role: 'Lead / PM', h: 'Off track', hc: 's-late', pct: 22, od: 7, odc: '#B91C1C', mine: 4, go: '21 เม.ย. 70', ms: 'Credit Line Go-live', msd: '26 ม.ค. 70 · อีก 55 วัน', href: 'Main.dc.html', team: tm(['Kaijeaw', 'Pond', 'Tung', 'Top']) }
+    ];
+    const reviews = [{"type": "Review", "sc": "s-rev", "t": "DP-91 Export EDI: รายการ Lot, Drill-down, Export เป็น Template", "meta": "Pond · Drawdown", "wait": "เลย 7 วัน", "wcls": "dt late", "href": "TaskDetail.dc.html"}, {"type": "Review", "sc": "s-rev", "t": "DP-34 ผู้ใช้วงเงินจาก MDP (P/J) + ผูกลูกค้า FACO", "meta": "Kaijeaw · Credit Line", "wait": "เลย 2 วัน", "wcls": "dt late", "href": "TaskDetail.dc.html"}, {"type": "Review", "sc": "s-rev", "t": "DP-260 Offset กับ HP: ตรวจรถจาก Chassis/Engine, ส่งยอด O/S, เทียบยอด, ตัดปิด + ใบเสร็จ, อีเมลส่วนต่าง", "meta": "Tung, Zo · Repayment", "wait": "ครบวันนี้", "wcls": "dt today", "href": "TaskDetail.dc.html"}];
+    const ib = function (who, act, target, q, when, unread, href) { return { who: who, ini: P[who][0], pc: P[who][1], act: act, target: target, q: q, when: when, unread: unread, href: href }; };
+    const inbox = [
+      ib('Kaijeaw', 'ขอเลื่อน Due', 'DP-30 Curtailment Information', 'Plan Template ต้องรองรับ Fleet เพิ่ม ขอเลื่อนเป็น 4 ธ.ค.', '1 ชม.ที่แล้ว', true, 'Inbox.dc.html'),
+      ib('Donut', 'mention คุณใน', 'DP-525 Bug Workflow ส่งกลับแก้ไข', 'พบตอนทดสอบ SIT ค่ะ กระทบ DP-21 ด้วย', '2 ชม.ที่แล้ว', true, 'BugDetail.dc.html'),
+      ib('Tung', 'ส่ง Review', 'DP-260 Offset กับ HP', 'ทดสอบกับข้อมูล HP ชุด UAT แล้วครับ', '25 นาทีที่แล้ว', true, 'TaskDetail.dc.html'),
+      ib('Pond', 'คอมเมนต์ใน', 'DP-91 Export EDI', 'รอ Naa ยืนยัน Template คอลัมน์สุดท้ายครับ', 'เมื่อวาน', false, 'TaskDetail.dc.html')
+    ];
+    const miles = [["2", "ธ.ค.", "Credit Line · Product & ผู้ใช้วงเงิน ครบตามแผน", "Development Plan 2026-11", "#1D4ED8", "อีก 0 วัน"], ["4", "ธ.ค.", "Drawdown · ตรวจสอบก่อนเบิกใช้ (Check engine) ครบตามแผน", "Development Plan 2026-11", "#0F766E", "อีก 2 วัน"], ["7", "ธ.ค.", "วันหยุด · ชดเชยวันพ่อแห่งชาติ", "ไม่นับเป็นวันทำงาน (ธปท.)", "#94A3B8", "อีก 5 วัน"], ["8", "ธ.ค.", "Repayment · ช่องทางรับชำระ ครบตามแผน", "Development Plan 2026-11", "#0369A1", "อีก 6 วัน"], ["10", "ธ.ค.", "วันหยุด · วันรัฐธรรมนูญ", "ไม่นับเป็นวันทำงาน (ธปท.)", "#94A3B8", "อีก 8 วัน"]].map(function (m) { return { d: m[0], mo: m[1], n: m[2], p: m[3], c: m[4], left: m[5] }; });
+    const week = [["Kaijeaw", 16.0], ["Pond", 13.0], ["Tung", 6.5], ["Zo", 2.5], ["Top", 2.0], ["P'Tum", 1.0]].map(function (w) {
+      return { l: w[0], v: w[1], h: Math.max(3, Math.min(84, Math.round(w[1] * 5))), c: w[1] > 5 ? '#EA580C' : '#93B4F5', fw: w[1] > 5 ? 700 : 500, lc: w[1] > 5 ? '#B91C1C' : '#5F6873' };
+    });
+    return { today: today, projects: projects, reviews: reviews, inbox: inbox, miles: miles, week: week };
+  }
+}
+</script>
+</body>
+</html>

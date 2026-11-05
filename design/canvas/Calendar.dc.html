@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Project Calendar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E4E7EB;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column}
+.navi{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 10px;border-radius:8px;color:#3D4550;text-decoration:none}
+.navi:hover{background:#F1F3F5;color:#1B1F24}
+.navi.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.sec{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:16px 10px 6px}
+.phead{background:#fff;padding:16px 24px 0;border-bottom:1px solid #E4E7EB}
+.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:10px}
+.tab{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;color:#56606B;text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+.tab:hover{color:#1B1F24}
+.tab.on{color:#1D4ED8;border-bottom-color:#1D4ED8;font-weight:600}
+.body{padding:20px 24px;display:flex;flex-direction:column;gap:14px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#F1F3F5}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF}
+.seg{display:inline-flex;border:1px solid #D5DAE0;border-radius:8px;overflow:hidden;background:#fff}
+.seg button{min-height:34px;padding:0 12px;border:0;background:transparent;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.muted{color:#5F6873}
+.av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;border:2px solid #fff;flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-mick{background:#1D4ED8}.p-ploy{background:#B45309}.p-ton{background:#0F766E}.p-fah{background:#7C3AED}.p-bank{background:#BE185D}
+.s-todo{background:#EEF0F3;color:#3D4550}.s-prog{background:#DBEAFE;color:#1E40AF}.s-rev{background:#FEF3C7;color:#92400E}.s-done{background:#DCFCE7;color:#166534}.s-late{background:#FEE2E2;color:#991B1B}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.cell{border-right:1px solid #EEF0F3;padding:6px 6px 8px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.cell.out{background:#FAFBFC}
+.cell.wkend{background:#FAFAFB}
+.cell.hol{background:#FEF2F2}
+.cell.today{background:#F5F8FF;box-shadow:inset 0 0 0 2px #1D4ED8}
+.num{font-size:13px;font-weight:600;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%}
+.num.out{color:#6B7280;font-weight:500}
+.num.today{background:#1D4ED8;color:#fff}
+.tag{font-size:11px;color:#5F6873;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag.hol{color:#B91C1C;font-weight:600}
+.ev{display:flex;align-items:center;gap:6px;font-size:12px;line-height:1.3;padding:3px 6px;border-radius:5px;text-decoration:none;color:#1B1F24;white-space:nowrap;overflow:hidden;min-width:0}
+.ev span.t{overflow:hidden;text-overflow:ellipsis}
+.ev:hover{outline:1px solid #8A94A0;color:#1B1F24}
+.e-auth{background:#DBEAFE}.e-appt{background:#CCFBF1}.e-pay{background:#FEF3C7}.e-admin{background:#EDE9FE}
+.e-late{background:#FEE2E2;color:#991B1B;font-weight:600}
+.e-done{background:#F1F3F5;color:#5F6873}.e-done span.t{text-decoration:line-through}
+.e-ms{background:#1B1F24;color:#fff;font-weight:600}.e-ms:hover{color:#fff}
+.e-leave{background:transparent;border:1px dashed #B8C0CA;color:#5F6873}
+.more{border:0;background:transparent;font:inherit;font-size:12px;font-weight:600;color:#1D4ED8;text-align:left;padding:2px 6px;cursor:pointer;border-radius:5px}
+.sb{position:absolute;height:20px;border-radius:5px;font-size:12px;font-weight:600;padding:0 8px;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;color:#1B1F24}
+.sb:hover{outline:1px solid #1B1F24;color:#1B1F24}
+.uc{display:flex;align-items:center;gap:8px;min-height:38px;padding:0 10px;border:1px dashed #B8C0CA;border-radius:8px;background:#fff;font-size:13px;cursor:grab}
+@media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.body{padding:16px}.phead{padding:12px 16px 0}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a href="IssueCreate.dc.html" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:#1D4ED8;color:#fff;font-weight:600;text-decoration:none">+ New</a>
+<a href="Bell.dc.html" aria-label="การแจ้งเตือน 5 รายการยังไม่อ่าน" style="position:relative;width:40px;height:40px;border-radius:8px;color:#E2E8F0;display:inline-flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #0F172A">5</span></a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div class="app">
+<aside class="side" aria-label="Workspace navigation">
+<a class="navi" href="Home.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"></path></svg>Home</a>
+<a class="navi" href="MyTasks.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="m8 12 3 3 5-6"></path></svg>My Tasks</a>
+<a class="navi" href="Inbox.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h5l1.5 3h5L16 13h5"></path><path d="M5 5h14l2 8v6H3v-6z"></path></svg>Inbox<span class="pill s-late" style="margin-left:auto">3</span></a>
+<div class="sec">Projects</div>
+<a class="navi on" href="Main.dc.html"><span class="dot" style="background:#334155"></span>Development Plan 2026-11</a>
+<a class="navi" href="NewProject.dc.html" style="color:#1D4ED8">+ New project</a>
+<div style="margin-top:auto;border-top:1px solid #E4E7EB;padding-top:10px;display:flex;flex-direction:column;gap:2px">
+<a class="navi" href="AdminConsole.dc.html">Admin Console</a>
+</div>
+</aside>
+<main class="main">
+<header class="phead">
+<div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px">
+<div style="min-width:0">
+<div class="muted" style="font-size:12px">Friday Workspace / Projects / Development Plan 2026-11</div>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+<div style="width:32px;height:32px;border-radius:8px;background:#334155;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">DP</div>
+<h1 style="margin:0;font-size:22px;line-height:1.3">Development Plan 2026-11</h1>
+<span class="pill s-prog">Active</span>
+<span class="pill s-late">Off track</span>
+<span class="muted" style="font-size:13px">5 พ.ย. 69 – 21 เม.ย. 70</span>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;margin-right:4px">
+<span class="av" title="Mick" style="background:#1D4ED8;">MK</span><span class="av" title="Kaijeaw" style="background:#B45309;margin-left:-8px;">KJ</span><span class="av" title="Pond" style="background:#0F766E;margin-left:-8px;">PD</span><span class="av" title="Tung" style="background:#7C3AED;margin-left:-8px;">TG</span><span class="av" title="Top" style="background:#BE185D;margin-left:-8px;">TP</span><span class="av" style="background:#64748B;margin-left:-8px" title="Zo, P'Tum, Ton และ BA อีก 7 คน">+9</span>
+</div>
+<button class="btn" type="button">Invite</button>
+<button class="btn" type="button" aria-label="Project menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+<button class="btn pri" type="button">+ New</button>
+</div>
+</div>
+<nav class="tabs" aria-label="Project views">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="8"><a class="{{t.cls}}" href="{{t.href}}">{{t.label}}</a></sc-for>
+</nav>
+</header>
+
+<div class="body">
+<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<button class="btn" type="button" aria-label="เดือนก่อนหน้า">‹</button>
+<button class="btn" type="button">Today</button>
+<button class="btn" type="button" aria-label="เดือนถัดไป">›</button>
+<h2 style="margin:0 0 0 6px;font-size:18px">ธันวาคม 2026</h2><span class="pill" style="margin-left:8px;background:#EEF0F3;color:#3D4550">ข้อมูลจริงจาก Development Plan 2026-11 · สถานะจำลอง ณ พ. 2 ธ.ค. 2569</span>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<div class="seg" role="group" aria-label="View"><button type="button" aria-pressed="true">Month</button><button type="button" aria-pressed="false">Week</button><button type="button" aria-pressed="false">Day</button><button type="button" aria-pressed="false">Agenda</button></div>
+<div class="seg" role="group" aria-label="Show tasks by"><button type="button" aria-pressed="{{dueOn}}" onClick="{{setDue}}">วัน Due</button><button type="button" aria-pressed="{{spanOn}}" onClick="{{setSpan}}">Start → Due</button></div>
+<label class="btn" style="cursor:default">สีตาม
+<select aria-label="Color by" style="border:0;font:inherit;font-weight:600;background:transparent;color:#1D4ED8"><option>Module</option><option>Status</option><option>Assignee</option></select>
+</label>
+<button class="btn" type="button">Filter</button>
+<button class="btn pri" type="button">+ Task</button>
+</div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<div class="card" style="flex:999 1 680px;min-width:0;overflow:hidden">
+<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));background:#F8F9FB;border-bottom:1px solid #E4E7EB">
+<sc-for list="{{dow}}" as="d" hint-placeholder-count="7"><div style="padding:8px 10px;font-size:12px;font-weight:600;color:#5F6873">{{d}}</div></sc-for>
+</div>
+<sc-for list="{{weeks}}" as="w" hint-placeholder-count="6">
+<div style="position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid #E4E7EB">
+<sc-for list="{{w.days}}" as="d" hint-placeholder-count="7">
+<div class="{{d.cls}}" style="min-height:{{w.h}}px">
+<div style="display:flex;align-items:center;gap:6px;min-width:0"><span class="{{d.numCls}}">{{d.n}}</span><span class="{{d.tagCls}}">{{d.tag}}</span></div>
+<sc-if value="{{showDue}}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{d.items}}" as="e" hint-placeholder-count="1">
+<a href="#" class="{{e.cls}}" title="{{e.n}}">
+<sc-if value="{{e.isMs}}" hint-placeholder-val="{{ false }}"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" style="flex:none"><rect x="1.5" y="1.5" width="7" height="7" transform="rotate(45 5 5)" fill="#fff"></rect></svg></sc-if>
+<sc-if value="{{e.hasDot}}" hint-placeholder-val="{{ true }}"><span style="width:7px;height:7px;border-radius:2px;background:{{e.c}};flex:none"></span></sc-if>
+<span class="t">{{e.n}}</span>
+</a>
+</sc-for>
+<sc-if value="{{d.hasMore}}" hint-placeholder-val="{{ false }}"><button class="more" type="button">+{{d.more}} more</button></sc-if>
+</sc-if>
+</div>
+</sc-for>
+<sc-if value="{{showSpan}}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{w.bars}}" as="b" hint-placeholder-count="2">
+<a href="#" class="sb" style="left:calc({{b.l}}% + 4px);width:calc({{b.w}}% - 8px);top:{{b.t}}px;background:{{b.bg}};color:{{b.fg}}" title="{{b.n}}">{{b.n}}</a>
+</sc-for>
+</sc-if>
+</div>
+</sc-for>
+</div>
+
+<aside style="flex:1 1 250px;min-width:0;display:flex;flex-direction:column;gap:16px">
+<section class="card" style="padding:14px">
+<h2 style="margin:0 0 4px;font-size:15px">Unscheduled</h2>
+<div class="muted" style="font-size:12px;margin-bottom:10px">ลากงานไปวางบนวันที่เพื่อกำหนด Due</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{unsched}}" as="u" hint-placeholder-count="5">
+<div class="uc"><svg width="10" height="16" viewBox="0 0 12 16" fill="#8A94A0" aria-hidden="true"><circle cx="3" cy="3" r="1.5"></circle><circle cx="9" cy="3" r="1.5"></circle><circle cx="3" cy="8" r="1.5"></circle><circle cx="9" cy="8" r="1.5"></circle><circle cx="3" cy="13" r="1.5"></circle><circle cx="9" cy="13" r="1.5"></circle></svg><span style="width:8px;height:8px;border-radius:2px;background:{{u.c}};flex:none"></span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{u.n}}</span></div>
+</sc-for>
+</div>
+</section>
+<section class="card" style="padding:14px">
+<h2 style="margin:0 0 10px;font-size:15px">แสดงบนปฏิทิน</h2>
+<div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked>Tasks &amp; Sub-tasks</label>
+<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked>Milestones</label>
+<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked>Sprint เริ่ม / จบ</label>
+<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked>วันหยุดราชการไทย</label>
+<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked>วันลาของสมาชิก</label>
+<label style="display:flex;align-items:center;gap:8px"><input type="checkbox">งานที่ Done แล้ว</label>
+</div>
+</section>
+<section class="card" style="padding:14px">
+<h2 style="margin:0 0 10px;font-size:15px">Module</h2>
+<div style="display:flex;flex-direction:column;gap:6px;font-size:13px">
+<div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:#1D4ED8"></span>Credit Line</div>
+<div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:#0F766E"></span>Drawdown</div>
+<div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:#BE185D"></span>BFC</div>
+<div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:#0369A1"></span>Repayment</div>
+<div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:#DC2626"></span>Overdue</div>
+</div>
+<a href="#" style="display:inline-block;margin-top:12px;font-size:13px">Subscribe (iCal / Google Calendar)</a>
+</section>
+</aside>
+</div>
+<div class="muted" style="font-size:12px">คลิกวันว่างเพื่อเพิ่มงานที่ due วันนั้น · ลากงานไปวันอื่นเพื่อเปลี่ยนวัน · โหมด Start → Due ลากขอบแถบเพื่อปรับช่วงเวลา</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+  state = { mode: 'due' };
+  renderVals() {
+    const self = this;
+    const mode = (this.state && this.state.mode) || 'due';
+    const T = [['Overview','Main.dc.html'],['ภาพรวม Lead','LeadDashboard.dc.html'],['Backlog','Backlog.dc.html'],['Table','Table.dc.html'],['Kanban','Kanban.dc.html'],['Timeline','Timeline.dc.html'],['Gantt','Gantt.dc.html'],['Calendar','Calendar.dc.html'],['Members','Members.dc.html'],['Files','Files.dc.html'],['Settings','ProjectSettings.dc.html']];
+    const tabs = T.map(function (x) { return { label: x[0], href: x[1], cls: x[0] === 'Calendar' ? 'tab on' : 'tab' }; });
+    const C = {"m0": "#1D4ED8", "m1": "#0F766E", "m2": "#B45309", "m3": "#7C3AED", "m4": "#BE185D", "m5": "#0369A1", "m6": "#4D7C0F", "m7": "#57534E", "m8": "#C2410C", "m9": "#4338CA", "m10": "#0E7490"};
+    const BG = {"m0": ["#1D4ED826", "#1B1F24"], "m1": ["#0F766E26", "#1B1F24"], "m2": ["#B4530926", "#1B1F24"], "m3": ["#7C3AED26", "#1B1F24"], "m4": ["#BE185D26", "#1B1F24"], "m5": ["#0369A126", "#1B1F24"], "m6": ["#4D7C0F26", "#1B1F24"], "m7": ["#57534E26", "#1B1F24"], "m8": ["#C2410C26", "#1B1F24"], "m9": ["#4338CA26", "#1B1F24"], "m10": ["#0E749026", "#1B1F24"]};
+    // day index 0 = Mon 30 Nov 2026; Dec d = d; Jan d = d + 31
+    const E = {"1": [{"n": "DP-30 Curtailment Information + Pl", "m": "m0", "kind": "late"}, {"n": "DP-20 Workflow : ส่งงาน/คืนงาน/ส่ง", "m": "m0", "kind": "done"}, {"n": "DP-258 รับชำระด้วยเช็ค (CLQ): คืนวง", "m": "m5", "kind": "done"}, {"n": "DP-96 แจ้งเตือนวงเงินใกล้หมดอายุ (", "m": "m1", "kind": "done"}], "0": [{"n": "DP-34 ผู้ใช้วงเงินจาก MDP (P/J) + ", "m": "m0", "kind": "late"}, {"n": "DP-24 Credit / Sub / Shared Limit ", "m": "m0", "kind": "done"}, {"n": "DP-259 Statement: ค้นหาเงินโอนที่ H", "m": "m5", "kind": "done"}, {"n": "DP-29 Interest Setting + Interest ", "m": "m0", "kind": "done"}, {"n": "DP-94 ตรวจวงเงินคงเหลือระดับ Credi", "m": "m1", "kind": "done"}], "3": [{"n": "DP-100 Drawdown Entry: นับรายการตาม", "m": "m1", "kind": ""}, {"n": "DP-38 Collateral framework: รายการ", "m": "m0", "kind": ""}], "4": [{"n": "BUG DP-525 Workflow ส่งกลับแก้ไข", "m": "m0", "kind": ""}, {"n": "DP-101 Dealer & Credit Line Search ", "m": "m1", "kind": ""}, {"n": "DP-95 เงื่อนไขระงับวงเงิน 8 ข้อ + ", "m": "m1", "kind": ""}, {"n": "DP-97 วงเงินถูกระงับหลัง Confirm: ", "m": "m1", "kind": ""}], "9": [{"n": "DP-102 Tab รายการรถ: Add Manual / S", "m": "m1", "kind": ""}, {"n": "DP-105 Tab Payment: Default Payee ต", "m": "m1", "kind": ""}, {"n": "DP-106 Tab Attachment (Office/PDF/ภ", "m": "m1", "kind": ""}, {"n": "DP-107 Tab Notes ใช้ร่วม", "m": "m1", "kind": ""}, {"n": "DP-39 ฟอร์มหลักประกัน 5 ประเภท: Ba", "m": "m0", "kind": ""}], "8": [{"n": "DP-103 Gen Drawdown No. (DDYYMM####", "m": "m1", "kind": ""}, {"n": "DP-261 สร้างไฟล์ Direct Debit (KBAN", "m": "m5", "kind": ""}, {"n": "DP-262 อัปโหลดผล Direct Debit -> ตั", "m": "m5", "kind": ""}, {"n": "DP-263 อีเมลแจ้งลูกค้าหักบัญชีไม่สำ", "m": "m5", "kind": ""}], "11": [{"n": "Sprint 3 Review", "m": "", "kind": "ms"}, {"n": "DP-104 จองวงเงิน (Reserve) / ปรับเม", "m": "m1", "kind": ""}, {"n": "DP-108 หลักประกันระดับรถ: Default ต", "m": "m1", "kind": ""}, {"n": "DP-109 ข้อมูลใบกำกับภาษีซื้อในรายกา", "m": "m1", "kind": ""}, {"n": "DP-40 คำนวณมูลค่าหลักประกัน & วงเง", "m": "m0", "kind": ""}, {"n": "DP-41 สถานะหลักประกัน Active / Ina", "m": "m0", "kind": ""}], "15": [{"n": "DP-110 ตรวจรถก่อนเบิกใช้: ส่ง CO, แ", "m": "m1", "kind": ""}, {"n": "DP-268 รายการไม่ผ่านเงื่อนไข -> ลงบ", "m": "m5", "kind": ""}, {"n": "DP-46 รายการเอกสารสัญญาอัตโนมัติ +", "m": "m0", "kind": ""}], "22": [{"n": "DP-111 Batch ยกเลิกอัตโนมัติ (New C", "m": "m1", "kind": ""}, {"n": "DP-118 ส่งสัญญาให้ Dealer ทางอีเมล", "m": "m1", "kind": ""}, {"n": "DP-224 ค่าธรรมเนียม 5 ประเภท (ทวงถา", "m": "m4", "kind": ""}, {"n": "DP-49 Final, รับฉบับจริง/อนุโลม, ผ", "m": "m0", "kind": ""}], "14": [{"n": "DP-112 ยกเลิกรายการด้วยตนเอง", "m": "m1", "kind": ""}, {"n": "DP-223 ค่าปรับ/ดอกเบี้ยผิดนัด 2 แบบ", "m": "m4", "kind": ""}, {"n": "DP-266 จับคู่ Ref1/Ref2 + ยอด + BFC", "m": "m5", "kind": ""}, {"n": "DP-267 Tolerance +- 20 บาท + บันทึก", "m": "m5", "kind": ""}, {"n": "DP-42 ผู้ค้ำประกัน (MDP ประเภท G /", "m": "m0", "kind": ""}], "17": [{"n": "DP-115 Generate สัญญา PDF – Invento", "m": "m1", "kind": ""}, {"n": "DP-45 เอกสารประกอบ: Upload / View ", "m": "m0", "kind": ""}], "21": [{"n": "DP-116 Generate สัญญา PDF – Loan (6", "m": "m1", "kind": ""}, {"n": "DP-117 Re-generate เมื่อแก้รายการรถ", "m": "m1", "kind": ""}], "23": [{"n": "DP-119 วันกำหนดรับสัญญา (Default +3", "m": "m1", "kind": ""}, {"n": "DP-52 Expense เพิ่ม/แก้/ลบ + คำนวณ", "m": "m0", "kind": ""}], "28": [{"n": "DP-122 CV Approve: คืนงาน / อนุมัติ", "m": "m1", "kind": ""}], "30": [{"n": "DP-123 CC Entry (Swap/Transfer): Ta", "m": "m1", "kind": ""}, {"n": "DP-124 CC Approve: อนุมัติ / ไม่อนุ", "m": "m1", "kind": ""}, {"n": "DP-226 จำลองยอดปิดบัญชีรถตามวันที่ ", "m": "m4", "kind": ""}], "36": [{"n": "DP-125 บันทึก Outstanding / Used ขอ", "m": "m1", "kind": ""}, {"n": "DP-277 Refund Entry: เลือกเงินพัก, ", "m": "m5", "kind": ""}, {"n": "DP-54 Generate BFC รวม/แยกรายการ +", "m": "m0", "kind": ""}], "37": [{"n": "DP-128 Swap Entry: รถใหม่ + ค้นหารถ", "m": "m1", "kind": ""}, {"n": "DP-276 Suspense Cancel", "m": "m5", "kind": ""}, {"n": "DP-62 Inquiry วงเงิน (สถานะ, ประเภ", "m": "m0", "kind": ""}], "25": [{"n": "Sprint 4 Review", "m": "", "kind": "ms"}, {"n": "DP-225 คำนวณ VAT / WHT / Total ต่อร", "m": "m4", "kind": ""}, {"n": "DP-274 Suspense Inquiry + ตัวกรองรา", "m": "m5", "kind": ""}, {"n": "DP-55 ตรวจ BFC “จ่ายแล้ว” ก่อนส่งอ", "m": "m0", "kind": ""}], "35": [{"n": "DP-229 Batch สิ้นเดือน BFC Curtailm", "m": "m4", "kind": ""}, {"n": "DP-275 Suspense Adjustment: โอนให้ด", "m": "m5", "kind": ""}], "2": [{"n": "DP-260 Offset กับ HP: ตรวจรถจาก Cha", "m": "m5", "kind": ""}, {"n": "DP-35 Add Dealer / Add Group Deale", "m": "m0", "kind": ""}], "18": [{"n": "DP-269 ส่งรายการบัญชีทุก Event ไป E", "m": "m5", "kind": ""}], "24": [{"n": "DP-270 ตรรกะจัดสรรเงิน: ตาม BFC / ไ", "m": "m5", "kind": ""}, {"n": "DP-273 Suspense Entry: บันทึกรับเงิ", "m": "m5", "kind": ""}, {"n": "DP-53 Waive Fee พร้อมเหตุผล", "m": "m0", "kind": ""}], "38": [{"n": "DP-278 Refund Approve / Reject + Ca", "m": "m5", "kind": ""}, {"n": "DP-60 Status engine (ฺBatch) + Aut", "m": "m0", "kind": ""}], "16": [{"n": "DP-47 Pre-print สัญญา Word / PDF จ", "m": "m0", "kind": ""}, {"n": "DP-48 Export Excel Merge (Floorpla", "m": "m0", "kind": ""}], "29": [{"n": "DP-58 Note (500 ตัวอักษร, บันทึกผู", "m": "m0", "kind": ""}, {"n": "DP-59 History + Audit Trail (User,", "m": "m0", "kind": ""}], "39": [{"n": "DP-61 แจ้งเตือน: สร้างสำเร็จ, หลัก", "m": "m0", "kind": ""}]};
+    const TAG = {"11": "Sprint 3 จบ", "14": "Sprint 4 เริ่ม", "25": "Sprint 4 จบ", "28": "Sprint 5 เริ่ม", "7": "ชดเชยวันพ่อแห่งชาติ", "10": "วันรัฐธรรมนูญ", "31": "วันสิ้นปี", "32": "วันขึ้นปีใหม่"};
+    const HOL = {"7": true, "10": true, "31": true, "32": true};
+    const SP = [["Credit Line · Credit Line & Workflow", "m0", 0, 1], ["Credit Line · Product & ผู้ใช้วงเงิน", "m0", 0, 2], ["BFC · Calculate Core engine Interest/Rental/Penalty/Fee", "m4", 0, 30], ["Repayment · ช่องทางรับชำระ", "m5", 0, 8], ["Drawdown · ตรวจสอบก่อนเบิกใช้ (Check engine)", "m1", 0, 4], ["Credit Line · หลักประกัน & ผู้ค้ำประกัน", "m0", 1, 14], ["Drawdown · Drawdown Entry - Normal", "m1", 3, 22], ["Repayment · ตัดชำระอัตโนมัติ & บันทึกบัญชี", "m5", 9, 24], ["Credit Line · เอกสาร & สัญญา", "m0", 10, 22], ["Drawdown · สัญญาเบิกใช้วงเงิน", "m1", 15, 23], ["Credit Line · ค่าใช้จ่าย & BFC", "m0", 21, 36], ["Drawdown · อนุมัติ & บันทึกบัญชี", "m1", 24, 36], ["Repayment · บัญชีพัก & คืนเงิน", "m5", 24, 38], ["Credit Line · Inquiry & Report & Notification", "m0", 29, 41], ["BFC · ออกใบเรียกเก็บ/ใบแจ้งหนี้", "m4", 35, 41], ["Drawdown · Drawdown – Swap", "m1", 37, 41], ["Repayment · Repayment Entry / Approve / Cancel", "m5", 39, 41], ["◆ Sprint 3 Review", "ms", 11, 11], ["◆ Sprint 4 Review", "ms", 25, 25]];
+    const weeks = [];
+    for (let wi = 0; wi < 6; wi++) {
+      const days = [];
+      for (let c = 0; c < 7; c++) {
+        const i = wi * 7 + c;
+        const out = i < 1 || i > 31;
+        const n = i < 1 ? 30 : (i <= 31 ? i : i - 31);
+        const isToday = i === 2;
+        const items = (E[String(i)] || []).map(function (e) {
+          let cls = 'ev ';
+          if (e.kind === 'ms') cls += 'e-ms'; else if (e.kind === 'leave') cls += 'e-leave'; else if (e.kind === 'late') cls += 'e-late'; else if (e.kind === 'done') cls += 'e-done'; else cls += 'e-' + e.m;
+          return { n: e.n, cls: cls, isMs: e.kind === 'ms', hasDot: !!e.m && e.kind !== 'late', c: C[e.m] || '#8A94A0' };
+        });
+        let cls = 'cell';
+        if (isToday) cls += ' today'; else if (HOL[String(i)]) cls += ' hol'; else if (out) cls += ' out'; else if (c >= 5) cls += ' wkend';
+        days.push({
+          n: (i === 1 ? '1 ธ.ค.' : (i === 32 ? '1 ม.ค.' : n)), numCls: isToday ? 'num today' : (out ? 'num out' : 'num'),
+          tag: TAG[String(i)] || '', tagCls: HOL[String(i)] ? 'tag hol' : 'tag', cls: cls,
+          items: items.slice(0, 3), more: items.length - 3, hasMore: items.length > 3
+        });
+      }
+      const lanes = [];
+      const bars = [];
+      SP.forEach(function (s) {
+        const a = Math.max(s[2], wi * 7), b = Math.min(s[3], wi * 7 + 6);
+        if (a > b) return;
+        let lane = 0;
+        while (lanes[lane] !== undefined && lanes[lane] >= a) lane++;
+        lanes[lane] = b;
+        const ms = s[1] === 'ms';
+        bars.push({ n: s[0], l: ((a - wi * 7) / 7 * 100).toFixed(3), w: ((b - a + 1) / 7 * 100).toFixed(3), t: 36 + lane * 24, bg: ms ? '#1B1F24' : BG[s[1]][0], fg: ms ? '#fff' : BG[s[1]][1] });
+      });
+      weeks.push({ days: days, bars: bars, h: mode === 'span' ? Math.max(120, 44 + lanes.length * 24) : 128 });
+    }
+    const unsched = [["DP-502 Credit Line : Inquiry Credit A", "#0E7490"], ["DP-503 Credit Line : Reserve Credit (", "#0E7490"], ["DP-504 Credit Line : Submit Credit (C", "#0E7490"], ["DP-505 Credit Line : Cancel Reserve C", "#0E7490"], ["DP-506 Credit Line : Cancel Submit Cr", "#0E7490"], ["… อีก 18 งาน", "#94A3B8"]].map(function (u) { return { n: u[0], c: u[1] }; });
+    return {
+      tabs: tabs, weeks: weeks, unsched: unsched,
+      dow: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'],
+      showDue: mode === 'due', showSpan: mode === 'span', dueOn: mode === 'due' ? 'true' : 'false', spanOn: mode === 'span' ? 'true' : 'false',
+      setDue: function () { self.setState({ mode: 'due' }); }, setSpan: function () { self.setState({ mode: 'span' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

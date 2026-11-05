@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Localization</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.muted{color:#5F6873}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.ch{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid #EEF0F3}
+.ch h2{margin:0;font-size:15px}
+.seg{display:inline-flex;border:1px solid #D5DAE0;border-radius:10px;overflow:hidden;background:#fff}
+.seg button{min-height:36px;padding:0 12px;border:0;background:#fff;font:inherit;cursor:pointer;color:#3D4550}
+.seg button[aria-pressed="true"]{background:#1B1F24;color:#fff;font-weight:600}
+.pill{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.rw{display:grid;grid-template-columns:minmax(140px,1fr) minmax(0,1.4fr) minmax(0,1.4fr);gap:12px;padding:10px 18px;border-bottom:1px solid #F1F3F5;font-size:13px;align-items:start}
+.rw.h{font-weight:700;color:#5F6873;background:#F8F9FB;font-size:12px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.lb{font-size:13px;font-weight:600}
+.in{min-height:38px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%}
+.task{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid #F1F3F5}
+</style>
+</helmet>
+<div style="max-width:1340px;margin:0 auto;padding:22px 24px 48px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end">
+<div><h1 style="margin:0;font-size:24px">ภาษา TH / EN</h1><div class="muted">แปลเฉพาะหน้าจอของระบบ · ข้อมูลที่ผู้ใช้พิมพ์ (ชื่องาน คอมเมนต์) ไม่แปล · ข้อความแจ้งเตือนส่งตามภาษาของผู้รับ</div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><div class="seg" role="group" aria-label="ภาษา"><button type="button" aria-pressed="{{isTh}}" onClick="{{setTh}}">ไทย</button><button type="button" aria-pressed="{{isEn}}" onClick="{{setEn}}">English</button></div><div class="seg" role="group" aria-label="ปี"><button type="button" aria-pressed="{{isBE}}" onClick="{{setBE}}">พ.ศ.</button><button type="button" aria-pressed="{{isCE}}" onClick="{{setCE}}">ค.ศ.</button></div></div>
+</div>
+
+<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+<section class="card" style="flex:1 1 520px;min-width:0;overflow:hidden" aria-label="ตัวอย่างหน้าจอ">
+<div class="ch"><h2>{{t.myTasks}}</h2><span class="muted" style="font-size:13px">{{t.today}}: {{today}}</span></div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="4"><div class="task"><input type="checkbox" aria-label="{{r.t}}" style="width:18px;height:18px"><div style="flex:1;min-width:0"><div style="font-weight:600">{{r.t}}</div><div class="muted" style="font-size:12px">{{r.key}} · {{r.size}} · {{r.md}}</div></div><span class="pill" style="background:{{r.sb}};color:{{r.sf}}">{{r.st}}</span><span style="font-size:13px;font-weight:600;color:{{r.dc}};min-width:96px;text-align:right">{{r.due}}</span></div></sc-for>
+<div style="padding:12px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#F8F9FB"><span class="muted" style="font-size:13px">{{t.summary}}</span></div>
+</section>
+
+<section class="card" style="flex:1 1 320px;min-width:0" aria-label="การตั้งค่าของผู้ใช้">
+<div class="ch"><h2>ตั้งค่าที่ Profile</h2></div>
+<div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+<label class="fld"><span class="lb">ภาษาของระบบ</span><select class="in"><option>ไทย</option><option>English</option><option>ตามเบราว์เซอร์</option></select></label>
+<label class="fld"><span class="lb">รูปแบบปี</span><select class="in"><option>พ.ศ. (2569)</option><option>ค.ศ. (2026)</option></select><span class="muted" style="font-size:12px">ค่าเริ่มต้น: ภาษาไทย = พ.ศ. · English = ค.ศ.</span></label>
+<label class="fld"><span class="lb">เขตเวลา</span><select class="in"><option>Asia/Bangkok (GMT+7)</option></select></label>
+<div class="muted" style="font-size:12px">Workspace กำหนดภาษาเริ่มต้นสำหรับสมาชิกใหม่ และภาษาของใบกำกับภาษีแยกได้</div>
+</div>
+</section>
+</div>
+
+<section class="card" style="overflow:hidden">
+<div class="ch"><h2>กติกาการแสดงผล</h2></div>
+<div class="rw h"><span>เรื่อง</span><span>ไทย</span><span>English</span></div>
+<sc-for list="{{rules}}" as="r" hint-placeholder-count="9"><div class="rw"><b>{{r.k}}</b><span>{{r.th}}</span><span>{{r.en}}</span></div></sc-for>
+</section>
+
+<section class="card" style="padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;font-size:13px">
+<div><b>สถานะการแปล (สำหรับทีม Dev)</b><div style="margin-top:6px;display:flex;flex-direction:column;gap:6px"><div><div style="display:flex;justify-content:space-between"><span>ไทย</span><b>100%</b></div><div style="height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden"><div style="height:100%;width:100%;background:#15803D"></div></div></div><div><div style="display:flex;justify-content:space-between"><span>English</span><b>94% · ขาด 38 ข้อความ</b></div><div style="height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden"><div style="height:100%;width:94%;background:#D97706"></div></div></div></div></div>
+<div><b>ข้อความที่ขาด</b><div class="muted">แสดงเป็นภาษาอังกฤษแทน ไม่แสดงรหัสข้อความ (<span class="mono">task.due.late</span>) ให้ผู้ใช้เห็น</div></div>
+<div><b>ความยาวข้อความ</b><div class="muted">ภาษาอังกฤษมักยาวกว่าไทย 20–40% · ปุ่มและแท็บต้องยืดได้ ห้ามกำหนดความกว้างตายตัว</div></div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  state = { lang: 'th', era: 'be' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const lang = st.lang || 'th', era = st.era || 'be', th = lang === 'th';
+    const yr = function (ce) { return era === 'be' ? ce + 543 : ce; };
+    const MTH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const MEN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dt = function (d, m, y) { return th ? d + ' ' + MTH[m] + ' ' + yr(y) : MEN[m] + ' ' + d + ', ' + yr(y); };
+    const t = th ? { myTasks: 'งานของฉัน', today: 'วันนี้', summary: 'รวม 4 งาน · 19 Man-Day · เลยกำหนด 1 งาน', late: 'เลย 5 วัน', md: 'Man-Day' } : { myTasks: 'My tasks', today: 'Today', summary: '4 tasks · 19 man-days · 1 overdue', late: '5 days late', md: 'man-days' };
+    const ST = { prog: [th ? 'กำลังทำ' : 'In progress', '#DBEAFE', '#1E40AF'], rev: [th ? 'รอตรวจ' : 'Review', '#FEF3C7', '#92400E'], todo: [th ? 'ยังไม่เริ่ม' : 'To do', '#EEF0F3', '#3D4550'] };
+    const R = [['CLB-52', 'เชื่อม Omise sandbox', 'S', 3, 'prog', null], ['CLB-20', 'Booking flow UI', 'L', 8, 'prog', [6, 10, 2026]], ['CLB-48', 'แจ้งเตือนนัดผ่าน LINE', 'S', 3, 'rev', [6, 10, 2026]], ['CLB-53', 'Payment callback', 'M', 5, 'todo', [11, 10, 2026]]];
+    const rows = R.map(function (r) { const s = ST[r[4]]; return { key: r[0], t: r[1], size: 'Size ' + r[2], md: r[3] + ' ' + t.md, st: s[0], sb: s[1], sf: s[2], due: r[5] ? dt(r[5][0], r[5][1], r[5][2]) : t.late, dc: r[5] ? '#3D4550' : '#B91C1C' }; });
+    const rules = [
+      ['วันที่', '5 พ.ย. 2569 (ค่าเริ่มต้น พ.ศ.)', 'Nov 5, 2026'],
+      ['เวลา', '14:30 น. (24 ชั่วโมง)', '14:30 (24-hour, เปลี่ยนเป็น 2:30 PM ได้)'],
+      ['วันเริ่มสัปดาห์', 'จันทร์', 'Monday'],
+      ['ตัวเลขและเงิน', '1,234.50 บาท · ฿1,234.50', '฿1,234.50 (THB)'],
+      ['ชื่อสถานะ', 'แปลเป็นไทย ถ้า Workspace ไม่ได้ตั้งชื่อเอง', 'ภาษาอังกฤษ · ชื่อที่ Workspace ตั้งเองแสดงตามที่ตั้ง'],
+      ['คำเฉพาะงาน Dev', 'คงไว้: Sprint, Backlog, Story, Bug, Commit, PR', 'Sprint, Backlog, Story, Bug, Commit, PR'],
+      ['Man-Day', 'Man-Day (ย่อ MD)', 'man-day (abbr. MD)'],
+      ['ข้อความแจ้งเตือน', 'ตามภาษาของผู้รับแต่ละคน', 'Recipient\'s language'],
+      ['เอกสารภาษี', 'ภาษาไทย (ตามกฎหมาย) แนบภาษาอังกฤษได้', 'Thai required, English copy optional']
+    ].map(function (r) { return { k: r[0], th: r[1], en: r[2] }; });
+    return {
+      t: t, rows: rows, rules: rules, today: dt(5, 10, 2026),
+      isTh: th ? 'true' : 'false', isEn: th ? 'false' : 'true', setTh: function () { self.setState({ lang: 'th', era: 'be' }); }, setEn: function () { self.setState({ lang: 'en', era: 'ce' }); },
+      isBE: era === 'be' ? 'true' : 'false', isCE: era === 'ce' ? 'true' : 'false', setBE: function () { self.setState({ era: 'be' }); }, setCE: function () { self.setState({ era: 'ce' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

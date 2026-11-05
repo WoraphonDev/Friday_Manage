@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Mobile Inbox</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:15px;line-height:1.45}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.chip{flex:none;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:14px;color:#3D4550;cursor:pointer}
+.chip[aria-pressed="true"]{background:#1B1F24;border-color:#1B1F24;color:#fff;font-weight:600}
+.n{display:flex;gap:12px;padding:14px 16px;background:#fff;border-bottom:1px solid #EEF0F3;text-decoration:none;color:#1B1F24;align-items:flex-start}
+.n.un{background:#F5F8FF}
+.av{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex:none}
+.muted{color:#5F6873}
+.b{min-height:40px;padding:0 14px;border-radius:10px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer;color:#1B1F24}
+.b.ok{background:#15803D;border-color:#15803D;color:#fff}
+.tabb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:#5F6873;text-decoration:none;min-height:56px;position:relative}
+.tabb.on{color:#1D4ED8;font-weight:700}
+.gl{padding:10px 16px 6px;font-size:12px;font-weight:700;color:#5F6873;text-transform:uppercase;letter-spacing:.05em}
+</style>
+</helmet>
+<div style="width:390px;height:844px;display:flex;flex-direction:column;background:#F6F7F9;overflow:hidden;position:relative">
+<header style="background:#fff;padding:16px 16px 10px;border-bottom:1px solid #E4E7EB;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:10px"><h1 style="margin:0;font-size:24px;flex:1">Inbox</h1><button type="button" onClick="{{readAll}}" style="min-height:44px;border:0;background:transparent;font:inherit;font-size:14px;color:#1D4ED8;font-weight:600;cursor:pointer">อ่านทั้งหมด</button></div>
+<div style="display:flex;gap:8px;overflow-x:auto" role="group" aria-label="ตัวกรอง">
+<sc-for list="{{chips}}" as="c" hint-placeholder-count="4"><button class="chip" type="button" aria-pressed="{{c.on}}" onClick="{{c.pick}}">{{c.n}}</button></sc-for>
+</div>
+</header>
+<div style="flex:1;overflow-y:auto">
+<div class="gl">วันนี้</div>
+<div class="{{c1}}">
+<span class="av" style="background:#B45309">KJ</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+<div><b>Kaijeaw</b> ขอเลื่อน Due <b>DP-30</b> Curtailment Information + Plan Template</div>
+<div style="font-size:14px"><span class="muted" style="text-decoration:line-through">1 ธ.ค.</span> → <b>4 ธ.ค.</b> · <span class="muted">ขอบเขตงานเพิ่ม (Template แบบ Fleet)</span></div>
+<sc-if value="{{pending}}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:8px"><button class="b ok" type="button" onClick="{{approve}}">อนุมัติ</button><button class="b" type="button" onClick="{{reject}}">ปฏิเสธ</button></div></sc-if>
+<sc-if value="{{decided}}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;font-weight:600;color:{{decC}}">{{decText}}</div></sc-if>
+<div class="muted" style="font-size:12px">Development Plan 2026-11 · 1 ชม.</div>
+</div>
+</div>
+<sc-for list="{{items}}" as="n" hint-placeholder-count="5">
+<a class="{{n.cls}}" href="{{n.href}}">
+<span class="av" style="background:{{n.c}}">{{n.ini}}</span>
+<div style="flex:1;min-width:0"><div><b>{{n.who}}</b> {{n.t}}</div><sc-if value="{{n.hasQ}}" hint-placeholder-val="{{ false }}"><div class="muted" style="font-size:14px;margin-top:2px">“{{n.q}}”</div></sc-if><div class="muted" style="font-size:12px;margin-top:4px">{{n.meta}}</div></div>
+<sc-if value="{{n.un}}" hint-placeholder-val="{{ true }}"><span style="width:10px;height:10px;border-radius:50%;background:#1D4ED8;margin-top:8px;flex:none" aria-label="ยังไม่อ่าน"></span></sc-if>
+</a>
+</sc-for>
+<div class="muted" style="font-size:12px;text-align:center;padding:16px">ปัดซ้ายเพื่ออ่านแล้ว · กดค้างเพื่อปิดแจ้งเตือนของงานนั้น</div>
+</div>
+<nav aria-label="เมนูหลัก" style="display:flex;background:#fff;border-top:1px solid #E4E7EB;padding-bottom:8px">
+<a class="tabb" href="MobileHome.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"></path></svg>Home</a>
+<a class="tabb" href="MobileMyTasks.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="m8 12 3 3 5-6"></path></svg>My Tasks</a>
+<a class="tabb" href="MobileOverview.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="7" height="7" rx="1.5"></rect><rect x="14" y="4" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>Projects</a>
+<a class="tabb on" href="MobileInbox.dc.html" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>Inbox<sc-if value="{{hasUn}}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:6px;left:calc(50% + 4px);min-width:18px;height:18px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px">{{unread}}</span></sc-if></a>
+<a class="tabb" href="Profile.dc.html"><span style="width:24px;height:24px;border-radius:50%;background:#1D4ED8;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">MK</span>Profile</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { f: 'all', ra: false, dec: '' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const f = st.f || 'all', ra = !!st.ra, dec = st.dec || '';
+    const N = [
+      ['Donut', 'DN', '#A21CAF', 'mention คุณใน DP-525', 'กระทบ DP-21 ด้วย ช่วยจัดลำดับให้หน่อยค่ะ', 'Development Plan 2026-11 · 2 ชม.', true, 'mention', 'BugDetail.dc.html'],
+      ['Tung', 'TG', '#7C3AED', 'ส่ง DP-260 Offset กับ HP เข้า Review', '', 'Development Plan 2026-11 · 25 นาที', true, 'assign', 'TaskDetail.dc.html'],
+      ['Donut', 'DN', '#A21CAF', 'ตรวจซ้ำ DP-526 ผ่าน · SIT run #2 Passed 9/9', '', 'Development Plan 2026-11 · 16:05', true, 'all', 'MobileSubtask.dc.html'],
+      ['Kaijeaw', 'KJ', '#B45309', 'ส่ง DP-34 ผู้ใช้วงเงินจาก MDP เข้า Review', '', 'เมื่อวาน 17:20', false, 'assign', 'TaskDetail.dc.html'],
+      ['ระบบ', 'FM', '#475569', 'งานในโปรเจกต์เลยกำหนด 7 งาน', '', 'สรุปรายวัน · 09:30', false, 'all', 'MobileOverview.dc.html']
+    ];
+    const items = N.filter(function (n) { return f === 'all' || n[7] === f; }).map(function (n) { const un = n[6] && !ra; return { who: n[0], ini: n[1], c: n[2], t: n[3], q: n[4], hasQ: !!n[4], meta: n[5], un: un, cls: un ? 'n un' : 'n', href: n[8] }; });
+    const unread = ra ? 0 : N.filter(function (n) { return n[6]; }).length + (dec ? 0 : 1);
+    const chips = [['all', 'ทั้งหมด'], ['assign', 'มอบหมาย'], ['mention', 'Mentions']].map(function (c) { return { n: c[1], on: f === c[0] ? 'true' : 'false', pick: function () { self.setState({ f: c[0] }); } }; });
+    return {
+      items: items, chips: chips, unread: unread, hasUn: unread > 0, c1: dec || ra ? 'n' : 'n un',
+      pending: !dec, decided: !!dec, decText: dec === 'ok' ? '✓ อนุมัติแล้ว · Due เป็น 4 ธ.ค. แจ้ง Kaijeaw แล้ว' : 'ปฏิเสธแล้ว · แจ้ง Kaijeaw แล้ว', decC: dec === 'ok' ? '#166534' : '#B91C1C',
+      approve: function () { self.setState({ dec: 'ok' }); }, reject: function () { self.setState({ dec: 'no' }); }, readAll: function () { self.setState({ ra: true }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

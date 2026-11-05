@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Project Overview</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E4E7EB;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column}
+.navi{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 10px;border-radius:8px;color:#3D4550;text-decoration:none}
+.navi:hover{background:#F1F3F5;color:#1B1F24}
+.navi.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.sec{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:16px 10px 6px}
+.phead{background:#fff;padding:16px 24px 0;border-bottom:1px solid #E4E7EB}
+.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:10px}
+.tab{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;color:#56606B;text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+.tab:hover{color:#1B1F24}
+.tab.on{color:#1D4ED8;border-bottom-color:#1D4ED8;font-weight:600}
+.body{padding:24px;display:flex;flex-direction:column;gap:20px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#F1F3F5}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF}
+.seg{display:inline-flex;border:1px solid #D5DAE0;border-radius:8px;overflow:hidden;background:#fff}
+.seg button{min-height:34px;padding:0 12px;border:0;background:transparent;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.chead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid #EEF0F3}
+.chead h2{margin:0;font-size:15px}
+.muted{color:#5F6873}
+.av{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;border:2px solid #fff;flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.m-auth{background:#DBEAFE;color:#1E40AF}.m-appt{background:#CCFBF1;color:#115E59}.m-pay{background:#FEF3C7;color:#92400E}.m-admin{background:#EDE9FE;color:#5B21B6}
+.p-mick{background:#1D4ED8}.p-ploy{background:#B45309}.p-ton{background:#0F766E}.p-fah{background:#7C3AED}.p-bank{background:#BE185D}
+.s-todo{background:#EEF0F3;color:#3D4550}.s-prog{background:#DBEAFE;color:#1E40AF}.s-rev{background:#FEF3C7;color:#92400E}.s-done{background:#DCFCE7;color:#166534}.s-late{background:#FEE2E2;color:#991B1B}
+.kpi{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:16px 18px;text-align:left;background:#fff;border:1px solid #E4E7EB;border-radius:12px;font:inherit;color:#1B1F24;cursor:pointer}
+.kpi:hover{border-color:#B8C0CA}
+.kpi.on{border-color:#1D4ED8;box-shadow:0 0 0 1px #1D4ED8}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.d-late{background:#DC2626}.d-today{background:#D97706}.d-week{background:#2563EB}.d-done{background:#16A34A}
+.row{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid #EEF0F3}
+.dt{font-size:12px;font-weight:600;white-space:nowrap}
+.dt.late{color:#B91C1C}.dt.today{color:#B45309}.dt.week{color:#3D4550}.dt.done{color:#166534}
+.up{color:#B91C1C}.good{color:#166534}
+@media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.body{padding:16px}.phead{padding:12px 16px 0}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a href="IssueCreate.dc.html" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:#1D4ED8;color:#fff;font-weight:600;text-decoration:none">+ New</a>
+<a href="Bell.dc.html" aria-label="การแจ้งเตือน 5 รายการยังไม่อ่าน" style="position:relative;width:40px;height:40px;border-radius:8px;color:#E2E8F0;display:inline-flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #0F172A">5</span></a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div class="app">
+<aside class="side" aria-label="Workspace navigation">
+<a class="navi" href="Home.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"></path></svg>Home</a>
+<a class="navi" href="MyTasks.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="m8 12 3 3 5-6"></path></svg>My Tasks</a>
+<a class="navi" href="Inbox.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h5l1.5 3h5L16 13h5"></path><path d="M5 5h14l2 8v6H3v-6z"></path></svg>Inbox<span class="pill s-late" style="margin-left:auto">3</span></a>
+<div class="sec">Projects</div>
+<a class="navi on" href="Main.dc.html"><span class="dot" style="background:#334155"></span>Development Plan 2026-11</a>
+<a class="navi" href="NewProject.dc.html" style="color:#1D4ED8">+ New project</a>
+<div style="margin-top:auto;border-top:1px solid #E4E7EB;padding-top:10px;display:flex;flex-direction:column;gap:2px">
+<a class="navi" href="AdminConsole.dc.html">Admin Console</a>
+</div>
+</aside>
+<main class="main">
+<header class="phead">
+<div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px">
+<div style="min-width:0">
+<div class="muted" style="font-size:12px">Friday Workspace / Projects / Development Plan 2026-11</div>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+<div style="width:32px;height:32px;border-radius:8px;background:#334155;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">DP</div>
+<h1 style="margin:0;font-size:22px;line-height:1.3">Development Plan 2026-11</h1>
+<span class="pill s-prog">Active</span>
+<span class="pill s-late">Off track</span>
+<span class="muted" style="font-size:13px">5 พ.ย. 69 – 21 เม.ย. 70</span>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;margin-right:4px">
+<span class="av" title="Mick" style="background:#1D4ED8;">MK</span><span class="av" title="Kaijeaw" style="background:#B45309;margin-left:-8px">KJ</span><span class="av" title="Pond" style="background:#0F766E;margin-left:-8px">PD</span><span class="av" title="Tung" style="background:#7C3AED;margin-left:-8px">TG</span><span class="av" title="Top" style="background:#BE185D;margin-left:-8px">TP</span><span class="av" style="background:#64748B;margin-left:-8px" title="Zo, P'Tum, Ton และ BA อีก 7 คน">+9</span>
+</div>
+<button class="btn" type="button">Invite</button>
+<button class="btn" type="button" aria-label="Project menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+<button class="btn pri" type="button">+ New</button>
+</div>
+</div>
+<nav class="tabs" aria-label="Project views">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="8"><a class="{{t.cls}}" href="{{t.href}}">{{t.label}}</a></sc-for>
+</nav>
+</header>
+
+<div class="body">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+<div class="muted" style="font-size:13px">อัปเดตล่าสุด 2 นาทีที่แล้ว · พุธ 2 ธ.ค. 2026 <span class="pill" style="background:#EEF0F3;color:#3D4550;margin-left:6px">ข้อมูลจริงจาก Development Plan 2026-11 · สถานะจำลอง ณ พ. 2 ธ.ค. 2569</span></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<div class="seg" role="group" aria-label="Scope"><button type="button" aria-pressed="true">ทั้งโปรเจกต์</button><button type="button" aria-pressed="false">งานของฉัน</button></div>
+<select class="btn" aria-label="Filter by module"><option>ทุก Module</option><option>Credit Line</option><option>Drawdown</option><option>Pre-Disburse</option><option>Maintain Car After Drawdown</option><option>BFC ใบเรียกเก็บ/ใบแจ้งหนี้</option><option>Repayment รับชำระเงิน</option><option>Checkstock & Collect Car Keys</option><option>Finance (GL)</option><option>Campaign</option><option>OEM / Dealer Portal</option><option>Interface FP/HP/KL</option></select>
+</div>
+</div>
+
+<section class="card" aria-label="Project summary" style="padding:18px 20px;display:flex;flex-wrap:wrap;gap:28px;align-items:center">
+<div style="display:flex;align-items:center;gap:16px">
+<svg width="92" height="92" viewBox="0 0 92 92" role="img" aria-label="Project progress 22 percent">
+<circle cx="46" cy="46" r="38" fill="none" stroke="#E4E7EB" stroke-width="10"></circle>
+<circle cx="46" cy="46" r="38" fill="none" stroke="#1D4ED8" stroke-width="10" stroke-linecap="round" stroke-dasharray="52.5 238.8" transform="rotate(-90 46 46)"></circle>
+<text x="46" y="52" text-anchor="middle" font-size="20" font-weight="700" fill="#1B1F24" font-family="IBM Plex Sans Thai, sans-serif">22%</text>
+</svg>
+<div>
+<div class="muted" style="font-size:13px">ความคืบหน้าโครงการ</div>
+<div style="font-size:18px;font-weight:700">72 / 334 งาน</div>
+<div class="muted" style="font-size:12px">Man-Day เสร็จ 189 / 944 (20%)</div>
+</div>
+</div>
+<div style="flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:10px">
+<div>
+<div style="display:flex;justify-content:space-between;font-size:13px"><span>เวลาที่ผ่านไป</span><span style="font-weight:600">18% · 20 / 111 วันทำการ</span></div>
+<div style="height:8px;background:#EEF0F3;border-radius:99px;overflow:hidden;margin-top:4px"><div style="width:18%;height:100%;background:#94A3B8;border-radius:99px"></div></div>
+</div>
+<div>
+<div style="display:flex;justify-content:space-between;font-size:13px"><span>งานที่เสร็จ</span><span style="font-weight:600">22%</span></div>
+<div style="height:8px;background:#EEF0F3;border-radius:99px;overflow:hidden;margin-top:4px"><div style="width:22%;height:100%;background:#1D4ED8;border-radius:99px"></div></div>
+</div>
+</div>
+<div style="display:flex;gap:28px;flex-wrap:wrap">
+<div><div class="muted" style="font-size:13px">เหลือก่อน Go-live</div><div style="font-size:24px;font-weight:700">91 วันทำการ</div><div class="muted" style="font-size:12px">งานสุดท้าย 21 เม.ย. 70</div></div>
+<div><div class="muted" style="font-size:13px">Milestone ถัดไป</div><div style="font-size:16px;font-weight:600;margin-top:4px">Credit Line Go-live</div><div class="muted" style="font-size:12px">26 ม.ค. 70 · อีก 55 วัน</div></div>
+</div>
+<div style="flex:1 1 240px;background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:12px 14px">
+<div style="display:flex;align-items:center;gap:8px;font-weight:600;color:#991B1B"><span class="dot" style="background:#DC2626"></span>Health: Off track</div>
+<div style="font-size:13px;color:#5B1E1E;margin-top:4px">งานที่เสร็จ 45 จาก 72 งานช้ากว่าแผน · Overdue 7 งาน (Kaijeaw 4) · ตาม capacity ต้องใช้ ≈ 29 สัปดาห์ แต่แผนมี ≈ 24 สัปดาห์</div>
+</div>
+</section>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
+<sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+<button class="{{k.cls}}" type="button" onClick="{{k.pick}}" aria-pressed="{{k.on}}">
+<span style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:#3D4550"><span class="dot {{k.dot}}"></span>{{k.label}}</span>
+<span style="display:flex;align-items:baseline;gap:10px"><span style="font-size:34px;font-weight:700;line-height:1.15">{{k.count}}</span><span class="{{k.dcls}}" style="font-size:12px;font-weight:600">{{k.delta}}</span></span>
+<span class="muted" style="font-size:12px">{{k.sub}}</span>
+</button>
+</sc-for>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+<div style="flex:2 1 520px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+<section class="card">
+<div class="chead">
+<h2>{{listTitle}} <span class="muted" style="font-weight:500">· {{listCount}} งาน</span></h2>
+<a href="Table.dc.html" style="font-size:13px;font-weight:500">เปิดใน Table →</a>
+</div>
+<div>
+<sc-for list="{{list}}" as="r" hint-placeholder-count="5">
+<div class="row">
+<sc-if value="{{r.open}}" hint-placeholder-val="{{ true }}"><input type="checkbox" aria-label="ทำเครื่องหมายว่าเสร็จ" style="width:18px;height:18px;margin:0;flex:none"></sc-if>
+<sc-if value="{{r.done}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" role="img" aria-label="Done" style="flex:none"><circle cx="12" cy="12" r="11" fill="#16A34A"></circle><path d="m7 12.5 3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+<div style="flex:1 1 auto;min-width:0">
+<div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.t}}</div>
+<div style="display:flex;gap:8px;margin-top:2px;align-items:center;flex-wrap:wrap"><span class="pill" style="background:{{r.mbg}};color:{{r.mfg}}">{{r.m}}</span><span class="muted" style="font-size:12px">↳ {{r.sub}}</span></div>
+</div>
+<span class="{{r.dcls}}">{{r.date}}</span>
+<span class="av" title="{{r.who}}" style="background:{{r.pc}}">{{r.ini}}</span>
+</div>
+</sc-for>
+</div>
+<div style="padding:10px 18px"><a href="Table.dc.html" style="font-size:13px">ดูทั้งหมด {{listCount}} งาน</a></div>
+</section>
+
+<section class="card">
+<div class="chead">
+<h2>งานที่เสร็จ <span class="muted" style="font-weight:500">· 7 วันล่าสุด</span></h2>
+<div class="seg" role="group" aria-label="Chart type"><button type="button" aria-pressed="true">Done รายวัน</button><button type="button" aria-pressed="false">Burn-up</button></div>
+</div>
+<div style="padding:18px 22px 16px">
+<div style="display:flex;align-items:flex-end;gap:14px;height:150px;border-bottom:1px solid #D5DAE0" role="img" aria-label="Tasks done per day: พฤ. 3, ศ. 0, ส. 0, อา. 0, จ. 5, อ. 7, พ. 0">
+<sc-for list="{{doneDays}}" as="d" hint-placeholder-count="7">
+<div style="flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%">
+<span style="font-size:12px;font-weight:600">{{d.v}}</span>
+<div style="width:100%;max-width:44px;height:{{d.h}}px;background:{{d.c}};border-radius:4px 4px 0 0"></div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:14px;margin-top:6px">
+<sc-for list="{{doneDays}}" as="d" hint-placeholder-count="7"><div class="muted" style="flex:1 1 0;text-align:center;font-size:12px">{{d.l}}</div></sc-for>
+</div>
+<div class="muted" style="font-size:12px;margin-top:10px">รวม 15 งาน · เฉลี่ย 3.0 งาน/วันทำการ · สัปดาห์ก่อน 11 งาน</div>
+</div>
+</section>
+
+<section class="card">
+<div class="chead"><h2>ข้อมูลโปรเจกต์</h2><button class="btn" type="button" style="min-height:32px;font-size:13px">แก้ไข</button></div>
+<div style="padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px">
+<div style="grid-column:1/-1"><div class="muted" style="font-size:12px;font-weight:600">เป้าหมาย</div><div>ระบบสินเชื่อ Floor Plan ครบวงจร ตั้งแต่วงเงิน การเบิกใช้ รับชำระ ใบเรียกเก็บ จนถึงบันทึกบัญชี GL · 11 Module · Dev 6 คน · BA 8 คน</div></div>
+<div><div class="muted" style="font-size:12px;font-weight:600">In-scope</div><ul style="margin:4px 0 0;padding-left:18px"><li>Credit Line, Drawdown, Pre-Disburse</li><li>Repayment, BFC, Finance (GL)</li><li>Interface FP / HP / KL</li></ul></div>
+<div><div class="muted" style="font-size:12px;font-weight:600">Out-of-scope</div><ul style="margin:4px 0 0;padding-left:18px"><li>[ระบุ Out-of-scope จาก TOR]</li></ul></div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div><span class="muted" style="font-size:12px;font-weight:600">Lead / PM</span><div style="display:flex;align-items:center;gap:8px"><span class="av" style="background:#1D4ED8">MK</span>Mick</div></div>
+<div><span class="muted" style="font-size:12px;font-weight:600">เจ้าของระบบ</span><div>[ชื่อหน่วยงาน]</div></div>
+<div><span class="muted" style="font-size:12px;font-weight:600">เอกสาร</span><div><a href="Files.dc.html">SRS</a> · <a href="Files.dc.html">BRD</a> · <a href="ImportExcel.dc.html">Development Plan 2026-11.xlsx</a></div></div>
+</div>
+</div>
+</section>
+</div>
+
+<div style="flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:20px">
+<section class="card">
+<div class="chead"><h2>Progress by Module</h2></div>
+<div style="padding:14px 18px;display:flex;flex-direction:column;gap:16px">
+<sc-for list="{{mods}}" as="m" hint-placeholder-count="11">
+<div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px">
+<span style="display:flex;align-items:center;gap:8px;font-weight:600"><span class="dot" style="background:{{m.color}};border-radius:3px"></span>{{m.name}}</span>
+<span><span style="font-weight:600">{{m.pct}}%</span> <span class="muted">· {{m.done}}/{{m.total}}</span></span>
+</div>
+<div style="height:8px;background:#EEF0F3;border-radius:99px;overflow:hidden;margin-top:6px"><div style="width:{{m.pct}}%;height:100%;background:{{m.color}};border-radius:99px"></div></div>
+<div style="font-size:12px;margin-top:4px" class="{{m.lateCls}}">{{m.late}}</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section class="card">
+<div class="chead"><h2>Status breakdown</h2><span class="muted" style="font-size:13px">334 งาน</span></div>
+<div style="padding:16px 18px">
+<div style="display:flex;height:14px;border-radius:99px;overflow:hidden;gap:2px" role="img" aria-label="Backlog 23, To do 225, In progress 11, Review 3, Done 72">
+<sc-for list="{{status}}" as="s" hint-placeholder-count="5"><div style="width:{{s.pct}}%;background:{{s.c}}"></div></sc-for>
+</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;margin-top:14px">
+<sc-for list="{{status}}" as="s" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span class="dot" style="background:{{s.c}};border-radius:3px"></span><span style="flex:1">{{s.l}}</span><span style="font-weight:600">{{s.n}}</span></div>
+</sc-for>
+</div>
+</div>
+</section>
+
+<section class="card">
+<div class="chead"><h2>Milestones</h2><a href="Timeline.dc.html" style="font-size:13px">Timeline →</a></div>
+<div style="padding:6px 0">
+<sc-for list="{{miles}}" as="ms" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:12px;padding:10px 18px">
+<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" style="flex:none"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill="{{ms.c}}"></rect></svg>
+<div style="flex:1;min-width:0"><div style="font-weight:600">{{ms.n}}</div><div class="muted" style="font-size:12px">{{ms.d}} · งานที่ผูกไว้เสร็จ {{ms.p}}</div></div>
+<span class="pill s-todo">{{ms.left}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section class="card">
+<div class="chead"><h2>Workload สัปดาห์นี้ <span class="muted" style="font-weight:500">· 30 พ.ย. – 4 ธ.ค.</span></h2><a href="Members.dc.html" style="font-size:13px">ดูทั้งหมด →</a></div>
+<div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{load}}" as="w" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:10px">
+<span class="av" style="background:{{w.pc}}">{{w.ini}}</span>
+<div style="flex:1;min-width:0">
+<div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:500">{{w.n}}</span><span class="{{w.cls}}" style="font-weight:600">{{w.h}} / 5 MD · {{w.pct}}%</span></div>
+<div style="height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden;margin-top:4px"><div style="width:{{w.bar}}%;height:100%;background:{{w.c}}"></div></div>
+</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section class="card">
+<div class="chead"><h2>Recent activity</h2></div>
+<div style="padding:6px 0">
+<sc-for list="{{acts}}" as="a" hint-placeholder-count="5">
+<div style="display:flex;gap:10px;padding:9px 18px;align-items:flex-start">
+<span class="av" style="width:24px;height:24px;font-size:10px;background:{{a.pc}}">{{a.ini}}</span>
+<div style="font-size:13px;min-width:0"><span style="font-weight:600">{{a.who}}</span> {{a.t}}<div class="muted" style="font-size:12px">{{a.when}}</div></div>
+</div>
+</sc-for>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  state = { focus: 'late' };
+  renderVals() {
+    const focus = (this.state && this.state.focus) || 'late';
+    const T = [['Overview','Main.dc.html'],['ภาพรวม Lead','LeadDashboard.dc.html'],['Backlog','Backlog.dc.html'],['Table','Table.dc.html'],['Kanban','Kanban.dc.html'],['Timeline','Timeline.dc.html'],['Gantt','Gantt.dc.html'],['Calendar','Calendar.dc.html'],['Members','Members.dc.html'],['Files','Files.dc.html'],['Settings','ProjectSettings.dc.html']];
+    const tabs = T.map(function (x) { return { label: x[0], href: x[1], cls: x[0] === 'Overview' ? 'tab on' : 'tab' }; });
+    const L = {"late": ["Overdue", 7, [{"t": "ยกเลิก BFC Curtailment อัตโนมัติเมื่อออก BFC SOT + ทำแผนใหม่", "m": "BFC", "mbg": "#BE185D1A", "mfg": "#BE185D", "who": "Top", "ini": "TP", "pc": "#BE185D", "sub": "DP-219 · แผน Curtailment", "date": "เลย 8 วัน", "dcls": "dt late", "done": false, "open": true}, {"t": "ระยะเวลาวงเงิน (เพิ่ม, ล็อกหลังอนุมัติ)", "m": "Credit Line", "mbg": "#1D4ED81A", "mfg": "#1D4ED8", "who": "Kaijeaw", "ini": "KJ", "pc": "#B45309", "sub": "DP-23 · Credit Line & Workflow", "date": "เลย 7 วัน", "dcls": "dt late", "done": false, "open": true}, {"t": "Export EDI: รายการ Lot, Drill-down, Export เป็น Template", "m": "Drawdown", "mbg": "#0F766E1A", "mfg": "#0F766E", "who": "Pond", "ini": "PD", "pc": "#0F766E", "sub": "DP-91 · รับข้อมูลรถ (Upload / EDI)", "date": "เลย 7 วัน", "dcls": "dt late", "done": false, "open": true}, {"t": "Maintain : สร้างงานอัตโนมัติ, Add Credit, Select Credit, Gen เลขที่", "m": "Credit Line", "mbg": "#1D4ED81A", "mfg": "#1D4ED8", "who": "Kaijeaw", "ini": "KJ", "pc": "#B45309", "sub": "DP-21 · Credit Line & Workflow", "date": "เลย 6 วัน", "dcls": "dt late", "done": false, "open": true}, {"t": "UX/UI 15 หน้าจอ", "m": "BFC", "mbg": "#BE185D1A", "mfg": "#BE185D", "who": "Top", "ini": "TP", "pc": "#BE185D", "sub": "DP-211 · ไม่ระบุกลุ่มงาน", "date": "เลย 6 วัน", "dcls": "dt late", "done": false, "open": true}, {"t": "ผู้ใช้วงเงินจาก MDP (P/J) + ผูกลูกค้า FACO", "m": "Credit Line", "mbg": "#1D4ED81A", "mfg": "#1D4ED8", "who": "Kaijeaw", "ini": "KJ", "pc": "#B45309", "sub": "DP-34 · Product & ผู้ใช้วงเงิน", "date": "เลย 2 วัน", "dcls": "dt late", "done": false, "open": true}, {"t": "Curtailment Information + Plan Template (Floor Plan)", "m": "Credit Line", "mbg": "#1D4ED81A", "mfg": "#1D4ED8", "who": "Kaijeaw", "ini": "KJ", "pc": "#B45309", "sub": "DP-30 · Product & ผู้ใช้วงเงิน", "date": "เลย 1 วัน", "dcls": "dt late", "done": false, "open": true}]], "today": ["Due today", 2, [{"t": "Add Dealer / Add Group Dealer (วงเงินใช้ได้จริงรายคน/กลุ่ม)", "m": "Credit Line", "mbg": "#1D4ED81A", "mfg": "#1D4ED8", "who": "Kaijeaw", "ini": "KJ", "pc": "#B45309", "sub": "DP-35 · Product & ผู้ใช้วงเงิน", "date": "วันนี้", "dcls": "dt today", "done": false, "open": true}, {"t": "Offset กับ HP: ตรวจรถจาก Chassis/Engine, ส่งยอด O/S, เทียบยอด, ตัดปิด + ใบเสร็จ, อีเมลส่วนต่าง", "m": "Repayment", "mbg": "#0369A11A", "mfg": "#0369A1", "who": "Tung, Zo", "ini": "TG", "pc": "#7C3AED", "sub": "DP-260 · ช่องทางรับชำระ", "date": "วันนี้", "dcls": "dt today", "done": false, "open": true}]], "week": ["Later this week", 5, [{"t": "Collateral framework: รายการ, Map จาก MDP (Other), ผูกกับวงเงิน", "m": "Credit Line", "mbg": "#1D4ED81A", "mfg": "#1D4ED8", "who": "Kaijeaw", "ini": "KJ", "pc": "#B45309", "sub": "DP-38 · หลักประกัน & ผู้ค้ำประกัน", "date": "พฤ. 3 ธ.ค.", "dcls": "dt week", "done": false, "open": true}, {"t": "Drawdown Entry: นับรายการตามสถานะ, สร้างตามประเภท", "m": "Drawdown", "mbg": "#0F766E1A", "mfg": "#0F766E", "who": "Pond", "ini": "PD", "pc": "#0F766E", "sub": "DP-100 · Drawdown Entry - Normal", "date": "พฤ. 3 ธ.ค.", "dcls": "dt week", "done": false, "open": true}, {"t": "เงื่อนไขระงับวงเงิน 8 ข้อ + ข้ามได้ตามช่วงอนุโลม", "m": "Drawdown", "mbg": "#0F766E1A", "mfg": "#0F766E", "who": "Pond", "ini": "PD", "pc": "#0F766E", "sub": "DP-95 · ตรวจสอบก่อนเบิกใช้ (Check engine)", "date": "ศ. 4 ธ.ค.", "dcls": "dt week", "done": false, "open": true}, {"t": "วงเงินถูกระงับหลัง Confirm: เตือน + บันทึกหมายเหตุอัตโนมัติ", "m": "Drawdown", "mbg": "#0F766E1A", "mfg": "#0F766E", "who": "Pond", "ini": "PD", "pc": "#0F766E", "sub": "DP-97 · ตรวจสอบก่อนเบิกใช้ (Check engine)", "date": "ศ. 4 ธ.ค.", "dcls": "dt week", "done": false, "open": true}, {"t": "Dealer & Credit Line Search (Popup ใช้ร่วม)", "m": "Drawdown", "mbg": "#0F766E1A", "mfg": "#0F766E", "who": "Pond", "ini": "PD", "pc": "#0F766E", "sub": "DP-101 · Drawdown Entry - Normal", "date": "ศ. 4 ธ.ค.", "dcls": "dt week", "done": false, "open": true}]], "done": ["Done in 7 days", 15, [{"t": "Workflow : ส่งงาน/คืนงาน/ส่งกลับแก้ไข ข้าม BD·LO·LC·CC + To-do list", "m": "Credit Line", "mbg": "#1D4ED81A", "mfg": "#1D4ED8", "who": "Kaijeaw", "ini": "KJ", "pc": "#B45309", "sub": "DP-20 · Credit Line & Workflow", "date": "เสร็จ 1 ธ.ค.", "dcls": "dt done", "done": true, "open": false}, {"t": "Credit / Sub / Shared Limit (Product / Dealer) + API Available Credit", "m": "Credit Line", "mbg": "#1D4ED81A", "mfg": "#1D4ED8", "who": "Kaijeaw", "ini": "KJ", "pc": "#B45309", "sub": "DP-24 · Credit Line & Workflow", "date": "เสร็จ 1 ธ.ค.", "dcls": "dt done", "done": true, "open": false}, {"t": "Interest Setting + Interest Program Normal / Penetration (Floor Plan)", "m": "Credit Line", "mbg": "#1D4ED81A", "mfg": "#1D4ED8", "who": "Kaijeaw", "ini": "KJ", "pc": "#B45309", "sub": "DP-29 · Product & ผู้ใช้วงเงิน", "date": "เสร็จ 1 ธ.ค.", "dcls": "dt done", "done": true, "open": false}, {"t": "ตรวจวงเงินคงเหลือระดับ Credit Line / Brand / Dealer (API ตั้งวงเงิน)", "m": "Drawdown", "mbg": "#0F766E1A", "mfg": "#0F766E", "who": "Pond", "ini": "PD", "pc": "#0F766E", "sub": "DP-94 · ตรวจสอบก่อนเบิกใช้ (Check engine)", "date": "เสร็จ 1 ธ.ค.", "dcls": "dt done", "done": true, "open": false}, {"t": "แจ้งเตือนวงเงินใกล้หมดอายุ (T-15)", "m": "Drawdown", "mbg": "#0F766E1A", "mfg": "#0F766E", "who": "Pond", "ini": "PD", "pc": "#0F766E", "sub": "DP-96 · ตรวจสอบก่อนเบิกใช้ (Check engine)", "date": "เสร็จ 1 ธ.ค.", "dcls": "dt done", "done": true, "open": false}, {"t": "ค่าเช่า/ดอกเบี้ยรายวัน: เงินต้นคงเหลือ × อัตรา × วัน / 365 แยก Loan/Inventory", "m": "BFC", "mbg": "#BE185D1A", "mfg": "#BE185D", "who": "Top, Zo", "ini": "TP", "pc": "#BE185D", "sub": "DP-222 · Calculate Core engine Interest/Rental/Penalty/Fee", "date": "เสร็จ 1 ธ.ค.", "dcls": "dt done", "done": true, "open": false}, {"t": "รับชำระด้วยเช็ค (CLQ): คืนวงเงินวันทำการถัดไป 15:00 น. + ยกเลิกเช็คคืน", "m": "Repayment", "mbg": "#0369A11A", "mfg": "#0369A1", "who": "Tung, P'Tum", "ini": "TG", "pc": "#7C3AED", "sub": "DP-258 · ช่องทางรับชำระ", "date": "เสร็จ 1 ธ.ค.", "dcls": "dt done", "done": true, "open": false}]]};
+    const self = this;
+    const K = [["late", "Overdue", 7, "▲ 2 จากสัปดาห์ก่อน", "up", "เลยกำหนดส่งและยังไม่ Done", "d-late"], ["today", "Due today", 2, "", "", "ครบกำหนดวันนี้ · พ. 2 ธ.ค.", "d-today"], ["week", "Later this week", 5, "", "", "พฤ. 3 – ศ. 4 ธ.ค.", "d-week"], ["done", "Done in 7 days", 15, "▲ 4 จากสัปดาห์ก่อน", "good", "26 พ.ย. – 2 ธ.ค.", "d-done"]];
+    const kpis = K.map(function (k) {
+      return { label: k[1], count: k[2], delta: k[3], dcls: k[4], sub: k[5], dot: k[6], on: focus === k[0] ? 'true' : 'false', cls: focus === k[0] ? 'kpi on' : 'kpi', pick: function () { self.setState({ focus: k[0] }); } };
+    });
+    const cur = L[focus];
+    const mods = [{"name": "Credit Line", "color": "#1D4ED8", "done": 21, "total": 54, "pct": 39, "late": "Overdue 4 งาน", "lateCls": "up"}, {"name": "Drawdown", "color": "#0F766E", "done": 14, "total": 61, "pct": 23, "late": "Overdue 1 งาน", "lateCls": "up"}, {"name": "Pre-Disburse", "color": "#B45309", "done": 10, "total": 29, "pct": 34, "late": "ไม่มีงาน Overdue", "lateCls": "muted"}, {"name": "Maintain Car", "color": "#7C3AED", "done": 12, "total": 12, "pct": 100, "late": "ไม่มีงาน Overdue", "lateCls": "muted"}, {"name": "BFC", "color": "#BE185D", "done": 8, "total": 28, "pct": 29, "late": "Overdue 2 งาน", "lateCls": "up"}, {"name": "Repayment", "color": "#0369A1", "done": 7, "total": 30, "pct": 23, "late": "ไม่มีงาน Overdue", "lateCls": "muted"}, {"name": "Checkstock", "color": "#4D7C0F", "done": 0, "total": 32, "pct": 0, "late": "ยังไม่เริ่ม · เริ่ม 25 ม.ค. 70", "lateCls": "muted"}, {"name": "Finance (GL)", "color": "#57534E", "done": 0, "total": 19, "pct": 0, "late": "ยังไม่เริ่ม · เริ่ม 1 มี.ค. 70", "lateCls": "muted"}, {"name": "Campaign", "color": "#C2410C", "done": 0, "total": 25, "pct": 0, "late": "ยังไม่เริ่ม · เริ่ม 26 ก.พ. 70", "lateCls": "muted"}, {"name": "OEM Portal", "color": "#4338CA", "done": 0, "total": 21, "pct": 0, "late": "ยังไม่เริ่ม · เริ่ม 25 ม.ค. 70", "lateCls": "muted"}, {"name": "Interface", "color": "#0E7490", "done": 0, "total": 23, "pct": 0, "late": "ยังไม่มีวันในแผน · อยู่ใน Backlog", "lateCls": "muted"}];
+    const status = [{"l": "Backlog", "n": 23, "pct": 6.9, "c": "#E4E7EB"}, {"l": "To do", "n": 225, "pct": 67.4, "c": "#C3CAD3"}, {"l": "In progress", "n": 11, "pct": 3.3, "c": "#3B82F6"}, {"l": "Review", "n": 3, "pct": 0.9, "c": "#F59E0B"}, {"l": "Done", "n": 72, "pct": 21.6, "c": "#15803D"}];
+    const doneDays = [{"l": "พฤ.", "v": 3, "h": 51, "c": "#93B4F5"}, {"l": "ศ.", "v": 0, "h": 3, "c": "#D5DAE0"}, {"l": "ส.", "v": 0, "h": 3, "c": "#D5DAE0"}, {"l": "อา.", "v": 0, "h": 3, "c": "#D5DAE0"}, {"l": "จ.", "v": 5, "h": 86, "c": "#93B4F5"}, {"l": "อ.", "v": 7, "h": 120, "c": "#93B4F5"}, {"l": "พ.", "v": 0, "h": 3, "c": "#D5DAE0"}];
+    const miles = [{"n": "Credit Line ครบตามแผน (Go-live)", "d": "อ. 26 ม.ค. 70", "p": "39%", "left": "อีก 55 วัน", "c": "#1D4ED8"}, {"n": "Repayment ครบตามแผน", "d": "พ. 27 ม.ค. 70", "p": "23%", "left": "อีก 56 วัน", "c": "#0369A1"}, {"n": "BFC ครบตามแผน", "d": "จ. 8 ก.พ. 70", "p": "29%", "left": "อีก 68 วัน", "c": "#BE185D"}];
+    const load = [{"n": "Kaijeaw", "ini": "KJ", "pc": "#B45309", "h": 16.0, "pct": 320, "bar": 100, "c": "#EA580C", "cls": "up"}, {"n": "Pond", "ini": "PD", "pc": "#0F766E", "h": 13.0, "pct": 260, "bar": 100, "c": "#EA580C", "cls": "up"}, {"n": "Tung", "ini": "TG", "pc": "#7C3AED", "h": 6.5, "pct": 130, "bar": 100, "c": "#EA580C", "cls": "up"}];
+    const acts = [{"who": "Tung", "ini": "TG", "pc": "#7C3AED", "t": "ส่ง DP-260 “Offset กับ HP: ตรวจรถจาก Chassis/Engine…” เข้า Review", "when": "25 นาทีที่แล้ว"}, {"who": "Kaijeaw", "ini": "KJ", "pc": "#B45309", "t": "ขอเลื่อน Due DP-30 “Curtailment Information + Plan Template” เป็น 4 ธ.ค.", "when": "1 ชม.ที่แล้ว"}, {"who": "Zo", "ini": "ZO", "pc": "#0369A1", "t": "ย้าย DP-222 “ค่าเช่า/ดอกเบี้ยรายวัน” ไป Done", "when": "เมื่อวาน 18:05"}, {"who": "Pond", "ini": "PD", "pc": "#0F766E", "t": "ย้าย DP-96 “แจ้งเตือนวงเงินใกล้หมดอายุ (T-15)” ไป Done", "when": "เมื่อวาน 16:10"}, {"who": "Kaijeaw", "ini": "KJ", "pc": "#B45309", "t": "ย้าย DP-29 “Interest Setting + Interest Program” ไป Done", "when": "เมื่อวาน 15:30"}];
+    return { tabs: tabs, kpis: kpis, listTitle: cur[0], listCount: cur[1], list: cur[2], mods: mods, status: status, doneDays: doneDays, miles: miles, load: load, acts: acts };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Workspace Switcher</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.muted{color:#5F6873}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:0 14px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.menu{position:absolute;top:52px;left:16px;width:360px;max-width:calc(100% - 32px);background:#fff;border:1px solid #E4E7EB;border-radius:12px;box-shadow:0 16px 40px rgba(15,23,42,.2);padding:6px;z-index:3;color:#1B1F24}
+.wi{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:6px 10px;border:0;border-radius:8px;background:#fff;font:inherit;text-align:left;cursor:pointer;color:#1B1F24}
+.wi:hover{background:#F1F3F5}
+.wi.cur{background:#EEF2FF}
+.lo{width:32px;height:32px;border-radius:8px;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.pill{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.mi{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:0;border-radius:8px;background:#fff;font:inherit;text-align:left;cursor:pointer;color:#1B1F24;text-decoration:none}
+.mi:hover{background:#F1F3F5}
+.fld{display:flex;flex-direction:column;gap:6px}
+.lb{font-size:13px;font-weight:600}
+.in{min-height:40px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%}
+.seg{display:inline-flex;border:1px solid #D5DAE0;border-radius:10px;overflow:hidden;background:#fff}
+.seg button{min-height:36px;padding:0 12px;border:0;background:#fff;font:inherit;cursor:pointer;color:#3D4550}
+.seg button[aria-pressed="true"]{background:#1B1F24;color:#fff;font-weight:600}
+</style>
+</helmet>
+<div style="position:relative">
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<button type="button" onClick="{{toggleMenu}}" aria-haspopup="menu" aria-expanded="{{menuOpen}}" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 10px;border-radius:8px;color:#fff;background:#1E293B;border:1px solid #334155;font:inherit;font-weight:600;cursor:pointer"><span class="lo" style="background:{{cur.c}};width:28px;height:28px;border-radius:7px">{{cur.ab}}</span>{{cur.n}} <span aria-hidden="true">▾</span></button>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><span style="flex:1">ค้นหาใน {{cur.n}}</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<div class="seg" role="group" aria-label="ตัวอย่างที่แสดง" style="border-color:#334155"><sc-for list="{{views}}" as="v" hint-placeholder-count="3"><button type="button" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.n}}</button></sc-for></div>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+
+<sc-if value="{{showMenu}}" hint-placeholder-val="{{ true }}">
+<div class="menu" role="menu" aria-label="สลับ Workspace">
+<div class="muted" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:8px 10px 4px">Workspace ของคุณ · mick@example.com</div>
+<sc-for list="{{wss}}" as="w" hint-placeholder-count="4">
+<button class="{{w.cls}}" type="button" role="menuitemradio" aria-checked="{{w.on}}" onClick="{{w.pick}}">
+<span class="lo" style="background:{{w.c}}">{{w.ab}}</span>
+<span style="flex:1;min-width:0"><b style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{w.n}}</b><span class="muted" style="font-size:12px">{{w.role}} · {{w.plan}}</span></span>
+<sc-if value="{{w.hasBadge}}" hint-placeholder-val="{{ false }}"><span class="pill" style="background:#DC2626;color:#fff">{{w.badge}}</span></sc-if>
+<sc-if value="{{w.sso}}" hint-placeholder-val="{{ false }}"><span class="pill" style="background:#EEF0F3;color:#3D4550">SSO</span></sc-if>
+<sc-if value="{{w.isCur}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2.5" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></sc-if>
+</button>
+</sc-for>
+<div style="border-top:1px solid #EEF0F3;margin:6px 0"></div>
+<button class="mi" type="button" role="menuitem" onClick="{{goCreate}}">+ สร้าง Workspace ใหม่</button>
+<a class="mi" href="AcceptInvite.dc.html" role="menuitem">เข้าร่วมด้วยลิงก์เชิญ</a>
+<a class="mi" href="AdminConsole.dc.html" role="menuitem">ตั้งค่า {{cur.n}}</a>
+<div class="muted" style="font-size:11px;padding:6px 10px">คีย์ลัด: Ctrl 1–9 สลับ Workspace ตามลำดับ</div>
+</div>
+</sc-if>
+
+<div style="max-width:1200px;margin:0 auto;padding:24px 24px 48px;display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+<div style="flex:1 1 400px;min-height:420px"></div>
+<section class="card" style="flex:1 1 520px;padding:18px;display:flex;flex-direction:column;gap:12px">
+
+<sc-if value="{{vRules}}" hint-placeholder-val="{{ true }}">
+<h2 style="margin:0;font-size:17px">หลักการของ Workspace</h2>
+<ul style="margin:0;padding-left:20px;line-height:1.9;font-size:14px">
+<li><b>1 Workspace = 1 องค์กร</b> ข้อมูล สมาชิก แพ็กเกจ และใบกำกับภาษีแยกกันทั้งหมด</li>
+<li><b>บัญชีเดียวอยู่ได้หลาย Workspace</b> เช่น Dev outsource ที่ทำงานให้ลูกค้า 2 ราย หรือที่ปรึกษา</li>
+<li><b>สิทธิ์แยกกัน</b> เป็น Owner ที่หนึ่ง และเป็น Guest อีกที่ได้</li>
+<li><b>กระดิ่งแสดงรวมทุก Workspace</b> เลขแดงในเมนูบอกว่ามีเรื่องใหม่ที่ไหน</li>
+<li><b>Workspace ที่บังคับ SSO</b> ต้องเข้าสู่ระบบด้วยบัญชีองค์กรนั้นก่อนสลับเข้า</li>
+<li><b>URL มีชื่อ Workspace</b> เช่น <span class="mono">friday.app/friday-dev/…</span> ลิงก์ที่แชร์จึงเปิดถูกที่เสมอ</li>
+</ul>
+<div style="background:#F8F9FB;border-radius:10px;padding:10px 12px;font-size:13px" class="muted">ผลต่อ API: ทุกคำขอระบุ workspace จาก URL และตรวจว่าผู้ใช้เป็นสมาชิก · ข้อมูลทุกตารางมี workspace_id และป้องกันด้วย Row-level security</div>
+<sc-if value="{{hasSwitched}}" hint-placeholder-val="{{ false }}"><div role="status" style="background:#DCFCE7;color:#166534;border-radius:10px;padding:10px 12px;font-weight:600">สลับไป {{cur.n}} แล้ว · เปิดหน้า Home ของ Workspace นี้</div></sc-if>
+</sc-if>
+
+<sc-if value="{{vCreate}}" hint-placeholder-val="{{ false }}">
+<h2 style="margin:0;font-size:17px">สร้าง Workspace ใหม่</h2>
+<label class="fld"><span class="lb">ชื่อองค์กรหรือทีม</span><input class="in" type="text" value="{{wsName}}" onInput="{{typeName}}" onChange="{{typeName}}"></label>
+<label class="fld"><span class="lb">URL</span><span style="display:flex;align-items:center;border:1px solid #C9CFD6;border-radius:8px;overflow:hidden"><span class="mono muted" style="padding:0 8px;background:#F8F9FB;align-self:stretch;display:flex;align-items:center">friday.app/</span><input type="text" value="{{slug}}" aria-label="ชื่อใน URL" style="flex:1;border:0;min-height:38px;padding:0 8px;font:inherit;outline:0"></span><span style="font-size:12px;color:{{slugC}}">{{slugMsg}}</span></label>
+<label class="fld"><span class="lb">ขนาดทีม</span><select class="in"><option>2–5 คน (เริ่ม Free)</option><option>6–10 คน</option><option>11–25 คน</option><option>26–50 คน</option><option>มากกว่า 50 คน</option></select><span class="muted" style="font-size:12px">ใช้แนะนำแพ็กเกจ · ทุก Workspace ใหม่ทดลอง Team เต็มรูปแบบ 14 วัน</span></label>
+<label class="fld"><span class="lb">ที่เก็บข้อมูล</span><select class="in"><option>[Data region หลัก]</option><option>[Data region อื่น] · Enterprise</option></select><span class="muted" style="font-size:12px">เปลี่ยนภายหลังไม่ได้</span></label>
+<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" type="button" onClick="{{goRules}}">ยกเลิก</button><a class="btn pri" href="Onboarding.dc.html">สร้าง Workspace</a></div>
+</sc-if>
+
+<sc-if value="{{vSso}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:12px;align-items:center"><span class="lo" style="background:#0F766E;width:44px;height:44px">AC</span><div><h2 style="margin:0;font-size:17px">Acme Software ต้องเข้าสู่ระบบด้วยบัญชีองค์กร</h2><div class="muted" style="font-size:13px">Admin ของ Workspace นี้บังคับ SSO · คุณเป็น Guest ในโปรเจกต์ Clinic Booking v2</div></div></div>
+<button class="btn" type="button" style="justify-content:flex-start;min-height:46px"><span style="width:20px;height:20px;display:inline-grid;grid-template-columns:1fr 1fr;gap:2px" aria-hidden="true"><span style="background:#F25022"></span><span style="background:#7FBA00"></span><span style="background:#00A4EF"></span><span style="background:#FFB900"></span></span>เข้าสู่ระบบด้วย Microsoft (acme.co.th)</button>
+<div class="muted" style="font-size:13px">ถ้าคุณเป็น Guest จากภายนอก (ไม่มีบัญชี acme.co.th) Admin ต้องเพิ่มคุณเป็นข้อยกเว้น SSO ให้ก่อน · <a href="#">ขอสิทธิ์จาก Admin</a></div>
+<div style="display:flex;justify-content:flex-end"><button class="btn" type="button" onClick="{{goRules}}">กลับ Friday Workspace</button></div>
+</sc-if>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  state = { ws: 'friday', open: true, view: 'rules', switched: false, name: 'Mick Studio' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const ws = st.ws || 'friday', open = st.open !== false, view = st.view || 'rules', name = st.name === undefined ? 'Mick Studio' : st.name;
+    const W = [
+      ['friday', 'FW', 'Friday Workspace', '#1D4ED8', 'Owner', 'Team M · ทดลอง 14 วัน', '3', false],
+      ['acme', 'AC', 'Acme Software', '#0F766E', 'Guest', 'Team L', '', true],
+      ['bank', 'BK', 'Bank Dev Team', '#7C3AED', 'Member', 'Enterprise', '12', false],
+      ['side', 'MS', 'Mick Side Projects', '#B45309', 'Owner', 'Free', '', false]
+    ];
+    const curW = W.filter(function (w) { return w[0] === ws; })[0];
+    const wss = W.map(function (w) {
+      const on = w[0] === ws;
+      return { n: w[2], ab: w[1], c: w[3], role: w[4], plan: w[5], badge: w[6], hasBadge: !!w[6] && !on, sso: w[7], isCur: on, on: on ? 'true' : 'false', cls: on ? 'wi cur' : 'wi',
+        pick: function () { if (w[7]) { self.setState({ view: 'sso', open: false }); } else { self.setState({ ws: w[0], open: false, view: 'rules', switched: true }); } } };
+    });
+    const views = [['rules', 'หลักการ'], ['create', 'สร้างใหม่'], ['sso', 'Workspace ที่บังคับ SSO']].map(function (v) { return { n: v[1], on: view === v[0] ? 'true' : 'false', pick: function () { self.setState({ view: v[0], open: v[0] === 'rules' }); } }; });
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'workspace';
+    const taken = slug === 'friday' || slug === 'acme-software';
+    return {
+      cur: { n: curW[2], ab: curW[1], c: curW[3] }, wss: wss, showMenu: open, menuOpen: open ? 'true' : 'false', toggleMenu: function () { self.setState({ open: !open }); },
+      views: views, vRules: view === 'rules', vCreate: view === 'create', vSso: view === 'sso', hasSwitched: !!st.switched,
+      goCreate: function () { self.setState({ view: 'create', open: false }); }, goRules: function () { self.setState({ view: 'rules' }); },
+      wsName: name, typeName: function (e) { self.setState({ name: (e && e.target && e.target.value) || '' }); }, slug: slug,
+      slugMsg: taken ? 'ชื่อนี้มีคนใช้แล้ว ลอง ' + slug + '-th' : 'ใช้ได้', slugC: taken ? '#B91C1C' : '#166534'
+    };
+  }
+}
+</script>
+</body>
+</html>

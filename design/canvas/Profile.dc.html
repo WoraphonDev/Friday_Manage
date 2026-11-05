@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>User Profile</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E4E7EB;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column}
+.navi{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 10px;border-radius:8px;color:#3D4550;text-decoration:none}
+.navi:hover{background:#F1F3F5;color:#1B1F24}
+.navi.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.sec{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:16px 10px 6px}
+.body{padding:24px;display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.chead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid #EEF0F3}
+.chead h2{margin:0;font-size:15px}
+.muted{color:#5F6873}
+.av{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-mick{background:#1D4ED8}
+.s-todo{background:#EEF0F3;color:#3D4550}.s-prog{background:#DBEAFE;color:#1E40AF}.s-rev{background:#FEF3C7;color:#92400E}.s-done{background:#DCFCE7;color:#166534}.s-late{background:#FEE2E2;color:#991B1B}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.ptab{min-height:44px;padding:0 14px;border:0;border-bottom:2px solid transparent;background:transparent;font:inherit;font-weight:500;color:#56606B;cursor:pointer;white-space:nowrap}
+.ptab[aria-selected="true"]{color:#1D4ED8;border-bottom-color:#1D4ED8;font-weight:600}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:7px 0;border-bottom:1px solid #F1F3F5}
+.lb{font-size:13px;font-weight:600}
+.in{min-height:38px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%;min-width:0}
+textarea.in{padding:8px 10px;min-height:70px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.mx{display:grid;grid-template-columns:minmax(220px,1fr) repeat(3,76px);align-items:center;column-gap:8px;min-height:46px;padding:0 18px;border-bottom:1px solid #F1F3F5}
+.mx.h{min-height:auto;padding-top:10px;padding-bottom:10px;background:#F8F9FB;font-size:12px;font-weight:600;color:#3D4550;text-align:center}
+.mx.g{min-height:36px;background:#FAFBFC;font-size:12px;font-weight:700;color:#5F6873;text-transform:uppercase;letter-spacing:.05em}
+.cb{width:20px;height:20px;justify-self:center;margin:0}
+.sw{position:relative;width:44px;height:26px;border-radius:99px;border:0;cursor:pointer;padding:0;flex:none}
+.sw span{position:absolute;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.chn{display:flex;align-items:center;gap:10px;border:1px solid #E4E7EB;border-radius:10px;padding:10px 12px}
+@media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.body{padding:16px}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a href="IssueCreate.dc.html" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:#1D4ED8;color:#fff;font-weight:600;text-decoration:none">+ New</a>
+<a href="Bell.dc.html" aria-label="การแจ้งเตือน 5 รายการยังไม่อ่าน" style="position:relative;width:40px;height:40px;border-radius:8px;color:#E2E8F0;display:inline-flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #0F172A">5</span></a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div class="app">
+<aside class="side" aria-label="Workspace navigation">
+<a class="navi" href="Home.dc.html">Home</a>
+<a class="navi" href="MyTasks.dc.html">My Tasks</a>
+<a class="navi" href="Inbox.dc.html">Inbox<span class="pill s-late" style="margin-left:auto">5</span></a>
+<div class="sec">Projects</div>
+<a class="navi on" href="Main.dc.html"><span class="dot" style="background:#334155"></span>Development Plan 2026-11</a>
+<a class="navi" href="NewProject.dc.html" style="color:#1D4ED8">+ New project</a>
+<div style="margin-top:auto;border-top:1px solid #E4E7EB;padding-top:10px;display:flex;flex-direction:column;gap:2px">
+<a class="navi" href="AdminConsole.dc.html">Admin Console</a>
+</div>
+</aside>
+<main class="main">
+<div class="body">
+<aside class="card" style="flex:1 1 280px;max-width:340px;min-width:0" aria-label="Profile summary">
+<div style="padding:24px 20px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;border-bottom:1px solid #EEF0F3">
+<span class="av p-mick" style="width:96px;height:96px;font-size:32px">MK</span>
+<button class="btn" type="button" style="min-height:30px;font-size:12px">เปลี่ยนรูป</button>
+<div style="font-size:20px;font-weight:700">Mick</div>
+<div class="muted">[ชื่อ-นามสกุล] · Project Manager</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center"><span class="pill s-done">● ทำงานอยู่</span><span class="pill s-prog">Owner</span></div>
+</div>
+<div style="padding:12px 20px">
+<div class="kv"><span class="muted">อีเมล</span><span>mick@example.com ✓</span></div>
+<div class="kv"><span class="muted">โทรศัพท์</span><span>[เบอร์โทร]</span></div>
+<div class="kv"><span class="muted">LINE</span><span style="color:#166534;font-weight:600">เชื่อมแล้ว</span></div>
+<div class="kv"><span class="muted">เวลาท้องถิ่น</span><span>15:42 (GMT+7)</span></div>
+<div class="kv"><span class="muted">เวลาทำงาน</span><span>จ.–ศ. 09:00–18:00</span></div>
+<div class="kv"><span class="muted">Capacity</span><span>40 ชม./สัปดาห์</span></div>
+</div>
+<div style="padding:4px 20px 16px">
+<div class="muted" style="font-size:12px;font-weight:600;margin-bottom:6px">โปรเจกต์</div>
+<div class="kv"><span style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:#334155"></span>Development Plan 2026-11</span><span class="pill s-prog">Lead · Admin</span></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px">
+<div style="background:#F8F9FB;border-radius:10px;padding:10px"><div class="muted" style="font-size:12px">งานที่เปิดอยู่</div><div style="font-size:20px;font-weight:700">12</div></div>
+<div style="background:#F8F9FB;border-radius:10px;padding:10px"><div class="muted" style="font-size:12px">เสร็จเดือนนี้</div><div style="font-size:20px;font-weight:700">28</div></div>
+</div>
+</div>
+</aside>
+
+<section class="card" style="flex:999 1 620px;min-width:0">
+<div role="tablist" aria-label="Profile sections" style="display:flex;gap:2px;overflow-x:auto;padding:0 12px;border-bottom:1px solid #E4E7EB">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="4"><button class="ptab" type="button" role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}">{{t.n}}</button></sc-for>
+</div>
+
+<sc-if value="{{tNotify}}" hint-placeholder-val="{{ true }}">
+<div style="padding:18px 18px 6px;display:flex;flex-direction:column;gap:12px">
+<div><h2 style="margin:0;font-size:17px">การแจ้งเตือน</h2><div class="muted" style="font-size:13px">เลือกว่าเรื่องไหนจะแจ้งผ่านช่องทางใด · In-app (Inbox) แจ้งทุกเรื่องเสมอสำหรับงานที่มอบหมายให้คุณ</div></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+<div class="chn"><span class="av" style="background:#475569;width:32px;height:32px;font-size:10px">IN</span><div style="flex:1"><div style="font-weight:600;font-size:13px">In-app / Inbox</div><div class="muted" style="font-size:12px">เปิดเสมอ · กระดิ่ง + Badge</div></div></div>
+<div class="chn"><span class="av" style="background:#1D4ED8;width:32px;height:32px;font-size:10px">@</span><div style="flex:1"><div style="font-weight:600;font-size:13px">Email</div><div class="muted" style="font-size:12px">mick@example.com</div></div><span class="pill s-done">เปิด</span></div>
+<div class="chn"><span class="av" style="background:#15803D;width:32px;height:32px;font-size:10px">LN</span><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">LINE ส่วนตัว</div><div class="muted" style="font-size:12px">ผูกกับ "Mick T." แล้ว</div></div><button class="btn" type="button" onClick="{{toggleLine}}" aria-expanded="{{lineOpen}}" style="min-height:30px;font-size:12px">จัดการ</button></div>
+<div class="chn" style="border-style:dashed"><span class="av" style="background:#334155;width:32px;height:32px;font-size:10px">WH</span><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">กลุ่มทีม (LINE กลุ่ม / Webhook)</div><div class="muted" style="font-size:12px">ตั้งโดย PM ที่ Project Settings · ไม่ใช่ช่องทางส่วนตัว</div></div><a class="btn" href="ProjectSettings.dc.html" style="min-height:30px;font-size:12px">ดู</a></div>
+</div>
+<sc-if value="{{showLine}}" hint-placeholder-val="{{ false }}">
+<div style="border:1px solid #BBF7D0;background:#F0FDF4;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>ผูกบัญชี LINE กับ Friday Manage</b><span class="muted" style="font-size:12px">ใช้ครั้งเดียว · ผูกได้ 1 บัญชีต่อผู้ใช้</span></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;font-size:13px">
+<div style="background:#fff;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span class="pill s-done">1</span><b>เพิ่มเพื่อน LINE OA</b><div style="width:96px;height:96px;border:1px solid #D5DAE0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#5F6873;background:repeating-linear-gradient(45deg,#F6F7F9 0 6px,#fff 6px 12px)">QR code</div><span class="muted" style="font-size:12px">หรือค้นหา [LINE ID ของ OA]</span></div>
+<div style="background:#fff;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span class="pill s-done">2</span><b>ส่งรหัสนี้ในแชต OA</b><span class="mono" style="font-size:22px;letter-spacing:.2em;font-weight:700">482 913</span><span class="muted" style="font-size:12px">หมดอายุใน 10 นาที</span><button class="btn" type="button" style="min-height:30px;font-size:12px">ขอรหัสใหม่</button></div>
+<div style="background:#fff;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span class="pill s-done">3</span><b>ระบบยืนยันและส่งข้อความทดสอบ</b><span class="muted" style="font-size:12px">หน้านี้จะเปลี่ยนเป็น "ผูกแล้ว" อัตโนมัติ · ยกเลิกการผูกได้ตลอด และ Admin ยกเลิกให้ได้เมื่อพนักงานลาออก</span></div>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button">ส่งข้อความทดสอบ</button><button class="btn" type="button" style="color:#B91C1C">ยกเลิกการผูกบัญชีปัจจุบัน</button></div>
+</div>
+</sc-if>
+</div>
+<div style="overflow-x:auto">
+<div style="min-width:520px">
+<div class="mx h"><div style="text-align:left">เหตุการณ์</div><div>In-app</div><div>Email</div><div>LINE</div></div>
+<sc-for list="{{matrix}}" as="r" hint-placeholder-count="16">
+<sc-if value="{{r.isGroup}}" hint-placeholder-val="{{ false }}"><div class="mx g"><div>{{r.n}}</div></div></sc-if>
+<sc-if value="{{r.isRow}}" hint-placeholder-val="{{ true }}">
+<div class="mx">
+<div style="min-width:0"><div style="font-size:14px">{{r.n}}</div><sc-if value="{{r.hasHint}}" hint-placeholder-val="{{ false }}"><div class="muted" style="font-size:12px">{{r.hint}}</div></sc-if></div>
+<sc-for list="{{r.cells}}" as="c" hint-placeholder-count="3"><input class="cb" type="checkbox" checked="{{c.on}}" disabled="{{c.dis}}" onChange="{{c.toggle}}" aria-label="{{c.aria}}"></sc-for>
+</div>
+</sc-if>
+</sc-for>
+</div>
+</div>
+<div style="padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;border-top:1px solid #EEF0F3">
+<div class="fld"><span class="lb">แจ้งเตือนก่อนครบกำหนด</span><select class="in" style="max-width:240px"><option>1 วันก่อน และเช้าวันครบกำหนด</option><option>3 วันก่อน</option><option>เฉพาะวันครบกำหนด</option></select></div>
+<div class="fld"><span class="lb">Daily digest</span><select class="in" style="max-width:240px"><option>ทุกวันทำการ 08:30</option><option>ทุกวัน 08:30</option><option>ปิด</option></select></div>
+<div style="display:flex;align-items:center;gap:12px">
+<button class="sw" type="button" role="switch" aria-checked="{{quietOn}}" onClick="{{toggleQuiet}}" aria-label="โหมดไม่รบกวน" style="background:{{quietBg}}"><span style="left:{{quietX}}px"></span></button>
+<div><div class="lb">ไม่รบกวน 20:00–08:00 และวันหยุด</div><div class="muted" style="font-size:12px">งดส่ง Email / LINE ช่วงนี้ แต่ยังเก็บไว้ใน Inbox · ยกเว้นงาน Urgent</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px">
+<button class="sw" type="button" role="switch" aria-checked="{{watchOn}}" onClick="{{toggleWatch}}" aria-label="Auto-watch" style="background:{{watchBg}}"><span style="left:{{watchX}}px"></span></button>
+<div><div class="lb">Auto-watch</div><div class="muted" style="font-size:12px">ติดตามงานอัตโนมัติเมื่อฉันสร้าง คอมเมนต์ หรือถูก @mention</div></div>
+</div>
+</div>
+<div style="margin:0 18px 18px;background:#F8FAFF;border:1px solid #DBEAFE;border-radius:10px;padding:12px 14px;font-size:13px">
+<div style="font-weight:600;margin-bottom:4px">ใครได้รับแจ้งเมื่อมีความเคลื่อนไหวในงาน</div>
+<div>Assignee · Reviewer · Tester · Watcher · เจ้าของ Task แม่ (เมื่อ Sub-task เปลี่ยน) · คนที่ถูก @mention · PM ของโปรเจกต์ (เฉพาะคำขอเลื่อน Due และ Health) · <span class="muted">คนที่ทำ action เองจะไม่ได้รับแจ้ง</span></div>
+</div>
+<div style="display:flex;justify-content:flex-end;gap:8px;padding:0 18px 18px"><button class="btn" type="button">คืนค่าเริ่มต้น</button><button class="btn pri" type="button">บันทึก</button></div>
+</sc-if>
+
+<sc-if value="{{tProfile}}" hint-placeholder-val="{{ false }}">
+<div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+<h2 style="margin:0;font-size:17px">ข้อมูลส่วนตัว</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+<label class="fld"><span class="lb">ชื่อ</span><input class="in" type="text" placeholder="[ชื่อ]"></label>
+<label class="fld"><span class="lb">นามสกุล</span><input class="in" type="text" placeholder="[นามสกุล]"></label>
+<label class="fld"><span class="lb">ชื่อที่แสดง (Display name)</span><input class="in" type="text" value="Mick"></label>
+<label class="fld"><span class="lb">ตำแหน่ง</span><input class="in" type="text" value="Project Manager"></label>
+<label class="fld"><span class="lb">แผนก / ทีม</span><input class="in" type="text" value="Delivery"></label>
+<label class="fld"><span class="lb">อีเมล</span><input class="in" type="email" value="mick@example.com"><span class="muted" style="font-size:12px">ยืนยันแล้ว · เปลี่ยนต้องยืนยันใหม่</span></label>
+<label class="fld"><span class="lb">โทรศัพท์</span><input class="in" type="tel" placeholder="[เบอร์โทร]"></label>
+<label class="fld"><span class="lb">Timezone</span><select class="in"><option>Asia/Bangkok (GMT+7)</option></select></label>
+<label class="fld"><span class="lb">ภาษา</span><select class="in"><option>ไทย</option><option>English</option></select></label>
+<label class="fld"><span class="lb">รูปแบบปี</span><select class="in"><option>พ.ศ. (2569)</option><option>ค.ศ. (2026)</option></select></label>
+<label class="fld"><span class="lb">รูปแบบวันที่</span><select class="in"><option>2 ธ.ค. 2026 (ค.ศ.)</option><option>2 ธ.ค. 2569 (พ.ศ.)</option></select></label>
+<label class="fld" style="grid-column:1/-1"><span class="lb">เกี่ยวกับฉัน</span><textarea class="in" placeholder="แนะนำตัวสั้น ๆ ให้ทีมรู้จัก"></textarea></label>
+</div>
+<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn" type="button">ยกเลิก</button><button class="btn pri" type="button">บันทึก</button></div>
+</div>
+</sc-if>
+
+<sc-if value="{{tHours}}" hint-placeholder-val="{{ false }}">
+<div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+<h2 style="margin:0;font-size:17px">เวลาทำงานและวันลา</h2>
+<div class="muted" style="font-size:13px">ใช้คำนวณ Workload, Gantt และเลื่อนการแจ้งเตือนให้อยู่ในเวลาทำงาน</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+<label class="fld"><span class="lb">Capacity (ชม./สัปดาห์)</span><input class="in" type="number" value="40"></label>
+<label class="fld"><span class="lb">เริ่มงาน</span><input class="in" type="time" value="09:00"></label>
+<label class="fld"><span class="lb">เลิกงาน</span><input class="in" type="time" value="18:00"></label>
+</div>
+<div class="fld"><span class="lb">วันทำงาน</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill s-prog">จ</span><span class="pill s-prog">อ</span><span class="pill s-prog">พ</span><span class="pill s-prog">พฤ</span><span class="pill s-prog">ศ</span><span class="pill s-todo">ส</span><span class="pill s-todo">อา</span></div></div>
+<div class="fld"><span class="lb">วันลา</span>
+<div class="kv"><span>ลาพักร้อน 24–25 ธ.ค. 2026</span><span class="pill s-done">อนุมัติแล้ว</span></div>
+<div class="kv"><span>ลากิจ 12 พ.ย. 2026 (ครึ่งวันบ่าย)</span><span class="pill s-rev">รออนุมัติ</span></div>
+<button class="btn" type="button" style="align-self:flex-start;margin-top:6px">+ เพิ่มวันลา</button>
+<span class="muted" style="font-size:12px">ระหว่างลา ระบบแสดงสถานะ "ลา" ให้ทีมเห็น และแจ้งผู้มอบหมายงานว่าคุณไม่อยู่</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{tSec}}" hint-placeholder-val="{{ false }}">
+<div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+<h2 style="margin:0;font-size:17px">ความปลอดภัย</h2>
+<div class="kv"><span>รหัสผ่าน · เปลี่ยนล่าสุด 3 เดือนก่อน</span><button class="btn" type="button" style="min-height:30px">เปลี่ยนรหัสผ่าน</button></div>
+<div class="kv"><span>Two-factor authentication (Authenticator app)</span><span class="pill s-done">เปิดอยู่</span></div>
+<div class="kv"><span>เข้าสู่ระบบด้วย Google</span><span class="pill s-done">เชื่อมแล้ว</span></div>
+<div class="lb" style="margin-top:8px">อุปกรณ์ที่ล็อกอินอยู่</div>
+<div class="kv"><span>Chrome · macOS · กรุงเทพฯ <span class="pill s-prog">เครื่องนี้</span></span><span class="muted">ตอนนี้</span></div>
+<div class="kv"><span>Friday Manage app · iPhone</span><button class="btn" type="button" style="min-height:30px;color:#B91C1C">ออกจากระบบ</button></div>
+</div>
+</sc-if>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  state = { tab: 'notify', quiet: true, watch: true };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const tab = st.tab || 'notify';
+    const TB = [['profile', 'ข้อมูลส่วนตัว'], ['notify', 'การแจ้งเตือน'], ['hours', 'เวลาทำงาน / วันลา'], ['sec', 'ความปลอดภัย']];
+    const tabs = TB.map(function (t) { return { n: t[1], on: tab === t[0] ? 'true' : 'false', pick: function () { self.setState({ tab: t[0] }); } }; });
+    const CH = ['In-app', 'Email', 'LINE'];
+    const R = [
+      ['g', 'งานที่มอบหมายให้ฉัน'],
+      ['a1', 'ถูกมอบหมาย Task หรือ Sub-task ใหม่', '', [1, 1, 1, 0], true],
+      ['a2', 'ถูกถอดออกจากงาน หรือเปลี่ยนผู้รับผิดชอบ', '', [1, 1, 0, 0], true],
+      ['a3', 'ถูกขอให้ Review หรือเป็น Tester', 'รวมถึง PR ที่ระบุให้ฉัน Review', [1, 1, 1, 0], true],
+      ['g', 'ความเคลื่อนไหวของงานที่เกี่ยวข้อง'],
+      ['b1', 'มีคน @mention ฉัน', '', [1, 1, 1, 0], true],
+      ['b2', 'คอมเมนต์ใหม่ในงานที่ฉันเป็น Assignee / Watcher', '', [1, 0, 0, 0], false],
+      ['b3', 'สถานะ / Due / Priority ของงานที่เกี่ยวข้องเปลี่ยน', '', [1, 0, 0, 0], false],
+      ['b4', 'Sub-task ใต้ Task ของฉันเปลี่ยนสถานะหรือเสร็จ', '', [1, 0, 0, 0], false],
+      ['b5', 'ผลทดสอบ, Commit หรือ PR ใหม่ในงานของฉัน', 'ผลทดสอบไม่ผ่านจะแจ้งทุกช่องทางที่เลือก', [1, 0, 1, 0], false],
+      ['b6', 'คำขอเลื่อน Due ที่รอฉันอนุมัติ', 'สำหรับ PM / Admin ของโปรเจกต์', [1, 1, 1, 0], true],
+      ['g', 'กำหนดเวลา'],
+      ['c1', 'งานใกล้ครบกำหนด', 'ตามที่ตั้งด้านล่าง', [1, 0, 1, 0], false],
+      ['c2', 'งานเลยกำหนด', '', [1, 1, 1, 0], true],
+      ['c3', 'Milestone ใกล้ถึง (3 วันก่อน)', '', [1, 1, 0, 0], false],
+      ['g', 'โปรเจกต์และ Workspace'],
+      ['d1', 'ถูกเพิ่มเข้าโปรเจกต์ หรือเปลี่ยนสิทธิ์', '', [1, 1, 0, 0], true],
+      ['d2', 'Health ของโปรเจกต์เปลี่ยน (At risk / Off track)', 'สำหรับ PM', [1, 1, 1, 0], false],
+      ['d3', 'สรุปรายวัน (Daily digest)', 'งานวันนี้ + Overdue + รอ Review', [0, 1, 1, 0], false]
+    ];
+    const mx = st.mx || {};
+    const matrix = R.map(function (r) {
+      if (r[0] === 'g') return { isGroup: true, isRow: false, n: r[1] };
+      return { isGroup: false, isRow: true, n: r[1], hint: r[2], hasHint: !!r[2],
+        cells: CH.map(function (c, i) {
+          const k = r[0] + i;
+          const lockIn = i === 0 && r[4];
+          const on = mx[k] !== undefined ? mx[k] : !!r[3][i];
+          return { on: lockIn ? true : on, dis: lockIn, aria: r[1] + ' ผ่าน ' + c,
+            toggle: function () { const m = Object.assign({}, (self.state && self.state.mx) || {}); m[k] = !on; self.setState({ mx: m }); } };
+        }) };
+    });
+    const q = st.quiet !== false, w = st.watch !== false, lo = !!st.line;
+    return {
+      tabs: tabs, matrix: matrix, showLine: lo, lineOpen: lo ? 'true' : 'false', toggleLine: function () { self.setState({ line: !lo }); }, tNotify: tab === 'notify', tProfile: tab === 'profile', tHours: tab === 'hours', tSec: tab === 'sec',
+      quietOn: q ? 'true' : 'false', quietBg: q ? '#1D4ED8' : '#C3CAD3', quietX: q ? 21 : 3, toggleQuiet: function () { self.setState({ quiet: !q }); },
+      watchOn: w ? 'true' : 'false', watchBg: w ? '#1D4ED8' : '#C3CAD3', watchX: w ? 21 : 3, toggleWatch: function () { self.setState({ watch: !w }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

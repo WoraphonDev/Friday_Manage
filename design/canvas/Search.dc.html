@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Search</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.muted{color:#5F6873}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.seg{display:inline-flex;border:1px solid #D5DAE0;border-radius:10px;overflow:hidden;background:#fff}
+.seg button{min-height:38px;padding:0 14px;border:0;background:#fff;font:inherit;cursor:pointer;color:#3D4550}
+.seg button[aria-pressed="true"]{background:#1B1F24;color:#fff;font-weight:600}
+.pal{width:min(680px,100%);background:#fff;border-radius:14px;box-shadow:0 24px 64px rgba(15,23,42,.35);overflow:hidden;display:flex;flex-direction:column}
+.gh{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:10px 16px 4px}
+.ri{display:flex;align-items:center;gap:12px;min-height:44px;padding:6px 16px;text-decoration:none;color:#1B1F24}
+.ri:hover,.ri.sel{background:#EEF2FF}
+.ic{width:26px;height:26px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:#fff;font-size:10px;font-weight:700}
+.kb{display:inline-flex;align-items:center;min-width:22px;height:22px;padding:0 6px;border:1px solid #D5DAE0;border-radius:5px;font-size:11px;color:#3D4550;background:#F8F9FB;justify-content:center}
+.pill{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.fchip{display:flex;align-items:center;gap:8px;min-height:34px;padding:0 10px;border-radius:8px;font-size:13px;cursor:pointer;color:#1B1F24}
+.fchip:hover{background:#F1F3F5}
+mark{background:#FEF08A;color:inherit;padding:0 1px;border-radius:2px}
+.res{display:flex;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F3F5;text-decoration:none;color:#1B1F24}
+.res:hover{background:#FAFBFC;color:#1B1F24}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="Home.dc.html" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace</a>
+<label style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#CBD5E1;border:1px solid #475569"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><input type="search" value="{{q}}" onInput="{{type}}" onChange="{{type}}" aria-label="ค้นหา" style="flex:1;border:0;background:transparent;color:#fff;font:inherit;outline:0"><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></label>
+<span style="flex:1"></span>
+<div class="seg" role="group" aria-label="ตัวอย่างที่แสดง" style="border-color:#334155"><button type="button" aria-pressed="{{isPal}}" onClick="{{showPal}}">Command palette</button><button type="button" aria-pressed="{{isRes}}" onClick="{{showRes}}">หน้าผลการค้นหา</button></div>
+</header>
+
+<sc-if value="{{palMode}}" hint-placeholder-val="{{ true }}">
+<div style="min-height:1200px;background:rgba(15,23,42,.5);padding:72px 16px;display:flex;flex-direction:column;align-items:center;gap:16px">
+<div class="pal" role="dialog" aria-modal="true" aria-label="ค้นหาและคำสั่ง">
+<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #EEF0F3">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5F6873" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+<input type="text" value="{{q}}" onInput="{{type}}" onChange="{{type}}" placeholder="ค้นหางาน โปรเจกต์ ไฟล์ คน · พิมพ์ &gt; เพื่อใช้คำสั่ง" aria-label="ค้นหาหรือพิมพ์คำสั่ง" style="flex:1;border:0;outline:0;font:inherit;font-size:16px;min-height:36px">
+<sc-if value="{{hasScope}}" hint-placeholder-val="{{ false }}"><span class="pill" style="background:#EEF2FF;color:#1D4ED8">ใน: Development Plan 2026-11</span></sc-if>
+<span class="kb">Esc</span>
+</div>
+<div style="display:flex;gap:6px;padding:8px 16px;border-bottom:1px solid #EEF0F3;flex-wrap:wrap">
+<sc-for list="{{tries}}" as="t" hint-placeholder-count="4"><button type="button" onClick="{{t.pick}}" style="min-height:28px;padding:0 10px;border-radius:999px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:12px;cursor:pointer;color:#3D4550">ลอง: <span class="mono">{{t.q}}</span></button></sc-for>
+</div>
+<div style="max-height:560px;overflow-y:auto;padding-bottom:6px">
+<sc-if value="{{isEmpty}}" hint-placeholder-val="{{ false }}">
+<div class="gh">เปิดล่าสุด</div>
+<sc-for list="{{recent}}" as="r" hint-placeholder-count="4"><a class="ri" href="{{r.href}}"><span class="ic" style="background:{{r.c}}">{{r.ab}}</span><span style="flex:1;min-width:0">{{r.t}}</span><span class="muted" style="font-size:12px">{{r.m}}</span></a></sc-for>
+<div class="gh">คำสั่งที่ใช้บ่อย</div>
+<sc-for list="{{cmds}}" as="c" hint-placeholder-count="4"><a class="ri" href="{{c.href}}"><span class="ic" style="background:#334155">{{c.ab}}</span><span style="flex:1">{{c.t}}</span><span class="kb">{{c.k}}</span></a></sc-for>
+</sc-if>
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+<div class="gh">{{g.n}} · {{g.k}}</div>
+<sc-for list="{{g.items}}" as="r" hint-placeholder-count="3"><a class="{{r.cls}}" href="{{r.href}}"><span class="ic" style="background:{{r.c}}">{{r.ab}}</span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.pre}}<mark>{{r.mid}}</mark>{{r.post}}</span><span class="muted" style="font-size:12px;white-space:nowrap">{{r.m}}</span><sc-if value="{{r.first}}" hint-placeholder-val="{{ false }}"><span class="kb">Enter</span></sc-if></a></sc-for>
+</sc-for>
+<sc-if value="{{noHit}}" hint-placeholder-val="{{ false }}">
+<div style="padding:28px 16px;text-align:center"><b>ไม่พบ "{{q}}"</b><div class="muted" style="font-size:13px">ลองคำอื่น หรือค้นในเนื้อหาไฟล์และคอมเมนต์ที่หน้าผลการค้นหา</div><button type="button" onClick="{{showRes}}" style="margin-top:10px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;font:inherit;cursor:pointer">ค้นแบบละเอียด</button></div>
+</sc-if>
+</div>
+<div style="display:flex;gap:14px;align-items:center;padding:8px 16px;border-top:1px solid #EEF0F3;background:#F8F9FB;font-size:12px;flex-wrap:wrap" class="muted">
+<span><span class="kb">↑</span> <span class="kb">↓</span> เลือก</span><span><span class="kb">Enter</span> เปิด</span><span><span class="kb">Ctrl</span> <span class="kb">Enter</span> ดูผลทั้งหมด</span><span style="flex:1"></span><span><span class="mono">&gt;</span> คำสั่ง · <span class="mono">#</span> รหัสงาน · <span class="mono">@</span> คน</span>
+</div>
+</div>
+<div style="color:#E2E8F0;font-size:13px;max-width:680px;text-align:center">เปิดได้จากทุกหน้าด้วย Ctrl K (Mac: Cmd K) · ถ้าอยู่ในโปรเจกต์ ผลจากโปรเจกต์นั้นขึ้นก่อน · แสดงเฉพาะสิ่งที่ผู้ใช้มีสิทธิ์เห็น</div>
+</div>
+</sc-if>
+
+<sc-if value="{{resMode}}" hint-placeholder-val="{{ false }}">
+<div style="max-width:1280px;margin:0 auto;padding:22px 24px 48px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end">
+<div><h1 style="margin:0;font-size:22px">ผลการค้นหา "{{q}}"</h1><div class="muted">{{total}} รายการ · ค้นทั้งชื่อ รายละเอียด คอมเมนต์ และข้อความในไฟล์ (PDF, Word, Excel)</div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><select aria-label="เรียงลำดับ" style="min-height:38px;border:1px solid #D5DAE0;border-radius:8px;padding:0 10px;font:inherit;background:#fff"><option>ตรงที่สุด</option><option>อัปเดตล่าสุด</option><option>Due ใกล้สุด</option></select><button type="button" style="min-height:38px;padding:0 14px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;font:inherit;cursor:pointer">บันทึกการค้นหานี้</button></div>
+</div>
+<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+<aside class="card" style="flex:1 1 220px;max-width:260px;padding:12px;display:flex;flex-direction:column;gap:4px" aria-label="ตัวกรอง">
+<b style="font-size:13px;padding:4px 10px">ประเภท</b>
+<sc-for list="{{types}}" as="t" hint-placeholder-count="6"><label class="fchip"><input type="checkbox" checked="{{t.on}}" onChange="{{t.toggle}}"><span style="flex:1">{{t.n}}</span><span class="muted" style="font-size:12px">{{t.k}}</span></label></sc-for>
+<b style="font-size:13px;padding:10px 10px 4px">โปรเจกต์</b>
+<label class="fchip"><input type="checkbox" checked><span style="flex:1">Development Plan 2026-11</span></label>
+<b style="font-size:13px;padding:10px 10px 4px">อื่น ๆ</b>
+<label class="fchip"><input type="checkbox"><span>มอบหมายให้ฉัน</span></label>
+<label class="fchip"><input type="checkbox"><span>ยังไม่เสร็จ</span></label>
+<label class="fchip"><input type="checkbox"><span>รวมโปรเจกต์ที่ Archive</span></label>
+<div style="border-top:1px solid #EEF0F3;margin-top:8px;padding:10px 10px 0"><b style="font-size:13px">การค้นหาที่บันทึกไว้</b><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;font-size:13px"><a href="#">Bug ที่ยังเปิด · ทุกโปรเจกต์</a><a href="#">งานไม่มี FR อ้างอิง</a></div></div>
+</aside>
+<section class="card" style="flex:999 1 560px;min-width:0">
+<sc-for list="{{results}}" as="r" hint-placeholder-count="6">
+<a class="res" href="{{r.href}}">
+<span class="ic" style="background:{{r.c}};width:30px;height:30px">{{r.ab}}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+<div style="font-weight:600">{{r.pre}}<mark>{{r.mid}}</mark>{{r.post}}</div>
+<div class="muted" style="font-size:12px;display:flex;gap:8px;flex-wrap:wrap"><span>{{r.tn}}</span><span>{{r.m}}</span></div>
+<sc-if value="{{r.hasSnip}}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:#3D4550;background:#F8F9FB;border-radius:6px;padding:4px 8px;margin-top:4px">{{r.snip}}</div></sc-if>
+</div>
+<sc-if value="{{r.hasSt}}" hint-placeholder-val="{{ false }}"><span class="pill" style="background:{{r.sb}};color:{{r.sf}};align-self:flex-start">{{r.st}}</span></sc-if>
+</a>
+</sc-for>
+<sc-if value="{{noRes}}" hint-placeholder-val="{{ false }}"><div style="padding:48px 18px;text-align:center"><b>ไม่พบผลลัพธ์</b><div class="muted" style="font-size:13px">ลองเอาตัวกรองออก หรือค้นในโปรเจกต์ที่ Archive</div></div></sc-if>
+</section>
+</div>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  state = { q: 'หลักประกัน', mode: 'pal', off: {} };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const q = st.q === undefined ? 'หลักประกัน' : st.q, mode = st.mode || 'pal', off = st.off || {};
+    const TC = { task: ['งาน', '#1D4ED8', 'T'], sub: ['Sub-task', '#64748B', 'S'], bug: ['Bug', '#DC2626', 'B'], proj: ['โปรเจกต์', '#0F766E', 'P'], file: ['ไฟล์', '#B45309', 'F'], cmt: ['คอมเมนต์', '#7C3AED', 'C'], person: ['คน', '#BE185D', '@'], cmd: ['คำสั่ง', '#334155', '>'] };
+    const SC = { 'In progress': ['#DBEAFE', '#1E40AF'], 'Review': ['#FEF3C7', '#92400E'], 'Done': ['#DCFCE7', '#166534'], 'To do': ['#EEF0F3', '#3D4550'], 'Open': ['#FEE2E2', '#991B1B'] };
+    const D = [["task", "DP-39", "ฟอร์มหลักประกัน 5 ประเภท: Bank Account, Stock, รถยนต์, BG, Mortgage", "Development Plan 2026-11 · Credit Line · Kaijeaw", "In progress", "TaskDetail.dc.html", ""], ["sub", "DP-526", "ฟอร์มหลักประกัน: Bank Account", "DP-39 · Kaijeaw · Due พรุ่งนี้", "In progress", "SubtaskModal.dc.html", ""], ["task", "DP-38", "Collateral framework: รายการ, Map จาก MDP (Other), ผูกกับวงเงิน", "Development Plan 2026-11 · Credit Line · Kaijeaw", "In progress", "TaskDetail.dc.html", ""], ["task", "DP-40", "คำนวณมูลค่าหลักประกัน & วงเงินตามสัดส่วน", "Development Plan 2026-11 · Credit Line · Kaijeaw", "To do", "TaskDetail.dc.html", ""], ["task", "DP-41", "สถานะหลักประกัน Active / Inactive อัตโนมัติ (Batch)", "Development Plan 2026-11 · Credit Line · Kaijeaw", "To do", "TaskDetail.dc.html", ""], ["bug", "DP-525", "Workflow ส่งกลับแก้ไข: สถานะไม่กลับเป็น Draft เมื่อ LO ส่งคืน", "Development Plan 2026-11 · Major", "Review", "BugDetail.dc.html", ""], ["proj", "DP", "Development Plan 2026-11", "Lead: Mick · 334 งาน · 11 Module · Off track", "", "Main.dc.html", ""], ["file", "", "BRD_CreditLine_SCR-107.pdf", "Development Plan 2026-11 · Files · พบในหน้า 12", "", "Files.dc.html", "\"...หลักประกันแต่ละประเภทต้องระบุมูลค่าประเมินและวันหมดอายุ...\""], ["cmt", "DP-39", "คอมเมนต์โดย Donut: BG ต้องมีวันหมดอายุ", "DP-39 ฟอร์มหลักประกัน · 2 ชม.ก่อน", "", "TaskDetail.dc.html", "\"...ประเภท BG ต้องมีวันหมดอายุ และให้สถานะหลักประกันเปลี่ยนเป็น Inactive อัตโนมัติ...\""], ["task", "DP", "Credit Line", "Development Plan 2026-11 · Module · 54 งาน · 202 MD", "", "Table.dc.html", ""], ["person", "", "Kaijeaw", "Dev · Credit Line, Pre-Disburse · 16 MD สัปดาห์นี้", "", "Members.dc.html", ""], ["person", "", "Donut", "BA · Credit Line", "", "WorkspaceMembers.dc.html", ""], ["cmd", "", "สร้างงานใหม่", "คำสั่ง", "", "IssueCreate.dc.html", ""], ["cmd", "", "เปิด Kanban ของโปรเจกต์นี้", "คำสั่ง · G แล้ว K", "", "Kanban.dc.html", ""], ["cmd", "", "Import Excel", "คำสั่ง", "", "ImportExcel.dc.html", ""], ["cmd", "", "ไปที่ My Tasks", "คำสั่ง · G แล้ว M", "", "MyTasks.dc.html", ""]];
+    let qq = q.trim(), only = '';
+    if (qq.charAt(0) === '>') { only = 'cmd'; qq = qq.slice(1).trim(); }
+    else if (qq.charAt(0) === '@') { only = 'person'; qq = qq.slice(1).trim(); }
+    else if (qq.charAt(0) === '#') { qq = qq.slice(1).trim(); }
+    const low = qq.toLowerCase();
+    const hit = function (d) {
+      if (only && d[0] !== only) return false;
+      if (!only && d[0] === 'cmd' && !low) return false;
+      if (!low) return true;
+      return (d[2] + ' ' + d[1] + ' ' + d[3] + ' ' + d[6]).toLowerCase().indexOf(low) >= 0;
+    };
+    const split = function (t) {
+      const i = low ? t.toLowerCase().indexOf(low) : -1;
+      if (i < 0) return { pre: t, mid: '', post: '' };
+      return { pre: t.slice(0, i), mid: t.slice(i, i + low.length), post: t.slice(i + low.length) };
+    };
+    const mk = function (d, first) {
+      const s = split((d[1] && d[0] !== 'cmt' && d[0] !== 'proj' && d[1] !== 'DP' ? d[1] + ' ' : '') + d[2]);
+      const sc = SC[d[4]] || ['#EEF0F3', '#3D4550'];
+      return { pre: s.pre, mid: s.mid, post: s.post, m: d[3], tn: TC[d[0]][0], c: TC[d[0]][1], ab: TC[d[0]][2], href: d[5], cls: first ? 'ri sel' : 'ri', first: first,
+        snip: d[6], hasSnip: !!d[6], st: d[4], hasSt: !!d[4], sb: sc[0], sf: sc[1] };
+    };
+    const hits = D.filter(hit);
+    const ORDER = [['task', 'งาน'], ['sub', 'งาน'], ['bug', 'งาน'], ['proj', 'โปรเจกต์'], ['file', 'ไฟล์ และคอมเมนต์'], ['cmt', 'ไฟล์ และคอมเมนต์'], ['person', 'คน'], ['cmd', 'คำสั่ง']];
+    const gnames = []; ORDER.forEach(function (o) { if (gnames.indexOf(o[1]) < 0) gnames.push(o[1]); });
+    let firstUsed = false;
+    const groups = !q.trim() ? [] : gnames.map(function (gn) {
+      const types = ORDER.filter(function (o) { return o[1] === gn; }).map(function (o) { return o[0]; });
+      const its = hits.filter(function (d) { return types.indexOf(d[0]) >= 0; }).slice(0, 4).map(function (d) { const f = !firstUsed; firstUsed = true; return mk(d, f); });
+      return { n: gn, k: hits.filter(function (d) { return types.indexOf(d[0]) >= 0; }).length, items: its };
+    }).filter(function (g) { return g.items.length > 0; });
+    const recent = [['DP', '#334155', 'Development Plan 2026-11 · Kanban', 'เมื่อสักครู่', 'Kanban.dc.html'], ['T', '#1D4ED8', 'DP-39 ฟอร์มหลักประกัน 5 ประเภท', '10 นาทีก่อน', 'TaskDetail.dc.html'], ['DP', '#334155', 'Development Plan 2026-11 · ภาพรวม Lead', 'เมื่อวาน', 'LeadDashboard.dc.html'], ['F', '#B45309', 'BRD_CreditLine_SCR-107.pdf', 'เมื่อวาน', 'Files.dc.html']].map(function (r) { return { ab: r[0], c: r[1], t: r[2], m: r[3], href: r[4] }; });
+    const cmds = [['+', 'สร้างงานใหม่', 'C', 'IssueCreate.dc.html'], ['>', 'ไปที่ My Tasks', 'G M', 'MyTasks.dc.html'], ['>', 'เปิด Kanban ของโปรเจกต์นี้', 'G K', 'Kanban.dc.html'], ['?', 'ดูคีย์ลัดทั้งหมด', '?', '#']].map(function (c) { return { ab: c[0], t: c[1], k: c[2], href: c[3] }; });
+    const tries = ['หลักประกัน', '> kanban', '@kaijeaw', ''].map(function (t) { return { q: t || '(ว่าง)', pick: function () { self.setState({ q: t }); } }; });
+    const TY = [['task', 'งาน / Story'], ['sub', 'Sub-task'], ['bug', 'Bug'], ['file', 'ไฟล์'], ['cmt', 'คอมเมนต์'], ['proj', 'โปรเจกต์'], ['person', 'คน']];
+    const rhits = hits.filter(function (d) { return d[0] !== 'cmd' && !off[d[0]]; });
+    const types = TY.map(function (t) { return { n: t[1], k: hits.filter(function (d) { return d[0] === t[0]; }).length, on: !off[t[0]], toggle: function () { const o = Object.assign({}, off); o[t[0]] = !o[t[0]]; self.setState({ off: o }); } }; });
+    return {
+      q: q, type: function (e) { self.setState({ q: (e && e.target && e.target.value) || '' }); },
+      palMode: mode === 'pal', resMode: mode === 'res', isPal: mode === 'pal' ? 'true' : 'false', isRes: mode === 'res' ? 'true' : 'false',
+      showPal: function () { self.setState({ mode: 'pal' }); }, showRes: function () { self.setState({ mode: 'res' }); },
+      hasScope: true, tries: tries, isEmpty: !q.trim(), recent: recent, cmds: cmds, groups: groups, noHit: !!q.trim() && groups.length === 0,
+      types: types, results: rhits.map(function (d) { return mk(d, false); }), total: rhits.length, noRes: rhits.length === 0
+    };
+  }
+}
+</script>
+</body>
+</html>

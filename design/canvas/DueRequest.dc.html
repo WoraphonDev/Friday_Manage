@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Request due date change</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.stage{position:relative;min-height:100vh;padding:36px 16px 48px}
+.under{position:absolute;inset:0;overflow:hidden;padding:20px}
+.sk{height:12px;border-radius:6px;background:#D5DAE0}
+.veil{position:absolute;inset:0;background:rgba(15,23,42,.5)}
+.modal{position:relative;max-width:900px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(15,23,42,.35)}
+.dlg{position:absolute;top:150px;left:50%;transform:translateX(-50%);width:min(560px,calc(100% - 24px));background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(15,23,42,.45)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 14px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.muted{color:#5F6873}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.pr{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;align-items:center;font-size:13px;min-height:36px}
+.pr .k{color:#5F6873;font-weight:500}
+.lb{font-size:13px;font-weight:600}
+.in{min-height:40px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%;min-width:0}
+textarea.in{padding:8px 10px;min-height:70px}
+.imp{display:flex;gap:10px;align-items:flex-start;font-size:13px;padding:8px 0;border-bottom:1px solid #F1F3F5}
+.av{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff;flex:none}
+@media(max-width:760px){.stage{padding:10px 6px}.dlg{top:60px}}
+</style>
+</helmet>
+<div class="stage">
+<div class="under" aria-hidden="true"><div style="background:#fff;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;height:100%"><sc-for list="{{sk}}" as="s" hint-placeholder-count="14"><div style="display:flex;gap:10px"><div class="sk" style="width:{{s.a}}%"></div><div class="sk" style="width:{{s.b}}%"></div></div></sc-for></div></div>
+<div class="veil"></div>
+
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="st-title">
+<div style="display:flex;align-items:center;gap:8px;padding:12px 16px 12px 24px;border-bottom:1px solid #E4E7EB;background:#FAFBFC;flex-wrap:wrap">
+<nav aria-label="Breadcrumb" style="font-size:13px;flex:1"><span class="muted">Development Plan 2026-11 › Credit Line › Product &amp; ผู้ใช้วงเงิน ›</span> <b>DP-30</b> <span class="pill" style="background:#1B1F24;color:#fff">Task</span></nav>
+<span class="muted" style="font-size:12px">มุมมองของ Kaijeaw (Dev) · ข้อมูลจริงจาก Development Plan 2026-11 · สถานะจำลอง ณ พ. 2 ธ.ค. 2569</span>
+</div>
+<div style="padding:18px 24px;display:flex;flex-wrap:wrap;gap:24px">
+<div style="flex:999 1 380px;min-width:0;display:flex;flex-direction:column;gap:12px">
+<h2 id="st-title" style="margin:0;font-size:22px">Curtailment Information + Plan Template (Floor Plan)</h2>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill" style="background:#DBEAFE;color:#1E40AF">In progress</span><span class="pill" style="background:#FEE2E2;color:#991B1B">เลยกำหนด 1 วัน</span></div>
+<div class="muted" style="line-height:1.7">ตั้งค่า Curtailment และ Plan Template ของวงเงิน Floor Plan ตามหน้าจอ SCR-106 (FR-03.5) · BA Donut ขอเพิ่ม Template แบบ Fleet เมื่อ 30 พ.ย.</div>
+<div style="border:1px dashed #D5DAE0;border-radius:10px;padding:14px;color:#5F6873;font-size:13px">Checklist, ผลทดสอบ, Commits และ Comments (เหมือนหน้า Sub-task Detail)</div>
+</div>
+<div style="flex:1 1 250px;min-width:0">
+<div style="border:1px solid #E4E7EB;border-radius:12px;padding:10px 14px">
+<div class="pr"><span class="k">Assignee</span><span style="display:flex;align-items:center;gap:6px"><span class="av" style="background:#B45309">KJ</span>Kaijeaw</span></div>
+<div class="pr"><span class="k">Start</span><span>25 พ.ย. 69</span></div>
+<div class="pr" style="align-items:flex-start;padding-top:6px"><span class="k">Due</span>
+<span style="display:flex;flex-direction:column;gap:6px">
+<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="color:#B91C1C">1 ธ.ค. 69</b>
+<sc-if value="{{canAsk}}" hint-placeholder-val="{{ false }}"><button class="btn" type="button" onClick="{{open}}" style="min-height:30px;font-size:12px;padding:0 10px">ขอเลื่อน Due</button></sc-if></span>
+<sc-if value="{{pending}}" hint-placeholder-val="{{ false }}"><span style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:8px 10px;font-size:12px;display:flex;flex-direction:column;gap:4px"><b style="color:#92400E">ขอเลื่อนเป็น 4 ธ.ค. · รอ Mick อนุมัติ</b><span class="muted">ส่งเมื่อสักครู่ · แจ้งทาง Inbox และ LINE แล้ว</span><button type="button" onClick="{{cancel}}" style="align-self:flex-start;border:0;background:transparent;font:inherit;color:#B91C1C;cursor:pointer;padding:0;font-weight:600">ยกเลิกคำขอ</button></span></sc-if>
+</span></div>
+<div class="pr"><span class="k">Priority</span><span style="color:#B91C1C;font-weight:600">Urgent</span></div>
+<div class="pr"><span class="k">Size</span><span>M · 5 Man-Day</span></div>
+<div class="pr"><span class="k">Module</span><span>Credit Line · Go-live 26 ม.ค. 70</span></div>
+</div>
+<div class="muted" style="font-size:12px;padding:8px 4px">PM / Admin เปลี่ยน Due ได้ทันที · Member ต้องส่งคำขอ (ค่าเริ่มต้น · ปิดได้ที่ Project Settings › สิทธิ์ของแต่ละ Role)</div>
+</div>
+</div>
+</div>
+
+<sc-if value="{{isOpen}}" hint-placeholder-val="{{ true }}">
+<div class="veil" style="background:rgba(15,23,42,.35)"></div>
+<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dr-title">
+<div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid #E4E7EB">
+<h3 id="dr-title" style="margin:0;font-size:17px;flex:1">ขอเลื่อนวันครบกำหนด</h3>
+<button type="button" onClick="{{close}}" aria-label="ปิด" style="width:32px;height:32px;border:0;background:transparent;border-radius:8px;font-size:20px;cursor:pointer;color:#3D4550">×</button>
+</div>
+<div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end">
+<label style="display:flex;flex-direction:column;gap:6px"><span class="lb">Due ปัจจุบัน</span><input class="in" type="text" value="1 ธ.ค. 69" readonly style="background:#F1F3F5"></label>
+<span style="padding-bottom:10px;font-size:18px" aria-hidden="true">→</span>
+<label style="display:flex;flex-direction:column;gap:6px"><span class="lb">Due ใหม่ <span style="color:#B91C1C">*</span></span><input class="in" type="date" value="2026-12-04"></label>
+</div>
+<label style="display:flex;flex-direction:column;gap:6px"><span class="lb">เหตุผล <span style="color:#B91C1C">*</span></span><select class="in"><option>ขอบเขตงานเพิ่ม</option><option>รอข้อมูล / สิ่งที่ต้องได้จาก BA หรือผู้ใช้</option><option>ติด Dependency จากงานอื่น</option><option>ประเมินเวลาผิด</option><option>อื่น ๆ</option></select></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span class="lb">รายละเอียด</span><textarea class="in">BA Donut ยืนยันเพิ่ม Plan Template แบบ Fleet (30 พ.ย.) ต้องใช้อีก 2 วันทำการ</textarea></label>
+<div style="background:#F8F9FB;border:1px solid #EEF0F3;border-radius:10px;padding:10px 14px">
+<div class="lb" style="margin-bottom:2px">ผลกระทบ (ระบบคำนวณให้)</div>
+<div class="imp"><span style="color:#B45309;font-weight:700">!</span><span><b>Workload ของ Kaijeaw</b> สัปดาห์นี้เพิ่มจาก 16 เป็น 18 MD (capacity 5) · ชนกับ DP-38 และ DP-39</span></div>
+<div class="imp"><span style="color:#166534;font-weight:700">✓</span><span>ไม่มีงานที่รอ DP-30 (ไม่มี dependency ในแผน)</span></div>
+<div class="imp" style="border-bottom:0"><span style="color:#166534;font-weight:700">✓</span><span>Module <b>Credit Line</b> ยังทัน Go-live 26 ม.ค. 70</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span class="av" style="background:#1D4ED8">MK</span><span>ส่งให้ <b>Mick (Lead)</b> อนุมัติ · แจ้งทาง Inbox, Email และ LINE · Watchers จะเห็นใน Activity</span></div>
+</div>
+<div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid #E4E7EB">
+<button class="btn" type="button" onClick="{{close}}">ยกเลิก</button>
+<button class="btn pri" type="button" onClick="{{send}}">ส่งคำขอ</button>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  state = { mode: 'open' };
+  renderVals() {
+    const self = this;
+    const mode = (this.state && this.state.mode) || 'open';
+    const sk = [[40, 20], [32, 26], [44, 16], [28, 30], [38, 18], [30, 24], [42, 20], [26, 28], [36, 22], [40, 18], [30, 26], [34, 20], [38, 24], [28, 22]].map(function (r) { return { a: r[0], b: r[1] }; });
+    return {
+      sk: sk, isOpen: mode === 'open', pending: mode === 'pending', canAsk: mode === 'idle',
+      open: function () { self.setState({ mode: 'open' }); }, close: function () { self.setState({ mode: 'idle' }); },
+      send: function () { self.setState({ mode: 'pending' }); }, cancel: function () { self.setState({ mode: 'idle' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

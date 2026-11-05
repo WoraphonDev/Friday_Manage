@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Project Settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E4E7EB;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column}
+.navi{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 10px;border-radius:8px;color:#3D4550;text-decoration:none}
+.navi:hover{background:#F1F3F5;color:#1B1F24}
+.navi.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.sec{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:16px 10px 6px}
+.phead{background:#fff;padding:16px 24px 0;border-bottom:1px solid #E4E7EB}
+.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:10px}
+.tab{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;color:#56606B;text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+.tab.on{color:#1D4ED8;border-bottom-color:#1D4ED8;font-weight:600}
+.body{padding:20px 24px;display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.danger{background:#B91C1C;border-color:#B91C1C;color:#fff}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.muted{color:#5F6873}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.s-todo{background:#EEF0F3;color:#3D4550}.s-prog{background:#DBEAFE;color:#1E40AF}.s-rev{background:#FEF3C7;color:#92400E}.s-done{background:#DCFCE7;color:#166534}.s-late{background:#FEE2E2;color:#991B1B}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.snav{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 12px;border:0;border-radius:8px;background:transparent;font:inherit;text-align:left;cursor:pointer;color:#3D4550}
+.snav:hover{background:#F1F3F5}
+.snav.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.snav.dz{color:#B91C1C}
+.sh{padding:18px 20px;border-bottom:1px solid #EEF0F3}
+.sh h2{margin:0;font-size:18px}
+.sb{padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+.lb{font-size:13px;font-weight:600}
+.in{min-height:38px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%;min-width:0}
+.fld{display:flex;flex-direction:column;gap:6px}
+.row{display:grid;grid-template-columns:20px 22px minmax(0,1fr) 150px 110px 80px 36px;gap:10px;align-items:center;min-height:48px;padding:0 12px;border:1px solid #E4E7EB;border-radius:10px;background:#fff}
+.mx{display:grid;grid-template-columns:minmax(220px,1fr) repeat(3,90px);align-items:center;min-height:42px;padding:0 14px;border-bottom:1px solid #F1F3F5}
+.mx.h{background:#F8F9FB;font-size:12px;font-weight:700;color:#3D4550;text-align:center}
+.cb{width:18px;height:18px;justify-self:center;margin:0}
+.ty{width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.x{width:30px;height:30px;border:0;background:transparent;border-radius:6px;cursor:pointer;color:#5F6873;font:inherit}
+.x:hover{background:#EEF0F3}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px}
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+@media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.body{padding:16px}.phead{padding:12px 16px 0}.row{grid-template-columns:22px minmax(0,1fr) 36px}.row .hs{display:none}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a href="IssueCreate.dc.html" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:#1D4ED8;color:#fff;font-weight:600;text-decoration:none">+ New</a>
+<a href="Bell.dc.html" aria-label="การแจ้งเตือน 5 รายการยังไม่อ่าน" style="position:relative;width:40px;height:40px;border-radius:8px;color:#E2E8F0;display:inline-flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #0F172A">5</span></a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div class="app">
+<aside class="side" aria-label="Workspace navigation">
+<a class="navi" href="Home.dc.html">Home</a>
+<a class="navi" href="MyTasks.dc.html">My Tasks</a>
+<a class="navi" href="Inbox.dc.html">Inbox<span class="pill s-late" style="margin-left:auto">5</span></a>
+<div class="sec">Projects</div>
+<a class="navi on" href="Main.dc.html"><span class="dot" style="background:#334155"></span>Development Plan 2026-11</a>
+<a class="navi" href="NewProject.dc.html" style="color:#1D4ED8">+ New project</a>
+<div style="margin-top:auto;border-top:1px solid #E4E7EB;padding-top:10px"><a class="navi" href="AdminConsole.dc.html">Admin Console</a></div>
+</aside>
+<main class="main">
+<header class="phead">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<div style="width:32px;height:32px;border-radius:8px;background:#334155;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">DP</div>
+<h1 style="margin:0;font-size:22px;line-height:1.3">Development Plan 2026-11</h1>
+<span class="pill s-prog">Active</span>
+<span class="muted" style="font-size:13px">เฉพาะ Admin ของโปรเจกต์แก้ไขได้</span>
+</div>
+<nav class="tabs" aria-label="Project views">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="10"><a class="{{t.cls}}" href="{{t.href}}">{{t.label}}</a></sc-for>
+</nav>
+</header>
+
+<div class="body">
+<nav class="card" aria-label="Settings sections" style="flex:1 1 210px;max-width:240px;padding:8px;display:flex;flex-direction:column;gap:2px">
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="8"><button class="{{n.cls}}" type="button" onClick="{{n.pick}}" aria-current="{{n.cur}}">{{n.n}}</button></sc-for>
+<a class="snav" href="Automation.dc.html" style="text-decoration:none">Automation <span style="margin-left:auto;font-size:11px;font-weight:600;padding:0 6px;border-radius:999px;background:#EDE9FE;color:#5B21B6">Team</span></a>
+</nav>
+
+<section class="card" style="flex:999 1 620px;min-width:0">
+
+<sc-if value="{{sGeneral}}" hint-placeholder-val="{{ false }}">
+<div class="sh"><h2>ทั่วไป</h2><div class="muted" style="font-size:13px">ข้อมูลที่กรอกตอนสร้างโปรเจกต์ แก้ได้ที่นี่</div></div>
+<div class="sb">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+<label class="fld"><span class="lb">ชื่อโปรเจกต์</span><input class="in" type="text" value="Development Plan 2026-11"></label>
+<label class="fld"><span class="lb">Project Key</span><input class="in" type="text" value="CLB"><span class="muted" style="font-size:12px">เปลี่ยน Key แล้วรหัสงานเดิมยังใช้ลิงก์ได้ (redirect)</span></label>
+<label class="fld"><span class="lb">วันเริ่ม</span><input class="in" type="date" value="2026-10-01"></label>
+<label class="fld"><span class="lb">Go-live</span><input class="in" type="date" value="2026-12-15"></label>
+<label class="fld"><span class="lb">Project Owner / PM</span><select class="in"><option>Mick</option></select></label>
+<label class="fld"><span class="lb">การมองเห็น</span><select class="in"><option>Private · เฉพาะสมาชิก</option><option>Workspace</option></select></label>
+<label class="fld"><span class="lb">หน่วยประมาณงาน</span><select class="in"><option>Man-Day + Size</option><option>ชั่วโมง</option></select><span class="muted" style="font-size:12px">Man-Day ของงานที่มีหลาย Dev = รวมทั้งทีม · Workload แบ่งเท่ากันตามจำนวนคน</span></label>
+<label class="fld"><span class="lb">ความยาว Sprint</span><select class="in"><option>2 สัปดาห์</option><option>1 สัปดาห์</option><option>ไม่ใช้ Sprint</option></select></label>
+<div class="fld" style="grid-column:1/-1"><span class="lb">Size → Man-Day</span>
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<label style="display:flex;align-items:center;gap:6px"><span class="pill s-todo" style="font-weight:700">XS</span><input class="in" type="number" value="1" style="width:70px" aria-label="Man-Day ของ XS"></label>
+<label style="display:flex;align-items:center;gap:6px"><span class="pill s-todo" style="font-weight:700">S</span><input class="in" type="number" value="3" style="width:70px" aria-label="Man-Day ของ S"></label>
+<label style="display:flex;align-items:center;gap:6px"><span class="pill s-todo" style="font-weight:700">M</span><input class="in" type="number" value="5" style="width:70px" aria-label="Man-Day ของ M"></label>
+<label style="display:flex;align-items:center;gap:6px"><span class="pill s-todo" style="font-weight:700">L</span><input class="in" type="number" value="8" style="width:70px" aria-label="Man-Day ของ L"></label>
+<label style="display:flex;align-items:center;gap:6px"><span class="pill s-todo" style="font-weight:700">XL</span><input class="in" type="number" value="12" style="width:70px" aria-label="Man-Day ของ XL"></label>
+</div>
+<span class="muted" style="font-size:12px">เลือก Size แล้วระบบเติม Man-Day ให้ แก้เองได้รายงาน · งาน XL จะมีคำแนะนำให้แตกเป็น Sub-task</span>
+</div>
+<label class="fld"><span class="lb">ปฏิทินวันหยุด</span><select class="in"><option>ประกาศธนาคารแห่งประเทศไทย (ธปท.) 2569–2570</option><option>วันหยุดราชการ</option><option>กำหนดเอง</option></select><span class="muted" style="font-size:12px">Plan Start ที่ตรงวันหยุด เริ่มนับวันทำงานถัดไป</span></label>
+<label class="fld"><span class="lb">เวลาทำงาน (1 Man-Day)</span><input class="in" type="text" value="จ.–ศ. 09:30–18:30 (พัก 1 ชม. = 8 ชม.)"></label>
+</div>
+<div style="display:flex;gap:12px;align-items:flex-start;border:1px solid #E4E7EB;border-radius:10px;padding:12px 14px">
+<button type="button" role="switch" aria-checked="{{tlOn}}" onClick="{{toggleTl}}" aria-label="บันทึกเวลาทำงาน (Time log)" style="position:relative;width:44px;height:26px;border-radius:99px;border:0;cursor:pointer;padding:0;flex:none;background:{{tlBg}}"><span style="position:absolute;top:3px;left:{{tlX}}px;width:20px;height:20px;border-radius:50%;background:#fff"></span></button>
+<div style="flex:1"><b>บันทึกเวลาทำงาน (Time log)</b> <span class="pill" style="background:#EEF0F3;color:#3D4550">{{tlTxt}}</span><div class="muted" style="font-size:13px">ปิดเป็นค่าเริ่มต้น เพราะองค์กรใช้ระบบ HR อยู่แล้ว · ความคืบหน้าดูจาก Man-Day และสถานะงานแทน · เปิดเมื่อต้องการเทียบ Man-Day ที่ประเมินกับเวลาจริง (จะเพิ่ม tab Time log ในหน้างาน)</div></div>
+</div>
+<div style="display:flex;justify-content:flex-end"><button class="btn pri" type="button">บันทึก</button></div>
+</div>
+</sc-if>
+
+<sc-if value="{{sWorkflow}}" hint-placeholder-val="{{ true }}">
+<div class="sh" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><div><h2>Workflow</h2><div class="muted" style="font-size:13px">สถานะของงาน ลำดับ และกฎการย้ายสถานะ · แยกตามประเภทงานได้</div></div>
+<div style="display:flex;gap:6px" role="group" aria-label="Workflow ของประเภทงาน"><sc-for list="{{wfTabs}}" as="w" hint-placeholder-count="2"><button class="btn" type="button" aria-pressed="{{w.on}}" onClick="{{w.pick}}" style="{{w.st}}">{{w.n}}</button></sc-for></div>
+</div>
+<div class="sb">
+<div class="flow" aria-label="ลำดับสถานะ">
+<sc-for list="{{statuses}}" as="s" hint-placeholder-count="5"><sc-if value="{{s.notFirst}}" hint-placeholder-val="{{ false }}"><span class="muted">→</span></sc-if><span class="pill" style="background:{{s.bg}};color:{{s.fg}};font-weight:600;padding:4px 12px">{{s.n}}</span></sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div class="row muted" style="border:0;min-height:28px;font-size:12px;font-weight:600"><span></span><span></span><span>ชื่อสถานะ</span><span class="hs">หมวด</span><span class="hs">WIP limit</span><span class="hs">ใช้อยู่</span><span></span></div>
+<sc-for list="{{statuses}}" as="s" hint-placeholder-count="5">
+<div class="row">
+<span class="muted" aria-hidden="true" style="cursor:grab">⋮⋮</span>
+<span style="width:18px;height:18px;border-radius:5px;background:{{s.dot}}"></span>
+<input class="in" type="text" value="{{s.n}}" aria-label="ชื่อสถานะ" style="min-height:34px">
+<select class="in hs" aria-label="หมวดของสถานะ" style="min-height:34px"><option>{{s.cat}}</option><option>To do</option><option>In progress</option><option>Done</option></select>
+<input class="in hs" type="text" value="{{s.wip}}" aria-label="WIP limit" style="min-height:34px">
+<span class="muted hs" style="font-size:13px">{{s.used}} งาน</span>
+<button class="x" type="button" aria-label="ลบสถานะ {{s.n}}">×</button>
+</div>
+</sc-for>
+<button class="btn" type="button" style="align-self:flex-start;border-style:dashed">+ เพิ่มสถานะ</button>
+</div>
+<div>
+<div class="lb" style="margin-bottom:8px">กฎการย้ายสถานะ</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{rules}}" as="r" hint-placeholder-count="4">
+<label style="display:flex;gap:10px;align-items:flex-start;border:1px solid #E4E7EB;border-radius:10px;padding:10px 12px"><input type="checkbox" checked="{{r.on}}" onChange="{{r.toggle}}" style="width:18px;height:18px;margin-top:2px"><span><b>{{r.t}}</b><span class="muted" style="display:block;font-size:12px">{{r.d}}</span></span></label>
+</sc-for>
+</div>
+</div>
+<div class="muted" style="font-size:12px">ลบสถานะที่มีงานอยู่ได้ ระบบจะถามว่าจะย้ายงานไปสถานะไหน · Kanban แสดงคอลัมน์ตามลำดับนี้</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sTypes}}" hint-placeholder-val="{{ false }}">
+<div class="sh"><h2>ประเภทงาน</h2><div class="muted" style="font-size:13px">เปิด/ปิดประเภท และกำหนดฟิลด์ที่บังคับกรอก</div></div>
+<div class="sb">
+<sc-for list="{{types}}" as="t" hint-placeholder-count="4">
+<div style="display:flex;gap:12px;align-items:flex-start;border:1px solid #E4E7EB;border-radius:10px;padding:12px">
+<span class="ty" style="background:{{t.c}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="{{t.i}}"></path></svg></span>
+<div style="flex:1;min-width:0"><b>{{t.n}}</b> <span class="muted" style="font-size:12px">· Workflow: {{t.wf}}</span><div class="muted" style="font-size:12px;margin-top:2px">ฟิลด์บังคับ: {{t.req}}</div></div>
+<label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" checked style="width:18px;height:18px">เปิดใช้</label>
+<button class="btn" type="button" style="min-height:30px;font-size:12px">แก้ฟิลด์</button>
+</div>
+</sc-for>
+<div class="fld"><span class="lb">Custom fields</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill s-prog">BA (คน)</span><span class="pill s-prog">Dev หลายคน</span><span class="pill s-prog">Screen ID</span><span class="pill s-prog">FR / NFR</span><span class="pill s-prog">Plan / Actual Start–End</span><span class="pill s-todo">Customer request (ข้อความ)</span><span class="pill s-todo">Release version (ตัวเลือก)</span><span class="pill s-todo">Effort ทีมลูกค้า (ตัวเลข)</span><button class="btn" type="button" style="min-height:28px;font-size:12px">+ เพิ่มฟิลด์</button></div>
+</div>
+<div class="fld"><span class="lb">Labels</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill s-prog">frontend</span><span class="pill s-done">backend</span><span class="pill s-rev">booking</span><span class="pill s-late">hotfix</span><span class="pill s-todo">tech-debt</span><button class="btn" type="button" style="min-height:28px;font-size:12px">+ เพิ่ม Label</button></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sModules}}" hint-placeholder-val="{{ false }}">
+<div class="sh"><h2>Modules</h2><div class="muted" style="font-size:13px">ลากเพื่อเรียงลำดับ · ลำดับนี้ใช้ใน Table, Timeline และตัวกรอง</div></div>
+<div class="sb">
+<sc-for list="{{mods}}" as="m" hint-placeholder-count="11">
+<div style="display:grid;grid-template-columns:20px 24px minmax(0,1fr) 140px 90px 36px;gap:10px;align-items:center;border:1px solid #E4E7EB;border-radius:10px;padding:8px 12px">
+<span class="muted" aria-hidden="true">⋮⋮</span><span style="width:20px;height:20px;border-radius:5px;background:{{m.c}}"></span>
+<input class="in" type="text" value="{{m.n}}" aria-label="ชื่อ Module" style="min-height:34px">
+<select class="in" aria-label="Owner" style="min-height:34px"><option>{{m.o}}</option><option>Kaijeaw</option><option>Pond</option><option>Tung</option><option>Top</option><option>Zo</option><option>P'Tum</option></select>
+<span class="muted" style="font-size:13px">{{m.k}} งาน</span>
+<button class="x" type="button" aria-label="ลบ Module {{m.n}}">×</button>
+</div>
+</sc-for>
+<button class="btn" type="button" style="align-self:flex-start;border-style:dashed">+ เพิ่ม Module</button>
+</div>
+</sc-if>
+
+<sc-if value="{{sPerms}}" hint-placeholder-val="{{ false }}">
+<div class="sh"><h2>สิทธิ์ของแต่ละ Role</h2><div class="muted" style="font-size:13px">ใช้กับสมาชิกในโปรเจกต์นี้เท่านั้น</div></div>
+<div style="overflow-x:auto"><div style="min-width:520px">
+<div class="mx h"><div style="text-align:left">สิ่งที่ทำได้</div><div>Admin</div><div>Member</div><div>Viewer</div></div>
+<sc-for list="{{perms}}" as="p" hint-placeholder-count="10">
+<div class="mx"><div style="font-size:14px">{{p.n}}</div>
+<sc-for list="{{p.cells}}" as="c" hint-placeholder-count="3"><input class="cb" type="checkbox" checked="{{c.on}}" disabled="{{c.dis}}" onChange="{{c.toggle}}" aria-label="{{c.aria}}"></sc-for>
+</div>
+</sc-for>
+</div></div>
+<div class="sb"><div class="muted" style="font-size:12px">Admin มีสิทธิ์ทุกอย่างเสมอ · Guest ระดับ Workspace จะเป็น Viewer หรือ Member ในโปรเจกต์ได้ตามที่เชิญ · Guest ที่เป็นลูกค้าเห็นเฉพาะ Overview, Timeline และงานที่แชร์ให้ (ไม่เห็นชื่อคน, Workload, Bug)</div></div>
+</sc-if>
+
+<sc-if value="{{sInteg}}" hint-placeholder-val="{{ false }}">
+<div class="sh"><h2>Integrations</h2><div class="muted" style="font-size:13px">ผูก Git กับโปรเจกต์ · การส่งแจ้งเตือนเข้ากลุ่มย้ายไปที่ "การแจ้งเตือน"</div></div>
+<div class="sb">
+<div style="border:1px solid #E4E7EB;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="ty" style="background:#1B1F24;width:32px;height:32px;color:#fff;font-weight:700;font-size:11px">GH</span><div style="flex:1"><b>GitHub</b> <span class="pill s-done">เชื่อมแล้ว</span><div class="muted mono">friday-dev/clinic-booking</div></div><button class="btn" type="button" style="min-height:32px">+ เพิ่ม repo</button></div>
+<div class="fld"><span class="lb">รูปแบบชื่อ branch</span><input class="in mono" type="text" value="feature/{KEY}-{slug}  ·  fix/{KEY}-{slug}"></div>
+<div class="lb">ย้ายสถานะอัตโนมัติ</div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 24px 160px;gap:8px;align-items:center;font-size:13px">
+<span>เมื่อมี commit แรกที่อ้างถึงงาน</span><span class="muted">→</span><select class="in" style="min-height:32px"><option>In progress</option><option>ไม่ทำอะไร</option></select>
+<span>เมื่อเปิด Pull request</span><span class="muted">→</span><select class="in" style="min-height:32px"><option>Review</option><option>ไม่ทำอะไร</option></select>
+<span>เมื่อ PR merge เข้า main</span><span class="muted">→</span><select class="in" style="min-height:32px"><option>Done (Bug → Fixed)</option><option>ไม่ทำอะไร</option></select>
+<span>เมื่อ CI ล้มเหลว</span><span class="muted">→</span><select class="in" style="min-height:32px"><option>แจ้ง Assignee</option><option>ไม่ทำอะไร</option></select>
+</div>
+</div>
+<div style="border:1px dashed #C9CFD6;border-radius:12px;padding:12px 14px;font-size:13px" class="muted">LINE กลุ่ม และ Webhook (Discord, Slack, Teams, Telegram) ตั้งว่าส่งเหตุการณ์ไหนได้ที่เมนู "การแจ้งเตือน"</div>
+</div>
+</sc-if>
+
+<sc-if value="{{sNotify}}" hint-placeholder-val="{{ false }}">
+<div class="sh" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><div><h2>การแจ้งเตือนของโปรเจกต์</h2><div class="muted" style="font-size:13px">กำหนดว่าเหตุการณ์ไหนส่งเข้ากลุ่มทีม · ข้อความส่วนตัวแต่ละคนตั้งเองที่ Profile</div></div><a class="btn" href="NotifyTemplates.dc.html">ดูตัวอย่างข้อความ</a></div>
+<div class="sb">
+<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:13px">
+<span class="pill" style="background:#DCFCE7;color:#166534;padding:4px 10px">LINE กลุ่ม "Dev Plan 2026" · เชื่อมแล้ว</span>
+<span class="pill" style="background:#DCFCE7;color:#166534;padding:4px 10px">Discord #dev-alerts · ทำงานปกติ</span>
+<span class="pill" style="background:#FEF3C7;color:#92400E;padding:4px 10px">โหมดปลอดภัยเปิดทั้ง Workspace · ส่งแค่หัวข้อ + ลิงก์</span>
+</div>
+<div style="overflow-x:auto"><div style="min-width:640px">
+<div style="display:grid;grid-template-columns:minmax(220px,1fr) 150px 170px 190px 56px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #E4E7EB;font-size:12px;font-weight:700;color:#5F6873"><div>เหตุการณ์</div><div>คนที่เกี่ยวข้อง</div><div>LINE กลุ่ม</div><div>Webhook</div><div>เปิด</div></div>
+<sc-for list="{{routes}}" as="r" hint-placeholder-count="7">
+<div style="display:grid;grid-template-columns:minmax(220px,1fr) 150px 170px 190px 56px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #F1F3F5;font-size:13px;opacity:{{r.op}}">
+<div><b>{{r.n}}</b><div class="muted" style="font-size:12px">{{r.d}}</div></div>
+<div>{{r.who}}</div>
+<select class="in" style="min-height:32px" aria-label="LINE กลุ่ม สำหรับ {{r.n}}"><option>{{r.line}}</option><option>ไม่ส่ง</option><option>Dev Plan 2026</option></select>
+<select class="in" style="min-height:32px" aria-label="Webhook สำหรับ {{r.n}}"><option>{{r.hook}}</option><option>ไม่ส่ง</option><option>Discord #dev-alerts</option><option>Slack #pm-weekly</option></select>
+<input type="checkbox" checked="{{r.on}}" onChange="{{r.toggle}}" aria-label="เปิดกฎ {{r.n}}" style="width:18px;height:18px">
+</div>
+</sc-for>
+</div></div>
+<div class="muted" style="font-size:12px">คำขอเลื่อน Due และการอนุมัติส่งเฉพาะคนที่มีสิทธิ์อนุมัติ ไม่ส่งเข้ากลุ่ม · ถ้าไม่มี LINE กลุ่มหรือ Webhook ให้เลือก ให้ Admin เพิ่มที่ Admin Console › ช่องทางแจ้งเตือน</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+<label class="fld"><span class="lb">ช่วงเวลาที่ไม่ส่งเข้ากลุ่ม</span><select class="in"><option>หลัง 19:00 และวันหยุด (ส่งรวมเช้าวันทำงานถัดไป)</option><option>ส่งตลอดเวลา</option></select></label>
+<label class="fld"><span class="lb">ยกเว้น</span><select class="in"><option>Bug Critical ส่งทันทีทุกเวลา</option><option>ไม่มีข้อยกเว้น</option></select></label>
+</div>
+<div style="display:flex;justify-content:flex-end"><button class="btn pri" type="button">บันทึก</button></div>
+</div>
+</sc-if>
+
+<sc-if value="{{sDanger}}" hint-placeholder-val="{{ false }}">
+<div class="sh"><h2 style="color:#B91C1C">Danger zone</h2><div class="muted" style="font-size:13px">การกระทำในส่วนนี้มีผลกับทุกคนในโปรเจกต์</div></div>
+<div class="sb">
+<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid #E4E7EB;border-radius:10px;padding:14px"><div style="flex:1 1 260px"><b>Archive โปรเจกต์</b><div class="muted" style="font-size:13px">ซ่อนจาก Sidebar ทุกคนยังเปิดดูได้แบบอ่านอย่างเดียว กู้คืนได้</div></div><button class="btn" type="button">Archive</button></div>
+<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid #E4E7EB;border-radius:10px;padding:14px"><div style="flex:1 1 260px"><b>โอนความเป็นเจ้าของ</b><div class="muted" style="font-size:13px">ส่งต่อบทบาท Project Owner ให้สมาชิกคนอื่น</div></div><button class="btn" type="button">โอนให้…</button></div>
+<div style="display:flex;flex-direction:column;gap:10px;border:1px solid #FECACA;background:#FEF2F2;border-radius:10px;padding:14px">
+<div><b style="color:#991B1B">ลบโปรเจกต์ถาวร</b><div style="font-size:13px;color:#7F1D1D">ลบงาน 74 งาน, ไฟล์ 24 ไฟล์ และประวัติทั้งหมด · กู้คืนได้ภายใน 30 วันโดย Workspace Owner เท่านั้น</div></div>
+<label class="fld"><span class="lb">พิมพ์ <span class="mono">CLB</span> เพื่อยืนยัน</span><input class="in" type="text" value="{{confirmVal}}" onChange="{{typeConfirm}}" onInput="{{typeConfirm}}" style="max-width:220px"></label>
+<button class="btn danger" type="button" disabled="{{cantDelete}}" style="align-self:flex-start;opacity:{{delOpacity}}">ลบโปรเจกต์</button>
+</div>
+</div>
+</sc-if>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+  state = { sec: 'workflow', wf: 'default' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const sec = st.sec || 'workflow', wf = st.wf || 'default';
+    const T = [['Overview','Main.dc.html'],['ภาพรวม Lead','LeadDashboard.dc.html'],['Backlog','Backlog.dc.html'],['Table','Table.dc.html'],['Kanban','Kanban.dc.html'],['Timeline','Timeline.dc.html'],['Gantt','Gantt.dc.html'],['Calendar','Calendar.dc.html'],['Members','Members.dc.html'],['Files','Files.dc.html'],['Settings','ProjectSettings.dc.html']];
+    const tabs = T.map(function (x) { return { label: x[0], href: x[1], cls: x[0] === 'Settings' ? 'tab on' : 'tab' }; });
+    const NV = [['general', 'ทั่วไป'], ['workflow', 'Workflow'], ['types', 'ประเภทงาน + ฟิลด์'], ['modules', 'Modules'], ['perms', 'สิทธิ์ของ Role'], ['notify', 'การแจ้งเตือน'], ['integ', 'Integrations'], ['danger', 'Danger zone']];
+    const nav = NV.map(function (n) { return { n: n[1], cls: 'snav' + (sec === n[0] ? ' on' : '') + (n[0] === 'danger' ? ' dz' : ''), cur: sec === n[0] ? 'page' : 'false', pick: function () { self.setState({ sec: n[0] }); } }; });
+    const WF = {
+      'default': [['To do', 'To do', '#8A94A0', '#EEF0F3', '#3D4550', '—', 12], ['In progress', 'In progress', '#3B82F6', '#DBEAFE', '#1E40AF', '5', 11], ['Review', 'In progress', '#F59E0B', '#FEF3C7', '#92400E', '3', 5], ['Done', 'Done', '#15803D', '#DCFCE7', '#166534', '—', 46]],
+      'bug': [['Open', 'To do', '#DC2626', '#FEE2E2', '#991B1B', '—', 2], ['In progress', 'In progress', '#3B82F6', '#DBEAFE', '#1E40AF', '—', 1], ['Fixed', 'In progress', '#F59E0B', '#FEF3C7', '#92400E', '—', 1], ['Verified', 'In progress', '#0F766E', '#CCFBF1', '#115E59', '—', 0], ['Closed', 'Done', '#15803D', '#DCFCE7', '#166534', '—', 6]]
+    };
+    const statuses = WF[wf].map(function (s, i) { return { n: s[0], cat: s[1], dot: s[2], bg: s[3], fg: s[4], wip: s[5], used: s[6], notFirst: i > 0 }; });
+    const wfTabs = [['default', 'Story / Task / Spike'], ['bug', 'Bug']].map(function (w) { return { n: w[1], on: wf === w[0] ? 'true' : 'false', st: wf === w[0] ? 'background:#1B1F24;color:#fff;border-color:#1B1F24' : '', pick: function () { self.setState({ wf: w[0] }); } }; });
+    const ru = st.rules || [true, true, true, false];
+    const RU = wf === 'bug'
+      ? [['ส่ง Fixed ต้องระบุ Commit หรือ PR ที่แก้', 'ป้องกันการปิด Bug โดยไม่มีหลักฐาน'], ['เฉพาะ Tester หรือ Reporter ย้าย Fixed → Verified', 'Dev ยืนยันผลงานตัวเองไม่ได้'], ['Reopen อัตโนมัติถ้าผลทดสอบซ้ำไม่ผ่าน', 'เมื่อแนบผลทดสอบที่ Failed ในงานที่ผูกกับ Bug นี้'], ['Bug Critical ข้ามไป In progress ทันทีและแจ้ง PM', 'ไม่ต้องรอคนรับงาน']]
+      : [['ย้ายไป Done ไม่ได้ถ้า Sub-task ยังไม่เสร็จครบ', 'จะเตือนและให้เลือกปิด Sub-task ทั้งหมดพร้อมกัน'], ['ย้ายไป Review ต้องมี Reviewer', 'ระบบถามหา Reviewer ก่อนย้าย'], ['เตือนเมื่อคอลัมน์เกิน WIP limit', 'ยังย้ายได้ แต่หัวคอลัมน์เป็นสีแดง'], ['เฉพาะ Reviewer ย้าย Review → Done', 'Assignee ปิดงานตัวเองไม่ได้']];
+    const rules = RU.map(function (r, i) { return { t: r[0], d: r[1], on: !!ru[i], toggle: function () { const a = ru.slice(); a[i] = !a[i]; self.setState({ rules: a }); } }; });
+    const types = [
+      ['Story', '#15803D', 'M6 3h12v18l-6-4-6 4z', 'มาตรฐาน', 'ชื่อ, User story, Acceptance criteria, Size'],
+      ['Task', '#1D4ED8', 'M5 5h14v14H5z', 'มาตรฐาน', 'ชื่อ, Module'],
+      ['Bug', '#DC2626', 'M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14z', 'Bug (Open → Closed)', 'ชื่อ, Severity, Environment, ขั้นตอนทำซ้ำ'],
+      ['Spike', '#7C3AED', 'M13 2 4 14h7l-1 8 9-12h-7z', 'มาตรฐาน', 'ชื่อ, คำถาม, Timebox']
+    ].map(function (t) { return { n: t[0], c: t[1], i: t[2], wf: t[3], req: t[4] }; });
+    const mods = [["Credit Line", "#1D4ED8", "Kaijeaw", 54], ["Drawdown", "#0F766E", "Pond", 61], ["Pre-Disburse", "#B45309", "Pond", 29], ["Maintain Car After Drawdown", "#7C3AED", "Kaijeaw", 12], ["BFC ใบเรียกเก็บ/ใบแจ้งหนี้", "#BE185D", "Top", 28], ["Repayment รับชำระเงิน", "#0369A1", "Tung", 30], ["Checkstock & Collect Car Keys", "#4D7C0F", "Tung", 32], ["Finance (GL)", "#57534E", "Top", 19], ["Campaign", "#C2410C", "Pond", 25], ["OEM / Dealer Portal", "#4338CA", "Top", 21], ["Interface FP/HP/KL", "#0E7490", "Tung", 23]].map(function (m) { return { n: m[0], c: m[1], o: m[2], k: m[3] }; });
+    const PM = st.pm || {};
+    const PR = [['ดูทุก tab และงาน', [1, 1, 1]], ['คอมเมนต์', [1, 1, 1]], ['สร้างและแก้ไขงาน', [1, 1, 0]], ['ลบงาน', [1, 0, 0]], ['เปลี่ยน Due โดยไม่ต้องขออนุมัติ', [1, 0, 0]], ['อนุมัติคำขอเลื่อน Due', [1, 0, 0]], ['อัปโหลด / ลบไฟล์', [1, 1, 0]], ['จัดการ Sprint (Start / Complete)', [1, 0, 0]], ['เชิญสมาชิกเข้าโปรเจกต์', [1, 0, 0]], ['แก้ Project Settings', [1, 0, 0]]];
+    const RL = ['Admin', 'Member', 'Viewer'];
+    const perms = PR.map(function (p, pi) { return { n: p[0], cells: RL.map(function (r, ri) { const k = pi + '-' + ri; const on = PM[k] !== undefined ? PM[k] : !!p[1][ri]; return { on: ri === 0 ? true : on, dis: ri === 0, aria: p[0] + ' สำหรับ ' + r, toggle: function () { const m = Object.assign({}, (self.state && self.state.pm) || {}); m[k] = !on; self.setState({ pm: m }); } }; }) }; });
+    const tl = !!st.tl;
+    const ro = st.ro || [true, true, true, true, true, true, false];
+    const RO = [
+      ['งานถูกมอบหมาย / เปลี่ยนผู้รับผิดชอบ', 'ส่วนตัวเท่านั้น', 'Assignee', 'ไม่ส่ง', 'ไม่ส่ง'],
+      ['คำขอเลื่อน Due', 'ส่งหาผู้อนุมัติ', 'PM, Lead', 'ไม่ส่ง', 'ไม่ส่ง'],
+      ['Bug ใหม่ (Critical / Major)', 'Minor ไม่ส่งเข้ากลุ่ม', 'Assignee, BA', 'Dev Plan 2026', 'Discord #dev-alerts'],
+      ['ผลทดสอบไม่ผ่าน / Bug ถูก Reopen', 'จากหน้า Bug หรือ Test result', 'Assignee, Reporter', 'Dev Plan 2026', 'Discord #dev-alerts'],
+      ['งานเลย Due', 'เช็กทุกวัน 09:30', 'Assignee, PM', 'ไม่ส่ง', 'Discord #dev-alerts'],
+      ['Sprint เริ่ม / ปิด และ Milestone', 'สรุปสั้น พร้อมลิงก์', 'ทุกคนในโปรเจกต์', 'Dev Plan 2026', 'Discord #dev-alerts'],
+      ['สรุปรายสัปดาห์ (ศ. 17:00)', 'จาก Reports › Weekly', 'PM, Lead (Email)', 'ไม่ส่ง', 'Slack #pm-weekly']
+    ];
+    const routes = RO.map(function (r, i) { return { n: r[0], d: r[1], who: r[2], line: r[3], hook: r[4], on: !!ro[i], op: ro[i] ? 1 : 0.5, toggle: function () { const a = ro.slice(); a[i] = !a[i]; self.setState({ ro: a }); } }; });
+    const cv = st.confirm || '';
+    return {
+      tabs: tabs, nav: nav, routes: routes, tlOn: tl ? 'true' : 'false', tlBg: tl ? '#1D4ED8' : '#C3CAD3', tlX: tl ? 21 : 3, tlTxt: tl ? 'เปิด' : 'ปิด (ค่าเริ่มต้น)', toggleTl: function () { self.setState({ tl: !tl }); }, statuses: statuses, wfTabs: wfTabs, rules: rules, types: types, mods: mods, perms: perms,
+      sGeneral: sec === 'general', sWorkflow: sec === 'workflow', sTypes: sec === 'types', sModules: sec === 'modules', sPerms: sec === 'perms', sNotify: sec === 'notify', sInteg: sec === 'integ', sDanger: sec === 'danger',
+      confirmVal: cv, cantDelete: cv !== 'CLB', delOpacity: cv === 'CLB' ? 1 : 0.5,
+      typeConfirm: function (e) { self.setState({ confirm: (e && e.target && e.target.value) || '' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

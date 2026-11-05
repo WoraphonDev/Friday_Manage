@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Plan Limits</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.muted{color:#5F6873}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:0 14px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.sc{display:flex;flex-direction:column;gap:2px;width:100%;padding:10px 12px;border-radius:10px;border:1px solid transparent;background:transparent;font:inherit;text-align:left;cursor:pointer;color:#1B1F24}
+.sc:hover{background:#F1F3F5}
+.sc[aria-pressed="true"]{background:#EEF2FF;border-color:#C7D2FE}
+.seg{display:inline-flex;border:1px solid #D5DAE0;border-radius:10px;overflow:hidden;background:#fff}
+.seg button{min-height:36px;padding:0 12px;border:0;background:#fff;font:inherit;cursor:pointer;color:#3D4550}
+.seg button[aria-pressed="true"]{background:#1B1F24;color:#fff;font-weight:600}
+.pill{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.ban{display:flex;gap:12px;align-items:center;padding:10px 16px;font-size:14px;flex-wrap:wrap}
+.sk{background:#EEF0F3;border-radius:6px}
+</style>
+</helmet>
+<div style="max-width:1400px;margin:0 auto;padding:22px 24px 40px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end">
+<div><h1 style="margin:0;font-size:24px">เมื่อใช้เกินสิทธิ์แพ็กเกจ</h1><div class="muted">หลักการ: ไม่ล็อกข้อมูล ไม่ซ่อนฟีเจอร์เฉย ๆ บอกเหตุผลและทางออกเสมอ · คนที่จ่ายเงินไม่ได้ (Member) เห็นปุ่ม "ขอให้ Admin อัปเกรด" แทน</div></div>
+<div class="seg" role="group" aria-label="มุมมองของ"><sc-for list="{{roles}}" as="r" hint-placeholder-count="2"><button type="button" aria-pressed="{{r.on}}" onClick="{{r.pick}}">{{r.n}}</button></sc-for></div>
+</div>
+<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+<aside class="card" style="flex:1 1 260px;max-width:320px;padding:10px;display:flex;flex-direction:column;gap:4px" aria-label="สถานการณ์">
+<sc-for list="{{list}}" as="s" hint-placeholder-count="7"><button class="sc" type="button" aria-pressed="{{s.on}}" onClick="{{s.pick}}"><b>{{s.n}}</b><span class="muted" style="font-size:12px">{{s.d}}</span></button></sc-for>
+</aside>
+
+<div style="flex:999 1 640px;min-width:0;display:flex;flex-direction:column;gap:12px">
+<div style="border:1px solid #E4E7EB;border-radius:14px;overflow:hidden;background:#fff;position:relative;min-height:600px">
+<div style="background:#0F172A;height:44px;display:flex;align-items:center;gap:10px;padding:0 14px" aria-hidden="true"><span style="width:24px;height:24px;border-radius:6px;background:#1D4ED8"></span><span style="width:140px;height:10px;border-radius:5px;background:#334155"></span></div>
+<sc-if value="{{hasBan}}" hint-placeholder-val="{{ true }}"><div class="ban" role="status" style="background:{{ban.bg}};color:{{ban.fg}}"><b>{{ban.t}}</b><span style="flex:1 1 260px">{{ban.d}}</span><a class="btn {{ban.bc}}" href="{{ban.href}}" style="min-height:32px">{{ban.cta}}</a></div></sc-if>
+<div style="display:flex;min-height:520px" aria-hidden="true">
+<div style="width:200px;border-right:1px solid #EEF0F3;padding:14px;display:flex;flex-direction:column;gap:10px"><div class="sk" style="height:12px;width:80%"></div><div class="sk" style="height:12px;width:60%"></div><div class="sk" style="height:12px;width:70%"></div><div class="sk" style="height:12px;width:50%"></div></div>
+<div style="flex:1;padding:18px;display:flex;flex-direction:column;gap:12px"><div class="sk" style="height:20px;width:40%"></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"><div class="sk" style="height:90px"></div><div class="sk" style="height:90px"></div><div class="sk" style="height:90px"></div></div><div class="sk" style="height:240px"></div></div>
+</div>
+
+<sc-if value="{{hasModal}}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:44px 0 0 0;background:rgba(15,23,42,.4);display:flex;align-items:center;justify-content:center;padding:16px">
+<div role="dialog" aria-modal="true" aria-labelledby="pl-t" style="width:min(500px,100%);background:#fff;border-radius:14px;box-shadow:0 24px 64px rgba(15,23,42,.35);padding:22px;display:flex;flex-direction:column;gap:12px">
+<span class="pill" style="background:{{mo.tb}};color:{{mo.tf}};align-self:flex-start">{{mo.tag}}</span>
+<h2 id="pl-t" style="margin:0;font-size:19px">{{mo.t}}</h2>
+<div class="muted">{{mo.d}}</div>
+<sc-if value="{{mo.hasBar}}" hint-placeholder-val="{{ false }}"><div><div style="display:flex;justify-content:space-between;font-size:13px"><span>{{mo.barL}}</span><b>{{mo.barV}}</b></div><div style="height:8px;background:#EEF0F3;border-radius:99px;overflow:hidden;margin-top:4px"><div style="height:100%;width:{{mo.barW}}%;background:{{mo.barC}}"></div></div></div></sc-if>
+<ul style="margin:0;padding-left:20px;font-size:13px;line-height:1.8;color:#3D4550"><sc-for list="{{mo.pts}}" as="p" hint-placeholder-count="3"><li>{{p}}</li></sc-for></ul>
+<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><sc-for list="{{mo.btns}}" as="b" hint-placeholder-count="2"><a class="{{b.cls}}" href="{{b.href}}">{{b.n}}</a></sc-for></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{hasLock}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:44px 0 0 200px;background:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;padding:16px">
+<div class="card" style="max-width:440px;padding:22px;display:flex;flex-direction:column;gap:10px;align-items:flex-start;box-shadow:0 12px 32px rgba(15,23,42,.12)">
+<span class="pill" style="background:#EDE9FE;color:#5B21B6">แพ็กเกจ Team</span>
+<h2 style="margin:0;font-size:19px">Gantt ใช้ได้ในแพ็กเกจ Team</h2>
+<div class="muted">ดูความสัมพันธ์ของงาน (Dependency) และเส้นทางวิกฤต · ข้อมูลโปรเจกต์ของคุณพร้อมแสดงแล้ว</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn pri" href="{{lockHref}}">{{lockCta}}</a><a class="btn" href="Landing.dc.html">ดูแพ็กเกจ</a></div>
+<span class="muted" style="font-size:12px">{{lockNote}}</span>
+</div>
+</div>
+</sc-if>
+</div>
+
+<div class="card" style="padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;font-size:13px">
+<div><b>เกิดอะไรขึ้น</b><div class="muted">{{info.what}}</div></div>
+<div><b>ระบบทำอะไร</b><div class="muted">{{info.sys}}</div></div>
+<div><b>ใครได้รับแจ้ง</b><div class="muted">{{info.who}}</div></div>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  state = { s: 'seat', role: 'owner' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const s = st.s || 'seat', role = st.role || 'owner', own = role === 'owner';
+    const req = { n: 'ขอให้ Admin อัปเกรด', cls: 'btn pri', href: '#' };
+    const up = function (n) { return { n: n || 'เปลี่ยนแพ็กเกจ', cls: 'btn pri', href: 'Checkout.dc.html' }; };
+    const later = { n: 'ไว้ทีหลัง', cls: 'btn', href: '#' };
+    const S = {
+      seat: { n: 'ทีมโตเกินแพ็กเกจ', d: '12 คน บน Team S (10 คน)',
+        ban: ['ทีมมี 12 คน เกิน Team S (10 คน)', own ? 'ใช้งานได้ตามปกติอีก 14 วัน (ถึง 19 พ.ย.) หลังจากนั้นจะเชิญคนเพิ่มไม่ได้' : 'แจ้ง Owner แล้ว · ทุกคนใช้งานได้ตามปกติ', '#FEF3C7', '#92400E', own ? 'เปลี่ยนเป็น Team M' : 'รับทราบ', own ? 'Checkout.dc.html' : '#', own ? 'pri' : ''],
+        modal: own ? { tag: 'เชิญสมาชิก', tb: '#FEF3C7', tf: '#92400E', t: 'เชิญคนที่ 13 ไม่ได้ในตอนนี้', d: 'Team S รองรับ 10 คน และช่วงผ่อนผันหมดแล้ว · Guest (ลูกค้า) ยังเชิญได้ไม่จำกัด', bar: ['สมาชิก', '12 / 10 คน', 100, '#DC2626'], pts: ['Team M รองรับ 25 คน คิดส่วนต่างตามวันที่เหลือของรอบ', 'หรือปิดบัญชีคนที่ไม่ได้ใช้งาน (Jane ไม่ได้เข้า 54 วัน)'], btns: [{ n: 'ดูสมาชิกที่ไม่ใช้งาน', cls: 'btn', href: 'WorkspaceMembers.dc.html' }, up('เปลี่ยนเป็น Team M')] } : null,
+        info: ['จำนวนสมาชิก (ไม่นับ Guest) เกินขนาดแพ็กเกจ', 'ผ่อนผัน 14 วัน · ระหว่างนั้นทำงานได้ทุกอย่าง · หลังจากนั้นหยุดเฉพาะการเชิญคนใหม่', 'Owner และ Admin ทางอีเมล + แบนเนอร์ · Member เห็นแบนเนอร์แบบไม่มีปุ่มซื้อ'] },
+      proj: { n: 'Free ครบ 3 โปรเจกต์', d: 'กด + New project',
+        ban: null,
+        modal: { tag: 'แพ็กเกจ Free', tb: '#EEF0F3', tf: '#3D4550', t: 'Free สร้างได้ 3 โปรเจกต์', d: 'Workspace นี้มี 3 โปรเจกต์แล้ว · Archive โปรเจกต์ที่จบแล้วเพื่อสร้างใหม่ได้', bar: ['โปรเจกต์ที่ใช้งาน', '3 / 3', 100, '#D97706'], pts: ['Team ทุกขนาดสร้างได้ไม่จำกัด', 'โปรเจกต์ที่ Archive ไม่นับ และกู้คืนได้'], btns: own ? [{ n: 'Archive โปรเจกต์', cls: 'btn', href: '#' }, up('ทดลอง Team ฟรี 14 วัน')] : [later, req] },
+        info: ['กดสร้างโปรเจกต์ที่ 4 บนแพ็กเกจ Free', 'แสดงทางเลือก 2 ทาง: Archive หรืออัปเกรด · ไม่ลบอะไร', 'ถ้า Member กด "ขอให้ Admin อัปเกรด" Admin ได้รับแจ้งใน Inbox'] },
+      feat: { n: 'ฟีเจอร์ของแพ็กเกจเสียเงิน', d: 'เปิด tab Gantt บน Free',
+        ban: null, modal: null, lock: true,
+        info: ['เปิดฟีเจอร์ที่อยู่ในแพ็กเกจ Team', 'แสดง tab ตามปกติ พร้อมคำอธิบายว่าได้อะไร · ไม่ซ่อน tab', 'ไม่แจ้งใคร · นับสถิติว่าฟีเจอร์ไหนถูกกดบ่อยเพื่อใช้ปรับแพ็กเกจ'] },
+      trial: { n: 'ทดลองใช้ใกล้หมด', d: 'เหลือ 3 วัน',
+        ban: ['ทดลอง Team เหลือ 3 วัน', own ? 'หลัง 8 พ.ย. จะกลับเป็น Free · ข้อมูลไม่หาย แต่ต้องเลือก 3 โปรเจกต์ที่ใช้ต่อ ที่เหลือเป็นอ่านอย่างเดียว' : 'Owner กำลังตัดสินใจเรื่องแพ็กเกจ', '#DBEAFE', '#1E40AF', own ? 'เลือกแพ็กเกจ' : 'รับทราบ', own ? 'Checkout.dc.html' : '#', own ? 'pri' : ''],
+        modal: null,
+        info: ['ช่วงทดลอง 14 วันใกล้หมด', 'แจ้งล่วงหน้า 7, 3 และ 1 วัน · หมดแล้วลดเป็น Free ให้เลือก 3 โปรเจกต์ที่ใช้ต่อ', 'Owner ทางอีเมล + แบนเนอร์ · Member เห็นแบนเนอร์เฉพาะวันสุดท้าย'] },
+      unpaid: { n: 'ใบแจ้งหนี้ค้างชำระ', d: 'PromptPay / โอน ยังไม่จ่าย',
+        ban: ['ใบแจ้งหนี้ INV-2569-0112 เลยกำหนด 3 วัน', own ? 'ชำระภายใน 4 วัน (ถึง 9 พ.ย.) หลังจากนั้น Workspace จะเป็นแบบอ่านอย่างเดียวจนกว่าจะชำระ' : 'ฝ่ายบัญชีกำลังดำเนินการ · ใช้งานได้ตามปกติ', '#FEE2E2', '#991B1B', own ? 'ชำระด้วย PromptPay' : 'รับทราบ', own ? 'Checkout.dc.html' : '#', own ? 'pri' : ''],
+        modal: null,
+        info: ['ไม่ได้รับเงินตามใบแจ้งหนี้ (หรือบัตรตัดไม่ผ่าน)', 'ผ่อนผัน 7 วัน → อ่านอย่างเดียว (ดูและ Export ได้ แก้ไม่ได้) → 60 วันแจ้งก่อนลบ · ไม่ลบทันที', 'Owner และอีเมลบัญชีทุกวันที่ 0, 3, 6 · ทีม Friday เห็นใน Super Admin'] },
+      store: { n: 'พื้นที่ไฟล์เต็ม', d: 'อัปโหลดไฟล์ไม่ได้',
+        ban: null,
+        modal: { tag: 'พื้นที่จัดเก็บ', tb: '#FEE2E2', tf: '#991B1B', t: 'พื้นที่ไฟล์เต็ม', d: 'อัปโหลด Bug_safari.mp4 (85 MB) ไม่ได้ · ไฟล์เดิมทั้งหมดยังเปิดได้ตามปกติ', bar: ['ใช้ไป', '120 / 120 GB', 100, '#DC2626'], pts: ['ไฟล์ใหญ่สุด 10 ไฟล์ใช้ 38 GB (ส่วนใหญ่เป็นวิดีโอ)', 'ลบไฟล์ในถังขยะคืนพื้นที่ได้ 6 GB ทันที'], btns: own ? [{ n: 'จัดการไฟล์', cls: 'btn', href: 'Files.dc.html' }, up('เพิ่มพื้นที่')] : [later, req] },
+        info: ['พื้นที่ไฟล์รวมเต็ม (Team = 10 GB ต่อคน)', 'หยุดเฉพาะการอัปโหลด · คอมเมนต์และงานอื่นใช้ได้ปกติ · เตือนก่อนที่ 80% และ 95%', 'Owner และคนที่พยายามอัปโหลด'] },
+      auto: { n: 'Automation ครบโควตา', d: '1,000 ครั้งในเดือนนี้',
+        ban: ['Automation ทำงานครบ 1,000 ครั้งของเดือนนี้', own ? 'กฎจะหยุดชั่วคราวจนถึง 1 ธ.ค. · กฎด้านแจ้งเตือน Bug Critical ยังทำงานต่อ' : 'แจ้ง Admin แล้ว', '#FEF3C7', '#92400E', own ? 'ดูกฎที่ทำงานบ่อย' : 'รับทราบ', own ? 'Automation.dc.html' : '#', own ? 'pri' : ''],
+        modal: null,
+        info: ['กฎ Automation ทำงานครบโควตาของเดือน', 'หยุดกฎชั่วคราว ยกเว้นกฎที่ติดดาว "สำคัญ" · ไม่มีการคิดเงินเพิ่มอัตโนมัติ', 'Admin ทางอีเมลที่ 80% และ 100%'] }
+    };
+    const keys = ['seat', 'proj', 'feat', 'trial', 'unpaid', 'store', 'auto'];
+    const list = keys.map(function (k) { return { n: S[k].n, d: S[k].d, on: s === k ? 'true' : 'false', pick: function () { self.setState({ s: k }); } }; });
+    const x = S[s];
+    const b = x.ban;
+    const m = x.modal;
+    return {
+      roles: [['owner', 'Owner / Admin'], ['member', 'Member']].map(function (r) { return { n: r[1], on: role === r[0] ? 'true' : 'false', pick: function () { self.setState({ role: r[0] }); } }; }),
+      list: list, hasBan: !!b, ban: b ? { t: b[0], d: b[1], bg: b[2], fg: b[3], cta: b[4], href: b[5], bc: b[6] } : { t: '', d: '', bg: '', fg: '', cta: '', href: '#', bc: '' },
+      hasModal: !!m, mo: m ? { tag: m.tag, tb: m.tb, tf: m.tf, t: m.t, d: m.d, hasBar: !!m.bar, barL: m.bar ? m.bar[0] : '', barV: m.bar ? m.bar[1] : '', barW: m.bar ? m.bar[2] : 0, barC: m.bar ? m.bar[3] : '', pts: m.pts, btns: m.btns } : { tag: '', tb: '', tf: '', t: '', d: '', hasBar: false, barL: '', barV: '', barW: 0, barC: '', pts: [], btns: [] },
+      hasLock: !!x.lock, lockCta: own ? 'ทดลอง Team ฟรี 14 วัน' : 'ขอให้ Admin อัปเกรด', lockHref: own ? 'Checkout.dc.html' : '#', lockNote: own ? 'ไม่ต้องใช้บัตรเครดิต' : 'Admin จะได้รับคำขอใน Inbox พร้อมชื่อฟีเจอร์ที่คุณต้องการ',
+      info: { what: x.info[0], sys: x.info[1], who: x.info[2] }
+    };
+  }
+}
+</script>
+</body>
+</html>

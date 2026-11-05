@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Notification templates</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.page{max-width:1380px;margin:0 auto;padding:22px 24px 48px;display:flex;flex-direction:column;gap:16px}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.muted{color:#5F6873}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.chip[aria-pressed="true"]{background:#1B1F24;border-color:#1B1F24;color:#fff}
+.col{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.lbl{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}
+.tag{font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;background:#EEF0F3;color:#3D4550}
+.phone{background:#8CABD9;border-radius:18px;padding:14px 12px;min-height:520px;display:flex;flex-direction:column;gap:10px}
+.oa{display:flex;gap:8px;align-items:flex-start}
+.oaav{width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;font-size:13px}
+.flex{background:#fff;border-radius:14px;overflow:hidden;width:100%;max-width:270px}
+.fh{padding:10px 14px;color:#fff;font-weight:700;font-size:13px}
+.fb{padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.fr{display:flex;justify-content:space-between;gap:8px}
+.fbtn{display:block;text-align:center;padding:10px;border-top:1px solid #EEF0F3;font-weight:700;font-size:13px;color:#1D4ED8;text-decoration:none}
+.mail{background:#fff;border:1px solid #E4E7EB;border-radius:12px;overflow:hidden;min-height:520px;display:flex;flex-direction:column}
+.mh{padding:12px 16px;border-bottom:1px solid #EEF0F3;font-size:13px}
+.mb{padding:20px;display:flex;flex-direction:column;gap:12px;font-size:14px}
+.mbtn{display:inline-block;padding:10px 18px;border-radius:8px;background:#1D4ED8;color:#fff;text-decoration:none;font-weight:700;font-size:14px}
+.hook{background:#1F2328;color:#E6E8EB;border-radius:12px;padding:14px;min-height:520px;display:flex;flex-direction:column;gap:10px;font-size:13px}
+.emb{background:#2B3036;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;border-top:3px solid #60A5FA}
+.code{background:#0F1419;border-radius:8px;padding:10px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;line-height:1.5;white-space:pre-wrap;color:#B5BDC6;overflow:auto}
+.sw{position:relative;width:44px;height:26px;border-radius:99px;border:0;cursor:pointer;padding:0;flex:none}
+.sw span{position:absolute;top:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="AdminConsole.dc.html" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Admin Console › ช่องทางแจ้งเตือน › Template</a>
+</header>
+<div class="page">
+<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end">
+<div><h1 style="margin:0;font-size:24px">หน้าตาข้อความแจ้งเตือน</h1><div class="muted">ข้อความเดียวกันเมื่อส่งออกแต่ละช่องทาง · เลือกเหตุการณ์เพื่อดูตัวอย่าง</div></div>
+<div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #E4E7EB;border-radius:10px;padding:8px 12px">
+<button class="sw" type="button" role="switch" aria-checked="{{safeOn}}" onClick="{{toggleSafe}}" aria-label="โหมดปลอดภัย" style="background:{{safeBg}}"><span style="left:{{safeX}}px"></span></button>
+<div><b style="font-size:13px">โหมดปลอดภัย</b><div class="muted" style="font-size:12px">ส่งเฉพาะหัวข้อ + ลิงก์ ไม่ส่งรายละเอียดออกนอกแอป</div></div>
+</div>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap" role="group" aria-label="เหตุการณ์">
+<sc-for list="{{events}}" as="e" hint-placeholder-count="4"><button class="chip" type="button" aria-pressed="{{e.on}}" onClick="{{e.pick}}">{{e.n}} <span style="opacity:.7;font-size:12px">· {{e.to}}</span></button></sc-for>
+</div>
+
+<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+<div class="col">
+<div class="lbl">LINE OA <span class="tag">{{lineTo}}</span></div>
+<div class="phone" aria-label="ตัวอย่างข้อความ LINE">
+<div style="text-align:center;font-size:11px;color:#fff;opacity:.9">วันนี้ 10:12</div>
+<div class="oa">
+<span class="oaav">F</span>
+<div style="display:flex;flex-direction:column;gap:6px;min-width:0;flex:1">
+<span style="font-size:11px;color:#fff">Friday Manage</span>
+<div class="flex">
+<div class="fh" style="background:{{c}}">{{head}}</div>
+<div class="fb">
+<b style="font-size:15px;line-height:1.35">{{title}}</b>
+<span class="muted" style="font-size:12px">{{proj}}</span>
+<sc-if value="{{showDetail}}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="3"><div class="fr"><span class="muted">{{r.k}}</span><b style="text-align:right">{{r.v}}</b></div></sc-for>
+<sc-if value="{{hasNote}}" hint-placeholder-val="{{ false }}"><div style="background:#F6F7F9;border-radius:8px;padding:8px;font-size:12px">“{{note}}”</div></sc-if>
+</sc-if>
+<sc-if value="{{isSafe}}" hint-placeholder-val="{{ false }}"><div class="muted" style="font-size:12px">รายละเอียดดูได้ในแอปหลังเข้าสู่ระบบ</div></sc-if>
+</div>
+<sc-for list="{{btns}}" as="b" hint-placeholder-count="2"><a class="fbtn" href="{{b.href}}" style="color:{{b.c}}">{{b.n}}</a></sc-for>
+</div>
+</div>
+</div>
+<div style="margin-top:auto;background:rgba(255,255,255,.85);border-radius:10px;padding:8px 10px;font-size:11px;color:#3D4550">{{lineNote}}</div>
+</div>
+</div>
+
+<div class="col">
+<div class="lbl">Email <span class="tag">{{mailTo}}</span></div>
+<div class="mail" aria-label="ตัวอย่างอีเมล">
+<div class="mh"><div><span class="muted">จาก</span> Friday Manage &lt;notify@example.com&gt;</div><div><span class="muted">ถึง</span> {{mailRcpt}}</div><div style="font-weight:700;margin-top:4px">{{subject}}</div></div>
+<div class="mb">
+<div style="display:flex;align-items:center;gap:8px"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700">F</span><b>Friday Manage</b></div>
+<div style="height:4px;border-radius:2px;background:{{c}}"></div>
+<div style="font-size:16px;font-weight:700;line-height:1.4">{{head}}: {{title}}</div>
+<div class="muted" style="font-size:13px">{{proj}}</div>
+<sc-if value="{{showDetail}}" hint-placeholder-val="{{ true }}">
+<table style="border-collapse:collapse;font-size:13px;width:100%"><tbody><sc-for list="{{rows}}" as="r" hint-placeholder-count="3"><tr><td style="padding:6px 0;color:#5F6873;width:40%">{{r.k}}</td><td style="padding:6px 0;font-weight:600">{{r.v}}</td></tr></sc-for></tbody></table>
+<sc-if value="{{hasNote}}" hint-placeholder-val="{{ false }}"><div style="border:1px solid #EEF0F3;border-radius:8px;padding:10px;font-size:13px">“{{note}}”</div></sc-if>
+</sc-if>
+<div><a class="mbtn" href="{{btn1href}}">{{btn1}}</a></div>
+<div class="muted" style="font-size:11px;border-top:1px solid #EEF0F3;padding-top:10px">คุณได้รับอีเมลนี้เพราะ{{why}} · <a href="Profile.dc.html">ตั้งค่าการแจ้งเตือน</a> · <a href="Profile.dc.html">ยกเลิกการรับอีเมลประเภทนี้</a></div>
+</div>
+</div>
+</div>
+
+<div class="col">
+<div class="lbl">Webhook ทั่วไป <span class="tag">{{hookTo}}</span></div>
+<div class="hook" aria-label="ตัวอย่างข้อความ Webhook">
+<div style="display:flex;align-items:center;gap:8px"><span style="width:28px;height:28px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">F</span><b>Friday Manage</b><span style="font-size:10px;background:#3B82F6;color:#fff;border-radius:3px;padding:0 4px">BOT</span><span style="color:#8B949E;font-size:11px">วันนี้ 10:12</span></div>
+<div class="emb" style="border-top-color:{{c}}">
+<b style="color:#fff">{{head}}</b>
+<span><a href="{{btn1href}}" style="color:#60A5FA;font-weight:700">{{title}}</a></span>
+<span style="color:#8B949E;font-size:12px">{{proj}}</span>
+<sc-if value="{{showDetail}}" hint-placeholder-val="{{ true }}"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:4px"><sc-for list="{{rows}}" as="r" hint-placeholder-count="3"><div><div style="color:#8B949E;font-size:11px">{{r.k}}</div><div style="font-weight:600">{{r.v}}</div></div></sc-for></div></sc-if>
+</div>
+<div style="color:#8B949E;font-size:11px">รูปแบบเดียวกันนี้แปลงเป็นข้อความของ Discord, Slack, Microsoft Teams หรือ Telegram group ให้อัตโนมัติ ตามที่ตั้งไว้ใน Webhook</div>
+<div style="color:#8B949E;font-size:11px;font-weight:700;margin-top:4px">Payload (รูปแบบ JSON)</div>
+<div class="code">{{json}}</div>
+</div>
+</div>
+</div>
+
+<div class="card" style="padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;font-size:13px">
+<div><b>ส่งหาใคร</b><div class="muted">LINE ส่วนตัวและ Email ส่งหาคนที่เกี่ยวข้องตามกฎใน Profile · LINE กลุ่มและ Webhook ส่งตามกฎของโปรเจกต์</div></div>
+<div><b>ปุ่มในข้อความ</b><div class="muted">ปุ่ม "อนุมัติ / ปฏิเสธ" ใน LINE ทำงานได้ทันทีโดยไม่ต้องเปิดแอป · ใน Email และ Webhook เป็นลิงก์เข้าแอป (ต้องล็อกอิน)</div></div>
+<div><b>ภาษาและการปรับแต่ง</b><div class="muted">ส่งตามภาษาของผู้รับ (TH / EN) · Admin แก้หัวข้อและข้อความท้ายได้ แต่โครงสร้างข้อความเป็นแบบมาตรฐาน</div></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  state = { ev: 'due', safe: false };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const ev = st.ev || 'due', safe = !!st.safe;
+    const E = {
+      assign: { n: 'มอบหมายงาน', to: 'ส่วนตัว', c: '#1D4ED8', head: 'Mick มอบหมายงานให้คุณ', title: 'DP-40 คำนวณมูลค่าหลักประกัน & วงเงินตามสัดส่วน', proj: 'Development Plan 2026-11 · Credit Line', rows: [['Plan', '7 – 11 ธ.ค. 2569'], ['Priority', 'Medium'], ['Size', 'S · 3 MD']], note: '', btns: [['เปิดงาน', 'TaskDetail.dc.html', '#1D4ED8'], ['รับทราบ', 'MyTasks.dc.html', '#3D4550']], line: 'LINE ส่วนตัวของ Kaijeaw', mail: 'kaijeaw@example.com', hook: 'ไม่ส่ง (เหตุการณ์ส่วนตัว)', why: 'คุณเป็น Assignee', subject: '[Friday] Mick มอบหมาย DP-40 ให้คุณ' },
+      due: { n: 'ขอเลื่อน Due', to: 'ส่วนตัว Lead', c: '#B45309', head: 'Kaijeaw ขอเลื่อนวันครบกำหนด', title: 'DP-30 Curtailment Information + Plan Template', proj: 'Development Plan 2026-11 · Credit Line', rows: [['Due เดิม', '1 ธ.ค. 2569'], ['Due ใหม่', '4 ธ.ค. 2569'], ['ผลกระทบ', 'Workload Kaijeaw สัปดาห์นี้ 18 / 5 MD']], note: 'BA Donut ยืนยันเพิ่ม Plan Template แบบ Fleet เมื่อ 30 พ.ย.', btns: [['อนุมัติ', 'Inbox.dc.html', '#15803D'], ['ปฏิเสธ', 'Inbox.dc.html', '#B91C1C'], ['เปิดในแอป', 'DueRequest.dc.html', '#1D4ED8']], line: 'LINE ส่วนตัวของ Mick (Lead)', mail: 'mick@example.com', hook: 'ไม่ส่ง (ต้องอนุมัติรายคน)', why: 'คุณเป็น Lead ของโปรเจกต์ (ผู้อนุมัติ)', subject: '[Friday] Kaijeaw ขอเลื่อน Due DP-30 · รอคุณอนุมัติ' },
+      bug: { n: 'Bug ใหม่ (Major)', to: 'กลุ่มทีม', c: '#DC2626', head: 'Bug ใหม่ · Major', title: 'DP-525 Workflow ส่งกลับแก้ไข: สถานะไม่กลับเป็น Draft', proj: 'Development Plan 2026-11 · Credit Line', rows: [['Severity', 'Major'], ['Assignee', 'Kaijeaw'], ['พบจาก', 'DP-20 · SIT run #1']], note: '', btns: [['เปิด Bug', 'BugDetail.dc.html', '#1D4ED8']], line: 'LINE กลุ่ม "Dev Plan 2026"', mail: 'ไม่ส่ง', hook: 'Discord #dev-alerts', why: 'คุณเป็น Watcher', subject: '[Friday] Bug ใหม่ DP-525' },
+      digest: { n: 'สรุปงานรายวัน', to: 'ส่วนตัว', c: '#0F766E', head: 'สรุปงานวันนี้ของ Mick', title: 'พ. 2 ธ.ค. 2569', proj: 'Development Plan 2026-11', rows: [['ครบกำหนดวันนี้ (ทีม)', '2 งาน'], ['Overdue (ทีม)', '7 งาน'], ['รอคุณ Review / อนุมัติ', '4 รายการ']], note: '', btns: [['เปิด Home', 'Home.dc.html', '#1D4ED8']], line: 'LINE ส่วนตัวของ Mick', mail: 'mick@example.com', hook: 'ไม่ส่ง', why: 'คุณเปิด Daily digest ไว้', subject: '[Friday] สรุปงานวันนี้ · ครบกำหนด 2 · Overdue 7' }
+    };
+    const e = E[ev];
+    const events = ['assign', 'due', 'bug', 'digest'].map(function (k) { return { n: E[k].n, to: E[k].to, on: ev === k ? 'true' : 'false', pick: function () { self.setState({ ev: k }); } }; });
+    const payload = { event: ev === 'due' ? 'due_change.requested' : (ev === 'bug' ? 'issue.created' : (ev === 'assign' ? 'issue.assigned' : 'digest.daily')), workspace: 'friday-workspace', project: e.proj.split(' · ')[0], title: e.title, url: 'https://friday.app/…' };
+    if (!safe) payload.fields = e.rows.reduce(function (o, r) { o[r[0]] = r[1]; return o; }, {});
+    return {
+      events: events, c: e.c, head: e.head, title: e.title, proj: e.proj,
+      rows: e.rows.map(function (r) { return { k: r[0], v: r[1] }; }), note: e.note, hasNote: !!e.note,
+      btns: e.btns.map(function (b) { return { n: b[0], href: b[1], c: b[2] }; }), btn1: e.btns[0][0], btn1href: e.btns[0][1],
+      lineTo: e.line, mailTo: e.mail, mailRcpt: e.mail, hookTo: e.hook, why: e.why, subject: e.subject,
+      lineNote: ev === 'due' ? 'กด "อนุมัติ" ได้ทันทีใน LINE · ระบบตรวจว่าเป็นบัญชีที่ผูกกับ Mick และบันทึกใน Audit log' : 'กดปุ่มเพื่อเปิดในแอป (ต้องเข้าสู่ระบบ)',
+      showDetail: !safe, isSafe: safe, json: JSON.stringify(payload, null, 2),
+      safeOn: safe ? 'true' : 'false', safeBg: safe ? '#1D4ED8' : '#C3CAD3', safeX: safe ? 21 : 3,
+      toggleSafe: function () { self.setState({ safe: !safe }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

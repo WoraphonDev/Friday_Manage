@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Reports</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.55}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.phead{background:#fff;padding:16px 24px 0;border-bottom:1px solid #E4E7EB}
+.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:10px}
+.tab{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;color:#56606B;text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+.tab.on{color:#1D4ED8;border-bottom-color:#1D4ED8;font-weight:600}
+.page{max-width:1360px;margin:0 auto;padding:20px 24px 48px;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.muted{color:#5F6873}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.rn{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 12px;border:0;border-radius:8px;background:transparent;font:inherit;text-align:left;cursor:pointer;color:#3D4550}
+.rn:hover{background:#F1F3F5}
+.rn.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.doc{padding:28px 32px;display:flex;flex-direction:column;gap:18px;line-height:1.7}
+.doc h2{margin:0;font-size:22px}
+.doc h3{margin:0 0 6px;font-size:15px}
+.doc ul{margin:0;padding-left:20px}
+.tb{width:100%;border-collapse:collapse;font-size:13px}
+.tb th{text-align:left;padding:8px 10px;background:#F8F9FB;color:#5F6873;font-size:12px;border-bottom:1px solid #E4E7EB}
+.tb td{padding:8px 10px;border-bottom:1px solid #F1F3F5}
+.chip{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.chip[aria-pressed="true"]{background:#1B1F24;border-color:#1B1F24;color:#fff}
+.cov{height:8px;background:#EEF0F3;border-radius:99px;overflow:hidden;min-width:60px}
+@media(max-width:760px){.doc{padding:18px}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<span style="flex:1"></span>
+<a href="Profile.dc.html" aria-label="โปรไฟล์" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<header class="phead">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<div style="width:32px;height:32px;border-radius:8px;background:#334155;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">DP</div>
+<h1 style="margin:0;font-size:22px">Development Plan 2026-11</h1>
+</div>
+<nav class="tabs" aria-label="Project views">
+<a class="tab" href="LeadDashboard.dc.html">ภาพรวม (Lead)</a><a class="tab on" href="Reports.dc.html">Reports</a><a class="tab" href="Backlog.dc.html">Backlog</a><a class="tab" href="Table.dc.html">Table</a><a class="tab" href="Kanban.dc.html">Kanban</a><a class="tab" href="Gantt.dc.html">Gantt</a><a class="tab" href="Members.dc.html">Members</a><a class="tab" href="ProjectSettings.dc.html">Settings</a>
+</nav>
+</header>
+
+<div class="page">
+<nav class="card" aria-label="รายงาน" style="flex:1 1 220px;max-width:250px;padding:8px;display:flex;flex-direction:column;gap:2px">
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="3"><button class="{{n.cls}}" type="button" onClick="{{n.pick}}" aria-current="{{n.cur}}">{{n.n}}</button></sc-for>
+<div class="muted" style="font-size:12px;padding:10px 12px;border-top:1px solid #EEF0F3;margin-top:6px">รายงานสร้างจากข้อมูลจริงในโปรเจกต์ · แก้ข้อความก่อนส่งได้</div>
+</nav>
+
+<section style="flex:999 1 640px;min-width:0;display:flex;flex-direction:column;gap:12px">
+
+<sc-if value="{{rWeekly}}" hint-placeholder-val="{{ true }}">
+<div class="card" style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<select class="btn" aria-label="รอบรายงาน"><option>สัปดาห์ 30 พ.ย. – 4 ธ.ค. 2569 (ร่าง)</option><option>สัปดาห์ 23–27 พ.ย.</option><option>สัปดาห์ 16–20 พ.ย.</option></select>
+<select class="btn" aria-label="ผู้รับ"><option>ส่งถึง: หัวหน้างาน + ทีม BA</option><option>ทีม Dev</option></select>
+<span style="flex:1"></span>
+<button class="btn" type="button">คัดลอกข้อความ</button><button class="btn" type="button">Export PDF</button><button class="btn" type="button">ส่งทาง LINE</button><button class="btn pri" type="button">ส่งอีเมล</button>
+</div>
+<article class="card doc" aria-label="รายงานประจำสัปดาห์">
+<div><div class="muted" style="font-size:13px">รายงานประจำสัปดาห์ · ร่าง ณ พ. 2 ธ.ค. 2569 · ส่งอัตโนมัติ ศ. 4 ธ.ค. 16:00 · ข้อมูลจริงจาก Development Plan 2026-11 · สถานะจำลอง ณ พ. 2 ธ.ค. 2569</div><h2>Development Plan 2026-11 · สัปดาห์ 30 พ.ย. – 4 ธ.ค.</h2></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+<div style="background:#F8F9FB;border-radius:10px;padding:10px 12px"><div class="muted" style="font-size:12px">สถานะรวม</div><b style="color:#B91C1C">Off track</b></div>
+<div style="background:#F8F9FB;border-radius:10px;padding:10px 12px"><div class="muted" style="font-size:12px">เสร็จ / ทั้งหมด</div><b>72 / 334 งาน</b></div>
+<div style="background:#F8F9FB;border-radius:10px;padding:10px 12px"><div class="muted" style="font-size:12px">Man-Day ใช้ไป</div><b>189 / 944</b></div>
+<div style="background:#F8F9FB;border-radius:10px;padding:10px 12px"><div class="muted" style="font-size:12px">งานล่าช้า</div><b style="color:#B91C1C">7</b></div>
+</div>
+<div><h3>1. สัปดาห์นี้</h3><ul>
+<li>เสร็จแล้ว <b>12 งาน (46 MD)</b> · กำลังทำ 14 งาน · รอ Review 3 งาน</li>
+<li>งานเลยกำหนด 7 งาน: Kaijeaw 4 · Top 2 · Pond 1</li>
+<li>Bug ใหม่ 1 (DP-525 Workflow ส่งกลับแก้ไข) · แก้แล้ว รอ Donut ตรวจซ้ำ</li>
+</ul></div>
+<div><h3>2. สัปดาห์หน้า (7–11 ธ.ค. · หยุด 7 และ 10 ธ.ค.)</h3><ul>
+<li>เริ่มตามแผน <b>14 งาน (37 MD)</b>: Drawdown 6 · Credit Line 5 · Repayment 2 · BFC 1</li>
+<li>Sprint 3 Review และ Sprint 4 Planning ศ. 11 ธ.ค.</li>
+</ul></div>
+<div><h3>3. ความเสี่ยงและสิ่งที่ต้องตัดสินใจ</h3>
+<table class="tb"><thead><tr><th>ความเสี่ยง</th><th>ผลกระทบ</th><th>ข้อเสนอ</th></tr></thead><tbody>
+<tr><td><b>Pond</b> สัปดาห์นี้ 13.0 MD (capacity 5)</td><td>Drawdown ช้าต่อเนื่อง · DP-91 รอ Review เลย 7 วัน</td><td>โอนงาน Interface HP บางส่วนให้ Zo หรือ P’Tum</td></tr>
+<tr><td><b>Kaijeaw</b> Overdue 4 งาน · สัปดาห์นี้ 16.0 MD</td><td>Credit Line Go-live 26 ม.ค. เสี่ยงสูง</td><td>เพิ่ม Dev 1 คนใน Credit Line หรือแยกงาน UX/UI ออก</td></tr>
+<tr><td>แผนต้องใช้ ≈ 29 สัปดาห์ แต่มี ≈ 24</td><td>Go-live รวมเลื่อนราว 5 สัปดาห์</td><td>เลือก: เพิ่มคน / ขยายเวลา / ลดขอบเขต Phase หลัง</td></tr>
+</tbody></table></div>
+<div><h3>4. ขอความช่วยเหลือ</h3><ul><li>ยืนยัน BA ของงาน Campaign No.266 และ BA "KL" ของ OEM Portal (No.296)</li><li>จัด Interface FP/HP/KL 23 งานเข้าแผน (ยังไม่มีวันและ BA)</li></ul></div>
+<div class="muted" style="font-size:12px;border-top:1px solid #EEF0F3;padding-top:10px">ส่งอัตโนมัติทุกวันศุกร์ 16:00 · <a href="#">ตั้งค่ารอบส่ง</a></div>
+</article>
+</sc-if>
+
+<sc-if value="{{rPva}}" hint-placeholder-val="{{ false }}">
+<div class="card" style="padding:14px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:#F8FAFF;border-color:#DBEAFE"><b>Actual จำลอง</b><span class="muted" style="font-size:13px;flex:1">Actual Start / End บันทึกอัตโนมัติเมื่อทีมเปลี่ยนสถานะงาน · ตัวเลขในตารางนี้จำลอง ณ 2 ธ.ค. เพื่อทดลอง UI</span><a class="btn" href="ImportExcel.dc.html">อัปเดต Actual จาก Excel</a></div>
+<div class="card" style="overflow-x:auto">
+<table class="tb" style="min-width:820px"><thead><tr><th>Module</th><th>งาน (เสร็จ / ทั้งหมด)</th><th>Man-Day แผน</th><th>Man-Day ใช้จริง</th><th>Plan End</th><th>คาดว่าจะจบ</th><th>ส่วนต่าง</th></tr></thead><tbody>
+<sc-for list="{{pva}}" as="m" hint-placeholder-count="11"><tr><td><b>{{m.n}}</b></td><td>{{m.dn}} / {{m.k}}</td><td>{{m.md}}</td><td>{{m.mdu}}</td><td>{{m.e}}</td><td>{{m.fc}}</td><td style="color:{{m.dc}};font-weight:600">{{m.diff}}</td></tr></sc-for>
+</tbody></table>
+</div>
+<div class="muted" style="font-size:12px">คาดการณ์วันจบคำนวณจากความเร็วจริงของ Module (Man-Day ที่ปิดได้ต่อสัปดาห์) เทียบกับ Man-Day ที่เหลือ</div>
+</sc-if>
+
+<sc-if value="{{rTrace}}" hint-placeholder-val="{{ false }}">
+<div class="card" style="padding:14px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:#FFFBEB;border-color:#FDE68A"><b>ยังไม่ได้นำเข้ารายการ FR จาก SRS</b><span style="font-size:13px;flex:1;color:#5B4A1E">ตอนนี้แสดงเฉพาะ FR ที่ถูกอ้างถึงในแผน · นำเข้า SRS เพื่อหา FR ที่ <b>ยังไม่มีงานรองรับ</b></span><button class="btn" type="button">นำเข้ารายการ FR</button></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{modChips}}" as="c" hint-placeholder-count="5"><button class="chip" type="button" aria-pressed="{{c.on}}" onClick="{{c.pick}}">{{c.n}}</button></sc-for></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+<div class="card" style="padding:12px 14px"><div class="muted" style="font-size:12px">FR ที่อ้างถึง</div><b style="font-size:22px">{{tr.fr}}</b></div>
+<div class="card" style="padding:12px 14px"><div class="muted" style="font-size:12px">Screen ที่อ้างถึง</div><b style="font-size:22px">{{tr.sc}}</b></div>
+<div class="card" style="padding:12px 14px"><div class="muted" style="font-size:12px">งานที่ไม่มี FR</div><b style="font-size:22px;color:{{tr.nc}}">{{tr.no}}</b></div>
+<div class="card" style="padding:12px 14px"><div class="muted" style="font-size:12px">เสร็จแล้ว</div><b style="font-size:22px">{{tr.dn}}%</b></div>
+</div>
+<sc-if value="{{hasMatrix}}" hint-placeholder-val="{{ true }}">
+<div class="card" style="overflow-x:auto">
+<table class="tb" style="min-width:760px"><thead><tr><th>Requirement</th><th>งาน</th><th>Man-Day</th><th>Screen</th><th>ความคืบหน้า</th></tr></thead><tbody>
+<sc-for list="{{matrix}}" as="r" hint-placeholder-count="18"><tr><td><b>{{r.f}}</b></td><td>{{r.k}}</td><td>{{r.md}}</td><td class="muted">{{r.sc}}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="cov" style="flex:1"><div style="width:{{r.p}}%;height:100%;background:#15803D"></div></div><span class="muted" style="font-size:12px">{{r.d}} / {{r.k}}</span></div></td></tr></sc-for>
+<tr><td><b style="color:#B45309">ไม่มี FR</b></td><td>1</td><td>3</td><td class="muted">No.2 Master data / Lookup 30 รายก</td><td><a href="Table.dc.html">ระบุ FR</a></td></tr>
+</tbody></table>
+</div>
+</sc-if>
+<sc-if value="{{noMatrix}}" hint-placeholder-val="{{ false }}"><div class="card" style="padding:18px" class="muted">เลือก Credit Line เพื่อดูตาราง FR × งาน (ตัวอย่าง) · Module อื่นแสดงเฉพาะตัวเลขสรุป</div></sc-if>
+</sc-if>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  state = { r: 'weekly', mod: 'cl' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const r = st.r || 'weekly', mod = st.mod || 'cl';
+    const nav = [['weekly', 'รายงานประจำสัปดาห์'], ['pva', 'Plan vs Actual ราย Module'], ['trace', 'Requirement Traceability']].map(function (n) { return { n: n[1], cls: r === n[0] ? 'rn on' : 'rn', cur: r === n[0] ? 'page' : 'false', pick: function () { self.setState({ r: n[0] }); } }; });
+    const pva = [{"n": "Credit Line", "dn": 21, "k": 54, "md": 202, "mdu": 76, "e": "26 ม.ค. 70", "fc": "27 ม.ค. 70", "diff": "+1 วัน", "dc": "#B91C1C"}, {"n": "Drawdown", "dn": 14, "k": 61, "md": 164, "mdu": 43, "e": "26 มี.ค. 70", "fc": "29 มี.ค. 70", "diff": "+1 วัน", "dc": "#B91C1C"}, {"n": "Pre-Disburse", "dn": 10, "k": 29, "md": 55, "mdu": 18, "e": "25 ก.พ. 70", "fc": "2 มี.ค. 70", "diff": "+3 วัน", "dc": "#B91C1C"}, {"n": "Maintain Car After Drawdown", "dn": 12, "k": 12, "md": 18, "mdu": 18, "e": "9 พ.ย. 69", "fc": "11 พ.ย. 69", "diff": "+2 วัน", "dc": "#B91C1C"}, {"n": "BFC ใบเรียกเก็บ/ใบแจ้งหนี้", "dn": 8, "k": 28, "md": 82, "mdu": 14, "e": "8 ก.พ. 70", "fc": "10 ก.พ. 70", "diff": "+2 วัน", "dc": "#B91C1C"}, {"n": "Repayment รับชำระเงิน", "dn": 7, "k": 30, "md": 75, "mdu": 20, "e": "27 ม.ค. 70", "fc": "28 ม.ค. 70", "diff": "+1 วัน", "dc": "#B91C1C"}, {"n": "Checkstock & Collect Car Keys", "dn": 0, "k": 32, "md": 78, "mdu": "—", "e": "12 มี.ค. 70", "fc": "ยังไม่เริ่ม", "diff": "—", "dc": "#5F6873"}, {"n": "Finance (GL)", "dn": 0, "k": 19, "md": 92, "mdu": "—", "e": "21 เม.ย. 70", "fc": "ยังไม่เริ่ม", "diff": "—", "dc": "#5F6873"}, {"n": "Campaign", "dn": 0, "k": 25, "md": 62, "mdu": "—", "e": "24 มี.ค. 70", "fc": "ยังไม่เริ่ม", "diff": "—", "dc": "#5F6873"}, {"n": "OEM / Dealer Portal", "dn": 0, "k": 21, "md": 47, "mdu": "—", "e": "2 มี.ค. 70", "fc": "ยังไม่เริ่ม", "diff": "—", "dc": "#5F6873"}, {"n": "Interface FP/HP/KL", "dn": 0, "k": 23, "md": 69, "mdu": "—", "e": "—", "fc": "ยังไม่มีในแผน", "diff": "—", "dc": "#5F6873"}];
+    const TR = {"cl": ["Credit Line", 18, 17, 1, 39], "dd": ["Drawdown", 15, 19, 4, 23], "bfc": ["BFC", 10, 15, 1, 29], "rp": ["Repayment", 15, 16, 2, 23], "all": ["ทุก Module", 22, 62, 44, 22]};
+    const modChips = [['cl', 'Credit Line'], ['dd', 'Drawdown'], ['bfc', 'BFC'], ['rp', 'Repayment'], ['all', 'ทุก Module']].map(function (c) { return { n: c[1], on: mod === c[0] ? 'true' : 'false', pick: function () { self.setState({ mod: c[0] }); } }; });
+    const t = TR[mod];
+    const matrix = [["FR-01", 7, 23, "SCR-101, SCR-102, SCR-103, SCR-116", 6], ["FR-02", 2, 6, "SCR-101, SCR-102", 2], ["FR-03", 7, 32, "SCR-103, SCR-104, SCR-106", 6], ["FR-04", 5, 18, "SCR-104, SCR-109", 3], ["FR-05", 3, 9, "SCR-105, SCR-115", 1], ["FR-06", 13, 53, "SCR-107, SCR-108, SCR-117", 0], ["FR-07", 4, 10, "SCR-111", 0], ["FR-08", 1, 5, "SCR-110", 0], ["FR-09", 2, 6, "SCR-112", 0], ["FR-10", 2, 9, "SCR-112", 0], ["FR-11", 2, 13, "SCR-103, SCR-117", 0], ["FR-12", 2, 13, "—", 0], ["FR-13", 5, 11, "SCR-101, SCR-103, SCR-113, SCR-114", 1], ["NFR-03", 1, 8, "—", 1], ["NFR-04", 1, 1, "SCR-114", 0], ["NFR-05", 1, 5, "—", 1], ["NFR-09", 2, 4, "SCR-103", 2], ["NFR-10", 1, 3, "—", 1]].map(function (m) { return { f: m[0], k: m[1], md: m[2], sc: m[3], d: m[4], p: Math.round(m[4] / m[1] * 100) }; });
+    return {
+      nav: nav, pva: pva, modChips: modChips, matrix: matrix, tr: { fr: t[1], sc: t[2], no: t[3], nc: t[3] > 0 ? '#B45309' : '#166534', dn: t[4] },
+      hasMatrix: mod === 'cl', noMatrix: mod !== 'cl',
+      rWeekly: r === 'weekly', rPva: r === 'pva', rTrace: r === 'trace'
+    };
+  }
+}
+</script>
+</body>
+</html>

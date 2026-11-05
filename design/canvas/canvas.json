@@ -1,0 +1,608 @@
+{
+  "v": 3,
+  "attachments": {},
+  "createdOnFiles": {
+    "at": "2026-11-04T10:02:06.207Z",
+    "v": 1
+  },
+  "title": "Friday Manage UI",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "ReviewGuide.dc.html": {
+      "x": -1600,
+      "y": 0,
+      "w": 1440,
+      "h": 1900,
+      "title": "0 · เริ่มที่นี่ — คู่มือ Review",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1620,
+      "title": "1 · Overview",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Table.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 1300,
+      "title": "2 · Table (Module › Task › Sub-task)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Kanban.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 1180,
+      "title": "3 · Kanban (drag & drop)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Timeline.dc.html": {
+      "x": 4560,
+      "y": 0,
+      "w": 1440,
+      "h": 1520,
+      "title": "4 · Timeline (Module › Task › Sub-task)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Gantt.dc.html": {
+      "x": 0,
+      "y": 1740,
+      "w": 1440,
+      "h": 1020,
+      "title": "5 · Gantt",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Calendar.dc.html": {
+      "x": 1520,
+      "y": 1740,
+      "w": 1440,
+      "h": 1240,
+      "title": "6 · Calendar",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Members.dc.html": {
+      "x": 3040,
+      "y": 1740,
+      "w": 1440,
+      "h": 1460,
+      "title": "7 · Members + Workload",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Files.dc.html": {
+      "x": 4560,
+      "y": 1740,
+      "w": 1440,
+      "h": 1140,
+      "title": "8 · Files (Attachments)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "NewProject.dc.html": {
+      "x": 0,
+      "y": 3500,
+      "w": 1440,
+      "h": 1340,
+      "title": "A · + New Project (Wizard 5 ขั้น)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "TaskCreate.dc.html": {
+      "x": 1520,
+      "y": 3500,
+      "w": 1440,
+      "h": 1560,
+      "title": "B · สร้าง Task / Sub-task",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "TaskDetail.dc.html": {
+      "x": 3040,
+      "y": 3500,
+      "w": 1440,
+      "h": 1700,
+      "title": "C · Task Detail (Drawer ด้านขวา)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "SubtaskModal.dc.html": {
+      "x": 4560,
+      "y": 3500,
+      "w": 1440,
+      "h": 1700,
+      "title": "D · Sub-task Detail (Drawer ซ้อนบน Task)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Home.dc.html": {
+      "x": 0,
+      "y": 5520,
+      "w": 1440,
+      "h": 1360,
+      "title": "E · Home",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "MyTasks.dc.html": {
+      "x": 1520,
+      "y": 5520,
+      "w": 1440,
+      "h": 1360,
+      "title": "F · My Tasks",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Inbox.dc.html": {
+      "x": 3040,
+      "y": 5520,
+      "w": 1440,
+      "h": 1360,
+      "title": "G · Inbox (Notifications)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "WorkspaceMembers.dc.html": {
+      "x": 4560,
+      "y": 5520,
+      "w": 1440,
+      "h": 1360,
+      "title": "H · Workspace Members + Invite",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Profile.dc.html": {
+      "x": 6080,
+      "y": 5520,
+      "w": 1440,
+      "h": 1560,
+      "title": "I · User Profile + Notification settings",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Login.dc.html": {
+      "x": 0,
+      "y": 7400,
+      "w": 1440,
+      "h": 960,
+      "title": "J1 · Login (+ 2FA)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Signup.dc.html": {
+      "x": 1520,
+      "y": 7400,
+      "w": 1440,
+      "h": 960,
+      "title": "J2 · Sign up + ยืนยันอีเมล",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "ForgotPassword.dc.html": {
+      "x": 3040,
+      "y": 7400,
+      "w": 1440,
+      "h": 960,
+      "title": "J3 · ลืมรหัสผ่าน (3 ขั้น)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "AcceptInvite.dc.html": {
+      "x": 4560,
+      "y": 7400,
+      "w": 1440,
+      "h": 960,
+      "title": "J4 · รับคำเชิญ",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Onboarding.dc.html": {
+      "x": 6080,
+      "y": 7400,
+      "w": 1440,
+      "h": 1000,
+      "title": "J5 · Onboarding (สร้าง Workspace)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "IssueCreate.dc.html": {
+      "x": 0,
+      "y": 8780,
+      "w": 1440,
+      "h": 1400,
+      "title": "K1 · สร้างงานตามประเภท (Story / Task / Bug / Spike)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "BugDetail.dc.html": {
+      "x": 1520,
+      "y": 8780,
+      "w": 1440,
+      "h": 1500,
+      "title": "K2 · Bug Detail",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "DueRequest.dc.html": {
+      "x": 3040,
+      "y": 8780,
+      "w": 1440,
+      "h": 1100,
+      "title": "K3 · ขอเลื่อน Due",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Bell.dc.html": {
+      "x": 4560,
+      "y": 8780,
+      "w": 1440,
+      "h": 1000,
+      "title": "K4 · กระดิ่งแจ้งเตือน + Toast + Global top bar",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Backlog.dc.html": {
+      "x": 0,
+      "y": 10660,
+      "w": 1440,
+      "h": 1600,
+      "title": "L1 · Backlog + Sprint planning",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "ProjectSettings.dc.html": {
+      "x": 1520,
+      "y": 10660,
+      "w": 1440,
+      "h": 1400,
+      "title": "L2 · Project Settings",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "States.dc.html": {
+      "x": 0,
+      "y": 12640,
+      "w": 1440,
+      "h": 2100,
+      "title": "M1 · สถานะหน้าจอ (Empty · Loading · Error · 403 · 404 · Viewer)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "MobileMyTasks.dc.html": {
+      "x": 1520,
+      "y": 12640,
+      "w": 390,
+      "h": 844,
+      "title": "M2 · Mobile · My Tasks",
+      "is_interactive": true
+    },
+    "MobileInbox.dc.html": {
+      "x": 1990,
+      "y": 12640,
+      "w": 390,
+      "h": 844,
+      "title": "M3 · Mobile · Inbox",
+      "is_interactive": true
+    },
+    "MobileSubtask.dc.html": {
+      "x": 2460,
+      "y": 12640,
+      "w": 390,
+      "h": 844,
+      "title": "M4 · Mobile · Sub-task Detail",
+      "is_interactive": true
+    },
+    "ImportExcel.dc.html": {
+      "x": 3040,
+      "y": 10660,
+      "w": 1440,
+      "h": 1500,
+      "title": "L3 · Import Excel + การแก้ไขแผน (Plan vs Actual)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "AdminConsole.dc.html": {
+      "x": 0,
+      "y": 15120,
+      "w": 1440,
+      "h": 1500,
+      "title": "N1 · Admin Console (Workspace / SaaS)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "LeadDashboard.dc.html": {
+      "x": 0,
+      "y": 17000,
+      "w": 1440,
+      "h": 1900,
+      "title": "O1 · Lead Dashboard (ข้อมูลจริง Development Plan 2026-11)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Reports.dc.html": {
+      "x": 1520,
+      "y": 17000,
+      "w": 1440,
+      "h": 1500,
+      "title": "O2 · Reports + Requirement Traceability",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "NotifyTemplates.dc.html": {
+      "x": 1520,
+      "y": 15120,
+      "w": 1440,
+      "h": 1300,
+      "title": "N2 · หน้าตาข้อความแจ้งเตือน (LINE · Email · Webhook)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "MobileHome.dc.html": {
+      "x": 2930,
+      "y": 12640,
+      "w": 390,
+      "h": 844,
+      "title": "M5 · Mobile · Home",
+      "is_interactive": true
+    },
+    "MobileOverview.dc.html": {
+      "x": 3400,
+      "y": 12640,
+      "w": 390,
+      "h": 844,
+      "title": "M6 · Mobile · Project Overview",
+      "is_interactive": true
+    },
+    "MobileKanban.dc.html": {
+      "x": 3870,
+      "y": 12640,
+      "w": 390,
+      "h": 844,
+      "title": "M7 · Mobile · Kanban (ย้ายด้วยปุ่ม)",
+      "is_interactive": true
+    },
+    "Search.dc.html": {
+      "x": 0,
+      "y": 19300,
+      "w": 1440,
+      "h": 1300,
+      "title": "P1 · ค้นหา + Command palette (Ctrl K)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Automation.dc.html": {
+      "x": 1520,
+      "y": 19300,
+      "w": 1440,
+      "h": 1300,
+      "title": "P2 · Automation (เมื่อ … ถ้า … ให้ …)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "ConfirmDialogs.dc.html": {
+      "x": 3040,
+      "y": 19300,
+      "w": 1440,
+      "h": 1000,
+      "title": "P3 · Dialog ยืนยัน + เลิกทำ",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "WorkspaceSwitch.dc.html": {
+      "x": 0,
+      "y": 21000,
+      "w": 1440,
+      "h": 1000,
+      "title": "Q1 · สลับ Workspace + สร้างใหม่",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "PlanLimits.dc.html": {
+      "x": 1520,
+      "y": 21000,
+      "w": 1440,
+      "h": 1100,
+      "title": "Q2 · เมื่อใช้เกินแพ็กเกจ (7 สถานการณ์)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "SuperAdmin.dc.html": {
+      "x": 3040,
+      "y": 21000,
+      "w": 1440,
+      "h": 1500,
+      "title": "Q3 · Super Admin (หลังบ้านทีม Friday)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Landing.dc.html": {
+      "x": 0,
+      "y": 22900,
+      "w": 1440,
+      "h": 2200,
+      "title": "R1 · Landing + ราคาเหมาตามขนาดทีม (TH / EN)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Checkout.dc.html": {
+      "x": 1520,
+      "y": 22900,
+      "w": 1440,
+      "h": 1400,
+      "title": "R2 · ชำระเงิน (บัตร · PromptPay · โอน + หัก ณ ที่จ่าย)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Localization.dc.html": {
+      "x": 3040,
+      "y": 22900,
+      "w": 1440,
+      "h": 1100,
+      "title": "R3 · ภาษา TH / EN",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Legal.dc.html": {
+      "x": 4560,
+      "y": 22900,
+      "w": 1440,
+      "h": 1300,
+      "title": "R4 · หน้ากฎหมาย + Cookie consent",
+      "expand": "fill",
+      "is_interactive": true
+    }
+  },
+  "order": [
+    "ReviewGuide.dc.html",
+    "Main.dc.html",
+    "Table.dc.html",
+    "Kanban.dc.html",
+    "Timeline.dc.html",
+    "Gantt.dc.html",
+    "Calendar.dc.html",
+    "Members.dc.html",
+    "Files.dc.html",
+    "NewProject.dc.html",
+    "TaskCreate.dc.html",
+    "TaskDetail.dc.html",
+    "SubtaskModal.dc.html",
+    "Home.dc.html",
+    "MyTasks.dc.html",
+    "Inbox.dc.html",
+    "WorkspaceMembers.dc.html",
+    "Profile.dc.html",
+    "Login.dc.html",
+    "Signup.dc.html",
+    "ForgotPassword.dc.html",
+    "AcceptInvite.dc.html",
+    "Onboarding.dc.html",
+    "IssueCreate.dc.html",
+    "BugDetail.dc.html",
+    "DueRequest.dc.html",
+    "Bell.dc.html",
+    "Backlog.dc.html",
+    "ProjectSettings.dc.html",
+    "ImportExcel.dc.html",
+    "States.dc.html",
+    "MobileMyTasks.dc.html",
+    "MobileInbox.dc.html",
+    "MobileSubtask.dc.html",
+    "MobileHome.dc.html",
+    "MobileOverview.dc.html",
+    "MobileKanban.dc.html",
+    "AdminConsole.dc.html",
+    "NotifyTemplates.dc.html",
+    "LeadDashboard.dc.html",
+    "Reports.dc.html",
+    "Search.dc.html",
+    "Automation.dc.html",
+    "ConfirmDialogs.dc.html",
+    "WorkspaceSwitch.dc.html",
+    "PlanLimits.dc.html",
+    "SuperAdmin.dc.html",
+    "Landing.dc.html",
+    "Checkout.dc.html",
+    "Localization.dc.html",
+    "Legal.dc.html"
+  ],
+  "notes": {
+    "title": {
+      "x": 0,
+      "y": -300,
+      "text": "Friday Manage — Project tabs",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "flows": {
+      "x": 0,
+      "y": 3230,
+      "text": "Create Project · Create Task / Sub-task · Task Detail · Sub-task Detail",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "personal": {
+      "x": 0,
+      "y": 5260,
+      "text": "Workspace · Home · My Tasks · Inbox · Members · Profile",
+      "kind": "title1",
+      "maxW": 7520
+    },
+    "auth": {
+      "x": 0,
+      "y": 7140,
+      "text": "Flow 1 · เข้าสู่ระบบ: Login · Sign up · ลืมรหัสผ่าน · รับคำเชิญ · Onboarding",
+      "kind": "title1",
+      "maxW": 7520
+    },
+    "daily": {
+      "x": 0,
+      "y": 8520,
+      "text": "Flow 2 · งานประจำวันของ Dev: ประเภทงาน · Bug · ขอเลื่อน Due · แจ้งเตือน",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "plan": {
+      "x": 0,
+      "y": 10400,
+      "text": "Flow 3 · วางแผนและตั้งค่า: Backlog + Sprint · Project Settings · Import Excel",
+      "kind": "title1",
+      "maxW": 4480
+    },
+    "states": {
+      "x": 0,
+      "y": 12380,
+      "text": "สถานะหน้าจอ · Mobile",
+      "kind": "title1",
+      "maxW": 2850
+    },
+    "lead": {
+      "x": 0,
+      "y": 16740,
+      "text": "มุมมองสำหรับ Lead / PM · ทดลองกับแผนงานจริง",
+      "kind": "title1",
+      "maxW": 2960
+    },
+    "admin": {
+      "x": 0,
+      "y": 14860,
+      "text": "Admin Console · ช่องทางแจ้งเตือน",
+      "kind": "title1",
+      "maxW": 2960
+    },
+    "rowP": {
+      "x": 0,
+      "y": 19040,
+      "text": "ค้นหา · Automation · Dialog ยืนยัน",
+      "kind": "title1",
+      "maxW": 4480
+    },
+    "rowQ": {
+      "x": 0,
+      "y": 20740,
+      "text": "SaaS · Workspace · แพ็กเกจ · Super Admin",
+      "kind": "title1",
+      "maxW": 4480
+    },
+    "rowR": {
+      "x": 0,
+      "y": 22640,
+      "text": "SaaS · หน้าเว็บ · ชำระเงิน · ภาษา · กฎหมาย",
+      "kind": "title1",
+      "maxW": 6000
+    }
+  },
+  "designSystems": []
+}

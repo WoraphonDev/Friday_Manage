@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Mobile My Tasks</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:15px;line-height:1.45}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.chip{flex:none;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:14px;color:#3D4550;cursor:pointer}
+.chip[aria-pressed="true"]{background:#1B1F24;border-color:#1B1F24;color:#fff;font-weight:600}
+.gh{display:flex;align-items:center;gap:8px;padding:14px 16px 6px;font-size:13px;font-weight:700}
+.it{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;background:#fff;border-bottom:1px solid #EEF0F3;text-decoration:none;color:#1B1F24}
+.ty{width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.muted{color:#5F6873}
+.tabb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:#5F6873;text-decoration:none;min-height:56px;position:relative}
+.tabb.on{color:#1D4ED8;font-weight:700}
+</style>
+</helmet>
+<div style="width:390px;height:844px;display:flex;flex-direction:column;background:#F6F7F9;overflow:hidden;position:relative">
+<header style="background:#fff;padding:16px 16px 10px;border-bottom:1px solid #E4E7EB;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:10px"><h1 style="margin:0;font-size:24px;flex:1">My Tasks <span style="font-size:13px;font-weight:500;color:#5F6873">· Kaijeaw</span></h1>
+<button type="button" aria-label="ค้นหา" style="width:44px;height:44px;border:0;background:transparent;border-radius:10px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B1F24" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></button>
+<button type="button" aria-label="ตัวกรอง" style="width:44px;height:44px;border:0;background:transparent;border-radius:10px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B1F24" stroke-width="2" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"></path></svg></button></div>
+<div style="display:flex;gap:8px;overflow-x:auto" role="group" aria-label="ช่วงเวลา">
+<sc-for list="{{chips}}" as="c" hint-placeholder-count="4"><button class="chip" type="button" aria-pressed="{{c.on}}" onClick="{{c.pick}}">{{c.n}} · {{c.k}}</button></sc-for>
+</div>
+</header>
+
+<div style="flex:1;overflow-y:auto">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+<div class="gh"><span style="width:8px;height:8px;border-radius:50%;background:{{g.c}}"></span><span style="color:{{g.tc}}">{{g.n}}</span><span class="muted" style="font-weight:500">{{g.k}}</span></div>
+<sc-for list="{{g.items}}" as="r" hint-placeholder-count="2">
+<div class="it">
+<input type="checkbox" checked="{{r.done}}" onChange="{{r.toggle}}" aria-label="ทำเครื่องหมายว่าเสร็จ: {{r.t}}" style="width:24px;height:24px;margin:2px 0 0;flex:none">
+<a href="{{r.href}}" style="flex:1;min-width:0;text-decoration:none;color:#1B1F24">
+<div style="font-weight:600;text-decoration:{{r.deco}};color:{{r.tc}}">{{r.t}}</div>
+<div style="display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px;flex-wrap:wrap" class="muted"><span class="ty" style="background:{{r.tyc}}"><svg width="10" height="10" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="{{r.tyi}}"></path></svg></span>{{r.key}} · <span style="width:8px;height:8px;border-radius:2px;background:{{r.pc}}"></span>{{r.proj}}</div>
+</a>
+<span style="font-size:13px;font-weight:600;color:{{r.dc}};white-space:nowrap">{{r.due}}</span>
+</div>
+</sc-for>
+</sc-for>
+<div class="muted" style="font-size:12px;text-align:center;padding:16px">ปัดซ้ายที่งานเพื่อเลื่อน Due · ปัดขวาเพื่อปิดงาน<br>ข้อมูลจริงจาก Development Plan 2026-11 · สถานะจำลอง ณ พ. 2 ธ.ค. 2569</div>
+</div>
+
+<a href="IssueCreate.dc.html" aria-label="สร้างงานใหม่" style="position:absolute;right:20px;bottom:84px;width:56px;height:56px;border-radius:16px;background:#1D4ED8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;text-decoration:none;box-shadow:0 8px 20px rgba(29,78,216,.35)">+</a>
+
+<nav aria-label="เมนูหลัก" style="display:flex;background:#fff;border-top:1px solid #E4E7EB;padding-bottom:8px">
+<a class="tabb" href="MobileHome.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"></path></svg>Home</a>
+<a class="tabb on" href="MobileMyTasks.dc.html" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="m8 12 3 3 5-6"></path></svg>My Tasks</a>
+<a class="tabb" href="MobileOverview.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="7" height="7" rx="1.5"></rect><rect x="14" y="4" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>Projects</a>
+<a class="tabb" href="MobileInbox.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>Inbox<span style="position:absolute;top:6px;left:calc(50% + 4px);min-width:18px;height:18px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px">5</span></a>
+<a class="tabb" href="Profile.dc.html"><span style="width:24px;height:24px;border-radius:50%;background:#B45309;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">KJ</span>Profile</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { f: 'focus', done: {} };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const f = st.f || 'focus', done = st.done || {};
+    const TYD = { story: ['#15803D', 'M6 3h12v18l-6-4-6 4z'], task: ['#1D4ED8', 'M5 5h14v14H5z'], bug: ['#DC2626', 'M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14z'], sub: ['#64748B', 'M8 6h8v2H8zM8 11h8v2H8zM8 16h5v2H8z'] };
+    const PJ = {"m0": ["Credit Line", "#1D4ED8"], "m1": ["Drawdown", "#0F766E"], "m2": ["Pre-Disburse", "#B45309"], "m3": ["Maintain Car", "#7C3AED"], "m4": ["BFC", "#BE185D"], "m5": ["Repayment", "#0369A1"], "m6": ["Checkstock", "#4D7C0F"], "m7": ["Finance (GL)", "#57534E"], "m8": ["Campaign", "#C2410C"], "m9": ["OEM Portal", "#4338CA"], "m10": ["Interface", "#0E7490"]};
+    const D = [["DP-23", "m0", "task", "ระยะเวลาวงเงิน (เพิ่ม, ล็อกหลังอนุมัติ)", "เลย 7 วัน", "late"], ["DP-21", "m0", "task", "Maintain : สร้างงานอัตโนมัติ, Add Credit, Select Credit, Gen เลขที่", "เลย 6 วัน", "late"], ["DP-34", "m0", "task", "ผู้ใช้วงเงินจาก MDP (P/J) + ผูกลูกค้า FACO", "เลย 2 วัน", "late"], ["DP-30", "m0", "task", "Curtailment Information + Plan Template (Floor Plan)", "เลย 1 วัน", "late"], ["DP-35", "m0", "task", "Add Dealer / Add Group Dealer (วงเงินใช้ได้จริงรายคน/กลุ่ม)", "วันนี้", "today"], ["DP-526", "m0", "sub", "ฟอร์มหลักประกัน: Bank Account", "พฤ. 3", "week"], ["DP-525", "m0", "bug", "Workflow ส่งกลับแก้ไข: สถานะไม่กลับเป็น Draft เมื่อ LO ส่งคืน", "ศ. 4", "week"], ["DP-38", "m0", "task", "Collateral framework: รายการ, Map จาก MDP (Other), ผูกกับวงเงิน", "พฤ. 3", "week"], ["DP-39", "m0", "task", "ฟอร์มหลักประกัน 5 ประเภท: Bank Account, Stock, รถยนต์, BG, Mortgage", "พ. 9", "next"], ["DP-40", "m0", "task", "คำนวณมูลค่าหลักประกัน & วงเงินตามสัดส่วน", "ศ. 11", "next"], ["DP-41", "m0", "task", "สถานะหลักประกัน Active / Inactive อัตโนมัติ (Batch)", "ศ. 11", "next"]];
+    const G = [['late', 'Overdue', '#DC2626', '#B91C1C'], ['today', 'วันนี้', '#D97706', '#1B1F24'], ['week', 'ภายในสัปดาห์นี้', '#2563EB', '#1B1F24'], ['next', 'สัปดาห์หน้า', '#93B4F5', '#1B1F24']];
+    const show = { focus: ['late', 'today'], week: ['late', 'today', 'week'], all: ['late', 'today', 'week', 'next'] }[f];
+    const groups = G.filter(function (g) { return show.indexOf(g[0]) >= 0; }).map(function (g) {
+      const items = D.filter(function (d) { return d[5] === g[0]; }).map(function (d) {
+        const dn = !!done[d[0]];
+        return { key: d[0], proj: PJ[d[1]][0], pc: PJ[d[1]][1], tyc: TYD[d[2]][0], tyi: TYD[d[2]][1], t: d[3], due: dn ? 'เสร็จ' : d[4],
+          dc: dn ? '#166534' : (d[5] === 'late' ? '#B91C1C' : (d[5] === 'today' ? '#B45309' : '#3D4550')), done: dn, deco: dn ? 'line-through' : 'none', tc: dn ? '#5F6873' : '#1B1F24',
+          href: d[2] === 'sub' ? 'MobileSubtask.dc.html' : (d[2] === 'bug' ? 'BugDetail.dc.html' : 'TaskDetail.dc.html'),
+          toggle: function () { const m = Object.assign({}, (self.state && self.state.done) || {}); m[d[0]] = !m[d[0]]; self.setState({ done: m }); } };
+      });
+      return { n: g[1], c: g[2], tc: g[3], k: items.length, items: items };
+    });
+    const cnt = function (arr) { return D.filter(function (d) { return arr.indexOf(d[5]) >= 0 && !done[d[0]]; }).length; };
+    const chips = [['focus', 'วันนี้ + Overdue', ['late', 'today']], ['week', 'สัปดาห์นี้', ['late', 'today', 'week']], ['all', 'ทั้งหมด', ['late', 'today', 'week', 'next']]].map(function (c) { return { n: c[1], k: cnt(c[2]), on: f === c[0] ? 'true' : 'false', pick: function () { self.setState({ f: c[0] }); } }; });
+    return { groups: groups, chips: chips };
+  }
+}
+</script>
+</body>
+</html>

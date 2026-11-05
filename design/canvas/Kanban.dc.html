@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Project Kanban</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E4E7EB;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column}
+.navi{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 10px;border-radius:8px;color:#3D4550;text-decoration:none}
+.navi:hover{background:#F1F3F5;color:#1B1F24}
+.navi.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.sec{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:16px 10px 6px}
+.phead{background:#fff;padding:16px 24px 0;border-bottom:1px solid #E4E7EB}
+.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:10px}
+.tab{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;color:#56606B;text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+.tab:hover{color:#1B1F24}
+.tab.on{color:#1D4ED8;border-bottom-color:#1D4ED8;font-weight:600}
+.body{padding:20px 24px;display:flex;flex-direction:column;gap:14px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.muted{color:#5F6873}
+.av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;border:2px solid #fff;flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.m-auth{background:#DBEAFE;color:#1E40AF}.m-appt{background:#CCFBF1;color:#115E59}.m-pay{background:#FEF3C7;color:#92400E}.m-admin{background:#EDE9FE;color:#5B21B6}
+.p-mick{background:#1D4ED8}.p-ploy{background:#B45309}.p-ton{background:#0F766E}.p-fah{background:#7C3AED}.p-bank{background:#BE185D}
+.s-todo{background:#EEF0F3;color:#3D4550}.s-prog{background:#DBEAFE;color:#1E40AF}.s-rev{background:#FEF3C7;color:#92400E}.s-done{background:#DCFCE7;color:#166534}.s-late{background:#FEE2E2;color:#991B1B}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.chip.on{background:#1B1F24;border-color:#1B1F24;color:#fff}
+.col{flex:0 0 288px;background:#EEF0F3;border-radius:12px;display:flex;flex-direction:column;min-height:420px}
+.col.over{background:#E0E7FF;outline:2px dashed #1D4ED8;outline-offset:-2px}
+.colh{display:flex;align-items:center;gap:8px;padding:12px 12px 8px}
+.ico{width:30px;height:30px;border:0;background:transparent;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#3D4550;cursor:pointer;padding:0}
+.ico:hover{background:#E1E5EA}
+.kc{display:flex;flex-direction:column;gap:8px;background:#fff;border:1px solid #E1E5EA;border-radius:10px;padding:12px;color:#1B1F24;box-shadow:0 1px 2px rgba(16,24,40,.05);cursor:grab;user-select:none}
+.kc:hover{border-color:#B8C0CA}
+.kc.dragging{opacity:.4;border-style:dashed}
+.kc.done .kt{color:#5F6873;text-decoration:line-through}
+.kt{font-weight:600;line-height:1.4}
+.dropline{height:4px;border-radius:2px;background:#1D4ED8;margin:-3px 2px}
+.ph{border:2px dashed #93B4F5;border-radius:10px;min-height:68px;display:flex;align-items:center;justify-content:center;color:#1D4ED8;font-size:13px;font-weight:600;background:#F8FAFF}
+.dc{font-size:12px;padding:1px 8px;border-radius:6px;background:#F1F3F5;color:#3D4550;font-weight:500;white-space:nowrap}
+.dc.late{background:#FEE2E2;color:#991B1B}.dc.today{background:#FEF3C7;color:#92400E}.dc.done{background:#DCFCE7;color:#166534}
+.meta{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#5F6873}
+.pr-u{color:#B91C1C}.pr-h{color:#B45309}.pr-m{color:#1D4ED8}.pr-l{color:#5F6873}
+.addc{border:0;background:transparent;color:#3D4550;font:inherit;font-size:13px;font-weight:500;cursor:pointer;min-height:38px;border-radius:8px;text-align:left;padding:0 10px}
+.addc:hover{background:#E1E5EA}
+.mv{display:flex;gap:4px;opacity:0}
+.kc:hover .mv,.kc:focus-within .mv{opacity:1}
+.mvb{width:28px;height:28px;border:1px solid #D5DAE0;border-radius:6px;background:#fff;cursor:pointer;font:inherit;font-size:15px;line-height:1;color:#3D4550;padding:0}
+.mvb:hover{background:#EEF2FF;color:#1D4ED8}
+.mvb:disabled{opacity:.35;cursor:default}
+.toast{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-radius:10px;padding:10px 14px;font-size:13px}
+.toast.info{background:#1B1F24;color:#fff}
+.toast.warn{background:#FFF7ED;border:1px solid #FED7AA;color:#7C2D12}
+.tbtn{min-height:30px;padding:0 10px;border-radius:6px;border:1px solid currentColor;background:transparent;color:inherit;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+@media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.body{padding:16px}.phead{padding:12px 16px 0}.mv{opacity:1}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a href="IssueCreate.dc.html" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:#1D4ED8;color:#fff;font-weight:600;text-decoration:none">+ New</a>
+<a href="Bell.dc.html" aria-label="การแจ้งเตือน 5 รายการยังไม่อ่าน" style="position:relative;width:40px;height:40px;border-radius:8px;color:#E2E8F0;display:inline-flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #0F172A">5</span></a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div class="app">
+<aside class="side" aria-label="Workspace navigation">
+<a class="navi" href="Home.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"></path></svg>Home</a>
+<a class="navi" href="MyTasks.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="m8 12 3 3 5-6"></path></svg>My Tasks</a>
+<a class="navi" href="Inbox.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h5l1.5 3h5L16 13h5"></path><path d="M5 5h14l2 8v6H3v-6z"></path></svg>Inbox<span class="pill s-late" style="margin-left:auto">3</span></a>
+<div class="sec">Projects</div>
+<a class="navi on" href="Main.dc.html"><span class="dot" style="background:#334155"></span>Development Plan 2026-11</a>
+<a class="navi" href="NewProject.dc.html" style="color:#1D4ED8">+ New project</a>
+<div style="margin-top:auto;border-top:1px solid #E4E7EB;padding-top:10px;display:flex;flex-direction:column;gap:2px">
+<a class="navi" href="AdminConsole.dc.html">Admin Console</a>
+</div>
+</aside>
+<main class="main">
+<header class="phead">
+<div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px">
+<div style="min-width:0">
+<div class="muted" style="font-size:12px">Friday Workspace / Projects / Development Plan 2026-11</div>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+<div style="width:32px;height:32px;border-radius:8px;background:#334155;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">DP</div>
+<h1 style="margin:0;font-size:22px;line-height:1.3">Development Plan 2026-11</h1>
+<span class="pill s-prog">Active</span>
+<span class="pill s-late">Off track</span>
+<span class="muted" style="font-size:13px">5 พ.ย. 69 – 21 เม.ย. 70</span>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;margin-right:4px">
+<span class="av" title="Mick" style="background:#1D4ED8;">MK</span><span class="av" title="Kaijeaw" style="background:#B45309;margin-left:-8px;">KJ</span><span class="av" title="Pond" style="background:#0F766E;margin-left:-8px;">PD</span><span class="av" title="Tung" style="background:#7C3AED;margin-left:-8px;">TG</span><span class="av" title="Top" style="background:#BE185D;margin-left:-8px;">TP</span><span class="av" style="background:#64748B;margin-left:-8px" title="Zo, P'Tum, Ton และ BA อีก 7 คน">+9</span>
+</div>
+<button class="btn" type="button">Invite</button>
+<a class="btn pri" href="TaskCreate.dc.html">+ New</a>
+</div>
+</div>
+<nav class="tabs" aria-label="Project views">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="8"><a class="{{t.cls}}" href="{{t.href}}">{{t.label}}</a></sc-for>
+</nav>
+</header>
+
+<div class="body">
+<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<sc-for list="{{chips}}" as="c" hint-placeholder-count="5">
+<button class="{{c.cls}}" type="button" onClick="{{c.pick}}" aria-pressed="{{c.on}}"><sc-if value="{{c.hasDot}}" hint-placeholder-val="{{ false }}"><span class="dot" style="background:{{c.color}};border-radius:3px"></span></sc-if>{{c.label}}<span style="opacity:.75">{{c.n}}</span></button>
+</sc-for>
+<span style="width:1px;height:24px;background:#D5DAE0;margin:0 4px"></span>
+<button class="chip" type="button">งานของฉัน</button>
+<button class="chip" type="button">Overdue</button>
+<span class="pill" title="Sprint 3 · 30 พ.ย. – 11 ธ.ค. 2569" style="background:#EEF0F3;color:#3D4550">ข้อมูลจริงจาก Development Plan 2026-11 · สถานะจำลอง ณ พ. 2 ธ.ค. 2569</span>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<label class="btn" style="cursor:default">แสดง
+<select aria-label="Card level" style="border:0;font:inherit;font-weight:600;background:transparent;color:#1D4ED8"><option>Task + Sub-task</option><option>Task เท่านั้น</option><option>Sub-task เท่านั้น</option></select>
+</label>
+<label class="btn" style="cursor:default">Swimlane
+<select aria-label="Swimlane" style="border:0;font:inherit;font-weight:600;background:transparent;color:#1D4ED8"><option>None</option><option>Module</option><option>Assignee</option><option>Priority</option></select>
+</label>
+<button class="btn" type="button" onClick="{{reset}}">Reset ตัวอย่าง</button>
+</div>
+</div>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+<div class="{{toastCls}}" role="status">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"></path><path d="M12 10v4M12 17.5v.01"></path></svg>
+<span style="flex:1;min-width:200px">{{toastMsg}}</span>
+<sc-if value="{{toastConfirm}}" hint-placeholder-val="{{ false }}"><button class="tbtn" type="button" onClick="{{dismiss}}">ยืนยันย้าย</button></sc-if>
+<button class="tbtn" type="button" onClick="{{undo}}">{{undoLabel}}</button>
+<sc-if value="{{toastInfo}}" hint-placeholder-val="{{ true }}"><button class="tbtn" type="button" onClick="{{dismiss}}" aria-label="ปิด" style="border:0">×</button></sc-if>
+</div>
+</sc-if>
+
+<div style="display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;align-items:stretch">
+<sc-for list="{{cols}}" as="col" hint-placeholder-count="4">
+<section class="{{col.cls}}" aria-label="{{col.name}}" onDragOver="{{col.over}}" onDrop="{{col.drop}}">
+<div class="colh">
+<span class="dot" style="background:{{col.color}}"></span>
+<h2 style="margin:0;font-size:14px;font-weight:700">{{col.name}}</h2>
+<span class="muted" style="font-size:13px;font-weight:600">{{col.count}}</span>
+<sc-if value="{{col.hasWip}}" hint-placeholder-val="{{ false }}"><span class="{{col.wipCls}}" title="WIP limit">WIP {{col.count}}/{{col.wip}}</span></sc-if>
+<span style="margin-left:auto;display:flex">
+<a class="ico" href="TaskCreate.dc.html" aria-label="เพิ่มการ์ดใน {{col.name}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></a>
+<button class="ico" type="button" aria-label="ตัวเลือกคอลัมน์ {{col.name}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;padding:4px 10px 6px;flex:1">
+<sc-for list="{{col.cards}}" as="k" hint-placeholder-count="3">
+<sc-if value="{{k.before}}" hint-placeholder-val="{{ false }}"><div class="dropline" aria-hidden="true"></div></sc-if>
+<div class="{{k.cls}}" draggable="true" onDragStart="{{k.ds}}" onDragEnd="{{k.de}}" onDragOver="{{k.dov}}">
+<div style="display:flex;align-items:center;gap:8px">
+<span role="img" aria-label="{{k.tyn}}" style="width:18px;height:18px;border-radius:4px;background:{{k.tyc}};display:inline-flex;align-items:center;justify-content:center;flex:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="{{k.tyi}}"></path></svg></span>
+<a href="{{k.href}}" draggable="false" style="font-size:12px;color:#5F6873">{{k.key}}</a>
+<span class="pill" style="background:{{k.mbg}};color:{{k.mfg}}">{{k.m}}</span>
+<svg class="{{k.prc}}" style="margin-left:auto" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Priority {{k.pr}}"><path d="M5 3v18h2v-7h11l-2-4 2-4H7V3z"></path></svg>
+</div>
+<sc-if value="{{k.hasParent}}" hint-placeholder-val="{{ true }}"><div class="muted" style="font-size:12px;margin-bottom:-6px">↳ {{k.parent}}</div></sc-if>
+<div class="kt">{{k.t}}</div>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<span class="{{k.dueCls}}">{{k.due}}</span>
+<sc-if value="{{k.hasSub}}" hint-placeholder-val="{{ false }}"><span class="meta" title="Sub-tasks"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6h11M10 12h11M10 18h11"></path><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"></path></svg>{{k.sub}}</span></sc-if>
+<sc-if value="{{k.hasCm}}" hint-placeholder-val="{{ false }}"><span class="meta" title="Comments"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>{{k.cm}}</span></sc-if>
+<sc-if value="{{k.hasPr}}" hint-placeholder-val="{{ false }}"><span class="meta" title="Pull request" style="color:#166534"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"></circle><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="18" r="2.5"></circle><path d="M6 8.5v7M18 15.5V10a3 3 0 0 0-3-3h-4"></path><path d="m13 4.5-2.5 2.5 2.5 2.5"></path></svg>{{k.prl}}</span></sc-if>
+<span class="av" style="margin-left:auto;background:{{k.pc}}" title="{{k.who}}">{{k.ini}}</span>
+</div>
+<div class="mv">
+<button class="mvb" type="button" onClick="{{k.left}}" disabled="{{k.noL}}" aria-label="ย้าย {{k.key}} ไปคอลัมน์ซ้าย">‹</button>
+<button class="mvb" type="button" onClick="{{k.right}}" disabled="{{k.noR}}" aria-label="ย้าย {{k.key}} ไปคอลัมน์ขวา">›</button>
+<span class="muted" style="font-size:11px;align-self:center">หรือลากการ์ด</span>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{col.showPh}}" hint-placeholder-val="{{ false }}"><div class="ph">วางที่นี่ → {{col.name}}</div></sc-if>
+<sc-if value="{{col.isDone}}" hint-placeholder-val="{{ false }}"><button class="addc" type="button" style="color:#1D4ED8">Show older (67) · ซ่อนการ์ดที่เสร็จเกิน 7 วัน</button></sc-if>
+</div>
+<a class="addc" href="TaskCreate.dc.html" style="margin:2px 10px 10px;display:flex;align-items:center;text-decoration:none">+ Add card</a>
+</section>
+</sc-for>
+<button class="btn" type="button" style="flex:0 0 200px;min-height:52px;border-style:dashed;justify-content:center;background:transparent;align-self:flex-start">+ Add column</button>
+</div>
+<div class="muted" style="font-size:12px">ลากการ์ดข้ามคอลัมน์เพื่อเปลี่ยนสถานะ หรือลากในคอลัมน์เดียวกันเพื่อเรียงลำดับ · ใช้ปุ่ม ‹ › บนการ์ดแทนการลากได้ (คีย์บอร์ด / มือถือ) · ย้ายไป Done ทั้งที่ Sub-task ยังไม่ครบจะมีคำเตือน · หัวคอลัมน์เป็นสีแดงเมื่อเกิน WIP limit</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  state = { mod: 'all' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const mod = st.mod || 'all';
+    const T = [['Overview','Main.dc.html'],['ภาพรวม Lead','LeadDashboard.dc.html'],['Backlog','Backlog.dc.html'],['Table','Table.dc.html'],['Kanban','Kanban.dc.html'],['Timeline','Timeline.dc.html'],['Gantt','Gantt.dc.html'],['Calendar','Calendar.dc.html'],['Members','Members.dc.html'],['Files','Files.dc.html'],['Settings','ProjectSettings.dc.html']];
+    const tabs = T.map(function (x) { return { label: x[0], href: x[1], cls: x[0] === 'Kanban' ? 'tab on' : 'tab' }; });
+    const P = {"Mick": ["MK", "#1D4ED8"], "Kaijeaw": ["KJ", "#B45309"], "Pond": ["PD", "#0F766E"], "Tung": ["TG", "#7C3AED"], "Top": ["TP", "#BE185D"], "Zo": ["ZO", "#0369A1"], "P'Tum": ["PT", "#4D7C0F"], "Ton": ["TN", "#65A30D"], "Donut": ["DN", "#A21CAF"], "Naa": ["NA", "#C2410C"], "P'Nee": ["PN", "#0E7490"], "P'Oak": ["PO", "#57534E"], "Kookkai": ["KK", "#DB2777"], "P'Wing": ["PW", "#4338CA"], "KL": ["KL", "#475569"]};
+    const MD = {"m0": ["Credit Line", "#1D4ED8"], "m1": ["Drawdown", "#0F766E"], "m2": ["Pre-Disburse", "#B45309"], "m3": ["Maintain Car", "#7C3AED"], "m4": ["BFC", "#BE185D"], "m5": ["Repayment", "#0369A1"], "m6": ["Checkstock", "#4D7C0F"], "m7": ["Finance (GL)", "#57534E"], "m8": ["Campaign", "#C2410C"], "m9": ["OEM Portal", "#4338CA"], "m10": ["Interface", "#0E7490"]};
+    const PRC = { Urgent: 'pr-u', High: 'pr-h', Medium: 'pr-m', Low: 'pr-l' };
+    const TYD = { story: ['Story', '#15803D', 'M6 3h12v18l-6-4-6 4z'], task: ['Task', '#1D4ED8', 'M5 5h14v14H5z'], bug: ['Bug', '#DC2626', 'M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14z'], spike: ['Spike', '#7C3AED', 'M13 2 4 14h7l-1 8 9-12h-7z'], sub: ['Sub-task', '#64748B', 'M8 6h8v2H8zM8 11h8v2H8zM8 16h5v2H8z'] };
+    const TYK = { 'DP-525': 'bug' };
+    const COLS = [['todo', 'To do', '#8A94A0', 0], ['prog', 'In progress', '#3B82F6', 8], ['rev', 'Review', '#F59E0B', 3], ['done', 'Done', '#15803D', 0]];
+    const NAME = { todo: 'To do', prog: 'In progress', rev: 'Review', done: 'Done' };
+    const CI = { todo: 0, prog: 1, rev: 2, done: 3 };
+    const D = [["rev", "DP-525", "m0", "DP-20 Workflow ส่งงาน/คืนงาน", "Workflow ส่งกลับแก้ไข: สถานะไม่กลับเป็น Draft เมื่อ LO ส่งคืน", "Kaijeaw", "High", "4 ธ.ค.", "", "", 2], ["todo", "DP-100", "m1", "Drawdown Entry - Normal", "Drawdown Entry: นับรายการตามสถานะ, สร้างตามประเภท", "Pond", "High", "3 ธ.ค.", "", "", 1], ["todo", "DP-261", "m5", "ช่องทางรับชำระ", "สร้างไฟล์ Direct Debit (KBANK): รอบ 11/14/16 น. + Manual, จาก Dealer Portal/CO, ส่งซ้ำรายการไม่ผ่าน", "Tung", "Medium", "8 ธ.ค.", "", "", 4], ["todo", "DP-262", "m5", "ช่องทางรับชำระ", "อัปโหลดผล Direct Debit -> ตัดชำระอัตโนมัติ + รายงานสรุป", "Tung", "Medium", "8 ธ.ค.", "", "", 3], ["todo", "DP-101", "m1", "Drawdown Entry - Normal", "Dealer & Credit Line Search (Popup ใช้ร่วม)", "Pond", "High", "4 ธ.ค.", "", "", 0], ["todo", "DP-102", "m1", "Drawdown Entry - Normal", "Tab รายการรถ: Add Manual / Select Car, Credit Information", "Pond", "Medium", "9 ธ.ค.", "", "", 0], ["todo", "DP-103", "m1", "Drawdown Entry - Normal", "Gen Drawdown No. (DDYYMM####) + Contract No./Car ID เมื่ออนุมัติ", "Pond", "Medium", "8 ธ.ค.", "", "", 2], ["todo", "DP-104", "m1", "Drawdown Entry - Normal", "จองวงเงิน (Reserve) / ปรับเมื่อเพิ่ม-ลบรถ / คืนเมื่อยกเลิก", "Pond", "Medium", "11 ธ.ค.", "", "", 3], ["prog", "DP-219", "m4", "แผน Curtailment", "ยกเลิก BFC Curtailment อัตโนมัติเมื่อออก BFC SOT + ทำแผนใหม่", "Top", "Urgent", "เลย 8 วัน", "late", "", 2], ["prog", "DP-23", "m0", "Credit Line & Workflow", "ระยะเวลาวงเงิน (เพิ่ม, ล็อกหลังอนุมัติ)", "Kaijeaw", "Urgent", "เลย 7 วัน", "late", "", 0], ["rev", "DP-91", "m1", "รับข้อมูลรถ (Upload / EDI)", "Export EDI: รายการ Lot, Drill-down, Export เป็น Template", "Pond", "Urgent", "เลย 7 วัน", "late", "", 3], ["prog", "DP-21", "m0", "Credit Line & Workflow", "Maintain : สร้างงานอัตโนมัติ, Add Credit, Select Credit, Gen เลขที่", "Kaijeaw", "Urgent", "เลย 6 วัน", "late", "", 4], ["prog", "DP-211", "m4", "ไม่ระบุกลุ่มงาน", "UX/UI 15 หน้าจอ", "Top", "Urgent", "เลย 6 วัน", "late", "", 3], ["rev", "DP-34", "m0", "Product & ผู้ใช้วงเงิน", "ผู้ใช้วงเงินจาก MDP (P/J) + ผูกลูกค้า FACO", "Kaijeaw", "Urgent", "เลย 2 วัน", "late", "", 3], ["prog", "DP-30", "m0", "Product & ผู้ใช้วงเงิน", "Curtailment Information + Plan Template (Floor Plan)", "Kaijeaw", "Urgent", "เลย 1 วัน", "late", "", 0], ["prog", "DP-35", "m0", "Product & ผู้ใช้วงเงิน", "Add Dealer / Add Group Dealer (วงเงินใช้ได้จริงรายคน/กลุ่ม)", "Kaijeaw", "High", "วันนี้", "today", "", 1], ["rev", "DP-260", "m5", "ช่องทางรับชำระ", "Offset กับ HP: ตรวจรถจาก Chassis/Engine, ส่งยอด O/S, เทียบยอด, ตัดปิด + ใบเสร็จ, อีเมลส่วนต่าง", "Tung", "High", "วันนี้", "today", "", 1], ["prog", "DP-38", "m0", "หลักประกัน & ผู้ค้ำประกัน", "Collateral framework: รายการ, Map จาก MDP (Other), ผูกกับวงเงิน", "Kaijeaw", "High", "3 ธ.ค.", "", "", 0], ["prog", "DP-95", "m1", "ตรวจสอบก่อนเบิกใช้ (Check engine)", "เงื่อนไขระงับวงเงิน 8 ข้อ + ข้ามได้ตามช่วงอนุโลม", "Pond", "High", "4 ธ.ค.", "", "", 4], ["prog", "DP-97", "m1", "ตรวจสอบก่อนเบิกใช้ (Check engine)", "วงเงินถูกระงับหลัง Confirm: เตือน + บันทึกหมายเหตุอัตโนมัติ", "Pond", "High", "4 ธ.ค.", "", "", 4], ["prog", "DP-39", "m0", "หลักประกัน & ผู้ค้ำประกัน", "ฟอร์มหลักประกัน 5 ประเภท: Bank Account, Stock, รถยนต์, BG, Mortgage", "Kaijeaw", "Medium", "9 ธ.ค.", "", "1/5", 0], ["prog", "DP-223", "m4", "Calculate Core engine Interest/Rental/Penalty/Fee", "ค่าปรับ/ดอกเบี้ยผิดนัด 2 แบบ: Curtailment และ SOT", "Top", "Medium", "14 ธ.ค.", "", "", 2], ["done", "DP-20", "m0", "Credit Line & Workflow", "Workflow : ส่งงาน/คืนงาน/ส่งกลับแก้ไข ข้าม BD·LO·LC·CC + To-do list", "Kaijeaw", "High", "เสร็จ 1 ธ.ค.", "done", "", 4], ["done", "DP-24", "m0", "Credit Line & Workflow", "Credit / Sub / Shared Limit (Product / Dealer) + API Available Credit", "Kaijeaw", "High", "เสร็จ 1 ธ.ค.", "done", "", 3], ["done", "DP-29", "m0", "Product & ผู้ใช้วงเงิน", "Interest Setting + Interest Program Normal / Penetration (Floor Plan)", "Kaijeaw", "High", "เสร็จ 1 ธ.ค.", "done", "", 1], ["done", "DP-94", "m1", "ตรวจสอบก่อนเบิกใช้ (Check engine)", "ตรวจวงเงินคงเหลือระดับ Credit Line / Brand / Dealer (API ตั้งวงเงิน)", "Pond", "High", "เสร็จ 1 ธ.ค.", "done", "", 4], ["done", "DP-96", "m1", "ตรวจสอบก่อนเบิกใช้ (Check engine)", "แจ้งเตือนวงเงินใกล้หมดอายุ (T-15)", "Pond", "High", "เสร็จ 1 ธ.ค.", "done", "", 1]];
+    const byKey = {};
+    const initCol = {};
+    const initOrder = [];
+    D.forEach(function (d) {
+      const sub = d[9] || '';
+      const parts = sub.split('/');
+      byKey[d[1]] = { key: d[1], mod: d[2], parent: d[3], t: d[4], who: d[5], pr: d[6], due: d[7], flag: d[8], sub: sub, cm: d[10] || 0, prl: d[11] || '', subOpen: parts.length === 2 && parseInt(parts[0], 10) < parseInt(parts[1], 10) };
+      initCol[d[1]] = d[0];
+      initOrder.push(d[1]);
+    });
+    const getCol = function () { return (self.state && self.state.colOf) || initCol; };
+    const getOrder = function () { return (self.state && self.state.order) || initOrder; };
+    const colOf = getCol();
+    const order = getOrder();
+    const drag = st.drag || null, overCol = st.overCol || null, overKey = st.overKey || null;
+
+    const doMove = function (key, toCol, beforeKey) {
+      if (!key || !toCol) { self.setState({ drag: null, overCol: null, overKey: null }); return; }
+      const cur = getCol(), ord = getOrder();
+      const fromCol = cur[key];
+      if (beforeKey === key) { self.setState({ drag: null, overCol: null, overKey: null }); return; }
+      const prev = { colOf: Object.assign({}, cur), order: ord.slice() };
+      const no = ord.filter(function (k) { return k !== key; });
+      let idx = beforeKey ? no.indexOf(beforeKey) : -1;
+      if (idx < 0) {
+        let last = -1;
+        no.forEach(function (k, i) { if (cur[k] === toCol) last = i; });
+        idx = last < 0 ? no.length : last + 1;
+      }
+      no.splice(idx, 0, key);
+      const nc = Object.assign({}, cur);
+      nc[key] = toCol;
+      const card = byKey[key];
+      let toast;
+      if (toCol === 'done' && fromCol !== 'done' && card.subOpen) {
+        toast = { kind: 'warn', confirm: true, msg: key + ' ยังมี Sub-task ไม่เสร็จ (' + card.sub + ') ต้องการย้ายไป Done จริงไหม? Sub-task ที่เหลือจะถูกปิดด้วย', undo: prev };
+      } else if (fromCol !== toCol) {
+        toast = { kind: 'info', msg: 'ย้าย ' + key + ' จาก ' + NAME[fromCol] + ' → ' + NAME[toCol] + ' แล้ว · แจ้งเตือน ' + card.who + ' และ Watchers', undo: prev };
+      } else {
+        toast = { kind: 'info', msg: 'เรียงลำดับ ' + key + ' ใหม่ใน ' + NAME[toCol], undo: prev };
+      }
+      self.setState({ colOf: nc, order: no, drag: null, overCol: null, overKey: null, toast: toast });
+    };
+
+    const visible = order.filter(function (k) { return mod === 'all' || byKey[k].mod === mod; });
+    const cols = COLS.map(function (c, ci) {
+      const id = c[0];
+      const keys = visible.filter(function (k) { return colOf[k] === id; });
+      const cards = keys.map(function (k) {
+        const d = byKey[k];
+        const cc = colOf[k];
+        const cidx = CI[cc];
+        const ty = TYD[TYK[k] || 'task'];
+        return {
+          key: k, tyn: ty[0], tyc: ty[1], tyi: ty[2], href: TYK[k] === 'bug' ? 'BugDetail.dc.html' : 'TaskDetail.dc.html', m: MD[d.mod][0], mbg: MD[d.mod][1] + '1A', mfg: MD[d.mod][1], parent: d.parent, hasParent: !!d.parent, t: d.t, who: d.who, ini: P[d.who][0], pc: P[d.who][1],
+          pr: d.pr, prc: PRC[d.pr], due: cc === 'done' && d.flag !== 'done' ? 'เสร็จวันนี้' : (cc !== 'done' && d.flag === 'done' ? 'เปิดใหม่' : d.due),
+          dueCls: 'dc ' + (cc === 'done' ? 'done' : (d.flag === 'done' ? '' : d.flag)),
+          sub: d.sub, hasSub: !!d.sub, cm: d.cm, hasCm: !!d.cm, prl: d.prl, hasPr: !!d.prl,
+          cls: 'kc' + (cc === 'done' ? ' done' : '') + (drag === k ? ' dragging' : ''),
+          before: !!drag && drag !== k && overKey === k,
+          noL: cidx === 0, noR: cidx === 3,
+          left: function () { if (cidx > 0) doMove(k, COLS[cidx - 1][0], null); },
+          right: function () { if (cidx < 3) doMove(k, COLS[cidx + 1][0], null); },
+          ds: function (e) {
+            try { e.dataTransfer.setData('text/plain', k); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
+            setTimeout(function () { self.setState({ drag: k, toast: null }); }, 0);
+          },
+          de: function () { setTimeout(function () { if (self.state && self.state.drag) self.setState({ drag: null, overCol: null, overKey: null }); }, 30); },
+          dov: function (e) {
+            e.preventDefault(); e.stopPropagation();
+            try { e.dataTransfer.dropEffect = 'move'; } catch (err) {}
+            const s = self.state || {};
+            if (s.overKey !== k || s.overCol !== cc) self.setState({ overKey: k, overCol: cc });
+          }
+        };
+      });
+      return {
+        name: c[1], color: c[2], wip: c[3], hasWip: c[3] > 0, count: keys.length,
+        wipCls: keys.length > c[3] ? 'pill s-late' : 'pill s-todo', cards: cards, isDone: id === 'done',
+        cls: drag && overCol === id ? 'col over' : 'col',
+        showPh: !!drag && overCol === id && !overKey,
+        over: function (e) {
+          e.preventDefault();
+          try { e.dataTransfer.dropEffect = 'move'; } catch (err) {}
+          const s = self.state || {};
+          if (s.overCol !== id || s.overKey) self.setState({ overCol: id, overKey: null });
+        },
+        drop: function (e) {
+          e.preventDefault();
+          const s = self.state || {};
+          let k = s.drag;
+          if (!k) { try { k = e.dataTransfer.getData('text/plain'); } catch (err) {} }
+          doMove(k, id, s.overCol === id ? s.overKey : null);
+        }
+      };
+    });
+    const opts = [["all", "All", ""], ["m0", "Credit Line", "#1D4ED8"], ["m1", "Drawdown", "#0F766E"], ["m4", "BFC", "#BE185D"], ["m5", "Repayment", "#0369A1"]];
+    const chips = opts.map(function (o) {
+      const n = o[0] === 'all' ? order.length : order.filter(function (k) { return byKey[k].mod === o[0]; }).length;
+      return { label: o[1], n: n, color: o[2], hasDot: !!o[2], on: mod === o[0] ? 'true' : 'false', cls: mod === o[0] ? 'chip on' : 'chip', pick: function () { self.setState({ mod: o[0] }); } };
+    });
+    const toast = st.toast || null;
+    return {
+      tabs: tabs, cols: cols, chips: chips,
+      hasToast: !!toast, toastMsg: toast ? toast.msg : '', toastCls: toast ? 'toast ' + toast.kind : 'toast',
+      toastConfirm: !!(toast && toast.confirm), toastInfo: !(toast && toast.confirm), undoLabel: toast && toast.confirm ? 'ยกเลิก' : 'Undo',
+      undo: function () { const t = self.state && self.state.toast; if (t && t.undo) self.setState({ colOf: t.undo.colOf, order: t.undo.order, toast: null }); },
+      dismiss: function () { self.setState({ toast: null }); },
+      reset: function () { self.setState({ colOf: null, order: null, toast: null, drag: null, overCol: null, overKey: null }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

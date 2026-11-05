@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Admin Console</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 230px;max-width:250px;background:#fff;border-right:1px solid #E4E7EB;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;padding:22px 24px 48px;display:flex;flex-direction:column;gap:16px}
+.nv{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 12px;border:0;border-radius:8px;background:transparent;font:inherit;text-align:left;cursor:pointer;color:#3D4550;text-decoration:none}
+.nv:hover{background:#F1F3F5;color:#1B1F24}
+.nv.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.sec{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:14px 12px 6px}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.ch{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid #EEF0F3}
+.ch h2{margin:0;font-size:15px}
+.cb{padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.btn.danger{background:#B91C1C;border-color:#B91C1C;color:#fff}
+.muted{color:#5F6873}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.ok{background:#DCFCE7;color:#166534}.warn{background:#FEF3C7;color:#92400E}.bad{background:#FEE2E2;color:#991B1B}.neu{background:#EEF0F3;color:#3D4550}.ent{background:#EDE9FE;color:#5B21B6}
+.kp{background:#fff;border:1px solid #E4E7EB;border-radius:12px;padding:14px 16px}
+.kp b{display:block;font-size:24px;line-height:1.2}
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #F1F3F5;flex-wrap:wrap}
+.fld{display:flex;flex-direction:column;gap:6px;min-width:0}
+.lb{font-size:13px;font-weight:600}
+.in{min-height:38px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%;min-width:0}
+textarea.in{padding:8px 10px;min-height:64px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid #D5DAE0;border-radius:10px;background:#fff;font:inherit;text-align:left;cursor:pointer;color:#1B1F24;flex:1 1 200px}
+.opt.on{border-color:#1D4ED8;box-shadow:0 0 0 1px #1D4ED8;background:#F8FAFF}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.chip[aria-pressed="true"]{background:#1B1F24;border-color:#1B1F24;color:#fff}
+.al{display:grid;grid-template-columns:130px 110px minmax(0,1fr) minmax(0,1fr) 120px;gap:10px;align-items:center;padding:9px 18px;border-bottom:1px solid #F1F3F5;font-size:13px}
+.al.h{font-size:12px;font-weight:700;color:#5F6873;background:#F8F9FB}
+.plan{display:flex;flex-direction:column;gap:8px;padding:18px;border:1px solid #E4E7EB;border-radius:12px;background:#fff;flex:1 1 240px}
+.plan.cur{border-color:#1D4ED8;box-shadow:0 0 0 1px #1D4ED8}
+.plan ul{margin:0;padding-left:18px;font-size:13px;line-height:1.8}
+.bar{height:8px;background:#EEF0F3;border-radius:99px;overflow:hidden}
+.av{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex:none}
+@media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.main{padding:16px}.al{grid-template-columns:110px minmax(0,1fr)}.al .hs{display:none}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<span class="pill" style="background:#334155;color:#E2E8F0">Admin Console</span>
+<span style="flex:1"></span>
+<a href="Home.dc.html" style="color:#93C5FD;font-size:13px">← กลับไปที่ Workspace</a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div class="app">
+<nav class="side" aria-label="Admin sections">
+<div style="padding:4px 12px 10px"><div style="font-weight:700">Friday Workspace</div><div class="muted" style="font-size:12px">friday.app/friday-workspace</div><span class="pill warn" style="margin-top:6px">Team M · ทดลองใช้ เหลือ 14 วัน</span></div>
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="12">
+<sc-if value="{{n.isSec}}" hint-placeholder-val="{{ false }}"><div class="sec">{{n.n}}</div></sc-if>
+<sc-if value="{{n.isItem}}" hint-placeholder-val="{{ true }}"><button class="{{n.cls}}" type="button" onClick="{{n.pick}}" aria-current="{{n.cur}}">{{n.n}}<sc-if value="{{n.hasBadge}}" hint-placeholder-val="{{ false }}"><span class="pill {{n.bc}}" style="margin-left:auto">{{n.badge}}</span></sc-if></button></sc-if>
+</sc-for>
+<a class="nv" href="WorkspaceMembers.dc.html">สมาชิก &amp; คำเชิญ ↗</a>
+</nav>
+
+<main class="main">
+<div><h1 style="margin:0;font-size:24px">{{title}}</h1><div class="muted">{{desc}}</div></div>
+
+<sc-if value="{{sOverview}}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
+<div class="kp"><span class="muted" style="font-size:13px">ผู้ใช้ Active</span><b>9 <span class="muted" style="font-size:14px;font-weight:500">/ 25 seats</span></b><div class="bar" style="margin-top:6px"><div style="width:36%;height:100%;background:#1D4ED8"></div></div></div>
+<div class="kp"><span class="muted" style="font-size:13px">โปรเจกต์ Active</span><b>3</b><span class="muted" style="font-size:12px">Archive แล้ว 1</span></div>
+<div class="kp"><span class="muted" style="font-size:13px">พื้นที่เก็บไฟล์</span><b>1.2 <span class="muted" style="font-size:14px;font-weight:500">/ 50 GB</span></b><div class="bar" style="margin-top:6px"><div style="width:3%;height:100%;background:#1D4ED8"></div></div></div>
+<div class="kp"><span class="muted" style="font-size:13px">ใช้งานใน 7 วัน</span><b>8 คน</b><span class="muted" style="font-size:12px">89% ของผู้ใช้</span></div>
+<div class="kp"><span class="muted" style="font-size:13px">งานทั้งหมด</span><b>486</b><span class="muted" style="font-size:12px">เปิดอยู่ 312</span></div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<section class="card" style="flex:2 1 460px;min-width:0">
+<div class="ch"><h2>ต้องดำเนินการ</h2><span class="pill bad">4</span></div>
+<div class="cb" style="gap:0;padding-top:4px;padding-bottom:4px">
+<sc-for list="{{alerts}}" as="a" hint-placeholder-count="4">
+<div class="row"><span class="pill {{a.c}}">{{a.t}}</span><span style="flex:1;min-width:200px">{{a.msg}}</span><button class="btn" type="button" onClick="{{a.go}}" style="min-height:32px">{{a.btn}}</button></div>
+</sc-for>
+</div>
+</section>
+<section class="card" style="flex:1 1 300px;min-width:0">
+<div class="ch"><h2>ผู้ใช้ Active รายสัปดาห์</h2></div>
+<div class="cb">
+<div style="display:flex;align-items:flex-end;gap:10px;height:110px;border-bottom:1px solid #D5DAE0" role="img" aria-label="ผู้ใช้ active 8 สัปดาห์ล่าสุด เพิ่มจาก 5 เป็น 8 คน">
+<sc-for list="{{wau}}" as="w" hint-placeholder-count="8"><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px"><span style="font-size:11px;font-weight:600">{{w.v}}</span><div style="width:100%;max-width:28px;height:{{w.h}}px;background:{{w.c}};border-radius:4px 4px 0 0"></div></div></sc-for>
+</div>
+<div class="muted" style="font-size:12px">8 สัปดาห์ล่าสุด · เพิ่มจาก 5 เป็น 8 คน</div>
+</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{sTeams}}" hint-placeholder-val="{{ false }}">
+<section class="card">
+<div class="ch"><h2>ทีมในองค์กร</h2><div style="display:flex;gap:8px"><a class="btn" href="WorkspaceMembers.dc.html">จัดการสมาชิก</a><button class="btn pri" type="button">+ สร้างทีม</button></div></div>
+<div class="cb" style="gap:0">
+<sc-for list="{{teams}}" as="t" hint-placeholder-count="5">
+<div class="row"><span style="width:12px;height:12px;border-radius:3px;background:{{t.c}}"></span><b style="min-width:120px">{{t.n}}</b><span class="muted" style="font-size:13px;min-width:120px">หัวหน้าทีม: {{t.lead}}</span><span style="font-size:13px;min-width:80px">{{t.k}} คน</span><span style="font-size:13px;min-width:150px">Capacity {{t.cap}} MD/สัปดาห์</span><span class="muted" style="font-size:13px;flex:1">{{t.proj}}</span><button class="btn" type="button" style="min-height:30px">แก้ไข</button></div>
+</sc-for>
+</div>
+</section>
+<div class="muted" style="font-size:12px">ทีมใช้กรอง Workload รวม และกำหนดสิทธิ์ได้ทั้งทีม เช่น เพิ่มทีม BA เข้าโปรเจกต์ใหม่ทีเดียว</div>
+</sc-if>
+
+<sc-if value="{{sStd}}" hint-placeholder-val="{{ false }}">
+<section class="card">
+<div class="ch"><h2>ปฏิทินวันหยุด</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button">นำเข้าจากประกาศ ธปท.</button><button class="btn" type="button">+ วันหยุดบริษัท</button></div></div>
+<div class="cb">
+<label class="fld" style="max-width:420px"><span class="lb">ใช้เป็นค่าเริ่มต้นของทุกโปรเจกต์</span><select class="in"><option>ธนาคารแห่งประเทศไทย (ธปท.) 2569–2570</option><option>วันหยุดราชการ</option><option>กำหนดเอง</option></select></label>
+<div>
+<sc-for list="{{hols}}" as="h" hint-placeholder-count="5"><div class="row" style="font-size:13px"><b style="min-width:140px">{{h.d}}</b><span style="flex:1">{{h.n}}</span><span class="pill {{h.c}}">{{h.t}}</span></div></sc-for>
+</div>
+<div class="muted" style="font-size:12px">ตัวอย่างช่วง พ.ย. 2569 – ม.ค. 2570 · ระบบแจ้ง Admin เมื่อ ธปท. ออกประกาศปีใหม่ · Plan End ของทุกงานคำนวณใหม่อัตโนมัติเมื่อปฏิทินเปลี่ยน</div>
+</div>
+</section>
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<section class="card" style="flex:1 1 360px">
+<div class="ch"><h2>เวลาทำงานและหน่วยประเมิน</h2></div>
+<div class="cb">
+<label class="fld"><span class="lb">เวลาทำงาน (1 Man-Day)</span><input class="in" type="text" value="จ.–ศ. 09:30–18:30 · พัก 1 ชม. = 8 ชม."></label>
+<div class="fld"><span class="lb">Size → Man-Day</span><div style="display:flex;gap:8px;flex-wrap:wrap">
+<sc-for list="{{sizes}}" as="s" hint-placeholder-count="5"><label style="display:flex;align-items:center;gap:6px"><span class="pill neu">{{s.n}}</span><input class="in" type="number" value="{{s.v}}" style="width:64px" aria-label="Man-Day ของ {{s.n}}"></label></sc-for>
+</div></div>
+<label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" checked style="width:18px;height:18px">อนุญาตให้โปรเจกต์ปรับค่าเองได้ (override)</label>
+</div>
+</section>
+<section class="card" style="flex:1 1 360px">
+<div class="ch"><h2>Template โปรเจกต์มาตรฐาน</h2><button class="btn" type="button">+ Template</button></div>
+<div class="cb" style="gap:0">
+<sc-for list="{{tpls}}" as="t" hint-placeholder-count="3"><div class="row"><b style="flex:1;min-width:160px">{{t.n}}</b><span class="muted" style="font-size:12px">{{t.d}}</span><span class="pill neu">ใช้ {{t.k}} ครั้ง</span></div></sc-for>
+</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{sLoad}}" hint-placeholder-val="{{ false }}">
+<section class="card">
+<div class="ch"><h2>Workload รวมทุกโปรเจกต์ <span class="muted" style="font-weight:500">· Man-Day ต่อสัปดาห์</span></h2>
+<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px" class="muted">
+<sc-for list="{{projLegend}}" as="p" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:{{p.c}}"></span>{{p.n}}</span></sc-for>
+<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:16px;border-top:2px dashed #475569"></span>Capacity</span>
+</div></div>
+<div style="display:grid;grid-template-columns:200px minmax(0,1fr);padding:8px 18px;background:#F8F9FB;font-size:12px;font-weight:600;color:#5F6873;border-bottom:1px solid #EEF0F3"><span>คน</span><span style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));text-align:center"><span style="color:#1D4ED8">2–8 พ.ย.</span><span>9–15 พ.ย.</span><span>16–22 พ.ย.</span><span>23–29 พ.ย.</span></span></div>
+<sc-for list="{{people}}" as="p" hint-placeholder-count="5">
+<div style="display:grid;grid-template-columns:200px minmax(0,1fr);padding:10px 18px;border-bottom:1px solid #F1F3F5;align-items:end">
+<div style="display:flex;gap:10px;align-items:center;align-self:center"><span class="av" style="background:{{p.c}}">{{p.ini}}</span><div><b>{{p.n}}</b><div class="muted" style="font-size:12px">{{p.role}}</div><div style="font-size:12px;color:{{p.flagC}};font-weight:600">{{p.flag}}</div></div></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
+<sc-for list="{{p.weeks}}" as="w" hint-placeholder-count="4">
+<div style="position:relative;height:110px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end" title="{{w.tip}}">
+<span style="font-size:11px;font-weight:700;color:{{w.tc}}">{{w.v}}</span>
+<div style="width:44px;display:flex;flex-direction:column-reverse;border-radius:4px 4px 0 0;overflow:hidden;outline:{{w.ol}}">
+<sc-for list="{{w.segs}}" as="s" hint-placeholder-count="2"><div style="height:{{s.h}}px;background:{{s.c}}"></div></sc-for>
+</div>
+<span style="position:absolute;left:10%;right:10%;bottom:{{w.capY}}px;border-top:2px dashed #475569"></span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<div class="cb"><div class="muted" style="font-size:12px">รวมทุกโปรเจกต์ใน Workspace · กรอบแดง = เกิน capacity · Man-Day ของงานหลาย Dev แบ่งเท่ากัน · กรองตามทีมได้</div></div>
+</section>
+</sc-if>
+
+<sc-if value="{{sSec}}" hint-placeholder-val="{{ false }}">
+<section class="card">
+<div class="ch"><h2>การเข้าช่วยเหลือจากทีม Friday</h2><span class="pill {{supPc}}">{{supTxt}}</span></div>
+<div class="cb">
+<div style="display:flex;gap:12px;align-items:flex-start">
+<button type="button" role="switch" aria-checked="{{supOn}}" onClick="{{toggleSup}}" aria-label="อนุญาตทีม Friday เข้าช่วยเหลือ" style="position:relative;width:44px;height:26px;border-radius:99px;border:0;cursor:pointer;padding:0;flex:none;background:{{supBg}}"><span style="position:absolute;top:3px;left:{{supX}}px;width:20px;height:20px;border-radius:50%;background:#fff"></span></button>
+<div><b>อนุญาตให้ทีม Friday เข้า Workspace นี้เพื่อช่วยแก้ปัญหา</b><div class="muted" style="font-size:13px">เปิดไว้ล่วงหน้า ทีมจะไม่ต้องขออนุญาตทุกครั้ง · ทุกครั้งต้องอ้างเลข Ticket · อ่านอย่างเดียว 60 นาทีเป็นค่าเริ่มต้น · เห็นข้อมูลบัตรและรหัสผ่านไม่ได้</div></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+<label class="fld"><span class="lb">อนุญาตถึง</span><select class="in"><option>ตลอด จนกว่าจะปิด</option><option>30 วัน</option><option>7 วัน</option></select></label>
+<label class="fld"><span class="lb">สิทธิ์สูงสุด</span><select class="in"><option>อ่านอย่างเดียว</option><option>แก้ไขได้ (ทีมต้องมีผู้อนุมัติ 2 คน)</option></select></label>
+<label class="fld"><span class="lb">แจ้งเมื่อมีการเข้า</span><select class="in"><option>Owner และ Admin ทางอีเมล</option></select></label>
+</div>
+<div class="row" style="border:0;padding:4px 0;font-size:13px"><span class="pill neu">ล่าสุด</span><span>28 ต.ค. 09:05 · Ticket #4702 · อ่านอย่างเดียว 14 นาที</span><a href="#" onClick="{{goAudit}}">ดูใน Audit Log</a></div>
+</div>
+</section>
+<section class="card">
+<div class="ch"><h2>Single Sign-On (SSO)</h2><span class="pill ent">Enterprise</span></div>
+<div class="cb">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+<sc-for list="{{sso}}" as="s" hint-placeholder-count="4"><div style="border:1px solid #E4E7EB;border-radius:10px;padding:12px;display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:8px;background:{{s.c}};color:#fff;font-weight:700;font-size:11px;display:inline-flex;align-items:center;justify-content:center">{{s.ab}}</span><div style="flex:1;min-width:0"><b style="font-size:13px">{{s.n}}</b><div class="muted" style="font-size:12px">{{s.d}}</div></div><button class="btn" type="button" style="min-height:30px;font-size:12px">ตั้งค่า</button></div></sc-for>
+</div>
+<div class="row" style="border:0"><span class="pill ok">ยืนยันโดเมนแล้ว</span><span class="mono">example.com</span><span class="muted" style="font-size:13px">ผ่าน DNS TXT record · ผู้ใช้อีเมล @example.com จะล็อกอินผ่าน SSO ได้</span></div>
+<label style="display:flex;gap:8px;align-items:center;font-size:14px;opacity:.55"><input type="checkbox" disabled style="width:18px;height:18px">บังคับใช้ SSO สำหรับ @example.com (เปิดได้หลังเชื่อม SSO)</label>
+</div>
+</section>
+<section class="card">
+<div class="ch"><h2>Two-factor authentication</h2><span class="muted" style="font-size:13px">เปิดแล้ว 7 / 9 คน</span></div>
+<div class="cb">
+<div style="display:flex;gap:10px;flex-wrap:wrap" role="radiogroup" aria-label="นโยบาย 2FA">
+<sc-for list="{{tfa}}" as="o" hint-placeholder-count="3"><button class="{{o.cls}}" type="button" role="radio" aria-checked="{{o.on}}" onClick="{{o.pick}}"><span style="width:18px;height:18px;border-radius:50%;border:2px solid {{o.bd}};display:inline-flex;align-items:center;justify-content:center;flex:none;margin-top:2px"><span style="width:8px;height:8px;border-radius:50%;background:{{o.dot}}"></span></span><span><b>{{o.n}}</b><span class="muted" style="display:block;font-size:12px">{{o.d}}</span></span></button></sc-for>
+</div>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px"><span class="pill warn">ยังไม่เปิด 2 คน</span>Jane, client-pm@example.com<button class="btn" type="button" style="min-height:30px">ส่งแจ้งเตือน</button></div>
+</div>
+</section>
+<section class="card">
+<div class="ch"><h2>รหัสผ่าน · Session · การเข้าถึง</h2></div>
+<div class="cb" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
+<label class="fld"><span class="lb">ความยาวรหัสผ่านขั้นต่ำ</span><select class="in"><option>10 ตัวอักษร + อักขระพิเศษ</option><option>8 ตัวอักษร</option><option>12 ตัวอักษร</option></select></label>
+<label class="fld"><span class="lb">บังคับเปลี่ยนรหัสผ่าน</span><select class="in"><option>ทุก 90 วัน</option><option>ไม่บังคับ</option><option>ทุก 180 วัน</option></select></label>
+<label class="fld"><span class="lb">ล็อกบัญชีเมื่อใส่รหัสผิด</span><select class="in"><option>5 ครั้ง · ล็อก 15 นาที</option><option>3 ครั้ง</option><option>10 ครั้ง</option></select></label>
+<label class="fld"><span class="lb">Session หมดอายุเมื่อไม่ใช้งาน</span><select class="in"><option>8 ชั่วโมง</option><option>1 ชั่วโมง</option><option>24 ชั่วโมง</option></select></label>
+<label class="fld"><span class="lb">อีเมลที่สมัคร / ได้รับเชิญได้</span><input class="in" type="text" value="@example.com · Guest: ทุกโดเมน"></label>
+<label class="fld"><span class="lb">IP Allowlist (ไม่บังคับ)</span><textarea class="in" placeholder="เช่น 203.0.113.0/24 (สำนักงาน) — เว้นว่าง = ไม่จำกัด"></textarea></label>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{sAudit}}" hint-placeholder-val="{{ false }}">
+<section class="card">
+<div class="ch">
+<div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{auditChips}}" as="c" hint-placeholder-count="5"><button class="chip" type="button" aria-pressed="{{c.on}}" onClick="{{c.pick}}">{{c.n}}</button></sc-for></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><select class="in" aria-label="ผู้ใช้" style="width:auto"><option>ทุกคน</option><option>Mick</option><option>Donut</option></select><select class="in" aria-label="ช่วงเวลา" style="width:auto"><option>7 วันล่าสุด</option><option>30 วัน</option><option>กำหนดเอง</option></select><button class="btn" type="button">Export CSV</button></div>
+</div>
+<div class="al h"><span>เวลา</span><span>ผู้ใช้</span><span>การกระทำ</span><span class="hs">รายการ</span><span class="hs">IP</span></div>
+<sc-for list="{{audit}}" as="a" hint-placeholder-count="7">
+<div class="al"><span class="muted">{{a.t}}</span><b>{{a.u}}</b><span><span class="pill {{a.c}}" style="margin-right:6px">{{a.k}}</span>{{a.act}}</span><span class="hs" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{a.obj}}</span><span class="hs mono muted">{{a.ip}}</span></div>
+</sc-for>
+<div class="cb"><div class="muted" style="font-size:12px">บันทึกแก้ไขไม่ได้ (append-only) · แพ็กเกจ Team เก็บ 1 ปี · Enterprise เก็บ 7 ปี และส่งต่อไป SIEM ได้</div></div>
+</section>
+</sc-if>
+
+<sc-if value="{{sData}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<section class="card" style="flex:1 1 360px">
+<div class="ch"><h2>ที่เก็บและการเก็บรักษาข้อมูล</h2></div>
+<div class="cb">
+<label class="fld"><span class="lb">Data region</span><select class="in"><option>ประเทศไทย (Bangkok)</option><option>สิงคโปร์</option></select><span class="muted" style="font-size:12px">ข้อมูลและไฟล์ทั้งหมดของ Workspace เก็บใน region นี้ · เปลี่ยนได้เฉพาะ Enterprise</span></label>
+<label class="fld"><span class="lb">ถังขยะ</span><select class="in"><option>ลบถาวรหลัง 30 วัน</option><option>90 วัน</option></select></label>
+<label class="fld"><span class="lb">งานและโปรเจกต์ที่ปิดแล้ว</span><select class="in"><option>เก็บถาวร</option><option>ลบหลัง 3 ปี</option></select></label>
+<div class="row" style="border:0;padding:0"><button class="btn" type="button">Export ทั้ง Workspace (JSON + ไฟล์แนบ)</button><span class="muted" style="font-size:12px">ล่าสุด: ยังไม่เคย Export</span></div>
+</div>
+</section>
+<section class="card" style="flex:1 1 360px">
+<div class="ch"><h2>PDPA</h2><a href="#" style="font-size:13px">เอกสาร DPA</a></div>
+<div class="cb">
+<div class="lb">คำขอจากเจ้าของข้อมูล</div>
+<div class="row"><span class="pill warn">รอดำเนินการ</span><span style="flex:1;min-width:180px;font-size:13px"><b>ขอลบข้อมูลส่วนบุคคล</b> · jane@example.com<span class="muted" style="display:block;font-size:12px">ยื่นเมื่อ 1 พ.ย. · ครบกำหนด 1 ธ.ค. 2569</span></span><button class="btn" type="button" style="min-height:30px">ดำเนินการ</button></div>
+<div class="row"><span class="pill ok">เสร็จแล้ว</span><span style="flex:1;font-size:13px"><b>ขอสำเนาข้อมูล</b> · nok@example.com<span class="muted" style="display:block;font-size:12px">ส่งไฟล์เมื่อ 28 ต.ค.</span></span></div>
+<label style="display:flex;gap:8px;align-items:flex-start;font-size:13px"><input type="checkbox" checked style="width:18px;height:18px;margin-top:2px">แสดงข้อความขอความยินยอมเมื่อผู้ใช้ใหม่เข้าระบบครั้งแรก</label>
+</div>
+</section>
+</div>
+<section class="card" style="border-color:#FECACA">
+<div class="cb" style="flex-direction:row;flex-wrap:wrap;align-items:center"><div style="flex:1 1 300px"><b style="color:#991B1B">ลบ Workspace</b><div class="muted" style="font-size:13px">ลบทุกโปรเจกต์ งาน ไฟล์ และสมาชิก · กู้คืนได้ภายใน 30 วันโดย Owner เท่านั้น · ต้องยกเลิกแพ็กเกจก่อน</div></div><button class="btn" type="button" style="color:#B91C1C;border-color:#FCA5A5">ลบ Workspace…</button></div>
+</section>
+</sc-if>
+
+<sc-if value="{{sNotify}}" hint-placeholder-val="{{ false }}">
+<section class="card">
+<div class="ch"><h2>นโยบายข้อความที่ส่งออกนอกแอป</h2><a class="btn" href="NotifyTemplates.dc.html">ดูตัวอย่างข้อความ</a></div>
+<div class="cb">
+<div style="display:flex;gap:12px;align-items:flex-start">
+<button type="button" role="switch" aria-checked="{{safeOn}}" onClick="{{toggleSafe}}" aria-label="โหมดปลอดภัย" style="position:relative;width:44px;height:26px;border-radius:99px;border:0;cursor:pointer;padding:0;flex:none;background:{{safeBg}}"><span style="position:absolute;top:3px;left:{{safeX}}px;width:20px;height:20px;border-radius:50%;background:#fff"></span></button>
+<div><b>โหมดปลอดภัย (Safe mode)</b> <span class="pill {{safePc}}">{{safeTxt}}</span><div class="muted" style="font-size:13px">LINE, Email และ Webhook จะได้รับแค่หัวข้องาน + ลิงก์ ไม่ส่งรายละเอียด ความเห็น หรือไฟล์แนบออกนอกระบบ · แนะนำให้เปิดเมื่อข้อมูลงานเป็นความลับ เช่น งานของธนาคาร</div></div>
+</div>
+<div class="muted" style="font-size:12px;border-top:1px solid #F1F3F5;padding-top:10px">ทุกข้อความที่ส่งออกจะบันทึกใน Audit Log (ช่องทาง · ผู้รับ · สถานะ) · ผู้ใช้ปิดรับรายช่องทางได้เองที่ Profile ยกเว้นข้อความด้านความปลอดภัย</div>
+</div>
+</section>
+
+<section class="card">
+<div class="ch"><div style="display:flex;align-items:center;gap:10px"><span class="av" style="background:#15803D;border-radius:8px;width:32px;height:32px">LN</span><div><h2>LINE Official Account</h2><div class="muted" style="font-size:12px">ส่งถึงผู้ใช้รายคน และกลุ่ม LINE ที่เชิญ OA เข้าไป</div></div></div><span class="pill ok">เชื่อมแล้ว</span></div>
+<div class="cb" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
+<label class="fld"><span class="lb">Channel ID</span><input class="in mono" type="text" value="[Channel ID]"></label>
+<label class="fld"><span class="lb">Channel secret</span><input class="in mono" type="password" value="xxxxxxxxxxxxxxxx"></label>
+<label class="fld"><span class="lb">Channel access token</span><input class="in mono" type="password" value="xxxxxxxxxxxxxxxxxxxxxxxx"></label>
+<label class="fld" style="grid-column:1/-1"><span class="lb">Webhook URL (นำไปใส่ใน LINE Developers Console)</span><span style="display:flex;gap:8px"><input class="in mono" type="text" readonly value="https://friday.app/hooks/line/[workspace-id]"><button class="btn" type="button">คัดลอก</button></span></label>
+</div>
+<div class="cb" style="border-top:1px solid #EEF0F3">
+<div style="display:flex;justify-content:space-between;font-size:13px;flex-wrap:wrap;gap:6px"><span><b>โควตาข้อความเดือนนี้</b> <span class="muted">(ตามแพ็กเกจ LINE OA ที่องค์กรสมัคร)</span></span><b>[ใช้ไป] / [โควตา] ข้อความ</b></div>
+<div class="bar"><div style="width:62%;height:100%;background:#15803D"></div></div>
+<label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" checked> เมื่อโควตาหมด ส่งทาง Email แทนอัตโนมัติ และแจ้ง Admin</label>
+<label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" checked> รวมข้อความเล็กเป็นสรุปทุก 30 นาที เพื่อประหยัดโควตา (ยกเว้นคำขออนุมัติ)</label>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted" style="font-size:13px;flex:1 1 240px">ผู้ใช้ที่ผูก LINE แล้ว 7 / 9 คน · กลุ่ม LINE ที่เชิญ OA แล้ว 2 กลุ่ม</span><button class="btn" type="button">ส่งข้อความทดสอบหาฉัน</button></div>
+</div>
+</section>
+
+<section class="card">
+<div class="ch"><div style="display:flex;align-items:center;gap:10px"><span class="av" style="background:#0369A1;border-radius:8px;width:32px;height:32px">@</span><div><h2>Email</h2><div class="muted" style="font-size:12px">ใช้ระบบส่งของ Friday หรือตั้งโดเมนผู้ส่งขององค์กร</div></div></div><span class="pill warn">รอยืนยันโดเมน</span></div>
+<div class="cb" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
+<label class="fld"><span class="lb">ชื่อผู้ส่ง</span><input class="in" type="text" value="Friday Manage"></label>
+<label class="fld"><span class="lb">อีเมลผู้ส่ง</span><input class="in" type="text" value="notify@[โดเมนองค์กร]"></label>
+<label class="fld"><span class="lb">Reply-to</span><input class="in" type="text" value="no-reply@[โดเมนองค์กร]"></label>
+</div>
+<div class="cb" style="border-top:1px solid #EEF0F3;gap:8px">
+<b style="font-size:13px">สถานะ DNS ของโดเมน</b>
+<div class="row" style="padding:6px 0"><span class="mono" style="width:60px">SPF</span><span class="muted" style="flex:1;font-size:13px">TXT record ที่โดเมนหลัก</span><span class="pill ok">ผ่าน</span></div>
+<div class="row" style="padding:6px 0"><span class="mono" style="width:60px">DKIM</span><span class="muted" style="flex:1;font-size:13px">CNAME friday._domainkey</span><span class="pill warn">ยังไม่พบ</span></div>
+<div class="row" style="padding:6px 0;border-bottom:0"><span class="mono" style="width:60px">DMARC</span><span class="muted" style="flex:1;font-size:13px">แนะนำ แต่ไม่บังคับ</span><span class="pill neu">ไม่ได้ตั้ง</span></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button">ตรวจ DNS อีกครั้ง</button><button class="btn" type="button">ส่งอีเมลทดสอบ</button><span class="muted" style="font-size:12px;align-self:center">ระหว่างรอ ระบบส่งด้วยโดเมนของ Friday ไปก่อน</span></div>
+</div>
+</section>
+
+<section class="card">
+<div class="ch"><div><h2>Webhook ทั่วไป</h2><div class="muted" style="font-size:12px">สำหรับ Discord, Slack, Microsoft Teams, Telegram group หรือระบบภายในขององค์กร · โปรเจกต์เลือกใช้ได้ที่ Project Settings</div></div><button class="btn pri" type="button" onClick="{{toggleAdd}}" aria-expanded="{{addOpen}}">+ เพิ่ม Webhook</button></div>
+<sc-for list="{{hooks}}" as="h" hint-placeholder-count="3">
+<div class="row" style="padding:12px 18px">
+<span class="av" style="background:{{h.c}};border-radius:8px;width:32px;height:32px">{{h.ab}}</span>
+<div style="flex:1 1 220px;min-width:0"><b style="font-size:13px">{{h.n}}</b><div class="muted mono" style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{h.url}}</div></div>
+<span class="muted" style="font-size:12px;flex:0 1 200px">{{h.used}}</span>
+<span class="pill {{h.sc}}">{{h.st}}</span>
+<button class="btn" type="button" style="min-height:32px;font-size:12px">{{h.act}}</button>
+</div>
+</sc-for>
+<sc-if value="{{showAdd}}" hint-placeholder-val="{{ false }}">
+<div class="cb" style="background:#F8F9FB;border-top:1px solid #EEF0F3">
+<b style="font-size:13px">เพิ่ม Webhook</b>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+<label class="fld"><span class="lb">ชื่อ</span><input class="in" type="text" placeholder="เช่น Discord #qa-alerts"></label>
+<label class="fld"><span class="lb">รูปแบบข้อความ</span><select class="in"><option>Discord</option><option>Slack</option><option>Microsoft Teams</option><option>Telegram (Bot API)</option><option>JSON ทั่วไป</option></select></label>
+<label class="fld" style="grid-column:1/-1"><span class="lb">URL ปลายทาง</span><input class="in mono" type="text" placeholder="https://"></label>
+<label class="fld"><span class="lb">Signing secret (สำหรับ JSON ทั่วไป)</span><span style="display:flex;gap:8px"><input class="in mono" type="password" value="xxxxxxxxxxxx"><button class="btn" type="button">สร้างใหม่</button></span></label>
+<div class="fld"><span class="lb">ส่งซ้ำเมื่อล้มเหลว</span><span class="muted" style="font-size:13px">3 ครั้ง (1, 5, 30 นาที) แล้วปิดชั่วคราวและแจ้ง Admin</span></div>
+</div>
+<div style="display:flex;gap:8px"><button class="btn" type="button">ส่งทดสอบ</button><button class="btn pri" type="button">บันทึก</button></div>
+</div>
+</sc-if>
+</section>
+</sc-if>
+
+<sc-if value="{{sInteg}}" hint-placeholder-val="{{ false }}">
+<section class="card">
+<div class="ch"><h2>Integrations ระดับองค์กร</h2><span class="muted" style="font-size:13px">ตั้งครั้งเดียว ทุกโปรเจกต์เลือกใช้ได้</span></div>
+<div class="cb" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
+<sc-for list="{{integ}}" as="g" hint-placeholder-count="6"><div style="border:1px solid #E4E7EB;border-radius:10px;padding:12px;display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:8px;background:{{g.c}};color:#fff;font-weight:700;font-size:11px;display:inline-flex;align-items:center;justify-content:center">{{g.ab}}</span><div style="flex:1;min-width:0"><b style="font-size:13px">{{g.n}}</b><div class="muted" style="font-size:12px">{{g.d}}</div></div><span class="pill {{g.sc}}">{{g.st}}</span></div></sc-for>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{sBill}}" hint-placeholder-val="{{ false }}">
+<section class="card" style="padding:18px;display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+<div style="flex:1 1 280px"><span class="pill warn">ทดลองใช้</span><h2 style="margin:6px 0 2px;font-size:20px">Team M · เหลือ 14 วัน</h2><div class="muted" style="font-size:13px">หมดช่วงทดลองแล้วจะเปลี่ยนเป็น Free อัตโนมัติ ถ้ายังไม่ได้ชำระเงิน · ข้อมูลไม่หาย แต่ต้องเลือก 3 โปรเจกต์ที่ใช้ต่อ</div></div>
+<div style="flex:1 1 260px;display:flex;flex-direction:column;gap:8px;font-size:13px">
+<div><div style="display:flex;justify-content:space-between"><span>สมาชิก</span><b>9 / 25 คน</b></div><div class="bar"><div style="width:36%;height:100%;background:#1D4ED8"></div></div></div>
+<div><div style="display:flex;justify-content:space-between"><span>พื้นที่ไฟล์</span><b>1.2 / 90 GB</b></div><div class="bar"><div style="width:2%;height:100%;background:#1D4ED8"></div></div></div>
+<div class="muted" style="font-size:12px">Guest (ลูกค้า) ไม่นับ · พื้นที่ = 10 GB ต่อสมาชิก</div>
+</div>
+<a class="btn pri" href="Checkout.dc.html">ชำระเงิน</a>
+</section>
+<div style="display:flex;gap:14px;flex-wrap:wrap">
+<sc-for list="{{plans}}" as="p" hint-placeholder-count="5">
+<div class="{{p.cls}}"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:17px">{{p.n}}</b><sc-if value="{{p.isCur}}" hint-placeholder-val="{{ false }}"><span class="pill warn">ใช้อยู่ (ทดลอง)</span></sc-if></div><span class="muted" style="font-size:13px">{{p.unit}}</span><div><b style="font-size:20px">{{p.price}}</b> <span class="muted" style="font-size:12px">/ เดือน</span></div><ul><sc-for list="{{p.f}}" as="x" hint-placeholder-count="3"><li>{{x}}</li></sc-for></ul><a class="btn" href="{{p.href}}" style="margin-top:auto">{{p.cta}}</a></div>
+</sc-for>
+</div>
+<div class="muted" style="font-size:12px">ราคาเหมาตามขนาดทีม · ทุกแพ็กเกจ Team ได้ฟีเจอร์เท่ากัน · ราคายังไม่รวม VAT 7% · <a href="Landing.dc.html">ดูเปรียบเทียบทั้งหมด</a></div>
+<section class="card">
+<div class="ch"><h2>วิธีชำระเงิน</h2><span class="muted" style="font-size:13px">เลือกได้ 1 วิธีต่อรอบ</span></div>
+<div class="cb" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+<div style="border:1px solid #E4E7EB;border-radius:10px;padding:12px"><b>บัตรเครดิต / เดบิต</b><div class="muted" style="font-size:12px">ตัดอัตโนมัติทุกรอบ · หัก ณ ที่จ่ายไม่ได้</div></div>
+<div style="border:1px solid #E4E7EB;border-radius:10px;padding:12px"><b>PromptPay</b><div class="muted" style="font-size:12px">ส่งใบแจ้งหนี้ + QR ก่อนครบรอบ 7 วัน · ยืนยันอัตโนมัติ</div></div>
+<div style="border:1px solid #E4E7EB;border-radius:10px;padding:12px"><b>โอนเงิน</b><div class="muted" style="font-size:12px">ขอใบแจ้งหนี้ก่อนได้ · แนบสลิป ตรวจภายใน 1 วันทำการ</div></div>
+</div>
+</section>
+<section class="card">
+<div class="ch"><h2>ข้อมูลออกใบกำกับภาษี</h2><span class="muted" style="font-size:13px">ใบกำกับภาษีอิเล็กทรอนิกส์ (e-Tax) ส่งทางอีเมลทุกครั้งที่ชำระ</span></div>
+<div class="cb" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
+<label class="fld"><span class="lb">ชื่อบริษัท</span><input class="in" type="text" placeholder="[ชื่อบริษัท]"></label>
+<label class="fld"><span class="lb">เลขประจำตัวผู้เสียภาษี</span><input class="in" type="text" placeholder="[เลขผู้เสียภาษี 13 หลัก]"></label>
+<label class="fld"><span class="lb">สาขา</span><input class="in" type="text" placeholder="สำนักงานใหญ่"></label>
+<label class="fld"><span class="lb">อีเมลรับเอกสาร</span><input class="in" type="email" placeholder="account@[โดเมน]"></label>
+<label class="fld" style="grid-column:1/-1"><span class="lb">ที่อยู่</span><input class="in" type="text" placeholder="[ที่อยู่สำหรับใบกำกับภาษี]"></label>
+<label style="display:flex;gap:8px;align-items:center;font-size:14px;grid-column:1/-1"><input type="checkbox" checked style="width:18px;height:18px">หักภาษี ณ ที่จ่าย 3% (นิติบุคคล · ใช้กับ PromptPay และโอนเงิน)</label>
+</div>
+</section>
+<section class="card">
+<div class="ch"><h2>ใบแจ้งหนี้และเอกสาร</h2><span class="muted" style="font-size:13px">ตัวอย่างหลังหมดช่วงทดลอง</span></div>
+<sc-for list="{{invoices}}" as="v" hint-placeholder-count="3"><div class="row" style="padding:10px 18px"><span class="mono" style="width:130px">{{v.no}}</span><span style="flex:1 1 200px">{{v.d}}</span><b>{{v.amt}}</b><span class="pill {{v.sc}}">{{v.st}}</span><a class="btn" href="{{v.href}}" style="min-height:30px;font-size:12px">{{v.act}}</a></div></sc-for>
+</section>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  state = { sec: 'overview', tfa: 'all', af: 'all', safe: true, add: false, sup: true };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const sec = st.sec || 'overview', tfa = st.tfa || 'all', af = st.af || 'all';
+    const go = function (s) { return function () { self.setState({ sec: s }); }; };
+    const NV = [
+      ['sec', 'ภาพรวม'], ['overview', 'แดชบอร์ด', '4', 'bad'],
+      ['sec', 'องค์กร'], ['teams', 'ทีม & โครงสร้าง'], ['std', 'ค่ามาตรฐานขององค์กร'], ['load', 'Workload รวม', '1', 'warn'],
+      ['sec', 'ความปลอดภัย & การกำกับ'], ['sec2', 'ความปลอดภัย & SSO'], ['audit', 'Audit Log'], ['data', 'ข้อมูล & PDPA', '1', 'warn'],
+      ['sec', 'ระบบ'], ['notify', 'ช่องทางแจ้งเตือน', '1', 'warn'], ['integ', 'Integrations'], ['bill', 'แพ็กเกจ & Billing']
+    ];
+    const nav = NV.map(function (n) {
+      if (n[0] === 'sec') return { isSec: true, isItem: false, n: n[1] };
+      return { isSec: false, isItem: true, n: n[1], cls: sec === n[0] ? 'nv on' : 'nv', cur: sec === n[0] ? 'page' : 'false', pick: go(n[0]), hasBadge: !!n[2], badge: n[2] || '', bc: n[3] || '' };
+    });
+    const TT = { overview: ['แดชบอร์ด', 'ภาพรวมการใช้งาน Workspace และสิ่งที่ Admin ต้องดำเนินการ'], teams: ['ทีม & โครงสร้าง', 'จัดกลุ่มคนเป็นทีม กำหนดหัวหน้าทีมและ capacity มาตรฐาน'], std: ['ค่ามาตรฐานขององค์กร', 'ตั้งครั้งเดียว ทุกโปรเจกต์ใหม่ใช้ค่านี้เป็นค่าเริ่มต้น'], load: ['Workload รวม', 'ภาระงานรายคนรวมทุกโปรเจกต์ เห็นงานซ้อนข้ามโปรเจกต์'], sec2: ['ความปลอดภัย & SSO', 'นโยบายการล็อกอินและการเข้าถึงของทั้ง Workspace'], audit: ['Audit Log', 'บันทึกทุกการกระทำสำคัญ ใช้ตรวจสอบย้อนหลัง'], data: ['ข้อมูล & PDPA', 'ที่เก็บข้อมูล การเก็บรักษา และคำขอตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล'], notify: ['ช่องทางแจ้งเตือน', 'LINE OA, Email และ Webhook ที่ใช้ส่งแจ้งเตือนออกนอกแอป'], integ: ['Integrations', 'เชื่อมระบบภายนอกระดับองค์กร'], bill: ['แพ็กเกจ & Billing', 'แพ็กเกจตามขนาดทีม วิธีชำระเงิน และเอกสารภาษี'] };
+    const alerts = [
+      ['ความปลอดภัย', 'bad', '2 คนยังไม่เปิด 2FA ทั้งที่นโยบายบังคับทุกคน', 'ดู', 'sec2'],
+      ['Workload', 'warn', 'Kaijeaw และ Pond งานเกิน capacity ทุกสัปดาห์ในเดือนนี้ (Kaijeaw 16.0 MD สัปดาห์นี้)', 'ดู Workload', 'load'],
+      ['PDPA', 'warn', 'คำขอลบข้อมูลของ jane@example.com ครบกำหนด 1 ธ.ค.', 'ดำเนินการ', 'data'],
+      ['แพ็กเกจ', 'neu', 'Jane ไม่ได้ใช้งาน 54 วัน · ปิดบัญชีเพื่อคืนที่ว่างในแพ็กเกจ?', 'ดูแพ็กเกจ', 'bill']
+    ].map(function (a) { return { t: a[0], c: a[1], msg: a[2], btn: a[3], go: go(a[4]) }; });
+    const wau = [5, 6, 7, 7, 8, 8, 9, 8].map(function (v, i) { return { v: v, h: v * 10, c: i === 7 ? '#1D4ED8' : '#93B4F5' }; });
+    const teams = [['ทีม Dev', '#1D4ED8', 'Kaijeaw', 6, 30, 'Development Plan 2026-11'], ['ทีม BA', '#A21CAF', 'Donut', 7, 35, 'Development Plan 2026-11'], ['PMO', '#334155', 'Mick', 1, 5, 'ทุกโปรเจกต์']].map(function (t) { return { n: t[0], c: t[1], lead: t[2], k: t[3], cap: t[4], proj: t[5] }; });
+    const hols = [['ส. 5 ธ.ค. 2569', 'วันพ่อแห่งชาติ', 'ธปท.', 'neu'], ['จ. 7 ธ.ค. 2569', 'ชดเชยวันพ่อแห่งชาติ', 'ธปท.', 'neu'], ['พฤ. 10 ธ.ค. 2569', 'วันรัฐธรรมนูญ', 'ธปท.', 'neu'], ['พฤ. 31 ธ.ค. 2569', 'วันสิ้นปี', 'ธปท.', 'neu'], ['ศ. 1 ม.ค. 2570', 'วันขึ้นปีใหม่', 'ธปท.', 'neu'], ['ศ. 8 ม.ค. 2570', 'งานเลี้ยงปีใหม่บริษัท', 'บริษัท', 'ent']].map(function (h) { return { d: h[0], n: h[1], t: h[2], c: h[3] }; });
+    const sizes = [['XS', 1], ['S', 3], ['M', 5], ['L', 8], ['XL', 12]].map(function (s) { return { n: s[0], v: s[1] }; });
+    const tpls = [['Software Dev (Scrum 2 สัปดาห์)', 'Story / Task / Bug / Spike · Workflow มาตรฐาน', 2], ['โครงการธนาคาร (Waterfall + Gantt)', 'Phase ตาม Module · Plan vs Actual · Import Excel', 1], ['Support / Maintenance (Kanban)', 'Bug + Task · WIP limit · SLA', 0]].map(function (t) { return { n: t[0], d: t[1], k: t[2] }; });
+    const PC = { DP: ['Development Plan 2026-11', '#334155'] };
+    const projLegend = ['DP'].map(function (k) { return { n: PC[k][0], c: PC[k][1] }; });
+    const W = [["Kaijeaw", "KJ", "#B45309", "Developer · ทีม Dev", {"DP": [16.0, 12.0, 12.0, 12.0]}, [5, 3, 5, 5]], ["Pond", "PD", "#0F766E", "Developer · ทีม Dev", {"DP": [13.0, 12.0, 9.5, 7.0]}, [5, 3, 5, 5]], ["Tung", "TG", "#7C3AED", "Developer · ทีม Dev", {"DP": [6.5, 4.5, 7.0, 6.0]}, [5, 3, 5, 5]], ["Top", "TP", "#BE185D", "Developer · ทีม Dev", {"DP": [2.0, 2.0, 3.0, 2.5]}, [5, 3, 5, 5]], ["Zo", "ZO", "#0369A1", "Developer · ทีม Dev", {"DP": [2.5, 2.0, 3.0, 2.5]}, [5, 3, 5, 5]], ["P'Tum", "PT", "#4D7C0F", "Developer · ทีม Dev", {"DP": [1.0, 0.5, 1.5, 1.0]}, [5, 3, 5, 5]]];
+    const SC = 5;
+    const people = W.map(function (p) {
+      let overWeeks = 0;
+      const weeks = [0, 1, 2, 3].map(function (i) {
+        let tot = 0; const segs = []; const tip = [];
+        ['DP'].forEach(function (k) { if (p[4][k]) { const v = p[4][k][i]; tot += v; segs.push({ h: Math.round(v * SC), c: PC[k][1] }); tip.push(PC[k][0] + ' ' + v + ' MD'); } });
+        const over = tot > p[5][i];
+        if (over) overWeeks++;
+        return { v: tot, segs: segs, capY: p[5][i] * SC, tc: over ? '#B91C1C' : '#3D4550', ol: over ? '2px solid #DC2626' : '0', tip: tip.join(' · ') + ' / capacity ' + p[5][i] + ' MD' };
+      });
+      return { n: p[0], ini: p[1], c: p[2], role: p[3], weeks: weeks, flag: overWeeks ? 'เกิน capacity ' + overWeeks + ' สัปดาห์' : 'อยู่ใน capacity', flagC: overWeeks ? '#B91C1C' : '#166534' };
+    });
+    const sso = [['ME', 'Microsoft Entra ID', 'Azure AD / Microsoft 365', '#0369A1'], ['GW', 'Google Workspace', 'บัญชี Google ขององค์กร', '#B91C1C'], ['SA', 'SAML 2.0', 'Okta, OneLogin, ADFS ฯลฯ', '#334155'], ['OI', 'OpenID Connect', 'IdP อื่นที่รองรับ OIDC', '#475569']].map(function (s) { return { ab: s[0], n: s[1], d: s[2], c: s[3] }; });
+    const TF = [['none', 'ไม่บังคับ', 'ผู้ใช้เลือกเปิดเอง'], ['admin', 'บังคับ Admin', 'Owner และ Admin ต้องเปิด'], ['all', 'บังคับทุกคน', 'ผู้ใช้ที่ยังไม่เปิดจะถูกขอให้ตั้งค่าตอนล็อกอินครั้งถัดไป']];
+    const tfaOpts = TF.map(function (o) { const on = tfa === o[0]; return { n: o[1], d: o[2], on: on ? 'true' : 'false', cls: on ? 'opt on' : 'opt', bd: on ? '#1D4ED8' : '#94A3B8', dot: on ? '#1D4ED8' : 'transparent', pick: function () { self.setState({ tfa: o[0] }); } }; });
+    const AU = [
+      ['5 พ.ย. 10:20', 'Mick', 'plan', 'แก้แผน', 'Man-Day 12 → 15 · Development Plan #13', '203.0.113.24'],
+      ['5 พ.ย. 09:58', 'Mick', 'perm', 'เปลี่ยน Role', 'Donut: Member → Admin · Development Plan 2026-11', '203.0.113.24'],
+      ['5 พ.ย. 09:30', 'Mick', 'data', 'Export Excel', 'Development Plan 2026-11 (334 งาน)', '203.0.113.24'],
+      ['1 ธ.ค. 18:02', 'Donut', 'data', 'ลบไฟล์', 'status_log_old.png · Development Plan 2026-11', '198.51.100.7'],
+      ['4 พ.ย. 17:40', 'ระบบ', 'secu', 'ล็อกบัญชีชั่วคราว', 'jane@example.com · ใส่รหัสผิด 5 ครั้ง', '192.0.2.88'],
+      ['4 พ.ย. 09:15', 'Mick', 'perm', 'เชิญ Guest', 'business-owner@example.com · Development Plan 2026-11', '203.0.113.24'],
+      ['3 พ.ย. 16:00', 'Mick', 'secu', 'เปลี่ยนนโยบาย', '2FA: บังคับ Admin → บังคับทุกคน', '203.0.113.31'],
+      ['28 ต.ค. 09:05', 'ทีม Friday · Mick', 'secu', 'เข้าช่วยเหลือ', 'Ticket #4702 · อ่านอย่างเดียว 14 นาที', 'Friday Ops']
+    ];
+    const AK = { perm: ['สิทธิ์', 'ent'], data: ['ข้อมูล', 'neu'], secu: ['ความปลอดภัย', 'bad'], plan: ['แผนงาน', 'warn'] };
+    const audit = AU.filter(function (a) { return af === 'all' || a[2] === af; }).map(function (a) { return { t: a[0], u: a[1], k: AK[a[2]][0], c: AK[a[2]][1], act: a[3], obj: a[4], ip: a[5] }; });
+    const auditChips = [['all', 'ทั้งหมด'], ['perm', 'สิทธิ์ & สมาชิก'], ['data', 'ข้อมูล & Export'], ['secu', 'ความปลอดภัย'], ['plan', 'แผนงาน']].map(function (c) { return { n: c[1], on: af === c[0] ? 'true' : 'false', pick: function () { self.setState({ af: c[0] }); } }; });
+    const integ = [['GH', 'GitHub Organization', 'friday-dev · 4 repos', '#1B1F24', 'เชื่อมแล้ว', 'ok'], ['GL', 'GitLab', 'Self-managed หรือ gitlab.com', '#B45309', 'ยังไม่เชื่อม', 'neu'], ['LN', 'LINE Official Account', 'ตั้งค่าที่ ช่องทางแจ้งเตือน', '#15803D', 'เชื่อมแล้ว', 'ok'], ['HR', 'ระบบ HR (วันลา)', 'ดึงวันลาที่อนุมัติแล้วมาลด capacity · ไม่ทำ Timesheet ซ้ำ', '#BE185D', 'ยังไม่เชื่อม', 'neu'], ['@', 'Email', 'ตั้งค่าที่ ช่องทางแจ้งเตือน', '#0369A1', 'รอยืนยันโดเมน', 'warn'], ['API', 'API tokens & Webhooks', '2 tokens ใช้งานอยู่', '#334155', 'จัดการ', 'neu']].map(function (g) { return { ab: g[0], n: g[1], d: g[2], c: g[3], st: g[4], sc: g[5] }; });
+    const safe = st.safe !== false, addOpen = !!st.add, sup = st.sup !== false;
+    const hooks = [['DC', 'Discord #dev-alerts', 'https://discord.com/api/webhooks/…/xxxx', '#5865F2', 'Development Plan 2026-11 · Bug, Daily summary', 'ทำงานปกติ', 'ok', 'แก้ไข'], ['TG', 'Telegram กลุ่ม QA', 'https://api.telegram.org/bot…/sendMessage', '#0284C7', 'Development Plan 2026-11 · คำขอเลื่อน Due', 'ทำงานปกติ', 'ok', 'แก้ไข'], ['SL', 'Slack #pm-weekly', 'https://hooks.slack.com/services/…', '#7C3AED', 'ทุกโปรเจกต์ · สรุปรายสัปดาห์', 'ล้มเหลว 3 ครั้ง (404)', 'bad', 'ตรวจ URL']].map(function (h) { return { ab: h[0], n: h[1], url: h[2], c: h[3], used: h[4], st: h[5], sc: h[6], act: h[7] }; });
+    const plans = [
+      ['Free', '฿0', 'สูงสุด 5 คน', ['3 โปรเจกต์', 'Kanban, Table, Calendar', 'ไฟล์ 1 GB'], 'ลดแพ็กเกจ', false, '#'],
+      ['Team S', '฿[ราคา S]', 'สูงสุด 10 คน', ['ทุกฟีเจอร์ของ Team', 'Automation 1,000 ครั้ง/เดือน'], 'เลือก Team S', false, 'Checkout.dc.html'],
+      ['Team M', '฿[ราคา M]', 'สูงสุด 25 คน', ['ทุกฟีเจอร์ของ Team', 'Automation 3,000 ครั้ง/เดือน'], 'ชำระ Team M', true, 'Checkout.dc.html'],
+      ['Team L', '฿[ราคา L]', 'สูงสุด 50 คน', ['ทุกฟีเจอร์ของ Team', 'Automation 6,000 ครั้ง/เดือน'], 'เลือก Team L', false, 'Checkout.dc.html'],
+      ['Enterprise', 'ตามสัญญา', '50 คนขึ้นไป', ['SSO + บังคับ SSO', 'Audit log 7 ปี', 'Data region + SLA'], 'ติดต่อฝ่ายขาย', false, '#']
+    ].map(function (p) { return { n: p[0], price: p[1], unit: p[2], f: p[3], cta: p[4], isCur: p[5], cls: p[5] ? 'plan cur' : 'plan', href: p[6] }; });
+    const invoices = [['INV-2569-0125', 'Team M · 19 พ.ย. – 18 ธ.ค. 2569', '฿3,120', 'รอชำระ', 'warn', 'Checkout.dc.html', 'ชำระ'], ['E-INV-2569-0124', 'ใบกำกับภาษี / ใบเสร็จ · ต.ค.', '฿3,210', 'ส่งแล้ว', 'ok', '#', 'ดาวน์โหลด'], ['WHT', 'หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) · ต.ค.', '฿90', 'ยังไม่อัปโหลด', 'bad', '#', 'อัปโหลด']].map(function (v) { return { no: v[0], d: v[1], amt: v[2], st: v[3], sc: v[4], href: v[5], act: v[6] }; });
+    return {
+      nav: nav, title: TT[sec][0], desc: TT[sec][1], alerts: alerts, wau: wau, teams: teams, hols: hols, sizes: sizes, tpls: tpls,
+      projLegend: projLegend, people: people, sso: sso, tfa: tfaOpts, audit: audit, auditChips: auditChips, integ: integ, plans: plans, invoices: invoices, hooks: hooks, supOn: sup ? 'true' : 'false', supBg: sup ? '#1D4ED8' : '#C3CAD3', supX: sup ? 21 : 3, supTxt: sup ? 'เปิดสิทธิ์ไว้' : 'ปิด', supPc: sup ? 'ok' : 'neu', toggleSup: function () { self.setState({ sup: !sup }); }, goAudit: go('audit'), showAdd: addOpen, addOpen: addOpen ? 'true' : 'false', toggleAdd: function () { self.setState({ add: !addOpen }); },
+      safeOn: safe ? 'true' : 'false', safeBg: safe ? '#1D4ED8' : '#C3CAD3', safeX: safe ? 21 : 3, safeTxt: safe ? 'เปิดอยู่' : 'ปิด', safePc: safe ? 'ok' : 'neu', toggleSafe: function () { self.setState({ safe: !safe }); },
+      sOverview: sec === 'overview', sTeams: sec === 'teams', sStd: sec === 'std', sLoad: sec === 'load', sSec: sec === 'sec2', sAudit: sec === 'audit', sData: sec === 'data', sNotify: sec === 'notify', sInteg: sec === 'integ', sBill: sec === 'bill'
+    };
+  }
+}
+</script>
+</body>
+</html>

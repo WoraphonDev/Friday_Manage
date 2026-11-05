@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Accept invite</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.page{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 16px;gap:24px}
+.card{width:100%;max-width:520px;background:#fff;border:1px solid #E4E7EB;border-radius:16px;overflow:hidden}
+.fld{display:flex;flex-direction:column;gap:6px}
+.lb{font-size:13px;font-weight:600}
+.in{min-height:44px;border:1px solid #C9CFD6;border-radius:10px;padding:0 12px;font:inherit;background:#fff;width:100%}
+.in[readonly]{background:#F1F3F5;color:#3D4550}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:46px;padding:0 16px;border-radius:10px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;width:100%}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.muted{color:#5F6873}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.seg{display:inline-flex;border:1px solid #D5DAE0;border-radius:8px;overflow:hidden;background:#fff}
+.seg button{min-height:32px;padding:0 10px;border:0;background:transparent;font:inherit;font-size:12px;color:#3D4550;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#1B1F24;color:#fff;font-weight:600}
+</style>
+</helmet>
+<div class="page">
+<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center">
+<span class="muted" style="font-size:12px">ดูตัวอย่างกรณี:</span>
+<div class="seg" role="group" aria-label="ตัวอย่างกรณี"><button type="button" aria-pressed="{{c1}}" onClick="{{setNew}}">ผู้ใช้ใหม่</button><button type="button" aria-pressed="{{c2}}" onClick="{{setHas}}">มีบัญชีแล้ว</button><button type="button" aria-pressed="{{c3}}" onClick="{{setExp}}">ลิงก์หมดอายุ</button></div>
+</div>
+
+<div class="card">
+<div style="padding:28px 28px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border-bottom:1px solid #EEF0F3">
+<div style="display:flex;align-items:center">
+<span style="width:52px;height:52px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;border:3px solid #fff">MK</span>
+<span style="width:52px;height:52px;border-radius:14px;background:#0F172A;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;margin-left:-10px;border:3px solid #fff">FW</span>
+</div>
+<sc-if value="{{notExp}}" hint-placeholder-val="{{ true }}">
+<h1 style="margin:0;font-size:22px">Mick เชิญคุณเข้าร่วม <span style="white-space:nowrap">Friday Workspace</span></h1>
+<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center"><span class="pill" style="background:#DCFCE7;color:#166534">Member</span><span class="pill" style="background:#E2E8F0;color:#1E293B">Development Plan 2026-11 · Member</span></div>
+<div style="background:#F8F9FB;border:1px solid #EEF0F3;border-radius:10px;padding:10px 14px;font-size:14px;text-align:left;width:100%">“ยินดีต้อนรับครับ คุณเป็น BA ของ OEM / Dealer Portal เริ่มจากดูงานใน Module นั้นได้เลย” <span class="muted">— Mick</span></div>
+<div class="muted" style="font-size:12px">คำเชิญส่งถึง kl@example.com · หมดอายุใน 5 วัน</div>
+</sc-if>
+<sc-if value="{{isExp}}" hint-placeholder-val="{{ false }}">
+<h1 style="margin:0;font-size:22px">ลิงก์คำเชิญนี้หมดอายุแล้ว</h1>
+<div class="muted">คำเชิญเข้า Friday Workspace หมดอายุเมื่อ 30 พ.ย. 2026 หรือถูกยกเลิกโดย Admin</div>
+</sc-if>
+</div>
+
+<div style="padding:24px 28px;display:flex;flex-direction:column;gap:14px">
+<sc-if value="{{isNew}}" hint-placeholder-val="{{ true }}">
+<div class="lb" style="font-size:15px">สร้างบัญชีเพื่อตอบรับ</div>
+<label class="fld"><span class="lb">อีเมล</span><input class="in" type="email" value="kl@example.com" readonly><span class="muted" style="font-size:12px">ล็อกตามอีเมลที่ได้รับเชิญ</span></label>
+<label class="fld"><span class="lb">ชื่อที่แสดง</span><input class="in" type="text" placeholder="เช่น KL"></label>
+<label class="fld"><span class="lb">รหัสผ่าน</span><input class="in" type="password" placeholder="อย่างน้อย 8 ตัวอักษร"></label>
+<a class="btn pri" href="Home.dc.html">ตอบรับและเข้าร่วม</a>
+<button class="btn" type="button">ตอบรับด้วย Google</button>
+</sc-if>
+<sc-if value="{{isHas}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:12px;border:1px solid #E4E7EB;border-radius:10px;padding:12px">
+<span style="width:40px;height:40px;border-radius:50%;background:#94A3B8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700">KL</span>
+<div style="flex:1"><div style="font-weight:600">KL</div><div class="muted" style="font-size:13px">kl@example.com · เข้าสู่ระบบอยู่</div></div>
+</div>
+<div class="muted" style="font-size:13px">คุณมีบัญชีแล้ว Workspace นี้จะถูกเพิ่มในรายการ Workspace ของคุณ สลับได้จากเมนูมุมซ้ายบน</div>
+<a class="btn pri" href="Home.dc.html">เข้าร่วม Friday Workspace</a>
+<a href="Login.dc.html" style="text-align:center;font-size:13px">ไม่ใช่บัญชีนี้? เข้าสู่ระบบด้วยบัญชีอื่น</a>
+</sc-if>
+<sc-if value="{{isExp}}" hint-placeholder-val="{{ false }}">
+<button class="btn pri" type="button">ขอคำเชิญใหม่จาก Mick</button>
+<div class="muted" style="font-size:13px;text-align:center">ระบบจะแจ้ง Admin ของ Workspace ใน Inbox · หรือ <a href="Login.dc.html">เข้าสู่ระบบ</a> ถ้าเคยเข้าร่วมแล้ว</div>
+</sc-if>
+<sc-if value="{{notExp}}" hint-placeholder-val="{{ true }}"><button type="button" style="border:0;background:transparent;font:inherit;color:#5F6873;cursor:pointer;text-decoration:underline">ปฏิเสธคำเชิญ</button></sc-if>
+</div>
+</div>
+<div class="muted" style="font-size:12px;max-width:520px;text-align:center">เมื่อตอบรับ ระบบจะแจ้ง Mick และ PM ของโปรเจกต์ใน Inbox และเพิ่มคุณในรายชื่อ Members + Workload ของโปรเจกต์ที่ได้รับเชิญ</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"case":{"editor":"enum","options":["new","has","expired"],"default":"new"},"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  state = {};
+  renderVals() {
+    const self = this;
+    const c = (this.state && this.state.c) || this.props['case'] || 'new';
+    return {
+      isNew: c === 'new', isHas: c === 'has', isExp: c === 'expired', notExp: c !== 'expired',
+      c1: c === 'new' ? 'true' : 'false', c2: c === 'has' ? 'true' : 'false', c3: c === 'expired' ? 'true' : 'false',
+      setNew: function () { self.setState({ c: 'new' }); }, setHas: function () { self.setState({ c: 'has' }); }, setExp: function () { self.setState({ c: 'expired' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

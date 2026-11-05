@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Mobile Project Overview</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:15px;line-height:1.45}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.muted{color:#5F6873}
+.vt{flex:none;min-height:40px;padding:0 14px;display:inline-flex;align-items:center;border-bottom:2px solid transparent;color:#5F6873;text-decoration:none;font-size:14px}
+.vt.on{border-bottom-color:#1D4ED8;color:#1D4ED8;font-weight:700}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px;margin:0 16px 12px;padding:14px}
+.card h2{margin:0 0 10px;font-size:15px}
+.pill{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.mr{display:flex;flex-direction:column;gap:4px;padding:8px 0;border-bottom:1px solid #F1F3F5}
+.tabb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:#5F6873;text-decoration:none;min-height:56px;position:relative}
+.tabb.on{color:#1D4ED8;font-weight:700}
+</style>
+</helmet>
+<div style="width:390px;height:844px;display:flex;flex-direction:column;background:#F6F7F9;overflow:hidden;position:relative">
+<header style="background:#fff;border-bottom:1px solid #E4E7EB">
+<div style="display:flex;align-items:center;gap:8px;padding:12px 8px 6px">
+<a href="MobileHome.dc.html" aria-label="กลับ" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B1F24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m15 5-7 7 7 7"></path></svg></a>
+<span style="width:30px;height:30px;border-radius:8px;background:#0F766E;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">CB</span>
+<div style="flex:1;min-width:0"><h1 style="margin:0;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Development Plan 2026-11</h1><div class="muted" style="font-size:12px">DP · Lead: Mick · สถานะจำลอง 2 ธ.ค.</div></div>
+<button type="button" aria-label="เมนูโปรเจกต์" style="width:44px;height:44px;border:0;background:transparent;border-radius:10px"><svg width="20" height="20" viewBox="0 0 24 24" fill="#1B1F24" aria-hidden="true"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg></button>
+</div>
+<nav aria-label="มุมมองโปรเจกต์" style="display:flex;overflow-x:auto;padding:0 8px">
+<a class="vt on" href="MobileOverview.dc.html" aria-current="page">Overview</a><a class="vt" href="MobileKanban.dc.html">Kanban</a><a class="vt" href="MobileMyTasks.dc.html">List</a><a class="vt" href="Calendar.dc.html">Calendar</a><a class="vt" href="Files.dc.html">Files</a>
+</nav>
+<div class="muted" style="font-size:11px;padding:0 16px 8px">Gantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น</div>
+</header>
+
+<div style="flex:1;overflow-y:auto;padding:14px 0 16px">
+<div class="card" style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span class="pill" style="background:#FEE2E2;color:#991B1B">Off track</span><span class="muted" style="font-size:12px">อัปเดตโดย Mick · วันนี้</span></div>
+<div style="display:flex;align-items:baseline;gap:8px"><b style="font-size:32px;line-height:1">22%</b><span class="muted" style="font-size:13px">72 / 334 งาน · เวลาผ่านไป 18%</span></div>
+<div style="position:relative;height:10px;background:#EEF0F3;border-radius:99px"><div style="height:100%;width:22%;background:#334155;border-radius:99px"></div><span style="position:absolute;left:18%;top:-3px;width:2px;height:16px;background:#1B1F24" aria-hidden="true"></span></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;text-align:center">
+<div style="background:#FEF2F2;border-radius:8px;padding:6px"><b style="display:block;font-size:18px;color:#B91C1C">7</b>Overdue</div>
+<div style="background:#F6F7F9;border-radius:8px;padding:6px"><b style="display:block;font-size:18px">1</b>Bug เปิด</div>
+<div style="background:#F6F7F9;border-radius:8px;padding:6px"><b style="display:block;font-size:18px">1</b>รออนุมัติ</div>
+</div>
+</div>
+
+<div class="card">
+<h2>Milestone ถัดไป</h2>
+<div style="display:flex;gap:12px;align-items:center"><div style="text-align:center;min-width:48px;border:1px solid #E4E7EB;border-radius:10px;padding:4px"><b style="display:block;font-size:20px;line-height:1.1">11</b><span class="muted" style="font-size:11px">ธ.ค.</span></div><div><b>Sprint 3 Review</b><div class="muted" style="font-size:12px">อีก 9 วัน · ถัดไป Credit Line Go-live 26 ม.ค.</div></div></div>
+</div>
+
+<div class="card">
+<h2>ความเสี่ยง</h2>
+<sc-for list="{{risks}}" as="r" hint-placeholder-count="3">
+<a href="{{r.href}}" style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #F1F3F5;text-decoration:none;color:#1B1F24"><span style="width:8px;height:8px;border-radius:50%;background:{{r.c}};margin-top:7px;flex:none"></span><div style="flex:1;min-width:0;font-size:14px">{{r.t}}<div class="muted" style="font-size:12px">{{r.d}}</div></div></a>
+</sc-for>
+</div>
+
+<div class="card">
+<h2>Module</h2>
+<sc-for list="{{mods}}" as="m" hint-placeholder-count="11">
+<div class="mr"><div style="display:flex;justify-content:space-between;font-size:14px"><span style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:2px;background:{{m.c}}"></span>{{m.n}}</span><b>{{m.pct}}%</b></div><div style="height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden"><div style="height:100%;width:{{m.pct}}%;background:{{m.c}}"></div></div><span class="muted" style="font-size:12px">{{m.meta}}</span></div>
+</sc-for>
+</div>
+
+<div class="card">
+<h2>Workload สัปดาห์นี้</h2>
+<sc-for list="{{load}}" as="l" hint-placeholder-count="6">
+<div style="display:flex;align-items:center;gap:10px;padding:5px 0;font-size:13px"><span style="width:44px">{{l.n}}</span><div style="flex:1;height:8px;background:#EEF0F3;border-radius:99px;overflow:hidden"><div style="height:100%;width:{{l.w}}%;background:{{l.c}}"></div></div><span style="width:58px;text-align:right;font-weight:600;color:{{l.tc}}">{{l.v}} MD</span></div>
+</sc-for>
+<div class="muted" style="font-size:12px;margin-top:4px">เต็ม = 5 MD ต่อสัปดาห์</div>
+</div>
+</div>
+
+<nav aria-label="เมนูหลัก" style="display:flex;background:#fff;border-top:1px solid #E4E7EB;padding-bottom:8px">
+<a class="tabb" href="MobileHome.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"></path></svg>Home</a>
+<a class="tabb" href="MobileMyTasks.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="m8 12 3 3 5-6"></path></svg>My Tasks</a>
+<a class="tabb on" href="MobileOverview.dc.html" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="7" height="7" rx="1.5"></rect><rect x="14" y="4" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>Projects</a>
+<a class="tabb" href="MobileInbox.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>Inbox<span style="position:absolute;top:6px;left:calc(50% + 4px);min-width:18px;height:18px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px">5</span></a>
+<a class="tabb" href="Profile.dc.html"><span style="width:24px;height:24px;border-radius:50%;background:#1D4ED8;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">MK</span>Profile</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const risks = [
+      ['#DC2626', 'Kaijeaw งานเกิน capacity 3 เท่า', 'Overdue 4 งาน · Credit Line Go-live 26 ม.ค.', 'Members.dc.html'],
+      ['#D97706', 'DP-30 รออนุมัติเลื่อน Due เป็น 4 ธ.ค.', 'ขอบเขตงานเพิ่ม · Plan Template แบบ Fleet', 'DueRequest.dc.html'],
+      ['#D97706', 'Bug DP-525 Workflow ส่งกลับแก้ไข', 'บล็อก DP-21 · รอ Donut ตรวจซ้ำ', 'BugDetail.dc.html']
+    ].map(function (r) { return { c: r[0], t: r[1], d: r[2], href: r[3] }; });
+    const mods = [["Credit Line", "#1D4ED8", 39, "54 งาน · Overdue 4"], ["Drawdown", "#0F766E", 23, "61 งาน · Overdue 1"], ["Pre-Disburse", "#B45309", 34, "29 งาน"], ["Maintain Car", "#7C3AED", 100, "12 งาน"], ["BFC", "#BE185D", 29, "28 งาน · Overdue 2"], ["Repayment", "#0369A1", 23, "30 งาน"], ["Checkstock", "#4D7C0F", 0, "32 งาน · เริ่ม 25 ม.ค."], ["Finance (GL)", "#57534E", 0, "19 งาน · เริ่ม 1 มี.ค."], ["Campaign", "#C2410C", 0, "25 งาน · เริ่ม 26 ก.พ."], ["OEM Portal", "#4338CA", 0, "21 งาน · เริ่ม 25 ม.ค."], ["Interface", "#0E7490", 0, "23 งาน · ยังไม่มีในแผน"]].map(function (m) { return { n: m[0], c: m[1], pct: m[2], meta: m[3] }; });
+    const load = [["Kaijeaw", 16.0], ["Pond", 13.0], ["Tung", 6.5], ["Top", 2.0], ["Zo", 2.5], ["P'Tum", 1.0]].map(function (l) { const over = l[1] > 5; return { n: l[0], v: l[1], w: Math.min(100, l[1] / 16 * 100), c: over ? '#DC2626' : '#3B82F6', tc: over ? '#B91C1C' : '#1B1F24' }; });
+    return { risks: risks, mods: mods, load: load };
+  }
+}
+</script>
+</body>
+</html>

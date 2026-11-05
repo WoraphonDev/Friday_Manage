@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Automation</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.muted{color:#5F6873}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.tab{display:inline-flex;align-items:center;min-height:40px;padding:0 4px;margin-right:18px;border-bottom:2px solid transparent;color:#5F6873;background:transparent;border-top:0;border-left:0;border-right:0;font:inherit;cursor:pointer}
+.tab[aria-selected="true"]{border-bottom-color:#1D4ED8;color:#1D4ED8;font-weight:700}
+.rl{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-bottom:1px solid #F1F3F5;cursor:pointer;width:100%;background:#fff;border-left:3px solid transparent;border-top:0;border-right:0;font:inherit;text-align:left;color:#1B1F24}
+.rl:hover{background:#FAFBFC}
+.rl.on{background:#F8FAFF;border-left-color:#1D4ED8}
+.sw{position:relative;width:40px;height:24px;border-radius:99px;border:0;cursor:pointer;padding:0;flex:none}
+.sw span{position:absolute;top:3px;width:18px;height:18px;border-radius:50%;background:#fff}
+.blk{border:1px solid #E4E7EB;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;background:#fff}
+.bh{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.04em}
+.in{min-height:36px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;min-width:0}
+.line{width:2px;height:16px;background:#D5DAE0;margin:0 auto}
+.tp{border:1px solid #E4E7EB;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;background:#fff}
+.lg{display:grid;grid-template-columns:120px minmax(0,1.3fr) minmax(0,1.6fr) 110px;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid #F1F3F5;font-size:13px}
+.lg.h{font-size:12px;font-weight:700;color:#5F6873;background:#F8F9FB}
+@media(max-width:760px){.lg{grid-template-columns:1fr 1fr}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="Home.dc.html" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace</a>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div style="max-width:1360px;margin:0 auto;padding:20px 24px 48px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end">
+<div><div class="muted" style="font-size:13px"><a href="Main.dc.html">Development Plan 2026-11</a> / <a href="ProjectSettings.dc.html">Settings</a> / Automation</div><h1 style="margin:2px 0 0;font-size:24px">Automation <span class="pill" style="background:#EDE9FE;color:#5B21B6;vertical-align:middle">แพ็กเกจ Team</span></h1><div class="muted">กฎแบบ "เมื่อ … ถ้า … ให้ …" ทำงานแทนคนในเรื่องที่ทำซ้ำทุกวัน · กฎ Workflow และ Git อยู่ที่ Project Settings</div></div>
+<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="min-width:220px"><div style="display:flex;justify-content:space-between;font-size:12px"><span class="muted">ทำงานเดือนนี้</span><b>312 / 1,000 ครั้ง</b></div><div style="height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden;margin-top:4px"><div style="height:100%;width:31%;background:#1D4ED8"></div></div></div><button class="btn pri" type="button" onClick="{{newRule}}">+ สร้างกฎ</button></div>
+</div>
+
+<div role="tablist" aria-label="Automation" style="border-bottom:1px solid #E4E7EB">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="3"><button class="tab" type="button" role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}">{{t.n}}</button></sc-for>
+</div>
+
+<sc-if value="{{tRules}}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+<section class="card" style="flex:1 1 380px;min-width:0;overflow:hidden" aria-label="รายการกฎ">
+<sc-for list="{{rules}}" as="r" hint-placeholder-count="5">
+<div style="display:flex;align-items:stretch;border-bottom:1px solid #F1F3F5">
+<button class="{{r.cls}}" type="button" onClick="{{r.pick}}" aria-current="{{r.cur}}" style="border-bottom:0;flex:1;opacity:{{r.op}}">
+<div style="flex:1;min-width:0"><b style="font-size:14px">{{r.n}}</b><div class="muted" style="font-size:12px;margin-top:2px">{{r.sum}}</div><div class="muted" style="font-size:12px;margin-top:4px">{{r.runs}} · {{r.by}}</div></div>
+<sc-if value="{{r.hasErr}}" hint-placeholder-val="{{ false }}"><span class="pill" style="background:#FEE2E2;color:#991B1B">ผิดพลาด 1</span></sc-if>
+</button>
+<div style="display:flex;align-items:center;padding:0 14px;background:#fff"><button class="sw" type="button" role="switch" aria-checked="{{r.onS}}" aria-label="เปิดใช้กฎ {{r.n}}" onClick="{{r.toggle}}" style="background:{{r.bg}}"><span style="left:{{r.x}}px"></span></button></div>
+</div>
+</sc-for>
+</section>
+
+<section class="card" style="flex:1.4 1 520px;min-width:0" aria-label="แก้ไขกฎ">
+<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:14px 18px;border-bottom:1px solid #EEF0F3">
+<input class="in" type="text" value="{{ed.n}}" aria-label="ชื่อกฎ" style="flex:1 1 260px;font-weight:600">
+<div style="display:flex;gap:8px"><button class="btn" type="button" onClick="{{dry}}">ทดสอบกับงานจริง</button><button class="btn pri" type="button">บันทึก</button></div>
+</div>
+<div style="padding:16px 18px;display:flex;flex-direction:column;background:#F8F9FB">
+<div class="blk"><div class="bh" style="color:#1D4ED8"><span class="pill" style="background:#DBEAFE;color:#1E40AF">เมื่อ</span>เหตุการณ์ที่เริ่มกฎ</div>
+<select class="in" aria-label="เหตุการณ์"><option>{{ed.when}}</option><option>งานถูกสร้าง</option><option>สถานะงานเปลี่ยน</option><option>Sub-task ทั้งหมดเสร็จ</option><option>งานเลย Due</option><option>มีการแนบผลทดสอบ</option><option>Sprint เริ่ม / ปิด</option><option>ตามเวลา (ทุกวัน / ทุกสัปดาห์)</option></select>
+</div>
+<div class="line"></div>
+<div class="blk"><div class="bh" style="color:#92400E"><span class="pill" style="background:#FEF3C7;color:#92400E">ถ้า</span>เงื่อนไข (ไม่บังคับ)</div>
+<sc-for list="{{ed.ifs}}" as="c" hint-placeholder-count="2"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select class="in" style="flex:1 1 140px" aria-label="ฟิลด์"><option>{{c.f}}</option></select><select class="in" style="flex:0 1 90px" aria-label="ตัวเปรียบเทียบ"><option>{{c.op}}</option><option>ไม่ใช่</option></select><select class="in" style="flex:1 1 140px" aria-label="ค่า"><option>{{c.v}}</option></select><button class="btn" type="button" aria-label="ลบเงื่อนไข" style="min-height:36px;width:36px;padding:0">×</button></div></sc-for>
+<button class="btn" type="button" style="align-self:flex-start;min-height:32px;font-size:13px">+ เพิ่มเงื่อนไข</button>
+</div>
+<div class="line"></div>
+<div class="blk"><div class="bh" style="color:#166534"><span class="pill" style="background:#DCFCE7;color:#166534">ให้</span>สิ่งที่ระบบทำ (ตามลำดับ)</div>
+<sc-for list="{{ed.thens}}" as="a" hint-placeholder-count="2"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted" style="width:18px;text-align:right;font-size:12px">{{a.i}}</span><select class="in" style="flex:1 1 180px" aria-label="การกระทำ"><option>{{a.a}}</option><option>เปลี่ยนสถานะ</option><option>มอบหมายให้</option><option>ตั้ง Priority</option><option>เพิ่ม Label</option><option>เพิ่ม Watcher</option><option>สร้าง Sub-task</option><option>แจ้งเตือน</option><option>ส่งเข้า LINE กลุ่ม / Webhook</option></select><input class="in" type="text" value="{{a.v}}" aria-label="ค่า" style="flex:1 1 200px"></div></sc-for>
+<button class="btn" type="button" style="align-self:flex-start;min-height:32px;font-size:13px">+ เพิ่มการกระทำ</button>
+</div>
+<div style="margin-top:14px;border-radius:10px;background:#fff;border:1px dashed #C9CFD6;padding:10px 12px;font-size:13px"><b>อ่านเป็นประโยค:</b> {{ed.sentence}}</div>
+<sc-if value="{{showDry}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="margin-top:10px;border-radius:10px;background:#F0FDF4;border:1px solid #BBF7D0;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:4px"><b style="color:#166534">ทดสอบแบบไม่บันทึกจริง (Dry run)</b><span>{{ed.dry}}</span><span class="muted" style="font-size:12px">ไม่มีการเปลี่ยนข้อมูลหรือส่งแจ้งเตือนจริง</span></div>
+</sc-if>
+<div class="muted" style="font-size:12px;margin-top:10px">กันวนซ้ำ: กฎไม่ถูกเรียกจากการกระทำของกฎอื่นเกิน 3 ชั้น · ทุกครั้งที่ทำงานบันทึกในประวัติและ Audit log ในชื่อ "Automation"</div>
+</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{tTpl}}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
+<sc-for list="{{tpls}}" as="t" hint-placeholder-count="6"><div class="tp"><span class="pill" style="background:#EEF0F3;color:#3D4550;align-self:flex-start">{{t.cat}}</span><b>{{t.n}}</b><div class="muted" style="font-size:13px;flex:1">{{t.d}}</div><button class="btn" type="button" style="align-self:flex-start">ใช้แม่แบบนี้</button></div></sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{tLog}}" hint-placeholder-val="{{ false }}">
+<section class="card" style="overflow:hidden">
+<div class="lg h"><div>เวลา</div><div>กฎ</div><div>ผล</div><div>สถานะ</div></div>
+<sc-for list="{{logs}}" as="l" hint-placeholder-count="6"><div class="lg"><div class="muted">{{l.t}}</div><div>{{l.r}}</div><div>{{l.d}}</div><div><span class="pill" style="background:{{l.sb}};color:{{l.sf}}">{{l.s}}</span></div></div></sc-for>
+</section>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  state = { tab: 'rules', sel: 0, on: [true, true, true, true, false], dry: false };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const tab = st.tab || 'rules', sel = st.sel || 0, on = st.on || [true, true, true, true, false];
+    const R = [
+      { n: 'Sub-task ครบแล้วส่ง Review อัตโนมัติ', when: 'Sub-task ทั้งหมดเสร็จ', ifs: [['ประเภทงาน', 'คือ', 'Task, Story']], thens: [['เปลี่ยนสถานะ', 'Review'], ['แจ้งเตือน', 'Reviewer ของงาน']], runs: 'ทำงาน 48 ครั้ง · ล่าสุด 2 ชม.ก่อน', by: 'สร้างโดย Mick', sentence: 'เมื่อ Sub-task ทั้งหมดเสร็จ ถ้าเป็น Task หรือ Story ให้ย้ายงานแม่ไป Review แล้วแจ้ง Reviewer', dry: 'ตรงเงื่อนไข 1 งาน: DP-39 ฟอร์มหลักประกัน 5 ประเภท (Sub-task 5/5 เมื่อครบ) → จะย้ายไป Review และแจ้ง Mick', err: false },
+      { n: 'Bug Critical แจ้งทีมทันที', when: 'งานถูกสร้าง', ifs: [['ประเภทงาน', 'คือ', 'Bug'], ['Severity', 'คือ', 'Critical']], thens: [['ตั้ง Priority', 'Urgent'], ['มอบหมายให้', 'เจ้าของ Module'], ['ส่งเข้า LINE กลุ่ม / Webhook', 'LINE กลุ่ม Dev Plan 2026 + Discord #dev-alerts']], runs: 'ทำงาน 3 ครั้ง · ล่าสุด 6 วันก่อน', by: 'สร้างโดย Mick', sentence: 'เมื่อมีงานใหม่ ถ้าเป็น Bug ระดับ Critical ให้ตั้ง Priority เป็น Urgent มอบหมายให้เจ้าของ Module และส่งเข้ากลุ่มทีม', dry: 'ไม่มี Bug Critical ที่เปิดอยู่ตอนนี้ · ลองกับ DP-525 (Major) → ไม่ตรงเงื่อนไข', err: false },
+      { n: 'เลย Due 2 วันทำงาน แจ้ง PM', when: 'ตามเวลา (ทุกวัน 09:30)', ifs: [['Due', 'เลยมาแล้ว', '≥ 2 วันทำงาน'], ['สถานะ', 'ไม่ใช่', 'Done']], thens: [['เพิ่ม Label', 'ล่าช้า'], ['แจ้งเตือน', 'PM และ Assignee']], runs: 'ทำงาน 214 ครั้ง · ล่าสุดวันนี้ 09:30', by: 'สร้างโดย Mick', sentence: 'ทุกวันทำงาน 09:30 งานที่เลย Due ตั้งแต่ 2 วันทำงานและยังไม่เสร็จ ให้ติด Label "ล่าช้า" และแจ้ง PM กับ Assignee (ไม่นับวันหยุด ธปท.)', dry: 'ตรงเงื่อนไข 5 งาน: DP-91 (เลย 7 วัน), DP-23 (เลย 7 วัน), DP-211, DP-219, DP-21', err: true },
+      { n: 'งาน Finance (GL) ต้องให้ BA ตรวจบัญชี', when: 'งานถูกสร้าง', ifs: [['Module', 'คือ', 'Finance (GL)']], thens: [['สร้าง Sub-task', 'ตรวจผลบันทึกบัญชี (มอบหมาย P\'Oak)'], ['เพิ่ม Watcher', 'Top']], runs: 'ทำงาน 9 ครั้ง · ล่าสุด 3 วันก่อน', by: 'สร้างโดย Mick', sentence: 'เมื่อสร้างงานใน Module Finance (GL) ให้สร้าง Sub-task "ตรวจผลบันทึกบัญชี" มอบหมาย P\'Oak และเพิ่ม Top เป็น Watcher', dry: 'จะทำงานกับงานใหม่เท่านั้น · งานเดิม 18 งานไม่ถูกแก้', err: false },
+      { n: 'Sprint เริ่มแต่งานยังไม่มี Size', when: 'Sprint เริ่ม', ifs: [['Size', 'คือ', 'ว่าง']], thens: [['แจ้งเตือน', 'Assignee ให้ประเมิน Size']], runs: 'ยังไม่เคยทำงาน', by: 'สร้างโดย Mick', sentence: 'เมื่อ Sprint เริ่ม งานที่ยังไม่มี Size ให้แจ้ง Assignee ให้ประเมิน', dry: 'Sprint 4 (เริ่ม 16 พ.ย.) มี 3 งานที่ยังไม่มี Size', err: false }
+    ];
+    const rules = R.map(function (r, i) {
+      const o = !!on[i];
+      return { n: r.n, sum: 'เมื่อ ' + r.when + ' → ' + r.thens.map(function (t) { return t[0]; }).join(', '), runs: r.runs, by: r.by, hasErr: r.err,
+        cls: sel === i ? 'rl on' : 'rl', cur: sel === i ? 'true' : 'false', op: o ? 1 : 0.6, pick: function () { self.setState({ sel: i, dry: false }); },
+        onS: o ? 'true' : 'false', bg: o ? '#1D4ED8' : '#C3CAD3', x: o ? 19 : 3, toggle: function () { const a = on.slice(); a[i] = !a[i]; self.setState({ on: a }); } };
+    });
+    const r = R[sel];
+    const ed = { n: r.n, when: r.when, sentence: r.sentence, dry: r.dry,
+      ifs: r.ifs.map(function (c) { return { f: c[0], op: c[1], v: c[2] }; }),
+      thens: r.thens.map(function (t, i) { return { i: i + 1, a: t[0], v: t[1] }; }) };
+    const tabs = [['rules', 'กฎของโปรเจกต์ (5)'], ['tpl', 'แม่แบบ'], ['log', 'ประวัติการทำงาน']].map(function (t) { return { n: t[1], on: tab === t[0] ? 'true' : 'false', pick: function () { self.setState({ tab: t[0] }); } }; });
+    const tpls = [
+      ['Workflow', 'ปิด Task แม่เมื่อ Sub-task เสร็จครบ', 'ย้าย Task ไป Done หรือ Review เมื่อ Sub-task ทุกตัวเสร็จ'],
+      ['Bug', 'Bug Reopen 2 ครั้งแจ้ง Lead', 'ถ้า Bug เดิมถูก Reopen ครั้งที่ 2 ให้แจ้ง Lead และติด Label "ต้องคุย"'],
+      ['กำหนดส่ง', 'เตือนก่อน Due 1 วันทำงาน', 'แจ้ง Assignee ช่วง 09:30 ของวันทำงานก่อนวันครบกำหนด'],
+      ['Sprint', 'ย้ายงานค้างไป Sprint ถัดไป', 'เมื่อปิด Sprint งานที่ยังไม่เสร็จย้ายไป Sprint ถัดไปและติด Label "ยกมา"'],
+      ['Requirement', 'งานไม่มี FR แจ้ง BA', 'เมื่อสร้าง Story ที่ไม่มี FR อ้างอิง ให้แจ้ง BA ของ Module'],
+      ['รายงาน', 'ส่งสรุปรายสัปดาห์', 'ทุกวันศุกร์ 17:00 ส่งรายงานประจำสัปดาห์ทาง Email และ Webhook']
+    ].map(function (t) { return { cat: t[0], n: t[1], d: t[2] }; });
+    const logs = [
+      ['2 ธ.ค. 09:30', 'เลย Due 2 วันทำงาน แจ้ง PM', 'DP-21, DP-23, DP-91, DP-211, DP-219 · ติด Label + แจ้ง 4 คน', 'สำเร็จ', '#DCFCE7', '#166534'],
+      ['2 ธ.ค. 09:30', 'เลย Due 2 วันทำงาน แจ้ง PM', 'DP-30 · มีคำขอเลื่อน Due รออนุมัติ ข้ามการแจ้งซ้ำ', 'ข้าม', '#EEF0F3', '#3D4550'],
+      ['1 ธ.ค. 18:05', 'Sub-task ครบแล้วส่ง Review อัตโนมัติ', 'DP-222 → Done · แจ้ง Mick', 'สำเร็จ', '#DCFCE7', '#166534'],
+      ['27 พ.ย. 10:05', 'งาน Finance (GL) ต้องให้ BA ตรวจบัญชี', 'DP-430 · สร้าง Sub-task ตรวจผลบันทึกบัญชี', 'สำเร็จ', '#DCFCE7', '#166534'],
+      ['24 พ.ย. 14:40', 'Bug Critical แจ้งทีมทันที', 'Bug ทดสอบ SIT · Webhook Discord ตอบ 404', 'ส่งซ้ำแล้ว', '#FEF3C7', '#92400E'],
+      ['24 พ.ย. 14:40', 'Bug Critical แจ้งทีมทันที', 'Urgent + มอบหมาย Kaijeaw + LINE กลุ่ม', 'สำเร็จ', '#DCFCE7', '#166534']
+    ].map(function (l) { return { t: l[0], r: l[1], d: l[2], s: l[3], sb: l[4], sf: l[5] }; });
+    return {
+      tabs: tabs, tRules: tab === 'rules', tTpl: tab === 'tpl', tLog: tab === 'log', rules: rules, ed: ed, tpls: tpls, logs: logs,
+      showDry: !!st.dry, dry: function () { self.setState({ dry: true }); }, newRule: function () { self.setState({ tab: 'tpl' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

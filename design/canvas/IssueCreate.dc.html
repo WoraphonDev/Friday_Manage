@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Create issue by type</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.stage{position:relative;min-height:100vh;padding:40px 16px 48px}
+.under{position:absolute;inset:0;overflow:hidden;padding:20px;display:flex;gap:16px}
+.sk{height:12px;border-radius:6px;background:#D5DAE0}
+.veil{position:absolute;inset:0;background:rgba(15,23,42,.5)}
+.modal{position:relative;max-width:860px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(15,23,42,.35)}
+.lb{font-size:13px;font-weight:600}
+.req{color:#B91C1C}
+.in{min-height:40px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%;min-width:0}
+textarea.in{padding:10px 12px;min-height:88px;resize:vertical;line-height:1.6}
+.fld{display:flex;flex-direction:column;gap:6px;min-width:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 16px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.muted{color:#5F6873}
+.ty{display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid #D5DAE0;border-radius:12px;background:#fff;font:inherit;text-align:left;cursor:pointer;color:#1B1F24}
+.ty:hover{border-color:#94A3B8}
+.ty.on{border-color:#1B1F24;box-shadow:0 0 0 1px #1B1F24}
+.tic{width:28px;height:28px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.sev{display:inline-flex;gap:6px;flex-wrap:wrap}
+.sev button{min-height:36px;padding:0 12px;border:1px solid #D5DAE0;border-radius:8px;background:#fff;font:inherit;font-size:13px;font-weight:500;cursor:pointer;color:#3D4550}
+.sev button[aria-pressed="true"]{border-color:#1B1F24;box-shadow:0 0 0 1px #1B1F24;color:#1B1F24;font-weight:700}
+.chipx{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 10px;border:1px solid #D5DAE0;border-radius:999px;background:#fff;font-size:12px;font-weight:500}
+.sec{padding:16px 24px;border-top:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+@media(max-width:760px){.stage{padding:10px 6px}.sec{padding:14px 16px}}
+</style>
+</helmet>
+<div class="stage">
+<div class="under" aria-hidden="true">
+<div style="flex:0 0 220px;background:#fff;border-radius:12px"></div>
+<div style="flex:1;background:#fff;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{sk}}" as="s" hint-placeholder-count="16"><div style="display:flex;gap:10px"><div class="sk" style="width:{{s.a}}%"></div><div class="sk" style="width:{{s.b}}%"></div></div></sc-for>
+</div>
+</div>
+<div class="veil"></div>
+
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="ic-title">
+<div style="display:flex;align-items:center;gap:10px;padding:16px 24px;border-bottom:1px solid #E4E7EB">
+<h2 id="ic-title" style="margin:0;font-size:18px;flex:1">สร้างงานใหม่ <span class="muted" style="font-weight:500;font-size:14px">· Development Plan 2026-11</span></h2>
+<a href="Kanban.dc.html" aria-label="ปิด" style="width:36px;height:36px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:#3D4550;font-size:22px">×</a>
+</div>
+
+<div style="padding:16px 24px;display:flex;flex-direction:column;gap:10px">
+<span class="lb">ประเภทงาน <span class="req">*</span></span>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px" role="group" aria-label="ประเภทงาน">
+<sc-for list="{{types}}" as="t" hint-placeholder-count="4">
+<button class="{{t.cls}}" type="button" onClick="{{t.pick}}" aria-pressed="{{t.on}}">
+<span class="tic" style="background:{{t.c}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="{{t.icon}}"></path></svg></span>
+<span style="display:flex;flex-direction:column"><b>{{t.n}}</b><span class="muted" style="font-size:12px">{{t.d}}</span></span>
+</button>
+</sc-for>
+</div>
+</div>
+
+<div class="sec">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+<label class="fld"><span class="lb">Module <span class="req">*</span></span><select class="in"><option>Credit Line</option><option>Drawdown</option><option>Pre-Disburse</option><option>Maintain Car After Drawdown</option><option>BFC ใบเรียกเก็บ/ใบแจ้งหนี้</option><option>Repayment รับชำระเงิน</option><option>Checkstock & Collect Car Keys</option><option>Finance (GL)</option><option>Campaign</option><option>OEM / Dealer Portal</option><option>Interface FP/HP/KL</option></select></label>
+<label class="fld"><span class="lb">Sprint</span><select class="in"><option>Sprint 3 · ปัจจุบัน</option><option>Sprint 4</option><option>Backlog</option></select></label>
+<sc-if value="{{isBug}}" hint-placeholder-val="{{ true }}"><label class="fld"><span class="lb">อยู่ใต้งาน</span><select class="in"><option>DP-20 Workflow: ส่งงาน/คืนงาน/ส่งกลับแก้ไข · Task</option><option>ไม่มี · เป็น Bug ระดับ Task</option></select><span class="muted" style="font-size:12px">เลือกงานแม่แล้ว Bug จะเป็น Sub-task ของงานนั้น</span></label></sc-if>
+<sc-if value="{{isStory}}" hint-placeholder-val="{{ false }}"><label class="fld"><span class="lb">Size / Man-Day</span><select class="in"><option>M · 5 MD</option><option>XS · 1 MD</option><option>S · 3 MD</option><option>L · 8 MD</option><option>XL · 12 MD</option></select></label></sc-if>
+<sc-if value="{{isSpike}}" hint-placeholder-val="{{ false }}"><label class="fld"><span class="lb">Timebox <span class="req">*</span></span><select class="in"><option>8 ชม. (1 วัน)</option><option>4 ชม.</option><option>16 ชม.</option></select></label></sc-if>
+</div>
+<label class="fld"><span class="lb">ชื่อ{{typeName}} <span class="req">*</span></span><input class="in" type="text" value="{{titleVal}}" style="font-size:16px;font-weight:600;min-height:46px"></label>
+</div>
+
+<sc-if value="{{isBug}}" hint-placeholder-val="{{ true }}">
+<div class="sec" style="background:#FFFBFB">
+<div style="display:flex;gap:16px;flex-wrap:wrap">
+<div class="fld"><span class="lb">Severity <span class="req">*</span></span>
+<div class="sev" role="group" aria-label="Severity"><sc-for list="{{sevs}}" as="s" hint-placeholder-count="4"><button type="button" aria-pressed="{{s.on}}" onClick="{{s.pick}}" style="color:{{s.c}}">{{s.n}}</button></sc-for></div>
+<span class="muted" style="font-size:12px">{{sevHint}}</span>
+</div>
+<label class="fld" style="flex:1 1 160px"><span class="lb">Environment <span class="req">*</span></span><select class="in"><option>SIT</option><option>UAT</option><option>Production</option><option>Local</option></select></label>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+<label class="fld"><span class="lb">Browser / อุปกรณ์</span><input class="in" type="text" value="Chrome 131 · Windows 11"></label>
+<label class="fld"><span class="lb">พบใน Commit / Version</span><input class="in mono" type="text" value="d52a0f1 · SIT build 1.3.0"></label>
+</div>
+<label class="fld"><span class="lb">ขั้นตอนทำซ้ำ (Steps to reproduce) <span class="req">*</span></span><textarea class="in">1. Login เป็น LO เปิดใบคำขอวงเงินสถานะ Verify (SCR-102)
+2. กด "ส่งกลับแก้ไข" ใส่เหตุผล แล้วยืนยัน
+3. Login เป็น Maker เปิดใบคำขอเดิม</textarea></label>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+<label class="fld"><span class="lb">ผลที่ควรเป็น (Expected)</span><textarea class="in" style="min-height:64px">สถานะกลับเป็น Draft และ Maker แก้ไขได้</textarea></label>
+<label class="fld"><span class="lb">ผลที่เกิดขึ้นจริง (Actual)</span><textarea class="in" style="min-height:64px">สถานะค้างเป็น Verify · Maker แก้ไขไม่ได้</textarea></label>
+</div>
+<div class="fld"><span class="lb">หลักฐาน</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="chipx">send_back_to_maker.mp4 · 6.1 MB</span><span class="chipx">status_log_SIT.png</span><button class="btn" type="button" style="min-height:30px;font-size:12px">+ แนบไฟล์ / วางรูป</button></div>
+</div>
+<div class="fld"><span class="lb">ที่มาและผลกระทบ</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chipx" style="border-color:#FECACA">พบจาก SIT run #1 ของ DP-20</span><span class="chipx">กระทบ: DP-20 Workflow</span><span class="chipx">Blocks: DP-21 Maintain: สร้างงานอัตโนมัติ</span></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isStory}}" hint-placeholder-val="{{ false }}">
+<div class="sec">
+<div class="fld"><span class="lb">User story <span class="req">*</span></span>
+<div style="display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;align-items:center">
+<span class="muted">ในฐานะ</span><input class="in" type="text" value="LO (Loan Officer)">
+<span class="muted">ฉันต้องการ</span><input class="in" type="text" value="ส่งใบคำขอวงเงินกลับให้ Maker แก้ไขพร้อมเหตุผล">
+<span class="muted">เพื่อที่จะ</span><input class="in" type="text" value="ไม่ต้องสร้างใบคำขอใหม่เมื่อข้อมูลผิด">
+</div>
+</div>
+<label class="fld"><span class="lb">Acceptance criteria <span class="req">*</span></span><textarea class="in">- [ ] สถานะกลับเป็น Draft และ Maker แก้ไขได้
+- [ ] เหตุผลการส่งกลับแสดงใน History
+- [ ] แจ้งเตือน Maker ทันที</textarea></label>
+<div class="muted" style="font-size:12px">Story จะแตกเป็น Task / Sub-task ได้หลังสร้าง · Man-Day ใช้คำนวณ Plan End และ Workload</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isTask}}" hint-placeholder-val="{{ false }}">
+<div class="sec">
+<label class="fld"><span class="lb">รายละเอียด</span><textarea class="in">Batch ประจำวันเปลี่ยนสถานะหลักประกันเป็น Inactive เมื่อหมดอายุ (FR-06.6)</textarea></label>
+<div class="muted" style="font-size:12px">ฟอร์มเต็มของ Task (Sub-task, Dependencies, Watchers) ดูที่หน้า "B · สร้าง Task / Sub-task"</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isSpike}}" hint-placeholder-val="{{ false }}">
+<div class="sec" style="background:#FAF8FF">
+<label class="fld"><span class="lb">คำถามที่ต้องหาคำตอบ <span class="req">*</span></span><textarea class="in" style="min-height:64px">รับ Textfile คำอนุมัติจาก MDP แบบ incremental ได้หรือไม่ (รูปแบบไฟล์, เวลาส่ง, การจัดการไฟล์ซ้ำ)</textarea></label>
+<label class="fld"><span class="lb">ผลลัพธ์ที่ต้องส่ง</span><select class="in"><option>เอกสารสรุป + ข้อเสนอแนะ</option><option>Prototype / PoC</option><option>ADR (Architecture Decision Record)</option></select></label>
+<div class="muted" style="font-size:12px">Spike จะแจ้งเตือนเมื่อใช้เวลาเกิน Timebox · Timebox นับเป็น Man-Day ใน Workload</div>
+</div>
+</sc-if>
+
+<div class="sec">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+<label class="fld"><span class="lb">Assignee</span><select class="in"><option>{{assignee}}</option><option>Kaijeaw</option><option>Pond</option><option>Tung</option><option>Top</option><option>Zo</option><option>P'Tum</option></select></label>
+<label class="fld"><span class="lb">Priority</span><select class="in"><option>{{prio}}</option><option>Urgent</option><option>High</option><option>Medium</option><option>Low</option></select></label>
+<label class="fld"><span class="lb">Due</span><input class="in" type="date" value="{{dueVal}}"></label>
+<sc-if value="{{isBug}}" hint-placeholder-val="{{ true }}"><label class="fld"><span class="lb">Tester (ตรวจซ้ำ)</span><select class="in"><option>Donut (BA)</option><option>ไม่มี</option></select></label></sc-if>
+</div>
+</div>
+
+<div style="display:flex;align-items:center;gap:10px;padding:14px 24px;border-top:1px solid #E4E7EB;flex-wrap:wrap">
+<label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" style="width:16px;height:16px">สร้างต่ออีกรายการ</label>
+<span style="flex:1"></span>
+<a class="btn" href="Kanban.dc.html">ยกเลิก</a>
+<a class="btn pri" href="{{doneHref}}">สร้าง{{typeName}}</a>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"type":{"editor":"enum","options":["bug","story","task","spike"],"default":"bug"},"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+  state = {};
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const type = st.type || this.props.type || 'bug';
+    const sev = st.sev || 'major';
+    const TY = [
+      ['story', 'Story', 'ความต้องการจากมุมผู้ใช้', '#15803D', 'M6 3h12v18l-6-4-6 4z'],
+      ['task', 'Task', 'งานทั่วไปที่ต้องทำ', '#1D4ED8', 'M4 4h16v16H4zM8 12.5l2.5 2.5L16 9.5'],
+      ['bug', 'Bug', 'สิ่งที่ทำงานผิดจากที่ควรเป็น', '#DC2626', 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z'],
+      ['spike', 'Spike', 'งานศึกษา / ทดลอง มี Timebox', '#7C3AED', 'M13 2 4 14h7l-1 8 9-12h-7z']
+    ];
+    const types = TY.map(function (t) { return { n: t[1], d: t[2], c: t[3], icon: t[4], on: type === t[0] ? 'true' : 'false', cls: type === t[0] ? 'ty on' : 'ty', pick: function () { self.setState({ type: t[0] }); } }; });
+    const SV = [['critical', 'Critical', '#B91C1C', 'ระบบล่มหรือข้อมูลเสียหาย · แจ้ง PM ทันทีทุกช่องทาง'], ['major', 'Major', '#B45309', 'ฟีเจอร์หลักใช้ไม่ได้ แต่มีทางเลี่ยง'], ['minor', 'Minor', '#1D4ED8', 'ใช้งานได้ แต่ผิดเล็กน้อย'], ['trivial', 'Trivial', '#5F6873', 'เรื่องหน้าตา คำผิด']];
+    const sevs = SV.map(function (s) { return { n: s[1], c: s[2], on: sev === s[0] ? 'true' : 'false', pick: function () { self.setState({ sev: s[0] }); } }; });
+    const sevHint = SV.filter(function (s) { return s[0] === sev; })[0][3];
+    const V = {
+      bug: [' Bug', "Workflow ส่งกลับแก้ไข: สถานะไม่กลับเป็น Draft เมื่อ LO ส่งคืน", 'Kaijeaw', 'High', '2026-12-04', 'BugDetail.dc.html'],
+      story: [' Story', 'LO ส่งใบคำขอวงเงินกลับให้ Maker แก้ไขได้', 'Kaijeaw', 'Medium', '2026-12-18', 'TaskDetail.dc.html'],
+      task: [' Task', 'Batch เปลี่ยนสถานะหลักประกัน Active / Inactive อัตโนมัติ', 'Kaijeaw', 'Medium', '2026-12-11', 'TaskDetail.dc.html'],
+      spike: [' Spike', 'ศึกษาการรับ Textfile จาก MDP แบบ incremental', 'Pond', 'Medium', '2026-12-08', 'TaskDetail.dc.html']
+    }[type];
+    const sk = [[40, 20], [32, 26], [44, 16], [28, 30], [38, 18], [30, 24], [42, 20], [26, 28], [36, 22], [40, 18], [30, 26], [34, 20], [38, 24], [28, 22], [36, 18], [30, 20]].map(function (r) { return { a: r[0], b: r[1] }; });
+    return {
+      types: types, sevs: sevs, sevHint: sevHint, sk: sk,
+      isBug: type === 'bug', isStory: type === 'story', isTask: type === 'task', isSpike: type === 'spike',
+      typeName: V[0], titleVal: V[1], assignee: V[2], prio: V[3], dueVal: V[4], doneHref: V[5]
+    };
+  }
+}
+</script>
+</body>
+</html>

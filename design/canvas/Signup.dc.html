@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Sign up</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#fff;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.wrap{display:flex;flex-wrap:wrap;min-height:100vh}
+.brand{flex:1 1 420px;background:#0F172A;color:#E2E8F0;padding:48px;display:flex;flex-direction:column;justify-content:space-between;gap:40px}
+.fs{flex:1 1 480px;display:flex;align-items:center;justify-content:center;padding:48px 24px}
+.box{width:100%;max-width:440px;display:flex;flex-direction:column;gap:16px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.lb{font-size:13px;font-weight:600}
+.in{min-height:44px;border:1px solid #C9CFD6;border-radius:10px;padding:0 12px;font:inherit;background:#fff;width:100%}
+.in:focus{outline:2px solid #1D4ED8;border-color:#1D4ED8}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:46px;padding:0 16px;border-radius:10px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;width:100%}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.muted{color:#5F6873}
+.or{display:flex;align-items:center;gap:12px;color:#5F6873;font-size:13px}
+.or:before,.or:after{content:"";flex:1;height:1px;background:#E4E7EB}
+.rule{display:flex;align-items:center;gap:6px;font-size:12px}
+.ok{color:#166534}.no{color:#5F6873}
+.otp{display:flex;gap:10px}
+.otp input{width:52px;height:58px;border:1px solid #C9CFD6;border-radius:10px;text-align:center;font:inherit;font-size:22px;font-weight:700}
+.step{display:flex;gap:6px;align-items:center;font-size:12px;color:#94A3B8}
+@media(max-width:760px){.brand{padding:28px 20px}.fs{padding:28px 16px}}
+</style>
+</helmet>
+<div class="wrap">
+<section class="brand" aria-label="Friday Manage">
+<div style="display:flex;align-items:center;gap:10px"><span style="width:36px;height:36px;border-radius:9px;background:#1D4ED8;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">F</span><span style="font-weight:700;font-size:18px">Friday Manage</span></div>
+<div style="max-width:460px">
+<h2 style="font-size:34px;line-height:1.25;margin:0 0 16px;color:#fff">เริ่มต้นใช้งานฟรี สำหรับทีมไม่เกิน 10 คน</h2>
+<div style="display:flex;flex-direction:column;gap:12px;color:#CBD5E1">
+<div style="display:flex;gap:12px"><span style="width:28px;height:28px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex:none">1</span><span>สร้างบัญชี และยืนยันอีเมล</span></div>
+<div style="display:flex;gap:12px"><span style="width:28px;height:28px;border-radius:50%;background:#334155;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex:none">2</span><span>ตั้งชื่อ Workspace และเชิญทีม</span></div>
+<div style="display:flex;gap:12px"><span style="width:28px;height:28px;border-radius:50%;background:#334155;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex:none">3</span><span>สร้างโปรเจกต์แรก หรือใช้โปรเจกต์ตัวอย่าง</span></div>
+</div>
+</div>
+<div style="font-size:12px;color:#94A3B8">ไม่ต้องใช้บัตรเครดิต</div>
+</section>
+
+<section class="fs">
+<div class="box">
+<sc-if value="{{isForm}}" hint-placeholder-val="{{ true }}">
+<div><h1 style="margin:0;font-size:28px">สร้างบัญชี</h1><div class="muted">มีบัญชีแล้ว? <a href="Login.dc.html" style="font-weight:600">เข้าสู่ระบบ</a></div></div>
+<button class="btn" type="button"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#EA4335"></circle><text x="12" y="16.5" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="sans-serif">G</text></svg>สมัครด้วย Google</button>
+<div class="or">หรือใช้อีเมล</div>
+<label class="fld"><span class="lb">ชื่อที่แสดง</span><input class="in" type="text" placeholder="เช่น Mick" autocomplete="nickname"></label>
+<label class="fld"><span class="lb">อีเมลที่ทำงาน</span><input class="in" type="email" value="mick@example.com" autocomplete="email"><span class="muted" style="font-size:12px">คนในโดเมนเดียวกันจะขอเข้าร่วม Workspace ของคุณได้</span></label>
+<label class="fld"><span class="lb">รหัสผ่าน</span><input class="in" type="password" value="Friday2026" autocomplete="new-password">
+<span style="display:flex;gap:4px;margin-top:2px" aria-hidden="true"><span style="flex:1;height:5px;border-radius:3px;background:#15803D"></span><span style="flex:1;height:5px;border-radius:3px;background:#15803D"></span><span style="flex:1;height:5px;border-radius:3px;background:#15803D"></span><span style="flex:1;height:5px;border-radius:3px;background:#E4E7EB"></span></span>
+<span style="font-size:12px;color:#166534;font-weight:600">ความปลอดภัย: ดี</span>
+<span style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px">
+<span class="rule ok">✓ อย่างน้อย 8 ตัวอักษร</span><span class="rule ok">✓ มีตัวพิมพ์ใหญ่</span>
+<span class="rule ok">✓ มีตัวเลข</span><span class="rule no">○ มีอักขระพิเศษ (แนะนำ)</span>
+</span>
+</label>
+<label style="display:flex;align-items:flex-start;gap:8px;font-size:13px"><input type="checkbox" checked style="width:18px;height:18px;margin-top:2px">ยอมรับ <a href="Legal.dc.html">ข้อกำหนดการใช้งาน</a> และ <a href="Legal.dc.html">นโยบายความเป็นส่วนตัว</a> (PDPA)</label>
+<button class="btn pri" type="button" onClick="{{submit}}">สร้างบัญชี</button>
+</sc-if>
+
+<sc-if value="{{isVerify}}" hint-placeholder-val="{{ false }}">
+<span style="width:56px;height:56px;border-radius:14px;background:#EEF2FF;display:flex;align-items:center;justify-content:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg></span>
+<div><h1 style="margin:0;font-size:28px">ยืนยันอีเมลของคุณ</h1><div class="muted">เราส่งรหัส 6 หลักไปที่ <b style="color:#1B1F24">mick@example.com</b> หรือกดลิงก์ในอีเมลก็ได้</div></div>
+<div class="otp" role="group" aria-label="รหัส 6 หลัก"><input type="text" maxlength="1" aria-label="หลักที่ 1"><input type="text" maxlength="1" aria-label="หลักที่ 2"><input type="text" maxlength="1" aria-label="หลักที่ 3"><input type="text" maxlength="1" aria-label="หลักที่ 4"><input type="text" maxlength="1" aria-label="หลักที่ 5"><input type="text" maxlength="1" aria-label="หลักที่ 6"></div>
+<a class="btn pri" href="Onboarding.dc.html">ยืนยันและตั้งค่า Workspace</a>
+<div class="muted" style="font-size:13px">ไม่ได้รับอีเมล? ส่งใหม่ได้ใน <b>0:42</b> · ตรวจในโฟลเดอร์ Spam · <button type="button" onClick="{{back}}" style="border:0;background:transparent;font:inherit;color:#1D4ED8;cursor:pointer;padding:0">เปลี่ยนอีเมล</button></div>
+</sc-if>
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  state = { step: 'form' };
+  renderVals() {
+    const self = this;
+    const step = (this.state && this.state.step) || 'form';
+    return { isForm: step === 'form', isVerify: step === 'verify',
+      submit: function () { self.setState({ step: 'verify' }); }, back: function () { self.setState({ step: 'form' }); } };
+  }
+}
+</script>
+</body>
+</html>

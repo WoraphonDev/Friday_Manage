@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Sub-task Detail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E4E7EB;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column}
+.navi{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 10px;border-radius:8px;color:#3D4550;text-decoration:none}
+.navi.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.sec{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:16px 10px 6px}
+.phead{background:#fff;padding:16px 24px 0;border-bottom:1px solid #E4E7EB}
+.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:10px}
+.tab{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;color:#56606B;text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+.tab.on{color:#1D4ED8;border-bottom-color:#1D4ED8;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.ok{background:#15803D;border-color:#15803D;color:#fff}
+.muted{color:#5F6873}
+.av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;border:2px solid #fff;flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.m-appt{background:#CCFBF1;color:#115E59}
+.p-mick{background:#1D4ED8}.p-ploy{background:#B45309}.p-ton{background:#0F766E}.p-fah{background:#7C3AED}.p-bank{background:#BE185D}
+.s-todo{background:#EEF0F3;color:#3D4550}.s-prog{background:#DBEAFE;color:#1E40AF}.s-rev{background:#FEF3C7;color:#92400E}.s-done{background:#DCFCE7;color:#166534}.s-late{background:#FEE2E2;color:#991B1B}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.stage{position:relative;flex:1 1 auto;display:flex;justify-content:flex-end}
+.under{position:absolute;inset:0;overflow:hidden;display:flex;gap:16px;padding:20px}
+.sk{height:12px;border-radius:6px;background:#D5DAE0}
+.veil{position:absolute;inset:0;background:rgba(15,23,42,.5)}
+.modal{position:relative;width:min(880px,100%);background:#fff;box-shadow:-16px 0 40px rgba(15,23,42,.28);overflow:hidden}
+.peek{position:absolute;top:0;bottom:0;right:min(880px,100%);width:56px;background:#fff;border-left:1px solid #D5DAE0;box-shadow:-12px 0 32px rgba(15,23,42,.18);display:flex;justify-content:center;padding-top:20px;text-decoration:none;color:#1B1F24}
+.peek:hover{background:#F1F5FF;color:#1D4ED8}
+.peek span{writing-mode:vertical-rl;font-size:13px;font-weight:600}
+.ico{width:36px;height:36px;border:0;background:transparent;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:#3D4550;cursor:pointer;padding:0;text-decoration:none;font:inherit}
+.ico:hover{background:#EEF0F3;color:#1B1F24}
+.blk{display:flex;flex-direction:column;gap:10px;padding:16px 0;border-bottom:1px solid #EEF0F3}
+.blk h3{margin:0;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pr{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px;align-items:center;font-size:13px;min-height:34px}
+.pr .k{color:#5F6873;font-weight:500}
+.res{border:1px solid #E4E7EB;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.fchip{display:inline-flex;align-items:center;gap:8px;min-height:32px;padding:0 10px;border:1px solid #E4E7EB;border-radius:8px;font-size:12px;color:#1B1F24;text-decoration:none;background:#fff}
+.fchip:hover{border-color:#94A3B8;color:#1B1F24}
+.ext{font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px}
+.sha{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;background:#F1F3F5;padding:1px 6px;border-radius:4px;color:#1D4ED8;text-decoration:none}
+.cm{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px solid #F1F3F5}
+.ttab{min-height:40px;padding:0 14px;border:0;border-bottom:2px solid transparent;background:transparent;font:inherit;font-weight:500;color:#56606B;cursor:pointer}
+.ttab[aria-selected="true"]{color:#1B1F24;border-bottom-color:#1B1F24;font-weight:600}
+.in{min-height:36px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%;min-width:0}
+textarea.in{padding:8px 10px;min-height:64px;resize:vertical}
+.lb{font-size:12px;font-weight:600;color:#3D4550}
+@media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.phead{padding:12px 16px 0}.stage{padding:0}.peek{display:none}.cm{grid-template-columns:70px minmax(0,1fr)}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a href="IssueCreate.dc.html" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:#1D4ED8;color:#fff;font-weight:600;text-decoration:none">+ New</a>
+<a href="Bell.dc.html" aria-label="การแจ้งเตือน 5 รายการยังไม่อ่าน" style="position:relative;width:40px;height:40px;border-radius:8px;color:#E2E8F0;display:inline-flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #0F172A">5</span></a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div class="app">
+<aside class="side" aria-label="Workspace navigation">
+<a class="navi" href="Home.dc.html">Home</a>
+<a class="navi" href="MyTasks.dc.html">My Tasks</a>
+<a class="navi" href="Inbox.dc.html">Inbox</a>
+<div class="sec">Projects</div>
+<a class="navi on" href="Main.dc.html"><span class="dot" style="background:#334155"></span>Development Plan 2026-11</a>
+<a class="navi" href="NewProject.dc.html" style="color:#1D4ED8">+ New project</a>
+<div style="margin-top:auto;border-top:1px solid #E4E7EB;padding-top:10px;display:flex;flex-direction:column;gap:2px">
+<a class="navi" href="AdminConsole.dc.html">Admin Console</a>
+</div>
+</aside>
+<main class="main">
+<header class="phead">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<div style="width:32px;height:32px;border-radius:8px;background:#334155;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">DP</div>
+<h1 style="margin:0;font-size:22px;line-height:1.3">Development Plan 2026-11</h1>
+</div>
+<nav class="tabs" aria-label="Project views">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="8"><a class="{{t.cls}}" href="{{t.href}}">{{t.label}}</a></sc-for>
+</nav>
+</header>
+
+<div class="stage">
+<div class="under" aria-hidden="true">
+<div style="flex:1;background:#fff;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{sk}}" as="s" hint-placeholder-count="14"><div style="display:flex;gap:10px"><div class="sk" style="width:{{s.a}}%"></div><div class="sk" style="width:{{s.b}}%"></div></div></sc-for>
+</div>
+<div style="flex:0 0 46%;background:#fff;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<div style="font-size:12px" class="muted">Credit Line › DP-39</div>
+<div style="font-size:22px;font-weight:700">ฟอร์มหลักประกัน 5 ประเภท</div>
+<sc-for list="{{sk}}" as="s" hint-placeholder-count="14"><div class="sk" style="width:{{s.c}}%"></div></sc-for>
+</div>
+</div>
+<div class="veil"></div>
+
+<a class="peek" href="TaskDetail.dc.html" aria-label="กลับไปที่ Task แม่ DP-39 ฟอร์มหลักประกัน 5 ประเภท"><span>‹ DP-39 · ฟอร์มหลักประกัน</span></a>
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="st-title">
+<div style="display:flex;align-items:center;gap:8px;padding:12px 14px 12px 24px;border-bottom:1px solid #E4E7EB;flex-wrap:wrap;background:#FAFBFC">
+<nav aria-label="Breadcrumb" style="display:flex;align-items:center;gap:6px;font-size:13px;flex:1;min-width:0;flex-wrap:wrap">
+<span class="pill" style="background:#1D4ED81A;color:#1D4ED8">Credit Line</span><span class="muted">›</span>
+<a href="TaskDetail.dc.html" title="กลับไปที่ Task แม่">DP-39 ฟอร์มหลักประกัน 5 ประเภท</a><span class="muted">›</span>
+<span style="font-weight:600">DP-526</span>
+<span class="pill" style="background:#1B1F24;color:#fff">Sub-task</span>
+</nav>
+<div style="display:flex;align-items:center;gap:2px;border:1px solid #D5DAE0;border-radius:8px;background:#fff">
+<button class="ico" type="button" aria-label="Sub-task ก่อนหน้า" style="width:32px;height:32px">‹</button>
+<span class="muted" style="font-size:12px;padding:0 4px">1 / 5</span>
+<button class="ico" type="button" aria-label="Sub-task ถัดไป" style="width:32px;height:32px">›</button>
+</div>
+<button class="ico" type="button" aria-label="Copy link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg></button>
+<button class="ico" type="button" aria-label="เปิดเต็มหน้า"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"></path></svg></button>
+<button class="ico" type="button" aria-label="More actions"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+<a class="ico" href="TaskDetail.dc.html" aria-label="ปิด (Esc)" style="font-size:22px">×</a>
+</div>
+
+<div style="padding:18px 24px 4px;display:flex;flex-direction:column;gap:10px">
+<h2 id="st-title" style="margin:0;font-size:22px;line-height:1.3">ฟอร์มหลักประกัน: Bank Account</h2>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<label class="btn" style="background:#DBEAFE;border-color:#BFDBFE;color:#1E40AF;font-weight:600;cursor:default">
+<select aria-label="Status" style="border:0;background:transparent;font:inherit;font-weight:600;color:#1E40AF"><option>In progress</option><option>To do</option><option>Review</option><option>Done</option></select>
+</label>
+<button class="btn ok" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg>Mark complete</button>
+<span class="muted" style="font-size:12px">สร้างโดย Kaijeaw · วันนี้ 09:40 · แตกจาก DP-39 · ข้อมูลจริงจาก Development Plan 2026-11 · สถานะจำลอง ณ พ. 2 ธ.ค. 2569</span>
+</div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:0 28px;padding:0 24px 20px">
+<div style="flex:999 1 420px;min-width:0">
+
+<div class="blk">
+<h3>Description</h3>
+<div style="line-height:1.7">ฟอร์มบันทึกหลักประกันประเภทบัญชีเงินฝาก: เลขบัญชี ธนาคาร สาขา ยอดเงิน และวันที่ตรวจสอบ ตามหน้าจอ SCR-107 (FR-06.2) · ใช้ร่วมกับ Collateral framework (DP-38)</div>
+</div>
+
+<div class="blk">
+<h3>Checklist <span class="muted" style="font-weight:500">{{chkDone}}/4</span><span style="flex:1;max-width:160px;height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden"><span style="display:block;height:100%;width:{{chkPct}}%;background:#15803D"></span></span></h3>
+<sc-for list="{{checks}}" as="c" hint-placeholder-count="4">
+<label style="display:flex;align-items:center;gap:10px"><input type="checkbox" checked="{{c.on}}" onChange="{{c.toggle}}" style="width:18px;height:18px"><span class="{{c.cls}}" style="text-decoration:{{c.deco}}">{{c.t}}</span></label>
+</sc-for>
+</div>
+
+<div class="blk">
+<h3>ผลการทดสอบ (Test results) <span class="muted" style="font-weight:500">2 รอบ</span><button class="btn" type="button" onClick="{{toggleAdd}}" style="margin-left:auto;min-height:32px;font-size:13px">{{addLabel}}</button></h3>
+<sc-if value="{{adding}}" hint-placeholder-val="{{ false }}">
+<div class="res" style="background:#F8FAFF;border-color:#BFDBFE">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+<label style="display:flex;flex-direction:column;gap:4px"><span class="lb">ผลลัพธ์</span><select class="in"><option>Passed</option><option>Failed</option><option>Blocked</option></select></label>
+<label style="display:flex;flex-direction:column;gap:4px"><span class="lb">ผ่าน / ทั้งหมด</span><span style="display:flex;gap:6px;align-items:center"><input class="in" type="number" placeholder="20"><span>/</span><input class="in" type="number" placeholder="20"></span></label>
+<label style="display:flex;flex-direction:column;gap:4px"><span class="lb">Environment</span><select class="in"><option>SIT</option><option>UAT</option><option>Production</option></select></label>
+<label style="display:flex;flex-direction:column;gap:4px"><span class="lb">ทดสอบบน Commit</span><input class="in" type="text" placeholder="เช่น a41e7c2" style="font-family:'IBM Plex Mono',monospace"></label>
+</div>
+<label style="display:flex;flex-direction:column;gap:4px"><span class="lb">หมายเหตุ</span><textarea class="in" placeholder="สรุปผล, เคสที่ไม่ผ่าน, ขั้นตอนทำซ้ำ"></textarea></label>
+<div style="border:2px dashed #B8C0CA;border-radius:8px;padding:10px;text-align:center;font-size:13px;background:#fff">ลากไฟล์ผลทดสอบมาวาง (PDF, รูป, วิดีโอ, .xlsx) หรือ <a href="#">เลือกไฟล์</a></div>
+<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn" type="button" onClick="{{toggleAdd}}">ยกเลิก</button><button class="btn pri" type="button" onClick="{{toggleAdd}}">บันทึกผลทดสอบ</button></div>
+</div>
+</sc-if>
+<sc-for list="{{results}}" as="r" hint-placeholder-count="2">
+<div class="res">
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+<span class="pill {{r.sc}}" style="font-weight:600">{{r.st}}</span>
+<span style="font-weight:600">{{r.run}}</span>
+<span class="muted" style="font-size:12px">{{r.env}} · ทดสอบบน</span><a class="sha" href="#">{{r.sha}}</a>
+<span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px" class="muted"><span class="av" style="width:22px;height:22px;font-size:9px;background:{{r.pc}}">{{r.ini}}</span>{{r.who}} · {{r.when}}</span>
+</div>
+<div style="font-size:13px">{{r.note}}</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<sc-for list="{{r.files}}" as="f" hint-placeholder-count="2"><a class="fchip" href="Files.dc.html"><span class="ext" style="background:{{f.bg}};color:{{f.fg}}">{{f.x}}</span>{{f.n}}</a></sc-for>
+<sc-if value="{{r.hasBug}}" hint-placeholder-val="{{ false }}"><a class="fchip" href="TaskDetail.dc.html" style="border-color:#FECACA;color:#991B1B">Bug DP-525 · เปิดแล้ว</a></sc-if>
+</div>
+</div>
+</sc-for>
+</div>
+
+<div class="blk">
+<h3>Commits &amp; Pull requests <span class="muted" style="font-weight:500;font-size:12px">GitHub · floorplan-credit-line</span></h3>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px">
+<span class="pill s-todo">Draft</span><a href="#" style="font-weight:600">PR #57 Collateral forms · Bank Account</a><span class="muted">feature/DP-526-collateral-bank-account → develop · ยังไม่ขอ Review · CI ผ่าน</span>
+</div>
+<div>
+<sc-for list="{{commits}}" as="c" hint-placeholder-count="3">
+<div class="cm"><a class="sha" href="#" title="เปิด commit {{c.sha}}">{{c.sha}}</a><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{c.msg}}</span><span class="muted" style="font-size:12px;white-space:nowrap">{{c.who}} · {{c.when}}</span></div>
+</sc-for>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<input class="in" type="text" placeholder="+ ใส่เลข commit หรือลิงก์ PR / MR ด้วยตนเอง" style="flex:1 1 260px;font-family:inherit">
+<button class="btn" type="button">เพิ่ม</button>
+</div>
+<div class="muted" style="font-size:12px">ผูกอัตโนมัติเมื่อมี <b>DP-526</b> อยู่ในชื่อ branch, commit message หรือชื่อ PR</div>
+</div>
+
+<div class="blk">
+<h3>Attachments <span class="muted" style="font-weight:500">3</span><button class="btn" type="button" style="margin-left:auto;min-height:32px;font-size:13px">+ แนบไฟล์</button></h3>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<a class="fchip" href="Files.dc.html"><span class="ext" style="background:#FEE2E2;color:#991B1B">PDF</span>BRD_CreditLine_SCR-107.pdf · หน้า 12–14</a>
+<a class="fchip" href="Files.dc.html"><span class="ext" style="background:#DBEAFE;color:#1E40AF">PNG</span>bank_account_form.png</a>
+<a class="fchip" href="Files.dc.html"><span class="ext" style="background:#DCFCE7;color:#166534">XLSX</span>Collateral_types_mapping.xlsx</a>
+</div>
+</div>
+
+<div style="padding-top:8px">
+<div role="tablist" aria-label="Activity" style="display:flex;gap:4px;border-bottom:1px solid #E4E7EB">
+<sc-for list="{{ttabs}}" as="t" hint-placeholder-count="3"><button class="ttab" type="button" role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}">{{t.n}}</button></sc-for>
+</div>
+<sc-if value="{{tabCm}}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:14px;padding:14px 0">
+<sc-for list="{{comments}}" as="c" hint-placeholder-count="2">
+<div style="display:flex;gap:10px"><span class="av" style="width:30px;height:30px;background:{{c.pc}}">{{c.ini}}</span><div style="flex:1;min-width:0"><div style="font-size:13px"><b>{{c.who}}</b> <span class="muted">{{c.when}}</span></div><div style="background:#F8F9FB;border:1px solid #EEF0F3;border-radius:10px;padding:8px 12px;margin-top:4px">{{c.t}}</div></div></div>
+</sc-for>
+<div style="display:flex;gap:10px"><span class="av" style="width:30px;height:30px;background:#B45309">KJ</span><div style="flex:1"><textarea class="in" placeholder="เขียนคอมเมนต์… พิมพ์ @ เพื่อ mention, # เพื่ออ้างอิงงานหรือ commit"></textarea><div style="display:flex;justify-content:flex-end;margin-top:6px"><button class="btn pri" type="button">ส่ง</button></div></div></div>
+</div>
+</sc-if>
+<sc-if value="{{tabAct}}" hint-placeholder-val="{{ false }}">
+<div style="padding:8px 0">
+<sc-for list="{{acts}}" as="a" hint-placeholder-count="5"><div style="display:flex;gap:10px;padding:8px 0;font-size:13px;border-bottom:1px solid #F1F3F5"><span class="av" style="width:24px;height:24px;font-size:9px;background:{{a.pc}}">{{a.ini}}</span><div><b>{{a.who}}</b> {{a.t}}<div class="muted" style="font-size:12px">{{a.when}}</div></div></div></sc-for>
+</div>
+</sc-if>
+<sc-if value="{{tabTime}}" hint-placeholder-val="{{ false }}">
+<div style="padding:12px 0;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;gap:8px;flex-wrap:wrap"><input class="in" type="text" placeholder="ชั่วโมง" style="max-width:110px"><input class="in" type="date" value="2026-12-02" style="max-width:170px"><input class="in" type="text" placeholder="ทำอะไร" style="flex:1 1 180px"><button class="btn pri" type="button">Log time</button></div>
+<div style="font-size:13px;padding:6px 0;border-bottom:1px solid #F1F3F5">Kaijeaw · 2 ธ.ค. · <b>0.5 MD</b> · ฟอร์มและ Validation</div>
+<div style="font-size:13px;padding:6px 0;border-bottom:1px solid #F1F3F5">Kaijeaw · 2 ธ.ค. · <b>0.25 MD</b> · แก้ตามผลทดสอบ Run #1</div>
+<div style="font-size:13px;font-weight:600">รวม 0.75 MD จาก 1 MD · นับรวมเข้า Task แม่ DP-39</div>
+</div>
+</sc-if>
+</div>
+</div>
+
+<div style="flex:1 1 240px;min-width:0;padding-top:16px">
+<div style="border:1px solid #E4E7EB;border-radius:12px;padding:10px 14px">
+<div class="pr"><span class="k">Status</span><span><span class="pill s-prog">In progress</span></span></div>
+<div class="pr"><span class="k">Assignee</span><span style="display:flex;align-items:center;gap:6px"><span class="av" style="background:#B45309">KJ</span>Kaijeaw</span></div>
+<div class="pr"><span class="k">Reviewer</span><span style="display:flex;align-items:center;gap:6px"><span class="av" style="background:#1D4ED8">MK</span>Mick</span></div>
+<div class="pr"><span class="k">Tester</span><span style="display:flex;align-items:center;gap:6px"><span class="av" style="background:#A21CAF">DN</span>Donut <span class="muted" style="font-size:12px">(BA)</span></span></div>
+<div class="pr"><span class="k">Priority</span><span style="color:#1D4ED8;font-weight:600">Medium</span></div>
+<div class="pr"><span class="k">Start</span><span>2 ธ.ค. 2026</span></div>
+<div class="pr"><span class="k">Due</span><span><b>3 ธ.ค. 2026</b> <span class="muted" style="font-size:12px">· อยู่ในช่วง Task แม่</span></span></div>
+<div class="pr"><span class="k">Size</span><span><span class="pill s-todo" style="font-weight:700">XS</span> 1 Man-Day</span></div>
+<div class="pr"><span class="k">Progress</span><span style="display:flex;align-items:center;gap:8px"><span style="flex:1;height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden"><span style="display:block;height:100%;width:{{chkPct}}%;background:#15803D"></span></span>{{chkPct}}%</span></div>
+<div style="border-top:1px solid #EEF0F3;margin:6px 0"></div>
+<div class="pr"><span class="k">Task แม่</span><a href="TaskDetail.dc.html">DP-39 ฟอร์มหลักประกัน 5 ประเภท</a></div>
+<div class="pr"><span class="k">Module</span><span><span class="pill" style="background:#1D4ED81A;color:#1D4ED8">Credit Line</span> <span class="muted" style="font-size:12px">สืบทอด</span></span></div>
+<div class="pr"><span class="k">Sprint</span><span>Sprint 3 <span class="muted" style="font-size:12px">· สืบทอด</span></span></div>
+<div class="pr"><span class="k">Labels</span><span style="display:flex;gap:4px;flex-wrap:wrap"><span class="pill s-todo">หลักประกัน</span></span></div>
+<div class="pr"><span class="k">Watchers</span><span style="display:flex"><span class="av" style="background:#1D4ED8">MK</span><span class="av" style="margin-left:-6px;background:#B45309">KJ</span><span class="av" style="margin-left:-6px;background:#A21CAF">DN</span></span></div>
+</div>
+<div class="muted" style="font-size:12px;padding:10px 4px">Esc = ปิด · ← → = สลับไป Sub-task อื่นของ Task เดียวกัน</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1640}}'>
+class Component extends DCLogic {
+  state = { tab: 'cm', adding: false, chk: [true, true, true, false] };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const tab = st.tab || 'cm';
+    const chk = st.chk || [true, true, true, false];
+    const T = [['Overview','Main.dc.html'],['ภาพรวม Lead','LeadDashboard.dc.html'],['Backlog','Backlog.dc.html'],['Table','Table.dc.html'],['Kanban','Kanban.dc.html'],['Timeline','Timeline.dc.html'],['Gantt','Gantt.dc.html'],['Calendar','Calendar.dc.html'],['Members','Members.dc.html'],['Files','Files.dc.html'],['Settings','ProjectSettings.dc.html']];
+    const tabs = T.map(function (x) { return { label: x[0], href: x[1], cls: x[0] === 'Table' ? 'tab on' : 'tab' }; });
+    const P = {"Mick": ["MK", "#1D4ED8"], "Kaijeaw": ["KJ", "#B45309"], "Pond": ["PD", "#0F766E"], "Tung": ["TG", "#7C3AED"], "Top": ["TP", "#BE185D"], "Zo": ["ZO", "#0369A1"], "P'Tum": ["PT", "#4D7C0F"], "Ton": ["TN", "#65A30D"], "Donut": ["DN", "#A21CAF"], "Naa": ["NA", "#C2410C"], "P'Nee": ["PN", "#0E7490"], "P'Oak": ["PO", "#57534E"], "Kookkai": ["KK", "#DB2777"], "P'Wing": ["PW", "#4338CA"], "KL": ["KL", "#475569"]};
+    const CT = ['ฟิลด์เลขบัญชี ธนาคาร สาขา ยอดเงิน', 'ดึงรายชื่อธนาคารจาก Master data', 'ตรวจเลขบัญชีซ้ำในระบบ', 'ผูกกับวงเงินผ่าน Collateral framework (DP-38)'];
+    const checks = CT.map(function (t, i) { return { t: t, on: !!chk[i], cls: chk[i] ? 'muted' : '', deco: chk[i] ? 'line-through' : 'none', toggle: function () { const a = chk.slice(); a[i] = !a[i]; self.setState({ chk: a }); } }; });
+    const chkDone = chk.filter(Boolean).length;
+    const F = { PDF: ['#FEE2E2', '#991B1B'], PNG: ['#DBEAFE', '#1E40AF'], MP4: ['#FCE7F3', '#9D174D'], XLSX: ['#DCFCE7', '#166534'] };
+    const file = function (x, n) { return { x: x, n: n, bg: F[x][0], fg: F[x][1] }; };
+    const results = [
+      { st: 'Passed 9/9', sc: 's-done', run: 'Test run #2', env: 'SIT', sha: 'a41e7c2', who: 'Donut', ini: 'DN', pc: '#A21CAF', when: 'วันนี้ 16:05',
+        note: 'ทดสอบซ้ำหลังแก้ไข ผ่านทุกเคส รวมเลขบัญชี 12 หลักและกรณีบัญชีซ้ำ', files: [file('PDF', 'TestReport_DP-526_run2.pdf'), file('XLSX', 'TestCases_Collateral_Bank.xlsx')], hasBug: false },
+      { st: 'Failed 7/9', sc: 's-late', run: 'Test run #1', env: 'SIT', sha: '3be9d10', who: 'Donut', ini: 'DN', pc: '#A21CAF', when: 'วันนี้ 13:20',
+        note: 'ไม่ผ่าน 2 เคส: (1) เลขบัญชี 12 หลักถูกตัดเหลือ 10 หลัก (2) บันทึกเลขบัญชีซ้ำได้', files: [file('PDF', 'TestReport_DP-526_run1.pdf'), file('PNG', 'account_truncated.png')], hasBug: false }
+    ];
+    const commits = [
+      { sha: 'a41e7c2', msg: 'fix(DP-526): support 12-digit account numbers', who: 'Kaijeaw', when: 'วันนี้ 15:40' },
+      { sha: '7c90b3e', msg: 'feat(DP-526): duplicate account check', who: 'Kaijeaw', when: 'วันนี้ 14:30' },
+      { sha: '3be9d10', msg: 'feat(DP-526): bank account collateral form', who: 'Kaijeaw', when: 'วันนี้ 11:05' }
+    ];
+    const TT = [['cm', 'Comments (2)'], ['act', 'Activity']]; // Time log tab แสดงเมื่อเปิดใน Project Settings (ปิดเป็นค่าเริ่มต้น)
+    const ttabs = TT.map(function (t) { return { n: t[1], on: tab === t[0] ? 'true' : 'false', pick: function () { self.setState({ tab: t[0] }); } }; });
+    const cm = function (who, when, t) { return { who: who, ini: P[who][0], pc: P[who][1], when: when, t: t }; };
+    const comments = [
+      cm('Donut', 'วันนี้ 13:25', 'Run #1 ไม่ผ่าน 2 เคส แนบรูปไว้ในผลทดสอบแล้วค่ะ @Kaijeaw'),
+      cm('Kaijeaw', 'วันนี้ 15:42', 'แก้แล้วใน a41e7c2 กับ 7c90b3e ครับ @Donut ช่วยรันซ้ำให้หน่อยครับ')
+    ];
+    const ac = function (who, t, when) { return { who: who, ini: P[who][0], pc: P[who][1], t: t, when: when }; };
+    const acts = [
+      ac('Donut', 'แนบผลทดสอบ Run #2 · Passed 9/9', 'วันนี้ 16:05'),
+      ac('Kaijeaw', 'push commit a41e7c2 (ผูกอัตโนมัติจาก DP-526)', 'วันนี้ 15:40'),
+      ac('Donut', 'แนบผลทดสอบ Run #1 · Failed 7/9', 'วันนี้ 13:20'),
+      ac('Kaijeaw', 'เปลี่ยนสถานะเป็น In progress', 'วันนี้ 09:45'),
+      ac('Kaijeaw', 'สร้าง Sub-task นี้ใต้ DP-39 ฟอร์มหลักประกัน 5 ประเภท', 'วันนี้ 09:40')
+    ];
+    const sk = [[40, 20, 70], [32, 26, 55], [44, 16, 80], [28, 30, 60], [38, 18, 75], [30, 24, 50], [42, 20, 65], [26, 28, 85], [36, 22, 45], [40, 18, 70], [30, 26, 60], [34, 20, 55], [38, 24, 75], [28, 22, 50]].map(function (r) { return { a: r[0], b: r[1], c: r[2] }; });
+    return {
+      tabs: tabs, checks: checks, chkDone: chkDone, chkPct: chkDone * 25, results: results, commits: commits,
+      adding: !!st.adding, addLabel: st.adding ? 'ปิดฟอร์ม' : '+ แนบผลทดสอบ', toggleAdd: function () { self.setState({ adding: !(self.state && self.state.adding) }); },
+      ttabs: ttabs, tabCm: tab === 'cm', tabAct: tab === 'act', tabTime: tab === 'time', comments: comments, acts: acts, sk: sk
+    };
+  }
+}
+</script>
+</body>
+</html>

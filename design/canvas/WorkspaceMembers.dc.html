@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Workspace Members</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E4E7EB;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;position:relative}
+.navi{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 10px;border-radius:8px;color:#3D4550;text-decoration:none}
+.navi:hover{background:#F1F3F5;color:#1B1F24}
+.navi.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.sec{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:16px 10px 6px}
+.phead{background:#fff;padding:20px 24px;border-bottom:1px solid #E4E7EB}
+.body{padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.muted{color:#5F6873}
+.av{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-mick{background:#1D4ED8}.p-ploy{background:#B45309}.p-ton{background:#0F766E}.p-fah{background:#7C3AED}.p-bank{background:#BE185D}.p-arm{background:#334155}.p-jane{background:#64748B}.p-nok{background:#94A3B8}.p-oat{background:#0369A1}.p-cl{background:#A3A3A3}
+.s-todo{background:#EEF0F3;color:#3D4550}.s-prog{background:#DBEAFE;color:#1E40AF}.s-rev{background:#FEF3C7;color:#92400E}.s-done{background:#DCFCE7;color:#166534}.s-late{background:#FEE2E2;color:#991B1B}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.kp{background:#fff;border:1px solid #E4E7EB;border-radius:12px;padding:14px 16px}
+.kp .v{font-size:26px;font-weight:700;line-height:1.2}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.chip.on{background:#1B1F24;border-color:#1B1F24;color:#fff}
+.mr{display:grid;grid-template-columns:minmax(240px,1.6fr) 140px 140px minmax(160px,1fr) 120px 110px 40px;column-gap:12px;align-items:center;min-height:60px;padding:0 18px;border-bottom:1px solid #EEF0F3}
+.mr.h{min-height:38px;font-size:12px;font-weight:600;color:#5F6873;background:#F8F9FB}
+.in{min-height:38px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%;min-width:0}
+textarea.in{padding:8px 10px;min-height:70px;resize:vertical}
+.ico{width:32px;height:32px;border:0;background:transparent;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#3D4550;cursor:pointer;padding:0;font:inherit}
+.ico:hover{background:#EEF0F3}
+.veil{position:absolute;inset:0;background:rgba(15,23,42,.5)}
+.modal{position:absolute;top:40px;left:50%;transform:translateX(-50%);width:min(760px,calc(100% - 24px));background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(15,23,42,.35)}
+.lb{font-size:13px;font-weight:600}
+.opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px;border:1px solid #D5DAE0;border-radius:10px;background:#fff;font:inherit;text-align:left;cursor:pointer;color:#1B1F24}
+.opt.on{border-color:#1D4ED8;box-shadow:0 0 0 1px #1D4ED8;background:#F8FAFF}
+.ec{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 4px 0 10px;border-radius:999px;font-size:13px;background:#EEF2FF;color:#1E3A8A}
+.ec.bad{background:#FEE2E2;color:#991B1B}
+.x{width:22px;height:22px;border:0;border-radius:50%;background:transparent;cursor:pointer;color:inherit;padding:0;font:inherit}
+.prow{display:grid;grid-template-columns:24px minmax(0,1fr) 140px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #F1F3F5}
+@media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.body{padding:16px}.phead{padding:16px}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a href="IssueCreate.dc.html" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:#1D4ED8;color:#fff;font-weight:600;text-decoration:none">+ New</a>
+<a href="Bell.dc.html" aria-label="การแจ้งเตือน 5 รายการยังไม่อ่าน" style="position:relative;width:40px;height:40px;border-radius:8px;color:#E2E8F0;display:inline-flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #0F172A">5</span></a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div class="app">
+<aside class="side" aria-label="Workspace navigation">
+<a class="navi" href="Home.dc.html">Home</a>
+<a class="navi" href="MyTasks.dc.html">My Tasks</a>
+<a class="navi" href="Inbox.dc.html">Inbox<span class="pill s-late" style="margin-left:auto">5</span></a>
+<div class="sec">Projects</div>
+<a class="navi on" href="Main.dc.html"><span class="dot" style="background:#334155"></span>Development Plan 2026-11</a>
+<a class="navi" href="NewProject.dc.html" style="color:#1D4ED8">+ New project</a>
+<div style="margin-top:auto;border-top:1px solid #E4E7EB;padding-top:10px;display:flex;flex-direction:column;gap:2px">
+<a class="navi" href="AdminConsole.dc.html">Admin Console</a>
+<a class="navi on" href="WorkspaceMembers.dc.html" aria-current="page">↳ สมาชิก &amp; คำเชิญ</a>
+</div>
+</aside>
+<main class="main">
+<header class="phead">
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px">
+<div>
+<div class="muted" style="font-size:12px">Friday Workspace / Settings</div>
+<h1 style="margin:2px 0 0;font-size:24px">Workspace members</h1>
+<div class="muted">จัดการคนในองค์กร สิทธิ์ระดับ Workspace และโปรเจกต์ที่แต่ละคนเข้าถึง</div>
+</div>
+<button class="btn pri" type="button" onClick="{{openInvite}}">+ เชิญสมาชิก</button>
+</div>
+</header>
+
+<div class="body">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+<div class="kp"><div class="muted" style="font-size:13px">Active</div><div class="v">7</div></div>
+<div class="kp"><div class="muted" style="font-size:13px">รอตอบรับคำเชิญ</div><div class="v" style="color:#B45309">2</div></div>
+<div class="kp"><div class="muted" style="font-size:13px">ปิดการใช้งาน</div><div class="v muted">1</div></div>
+<div class="kp"><div class="muted" style="font-size:13px">Seats ที่ใช้</div><div class="v">9 / 25</div><div style="height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden;margin-top:6px"><div style="width:36%;height:100%;background:#1D4ED8"></div></div></div>
+</div>
+
+<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="4"><button class="{{t.cls}}" type="button" onClick="{{t.pick}}" aria-pressed="{{t.on}}">{{t.n}} <span style="opacity:.75">{{t.c}}</span></button></sc-for>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<input class="in" type="search" placeholder="ค้นหาชื่อหรืออีเมล" aria-label="ค้นหาสมาชิก" style="width:220px">
+<select class="in" aria-label="Role" style="width:auto"><option>ทุก Role</option><option>Owner</option><option>Admin</option><option>Member</option><option>Guest</option></select>
+<select class="in" aria-label="Project" style="width:auto"><option>ทุกโปรเจกต์</option><option>Development Plan 2026-11</option></select>
+</div>
+</div>
+
+<section class="card" style="overflow-x:auto">
+<div style="min-width:1000px">
+<div class="mr h"><div>สมาชิก</div><div>ตำแหน่ง</div><div>Workspace role</div><div>โปรเจกต์</div><div>ใช้งานล่าสุด</div><div>สถานะ</div><div></div></div>
+<sc-for list="{{rows}}" as="m" hint-placeholder-count="9">
+<div class="mr">
+<div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="av" style="background:{{m.pc}}">{{m.ini}}</span><div style="min-width:0"><div style="font-weight:600">{{m.n}}</div><div class="muted" style="font-size:12px;overflow:hidden;text-overflow:ellipsis">{{m.e}}</div></div></div>
+<div style="font-size:13px">{{m.pos}}</div>
+<div><select class="in" aria-label="Workspace role ของ {{m.n}}" style="min-height:32px;font-size:13px"><option>{{m.role}}</option><option>Admin</option><option>Member</option><option>Guest</option></select></div>
+<div style="display:flex;gap:4px;flex-wrap:wrap"><sc-for list="{{m.projs}}" as="p" hint-placeholder-count="2"><span class="pill" style="background:{{p.bg}};color:{{p.fg}}">{{p.n}}</span></sc-for></div>
+<div class="muted" style="font-size:13px">{{m.last}}</div>
+<div><span class="pill {{m.sc}}">{{m.st}}</span></div>
+<button class="ico" type="button" aria-label="ตัวเลือกของ {{m.n}}">⋯</button>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section class="card" style="padding:14px 18px;display:flex;gap:16px;flex-wrap:wrap;font-size:13px">
+<div style="flex:1 1 200px"><span class="pill s-prog">Owner / Admin</span><div style="margin-top:4px">จัดการสมาชิก, billing, สร้างและลบโปรเจกต์, ตั้งค่า Workspace</div></div>
+<div style="flex:1 1 200px"><span class="pill s-done">Member</span><div style="margin-top:4px">สร้างโปรเจกต์ได้ เห็นเฉพาะโปรเจกต์ที่ถูกเพิ่ม สิทธิ์ในโปรเจกต์ตาม Project role</div></div>
+<div style="flex:1 1 200px"><span class="pill s-todo">Guest</span><div style="margin-top:4px">เช่น ลูกค้า เห็นเฉพาะโปรเจกต์ที่เชิญ ไม่เห็นรายชื่อคนในองค์กร ไม่นับ Seat</div></div>
+</section>
+</div>
+
+<sc-if value="{{showInvite}}" hint-placeholder-val="{{ true }}">
+<div class="veil"></div>
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="inv-title">
+<div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid #E4E7EB">
+<h2 id="inv-title" style="margin:0;font-size:18px;flex:1">เชิญสมาชิกเข้า Workspace</h2>
+<button class="ico" type="button" onClick="{{closeInvite}}" aria-label="ปิด" style="font-size:22px">×</button>
+</div>
+<div style="padding:18px 20px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<span class="lb">อีเมล <span style="color:#B91C1C">*</span></span>
+<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;border:1px solid #C9CFD6;border-radius:8px;padding:6px 8px;min-height:44px">
+<span class="ec">oat@example.com<button class="x" type="button" aria-label="ลบ">×</button></span>
+<span class="ec">pim@example.com<button class="x" type="button" aria-label="ลบ">×</button></span>
+<span class="ec bad" title="รูปแบบอีเมลไม่ถูกต้อง">kan@examplecom<button class="x" type="button" aria-label="ลบ">×</button></span>
+<input type="text" placeholder="พิมพ์อีเมลแล้วกด Enter หรือวางหลายอีเมลพร้อมกัน" aria-label="เพิ่มอีเมล" style="border:0;outline:0;font:inherit;flex:1;min-width:200px">
+</div>
+<span style="font-size:12px;color:#B91C1C">kan@examplecom รูปแบบอีเมลไม่ถูกต้อง</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<span class="lb">Workspace role</span>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+<sc-for list="{{roles}}" as="r" hint-placeholder-count="3"><button class="{{r.cls}}" type="button" onClick="{{r.pick}}" aria-pressed="{{r.on}}"><span style="font-weight:700">{{r.n}}</span><span class="muted" style="font-size:12px">{{r.d}}</span></button></sc-for>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<span class="lb">เพิ่มเข้าโปรเจกต์ <span class="muted" style="font-weight:500">(ไม่บังคับ)</span></span>
+<div class="prow"><input type="checkbox" checked aria-label="Development Plan 2026-11"><span style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:#334155"></span>Development Plan 2026-11</span><select class="in" style="min-height:32px;font-size:13px"><option>Member</option><option>Admin</option><option>Viewer</option></select></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+<label style="display:flex;flex-direction:column;gap:6px"><span class="lb">ตำแหน่ง</span><select class="in"><option>Frontend Dev</option><option>Backend Dev</option><option>QA Engineer</option><option>UX/UI Designer</option><option>Project Manager</option></select></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span class="lb">Capacity (ชม./สัปดาห์)</span><input class="in" type="number" value="40"></label>
+</div>
+<label style="display:flex;flex-direction:column;gap:6px"><span class="lb">ข้อความถึงผู้ได้รับเชิญ</span><textarea class="in" placeholder="เช่น ยินดีต้อนรับเข้าทีม Development Plan ครับ"></textarea></label>
+<div style="background:#F8F9FB;border:1px solid #EEF0F3;border-radius:10px;padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px">
+<span style="font-weight:600">หรือแชร์ลิงก์เชิญ</span>
+<code style="background:#fff;border:1px solid #E4E7EB;border-radius:6px;padding:4px 8px;flex:1 1 200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">friday.app/join/x8Kd2Q…</code>
+<select class="in" aria-label="ลิงก์หมดอายุ" style="width:auto;min-height:32px"><option>หมดอายุใน 7 วัน</option><option>1 วัน</option><option>30 วัน</option></select>
+<button class="btn" type="button" style="min-height:32px">Copy</button>
+</div>
+<div class="muted" style="font-size:12px">ผู้ได้รับเชิญจะได้อีเมลและ LINE (ถ้าเชื่อมไว้) · เมื่อตอบรับ ระบบจะแจ้ง Admin และ PM ของโปรเจกต์ที่เลือกใน Inbox</div>
+</div>
+<div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid #E4E7EB;flex-wrap:wrap">
+<button class="btn" type="button" onClick="{{closeInvite}}">ยกเลิก</button>
+<button class="btn pri" type="button" onClick="{{closeInvite}}">ส่งคำเชิญ (2)</button>
+</div>
+</div>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  state = { invite: true, tab: 'all', role: 'member' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const tab = st.tab || 'all', role = st.role || 'member';
+    const PJ = { DP: ['Dev Plan 2026-11', '#E2E8F0', '#1E293B'] };
+    const ST = { active: ['Active', 's-done'], invited: ['รอตอบรับ', 's-rev'], off: ['ปิดการใช้งาน', 's-todo'] };
+    const M = [["Mick", "MK", "#1D4ED8", "mick@example.com", "Lead / PM", "Owner", ["DP"], "ออนไลน์อยู่", "active"], ["Kaijeaw", "KJ", "#B45309", "kaijeaw@example.com", "Developer", "Member", ["DP"], "5 นาทีที่แล้ว", "active"], ["Pond", "PD", "#0F766E", "pond@example.com", "Developer", "Member", ["DP"], "12 นาทีที่แล้ว", "active"], ["Tung", "TG", "#7C3AED", "tung@example.com", "Developer", "Member", ["DP"], "1 ชม.ที่แล้ว", "active"], ["Top", "TP", "#BE185D", "top@example.com", "Developer", "Member", ["DP"], "30 นาทีที่แล้ว", "active"], ["Zo", "ZO", "#0369A1", "zo@example.com", "Developer", "Member", ["DP"], "2 ชม.ที่แล้ว", "active"], ["P'Tum", "PT", "#4D7C0F", "ptum@example.com", "Developer", "Member", ["DP"], "เมื่อวาน", "active"], ["Donut", "DN", "#A21CAF", "donut@example.com", "BA", "Member", ["DP"], "1 ชม.ที่แล้ว", "active"], ["Naa", "NA", "#C2410C", "naa@example.com", "BA", "Member", ["DP"], "30 นาทีที่แล้ว", "active"], ["P'Nee", "PN", "#0E7490", "pnee@example.com", "BA", "Member", ["DP"], "2 ชม.ที่แล้ว", "active"], ["P'Oak", "PO", "#57534E", "poak@example.com", "BA", "Member", ["DP"], "เมื่อวาน", "active"], ["Kookkai", "KK", "#DB2777", "kookkai@example.com", "BA", "Member", ["DP"], "5 นาทีที่แล้ว", "active"], ["P'Wing", "PW", "#4338CA", "pwing@example.com", "BA", "Member", ["DP"], "12 นาทีที่แล้ว", "active"], ["Ton", "TN", "#65A30D", "ton@example.com", "BA", "Member", ["DP"], "1 ชม.ที่แล้ว", "active"], ["kl@example.com", "KL", "#475569", "เชิญโดย Mick · 25 พ.ย. · Resend", "BA (OEM Portal)", "Member", ["DP"], "—", "invited"], ["business-owner@example.com", "BO", "#64748B", "เชิญโดย Mick · 20 พ.ย. · Resend", "เจ้าของระบบ", "Guest", ["DP"], "—", "invited"]];
+    const rows = M.filter(function (m) { return tab === 'all' || m[8] === tab; }).map(function (m) {
+      return { n: m[0], ini: m[1], pc: m[2], e: m[3], pos: m[4], role: m[5], last: m[7], st: ST[m[8]][0], sc: ST[m[8]][1],
+        projs: m[6].length ? m[6].map(function (p) { return { n: PJ[p][0], bg: PJ[p][1], fg: PJ[p][2] }; }) : [{ n: 'ไม่มี', bg: '#F1F3F5', fg: '#5F6873' }] };
+    });
+    const TB = [['all', 'ทั้งหมด'], ['active', 'Active'], ['invited', 'รอตอบรับ'], ['off', 'ปิดการใช้งาน']];
+    const tabs = TB.map(function (t) { const c = t[0] === 'all' ? M.length : M.filter(function (m) { return m[8] === t[0]; }).length; return { n: t[1], c: c, on: tab === t[0] ? 'true' : 'false', cls: tab === t[0] ? 'chip on' : 'chip', pick: function () { self.setState({ tab: t[0] }); } }; });
+    const RL = [['admin', 'Admin', 'จัดการสมาชิกและตั้งค่า Workspace'], ['member', 'Member', 'ทำงานในโปรเจกต์ที่ถูกเพิ่ม'], ['guest', 'Guest', 'ลูกค้า / ภายนอก เห็นเฉพาะโปรเจกต์ที่เชิญ']];
+    const roles = RL.map(function (r) { return { n: r[1], d: r[2], on: role === r[0] ? 'true' : 'false', cls: role === r[0] ? 'opt on' : 'opt', pick: function () { self.setState({ role: r[0] }); } }; });
+    return { rows: rows, tabs: tabs, roles: roles, showInvite: st.invite !== false,
+      openInvite: function () { self.setState({ invite: true }); }, closeInvite: function () { self.setState({ invite: false }); } };
+  }
+}
+</script>
+</body>
+</html>

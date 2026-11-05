@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Legal Pages</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#fff;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:15px;line-height:1.7}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.muted{color:#5F6873}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 14px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.tab{display:inline-flex;align-items:center;min-height:44px;padding:0 4px;margin-right:20px;border:0;border-bottom:2px solid transparent;background:transparent;font:inherit;cursor:pointer;color:#5F6873}
+.tab[aria-selected="true"]{border-bottom-color:#1D4ED8;color:#1D4ED8;font-weight:700}
+.toc a{display:block;padding:4px 10px;border-left:2px solid #E4E7EB;color:#3D4550;text-decoration:none;font-size:14px}
+.toc a:hover{border-left-color:#1D4ED8;color:#1D4ED8}
+.ph{background:repeating-linear-gradient(0deg,#F1F3F5 0 10px,#fff 10px 22px);border-radius:6px;height:66px}
+.note{background:#FEF3C7;color:#92400E;border-radius:10px;padding:10px 14px;font-size:14px}
+.sp{display:grid;grid-template-columns:minmax(160px,1fr) minmax(0,1.4fr) minmax(120px,.8fr);gap:12px;padding:10px 0;border-bottom:1px solid #F1F3F5;font-size:14px}
+</style>
+</helmet>
+<header style="border-bottom:1px solid #E4E7EB">
+<div style="max-width:1160px;margin:0 auto;padding:0 24px;min-height:60px;display:flex;align-items:center;gap:16px">
+<a href="Landing.dc.html" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:#1B1F24;font-weight:700"><span style="width:30px;height:30px;border-radius:8px;background:#1D4ED8;color:#fff;display:flex;align-items:center;justify-content:center">F</span>Friday Manage</a>
+<span class="muted">ศูนย์ข้อมูลทางกฎหมาย</span>
+</div>
+</header>
+<div style="max-width:1160px;margin:0 auto;padding:20px 24px 140px;display:flex;flex-direction:column;gap:18px">
+<div class="note"><b>สำหรับ Prototype:</b> หน้านี้กำหนดโครงสร้างและหัวข้อเท่านั้น เนื้อหาจริงต้องให้ที่ปรึกษากฎหมายเขียนและตรวจตาม PDPA และกฎหมายที่เกี่ยวข้อง</div>
+<div role="tablist" aria-label="เอกสาร" style="border-bottom:1px solid #E4E7EB;overflow-x:auto;white-space:nowrap">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="5"><button class="tab" type="button" role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}">{{t.n}}</button></sc-for>
+</div>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+<nav class="toc" aria-label="สารบัญ" style="flex:0 1 240px;display:flex;flex-direction:column;gap:2px;position:sticky;top:12px">
+<b style="font-size:13px;padding:0 10px 6px">สารบัญ</b>
+<sc-for list="{{doc.secs}}" as="s" hint-placeholder-count="8"><a href="#">{{s.i}}. {{s.n}}</a></sc-for>
+</nav>
+<article style="flex:1 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px">
+<div><h1 style="margin:0;font-size:30px">{{doc.t}}</h1><div class="muted" style="font-size:14px">เวอร์ชัน {{doc.v}} · มีผลตั้งแต่ {{doc.eff}} · <a href="#">ดาวน์โหลด PDF</a> · <a href="#">ประวัติการแก้ไข</a></div></div>
+<p style="margin:0">{{doc.intro}}</p>
+<sc-if value="{{isSub}}" hint-placeholder-val="{{ false }}">
+<div><div class="sp" style="font-weight:700;color:#5F6873;font-size:13px"><span>ประเภทบริการ</span><span>ข้อมูลที่เกี่ยวข้อง</span><span>ผู้ให้บริการ / ที่ตั้ง</span></div>
+<sc-for list="{{subs}}" as="s" hint-placeholder-count="6"><div class="sp"><b>{{s.k}}</b><span>{{s.d}}</span><span class="muted">{{s.v}}</span></div></sc-for></div>
+<div class="muted" style="font-size:14px">แจ้งลูกค้าล่วงหน้า 30 วันก่อนเพิ่มผู้ให้บริการรายใหม่ · <a href="#">รับแจ้งเตือนทางอีเมล</a></div>
+</sc-if>
+<sc-if value="{{notSub}}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{doc.secs}}" as="s" hint-placeholder-count="8"><section style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font-size:18px">{{s.i}}. {{s.n}}</h2><div class="muted" style="font-size:14px">{{s.hint}}</div><div class="ph" aria-label="พื้นที่สำหรับเนื้อหาจากที่ปรึกษากฎหมาย"></div></section></sc-for>
+</sc-if>
+<div style="border-top:1px solid #E4E7EB;padding-top:14px;font-size:14px" class="muted">ติดต่อเจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO): [อีเมล DPO] · [ชื่อบริษัท] [ที่อยู่]</div>
+</article>
+</div>
+
+<section style="border:1px solid #E4E7EB;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+<b>เมื่อข้อกำหนดเปลี่ยน (ในแอป)</b>
+<div style="display:flex;gap:14px;align-items:flex-start;background:#F8F9FB;border-radius:10px;padding:14px;flex-wrap:wrap"><div style="flex:1 1 320px"><b>เราปรับปรุงข้อกำหนดการใช้งานและ DPA</b><div class="muted" style="font-size:14px">มีผล 1 ธ.ค. 2569 · สรุปสิ่งที่เปลี่ยน 3 ข้อ: เพิ่มผู้ให้บริการส่งอีเมล, ระยะเวลาเก็บ Audit log, การเข้าช่วยเหลือจากทีม Friday</div></div><div style="display:flex;gap:8px"><a class="btn" href="#">อ่านฉบับเต็ม</a><button class="btn pri" type="button">รับทราบ</button></div></div>
+<div class="muted" style="font-size:13px">แสดงกับ Owner และ Admin เท่านั้น · สมาชิกทั่วไปไม่ต้องกดยอมรับ · บันทึกการยอมรับใน Audit Log</div>
+</section>
+</div>
+
+<sc-if value="{{showCookie}}" hint-placeholder-val="{{ true }}">
+<div role="region" aria-label="การใช้คุกกี้" style="position:fixed;left:16px;right:16px;bottom:16px;max-width:760px;margin:0 auto;background:#fff;border:1px solid #D5DAE0;border-radius:14px;box-shadow:0 16px 40px rgba(15,23,42,.18);padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+<b>เว็บไซต์นี้ใช้คุกกี้</b>
+<div class="muted" style="font-size:14px">คุกกี้ที่จำเป็นใช้ให้เข้าสู่ระบบได้ ส่วนคุกกี้วิเคราะห์การใช้งานจะเปิดเมื่อคุณยินยอมเท่านั้น · <a href="#">นโยบายคุกกี้</a></div>
+<sc-if value="{{showPrefs}}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:6px;font-size:14px"><label style="display:flex;gap:8px"><input type="checkbox" checked disabled> จำเป็น (ปิดไม่ได้)</label><label style="display:flex;gap:8px"><input type="checkbox"> วิเคราะห์การใช้งาน</label><label style="display:flex;gap:8px"><input type="checkbox"> การตลาด</label></div></sc-if>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" onClick="{{closeCookie}}">ปฏิเสธที่ไม่จำเป็น</button><button class="btn" type="button" onClick="{{togglePrefs}}">ตั้งค่า</button><button class="btn" type="button" onClick="{{closeCookie}}">ยอมรับทั้งหมด</button></div>
+<div class="muted" style="font-size:12px">ปุ่มยอมรับและปฏิเสธมีน้ำหนักเท่ากัน ตามแนวทาง PDPA · ในแอปหลังล็อกอินใช้เฉพาะคุกกี้ที่จำเป็น</div>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  state = { tab: 'terms', cookie: true, prefs: false };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const tab = st.tab || 'terms';
+    const D = {
+      terms: ['ข้อกำหนดการใช้งาน', '1.0', '1 ธ.ค. 2569', 'ข้อตกลงระหว่าง [ชื่อบริษัท] กับลูกค้าที่ใช้ Friday Manage', [
+        ['คำนิยาม', 'Workspace, Owner, Admin, สมาชิก, Guest, ข้อมูลของลูกค้า'], ['บัญชีและความปลอดภัย', 'หน้าที่ดูแลรหัสผ่าน 2FA และ SSO'], ['แพ็กเกจและการชำระเงิน', 'ราคาเหมาตามขนาดทีม, VAT, หัก ณ ที่จ่าย, ผ่อนผันเมื่อเกินแพ็กเกจหรือค้างชำระ'], ['การยกเลิกและการคืนเงิน', 'ใช้ต่อจนจบรอบ, ไม่คืนเงินบางส่วน (ยืนยันกับที่ปรึกษา)'], ['การใช้งานที่ไม่อนุญาต', 'ห้ามใช้ผิดกฎหมาย, ห้ามทดสอบเจาะระบบโดยไม่ขออนุญาต'], ['ความเป็นเจ้าของข้อมูล', 'ข้อมูลเป็นของลูกค้า Export ได้ตลอด'], ['ระดับการให้บริการ', 'SLA สำหรับ Enterprise, ช่วงปิดปรับปรุง'], ['การจำกัดความรับผิด', ''], ['กฎหมายที่ใช้บังคับ', 'กฎหมายไทย']]],
+      privacy: ['นโยบายความเป็นส่วนตัว', '1.0', '1 ธ.ค. 2569', 'อธิบายว่าเราเก็บ ใช้ และปกป้องข้อมูลส่วนบุคคลของผู้ใช้อย่างไร ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562', [
+        ['ข้อมูลที่เก็บ', 'ชื่อ อีเมล บัญชี LINE ที่ผูก ข้อมูลการใช้งาน IP'], ['วัตถุประสงค์และฐานทางกฎหมาย', 'การปฏิบัติตามสัญญา ประโยชน์โดยชอบด้วยกฎหมาย ความยินยอม'], ['การเปิดเผยข้อมูล', 'ผู้ให้บริการช่วง (ดูแท็บผู้ให้บริการช่วง)'], ['การส่งข้อมูลไปต่างประเทศ', 'ระบุประเทศปลายทางและมาตรการคุ้มครอง'], ['ระยะเวลาเก็บรักษา', 'ตามที่ Workspace ตั้งค่า และหลังยกเลิกบัญชี'], ['สิทธิของเจ้าของข้อมูล', 'ขอเข้าถึง แก้ไข ลบ คัดค้าน โอนย้าย · ยื่นคำขอที่ Profile'], ['ความปลอดภัย', 'เข้ารหัส, ควบคุมสิทธิ์, Audit log'], ['การติดต่อ DPO', '']]],
+      dpa: ['ข้อตกลงการประมวลผลข้อมูล (DPA)', '1.0', '1 ธ.ค. 2569', 'สำหรับลูกค้าองค์กร: ลูกค้าเป็นผู้ควบคุมข้อมูล Friday เป็นผู้ประมวลผลข้อมูล', [
+        ['บทบาทของคู่สัญญา', 'ผู้ควบคุม / ผู้ประมวลผล'], ['ขอบเขตการประมวลผล', 'ประเภทข้อมูลและวัตถุประสงค์'], ['มาตรการรักษาความปลอดภัย', ''], ['ผู้ประมวลผลช่วง', 'การแจ้งล่วงหน้าและสิทธิคัดค้าน'], ['การเข้าถึงโดยทีมช่วยเหลือ', 'เฉพาะเมื่อลูกค้าเปิดสิทธิ์ · บันทึกทุกครั้ง'], ['การแจ้งเหตุละเมิดข้อมูล', 'ภายใน [ชั่วโมง] หลังทราบเหตุ'], ['การส่งคืนและลบข้อมูล', 'เมื่อสิ้นสุดสัญญา'], ['การตรวจสอบ', '']]],
+      cookie: ['นโยบายคุกกี้', '1.0', '1 ธ.ค. 2569', 'คุกกี้ที่ใช้บนเว็บไซต์และในแอป', [['คุกกี้คืออะไร', ''], ['คุกกี้ที่จำเป็น', 'การเข้าสู่ระบบ ความปลอดภัย'], ['คุกกี้วิเคราะห์', 'เปิดเมื่อยินยอม'], ['การจัดการคุกกี้', 'เปลี่ยนความยินยอมได้ตลอด']]],
+      sub: ['ผู้ให้บริการช่วง (Subprocessors)', '1.0', '1 ธ.ค. 2569', 'บริการภายนอกที่ประมวลผลข้อมูลของลูกค้าแทนเรา', [['รายชื่อผู้ให้บริการ', ''], ['การแจ้งเปลี่ยนแปลง', '']]]
+    };
+    const d = D[tab];
+    const tabs = [['terms', 'ข้อกำหนดการใช้งาน'], ['privacy', 'นโยบายความเป็นส่วนตัว'], ['dpa', 'DPA'], ['cookie', 'คุกกี้'], ['sub', 'ผู้ให้บริการช่วง']].map(function (t) { return { n: t[1], on: tab === t[0] ? 'true' : 'false', pick: function () { self.setState({ tab: t[0] }); } }; });
+    const subs = [['Cloud hosting', 'ข้อมูลทั้งหมดของ Workspace', '[ผู้ให้บริการ] · [ประเทศ]'], ['ส่งอีเมล', 'อีเมลผู้รับ เนื้อหาแจ้งเตือน', '[ผู้ให้บริการ] · [ประเทศ]'], ['รับชำระเงิน', 'ข้อมูลบัตร (ไม่ผ่าน Friday)', '[Payment gateway] · ประเทศไทย'], ['LINE Messaging API', 'LINE user ID ที่ผูก ข้อความแจ้งเตือน', 'LY Corporation · [ประเทศ]'], ['ออกใบกำกับภาษีอิเล็กทรอนิกส์', 'ชื่อ เลขผู้เสียภาษี ที่อยู่ของลูกค้า', '[ผู้ให้บริการ e-Tax] · ประเทศไทย'], ['ติดตามข้อผิดพลาด', 'ข้อมูลทางเทคนิค ไม่มีเนื้อหางาน', '[ผู้ให้บริการ] · [ประเทศ]']].map(function (s) { return { k: s[0], d: s[1], v: s[2] }; });
+    return {
+      tabs: tabs, doc: { t: d[0], v: d[1], eff: d[2], intro: d[3], secs: d[4].map(function (s, i) { return { i: i + 1, n: s[0], hint: s[1] ? 'ครอบคลุม: ' + s[1] : 'รอเนื้อหา' }; }) },
+      isSub: tab === 'sub', notSub: tab !== 'sub', subs: subs,
+      showCookie: st.cookie !== false, showPrefs: !!st.prefs, closeCookie: function () { self.setState({ cookie: false }); }, togglePrefs: function () { self.setState({ prefs: !st.prefs }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

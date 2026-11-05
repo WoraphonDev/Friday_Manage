@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Landing + Pricing</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#fff;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:15px;line-height:1.6}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.muted{color:#5F6873}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 18px;border-radius:10px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.seg{display:inline-flex;border:1px solid #D5DAE0;border-radius:999px;padding:3px;background:#fff}
+.seg button{min-height:34px;padding:0 14px;border:0;border-radius:999px;background:transparent;font:inherit;font-size:14px;cursor:pointer;color:#3D4550}
+.seg button[aria-pressed="true"]{background:#1B1F24;color:#fff;font-weight:600}
+.feat{display:flex;flex-direction:column;gap:6px;padding:20px;border:1px solid #E4E7EB;border-radius:14px;background:#fff}
+.plan{display:flex;flex-direction:column;gap:10px;padding:20px;border:1px solid #E4E7EB;border-radius:14px;background:#fff;position:relative}
+.plan.hot{border-color:#1D4ED8;box-shadow:0 0 0 1px #1D4ED8}
+.plan ul{margin:0;padding-left:18px;font-size:14px;line-height:1.9}
+.price{font-size:28px;font-weight:700;line-height:1.2}
+.pill{display:inline-flex;align-items:center;padding:1px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.faq{border-bottom:1px solid #E4E7EB;padding:14px 0}
+.faq summary{cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}
+.cmp{display:grid;grid-template-columns:minmax(200px,1.6fr) repeat(5,minmax(90px,1fr));gap:0;font-size:14px}
+.cmp>div{padding:10px 12px;border-bottom:1px solid #F1F3F5;text-align:center}
+.cmp>div.l{text-align:left}
+.cmp>div.h{font-weight:700;background:#F8F9FB}
+</style>
+</helmet>
+<header style="border-bottom:1px solid #E4E7EB;background:#fff;position:sticky;top:0;z-index:2">
+<div class="wrap" style="display:flex;align-items:center;gap:20px;min-height:64px;flex-wrap:wrap">
+<a href="Landing.dc.html" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:#1B1F24;font-weight:700;font-size:17px"><span style="width:32px;height:32px;border-radius:8px;background:#1D4ED8;color:#fff;display:flex;align-items:center;justify-content:center">F</span>Friday Manage</a>
+<nav aria-label="เมนูเว็บไซต์" style="display:flex;gap:18px;font-size:14px;flex-wrap:wrap"><a href="#features" style="color:#3D4550;text-decoration:none">{{t.nFeat}}</a><a href="#pricing" style="color:#3D4550;text-decoration:none">{{t.nPrice}}</a><a href="#faq" style="color:#3D4550;text-decoration:none">{{t.nFaq}}</a></nav>
+<span style="flex:1"></span>
+<div class="seg" role="group" aria-label="ภาษา / Language"><button type="button" aria-pressed="{{isTh}}" onClick="{{setTh}}">ไทย</button><button type="button" aria-pressed="{{isEn}}" onClick="{{setEn}}">EN</button></div>
+<a href="Login.dc.html" style="color:#1B1F24;text-decoration:none;font-weight:600">{{t.login}}</a>
+<a class="btn pri" href="Signup.dc.html" style="min-height:40px">{{t.cta}}</a>
+</div>
+</header>
+
+<section style="background:linear-gradient(180deg,#EEF2FF 0%,#fff 100%);padding:64px 0 40px">
+<div class="wrap" style="display:flex;gap:40px;flex-wrap:wrap;align-items:center">
+<div style="flex:1 1 440px;display:flex;flex-direction:column;gap:18px">
+<span class="pill" style="background:#fff;color:#1D4ED8;border:1px solid #C7D2FE;align-self:flex-start">{{t.badge}}</span>
+<h1 style="margin:0;font-size:44px;line-height:1.2">{{t.h1}}</h1>
+<p class="muted" style="margin:0;font-size:18px">{{t.lead}}</p>
+<div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn pri" href="Signup.dc.html">{{t.cta}}</a><a class="btn" href="#pricing">{{t.seePrice}}</a></div>
+<div class="muted" style="font-size:13px">{{t.note}}</div>
+</div>
+<div style="flex:1 1 480px;min-width:0;background:#fff;border:1px solid #E4E7EB;border-radius:16px;box-shadow:0 24px 48px rgba(15,23,42,.12);overflow:hidden" aria-label="ภาพตัวอย่างหน้าจอ">
+<div style="background:#0F172A;height:28px;display:flex;align-items:center;gap:6px;padding:0 12px"><span style="width:8px;height:8px;border-radius:50%;background:#475569"></span><span style="width:8px;height:8px;border-radius:50%;background:#475569"></span><span style="width:8px;height:8px;border-radius:50%;background:#475569"></span></div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px;background:#F6F7F9">
+<sc-for list="{{kcols}}" as="c" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:11px;font-weight:700;color:#3D4550">{{c.n}}</div><sc-for list="{{c.cards}}" as="k" hint-placeholder-count="2"><div style="background:#fff;border:1px solid #E4E7EB;border-radius:8px;padding:8px;font-size:11px;line-height:1.4"><div style="height:3px;width:30px;border-radius:2px;background:{{k.c}};margin-bottom:6px"></div>{{k.t}}<div class="muted" style="font-size:10px;margin-top:4px">{{k.m}}</div></div></sc-for></div></sc-for>
+</div>
+</div>
+</div>
+</section>
+
+<section id="features" style="padding:48px 0">
+<div class="wrap" style="display:flex;flex-direction:column;gap:20px">
+<h2 style="margin:0;font-size:28px;text-align:center">{{t.featH}}</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
+<sc-for list="{{feats}}" as="f" hint-placeholder-count="6"><div class="feat"><b style="font-size:16px">{{f.n}}</b><span class="muted" style="font-size:14px">{{f.d}}</span></div></sc-for>
+</div>
+</div>
+</section>
+
+<section id="pricing" style="padding:48px 0;background:#F8F9FB;border-top:1px solid #EEF0F3;border-bottom:1px solid #EEF0F3">
+<div class="wrap" style="display:flex;flex-direction:column;gap:20px">
+<div style="text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center"><h2 style="margin:0;font-size:28px">{{t.priceH}}</h2><div class="muted">{{t.priceSub}}</div>
+<div class="seg" role="group" aria-label="รอบการชำระ"><button type="button" aria-pressed="{{isMo}}" onClick="{{setMo}}">{{t.monthly}}</button><button type="button" aria-pressed="{{isYr}}" onClick="{{setYr}}">{{t.yearly}} <span style="color:{{saveC}};font-weight:700">{{t.save}}</span></button></div></div>
+
+<div style="background:#fff;border:1px solid #E4E7EB;border-radius:14px;padding:16px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+<label for="team" style="font-weight:600">{{t.teamQ}}</label>
+<input id="team" type="range" min="1" max="60" value="{{team}}" onInput="{{setTeam}}" onChange="{{setTeam}}" style="flex:1 1 260px;accent-color:#1D4ED8">
+<b style="min-width:70px;font-size:18px">{{team}} {{t.ppl}}</b>
+<span class="pill" style="background:#DBEAFE;color:#1E40AF">{{t.fit}}: {{fitName}}</span>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+<sc-for list="{{plans}}" as="p" hint-placeholder-count="5">
+<div class="{{p.cls}}">
+<sc-if value="{{p.isFit}}" hint-placeholder-val="{{ false }}"><span class="pill" style="position:absolute;top:-11px;left:16px;background:#1D4ED8;color:#fff">{{t.fitTag}}</span></sc-if>
+<b style="font-size:17px">{{p.n}}</b>
+<span class="muted" style="font-size:13px">{{p.size}}</span>
+<div><span class="price">{{p.price}}</span> <span class="muted" style="font-size:13px">{{p.unit}}</span></div>
+<span class="muted" style="font-size:12px;min-height:18px">{{p.sub}}</span>
+<a class="{{p.btn}}" href="{{p.href}}">{{p.cta}}</a>
+<ul><sc-for list="{{p.f}}" as="x" hint-placeholder-count="4"><li>{{x}}</li></sc-for></ul>
+</div>
+</sc-for>
+</div>
+<div class="muted" style="font-size:13px;text-align:center">{{t.vat}}</div>
+
+<details style="background:#fff;border:1px solid #E4E7EB;border-radius:14px;padding:4px 0">
+<summary style="cursor:pointer;padding:12px 20px;font-weight:600">{{t.cmpH}}</summary>
+<div style="overflow-x:auto;padding:0 8px 12px"><div class="cmp" style="min-width:760px">
+<sc-for list="{{cmp}}" as="r" hint-placeholder-count="8"><div class="{{r.lc}}">{{r.n}}</div><sc-for list="{{r.v}}" as="v" hint-placeholder-count="5"><div class="{{r.vc}}">{{v}}</div></sc-for></sc-for>
+</div></div>
+</details>
+</div>
+</section>
+
+<section id="faq" style="padding:48px 0">
+<div class="wrap" style="max-width:820px">
+<h2 style="margin:0 0 12px;font-size:28px;text-align:center">{{t.faqH}}</h2>
+<sc-for list="{{faq}}" as="q" hint-placeholder-count="6"><details class="faq"><summary>{{q.q}}<span aria-hidden="true">+</span></summary><p class="muted" style="margin:8px 0 0">{{q.a}}</p></details></sc-for>
+</div>
+</section>
+
+<footer style="background:#0F172A;color:#CBD5E1;padding:32px 0;font-size:14px">
+<div class="wrap" style="display:flex;gap:24px;flex-wrap:wrap;justify-content:space-between">
+<div><b style="color:#fff">Friday Manage</b><div>[ชื่อบริษัท] · เลขผู้เสียภาษี [เลข 13 หลัก]</div></div>
+<nav aria-label="ข้อกฎหมาย" style="display:flex;gap:16px;flex-wrap:wrap"><a href="Legal.dc.html" style="color:#BFDBFE">{{t.terms}}</a><a href="Legal.dc.html" style="color:#BFDBFE">{{t.privacy}}</a><a href="Legal.dc.html" style="color:#BFDBFE">DPA</a><a href="Legal.dc.html" style="color:#BFDBFE">Cookies</a></nav>
+</div>
+</footer>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2200}}'>
+class Component extends DCLogic {
+  state = { lang: 'th', cyc: 'mo', team: 12 };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const lang = st.lang || 'th', cyc = st.cyc || 'mo', team = st.team || 12, th = lang === 'th';
+    const L = {
+      th: { nFeat: 'ฟีเจอร์', nPrice: 'ราคา', nFaq: 'คำถามที่พบบ่อย', login: 'เข้าสู่ระบบ', cta: 'ทดลองใช้ฟรี 14 วัน', badge: 'สำหรับ Software house และทีม Dev', h1: 'วางแผนเป็น Man-Day เห็นงานล้นก่อนส่งงานช้า', lead: 'Kanban, Timeline, Gantt และ Workload ในที่เดียว นำเข้าแผนจาก Excel ได้ทันที แจ้งเตือนผ่าน LINE', seePrice: 'ดูราคา', note: 'ไม่ต้องใช้บัตรเครดิต · ข้อมูลเก็บในประเทศไทย [ยืนยัน Data region]', featH: 'ทำมาสำหรับงานพัฒนาระบบ', priceH: 'ราคาเหมาตามขนาดทีม', priceSub: 'ทุกแพ็กเกจที่ชำระเงินได้ฟีเจอร์ครบเท่ากัน ต่างกันแค่จำนวนคน · Guest (ลูกค้า) ไม่นับ', monthly: 'รายเดือน', yearly: 'รายปี', save: 'ลด 2 เดือน', teamQ: 'ทีมคุณมีกี่คน', ppl: 'คน', fit: 'แนะนำ', fitTag: 'เหมาะกับทีมคุณ', vat: 'ราคายังไม่รวม VAT 7% · ชำระด้วยบัตรเครดิต, PromptPay หรือโอนเงิน · ออกใบกำกับภาษีอิเล็กทรอนิกส์ทุกครั้ง · หักภาษี ณ ที่จ่าย 3% ได้', cmpH: 'เปรียบเทียบแพ็กเกจทั้งหมด', faqH: 'คำถามที่พบบ่อย', terms: 'ข้อกำหนดการใช้งาน', privacy: 'นโยบายความเป็นส่วนตัว', mo: '/ เดือน', yr: '/ ปี', start: 'เริ่มใช้ฟรี', trial: 'ทดลอง 14 วัน', contact: 'ติดต่อฝ่ายขาย', upto: 'สูงสุด', free: 'ฟรี', perYr: 'จ่ายรายปี' },
+      en: { nFeat: 'Features', nPrice: 'Pricing', nFaq: 'FAQ', login: 'Log in', cta: 'Start 14-day free trial', badge: 'Built for software houses and dev teams', h1: 'Plan in man-days. See overload before deadlines slip.', lead: 'Kanban, Timeline, Gantt and Workload in one place. Import your Excel plan in minutes. Notify the team on LINE.', seePrice: 'See pricing', note: 'No credit card required · Data hosted in Thailand [confirm data region]', featH: 'Made for software delivery', priceH: 'Flat pricing by team size', priceSub: 'Every paid plan has every feature. Only team size differs. Guests are free.', monthly: 'Monthly', yearly: 'Yearly', save: '2 months free', teamQ: 'How big is your team?', ppl: 'people', fit: 'Best fit', fitTag: 'Fits your team', vat: 'Prices exclude 7% VAT · Pay by card, PromptPay or bank transfer · e-Tax invoice issued automatically · 3% withholding tax supported', cmpH: 'Compare all plans', faqH: 'Frequently asked questions', terms: 'Terms of Service', privacy: 'Privacy Policy', mo: '/ month', yr: '/ year', start: 'Start free', trial: 'Start trial', contact: 'Contact sales', upto: 'Up to', free: 'Free', perYr: 'billed yearly' }
+    };
+    const t = L[lang];
+    const P = [
+      ['free', 'Free', 5, '฿0', '฿0'],
+      ['s', 'Team S', 10, '฿[ราคา S]', '฿[ราคา S × 10]'],
+      ['m', 'Team M', 25, '฿[ราคา M]', '฿[ราคา M × 10]'],
+      ['l', 'Team L', 50, '฿[ราคา L]', '฿[ราคา L × 10]'],
+      ['ent', 'Enterprise', 0, th ? 'ตามสัญญา' : 'Custom', th ? 'ตามสัญญา' : 'Custom']
+    ];
+    const fitKey = team <= 5 ? 'free' : (team <= 10 ? 's' : (team <= 25 ? 'm' : (team <= 50 ? 'l' : 'ent')));
+    const FT = {
+      free: th ? ['3 โปรเจกต์', 'Kanban, Table, Calendar', 'แจ้งเตือน In-app + Email', 'ไฟล์ 1 GB'] : ['3 projects', 'Kanban, Table, Calendar', 'In-app + email notifications', '1 GB files'],
+      paid: th ? ['ไม่จำกัดโปรเจกต์', 'Gantt, Workload, Sprint, Reports', 'Import Excel + Automation', 'LINE OA + Webhook', 'ไฟล์ 10 GB ต่อคน'] : ['Unlimited projects', 'Gantt, Workload, Sprints, Reports', 'Excel import + Automation', 'LINE OA + Webhooks', '10 GB files per member'],
+      ent: th ? ['ทุกอย่างในแพ็กเกจทีม', 'SSO (Entra ID, Google, SAML)', 'Audit log 7 ปี', 'เลือก Data region + SLA'] : ['Everything in team plans', 'SSO (Entra ID, Google, SAML)', '7-year audit log', 'Data region + SLA']
+    };
+    const plans = P.map(function (p) {
+      const fit = p[0] === fitKey, paid = p[0] !== 'free' && p[0] !== 'ent';
+      return { n: p[1], size: p[2] ? t.upto + ' ' + p[2] + ' ' + t.ppl : (th ? '50 คนขึ้นไป' : '50+ people'),
+        price: cyc === 'yr' && paid ? p[4] : p[3], unit: p[0] === 'ent' ? '' : (cyc === 'yr' && paid ? t.yr : t.mo),
+        sub: paid && cyc === 'yr' ? t.perYr : '', isFit: fit, cls: fit ? 'plan hot' : 'plan', btn: fit ? 'btn pri' : 'btn',
+        cta: p[0] === 'free' ? t.start : (p[0] === 'ent' ? t.contact : t.trial), href: p[0] === 'ent' ? '#' : (p[0] === 'free' ? 'Signup.dc.html' : 'Checkout.dc.html'),
+        f: p[0] === 'free' ? FT.free : (p[0] === 'ent' ? FT.ent : FT.paid) };
+    });
+    const fitName = P.filter(function (p) { return p[0] === fitKey; })[0][1];
+    const y = '✓', n = '–';
+    const C = [
+      [th ? 'จำนวนคน (ไม่นับ Guest)' : 'Members (guests free)', ['5', '10', '25', '50', '50+']],
+      [th ? 'โปรเจกต์' : 'Projects', ['3', th ? 'ไม่จำกัด' : 'Unlimited', th ? 'ไม่จำกัด' : 'Unlimited', th ? 'ไม่จำกัด' : 'Unlimited', th ? 'ไม่จำกัด' : 'Unlimited']],
+      ['Gantt, Workload, Sprint', [n, y, y, y, y]],
+      [th ? 'Import / Export Excel' : 'Excel import / export', [n, y, y, y, y]],
+      ['Automation', [n, th ? '1,000 ครั้ง/เดือน' : '1,000 runs/mo', th ? '3,000 ครั้ง/เดือน' : '3,000 runs/mo', th ? '6,000 ครั้ง/เดือน' : '6,000 runs/mo', th ? 'ไม่จำกัด' : 'Unlimited']],
+      [th ? 'LINE OA + Webhook' : 'LINE OA + webhooks', [n, y, y, y, y]],
+      ['SSO / SAML', [n, n, n, n, y]],
+      ['Audit log', [th ? '30 วัน' : '30 days', th ? '1 ปี' : '1 year', th ? '1 ปี' : '1 year', th ? '1 ปี' : '1 year', th ? '7 ปี' : '7 years']]
+    ];
+    const cmp = [{ n: '', lc: 'l h', vc: 'h', v: P.map(function (p) { return p[1]; }) }].concat(C.map(function (r) { return { n: r[0], lc: 'l', vc: '', v: r[1] }; }));
+    const feats = (th ? [
+      ['Man-Day + Size', 'ประเมินงานเป็น XS–XL แปลงเป็น Man-Day อัตโนมัติ นับเฉพาะวันทำงานและวันหยุดที่กำหนด'],
+      ['Workload ข้ามโปรเจกต์', 'เห็นทันทีว่าใครงานล้นสัปดาห์ไหน ก่อนส่งงานไม่ทัน'],
+      ['Import แผนจาก Excel', 'ตรวจข้อมูลผิดก่อนนำเข้า เก็บ Baseline ไว้เทียบแผนกับงานจริง'],
+      ['Task › Sub-task', 'Sub-task มีผู้รับผิดชอบ สถานะ Commit และผลทดสอบของตัวเอง'],
+      ['Bug workflow', 'Open → Fixed → Verified ผูกกับผลทดสอบและ Commit'],
+      ['แจ้งเตือนผ่าน LINE', 'อนุมัติเลื่อน Due ได้ใน LINE ส่งเข้ากลุ่มทีมหรือ Discord ได้']
+    ] : [
+      ['Man-days + sizes', 'Estimate XS–XL, auto-converted to man-days on working days and your holiday calendar.'],
+      ['Cross-project workload', 'See who is overloaded and when, before a deadline slips.'],
+      ['Excel plan import', 'Validate before import. Keep a baseline to compare plan vs actual.'],
+      ['Task › sub-task', 'Sub-tasks have their own owner, status, commits and test results.'],
+      ['Bug workflow', 'Open → Fixed → Verified, linked to test results and commits.'],
+      ['LINE notifications', 'Approve due-date changes in LINE. Post to team groups or Discord.']
+    ]).map(function (f) { return { n: f[0], d: f[1] }; });
+    const faq = (th ? [
+      ['ทีมโตเกินแพ็กเกจจะเกิดอะไรขึ้น', 'ใช้งานต่อได้ตามปกติ ระบบแจ้ง Owner และให้เวลา 14 วันเปลี่ยนแพ็กเกจ ระหว่างนั้นเชิญคนเพิ่มไม่ได้ ไม่มีการล็อกข้อมูล'],
+      ['หักภาษี ณ ที่จ่าย 3% ได้ไหม', 'ได้ เมื่อชำระด้วย PromptPay หรือโอนเงินในนามนิติบุคคล ส่งหนังสือรับรองการหักภาษี (50 ทวิ) ผ่านหน้า Billing ได้เลย'],
+      ['PromptPay ตัดเงินอัตโนมัติไหม', 'ไม่ ระบบส่งใบแจ้งหนี้พร้อม QR ล่วงหน้า 7 วันก่อนครบรอบ ถ้าต้องการตัดอัตโนมัติให้ใช้บัตรเครดิต'],
+      ['ข้อมูลเก็บที่ไหน', 'เก็บที่ [Data region] เข้ารหัสทั้งตอนส่งและตอนจัดเก็บ ปฏิบัติตาม PDPA'],
+      ['ทีม Friday เข้าดูข้อมูลของเราได้ไหม', 'เฉพาะเมื่อ Admin ของคุณเปิดสิทธิ์ให้ทีมช่วยเหลือ ทุกครั้งที่เข้าจะบันทึกใน Audit Log และแจ้ง Admin'],
+      ['ยกเลิกได้ไหม', 'ยกเลิกได้ตลอด ใช้ต่อได้จนจบรอบที่จ่ายไว้ และ Export ข้อมูลทั้งหมดเป็น Excel ได้']
+    ] : [
+      ['What if our team outgrows the plan?', 'Nothing breaks. The owner is notified and has 14 days to upgrade. New invites are paused meanwhile.'],
+      ['Can we withhold 3% tax?', 'Yes, for PromptPay or bank transfer paid by a company. Upload the withholding certificate (50 Tawi) in Billing.'],
+      ['Does PromptPay renew automatically?', 'No. We send an invoice with a QR code 7 days before renewal. Use a card for automatic renewal.'],
+      ['Where is our data stored?', 'In [data region], encrypted in transit and at rest, PDPA compliant.'],
+      ['Can Friday staff see our data?', 'Only if your admin enables support access. Every session is logged and your admins are notified.'],
+      ['Can we cancel?', 'Anytime. You keep access until the end of the paid period and can export everything to Excel.']
+    ]).map(function (q) { return { q: q[0], a: q[1] }; });
+    const kcols = [['To do', [['Payment callback', 'M · 5 MD', '#B45309'], ['Export report', 'S · 3 MD', '#7C3AED']]], ['In progress', [['Booking flow UI', 'L · 8 MD', '#0F766E'], ['Omise sandbox', th ? 'เลย 5 วัน' : '5d late', '#DC2626']]], ['Review', [['LINE reminder', 'S · 3 MD', '#0F766E']]], ['Done', [['Login + 2FA', 'M · 5 MD', '#1D4ED8'], ['Select doctor', 'S · 3 MD', '#0F766E']]]].map(function (c) { return { n: c[0], cards: c[1].map(function (k) { return { t: k[0], m: k[1], c: k[2] }; }) }; });
+    return {
+      t: t, isTh: th ? 'true' : 'false', isEn: th ? 'false' : 'true', setTh: function () { self.setState({ lang: 'th' }); }, setEn: function () { self.setState({ lang: 'en' }); },
+      isMo: cyc === 'mo' ? 'true' : 'false', isYr: cyc === 'yr' ? 'true' : 'false', saveC: cyc === 'yr' ? '#86EFAC' : '#15803D', setMo: function () { self.setState({ cyc: 'mo' }); }, setYr: function () { self.setState({ cyc: 'yr' }); },
+      team: team, setTeam: function (e) { const v = parseInt(e && e.target && e.target.value, 10); if (v) self.setState({ team: v }); }, fitName: fitName,
+      plans: plans, cmp: cmp, feats: feats, faq: faq, kcols: kcols
+    };
+  }
+}
+</script>
+</body>
+</html>

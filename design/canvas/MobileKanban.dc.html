@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Mobile Kanban</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:15px;line-height:1.45}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.muted{color:#5F6873}
+.vt{flex:none;min-height:40px;padding:0 14px;display:inline-flex;align-items:center;border-bottom:2px solid transparent;color:#5F6873;text-decoration:none;font-size:14px}
+.vt.on{border-bottom-color:#1D4ED8;color:#1D4ED8;font-weight:700}
+.col{flex:none;min-height:40px;padding:0 12px;border-radius:999px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:14px;color:#3D4550;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.col[aria-pressed="true"]{background:#1B1F24;border-color:#1B1F24;color:#fff;font-weight:600}
+.kc{background:#fff;border:1px solid #E4E7EB;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.ty{width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex:none}
+.mv{min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:#1B1F24}
+.opt{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:0 16px;border:0;border-bottom:1px solid #F1F3F5;background:#fff;font:inherit;text-align:left;cursor:pointer;color:#1B1F24}
+.tabb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:#5F6873;text-decoration:none;min-height:56px;position:relative}
+.tabb.on{color:#1D4ED8;font-weight:700}
+</style>
+</helmet>
+<div style="width:390px;height:844px;display:flex;flex-direction:column;background:#F6F7F9;overflow:hidden;position:relative">
+<header style="background:#fff;border-bottom:1px solid #E4E7EB">
+<div style="display:flex;align-items:center;gap:8px;padding:12px 8px 6px">
+<a href="MobileHome.dc.html" aria-label="กลับ" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B1F24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m15 5-7 7 7 7"></path></svg></a>
+<span style="width:30px;height:30px;border-radius:8px;background:#0F766E;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">CB</span>
+<div style="flex:1;min-width:0"><h1 style="margin:0;font-size:18px">Development Plan 2026-11</h1><div class="muted" style="font-size:12px">Sprint 3 · เหลือ 6 วันทำการ · สถานะจำลอง</div></div>
+<button type="button" aria-label="ตัวกรอง" style="width:44px;height:44px;border:0;background:transparent;border-radius:10px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B1F24" stroke-width="2" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"></path></svg></button>
+</div>
+<nav aria-label="มุมมองโปรเจกต์" style="display:flex;overflow-x:auto;padding:0 8px">
+<a class="vt" href="MobileOverview.dc.html">Overview</a><a class="vt on" href="MobileKanban.dc.html" aria-current="page">Kanban</a><a class="vt" href="MobileMyTasks.dc.html">List</a><a class="vt" href="Calendar.dc.html">Calendar</a><a class="vt" href="Files.dc.html">Files</a>
+</nav>
+</header>
+
+<div style="display:flex;gap:8px;overflow-x:auto;padding:12px 16px" role="group" aria-label="คอลัมน์">
+<sc-for list="{{cols}}" as="c" hint-placeholder-count="4"><button class="col" type="button" aria-pressed="{{c.on}}" onClick="{{c.pick}}"><span style="width:8px;height:8px;border-radius:50%;background:{{c.dot}}"></span>{{c.n}} <span style="opacity:.75">{{c.k}}</span></button></sc-for>
+</div>
+<sc-if value="{{overWip}}" hint-placeholder-val="{{ false }}"><div role="status" style="margin:0 16px 8px;background:#FEF2F2;color:#991B1B;border-radius:10px;padding:8px 12px;font-size:13px">เกิน WIP limit ({{wip}}) ของคอลัมน์นี้</div></sc-if>
+
+<div style="flex:1;overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{cards}}" as="k" hint-placeholder-count="3">
+<div class="kc">
+<a href="{{k.href}}" style="font-weight:600;color:#1B1F24;text-decoration:none">{{k.t}}</a>
+<div style="display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap" class="muted"><span class="ty" style="background:{{k.tyc}}"><svg width="10" height="10" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="{{k.tyi}}"></path></svg></span>{{k.key}} · <span style="width:8px;height:8px;border-radius:2px;background:{{k.mc}}"></span>{{k.mod}}<sc-if value="{{k.hasSub}}" hint-placeholder-val="{{ false }}"> · Sub-task {{k.sub}}</sc-if></div>
+<div style="display:flex;align-items:center;gap:8px"><span class="av" style="background:{{k.ac}}">{{k.ai}}</span><span style="font-size:13px;font-weight:600;color:{{k.dc}}">{{k.due}}</span><span style="flex:1"></span><button class="mv" type="button" onClick="{{k.open}}" aria-haspopup="dialog">ย้ายไป…</button></div>
+</div>
+</sc-for>
+<sc-if value="{{empty}}" hint-placeholder-val="{{ false }}"><div class="muted" style="text-align:center;padding:40px 16px;font-size:14px">ไม่มีงานในคอลัมน์นี้</div></sc-if>
+<div class="muted" style="font-size:12px;text-align:center;padding:4px 0 8px">บนมือถือย้ายด้วยปุ่ม "ย้ายไป…" แทนการลาก · ปัดซ้าย-ขวาเพื่อเปลี่ยนคอลัมน์</div>
+</div>
+
+<nav aria-label="เมนูหลัก" style="display:flex;background:#fff;border-top:1px solid #E4E7EB;padding-bottom:8px">
+<a class="tabb" href="MobileHome.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"></path></svg>Home</a>
+<a class="tabb" href="MobileMyTasks.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="m8 12 3 3 5-6"></path></svg>My Tasks</a>
+<a class="tabb on" href="MobileOverview.dc.html" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="7" height="7" rx="1.5"></rect><rect x="14" y="4" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>Projects</a>
+<a class="tabb" href="MobileInbox.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>Inbox<span style="position:absolute;top:6px;left:calc(50% + 4px);min-width:18px;height:18px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px">5</span></a>
+<a class="tabb" href="Profile.dc.html"><span style="width:24px;height:24px;border-radius:50%;background:#1D4ED8;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">MK</span>Profile</a>
+</nav>
+
+<sc-if value="{{sheet}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(15,23,42,.45);display:flex;flex-direction:column;justify-content:flex-end">
+<button type="button" aria-label="ปิด" onClick="{{close}}" style="flex:1;border:0;background:transparent;cursor:pointer"></button>
+<div role="dialog" aria-modal="true" aria-label="ย้ายงาน" style="background:#fff;border-radius:16px 16px 0 0;padding-bottom:16px">
+<div style="width:40px;height:4px;border-radius:2px;background:#D5DAE0;margin:8px auto"></div>
+<div style="padding:4px 16px 10px"><div class="muted" style="font-size:12px">ย้ายงาน</div><b>{{sheetTitle}}</b></div>
+<sc-for list="{{moveOpts}}" as="o" hint-placeholder-count="4"><button class="opt" type="button" onClick="{{o.pick}}" disabled="{{o.cur}}"><span style="width:10px;height:10px;border-radius:50%;background:{{o.dot}}"></span><span style="flex:1">{{o.n}}</span><span class="muted" style="font-size:12px">{{o.note}}</span></button></sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}"><div role="status" style="position:absolute;left:16px;right:16px;bottom:84px;background:#1B1F24;color:#fff;border-radius:12px;padding:12px 14px;font-size:14px;display:flex;gap:10px;align-items:center"><span style="flex:1">{{toast}}</span><button type="button" onClick="{{undo}}" style="border:0;background:transparent;color:#93C5FD;font:inherit;font-weight:700;cursor:pointer;min-height:36px">เลิกทำ</button></div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { col: 'prog', mv: {}, sheet: '', last: null };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const col = st.col || 'prog', mv = st.mv || {}, sh = st.sheet || '', last = st.last;
+    const C = [['todo', 'To do', '#8A94A0', 0], ['prog', 'In progress', '#3B82F6', 8], ['rev', 'Review', '#F59E0B', 3], ['done', 'Done', '#15803D', 0]];
+    const TY = { story: ['#15803D', 'M6 3h12v18l-6-4-6 4z'], task: ['#1D4ED8', 'M5 5h14v14H5z'], bug: ['#DC2626', 'M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14z'] };
+    const MO = {"Credit Line": "#1D4ED8", "Drawdown": "#0F766E", "Pre-Disburse": "#B45309", "Maintain Car": "#7C3AED", "BFC": "#BE185D", "Repayment": "#0369A1", "Checkstock": "#4D7C0F", "Finance (GL)": "#57534E", "Campaign": "#C2410C", "OEM Portal": "#4338CA", "Interface": "#0E7490"};
+    const PE = {"Kaijeaw": ["KJ", "#B45309"], "Pond": ["PD", "#0F766E"], "Tung": ["TG", "#7C3AED"], "Top": ["TP", "#BE185D"], "Zo": ["ZO", "#0369A1"], "P'Tum": ["PT", "#4D7C0F"], "Ton": ["TN", "#65A30D"], "Mick": ["MK", "#1D4ED8"]};
+    const K = [["DP-525", "bug", "Workflow ส่งกลับแก้ไข: สถานะไม่กลับเป็น Draft เมื่อ LO ส่งคืน", "Credit Line", "Kaijeaw", "ศ. 4 ธ.ค.", "rev", "", "BugDetail.dc.html"], ["DP-219", "task", "ยกเลิก BFC Curtailment อัตโนมัติเมื่อออก BFC SOT + ทำแผนใหม่", "BFC", "Top", "เลย 8 วัน", "prog", "", "TaskDetail.dc.html"], ["DP-23", "task", "ระยะเวลาวงเงิน (เพิ่ม, ล็อกหลังอนุมัติ)", "Credit Line", "Kaijeaw", "เลย 7 วัน", "prog", "", "TaskDetail.dc.html"], ["DP-91", "task", "Export EDI: รายการ Lot, Drill-down, Export เป็น Template", "Drawdown", "Pond", "เลย 7 วัน", "rev", "", "TaskDetail.dc.html"], ["DP-21", "task", "Maintain : สร้างงานอัตโนมัติ, Add Credit, Select Credit, Gen เลขที่", "Credit Line", "Kaijeaw", "เลย 6 วัน", "prog", "", "TaskDetail.dc.html"], ["DP-211", "task", "UX/UI 15 หน้าจอ", "BFC", "Top", "เลย 6 วัน", "prog", "", "TaskDetail.dc.html"], ["DP-34", "task", "ผู้ใช้วงเงินจาก MDP (P/J) + ผูกลูกค้า FACO", "Credit Line", "Kaijeaw", "เลย 2 วัน", "rev", "", "TaskDetail.dc.html"], ["DP-30", "task", "Curtailment Information + Plan Template (Floor Plan)", "Credit Line", "Kaijeaw", "เลย 1 วัน", "prog", "", "TaskDetail.dc.html"], ["DP-35", "task", "Add Dealer / Add Group Dealer (วงเงินใช้ได้จริงรายคน/กลุ่ม)", "Credit Line", "Kaijeaw", "วันนี้", "prog", "", "TaskDetail.dc.html"], ["DP-260", "task", "Offset กับ HP: ตรวจรถจาก Chassis/Engine, ส่งยอด O/S, เทียบยอด, ตัดปิด + ใบเสร็จ, อีเมลส่วนต่าง", "Repayment", "Tung", "วันนี้", "rev", "", "TaskDetail.dc.html"], ["DP-38", "task", "Collateral framework: รายการ, Map จาก MDP (Other), ผูกกับวงเงิน", "Credit Line", "Kaijeaw", "พฤ. 3 ธ.ค.", "prog", "", "TaskDetail.dc.html"], ["DP-95", "task", "เงื่อนไขระงับวงเงิน 8 ข้อ + ข้ามได้ตามช่วงอนุโลม", "Drawdown", "Pond", "ศ. 4 ธ.ค.", "prog", "", "TaskDetail.dc.html"], ["DP-97", "task", "วงเงินถูกระงับหลัง Confirm: เตือน + บันทึกหมายเหตุอัตโนมัติ", "Drawdown", "Pond", "ศ. 4 ธ.ค.", "prog", "", "TaskDetail.dc.html"], ["DP-39", "task", "ฟอร์มหลักประกัน 5 ประเภท: Bank Account, Stock, รถยนต์, BG, Mortgage", "Credit Line", "Kaijeaw", "พ. 9 ธ.ค.", "prog", "1/5", "TaskDetail.dc.html"], ["DP-223", "task", "ค่าปรับ/ดอกเบี้ยผิดนัด 2 แบบ: Curtailment และ SOT", "BFC", "Top", "จ. 14 ธ.ค.", "prog", "", "TaskDetail.dc.html"], ["DP-100", "task", "Drawdown Entry: นับรายการตามสถานะ, สร้างตามประเภท", "Drawdown", "Pond", "พฤ. 3 ธ.ค.", "todo", "", "TaskDetail.dc.html"], ["DP-261", "task", "สร้างไฟล์ Direct Debit (KBANK): รอบ 11/14/16 น. + Manual, จาก Dealer Portal/CO, ส่งซ้ำรายการไม่ผ่าน", "Repayment", "Tung", "อ. 8 ธ.ค.", "todo", "", "TaskDetail.dc.html"], ["DP-262", "task", "อัปโหลดผล Direct Debit -> ตัดชำระอัตโนมัติ + รายงานสรุป", "Repayment", "Tung", "อ. 8 ธ.ค.", "todo", "", "TaskDetail.dc.html"], ["DP-101", "task", "Dealer & Credit Line Search (Popup ใช้ร่วม)", "Drawdown", "Pond", "ศ. 4 ธ.ค.", "todo", "", "TaskDetail.dc.html"], ["DP-102", "task", "Tab รายการรถ: Add Manual / Select Car, Credit Information", "Drawdown", "Pond", "พ. 9 ธ.ค.", "todo", "", "TaskDetail.dc.html"], ["DP-103", "task", "Gen Drawdown No. (DDYYMM####) + Contract No./Car ID เมื่ออนุมัติ", "Drawdown", "Pond", "อ. 8 ธ.ค.", "todo", "", "TaskDetail.dc.html"], ["DP-20", "task", "Workflow : ส่งงาน/คืนงาน/ส่งกลับแก้ไข ข้าม BD·LO·LC·CC + To-do list", "Credit Line", "Kaijeaw", "เสร็จ 1 ธ.ค.", "done", "", "TaskDetail.dc.html"], ["DP-24", "task", "Credit / Sub / Shared Limit (Product / Dealer) + API Available Credit", "Credit Line", "Kaijeaw", "เสร็จ 1 ธ.ค.", "done", "", "TaskDetail.dc.html"], ["DP-29", "task", "Interest Setting + Interest Program Normal / Penetration (Floor Plan)", "Credit Line", "Kaijeaw", "เสร็จ 1 ธ.ค.", "done", "", "TaskDetail.dc.html"], ["DP-94", "task", "ตรวจวงเงินคงเหลือระดับ Credit Line / Brand / Dealer (API ตั้งวงเงิน)", "Drawdown", "Pond", "เสร็จ 1 ธ.ค.", "done", "", "TaskDetail.dc.html"], ["DP-96", "task", "แจ้งเตือนวงเงินใกล้หมดอายุ (T-15)", "Drawdown", "Pond", "เสร็จ 1 ธ.ค.", "done", "", "TaskDetail.dc.html"]];
+    const where = function (k) { return mv[k[0]] || k[6]; };
+    const cnt = function (c) { return K.filter(function (k) { return where(k) === c; }).length; };
+    const cols = C.map(function (c) { return { n: c[1], dot: c[2], k: cnt(c[0]), on: col === c[0] ? 'true' : 'false', pick: function () { self.setState({ col: c[0] }); } }; });
+    const cards = K.filter(function (k) { return where(k) === col; }).map(function (k) {
+      const late = k[5].indexOf('เลย') === 0;
+      return { key: k[0], tyc: TY[k[1]][0], tyi: TY[k[1]][1], t: k[2], mod: k[3], mc: MO[k[3]], ai: PE[k[4]][0], ac: PE[k[4]][1], due: k[5], dc: late ? '#B91C1C' : '#3D4550', hasSub: !!k[7], sub: k[7], href: k[8], open: function () { self.setState({ sheet: k[0] }); } };
+    });
+    const cur = C.filter(function (c) { return c[0] === col; })[0];
+    const card = K.filter(function (k) { return k[0] === sh; })[0];
+    const moveOpts = C.map(function (c) {
+      const isCur = card ? where(card) === c[0] : false;
+      return { n: c[1], dot: c[2], cur: isCur, note: isCur ? 'อยู่ตอนนี้' : (c[0] === 'done' && card && card[7] && card[7].split('/')[0] !== card[7].split('/')[1] ? 'Sub-task ยังไม่ครบ' : ''),
+        pick: function () { const m = Object.assign({}, mv); const from = where(card); m[card[0]] = c[0]; self.setState({ mv: m, sheet: '', last: { k: card[0], from: from, to: c[1] } }); } };
+    });
+    return {
+      cols: cols, cards: cards, empty: cards.length === 0, overWip: cur[3] > 0 && cnt(col) > cur[3], wip: cur[3],
+      sheet: !!card, sheetTitle: card ? card[0] + ' ' + card[2] : '', moveOpts: moveOpts, close: function () { self.setState({ sheet: '' }); },
+      hasToast: !!last, toast: last ? 'ย้าย ' + last.k + ' ไป ' + last.to + ' แล้ว' : '',
+      undo: function () { const m = Object.assign({}, mv); if (last) m[last.k] = last.from; self.setState({ mv: m, last: null }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

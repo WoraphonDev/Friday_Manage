@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Import Excel and plan changes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.page{max-width:1320px;margin:0 auto;padding:20px 24px 48px;display:flex;flex-direction:column;gap:16px}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.muted{color:#5F6873}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.ttab{min-height:44px;padding:0 16px;border:0;border-bottom:2px solid transparent;background:transparent;font:inherit;font-weight:500;color:#56606B;cursor:pointer}
+.ttab[aria-selected="true"]{color:#1D4ED8;border-bottom-color:#1D4ED8;font-weight:700}
+.st{display:flex;align-items:center;gap:8px;padding:8px 12px;border:0;background:transparent;border-radius:8px;font:inherit;cursor:pointer;color:#5F6873}
+.st.on{background:#EEF2FF;color:#1D4ED8;font-weight:700}
+.sn{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid #C3CAD3;background:#fff}
+.sn.on{background:#1D4ED8;border-color:#1D4ED8;color:#fff}.sn.done{background:#15803D;border-color:#15803D;color:#fff}
+.kp{background:#F8F9FB;border-radius:10px;padding:10px 14px}
+.kp b{display:block;font-size:22px;line-height:1.2}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.chip[aria-pressed="true"]{background:#1B1F24;border-color:#1B1F24;color:#fff}
+.vr{display:grid;grid-template-columns:28px 54px 150px minmax(0,1fr) minmax(220px,1.1fr) 150px;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid #F1F3F5;font-size:13px}
+.vr.h{font-size:12px;font-weight:700;color:#5F6873;background:#F8F9FB}
+.ic{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff}
+.mp{display:grid;grid-template-columns:190px 24px 220px minmax(0,1fr);gap:10px;align-items:center;padding:8px 16px;border-bottom:1px solid #F1F3F5;font-size:13px}
+.in{min-height:34px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%}
+.ch{display:grid;grid-template-columns:54px minmax(0,1.4fr) 110px minmax(0,1fr) minmax(0,1fr) 90px;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid #F1F3F5;font-size:13px}
+.ch.h{font-size:12px;font-weight:700;color:#5F6873;background:#F8F9FB}
+.old{color:#5F6873;text-decoration:line-through}
+.new{background:#FEF3C7;color:#78350F;font-weight:700;border-radius:4px;padding:0 4px}
+@media(max-width:900px){.vr{grid-template-columns:28px 54px minmax(0,1fr)}.vr .hs{display:none}.ch{grid-template-columns:54px minmax(0,1fr) 110px}.ch .hs{display:none}.mp{grid-template-columns:1fr 1fr}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<span style="flex:1"></span>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div class="page">
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap">
+<div><div class="muted" style="font-size:12px">Projects / Development Plan 2026-11</div><h1 style="margin:2px 0 0;font-size:24px">Import / Export Excel</h1><div class="muted">นำแผนจาก Excel เข้า Friday Manage และติดตามว่าแผนถูกแก้ไขตรงไหน เทียบกับแผนตั้งต้น (Baseline)</div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button">ดาวน์โหลด Template</button><button class="btn" type="button">Export Excel (พร้อมสี)</button><a class="btn" href="Table.dc.html">กลับไปที่ Table</a></div>
+</div>
+
+<div role="tablist" aria-label="ส่วน" style="display:flex;gap:4px;border-bottom:1px solid #E4E7EB">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="2"><button class="ttab" type="button" role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}">{{t.n}}</button></sc-for>
+</div>
+
+<sc-if value="{{isImport}}" hint-placeholder-val="{{ true }}">
+<nav class="card" aria-label="ขั้นตอน" style="display:flex;gap:4px;padding:6px;flex-wrap:wrap">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="4"><button class="{{s.cls}}" type="button" onClick="{{s.go}}" aria-current="{{s.cur}}"><span class="{{s.ncls}}">{{s.mark}}</span>{{s.n}}</button></sc-for>
+</nav>
+
+<sc-if value="{{s1}}" hint-placeholder-val="{{ false }}">
+<section class="card" style="padding:20px;display:flex;flex-direction:column;gap:16px">
+<div style="border:2px dashed #93B4F5;background:#F8FAFF;border-radius:12px;padding:22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+<span style="width:48px;height:48px;border-radius:10px;background:#DCFCE7;color:#166534;font-weight:700;display:flex;align-items:center;justify-content:center">XLSX</span>
+<div style="flex:1 1 260px"><b>Development Plan 2026-11 (2026-11-05).xlsx</b><div class="muted" style="font-size:13px">230 KB · ชีต <b>Table</b> · 334 แถว (+ ชีต Holidays) · อัปโหลดเมื่อสักครู่</div></div>
+<select class="in" aria-label="เลือกชีต" style="width:auto"><option>Dev Plan V.2</option><option>Dev Plan V.1</option><option>Summary</option></select>
+<button class="btn" type="button">เปลี่ยนไฟล์</button>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
+<label class="card" style="padding:14px;display:flex;gap:10px;align-items:flex-start;border-color:#1D4ED8;box-shadow:0 0 0 1px #1D4ED8"><input type="radio" name="mode" checked style="margin-top:4px"><span><b>นำเข้าเป็นโปรเจกต์ใหม่</b><span class="muted" style="display:block;font-size:13px">สร้าง Module, Sprint และงานทั้งหมดตามไฟล์</span></span></label>
+<label class="card" style="padding:14px;display:flex;gap:10px;align-items:flex-start"><input type="radio" name="mode" style="margin-top:4px"><span><b>อัปเดตโปรเจกต์เดิม</b><span class="muted" style="display:block;font-size:13px">จับคู่งานด้วยคอลัมน์ No. · แถวที่ค่าเปลี่ยนจะถูกบันทึกเป็น "การแก้ไขแผน"</span></span></label>
+</div>
+<div style="display:flex;justify-content:flex-end"><button class="btn pri" type="button" onClick="{{toStep2}}">ถัดไป: จับคู่คอลัมน์ →</button></div>
+</section>
+</sc-if>
+
+<sc-if value="{{s2}}" hint-placeholder-val="{{ false }}">
+<section class="card">
+<div style="padding:14px 16px;border-bottom:1px solid #EEF0F3;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>จับคู่คอลัมน์ Excel กับฟิลด์ใน Friday Manage</b><span class="pill" style="background:#DCFCE7;color:#166534">จับคู่อัตโนมัติ 16 / 16</span></div>
+<div class="mp muted" style="font-weight:700;font-size:12px;background:#F8F9FB"><span>คอลัมน์ใน Excel</span><span></span><span>ฟิลด์</span><span>ตัวอย่างค่าจากแถวแรก</span></div>
+<sc-for list="{{maps}}" as="m" hint-placeholder-count="16">
+<div class="mp"><b>{{m.x}}</b><span class="muted" aria-hidden="true">→</span><select class="in" aria-label="ฟิลด์สำหรับ {{m.x}}"><option>{{m.f}}</option><option>ไม่นำเข้า</option></select><span class="muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.v}}</span></div>
+</sc-for>
+<div style="padding:12px 16px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:13px">
+<span><b>Status:</b> Not Start → To do · In Progress → In progress · Done → Done</span>
+<span><b>Size:</b> XS 1 · S 3 · M 5 · L 8 · XL 12 Man-Day</span>
+<span><b>Dev หลายคน:</b> Man-Day เป็นของทั้งทีม แบ่งเท่ากันใน Workload</span>
+<span style="flex:1"></span><button class="btn pri" type="button" onClick="{{toStep3}}">ถัดไป: ตรวจสอบข้อมูล →</button>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{s3}}" hint-placeholder-val="{{ true }}">
+<section class="card" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+<div class="kp"><span class="muted" style="font-size:12px">แถว</span><b>334</b></div>
+<div class="kp"><span class="muted" style="font-size:12px">Module</span><b>11</b></div>
+<div class="kp"><span class="muted" style="font-size:12px">กลุ่มงาน (Phase)</span><b>60</b></div>
+<div class="kp"><span class="muted" style="font-size:12px">Man-Day รวม</span><b>944</b></div>
+<div class="kp"><span class="muted" style="font-size:12px">Dev / BA</span><b>7 / 8</b></div>
+<div class="kp"><span class="muted" style="font-size:12px">ช่วงแผน</span><b style="font-size:15px">5 พ.ย. 69 – 21 เม.ย. 70</b></div>
+</section>
+<section class="card">
+<div style="padding:12px 16px;border-bottom:1px solid #EEF0F3;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<sc-for list="{{chips}}" as="c" hint-placeholder-count="5"><button class="chip" type="button" aria-pressed="{{c.on}}" onClick="{{c.pick}}"><span style="width:8px;height:8px;border-radius:50%;background:{{c.c}}"></span>{{c.n}} · {{c.k}}</button></sc-for>
+<span style="flex:1"></span><button class="btn" type="button">แก้ไขใน Excel แล้วอัปโหลดใหม่</button>
+</div>
+<div class="vr h"><span></span><span>No.</span><span class="hs">Module</span><span>งาน</span><span>ผลตรวจ</span><span class="hs">แก้ไข</span></div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+<div class="vr">
+<span class="ic" style="background:{{r.c}}" role="img" aria-label="{{r.lv}}">{{r.sym}}</span>
+<span class="mono">#{{r.no}}</span>
+<span class="hs" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.m}}</span>
+<span style="min-width:0"><span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500">{{r.t}}</span><span class="muted" style="font-size:12px">{{r.meta}}</span></span>
+<span>{{r.msg}}</span>
+<span class="hs">{{r.fix}}</span>
+</div>
+</sc-for>
+<sc-if value="{{hasMore}}" hint-placeholder-val="{{ false }}"><div class="muted" style="padding:12px 16px;font-size:13px">และอีก {{more}} แถวที่พร้อมนำเข้า · ตารางโหลดทีละส่วนเมื่อเลื่อน</div></sc-if>
+<div style="padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap"><button class="btn" type="button" onClick="{{toStep2}}">← ย้อนกลับ</button><button class="btn pri" type="button" onClick="{{toStep4}}">ถัดไป: ยืนยัน →</button></div>
+</section>
+</sc-if>
+
+<sc-if value="{{s4}}" hint-placeholder-val="{{ false }}">
+<section class="card" style="padding:20px;display:flex;flex-direction:column;gap:16px">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+<div><b>สิ่งที่จะสร้าง</b><ul style="margin:6px 0 0;padding-left:20px;line-height:1.9"><li>โปรเจกต์ <b>Development Plan 2026-11</b></li><li>11 Module · 60 กลุ่มงาน (Phase) จากคอลัมน์ Sprint</li><li>Sprint 2 สัปดาห์ของทั้งโปรเจกต์ ตั้งแยกได้ภายหลังในหน้า Backlog</li><li>310 งานลงแผน + 23 งานเข้า Backlog (ข้าม 1 แถวที่ยังต้องแก้)</li><li>Plan Start / Plan End ตามไฟล์ · นับ จ.–ศ. ไม่รวมวันหยุด ธปท.</li></ul></div>
+<div><b>จับคู่คนในไฟล์กับสมาชิก</b>
+<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;font-size:13px">
+<sc-for list="{{people}}" as="p" hint-placeholder-count="6"><div style="display:grid;grid-template-columns:90px 50px minmax(0,1fr);gap:8px;align-items:center"><b>{{p.n}}</b><span class="pill" style="background:#EEF0F3;color:#3D4550">{{p.r}}</span><select class="in" aria-label="จับคู่ {{p.n}}" style="min-height:30px"><option>{{p.m}}</option><option>เชิญด้วยอีเมล…</option></select></div></sc-for>
+<span class="muted">+ อีก 9 คน (BA) · คนที่ยังไม่เป็นสมาชิกจะได้รับคำเชิญ</span>
+</div></div>
+</div>
+<label style="display:flex;gap:10px;align-items:flex-start;background:#F8FAFF;border:1px solid #DBEAFE;border-radius:10px;padding:12px"><input type="checkbox" checked style="width:18px;height:18px;margin-top:2px"><span><b>ตั้งแผนนี้เป็น Baseline v1</b><span class="muted" style="display:block;font-size:13px">ใช้เทียบ Plan กับ Actual ใน Gantt และบันทึกทุกการแก้ไขแผนหลังจากนี้ในแท็บ "การแก้ไขแผน"</span></span></label>
+<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn" type="button" onClick="{{toStep3}}">← ย้อนกลับ</button><a class="btn pri" href="Table.dc.html">นำเข้า 301 งาน</a></div>
+</section>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{isChanges}}" hint-placeholder-val="{{ false }}">
+<section class="card" style="padding:16px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+<div style="flex:1 1 300px"><b>เทียบกับ Baseline v1</b> <span class="muted">· นำเข้าเมื่อ 5 พ.ย. 2026 โดย Mick</span><div class="muted" style="font-size:13px">แก้ไขแล้ว 4 งาน · กระทบวันจบ 1 Module</div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button">คัดลอกรายการที่แก้ไข</button><button class="btn" type="button">Export Excel (ไฮไลต์จุดที่แก้)</button><button class="btn pri" type="button">ตั้งเป็น Baseline v2…</button></div>
+</section>
+<section class="card">
+<div style="padding:12px 16px;border-bottom:1px solid #EEF0F3"><b>วันจบของแต่ละ Module: แผน vs คาดการณ์</b></div>
+<sc-for list="{{mods}}" as="m" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:minmax(0,1fr) 120px 120px 110px;gap:10px;padding:10px 16px;border-bottom:1px solid #F1F3F5;font-size:13px;align-items:center"><b>{{m.n}}</b><span><span class="muted">แผน</span> {{m.p}}</span><span><span class="muted">คาด</span> {{m.f}}</span><span class="pill" style="background:{{m.bg}};color:{{m.fg}};justify-self:start">{{m.v}}</span></div></sc-for>
+</section>
+<section class="card">
+<div class="ch h"><span>No.</span><span>งาน</span><span>ฟิลด์</span><span>เดิม → ใหม่</span><span class="hs">เหตุผล / ผลกระทบ</span><span class="hs">โดย</span></div>
+<sc-for list="{{changes}}" as="c" hint-placeholder-count="4">
+<div class="ch">
+<span class="mono">#{{c.no}}</span>
+<span style="min-width:0"><span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500">{{c.t}}</span><span class="muted" style="font-size:12px">{{c.m}}</span></span>
+<span>{{c.f}}</span>
+<span><span class="old">{{c.a}}</span> → <span class="new">{{c.b}}</span></span>
+<span class="hs" style="font-size:13px">{{c.why}}<span class="muted" style="display:block;font-size:12px">{{c.impact}}</span></span>
+<span class="hs muted" style="font-size:12px">{{c.by}}<br>{{c.when}}</span>
+</div>
+</sc-for>
+<div class="muted" style="padding:12px 16px;font-size:12px">ทุกการแก้ Plan Start / Man-Day / Plan End / Dev ถูกบันทึกอัตโนมัติ · การแก้หลัง Baseline ต้องใส่เหตุผล · Actual Start / End บันทึกเมื่องานเปลี่ยนเป็น In progress / Done</div>
+</section>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  state = { tab: 'import', step: 3, f: 'issue' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const tab = st.tab || 'import', step = st.step || 3, f = st.f || 'issue';
+    const tabs = [['import', 'นำเข้า Excel'], ['changes', 'การแก้ไขแผน (Plan vs Baseline)']].map(function (t) { return { n: t[1], on: tab === t[0] ? 'true' : 'false', pick: function () { self.setState({ tab: t[0] }); } }; });
+    const steps = ['อัปโหลดไฟล์', 'จับคู่คอลัมน์', 'ตรวจสอบข้อมูล', 'ยืนยันนำเข้า'].map(function (n, i) {
+      const k = i + 1;
+      return { n: n, mark: k < step ? '✓' : String(k), cls: k === step ? 'st on' : 'st', ncls: k < step ? 'sn done' : (k === step ? 'sn on' : 'sn'), cur: k === step ? 'step' : 'false', go: function () { self.setState({ step: k }); } };
+    });
+    const maps = [['No.', 'ลำดับ (ใช้จับคู่ตอนอัปเดต)', '1'], ['Module', 'Module', 'Credit Line'], ['Sprint', 'กลุ่มงาน (Phase) ใน Module', 'Sprint 0 : Foundation & Setup'], ['Task', 'ชื่องาน', 'Database 42 tables (21 คู่ Draft/Master)'], ['Screen', 'Screen ID', '-'], ['FR', 'Requirement (FR / NFR)', 'NFR-09'], ['BA', 'BA', 'Donut'], ['Status', 'Status', 'Not Start → To do'], ['Dev', 'Dev (หลายคน คั่นด้วย ,)', 'Zo'], ['Size', 'Size', 'S'], ['Man-Day', 'Man-Day (รวมทั้งทีม)', '3'], ['Plan Start', 'Plan Start', '5 พ.ย. 2026'], ['Plan End', 'Plan End', '9 พ.ย. 2026'], ['Actual Start', 'Actual Start', '—'], ['Actual End', 'Actual End', '—'], ['Remark', 'หมายเหตุ', '—']].map(function (m) { return { x: m[0], f: m[1], v: m[2] }; });
+    const LV = { err: ['ต้องแก้', '#B91C1C', '!'], warn: ['เตือน', '#B45309', '!'], tip: ['แนะนำ', '#1D4ED8', 'i'], ok: ['พร้อม', '#15803D', '✓'] };
+    const V = [["err", 266, "Campaign", "Database 17 tables (FPWKCM01–08, FPMSCM01–08, FPTRCM", "S · 3 MD", "ไม่มี BA", "เลือก BA…"], ["warn", 312, "Interface FP/HP/KL", "23 แถว (No. 312–334)", "ไม่มี Plan Start / End และ BA", "นำเข้าเป็น Backlog ยังไม่ลงแผน", "นำเข้าเป็น Backlog"], ["warn", 296, "OEM / Dealer Portal", "จัดการผู้ใช้ Portal (สร้าง, ระงับ, รีเซ็ตรหัสผ่าน) ส", "BA: KL", "ไม่พบ \"KL\" ในรายชื่อสมาชิก", "จับคู่ / เชิญ"], ["warn", 327, "Interface FP/HP/KL", "Direct Debit Result Report ผลหักบัญชี Direct Debit ของ FP", "Status ว่าง", "ไม่มีค่า Status", "ใช้ To do"], ["warn", 29, "Credit Line", "คำนวณมูลค่าหลักประกัน & วงเงินตามสัดส่วน", "Plan Start 7 ธ.ค. (ชดเชยวันพ่อแห่งชาติ)", "Plan Start ตรงวันหยุด → เริ่มนับวันทำงานถัดไป", "ใช้วันที่ระบบคำนวณ"], ["warn", 32, "Credit Line", "เอกสารประกอบ: Upload / View / Download / Delete (≤ 2", "Plan Start 10 ธ.ค. (วันรัฐธรรมนูญ)", "Plan Start ตรงวันหยุด → เริ่มนับวันทำงานถัดไป", "ใช้วันที่ระบบคำนวณ"], ["warn", 44, "Credit Line", "แจ้งเตือน: สร้างสำเร็จ, หลักประกันใกล้หมดอายุ, ถูกระ", "Plan Start 31 ธ.ค. (วันสิ้นปี)", "Plan Start ตรงวันหยุด → เริ่มนับวันทำงานถัดไป", "ใช้วันที่ระบบคำนวณ"], ["warn", 45, "Credit Line", "Inquiry วงเงิน (สถานะ, ประเภท, วันที่, ลูกค้า, เลขที", "Plan Start 1 ม.ค. (วันขึ้นปีใหม่)", "Plan Start ตรงวันหยุด → เริ่มนับวันทำงานถัดไป", "ใช้วันที่ระบบคำนวณ"], ["warn", 157, "BFC, Repayment, Checkstock", "9 แถวใน BFC, Repayment, Checkstock", "Sprint: \"Database 4 tables (FPMSV…\"", "ค่าในคอลัมน์ Sprint ดูเหมือนชื่องาน", "เปลี่ยนเป็น Sprint 0 ทั้ง 9 แถว"], ["tip", 13, "Credit Line", "Workflow : ส่งงาน/คืนงาน/ส่งกลับแก้ไข ข้าม BD·LO·LC·", "XL · 12 MD · Kaijeaw", "งาน XL ควรแตกเป็น Sub-task เพื่อติดตามได้ละเอียดขึ้น", "แตกงานหลังนำเข้า"], ["tip", 247, "Finance (GL)", "Database: 3 Master + Journal header/detail, Posting ", "XL · 12 MD · Top, Zo", "งาน XL ควรแตกเป็น Sub-task เพื่อติดตามได้ละเอียดขึ้น", "แตกงานหลังนำเข้า"], ["ok", 1, "Credit Line", "Database 42 tables (21 คู่ Draft/Master)", "S · 3 MD · Zo · 5 พ.ย.–9 พ.ย.", "พร้อมนำเข้า", "—"], ["ok", 3, "Credit Line", "Role & Permission + Field-config ตามประเภทวงเงิน", "S · 3 MD · Pond, Kaijeaw, P'Tum, Top · 5 พ.ย.–9 พ.ย.", "Man-Day แบ่ง 4 คน = 0.75 MD/คน", "—"], ["ok", 4, "Credit Line", "UX/UI 17 หน้าจอตาม Design System", "L · 8 MD · Kaijeaw · 5 พ.ย.–16 พ.ย.", "พร้อมนำเข้า", "—"]];
+    const show = { all: ['err', 'warn', 'tip', 'ok'], issue: ['err', 'warn', 'tip'], err: ['err'], warn: ['warn'], ok: ['ok'] }[f];
+    const rows = V.filter(function (v) { return show.indexOf(v[0]) >= 0; }).map(function (v) { return { lv: LV[v[0]][0], c: LV[v[0]][1], sym: LV[v[0]][2], no: v[1], m: v[2], t: v[3], meta: v[4], msg: v[5], fix: v[6] }; });
+    const CH = [["issue", "มีประเด็น", "#B45309", 47], ["err", "ต้องแก้", "#B91C1C", 1], ["warn", "เตือน", "#B45309", 44], ["ok", "พร้อม", "#15803D", 287], ["all", "ทั้งหมด", "#5F6873", 334]];
+    const chips = CH.map(function (c) { return { n: c[1], c: c[2], k: c[3], on: f === c[0] ? 'true' : 'false', pick: function () { self.setState({ f: c[0] }); } }; });
+    const okShown = rows.filter(function (r) { return r.sym === '✓'; }).length;
+    const people = [['Pond', 'Dev', 'pond@… (เชิญใหม่)'], ['Kaijeaw', 'Dev', 'kaijeaw@… (เชิญใหม่)'], ['Top', 'Dev', 'top@… (เชิญใหม่)'], ['Tung', 'Dev', 'tung@… (เชิญใหม่)'], ['Zo', 'Dev', 'zo@… (เชิญใหม่)'], ['P’Tum', 'Dev', 'tum@… (เชิญใหม่)']].map(function (p) { return { n: p[0], r: p[1], m: p[2] }; });
+    const mods = [['Credit Line', '26 ม.ค. 70', '29 ม.ค. 70', '+3 วันทำการ', '#FEE2E2', '#991B1B'], ['Drawdown', '26 มี.ค. 70', '26 มี.ค. 70', 'ตามแผน', '#DCFCE7', '#166534'], ['Pre-Disburse', 'ตามไฟล์', 'ตามแผน', 'ตามแผน', '#DCFCE7', '#166534']].map(function (m) { return { n: m[0], p: m[1], f: m[2], v: m[3], bg: m[4], fg: m[5] }; });
+    const changes = [
+      ['13', 'Workflow : ส่งงาน/คืนงาน/ส่งกลับแก้ไข ข้าม BD·LO·LC·CC', 'Credit Line · Sprint 2', 'Man-Day', '12', '15', 'เพิ่มขั้นตอน CC ตาม SRS ฉบับแก้ไข', 'Plan End 1 ธ.ค. → 4 ธ.ค. · งานต่อจากนี้ใน Sprint 2 เลื่อน +3 วัน', 'Mick', '6 พ.ย. 10:20'],
+      ['4', 'UX/UI 17 หน้าจอตาม Design System', 'Credit Line · Sprint 0', 'Dev', 'Kaijeaw', 'Kaijeaw, Zo', 'แบ่งงานลดคอขวดของ Kaijeaw', 'Man-Day ต่อคน 8 → 4 · Plan End ไม่เปลี่ยน', 'Mick', '6 พ.ย. 10:05'],
+      ['60', 'Upload Template Used Car (22 คอลัมน์) + ผลประเมินราคา', 'Drawdown · Sprint 1', 'Plan Start', '6 พ.ย.', '9 พ.ย.', 'รอ Template จาก BA', 'Plan End 10 พ.ย. → 11 พ.ย.', 'Pond', '5 พ.ย. 17:40'],
+      ['1', 'Database 42 tables (21 คู่ Draft/Master)', 'Credit Line · Sprint 0', 'Actual Start', '—', '5 พ.ย.', 'เริ่มงานตามแผน (บันทึกอัตโนมัติ)', 'สถานะ To do → In progress', 'Zo', '5 พ.ย. 09:42']
+    ].map(function (c) { return { no: c[0], t: c[1], m: c[2], f: c[3], a: c[4], b: c[5], why: c[6], impact: c[7], by: c[8], when: c[9] }; });
+    return {
+      tabs: tabs, steps: steps, maps: maps, rows: rows, chips: chips, people: people, mods: mods, changes: changes,
+      isImport: tab === 'import', isChanges: tab === 'changes', s1: step === 1, s2: step === 2, s3: step === 3, s4: step === 4,
+      hasMore: f === 'ok' || f === 'all', more: 289 - okShown,
+      toStep2: function () { self.setState({ step: 2 }); }, toStep3: function () { self.setState({ step: 3 }); }, toStep4: function () { self.setState({ step: 4 }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

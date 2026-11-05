@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Lead Dashboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.phead{background:#fff;padding:16px 24px 0;border-bottom:1px solid #E4E7EB}
+.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:10px}
+.tab{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;color:#56606B;text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+.tab.on{color:#1D4ED8;border-bottom-color:#1D4ED8;font-weight:600}
+.page{max-width:1360px;margin:0 auto;padding:20px 24px 48px;display:flex;flex-direction:column;gap:16px}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.ch{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid #EEF0F3}
+.ch h2{margin:0;font-size:15px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.muted{color:#5F6873}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.kp{background:#fff;border:1px solid #E4E7EB;border-radius:12px;padding:14px 16px}
+.kp b{display:block;font-size:24px;line-height:1.2}
+.risk{display:flex;gap:12px;align-items:flex-start;padding:12px 18px;border-bottom:1px solid #F1F3F5}
+.lvl{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex:none}
+.hm{display:grid;gap:3px;align-items:center}
+.hc{height:30px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+.mr{display:grid;grid-template-columns:minmax(180px,1.3fr) 56px 60px 110px 120px minmax(260px,2fr);gap:10px;align-items:center;padding:10px 18px;border-bottom:1px solid #F1F3F5;font-size:13px}
+.mr.h{font-size:12px;font-weight:700;color:#5F6873;background:#F8F9FB}
+.seg{display:inline-flex;border:1px solid #D5DAE0;border-radius:8px;overflow:hidden;background:#fff}
+.seg button{min-height:32px;padding:0 12px;border:0;background:transparent;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+@media(max-width:900px){.mr{grid-template-columns:minmax(0,1fr) 56px 60px}.mr .hs{display:none}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<span style="flex:1"></span>
+<a href="Bell.dc.html" style="color:#E2E8F0;font-size:13px">การแจ้งเตือน</a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<header class="phead">
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<div style="width:32px;height:32px;border-radius:8px;background:#334155;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">DP</div>
+<h1 style="margin:0;font-size:22px">Development Plan 2026-11</h1>
+<span class="pill" style="background:#EEF0F3;color:#3D4550">นำเข้าจาก Excel (2026-11-05) · Baseline v1</span>
+<span class="pill" style="background:#FEE2E2;color:#991B1B">Off track (ตามแผน capacity)</span>
+</div>
+<div style="display:flex;gap:8px"><a class="btn" href="Reports.dc.html">สร้างรายงานประจำสัปดาห์</a><a class="btn" href="ImportExcel.dc.html">Import / Export</a></div>
+</div>
+<nav class="tabs" aria-label="Project views">
+<a class="tab on" href="LeadDashboard.dc.html">ภาพรวม (Lead)</a><a class="tab" href="Reports.dc.html">Reports</a><a class="tab" href="Backlog.dc.html">Backlog</a><a class="tab" href="Table.dc.html">Table</a><a class="tab" href="Kanban.dc.html">Kanban</a><a class="tab" href="Gantt.dc.html">Gantt</a><a class="tab" href="Members.dc.html">Members</a><a class="tab" href="ProjectSettings.dc.html">Settings</a>
+</nav>
+</header>
+
+<div class="page">
+<div class="muted" style="font-size:13px">ข้อมูลจริงจาก Development Plan 2026-11 · สถานะจำลอง ณ พ. 2 ธ.ค. 2569 · ตัวเลขแผนมาจากไฟล์จริง ส่วนสถานะงานเป็นการจำลองเพื่อทดลอง UI</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+<div class="kp"><span class="muted" style="font-size:13px">งานทั้งหมด</span><b>334</b><span class="muted" style="font-size:12px">11 Module · BA 8 · Dev 6 (+Ton 1 งาน)</span></div>
+<div class="kp"><span class="muted" style="font-size:13px">Man-Day ตามแผน</span><b>944</b><span class="muted" style="font-size:12px">XS 120 · S 154 · M 42 · L 16 · XL 2</span></div>
+<div class="kp"><span class="muted" style="font-size:13px">ช่วงแผน</span><b>≈ 24 สัปดาห์</b><span class="muted" style="font-size:12px">5 พ.ย. 69 – 21 เม.ย. 70</span></div>
+<div class="kp" style="border-color:#FCA5A5;background:#FEF2F2"><span class="muted" style="font-size:13px">ต้องใช้จริงตาม capacity</span><b style="color:#B91C1C">≈ 29 สัปดาห์</b><span style="font-size:12px;color:#7F1D1D">875 MD ÷ 30 MD/สัปดาห์ (Dev 6 คน) · ยังไม่หักวันหยุด</span></div>
+<div class="kp"><span class="muted" style="font-size:13px">เริ่มสัปดาห์นี้ / หน้า</span><b>17 / 14 งาน</b><span class="muted" style="font-size:12px">46 MD / 37 MD · Overdue 7</span></div>
+</div>
+
+<section class="card">
+<div class="ch"><h2>ความเสี่ยงที่ระบบพบในแผน</h2><span class="pill" style="background:#FEE2E2;color:#991B1B">5</span></div>
+<sc-for list="{{risks}}" as="r" hint-placeholder-count="5">
+<div class="risk"><span class="lvl" style="background:{{r.c}}">{{r.i}}</span><div style="flex:1;min-width:0"><b>{{r.t}}</b><div class="muted" style="font-size:13px">{{r.d}}</div></div><a class="btn" href="{{r.href}}" style="min-height:32px">{{r.btn}}</a></div>
+</sc-for>
+</section>
+
+<section class="card">
+<div class="ch"><h2>Workload Dev รายสัปดาห์ <span class="muted" style="font-weight:500">· Man-Day (capacity 5 / คน / สัปดาห์)</span></h2>
+<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+<div style="display:flex;gap:10px;font-size:12px;flex-wrap:wrap" class="muted">
+<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:14px;height:14px;border-radius:3px;background:#DBEAFE"></span>≤ 80%</span>
+<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:14px;height:14px;border-radius:3px;background:#60A5FA"></span>80–100%</span>
+<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:14px;height:14px;border-radius:3px;background:#FDBA74"></span>เกิน 1–2 เท่า</span>
+<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:14px;height:14px;border-radius:3px;background:#B91C1C"></span>เกิน 2 เท่าขึ้นไป</span>
+</div>
+</div></div>
+<div style="overflow-x:auto;padding:14px 18px">
+<div style="min-width:1120px;display:flex;flex-direction:column;gap:3px">
+<div class="hm" style="grid-template-columns:110px repeat(24,minmax(0,1fr)) 64px">
+<span></span>
+<sc-for list="{{weeks}}" as="w" hint-placeholder-count="24"><span style="font-size:10px;text-align:center;color:{{w.c}};font-weight:{{w.fw}}">{{w.l}}</span></sc-for>
+<span style="font-size:11px;text-align:right" class="muted">สูงสุด</span>
+</div>
+<sc-for list="{{heat}}" as="h" hint-placeholder-count="6">
+<div class="hm" style="grid-template-columns:110px repeat(24,minmax(0,1fr)) 64px">
+<span style="font-weight:600;font-size:13px">{{h.n}}<span class="muted" style="display:block;font-size:11px;font-weight:500">{{h.k}} งาน</span></span>
+<sc-for list="{{h.cells}}" as="c" hint-placeholder-count="24"><span class="hc" style="background:{{c.bg}};color:{{c.fg}}" title="{{c.tip}}">{{c.v}}</span></sc-for>
+<span style="text-align:right;font-weight:700;color:{{h.pc}}">{{h.peak}}×</span>
+</div>
+</sc-for>
+</div>
+<div class="muted" style="font-size:12px;margin-top:10px">คำนวณจาก Plan Start–End และ Man-Day ในไฟล์ · งานที่มีหลาย Dev แบ่ง Man-Day เท่ากัน · ไม่รวมงานของ BA · คลิกช่องเพื่อดูงานในสัปดาห์นั้นและย้ายให้คนอื่น</div>
+</div>
+</section>
+
+<section class="card" id="mods">
+<div class="ch"><h2>Module</h2><div class="seg" role="group" aria-label="เรียง"><button type="button" aria-pressed="{{byStart}}" onClick="{{sortStart}}">ตามวันเริ่ม</button><button type="button" aria-pressed="{{byMd}}" onClick="{{sortMd}}">ตาม Man-Day</button></div></div>
+<div class="mr h"><span>Module</span><span>งาน</span><span>MD</span><span class="hs">BA</span><span class="hs">Dev หลัก</span><span class="hs" style="display:flex;justify-content:space-between"><span>พ.ย.</span><span>ธ.ค.</span><span>ม.ค.</span><span>ก.พ.</span><span>มี.ค.</span><span>เม.ย.</span></span></div>
+<sc-for list="{{mods}}" as="m" hint-placeholder-count="11">
+<div class="mr">
+<b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.n}}</b>
+<span>{{m.k}}</span>
+<span style="font-weight:700">{{m.md}}</span>
+<span class="hs muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{m.ba}}</span>
+<span class="hs" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{m.devC}}">{{m.dev}}</span>
+<span class="hs" style="position:relative;height:16px;background:repeating-linear-gradient(to right,#F1F3F5 0 1px,transparent 1px 16.66%)" title="{{m.range}}"><span style="position:absolute;top:3px;height:10px;border-radius:5px;left:{{m.l}}%;width:{{m.w}}%;background:#3B82F6"></span><span style="position:absolute;top:0;bottom:0;left:{{todayL}}%;width:2px;background:#DC2626"></span></span>
+</div>
+</sc-for>
+<div class="muted" style="padding:10px 18px;font-size:12px">สีแดงในคอลัมน์ Dev หลัก = Module ที่ Dev คนเดียวทำเกิน 85% ของงาน (ถ้าคนนั้นลาหรือติดงานอื่น Module จะหยุดทั้งหมด)</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1900}}'>
+class Component extends DCLogic {
+  state = { sort: 'start' };
+  renderVals() {
+    const self = this;
+    const sort = (this.state && this.state.sort) || 'start';
+    const L = {"Kaijeaw": [26.2, 28.6, 17.0, 28.0, 16.0, 12.0, 12.0, 12.0, 6.0, 18.0, 11.0, 27.0, 10.0, 4.0, 5.0, 5.0, 4.0, 5.0, 5.0, 1.0, 0, 0, 0, 0], "Pond": [8.8, 16.9, 8.5, 4.5, 13.0, 12.0, 9.5, 7.0, 8.0, 6.0, 12.0, 5.0, 9.0, 11.0, 7.0, 7.5, 11.0, 24.0, 14.5, 8.0, 4.0, 0, 0, 0], "Tung": [0, 3.5, 5.0, 4.5, 6.5, 4.5, 7.0, 6.0, 0, 9.0, 10.0, 10.0, 8.5, 16.0, 15.0, 12.0, 11.5, 10.0, 9.0, 10.0, 10.0, 0, 0, 0], "Top": [2.2, 4.1, 11.5, 4.5, 2.0, 2.0, 3.0, 2.5, 3.0, 1.7, 2.3, 4.5, 6.0, 6.8, 5.5, 6.3, 8.5, 7.5, 8.0, 5.0, 6.5, 9.5, 6.5, 4.0], "Zo": [10.7, 6.3, 0, 2.5, 2.5, 2.0, 3.0, 2.5, 0, 1.7, 2.3, 3.5, 2.5, 1.8, 2.5, 2.8, 1.5, 5.5, 8.0, 5.0, 6.5, 9.5, 6.5, 4.0], "P'Tum": [1.2, 0.6, 1.0, 5.0, 1.0, 0.5, 1.5, 1.0, 0, 1.7, 1.3, 0, 1.0, 0.3, 2.0, 2.3, 1.5, 0, 2.5, 0, 0, 0, 0, 0]};
+    const K = {"Kaijeaw": 88, "Pond": 105, "Tung": 76, "Top": 69, "Zo": 52, "P'Tum": 18};
+    const base = new Date(2026, 10, 2);
+    const TM = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const weeks = [];
+    for (let i = 0; i < 24; i++) { const d = new Date(base.getTime() + i * 7 * 86400000); weeks.push({ l: d.getDate() + '/' + (d.getMonth() + 1), c: i === 4 ? '#DC2626' : '#5F6873', fw: i === 4 ? 700 : 500 }); }
+    const cell = function (v) {
+      const r = v / 5;
+      if (v === 0) return { bg: '#F6F7F9', fg: '#94A3B8', v: '' };
+      if (r <= 0.8) return { bg: '#DBEAFE', fg: '#1E3A8A', v: v };
+      if (r <= 1) return { bg: '#60A5FA', fg: '#0B1F4D', v: v };
+      if (r <= 2) return { bg: '#FDBA74', fg: '#7C2D12', v: v };
+      return { bg: '#B91C1C', fg: '#fff', v: v };
+    };
+    const heat = Object.keys(L).map(function (n) {
+      const peak = Math.max.apply(null, L[n]) / 5;
+      return { n: n, k: K[n], peak: peak.toFixed(1), pc: peak > 2 ? '#B91C1C' : (peak > 1 ? '#C2410C' : '#166534'),
+        cells: L[n].map(function (v, i) { const c = cell(Math.round(v * 10) / 10); c.tip = n + ' · สัปดาห์ ' + weeks[i].l + ' · ' + (Math.round(v * 10) / 10) + ' MD / 5'; return c; }) };
+    });
+    const risks = [["!", "#B91C1C", "Kaijeaw: 28.6 MD ในสัปดาห์เดียว (6 เท่าของ capacity) · Overdue 4 งาน", "ทำ Credit Line เกือบทั้งหมด และงานใน Pre-Disburse / Maintain Car · Credit Line Go-live 26 ม.ค. เสี่ยงสูงสุด", "ดู Workload", "Members.dc.html"], ["!", "#B91C1C", "Pond: 24.0 MD ในสัปดาห์ 9–15 พ.ย. และรับ Drawdown 47/61 งาน", "Drawdown กับ Interface HP เป็นของ Pond คนเดียว · ควรแบ่งงานให้ Zo / P’Tum ที่ยังว่าง", "ดูงานของ Pond", "Table.dc.html"], ["!", "#C2410C", "แผนต้องใช้ ≈ 29 สัปดาห์ แต่ช่วงแผนมี ≈ 24 สัปดาห์", "875 MD ที่ลงแผนแล้ว กับ Dev 6 คน (30 MD/สัปดาห์) · ยังไม่รวม Interface FP/HP/KL อีก 69 MD ที่ยังไม่ลงแผน", "สร้างรายงานเสนอ", "Reports.dc.html"], ["i", "#B45309", "Interface FP/HP/KL 23 งานยังไม่มีวันในแผนและไม่มี BA", "อยู่ใน Backlog · ต้องจัดเข้า Sprint ก่อนเริ่ม Drawdown / Repayment ส่วนที่เชื่อม HP", "ดู Backlog", "Backlog.dc.html"], ["i", "#B45309", "ข้อมูลในไฟล์มี 47 แถวที่ควรตรวจ", "BA ว่าง 1 · BA ไม่พบ 1 · Plan Start ตรงวันหยุด 11 · ค่า Sprint ผิดคอลัมน์ 9 · ไม่มีวันในแผน 23 · XL 2", "ดูรายการ", "ImportExcel.dc.html"]].map(function (r) { return { i: r[0], c: r[1], t: r[2], d: r[3], btn: r[4], href: r[5] }; });
+    const M = [["Credit Line", 54, 202, "2026-11-05", "2027-01-26", "Donut", "Kaijeaw 52/54", true], ["Drawdown", 61, 164, "2026-11-05", "2027-03-26", "Naa", "Pond 47 · Kaijeaw 9", false], ["Pre-Disburse", 29, 55, "2026-11-05", "2027-02-25", "Naa", "Pond 21 · Kaijeaw 8", false], ["Maintain Car After Drawdown", 12, 18, "2026-11-05", "2026-11-09", "Naa", "Kaijeaw 11/12", true], ["BFC ใบเรียกเก็บ/ใบแจ้งหนี้", 28, 82, "2026-11-09", "2027-02-08", "P'Nee, P'Oak", "Top 28/28", true], ["Repayment รับชำระเงิน", 30, 75, "2026-11-11", "2027-01-27", "Kookkai", "Tung 30/30", true], ["Checkstock & Collect Car Keys", 32, 78, "2027-01-25", "2027-03-12", "P'Wing", "Tung 32/32", true], ["Finance (GL)", 19, 92, "2027-03-01", "2027-04-21", "P'Oak", "Top 19/19", true], ["Campaign", 25, 62, "2027-02-26", "2027-03-24", "P'Nee", "Pond 24/25", true], ["OEM / Dealer Portal", 21, 47, "2027-01-25", "2027-03-02", "P'Tum, Ton, KL", "Top 18/21", true], ["Interface FP/HP/KL", 23, 69, "2027-04-21", "2027-04-21", "— (ยังไม่มี BA)", "Tung 9 · Pond 6", false]];
+    const t0 = new Date(2026, 10, 2).getTime(), span = new Date(2027, 3, 25).getTime() - t0;
+    const pct = function (s) { const p = s.split('-'); return (new Date(+p[0], +p[1] - 1, +p[2]).getTime() - t0) / span * 100; };
+    const fmt = function (s) { const p = s.split('-'); return (+p[2]) + ' ' + TM[+p[1] - 1] + ' ' + (String(+p[0] + 543).slice(2)); };
+    let mods = M.map(function (m) { const l = pct(m[3]), r = pct(m[4]); return { n: m[0], k: m[1], md: m[2], ba: m[5], dev: m[6], devC: m[7] ? '#B91C1C' : '#3D4550', l: l.toFixed(2), w: Math.max(1, r - l).toFixed(2), range: fmt(m[3]) + ' – ' + fmt(m[4]), s: m[3] }; });
+    if (sort === 'md') mods = mods.slice().sort(function (a, b) { return b.md - a.md; });
+    return {
+      risks: risks, weeks: weeks, heat: heat, mods: mods, todayL: pct('2026-12-02').toFixed(2),
+      byStart: sort === 'start' ? 'true' : 'false', byMd: sort === 'md' ? 'true' : 'false',
+      sortStart: function () { self.setState({ sort: 'start' }); }, sortMd: function () { self.setState({ sort: 'md' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

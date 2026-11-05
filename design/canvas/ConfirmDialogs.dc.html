@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Confirm Dialogs</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.muted{color:#5F6873}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:0 14px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.danger{background:#B91C1C;border-color:#B91C1C;color:#fff}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.sc{display:flex;flex-direction:column;gap:2px;width:100%;padding:10px 12px;border-radius:10px;border:1px solid transparent;background:transparent;font:inherit;text-align:left;cursor:pointer;color:#1B1F24}
+.sc:hover{background:#F1F3F5}
+.sc[aria-pressed="true"]{background:#EEF2FF;border-color:#C7D2FE}
+.pill{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.dlg{width:min(520px,100%);background:#fff;border-radius:14px;box-shadow:0 24px 64px rgba(15,23,42,.35);display:flex;flex-direction:column}
+.dh{display:flex;gap:12px;padding:20px 20px 0;align-items:flex-start}
+.di{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
+.db{padding:12px 20px 4px 72px;display:flex;flex-direction:column;gap:10px;font-size:14px}
+.df{display:flex;justify-content:flex-end;gap:8px;padding:16px 20px 20px;flex-wrap:wrap}
+.ro{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid #D5DAE0;border-radius:10px;cursor:pointer}
+.ro.on{border-color:#1D4ED8;background:#F8FAFF}
+.in{min-height:38px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%}
+.lst{margin:0;padding-left:18px;color:#3D4550;line-height:1.8;font-size:13px}
+@media(max-width:600px){.db{padding-left:20px}}
+</style>
+</helmet>
+<div style="max-width:1400px;margin:0 auto;padding:22px 24px 40px;display:flex;flex-direction:column;gap:16px">
+<div><h1 style="margin:0;font-size:24px">Dialog ยืนยัน และการเลิกทำ</h1><div class="muted">เลือกสถานการณ์ทางซ้ายเพื่อดู Dialog · ใช้เป็นมาตรฐานเดียวกันทั้งระบบ</div></div>
+<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+<aside class="card" style="flex:1 1 260px;max-width:320px;padding:10px;display:flex;flex-direction:column;gap:4px" aria-label="สถานการณ์">
+<sc-for list="{{list}}" as="s" hint-placeholder-count="7"><button class="sc" type="button" aria-pressed="{{s.on}}" onClick="{{s.pick}}"><b style="font-size:14px">{{s.n}}</b><span class="muted" style="font-size:12px">{{s.lv}}</span></button></sc-for>
+<div style="border-top:1px solid #EEF0F3;margin-top:8px;padding:12px 8px 4px;font-size:13px;display:flex;flex-direction:column;gap:8px">
+<b>ใช้แบบไหนเมื่อไร</b>
+<div><span class="pill" style="background:#DCFCE7;color:#166534">ระดับ 1</span> <b>เลิกทำได้</b> ไม่ต้องถาม ทำเลยแล้วแสดง "เลิกทำ" 10 วินาที เช่น ย้ายสถานะ ลบคอมเมนต์ของตัวเอง</div>
+<div><span class="pill" style="background:#FEF3C7;color:#92400E">ระดับ 2</span> <b>มีผลต่อคนอื่นหรือข้อมูลที่ผูกกัน</b> ถาม 1 ครั้ง บอกผลกระทบเป็นตัวเลข และให้ทางเลือก</div>
+<div><span class="pill" style="background:#FEE2E2;color:#991B1B">ระดับ 3</span> <b>กู้คืนไม่ได้หรือกระทบจำนวนมาก</b> ต้องพิมพ์ยืนยัน</div>
+<div class="muted" style="font-size:12px">ปุ่มยืนยันบอกผลเสมอ เช่น "ลบ 3 งาน" ไม่ใช่ "ตกลง" · Esc และคลิกนอกกรอบ = ยกเลิก · โฟกัสเริ่มที่ปุ่มปลอดภัย</div>
+</div>
+</aside>
+
+<div style="flex:999 1 640px;min-width:0;border-radius:14px;overflow:hidden;border:1px solid #E4E7EB;position:relative;min-height:760px;background:#fff">
+<div aria-hidden="true" style="padding:20px;display:flex;flex-direction:column;gap:10px;opacity:.6">
+<div style="height:24px;width:40%;background:#EEF0F3;border-radius:6px"></div>
+<div style="height:14px;width:70%;background:#F1F3F5;border-radius:6px"></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px"><div style="height:120px;background:#F6F7F9;border-radius:10px"></div><div style="height:120px;background:#F6F7F9;border-radius:10px"></div><div style="height:120px;background:#F6F7F9;border-radius:10px"></div></div>
+<div style="height:300px;background:#F6F7F9;border-radius:10px"></div>
+</div>
+
+<sc-if value="{{showDlg}}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px">
+<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t">
+<div class="dh"><span class="di" style="background:{{d.ib}};color:{{d.ic}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 8v5"></path><path d="M12 16.5v.5"></path><circle cx="12" cy="12" r="9"></circle></svg></span><div style="flex:1"><h2 id="dlg-t" style="margin:0;font-size:17px">{{d.t}}</h2><div class="muted" style="font-size:13px">{{d.sub}}</div></div></div>
+<div class="db">
+
+<sc-if value="{{isDel}}" hint-placeholder-val="{{ true }}">
+<div>งานนี้มีข้อมูลที่ผูกอยู่</div>
+<ul class="lst"><li>Sub-task <b>3</b> รายการ (เสร็จแล้ว 1)</li><li>ไฟล์แนบ <b>2</b> ไฟล์ · คอมเมนต์ <b>5</b> รายการ</li><li>เป็นงานที่ <b>DP-40</b> รออยู่ (Blocks)</li></ul>
+<sc-for list="{{delOpts}}" as="o" hint-placeholder-count="2"><label class="{{o.cls}}"><input type="radio" name="del" checked="{{o.on}}" onChange="{{o.pick}}" style="margin-top:3px"><span><b>{{o.n}}</b><div class="muted" style="font-size:12px">{{o.d}}</div></span></label></sc-for>
+<div class="muted" style="font-size:12px">ย้ายไปถังขยะของโปรเจกต์ · กู้คืนได้ภายใน 30 วัน</div>
+</sc-if>
+
+<sc-if value="{{isLeave}}" hint-placeholder-val="{{ false }}">
+<div>คุณแก้ไข <b>คำอธิบาย</b> และ <b>Acceptance criteria</b> ของ DP-39 แต่ยังไม่ได้บันทึก</div>
+<div class="muted" style="font-size:13px">ระบบเก็บแบบร่างไว้ในเครื่องนี้ 7 วัน ถ้าเลือก "เก็บเป็นแบบร่าง"</div>
+</sc-if>
+
+<sc-if value="{{isBulk}}" hint-placeholder-val="{{ false }}">
+<div>จะลบงานที่เลือกไว้ <b>12 งาน</b> พร้อม Sub-task ทั้งหมด <b>27 รายการ</b> · มี 4 งานที่คนอื่นเป็น Assignee</div>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:600">พิมพ์ <span class="mono">ลบ 12 งาน</span> เพื่อยืนยัน</span><input class="in" type="text" value="{{typed}}" onInput="{{type}}" onChange="{{type}}"></label>
+<div class="muted" style="font-size:12px">กู้คืนได้ภายใน 30 วัน · บันทึกใน Audit log</div>
+</sc-if>
+
+<sc-if value="{{isMember}}" hint-placeholder-val="{{ false }}">
+<div><b>P'Tum</b> ยังมีงานค้างในโปรเจกต์นี้ <b>12 งาน (31 MD)</b> · Sub-task 0 รายการ</div>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:600">โอนงานที่ยังไม่เสร็จให้</span><select class="in"><option>Zo (ว่าง 2.5 MD สัปดาห์นี้)</option><option>Top (ว่าง 3 MD)</option><option>ไม่ระบุผู้รับผิดชอบ</option></select></label>
+<div class="muted" style="font-size:12px">งานที่เสร็จแล้วยังแสดงชื่อ P'Tum ตามเดิม · P'Tum ยังอยู่ใน Workspace และโปรเจกต์อื่น</div>
+</sc-if>
+
+<sc-if value="{{isFile}}" hint-placeholder-val="{{ false }}">
+<div><b>TestReport_DP-526_run1.pdf</b> ถูกอ้างเป็นหลักฐานใน</div>
+<ul class="lst"><li>DP-526 ผลทดสอบ SIT Run #1 (Failed 7/9)</li><li>DP-39 ฟอร์มหลักประกัน 5 ประเภท</li></ul>
+<div style="background:#FEF3C7;color:#92400E;border-radius:8px;padding:8px 10px;font-size:13px">ถ้าลบ หลักฐานใน Bug จะหายไป แนะนำให้อัปโหลดเวอร์ชันใหม่แทนการลบ</div>
+</sc-if>
+
+<sc-if value="{{isSprint}}" hint-placeholder-val="{{ false }}">
+<div>Sprint 3 เสร็จ <b>2 จาก 37 งาน</b> (2 / 106 MD) · ข้อมูลจำลอง ณ 2 ธ.ค.</div>
+<sc-for list="{{spOpts}}" as="o" hint-placeholder-count="2"><label class="{{o.cls}}"><input type="radio" name="sp" checked="{{o.on}}" onChange="{{o.pick}}" style="margin-top:3px"><span><b>{{o.n}}</b><div class="muted" style="font-size:12px">{{o.d}}</div></span></label></sc-for>
+</sc-if>
+
+<sc-if value="{{isImport}}" hint-placeholder-val="{{ false }}">
+<div>ไฟล์ใหม่จะเปลี่ยนแผน <b>Development Plan 2026-11</b></div>
+<ul class="lst"><li>แก้ไข <b>23</b> งาน (Man-Day หรือวันที่เปลี่ยน)</li><li>เพิ่ม <b>4</b> งาน · ลบ <b>2</b> งานที่ไม่อยู่ในไฟล์</li><li>งานที่เริ่มแล้วจะไม่ถูกเปลี่ยน Actual</li></ul>
+<div class="muted" style="font-size:12px">ระบบเก็บแผนเดิมเป็น Baseline v1 ให้เทียบย้อนหลังได้</div>
+</sc-if>
+
+<sc-if value="{{isDeleteProj}}" hint-placeholder-val="{{ false }}">
+<div>ลบงาน <b>334</b> งาน ไฟล์ <b>12</b> ไฟล์ และประวัติทั้งหมดของ Development Plan 2026-11 · สมาชิก 14 คนจะเข้าไม่ได้ทันที</div>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:600">พิมพ์รหัสโปรเจกต์ <span class="mono">DP</span> เพื่อยืนยัน</span><input class="in" type="text" value="{{typed}}" onInput="{{type}}" onChange="{{type}}"></label>
+<div class="muted" style="font-size:12px">กู้คืนได้ 30 วันโดย Workspace Owner เท่านั้น · แนะนำ Archive ถ้าแค่ไม่อยากเห็น</div>
+</sc-if>
+</div>
+<div class="df">
+<sc-for list="{{d.btns}}" as="b" hint-placeholder-count="2"><button class="{{b.cls}}" type="button" onClick="{{b.go}}" disabled="{{b.dis}}">{{b.n}}</button></sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{closedQuiet}}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><button class="btn pri" type="button" onClick="{{reopen}}">เปิด Dialog อีกครั้ง</button></div></sc-if>
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="position:absolute;left:50%;bottom:24px;transform:translateX(-50%);background:#1B1F24;color:#fff;border-radius:12px;padding:12px 16px;display:flex;gap:14px;align-items:center;font-size:14px;box-shadow:0 12px 32px rgba(15,23,42,.3);max-width:calc(100% - 32px)"><span>{{toast}}</span><button type="button" onClick="{{reopen}}" style="border:0;background:transparent;color:#93C5FD;font:inherit;font-weight:700;cursor:pointer;min-height:36px">เลิกทำ</button></div>
+</sc-if>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  state = { s: 'del', open: true, opt: 'all', sp: 'next', typed: '', toast: '' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const s = st.s || 'del', open = st.open !== false, opt = st.opt || 'all', sp = st.sp || 'next', typed = st.typed || '', toast = st.toast || '';
+    const L2 = ['#FEF3C7', '#B45309'], L3 = ['#FEE2E2', '#B91C1C'];
+    const done = function (msg) { return function () { self.setState({ open: false, toast: msg }); }; };
+    const cancel = function () { self.setState({ open: false, toast: '' }); };
+    const S = {
+      del: ['ลบ Task ที่มี Sub-task', 'ระดับ 2 · มีข้อมูลผูกอยู่', L2, 'ลบ DP-39 ฟอร์มหลักประกัน 5 ประเภท?', 'Task · Credit Line', [['ยกเลิก', 'btn', cancel], [opt === 'all' ? 'ลบ Task และ Sub-task 5 รายการ' : 'ลบเฉพาะ Task', 'btn danger', done('ลบ DP-39 แล้ว · อยู่ในถังขยะ 30 วัน')]]],
+      leave: ['ออกจากหน้าโดยยังไม่บันทึก', 'ระดับ 2 · ป้องกันงานหาย', L2, 'ยังไม่ได้บันทึกการแก้ไข', 'DP-39 ฟอร์มหลักประกัน 5 ประเภท', [['ทิ้งการแก้ไข', 'btn', done('ทิ้งการแก้ไขแล้ว')], ['เก็บเป็นแบบร่าง', 'btn', done('เก็บแบบร่างแล้ว')], ['กลับไปแก้ต่อ', 'btn pri', cancel]]],
+      bulk: ['ลบหลายงานพร้อมกัน', 'ระดับ 3 · กระทบจำนวนมาก', L3, 'ลบ 12 งาน?', 'เลือกจาก Table', [['ยกเลิก', 'btn', cancel], ['ลบ 12 งาน', 'btn danger', done('ลบ 12 งานแล้ว · อยู่ในถังขยะ 30 วัน'), typed !== 'ลบ 12 งาน']]],
+      member: ['นำสมาชิกออกจากโปรเจกต์', 'ระดับ 2 · มีงานค้าง', L2, 'นำ P\'Tum ออกจาก Development Plan 2026-11?', 'Dev · เข้าร่วมเมื่อ 5 พ.ย.', [['ยกเลิก', 'btn', cancel], ['โอนงานและนำออก', 'btn danger', done('นำ P\'Tum ออกแล้ว · โอน 12 งานให้ Zo')]]],
+      file: ['ลบไฟล์ที่เป็นหลักฐาน', 'ระดับ 2 · ถูกอ้างอิงอยู่', L2, 'ลบไฟล์ผลทดสอบ?', 'Files · 48 KB', [['ยกเลิก', 'btn', cancel], ['อัปโหลดเวอร์ชันใหม่', 'btn pri', cancel], ['ลบไฟล์', 'btn danger', done('ลบไฟล์แล้ว')]]],
+      sprint: ['ปิด Sprint ที่ยังมีงานค้าง', 'ระดับ 2 · ต้องเลือกปลายทาง', L2, 'ปิด Sprint 3?', '30 พ.ย. – 11 ธ.ค.', [['ยกเลิก', 'btn', cancel], ['ปิด Sprint และย้าย 35 งาน', 'btn pri', done('ปิด Sprint 3 แล้ว')]]],
+      imp: ['Import ทับแผนเดิม', 'ระดับ 2 · เปลี่ยนแผนจำนวนมาก', L2, 'นำเข้าแผนเวอร์ชันใหม่?', 'Development Plan 2026-11 (v2).xlsx', [['ยกเลิก', 'btn', cancel], ['ดูรายการเปลี่ยนแปลง', 'btn', cancel], ['นำเข้า และเก็บ Baseline', 'btn pri', done('นำเข้าแล้ว · เก็บ Baseline v1')]]],
+      proj: ['ลบโปรเจกต์', 'ระดับ 3 · ต้องพิมพ์ยืนยัน', L3, 'ลบ Development Plan 2026-11?', 'การกระทำนี้มีผลกับทุกคนในโปรเจกต์', [['ยกเลิก', 'btn', cancel], ['Archive แทน', 'btn', done('Archive แล้ว')], ['ลบโปรเจกต์', 'btn danger', done('ลบโปรเจกต์แล้ว'), typed !== 'DP']]]
+    };
+    const keys = ['del', 'leave', 'bulk', 'member', 'file', 'sprint', 'imp', 'proj'];
+    const list = keys.map(function (k) { return { n: S[k][0], lv: S[k][1], on: s === k ? 'true' : 'false', pick: function () { self.setState({ s: k, open: true, typed: '', toast: '' }); } }; });
+    const x = S[s];
+    const d = { t: x[3], sub: x[4], ib: x[2][0], ic: x[2][1], btns: x[5].map(function (b) { return { n: b[0], cls: b[1], go: b[2], dis: !!b[3] }; }) };
+    const delOpts = [['all', 'ลบ Sub-task ทั้งหมดด้วย', 'ไฟล์และคอมเมนต์ของ Sub-task ถูกลบด้วย'], ['keep', 'เก็บ Sub-task ไว้ เปลี่ยนเป็น Task เดี่ยว', 'Sub-task 5 รายการย้ายไปอยู่ใน Module Credit Line']].map(function (o) { return { n: o[1], d: o[2], on: opt === o[0], cls: opt === o[0] ? 'ro on' : 'ro', pick: function () { self.setState({ opt: o[0] }); } }; });
+    const spOpts = [['next', 'ย้ายงานค้าง 35 งานไป Sprint 4', 'ติด Label "ยกมา" ให้เห็นในรายงาน'], ['back', 'ย้ายกลับ Backlog', 'วางแผนใหม่ใน Sprint planning']].map(function (o) { return { n: o[1], d: o[2], on: sp === o[0], cls: sp === o[0] ? 'ro on' : 'ro', pick: function () { self.setState({ sp: o[0] }); } }; });
+    return {
+      list: list, d: d, showDlg: open, delOpts: delOpts, spOpts: spOpts,
+      isDel: s === 'del', isLeave: s === 'leave', isBulk: s === 'bulk', isMember: s === 'member', isFile: s === 'file', isSprint: s === 'sprint', isImport: s === 'imp', isDeleteProj: s === 'proj',
+      typed: typed, type: function (e) { self.setState({ typed: (e && e.target && e.target.value) || '' }); },
+      closedQuiet: !open && !toast, hasToast: !open && !!toast, toast: toast, reopen: function () { self.setState({ open: true, toast: '' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

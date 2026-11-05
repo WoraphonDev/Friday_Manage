@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Backlog and Sprints</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E4E7EB;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;position:relative}
+.navi{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 10px;border-radius:8px;color:#3D4550;text-decoration:none}
+.navi:hover{background:#F1F3F5;color:#1B1F24}
+.navi.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.sec{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:16px 10px 6px}
+.phead{background:#fff;padding:16px 24px 0;border-bottom:1px solid #E4E7EB}
+.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:10px}
+.tab{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;color:#56606B;text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+.tab:hover{color:#1B1F24}
+.tab.on{color:#1D4ED8;border-bottom-color:#1D4ED8;font-weight:600}
+.body{padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.btn.ok{background:#15803D;border-color:#15803D;color:#fff}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.muted{color:#5F6873}
+.av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.s-todo{background:#EEF0F3;color:#3D4550}.s-prog{background:#DBEAFE;color:#1E40AF}.s-rev{background:#FEF3C7;color:#92400E}.s-done{background:#DCFCE7;color:#166534}.s-late{background:#FEE2E2;color:#991B1B}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.chip.on{background:#1B1F24;border-color:#1B1F24;color:#fff}
+.sh{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid #EEF0F3}
+.zone{min-height:56px}
+.zone.over{background:#EEF2FF;outline:2px dashed #1D4ED8;outline-offset:-4px}
+.it{display:grid;grid-template-columns:14px 20px 62px minmax(0,1fr) 128px 40px 28px 120px;column-gap:10px;align-items:center;min-height:46px;padding:0 16px;border-bottom:1px solid #F1F3F5;background:#fff;cursor:grab}
+.it:hover{background:#FAFBFC}
+.it.drag{opacity:.4}
+.ty{width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center}
+.pts{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;border-radius:11px;background:#EEF0F3;font-size:12px;font-weight:700}
+.pts.none{background:#FEF3C7;color:#92400E}
+.mv{min-height:30px;padding:0 10px;border:1px solid #D5DAE0;border-radius:6px;background:#fff;font:inherit;font-size:12px;font-weight:600;color:#1D4ED8;cursor:pointer}
+.mv:hover{background:#EEF2FF}
+.cap{height:10px;background:#EEF0F3;border-radius:99px;overflow:hidden;position:relative}
+.veil{position:absolute;inset:0;background:rgba(15,23,42,.5)}
+.dlg{position:absolute;top:120px;left:50%;transform:translateX(-50%);width:min(620px,calc(100% - 24px));background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(15,23,42,.4)}
+.in{min-height:38px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%}
+textarea.in{padding:8px 10px;min-height:64px}
+@media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.body{padding:16px}.phead{padding:12px 16px 0}.it{grid-template-columns:20px 56px minmax(0,1fr) 40px}.it .hs{display:none}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a href="IssueCreate.dc.html" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:#1D4ED8;color:#fff;font-weight:600;text-decoration:none">+ New</a>
+<a href="Bell.dc.html" aria-label="การแจ้งเตือน 5 รายการยังไม่อ่าน" style="position:relative;width:40px;height:40px;border-radius:8px;color:#E2E8F0;display:inline-flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #0F172A">5</span></a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div class="app">
+<aside class="side" aria-label="Workspace navigation">
+<a class="navi" href="Home.dc.html">Home</a>
+<a class="navi" href="MyTasks.dc.html">My Tasks</a>
+<a class="navi" href="Inbox.dc.html">Inbox<span class="pill s-late" style="margin-left:auto">5</span></a>
+<div class="sec">Projects</div>
+<a class="navi on" href="Main.dc.html"><span class="dot" style="background:#334155"></span>Development Plan 2026-11</a>
+<a class="navi" href="NewProject.dc.html" style="color:#1D4ED8">+ New project</a>
+<div style="margin-top:auto;border-top:1px solid #E4E7EB;padding-top:10px"><a class="navi" href="AdminConsole.dc.html">Admin Console</a></div>
+</aside>
+<main class="main">
+<header class="phead">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<div style="width:32px;height:32px;border-radius:8px;background:#334155;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">DP</div>
+<h1 style="margin:0;font-size:22px;line-height:1.3">Development Plan 2026-11</h1>
+<span class="pill s-prog">Active</span><span class="pill s-late">Off track</span>
+</div>
+<nav class="tabs" aria-label="Project views">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="10"><a class="{{t.cls}}" href="{{t.href}}">{{t.label}}</a></sc-for>
+</nav>
+</header>
+
+<div class="body">
+<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<sc-for list="{{chips}}" as="c" hint-placeholder-count="5"><button class="{{c.cls}}" type="button" onClick="{{c.pick}}" aria-pressed="{{c.on}}">{{c.n}}</button></sc-for>
+<select class="btn" aria-label="Module"><option>ทุก Module</option><option>Credit Line</option><option>Drawdown</option><option>Pre-Disburse</option><option>Maintain Car After Drawdown</option><option>BFC ใบเรียกเก็บ/ใบแจ้งหนี้</option><option>Repayment รับชำระเงิน</option><option>Checkstock & Collect Car Keys</option><option>Finance (GL)</option><option>Campaign</option><option>OEM / Dealer Portal</option><option>Interface FP/HP/KL</option></select>
+</div>
+<div style="display:flex;gap:8px"><button class="btn" type="button">+ สร้าง Sprint</button><a class="btn pri" href="IssueCreate.dc.html">+ สร้างงาน</a></div>
+</div>
+
+<section class="card" aria-label="Sprint 3 (active)">
+<div class="sh">
+<span class="pill s-prog" style="font-weight:700">ACTIVE</span>
+<h2 style="margin:0;font-size:16px">Sprint 3</h2>
+<span class="muted" style="font-size:13px">30 พ.ย. – 11 ธ.ค. · เหลือ 6 วันทำการ (หยุด 7 และ 10 ธ.ค.)</span>
+<span style="flex:1"></span>
+<a class="btn" href="Kanban.dc.html">เปิดบอร์ด</a>
+<button class="btn" type="button" onClick="{{openComplete}}">Complete sprint</button>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:20px;padding:14px 16px">
+<div style="flex:1 1 280px;display:flex;flex-direction:column;gap:10px">
+<div><span class="muted" style="font-size:12px;font-weight:600">SPRINT GOAL</span><div style="font-weight:600">ปิดงานค้างจาก Sprint 1–2 และเริ่มหลักประกันของ Credit Line ให้ทัน Go-live 26 ม.ค.</div></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+<div style="background:#F8F9FB;border-radius:10px;padding:10px"><div class="muted" style="font-size:12px">งาน (รวมงานค้าง)</div><div style="font-size:20px;font-weight:700">2 / 37</div></div>
+<div style="background:#F8F9FB;border-radius:10px;padding:10px"><div class="muted" style="font-size:12px">Man-Day เสร็จ</div><div style="font-size:20px;font-weight:700">2 / 106</div></div>
+<div style="background:#F8F9FB;border-radius:10px;padding:10px"><div class="muted" style="font-size:12px">Bug เปิดอยู่</div><div style="font-size:20px;font-weight:700;color:#B91C1C">1</div></div>
+</div>
+</div>
+<div style="flex:1 1 320px">
+<div style="display:flex;justify-content:space-between;font-size:12px" class="muted"><span style="font-weight:600">Burndown (Man-Day ที่เหลือ)</span><span><span style="display:inline-block;width:14px;border-top:2px dashed #94A3B8;vertical-align:middle"></span> แผน · <span style="display:inline-block;width:14px;border-top:3px solid #1D4ED8;vertical-align:middle"></span> จริง</span></div>
+<svg viewBox="0 0 320 130" width="100%" height="130" role="img" aria-label="Burndown: แผน 106 ลดเหลือ 0 ใน 8 วันทำการ, จริง 106, 105, 104">
+<line x1="30" y1="10" x2="30" y2="110" stroke="#D5DAE0"></line><line x1="30" y1="110" x2="310" y2="110" stroke="#D5DAE0"></line>
+<text x="24" y="14" font-size="10" text-anchor="end" fill="#5F6873">106</text><text x="24" y="113" font-size="10" text-anchor="end" fill="#5F6873">0</text>
+<line x1="30" y1="10" x2="310" y2="110" stroke="#94A3B8" stroke-width="2" stroke-dasharray="5 4"></line>
+<polyline points="30.0,10.0 70.0,10.9 110.0,11.9" fill="none" stroke="#1D4ED8" stroke-width="3" stroke-linejoin="round"></polyline>
+<circle cx="110.0" cy="11.9" r="4" fill="#1D4ED8"></circle>
+<text x="116.0" y="7.9" font-size="10" fill="#1D4ED8" font-weight="700">104 วันนี้</text>
+<text x="30" y="125" font-size="10" fill="#5F6873">30 พ.ย.</text><text x="310" y="125" font-size="10" text-anchor="end" fill="#5F6873">11 ธ.ค.</text>
+</svg>
+</div>
+</div>
+</section>
+
+<section class="card" aria-label="Sprint 4 (planning)">
+<div class="sh">
+<span class="pill s-todo" style="font-weight:700">PLANNING</span>
+<h2 style="margin:0;font-size:16px">Sprint 4</h2>
+<span class="muted" style="font-size:13px">14 – 25 ธ.ค. · {{s6Count}} งาน</span>
+<span style="flex:1"></span>
+<button class="btn ok" type="button">Start sprint</button>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:20px;padding:12px 16px;border-bottom:1px solid #EEF0F3;align-items:center">
+<label style="flex:2 1 300px;display:flex;flex-direction:column;gap:4px"><span class="muted" style="font-size:12px;font-weight:600">SPRINT GOAL</span><input class="in" type="text" value="หลักประกันและผู้ค้ำประกันของ Credit Line ครบ + เริ่มค่าธรรมเนียม BFC"></label>
+<div style="flex:1 1 260px">
+<div style="display:flex;justify-content:space-between;font-size:13px"><span class="muted">Commit vs capacity</span><span style="font-weight:700;color:{{capColor}}">{{s6Pts}} / 36 MD</span></div>
+<div class="cap" style="margin-top:6px"><div style="height:100%;width:{{capW}}%;background:{{capColor}}"></div></div>
+<div class="muted" style="font-size:12px;margin-top:4px">{{capNote}}</div>
+</div>
+</div>
+<div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid #EEF0F3;font-size:12px">
+<sc-for list="{{people}}" as="p" hint-placeholder-count="7"><span style="display:inline-flex;align-items:center;gap:6px"><span class="av" style="background:{{p.c}};width:22px;height:22px;font-size:9px">{{p.ini}}</span><b style="color:{{p.tc}}">{{p.pts}}</b><span class="muted">/ {{p.cap}} MD</span></span></sc-for>
+</div>
+<div class="{{z6}}" onDragOver="{{over6}}" onDrop="{{drop6}}">
+<sc-for list="{{s6}}" as="r" hint-placeholder-count="5">
+<div class="{{r.cls}}" draggable="true" onDragStart="{{r.ds}}" onDragEnd="{{r.de}}">
+<span class="muted hs" aria-hidden="true">⋮⋮</span>
+<span class="ty" style="background:{{r.tyc}}" role="img" aria-label="{{r.tyn}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="{{r.tyi}}"></path></svg></span>
+<a href="{{r.href}}" class="muted" style="font-size:12px" draggable="false">{{r.key}}</a>
+<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.t}}</span>
+<span class="hs"><span class="pill" style="background:{{r.mbg}};color:{{r.mfg}}">{{r.m}}</span></span>
+<span class="{{r.pcls}}" title="Man-Day">{{r.ptsL}}</span>
+<span class="av hs" style="background:{{r.ac}}">{{r.ai}}</span>
+<span class="hs" style="text-align:right"><button class="mv" type="button" onClick="{{r.move}}">↓ Backlog</button></span>
+</div>
+</sc-for>
+<sc-if value="{{s6Empty}}" hint-placeholder-val="{{ false }}"><div class="muted" style="padding:16px;text-align:center">ลากงานจาก Backlog มาวางที่นี่เพื่อวางแผน Sprint</div></sc-if>
+</div>
+</section>
+
+<section class="card" aria-label="Backlog">
+<div class="sh">
+<h2 style="margin:0;font-size:16px">Backlog</h2>
+<span class="muted" style="font-size:13px">{{blCount}} งาน · {{blPts}} MD · {{noEst}} งานยังไม่ประเมิน</span>
+<span style="flex:1"></span>
+<span class="muted" style="font-size:12px">เรียงตามลำดับความสำคัญ · ลากขึ้นลงเพื่อจัดลำดับ</span>
+</div>
+<div class="{{zb}}" onDragOver="{{overB}}" onDrop="{{dropB}}">
+<sc-for list="{{bl}}" as="r" hint-placeholder-count="8">
+<div class="{{r.cls}}" draggable="true" onDragStart="{{r.ds}}" onDragEnd="{{r.de}}">
+<span class="muted hs" aria-hidden="true">⋮⋮</span>
+<span class="ty" style="background:{{r.tyc}}" role="img" aria-label="{{r.tyn}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="{{r.tyi}}"></path></svg></span>
+<a href="{{r.href}}" class="muted" style="font-size:12px" draggable="false">{{r.key}}</a>
+<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.t}}</span>
+<span class="hs"><span class="pill" style="background:{{r.mbg}};color:{{r.mfg}}">{{r.m}}</span></span>
+<span class="{{r.pcls}}" title="Man-Day">{{r.ptsL}}</span>
+<span class="av hs" style="background:{{r.ac}}">{{r.ai}}</span>
+<span class="hs" style="text-align:right"><button class="mv" type="button" onClick="{{r.move}}">↑ Sprint 4</button></span>
+</div>
+</sc-for>
+</div>
+<div style="padding:10px 16px"><input class="in" type="text" placeholder="+ เพิ่มงานใน Backlog แล้วกด Enter (พิมพ์ bug: เพื่อสร้าง Bug)" style="border-style:dashed"></div>
+</section>
+<div class="muted" style="font-size:12px">ลากงานระหว่าง Sprint กับ Backlog หรือกดปุ่ม ↑ ↓ · แถบ capacity เป็นสีแดงเมื่อเกิน · Man-Day ที่เป็น "?" คืองานที่ยังไม่ได้เลือก Size · งานที่มีหลาย Dev แบ่ง Man-Day เท่ากันในแถบรายคน</div>
+</div>
+
+<sc-if value="{{showComplete}}" hint-placeholder-val="{{ false }}">
+<div class="veil"></div>
+<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="cs-title">
+<div style="display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid #E4E7EB"><h3 id="cs-title" style="margin:0;font-size:17px;flex:1">ปิด Sprint 3</h3><button type="button" onClick="{{closeComplete}}" aria-label="ปิด" style="width:32px;height:32px;border:0;background:transparent;font-size:20px;cursor:pointer">×</button></div>
+<div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+<div style="background:#F0FDF4;border-radius:10px;padding:10px"><div class="muted" style="font-size:12px">เสร็จ</div><div style="font-size:20px;font-weight:700;color:#166534">2 งาน · 2 MD</div></div>
+<div style="background:#FEF2F2;border-radius:10px;padding:10px"><div class="muted" style="font-size:12px">ไม่เสร็จ</div><div style="font-size:20px;font-weight:700;color:#991B1B">35 งาน · 104 MD</div></div>
+<div style="background:#F8F9FB;border-radius:10px;padding:10px"><div class="muted" style="font-size:12px">ปิดได้เฉลี่ยต่อ Sprint</div><div style="font-size:20px;font-weight:700">36 งาน</div></div>
+</div>
+<div><div style="font-weight:600;margin-bottom:6px">งานที่ไม่เสร็จ 35 งาน ย้ายไปที่</div>
+<label style="display:flex;gap:8px;align-items:center;padding:4px 0"><input type="radio" name="dest" checked="{{dS6}}" onChange="{{toS6}}">Sprint 4 (แนะนำ)</label>
+<label style="display:flex;gap:8px;align-items:center;padding:4px 0"><input type="radio" name="dest" checked="{{dBl}}" onChange="{{toBl}}">กลับไป Backlog</label>
+<div class="muted" style="font-size:12px">DP-34 · DP-35 · DP-38 · DP-39 · DP-40 · DP-41 · DP-42 · DP-45 · DP-46 · DP-95 · อีก 25 งาน</div>
+</div>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-weight:600">บันทึก Retrospective (ไม่บังคับ)</span><textarea class="in" placeholder="อะไรดี / อะไรควรปรับ / Action items"></textarea></label>
+</div>
+<div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid #E4E7EB"><button class="btn" type="button" onClick="{{closeComplete}}">ยกเลิก</button><button class="btn pri" type="button" onClick="{{closeComplete}}">ปิด Sprint และย้ายงาน</button></div>
+</div>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1600}}'>
+class Component extends DCLogic {
+  state = { ty: 'all', dest: 's6' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const T = [['Overview','Main.dc.html'],['ภาพรวม Lead','LeadDashboard.dc.html'],['Backlog','Backlog.dc.html'],['Table','Table.dc.html'],['Kanban','Kanban.dc.html'],['Timeline','Timeline.dc.html'],['Gantt','Gantt.dc.html'],['Calendar','Calendar.dc.html'],['Members','Members.dc.html'],['Files','Files.dc.html'],['Settings','ProjectSettings.dc.html']];
+    const tabs = T.map(function (x) { return { label: x[0], href: x[1], cls: x[0] === 'Backlog' ? 'tab on' : 'tab' }; });
+    const TY = { story: ['Story', '#15803D', 'M6 3h12v18l-6-4-6 4z'], task: ['Task', '#1D4ED8', 'M5 5h14v14H5z'], bug: ['Bug', '#DC2626', 'M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14z'], spike: ['Spike', '#7C3AED', 'M13 2 4 14h7l-1 8 9-12h-7z'] };
+    const MD = {"m0": ["Credit Line", "#1D4ED81A", "#1D4ED8"], "m1": ["Drawdown", "#0F766E1A", "#0F766E"], "m2": ["Pre-Disburse", "#B453091A", "#B45309"], "m3": ["Maintain Car", "#7C3AED1A", "#7C3AED"], "m4": ["BFC", "#BE185D1A", "#BE185D"], "m5": ["Repayment", "#0369A11A", "#0369A1"], "m6": ["Checkstock", "#4D7C0F1A", "#4D7C0F"], "m7": ["Finance (GL)", "#57534E1A", "#57534E"], "m8": ["Campaign", "#C2410C1A", "#C2410C"], "m9": ["OEM Portal", "#4338CA1A", "#4338CA"], "m10": ["Interface", "#0E74901A", "#0E7490"]};
+    const PP = {"Kaijeaw": ["KJ", "#B45309"], "Pond": ["PD", "#0F766E"], "Tung": ["TG", "#7C3AED"], "Top": ["TP", "#BE185D"], "Zo": ["ZO", "#0369A1"], "P'Tum": ["PT", "#4D7C0F"], "Ton": ["TN", "#65A30D"], "Mick": ["MK", "#1D4ED8"]};
+    // key, type, title, module, points, assignee, initial location
+    const D = [["DP-47", "task", "Pre-print สัญญา Word / PDF จาก Template (แยก FP / Fleet)", "m0", 3, "Kaijeaw", "s6"], ["DP-112", "task", "ยกเลิกรายการด้วยตนเอง", "m1", 1, "Pond", "s6"], ["DP-267", "task", "Tolerance +- 20 บาท + บันทึก FP48/FP49, กรณีหลายคันขาดที่คันสุดท้าย", "m5", 1, "Tung", "s6"], ["DP-115", "task", "Generate สัญญา PDF – Inventory (3 แบบ) + Barcode", "m1", 3, "Pond", "s6"], ["DP-268", "task", "รายการไม่ผ่านเงื่อนไข -> ลงบัญชีพักอัตโนมัติ", "m5", 1, "Tung", "s6"], ["DP-48", "task", "Export Excel Merge (Floorplan.xls / FLEET.xlsx)", "m0", 1, "Kaijeaw", "s6"], ["DP-111", "task", "Batch ยกเลิกอัตโนมัติ (New Car X วัน / อายุผลประเมิน Used Car)", "m1", 5, "Pond", "s6"], ["DP-269", "task", "ส่งรายการบัญชีทุก Event ไป ERP (IT-500) + Mapping Tran code", "m5", 3, "Tung", "s6"], ["DP-116", "task", "Generate สัญญา PDF – Loan (6 แบบ) + Barcode", "m1", 3, "Pond", "s6"], ["DP-49", "task", "Final, รับฉบับจริง/อนุโลม, ผลจด DBD, สถานะห้องมั่นคง", "m0", 3, "Kaijeaw", "s6"], ["DP-270", "task", "ตรรกะจัดสรรเงิน: ตาม BFC / ไม่อ้างอิง BFC (ค่ารถ, ดอกเบี้ย, ค่าปรับ, ค่าธรรมเนียม)", "m5", 5, "Tung", "s6"], ["DP-52", "task", "Expense เพิ่ม/แก้/ลบ + คำนวณ VAT / WHT", "m0", 3, "Kaijeaw", "s6"], ["DP-117", "task", "Re-generate เมื่อแก้รายการรถ + แก้ข้อมูลในสัญญา", "m1", 1, "Pond", "s6"], ["DP-53", "task", "Waive Fee พร้อมเหตุผล", "m0", 3, "Kaijeaw", "s6"], ["DP-118", "task", "ส่งสัญญาให้ Dealer ทางอีเมล", "m1", 1, "Pond", "s6"], ["DP-54", "task", "Generate BFC รวม/แยกรายการ + ยกเลิกอัตโนมัติ", "m0", 8, "Kaijeaw", "s6"], ["DP-119", "task", "วันกำหนดรับสัญญา (Default +30 วัน) + แจ้งเตือน T-15 / T", "m1", 1, "Pond", "s6"], ["DP-225", "task", "คำนวณ VAT / WHT / Total ต่อรายการ", "m4", 3, "Top", "s6"], ["DP-122", "task", "CV Approve: คืนงาน / อนุมัติ / ไม่อนุมัติ → On Floor, ส่ง Pre-disburse หรือ CC", "m1", 3, "Pond", "s6"], ["DP-273", "task", "Suspense Entry: บันทึกรับเงินพักแบบ Manual + เลขที่ Suspense", "m5", 1, "Tung", "s6"], ["DP-55", "task", "ตรวจ BFC “จ่ายแล้ว” ก่อนส่งอนุมัติ", "m0", 1, "Kaijeaw", "s6"], ["DP-274", "task", "Suspense Inquiry + ตัวกรองรายการไม่ทราบสัญญา (Ref1/Ref2/ชื่อในไฟล์/ยอด)", "m5", 1, "Tung", "s6"], ["DP-502", "task", "Credit Line : Inquiry Credit Available (CL Type Fleet)", "m10", 3, "Kaijeaw", "bl"], ["DP-503", "task", "Credit Line : Reserve Credit (CL Type Fleet)", "m10", 3, "Kaijeaw", "bl"], ["DP-504", "task", "Credit Line : Submit Credit (CL Type Fleet)", "m10", 3, "Kaijeaw", "bl"], ["DP-505", "task", "Credit Line : Cancel Reserve Credit (CL Type Fleet)", "m10", 3, "Kaijeaw", "bl"], ["DP-506", "task", "Credit Line : Cancel Submit Credit (CL Type Fleet)", "m10", 3, "Kaijeaw", "bl"], ["DP-507", "task", "Car Information : Check Car on Floor Plan เช็ครถว่ามีอยู่ใน FP, ถ้ามี ส่งยอดเงินคงเหลือไปด้วย", "m10", 3, "Ton", "bl"], ["DP-508", "task", "Offset-Get : (Views SQL) Report รายการรับเงินของรายการที่ไม่มีเก็บ W/H TAX", "m10", 3, "Zo", "bl"], ["DP-509", "task", "Offset-Post : Offset HP Repayment (Settlement HP) + Amount\nAPI ตัดยอด(Repay)", "m10", 3, "Tung", "bl"], ["DP-510", "task", "Offset-Cancel : Cancel Offset HP ยกเลิกสัญญา ( ลค คืนรถ)", "m10", 3, "Tung", "bl"], ["DP-511", "task", "Offset-Report : Report Transection Offset from HP", "m10", 3, "Tung", "bl"], ["DP-512", "task", "Repayment : Bill Payment", "m10", 3, "Tung", "bl"], ["DP-513", "task", "Repayment : Statement to Suspense", "m10", 3, "Tung", "bl"], ["DP-514", "task", "Repayment : ปรับปรุงบัญชีพัก FP (เก็บประวัติด้วย) ต้องรองรับ กรณีไม่รู้เจ้าของเงิน (999)", "m10", 3, "Tung", "bl"], ["DP-515", "task", "Repayment : Report Recconcil รับเงิน", "m10", 3, "Tung", "bl"], ["DP-516", "task", "Repayment : (Views SQL) Report รายการรับเงินของรายการที่ไม่มีเก็บ W/H TAX", "m10", 3, "Zo", "bl"], ["DP-517", "task", "Direct Debit Result Report  ผลหักบัญชี Direct Debit ของ FP", "m10", 3, "Tung", "bl"], ["DP-518", "task", "Dealer / Customer Profile - ข้อมูลลูกค้า (Views)", "m10", 3, "Pond", "bl"], ["DP-519", "task", "Disburse - Post - ตั้งจ่าย", "m10", 3, "Pond", "bl"], ["DP-520", "task", "Disburse - Cancel - ยกเลิกตั้งจ่าย", "m10", 3, "Pond", "bl"], ["DP-521", "task", "Disburse - Get - เช็คการจ่าย (จ่ายไปหรือยัง)", "m10", 3, "Pond", "bl"], ["DP-522", "task", "Disburse - Tax Invoice - ใบกำกับภาษีซื้อ", "m10", 3, "Pond", "bl"], ["DP-523", "task", "Drawdown - Check - Double Finance", "m10", 3, "Pond", "bl"], ["DP-524", "task", "Repayment - Suspense - ปรับปรุงบัญชีพัก HP (FP คืนยอดให้ HP)", "m10", 3, "Tung", "bl"]];
+    const loc = st.loc || {};
+    const where = function (d) { return loc[d[0]] || d[6]; };
+    const ty = st.ty || 'all';
+    const drag = st.drag || null;
+    const moveTo = function (key, to) { const m = Object.assign({}, (self.state && self.state.loc) || {}); m[key] = to; self.setState({ loc: m, drag: null, over: null }); };
+    const row = function (d) {
+      const t = TY[d[1]];
+      return { key: d[0], t: d[2], tyn: t[0], tyc: t[1], tyi: t[2], m: MD[d[3]][0], mbg: MD[d[3]][1], mfg: MD[d[3]][2],
+        MDL: d[4] ? d[4] : '?', pcls: d[4] ? 'pts' : 'pts none', ai: PP[d[5]][0], ac: PP[d[5]][1], href: d[1] === 'bug' ? 'BugDetail.dc.html' : 'TaskDetail.dc.html',
+        cls: drag === d[0] ? 'it drag' : 'it',
+        move: function () { moveTo(d[0], where(d) === 's6' ? 'bl' : 's6'); },
+        ds: function (e) { try { e.dataTransfer.setData('text/plain', d[0]); e.dataTransfer.effectAllowed = 'move'; } catch (err) {} setTimeout(function () { self.setState({ drag: d[0] }); }, 0); },
+        de: function () { setTimeout(function () { if (self.state && self.state.drag) self.setState({ drag: null, over: null }); }, 30); } };
+    };
+    const vis = function (d) { return ty === 'all' || d[1] === ty; };
+    const s6D = D.filter(function (d) { return where(d) === 's6'; });
+    const blD = D.filter(function (d) { return where(d) === 'bl'; });
+    const s6Pts = s6D.reduce(function (a, d) { return a + d[4]; }, 0);
+    const over = st.over || null;
+    const mkOver = function (z) { return function (e) { e.preventDefault(); if ((self.state || {}).over !== z) self.setState({ over: z }); }; };
+    const mkDrop = function (z) { return function (e) { e.preventDefault(); let k = (self.state || {}).drag; if (!k) { try { k = e.dataTransfer.getData('text/plain'); } catch (err) {} } if (k) moveTo(k, z); }; };
+    const CAP = {"Kaijeaw": 10, "Pond": 10, "Tung": 10, "Top": 10, "Zo": 10, "P'Tum": 10, "Ton": 2};
+    const people = ["Kaijeaw", "Pond", "Tung", "Top", "Zo", "P'Tum", "Ton"].map(function (n) {
+      const p = s6D.filter(function (d) { return d[5] === n; }).reduce(function (a, d) { return a + d[4]; }, 0);
+      return { ini: PP[n][0], c: PP[n][1], MD: p, cap: CAP[n], tc: p > CAP[n] ? '#B91C1C' : '#1B1F24' };
+    });
+    const overCap = s6Pts > 62;
+    const CH = [['all', 'ทั้งหมด'], ['task', 'Task'], ['bug', 'Bug']];
+    const chips = CH.map(function (c) { return { n: c[1], on: ty === c[0] ? 'true' : 'false', cls: ty === c[0] ? 'chip on' : 'chip', pick: function () { self.setState({ ty: c[0] }); } }; });
+    const dest = st.dest || 's6';
+    return {
+      tabs: tabs, chips: chips, people: people,
+      s6: s6D.filter(vis).map(row), bl: blD.filter(vis).map(row), s6Empty: s6D.length === 0,
+      s6Count: s6D.length, s6Pts: s6Pts, capW: Math.min(100, Math.round(s6Pts / 62 * 100)), capColor: overCap ? '#DC2626' : (s6Pts >= 50 ? '#15803D' : '#1D4ED8'),
+      capNote: overCap ? 'เกิน capacity ' + (s6Pts - 62) + ' MD · ควรย้ายงานบางส่วนกลับ Backlog' : 'Capacity 62 MD = Dev 6 คน × 10 วัน + Ton 2 วัน (ไม่มีวันหยุดในช่วงนี้)',
+      blCount: blD.length, blPts: blD.reduce(function (a, d) { return a + d[4]; }, 0), noEst: blD.filter(function (d) { return !d[4]; }).length,
+      z6: over === 's6' ? 'zone over' : 'zone', zb: over === 'bl' ? 'zone over' : 'zone',
+      over6: mkOver('s6'), overB: mkOver('bl'), drop6: mkDrop('s6'), dropB: mkDrop('bl'),
+      showComplete: !!st.complete, openComplete: function () { self.setState({ complete: true }); }, closeComplete: function () { self.setState({ complete: false }); },
+      dS6: dest === 's6', dBl: dest === 'bl', toS6: function () { self.setState({ dest: 's6' }); }, toBl: function () { self.setState({ dest: 'bl' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

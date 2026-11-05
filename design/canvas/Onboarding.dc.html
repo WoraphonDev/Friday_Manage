@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Onboarding</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 24px;background:#fff;border-bottom:1px solid #E4E7EB;flex-wrap:wrap}
+.page{display:flex;flex-direction:column;align-items:center;padding:32px 16px 48px;gap:20px}
+.card{width:100%;max-width:720px;background:#fff;border:1px solid #E4E7EB;border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:18px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.lb{font-size:13px;font-weight:600}
+.in{min-height:44px;border:1px solid #C9CFD6;border-radius:10px;padding:0 12px;font:inherit;background:#fff;width:100%;min-width:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:10px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.muted{color:#5F6873}
+.opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px;border:1px solid #D5DAE0;border-radius:12px;background:#fff;font:inherit;text-align:left;cursor:pointer;color:#1B1F24}
+.opt:hover{border-color:#94A3B8}
+.opt.on{border-color:#1D4ED8;box-shadow:0 0 0 1px #1D4ED8;background:#F8FAFF}
+.chip{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid #D5DAE0;background:#fff;font:inherit;cursor:pointer;color:#3D4550}
+.chip[aria-pressed="true"]{background:#1B1F24;border-color:#1B1F24;color:#fff}
+.bar{display:flex;gap:6px;width:100%;max-width:720px}
+.bar span{flex:1;height:6px;border-radius:3px;background:#D5DAE0}
+.bar span.on{background:#1D4ED8}
+.prefix{display:flex;align-items:center;border:1px solid #C9CFD6;border-radius:10px;overflow:hidden}
+.prefix span{padding:0 12px;background:#F1F3F5;min-height:44px;display:flex;align-items:center;color:#5F6873;border-right:1px solid #C9CFD6}
+.prefix input{border:0;min-height:44px;padding:0 12px;font:inherit;flex:1;min-width:0;outline:0}
+@media(max-width:760px){.card{padding:20px}}
+</style>
+</helmet>
+<div class="top">
+<div style="display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:9px;background:#1D4ED8;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">F</span><span style="font-weight:700">Friday Manage</span></div>
+<div class="muted" style="font-size:13px">mick@example.com · <a href="Login.dc.html">ออกจากระบบ</a></div>
+</div>
+<div class="page">
+<div class="bar" aria-label="ขั้นที่ {{step}} จาก 4"><span class="{{b1}}"></span><span class="{{b2}}"></span><span class="{{b3}}"></span><span class="{{b4}}"></span></div>
+<div class="muted" style="font-size:13px;font-weight:600">ขั้นที่ {{step}} จาก 4 · {{stepName}}</div>
+<div class="card">
+
+<sc-if value="{{s1}}" hint-placeholder-val="{{ true }}">
+<div><h1 style="margin:0;font-size:26px">ตั้งชื่อ Workspace</h1><div class="muted">Workspace คือพื้นที่ของทีมหรือบริษัท รวมทุกโปรเจกต์และสมาชิกไว้ที่เดียว</div></div>
+<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+<span style="width:64px;height:64px;border-radius:14px;background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px">FW</span>
+<button class="btn" type="button">อัปโหลดโลโก้</button>
+</div>
+<label class="fld"><span class="lb">ชื่อ Workspace</span><input class="in" type="text" value="Friday Workspace"></label>
+<label class="fld"><span class="lb">URL</span><span class="prefix"><span>friday.app/</span><input type="text" value="friday-workspace" aria-label="URL slug"></span><span style="font-size:12px;color:#166534">✓ ใช้ได้</span></label>
+<label style="display:flex;gap:8px;align-items:flex-start;font-size:13px"><input type="checkbox" checked style="width:18px;height:18px;margin-top:2px">ให้คนที่ใช้อีเมล @example.com ขอเข้าร่วมได้ (Admin อนุมัติ)</label>
+</sc-if>
+
+<sc-if value="{{s2}}" hint-placeholder-val="{{ false }}">
+<div><h1 style="margin:0;font-size:26px">บอกเราเกี่ยวกับทีมของคุณ</h1><div class="muted">ใช้ตั้งค่าเริ่มต้นให้เหมาะกับทีม เปลี่ยนได้ภายหลัง</div></div>
+<div class="fld"><span class="lb">บทบาทของคุณ</span>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+<sc-for list="{{roles}}" as="r" hint-placeholder-count="5"><button class="{{r.cls}}" type="button" onClick="{{r.pick}}" aria-pressed="{{r.on}}"><b>{{r.n}}</b><span class="muted" style="font-size:12px">{{r.d}}</span></button></sc-for>
+</div>
+</div>
+<div class="fld"><span class="lb">ขนาดทีม</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="chip" type="button" aria-pressed="false">1–5</button><button class="chip" type="button" aria-pressed="true">6–15</button><button class="chip" type="button" aria-pressed="false">16–50</button><button class="chip" type="button" aria-pressed="false">50+</button></div>
+</div>
+<div class="fld"><span class="lb">ทีมทำงานแบบไหน</span>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+<button class="opt on" type="button" aria-pressed="true"><b>Scrum</b><span class="muted" style="font-size:12px">Sprint 1–2 สัปดาห์ มี Backlog</span></button>
+<button class="opt" type="button" aria-pressed="false"><b>Kanban</b><span class="muted" style="font-size:12px">งานไหลต่อเนื่อง</span></button>
+<button class="opt" type="button" aria-pressed="false"><b>Waterfall</b><span class="muted" style="font-size:12px">แผนเป็นเฟส ใช้ Gantt</span></button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{s3}}" hint-placeholder-val="{{ false }}">
+<div><h1 style="margin:0;font-size:26px">เชิญทีมของคุณ</h1><div class="muted">ทำงานคนเดียวก็ได้ แต่ Friday Manage ทำงานได้ดีที่สุดเมื่อมีทีม</div></div>
+<sc-for list="{{invites}}" as="v" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:10px"><input class="in" type="email" placeholder="{{v.ph}}" value="{{v.val}}" aria-label="อีเมลสมาชิก"><select class="in" aria-label="Role"><option>Member</option><option>Admin</option><option>Guest</option></select></div>
+</sc-for>
+<button type="button" style="align-self:flex-start;border:0;background:transparent;font:inherit;color:#1D4ED8;font-weight:600;cursor:pointer;padding:0">+ เพิ่มอีกคน</button>
+<div style="background:#F8F9FB;border:1px solid #EEF0F3;border-radius:10px;padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px"><span style="font-weight:600">หรือแชร์ลิงก์</span><code style="background:#fff;border:1px solid #E4E7EB;border-radius:6px;padding:4px 8px;flex:1 1 200px">friday.app/join/x8Kd2Q…</code><button class="btn" type="button" style="min-height:34px">Copy</button></div>
+</sc-if>
+
+<sc-if value="{{s4}}" hint-placeholder-val="{{ false }}">
+<div><h1 style="margin:0;font-size:26px">เริ่มโปรเจกต์แรก</h1><div class="muted">เลือกวิธีที่สะดวก</div></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+<sc-for list="{{starts}}" as="s" hint-placeholder-count="3"><button class="{{s.cls}}" type="button" onClick="{{s.pick}}" aria-pressed="{{s.on}}" style="min-height:130px"><b style="font-size:15px">{{s.n}}</b><span class="muted" style="font-size:13px">{{s.d}}</span></button></sc-for>
+</div>
+<sc-if value="{{isImport}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="chip" type="button" aria-pressed="true">Excel แผนงาน</button><button class="chip" type="button" aria-pressed="false">Jira</button><button class="chip" type="button" aria-pressed="false">Trello</button><button class="chip" type="button" aria-pressed="false">Asana</button></div>
+</sc-if>
+</sc-if>
+
+<div style="display:flex;gap:10px;align-items:center;border-top:1px solid #EEF0F3;padding-top:16px;flex-wrap:wrap">
+<sc-if value="{{hasBack}}" hint-placeholder-val="{{ false }}"><button class="btn" type="button" onClick="{{back}}">← ย้อนกลับ</button></sc-if>
+<span style="flex:1"></span>
+<sc-if value="{{canSkip}}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{next}}" style="border:0;background:transparent;font:inherit;color:#5F6873;cursor:pointer;text-decoration:underline">ข้ามไปก่อน</button></sc-if>
+<sc-if value="{{notLast}}" hint-placeholder-val="{{ true }}"><button class="btn pri" type="button" onClick="{{next}}">{{nextLabel}}</button></sc-if>
+<sc-if value="{{isLast}}" hint-placeholder-val="{{ false }}"><a class="btn pri" href="{{finishHref}}">{{finishLabel}}</a></sc-if>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"step":{"editor":"enum","options":["1","2","3","4"],"default":"1"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  state = {};
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const step = st.step || parseInt(this.props.step || '1', 10) || 1;
+    const role = st.role || 'pm', start = st.start || 'sample';
+    const N = ['', 'Workspace', 'ทีมของคุณ', 'เชิญสมาชิก', 'โปรเจกต์แรก'];
+    const RL = [['pm', 'PM / Lead', 'วางแผนและติดตามงาน'], ['dev', 'Developer', 'FE / BE / Mobile'], ['design', 'Designer', 'UX / UI'], ['qa', 'QA / Tester', 'ทดสอบและรายงาน Bug'], ['other', 'อื่น ๆ', 'Business, ลูกค้า']];
+    const roles = RL.map(function (r) { return { n: r[1], d: r[2], on: role === r[0] ? 'true' : 'false', cls: role === r[0] ? 'opt on' : 'opt', pick: function () { self.setState({ role: r[0] }); } }; });
+    const SS = [['sample', 'ลองด้วยโปรเจกต์ตัวอย่าง', 'มีงาน Module, Sprint และ Bug ตัวอย่างพร้อมให้ลองทุก tab ลบทิ้งได้ทีหลัง'], ['new', 'สร้างโปรเจกต์ใหม่', 'เปิด Wizard 5 ขั้น ตั้งชื่อ ระยะเวลา ขอบเขต ทีม'], ['import', 'นำเข้าจากไฟล์แผนงาน', 'นำเข้า Excel แผนงาน (เช่น Development Plan) หรือย้ายจาก Jira, Trello, Asana']];
+    const starts = SS.map(function (s) { return { n: s[1], d: s[2], on: start === s[0] ? 'true' : 'false', cls: start === s[0] ? 'opt on' : 'opt', pick: function () { self.setState({ start: s[0] }); } }; });
+    const bc = function (n) { return step >= n ? 'on' : ''; };
+    return {
+      step: step, stepName: N[step], s1: step === 1, s2: step === 2, s3: step === 3, s4: step === 4, b1: bc(1), b2: bc(2), b3: bc(3), b4: bc(4),
+      roles: roles, starts: starts, isImport: start === 'import',
+      invites: [{ ph: 'name@example.com', val: 'kaijeaw@example.com' }, { ph: 'name@example.com', val: 'donut@example.com' }, { ph: 'name@example.com', val: '' }],
+      hasBack: step > 1, canSkip: step === 2 || step === 3, notLast: step < 4, isLast: step === 4,
+      nextLabel: step === 3 ? 'ส่งคำเชิญและไปต่อ' : 'ถัดไป →',
+      finishHref: start === 'new' ? 'NewProject.dc.html' : (start === 'import' ? 'ImportExcel.dc.html' : 'Home.dc.html'), finishLabel: start === 'new' ? 'ไปสร้างโปรเจกต์' : (start === 'import' ? 'เริ่มนำเข้า' : 'เปิดโปรเจกต์ตัวอย่าง'),
+      next: function () { self.setState({ step: Math.min(4, step + 1) }); }, back: function () { self.setState({ step: Math.max(1, step - 1) }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Mobile Sub-task Detail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#fff;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:15px;line-height:1.45}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.ib{width:44px;height:44px;border:0;background:transparent;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#1B1F24;text-decoration:none;font:inherit;font-size:22px}
+.pr{display:flex;justify-content:space-between;align-items:center;min-height:44px;border-bottom:1px solid #F1F3F5;font-size:14px}
+.pr .k{color:#5F6873}
+.muted{color:#5F6873}
+.st{min-height:40px;flex:1;border:0;border-bottom:2px solid transparent;background:transparent;font:inherit;font-size:14px;font-weight:500;color:#56606B;cursor:pointer}
+.st[aria-selected="true"]{color:#1B1F24;border-bottom-color:#1B1F24;font-weight:700}
+.sha{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;background:#F1F3F5;padding:1px 6px;border-radius:4px;color:#1D4ED8}
+.card{border:1px solid #E4E7EB;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.av{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex:none}
+</style>
+</helmet>
+<div style="width:390px;height:844px;display:flex;flex-direction:column;background:#fff;overflow:hidden">
+<header style="display:flex;align-items:center;gap:4px;padding:8px 8px;border-bottom:1px solid #E4E7EB">
+<a class="ib" href="MobileMyTasks.dc.html" aria-label="กลับ">‹</a>
+<div style="flex:1;min-width:0;font-size:13px"><div class="muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Credit Line › DP-39 ฟอร์มหลักประกัน 5 ประเภท</div><b>DP-526</b> <span style="font-size:11px;background:#1B1F24;color:#fff;border-radius:999px;padding:1px 8px">Sub-task</span></div>
+<button class="ib" type="button" aria-label="ตัวเลือกเพิ่มเติม">⋯</button>
+</header>
+
+<div style="flex:1;overflow-y:auto">
+<div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+<h1 style="margin:0;font-size:21px;line-height:1.3">ฟอร์มหลักประกัน: Bank Account</h1>
+<div style="display:flex;gap:8px">
+<label style="flex:1;display:flex;align-items:center;min-height:44px;border-radius:10px;background:#DBEAFE;padding:0 12px"><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Status</span><select aria-label="Status" style="flex:1;border:0;background:transparent;font:inherit;font-weight:700;color:#1E40AF"><option>In progress</option><option>To do</option><option>Review</option><option>Done</option></select></label>
+<button type="button" style="min-height:44px;padding:0 16px;border-radius:10px;border:0;background:#15803D;color:#fff;font:inherit;font-weight:700">✓ เสร็จ</button>
+</div>
+<div>
+<div class="pr"><span class="k">Assignee</span><span style="display:flex;align-items:center;gap:6px"><span class="av" style="background:#B45309;width:24px;height:24px;font-size:9px">KJ</span>Kaijeaw</span></div>
+<div class="pr"><span class="k">Due</span><b>3 ธ.ค. 2026</b></div>
+<div class="pr"><span class="k">Priority</span><span style="color:#B45309;font-weight:700">High</span></div>
+<div class="pr"><span class="k">Progress</span><span>{{pct}}% · Checklist {{done}}/4</span></div>
+</div>
+</div>
+<div role="tablist" aria-label="รายละเอียด" style="display:flex;border-bottom:1px solid #E4E7EB;position:sticky;top:0;background:#fff">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="4"><button class="st" type="button" role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}">{{t.n}}</button></sc-for>
+</div>
+<div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+<sc-if value="{{tDetail}}" hint-placeholder-val="{{ true }}">
+<div style="line-height:1.6">ฟอร์มหลักประกันประเภทบัญชีเงินฝาก ตาม SCR-107 (FR-06.2) · ข้อมูลจริงจาก Development Plan 2026-11 · สถานะจำลอง ณ พ. 2 ธ.ค. 2569</div>
+<div style="font-weight:700">Checklist</div>
+<sc-for list="{{checks}}" as="c" hint-placeholder-count="4"><label style="display:flex;align-items:center;gap:12px;min-height:44px"><input type="checkbox" checked="{{c.on}}" onChange="{{c.toggle}}" style="width:22px;height:22px"><span style="text-decoration:{{c.deco}};color:{{c.tc}}">{{c.t}}</span></label></sc-for>
+</sc-if>
+<sc-if value="{{tTest}}" hint-placeholder-val="{{ false }}">
+<div class="card"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:12px;font-weight:700;background:#DCFCE7;color:#166534;border-radius:999px;padding:1px 8px">Passed 9/9</span><b>Run #2</b></div><div class="muted" style="font-size:13px">Donut · วันนี้ 16:05 · SIT · <span class="sha">a41e7c2</span></div><a href="#" style="font-size:14px">TestReport_DP-526_run2.pdf</a></div>
+<div class="card"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:12px;font-weight:700;background:#FEE2E2;color:#991B1B;border-radius:999px;padding:1px 8px">Failed 7/9</span><b>Run #1</b></div><div class="muted" style="font-size:13px">Donut · วันนี้ 13:20 · <span class="sha">3be9d10</span> · แก้ในงานเดียวกัน</div></div>
+<button type="button" style="min-height:48px;border-radius:12px;border:2px dashed #B8C0CA;background:#fff;font:inherit;font-weight:600;color:#1D4ED8">+ แนบผลทดสอบ / ถ่ายรูปหน้าจอ</button>
+</sc-if>
+<sc-if value="{{tCommit}}" hint-placeholder-val="{{ false }}">
+<div class="card"><b>PR #142 Booking flow UI</b><div class="muted" style="font-size:13px">Review · รอ Mick · CI ผ่าน</div></div>
+<div style="display:flex;flex-direction:column;gap:10px;font-size:14px">
+<div><span class="sha">a41e7c2</span> fix: support 12-digit account numbers<div class="muted" style="font-size:12px">Kaijeaw · วันนี้ 15:40</div></div>
+<div><span class="sha">7c90b3e</span> feat: duplicate account check<div class="muted" style="font-size:12px">Kaijeaw · วันนี้ 14:30</div></div>
+<div><span class="sha">3be9d10</span> feat: bank account collateral form<div class="muted" style="font-size:12px">Kaijeaw · วันนี้ 11:05</div></div>
+</div>
+</sc-if>
+<sc-if value="{{tCm}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:10px"><span class="av" style="background:#A21CAF">DN</span><div><b>Donut</b> <span class="muted" style="font-size:12px">วันนี้ 13:25</span><div style="background:#F6F7F9;border-radius:12px;padding:8px 12px;margin-top:2px">Run #1 ไม่ผ่าน 2 เคส แนบรูปไว้แล้วค่ะ @Kaijeaw</div></div></div>
+<div style="display:flex;gap:10px"><span class="av" style="background:#B45309">KJ</span><div><b>Kaijeaw</b> <span class="muted" style="font-size:12px">วันนี้ 15:42</span><div style="background:#F6F7F9;border-radius:12px;padding:8px 12px;margin-top:2px">แก้แล้วใน a41e7c2 ครับ @Donut ช่วยรันซ้ำ</div></div></div>
+</sc-if>
+</div>
+</div>
+
+<div style="display:flex;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid #E4E7EB;background:#fff">
+<button class="ib" type="button" aria-label="แนบไฟล์" style="font-size:20px">+</button>
+<input type="text" placeholder="เขียนคอมเมนต์… @ เพื่อ mention" aria-label="เขียนคอมเมนต์" style="flex:1;min-height:44px;border:1px solid #C9CFD6;border-radius:22px;padding:0 14px;font:inherit">
+<button type="button" style="min-height:44px;padding:0 16px;border-radius:22px;border:0;background:#1D4ED8;color:#fff;font:inherit;font-weight:700">ส่ง</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { tab: 'detail', chk: [true, true, false, false] };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const tab = st.tab || 'detail', chk = st.chk || [true, true, false, false];
+    const TB = [['detail', 'รายละเอียด'], ['test', 'ผลทดสอบ'], ['commit', 'Commits'], ['cm', 'คอมเมนต์']];
+    const tabs = TB.map(function (t) { return { n: t[1], on: tab === t[0] ? 'true' : 'false', pick: function () { self.setState({ tab: t[0] }); } }; });
+    const CT = ['Layout ปฏิทินเลือกวัน', 'Time slot grid + สถานะเต็ม', 'ปิดวันหยุดคลินิกไม่ให้เลือก', 'Responsive บนมือถือ'];
+    const checks = CT.map(function (t, i) { return { t: t, on: !!chk[i], deco: chk[i] ? 'line-through' : 'none', tc: chk[i] ? '#5F6873' : '#1B1F24', toggle: function () { const a = chk.slice(); a[i] = !a[i]; self.setState({ chk: a }); } }; });
+    const done = chk.filter(Boolean).length;
+    return { tabs: tabs, checks: checks, done: done, pct: done * 25, tDetail: tab === 'detail', tTest: tab === 'test', tCommit: tab === 'commit', tCm: tab === 'cm' };
+  }
+}
+</script>
+</body>
+</html>

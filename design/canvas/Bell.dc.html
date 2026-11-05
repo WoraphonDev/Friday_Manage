@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Notification bell</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.page{position:relative;min-height:100vh}
+.tb{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap}
+.ws{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 10px;border-radius:8px;border:0;background:transparent;color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.ws:hover{background:#1E293B}
+.srch{flex:1 1 320px;max-width:560px;display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155}
+.ib{position:relative;width:40px;height:40px;border-radius:8px;border:0;background:transparent;color:#E2E8F0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.ib:hover,.ib[aria-expanded="true"]{background:#1E293B}
+.badge{position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #0F172A}
+.newb{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;background:#1D4ED8;color:#fff;border:0;font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
+.pop{position:absolute;top:62px;right:64px;width:min(420px,calc(100% - 16px));background:#fff;border:1px solid #E4E7EB;border-radius:14px;box-shadow:0 16px 48px rgba(15,23,42,.22);overflow:hidden}
+.ptab{min-height:40px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:transparent;font:inherit;font-weight:500;color:#56606B;cursor:pointer}
+.ptab[aria-selected="true"]{color:#1D4ED8;border-bottom-color:#1D4ED8;font-weight:600}
+.it{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid #F1F3F5;text-decoration:none;color:#1B1F24;align-items:flex-start}
+.it:hover{background:#FAFBFC;color:#1B1F24}
+.it.un{background:#F5F8FF}
+.av{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex:none}
+.muted{color:#5F6873}
+.sk{height:12px;border-radius:6px;background:#E1E5EA}
+.toasts{position:absolute;right:24px;bottom:24px;display:flex;flex-direction:column;gap:10px;width:min(380px,calc(100% - 32px))}
+.toast{display:flex;gap:10px;align-items:flex-start;background:#1B1F24;color:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 12px 32px rgba(15,23,42,.3)}
+.tbtn{min-height:30px;padding:0 10px;border-radius:6px;border:1px solid #475569;background:transparent;color:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.tbtn.pri{background:#fff;color:#1B1F24;border-color:#fff}
+.x{width:28px;height:28px;border:0;background:transparent;color:#94A3B8;font-size:18px;cursor:pointer;border-radius:6px}
+</style>
+</helmet>
+<div class="page">
+<header class="tb" aria-label="Global top bar">
+<a class="ws" href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace" style="text-decoration:none"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<a class="srch" href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์ หรือคนในทีม</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a class="newb" href="IssueCreate.dc.html">+ New</a>
+<button class="ib" type="button" aria-label="ช่วยเหลือ"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17v.01"></path></svg></button>
+<button class="ib" type="button" onClick="{{togglePop}}" aria-expanded="{{popOpen}}" aria-label="การแจ้งเตือน {{unread}} รายการยังไม่อ่าน"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><sc-if value="{{hasUnread}}" hint-placeholder-val="{{ true }}"><span class="badge">{{unread}}</span></sc-if></button>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+
+<div style="display:flex;gap:16px;padding:20px" aria-hidden="true">
+<div style="flex:0 0 220px;background:#fff;border-radius:12px;min-height:640px;padding:14px;display:flex;flex-direction:column;gap:12px"><div class="sk" style="width:70%"></div><div class="sk" style="width:55%"></div><div class="sk" style="width:62%"></div><div class="sk" style="width:48%"></div></div>
+<div style="flex:1;background:#fff;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{sk}}" as="s" hint-placeholder-count="12"><div style="display:flex;gap:10px"><div class="sk" style="width:{{s.a}}%"></div><div class="sk" style="width:{{s.b}}%"></div></div></sc-for>
+</div>
+</div>
+
+<sc-if value="{{isPop}}" hint-placeholder-val="{{ true }}">
+<div class="pop" role="dialog" aria-label="การแจ้งเตือน">
+<div style="display:flex;align-items:center;gap:8px;padding:12px 14px 0">
+<b style="font-size:16px;flex:1">การแจ้งเตือน</b>
+<button type="button" onClick="{{readAll}}" style="border:0;background:transparent;font:inherit;font-size:13px;color:#1D4ED8;cursor:pointer">อ่านทั้งหมด</button>
+<a href="Profile.dc.html" style="font-size:13px">ตั้งค่า</a>
+</div>
+<div role="tablist" style="display:flex;gap:2px;padding:0 6px;border-bottom:1px solid #E4E7EB">
+<sc-for list="{{ptabs}}" as="t" hint-placeholder-count="3"><button class="ptab" type="button" role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}">{{t.n}}</button></sc-for>
+</div>
+<sc-for list="{{items}}" as="n" hint-placeholder-count="5">
+<a class="{{n.cls}}" href="{{n.href}}">
+<span class="av" style="background:{{n.c}}">{{n.ini}}</span>
+<span style="flex:1;min-width:0;font-size:13px"><span><b>{{n.who}}</b> {{n.t}}</span><span class="muted" style="display:block;font-size:12px">{{n.meta}}</span></span>
+<sc-if value="{{n.un}}" hint-placeholder-val="{{ true }}"><span style="width:8px;height:8px;border-radius:50%;background:#1D4ED8;margin-top:6px;flex:none" aria-label="ยังไม่อ่าน"></span></sc-if>
+</a>
+</sc-for>
+<a href="Inbox.dc.html" style="display:block;text-align:center;padding:12px;font-weight:600;font-size:13px;text-decoration:none">เปิด Inbox ทั้งหมด →</a>
+</div>
+</sc-if>
+
+<div class="toasts" role="status" aria-live="polite">
+<sc-for list="{{toasts}}" as="t" hint-placeholder-count="2">
+<div class="toast">
+<span class="av" style="background:{{t.c}}">{{t.ini}}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+<div style="font-size:13px"><b>{{t.who}}</b> {{t.text}}<div style="color:#94A3B8;font-size:12px">{{t.meta}}</div></div>
+<div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{t.acts}}" as="a" hint-placeholder-count="2"><a class="{{a.cls}}" href="{{a.href}}">{{a.n}}</a></sc-for></div>
+</div>
+<button class="x" type="button" onClick="{{t.close}}" aria-label="ปิดการแจ้งเตือน">×</button>
+</div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  state = { pop: true, tab: 'all', readAll: false, closed: {} };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const tab = st.tab || 'all', ra = !!st.readAll, closed = st.closed || {};
+    const N = [
+      ['Kaijeaw', 'KJ', '#B45309', 'ขอเลื่อน Due DP-30 เป็น 4 ธ.ค.', 'รอคุณอนุมัติ · 1 ชม.', true, 'assign', 'Inbox.dc.html'],
+      ['Donut', 'DN', '#A21CAF', 'mention คุณใน DP-525', '“กระทบ DP-21 ด้วย ช่วยจัดลำดับให้หน่อยค่ะ” · 2 ชม.', true, 'mention', 'BugDetail.dc.html'],
+      ['Tung', 'TG', '#7C3AED', 'ส่ง DP-260 Offset กับ HP เข้า Review', 'Development Plan 2026-11 · 25 นาที', true, 'assign', 'TaskDetail.dc.html'],
+      ['Donut', 'DN', '#A21CAF', 'ตรวจซ้ำ DP-526 ผ่าน · SIT run #2 Passed 9/9', 'Development Plan 2026-11 · 16:05', true, 'all', 'SubtaskModal.dc.html'],
+      ['ระบบ', 'FM', '#475569', 'งานในโปรเจกต์เลยกำหนด 7 งาน', 'สรุปรายวัน · 09:30', false, 'all', 'Main.dc.html'],
+      ['ระบบ', 'FM', '#475569', 'DP-35 ครบกำหนดวันนี้', 'Kaijeaw · 08:00', false, 'all', 'TaskDetail.dc.html']
+    ];
+    const items = N.filter(function (n) { return tab === 'all' || n[6] === tab; }).map(function (n) {
+      const un = n[5] && !ra;
+      return { who: n[0], ini: n[1], c: n[2], t: n[3], meta: n[4], un: un, cls: un ? 'it un' : 'it', href: n[7] };
+    });
+    const unread = ra ? 0 : N.filter(function (n) { return n[5]; }).length;
+    const PT = [['all', 'ทั้งหมด'], ['assign', 'มอบหมาย / อนุมัติ'], ['mention', 'Mentions']];
+    const ptabs = PT.map(function (t) { return { n: t[1], on: tab === t[0] ? 'true' : 'false', pick: function () { self.setState({ tab: t[0] }); } }; });
+    const T = [
+      ['t1', 'Kaijeaw', 'KJ', '#B45309', 'ขอเลื่อน Due DP-30 จาก 1 ธ.ค. → 4 ธ.ค.', 'Development Plan 2026-11 · รอคุณอนุมัติ', [['อนุมัติ / ดูรายละเอียด', 'tbtn pri', 'Inbox.dc.html']]],
+      ['t2', 'Tung', 'TG', '#7C3AED', 'ส่งงานเข้า Review: DP-260 Offset กับ HP', 'ครบกำหนดวันนี้ · Development Plan 2026-11', [['เปิดงาน', 'tbtn pri', 'TaskDetail.dc.html'], ['ดูภายหลัง', 'tbtn', 'Inbox.dc.html']]]
+    ];
+    const toasts = T.filter(function (t) { return !closed[t[0]]; }).map(function (t) {
+      return { who: t[1], ini: t[2], c: t[3], text: t[4], meta: t[5], acts: t[6].map(function (a) { return { n: a[0], cls: a[1], href: a[2] }; }),
+        close: function () { const m = Object.assign({}, (self.state && self.state.closed) || {}); m[t[0]] = true; self.setState({ closed: m }); } };
+    });
+    const sk = [[40, 20], [32, 26], [44, 16], [28, 30], [38, 18], [30, 24], [42, 20], [26, 28], [36, 22], [40, 18], [30, 26], [34, 20]].map(function (r) { return { a: r[0], b: r[1] }; });
+    return {
+      items: items, ptabs: ptabs, toasts: toasts, sk: sk, unread: unread, hasUnread: unread > 0,
+      isPop: st.pop !== false, popOpen: st.pop !== false ? 'true' : 'false',
+      togglePop: function () { self.setState({ pop: !(self.state && self.state.pop !== false) }); },
+      readAll: function () { self.setState({ readAll: true }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

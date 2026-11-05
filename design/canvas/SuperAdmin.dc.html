@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Super Admin</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 220px;max-width:240px;background:#111827;color:#CBD5E1;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;padding:22px 24px 48px;display:flex;flex-direction:column;gap:16px}
+.nv{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 12px;border:0;border-radius:8px;background:transparent;font:inherit;text-align:left;cursor:pointer;color:#CBD5E1}
+.nv:hover{background:#1F2937;color:#fff}
+.nv.on{background:#1E3A8A;color:#fff;font-weight:600}
+.muted{color:#5F6873}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.ch{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid #EEF0F3}
+.ch h2{margin:0;font-size:15px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.pill{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.ok{background:#DCFCE7;color:#166534}.warn{background:#FEF3C7;color:#92400E}.bad{background:#FEE2E2;color:#991B1B}.neu{background:#EEF0F3;color:#3D4550}.inf{background:#DBEAFE;color:#1E40AF}
+.kp{background:#fff;border:1px solid #E4E7EB;border-radius:12px;padding:14px 16px}
+.kp b{display:block;font-size:24px;line-height:1.2}
+.tr{display:grid;grid-template-columns:minmax(180px,1.6fr) 90px 80px 110px 100px 110px;gap:10px;align-items:center;padding:10px 18px;border-bottom:1px solid #F1F3F5;font-size:13px;width:100%;background:#fff;border-left:0;border-right:0;border-top:0;font-family:inherit;text-align:left;cursor:pointer;color:#1B1F24}
+.tr:hover{background:#FAFBFC}
+.tr.on{background:#F8FAFF;box-shadow:inset 3px 0 0 #1D4ED8}
+.tr.h{font-size:12px;font-weight:700;color:#5F6873;background:#F8F9FB;cursor:default}
+.fld{display:flex;flex-direction:column;gap:6px}
+.lb{font-size:13px;font-weight:600}
+.in{min-height:38px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #F1F3F5;font-size:13px}
+.pr{display:flex;gap:12px;align-items:center;padding:12px 18px;border-bottom:1px solid #F1F3F5;flex-wrap:wrap}
+@media(max-width:900px){.tr{grid-template-columns:minmax(0,1fr) 90px}.tr .hs{display:none}}
+</style>
+</helmet>
+<sc-if value="{{inSession}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="background:#B45309;color:#fff;padding:8px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:14px"><b>คุณกำลังเข้าใช้ในฐานะทีมช่วยเหลือ</b><span>Acme Software · อ่านอย่างเดียว · Ticket #4821 · เหลือ 58 นาที · ลูกค้าเห็นการเข้าใช้นี้ใน Audit Log</span><span style="flex:1"></span><button type="button" onClick="{{endSession}}" style="min-height:32px;padding:0 12px;border-radius:8px;border:1px solid #fff;background:transparent;color:#fff;font:inherit;font-weight:600;cursor:pointer">ออกจากบัญชีลูกค้า</button></div>
+</sc-if>
+<div class="app">
+<aside class="side" aria-label="Super Admin">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 8px 4px"><span style="width:30px;height:30px;border-radius:8px;background:#DC2626;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">F</span><div><b style="color:#fff">Friday Ops</b><div style="font-size:11px">Super Admin · ภายในเท่านั้น</div></div></div>
+<div style="font-size:11px;padding:4px 8px 12px;color:#FCA5A5">ทุกการกระทำในหน้านี้ถูกบันทึก</div>
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="6"><button class="{{n.cls}}" type="button" onClick="{{n.pick}}" aria-current="{{n.cur}}">{{n.n}}<sc-if value="{{n.hasB}}" hint-placeholder-val="{{ false }}"><span class="pill {{n.bc}}" style="margin-left:auto">{{n.b}}</span></sc-if></button></sc-for>
+<div style="margin-top:auto;border-top:1px solid #1F2937;padding:10px 8px 0;font-size:12px">Mick · Owner<br>2FA ด้วย Security key</div>
+</aside>
+<main class="main">
+<div><h1 style="margin:0;font-size:22px">{{title}}</h1><div class="muted">{{desc}}</div></div>
+
+<sc-if value="{{sOv}}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
+<div class="kp"><span class="muted" style="font-size:13px">รายได้ต่อเดือน (MRR)</span><b>฿184,500</b><span style="font-size:12px;color:#166534">+12% จากเดือนก่อน</span></div>
+<div class="kp"><span class="muted" style="font-size:13px">Workspace ที่จ่ายเงิน</span><b>58</b><span class="muted" style="font-size:12px">S 31 · M 21 · L 5 · Ent 1</span></div>
+<div class="kp"><span class="muted" style="font-size:13px">กำลังทดลอง</span><b>14</b><span class="muted" style="font-size:12px">แปลงเป็นลูกค้า 38% (90 วัน)</span></div>
+<div class="kp"><span class="muted" style="font-size:13px">ยกเลิกเดือนนี้</span><b>2</b><span class="muted" style="font-size:12px">เหตุผล: ราคา 1, ย้ายไป Jira 1</span></div>
+<div class="kp" style="border-color:#FDE68A;background:#FFFBEB"><span class="muted" style="font-size:13px">รอตรวจการชำระเงิน</span><b style="color:#92400E">5</b><span class="muted" style="font-size:12px">สลิป 3 · 50 ทวิ 2</span></div>
+</div>
+<div class="muted" style="font-size:12px">ตัวเลขทั้งหมดเป็นตัวอย่าง · MRR คิดจากราคาก่อน VAT</div>
+<section class="card">
+<div class="ch"><h2>ต้องดูแลวันนี้</h2></div>
+<sc-for list="{{todo}}" as="t" hint-placeholder-count="4"><div class="pr"><span class="pill {{t.c}}">{{t.k}}</span><span style="flex:1 1 300px">{{t.t}}</span><button class="btn" type="button" onClick="{{t.go}}">{{t.b}}</button></div></sc-for>
+</section>
+</sc-if>
+
+<sc-if value="{{sTen}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+<section class="card" style="flex:999 1 600px;min-width:0;overflow:hidden">
+<div class="ch"><input class="in" type="search" placeholder="ค้นหาชื่อ, URL หรือเลขผู้เสียภาษี" aria-label="ค้นหาลูกค้า" style="max-width:340px"><div style="display:flex;gap:6px"><select class="in" aria-label="แพ็กเกจ" style="width:auto"><option>ทุกแพ็กเกจ</option></select><select class="in" aria-label="สถานะ" style="width:auto"><option>ทุกสถานะ</option></select></div></div>
+<div class="tr h"><span>Workspace</span><span>แพ็กเกจ</span><span class="hs">สมาชิก</span><span class="hs">MRR</span><span class="hs">ใช้งานล่าสุด</span><span class="hs">สถานะ</span></div>
+<sc-for list="{{tenants}}" as="t" hint-placeholder-count="6"><button class="{{t.cls}}" type="button" onClick="{{t.pick}}" aria-current="{{t.cur}}"><span style="display:flex;gap:8px;align-items:center;min-width:0"><span style="width:26px;height:26px;border-radius:6px;background:{{t.c}};color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex:none">{{t.ab}}</span><span style="min-width:0"><b style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{t.n}}</b><span class="muted mono">{{t.url}}</span></span></span><span>{{t.plan}}</span><span class="hs" style="color:{{t.mc}}">{{t.mem}}</span><span class="hs">{{t.mrr}}</span><span class="hs muted">{{t.last}}</span><span class="hs"><span class="pill {{t.sc}}">{{t.st}}</span></span></button></sc-for>
+</section>
+
+<section class="card" style="flex:1 1 360px;min-width:0" aria-label="รายละเอียดลูกค้า">
+<div class="ch"><div><h2>{{tn.n}}</h2><span class="muted mono">friday.app/{{tn.url}}</span></div><span class="pill {{tn.sc}}">{{tn.st}}</span></div>
+<div style="padding:12px 18px">
+<div class="kv"><span class="muted">แพ็กเกจ</span><span>{{tn.plan}} · {{tn.cyc}}</span></div>
+<div class="kv"><span class="muted">สมาชิก / Guest</span><span>{{tn.mem}} · Guest {{tn.guest}}</span></div>
+<div class="kv"><span class="muted">วิธีชำระ</span><span>{{tn.pay}}</span></div>
+<div class="kv"><span class="muted">Data region</span><span>{{tn.region}}</span></div>
+<div class="kv"><span class="muted">Owner</span><span>{{tn.owner}}</span></div>
+<div class="kv"><span class="muted">สร้างเมื่อ</span><span>{{tn.created}}</span></div>
+</div>
+<div style="padding:4px 18px 16px;display:flex;flex-direction:column;gap:10px">
+<b style="font-size:13px">เข้าบัญชีเพื่อช่วยเหลือ</b>
+<sc-if value="{{tn.allowed}}" hint-placeholder-val="{{ true }}">
+<div class="pill ok" style="align-self:flex-start">ลูกค้าเปิดสิทธิ์ไว้ล่วงหน้า · โดย {{tn.grantBy}}</div>
+<label class="fld"><span class="lb">เลข Ticket</span><input class="in mono" type="text" value="{{ticket}}" onInput="{{typeTicket}}" onChange="{{typeTicket}}" placeholder="#0000"></label>
+<label class="fld"><span class="lb">เหตุผล</span><input class="in" type="text" value="ลูกค้าแจ้ง Import Excel ค้างที่ขั้นตรวจสอบ"></label>
+<label class="fld"><span class="lb">สิทธิ์ในครั้งนี้</span><select class="in"><option>อ่านอย่างเดียว · 60 นาที</option><option>แก้ไขได้ · 30 นาที (ต้องมีผู้อนุมัติคนที่ 2)</option></select></label>
+<button class="btn pri" type="button" onClick="{{startSession}}" disabled="{{noTicket}}">เริ่มเข้าใช้ในฐานะทีมช่วยเหลือ</button>
+<span class="muted" style="font-size:12px">ลูกค้าได้รับอีเมลแจ้งทันที และเห็นรายการนี้ใน Audit Log · ดูข้อมูลบัตร รหัสผ่าน และ Export ไม่ได้</span>
+</sc-if>
+<sc-if value="{{tn.notAllowed}}" hint-placeholder-val="{{ false }}">
+<div class="pill neu" style="align-self:flex-start">ลูกค้ายังไม่เปิดสิทธิ์</div>
+<span class="muted" style="font-size:13px">ขอให้ Admin ของลูกค้าเปิดที่ Admin Console › ความปลอดภัย › การเข้าช่วยเหลือจากทีม Friday</span>
+<button class="btn" type="button">ส่งคำขอสิทธิ์ทางอีเมล</button>
+</sc-if>
+<div style="border-top:1px solid #EEF0F3;padding-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button">ขยายช่วงทดลอง</button><button class="btn" type="button">ให้ส่วนลด</button><button class="btn" type="button">เปลี่ยนแพ็กเกจ</button><button class="btn" type="button" style="color:#B91C1C">ระงับ Workspace</button></div>
+</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{sPay}}" hint-placeholder-val="{{ false }}">
+<section class="card">
+<div class="ch"><h2>รอตรวจสอบ</h2><span class="muted" style="font-size:13px">ตรวจสลิปภายใน 1 วันทำการ · ระหว่างรอลูกค้าใช้งานได้ตามปกติ</span></div>
+<sc-for list="{{pays}}" as="p" hint-placeholder-count="5">
+<div class="pr">
+<span class="pill {{p.kc}}">{{p.k}}</span>
+<div style="flex:1 1 260px;min-width:0"><b>{{p.n}}</b> <span class="muted mono">{{p.inv}}</span><div class="muted" style="font-size:12px">{{p.d}}</div></div>
+<b style="white-space:nowrap">{{p.amt}}</b>
+<sc-if value="{{p.pending}}" hint-placeholder-val="{{ true }}"><span style="display:flex;gap:6px"><button class="btn" type="button">ดูไฟล์</button><button class="btn" type="button" onClick="{{p.reject}}">ไม่ผ่าน</button><button class="btn pri" type="button" onClick="{{p.approve}}">{{p.okLabel}}</button></span></sc-if>
+<sc-if value="{{p.decided}}" hint-placeholder-val="{{ false }}"><span class="pill {{p.rc}}">{{p.res}}</span></sc-if>
+</div>
+</sc-for>
+</section>
+<section class="card">
+<div class="ch"><h2>เอกสารภาษีที่ออกล่าสุด</h2><span class="muted" style="font-size:13px">ใบกำกับภาษี / ใบเสร็จรับเงินอิเล็กทรอนิกส์ (e-Tax Invoice &amp; e-Receipt)</span></div>
+<sc-for list="{{docs}}" as="d" hint-placeholder-count="3"><div class="pr"><span class="mono" style="width:140px">{{d.no}}</span><span style="flex:1 1 200px">{{d.n}}</span><span>{{d.amt}}</span><span class="pill {{d.sc}}">{{d.st}}</span></div></sc-for>
+</section>
+</sc-if>
+
+<sc-if value="{{sSup}}" hint-placeholder-val="{{ false }}">
+<section class="card">
+<div class="ch"><h2>ประวัติการเข้าบัญชีลูกค้า</h2><span class="muted" style="font-size:13px">ลูกค้าเห็นรายการเดียวกันนี้ใน Audit Log ของตัวเอง</span></div>
+<sc-for list="{{sessions}}" as="s" hint-placeholder-count="4"><div class="pr"><span class="muted" style="width:120px">{{s.t}}</span><b style="width:150px">{{s.w}}</b><span style="width:80px">{{s.who}}</span><span style="flex:1 1 220px">{{s.why}}</span><span class="pill {{s.mc}}">{{s.mode}}</span><span class="muted" style="width:70px;text-align:right">{{s.dur}}</span></div></sc-for>
+</section>
+</sc-if>
+
+<sc-if value="{{sFlag}}" hint-placeholder-val="{{ false }}">
+<section class="card">
+<div class="ch"><h2>Feature flags</h2><span class="muted" style="font-size:13px">เปิดฟีเจอร์ใหม่ให้บางลูกค้าก่อน</span></div>
+<sc-for list="{{flags}}" as="f" hint-placeholder-count="4"><div class="pr"><div style="flex:1 1 260px"><b class="mono">{{f.k}}</b><div class="muted" style="font-size:12px">{{f.d}}</div></div><span class="pill {{f.sc}}">{{f.st}}</span><button class="btn" type="button">แก้ไข</button></div></sc-for>
+</section>
+<section class="card">
+<div class="ch"><h2>ประกาศถึงลูกค้า</h2></div>
+<div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+<label class="fld"><span class="lb">ข้อความ</span><input class="in" type="text" value="ปิดปรับปรุงระบบ ส. 14 พ.ย. 02:00–04:00 น."></label>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><select class="in" style="width:auto" aria-label="ส่งถึง"><option>ทุก Workspace</option><option>เฉพาะ Owner และ Admin</option></select><select class="in" style="width:auto" aria-label="ช่องทาง"><option>แบนเนอร์ในแอป + Email</option></select><button class="btn pri" type="button">ตั้งเวลาส่ง</button></div>
+</div>
+</section>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  state = { sec: 'ten', sel: 0, ticket: '#4821', session: false, pay: {} };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const sec = st.sec || 'ten', sel = st.sel || 0, ticket = st.ticket === undefined ? '#4821' : st.ticket, pay = st.pay || {};
+    const go = function (s) { return function () { self.setState({ sec: s }); }; };
+    const NV = [['ov', 'ภาพรวม', '', ''], ['ten', 'ลูกค้า (Workspace)', '', ''], ['pay', 'การชำระเงิน', '5', 'warn'], ['sup', 'การเข้าช่วยเหลือ', '', ''], ['flag', 'Feature flags + ประกาศ', '', '']];
+    const nav = NV.map(function (n) { return { n: n[1], cls: sec === n[0] ? 'nv on' : 'nv', cur: sec === n[0] ? 'page' : 'false', pick: go(n[0]), hasB: !!n[2], b: n[2], bc: n[3] }; });
+    const TT = { ov: ['ภาพรวมธุรกิจ', 'สำหรับทีม Friday เท่านั้น ลูกค้ามองไม่เห็นหน้านี้'], ten: ['ลูกค้า (Workspace)', 'ค้นหาลูกค้า ดูแพ็กเกจ และเข้าช่วยเหลือเมื่อลูกค้าเปิดสิทธิ์ไว้'], pay: ['การชำระเงิน', 'ตรวจสลิปโอนเงินและหนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)'], sup: ['การเข้าช่วยเหลือ', 'ทุกครั้งที่ทีมเข้าบัญชีลูกค้า'], flag: ['Feature flags + ประกาศ', 'ทยอยเปิดฟีเจอร์ และแจ้งข่าวถึงลูกค้า'] };
+    const T = [
+      ['AC', 'Acme Software', 'acme-software', '#0F766E', 'Team L', '41 / 50', '#1B1F24', '฿5,500', '5 นาทีก่อน', 'ใช้งาน', 'ok', 'รายปี', 3, 'บัตรเครดิต', '[Data region หลัก]', 'somchai@acme.example', '12 มี.ค. 2569', true, 'Somchai (Owner) · 2 ก.ย.'],
+      ['BB', 'Bluebird Studio', 'bluebird', '#7C3AED', 'Team S', '12 / 10', '#B91C1C', '฿1,500', '1 ชม.ก่อน', 'เกินแพ็กเกจ', 'warn', 'รายเดือน', 0, 'PromptPay', '[Data region หลัก]', 'nok@bluebird.example', '2 ส.ค. 2569', false, ''],
+      ['SD', 'สยามเดฟ จำกัด', 'siamdev', '#B45309', 'Team M', '19 / 25', '#1B1F24', '฿3,000', 'เมื่อวาน', 'ค้างชำระ 3 วัน', 'bad', 'รายเดือน', 4, 'โอนเงิน + หัก ณ ที่จ่าย', '[Data region หลัก]', 'acc@siamdev.example', '19 พ.ค. 2569', true, 'Arthit (Admin) · 20 พ.ค.'],
+      ['NW', 'Northwind Labs', 'northwind', '#1D4ED8', 'Enterprise', '86 / 120', '#1B1F24', '฿[ตามสัญญา]', '2 นาทีก่อน', 'ใช้งาน', 'ok', 'รายปี (สัญญา)', 10, 'โอนเงินตามใบแจ้งหนี้', '[Data region อื่น]', 'it@northwind.example', '1 ม.ค. 2569', true, 'IT Admin · 1 ม.ค.'],
+      ['KS', 'Kanit Soft', 'kanit-soft', '#BE185D', 'ทดลอง Team', '6 / 25', '#1B1F24', '฿0', '3 ชม.ก่อน', 'ทดลอง เหลือ 3 วัน', 'inf', '–', 0, '–', '[Data region หลัก]', 'kanit@kanit.example', '22 ต.ค. 2569', false, ''],
+      ['FW', 'Friday Workspace', 'friday-dev', '#334155', 'Team M', '9 / 25', '#1B1F24', '฿0 (ภายใน)', 'ตอนนี้', 'ภายใน', 'neu', '–', 2, '–', '[Data region หลัก]', 'mick@example.com', '5 ม.ค. 2569', true, 'Mick (Owner)']
+    ];
+    const tenants = T.map(function (t, i) { return { ab: t[0], n: t[1], url: t[2], c: t[3], plan: t[4], mem: t[5], mc: t[6], mrr: t[7], last: t[8], st: t[9], sc: t[10], cls: sel === i ? 'tr on' : 'tr', cur: sel === i ? 'true' : 'false', pick: function () { self.setState({ sel: i }); } }; });
+    const x = T[sel];
+    const tn = { n: x[1], url: x[2], plan: x[4], mem: x[5], st: x[9], sc: x[10], cyc: x[11], guest: x[12], pay: x[13], region: x[14], owner: x[15], created: x[16], allowed: x[17], notAllowed: !x[17], grantBy: x[18] };
+    const todo = [['ชำระเงิน', 'warn', 'สลิป 3 รายการ และ 50 ทวิ 2 รายการรอตรวจ', 'ตรวจ', 'pay'], ['ค้างชำระ', 'bad', 'สยามเดฟ จำกัด ค้าง 3 วัน · จะเป็นอ่านอย่างเดียวใน 4 วัน', 'ดูลูกค้า', 'ten'], ['เกินแพ็กเกจ', 'warn', 'Bluebird Studio 12 / 10 คน · ผ่อนผันถึง 19 พ.ย.', 'ดูลูกค้า', 'ten'], ['ทดลองใกล้หมด', 'inf', '4 Workspace หมดช่วงทดลองภายใน 3 วัน · ใช้งานจริง 2', 'ดูรายชื่อ', 'ten']].map(function (t) { return { k: t[0], c: t[1], t: t[2], b: t[3], go: go(t[4]) }; });
+    const P = [
+      ['slip1', 'สลิปโอน', 'neu', 'สยามเดฟ จำกัด', 'INV-2569-0112', 'โอน 3,120 บาท (หัก ณ ที่จ่าย 90) · ยอดตรงใบแจ้งหนี้', '฿3,120', 'ยืนยันรับเงิน'],
+      ['slip2', 'สลิปโอน', 'neu', 'Bluebird Studio', 'INV-2569-0118', 'ยอดในสลิป 1,500 แต่ใบแจ้งหนี้ 1,605 (ขาด VAT)', '฿1,500', 'ยืนยันรับเงิน'],
+      ['slip3', 'สลิปโอน', 'neu', 'Northwind Labs', 'INV-2569-0101', 'งวดที่ 2 ตามสัญญา', '฿[ตามสัญญา]', 'ยืนยันรับเงิน'],
+      ['wht1', '50 ทวิ', 'inf', 'สยามเดฟ จำกัด', 'INV-2569-0098', 'หนังสือรับรองการหักภาษี ณ ที่จ่าย 90 บาท · เลขผู้เสียภาษีตรง', '฿90', 'รับเอกสาร'],
+      ['wht2', '50 ทวิ', 'inf', 'Northwind Labs', 'INV-2569-0090', 'ยังไม่ส่ง · ครบ 30 วันในอีก 4 วัน', '฿[3%]', 'ส่งอีเมลเตือน']
+    ];
+    const pays = P.map(function (p) {
+      const r = pay[p[0]];
+      return { k: p[1], kc: p[2], n: p[3], inv: p[4], d: p[5], amt: p[6], okLabel: p[7], pending: !r, decided: !!r, res: r === 'ok' ? 'ผ่าน · ออกใบกำกับภาษีแล้ว' : 'ไม่ผ่าน · แจ้งลูกค้าแล้ว', rc: r === 'ok' ? 'ok' : 'bad',
+        approve: function () { const o = Object.assign({}, pay); o[p[0]] = 'ok'; self.setState({ pay: o }); }, reject: function () { const o = Object.assign({}, pay); o[p[0]] = 'no'; self.setState({ pay: o }); } };
+    });
+    const docs = [['E-INV-2569-0231', 'Acme Software · Team L รายปี', '฿58,850', 'ส่งแล้ว', 'ok'], ['E-INV-2569-0230', 'Kanit Soft · ยังไม่ออก (ทดลอง)', '–', 'ร่าง', 'neu'], ['E-INV-2569-0229', 'สยามเดฟ จำกัด · Team M ต.ค.', '฿3,210', 'รอรับเงิน', 'warn']].map(function (d) { return { no: d[0], n: d[1], amt: d[2], st: d[3], sc: d[4] }; });
+    const sessions = [['5 พ.ย. 10:42', 'Acme Software', 'Mick', '#4821 Import Excel ค้างที่ขั้นตรวจสอบ', 'อ่านอย่างเดียว', 'neu', 'กำลังใช้'], ['3 พ.ย. 15:10', 'สยามเดฟ จำกัด', 'Ann', '#4790 Gantt แสดงวันหยุดผิด', 'อ่านอย่างเดียว', 'neu', '22 นาที'], ['28 ต.ค. 09:05', 'Northwind Labs', 'Mick', '#4702 กู้คืนโปรเจกต์ที่ลบผิด', 'แก้ไขได้ · อนุมัติโดย Ann', 'warn', '14 นาที']].map(function (s) { return { t: s[0], w: s[1], who: s[2], why: s[3], mode: s[4], mc: s[5], dur: s[6] }; });
+    const flags = [['automation_v2', 'ตัวสร้างกฎแบบใหม่', '3 Workspace (ทดลอง)', 'inf'], ['line_approve_button', 'ปุ่มอนุมัติใน LINE', 'ทุกคน', 'ok'], ['gantt_critical_path', 'เส้นทางวิกฤตใน Gantt', 'ภายในเท่านั้น', 'neu'], ['sso_oidc', 'SSO แบบ OIDC', 'Enterprise', 'ok']].map(function (f) { return { k: f[0], d: f[1], st: f[2], sc: f[3] }; });
+    const inS = !!st.session;
+    return {
+      nav: nav, title: TT[sec][0], desc: TT[sec][1], sOv: sec === 'ov', sTen: sec === 'ten', sPay: sec === 'pay', sSup: sec === 'sup', sFlag: sec === 'flag',
+      todo: todo, tenants: tenants, tn: tn, pays: pays, docs: docs, sessions: sessions, flags: flags,
+      ticket: ticket, typeTicket: function (e) { self.setState({ ticket: (e && e.target && e.target.value) || '' }); }, noTicket: !ticket.trim(),
+      inSession: inS, startSession: function () { self.setState({ session: true }); }, endSession: function () { self.setState({ session: false }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

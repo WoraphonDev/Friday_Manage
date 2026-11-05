@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Create Task</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E4E7EB;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column}
+.navi{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 10px;border-radius:8px;color:#3D4550;text-decoration:none}
+.navi:hover{background:#F1F3F5;color:#1B1F24}
+.navi.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.sec{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:16px 10px 6px}
+.phead{background:#fff;padding:16px 24px 0;border-bottom:1px solid #E4E7EB}
+.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:10px}
+.tab{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;color:#56606B;text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+.tab:hover{color:#1B1F24}
+.tab.on{color:#1D4ED8;border-bottom-color:#1D4ED8;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:0 14px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.seg{display:inline-flex;border:1px solid #D5DAE0;border-radius:8px;overflow:hidden;background:#fff}
+.seg button{min-height:36px;padding:0 14px;border:0;background:transparent;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#1D4ED8;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.muted{color:#5F6873}
+.av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;border:2px solid #fff;flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.m-appt{background:#CCFBF1;color:#115E59}
+.p-mick{background:#1D4ED8}.p-ploy{background:#B45309}.p-ton{background:#0F766E}.p-fah{background:#7C3AED}.p-bank{background:#BE185D}
+.s-todo{background:#EEF0F3;color:#3D4550}.s-prog{background:#DBEAFE;color:#1E40AF}.s-rev{background:#FEF3C7;color:#92400E}.s-done{background:#DCFCE7;color:#166534}.s-late{background:#FEE2E2;color:#991B1B}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.stage{display:flex;flex-wrap:wrap;flex:1 1 auto;align-items:stretch}
+.dim{flex:1 1 320px;min-width:0;position:relative;padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+.veil{position:absolute;inset:0;background:rgba(15,23,42,.42);pointer-events:none}
+.sk{height:12px;border-radius:6px;background:#D5DAE0}
+.drawer{flex:0 1 640px;min-width:0;background:#fff;border-left:1px solid #D5DAE0;box-shadow:-12px 0 32px rgba(15,23,42,.18);display:flex;flex-direction:column}
+.dsec{padding:16px 24px;border-bottom:1px solid #EEF0F3;display:flex;flex-direction:column;gap:12px}
+.dsec h3{margin:0;font-size:14px}
+.lb{font-size:13px;font-weight:600}
+.req{color:#B91C1C}
+.hint{font-size:12px;color:#5F6873}
+.in{min-height:38px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;color:#1B1F24;width:100%;min-width:0}
+textarea.in{padding:10px 12px;min-height:120px;resize:vertical;line-height:1.6}
+.in:focus{outline:2px solid #1D4ED8;outline-offset:0;border-color:#1D4ED8}
+.prop{display:grid;grid-template-columns:120px minmax(0,1fr);gap:10px;align-items:center}
+.prg{display:inline-flex;gap:6px;flex-wrap:wrap}
+.prb{min-height:34px;padding:0 12px;border:1px solid #D5DAE0;border-radius:8px;background:#fff;font:inherit;font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:#3D4550}
+.prb[aria-pressed="true"]{border-color:#1B1F24;box-shadow:0 0 0 1px #1B1F24;color:#1B1F24;font-weight:600}
+.chipx{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 4px 0 10px;border:1px solid #D5DAE0;border-radius:999px;background:#fff;font-size:12px;font-weight:500}
+.x{width:24px;height:24px;border:0;border-radius:50%;background:transparent;cursor:pointer;color:#5F6873;display:inline-flex;align-items:center;justify-content:center;padding:0;font:inherit}
+.x:hover{background:#EEF0F3}
+.tb{display:flex;gap:2px;flex-wrap:wrap;border:1px solid #C9CFD6;border-bottom:0;border-radius:8px 8px 0 0;padding:4px;background:#F8F9FB}
+.tb button{min-width:32px;height:32px;border:0;background:transparent;border-radius:6px;font:inherit;font-size:13px;font-weight:600;color:#3D4550;cursor:pointer}
+.tb button:hover{background:#E4E7EB}
+.sr{display:grid;grid-template-columns:minmax(0,1fr) 130px 140px 32px;gap:8px;align-items:center}
+@media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.phead{padding:12px 16px 0}.prop{grid-template-columns:1fr}.sr{grid-template-columns:1fr 1fr}.dsec{padding:14px 16px}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a href="IssueCreate.dc.html" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:#1D4ED8;color:#fff;font-weight:600;text-decoration:none">+ New</a>
+<a href="Bell.dc.html" aria-label="การแจ้งเตือน 5 รายการยังไม่อ่าน" style="position:relative;width:40px;height:40px;border-radius:8px;color:#E2E8F0;display:inline-flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #0F172A">5</span></a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Mick" style="width:34px;height:34px;border-radius:50%;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">MK</a>
+</header>
+<div class="app">
+<aside class="side" aria-label="Workspace navigation">
+<a class="navi" href="Home.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"></path></svg>Home</a>
+<a class="navi" href="MyTasks.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="m8 12 3 3 5-6"></path></svg>My Tasks</a>
+<a class="navi" href="Inbox.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h5l1.5 3h5L16 13h5"></path><path d="M5 5h14l2 8v6H3v-6z"></path></svg>Inbox<span class="pill s-late" style="margin-left:auto">3</span></a>
+<div class="sec">Projects</div>
+<a class="navi on" href="Main.dc.html"><span class="dot" style="background:#334155"></span>Development Plan 2026-11</a>
+<a class="navi" href="NewProject.dc.html" style="color:#1D4ED8">+ New project</a>
+<div style="margin-top:auto;border-top:1px solid #E4E7EB;padding-top:10px;display:flex;flex-direction:column;gap:2px">
+<a class="navi" href="AdminConsole.dc.html">Admin Console</a>
+</div>
+</aside>
+<main class="main">
+<header class="phead">
+<div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px">
+<div style="min-width:0">
+<div class="muted" style="font-size:12px">Friday Workspace / Projects / Development Plan 2026-11</div>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+<div style="width:32px;height:32px;border-radius:8px;background:#334155;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">DP</div>
+<h1 style="margin:0;font-size:22px;line-height:1.3">Development Plan 2026-11</h1>
+<span class="pill s-prog">Active</span>
+<span class="pill s-late">Off track</span>
+</div>
+</div>
+</div>
+<nav class="tabs" aria-label="Project views">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="8"><a class="{{t.cls}}" href="{{t.href}}">{{t.label}}</a></sc-for>
+</nav>
+</header>
+
+<div class="stage">
+<div class="dim">
+<div class="card" style="padding:14px 16px;display:flex;flex-direction:column;gap:14px" aria-hidden="true">
+<sc-for list="{{skRows}}" as="s" hint-placeholder-count="10"><div style="display:flex;gap:14px;align-items:center"><div class="sk" style="width:{{s.a}}%"></div><div class="sk" style="width:{{s.b}}%"></div><div class="sk" style="width:12%"></div></div></sc-for>
+</div>
+<div class="veil"></div>
+<section class="card" style="position:relative;padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+<h2 style="margin:0;font-size:15px">วิธีที่ 1 · Quick add ในหน้า Table</h2>
+<div class="hint">พิมพ์ชื่อแล้วกด Enter สร้างได้ทันที ค่าอื่นใส่ทีหลังในแถวหรือใน Drawer</div>
+<div style="border:1px solid #E4E7EB;border-radius:8px;overflow:hidden;font-size:13px">
+<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#F8F9FB;font-weight:700"><span style="width:10px;height:10px;border-radius:3px;background:#1D4ED8"></span>Credit Line › หลักประกัน &amp; ผู้ค้ำประกัน</div>
+<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid #EEF0F3;font-weight:600"><span class="muted" style="font-size:12px">DP-39</span>ฟอร์มหลักประกัน 5 ประเภท</div>
+<div style="display:flex;align-items:center;gap:8px;padding:6px 10px 6px 40px;border-top:1px solid #EEF0F3;background:#F8FAFF"><input class="in" type="text" value="ฟอร์มหลักประกัน: Mortgage (จำนอง)" aria-label="ชื่อ Sub-task ใหม่" style="border:2px solid #1D4ED8;min-height:32px"></div>
+<div style="display:flex;align-items:center;gap:8px;padding:6px 10px 6px 18px;border-top:1px solid #EEF0F3"><span style="color:#1D4ED8;font-weight:500">+ เพิ่ม Task ใน หลักประกัน &amp; ผู้ค้ำประกัน</span></div>
+</div>
+<div class="hint">Enter = สร้าง · Tab = เปลี่ยนเป็น Sub-task · Shift+Tab = กลับเป็น Task · Esc = ยกเลิก</div>
+</section>
+<section class="card" style="position:relative;padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+<h2 style="margin:0;font-size:15px">วิธีที่ 2 · ฟอร์มเต็ม (Drawer ด้านขวา)</h2>
+<div class="hint">เปิดจากปุ่ม + Task, + New › Task หรือกด C ที่ไหนก็ได้ในโปรเจกต์</div>
+<div style="overflow-x:auto">
+<table style="border-collapse:collapse;width:100%;font-size:13px;min-width:360px">
+<thead><tr><th style="text-align:left;padding:6px 8px;border-bottom:1px solid #E4E7EB" class="muted">ต่างกันตรงไหน</th><th style="text-align:left;padding:6px 8px;border-bottom:1px solid #E4E7EB">Task</th><th style="text-align:left;padding:6px 8px;border-bottom:1px solid #E4E7EB">Sub-task</th></tr></thead>
+<tbody>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3" class="muted">Assignee · Status · วันที่ · Comment · ไฟล์ / ผลทดสอบ · Commit / PR · Time log</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">มี</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3;font-weight:600">มีครบเหมือน Task</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3" class="muted">อยู่ภายใต้</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">Module (บังคับ)</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">Task แม่ (บังคับ) · Module สืบทอดเอง</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3" class="muted">ลูก</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">มี Sub-task ได้</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">ไม่มีลูก · ใช้ Checklist แทน</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3" class="muted">วันที่</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">อิสระ</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">ต้องอยู่ในช่วงของ Task แม่ (เตือนถ้าเกิน)</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3" class="muted">Estimate / Progress</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">รวมจาก Sub-task อัตโนมัติ (ถ้ามี)</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">กรอกเอง</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3" class="muted">Sprint</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">เลือกได้</td><td style="padding:6px 8px;border-bottom:1px solid #EEF0F3">ตาม Task แม่</td></tr>
+<tr><td style="padding:6px 8px" class="muted">เปิดดูรายละเอียด</td><td style="padding:6px 8px">Drawer ด้านขวา</td><td style="padding:6px 8px">Popup กลางจอ</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+
+<aside class="drawer" aria-label="สร้าง {{typeName}}">
+<div style="display:flex;align-items:center;gap:12px;padding:16px 24px;border-bottom:1px solid #E4E7EB;flex-wrap:wrap">
+<h2 style="margin:0;font-size:18px;flex:1">สร้างใหม่</h2>
+<div class="seg" role="group" aria-label="ประเภท"><button type="button" aria-pressed="{{taskOn}}" onClick="{{setTask}}">Task</button><button type="button" aria-pressed="{{subOn}}" onClick="{{setSub}}">Sub-task</button></div>
+<a class="x" href="Table.dc.html" aria-label="ปิด" style="width:36px;height:36px;text-decoration:none;font-size:20px">×</a>
+</div>
+
+<div class="dsec">
+<sc-if value="{{isTask}}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+<label style="display:flex;flex-direction:column;gap:6px"><span class="lb">Module <span class="req">*</span></span><select class="in"><option>Credit Line</option><option>Drawdown</option><option>Pre-Disburse</option><option>Maintain Car After Drawdown</option><option>BFC ใบเรียกเก็บ/ใบแจ้งหนี้</option><option>Repayment รับชำระเงิน</option><option>Checkstock & Collect Car Keys</option><option>Finance (GL)</option><option>Campaign</option><option>OEM / Dealer Portal</option><option>Interface FP/HP/KL</option><option>+ สร้าง Module ใหม่…</option></select></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span class="lb">Sprint</span><select class="in"><option>Sprint 3 (30 พ.ย. – 11 ธ.ค.) · ปัจจุบัน</option><option>Sprint 4 (14–25 ธ.ค.)</option><option>Backlog</option></select></label>
+</div>
+</sc-if>
+<sc-if value="{{isSub}}" hint-placeholder-val="{{ false }}">
+<label style="display:flex;flex-direction:column;gap:6px"><span class="lb">Task แม่ <span class="req">*</span></span><select class="in"><option>DP-39 · ฟอร์มหลักประกัน 5 ประเภท</option><option>DP-38 · Collateral framework</option><option>DP-223 · ค่าปรับ/ดอกเบี้ยผิดนัด 2 แบบ</option></select></label>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center" class="hint"><span class="pill" style="background:#1D4ED81A;color:#1D4ED8">Credit Line</span>Module และ Sprint 3 สืบทอดจาก Task แม่ · ช่วงเวลา Task แม่ 2 – 9 ธ.ค.</div>
+</sc-if>
+<label style="display:flex;flex-direction:column;gap:6px"><span class="lb">ชื่อ{{typeName}} <span class="req">*</span></span><input class="in" type="text" value="{{titleVal}}" style="font-size:17px;font-weight:600;min-height:46px"></label>
+</div>
+
+<div class="dsec">
+<h3>รายละเอียด</h3>
+<div class="prop"><span class="lb">Status</span><select class="in" style="max-width:220px"><option>To do</option><option>In progress</option><option>Review</option><option>Done</option></select></div>
+<div class="prop"><span class="lb">Dev</span><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="chipx"><span class="av" style="background:{{who.pc}}" style="width:22px;height:22px;font-size:9px;border:0">{{who.ini}}</span>{{who.n}}<button class="x" type="button" aria-label="นำ {{who.n}} ออก">×</button></span><sc-if value="{{isTask}}" hint-placeholder-val="{{ true }}"><span class="chipx"><span class="av p-ton" style="width:22px;height:22px;font-size:9px;border:0">TN</span>Ton<button class="x" type="button" aria-label="นำ Ton ออก">×</button></span></sc-if><button class="prb" type="button">+ เพิ่ม Dev</button><span class="hint">{{who.load}}</span></div></div>
+<div class="prop"><span class="lb">BA</span><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="av" style="background:#0369A1">DN</span><select class="in" style="max-width:200px" aria-label="BA"><option>Donut</option><option>Naa</option><option>P'Nee</option></select><span class="hint">เจ้าของ Requirement · ตอบคำถาม Dev</span></div></div>
+<div class="prop"><span class="lb">Reviewer</span><div style="display:flex;align-items:center;gap:8px"><span class="av p-mick">MK</span><select class="in" style="max-width:220px"><option>Mick</option><option>ไม่มี</option></select></div></div>
+<div class="prop"><span class="lb">Priority</span>
+<div class="prg" role="group" aria-label="Priority">
+<sc-for list="{{prios}}" as="p" hint-placeholder-count="4"><button class="prb" type="button" aria-pressed="{{p.on}}" onClick="{{p.pick}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="{{p.c}}" aria-hidden="true"><path d="M5 3v18h2v-7h11l-2-4 2-4H7V3z"></path></svg>{{p.n}}</button></sc-for>
+</div>
+</div>
+<div class="prop"><span class="lb">Plan Start → End</span>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input class="in" type="date" value="{{startVal}}" aria-label="Start date" style="max-width:170px"><span class="muted">→</span><input class="in" type="date" value="{{dueVal}}" aria-label="Due date" style="max-width:170px"><span class="hint">{{dateHint}}</span></div>
+</div>
+<div class="prop"><span class="lb">Size / Man-Day</span><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div class="prg" role="group" aria-label="Size"><sc-for list="{{sizes}}" as="z" hint-placeholder-count="5"><button class="prb" type="button" aria-pressed="{{z.on}}" onClick="{{z.pick}}">{{z.n}} · {{z.md}}</button></sc-for></div><input class="in" type="number" value="{{mdVal}}" aria-label="Man-Day" style="max-width:76px"><span>MD</span><span class="hint">{{mdHint}}</span></div></div>
+<div class="prop"><span class="lb">Requirement</span><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="chipx">FR-02.3<button class="x" type="button" aria-label="ลบ FR-02.3">×</button></span><span class="chipx">SCR-203<button class="x" type="button" aria-label="ลบ SCR-203">×</button></span><button class="prb" type="button">+ FR / NFR</button><button class="prb" type="button">+ Screen</button><span class="hint">ค้นจาก SRS ใน Files</span></div></div>
+<div class="prop"><span class="lb">Labels</span><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="chipx">backend<button class="x" type="button" aria-label="ลบ label">×</button></span><span class="chipx">booking<button class="x" type="button" aria-label="ลบ label">×</button></span><button class="prb" type="button">+ Label</button></div></div>
+<div class="prop"><span class="lb">Watchers</span><div style="display:flex;align-items:center;gap:4px"><span class="av p-mick">MK</span><span class="av p-ploy" style="margin-left:-6px">PL</span><button class="prb" type="button" style="margin-left:6px">+ เพิ่ม</button></div></div>
+</div>
+
+<div class="dsec">
+<h3>Description</h3>
+<div>
+<div class="tb" role="toolbar" aria-label="Text formatting"><button type="button" aria-label="Bold">B</button><button type="button" aria-label="Italic" style="font-style:italic">I</button><button type="button" aria-label="Heading">H</button><button type="button" aria-label="Bulleted list">•≡</button><button type="button" aria-label="Checklist">☐</button><button type="button" aria-label="Code block">&lt;/&gt;</button><button type="button" aria-label="Link">Link</button><button type="button" aria-label="Mention">@</button><button type="button" aria-label="Image">รูป</button><span style="flex:1"></span><button type="button">ใช้ Template</button></div>
+<textarea class="in" style="border-radius:0 0 8px 8px">{{descVal}}</textarea>
+</div>
+<div class="hint">รองรับ Markdown · พิมพ์ @ เพื่อ mention · วางรูปได้โดยตรง</div>
+</div>
+
+<sc-if value="{{isTask}}" hint-placeholder-val="{{ true }}">
+<div class="dsec">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3>Sub-tasks <span class="muted" style="font-weight:500">· สร้างพร้อมกันได้เลย</span></h3><span class="hint">Estimate รวม 18 ชม.</span></div>
+<div class="sr hint" style="font-weight:600"><span>ชื่อ Sub-task</span><span>Assignee</span><span>Due</span><span></span></div>
+<sc-for list="{{subRows}}" as="s" hint-placeholder-count="3">
+<div class="sr">
+<input class="in" type="text" value="{{s.n}}" aria-label="ชื่อ Sub-task">
+<select class="in" aria-label="Assignee"><option>{{s.who}}</option><option>Kaijeaw</option><option>Pond</option><option>Tung</option><option>Top</option><option>Zo</option><option>P'Tum</option><option>Donut</option></select>
+<input class="in" type="date" value="{{s.d}}" aria-label="Due date">
+<button class="x" type="button" aria-label="ลบแถว">×</button>
+</div>
+</sc-for>
+<input class="in" type="text" placeholder="+ เพิ่ม Sub-task แล้วกด Enter" style="border-style:dashed">
+</div>
+</sc-if>
+
+<sc-if value="{{isSub}}" hint-placeholder-val="{{ false }}">
+<div class="dsec">
+<h3>Checklist <span class="muted" style="font-weight:500">· ไม่บังคับ</span></h3>
+<sc-for list="{{checks}}" as="c" hint-placeholder-count="3"><label style="display:flex;align-items:center;gap:10px;font-size:14px"><input type="checkbox" style="width:18px;height:18px">{{c}}</label></sc-for>
+<input class="in" type="text" placeholder="+ เพิ่มรายการ" style="border-style:dashed">
+</div>
+</sc-if>
+
+<div class="dsec">
+<h3>Dependencies</h3>
+<div class="prop"><span class="lb">Blocked by</span><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="chipx"><span class="pill s-prog">In progress</span>DP-38 Collateral framework<button class="x" type="button" aria-label="ลบ">×</button></span><button class="prb" type="button">+ เพิ่ม</button></div></div>
+<div class="prop"><span class="lb">Blocks</span><div><button class="prb" type="button">+ เพิ่ม</button></div></div>
+</div>
+
+<div class="dsec">
+<h3>Attachments</h3>
+<div style="border:2px dashed #B8C0CA;border-radius:10px;padding:14px;text-align:center;font-size:13px">ลากไฟล์มาวาง หรือ <a href="#">เลือกไฟล์</a> · แนบลิงก์ Figma / Google Drive ได้</div>
+</div>
+
+<div style="margin-top:auto;padding:14px 24px;border-top:1px solid #E4E7EB;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff">
+<label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" style="width:16px;height:16px">สร้างต่ออีกรายการ</label>
+<span style="flex:1"></span>
+<span class="hint">Ctrl + Enter</span>
+<a class="btn" href="Table.dc.html">ยกเลิก</a>
+<a class="btn pri" href="TaskDetail.dc.html">สร้าง{{typeName}}</a>
+</div>
+</aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"type":{"editor":"enum","options":["task","sub"],"default":"task"},"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  state = {};
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const type = st.type || this.props.type || 'task';
+    const isTask = type !== 'sub';
+    const pr = st.pr || (isTask ? 'High' : 'Medium');
+    const T = [['Overview','Main.dc.html'],['ภาพรวม Lead','LeadDashboard.dc.html'],['Backlog','Backlog.dc.html'],['Table','Table.dc.html'],['Kanban','Kanban.dc.html'],['Timeline','Timeline.dc.html'],['Gantt','Gantt.dc.html'],['Calendar','Calendar.dc.html'],['Members','Members.dc.html'],['Files','Files.dc.html'],['Settings','ProjectSettings.dc.html']];
+    const tabs = T.map(function (x) { return { label: x[0], href: x[1], cls: x[0] === 'Table' ? 'tab on' : 'tab' }; });
+    const PC = { Urgent: '#B91C1C', High: '#B45309', Medium: '#1D4ED8', Low: '#5F6873' };
+    const prios = ['Urgent', 'High', 'Medium', 'Low'].map(function (p) { return { n: p, c: PC[p], on: pr === p ? 'true' : 'false', pick: function () { self.setState({ pr: p }); } }; });
+    const size = st.size || (isTask ? 'L' : 'S');
+    const MDM = { XS: 1, S: 3, M: 5, L: 8, XL: 12 };
+    const sizes = ['XS', 'S', 'M', 'L', 'XL'].map(function (z) { return { n: z, md: MDM[z], on: size === z ? 'true' : 'false', pick: function () { self.setState({ size: z }); } }; });
+    const skRows = [[30, 14], [24, 18], [36, 10], [28, 16], [22, 20], [34, 12], [26, 14], [30, 18], [20, 16], [32, 12]].map(function (r) { return { a: r[0], b: r[1] }; });
+    return {
+      tabs: tabs, skRows: skRows, prios: prios, isTask: isTask, isSub: !isTask,
+      sizes: sizes, mdVal: MDM[size], mdHint: isTask ? 'รวมทั้งทีม · 2 Dev = ' + (MDM[size] / 2) + ' MD ต่อคน' : 'นับรวมเข้า Task แม่ (DP-39)',
+      typeName: isTask ? ' Task' : ' Sub-task',
+      taskOn: isTask ? 'true' : 'false', subOn: isTask ? 'false' : 'true',
+      setTask: function () { self.setState({ type: 'task', pr: null }); }, setSub: function () { self.setState({ type: 'sub', pr: null }); },
+      titleVal: isTask ? 'Interface HP: Disburse - Post - ตั้งจ่าย' : 'ฟอร์มหลักประกัน: Mortgage (จำนอง)',
+      who: isTask ? { n: 'Zo', ini: 'ZO', pc: '#0369A1', load: '2.5/5 MD สัปดาห์นี้' } : { n: 'Kaijeaw', ini: 'KJ', pc: '#B45309', load: '16/5 MD · เกิน capacity' },
+      startVal: isTask ? '2026-12-14' : '2026-12-09', dueVal: isTask ? '2026-12-16' : '2026-12-09',
+      dateHint: 'Plan End = Plan Start + Man-Day (จ.–ศ. ไม่รวมวันหยุด ธปท.) · Actual บันทึกเองเมื่อเปลี่ยนสถานะ',
+      estVal: isTask ? 3 : 1, estHint: isTask ? 'รวมจาก Sub-task อัตโนมัติเมื่อมี Sub-task' : 'นับรวมเข้า Estimate ของ Task แม่',
+      descVal: isTask ? '## เป้าหมาย\nAPI ตั้งจ่ายจากระบบ HP ไปยัง Floor Plan (Interface FP/HP/KL)\n\n## Acceptance criteria\n- [ ] รับรายการตั้งจ่ายจาก HP พร้อมเลขสัญญา\n- [ ] ตรวจ Double Finance ก่อนบันทึก\n- [ ] ส่งผลกลับ HP ภายใน 1 นาที' : 'ฟอร์มหลักประกันประเภทจำนอง: เลขโฉนด ผู้จำนอง มูลค่าประเมิน และวันที่จดจำนอง ตาม SCR-107',
+      subRows: [{ n: 'Mapping ฟิลด์ HP → FP', who: 'Zo', d: '2026-12-14' }, { n: 'API ตั้งจ่าย + ตรวจ Double Finance', who: 'Pond', d: '2026-12-15' }, { n: 'ทดสอบกับ HP SIT', who: 'Donut', d: '2026-12-16' }],
+      checks: ['ตรวจเลขโฉนดซ้ำในระบบ', 'คำนวณมูลค่าตามสัดส่วน (DP-40)', 'บันทึกเป็น Draft ก่อนส่งอนุมัติ']
+    };
+  }
+}
+</script>
+</body>
+</html>

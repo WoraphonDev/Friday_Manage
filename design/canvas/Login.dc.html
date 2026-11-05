@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Login</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#fff;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.wrap{display:flex;flex-wrap:wrap;min-height:100vh}
+.brand{flex:1 1 420px;background:#0F172A;color:#E2E8F0;padding:48px;display:flex;flex-direction:column;justify-content:space-between;gap:40px}
+.brand .m{color:#94A3B8}
+.fs{flex:1 1 480px;display:flex;align-items:center;justify-content:center;padding:48px 24px}
+.box{width:100%;max-width:420px;display:flex;flex-direction:column;gap:16px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.lb{font-size:13px;font-weight:600}
+.in{min-height:44px;border:1px solid #C9CFD6;border-radius:10px;padding:0 12px;font:inherit;background:#fff;width:100%}
+.in:focus{outline:2px solid #1D4ED8;border-color:#1D4ED8}
+.in.err{border-color:#DC2626}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:46px;padding:0 16px;border-radius:10px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;width:100%}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.muted{color:#5F6873}
+.or{display:flex;align-items:center;gap:12px;color:#5F6873;font-size:13px}
+.or:before,.or:after{content:"";flex:1;height:1px;background:#E4E7EB}
+.otp{display:flex;gap:10px}
+.otp input{width:52px;height:58px;border:1px solid #C9CFD6;border-radius:10px;text-align:center;font:inherit;font-size:22px;font-weight:700}
+.alert{display:flex;gap:10px;align-items:flex-start;background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;border-radius:10px;padding:10px 12px;font-size:13px}
+@media(max-width:760px){.brand{padding:28px 20px}.fs{padding:28px 16px}}
+</style>
+</helmet>
+<div class="wrap">
+<section class="brand" aria-label="Friday Manage">
+<div style="display:flex;align-items:center;gap:10px"><span style="width:36px;height:36px;border-radius:9px;background:#1D4ED8;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">F</span><span style="font-weight:700;font-size:18px">Friday Manage</span></div>
+<div style="max-width:460px">
+<h2 style="font-size:34px;line-height:1.25;margin:0 0 16px;color:#fff">จัดการงานพัฒนาระบบ ตั้งแต่ Module จนถึง Commit</h2>
+<ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;color:#CBD5E1">
+<li>Table, Kanban, Timeline, Gantt ในข้อมูลชุดเดียวกัน</li>
+<li>ผูก Commit, PR และผลทดสอบเข้ากับทุก Task / Sub-task</li>
+<li>เห็น Workload ทีมก่อนงานล้นมือ</li>
+</ul>
+</div>
+<div class="m" style="font-size:12px">© 2026 Friday Manage · <a href="Legal.dc.html" style="color:#93C5FD">นโยบายความเป็นส่วนตัว</a> · <a href="Legal.dc.html" style="color:#93C5FD">ข้อกำหนดการใช้งาน</a></div>
+</section>
+
+<section class="fs">
+<div class="box">
+<sc-if value="{{isLogin}}" hint-placeholder-val="{{ true }}">
+<div><h1 style="margin:0;font-size:28px">เข้าสู่ระบบ</h1><div class="muted">ยินดีต้อนรับกลับมา</div></div>
+<sc-if value="{{hasErr}}" hint-placeholder-val="{{ false }}">
+<div class="alert" role="alert"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16v.01"></path></svg><span>อีเมลหรือรหัสผ่านไม่ถูกต้อง · ลองได้อีก 4 ครั้งก่อนบัญชีถูกล็อก 15 นาที</span></div>
+</sc-if>
+<label class="fld"><span class="lb">อีเมล</span><input class="in" type="email" value="mick@example.com" autocomplete="email"></label>
+<label class="fld"><span class="lb" style="display:flex;justify-content:space-between">รหัสผ่าน <a href="ForgotPassword.dc.html" style="font-weight:500">ลืมรหัสผ่าน?</a></span>
+<span style="position:relative;display:block"><input class="{{pwCls}}" type="{{pwType}}" value="password123" autocomplete="current-password" style="padding-right:64px"><button type="button" onClick="{{togglePw}}" style="position:absolute;right:6px;top:6px;height:32px;border:0;background:transparent;font:inherit;color:#1D4ED8;font-weight:600;cursor:pointer">{{pwBtn}}</button></span>
+</label>
+<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked style="width:18px;height:18px">จดจำฉันไว้ 30 วัน</label>
+<button class="btn pri" type="button" onClick="{{submit}}">เข้าสู่ระบบ</button>
+<div class="or">หรือ</div>
+<button class="btn" type="button"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#EA4335"></circle><text x="12" y="16.5" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="sans-serif">G</text></svg>เข้าสู่ระบบด้วย Google</button>
+<button class="btn" type="button"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="9" height="9" fill="#F25022"></rect><rect x="13" y="2" width="9" height="9" fill="#7FBA00"></rect><rect x="2" y="13" width="9" height="9" fill="#00A4EF"></rect><rect x="13" y="13" width="9" height="9" fill="#FFB900"></rect></svg>เข้าสู่ระบบด้วย Microsoft</button>
+<button class="btn" type="button">SSO ขององค์กร (SAML)</button>
+<div class="muted" style="text-align:center">ยังไม่มีบัญชี? <a href="Signup.dc.html" style="font-weight:600">สมัครใช้งาน</a></div>
+</sc-if>
+
+<sc-if value="{{isOtp}}" hint-placeholder-val="{{ false }}">
+<button type="button" onClick="{{back}}" style="align-self:flex-start;border:0;background:transparent;font:inherit;color:#1D4ED8;cursor:pointer;padding:0">← กลับ</button>
+<div><h1 style="margin:0;font-size:28px">ยืนยันตัวตน 2 ขั้นตอน</h1><div class="muted">ใส่รหัส 6 หลักจากแอป Authenticator ของ mick@example.com</div></div>
+<div class="otp" role="group" aria-label="รหัส 6 หลัก">
+<input type="text" inputmode="numeric" maxlength="1" value="4" aria-label="หลักที่ 1"><input type="text" inputmode="numeric" maxlength="1" value="8" aria-label="หลักที่ 2"><input type="text" inputmode="numeric" maxlength="1" value="2" aria-label="หลักที่ 3"><input type="text" inputmode="numeric" maxlength="1" aria-label="หลักที่ 4" style="border-color:#1D4ED8;outline:2px solid #1D4ED8"><input type="text" inputmode="numeric" maxlength="1" aria-label="หลักที่ 5"><input type="text" inputmode="numeric" maxlength="1" aria-label="หลักที่ 6">
+</div>
+<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" style="width:18px;height:18px">ไม่ต้องถามอีกบนอุปกรณ์นี้ 30 วัน</label>
+<a class="btn pri" href="Home.dc.html">ยืนยันและเข้าสู่ระบบ</a>
+<div class="muted" style="font-size:13px;text-align:center">ใช้งานแอปไม่ได้? <a href="#">ใช้ Backup code</a></div>
+</sc-if>
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  state = { step: 'login', tries: 0, show: false };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const step = st.step || 'login', tries = st.tries || 0, show = !!st.show;
+    return {
+      isLogin: step === 'login', isOtp: step === 'otp', hasErr: tries === 1,
+      pwType: show ? 'text' : 'password', pwBtn: show ? 'ซ่อน' : 'แสดง', pwCls: tries === 1 ? 'in err' : 'in',
+      togglePw: function () { self.setState({ show: !show }); },
+      submit: function () { if (tries === 0) self.setState({ tries: 1 }); else self.setState({ step: 'otp' }); },
+      back: function () { self.setState({ step: 'login', tries: 0 }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

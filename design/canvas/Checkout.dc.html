@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Checkout</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}
+.muted{color:#5F6873}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 16px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.fld{display:flex;flex-direction:column;gap:6px;min-width:0}
+.lb{font-size:13px;font-weight:600}
+.in{min-height:40px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%;min-width:0}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid #D5DAE0;border-radius:10px;background:#fff;font:inherit;text-align:left;cursor:pointer;color:#1B1F24;flex:1 1 180px}
+.opt[aria-pressed="true"]{border-color:#1D4ED8;box-shadow:0 0 0 1px #1D4ED8;background:#F8FAFF}
+.rd{width:18px;height:18px;border-radius:50%;border:2px solid #94A3B8;flex:none;margin-top:2px;display:flex;align-items:center;justify-content:center}
+.sr{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:14px}
+.pill{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.step{display:flex;align-items:center;gap:8px;font-size:13px;color:#5F6873}
+.step b{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#EEF0F3;color:#3D4550;font-size:12px}
+.step.on{color:#1B1F24;font-weight:600}.step.on b{background:#1D4ED8;color:#fff}
+</style>
+</helmet>
+<header style="background:#fff;border-bottom:1px solid #E4E7EB">
+<div style="max-width:1160px;margin:0 auto;padding:0 24px;min-height:60px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+<a href="Landing.dc.html" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:#1B1F24;font-weight:700"><span style="width:30px;height:30px;border-radius:8px;background:#1D4ED8;color:#fff;display:flex;align-items:center;justify-content:center">F</span>Friday Manage</a>
+<span class="muted">ชำระเงิน · Friday Workspace</span>
+<span style="flex:1"></span>
+<span class="muted" style="font-size:13px;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>เชื่อมต่อแบบเข้ารหัส</span>
+</div>
+</header>
+<div style="max-width:1160px;margin:0 auto;padding:22px 24px 48px;display:flex;flex-direction:column;gap:16px">
+<sc-if value="{{notPaid}}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;gap:18px;flex-wrap:wrap" aria-label="ขั้นตอน"><span class="step on"><b>1</b>แพ็กเกจ</span><span class="step on"><b>2</b>ข้อมูลใบกำกับภาษี</span><span class="step on"><b>3</b>ชำระเงิน</span></div>
+<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+<div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px">
+
+<section class="card" style="padding:18px;display:flex;flex-direction:column;gap:12px">
+<h2 style="margin:0;font-size:16px">1. แพ็กเกจ</h2>
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<sc-for list="{{plans}}" as="p" hint-placeholder-count="3"><button class="opt" type="button" aria-pressed="{{p.on}}" onClick="{{p.pick}}"><span class="rd" style="border-color:{{p.bd}}"><span style="width:8px;height:8px;border-radius:50%;background:{{p.dot}}"></span></span><span><b>{{p.n}}</b><div class="muted" style="font-size:12px">{{p.d}}</div></span></button></sc-for>
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<sc-for list="{{cycles}}" as="c" hint-placeholder-count="2"><button class="opt" type="button" aria-pressed="{{c.on}}" onClick="{{c.pick}}"><span class="rd" style="border-color:{{c.bd}}"><span style="width:8px;height:8px;border-radius:50%;background:{{c.dot}}"></span></span><span><b>{{c.n}}</b><div class="muted" style="font-size:12px">{{c.d}}</div></span></button></sc-for>
+</div>
+<div class="muted" style="font-size:12px">ทีมปัจจุบัน 12 คน (ไม่นับ Guest 2 คน) · Team M รองรับถึง 25 คน</div>
+</section>
+
+<section class="card" style="padding:18px;display:flex;flex-direction:column;gap:12px">
+<h2 style="margin:0;font-size:16px">2. ข้อมูลสำหรับใบกำกับภาษี</h2>
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<sc-for list="{{ents}}" as="c" hint-placeholder-count="2"><button class="opt" type="button" aria-pressed="{{c.on}}" onClick="{{c.pick}}"><span class="rd" style="border-color:{{c.bd}}"><span style="width:8px;height:8px;border-radius:50%;background:{{c.dot}}"></span></span><span><b>{{c.n}}</b></span></button></sc-for>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px">
+<label class="fld"><span class="lb">{{nameLb}}</span><input class="in" type="text" placeholder="{{namePh}}"></label>
+<label class="fld"><span class="lb">เลขประจำตัวผู้เสียภาษี (13 หลัก)</span><input class="in mono" type="text" inputmode="numeric" placeholder="[เลข 13 หลัก]"></label>
+<sc-if value="{{isCorp}}" hint-placeholder-val="{{ true }}"><label class="fld"><span class="lb">สำนักงานใหญ่ / สาขา</span><select class="in"><option>สำนักงานใหญ่</option><option>สาขาที่ (ระบุเลข 5 หลัก)</option></select></label></sc-if>
+<label class="fld" style="grid-column:1/-1"><span class="lb">ที่อยู่ตามที่จดทะเบียน</span><input class="in" type="text" placeholder="[ที่อยู่สำหรับใบกำกับภาษี]"></label>
+<label class="fld"><span class="lb">อีเมลรับใบกำกับภาษี (e-Tax)</span><input class="in" type="email" placeholder="account@[โดเมน]"></label>
+<label class="fld"><span class="lb">เลขที่ใบสั่งซื้อ (PO) ถ้ามี</span><input class="in" type="text" placeholder="ไม่บังคับ"></label>
+</div>
+</section>
+
+<section class="card" style="padding:18px;display:flex;flex-direction:column;gap:12px">
+<h2 style="margin:0;font-size:16px">3. วิธีชำระเงิน</h2>
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<sc-for list="{{methods}}" as="m" hint-placeholder-count="3"><button class="opt" type="button" aria-pressed="{{m.on}}" onClick="{{m.pick}}"><span class="rd" style="border-color:{{m.bd}}"><span style="width:8px;height:8px;border-radius:50%;background:{{m.dot}}"></span></span><span><b>{{m.n}}</b><div class="muted" style="font-size:12px">{{m.d}}</div></span></button></sc-for>
+</div>
+
+<sc-if value="{{isCard}}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+<label class="fld" style="grid-column:1/-1"><span class="lb">หมายเลขบัตร</span><input class="in mono" type="text" inputmode="numeric" placeholder="0000 0000 0000 0000"></label>
+<label class="fld"><span class="lb">วันหมดอายุ</span><input class="in mono" type="text" placeholder="MM/YY"></label>
+<label class="fld"><span class="lb">CVC</span><input class="in mono" type="text" inputmode="numeric" placeholder="123"></label>
+<label class="fld"><span class="lb">ชื่อบนบัตร</span><input class="in" type="text"></label>
+</div>
+<div class="muted" style="font-size:12px">ตัดเงินอัตโนมัติทุกรอบ · ข้อมูลบัตรเก็บที่ผู้ให้บริการชำระเงิน [Payment gateway] ไม่ผ่านเซิร์ฟเวอร์ของ Friday · อาจมีขั้นตอนยืนยัน 3-D Secure จากธนาคาร</div>
+</sc-if>
+
+<sc-if value="{{isPP}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;border:1px solid #E4E7EB;border-radius:10px;padding:14px">
+<div style="width:160px;height:160px;border:1px solid #D5DAE0;border-radius:10px;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,#F6F7F9 0 8px,#fff 8px 16px);font-size:12px;color:#5F6873;flex:none">QR PromptPay</div>
+<div style="flex:1 1 220px;display:flex;flex-direction:column;gap:6px"><b>สแกนจ่าย {{pay}} บาท</b><span class="muted" style="font-size:13px">QR หมดอายุใน 15:00 นาที · ระบบยืนยันอัตโนมัติเมื่อเงินเข้า ไม่ต้องส่งสลิป</span><span class="muted" style="font-size:13px">รอบถัดไป: ส่งใบแจ้งหนี้พร้อม QR ทางอีเมลล่วงหน้า 7 วัน (PromptPay ตัดอัตโนมัติไม่ได้)</span><button class="btn" type="button" style="align-self:flex-start;min-height:36px">ดาวน์โหลด QR</button></div>
+</div>
+</sc-if>
+
+<sc-if value="{{isBank}}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;border:1px solid #E4E7EB;border-radius:10px;padding:14px">
+<div><div class="muted" style="font-size:12px">ธนาคาร</div><b>[ชื่อธนาคาร]</b></div>
+<div><div class="muted" style="font-size:12px">ชื่อบัญชี</div><b>[ชื่อบริษัท]</b></div>
+<div><div class="muted" style="font-size:12px">เลขที่บัญชี</div><b class="mono">[xxx-x-xxxxx-x]</b></div>
+<div><div class="muted" style="font-size:12px">ยอดโอน</div><b>{{pay}} บาท</b></div>
+<label class="fld" style="grid-column:1/-1"><span class="lb">แนบสลิปการโอน</span><span style="display:flex;align-items:center;gap:10px;border:1px dashed #C9CFD6;border-radius:8px;padding:12px;font-size:13px" class="muted"><button class="btn" type="button" style="min-height:34px">เลือกไฟล์</button>JPG, PNG หรือ PDF · ทีมตรวจภายใน 1 วันทำการ</span></label>
+</div>
+<div class="muted" style="font-size:12px">ระหว่างรอตรวจ ใช้งานแพ็กเกจใหม่ได้ทันที · เหมาะกับบริษัทที่ต้องตั้งเบิกจ่ายผ่านฝ่ายบัญชี (ขอใบแจ้งหนี้ก่อนโอนได้)</div>
+</sc-if>
+
+<sc-if value="{{canWht}}" hint-placeholder-val="{{ true }}">
+<label style="display:flex;gap:10px;align-items:flex-start;background:#F8F9FB;border-radius:10px;padding:12px;cursor:pointer"><input type="checkbox" checked="{{wht}}" onChange="{{toggleWht}}" style="width:18px;height:18px;margin-top:2px"><span><b>หักภาษี ณ ที่จ่าย 3%</b><div class="muted" style="font-size:12px">สำหรับนิติบุคคล · ส่งหนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ) ภายใน 30 วันที่หน้า Billing · ใบกำกับภาษียังออกเต็มจำนวน</div></span></label>
+</sc-if>
+<sc-if value="{{cardCorp}}" hint-placeholder-val="{{ false }}"><div class="muted" style="font-size:12px">ต้องการหักภาษี ณ ที่จ่าย ให้เลือก PromptPay หรือโอนเงิน (บัตรเครดิตหักไม่ได้)</div></sc-if>
+</section>
+</div>
+
+<aside class="card" style="flex:1 1 300px;padding:18px;display:flex;flex-direction:column;gap:4px;position:sticky;top:12px" aria-label="สรุปยอด">
+<h2 style="margin:0 0 8px;font-size:16px">สรุปยอด</h2>
+<div class="sr"><span>{{planName}} · {{cycName}}</span><span>{{sub}}</span></div>
+<div class="sr"><span class="muted">VAT 7%</span><span>{{vat}}</span></div>
+<div class="sr" style="border-top:1px solid #EEF0F3;font-weight:700"><span>ยอดตามใบกำกับภาษี</span><span>{{total}}</span></div>
+<sc-if value="{{showWht}}" hint-placeholder-val="{{ false }}"><div class="sr" style="color:#B45309"><span>หัก ณ ที่จ่าย 3%</span><span>− {{whtAmt}}</span></div></sc-if>
+<div class="sr" style="font-size:18px;font-weight:700;border-top:1px solid #EEF0F3;padding-top:10px"><span>ยอดที่ต้องชำระ</span><span>{{pay}} บาท</span></div>
+<div class="muted" style="font-size:12px;margin:4px 0 10px">ตัวเลขตัวอย่างสำหรับดูการคำนวณ (Team M = 3,000 บาท/เดือน) ยังไม่ใช่ราคาจริง</div>
+<button class="btn pri" type="button" onClick="{{payNow}}">{{payBtn}}</button>
+<div class="muted" style="font-size:12px;margin-top:8px">กดชำระเงินแสดงว่ายอมรับ <a href="Legal.dc.html">ข้อกำหนดการใช้งาน</a> และ <a href="Legal.dc.html">DPA</a> · ยกเลิกได้ตลอด ใช้ต่อจนจบรอบ</div>
+</aside>
+</div>
+</sc-if>
+
+<sc-if value="{{paid}}" hint-placeholder-val="{{ false }}">
+<section class="card" style="max-width:640px;margin:24px auto;padding:28px;display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+<span class="pill" style="background:{{doneBg}};color:{{doneFg}};font-size:13px">{{doneTag}}</span>
+<h1 style="margin:0;font-size:24px">{{doneH}}</h1>
+<div class="muted">{{doneD}}</div>
+<ul style="margin:0;padding-left:20px;line-height:1.9">
+<li>ใบกำกับภาษี / ใบเสร็จรับเงินอิเล็กทรอนิกส์ ส่งไปที่อีเมลบัญชี {{docWhen}}</li>
+<sc-if value="{{showWht}}" hint-placeholder-val="{{ false }}"><li>อัปโหลด 50 ทวิ ภายใน 30 วันที่ Admin Console › แพ็กเกจ &amp; Billing</li></sc-if>
+<li>รอบถัดไป: {{nextNote}}</li>
+</ul>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn pri" href="Home.dc.html">กลับไปทำงาน</a><a class="btn" href="AdminConsole.dc.html">ดู Billing</a><button class="btn" type="button" onClick="{{back}}">ดูหน้าชำระเงินอีกครั้ง</button></div>
+</section>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+  state = { plan: 'm', cyc: 'mo', ent: 'corp', m: 'bank', wht: true, paid: false };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const plan = st.plan || 'm', cyc = st.cyc || 'mo', ent = st.ent || 'corp', m = st.m || 'bank', wht = st.wht !== false, paid = !!st.paid;
+    const PR = { s: ['Team S', 'สูงสุด 10 คน', 1500], m: ['Team M', 'สูงสุด 25 คน', 3000], l: ['Team L', 'สูงสุด 50 คน', 5500] };
+    const radio = function (on) { return { on: on ? 'true' : 'false', bd: on ? '#1D4ED8' : '#94A3B8', dot: on ? '#1D4ED8' : 'transparent' }; };
+    const mk = function (arr, cur, key) { return arr.map(function (a) { return Object.assign({ n: a[1], d: a[2] || '', pick: function () { const o = {}; o[key] = a[0]; self.setState(o); } }, radio(cur === a[0])); }); };
+    const plans = mk([['s', 'Team S', 'สูงสุด 10 คน'], ['m', 'Team M', 'สูงสุด 25 คน'], ['l', 'Team L', 'สูงสุด 50 คน']], plan, 'plan');
+    const cycles = mk([['mo', 'รายเดือน', 'ยกเลิกได้ทุกเดือน'], ['yr', 'รายปี', 'จ่าย 10 เดือน ใช้ 12 เดือน']], cyc, 'cyc');
+    const ents = mk([['corp', 'นิติบุคคล (บริษัท / ห้างหุ้นส่วน)'], ['person', 'บุคคลธรรมดา']], ent, 'ent');
+    const methods = mk([['card', 'บัตรเครดิต / เดบิต', 'ตัดอัตโนมัติทุกรอบ'], ['pp', 'PromptPay', 'สแกน QR · ยืนยันอัตโนมัติ'], ['bank', 'โอนเงินผ่านธนาคาร', 'แนบสลิป · ขอใบแจ้งหนี้ก่อนได้']], m, 'm');
+    const base = PR[plan][2] * (cyc === 'yr' ? 10 : 1);
+    const vat = Math.round(base * 0.07), total = base + vat;
+    const canWht = ent === 'corp' && m !== 'card';
+    const showWht = canWht && wht;
+    const whtAmt = showWht ? Math.round(base * 0.03) : 0;
+    const f = function (n) { return n.toLocaleString('en-US'); };
+    const D = {
+      card: ['ชำระเงินสำเร็จ', '#DCFCE7', '#166534', 'เปลี่ยนเป็น ' + PR[plan][0] + ' แล้ว', 'ทุกคนในทีมใช้ฟีเจอร์ได้ทันที', 'ทันที', 'ตัดบัตรอัตโนมัติ ' + (cyc === 'yr' ? '5 พ.ย. 2570' : '5 ธ.ค. 2569')],
+      pp: ['ได้รับเงินแล้ว', '#DCFCE7', '#166534', 'เปลี่ยนเป็น ' + PR[plan][0] + ' แล้ว', 'ระบบยืนยันยอด PromptPay อัตโนมัติ', 'ทันที', 'ใบแจ้งหนี้พร้อม QR จะส่งให้ 7 วันก่อนครบรอบ'],
+      bank: ['รอตรวจสลิป', '#FEF3C7', '#92400E', 'ได้รับสลิปแล้ว ใช้งาน ' + PR[plan][0] + ' ได้ทันที', 'ทีม Friday ตรวจภายใน 1 วันทำการ · ถ้ายอดไม่ตรงจะแจ้งกลับทางอีเมล ไม่ปิดการใช้งานทันที', 'หลังตรวจสลิปผ่าน', 'ส่งใบแจ้งหนี้ให้ 7 วันก่อนครบรอบ']
+    }[m];
+    return {
+      notPaid: !paid, paid: paid, plans: plans, cycles: cycles, ents: ents, methods: methods,
+      isCorp: ent === 'corp', nameLb: ent === 'corp' ? 'ชื่อนิติบุคคล' : 'ชื่อ-นามสกุล', namePh: ent === 'corp' ? '[ชื่อบริษัท]' : '[ชื่อ-นามสกุล]',
+      isCard: m === 'card', isPP: m === 'pp', isBank: m === 'bank', canWht: canWht, cardCorp: ent === 'corp' && m === 'card',
+      wht: wht, toggleWht: function () { self.setState({ wht: !wht }); },
+      planName: PR[plan][0], cycName: cyc === 'yr' ? 'รายปี' : 'รายเดือน', sub: f(base), vat: f(vat), total: f(total), showWht: showWht, whtAmt: f(whtAmt), pay: f(total - whtAmt),
+      payBtn: m === 'card' ? 'ชำระ ' + f(total - whtAmt) + ' บาท' : (m === 'pp' ? 'ฉันสแกนจ่ายแล้ว' : 'ส่งสลิปการโอน'),
+      payNow: function () { self.setState({ paid: true }); }, back: function () { self.setState({ paid: false }); },
+      doneTag: D[0], doneBg: D[1], doneFg: D[2], doneH: D[3], doneD: D[4], docWhen: D[5], nextNote: D[6]
+    };
+  }
+}
+</script>
+</body>
+</html>

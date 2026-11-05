@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>My Tasks</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F7F9;color:#1B1F24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+.side{flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E4E7EB;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column}
+.navi{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 10px;border-radius:8px;color:#3D4550;text-decoration:none}
+.navi:hover{background:#F1F3F5;color:#1B1F24}
+.navi.on{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.sec{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#5F6873;padding:16px 10px 6px}
+.phead{background:#fff;padding:20px 24px 14px;border-bottom:1px solid #E4E7EB;display:flex;flex-direction:column;gap:14px}
+.body{padding:20px 24px;display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #D5DAE0;background:#fff;color:#1B1F24;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#F1F3F5;color:#1B1F24}
+.btn.pri{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.btn.pri:hover{background:#1E40AF;color:#fff}
+.seg{display:inline-flex;border:1px solid #D5DAE0;border-radius:8px;overflow:hidden;background:#fff}
+.seg button{min-height:34px;padding:0 12px;border:0;background:transparent;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#EEF2FF;color:#1D4ED8;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid #D5DAE0;background:#fff;font:inherit;font-size:13px;color:#3D4550;cursor:pointer}
+.chip.on{background:#1B1F24;border-color:#1B1F24;color:#fff}
+.card{background:#fff;border:1px solid #E4E7EB;border-radius:12px}
+.chead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid #EEF0F3}
+.chead h2{margin:0;font-size:15px}
+.muted{color:#5F6873}
+.av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.s-todo{background:#EEF0F3;color:#3D4550}.s-prog{background:#DBEAFE;color:#1E40AF}.s-rev{background:#FEF3C7;color:#92400E}.s-done{background:#DCFCE7;color:#166534}.s-late{background:#FEE2E2;color:#991B1B}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.gh{display:flex;align-items:center;gap:10px;min-height:46px;padding:0 14px;background:#F8F9FB;border-bottom:1px solid #E4E7EB;border-top:1px solid #E4E7EB;cursor:pointer;width:100%;border-left:0;border-right:0;font:inherit;text-align:left;color:#1B1F24}
+.gh:hover{background:#F1F3F5}
+.rot{transform:rotate(-90deg)}
+.tr{display:grid;grid-template-columns:24px minmax(0,1fr) 112px 78px 140px 44px;column-gap:12px;align-items:center;min-height:58px;padding:6px 14px;border-bottom:1px solid #EEF0F3}
+.tr:hover{background:#FAFBFC}
+.tt{font-weight:500;color:#1B1F24;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.tt:hover{color:#1D4ED8;text-decoration:underline}
+.dt{font-size:13px;white-space:nowrap}.dt.late{color:#B91C1C;font-weight:600}.dt.today{color:#B45309;font-weight:600}
+.pr-u{color:#B91C1C}.pr-h{color:#B45309}.pr-m{color:#1D4ED8}.pr-l{color:#5F6873}
+.in{min-height:38px;border:1px solid #C9CFD6;border-radius:8px;padding:0 10px;font:inherit;background:#fff;width:100%;min-width:0}
+@media(max-width:760px){.side{max-width:none;border-right:0;border-bottom:1px solid #E4E7EB}.body{padding:16px}.phead{padding:16px}.tr{grid-template-columns:24px minmax(0,1fr) 90px}.tr .hs{display:none}}
+</style>
+</helmet>
+<header aria-label="Global top bar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0F172A;color:#E2E8F0;flex-wrap:wrap">
+<a href="WorkspaceSwitch.dc.html" aria-label="สลับ Workspace (ตอนนี้: Friday Workspace)" style="display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 8px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600"><span style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;display:inline-flex;align-items:center;justify-content:center">F</span>Friday Workspace ▾</a>
+<a href="Search.dc.html" aria-label="ค้นหา (Ctrl K)" style="flex:1 1 280px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;background:#1E293B;color:#94A3B8;border:1px solid #334155;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1">ค้นหางาน โปรเจกต์ ไฟล์</span><span style="font-size:12px;border:1px solid #475569;border-radius:4px;padding:0 6px">Ctrl K</span></a>
+<span style="flex:1"></span>
+<a href="IssueCreate.dc.html" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:#1D4ED8;color:#fff;font-weight:600;text-decoration:none">+ New</a>
+<a href="Bell.dc.html" aria-label="การแจ้งเตือน 5 รายการยังไม่อ่าน" style="position:relative;width:40px;height:40px;border-radius:8px;color:#E2E8F0;display:inline-flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #0F172A">5</span></a>
+<a href="Profile.dc.html" aria-label="โปรไฟล์ของ Kaijeaw" style="width:34px;height:34px;border-radius:50%;background:#B45309;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-decoration:none;border:2px solid #334155">KJ</a>
+</header>
+<div class="app">
+<aside class="side" aria-label="Workspace navigation">
+<a class="navi" href="Home.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"></path></svg>Home</a>
+<a class="navi on" href="MyTasks.dc.html" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="m8 12 3 3 5-6"></path></svg>My Tasks<span class="pill s-todo" style="margin-left:auto">{{openCount}}</span></a>
+<a class="navi" href="Inbox.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h5l1.5 3h5L16 13h5"></path><path d="M5 5h14l2 8v6H3v-6z"></path></svg>Inbox<span class="pill s-late" style="margin-left:auto">3</span></a>
+<div class="sec">Projects</div>
+<a class="navi" href="Main.dc.html"><span class="dot" style="background:#334155"></span>Development Plan 2026-11</a>
+<a class="navi" href="NewProject.dc.html" style="color:#1D4ED8">+ New project</a>
+<div style="margin-top:auto;border-top:1px solid #E4E7EB;padding-top:10px;display:flex;flex-direction:column;gap:2px">
+<a class="navi" href="AdminConsole.dc.html">Admin Console</a>
+</div>
+</aside>
+<main class="main">
+<header class="phead">
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px">
+<div>
+<h1 style="margin:0;font-size:24px">My Tasks</h1>
+<div class="muted" style="font-size:14px">มุมมองของ <b>Kaijeaw</b> (Dev) · <b>{{openCount}}</b> งานที่ยังไม่เสร็จ · Man-Day รวม {{estSum}} MD (ส่วนของฉัน)</div>
+<div style="margin-top:6px"><span class="pill" style="background:#EEF0F3;color:#3D4550">ข้อมูลจริงจาก Development Plan 2026-11 · สถานะจำลอง ณ พ. 2 ธ.ค. 2569</span></div>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<div class="seg" role="group" aria-label="View"><button type="button" aria-pressed="true">List</button><button type="button" aria-pressed="false">Board</button><button type="button" aria-pressed="false">Calendar</button></div>
+<a class="btn pri" href="TaskCreate.dc.html">+ New task</a>
+</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between">
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+<button class="chip on" type="button">มอบหมายให้ฉัน <span style="opacity:.75">{{openCount}}</span></button>
+<button class="chip" type="button">ฉันเป็น Reviewer <span style="opacity:.75">3</span></button>
+<button class="chip" type="button">Watching <span style="opacity:.75">8</span></button>
+<button class="chip" type="button">ฉันสร้าง <span style="opacity:.75">15</span></button>
+<span style="width:1px;height:24px;background:#D5DAE0;margin:0 4px"></span>
+<sc-for list="{{projChips}}" as="c" hint-placeholder-count="5"><button class="{{c.cls}}" type="button" onClick="{{c.pick}}" aria-pressed="{{c.on}}"><sc-if value="{{c.hasDot}}" hint-placeholder-val="{{ false }}"><span style="width:9px;height:9px;border-radius:3px;background:{{c.c}}"></span></sc-if>{{c.n}}</button></sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+<span class="muted" style="font-size:13px">จัดกลุ่ม</span>
+<div class="seg" role="group" aria-label="Group by"><button type="button" aria-pressed="{{gDue}}" onClick="{{byDue}}">Due date</button><button type="button" aria-pressed="{{gProj}}" onClick="{{byProj}}">Project</button><button type="button" aria-pressed="{{gSt}}" onClick="{{bySt}}">Status</button></div>
+</div>
+</div>
+</header>
+
+<div class="body">
+<section class="card" style="flex:999 1 620px;min-width:0;overflow:hidden">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="6">
+<button class="gh" type="button" onClick="{{g.toggle}}" aria-expanded="{{g.exp}}">
+<svg class="{{g.rot}}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+<span style="width:10px;height:10px;border-radius:3px;background:{{g.c}}"></span>
+<span style="font-weight:700;color:{{g.tc}}">{{g.n}}</span>
+<span class="pill s-todo">{{g.count}}</span>
+<span class="muted" style="font-size:12px;margin-left:auto">{{g.sub}}</span>
+</button>
+<sc-if value="{{g.open}}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{g.items}}" as="r" hint-placeholder-count="2">
+<div class="tr">
+<input type="checkbox" checked="{{r.done}}" onChange="{{r.toggle}}" aria-label="ทำเครื่องหมายว่าเสร็จ: {{r.t}}" style="width:18px;height:18px;margin:0">
+<div style="min-width:0">
+<a class="tt" href="{{r.href}}" style="text-decoration:{{r.deco}};color:{{r.tc}}">{{r.t}}</a>
+<div style="display:flex;align-items:center;gap:6px;font-size:12px;flex-wrap:wrap;margin-top:2px" class="muted">
+<span style="width:8px;height:8px;border-radius:2px;background:{{r.pc}}"></span><span>{{r.key}}</span><span>·</span><span>{{r.crumb}}</span>
+<sc-if value="{{r.isSub}}" hint-placeholder-val="{{ false }}"><span class="pill" style="background:#F1F3F5;color:#3D4550;font-size:11px">Sub-task</span></sc-if>
+</div>
+</div>
+<span class="hs"><span class="pill {{r.sc}}">{{r.st}}</span></span>
+<span class="hs" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:500"><svg class="{{r.prc}}" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 3v18h2v-7h11l-2-4 2-4H7V3z"></path></svg><span class="{{r.prc}}">{{r.pr}}</span></span>
+<span class="{{r.dcls}}">{{r.due}}</span>
+<span class="muted hs" style="font-size:12px;text-align:right">{{r.est}}</span>
+</div>
+</sc-for>
+<sc-if value="{{g.empty}}" hint-placeholder-val="{{ false }}"><div class="muted" style="padding:14px 18px;font-size:13px">ไม่มีงานในกลุ่มนี้</div></sc-if>
+</sc-if>
+</sc-for>
+<div style="padding:12px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+<input class="in" type="text" placeholder="+ เพิ่มงาน… พิมพ์ชื่อแล้วกด Enter" style="flex:1 1 260px;border-style:dashed">
+<select class="in" aria-label="Module ของงานใหม่" style="width:auto"><option>Credit Line</option><option>Drawdown</option><option>OEM Portal</option><option>Interface</option></select>
+</div>
+</section>
+
+<aside style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:16px">
+<section class="card">
+<div class="chead"><h2>สรุปของฉัน</h2></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:#EEF0F3">
+<div style="background:#fff;padding:12px 16px"><div class="muted" style="font-size:12px">Overdue</div><div style="font-size:24px;font-weight:700;color:#B91C1C">{{cLate}}</div></div>
+<div style="background:#fff;padding:12px 16px"><div class="muted" style="font-size:12px">วันนี้</div><div style="font-size:24px;font-weight:700;color:#B45309">{{cToday}}</div></div>
+<div style="background:#fff;padding:12px 16px"><div class="muted" style="font-size:12px">สัปดาห์นี้</div><div style="font-size:24px;font-weight:700">{{cWeek}}</div></div>
+<div style="background:#fff;padding:12px 16px"><div class="muted" style="font-size:12px">เสร็จวันนี้</div><div style="font-size:24px;font-weight:700;color:#15803D">{{cDone}}</div></div>
+</div>
+</section>
+<section class="card">
+<div class="chead"><h2>แยกตาม Module</h2></div>
+<div style="padding:12px 18px;display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{byProject}}" as="p" hint-placeholder-count="4">
+<div>
+<div style="display:flex;justify-content:space-between;font-size:13px"><span style="display:flex;align-items:center;gap:8px;font-weight:600"><span style="width:10px;height:10px;border-radius:3px;background:{{p.c}}"></span>{{p.n}}</span><span><b>{{p.k}}</b> <span class="muted">งาน · {{p.h}} MD</span></span></div>
+<div style="height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden;margin-top:5px"><div style="height:100%;width:{{p.w}}%;background:{{p.c}}"></div></div>
+</div>
+</sc-for>
+</div>
+</section>
+<section class="card">
+<div class="chead"><h2>สัปดาห์นี้</h2><span style="font-size:13px;font-weight:600;color:#B91C1C">16.0 / 5 MD</span></div>
+<div style="padding:12px 18px 14px">
+<div style="display:flex;align-items:flex-end;gap:10px;height:90px;border-bottom:1px solid #D5DAE0;position:relative" role="img" aria-label="Man-Day รายวัน จ. 6.0 อ. 4.0 พ. 3.0 พฤ. 2.0 ศ. 1.0 (เส้นประ = 1 MD ต่อวัน)">
+<span style="position:absolute;left:0;right:0;bottom:24px;border-top:2px dashed #475569"></span>
+<sc-for list="{{week}}" as="w" hint-placeholder-count="5"><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%"><div style="width:100%;max-width:32px;height:{{w.h}}px;background:{{w.c}};border-radius:4px 4px 0 0"></div></div></sc-for>
+</div>
+<div style="display:flex;gap:10px;margin-top:6px"><sc-for list="{{week}}" as="w" hint-placeholder-count="5"><div style="flex:1;text-align:center;font-size:12px;color:{{w.lc}};font-weight:{{w.fw}}">{{w.l}}</div></sc-for></div>
+</div>
+</section>
+<div class="muted" style="font-size:12px;padding:0 4px">ลากงานไปวางที่หัวกลุ่ม (เช่น "สัปดาห์หน้า") เพื่อเปลี่ยน Due · ติ๊กเพื่อปิดงาน งานจะย้ายไปกลุ่ม "เสร็จวันนี้"</div>
+</aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  state = { done: {}, closed: { 'due:later': true, 'due:none': true }, group: 'due', proj: 'all' };
+  renderVals() {
+    const self = this;
+    const st = this.state || {};
+    const done = st.done || {}, closed = st.closed || {}, group = st.group || 'due', proj = st.proj || 'all';
+    const PJ = {"m0": ["Credit Line", "#1D4ED8"], "m1": ["Drawdown", "#0F766E"], "m9": ["OEM Portal", "#4338CA"], "m10": ["Interface", "#0E7490"]};
+    const ST = { todo: ['To do', 's-todo'], prog: ['In progress', 's-prog'], rev: ['Review', 's-rev'], done: ['Done', 's-done'] };
+    const PRC = { Urgent: 'pr-u', High: 'pr-h', Medium: 'pr-m', Low: 'pr-l' };
+    // key, module, crumb, title, isSub, status, prio, due label, bucket, Man-Day (ส่วนของฉัน)
+    const D = [["DP-23", "m0", "Credit Line & Workflow", "ระยะเวลาวงเงิน (เพิ่ม, ล็อกหลังอนุมัติ)", false, "prog", "Urgent", "จ. 23 พ.ย. · เลย 7 วัน", "late", 3.0], ["DP-21", "m0", "Credit Line & Workflow", "Maintain : สร้างงานอัตโนมัติ, Add Credit, Select Credit, Gen เลขที่", false, "prog", "Urgent", "อ. 24 พ.ย. · เลย 6 วัน", "late", 5.0], ["DP-34", "m0", "Product & ผู้ใช้วงเงิน", "ผู้ใช้วงเงินจาก MDP (P/J) + ผูกลูกค้า FACO", false, "rev", "Urgent", "จ. 30 พ.ย. · เลย 2 วัน", "late", 1.0], ["DP-30", "m0", "Product & ผู้ใช้วงเงิน", "Curtailment Information + Plan Template (Floor Plan)", false, "prog", "Urgent", "อ. 1 ธ.ค. · เลย 1 วัน", "late", 5.0], ["DP-35", "m0", "Product & ผู้ใช้วงเงิน", "Add Dealer / Add Group Dealer (วงเงินใช้ได้จริงรายคน/กลุ่ม)", false, "prog", "High", "วันนี้", "today", 3.0], ["DP-525", "m0", "Bug · พบจาก DP-20", "Workflow ส่งกลับแก้ไข: สถานะไม่กลับเป็น Draft เมื่อ LO ส่งคืน", false, "rev", "High", "ศ. 4 ธ.ค.", "week", 1], ["DP-38", "m0", "หลักประกัน & ผู้ค้ำประกัน", "Collateral framework: รายการ, Map จาก MDP (Other), ผูกกับวงเงิน", false, "prog", "High", "พฤ. 3 ธ.ค.", "week", 3.0], ["DP-39", "m0", "หลักประกัน & ผู้ค้ำประกัน", "ฟอร์มหลักประกัน 5 ประเภท: Bank Account, Stock, รถยนต์, BG, Mortgage", false, "prog", "Medium", "พ. 9 ธ.ค.", "next", 5.0], ["DP-526", "m0", "DP-39 ฟอร์มหลักประกัน 5 ประเภท", "ฟอร์มหลักประกัน: Bank Account", true, "prog", "Medium", "พฤ. 3 ธ.ค.", "week", 1], ["DP-527", "m0", "DP-39 ฟอร์มหลักประกัน 5 ประเภท", "ฟอร์มหลักประกัน: Stock", true, "todo", "Medium", "ศ. 4 ธ.ค.", "week", 1], ["DP-528", "m0", "DP-39 ฟอร์มหลักประกัน 5 ประเภท", "ฟอร์มหลักประกัน: รถยนต์", true, "todo", "Medium", "จ. 7 ธ.ค.", "next", 1], ["DP-529", "m0", "DP-39 ฟอร์มหลักประกัน 5 ประเภท", "ฟอร์มหลักประกัน: BG (หนังสือค้ำประกัน)", true, "todo", "Medium", "อ. 8 ธ.ค.", "next", 1], ["DP-530", "m0", "DP-39 ฟอร์มหลักประกัน 5 ประเภท", "ฟอร์มหลักประกัน: Mortgage (จำนอง)", true, "todo", "Medium", "พ. 9 ธ.ค.", "next", 1], ["DP-40", "m0", "หลักประกัน & ผู้ค้ำประกัน", "คำนวณมูลค่าหลักประกัน & วงเงินตามสัดส่วน", false, "todo", "Medium", "ศ. 11 ธ.ค.", "next", 3.0], ["DP-41", "m0", "หลักประกัน & ผู้ค้ำประกัน", "สถานะหลักประกัน Active / Inactive อัตโนมัติ (Batch)", false, "todo", "Medium", "ศ. 11 ธ.ค.", "next", 3.0], ["DP-42", "m0", "หลักประกัน & ผู้ค้ำประกัน", "ผู้ค้ำประกัน (MDP ประเภท G / FACO) เพิ่ม-ลบ", false, "todo", "Medium", "จ. 14 ธ.ค.", "later", 3.0], ["DP-46", "m0", "เอกสาร & สัญญา", "รายการเอกสารสัญญาอัตโนมัติ + Gen เลขที่สัญญา", false, "todo", "Medium", "อ. 15 ธ.ค.", "later", 3.0], ["DP-47", "m0", "เอกสาร & สัญญา", "Pre-print สัญญา Word / PDF จาก Template (แยก FP / Fleet)", false, "todo", "Medium", "พ. 16 ธ.ค.", "later", 3.0], ["DP-48", "m0", "เอกสาร & สัญญา", "Export Excel Merge (Floorplan.xls / FLEET.xlsx)", false, "todo", "Medium", "พ. 16 ธ.ค.", "later", 1.0], ["DP-45", "m0", "เอกสาร & สัญญา", "เอกสารประกอบ: Upload / View / Download / Delete (≤ 20 MB)", false, "todo", "Medium", "พฤ. 17 ธ.ค.", "later", 5.0], ["DP-49", "m0", "เอกสาร & สัญญา", "Final, รับฉบับจริง/อนุโลม, ผลจด DBD, สถานะห้องมั่นคง", false, "todo", "Medium", "อ. 22 ธ.ค.", "later", 3.0], ["DP-52", "m0", "ค่าใช้จ่าย & BFC", "Expense เพิ่ม/แก้/ลบ + คำนวณ VAT / WHT", false, "todo", "Medium", "พ. 23 ธ.ค.", "later", 3.0], ["DP-53", "m0", "ค่าใช้จ่าย & BFC", "Waive Fee พร้อมเหตุผล", false, "todo", "Medium", "พฤ. 24 ธ.ค.", "later", 3.0], ["DP-55", "m0", "ค่าใช้จ่าย & BFC", "ตรวจ BFC “จ่ายแล้ว” ก่อนส่งอนุมัติ", false, "todo", "Medium", "ศ. 25 ธ.ค.", "later", 1.0], ["DP-58", "m0", "Inquiry & Report & Notification", "Note (500 ตัวอักษร, บันทึกผู้ใช้/หน่วยงานอัตโนมัติ)", false, "todo", "Medium", "อ. 29 ธ.ค.", "later", 1.0], ["DP-59", "m0", "Inquiry & Report & Notification", "History + Audit Trail (User, IP, เวลา)", false, "todo", "Medium", "อ. 29 ธ.ค.", "later", 1.0], ["DP-54", "m0", "ค่าใช้จ่าย & BFC", "Generate BFC รวม/แยกรายการ + ยกเลิกอัตโนมัติ", false, "todo", "Medium", "อ. 5 ม.ค.", "later", 8.0], ["DP-62", "m0", "Inquiry & Report & Notification", "Inquiry วงเงิน (สถานะ, ประเภท, วันที่, ลูกค้า, เลขที่)", false, "todo", "Medium", "พ. 6 ม.ค.", "later", 3.0], ["DP-60", "m0", "Inquiry & Report & Notification", "Status engine (ฺBatch) + Auto-Freeze (หลักประกันหมดอายุ, ครบอนุโลม, Overdue)", false, "todo", "Medium", "พฤ. 7 ม.ค.", "later", 5.0], ["DP-61", "m0", "Inquiry & Report & Notification", "แจ้งเตือน: สร้างสำเร็จ, หลักประกันใกล้หมดอายุ, ถูกระงับ", false, "todo", "Medium", "ศ. 8 ม.ค.", "later", 5.0], ["DP-63", "m0", "Inquiry & Report & Notification", "ยกเลิกวงเงิน (FP: ต้องไม่มีหนี้คงค้าง / Fleet: เฉพาะส่วนที่ยังไม่เบิก)", false, "todo", "Medium", "ศ. 15 ม.ค.", "later", 8.0], ["DP-64", "m0", "Inquiry & Report & Notification", "รายงาน 4 รายการ + Export Excel", false, "todo", "Medium", "อ. 19 ม.ค.", "later", 8.0], ["DP-68", "m0", "หลักประกันระดับวงเงิน (ห้องมั่นคง)", "นำส่งหลักประกัน: Gen สถานที่เก็บ, Barcode, Doc No., ใบปะหน้า", false, "todo", "Medium", "พ. 20 ม.ค.", "later", 3.0], ["DP-67", "m0", "หลักประกันระดับวงเงิน (ห้องมั่นคง)", "รับหลักประกันระดับวงเงิน (ค้นหา, รับฉบับจริง, แก้วันอนุโลม)", false, "todo", "Medium", "พฤ. 21 ม.ค.", "later", 5.0], ["DP-72", "m0", "หลักประกันระดับวงเงิน (ห้องมั่นคง)", "ประวัติเอกสาร DLV / TMP / REL + Delivery Report", false, "todo", "Medium", "ศ. 22 ม.ค.", "later", 3.0], ["DP-69", "m0", "หลักประกันระดับวงเงิน (ห้องมั่นคง)", "เบิกหลักประกันชั่วคราว (TMP)", false, "todo", "Medium", "จ. 25 ม.ค.", "later", 5.0], ["DP-70", "m0", "หลักประกันระดับวงเงิน (ห้องมั่นคง)", "เบิกหลักประกันถาวร (REL) จากงานยกเลิกวงเงิน", false, "todo", "Medium", "จ. 25 ม.ค.", "later", 5.0], ["DP-71", "m0", "หลักประกันระดับวงเงิน (ห้องมั่นคง)", "อนุมัติหลักประกัน Approve / Reject หลายรายการ", false, "todo", "Medium", "จ. 25 ม.ค.", "later", 5.0], ["DP-73", "m0", "หลักประกันระดับวงเงิน (ห้องมั่นคง)", "Iron Mountain: ส่ง Scan / รับไฟล์กลับ", false, "todo", "Medium", "อ. 26 ม.ค.", "later", 5.0], ["DP-413", "m9", "Inquiry", "รายการวงเงิน OEM (ดีลเลอร์ในสังกัด) / Dealer (วงเงินตนเอง) 17 คอลัมน์ + ค้นหา", false, "todo", "Medium", "พ. 27 ม.ค.", "later", 3.0], ["DP-414", "m9", "Inquiry", "รายละเอียดวงเงิน + รายการระงับวงเงิน", false, "todo", "Medium", "จ. 1 ก.พ.", "later", 3.0], ["DP-415", "m9", "Inquiry", "หลักประกันค้างส่ง + สัญญาเบิกกู้รายครั้งค้างส่ง", false, "todo", "Medium", "ศ. 5 ก.พ.", "later", 3.0], ["DP-433", "m1", "โอนภาระหนี้ระหว่างวงเงิน (Debt Transfer)", "SCR-14 หน้าหลัก: Debt Transfer No. (DTYYMM####), Transfer Date, ประเภท Debt Transfer, Dealer ผู้ส่งมอบ, สถานะ Draft", false, "todo", "Medium", "พ. 10 ก.พ.", "later", 3.0], ["DP-434", "m1", "โอนภาระหนี้ระหว่างวงเงิน (Debt Transfer)", "Credit Destination: Dealer ผู้รับมอบ, Source Type, เลขที่วงเงินปลายทาง + ข้อมูลวงเงิน (ใช้ไป, Reserved, คงเหลือ, VAT, คงเหลือหลังอนุมัติ); ต้นทาง-ปลายทางต้องเป็นวงเงินประเภทเดียวกัน (Loan/Inventory), Dealer เดียวกันหรือต่าง Dealer", false, "todo", "Medium", "จ. 15 ก.พ.", "later", 3.0], ["DP-435", "m1", "โอนภาระหนี้ระหว่างวงเงิน (Debt Transfer)", "Tab Car Transfer: Popup ค้นหารถโอนย้าย (11 เงื่อนไข) + ตารางรถโอนย้าย + สรุปมูลค่ารถ/คงเหลือ/VAT/จำนวนคัน", false, "todo", "Medium", "พฤ. 18 ก.พ.", "later", 3.0], ["DP-436", "m1", "โอนภาระหนี้ระหว่างวงเงิน (Debt Transfer)", "ตรวจรถก่อนโอน (On Floor, ไม่ติด Double Finance, ไม่ Overdue) + ตรวจวงเงินปลายทางไม่ถูกระงับ/คงเหลือพอ", false, "todo", "Medium", "พ. 24 ก.พ.", "later", 3.0], ["DP-437", "m1", "โอนภาระหนี้ระหว่างวงเงิน (Debt Transfer)", "Maker: บันทึกร่าง / ส่งขออนุมัติ (Draft → Verify) / ยกเลิก", false, "todo", "Medium", "พฤ. 25 ก.พ.", "later", 1.0], ["DP-438", "m1", "โอนภาระหนี้ระหว่างวงเงิน (Debt Transfer)", "Checker: รับงานสถานะ Verify (ข้อมูลอ่านอย่างเดียว) + ดู Tab Car Transfer / Attachment / Notes", false, "todo", "Medium", "ศ. 26 ก.พ.", "later", 1.0], ["DP-439", "m1", "โอนภาระหนี้ระหว่างวงเงิน (Debt Transfer)", "Checker: อนุมัติ / ไม่อนุมัติ (รถคงอยู่กับผู้โอน สถานะเดิม) / คืนงาน (กลับเป็น Draft)", false, "todo", "Medium", "พ. 3 มี.ค.", "later", 3.0], ["DP-440", "m1", "โอนภาระหนี้ระหว่างวงเงิน (Debt Transfer)", "หลังอนุมัติ: บันทึกสถานะรถที่โอน + Transfer Date ใน Stock Report, ย้ายภาระหนี้ CL A → CL B (Outstanding / Used ของวงเงิน)", false, "todo", "Medium", "จ. 8 มี.ค.", "later", 3.0], ["DP-441", "m1", "โอนภาระหนี้ระหว่างวงเงิน (Debt Transfer)", "หลังอนุมัติ: ตรวจประวัติรับชำระ — ชำระบางส่วน ออกใบลดหนี้ผู้โอน + ใบเสร็จ/ใบกำกับผู้รับโอน, ไม่มีประวัติ โอนอัตโนมัติ", false, "todo", "Medium", "จ. 15 มี.ค.", "later", 5.0], ["DP-502", "m10", "Floor Plan", "Credit Line : Inquiry Credit Available (CL Type Fleet)", false, "todo", "Medium", "ยังไม่มีในแผน", "none", 3.0], ["DP-503", "m10", "Floor Plan", "Credit Line : Reserve Credit (CL Type Fleet)", false, "todo", "Medium", "ยังไม่มีในแผน", "none", 3.0], ["DP-504", "m10", "Floor Plan", "Credit Line : Submit Credit (CL Type Fleet)", false, "todo", "Medium", "ยังไม่มีในแผน", "none", 3.0], ["DP-505", "m10", "Floor Plan", "Credit Line : Cancel Reserve Credit (CL Type Fleet)", false, "todo", "Medium", "ยังไม่มีในแผน", "none", 3.0], ["DP-506", "m10", "Floor Plan", "Credit Line : Cancel Submit Credit (CL Type Fleet)", false, "todo", "Medium", "ยังไม่มีในแผน", "none", 3.0]];
+    const items = D.filter(function (d) { return proj === 'all' || d[1] === proj; }).map(function (d) {
+      const isDone = !!done[d[0]];
+      const s = isDone ? 'done' : d[5];
+      const href = d[4] ? 'SubtaskModal.dc.html' : (d[0] === 'DP-525' ? 'BugDetail.dc.html' : 'TaskDetail.dc.html');
+      return { key: d[0], proj: d[1], pc: PJ[d[1]][1], crumb: PJ[d[1]][0] + ' › ' + d[2], t: d[3], isSub: d[4], st: ST[s][0], sc: ST[s][1], stKey: s, pr: d[6], prc: PRC[d[6]],
+        due: isDone ? 'เสร็จวันนี้' : d[7], dcls: isDone ? 'dt muted' : 'dt ' + (d[8] === 'late' ? 'late' : (d[8] === 'today' ? 'today' : '')), bucket: isDone ? 'done' : d[8], est: d[9] ? d[9] + ' MD' : '—', estN: d[9],
+        done: isDone, deco: isDone ? 'line-through' : 'none', tc: isDone ? '#5F6873' : '#1B1F24', href: href,
+        toggle: function () { const m = Object.assign({}, (self.state && self.state.done) || {}); m[d[0]] = !m[d[0]]; self.setState({ done: m }); } };
+    });
+    const mk = function (id, n, c, tc, sub, list) {
+      const open = !closed[group + ':' + id];
+      return { n: n, c: c, tc: tc, sub: sub, items: list, count: list.length, empty: list.length === 0, open: open, exp: open ? 'true' : 'false', rot: open ? '' : 'rot',
+        toggle: function () { const m = Object.assign({}, (self.state && self.state.closed) || {}); m[group + ':' + id] = !m[group + ':' + id]; self.setState({ closed: m }); } };
+    };
+    const inB = function (b) { return items.filter(function (r) { return r.bucket === b; }); };
+    let groups;
+    if (group === 'due') {
+      groups = [
+        mk('late', 'Overdue', '#DC2626', '#B91C1C', 'เลยกำหนด', inB('late')),
+        mk('today', 'วันนี้', '#D97706', '#1B1F24', 'พ. 2 ธ.ค.', inB('today')),
+        mk('week', 'ภายในสัปดาห์นี้', '#2563EB', '#1B1F24', 'พฤ. 3 – อา. 6 ธ.ค.', inB('week')),
+        mk('next', 'สัปดาห์หน้า', '#93B4F5', '#1B1F24', '7 – 13 ธ.ค.', inB('next')),
+        mk('later', 'หลังจากนั้น', '#C3CAD3', '#1B1F24', 'ตั้งแต่ 14 ธ.ค.', inB('later')),
+        mk('none', 'ยังไม่มีในแผน', '#E4E7EB', '#1B1F24', 'Backlog · Interface FP/HP/KL', inB('none')),
+        mk('done', 'เสร็จวันนี้', '#15803D', '#166534', 'ติ๊กแล้วจะมาอยู่ที่นี่', inB('done'))
+      ];
+    } else if (group === 'proj') {
+      groups = Object.keys(PJ).filter(function (p) { return proj === 'all' || p === proj; }).map(function (p) {
+        const list = items.filter(function (r) { return r.proj === p; });
+        return mk(p, PJ[p][0], PJ[p][1], '#1B1F24', list.filter(function (r) { return !r.done; }).length + ' ยังไม่เสร็จ', list);
+      });
+    } else {
+      groups = [['prog', 'In progress', '#3B82F6'], ['rev', 'Review', '#F59E0B'], ['todo', 'To do', '#8A94A0'], ['done', 'Done', '#15803D']].map(function (s) {
+        return mk(s[0], s[1], s[2], '#1B1F24', '', items.filter(function (r) { return r.stKey === s[0]; }));
+      });
+    }
+    const allOpen = D.filter(function (d) { return !done[d[0]]; });
+    const openCount = allOpen.length;
+    const estSum = allOpen.reduce(function (a, d) { return a + d[9]; }, 0);
+    const cnt = function (b) { return D.filter(function (d) { return !done[d[0]] && d[8] === b; }).length; };
+    const byProject = Object.keys(PJ).map(function (p) {
+      const l = allOpen.filter(function (d) { return d[1] === p; });
+      return { n: PJ[p][0], c: PJ[p][1], k: l.length, h: l.reduce(function (a, d) { return a + d[9]; }, 0), w: openCount ? Math.round(l.length / openCount * 100) : 0 };
+    });
+    const pc = [["all", "ทุก Module", ""], ["m0", "Credit Line", "#1D4ED8"], ["m1", "Drawdown", "#0F766E"], ["m9", "OEM Portal", "#4338CA"], ["m10", "Interface", "#0E7490"]];
+    const projChips = pc.map(function (c) { return { n: c[1], c: c[2], hasDot: !!c[2], on: proj === c[0] ? 'true' : 'false', cls: proj === c[0] ? 'chip on' : 'chip', pick: function () { self.setState({ proj: c[0] }); } }; });
+    const week = [["จ.", 6.0], ["อ.", 4.0], ["พ.", 3.0], ["พฤ.", 2.0], ["ศ.", 1.0]].map(function (w, i) { return { l: w[0] + ' ' + w[1], h: Math.max(3, Math.min(86, Math.round(w[1] * 24))), c: w[1] > 1 ? '#EA580C' : (i === 2 ? '#1D4ED8' : '#93B4F5'), fw: i === 2 ? 700 : 500, lc: i === 2 ? '#1D4ED8' : '#5F6873' }; });
+    return {
+      groups: groups, openCount: openCount, estSum: estSum, projChips: projChips, byProject: byProject, week: week,
+      cLate: cnt('late'), cToday: cnt('today'), cWeek: cnt('today') + cnt('week'), cDone: Object.keys(done).filter(function (k) { return done[k]; }).length,
+      gDue: group === 'due' ? 'true' : 'false', gProj: group === 'proj' ? 'true' : 'false', gSt: group === 'status' ? 'true' : 'false',
+      byDue: function () { self.setState({ group: 'due' }); }, byProj: function () { self.setState({ group: 'proj' }); }, bySt: function () { self.setState({ group: 'status' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

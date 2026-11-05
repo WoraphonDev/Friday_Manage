@@ -10,6 +10,7 @@ import { TenantDb } from '../common/tenant.js';
 import { planEndFor, WorkCalendar } from '../projects/calendar.js';
 import { type ProjectAccess, requirePerm, usersWithPerm } from '../projects/permissions.js';
 import { loadPeople } from '../common/people.js';
+import { type DomainEvent, EventBus, type EventType } from '../core/events.js';
 import { isLegacyRank, PLAIN_RANK, rankAfter, rankBetween, spreadRanks } from './rank.js';
 import { type ProjectRow, ProjectsService } from '../projects/projects.service.js';
 
@@ -103,13 +104,15 @@ export class IssuesService {
   constructor(
     private readonly db: TenantDb,
     private readonly projects: ProjectsService,
+    private readonly events: EventBus,
   ) {}
 
   // ---------------------------------------------------------------------------
   // สร้าง (หน้า B, K1)
   // ---------------------------------------------------------------------------
   async create(auth: AuthInfo, tenant: TenantInfo, projectKey: string, input: z.infer<typeof CreateIssueBody>) {
-    return this.db.run(auth, tenant, async (tx) => {
+    const events: DomainEvent[] = [];
+    const result = await this.db.run(auth, tenant, async (tx) => {
       const { project, access } = await this.projects.load(tx, auth, tenant, projectKey);
       requirePerm(access, 'issue.create');
       const warnings: Warning[] = [];
@@ -193,8 +196,14 @@ export class IssuesService {
       await tx.insert(s.issueWatchers).values({ workspaceId: tenant.workspaceId, issueId: issue.id, userId: auth.userId, source: 'auto_create' });
       await tx.insert(s.activities).values({ ...base, issueId: issue.id, actorId: auth.userId, verb: 'created' });
 
+      const ev = eventFor(auth, tenant, project, issue);
+      events.push(ev('issue.created', { type: type.name, parentKey: parent ? `${project.key}-${parent.number}` : null }));
+      if (type.name === 'Bug') events.push(ev('bug.created', { severity: issue.severity }));
+      if (input.assigneeIds.length) events.push(ev('issue.assigned', { userIds: input.assigneeIds, removedUserIds: [] }));
       return { ...(await this.dto(tx, project, issue, access)), warnings };
     });
+    await this.events.publish(events);
+    return result;
   }
 
   // ---------------------------------------------------------------------------
@@ -258,7 +267,8 @@ export class IssuesService {
   // ---------------------------------------------------------------------------
   async patch(auth: AuthInfo, tenant: TenantInfo, issueKey: string, ifMatch: string | undefined, input: z.infer<typeof PatchIssueBody>) {
     const expected = parseIfMatch(ifMatch);
-    return this.db.run(auth, tenant, async (tx) => {
+    const events: DomainEvent[] = [];
+    const result = await this.db.run(auth, tenant, async (tx) => {
       const { project, access, issue } = await this.loadIssue(tx, auth, tenant, issueKey);
       requirePerm(access, 'issue.edit');
       if (issue.version !== expected) throw await this.conflict(tx, project, issue, access);
@@ -374,15 +384,22 @@ export class IssuesService {
           planRows.map((c) => ({ ...base, baselineId: baseline.id, field: c.field, oldValue: c.oldValue, newValue: c.newValue, reason: input.planChangeReason, changedBy: auth.userId })),
         );
       }
+      events.push(...(await this.changeEvents(tx, auth, tenant, project, issue, updated, assigneesChanged ? { before: oldAssignees, after: assignees } : null)));
+      if (baseline && (planChanged.length || assigneesChanged)) {
+        events.push(eventFor(auth, tenant, project, updated)('plan.changed', { fields: assigneesChanged ? [...planChanged, 'assigneeIds'] : [...planChanged], reason: input.planChangeReason }));
+      }
       return { ...(await this.dto(tx, project, updated, access)), warnings };
     });
+    await this.events.publish(events);
+    return result;
   }
 
   // ---------------------------------------------------------------------------
   // ย้ายการ์ด (Kanban, Backlog, Mobile) · If-Match ไม่บังคับ เพราะการลากเป็นการแก้ทีละฟิลด์
   // ---------------------------------------------------------------------------
   async move(auth: AuthInfo, tenant: TenantInfo, issueKey: string, ifMatch: string | undefined, input: z.infer<typeof MoveIssueBody>) {
-    return this.db.run(auth, tenant, async (tx) => {
+    const events: DomainEvent[] = [];
+    const result = await this.db.run(auth, tenant, async (tx) => {
       const { project, access, issue } = await this.loadIssue(tx, auth, tenant, issueKey);
       requirePerm(access, 'issue.edit');
       if (ifMatch !== undefined && parseIfMatch(ifMatch) !== issue.version) throw await this.conflict(tx, project, issue, access);
@@ -451,8 +468,11 @@ export class IssuesService {
           if (cnt.n > col.wipLimit) warnings.push({ code: 'wip_exceeded', message: `คอลัมน์ ${col.name} เกิน WIP limit (${cnt.n}/${col.wipLimit})` });
         }
       }
+      events.push(...(await this.changeEvents(tx, auth, tenant, project, issue, updated, null)));
       return { ...(await this.dto(tx, project, updated, access)), warnings };
     });
+    await this.events.publish(events);
+    return result;
   }
 
   /** สถานะที่วางลงไป: ถ้าเป็นคอลัมน์ของบอร์ดมาตรฐานแต่งานใช้ Workflow อื่น (Bug) ใช้สถานะที่ผูกกับคอลัมน์นั้น */
@@ -515,6 +535,27 @@ export class IssuesService {
   // ---------------------------------------------------------------------------
   // ตัวช่วย
   // ---------------------------------------------------------------------------
+  /** เหตุการณ์จากการแก้งาน: issue.updated · issue.status_changed · issue.assigned (ส่งหลัง commit) */
+  private async changeEvents(tx: Tx, auth: AuthInfo, tenant: TenantInfo, project: ProjectRow, before: Issue, after: Issue, assignees: { before: string[]; after: string[] } | null) {
+    const ev = eventFor(auth, tenant, project, after);
+    const out: DomainEvent[] = [];
+    const fields = diff(before, after).map((c) => c.field);
+    if (assignees) fields.push('assigneeIds');
+    if (fields.length) out.push(ev('issue.updated', { fields }));
+    if (before.statusId !== after.statusId) {
+      const rows = await tx.select().from(s.workflowStatuses).where(inArray(s.workflowStatuses.id, [before.statusId, after.statusId]));
+      const from = rows.find((r) => r.id === before.statusId)!;
+      const to = rows.find((r) => r.id === after.statusId)!;
+      out.push(ev('issue.status_changed', { from: { id: from.id, name: from.name, category: from.category }, to: { id: to.id, name: to.name, category: to.category }, parentId: after.parentId }));
+    }
+    if (assignees) {
+      const added = assignees.after.filter((x) => !assignees.before.includes(x));
+      const removed = assignees.before.filter((x) => !assignees.after.includes(x));
+      if (added.length || removed.length) out.push(ev('issue.assigned', { userIds: added, removedUserIds: removed }));
+    }
+    return out;
+  }
+
   async loadIssue(tx: Tx, auth: AuthInfo, tenant: TenantInfo, issueKey: string) {
     const m = ISSUE_KEY.exec(issueKey);
     if (!m) throw notFound('งาน');
@@ -706,6 +747,19 @@ function parseIfMatch(v: string | undefined) {
   const n = Number(v.replace(/^W\//, '').replaceAll('"', ''));
   if (!Number.isInteger(n) || n < 1) throw new AppError(400, 'invalid_if_match', 'If-Match ไม่ถูกต้อง');
   return n;
+}
+
+/** สร้างเหตุการณ์ของงาน · data มี issueKey และ title เสมอ */
+function eventFor(auth: AuthInfo, tenant: TenantInfo, project: ProjectRow, issue: Issue) {
+  return (type: EventType, data: Record<string, unknown>): DomainEvent => ({
+    type,
+    workspaceId: tenant.workspaceId,
+    projectId: project.id,
+    issueId: issue.id,
+    actorId: auth.userId,
+    data: { issueKey: `${project.key}-${issue.number}`, title: issue.title, ...data },
+    at: new Date(),
+  });
 }
 
 /** Actual Start / End ตั้งอัตโนมัติเมื่อเปลี่ยนสถานะ */

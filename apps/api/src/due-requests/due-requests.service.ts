@@ -7,6 +7,7 @@ import { loadPeople, type Person } from '../common/people.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { IssuesService, outsideParent } from '../issues/issues.service.js';
+import { EventBus } from '../core/events.js';
 import { Notifier } from '../notifications/notifier.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
 import { type ProjectAccess, projectAccess, requirePerm, usersWithPerm } from '../projects/permissions.js';
@@ -53,6 +54,7 @@ export class DueRequestsService {
     private readonly db: TenantDb,
     private readonly issues: IssuesService,
     private readonly notifier: Notifier,
+    private readonly events: EventBus,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -139,6 +141,15 @@ export class DueRequestsService {
       },
       reason: (id) => (id === project.ownerUserId ? 'คุณเป็นผู้อนุมัติ (Project Owner)' : 'คุณเป็นผู้อนุมัติคำขอเลื่อน Due ของโปรเจกต์นี้'),
     });
+    await this.events.publish({
+      type: 'due_request.created',
+      workspaceId: tenant.workspaceId,
+      projectId: project.id,
+      issueId: issue.id,
+      actorId: auth.userId,
+      data: { issueKey: key, title: issue.title, requestId: req.id, currentDue: req.currentDue, requestedDue: req.requestedDue, reasonCode: req.reasonCode, approverIds: impact.approvers.map((p) => p.id) },
+      at: new Date(),
+    });
     return { ...this.dto(req, key, new Map([[requester.id, requester]])), warnings: result.warnings };
   }
 
@@ -194,7 +205,8 @@ export class DueRequestsService {
   // ---------------------------------------------------------------------------
   // G · อนุมัติ / ปฏิเสธ / ยกเลิก
   // ---------------------------------------------------------------------------
-  async decide(auth: AuthInfo, tenant: TenantInfo, id: string, action: 'approve' | 'reject' | 'cancel', note?: string) {
+  /** via = ช่องทางที่ตัดสิน · ปุ่มใน LINE (A24) เรียกด้วย 'line' หลังตรวจว่าบัญชี LINE ผูกกับผู้มีสิทธิ์ และเขียน Audit เอง */
+  async decide(auth: AuthInfo, tenant: TenantInfo, id: string, action: 'approve' | 'reject' | 'cancel', note?: string, via: 'in_app' | 'line' | 'email' = 'in_app') {
     const parsedId = z.uuid().safeParse(id);
     if (!parsedId.success) throw notFoundRequest();
 
@@ -274,7 +286,7 @@ export class DueRequestsService {
           // ยกเลิกโดยผู้ขอ: ไม่ใช่การตัดสิน (constraint ห้าม decided_by = ผู้ขอ)
           decidedBy: action === 'cancel' ? null : auth.userId,
           decidedAt: new Date(),
-          decidedVia: action === 'cancel' ? null : 'in_app',
+          decidedVia: action === 'cancel' ? null : via,
           decisionNote: note,
         })
         .where(eq(s.dueChangeRequests.id, req.id))
@@ -307,6 +319,15 @@ export class DueRequestsService {
         reason: 'คุณเป็นผู้ขอเลื่อน Due',
       });
     }
+    await this.events.publish({
+      type: 'due_request.decided',
+      workspaceId: tenant.workspaceId,
+      projectId: project.id,
+      issueId: issue.id,
+      actorId: auth.userId,
+      data: { issueKey: key, title: issue.title, requestId: decided.id, decision: decided.status, via: decided.decidedVia, requesterId: decided.requesterId },
+      at: new Date(),
+    });
     return {
       ...this.dto(decided, key, people),
       issue: { key, planEnd: issue.planEnd, version: issue.version },

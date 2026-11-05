@@ -3,6 +3,7 @@ import { type Db, schema } from '@friday/db';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { hashToken, newToken } from '../auth/sessions.js';
+import { PlanLimits } from '../core/plan-limits.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { AppError, forbidden, notFound } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
@@ -32,6 +33,7 @@ export class InvitationsService {
     private readonly db: TenantDb,
     @Inject(SYSTEM_DB) private readonly system: Db,
     private readonly projects: ProjectsService,
+    private readonly limits: PlanLimits,
   ) {}
 
   /**
@@ -177,6 +179,8 @@ export class InvitationsService {
   async accept(auth: AuthInfo, token: string) {
     const r = await this.usable(auth, token);
     await this.system.transaction(async (tx) => {
+      // Guest ไม่นับ Seat (04-permissions ข้อ 1)
+      if (r.inv.workspaceRole !== 'guest') await this.limits.assert(tx, r.workspace.id, 'seats');
       await tx
         .insert(s.workspaceMembers)
         .values({ workspaceId: r.workspace.id, userId: auth.userId, role: r.inv.workspaceRole, jobTitle: r.inv.jobTitle, capacityHoursWeek: r.inv.capacityHoursWeek ?? undefined })

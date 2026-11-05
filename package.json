@@ -10,6 +10,7 @@
     "test": "pnpm -r --workspace-concurrency=1 test",
     "db:dev-roles": "pnpm --filter @friday/db dev-roles",
     "api:dev": "pnpm --filter @friday/api dev",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "db:setup-nodocker": "bash scripts/setup-postgres.sh"
   }
 }

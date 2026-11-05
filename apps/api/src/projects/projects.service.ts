@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { type Db, schema, type Tx } from '@friday/db';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import { PlanLimits } from '../core/plan-limits.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { AppError, forbidden } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
@@ -74,6 +75,7 @@ export class ProjectsService {
   constructor(
     private readonly db: TenantDb,
     @Inject(SYSTEM_DB) private readonly system: Db,
+    private readonly limits: PlanLimits,
   ) {}
 
   /** โหลดโปรเจกต์ด้วย Key (RLS กรองแล้ว) และคำนวณสิทธิ์ · ไม่ใช่สมาชิกตอบ 403 แบบหน้า M1 */
@@ -151,6 +153,7 @@ export class ProjectsService {
   async createInTx(tx: Tx, auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof CreateProjectBody>) {
     if (tenant.role === 'guest') throw forbidden('ws.project.create');
     if (!(await this.keyFree(tenant.workspaceId, input.key))) throw new AppError(409, 'key_taken', 'Project Key นี้มีใน Workspace แล้ว', { key: input.key });
+    await this.limits.assert(tx, tenant.workspaceId, 'projects');
 
     const [project] = await tx
       .insert(s.projects)

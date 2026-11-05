@@ -1,73 +1,30 @@
 // ทดสอบ API กับ PostgreSQL จริง: pnpm db:up && pnpm db:migrate && pnpm db:dev-roles ก่อน
 import type { INestApplication } from '@nestjs/common';
 import ExcelJS from 'exceljs';
-import pg from 'pg';
+import type pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createApp } from '../src/bootstrap.js';
+import { addMember as addMemberTo, type Client, client as clientOf, signup, startApp, type TestApp } from './helpers.js';
 
-const OWNER_URL = process.env.DATABASE_OWNER_URL ?? 'postgres://friday_owner:friday_owner_dev@localhost:54329/friday';
-const owner = new pg.Client({ connectionString: OWNER_URL });
+let t: TestApp;
 let app: INestApplication;
-
-/** ผู้ใช้ 1 คน = agent ที่จำคุกกี้ + CSRF token */
-async function client() {
-  const agent = request.agent(app.getHttpServer());
-  const { body } = await agent.get('/api/v1/auth/csrf');
-  const h = { 'x-csrf-token': body.csrfToken as string };
-  return {
-    agent,
-    get: (url: string) => agent.get(`/api/v1${url}`),
-    post: (url: string, data?: object) => agent.post(`/api/v1${url}`).set(h).send(data),
-    put: (url: string, data?: object) => agent.put(`/api/v1${url}`).set(h).send(data),
-    upload: (url: string, file: Buffer, name: string, fields: Record<string, string> = {}) => {
-      const r = agent.post(`/api/v1${url}`).set(h);
-      for (const [k, v] of Object.entries(fields)) r.field(k, v);
-      return r.attach('file', file, name);
-    },
-    patch: (url: string, data: object, ifMatch?: string | number) => {
-      const r = agent.patch(`/api/v1${url}`).set(h);
-      return (ifMatch === undefined ? r : r.set('If-Match', `"${ifMatch}"`)).send(data);
-    },
-  };
-}
-type Client = Awaited<ReturnType<typeof client>>;
-
-async function signup(c: Client, email: string, name: string) {
-  const r = await c.post('/auth/signup', { email, password: 'Friday2026', displayName: name, acceptTerms: true });
-  expect(r.status).toBe(201);
-  return r.body.id as string;
-}
-
-/** ยังไม่มี endpoint เชิญสมาชิก จึงเพิ่มตรงในฐานข้อมูล */
-async function addMember(wsSlug: string, userId: string, role: string, project?: { key: string; role: string }) {
-  const { rows } = await owner.query('SELECT id FROM workspaces WHERE slug = $1', [wsSlug]);
-  await owner.query('INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, $3)', [rows[0].id, userId, role]);
-  if (project) {
-    await owner.query(
-      `INSERT INTO project_members (workspace_id, project_id, user_id, role)
-       SELECT workspace_id, id, $2, $3 FROM projects WHERE workspace_id = $1 AND key = $4`,
-      [rows[0].id, userId, project.role, project.key],
-    );
-  }
-}
+let owner: pg.Client;
+const client = () => clientOf(app);
+const addMember = (wsSlug: string, userId: string, role: 'owner' | 'admin' | 'member' | 'guest', project?: { key: string; role: 'admin' | 'member' | 'viewer' }) =>
+  addMemberTo(owner, wsSlug, userId, role, project);
 
 let mick: Client, kaijeaw: Client, outsider: Client, arm: Client, client_: Client;
 let mickId: string, kaijeawId: string, armId: string, clientId: string;
 let creditLine: string;
 
 beforeAll(async () => {
-  await owner.connect();
-  const t = (await owner.query(`SELECT string_agg(format('public.%I', tablename), ', ') AS t FROM pg_tables WHERE schemaname = 'public'`)).rows[0].t;
-  await owner.query(`TRUNCATE ${t} CASCADE`);
-  app = await createApp();
-  await app.init();
+  t = await startApp();
+  ({ app, owner } = t);
   [mick, kaijeaw, outsider, arm, client_] = await Promise.all([client(), client(), client(), client(), client()]);
 });
 
 afterAll(async () => {
-  await app.close();
-  await owner.end();
+  await t.close();
 });
 
 describe('บัญชีและ Session', () => {

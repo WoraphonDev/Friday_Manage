@@ -8,7 +8,7 @@ Friday Manage: ระบบ Project Management สำหรับทีม Dev (
 
 ## รัน
 
-- ฐานข้อมูล: `pnpm db:up` (Docker) หรือ `pnpm db:setup-nodocker` (Ubuntu ไม่มี Docker) แล้ว `pnpm db:migrate && pnpm db:dev-roles`
+- ฐานข้อมูล: `pnpm db:up && pnpm db:migrate && pnpm db:dev-roles` (Docker) · ไม่มี Docker / ไม่มี root (Codex): `bash scripts/setup-postgres.sh` ทำทั้งหมดให้และรันซ้ำได้ (เปิด PostgreSQL ใหม่ทุก session)
 - `pnpm typecheck` · `pnpm test` (ใช้ฐานข้อมูลจริง รันทีละแพ็กเกจ)
 
 ## ที่มาของความจริง

@@ -145,9 +145,8 @@
 
 ## ตั้ง environment ของ Codex
 
-Codex cloud ส่วนใหญ่ไม่มี Docker: ใส่ใน setup script ของ environment
+ตั้งไว้แล้วที่ chatgpt.com/codex › Environment `Friday_Manage` · Codex ไม่มี root, ไม่มี Docker และ home ของผู้ใช้ไม่มีอยู่จริง
 
-```bash
-corepack enable && pnpm install
-bash scripts/setup-postgres.sh   # PostgreSQL 18 + migration + บัญชี dev (งาน T01 ตรวจสคริปต์นี้)
-```
+- Install script: `bash scripts/codex-setup.sh` (pnpm install + PostgreSQL 18 จาก npm ไม่ต้องใช้ root)
+- Environment variables: `XDG_DATA_HOME=/workspace/.local/share` · `XDG_CACHE_HOME=/workspace/.cache` · `XDG_CONFIG_HOME=/workspace/.config` · `COREPACK_HOME=/workspace/.cache/corepack` · `npm_config_cache=/workspace/.cache/npm`
+- ทุก session เริ่มด้วย `bash scripts/setup-postgres.sh` (เปิดเซิร์ฟเวอร์ที่หยุดไปตอน container ถูกเก็บ)

@@ -1,32 +1,54 @@
 #!/usr/bin/env bash
-# ฐานข้อมูลสำหรับเครื่องที่ไม่มี Docker (Codex cloud, CI) · Ubuntu / Debian เท่านั้น
-# ได้ผลเหมือน `pnpm db:up`: PostgreSQL 18 พอร์ต 54329 · ฐาน friday · เจ้าของ friday_owner (superuser)
-# แล้วรัน migration และสร้างบัญชี friday_api / friday_worker ให้ (ค่าตาม .env.example)
+# PostgreSQL 18 สำหรับเครื่องที่ไม่มี Docker และไม่มี root (Codex cloud) · Linux x64 / arm64
+# ได้ผลเหมือน `pnpm db:up`: พอร์ต 54329 · ฐาน friday · เจ้าของ friday_owner (superuser) · ค่าตาม .env.example
+# ใช้ binary ของ PostgreSQL จาก npm (@embedded-postgres) เก็บใน .cache/postgres ของ repo (อยู่ใน .gitignore)
+# รันซ้ำได้: ติดตั้งครั้งแรกครั้งเดียว ครั้งต่อไปแค่เปิดเซิร์ฟเวอร์ถ้ายังไม่เปิด แล้วรัน migration
 set -euo pipefail
-PORT=54329
 cd "$(dirname "$0")/.."
 
-as_root() { if [ "$(id -u)" -eq 0 ]; then "$@"; else sudo "$@"; fi; }
-as_pg() { if [ "$(id -u)" -eq 0 ]; then runuser -u postgres -- "$@"; else sudo -u postgres "$@"; fi; }
+PORT=54329
+PG_PACKAGE_VERSION=18.6.0-beta.19
+ROOT="$PWD/.cache/postgres"
+PKG="$ROOT/package"
+BIN="$PKG/native/bin"
+DATA="$ROOT/data"
+export LD_LIBRARY_PATH="$PKG/native/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
-if [ ! -x /usr/lib/postgresql/18/bin/postgres ]; then
-  as_root apt-get update -qq
-  as_root apt-get install -y -qq postgresql-common ca-certificates
-  as_root /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-  as_root apt-get install -y -qq postgresql-18
+if [ "$(id -u)" -eq 0 ]; then
+  echo "PostgreSQL ไม่ยอมรันด้วย root · รันสคริปต์นี้ด้วยผู้ใช้ทั่วไป หรือใช้ pnpm db:up (Docker)" >&2
+  exit 1
+fi
+case "$(uname -m)" in
+  x86_64) ARCH=x64 ;;
+  aarch64 | arm64) ARCH=arm64 ;;
+  *) echo "ไม่รองรับ CPU $(uname -m)" >&2; exit 1 ;;
+esac
+
+# 1. binary
+if [ ! -x "$BIN/postgres" ]; then
+  mkdir -p "$ROOT"
+  (cd "$ROOT" && npm pack "@embedded-postgres/linux-$ARCH@$PG_PACKAGE_VERSION" --silent >/dev/null && tar xzf embedded-postgres-linux-*.tgz && rm embedded-postgres-linux-*.tgz)
+  node "$PKG/scripts/hydrate-symlinks.js"
 fi
 
-if ! pg_lsclusters --no-header | awk '{print $1, $2}' | grep -qx '18 friday'; then
-  as_root pg_createcluster 18 friday --port "$PORT"
+# 2. ฐานข้อมูล (initdb ตั้ง friday_owner เป็น superuser ให้เลย)
+if [ ! -f "$DATA/PG_VERSION" ]; then
+  pw="$(mktemp)"
+  printf 'friday_owner_dev' >"$pw"
+  "$BIN/initdb" -D "$DATA" -U friday_owner --pwfile="$pw" -A scram-sha-256 -E UTF8 \
+    --locale=C --locale-provider=builtin --builtin-locale=C.UTF-8 >/dev/null
+  rm -f "$pw"
+  echo "CREATE DATABASE friday OWNER friday_owner;" | "$BIN/postgres" --single -D "$DATA" postgres >/dev/null
 fi
-as_root pg_ctlcluster 18 friday start 2>/dev/null || true
 
-psql_pg() { as_pg psql -p "$PORT" -v ON_ERROR_STOP=1 -tAc "$1"; }
-[ "$(psql_pg "SELECT 1 FROM pg_roles WHERE rolname = 'friday_owner'")" = "1" ] ||
-  psql_pg "CREATE ROLE friday_owner LOGIN SUPERUSER PASSWORD 'friday_owner_dev'"
-[ "$(psql_pg "SELECT 1 FROM pg_database WHERE datname = 'friday'")" = "1" ] ||
-  psql_pg "CREATE DATABASE friday OWNER friday_owner"
+# 3. เปิดเซิร์ฟเวอร์ (socket อยู่ใน .cache เพราะ /var/run/postgresql เขียนไม่ได้)
+if ! "$BIN/pg_ctl" -D "$DATA" status >/dev/null 2>&1; then
+  "$BIN/pg_ctl" -D "$DATA" -l "$ROOT/server.log" -o "-p $PORT -k $ROOT -c listen_addresses=localhost" -w start >/dev/null
+fi
 
-pnpm db:migrate
-pnpm db:dev-roles
-echo "PostgreSQL 18 พร้อมที่ localhost:$PORT"
+# 4. migration + บัญชี friday_api / friday_worker
+PNPM="pnpm"
+command -v pnpm >/dev/null || PNPM="corepack pnpm"
+$PNPM db:migrate >/dev/null
+$PNPM db:dev-roles
+echo "PostgreSQL 18 พร้อมที่ localhost:$PORT (log: .cache/postgres/server.log · หยุด: $BIN/pg_ctl -D $DATA stop)"

@@ -12,10 +12,9 @@
 
 ## ทำอะไร
 
-- ตรวจ `scripts/setup-postgres.sh` บน Ubuntu 24.04 ที่ไม่มี Docker (เช่น container `ubuntu:24.04` หรือ environment ของ Codex) จนได้ PostgreSQL 18 ที่ `pnpm test` ผ่าน · แก้สคริปต์ถ้าพัง
+- `scripts/setup-postgres.sh` และ `scripts/codex-setup.sh` ใช้ได้แล้วบน Linux ที่ไม่มี root (ทดสอบใน container `node:22-bookworm` แบบ linux/amd64 ด้วยผู้ใช้ทั่วไป: test ผ่านทั้งหมด) · แก้เฉพาะเมื่อพังบน Codex
 - GitHub Actions `.github/workflows/ci.yml` ทุก PR และ push เข้า main: pnpm install (cache) → service `postgres:18` พอร์ต 54329 ผู้ใช้ `friday_owner` → `pnpm db:migrate` → `pnpm db:dev-roles` → `pnpm typecheck` → `pnpm test` → `pnpm -r --if-present build`
 - คำสั่งต้องไม่ผูกกับแพ็กเกจที่มีตอนนี้ (`pnpm -r`) เพื่อให้ `apps/web` และแอปใหม่เข้า CI เองโดยไม่ต้องแก้ไฟล์นี้
-- เขียนวิธีตั้ง environment ของ Codex (setup script ที่ต้องใส่ในหน้า Environment) ใน "บันทึกผล" ของไฟล์นี้
 
 ## กติกาที่ต้องตรง
 
@@ -24,7 +23,6 @@
 ## เสร็จเมื่อ
 
 - [ ] CI เขียวบน PR ของงานนี้
-- [ ] บันทึกผลลัพธ์การรัน `scripts/setup-postgres.sh` บน Ubuntu เปล่า (log ช่วงท้าย) ไว้ใน "บันทึกผล"
 
 ## ไม่อยู่ในงานนี้
 

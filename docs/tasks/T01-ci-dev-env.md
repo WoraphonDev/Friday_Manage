@@ -31,3 +31,11 @@
 ## บันทึกผล
 
 <!-- ผู้ทำงานเขียนตอนส่งงาน: endpoint / หน้าที่เพิ่ม, สิ่งที่ต่างจากสเปกหรือหน้าจอ, คำตัดสินที่เลือกเอง, คำขอนอก lane, คำถามที่ค้าง -->
+
+- เพิ่ม `.github/workflows/ci.yml`: ทำงานทุก Pull Request และ push เข้า `main` โดยใช้ PostgreSQL 18 service ที่พอร์ต 54329 และรอ health check ก่อนเริ่ม
+- ใช้ Node.js 22 และ pnpm ตาม `packageManager` ใน `package.json` พร้อม cache ตาม `pnpm-lock.yaml` และติดตั้งด้วย `--frozen-lockfile`
+- ลำดับตรวจ: migrate → dev roles → `pnpm typecheck` → `pnpm test` (ทีละแพ็กเกจ) → `pnpm -r --if-present build` เพื่อรองรับแพ็กเกจที่จะเพิ่มในภายหลัง
+- จำกัดสิทธิ์ workflow เป็น `contents: read`, timeout 20 นาที และยกเลิก run เก่าของ branch เดียวกันเมื่อมี commit ใหม่
+- ไม่แก้สคริปต์ตั้ง environment เดิม เพราะงานนี้ยังไม่พบปัญหาบน Codex ตามเงื่อนไขของ task
+- ตรวจในเครื่อง: YAML parse ผ่าน, `bash -n` ของสคริปต์เดิมผ่าน, migration / dev roles / typecheck / build ผ่าน และ test ผ่าน 78 ข้อ (DB 24 + API 54) · ข้าม 2 ข้อที่ต้องใช้ไฟล์แผนจริงซึ่งไม่ได้เก็บใน repo
+- รอยืนยัน GitHub Actions บน PR ก่อนติ๊กเกณฑ์ CI เขียว · ไม่มีคำขอนอก lane

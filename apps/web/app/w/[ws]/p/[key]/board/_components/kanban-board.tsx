@@ -179,13 +179,13 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   return <section className={styles.board} aria-label={t("title")} aria-busy={moving}>
     <div className={`${styles.toolbar} ${filtersOpen ? styles.filtersOpen : ""}`}>
       <div className={styles.filters}>
-        <Select aria-label={t("boardType")} value={isBug ? "bug" : "standard"} onChange={(event) => switchBoard(event.target.value)} disabled={moving}><option value="standard">{t("standard")}</option><option value="bug">{t("bug")}</option></Select>
+        <Select size="small" aria-label={t("boardType")} value={isBug ? "bug" : "standard"} onChange={(event) => switchBoard(event.target.value)} disabled={moving}><option value="standard">{t("standard")}</option><option value="bug">{t("bug")}</option></Select>
         <Button className={`${styles.chip} ${styles.secondaryFilter} ${mine ? styles.selected : ""}`} aria-pressed={mine} onClick={() => setMine(!mine)}>{t("mine")}</Button>
         <Button className={`${styles.chip} ${styles.secondaryFilter} ${overdue ? styles.selected : ""}`} aria-pressed={overdue} onClick={() => setOverdue(!overdue)}>{t("overdue")}</Button>
       </div>
       <div className={`${styles.filters} ${styles.advancedFilters}`}>
-        <Select aria-label={t("level")} value={level} onChange={(event) => setLevel(event.target.value)}><option value="all">{t("allLevels")}</option><option value="task">{t("tasks")}</option><option value="subtask">{t("subtasks")}</option></Select>
-        <Select aria-label={t("swimlane")} value={swimlane} onChange={(event) => setSwimlane(event.target.value as Swimlane)}><option value="none">{t("swimlane")}: {t("none")}</option><option value="module">{t("module")}</option><option value="assignee">{t("assignee")}</option><option value="priority">{t("priority")}</option></Select>
+        <Select size="small" prefix={t("level")} aria-label={t("level")} value={level} onChange={(event) => setLevel(event.target.value)}><option value="all">{t("allLevels")}</option><option value="task">{t("tasks")}</option><option value="subtask">{t("subtasks")}</option></Select>
+        <Select size="small" prefix={t("swimlane")} aria-label={t("swimlane")} value={swimlane} onChange={(event) => setSwimlane(event.target.value as Swimlane)}><option value="none">{t("none")}</option><option value="module">{t("module")}</option><option value="assignee">{t("assignee")}</option><option value="priority">{t("priority")}</option></Select>
         {hasFilters && <Button variant="ghost" onClick={() => { setModuleId(""); setMine(false); setOverdue(false); setLevel("all"); }}>{t("reset")}</Button>}
       </div>
       <Button className={styles.mobileFilterToggle} aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal size={16} aria-hidden="true" />{t("filters")}</Button>

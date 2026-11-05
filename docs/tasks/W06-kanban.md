@@ -35,3 +35,4 @@
 - Real API smoke บนฐานแยก `friday_w06` ผ่าน: cross-column move, If-Match/Undo, Bug Open→Fixed→Open และ 422/confirm ของ Parent ที่ Sub-task ยังไม่เสร็จ Browser ตรวจการเปิด Drawer และ conflict/requestId ได้; เครื่องมือ native browser มีอาการ index เปลี่ยนระหว่างตรวจ จึงยืนยัน mutation flows ครบด้วย MSW และ real API smoke
 - ไม่เพิ่ม Add column เพราะเป็นการตั้งค่า Workflow ของ W13/A05; ไม่แสดงข้อมูล Git PR ที่ Board API ยังไม่ส่งมา ไม่สร้างข้อมูลสมมติบนหน้าจอจริง
 - ผลตรวจสุดท้าย: `pnpm typecheck` และ `pnpm test` ทั้ง workspace ผ่าน Web52 + DB105 + API54 =211 tests; opt-in เดิม2 skipped ตามเดิม และ web production build ผ่าน ไม่เพิ่ม dependency
+- แก้หลัง merge: dropdown ในแถบตัวกรองใช้ `Select size="small"` จาก UI kit · "แสดง" และ "Swimlane" เป็นคำนำหน้าในกล่องตาม Canvas (ตัวเลือก Swimlane เหลือแค่ค่า เช่น "ไม่แบ่งกลุ่ม") · ข้อความไม่ชนลูกศรแล้ว ทั้ง 1440 px และมือถือ

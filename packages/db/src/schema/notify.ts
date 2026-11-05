@@ -1,5 +1,5 @@
 // J. แจ้งเตือน (Inbox) · ช่องทางส่งออกนอกแอป (LINE, Email, Webhook) อยู่ใน migration ถัดไป
-import { index, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { index, jsonb, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, pk, tstz } from './_common.ts';
 import { users } from './identity.ts';
 import { workspaceId } from './project.ts';
@@ -24,5 +24,5 @@ export const notifications = pgTable(
     snoozedUntil: tstz(),
     createdAt: createdAt(),
   },
-  (t) => [index('notifications_recipient_idx').on(t.recipientId, t.createdAt)],
+  (t) => [unique('notifications_workspace_id_key').on(t.workspaceId, t.id), index('notifications_recipient_idx').on(t.recipientId, t.createdAt)],
 );

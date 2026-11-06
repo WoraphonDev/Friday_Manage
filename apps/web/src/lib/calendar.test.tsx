@@ -63,6 +63,7 @@ beforeEach(() => {
       return HttpResponse.json(!month || month === "2026-12" ? d : empty(month));
     }),
     http.get("*/api/v1/w/:ws/issues/:key", () => HttpResponse.json({ version: 9 })),
+    http.get("*/api/v1/w/:ws/projects/:key/timeline", () => HttpResponse.json({ unscheduled: [{ key: "DE-20", title: "งานยังไม่มีวัน", parentKey: null }] })),
     http.patch("*/api/v1/w/:ws/issues/:key", async ({ request, params }) => {
       const body = (await request.json()) as Record<string, unknown>;
       patches.push({ key: String(params.key), body, etag: request.headers.get("if-match") });
@@ -119,7 +120,7 @@ describe("Calendar (6)", () => {
     expect(screen.queryByTestId("task-DE-9")).not.toBeInTheDocument();
     await user.click(within(day("2026-12-16")).getByRole("button", { name: "+1 more" }));
     expect(task("DE-9")).toHaveAttribute("href", "/w/sample/p/DE/calendar?issue=DE-9");
-    expect(screen.getByRole("link", { name: "+ Task" })).toHaveAttribute("href", "/w/sample/p/DE/calendar?new=1");
+    expect(screen.getByRole("link", { name: "+ Task" })).toHaveAttribute("href", "/w/sample/p/DE/calendar?new=1&type=task");
   });
 
   it("เลื่อนเดือน ก่อนหน้า / ถัดไป / Today", async () => {
@@ -249,5 +250,19 @@ describe("Calendar (6)", () => {
     expect(monthDays("2026-12")[0]).toBe("2026-11-30");
     expect(monthDays("2027-03")).toHaveLength(35);
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+  });
+
+  it("Canvas: Agenda แสดงเฉพาะวันที่มีของ · ลากงาน Unscheduled ไปวางบนวัน = เริ่มและครบกำหนดวันนั้น", async () => {
+    const user = userEvent.setup();
+    mount();
+    const chip = await screen.findByTestId("unscheduled-DE-20");
+    fireEvent.dragStart(chip);
+    fireEvent.dragOver(day("2026-12-16"));
+    fireEvent.drop(day("2026-12-16"));
+    await waitFor(() => expect(patches.at(-1)).toEqual({ key: "DE-20", body: { planStart: "2026-12-16", planEnd: "2026-12-16" }, etag: '"9"' }));
+    await user.click(screen.getByRole("button", { name: "Agenda" }));
+    expect(day("2026-12-16")).toBeInTheDocument();
+    // เดือนแสดง 35 ช่อง · Agenda เหลือเฉพาะวันที่มีงาน / แท็ก
+    expect(screen.getAllByTestId(/^day-/).length).toBeLessThan(28);
   });
 });

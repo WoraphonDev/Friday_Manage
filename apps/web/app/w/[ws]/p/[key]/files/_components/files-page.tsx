@@ -17,8 +17,10 @@ import styles from "./files.module.css";
 /** ขีดจำกัดเดียวกับ API (413 file_too_large) · ตรวจก่อนเพื่อไม่ต้องขอ URL เปล่า ๆ */
 export const MAX_BYTES = 100 * 1024 * 1024;
 type Sort = "newest" | "oldest" | "name" | "size";
-/** root = รากของโปรเจกต์ · trash = ถังขยะ · อื่น ๆ = id ของโฟลเดอร์ */
-type Place = "root" | "trash" | string;
+/** all / recent / tasks / k:{ประเภท} = มุมมองรวมทุกโฟลเดอร์ (Canvas Files) · root = รากของโปรเจกต์ · trash = ถังขยะ · อื่น ๆ = id ของโฟลเดอร์ */
+type Place = "all" | "recent" | "tasks" | `k:${string}` | "root" | "trash" | string;
+const VIRTUAL = (p: string) => p === "all" || p === "recent" || p === "tasks" || p.startsWith("k:");
+const KIND_GROUPS = ["doc", "design", "image", "sheet", "other"] as const;
 interface UploadJob {
   id: number;
   name: string;
@@ -53,6 +55,12 @@ export function kindOf(f: Pick<FileItem, "name" | "kind" | "linkProvider" | "mim
   if (tone === "png" || f.mime?.startsWith("image/")) return "image";
   if (tone === "mp4" || f.mime?.startsWith("video/")) return "video";
   return "other";
+}
+
+/** กลุ่มประเภทในเมนูซ้ายตาม Canvas: Documents, Designs, Images, Spreadsheets, Others */
+export function groupOf(f: Pick<FileItem, "name" | "kind" | "linkProvider" | "mime">): (typeof KIND_GROUPS)[number] {
+  const k = kindOf(f);
+  return k === "doc" ? "doc" : k === "design" ? "design" : k === "image" ? "image" : k === "sheet" ? "sheet" : "other";
 }
 
 /** เรียงโฟลเดอร์เป็นต้นไม้ (แม่ก่อนลูก) พร้อมระดับความลึกสำหรับเยื้อง */
@@ -114,7 +122,7 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
   const toast = useToast();
   const base = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
   const pageHref = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/files`;
-  const [place, setPlace] = useState<Place>("root");
+  const [place, setPlace] = useState<Place>("all");
   const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
   const [uploader, setUploader] = useState("");
@@ -146,9 +154,24 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
   const params = new URLSearchParams({ sort });
   if (place === "trash") params.set("trashed", "true");
   else if (q) params.set("q", q);
-  else params.set("folder", place);
+  else params.set("folder", VIRTUAL(place) ? "root" : place);
   if (uploader) params.set("uploader", uploader);
   const list = useQuery({ queryKey: ["files", ws, projectKey, "list", params.toString()], queryFn: () => api.get<FileList>(`${base}/files?${params}`), enabled: allowed });
+  // ไฟล์ทุกโฟลเดอร์สำหรับ All files / Recent / From tasks / ตามประเภท · API ไม่มีตัวเลือก "ทั้งหมด" จึงรวมรากกับทุกโฟลเดอร์
+  const folderIds = (folders.data?.items ?? []).map((f) => f.id);
+  const allFiles = useQuery({
+    queryKey: ["files", ws, projectKey, "all", sort, uploader, folderIds.join(",")],
+    queryFn: async () => {
+      const lists = await Promise.all(["root", ...folderIds].map((id) => api.get<FileList>(`${base}/files?sort=${sort}&folder=${encodeURIComponent(id)}${uploader ? `&uploader=${encodeURIComponent(uploader)}` : ""}`)));
+      const items = [...new Map(lists.flatMap((l) => l.items).map((f) => [f.id, f])).values()];
+      const by: Record<Sort, (a: FileItem, b: FileItem) => number> = {
+        newest: (a, b) => b.updatedAt.localeCompare(a.updatedAt), oldest: (a, b) => a.updatedAt.localeCompare(b.updatedAt),
+        name: (a, b) => a.name.localeCompare(b.name), size: (a, b) => (b.size ?? 0) - (a.size ?? 0),
+      };
+      return { items: items.sort(by[sort]), totalBytes: lists.reduce((n, l) => n + l.totalBytes, 0) };
+    },
+    enabled: allowed && !!folders.data,
+  });
   // จำนวนในถังขยะ (เฉพาะคนที่กู้คืนได้ · คนอื่นได้ 403)
   const trash = useQuery({ queryKey: ["files", ws, projectKey, "list", "sort=newest&trashed=true"], queryFn: () => api.get<FileList>(`${base}/files?sort=newest&trashed=true`), enabled: allowed && canTrash });
 
@@ -159,11 +182,18 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
   }, [list.data]);
 
   const tree = useMemo(() => flattenFolders(folders.data?.items ?? []), [folders.data]);
-  const items = useMemo(() => list.data?.items ?? [], [list.data]);
+  const items = useMemo(() => {
+    if (!VIRTUAL(place) || q) return list.data?.items ?? [];
+    const all = allFiles.data?.items ?? [];
+    if (place === "recent") return [...all].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 20);
+    if (place === "tasks") return all.filter((f) => f.attachments > 0);
+    if (place.startsWith("k:")) return all.filter((f) => groupOf(f) === place.slice(2));
+    return all;
+  }, [list.data, allFiles.data, place, q]);
   const inTrash = place === "trash";
   const current = items.find((f) => f.id === selectedId) ?? items[0];
   const detail = useQuery({ queryKey: ["files", ws, projectKey, "detail", current?.id], queryFn: () => api.get<FileDetail>(`${base}/files/${current!.id}`), enabled: !!current && !inTrash });
-  const folderId = place !== "root" && place !== "trash" ? place : null;
+  const folderId = place !== "root" && place !== "trash" && !VIRTUAL(place) ? place : null;
   const folderName = tree.find((f) => f.id === folderId)?.name;
   const reload = () => cache.invalidateQueries({ queryKey: ["files", ws, projectKey] });
 
@@ -254,22 +284,29 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
   if (err) return <div className={styles.page}>{err instanceof ApiError && err.status === 403 ? <Forbidden /> : <ErrorState error={err} retry={() => { void folders.refetch(); void list.refetch(); }} />}</div>;
 
   const data = list.data!;
-  const title = inTrash ? t("trash") : q ? t("searchResults", { q }) : (folderName ?? t("root"));
+  const title = inTrash ? t("trash") : q ? t("searchResults", { q }) : VIRTUAL(place) ? t(place.startsWith("k:") ? `typeGroups.${place.slice(2)}` : `places.${place}`) : (folderName ?? t("root"));
+  const all = allFiles.data?.items ?? [];
   const trashCount = trash.data?.items.length ?? 0;
 
   return (
     <div className={styles.page}>
       <div className={styles.body}>
         <nav className={`${styles.card} ${styles.side}`} aria-label={t("foldersNav")}>
-          <FolderButton on={place === "root" && !q} onClick={() => go("root")} count={folders.data?.rootFileCount}>{t("root")}</FolderButton>
+          {/* Canvas Files: All files, Recent, From tasks · ตามประเภท · Folders */}
+          <FolderButton on={place === "all" && !q} onClick={() => go("all")} count={all.length}>{t("places.all")}</FolderButton>
+          <FolderButton on={place === "recent" && !q} onClick={() => go("recent")} count={Math.min(20, all.length)}>{t("places.recent")}</FolderButton>
+          <FolderButton on={place === "tasks" && !q} onClick={() => go("tasks")} count={all.filter((f) => f.attachments > 0).length}>{t("places.tasks")}</FolderButton>
+          <div className={styles.fsec}>{t("byType")}</div>
+          {KIND_GROUPS.map((k) => <FolderButton key={k} on={place === `k:${k}` && !q} onClick={() => go(`k:${k}`)} count={all.filter((f) => groupOf(f) === k).length}>{t(`typeGroups.${k}`)}</FolderButton>)}
           <div className={styles.fsec}>{t("folders")}</div>
+          <FolderButton on={place === "root" && !q} onClick={() => go("root")} count={folders.data?.rootFileCount}>{t("root")}</FolderButton>
           {tree.map((f) => (
             <FolderButton key={f.id} on={place === f.id && !q} onClick={() => go(f.id)} count={f.fileCount} depth={f.depth}>{f.name}</FolderButton>
           ))}
           {!tree.length && <div className={`${styles.muted} ${styles.hint}`}>{t("noFolders")}</div>}
           {canUpload && <button type="button" className={styles.fo} style={{ color: "var(--primary)" }} onClick={() => setDialog("folder")}>{t("newFolder")}</button>}
           <div className={styles.sideFoot}>
-            <div className={styles.line}><span className={styles.muted}>{t("totalHere")}</span><b>{formatBytes(data.totalBytes)}</b></div>
+            <div className={styles.line}><span className={styles.muted}>{t("totalHere")}</span><b>{formatBytes(allFiles.data?.totalBytes ?? data.totalBytes)}</b></div>
             {canTrash && (
               <button type="button" className={`${styles.fo} ${place === "trash" ? styles.on : ""}`} aria-pressed={inTrash} style={{ padding: 0, marginTop: 8 }} onClick={() => go("trash")}>
                 {t("trash")} <span className={styles.c}>{t("trashCount", { count: trashCount })}</span>
@@ -331,7 +368,7 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
               )}
             </div>
             <div className={styles.row}>
-              {!inTrash && <input className="input" type="search" placeholder={t("search")} aria-label={t("search")} value={qInput} onChange={(e) => setQInput(e.target.value)} />}
+              {!inTrash && <input className={`input ${styles.search}`} type="search" placeholder={t("search")} aria-label={t("search")} value={qInput} onChange={(e) => setQInput(e.target.value)} />}
               <Select size="small" prefix={t("uploader")} aria-label={t("uploader")} value={uploader} onChange={(e) => setUploader(e.target.value)}>
                 <option value="">{t("everyone")}</option>
                 {people.map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}

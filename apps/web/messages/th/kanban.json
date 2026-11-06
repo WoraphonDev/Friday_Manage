@@ -71,10 +71,10 @@
   "errorTitle": "โหลดบอร์ดไม่สำเร็จ",
   "retry": "ลองอีกครั้ง",
   "priorityValues": {
-    "urgent": "เร่งด่วน",
-    "high": "สูง",
-    "medium": "ปานกลาง",
-    "low": "ต่ำ"
+    "urgent": "Urgent",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
   },
   "typeValues": {
     "Task": "Task",

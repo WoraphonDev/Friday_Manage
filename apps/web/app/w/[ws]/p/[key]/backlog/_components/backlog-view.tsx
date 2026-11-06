@@ -296,7 +296,7 @@ function PlanningSprint({ sprint, canManage, hasActive, dates, onStart, saveGoal
       <h2>{sprint.name}</h2>
       <span className={styles.muted}>{dates} · {t("issueCount", { count: sprint.issues.length })}</span>
       <span className={styles.spacer} />
-      {canManage && <Button variant="primary" disabled={hasActive} title={hasActive ? t("activeExists") : undefined} onClick={onStart}>{t("startSprint")}</Button>}
+      {canManage && <Button className={styles.startBtn} disabled={hasActive} title={hasActive ? t("activeExists") : undefined} onClick={onStart}>{t("startSprint")}</Button>}
     </header>
     <div className={styles.planBody}>
       {canManage

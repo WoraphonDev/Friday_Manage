@@ -2,6 +2,7 @@
   "admin": {
     "navLabel": "Admin Console menu",
     "actionsBadge": "{n, plural, one {{n} item needs action} other {{n} items need action}}",
+    "planTrial": "{plan} · Trial until {date}",
     "saved": "Saved",
     "failed": "Couldn't save",
     "recalculated": "Saved · Recalculated Plan End for {issues} tasks in {projects} projects",

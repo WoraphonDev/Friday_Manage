@@ -208,8 +208,8 @@ export function SearchPage({ ws }: { ws: string }) {
                 const hits = results.filter((h) => (g.types as readonly string[]).includes(h.type));
                 if (!hits.length) return null;
                 return (
+                  // Canvas P1 แสดงรายการต่อกันไม่มีหัวกลุ่ม · คงกลุ่มไว้ให้โปรแกรมอ่านหน้าจอ
                   <div key={g.id} role="group" aria-label={t(`groups.${g.id}`)}>
-                    <div className={styles.gh}>{t(`groups.${g.id}`)} · {hits.length}</div>
                     {hits.map((h) => <Result key={`${h.type}:${hitId(h)}`} ws={ws} h={h} q={filters.q} year={me.yearFormat} />)}
                   </div>
                 );

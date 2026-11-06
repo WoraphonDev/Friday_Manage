@@ -5,6 +5,8 @@
 .actions { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
 .actions :global(.field) { margin:0; }
 .form { display:flex; gap:8px; flex-wrap:wrap; }
+/* เดสก์ท็อปพิมพ์คำค้นที่แถบบนตาม Canvas · มือถือไม่มีแถบบนจึงใช้ช่องในหน้า */
+@media (min-width:761px) { .form { display:none; } }
 .form input { flex:1 1 280px; min-width:0; }
 .body { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
 .card { background:var(--card); border:1px solid var(--border); border-radius:12px; min-width:0; }
@@ -20,7 +22,6 @@
 .savedItem { display:flex; align-items:center; gap:4px; font-size:13px; }
 .savedItem a { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .results { flex:999 1 560px; overflow:hidden; }
-.gh { padding:8px 18px; font-size:12px; font-weight:600; color:var(--muted); background:#f8f9fb; border-bottom:1px solid #eef0f3; text-transform:uppercase; letter-spacing:.05em; }
 .res { display:flex; gap:12px; padding:14px 18px; border-bottom:1px solid #f1f3f5; text-decoration:none; color:var(--foreground); }
 .res:hover { background:#fafbfc; color:var(--foreground); }
 .resBody { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }

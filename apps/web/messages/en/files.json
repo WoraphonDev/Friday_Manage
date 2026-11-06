@@ -1,6 +1,9 @@
 {
   "foldersNav": "File folders",
   "root": "Project files",
+  "places": { "all": "All files", "recent": "Recent", "tasks": "From tasks" },
+  "byType": "By type",
+  "typeGroups": { "doc": "Documents", "design": "Designs", "image": "Images", "sheet": "Spreadsheets", "other": "Others" },
   "folders": "Folders",
   "noFolders": "No folders yet",
   "newFolder": "+ New folder",

@@ -32,17 +32,17 @@
 .who { display:flex; gap:10px; align-items:center; min-width:0; align-self:center; }
 .who > div { min-width:0; }
 .name { font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.bars { display:grid; gap:6px; }
+.bars { display:grid; gap:4px; }
 .bars > div { position:relative; height:110px; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; }
 .bars .val { font-size:11px; color:#3d4550; margin-bottom:2px; white-space:nowrap; }
 .overText { color:#b91c1c; font-weight:600; }
-.wb { width:100%; max-width:40px; border:0; border-radius:4px 4px 0 0; cursor:pointer; padding:0; min-height:2px; }
+.wb { width:100%; border:0; border-radius:3px 3px 0 0; cursor:pointer; padding:0; min-height:2px; }
 .wb:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
 .wb[aria-pressed="true"] { box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--foreground); }
 .low { background:#93b4f5; }
 .mid { background:#2563eb; }
 .over { background:#ea580c; }
-.teamBar { width:100%; max-width:40px; border-radius:4px 4px 0 0; background:#94a3b8; min-height:2px; }
+.teamBar { width:100%; border-radius:4px 4px 0 0; background:#94a3b8; min-height:2px; }
 .capLine { position:absolute; left:4px; right:4px; border-top:2px dashed #475569; pointer-events:none; }
 .labels { display:grid; gap:6px; }
 .labels span { text-align:center; font-size:11px; color:var(--muted); white-space:nowrap; }

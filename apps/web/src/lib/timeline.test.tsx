@@ -55,23 +55,24 @@ const px = (el: HTMLElement, prop: "left" | "width") => Number(el.style[prop].re
 describe("Timeline (4)", () => {
   it("แถว Sprint, Milestone, เส้นวันนี้, Module › กลุ่มงาน › Task › Sub-task · Unscheduled", async () => {
     mount();
-    expect(await screen.findByText("Sprint 1")).toBeInTheDocument();
+    // Sprint ปัจจุบันแสดงในแถวเลขสัปดาห์ของหัวแกน (Canvas Timeline)
+    expect(await screen.findByText(/· Sprint 1$/)).toBeInTheDocument();
     expect(screen.getAllByText("Go-live ระยะแรก").length).toBeGreaterThan(0);
     expect(screen.getByText(/วันนี้ \(/)).toBeInTheDocument();
     expect(bar("DE-1")).toHaveAccessibleName(/DE-1 งาน DE-1: .* · ผู้พัฒนาหนึ่ง/);
     expect(bar("DE-3")).toHaveAccessibleName(/เลยกำหนด 3 วัน/);
     expect(bar("DE-2")).toBeInTheDocument();
     expect(screen.getByTestId("unscheduled-DE-9")).toHaveTextContent("งานยังไม่มีวัน");
-    // ความกว้าง bar = จำนวนวัน × px/วัน (Month = 8px)
-    expect(px(bar("DE-1"), "width")).toBe(5 * PX_PER_DAY.month);
+    // ความกว้าง bar = จำนวนวัน × px/วัน (เริ่มที่ Week ตาม Canvas)
+    expect(px(bar("DE-1"), "width")).toBe(5 * PX_PER_DAY.week);
   });
 
   it("Week / Month / Quarter เปลี่ยนสเกล · ยุบ / ขยายได้ทุกระดับ", async () => {
     const user = userEvent.setup();
     mount();
     await screen.findByTestId("bar-DE-1");
-    await user.click(screen.getByRole("button", { name: "Week" }));
-    expect(px(bar("DE-1"), "width")).toBe(5 * PX_PER_DAY.week);
+    await user.click(screen.getByRole("button", { name: "Month" }));
+    expect(px(bar("DE-1"), "width")).toBe(5 * PX_PER_DAY.month);
     await user.click(screen.getByRole("button", { name: "Quarter" }));
     expect(px(bar("DE-1"), "width")).toBe(5 * PX_PER_DAY.quarter);
     await user.click(screen.getByRole("button", { name: "ย่อ DE-1" }));
@@ -82,21 +83,27 @@ describe("Timeline (4)", () => {
     expect(screen.queryByRole("button", { name: /กลุ่มงานแรก/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "ขยาย Module A" }));
     expect(screen.getByRole("button", { name: "ขยาย กลุ่มงานแรก" })).toBeInTheDocument();
+    // ปุ่มระดับ: Module = ย่อทุก Module · + Sub-task = เปิดทั้งหมด
+    const levels = within(screen.getByRole("group", { name: "ระดับที่แสดง" }));
+    await user.click(levels.getByRole("button", { name: "Module" }));
+    expect(screen.queryByTestId("bar-DE-1")).not.toBeInTheDocument();
+    await user.click(levels.getByRole("button", { name: "+ Sub-task" }));
+    expect(screen.getByTestId("bar-DE-2")).toBeInTheDocument();
   });
 
   it("ลาก bar = เลื่อนทั้งช่วง · ลากขอบ = ปรับความยาว → PATCH พร้อม If-Match ล่าสุด", async () => {
     mount();
     const b = await screen.findByTestId("bar-DE-1");
     fireEvent.mouseDown(b, { button: 0, clientX: 100 });
-    fireEvent.mouseMove(window, { clientX: 100 + 3 * PX_PER_DAY.month });
+    fireEvent.mouseMove(window, { clientX: 100 + 3 * PX_PER_DAY.week });
     fireEvent.mouseUp(window);
     await waitFor(() => expect(patches[0]).toEqual({ key: "DE-1", body: { planStart: "2026-12-03", planEnd: "2026-12-07" }, etag: '"5"' }));
     fireEvent.mouseDown(screen.getByTestId("end-DE-1"), { button: 0, clientX: 200 });
-    fireEvent.mouseMove(window, { clientX: 200 + 2 * PX_PER_DAY.month });
+    fireEvent.mouseMove(window, { clientX: 200 + 2 * PX_PER_DAY.week });
     fireEvent.mouseUp(window);
     await waitFor(() => expect(patches[1]?.body).toEqual({ planEnd: "2026-12-06" }));
     fireEvent.mouseDown(screen.getByTestId("start-DE-1"), { button: 0, clientX: 200 });
-    fireEvent.mouseMove(window, { clientX: 200 - PX_PER_DAY.month });
+    fireEvent.mouseMove(window, { clientX: 200 - PX_PER_DAY.week });
     fireEvent.mouseUp(window);
     await waitFor(() => expect(patches[2]?.body).toEqual({ planStart: "2026-11-29" }));
   });
@@ -137,7 +144,7 @@ describe("Timeline (4)", () => {
     fireEvent.dragStart(chip);
     fireEvent.dragOver(lane);
     const drop = createEvent.drop(lane);
-    Object.defineProperty(drop, "clientX", { value: 10 * PX_PER_DAY.month + 2 });
+    Object.defineProperty(drop, "clientX", { value: 10 * PX_PER_DAY.week + 2 });
     fireEvent(lane, drop);
     // แกนเริ่มจันทร์ 2 พ.ย. 2569 → วันที่ 10 = 12 พ.ย.
     await waitFor(() => expect(patches[0]).toEqual({ key: "DE-9", body: { planStart: "2026-11-12", planEnd: "2026-11-12" }, etag: '"5"' }));

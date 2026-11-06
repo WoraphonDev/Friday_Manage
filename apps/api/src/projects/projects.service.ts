@@ -11,6 +11,7 @@ import { TenantDb } from '../common/tenant.js';
 import { today } from '../common/dates.js';
 import { addDays } from './calendar.js';
 import { L2_GROUPS, L2_PERMISSIONS, projectAccess, type ProjectAccess, requirePerm } from './permissions.js';
+import { defaultWorkflowRules } from '../project-structure/rules.js';
 
 const s = schema;
 
@@ -340,6 +341,12 @@ export class ProjectsService {
     await tx
       .insert(s.issueTypes)
       .values(issueTypesFor(cfg).map((t, i) => ({ ...base, name: t.name, color: t.color, workflowId: t.bug ? bugWf.id : stdWf.id, requiredFields: t.required, enabled: t.enabled, sort: i })));
+    // กฎ Workflow ค่าเริ่มต้นตาม catalog (BUG-10) · บางกฎ implicitEnabled = false จึงไม่มีผลถ้าไม่มีแถว
+    // อยู่ในธุรกรรมเดียวกับการสร้าง ครอบคลุม Template / Wizard / Sample / Import เพราะทุกทางสร้างผ่านจุดนี้
+    await tx.insert(s.workflowRules).values([
+      ...defaultWorkflowRules('standard').map((r) => ({ ...base, workflowId: stdWf.id, ...r })),
+      ...defaultWorkflowRules('bug').map((r) => ({ ...base, workflowId: bugWf.id, ...r })),
+    ]);
     if (cfg.customFields?.length) {
       await tx.insert(s.customFields).values(cfg.customFields.map((f, i) => ({ ...base, name: f.name, fieldType: f.fieldType, options: f.options ?? null, sort: i })));
     }

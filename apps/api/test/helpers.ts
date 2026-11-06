@@ -87,7 +87,7 @@ export async function seedHolidays(owner: pg.Client) {
  * จุดเริ่มของไฟล์ test ใหม่: Lead (Owner ของ Workspace + PM) และ Dev (Member) ในโปรเจกต์ DP
  * ข้อมูลสมมติเท่านั้น · ห้ามใช้ข้อมูลจริงของที่ทำงาน
  */
-export async function seedTeam(t: TestApp, opts: { slug?: string; key?: string } = {}) {
+export async function seedTeam(t: TestApp, opts: { slug?: string; key?: string; withDefaultRules?: boolean } = {}) {
   const slug = opts.slug ?? 'friday-dev';
   const key = opts.key ?? 'DP';
   const lead = await client(t.app);
@@ -105,6 +105,9 @@ export async function seedTeam(t: TestApp, opts: { slug?: string; key?: string }
     milestones: [{ name: 'Credit Line Go-live', date: '2027-01-26' }],
   });
   expect(p.status).toBe(201);
+  // โปรเจกต์ใหม่ได้กฎ Workflow ค่าเริ่มต้น (BUG-10) · fixture ร่วมเริ่มจากไม่มีกฎ เพื่อให้ test ที่ไม่ได้ทดสอบกฎไม่ต้องตั้ง Reviewer / หลักฐาน
+  // test ของกฎเองเพิ่มแถวตามต้องการ · ค่าเริ่มต้นของโปรเจกต์ใหม่ตรวจใน project-structure.e2e.test.ts
+  if (opts.withDefaultRules !== true) await t.owner.query('DELETE FROM workflow_rules WHERE project_id = $1', [p.body.id]);
   await addMember(t.owner, slug, devId, 'member', { key, role: 'member' });
   const project = (await lead.get(`/w/${slug}/projects/${key}`)).body;
   return { slug, key, lead, leadId, dev, devId, project, ws: `/w/${slug}` };

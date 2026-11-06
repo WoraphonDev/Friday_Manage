@@ -106,6 +106,23 @@ describe('Workspace และโปรเจกต์', () => {
     expect(fixed.boardColumnId).toBe(review.id);
     creditLine = p.body.modules[0].id;
 
+    // กฎ Workflow ค่าเริ่มต้นตาม catalog (BUG-10) · ไฟล์นี้ทดสอบเรื่องอื่นต่อ จึงล้างกฎออกเหมือน seedTeam
+    const rules = (await owner.query(
+      `SELECT w.name AS workflow, r.rule_type, r.enabled FROM workflow_rules r JOIN workflows w ON w.id = r.workflow_id WHERE r.project_id = $1 ORDER BY w.name, r.rule_type`,
+      [r.body.id],
+    )).rows;
+    expect(rules).toEqual([
+      { workflow: 'Bug', rule_type: 'critical_auto_start', enabled: false },
+      { workflow: 'Bug', rule_type: 'fix_reference_required', enabled: true },
+      { workflow: 'Bug', rule_type: 'reopen_on_failed_test', enabled: true },
+      { workflow: 'Bug', rule_type: 'tester_or_reporter_only_verified', enabled: true },
+      { workflow: 'มาตรฐาน', rule_type: 'reviewer_only_done', enabled: false },
+      { workflow: 'มาตรฐาน', rule_type: 'reviewer_required', enabled: true },
+      { workflow: 'มาตรฐาน', rule_type: 'subtasks_done', enabled: true },
+      { workflow: 'มาตรฐาน', rule_type: 'wip_warning', enabled: true },
+    ]);
+    await owner.query('DELETE FROM workflow_rules WHERE project_id = $1', [r.body.id]);
+
     const dup = await mick.get('/w/friday-dev/projects/key-available?key=DP');
     expect(dup.body.available).toBe(false);
   });

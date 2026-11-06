@@ -74,8 +74,26 @@ export class PaymentsService implements OnModuleInit {
     private readonly mailer: Mailer,
   ) {}
 
-  onModuleInit() {
+  async onModuleInit() {
     this.jobs.define('payments.etax', (d: { taxDocumentId: string }) => this.submitETax(d.taxDocumentId));
+    // ใบกำกับภาษีที่หลังบ้าน (ops-api) สร้างตอนยืนยันสลิปโอน อยู่ในสถานะ pending โดยไม่มีใครส่งงานให้ → กวาดส่งทุก 10 นาที
+    this.jobs.define('payments.etax-sweep', () => this.sweepETax());
+    await this.jobs.every('payments.etax-sweep', '*/10 * * * *');
+  }
+
+  /** ส่ง e-Tax ของเอกสารที่ค้างสถานะ pending เกิน 1 นาที (ให้ผู้สร้างเอกสารมีเวลาส่งงานเอง) */
+  async sweepETax() {
+    const rows = await this.sys.select({ id: s.taxDocuments.id }).from(s.taxDocuments).where(and(eq(s.taxDocuments.status, 'pending'), sql`${s.taxDocuments.createdAt} < now() - interval '1 minute'`)).limit(50);
+    let submitted = 0;
+    for (const r of rows) {
+      try {
+        await this.submitETax(r.id);
+        submitted++;
+      } catch (e) {
+        this.log.error(`ส่ง e-Tax ${r.id} ไม่สำเร็จ: ${(e as Error).message}`);
+      }
+    }
+    return { submitted };
   }
 
   private requireBilling(tenant: TenantInfo) {

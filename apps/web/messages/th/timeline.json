@@ -1,6 +1,6 @@
 {
   "title": "Timeline",
-  "zoom": { "label": "ช่วงเวลา", "week": "Week", "month": "Month", "quarter": "Quarter" },
+  "zoom": { "label": "ช่วงเวลา", "day": "Day", "week": "Week", "month": "Month" },
   "prev": "เลื่อนไปก่อนหน้า",
   "next": "เลื่อนไปถัดไป",
   "today": "Today",
@@ -12,7 +12,6 @@
   "addMilestone": "+ Milestone",
   "colors": { "module": "Module", "status": "Status", "assignee": "Assignee" },
   "rowsLabel": "Module › Task › Sub-task",
-  "sprints": "Sprint",
   "milestones": "Milestones",
   "todayLine": "วันนี้ ({date})",
   "lastEnd": "งานสุดท้าย {date}",

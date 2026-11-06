@@ -94,7 +94,7 @@ export class GithubHooksController {
   @Public()
   @Get('setup')
   @Redirect()
-  async setup(@Query('installation_id') installationId?: string, @Query('state') state?: string, @Query('setup_action') action?: string) {
-    return { url: await this.git.setup(installationId ?? '', state ?? '', action), statusCode: 302 };
+  async setup(@Query('installation_id') installationId?: string, @Query('state') state?: string, @Query('setup_action') action?: string, @Query('code') code?: string) {
+    return { url: await this.git.setup(installationId ?? '', state ?? '', action, code), statusCode: 302 };
   }
 }

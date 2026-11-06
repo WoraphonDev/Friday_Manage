@@ -146,8 +146,8 @@ describe("Timeline (4)", () => {
     const drop = createEvent.drop(lane);
     Object.defineProperty(drop, "clientX", { value: 10 * PX_PER_DAY.week + 2 });
     fireEvent(lane, drop);
-    // แกนเริ่มจันทร์ 2 พ.ย. 2569 → วันที่ 10 = 12 พ.ย.
-    await waitFor(() => expect(patches[0]).toEqual({ key: "DE-9", body: { planStart: "2026-11-12", planEnd: "2026-11-12" }, etag: '"5"' }));
+    // แกนเริ่มวันที่ 1 ของเดือน (1 พ.ย. 2569) → วันที่ 10 = 11 พ.ย.
+    await waitFor(() => expect(patches[0]).toEqual({ key: "DE-9", body: { planStart: "2026-11-11", planEnd: "2026-11-11" }, etag: '"5"' }));
   });
 
   it("สีตาม Module / Status / Assignee", async () => {

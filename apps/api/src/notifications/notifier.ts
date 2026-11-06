@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { type Db, schema } from '@friday/db';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { SYSTEM_DB } from '../db/db.module.js';
 
 export interface NotifyInput {
@@ -14,6 +15,11 @@ export interface NotifyInput {
   payload: Record<string, unknown>;
   /** "ทำไมฉันได้รับแจ้ง" · ส่งเป็นฟังก์ชันได้เมื่อเหตุผลต่างกันตามผู้รับ */
   reason: string | ((recipientId: string) => string);
+  /**
+   * กันแจ้งซ้ำ: ผู้รับที่เคยได้ eventType เดียวกันพร้อม key นี้แล้วจะถูกข้าม (เก็บไว้ใน payload.dedupeKey)
+   * ใช้กับงานตามเวลาที่อาจรันซ้ำหรือ retry (A16) เช่น `due_soon:{issueId}:{planEnd}:{date}`
+   */
+  dedupeKey?: string;
 }
 
 /**
@@ -27,9 +33,20 @@ export class Notifier {
   constructor(@Inject(SYSTEM_DB) private readonly system: Db) {}
 
   async notify(n: NotifyInput) {
-    const recipients = [...new Set(n.recipientIds)].filter((id) => id !== n.actorId);
+    let recipients = [...new Set(n.recipientIds)].filter((id) => id !== n.actorId);
     if (!recipients.length) return;
     try {
+      if (n.dedupeKey) {
+        const t = schema.notifications;
+        const sent = await this.system
+          .select({ recipientId: t.recipientId })
+          .from(t)
+          .where(and(eq(t.workspaceId, n.workspaceId), eq(t.eventType, n.eventType), inArray(t.recipientId, recipients), sql`${t.payload}->>'dedupeKey' = ${n.dedupeKey}`));
+        const done = new Set(sent.map((r) => r.recipientId));
+        recipients = recipients.filter((id) => !done.has(id));
+        if (!recipients.length) return;
+      }
+      const payload = n.dedupeKey ? { ...n.payload, dedupeKey: n.dedupeKey } : n.payload;
       await this.system.insert(schema.notifications).values(
         recipients.map((recipientId) => ({
           workspaceId: n.workspaceId,
@@ -38,7 +55,7 @@ export class Notifier {
           actorId: n.actorId,
           projectId: n.projectId,
           issueId: n.issueId,
-          payload: n.payload,
+          payload,
           reason: typeof n.reason === 'function' ? n.reason(recipientId) : n.reason,
         })),
       );

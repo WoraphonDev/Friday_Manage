@@ -535,7 +535,8 @@ describe('คำขอเลื่อน Due (K3) และ Inbox (G)', () => {
     expect(item.readAt).toBeNull();
     expect(r.body.counts.unread).toBeGreaterThanOrEqual(1);
     expect((await inbox(arm)).body.items.some((x: { eventType: string }) => x.eventType === 'due_request.created')).toBe(true);
-    expect((await inbox(kaijeaw)).body.items).toEqual([]);
+    // ผู้ขอไม่ได้รับแจ้งคำขอของตัวเอง (หลัง A23 Inbox ของผู้ขอมีแจ้งเตือนอื่นที่ถูกต้อง เช่น ได้รับมอบหมายงาน)
+    expect((await inbox(kaijeaw)).body.items.filter((x: { eventType: string }) => x.eventType.startsWith('due_request.'))).toEqual([]);
 
     const bell = await mick.get('/me/notifications/summary');
     expect(bell.body.workspaces).toEqual([expect.objectContaining({ slug: 'friday-dev' })]);

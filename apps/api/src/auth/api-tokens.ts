@@ -28,17 +28,19 @@ const BLOCKED_WORKSPACE_AREAS = /^(api-tokens|channels|billing|members|invitatio
 
 /**
  * ตรวจ Bearer token แล้วคืนตัวตนของผู้สร้าง token (สิทธิ์จริงของคำขอ = สิทธิ์ของผู้สร้างใน Workspace นั้น ∩ scopes ตาม 04-permissions ข้อ 9)
- * คืน null เมื่อ token ไม่รู้จัก / ยกเลิกแล้ว / ผู้สร้างไม่ได้เป็นสมาชิก active แล้ว
+ * คืน null เมื่อ token ไม่รู้จัก / ยกเลิกแล้ว / ผู้สร้างไม่ได้เป็นสมาชิก active แล้ว / บัญชีผู้สร้างถูกปิด
  */
 export async function findApiToken(db: Db, token: string): Promise<TokenIdentity | null> {
   if (!token.startsWith(TOKEN_PREFIX)) return null;
   const [row] = await db
-    .select({ id: s.apiTokens.id, workspaceId: s.apiTokens.workspaceId, scopes: s.apiTokens.scopes, createdBy: s.apiTokens.createdBy, member: s.workspaceMembers.userId, wsDeleted: s.workspaces.deletedAt })
+    .select({ id: s.apiTokens.id, workspaceId: s.apiTokens.workspaceId, scopes: s.apiTokens.scopes, createdBy: s.apiTokens.createdBy, member: s.workspaceMembers.userId, wsDeleted: s.workspaces.deletedAt, userDisabled: s.users.disabledAt })
     .from(s.apiTokens)
     .innerJoin(s.workspaces, eq(s.workspaces.id, s.apiTokens.workspaceId))
+    // บัญชีที่ถูกปิดทั้งระบบต้องใช้ token ไม่ได้ เหมือน session (สมาชิก Workspace อาจยัง active อยู่)
+    .innerJoin(s.users, eq(s.users.id, s.apiTokens.createdBy))
     .leftJoin(s.workspaceMembers, and(eq(s.workspaceMembers.workspaceId, s.apiTokens.workspaceId), eq(s.workspaceMembers.userId, s.apiTokens.createdBy), eq(s.workspaceMembers.status, 'active')))
     .where(and(eq(s.apiTokens.tokenHash, hashApiToken(token)), isNull(s.apiTokens.revokedAt)));
-  if (!row || !row.member || row.wsDeleted) return null;
+  if (!row || !row.member || row.wsDeleted || row.userDisabled) return null;
   // บันทึกการใช้ล่าสุดไม่เกินนาทีละครั้ง (ไม่ให้ทุกคำขอเขียนฐานข้อมูล)
   void db
     .update(s.apiTokens)

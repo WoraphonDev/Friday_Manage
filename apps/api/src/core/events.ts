@@ -28,7 +28,8 @@ export type EventType =
   | 'member.joined'
   | 'import.completed'
   | 'report.weekly'
-  | 'leave.created';
+  | 'leave.created'
+  | 'ci.failed';
 
 export interface DomainEvent {
   type: EventType;

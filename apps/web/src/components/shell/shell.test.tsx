@@ -63,6 +63,33 @@ describe("Workspace / Project shell", () => {
     ).toHaveAttribute("href", "/w/other");
   });
 
+  it("เมนู Workspace มีตัวสลับภาษาและรูปแบบปี (W21)", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <WorkspaceShell ws="sample">
+        <p>Home</p>
+      </WorkspaceShell>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "สลับ Workspace: ทีมตัวอย่าง" }),
+    );
+    const language = screen.getByRole("group", { name: "ภาษาของระบบ" });
+    expect(within(language).getByRole("button", { name: /English/ })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "รูปแบบปี" })).toBeInTheDocument();
+  });
+
+  it("locale en: shell แสดงข้อความภาษาอังกฤษ (W21)", async () => {
+    renderWithProviders(
+      <WorkspaceShell ws="sample">
+        <p>Home</p>
+      </WorkspaceShell>,
+      { locale: "en" },
+    );
+    expect(
+      await screen.findByRole("button", { name: "Switch Workspace: ทีมตัวอย่าง" }),
+    ).toBeInTheDocument();
+  });
+
   it("Ctrl K เปิดช่องค้นหาและส่งคำค้นไป Workspace ปัจจุบัน", async () => {
     const user = userEvent.setup();
     renderWithProviders(

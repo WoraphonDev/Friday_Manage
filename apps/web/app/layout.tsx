@@ -1,32 +1,31 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { Providers } from "@/components/providers";
-import { messages } from "@/i18n/messages";
 import "@fontsource/ibm-plex-sans-thai/400.css";
 import "@fontsource/ibm-plex-sans-thai/500.css";
 import "@fontsource/ibm-plex-sans-thai/600.css";
 import "@fontsource/ibm-plex-sans-thai/700.css";
 import "@/styles/globals.css";
 
-export const metadata: Metadata = {
-  title: {
-    default: messages.common.app.name,
-    template: `%s · ${messages.common.app.name}`,
-  },
-  description: messages.common.app.description,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.app");
+  return {
+    title: { default: t("name"), template: `%s · ${t("name")}` },
+    description: t("description"),
+  };
+}
 export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const allMessages = await getMessages();
+  const [locale, allMessages] = await Promise.all([getLocale(), getMessages()]);
   return (
-    <html lang="th">
+    <html lang={locale}>
       <body>
         <NextIntlClientProvider
-          locale="th"
+          locale={locale}
           messages={allMessages}
           timeZone="Asia/Bangkok"
         >

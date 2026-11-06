@@ -183,3 +183,9 @@
 - ยังไม่ได้เทียบภาพกับ Canvas R3 ที่ 1440 / 390 px (ตัวสลับจะอยู่ในหน้าจริงหลังคำขอข้อ 4–5)
 - M1 (โหลด / ว่าง / Error พร้อม requestId / 403) ไม่เกี่ยวกับงานนี้โดยตรง: ตัวสลับไม่มีข้อมูลให้โหลด · Error ของ PATCH แสดงข้อความจาก API ใน toast
 - เทมเพลตแจ้งเตือน (Email / LINE) ที่ส่ง "ตามภาษาของผู้รับ" เป็นงานฝั่ง API (`users.locale` มีอยู่แล้ว) ยังไม่อยู่ในงานนี้
+
+### ต่อไฟล์กลางแล้ว (หลัง merge #69)
+
+- ข้อ 1–5 ของคำขอนอก lane ทำแล้ว: `src/i18n/request.ts` ใช้ `getRequestLocale()` + `loadMessages()` · `app/layout.tsx` ใช้ `getLocale()` ใน `<html lang>` และ provider, metadata เป็น `generateMetadata` · `messagesEn` + `renderWithProviders({ locale: "en" })` · ตัวสลับภาษา + ปีอยู่ในเมนู Workspace และ `LocaleSync` ใน shell · ตัวสลับอยู่ที่หัวเว็บสาธารณะ
+- ตรวจกับ production build: cookie `NEXT_LOCALE=en` หรือ `Accept-Language: en` → `<html lang="en">` และข้อความ EN · ไม่มี → ไทย
+- ยังไม่ได้ทำ: ข้อ 6 (ฟอร์มภาษาใน Profile), ข้อ 7–8 (`format.ts` / `Intl` ที่ล็อก `th-TH` และหน้าที่ import `messages/th` ตรงเพื่อทำ metadata เช่น `<title>` ของ /pricing ยังเป็นไทย) · วันที่จึงยังแสดงแบบไทยในโหมด EN

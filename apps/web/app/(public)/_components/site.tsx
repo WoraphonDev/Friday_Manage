@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { buttonVariants } from "@/components/ui";
+import { LocaleSwitch } from "@/features/locale-switch";
 import { cn } from "@/lib/utils";
 import { openCookieSettings } from "./cookie-consent";
 import styles from "./public.module.css";
@@ -35,6 +36,7 @@ export function SiteHeader() {
           <a href="/#faq">{t("faq")}</a>
         </nav>
         <span className={styles.spacer} />
+        <LocaleSwitch />
         <Link href="/login" className={styles.login}>
           {t("login")}
         </Link>

@@ -67,6 +67,8 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const [needReason, setNeedReason] = useState<Pending | null>(null);
   const [needRequest, setNeedRequest] = useState<Pending | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // ความกว้างที่มองเห็น: แกนเวลายาวอย่างน้อยเต็มจอ ไม่เหลือพื้นที่ว่างด้านขวา
+  const [viewW, setViewW] = useState(0);
   const dragged = useRef<string | null>(null);
   const dragRef = useRef<Drag | null>(null);
   dragRef.current = drag;
@@ -85,9 +87,17 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
     const f = new Date(`${q.data.range.from}T00:00:00Z`);
     f.setUTCDate(f.getUTCDate() - ((f.getUTCDay() + 6) % 7));
     const from = f.toISOString().slice(0, 10);
-    const days = Math.max(28, toDay(q.data.range.to, from) + 14);
+    const days = Math.max(28, toDay(q.data.range.to, from) + 14, Math.ceil((viewW - LABEL_W) / PX_PER_DAY[zoom]));
     return { from, days };
-  }, [q.data]);
+  }, [q.data, viewW, zoom]);
+  const hasData = !!q.data;
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([entry]) => setViewW(entry!.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [hasData]);
 
   const lines = useMemo<Line[]>(() => {
     if (!q.data) return [];
@@ -306,7 +316,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                     <div className={`${styles.lab} ${ln.sub ? styles.sub : styles.task}`}>
                       {ln.hasKids && <button type="button" className={styles.toggle} aria-expanded={!closed.has(`t:${r.key}`)} aria-label={t(closed.has(`t:${r.key}`) ? "expand" : "collapse", { name: r.key })} onClick={() => toggle(`t:${r.key}`)}><ChevronDown size={14} style={{ transform: closed.has(`t:${r.key}`) ? "rotate(-90deg)" : undefined }} /></button>}
                       {!ln.hasKids && <span className={styles.dotStatus} style={{ borderColor: STATUS_COLOR[r.status.category], background: r.status.category === "done" ? STATUS_COLOR.done : "transparent" }} aria-hidden="true" />}
-                      <span className="muted" style={{ fontSize: 12 }}>{r.key}</span>
+                      <span className="muted" style={{ fontSize: 12, flex: "none", whiteSpace: "nowrap" }}>{r.key}</span>
                       {open ? <Link className={styles.labText} href={issueHref(r.key)} style={{ color: "var(--foreground)" }}>{r.title}</Link> : <span className={styles.labText}>{r.title}</span>}
                       {!guest && !!r.assignees?.length && <span className={styles.who}><AvatarStack people={r.assignees} max={1} /></span>}
                     </div>

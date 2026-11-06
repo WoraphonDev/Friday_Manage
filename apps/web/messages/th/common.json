@@ -64,7 +64,11 @@
     "private": "โปรเจกต์ส่วนตัว",
     "projectStatus": "สถานะโปรเจกต์",
     "notifications": "การแจ้งเตือน {count} รายการยังไม่อ่าน",
-    "workspaceStatus": "Workspace ถูกระงับการใช้งาน"
+    "workspaceStatus": "Workspace ถูกระงับการใช้งาน",
+    "projectMembers": "Members",
+    "invite": "Invite",
+    "projectMenu": "เมนูโปรเจกต์",
+    "projectTeam": "ทีมในโปรเจกต์ {count} คน"
   },
   "roles": {
     "owner": "Owner",
@@ -181,5 +185,10 @@
     "personOne": "สมาชิกตัวอย่าง",
     "personTwo": "ผู้ทดสอบตัวอย่าง",
     "seeAll": "ดูทั้งหมด"
+  },
+  "health": {
+    "on_track": "On track",
+    "at_risk": "At risk",
+    "off_track": "Off track"
   }
 }

@@ -64,7 +64,11 @@
     "private": "Private project",
     "projectStatus": "Project status",
     "notifications": "{count, plural, one {{count} unread notification} other {{count} unread notifications}}",
-    "workspaceStatus": "Workspace is suspended"
+    "workspaceStatus": "Workspace is suspended",
+    "projectMembers": "Members",
+    "invite": "Invite",
+    "projectMenu": "Project menu",
+    "projectTeam": "{count} project members"
   },
   "roles": {
     "owner": "Owner",
@@ -181,5 +185,10 @@
     "personOne": "Sample member",
     "personTwo": "Sample tester",
     "seeAll": "See all"
+  },
+  "health": {
+    "on_track": "On track",
+    "at_risk": "At risk",
+    "off_track": "Off track"
   }
 }

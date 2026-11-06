@@ -42,6 +42,8 @@
 .sprint { position:absolute; top:5px; height:18px; border-radius:4px; background:#e0e7ff; color:#3730a3; font-size:11px; padding:0 6px; overflow:hidden; white-space:nowrap; }
 .sprint.active { background:#c7d2fe; font-weight:600; }
 .ms { position:absolute; top:6px; display:flex; align-items:center; gap:4px; font-size:11px; white-space:nowrap; transform:translateX(-6px); }
+.ms svg { flex:none; }
+.msName { min-width:0; overflow:hidden; text-overflow:ellipsis; }
 .toggle { border:0; background:transparent; cursor:pointer; padding:0; display:inline-flex; color:inherit; }
 .unsched { padding:12px 16px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; border-top:1px solid var(--border); }
 .chip { display:inline-flex; gap:6px; align-items:center; min-height:30px; padding:0 10px; border:1px dashed var(--input); border-radius:8px; background:#fff; font-size:12px; cursor:grab; }

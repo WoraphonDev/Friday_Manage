@@ -174,6 +174,16 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
       weeks.push({ left: i * px, date: dt.getUTCDate(), no: isoWeek(day), current: d.today >= day && d.today <= end, sprint: sprint?.name ?? null });
     }
   }
+  // ป้ายสัปดาห์ปัจจุบัน + ชื่อ Sprint กว้าง 3 สัปดาห์ จึงไม่แสดงเลขสัปดาห์ที่ถูกป้ายบัง
+  const nowWeek = weeks.findIndex((w) => w.current && w.sprint);
+  const coveredBySprint = (i: number) => nowWeek >= 0 && i > nowWeek && i <= nowWeek + 2;
+  // ป้าย Milestone ที่อยู่ใกล้กันตัดด้วย … ไม่ให้ทับป้ายถัดไป (ชื่อเต็มอยู่ใน title)
+  const msSorted = [...d.milestones].sort((a, b) => a.date.localeCompare(b.date));
+  const msRoom = (id: string) => {
+    const i = msSorted.findIndex((m) => m.id === id);
+    const next = msSorted[i + 1];
+    return next ? Math.max(24, x(next.date) - x(msSorted[i]!.date) - 8) : undefined;
+  };
   const weekends: number[] = [];
   const issueHref = (key: string) => `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?issue=${encodeURIComponent(key)}`;
   const newHref = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?new=1&type=task`;
@@ -237,7 +247,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                 <div className={styles.lane} style={{ width }} data-testid="axis">
                   <div className={styles.axisRow}>{ticks.map((tk) => <span key={tk.left} className={styles.tick} style={{ left: tk.left, fontWeight: 600 }}>{tk.label}</span>)}</div>
                   {zoom !== "quarter" && <div className={styles.axisRow}>{weeks.map((w) => <span key={w.left} className={styles.wk} style={{ left: w.left, width: 7 * px }}>{w.date}</span>)}</div>}
-                  <div className={styles.axisRow} aria-label={t("sprints")}>{weeks.map((w) => <span key={w.left} className={`${styles.wk} ${w.current ? styles.wkNow : ""}`} style={{ left: w.left, width: w.sprint && w.current ? 7 * px * 3 : 7 * px }} title={w.sprint ?? undefined}>{w.no}{w.current && w.sprint ? ` · ${w.sprint}` : ""}</span>)}</div>
+                  <div className={styles.axisRow} aria-label={t("sprints")}>{weeks.map((w, i) => coveredBySprint(i) ? null : <span key={w.left} className={`${styles.wk} ${w.current ? styles.wkNow : ""}`} style={{ left: w.left, width: w.sprint && w.current ? 7 * px * 3 : 7 * px }} title={w.sprint ?? undefined}>{w.no}{w.current && w.sprint ? ` · ${w.sprint}` : ""}</span>)}</div>
                 </div>
               </div>
               <div className={styles.row} aria-label={t("milestones")}>
@@ -245,8 +255,8 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                 <div className={styles.lane} style={{ width }}>
                   {laneBg}
                   {d.milestones.map((ms) => (
-                    <span key={ms.id} className={styles.ms} style={{ left: x(ms.date) }} title={`${ms.name} · ${formatDate(ms.date, year)}`}>
-                      <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill="#1b1f24" /></svg>{ms.name}
+                    <span key={ms.id} className={styles.ms} style={{ left: x(ms.date), maxWidth: msRoom(ms.id) }} title={`${ms.name} · ${formatDate(ms.date, year)}`}>
+                      <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill="#1b1f24" /></svg><span className={styles.msName}>{ms.name}</span>
                     </span>
                   ))}
                 </div>

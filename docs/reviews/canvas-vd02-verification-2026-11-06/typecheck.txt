@@ -1,0 +1,2 @@
+> @friday/web@0.0.0 typecheck /private/tmp/friday-audit-20261106-s1/apps/web
+> tsc --noEmit

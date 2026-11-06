@@ -1,0 +1,7 @@
+RUN  v5.1.0 /private/tmp/friday-audit-20261106-s1/apps/web
+
+
+ Test Files  1 passed (1)
+      Tests  13 passed (13)
+   Start at  21:43:46
+   Duration  3.11s (tests 36%, import 33%, environment 17%, setup 9%, transform 5%)

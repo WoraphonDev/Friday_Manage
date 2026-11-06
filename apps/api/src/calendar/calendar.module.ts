@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
+import { CalendarFeedsController, IcalController, ProjectCalendarController } from './calendar.controller.js';
+import { CalendarService } from './calendar.service.js';
 
-/** ปฏิทินและ iCal · งาน A21 (docs/tasks/A21-*.md) · ใส่ controller / provider ของงานนี้ที่นี่ */
+/** ปฏิทินโปรเจกต์ และ iCal · งาน A21 (docs/tasks/A21-*.md) */
 @Module({
-  controllers: [],
-  providers: [],
+  controllers: [ProjectCalendarController, CalendarFeedsController, IcalController],
+  providers: [CalendarService],
 })
 export class CalendarModule {}

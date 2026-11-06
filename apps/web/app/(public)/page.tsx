@@ -1,4 +1,5 @@
-import { Placeholder } from "@/components/Placeholder";
+import { Landing } from "./_components/landing";
+
 export default function Page() {
-  return <Placeholder task="W19" titleKey="public.home" />;
+  return <Landing />;
 }

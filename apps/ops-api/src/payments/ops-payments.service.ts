@@ -2,7 +2,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { Inject, Injectable } from '@nestjs/common';
-import { type Db, schema, type Tx } from '@friday/db';
+import { canGrant, type Db, fallbackGrant, isGrantSource, schema, type Tx } from '@friday/db';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { audit } from '../audit.js';
@@ -95,10 +95,10 @@ export class OpsPaymentsService {
     await this.db.transaction(async (tx) => {
       await tx.update(s.payments).set({ status: 'confirmed', reviewedBy: staff.id, reviewedAt: new Date(), updatedAt: new Date() }).where(eq(s.payments.id, p.id));
       await tx.update(s.invoices).set({ status: 'paid', paidAt: new Date(), updatedAt: new Date() }).where(eq(s.invoices.id, inv.id));
-      await this.activate(tx, inv, meta);
+      const granted = await this.activate(tx, inv, meta);
       // ออกใบกำกับภาษีหลังยืนยันชำระ · สถานะ pending จนกว่างาน e-Tax ของ API ลูกค้าจะรับไปส่งต่อ
       await tx.insert(s.taxDocuments).values({ workspaceId: inv.workspaceId, invoiceId: inv.id, docType: 'tax_invoice_receipt', number: `TX-${inv.number.slice(4)}` }).onConflictDoNothing();
-      await audit(tx, staff, inv.workspaceId, 'plan', 'ops.payment_confirmed', `ยืนยันการชำระ ${inv.number} · ${p.method} · ${p.amount / 100} บาท${input.note ? ` · ${input.note}` : ''}`, { type: 'payment', id: p.id });
+      await audit(tx, staff, inv.workspaceId, 'plan', 'ops.payment_confirmed', `ยืนยันการชำระ ${inv.number} · ${p.method} · ${p.amount / 100} บาท${granted ? '' : ' · ไม่เปลี่ยนแพ็กเกจ (มีใบที่ใหม่กว่าเปิดสิทธิ์อยู่)'}${input.note ? ` · ${input.note}` : ''}`, { type: 'payment', id: p.id });
     });
     return { id: p.id, status: 'confirmed' as const, invoice: inv.number };
   }
@@ -112,10 +112,12 @@ export class OpsPaymentsService {
     await this.db.transaction(async (tx) => {
       await tx.update(s.payments).set({ status: 'rejected', reviewedBy: staff.id, reviewedAt: new Date(), updatedAt: new Date() }).where(eq(s.payments.id, p.id));
       await tx.update(s.invoices).set({ status: 'open', updatedAt: new Date() }).where(eq(s.invoices.id, inv.id));
-      const [sub] = await tx.select().from(s.subscriptions).where(eq(s.subscriptions.id, inv.subscriptionId));
-      const periodStart = new Date(`${inv.periodStart}T00:00:00+07:00`).getTime();
-      if (sub && sub.status === 'active' && sub.currentPeriodStart && sub.currentPeriodStart.getTime() === periodStart) {
-        await tx.update(s.subscriptions).set({ status: 'canceled', currentPeriodEnd: new Date(), updatedAt: new Date() }).where(eq(s.subscriptions.id, sub.id));
+      // เลิกสิทธิ์เฉพาะเมื่อใบนี้เป็นแหล่งสิทธิ์ปัจจุบันจริง (N01): เดิมเทียบแค่วันเริ่มรอบ ใบอื่นที่ชำระแล้วในวันเดียวกันจึงถูกยกเลิกไปด้วย
+      if (await isGrantSource(tx, inv)) {
+        // มีใบอื่นที่ชำระแล้วและรอบยังไม่จบ → คืนสิทธิ์ของใบนั้น · ไม่มี → ยกเลิก
+        const back = await fallbackGrant(tx, inv.subscriptionId, inv.id);
+        if (back) await this.activate(tx, back, await this.meta(back.id));
+        else await tx.update(s.subscriptions).set({ status: 'canceled', currentPeriodEnd: new Date(), updatedAt: new Date() }).where(eq(s.subscriptions.id, inv.subscriptionId));
         revoked = true;
       }
       await audit(tx, staff, inv.workspaceId, 'plan', 'ops.payment_rejected', `ปฏิเสธการชำระ ${inv.number} · ${input.reason}${revoked ? ' · เลิกสิทธิ์แพ็กเกจที่เปิดชั่วคราว' : ''}`, { type: 'payment', id: p.id });
@@ -146,13 +148,16 @@ export class OpsPaymentsService {
     return JSON.parse(row.summary) as CheckoutMeta;
   }
 
-  private async activate(tx: Tx, inv: typeof s.invoices.$inferSelect, meta: CheckoutMeta) {
+  /** เปิดแพ็กเกจตามใบแจ้งหนี้ · false = ใบนี้ถูกแทนที่ด้วยใบที่ใหม่กว่าซึ่งยังมีผล (กติกาเดียวกับ apps/api › PaymentsService.activate) */
+  private async activate(tx: Tx, inv: typeof s.invoices.$inferSelect, meta: CheckoutMeta): Promise<boolean> {
+    if (!(await canGrant(tx, inv))) return false;
     const [plan] = await tx.select({ id: s.plans.id }).from(s.plans).where(eq(s.plans.code, meta.plan));
     if (!plan) throw new AppError(409, 'plan_not_found', `ไม่พบแพ็กเกจ ${meta.plan}`);
     await tx
       .update(s.subscriptions)
-      .set({ planId: plan.id, cycle: meta.cycle, status: 'active', trialEndsAt: null, currentPeriodStart: new Date(`${inv.periodStart}T00:00:00+07:00`), currentPeriodEnd: new Date(`${addDays(inv.periodEnd, 1)}T00:00:00+07:00`), paymentMethod: meta.method, updatedAt: new Date() })
+      .set({ planId: plan.id, cycle: meta.cycle, status: 'active', trialEndsAt: null, currentPeriodStart: new Date(`${inv.periodStart}T00:00:00+07:00`), currentPeriodEnd: new Date(`${addDays(inv.periodEnd, 1)}T00:00:00+07:00`), paymentMethod: meta.method, sourceInvoiceId: inv.id, updatedAt: new Date() })
       .where(eq(s.subscriptions.id, inv.subscriptionId));
+    return true;
   }
 
   private async notifyAdmins(workspaceId: string, subject: string, text: string) {

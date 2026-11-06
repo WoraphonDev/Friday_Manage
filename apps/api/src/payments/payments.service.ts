@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { type Db, schema, type Tx } from '@friday/db';
+import { canGrant, type Db, schema, type Tx } from '@friday/db';
 import { and, count, eq, inArray, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { today } from '../common/dates.js';
@@ -199,14 +199,17 @@ export class PaymentsService implements OnModuleInit {
   /**
    * เปลี่ยนแพ็กเกจของ Workspace ตามใบแจ้งหนี้ · เขียน `subscriptions` ผ่าน SYSTEM_DB เพราะตารางนี้ฝั่งแอปแก้ไม่ได้ (ลูกค้าห้ามตั้งแพ็กเกจเอง)
    * เรียกซ้ำได้: ตั้งค่าเดิมซ้ำไม่มีผลข้างเคียง
+   * คืน false เมื่อใบนี้ถูกแทนที่ด้วยใบที่ใหม่กว่าซึ่งยังมีผล (N02): สลิป / webhook / การยืนยันของใบเก่าที่มาทีหลังต้องไม่ลดแพ็กเกจที่ชำระแล้ว
    */
-  async activate(tx: Tx | Db, invoice: Invoice, meta: CheckoutMeta) {
+  async activate(tx: Tx, invoice: Invoice, meta: CheckoutMeta): Promise<boolean> {
+    if (!(await canGrant(tx, invoice))) return false;
     const [plan] = await tx.select({ id: s.plans.id }).from(s.plans).where(eq(s.plans.code, meta.plan));
     if (!plan) throw new AppError(409, 'plan_not_found', `ไม่พบแพ็กเกจ ${meta.plan}`);
     await tx
       .update(s.subscriptions)
-      .set({ planId: plan.id, cycle: meta.cycle, status: 'active', trialEndsAt: null, currentPeriodStart: new Date(`${invoice.periodStart}T00:00:00+07:00`), currentPeriodEnd: new Date(`${addDays(invoice.periodEnd, 1)}T00:00:00+07:00`), paymentMethod: meta.method, updatedAt: new Date() })
+      .set({ planId: plan.id, cycle: meta.cycle, status: 'active', trialEndsAt: null, currentPeriodStart: new Date(`${invoice.periodStart}T00:00:00+07:00`), currentPeriodEnd: new Date(`${addDays(invoice.periodEnd, 1)}T00:00:00+07:00`), paymentMethod: meta.method, sourceInvoiceId: invoice.id, updatedAt: new Date() })
       .where(eq(s.subscriptions.id, invoice.subscriptionId));
+    return true;
   }
 
   /** ชำระสำเร็จ (Stripe หรือเจ้าหน้าที่ยืนยัน) → ปิดใบแจ้งหนี้, เปิดแพ็กเกจ, ขอออกใบกำกับภาษี */
@@ -216,13 +219,13 @@ export class PaymentsService implements OnModuleInit {
       const meta = await this.meta(invoice.id);
       await tx.update(s.payments).set({ status: 'confirmed', updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
       await tx.update(s.invoices).set({ status: 'paid', paidAt: new Date(), updatedAt: new Date() }).where(eq(s.invoices.id, invoice.id));
-      await this.activate(tx, invoice, meta);
+      const granted = await this.activate(tx, invoice, meta);
       const [doc] = await tx
         .insert(s.taxDocuments)
         .values({ workspaceId: invoice.workspaceId, invoiceId: invoice.id, docType: 'tax_invoice_receipt', number: `TX-${invoice.number.slice(4)}` })
         .onConflictDoNothing()
         .returning();
-      await tx.insert(s.auditLogs).values({ workspaceId: invoice.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.payment_confirmed', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · ${payment.method} · ${payment.amount / 100} บาท · เปิดแพ็กเกจ ${meta.plan}` });
+      await tx.insert(s.auditLogs).values({ workspaceId: invoice.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.payment_confirmed', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · ${payment.method} · ${payment.amount / 100} บาท · ${granted ? `เปิดแพ็กเกจ ${meta.plan}` : 'ไม่เปลี่ยนแพ็กเกจ (มีใบที่ใหม่กว่าเปิดสิทธิ์อยู่)'}` });
       return doc;
     });
     if (created) await this.jobs.enqueue('payments.etax', { taxDocumentId: created.id });

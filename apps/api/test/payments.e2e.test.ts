@@ -301,6 +301,43 @@ describe('กวาดส่งใบกำกับภาษีที่ค้�
   });
 });
 
+describe('ใบเก่าไม่ทับสิทธิ์ของใบใหม่ (N02 · full-system-audit)', () => {
+  async function checkout(plan: string, method: 'transfer' | 'card') {
+    const r = await post(team.lead, `${ws}/billing/checkout`, { plan, cycle: 'monthly', method }, key());
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    return r.body.invoice as { id: string };
+  }
+  async function payCard(invoiceId: string) {
+    const ref = (await t.owner.query(`SELECT provider_ref FROM payments WHERE invoice_id = $1`, [invoiceId])).rows[0].provider_ref;
+    expect((await hook(stripeEvent('payment_intent.succeeded', ref, invoiceId)))!.status).toBe(200);
+  }
+  const slip = (id: string) => upload(team.lead, `${ws}/billing/invoices/${id}/slip`, PNG, 'slip.png');
+
+  it('แนบสลิปใบเก่าซ้ำหลังใบใหม่ชำระด้วยบัตร → เก็บสลิปได้ แต่ Team L ไม่ถูกลดเป็น Team M', async () => {
+    const a = await checkout('team_m', 'transfer');
+    expect((await slip(a.id)).status).toBe(201);
+    expect(await sub()).toMatchObject({ status: 'active', code: 'team_m' });
+    const b = await checkout('team_l', 'card');
+    await payCard(b.id);
+    expect(await sub()).toMatchObject({ status: 'active', code: 'team_l' });
+    const again = await slip(a.id);
+    expect(again.status).toBe(201);
+    expect(again.body).toMatchObject({ status: 'pending_review', hasSlip: true });
+    expect(await sub()).toMatchObject({ status: 'active', code: 'team_l' });
+    expect((await t.owner.query(`SELECT summary FROM audit_logs WHERE action = 'billing.slip_uploaded' AND target_id = $1 ORDER BY created_at DESC LIMIT 1`, [a.id])).rows[0].summary).toContain('ไม่เปลี่ยนแพ็กเกจ');
+  });
+
+  it('Webhook มาสลับลำดับ: ใบใหม่ชำระก่อน ใบเก่าชำระทีหลัง → ใบเก่า paid แต่สิทธิ์เป็นของใบใหม่', async () => {
+    const older = await checkout('team_m', 'card');
+    const newer = await checkout('team_l', 'card');
+    await payCard(newer.id);
+    await payCard(older.id);
+    expect((await t.owner.query(`SELECT status FROM invoices WHERE id = $1`, [older.id])).rows[0].status).toBe('paid');
+    expect(await sub()).toMatchObject({ status: 'active', code: 'team_l' });
+    expect((await t.owner.query(`SELECT source_invoice_id FROM subscriptions WHERE workspace_id = $1`, [wsId])).rows[0].source_invoice_id).toBe(newer.id);
+  });
+});
+
 describe('ผู้ให้บริการ', () => {
   it('เลือก provider จาก env · production ต้องตั้ง Stripe · ตรวจลายเซ็น Stripe', () => {
     expect(gatewayFromEnv({})).toBeInstanceOf(FakeGateway);

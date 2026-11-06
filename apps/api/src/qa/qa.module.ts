@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
+import { QaController } from './qa.controller.js';
+import { QaService } from './qa.service.js';
 
-/** ผลทดสอบและบันทึกเวลา · งาน A12 (docs/tasks/A12-*.md) · ใส่ controller / provider ของงานนี้ที่นี่ */
+/** ผลทดสอบ, สร้าง Bug จากผลทดสอบ และบันทึกเวลา · งาน A12 (docs/tasks/A12-*.md) */
 @Module({
-  controllers: [],
-  providers: [],
+  controllers: [QaController],
+  providers: [QaService],
 })
 export class QaModule {}

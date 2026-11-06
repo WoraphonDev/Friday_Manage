@@ -274,6 +274,7 @@ export function NewProjectWizard({ ws }: { ws: string }) {
     1: (
       <>
         <div className={styles.grid}>
+          <div className={styles.full}>
           <Input
             label={`${t("name")} *`}
             value={d.name}
@@ -285,6 +286,7 @@ export function NewProjectWizard({ ws }: { ws: string }) {
               setDraft((x) => ({ ...x, name, key: x.keyTouched ? x.key : suggestKey(name) }));
             }}
           />
+          </div>
           <Input
             label={`${t("key")} *`}
             value={d.key}
@@ -296,7 +298,7 @@ export function NewProjectWizard({ ws }: { ws: string }) {
             onBlur={() => void checkKey()}
           />
           <Input label={t("client")} value={d.clientName} placeholder={t("clientPlaceholder")} hint={t("clientHint")} maxLength={120} onChange={(e) => set("clientName", e.target.value)} />
-          <label className={styles.fld}>
+          <label className={`${styles.fld} ${styles.full}`}>
             <span className={styles.lb}>{t("description")}</span>
             <textarea className={styles.in} rows={3} value={d.description} placeholder={t("descriptionPlaceholder")} onChange={(e) => set("description", e.target.value)} />
           </label>

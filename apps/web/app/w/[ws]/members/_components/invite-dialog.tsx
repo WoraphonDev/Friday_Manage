@@ -112,7 +112,7 @@ export function InviteDialog({
   }
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !pending && onClose()} title={t("inviteTitle")}>
+    <Dialog open size="medium" onOpenChange={(open) => !open && !pending && onClose()} title={t("inviteTitle")}>
       <form className={styles.dialogBody} onSubmit={(e) => { e.preventDefault(); void send(); }}>
         <div className={styles.dialogBody} style={{ gap: 6 }}>
           <span className={local.lb}>{t("emails")} <span aria-hidden="true">*</span></span>
@@ -141,17 +141,22 @@ export function InviteDialog({
         </div>
 
         {!!projects.length && (
-          <div className={local.two}>
-            <Select label={`${t("addToProject")} ${t("optional")}`} value={projectKey} onChange={(e) => setProjectKey(e.target.value)}>
-              <option value="">{t("noProject")}</option>
-              {projects.map((p) => <option key={p.key} value={p.key}>{p.name}</option>)}
-            </Select>
-            {projectKey && (
-              <Select label={t("projectRole")} value={role === "guest" ? "viewer" : projectRole} disabled={role === "guest"} onChange={(e) => setProjectRole(e.target.value as ProjectRole)}>
-                {(["member", "admin", "viewer"] as const).map((r) => <option key={r} value={r}>{tr(r)}</option>)}
-              </Select>
-            )}
-          </div>
+          // Canvas H: รายการโปรเจกต์ติ๊กเลือกพร้อมบทบาท · API รับได้ครั้งละ 1 โปรเจกต์ จึงติ๊กได้ทีละรายการ
+          <fieldset className={local.projects}>
+            <legend className={local.lb}>{t("addToProject")} <span className={styles.muted}>{t("optional")}</span></legend>
+            {projects.map((p) => (
+              <div key={p.key} className={local.projRow}>
+                <label className={local.projName}>
+                  <input type="checkbox" checked={projectKey === p.key} onChange={(e) => setProjectKey(e.target.checked ? p.key : "")} />
+                  <span className={local.dot} style={{ background: p.color ?? "#334155" }} aria-hidden="true" />
+                  {p.name}
+                </label>
+                <select aria-label={t("projectRoleFor", { name: p.name })} value={role === "guest" ? "viewer" : projectRole} disabled={projectKey !== p.key || role === "guest"} onChange={(e) => setProjectRole(e.target.value as ProjectRole)}>
+                  {(["member", "admin", "viewer"] as const).map((r) => <option key={r} value={r}>{tr(r)}</option>)}
+                </select>
+              </div>
+            ))}
+          </fieldset>
         )}
 
         <div className={local.two}>
@@ -180,7 +185,7 @@ export function InviteDialog({
         <InviteLinks links={links} />
         <p className={cn(styles.muted, styles.small)} style={{ margin: 0 }}>{t("notice")}</p>
         {error && <p className={styles.error} role="alert">{error}</p>}
-        <div className={styles.actions}>
+        <div className={cn(styles.actions, local.foot)}>
           <Button onClick={onClose} disabled={pending}>{t("cancel")}</Button>
           <Button type="submit" variant="primary" disabled={pending || !all.length}>{pending ? ti("sending") : t("send", { count: all.length })}</Button>
         </div>

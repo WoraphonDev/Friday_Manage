@@ -56,6 +56,8 @@ interface ShellContext {
   me: Me;
   workspace: Workspace;
   projects: Project[];
+  /** เปิด Command palette (หัวหน้ามือถือ M2/M5 มีปุ่มค้นหาของตัวเอง) */
+  openSearch?: () => void;
 }
 const Context = createContext<ShellContext | null>(null);
 export function useWorkspace() {
@@ -358,7 +360,12 @@ export function WorkspaceShell({
   );
   return (
     <Context.Provider
-      value={{ me: me.data, workspace, projects: projects.data?.items ?? [] }}
+      value={{
+        me: me.data,
+        workspace,
+        projects: projects.data?.items ?? [],
+        openSearch: () => setCommandOpen(true),
+      }}
     >
       <YearFormatContext.Provider value={me.data.yearFormat}>
         {/* cookie ภาษาให้ตรงกับที่บันทึกในบัญชี (เข้าจากเครื่องใหม่ก็ได้ภาษาเดิม) */}

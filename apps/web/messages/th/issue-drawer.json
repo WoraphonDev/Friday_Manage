@@ -27,7 +27,6 @@
   "moreFields": "รายละเอียดเพิ่มเติม (สถานะ, BA, Reviewer, แผน, Checklist)",
   "planRange": "Plan Start → End",
   "sizeMd": "Size / Man-Day",
-  "markdownHint": "รองรับ Markdown · พิมพ์ @ เพื่อ mention",
   "reporter": "Reporter",
   "addChecklistPlaceholder": "+ เพิ่มรายการ",
   "copyLink": "คัดลอกลิงก์",

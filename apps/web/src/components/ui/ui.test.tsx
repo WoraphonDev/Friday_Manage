@@ -6,6 +6,7 @@ import { renderWithProviders } from "@/test/render";
 import { UiGallery } from "../../../app/dev/ui/ui-gallery";
 import { ApiError } from "@/lib/api";
 import {
+  useToast,
   ConfirmDialog,
   Drawer,
   ErrorState,
@@ -187,5 +188,21 @@ describe("UI kit", () => {
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "ลองอีกครั้ง" }));
     expect(retry).toHaveBeenCalled();
+  });
+
+  it("Toast แจ้งเตือน K4 แสดงผู้กระทำ บรรทัดรอง และปุ่มลิงก์ แล้วปิดเมื่อกด", async () => {
+    function Example() {
+      const toast = useToast();
+      return <button onClick={() => toast({ actor: { id: "u1", displayName: "ผู้ทดสอบ" }, message: "ส่งงานเข้า Review DE-2", meta: "ยังไม่อ่าน 1 รายการ", actions: [{ label: "เปิดงาน", href: "/w/sample/p/DE?issue=DE-2", primary: true }, { label: "ดูภายหลัง", href: "/w/sample/inbox" }] })}>แจ้ง</button>;
+    }
+    const user = userEvent.setup();
+    renderWithProviders(<Example />);
+    await user.click(screen.getByRole("button", { name: "แจ้ง" }));
+    const toast = (await screen.findByText("ยังไม่อ่าน 1 รายการ")).closest(".toast") as HTMLElement;
+    expect(toast).toHaveTextContent("ผู้ทดสอบ ส่งงานเข้า Review DE-2");
+    expect(within(toast).getByText("ยังไม่อ่าน 1 รายการ")).toBeInTheDocument();
+    expect(within(toast).getByRole("link", { name: "เปิดงาน" })).toHaveAttribute("href", "/w/sample/p/DE?issue=DE-2");
+    await user.click(within(toast).getByRole("link", { name: "ดูภายหลัง" }));
+    await waitFor(() => expect(screen.queryByText("ส่งงานเข้า Review DE-2")).not.toBeInTheDocument());
   });
 });

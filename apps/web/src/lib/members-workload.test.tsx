@@ -311,8 +311,9 @@ describe("สมาชิก Workspace (หน้า H)", () => {
     expect(within(dialog).getByText("kan@examplecom รูปแบบอีเมลไม่ถูกต้อง")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "ลบ kan@examplecom" }));
     await user.click(within(dialog).getByRole("button", { name: /^Guest/ }));
-    await user.selectOptions(within(dialog).getByLabelText("เพิ่มเข้าโปรเจกต์ (ไม่บังคับ)"), "DE");
-    expect(within(dialog).getByLabelText("Project role")).toBeDisabled();
+    // Canvas H: ติ๊กโปรเจกต์จากรายการ
+    await user.click(within(dialog).getByRole("checkbox", { name: "แผนพัฒนาผลิตภัณฑ์" }));
+    expect(within(dialog).getByLabelText("บทบาทใน แผนพัฒนาผลิตภัณฑ์")).toBeDisabled();
     await user.type(within(dialog).getByLabelText("ข้อความถึงผู้ได้รับเชิญ"), "ยินดีต้อนรับ");
     await user.click(within(dialog).getByRole("button", { name: "สร้างลิงก์" }));
     expect(await within(dialog).findByText("http://localhost:3000/join/lnk_sample")).toBeInTheDocument();

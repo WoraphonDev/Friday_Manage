@@ -97,6 +97,10 @@
     "openInbox": "Open full Inbox →",
     "empty": "No notifications",
     "toastNew": "New notification · {count} unread",
+    "toastMeta": "{count} unread",
+    "toastReview": "Approve / view details",
+    "toastOpenIssue": "Open issue",
+    "toastLater": "Later",
     "toastOpen": "Open Inbox"
   }
 }

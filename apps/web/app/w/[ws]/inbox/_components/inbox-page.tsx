@@ -82,16 +82,16 @@ export function InboxPage({ ws }: { ws: string }) {
         <div className={styles.headRow}>
           <div>
             <h1>{t("title")}</h1>
-            <div className="muted">{t("subtitle", { name: me.displayName, count: counts?.unread ?? 0 })}</div>
+            <div className={`muted ${styles.sub}`}>{t("subtitle", { name: me.displayName, count: counts?.unread ?? 0 })}</div>
           </div>
           <div className={styles.actions}>
-            <Button disabled={act.isPending || !counts?.unread} onClick={() => act.mutate({ path: "/me/notifications/read-all", body: { workspace: ws }, message: t("markedAll") })}>{t("markAll")}</Button>
-            <Link className="button button-secondary" href={`/w/${encodeURIComponent(ws)}/profile`}>{t("settings")}</Link>
+            <Button className={styles.markAll} disabled={act.isPending || !counts?.unread} onClick={() => act.mutate({ path: "/me/notifications/read-all", body: { workspace: ws }, message: t("markedAll") })}>{t("markAll")}</Button>
+            <Link className={`button button-secondary ${styles.settings}`} href={`/w/${encodeURIComponent(ws)}/profile`}>{t("settings")}</Link>
           </div>
         </div>
         <div className={styles.tabs} role="group" aria-label={t("filterLabel")}>
           {FILTERS.map((f) => (
-            <button key={f} type="button" className={styles.ftab} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); }}>
+            <button key={f} type="button" className={styles.ftab} data-filter={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); }}>
               {t(`filters.${f}`)}<span className={styles.count}>{counts?.[f] ?? 0}</span>
             </button>
           ))}

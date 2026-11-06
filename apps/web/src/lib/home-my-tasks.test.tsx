@@ -4,6 +4,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { renderWithProviders } from "@/test/render";
+import { asMobile } from "@/test/mobile";
 import { server } from "@/test/server";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import hmt from "../../messages/th/home-my-tasks.json";
@@ -115,6 +116,19 @@ describe("Home (E / M5)", () => {
     expect(await screen.findByText("อนุมัติคำขอของ DE-30 แล้ว")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "ปฏิเสธ DE-30" }));
     await waitFor(() => expect(decisions).toEqual(["approve:req-1", "reject:req-1"]));
+  });
+
+  it("มือถือ (M5): หัวขาวพร้อมค้นหา, KPI 3 ช่อง และอนุมัติคำขอจากการ์ด", async () => {
+    const restore = asMobile();
+    try {
+      const user = userEvent.setup();
+      mount(<HomePage ws="sample" />);
+      expect(await screen.findByRole("button", { name: "ค้นหา" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "รอคุณอนุมัติ" })).toBeInTheDocument();
+      expect(screen.queryByTestId("summary-line")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "อนุมัติ DE-30" }));
+      await waitFor(() => expect(decisions).toEqual(["approve:req-1"]));
+    } finally { restore(); }
   });
 
   it("ไม่มีสิทธิ์ตัดสินคำขอ = ไม่มีปุ่ม · ไม่มีอะไรรอ = สถานะว่าง", async () => {

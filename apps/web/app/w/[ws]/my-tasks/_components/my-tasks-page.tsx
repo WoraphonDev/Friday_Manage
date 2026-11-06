@@ -4,6 +4,8 @@ import { useRef, useState, type DragEvent, type TouchEvent } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { Filter, Plus, Search } from "lucide-react";
+import { useIsMobile } from "@/lib/use-mobile";
 import { CalendarClock, ChevronDown } from "lucide-react";
 import { Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
@@ -60,7 +62,10 @@ export function MyTasksPage({ ws }: { ws: string }) {
   const cache = useQueryClient();
   const toast = useToast();
   const [tab, setTab] = useState<Tab>("assigned");
-  const [group, setGroup] = useState<GroupBy>("due");
+  const mobile = useIsMobile();
+  const [groupChoice, setGroup] = useState<GroupBy>("due");
+  // M2 มือถือจัดกลุ่มตาม Due เสมอ
+  const group: GroupBy = mobile ? "due" : groupChoice;
   const [project, setProject] = useState("");
   const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({ "due:later": true, "due:none": true });
   const [dueFor, setDueFor] = useState<{ item: TaskItem; date: string } | null>(null);
@@ -109,6 +114,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
   if (list.isPending) return <div className={styles.body}><LoadingState /></div>;
   if (list.error) return <div className={styles.body}>{list.error instanceof ApiError && list.error.status === 403 ? <Forbidden /> : <ErrorState error={list.error} retry={() => list.refetch()} />}</div>;
   const data = list.data;
+  if (mobile) return <MobileTasks data={data} ws={ws} name={me.displayName} year={year} tab={tab} setTab={(k) => { setTab(k); setProject(""); }} busy={busy} onToggle={(item, done) => void setDone(item, done)} />;
   const everything = data.groups.flatMap((g) => g.items);
   const open = everything.filter((i) => i.status.category !== "done");
   const estSum = open.reduce((n, i) => n + (i.estimateMd ?? 0) / Math.max(1, i.assignees.length), 0);
@@ -242,6 +248,64 @@ export function MyTasksPage({ ws }: { ws: string }) {
       </div>
       {dueFor && <DueDialog ws={ws} item={dueFor.item} initial={dueFor.date} onClose={() => setDueFor(null)} onDone={async () => { setDueFor(null); await refresh(); }} />}
     </>
+  );
+}
+
+const MOBILE_FILTERS = { focus: ["late", "today"], week: ["late", "today", "this_week"], all: ["late", "today", "this_week", "next_week", "later", "none"] } as const;
+
+/** M2 · มือถือ: หัว My Tasks + ค้นหา/ตัวกรอง, ชิปช่วงเวลา, รายการกะทัดรัดตามกลุ่ม Due, ปุ่มสร้างลอย */
+function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
+  data: MyIssues; ws: string; name: string; year: YearFormat; tab: Tab; setTab: (tab: Tab) => void;
+  busy: string | null; onToggle: (item: TaskItem, done: boolean) => void;
+}) {
+  const t = useTranslations("home-my-tasks.tasks");
+  const { openSearch, projects } = useWorkspace();
+  const dueText = useDueText();
+  const [range, setRange] = useState<keyof typeof MOBILE_FILTERS>("focus");
+  const [showTabs, setShowTabs] = useState(false);
+  const count = (keys: readonly string[]) => data.groups.filter((g) => keys.includes(g.key)).reduce((n, g) => n + g.items.filter((i) => i.status.category !== "done").length, 0);
+  const groups = data.groups.filter((g) => (MOBILE_FILTERS[range] as readonly string[]).includes(g.key) && g.items.length);
+  const first = projects[0];
+  return (
+    <div className={styles.mTasks}>
+      <header className={styles.mHeadCol}>
+        <div className={styles.mHeadRow}>
+          <h1 className={styles.mTitle} style={{ fontSize: 24, flex: 1 }}>{t("title")} <span className={styles.mOwner}>· {name}</span></h1>
+          <button type="button" className={styles.mIcon} aria-label={t("search")} onClick={() => openSearch?.()}><Search size={22} aria-hidden="true" /></button>
+          <button type="button" className={styles.mIcon} aria-label={t("filter")} aria-expanded={showTabs} onClick={() => setShowTabs((v) => !v)}><Filter size={22} aria-hidden="true" /></button>
+        </div>
+        {showTabs && (
+          <div className={styles.mChips} role="group" aria-label={t("title")}>
+            {TABS.map((k) => <button key={k} type="button" className={styles.chip} aria-pressed={tab === k} onClick={() => setTab(k)}>{t(`tabs.${k}`)} {data.counts[k]}</button>)}
+          </div>
+        )}
+        <div className={styles.mChips} role="group" aria-label={t("rangeLabel")}>
+          {(Object.keys(MOBILE_FILTERS) as (keyof typeof MOBILE_FILTERS)[]).map((k) => <button key={k} type="button" className={styles.chip} aria-pressed={range === k} onClick={() => setRange(k)}>{t(`mobileRange.${k}`)} · {count(MOBILE_FILTERS[k])}</button>)}
+        </div>
+      </header>
+      {groups.length === 0 && <EmptyState title={t("empty")} description={t("emptyHint")} />}
+      {groups.map((g) => (
+        <div key={g.key} role="group" aria-label={g.label}>
+          <div className={styles.mGroup}><span style={{ background: GROUP_COLOR[g.key] ?? "#94a3b8" }} /><b style={{ color: g.key === "late" ? "#b91c1c" : undefined }}>{g.label}</b><span className="muted">{g.items.length}</span></div>
+          {g.items.map((i) => {
+            const done = i.status.category === "done";
+            const due = dueText(i, year);
+            return (
+              <div key={i.key} className={styles.mItem}>
+                <input type="checkbox" checked={done} disabled={busy === i.key} aria-label={t(done ? "markUndone" : "markDone", { title: i.title })} onChange={(e) => onToggle(i, e.target.checked)} />
+                <Link href={taskHref(ws, i.project.key, i.key)} className={styles.mItemMain}>
+                  <span className={styles.mItemTitle} style={done ? { textDecoration: "line-through", color: "var(--muted)" } : undefined}>{i.title}</span>
+                  <span className={styles.mItemMeta}><span className={styles.mType} aria-hidden="true" />{i.key} · <span className={styles.mProjDot} style={{ background: i.project.color ?? "#334155" }} />{i.project.name}</span>
+                </Link>
+                <span className={`${styles.mDue} ${due.cls}`}>{due.text}</span>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+      <p className={styles.mHint}>{t("mobileHint")}</p>
+      {first && <Link className={styles.fab} href={`/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(first.key)}?new=1`} aria-label={t("newTask")}><Plus size={26} aria-hidden="true" /></Link>}
+    </div>
   );
 }
 

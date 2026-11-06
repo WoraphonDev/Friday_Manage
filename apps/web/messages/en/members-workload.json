@@ -217,6 +217,7 @@
     "roleMemberDesc": "Work in projects they're added to",
     "roleGuestDesc": "Client / external. Sees only invited projects",
     "addToProject": "Add to project",
+    "projectRoleFor": "Role in {name}",
     "optional": "(optional)",
     "noProject": "Don't add to a project",
     "projectRole": "Project role",

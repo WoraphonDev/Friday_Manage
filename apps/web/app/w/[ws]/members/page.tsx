@@ -1,4 +1,6 @@
-import { Placeholder } from "@/components/Placeholder";
-export default function Page() {
-  return <Placeholder task="W10" titleKey="nav.members" />;
+import { WorkspaceMembers } from "./_components/workspace-members";
+
+export default async function Page({ params }: { params: Promise<{ ws: string }> }) {
+  const { ws } = await params;
+  return <WorkspaceMembers ws={ws} />;
 }

@@ -122,6 +122,22 @@ describe('Authorization: Bearer', () => {
     expect(dead.body.error.code).toBe('invalid_token');
   });
 
+  it('บัญชีผู้สร้างถูกปิด (users.disabled_at) แม้สมาชิก Workspace ยัง active → token ใช้ไม่ได้ทั้งอ่านและเขียน · เปิดบัญชีคืนแล้วใช้ได้ (BUG-03)', async () => {
+    const u = await client(t.app);
+    const uid = await signup(u, 'disabled-token@tokens.example.com', 'Token Disabled');
+    await addMember(t.owner, team.slug, uid, 'admin', { key: team.key, role: 'member' });
+    const tk = await mint(u, { name: 'disabled user', scopes: ['write'] });
+    expect((await api(tk.token).get(`${team.ws}/projects/${team.key}`)).status).toBe(200);
+    await t.owner.query('UPDATE users SET disabled_at = now() WHERE id = $1', [uid]);
+    const read = await api(tk.token).get(`${team.ws}/projects/${team.key}`);
+    expect(read.status).toBe(401);
+    expect(read.body.error.code).toBe('invalid_token');
+    expect((await api(tk.token).post(`${team.ws}/projects/${team.key}/issues`, { title: 'จากบัญชีที่ถูกปิด', moduleId })).status).toBe(401);
+    expect((await api(tk.token).get('/me')).status).toBe(401);
+    await t.owner.query('UPDATE users SET disabled_at = NULL WHERE id = $1', [uid]);
+    expect((await api(tk.token).get(`${team.ws}/projects/${team.key}`)).status).toBe(200);
+  });
+
   it('ใช้กับ Workspace อื่นไม่ได้ · ส่วนอ่อนไหวและ API ระดับบัญชีเข้าไม่ได้ แม้ scope write', async () => {
     const tk = await mint(team.lead, { name: 'limited', scopes: ['write'] });
     const b = api(tk.token);

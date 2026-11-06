@@ -757,8 +757,21 @@ kbd {
   background: white;
   border-right: 1px solid var(--border);
   padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
 }
 .sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sidebar > nav {
+  flex: 1;
+}
+.nav-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -784,10 +797,12 @@ kbd {
 .nav-link .badge {
   margin-left: auto;
 }
+/* ชื่อโปรเจกต์ยาวขึ้นบรรทัดใหม่ตาม Canvas แทนการตัด */
 .nav-link .project-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  padding: 8px 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 .nav-section {
   color: var(--muted);
@@ -806,6 +821,76 @@ kbd {
 .workspace-main {
   flex: 1;
   min-width: 0;
+}
+.admin-pill {
+  background: #334155;
+  color: #e2e8f0;
+}
+.topbar-back {
+  color: #93c5fd;
+  font-size: 13px;
+}
+.topbar-back:hover {
+  color: #bfdbfe;
+}
+.checkout-header {
+  background: white;
+  border-bottom: 1px solid var(--border);
+}
+.checkout-header-inner {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 24px;
+  min-height: 60px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.checkout-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--foreground);
+  font-weight: 700;
+}
+.checkout-brand .workspace-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+.checkout-secure {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.workspace-body.chrome-checkout {
+  display: block;
+}
+.drawer-search {
+  width: 100%;
+  max-width: none;
+  margin-bottom: 12px;
+  background: var(--background);
+  border-color: var(--border);
+  color: var(--muted);
+}
+.bottom-nav-count {
+  position: absolute;
+  top: 6px;
+  left: calc(50% + 4px);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #dc2626;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .page-content {
   padding: 24px;
@@ -864,6 +949,9 @@ kbd {
 .project-dates {
   color: var(--muted);
   font-size: 13px;
+}
+.project-back {
+  display: none;
 }
 .project-actions {
   display: flex;
@@ -1011,8 +1099,12 @@ kbd {
   .sidebar {
     display: none;
   }
+  /* Canvas M2–M7 ไม่มี top bar มืด: แต่ละหน้ามีหัวขาวของตัวเอง เหลือเมนูล่าง 5 รายการ */
+  .topbar-desktop {
+    display: none;
+  }
   .workspace-body {
-    min-height: calc(100dvh - 112px);
+    min-height: calc(100dvh - 56px);
   }
   .page-content {
     padding: 16px 16px 80px;
@@ -1023,8 +1115,27 @@ kbd {
   .project-title-row {
     gap: 8px;
   }
+  /* M6: ปุ่มกลับ + ไอคอน + ชื่อบรรทัดเดียว แทน breadcrumb */
+  .project-header {
+    padding-top: 8px;
+  }
+  .project-crumb {
+    display: none;
+  }
+  .project-back {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    margin-left: -12px;
+    margin-right: -6px;
+  }
   .project-title-row h1 {
     font-size: 18px;
+    /* ให้ชื่อเต็มบรรทัดแรก สถานะ/วันที่ขึ้นบรรทัดที่สองแบบ M6 (เว้นที่ให้ปุ่มกลับ + ไอคอน) */
+    flex: 1 1 calc(100% - 80px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .project-dates {
     font-size: 11px;
@@ -1065,12 +1176,22 @@ kbd {
   }
   .mobile-bottom-nav .nav-link {
     flex: 1;
+    position: relative;
     flex-direction: column;
     justify-content: center;
     gap: 2px;
+    min-height: 56px;
     font-size: 11px;
     padding: 6px 2px;
+    border: 0;
     border-radius: 0;
+    background: none;
+    color: #5f6873;
+  }
+  .mobile-bottom-nav .nav-link[aria-current="page"] {
+    background: none;
+    color: var(--primary);
+    font-weight: 700;
   }
   .mobile-bottom-nav .badge {
     margin: 0;

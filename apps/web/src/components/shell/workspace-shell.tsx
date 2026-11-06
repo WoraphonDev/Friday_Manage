@@ -19,6 +19,7 @@ import {
   Home,
   Inbox,
   CreditCard,
+  Lock,
   Menu,
   Search,
   Settings,
@@ -143,8 +144,8 @@ function Navigation({
         </Link>
       )}
       {["owner", "admin"].includes(workspace.role) && (
-        <>
-          <div className="nav-section">{t("admin")}</div>
+        // Canvas วาง Admin Console ไว้ล่างสุดของ Sidebar คั่นด้วยเส้น
+        <div className="nav-footer">
           <Link className="nav-link" href={`${base}/admin`} onClick={close}>
             <Settings size={18} />
             {t("admin")}
@@ -153,10 +154,27 @@ function Navigation({
             <CreditCard size={18} />
             {t("billing")}
           </Link>
-        </>
+        </div>
       )}
     </nav>
   );
+}
+
+/**
+ * กรอบหน้าตามบริบทของ Canvas
+ * - workspace: top bar + Sidebar (หน้าทั่วไป)
+ * - focus: ไม่มี Sidebar (O1 Lead, O2 Reports, P2 Automation)
+ * - admin: top bar ของ Admin Console + เมนูของหน้าเอง (N1, N2)
+ * - checkout: หัวขาวเรียบ ไม่มีเมนู (R2)
+ */
+export type ShellChrome = "workspace" | "focus" | "admin" | "checkout";
+export function shellChrome(pathname: string): ShellChrome {
+  const rest = pathname.replace(/^\/w\/[^/]+/, "");
+  if (/^\/billing\/checkout(\/|$)/.test(rest)) return "checkout";
+  if (/^\/admin(\/|$)/.test(rest)) return "admin";
+  if (/^\/p\/[^/]+\/(dashboard|reports|automation)(\/|$)/.test(rest))
+    return "focus";
+  return "workspace";
 }
 
 export function WorkspaceShell({
@@ -251,6 +269,93 @@ export function WorkspaceShell({
     cache.clear();
     router.replace("/login");
   }
+  const chrome = shellChrome(pathname);
+  const unreadOf = (slug: string) =>
+    summary.data?.workspaces.find((count) => count.slug === slug)?.unread ?? 0;
+  const workspaceList = (close: () => void) => (
+    <nav aria-label={t("nav.switchWorkspace")}>
+      {workspaces.data?.items.map((item) => (
+        <Link
+          className="workspace-item"
+          key={item.id}
+          href={`/w/${encodeURIComponent(item.slug)}`}
+          aria-current={item.slug === ws ? "true" : undefined}
+          onClick={close}
+        >
+          <span className="workspace-logo">{item.name.slice(0, 1)}</span>
+          <span className="workspace-item-text">
+            <strong>{item.name}</strong>
+            <small>{t(`roles.${item.role}`)}</small>
+          </span>
+          {unreadOf(item.slug) > 0 && (
+            <Badge tone="red">{unreadOf(item.slug)}</Badge>
+          )}
+          {item.slug === ws && <Check size={16} />}
+        </Link>
+      ))}
+    </nav>
+  );
+  const signOut = (
+    <Button
+      variant="ghost"
+      onClick={() => {
+        void logout().catch((error: unknown) =>
+          toast({
+            message:
+              error instanceof Error ? error.message : t("app.unknownError"),
+          }),
+        );
+      }}
+    >
+      {t("app.signOut")}
+    </Button>
+  );
+  const switcher = (
+    <Popover.Root open={switchOpen} onOpenChange={setSwitchOpen}>
+      <Popover.Trigger asChild>
+        <button
+          className="workspace-switch"
+          aria-label={`${t("nav.switchWorkspace")}: ${workspace.name}`}
+        >
+          <span className="workspace-logo">{workspace.name.slice(0, 1)}</span>
+          <span>{workspace.name}</span>
+          <ChevronDown size={14} />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          className="popover workspace-menu"
+          sideOffset={8}
+          align="start"
+        >
+          <div className="menu-label">
+            {t("nav.yourWorkspaces")} · {me.data.email}
+          </div>
+          {workspaceList(() => setSwitchOpen(false))}
+          <div className="menu-divider" />
+          <Link
+            className="workspace-item"
+            href="/onboarding"
+            onClick={() => setSwitchOpen(false)}
+          >
+            {t("nav.createWorkspace")}
+          </Link>
+          <div className="menu-divider" />
+          <LocaleSwitch
+            signedIn
+            showYearFormat
+            onChange={() => setSwitchOpen(false)}
+          />
+          {signOut}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+  const profileLink = (
+    <Link href={`${base}/profile`} aria-label={t("nav.profile")}>
+      <Avatar person={me.data} />
+    </Link>
+  );
   return (
     <Context.Provider
       value={{ me: me.data, workspace, projects: projects.data?.items ?? [] }}
@@ -261,166 +366,180 @@ export function WorkspaceShell({
         <a className="skip-link" href="#main-content">
           {t("app.skip")}
         </a>
-        <header className="topbar">
-          <Button
-            className="mobile-menu"
-            variant="ghost"
-            size="icon"
-            aria-label={t("app.menu")}
-            onClick={() => setMenuOpen(true)}
-          >
-            <Menu size={20} />
-          </Button>
-          <Popover.Root open={switchOpen} onOpenChange={setSwitchOpen}>
-            <Popover.Trigger asChild>
-              <button
-                className="workspace-switch"
-                aria-label={`${t("nav.switchWorkspace")}: ${workspace.name}`}
-              >
-                <span className="workspace-logo">
-                  {workspace.name.slice(0, 1)}
-                </span>
-                <span>{workspace.name}</span>
-                <ChevronDown size={14} />
-              </button>
-            </Popover.Trigger>
-            <Popover.Portal>
-              <Popover.Content
-                className="popover workspace-menu"
-                sideOffset={8}
-                align="start"
-              >
-                <div className="menu-label">
-                  {t("nav.yourWorkspaces")} · {me.data.email}
-                </div>
-                <nav aria-label={t("nav.switchWorkspace")}>
-                  {workspaces.data?.items.map((item) => (
-                    <Link
-                      className="workspace-item"
-                      key={item.id}
-                      href={`/w/${encodeURIComponent(item.slug)}`}
-                      aria-current={item.slug === ws ? "true" : undefined}
-                      onClick={() => setSwitchOpen(false)}
-                    >
-                      <span className="workspace-logo">
-                        {item.name.slice(0, 1)}
-                      </span>
-                      <span className="workspace-item-text">
-                        <strong>{item.name}</strong>
-                        <small>{t(`roles.${item.role}`)}</small>
-                      </span>
-                      {(summary.data?.workspaces.find(
-                        (count) => count.slug === item.slug,
-                      )?.unread ?? 0) > 0 && (
-                        <Badge tone="red">
-                          {
-                            summary.data?.workspaces.find(
-                              (count) => count.slug === item.slug,
-                            )?.unread
-                          }
-                        </Badge>
-                      )}
-                      {item.slug === ws && <Check size={16} />}
-                    </Link>
-                  ))}
-                </nav>
-                <div className="menu-divider" />
-                <Link
-                  className="workspace-item"
-                  href="/onboarding"
-                  onClick={() => setSwitchOpen(false)}
-                >
-                  {t("nav.createWorkspace")}
-                </Link>
-                <div className="menu-divider" />
-                <LocaleSwitch signedIn showYearFormat onChange={() => setSwitchOpen(false)} />
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    void logout().catch((error: unknown) => toast({ message: error instanceof Error ? error.message : t("app.unknownError") }));
-                  }}
-                >
-                  {t("app.signOut")}
-                </Button>
-              </Popover.Content>
-            </Popover.Portal>
-          </Popover.Root>
-          <button
-            className="search-trigger"
-            aria-label={t("nav.search")}
-            onClick={() => setCommandOpen(true)}
-          >
-            <Search size={16} />
-            <span>{t("nav.search")}</span>
-            <kbd>Ctrl K</kbd>
-          </button>
-          <span className="topbar-spacer" />
-          {canCreate && (
-            <Link
-              className="button button-primary topbar-new"
-              href={`${base}/p/${selectedKey}?new=1`}
-            >
-              {t("nav.new")}
+        {chrome === "checkout" ? (
+          <header className="checkout-header">
+            <div className="checkout-header-inner">
+              <Link className="checkout-brand" href={base}>
+                <span className="workspace-logo">F</span>
+                Friday Manage
+              </Link>
+              <span className="muted">
+                {t("nav.checkoutTitle", { name: workspace.name })}
+              </span>
+              <span className="topbar-spacer" />
+              <span className="muted checkout-secure">
+                <Lock size={14} aria-hidden="true" />
+                {t("nav.secure")}
+              </span>
+            </div>
+          </header>
+        ) : chrome === "admin" ? (
+          <header className="topbar">
+            {switcher}
+            <Badge className="admin-pill">{t("nav.admin")}</Badge>
+            <span className="topbar-spacer" />
+            <Link className="topbar-back" href={base}>
+              {t("nav.backToWorkspace")}
             </Link>
-          )}
-          <Bell workspace={ws} unread={summary.data?.total ?? 0} />
-          <Link href={`${base}/profile`} aria-label={t("nav.profile")}>
-            <Avatar person={me.data} />
-          </Link>
-        </header>
-        <div className="workspace-body">
-          <aside className="sidebar">
-            <Navigation
-              workspace={workspace}
-              projects={projects.data?.items ?? []}
-              unread={unread}
-            />
-            {projects.isPending && <LoadingState />}
-            {projects.error && (
-              <ErrorState
-                error={projects.error}
-                retry={() => void projects.refetch()}
-              />
+            {profileLink}
+          </header>
+        ) : (
+          // มือถือใช้หัวขาวของแต่ละหน้า + เมนูล่าง ตาม Canvas M2–M7 จึงซ่อน top bar
+          <header className="topbar topbar-desktop">
+            <Button
+              className="mobile-menu"
+              variant="ghost"
+              size="icon"
+              aria-label={t("app.menu")}
+              onClick={() => setMenuOpen(true)}
+            >
+              <Menu size={20} />
+            </Button>
+            {switcher}
+            <button
+              className="search-trigger"
+              aria-label={t("nav.search")}
+              onClick={() => setCommandOpen(true)}
+            >
+              <Search size={16} />
+              <span>{t("nav.search")}</span>
+              <kbd>Ctrl K</kbd>
+            </button>
+            <span className="topbar-spacer" />
+            {canCreate && (
+              <Link
+                className="button button-primary topbar-new"
+                href={`${base}/p/${selectedKey}?new=1`}
+              >
+                {t("nav.new")}
+              </Link>
             )}
-          </aside>
+            <Bell workspace={ws} unread={summary.data?.total ?? 0} />
+            {profileLink}
+          </header>
+        )}
+        <div className={`workspace-body chrome-${chrome}`}>
+          {chrome === "workspace" && (
+            <aside className="sidebar">
+              <Navigation
+                workspace={workspace}
+                projects={projects.data?.items ?? []}
+                unread={unread}
+              />
+              {projects.isPending && <LoadingState />}
+              {projects.error && (
+                <ErrorState
+                  error={projects.error}
+                  retry={() => void projects.refetch()}
+                />
+              )}
+            </aside>
+          )}
           <main className="workspace-main" id="main-content">
-            <WorkspaceBanners ws={ws} role={workspace.role} />
+            {chrome !== "checkout" && (
+              <WorkspaceBanners ws={ws} role={workspace.role} />
+            )}
             {children}
           </main>
         </div>
-        <nav className="mobile-bottom-nav" aria-label={t("nav.workspaceNav")}>
-          {[
-            { suffix: "", icon: Home, key: "home" },
-            { suffix: "/my-tasks", icon: CircleCheck, key: "myTasks" },
-            { suffix: "/inbox", icon: Inbox, key: "inbox" },
-          ].map(({ suffix, icon: Icon, key }) => (
-            <Link
-              key={key}
+        {chrome !== "checkout" && chrome !== "admin" && (
+          <nav className="mobile-bottom-nav" aria-label={t("nav.mainMenu")}>
+            {[
+              { suffix: "", icon: Home, key: "home" },
+              { suffix: "/my-tasks", icon: CircleCheck, key: "myTasks" },
+            ].map(({ suffix, icon: Icon, key }) => (
+              <Link
+                key={key}
+                className="nav-link"
+                href={`${base}${suffix}`}
+                aria-current={
+                  pathname === `${base}${suffix}` ? "page" : undefined
+                }
+              >
+                <Icon size={22} />
+                {t(`nav.${key}`)}
+              </Link>
+            ))}
+            <button
+              type="button"
               className="nav-link"
-              href={`${base}${suffix}`}
+              aria-current={selectedKey ? "page" : undefined}
+              onClick={() => setMenuOpen(true)}
+            >
+              <FolderKanban size={22} />
+              {t("nav.projects")}
+            </button>
+            <Link
+              className="nav-link"
+              href={`${base}/inbox`}
+              aria-current={pathname === `${base}/inbox` ? "page" : undefined}
+            >
+              <Inbox size={22} />
+              {t("nav.inbox")}
+              {unread > 0 && <span className="bottom-nav-count">{unread}</span>}
+            </Link>
+            <Link
+              className="nav-link"
+              href={`${base}/profile`}
               aria-current={
-                pathname === `${base}${suffix}` ? "page" : undefined
+                pathname.startsWith(`${base}/profile`) ? "page" : undefined
               }
             >
-              <Icon size={20} />
-              {t(`nav.${key}`)}
+              <Avatar person={me.data} size="small" />
+              {t("nav.profileTab")}
             </Link>
-          ))}
-          <button type="button" className="nav-link" onClick={() => setMenuOpen(true)}>
-            <FolderKanban size={20} />{t("nav.projects")}
-          </button>
-        </nav>
+          </nav>
+        )}
         <Drawer
           open={menuOpen}
           onOpenChange={setMenuOpen}
           title={workspace.name}
         >
+          {/* มือถือไม่มี top bar: ค้นหา, สลับ Workspace, ภาษา และออกจากระบบอยู่ในเมนูนี้ */}
+          <button
+            type="button"
+            className="search-trigger drawer-search"
+            onClick={() => {
+              setMenuOpen(false);
+              setCommandOpen(true);
+            }}
+          >
+            <Search size={16} />
+            <span>{t("nav.search")}</span>
+          </button>
           <Navigation
             workspace={workspace}
             projects={projects.data?.items ?? []}
             unread={unread}
             close={() => setMenuOpen(false)}
           />
+          <div className="menu-divider" />
+          <div className="menu-label">{t("nav.yourWorkspaces")}</div>
+          {workspaceList(() => setMenuOpen(false))}
+          <Link
+            className="workspace-item"
+            href="/onboarding"
+            onClick={() => setMenuOpen(false)}
+          >
+            {t("nav.createWorkspace")}
+          </Link>
+          <div className="menu-divider" />
+          <LocaleSwitch
+            signedIn
+            showYearFormat
+            onChange={() => setMenuOpen(false)}
+          />
+          {signOut}
         </Drawer>
         <CommandPalette
           workspace={ws}

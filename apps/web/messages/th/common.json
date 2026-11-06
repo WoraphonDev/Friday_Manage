@@ -68,7 +68,13 @@
     "projectMembers": "Members",
     "invite": "Invite",
     "projectMenu": "เมนูโปรเจกต์",
-    "projectTeam": "ทีมในโปรเจกต์ {count} คน"
+    "projectTeam": "ทีมในโปรเจกต์ {count} คน",
+    "backToWorkspace": "← กลับไปที่ Workspace",
+    "back": "กลับ",
+    "checkoutTitle": "ชำระเงิน · {name}",
+    "secure": "เชื่อมต่อแบบเข้ารหัส",
+    "mainMenu": "เมนูหลัก",
+    "profileTab": "Profile"
   },
   "roles": {
     "owner": "Owner",

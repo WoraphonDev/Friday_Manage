@@ -51,3 +51,12 @@
 - ตรวจ enabled rules ใน PATCH/move เป็น 422 พร้อม ruleId/ruleType; กฎที่ไม่รู้จักไม่ปล่อยข้ามเงียบ · โปรเจกต์เดิมที่ยังไม่มีแถวกฎยังคงพฤติกรรม Kanban เรื่อง Sub-task/WIP เดิม; เมื่อมีแถว disabled จะปิดกฎนั้นจริง
 - รักษา signature/ความหมาย public methods ของ IssuesService เดิม และไม่แก้ test เดิม · ทดสอบใหม่ `issues.e2e.test.ts` เริ่มจาก startApp + seedTeam ครบ 19 กรณี (รวม Due partial failure, Baseline, Guest, cascade/expiry, workflow enabled/disabled และ cursor)
 - ตรวจผ่าน: `pnpm typecheck`, `pnpm test` ทั้ง workspace: DB 105, API 73 (ใหม่ 19), Web 31 รวม 209 ผ่าน; มี opt-in test เดิม 2 ข้อที่ skipped ตาม environment เดิม · ทดสอบด้วยฐาน `friday_a03` แยกจากงานอื่น
+
+### แก้ต่อหลัง A06: ปิดช่องย้ายงานเข้า Sprint ที่จบแล้ว
+
+- แก้จุดค้างจาก A06 / PR #18: create, PATCH, move และ bulk (ผ่าน PATCH เดิม) ปฏิเสธ Sprint ปลายทางที่ completed ด้วย `422 sprint_completed` พร้อม `details.sprintId`; ตรวจ reference ข้ามโปรเจกต์/Workspace แบบเดิมและไม่เปลี่ยน signature ของ public methods
+- ล็อกแถวโปรเจกต์ร่วมกับ Sprint complete ก่อนตรวจ Sprint/อ่าน version เดิม: create ล็อกก่อนอ่านแม่และจองเลขงาน เพื่อไม่ตรวจ Sprint ก่อนรอ complete หรือจับ lock แม่สลับกับโปรเจกต์; PATCH/move จับ lock นี้เฉพาะเมื่อส่ง sprintId (รวม null) · Bulk ใช้ transaction ต่อรายงานเดิม จึงยังรายงานความล้มเหลวแยกงานได้
+- หลังรอ complete จะอ่านแผน/แม่/version ใหม่: PATCH ที่ If-Match ล้าสมัยตอบ 409 ตามเดิม, move ที่ไม่ส่ง If-Match ใช้ version ปัจจุบัน, Sub-task ที่สร้างหลังแม่ถูกย้ายออกจะสืบทอด Sprint ใหม่ · ไม่เพิ่มลูกเข้าแม่ที่ยังอยู่ completed แม้ส่ง sprintId อื่นมาเอง
+- ยังแก้รายละเอียดงานเดิมใน completed หรือส่ง sprintId เดิมแบบไม่ย้ายได้ และย้ายออกไป planning/active/Backlog ได้; ไม่สร้าง/เพิ่มงานใหม่เข้า completed
+- เพิ่ม regression 9 เคสใน issues.e2e.test.ts (รวมของเดิม 28): ครบ create/PATCH/move/bulk, rollback และไม่ส่ง Event เมื่อถูกปฏิเสธ, งานประวัติ, สร้างลูกและ If-Match · ทดสอบคำขอแข่งกับ API complete จริง โดยใช้ connection แยกถือ project lock แล้วรอหลักฐานจาก pg_blocking_pids (รวม soft blocker chain) ให้ complete ต่อคิวก่อนคำขอเปลี่ยนแผน โดยไม่ใช้ sleep จัดลำดับ
+- ยืนยัน regression กับโค้ดเดิม: 2 เคส guard ล้มเพราะ API ตอบ 201 แทน 422; เมื่อนำโค้ดแก้กลับมา 28 เคสผ่าน · ตรวจเต็ม `pnpm typecheck`, `pnpm test` และ API build ผ่าน: Web 109, DB 107, API 223 ผ่าน + queue integration เดิมข้าม 6 · ใช้ฐานสมมติ friday_a03_sprint แยกจากงานอื่น

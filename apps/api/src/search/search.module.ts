@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
+import { SavedService } from './saved.service.js';
+import { SearchController } from './search.controller.js';
+import { SearchService } from './search.service.js';
 
-/** ค้นหา, การค้นหาที่บันทึก, View ที่บันทึก · งาน A22 (docs/tasks/A22-*.md) · ใส่ controller / provider ของงานนี้ที่นี่ */
+/** ค้นหา, การค้นหาที่บันทึก และ View ที่บันทึก · งาน A22 (docs/tasks/A22-*.md) */
 @Module({
-  controllers: [],
-  providers: [],
+  controllers: [SearchController],
+  providers: [SearchService, SavedService],
 })
 export class SearchModule {}

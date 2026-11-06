@@ -1,8 +1,12 @@
 import { Module } from '@nestjs/common';
+import { GitEventsService } from './git-events.js';
+import { GithubApi } from './github-api.js';
+import { GitIntegrationsController, GithubHooksController, IssueGitController, ProjectReposController } from './git.controller.js';
+import { GitService } from './git.service.js';
 
-/** เชื่อม Git (GitHub) · งาน A27 (docs/tasks/A27-*.md) · ใส่ controller / provider ของงานนี้ที่นี่ */
+/** เชื่อม GitHub: Commit / PR กับงาน · งาน A27 (docs/tasks/A27-*.md) */
 @Module({
-  controllers: [],
-  providers: [],
+  controllers: [GitIntegrationsController, ProjectReposController, IssueGitController, GithubHooksController],
+  providers: [GitService, GitEventsService, GithubApi],
 })
 export class GitModule {}

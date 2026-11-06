@@ -1,4 +1,6 @@
-import { Placeholder } from "@/components/Placeholder";
-export default function Page() {
-  return <Placeholder task="W03" titleKey="nav.myTasks" />;
+import { MyTasksPage } from "./_components/my-tasks-page";
+
+export default async function Page({ params }: { params: Promise<{ ws: string }> }) {
+  const { ws } = await params;
+  return <MyTasksPage ws={ws} />;
 }

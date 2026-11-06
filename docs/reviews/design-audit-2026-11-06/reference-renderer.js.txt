@@ -1,0 +1,86 @@
+// Minimal stand-in for the Canvas runtime: renders <x-dc> templates (sc-for, sc-if, {{expr}}) for visual review only.
+(function () {
+  class DCLogic {
+    constructor(props) { this.props = props || {}; this.state = this.state || {}; }
+    setState(p) { this.state = Object.assign({}, this.state, typeof p === 'function' ? p(this.state) : p); window.__dcRender(); }
+  }
+  window.DCLogic = DCLogic;
+  const BOOL = new Set(['checked', 'disabled', 'selected', 'hidden', 'open', 'readonly', 'required']);
+  function ev(expr, scope) {
+    try { return Function('scope', 'with(scope){return (' + expr + ');}')(scope); } catch (e) { return undefined; }
+  }
+  function interp(str, scope) {
+    const whole = str.match(/^\s*\{\{([\s\S]+?)\}\}\s*$/);
+    if (whole) return { raw: ev(whole[1], scope), whole: true };
+    return { raw: str.replace(/\{\{([\s\S]+?)\}\}/g, (_, e) => { const v = ev(e, scope); return v == null ? '' : String(v); }), whole: false };
+  }
+  function proc(node, scope, out) {
+    if (node.nodeType === 3) {
+      out.appendChild(document.createTextNode(node.data.includes('{{') ? (function () { const r = interp(node.data, scope); return r.raw == null ? '' : String(r.raw); })() : node.data));
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    const tag = node.tagName.toLowerCase();
+    if (tag === 'sc-for') {
+      const list = interp(node.getAttribute('list') || '', scope).raw || [];
+      const as = node.getAttribute('as') || 'item';
+      (Array.isArray(list) ? list : []).forEach((item, i) => {
+        const s = Object.create(scope); s[as] = item; s.index = i;
+        node.childNodes.forEach((c) => proc(c, s, out));
+      });
+      return;
+    }
+    if (tag === 'sc-if') {
+      if (interp(node.getAttribute('value') || '', scope).raw) node.childNodes.forEach((c) => proc(c, scope, out));
+      return;
+    }
+    const isSvg = node.namespaceURI === 'http://www.w3.org/2000/svg';
+    const el = isSvg ? document.createElementNS(node.namespaceURI, node.localName) : document.createElement(tag);
+    for (const a of Array.from(node.attributes)) {
+      if (!a.value.includes('{{')) { try { el.setAttribute(a.name, a.value); } catch (e) {} continue; }
+      const r = interp(a.value, scope);
+      if (/^on/i.test(a.name)) {
+        if (typeof r.raw === 'function') {
+          let type = a.name.slice(2).toLowerCase();
+          if (type === 'change' && (tag === 'input' || tag === 'textarea')) type = node.type === 'checkbox' ? 'change' : 'input';
+          el.addEventListener(type, r.raw);
+        }
+        continue;
+      }
+      if (BOOL.has(a.name.toLowerCase())) { if (r.raw) el.setAttribute(a.name, ''); continue; }
+      if (r.raw === false || r.raw == null) continue;
+      el.setAttribute(a.name, String(r.raw));
+    }
+    const src = tag === 'template' ? node.content : node;
+    src.childNodes.forEach((c) => proc(c, scope, el));
+    if (tag === 'input' && el.hasAttribute('value')) el.value = el.getAttribute('value');
+    out.appendChild(el);
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    const host = document.querySelector('x-dc');
+    const scriptEl = document.querySelector('script[data-dc-script]');
+    if (!host) return;
+    const tpl = host.cloneNode(true);
+    let props = {};
+    try {
+      const def = JSON.parse(scriptEl.getAttribute('data-props') || '{}');
+      for (const k in def) if (k[0] !== '$') props[k] = def[k].default;
+      const q = new URLSearchParams(location.search);
+      q.forEach((v, k) => { props[k] = v; });
+    } catch (e) {}
+    let comp = null;
+    if (scriptEl) {
+      try { const C = Function('DCLogic', scriptEl.textContent + '\n;return Component;')(DCLogic); comp = new C(props); comp.props = props; }
+      catch (e) { console.error('[dc] script', e); }
+    }
+    window.__dcRender = function () {
+      let vals = {};
+      try { vals = comp && comp.renderVals ? comp.renderVals() : {}; } catch (e) { console.error('[dc] renderVals', e); }
+      const scope = Object.assign(Object.create(null), props, vals, { props: props, state: comp && comp.state });
+      const frag = document.createDocumentFragment();
+      tpl.childNodes.forEach((c) => proc(c, scope, frag));
+      host.replaceChildren(frag);
+    };
+    window.__dcRender();
+  });
+})();

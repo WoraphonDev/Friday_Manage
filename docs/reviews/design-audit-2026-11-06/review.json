@@ -1,0 +1,2634 @@
+{
+  "date": "2026-11-06",
+  "commit": "46719fabcc1620d1166ec4604cfdeac862f0e058",
+  "pages": [
+    {
+      "id": "ReviewGuide",
+      "file": "ReviewGuide.dc.html",
+      "title": "0 · เริ่มที่นี่ — คู่มือ Review",
+      "board": {
+        "x": -1600,
+        "y": 0,
+        "w": 1440,
+        "h": 1900,
+        "title": "0 · เริ่มที่นี่ — คู่มือ Review",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "pattern",
+      "kind": "บอร์ดแนวทาง/องค์ประกอบ",
+      "findingIds": [],
+      "note": "คู่มือ Review ไม่ใช่หน้าผลิตภัณฑ์ จึงเก็บเฉพาะ Canvas",
+      "shots": {
+        "390": {
+          "canvas": "canvas/ReviewGuide-390.png",
+          "actualViewport": null,
+          "canvasViewport": "viewport/canvas-ReviewGuide-390.png",
+          "nativeMobile": false,
+          "width": 390,
+          "height": 1900
+        },
+        "1440": {
+          "canvas": "canvas/ReviewGuide-1440.png",
+          "actualViewport": null,
+          "canvasViewport": "viewport/canvas-ReviewGuide-1440.png",
+          "nativeMobile": false,
+          "width": 1440,
+          "height": 1900
+        }
+      }
+    },
+    {
+      "id": "Main",
+      "file": "Main.dc.html",
+      "title": "1 · Overview",
+      "board": {
+        "x": 0,
+        "y": 0,
+        "w": 1440,
+        "h": 1620,
+        "title": "1 · Overview",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD01",
+        "VD02",
+        "VD05",
+        "VD06"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/MobileOverview-390.png",
+          "canvas": "canvas/MobileOverview-390.png",
+          "actualViewport": "viewport/actual-MobileOverview-390.png",
+          "canvasViewport": "viewport/canvas-MobileOverview-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/p/DP",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Main-1440.png",
+          "canvas": "canvas/Main-1440.png",
+          "actualViewport": "viewport/actual-Main-1440.png",
+          "canvasViewport": "viewport/canvas-Main-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP",
+          "width": 1440,
+          "height": 1620
+        }
+      }
+    },
+    {
+      "id": "Table",
+      "file": "Table.dc.html",
+      "title": "2 · Table (Module › Task › Sub-task)",
+      "board": {
+        "x": 1520,
+        "y": 0,
+        "w": 1440,
+        "h": 1300,
+        "title": "2 · Table (Module › Task › Sub-task)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD01",
+        "VD02",
+        "VD07",
+        "VD08",
+        "VD09"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/Table-390.png",
+          "canvas": "canvas/Table-390.png",
+          "actualViewport": "viewport/actual-Table-390.png",
+          "canvasViewport": "viewport/canvas-Table-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/table",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Table-1440.png",
+          "canvas": "canvas/Table-1440.png",
+          "actualViewport": "viewport/actual-Table-1440.png",
+          "canvasViewport": "viewport/canvas-Table-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/table",
+          "width": 1440,
+          "height": 1300
+        }
+      }
+    },
+    {
+      "id": "Kanban",
+      "file": "Kanban.dc.html",
+      "title": "3 · Kanban (drag & drop)",
+      "board": {
+        "x": 3040,
+        "y": 0,
+        "w": 1440,
+        "h": 1180,
+        "title": "3 · Kanban (drag & drop)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD02",
+        "VD01"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/MobileKanban-390.png",
+          "canvas": "canvas/MobileKanban-390.png",
+          "actualViewport": "viewport/actual-MobileKanban-390.png",
+          "canvasViewport": "viewport/canvas-MobileKanban-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/p/DP/board",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Kanban-1440.png",
+          "canvas": "canvas/Kanban-1440.png",
+          "actualViewport": "viewport/actual-Kanban-1440.png",
+          "canvasViewport": "viewport/canvas-Kanban-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/board",
+          "width": 1440,
+          "height": 1180
+        }
+      }
+    },
+    {
+      "id": "Timeline",
+      "file": "Timeline.dc.html",
+      "title": "4 · Timeline (Module › Task › Sub-task)",
+      "board": {
+        "x": 4560,
+        "y": 0,
+        "w": 1440,
+        "h": 1520,
+        "title": "4 · Timeline (Module › Task › Sub-task)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD02",
+        "VD01"
+      ],
+      "note": "มี Module/Phase/Task และ timeline; ความยาว bar ตามข้อมูลไม่ใช่ Design defect; ต้องปรับ header ร่วมและ toolbar ตามแบบ",
+      "shots": {
+        "390": {
+          "actual": "actual/Timeline-390.png",
+          "canvas": "canvas/Timeline-390.png",
+          "actualViewport": "viewport/actual-Timeline-390.png",
+          "canvasViewport": "viewport/canvas-Timeline-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/timeline",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Timeline-1440.png",
+          "canvas": "canvas/Timeline-1440.png",
+          "actualViewport": "viewport/actual-Timeline-1440.png",
+          "canvasViewport": "viewport/canvas-Timeline-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/timeline",
+          "width": 1440,
+          "height": 1520
+        }
+      }
+    },
+    {
+      "id": "Gantt",
+      "file": "Gantt.dc.html",
+      "title": "5 · Gantt",
+      "board": {
+        "x": 0,
+        "y": 1740,
+        "w": 1440,
+        "h": 1020,
+        "title": "5 · Gantt",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD02",
+        "VD01"
+      ],
+      "note": "มี timeline/baseline/แถบเวลา; อย่าตัดสินเส้น dependency หรือ critical path จาก fixture ที่ไม่มีความสัมพันธ์ครบ; header และตำแหน่งเครื่องมือดูภาพเทียบ",
+      "shots": {
+        "390": {
+          "actual": "actual/Gantt-390.png",
+          "canvas": "canvas/Gantt-390.png",
+          "actualViewport": "viewport/actual-Gantt-390.png",
+          "canvasViewport": "viewport/canvas-Gantt-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/gantt",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Gantt-1440.png",
+          "canvas": "canvas/Gantt-1440.png",
+          "actualViewport": "viewport/actual-Gantt-1440.png",
+          "canvasViewport": "viewport/canvas-Gantt-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/gantt",
+          "width": 1440,
+          "height": 1020
+        }
+      }
+    },
+    {
+      "id": "Calendar",
+      "file": "Calendar.dc.html",
+      "title": "6 · Calendar",
+      "board": {
+        "x": 1520,
+        "y": 1740,
+        "w": 1440,
+        "h": 1240,
+        "title": "6 · Calendar",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD02",
+        "VD01"
+      ],
+      "note": "กริดเดือน/agenda/unscheduled มีแล้ว; จำนวนและวันที่ในภาพเป็นข้อมูลสมมติต่างกัน; header ร่วมยังคลาดจากแบบ",
+      "shots": {
+        "390": {
+          "actual": "actual/Calendar-390.png",
+          "canvas": "canvas/Calendar-390.png",
+          "actualViewport": "viewport/actual-Calendar-390.png",
+          "canvasViewport": "viewport/canvas-Calendar-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/calendar",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Calendar-1440.png",
+          "canvas": "canvas/Calendar-1440.png",
+          "actualViewport": "viewport/actual-Calendar-1440.png",
+          "canvasViewport": "viewport/canvas-Calendar-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/calendar",
+          "width": 1440,
+          "height": 1240
+        }
+      }
+    },
+    {
+      "id": "Members",
+      "file": "Members.dc.html",
+      "title": "7 · Members + Workload",
+      "board": {
+        "x": 3040,
+        "y": 1740,
+        "w": 1440,
+        "h": 1460,
+        "title": "7 · Members + Workload",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD02",
+        "VD01"
+      ],
+      "note": "มี workload, KPI และรายชื่อสมาชิก; จำนวนคนและการใช้ capacity ต่างตาม fixture; header ร่วมยังต่าง",
+      "shots": {
+        "390": {
+          "actual": "actual/Members-390.png",
+          "canvas": "canvas/Members-390.png",
+          "actualViewport": "viewport/actual-Members-390.png",
+          "canvasViewport": "viewport/canvas-Members-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/members",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Members-1440.png",
+          "canvas": "canvas/Members-1440.png",
+          "actualViewport": "viewport/actual-Members-1440.png",
+          "canvasViewport": "viewport/canvas-Members-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/members",
+          "width": 1440,
+          "height": 1460
+        }
+      }
+    },
+    {
+      "id": "Files",
+      "file": "Files.dc.html",
+      "title": "8 · Files (Attachments)",
+      "board": {
+        "x": 4560,
+        "y": 1740,
+        "w": 1440,
+        "h": 1140,
+        "title": "8 · Files (Attachments)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD02",
+        "VD01"
+      ],
+      "note": "ใช้ข้อมูลไฟล์/ลิงก์และเปิด PDF preview แล้วเพื่อไม่เทียบ empty state กับรายการมีข้อมูล; header ร่วมยังต่าง",
+      "shots": {
+        "390": {
+          "actual": "actual/Files-390.png",
+          "canvas": "canvas/Files-390.png",
+          "actualViewport": "viewport/actual-Files-390.png",
+          "canvasViewport": "viewport/canvas-Files-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/files",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Files-1440.png",
+          "canvas": "canvas/Files-1440.png",
+          "actualViewport": "viewport/actual-Files-1440.png",
+          "canvasViewport": "viewport/canvas-Files-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/files",
+          "width": 1440,
+          "height": 1140
+        }
+      }
+    },
+    {
+      "id": "NewProject",
+      "file": "NewProject.dc.html",
+      "title": "A · + New Project (Wizard 5 ขั้น)",
+      "board": {
+        "x": 0,
+        "y": 3500,
+        "w": 1440,
+        "h": 1340,
+        "title": "A · + New Project (Wizard 5 ขั้น)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P2",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD26",
+        "VD01"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/NewProject-390.png",
+          "canvas": "canvas/NewProject-390.png",
+          "actualViewport": "viewport/actual-NewProject-390.png",
+          "canvasViewport": "viewport/canvas-NewProject-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/new-project",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/NewProject-1440.png",
+          "canvas": "canvas/NewProject-1440.png",
+          "actualViewport": "viewport/actual-NewProject-1440.png",
+          "canvasViewport": "viewport/canvas-NewProject-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/new-project",
+          "width": 1440,
+          "height": 1340
+        }
+      }
+    },
+    {
+      "id": "TaskCreate",
+      "file": "TaskCreate.dc.html",
+      "title": "B · สร้าง Task / Sub-task",
+      "board": {
+        "x": 1520,
+        "y": 3500,
+        "w": 1440,
+        "h": 1560,
+        "title": "B · สร้าง Task / Sub-task",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD10",
+        "VD01",
+        "VD02"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/TaskCreate-390.png",
+          "canvas": "canvas/TaskCreate-390.png",
+          "actualViewport": "viewport/actual-TaskCreate-390.png",
+          "canvasViewport": "viewport/canvas-TaskCreate-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP?new=1",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/TaskCreate-1440.png",
+          "canvas": "canvas/TaskCreate-1440.png",
+          "actualViewport": "viewport/actual-TaskCreate-1440.png",
+          "canvasViewport": "viewport/canvas-TaskCreate-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP?new=1",
+          "width": 1440,
+          "height": 1560
+        }
+      }
+    },
+    {
+      "id": "TaskDetail",
+      "file": "TaskDetail.dc.html",
+      "title": "C · Task Detail (Drawer ด้านขวา)",
+      "board": {
+        "x": 3040,
+        "y": 3500,
+        "w": 1440,
+        "h": 1700,
+        "title": "C · Task Detail (Drawer ด้านขวา)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD12",
+        "VD01",
+        "VD02"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/TaskDetail-390.png",
+          "canvas": "canvas/TaskDetail-390.png",
+          "actualViewport": "viewport/actual-TaskDetail-390.png",
+          "canvasViewport": "viewport/canvas-TaskDetail-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP?issue=DP-1",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/TaskDetail-1440.png",
+          "canvas": "canvas/TaskDetail-1440.png",
+          "actualViewport": "viewport/actual-TaskDetail-1440.png",
+          "canvasViewport": "viewport/canvas-TaskDetail-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP?issue=DP-1",
+          "width": 1440,
+          "height": 1700
+        }
+      }
+    },
+    {
+      "id": "SubtaskModal",
+      "file": "SubtaskModal.dc.html",
+      "title": "D · Sub-task Detail (Drawer ซ้อนบน Task)",
+      "board": {
+        "x": 4560,
+        "y": 3500,
+        "w": 1440,
+        "h": 1700,
+        "title": "D · Sub-task Detail (Drawer ซ้อนบน Task)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD13",
+        "VD01",
+        "VD02"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/MobileSubtask-390.png",
+          "canvas": "canvas/MobileSubtask-390.png",
+          "actualViewport": "viewport/actual-MobileSubtask-390.png",
+          "canvasViewport": "viewport/canvas-MobileSubtask-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/p/DP?issue=DP-25",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/SubtaskModal-1440.png",
+          "canvas": "canvas/SubtaskModal-1440.png",
+          "actualViewport": "viewport/actual-SubtaskModal-1440.png",
+          "canvasViewport": "viewport/canvas-SubtaskModal-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP?issue=DP-25",
+          "width": 1440,
+          "height": 1700
+        }
+      }
+    },
+    {
+      "id": "Home",
+      "file": "Home.dc.html",
+      "title": "E · Home",
+      "board": {
+        "x": 0,
+        "y": 5520,
+        "w": 1440,
+        "h": 1360,
+        "title": "E · Home",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P2",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD01"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/MobileHome-390.png",
+          "canvas": "canvas/MobileHome-390.png",
+          "actualViewport": "viewport/actual-MobileHome-390.png",
+          "canvasViewport": "viewport/canvas-MobileHome-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Home-1440.png",
+          "canvas": "canvas/Home-1440.png",
+          "actualViewport": "viewport/actual-Home-1440.png",
+          "canvasViewport": "viewport/canvas-Home-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit",
+          "width": 1440,
+          "height": 1360
+        }
+      }
+    },
+    {
+      "id": "MyTasks",
+      "file": "MyTasks.dc.html",
+      "title": "F · My Tasks",
+      "board": {
+        "x": 1520,
+        "y": 5520,
+        "w": 1440,
+        "h": 1360,
+        "title": "F · My Tasks",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P2",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD01"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/MobileMyTasks-390.png",
+          "canvas": "canvas/MobileMyTasks-390.png",
+          "actualViewport": "viewport/actual-MobileMyTasks-390.png",
+          "canvasViewport": "viewport/canvas-MobileMyTasks-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/my-tasks",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/MyTasks-1440.png",
+          "canvas": "canvas/MyTasks-1440.png",
+          "actualViewport": "viewport/actual-MyTasks-1440.png",
+          "canvasViewport": "viewport/canvas-MyTasks-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/my-tasks",
+          "width": 1440,
+          "height": 1360
+        }
+      }
+    },
+    {
+      "id": "Inbox",
+      "file": "Inbox.dc.html",
+      "title": "G · Inbox (Notifications)",
+      "board": {
+        "x": 3040,
+        "y": 5520,
+        "w": 1440,
+        "h": 1360,
+        "title": "G · Inbox (Notifications)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P2",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD01"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/MobileInbox-390.png",
+          "canvas": "canvas/MobileInbox-390.png",
+          "actualViewport": "viewport/actual-MobileInbox-390.png",
+          "canvasViewport": "viewport/canvas-MobileInbox-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/inbox",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Inbox-1440.png",
+          "canvas": "canvas/Inbox-1440.png",
+          "actualViewport": "viewport/actual-Inbox-1440.png",
+          "canvasViewport": "viewport/canvas-Inbox-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/inbox?n=01a1b109-613b-797c-b41e-03ccf0ef124c",
+          "width": 1440,
+          "height": 1360
+        }
+      }
+    },
+    {
+      "id": "WorkspaceMembers",
+      "file": "WorkspaceMembers.dc.html",
+      "title": "H · Workspace Members + Invite",
+      "board": {
+        "x": 4560,
+        "y": 5520,
+        "w": 1440,
+        "h": 1360,
+        "title": "H · Workspace Members + Invite",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P2",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD21",
+        "VD01"
+      ],
+      "note": "เปิด Invite dialog แล้วตาม default ของ Canvas H",
+      "shots": {
+        "390": {
+          "actual": "actual/WorkspaceMembers-390.png",
+          "canvas": "canvas/WorkspaceMembers-390.png",
+          "actualViewport": "viewport/actual-WorkspaceMembers-390.png",
+          "canvasViewport": "viewport/canvas-WorkspaceMembers-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/members",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/WorkspaceMembers-1440.png",
+          "canvas": "canvas/WorkspaceMembers-1440.png",
+          "actualViewport": "viewport/actual-WorkspaceMembers-1440.png",
+          "canvasViewport": "viewport/canvas-WorkspaceMembers-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/members",
+          "width": 1440,
+          "height": 1360
+        }
+      }
+    },
+    {
+      "id": "Profile",
+      "file": "Profile.dc.html",
+      "title": "I · User Profile + Notification settings",
+      "board": {
+        "x": 6080,
+        "y": 5520,
+        "w": 1440,
+        "h": 1560,
+        "title": "I · User Profile + Notification settings",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P2",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD01",
+        "VD20"
+      ],
+      "note": "เทียบแท็บการแจ้งเตือนซึ่งเป็น default เดียวกับ Canvas; รูปแบบ connection cards ยังขาดกลุ่มทีม",
+      "shots": {
+        "390": {
+          "actual": "actual/Profile-390.png",
+          "canvas": "canvas/Profile-390.png",
+          "actualViewport": "viewport/actual-Profile-390.png",
+          "canvasViewport": "viewport/canvas-Profile-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/profile",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Profile-1440.png",
+          "canvas": "canvas/Profile-1440.png",
+          "actualViewport": "viewport/actual-Profile-1440.png",
+          "canvasViewport": "viewport/canvas-Profile-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/profile",
+          "width": 1440,
+          "height": 1560
+        }
+      }
+    },
+    {
+      "id": "Login",
+      "file": "Login.dc.html",
+      "title": "J1 · Login (+ 2FA)",
+      "board": {
+        "x": 0,
+        "y": 7400,
+        "w": 1440,
+        "h": 960,
+        "title": "J1 · Login (+ 2FA)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "close",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [],
+      "note": "กรอกอีเมล/รหัสผ่านแต่ไม่ส่ง; โครง split pane และ theme ใกล้เคียง",
+      "shots": {
+        "390": {
+          "actual": "actual/Login-390.png",
+          "canvas": "canvas/Login-390.png",
+          "actualViewport": "viewport/actual-Login-390.png",
+          "canvasViewport": "viewport/canvas-Login-390.png",
+          "nativeMobile": false,
+          "route": "/login",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Login-1440.png",
+          "canvas": "canvas/Login-1440.png",
+          "actualViewport": "viewport/actual-Login-1440.png",
+          "canvasViewport": "viewport/canvas-Login-1440.png",
+          "nativeMobile": false,
+          "route": "/login",
+          "width": 1440,
+          "height": 960
+        }
+      }
+    },
+    {
+      "id": "Signup",
+      "file": "Signup.dc.html",
+      "title": "J2 · Sign up + ยืนยันอีเมล",
+      "board": {
+        "x": 1520,
+        "y": 7400,
+        "w": 1440,
+        "h": 960,
+        "title": "J2 · Sign up + ยืนยันอีเมล",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "close",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [],
+      "note": "กรอกข้อมูลจำลองเพื่อเห็น password strength; ไม่ส่งสมัครจาก browser; โครงหลักใกล้เคียง",
+      "shots": {
+        "390": {
+          "actual": "actual/Signup-390.png",
+          "canvas": "canvas/Signup-390.png",
+          "actualViewport": "viewport/actual-Signup-390.png",
+          "canvasViewport": "viewport/canvas-Signup-390.png",
+          "nativeMobile": false,
+          "route": "/signup",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Signup-1440.png",
+          "canvas": "canvas/Signup-1440.png",
+          "actualViewport": "viewport/actual-Signup-1440.png",
+          "canvasViewport": "viewport/canvas-Signup-1440.png",
+          "nativeMobile": false,
+          "route": "/signup",
+          "width": 1440,
+          "height": 960
+        }
+      }
+    },
+    {
+      "id": "ForgotPassword",
+      "file": "ForgotPassword.dc.html",
+      "title": "J3 · ลืมรหัสผ่าน (3 ขั้น)",
+      "board": {
+        "x": 3040,
+        "y": 7400,
+        "w": 1440,
+        "h": 960,
+        "title": "J3 · ลืมรหัสผ่าน (3 ขั้น)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "close",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [],
+      "note": "กรอกอีเมลให้ CTA อยู่สถานะเดียวกัน; ไม่ส่งอีเมลจริง; โครงหลักใกล้เคียง",
+      "shots": {
+        "390": {
+          "actual": "actual/ForgotPassword-390.png",
+          "canvas": "canvas/ForgotPassword-390.png",
+          "actualViewport": "viewport/actual-ForgotPassword-390.png",
+          "canvasViewport": "viewport/canvas-ForgotPassword-390.png",
+          "nativeMobile": false,
+          "route": "/forgot-password",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/ForgotPassword-1440.png",
+          "canvas": "canvas/ForgotPassword-1440.png",
+          "actualViewport": "viewport/actual-ForgotPassword-1440.png",
+          "canvasViewport": "viewport/canvas-ForgotPassword-1440.png",
+          "nativeMobile": false,
+          "route": "/forgot-password",
+          "width": 1440,
+          "height": 960
+        }
+      }
+    },
+    {
+      "id": "AcceptInvite",
+      "file": "AcceptInvite.dc.html",
+      "title": "J4 · รับคำเชิญ",
+      "board": {
+        "x": 4560,
+        "y": 7400,
+        "w": 1440,
+        "h": 960,
+        "title": "J4 · รับคำเชิญ",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "close",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [],
+      "note": "ใช้คำเชิญสมมติจริง; ชื่อ/อีเมลและสถานะ checkbox ต่างตามข้อมูล ไม่ใช่ความผิดของ CSS",
+      "shots": {
+        "390": {
+          "actual": "actual/AcceptInvite-390.png",
+          "canvas": "canvas/AcceptInvite-390.png",
+          "actualViewport": "viewport/actual-AcceptInvite-390.png",
+          "canvasViewport": "viewport/canvas-AcceptInvite-390.png",
+          "nativeMobile": false,
+          "route": "/join/v9uLeTweBcw7HHUuahFskqIafdcTdBCCK6KRxoQCcfA",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/AcceptInvite-1440.png",
+          "canvas": "canvas/AcceptInvite-1440.png",
+          "actualViewport": "viewport/actual-AcceptInvite-1440.png",
+          "canvasViewport": "viewport/canvas-AcceptInvite-1440.png",
+          "nativeMobile": false,
+          "route": "/join/v9uLeTweBcw7HHUuahFskqIafdcTdBCCK6KRxoQCcfA",
+          "width": 1440,
+          "height": 960
+        }
+      }
+    },
+    {
+      "id": "Onboarding",
+      "file": "Onboarding.dc.html",
+      "title": "J5 · Onboarding (สร้าง Workspace)",
+      "board": {
+        "x": 6080,
+        "y": 7400,
+        "w": 1440,
+        "h": 1000,
+        "title": "J5 · Onboarding (สร้าง Workspace)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "close",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [],
+      "note": "ใช้บัญชีสมมติที่ไม่มี Workspace; กรอกชื่อแต่ไม่สร้าง; โครง wizard ใกล้เคียง",
+      "shots": {
+        "390": {
+          "actual": "actual/Onboarding-390.png",
+          "canvas": "canvas/Onboarding-390.png",
+          "actualViewport": "viewport/actual-Onboarding-390.png",
+          "canvasViewport": "viewport/canvas-Onboarding-390.png",
+          "nativeMobile": false,
+          "route": "/onboarding",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Onboarding-1440.png",
+          "canvas": "canvas/Onboarding-1440.png",
+          "actualViewport": "viewport/actual-Onboarding-1440.png",
+          "canvasViewport": "viewport/canvas-Onboarding-1440.png",
+          "nativeMobile": false,
+          "route": "/onboarding",
+          "width": 1440,
+          "height": 1000
+        }
+      }
+    },
+    {
+      "id": "IssueCreate",
+      "file": "IssueCreate.dc.html",
+      "title": "K1 · สร้างงานตามประเภท (Story / Task / Bug / Spike)",
+      "board": {
+        "x": 0,
+        "y": 8780,
+        "w": 1440,
+        "h": 1400,
+        "title": "K1 · สร้างงานตามประเภท (Story / Task / Bug / Spike)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD11",
+        "VD01",
+        "VD02"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/IssueCreate-390.png",
+          "canvas": "canvas/IssueCreate-390.png",
+          "actualViewport": "viewport/actual-IssueCreate-390.png",
+          "canvasViewport": "viewport/canvas-IssueCreate-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP?new=1&type=bug",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/IssueCreate-1440.png",
+          "canvas": "canvas/IssueCreate-1440.png",
+          "actualViewport": "viewport/actual-IssueCreate-1440.png",
+          "canvasViewport": "viewport/canvas-IssueCreate-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP?new=1&type=bug",
+          "width": 1440,
+          "height": 1400
+        }
+      }
+    },
+    {
+      "id": "BugDetail",
+      "file": "BugDetail.dc.html",
+      "title": "K2 · Bug Detail",
+      "board": {
+        "x": 1520,
+        "y": 8780,
+        "w": 1440,
+        "h": 1500,
+        "title": "K2 · Bug Detail",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD12",
+        "VD01",
+        "VD02"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/BugDetail-390.png",
+          "canvas": "canvas/BugDetail-390.png",
+          "actualViewport": "viewport/actual-BugDetail-390.png",
+          "canvasViewport": "viewport/canvas-BugDetail-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP?issue=DP-26",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/BugDetail-1440.png",
+          "canvas": "canvas/BugDetail-1440.png",
+          "actualViewport": "viewport/actual-BugDetail-1440.png",
+          "canvasViewport": "viewport/canvas-BugDetail-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP?issue=DP-26",
+          "width": 1440,
+          "height": 1500
+        }
+      }
+    },
+    {
+      "id": "DueRequest",
+      "file": "DueRequest.dc.html",
+      "title": "K3 · ขอเลื่อน Due",
+      "board": {
+        "x": 3040,
+        "y": 8780,
+        "w": 1440,
+        "h": 1100,
+        "title": "K3 · ขอเลื่อน Due",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD22",
+        "VD01",
+        "VD02"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/DueRequest-390.png",
+          "canvas": "canvas/DueRequest-390.png",
+          "actualViewport": "viewport/actual-DueRequest-390.png",
+          "canvasViewport": "viewport/canvas-DueRequest-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP?issue=DP-2",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/DueRequest-1440.png",
+          "canvas": "canvas/DueRequest-1440.png",
+          "actualViewport": "viewport/actual-DueRequest-1440.png",
+          "canvasViewport": "viewport/canvas-DueRequest-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP?issue=DP-2",
+          "width": 1440,
+          "height": 1100
+        }
+      }
+    },
+    {
+      "id": "Bell",
+      "file": "Bell.dc.html",
+      "title": "K4 · กระดิ่งแจ้งเตือน + Toast + Global top bar",
+      "board": {
+        "x": 4560,
+        "y": 8780,
+        "w": 1440,
+        "h": 1000,
+        "title": "K4 · กระดิ่งแจ้งเตือน + Toast + Global top bar",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD24",
+        "VD01",
+        "VD02"
+      ],
+      "note": "เปิดกระดิ่ง; Toast/ปุ่ม action อ้าง K4 และ source เพิ่มเติมจากภาพแผงกระดิ่ง",
+      "shots": {
+        "390": {
+          "actual": "actual/Bell-390.png",
+          "canvas": "canvas/Bell-390.png",
+          "actualViewport": "viewport/actual-Bell-390.png",
+          "canvasViewport": "viewport/canvas-Bell-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Bell-1440.png",
+          "canvas": "canvas/Bell-1440.png",
+          "actualViewport": "viewport/actual-Bell-1440.png",
+          "canvasViewport": "viewport/canvas-Bell-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP",
+          "width": 1440,
+          "height": 1000
+        }
+      }
+    },
+    {
+      "id": "Backlog",
+      "file": "Backlog.dc.html",
+      "title": "L1 · Backlog + Sprint planning",
+      "board": {
+        "x": 0,
+        "y": 10660,
+        "w": 1440,
+        "h": 1600,
+        "title": "L1 · Backlog + Sprint planning",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD02",
+        "VD01"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/Backlog-390.png",
+          "canvas": "canvas/Backlog-390.png",
+          "actualViewport": "viewport/actual-Backlog-390.png",
+          "canvasViewport": "viewport/canvas-Backlog-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/backlog",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Backlog-1440.png",
+          "canvas": "canvas/Backlog-1440.png",
+          "actualViewport": "viewport/actual-Backlog-1440.png",
+          "canvasViewport": "viewport/canvas-Backlog-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/backlog",
+          "width": 1440,
+          "height": 1600
+        }
+      }
+    },
+    {
+      "id": "ProjectSettings",
+      "file": "ProjectSettings.dc.html",
+      "title": "L2 · Project Settings",
+      "board": {
+        "x": 1520,
+        "y": 10660,
+        "w": 1440,
+        "h": 1400,
+        "title": "L2 · Project Settings",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD02",
+        "VD01"
+      ],
+      "note": "เทียบ Workflow active ตาม default ของ L2 ไม่ใช้ General เทียบ Workflow",
+      "shots": {
+        "390": {
+          "actual": "actual/ProjectSettings-390.png",
+          "canvas": "canvas/ProjectSettings-390.png",
+          "actualViewport": "viewport/actual-ProjectSettings-390.png",
+          "canvasViewport": "viewport/canvas-ProjectSettings-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/settings/workflow",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/ProjectSettings-1440.png",
+          "canvas": "canvas/ProjectSettings-1440.png",
+          "actualViewport": "viewport/actual-ProjectSettings-1440.png",
+          "canvasViewport": "viewport/canvas-ProjectSettings-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/settings/workflow",
+          "width": 1440,
+          "height": 1400
+        }
+      }
+    },
+    {
+      "id": "States",
+      "file": "States.dc.html",
+      "title": "M1 · สถานะหน้าจอ (Empty · Loading · Error · 403 · 404 · Viewer)",
+      "board": {
+        "x": 0,
+        "y": 12640,
+        "w": 1440,
+        "h": 2100,
+        "title": "M1 · สถานะหน้าจอ (Empty · Loading · Error · 403 · 404 · Viewer)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "pattern",
+      "kind": "บอร์ดแนวทาง/องค์ประกอบ",
+      "findingIds": [],
+      "note": "M1 เป็นบอร์ดรวมรูปแบบสถานะ ไม่ใช่ route เดียว ดูภาพ 404/403/Error/Loading/Empty/Success ของ UI จริงแยกด้านล่าง",
+      "shots": {
+        "390": {
+          "actual": "actual/States-390.png",
+          "canvas": "canvas/States-390.png",
+          "actualViewport": "viewport/actual-States-390.png",
+          "canvasViewport": "viewport/canvas-States-390.png",
+          "nativeMobile": false,
+          "route": "/dev/ui",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/States-1440.png",
+          "canvas": "canvas/States-1440.png",
+          "actualViewport": "viewport/actual-States-1440.png",
+          "canvasViewport": "viewport/canvas-States-1440.png",
+          "nativeMobile": false,
+          "route": "/dev/ui",
+          "width": 1440,
+          "height": 2100
+        }
+      }
+    },
+    {
+      "id": "MobileMyTasks",
+      "file": "MobileMyTasks.dc.html",
+      "title": "M2 · Mobile · My Tasks",
+      "board": {
+        "x": 1520,
+        "y": 12640,
+        "w": 390,
+        "h": 844,
+        "title": "M2 · Mobile · My Tasks",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD04",
+        "VD16"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/MobileMyTasks-390.png",
+          "canvas": "canvas/MobileMyTasks-390.png",
+          "actualViewport": "viewport/actual-MobileMyTasks-390.png",
+          "canvasViewport": "viewport/canvas-MobileMyTasks-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/my-tasks",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/MobileMyTasks-390.png",
+          "canvas": "canvas/MobileMyTasks-390.png",
+          "actualViewport": "viewport/actual-MobileMyTasks-390.png",
+          "canvasViewport": "viewport/canvas-MobileMyTasks-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/my-tasks",
+          "width": 390,
+          "height": 844
+        }
+      }
+    },
+    {
+      "id": "MobileInbox",
+      "file": "MobileInbox.dc.html",
+      "title": "M3 · Mobile · Inbox",
+      "board": {
+        "x": 1990,
+        "y": 12640,
+        "w": 390,
+        "h": 844,
+        "title": "M3 · Mobile · Inbox",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD04",
+        "VD16"
+      ],
+      "note": "ใช้ list state ไม่มี ?n= เพื่อให้ตรง M3 ไม่เอา detail ที่เปิดแล้วไปเทียบ list",
+      "shots": {
+        "390": {
+          "actual": "actual/MobileInbox-390.png",
+          "canvas": "canvas/MobileInbox-390.png",
+          "actualViewport": "viewport/actual-MobileInbox-390.png",
+          "canvasViewport": "viewport/canvas-MobileInbox-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/inbox",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/MobileInbox-390.png",
+          "canvas": "canvas/MobileInbox-390.png",
+          "actualViewport": "viewport/actual-MobileInbox-390.png",
+          "canvasViewport": "viewport/canvas-MobileInbox-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/inbox",
+          "width": 390,
+          "height": 844
+        }
+      }
+    },
+    {
+      "id": "MobileSubtask",
+      "file": "MobileSubtask.dc.html",
+      "title": "M4 · Mobile · Sub-task Detail",
+      "board": {
+        "x": 2460,
+        "y": 12640,
+        "w": 390,
+        "h": 844,
+        "title": "M4 · Mobile · Sub-task Detail",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD13",
+        "VD18"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/MobileSubtask-390.png",
+          "canvas": "canvas/MobileSubtask-390.png",
+          "actualViewport": "viewport/actual-MobileSubtask-390.png",
+          "canvasViewport": "viewport/canvas-MobileSubtask-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/p/DP?issue=DP-25",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/MobileSubtask-390.png",
+          "canvas": "canvas/MobileSubtask-390.png",
+          "actualViewport": "viewport/actual-MobileSubtask-390.png",
+          "canvasViewport": "viewport/canvas-MobileSubtask-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/p/DP?issue=DP-25",
+          "width": 390,
+          "height": 844
+        }
+      }
+    },
+    {
+      "id": "ImportExcel",
+      "file": "ImportExcel.dc.html",
+      "title": "L3 · Import Excel + การแก้ไขแผน (Plan vs Actual)",
+      "board": {
+        "x": 3040,
+        "y": 10660,
+        "w": 1440,
+        "h": 1500,
+        "title": "L3 · Import Excel + การแก้ไขแผน (Plan vs Actual)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD19",
+        "VD01"
+      ],
+      "note": "อัปโหลด Excel สมมติและไป step 3 ตาม Canvas; ที่390ต้องใช้ Enter เพราะเมนูล่างบัง pointer ของปุ่มใน step2 ดู VD19",
+      "shots": {
+        "390": {
+          "actual": "actual/ImportExcel-390.png",
+          "canvas": "canvas/ImportExcel-390.png",
+          "actualViewport": "viewport/actual-ImportExcel-390.png",
+          "canvasViewport": "viewport/canvas-ImportExcel-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/import",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/ImportExcel-1440.png",
+          "canvas": "canvas/ImportExcel-1440.png",
+          "actualViewport": "viewport/actual-ImportExcel-1440.png",
+          "canvasViewport": "viewport/canvas-ImportExcel-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/import",
+          "width": 1440,
+          "height": 1500
+        }
+      }
+    },
+    {
+      "id": "AdminConsole",
+      "file": "AdminConsole.dc.html",
+      "title": "N1 · Admin Console (Workspace / SaaS)",
+      "board": {
+        "x": 0,
+        "y": 15120,
+        "w": 1440,
+        "h": 1500,
+        "title": "N1 · Admin Console (Workspace / SaaS)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD03",
+        "VD01"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/AdminConsole-390.png",
+          "canvas": "canvas/AdminConsole-390.png",
+          "actualViewport": "viewport/actual-AdminConsole-390.png",
+          "canvasViewport": "viewport/canvas-AdminConsole-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/admin",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/AdminConsole-1440.png",
+          "canvas": "canvas/AdminConsole-1440.png",
+          "actualViewport": "viewport/actual-AdminConsole-1440.png",
+          "canvasViewport": "viewport/canvas-AdminConsole-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/admin",
+          "width": 1440,
+          "height": 1500
+        }
+      }
+    },
+    {
+      "id": "LeadDashboard",
+      "file": "LeadDashboard.dc.html",
+      "title": "O1 · Lead Dashboard (ข้อมูลจริง Development Plan 2026-11)",
+      "board": {
+        "x": 0,
+        "y": 17000,
+        "w": 1440,
+        "h": 1900,
+        "title": "O1 · Lead Dashboard (ข้อมูลจริง Development Plan 2026-11)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD03",
+        "VD01",
+        "VD02"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/LeadDashboard-390.png",
+          "canvas": "canvas/LeadDashboard-390.png",
+          "actualViewport": "viewport/actual-LeadDashboard-390.png",
+          "canvasViewport": "viewport/canvas-LeadDashboard-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/dashboard",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/LeadDashboard-1440.png",
+          "canvas": "canvas/LeadDashboard-1440.png",
+          "actualViewport": "viewport/actual-LeadDashboard-1440.png",
+          "canvasViewport": "viewport/canvas-LeadDashboard-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/dashboard",
+          "width": 1440,
+          "height": 1900
+        }
+      }
+    },
+    {
+      "id": "Reports",
+      "file": "Reports.dc.html",
+      "title": "O2 · Reports + Requirement Traceability",
+      "board": {
+        "x": 1520,
+        "y": 17000,
+        "w": 1440,
+        "h": 1500,
+        "title": "O2 · Reports + Requirement Traceability",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD03",
+        "VD01",
+        "VD02"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/Reports-390.png",
+          "canvas": "canvas/Reports-390.png",
+          "actualViewport": "viewport/actual-Reports-390.png",
+          "canvasViewport": "viewport/canvas-Reports-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/reports",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Reports-1440.png",
+          "canvas": "canvas/Reports-1440.png",
+          "actualViewport": "viewport/actual-Reports-1440.png",
+          "canvasViewport": "viewport/canvas-Reports-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/reports",
+          "width": 1440,
+          "height": 1500
+        }
+      }
+    },
+    {
+      "id": "NotifyTemplates",
+      "file": "NotifyTemplates.dc.html",
+      "title": "N2 · หน้าตาข้อความแจ้งเตือน (LINE · Email · Webhook)",
+      "board": {
+        "x": 1520,
+        "y": 15120,
+        "w": 1440,
+        "h": 1300,
+        "title": "N2 · หน้าตาข้อความแจ้งเตือน (LINE · Email · Webhook)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD03",
+        "VD01"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/NotifyTemplates-390.png",
+          "canvas": "canvas/NotifyTemplates-390.png",
+          "actualViewport": "viewport/actual-NotifyTemplates-390.png",
+          "canvasViewport": "viewport/canvas-NotifyTemplates-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/admin/notify-templates",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/NotifyTemplates-1440.png",
+          "canvas": "canvas/NotifyTemplates-1440.png",
+          "actualViewport": "viewport/actual-NotifyTemplates-1440.png",
+          "canvasViewport": "viewport/canvas-NotifyTemplates-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/admin/notify-templates",
+          "width": 1440,
+          "height": 1300
+        }
+      }
+    },
+    {
+      "id": "MobileHome",
+      "file": "MobileHome.dc.html",
+      "title": "M5 · Mobile · Home",
+      "board": {
+        "x": 2930,
+        "y": 12640,
+        "w": 390,
+        "h": 844,
+        "title": "M5 · Mobile · Home",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD04",
+        "VD14"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/MobileHome-390.png",
+          "canvas": "canvas/MobileHome-390.png",
+          "actualViewport": "viewport/actual-MobileHome-390.png",
+          "canvasViewport": "viewport/canvas-MobileHome-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/MobileHome-390.png",
+          "canvas": "canvas/MobileHome-390.png",
+          "actualViewport": "viewport/actual-MobileHome-390.png",
+          "canvasViewport": "viewport/canvas-MobileHome-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit",
+          "width": 390,
+          "height": 844
+        }
+      }
+    },
+    {
+      "id": "MobileOverview",
+      "file": "MobileOverview.dc.html",
+      "title": "M6 · Mobile · Project Overview",
+      "board": {
+        "x": 3400,
+        "y": 12640,
+        "w": 390,
+        "h": 844,
+        "title": "M6 · Mobile · Project Overview",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD04",
+        "VD05",
+        "VD15"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/MobileOverview-390.png",
+          "canvas": "canvas/MobileOverview-390.png",
+          "actualViewport": "viewport/actual-MobileOverview-390.png",
+          "canvasViewport": "viewport/canvas-MobileOverview-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/p/DP",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/MobileOverview-390.png",
+          "canvas": "canvas/MobileOverview-390.png",
+          "actualViewport": "viewport/actual-MobileOverview-390.png",
+          "canvasViewport": "viewport/canvas-MobileOverview-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/p/DP",
+          "width": 390,
+          "height": 844
+        }
+      }
+    },
+    {
+      "id": "MobileKanban",
+      "file": "MobileKanban.dc.html",
+      "title": "M7 · Mobile · Kanban (ย้ายด้วยปุ่ม)",
+      "board": {
+        "x": 3870,
+        "y": 12640,
+        "w": 390,
+        "h": 844,
+        "title": "M7 · Mobile · Kanban (ย้ายด้วยปุ่ม)",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD04",
+        "VD17"
+      ],
+      "note": "เลือก In progress แล้วให้ตรง M7; มีข้อมูล6รายการในคอลัมน์",
+      "shots": {
+        "390": {
+          "actual": "actual/MobileKanban-390.png",
+          "canvas": "canvas/MobileKanban-390.png",
+          "actualViewport": "viewport/actual-MobileKanban-390.png",
+          "canvasViewport": "viewport/canvas-MobileKanban-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/p/DP/board",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/MobileKanban-390.png",
+          "canvas": "canvas/MobileKanban-390.png",
+          "actualViewport": "viewport/actual-MobileKanban-390.png",
+          "canvasViewport": "viewport/canvas-MobileKanban-390.png",
+          "nativeMobile": true,
+          "route": "/w/visual-audit/p/DP/board",
+          "width": 390,
+          "height": 844
+        }
+      }
+    },
+    {
+      "id": "Search",
+      "file": "Search.dc.html",
+      "title": "P1 · ค้นหา + Command palette (Ctrl K)",
+      "board": {
+        "x": 0,
+        "y": 19300,
+        "w": 1440,
+        "h": 1300,
+        "title": "P1 · ค้นหา + Command palette (Ctrl K)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD25",
+        "VD01",
+        "VD02"
+      ],
+      "note": "เปิด Command palette และพิมพ์คำค้นเดียวกับข้อมูลสมมติ; รูปแบบผลตามจำนวนข้อมูลไม่ใช้คิดเป็นคะแนน pixel",
+      "shots": {
+        "390": {
+          "actual": "actual/Search-390.png",
+          "canvas": "canvas/Search-390.png",
+          "actualViewport": "viewport/actual-Search-390.png",
+          "canvasViewport": "viewport/canvas-Search-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Search-1440.png",
+          "canvas": "canvas/Search-1440.png",
+          "actualViewport": "viewport/actual-Search-1440.png",
+          "canvasViewport": "viewport/canvas-Search-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP",
+          "width": 1440,
+          "height": 1300
+        }
+      }
+    },
+    {
+      "id": "Automation",
+      "file": "Automation.dc.html",
+      "title": "P2 · Automation (เมื่อ … ถ้า … ให้ …)",
+      "board": {
+        "x": 1520,
+        "y": 19300,
+        "w": 1440,
+        "h": 1300,
+        "title": "P2 · Automation (เมื่อ … ถ้า … ให้ …)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD03",
+        "VD01",
+        "VD02"
+      ],
+      "note": "ดูรายการแก้และภาพเทียบ; แยกความต่างของข้อมูลตัวอย่างออกจากโครงหน้า",
+      "shots": {
+        "390": {
+          "actual": "actual/Automation-390.png",
+          "canvas": "canvas/Automation-390.png",
+          "actualViewport": "viewport/actual-Automation-390.png",
+          "canvasViewport": "viewport/canvas-Automation-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/automation",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Automation-1440.png",
+          "canvas": "canvas/Automation-1440.png",
+          "actualViewport": "viewport/actual-Automation-1440.png",
+          "canvasViewport": "viewport/canvas-Automation-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP/automation",
+          "width": 1440,
+          "height": 1300
+        }
+      }
+    },
+    {
+      "id": "ConfirmDialogs",
+      "file": "ConfirmDialogs.dc.html",
+      "title": "P3 · Dialog ยืนยัน + เลิกทำ",
+      "board": {
+        "x": 3040,
+        "y": 19300,
+        "w": 1440,
+        "h": 1000,
+        "title": "P3 · Dialog ยืนยัน + เลิกทำ",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD23",
+        "VD01",
+        "VD02"
+      ],
+      "note": "เทียบ dialog ลบ Task ที่มี Sub-task; ไม่กดยืนยันลบ",
+      "shots": {
+        "390": {
+          "actual": "actual/ConfirmDialogs-390.png",
+          "canvas": "canvas/ConfirmDialogs-390.png",
+          "actualViewport": "viewport/actual-ConfirmDialogs-390.png",
+          "canvasViewport": "viewport/canvas-ConfirmDialogs-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP?issue=DP-1",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/ConfirmDialogs-1440.png",
+          "canvas": "canvas/ConfirmDialogs-1440.png",
+          "actualViewport": "viewport/actual-ConfirmDialogs-1440.png",
+          "canvasViewport": "viewport/canvas-ConfirmDialogs-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP?issue=DP-1",
+          "width": 1440,
+          "height": 1000
+        }
+      }
+    },
+    {
+      "id": "WorkspaceSwitch",
+      "file": "WorkspaceSwitch.dc.html",
+      "title": "Q1 · สลับ Workspace + สร้างใหม่",
+      "board": {
+        "x": 0,
+        "y": 21000,
+        "w": 1440,
+        "h": 1000,
+        "title": "Q1 · สลับ Workspace + สร้างใหม่",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "close",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [],
+      "note": "โครงหลักใกล้เคียงในสถานะที่เก็บภาพ ยังไม่ใช่การรับรองทุก interaction",
+      "shots": {
+        "390": {
+          "actual": "actual/WorkspaceSwitch-390.png",
+          "canvas": "canvas/WorkspaceSwitch-390.png",
+          "actualViewport": "viewport/actual-WorkspaceSwitch-390.png",
+          "canvasViewport": "viewport/canvas-WorkspaceSwitch-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/WorkspaceSwitch-1440.png",
+          "canvas": "canvas/WorkspaceSwitch-1440.png",
+          "actualViewport": "viewport/actual-WorkspaceSwitch-1440.png",
+          "canvasViewport": "viewport/canvas-WorkspaceSwitch-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit",
+          "width": 1440,
+          "height": 1000
+        }
+      }
+    },
+    {
+      "id": "PlanLimits",
+      "file": "PlanLimits.dc.html",
+      "title": "Q2 · เมื่อใช้เกินแพ็กเกจ (7 สถานการณ์)",
+      "board": {
+        "x": 1520,
+        "y": 21000,
+        "w": 1440,
+        "h": 1100,
+        "title": "Q2 · เมื่อใช้เกินแพ็กเกจ (7 สถานการณ์)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "close",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [],
+      "note": "เทียบ seat-limit modal; ใช้ response402จำลองเฉพาะ browser เพื่อเปิดสถานะนี้ ไม่มีการเปลี่ยนแพ็กเกจ",
+      "shots": {
+        "390": {
+          "actual": "actual/PlanLimits-390.png",
+          "canvas": "canvas/PlanLimits-390.png",
+          "actualViewport": "viewport/actual-PlanLimits-390.png",
+          "canvasViewport": "viewport/canvas-PlanLimits-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/PlanLimits-1440.png",
+          "canvas": "canvas/PlanLimits-1440.png",
+          "actualViewport": "viewport/actual-PlanLimits-1440.png",
+          "canvasViewport": "viewport/canvas-PlanLimits-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/p/DP",
+          "width": 1440,
+          "height": 1100
+        }
+      }
+    },
+    {
+      "id": "SuperAdmin",
+      "file": "SuperAdmin.dc.html",
+      "title": "Q3 · Super Admin (หลังบ้านทีม Friday)",
+      "board": {
+        "x": 3040,
+        "y": 21000,
+        "w": 1440,
+        "h": 1500,
+        "title": "Q3 · Super Admin (หลังบ้านทีม Friday)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "close",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [],
+      "note": "ใช้ session ทดสอบของ staff สมมติ; โครง sidebar/list/detail ใกล้เคียง Q3; grant/ตัวเลขธุรกิจต่างตาม fixture ไม่ใช่ design defect",
+      "shots": {
+        "390": {
+          "actual": "actual/SuperAdmin-390.png",
+          "canvas": "canvas/SuperAdmin-390.png",
+          "actualViewport": "viewport/actual-SuperAdmin-390.png",
+          "canvasViewport": "viewport/canvas-SuperAdmin-390.png",
+          "nativeMobile": false,
+          "route": "/workspaces?id=01a1b109-5e9e-71af-a255-df792c41914c",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/SuperAdmin-1440.png",
+          "canvas": "canvas/SuperAdmin-1440.png",
+          "actualViewport": "viewport/actual-SuperAdmin-1440.png",
+          "canvasViewport": "viewport/canvas-SuperAdmin-1440.png",
+          "nativeMobile": false,
+          "route": "/workspaces?id=01a1b109-5e9e-71af-a255-df792c41914c",
+          "width": 1440,
+          "height": 1500
+        }
+      }
+    },
+    {
+      "id": "Landing",
+      "file": "Landing.dc.html",
+      "title": "R1 · Landing + ราคาเหมาตามขนาดทีม (TH / EN)",
+      "board": {
+        "x": 0,
+        "y": 22900,
+        "w": 1440,
+        "h": 2200,
+        "title": "R1 · Landing + ราคาเหมาตามขนาดทีม (TH / EN)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "close",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [],
+      "note": "hero/features/pricing layout ใกล้เคียง; ราคาและจำนวนคนที่ต่างเป็นข้อมูล catalog ไม่ใช่ pixel defect",
+      "shots": {
+        "390": {
+          "actual": "actual/Landing-390.png",
+          "canvas": "canvas/Landing-390.png",
+          "actualViewport": "viewport/actual-Landing-390.png",
+          "canvasViewport": "viewport/canvas-Landing-390.png",
+          "nativeMobile": false,
+          "route": "/",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Landing-1440.png",
+          "canvas": "canvas/Landing-1440.png",
+          "actualViewport": "viewport/actual-Landing-1440.png",
+          "canvasViewport": "viewport/canvas-Landing-1440.png",
+          "nativeMobile": false,
+          "route": "/",
+          "width": 1440,
+          "height": 2200
+        }
+      }
+    },
+    {
+      "id": "Checkout",
+      "file": "Checkout.dc.html",
+      "title": "R2 · ชำระเงิน (บัตร · PromptPay · โอน + หัก ณ ที่จ่าย)",
+      "board": {
+        "x": 1520,
+        "y": 22900,
+        "w": 1440,
+        "h": 1400,
+        "title": "R2 · ชำระเงิน (บัตร · PromptPay · โอน + หัก ณ ที่จ่าย)",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "P1",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [
+        "VD03",
+        "VD01"
+      ],
+      "note": "เลือกโอนเงิน/ข้อมูลภาษีตัวอย่าง แต่ไม่กดขอ invoice หรือชำระ; ข้อมูลธนาคารในแบบกับสถานะก่อนออก invoice จริงเป็นคนละขั้นของข้อมูล",
+      "shots": {
+        "390": {
+          "actual": "actual/Checkout-390.png",
+          "canvas": "canvas/Checkout-390.png",
+          "actualViewport": "viewport/actual-Checkout-390.png",
+          "canvasViewport": "viewport/canvas-Checkout-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/billing/checkout?plan=team_m",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Checkout-1440.png",
+          "canvas": "canvas/Checkout-1440.png",
+          "actualViewport": "viewport/actual-Checkout-1440.png",
+          "canvasViewport": "viewport/canvas-Checkout-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/billing/checkout?plan=team_m",
+          "width": 1440,
+          "height": 1400
+        }
+      }
+    },
+    {
+      "id": "Localization",
+      "file": "Localization.dc.html",
+      "title": "R3 · ภาษา TH / EN",
+      "board": {
+        "x": 3040,
+        "y": 22900,
+        "w": 1440,
+        "h": 1100,
+        "title": "R3 · ภาษา TH / EN",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "pattern",
+      "kind": "บอร์ดแนวทาง/องค์ประกอบ",
+      "findingIds": [],
+      "note": "R3 เป็นบอร์ดตัวอย่างและกติกา เปรียบเทียบ controls ที่ Profile และ Workspace menu ไม่ถือว่าตารางอธิบายใน Canvas เป็นหน้าที่ต้องสร้าง",
+      "shots": {
+        "390": {
+          "actual": "actual/Localization-390.png",
+          "canvas": "canvas/Localization-390.png",
+          "actualViewport": "viewport/actual-Localization-390.png",
+          "canvasViewport": "viewport/canvas-Localization-390.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/profile?tab=profile",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Localization-1440.png",
+          "canvas": "canvas/Localization-1440.png",
+          "actualViewport": "viewport/actual-Localization-1440.png",
+          "canvasViewport": "viewport/canvas-Localization-1440.png",
+          "nativeMobile": false,
+          "route": "/w/visual-audit/profile?tab=profile",
+          "width": 1440,
+          "height": 1100
+        }
+      }
+    },
+    {
+      "id": "Legal",
+      "file": "Legal.dc.html",
+      "title": "R4 · หน้ากฎหมาย + Cookie consent",
+      "board": {
+        "x": 4560,
+        "y": 22900,
+        "w": 1440,
+        "h": 1300,
+        "title": "R4 · หน้ากฎหมาย + Cookie consent",
+        "expand": "fill",
+        "is_interactive": true
+      },
+      "priority": "close",
+      "kind": "หน้าจอ/สถานะ UI จริง",
+      "findingIds": [],
+      "note": "เทียบเอกสาร terms และ Cookie consent; API ยังไม่มีเอกสารเผยแพร่จึงใช้ข้อความตัวอย่างของ UI — ไม่ได้อนุมัติเนื้อหากฎหมาย",
+      "shots": {
+        "390": {
+          "actual": "actual/Legal-390.png",
+          "canvas": "canvas/Legal-390.png",
+          "actualViewport": "viewport/actual-Legal-390.png",
+          "canvasViewport": "viewport/canvas-Legal-390.png",
+          "nativeMobile": false,
+          "route": "/legal/terms",
+          "width": 390,
+          "height": 844
+        },
+        "1440": {
+          "actual": "actual/Legal-1440.png",
+          "canvas": "canvas/Legal-1440.png",
+          "actualViewport": "viewport/actual-Legal-1440.png",
+          "canvasViewport": "viewport/canvas-Legal-1440.png",
+          "nativeMobile": false,
+          "route": "/legal/terms",
+          "width": 1440,
+          "height": 1300
+        }
+      }
+    }
+  ],
+  "findings": [
+    {
+      "id": "VD01",
+      "priority": "P2",
+      "title": "Sidebar desktop กว้างและจัดเมนูต่างจากแบบ",
+      "boards": [
+        "Main",
+        "Table",
+        "Home",
+        "MyTasks",
+        "Inbox",
+        "Profile"
+      ],
+      "lane": "W00",
+      "files": [
+        "apps/web/src/styles/tokens.css",
+        "apps/web/src/styles/globals.css",
+        "apps/web/src/components/shell/workspace-shell.tsx"
+      ],
+      "expected": "Canvas Main/Table ที่ 1440: Sidebar ≈220.6 px; Admin Console อยู่ด้านล่าง",
+      "actual": "UI ใช้ 240 px; เพิ่มกลุ่ม ADMIN CONSOLE และ Billing ในช่วงกลาง; ชื่อโปรเจกต์ตัดหนึ่งบรรทัดแทนการ wrap",
+      "accept": "เทียบตำแหน่งเส้นขอบ Sidebar และการ wrap ชื่อโปรเจกต์กับภาพที่ 1440; คงสิทธิ์และเมนูที่จำเป็นโดยจัดตำแหน่งตามแบบ",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD02",
+      "priority": "P1",
+      "title": "Project header สูญเสียองค์ประกอบและสูงกว่า Canvas",
+      "boards": [
+        "Main",
+        "Table",
+        "Kanban",
+        "Timeline",
+        "Gantt",
+        "Calendar",
+        "Members",
+        "Files",
+        "Backlog",
+        "ProjectSettings"
+      ],
+      "lane": "W00",
+      "files": [
+        "apps/web/src/components/shell/project-shell.tsx",
+        "apps/web/src/styles/globals.css"
+      ],
+      "expected": "Main/Table: header สูง 125 px; ชื่อ+สถานะ+Health+วันที่ในแถวเดียว มี Avatar stack, Invite, เมนู ⋯",
+      "actual": "header สูง 152 px; metadata แยกลงแถว; ไม่มี Avatar stack/Invite/เมนูโปรเจกต์/Health ใน header; เนื้อหาเริ่มต่ำลง 27 px",
+      "accept": "คืนองค์ประกอบครบและวัดความสูง/แนว baseline ตาม Canvas โดยข้อมูลชื่อยาวยังไม่ดัน layout",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD03",
+      "priority": "P1",
+      "title": "หน้าบริบทเฉพาะยังถูกครอบด้วย Workspace/Project shell เต็มชุด",
+      "boards": [
+        "AdminConsole",
+        "LeadDashboard",
+        "Reports",
+        "NotifyTemplates",
+        "Automation",
+        "Checkout"
+      ],
+      "lane": "W00 + W15/W18/W19",
+      "files": [
+        "apps/web/src/components/shell/workspace-shell.tsx",
+        "apps/web/src/components/shell/project-shell.tsx",
+        "apps/web/app/w/[ws]/admin/_components/admin-console.tsx"
+      ],
+      "expected": "N1/O1/O2/N2/P2/R2 ใช้ header/navigation เฉพาะบริบทตามแต่ละบอร์ด",
+      "actual": "Admin/Reports มีเมนู Workspace ซ้อนกับเมนูของหน้า; Lead/Reports/Automation มี project header เต็ม; Checkout มี sidebar/search/bell ที่แบบ R2 ไม่มี",
+      "accept": "กำหนด shell ตาม route/context ไม่ลบเมนูร่วมทุกหน้าแบบเหมารวม; พื้นที่เนื้อหาและจุดเริ่ม x/y ตรงบอร์ดของหน้านั้น",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD04",
+      "priority": "P1",
+      "title": "Mobile app bar และ bottom navigation ไม่ตรง M2–M7",
+      "boards": [
+        "MobileHome",
+        "MobileMyTasks",
+        "MobileInbox",
+        "MobileOverview",
+        "MobileKanban"
+      ],
+      "lane": "W00",
+      "files": [
+        "apps/web/src/components/shell/workspace-shell.tsx",
+        "apps/web/src/components/shell/project-shell.tsx",
+        "apps/web/src/styles/globals.css"
+      ],
+      "expected": "Mobile Canvas ใช้ app bar สีขาวตามบริบท; bottom bar มี Home/My Tasks/Projects/Inbox/Profile 5 รายการ",
+      "actual": "UI คง top bar มืด 56 px และ bottom bar มี 4 รายการ Home/My Tasks/Inbox/Projects; ไม่มี Profile และลำดับต่าง",
+      "accept": "เทียบทั้ง 5 บอร์ดที่ 390×844; header/back/menu และ 5 จุดนำทางตรงแบบ พร้อม active state ตามหน้า",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD05",
+      "priority": "P1",
+      "title": "Overview summary เปลี่ยนจากการ์ดรวมเป็น 5 การ์ด",
+      "boards": [
+        "Main",
+        "MobileOverview"
+      ],
+      "lane": "W05",
+      "files": [
+        "apps/web/app/w/[ws]/p/[key]/table/_components/overview.tsx",
+        "apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css"
+      ],
+      "expected": "การ์ดรวมมี donut progress, เวลา/งานเสร็จ, Go-live, Milestone และ Health ภายในกรอบเดียว",
+      "actual": "ใช้ .top grid 5 cards; ไม่มี donut; Health อยู่อีกกรอบ แยกการอ่านออกจากกัน",
+      "accept": "คืนโครง summary card desktop ตาม Main; mobile ใช้องค์ประกอบ M6 โดยไม่ stack 5 card desktop",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD06",
+      "priority": "P1",
+      "title": "Overview KPI/list/ข้อมูลโปรเจกต์จัดใหม่คนละโครง",
+      "boards": [
+        "Main"
+      ],
+      "lane": "W05",
+      "files": [
+        "apps/web/app/w/[ws]/p/[key]/table/_components/overview.tsx",
+        "apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css"
+      ],
+      "expected": "4 KPI cards แยกกรอบพร้อมจุดสี/เส้นเลือก; รายการมี checkbox และบรรทัด Module/กลุ่มงาน; ข้อมูลโปรเจกต์มีเป้าหมาย ขอบเขต เอกสาร อยู่ใต้กราฟด้านซ้าย",
+      "actual": "KPI เชื่อมเป็น tab strip ใน list card; รายการลดเป็นบรรทัดเดียว; project info ย้ายไปคอลัมน์ขวาและเหลือ Lead/จำนวนสมาชิก",
+      "accept": "คืนลำดับชั้นและตำแหน่ง section; อย่าใช้จำนวนรายการตัวอย่างเป็นเงื่อนไขจัด layout",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD07",
+      "priority": "P1",
+      "title": "Table toolbar ขาดชุดควบคุมในแบบ",
+      "boards": [
+        "Table"
+      ],
+      "lane": "W05",
+      "files": [
+        "apps/web/app/w/[ws]/p/[key]/table/_components/table-view.tsx"
+      ],
+      "expected": "มี Views งานของฉัน/Overdue/Sprint/Backlog; Filter, Group by, BA, Dev, Size, Sort, Columns, Import/Export, +Module/+Task",
+      "actual": "ใช้ search + select Status/Dev/Priority/ระดับ กับสอง toggle; ชุด Group by/BA/Size/Sort/Columns และ action หลายตัวไม่อยู่ใน toolbar ตามแบบ",
+      "accept": "ทำ inventory คอนโทรลตาม Table.dc.html ให้ครบ จัดแถวและระยะห่างตรงที่ 1440 พร้อมทางเข้าที่ใช้ได้บน 390",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD08",
+      "priority": "P1",
+      "title": "Table ใช้ native select ทุกแถวและสลับชุดคอลัมน์",
+      "boards": [
+        "Table"
+      ],
+      "lane": "W05",
+      "files": [
+        "apps/web/app/w/[ws]/p/[key]/table/_components/table-view.tsx",
+        "apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css"
+      ],
+      "expected": "สถานะเป็น pill/ตัวบ่งชี้สีในแถว; มี FR/Screen; header/column widths และแถวกลุ่มตามแบบ",
+      "actual": "Status/Priority เป็น select box ค้างทุกแถว, เพิ่ม Priority column แต่ไม่มี FR/Screen แบบ; row density และสี group ต่าง",
+      "accept": "แสดงค่าปกติให้เหมือน pill/cell ใน Canvas และเปิด editor เมื่อแก้; คืนคอลัมน์/width และ group hierarchy โดยยังคง edit ได้",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD09",
+      "priority": "P2",
+      "title": "Table bulk bar และ action ของแถวอยู่ผิดตำแหน่ง",
+      "boards": [
+        "Table"
+      ],
+      "lane": "W05",
+      "files": [
+        "apps/web/app/w/[ws]/p/[key]/table/_components/table-view.tsx",
+        "apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css"
+      ],
+      "expected": "เลือกแถวแล้ว bulk bar อยู่เหนือหัวตาราง; แถว Module/Phase มี action เพิ่มงานและท้ายกลุ่ม",
+      "actual": "bulk bar เป็นแถบ sticky ล่าง; action inline และแถวเพิ่ม Task/สรุปท้ายกลุ่มไม่ครบตามแบบ",
+      "accept": "เลือก 2 แถวแล้วเทียบตำแหน่ง bulk bar และ action ต่อ Module/Phase; ไม่บังแถวล่างบนมือถือ",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD10",
+      "priority": "P1",
+      "title": "Task create drawer ใช้กรอบเดียวกับ detail และ form arrangement ต่าง",
+      "boards": [
+        "TaskCreate"
+      ],
+      "lane": "W02",
+      "files": [
+        "apps/web/src/features/issue-drawer/create-issue.tsx",
+        "apps/web/src/features/issue-drawer/issue-drawer.module.css",
+        "apps/web/src/components/ui/overlays.tsx"
+      ],
+      "expected": "TaskCreate reference: drawer x=800,w=640 ที่ 1440 เริ่มใต้ header; กลุ่ม field/estimate/description/subtasks ตามแบบ B",
+      "actual": "UI x=680,w=760 เริ่ม y=0; ทำเป็นฟอร์มทั่วไปยาวพร้อม fields เรียงใหม่",
+      "accept": "แยก variant สร้าง Task ออกจาก detail/Bug; เทียบ width, top offset, field grouping และ footer ของ B โดยไม่ทำให้ validation หาย",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD11",
+      "priority": "P1",
+      "title": "สร้าง Bug/Story/Spike ใช้ drawer แทน centered modal",
+      "boards": [
+        "IssueCreate"
+      ],
+      "lane": "W02",
+      "files": [
+        "apps/web/src/features/issue-drawer/IssueDrawer.tsx",
+        "apps/web/src/features/issue-drawer/create-issue.tsx"
+      ],
+      "expected": "K1 เป็น modal กลางจอ x=290,w=860,y=40 ที่ 1440 พร้อมการ์ดเลือกประเภทและส่วนรายละเอียดเฉพาะประเภท",
+      "actual": "ทุกประเภทเปิด right drawer x=680,w=760,y=0; type selector เป็น segmented แถวเล็ก",
+      "accept": "ใช้ modal variant ตาม K1 และจัด severity/environment/steps/expected/actual ตามแบบ; ไม่ใช้ drawer ทั่วไปแทน",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD12",
+      "priority": "P1",
+      "title": "Task/Bug detail เปลี่ยน information architecture",
+      "boards": [
+        "TaskDetail",
+        "BugDetail"
+      ],
+      "lane": "W02",
+      "files": [
+        "apps/web/src/features/issue-drawer/issue-panel.tsx",
+        "apps/web/src/features/issue-drawer/issue-parts.tsx",
+        "apps/web/src/features/issue-drawer/issue-drawer.module.css"
+      ],
+      "expected": "Task detail มี drawer 860 px; Description/Checklist/Subtasks/Dependency/Development/Attachments/Comments ต่อเนื่อง; properties column กระชับ; Bug มี steps/expected/actual และ Verify/Reopen เด่น",
+      "actual": "drawer 760 px จากบนสุด; ใช้ 4 tabs แทน section ต่อเนื่อง; หน้าแรกของ Task เหลือ description/subtasks/watchers และไม่อยู่ใน composition เดิมของ Development/attachments/QA; Bug มี steps/expected/actual แต่ label ซ้ำและจัดแนวตั้งแทนคู่คอลัมน์",
+      "accept": "คืนโครง C/K2 และรายละเอียดที่สเปก API รองรับ; ใช้ไฟล์แนบที่ seed ไว้ยืนยันว่าแสดงได้จริง ไม่ตรวจเฉพาะกรณีไม่มีข้อมูล",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD13",
+      "priority": "P2",
+      "title": "Sub-task มี parent navigation ซ้ำและ rail/พื้นที่เนื้อหาต่าง",
+      "boards": [
+        "SubtaskModal",
+        "MobileSubtask"
+      ],
+      "lane": "W02",
+      "files": [
+        "apps/web/src/features/issue-drawer/IssueDrawer.tsx",
+        "apps/web/src/features/issue-drawer/issue-panel.tsx",
+        "apps/web/src/components/ui/overlays.tsx"
+      ],
+      "expected": "parent breadcrumb/rail เดียวในตำแหน่งที่กำหนด พร้อมแยก parent กับ child ชัดเจน",
+      "actual": "มี parentLabel ของ Drawer และ parent/sibling navigation ใน panel ซ้ำกัน เพิ่มความสูงก่อนชื่องาน; สัดส่วน rail ต่างจาก D/M4",
+      "accept": "เทียบทั้งการเปิดจาก Task แม่และ deep link โดยคงแถบ parent เพียงชุดที่เหมาะกับ viewport",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD14",
+      "priority": "P1",
+      "title": "Mobile Home ยังเป็น desktop ที่ยุบคอลัมน์",
+      "boards": [
+        "MobileHome"
+      ],
+      "lane": "W03",
+      "files": [
+        "apps/web/app/w/[ws]/my-tasks/_components/home-page.tsx"
+      ],
+      "expected": "M5 มีหัวต้อนรับ/ค้นหา, KPI 3 ช่องแถวเดียว, รออนุมัติ/วันนี้ก่อนโปรเจกต์ ใน 844 px",
+      "actual": "เพิ่ม top bar และ +New project; KPI desktop 5 ช่องกินหลายแถว ทำให้สิ่งที่ต้องทำเลื่อนลงมาก",
+      "accept": "วาง hierarchy ของ M5 โดยเฉพาะ; หน้าจอแรกต้องเห็นรายการที่รอการตัดสินใจเมื่อมีข้อมูล",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD15",
+      "priority": "P1",
+      "title": "Mobile Overview ไม่ใช้ summary compact ของ M6",
+      "boards": [
+        "MobileOverview"
+      ],
+      "lane": "W05 + W00",
+      "files": [
+        "apps/web/app/w/[ws]/p/[key]/table/_components/overview.tsx",
+        "apps/web/src/components/shell/project-shell.tsx"
+      ],
+      "expected": "M6 header รวม tabs สูง 127 px และ summary compact ที่มี progress/KPI 3 ช่อง ก่อน Milestone/ความเสี่ยง",
+      "actual": "UI topbar56 + project header168.5 =224.5 px; summary 5 cards เรียงลงมา ใช้พื้นที่ก่อน Milestone สูงมาก",
+      "accept": "header รวมใกล้ 127 px ตามแบบ และ summary/card order ของ M6; ไม่ถือว่าการไม่ล้นแนวนอนคือผ่าน Design",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD16",
+      "priority": "P1",
+      "title": "Mobile My Tasks/Inbox ไม่ใช้โครง toolbar และ list ของ M2/M3",
+      "boards": [
+        "MobileMyTasks",
+        "MobileInbox"
+      ],
+      "lane": "W03/W04 + W00",
+      "files": [
+        "apps/web/app/w/[ws]/my-tasks/_components/my-tasks-page.tsx",
+        "apps/web/app/w/[ws]/inbox/_components/inbox-page.tsx"
+      ],
+      "expected": "My Tasks มี avatar filters/search/filter icon และรายการกะทัดรัด; Inbox มี title/read-all inline และ 3 filter chips",
+      "actual": "ยังมีแถบ header กลางและชุด desktop filter/action button; Inbox filter หลายชุดและใช้พื้นที่แนวตั้งมากกว่า",
+      "accept": "เทียบ 390×844 ด้วย list state เดียวกัน; ให้ controls/spacing และจำนวนรายการที่มองเห็นใกล้แบบ ไม่ใช้จำนวนข้อมูลมาชดเชย",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD17",
+      "priority": "P2",
+      "title": "Mobile Kanban toolbar/card actions ต่างจาก M7",
+      "boards": [
+        "MobileKanban"
+      ],
+      "lane": "W06 + W00",
+      "files": [
+        "apps/web/app/w/[ws]/p/[key]/board/_components/kanban-board.tsx",
+        "apps/web/app/w/[ws]/p/[key]/board/_components/kanban.module.css"
+      ],
+      "expected": "M7 app bar ขาว, status chips กับ WIP notice, card กระชับและปุ่มย้ายไป",
+      "actual": "มี dark globalbar/project header/filters หลายแถว; card แสดงปุ่มลูกศร/เรียงหลายปุ่มเพิ่ม",
+      "accept": "เทียบคอลัมน์ In progress ที่เลือกตรงกัน; ลด action ให้ตรง M7 และคงการย้ายงานที่มือถือใช้ได้",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD18",
+      "priority": "P1",
+      "title": "Mobile Sub-task properties ดันเนื้อหาหลักพ้นจอ",
+      "boards": [
+        "MobileSubtask"
+      ],
+      "lane": "W02",
+      "files": [
+        "apps/web/src/features/issue-drawer/issue-panel.tsx",
+        "apps/web/src/features/issue-drawer/issue-drawer.module.css"
+      ],
+      "expected": "M4 แสดง title/status/ปุ่มเสร็จ, compact assignee/due/priority/progress, tabs และ checklist พร้อม comment composer ล่าง",
+      "actual": "มี header/breadcrumb ซ้ำ แล้วแสดง properties เป็นฟอร์มเต็มก่อน tabs; checklist และ composer ไม่อยู่ใน composition แรก",
+      "accept": "จัด layout mobile detail โดยเฉพาะ ไม่ใช้ properties panel desktop มาเรียงก่อน body; เทียบ 390×844",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD19",
+      "priority": "P1",
+      "title": "Import บนมือถือ: เมนูล่างบังปุ่มถัดไปจนแตะไม่ได้",
+      "boards": [
+        "ImportExcel"
+      ],
+      "lane": "W14 + W00",
+      "files": [
+        "apps/web/app/w/[ws]/import/_components/import.module.css",
+        "apps/web/src/styles/globals.css"
+      ],
+      "expected": "CTA ต้องอยู่เหนือ fixed navigation และแตะได้ที่ 390×844",
+      "actual": "ปุ่ม y=775,h=40; bottom nav y=788,h=56; nav บัง 27 px และรับ pointer แทนปุ่ม; Playwright click ล้มเหลวจริง",
+      "accept": "เพิ่ม safe-area/scroll padding/sticky footer ให้ปุ่มทั้งหมดพ้น bottom nav; ตรวจ pointer click ได้โดยไม่ force/keyboard workaround",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD20",
+      "priority": "P2",
+      "title": "Profile notification connections ขาดการ์ดกลุ่มทีม",
+      "boards": [
+        "Profile"
+      ],
+      "lane": "W17",
+      "files": [
+        "apps/web/app/w/[ws]/profile/_components/notify-tab.tsx"
+      ],
+      "expected": "I มี In-app, Email, LINE ส่วนตัว และ dashed card กลุ่มทีม LINE/Webhook ลิงก์ไป Project Settings",
+      "actual": "UI แสดง 3 personal connection cards ไม่มีตัวอธิบาย/ทางเข้ากลุ่มทีมตามแบบ",
+      "accept": "คืนการ์ดกลุ่มทีมและอธิบายว่าตั้งโดย PM ไม่ใช่ personal channel; matrix/connection spacing ตรง I",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD21",
+      "priority": "P2",
+      "title": "Invite dialog ใช้ controls/สัดส่วนต่างจาก H",
+      "boards": [
+        "WorkspaceMembers"
+      ],
+      "lane": "W10",
+      "files": [
+        "apps/web/app/w/[ws]/members/_components/invite-dialog.tsx"
+      ],
+      "expected": "Invite modal ตาม H มี role cards และข้อมูลเชิญ/โปรเจกต์/ตัวเลือกเสริมเรียงตามแบบ",
+      "actual": "เปิด modal ได้ แต่ใช้ select/field layout ทั่วไปและกรอบ Dialog ร่วม ทำให้ตำแหน่ง/ความกว้างไม่ตรง",
+      "accept": "เทียบสถานะ Invite เปิดแล้วทั้งสองขนาด พร้อม email หลายรายการและ role/permission ที่เหมือนกัน",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD22",
+      "priority": "P2",
+      "title": "Due request dialog ขาดตัวเพิ่มวันและจัดส่วนผลกระทบต่าง",
+      "boards": [
+        "DueRequest"
+      ],
+      "lane": "W02",
+      "files": [
+        "apps/web/src/features/issue-drawer/due-request.tsx"
+      ],
+      "expected": "K3 วางเพิ่มกี่วันทำการกับ Due ใหม่ร่วมกัน พร้อม reason และ impact/approvers ในลำดับกะทัดรัด",
+      "actual": "มี date input เต็มแถวอย่างเดียว และ section ผลกระทบเรียงยาว; ไม่มีตัวเพิ่มจำนวนวันในแบบ",
+      "accept": "คืน control จำนวนวันทำการที่คำนวณกับ WorkCalendar และ layout K3 ไม่คำนวณเป็นวันปฏิทินเอง",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD23",
+      "priority": "P1",
+      "title": "Delete confirmation ไม่มีตัวเลือกจัดการ Sub-task ตาม P3",
+      "boards": [
+        "ConfirmDialogs"
+      ],
+      "lane": "W02/A03",
+      "files": [
+        "apps/web/src/features/issue-drawer/issue-panel.tsx"
+      ],
+      "expected": "P3 มีสรุปผลกระทบและตัวเลือกจัดการงานลูก ก่อนยืนยันลบ",
+      "actual": "UI แจ้งจำนวนงานแล้วมี cancel/delete เท่านั้น ไม่มีตัวเลือกในแบบ",
+      "accept": "ยืนยัน product/API semantics ก่อนเพิ่มตัวเลือก; เมื่อเลือกวิธีใด ผลจริงต้องตรงข้อความและ Undo ครบตามวิธีนั้น",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD24",
+      "priority": "P2",
+      "title": "Notification toast ไม่รองรับ action ใน Canvas K4",
+      "boards": [
+        "Bell"
+      ],
+      "lane": "W04/W00",
+      "files": [
+        "apps/web/src/features/bell/Bell.tsx",
+        "apps/web/src/components/ui/toast.tsx"
+      ],
+      "expected": "K4 toast มี context งานและปุ่มเช่นดูงาน/อนุมัติ/ปฏิเสธ/ปิดตามเหตุการณ์",
+      "actual": "Bell ส่งแค่ข้อความจำนวน unread; ToastOptions รองรับ message/undo/duration จึงไม่มี notification actions",
+      "accept": "เพิ่ม variant/action ตามสิทธิ์ของ event; คง generic undo toast และไม่แสดงปุ่มอนุมัติแก่ผู้ไม่มีสิทธิ์",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD25",
+      "priority": "P2",
+      "title": "Command palette อยู่สูงกว่าแบบ 56 px",
+      "boards": [
+        "Search"
+      ],
+      "lane": "W16",
+      "files": [
+        "apps/web/src/features/command-palette/palette.module.css"
+      ],
+      "expected": "P1 palette x=380,w=680,y=128 ที่ 1440",
+      "actual": "UI กำหนด top:72px; ความกว้าง680ถูกแล้วแต่ตำแหน่งและกลุ่ม hint/footer ต่าง",
+      "accept": "คืน top offset และ spacing ของ header/result/footer ตาม P1 โดย mobile ยังเปิดพอดี viewport",
+      "status": "รอแก้"
+    },
+    {
+      "id": "VD26",
+      "priority": "P2",
+      "title": "New Project template choices จัด grid ต่างจาก A",
+      "boards": [
+        "NewProject"
+      ],
+      "lane": "W13",
+      "files": [
+        "apps/web/app/w/[ws]/new-project/_components"
+      ],
+      "expected": "A วาง Scrum/Kanban/Waterfall 3 ตัวเลือกในแถวและ Blank แถวถัดไป",
+      "actual": "UI วาง 4 ตัวเลือกเป็น 2×2 ทำให้ความสูงและแนวปุ่มถัดไปเปลี่ยน",
+      "accept": "จัด template grid/summary/stepper ตาม A ที่1440 และ responsive ที่390; ใช้สถานะกรอกข้อมูลเดียวกันก่อนเทียบ",
+      "status": "รอแก้"
+    }
+  ]
+}

@@ -1,0 +1,469 @@
+[
+  {
+    "id": "VD01",
+    "priority": "P2",
+    "title": "Sidebar desktop กว้างและจัดเมนูต่างจากแบบ",
+    "boards": [
+      "Main",
+      "Table",
+      "Home",
+      "MyTasks",
+      "Inbox",
+      "Profile"
+    ],
+    "lane": "W00",
+    "files": [
+      "apps/web/src/styles/tokens.css",
+      "apps/web/src/styles/globals.css",
+      "apps/web/src/components/shell/workspace-shell.tsx"
+    ],
+    "expected": "Canvas Main/Table ที่ 1440: Sidebar ≈220.6 px; Admin Console อยู่ด้านล่าง",
+    "actual": "UI ใช้ 240 px; เพิ่มกลุ่ม ADMIN CONSOLE และ Billing ในช่วงกลาง; ชื่อโปรเจกต์ตัดหนึ่งบรรทัดแทนการ wrap",
+    "accept": "เทียบตำแหน่งเส้นขอบ Sidebar และการ wrap ชื่อโปรเจกต์กับภาพที่ 1440; คงสิทธิ์และเมนูที่จำเป็นโดยจัดตำแหน่งตามแบบ",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD02",
+    "priority": "P1",
+    "title": "Project header สูญเสียองค์ประกอบและสูงกว่า Canvas",
+    "boards": [
+      "Main",
+      "Table",
+      "Kanban",
+      "Timeline",
+      "Gantt",
+      "Calendar",
+      "Members",
+      "Files",
+      "Backlog",
+      "ProjectSettings"
+    ],
+    "lane": "W00",
+    "files": [
+      "apps/web/src/components/shell/project-shell.tsx",
+      "apps/web/src/styles/globals.css"
+    ],
+    "expected": "Main/Table: header สูง 125 px; ชื่อ+สถานะ+Health+วันที่ในแถวเดียว มี Avatar stack, Invite, เมนู ⋯",
+    "actual": "header สูง 152 px; metadata แยกลงแถว; ไม่มี Avatar stack/Invite/เมนูโปรเจกต์/Health ใน header; เนื้อหาเริ่มต่ำลง 27 px",
+    "accept": "คืนองค์ประกอบครบและวัดความสูง/แนว baseline ตาม Canvas โดยข้อมูลชื่อยาวยังไม่ดัน layout",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD03",
+    "priority": "P1",
+    "title": "หน้าบริบทเฉพาะยังถูกครอบด้วย Workspace/Project shell เต็มชุด",
+    "boards": [
+      "AdminConsole",
+      "LeadDashboard",
+      "Reports",
+      "NotifyTemplates",
+      "Automation",
+      "Checkout"
+    ],
+    "lane": "W00 + W15/W18/W19",
+    "files": [
+      "apps/web/src/components/shell/workspace-shell.tsx",
+      "apps/web/src/components/shell/project-shell.tsx",
+      "apps/web/app/w/[ws]/admin/_components/admin-console.tsx"
+    ],
+    "expected": "N1/O1/O2/N2/P2/R2 ใช้ header/navigation เฉพาะบริบทตามแต่ละบอร์ด",
+    "actual": "Admin/Reports มีเมนู Workspace ซ้อนกับเมนูของหน้า; Lead/Reports/Automation มี project header เต็ม; Checkout มี sidebar/search/bell ที่แบบ R2 ไม่มี",
+    "accept": "กำหนด shell ตาม route/context ไม่ลบเมนูร่วมทุกหน้าแบบเหมารวม; พื้นที่เนื้อหาและจุดเริ่ม x/y ตรงบอร์ดของหน้านั้น",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD04",
+    "priority": "P1",
+    "title": "Mobile app bar และ bottom navigation ไม่ตรง M2–M7",
+    "boards": [
+      "MobileHome",
+      "MobileMyTasks",
+      "MobileInbox",
+      "MobileOverview",
+      "MobileKanban"
+    ],
+    "lane": "W00",
+    "files": [
+      "apps/web/src/components/shell/workspace-shell.tsx",
+      "apps/web/src/components/shell/project-shell.tsx",
+      "apps/web/src/styles/globals.css"
+    ],
+    "expected": "Mobile Canvas ใช้ app bar สีขาวตามบริบท; bottom bar มี Home/My Tasks/Projects/Inbox/Profile 5 รายการ",
+    "actual": "UI คง top bar มืด 56 px และ bottom bar มี 4 รายการ Home/My Tasks/Inbox/Projects; ไม่มี Profile และลำดับต่าง",
+    "accept": "เทียบทั้ง 5 บอร์ดที่ 390×844; header/back/menu และ 5 จุดนำทางตรงแบบ พร้อม active state ตามหน้า",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD05",
+    "priority": "P1",
+    "title": "Overview summary เปลี่ยนจากการ์ดรวมเป็น 5 การ์ด",
+    "boards": [
+      "Main",
+      "MobileOverview"
+    ],
+    "lane": "W05",
+    "files": [
+      "apps/web/app/w/[ws]/p/[key]/table/_components/overview.tsx",
+      "apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css"
+    ],
+    "expected": "การ์ดรวมมี donut progress, เวลา/งานเสร็จ, Go-live, Milestone และ Health ภายในกรอบเดียว",
+    "actual": "ใช้ .top grid 5 cards; ไม่มี donut; Health อยู่อีกกรอบ แยกการอ่านออกจากกัน",
+    "accept": "คืนโครง summary card desktop ตาม Main; mobile ใช้องค์ประกอบ M6 โดยไม่ stack 5 card desktop",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD06",
+    "priority": "P1",
+    "title": "Overview KPI/list/ข้อมูลโปรเจกต์จัดใหม่คนละโครง",
+    "boards": [
+      "Main"
+    ],
+    "lane": "W05",
+    "files": [
+      "apps/web/app/w/[ws]/p/[key]/table/_components/overview.tsx",
+      "apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css"
+    ],
+    "expected": "4 KPI cards แยกกรอบพร้อมจุดสี/เส้นเลือก; รายการมี checkbox และบรรทัด Module/กลุ่มงาน; ข้อมูลโปรเจกต์มีเป้าหมาย ขอบเขต เอกสาร อยู่ใต้กราฟด้านซ้าย",
+    "actual": "KPI เชื่อมเป็น tab strip ใน list card; รายการลดเป็นบรรทัดเดียว; project info ย้ายไปคอลัมน์ขวาและเหลือ Lead/จำนวนสมาชิก",
+    "accept": "คืนลำดับชั้นและตำแหน่ง section; อย่าใช้จำนวนรายการตัวอย่างเป็นเงื่อนไขจัด layout",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD07",
+    "priority": "P1",
+    "title": "Table toolbar ขาดชุดควบคุมในแบบ",
+    "boards": [
+      "Table"
+    ],
+    "lane": "W05",
+    "files": [
+      "apps/web/app/w/[ws]/p/[key]/table/_components/table-view.tsx"
+    ],
+    "expected": "มี Views งานของฉัน/Overdue/Sprint/Backlog; Filter, Group by, BA, Dev, Size, Sort, Columns, Import/Export, +Module/+Task",
+    "actual": "ใช้ search + select Status/Dev/Priority/ระดับ กับสอง toggle; ชุด Group by/BA/Size/Sort/Columns และ action หลายตัวไม่อยู่ใน toolbar ตามแบบ",
+    "accept": "ทำ inventory คอนโทรลตาม Table.dc.html ให้ครบ จัดแถวและระยะห่างตรงที่ 1440 พร้อมทางเข้าที่ใช้ได้บน 390",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD08",
+    "priority": "P1",
+    "title": "Table ใช้ native select ทุกแถวและสลับชุดคอลัมน์",
+    "boards": [
+      "Table"
+    ],
+    "lane": "W05",
+    "files": [
+      "apps/web/app/w/[ws]/p/[key]/table/_components/table-view.tsx",
+      "apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css"
+    ],
+    "expected": "สถานะเป็น pill/ตัวบ่งชี้สีในแถว; มี FR/Screen; header/column widths และแถวกลุ่มตามแบบ",
+    "actual": "Status/Priority เป็น select box ค้างทุกแถว, เพิ่ม Priority column แต่ไม่มี FR/Screen แบบ; row density และสี group ต่าง",
+    "accept": "แสดงค่าปกติให้เหมือน pill/cell ใน Canvas และเปิด editor เมื่อแก้; คืนคอลัมน์/width และ group hierarchy โดยยังคง edit ได้",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD09",
+    "priority": "P2",
+    "title": "Table bulk bar และ action ของแถวอยู่ผิดตำแหน่ง",
+    "boards": [
+      "Table"
+    ],
+    "lane": "W05",
+    "files": [
+      "apps/web/app/w/[ws]/p/[key]/table/_components/table-view.tsx",
+      "apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css"
+    ],
+    "expected": "เลือกแถวแล้ว bulk bar อยู่เหนือหัวตาราง; แถว Module/Phase มี action เพิ่มงานและท้ายกลุ่ม",
+    "actual": "bulk bar เป็นแถบ sticky ล่าง; action inline และแถวเพิ่ม Task/สรุปท้ายกลุ่มไม่ครบตามแบบ",
+    "accept": "เลือก 2 แถวแล้วเทียบตำแหน่ง bulk bar และ action ต่อ Module/Phase; ไม่บังแถวล่างบนมือถือ",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD10",
+    "priority": "P1",
+    "title": "Task create drawer ใช้กรอบเดียวกับ detail และ form arrangement ต่าง",
+    "boards": [
+      "TaskCreate"
+    ],
+    "lane": "W02",
+    "files": [
+      "apps/web/src/features/issue-drawer/create-issue.tsx",
+      "apps/web/src/features/issue-drawer/issue-drawer.module.css",
+      "apps/web/src/components/ui/overlays.tsx"
+    ],
+    "expected": "TaskCreate reference: drawer x=800,w=640 ที่ 1440 เริ่มใต้ header; กลุ่ม field/estimate/description/subtasks ตามแบบ B",
+    "actual": "UI x=680,w=760 เริ่ม y=0; ทำเป็นฟอร์มทั่วไปยาวพร้อม fields เรียงใหม่",
+    "accept": "แยก variant สร้าง Task ออกจาก detail/Bug; เทียบ width, top offset, field grouping และ footer ของ B โดยไม่ทำให้ validation หาย",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD11",
+    "priority": "P1",
+    "title": "สร้าง Bug/Story/Spike ใช้ drawer แทน centered modal",
+    "boards": [
+      "IssueCreate"
+    ],
+    "lane": "W02",
+    "files": [
+      "apps/web/src/features/issue-drawer/IssueDrawer.tsx",
+      "apps/web/src/features/issue-drawer/create-issue.tsx"
+    ],
+    "expected": "K1 เป็น modal กลางจอ x=290,w=860,y=40 ที่ 1440 พร้อมการ์ดเลือกประเภทและส่วนรายละเอียดเฉพาะประเภท",
+    "actual": "ทุกประเภทเปิด right drawer x=680,w=760,y=0; type selector เป็น segmented แถวเล็ก",
+    "accept": "ใช้ modal variant ตาม K1 และจัด severity/environment/steps/expected/actual ตามแบบ; ไม่ใช้ drawer ทั่วไปแทน",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD12",
+    "priority": "P1",
+    "title": "Task/Bug detail เปลี่ยน information architecture",
+    "boards": [
+      "TaskDetail",
+      "BugDetail"
+    ],
+    "lane": "W02",
+    "files": [
+      "apps/web/src/features/issue-drawer/issue-panel.tsx",
+      "apps/web/src/features/issue-drawer/issue-parts.tsx",
+      "apps/web/src/features/issue-drawer/issue-drawer.module.css"
+    ],
+    "expected": "Task detail มี drawer 860 px; Description/Checklist/Subtasks/Dependency/Development/Attachments/Comments ต่อเนื่อง; properties column กระชับ; Bug มี steps/expected/actual และ Verify/Reopen เด่น",
+    "actual": "drawer 760 px จากบนสุด; ใช้ 4 tabs แทน section ต่อเนื่อง; หน้าแรกของ Task เหลือ description/subtasks/watchers และไม่อยู่ใน composition เดิมของ Development/attachments/QA; Bug มี steps/expected/actual แต่ label ซ้ำและจัดแนวตั้งแทนคู่คอลัมน์",
+    "accept": "คืนโครง C/K2 และรายละเอียดที่สเปก API รองรับ; ใช้ไฟล์แนบที่ seed ไว้ยืนยันว่าแสดงได้จริง ไม่ตรวจเฉพาะกรณีไม่มีข้อมูล",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD13",
+    "priority": "P2",
+    "title": "Sub-task มี parent navigation ซ้ำและ rail/พื้นที่เนื้อหาต่าง",
+    "boards": [
+      "SubtaskModal",
+      "MobileSubtask"
+    ],
+    "lane": "W02",
+    "files": [
+      "apps/web/src/features/issue-drawer/IssueDrawer.tsx",
+      "apps/web/src/features/issue-drawer/issue-panel.tsx",
+      "apps/web/src/components/ui/overlays.tsx"
+    ],
+    "expected": "parent breadcrumb/rail เดียวในตำแหน่งที่กำหนด พร้อมแยก parent กับ child ชัดเจน",
+    "actual": "มี parentLabel ของ Drawer และ parent/sibling navigation ใน panel ซ้ำกัน เพิ่มความสูงก่อนชื่องาน; สัดส่วน rail ต่างจาก D/M4",
+    "accept": "เทียบทั้งการเปิดจาก Task แม่และ deep link โดยคงแถบ parent เพียงชุดที่เหมาะกับ viewport",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD14",
+    "priority": "P1",
+    "title": "Mobile Home ยังเป็น desktop ที่ยุบคอลัมน์",
+    "boards": [
+      "MobileHome"
+    ],
+    "lane": "W03",
+    "files": [
+      "apps/web/app/w/[ws]/my-tasks/_components/home-page.tsx"
+    ],
+    "expected": "M5 มีหัวต้อนรับ/ค้นหา, KPI 3 ช่องแถวเดียว, รออนุมัติ/วันนี้ก่อนโปรเจกต์ ใน 844 px",
+    "actual": "เพิ่ม top bar และ +New project; KPI desktop 5 ช่องกินหลายแถว ทำให้สิ่งที่ต้องทำเลื่อนลงมาก",
+    "accept": "วาง hierarchy ของ M5 โดยเฉพาะ; หน้าจอแรกต้องเห็นรายการที่รอการตัดสินใจเมื่อมีข้อมูล",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD15",
+    "priority": "P1",
+    "title": "Mobile Overview ไม่ใช้ summary compact ของ M6",
+    "boards": [
+      "MobileOverview"
+    ],
+    "lane": "W05 + W00",
+    "files": [
+      "apps/web/app/w/[ws]/p/[key]/table/_components/overview.tsx",
+      "apps/web/src/components/shell/project-shell.tsx"
+    ],
+    "expected": "M6 header รวม tabs สูง 127 px และ summary compact ที่มี progress/KPI 3 ช่อง ก่อน Milestone/ความเสี่ยง",
+    "actual": "UI topbar56 + project header168.5 =224.5 px; summary 5 cards เรียงลงมา ใช้พื้นที่ก่อน Milestone สูงมาก",
+    "accept": "header รวมใกล้ 127 px ตามแบบ และ summary/card order ของ M6; ไม่ถือว่าการไม่ล้นแนวนอนคือผ่าน Design",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD16",
+    "priority": "P1",
+    "title": "Mobile My Tasks/Inbox ไม่ใช้โครง toolbar และ list ของ M2/M3",
+    "boards": [
+      "MobileMyTasks",
+      "MobileInbox"
+    ],
+    "lane": "W03/W04 + W00",
+    "files": [
+      "apps/web/app/w/[ws]/my-tasks/_components/my-tasks-page.tsx",
+      "apps/web/app/w/[ws]/inbox/_components/inbox-page.tsx"
+    ],
+    "expected": "My Tasks มี avatar filters/search/filter icon และรายการกะทัดรัด; Inbox มี title/read-all inline และ 3 filter chips",
+    "actual": "ยังมีแถบ header กลางและชุด desktop filter/action button; Inbox filter หลายชุดและใช้พื้นที่แนวตั้งมากกว่า",
+    "accept": "เทียบ 390×844 ด้วย list state เดียวกัน; ให้ controls/spacing และจำนวนรายการที่มองเห็นใกล้แบบ ไม่ใช้จำนวนข้อมูลมาชดเชย",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD17",
+    "priority": "P2",
+    "title": "Mobile Kanban toolbar/card actions ต่างจาก M7",
+    "boards": [
+      "MobileKanban"
+    ],
+    "lane": "W06 + W00",
+    "files": [
+      "apps/web/app/w/[ws]/p/[key]/board/_components/kanban-board.tsx",
+      "apps/web/app/w/[ws]/p/[key]/board/_components/kanban.module.css"
+    ],
+    "expected": "M7 app bar ขาว, status chips กับ WIP notice, card กระชับและปุ่มย้ายไป",
+    "actual": "มี dark globalbar/project header/filters หลายแถว; card แสดงปุ่มลูกศร/เรียงหลายปุ่มเพิ่ม",
+    "accept": "เทียบคอลัมน์ In progress ที่เลือกตรงกัน; ลด action ให้ตรง M7 และคงการย้ายงานที่มือถือใช้ได้",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD18",
+    "priority": "P1",
+    "title": "Mobile Sub-task properties ดันเนื้อหาหลักพ้นจอ",
+    "boards": [
+      "MobileSubtask"
+    ],
+    "lane": "W02",
+    "files": [
+      "apps/web/src/features/issue-drawer/issue-panel.tsx",
+      "apps/web/src/features/issue-drawer/issue-drawer.module.css"
+    ],
+    "expected": "M4 แสดง title/status/ปุ่มเสร็จ, compact assignee/due/priority/progress, tabs และ checklist พร้อม comment composer ล่าง",
+    "actual": "มี header/breadcrumb ซ้ำ แล้วแสดง properties เป็นฟอร์มเต็มก่อน tabs; checklist และ composer ไม่อยู่ใน composition แรก",
+    "accept": "จัด layout mobile detail โดยเฉพาะ ไม่ใช้ properties panel desktop มาเรียงก่อน body; เทียบ 390×844",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD19",
+    "priority": "P1",
+    "title": "Import บนมือถือ: เมนูล่างบังปุ่มถัดไปจนแตะไม่ได้",
+    "boards": [
+      "ImportExcel"
+    ],
+    "lane": "W14 + W00",
+    "files": [
+      "apps/web/app/w/[ws]/import/_components/import.module.css",
+      "apps/web/src/styles/globals.css"
+    ],
+    "expected": "CTA ต้องอยู่เหนือ fixed navigation และแตะได้ที่ 390×844",
+    "actual": "ปุ่ม y=775,h=40; bottom nav y=788,h=56; nav บัง 27 px และรับ pointer แทนปุ่ม; Playwright click ล้มเหลวจริง",
+    "accept": "เพิ่ม safe-area/scroll padding/sticky footer ให้ปุ่มทั้งหมดพ้น bottom nav; ตรวจ pointer click ได้โดยไม่ force/keyboard workaround",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD20",
+    "priority": "P2",
+    "title": "Profile notification connections ขาดการ์ดกลุ่มทีม",
+    "boards": [
+      "Profile"
+    ],
+    "lane": "W17",
+    "files": [
+      "apps/web/app/w/[ws]/profile/_components/notify-tab.tsx"
+    ],
+    "expected": "I มี In-app, Email, LINE ส่วนตัว และ dashed card กลุ่มทีม LINE/Webhook ลิงก์ไป Project Settings",
+    "actual": "UI แสดง 3 personal connection cards ไม่มีตัวอธิบาย/ทางเข้ากลุ่มทีมตามแบบ",
+    "accept": "คืนการ์ดกลุ่มทีมและอธิบายว่าตั้งโดย PM ไม่ใช่ personal channel; matrix/connection spacing ตรง I",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD21",
+    "priority": "P2",
+    "title": "Invite dialog ใช้ controls/สัดส่วนต่างจาก H",
+    "boards": [
+      "WorkspaceMembers"
+    ],
+    "lane": "W10",
+    "files": [
+      "apps/web/app/w/[ws]/members/_components/invite-dialog.tsx"
+    ],
+    "expected": "Invite modal ตาม H มี role cards และข้อมูลเชิญ/โปรเจกต์/ตัวเลือกเสริมเรียงตามแบบ",
+    "actual": "เปิด modal ได้ แต่ใช้ select/field layout ทั่วไปและกรอบ Dialog ร่วม ทำให้ตำแหน่ง/ความกว้างไม่ตรง",
+    "accept": "เทียบสถานะ Invite เปิดแล้วทั้งสองขนาด พร้อม email หลายรายการและ role/permission ที่เหมือนกัน",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD22",
+    "priority": "P2",
+    "title": "Due request dialog ขาดตัวเพิ่มวันและจัดส่วนผลกระทบต่าง",
+    "boards": [
+      "DueRequest"
+    ],
+    "lane": "W02",
+    "files": [
+      "apps/web/src/features/issue-drawer/due-request.tsx"
+    ],
+    "expected": "K3 วางเพิ่มกี่วันทำการกับ Due ใหม่ร่วมกัน พร้อม reason และ impact/approvers ในลำดับกะทัดรัด",
+    "actual": "มี date input เต็มแถวอย่างเดียว และ section ผลกระทบเรียงยาว; ไม่มีตัวเพิ่มจำนวนวันในแบบ",
+    "accept": "คืน control จำนวนวันทำการที่คำนวณกับ WorkCalendar และ layout K3 ไม่คำนวณเป็นวันปฏิทินเอง",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD23",
+    "priority": "P1",
+    "title": "Delete confirmation ไม่มีตัวเลือกจัดการ Sub-task ตาม P3",
+    "boards": [
+      "ConfirmDialogs"
+    ],
+    "lane": "W02/A03",
+    "files": [
+      "apps/web/src/features/issue-drawer/issue-panel.tsx"
+    ],
+    "expected": "P3 มีสรุปผลกระทบและตัวเลือกจัดการงานลูก ก่อนยืนยันลบ",
+    "actual": "UI แจ้งจำนวนงานแล้วมี cancel/delete เท่านั้น ไม่มีตัวเลือกในแบบ",
+    "accept": "ยืนยัน product/API semantics ก่อนเพิ่มตัวเลือก; เมื่อเลือกวิธีใด ผลจริงต้องตรงข้อความและ Undo ครบตามวิธีนั้น",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD24",
+    "priority": "P2",
+    "title": "Notification toast ไม่รองรับ action ใน Canvas K4",
+    "boards": [
+      "Bell"
+    ],
+    "lane": "W04/W00",
+    "files": [
+      "apps/web/src/features/bell/Bell.tsx",
+      "apps/web/src/components/ui/toast.tsx"
+    ],
+    "expected": "K4 toast มี context งานและปุ่มเช่นดูงาน/อนุมัติ/ปฏิเสธ/ปิดตามเหตุการณ์",
+    "actual": "Bell ส่งแค่ข้อความจำนวน unread; ToastOptions รองรับ message/undo/duration จึงไม่มี notification actions",
+    "accept": "เพิ่ม variant/action ตามสิทธิ์ของ event; คง generic undo toast และไม่แสดงปุ่มอนุมัติแก่ผู้ไม่มีสิทธิ์",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD25",
+    "priority": "P2",
+    "title": "Command palette อยู่สูงกว่าแบบ 56 px",
+    "boards": [
+      "Search"
+    ],
+    "lane": "W16",
+    "files": [
+      "apps/web/src/features/command-palette/palette.module.css"
+    ],
+    "expected": "P1 palette x=380,w=680,y=128 ที่ 1440",
+    "actual": "UI กำหนด top:72px; ความกว้าง680ถูกแล้วแต่ตำแหน่งและกลุ่ม hint/footer ต่าง",
+    "accept": "คืน top offset และ spacing ของ header/result/footer ตาม P1 โดย mobile ยังเปิดพอดี viewport",
+    "status": "รอแก้"
+  },
+  {
+    "id": "VD26",
+    "priority": "P2",
+    "title": "New Project template choices จัด grid ต่างจาก A",
+    "boards": [
+      "NewProject"
+    ],
+    "lane": "W13",
+    "files": [
+      "apps/web/app/w/[ws]/new-project/_components"
+    ],
+    "expected": "A วาง Scrum/Kanban/Waterfall 3 ตัวเลือกในแถวและ Blank แถวถัดไป",
+    "actual": "UI วาง 4 ตัวเลือกเป็น 2×2 ทำให้ความสูงและแนวปุ่มถัดไปเปลี่ยน",
+    "accept": "จัด template grid/summary/stepper ตาม A ที่1440 และ responsive ที่390; ใช้สถานะกรอกข้อมูลเดียวกันก่อนเทียบ",
+    "status": "รอแก้"
+  }
+]

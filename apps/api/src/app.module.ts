@@ -28,6 +28,7 @@ import { MeModule } from './me/me.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { OverviewModule } from './overview/overview.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
+import { OpenApiModule } from './openapi/openapi.module.js';
 import { PrivacyModule } from './privacy/privacy.module.js';
 import { ProjectStructureModule } from './project-structure/project-structure.module.js';
 import { ProjectsModule } from './projects/projects.module.js';
@@ -71,6 +72,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     OverviewModule,
     PaymentsModule,
     PrivacyModule,
+    OpenApiModule,
     ProjectStructureModule,
     ProjectsModule,
     PublicModule,

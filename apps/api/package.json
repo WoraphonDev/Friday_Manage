@@ -10,7 +10,8 @@
     "worker": "node dist/worker.js",
     "worker:dev": "pnpm build && node --env-file-if-exists=../../.env dist/worker.js",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "openapi": "UPDATE_OPENAPI=1 vitest run test/openapi.e2e.test.ts"
   },
   "devDependencies": {
     "@swc/cli": "^0.8.2",

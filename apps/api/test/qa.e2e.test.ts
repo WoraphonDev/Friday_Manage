@@ -160,6 +160,32 @@ describe('POST test-runs/{id}/create-bug', () => {
     expect([403, 404]).toContain((await guest.post(`${base}/${task.key}/test-runs/${fail.id}/create-bug`, {})).status);
     expect((await team.lead.post(`${base}/${task.key}/test-runs/${fail.id}/create-bug`, { severity: 'fatal' })).status).toBe(400);
   });
+
+  it('Guest Viewer เห็นผลทดสอบของงานที่แชร์ได้ แต่ไม่เห็นชื่อ/UUID ผู้ทดสอบ, Bug, ไฟล์ และบันทึก · Guest Member เห็นครบ (BUG-04)', async () => {
+    const task = await issue('งานที่แชร์ให้ลูกค้า');
+    await t.owner.query('UPDATE issues SET shared_with_guests = true WHERE id = $1', [task.id]);
+    const fail = (await team.lead.post(`${base}/${task.key}/test-runs`, { result: 'failed', note: 'Mick เจอปัญหาตอนกดจ่ายเงิน', commitSha: 'abc1234' })).body;
+    const bug = await team.lead.post(`${base}/${task.key}/test-runs/${fail.id}/create-bug`, { title: 'Bug ลับของทีม' });
+    expect(bug.status, JSON.stringify(bug.body)).toBe(201);
+
+    const seen = await guest.get(`${base}/${task.key}/test-runs`);
+    expect(seen.status, JSON.stringify(seen.body)).toBe(200);
+    const text = JSON.stringify(seen.body);
+    expect(text).not.toContain(team.leadId);
+    expect(text).not.toContain('Bug ลับของทีม');
+    expect(text).not.toContain(bug.body.key);
+    expect(text).not.toContain('Mick');
+    expect(seen.body.items[0]).toMatchObject({ result: 'failed', tester: { displayName: 'ทีมพัฒนา' }, bugs: [], files: [], note: null });
+    expect(seen.body.latest).toEqual(seen.body.items[0]);
+
+    // Guest Member (Workspace guest + Project member) ทำงานแบบ Member
+    const gm = await client(t.app);
+    await addMember(t.owner, team.slug, await signup(gm, 'guest-member@qa.example.com', 'Guest Member'), 'guest', { key: team.key, role: 'member' });
+    const full = await gm.get(`${base}/${task.key}/test-runs`);
+    expect(full.status).toBe(200);
+    expect(full.body.items[0].bugs).toEqual([{ key: bug.body.key, title: 'Bug ลับของทีม' }]);
+    expect(full.body.items[0].tester.id).toBe(team.leadId);
+  });
 });
 
 describe('time-logs', () => {

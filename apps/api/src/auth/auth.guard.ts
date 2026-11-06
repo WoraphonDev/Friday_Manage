@@ -21,7 +21,8 @@ export class AuthGuard implements CanActivate {
     const req = ctx.switchToHttp().getRequest<AppRequest>();
 
     // Webhook ขาเข้า (LINE, GitHub, Stripe …) เรียกจากเซิร์ฟเวอร์ภายนอกที่ไม่มีคุกกี้ จึงข้าม CSRF · แต่ละ route ต้องตรวจลายเซ็นของผู้ให้บริการเอง
-    const isHook = req.path.startsWith('/api/v1/hooks/');
+    // /storage/ = PUT/GET ของที่เก็บไฟล์ในเครื่อง (dev / test) ที่ยืนยันตัวตนด้วย token ใน URL ที่ลงลายมือชื่อแล้ว (งาน A11)
+    const isHook = req.path.startsWith('/api/v1/hooks/') || req.path.startsWith('/api/v1/storage/');
     if (!SAFE.has(req.method) && !isHook) {
       const cookie = req.cookies?.[CSRF_COOKIE];
       if (!cookie || cookie !== req.get('x-csrf-token')) {

@@ -34,3 +34,17 @@
 ## วิธีตรวจซ้ำ
 
 `docs/reviews/claude-review-repro.e2e.test.ts.txt` ตรวจ **พฤติกรรมผิดเดิม** หลังแก้จึงควรล้มทุกข้อ (R01–R14) · test ที่ยืนยันพฤติกรรมถูกต้องอยู่ใน suite ปกติตามตารางข้างบน
+
+## รอบตรวจรวม (full-system-audit-2026-11-06)
+
+แก้ครบ 5 รายการจาก [full-system-audit-2026-11-06.md](full-system-audit-2026-11-06.md) · `acceptance-repro.e2e.test.ts.txt` ของรอบนั้น (ตรวจพฤติกรรมที่ถูกต้อง) **ผ่าน 5/5** บนโค้ดที่รวมทั้งสาม PR แล้ว
+
+| ID | PR | สิ่งที่เปลี่ยน | Regression test |
+|---|---|---|---|
+| N01 | #78 | migration 0012 `subscriptions.source_invoice_id` · ปฏิเสธสลิปเลิกสิทธิ์เฉพาะใบที่เป็นแหล่งสิทธิ์ · คืนสิทธิ์ใบที่ชำระแล้วก่อนหน้าแทนการยกเลิก | `ops.e2e` (3 ข้อ) |
+| N02 | #78 | `canGrant` (ใช้ร่วมใน `@friday/db`, ล็อก subscription): ใบที่ใหม่กว่าและยังมีผลชนะ · สลิป / webhook / Ops confirm ของใบเก่าไม่เปลี่ยนแพ็กเกจ | `payments.e2e` (2 ข้อ), `ops.e2e` |
+| N03 | #76 | ตัดงานที่ทำแล้ว + ตรวจเงื่อนไขก่อนใช้โควตา 200 · โหลดทีละ 500 สูงสุด 20,000 ต่อกฎต่อรอบ | `automation-scan.e2e` (2 ข้อ) |
+| N04 | #76 | `actorFor()` ปฏิเสธผู้สร้างกฎที่ `users.disabled_at` → `failed` `creator_inactive` | `automation-scan.e2e` |
+| K01 | #77 | ผู้รับ digest = ใครที่เปิดช่องทางใดก็ได้ (Email เปิดเป็นค่าเริ่มต้น) · ไม่เปิด In-app ได้แถว `in_app = false` | `channels.e2e` (2 ข้อ) |
+
+ผลที่ผู้ใช้จะเห็นจาก K01: สมาชิกที่ไม่เคยตั้ง pref จะเริ่มได้ Daily digest ทาง Email ในวันทำการที่มีงาน (ตรงกับค่าเริ่มต้น Email ที่หน้า Profile แสดง)

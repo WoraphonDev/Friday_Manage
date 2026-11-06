@@ -1,4 +1,6 @@
-import { Placeholder } from "@/components/Placeholder";
-export default function Page() {
-  return <Placeholder task="W13" titleKey="nav.newProject" />;
+import { NewProjectWizard } from "./_components/new-project-wizard";
+
+export default async function Page({ params }: { params: Promise<{ ws: string }> }) {
+  const { ws } = await params;
+  return <NewProjectWizard ws={ws} />;
 }

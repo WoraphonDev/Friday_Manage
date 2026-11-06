@@ -1,0 +1,103 @@
+
+> friday-manage@ test /Users/mickitang/Documents/Friday_Manage/Friday_Manage
+> pnpm -r --workspace-concurrency=1 test
+
+Scope: 3 of 4 workspace projects
+
+> @friday/web@0.0.0 test /Users/mickitang/Documents/Friday_Manage/Friday_Manage/apps/web
+> vitest run
+
+
+ RUN  v5.1.0 /Users/mickitang/Documents/Friday_Manage/Friday_Manage/apps/web
+
+
+ Test Files  7 passed (7)
+      Tests  109 passed (109)
+   Start at  14:06:40
+   Duration  23.03s (tests 65%, import 19%, environment 9%, setup 5%, transform 2%)
+
+    Isolate  7 workers spawned · ~384ms startup each (spawn + environment, per file)
+             at least ~2.30s faster with isolate: false — reuses workers across files instead of one per file
+
+
+> @friday/db@0.0.0 test /Users/mickitang/Documents/Friday_Manage/Friday_Manage/packages/db
+> vitest run
+
+
+ RUN  v5.1.0 /Users/mickitang/Documents/Friday_Manage/Friday_Manage/packages/db
+
+
+ Test Files  4 passed (4)
+      Tests  107 passed (107)
+   Start at  14:07:03
+   Duration  5.17s (tests 82%, import 15%, transform 3%)
+
+    Isolate  4 workers spawned · ~102ms startup each (spawn + environment, per file)
+             at least ~305ms faster with isolate: false — reuses workers across files instead of one per file
+
+
+> @friday/api@0.0.0 test /Users/mickitang/Documents/Friday_Manage/Friday_Manage/apps/api
+> vitest run
+
+
+ RUN  v5.1.0 /Users/mickitang/Documents/Friday_Manage/Friday_Manage/apps/api
+
+(node:98754) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:98764) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:98771) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:98891) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[Nest] 98911  - 11/06/2026, 2:07:55 PM    WARN [Jobs] channels.deliver (deliver-01a1afaf-79eb-744c-80e9-ae8ff662024b) ล้มครั้งที่ 1: smtp down
+[Nest] 98911  - 11/06/2026, 2:07:55 PM    WARN [Jobs] channels.deliver (deliver-01a1afaf-79eb-744c-80e9-ae8ff662024b) ล้มครั้งที่ 2: smtp down
+[Nest] 98911  - 11/06/2026, 2:07:55 PM    WARN [Jobs] channels.deliver (deliver-01a1afaf-79fb-7509-a352-b627b6d8f301) ล้มครั้งที่ 1: smtp down
+[Nest] 98911  - 11/06/2026, 2:07:55 PM    WARN [Jobs] channels.deliver (deliver-01a1afaf-79fb-7509-a352-b627b6d8f301) ล้มครั้งที่ 2: smtp down
+[Nest] 98911  - 11/06/2026, 2:07:55 PM    WARN [Jobs] channels.deliver (deliver-01a1afaf-79fb-7509-a352-b627b6d8f301) ล้มครั้งที่ 3: smtp down
+[Nest] 98911  - 11/06/2026, 2:07:55 PM    WARN [ChannelDispatcher] delivery 01a1afaf-79fb-7509-a352-b627b6d8f301 failed: smtp down
+[Nest] 98911  - 11/06/2026, 2:07:55 PM   ERROR [Jobs] channels.deliver (deliver-01a1afaf-79fb-7509-a352-b627b6d8f301) ล้มครั้งที่ 4: smtp down
+[Nest] 98911  - 11/06/2026, 2:07:55 PM    WARN [Jobs] channels.deliver (deliver-01a1afaf-7b4d-7a40-8f4a-7e7cf9effd1f) ล้มครั้งที่ 1: Webhook ตอบ HTTP 500
+[Nest] 98911  - 11/06/2026, 2:07:55 PM    WARN [Jobs] channels.deliver (deliver-01a1afaf-7b4d-7a40-8f4a-7e7cf9effd1f) ล้มครั้งที่ 2: Webhook ตอบ HTTP 502
+[Nest] 98911  - 11/06/2026, 2:07:55 PM    WARN [Jobs] channels.deliver (deliver-01a1afaf-7b73-7fac-9d66-402fd44b13bd) ล้มครั้งที่ 1: Webhook ตอบ HTTP 500
+[Nest] 98911  - 11/06/2026, 2:07:55 PM    WARN [Jobs] channels.deliver (deliver-01a1afaf-7b73-7fac-9d66-402fd44b13bd) ล้มครั้งที่ 2: Webhook ตอบ HTTP 500
+[Nest] 98911  - 11/06/2026, 2:07:55 PM    WARN [Jobs] channels.deliver (deliver-01a1afaf-7b73-7fac-9d66-402fd44b13bd) ล้มครั้งที่ 3: Webhook ตอบ HTTP 500
+[Nest] 98911  - 11/06/2026, 2:07:55 PM    WARN [ChannelDispatcher] delivery 01a1afaf-7b73-7fac-9d66-402fd44b13bd failed: Webhook ตอบ HTTP 500
+[Nest] 98911  - 11/06/2026, 2:07:55 PM   ERROR [Jobs] channels.deliver (deliver-01a1afaf-7b73-7fac-9d66-402fd44b13bd) ล้มครั้งที่ 4: Webhook ตอบ HTTP 500
+[Nest] 98911  - 11/06/2026, 2:07:55 PM   ERROR [Error] req_05a5250f AppError: ส่งอีเมลทดสอบไม่สำเร็จ
+    at ChannelsService.testEmail (/Users/mickitang/Documents/Friday_Manage/Friday_Manage/apps/api/src/channels/channels.service.ts:176:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-execution-context.js:81:62
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-proxy.js:9:17
+[Nest] 98943  - 11/06/2026, 2:08:00 PM   ERROR [Error] req_65cdd29a AppError: ยังไม่ได้ตั้ง GITHUB_WEBHOOK_SECRET
+    at GitService.receive (/Users/mickitang/Documents/Friday_Manage/Friday_Manage/apps/api/src/git/git.service.ts:155:24)
+    at GithubHooksController.hook (/Users/mickitang/Documents/Friday_Manage/Friday_Manage/apps/api/src/git/git.controller.ts:90:21)
+    at /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-execution-context.js:50:37
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-execution-context.js:81:62
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-proxy.js:9:17
+[Nest] 98982  - 11/06/2026, 2:08:08 PM   ERROR [Error] req_daf33e39 AppError: เชื่อม LINE ไม่สำเร็จ · ตรวจ Channel access token
+    at LineService.testConfig (/Users/mickitang/Documents/Friday_Manage/Friday_Manage/apps/api/src/line/line.service.ts:111:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-execution-context.js:81:62
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-proxy.js:9:17
+[Nest] 98982  - 11/06/2026, 2:08:08 PM   ERROR [Error] req_52aca9f2 AppError: ส่งข้อความไป LINE ไม่สำเร็จ
+    at LineService.testMine (/Users/mickitang/Documents/Friday_Manage/Friday_Manage/apps/api/src/line/line.service.ts:163:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-execution-context.js:81:62
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-proxy.js:9:17
+[Nest] 98982  - 11/06/2026, 2:08:08 PM    WARN [ChannelDispatcher] delivery 01a1afaf-af0f-79d5-8f9e-ac442004d45d failed: LINE ตอบ HTTP 403
+[Nest] 98982  - 11/06/2026, 2:08:08 PM   ERROR [Jobs] channels.deliver (deliver-01a1afaf-af0f-79d5-8f9e-ac442004d45d) ล้มครั้งที่ 1: LINE ตอบ HTTP 403
+[Nest] 99033  - 11/06/2026, 2:08:22 PM    WARN [Jobs] test.flaky (58f96123-d197-4764-b5d7-3a737c927860) ล้มครั้งที่ 1: ชั่วคราว
+[Nest] 99033  - 11/06/2026, 2:08:22 PM    WARN [Jobs] test.flaky (58f96123-d197-4764-b5d7-3a737c927860) ล้มครั้งที่ 2: ชั่วคราว
+[Nest] 99033  - 11/06/2026, 2:08:22 PM    WARN [Jobs] test.broken (5c98dc38-00f5-4268-8812-b9a8a8c7647e) ล้มครั้งที่ 1: เสียถาวร
+[Nest] 99033  - 11/06/2026, 2:08:22 PM    WARN [Jobs] test.broken (5c98dc38-00f5-4268-8812-b9a8a8c7647e) ล้มครั้งที่ 2: เสียถาวร
+[Nest] 99033  - 11/06/2026, 2:08:22 PM    WARN [Jobs] test.broken (5c98dc38-00f5-4268-8812-b9a8a8c7647e) ล้มครั้งที่ 3: เสียถาวร
+[Nest] 99033  - 11/06/2026, 2:08:22 PM   ERROR [Jobs] test.broken (5c98dc38-00f5-4268-8812-b9a8a8c7647e) ล้มครั้งที่ 4: เสียถาวร
+[Nest] 99033  - 11/06/2026, 2:08:22 PM   ERROR [Jobs] test.unrecoverable (41f38ced-6ada-48cc-b44f-275559d1a1e4) ล้มครั้งที่ 1: ข้อมูลผิด ลองใหม่ก็ไม่ผ่าน
+
+ Test Files  28 passed | 1 skipped (29)
+      Tests  452 passed | 6 skipped (458)
+   Start at  14:07:08
+   Duration  74.60s (tests 68%, import 32%)
+

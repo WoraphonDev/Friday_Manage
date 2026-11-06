@@ -1,0 +1,11 @@
+Scope: 3 of 4 workspace projects
+apps/web build$ next build
+apps/web build: ▲ Next.js 16.4.5 (Turbopack)
+apps/web build: ✓ Running next.config.ts took 172ms
+apps/web build:   Creating an optimized production build ...
+apps/web build: Failed
+/Users/mickitang/Documents/Friday_Manage/Friday_Manage/apps/web:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @friday/web@0.0.0 build: `next build`
+Exit status 130
+
+Review note: stopped with Ctrl-C (exit 130); build result inconclusive.

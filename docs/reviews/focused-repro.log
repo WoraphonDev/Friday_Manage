@@ -1,0 +1,13 @@
+
+> @friday/api@0.0.0 test /Users/mickitang/Documents/Friday_Manage/Friday_Manage/apps/api
+> vitest run test/codex-review.e2e.test.ts
+
+
+ RUN  v5.1.0 /Users/mickitang/Documents/Friday_Manage/Friday_Manage/apps/api
+
+
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+   Start at  14:11:42
+   Duration  2.44s (import 54%, tests 37%, transform 8%)
+

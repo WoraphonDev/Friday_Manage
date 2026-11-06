@@ -129,7 +129,20 @@ export interface PlanCheck {
 }
 
 /** แปลงแถวตามการจับคู่คอลัมน์ แล้วตรวจตามกติกาของหน้า L3 · ตรวจสอบข้อมูล */
-export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkCalendar, knownPeople: Set<string>): PlanCheck {
+export interface CheckOptions {
+  /** โหมดอัปเดต: ถ้าไฟล์ระบุ Plan End ให้ใช้ค่าในไฟล์ (เตือนถ้าไม่ตรงกับที่คำนวณ) แทนการคำนวณทับ */
+  keepPlanEnd?: boolean;
+  /** โหมดอัปเดต: งานที่สร้างในระบบอาจไม่มี BA จึงเป็นแค่คำเตือน */
+  baOptional?: boolean;
+  /** โหมดอัปเดต: Size ว่างในไฟล์ = ว่าง (ไม่คำนวณจาก Man-Day) เพื่อให้ตรงกับงานที่ไม่ได้ตั้ง Size */
+  noDerivedSize?: boolean;
+  /** ชื่อสถานะจริงใน Workflow ของโปรเจกต์ (โหมดอัปเดต) · ตรงชื่อก่อนใช้ตารางแปลงมาตรฐาน */
+  statuses?: string[];
+}
+
+export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkCalendar, knownPeople: Set<string>, opts: CheckOptions = {}): PlanCheck {
+  const known = new Map((opts.statuses ?? []).map((n) => [n.toLowerCase(), n]));
+  const resolveStatus = (raw: unknown) => known.get(String(raw ?? '').trim().toLowerCase()) ?? STATUS[String(raw ?? '').trim().toLowerCase()];
   const idx = {} as Record<Field, number>;
   wb.table.headers.forEach((h, i) => {
     const f = mapping[h];
@@ -211,9 +224,9 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
       requirements: reqs.filter((x) => /^N?FR-/i.test(x)).map((x) => x.toUpperCase()),
       requirementText: reqs.filter((x) => !/^N?FR-/i.test(x)).join(', ') || null,
       ba: ba && ba !== '-' ? ba : null,
-      status: STATUS[String(statusRaw ?? '').trim().toLowerCase()] ?? 'To do',
+      status: resolveStatus(statusRaw) ?? 'To do',
       devs,
-      size: size ?? (md && md > 0 ? sizeFromMd(md) : null),
+      size: size ?? (!opts.noDerivedSize && md && md > 0 ? sizeFromMd(md) : null),
       estimateMd: md !== null && Number.isFinite(md) && md > 0 ? md : null,
       planStart: dates.planStart ?? null,
       planEnd: dates.planEnd ?? null,
@@ -231,7 +244,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     }
     if (mdRaw !== null && row.estimateMd === null) blocking.push(['Man-Day ไม่ใช่ตัวเลขที่มากกว่า 0', 'แก้ไขใน Excel']);
     const scheduled = !!(row.planStart || row.planEnd);
-    if (scheduled && !row.ba) blocking.push(['ไม่มี BA', 'ระบุ BA ใน Excel']);
+    if (scheduled && !row.ba && !opts.baOptional) blocking.push(['ไม่มี BA', 'ระบุ BA ใน Excel']);
     if (blocking.length) {
       blocking.forEach(([p, f]) => err(p, f));
       skip.add(no);
@@ -240,9 +253,10 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     }
 
     // เตือน (นำเข้าได้)
+    if (scheduled && !row.ba && opts.baOptional) warn('ไม่มี BA', 'ยังไม่ระบุ BA');
     if (!scheduled) warn('ไม่มี Plan Start / End', 'นำเข้าเป็น Backlog ยังไม่ลงแผน');
     if (statusRaw === null) warn('ไม่มีค่า Status', 'ใช้ To do');
-    else if (!STATUS[String(statusRaw).trim().toLowerCase()]) warn(`Status "${statusRaw}" ไม่รู้จัก`, 'ใช้ To do');
+    else if (!resolveStatus(statusRaw)) warn(`Status "${statusRaw}" ไม่รู้จัก`, 'ใช้ To do');
     if (row.planStart && !cal.isWorkingDay(row.planStart)) {
       const moved = cal.onOrAfter(row.planStart);
       warn(`Plan Start ${row.planStart} ตรงวันหยุด`, `เริ่มนับวันทำงานถัดไป (${moved})`);
@@ -250,8 +264,8 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     }
     if (row.planStart && row.estimateMd) {
       const computed = planEndFor(cal, row.planStart, row.estimateMd);
-      if (row.planEnd && row.planEnd !== computed) warn(`Plan End ในไฟล์ ${row.planEnd} ไม่ตรงกับที่คำนวณ ${computed}`, 'ใช้วันที่ระบบคำนวณ');
-      row.planEnd = computed;
+      if (row.planEnd && row.planEnd !== computed) warn(`Plan End ในไฟล์ ${row.planEnd} ไม่ตรงกับที่คำนวณ ${computed}`, opts.keepPlanEnd ? 'ใช้วันที่ในไฟล์' : 'ใช้วันที่ระบบคำนวณ');
+      if (!(opts.keepPlanEnd && row.planEnd)) row.planEnd = computed;
     }
     if (row.planStart && row.planEnd && row.planEnd < row.planStart) {
       err('Plan End ก่อน Plan Start', 'แก้ไขใน Excel');

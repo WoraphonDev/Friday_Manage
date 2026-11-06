@@ -1,0 +1,146 @@
+// หลักฐาน review: คัดลอกไฟล์นี้ไป apps/api/test/codex-review.e2e.test.ts ก่อนรัน
+// Assertions ยืนยันพฤติกรรมผิดปัจจุบัน ไม่ใช่ acceptance criteria หลังแก้
+// ใช้ฐาน review แยกเท่านั้น: startApp() ล้างทุกตารางในฐานที่ระบุ
+import request from 'supertest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
+import { addMember, client, seedTeam, signup, startApp, type TestApp } from './helpers.js';
+import { RealtimeService } from '../src/realtime/realtime.service.js';
+import { priceFor, PLAN_CATALOG } from '../src/billing/catalog.js';
+import { GithubApi } from '../src/git/github-api.js';
+import { ChannelRegistry } from '../src/channels/senders.js';
+import { ChannelDispatcher } from '../src/channels/dispatcher.js';
+import { EventBus } from '../src/core/events.js';
+
+let t: TestApp;
+let team: Awaited<ReturnType<typeof seedTeam>>;
+let wsId: string;
+beforeAll(async () => {
+  t = await startApp(); team = await seedTeam(t, { slug: 'review-fixture' });
+  wsId = (await t.owner.query('select id from workspaces where slug=$1', [team.slug])).rows[0].id;
+});
+afterAll(async () => { await t?.close(); });
+const anon = () => request(t.app.getHttpServer());
+const base = () => `${team.ws}/projects/${team.key}`;
+
+it('R01 disabled account still uses API token', async () => {
+  const tk = await team.lead.post(`${team.ws}/api-tokens`, {name:'review'});
+  expect(tk.status).toBe(201);
+  await t.owner.query('update users set disabled_at=now() where id=$1', [team.leadId]);
+  const r = await anon().get(`/api/v1${base()}`).set('authorization', `Bearer ${tk.body.token}`);
+  console.log('R01 disabled token HTTP', r.status);
+  expect(r.status).toBe(200);
+  await t.owner.query('update users set disabled_at=null where id=$1', [team.leadId]);
+});
+it('R02 websocket null JSON rejects outside parser catch', async () => {
+  const rt = t.app.get(RealtimeService) as any;
+  await expect(rt.message({ws:{readyState:0}}, 'null')).rejects.toThrow(TypeError);
+});
+it('R03 committed local file can be overwritten with same upload URL', async () => {
+  const u = await team.lead.post(`${base()}/files/upload-url`, {name:'review.txt',size:3,mime:'text/plain'});
+  expect(u.status).toBe(200);
+  expect((await anon().put(new URL(u.body.url).pathname).set('content-type','application/octet-stream').send(Buffer.from('old'))).status).toBe(200);
+  const f = await team.lead.post(`${base()}/files`,{uploadToken:u.body.uploadToken});
+  expect(f.status).toBe(201);
+  expect((await anon().put(new URL(u.body.url).pathname).set('content-type','application/octet-stream').send(Buffer.from('NEW'))).status).toBe(200);
+  const dl = await team.lead.get(`${base()}/files/${f.body.id}/download`);
+  const got = await anon().get(new URL(dl.headers.location).pathname);
+  expect(got.text).toBe('NEW');
+  const duplicate = await team.lead.post(`${base()}/files`,{uploadToken:u.body.uploadToken});
+  expect(duplicate.status).toBe(201);
+  console.log('R03 same upload committed twice',f.body.id !== duplicate.body.id);
+});
+it('R04 quota only checked before issuing URL', async () => {
+  const u = await team.lead.post(`${base()}/files/upload-url`, {name:'quota.txt',size:3});
+  expect(u.status).toBe(200);
+  expect((await anon().put(new URL(u.body.url).pathname).set('content-type','application/octet-stream').send(Buffer.from('abc'))).status).toBe(200);
+  await t.owner.query('update file_versions set size_bytes=107374182400 where workspace_id=$1',[wsId]);
+  expect((await team.lead.post(`${base()}/files/upload-url`,{name:'blocked.txt',size:3})).status).toBe(402);
+  expect((await team.lead.post(`${base()}/files`,{uploadToken:u.body.uploadToken})).status).toBe(201);
+  await t.owner.query('update file_versions set size_bytes=3 where workspace_id=$1',[wsId]);
+});
+it('R05 guest viewer receives tester identity and hidden bug from test runs',async()=>{
+  const task=await team.lead.post(`${base()}/issues`,{title:'Shared review task',moduleId:team.project.modules[0].id,sharedWithGuests:true});
+  expect(task.status).toBe(201);
+  const run=await team.lead.post(`${team.ws}/issues/${task.body.key}/test-runs`,{result:'failed',note:'internal note'});
+  expect(run.status).toBe(201);
+  const bug=await team.lead.post(`${team.ws}/issues/${task.body.key}/test-runs/${run.body.id}/create-bug`,{});
+  expect(bug.status).toBe(201);
+  const g=await client(t.app);
+  await addMember(t.owner,team.slug,await signup(g,'guest@review.example.com','Review Guest'),'guest',{key:team.key,role:'viewer'});
+  const r=await g.get(`${team.ws}/issues/${task.body.key}/test-runs`);
+  console.log('R05 guest test run',JSON.stringify(r.body));
+  expect(r.status).toBe(200); expect(r.body.items[0].tester.displayName).toBe('Mick');
+  expect(r.body.items[0].bugs[0].key).toBe(bug.body.key);
+});
+it('R06 guest member denied Files despite Member permissions',async()=>{
+  const g=await client(t.app);
+  await addMember(t.owner,team.slug,await signup(g,'contractor@review.example.com','Contractor'),'guest',{key:team.key,role:'member'});
+  expect((await g.get(`${base()}/my-permissions`)).body.permissions).toContain('file.upload');
+  expect((await g.get(`${base()}/files`)).status).toBe(403);
+});
+it('R07 yearly quote ignores custom monthly price',()=>{
+  expect(priceFor(PLAN_CATALOG.team_s,'monthly',{monthly:200000,yearly:null})).toBe(200000);
+  expect(priceFor(PLAN_CATALOG.team_s,'yearly',{monthly:200000,yearly:null})).toBe(1500000);
+});
+it('R08 Git setup accepts unrelated installation id using self-issued state',async()=>{
+  Object.assign(process.env,{GITHUB_APP_ID:'review',GITHUB_APP_SLUG:'review',GITHUB_APP_PRIVATE_KEY:'mock'});
+  const gh=t.app.get(GithubApi); gh.installation=async(id)=>({accountName:`other-org-${id}`}); gh.repositories=async()=>[{fullName:'other-org/private-repo',defaultBranch:'main'}];
+  const u=await team.lead.get(`${team.ws}/integrations/git/install-url`);
+  const state=new URL(u.body.url).searchParams.get('state')!;
+  const r=await anon().get(`/api/v1/hooks/github/setup?installation_id=987654321&state=${encodeURIComponent(state)}`);
+  expect(r.status).toBe(302);
+  expect((await team.lead.get(`${team.ws}/integrations/git`)).body.items[0].repositories[0].fullName).toBe('other-org/private-repo');
+  for(const k of ['GITHUB_APP_ID','GITHUB_APP_SLUG','GITHUB_APP_PRIVATE_KEY']) delete process.env[k];
+});
+it('R09 new project omits default workflow rules',async()=>{
+  const rules=await t.owner.query('select * from workflow_rules where project_id=$1',[team.project.id]);
+  expect(rules.rowCount).toBe(0);
+  const task=await team.lead.post(`${base()}/issues`,{title:'No reviewer',moduleId:team.project.modules[0].id});
+  const review=(await t.owner.query("select id from workflow_statuses where project_id=$1 and name='Review'",[team.project.id])).rows[0].id;
+  const moved=await team.lead.patch(`${team.ws}/issues/${task.body.key}`,{statusId:review},task.body.version);
+  expect(moved.status).toBe(200);
+});
+it('R10 plan changes cursor loses remaining rows sharing timestamp',async()=>{
+  const task=await team.lead.post(`${base()}/issues`,{title:'Cursor fixture',moduleId:team.project.modules[0].id});
+  await t.owner.query("insert into plan_changes(workspace_id,project_id,issue_id,field,old_value,new_value,changed_by,changed_at) select $1,$2,$3,'planEnd','\"2026-11-09\"','\"2026-11-10\"',$4,'2026-11-06 01:02:03.123456+00' from generate_series(1,3)",[wsId,team.project.id,task.body.id,team.leadId]);
+  const first=await team.lead.get(`${base()}/plan-changes?limit=1`);
+  expect(first.status).toBe(200); expect(first.body.nextCursor).toBeTruthy();
+  const next=await team.lead.get(`${base()}/plan-changes?limit=1&before=${encodeURIComponent(first.body.nextCursor)}`);
+  expect(next.status).toBe(200); expect(next.body.items).toHaveLength(0);
+});
+it('R11 delayed delivery still sends to deactivated member',async()=>{
+  let sent=0;
+  t.app.get(ChannelRegistry).register({channel:'email',scope:'personal',available:async()=>true,send:async()=>{sent++;}});
+  const n=(await t.owner.query("insert into notifications(workspace_id,recipient_id,event_type,project_id,payload) values($1,$2,'issue.assigned',$3,'{}') returning id",[wsId,team.devId,team.project.id])).rows[0].id;
+  const d=(await t.owner.query("insert into notification_deliveries(workspace_id,notification_id,channel,target_ref) values($1,$2,'email','dev@review.example.com') returning id",[wsId,n])).rows[0].id;
+  await t.owner.query("update workspace_members set status='deactivated' where workspace_id=$1 and user_id=$2",[wsId,team.devId]);
+  await t.app.get(ChannelDispatcher).deliver(d,{now:new Date('2026-11-09T05:00:00Z')});
+  expect(sent).toBe(1);
+  await t.owner.query("update workspace_members set status='active' where workspace_id=$1 and user_id=$2",[wsId,team.devId]);
+});
+it('R12 in-app off suppresses independently enabled email',async()=>{
+  let sent=0;
+  t.app.get(ChannelRegistry).register({channel:'email',scope:'personal',available:async()=>true,targetFor:async()=> 'dev@review.example.com',send:async()=>{sent++;}});
+  const task=await team.lead.post(`${base()}/issues`,{title:'Notification fixture',moduleId:team.project.modules[0].id});
+  await t.owner.query("insert into issue_watchers(workspace_id,issue_id,user_id) values($1,$2,$3)",[wsId,task.body.id,team.devId]);
+  await t.owner.query("insert into user_notification_prefs(workspace_id,user_id,event_type,channel,enabled) values($1,$2,'issue.commented','in_app',false),($1,$2,'issue.commented','email',true)",[wsId,team.devId]);
+  const n=await t.owner.query('select count(*) from notifications');
+  await t.app.get(EventBus).publish({type:'issue.commented',workspaceId:wsId,projectId:team.project.id,issueId:task.body.id,actorId:team.leadId,data:{excerpt:'new comment'},at:new Date()});
+  expect((await t.owner.query('select count(*) from notifications')).rows[0].count).toBe(n.rows[0].count);
+  expect(sent).toBe(0);
+});
+it('R13 Git repo sync reads only first page',async()=>{
+  const original=globalThis.fetch; const gh=t.app.get(GithubApi) as any;
+  const calls:string[]=[];
+  gh.appJwt=()=> 'mock-app-jwt';
+  globalThis.fetch=(async(url:any)=>{calls.push(String(url)); return new Response(JSON.stringify(String(url).endsWith('/access_tokens')?{token:'mock'}:{repositories:Array.from({length:100},(_,i)=>({full_name:`org/repo-${i}`,default_branch:'main'}))}),{status:200,headers:{'content-type':'application/json',link:'<https://api.github.com/installation/repositories?per_page=100&page=2>; rel="next"'}});}) as typeof fetch;
+  try {
+    // R08 replaces this instance method: call the original prototype explicitly.
+    const repos=await GithubApi.prototype.repositories.call(gh,'1');
+    expect(repos).toHaveLength(100); expect(calls.filter(x=>x.includes('/installation/repositories'))).toHaveLength(1);
+  } finally {globalThis.fetch=original;}
+});
+it('R14 malformed WebSocket cookie rejects before auth error handler',async()=>{
+  const rt=t.app.get(RealtimeService) as any;
+  await expect(rt.upgrade({url:'/realtime',headers:{cookie:'fm_session=%'}},{on:()=>{}},Buffer.alloc(0))).rejects.toThrow(URIError);
+});

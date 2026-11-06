@@ -7,6 +7,7 @@ import { ChannelDispatcher } from '../src/channels/dispatcher.js';
 import { DnsChecker } from '../src/channels/channels.service.js';
 import { ProjectNotifyService } from '../src/channels/project-notify.service.js';
 import { sign } from '../src/channels/render.js';
+import { EventBus } from '../src/core/events.js';
 import { Mailer, type SmtpConfig } from '../src/core/mail.js';
 import { Notifier } from '../src/notifications/notifier.js';
 import { addMember, client, type Client, seedTeam, signup, startApp, type TestApp } from './helpers.js';
@@ -388,6 +389,134 @@ describe('ช่วงงดส่ง (Quiet hours)', () => {
     vi.setSystemTime(NIGHT);
     await notify('bug.created', [team.devId], { severity: 'Critical' });
     expect(hits).toHaveLength(0);
+  });
+});
+
+describe('ตรวจผู้รับซ้ำตอนส่ง (BUG-05)', () => {
+  const NIGHT = new Date('2026-11-04T15:00:00Z');
+  const NEXT_MORNING = new Date('2026-11-05T01:30:00Z');
+  /** แจ้งเตือน + รายการส่ง Email ที่ค้างอยู่ (เหมือนรอ retry) */
+  async function pending(eventType = 'issue.assigned', issueId: string | null = null) {
+    const n = (await t.owner.query(`INSERT INTO notifications (workspace_id, recipient_id, event_type, project_id, issue_id, payload, reason) VALUES ($1,$2,$3,$4,$5,'{}','ทดสอบ') RETURNING id`, [wsId, team.devId, eventType, projectId, issueId])).rows[0].id;
+    return (await t.owner.query(`INSERT INTO notification_deliveries (workspace_id, notification_id, channel, target_ref) VALUES ($1,$2,'email',$3) RETURNING id`, [wsId, n, `dev@${team.slug}.example.com`])).rows[0].id as string;
+  }
+  const status = async (id: string) => (await t.owner.query('SELECT status, last_error FROM notification_deliveries WHERE id = $1', [id])).rows[0];
+
+  it('รอช่วงงดส่งอยู่แล้วผู้รับถูกปิดการใช้งานใน Workspace → พ้นช่วงแล้วไม่ส่ง และไม่ retry', async () => {
+    await t.owner.query('UPDATE user_notification_settings SET quiet_start=$3, quiet_end=$4 WHERE workspace_id=$1 AND user_id=$2', [wsId, team.devId, '20:00', '08:00']);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(NIGHT);
+      await notify('issue.assigned', [team.devId]);
+      expect(await deliveries()).toMatchObject([{ status: 'skipped_quiet_hours' }]);
+      await t.owner.query(`UPDATE workspace_members SET status = 'deactivated' WHERE workspace_id = $1 AND user_id = $2`, [wsId, team.devId]);
+      vi.setSystemTime(NEXT_MORNING);
+      await dispatcher.flushQuiet();
+      expect(mails).toHaveLength(0);
+      const [d] = await deliveries();
+      expect(d.status).toBe('failed');
+      expect(d.last_error).toContain('ยกเลิกการส่ง');
+      // รันซ้ำก็ไม่ส่ง
+      await dispatcher.flushQuiet();
+      expect(mails).toHaveLength(0);
+    } finally {
+      await t.owner.query(`UPDATE workspace_members SET status = 'active' WHERE workspace_id = $1 AND user_id = $2`, [wsId, team.devId]);
+      await t.owner.query('UPDATE user_notification_settings SET quiet_start=NULL, quiet_end=NULL WHERE workspace_id=$1 AND user_id=$2', [wsId, team.devId]);
+    }
+  });
+
+  it('บัญชีถูกปิด · ออกจากโปรเจกต์ Private · ปิด pref ระหว่างรอ → ไม่ส่ง · ผู้รับที่ยังมีสิทธิ์ส่งได้', async () => {
+    // บัญชีถูกปิดทั้งระบบ
+    let d = await pending();
+    await t.owner.query('UPDATE users SET disabled_at = now() WHERE id = $1', [team.devId]);
+    await dispatcher.deliver(d);
+    await t.owner.query('UPDATE users SET disabled_at = NULL WHERE id = $1', [team.devId]);
+    expect(mails).toHaveLength(0);
+    expect((await status(d)).last_error).toContain('ไม่มีสิทธิ์');
+
+    // โปรเจกต์เป็น Private แล้วผู้รับถูกนำออก
+    const pm = (await t.owner.query('SELECT * FROM project_members WHERE project_id = $1 AND user_id = $2', [projectId, team.devId])).rows[0];
+    d = await pending();
+    await t.owner.query(`UPDATE projects SET visibility = 'private' WHERE id = $1`, [projectId]);
+    await t.owner.query('DELETE FROM project_members WHERE project_id = $1 AND user_id = $2', [projectId, team.devId]);
+    await dispatcher.deliver(d);
+    await t.owner.query(`UPDATE projects SET visibility = 'workspace' WHERE id = $1`, [projectId]);
+    if (pm) await t.owner.query('INSERT INTO project_members (workspace_id, project_id, user_id, role) VALUES ($1,$2,$3,$4)', [wsId, projectId, team.devId, pm.role]);
+    expect(mails).toHaveLength(0);
+    expect((await status(d)).status).toBe('failed');
+
+    // ปิด Email ของเหตุการณ์นี้หลังเข้าคิว
+    d = await pending();
+    await t.owner.query(`INSERT INTO user_notification_prefs (workspace_id, user_id, event_type, channel, enabled) VALUES ($1,$2,'issue.assigned','email',false)`, [wsId, team.devId]);
+    await dispatcher.deliver(d);
+    await t.owner.query('DELETE FROM user_notification_prefs');
+    expect(mails).toHaveLength(0);
+    expect((await status(d)).last_error).toContain('ปิดช่องทาง');
+
+    // ยังมีสิทธิ์ → ส่งได้
+    d = await pending();
+    await dispatcher.deliver(d);
+    expect(mails).toHaveLength(1);
+    expect((await status(d)).status).toBe('sent');
+  });
+
+  it('งานเลิกแชร์ให้ Guest ระหว่างรอ → Guest Viewer ไม่ได้ Email', async () => {
+    const g = await client(t.app);
+    const gid = await signup(g, 'guest-mail@channels.example.com', 'Guest Mail');
+    await addMember(t.owner, team.slug, gid, 'guest', { key: team.key, role: 'viewer' });
+    await t.owner.query('INSERT INTO user_notification_settings (workspace_id, user_id, quiet_start, quiet_end, quiet_on_holidays) VALUES ($1,$2,NULL,NULL,false)', [wsId, gid]);
+    const task = await team.lead.post(`${team.ws}/projects/${team.key}/issues`, { title: 'งานที่แชร์ชั่วคราว', moduleId: team.project.modules[0].id });
+    await t.owner.query('UPDATE issues SET shared_with_guests = true WHERE id = $1', [task.body.id]);
+    const n = (await t.owner.query(`INSERT INTO notifications (workspace_id, recipient_id, event_type, project_id, issue_id, payload, reason) VALUES ($1,$2,'issue.assigned',$3,$4,'{}','ทดสอบ') RETURNING id`, [wsId, gid, projectId, task.body.id])).rows[0].id;
+    const d = (await t.owner.query(`INSERT INTO notification_deliveries (workspace_id, notification_id, channel, target_ref) VALUES ($1,$2,'email','guest-mail@channels.example.com') RETURNING id`, [wsId, n])).rows[0].id;
+    await t.owner.query('UPDATE issues SET shared_with_guests = false WHERE id = $1', [task.body.id]);
+    mails = [];
+    await dispatcher.deliver(d);
+    expect(mails.map((m) => m.to)).toEqual([]);
+    expect((await status(d)).status).toBe('failed');
+  });
+});
+
+describe('In-app กับ Email แยกกัน (BUG-13)', () => {
+  async function watched() {
+    const task = await team.lead.post(`${team.ws}/projects/${team.key}/issues`, { title: 'งานที่ Dev ติดตาม', moduleId: team.project.modules[0].id });
+    expect(task.status).toBe(201);
+    await t.owner.query('INSERT INTO issue_watchers (workspace_id, issue_id, user_id) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING', [wsId, task.body.id, team.devId]);
+    return task.body as { id: string; key: string };
+  }
+  const comment = (issueId: string) =>
+    t.app.get(EventBus).publish({ type: 'issue.commented', workspaceId: wsId, projectId, issueId, actorId: team.leadId, data: { excerpt: 'คอมเมนต์ใหม่' }, at: new Date() });
+  const pref = (eventType: string, channel: string, enabled: boolean) =>
+    t.owner.query('INSERT INTO user_notification_prefs (workspace_id, user_id, event_type, channel, enabled) VALUES ($1,$2,$3,$4,$5)', [wsId, team.devId, eventType, channel, enabled]);
+  const inbox = async () => (await team.dev.get('/me/notifications?filter=all')).body.items as Array<{ eventType: string }>;
+
+  it('In-app ปิด / Email เปิด → ส่ง Email แต่ไม่เข้า Inbox และไม่นับในตัวเลขยังไม่อ่าน', async () => {
+    const task = await watched();
+    await pref('issue.commented', 'in_app', false);
+    await pref('issue.commented', 'email', true);
+    await comment(task.id);
+    expect(mails).toHaveLength(1);
+    expect(mails[0].to).toBe(`dev@${team.slug}.example.com`);
+    expect((await inbox()).filter((i) => i.eventType === 'issue.commented')).toEqual([]);
+    const summary = await team.dev.get('/me/notifications/summary');
+    expect(JSON.stringify(summary.body)).not.toContain('issue.commented');
+  });
+
+  it('In-app เปิด / Email ปิด → เข้า Inbox อย่างเดียว', async () => {
+    const task = await watched();
+    await pref('issue.commented', 'email', false);
+    await comment(task.id);
+    expect(mails).toHaveLength(0);
+    expect((await inbox()).some((i) => i.eventType === 'issue.commented')).toBe(true);
+  });
+
+  it('ทุกผู้รับปิด In-app → กฎ Webhook ของโปรเจกต์ยังส่ง', async () => {
+    const hook = await createHook();
+    await ruleFor(hook.id, 'issue.commented');
+    const task = await watched();
+    await pref('issue.commented', 'in_app', false);
+    await comment(task.id);
+    expect(hits).toHaveLength(1);
   });
 });
 

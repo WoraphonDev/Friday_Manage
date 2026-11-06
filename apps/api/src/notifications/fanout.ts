@@ -85,7 +85,8 @@ export class NotificationFanout implements OnModuleInit {
       const candidates = [...send.reasons.keys()].filter((id) => selfNotify || id !== event.actorId);
       const visible = await this.audience.visible(candidates, project, issue);
       const muted = IN_APP_LOCKED.has(send.eventType) ? new Set<string>() : await this.audience.inAppDisabled(project.workspaceId, [...visible], send.eventType);
-      const recipients = [...visible].filter((id) => !muted.has(id));
+      // คนที่ปิด In-app ยังอยู่ในรายชื่อ (ไม่เข้า Inbox) เพื่อให้ Email / LINE / กฎ Webhook ที่เปิดไว้ยังทำงาน
+      const recipients = [...visible];
       if (!recipients.length) continue;
       await this.notifier.notify({
         workspaceId: project.workspaceId,
@@ -96,6 +97,7 @@ export class NotificationFanout implements OnModuleInit {
         issueId: issue?.id,
         payload: { ...base, ...send.payload },
         reason: (id) => send.reasons.get(id)!,
+        inAppOff: muted,
       });
     }
   }

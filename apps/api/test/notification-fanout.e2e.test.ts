@@ -30,7 +30,7 @@ const name = (id: string) =>
 async function since(mark: string): Promise<Row[]> {
   const { rows } = await t.owner.query(
     `SELECT event_type, recipient_id, reason, payload, actor_id, payload->>'issueKey' AS issue_key
-     FROM notifications WHERE created_at > $1 ORDER BY created_at, recipient_id`,
+     FROM notifications WHERE created_at > $1 AND in_app ORDER BY created_at, recipient_id`,
     [mark],
   );
   return rows.map((r) => ({ event_type: r.event_type, recipient: name(r.recipient_id), reason: r.reason, payload: r.payload, actor: r.actor_id && name(r.actor_id), issue_key: r.issue_key }));

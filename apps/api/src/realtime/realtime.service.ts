@@ -267,7 +267,7 @@ export class RealtimeService implements OnApplicationBootstrap, OnApplicationShu
     const found = await this.db
       .select({ id: s.notifications.id, recipientId: s.notifications.recipientId, createdAt: s.notifications.createdAt })
       .from(s.notifications)
-      .where(and(gt(s.notifications.createdAt, since), sql`${s.notifications.recipientId} in (${sql.join(users.map((u) => sql`${u}::uuid`), sql`, `)})`));
+      .where(and(gt(s.notifications.createdAt, since), eq(s.notifications.inApp, true), sql`${s.notifications.recipientId} in (${sql.join(users.map((u) => sql`${u}::uuid`), sql`, `)})`));
     this.notifyCursor = new Date(now);
     const recipients = new Set<string>();
     for (const n of found) {
@@ -286,7 +286,7 @@ export class RealtimeService implements OnApplicationBootstrap, OnApplicationShu
     const rows = await this.db
       .select({ workspaceId: s.notifications.workspaceId, n: sql<number>`count(*)::int` })
       .from(s.notifications)
-      .where(and(eq(s.notifications.recipientId, userId), isNull(s.notifications.readAt), isNull(s.notifications.doneAt)))
+      .where(and(eq(s.notifications.recipientId, userId), eq(s.notifications.inApp, true), isNull(s.notifications.readAt), isNull(s.notifications.doneAt)))
       .groupBy(s.notifications.workspaceId);
     this.publish(`user:${userId}`, { type: 'notification', unread: { total: rows.reduce((n, r) => n + r.n, 0), byWorkspace: Object.fromEntries(rows.map((r) => [r.workspaceId, r.n])) } });
   }

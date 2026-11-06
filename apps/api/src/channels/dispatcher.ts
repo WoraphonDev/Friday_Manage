@@ -1,8 +1,9 @@
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { type Db, schema, type Tx } from '@friday/db';
-import { and, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 import { webUrl } from '../auth/auth.config.js';
 import { Jobs, JOB_ATTEMPTS, UnrecoverableError } from '../queue/jobs.js';
+import { Audience } from '../notifications/audience.js';
 import { Notifier } from '../notifications/notifier.js';
 import { WorkCalendar } from '../projects/calendar.js';
 import { SYSTEM_DB } from '../db/db.module.js';
@@ -47,9 +48,16 @@ const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 const SCAN_WINDOW_MS = 5 * 60_000;
 
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : null);
+/** ช่องทางที่ส่งถึงทั้งกลุ่ม (ไม่ใช่ผู้รับรายคน) · ตรวจตามกฎของโปรเจกต์แทนสิทธิ์ของผู้รับ */
+const GROUP_CHANNELS = new Set<ExternalChannel>(['webhook', 'line_group']);
 
 type NotificationRow = typeof s.notifications.$inferSelect;
 const payloadOf = (n: NotificationRow) => (n.payload ?? {}) as Record<string, unknown>;
+
+/** pref ของช่องทางรายคน · ไม่เคยตั้ง = ค่าเริ่มต้น (Email เปิดเฉพาะ EMAIL_DEFAULT_ON) */
+function personalEnabled(pref: Map<string, boolean>, channel: ExternalChannel, eventType: string) {
+  return pref.get(channel) ?? (channel === 'email' && EMAIL_DEFAULT_ON.has(eventType));
+}
 
 /**
  * ท่อส่งแจ้งเตือนออกนอกแอป: notifications ใหม่ → pref ของผู้รับ + กฎของโปรเจกต์ → notification_deliveries → คิว
@@ -59,13 +67,16 @@ const payloadOf = (n: NotificationRow) => (n.payload ?? {}) as Record<string, un
 @Injectable()
 export class ChannelDispatcher implements OnModuleInit {
   private readonly log = new Logger('ChannelDispatcher');
+  private readonly audience: Audience;
 
   constructor(
     @Inject(SYSTEM_DB) private readonly db: Db,
     private readonly jobs: Jobs,
     private readonly notifier: Notifier,
     private readonly registry: ChannelRegistry,
-  ) {}
+  ) {
+    this.audience = new Audience(db);
+  }
 
   async onModuleInit() {
     this.jobs.define<{ notificationIds: string[] }>(CHANNEL_JOBS.dispatch, (d) => this.dispatch(d.notificationIds));
@@ -159,14 +170,9 @@ export class ChannelDispatcher implements OnModuleInit {
     };
 
     // ผู้รับรายคน (Email, LINE ส่วนตัว) ตาม pref ของเขา
-    const prefs = await this.db
-      .select({ channel: s.userNotificationPrefs.channel, enabled: s.userNotificationPrefs.enabled })
-      .from(s.userNotificationPrefs)
-      .where(and(eq(s.userNotificationPrefs.workspaceId, n.workspaceId), eq(s.userNotificationPrefs.userId, n.recipientId), eq(s.userNotificationPrefs.eventType, n.eventType)));
-    const pref = new Map(prefs.map((p) => [p.channel as string, p.enabled]));
+    const pref = await this.prefs(n);
     for (const sender of this.registry.personal()) {
-      const enabled = pref.get(sender.channel) ?? (sender.channel === 'email' && EMAIL_DEFAULT_ON.has(n.eventType));
-      if (!enabled || !(await sender.available(n.workspaceId))) continue;
+      if (!personalEnabled(pref, sender.channel, n.eventType) || !(await sender.available(n.workspaceId))) continue;
       const target = (await sender.targetFor?.(n.recipientId)) ?? null;
       if (target) await insert(sender.channel, target);
     }
@@ -195,6 +201,35 @@ export class ChannelDispatcher implements OnModuleInit {
       }
     }
     return out;
+  }
+
+  private async prefs(n: NotificationRow) {
+    const rows = await this.db
+      .select({ channel: s.userNotificationPrefs.channel, enabled: s.userNotificationPrefs.enabled })
+      .from(s.userNotificationPrefs)
+      .where(and(eq(s.userNotificationPrefs.workspaceId, n.workspaceId), eq(s.userNotificationPrefs.userId, n.recipientId), eq(s.userNotificationPrefs.eventType, n.eventType)));
+    return new Map(rows.map((p) => [p.channel as string, p.enabled]));
+  }
+
+  /**
+   * ตรวจผู้รับรายคนซ้ำ ณ เวลาส่ง (BUG-05): รายการที่รอช่วงงดส่งหรือ retry อาจถูกส่งหลังผู้รับหมดสิทธิ์
+   * คืนเหตุผลที่ไม่ส่ง หรือ null = ยังส่งได้ · ใช้สิทธิ์และ pref ล่าสุด ไม่ใช่ค่าตอนสร้างแจ้งเตือน
+   */
+  private async personalBlocked(n: NotificationRow, channel: ExternalChannel): Promise<string | null> {
+    if (!personalEnabled(await this.prefs(n), channel, n.eventType)) return 'ผู้รับปิดช่องทางนี้ของเหตุการณ์นี้แล้ว';
+    if (n.projectId) {
+      const project = await this.audience.project(n.projectId);
+      const issue = project && n.issueId ? await this.audience.issue(n.issueId, project.key) : null;
+      if (!project || (n.issueId && !issue)) return 'ไม่พบโปรเจกต์หรืองานแล้ว';
+      if (!(await this.audience.visible([n.recipientId], project, issue)).has(n.recipientId)) return 'ผู้รับไม่มีสิทธิ์เห็นข้อมูลนี้แล้ว';
+      return null;
+    }
+    const [m] = await this.db
+      .select({ userId: s.workspaceMembers.userId })
+      .from(s.workspaceMembers)
+      .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
+      .where(and(eq(s.workspaceMembers.workspaceId, n.workspaceId), eq(s.workspaceMembers.userId, n.recipientId), eq(s.workspaceMembers.status, 'active'), isNull(s.users.disabledAt)));
+    return m ? null : 'ผู้รับไม่ได้เป็นสมาชิก Workspace แล้ว';
   }
 
   /** ช่วงงดส่งของรายการนี้ · null = ส่งได้เสมอ */
@@ -233,6 +268,11 @@ export class ChannelDispatcher implements OnModuleInit {
     const [n] = await this.db.select().from(s.notifications).where(eq(s.notifications.id, d.notificationId));
     const sender = this.registry.get(d.channel as ExternalChannel);
     if (!n || !sender) return this.fail(d.id, 'ไม่พบแจ้งเตือนหรือช่องทางนี้ถูกปิด', true);
+    if (!GROUP_CHANNELS.has(d.channel as ExternalChannel)) {
+      // ยกเลิกถาวร (ไม่ throw = ไม่ retry) และบันทึกเหตุผลไว้ใน last_error
+      const blocked = await this.personalBlocked(n, d.channel as ExternalChannel);
+      if (blocked) return this.fail(d.id, `ยกเลิกการส่ง: ${blocked}`, true);
+    }
 
     const project = n.projectId ? await this.projectInfo(n.projectId) : null;
     const rule = await this.quietRule(n, d.channel as ExternalChannel);

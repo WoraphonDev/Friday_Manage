@@ -1,4 +1,6 @@
-import { Placeholder } from "@/components/Placeholder";
-export default function Page() {
-  return <Placeholder task="W18" titleKey="nav.automation" />;
+import { AutomationPage } from "./_components/automation-page";
+
+export default async function Page({ params }: { params: Promise<{ ws: string; key: string }> }) {
+  const { ws, key } = await params;
+  return <AutomationPage ws={ws} projectKey={key} />;
 }

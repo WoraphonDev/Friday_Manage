@@ -1,8 +1,13 @@
 import { Module } from '@nestjs/common';
+import { FilesController } from './files.controller.js';
+import { FilesService } from './files.service.js';
+import { StorageController } from './storage.controller.js';
+import { LocalStorage, S3Storage } from './storage.js';
 
-/** ไฟล์และโฟลเดอร์ · งาน A11 (docs/tasks/A11-*.md) · ใส่ controller / provider ของงานนี้ที่นี่ */
+/** ไฟล์, โฟลเดอร์, เวอร์ชัน และไฟล์แนบ · งาน A11 (docs/tasks/A11-*.md) */
 @Module({
-  controllers: [],
-  providers: [],
+  controllers: [FilesController, StorageController],
+  providers: [FilesService, LocalStorage, S3Storage],
+  exports: [FilesService],
 })
 export class FilesModule {}

@@ -309,13 +309,22 @@ export class RealtimeService implements OnApplicationBootstrap, OnApplicationShu
     for (const r of rows) await this.sendUnread(r.recipientId);
   }
 
-  async sendUnread(userId: string) {
+  /**
+   * จำนวนยังไม่อ่านเปลี่ยนจากการอ่าน / เสร็จ / เลื่อนเตือน (ไม่ใช่รายการใหม่) → `{ type: 'unread' }` ไปทุก session ของผู้รับ
+   * poll ด้านบนดูเฉพาะแถวใหม่ จึงต้องให้คำสั่งเหล่านี้เรียกเองหลัง commit · ไม่มีคนฟังช่องนี้ = ไม่ต้องนับ
+   */
+  async unreadChanged(userId: string) {
+    if (!this.channels.has(`user:${userId}`)) return;
+    await this.sendUnread(userId, 'unread');
+  }
+
+  async sendUnread(userId: string, type: 'notification' | 'unread' = 'notification') {
     const rows = await this.db
       .select({ workspaceId: s.notifications.workspaceId, n: sql<number>`count(*)::int` })
       .from(s.notifications)
       .where(and(eq(s.notifications.recipientId, userId), eq(s.notifications.inApp, true), isNull(s.notifications.readAt), isNull(s.notifications.doneAt)))
       .groupBy(s.notifications.workspaceId);
-    this.publish(`user:${userId}`, { type: 'notification', unread: { total: rows.reduce((n, r) => n + r.n, 0), byWorkspace: Object.fromEntries(rows.map((r) => [r.workspaceId, r.n])) } });
+    this.publish(`user:${userId}`, { type, unread: { total: rows.reduce((n, r) => n + r.n, 0), byWorkspace: Object.fromEntries(rows.map((r) => [r.workspaceId, r.n])) } });
   }
 
   // ---------------------------------------------------------------------------

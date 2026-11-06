@@ -360,6 +360,37 @@ describe('แจ้งเตือนใหม่ → user:{id}', () => {
     await t.app.get(Notifier).notify({ workspaceId: wsId, recipientIds: [team.devId], eventType: 'issue.assigned', actorId: team.leadId, payload: {}, reason: 'ของ dev' });
     await lead.expectNone((m) => m.type === 'notification', 600);
   });
+
+  it('อ่าน / ยังไม่อ่าน / เสร็จ / เลื่อน / อ่านทั้งหมด → ทุก session ของผู้รับได้ { type: unread } (ไม่ใช่แจ้งเตือนใหม่) · ไม่ข้ามผู้รับ (UI-06)', async () => {
+    await t.owner.query('DELETE FROM notifications');
+    const insert = async (recipient: string) =>
+      (await t.owner.query(`INSERT INTO notifications (workspace_id, recipient_id, event_type, payload, reason) VALUES ($1,$2,'issue.mentioned','{}','ทดสอบตัวนับ') RETURNING id`, [wsId, recipient])).rows[0].id as string;
+    const [a, b, c] = [await insert(team.leadId), await insert(team.leadId), await insert(team.leadId)];
+    await insert(team.devId);
+    const tabs = [await connect(team.leadId), await connect(team.leadId)];
+    for (const w of tabs) await w.request({ op: 'subscribe', channel: `user:${team.leadId}` });
+    const dev = await connect(team.devId);
+    await dev.request({ op: 'subscribe', channel: `user:${team.devId}` });
+    const expectCount = async (total: number) => {
+      for (const w of tabs) {
+        expect(await w.waitFor((m) => m.type === 'unread')).toMatchObject({ channel: `user:${team.leadId}`, unread: { total, byWorkspace: total ? { [wsId]: total } : {} } });
+        w.messages.length = 0;
+      }
+    };
+    const steps: [string, object | undefined, number][] = [
+      [`/me/notifications/${a}/read`, undefined, 2],
+      [`/me/notifications/${a}/unread`, undefined, 3],
+      [`/me/notifications/${b}/done`, undefined, 2],
+      [`/me/notifications/${c}/snooze`, { preset: 'tomorrow' }, 1],
+      ['/me/notifications/read-all', {}, 0],
+    ];
+    for (const [path, body, total] of steps) {
+      expect((await team.lead.post(path, body)).status, path).toBeLessThan(300);
+      await expectCount(total);
+    }
+    for (const w of tabs) await w.expectNone((m) => m.type === 'notification', 300);
+    await dev.expectNone((m) => m.type === 'unread' || m.type === 'notification', 300);
+  });
 });
 
 describe('ตรวจซ้ำสิทธิ์และ Session', () => {

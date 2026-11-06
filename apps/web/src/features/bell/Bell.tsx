@@ -3,14 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import * as Popover from "@radix-ui/react-popover";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Bell as BellIcon } from "lucide-react";
-import { Avatar, useToast } from "@/components/ui";
+import { Avatar, ErrorState, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
-import type { Me, NotificationSummary } from "@/lib/types";
+import type { List, Me, NotificationSummary, Workspace } from "@/lib/types";
 import styles from "./bell.module.css";
 
 type Tab = "all" | "unread" | "mention";
@@ -27,11 +27,16 @@ const POLL_MS = 60_000;
 /** API ส่งชื่องานเป็น issueTitle (event อื่นบางชนิดใช้ title) */
 const titleOf = (n: BellItem) => (typeof n.payload.issueTitle === "string" ? n.payload.issueTitle : typeof n.payload.title === "string" ? n.payload.title : null);
 
-/** เชื่อม Realtime (A17) เพื่อรู้ว่ามีแจ้งเตือนใหม่ · เชื่อมไม่ได้ = ให้ผู้เรียก poll แทน */
-export function useNotificationSocket(userId: string | undefined, onNotification: (unread: number) => void) {
+/**
+ * เชื่อม Realtime (A17) เพื่อรู้ว่ามีแจ้งเตือนใหม่ · เชื่อมไม่ได้ = ให้ผู้เรียก poll แทน
+ * `notification` = มีรายการใหม่ (แสดง Toast) · `unread` = จำนวนเปลี่ยนจากการอ่าน/เสร็จ/เลื่อน ในอีก session (ไม่แสดง Toast)
+ */
+export function useNotificationSocket(userId: string | undefined, onNotification: (unread: number) => void, onUnreadChanged?: () => void) {
   const [connected, setConnected] = useState(false);
   const handler = useRef(onNotification);
   handler.current = onNotification;
+  const changed = useRef(onUnreadChanged);
+  changed.current = onUnreadChanged;
   useEffect(() => {
     if (!userId || typeof window === "undefined" || typeof WebSocket === "undefined" || process.env.NODE_ENV === "test") return;
     let closed = false;
@@ -44,6 +49,7 @@ export function useNotificationSocket(userId: string | undefined, onNotification
         try {
           const m = JSON.parse(String(e.data)) as { type?: string; unread?: { total?: number } };
           if (m.type === "notification") handler.current(m.unread?.total ?? 0);
+          else if (m.type === "unread") changed.current?.();
         } catch { /* ข้อความที่ไม่ใช่ JSON ไม่สนใจ */ }
       };
       ws.onclose = () => {
@@ -66,18 +72,23 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
   const [tab, setTab] = useState<Tab>("all");
   const me = useQuery({ queryKey: queryKeys.me, queryFn: () => api.get<Me>("/me") });
   const ti = useTranslations("inbox-bell.inbox");
-  const live = useNotificationSocket(me.data?.id, (count) => {
-    void cache.invalidateQueries({ queryKey: queryKeys.notifications });
-    void cache.invalidateQueries({ queryKey: ["bell"] });
-    void cache.invalidateQueries({ queryKey: ["inbox"] });
-    void showLatest(count);
-  });
+  const refresh = () =>
+    Promise.all([cache.invalidateQueries({ queryKey: queryKeys.notifications }), cache.invalidateQueries({ queryKey: ["bell"] }), cache.invalidateQueries({ queryKey: ["inbox"] })]);
+  const live = useNotificationSocket(
+    me.data?.id,
+    (count) => {
+      void refresh();
+      void showLatest(count);
+    },
+    // อ่าน / เสร็จ / เลื่อนเตือนจากอีก session: อัปเดตตัวเลขโดยไม่แสดง Toast
+    () => void refresh(),
+  );
   // K4: Toast บอกว่าใครทำอะไร พร้อมปุ่มไปงาน / Inbox · ดึงรายการล่าสุดไม่ได้ = ใช้ข้อความนับจำนวนแบบเดิม
   async function showLatest(count: number) {
     try {
       const latest = (await api.get<{ items: BellItem[] }>("/me/notifications?filter=unread&limit=1")).items[0];
       if (!latest) throw new Error("empty");
-      const slug = slugOf(latest.workspaceId);
+      const slug = slugOf(latest.workspaceId) ?? workspace;
       const who = latest.actor?.displayName ?? (latest.payload.actorName as string | undefined) ?? "Friday";
       const key = typeof latest.payload.issueKey === "string" ? latest.payload.issueKey : null;
       const typeKey = latest.eventType.replace(/\./g, "__");
@@ -105,13 +116,21 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
     queryFn: () => api.get<{ items: BellItem[] }>(`/me/notifications?filter=${tab}&limit=8`),
     enabled: open,
   });
-  const slugOf = (id: string) => summary.data?.workspaces.find((w) => w.id === id)?.slug ?? workspace;
+  // summary มีเฉพาะ Workspace ที่ยังมีรายการไม่อ่าน · รายการที่อ่านแล้วต้องหา slug จากรายชื่อ Workspace ทั้งหมดของผู้ใช้ (ใช้ cache ร่วมกับ shell)
+  const workspaces = useQuery({ queryKey: queryKeys.workspaces, queryFn: () => api.get<List<Workspace>>("/me/workspaces"), enabled: open });
+  const slugOf = (id: string) => workspaces.data?.items.find((w) => w.id === id)?.slug ?? summary.data?.workspaces.find((w) => w.id === id)?.slug;
   const inboxHref = `/work/${encodeURIComponent(workspace)}/inbox`;
+  // ไม่รู้ Workspace เจ้าของรายการ: เปิด Inbox ปัจจุบันโดยไม่เลือกรายการ แทนการเดาว่าเป็นทีมที่เปิดอยู่
+  const itemHref = (n: BellItem) => {
+    const slug = slugOf(n.workspaceId);
+    return slug ? `/work/${encodeURIComponent(slug)}/inbox?n=${encodeURIComponent(n.id)}` : inboxHref;
+  };
 
-  async function readAll() {
-    await api.post("/me/notifications/read-all", {});
-    await Promise.all([cache.invalidateQueries({ queryKey: queryKeys.notifications }), cache.invalidateQueries({ queryKey: ["bell"] }), cache.invalidateQueries({ queryKey: ["inbox"] })]);
-  }
+  const readAll = useMutation({
+    mutationFn: () => api.post("/me/notifications/read-all", {}),
+    onSuccess: () => refresh(),
+    onError: (e) => toast({ message: e instanceof Error ? e.message : String(e) }),
+  });
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -136,7 +155,7 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
         <Popover.Content className={styles.pop} align="end" sideOffset={8} role="dialog" aria-label={tb("title")}>
           <div className={styles.top}>
             <b>{tb("title")}</b>
-            <button type="button" className={styles.link} onClick={() => void readAll()}>{tb("readAll")}</button>
+            <button type="button" className={styles.link} disabled={readAll.isPending} onClick={() => readAll.mutate()}>{tb("readAll")}</button>
             <Link href={`/work/${encodeURIComponent(workspace)}/profile`} style={{ fontSize: 12 }} onClick={() => setOpen(false)}>{tb("settings")}</Link>
           </div>
           <div className={styles.tabs} role="tablist">
@@ -144,12 +163,13 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
           </div>
           <div className={styles.list}>
             {list.isPending && <div className={styles.empty}>…</div>}
+            {list.isError && <ErrorState error={list.error} retry={() => void list.refetch()} />}
             {list.data && !list.data.items.length && <div className={styles.empty}>{tb("empty")}</div>}
             {list.data?.items.map((n) => {
               const who = n.actor?.displayName ?? (n.payload.actorName as string | undefined) ?? "Friday";
               const target = [n.payload.issueKey, titleOf(n)].filter(Boolean).join(" ");
               return (
-                <Link key={n.id} className={`${styles.item} ${!n.readAt ? styles.unread : ""}`} href={`/work/${encodeURIComponent(slugOf(n.workspaceId))}/inbox?n=${n.id}`} onClick={() => setOpen(false)}>
+                <Link key={n.id} className={`${styles.item} ${!n.readAt ? styles.unread : ""}`} href={itemHref(n)} onClick={() => setOpen(false)}>
                   <Avatar size="small" person={{ id: n.actor?.id ?? n.id, displayName: who }} />
                   <span className={styles.text}><span><b>{who}</b> {target}</span><span className={styles.meta}>{typeof n.payload.message === "string" ? `“${n.payload.message}” · ` : ""}{formatDate(n.createdAt)}</span></span>
                   {!n.readAt && <span className={styles.dot} />}

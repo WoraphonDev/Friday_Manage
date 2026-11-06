@@ -139,3 +139,89 @@ describe("กระดิ่ง (K4)", () => {
     expect(within(pop).getByRole("link", { name: "เปิด Inbox ทั้งหมด →" })).toHaveAttribute("href", "/work/sample/inbox");
   });
 });
+
+// รายงาน docs/reviews/ui-interaction-audit-2026-11-06.md · payload ตามรูปแบบที่ fanout ส่งจริง (issueTitle)
+describe("กระดิ่ง · ข้อผิดพลาดและลิงก์ (UI-01 ถึง UI-04)", () => {
+  const openBell = async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Bell workspace="sample" unread={1} />, { messages: { "inbox-bell": ib } });
+    await user.click(screen.getByRole("link", { name: "การแจ้งเตือน 1 รายการยังไม่อ่าน" }));
+    return { user, pop: await screen.findByRole("dialog", { name: "การแจ้งเตือน" }) };
+  };
+
+  it("UI-01: โหลดรายการไม่สำเร็จแสดงข้อความ + requestId · ลองใหม่แล้วแสดงรายการโดยไม่ reload", async () => {
+    let fail = true;
+    server.use(http.get("*/api/v1/me/notifications", () => (fail ? errorBody(503) : HttpResponse.json({ items: [note("n1")], nextCursor: null }))));
+    const { user, pop } = await openBell();
+    const alert = await within(pop).findByRole("alert");
+    expect(alert).toHaveTextContent("ข้อผิดพลาดทดสอบ");
+    expect(alert).toHaveTextContent("req_w04_001");
+    fail = false;
+    await user.click(within(alert).getByRole("button", { name: /ลองอีกครั้ง/ }));
+    expect(await within(pop).findByRole("link", { name: /DE-1/ })).toBeInTheDocument();
+    expect(within(pop).queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("UI-02: แสดงชื่องานจาก payload.issueTitle · Event อื่นยังใช้ title", async () => {
+    server.use(http.get("*/api/v1/me/notifications", () => HttpResponse.json({ items: [
+      { ...note("n-real"), payload: { issueKey: "DE-5", issueTitle: "งานจาก API จริง", actorName: "ผู้พัฒนาหนึ่ง" } },
+      { ...note("n-other", { eventType: "import.completed", category: "activity" }), payload: { title: "นำเข้าเสร็จ" } },
+    ], nextCursor: null })));
+    const { pop } = await openBell();
+    expect(await within(pop).findByRole("link", { name: /DE-5 งานจาก API จริง/ })).toBeInTheDocument();
+    expect(within(pop).getByRole("link", { name: /นำเข้าเสร็จ/ })).toBeInTheDocument();
+  });
+
+  it("UI-03: รายการที่อ่านแล้วของอีก Workspace ลิงก์ไป Inbox ของ Workspace นั้น แม้ summary ไม่มีทีมนั้น", async () => {
+    server.use(
+      http.get("*/api/v1/me/notifications/summary", () => HttpResponse.json({ total: 0, workspaces: [] })),
+      http.get("*/api/v1/me/notifications", () => HttpResponse.json({ items: [note("n-b", { workspaceId: "sample-ws-two", readAt: now })], nextCursor: null })),
+    );
+    const { pop } = await openBell();
+    await waitFor(() => expect(within(pop).getByRole("link", { name: /DE-1/ })).toHaveAttribute("href", "/work/other/inbox?n=n-b"));
+  });
+
+  it("UI-04: อ่านทั้งหมดไม่สำเร็จแจ้งผู้ใช้ · ระหว่างรอกดซ้ำไม่ได้ · ลองใหม่ได้", async () => {
+    let attempts = 0;
+    server.use(http.post("*/api/v1/me/notifications/read-all", () => { attempts++; return errorBody(503); }));
+    const { user, pop } = await openBell();
+    const button = within(pop).getByRole("button", { name: "อ่านทั้งหมด" });
+    await user.click(button);
+    expect(await screen.findByRole("status")).toHaveTextContent("ข้อผิดพลาดทดสอบ");
+    await waitFor(() => expect(button).toBeEnabled());
+    await user.click(button);
+    await waitFor(() => expect(attempts).toBe(2));
+  });
+});
+
+describe("Inbox · เลือกรายการตาม ?n= (UI-05)", () => {
+  const ui = () => <WorkspaceShell ws="sample"><InboxPage ws="sample" /></WorkspaceShell>;
+  const detail = () => screen.findByRole("complementary", { name: "รายละเอียดการแจ้งเตือน" });
+
+  it("?n= เปลี่ยนโดยไม่ remount เลือกรายการใหม่และอ่านรายการนั้น · ลบ query แล้วไม่เลือก", async () => {
+    navigation.search = "?n=n1";
+    const { rerender } = renderWithProviders(ui(), { messages: { "inbox-bell": ib } });
+    expect(await within(await detail()).findByRole("link", { name: /งานตัวอย่างหนึ่ง/ })).toBeInTheDocument();
+    navigation.search = "?n=n-due";
+    rerender(ui());
+    expect(await within(await detail()).findByText("“ขอเพิ่มอีก 2 วันทำการ”")).toBeInTheDocument();
+    await waitFor(() => expect(calls).toContain("read:n-due:{}"));
+    navigation.search = "";
+    rerender(ui());
+    expect(await within(await detail()).findByText(/เลือกการแจ้งเตือน/)).toBeInTheDocument();
+  });
+
+  it("ตัวกรองที่ซ่อนรายการเป้าหมายถูกล้าง · รายการที่อยู่หน้าถัดไปโหลดให้จนเจอ", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderWithProviders(ui(), { messages: { "inbox-bell": ib } });
+    await user.click(await screen.findByRole("button", { name: "Mentions1" }));
+    navigation.search = "?n=n1";
+    rerender(ui());
+    expect(await screen.findByRole("button", { name: "ทั้งหมด3" })).toHaveAttribute("aria-pressed", "true");
+    expect(await within(await detail()).findByRole("link", { name: /งานตัวอย่างหนึ่ง/ })).toBeInTheDocument();
+    navigation.search = "?n=n-old";
+    rerender(ui());
+    await waitFor(() => expect(lists.some((u) => u.searchParams.get("cursor") === "cursor-1")).toBe(true));
+    expect(await screen.findByRole("button", { name: /งานหน้าสอง/ })).toHaveAttribute("aria-current", "true");
+  });
+});

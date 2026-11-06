@@ -3,18 +3,22 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { Injectable } from '@nestjs/common';
 import { schema, type Tx } from '@friday/db';
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { today } from '../common/dates.js';
 import { AppError, forbidden, notFound } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
+import { type DomainEvent, EventBus } from '../core/events.js';
 import { InvitationsService } from '../invitations/invitations.service.js';
 import { WorkCalendar } from '../projects/calendar.js';
+import { requirePerm } from '../projects/permissions.js';
 import { projectKey, ProjectsService } from '../projects/projects.service.js';
 import { type ParsedWorkbook, readPlanWorkbook } from './excel.js';
-import { autoMap, checkPlan, type ColumnMapping, FIELDS, type Field, personKey, type PlanCheck } from './plan.js';
+import { applyUpdate, computeUpdate, statusNames, type UpdateDiff, type UpdatePlan } from './update.js';
+import { buildPlanXlsx } from './export.js';
+import { autoMap, type CheckOptions, checkPlan, type ColumnMapping, FIELDS, type Field, personKey, type PlanCheck } from './plan.js';
 
 const s = schema;
 const isoDate = z.iso.date();
@@ -37,6 +41,12 @@ export const PatchImportBody = z.object({
   project: ProjectDraft.optional(),
   /** ตั้งแผนนี้เป็น Baseline v1 (ค่าเริ่มต้นเปิด) */
   setBaseline: z.boolean().optional(),
+  /** โหมดอัปเดต: งานที่หายไปจากไฟล์ (key = No.) · ค่าเริ่มต้น keep */
+  missing: z.record(z.string().regex(/^\d+$/), z.enum(['keep', 'delete'])).optional(),
+  /** โหมดอัปเดต: ใช้กับงานที่หายไปทุกงาน (ค่าใน `missing` รายงานชนะ) */
+  missingAll: z.enum(['keep', 'delete']).optional(),
+  /** โหมดอัปเดต: เหตุผลที่บันทึกใน plan_changes */
+  planChangeReason: z.string().trim().min(1).max(500).optional(),
 });
 
 interface JobState {
@@ -48,6 +58,11 @@ interface JobState {
   /** decided = ผู้ใช้เลือกแล้ว (สมาชิก / อีเมล / ไม่ระบุ) · false = ยังไม่พบและยังไม่ได้เลือก */
   people: { name: string; roles: string[]; rows: number; decided: boolean; target: z.infer<typeof PersonTarget> }[];
   columns: { header: string; field: Field | null; sample: unknown }[];
+  /** โหมดอัปเดตเท่านั้น */
+  diff?: UpdateDiff;
+  missingChoice?: Record<string, 'keep' | 'delete'>;
+  missingAll?: 'keep' | 'delete';
+  planChangeReason?: string;
 }
 
 type Job = typeof s.importJobs.$inferSelect;
@@ -58,15 +73,19 @@ export class ImportsService {
     private readonly db: TenantDb,
     private readonly projects: ProjectsService,
     private readonly invitations: InvitationsService,
+    private readonly events: EventBus,
   ) {}
 
   /** L3 ขั้นที่ 1 · อัปโหลดแล้วจับคู่คอลัมน์และคนให้อัตโนมัติ */
-  async upload(auth: AuthInfo, tenant: TenantInfo, file: { buffer: Buffer; originalname: string } | undefined, mode: string) {
+  async upload(auth: AuthInfo, tenant: TenantInfo, file: { buffer: Buffer; originalname: string } | undefined, mode: string, targetKey?: string) {
     if (tenant.role === 'guest') throw forbidden('ws.project.create');
     if (!file) throw new AppError(400, 'file_required', 'แนบไฟล์ .xlsx');
     if (!/\.xlsx$/i.test(file.originalname)) throw new AppError(400, 'invalid_file', 'รองรับเฉพาะไฟล์ .xlsx');
-    if (mode !== 'create') throw new AppError(400, 'mode_not_supported', 'ตอนนี้รองรับเฉพาะการนำเข้าเป็นโปรเจกต์ใหม่ · การอัปเดตโปรเจกต์เดิมจะมาในรอบถัดไป');
+    if (mode !== 'create' && mode !== 'update') throw new AppError(400, 'mode_not_supported', 'mode ต้องเป็น create (โปรเจกต์ใหม่) หรือ update (อัปเดตแผนของโปรเจกต์เดิม)');
+    if (mode === 'update' && !targetKey) throw new AppError(400, 'project_required', 'ระบุ projectKey ของโปรเจกต์ที่จะอัปเดต');
     const wb = await this.parse(file.buffer);
+    // อัปเดตแผนต้องมี project.baseline · ตรวจก่อนเก็บไฟล์ลงดิสก์
+    if (mode === 'update') await this.db.run(auth, tenant, async (tx) => void (await this.updateProject(tx, auth, tenant, targetKey!)));
 
     const storageKey = `imports/${randomUUID()}.xlsx`;
     const path = join(config.uploadDir, storageKey);
@@ -76,6 +95,15 @@ export class ImportsService {
     return this.db.run(auth, tenant, async (tx) => {
       const columnMapping = autoMap(wb.table.headers);
       const members = await this.members(tx);
+      if (mode === 'update') {
+        const project = await this.updateProject(tx, auth, tenant, targetKey!);
+        const ev = await this.evaluateUpdate(tx, tenant, project, wb, columnMapping, {}, members, {}, true);
+        const [job] = await tx
+          .insert(s.importJobs)
+          .values({ workspaceId: tenant.workspaceId, projectId: project.id, mode: 'update', fileName: file.originalname, storageKey, columnMapping, personMapping: ev.personMapping, validation: ev.state, status: 'validated', rowTotal: ev.state.summary.rows, createdBy: auth.userId })
+          .returning();
+        return view(job, ev.state);
+      }
       const draft = suggestProject(file.originalname);
       const { state, personMapping } = await this.evaluate(tx, tenant, wb, columnMapping, {}, members, { project: draft, setBaseline: true }, true);
       const [job] = await tx
@@ -114,6 +142,13 @@ export class ImportsService {
       const columnMapping = { ...(job.columnMapping as ColumnMapping), ...(input.columnMapping ?? {}) };
       const personMapping = { ...(job.personMapping as PersonMapping), ...(input.personMapping ?? {}) };
       const settings = { project: { ...prev.project, ...(input.project ?? {}) }, setBaseline: input.setBaseline ?? prev.setBaseline };
+      if (job.mode === 'update') {
+        const project = await this.updateProject(tx, auth, tenant, job);
+        const keep = { missingChoice: { ...(prev.missingChoice ?? {}), ...(input.missing ?? {}) }, missingAll: input.missingAll ?? prev.missingAll, planChangeReason: input.planChangeReason ?? prev.planChangeReason };
+        const ev = await this.evaluateUpdate(tx, tenant, project, wb, columnMapping, personMapping, await this.members(tx), keep, false);
+        const [done] = await tx.update(s.importJobs).set({ columnMapping, personMapping, validation: ev.state, rowTotal: ev.state.summary.rows }).where(eq(s.importJobs.id, job.id)).returning();
+        return view(done, ev.state);
+      }
       const { state } = await this.evaluate(tx, tenant, wb, columnMapping, personMapping, await this.members(tx), settings, false);
       const [updated] = await tx
         .update(s.importJobs)
@@ -132,6 +167,7 @@ export class ImportsService {
       const prev = job.validation as JobState;
       const wb = await this.parse(await readFile(join(config.uploadDir, job.storageKey)));
       const personMapping = job.personMapping as PersonMapping;
+      if (job.mode === 'update') return this.commitUpdate(tx, auth, tenant, job, prev, wb, personMapping);
       const { check } = await this.evaluate(tx, tenant, wb, job.columnMapping as ColumnMapping, personMapping, await this.members(tx), prev, false);
 
       const p = prev.project;
@@ -281,15 +317,105 @@ export class ImportsService {
         summary: `${job.fileName} → ${project.key} · ${rows.length} งาน · ข้าม ${check.skip.size}`,
       });
       const emails = Object.values(personMapping).flatMap((t) => (t && 'email' in t ? [t.email] : []));
-      return { project: { key: project.key, name: project.name }, imported: rows.length, scheduled: rows.length - backlog, backlog, skipped: check.skip.size, baseline: prev.setBaseline, emails };
+      return { mode: 'create' as const, project: { key: project.key, name: project.name }, imported: rows.length, scheduled: rows.length - backlog, backlog, skipped: check.skip.size, baseline: prev.setBaseline, emails, events: [] as DomainEvent[], projectId: project.id, fileName: job.fileName };
     });
 
     // คนที่เลือก "เชิญด้วยอีเมล" ได้คำเชิญเข้าโปรเจกต์ที่เพิ่งสร้าง
-    const { emails, ...summary } = result;
+    const { emails, events, projectId, fileName, ...summary } = result;
+    await this.events.publish([
+      ...events,
+      { type: 'import.completed', workspaceId: tenant.workspaceId, projectId, actorId: auth.userId, data: { fileName, mode: summary.mode, projectKey: summary.project.key, ...counts(summary) }, at: new Date() },
+    ]);
     const invitations = emails.length
       ? (await this.invitations.create(auth, tenant, { emails, workspaceRole: 'member', projectKey: summary.project.key, projectRole: 'member', expiresInDays: 7 }, baseUrl)).items
       : [];
     return { ...summary, invitations };
+  }
+
+  // ---------------------------------------------------------------------------
+  // โหมดอัปเดตแผน (L3)
+  // ---------------------------------------------------------------------------
+
+  /** โปรเจกต์ปลายทางของการอัปเดต (key หรือ job) · ต้องมี project.baseline */
+  private async updateProject(tx: Tx, auth: AuthInfo, tenant: TenantInfo, target: string | Job) {
+    let key = typeof target === 'string' ? target : '';
+    if (typeof target !== 'string') {
+      const [p] = await tx.select({ key: s.projects.key }).from(s.projects).where(eq(s.projects.id, target.projectId ?? ''));
+      if (!p) throw notFound('โปรเจกต์');
+      key = p.key;
+    }
+    const { project, access } = await this.projects.load(tx, auth, tenant, key);
+    requirePerm(access, 'project.view');
+    requirePerm(access, 'project.baseline');
+    if (project.archivedAt) throw new AppError(409, 'project_archived', 'โปรเจกต์ถูก Archive แล้ว อัปเดตแผนไม่ได้');
+    return project;
+  }
+
+  private async evaluateUpdate(
+    tx: Tx,
+    tenant: TenantInfo,
+    project: typeof s.projects.$inferSelect,
+    wb: ParsedWorkbook,
+    columnMapping: ColumnMapping,
+    personMapping: PersonMapping,
+    members: Map<string, string>,
+    keep: Pick<JobState, 'missingChoice' | 'missingAll' | 'planChangeReason'>,
+    autoMatch: boolean,
+  ) {
+    const cal = await WorkCalendar.load(tx, project);
+    const base = await this.evaluate(tx, tenant, wb, columnMapping, personMapping, members, { project: { key: project.key, name: project.name }, setBaseline: false }, autoMatch, {
+      cal,
+      keepPlanEnd: true,
+      baOptional: true,
+      noDerivedSize: true,
+      statuses: await statusNames(tx, project.id),
+    });
+    const plan: UpdatePlan = await computeUpdate(tx, project, base.check, Object.values(columnMapping).includes('id'));
+    const state: JobState = { ...base.state, diff: plan.diff, ...keep };
+    state.summary = { ...state.summary, ready: plan.diff.changed.length + plan.diff.added.length };
+    return { ...base, state, plan };
+  }
+
+  private async commitUpdate(tx: Tx, auth: AuthInfo, tenant: TenantInfo, job: Job, prev: JobState, wb: ParsedWorkbook, personMapping: PersonMapping) {
+    const project = await this.updateProject(tx, auth, tenant, job);
+    // กันอัปเดตแผนพร้อมกันสองคำขอ (เลขงาน / No. ซ้ำ)
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'import:' + project.id}, 0))`);
+    const ev = await this.evaluateUpdate(tx, tenant, project, wb, job.columnMapping as ColumnMapping, personMapping, await this.members(tx), prev, false);
+    const userOf = (name: string | null) => {
+      if (!name) return null;
+      const t = personMapping[personKey(name)];
+      return t && 'userId' in t ? t.userId : null;
+    };
+    const choice = (no: number) => prev.missingChoice?.[String(no)] ?? prev.missingAll ?? 'keep';
+    const deleteNos = new Set(ev.plan.diff.missing.filter((m) => choice(m.no) === 'delete').map((m) => m.no));
+    const reason = prev.planChangeReason ?? `อัปเดตแผนจากไฟล์ ${job.fileName}`;
+    const done = await applyUpdate(tx, { auth, tenant, project, fileName: job.fileName, plan: ev.plan, userOf, deleteNos, reason });
+
+    const skipped = ev.check.skip.size;
+    await tx.update(s.importJobs).set({ status: 'completed', rowImported: done.added + done.changed, rowSkipped: skipped, completedAt: new Date() }).where(eq(s.importJobs.id, job.id));
+    await tx.insert(s.auditLogs).values({
+      workspaceId: tenant.workspaceId,
+      actorId: auth.userId,
+      actorKind: 'user',
+      category: 'data',
+      action: 'import.completed',
+      targetType: 'project',
+      targetId: project.id,
+      summary: `${job.fileName} → อัปเดต ${project.key} · เพิ่ม ${done.added} · เปลี่ยน ${done.changed} · ลบ ${done.deleted} · ข้าม ${skipped}`,
+    });
+    const emails = Object.values(personMapping).flatMap((t) => (t && 'email' in t ? [t.email] : []));
+    const { events, ...counts } = done;
+    return { mode: 'update' as const, project: { key: project.key, name: project.name }, ...counts, skipped, emails, events, projectId: project.id, fileName: job.fileName };
+  }
+
+  /** `GET projects/:key/export.xlsx` · เห็นโปรเจกต์ได้ก็ export ได้ ยกเว้น Guest */
+  async exportXlsx(auth: AuthInfo, tenant: TenantInfo, key: string) {
+    return this.db.run(auth, tenant, async (tx) => {
+      const { project, access } = await this.projects.load(tx, auth, tenant, key);
+      requirePerm(access, 'project.view');
+      if (access.guestViewer || tenant.role === 'guest') throw new AppError(403, 'guest_view_limited', 'Guest export แผนงานไม่ได้', { allowed: ['overview', 'timeline'] });
+      return { filename: `${project.key}-plan.xlsx`, buffer: await buildPlanXlsx(tx, project) };
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -332,16 +458,17 @@ export class ImportsService {
     members: Map<string, string>,
     settings: Pick<JobState, 'project' | 'setBaseline'>,
     autoMatch: boolean,
+    opts: CheckOptions & { cal?: WorkCalendar } = {},
   ) {
     // ปฏิทิน: วันทำงานและวันหยุดของ Workspace + ชีต Holidays ในไฟล์
     const [ws] = await tx.select({ cal: s.workspaceSettings.holidayCalendarId, days: s.workspaceSettings.workDays }).from(s.workspaceSettings).where(eq(s.workspaceSettings.workspaceId, tenant.workspaceId));
     const off = new Set(wb.holidays.map((h) => h.date));
     if (ws?.cal) (await tx.select({ date: s.holidays.date }).from(s.holidays).where(eq(s.holidays.calendarId, ws.cal))).forEach((h) => off.add(h.date));
-    const cal = new WorkCalendar(new Set(ws?.days ?? [1, 2, 3, 4, 5]), off);
+    const cal = opts.cal ?? new WorkCalendar(new Set(ws?.days ?? [1, 2, 3, 4, 5]), off);
 
     // ชื่อที่ถูกจับคู่แล้ว (สมาชิก / อีเมล / ไม่ระบุ) ไม่ต้องเตือนว่าไม่พบ
     const handled = new Set([...members.keys(), ...Object.keys(personMapping)]);
-    const check = checkPlan(wb, columnMapping, cal, handled);
+    const check = checkPlan(wb, columnMapping, cal, handled, opts);
 
     const mapping: PersonMapping = { ...personMapping };
     // จับคู่อัตโนมัติเฉพาะคนที่ชื่อตรงกับสมาชิก · คนที่ไม่พบยังไม่ถือว่าตัดสินแล้ว (ต่างจากการเลือก "ไม่ระบุ" = null)
@@ -364,6 +491,8 @@ export class ImportsService {
   }
 }
 
+const counts = (r: Record<string, unknown>) => Object.fromEntries(['imported', 'scheduled', 'backlog', 'added', 'changed', 'unchanged', 'deleted', 'kept', 'planChanges', 'skipped'].filter((k) => k in r).map((k) => [k, r[k]]));
+
 function view(job: Job, state: JobState) {
   return {
     id: job.id,
@@ -374,6 +503,7 @@ function view(job: Job, state: JobState) {
     fields: Object.fromEntries(Object.entries(FIELDS).map(([k, v]) => [k, v.label])),
     ...state,
     findings: state.findings.slice(0, 1000),
+    ...(state.diff ? { diff: { ...state.diff, added: state.diff.added.slice(0, 1000), changed: state.diff.changed.slice(0, 1000), missing: state.diff.missing.slice(0, 1000) } } : {}),
   };
 }
 

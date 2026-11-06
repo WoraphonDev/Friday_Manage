@@ -1,0 +1,51 @@
+.page { max-width:1380px; margin:0 auto; padding:22px 24px 48px; display:flex; flex-direction:column; gap:16px; min-width:0; }
+.crumb { font-size:13px; color:var(--muted); }
+.top { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+.top h1 { margin:0; font-size:24px; }
+.muted { color:var(--muted); font-size:12px; }
+.safe { display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--border); border-radius:10px; padding:8px 12px; }
+.safe b { font-size:13px; }
+.chips { display:flex; gap:8px; flex-wrap:wrap; }
+.chip { display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:0 14px; border-radius:999px; border:1px solid #d5dae0; background:#fff; font:inherit; font-size:13px; color:#3d4550; cursor:pointer; }
+.chip[aria-pressed="true"] { background:var(--foreground); border-color:var(--foreground); color:#fff; }
+.chipTo { opacity:.7; font-size:12px; }
+.cols { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+.col { flex:1 1 300px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+.lbl { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; flex-wrap:wrap; }
+.tag { font-size:11px; font-weight:600; padding:1px 8px; border-radius:999px; background:#eef0f3; color:#3d4550; }
+.phone { background:#8cabd9; border-radius:18px; padding:14px 12px; min-height:520px; display:flex; flex-direction:column; gap:10px; }
+.oa { display:flex; gap:8px; align-items:flex-start; }
+.oaav { width:34px; height:34px; border-radius:50%; background:#1d4ed8; color:#fff; font-weight:700; display:flex; align-items:center; justify-content:center; flex:none; font-size:13px; }
+.flex { background:#fff; border-radius:14px; overflow:hidden; width:100%; max-width:270px; }
+.fh { padding:10px 14px; color:#fff; font-weight:700; font-size:13px; }
+.fb { padding:12px 14px; display:flex; flex-direction:column; gap:6px; font-size:13px; }
+.fTitle { font-size:15px; line-height:1.35; }
+.fr { display:flex; justify-content:space-between; gap:8px; }
+.fr b { text-align:right; }
+.fbtn { display:block; text-align:center; padding:10px; border-top:1px solid #eef0f3; font-weight:700; font-size:13px; color:#1d4ed8; }
+.note { background:#f6f7f9; border-radius:8px; padding:8px; font-size:12px; }
+.lineNote { margin-top:auto; background:rgba(255,255,255,.85); border-radius:10px; padding:8px 10px; font-size:11px; color:#3d4550; }
+.mail { background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; min-height:520px; display:flex; flex-direction:column; }
+.mh { padding:12px 16px; border-bottom:1px solid #eef0f3; font-size:13px; }
+.subject { font-weight:700; margin-top:4px; }
+.mb { padding:20px; display:flex; flex-direction:column; gap:12px; font-size:14px; }
+.bar { height:4px; border-radius:2px; }
+.mTitle { font-size:16px; font-weight:700; line-height:1.4; }
+.table { border-collapse:collapse; font-size:13px; width:100%; }
+.table td { padding:6px 0; }
+.table td:first-child { width:40%; }
+.mbtn { display:inline-block; padding:10px 18px; border-radius:8px; background:#1d4ed8; color:#fff; font-weight:700; font-size:14px; }
+.foot { font-size:11px; border-top:1px solid #eef0f3; padding-top:10px; }
+.hook { background:#1f2328; color:#e6e8eb; border-radius:12px; padding:14px; min-height:520px; display:flex; flex-direction:column; gap:10px; font-size:13px; }
+.emb { background:#2b3036; border-radius:8px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; border-top:3px solid #60a5fa; }
+.emb b { color:#fff; }
+.embTitle { color:#60a5fa; font-weight:700; }
+.embMuted { color:#8b949e; font-size:12px; }
+.embLabel { color:#8b949e; font-size:11px; font-weight:700; margin-top:4px; }
+.embGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:4px; }
+.code { margin:0; background:#0f1419; border-radius:8px; padding:10px; font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:11px; line-height:1.5; white-space:pre-wrap; word-break:break-word; color:#b5bdc6; overflow:auto; }
+.notes { background:#fff; border:1px solid var(--border); border-radius:12px; padding:14px 18px; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; font-size:13px; }
+@media (max-width:760px) {
+  .page { padding:12px; }
+  .phone, .mail, .hook { min-height:0; }
+}

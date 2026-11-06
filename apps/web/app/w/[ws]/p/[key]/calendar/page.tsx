@@ -1,4 +1,6 @@
-import { Placeholder } from "@/components/Placeholder";
-export default function Page() {
-  return <Placeholder task="W09" titleKey="nav.calendar" />;
+import { CalendarView } from "./_components/calendar-view";
+
+export default async function Page({ params }: { params: Promise<{ ws: string; key: string }> }) {
+  const { ws, key } = await params;
+  return <CalendarView ws={ws} projectKey={key} />;
 }

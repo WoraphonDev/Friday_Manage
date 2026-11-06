@@ -71,6 +71,13 @@
       "when": 1793895661817,
       "tag": "0009_rls_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793938111277,
+      "tag": "0010_in_app_channel",
+      "breakpoints": true
     }
   ]
 }

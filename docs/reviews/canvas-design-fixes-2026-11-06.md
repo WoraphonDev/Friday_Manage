@@ -5,7 +5,7 @@
 | ID | สถานะ | PR | หมายเหตุ |
 |---|---|---|---|
 | VD01 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-shell-variants | ดูด้านล่าง |
-| VD02 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-project-header | ดูด้านล่าง |
+| VD02 | Codex ตรวจผ่าน desktop; mobile รอ VD04/VD15 | [#79](https://github.com/WoraphonDev/Friday_Manage/pull/79) | [ผลตรวจและภาพ](canvas-vd02-verification-2026-11-06.md) |
 | VD03 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-shell-variants | ดูด้านล่าง |
 | VD04 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-shell-variants | ดูด้านล่าง |
 | VD05 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
@@ -13,20 +13,20 @@
 | VD07 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ยังไม่มีคอลัมน์ FR / Screen (ดูด้านล่าง) |
 | VD08 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
 | VD09 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
-| VD15 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
 | VD10 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ดูด้านล่าง |
 | VD11 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ดูด้านล่าง |
 | VD12 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ยังไม่มีผลทดสอบ / Requirement / Screen / Labels (ดูด้านล่าง) |
 | VD13 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ดูด้านล่าง |
-| VD18 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ยังไม่มีแท็บ รายละเอียด / ผลทดสอบ / Commits / คอมเมนต์ ของ M4 |
-| VD22 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | Canvas K3 ไม่มีช่องเพิ่มวันทำการแยก (ดูด้านล่าง) |
-| VD23 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | เพิ่ม API `DELETE issues/:key?subtasks=keep` |
 | VD14 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | ดูด้านล่าง |
+| VD15 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
 | VD16 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | ดูด้านล่าง |
 | VD17 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | รวมการ์ด Kanban บนจอใหญ่ |
+| VD18 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ยังไม่มีแท็บ รายละเอียด / ผลทดสอบ / Commits / คอมเมนต์ ของ M4 |
 | VD19 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | ดูด้านล่าง |
 | VD20 | ตรงแล้ว (ไม่ต้องแก้) | fix/canvas-pages | การ์ดกลุ่มทีมมีอยู่แล้วใน source ปัจจุบัน · ตรวจภาพเทียบ Profile แล้ว |
 | VD21 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | ดูด้านล่าง |
+| VD22 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | Canvas K3 ไม่มีช่องเพิ่มวันทำการแยก (ดูด้านล่าง) |
+| VD23 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | เพิ่ม API `DELETE issues/:key?subtasks=keep` |
 | VD24 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | รวมแก้ UI-02 (ชื่องานในกระดิ่ง) |
 | VD25 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | palette y=128 w=680 |
 | VD26 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | ดูด้านล่าง |
@@ -176,3 +176,8 @@
 - Reports: ไม่มีปุ่ม "ส่งทาง LINE" และตัวเลือก "ส่งถึง" แบบหลายกลุ่ม (ส่งตามรอบที่ตั้งไว้)
 - ปุ่มภาษาแสดง "English" (ชื่อภาษาของตัวเอง) แทน "EN"
 - Canvas ใช้ทั้ง "ภาพรวม Lead" (16 ไฟล์) และ "ภาพรวม (Lead)" (2 ไฟล์) จึงคงแบบที่ใช้มากกว่า
+
+
+## ผลตรวจ Codex
+
+VD02 ผ่านตามขอบเขต desktop; อีก25รายการยังเปิดอยู่ ดู [ผลตรวจซ้ำ](canvas-vd02-verification-2026-11-06.md) และภาพ1440/390px ตัวเลขมือถือของ fixture ที่ Codexใช้คือ200px ไม่ใช่175px; Canvas M6ยังต้องแก้ใน VD04/VD15 ส่วนชื่อยาวมีพฤติกรรม wrap ใน Canvasเช่นกัน ไม่บังคับความสูง125pxกับทุกชื่อ

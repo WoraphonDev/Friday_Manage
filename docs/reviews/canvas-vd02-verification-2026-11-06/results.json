@@ -1,0 +1,1518 @@
+{
+  "commit": "844a671ac6e0dd1c4f8c47404ac31076973225ce",
+  "results": [
+    {
+      "id": "Main",
+      "route": "/w/visual-audit/p/DP",
+      "width": 1440,
+      "header": {
+        "x": 240,
+        "y": 56,
+        "w": 1200,
+        "h": 125,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 264,
+        "y": 94,
+        "w": 847.828125,
+        "h": 32,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 306,
+        "y": 95.703125,
+        "w": 282.703125,
+        "h": 28.59375,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 1123.828125,
+        "y": 72,
+        "w": 292.171875,
+        "h": 38,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 264,
+        "y": 136,
+        "w": 1152,
+        "h": 44,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 264,
+        "y": 94,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nภาพรวม Lead\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Main",
+      "route": "/w/visual-audit/p/DP",
+      "width": 390,
+      "header": {
+        "x": 0,
+        "y": 56,
+        "w": 390,
+        "h": 200,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 16,
+        "y": 90,
+        "w": 272.5,
+        "h": 84.5,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 56,
+        "y": 94.296875,
+        "w": 231.3125,
+        "h": 23.390625,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 300.5,
+        "y": 68,
+        "w": 73.5,
+        "h": 40,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 16,
+        "y": 184.5,
+        "w": 358,
+        "h": 40,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 16,
+        "y": 90,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 390,
+      "viewport": 390,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\n+ New\nOverview\nภาพรวม Lead\nBacklog\nTable\nKanban\nCalendar\nMembers\nFiles\n\nGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Table",
+      "route": "/w/visual-audit/p/DP/table",
+      "width": 1440,
+      "header": {
+        "x": 240,
+        "y": 56,
+        "w": 1200,
+        "h": 125,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 264,
+        "y": 94,
+        "w": 847.828125,
+        "h": 32,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 306,
+        "y": 95.703125,
+        "w": 282.703125,
+        "h": 28.59375,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 1123.828125,
+        "y": 72,
+        "w": 292.171875,
+        "h": 38,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 264,
+        "y": 136,
+        "w": 1152,
+        "h": 44,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 264,
+        "y": 94,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nภาพรวม Lead\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Table",
+      "route": "/w/visual-audit/p/DP/table",
+      "width": 390,
+      "header": {
+        "x": 0,
+        "y": 56,
+        "w": 390,
+        "h": 200,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 16,
+        "y": 90,
+        "w": 272.5,
+        "h": 84.5,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 56,
+        "y": 94.296875,
+        "w": 231.3125,
+        "h": 23.390625,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 300.5,
+        "y": 68,
+        "w": 73.5,
+        "h": 40,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 16,
+        "y": 184.5,
+        "w": 358,
+        "h": 40,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 16,
+        "y": 90,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 390,
+      "viewport": 390,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\n+ New\nOverview\nภาพรวม Lead\nBacklog\nTable\nKanban\nCalendar\nMembers\nFiles\n\nGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Kanban",
+      "route": "/w/visual-audit/p/DP/board",
+      "width": 1440,
+      "header": {
+        "x": 240,
+        "y": 56,
+        "w": 1200,
+        "h": 125,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 264,
+        "y": 94,
+        "w": 847.828125,
+        "h": 32,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 306,
+        "y": 95.703125,
+        "w": 282.703125,
+        "h": 28.59375,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 1123.828125,
+        "y": 72,
+        "w": 292.171875,
+        "h": 38,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 264,
+        "y": 136,
+        "w": 1152,
+        "h": 44,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 264,
+        "y": 94,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nภาพรวม Lead\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Kanban",
+      "route": "/w/visual-audit/p/DP/board",
+      "width": 390,
+      "header": {
+        "x": 0,
+        "y": 56,
+        "w": 390,
+        "h": 200,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 16,
+        "y": 90,
+        "w": 272.5,
+        "h": 84.5,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 56,
+        "y": 94.296875,
+        "w": 231.3125,
+        "h": 23.390625,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 300.5,
+        "y": 68,
+        "w": 73.5,
+        "h": 40,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 16,
+        "y": 184.5,
+        "w": 358,
+        "h": 40,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 16,
+        "y": 90,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 390,
+      "viewport": 390,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\n+ New\nOverview\nภาพรวม Lead\nBacklog\nTable\nKanban\nCalendar\nMembers\nFiles\n\nGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Timeline",
+      "route": "/w/visual-audit/p/DP/timeline",
+      "width": 1440,
+      "header": {
+        "x": 240,
+        "y": 56,
+        "w": 1200,
+        "h": 125,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 264,
+        "y": 94,
+        "w": 847.828125,
+        "h": 32,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 306,
+        "y": 95.703125,
+        "w": 282.703125,
+        "h": 28.59375,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 1123.828125,
+        "y": 72,
+        "w": 292.171875,
+        "h": 38,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 264,
+        "y": 136,
+        "w": 1152,
+        "h": 44,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 264,
+        "y": 94,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nภาพรวม Lead\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Timeline",
+      "route": "/w/visual-audit/p/DP/timeline",
+      "width": 390,
+      "header": {
+        "x": 0,
+        "y": 56,
+        "w": 390,
+        "h": 200,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 16,
+        "y": 90,
+        "w": 272.5,
+        "h": 84.5,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 56,
+        "y": 94.296875,
+        "w": 231.3125,
+        "h": 23.390625,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 300.5,
+        "y": 68,
+        "w": 73.5,
+        "h": 40,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 16,
+        "y": 184.5,
+        "w": 358,
+        "h": 40,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 16,
+        "y": 90,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 390,
+      "viewport": 390,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\n+ New\nOverview\nภาพรวม Lead\nBacklog\nTable\nKanban\nCalendar\nMembers\nFiles\n\nGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Gantt",
+      "route": "/w/visual-audit/p/DP/gantt",
+      "width": 1440,
+      "header": {
+        "x": 240,
+        "y": 56,
+        "w": 1200,
+        "h": 125,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 264,
+        "y": 94,
+        "w": 847.828125,
+        "h": 32,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 306,
+        "y": 95.703125,
+        "w": 282.703125,
+        "h": 28.59375,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 1123.828125,
+        "y": 72,
+        "w": 292.171875,
+        "h": 38,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 264,
+        "y": 136,
+        "w": 1152,
+        "h": 44,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 264,
+        "y": 94,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nภาพรวม Lead\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Gantt",
+      "route": "/w/visual-audit/p/DP/gantt",
+      "width": 390,
+      "header": {
+        "x": 0,
+        "y": 56,
+        "w": 390,
+        "h": 200,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 16,
+        "y": 90,
+        "w": 272.5,
+        "h": 84.5,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 56,
+        "y": 94.296875,
+        "w": 231.3125,
+        "h": 23.390625,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 300.5,
+        "y": 68,
+        "w": 73.5,
+        "h": 40,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 16,
+        "y": 184.5,
+        "w": 358,
+        "h": 40,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 16,
+        "y": 90,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 390,
+      "viewport": 390,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\n+ New\nOverview\nภาพรวม Lead\nBacklog\nTable\nKanban\nCalendar\nMembers\nFiles\n\nGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Calendar",
+      "route": "/w/visual-audit/p/DP/calendar",
+      "width": 1440,
+      "header": {
+        "x": 240,
+        "y": 56,
+        "w": 1200,
+        "h": 125,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 264,
+        "y": 94,
+        "w": 847.828125,
+        "h": 32,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 306,
+        "y": 95.703125,
+        "w": 282.703125,
+        "h": 28.59375,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 1123.828125,
+        "y": 72,
+        "w": 292.171875,
+        "h": 38,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 264,
+        "y": 136,
+        "w": 1152,
+        "h": 44,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 264,
+        "y": 94,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nภาพรวม Lead\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Calendar",
+      "route": "/w/visual-audit/p/DP/calendar",
+      "width": 390,
+      "header": {
+        "x": 0,
+        "y": 56,
+        "w": 390,
+        "h": 200,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 16,
+        "y": 90,
+        "w": 272.5,
+        "h": 84.5,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 56,
+        "y": 94.296875,
+        "w": 231.3125,
+        "h": 23.390625,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 300.5,
+        "y": 68,
+        "w": 73.5,
+        "h": 40,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 16,
+        "y": 184.5,
+        "w": 358,
+        "h": 40,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 16,
+        "y": 90,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 390,
+      "viewport": 390,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\n+ New\nOverview\nภาพรวม Lead\nBacklog\nTable\nKanban\nCalendar\nMembers\nFiles\n\nGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Members",
+      "route": "/w/visual-audit/p/DP/members",
+      "width": 1440,
+      "header": {
+        "x": 240,
+        "y": 56,
+        "w": 1200,
+        "h": 125,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 264,
+        "y": 94,
+        "w": 847.828125,
+        "h": 32,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 306,
+        "y": 95.703125,
+        "w": 282.703125,
+        "h": 28.59375,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 1123.828125,
+        "y": 72,
+        "w": 292.171875,
+        "h": 38,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 264,
+        "y": 136,
+        "w": 1152,
+        "h": 44,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 264,
+        "y": 94,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nภาพรวม Lead\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Members",
+      "route": "/w/visual-audit/p/DP/members",
+      "width": 390,
+      "header": {
+        "x": 0,
+        "y": 56,
+        "w": 390,
+        "h": 200,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 16,
+        "y": 90,
+        "w": 272.5,
+        "h": 84.5,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 56,
+        "y": 94.296875,
+        "w": 231.3125,
+        "h": 23.390625,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 300.5,
+        "y": 68,
+        "w": 73.5,
+        "h": 40,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 16,
+        "y": 184.5,
+        "w": 358,
+        "h": 40,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 16,
+        "y": 90,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 390,
+      "viewport": 390,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\n+ New\nOverview\nภาพรวม Lead\nBacklog\nTable\nKanban\nCalendar\nMembers\nFiles\n\nGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Files",
+      "route": "/w/visual-audit/p/DP/files",
+      "width": 1440,
+      "header": {
+        "x": 240,
+        "y": 56,
+        "w": 1200,
+        "h": 125,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 264,
+        "y": 94,
+        "w": 847.828125,
+        "h": 32,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 306,
+        "y": 95.703125,
+        "w": 282.703125,
+        "h": 28.59375,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 1123.828125,
+        "y": 72,
+        "w": 292.171875,
+        "h": 38,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 264,
+        "y": 136,
+        "w": 1152,
+        "h": 44,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 264,
+        "y": 94,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nภาพรวม Lead\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Files",
+      "route": "/w/visual-audit/p/DP/files",
+      "width": 390,
+      "header": {
+        "x": 0,
+        "y": 56,
+        "w": 390,
+        "h": 200,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 16,
+        "y": 90,
+        "w": 272.5,
+        "h": 84.5,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 56,
+        "y": 94.296875,
+        "w": 231.3125,
+        "h": 23.390625,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 300.5,
+        "y": 68,
+        "w": 73.5,
+        "h": 40,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 16,
+        "y": 184.5,
+        "w": 358,
+        "h": 40,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 16,
+        "y": 90,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 390,
+      "viewport": 390,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\n+ New\nOverview\nภาพรวม Lead\nBacklog\nTable\nKanban\nCalendar\nMembers\nFiles\n\nGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Backlog",
+      "route": "/w/visual-audit/p/DP/backlog",
+      "width": 1440,
+      "header": {
+        "x": 240,
+        "y": 56,
+        "w": 1200,
+        "h": 125,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 264,
+        "y": 94,
+        "w": 847.828125,
+        "h": 32,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 306,
+        "y": 95.703125,
+        "w": 282.703125,
+        "h": 28.59375,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 1123.828125,
+        "y": 72,
+        "w": 292.171875,
+        "h": 38,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 264,
+        "y": 136,
+        "w": 1152,
+        "h": 44,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 264,
+        "y": 94,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nภาพรวม Lead\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Backlog",
+      "route": "/w/visual-audit/p/DP/backlog",
+      "width": 390,
+      "header": {
+        "x": 0,
+        "y": 56,
+        "w": 390,
+        "h": 200,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 16,
+        "y": 90,
+        "w": 272.5,
+        "h": 84.5,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 56,
+        "y": 94.296875,
+        "w": 231.3125,
+        "h": 23.390625,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 300.5,
+        "y": 68,
+        "w": 73.5,
+        "h": 40,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 16,
+        "y": 184.5,
+        "w": 358,
+        "h": 40,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 16,
+        "y": 90,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 390,
+      "viewport": 390,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\n+ New\nOverview\nภาพรวม Lead\nBacklog\nTable\nKanban\nCalendar\nMembers\nFiles\n\nGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "ProjectSettings",
+      "route": "/w/visual-audit/p/DP/settings/workflow",
+      "width": 1440,
+      "header": {
+        "x": 240,
+        "y": 56,
+        "w": 1200,
+        "h": 125,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 264,
+        "y": 94,
+        "w": 847.828125,
+        "h": 32,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 306,
+        "y": 95.703125,
+        "w": 282.703125,
+        "h": 28.59375,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 1123.828125,
+        "y": 72,
+        "w": 292.171875,
+        "h": 38,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 264,
+        "y": 136,
+        "w": 1152,
+        "h": 44,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 264,
+        "y": 94,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nภาพรวม Lead\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "ProjectSettings",
+      "route": "/w/visual-audit/p/DP/settings/workflow",
+      "width": 390,
+      "header": {
+        "x": 0,
+        "y": 56,
+        "w": 390,
+        "h": 200,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 16,
+        "y": 90,
+        "w": 272.5,
+        "h": 84.5,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 56,
+        "y": 94.296875,
+        "w": 231.3125,
+        "h": 23.390625,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 300.5,
+        "y": 68,
+        "w": 73.5,
+        "h": 40,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 16,
+        "y": 184.5,
+        "w": 358,
+        "h": 40,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 16,
+        "y": 90,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 390,
+      "viewport": 390,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\n+ New\nOverview\nภาพรวม Lead\nBacklog\nTable\nKanban\nCalendar\nMembers\nFiles\n\nGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "LeadDashboard",
+      "route": "/w/visual-audit/p/DP/dashboard",
+      "width": 1440,
+      "header": {
+        "x": 240,
+        "y": 56,
+        "w": 1200,
+        "h": 125,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 264,
+        "y": 94,
+        "w": 847.828125,
+        "h": 32,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 306,
+        "y": 95.703125,
+        "w": 282.703125,
+        "h": 28.59375,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 1123.828125,
+        "y": 72,
+        "w": 292.171875,
+        "h": 38,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 264,
+        "y": 136,
+        "w": 1152,
+        "h": 44,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 264,
+        "y": 94,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nภาพรวม Lead\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "LeadDashboard",
+      "route": "/w/visual-audit/p/DP/dashboard",
+      "width": 390,
+      "header": {
+        "x": 0,
+        "y": 56,
+        "w": 390,
+        "h": 200,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 16,
+        "y": 90,
+        "w": 272.5,
+        "h": 84.5,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 56,
+        "y": 94.296875,
+        "w": 231.3125,
+        "h": 23.390625,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 300.5,
+        "y": 68,
+        "w": 73.5,
+        "h": 40,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 16,
+        "y": 184.5,
+        "w": 358,
+        "h": 40,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 16,
+        "y": 90,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 390,
+      "viewport": 390,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\n+ New\nOverview\nภาพรวม Lead\nBacklog\nTable\nKanban\nCalendar\nMembers\nFiles\n\nGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Reports",
+      "route": "/w/visual-audit/p/DP/reports",
+      "width": 1440,
+      "header": {
+        "x": 240,
+        "y": 56,
+        "w": 1200,
+        "h": 125,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 264,
+        "y": 94,
+        "w": 847.828125,
+        "h": 32,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 306,
+        "y": 95.703125,
+        "w": 282.703125,
+        "h": 28.59375,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 1123.828125,
+        "y": 72,
+        "w": 292.171875,
+        "h": 38,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 264,
+        "y": 136,
+        "w": 1152,
+        "h": 44,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 264,
+        "y": 94,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nภาพรวม Lead\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Reports",
+      "route": "/w/visual-audit/p/DP/reports",
+      "width": 390,
+      "header": {
+        "x": 0,
+        "y": 56,
+        "w": 390,
+        "h": 200,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 16,
+        "y": 90,
+        "w": 272.5,
+        "h": 84.5,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 56,
+        "y": 94.296875,
+        "w": 231.3125,
+        "h": 23.390625,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 300.5,
+        "y": 68,
+        "w": 73.5,
+        "h": 40,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 16,
+        "y": 184.5,
+        "w": 358,
+        "h": 40,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 16,
+        "y": 90,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 390,
+      "viewport": 390,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\n+ New\nOverview\nภาพรวม Lead\nBacklog\nTable\nKanban\nCalendar\nMembers\nFiles\n\nGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Automation",
+      "route": "/w/visual-audit/p/DP/automation",
+      "width": 1440,
+      "header": {
+        "x": 240,
+        "y": 56,
+        "w": 1200,
+        "h": 125,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 264,
+        "y": 94,
+        "w": 847.828125,
+        "h": 32,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 306,
+        "y": 95.703125,
+        "w": 282.703125,
+        "h": 28.59375,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 1123.828125,
+        "y": 72,
+        "w": 292.171875,
+        "h": 38,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 264,
+        "y": 136,
+        "w": 1152,
+        "h": 44,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 264,
+        "y": 94,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nภาพรวม Lead\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "Automation",
+      "route": "/w/visual-audit/p/DP/automation",
+      "width": 390,
+      "header": {
+        "x": 0,
+        "y": 56,
+        "w": 390,
+        "h": 200,
+        "text": "Friday Workspace / Projects / Development Plan 2026-11DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70MDDDQDRDInvite+ NewOverviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettingsGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น"
+      },
+      "title": {
+        "x": 16,
+        "y": 90,
+        "w": 272.5,
+        "h": 84.5,
+        "text": "DPDevelopment Plan 2026-11กำลังวางแผนOn track5 ต.ค. 69 – 21 เม.ย. 70"
+      },
+      "h1": {
+        "x": 56,
+        "y": 94.296875,
+        "w": 231.3125,
+        "h": 23.390625,
+        "text": "Development Plan 2026-11"
+      },
+      "actions": {
+        "x": 300.5,
+        "y": 68,
+        "w": 73.5,
+        "h": 40,
+        "text": "MDDDQDRDInvite+ New"
+      },
+      "tabs": {
+        "x": 16,
+        "y": 184.5,
+        "w": 358,
+        "h": 40,
+        "text": "Overviewภาพรวม LeadReportsBacklogTableKanbanTimelineGanttCalendarMembersFilesSettings"
+      },
+      "icon": {
+        "x": 16,
+        "y": 90,
+        "w": 32,
+        "h": 32,
+        "text": "DP"
+      },
+      "scrollWidth": 390,
+      "viewport": 390,
+      "fonts": true,
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\n+ New\nOverview\nภาพรวม Lead\nBacklog\nTable\nKanban\nCalendar\nMembers\nFiles\n\nGantt, Timeline และ Settings เปิดบนจอใหญ่เท่านั้น",
+      "errors": [],
+      "failed": []
+    },
+    {
+      "id": "long-title",
+      "width": 1440,
+      "setup": "GET project response name overridden only in browser; within max120",
+      "titleLength": 97,
+      "header": {
+        "h": 205
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440
+    },
+    {
+      "id": "unbroken-title",
+      "width": 1440,
+      "setup": "GET project response name overridden only in browser; within max120",
+      "titleLength": 112,
+      "header": {
+        "h": 272.1875
+      },
+      "scrollWidth": 1440,
+      "viewport": 1440
+    }
+  ],
+  "checks": [
+    {
+      "name": "Invite opens actual invitation section",
+      "passed": true,
+      "detail": {
+        "url": "http://localhost:43200/w/visual-audit/p/DP/members#invites",
+        "heading": "Invite members"
+      }
+    },
+    {
+      "name": "Project menu opens with authorized routes and Escape closes",
+      "passed": true,
+      "detail": [
+        "/w/visual-audit/p/DP/settings",
+        "/w/visual-audit/p/DP/automation",
+        "/w/visual-audit/p/DP/plan-changes"
+      ]
+    },
+    {
+      "name": "Menu navigation /settings",
+      "passed": true,
+      "detail": {
+        "url": "http://localhost:43200/w/visual-audit/p/DP/settings",
+        "h1": [
+          "Development Plan 2026-11"
+        ]
+      }
+    },
+    {
+      "name": "Menu navigation /automation",
+      "passed": true,
+      "detail": {
+        "url": "http://localhost:43200/w/visual-audit/p/DP/automation",
+        "h1": [
+          "Development Plan 2026-11"
+        ]
+      }
+    },
+    {
+      "name": "Menu navigation /plan-changes",
+      "passed": true,
+      "detail": {
+        "url": "http://localhost:43200/w/visual-audit/p/DP/plan-changes",
+        "h1": [
+          "Development Plan 2026-11"
+        ]
+      }
+    },
+    {
+      "name": "Project + New opens create drawer",
+      "passed": true,
+      "detail": {
+        "url": "http://localhost:43200/w/visual-audit/p/DP?new=1",
+        "dialog": "สร้างงานใหม่"
+      }
+    },
+    {
+      "name": "Header avatar count matches active API members",
+      "passed": true,
+      "detail": {
+        "active": 4,
+        "shown": 4
+      }
+    },
+    {
+      "name": "Guest UI does not request members or show Invite / project menu / New",
+      "passed": true,
+      "detail": {
+        "memberRequests": [],
+        "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nกำลังวางแผน\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nOverview\nTimeline"
+      }
+    }
+  ],
+  "extra": [
+    {
+      "id": "long-title",
+      "source": "actual",
+      "titleLength": 97,
+      "headerHeight": 205,
+      "scrollWidth": 1440,
+      "viewport": 1440
+    },
+    {
+      "id": "long-title",
+      "source": "canvas",
+      "titleLength": 97,
+      "headerHeight": 203,
+      "scrollWidth": 1440,
+      "viewport": 1440
+    },
+    {
+      "id": "unbroken-title",
+      "source": "actual",
+      "titleLength": 112,
+      "headerHeight": 272.1875,
+      "scrollWidth": 1440,
+      "viewport": 1440
+    },
+    {
+      "id": "unbroken-title",
+      "source": "canvas",
+      "titleLength": 112,
+      "headerHeight": 241.59375,
+      "scrollWidth": 1795,
+      "viewport": 1440
+    },
+    {
+      "id": "english",
+      "lang": "en",
+      "headerText": "Friday Workspace / Projects / Development Plan 2026-11\nDP\nDevelopment Plan 2026-11\nPlanning\nOn track\n5 ต.ค. 69 – 21 เม.ย. 70\nMD\nDD\nQD\nRD\nInvite\n+ New\nOverview\nLead dashboard\nReports\nBacklog\nTable\nKanban\nTimeline\nGantt\nCalendar\nMembers\nFiles\nSettings",
+      "setup": "Account locale response simulated as en, cookie NEXT_LOCALE=en; read-only UI check"
+    }
+  ]
+}

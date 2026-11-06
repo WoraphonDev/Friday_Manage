@@ -78,6 +78,13 @@
       "when": 1793938111277,
       "tag": "0010_in_app_channel",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793964184088,
+      "tag": "0011_notification_in_app",
+      "breakpoints": true
     }
   ]
 }

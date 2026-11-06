@@ -126,12 +126,15 @@ export class Audience {
       .select({ userId: s.workspaceMembers.userId, role: s.workspaceMembers.role })
       .from(s.workspaceMembers)
       .innerJoin(s.workspaces, eq(s.workspaces.id, s.workspaceMembers.workspaceId))
+      // บัญชีที่ถูกปิดทั้งระบบไม่รับแจ้งเตือน แม้สมาชิก Workspace ยัง active
+      .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
       .where(
         and(
           eq(s.workspaceMembers.workspaceId, project.workspaceId),
           inArray(s.workspaceMembers.userId, ids),
           eq(s.workspaceMembers.status, 'active'),
           isNull(s.workspaces.deletedAt),
+          isNull(s.users.disabledAt),
         ),
       );
     const pm = await this.db

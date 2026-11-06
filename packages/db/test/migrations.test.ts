@@ -88,7 +88,9 @@ describe('Migration T00', () => {
         const before: pg.QueryResultRow[][] = [];
         for (const table of tables) before.push((await client.query(`SELECT * FROM ${table} ORDER BY id`)).rows);
         await migrate(db, { migrationsFolder: folder });
-        for (const [i, table] of tables.entries()) expect((await client.query(`SELECT * FROM ${table} ORDER BY id`)).rows, table).toEqual(before[i]);
+        // คอลัมน์ที่ migration ถัดไปเพิ่ม (มีค่าเริ่มต้น) ไม่นับเป็นข้อมูลเดิมที่เปลี่ยน · notifications.in_app (0011) ต้องเป็น true
+        const added: Record<string, Record<string, unknown>> = { notifications: { in_app: true } };
+        for (const [i, table] of tables.entries()) expect((await client.query(`SELECT * FROM ${table} ORDER BY id`)).rows, table).toEqual(before[i].map((r: Record<string, unknown>) => ({ ...r, ...added[table] })));
         await expectPlanSeed(client);
         // ตรวจด้วยข้อมูลเดิมจริงว่า FK ของตารางใหม่ผูกกับ notification ที่มีอยู่แล้วได้
         await client.query(`INSERT INTO notification_deliveries (workspace_id, notification_id, channel, target_ref)

@@ -20,6 +20,11 @@ export interface NotifyInput {
    * ใช้กับงานตามเวลาที่อาจรันซ้ำหรือ retry (A16) เช่น `due_soon:{issueId}:{planEnd}:{date}`
    */
   dedupeKey?: string;
+  /**
+   * ผู้รับที่ปิด In-app ของเหตุการณ์นี้: ยังสร้างแถวไว้ให้ท่อส่ง Email / LINE (in_app = false, RLS ซ่อนจาก Inbox)
+   * ไม่ตัดผู้รับทิ้ง เพราะการปิด Inbox ต้องไม่ทำให้ช่องทางอื่นที่เปิดไว้หยุดตาม (BUG-13)
+   */
+  inAppOff?: Iterable<string>;
 }
 
 /**
@@ -47,6 +52,7 @@ export class Notifier {
         if (!recipients.length) return;
       }
       const payload = n.dedupeKey ? { ...n.payload, dedupeKey: n.dedupeKey } : n.payload;
+      const off = new Set(n.inAppOff ?? []);
       await this.system.insert(schema.notifications).values(
         recipients.map((recipientId) => ({
           workspaceId: n.workspaceId,
@@ -57,6 +63,7 @@ export class Notifier {
           issueId: n.issueId,
           payload,
           reason: typeof n.reason === 'function' ? n.reason(recipientId) : n.reason,
+          inApp: !off.has(recipientId),
         })),
       );
     } catch (err) {

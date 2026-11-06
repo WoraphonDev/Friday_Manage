@@ -168,7 +168,8 @@ export class Reminders {
     if (!userIds.length) return 0;
     const visible = await this.audience.visible(userIds, o.project, o.issue);
     const muted = eventType === 'issue.overdue' ? new Set<string>() : await this.audience.inAppDisabled(o.project.workspaceId, [...visible], eventType);
-    const recipients = [...visible].filter((id) => !muted.has(id));
+    // ปิด In-app แล้วยังส่ง Email / LINE ได้ (in_app = false) · ดู NotifyInput.inAppOff
+    const recipients = [...visible];
     if (!recipients.length) return 0;
     await this.notifier.notify({
       workspaceId: o.project.workspaceId,
@@ -180,8 +181,9 @@ export class Reminders {
       payload: { projectKey: o.project.key, projectName: o.project.name, issueKey: o.issue.key, issueTitle: o.issue.title, ...extra },
       reason,
       dedupeKey,
+      inAppOff: muted,
     });
-    return recipients.length;
+    return recipients.filter((id) => !muted.has(id)).length;
   }
 
   /** งานที่ยังไม่เสร็จและมี Plan End ไม่เกิน until · ไม่รวมโปรเจกต์ที่เก็บถาวรหรือถูกลบ */

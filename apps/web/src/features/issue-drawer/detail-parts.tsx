@@ -92,7 +92,14 @@ export function Development({ scope, issue }: { scope: Scope; issue: Issue }) {
     <div className={styles.dev}>
       <div className={styles.branch}><GitBranch size={15} aria-hidden="true" /><code>{branch}</code><Button size="small" onClick={() => { void navigator.clipboard?.writeText(branch).then(() => toast({ message: t('branchCopied') })); }}>Copy</Button></div>
       {git.data?.pullRequests.map((pr) => <div key={`${pr.repository}#${pr.number}`} className={styles.prLine}><span className={`${styles.pill} ${pr.state === 'merged' ? styles.sDone : pr.state === 'closed' ? styles.sTodo : styles.sProg}`}>{pr.state}</span>{pr.url ? <a href={pr.url} target="_blank" rel="noopener noreferrer">#{pr.number} {pr.title}</a> : <span>#{pr.number} {pr.title}</span>}</div>)}
-      {latest ? <div className="muted">{t('commitsLine', { count: git.data!.commits.length, message: latest.message })}</div> : git.data && <div className="muted">{t('noGit')}</div>}
+      {latest ? <>
+        <div className="muted">{t('commitsCount', { count: git.data!.commits.length })}</div>
+        {git.data!.commits.map((commit) => <div key={`${commit.repository}/${commit.sha}`} className={styles.commitLine}>
+          {commit.url ? <a href={commit.url} target="_blank" rel="noopener noreferrer"><code>{commit.shortSha || commit.sha.slice(0, 7)}</code></a> : <code>{commit.shortSha || commit.sha.slice(0, 7)}</code>}
+          <span title={commit.message}>{commit.message.split('\n')[0]}</span>
+          <small className="muted">{commit.author}{commit.author ? ' · ' : ''}<time dateTime={commit.committedAt}>{formatDate(commit.committedAt.slice(0, 10), scope.yearFormat)}</time></small>
+        </div>)}
+      </> : git.data && <div className="muted">{t('noGit')}</div>}
     </div>
   </div>;
 }

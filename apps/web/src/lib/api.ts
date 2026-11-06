@@ -94,6 +94,8 @@ export class ApiClient {
     try {
       response = await this.fetcher(`${this.base}${path}`, {
         ...init,
+        // Module/ลูกงานเปลี่ยนได้โดย ETag หลักคงเดิม ให้ React Query เป็นแคชข้อมูลเพียงชั้นเดียว
+        cache: init.cache ?? "no-store",
         method,
         headers,
         credentials: "include",

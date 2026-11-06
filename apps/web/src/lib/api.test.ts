@@ -12,9 +12,11 @@ import { server } from "@/test/server";
 describe("API client", () => {
   it("GET ส่ง cookie และคืน ETag สำหรับ If-Match", async () => {
     let credentials = "";
+    let cache = "";
     server.use(
       http.get("*/api/v1/example", ({ request }) => {
         credentials = request.credentials;
+        cache = request.cache;
         return HttpResponse.json({ version: 4 }, { headers: { ETag: '"4"' } });
       }),
     );
@@ -23,6 +25,7 @@ describe("API client", () => {
       etag: '"4"',
     });
     expect(credentials).toBe("include");
+    expect(cache).toBe("no-store");
     expect(ifMatch(4)).toBe('"4"');
     expect(ifMatch('"4"')).toBe('"4"');
   });

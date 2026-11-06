@@ -5,8 +5,14 @@
   "deleteLinked": "งานนี้มีข้อมูลที่ผูกอยู่",
   "deleteImpactSubtasks": "Sub-task {count} รายการ (เสร็จแล้ว {done})",
   "subtaskHandling": "วิธีจัดการ Sub-task",
-  "deleteOption": { "delete": "ลบ Sub-task ทั้งหมดด้วย", "keep": "เก็บ Sub-task ไว้ เปลี่ยนเป็น Task เดี่ยว" },
-  "deleteOptionHint": { "delete": "ไฟล์และคอมเมนต์ของ Sub-task ถูกลบด้วย", "keep": "Sub-task {count} รายการย้ายไปอยู่ใน Module {module}" },
+  "deleteOption": {
+    "delete": "ลบ Sub-task ทั้งหมดด้วย",
+    "keep": "เก็บ Sub-task ไว้ เปลี่ยนเป็น Task เดี่ยว"
+  },
+  "deleteOptionHint": {
+    "delete": "ไฟล์และคอมเมนต์ของ Sub-task ถูกลบด้วย",
+    "keep": "Sub-task {count} รายการย้ายไปอยู่ใน Module {module}"
+  },
   "restoreThirtyDaysShort": "ย้ายไปถังขยะของโปรเจกต์ · กู้คืนได้ภายใน 30 วัน",
   "deleteOnlyTask": "ลบเฉพาะ {type}",
   "deleteWithSubtasks": "ลบ {type} และ Sub-task {count} รายการ",
@@ -19,7 +25,12 @@
   "createAs": "สร้างเป็น",
   "subtaskName": "ชื่อ Sub-task",
   "typeName": "ชื่อ {type}",
-  "typeHints": { "Story": "ความต้องการจากมุมผู้ใช้", "Task": "งานทั่วไปที่ต้องทำ", "Bug": "สิ่งที่ทำงานผิดจากที่ควรเป็น", "Spike": "งานศึกษา / ทดลอง มี Timebox" },
+  "typeHints": {
+    "Story": "ความต้องการจากมุมผู้ใช้",
+    "Task": "งานทั่วไปที่ต้องทำ",
+    "Bug": "สิ่งที่ทำงานผิดจากที่ควรเป็น",
+    "Spike": "งานศึกษา / ทดลอง มี Timebox"
+  },
   "underIssue": "อยู่ใต้งาน",
   "underIssueHint": "เลือกงานแม่แล้ว {type} จะเป็น Sub-task ของงานนั้น",
   "noParent": "ไม่มี (งานหลัก)",
@@ -215,13 +226,108 @@
   "partialCloseTitle": "สร้างงานหลักแล้ว แต่ยังทำไม่ครบ",
   "partialCloseDescription": "งานหลักที่สร้างแล้วยังคงอยู่ ส่วนรายการที่ยังเพิ่มไม่สำเร็จจะไม่ถูกบันทึกหากปิดหน้านี้",
   "fields": {
-    "title": "ชื่อเรื่อง", "description": "คำอธิบาย", "statusId": "สถานะ", "priority": "Priority", "moduleId": "Module", "phaseId": "กลุ่มงาน", "sprintId": "Sprint", "assigneeIds": "ผู้รับผิดชอบ", "baId": "BA", "reviewerId": "Reviewer", "testerId": "Tester", "reporterId": "ผู้แจ้ง", "planStart": "วันเริ่มแผน", "planEnd": "วันครบกำหนด", "estimateMd": "Man-Day", "size": "Size", "progressPct": "ความคืบหน้า (%)", "severity": "Severity", "environment": "Environment", "sharedWithGuests": "การแชร์ให้ Guest", "checklist": "Checklist", "dependencies": "Dependency", "details": "รายละเอียดเพิ่มเติม"
+    "title": "ชื่อเรื่อง",
+    "description": "คำอธิบาย",
+    "statusId": "สถานะ",
+    "priority": "Priority",
+    "moduleId": "Module",
+    "phaseId": "กลุ่มงาน",
+    "sprintId": "Sprint",
+    "assigneeIds": "ผู้รับผิดชอบ",
+    "baId": "BA",
+    "reviewerId": "Reviewer",
+    "testerId": "Tester",
+    "reporterId": "ผู้แจ้ง",
+    "planStart": "วันเริ่มแผน",
+    "planEnd": "วันครบกำหนด",
+    "estimateMd": "Man-Day",
+    "size": "Size",
+    "progressPct": "ความคืบหน้า (%)",
+    "severity": "Severity",
+    "environment": "Environment",
+    "sharedWithGuests": "การแชร์ให้ Guest",
+    "checklist": "Checklist",
+    "dependencies": "Dependency",
+    "details": "รายละเอียดเพิ่มเติม"
   },
-  "priority": { "urgent": "Urgent", "high": "High", "medium": "Medium", "low": "Low" },
-  "severity": { "critical": "Critical", "major": "Major", "minor": "Minor" },
-  "environment": { "local": "Local", "sit": "SIT", "uat": "UAT", "production": "Production" },
-  "types": { "Task": "Task", "Story": "Story", "Bug": "Bug", "Spike": "Spike" },
-  "detailFields": { "steps": "ขั้นตอนทำซ้ำ", "expected": "ผลที่ควรเป็น", "actual": "ผลที่เกิดขึ้นจริง", "browser": "Browser / อุปกรณ์", "found_in": "พบใน Commit / Version", "as_a": "ในฐานะ", "i_want": "ฉันต้องการ", "so_that": "เพื่อที่จะ", "question": "คำถามที่ต้องหาคำตอบ", "timebox_hours": "Timebox (ชั่วโมง)", "deliverable": "ผลลัพธ์ที่ต้องส่ง" },
-  "reasons": { "scope_added": "ขอบเขตงานเพิ่ม", "waiting_input": "รอข้อมูลหรือสิ่งที่ต้องได้จากผู้อื่น", "blocked_by_dependency": "ติด Dependency จากงานอื่น", "estimate_wrong": "ประเมินเวลาผิด", "other": "อื่น ๆ" },
-  "verbs": { "created": "สร้างงาน", "updated": "แก้ไข", "deleted": "ลบงาน", "restored": "กู้คืนงาน", "reopened": "เปิด Bug ใหม่", "due_request_created": "ส่งคำขอเลื่อน Due", "due_request_approved": "อนุมัติเลื่อน Due", "due_request_rejected": "ปฏิเสธคำขอเลื่อน Due", "due_request_cancelled": "ยกเลิกคำขอเลื่อน Due" }
+  "priority": {
+    "urgent": "Urgent",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "severity": {
+    "critical": "Critical",
+    "major": "Major",
+    "minor": "Minor"
+  },
+  "environment": {
+    "local": "Local",
+    "sit": "SIT",
+    "uat": "UAT",
+    "production": "Production"
+  },
+  "types": {
+    "Task": "Task",
+    "Story": "Story",
+    "Bug": "Bug",
+    "Spike": "Spike"
+  },
+  "detailFields": {
+    "steps": "ขั้นตอนทำซ้ำ",
+    "expected": "ผลที่ควรเป็น",
+    "actual": "ผลที่เกิดขึ้นจริง",
+    "browser": "Browser / อุปกรณ์",
+    "found_in": "พบใน Commit / Version",
+    "as_a": "ในฐานะ",
+    "i_want": "ฉันต้องการ",
+    "so_that": "เพื่อที่จะ",
+    "question": "คำถามที่ต้องหาคำตอบ",
+    "timebox_hours": "Timebox (ชั่วโมง)",
+    "deliverable": "ผลลัพธ์ที่ต้องส่ง"
+  },
+  "reasons": {
+    "scope_added": "ขอบเขตงานเพิ่ม",
+    "waiting_input": "รอข้อมูลหรือสิ่งที่ต้องได้จากผู้อื่น",
+    "blocked_by_dependency": "ติด Dependency จากงานอื่น",
+    "estimate_wrong": "ประเมินเวลาผิด",
+    "other": "อื่น ๆ"
+  },
+  "verbs": {
+    "created": "สร้างงาน",
+    "updated": "แก้ไข",
+    "deleted": "ลบงาน",
+    "restored": "กู้คืนงาน",
+    "reopened": "เปิด Bug ใหม่",
+    "due_request_created": "ส่งคำขอเลื่อน Due",
+    "due_request_approved": "อนุมัติเลื่อน Due",
+    "due_request_rejected": "ปฏิเสธคำขอเลื่อน Due",
+    "due_request_cancelled": "ยกเลิกคำขอเลื่อน Due"
+  },
+  "mobileTabs": {
+    "label": "รายละเอียดงานย่อย",
+    "details": "รายละเอียด",
+    "tests": "ผลทดสอบ",
+    "commits": "Commits",
+    "comments": "คอมเมนต์"
+  },
+  "qa": {
+    "title": "ผลทดสอบ",
+    "add": "บันทึกผลทดสอบ",
+    "empty": "ยังไม่มีผลทดสอบ",
+    "passed": "ผ่าน",
+    "failed": "ไม่ผ่าน",
+    "blocked": "ติดเงื่อนไข",
+    "result": "ผลการทดสอบ",
+    "passedCount": "จำนวนที่ผ่าน",
+    "totalCount": "จำนวนทั้งหมด",
+    "note": "บันทึก / ขั้นตอนที่พบปัญหา",
+    "evidence": "หลักฐาน",
+    "createBug": "สร้าง Bug จากผลทดสอบ",
+    "cancel": "ยกเลิก",
+    "save": "บันทึกผล"
+  },
+  "mobileComplete": "เสร็จ",
+  "commentPlaceholder": "เขียนคอมเมนต์… @ เพื่อ mention",
+  "commitsCount": "{count} commits"
 }

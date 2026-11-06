@@ -234,7 +234,7 @@ describe("Kanban", () => {
   it("บอร์ดว่างและคอลัมน์ว่างมีสถานะและปุ่มสร้างตามสิทธิ์", async () => {
     data.columns.forEach((column) => { column.cards = []; column.count = 0; });
     mount(); await screen.findByText("ยังไม่มีงานบนบอร์ด");
-    expect(screen.getByRole("link", { name: "+ สร้างงาน" })).toHaveAttribute("href", "/w/sample/p/DE/board?new=1");
+    expect(screen.getByRole("link", { name: "+ สร้างงาน" })).toHaveAttribute("href", "/w/sample/p/DE/board?new=1&type=task");
     expect(screen.getAllByText("ไม่มีงานในคอลัมน์นี้")).toHaveLength(4);
   });
 

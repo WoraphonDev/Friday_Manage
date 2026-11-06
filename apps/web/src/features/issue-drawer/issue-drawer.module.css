@@ -178,3 +178,24 @@
   .pr { border-bottom:1px solid #eef0f3; min-height:40px; }
   .statusRow .statusPill { flex:1 1 auto; text-align:left; }.statusRow .meta { width:100%; }.sidebar { width:100%; padding-top:12px; }.dhead { padding:8px 8px 8px 16px; }.headBlock { padding:14px 16px 6px; }.sub { grid-template-columns:22px minmax(0,1fr) 28px 64px; }.hideS { display:none; }.pair { grid-template-columns:minmax(0,1fr); }.main { width:100%; }.sidebar :global(.input),.sidebar :global(.picker-trigger) { min-height:40px; }.title .editValue { font-size:20px; }.topbar { gap:6px; }.topbar .actions { flex-wrap:wrap; }.tabs { gap:16px; }.tabs button { min-height:44px; }.checkRow { flex-wrap:wrap; }.checkRow .actions { margin-left:auto; }.checkRow .actions button { min-height:36px; width:32px; }.formGrid,.grid2,.grid3,.grid4,.typeCards { grid-template-columns:minmax(0,1fr); }.frow { grid-template-columns:minmax(0,1fr); }.typeSection { margin:0 -16px; padding:12px 16px; }.typeChoices { gap:5px; }.typeChoices button { font-size:12px; }.createFooter { flex-wrap:wrap; bottom:-16px; }.createFooter>span { width:100%; }.feedHeading { flex-wrap:wrap; }.childDraft { grid-template-columns:minmax(0,1fr); }.childDraft>:first-child { grid-column:auto; }
 }
+
+/* M4: คุณสมบัติหลัก 4 แถวก่อนแท็บ และช่องคอมเมนต์ที่เอื้อมถึงได้ทุกแท็บ */
+@media(max-width:760px) {
+  .subtaskMobile { padding-bottom:84px; }
+  .subtaskMobile .statusRow .meta { display:none; }
+  .subtaskMobile .sidebar { padding-top:0; }
+  .subtaskMobile .tabs { gap:0; justify-content:space-between; overflow-x:auto; }
+  .subtaskMobile .tabs button { font-size:13px; white-space:nowrap; padding:8px 6px; }
+  .mobileComposer { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--border); padding:8px 16px max(8px,env(safe-area-inset-bottom)); z-index:5; }
+  .compactComposer { display:flex; flex-direction:row; align-items:center; gap:8px; margin:0; }
+  .compactComposer > :global(.field) { flex:1; min-width:0; margin:0; }
+  .compactComposer textarea { height:40px; min-height:40px; max-height:110px; resize:vertical; border-radius:20px; }
+  .compactComposer .composerFooter { margin:0; }
+  .compactComposer .composerFooter > span { display:none; }
+  .compactComposer .composerFooter button { min-height:40px; border-radius:20px; }
+  .compactComposer .mentionOptions { position:absolute; bottom:100%; left:16px; right:16px; background:white; padding:8px; border:1px solid var(--border); border-radius:8px; }
+}
+
+.commitLine { display:grid; grid-template-columns:68px minmax(0,1fr); align-items:start; gap:4px 10px; padding:7px 0; border-top:1px solid var(--border); font-size:12px; }
+.commitLine > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.commitLine > small { grid-column:2; }

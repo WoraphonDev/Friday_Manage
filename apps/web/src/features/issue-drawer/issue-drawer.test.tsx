@@ -273,3 +273,43 @@ it('renders configured required fields even when added to another issue type',as
   await user.click(screen.getByRole('button',{name:'สร้างTask'}));expect(mutations('/projects/DE/issues')).toHaveLength(0);await user.type(screen.getByLabelText('ขั้นตอนทำซ้ำ *'),'ขั้นตอนตามที่โปรเจกต์กำหนด');await user.click(screen.getByRole('button',{name:'สร้างTask'}));
   await waitFor(()=>expect(mutations('/projects/DE/issues')[0]?.body).toMatchObject({type:'Task',severity:'major',environment:'sit',details:{steps:'ขั้นตอนตามที่โปรเจกต์กำหนด'}}));
 });
+
+it('prefills and submits Table module/phase and Kanban status context', async () => {
+  const user = userEvent.setup(); navigation.search = `new=1&type=task&moduleId=${uid(10)}&phaseId=${uid(11)}&statusId=${statuses[1].id}`; mount(undefined, { issueKey: undefined });
+  await screen.findByRole('textbox', { name: 'ชื่อ Task' }); expect(screen.getByLabelText('Module')).toHaveValue(uid(10)); expect(screen.getByLabelText('กลุ่มงาน')).toHaveValue(uid(11)); expect(screen.getByLabelText('สถานะ')).toHaveValue(statuses[1].id);
+  await user.type(screen.getByLabelText('ชื่อ Task'), 'งานในกลุ่มที่เลือก'); await user.click(screen.getByRole('button', { name: 'สร้างTask' })); await waitFor(() => expect(mutations('/projects/DE/issues')).toHaveLength(1)); expect(mutations('/projects/DE/issues')[0].body).toMatchObject({ moduleId: uid(10), phaseId: uid(11), statusId: statuses[1].id });
+});
+it('ignores unavailable module/phase/status context IDs', async () => {
+  navigation.search = 'new=1&type=task&moduleId=unavailable&phaseId=unavailable&statusId=unavailable'; mount(undefined, { issueKey: undefined }); await screen.findByRole('textbox', { name: 'ชื่อ Task' }); expect(screen.getByLabelText('Module')).toHaveValue(''); expect(screen.getByLabelText('สถานะ')).toHaveValue(''); expect(mutations('/projects/DE/issues')).toHaveLength(0);
+});
+
+it('read-only members see checklist and dependencies without edit controls', async () => {
+  f.state.access = { role: 'viewer', guestViewer: false, permissions: ['project.view'] }; mount(); await loaded();
+  expect(await screen.findByRole('checkbox', { name: 'ตรวจสอบข้อมูล' })).toBeDisabled();
+  expect(await screen.findByRole('button', { name: /DE-9/ })).toBeInTheDocument();
+  expect(screen.queryByLabelText('ข้อความ Checklist')).not.toBeInTheDocument();
+  expect(f.state.mutations).toHaveLength(0);
+});
+it('records a Sub-task test result using the QA API', async () => {
+  const user = userEvent.setup(); const runs: unknown[] = [];
+  server.use(http.get('*/api/v1/w/:ws/issues/DE-2/test-runs', () => HttpResponse.json({ items: runs })), http.post('*/api/v1/w/:ws/issues/DE-2/test-runs', async ({ request }) => {
+    const body = await request.json() as object; expect(body).toMatchObject({ result: 'failed', note: 'บันทึกผิดพลาด', passedCount: 2, totalCount: 3 });
+    const run = { id: uid(400), runNo: 1, createdAt: '2026-11-07T00:00:00Z', tester: me, files: [], bugs: [], commitSha: null, ...body }; runs.push(run); return HttpResponse.json(run, { status: 201 });
+  }));
+  mount('DE-2'); await user.click(await screen.findByRole('button', { name: 'บันทึกผลทดสอบ' })); await user.selectOptions(screen.getByLabelText('ผลการทดสอบ'), 'failed'); await user.type(screen.getByLabelText('จำนวนที่ผ่าน'), '2'); await user.type(screen.getByLabelText('จำนวนทั้งหมด'), '3'); await user.type(screen.getByLabelText('บันทึก / ขั้นตอนที่พบปัญหา'), 'บันทึกผิดพลาด'); await user.click(screen.getByRole('button', { name: 'บันทึกผล' })); await screen.findByText('บันทึกผิดพลาด'); expect(screen.getByRole('button', { name: 'สร้าง Bug จากผลทดสอบ' })).toBeInTheDocument();
+});
+it('mobile Sub-task tabs retain the test draft when switching sections', async () => {
+  vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true, media: '(max-width: 760px)', onchange: null, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn() } as MediaQueryList));
+  try {
+    const user = userEvent.setup(); mount('DE-2'); await user.click(await screen.findByRole('tab', { name: 'ผลทดสอบ' })); await user.click(await screen.findByRole('button', { name: 'บันทึกผลทดสอบ' })); await user.type(screen.getByLabelText('บันทึก / ขั้นตอนที่พบปัญหา'), 'ร่างผลทดสอบ'); await user.click(screen.getByRole('tab', { name: 'คอมเมนต์' })); await user.click(screen.getByRole('tab', { name: 'ผลทดสอบ' })); expect(screen.getByLabelText('บันทึก / ขั้นตอนที่พบปัญหา')).toHaveValue('ร่างผลทดสอบ');
+  } finally { vi.unstubAllGlobals(); }
+});
+
+
+it('Commits แสดงทุกรายการพร้อมลิงก์ ไม่แสดงแค่ commit ล่าสุด', async () => {
+  server.use(http.get('*/api/v1/w/:ws/issues/:key/git', () => HttpResponse.json({ pullRequests: [], commits: [
+    { sha: 'abcdef1234567', shortSha: 'abcdef1', message: 'แก้แบบฟอร์ม', author: 'ผู้พัฒนาตัวอย่าง', committedAt: '2026-11-07T00:00:00Z', repository: 'demo/repo', url: 'https://example.com/commit/abcdef1' },
+    { sha: 'fedcba1234567', shortSha: 'fedcba1', message: 'เพิ่มการทดสอบ', author: null, committedAt: '2026-11-06T00:00:00Z', repository: 'demo/repo', url: 'https://example.com/commit/fedcba1' },
+  ] })));
+  mount(); await loaded(); expect(await screen.findByRole('link', { name: 'abcdef1' })).toHaveAttribute('href', 'https://example.com/commit/abcdef1'); expect(screen.getByRole('link', { name: 'fedcba1' })).toHaveAttribute('href', 'https://example.com/commit/fedcba1'); expect(screen.getByText('เพิ่มการทดสอบ')).toBeInTheDocument();
+});

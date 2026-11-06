@@ -208,6 +208,11 @@ export function ProjectShell({
     const params = new URLSearchParams(search);
     params.delete("issue");
     params.delete("new");
+    params.delete("parent");
+    params.delete("type");
+    params.delete("moduleId");
+    params.delete("phaseId");
+    params.delete("statusId");
     router.replace(`${pathname}${params.size ? `?${params}` : ""}`, {
       scroll: false,
     });

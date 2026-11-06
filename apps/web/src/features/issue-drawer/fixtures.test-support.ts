@@ -45,6 +45,9 @@ export function fixture() {
   }
   const base = '*/api/v1/w/:ws';
   const handlers = [
+    http.get(`${base}/issues/:key/git`, () => HttpResponse.json({ commits: [], pullRequests: [] })),
+    http.get(`${base}/projects/:project/files`, () => HttpResponse.json({ items: [], nextCursor: null })),
+    http.get(`${base}/issues/:key/test-runs`, () => HttpResponse.json({ items: [], latest: null })),
     http.get(`${base}/projects/:project/my-permissions`, () => HttpResponse.json(state.access)),
     http.get(`${base}/projects/:project`, () => HttpResponse.json(project)),
     http.get(`${base}/projects/:project/members`, ({ request }) => { state.reads.push(new URL(request.url).pathname); return HttpResponse.json({ items:[{...me,userId:me.id},{...dev,userId:dev.id}] }); }),

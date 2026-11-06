@@ -564,6 +564,7 @@ export function WorkspaceShell({
           <button
             type="button"
             className="search-trigger drawer-search"
+            aria-label={t("nav.search")}
             onClick={() => {
               setMenuOpen(false);
               setCommandOpen(true);

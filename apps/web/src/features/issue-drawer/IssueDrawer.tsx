@@ -8,6 +8,7 @@ import { useWorkspace } from '@/components/shell/workspace-shell';
 import { Button, Dialog, Drawer, ErrorState, Forbidden, LoadingState, NotFound } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/format';
+import { useIsMobile } from '@/lib/use-mobile';
 import { queryKeys } from '@/lib/query';
 import type { Permissions, Person } from '@/lib/types';
 import { IssuePanel } from './issue-panel';
@@ -36,6 +37,7 @@ function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
   ws: string; projectKey: string; meId: string; yearFormat: 'BE' | 'CE'; issueKey?: string; onClose: () => void;
 }) {
   const t = useTranslations('issue-drawer');
+  const mobile = useIsMobile();
   const router = useRouter(); const pathname = usePathname(); const search = useSearchParams();
   const cache = useQueryClient();
   const [activeKey, setActiveKey] = useState(issueKey);
@@ -58,7 +60,7 @@ function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
   const people = (members.data?.items ?? []).map((person) => ({ ...person, id: person.userId ?? person.id }));
   function replace(key?: string, newParent?: string) {
     const next = new URLSearchParams(search);
-    next.delete('issue'); next.delete('new'); next.delete('parent');
+    next.delete('issue'); next.delete('new'); next.delete('parent'); next.delete('type'); next.delete('moduleId'); next.delete('phaseId'); next.delete('statusId');
     if (key) next.set('issue', key);
     if (newParent) { next.set('issue', newParent); next.set('new', '1'); next.set('parent', newParent); }
     router.replace(`${pathname}${next.size ? `?${next}` : ''}`, { scroll: false });
@@ -86,7 +88,7 @@ function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
   });
-  async function created(value: Issue) { await cache.invalidateQueries({ queryKey: ['issue-drawer-list', ws, projectKey] }); await cache.invalidateQueries({ queryKey: ['kanban', ws, projectKey] }); navigate(value.key); }
+  async function created(value: Issue) { await cache.invalidateQueries({ queryKey: ['issue-drawer-list', ws, projectKey] }); navigate(value.key); }
   const requestedParam = search.get('type')?.toLowerCase();
   const requestedType: IssueType = requestedParam === 'bug' ? 'Bug' : requestedParam === 'story' ? 'Story' : requestedParam === 'spike' ? 'Spike' : 'Task';
   // B: "+ Task" ในหน้า Table/Kanban (type=task) และ Sub-task ใช้ Drawer · K1: "+ New" เลือกประเภทในหน้าต่างกลางจอ
@@ -107,7 +109,7 @@ function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
     if (!canCreate) return <Forbidden />;
     if (options.error) return <ErrorState error={options.error} retry={() => void options.refetch()} />;
     if (!options.data || (newParentKey && !parent.data)) return <LoadingState />;
-    return <CreateIssue key={newParentKey ?? 'root'} layout={createLayout} scope={scope} options={options.data} parent={newParentKey ? parent.data : null} initialType={requestedType} onCreated={(issue) => void created(issue)} onClose={closeNew} registerClose={registerClose} />;
+    return <CreateIssue key={`${newParentKey ?? 'root'}:${search.get('moduleId') ?? ''}:${search.get('phaseId') ?? ''}:${search.get('statusId') ?? ''}`} initialContext={{ moduleId: search.get('moduleId') ?? undefined, phaseId: search.get('phaseId') ?? undefined, statusId: search.get('statusId') ?? undefined }} layout={createLayout} scope={scope} options={options.data} parent={newParentKey ? parent.data : null} initialType={requestedType} onCreated={(issue) => void created(issue)} onClose={closeNew} registerClose={registerClose} />;
   }
   // ขนาดตาม Canvas: สร้างงาน = B (640), Bug = K2 (920 เต็มสูง), งานอื่น = C (860 ใต้หัวโปรเจกต์)
   const showingPanel = !(creating && !newParentKey) && !!rootIssue && !error && !loading;
@@ -121,7 +123,7 @@ function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
     <Drawer open variant={variant} bare={showingPanel || createReady} title={creating && !newParentKey ? t('newIssue') : t('issueTitle', { key: rootIssue?.key ?? rootName.current ?? activeKey ?? '' })} onOpenChange={(open) => { if (!open) { if (creating && !newParentKey && guard.current) guard.current(); else onClose(); } }}>
       <div className={styles.root}>{content()}</div>
     </Drawer>}
-    {nested && issue.data && <Drawer open depth={2} variant="detail" bare title={t('issueTitle', { key: issue.data.key })} parentLabel={`${parent.data!.key} · ${parent.data!.title}`} onBack={() => navigate(parent.data!.key)} onOpenChange={(open) => { if (!open) navigate(parent.data!.key); }}><div className={styles.root}><IssuePanel key={issue.data.key} scope={scope} issue={issue.data} siblings={parent.data!.subtasks} onDeleted={(parentKey) => parentKey ? navigate(parentKey) : onClose()} /></div></Drawer>}
+    {nested && issue.data && <Drawer open depth={2} variant="detail" bare title={t('issueTitle', { key: issue.data.key })} parentLabel={mobile ? undefined : `${parent.data!.key} · ${parent.data!.title}`} onBack={() => navigate(parent.data!.key)} onOpenChange={(open) => { if (!open) navigate(parent.data!.key); }}><div className={styles.root}><IssuePanel key={issue.data.key} scope={scope} issue={issue.data} siblings={parent.data!.subtasks} onDeleted={(parentKey) => parentKey ? navigate(parentKey) : onClose()} /></div></Drawer>}
     {newParentKey && <Drawer open depth={2} variant="create" title={t('newSubtask')} parentLabel={parent.data ? `${parent.data.key} · ${parent.data.title}` : newParentKey} onBack={() => guard.current ? guard.current() : closeNew()} onOpenChange={(open) => { if (!open) { if (guard.current) guard.current(); else closeNew(); } }}><div className={styles.root}>{parent.error ? <ErrorState error={parent.error} retry={() => void parent.refetch()} /> : createForm()}</div></Drawer>}
   </>;
 }

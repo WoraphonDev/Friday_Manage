@@ -5,8 +5,14 @@
   "deleteLinked": "Linked to this issue",
   "deleteImpactSubtasks": "{count} sub-tasks ({done} done)",
   "subtaskHandling": "Sub-task handling",
-  "deleteOption": { "delete": "Delete all sub-tasks too", "keep": "Keep sub-tasks as standalone tasks" },
-  "deleteOptionHint": { "delete": "Their files and comments are deleted too", "keep": "{count} sub-tasks move into module {module}" },
+  "deleteOption": {
+    "delete": "Delete all sub-tasks too",
+    "keep": "Keep sub-tasks as standalone tasks"
+  },
+  "deleteOptionHint": {
+    "delete": "Their files and comments are deleted too",
+    "keep": "{count} sub-tasks move into module {module}"
+  },
   "restoreThirtyDaysShort": "Moves to the project trash · restorable for 30 days",
   "deleteOnlyTask": "Delete only the {type}",
   "deleteWithSubtasks": "Delete {type} and {count} sub-tasks",
@@ -19,7 +25,12 @@
   "createAs": "Create as",
   "subtaskName": "Sub-task name",
   "typeName": "{type} name",
-  "typeHints": { "Story": "A need from the user point of view", "Task": "General work to do", "Bug": "Something that does not work as it should", "Spike": "Research / experiment with a timebox" },
+  "typeHints": {
+    "Story": "A need from the user point of view",
+    "Task": "General work to do",
+    "Bug": "Something that does not work as it should",
+    "Spike": "Research / experiment with a timebox"
+  },
   "underIssue": "Under issue",
   "underIssueHint": "Pick a parent and this {type} becomes its sub-task",
   "noParent": "None (top level)",
@@ -215,13 +226,108 @@
   "partialCloseTitle": "Main task created, but not finished",
   "partialCloseDescription": "The main task that was created stays. Items that failed to add won't be saved if you close this page",
   "fields": {
-    "title": "Title", "description": "Description", "statusId": "Status", "priority": "Priority", "moduleId": "Module", "phaseId": "Task group", "sprintId": "Sprint", "assigneeIds": "Assignees", "baId": "BA", "reviewerId": "Reviewer", "testerId": "Tester", "reporterId": "Reporter", "planStart": "Plan start", "planEnd": "Due date", "estimateMd": "Man-Day", "size": "Size", "progressPct": "Progress (%)", "severity": "Severity", "environment": "Environment", "sharedWithGuests": "Shared with Guests", "checklist": "Checklist", "dependencies": "Dependency", "details": "Additional details"
+    "title": "Title",
+    "description": "Description",
+    "statusId": "Status",
+    "priority": "Priority",
+    "moduleId": "Module",
+    "phaseId": "Task group",
+    "sprintId": "Sprint",
+    "assigneeIds": "Assignees",
+    "baId": "BA",
+    "reviewerId": "Reviewer",
+    "testerId": "Tester",
+    "reporterId": "Reporter",
+    "planStart": "Plan start",
+    "planEnd": "Due date",
+    "estimateMd": "Man-Day",
+    "size": "Size",
+    "progressPct": "Progress (%)",
+    "severity": "Severity",
+    "environment": "Environment",
+    "sharedWithGuests": "Shared with Guests",
+    "checklist": "Checklist",
+    "dependencies": "Dependency",
+    "details": "Additional details"
   },
-  "priority": { "urgent": "Urgent", "high": "High", "medium": "Medium", "low": "Low" },
-  "severity": { "critical": "Critical", "major": "Major", "minor": "Minor" },
-  "environment": { "local": "Local", "sit": "SIT", "uat": "UAT", "production": "Production" },
-  "types": { "Task": "Task", "Story": "Story", "Bug": "Bug", "Spike": "Spike" },
-  "detailFields": { "steps": "Steps to reproduce", "expected": "Expected result", "actual": "Actual result", "browser": "Browser / device", "found_in": "Found in Commit / Version", "as_a": "As a", "i_want": "I want", "so_that": "So that", "question": "Question to answer", "timebox_hours": "Timebox (hours)", "deliverable": "Deliverable" },
-  "reasons": { "scope_added": "Scope added", "waiting_input": "Waiting for input or deliverables from others", "blocked_by_dependency": "Blocked by a Dependency on another task", "estimate_wrong": "Time estimate was wrong", "other": "Other" },
-  "verbs": { "created": "created the task", "updated": "edited", "deleted": "deleted the task", "restored": "restored the task", "reopened": "reopened the Bug", "due_request_created": "sent a Due change request", "due_request_approved": "approved the Due change", "due_request_rejected": "rejected the Due change request", "due_request_cancelled": "cancelled the Due change request" }
+  "priority": {
+    "urgent": "Urgent",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "severity": {
+    "critical": "Critical",
+    "major": "Major",
+    "minor": "Minor"
+  },
+  "environment": {
+    "local": "Local",
+    "sit": "SIT",
+    "uat": "UAT",
+    "production": "Production"
+  },
+  "types": {
+    "Task": "Task",
+    "Story": "Story",
+    "Bug": "Bug",
+    "Spike": "Spike"
+  },
+  "detailFields": {
+    "steps": "Steps to reproduce",
+    "expected": "Expected result",
+    "actual": "Actual result",
+    "browser": "Browser / device",
+    "found_in": "Found in Commit / Version",
+    "as_a": "As a",
+    "i_want": "I want",
+    "so_that": "So that",
+    "question": "Question to answer",
+    "timebox_hours": "Timebox (hours)",
+    "deliverable": "Deliverable"
+  },
+  "reasons": {
+    "scope_added": "Scope added",
+    "waiting_input": "Waiting for input or deliverables from others",
+    "blocked_by_dependency": "Blocked by a Dependency on another task",
+    "estimate_wrong": "Time estimate was wrong",
+    "other": "Other"
+  },
+  "verbs": {
+    "created": "created the task",
+    "updated": "edited",
+    "deleted": "deleted the task",
+    "restored": "restored the task",
+    "reopened": "reopened the Bug",
+    "due_request_created": "sent a Due change request",
+    "due_request_approved": "approved the Due change",
+    "due_request_rejected": "rejected the Due change request",
+    "due_request_cancelled": "cancelled the Due change request"
+  },
+  "mobileTabs": {
+    "label": "Subtask details",
+    "details": "Details",
+    "tests": "Test runs",
+    "commits": "Commits",
+    "comments": "Comments"
+  },
+  "qa": {
+    "title": "Test runs",
+    "add": "Record test result",
+    "empty": "No test runs yet",
+    "passed": "Passed",
+    "failed": "Failed",
+    "blocked": "Blocked",
+    "result": "Test result",
+    "passedCount": "Passed count",
+    "totalCount": "Total count",
+    "note": "Notes / reproduction steps",
+    "evidence": "Evidence",
+    "createBug": "Create bug from test result",
+    "cancel": "Cancel",
+    "save": "Save result"
+  },
+  "mobileComplete": "Done",
+  "commentPlaceholder": "Write a comment… @ to mention",
+  "commitsCount": "{count, plural, one {# commit} other {# commits}}"
 }

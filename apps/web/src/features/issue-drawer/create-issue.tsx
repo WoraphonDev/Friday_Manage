@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Flag, Plus, Trash2, X } from 'lucide-react';
 import { Button, Combobox, Dialog, DrawerClose, Input, Select, useToast } from '@/components/ui';
@@ -34,16 +34,25 @@ function readDraft(key: string, fallback: Draft): Draft | null {
   } catch { return null; }
 }
 
-export function CreateIssue({ scope, options, parent, initialType = 'Task', layout = 'drawer', onCreated, onClose, registerClose }: {
+export function CreateIssue({ scope, options, parent, initialType = 'Task', initialContext, layout = 'drawer', onCreated, onClose, registerClose }: {
   scope: Scope; options: FormOptions; parent?: Issue | null; initialType?: IssueType;
+  initialContext?: { moduleId?: string; phaseId?: string; statusId?: string };
   /** drawer = Canvas B (Task / Sub-task ใน Drawer 640 px) · modal = Canvas K1 (เลือกประเภทในหน้าต่างกลางจอ) */
   layout?: 'drawer' | 'modal';
   onCreated: (issue: Issue) => void; onClose: () => void; registerClose: (handler: (() => void) | null) => void;
 }) {
   const t = useTranslations('issue-drawer'); const toast = useToast();
-  const draftKey = `friday:issue-draft:${scope.ws}:${scope.projectKey}:${scope.meId}`;
-  const [restored] = useState(() => parent ? null : readDraft(draftKey, defaultDraft(initialType)));
-  const [draft, setDraft] = useState<Draft>(() => restored ?? defaultDraft(initialType, parent));
+  const cache = useQueryClient();
+  const initialModule = options.modules.find((module) => module.id === initialContext?.moduleId);
+  const initialPhases = options.phases?.filter((phase) => phase.moduleId === initialModule?.id) ?? initialModule?.phases ?? [];
+  const initialPhase = initialPhases.find((phase) => phase.id === initialContext?.phaseId);
+  const initialStatus = options.issueTypes.find((type) => type.name === initialType)?.statuses?.find((status) => status.id === initialContext?.statusId);
+  const freshDraft = (type: IssueType): Draft => ({ ...defaultDraft(type, parent), ...(!parent ? { moduleId: initialModule?.id ?? '', phaseId: initialPhase?.id ?? '', statusId: initialStatus?.id ?? '' } : {}) });
+  // ร่างที่เริ่มใน Module/กลุ่มงานหนึ่งต้องไม่ไปแทนร่างของอีกกลุ่ม
+  const contextKey = initialModule ? `:${initialModule.id}:${initialPhase?.id ?? ''}` : initialStatus ? `:status:${initialStatus.id}` : '';
+  const draftKey = `friday:issue-draft:${scope.ws}:${scope.projectKey}:${scope.meId}${contextKey}`;
+  const [restored] = useState(() => parent ? null : readDraft(draftKey, freshDraft(initialType)));
+  const [draft, setDraft] = useState<Draft>(() => restored ?? freshDraft(initialType));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [continueCreating, setContinueCreating] = useState(false);
@@ -62,7 +71,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', layo
   const parentIssue = useQuery({ queryKey: ['issue-parent', scope.ws, scope.projectKey, draft.parentKey], queryFn: ({ signal }) => api.get<Issue>(issuePath(scope.ws, draft.parentKey), { signal }), enabled: draft.subtask && parentKeyValid, initialData: parent?.key === draft.parentKey ? parent : undefined });
   const candidates = useQuery({ queryKey: ['issue-drawer-list', scope.ws, scope.projectKey, 'parents'], queryFn: ({ signal }) => api.get<{ items: Issue[] }>(`${projectEndpoint}/issues?level=task&limit=100`, { signal }), enabled: draft.subtask || layout === 'modal' });
   const parents = candidates.data?.items.filter((issue) => !issue.parentKey) ?? [];
-  const dirty = JSON.stringify(draft) !== JSON.stringify(defaultDraft(initialType, parent));
+  const dirty = JSON.stringify(draft) !== JSON.stringify(freshDraft(initialType));
   useEffect(() => { registerClose(() => { if (dirty || created.current) setCloseOpen(true); else onClose(); }); return () => registerClose(null); }, [dirty, onClose, registerClose]);
   function set<K extends keyof Draft>(name: K, value: Draft[K]) { setDraft((previous) => ({ ...previous, [name]: value })); }
   const setDetail = (name: string, value: string) => setDraft((previous) => ({ ...previous, details: { ...previous.details, [name]: value } }));
@@ -96,7 +105,8 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', layo
         for (const [index, text] of lines(content).entries()) await once(`${kind}-${index}`, () => api.post(`${issuePath(scope.ws, issue.key)}/checklist`, { text, kind }));
       }
       for (const peer of [...new Set(draft.blockedBy.split(/[\n,]/).map((key) => key.trim().toUpperCase()).filter(Boolean))]) await once(`dependency-${peer}`, () => api.post(`${issuePath(scope.ws, issue.key)}/dependencies`, { predecessorKey: peer, type: 'FS', lagDays: 0 }));
-      if (continueCreating) { toast({ message: t('issueCreated', { key: issue.key }) }); created.current = null; completed.current.clear(); setPartial(null); setDraft(defaultDraft(draft.type, parent)); form.current?.querySelector<HTMLInputElement>('input[name="title"]')?.focus(); }
+      await Promise.all(['table', 'overview', 'kanban', 'timeline', 'gantt', 'calendar', 'backlog'].map((key) => cache.invalidateQueries({ queryKey: [key, scope.ws, scope.projectKey] })));
+      if (continueCreating) { toast({ message: t('issueCreated', { key: issue.key }) }); created.current = null; completed.current.clear(); setPartial(null); setDraft(freshDraft(draft.type)); form.current?.querySelector<HTMLInputElement>('input[name="title"]')?.focus(); }
       else onCreated(issue);
     } catch (failure) { setError(failure); }
     finally { lock.current = false; setPending(false); }

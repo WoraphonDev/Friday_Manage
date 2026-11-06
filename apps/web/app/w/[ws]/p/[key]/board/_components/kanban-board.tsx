@@ -64,10 +64,16 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   const data = board.data;
   const activeColumn = data?.columns.some((column) => column.id === mobileColumn) ? mobileColumn : data?.columns[0]?.id;
   const hasFilters = moduleId || mine || overdue || level !== "all";
-  const href = (key?: string) => {
+  const href = (key?: string, statusId?: string, targetModuleId?: string | null) => {
     const next = new URLSearchParams(search);
     next.delete("issue"); next.delete("new");
-    if (key) next.set("issue", key); else next.set("new", "1");
+    next.delete("statusId"); next.delete("moduleId"); next.delete("phaseId");
+    if (key) next.set("issue", key);
+    else {
+      next.set("new", "1"); next.set("type", isBug ? "bug" : "task");
+      if (statusId) next.set("statusId", statusId);
+      if (targetModuleId || moduleId) next.set("moduleId", targetModuleId || moduleId);
+    }
     return `${pathname}?${next}`;
   };
   function switchBoard(value: string) {
@@ -209,14 +215,14 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
       <div className={styles.columns}>
         {data.columns.map((column, columnIndex) => <section key={column.id} aria-label={t("column", { name: column.name })} data-mobile-active={column.id === activeColumn} className={`${styles.column} ${column.wip.exceeded ? styles.exceeded : ""} ${dropTarget?.column === column.id ? styles.dropColumn : ""}`}
           onDragOver={(event) => dragOver(event, column.id)} onDrop={(event) => drop(event, column.id)}>
-          <header className={styles.columnHeader}><span className={`${styles.dot} ${styles[column.category]}`} /><h3>{column.name}</h3><span className={styles.count}>{column.cards.filter((card) => filtered.includes(card) && inGroup(card, group.id)).length}</span>{column.wip.limit !== null && <span className={`${styles.wip} ${column.wip.exceeded ? styles.wipOver : ""}`}>{t("wip", { current: column.wip.current, limit: column.wip.limit })}</span>}{canCreate && <Link className={styles.colAdd} href={href()} aria-label={t("addCardTo", { name: column.name })}><Plus size={16} aria-hidden="true" /></Link>}</header>
+          <header className={styles.columnHeader}><span className={`${styles.dot} ${styles[column.category]}`} /><h3>{column.name}</h3><span className={styles.count}>{column.cards.filter((card) => filtered.includes(card) && inGroup(card, group.id)).length}</span>{column.wip.limit !== null && <span className={`${styles.wip} ${column.wip.exceeded ? styles.wipOver : ""}`}>{t("wip", { current: column.wip.current, limit: column.wip.limit })}</span>}{canCreate && <Link className={styles.colAdd} href={href(undefined, column.id, swimlane === "module" ? group.id : undefined)} aria-label={t("addCardTo", { name: column.name })}><Plus size={16} aria-hidden="true" /></Link>}</header>
           {column.wip.exceeded && <p className={styles.mobileWip} role="status">{t("overWip", { current: column.wip.current, limit: column.wip.limit! })}</p>}
           <div className={styles.cardList}>{column.cards.filter((card) => filtered.includes(card) && inGroup(card, group.id)).map((card) => renderCard(card, column, columnIndex, column.cards.filter((item) => filtered.includes(item) && inGroup(item, group.id))))}
             {!column.cards.some((card) => filtered.includes(card) && inGroup(card, group.id)) && <p className={styles.emptyColumn}>{t("emptyColumn")}</p>}
             {dragging && dropTarget?.column === column.id && !dropTarget.before && <div className={styles.dropPlaceholder}>{t("dropHere", { name: column.name })}</div>}
           </div>
           {column.category === "done" && (older || data.hiddenDone > 0) && <Button className={styles.older} variant="ghost" onClick={() => setOlder(!older)}>{older ? t("hideOlder") : t("showOlder", { count: data.hiddenDone })}</Button>}
-          {canCreate && <Link className={styles.addCard} href={href()}>{t("addCard")}</Link>}
+          {canCreate && <Link className={styles.addCard} href={href(undefined, column.id, swimlane === "module" ? group.id : undefined)}>{t("addCard")}</Link>}
         </section>)}
       </div>
     </section>)}

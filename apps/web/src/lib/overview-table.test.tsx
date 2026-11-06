@@ -262,3 +262,52 @@ describe("Table (2)", () => {
     expect(d.map((x) => (x.kind === "issue" ? x.row.key : `${x.kind}:${x.kind === "module" ? x.name : ""}`))).toEqual(["module:Module A", "DE-1", "DE-2", "add:", "foot:", "module:Module B"]);
   });
 });
+
+describe("จัดโครงงานใน Table", () => {
+  it("เพิ่ม Module ว่างแล้วเห็นทางเพิ่ม Task ใน Module นั้นทันที", async () => {
+    const user = userEvent.setup(); const creates: unknown[] = [];
+    server.use(http.post("*/api/v1/w/:ws/projects/:key/modules", async ({ request }) => {
+      creates.push(await request.json()); tableData.modules.push({ id: "m-new", name: "Module ใหม่", color: "#1d4ed8", ...agg(0), phases: [{ id: null, name: null, ...agg(0) }] });
+      return HttpResponse.json({ id: "m-new" }, { status: 201 });
+    }));
+    mount(<TableView ws="sample" projectKey="DE" />);
+    await user.click(await screen.findByRole("button", { name: "+ Module" }));
+    await user.type(screen.getByLabelText("ชื่อ Module"), "Module ใหม่");
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(creates).toEqual([{ name: "Module ใหม่", color: "#1d4ed8" }]);
+    expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน Module ใหม่" })).toHaveAttribute("href", "/w/sample/p/DE/table?new=1&type=task&moduleId=m-new");
+  });
+  it("เพิ่มกลุ่มงานว่างใน Module และส่งบริบทเข้า Task", async () => {
+    const user = userEvent.setup();
+    server.use(http.post("*/api/v1/w/:ws/projects/:key/modules/:id/phases", async ({ request }) => {
+      expect(await request.json()).toEqual({ name: "กลุ่มใหม่" }); tableData.modules[0].phases.push({ id: "ph-new", name: "กลุ่มใหม่", ...agg(0) }); return HttpResponse.json({ id: "ph-new" }, { status: 201 });
+    }));
+    mount(<TableView ws="sample" projectKey="DE" />);
+    await user.click(await screen.findByRole("button", { name: "จัดการ Module Module A" }));
+    await user.click(screen.getByRole("button", { name: "เพิ่มกลุ่มงาน" }));
+    await user.type(screen.getByLabelText("ชื่อกลุ่มงาน"), "กลุ่มใหม่");
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มใหม่" })).toHaveAttribute("href", "/w/sample/p/DE/table?new=1&type=task&moduleId=m-a&phaseId=ph-new");
+  });
+  it("เมื่อบันทึกไม่ผ่านคงข้อมูลและ requestId ให้แก้", async () => {
+    const user = userEvent.setup(); server.use(http.post("*/api/v1/w/:ws/projects/:key/modules", () => errorBody(500)));
+    mount(<TableView ws="sample" projectKey="DE" />); await user.click(await screen.findByRole("button", { name: "+ Module" })); await user.type(screen.getByLabelText("ชื่อ Module"), "ยังไม่สำเร็จ"); await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("req_w05_001"); expect(screen.getByLabelText("ชื่อ Module")).toHaveValue("ยังไม่สำเร็จ");
+  });
+  it("Sprint และ Backlog ใช้ตัวกรองที่ API รองรับ", async () => {
+    const user = userEvent.setup(); mount(<TableView ws="sample" projectKey="DE" />); await user.click(await screen.findByRole("button", { name: "Sprint ปัจจุบัน" })); await waitFor(() => expect(urls.some((u) => u.searchParams.get("sprint") === "current")).toBe(true)); await user.click(screen.getByRole("button", { name: "Backlog" })); await waitFor(() => expect(urls.some((u) => u.searchParams.get("sprint") === "none")).toBe(true));
+  });
+});
+
+
+it("เพิ่ม Module ในตาราง 450 แถวแล้วเลื่อนไปเห็นกลุ่มใหม่ที่อยู่นอกช่วง virtualized", async () => {
+  const user = userEvent.setup(); tableData = table(Array.from({ length: 450 }, (_, index) => row(`DE-${index + 1}`)));
+  server.use(http.post("*/api/v1/w/:ws/projects/:key/modules", () => {
+    tableData.modules.push({ id: "m-last", name: "กลุ่มท้ายตาราง", color: null, ...agg(0), phases: [{ id: null, name: null, ...agg(0) }] });
+    return HttpResponse.json({ id: "m-last" }, { status: 201 });
+  }));
+  mount(<TableView ws="sample" projectKey="DE" />); await user.click(await screen.findByRole("button", { name: "+ Module" })); await user.type(screen.getByLabelText("ชื่อ Module"), "กลุ่มท้ายตาราง"); await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
+  expect(await screen.findByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มท้ายตาราง" })).toBeInTheDocument();
+});

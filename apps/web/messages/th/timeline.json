@@ -1,16 +1,29 @@
 {
   "title": "Timeline",
-  "zoom": { "label": "ช่วงเวลา", "day": "Day", "week": "Week", "month": "Month" },
+  "zoom": {
+    "label": "ช่วงเวลา",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month"
+  },
   "prev": "เลื่อนไปก่อนหน้า",
   "next": "เลื่อนไปถัดไป",
   "today": "Today",
   "colorBy": "สีตาม",
   "levelLabel": "ระดับที่แสดง",
-  "levels": { "module": "Module", "task": "+ Task", "subtask": "+ Sub-task" },
+  "levels": {
+    "module": "Module",
+    "task": "+ Task",
+    "subtask": "+ Sub-task"
+  },
   "groups": "{count} กลุ่มงาน",
   "addIn": "เพิ่มงานใน {name}",
   "addMilestone": "+ Milestone",
-  "colors": { "module": "Module", "status": "Status", "assignee": "Assignee" },
+  "colors": {
+    "module": "Module",
+    "status": "Status",
+    "assignee": "Assignee"
+  },
   "rowsLabel": "Module › Task › Sub-task",
   "milestones": "Milestones",
   "todayLine": "วันนี้ ({date})",
@@ -27,7 +40,12 @@
   "unscheduledCount": "· {count} งานยังไม่มีวันที่",
   "unscheduledHint": "ลากไปวางบนแถวของ Task หรือ Module เพื่อกำหนดวัน",
   "dropHere": "วางเพื่อกำหนดวันเริ่ม",
-  "legend": { "module": "Module", "task": "Task", "subtask": "Sub-task", "late": "เลยกำหนด" },
+  "legend": {
+    "module": "Module",
+    "task": "Task",
+    "subtask": "Sub-task",
+    "late": "เลยกำหนด"
+  },
   "footer": "ลาก bar เพื่อเลื่อนวัน · ลากขอบเพื่อปรับความยาว",
   "saved": "เลื่อน {key} เป็น {start} – {end} แล้ว",
   "conflict": "งานถูกแก้โดยคนอื่น โหลดข้อมูลล่าสุดแล้ว",
@@ -41,8 +59,25 @@
   "requestTitle": "ขอเลื่อน Due",
   "requestBody": "คุณไม่มีสิทธิ์เลื่อน Due ของ {key} เอง · ส่งคำขอให้ผู้อนุมัติเป็น {date}",
   "reason": "เหตุผล",
-  "reasons": { "scope_added": "ขอบเขตเพิ่ม", "waiting_input": "รอข้อมูล", "blocked_by_dependency": "ติดงานที่ต้องทำก่อน", "estimate_wrong": "ประเมินคลาดเคลื่อน", "other": "อื่น ๆ" },
+  "reasons": {
+    "scope_added": "ขอบเขตเพิ่ม",
+    "waiting_input": "รอข้อมูล",
+    "blocked_by_dependency": "ติดงานที่ต้องทำก่อน",
+    "estimate_wrong": "ประเมินคลาดเคลื่อน",
+    "other": "อื่น ๆ"
+  },
   "detail": "รายละเอียด",
   "send": "ส่งคำขอ",
-  "requested": "ส่งคำขอเลื่อน Due ของ {key} แล้ว"
+  "requested": "ส่งคำขอเลื่อน Due ของ {key} แล้ว",
+  "milestoneForm": {
+    "title": "เพิ่ม Milestone",
+    "name": "ชื่อ Milestone",
+    "date": "วันที่เป้าหมาย",
+    "module": "Module",
+    "allModules": "ทั้งโปรเจกต์",
+    "cancel": "ยกเลิก",
+    "create": "เพิ่ม",
+    "created": "เพิ่ม Milestone แล้ว",
+    "failed": "เพิ่มไม่สำเร็จ กรุณาลองอีกครั้ง"
+  }
 }

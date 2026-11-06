@@ -1,0 +1,102 @@
+{
+  "inbox": {
+    "title": "Inbox",
+    "subtitle": "การแจ้งเตือนของ {name} · ยังไม่อ่าน {count} รายการ",
+    "markAll": "Mark all as read",
+    "markedAll": "อ่านทั้งหมดแล้ว",
+    "settings": "ตั้งค่าการแจ้งเตือน",
+    "filterLabel": "ตัวกรอง",
+    "filters": {
+      "all": "ทั้งหมด",
+      "unread": "ยังไม่อ่าน",
+      "assign": "มอบหมาย",
+      "mention": "Mention",
+      "activity": "ความเคลื่อนไหว",
+      "due": "ใกล้ / เลยกำหนด"
+    },
+    "listLabel": "รายการแจ้งเตือน",
+    "detailLabel": "รายละเอียดการแจ้งเตือน",
+    "groups": {
+      "today": "วันนี้",
+      "yesterday": "เมื่อวาน",
+      "earlier": "ก่อนหน้า"
+    },
+    "empty": "ไม่มีการแจ้งเตือนในหมวดนี้",
+    "unread": "ยังไม่อ่าน",
+    "system": "ระบบ",
+    "loadMore": "โหลดเพิ่ม",
+    "selectHint": "เลือกการแจ้งเตือนทางซ้ายเพื่อดูรายละเอียด",
+    "back": "กลับไปรายการ",
+    "openIssue": "เปิดงาน",
+    "acknowledge": "รับทราบ",
+    "acknowledged": "รับทราบแล้ว",
+    "remindTomorrow": "เตือนฉันพรุ่งนี้",
+    "snoozed": "จะเตือนอีกครั้งพรุ่งนี้",
+    "approve": "อนุมัติการเลื่อน",
+    "reject": "ปฏิเสธ",
+    "approvedToast": "อนุมัติการเลื่อน Due แล้ว",
+    "rejectedToast": "ปฏิเสธคำขอแล้ว",
+    "decision": {
+      "approved": "อนุมัติแล้วโดย {name}",
+      "rejected": "ปฏิเสธแล้วโดย {name}",
+      "cancelled": "ผู้ขอยกเลิกคำขอแล้ว",
+      "pending": "รอผู้อนุมัติ"
+    },
+    "dueDiff": "Due",
+    "reasonLabel": "เหตุผล: {reason}",
+    "why": "ทำไมฉันได้รับแจ้ง:",
+    "due": "Due {date}",
+    "assignee": "Assignee {names}",
+    "noDue": "ไม่มีกำหนด",
+    "issueGone": "งานนี้ถูกลบหรือคุณไม่มีสิทธิ์เห็นแล้ว",
+    "types": {
+      "issue__assigned": "มอบหมายงาน",
+      "issue__mentioned": "Mention",
+      "issue__status_changed": "สถานะเปลี่ยน",
+      "issue__review_requested": "ขอ Review",
+      "issue__commented": "คอมเมนต์",
+      "issue__updated": "งานถูกแก้",
+      "issue__due_soon": "ใกล้ครบกำหนด",
+      "issue__overdue": "เลยกำหนด",
+      "due_request__created": "ขอเลื่อน Due",
+      "due_request__decided": "ผลคำขอเลื่อน Due",
+      "bug__created": "Bug ใหม่",
+      "bug__reopened": "Bug เปิดใหม่",
+      "test_run__failed": "ทดสอบไม่ผ่าน",
+      "sprint__started": "Sprint เริ่ม",
+      "sprint__completed": "Sprint ปิด",
+      "member__joined": "สมาชิกใหม่",
+      "member__invited": "คำเชิญ",
+      "automation__notified": "Automation",
+      "other": "แจ้งเตือน"
+    },
+    "verbs": {
+      "issue__assigned": "มอบหมายงานให้คุณ",
+      "issue__mentioned": "mention คุณใน",
+      "issue__status_changed": "เปลี่ยนสถานะ",
+      "issue__review_requested": "ส่งงานเข้า Review",
+      "issue__commented": "คอมเมนต์ใน",
+      "issue__updated": "แก้งาน",
+      "issue__due_soon": "งานใกล้ครบกำหนด",
+      "issue__overdue": "งานเลยกำหนด",
+      "due_request__created": "ขอเลื่อนวันครบกำหนด",
+      "due_request__decided": "ตอบคำขอเลื่อน Due",
+      "other": "มีความเคลื่อนไหว"
+    },
+    "loading": "กำลังโหลด Inbox"
+  },
+  "bell": {
+    "title": "การแจ้งเตือน",
+    "readAll": "อ่านทั้งหมด",
+    "settings": "ตั้งค่า",
+    "tabs": {
+      "all": "ทั้งหมด",
+      "unread": "ยังไม่อ่าน",
+      "mention": "Mention"
+    },
+    "openInbox": "เปิด Inbox ทั้งหมด →",
+    "empty": "ไม่มีการแจ้งเตือน",
+    "toastNew": "มีการแจ้งเตือนใหม่ · ยังไม่อ่าน {count} รายการ",
+    "toastOpen": "เปิด Inbox"
+  }
+}

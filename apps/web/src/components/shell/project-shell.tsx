@@ -26,6 +26,12 @@ export const projectTabs = [
     label: "dashboard",
     permission: "project.reports.view",
   },
+  {
+    path: "/reports",
+    label: "reports",
+    permission: "project.reports.view",
+    desktop: true,
+  },
   { path: "/backlog", label: "backlog", hiddenForGuestViewer: true },
   { path: "/table", label: "table", hiddenForGuestViewer: true },
   { path: "/board", label: "board", hiddenForGuestViewer: true },
@@ -125,7 +131,16 @@ export function ProjectShell({
       !access.permissions.includes("project.reports.view")) ||
     (route.startsWith("/plan-changes") &&
       !access.permissions.includes("project.baseline"));
-  if ((matchingTab && !allowedProjectTab(matchingTab, access)) || extraDenied)
+  // โปรเจกต์ที่ Archive แล้วเสียสิทธิ์ project.settings แต่ต้องเข้า Danger zone เพื่อกด "กู้คืน" ได้
+  const dangerByArchive =
+    route.startsWith("/settings/danger") &&
+    access.permissions.includes("project.archive");
+  if (
+    (matchingTab &&
+      !allowedProjectTab(matchingTab, access) &&
+      !dangerByArchive) ||
+    extraDenied
+  )
     return <Forbidden />;
   const issueKey = search.get("issue");
   const newIssue =

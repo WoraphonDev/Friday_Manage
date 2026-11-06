@@ -90,6 +90,8 @@ describe('402 plan_limit_reached', () => {
     }
     const accept = async (email: string, role?: string) => {
       const inv = await team.lead.post(`${team.ws}/invitations`, { emails: [email], ...(role ? { workspaceRole: role } : {}) });
+      // A14: ตรวจ Seat ตั้งแต่ตอนเชิญด้วย (03-api 3.2) จึงอาจโดน 402 ตั้งแต่สร้างคำเชิญ
+      if (inv.status === 402) return inv;
       expect(inv.status, JSON.stringify(inv.body)).toBe(201);
       const token = inv.body.items[0].inviteUrl.split('/join/')[1];
       const c = await client(t.app);

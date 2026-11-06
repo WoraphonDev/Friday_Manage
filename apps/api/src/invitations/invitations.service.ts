@@ -3,6 +3,7 @@ import { type Db, schema } from '@friday/db';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { hashToken, newToken } from '../auth/sessions.js';
+import { EventBus } from '../core/events.js';
 import { PlanLimits } from '../core/plan-limits.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { AppError, forbidden, notFound } from '../common/errors.js';
@@ -34,6 +35,7 @@ export class InvitationsService {
     @Inject(SYSTEM_DB) private readonly system: Db,
     private readonly projects: ProjectsService,
     private readonly limits: PlanLimits,
+    private readonly events: EventBus,
   ) {}
 
   /**
@@ -54,8 +56,22 @@ export class InvitationsService {
       }
       if (!isWsAdmin && input.workspaceRole === 'admin') throw forbidden('ws.members.manage');
 
+      // ตรวจ Seat ล่วงหน้า (03-api 3.2): สมาชิกปัจจุบัน + คำเชิญใหม่ที่ไม่ใช่ Guest ต้องไม่เกินแพ็กเกจ
+      const unique = [...new Set(input.emails.map((e) => e.toLowerCase()))];
+      if (input.workspaceRole !== 'guest') {
+        const existing = unique.length
+          ? await tx
+              .select({ email: s.users.email })
+              .from(s.workspaceMembers)
+              .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
+              .where(and(eq(s.workspaceMembers.status, 'active'), sql`lower(${s.users.email}) in (${sql.join(unique.map((e) => sql`${e}`), sql`, `)})`))
+          : [];
+        const fresh = unique.length - existing.length;
+        if (fresh > 0) await this.limits.assert(tx, tenant.workspaceId, 'seats', fresh);
+      }
+      const invited: Array<{ email: string; id: string }> = [];
       const results = [];
-      for (const raw of [...new Set(input.emails.map((e) => e.toLowerCase()))]) {
+      for (const raw of unique) {
         const [member] = await tx
           .select({ userId: s.workspaceMembers.userId, status: s.workspaceMembers.status })
           .from(s.workspaceMembers)
@@ -98,9 +114,16 @@ export class InvitationsService {
           summary: `${raw} · ${input.workspaceRole}${project ? ` · ${project.key} ${input.projectRole}` : ''}`,
         });
         this.log.log(`invitation ${inv.id} for ${raw} (email sending disabled)`);
+        invited.push({ email: raw, id: inv.id });
         results.push({ email: raw, status: 'invited' as const, invitationId: inv.id, inviteUrl: `${baseUrl}/join/${token}`, expiresAt: values.expiresAt });
       }
-      return { items: results };
+      return { items: results, invited, projectId: project?.id };
+    }).then(async (r) => {
+      // Event member.invited หลัง commit · ส่งต่อให้ PM ของโปรเจกต์ (A23 fan-out)
+      for (const i of r.invited) {
+        await this.events.publish({ type: 'member.invited', workspaceId: tenant.workspaceId, projectId: r.projectId, actorId: auth.userId, data: { email: i.email, invitationId: i.id, role: input.workspaceRole }, at: new Date() });
+      }
+      return { items: r.items };
     });
   }
 
@@ -122,6 +145,25 @@ export class InvitationsService {
         .where(eq(s.invitations.status, 'pending'))
         .orderBy(desc(s.invitations.createdAt)),
     }));
+  }
+
+  /** ส่งคำเชิญซ้ำ: ออก token ใหม่ (ของเดิมใช้ไม่ได้) และต่ออายุเท่าเดิม · ผู้ส่ง หรือ ws.members.manage */
+  async resend(auth: AuthInfo, tenant: TenantInfo, id: string, baseUrl: string) {
+    if (!z.uuid().safeParse(id).success) throw notFound('คำเชิญ');
+    return this.db.run(auth, tenant, async (tx) => {
+      const [inv] = await tx.select().from(s.invitations).where(eq(s.invitations.id, id));
+      if (!inv) throw notFound('คำเชิญ');
+      const isWsAdmin = tenant.role === 'owner' || tenant.role === 'admin';
+      if (!isWsAdmin && inv.invitedBy !== auth.userId) throw forbidden('ws.members.manage');
+      if (inv.status !== 'pending') throw new AppError(409, 'invitation_not_pending', 'คำเชิญนี้ไม่ได้รอตอบรับแล้ว');
+      const token = newToken();
+      // ต่ออายุเท่ากับที่ตั้งตอนเชิญ (ขั้นต่ำ 7 วัน)
+      const days = Math.max(7, Math.round((inv.expiresAt.getTime() - inv.createdAt.getTime()) / 86_400_000));
+      const expiresAt = new Date(Date.now() + days * 86_400_000);
+      await tx.update(s.invitations).set({ tokenHash: hashToken(token), expiresAt, createdAt: new Date() }).where(eq(s.invitations.id, id));
+      await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'perm', action: 'member.invite_resent', targetType: 'invitation', targetId: id, summary: inv.email });
+      return { id, email: inv.email, inviteUrl: `${baseUrl}/join/${token}`, expiresAt };
+    });
   }
 
   async revoke(auth: AuthInfo, tenant: TenantInfo, id: string) {
@@ -206,16 +248,21 @@ export class InvitationsService {
         summary: r.inv.email,
       });
       // J4: "เมื่อตอบรับ ระบบจะแจ้งผู้เชิญ และ PM ของโปรเจกต์ใน Inbox"
-      await tx.insert(s.notifications).values({
-        workspaceId: r.workspace.id,
-        recipientId: r.inv.invitedBy,
-        eventType: 'member.joined',
-        actorId: auth.userId,
-        projectId: r.inv.projectId,
-        payload: { email: r.inv.email },
-        reason: 'คุณเป็นผู้เชิญ',
-      });
+      // PM ได้รับผ่าน Event member.joined (fan-out ของ A23) จึงแจ้งผู้เชิญเองเฉพาะเมื่อผู้เชิญไม่ใช่ PM (ไม่งั้นได้ซ้ำ 2 รายการ)
+      const [proj] = r.inv.projectId ? await tx.select({ owner: s.projects.ownerUserId }).from(s.projects).where(eq(s.projects.id, r.inv.projectId)) : [];
+      if (!proj || proj.owner !== r.inv.invitedBy) {
+        await tx.insert(s.notifications).values({
+          workspaceId: r.workspace.id,
+          recipientId: r.inv.invitedBy,
+          eventType: 'member.joined',
+          actorId: auth.userId,
+          projectId: r.inv.projectId,
+          payload: { email: r.inv.email },
+          reason: 'คุณเป็นผู้เชิญ',
+        });
+      }
     });
+    await this.events.publish({ type: 'member.joined', workspaceId: r.workspace.id, projectId: r.inv.projectId ?? undefined, actorId: auth.userId, data: { userId: auth.userId, role: r.inv.projectRole ?? r.inv.workspaceRole, via: 'invitation' }, at: new Date() });
     return { workspace: { slug: r.workspace.slug, name: r.workspace.name }, role: r.inv.workspaceRole };
   }
 

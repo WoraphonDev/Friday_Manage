@@ -21,6 +21,12 @@ export class WorkspaceInvitationsController {
     return this.invitations.create(auth, tenant, parse(CreateInvitationsBody, body), appUrl(req));
   }
 
+  @Post([':id/resend', ':id\\:resend'])
+  @HttpCode(200)
+  resend(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('id') id: string, @Req() req: AppRequest) {
+    return this.invitations.resend(auth, tenant, id, appUrl(req));
+  }
+
   @Post(':id/revoke')
   @HttpCode(200)
   revoke(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('id') id: string) {

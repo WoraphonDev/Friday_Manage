@@ -11,7 +11,7 @@ import { TenantDb } from '../common/tenant.js';
 import { PlanLimits } from '../core/plan-limits.js';
 import { requirePerm } from '../projects/permissions.js';
 import { ProjectsService, type ProjectRow } from '../projects/projects.service.js';
-import { LocalStorage, MAX_FILE_BYTES, S3Storage, type StorageDriver, UPLOAD_TTL_SECONDS } from './storage.js';
+import { finalKeyOf, LocalStorage, MAX_FILE_BYTES, S3Storage, StagingGone, stagingKeyFor, type StorageDriver, UPLOAD_TTL_SECONDS } from './storage.js';
 
 const Id = z.uuid();
 const Name = z.string().trim().min(1).max(255).refine((v) => !/[\\/\0]/.test(v), 'ชื่อมี / \\ ไม่ได้');
@@ -99,7 +99,8 @@ export class FilesService {
       if (body.folderId) await this.folderOf(tx, project, body.folderId);
       // พื้นที่ไฟล์ของแพ็กเกจ → 402 (หน้า Q2)
       await this.limits.assert(tx, tenant.workspaceId, 'storage_bytes', body.size);
-      const storageKey = `${tenant.workspaceId}/${project.id}/${randomUUID()}`;
+      // ลิงก์ PUT ชี้ไป staging เท่านั้น · ยืนยันแล้วย้ายไป key ถาวร (BUG-06)
+      const storageKey = stagingKeyFor(`${tenant.workspaceId}/${project.id}/${randomUUID()}`);
       const target = await this.driver.presignUpload(storageKey, { size: body.size, mime: body.mime });
       const claims: UploadClaims = { k: storageKey, s: body.size, n: body.name, m: body.mime, w: tenant.workspaceId, p: project.id, u: auth.userId, ...(body.fileId ? { f: body.fileId } : {}), d: body.folderId ?? null };
       const expiresAt = new Date(Date.now() + UPLOAD_TTL_SECONDS * 1000);
@@ -107,15 +108,41 @@ export class FilesService {
     });
   }
 
-  /** ตรวจ uploadToken ว่าออกให้ผู้เรียกในโปรเจกต์นี้ และไฟล์อยู่ในที่เก็บครบขนาด */
-  private async claims(tenant: TenantInfo, auth: AuthInfo, project: ProjectRow, token: string, fileId?: string) {
+  /** ตรวจ uploadToken ว่าออกให้ผู้เรียกในโปรเจกต์นี้ */
+  private claims(tenant: TenantInfo, auth: AuthInfo, project: ProjectRow, token: string, fileId?: string) {
     const c = verifyToken<UploadClaims>('file-upload', token);
-    if (!c || c.w !== tenant.workspaceId || c.p !== project.id || c.u !== auth.userId) throw new AppError(400, 'invalid_upload_token', 'ลิงก์อัปโหลดไม่ถูกต้องหรือหมดอายุ · ขอใหม่แล้วอัปโหลดอีกครั้ง');
+    if (!c || c.w !== tenant.workspaceId || c.p !== project.id || c.u !== auth.userId || !finalKeyOf(c.k)) throw new AppError(400, 'invalid_upload_token', 'ลิงก์อัปโหลดไม่ถูกต้องหรือหมดอายุ · ขอใหม่แล้วอัปโหลดอีกครั้ง');
     if (fileId !== undefined && c.f !== fileId) throw new AppError(400, 'invalid_upload_token', 'ลิงก์อัปโหลดนี้ไม่ได้ออกให้เวอร์ชันของไฟล์นี้');
+    return c;
+  }
+
+  /**
+   * จองการยืนยัน upload ในธุรกรรมนี้ แล้วคืน key ถาวร
+   * - ล็อกต่อ upload: token เดียวยืนยันได้ครั้งเดียว แม้ส่งพร้อมกัน (BUG-07)
+   * - ล็อกพื้นที่ต่อ Workspace แล้วตรวจโควตาซ้ำ: URL หลายอันที่ออกจาก usage เดียวกันยืนยันเกินพื้นที่ไม่ได้ (BUG-08)
+   * advisory lock ถือจนธุรกรรม commit คำขอถัดไปจึงเห็นแถว file_versions ที่เพิ่งบันทึก
+   */
+  private async reserve(tx: Tx, tenant: TenantInfo, c: UploadClaims) {
+    const finalKey = finalKeyOf(c.k)!;
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'file-upload:' + c.k}, 0))`);
+    const [used] = await tx.select({ id: s.fileVersions.id }).from(s.fileVersions).where(eq(s.fileVersions.storageKey, finalKey));
+    if (used) throw new AppError(409, 'upload_already_used', 'ไฟล์นี้ยืนยันไปแล้ว · ขอลิงก์อัปโหลดใหม่ถ้าต้องการเพิ่มอีกไฟล์');
     const st = await this.driver.stat(c.k);
     if (!st) throw new AppError(409, 'upload_incomplete', 'ยังไม่พบไฟล์ที่อัปโหลด · อัปโหลดให้เสร็จก่อนยืนยัน');
     if (st.size !== c.s) throw new AppError(409, 'upload_incomplete', 'ขนาดไฟล์ที่อัปโหลดไม่ตรงกับที่แจ้งไว้', { expected: c.s, actual: st.size });
-    return c;
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'storage:' + tenant.workspaceId}, 0))`);
+    await this.limits.assert(tx, tenant.workspaceId, 'storage_bytes', c.s);
+    return finalKey;
+  }
+
+  /** ย้ายเนื้อหาไป key ถาวรหลังบันทึกแถวแล้ว · ล้ม = ธุรกรรมย้อนกลับ ไม่มีเวอร์ชันที่ชี้ไฟล์ซึ่งยังแก้ทับได้ */
+  private async commitObject(c: UploadClaims, finalKey: string) {
+    try {
+      await this.driver.commit(c.k, finalKey);
+    } catch (err) {
+      if (err instanceof StagingGone) throw new AppError(409, 'upload_already_used', 'ไฟล์นี้ยืนยันไปแล้ว · ขอลิงก์อัปโหลดใหม่ถ้าต้องการเพิ่มอีกไฟล์');
+      throw err;
+    }
   }
 
   async create(auth: AuthInfo, tenant: TenantInfo, key: string, body: z.infer<typeof CreateFileBody>) {
@@ -133,21 +160,23 @@ export class FilesService {
         await this.audit(tx, auth, tenant, 'file.link_added', f.id, f.name);
         return this.dtoOne(tx, project, f.id);
       }
-      const c = await this.claims(tenant, auth, project, body.uploadToken);
+      const c = this.claims(tenant, auth, project, body.uploadToken);
       if (c.f) throw new AppError(400, 'invalid_upload_token', 'โทเค็นนี้ใช้กับเวอร์ชันใหม่ (POST files/{id}/versions)');
       if (c.d) await this.folderOf(tx, project, c.d);
+      const finalKey = await this.reserve(tx, tenant, c);
       const [f] = await tx
         .insert(s.files)
         .values({ workspaceId: tenant.workspaceId, projectId: project.id, folderId: c.d ?? null, kind: 'upload', name: c.n, mime: c.m, uploadedBy: auth.userId })
         .returning();
-      await this.addVersion(tx, tenant, auth, f.id, 1, c, body.note);
+      await this.addVersion(tx, tenant, auth, f.id, 1, c, finalKey, body.note);
+      await this.commitObject(c, finalKey);
       await this.audit(tx, auth, tenant, 'file.uploaded', f.id, f.name);
       return this.dtoOne(tx, project, f.id);
     });
   }
 
-  private async addVersion(tx: Tx, tenant: TenantInfo, auth: AuthInfo, fileId: string, versionNo: number, c: UploadClaims, note?: string) {
-    const [v] = await tx.insert(s.fileVersions).values({ workspaceId: tenant.workspaceId, fileId, versionNo, storageKey: c.k, sizeBytes: c.s, note: note ?? null, uploadedBy: auth.userId }).returning();
+  private async addVersion(tx: Tx, tenant: TenantInfo, auth: AuthInfo, fileId: string, versionNo: number, c: UploadClaims, storageKey: string, note?: string) {
+    const [v] = await tx.insert(s.fileVersions).values({ workspaceId: tenant.workspaceId, fileId, versionNo, storageKey, sizeBytes: c.s, note: note ?? null, uploadedBy: auth.userId }).returning();
     await tx.update(s.files).set({ currentVersionId: v.id }).where(eq(s.files.id, fileId));
     return v;
   }
@@ -157,11 +186,13 @@ export class FilesService {
       const { project } = await this.ctx(tx, auth, tenant, key, 'file.upload');
       const f = await this.fileOf(tx, project, fileId, false);
       if (f.kind !== 'upload') throw new AppError(400, 'link_file', 'ไฟล์ที่เป็นลิงก์ไม่มีเวอร์ชัน');
-      const c = await this.claims(tenant, auth, project, body.uploadToken, f.id);
+      const c = this.claims(tenant, auth, project, body.uploadToken, f.id);
+      const finalKey = await this.reserve(tx, tenant, c);
       // ล็อกต่อไฟล์ กันสองคนอัปโหลดเวอร์ชันพร้อมกันได้เลขซ้ำ
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'file-version:' + f.id}, 0))`);
       const [last] = await tx.select({ n: sql<number>`coalesce(max(${s.fileVersions.versionNo}), 0)::int` }).from(s.fileVersions).where(eq(s.fileVersions.fileId, f.id));
-      await this.addVersion(tx, tenant, auth, f.id, (last?.n ?? 0) + 1, c, body.note);
+      await this.addVersion(tx, tenant, auth, f.id, (last?.n ?? 0) + 1, c, finalKey, body.note);
+      await this.commitObject(c, finalKey);
       await this.audit(tx, auth, tenant, 'file.version_added', f.id, `${f.name} v${(last?.n ?? 0) + 1}`);
       return this.dtoOne(tx, project, f.id);
     });

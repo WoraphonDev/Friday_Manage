@@ -338,6 +338,86 @@ describe('สิทธิ์', () => {
   });
 });
 
+describe('ความถูกต้องของการยืนยัน upload (BUG-06 · 07 · 08)', () => {
+  async function staged(content: string, extra: { fileId?: string } = {}) {
+    const u = await team.dev.post(`${base}/files/upload-url`, { name: 'หลักฐาน.txt', size: Buffer.byteLength(content), mime: 'text/plain', ...extra });
+    expect(u.status, JSON.stringify(u.body)).toBe(200);
+    expect((await anon().put(new URL(u.body.url).pathname).set('content-type', 'application/octet-stream').send(Buffer.from(content))).status).toBe(200);
+    return u.body as { url: string; uploadToken: string };
+  }
+  const download = async (fileId: string, version?: number) => {
+    const dl = await team.dev.get(`${base}/files/${fileId}/download${version ? `?version=${version}` : ''}`).redirects(0);
+    return body(new URL(dl.headers.location).pathname);
+  };
+  const sizeOf = async () => Number((await t.owner.query('SELECT coalesce(sum(size_bytes),0) AS n FROM file_versions WHERE workspace_id = $1', [wsId])).rows[0].n);
+
+  it('PUT ซ้ำไป URL เดิมหลังยืนยัน → เนื้อหาเวอร์ชันที่ยืนยันแล้วไม่เปลี่ยน (ทั้งไฟล์ใหม่และเวอร์ชันใหม่)', async () => {
+    const u = await staged('old');
+    const f = await team.dev.post(`${base}/files`, { uploadToken: u.uploadToken });
+    expect(f.status, JSON.stringify(f.body)).toBe(201);
+    await anon().put(new URL(u.url).pathname).set('content-type', 'application/octet-stream').send(Buffer.from('NEW'));
+    expect(await download(f.body.id)).toBe('old');
+    const key = (await t.owner.query('SELECT storage_key FROM file_versions WHERE file_id = $1', [f.body.id])).rows[0].storage_key as string;
+    expect(key.startsWith('staging/')).toBe(false);
+
+    const v = await staged('v2!', { fileId: f.body.id });
+    expect((await team.dev.post(`${base}/files/${f.body.id}/versions`, { uploadToken: v.uploadToken })).status).toBe(201);
+    await anon().put(new URL(v.url).pathname).set('content-type', 'application/octet-stream').send(Buffer.from('BAD'));
+    expect(await download(f.body.id)).toBe('v2!');
+    expect(await download(f.body.id, 1)).toBe('old');
+  });
+
+  it('uploadToken ใช้ได้ครั้งเดียว · ส่งพร้อมกันได้ไฟล์เดียวและนับพื้นที่ครั้งเดียว', async () => {
+    const u = await staged('once');
+    const ok = await team.dev.post(`${base}/files`, { uploadToken: u.uploadToken });
+    expect(ok.status).toBe(201);
+    const again = await team.dev.post(`${base}/files`, { uploadToken: u.uploadToken });
+    expect(again.status).toBe(409);
+    expect(again.body.error.code).toBe('upload_already_used');
+
+    const p = await staged('pair');
+    const before = await sizeOf();
+    const files = Number((await t.owner.query('SELECT count(*) FROM files WHERE workspace_id = $1', [wsId])).rows[0].count);
+    const results = await Promise.all([1, 2, 3].map(() => team.dev.post(`${base}/files`, { uploadToken: p.uploadToken })));
+    expect(results.map((r) => r.status).sort()).toEqual([201, 409, 409]);
+    expect(Number((await t.owner.query('SELECT count(*) FROM files WHERE workspace_id = $1', [wsId])).rows[0].count)).toBe(files + 1);
+    expect(await sizeOf()).toBe(before + 4);
+
+    // เวอร์ชันใหม่ก็ใช้ token ครั้งเดียวเช่นกัน
+    const v = await staged('ver2', { fileId: ok.body.id });
+    expect((await team.dev.post(`${base}/files/${ok.body.id}/versions`, { uploadToken: v.uploadToken })).status).toBe(201);
+    expect((await team.dev.post(`${base}/files/${ok.body.id}/versions`, { uploadToken: v.uploadToken })).status).toBe(409);
+  });
+
+  it('ตรวจโควตาซ้ำตอนยืนยัน: URL ที่ออกก่อนพื้นที่เต็มยืนยันไม่ได้ · เหลือที่พอไฟล์เดียว ยืนยันพร้อมกันสำเร็จได้ไม่เกินหนึ่ง', async () => {
+    await team.lead.get(`${team.ws}/usage`);
+    await t.owner.query(`UPDATE subscriptions SET plan_id = (SELECT id FROM plans WHERE code = 'free'), status = 'active', trial_ends_at = NULL WHERE workspace_id = $1`, [wsId]);
+    const members = Number((await t.owner.query(`SELECT count(*) FROM workspace_members WHERE workspace_id = $1 AND status = 'active' AND role <> 'guest'`, [wsId])).rows[0].count);
+    const capacity = members * 1024 ** 3;
+    const fill = (left: number) =>
+      t.owner.query(`INSERT INTO file_versions (workspace_id, file_id, version_no, storage_key, size_bytes, uploaded_by) SELECT workspace_id, id, 98, 'filler-quota', $2, uploaded_by FROM files WHERE workspace_id = $1 LIMIT 1`, [wsId, capacity - left]);
+    const clear = () => t.owner.query(`DELETE FROM file_versions WHERE storage_key = 'filler-quota'`);
+    try {
+      const early = await staged('abc');
+      await fill((await sizeOf()) + 2);
+      expect((await team.dev.post(`${base}/files/upload-url`, { name: 'x.txt', size: 3 })).status).toBe(402);
+      const late = await team.dev.post(`${base}/files`, { uploadToken: early.uploadToken });
+      expect(late.status).toBe(402);
+      expect(late.body.error).toMatchObject({ code: 'plan_limit_reached', details: { kind: 'storage_bytes' } });
+      await clear();
+
+      const a = await staged('aaaa');
+      const b = await staged('bbbb');
+      await fill((await sizeOf()) + 6); // พอสำหรับ 4 bytes เพียงไฟล์เดียว
+      const both = await Promise.all([a, b].map((u) => team.dev.post(`${base}/files`, { uploadToken: u.uploadToken })));
+      expect(both.map((r) => r.status).sort()).toEqual([201, 402]);
+    } finally {
+      await clear();
+      await t.owner.query(`UPDATE subscriptions SET plan_id = (SELECT id FROM plans WHERE code = 'team_l') WHERE workspace_id = $1`, [wsId]);
+    }
+  });
+});
+
 describe('ที่เก็บ S3 (presigned URL · ไม่ยิงเครือข่ายจริง)', () => {
   it('ตั้ง S3_BUCKET แล้วออก URL ของ S3 ที่ผูกขนาดและชนิดไฟล์ไว้ใน signature', async () => {
     Object.assign(process.env, { S3_BUCKET: 'friday-test-bucket', S3_REGION: 'ap-southeast-1', AWS_ACCESS_KEY_ID: 'AKIATESTTESTTESTTEST', AWS_SECRET_ACCESS_KEY: 'test-secret-access-key-for-presign-only' });
@@ -348,7 +428,7 @@ describe('ที่เก็บ S3 (presigned URL · ไม่ยิงเคร
       expect(r.body).toMatchObject({ method: 'PUT', storage: 's3', headers: { 'content-type': 'application/pdf' } });
       const u = new URL(r.body.url);
       expect(u.hostname).toContain('friday-test-bucket');
-      expect(u.pathname).toContain(`/${wsId}/${projectId}/`);
+      expect(u.pathname).toContain(`/staging/${wsId}/${projectId}/`);
       expect(u.searchParams.get('X-Amz-Signature')).toMatch(/^[0-9a-f]{64}$/);
       expect(u.searchParams.get('X-Amz-Expires')).toBe('900');
       expect(u.searchParams.get('X-Amz-SignedHeaders')).toContain('content-length');
@@ -360,5 +440,22 @@ describe('ที่เก็บ S3 (presigned URL · ไม่ยิงเคร
       for (const k of ['S3_BUCKET', 'S3_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']) delete process.env[k];
     }
     expect(t.app.get(FilesService).driver.kind).toBe('local');
+  });
+
+  it('S3: ลิงก์ PUT ชี้ staging/ · commit คัดลอกเฉพาะเนื้อหาที่ตรวจแล้ว (CopySourceIfMatch) ไป key ถาวร แล้วลบ staging', async () => {
+    process.env.S3_BUCKET = 'friday-test-bucket';
+    const s3 = t.app.get(S3Storage) as unknown as { client: { send: (cmd: { constructor: { name: string }; input: Record<string, unknown> }) => Promise<unknown> } | null };
+    const sent: Array<{ name: string; input: Record<string, unknown> }> = [];
+    const prev = s3.client;
+    s3.client = { send: async (cmd) => (sent.push({ name: cmd.constructor.name, input: cmd.input }), cmd.constructor.name === 'HeadObjectCommand' ? { ETag: '"etag-1"' } : {}) };
+    try {
+      await t.app.get(S3Storage).commit('staging/ws/p/abc', 'ws/p/abc');
+      expect(sent.map((x) => x.name)).toEqual(['HeadObjectCommand', 'CopyObjectCommand', 'DeleteObjectCommand']);
+      expect(sent[1].input).toMatchObject({ Bucket: 'friday-test-bucket', Key: 'ws/p/abc', CopySource: 'friday-test-bucket/staging/ws/p/abc', CopySourceIfMatch: '"etag-1"' });
+      expect(sent[2].input).toMatchObject({ Key: 'staging/ws/p/abc' });
+    } finally {
+      s3.client = prev;
+      delete process.env.S3_BUCKET;
+    }
   });
 });

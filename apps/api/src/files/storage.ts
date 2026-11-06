@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, rename, rm, stat } from 'node:fs/promises';
+import { link, mkdir, rename, rm, stat, unlink } from 'node:fs/promises';
 import { dirname, resolve, sep } from 'node:path';
 import { Injectable } from '@nestjs/common';
-import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { apiPublicUrl } from '../auth/auth.config.js';
 import { signToken, verifyToken } from '../auth/crypto.js';
@@ -25,6 +25,21 @@ export interface StorageDriver {
   presignUpload(key: string, o: { size: number; mime: string }): Promise<UploadTarget>;
   stat(key: string): Promise<{ size: number } | null>;
   presignDownload(key: string, o: { filename: string; mime: string }): Promise<string>;
+  /**
+   * ย้ายไฟล์จาก staging (ที่ client มีลิงก์ PUT) ไป key ถาวรที่ไม่มีลิงก์ PUT ใด ๆ (BUG-06)
+   * ห้ามเขียนทับของเดิม · staging ไม่มีแล้ว (ถูกยืนยันไปแล้ว) → throw StagingGone
+   */
+  commit(stagingKey: string, finalKey: string): Promise<void>;
+}
+
+/** ลิงก์อัปโหลดออกให้เฉพาะ key ใต้ staging/ · เนื้อหาที่ยืนยันแล้วอยู่ที่ key ถาวรซึ่งไม่มีใครได้ลิงก์ PUT */
+export const STAGING_PREFIX = 'staging/';
+export const stagingKeyFor = (finalKey: string) => `${STAGING_PREFIX}${finalKey}`;
+export const finalKeyOf = (stagingKey: string) => (stagingKey.startsWith(STAGING_PREFIX) ? stagingKey.slice(STAGING_PREFIX.length) : null);
+export class StagingGone extends Error {
+  constructor() {
+    super('staging_gone');
+  }
 }
 
 const disposition = (filename: string) => `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`;
@@ -94,6 +109,21 @@ export class LocalStorage implements StorageDriver {
     await rename(tmp, path);
   }
 
+  async commit(stagingKey: string, finalKey: string) {
+    const from = this.path(stagingKey);
+    const to = this.path(finalKey);
+    await mkdir(dirname(to), { recursive: true });
+    // link ไม่เขียนทับปลายทางที่มีอยู่ (EEXIST) แล้วจึงลบ staging · PUT ซ้ำทีหลังได้แค่ไฟล์ staging ใหม่ที่ไม่มีใครอ้าง
+    try {
+      await link(from, to);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT' || code === 'EEXIST') throw new StagingGone();
+      throw err;
+    }
+    await unlink(from).catch(() => undefined);
+  }
+
   read(key: string) {
     return createReadStream(this.path(key));
   }
@@ -135,6 +165,20 @@ export class S3Storage implements StorageDriver {
 
   presignDownload(key: string, o: { filename: string; mime: string }) {
     return getSignedUrl(this.s3, new GetObjectCommand({ Bucket: this.bucket, Key: key, ResponseContentDisposition: disposition(o.filename), ResponseContentType: o.mime }), { expiresIn: DOWNLOAD_TTL_SECONDS });
+  }
+
+  async commit(stagingKey: string, finalKey: string) {
+    let etag: string | undefined;
+    try {
+      etag = (await this.s3.send(new HeadObjectCommand({ Bucket: this.bucket, Key: stagingKey }))).ETag;
+    } catch {
+      throw new StagingGone();
+    }
+    // CopySourceIfMatch: คัดลอกเฉพาะเนื้อหาที่ตรวจขนาดแล้ว ถ้ามี PUT ใหม่แทรกระหว่างนี้ให้ล้มแทนการคัดลอกเนื้อหาอื่น
+    await this.s3.send(
+      new CopyObjectCommand({ Bucket: this.bucket, Key: finalKey, CopySource: `${this.bucket}/${stagingKey.split('/').map(encodeURIComponent).join('/')}`, CopySourceIfMatch: etag }),
+    );
+    await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: stagingKey })).catch(() => undefined);
   }
 }
 

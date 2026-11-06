@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { schema, type Tx } from '@friday/db';
-import { and, asc, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
 import { z } from 'zod';
 import { AppError } from '../common/errors.js';
@@ -26,8 +26,20 @@ export const CreateBaselineBody = z.object({ name: z.string().trim().min(1).max(
 export const PlanChangesQuery = z.object({
   baseline: Version.optional(),
   limit: z.coerce.number().int().min(1).max(1000).default(200),
-  before: z.iso.datetime().optional(),
+  /** nextCursor ของหน้าก่อน (ทึบ) · เวลาเต็มระดับ microsecond ของ PostgreSQL + id */
+  before: z.string().min(1).max(500).optional(),
 });
+
+const PlanCursor = z.object({ t: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/), id: z.uuid() });
+type PlanCursor = z.infer<typeof PlanCursor>;
+const encodeCursor = (c: PlanCursor) => Buffer.from(JSON.stringify(c)).toString('base64url');
+function decodeCursor(raw: string): PlanCursor {
+  try {
+    return PlanCursor.parse(JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')));
+  } catch {
+    throw new AppError(400, 'invalid_cursor', 'cursor ไม่ถูกต้อง · โหลดรายการใหม่ตั้งแต่ต้น');
+  }
+}
 export const XlsxQuery = z.object({ baseline: Version.optional() });
 
 type Issue = typeof s.issues.$inferSelect;
@@ -236,7 +248,7 @@ export class GanttService {
   // ---------------------------------------------------------------------------
   // การแก้ไขแผน (L3 › Plan vs Baseline)
   // ---------------------------------------------------------------------------
-  private async changeRows(tx: Tx, projectId: string, baseline: number | undefined, opts: { limit: number; before?: string }) {
+  private async changeRows(tx: Tx, projectId: string, baseline: number | undefined, opts: { limit: number; before?: PlanCursor }) {
     let baselineId: string | undefined;
     if (baseline !== undefined) {
       const [b] = await tx.select({ id: s.planBaselines.id }).from(s.planBaselines).where(and(eq(s.planBaselines.projectId, projectId), eq(s.planBaselines.version, baseline)));
@@ -244,11 +256,12 @@ export class GanttService {
       baselineId = b.id;
     }
     return tx
-      .select({ c: s.planChanges, number: s.issues.number, title: s.issues.title, version: s.planBaselines.version })
+      // เวลาแบบข้อความเต็ม microsecond: Date ของ JS ละเอียดแค่ ms จึงใช้ทำ cursor ไม่ได้ (BUG-11)
+      .select({ c: s.planChanges, number: s.issues.number, title: s.issues.title, version: s.planBaselines.version, at: sql<string>`to_char(${s.planChanges.changedAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')` })
       .from(s.planChanges)
       .innerJoin(s.issues, eq(s.issues.id, s.planChanges.issueId))
       .leftJoin(s.planBaselines, eq(s.planBaselines.id, s.planChanges.baselineId))
-      .where(and(eq(s.planChanges.projectId, projectId), baselineId ? eq(s.planChanges.baselineId, baselineId) : undefined, opts.before ? lt(s.planChanges.changedAt, new Date(opts.before)) : undefined))
+      .where(and(eq(s.planChanges.projectId, projectId), baselineId ? eq(s.planChanges.baselineId, baselineId) : undefined, opts.before ? sql`(${s.planChanges.changedAt}, ${s.planChanges.id}) < (${opts.before.t}::timestamptz, ${opts.before.id}::uuid)` : undefined))
       .orderBy(desc(s.planChanges.changedAt), desc(s.planChanges.id))
       .limit(opts.limit + 1);
   }
@@ -256,7 +269,7 @@ export class GanttService {
   async planChanges(auth: AuthInfo, tenant: TenantInfo, key: string, q: z.infer<typeof PlanChangesQuery>) {
     return this.db.run(auth, tenant, async (tx) => {
       const { project } = await this.context(tx, auth, tenant, key);
-      const rows = await this.changeRows(tx, project.id, q.baseline, { limit: q.limit, before: q.before });
+      const rows = await this.changeRows(tx, project.id, q.baseline, { limit: q.limit, before: q.before ? decodeCursor(q.before) : undefined });
       const page = rows.slice(0, q.limit);
       const people = await loadPeople(tx, page.map((r) => r.c.changedBy));
       const items = page.map((r) => ({
@@ -274,7 +287,8 @@ export class GanttService {
         changedBy: r.c.changedBy ? (people.get(r.c.changedBy) ?? null) : null,
         changedAt: r.c.changedAt,
       }));
-      return { items, nextCursor: rows.length > q.limit ? items[items.length - 1]!.changedAt.toISOString() : null };
+      const last = page[page.length - 1];
+      return { items, nextCursor: rows.length > q.limit && last ? encodeCursor({ t: last.at, id: last.c.id }) : null };
     });
   }
 

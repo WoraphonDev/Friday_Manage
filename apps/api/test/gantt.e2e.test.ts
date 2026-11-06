@@ -242,6 +242,32 @@ describe('การแก้ไขแผน (Plan vs Baseline)', () => {
     const page2 = await team.lead.get(`${f.base}/plan-changes?limit=2&before=${encodeURIComponent(page1.body.nextCursor)}`);
     expect(page2.body.items.map((x: { field: string }) => x.field)).toEqual(['planEnd']);
     expect(page2.body.nextCursor).toBeNull();
+
+    // BUG-11: เวลาเท่ากันทุกแถว (ระดับ microsecond) อ่านทีละหน้าต้องได้ครบ ไม่ซ้ำ ไม่หาย · cursor เสีย → 400
+    const ref = (await t.owner.query('SELECT workspace_id, project_id, issue_id, changed_by FROM plan_changes WHERE project_id = (SELECT project_id FROM plan_changes ORDER BY changed_at DESC LIMIT 1) LIMIT 1')).rows[0];
+    await t.owner.query('DELETE FROM plan_changes WHERE project_id = $1', [ref.project_id]);
+    await t.owner.query(
+      `INSERT INTO plan_changes (workspace_id, project_id, issue_id, field, old_value, new_value, changed_by, changed_at)
+       SELECT $1::uuid, $2::uuid, $3::uuid, 'planEnd', '"2026-11-09"'::jsonb, '"2026-11-10"'::jsonb, $4::uuid, '2026-11-06 01:02:03.123456+00'::timestamptz FROM generate_series(1, 4)
+       UNION ALL SELECT $1, $2, $3, 'planEnd', '"2026-11-09"', '"2026-11-10"', $4, '2026-11-06 01:02:03.123999+00'`,
+      [ref.workspace_id, ref.project_id, ref.issue_id, ref.changed_by],
+    );
+    const expected = (await t.owner.query('SELECT id FROM plan_changes WHERE project_id = $1', [ref.project_id])).rows.map((r) => r.id).sort();
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    for (let i = 0; i < 10; i++) {
+      const pageN = await team.lead.get(`${f.base}/plan-changes?limit=1${cursor ? `&before=${encodeURIComponent(cursor)}` : ''}`);
+      expect(pageN.status, JSON.stringify(pageN.body)).toBe(200);
+      seen.push(...pageN.body.items.map((x: { id: string }) => x.id));
+      cursor = pageN.body.nextCursor;
+      if (!cursor) break;
+    }
+    expect(seen.slice().sort()).toEqual(expected);
+    expect(new Set(seen).size).toBe(5);
+    for (const bad of ['not-a-cursor', '2026-11-06T01:02:03.123Z', Buffer.from('{"t":"x","id":"y"}').toString('base64url')]) {
+      const r = await team.lead.get(`${f.base}/plan-changes?before=${encodeURIComponent(bad)}`);
+      expect(r.status, bad).toBe(400);
+    }
     await f.addViewer('guest@gantt.example.com');
     expect((await guest.get(`${f.base}/plan-changes`)).status).toBe(403);
   });

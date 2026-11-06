@@ -97,6 +97,9 @@ describe("Workspace / Project shell", () => {
       "/w/sample/import",
     );
     expect(
+      screen.getAllByRole("link", { name: "แพ็กเกจและการชำระเงิน", hidden: true })[0],
+    ).toHaveAttribute("href", "/w/sample/billing");
+    expect(
       screen.getByRole("dialog", { name: "รายละเอียดงาน DE-1" }),
     ).toBeInTheDocument();
     await user.click(
@@ -215,7 +218,7 @@ describe("Workspace / Project shell", () => {
     expect(await screen.findByText("ยังไม่มีโปรเจกต์")).toBeInTheDocument();
   });
 
-  it("401 จำ URL เดิมและ 402 แสดง Dialog ทั่วไป", async () => {
+  it("401 จำ URL เดิมและ 402 แสดง Dialog ของ Q2 (ชนิดทั่วไป)", async () => {
     window.history.replaceState({}, "", "/w/sample/p/DE?issue=DE-1");
     const user = userEvent.setup();
     server.use(
@@ -264,9 +267,9 @@ describe("Workspace / Project shell", () => {
     );
     await user.click(screen.getByRole("button", { name: "limit" }));
     expect(
-      await screen.findByRole("dialog", { name: "ถึงขีดจำกัดของแพ็กเกจแล้ว" }),
+      await screen.findByRole("dialog", { name: "เกินสิทธิ์ของแพ็กเกจ" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("ใช้อยู่ 5 / 5")).toBeInTheDocument();
+    expect(screen.getByText("ถึงขีดจำกัดแล้ว")).toBeInTheDocument();
     window.history.replaceState({}, "", "/");
   });
 });

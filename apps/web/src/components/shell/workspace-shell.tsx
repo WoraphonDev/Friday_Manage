@@ -18,6 +18,7 @@ import {
   FolderKanban,
   Home,
   Inbox,
+  CreditCard,
   Menu,
   Search,
   Settings,
@@ -47,6 +48,7 @@ import {
 } from "@/components/ui";
 import { Bell } from "@/features/bell/Bell";
 import { CommandPalette } from "@/features/command-palette/CommandPalette";
+import { WorkspaceBanners } from "@/features/plan-limits";
 
 interface ShellContext {
   me: Me;
@@ -145,6 +147,10 @@ function Navigation({
           <Link className="nav-link" href={`${base}/admin`} onClick={close}>
             <Settings size={18} />
             {t("admin")}
+          </Link>
+          <Link className="nav-link" href={`${base}/billing`} onClick={close}>
+            <CreditCard size={18} />
+            {t("billing")}
           </Link>
         </>
       )}
@@ -373,6 +379,7 @@ export function WorkspaceShell({
             )}
           </aside>
           <main className="workspace-main" id="main-content">
+            <WorkspaceBanners ws={ws} role={workspace.role} />
             {children}
           </main>
         </div>

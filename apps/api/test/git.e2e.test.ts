@@ -24,11 +24,13 @@ let ghRepos = [{ fullName: REPO, defaultBranch: 'main' }, { fullName: 'friday-or
 const anon = () => request(t.app.getHttpServer());
 
 beforeAll(async () => {
-  Object.assign(process.env, { GITHUB_WEBHOOK_SECRET: SECRET, GITHUB_APP_ID: '123456', GITHUB_APP_SLUG: 'friday-manage-test', GITHUB_APP_PRIVATE_KEY: 'unused-in-tests', WEB_URL: 'https://app.friday.test' });
+  Object.assign(process.env, { GITHUB_WEBHOOK_SECRET: SECRET, GITHUB_APP_ID: '123456', GITHUB_APP_SLUG: 'friday-manage-test', GITHUB_APP_PRIVATE_KEY: 'unused-in-tests', GITHUB_CLIENT_ID: 'Iv1.test', GITHUB_CLIENT_SECRET: 'client-secret-test', WEB_URL: 'https://app.friday.test' });
   t = await startApp();
   const gh = t.app.get(GithubApi);
   gh.installation = async (id) => ({ accountName: `org-${id}` });
   gh.repositories = async () => ghRepos;
+  // code ของผู้ติดตั้งที่เข้าถึง installation นี้ได้ = 'owner-code' · อย่างอื่นถือว่าเข้าไม่ถึง
+  gh.userCanAccess = async (code, id) => code === 'owner-code' && id === INSTALL;
   team = await seedTeam(t);
   wsId = (await t.owner.query('SELECT id FROM workspaces WHERE slug = $1', [team.slug])).rows[0].id;
   projectId = team.project.id;
@@ -86,7 +88,7 @@ describe('ติดตั้ง GitHub App', () => {
 
   it('setup: กลับจาก GitHub → บันทึกการติดตั้งและ repository แล้ว redirect ไปหน้า Admin Console · Audit', async () => {
     const state = new URL((await team.lead.get(`${team.ws}/integrations/git/install-url`)).body.url).searchParams.get('state')!;
-    const r = await anon().get(`/api/v1/hooks/github/setup?installation_id=${INSTALL}&setup_action=install&state=${encodeURIComponent(state)}`).redirects(0);
+    const r = await anon().get(`/api/v1/hooks/github/setup?installation_id=${INSTALL}&setup_action=install&code=owner-code&state=${encodeURIComponent(state)}`).redirects(0);
     expect(r.status).toBe(302);
     expect(r.headers.location).toBe(`https://app.friday.test/w/${team.slug}/admin/integrations?github=connected`);
     const list = await team.lead.get(`${team.ws}/integrations/git`);
@@ -99,7 +101,7 @@ describe('ติดตั้ง GitHub App', () => {
   });
 
   it('setup ไม่ถูกต้อง: state ปลอม / หมดอายุ / ผู้เริ่มไม่ใช่ Admin แล้ว / installation เป็นของ Workspace อื่น → ปฏิเสธ', async () => {
-    const go = (installation: string, state: string) => anon().get(`/api/v1/hooks/github/setup?installation_id=${installation}&state=${encodeURIComponent(state)}`).redirects(0);
+    const go = (installation: string, state: string, code = 'owner-code') => anon().get(`/api/v1/hooks/github/setup?installation_id=${installation}&code=${code}&state=${encodeURIComponent(state)}`).redirects(0);
     expect((await go(INSTALL, 'garbage')).status).toBe(400);
     expect((await go('abc', signToken('github-install', { w: wsId, u: team.leadId }, 900))).status).toBe(400);
     expect((await go(INSTALL, signToken('github-install', { w: wsId, u: team.leadId }, -10))).status).toBe(400);
@@ -117,6 +119,22 @@ describe('ติดตั้ง GitHub App', () => {
     expect(pending).not.toBeNull();
     const req = await anon().get(`/api/v1/hooks/github/setup?installation_id=${INSTALL}&setup_action=request&state=${encodeURIComponent(signToken('github-install', { w: wsId, u: team.leadId }, 900))}`).redirects(0);
     expect(req.headers.location).toContain('github=pending');
+  });
+
+  it('state ถูกต้องแต่บัญชี GitHub ของผู้ติดตั้งเข้า installation นั้นไม่ได้ → ปฏิเสธและไม่บันทึกอะไร · ไม่มี code → 400 (BUG-01)', async () => {
+    const before = (await t.owner.query('SELECT count(*)::int AS n FROM git_installations')).rows[0].n;
+    const reposBefore = (await t.owner.query('SELECT count(*)::int AS n FROM git_repositories')).rows[0].n;
+    const state = new URL((await team.lead.get(`${team.ws}/integrations/git/install-url`)).body.url).searchParams.get('state')!;
+    const other = await anon().get(`/api/v1/hooks/github/setup?installation_id=987654321&setup_action=install&code=owner-code&state=${encodeURIComponent(state)}`).redirects(0);
+    expect(other.status).toBe(403);
+    expect(other.body.error.code).toBe('installation_forbidden');
+    const wrongUser = await anon().get(`/api/v1/hooks/github/setup?installation_id=${INSTALL}&setup_action=install&code=attacker-code&state=${encodeURIComponent(state)}`).redirects(0);
+    expect(wrongUser.status).toBe(403);
+    const noCode = await anon().get(`/api/v1/hooks/github/setup?installation_id=${INSTALL}&setup_action=install&state=${encodeURIComponent(state)}`).redirects(0);
+    expect(noCode.status).toBe(400);
+    expect(noCode.body.error.code).toBe('github_user_authorization_required');
+    expect((await t.owner.query('SELECT count(*)::int AS n FROM git_installations')).rows[0].n).toBe(before);
+    expect((await t.owner.query('SELECT count(*)::int AS n FROM git_repositories')).rows[0].n).toBe(reposBefore);
   });
 
   it('sync: ดึง repository ใหม่ / เอาที่ App เข้าไม่ถึงออก (การผูกกับโปรเจกต์หายตาม) · DELETE ถอนการเชื่อมต่อ', async () => {
@@ -330,7 +348,7 @@ describe('installation events และสิทธิ์ดู', () => {
 
   it('DELETE ถอนการเชื่อมต่อ (เฉพาะ Admin) · Guest ดู Git ของงานที่ไม่ได้แชร์ไม่ได้', async () => {
     const state = new URL((await team.lead.get(`${team.ws}/integrations/git/install-url`)).body.url).searchParams.get('state')!;
-    await anon().get(`/api/v1/hooks/github/setup?installation_id=${INSTALL}&setup_action=install&state=${encodeURIComponent(state)}`).redirects(0);
+    await anon().get(`/api/v1/hooks/github/setup?installation_id=${INSTALL}&setup_action=install&code=owner-code&state=${encodeURIComponent(state)}`).redirects(0);
     const id = (await team.lead.get(`${team.ws}/integrations/git`)).body.items[0].id;
     expect((await team.dev.delete(`${team.ws}/integrations/git/${id}`)).status).toBe(403);
     expect((await team.lead.delete(`${team.ws}/integrations/git/${id}`)).body).toEqual({ removed: true });
@@ -339,5 +357,73 @@ describe('installation events และสิทธิ์ดู', () => {
     const q = await issue('งานภายใน');
     expect([403, 404]).toContain((await guest.get(`${team.ws}/issues/${q.key}/git`)).status);
     expect((await team.dev.get(`${team.ws}/issues/${q.key}/git`)).body).toEqual({ commits: [], pullRequests: [] });
+  });
+});
+
+describe('repository เกิน 100 รายการ (BUG-14)', () => {
+  const page = (n: number, from: number) => Array.from({ length: n }, (_, i) => ({ full_name: `friday-org/repo-${from + i}`, default_branch: 'main' }));
+  /** GitHub ปลอม: หน้า 1 = 100 repo + Link rel=next · หน้า 2 = 1 repo (หรือ 502 เมื่อ failSecond) */
+  function fakeGithub(failSecond = false) {
+    const calls: string[] = [];
+    const fetchMock = (async (url: string | URL) => {
+      const u = String(url);
+      calls.push(u);
+      if (u.endsWith('/access_tokens')) return new Response(JSON.stringify({ token: 'inst-token' }), { status: 201 });
+      if (u.includes('page=2')) return failSecond ? new Response('{}', { status: 502 }) : new Response(JSON.stringify({ repositories: page(1, 100) }), { status: 200 });
+      return new Response(JSON.stringify({ repositories: page(100, 0) }), { status: 200, headers: { link: '<https://api.github.com/installation/repositories?per_page=100&page=2>; rel="next", <https://api.github.com/installation/repositories?per_page=100&page=2>; rel="last"' } });
+    }) as typeof fetch;
+    return { calls, fetchMock };
+  }
+
+  it('ดึงครบทุกหน้า · ไม่ตาม Link ที่ไม่ใช่ api.github.com', async () => {
+    const gh = t.app.get(GithubApi) as unknown as { appJwt: () => string };
+    const { calls, fetchMock } = fakeGithub();
+    const original = globalThis.fetch;
+    const jwt = gh.appJwt;
+    gh.appJwt = () => 'app-jwt';
+    globalThis.fetch = fetchMock;
+    try {
+      const repos = await GithubApi.prototype.repositories.call(gh, '1');
+      expect(repos).toHaveLength(101);
+      expect(repos[100].fullName).toBe('friday-org/repo-100');
+      expect(calls.filter((c) => c.includes('/installation/repositories'))).toHaveLength(2);
+    } finally {
+      globalThis.fetch = original;
+      gh.appJwt = jwt;
+    }
+    const { nextPage } = await import('../src/git/github-api.js');
+    expect(nextPage('<https://evil.example.com/x?page=2>; rel="next"')).toBeNull();
+    expect(nextPage(null)).toBeNull();
+  });
+
+  it('sync เก็บ repository ครบ 101 และคง project link ของ repo หน้า 2 · หน้า 2 ล้มเหลวไม่ลบของเดิม', async () => {
+    const state = new URL((await team.lead.get(`${team.ws}/integrations/git/install-url`)).body.url).searchParams.get('state')!;
+    const gh = t.app.get(GithubApi);
+    const mocked = gh.repositories;
+    gh.repositories = async () => page(101, 0).map((r) => ({ fullName: r.full_name, defaultBranch: r.default_branch }));
+    await anon().get(`/api/v1/hooks/github/setup?installation_id=${INSTALL}&setup_action=install&code=owner-code&state=${encodeURIComponent(state)}`).redirects(0);
+    const list = (await team.lead.get(`${team.ws}/integrations/git`)).body.items[0];
+    expect(list.repositories).toHaveLength(101);
+    const last = list.repositories.find((r: { fullName: string }) => r.fullName === 'friday-org/repo-100');
+    expect((await team.lead.post(`${team.ws}/projects/${team.key}/repositories`, { repositoryId: last.id })).status).toBeLessThan(300);
+
+    // หน้า 2 ล้ม (ผ่าน GithubApi จริง + fetch ปลอม) → sync ล้ม แต่ repository และการผูกเดิมอยู่ครบ
+    gh.repositories = GithubApi.prototype.repositories;
+    const g = gh as unknown as { appJwt: () => string };
+    const jwt = g.appJwt;
+    g.appJwt = () => 'app-jwt';
+    const original = globalThis.fetch;
+    globalThis.fetch = fakeGithub(true).fetchMock;
+    try {
+      const r = await team.lead.post(`${team.ws}/integrations/git/${list.id}/sync`);
+      expect(r.status).toBeGreaterThanOrEqual(400);
+    } finally {
+      globalThis.fetch = original;
+      g.appJwt = jwt;
+      gh.repositories = mocked;
+    }
+    const after = (await team.lead.get(`${team.ws}/integrations/git`)).body.items[0];
+    expect(after.repositories).toHaveLength(101);
+    expect(after.repositories.find((r: { fullName: string }) => r.fullName === 'friday-org/repo-100').projects).toEqual([team.key]);
   });
 });

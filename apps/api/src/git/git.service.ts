@@ -59,18 +59,22 @@ export class GitService {
   /** URL ไปหน้าติดตั้ง GitHub App · state ลงลายมือชื่อ ผูกกับ Workspace + ผู้กด และหมดอายุใน 15 นาที */
   installUrl(auth: AuthInfo, tenant: TenantInfo) {
     if (!isAdmin(tenant)) throw forbidden('ws.settings');
-    if (!this.github.configured) throw new AppError(409, 'github_not_configured', 'ยังไม่ได้ตั้งค่า GitHub App ของระบบ (GITHUB_APP_ID / GITHUB_APP_SLUG / GITHUB_APP_PRIVATE_KEY)');
+    if (!this.github.configured) throw new AppError(409, 'github_not_configured', 'ยังไม่ได้ตั้งค่า GitHub App ของระบบ (GITHUB_APP_ID / GITHUB_APP_SLUG / GITHUB_APP_PRIVATE_KEY / GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET)');
     return { url: this.github.installUrl(signToken('github-install', { w: tenant.workspaceId, u: auth.userId }, 900)) };
   }
 
   /** `GET hooks/github/setup` · GitHub พากลับมาหลังติดตั้ง · คืน URL หน้าเว็บที่จะ redirect ไป */
-  async setup(installationId: string, state: string, action?: string) {
+  async setup(installationId: string, state: string, action?: string, code?: string) {
     const claims = verifyToken<{ w: string; u: string }>('github-install', state);
     if (!claims || !/^\d{1,20}$/.test(installationId)) throw new AppError(400, 'invalid_state', 'ลิงก์ติดตั้งไม่ถูกต้องหรือหมดอายุ · เริ่มติดตั้งใหม่จาก Admin Console');
     const [ws] = await this.system.select().from(s.workspaces).where(and(eq(s.workspaces.id, claims.w), isNull(s.workspaces.deletedAt)));
     const [member] = await this.system.select({ role: s.workspaceMembers.role }).from(s.workspaceMembers).where(and(eq(s.workspaceMembers.workspaceId, claims.w), eq(s.workspaceMembers.userId, claims.u), eq(s.workspaceMembers.status, 'active')));
     if (!ws || !member || !['owner', 'admin'].includes(member.role)) throw new AppError(403, 'forbidden', 'ผู้เริ่มติดตั้งไม่มีสิทธิ์ตั้งค่า Integration แล้ว', { permission: 'ws.settings' });
     if (action === 'request') return `${webUrl()}/w/${ws.slug}/admin/integrations?github=pending`;
+    // state ที่ผู้ใช้ขอเองพิสูจน์แค่ Workspace · installation_id มาจาก query จึงต้องพิสูจน์ด้วยตัวตน GitHub ของผู้ติดตั้ง (BUG-01)
+    if (!code) throw new AppError(400, 'github_user_authorization_required', 'GitHub ไม่ได้ส่งการยืนยันตัวตนของผู้ติดตั้งมา · เริ่มติดตั้งใหม่จาก Admin Console');
+    if (!this.github.configured) throw new AppError(409, 'github_not_configured', 'ยังไม่ได้ตั้งค่า GitHub App ของระบบ');
+    if (!(await this.github.userCanAccess(code, installationId))) throw new AppError(403, 'installation_forbidden', 'บัญชี GitHub ที่ยืนยันไม่มีสิทธิ์ในการติดตั้งนี้', { installationId });
     const account = await this.github.installation(installationId);
     const [taken] = await this.system.select().from(s.gitInstallations).where(and(eq(s.gitInstallations.provider, 'github'), eq(s.gitInstallations.externalInstallationId, installationId)));
     if (taken && taken.workspaceId !== ws.id) throw new AppError(409, 'installation_taken', 'การติดตั้งนี้ผูกกับ Workspace อื่นอยู่แล้ว');
@@ -83,6 +87,7 @@ export class GitService {
   }
 
   private async syncRepos(inst: typeof s.gitInstallations.$inferSelect) {
+    // ต้องได้รายการครบทุกหน้าก่อน (ล้มกลางทาง = throw ก่อนลบ) ไม่อย่างนั้น repository หน้าถัดไปถูกนับว่าหายและถูกลบพร้อมการผูกโปรเจกต์
     const repos = await this.github.repositories(inst.externalInstallationId);
     for (const r of repos) {
       await this.system.insert(s.gitRepositories).values({ workspaceId: inst.workspaceId, installationId: inst.id, fullName: r.fullName, defaultBranch: r.defaultBranch }).onConflictDoUpdate({ target: [s.gitRepositories.installationId, s.gitRepositories.fullName], set: { defaultBranch: r.defaultBranch } });

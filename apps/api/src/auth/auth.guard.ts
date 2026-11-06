@@ -1,6 +1,9 @@
-import { type CanActivate, type ExecutionContext, Injectable } from '@nestjs/common';
+import { type CanActivate, type ExecutionContext, Inject, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import type { Db } from '@friday/db';
 import { AppError } from '../common/errors.js';
+import { SYSTEM_DB } from '../db/db.module.js';
+import { assertTokenAllowed, findApiToken } from './api-tokens.js';
 import { type AppRequest, IS_PUBLIC } from '../common/request.js';
 import { CSRF_COOKIE, SESSION_COOKIE, SessionService } from './sessions.js';
 
@@ -15,10 +18,26 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly sessions: SessionService,
+    // อ่าน api_tokens ก่อนรู้ว่าเป็น Workspace ไหน จึงใช้ SYSTEM_DB (งาน A28)
+    @Inject(SYSTEM_DB) private readonly db: Db,
   ) {}
 
   async canActivate(ctx: ExecutionContext) {
     const req = ctx.switchToHttp().getRequest<AppRequest>();
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, [ctx.getHandler(), ctx.getClass()]);
+
+    // ระบบภายนอก: Authorization: Bearer <api_token> · ไม่ใช้คุกกี้ จึงไม่ต้องตรวจ CSRF
+    const bearer = /^Bearer\s+(\S+)$/i.exec(req.get('authorization') ?? '')?.[1];
+    if (bearer) {
+      const id = await findApiToken(this.db, bearer);
+      if (!id) {
+        if (isPublic) return true;
+        throw new AppError(401, 'invalid_token', 'API token ไม่ถูกต้อง หมดสิทธิ์ หรือถูกยกเลิกแล้ว');
+      }
+      if (!isPublic) await assertTokenAllowed(this.db, id, req.method, req.path);
+      req.auth = { userId: id.userId, sessionId: `token:${id.tokenId}` };
+      return true;
+    }
 
     // Webhook ขาเข้า (LINE, GitHub, Stripe …) เรียกจากเซิร์ฟเวอร์ภายนอกที่ไม่มีคุกกี้ จึงข้าม CSRF · แต่ละ route ต้องตรวจลายเซ็นของผู้ให้บริการเอง
     // /storage/ = PUT/GET ของที่เก็บไฟล์ในเครื่อง (dev / test) ที่ยืนยันตัวตนด้วย token ใน URL ที่ลงลายมือชื่อแล้ว (งาน A11)
@@ -30,7 +49,6 @@ export class AuthGuard implements CanActivate {
       }
     }
 
-    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, [ctx.getHandler(), ctx.getClass()]);
     const token = req.cookies?.[SESSION_COOKIE];
     const session = token ? await this.sessions.find(token) : null;
     if (session) req.auth = session;

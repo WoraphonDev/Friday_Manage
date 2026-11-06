@@ -286,12 +286,14 @@ describe('2FA (J1 ขั้นที่ 2 และ Profile)', () => {
     const forged = await c.post('/auth/login/mfa', { mfaToken: `${r.body.mfaToken}x`, code: totp(secret) });
     expect(forged.body.error.code).toBe('mfa_token_invalid');
 
-    const ok = await c.post('/auth/login/mfa', { mfaToken: r.body.mfaToken, code: totp(secret), trustDevice: true });
+    // ใช้รหัสเดียวกันทั้งตอนเข้าและตอนลองซ้ำ ถ้าคำนวณใหม่แล้วข้ามรอบ 30 วินาที จะได้รหัสใหม่ที่ใช้ได้จริง (test สุ่มล้ม)
+    const code = totp(secret);
+    const ok = await c.post('/auth/login/mfa', { mfaToken: r.body.mfaToken, code, trustDevice: true });
     expect(ok.status).toBe(200);
     expect(String(ok.headers['set-cookie'])).toContain('fm_mfa_trust=');
     expect((await c.get('/me')).status).toBe(200);
     // รหัสเดิมใช้ซ้ำไม่ได้ (กันดักรหัส)
-    const replay = await (await client(t.app)).post('/auth/login/mfa', { mfaToken: r.body.mfaToken, code: totp(secret) });
+    const replay = await (await client(t.app)).post('/auth/login/mfa', { mfaToken: r.body.mfaToken, code });
     expect(replay.status).toBe(401);
 
     // ออกจากระบบแล้วเข้าใหม่บนอุปกรณ์เดิม → ไม่ถาม 2FA

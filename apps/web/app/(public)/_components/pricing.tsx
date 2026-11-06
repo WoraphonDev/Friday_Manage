@@ -1,0 +1,164 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { ErrorState, LoadingState, buttonVariants } from "@/components/ui";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { baht, fitPlan, type PlanCode, type PublicPlan, type PublicPlans } from "@/features/plan-limits";
+import styles from "./public.module.css";
+
+type Cyc = "monthly" | "yearly";
+// ช่องทางติดต่อฝ่ายขายตั้งตอน deploy · ไม่ตั้ง = ไปหน้าสมัครพร้อมแพ็กเกจ Enterprise ให้ทีมติดต่อกลับ
+const SALES_URL = process.env.NEXT_PUBLIC_SALES_URL ?? "/signup?plan=enterprise";
+
+/** R1 · ราคาเหมาตามขนาดทีม (ใช้ทั้งใน Landing และ /pricing) · ราคาและขีดจำกัดจาก `GET public/plans` */
+export function PricingSection({ heading = "h2" }: { heading?: "h1" | "h2" }) {
+  const t = useTranslations("saas-pages.pricing");
+  const [cycle, setCycle] = useState<Cyc>("monthly");
+  const [team, setTeam] = useState(12);
+  const plans = useQuery({ queryKey: ["public-plans"], queryFn: () => api.get<PublicPlans>("/public/plans"), staleTime: 300_000 });
+  const H = heading;
+
+  return (
+    <section id="pricing" className={styles.pricing} aria-labelledby="pricing-title">
+      <div className={cn(styles.wrap, styles.stackLg)}>
+        <div className={styles.pricingHead}>
+          <H id="pricing-title" style={{ fontSize: 28 }}>
+            {t("title")}
+          </H>
+          <div className={styles.muted}>{t("subtitle")}</div>
+          <div className={styles.seg} role="group" aria-label={t("cycle")}>
+            <button type="button" aria-pressed={cycle === "monthly"} onClick={() => setCycle("monthly")}>
+              {t("monthly")}
+            </button>
+            <button type="button" aria-pressed={cycle === "yearly"} onClick={() => setCycle("yearly")}>
+              {t("yearly")} <span className={styles.save}>{t("save", { months: 12 - (plans.data?.yearlyMonths ?? 10) })}</span>
+            </button>
+          </div>
+        </div>
+        {plans.isPending ? (
+          <LoadingState />
+        ) : plans.error ? (
+          <ErrorState error={plans.error} retry={() => plans.refetch()} />
+        ) : (
+          <Plans data={plans.data} cycle={cycle} team={team} setTeam={setTeam} />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function Plans({ data, cycle, team, setTeam }: { data: PublicPlans; cycle: Cyc; team: number; setTeam: (n: number) => void }) {
+  const t = useTranslations("saas-pages.pricing");
+  const items = data.items;
+  const fit = fitPlan(items, team);
+  const paid = (p: PublicPlan) => !p.contactSales && p.code !== "free";
+  const prevLimit = (i: number) => items[i - 1]?.seatLimit ?? 0;
+
+  const bullets = (p: PublicPlan): string[] => {
+    if (p.code === "free")
+      return [
+        t("bullets.projects", { n: p.projectLimit ?? 0 }),
+        t("bullets.freeViews"),
+        t("bullets.freeNotify"),
+        t("bullets.freeFiles", { gb: p.storageGbPerMember ?? 0 }),
+      ];
+    if (p.contactSales) return t.raw("bullets.enterprise") as string[];
+    return [t("bullets.unlimited"), t("bullets.paidViews"), t("bullets.paidImport"), t("bullets.paidLine"), t("bullets.paidFiles", { gb: p.storageGbPerMember ?? 0 })];
+  };
+  const price = (p: PublicPlan) => {
+    if (p.contactSales) return { price: t("custom"), unit: "", sub: "" };
+    const yearly = cycle === "yearly" && paid(p);
+    const satang = (yearly ? p.priceYearlySatang : p.priceMonthlySatang) ?? 0;
+    return { price: `฿${baht(satang)}`, unit: yearly ? t("perYear") : t("perMonth"), sub: yearly ? t("billedYearly") : "" };
+  };
+  const cta = (p: PublicPlan) =>
+    p.code === "free"
+      ? { label: t("start"), href: "/signup" }
+      : p.contactSales
+        ? { label: t("contact"), href: SALES_URL }
+        : { label: t("trial", { days: data.trialDays }), href: `/signup?plan=${p.code}&cycle=${cycle}` };
+
+  const yes = "✓";
+  const no = "–";
+  const has = (p: PublicPlan, f: string) => (p.features.includes(f) ? yes : no);
+  const byCode = (key: string) => (p: PublicPlan) => t(`compare.${key}.${p.code as PlanCode}`);
+  const rows: [string, (p: PublicPlan, i: number) => string][] = [
+    [t("compare.members"), (p, i) => (p.seatLimit === null ? `${prevLimit(i)}+` : String(p.seatLimit))],
+    [t("compare.projects"), (p) => (p.projectLimit === null ? t("compare.unlimited") : String(p.projectLimit))],
+    ["Gantt, Workload, Sprint", (p) => has(p, "gantt")],
+    [t("compare.excel"), (p) => has(p, "import_excel")],
+    ["Automation", byCode("automation")],
+    [t("compare.line"), (p) => has(p, "line_oa")],
+    ["SSO / SAML", (p) => (p.contactSales ? yes : no)],
+    ["Audit log", byCode("audit")],
+  ];
+
+  return (
+    <>
+      <div className={styles.team}>
+        <label htmlFor="team-size">{t("teamQ")}</label>
+        <input id="team-size" type="range" min={1} max={60} value={team} onChange={(e) => setTeam(Number(e.target.value))} />
+        <b>{t("people", { n: team })}</b>
+        {fit && <span className={styles.pill}>{t("fit", { plan: fit.name })}</span>}
+      </div>
+      <div className={styles.plans}>
+        {items.map((p, i) => {
+          const hot = fit?.code === p.code;
+          const pr = price(p);
+          const c = cta(p);
+          return (
+            <article key={p.code} className={cn(styles.plan, hot && styles.hot)} aria-label={p.name}>
+              {hot && <span className={cn(styles.pill, styles.fitTag)}>{t("fitTag")}</span>}
+              <b>{p.name}</b>
+              <span className={cn(styles.muted, styles.small)}>{p.seatLimit === null ? t("sizeOver", { n: prevLimit(i) }) : t("sizeUpTo", { n: p.seatLimit })}</span>
+              <div>
+                <span className={styles.price}>{pr.price}</span> <span className={cn(styles.muted, styles.small)}>{pr.unit}</span>
+              </div>
+              <span className={cn(styles.muted, styles.sub)}>{pr.sub}</span>
+              <Link className={cn(buttonVariants({ variant: hot ? "primary" : "secondary" }), styles.btn)} href={c.href}>
+                {c.label}
+              </Link>
+              <ul>
+                {bullets(p).map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            </article>
+          );
+        })}
+      </div>
+      <div className={cn(styles.muted, styles.small, styles.center)}>{t("vat")}</div>
+      <details className={styles.cmpBox}>
+        <summary>{t("compare.title")}</summary>
+        <div className={styles.cmpScroll}>
+          <div className={styles.cmp} role="table" aria-label={t("compare.title")}>
+            <div role="row" style={{ display: "contents" }}>
+              <div role="columnheader" className={cn(styles.l, styles.h)} />
+              {items.map((p) => (
+                <div role="columnheader" key={p.code} className={styles.h}>
+                  {p.name}
+                </div>
+              ))}
+            </div>
+            {rows.map(([label, value]) => (
+              <div role="row" key={label} style={{ display: "contents" }}>
+                <div role="rowheader" className={styles.l}>
+                  {label}
+                </div>
+                {items.map((p, i) => (
+                  <div role="cell" key={p.code}>
+                    {value(p, i)}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </details>
+    </>
+  );
+}

@@ -42,6 +42,7 @@ export class ImportsController {
 export class PlanExportController {
   constructor(private readonly imports: ImportsService) {}
 
+  /** ดาวน์โหลดแผนงานของโปรเจกต์เป็น .xlsx (18 คอลัมน์ + ชีต Holidays) นำเข้ากลับโหมดอัปเดตได้ */
   @Get('export.xlsx')
   async export(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Res({ passthrough: true }) res: Response) {
     const file = await this.imports.exportXlsx(auth, tenant, key);

@@ -253,7 +253,8 @@ function Reviews({ data, ws }: { data: HomeData; ws: string }) {
 function InboxCard({ ws, items, loading }: { ws: string; items?: InboxItem[]; loading: boolean }) {
   const t = useTranslations("home-my-tasks.home");
   const fresh = items?.filter((i) => !i.readAt).length ?? 0;
-  const label = (type: string) => (type in EVENT_KEYS ? t(`events.${type}` as never) : t("events.other"));
+  // คีย์ข้อความใช้ "__" แทน "." ของชื่อ Event (next-intl ใช้ "." แยกระดับ)
+  const label = (type: string) => (type in EVENT_KEYS ? t(`events.${type.replace(/\./g, "__")}` as never) : t("events.other"));
   return (
     <section className={styles.card} id="inbox">
       <div className={styles.chead}>

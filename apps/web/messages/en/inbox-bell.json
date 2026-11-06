@@ -1,0 +1,102 @@
+{
+  "inbox": {
+    "title": "Inbox",
+    "subtitle": "Notifications for {name} · {count} unread",
+    "markAll": "Mark all as read",
+    "markedAll": "All marked as read",
+    "settings": "Notification settings",
+    "filterLabel": "Filters",
+    "filters": {
+      "all": "All",
+      "unread": "Unread",
+      "assign": "Assigned",
+      "mention": "Mention",
+      "activity": "Activity",
+      "due": "Due soon / Overdue"
+    },
+    "listLabel": "Notification list",
+    "detailLabel": "Notification details",
+    "groups": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "earlier": "Earlier"
+    },
+    "empty": "No notifications in this category",
+    "unread": "Unread",
+    "system": "System",
+    "loadMore": "Load more",
+    "selectHint": "Select a notification on the left to see details",
+    "back": "Back to list",
+    "openIssue": "Open task",
+    "acknowledge": "Acknowledge",
+    "acknowledged": "Acknowledged",
+    "remindTomorrow": "Remind me tomorrow",
+    "snoozed": "We'll remind you again tomorrow",
+    "approve": "Approve change",
+    "reject": "Reject",
+    "approvedToast": "Due change approved",
+    "rejectedToast": "Request rejected",
+    "decision": {
+      "approved": "Approved by {name}",
+      "rejected": "Rejected by {name}",
+      "cancelled": "The requester cancelled the request",
+      "pending": "Waiting for approver"
+    },
+    "dueDiff": "Due",
+    "reasonLabel": "Reason: {reason}",
+    "why": "Why am I notified:",
+    "due": "Due {date}",
+    "assignee": "Assignee {names}",
+    "noDue": "No due date",
+    "issueGone": "This task was deleted or you no longer have access to it",
+    "types": {
+      "issue__assigned": "Assigned",
+      "issue__mentioned": "Mention",
+      "issue__status_changed": "Status changed",
+      "issue__review_requested": "Review requested",
+      "issue__commented": "Comment",
+      "issue__updated": "Task updated",
+      "issue__due_soon": "Due soon",
+      "issue__overdue": "Overdue",
+      "due_request__created": "Due change request",
+      "due_request__decided": "Due change result",
+      "bug__created": "New Bug",
+      "bug__reopened": "Bug reopened",
+      "test_run__failed": "Test failed",
+      "sprint__started": "Sprint started",
+      "sprint__completed": "Sprint closed",
+      "member__joined": "New member",
+      "member__invited": "Invitation",
+      "automation__notified": "Automation",
+      "other": "Notification"
+    },
+    "verbs": {
+      "issue__assigned": "assigned you to",
+      "issue__mentioned": "mentioned you in",
+      "issue__status_changed": "changed the status of",
+      "issue__review_requested": "sent for Review",
+      "issue__commented": "commented on",
+      "issue__updated": "updated",
+      "issue__due_soon": "task due soon",
+      "issue__overdue": "task overdue",
+      "due_request__created": "requested a due date change for",
+      "due_request__decided": "responded to the Due change request for",
+      "other": "has activity on"
+    },
+    "loading": "Loading Inbox"
+  },
+  "bell": {
+    "title": "Notifications",
+    "readAll": "Mark all read",
+    "settings": "Settings",
+    "tabs": {
+      "all": "All",
+      "unread": "Unread",
+      "mention": "Mention"
+    },
+    "openInbox": "Open full Inbox →",
+    "empty": "No notifications",
+    "toastNew": "New notification · {count} unread",
+    "toastOpen": "Open Inbox"
+  }
+}

@@ -55,6 +55,9 @@ export interface Quote {
 export function priceFor(spec: PlanSpec, cycle: Cycle, override?: { monthly: number | null; yearly: number | null }): number | null {
   if (cycle === 'yearly') {
     if (override?.yearly != null) return override.yearly;
+    // ไม่ได้ตั้งราคาปีเอง → คิดจากราคาเดือนที่ใช้จริง (override ก่อน catalog) × YEARLY_MONTHS (BUG-12)
+    // ราคาเดือน 0 ที่ตั้งใจ (override = 0) ได้ราคาปี 0 · ไม่มีราคาเลย (Free / Enterprise) = null
+    if (override?.monthly != null) return override.monthly * YEARLY_MONTHS;
     return spec.monthlySatang ? spec.monthlySatang * YEARLY_MONTHS : null;
   }
   if (override?.monthly != null) return override.monthly;

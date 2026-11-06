@@ -50,6 +50,23 @@ describe('GET public/plans', () => {
     expect(r.body.items.find((p: { code: string }) => p.code === 'team_s')).toMatchObject({ priceMonthlySatang: 123_400, priceYearlySatang: 1_111_100, seatLimit: 12 });
     await t.owner.query(`UPDATE plans SET price_monthly_satang = NULL, price_yearly_satang = NULL, seat_limit = 10 WHERE code = 'team_s'`);
   });
+
+  it('ตั้งเฉพาะราคาเดือน → ราคาปี = ราคาเดือนที่ตั้ง × 10 · ตั้งเฉพาะราคาปี → ใช้ราคาปีนั้น (BUG-12)', async () => {
+    const teamS = async () => (await anon().get('/api/v1/public/plans')).body.items.find((p: { code: string }) => p.code === 'team_s');
+    const set = (m: number | null, y: number | null) =>
+      t.owner.query(`INSERT INTO plans (code, price_monthly_satang, price_yearly_satang) VALUES ('team_s', $1, $2) ON CONFLICT (code) DO UPDATE SET price_monthly_satang = $1, price_yearly_satang = $2`, [m, y]);
+    try {
+      await set(200_000, null);
+      expect(await teamS()).toMatchObject({ priceMonthlySatang: 200_000, priceYearlySatang: 2_000_000 });
+      await set(null, 1_400_000);
+      expect(await teamS()).toMatchObject({ priceMonthlySatang: 150_000, priceYearlySatang: 1_400_000 });
+      await set(200_000, 1_800_000);
+      expect(await teamS()).toMatchObject({ priceMonthlySatang: 200_000, priceYearlySatang: 1_800_000 });
+    } finally {
+      await set(null, null);
+    }
+    expect(await teamS()).toMatchObject({ priceMonthlySatang: 150_000, priceYearlySatang: 1_500_000 });
+  });
 });
 
 describe('GET public/legal', () => {

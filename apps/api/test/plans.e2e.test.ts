@@ -183,6 +183,18 @@ describe('GET w/billing/quote', () => {
     await t.owner.query(`UPDATE plans SET price_monthly_satang = NULL WHERE code = 'team_s'`);
   });
 
+  it('ราคาปีใช้ราคาเดือนที่ตั้งใหม่ เมื่อไม่ได้ตั้งราคาปีเอง · ตรงกับ public/plans (BUG-12)', async () => {
+    await t.owner.query(`UPDATE plans SET price_monthly_satang = 200000, price_yearly_satang = NULL WHERE code = 'team_s'`);
+    try {
+      expect((await q('team_s', 'monthly')).body.subtotal).toBe(200_000);
+      expect((await q('team_s', 'yearly')).body.subtotal).toBe(2_000_000);
+      const pub = (await team.lead.get('/public/plans')).body.items.find((p: { code: string }) => p.code === 'team_s');
+      expect(pub).toMatchObject({ priceMonthlySatang: 200_000, priceYearlySatang: 2_000_000 });
+    } finally {
+      await t.owner.query(`UPDATE plans SET price_monthly_satang = NULL, price_yearly_satang = NULL WHERE code = 'team_s'`);
+    }
+  });
+
   it('แพ็กเกจที่ซื้อออนไลน์ไม่ได้ / พารามิเตอร์ผิด → 400', async () => {
     expect((await q('free', 'monthly')).status).toBe(400);
     expect((await q('enterprise', 'monthly')).status).toBe(400);

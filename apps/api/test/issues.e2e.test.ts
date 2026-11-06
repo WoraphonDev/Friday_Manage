@@ -1,7 +1,8 @@
 // ข้อมูลสมมติ · ฐานข้อมูลแยกและล้างด้วย startApp ตามกติกา lane
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import pg from 'pg';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { type DomainEvent, EventBus } from '../src/core/events.js';
-import { addMember, client, seedTeam, signup, startApp, type Client, type TestApp } from './helpers.js';
+import { addMember, client, OWNER_URL, seedTeam, signup, startApp, type Client, type TestApp } from './helpers.js';
 
 let t: TestApp;
 let team: Awaited<ReturnType<typeof seedTeam>>;
@@ -370,5 +371,124 @@ describe('Bulk ใช้กติกา PATCH ต่อรายงาน', () =
     const changes = await t.owner.query('SELECT field,reason FROM plan_changes WHERE issue_id=$1 ORDER BY field', [issue.id]);
     expect(changes.rows).toEqual([{ field: 'assigneeIds', reason: 'ปรับแผนสมมติ' }, { field: 'planEnd', reason: 'ปรับแผนสมมติ' }]);
     expect(seen.find((e) => e.type === 'plan.changed')?.data.reason).toBe('ปรับแผนสมมติ');
+  });
+});
+
+// Regression ของ A06: ใช้ API จริงปิด Sprint และบังคับลำดับคำขอด้วย lock ของ PostgreSQL
+async function sprintFixture() {
+  const key = `SG${++serial}`;
+  const base = `${team.ws}/projects/${key}`;
+  expect((await team.lead.post(`${team.ws}/projects`, { key, name: 'Sprint guard test', startDate: '2026-11-05', goliveDate: '2027-04-21', modules: ['Demo'] })).status).toBe(201);
+  const project = (await team.lead.get(base)).body;
+  await t.owner.query('DELETE FROM sprints WHERE project_id=$1', [project.id]);
+  const first = await team.lead.post(`${base}/sprints`, { name: 'Current sprint', startDate: '2026-11-30', endDate: '2026-12-11' });
+  const next = await team.lead.post(`${base}/sprints`, { name: 'Next sprint', startDate: '2026-12-14', endDate: '2026-12-25' });
+  expect(first.status).toBe(201); expect(next.status).toBe(201);
+  expect((await team.lead.post(`${base}/sprints/${first.body.id}/start`)).status).toBe(200);
+  async function issue(input: Record<string, unknown> = {}) {
+    const response = await team.lead.post(`${base}/issues`, { title: 'Sprint issue', moduleId: project.modules[0].id, size: 'XS', ...input });
+    expect(response.status, JSON.stringify(response.body)).toBe(201);
+    return response.body;
+  }
+  return { base, project, sprint: first.body, next: next.body, issue };
+}
+
+/** ต่อคิว complete ก่อน operation โดยรอหลักฐานว่า request รอ lock จริง ไม่อาศัยการหน่วงเวลา */
+async function completeBefore<T>(f: Awaited<ReturnType<typeof sprintFixture>>, operation: () => PromiseLike<T>) {
+  const locker = new pg.Client({ connectionString: OWNER_URL });
+  await locker.connect();
+  let completion: Promise<Awaited<ReturnType<Client['post']>>> | undefined;
+  let pending: Promise<T> | undefined;
+  try {
+    await locker.query('BEGIN');
+    const pid = (await locker.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
+    await locker.query('SELECT id FROM projects WHERE id=$1 FOR UPDATE', [f.project.id]);
+    async function waitForBlocked(count: number) {
+      await vi.waitFor(async () => {
+        const result = await t.owner.query("WITH RECURSIVE blocked(pid) AS (SELECT pid FROM pg_stat_activity WHERE datname=current_database() AND $1=ANY(pg_blocking_pids(pid)) UNION SELECT a.pid FROM pg_stat_activity a JOIN blocked b ON b.pid=ANY(pg_blocking_pids(a.pid)) WHERE a.datname=current_database()) SELECT count(*)::int AS n FROM blocked", [pid]);
+        expect(result.rows[0].n).toBeGreaterThanOrEqual(count);
+      }, { timeout: 5000, interval: 10 });
+    }
+    completion = team.lead.post(`${f.base}/sprints/${f.sprint.id}/complete`, { moveIncompleteTo: f.next.id }).then((response) => response);
+    await waitForBlocked(1);
+    pending = Promise.resolve(operation());
+    await waitForBlocked(2);
+    await locker.query('COMMIT');
+    const [completed, response] = await Promise.all([completion, pending]);
+    expect(completed.status, JSON.stringify(completed.body)).toBe(200);
+    return response;
+  } finally {
+    await locker.query('ROLLBACK');
+    await Promise.allSettled([completion, pending]);
+    await locker.end();
+  }
+}
+
+describe('Sprint ที่จบแล้วและการปิด Sprint พร้อมเปลี่ยนแผน', () => {
+  it('ปฏิเสธ create/PATCH/move/bulk ที่ใส่งานเข้า completed โดยไม่เปลี่ยนงานหรือส่ง Event', async () => {
+    const f = await sprintFixture(); const one = await f.issue(); const two = await f.issue();
+    expect((await team.lead.post(`${f.base}/sprints/${f.sprint.id}/complete`, { moveIncompleteTo: 'backlog' })).status).toBe(200);
+    const beforeEvents = seen.length;
+    const beforeCount = (await t.owner.query('SELECT count(*)::int AS n FROM issues WHERE project_id=$1', [f.project.id])).rows[0].n;
+    const created = await team.lead.post(`${f.base}/issues`, { title: 'Must not create', moduleId: f.project.modules[0].id, size: 'XS', sprintId: f.sprint.id });
+    const patched = await team.lead.patch(url(one.key), { title: 'Must roll back', sprintId: f.sprint.id }, one.version);
+    const moved = await team.lead.post(`${url(one.key)}/move`, { sprintId: f.sprint.id });
+    for (const response of [created, patched, moved]) { expect(response.status, JSON.stringify(response.body)).toBe(422); expect(response.body.error).toMatchObject({ code: 'sprint_completed', details: { sprintId: f.sprint.id } }); }
+    const bulk = await team.lead.post(`${f.base}/issues/bulk`, { keys: [one.key, two.key], set: { sprintId: f.sprint.id } });
+    expect(bulk.status).toBe(200); expect(bulk.body.results).toMatchObject([{ key: one.key, ok: false, error: { status: 422, code: 'sprint_completed' } }, { key: two.key, ok: false, error: { status: 422, code: 'sprint_completed' } }]);
+    expect(seen).toHaveLength(beforeEvents);
+    expect((await t.owner.query('SELECT count(*)::int AS n FROM issues WHERE project_id=$1', [f.project.id])).rows[0].n).toBe(beforeCount);
+    for (const issue of [one, two]) expect((await team.lead.get(url(issue.key))).body).toMatchObject({ sprintId: null, version: issue.version, title: issue.title });
+  });
+
+  it('ห้ามเพิ่ม Sub-task เข้าแม่ใน completed แต่ยังแก้รายละเอียดเดิมหรือย้ายออกได้', async () => {
+    const f = await sprintFixture();
+    const done = f.project.statuses.find((row: { name: string; boardColumnId: string | null }) => row.name === 'Done' && !row.boardColumnId).id;
+    const parent = await f.issue({ sprintId: f.sprint.id, statusId: done });
+    await team.lead.post(`${f.base}/sprints/${f.sprint.id}/complete`, { moveIncompleteTo: 'backlog' });
+    const child = await team.lead.post(`${f.base}/issues`, { title: 'Must not create child', parentKey: parent.key, size: 'XS', sprintId: f.next.id });
+    expect(child.status).toBe(422); expect(child.body.error.code).toBe('sprint_completed');
+    const patch = await team.lead.patch(url(parent.key), { title: 'Historical edit', sprintId: f.sprint.id }, parent.version);
+    expect(patch.status, JSON.stringify(patch.body)).toBe(200);
+    expect((await team.lead.post(`${url(parent.key)}/move`, { sprintId: f.sprint.id })).status).toBe(200);
+    const moved = await team.lead.post(`${url(parent.key)}/move`, { sprintId: f.next.id });
+    expect(moved.status).toBe(200); expect(moved.body.sprintId).toBe(f.next.id);
+    const backlog = await team.lead.patch(url(parent.key), { sprintId: null }, moved.body.version);
+    expect(backlog.status).toBe(200); expect(backlog.body.sprintId).toBeNull();
+  });
+
+  it.each(['create', 'patch', 'move', 'bulk'] as const)('%s รอ complete แล้วตรวจปลายทางใหม่ ไม่ใส่งานเข้า Sprint ที่เพิ่งจบ', async (method) => {
+    const f = await sprintFixture(); const issue = await f.issue();
+    const response = await completeBefore(f, () => {
+      if (method === 'create') return team.lead.post(`${f.base}/issues`, { title: 'Race create', moduleId: f.project.modules[0].id, size: 'XS', sprintId: f.sprint.id });
+      if (method === 'patch') return team.lead.patch(url(issue.key), { sprintId: f.sprint.id }, issue.version);
+      if (method === 'move') return team.lead.post(`${url(issue.key)}/move`, { sprintId: f.sprint.id });
+      return team.lead.post(`${f.base}/issues/bulk`, { keys: [issue.key], set: { sprintId: f.sprint.id } });
+    });
+    if (method === 'bulk') { expect(response.status).toBe(200); expect(response.body.results[0]).toMatchObject({ ok: false, error: { code: 'sprint_completed', status: 422 } }); }
+    else { expect(response.status, JSON.stringify(response.body)).toBe(422); expect(response.body.error.code).toBe('sprint_completed'); }
+    expect((await team.lead.get(url(issue.key))).body.sprintId).toBeNull();
+    expect((await t.owner.query('SELECT count(*)::int AS n FROM issues WHERE project_id=$1 AND sprint_id=$2', [f.project.id, f.sprint.id])).rows[0].n).toBe(0);
+  });
+
+  it('สร้างลูกที่แข่งกับ complete อ่าน Sprint ที่แม่ย้ายไปใหม่ โดยไม่ deadlock', async () => {
+    const f = await sprintFixture(); const parent = await f.issue({ sprintId: f.sprint.id });
+    const child = await completeBefore(f, () => team.lead.post(`${f.base}/issues`, { title: 'Child after complete', parentKey: parent.key, size: 'XS' }));
+    expect(child.status, JSON.stringify(child.body)).toBe(201); expect(child.body.sprintId).toBe(f.next.id);
+    expect((await team.lead.get(url(parent.key))).body.sprintId).toBe(child.body.sprintId);
+  });
+
+  it('PATCH ที่รอ complete ยังคง If-Match และไม่เขียนทับ version ที่ complete เปลี่ยน', async () => {
+    const f = await sprintFixture(); const issue = await f.issue({ sprintId: f.sprint.id });
+    const response = await completeBefore(f, () => team.lead.patch(url(issue.key), { sprintId: null }, issue.version));
+    expect(response.status, JSON.stringify(response.body)).toBe(409); expect(response.body.error.code).toBe('conflict');
+    expect((await team.lead.get(url(issue.key))).body.sprintId).toBe(f.next.id);
+  });
+
+  it('move ที่ไม่มี If-Match อ่าน version หลัง complete แล้วจึงย้ายออกได้', async () => {
+    const f = await sprintFixture(); const issue = await f.issue({ sprintId: f.sprint.id }); const child = await f.issue({ parentKey: issue.key });
+    const response = await completeBefore(f, () => team.lead.post(`${url(issue.key)}/move`, { sprintId: null }));
+    expect(response.status, JSON.stringify(response.body)).toBe(200); expect(response.body.sprintId).toBeNull();
+    expect((await team.lead.get(url(child.key))).body.sprintId).toBeNull();
   });
 });

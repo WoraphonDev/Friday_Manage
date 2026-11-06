@@ -122,6 +122,8 @@ export class IssuesService {
     const result = await this.db.run(auth, tenant, async (tx) => {
       const { project, access } = await this.projects.load(tx, auth, tenant, projectKey);
       requirePerm(access, 'issue.create');
+      // ใช้ลำดับเดียวกับ Sprint complete: โปรเจกต์ → แม่ → ลูก และตรวจ Sprint หลังได้ lock
+      await this.lockProject(tx, project.id);
       const warnings: Warning[] = [];
       const base = { workspaceId: tenant.workspaceId, projectId: project.id };
 
@@ -426,6 +428,7 @@ export class IssuesService {
     const expected = parseIfMatch(ifMatch);
     const events: DomainEvent[] = [];
     const result = await this.db.run(auth, tenant, async (tx) => {
+      if (input.sprintId !== undefined) await this.lockSprintChangeProject(tx, auth, tenant, issueKey);
       const { project, access, issue } = await this.loadIssue(tx, auth, tenant, issueKey);
       requirePerm(access, 'issue.edit');
       if (issue.version !== expected) throw await this.conflict(tx, project, issue, access);
@@ -442,7 +445,7 @@ export class IssuesService {
       }
       if (input.moduleId !== undefined) set.moduleId = input.moduleId;
       if (input.phaseId !== undefined) set.phaseId = input.phaseId;
-      if (input.sprintId !== undefined) set.sprintId = input.sprintId;
+      if (input.sprintId !== undefined && input.sprintId !== issue.sprintId) set.sprintId = input.sprintId;
       await this.checkInProject(tx, project.id, { moduleId: set.moduleId, phaseId: set.phaseId, sprintId: set.sprintId });
       await this.checkPeople(tx, [...(input.assigneeIds ?? []), input.baId, input.reviewerId, input.testerId]);
 
@@ -558,6 +561,7 @@ export class IssuesService {
   async move(auth: AuthInfo, tenant: TenantInfo, issueKey: string, ifMatch: string | undefined, input: z.infer<typeof MoveIssueBody>) {
     const events: DomainEvent[] = [];
     const result = await this.db.run(auth, tenant, async (tx) => {
+      if (input.sprintId !== undefined) await this.lockSprintChangeProject(tx, auth, tenant, issueKey);
       const { project, access, issue } = await this.loadIssue(tx, auth, tenant, issueKey);
       requirePerm(access, 'issue.edit');
       if (ifMatch !== undefined && parseIfMatch(ifMatch) !== issue.version) throw await this.conflict(tx, project, issue, access);
@@ -770,13 +774,30 @@ export class IssuesService {
     const checks = [
       [ids.moduleId, s.modules, 'Module'],
       [ids.phaseId, s.phases, 'กลุ่มงาน'],
-      [ids.sprintId, s.sprints, 'Sprint'],
     ] as const;
     for (const [id, table, label] of checks) {
       if (!id) continue;
       const [row] = await tx.select({ projectId: table.projectId }).from(table).where(eq(table.id, id));
       if (!row || row.projectId !== projectId) throw new AppError(400, 'invalid_reference', `${label} ไม่อยู่ในโปรเจกต์นี้`);
     }
+    if (ids.sprintId) {
+      const [sprint] = await tx.select({ projectId: s.sprints.projectId, status: s.sprints.status }).from(s.sprints).where(eq(s.sprints.id, ids.sprintId));
+      if (!sprint || sprint.projectId !== projectId) throw new AppError(400, 'invalid_reference', 'Sprint ไม่อยู่ในโปรเจกต์นี้');
+      if (sprint.status === 'completed') throw new AppError(422, 'sprint_completed', 'Sprint จบแล้ว ไม่สามารถเพิ่มหรือย้ายงานเข้าได้', { sprintId: ids.sprintId });
+    }
+  }
+
+  private async lockProject(tx: Tx, projectId: string) {
+    await tx.select({ id: s.projects.id }).from(s.projects).where(eq(s.projects.id, projectId)).for('update');
+  }
+
+  private async lockSprintChangeProject(tx: Tx, auth: AuthInfo, tenant: TenantInfo, issueKey: string) {
+    const match = ISSUE_KEY.exec(issueKey);
+    if (!match) throw notFound('งาน');
+    const { project, access } = await this.projects.load(tx, auth, tenant, match[1]);
+    requirePerm(access, 'issue.edit');
+    // ห้ามอ่าน version/แผนเดิมก่อนรอ complete ไม่เช่นนั้นอาจย้ายทับแผนที่เพิ่งย้ายออกมา
+    await this.lockProject(tx, project.id);
   }
 
   /** คนที่ถูกระบุในงานต้องเป็นสมาชิก active ของ Workspace */

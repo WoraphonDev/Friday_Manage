@@ -2,6 +2,10 @@ import common from "../../messages/th/common.json";
 import inboxBell from "../../messages/th/inbox-bell.json";
 import saasPages from "../../messages/th/saas-pages.json";
 import searchPalette from "../../messages/th/search-palette.json";
+import commonEn from "../../messages/en/common.json";
+import inboxBellEn from "../../messages/en/inbox-bell.json";
+import saasPagesEn from "../../messages/en/saas-pages.json";
+import searchPaletteEn from "../../messages/en/search-palette.json";
 
 // เพิ่ม namespace ต่องานที่นี่ แยกข้อความของแต่ละหน้าออกจากไฟล์กลาง
 // inbox-bell, search-palette: กระดิ่งและ Command palette อยู่ใน shell ทุกหน้า
@@ -12,4 +16,12 @@ export const messages = {
   "inbox-bell": inboxBell,
   "search-palette": searchPalette,
   "saas-pages": saasPages,
+};
+
+/** ข้อความ EN ของ namespace เดียวกัน (W21) · test ใช้ผ่าน renderWithProviders({ locale: "en" }) */
+export const messagesEn = {
+  common: commonEn,
+  "inbox-bell": inboxBellEn,
+  "search-palette": searchPaletteEn,
+  "saas-pages": saasPagesEn,
 };

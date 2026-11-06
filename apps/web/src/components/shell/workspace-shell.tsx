@@ -48,6 +48,7 @@ import {
 } from "@/components/ui";
 import { Bell } from "@/features/bell/Bell";
 import { CommandPalette } from "@/features/command-palette/CommandPalette";
+import { LocaleSwitch, LocaleSync } from "@/features/locale-switch";
 import { WorkspaceBanners } from "@/features/plan-limits";
 
 interface ShellContext {
@@ -255,6 +256,8 @@ export function WorkspaceShell({
       value={{ me: me.data, workspace, projects: projects.data?.items ?? [] }}
     >
       <YearFormatContext.Provider value={me.data.yearFormat}>
+        {/* cookie ภาษาให้ตรงกับที่บันทึกในบัญชี (เข้าจากเครื่องใหม่ก็ได้ภาษาเดิม) */}
+        <LocaleSync me={me.data} />
         <a className="skip-link" href="#main-content">
           {t("app.skip")}
         </a>
@@ -329,6 +332,8 @@ export function WorkspaceShell({
                 >
                   {t("nav.createWorkspace")}
                 </Link>
+                <div className="menu-divider" />
+                <LocaleSwitch signedIn showYearFormat onChange={() => setSwitchOpen(false)} />
                 <Button
                   variant="ghost"
                   onClick={() => {

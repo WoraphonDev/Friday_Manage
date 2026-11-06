@@ -1,21 +1,17 @@
 import { getRequestConfig } from "next-intl/server";
-import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import {
+  getRequestLocale,
+  loadMessages,
+} from "@/features/locale-switch/server";
 
+// ภาษา: cookie NEXT_LOCALE (ตั้งจากบัญชีหรือตัวสลับ) → Accept-Language → ไทย (W21)
+// ข้อความ EN วางทับไทย ข้อความที่ยังไม่แปลจึงแสดงเป็นไทยแทนรหัสข้อความ
+// หมายเหตุ: อ่าน cookie ทำให้ทุกหน้า render แบบ dynamic (รวม /, /pricing, /legal/*)
 export default getRequestConfig(async () => {
-  const directory = join(process.cwd(), "messages", "th");
-  const files = (await readdir(directory)).filter((name) =>
-    name.endsWith(".json"),
-  );
-  const entries = await Promise.all(
-    files.map(async (name) => [
-      name.slice(0, -5),
-      JSON.parse(await readFile(join(directory, name), "utf8")),
-    ]),
-  );
+  const locale = await getRequestLocale();
   return {
-    locale: "th",
-    messages: Object.fromEntries(entries),
+    locale,
+    messages: await loadMessages(locale),
     timeZone: "Asia/Bangkok",
   };
 });

@@ -70,5 +70,5 @@
 ### ผล test
 
 - `src/lib/saas-pages.test.tsx` 23 ข้อ (MSW, mock Stripe.js, ข้อมูลสมมติ): Landing (ราคา, ขนาดทีม → แพ็กเกจแนะนำ, รายปี, ตารางเปรียบเทียบ, FAQ, ลิงก์) · /pricing Error + requestId + ลองอีกครั้ง · กฎหมาย (สารบัญ, แท็บ, ประวัติเวอร์ชัน, 404 → โครงหัวข้อ, ผู้ให้บริการช่วง, 500) · Cookie (ปฏิเสธ / ตั้งค่า / ยอมรับ / ไม่ถามซ้ำ / เปิดจาก footer / ปุ่มน้ำหนักเท่ากัน) · แบนเนอร์ข้อกำหนดเปลี่ยน · Checkout บัตร (prefill, PUT profile, POST checkout + Idempotency-Key + PO, `confirmCardPayment(client_secret)`, poll → สำเร็จ) · key ใช้ซ้ำเมื่อ 5xx และเป็น key ใหม่เมื่อเปลี่ยนแพ็กเกจ, บัตรถูกปฏิเสธ · ตรวจข้อมูลภาษี / บุคคลธรรมดา · PromptPay + หัก 3% (quote `wht=true`, QR SVG, นับถอยหลัง, ยังไม่จ่าย / จ่ายแล้ว) · โอน (เลขบัญชี, PDF, สลิป multipart → รอตรวจ) · ไม่มีกุญแจ Stripe · สิทธิ์ (Member ไม่เรียก API, 403, 500) · Billing (มิเตอร์, ใบแจ้งหนี้, สลิป, 50 ทวิ, ยกเลิกโดย Owner, Admin ไม่มีปุ่มยกเลิก, ว่าง, Member, 500, NotFound) · Q2 ครบ 7 สถานการณ์ (402 seats / projects / storage, FeatureLock, ทดลอง Owner/Member + รับทราบ, ค้างชำระ + ทีมเกิน, Guest ไม่เรียก API, Automation)
-- `pnpm --filter @friday/web typecheck`, `test` (256 ข้อ), `build` ผ่าน
+- `pnpm --filter @friday/web typecheck`, `test` (292 ข้อหลัง rebase), `build` ผ่าน
 - ยังไม่ได้เทียบภาพกับ Canvas ที่ 1440 / 390 px

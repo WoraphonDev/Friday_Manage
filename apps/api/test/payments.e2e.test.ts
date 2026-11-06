@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { config } from '../src/config.js';
 import { ETAX_PROVIDER, FakeETax, FakeGateway, gatewayFromEnv, PAYMENT_GATEWAY, StripeGateway, verifyStripeSignature } from '../src/payments/providers.js';
+import { PaymentsService } from '../src/payments/payments.service.js';
 import { type Client, seedTeam, startApp, type TestApp } from './helpers.js';
 
 let t: TestApp;
@@ -283,6 +284,20 @@ describe('ยกเลิกแพ็กเกจ', () => {
     expect(again.status).toBe(409);
     expect(again.body.error.code).toBe('already_canceled');
     expect((await t.owner.query(`SELECT count(*)::int AS n FROM audit_logs WHERE action = 'billing.subscription_canceled' AND workspace_id = $1`, [wsId])).rows[0].n).toBe(1);
+  });
+});
+
+describe('กวาดส่งใบกำกับภาษีที่ค้าง', () => {
+  it('เอกสาร pending ที่หลังบ้านสร้างตอนยืนยันสลิป ถูกส่งไปผู้ให้บริการ e-Tax', async () => {
+    const inv = (await t.owner.query(`SELECT id FROM invoices WHERE workspace_id = $1 ORDER BY created_at LIMIT 1`, [wsId])).rows[0].id;
+    const doc = (await t.owner.query(`INSERT INTO tax_documents (workspace_id, invoice_id, doc_type, number, created_at) VALUES ($1, $2, 'tax_invoice_receipt', 'TX-SWEEP-1', now() - interval '5 minutes') RETURNING id`, [wsId, inv])).rows[0].id;
+    const fresh = (await t.owner.query(`INSERT INTO tax_documents (workspace_id, invoice_id, doc_type, number) VALUES ($1, $2, 'tax_invoice_receipt', 'TX-SWEEP-2') RETURNING id`, [wsId, inv])).rows[0].id;
+    const before = etax.issued.length;
+    const r = await t.app.get(PaymentsService).sweepETax();
+    expect(r.submitted).toBe(1);
+    expect(etax.issued.slice(before).map((x) => x.number)).toEqual(['TX-SWEEP-1']);
+    expect((await t.owner.query(`SELECT status, provider_ref FROM tax_documents WHERE id = $1`, [doc])).rows[0]).toEqual({ status: 'submitted', provider_ref: 'etax_TX-SWEEP-1' });
+    expect((await t.owner.query(`SELECT status FROM tax_documents WHERE id = $1`, [fresh])).rows[0].status).toBe('pending'); // ยังใหม่เกินไป รอผู้สร้างส่งเอง
   });
 });
 

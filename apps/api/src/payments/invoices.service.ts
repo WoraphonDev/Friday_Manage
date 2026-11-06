@@ -188,8 +188,9 @@ export class InvoicesService {
     await this.sys.transaction(async (tx) => {
       await tx.update(s.payments).set({ slipFileKey, status: 'pending_review', updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
       await tx.update(s.invoices).set({ status: 'pending_review', updatedAt: new Date() }).where(eq(s.invoices.id, invoice.id));
-      await this.payments.activate(tx, invoice, meta);
-      await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'plan', action: 'billing.slip_uploaded', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · ${type.mime} · เปิดแพ็กเกจ ${meta.plan} ระหว่างรอตรวจ` });
+      // เก็บสลิปเสมอ แต่เปิดสิทธิ์ชั่วคราวเฉพาะเมื่อใบนี้ยังไม่ถูกแทนที่ด้วยใบที่ใหม่กว่า (N02)
+      const granted = await this.payments.activate(tx, invoice, meta);
+      await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'plan', action: 'billing.slip_uploaded', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · ${type.mime} · ${granted ? `เปิดแพ็กเกจ ${meta.plan} ระหว่างรอตรวจ` : 'ไม่เปลี่ยนแพ็กเกจ (มีใบที่ใหม่กว่าเปิดสิทธิ์อยู่)'}` });
     });
     return this.get(auth, tenant, id);
   }

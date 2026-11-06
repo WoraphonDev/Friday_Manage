@@ -22,7 +22,10 @@ export const subscriptions = pgTable('subscriptions', {
   cycle: billingCycle().notNull().default('monthly'), status: subscriptionStatus().notNull().default('trialing'),
   trialEndsAt: tstz(), currentPeriodStart: tstz(), currentPeriodEnd: tstz(), paymentMethod: paymentMethod(),
   stripeCustomerId: text(), stripeSubscriptionId: text(),
-  discount: jsonb().notNull().default(sql`'{}'::jsonb`), createdAt: createdAt(), updatedAt: updatedAt(),
+  discount: jsonb().notNull().default(sql`'{}'::jsonb`),
+  /** ใบแจ้งหนี้ที่เปิดสิทธิ์ปัจจุบัน (ชำระแล้วหรือเปิดชั่วคราวระหว่างรอตรวจสลิป) · ใช้ตัดสินว่าใบไหนแทนใบไหน (N01/N02) */
+  sourceInvoiceId: uuid(),
+  createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [tenantKey('subscriptions', t), check('subscriptions_dates', sql`${t.currentPeriodEnd} >= ${t.currentPeriodStart}`)]);
 
 export const billingProfiles = pgTable('billing_profiles', {

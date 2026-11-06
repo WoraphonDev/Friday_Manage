@@ -286,10 +286,56 @@ describe('ตรวจสลิปและ 50 ทวิ', () => {
     await t.owner.query(`INSERT INTO audit_logs (workspace_id, actor_kind, category, action, target_type, target_id, summary) VALUES ($1,'user','plan','billing.checkout','invoice',$2,$3)`, [c.id, inv.id, JSON.stringify({ plan: 'team_l', cycle: 'monthly', method: 'transfer', wht: true, key: 'k', payload: 'p' })]);
     if (opts.activated) {
       const plan = (await t.owner.query(`SELECT id FROM plans WHERE code = 'team_l'`)).rows[0].id;
-      await t.owner.query(`UPDATE subscriptions SET plan_id = $2, status = 'active', trial_ends_at = NULL, current_period_start = $3, current_period_end = now() + interval '30 days' WHERE id = $1`, [c.sub, plan, new Date(`${inv.ps}T00:00:00+07:00`)]);
+      // เหมือนที่ API ลูกค้าเปิดสิทธิ์ชั่วคราวตอนแนบสลิป: ใบนี้เป็นแหล่งสิทธิ์ปัจจุบัน
+      await t.owner.query(`UPDATE subscriptions SET plan_id = $2, status = 'active', trial_ends_at = NULL, current_period_start = $3, current_period_end = now() + interval '30 days', source_invoice_id = $4 WHERE id = $1`, [c.sub, plan, new Date(`${inv.ps}T00:00:00+07:00`), inv.id]);
     }
     return { c, inv, pay };
   }
+
+  /** ใบแจ้งหนี้เพิ่มของ Workspace เดียวกัน (วันเริ่มรอบเดียวกัน) พร้อมแพ็กเกจที่สั่งซื้อ */
+  async function extraInvoice(c: { id: string; sub: string }, n: number, plan: string, status: 'paid' | 'pending_review', method: 'card' | 'transfer') {
+    const inv = (await t.owner.query(`INSERT INTO invoices (workspace_id, subscription_id, number, period_start, period_end, subtotal, vat, total, wht_amount, amount_due, status, due_date, paid_at) VALUES ($1,$2,$3,current_date,current_date + 29,300000,21000,321000,0,321000,$4::invoice_status,current_date + 7, CASE WHEN $4::text = 'paid' THEN now() END) RETURNING *`, [c.id, c.sub, `FRI-x${n}-${randomUUID().slice(0, 6)}`, status])).rows[0];
+    const pay = (await t.owner.query(`INSERT INTO payments (workspace_id, invoice_id, method, amount, status) VALUES ($1,$2,$3,321000,$4) RETURNING id`, [c.id, inv.id, method, status === 'paid' ? 'confirmed' : 'pending_review'])).rows[0].id as string;
+    await t.owner.query(`INSERT INTO audit_logs (workspace_id, actor_kind, category, action, target_type, target_id, summary) VALUES ($1,'user','plan','billing.checkout','invoice',$2,$3)`, [c.id, inv.id, JSON.stringify({ plan, cycle: 'monthly', method, wht: false, key: 'k', payload: 'p' })]);
+    return { inv, pay };
+  }
+  const subOf = async (id: string) => (await t.owner.query(`SELECT p.code, s.status, s.source_invoice_id FROM subscriptions s JOIN plans p ON p.id = s.plan_id WHERE s.id = $1`, [id])).rows[0];
+  const setSource = async (subId: string, plan: string, invoiceId: string) =>
+    t.owner.query(`UPDATE subscriptions SET plan_id = (SELECT id FROM plans WHERE code = $2), status = 'active', trial_ends_at = NULL, current_period_start = (current_date::timestamp AT TIME ZONE 'Asia/Bangkok'), current_period_end = now() + interval '30 days', source_invoice_id = $3 WHERE id = $1`, [subId, plan, invoiceId]);
+
+  it('ปฏิเสธสลิปใบเก่าไม่ยกเลิกสิทธิ์ของใบใหม่ที่ชำระแล้ว แม้วันเริ่มรอบตรงกัน (N01)', async () => {
+    const a = await pending('n01-old');
+    const b = await extraInvoice(a.c, 2, 'team_l', 'paid', 'card');
+    await setSource(a.c.sub, 'team_l', b.inv.id);
+    const r = await finance.agent.post(`/ops/payments/${a.pay}:reject`).send({ reason: 'สลิปไม่ถูกต้อง' });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body.revoked).toBe(false);
+    expect(await subOf(a.c.sub)).toEqual({ code: 'team_l', status: 'active', source_invoice_id: b.inv.id });
+    expect((await audit(a.c.id, 'ops.payment_rejected'))[0].summary).not.toContain('เลิกสิทธิ์');
+  });
+
+  it('ปฏิเสธใบที่เปิดสิทธิ์ชั่วคราว → คืนสิทธิ์ของใบที่ชำระแล้วก่อนหน้า (ไม่ยกเลิกทั้งหมด)', async () => {
+    const paidBefore = await pending('n01-fallback');
+    // ใบแรก (Team M) ชำระแล้ว · ใบใหม่ (Team L) แนบสลิปและเปิดสิทธิ์ชั่วคราว
+    const older = await extraInvoice(paidBefore.c, 3, 'team_m', 'paid', 'card');
+    await t.owner.query(`UPDATE invoices SET created_at = now() - interval '1 day' WHERE id = $1`, [older.inv.id]);
+    await setSource(paidBefore.c.sub, 'team_l', paidBefore.inv.id);
+    const r = await finance.agent.post(`/ops/payments/${paidBefore.pay}:reject`).send({ reason: 'ยอดไม่ตรง' });
+    expect(r.body.revoked).toBe(true);
+    expect(await subOf(paidBefore.c.sub)).toEqual({ code: 'team_m', status: 'active', source_invoice_id: older.inv.id });
+  });
+
+  it('ยืนยันสลิปใบเก่าหลังใบใหม่ชำระแล้ว → ใบเก่า paid แต่ไม่ลดแพ็กเกจ (N02 ฝั่งหลังบ้าน)', async () => {
+    const a = await pending('n02-ops');
+    await t.owner.query(`UPDATE invoices SET created_at = now() - interval '1 hour' WHERE id = $1`, [a.inv.id]);
+    await t.owner.query(`UPDATE audit_logs SET summary = $2 WHERE target_id = $1 AND action = 'billing.checkout'`, [a.inv.id, JSON.stringify({ plan: 'team_m', cycle: 'monthly', method: 'transfer', wht: true, key: 'k', payload: 'p' })]);
+    const b = await extraInvoice(a.c, 4, 'team_l', 'paid', 'card');
+    await setSource(a.c.sub, 'team_l', b.inv.id);
+    const r = await finance.agent.post(`/ops/payments/${a.pay}:confirm`).send({});
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect((await t.owner.query(`SELECT status FROM invoices WHERE id = $1`, [a.inv.id])).rows[0].status).toBe('paid');
+    expect(await subOf(a.c.sub)).toEqual({ code: 'team_l', status: 'active', source_invoice_id: b.inv.id });
+  });
 
   it('รายการรอตรวจ + ดาวน์โหลดสลิป · เฉพาะ finance / admin', async () => {
     const p = await pending('review-me');

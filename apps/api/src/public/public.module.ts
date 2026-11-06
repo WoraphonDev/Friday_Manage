@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
+import { LegalAcceptancesController, PublicController } from './public.controller.js';
+import { PublicService } from './public.service.js';
 
-/** หน้าสาธารณะ: แพ็กเกจ, เอกสารกฎหมาย · งาน A30 (docs/tasks/A30-*.md) · ใส่ controller / provider ของงานนี้ที่นี่ */
+/** หน้าสาธารณะ: แพ็กเกจและเอกสารกฎหมาย · งาน A30 (docs/tasks/A30-*.md) */
 @Module({
-  controllers: [],
-  providers: [],
+  controllers: [PublicController, LegalAcceptancesController],
+  providers: [PublicService],
 })
 export class PublicModule {}

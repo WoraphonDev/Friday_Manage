@@ -1,0 +1,35 @@
+{
+  "sourceCommit": "bb637785da6168016a694df617d22d13b43dbf44",
+  "date": "2026-11-07",
+  "rootTypecheck": "passed",
+  "productionWebpackBuild": "passed",
+  "monorepoTestRun": {
+    "command": "pnpm test",
+    "status": "passed",
+    "passed": 1286,
+    "skipped": 6,
+    "note": "Full run had web435; latest web recheck436 supersedes it. API/DB/ops sources unchanged."
+  },
+  "latestPackageResults": {
+    "ops-web": 53,
+    "web": 436,
+    "db": 107,
+    "api": 571,
+    "ops-api": 20
+  },
+  "latestPassingTotal": 1287,
+  "skipReason": "6 real-plan tests skip without the private plan file; synthetic data only.",
+  "browserWorkflows": {
+    "passed": 15,
+    "total": 15,
+    "pageErrors": [],
+    "mockPermissionCases": [
+      "UX14"
+    ]
+  },
+  "databaseIsolation": {
+    "visual": "friday_codex_audit2_20261106",
+    "destructiveTests": "friday_ux_tests_20261107",
+    "migration": "0012"
+  }
+}

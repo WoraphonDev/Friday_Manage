@@ -1,0 +1,11 @@
+{
+  "pages": 51,
+  "initialImages": 3,
+  "fixes": 11,
+  "statuses": 26,
+  "checks": 16,
+  "overlay": "aspect-ratio: 390 / 844; --cut: 72%;",
+  "filtered": 2,
+  "errors": [],
+  "failedRequests": []
+}

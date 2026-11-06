@@ -1,0 +1,11 @@
+RUN  v5.1.0 <isolated-checkout>/apps/web
+
+Not implemented: navigation to another Document
+
+ Test Files  25 passed (25)
+      Tests  436 passed (436)
+   Start at  01:44:35
+   Duration  84.69s (tests 68%, import 19%, environment 8%, setup 4%, transform 1%)
+
+    Isolate  25 workers spawned · ~366ms startup each (spawn + environment, per file)
+             at least ~8.77s faster with isolate: false — reuses workers across files instead of one per file

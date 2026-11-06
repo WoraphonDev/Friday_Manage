@@ -1,0 +1,14 @@
+> friday-manage@ typecheck <isolated-checkout>
+> pnpm -r typecheck
+
+Scope: 5 of 6 workspace projects
+apps/ops-web typecheck$ tsc --noEmit
+apps/web typecheck$ tsc --noEmit
+packages/db typecheck$ tsc --noEmit
+packages/db typecheck: Done
+apps/ops-web typecheck: Done
+apps/web typecheck: Done
+apps/api typecheck$ tsc --noEmit
+apps/ops-api typecheck$ tsc --noEmit
+apps/ops-api typecheck: Done
+apps/api typecheck: Done

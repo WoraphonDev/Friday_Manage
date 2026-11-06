@@ -1,0 +1,23 @@
+{
+  "before": {
+    "sourceCommit": "5253f177abc2d6b8dad05af6b2349d7890f08051",
+    "expectedModuleId": "01a1b22a-cea8-7e19-b476-9ac916fc94ae",
+    "selectedModuleId": "01a1b109-5edf-768c-a488-6556379468a4",
+    "selectedText": "Credit Line",
+    "result": "failed"
+  },
+  "after": {
+    "sourceCommit": "bb637785da6168016a694df617d22d13b43dbf44",
+    "id": "UX15",
+    "name": "เพิ่ม Module แล้วสร้าง Task ทันทีโดยไม่ต้องผ่าน Settings/เปลี่ยนชื่อ/เพิ่มกลุ่มงาน",
+    "passed": true,
+    "detail": {
+      "moduleId": "01a1b231-ce43-7781-8845-55e1aaadb297",
+      "key": "DP-41",
+      "selectedModule": "Direct module 0969616",
+      "url": "http://localhost:43200/w/visual-audit/p/DP/table"
+    }
+  },
+  "sourceCause": "Project GET uses the project version for ETag; module mutations do not change that version. ApiClient previously left HTTP caching at its default.",
+  "fix": "Default API fetch cache=no-store; React Query invalidation supplies fresh data; ETag/If-Match remains available for writes."
+}

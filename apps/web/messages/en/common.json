@@ -69,6 +69,8 @@
     "projectMembers": "Members",
     "invite": "Invite",
     "projectMenu": "Project menu",
+    "chooseTabs": "Choose tabs",
+    "moreTabs": "More tabs",
     "projectTeam": "{count} project members",
     "backToWorkspace": "← Back to Workspace",
     "back": "Back",

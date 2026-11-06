@@ -69,6 +69,8 @@
     "projectMembers": "Members",
     "invite": "Invite",
     "projectMenu": "เมนูโปรเจกต์",
+    "chooseTabs": "เลือกแท็บที่แสดง",
+    "moreTabs": "แท็บเพิ่มเติม",
     "projectTeam": "ทีมในโปรเจกต์ {count} คน",
     "backToWorkspace": "← กลับไปที่ Workspace",
     "back": "กลับ",

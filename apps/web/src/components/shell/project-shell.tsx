@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
-import { ChevronLeft, MoreHorizontal } from "lucide-react";
+import { ChevronLeft, MoreHorizontal, Plus } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { formatDateRange } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -42,23 +42,26 @@ interface HeaderMember {
 
 export const projectTabs = [
   // mobile: แท็บที่มีบนมือถือตาม Canvas M6/M7 (Overview, Kanban, List, Calendar, Files)
+  // optional: แท็บเสริมที่ซ่อนไว้ก่อน ผู้ใช้เลือกแสดงเองจากปุ่ม + ท้ายแถวแท็บ · หน้ายังเปิดจาก URL ได้ตามสิทธิ์
   { path: "", label: "overview", mobile: true },
   {
     path: "/dashboard",
     label: "dashboard",
     permission: "project.reports.view",
+    optional: true,
   },
   {
     path: "/reports",
     label: "reports",
     permission: "project.reports.view",
     desktop: true,
+    optional: true,
   },
-  { path: "/backlog", label: "backlog", hiddenForGuestViewer: true },
+  { path: "/backlog", label: "backlog", hiddenForGuestViewer: true, optional: true },
   { path: "/table", label: "table", hiddenForGuestViewer: true, mobile: true },
   { path: "/board", label: "board", hiddenForGuestViewer: true, mobile: true },
   { path: "/timeline", label: "timeline", desktop: true },
-  { path: "/gantt", label: "gantt", hiddenForGuestViewer: true, desktop: true },
+  { path: "/gantt", label: "gantt", hiddenForGuestViewer: true, desktop: true, optional: true },
   { path: "/calendar", label: "calendar", hiddenForGuestViewer: true, mobile: true },
   { path: "/members", label: "members", permission: "project.workload.view" },
   { path: "/files", label: "files", hiddenForGuestViewer: true, mobile: true },
@@ -69,8 +72,6 @@ export const projectTabs = [
     desktop: true,
   },
 ];
-/** แท็บของหัวแบบ Lead (Canvas O1/O2) */
-
 export function allowedProjectTab(
   tab: (typeof projectTabs)[number],
   access: Permissions,
@@ -79,6 +80,35 @@ export function allowedProjectTab(
     !(tab.hiddenForGuestViewer && access.guestViewer) &&
     (!tab.permission || access.permissions.includes(tab.permission))
   );
+}
+
+/**
+ * แท็บเสริมที่ผู้ใช้เลือกแสดงในโปรเจกต์นี้ · เลือกเป็นรายคน เก็บใน browser (ผู้ใช้ตัดสินใจ 2026-11-07)
+ * อ่าน storage ไม่ได้ (private window, ถูกบล็อก) = ใช้แท็บหลักอย่างเดียว
+ */
+function useOptionalTabs(ws: string, projectKey: string) {
+  const storageKey = `friday:project-tabs:${ws}:${projectKey}`;
+  const [shown, setShown] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem(storageKey) ?? "[]");
+      setShown(Array.isArray(saved) ? saved.filter((v): v is string => typeof v === "string") : []);
+    } catch {
+      setShown([]);
+    }
+  }, [storageKey]);
+  function toggle(label: string) {
+    setShown((current) => {
+      const next = current.includes(label) ? current.filter((v) => v !== label) : [...current, label];
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {
+        /* บันทึกไม่ได้ก็ยังใช้ได้ใน session นี้ */
+      }
+      return next;
+    });
+  }
+  return [shown, toggle] as const;
 }
 
 export function ProjectShell({
@@ -106,6 +136,7 @@ export function ProjectShell({
     queryKey: queryKeys.permissions(ws, projectKey),
     queryFn: () => api.get<Permissions>(`${endpoint}/my-permissions`),
   });
+  const [shownTabs, toggleTab] = useOptionalTabs(ws, projectKey);
   const canSeeTeam = !!permissions.data && !permissions.data.guestViewer;
   const health = useQuery({
     queryKey: ["overview", ws, projectKey, "scope=all"],
@@ -216,6 +247,14 @@ export function ProjectShell({
     });
   }
   const activeTeam = (team.data?.items ?? []).filter((m) => m.active);
+  const isCurrentTab = (tab: (typeof projectTabs)[number]) =>
+    route === tab.path || (!!tab.path && route.startsWith(`${tab.path}/`));
+  const allowedTabs = projectTabs.filter((tab) => allowedProjectTab(tab, access));
+  const optionalTabs = allowedTabs.filter((tab) => tab.optional);
+  // หน้าที่เปิดอยู่แสดงแท็บเสมอแม้ไม่ได้เลือกไว้ (เข้าจากลิงก์ในหน้าอื่น) เพื่อให้รู้ว่าอยู่หน้าไหน
+  const visibleTabs = allowedTabs.filter(
+    (tab) => !tab.optional || shownTabs.includes(tab.label) || isCurrentTab(tab),
+  );
   // P2 Automation มี breadcrumb ของหน้าเอง · แท็บอื่นใช้หัวและแท็บชุดเดียวกันทุกหน้า
   // (Canvas O1/O2/M1 ตัดหัวให้สั้นลง แต่ผู้ใช้เลือกให้แท็บไม่ขยับและครบทุกหน้า · 2026-11-07)
   const headerVariant = route.startsWith("/automation") ? "none" : "full";
@@ -363,19 +402,12 @@ export function ProjectShell({
             </div>
           </div>
           <nav className="tabs" aria-label={t("nav.projectViews")}>
-            {projectTabs
-              .filter((tab) => allowedProjectTab(tab, access))
-              .map((tab) => (
+            {visibleTabs.map((tab) => (
                 <Link
                   key={tab.path}
                   className={`tab${"mobile" in tab ? "" : " desktop-project-tab"}`}
                   data-tab={tab.label}
-                  aria-current={
-                    route === tab.path ||
-                    (!!tab.path && route.startsWith(`${tab.path}/`))
-                      ? "page"
-                      : undefined
-                  }
+                  aria-current={isCurrentTab(tab) ? "page" : undefined}
                   href={`${base}${tab.path}`}
                 >
                   {tab.label === "table" ? (
@@ -388,6 +420,42 @@ export function ProjectShell({
                   )}
                 </Link>
               ))}
+            {optionalTabs.length > 0 && (
+              // แท็บเสริมเป็นแท็บจอใหญ่ทั้งหมด ปุ่มเลือกจึงไม่แสดงบนมือถือ
+              <Popover.Root>
+                <Popover.Trigger asChild>
+                  <button
+                    type="button"
+                    className="tab desktop-project-tab project-tab-picker"
+                    aria-label={t("nav.chooseTabs")}
+                    title={t("nav.chooseTabs")}
+                  >
+                    <Plus size={16} aria-hidden="true" />
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="popover project-menu"
+                    sideOffset={6}
+                    align="start"
+                  >
+                    <fieldset className="project-tab-options">
+                      <legend className="muted">{t("nav.moreTabs")}</legend>
+                      {optionalTabs.map((tab) => (
+                        <label key={tab.path} className="menu-item">
+                          <input
+                            type="checkbox"
+                            checked={shownTabs.includes(tab.label)}
+                            onChange={() => toggleTab(tab.label)}
+                          />
+                          {t(`nav.${tab.label}`)}
+                        </label>
+                      ))}
+                    </fieldset>
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
+            )}
           </nav>
           <p className="muted mobile-project-note">{t("nav.mobileOnly")}</p>
         </header>

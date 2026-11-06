@@ -1244,6 +1244,23 @@ kbd {
   margin-top: 10px;
   border-bottom: 0;
 }
+.project-tab-picker {
+  cursor: pointer;
+  padding: 0 10px;
+}
+.project-tab-options {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.project-tab-options legend {
+  padding: 4px 10px 6px;
+  font-size: 12px;
+}
+.project-tab-options .menu-item {
+  gap: 8px;
+  cursor: pointer;
+}
 .mobile-menu,
 .mobile-bottom-nav,
 .mobile-project-note {

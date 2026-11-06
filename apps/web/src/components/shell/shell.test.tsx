@@ -108,18 +108,23 @@ describe("Workspace / Project shell", () => {
     expect(router.push).toHaveBeenCalledWith("/w/sample/search?q=DE-1");
   });
 
-  it("Admin เห็น 12 project tabs (รวม Reports) และ Drawer เปิดตาม query โดยรักษา filter อื่นตอนปิด", async () => {
+  it("Admin เห็นแท็บหลัก 8 แท็บ และ Drawer เปิดตาม query โดยรักษา filter อื่นตอนปิด", async () => {
     navigation.pathname = "/w/sample/p/DE";
     navigation.search = "issue=DE-1&filter=open";
     const user = userEvent.setup();
     renderWithProviders(<ProjectExample />);
     await screen.findByRole("dialog", { name: "รายละเอียดงาน DE-1" });
     const tabs = within(screen.getByLabelText("มุมมองโปรเจกต์"));
-    expect(tabs.getAllByRole("link", { hidden: true })).toHaveLength(12);
-    expect(tabs.getByRole("link", { name: "Reports", hidden: true })).toHaveAttribute(
-      "href",
-      "/w/sample/p/DE/reports",
-    );
+    expect(tabs.getAllByRole("link", { hidden: true }).map((l) => l.textContent)).toEqual([
+      "Overview",
+      "TableList",
+      "Kanban",
+      "Timeline",
+      "Calendar",
+      "Members",
+      "Files",
+      "Settings",
+    ]);
     expect(screen.getAllByRole("link", { name: "นำเข้าแผน", hidden: true })[0]).toHaveAttribute(
       "href",
       "/w/sample/import",
@@ -418,6 +423,47 @@ describe("Workspace / Project shell", () => {
     // แท็บไม่ขยับเมื่อสลับไปภาพรวม Lead: มี breadcrumb และแท็บครบเหมือนหน้าอื่น
     expect(document.querySelector(".project-crumb")).not.toBeNull();
     expect(tabs.getByRole("link", { name: "Timeline", hidden: true })).toBeInTheDocument();
-    expect(tabs.getByRole("link", { name: "Gantt", hidden: true })).toBeInTheDocument();
+    // ภาพรวม Lead เป็นแท็บเสริมที่ยังไม่ได้เลือก แต่เป็นหน้าที่เปิดอยู่จึงแสดง
+    expect(tabs.getByRole("link", { name: "ภาพรวม Lead", hidden: true })).toHaveAttribute("aria-current", "page");
+    expect(tabs.queryByRole("link", { name: "Gantt", hidden: true })).not.toBeInTheDocument();
+  });
+
+  it("เลือกแสดงแท็บเสริม (ภาพรวม Lead, Reports, Backlog, Gantt) ได้ และจำค่าไว้ต่อโปรเจกต์", async () => {
+    navigation.pathname = "/w/sample/p/DE";
+    const user = userEvent.setup();
+    const { unmount } = renderWithProviders(<ProjectExample />);
+    const nav = await screen.findByRole("navigation", { name: "มุมมองโปรเจกต์" });
+    const tabs = within(nav);
+    expect(tabs.queryByRole("link", { name: "Backlog", hidden: true })).not.toBeInTheDocument();
+    await user.click(tabs.getByRole("button", { name: "เลือกแท็บที่แสดง", hidden: true }));
+    const options = within(await screen.findByRole("group", { name: "แท็บเพิ่มเติม" }));
+    expect(options.getAllByRole("checkbox").map((c) => c.closest("label")?.textContent)).toEqual([
+      "ภาพรวม Lead",
+      "Reports",
+      "Backlog",
+      "Gantt",
+    ]);
+    await user.click(options.getByRole("checkbox", { name: "Backlog" }));
+    await user.click(options.getByRole("checkbox", { name: "Gantt" }));
+    // แท็บเสริมอยู่ตำแหน่งเดิมในลำดับ ไม่ต่อท้าย
+    expect(tabs.getAllByRole("link", { hidden: true }).map((l) => l.textContent)).toEqual([
+      "Overview",
+      "Backlog",
+      "TableList",
+      "Kanban",
+      "Timeline",
+      "Gantt",
+      "Calendar",
+      "Members",
+      "Files",
+      "Settings",
+    ]);
+    await user.click(options.getByRole("checkbox", { name: "Gantt" }));
+    expect(tabs.queryByRole("link", { name: "Gantt", hidden: true })).not.toBeInTheDocument();
+    unmount();
+    renderWithProviders(<ProjectExample />);
+    const again = within(await screen.findByRole("navigation", { name: "มุมมองโปรเจกต์" }));
+    expect(await again.findByRole("link", { name: "Backlog", hidden: true })).toHaveAttribute("href", "/w/sample/p/DE/backlog");
+    expect(again.queryByRole("link", { name: "Gantt", hidden: true })).not.toBeInTheDocument();
   });
 });

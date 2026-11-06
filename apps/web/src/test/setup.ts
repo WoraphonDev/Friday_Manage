@@ -27,5 +27,6 @@ afterEach(() => {
   navigation.pathname = "/w/sample";
   navigation.search = "";
   document.cookie = "fm_csrf=; Max-Age=0; path=/";
+  localStorage.clear();
 });
 afterAll(() => server.close());

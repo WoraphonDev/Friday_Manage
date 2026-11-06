@@ -4,11 +4,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import * as Popover from "@radix-ui/react-popover";
+import { MoreHorizontal } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { formatDateRange } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Project } from "@/lib/types";
 import {
+  AvatarStack,
   Badge,
   ErrorState,
   Forbidden,
@@ -18,6 +21,17 @@ import {
 } from "@/components/ui";
 import { IssueDrawer } from "@/features/issue-drawer/IssueDrawer";
 import { useWorkspace } from "./workspace-shell";
+
+// ใช้ queryKey เดียวกับหน้า Overview และหน้า Members เพื่อไม่ยิง API ซ้ำเมื่อเปิดหน้านั้น
+type HealthLevel = "on_track" | "at_risk" | "off_track";
+const HEALTH_TONE = { on_track: "green", at_risk: "amber", off_track: "red" } as const;
+interface HeaderMember {
+  userId: string;
+  displayName: string;
+  initials: string;
+  avatarUrl: string | null;
+  active: boolean;
+}
 
 export const projectTabs = [
   { path: "", label: "overview" },
@@ -81,6 +95,19 @@ export function ProjectShell({
   const permissions = useQuery({
     queryKey: queryKeys.permissions(ws, projectKey),
     queryFn: () => api.get<Permissions>(`${endpoint}/my-permissions`),
+  });
+  const canSeeTeam = !!permissions.data && !permissions.data.guestViewer;
+  const health = useQuery({
+    queryKey: ["overview", ws, projectKey, "scope=all"],
+    queryFn: () =>
+      api.get<{ health: { level: HealthLevel } }>(`${endpoint}/overview?scope=all`),
+    enabled: !!permissions.data,
+  });
+  const team = useQuery({
+    queryKey: ["project-members", ws, projectKey],
+    queryFn: () =>
+      api.get<{ items: HeaderMember[]; canInvite: boolean }>(`${endpoint}/members`),
+    enabled: canSeeTeam,
   });
   const error = project.error ?? permissions.error;
   async function joinAsAdmin() {
@@ -153,24 +180,37 @@ export function ProjectShell({
       scroll: false,
     });
   }
+  const activeTeam = (team.data?.items ?? []).filter((m) => m.active);
+  // หน้าที่ไม่มีแท็บของตัวเอง เข้าจากเมนู ⋯ ตาม Canvas (Main มีปุ่ม ⋯ ข้าง Invite)
+  const menuItems = [
+    { path: "/settings", label: "settings", permission: "project.settings" },
+    { path: "/automation", label: "automation", permission: "project.automation" },
+    { path: "/plan-changes", label: "planChanges", permission: "project.baseline" },
+  ].filter((item) => access.permissions.includes(item.permission));
   return (
     <>
       <header className="project-header">
-        <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-          {workspace.name} / {t("nav.projects")} / {project.data.name}
-        </div>
-        <div className="project-title-row">
-          <span
-            className="project-icon"
-            style={{ background: project.data.color ?? "#334155" }}
-          >
-            {projectKey}
-          </span>
-          <div className="project-title">
-            <h1>{project.data.name}</h1>
-            <div className="project-meta">
+        <div className="project-header-row">
+          <div className="project-heading">
+            <div className="muted project-crumb">
+              {workspace.name} / {t("nav.projects")} / {project.data.name}
+            </div>
+            <div className="project-title-row">
+              <span
+                className="project-icon"
+                style={{ background: project.data.color ?? "#334155" }}
+                aria-hidden="true"
+              >
+                {projectKey.slice(0, 2)}
+              </span>
+              <h1>{project.data.name}</h1>
               <Badge tone="blue">{t(`status.${project.data.status}`)}</Badge>
-              <span>
+              {health.data && (
+                <Badge tone={HEALTH_TONE[health.data.health.level]}>
+                  {t(`health.${health.data.health.level}`)}
+                </Badge>
+              )}
+              <span className="project-dates">
                 {formatDateRange(
                   project.data.startDate,
                   project.data.goliveDate,
@@ -179,11 +219,67 @@ export function ProjectShell({
               </span>
             </div>
           </div>
-          {access.permissions.includes("issue.create") && (
-            <Link className="button button-primary" href={`${base}?new=1`}>
-              {t("nav.new")}
-            </Link>
-          )}
+          <div className="project-actions">
+            {activeTeam.length > 0 && (
+              <span
+                className="project-team"
+                title={t("nav.projectTeam", { count: activeTeam.length })}
+              >
+                <AvatarStack
+                  max={5}
+                  people={activeTeam.map((m) => ({
+                    id: m.userId,
+                    displayName: m.displayName,
+                    initials: m.initials,
+                    avatarUrl: m.avatarUrl,
+                  }))}
+                />
+              </span>
+            )}
+            {team.data?.canInvite && (
+              <Link
+                className="button project-invite"
+                href={`${base}/members#invites`}
+              >
+                {t("nav.invite")}
+              </Link>
+            )}
+            {menuItems.length > 0 && (
+              <Popover.Root>
+                <Popover.Trigger asChild>
+                  <button
+                    type="button"
+                    className="button button-icon project-menu-trigger"
+                    aria-label={t("nav.projectMenu")}
+                  >
+                    <MoreHorizontal size={18} aria-hidden="true" />
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="popover project-menu"
+                    sideOffset={6}
+                    align="end"
+                  >
+                    <nav aria-label={t("nav.projectMenu")}>
+                      {menuItems.map((item) => (
+                        <Popover.Close asChild key={item.path}>
+                          <Link className="menu-item" href={`${base}${item.path}`}>
+                            {t(`nav.${item.label}`)}
+                          </Link>
+                        </Popover.Close>
+                      ))}
+                    </nav>
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
+            )}
+            {access.permissions.includes("issue.create") && (
+              <Link className="button button-primary" href={`${base}?new=1`}>
+                {t("nav.new")}
+              </Link>
+            )}
+          </div>
         </div>
         <nav className="tabs" aria-label={t("nav.projectViews")}>
           {projectTabs
@@ -200,7 +296,7 @@ export function ProjectShell({
                 }
                 href={`${base}${tab.path}`}
               >
-                {t(`nav.${tab.label}`)}
+                {t(`nav.${tab.path === "/members" ? "projectMembers" : tab.label}`)}
               </Link>
             ))}
         </nav>

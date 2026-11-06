@@ -137,6 +137,48 @@ describe("Workspace / Project shell", () => {
     });
   });
 
+  it("หัวโปรเจกต์ตาม Canvas: Health, ทีม, Invite, เมนู ⋯ และแท็บ Members", async () => {
+    navigation.pathname = "/w/sample/p/DE";
+    navigation.search = "";
+    server.use(
+      http.get("*/api/v1/w/:ws/projects/:key/overview", () =>
+        HttpResponse.json({ health: { level: "off_track" } }),
+      ),
+      http.get("*/api/v1/w/:ws/projects/:key/members", () =>
+        HttpResponse.json({
+          canInvite: true,
+          items: [
+            { userId: "u1", displayName: "Mick", initials: "MK", avatarUrl: null, active: true },
+            { userId: "u2", displayName: "Kaijeaw", initials: "KJ", avatarUrl: null, active: true },
+            { userId: "u3", displayName: "Pond", initials: "PD", avatarUrl: null, active: false },
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<ProjectExample />);
+    expect(await screen.findByText("Off track")).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: "Kaijeaw" })).toHaveTextContent("KJ");
+    // สมาชิกที่ปิดบัญชีแล้วไม่แสดงใน Avatar stack
+    expect(screen.queryByRole("img", { name: "Pond" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Invite" })).toHaveAttribute(
+      "href",
+      "/w/sample/p/DE/members#invites",
+    );
+    const tabs = within(screen.getByLabelText("มุมมองโปรเจกต์"));
+    expect(tabs.getByRole("link", { name: "Members", hidden: true })).toHaveAttribute(
+      "href",
+      "/w/sample/p/DE/members",
+    );
+    await user.click(screen.getByRole("button", { name: "เมนูโปรเจกต์" }));
+    const menu = within(await screen.findByRole("navigation", { name: "เมนูโปรเจกต์" }));
+    expect(menu.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual([
+      "/w/sample/p/DE/settings",
+      "/w/sample/p/DE/automation",
+      "/w/sample/p/DE/plan-changes",
+    ]);
+  });
+
   it("Guest Viewer เห็นเฉพาะ Overview/Timeline และไม่มี New/Admin/New project", async () => {
     navigation.pathname = "/w/sample/p/DE";
     server.use(

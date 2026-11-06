@@ -6,7 +6,8 @@ import { SYSTEM_DB } from '../db/db.module.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
 import { Audience, type IssueCtx, type ProjectCtx } from './audience.js';
 import { Notifier } from './notifier.js';
-import { REASONS } from './rules.js';
+import { EMAIL_DEFAULT_ON } from '../channels/dispatcher.js';
+import { IN_APP_CHANNEL, REASONS } from './rules.js';
 
 const s = schema;
 type DueReminder = '1d_and_today' | '3d' | 'today_only';
@@ -123,17 +124,18 @@ export class Reminders {
 
   /**
    * 08:30 · Daily digest (งานวันนี้ + เลยกำหนด + รอ Review) ตาม digest ใน Profile
-   * Canvas I ปิด In-app ของ digest เป็นค่าเริ่มต้น จึงส่งเข้า Inbox เฉพาะคนที่เปิดเอง · Email / LINE เป็นของ A24 / A25
+   * ผู้รับ = ใครก็ตามที่เปิดช่องทางใดช่องทางหนึ่งของ digest (K01): In-app ปิดเป็นค่าเริ่มต้น (Canvas I) จึงเข้า Inbox เฉพาะคนที่เปิดเอง
+   * ส่วน Email เปิดเป็นค่าเริ่มต้น (EMAIL_DEFAULT_ON) · คนที่ไม่ได้เปิด In-app ได้แถว in_app = false ให้ท่อส่งออกนอกแอปใช้
    */
   async digest(date = today()) {
-    const optedIn = await this.audience.inAppEnabled('digest.daily');
+    const optedIn = await this.digestRecipients();
     if (!optedIn.length) return { date, sent: 0 };
     const settings = await this.settings(optedIn.map((o) => o.userId));
     const open = await this.openIssues(date);
     const assignees = await this.audience.assignees(open.map((o) => o.issue.id));
     const workspaceCalendars = new Map<string, WorkCalendar>();
     let sent = 0;
-    for (const { workspaceId, userId } of optedIn) {
+    for (const { workspaceId, userId, inApp } of optedIn) {
       const mode: Digest = settings.get(`${workspaceId}:${userId}`)?.digest ?? 'workdays';
       if (mode === 'off') continue;
       if (mode === 'workdays') {
@@ -158,6 +160,7 @@ export class Reminders {
         payload: { date, dueToday, overdue: overdue.slice(0, MAX_SUMMARY_ITEMS), overdueCount: overdue.length, review },
         reason: REASONS.digest,
         dedupeKey: `digest:${date}`,
+        inAppOff: inApp ? [] : [userId],
       });
       sent++;
     }
@@ -184,6 +187,28 @@ export class Reminders {
       inAppOff: muted,
     });
     return recipients.filter((id) => !muted.has(id)).length;
+  }
+
+  /** สมาชิก active (บัญชีไม่ถูกปิด) ที่เปิด digest อย่างน้อยหนึ่งช่องทาง · inApp = เปิด In-app เอง (ค่าเริ่มต้นปิด) */
+  private async digestRecipients() {
+    const p = s.userNotificationPrefs;
+    const members = await this.db
+      .select({ workspaceId: s.workspaceMembers.workspaceId, userId: s.workspaceMembers.userId })
+      .from(s.workspaceMembers)
+      .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
+      .innerJoin(s.workspaces, eq(s.workspaces.id, s.workspaceMembers.workspaceId))
+      .where(and(eq(s.workspaceMembers.status, 'active'), isNull(s.users.disabledAt), isNull(s.workspaces.deletedAt)));
+    const prefs = await this.db.select({ workspaceId: p.workspaceId, userId: p.userId, channel: p.channel, enabled: p.enabled }).from(p).where(eq(p.eventType, 'digest.daily'));
+    const pref = new Map(prefs.map((r) => [`${r.workspaceId}:${r.userId}:${r.channel}`, r.enabled]));
+    const out: Array<{ workspaceId: string; userId: string; inApp: boolean }> = [];
+    for (const m of members) {
+      const k = `${m.workspaceId}:${m.userId}`;
+      const inApp = pref.get(`${k}:${IN_APP_CHANNEL}`) === true;
+      const email = pref.get(`${k}:email`) ?? EMAIL_DEFAULT_ON.has('digest.daily');
+      const external = email || [...pref.entries()].some(([key, on]) => on && key.startsWith(`${k}:`) && !key.endsWith(`:${IN_APP_CHANNEL}`));
+      if (inApp || external) out.push({ ...m, inApp });
+    }
+    return out;
   }
 
   /** งานที่ยังไม่เสร็จและมี Plan End ไม่เกิน until · ไม่รวมโปรเจกต์ที่เก็บถาวรหรือถูกลบ */

@@ -10,6 +10,7 @@ import { sign } from '../src/channels/render.js';
 import { EventBus } from '../src/core/events.js';
 import { Mailer, type SmtpConfig } from '../src/core/mail.js';
 import { Notifier } from '../src/notifications/notifier.js';
+import { Reminders } from '../src/notifications/reminders.js';
 import { addMember, client, type Client, seedTeam, signup, startApp, type TestApp } from './helpers.js';
 
 process.env.SMTP_HOST = 'smtp.test.example.com';
@@ -517,6 +518,42 @@ describe('In-app กับ Email แยกกัน (BUG-13)', () => {
     await pref('issue.commented', 'in_app', false);
     await comment(task.id);
     expect(hits).toHaveLength(1);
+  });
+});
+
+describe('Daily digest ทาง Email โดยไม่เปิด In-app (K01)', () => {
+  async function overdueTask() {
+    const task = await team.lead.post(`${team.ws}/projects/${team.key}/issues`, { title: 'งานเลยกำหนดของ Dev', moduleId: team.project.modules[0].id, assigneeIds: [team.devId] });
+    expect(task.status, JSON.stringify(task.body)).toBe(201);
+    await t.owner.query(`UPDATE issues SET plan_end = '2026-11-02' WHERE id = $1`, [task.body.id]);
+    return task.body as { id: string };
+  }
+  const digestRows = async () => (await t.owner.query(`SELECT in_app FROM notifications WHERE event_type = 'digest.daily' AND recipient_id = $1`, [team.devId])).rows;
+  const pref = (channel: string, enabled: boolean) =>
+    t.owner.query(`INSERT INTO user_notification_prefs (workspace_id, user_id, event_type, channel, enabled) VALUES ($1,$2,'digest.daily',$3,$4)`, [wsId, team.devId, channel, enabled]);
+
+  it('Email เปิด / In-app ปิด → ได้ Email และแถว in_app = false ที่ไม่เข้า Inbox', async () => {
+    const task = await overdueTask();
+    await pref('email', true);
+    await pref('in_app', false);
+    mails = [];
+    await t.app.get(Reminders).digest('2026-11-06');
+    expect(await digestRows()).toEqual([{ in_app: false }]);
+    expect(mails.filter((m) => m.to === `dev@${team.slug}.example.com`)).toHaveLength(1);
+    const inbox = (await team.dev.get('/me/notifications?filter=all')).body.items as Array<{ eventType: string }>;
+    expect(inbox.some((i) => i.eventType === 'digest.daily')).toBe(false);
+    await t.owner.query('DELETE FROM issues WHERE id = $1', [task.id]);
+  });
+
+  it('ปิดทุกช่องทาง → ไม่สร้างแถว · เปิด In-app → เข้า Inbox', async () => {
+    const task = await overdueTask();
+    await pref('email', false);
+    await t.app.get(Reminders).digest('2026-11-06');
+    expect(await digestRows()).toEqual([]);
+    await pref('in_app', true);
+    await t.app.get(Reminders).digest('2026-11-06');
+    expect(await digestRows()).toEqual([{ in_app: true }]);
+    await t.owner.query('DELETE FROM issues WHERE id = $1', [task.id]);
   });
 });
 

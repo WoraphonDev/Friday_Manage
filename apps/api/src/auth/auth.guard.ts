@@ -20,7 +20,9 @@ export class AuthGuard implements CanActivate {
   async canActivate(ctx: ExecutionContext) {
     const req = ctx.switchToHttp().getRequest<AppRequest>();
 
-    if (!SAFE.has(req.method)) {
+    // Webhook ขาเข้า (LINE, GitHub, Stripe …) เรียกจากเซิร์ฟเวอร์ภายนอกที่ไม่มีคุกกี้ จึงข้าม CSRF · แต่ละ route ต้องตรวจลายเซ็นของผู้ให้บริการเอง
+    const isHook = req.path.startsWith('/api/v1/hooks/');
+    if (!SAFE.has(req.method) && !isHook) {
       const cookie = req.cookies?.[CSRF_COOKIE];
       if (!cookie || cookie !== req.get('x-csrf-token')) {
         throw new AppError(403, 'csrf_failed', 'คำขอไม่ผ่านการตรวจ CSRF · โหลดหน้าใหม่แล้วลองอีกครั้ง');

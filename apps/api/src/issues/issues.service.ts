@@ -87,6 +87,9 @@ export const BulkIssueBody = z.discriminatedUnion('delete', [
   z.object({ keys: z.array(z.string().regex(ISSUE_KEY_PATTERN)).min(1).max(500), delete: z.literal(false).optional(), set: PatchIssueBody.pick({ planEnd: true, moduleId: true, sprintId: true, assigneeIds: true, planChangeReason: true }).refine((v) => Object.keys(v).length > 0, 'ต้องระบุค่าที่จะแก้') }).strict(),
 ]);
 
+/** DELETE i/:key · P3 เลือกลบ Sub-task ด้วย (ค่าเริ่มต้น) หรือเก็บไว้เป็น Task เดี่ยว */
+export const RemoveIssueQuery = z.object({ subtasks: z.enum(['delete', 'keep']).default('delete') });
+
 /** ลากการ์ดใน Kanban / Backlog / ปุ่ม ‹ › บนมือถือ (03-api › POST i/move) */
 export const MoveIssueBody = z.object({
   /** สถานะใหม่ · ส่งคอลัมน์ของบอร์ดมาตรฐานได้ ระบบเลือกสถานะของ Workflow งานนั้นที่ผูกกับคอลัมน์ให้ (เช่น Bug: Review → Fixed) */
@@ -331,20 +334,33 @@ export class IssuesService {
     });
   }
 
-  async remove(auth: AuthInfo, tenant: TenantInfo, issueKey: string) {
+  async remove(auth: AuthInfo, tenant: TenantInfo, issueKey: string, options: z.infer<typeof RemoveIssueQuery> = { subtasks: 'delete' }) {
     const events: DomainEvent[] = [];
     const result = await this.db.run(auth, tenant, async (tx) => {
       const { project, access, issue } = await this.lifecycleIssue(tx, auth, tenant, issueKey);
       if (issue.deletedAt) return { key: issueKey.toUpperCase(), deletedAt: issue.deletedAt, alreadyDeleted: true };
       const children = await tx.select().from(s.issues).where(and(eq(s.issues.parentId, issue.id), isNull(s.issues.deletedAt))).for('update');
-      const rows = [issue, ...children];
+      // P3 "เก็บ Sub-task ไว้ เปลี่ยนเป็น Task เดี่ยว": ตัดออกจากแม่ก่อนลบ · ใช้ Module / กลุ่มงาน / Sprint ของแม่เมื่อลูกยังไม่มี
+      // กู้คืนแม่ภายหลังจะไม่ผูกลูกกลับ เพราะลูกไม่ได้ถูกลบใน batch นี้
+      if (options.subtasks === 'keep' && children.length) {
+        const parentKey = `${project.key}-${issue.number}`;
+        for (const child of children) {
+          const [updated] = await tx.update(s.issues).set({
+            parentId: null, moduleId: child.moduleId ?? issue.moduleId, phaseId: child.phaseId ?? issue.phaseId, sprintId: child.sprintId ?? issue.sprintId,
+            version: sql`${s.issues.version} + 1`, updatedAt: new Date(),
+          }).where(eq(s.issues.id, child.id)).returning();
+          await tx.insert(s.activities).values({ workspaceId: tenant.workspaceId, projectId: project.id, issueId: child.id, actorId: auth.userId, verb: 'updated', field: 'parentId', oldValue: parentKey, newValue: null });
+          events.push(eventFor(auth, tenant, project, updated)('issue.updated', { fields: ['parentId'] }));
+        }
+      }
+      const rows = options.subtasks === 'keep' ? [issue] : [issue, ...children];
       const deletedAt = new Date();
       await tx.update(s.issues).set({ deletedAt, version: sql`${s.issues.version} + 1` }).where(inArray(s.issues.id, rows.map((r) => r.id)));
       await tx.insert(s.activities).values(rows.map((r) => ({ workspaceId: tenant.workspaceId, projectId: project.id, issueId: r.id, actorId: auth.userId,
         verb: 'deleted', field: 'deletedAt', newValue: { deletedAt: deletedAt.toISOString(), cascadeRootId: issue.id } })));
-      await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'data', action: 'issue.deleted', targetType: 'issue', targetId: issue.id, summary: `ลบ ${project.key}-${issue.number} พร้อม Sub-task ${children.length} งาน` });
+      await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'data', action: 'issue.deleted', targetType: 'issue', targetId: issue.id, summary: options.subtasks === 'keep' ? `ลบ ${project.key}-${issue.number} และแยก Sub-task ${children.length} งานเป็น Task เดี่ยว` : `ลบ ${project.key}-${issue.number} พร้อม Sub-task ${children.length} งาน` });
       for (const row of rows) events.push(eventFor(auth, tenant, project, row)('issue.deleted', { cascadeRootId: issue.id }));
-      return { key: issueKey.toUpperCase(), deletedAt, restorableUntil: restoreDeadline(deletedAt), subtasks: children.length };
+      return { key: issueKey.toUpperCase(), deletedAt, restorableUntil: restoreDeadline(deletedAt), subtasks: options.subtasks === 'keep' ? 0 : children.length, keptSubtasks: options.subtasks === 'keep' ? children.length : 0 };
     });
     await this.events.publish(events);
     return result;

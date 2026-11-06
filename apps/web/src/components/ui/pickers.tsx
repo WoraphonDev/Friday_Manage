@@ -18,6 +18,7 @@ export function DatePicker({
   yearFormat,
   min,
   max,
+  compact = false,
 }: {
   value?: string;
   onValueChange: (value: string) => void;
@@ -25,6 +26,8 @@ export function DatePicker({
   yearFormat?: YearFormat;
   min?: string;
   max?: string;
+  /** แสดงเป็นข้อความวันที่สั้น ๆ ไม่มีไอคอน (การ์ดคุณสมบัติของงาน) */
+  compact?: boolean;
 }) {
   const t = useTranslations("common.app");
   const preference = useContext(YearFormatContext);
@@ -36,16 +39,18 @@ export function DatePicker({
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger asChild>
           <Button
-            className="picker-trigger"
+            className={compact ? "picker-trigger picker-compact" : "picker-trigger"}
             aria-labelledby={`${id}-label ${id}-value`}
           >
-            <CalendarDays size={16} />
+            {!compact && <CalendarDays size={16} />}
             <span id={`${id}-value`}>
               {value
-                ? formatDate(value, yearFormat ?? preference, true)
-                : t("date")}
+                ? formatDate(value, yearFormat ?? preference, !compact)
+                : compact
+                  ? "—"
+                  : t("date")}
             </span>
-            <ChevronDown size={14} />
+            {!compact && <ChevronDown size={14} />}
           </Button>
         </Popover.Trigger>
         <Popover.Portal>

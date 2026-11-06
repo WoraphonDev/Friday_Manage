@@ -3,7 +3,7 @@ import type { Response } from 'express';
 import { Auth, type AuthInfo, Tenant, type TenantInfo } from '../common/request.js';
 import { TenantGuard } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
-import { AssigneesBody, BulkIssueBody, CreateIssueBody, IssuesService, ListQuery, MoveIssueBody, PatchIssueBody } from './issues.service.js';
+import { AssigneesBody, BulkIssueBody, CreateIssueBody, IssuesService, ListQuery, MoveIssueBody, PatchIssueBody, RemoveIssueQuery } from './issues.service.js';
 
 @Controller('w/:ws')
 @UseGuards(TenantGuard)
@@ -37,8 +37,8 @@ export class IssuesController {
   }
 
   @Delete('issues/:issueKey')
-  remove(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('issueKey') key: string) {
-    return this.issues.remove(auth, tenant, key);
+  remove(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('issueKey') key: string, @Query() query: unknown) {
+    return this.issues.remove(auth, tenant, key, parse(RemoveIssueQuery, query));
   }
 
   @Post('issues/:issueKey/restore')

@@ -84,6 +84,26 @@ describe('ลบ กู้คืน และผลกระทบ', () => {
     expect(again.body.version).toBe(restored.body.version);
   });
 
+  it('P3 เก็บ Sub-task: ลูกเป็น Task เดี่ยวใน Module ของแม่ ลบเฉพาะแม่ และกู้คืนแม่ไม่ผูกลูกกลับ', async () => {
+    const parent = await create();
+    const child = await create({ parentKey: parent.key });
+    seen.length = 0;
+    const removed = await team.lead.delete(`${url(parent.key)}?subtasks=keep`);
+    expect(removed.status).toBe(200);
+    expect(removed.body).toMatchObject({ subtasks: 0, keptSubtasks: 1 });
+    const kept = await team.lead.get(url(child.key));
+    expect(kept.status).toBe(200);
+    expect(kept.body).toMatchObject({ parentKey: null, moduleId: parent.moduleId });
+    expect(kept.body.version).toBeGreaterThan(child.version);
+    expect(seen.filter((e) => e.type === 'issue.deleted').map((e) => e.issueId)).toEqual([parent.id]);
+    expect(seen.some((e) => e.type === 'issue.updated' && e.issueId === child.id)).toBe(true);
+    const activity = await t.owner.query("SELECT old_value FROM activities WHERE issue_id=$1 AND field='parentId'", [child.id]);
+    expect(activity.rows[0].old_value).toBe(parent.key);
+    expect((await team.lead.post(`${url(parent.key)}/restore`)).status).toBe(200);
+    expect((await team.lead.get(url(child.key))).body.parentKey).toBeNull();
+    expect((await team.lead.delete(`${url(parent.key)}?subtasks=nope`)).status).toBe(400);
+  });
+
   it('กู้คืนเมื่อเกิน 30 วันไม่ได้ และไม่เปลี่ยนข้อมูลหรือส่ง event', async () => {
     const issue = await create();
     await team.lead.delete(url(issue.key));

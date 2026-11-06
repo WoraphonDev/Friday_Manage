@@ -469,6 +469,29 @@ td {
   transform: translate(-50%, -50%);
   border-radius: 12px;
 }
+.dialog-wide {
+  width: min(860px, calc(100vw - 32px));
+  top: 40px;
+  transform: translateX(-50%);
+  max-height: calc(100dvh - 80px);
+  padding: 0 20px;
+}
+.dialog-wide > .dialog-heading {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: white;
+  margin: 0 -20px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.dialog-wide > .dialog-heading h2 {
+  font-size: 17px;
+  font-weight: 700;
+}
+.dialog-wide > .dialog-body {
+  margin-top: 0;
+}
 .dialog-heading {
   display: flex;
   justify-content: space-between;
@@ -495,6 +518,40 @@ td {
   max-height: 100dvh;
   border-left: 1px solid var(--border);
 }
+/* ขนาด Drawer ตาม Canvas: C/D 860 px และ B 640 px เริ่มใต้หัวโปรเจกต์ (--drawer-top ตั้งจาก ProjectShell), K2 920 px เต็มสูง */
+.drawer-detail,
+.drawer-create {
+  top: var(--drawer-top, 0px);
+  max-height: calc(100dvh - var(--drawer-top, 0px));
+}
+.drawer-detail {
+  width: min(860px, 100vw);
+}
+.drawer-create {
+  width: min(640px, 100vw);
+}
+.drawer-wide {
+  width: min(920px, 100vw);
+}
+.picker-compact {
+  min-height: 28px;
+  padding: 2px 4px;
+  border-color: transparent;
+  background: transparent;
+  font-weight: 400;
+}
+.picker-compact:hover {
+  border-color: var(--border);
+}
+.overlay-below {
+  top: var(--drawer-top, 0px);
+}
+.drawer-bare {
+  padding: 0;
+}
+.drawer-bare > .drawer-body {
+  padding-top: 0;
+}
 .drawer-nested {
   width: min(760px, 100vw);
   padding: 0 20px 0 0;
@@ -506,6 +563,10 @@ td {
 .drawer-nested > .drawer-parent { grid-column: 1; grid-row: 1 / 4; writing-mode: vertical-rl; justify-content: flex-start; margin: 0; border-radius: 0; padding: 20px; }
 .drawer-nested > .dialog-heading { grid-column: 2; padding-top: 20px; }
 .drawer-nested > .drawer-body, .drawer-nested > p { grid-column: 2; }
+.drawer-nested.drawer-detail { width: min(860px, 100vw); grid-template-columns: 44px minmax(0, 1fr); column-gap: 0; padding: 0; }
+.drawer-nested.drawer-create { width: min(640px, 100vw); }
+.drawer-nested.drawer-bare > .drawer-parent { padding: 16px 12px; font-size: 13px; font-weight: 600; background: #fff; color: var(--foreground); border-right: 1px solid var(--border); }
+.drawer-nested.drawer-bare > .drawer-parent:hover { background: #f8f9fb; color: var(--primary); }
 .drawer-parent {
   display: flex;
   align-items: center;
@@ -1237,6 +1298,12 @@ kbd {
   }
   .mobile-bottom-nav .badge {
     margin: 0;
+  }
+  .drawer-detail,
+  .drawer-create,
+  .overlay-below {
+    top: 0;
+    max-height: 100dvh;
   }
   .drawer,
   .drawer-nested {

@@ -14,6 +14,13 @@
 | VD08 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
 | VD09 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
 | VD15 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
+| VD10 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ดูด้านล่าง |
+| VD11 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ดูด้านล่าง |
+| VD12 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ยังไม่มีผลทดสอบ / Requirement / Screen / Labels (ดูด้านล่าง) |
+| VD13 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ดูด้านล่าง |
+| VD18 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ยังไม่มีแท็บ รายละเอียด / ผลทดสอบ / Commits / คอมเมนต์ ของ M4 |
+| VD22 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | Canvas K3 ไม่มีช่องเพิ่มวันทำการแยก (ดูด้านล่าง) |
+| VD23 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | เพิ่ม API `DELETE issues/:key?subtasks=keep` |
 
 ## VD02 · Project header
 
@@ -65,3 +72,36 @@
 
 - มือถือแสดงการ์ดสรุป M6 (ระดับ Health, % ใหญ่, แถบพร้อมเส้นเวลา, Overdue / Bug เปิด / รออนุมัติ จาก `counts`), Milestone ถัดไป, ความเสี่ยง (สร้างจาก Health / Module / counts) แล้วตามด้วย Module และ Workload · ซ่อนการ์ด desktop
 - หัวโปรเจกต์มือถือตาม M6/M7: ปุ่มกลับ + ไอคอน + ชื่อ + บรรทัดรายละเอียด + ⋯ (มี + New) · แท็บ Overview, Kanban, List, Calendar, Files
+
+## VD12 / VD13 · Drawer รายละเอียดงาน (C, D, K2)
+
+- Drawer C/D กว้าง 860 px เริ่มใต้หัวโปรเจกต์ (`--drawer-top` จาก ProjectShell) · K2 Bug กว้าง 920 px เต็มสูง · วัดที่จอกว้าง: x/width/top ตรงตำแหน่งใต้หัวโปรเจกต์
+- แถบหัวของ Drawer: breadcrumb (Module pill › กลุ่มงาน › งานแม่ › Key + ป้ายประเภท), ‹ 1/N › สำหรับ Sub-task, Watch · N, คัดลอกลิงก์, ⋯ (ขอเลื่อน Due, ลบงาน), ปิด
+- ชื่อ 24 px, สถานะเป็นปุ่มสีตามสถานะ + Mark complete (ย้ายไปสถานะ done แรกของ Workflow) + บรรทัดผู้สร้าง/แก้ไขล่าสุด
+- เนื้อหาต่อเนื่องแทน 4 แท็บ: Description, Acceptance criteria / Checklist (แยกหัวข้อ, ปุ่มเลื่อน/ลบแสดงเมื่อชี้, เพิ่มด้วยช่องเส้นประ), Sub-tasks (แถบ % + แถวติ๊กเสร็จ/ผู้รับผิดชอบ/วันที่/สถานะ + พิมพ์แล้ว Enter สร้าง Sub-task), Dependencies (ชิป Blocked by / Blocks · ฟอร์มเปิดจากปุ่ม), Development (`GET issues/:key/git` + ชื่อ branch แนะนำ + Copy), Attachments (`files?target=issue:KEY`), Activity และคอมเมนต์
+- การ์ดคุณสมบัติ 240 px แบบ "ชื่อ : ค่า" · ช่องแก้ไขดูเป็นค่าธรรมดาจนชี้/โฟกัส (คง label ไว้ให้โปรแกรมอ่านหน้าจอ) · ตารางแผน/จริง (เริ่ม/จบ) · Progress เป็นแถบ
+- Bug (K2): ไม่มี Description ว่าง / Checklist / Sub-task · กล่อง Verify เมื่ออยู่สถานะหลังสถานะทำงานแรก (ผ่าน = สถานะถัดไป, ไม่ผ่าน = กลับสถานะทำงานแรก) · ขั้นตอนทำซ้ำ + ผลที่ควรเป็น (เขียว) / ผลจริง (แดง) คู่กัน · คุณสมบัติ Bug: Severity, Environment, Reporter, Due
+- Sub-task (D): rail งานแม่ทางซ้ายพื้นขาว · Module แสดง "จาก Task แม่"
+- ภาษา: Priority / Watch แสดงเป็นอังกฤษตาม Canvas (Urgent/High/Medium/Low)
+- ยังไม่ทำ: ผลการทดสอบ (Test runs) ใน Sub-task, Requirement / Screen / Labels, ปุ่มเปิดเต็มหน้า
+
+## VD10 / VD11 · ฟอร์มสร้างงาน (B, K1)
+
+- `?new=1` (ปุ่ม + New) เปิด K1 หน้าต่างกลางจอ 860 px: การ์ดประเภท Story/Task/Bug/Spike, Module / Sprint / อยู่ใต้งาน (เลือกแม่ = Sub-task), ชื่อ {ประเภท}, ส่วนเฉพาะประเภท (Bug: Severity เป็นปุ่ม, Environment, Browser, Found in, ขั้นตอน, ผลที่ควรเป็น/ผลจริงคู่กัน), Assignee / Priority / Due / Tester, "รายละเอียดเพิ่มเติม" (สถานะ, BA, Reviewer, แผน, Size, Checklist, Dependency, Sub-task) · สร้างต่ออีกรายการอยู่ซ้ายของ footer
+- `?new=1&type=task` (+ Task ใน Table) และสร้าง Sub-task เปิด B Drawer 640 px ใต้หัวโปรเจกต์: หัว "สร้างใหม่" + ปุ่มสลับ Task | Sub-task, Module / Sprint, ชื่อ Task, แถว "ชื่อ : ค่า" (Status, Dev, BA, Reviewer, Priority เป็นปุ่มธง, Plan Start → End, Size เป็นปุ่ม XS–XL + MD), คำอธิบาย
+- ช่องบังคับมี * สีแดงด้วย CSS (ชื่อช่องเดิมสำหรับโปรแกรมอ่านหน้าจอ)
+- ยังไม่ทำ: Requirement / Labels / Watchers และแถบเครื่องมือ Markdown ของคำอธิบาย
+
+## VD18 · Sub-task บนมือถือ (M4)
+
+- แถบหัวเหลือ breadcrumb + ⋯ + ปิด · คุณสมบัติหลัก (Dev, Priority, แผน/จริง, Progress) อยู่ใต้สถานะก่อนเนื้อหา ที่เหลือกด "คุณสมบัติเพิ่มเติม" · ปุ่มสถานะกว้างเต็มแถว
+
+## VD22 · ขอเลื่อน Due (K3)
+
+- Due ปัจจุบัน → Due ใหม่ ในแถวเดียว, เหตุผล, รายละเอียด, กล่อง "ผลกระทบ (ระบบคำนวณให้)" แต่ละแถวมี ✓ / ! (วันทำการที่เพิ่ม, Workload, งานที่รอ, Milestone, Go-live), ผู้อนุมัติพร้อมช่องทางแจ้ง, footer มีเส้นคั่น
+- Canvas K3 ไม่มีช่องกรอกจำนวนวันทำการแยก (รายงาน VD22 ระบุไว้) จึงแสดงจำนวนวันทำการที่เพิ่มในกล่องผลกระทบแทน
+
+## VD23 · ยืนยันลบงาน (P3)
+
+- หัวข้อ "ลบ {Key} {ชื่อ}?" + ประเภท · Module, กล่อง "งานนี้มีข้อมูลที่ผูกอยู่" (Sub-task / เสร็จแล้ว, ไฟล์, Dependency), เลือก "ลบ Sub-task ทั้งหมดด้วย" หรือ "เก็บ Sub-task ไว้ เปลี่ยนเป็น Task เดี่ยว", ปุ่มบอกผล ("ลบ Task และ Sub-task N รายการ" / "ลบเฉพาะ Task")
+- API ใหม่: `DELETE w/{ws}/issues/{key}?subtasks=keep` ตัดลูกออกจากแม่ (ใช้ Module / กลุ่มงาน / Sprint ของแม่ถ้าลูกไม่มี) แล้วลบเฉพาะแม่ · Activity `parentId` + event `issue.updated` · กู้คืนแม่ไม่ผูกลูกกลับ · สเปก 03-api มีแต่แบบลบพร้อมลูก จึงยึดหน้าจอ P3 (D99 ควรเพิ่มในสเปก)

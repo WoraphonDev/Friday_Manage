@@ -42,7 +42,7 @@ export class InsightsService {
   async guard(tx: Tx, auth: AuthInfo, tenant: TenantInfo, key: string, permission: string) {
     const { project, access } = await this.projects.load(tx, auth, tenant, key);
     requirePerm(access, 'project.view');
-    if (access.guestViewer || tenant.role === 'guest') throw new AppError(403, 'guest_view_limited', 'Guest เห็นเฉพาะ Overview, Timeline และงานที่แชร์ให้', { allowed: ['overview', 'timeline'] });
+    if (access.guestViewer) throw new AppError(403, 'guest_view_limited', 'Guest เห็นเฉพาะ Overview, Timeline และงานที่แชร์ให้', { allowed: ['overview', 'timeline'] });
     requirePerm(access, permission);
     return project;
   }

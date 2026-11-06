@@ -58,8 +58,8 @@ export class CalendarService {
     return this.db.run(auth, tenant, async (tx) => {
       const { project, access } = await this.projects.load(tx, auth, tenant, key);
       requirePerm(access, 'project.view');
-      // Guest เห็นเฉพาะ Overview และ Timeline (03-api 3.5, 04-permissions ข้อ 4) · จึงไม่มีวันลา / ชื่อคนให้รั่ว
-      if (access.guestViewer || tenant.role === 'guest') {
+      // Guest Viewer เห็นเฉพาะ Overview และ Timeline (03-api 3.5, 04-permissions ข้อ 4) · จึงไม่มีวันลา / ชื่อคนให้รั่ว · Guest Member เห็นเหมือน Member
+      if (access.guestViewer) {
         throw new AppError(403, 'guest_view_limited', 'Guest เห็นเฉพาะ Overview, Timeline และงานที่แชร์ให้', { allowed: ['overview', 'timeline'] });
       }
 

@@ -100,8 +100,8 @@ export class GanttService {
   private async context(tx: Tx, auth: AuthInfo, tenant: TenantInfo, key: string) {
     const { project, access } = await this.projects.load(tx, auth, tenant, key);
     requirePerm(access, 'project.view');
-    // Guest เห็นแค่ Overview และ Timeline (04-permissions ข้อ 4)
-    if (access.guestViewer || tenant.role === 'guest') {
+    // Guest Viewer เห็นแค่ Overview และ Timeline · Guest Member เห็นเหมือน Member (04-permissions ข้อ 4)
+    if (access.guestViewer) {
       throw new AppError(403, 'guest_view_limited', 'Guest เห็นเฉพาะ Overview, Timeline และงานที่แชร์ให้', { allowed: ['overview', 'timeline'] });
     }
     return { project, access };
@@ -327,7 +327,7 @@ export class GanttService {
       const { project, access } = await this.projects.load(tx, auth, tenant, key);
       requirePerm(access, 'project.view');
       requirePerm(access, 'issue.edit');
-      if (access.guestViewer || tenant.role === 'guest') throw new AppError(403, 'guest_view_limited', 'Guest ใช้ Auto-schedule ไม่ได้');
+      if (access.guestViewer) throw new AppError(403, 'guest_view_limited', 'Guest ใช้ Auto-schedule ไม่ได้');
       const plan = await this.loadPlan(tx, project);
       const nodes = this.scheduledNodes(plan, true);
       const axis = this.axisFor(plan, nodes);

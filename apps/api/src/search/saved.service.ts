@@ -87,7 +87,7 @@ export class SavedService {
   private async ctx(tx: Tx, auth: AuthInfo, tenant: TenantInfo, key: string, write: boolean) {
     const { project, access } = await this.projects.load(tx, auth, tenant, key);
     requirePerm(access, 'project.view');
-    if (access.guestViewer || tenant.role === 'guest') throw new AppError(403, 'guest_view_limited', 'Guest ใช้ View ที่บันทึกไม่ได้');
+    if (access.guestViewer) throw new AppError(403, 'guest_view_limited', 'Guest ใช้ View ที่บันทึกไม่ได้');
     if (write && (project.archivedAt || project.status === 'archived')) throw new AppError(403, 'project_archived', 'โปรเจกต์ที่เก็บถาวรแก้ไขไม่ได้');
     return { project, access };
   }

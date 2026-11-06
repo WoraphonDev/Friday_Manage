@@ -36,6 +36,15 @@ interface Client {
 }
 
 /** Origin ที่เบราว์เซอร์เปิด WebSocket ได้ (กัน Cross-Site WebSocket Hijacking เพราะเบราว์เซอร์แนบคุกกี้ session ไปกับ handshake เสมอ) */
+/** cookie ที่ encode ผิดรูปแบบ (เช่น `%`) ถือว่าไม่มี session แทนที่จะโยน URIError */
+function safeDecode(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
 function allowedOrigins() {
   const extra = (process.env.REALTIME_ALLOWED_ORIGINS ?? '').split(',').map((x) => x.trim()).filter(Boolean);
   return new Set([webUrl(), process.env.APP_URL?.replace(/\/$/, ''), ...extra].filter((x): x is string => !!x));
@@ -65,7 +74,12 @@ export class RealtimeService implements OnApplicationBootstrap, OnApplicationShu
   private notifySeen = new Map<string, number>();
   /** เวลาที่ช่อง user:{id} เริ่มมีคนฟัง · แจ้งเตือนที่เก่ากว่านี้ไม่ต้องส่ง (หน้าเว็บโหลดจำนวนเองตอนเปิด) */
   private channelSince = new Map<string, number>();
-  private readonly onUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => void this.upgrade(req, socket, head);
+  // ทุกทางเข้าแบบ async ต้องรับ rejection เอง: unhandled rejection ทำให้โปรเซส API จบ
+  private readonly onUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) =>
+    void this.upgrade(req, socket, head).catch((err) => {
+      this.log.warn(`upgrade failed: ${(err as Error).message}`);
+      if (!socket.destroyed) this.reject(socket, 500, 'Internal Server Error');
+    });
 
   constructor(
     private readonly adapter: HttpAdapterHost,
@@ -84,8 +98,11 @@ export class RealtimeService implements OnApplicationBootstrap, OnApplicationShu
     this.events.on('*', (e) => this.fromEvent(e));
     this.timers.push(
       setInterval(() => this.heartbeat(), HEARTBEAT_MS).unref(),
-      setInterval(() => void this.recheck(), RECHECK_MS).unref(),
-      setInterval(() => void this.pollNotifications(), Number(process.env.REALTIME_POLL_MS ?? 1500)).unref(),
+      setInterval(() => void this.recheck().catch((err) => this.log.warn(`recheck failed: ${(err as Error).message}`)), RECHECK_MS).unref(),
+      setInterval(
+        () => void this.pollNotifications().catch((err) => this.log.warn(`notification poll failed: ${(err as Error).message}`)),
+        Number(process.env.REALTIME_POLL_MS ?? 1500),
+      ).unref(),
     );
   }
 
@@ -116,7 +133,8 @@ export class RealtimeService implements OnApplicationBootstrap, OnApplicationShu
     const origin = req.headers.origin;
     if (origin && !allowedOrigins().has(origin.replace(/\/$/, ''))) return this.reject(socket, 403, 'Forbidden');
     const cookie = /(?:^|;\s*)fm_session=([^;]+)/.exec(req.headers.cookie ?? '')?.[1];
-    const session = cookie ? await this.sessions.find(decodeURIComponent(cookie)).catch(() => null) : null;
+    const token = cookie ? safeDecode(cookie) : null;
+    const session = token ? await this.sessions.find(token).catch(() => null) : null;
     if (!session) return this.reject(socket, 401, 'Unauthorized');
     this.wss!.handleUpgrade(req, socket, head, (ws) => this.connect(ws, session.userId, session.sessionId));
   }
@@ -125,7 +143,12 @@ export class RealtimeService implements OnApplicationBootstrap, OnApplicationShu
     const c: Client = { ws, userId, sessionId, subs: new Set(), alive: true, presence: new Map(), presenceAt: [] };
     this.clients.add(c);
     ws.on('pong', () => (c.alive = true));
-    ws.on('message', (raw) => void this.message(c, raw.toString()));
+    ws.on('message', (raw) =>
+      void this.message(c, raw.toString()).catch((err) => {
+        this.log.warn(`message failed: ${(err as Error).message}`);
+        this.send(c, { op: 'error', code: 'internal_error', message: 'เกิดข้อผิดพลาด ลองใหม่อีกครั้ง' });
+      }),
+    );
     ws.on('close', () => this.drop(c));
     ws.on('error', () => this.drop(c));
     this.send(c, { op: 'ready', userId });
@@ -160,6 +183,10 @@ export class RealtimeService implements OnApplicationBootstrap, OnApplicationShu
       m = JSON.parse(raw);
     } catch {
       return this.send(c, { op: 'error', code: 'invalid_message', message: 'ข้อความต้องเป็น JSON' });
+    }
+    // JSON ที่ถูกต้องแต่ไม่ใช่ object (null, array, ตัวเลข, ข้อความ) อ่าน field ไม่ได้
+    if (typeof m !== 'object' || m === null || Array.isArray(m)) {
+      return this.send(c, { op: 'error', code: 'invalid_message', message: 'ข้อความต้องเป็น JSON object' });
     }
     const id = typeof m.id === 'string' ? m.id.slice(0, 64) : undefined;
     const channel = typeof m.channel === 'string' ? m.channel : '';

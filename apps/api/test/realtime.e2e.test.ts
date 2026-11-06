@@ -130,6 +130,59 @@ describe('เชื่อมต่อ', () => {
     expect(await w.request({ op: 'explode' })).toMatchObject({ op: 'error', code: 'unknown_op' });
     expect(w.closed).toBeNull();
   });
+
+  it('JSON ที่ไม่ใช่ object (null · array · ตัวเลข · ข้อความ) และ cookie encode ผิด ไม่ทำให้เกิด unhandled rejection (BUG-02)', async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      const w = await connect(team.leadId);
+      for (const raw of ['null', '[]', '[1,2]', '42', '"subscribe"', 'true']) {
+        w.messages.length = 0;
+        w.ws.send(raw);
+        expect(await w.waitFor((m) => m.code === 'invalid_message')).toMatchObject({ op: 'error' });
+      }
+      // cookie ผิดรูปแบบไม่ต้องมี session ที่ถูกต้อง → ต้องได้ 401 ไม่ใช่โปรเซสล่ม
+      expect(await rejected(null, { cookie: 'fm_session=%' })).toBe(401);
+      expect(await rejected(null, { cookie: 'fm_session=%E0%A4%A' })).toBe(401);
+      await new Promise((r) => setTimeout(r, 100));
+      expect(unhandled).toEqual([]);
+      // การเชื่อมต่อเดิมและการเชื่อมต่อใหม่ยังใช้ได้
+      expect(await w.request({ op: 'ping' })).toMatchObject({ op: 'pong' });
+      expect(w.closed).toBeNull();
+      expect((await connect(team.devId)).messages[0].op).toBe('ready');
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
+  });
+
+  it('ฐานข้อมูลล้มระหว่าง subscribe / poll / recheck ไม่ทำให้เกิด unhandled rejection (BUG-02)', async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', onUnhandled);
+    const svc = rt as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>;
+    const orig = { authorize: svc.authorize, sendUnread: svc.sendUnread };
+    try {
+      const w = await connect(team.leadId);
+      svc.authorize = async () => {
+        throw new Error('db down (ทดสอบ)');
+      };
+      expect(await w.request({ op: 'subscribe', channel: `project:${projectId}` })).toMatchObject({ op: 'error', code: 'forbidden' });
+      svc.authorize = orig.authorize;
+      await w.request({ op: 'subscribe', channel: `user:${team.leadId}` });
+      svc.sendUnread = async () => {
+        throw new Error('db down (ทดสอบ)');
+      };
+      await t.owner.query(`INSERT INTO notifications (workspace_id, recipient_id, event_type, payload, reason) VALUES ($1,$2,'issue.mentioned','{}','db ล้ม')`, [wsId, team.leadId]);
+      await new Promise((r) => setTimeout(r, 500));
+      expect(unhandled).toEqual([]);
+      expect(await w.request({ op: 'ping' })).toMatchObject({ op: 'pong' });
+    } finally {
+      svc.authorize = orig.authorize;
+      svc.sendUnread = orig.sendUnread;
+      process.off('unhandledRejection', onUnhandled);
+    }
+  });
 });
 
 describe('subscribe · ตรวจสิทธิ์ทุกช่อง', () => {

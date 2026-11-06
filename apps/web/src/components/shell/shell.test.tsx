@@ -173,7 +173,9 @@ describe("Workspace / Project shell", () => {
     );
     await user.click(screen.getByRole("button", { name: "เมนูโปรเจกต์" }));
     const menu = within(await screen.findByRole("navigation", { name: "เมนูโปรเจกต์" }));
+    // ลิงก์แรก (+ New) แสดงเฉพาะมือถือที่ไม่มีปุ่ม + New บนหัว
     expect(menu.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual([
+      "/w/sample/p/DE?new=1",
       "/w/sample/p/DE/settings",
       "/w/sample/p/DE/automation",
       "/w/sample/p/DE/plan-changes",

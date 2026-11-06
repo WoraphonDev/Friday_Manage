@@ -950,7 +950,10 @@ kbd {
   color: var(--muted);
   font-size: 13px;
 }
-.project-back {
+.project-back,
+.project-subline,
+.mobile-only,
+.label-narrow {
   display: none;
 }
 .project-actions {
@@ -1147,8 +1150,47 @@ kbd {
   }
   .project-team,
   .project-invite,
-  .project-menu-trigger {
+  .project-new,
+  .desktop-only,
+  .project-title-row .badge,
+  .project-dates {
     display: none;
+  }
+  .mobile-only {
+    display: flex;
+  }
+  .label-wide {
+    display: none;
+  }
+  .label-narrow {
+    display: inline;
+  }
+  .project-menu-trigger {
+    display: inline-flex;
+    border-color: transparent;
+    width: 44px;
+    height: 44px;
+  }
+  .project-subline {
+    display: block;
+    font-size: 12px;
+    margin: -4px 0 0 64px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* ลำดับแท็บมือถือตาม M6: Overview, Kanban, List, Calendar, Files */
+  .project-header .tabs [data-tab="board"] {
+    order: 1;
+  }
+  .project-header .tabs [data-tab="table"] {
+    order: 2;
+  }
+  .project-header .tabs [data-tab="calendar"] {
+    order: 3;
+  }
+  .project-header .tabs [data-tab="files"] {
+    order: 4;
   }
   .project-header .tab {
     min-height: 40px;

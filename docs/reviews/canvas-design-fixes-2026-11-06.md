@@ -8,6 +8,12 @@
 | VD02 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-project-header | ดูด้านล่าง |
 | VD03 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-shell-variants | ดูด้านล่าง |
 | VD04 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-shell-variants | ดูด้านล่าง |
+| VD05 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
+| VD06 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
+| VD07 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ยังไม่มีคอลัมน์ FR / Screen (ดูด้านล่าง) |
+| VD08 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
+| VD09 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
+| VD15 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
 
 ## VD02 · Project header
 
@@ -37,3 +43,25 @@
 - ค้นหา, สลับ Workspace, ภาษา และออกจากระบบ ย้ายไปอยู่ในเมนู Projects เพราะมือถือไม่มี top bar แล้ว
 - หัวโปรเจกต์มือถือมีปุ่มกลับ + ไอคอน + ชื่อบรรทัดเดียว สถานะ/วันที่บรรทัดที่สอง ไม่มี breadcrumb (header 165 px · M6 127 px ส่วนที่เหลือเป็นชุดแท็บ/summary ของ VD15)
 - ปุ่มค้นหาในหัวของ Home / My Tasks ตาม M2/M5 เป็นงานของหน้า (VD14, VD16)
+
+## VD05 / VD06 · Overview
+
+- การ์ดสรุปเดียวตาม Main: วงความคืบหน้า, แถบเวลา/งานที่เสร็จ, Go-live, Milestone ถัดไป และกล่อง Health ตามระดับ (แดง/เหลือง/เขียว) เต็มแถว
+- KPI 4 การ์ดแยก มีจุดสี ตัวเลข 34 px และ ▲/▼ เทียบสัปดาห์ก่อน · ชื่อ Overdue / Due today / Later this week / Done in 7 days ตาม Canvas
+- รายการมี checkbox ปิดงาน (ใช้สถานะ Done ของประเภทงานพร้อม version ล่าสุด แบบ My Tasks), แถวที่สอง Module pill + Key/แม่/กลุ่มงาน, วันที่สีตามรายการ, ลิงก์ "ดูทั้งหมด N งาน"
+- ข้อมูลโปรเจกต์อยู่ใต้กราฟคอลัมน์ซ้าย (มีปุ่มแก้ไขไป Settings) · คอลัมน์ขวา: Progress by Module, Status breakdown, Milestones, Workload, Recent activity · กราฟใช้ชื่อวันแบบย่อ
+- ยังต่างจากแบบ: "อัปเดตล่าสุด" ใช้เวลาที่โหลดข้อมูล · แถวเอกสาร (SRS/BRD) ยังไม่มีข้อมูลใน API
+
+## VD07 / VD08 / VD09 · Table
+
+- Views: All tasks, งานของฉัน, Overdue + View ที่บันทึก · แถบเครื่องมือ: ค้นหา, Filter (Status / Priority / ระดับ พร้อมตัวนับ), Group by (Module › กลุ่มงาน / Status / Assignee / Priority / None), BA, Dev, Size, Sort (Manual = rank), Columns, Show completed · ขวา: Expand/Collapse all, Import / Export Excel, + Module, + Task
+- Status เป็น pill ที่กดแล้วเลือกได้ · Plan End เป็นข้อความกดแล้วเป็นช่องวันที่ · ไม่มีคอลัมน์ Priority (แก้ใน Drawer) · Actual แสดง "จบ … · ช้า N วัน"
+- แถว Module สูง 52 px มีแถบ % และช่วงแผน + "+ Task" · แถวกลุ่มงานมีป้าย "กลุ่มงาน" + เสร็จ/ทั้งหมด + MD และย่อได้ · แถว "+ เพิ่ม Task ใน …" และสรุปท้าย Module · ปุ่ม "+ เพิ่ม Module ใหม่"
+- แถบเลือกหลายแถวอยู่เหนือตาราง ปุ่ม Status / Assignee / Due date / ย้าย Module / Delete / ยกเลิกการเลือก · Status หลายงานแก้ทีละงานพร้อม version เพราะ bulk API ไม่รับ statusId
+- Size กรองฝั่งเว็บ (API ยังไม่มีตัวกรอง Size)
+- ยังไม่ทำ: คอลัมน์ FR / Screen และ View Sprint / Backlog ใน Canvas เพราะยังไม่มีข้อมูลอ้างอิง Requirement ในแถวของ API
+
+## VD15 · Mobile Overview + หัวโปรเจกต์มือถือ
+
+- มือถือแสดงการ์ดสรุป M6 (ระดับ Health, % ใหญ่, แถบพร้อมเส้นเวลา, Overdue / Bug เปิด / รออนุมัติ จาก `counts`), Milestone ถัดไป, ความเสี่ยง (สร้างจาก Health / Module / counts) แล้วตามด้วย Module และ Workload · ซ่อนการ์ด desktop
+- หัวโปรเจกต์มือถือตาม M6/M7: ปุ่มกลับ + ไอคอน + ชื่อ + บรรทัดรายละเอียด + ⋯ (มี + New) · แท็บ Overview, Kanban, List, Calendar, Files

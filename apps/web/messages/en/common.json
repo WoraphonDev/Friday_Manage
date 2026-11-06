@@ -45,6 +45,7 @@
     "dashboard": "Lead dashboard",
     "backlog": "Backlog",
     "table": "Table",
+    "list": "List",
     "board": "Kanban",
     "timeline": "Timeline",
     "gantt": "Gantt",

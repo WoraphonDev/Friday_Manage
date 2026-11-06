@@ -84,10 +84,11 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   // วันเริ่มของแกน = ต้นสัปดาห์ (จันทร์) ก่อนช่วงข้อมูล · เผื่อท้าย 14 วัน
   const axis = useMemo(() => {
     if (!q.data) return null;
-    const f = new Date(`${q.data.range.from}T00:00:00Z`);
-    f.setUTCDate(f.getUTCDate() - ((f.getUTCDay() + 6) % 7));
-    const from = f.toISOString().slice(0, 10);
-    const days = Math.max(28, toDay(q.data.range.to, from) + 14, Math.ceil((viewW - LABEL_W) / PX_PER_DAY[zoom]));
+    // แกนเวลาเต็มเดือน: เริ่มวันที่ 1 ของเดือนแรก จบวันสุดท้ายของเดือนสุดท้าย (และยาวอย่างน้อยเต็มจอ)
+    const from = `${q.data.range.from.slice(0, 7)}-01`;
+    const t = new Date(`${q.data.range.to.slice(0, 7)}-01T00:00:00Z`);
+    t.setUTCMonth(t.getUTCMonth() + 1);
+    const days = Math.max(28, toDay(t.toISOString().slice(0, 10), from), Math.ceil((viewW - LABEL_W) / PX_PER_DAY[zoom]));
     return { from, days };
   }, [q.data, viewW, zoom]);
   const hasData = !!q.data;

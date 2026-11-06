@@ -288,6 +288,19 @@ describe('แจ้งเตือนใหม่ → user:{id}', () => {
     expect(await lead.waitFor((m) => m.type === 'notification')).toMatchObject({ unread: { total: 2 } });
   });
 
+  it('ธุรกรรมที่เริ่มก่อนรอบ poll แต่ commit ทีหลังก็ยังส่ง (created_at = เวลาเริ่มธุรกรรม) · ไม่ส่งซ้ำ', async () => {
+    const lead = await connect(team.leadId);
+    await lead.request({ op: 'subscribe', channel: `user:${team.leadId}` });
+    await t.owner.query('BEGIN');
+    await t.owner.query(`INSERT INTO notifications (workspace_id, recipient_id, event_type, payload, reason) VALUES ($1,$2,'issue.mentioned','{}','ธุรกรรมยาว')`, [wsId, team.leadId]);
+    // ให้ poll วิ่งผ่านไปหลายรอบระหว่างที่ธุรกรรมยังไม่ commit (cursor เลย created_at ไปแล้ว)
+    await new Promise((r) => setTimeout(r, 600));
+    await t.owner.query('COMMIT');
+    await lead.waitFor((m) => m.type === 'notification');
+    lead.messages.length = 0;
+    await lead.expectNone((m) => m.type === 'notification', 600);
+  });
+
   it('แจ้งเตือนของคนอื่นไม่ถึงเรา', async () => {
     const lead = await connect(team.leadId);
     await lead.request({ op: 'subscribe', channel: `user:${team.leadId}` });

@@ -41,6 +41,9 @@ function allowedOrigins() {
   return new Set([webUrl(), process.env.APP_URL?.replace(/\/$/, ''), ...extra].filter((x): x is string => !!x));
 }
 
+/** ช่วงย้อนอ่านแจ้งเตือนต่อรอบ ต้องยาวกว่าธุรกรรมที่เขียนแจ้งเตือนนานที่สุด */
+const NOTIFY_OVERLAP_MS = 30_000;
+
 /**
  * Realtime (WebSocket เดียวต่อแท็บที่ `/realtime`)
  * - ยืนยันตัวตนด้วยคุกกี้ session ตอน upgrade · ตรวจ Origin
@@ -58,6 +61,10 @@ export class RealtimeService implements OnApplicationBootstrap, OnApplicationShu
   private readonly channels = new Map<string, Set<Client>>();
   private timers: NodeJS.Timeout[] = [];
   private notifyCursor = new Date();
+  /** แจ้งเตือนที่ส่งไปแล้วในช่วงซ้อนทับ (id → created_at) กันส่งซ้ำ */
+  private notifySeen = new Map<string, number>();
+  /** เวลาที่ช่อง user:{id} เริ่มมีคนฟัง · แจ้งเตือนที่เก่ากว่านี้ไม่ต้องส่ง (หน้าเว็บโหลดจำนวนเองตอนเปิด) */
+  private channelSince = new Map<string, number>();
   private readonly onUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => void this.upgrade(req, socket, head);
 
   constructor(
@@ -191,6 +198,7 @@ export class RealtimeService implements OnApplicationBootstrap, OnApplicationShu
   private join(c: Client, channel: string) {
     c.subs.add(channel);
     const set = this.channels.get(channel) ?? new Set();
+    if (!set.size) this.channelSince.set(channel, Date.now());
     set.add(c);
     this.channels.set(channel, set);
   }
@@ -199,7 +207,10 @@ export class RealtimeService implements OnApplicationBootstrap, OnApplicationShu
     c.subs.delete(channel);
     const set = this.channels.get(channel);
     set?.delete(c);
-    if (set && !set.size) this.channels.delete(channel);
+    if (set && !set.size) {
+      this.channels.delete(channel);
+      this.channelSince.delete(channel);
+    }
     if (c.presence.delete(channel) && !silent) this.broadcast(channel, { type: 'presence', channel, userId: c.userId, state: 'left' }, c);
     else if (silent && channel.startsWith('issue:') && set) this.broadcast(channel, { type: 'presence', channel, userId: c.userId, state: 'left' }, c);
   }
@@ -248,14 +259,26 @@ export class RealtimeService implements OnApplicationBootstrap, OnApplicationShu
       this.notifyCursor = new Date();
       return;
     }
-    const since = this.notifyCursor;
+    // created_at = now() คือเวลาเริ่มธุรกรรม แถวที่ธุรกรรมเริ่มก่อนรอบนี้แต่ commit หลัง select จะมี created_at
+    // เก่ากว่า cursor · ถ้าอ่านเฉพาะ > cursor จะหลุดถาวร จึงอ่านย้อนช่วงซ้อนทับแล้วตัดตัวที่ส่งแล้วด้วย id
+    const since = new Date(this.notifyCursor.getTime() - NOTIFY_OVERLAP_MS);
     // ใช้นาฬิกาของฐานข้อมูลเป็นจุดอ้างอิง กัน clock skew ระหว่างแอปกับฐานข้อมูล
     const [{ now }] = (await this.db.execute(sql`select clock_timestamp() as now`)).rows as Array<{ now: Date }>;
-    const rows = await this.db
-      .selectDistinct({ recipientId: s.notifications.recipientId })
+    const found = await this.db
+      .select({ id: s.notifications.id, recipientId: s.notifications.recipientId, createdAt: s.notifications.createdAt })
       .from(s.notifications)
       .where(and(gt(s.notifications.createdAt, since), sql`${s.notifications.recipientId} in (${sql.join(users.map((u) => sql`${u}::uuid`), sql`, `)})`));
     this.notifyCursor = new Date(now);
+    const recipients = new Set<string>();
+    for (const n of found) {
+      if (this.notifySeen.has(n.id)) continue;
+      const at = new Date(n.createdAt).getTime();
+      this.notifySeen.set(n.id, at);
+      if (at < (this.channelSince.get(`user:${n.recipientId}`) ?? 0)) continue;
+      recipients.add(n.recipientId);
+    }
+    for (const [id, at] of this.notifySeen) if (at <= since.getTime()) this.notifySeen.delete(id);
+    const rows = [...recipients].map((recipientId) => ({ recipientId }));
     for (const r of rows) await this.sendUnread(r.recipientId);
   }
 

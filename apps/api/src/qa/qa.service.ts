@@ -60,8 +60,28 @@ export class QaService {
   // ---------------------------------------------------------------------------
   // test-runs
   // ---------------------------------------------------------------------------
-  private async runDto(tx: Tx, runs: Array<typeof s.testRuns.$inferSelect>, projectKey: string) {
+  /**
+   * `guest` = Guest Viewer: 04-permissions ข้อ 4 ห้ามเห็นชื่อคนและ Bug จึงตัดผู้ทดสอบ, Bug, ไฟล์หลักฐาน (เข้า Files ไม่ได้)
+   * และบันทึก (อาจอ้างชื่อคน/Bug) ทิ้งที่ API · เหลือผล จำนวน สภาพแวดล้อม และเวลา
+   */
+  private async runDto(tx: Tx, runs: Array<typeof s.testRuns.$inferSelect>, projectKey: string, guest = false) {
     if (!runs.length) return [];
+    if (guest) {
+      return runs.map((r) => ({
+        id: r.id,
+        runNo: r.runNo,
+        result: r.result,
+        passedCount: r.passedCount,
+        totalCount: r.totalCount,
+        environment: r.environment,
+        commitSha: null,
+        note: null,
+        tester: r.testerId ? { displayName: 'ทีมพัฒนา' } : null,
+        createdAt: r.createdAt,
+        files: [],
+        bugs: [],
+      }));
+    }
     const people = await loadPeople(tx, runs.map((r) => r.testerId));
     const att = await tx.select({ targetId: s.fileAttachments.targetId, fileId: s.fileAttachments.fileId, name: s.files.name }).from(s.fileAttachments).innerJoin(s.files, eq(s.files.id, s.fileAttachments.fileId)).where(and(eq(s.fileAttachments.targetType, 'test_run'), inArray(s.fileAttachments.targetId, runs.map((r) => r.id))));
     const bugs = await tx.select({ runId: s.issues.foundInTestRunId, number: s.issues.number, title: s.issues.title }).from(s.issues).where(inArray(s.issues.foundInTestRunId, runs.map((r) => r.id)));
@@ -83,9 +103,9 @@ export class QaService {
 
   async listRuns(auth: AuthInfo, tenant: TenantInfo, key: string) {
     return this.db.run(auth, tenant, async (tx) => {
-      const { project, issue } = await this.issues.loadIssue(tx, auth, tenant, key);
+      const { project, access, issue } = await this.issues.loadIssue(tx, auth, tenant, key);
       const runs = await tx.select().from(s.testRuns).where(eq(s.testRuns.issueId, issue.id)).orderBy(desc(s.testRuns.runNo));
-      const items = await this.runDto(tx, runs, project.key);
+      const items = await this.runDto(tx, runs, project.key, access.guestViewer);
       return { items, latest: items[0] ?? null };
     });
   }

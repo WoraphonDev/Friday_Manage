@@ -57,7 +57,7 @@
 
 คำขอนอก lane / งานต่อ:
 
-1. A05: เมื่อ `recalculatePlanEnds(tx, project)` merge แล้ว `PATCH p/` ที่เปลี่ยน `holidayCalendarId` ควรเรียกฟังก์ชันนี้และเลิกส่ง warning `plan_end_not_recalculated` (แก้ใน lane A04 ได้ภายหลัง)
+1. A05: เมื่อ `recalculatePlanEnds(tx, project)` merge แล้ว `PATCH p/` ที่เปลี่ยน `holidayCalendarId` ควรเรียกฟังก์ชันนี้และเลิกส่ง warning `plan_end_not_recalculated` (แก้ใน lane A04 ได้ภายหลัง) · การสร้างโปรเจกต์ (`createInTx`) ยังไม่ใส่แถว `workflow_rules` เริ่มต้น เพราะ `defaultWorkflowRules(kind)` ใน `project-structure/rules.ts` ของ A05 (PR #12) ยังไม่อยู่ใน main · เมื่อ A05 merge ควรใส่กฎเริ่มต้นจาก `defaultWorkflowRules()` ให้ทั้ง Workflow มาตรฐานและ Bug ในธุรกรรมเดียวกับการสร้างโปรเจกต์
 2. A18: ตรวจ `config` ของ `w/project-templates` ด้วย `TemplateConfig` ที่ export จาก `projects.service.ts` ให้ Template ที่บันทึกแล้วใช้สร้างโปรเจกต์ได้เสมอ
 3. A03: `CreateIssueBody.type` จำกัดแค่ Story / Task / Bug / Spike ประเภทใหม่จาก Template (เช่น Incident) จึงยังสร้างงานผ่าน API ไม่ได้
 4. Invitations (`invitations.service.ts`): Workspace Owner / Admin เชิญเข้าโปรเจกต์ที่ถูก Archive ได้ เพราะข้าม `requirePerm` · ควรตรวจ `access.archived` · Watch / Unwatch (A01) ยังทำได้ในโปรเจกต์ที่ Archive เพราะใช้แค่ `project.view` (เป็นเรื่องส่วนตัว จึงคิดว่ายอมรับได้)

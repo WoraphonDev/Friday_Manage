@@ -8812,6 +8812,19 @@
           },
           {
             "$ref": "#/components/parameters/CsrfToken"
+          },
+          {
+            "name": "subtasks",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "delete",
+              "type": "string",
+              "enum": [
+                "delete",
+                "keep"
+              ]
+            }
           }
         ],
         "responses": {
@@ -8822,6 +8835,9 @@
                 "schema": {}
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
           },
           "401": {
             "$ref": "#/components/responses/Error"

@@ -68,7 +68,6 @@ export const projectTabs = [
   },
 ];
 /** แท็บของหัวแบบ Lead (Canvas O1/O2) */
-const LEAD_TABS = new Set(["/dashboard", "/reports", "/backlog", "/table", "/board", "/gantt", "/members", "/settings"]);
 
 export function allowedProjectTab(
   tab: (typeof projectTabs)[number],
@@ -214,17 +213,9 @@ export function ProjectShell({
     });
   }
   const activeTeam = (team.data?.items ?? []).filter((m) => m.active);
-  // P2 Automation มี breadcrumb ของหน้าเอง · O1/O2 ใช้หัวแบบ Lead ที่ไม่มี breadcrumb และปุ่มทีม
-  const headerVariant = route.startsWith("/automation")
-    ? "none"
-    : /^\/(dashboard|reports)(\/|$)/.test(route)
-      ? "lead"
-      : "full";
-  const lead = headerVariant === "lead";
-  // O2 Reports: หัวมีแค่ไอคอนกับชื่อตาม Canvas
-  const bareHeader = /^\/reports(\/|$)/.test(route);
-  // M1 Project Settings: หัวมีแค่ชื่อ สถานะ และหมายเหตุว่าใครแก้ได้ ตาม Canvas
-  const settingsHeader = /^\/settings(\/|$)/.test(route);
+  // P2 Automation มี breadcrumb ของหน้าเอง · แท็บอื่นใช้หัวและแท็บชุดเดียวกันทุกหน้า
+  // (Canvas O1/O2/M1 ตัดหัวให้สั้นลง แต่ผู้ใช้เลือกให้แท็บไม่ขยับและครบทุกหน้า · 2026-11-07)
+  const headerVariant = route.startsWith("/automation") ? "none" : "full";
   const canCreate = access.permissions.includes("issue.create");
   const dates = formatDateRange(
     project.data.startDate,
@@ -249,16 +240,14 @@ export function ProjectShell({
     <>
       {headerVariant !== "none" && (
         <header
-          className={`project-header${bareHeader ? " project-header-bare" : ""}`}
+          className="project-header"
           ref={headerRef}
         >
           <div className="project-header-row">
             <div className="project-heading">
-              {!lead && !settingsHeader && (
-                <div className="muted project-crumb">
-                  {workspace.name} / {t("nav.projects")} / {project.data.name}
-                </div>
-              )}
+              <div className="muted project-crumb">
+                {workspace.name} / {t("nav.projects")} / {project.data.name}
+              </div>
               <div className="project-title-row">
                 <Link
                   className="button button-ghost button-icon project-back"
@@ -276,14 +265,12 @@ export function ProjectShell({
                 </span>
                 <h1>{project.data.name}</h1>
                 <Badge tone="blue">{t(`status.${project.data.status}`)}</Badge>
-                {settingsHeader ? (
-                  <span className="muted project-dates">{t("nav.settingsNote")}</span>
-                ) : health.data && (
+                {health.data && (
                   <Badge tone={HEALTH_TONE[health.data.health.level]}>
                     {t(`health.${health.data.health.level}`)}
                   </Badge>
                 )}
-                {!settingsHeader && <span className="project-dates">{dates}</span>}
+                <span className="project-dates">{dates}</span>
               </div>
               {/* มือถือ M6: รายละเอียดเป็นบรรทัดเดียวใต้ชื่อแทน badge */}
               <div className="muted project-subline">
@@ -297,15 +284,8 @@ export function ProjectShell({
                   .join(" · ")}
               </div>
             </div>
-            <div className={`project-actions${settingsHeader ? " project-actions-off" : ""}`}>
-              {/* O1/O2: ปุ่มของมุมมอง Lead อยู่บนหัว */}
-              {lead && access.permissions.includes("project.reports.view") && (
-                <Link className="button" href={`${base}/reports?report=weekly`}>{t("nav.weeklyReport")}</Link>
-              )}
-              {lead && (
-                <Link className="button" href={`/w/${encodeURIComponent(ws)}/import`}>{t("nav.importExport")}</Link>
-              )}
-              {!lead && activeTeam.length > 0 && (
+            <div className="project-actions">
+              {activeTeam.length > 0 && (
                 <span
                   className="project-team"
                   title={t("nav.projectTeam", { count: activeTeam.length })}
@@ -321,7 +301,7 @@ export function ProjectShell({
                   />
                 </span>
               )}
-              {!lead && team.data?.canInvite && (
+              {team.data?.canInvite && (
                 <Link
                   className="button project-invite"
                   href={`${base}/members#invites`}
@@ -329,7 +309,7 @@ export function ProjectShell({
                   {t("nav.invite")}
                 </Link>
               )}
-              {!lead && (menuItems.length > 0 || canCreate) && (
+              {(menuItems.length > 0 || canCreate) && (
                 <Popover.Root>
                   <Popover.Trigger asChild>
                     <button
@@ -370,7 +350,7 @@ export function ProjectShell({
                   </Popover.Portal>
                 </Popover.Root>
               )}
-              {!lead && canCreate && (
+              {canCreate && (
                 <Link className="button button-primary project-new" href={`${base}?new=1`}>
                   {t("nav.new")}
                 </Link>
@@ -379,7 +359,7 @@ export function ProjectShell({
           </div>
           <nav className="tabs" aria-label={t("nav.projectViews")}>
             {projectTabs
-              .filter((tab) => allowedProjectTab(tab, access) && (!lead || LEAD_TABS.has(tab.path)))
+              .filter((tab) => allowedProjectTab(tab, access))
               .map((tab) => (
                 <Link
                   key={tab.path}

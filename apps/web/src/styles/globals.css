@@ -967,10 +967,6 @@ kbd {
   background: #334155;
   color: #e2e8f0;
 }
-.topbar-lean .search-trigger,
-.topbar-lean .topbar-new {
-  display: none;
-}
 .topbar-back {
   color: #93c5fd;
   font-size: 13px;
@@ -1138,12 +1134,6 @@ kbd {
 .menu-item:focus-visible {
   background: #f1f3f5;
   color: var(--foreground);
-}
-.project-header-bare .project-title-row .badge,
-.project-header-bare .project-dates,
-.project-header-bare .project-actions,
-.project-actions-off {
-  display: none;
 }
 .project-header .tabs {
   margin-top: 10px;

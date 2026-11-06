@@ -170,20 +170,17 @@ function Navigation({
 
 /**
  * กรอบหน้าตามบริบทของ Canvas
- * - workspace: top bar + Sidebar (หน้าทั่วไป)
- * - focus: ไม่มี Sidebar (O1 Lead, O2 Reports, P2 Automation, P1 Search, L1 Import)
+ * - workspace: top bar + Sidebar (ทุกหน้าทั่วไป)
+ *   Canvas O1 Lead, O2 Reports, P2 Automation, P1 Search, L1 Import ไม่มี Sidebar
+ *   แต่ผู้ใช้เลือกให้แสดงตลอดเพื่อไม่ให้เมนูหายระหว่างสลับแท็บ (2026-11-07)
  * - admin: top bar ของ Admin Console + เมนูของหน้าเอง (N1, N2)
  * - checkout: หัวขาวเรียบ ไม่มีเมนู (R2)
  */
-export type ShellChrome = "workspace" | "focus" | "admin" | "checkout";
+export type ShellChrome = "workspace" | "admin" | "checkout";
 export function shellChrome(pathname: string): ShellChrome {
   const rest = pathname.replace(/^\/w\/[^/]+/, "");
   if (/^\/billing\/checkout(\/|$)/.test(rest)) return "checkout";
   if (/^\/admin(\/|$)/.test(rest)) return "admin";
-  if (/^\/p\/[^/]+\/(dashboard|reports|automation)(\/|$)/.test(rest))
-    return "focus";
-  // P1 หน้าผลการค้นหา (ช่องค้นหาบนแถบบนคือคำค้นของหน้า) และ L1 Import ไม่มี Sidebar
-  if (/^\/(search|import)(\/|$)/.test(rest)) return "focus";
   return "workspace";
 }
 
@@ -324,7 +321,6 @@ export function WorkspaceShell({
       <kbd>Ctrl K</kbd>
     </button>
   );
-  const leanTopbar = /\/p\/[^/]+\/(dashboard|reports)(\/|$)/.test(pathname);
   const unreadOf = (slug: string) =>
     summary.data?.workspaces.find((count) => count.slug === slug)?.unread ?? 0;
   const workspaceList = (close: () => void) => (
@@ -455,7 +451,7 @@ export function WorkspaceShell({
           </header>
         ) : (
           // มือถือใช้หัวขาวของแต่ละหน้า + เมนูล่าง ตาม Canvas M2–M7 จึงซ่อน top bar
-          <header className={`topbar topbar-desktop${leanTopbar ? " topbar-lean" : ""}`}>
+          <header className="topbar topbar-desktop">
             <Button
               className="mobile-menu"
               variant="ghost"

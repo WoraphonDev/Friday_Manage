@@ -134,6 +134,11 @@ function Navigation({
           {t("newProject")}
         </Link>
       )}
+      {workspace.role !== "guest" && (
+        <Link className="nav-link" href={`${base}/import`} onClick={close}>
+          {t("import")}
+        </Link>
+      )}
       {["owner", "admin"].includes(workspace.role) && (
         <>
           <div className="nav-section">{t("admin")}</div>

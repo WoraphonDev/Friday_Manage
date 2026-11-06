@@ -80,14 +80,22 @@ describe("Workspace / Project shell", () => {
     expect(router.push).toHaveBeenCalledWith("/w/sample/search?q=DE-1");
   });
 
-  it("Admin เห็น 11 project tabs และ Drawer เปิดตาม query โดยรักษา filter อื่นตอนปิด", async () => {
+  it("Admin เห็น 12 project tabs (รวม Reports) และ Drawer เปิดตาม query โดยรักษา filter อื่นตอนปิด", async () => {
     navigation.pathname = "/w/sample/p/DE";
     navigation.search = "issue=DE-1&filter=open";
     const user = userEvent.setup();
     renderWithProviders(<ProjectExample />);
     await screen.findByRole("dialog", { name: "รายละเอียดงาน DE-1" });
     const tabs = within(screen.getByLabelText("มุมมองโปรเจกต์"));
-    expect(tabs.getAllByRole("link", { hidden: true })).toHaveLength(11);
+    expect(tabs.getAllByRole("link", { hidden: true })).toHaveLength(12);
+    expect(tabs.getByRole("link", { name: "Reports", hidden: true })).toHaveAttribute(
+      "href",
+      "/w/sample/p/DE/reports",
+    );
+    expect(screen.getAllByRole("link", { name: "นำเข้าแผน", hidden: true })[0]).toHaveAttribute(
+      "href",
+      "/w/sample/import",
+    );
     expect(
       screen.getByRole("dialog", { name: "รายละเอียดงาน DE-1" }),
     ).toBeInTheDocument();
@@ -144,6 +152,23 @@ describe("Workspace / Project shell", () => {
       await screen.findByRole("heading", { name: "คุณยังไม่มีสิทธิ์เข้าถึง" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("หน้าโปรเจกต์")).not.toBeInTheDocument();
+  });
+
+  it("โปรเจกต์ที่ Archive แล้ว: ไม่มี project.settings แต่มี project.archive เข้า Danger zone ได้", async () => {
+    navigation.pathname = "/w/sample/p/DE/settings/danger";
+    server.use(
+      http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () =>
+        HttpResponse.json({
+          ...permissions,
+          permissions: ["project.view", "project.archive"],
+        }),
+      ),
+    );
+    renderWithProviders(<ProjectExample />);
+    expect(await screen.findByText("หน้าโปรเจกต์")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "คุณยังไม่มีสิทธิ์เข้าถึง" }),
+    ).not.toBeInTheDocument();
   });
 
   it("API error แสดง requestId และ retry หลังโหลดไม่สำเร็จ", async () => {

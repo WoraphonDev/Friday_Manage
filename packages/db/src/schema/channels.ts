@@ -17,7 +17,9 @@ export const notificationDeliveries = pgTable('notification_deliveries', {
 }, (t) => [tenantFk('notification_deliveries_notification_fk', t.workspaceId, t.notificationId, notifications).onDelete('cascade'),
   index('notification_deliveries_status_idx').on(t.workspaceId, t.status, t.createdAt),
   uniqueIndex('notification_deliveries_target_key').on(t.notificationId, t.channel, t.targetRef),
-  check('notification_deliveries_attempts_nonnegative', sql`${t.attempts} >= 0`)]);
+  check('notification_deliveries_attempts_nonnegative', sql`${t.attempts} >= 0`),
+  // Inbox ไม่ใช่การส่งออกนอกแอป · เทียบเป็นข้อความเพราะค่า enum ใหม่ใช้ในธุรกรรมเดียวกับที่เพิ่มไม่ได้
+  check('notification_deliveries_external_channel', sql`${t.channel}::text <> 'in_app'`)]);
 
 export const userNotificationPrefs = pgTable('user_notification_prefs', {
   id: pk(), workspaceId: workspaceId(),

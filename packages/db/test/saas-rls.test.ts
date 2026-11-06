@@ -311,6 +311,22 @@ describe('Review หลัง 0008 (migration 0009)', () => {
   });
 });
 
+describe('ช่อง In-app ของการตั้งค่าแจ้งเตือน (migration 0010)', () => {
+  it('ผู้ใช้ปิด In-app ของเหตุการณ์ในแถวของตัวเองได้ แต่ตั้งแทนคนอื่นไม่ได้', async () => {
+    await as(U.lead, W.one, async (client) => {
+      await insert('user_notification_prefs', { workspace_id: W.one, user_id: U.lead, event_type: 'issue.updated', channel: 'in_app', enabled: false }, client);
+      expect((await client.query(`SELECT channel, enabled FROM user_notification_prefs WHERE event_type = 'issue.updated'`)).rows).toEqual([{ channel: 'in_app', enabled: false }]);
+    });
+    await expect(
+      as(U.lead, W.one, (client) => insert('user_notification_prefs', { workspace_id: W.one, user_id: U.member, event_type: 'issue.updated', channel: 'in_app', enabled: false }, client)),
+    ).rejects.toMatchObject({ code: '42501' });
+  });
+
+  it('ประวัติส่งออกนอกแอปไม่มีช่อง In-app', async () => {
+    await expect(insert('notification_deliveries', { workspace_id: W.one, notification_id: one.notification, channel: 'in_app', target_ref: 'inbox' })).rejects.toMatchObject({ code: '23514' });
+  });
+});
+
 describe('ข้อมูลระบบและหลังบ้าน Friday', () => {
   it.each(['plans', 'legal_documents'])('%s อ่านได้แม้ยังไม่มี Workspace แต่แก้ไขไม่ได้', async (table) => {
     await as(U.lead, null, async (client) => expect((await client.query(`SELECT id FROM ${table}`)).rows.length).toBeGreaterThan(0));

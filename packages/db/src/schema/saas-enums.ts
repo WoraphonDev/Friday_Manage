@@ -4,7 +4,8 @@ export const ssoType = pgEnum('sso_type', ['entra', 'google_workspace', 'saml', 
 export const gitProvider = pgEnum('git_provider', ['github', 'gitlab']);
 export const pullRequestState = pgEnum('pull_request_state', ['draft', 'open', 'merged', 'closed']);
 export const gitLinkSource = pgEnum('git_link_source', ['branch', 'message', 'title', 'manual']);
-export const notificationChannel = pgEnum('notification_channel', ['email', 'line', 'line_group', 'webhook']);
+// in_app ใช้เฉพาะ user_notification_prefs (คอลัมน์ In-app ของ Profile · A23) · ส่งออกนอกแอปไม่มีช่องนี้
+export const notificationChannel = pgEnum('notification_channel', ['email', 'line', 'line_group', 'webhook', 'in_app']);
 export const deliveryStatus = pgEnum('delivery_status', ['queued', 'sent', 'failed', 'skipped_quiet_hours']);
 export const dueReminder = pgEnum('due_reminder', ['1d_and_today', '3d', 'today_only']);
 export const digestFrequency = pgEnum('digest_frequency', ['workdays', 'daily', 'off']);

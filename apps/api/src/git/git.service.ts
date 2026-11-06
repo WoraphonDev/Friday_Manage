@@ -175,7 +175,7 @@ export class GitService {
   private async ctx(tx: Tx, auth: AuthInfo, tenant: TenantInfo, key: string, write: boolean) {
     const { project, access } = await this.projects.load(tx, auth, tenant, key);
     requirePerm(access, 'project.view');
-    if (access.guestViewer || tenant.role === 'guest') throw new AppError(403, 'guest_view_limited', 'Guest เห็นเฉพาะ Overview, Timeline และงานที่แชร์ให้', { allowed: ['overview', 'timeline'] });
+    if (access.guestViewer) throw new AppError(403, 'guest_view_limited', 'Guest เห็นเฉพาะ Overview, Timeline และงานที่แชร์ให้', { allowed: ['overview', 'timeline'] });
     if (write) {
       requirePerm(access, 'project.settings');
       if (project.archivedAt || project.status === 'archived') throw new AppError(403, 'project_archived', 'โปรเจกต์ที่เก็บถาวรแก้ไขไม่ได้');

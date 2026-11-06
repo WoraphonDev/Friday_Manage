@@ -9,10 +9,10 @@
     "filters": {
       "all": "All",
       "unread": "Unread",
-      "assign": "Assigned",
-      "mention": "Mention",
-      "activity": "Activity",
-      "due": "Due soon / Overdue"
+      "assign": "Assigned / Review",
+      "mention": "Mentions",
+      "activity": "Task activity",
+      "due": "Due dates"
     },
     "listLabel": "Notification list",
     "detailLabel": "Notification details",

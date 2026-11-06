@@ -4,7 +4,7 @@ import { useRef, useState, type DragEvent, type TouchEvent } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Filter, Plus, Search } from "lucide-react";
+import { Filter, Flag, Plus, Search } from "lucide-react";
 import { useIsMobile } from "@/lib/use-mobile";
 import { CalendarClock, ChevronDown } from "lucide-react";
 import { Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
@@ -58,7 +58,8 @@ export function weekStartOf(today: string) {
 
 export function MyTasksPage({ ws }: { ws: string }) {
   const t = useTranslations("home-my-tasks.tasks");
-  const { me } = useWorkspace();
+  const { me, projects: myProjects } = useWorkspace();
+  const firstProject = myProjects[0];
   const cache = useQueryClient();
   const toast = useToast();
   const [tab, setTab] = useState<Tab>("assigned");
@@ -140,6 +141,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
               {t("owner", { name: me.displayName })} · <b>{t("openCount", { count: data.counts[tab] })}</b> · {t("estSum", { md: estSum.toFixed(1) })}
             </div>
           </div>
+          {firstProject && <Link className="button button-primary" href={`${base}/p/${encodeURIComponent(firstProject.key)}?new=1`}>{t("newTask")}</Link>}
         </div>
         <div className={styles.filters}>
           <div className={styles.tabsScroll} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }} role="group" aria-label={t("title")}>
@@ -337,7 +339,7 @@ function TaskRow({ item, ws, year, busy, onToggle, onMove, onDragStart }: { item
         </div>
       </div>
       <span className="hideMobile"><StatusBadge category={item.status.category} name={item.status.name} /></span>
-      <span className={`hideMobile ${styles["pr-" + item.priority]}`} style={{ fontSize: 13, fontWeight: 500 }}>{tp(item.priority)}</span>
+      <span className={`hideMobile ${styles["pr-" + item.priority]}`} style={{ fontSize: 13, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 4 }}><Flag size={13} aria-hidden="true" />{tp(item.priority)}</span>
       <span className={`${styles.dt} ${due.cls}`}>{due.text}</span>
       <span className="muted hideMobile" style={{ fontSize: 12, textAlign: "right" }}>{item.estimateMd ? t("estimate", { md: item.estimateMd }) : t("noEstimate")}</span>
       <Button size="icon" variant="ghost" aria-label={t("moveDueFor", { key: item.key })} disabled={done || busy} onClick={onMove}><CalendarClock size={16} aria-hidden /></Button>

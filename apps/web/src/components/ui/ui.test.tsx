@@ -26,7 +26,7 @@ describe("UI kit", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("To do")).toBeInTheDocument();
     expect(
-      screen.getByText("ด่วนที่สุด", { exact: false }),
+      screen.getByText("Urgent", { exact: false }),
     ).toBeInTheDocument();
     expect(
       screen.getByLabelText("อีเมล", {

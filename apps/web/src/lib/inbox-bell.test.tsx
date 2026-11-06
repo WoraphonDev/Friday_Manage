@@ -49,12 +49,12 @@ describe("Inbox (G / M3)", () => {
   it("ตัวกรอง 6 แบบพร้อมจำนวน · จัดกลุ่มตามวัน · ยังไม่อ่านมีจุด", async () => {
     mount();
     const filters = await screen.findByRole("group", { name: "ตัวกรอง" });
-    for (const [label, n] of [["ทั้งหมด", 3], ["ยังไม่อ่าน", 2], ["มอบหมาย", 1], ["Mention", 1], ["ความเคลื่อนไหว", 1], ["ใกล้ / เลยกำหนด", 0]] as const) expect(within(filters).getByRole("button", { name: `${label}${n}` })).toBeInTheDocument();
+    for (const [label, n] of [["ทั้งหมด", 3], ["ยังไม่อ่าน", 2], ["มอบหมาย / Review", 1], ["Mentions", 1], ["ความเคลื่อนไหวของงาน", 1], ["กำหนดส่ง", 0]] as const) expect(within(filters).getByRole("button", { name: `${label}${n}` })).toBeInTheDocument();
     const list = screen.getByRole("region", { name: "รายการแจ้งเตือน" });
     expect(within(list).getByText("วันนี้")).toBeInTheDocument();
     expect(within(list).getByText("ก่อนหน้า")).toBeInTheDocument();
     expect(within(list).getAllByRole("img", { name: "ยังไม่อ่าน" })).toHaveLength(2);
-    await userEvent.setup().click(within(filters).getByRole("button", { name: "Mention1" }));
+    await userEvent.setup().click(within(filters).getByRole("button", { name: "Mentions1" }));
     await waitFor(() => expect(lists.at(-1)?.searchParams.get("filter")).toBe("mention"));
     expect(lists.at(-1)?.searchParams.get("workspace")).toBe("sample");
   });

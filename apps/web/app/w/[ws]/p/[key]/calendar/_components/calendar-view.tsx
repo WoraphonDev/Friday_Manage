@@ -33,7 +33,7 @@ export interface CalendarData {
   leaves: CalLeave[];
 }
 
-export type View = "month" | "week";
+export type View = "month" | "week" | "day" | "agenda";
 type Show = Record<"tasks" | "milestones" | "sprints" | "holidays" | "leaves" | "done", boolean>;
 type Pending = { key: string; body: { planStart?: string; planEnd: string }; version?: number; reason?: string };
 type Item =
@@ -82,12 +82,15 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
   const [needReason, setNeedReason] = useState<Pending | null>(null);
   const [needRequest, setNeedRequest] = useState<Pending | null>(null);
   const [subscribe, setSubscribe] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const dragged = useRef<string | null>(null);
 
   const month = anchor ? anchor.slice(0, 7) : null;
   const queryKey = ["calendar", ws, projectKey, month ?? "current"];
   const perms = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${base}/my-permissions`) });
   const q = useQuery({ queryKey, queryFn: () => api.get<CalendarData>(`${base}/calendar${month ? `?month=${month}` : ""}`) });
+  // Canvas: การ์ด Unscheduled ทางขวา · ใช้รายการงานที่ไม่มีวันจาก API Timeline (calendar ส่งเฉพาะงานที่มีวัน)
+  const unscheduled = useQuery({ queryKey: ["timeline", ws, projectKey], queryFn: () => api.get<{ unscheduled: { key: string; title: string; parentKey: string | null }[] }>(`${base}/timeline`), enabled: !!perms.data && !perms.data.guestViewer });
   const canEdit = !!perms.data?.permissions.includes("issue.edit") && !perms.data.guestViewer;
   const canCreate = !!perms.data?.permissions.includes("issue.create") && !perms.data.guestViewer;
 
@@ -117,8 +120,8 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
   const d = q.data!;
   const at = anchor ?? d.today;
   const shownMonth = month ?? d.month;
-  const days = view === "month" ? monthDays(shownMonth) : Array.from({ length: 7 }, (_, i) => addDays(mondayOf(at), i));
-  const weeks = Array.from({ length: days.length / 7 }, (_, i) => days.slice(i * 7, i * 7 + 7));
+  const days = view === "month" || view === "agenda" ? monthDays(shownMonth) : view === "day" ? [at] : Array.from({ length: 7 }, (_, i) => addDays(mondayOf(at), i));
+  const weeks = view === "day" ? [days] : Array.from({ length: days.length / 7 }, (_, i) => days.slice(i * 7, i * 7 + 7));
 
   // จัดของลงวัน: Milestone ก่อน ตามด้วยงาน (วัน Due) แล้ววันลา
   const items = new Map<string, Item[]>();
@@ -140,8 +143,8 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
   const hasTasks = d.issues.some((i) => i.planEnd && days.includes(i.planEnd));
 
   const issueHref = (key: string) => `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/calendar?issue=${encodeURIComponent(key)}`;
-  const go = (dir: -1 | 1) => setAnchor(view === "month" ? `${shiftMonth(shownMonth, dir)}-01` : addDays(at, dir * 7));
-  const title = view === "month" ? monthLabel(shownMonth, year) : `${formatDate(days[0], year)} – ${formatDate(days[6], year)}`;
+  const go = (dir: -1 | 1) => setAnchor(view === "month" || view === "agenda" ? `${shiftMonth(shownMonth, dir)}-01` : addDays(at, dir * (view === "day" ? 1 : 7)));
+  const title = view === "month" || view === "agenda" ? monthLabel(shownMonth, year) : view === "day" ? formatDate(at, year, true) : `${formatDate(days[0], year)} – ${formatDate(days[6], year)}`;
   const toggle = (k: keyof Show) => setShow((s) => ({ ...s, [k]: !s[k] }));
   const dow = t.raw("dow") as string[];
   const dowShort = t.raw("dowShort") as string[];
@@ -153,6 +156,8 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
     dragged.current = null;
     const issue = d.issues.find((i) => i.key === key);
     if (issue && canEdit) moveDue(issue, day);
+    // งาน Unscheduled ที่ลากมาวาง = เริ่มและครบกำหนดวันนั้น
+    else if (key && canEdit && unscheduled.data?.unscheduled.some((u) => u.key === key)) void commit({ key, body: { planStart: day, planEnd: day } });
   }
 
   const renderItem = (it: Item) => {
@@ -192,6 +197,7 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
         onDragEnd={() => { dragged.current = null; setDropDay(null); }}
         onKeyDown={onKey}
       >
+        <span className={styles.evDot} aria-hidden="true" />
         <span className={styles.t}>{i.key} {i.title}</span>
       </Link>
     );
@@ -199,40 +205,53 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
 
   return (
     <div className={styles.page}>
-      <div className={styles.bar}>
-        <div className={styles.group}>
-          <Button size="icon" aria-label={t(`prev.${view}`)} onClick={() => go(-1)}><ChevronLeft size={16} /></Button>
-          <Button onClick={() => setAnchor(view === "month" ? null : d.today)}>{t("today")}</Button>
-          <Button size="icon" aria-label={t(`next.${view}`)} onClick={() => go(1)}><ChevronRight size={16} /></Button>
-          <h2 className={styles.title}>{title}</h2>
+      {/* Canvas: แถวแรก = เลื่อน + ชื่อเดือน · แถวสอง = มุมมอง, ตัวกรอง, + Task */}
+      <div className={styles.bar} style={{ justifyContent: "flex-start" }}>
+        <Button size="icon" aria-label={t(`prev.${view === "day" ? "week" : view === "agenda" ? "month" : view}`)} onClick={() => go(-1)}><ChevronLeft size={16} /></Button>
+        <Button onClick={() => setAnchor(view === "month" || view === "agenda" ? null : d.today)}>{t("today")}</Button>
+        <Button size="icon" aria-label={t(`next.${view === "day" ? "week" : view === "agenda" ? "month" : view}`)} onClick={() => go(1)}><ChevronRight size={16} /></Button>
+        <h2 className={styles.title}>{title}</h2>
+      </div>
+      <div className={styles.bar} style={{ justifyContent: "flex-start" }}>
+        <div className={styles.seg} role="group" aria-label={t("view.label")}>
+          {(["month", "week", "day", "agenda"] as const).map((v) => (
+            <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>{t(`view.${v}`)}</button>
+          ))}
         </div>
-        <div className={styles.group}>
-          <div className={styles.seg} role="group" aria-label={t("view.label")}>
-            {(["month", "week"] as const).map((v) => (
-              <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>{t(`view.${v}`)}</button>
-            ))}
-          </div>
-          {canCreate && <Link className={buttonVariants({ variant: "primary" })} href={`/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/calendar?new=1`}>{t("newTask")}</Link>}
-        </div>
+        <Button aria-expanded={filtersOpen} onClick={() => setFiltersOpen((x) => !x)}>{t("filter")}</Button>
+        {canCreate && <Link className={buttonVariants({ variant: "primary" })} href={`/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/calendar?new=1&type=task`}>{t("newTask")}</Link>}
       </div>
 
       <div className={styles.layout}>
         <section className={styles.card} aria-label={title}>
           {!hasTasks && <p className={styles.empty} role="status"><b>{t("empty")}</b> <span className="muted">{t("emptyHint")}</span></p>}
-          <div className={styles.dow}>
-            {dow.map((name, i) => <div key={name}><span className={styles.long}>{name}</span><span className={styles.short} aria-hidden="true">{dowShort[i]}</span></div>)}
+          {view === "agenda" ? (
+            <div className={styles.agenda}>
+              {days.filter((day) => day.startsWith(shownMonth) && ((items.get(day) ?? []).length || (tags.get(day) ?? []).length)).map((day) => (
+                <div key={day} className={`${styles.agendaDay} ${day === d.today ? styles.agendaToday : ""}`} data-testid={`day-${day}`}>
+                  <div className={styles.agendaDate}><b>{Number(day.slice(8))}</b><span>{dow[(new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7]}</span></div>
+                  <div className={styles.agendaItems}>
+                    {(tags.get(day) ?? []).map((x) => <span key={x.text} className={`${styles.tag} ${x.hol ? styles.tagHol : ""}`}>{x.text}</span>)}
+                    {(items.get(day) ?? []).map(renderItem)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : <>
+          <div className={styles.dow} style={view === "day" ? { gridTemplateColumns: "1fr" } : undefined}>
+            {(view === "day" ? [dow[(new Date(`${at}T00:00:00Z`).getUTCDay() + 6) % 7]] : dow).map((name, i) => <div key={name}><span className={styles.long}>{name}</span><span className={styles.short} aria-hidden="true">{dowShort[i]}</span></div>)}
           </div>
           {weeks.map((week) => (
-            <div key={week[0]} className={styles.week}>
+            <div key={week[0]} className={styles.week} style={view === "day" ? { gridTemplateColumns: "1fr" } : undefined}>
               {week.map((day, c) => {
                 const out = view === "month" && !day.startsWith(shownMonth);
                 const isToday = day === d.today;
                 const dayTags = tags.get(day) ?? [];
                 const hol = dayTags.some((x) => x.hol);
                 const list = items.get(day) ?? [];
-                const open = view === "week" || expanded.has(day);
+                const open = view === "week" || view === "day" || expanded.has(day);
                 const visible = open ? list : list.slice(0, MAX_ITEMS);
-                const cls = [styles.cell, isToday ? styles.today : hol ? styles.hol : out ? styles.out : c >= 5 ? styles.wkend : "", dropDay === day ? styles.drop : "", view === "week" ? styles.tall : ""].join(" ");
+                const cls = [styles.cell, isToday ? styles.today : hol ? styles.hol : out ? styles.out : c >= 5 ? styles.wkend : "", dropDay === day ? styles.drop : "", view === "week" || view === "day" ? styles.tall : ""].join(" ");
                 const n = Number(day.slice(8));
                 return (
                   <div
@@ -260,17 +279,32 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
               })}
             </div>
           ))}
+          </>}
         </section>
 
         <aside className={styles.aside}>
-          <section className={styles.panel}>
+          {!!unscheduled.data?.unscheduled.length && (
+            <section className={styles.panel} aria-label={t("unscheduled")}>
+              <h2>{t("unscheduled")}</h2>
+              <p className="muted" style={{ fontSize: 12, margin: "-6px 0 8px" }}>{t("unscheduledHint")}</p>
+              <div className={styles.unsched}>
+                {unscheduled.data.unscheduled.slice(0, 5).map((u) => (
+                  <span key={u.key} className={styles.uItem} draggable={canEdit} data-testid={`unscheduled-${u.key}`} onDragStart={(e) => { dragged.current = u.key; e.dataTransfer?.setData("text/plain", u.key); }} title={u.title}>
+                    <span className={styles.grip} aria-hidden="true">⋮⋮</span><span className={styles.evDot} aria-hidden="true" /><span className={styles.t}>{u.key} {u.title}</span>
+                  </span>
+                ))}
+                {unscheduled.data.unscheduled.length > 5 && <span className="muted" style={{ fontSize: 12 }}>{t("moreUnscheduled", { count: unscheduled.data.unscheduled.length - 5 })}</span>}
+              </div>
+            </section>
+          )}
+          {filtersOpen && <section className={styles.panel}>
             <h2>{t("show.title")}</h2>
             <div className={styles.checks}>
               {(["tasks", "milestones", "sprints", "holidays", "leaves", "done"] as const).map((k) => (
                 <label key={k}><input type="checkbox" checked={show[k]} onChange={() => toggle(k)} />{t(`show.${k}`)}</label>
               ))}
             </div>
-          </section>
+          </section>}
           <section className={styles.panel}>
             <h2>{t("legend.title")}</h2>
             <div className={styles.legend}>

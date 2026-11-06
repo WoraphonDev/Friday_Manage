@@ -22,6 +22,10 @@ const ACTION_TARGET: Record<string, { section: string; tone: string }> = {
   trial_ending: { section: "bill", tone: "neu" },
 };
 
+function Meter({ value, max }: { value: number; max: number }) {
+  return <div className={styles.meter} aria-hidden="true"><span style={{ width: `${Math.min(100, max ? (value / max) * 100 : 0)}%` }} /></div>;
+}
+
 export function OverviewSection({ ws, data }: { ws: string; data: AdminOverview }) {
   const t = useTranslations("admin-automation.admin.overview");
   const { me } = useWorkspace();
@@ -34,14 +38,23 @@ export function OverviewSection({ ws, data }: { ws: string; data: AdminOverview 
   return (
     <>
       <div className={styles.kpis}>
-        <div className={styles.kp}><span className={styles.muted}>{t("users")}</span><b>{data.users.active}</b><span className={styles.muted}>{data.users.seatLimit === null ? t("noLimit") : t("seats", { n: data.users.seatLimit })}</span></div>
-        <div className={styles.kp}><span className={styles.muted}>{t("projects")}</span><b>{data.projects.active}</b><span className={styles.muted}>{t("archived", { n: data.projects.archived })}</span></div>
-        <div className={styles.kp}><span className={styles.muted}>{t("storage")}</span><b>{formatBytes(data.storage.usedBytes)}</b><span className={styles.muted}>{data.storage.limitBytes === null ? t("noLimit") : `/ ${formatBytes(data.storage.limitBytes)}`}</span></div>
-        <div className={styles.kp}><span className={styles.muted}>{t("active7d")}</span><b>{t("people", { n: data.users.activeLast7Days })}</b><span className={styles.muted}>{t("ofUsers", { pct })}</span></div>
-        <div className={styles.kp}><span className={styles.muted}>{t("issues")}</span><b>{num.number(data.issues.total)}</b><span className={styles.muted}>{t("open", { n: num.number(data.issues.open) })}</span></div>
-        <div className={styles.kp}><span className={styles.muted}>{t("actions")}</span><b>{data.actions.length}</b></div>
+        <div className={styles.kp}>
+          <span className={styles.muted}>{t("users")}</span>
+          <b>{data.users.active} {data.users.seatLimit === null ? <small>{t("noLimit")}</small> : <small>{t("seats", { n: data.users.seatLimit })}</small>}</b>
+          {data.users.seatLimit !== null && <Meter value={data.users.active} max={data.users.seatLimit} />}
+        </div>
+        <div className={styles.kp}><span className={styles.muted}>{t("projects")}</span><b>{data.projects.active}</b><span className={`${styles.muted} ${styles.small}`}>{t("archived", { n: data.projects.archived })}</span></div>
+        <div className={styles.kp}>
+          <span className={styles.muted}>{t("storage")}</span>
+          <b>{formatBytes(data.storage.usedBytes)} <small>{data.storage.limitBytes === null ? t("noLimit") : `/ ${formatBytes(data.storage.limitBytes)}`}</small></b>
+          {data.storage.limitBytes !== null && <Meter value={data.storage.usedBytes} max={data.storage.limitBytes} />}
+        </div>
+        <div className={styles.kp}><span className={styles.muted}>{t("active7d")}</span><b>{t("people", { n: data.users.activeLast7Days })}</b><span className={`${styles.muted} ${styles.small}`}>{t("ofUsers", { pct })}</span></div>
+        <div className={styles.kp}><span className={styles.muted}>{t("issues")}</span><b>{num.number(data.issues.total)}</b><span className={`${styles.muted} ${styles.small}`}>{t("open", { n: num.number(data.issues.open) })}</span></div>
       </div>
-      <Card title={t("actionsTitle")}>
+      {/* Canvas: เรื่องที่ต้องทำกับกราฟผู้ใช้อยู่แถวเดียวกัน */}
+      <div className={styles.split}>
+      <Card title={t("actions")} actions={data.actions.length > 0 && <span className={`${styles.pill} ${styles.bad}`}>{data.actions.length}</span>}>
         {data.actions.length ? (
           data.actions.map((a) => {
             const target = ACTION_TARGET[a.code] ?? { section: "overview", tone: "neu" };
@@ -75,6 +88,7 @@ export function OverviewSection({ ws, data }: { ws: string; data: AdminOverview 
           <span className={styles.muted}>{t("wauEmpty")}</span>
         )}
       </Card>
+      </div>
     </>
   );
 }

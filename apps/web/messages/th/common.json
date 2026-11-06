@@ -69,6 +69,9 @@
     "projectMembers": "Members",
     "invite": "Invite",
     "projectMenu": "เมนูโปรเจกต์",
+    "settingsNote": "เฉพาะ Admin ของโปรเจกต์แก้ไขได้",
+    "weeklyReport": "สร้างรายงานประจำสัปดาห์",
+    "importExport": "Import / Export",
     "projectTeam": "ทีมในโปรเจกต์ {count} คน",
     "backToWorkspace": "← กลับไปที่ Workspace",
     "back": "กลับ",
@@ -95,10 +98,10 @@
     "archived": "เก็บถาวร"
   },
   "priority": {
-    "urgent": "ด่วนที่สุด",
-    "high": "สูง",
-    "medium": "ปานกลาง",
-    "low": "ต่ำ"
+    "urgent": "Urgent",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
   },
   "states": {
     "emptyTitle": "ยังไม่มีข้อมูล",

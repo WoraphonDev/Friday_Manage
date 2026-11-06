@@ -207,8 +207,10 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
           ))}
         </div>
         <Button size="small" onClick={scrollToToday}>{t("today")}</Button>
-        <span className="muted" style={{ fontSize: 13 }}>{formatDate(d.range.from, year)} – {formatDate(d.range.to, year)}</span>
-        <span style={{ flex: 1 }} />
+        <b style={{ fontSize: 14 }}>{formatDate(d.range.from, year)} – {formatDate(d.range.to, year)}</b>
+      </div>
+      {/* Canvas: แถวที่สองเป็นเครื่องมือของแผน */}
+      <div className={styles.bar}>
         {canEdit && <Button onClick={() => setAutoOpen(true)}>{t("autoSchedule")}</Button>}
         <Button className={styles.toggle} aria-pressed={critOn} onClick={() => setCritOn((c) => !c)}>{t("critical")}</Button>
         <Button className={styles.toggle} aria-pressed={!!baseVer} disabled={!latest} title={latest ? undefined : t("noBaseline")} onClick={() => setBaseVer(baseVer ? null : latest)}>{t("baselineToggle")}</Button>
@@ -218,6 +220,7 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
           </Select>
         )}
         {canBaseline && <Button onClick={() => setBaselineOpen(true)}>{t("setBaseline", { version: latest + 1 })}</Button>}
+        <Button onClick={() => window.print()}>{t("exportPdf")}</Button>
       </div>
 
       {(lateCount > 0 || slipCount > 0 || d.ignoredDependencies > 0) && (

@@ -87,3 +87,7 @@
   .item { grid-template-columns:20px 56px minmax(0,1fr) 32px 36px; padding:0 12px; }
   .handle,.hideSmall { display:none !important; }
 }
+
+/* Canvas Backlog: ปุ่ม Start sprint สีเขียว */
+.startBtn { background:#15803d; border-color:#15803d; color:#fff; }
+.startBtn:hover:not(:disabled) { background:#166534; color:#fff; }

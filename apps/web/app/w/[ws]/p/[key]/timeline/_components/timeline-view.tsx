@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
+import { useLocale, useTranslations } from "next-intl";
+import { ChevronDown, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { AvatarStack, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
@@ -32,7 +32,8 @@ export interface TimelineData {
 }
 
 export type Zoom = "week" | "month" | "quarter";
-export const PX_PER_DAY: Record<Zoom, number> = { week: 28, month: 8, quarter: 3 };
+/** Canvas Timeline: Week = 1 คอลัมน์ต่อสัปดาห์ (≈28 px) · Month / Quarter ย่อลงตามลำดับ */
+export const PX_PER_DAY: Record<Zoom, number> = { week: 4, month: 2, quarter: 1 };
 const DAY = 86_400_000;
 const LABEL_W = 290;
 const STATUS_COLOR: Record<Cat, string> = { todo: "#8a94a0", in_progress: "#2563eb", done: "#15803d" };
@@ -51,13 +52,15 @@ type Pending = { key: string; body: { planStart?: string; planEnd?: string }; re
 
 export function TimelineView({ ws, projectKey }: { ws: string; projectKey: string }) {
   const t = useTranslations("timeline");
+  const locale = useLocale();
   const { me } = useWorkspace();
   const year: YearFormat = me.yearFormat;
   const cache = useQueryClient();
   const toast = useToast();
   const base = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
-  const [zoom, setZoom] = useState<Zoom>("month");
+  const [zoom, setZoom] = useState<Zoom>("week");
   const [colorBy, setColorBy] = useState<"module" | "status" | "assignee">("module");
+  const [level, setLevel] = useState<"module" | "task" | "subtask">("subtask");
   const [closed, setClosed] = useState<Set<string>>(new Set());
   const [drag, setDrag] = useState<Drag | null>(null);
   const [dropRow, setDropRow] = useState<string | null>(null);
@@ -71,6 +74,8 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const perms = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${base}/my-permissions`) });
   const q = useQuery({ queryKey: ["timeline", ws, projectKey], queryFn: () => api.get<TimelineData>(`${base}/timeline`) });
   const canEdit = !!perms.data?.permissions.includes("issue.edit") && !perms.data.guestViewer;
+  const canCreate = !!perms.data?.permissions.includes("issue.create") && !perms.data.guestViewer;
+  const canSettings = !!perms.data?.permissions.includes("project.settings");
   const guest = !!perms.data?.guestViewer;
   const px = PX_PER_DAY[zoom];
 
@@ -154,16 +159,32 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const scrollToToday = () => scrollRef.current?.scrollTo?.({ left: Math.max(0, x(d.today) - 200), behavior: "smooth" });
   const scrollBy = (dir: number) => scrollRef.current?.scrollBy?.({ left: dir * (scrollRef.current.clientWidth - LABEL_W) * 0.8, behavior: "smooth" });
 
-  // หัวแกนเวลา: เดือน (และสัปดาห์เมื่อ zoom = week / month)
+  // หัวแกนเวลา 3 แถวตาม Canvas: เดือน · วันจันทร์ของแต่ละสัปดาห์ · เลขสัปดาห์ (สัปดาห์ปัจจุบันเน้นสีพร้อมชื่อ Sprint)
   const ticks: { left: number; label: string; major: boolean }[] = [];
+  const weeks: { left: number; date: number; no: number; current: boolean; sprint: string | null }[] = [];
+  // ชื่อเดือนเต็มพร้อมปีตาม Canvas (เช่น พฤศจิกายน 2569) · ปฏิทินตามที่ผู้ใช้ตั้ง พ.ศ. / ค.ศ.
+  const monthName = new Intl.DateTimeFormat(`${locale === "en" ? "en-GB" : "th-TH"}-u-ca-${year === "BE" ? "buddhist" : "gregory"}`, { month: "long", year: "numeric", timeZone: "UTC" });
   for (let i = 0; i <= ax.days; i++) {
     const day = addDays(ax.from, i);
     const dt = new Date(`${day}T00:00:00Z`);
-    if (dt.getUTCDate() === 1) ticks.push({ left: i * px, label: formatDate(day, year).split(" ").slice(1).join(" "), major: true });
-    else if (zoom !== "quarter" && dt.getUTCDay() === 1) ticks.push({ left: i * px, label: zoom === "week" ? String(dt.getUTCDate()) : "", major: false });
+    if (dt.getUTCDate() === 1) ticks.push({ left: i * px, label: zoom === "quarter" ? formatDate(day, year).split(" ").slice(1).join(" ") : monthName.format(dt), major: true });
+    if (dt.getUTCDay() === 1) {
+      const end = addDays(day, 6);
+      const sprint = d.sprints.find((sp) => sp.startDate <= end && sp.endDate >= day && sp.status === "active");
+      weeks.push({ left: i * px, date: dt.getUTCDate(), no: isoWeek(day), current: d.today >= day && d.today <= end, sprint: sprint?.name ?? null });
+    }
   }
-  const weekends = zoom === "week" ? Array.from({ length: ax.days }, (_, i) => i).filter((i) => [0, 6].includes(new Date(`${addDays(ax.from, i)}T00:00:00Z`).getUTCDay())) : [];
+  const weekends: number[] = [];
   const issueHref = (key: string) => `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?issue=${encodeURIComponent(key)}`;
+  const newHref = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?new=1&type=task`;
+  const groupsOf = (moduleLineId: string) => d.modules.find((m) => `m:${m.id ?? "none"}` === moduleLineId)?.groups.length ?? 0;
+  // ระดับที่แสดง: Module = ย่อทุก Module · Task = เปิด Module ย่อ Sub-task · Sub-task = เปิดทั้งหมด
+  const showLevel = (lv: "module" | "task" | "subtask") => {
+    setLevel(lv);
+    if (lv === "subtask") return setClosed(new Set());
+    if (lv === "module") return setClosed(new Set(d.modules.map((m) => `m:${m.id ?? "none"}`)));
+    setClosed(new Set(d.modules.flatMap((m) => m.groups.flatMap((g) => g.tasks.filter((r) => r.subtasks.length).map((r) => `t:${r.key}`)))));
+  };
   const empty = !d.modules.some((m) => m.groups.length);
 
   const laneBg = (
@@ -196,10 +217,15 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
         <Button size="small" onClick={scrollToToday}>{t("today")}</Button>
         <Button size="icon" variant="ghost" aria-label={t("next")} onClick={() => scrollBy(1)}><ChevronRight size={16} /></Button>
         <span className="muted" style={{ fontSize: 13 }}>{formatDate(d.range.from, year)} – {formatDate(d.range.to, year)}</span>
-        <span style={{ flex: 1 }} />
-        <Select aria-label={t("colorBy")} size="small" value={colorBy} onChange={(e) => setColorBy(e.target.value as typeof colorBy)}>
-          {(["module", "status", "assignee"] as const).filter((c) => !(guest && c === "assignee")).map((c) => <option key={c} value={c}>{t("colorBy")}: {t(`colors.${c}`)}</option>)}
+      </div>
+      <div className={styles.bar}>
+        <div className={styles.seg} role="group" aria-label={t("levelLabel")}>
+          {(["module", "task", "subtask"] as const).map((lv) => <button key={lv} type="button" aria-pressed={level === lv} onClick={() => showLevel(lv)}>{t(`levels.${lv}`)}</button>)}
+        </div>
+        <Select aria-label={t("colorBy")} size="small" prefix={t("colorBy")} value={colorBy} onChange={(e) => setColorBy(e.target.value as typeof colorBy)}>
+          {(["module", "status", "assignee"] as const).filter((c) => !(guest && c === "assignee")).map((c) => <option key={c} value={c}>{t(`colors.${c}`)}</option>)}
         </Select>
+        {canSettings && <Link className="button button-small" href={`/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/settings/milestones`}>{t("addMilestone")}</Link>}
       </div>
 
       <section className={styles.card}>
@@ -209,18 +235,13 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
               <div className={`${styles.row} ${styles.headRow}`}>
                 <div className={styles.lab}>{t("rowsLabel")}</div>
                 <div className={styles.lane} style={{ width }} data-testid="axis">
-                  {ticks.map((tk) => <span key={tk.left} className={styles.tick} style={{ left: tk.left, fontWeight: tk.major ? 600 : 400 }}>{tk.label}</span>)}
-                </div>
-              </div>
-              <div className={styles.row} aria-label={t("sprints")}>
-                <div className={styles.lab}><span className="muted">{t("sprints")}</span></div>
-                <div className={styles.lane} style={{ width }}>
-                  {laneBg}
-                  {d.sprints.map((sp) => <span key={sp.id} className={`${styles.sprint} ${sp.status === "active" ? styles.active : ""}`} style={{ left: x(sp.startDate), width: Math.max(px, (toDay(sp.endDate, sp.startDate) + 1) * px) }} title={sp.name}>{sp.name}</span>)}
+                  <div className={styles.axisRow}>{ticks.map((tk) => <span key={tk.left} className={styles.tick} style={{ left: tk.left, fontWeight: 600 }}>{tk.label}</span>)}</div>
+                  {zoom !== "quarter" && <div className={styles.axisRow}>{weeks.map((w) => <span key={w.left} className={styles.wk} style={{ left: w.left, width: 7 * px }}>{w.date}</span>)}</div>}
+                  <div className={styles.axisRow} aria-label={t("sprints")}>{weeks.map((w) => <span key={w.left} className={`${styles.wk} ${w.current ? styles.wkNow : ""}`} style={{ left: w.left, width: w.sprint && w.current ? 7 * px * 3 : 7 * px }} title={w.sprint ?? undefined}>{w.no}{w.current && w.sprint ? ` · ${w.sprint}` : ""}</span>)}</div>
                 </div>
               </div>
               <div className={styles.row} aria-label={t("milestones")}>
-                <div className={styles.lab}><span className="muted">{t("milestones")}</span></div>
+                <div className={`${styles.lab} ${styles.mod}`}><svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill="#1b1f24" /></svg>{t("milestones")}</div>
                 <div className={styles.lane} style={{ width }}>
                   {laneBg}
                   {d.milestones.map((ms) => (
@@ -237,13 +258,17 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                     <div key={ln.id} className={styles.row}>
                       <div className={`${styles.lab} ${ln.kind === "module" ? styles.mod : styles.grp}`}>
                         <button type="button" className={styles.toggle} aria-expanded={!closed.has(ln.id)} aria-label={t(closed.has(ln.id) ? "expand" : "collapse", { name: ln.name })} onClick={() => toggle(ln.id)}><ChevronDown size={14} style={{ transform: closed.has(ln.id) ? "rotate(-90deg)" : undefined }} /></button>
-                        {ln.kind === "module" && <span style={{ width: 10, height: 10, borderRadius: 3, background: ln.color, flex: "none" }} />}
+                        <span style={{ width: ln.kind === "module" ? 12 : 16, height: ln.kind === "module" ? 12 : 16, borderRadius: ln.kind === "module" ? 3 : 4, background: ln.kind === "module" ? ln.color : `${ln.color}26`, border: ln.kind === "module" ? 0 : `1px solid ${ln.color}66`, flex: "none" }} aria-hidden="true" />
                         <span className={styles.labText}>{ln.name}</span>
-                        {ln.kind === "module" && <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>{t("tasks", { count: ln.count })}</span>}
+                        <span className={styles.cnt}>{ln.kind === "module" ? t("groups", { count: groupsOf(ln.id) }) : ln.s.taskCount}</span>
+                        {canCreate && <Link className={styles.add} href={newHref} aria-label={t("addIn", { name: ln.name })}><Plus size={14} aria-hidden="true" /></Link>}
                       </div>
                       <div className={`${styles.lane} ${dropRow === ln.id ? styles.drop : ""}`} style={{ width }} onDragOver={(e) => { if (canEdit && dragged.current) { e.preventDefault(); setDropRow(ln.id); } }} onDragLeave={() => setDropRow(null)} onDrop={(e) => onDropRow(e, ln.id)} data-testid={`lane-${ln.id}`}>
                         {laneBg}
-                        {s.start && s.end && <span className={`${styles.b} ${styles.summary} ${s.lateDays ? styles.late : ""}`} style={{ left: x(s.start), width: Math.max(px, (toDay(s.end, s.start) + 1) * px), background: ln.kind === "module" ? ln.color : "#64748b" }}><span className={styles.prog} style={{ width: `${s.progressPct}%` }} /></span>}
+                        {s.start && s.end && <>
+                          <span className={`${styles.b} ${styles.summary}`} style={{ left: x(s.start), width: Math.max(px, (toDay(s.end, s.start) + 1) * px), background: ln.kind === "module" ? "#e4e7eb" : `${ln.color}33` }}><span className={styles.fill} style={{ width: `${s.progressPct}%`, background: ln.color }} /></span>
+                          <span className={styles.barLabel} style={{ left: x(s.end) + px + 6 }}>{s.progressPct}% · {formatDate(s.start, year)} – {formatDate(s.end, year)}</span>
+                        </>}
                       </div>
                     </div>
                   );
@@ -270,8 +295,10 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                   <div key={`${r.key}${ln.sub ? ":s" : ""}`} className={styles.row}>
                     <div className={`${styles.lab} ${ln.sub ? styles.sub : styles.task}`}>
                       {ln.hasKids && <button type="button" className={styles.toggle} aria-expanded={!closed.has(`t:${r.key}`)} aria-label={t(closed.has(`t:${r.key}`) ? "expand" : "collapse", { name: r.key })} onClick={() => toggle(`t:${r.key}`)}><ChevronDown size={14} style={{ transform: closed.has(`t:${r.key}`) ? "rotate(-90deg)" : undefined }} /></button>}
+                      {!ln.hasKids && <span className={styles.dotStatus} style={{ borderColor: STATUS_COLOR[r.status.category], background: r.status.category === "done" ? STATUS_COLOR.done : "transparent" }} aria-hidden="true" />}
                       <span className="muted" style={{ fontSize: 12 }}>{r.key}</span>
                       {open ? <Link className={styles.labText} href={issueHref(r.key)} style={{ color: "var(--foreground)" }}>{r.title}</Link> : <span className={styles.labText}>{r.title}</span>}
+                      {!guest && !!r.assignees?.length && <span className={styles.who}><AvatarStack people={r.assignees} max={1} /></span>}
                     </div>
                     <div className={`${styles.lane} ${dropRow === r.key ? styles.drop : ""}`} style={{ width }} onDragOver={(e) => { if (canEdit && dragged.current) { e.preventDefault(); setDropRow(r.key); } }} onDragLeave={() => setDropRow(null)} onDrop={(e) => onDropRow(e, r.key)}>
                       {laneBg}
@@ -287,10 +314,11 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                         onKeyDown={onKey}
                       >
                         <span className={styles.prog} style={{ width: `${r.progressPct}%` }} />
-                        {zoom !== "quarter" && <span style={{ position: "relative" }}>{names || r.key}</span>}
                         {canEdit && <span className={`${styles.handle} ${styles.start}`} aria-label={t("resizeStart", { key: r.key })} data-testid={`start-${r.key}`} onMouseDown={startDrag("start")} />}
                         {canEdit && <span className={`${styles.handle} ${styles.end}`} aria-label={t("resizeEnd", { key: r.key })} data-testid={`end-${r.key}`} onMouseDown={startDrag("end")} />}
                       </span>
+                      {/* Canvas: ชื่อผู้รับผิดชอบ · % หรือ "เลย N วัน" อยู่ขวาของแท่ง */}
+                      <span className={`${styles.barLabel} ${r.lateDays ? styles.barLate : ""}`} style={{ left: x(end) + px + 6 }} aria-hidden="true">{[names || r.key, r.lateDays ? t("late", { days: r.lateDays }) : `${r.progressPct}%`].join(" · ")}</span>
                     </div>
                   </div>
                 );
@@ -324,6 +352,14 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
       {needRequest && <RequestDialog ws={ws} pending={needRequest} year={year} onClose={() => setNeedRequest(null)} onSent={async () => { const k = needRequest.key; setNeedRequest(null); toast({ message: t("requested", { key: k }) }); await cache.invalidateQueries({ queryKey: ["timeline", ws, projectKey] }); }} />}
     </div>
   );
+}
+
+/** เลขสัปดาห์แบบ ISO 8601 ของวันที่ YYYY-MM-DD */
+export function isoWeek(iso: string) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 3 - ((d.getUTCDay() + 6) % 7));
+  const first = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  return 1 + Math.round(((d.getTime() - first.getTime()) / DAY - 3 + ((first.getUTCDay() + 6) % 7)) / 7);
 }
 
 const minDate = (a: string, b: string) => (a < b ? a : b);

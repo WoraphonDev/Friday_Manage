@@ -8,9 +8,9 @@ import { api } from "@/lib/api";
 import { adminKey, errorText, wsPath, type WorkspaceSettings } from "./types";
 import styles from "./admin.module.css";
 
-export function Card({ title, actions, children, label }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; label?: string }) {
+export function Card({ title, actions, children, label, className }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; label?: string; className?: string }) {
   return (
-    <section className={styles.card} aria-label={label}>
+    <section className={className ? `${styles.card} ${className}` : styles.card} aria-label={label}>
       {(title || actions) && (
         <div className={styles.ch}>
           {title && <h2>{title}</h2>}

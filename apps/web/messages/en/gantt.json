@@ -3,6 +3,7 @@
   "scale": { "label": "Scale", "day": "Day", "week": "Week", "month": "Month" },
   "level": { "label": "Expand level", "one": "Level 1", "two": "2", "three": "3", "hint": "Level {n}: {what}", "what1": "Module", "what2": "Module › Task group", "what3": "All levels down to Sub-task" },
   "today": "Today",
+  "exportPdf": "Export PDF",
   "autoSchedule": "Auto-schedule",
   "critical": "Critical path",
   "baselineToggle": "Plan vs actual",

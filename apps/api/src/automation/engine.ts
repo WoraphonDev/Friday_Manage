@@ -18,6 +18,9 @@ const s = schema;
 /** กฎที่ถูกเรียกจากการกระทำของกฎอื่นได้สูงสุด 3 ชั้น (หน้า P2, 01-entities › automation_run.depth) */
 export const MAX_DEPTH = 3;
 const SCAN_LIMIT = 200;
+/** โหลดข้อมูลงานทีละชุดตอนสแกน · และอ่านผู้สมัครไม่เกินจำนวนนี้ต่อกฎต่อรอบ (จำกัดทรัพยากร) */
+const FACT_CHUNK = 500;
+const SCAN_MAX_CANDIDATES = 20_000;
 
 interface Chain {
   depth: number;
@@ -269,10 +272,25 @@ export class AutomationEngine implements OnModuleInit {
         .orderBy(asc(s.issues.number));
       if (!issues.length) continue;
       const seen = new Set((await this.sys.select({ d: sql<string>`${s.automationRuns.detail}->>'dedupe'` }).from(s.automationRuns).where(and(eq(s.automationRuns.ruleId, rule.id), sql`${s.automationRuns.detail} ? 'dedupe'`))).map((r) => r.d));
-      for (const i of issues.slice(0, SCAN_LIMIT)) {
-        const dedupe = `${i.id}:${i.planEnd}`;
-        if (seen.has(dedupe)) continue;
-        ran += await this.runBatch(rule, [i.id], { dedupe });
+      // ตัดงานที่เคยทำ และตรวจเงื่อนไขก่อนใช้โควตา SCAN_LIMIT (N03): เดิมตัด 200 งานแรกก่อน
+      // งานที่ไม่ตรงเงื่อนไขกินโควตาทุกรอบ งานหลังลำดับ 200 จึงไม่เคยถูกตรวจ
+      const pending = issues.filter((i) => !seen.has(`${i.id}:${i.planEnd}`));
+      if (!pending.length) continue;
+      const actor = await this.actorFor(rule);
+      if (!actor) {
+        await this.record(rule, [], 'failed', { reason: 'creator_inactive' }, 0);
+        continue;
+      }
+      const planEnd = new Map(pending.map((i) => [i.id, i.planEnd]));
+      const matched: Facts[] = [];
+      for (let at = 0; at < pending.length && at < SCAN_MAX_CANDIDATES && matched.length < SCAN_LIMIT; at += FACT_CHUNK) {
+        const ids = pending.slice(at, at + FACT_CHUNK).map((i) => i.id);
+        const facts = await this.db.run(actor.auth, actor.tenant, (tx) => loadFacts(tx, ids));
+        matched.push(...facts.filter((f) => matches(rule.conditions as Condition[], f)));
+      }
+      for (const f of matched.slice(0, SCAN_LIMIT)) {
+        await this.runRule(rule, f.id, { depth: 0, seen: new Set() }, { trigger: rule.trigger, extra: { dedupe: `${f.id}:${planEnd.get(f.id)}` }, facts: f, actor });
+        ran++;
       }
     }
     return { ran };
@@ -339,13 +357,17 @@ export class AutomationEngine implements OnModuleInit {
     await this.record(rule, [...touched], result, { ...base, issueKey: facts.key, steps }, chain.depth);
   }
 
-  /** ผู้กระทำ = ผู้สร้างกฎ (สิทธิ์ของเขาจำกัดสิ่งที่กฎทำได้) · ไม่ใช่สมาชิก active แล้ว = null */
+  /**
+   * ผู้กระทำ = ผู้สร้างกฎ (สิทธิ์ของเขาจำกัดสิ่งที่กฎทำได้) · ไม่ใช่สมาชิก active แล้ว หรือบัญชีถูกปิดทั้งระบบ = null
+   * งานเบื้องหลังไม่ผ่าน AuthGuard จึงต้องตรวจ users.disabled_at เอง (N04 · เทียบ BUG-03 ของ API token)
+   */
   private async actorFor(rule: Rule): Promise<Actor | null> {
     const [row] = await this.sys
       .select({ workspaceId: s.workspaces.id, slug: s.workspaces.slug, role: s.workspaceMembers.role })
       .from(s.workspaces)
       .innerJoin(s.workspaceMembers, and(eq(s.workspaceMembers.workspaceId, s.workspaces.id), eq(s.workspaceMembers.userId, rule.createdBy), eq(s.workspaceMembers.status, 'active')))
-      .where(and(eq(s.workspaces.id, rule.workspaceId), isNull(s.workspaces.deletedAt)));
+      .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
+      .where(and(eq(s.workspaces.id, rule.workspaceId), isNull(s.workspaces.deletedAt), isNull(s.users.disabledAt)));
     return row ? { auth: { userId: rule.createdBy, sessionId: 'automation' }, tenant: { workspaceId: row.workspaceId, slug: row.slug, role: row.role } } : null;
   }
 

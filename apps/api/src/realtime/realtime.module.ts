@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
+import { RealtimeService } from './realtime.service.js';
 
-/** WebSocket · งาน A17 (docs/tasks/A17-*.md) · ใส่ controller / provider ของงานนี้ที่นี่ */
+/** Realtime (WebSocket) · งาน A17 (docs/tasks/A17-*.md) · โมดูลอื่นฉีด RealtimeService แล้วเรียก publish() ได้ */
 @Module({
-  controllers: [],
-  providers: [],
+  providers: [RealtimeService],
+  exports: [RealtimeService],
 })
 export class RealtimeModule {}

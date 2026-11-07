@@ -13,7 +13,7 @@ export const project: ProjectMeta = { id: uid(9), key: 'DE', name: 'แผนต
   { id: uid(23), name: 'Spike', workflowId: uid(90), requiredFields: ['title','question','timebox'] },
 ] };
 export const formOptions: FormOptions = { modules: project.modules, phases: project.phases, sprints: project.sprints, members: [me,dev], sizeMdMap: { XS:1, S:3, M:5, L:8, XL:12 }, labels: [], issueTypes: project.issueTypes.map((type) => ({ ...type, statuses: project.statuses.filter((status) => status.workflowId === type.workflowId) })) };
-export const fullAccess: Permissions = { role: 'admin', guestViewer: false, permissions: ['project.view','issue.create','issue.edit','issue.comment','issue.delete','issue.change_due_directly'] };
+export const fullAccess: Permissions = { role: 'admin', guestViewer: false, permissions: ['project.view','issue.create','issue.edit','issue.comment','issue.delete','issue.change_due_directly','issue.record_test'] };
 export function makeIssue(key = 'DE-1', change: Partial<Issue> = {}): Issue {
   return { id: uid(200+Number(key.split('-')[1])), key, projectKey: 'DE', type: 'Task', parentKey: null, title: `งานตัวอย่าง ${key}`, description: '**รายละเอียด** ของงานตัวอย่าง', status: statuses[1], priority: 'medium', moduleId: uid(10), phaseId: uid(11), sprintId: uid(12), assigneeIds: [me.id], baId: null, reviewerId: dev.id, testerId: null, reporterId: me.id, size: 'M', estimateMd: 5, progressPct: 20, planStart: '2026-11-06', planEnd: '2026-11-09', actualStart: '2026-11-06', actualEnd: null, severity: null, environment: null, details: {}, reopenCount: 0, sharedWithGuests: true, version: 3, createdAt: '2026-11-06T01:00:00Z', updatedAt: '2026-11-06T02:00:00Z', pendingDueRequest: null, ...change };
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Upload, X } from "lucide-react";
@@ -128,7 +129,9 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
   const [uploader, setUploader] = useState("");
   const [sort, setSort] = useState<Sort>("newest");
   const [view, setView] = useState<"list" | "grid">("list");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const search = useSearchParams();
+  // ?file=<id> มาจากลิงก์หลักฐานผลทดสอบใน Drawer ให้เปิดไฟล์นั้นทันที
+  const [selectedId, setSelectedId] = useState<string | null>(() => search.get("file"));
   const [jobs, setJobs] = useState<UploadJob[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [dialog, setDialog] = useState<null | "folder" | "renameFolder" | "link" | "rename" | "move" | "attach">(null);

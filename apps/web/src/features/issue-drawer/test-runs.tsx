@@ -18,7 +18,9 @@ interface TestRun {
 }
 
 /** ผลทดสอบของ Sub-task ใช้ API ที่มีอยู่ เพื่อไม่ให้แท็บ M4 เป็นเพียงปุ่มว่าง */
-export function TestRuns({ scope, issue, canEdit }: { scope: Scope; issue: Issue; canEdit: boolean }) {
+export function TestRuns({ scope, issue }: { scope: Scope; issue: Issue }) {
+  // API บังคับ issue.record_test ไม่ใช่ issue.edit: ผู้ทดสอบบันทึกผลได้แม้แก้งานไม่ได้
+  const canRecord = !scope.access.guestViewer && scope.access.permissions.includes('issue.record_test') && scope.project?.status !== 'archived';
   const t = useTranslations('issue-drawer.qa');
   const cache = useQueryClient();
   const endpoint = `${issuePath(scope.ws, issue.key)}/test-runs`;
@@ -33,7 +35,7 @@ export function TestRuns({ scope, issue, canEdit }: { scope: Scope; issue: Issue
   const lock = useRef(false);
   async function save(event: React.FormEvent) {
     event.preventDefault();
-    if (!canEdit || lock.current) return;
+    if (!canRecord || lock.current) return;
     lock.current = true; setPending(true); setError(null);
     try {
       await api.post(endpoint, { result, environment, note: note.trim(), ...(commit.trim() ? { commitSha: commit.trim() } : {}), ...(passed !== '' && total !== '' ? { passedCount: Number(passed), totalCount: Number(total) } : {}) });
@@ -52,7 +54,7 @@ export function TestRuns({ scope, issue, canEdit }: { scope: Scope; issue: Issue
     finally { lock.current = false; setPending(false); }
   }
   return <div className={styles.blk}>
-    <h3>{t('title')}{canEdit && !editing && <Button size="small" style={{ marginLeft: 'auto' }} onClick={() => { setError(null); setEditing(true); }}>{t('add')}</Button>}</h3>
+    <h3>{t('title')}{canRecord && !editing && <Button size="small" style={{ marginLeft: 'auto' }} onClick={() => { setError(null); setEditing(true); }}>{t('add')}</Button>}</h3>
     {query.isPending && <LoadingState />}{query.error != null && <ErrorState error={query.error} retry={() => void query.refetch()} />}
     {query.data?.items.length === 0 && <p className="muted">{t('empty')}</p>}
     {query.data?.items.map((run) => <article key={run.id} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 10 }}>

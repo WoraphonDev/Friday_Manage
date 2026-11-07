@@ -14,6 +14,7 @@ import type { Permissions, Person } from '@/lib/types';
 import { IssuePanel } from './issue-panel';
 import { CreateIssue } from './create-issue';
 import { Failure } from './shared';
+import { withoutDrawerParams } from './url';
 import { issuePath, issueQuery, projectPath, type FormOptions, type Issue, type IssueType, type ProjectMeta, type Scope } from './types';
 import styles from './issue-drawer.module.css';
 
@@ -59,8 +60,7 @@ function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
   const options = useQuery({ queryKey: ['issue-form-options', ws, projectKey], queryFn: () => api.get<FormOptions>(`${endpoint}/form-options`), enabled: creating && !!canCreate });
   const people = (members.data?.items ?? []).map((person) => ({ ...person, id: person.userId ?? person.id }));
   function replace(key?: string, newParent?: string) {
-    const next = new URLSearchParams(search);
-    next.delete('issue'); next.delete('new'); next.delete('parent'); next.delete('type'); next.delete('moduleId'); next.delete('phaseId'); next.delete('statusId');
+    const next = withoutDrawerParams(search, pathname);
     if (key) next.set('issue', key);
     if (newParent) { next.set('issue', newParent); next.set('new', '1'); next.set('parent', newParent); }
     router.replace(`${pathname}${next.size ? `?${next}` : ''}`, { scroll: false });

@@ -282,6 +282,19 @@ it('prefills and submits Table module/phase and Kanban status context', async ()
 it('ignores unavailable module/phase/status context IDs', async () => {
   navigation.search = 'new=1&type=task&moduleId=unavailable&phaseId=unavailable&statusId=unavailable'; mount(undefined, { issueKey: undefined }); await screen.findByRole('textbox', { name: 'ชื่อ Task' }); expect(screen.getByLabelText('Module')).toHaveValue(''); expect(screen.getByLabelText('สถานะ')).toHaveValue(''); expect(mutations('/projects/DE/issues')).toHaveLength(0);
 });
+it('gates recording test results on issue.record_test, not issue.edit', async () => {
+  f.state.access = { role: 'member', guestViewer: false, permissions: ['project.view', 'issue.record_test'] }; mount('DE-2');
+  expect(await screen.findByRole('button', { name: 'บันทึกผลทดสอบ' })).toBeInTheDocument();
+});
+it('hides recording test results without issue.record_test', async () => {
+  f.state.access = { role: 'member', guestViewer: false, permissions: ['project.view', 'issue.edit'] }; mount('DE-2');
+  await screen.findByText('ยังไม่มีผลทดสอบ'); expect(screen.queryByRole('button', { name: 'บันทึกผลทดสอบ' })).not.toBeInTheDocument();
+});
+it('keeps the Kanban Bug board when moving between issues', async () => {
+  const user = userEvent.setup(); navigation.search = 'type=bug&issue=DE-1'; mount(); await loaded();
+  await user.click(screen.getByRole('button', { name: /DE-2.*งานย่อยหนึ่ง/ }));
+  await waitFor(() => expect(router.replace).toHaveBeenLastCalledWith('/w/sample/p/DE/board?type=bug&issue=DE-2', { scroll: false }));
+});
 
 it('read-only members see checklist and dependencies without edit controls', async () => {
   f.state.access = { role: 'viewer', guestViewer: false, permissions: ['project.view'] }; mount(); await loaded();

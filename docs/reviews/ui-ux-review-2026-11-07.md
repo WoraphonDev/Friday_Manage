@@ -154,3 +154,17 @@
 | R4 · หน้ากฎหมาย + Cookie consent | `/legal/terms` | ไม่มีเอกสารเผยแพร่ใน fixture จึงตรวจ layout ของข้อความ fallback ไม่ได้อนุมัติเนื้อหากฎหมาย |
 
 ยังไม่ merge PR หรือ deploy ระบบจากการตรวจรอบนี้
+
+## ตรวจซ้ำโดย Claude — 7 พฤศจิกายน 2569
+
+อ่านโค้ด `bb63778` เทียบกับรายงาน แล้วแก้ใน branch เดียวกัน
+
+| เรื่อง | ที่พบ | แก้ |
+|---|---|---|
+| ปิด Drawer บนบอร์ด Bug | การล้าง `type` ตอนปิด Drawer ทำให้ `?type=bug` ของ Kanban หาย ปิดแล้วเด้งกลับบอร์ด Task | รวมการล้าง query ไว้ที่ `withoutDrawerParams` และคง `type=bug` เมื่ออยู่ที่ `/board` |
+| ลิงก์ไฟล์หลักฐาน QA | ลิงก์ `/files?file=<id>` แต่หน้า Files ไม่อ่าน `file` | หน้า Files เลือกไฟล์จาก `?file=` (ลิงก์ภายนอกโหลดผ่าน download ไม่ได้ จึงไม่ลิงก์ตรง) |
+| สิทธิ์บันทึกผลทดสอบ | ปุ่มใช้ `issue.edit` แต่ API บังคับ `issue.record_test` | ปุ่มใช้ `issue.record_test` ตาม API |
+| บั๊กแคช (UF03) | แก้เฉพาะเว็บ ต้นเหตุคือ Express ตอบ 304 เมื่อ If-None-Match ตรงกับ ETag ที่เป็น version | API ส่ง `Cache-Control: no-store` และไม่ใช้ If-None-Match · route ที่ตั้ง Cache-Control เองยังทับได้ · test ใน `projects.e2e.test.ts` ได้ 304 ก่อนแก้ |
+
+- พฤติกรรมที่เปลี่ยนแต่ไม่ได้บอกไว้ข้างบน: Table ที่ไม่มีตัวกรองแสดง Module และกลุ่มงานที่ยังว่างทุกกลุ่ม (คงไว้ เพื่อให้เห็นกลุ่มที่เพิ่งสร้าง)
+- คำขอนอก lane: `apps/api/src/bootstrap.ts` (A17), `apps/api/test/projects.e2e.test.ts` (A04), หน้า Files (W11)

@@ -191,7 +191,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       {!guest && <div className={styles.blk}><h3>{t('dependencies')}</h3><DependencyPanel scope={scope} issueKey={issue.key} /></div>}
       {!guest && <Attachments scope={scope} issue={issue} />}
       </div>
-      {!guest && issue.parentKey && <div hidden={mobile && mobileTab !== 'tests'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-tests`} aria-labelledby={mobile ? `${issue.key}-tab-tests` : undefined}><TestRuns scope={scope} issue={issue} canEdit={canEdit} /></div>}
+      {!guest && issue.parentKey && <div hidden={mobile && mobileTab !== 'tests'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-tests`} aria-labelledby={mobile ? `${issue.key}-tab-tests` : undefined}><TestRuns scope={scope} issue={issue} /></div>}
       {!guest && <div hidden={mobile && mobileTab !== 'commits'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-commits`} aria-labelledby={mobile ? `${issue.key}-tab-commits` : undefined}><Development scope={scope} issue={issue} /></div>}
       <div hidden={mobile && mobileTab !== 'comments'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-comments`} aria-labelledby={mobile ? `${issue.key}-tab-comments` : undefined}><div className={styles.blk} style={{ borderBottom: 0 }}><h3>{t('activity')}</h3><ActivityPanel scope={scope} issueKey={issue.key} showComposer={!mobile} /></div></div>
     </div>

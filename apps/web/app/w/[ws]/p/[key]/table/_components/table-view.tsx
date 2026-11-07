@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { ChevronDown, X } from "lucide-react";
+import * as Popover from "@radix-ui/react-popover";
+import { Check, ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
 import { AvatarStack, Avatar, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
@@ -20,15 +21,32 @@ const ROW_H = 44;
 export const VIRTUAL_AFTER = 300;
 const PAGE = 500;
 const MAX_PAGES = 4;
-const FILTER_KEYS = ["q", "status", "assignee", "priority", "level", "overdue", "hideDone"] as const;
+const FILTER_KEYS = ["q", "status", "assignee", "ba", "size", "priority", "level", "overdue", "hideDone"] as const;
 type Filters = Partial<Record<(typeof FILTER_KEYS)[number], string>>;
+const SIZES = ["XS", "S", "M", "L", "XL"] as const;
+const GROUPS = ["module", "status", "assignee", "priority", "none"] as const;
+type GroupBy = (typeof GROUPS)[number];
+const SORTS = ["rank", "number", "planEnd", "priority"] as const;
+const OPTIONAL_COLS = ["dev", "ba", "status", "size", "start", "end", "actual", "progress"] as const;
+type Col = (typeof OPTIONAL_COLS)[number];
+/** ความกว้างคอลัมน์ตาม Canvas Table (.gr grid-template-columns) */
+const COL_W: Record<Col, number> = { dev: 84, ba: 40, status: 112, size: 78, start: 74, end: 82, actual: 96, progress: 96 };
 
 type Display =
-  | { kind: "module"; id: string; name: string; color: string | null; count: number; md: number; pct: number }
-  | { kind: "phase"; id: string; name: string; count: number }
-  | { kind: "issue"; row: Row; sub: boolean };
+  | { kind: "module"; id: string; name: string; color: string | null; count: number; phases: number; md: number; pct: number; moduleId: string | null; from: string | null; to: string | null }
+  | { kind: "phase"; id: string; name: string; done: number; total: number; md: number }
+  | { kind: "issue"; row: Row; sub: boolean }
+  | { kind: "add"; id: string; name: string; moduleId: string | null; phaseId: string | null }
+  | { kind: "foot"; id: string; count: number; md: number };
 
-/** แถวที่แสดง: Module › กลุ่มงาน › Task › Sub-task (Sub-task ตามแม่ทันที) */
+/** ช่วงแผนของกลุ่ม: Plan Start แรกสุด – Plan End สุดท้าย */
+function span(rows: Row[]) {
+  const starts = rows.map((r) => r.planStart).filter((x): x is string => !!x).sort();
+  const ends = rows.map((r) => r.planEnd).filter((x): x is string => !!x).sort();
+  return { from: starts[0] ?? null, to: ends.at(-1) ?? null };
+}
+
+/** แถวที่แสดง: Module › กลุ่มงาน › Task › Sub-task (Sub-task ตามแม่ทันที) + แถวเพิ่มงานท้ายกลุ่ม + สรุปท้าย Module */
 export function buildDisplay(data: TableData, collapsed: Set<string>, noModule: string, noPhase: string): Display[] {
   const out: Display[] = [];
   const keys = new Set(data.items.map((r) => r.key));
@@ -38,20 +56,52 @@ export function buildDisplay(data: TableData, collapsed: Set<string>, noModule: 
     const mid = m.id ?? "none";
     const inModule = data.items.filter((r) => (r.moduleId ?? null) === m.id && !(r.parentKey && keys.has(r.parentKey)));
     if (!inModule.length) continue;
-    out.push({ kind: "module", id: mid, name: m.name ?? noModule, color: m.color, count: m.taskCount, md: m.estimateMd, pct: m.progressPct });
+    const namedPhases = m.phases.filter((x) => x.id && inModule.some((r) => r.phaseId === x.id)).length;
+    out.push({ kind: "module", id: mid, name: m.name ?? noModule, color: m.color, count: m.taskCount, phases: namedPhases, md: m.estimateMd, pct: m.progressPct, moduleId: m.id, ...span(inModule) });
     if (collapsed.has(mid)) continue;
     for (const ph of m.phases) {
       const roots = inModule.filter((r) => (r.phaseId ?? null) === ph.id);
       if (!roots.length) continue;
-      if (ph.id || m.phases.some((x) => x.id && inModule.some((r) => r.phaseId === x.id))) out.push({ kind: "phase", id: `${mid}:${ph.id ?? "none"}`, name: ph.name ?? noPhase, count: roots.length });
+      const pid = `${mid}:${ph.id ?? "none"}`;
+      const showPhase = !!ph.id || namedPhases > 0;
+      if (showPhase) out.push({ kind: "phase", id: pid, name: ph.name ?? noPhase, done: ph.doneCount, total: ph.taskCount, md: ph.estimateMd });
+      if (collapsed.has(pid)) continue;
       for (const r of roots) {
         out.push({ kind: "issue", row: r, sub: !!r.parentKey });
         for (const k of kids.get(r.key) ?? []) out.push({ kind: "issue", row: k, sub: true });
       }
+      out.push({ kind: "add", id: `${pid}:add`, name: showPhase ? (ph.name ?? noPhase) : (m.name ?? noModule), moduleId: m.id, phaseId: ph.id });
+    }
+    out.push({ kind: "foot", id: `${mid}:foot`, count: m.taskCount, md: m.estimateMd });
+  }
+  return out;
+}
+
+/** จัดกลุ่มแบบอื่นที่ไม่ใช่ Module (Status / Assignee / Priority / None) จากแถวที่โหลดแล้ว */
+function buildFlat(data: TableData, collapsed: Set<string>, group: Exclude<GroupBy, "module">, label: (r: Row) => string): Display[] {
+  const keys = new Set(data.items.map((r) => r.key));
+  const kids = new Map<string, Row[]>();
+  for (const r of data.items) if (r.parentKey && keys.has(r.parentKey)) kids.set(r.parentKey, [...(kids.get(r.parentKey) ?? []), r]);
+  const roots = data.items.filter((r) => !(r.parentKey && keys.has(r.parentKey)));
+  const buckets = new Map<string, Row[]>();
+  for (const r of roots) { const k = group === "none" ? "" : label(r); buckets.set(k, [...(buckets.get(k) ?? []), r]); }
+  const out: Display[] = [];
+  for (const [name, rows] of buckets) {
+    const id = `${group}:${name}`;
+    const md = rows.reduce((n, r) => n + (r.estimateMd ?? 0), 0);
+    const pct = rows.length ? Math.round(rows.reduce((n, r) => n + (r.progressPct ?? 0), 0) / rows.length) : 0;
+    if (group !== "none") out.push({ kind: "module", id, name, color: null, count: rows.length, phases: 0, md, pct, moduleId: null, ...span(rows) });
+    if (collapsed.has(id)) continue;
+    for (const r of rows) {
+      out.push({ kind: "issue", row: r, sub: !!r.parentKey });
+      for (const k of kids.get(r.key) ?? []) out.push({ kind: "issue", row: k, sub: true });
     }
   }
   return out;
 }
+
+const pillClass = (category: string, name: string) =>
+  category === "done" ? styles.sDone : /review/i.test(name) ? styles.sRev : category === "in_progress" ? styles.sProg : styles.sTodo;
 
 export function TableView({ ws, projectKey }: { ws: string; projectKey: string }) {
   const t = useTranslations("overview-table.table");
@@ -61,7 +111,11 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const cache = useQueryClient();
   const toast = useToast();
   const base = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
+  const page = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}`;
   const [filters, setFilters] = useState<Filters>(() => (search.get("overdue") === "true" ? { overdue: "true" } : {}));
+  const [groupBy, setGroupBy] = useState<GroupBy>("module");
+  const [sort, setSort] = useState<(typeof SORTS)[number]>("rank");
+  const [hidden, setHidden] = useState<Set<Col>>(new Set());
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [scrollTop, setScrollTop] = useState(0);
@@ -71,15 +125,18 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
 
   const perms = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${base}/my-permissions`) });
   const canEdit = !!perms.data?.permissions.includes("issue.edit");
+  const canCreate = !!perms.data?.permissions.includes("issue.create");
+  const canSettings = !!perms.data?.permissions.includes("project.settings");
   const canDelete = !!perms.data?.permissions.includes("issue.delete") || perms.data?.role === "admin";
-  const options = useQuery({ queryKey: ["form-options", ws, projectKey], queryFn: () => api.get<Options>(`${base}/form-options`), enabled: canEdit });
+  const options = useQuery({ queryKey: ["form-options", ws, projectKey], queryFn: () => api.get<Options>(`${base}/form-options`), enabled: !!perms.data && !perms.data.guestViewer });
   const views = useQuery({ queryKey: ["saved-views", ws, projectKey], queryFn: () => api.get<{ items: SavedView[] }>(`${base}/saved-views`) });
 
-  const params = new URLSearchParams({ view: "table", limit: String(PAGE), sort: "number" });
+  const params = new URLSearchParams({ view: "table", limit: String(PAGE), sort });
   if (filters.q) params.set("q", filters.q);
   if (filters.status) params.set("status", filters.status);
   else if (filters.hideDone) params.set("status", "todo,in_progress");
   if (filters.assignee) params.set("assignee", filters.assignee);
+  if (filters.ba) params.set("ba", filters.ba);
   if (filters.priority) params.set("priority", filters.priority);
   if (filters.level) params.set("level", filters.level);
   if (filters.overdue) params.set("overdue", "true");
@@ -100,12 +157,21 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
     enabled: !!perms.data && !perms.data.guestViewer,
   });
 
-  const display = useMemo(() => (table.data ? buildDisplay(table.data, collapsed, t("noModule"), t("noPhase")) : []), [table.data, collapsed, t]);
+  // API ยังไม่มีตัวกรอง Size จึงกรองจากแถวที่โหลดมาแล้ว
+  const view = useMemo(() => (table.data && filters.size ? { ...table.data, items: table.data.items.filter((r) => r.size === filters.size) } : table.data), [table.data, filters.size]);
+  const display = useMemo(() => {
+    if (!view) return [];
+    if (groupBy === "module") return buildDisplay(view, collapsed, t("noModule"), t("noPhase"));
+    const label = (r: Row) =>
+      groupBy === "status" ? r.status.name : groupBy === "assignee" ? (r.assignees?.[0]?.displayName ?? t("noAssignee")) : r.priority;
+    return buildFlat(view, collapsed, groupBy, label);
+  }, [view, collapsed, groupBy, t]);
   const statuses = options.data?.issueTypes.find((x) => x.name === "Task")?.statuses ?? [];
   const reload = () => cache.invalidateQueries({ queryKey: ["table", ws, projectKey] });
   const set = (k: keyof Filters, v: string) => { setFilters((f) => ({ ...f, [k]: v || undefined })); setSelected(new Set()); };
+  const toggle = (id: string) => setCollapsed((c) => { const n = new Set(c); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
-  async function patch(row: Row, body: Record<string, unknown>, field: string) {
+  async function patch(row: Row, body: Record<string, unknown>) {
     const run = async (reason?: string) => {
       try {
         await api.patch(`/w/${encodeURIComponent(ws)}/issues/${encodeURIComponent(row.key)}`, reason ? { ...body, planChangeReason: reason } : body, row.version);
@@ -116,7 +182,6 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
       }
       await reload();
     };
-    void field;
     await run();
   }
 
@@ -134,11 +199,21 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
     await reload();
   }
 
+  // bulk ของ API ไม่รับ statusId จึงแก้ทีละงานพร้อม version ของแถว
+  async function bulkStatus(statusId: string) {
+    const rows = (table.data?.items ?? []).filter((r) => selected.has(r.key));
+    const results = await Promise.allSettled(rows.map((r) => api.patch(`/w/${encodeURIComponent(ws)}/issues/${encodeURIComponent(r.key)}`, { statusId }, r.version)));
+    const failed = results.filter((x) => x.status === "rejected").length;
+    toast({ message: failed ? t("bulkFailed", { count: failed }) : t("bulkDone", { count: rows.length }) });
+    if (!failed) setSelected(new Set());
+    await reload();
+  }
+
   if (perms.isPending || (table.isPending && table.fetchStatus !== "idle")) return <div className={styles.page}><LoadingState /></div>;
   if (perms.data?.guestViewer) return <div className={styles.page}><Forbidden /></div>;
   const err = perms.error ?? table.error;
   if (err) return <div className={styles.page}>{err instanceof ApiError && err.status === 403 ? <Forbidden /> : <ErrorState error={err} retry={() => table.refetch()} />}</div>;
-  const data = table.data!;
+  const data = view!;
   const issueRows = display.filter((d): d is Extract<Display, { kind: "issue" }> => d.kind === "issue");
   const virtual = display.length > VIRTUAL_AFTER;
   const viewH = 640;
@@ -148,93 +223,174 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const allSelected = issueRows.length > 0 && issueRows.every((d) => selected.has(d.row.key));
   const filtered = FILTER_KEYS.some((k) => filters[k]);
   const s = data.summary;
+  const cols = OPTIONAL_COLS.filter((c) => !hidden.has(c));
+  const span = cols.length + 1;
+  const extra = (["status", "priority", "level"] as const).filter((k) => filters[k]).length;
+  const activeView = (f: Filters) => JSON.stringify(f) === JSON.stringify(Object.fromEntries(Object.entries(filters).filter(([, x]) => x)));
+  const groupIds = display.filter((d) => d.kind === "module" || d.kind === "phase").map((d) => d.id);
 
   return (
     <div className={styles.page}>
       <div className={styles.bar} role="group" aria-label={t("views")}>
-        <span className="muted">{t("views")}</span>
+        <span className={styles.muted} style={{ fontSize: 13, marginRight: 4 }}>{t("views")}</span>
         <button type="button" className={styles.chip} aria-pressed={!filtered} onClick={() => setFilters({})}>{t("allTasks")}</button>
+        <button type="button" className={styles.chip} aria-pressed={activeView({ assignee: "me" })} onClick={() => setFilters({ assignee: "me" })}>{t("myView")}</button>
+        <button type="button" className={styles.chip} aria-pressed={activeView({ overdue: "true" })} onClick={() => setFilters({ overdue: "true" })}>{t("overdue")}</button>
         {views.data?.items.map((v) => (
           <span key={v.id} style={{ display: "inline-flex", alignItems: "center" }}>
-            <button type="button" className={styles.chip} aria-pressed={JSON.stringify(v.filters) === JSON.stringify(Object.fromEntries(Object.entries(filters).filter(([, x]) => x)))} onClick={() => setFilters(v.filters as Filters)}>{v.name}</button>
+            <button type="button" className={styles.chip} aria-pressed={activeView(v.filters as Filters)} onClick={() => setFilters(v.filters as Filters)}>{v.name}</button>
             {v.mine !== false && <button type="button" className={styles.toggle} aria-label={t("deleteView", { name: v.name })} onClick={async () => { await api.delete(`${base}/saved-views/${v.id}`); await cache.invalidateQueries({ queryKey: ["saved-views", ws, projectKey] }); }}><X size={14} /></button>}
           </span>
         ))}
-        <Button size="small" variant="ghost" onClick={() => setSaving(true)}>{t("saveView")}</Button>
+        <button type="button" className={styles.addb} onClick={() => setSaving(true)}>{t("saveView")}</button>
       </div>
 
-      <div className={styles.bar} role="group" aria-label={t("filters")}>
-        <form onSubmit={(e) => { e.preventDefault(); set("q", String(new FormData(e.currentTarget).get("q") ?? "")); }}>
-          <input className="input" name="q" aria-label={t("search")} placeholder={t("search")} defaultValue={filters.q ?? ""} style={{ minWidth: 220 }} />
-        </form>
-        <Select aria-label={t("status")} size="small" value={filters.status ?? ""} onChange={(e) => set("status", e.target.value)}>
-          <option value="">{t("allStatus")}</option>
-          {(["todo", "in_progress", "done"] as const).map((c) => <option key={c} value={c}>{t(`statusCategory.${c}`)}</option>)}
-        </Select>
-        <Select aria-label={t("assignee")} size="small" value={filters.assignee ?? ""} onChange={(e) => set("assignee", e.target.value)}>
-          <option value="">{t("assignee")}: {t("anyone")}</option>
-          <option value="me">{t("me")}</option>
-          <option value="none">{t("none")}</option>
-          {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
-        </Select>
-        <Select aria-label={t("priority")} size="small" value={filters.priority ?? ""} onChange={(e) => set("priority", e.target.value)}>
-          <option value="">{t("anyPriority")}</option>
-          {(["urgent", "high", "medium", "low"] as const).map((p) => <option key={p} value={p}>{p}</option>)}
-        </Select>
-        <Select aria-label={t("level")} size="small" value={filters.level ?? ""} onChange={(e) => set("level", e.target.value)}>
-          <option value="">{t("allLevels")}</option><option value="task">{t("tasks")}</option><option value="subtask">{t("subtasks")}</option>
-        </Select>
-        <button type="button" className={styles.chip} aria-pressed={!!filters.overdue} onClick={() => set("overdue", filters.overdue ? "" : "true")}>{t("overdue")}</button>
-        <button type="button" className={styles.chip} aria-pressed={!filters.hideDone} onClick={() => set("hideDone", filters.hideDone ? "" : "1")}>{t("showDone")}</button>
-        {filtered && <Button size="small" variant="ghost" onClick={() => setFilters({})}>{t("clear")}</Button>}
-        <span style={{ flex: 1 }} />
-        <Button size="small" onClick={() => setCollapsed(new Set())}>{t("expandAll")}</Button>
-        <Button size="small" onClick={() => setCollapsed(new Set(data.modules.map((m) => m.id ?? "none")))}>{t("collapseAll")}</Button>
+      <div className={styles.toolbar}>
+        <div className={styles.bar} role="group" aria-label={t("filters")}>
+          <form className={styles.search} onSubmit={(e) => { e.preventDefault(); set("q", String(new FormData(e.currentTarget).get("q") ?? "")); }}>
+            <Search size={16} aria-hidden="true" />
+            <input type="search" name="q" aria-label={t("search")} placeholder={t("search")} defaultValue={filters.q ?? ""} />
+          </form>
+          <Popover.Root>
+            <Popover.Trigger asChild>
+              <button type="button" className={styles.tbtn}><SlidersHorizontal size={16} aria-hidden="true" />{t("filter")}{extra > 0 && <span className={`${styles.pill} ${styles.sProg}`}>{extra}</span>}</button>
+            </Popover.Trigger>
+            <Popover.Content className={`popover ${styles.pop}`} sideOffset={6} align="start">
+              <Select label={t("status")} size="small" value={filters.status ?? ""} onChange={(e) => set("status", e.target.value)}>
+                <option value="">{t("allStatus")}</option>
+                {(["todo", "in_progress", "done"] as const).map((c) => <option key={c} value={c}>{t(`statusCategory.${c}`)}</option>)}
+              </Select>
+              <Select label={t("priority")} size="small" value={filters.priority ?? ""} onChange={(e) => set("priority", e.target.value)}>
+                <option value="">{t("anyPriority")}</option>
+                {(["urgent", "high", "medium", "low"] as const).map((p) => <option key={p} value={p}>{p}</option>)}
+              </Select>
+              <Select label={t("level")} size="small" value={filters.level ?? ""} onChange={(e) => set("level", e.target.value)}>
+                <option value="">{t("allLevels")}</option><option value="task">{t("tasks")}</option><option value="subtask">{t("subtasks")}</option>
+              </Select>
+              {filtered && <Button size="small" variant="ghost" onClick={() => setFilters({})}>{t("clear")}</Button>}
+            </Popover.Content>
+          </Popover.Root>
+          <label className={styles.tbtn}>{t("groupBy")}
+            <select className={styles.tsel} aria-label={t("groupBy")} value={groupBy} onChange={(e) => { setGroupBy(e.target.value as GroupBy); setCollapsed(new Set()); }}>
+              {GROUPS.map((g) => <option key={g} value={g}>{t(`groups.${g}`)}</option>)}
+            </select>
+          </label>
+          <select className={styles.tbtn} aria-label={t("ba")} value={filters.ba ?? ""} onChange={(e) => set("ba", e.target.value)}>
+            <option value="">{t("ba")}: {t("anyone")}</option>
+            {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
+          </select>
+          <select className={styles.tbtn} aria-label={t("assignee")} value={filters.assignee ?? ""} onChange={(e) => set("assignee", e.target.value)}>
+            <option value="">{t("assignee")}: {t("anyone")}</option>
+            <option value="me">{t("me")}</option>
+            <option value="none">{t("none")}</option>
+            {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
+          </select>
+          <select className={styles.tbtn} aria-label={t("size")} value={filters.size ?? ""} onChange={(e) => set("size", e.target.value)}>
+            <option value="">{t("size")}: {t("allSizes")}</option>
+            {SIZES.map((z) => <option key={z} value={z}>{z}</option>)}
+          </select>
+          <label className={styles.tbtn}>{t("sort")}:
+            <select className={styles.tsel} aria-label={t("sort")} value={sort} onChange={(e) => setSort(e.target.value as (typeof SORTS)[number])}>
+              {SORTS.map((o) => <option key={o} value={o}>{t(`sorts.${o}`)}</option>)}
+            </select>
+          </label>
+          <Popover.Root>
+            <Popover.Trigger asChild><button type="button" className={styles.tbtn}>{t("columns")}</button></Popover.Trigger>
+            <Popover.Content className={`popover ${styles.pop}`} sideOffset={6} align="start">
+              {OPTIONAL_COLS.map((c) => (
+                <label key={c} className={styles.colCheck}>
+                  <input type="checkbox" checked={!hidden.has(c)} onChange={() => setHidden((h) => { const n = new Set(h); if (n.has(c)) n.delete(c); else n.add(c); return n; })} />{t(`cols.${c}`)}
+                </label>
+              ))}
+            </Popover.Content>
+          </Popover.Root>
+          <label className={styles.tbtn} style={{ cursor: "pointer" }}>
+            <input type="checkbox" className={styles.cb} checked={!filters.hideDone} onChange={() => set("hideDone", filters.hideDone ? "" : "1")} />{t("showCompleted")}
+          </label>
+        </div>
+        <div className={styles.bar}>
+          <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set())}>{t("expandAll")}</button>
+          <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set(groupIds))}>{t("collapseAll")}</button>
+          {canEdit && <Link className={styles.tbtn} href={`/w/${encodeURIComponent(ws)}/import`}>{t("importExport")}</Link>}
+          {canSettings && <Link className={styles.tbtn} href={`${page}/settings/modules`}>{t("addModule")}</Link>}
+          {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={`${page}/table?new=1`}>{t("addTask")}</Link>}
+        </div>
       </div>
+
+      {canEdit && selected.size > 0 && (
+        <BulkBar count={selected.size} options={options.data} statuses={statuses} canDelete={canDelete} onApply={(set) => bulk(set)} onStatus={(id) => void bulkStatus(id)} onDelete={() => setDeleting(true)} onClear={() => setSelected(new Set())} />
+      )}
 
       <section className={styles.card} style={{ overflow: "hidden" }}>
         {!data.items.length ? <EmptyState title={filtered ? t("emptyFiltered") : t("empty")} /> : (
           <div className={styles.tableWrap} style={virtual ? { height: viewH } : undefined} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)} data-testid="table-scroll">
             <table className={styles.table} aria-rowcount={display.length + 1}>
+              <colgroup><col />{cols.map((c) => <col key={c} style={{ width: COL_W[c] + 10 }} />)}</colgroup>
               <thead>
                 <tr>
-                  <th style={{ width: 34 }}>{canEdit && <input type="checkbox" aria-label={t("selectAll")} checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(issueRows.map((d) => d.row.key)) : new Set())} />}</th>
-                  {(["name", "dev", "ba", "status", "priority", "size", "start", "end", "actual", "progress"] as const).map((c) => <th key={c}>{t(`cols.${c}`)}</th>)}
+                  <th>
+                    <div className={styles.nameHead}>
+                      {canEdit ? <input type="checkbox" className={styles.cb} aria-label={t("selectAll")} checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(issueRows.map((d) => d.row.key)) : new Set())} /> : <span style={{ width: 16 }} />}
+                      {t("cols.name")}
+                    </div>
+                  </th>
+                  {cols.map((c) => <th key={c}>{t(`cols.${c}`)}</th>)}
                 </tr>
               </thead>
               <tbody>
-                {virtual && start > 0 && <tr aria-hidden="true"><td colSpan={11} style={{ height: start * ROW_H, padding: 0 }} /></tr>}
+                {virtual && start > 0 && <tr aria-hidden="true"><td colSpan={span} style={{ height: start * ROW_H, padding: 0 }} /></tr>}
                 {shown.map((d) => d.kind === "module" ? (
                   <tr key={d.id} className={styles.moduleRow}>
-                    <td />
-                    <td colSpan={10}>
-                      <button type="button" className={styles.toggle} aria-expanded={!collapsed.has(d.id)} aria-label={t(collapsed.has(d.id) ? "expand" : "collapse", { name: d.name })} onClick={() => setCollapsed((c) => { const n = new Set(c); if (n.has(d.id)) n.delete(d.id); else n.add(d.id); return n; })}>
-                        <ChevronDown size={16} style={{ transform: collapsed.has(d.id) ? "rotate(-90deg)" : undefined }} />
-                      </button>{" "}
-                      <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: d.color ?? "#94a3b8", marginRight: 6 }} />
-                      {d.name} <span className="muted" style={{ fontWeight: 500 }}>· {t("moduleSummary", { count: d.count, md: d.md })} · {d.pct}%</span>
+                    <td colSpan={span}>
+                      <div className={styles.mrow}>
+                        <button type="button" className={styles.chv} aria-expanded={!collapsed.has(d.id)} aria-label={t(collapsed.has(d.id) ? "expand" : "collapse", { name: d.name })} onClick={() => toggle(d.id)}>
+                          <ChevronDown size={16} style={{ transform: collapsed.has(d.id) ? "rotate(-90deg)" : undefined }} />
+                        </button>
+                        {d.color !== null && <span className={styles.swatch} style={{ background: d.color }} />}
+                        <span className={styles.mname}>{d.name}</span>
+                        <span className={styles.muted} style={{ fontSize: 13 }}>{groupBy === "module" ? t("moduleTasks", { count: d.count, phases: d.phases }) : t("groupTasks", { count: d.count })}</span>
+                        <span className={styles.mbar}><span><span style={{ width: `${d.pct}%`, background: d.color ?? "var(--primary)" }} /></span><b>{d.pct}%</b></span>
+                        <span className={styles.muted} style={{ fontSize: 13, marginLeft: 8 }}>{d.from && d.to ? `${formatDate(d.from, year)} – ${formatDate(d.to, year)}` : `${d.md} MD`}</span>
+                        {groupBy === "module" && canCreate && <Link className={styles.addb} style={{ marginLeft: "auto" }} href={`${page}/table?new=1`}>{t("addTask")}</Link>}
+                      </div>
                     </td>
                   </tr>
                 ) : d.kind === "phase" ? (
-                  <tr key={d.id} className={styles.phaseRow}><td /><td colSpan={10}>{d.name} <span className="muted">· {d.count}</span></td></tr>
+                  <tr key={d.id} className={styles.phaseRow}>
+                    <td colSpan={span}>
+                      <div className={styles.prow}>
+                        <button type="button" className={styles.chv} aria-expanded={!collapsed.has(d.id)} aria-label={t(collapsed.has(d.id) ? "expand" : "collapse", { name: d.name })} onClick={() => toggle(d.id)}>
+                          <ChevronDown size={16} style={{ transform: collapsed.has(d.id) ? "rotate(-90deg)" : undefined }} />
+                        </button>
+                        <span className={styles.plabel}>{t("phaseLabel")}</span>
+                        <b>{d.name}</b>
+                        <span className={`${styles.pill} ${styles.sTodo}`}>{d.done}/{d.total}</span>
+                        <span className={`${styles.muted} ${styles.small}`}>{d.md} MD</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : d.kind === "add" ? (
+                  canCreate ? <tr key={d.id} className={styles.addRow}><td colSpan={span}><Link className={styles.addb} href={`${page}/table?new=1`}>{t("addTaskIn", { name: d.name })}</Link></td></tr> : null
+                ) : d.kind === "foot" ? (
+                  <tr key={d.id} className={styles.footRow}><td colSpan={span}><span>{t("footTasks", { count: d.count })}</span><span>{t("footMd", { md: d.md })}</span></td></tr>
                 ) : (
-                  <IssueRow key={d.row.key} row={d.row} sub={d.sub} ws={ws} projectKey={projectKey} year={year} canEdit={canEdit} statuses={statuses}
+                  <IssueRow key={d.row.key} row={d.row} sub={d.sub} cols={cols} ws={ws} projectKey={projectKey} year={year} canEdit={canEdit} statuses={statuses}
                     selected={selected.has(d.row.key)} onSelect={(on) => setSelected((c) => { const n = new Set(c); if (on) n.add(d.row.key); else n.delete(d.row.key); return n; })}
-                    onPatch={(body, field) => patch(d.row, body, field)} />
+                    onPatch={(body) => patch(d.row, body)} />
                 ))}
-                {virtual && end < display.length && <tr aria-hidden="true"><td colSpan={11} style={{ height: (display.length - end) * ROW_H, padding: 0 }} /></tr>}
+                {virtual && end < display.length && <tr aria-hidden="true"><td colSpan={span} style={{ height: (display.length - end) * ROW_H, padding: 0 }} /></tr>}
               </tbody>
             </table>
           </div>
+        )}
+        {groupBy === "module" && canSettings && (
+          <div style={{ padding: "10px 14px" }}><Link className={styles.newModule} href={`${page}/settings/modules`}>{t("newModule")}</Link></div>
         )}
         <div className={styles.foot}>
           {t("summary", { tasks: s.taskCount, subs: s.subtaskCount, done: s.doneCount, md: s.estimateMd, pct: s.progressPct })} · {t("rows", { shown: issueRows.length, total: data.items.length })}{virtual ? ` · ${t("virtualHint")}` : ""}
         </div>
       </section>
 
-      {canEdit && selected.size > 0 && (
-        <BulkBar count={selected.size} options={options.data} canDelete={canDelete} onApply={(set) => bulk(set)} onDelete={() => setDeleting(true)} onClear={() => setSelected(new Set())} />
-      )}
       {saving && <SaveViewDialog onClose={() => setSaving(false)} onSave={async (name, shared) => {
         await api.post(`${base}/saved-views`, { name, viewType: "table", shared, filters: Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) });
         toast({ message: t("viewSaved", { name }) });
@@ -253,60 +409,87 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   );
 }
 
-function IssueRow({ row, sub, ws, projectKey, year, canEdit, statuses, selected, onSelect, onPatch }: {
-  row: Row; sub: boolean; ws: string; projectKey: string; year: YearFormat; canEdit: boolean;
-  statuses: { id: string; name: string }[]; selected: boolean; onSelect: (on: boolean) => void; onPatch: (body: Record<string, unknown>, field: string) => void;
+function IssueRow({ row, sub, cols, ws, projectKey, year, canEdit, statuses, selected, onSelect, onPatch }: {
+  row: Row; sub: boolean; cols: Col[]; ws: string; projectKey: string; year: YearFormat; canEdit: boolean;
+  statuses: { id: string; name: string; category?: string }[]; selected: boolean; onSelect: (on: boolean) => void; onPatch: (body: Record<string, unknown>) => void;
 }) {
   const t = useTranslations("overview-table.table");
+  const [editEnd, setEditEnd] = useState(false);
   const href = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/table?issue=${encodeURIComponent(row.key)}`;
   const statusOptions = statuses.some((s) => s.id === row.status.id) ? statuses : [{ id: row.status.id, name: row.status.name }, ...statuses];
+  const done = row.status.category === "done";
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+  const dueCls = !done && row.planEnd ? (row.planEnd < today ? styles.dueLate : row.planEnd === today ? styles.dueToday : "") : "";
+  const actualLate = !!(row.actualEnd && row.planEnd && row.actualEnd > row.planEnd);
+  // นับเป็นวันปฏิทินจากวันที่ในแผน (YYYY-MM-DD) เพื่อบอกว่าเสร็จช้ากว่าแผนเท่าไร
+  const lateBy = actualLate ? Math.round((Date.parse(row.actualEnd!) - Date.parse(row.planEnd!)) / 86400000) : 0;
+  const cell: Record<Col, React.ReactNode> = {
+    dev: row.assignees?.length ? <span className={styles.avs}><AvatarStack people={row.assignees} max={3} /></span> : <span className={styles.muted}>—</span>,
+    ba: row.ba ? <span className={styles.avs}><Avatar size="small" person={row.ba} /></span> : <span className={styles.muted}>—</span>,
+    status: canEdit && statuses.length ? (
+      <select className={`${styles.pill} ${styles.pillSelect} ${pillClass(row.status.category, row.status.name)}`} aria-label={t("edit", { field: t("cols.status"), key: row.key })} value={row.status.id} onChange={(e) => onPatch({ statusId: e.target.value })}>
+        {statusOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+      </select>
+    ) : <span className={`${styles.pill} ${pillClass(row.status.category, row.status.name)}`}>{row.status.name}</span>,
+    size: <span style={{ whiteSpace: "nowrap" }}>{row.size ? <span className={`${styles.pill} ${styles.sTodo}`} style={{ fontWeight: 700 }}>{row.size}</span> : <span className={styles.muted}>—</span>}{row.estimateMd !== null ? ` ${row.estimateMd}` : ""}</span>,
+    start: formatDate(row.planStart, year),
+    end: canEdit && editEnd ? (
+      <input className={styles.inline} type="date" autoFocus aria-label={t("edit", { field: t("cols.end"), key: row.key })} defaultValue={row.planEnd ?? ""} onBlur={(e) => { setEditEnd(false); if (e.target.value && e.target.value !== row.planEnd) onPatch({ planEnd: e.target.value }); }} />
+    ) : canEdit ? (
+      <button type="button" className={`${styles.cellBtn} ${dueCls}`} aria-label={t("edit", { field: t("cols.end"), key: row.key })} onClick={() => setEditEnd(true)}>{row.planEnd ? formatDate(row.planEnd, year) : "—"}</button>
+    ) : <span className={dueCls}>{formatDate(row.planEnd, year)}</span>,
+    actual: <span className={actualLate ? styles.dueLate : styles.muted} style={{ fontSize: 12 }}>{row.actualEnd ? `${t("actualEnd", { date: formatDate(row.actualEnd, year) })}${actualLate ? ` · ${t("actualLate", { days: lateBy })}` : ""}` : row.actualStart ? t("actualStart", { date: formatDate(row.actualStart, year) }) : "—"}</span>,
+    progress: <span className={styles.prog}><span><span style={{ width: `${row.progressPct ?? 0}%`, background: (row.progressPct ?? 0) >= 100 ? "#16a34a" : "var(--primary)" }} /></span><span>{row.progressPct ?? 0}%</span></span>,
+  };
   return (
-    <tr className={sub ? styles.sub : undefined} data-testid={`row-${row.key}`}>
-      <td>{canEdit && <input type="checkbox" aria-label={t("select", { key: row.key })} checked={selected} onChange={(e) => onSelect(e.target.checked)} />}</td>
-      <td><div className={styles.name}><span className={styles.key}>{row.key}</span><Link href={href} style={{ color: "var(--foreground)", textDecoration: row.status.category === "done" ? "line-through" : "none" }}>{row.title}</Link></div></td>
-      <td>{row.assignees?.length ? <AvatarStack people={row.assignees} /> : <span className="muted">—</span>}</td>
-      <td>{row.ba ? <Avatar size="small" person={row.ba} /> : <span className="muted">—</span>}</td>
+    <tr className={`${styles.itemRow}${selected ? ` ${styles.sel}` : ""}`} data-testid={`row-${row.key}`}>
       <td>
-        {canEdit && statuses.length ? (
-          <select className={styles.inline} aria-label={t("edit", { field: t("cols.status"), key: row.key })} value={row.status.id} onChange={(e) => onPatch({ statusId: e.target.value }, "status")}>
-            {statusOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        ) : row.status.name}
+        <div className={styles.name} style={{ paddingLeft: sub ? 54 : 30 }}>
+          {canEdit ? <input type="checkbox" className={styles.cb} aria-label={t("select", { key: row.key })} checked={selected} onChange={(e) => onSelect(e.target.checked)} /> : <span style={{ width: 16, flex: "none" }} />}
+          <span role="img" aria-label={sub ? t("typeSubtask") : t("typeTask")} className={sub ? styles.typeSub : styles.typeTask}><Check size={12} strokeWidth={3} aria-hidden="true" /></span>
+          <span className={styles.key}>{row.key}</span>
+          <Link href={href} className={`${styles.nm}${done ? ` ${styles.nmDone}` : ""}`} title={row.title}>{row.title}</Link>
+        </div>
       </td>
-      <td>
-        {canEdit ? (
-          <select className={styles.inline} aria-label={t("edit", { field: t("cols.priority"), key: row.key })} value={row.priority} onChange={(e) => onPatch({ priority: e.target.value }, "priority")}>
-            {(["urgent", "high", "medium", "low"] as const).map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-        ) : row.priority}
-      </td>
-      <td>{row.size ?? "—"}{row.estimateMd !== null ? ` · ${row.estimateMd}` : ""}</td>
-      <td>{formatDate(row.planStart, year)}</td>
-      <td>
-        {canEdit ? <input className={styles.inline} type="date" aria-label={t("edit", { field: t("cols.end"), key: row.key })} defaultValue={row.planEnd ?? ""} onBlur={(e) => { if (e.target.value && e.target.value !== row.planEnd) onPatch({ planEnd: e.target.value }, "planEnd"); }} /> : formatDate(row.planEnd, year)}
-      </td>
-      <td className="muted">{row.actualStart ? `${formatDate(row.actualStart, year)}${row.actualEnd ? ` – ${formatDate(row.actualEnd, year)}` : ""}` : "—"}</td>
-      <td>{row.progressPct ?? 0}%</td>
+      {cols.map((c) => <td key={c}>{cell[c]}</td>)}
     </tr>
   );
 }
 
-function BulkBar({ count, options, canDelete, onApply, onDelete, onClear }: { count: number; options?: Options; canDelete: boolean; onApply: (set: Record<string, unknown>) => void; onDelete: () => void; onClear: () => void }) {
+function BulkBar({ count, options, statuses, canDelete, onApply, onStatus, onDelete, onClear }: { count: number; options?: Options; statuses: { id: string; name: string }[]; canDelete: boolean; onApply: (set: Record<string, unknown>) => void; onStatus: (id: string) => void; onDelete: () => void; onClear: () => void }) {
   const t = useTranslations("overview-table.table");
   const [moduleId, setModuleId] = useState("");
   const [due, setDue] = useState("");
   const [assignee, setAssignee] = useState("");
+  const [status, setStatus] = useState("");
+  // เปิดแผงย่อยใต้ปุ่ม (ไม่ใช้ portal เพื่อให้อยู่ในแถบเดียวกัน)
+  const action = (label: string, body: React.ReactNode) => (
+    <Popover.Root>
+      <Popover.Trigger asChild><button type="button" className={styles.bulkBtn}>{label}</button></Popover.Trigger>
+      <Popover.Content className={`popover ${styles.pop}`} sideOffset={6} align="start">{body}</Popover.Content>
+    </Popover.Root>
+  );
   return (
     <div className={styles.bulk} role="region" aria-label={t("selected", { count })}>
-      <b>{t("selected", { count })}</b>
-      <select aria-label={t("bulkModule")} value={moduleId} onChange={(e) => setModuleId(e.target.value)}><option value="">{t("bulkModule")}</option>{options?.modules.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
-      <Button size="small" disabled={!moduleId} onClick={() => onApply({ moduleId })}>{t("apply")}</Button>
-      <input type="date" aria-label={t("bulkDue")} value={due} onChange={(e) => setDue(e.target.value)} />
-      <Button size="small" disabled={!due} onClick={() => onApply({ planEnd: due })}>{t("apply")}</Button>
-      <select aria-label={t("bulkAssignee")} value={assignee} onChange={(e) => setAssignee(e.target.value)}><option value="">{t("bulkAssignee")}</option>{options?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}</select>
-      <Button size="small" disabled={!assignee} onClick={() => onApply({ assigneeIds: [assignee] })}>{t("apply")}</Button>
-      {canDelete && <Button size="small" variant="danger" onClick={onDelete}>{t("delete")}</Button>}
-      <Button size="small" variant="ghost" style={{ color: "#fff" }} onClick={onClear}>{t("unselect")}</Button>
+      <b style={{ marginRight: 8 }}>{t("selected", { count })}</b>
+      {action(t("bulkStatus"), <>
+        <select aria-label={t("bulkStatus")} value={status} onChange={(e) => setStatus(e.target.value)}><option value="">{t("bulkStatus")}</option>{statuses.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+        <Button size="small" disabled={!status} onClick={() => onStatus(status)}>{t("apply")}</Button>
+      </>)}
+      {action(t("bulkAssignee"), <>
+        <select aria-label={t("bulkAssignee")} value={assignee} onChange={(e) => setAssignee(e.target.value)}><option value="">{t("bulkAssignee")}</option>{options?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}</select>
+        <Button size="small" disabled={!assignee} onClick={() => onApply({ assigneeIds: [assignee] })}>{t("apply")}</Button>
+      </>)}
+      {action(t("bulkDue"), <>
+        <input type="date" aria-label={t("bulkDue")} value={due} onChange={(e) => setDue(e.target.value)} />
+        <Button size="small" disabled={!due} onClick={() => onApply({ planEnd: due })}>{t("apply")}</Button>
+      </>)}
+      {action(t("bulkModule"), <>
+        <select aria-label={t("bulkModule")} value={moduleId} onChange={(e) => setModuleId(e.target.value)}><option value="">{t("bulkModule")}</option>{options?.modules.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
+        <Button size="small" disabled={!moduleId} onClick={() => onApply({ moduleId })}>{t("apply")}</Button>
+      </>)}
+      {canDelete && <button type="button" className={styles.bulkBtn} style={{ color: "#fca5a5" }} onClick={onDelete}>{t("delete")}</button>}
+      <button type="button" className={`${styles.bulkBtn} ${styles.bulkClear}`} onClick={onClear}>{t("unselect")}</button>
     </div>
   );
 }

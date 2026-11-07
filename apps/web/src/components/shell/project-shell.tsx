@@ -38,7 +38,8 @@ interface HeaderMember {
 }
 
 export const projectTabs = [
-  { path: "", label: "overview" },
+  // mobile: แท็บที่มีบนมือถือตาม Canvas M6/M7 (Overview, Kanban, List, Calendar, Files)
+  { path: "", label: "overview", mobile: true },
   {
     path: "/dashboard",
     label: "dashboard",
@@ -51,13 +52,13 @@ export const projectTabs = [
     desktop: true,
   },
   { path: "/backlog", label: "backlog", hiddenForGuestViewer: true },
-  { path: "/table", label: "table", hiddenForGuestViewer: true },
-  { path: "/board", label: "board", hiddenForGuestViewer: true },
+  { path: "/table", label: "table", hiddenForGuestViewer: true, mobile: true },
+  { path: "/board", label: "board", hiddenForGuestViewer: true, mobile: true },
   { path: "/timeline", label: "timeline", desktop: true },
   { path: "/gantt", label: "gantt", hiddenForGuestViewer: true, desktop: true },
-  { path: "/calendar", label: "calendar", hiddenForGuestViewer: true },
+  { path: "/calendar", label: "calendar", hiddenForGuestViewer: true, mobile: true },
   { path: "/members", label: "members", permission: "project.workload.view" },
-  { path: "/files", label: "files", hiddenForGuestViewer: true },
+  { path: "/files", label: "files", hiddenForGuestViewer: true, mobile: true },
   {
     path: "/settings",
     label: "settings",
@@ -196,6 +197,12 @@ export function ProjectShell({
       ? "lead"
       : "full";
   const lead = headerVariant === "lead";
+  const canCreate = access.permissions.includes("issue.create");
+  const dates = formatDateRange(
+    project.data.startDate,
+    project.data.goliveDate,
+    me.yearFormat,
+  );
   // หน้าที่ไม่มีแท็บของตัวเอง เข้าจากเมนู ⋯ ตาม Canvas (Main มีปุ่ม ⋯ ข้าง Invite)
   const menuItems = [
     { path: "/settings", label: "settings", permission: "project.settings" },
@@ -243,13 +250,18 @@ export function ProjectShell({
                     {t(`health.${health.data.health.level}`)}
                   </Badge>
                 )}
-                <span className="project-dates">
-                  {formatDateRange(
-                    project.data.startDate,
-                    project.data.goliveDate,
-                    me.yearFormat,
-                  )}
-                </span>
+                <span className="project-dates">{dates}</span>
+              </div>
+              {/* มือถือ M6: รายละเอียดเป็นบรรทัดเดียวใต้ชื่อแทน badge */}
+              <div className="muted project-subline">
+                {[
+                  projectKey,
+                  t(`status.${project.data.status}`),
+                  health.data ? t(`health.${health.data.health.level}`) : null,
+                  dates,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </div>
             </div>
             <div className="project-actions">
@@ -277,12 +289,12 @@ export function ProjectShell({
                   {t("nav.invite")}
                 </Link>
               )}
-              {!lead && menuItems.length > 0 && (
+              {!lead && (menuItems.length > 0 || canCreate) && (
                 <Popover.Root>
                   <Popover.Trigger asChild>
                     <button
                       type="button"
-                      className="button button-icon project-menu-trigger"
+                      className={`button button-icon project-menu-trigger${menuItems.length ? "" : " mobile-only"}`}
                       aria-label={t("nav.projectMenu")}
                     >
                       <MoreHorizontal size={18} aria-hidden="true" />
@@ -295,10 +307,18 @@ export function ProjectShell({
                       align="end"
                     >
                       <nav aria-label={t("nav.projectMenu")}>
+                        {canCreate && (
+                          // มือถือไม่มีปุ่ม + New บนหัว จึงย้ายมาไว้ในเมนู ⋯
+                          <Popover.Close asChild>
+                            <Link className="menu-item mobile-only" href={`${base}?new=1`}>
+                              {t("nav.new")}
+                            </Link>
+                          </Popover.Close>
+                        )}
                         {menuItems.map((item) => (
                           <Popover.Close asChild key={item.path}>
                             <Link
-                              className="menu-item"
+                              className="menu-item desktop-only"
                               href={`${base}${item.path}`}
                             >
                               {t(`nav.${item.label}`)}
@@ -310,8 +330,8 @@ export function ProjectShell({
                   </Popover.Portal>
                 </Popover.Root>
               )}
-              {!lead && access.permissions.includes("issue.create") && (
-                <Link className="button button-primary" href={`${base}?new=1`}>
+              {!lead && canCreate && (
+                <Link className="button button-primary project-new" href={`${base}?new=1`}>
                   {t("nav.new")}
                 </Link>
               )}
@@ -323,7 +343,8 @@ export function ProjectShell({
               .map((tab) => (
                 <Link
                   key={tab.path}
-                  className={`tab${tab.desktop ? " desktop-project-tab" : ""}`}
+                  className={`tab${"mobile" in tab ? "" : " desktop-project-tab"}`}
+                  data-tab={tab.label}
                   aria-current={
                     route === tab.path ||
                     (!!tab.path && route.startsWith(`${tab.path}/`))
@@ -332,8 +353,13 @@ export function ProjectShell({
                   }
                   href={`${base}${tab.path}`}
                 >
-                  {t(
-                    `nav.${tab.path === "/members" ? "projectMembers" : tab.label}`,
+                  {tab.label === "table" ? (
+                    <>
+                      <span className="label-wide">{t("nav.table")}</span>
+                      <span className="label-narrow">{t("nav.list")}</span>
+                    </>
+                  ) : (
+                    t(`nav.${tab.path === "/members" ? "projectMembers" : tab.label}`)
                   )}
                 </Link>
               ))}

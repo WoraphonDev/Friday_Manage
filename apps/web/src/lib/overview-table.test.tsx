@@ -84,14 +84,27 @@ describe("Overview (1 / M6)", () => {
     expect(screen.getByRole("link", { name: "งานที่เลยกำหนด" })).toHaveAttribute("href", "/w/sample/p/DE?issue=DE-23");
     expect(screen.getByText("เลย 9 วัน")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "เปิดใน Table →" })).toHaveAttribute("href", "/w/sample/p/DE/table?overdue=true");
-    await userEvent.setup().click(screen.getByRole("button", { name: /ครบกำหนดวันนี้2/ }));
+    expect(screen.getByRole("img", { name: "ความคืบหน้าโครงการ 22 เปอร์เซ็นต์" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Overdue7/ })).toHaveTextContent("เลยกำหนดส่งและยังไม่ Done");
+    await userEvent.setup().click(screen.getByRole("button", { name: /Due today2/ }));
     expect(screen.getByRole("link", { name: "งานครบวันนี้" })).toBeInTheDocument();
     expect(within(screen.getByRole("region", { name: "Progress by Module" })).getByText("Overdue 3", { exact: false })).toBeInTheDocument();
-    expect(screen.getAllByText("Go-live ระยะแรก", { selector: "b" })).toHaveLength(2); // Milestone ถัดไป + รายการ Milestones
+    expect(screen.getAllByText("Go-live ระยะแรก")).toHaveLength(3); // Milestone ถัดไป (จอใหญ่ + การ์ดมือถือ M6) + รายการ Milestones
+    // M6: ความเสี่ยงสร้างจาก Health / Module บนมือถือ
+    expect(screen.getByText("ผู้พัฒนาหนึ่ง มีงาน Overdue 4 งาน")).toBeInTheDocument();
     expect(screen.getByText("6 / 5 MD · 120%")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /งานที่เสร็จรายวัน/ })).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("button", { name: "Burn-up" }));
     expect(screen.getByRole("img", { name: /Burn-up รายสัปดาห์/ })).toBeInTheDocument();
+  });
+
+  it("ติ๊ก checkbox ในรายการแล้วปิดงานด้วยสถานะ Done ของประเภทงานพร้อม version ล่าสุด", async () => {
+    server.use(http.get("*/api/v1/w/:ws/issues/:key", () => HttpResponse.json({ key: "DE-23", type: "Task", version: 7 })));
+    const user = userEvent.setup();
+    mount(<OverviewPage ws="sample" projectKey="DE" />);
+    await user.click(await screen.findByRole("checkbox", { name: "ทำเครื่องหมายว่าเสร็จ: งานที่เลยกำหนด" }));
+    await waitFor(() => expect(patches).toEqual([{ key: "DE-23", body: { statusId: "st-done" }, etag: '"7"' }]));
+    expect(await screen.findByText("ปิดงาน DE-23 แล้ว")).toBeInTheDocument();
   });
 
   it("เปลี่ยนมุมมอง งานของฉัน / Module ส่ง query ใหม่", async () => {
@@ -128,22 +141,29 @@ describe("Table (2)", () => {
     expect(screen.queryByTestId("row-DE-1")).not.toBeInTheDocument();
     expect(screen.getByTestId("row-DE-3")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Expand all" }));
+    // Status / Priority / ระดับ อยู่ในแผง Filter ตาม Canvas
+    await user.click(screen.getByRole("button", { name: "Filter" }));
     await user.selectOptions(screen.getByLabelText("Status"), "done");
     await waitFor(() => expect(urls.at(-1)?.searchParams.get("status")).toBe("done"));
+    expect(screen.getByRole("button", { name: /Filter/ })).toHaveTextContent("Filter1");
+    await user.keyboard("{Escape}");
     await user.selectOptions(screen.getByLabelText("Dev"), "me");
     await waitFor(() => expect(urls.at(-1)?.searchParams.get("assignee")).toBe("me"));
-    await user.click(screen.getByRole("button", { name: "แสดงงานที่เสร็จ" }));
+    await user.selectOptions(screen.getByLabelText("BA"), "u2");
+    await waitFor(() => expect(urls.at(-1)?.searchParams.get("ba")).toBe("u2"));
+    await user.click(screen.getByRole("checkbox", { name: "Show completed" }));
+    await user.click(screen.getByRole("button", { name: /Filter/ }));
     await user.selectOptions(screen.getByLabelText("Status"), "");
     await waitFor(() => expect(urls.at(-1)?.searchParams.get("status")).toBe("todo,in_progress"));
   });
 
-  it("แก้ในแถว: Status / Priority ส่ง If-Match · แก้แผนหลัง Baseline ถามเหตุผลแล้วส่งซ้ำ", async () => {
+  it("แก้ในแถว: Status ส่ง If-Match · แก้แผนหลัง Baseline ถามเหตุผลแล้วส่งซ้ำ", async () => {
     const user = userEvent.setup();
     mount(<TableView ws="sample" projectKey="DE" />);
     await user.selectOptions(await screen.findByLabelText("แก้ Status ของ DE-1"), "st-done");
     await waitFor(() => expect(patches[0]).toEqual({ key: "DE-1", body: { statusId: "st-done" }, etag: '"2"' }));
-    await user.selectOptions(screen.getByLabelText("แก้ Priority ของ DE-1"), "urgent");
-    await waitFor(() => expect(patches[1].body).toEqual({ priority: "urgent" }));
+    // Plan End แสดงเป็นข้อความ กดแล้วจึงเป็นช่องวันที่
+    await user.click(screen.getByRole("button", { name: "แก้ Plan End ของ DE-1" }));
     const end = screen.getByLabelText("แก้ Plan End ของ DE-1");
     fireEvent.change(end, { target: { value: "2026-12-09" } });
     fireEvent.blur(end);
@@ -159,8 +179,9 @@ describe("Table (2)", () => {
     await user.click(await screen.findByLabelText("เลือก DE-1"));
     await user.click(screen.getByLabelText("เลือก DE-3"));
     const bar = screen.getByRole("region", { name: "2 รายการที่เลือก" });
+    await user.click(within(bar).getByRole("button", { name: "ย้าย Module" }));
     await user.selectOptions(within(bar).getByLabelText("ย้าย Module"), "m-b");
-    await user.click(within(bar).getAllByRole("button", { name: "ใช้" })[0]);
+    await user.click(within(bar).getByRole("button", { name: "ใช้" }));
     await waitFor(() => expect(bulks[0]).toEqual({ keys: ["DE-1", "DE-3"], set: { moduleId: "m-b" } }));
     expect(await screen.findByText("แก้ 2 งานแล้ว")).toBeInTheDocument();
     await user.click(screen.getByLabelText("เลือกทั้งหมดที่แสดง"));
@@ -202,6 +223,20 @@ describe("Table (2)", () => {
     await waitFor(() => expect(urls.at(-1)?.searchParams.get("overdue")).toBe("true"));
   });
 
+  it("Status แบบหลายงานแก้ทีละงานพร้อม version · Group by Status", async () => {
+    const user = userEvent.setup();
+    mount(<TableView ws="sample" projectKey="DE" />);
+    await user.click(await screen.findByLabelText("เลือก DE-1"));
+    await user.click(screen.getByLabelText("เลือก DE-3"));
+    const bar = screen.getByRole("region", { name: "2 รายการที่เลือก" });
+    await user.click(within(bar).getByRole("button", { name: "Status" }));
+    await user.selectOptions(within(bar).getByLabelText("Status"), "st-done");
+    await user.click(within(bar).getByRole("button", { name: "ใช้" }));
+    await waitFor(() => expect(patches.map((p) => [p.key, p.body.statusId, p.etag]).sort()).toEqual([["DE-1", "st-done", '"2"'], ["DE-3", "st-done", '"2"']]));
+    await user.selectOptions(screen.getByLabelText("Group by"), "status");
+    expect(screen.getByRole("button", { name: "ย่อ To do" })).toBeInTheDocument();
+  });
+
   it("300+ แถว render เฉพาะส่วนที่เห็น (virtualized) · ว่าง · Error", async () => {
     tableData = table(Array.from({ length: 450 }, (_, i) => row(`DE-${i + 1}`)));
     const a = mount(<TableView ws="sample" projectKey="DE" />);
@@ -222,8 +257,8 @@ describe("Table (2)", () => {
     expect(await screen.findByText(/req_w05_001/)).toBeInTheDocument();
   });
 
-  it("buildDisplay จัด Sub-task ต่อท้ายแม่ และซ่อน Module ที่ย่อ", () => {
+  it("buildDisplay จัด Sub-task ต่อท้ายแม่, มีแถวเพิ่มงาน + สรุปท้าย Module และซ่อน Module ที่ย่อ", () => {
     const d = buildDisplay(table(), new Set(["m-b"]), "-", "-");
-    expect(d.map((x) => (x.kind === "issue" ? x.row.key : `${x.kind}:${x.kind === "module" ? x.name : ""}`))).toEqual(["module:Module A", "DE-1", "DE-2", "module:Module B"]);
+    expect(d.map((x) => (x.kind === "issue" ? x.row.key : `${x.kind}:${x.kind === "module" ? x.name : ""}`))).toEqual(["module:Module A", "DE-1", "DE-2", "add:", "foot:", "module:Module B"]);
   });
 });

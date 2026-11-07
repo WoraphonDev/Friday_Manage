@@ -51,6 +51,8 @@ export interface Overview {
   milestones: { id: string; name: string; date: string; daysLeft: number; linkedIssues: number; donePct: number; basis: "linked" | "module" | "project" }[];
   workloadThisWeek: { from: string; to: string; people: { person: Person; md: number; capacityMd: number; utilizationPct: number | null; over: boolean }[] } | null;
   activity: { id: string; issue: { key: string; title: string } | null; actor: Person | null; actorKind: string; verb: string; field: string | null; createdAt: string }[];
+  /** M6 · null สำหรับ Guest */
+  counts?: { openBugs: number; pendingDueRequests: number } | null;
 }
 
 export interface Row {

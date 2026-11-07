@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
-import { Avatar, AvatarStack, Badge, ErrorState, Forbidden, LoadingState, Select } from "@/components/ui";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocale, useTranslations } from "next-intl";
+import { Avatar, AvatarStack, Badge, ErrorState, Forbidden, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
@@ -13,17 +13,23 @@ import styles from "./ot.module.css";
 
 type ListKey = keyof Overview["lists"];
 const LIST_KEYS: ListKey[] = ["overdue", "dueToday", "laterThisWeek", "doneLast7Days"];
-const CAT_COLOR = { todo: "#8a94a0", in_progress: "#3b82f6", done: "#15803d" } as const;
+const CAT_COLOR = { todo: "#94a3b8", in_progress: "#2563eb", done: "#16a34a" } as const;
+const KPI_DOT: Record<ListKey, string> = { overdue: "#dc2626", dueToday: "#d97706", laterThisWeek: "#2563eb", doneLast7Days: "#16a34a" };
 
 export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: string }) {
   const t = useTranslations("overview-table.overview");
+  const locale = useLocale();
   const { me } = useWorkspace();
+  const toast = useToast();
+  const cache = useQueryClient();
   const year: YearFormat = me.yearFormat;
   const [scope, setScope] = useState<"all" | "mine">("all");
   const [moduleId, setModuleId] = useState("");
   const [list, setList] = useState<ListKey>("overdue");
   const [chart, setChart] = useState<"daily" | "burnup">("daily");
+  const [busy, setBusy] = useState<string | null>(null);
   const base = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
+  const page = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}`;
   const params = new URLSearchParams({ scope });
   if (moduleId) params.set("moduleId", moduleId);
   const q = useQuery({ queryKey: ["overview", ws, projectKey, params.toString()], queryFn: () => api.get<Overview>(`${base}/overview?${params}`) });
@@ -32,64 +38,106 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
   const d = q.data;
   const p = d.progress;
   const h = d.health;
-  const href = (key: string) => `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}?issue=${encodeURIComponent(key)}`;
-  const tableHref = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/table${list === "overdue" ? "?overdue=true" : ""}`;
-  const delta = (n: number) => t("kpi.delta", { sign: n > 0 ? "+" : "", n });
+  const href = (key: string) => `${page}?issue=${encodeURIComponent(key)}`;
+  const tableHref = `${page}/table${list === "overdue" ? "?overdue=true" : ""}`;
+  const delta = (n: number, goodWhenUp: boolean) =>
+    n === 0 ? null : <span className={(n > 0) === goodWhenUp ? styles.good : styles.bad}>{t(n > 0 ? "kpi.up" : "kpi.down", { n: Math.abs(n) })}</span>;
   const kpiValue: Record<ListKey, number> = { overdue: d.kpis.overdue, dueToday: d.kpis.dueToday, laterThisWeek: d.kpis.laterThisWeek, doneLast7Days: d.kpis.doneLast7Days };
+  const kpiDelta: Record<ListKey, React.ReactNode> = { overdue: delta(d.kpis.overdueDelta, false), dueToday: null, laterThisWeek: null, doneLast7Days: delta(d.kpis.doneDelta, true) };
+  const range = (from: string, to: string) => t("kpi.range", { from: formatDate(from, year), to: formatDate(to, year) });
+  const firstDoneDay = d.doneDaily[0]?.date ?? d.today;
   const kpiSub: Record<ListKey, string> = {
-    overdue: delta(d.kpis.overdueDelta),
-    dueToday: formatDate(d.today, year),
-    laterThisWeek: t("kpi.range", { from: formatDate(d.kpis.laterThisWeekRange.from, year), to: formatDate(d.kpis.laterThisWeekRange.to, year) }),
-    doneLast7Days: delta(d.kpis.doneDelta),
+    overdue: t("kpi.subOverdue"),
+    dueToday: t("kpi.subToday", { date: formatDate(d.today, year) }),
+    laterThisWeek: range(d.kpis.laterThisWeekRange.from, d.kpis.laterThisWeekRange.to),
+    doneLast7Days: range(firstDoneDay, d.today),
   };
   const items = d.lists[list];
   const maxDaily = Math.max(1, ...d.doneDaily.map((x) => x.count));
   const total7 = d.doneDaily.reduce((n, x) => n + x.count, 0);
   const statusTotal = d.statusBreakdown.columns.reduce((n, c) => n + c.count, 0);
+  const updatedAt = new Date(q.dataUpdatedAt);
+  const ring = 2 * Math.PI * 38;
+  // แกนกราฟใช้ชื่อวันแบบย่อตาม Canvas (พฤ. ศ. ส. …)
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "Asia/Bangkok" });
+
+  // ติ๊กเสร็จจากรายการ: ใช้สถานะกลุ่ม done/todo ตัวแรกของประเภทงาน แบบเดียวกับ My Tasks
+  async function toggleDone(i: OverviewItem, done: boolean) {
+    if (busy) return;
+    setBusy(i.key);
+    try {
+      const issue = await api.get<{ type: string; version: number }>(`/w/${encodeURIComponent(ws)}/issues/${encodeURIComponent(i.key)}`);
+      const opts = await cache.fetchQuery({ queryKey: ["form-options", ws, projectKey], queryFn: () => api.get<{ issueTypes: { name: string; statuses: { id: string; category: string }[] }[] }>(`${base}/form-options`), staleTime: 60_000 });
+      const type = opts.issueTypes.find((x) => x.name === issue.type) ?? opts.issueTypes[0];
+      const target = type?.statuses.find((s) => s.category === (done ? "done" : "todo"));
+      if (!target) return toast({ message: t("noDoneStatus") });
+      await api.patch(`/w/${encodeURIComponent(ws)}/issues/${encodeURIComponent(i.key)}`, { statusId: target.id }, issue.version);
+      toast({ message: t(done ? "doneMarked" : "undoneMarked", { key: i.key }) });
+    } catch (e) {
+      toast({ message: e instanceof ApiError && e.status === 409 ? t("conflict") : e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(null);
+      await cache.invalidateQueries({ queryKey: ["overview", ws, projectKey] });
+    }
+  }
 
   return (
     <div className={styles.page}>
-      <div className={styles.bar}>
-        <div className={styles.seg} role="group" aria-label={t("scope.label")}>
-          {(["all", "mine"] as const).map((s) => <button key={s} type="button" aria-pressed={scope === s} onClick={() => setScope(s)}>{t(`scope.${s}`)}</button>)}
+      <div className={`${styles.bar} ${styles.desktopOnly}`} style={{ justifyContent: "space-between" }}>
+        <div className={`${styles.muted} ${styles.updated}`}>
+          {t("updated", { time: `${String(updatedAt.getHours()).padStart(2, "0")}:${String(updatedAt.getMinutes()).padStart(2, "0")}`, date: formatDate(d.today, year) })}
         </div>
-        <Select aria-label={t("moduleFilter")} size="small" value={moduleId} onChange={(e) => setModuleId(e.target.value)}>
-          <option value="">{t("allModules")}</option>
-          {d.modules.filter((m) => m.id).map((m) => <option key={m.id} value={m.id!}>{m.name}</option>)}
-        </Select>
+        <div className={styles.bar}>
+          <div className={styles.seg} role="group" aria-label={t("scope.label")}>
+            {(["all", "mine"] as const).map((s) => <button key={s} type="button" aria-pressed={scope === s} onClick={() => setScope(s)}>{t(`scope.${s}`)}</button>)}
+          </div>
+          <Select aria-label={t("moduleFilter")} size="small" value={moduleId} onChange={(e) => setModuleId(e.target.value)}>
+            <option value="">{t("allModules")}</option>
+            {d.modules.filter((m) => m.id).map((m) => <option key={m.id} value={m.id!}>{m.name}</option>)}
+          </Select>
+        </div>
       </div>
 
-      <div className={styles.top}>
-        <section className={`${styles.card} ${styles.stat}`} aria-label={t("progressTitle")}>
-          <span className="muted">{t("progressTitle")}</span>
-          <b>{t("tasksDone", { done: p.tasks.done, total: p.tasks.total })}</b>
-          <div className={styles.progress}><div style={{ width: `${p.pct}%` }} /></div>
-          <span className={`${styles.muted} ${styles.small}`}>{t("mdDone", { done: p.md.done, total: p.md.total, pct: p.md.pct })}</span>
-        </section>
-        <section className={`${styles.card} ${styles.stat}`}>
-          <span className="muted">{t("timeTitle")}</span>
-          <b>{t("timeValue", { pct: p.time.pct, elapsed: p.time.elapsedWorkingDays, total: p.time.totalWorkingDays })}</b>
-          <div className={styles.progress}><div style={{ width: `${p.time.pct}%`, background: "#94a3b8" }} /></div>
-        </section>
-        <section className={`${styles.card} ${styles.stat}`}>
-          <span className="muted">{t("doneTitle")}</span>
-          <b>{p.pct}%</b>
-        </section>
-        <section className={`${styles.card} ${styles.stat}`}>
-          <span className="muted">{t("remainTitle")}</span>
-          <b>{t("remainValue", { days: p.remainingWorkingDays })}</b>
-          <span className={`${styles.muted} ${styles.small}`}>{p.lastPlanEnd ? t("lastPlanEnd", { date: formatDate(p.lastPlanEnd, year) }) : t("noPlan")}</span>
-        </section>
-        <section className={`${styles.card} ${styles.stat}`}>
-          <span className="muted">{t("nextMilestone")}</span>
-          {p.nextMilestone ? <><b style={{ fontSize: 16 }}>{p.nextMilestone.name}</b><span className={`${styles.muted} ${styles.small}`}>{t("milestoneIn", { date: formatDate(p.nextMilestone.date, year), days: p.nextMilestone.daysLeft })}</span></> : <span>{t("noMilestone")}</span>}
-        </section>
-      </div>
+      <MobileSummary d={d} time={`${String(updatedAt.getHours()).padStart(2, "0")}:${String(updatedAt.getMinutes()).padStart(2, "0")}`} year={year} />
 
-      <section className={`${styles.health} ${styles[h.level]}`} role="status" aria-label={t("health.title", { level: t(`health.levels.${h.level}`) })}>
-        <div>
-          <b>{t("health.title", { level: t(`health.levels.${h.level}`) })}</b>
-          <div className={styles.small}>
+      {/* Canvas Main: สรุปโครงการอยู่ในการ์ดเดียว (วงความคืบหน้า, เวลา/งาน, Go-live, Milestone, Health) */}
+      <section className={`${styles.card} ${styles.summary} ${styles.desktopOnly}`} aria-label={t("progressTitle")}>
+        <div className={styles.donutBox}>
+          <svg width="92" height="92" viewBox="0 0 92 92" role="img" aria-label={t("progressLabel", { pct: p.pct })}>
+            <circle cx="46" cy="46" r="38" fill="none" stroke="#e4e7eb" strokeWidth="10" />
+            <circle cx="46" cy="46" r="38" fill="none" stroke="#1d4ed8" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(ring * Math.min(100, p.pct)) / 100} ${ring}`} transform="rotate(-90 46 46)" />
+            <text x="46" y="52" textAnchor="middle" fontSize="20" fontWeight="700" fill="#1b1f24">{p.pct}%</text>
+          </svg>
+          <div>
+            <div className={styles.muted} style={{ fontSize: 13 }}>{t("progressTitle")}</div>
+            <div style={{ fontSize: 18, fontWeight: 700 }}>{t("tasksDone", { done: p.tasks.done, total: p.tasks.total })}</div>
+            <div className={`${styles.muted} ${styles.small}`}>{t("mdDone", { done: p.md.done, total: p.md.total, pct: p.md.pct })}</div>
+          </div>
+        </div>
+        <div className={styles.bars}>
+          <div>
+            <div className={styles.line}><span>{t("timeTitle")}</span><b>{t("timeValue", { pct: p.time.pct, elapsed: p.time.elapsedWorkingDays, total: p.time.totalWorkingDays })}</b></div>
+            <div className={styles.progress} style={{ marginTop: 4 }}><div style={{ width: `${p.time.pct}%`, background: "#94a3b8" }} /></div>
+          </div>
+          <div>
+            <div className={styles.line}><span>{t("doneTitle")}</span><b>{p.pct}%</b></div>
+            <div className={styles.progress} style={{ marginTop: 4 }}><div style={{ width: `${p.pct}%` }} /></div>
+          </div>
+        </div>
+        <div className={styles.facts}>
+          <div>
+            <div className={styles.muted} style={{ fontSize: 13 }}>{t("remainTitle")}</div>
+            <div style={{ fontSize: 24, fontWeight: 700 }}>{t("remainValue", { days: p.remainingWorkingDays })}</div>
+            <div className={`${styles.muted} ${styles.small}`}>{p.lastPlanEnd ? t("lastPlanEnd", { date: formatDate(p.lastPlanEnd, year) }) : t("noPlan")}</div>
+          </div>
+          <div>
+            <div className={styles.muted} style={{ fontSize: 13 }}>{t("nextMilestone")}</div>
+            {p.nextMilestone ? <><div style={{ fontSize: 16, fontWeight: 600, marginTop: 4 }}>{p.nextMilestone.name}</div><div className={`${styles.muted} ${styles.small}`}>{t("milestoneIn", { date: formatDate(p.nextMilestone.date, year), days: p.nextMilestone.daysLeft })}</div></> : <div style={{ marginTop: 4 }}>{t("noMilestone")}</div>}
+          </div>
+        </div>
+        <div className={`${styles.health} ${styles[h.level]}`} role="status" aria-label={t("health.title", { level: t(`health.levels.${h.level}`) })}>
+          <div className={styles.healthTitle}><span className={styles.dot} />{t("health.title", { level: t(`health.levels.${h.level}`) })}</div>
+          <div className={styles.healthText}>
             {t("health.behind", { count: h.behindPlan })} · {t("health.overdue", { count: h.overdue.count })}
             {h.overdue.topAssignee ? ` ${t("health.top", { name: h.overdue.topAssignee.person.displayName, count: h.overdue.topAssignee.count })}` : ""}
             {h.capacity.weeksNeeded !== null ? ` · ${t("health.capacity", { need: h.capacity.weeksNeeded, left: h.capacity.weeksLeft })}` : ""}
@@ -98,24 +146,26 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
         </div>
       </section>
 
+      <div className={`${styles.kpis} ${styles.desktopOnly}`} role="group" aria-label="KPI">
+        {LIST_KEYS.map((k) => (
+          <button key={k} type="button" className={styles.kpi} aria-pressed={list === k} onClick={() => setList(k)}>
+            <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: KPI_DOT[k] }} />{t(`kpi.${k}`)}</span>
+            <span className={styles.kpiValue}><b>{kpiValue[k]}</b>{kpiDelta[k]}</span>
+            <span className={`${styles.muted} ${styles.small}`}>{kpiSub[k]}</span>
+          </button>
+        ))}
+      </div>
+
       <div className={styles.cols}>
-        <div className={styles.main}>
+        <div className={`${styles.main} ${styles.desktopOnly}`}>
           <section className={styles.card}>
-            <div className={styles.kpis} role="group" aria-label="KPI">
-              {LIST_KEYS.map((k) => (
-                <button key={k} type="button" className={styles.kpi} aria-pressed={list === k} onClick={() => setList(k)}>
-                  <span className="muted">{t(`kpi.${k}`)}</span>
-                  <b style={{ color: k === "overdue" && kpiValue[k] ? "#b91c1c" : undefined }}>{kpiValue[k]}</b>
-                  <span className={`${styles.muted} ${styles.small}`}>{kpiSub[k]}</span>
-                </button>
-              ))}
-            </div>
             <div className={styles.chead}>
               <h2>{t(`kpi.${list}`)} <span className="muted" style={{ fontWeight: 500 }}>{t("listCount", { count: kpiValue[list] })}</span></h2>
-              <Link href={tableHref} style={{ fontSize: 13 }}>{t("openInTable")}</Link>
+              <Link href={tableHref} style={{ fontSize: 13, fontWeight: 500 }}>{t("openInTable")}</Link>
             </div>
             {!items.length && <div className={styles.empty}>{t("listEmpty")}</div>}
-            {items.map((i) => <ListRow key={i.key} i={i} href={href} year={year} />)}
+            {items.map((i) => <ListRow key={i.key} i={i} list={list} href={href} year={year} busy={busy === i.key} onToggle={(done) => void toggleDone(i, done)} />)}
+            {kpiValue[list] > 0 && <div className={styles.listFoot}><Link href={tableHref}>{t("seeAllList", { count: kpiValue[list] })}</Link></div>}
           </section>
 
           <section className={styles.card}>
@@ -124,86 +174,99 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
               <div className={styles.seg}>{(["daily", "burnup"] as const).map((c) => <button key={c} type="button" aria-pressed={chart === c} onClick={() => setChart(c)}>{t(c)}</button>)}</div>
             </div>
             {chart === "daily" ? (
-              <>
+              <div className={styles.chartBox}>
                 <div className={styles.chart} role="img" aria-label={t("dailyLabel", { values: d.doneDaily.map((x) => `${formatDate(x.date, year)} ${x.count}`).join(", ") })}>
-                  {d.doneDaily.map((x) => <div key={x.date}><span className={styles.small}>{x.count}</span><i style={{ height: Math.max(3, Math.round((x.count / maxDaily) * 90)), opacity: x.workingDay ? 1 : 0.4 }} /></div>)}
+                  {d.doneDaily.map((x) => <div key={x.date}><span>{x.count}</span><i style={{ height: Math.max(3, Math.round((x.count / maxDaily) * 120)), background: x.workingDay ? (x.date === d.today ? "#1d4ed8" : "#93b4f5") : "#e4e7eb" }} /></div>)}
                 </div>
-                <div className={styles.labels}>{d.doneDaily.map((x) => <span key={x.date}>{formatDate(x.date, year).split(" ").slice(0, 2).join(" ")}</span>)}</div>
-                <div className={styles.empty} style={{ paddingTop: 0 }}>{t("chartNote", { total: total7, prev: d.kpis.doneLast7Days - d.kpis.doneDelta })}</div>
-              </>
+                <div className={styles.labels}>{d.doneDaily.map((x) => <span key={x.date}>{weekday.format(new Date(`${x.date}T00:00:00+07:00`))}</span>)}</div>
+                <div className={`${styles.muted} ${styles.small}`} style={{ marginTop: 10 }}>{t("chartNote", { total: total7, prev: d.kpis.doneLast7Days - d.kpis.doneDelta })}</div>
+              </div>
             ) : <Burnup d={d} />}
+          </section>
+
+          <section className={styles.card}>
+            <div className={styles.chead}>
+              <h2>{t("info")}</h2>
+              <Link className="button button-small" href={`${page}/settings`}>{t("edit")}</Link>
+            </div>
+            <div className={styles.info}>
+              {d.project.description && <div style={{ gridColumn: "1/-1" }}><div className={styles.label}>{t("goal")}</div><div>{d.project.description}</div></div>}
+              {!!d.project.scope.inScope.length && <div><div className={styles.label}>{t("inScope")}</div><ul>{d.project.scope.inScope.map((x) => <li key={x}>{x}</li>)}</ul></div>}
+              {!!d.project.scope.outScope.length && <div><div className={styles.label}>{t("outScope")}</div><ul>{d.project.scope.outScope.map((x) => <li key={x}>{x}</li>)}</ul></div>}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {d.project.owner && <div><div className={styles.label}>{t("owner")}</div><div style={{ display: "flex", alignItems: "center", gap: 8 }}><Avatar size="small" person={d.project.owner} />{d.project.owner.displayName}</div></div>}
+                {d.project.clientName && <div><div className={styles.label}>{t("client")}</div><div>{d.project.clientName}</div></div>}
+                <div className={`${styles.muted} ${styles.small}`}>{t("members", { count: d.project.memberCount, modules: d.project.moduleCount })}</div>
+              </div>
+            </div>
           </section>
         </div>
 
         <aside className={styles.side}>
-          <section className={styles.card}>
-            <div className={styles.chead}><h2>{t("info")}</h2></div>
-            <div className={styles.list}>
-              {d.project.description && <div><div className={`${styles.muted} ${styles.small}`}>{t("goal")}</div>{d.project.description}</div>}
-              {!!d.project.scope.inScope.length && <div><div className={`${styles.muted} ${styles.small}`}>{t("inScope")}</div><ul style={{ margin: 0, paddingLeft: 18 }}>{d.project.scope.inScope.map((x) => <li key={x}>{x}</li>)}</ul></div>}
-              {!!d.project.scope.outScope.length && <div><div className={`${styles.muted} ${styles.small}`}>{t("outScope")}</div><ul style={{ margin: 0, paddingLeft: 18 }}>{d.project.scope.outScope.map((x) => <li key={x}>{x}</li>)}</ul></div>}
-              {d.project.owner && <div style={{ display: "flex", gap: 8, alignItems: "center" }}><span className={`${styles.muted} ${styles.small}`}>{t("owner")}</span><Avatar size="small" person={d.project.owner} />{d.project.owner.displayName}</div>}
-              {d.project.clientName && <div><span className={`${styles.muted} ${styles.small}`}>{t("client")}</span> {d.project.clientName}</div>}
-              <div className={`${styles.muted} ${styles.small}`}>{t("members", { count: d.project.memberCount, modules: d.project.moduleCount })}</div>
-            </div>
-          </section>
           <section className={styles.card} aria-label={t("byModule")}>
             <div className={styles.chead}><h2>{t("byModule")}</h2></div>
-            <div className={styles.list}>
+            <div className={styles.list} style={{ gap: 16 }}>
               {d.modules.map((m) => (
                 <div key={m.id ?? "none"}>
-                  <div className={styles.line}><span style={{ fontWeight: 600 }}>{m.name}</span><span><b>{m.pct}%</b> <span className="muted">· {m.done}/{m.total}</span>{m.overdue > 0 && <span className={styles.late}> · {t("moduleLate", { count: m.overdue })}</span>}{m.notStarted && <span className="muted"> · {t("notStarted")}</span>}</span></div>
-                  <div className={styles.progress} style={{ height: 6 }}><div style={{ width: `${m.pct}%`, background: m.color ?? "var(--primary)" }} /></div>
+                  <div className={styles.line}><span className={styles.modName}><span className={styles.dot} style={{ background: m.color ?? "var(--primary)", borderRadius: 3 }} />{m.name}</span><span><b>{m.pct}%</b> <span className="muted">· {m.done}/{m.total}</span></span></div>
+                  <div className={styles.progress} style={{ marginTop: 6 }}><div style={{ width: `${m.pct}%`, background: m.color ?? "var(--primary)" }} /></div>
+                  {(m.overdue > 0 || m.notStarted) && <div className={m.overdue > 0 ? styles.late : `${styles.muted} ${styles.small}`} style={{ marginTop: 4 }}>{m.overdue > 0 ? t("moduleLate", { count: m.overdue }) : t("notStarted")}</div>}
                 </div>
               ))}
             </div>
           </section>
-          <section className={styles.card}>
-            <div className={styles.chead}><h2>{t("statusTitle")}</h2><span className="muted">{t("statusTotal", { count: statusTotal })}</span></div>
-            <div className={styles.list}>
-              <div className={styles.progress} style={{ display: "flex" }}>{d.statusBreakdown.columns.map((c) => <div key={c.id} style={{ width: `${c.pct}%`, background: CAT_COLOR[c.category] }} title={c.name} />)}</div>
-              {d.statusBreakdown.columns.map((c) => <div className={styles.line} key={c.id}><span style={{ display: "flex", gap: 6, alignItems: "center" }}><span style={{ width: 9, height: 9, borderRadius: "50%", background: CAT_COLOR[c.category] }} />{c.name}</span><b>{c.count}</b></div>)}
+          <section className={`${styles.card} ${styles.desktopOnly}`}>
+            <div className={styles.chead}><h2>{t("statusTitle")}</h2><span className="muted" style={{ fontSize: 13 }}>{t("statusTotal", { count: statusTotal })}</span></div>
+            <div style={{ padding: "16px 18px" }}>
+              <div className={styles.stack} role="img" aria-label={d.statusBreakdown.columns.map((c) => `${c.name} ${c.count}`).join(", ")}>{d.statusBreakdown.columns.map((c) => <div key={c.id} style={{ width: `${c.pct}%`, background: CAT_COLOR[c.category] }} />)}</div>
+              <div className={styles.legend}>
+                {d.statusBreakdown.columns.map((c) => <div key={c.id}><span className={styles.dot} style={{ background: CAT_COLOR[c.category], borderRadius: 3 }} /><span style={{ flex: 1 }}>{c.name}</span><b>{c.count}</b></div>)}
+              </div>
             </div>
           </section>
-          <section className={styles.card}>
-            <div className={styles.chead}><h2>{t("milestones")}</h2><Link href={`/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline`} style={{ fontSize: 13 }}>{t("timeline")}</Link></div>
-            <div className={styles.list}>
+          <section className={`${styles.card} ${styles.desktopOnly}`}>
+            <div className={styles.chead}><h2>{t("milestones")}</h2><Link href={`${page}/timeline`} style={{ fontSize: 13 }}>{t("timeline")}</Link></div>
+            <div style={{ padding: "6px 0" }}>
+              {!d.milestones.length && <div className={styles.empty}>{t("noMilestone")}</div>}
               {d.milestones.map((m) => (
-                <div key={m.id} className={styles.line}>
-                  <div><b>{m.name}</b><div className={`${styles.muted} ${styles.small}`}>{t("milestoneLine", { date: formatDate(m.date, year), pct: m.donePct })} ({t(`milestoneBasis.${m.basis}`)})</div></div>
-                  <Badge tone={m.daysLeft < 0 ? "neutral" : m.daysLeft <= 14 ? "amber" : "blue"}>{m.daysLeft >= 0 ? t("daysLeft", { days: m.daysLeft }) : t("daysPast", { days: -m.daysLeft })}</Badge>
+                <div key={m.id} className={styles.mile}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 7 7 13 1 7z" fill={m.daysLeft < 0 ? "#94a3b8" : "#1d4ed8"} /></svg>
+                  <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600 }}>{m.name}</div><div className={`${styles.muted} ${styles.small}`}>{t("milestoneLine", { date: formatDate(m.date, year), pct: m.donePct })} ({t(`milestoneBasis.${m.basis}`)})</div></div>
+                  <Badge>{m.daysLeft >= 0 ? t("daysLeft", { days: m.daysLeft }) : t("daysPast", { days: -m.daysLeft })}</Badge>
                 </div>
               ))}
             </div>
           </section>
           {d.workloadThisWeek && (
             <section className={styles.card}>
-              <div className={styles.chead}><h2>{t("workload")} <span className="muted" style={{ fontWeight: 500 }}>· {formatDate(d.workloadThisWeek.from, year)} – {formatDate(d.workloadThisWeek.to, year)}</span></h2><Link href={`/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/members`} style={{ fontSize: 13 }}>{t("seeAll")}</Link></div>
+              <div className={styles.chead}><h2>{t("workload")} <span className="muted" style={{ fontWeight: 500 }}>· {formatDate(d.workloadThisWeek.from, year)} – {formatDate(d.workloadThisWeek.to, year)}</span></h2><Link href={`${page}/members`} style={{ fontSize: 13 }}>{t("seeAll")}</Link></div>
               <div className={styles.list}>
                 {d.workloadThisWeek.people.map((w) => (
                   <div key={w.person.id} style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <Avatar size="small" person={w.person} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className={styles.line}><span>{w.person.displayName}</span><span className={w.over ? styles.late : "muted"}>{t("workloadLine", { md: w.md, cap: w.capacityMd, pct: w.utilizationPct ?? 0 })}</span></div>
-                      <div className={styles.progress} style={{ height: 6 }}><div style={{ width: `${Math.min(100, w.utilizationPct ?? 0)}%`, background: w.over ? "#ea580c" : "#93b4f5" }} /></div>
+                      <div className={styles.line}><span style={{ fontWeight: 500 }}>{w.person.displayName}</span><b className={w.over ? styles.bad : undefined}>{t("workloadLine", { md: w.md, cap: w.capacityMd, pct: w.utilizationPct ?? 0 })}</b></div>
+                      <div className={styles.progress} style={{ height: 6, marginTop: 4 }}><div style={{ width: `${Math.min(100, w.utilizationPct ?? 0)}%`, background: w.over ? "#ea580c" : "#93b4f5" }} /></div>
                     </div>
                   </div>
                 ))}
               </div>
             </section>
           )}
-          <section className={styles.card}>
+          <section className={`${styles.card} ${styles.desktopOnly}`}>
             <div className={styles.chead}><h2>{t("activity")}</h2></div>
-            {!d.activity.length && <div className={styles.empty}>{t("activityEmpty")}</div>}
-            {d.activity.slice(0, 8).map((a) => (
-              <div key={a.id} className={styles.row} style={{ alignItems: "flex-start" }}>
-                <Avatar size="small" person={a.actor ?? { id: a.id, displayName: a.actorKind === "user" ? t("hidden") : t("system") }} />
-                <div style={{ flex: 1, minWidth: 0, fontSize: 13 }}>
-                  <b>{a.actor?.displayName ?? t("system")}</b> {t.has(`verbs.${a.verb}` as never) ? t(`verbs.${a.verb}` as never) : t("verbs.other")} {a.field ? `${a.field} ` : ""}{a.issue && <Link href={href(a.issue.key)}>{a.issue.key} {a.issue.title}</Link>}
-                  <div className={`${styles.muted} ${styles.small}`}>{formatDate(a.createdAt, year)}</div>
+            <div style={{ padding: "6px 0" }}>
+              {!d.activity.length && <div className={styles.empty}>{t("activityEmpty")}</div>}
+              {d.activity.slice(0, 8).map((a) => (
+                <div key={a.id} className={styles.act}>
+                  <Avatar size="small" person={a.actor ?? { id: a.id, displayName: a.actorKind === "user" ? t("hidden") : t("system") }} />
+                  <div style={{ fontSize: 13, minWidth: 0 }}>
+                    <b>{a.actor?.displayName ?? t("system")}</b> {t.has(`verbs.${a.verb}` as never) ? t(`verbs.${a.verb}` as never) : t("verbs.other")} {a.field ? `${a.field} ` : ""}{a.issue && <Link href={href(a.issue.key)}>{a.issue.key} {a.issue.title}</Link>}
+                    <div className={`${styles.muted} ${styles.small}`}>{formatDate(a.createdAt, year)}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </section>
         </aside>
       </div>
@@ -211,16 +274,78 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
   );
 }
 
-function ListRow({ i, href, year }: { i: OverviewItem; href: (key: string) => string; year: YearFormat }) {
+/** M6 · มือถือ: สรุปกะทัดรัด, Milestone ถัดไป และความเสี่ยง (ซ่อนบนจอใหญ่) */
+function MobileSummary({ d, time, year }: { d: Overview; time: string; year: YearFormat }) {
+  const t = useTranslations("overview-table.overview");
+  const p = d.progress;
+  const h = d.health;
+  const tone = { on_track: styles.sDoneM, at_risk: styles.sRevM, off_track: styles.sLateM }[h.level];
+  const risks: { text: string; sub?: string; color: string }[] = [];
+  if (h.overdue.topAssignee) risks.push({ text: t("mobile.riskOverdue", { name: h.overdue.topAssignee.person.displayName, count: h.overdue.topAssignee.count }), color: "#dc2626" });
+  if (h.capacity.weeksNeeded !== null && h.capacity.weeksNeeded > h.capacity.weeksLeft) risks.push({ text: t("mobile.riskCapacity"), sub: t("health.capacity", { need: h.capacity.weeksNeeded, left: h.capacity.weeksLeft }), color: "#dc2626" });
+  for (const m of d.modules.filter((x) => x.overdue > 0).slice(0, 2)) risks.push({ text: t("mobile.riskModule", { name: m.name, count: m.overdue }), color: "#d97706" });
+  if (d.counts?.pendingDueRequests) risks.push({ text: t("mobile.riskPending", { count: d.counts.pendingDueRequests }), color: "#d97706" });
+  if (d.counts?.openBugs) risks.push({ text: t("mobile.riskBugs", { count: d.counts.openBugs }), color: "#d97706" });
+  const next = p.nextMilestone;
+  return (
+    <div className={styles.mobileOnly}>
+      <section className={`${styles.card} ${styles.mcard}`} aria-label={t("progressTitle")}>
+        <div className={styles.line}><span className={`${styles.mpill} ${tone}`}>{t(`health.levels.${h.level}`)}</span><span className={`${styles.muted} ${styles.small}`}>{t("mobile.updatedBy", { time })}</span></div>
+        <div className={styles.mbig}><b>{p.pct}%</b><span className={styles.muted}>{t("mobile.line", { done: p.tasks.done, total: p.tasks.total, time: p.time.pct })}</span></div>
+        <div className={styles.mtrack}><div style={{ width: `${p.pct}%` }} /><span style={{ left: `${p.time.pct}%` }} aria-hidden="true" /></div>
+        <div className={styles.mtiles}>
+          <div className={styles.mlate}><b>{d.kpis.overdue}</b>Overdue</div>
+          {d.counts && <div><b>{d.counts.openBugs}</b>{t("mobile.openBugs")}</div>}
+          {d.counts && <div><b>{d.counts.pendingDueRequests}</b>{t("mobile.pending")}</div>}
+        </div>
+      </section>
+      {next && (
+        <section className={`${styles.card} ${styles.mcard}`}>
+          <h2 className={styles.mh}>{t("nextMilestone")}</h2>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <div className={styles.mdate}><b>{Number(next.date.slice(8))}</b><span>{formatDate(next.date, year).split(" ")[1]}</span></div>
+            <div><b>{next.name}</b><div className={`${styles.muted} ${styles.small}`}>{t("milestoneIn", { date: formatDate(next.date, year), days: next.daysLeft })}</div></div>
+          </div>
+        </section>
+      )}
+      <section className={`${styles.card} ${styles.mcard}`}>
+        <h2 className={styles.mh}>{t("mobile.risks")}</h2>
+        {!risks.length && <div className={`${styles.muted} ${styles.small}`}>{t("mobile.noRisks")}</div>}
+        {risks.map((r) => (
+          <div key={r.text} className={styles.risk}><span style={{ background: r.color }} /><div><div>{r.text}</div>{r.sub && <div className={`${styles.muted} ${styles.small}`}>{r.sub}</div>}</div></div>
+        ))}
+      </section>
+    </div>
+  );
+}
+
+function ListRow({ i, list, href, year, busy, onToggle }: { i: OverviewItem; list: ListKey; href: (key: string) => string; year: YearFormat; busy: boolean; onToggle: (done: boolean) => void }) {
   const t = useTranslations("overview-table.overview");
   const open = i.canOpen !== false;
+  const done = i.status.category === "done" || !!i.completedOn;
+  const color = i.module?.color ?? "#1d4ed8";
+  const date = i.completedOn
+    ? { text: t("doneOn", { date: formatDate(i.completedOn, year) }), cls: styles.dtDone }
+    : i.lateDays > 0
+      ? { text: t("lateDays", { days: i.lateDays }), cls: styles.dtLate }
+      : list === "dueToday"
+        ? { text: t("todayLabel"), cls: styles.dtToday }
+        : { text: i.planEnd ? formatDate(i.planEnd, year) : "", cls: styles.dtWeek };
+  const sub = [i.key, i.parentKey ? `↳ ${i.parentKey}` : null, i.phase?.name].filter(Boolean).join(" · ");
   return (
     <div className={styles.row}>
-      <span className={styles.small} style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{i.key}</span>
-      {open ? <Link className={styles.rowTitle} href={href(i.key)}>{i.title}</Link> : <span className={styles.rowTitle}>{i.title}</span>}
-      {i.module && <Badge tone="blue">{i.module.name}</Badge>}
-      {i.completedOn ? <span className={`${styles.muted} ${styles.small}`}>{t("doneOn", { date: formatDate(i.completedOn, year) })}</span> : i.lateDays > 0 ? <span className={styles.late}>{t("lateDays", { days: i.lateDays })}</span> : <span className={styles.small}>{formatDate(i.planEnd, year)}</span>}
-      {!!i.assignees?.length && <AvatarStack people={i.assignees} />}
+      {done
+        ? <svg width="18" height="18" viewBox="0 0 24 24" role="img" aria-label={t("doneTitle")} style={{ flex: "none" }}><circle cx="12" cy="12" r="10" fill="#16a34a" /><path d="m7.5 12.5 3 3 6-6.5" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        : <input type="checkbox" className={styles.check} disabled={busy || !open} aria-label={t("markDone", { title: i.title })} onChange={(e) => onToggle(e.target.checked)} />}
+      <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+        {open ? <Link className={styles.rowTitle} href={href(i.key)}>{i.title}</Link> : <span className={styles.rowTitle}>{i.title}</span>}
+        <div className={styles.rowMeta}>
+          {i.module && <span className={styles.modPill} style={{ background: `${color}1a`, color }}>{i.module.name}</span>}
+          <span className={`${styles.muted} ${styles.small}`}>{sub}</span>
+        </div>
+      </div>
+      {date.text && <span className={`${styles.dt} ${date.cls}`}>{date.text}</span>}
+      {!!i.assignees?.length && <AvatarStack people={i.assignees} max={2} />}
     </div>
   );
 }

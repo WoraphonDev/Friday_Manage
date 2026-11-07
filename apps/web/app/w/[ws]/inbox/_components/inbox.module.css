@@ -33,8 +33,19 @@
 .empty { padding:40px; text-align:center; color:var(--muted); }
 .back { display:none; }
 .more { padding:12px; text-align:center; }
+.sub, .settings, .markAll { min-width:0; }
 @media (max-width:760px) {
+  /* M3: หัว Inbox + "อ่านทั้งหมด" เป็นลิงก์ · ชิป ทั้งหมด / มอบหมาย / Mentions */
   .head { padding:16px 16px 0; }
+  .headRow { align-items:center; flex-wrap:nowrap; }
+  .sub, .settings { display:none !important; }
+  .markAll { border:0; background:transparent; color:var(--primary); font-weight:600; padding:0; min-height:auto; }
+  .markAll:disabled { color:var(--muted); }
+  .tabs { border-bottom:0; gap:8px; padding-bottom:10px; }
+  .ftab { border:1px solid var(--input); border-radius:999px; min-height:34px; padding:0 14px; }
+  .ftab[aria-pressed="true"] { background:var(--foreground); border-color:var(--foreground); color:#fff; }
+  .ftab .count { display:none; }
+  .ftab[data-filter="unread"], .ftab[data-filter="activity"], .ftab[data-filter="due"] { display:none; }
   .layout { padding:12px 0 0; gap:0; }
   .list, .detail { border-radius:0; border-left:0; border-right:0; flex-basis:100%; }
   .showDetail .list { display:none; }

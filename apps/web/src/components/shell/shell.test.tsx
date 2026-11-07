@@ -351,6 +351,8 @@ describe("Workspace / Project shell", () => {
     expect(shellChrome("/w/sample/p/DE/dashboard")).toBe("focus");
     expect(shellChrome("/w/sample/p/DE/reports")).toBe("focus");
     expect(shellChrome("/w/sample/p/DE/automation")).toBe("focus");
+    expect(shellChrome("/w/sample/search")).toBe("focus");
+    expect(shellChrome("/w/sample/import")).toBe("focus");
     expect(shellChrome("/w/sample/admin/security")).toBe("admin");
     expect(shellChrome("/w/sample/billing")).toBe("workspace");
     expect(shellChrome("/w/sample/billing/checkout")).toBe("checkout");
@@ -411,5 +413,11 @@ describe("Workspace / Project shell", () => {
     expect(await screen.findByLabelText("มุมมองโปรเจกต์")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "เมนูโปรเจกต์" })).not.toBeInTheDocument();
     expect(document.querySelector(".project-crumb")).toBeNull();
+    // O1: ปุ่มบนหัว + แท็บชุดของ Lead
+    expect(screen.getByRole("link", { name: "สร้างรายงานประจำสัปดาห์" })).toHaveAttribute("href", "/w/sample/p/DE/reports?report=weekly");
+    expect(screen.getByRole("link", { name: "Import / Export" })).toHaveAttribute("href", "/w/sample/import");
+    const tabs = within(screen.getByLabelText("มุมมองโปรเจกต์"));
+    expect(tabs.queryByRole("link", { name: "Timeline", hidden: true })).not.toBeInTheDocument();
+    expect(tabs.getByRole("link", { name: "Gantt", hidden: true })).toBeInTheDocument();
   });
 });

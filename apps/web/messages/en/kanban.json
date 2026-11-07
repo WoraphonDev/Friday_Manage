@@ -30,6 +30,7 @@
   "emptyColumn": "No tasks in this column",
   "new": "+ Create task",
   "addCard": "+ Add card",
+  "addCardTo": "Add card to {name}",
   "showOlder": "Show older tasks ({count}) · done more than 7 days ago",
   "hideOlder": "Hide tasks done more than 7 days ago",
   "left": "Move {key} to the left column",

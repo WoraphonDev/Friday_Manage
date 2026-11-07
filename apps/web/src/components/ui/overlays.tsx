@@ -37,8 +37,8 @@ export function Dialog({
   children,
   size,
 }: OverlayProps & {
-  /** wide = หน้าต่างสร้างงาน K1 (860 px ชิดบน 40 px) */
-  size?: "wide";
+  /** wide = หน้าต่างสร้างงาน K1 (860 px ชิดบน 40 px) · medium = หน้าต่างฟอร์ม เช่น เชิญสมาชิก (680 px) */
+  size?: "wide" | "medium";
 }) {
   const t = useTranslations("common.app");
   const returnFocus = useReturnFocus(open);
@@ -47,7 +47,7 @@ export function Dialog({
       <RadixDialog.Portal>
         <RadixDialog.Overlay className="overlay" />
         <RadixDialog.Content
-          className={cn("dialog", size === "wide" && "dialog-wide")}
+          className={cn("dialog", size && `dialog-${size}`)}
           onCloseAutoFocus={returnFocus}
           {...(!description ? { "aria-describedby": undefined } : {})}
         >

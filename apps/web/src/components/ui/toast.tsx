@@ -10,13 +10,24 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { X } from "lucide-react";
-import { Button } from "./primitives";
+import { Avatar, Button } from "./primitives";
 
+/** ปุ่มลิงก์ใน Toast แจ้งเตือน (K4) · primary = ปุ่มขาวหลัก */
+export interface ToastAction {
+  label: string;
+  href: string;
+  primary?: boolean;
+}
 export interface ToastOptions {
   message: string;
   undo?: () => void | Promise<void>;
   duration?: number;
+  /** มีผู้กระทำ = Toast แบบแจ้งเตือน K4 (รูป + ชื่อ + บรรทัดรอง + ปุ่ม) */
+  actor?: { id: string; displayName: string };
+  meta?: string;
+  actions?: ToastAction[];
 }
 interface ToastItem extends ToastOptions {
   id: number;
@@ -80,7 +91,39 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         aria-live="polite"
         aria-relevant="additions text"
       >
-        {items.map((item) => (
+        {items.map((item) => item.actor ? (
+          <div className="toast toast-rich" role="status" key={item.id}>
+            <Avatar person={item.actor} size="small" />
+            <div className="toast-body">
+              <div>
+                <b>{item.actor.displayName}</b> {item.message}
+                {item.meta && <div className="toast-meta">{item.meta}</div>}
+              </div>
+              {!!item.actions?.length && (
+                <div className="toast-actions">
+                  {item.actions.map((action) => (
+                    <Link
+                      key={action.href + action.label}
+                      className={action.primary ? "toast-btn toast-btn-primary" : "toast-btn"}
+                      href={action.href}
+                      onClick={() => dismiss(item.id)}
+                    >
+                      {action.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label={t("close")}
+              onClick={() => dismiss(item.id)}
+            >
+              <X size={16} />
+            </Button>
+          </div>
+        ) : (
           <div className="toast" role="status" key={item.id}>
             <span>{item.message}</span>
             {item.undo && (

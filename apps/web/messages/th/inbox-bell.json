@@ -9,10 +9,10 @@
     "filters": {
       "all": "ทั้งหมด",
       "unread": "ยังไม่อ่าน",
-      "assign": "มอบหมาย",
-      "mention": "Mention",
-      "activity": "ความเคลื่อนไหว",
-      "due": "ใกล้ / เลยกำหนด"
+      "assign": "มอบหมาย / Review",
+      "mention": "Mentions",
+      "activity": "ความเคลื่อนไหวของงาน",
+      "due": "กำหนดส่ง"
     },
     "listLabel": "รายการแจ้งเตือน",
     "detailLabel": "รายละเอียดการแจ้งเตือน",
@@ -97,6 +97,10 @@
     "openInbox": "เปิด Inbox ทั้งหมด →",
     "empty": "ไม่มีการแจ้งเตือน",
     "toastNew": "มีการแจ้งเตือนใหม่ · ยังไม่อ่าน {count} รายการ",
+    "toastMeta": "ยังไม่อ่าน {count} รายการ",
+    "toastReview": "อนุมัติ / ดูรายละเอียด",
+    "toastOpenIssue": "เปิดงาน",
+    "toastLater": "ดูภายหลัง",
     "toastOpen": "เปิด Inbox"
   }
 }

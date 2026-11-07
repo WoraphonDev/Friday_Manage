@@ -1,6 +1,9 @@
 {
   "foldersNav": "โฟลเดอร์ไฟล์",
   "root": "ไฟล์ของโปรเจกต์",
+  "places": { "all": "All files", "recent": "Recent", "tasks": "From tasks" },
+  "byType": "ตามประเภท",
+  "typeGroups": { "doc": "Documents", "design": "Designs", "image": "Images", "sheet": "Spreadsheets", "other": "Others" },
   "folders": "Folders",
   "noFolders": "ยังไม่มีโฟลเดอร์",
   "newFolder": "+ New folder",

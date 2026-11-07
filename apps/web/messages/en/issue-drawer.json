@@ -27,7 +27,6 @@
   "moreFields": "More details (status, BA, reviewer, plan, checklist)",
   "planRange": "Plan Start → End",
   "sizeMd": "Size / Man-Day",
-  "markdownHint": "Markdown supported · type @ to mention",
   "reporter": "Reporter",
   "addChecklistPlaceholder": "+ Add item",
   "copyLink": "Copy link",

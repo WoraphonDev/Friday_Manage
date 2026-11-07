@@ -32,10 +32,10 @@
 .seg { display:inline-flex; gap:6px; flex-wrap:wrap; }
 .seg button[aria-pressed="true"] { background:var(--foreground); color:#fff; border-color:var(--foreground); }
 .list { display:flex; flex-direction:column; gap:8px; }
-.row { display:grid; grid-template-columns:56px minmax(0,1fr) 150px 110px 80px 36px; gap:10px; align-items:center; min-height:48px; padding:6px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; }
-.rowHead { display:grid; grid-template-columns:56px minmax(0,1fr) 150px 110px 80px 36px; gap:10px; padding:0 12px; font-size:12px; color:var(--muted); }
+.row { display:grid; grid-template-columns:80px minmax(0,1fr) 150px 110px 80px 36px; gap:10px; align-items:center; min-height:48px; padding:6px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; }
+.rowHead { display:grid; grid-template-columns:80px minmax(0,1fr) 150px 110px 80px 36px; gap:10px; padding:0 12px; font-size:12px; color:var(--muted); }
 .modRow { display:grid; grid-template-columns:56px minmax(0,1fr) 180px 80px 36px; gap:10px; align-items:center; min-height:48px; padding:6px 12px; border:1px solid var(--border); border-radius:10px; }
-.order { display:flex; gap:2px; }
+.order { display:flex; gap:2px; align-items:center; }
 .icon { width:26px; height:26px; border:1px solid var(--input); border-radius:6px; background:#fff; cursor:pointer; font:inherit; font-size:12px; color:#3d4550; padding:0; }
 .icon:disabled { opacity:.4; cursor:default; }
 .x { width:32px; height:32px; border:0; border-radius:8px; background:transparent; cursor:pointer; font-size:18px; color:var(--muted); }
@@ -62,8 +62,14 @@
   .body { padding:12px; gap:12px; }
   .nav { flex:1 1 100%; flex-direction:row; overflow-x:auto; }
   .snav { width:auto; white-space:nowrap; }
-  .row, .rowHead { grid-template-columns:56px minmax(0,1fr) 36px; }
+  .row, .rowHead { grid-template-columns:80px minmax(0,1fr) 36px; }
   .row .hs, .rowHead .hs { display:none; }
   .modRow { grid-template-columns:56px minmax(0,1fr) 36px; }
   .modRow .hs { display:none; }
 }
+
+/* L2 Workflow: ที่จับ + สี · ปุ่มเลื่อนแสดงเมื่อชี้ */
+.grip { color:#94a3b8; font-size:11px; letter-spacing:-2px; width:12px; }
+.swatch { width:14px; height:14px; border-radius:4px; flex:none; }
+.orderBtn { opacity:0; width:20px; }
+.row:hover .orderBtn, .row:focus-within .orderBtn { opacity:1; }

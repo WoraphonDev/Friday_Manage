@@ -217,6 +217,7 @@
     "roleMemberDesc": "ทำงานในโปรเจกต์ที่ถูกเพิ่ม",
     "roleGuestDesc": "ลูกค้า / ภายนอก เห็นเฉพาะโปรเจกต์ที่เชิญ",
     "addToProject": "เพิ่มเข้าโปรเจกต์",
+    "projectRoleFor": "บทบาทใน {name}",
     "optional": "(ไม่บังคับ)",
     "noProject": "ไม่เพิ่มเข้าโปรเจกต์",
     "projectRole": "Project role",

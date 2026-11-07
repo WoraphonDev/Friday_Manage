@@ -125,7 +125,11 @@ describe("Files (8)", () => {
     expect(within(row).getByText("ผูกกับ 1 รายการ")).toBeInTheDocument();
     expect(within(screen.getByTestId("file-ตารางทดสอบ.xlsx")).getByText("หลักฐาน")).toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "โฟลเดอร์ไฟล์" });
-    expect(within(nav).getByRole("button", { name: /ไฟล์ของโปรเจกต์2/ })).toHaveAttribute("aria-pressed", "true");
+    // Canvas: เริ่มที่ All files (รวมทุกโฟลเดอร์) · มีเมนู Recent / From tasks / ตามประเภท
+    expect(within(nav).getByRole("button", { name: /^All files/ })).toHaveAttribute("aria-pressed", "true");
+    expect(within(nav).getByRole("button", { name: /^From tasks\d+$/ })).toBeInTheDocument();
+    expect(within(nav).getByRole("button", { name: /^Spreadsheets\d+$/ })).toBeInTheDocument();
+    expect(within(nav).getByRole("button", { name: /ไฟล์ของโปรเจกต์2/ })).toHaveAttribute("aria-pressed", "false");
     expect(within(nav).getByRole("button", { name: /ฉบับร่าง0/ })).toBeInTheDocument();
     expect(await within(nav).findByRole("button", { name: /Trash\s*1 · กู้คืนได้ใน 30 วัน/ })).toBeInTheDocument();
     expect(urls[0].searchParams.get("folder")).toBe("root");

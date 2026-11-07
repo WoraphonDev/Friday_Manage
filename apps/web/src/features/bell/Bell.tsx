@@ -24,6 +24,8 @@ interface BellItem {
   createdAt: string;
 }
 const POLL_MS = 60_000;
+/** API ส่งชื่องานเป็น issueTitle (event อื่นบางชนิดใช้ title) */
+const titleOf = (n: BellItem) => (typeof n.payload.issueTitle === "string" ? n.payload.issueTitle : typeof n.payload.title === "string" ? n.payload.title : null);
 
 /** เชื่อม Realtime (A17) เพื่อรู้ว่ามีแจ้งเตือนใหม่ · เชื่อมไม่ได้ = ให้ผู้เรียก poll แทน */
 export function useNotificationSocket(userId: string | undefined, onNotification: (unread: number) => void) {
@@ -63,12 +65,39 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
   const me = useQuery({ queryKey: queryKeys.me, queryFn: () => api.get<Me>("/me") });
+  const ti = useTranslations("inbox-bell.inbox");
   const live = useNotificationSocket(me.data?.id, (count) => {
     void cache.invalidateQueries({ queryKey: queryKeys.notifications });
     void cache.invalidateQueries({ queryKey: ["bell"] });
     void cache.invalidateQueries({ queryKey: ["inbox"] });
-    toast({ message: tb("toastNew", { count }) });
+    void showLatest(count);
   });
+  // K4: Toast บอกว่าใครทำอะไร พร้อมปุ่มไปงาน / Inbox · ดึงรายการล่าสุดไม่ได้ = ใช้ข้อความนับจำนวนแบบเดิม
+  async function showLatest(count: number) {
+    try {
+      const latest = (await api.get<{ items: BellItem[] }>("/me/notifications?filter=unread&limit=1")).items[0];
+      if (!latest) throw new Error("empty");
+      const slug = slugOf(latest.workspaceId);
+      const who = latest.actor?.displayName ?? (latest.payload.actorName as string | undefined) ?? "Friday";
+      const key = typeof latest.payload.issueKey === "string" ? latest.payload.issueKey : null;
+      const typeKey = latest.eventType.replace(/\./g, "__");
+      const verb = ti.has(`verbs.${typeKey}` as never) ? ti(`verbs.${typeKey}` as never) : ti("verbs.other");
+      const inbox = `/w/${encodeURIComponent(slug)}/inbox?n=${latest.id}`;
+      toast({
+        actor: { id: latest.actor?.id ?? latest.id, displayName: who },
+        message: [verb, key, titleOf(latest)].filter(Boolean).join(" "),
+        meta: tb("toastMeta", { count }),
+        duration: 8000,
+        actions: latest.eventType === "due_request.created"
+          ? [{ label: tb("toastReview"), href: inbox, primary: true }]
+          : key
+            ? [{ label: tb("toastOpenIssue"), href: `/w/${encodeURIComponent(slug)}/p/${encodeURIComponent(key.replace(/-\d+$/, ""))}?issue=${encodeURIComponent(key)}`, primary: true }, { label: tb("toastLater"), href: inbox }]
+            : [{ label: tb("toastOpen"), href: inbox, primary: true }],
+      });
+    } catch {
+      toast({ message: tb("toastNew", { count }) });
+    }
+  }
   // ไม่มี Realtime: poll ตัวนับทุก 60 วินาที (ใช้ cache ร่วมกับ shell)
   const summary = useQuery({ queryKey: queryKeys.notifications, queryFn: () => api.get<NotificationSummary>("/me/notifications/summary"), refetchInterval: live ? false : POLL_MS });
   const list = useQuery({
@@ -118,7 +147,7 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
             {list.data && !list.data.items.length && <div className={styles.empty}>{tb("empty")}</div>}
             {list.data?.items.map((n) => {
               const who = n.actor?.displayName ?? (n.payload.actorName as string | undefined) ?? "Friday";
-              const target = [n.payload.issueKey, n.payload.title].filter(Boolean).join(" ");
+              const target = [n.payload.issueKey, titleOf(n)].filter(Boolean).join(" ");
               return (
                 <Link key={n.id} className={`${styles.item} ${!n.readAt ? styles.unread : ""}`} href={`/w/${encodeURIComponent(slugOf(n.workspaceId))}/inbox?n=${n.id}`} onClick={() => setOpen(false)}>
                   <Avatar size="small" person={{ id: n.actor?.id ?? n.id, displayName: who }} />

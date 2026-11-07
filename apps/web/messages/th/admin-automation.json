@@ -2,6 +2,7 @@
   "admin": {
     "navLabel": "เมนู Admin Console",
     "actionsBadge": "ต้องดำเนินการ {n} เรื่อง",
+    "planTrial": "{plan} · ทดลองใช้ถึง {date}",
     "saved": "บันทึกแล้ว",
     "failed": "บันทึกไม่สำเร็จ",
     "recalculated": "บันทึกแล้ว · คำนวณ Plan End ใหม่ {issues} งานใน {projects} โปรเจกต์",

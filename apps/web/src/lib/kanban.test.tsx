@@ -152,7 +152,7 @@ describe("Kanban", () => {
     expect(screen.getByRole("heading", { name: /ผู้ทดสอบหนึ่ง/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /ยังไม่ระบุผู้รับผิดชอบ/ })).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("Swimlane"), "priority");
-    expect(screen.getByRole("heading", { name: /ปานกลาง/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Medium/ })).toBeInTheDocument();
     expect(screen.getAllByRole("article")).toHaveLength(5);
     expect(requests).toHaveLength(1);
   });

@@ -26,6 +26,8 @@
 .crumbs { display:flex; flex-wrap:wrap; gap:2px; color:var(--muted); }
 .toolbar { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; }
 .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.search { width:170px; min-height:36px; }
+@media (max-width:760px) { .search { width:100%; } }
 .h2 { margin:0; font-size:16px; }
 .h3 { margin:0; font-size:16px; word-break:break-all; }
 .seg { display:inline-flex; border:1px solid var(--input); border-radius:8px; overflow:hidden; background:#fff; }

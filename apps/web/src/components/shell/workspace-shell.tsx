@@ -4,11 +4,12 @@ import {
   createContext,
   useContext,
   useEffect,
+  Suspense,
   useState,
   type ReactNode,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import * as Popover from "@radix-ui/react-popover";
 import {
@@ -56,6 +57,8 @@ interface ShellContext {
   me: Me;
   workspace: Workspace;
   projects: Project[];
+  /** เปิด Command palette (หัวหน้ามือถือ M2/M5 มีปุ่มค้นหาของตัวเอง) */
+  openSearch?: () => void;
 }
 const Context = createContext<ShellContext | null>(null);
 export function useWorkspace() {
@@ -134,7 +137,12 @@ function Navigation({
         <span className="muted menu-label">{t("noProjects")}</span>
       )}
       {workspace.role !== "guest" && (
-        <Link className="nav-link" href={`${base}/new-project`} onClick={close}>
+        <Link
+          className="nav-link"
+          href={`${base}/new-project`}
+          aria-current={pathname === `${base}/new-project` ? "page" : undefined}
+          onClick={close}
+        >
           {t("newProject")}
         </Link>
       )}
@@ -163,7 +171,7 @@ function Navigation({
 /**
  * กรอบหน้าตามบริบทของ Canvas
  * - workspace: top bar + Sidebar (หน้าทั่วไป)
- * - focus: ไม่มี Sidebar (O1 Lead, O2 Reports, P2 Automation)
+ * - focus: ไม่มี Sidebar (O1 Lead, O2 Reports, P2 Automation, P1 Search, L1 Import)
  * - admin: top bar ของ Admin Console + เมนูของหน้าเอง (N1, N2)
  * - checkout: หัวขาวเรียบ ไม่มีเมนู (R2)
  */
@@ -174,7 +182,41 @@ export function shellChrome(pathname: string): ShellChrome {
   if (/^\/admin(\/|$)/.test(rest)) return "admin";
   if (/^\/p\/[^/]+\/(dashboard|reports|automation)(\/|$)/.test(rest))
     return "focus";
+  // P1 หน้าผลการค้นหา (ช่องค้นหาบนแถบบนคือคำค้นของหน้า) และ L1 Import ไม่มี Sidebar
+  if (/^\/(search|import)(\/|$)/.test(rest)) return "focus";
   return "workspace";
+}
+
+/** ช่องค้นหาบนแถบบนของหน้าผลการค้นหา (Canvas P1): Enter = ค้นใหม่โดยคงตัวกรองอื่นไว้ */
+function TopbarSearchInput({ base, label }: { base: string; label: string }) {
+  const router = useRouter();
+  const params = useSearchParams();
+  const q = params.get("q") ?? "";
+  const [draft, setDraft] = useState(q);
+  useEffect(() => setDraft(q), [q]);
+  return (
+    <form
+      className="search-trigger"
+      role="search"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const next = new URLSearchParams(params.toString());
+        if (draft.trim()) next.set("q", draft.trim());
+        else next.delete("q");
+        router.replace(`${base}/search?${next}`, { scroll: false });
+      }}
+    >
+      <Search size={16} />
+      <input
+        type="search"
+        aria-label={label}
+        placeholder={label}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+      />
+      <kbd>Ctrl K</kbd>
+    </form>
+  );
 }
 
 export function WorkspaceShell({
@@ -270,6 +312,19 @@ export function WorkspaceShell({
     router.replace("/login");
   }
   const chrome = shellChrome(pathname);
+  // O1/O2: หน้า Lead / Reports ไม่มีช่องค้นหาและ + New บนแถบบน
+  const searchTrigger = (
+    <button
+      className="search-trigger"
+      aria-label={t("nav.search")}
+      onClick={() => setCommandOpen(true)}
+    >
+      <Search size={16} />
+      <span>{t("nav.search")}</span>
+      <kbd>Ctrl K</kbd>
+    </button>
+  );
+  const leanTopbar = /\/p\/[^/]+\/(dashboard|reports)(\/|$)/.test(pathname);
   const unreadOf = (slug: string) =>
     summary.data?.workspaces.find((count) => count.slug === slug)?.unread ?? 0;
   const workspaceList = (close: () => void) => (
@@ -358,7 +413,12 @@ export function WorkspaceShell({
   );
   return (
     <Context.Provider
-      value={{ me: me.data, workspace, projects: projects.data?.items ?? [] }}
+      value={{
+        me: me.data,
+        workspace,
+        projects: projects.data?.items ?? [],
+        openSearch: () => setCommandOpen(true),
+      }}
     >
       <YearFormatContext.Provider value={me.data.yearFormat}>
         {/* cookie ภาษาให้ตรงกับที่บันทึกในบัญชี (เข้าจากเครื่องใหม่ก็ได้ภาษาเดิม) */}
@@ -395,7 +455,7 @@ export function WorkspaceShell({
           </header>
         ) : (
           // มือถือใช้หัวขาวของแต่ละหน้า + เมนูล่าง ตาม Canvas M2–M7 จึงซ่อน top bar
-          <header className="topbar topbar-desktop">
+          <header className={`topbar topbar-desktop${leanTopbar ? " topbar-lean" : ""}`}>
             <Button
               className="mobile-menu"
               variant="ghost"
@@ -406,20 +466,19 @@ export function WorkspaceShell({
               <Menu size={20} />
             </Button>
             {switcher}
-            <button
-              className="search-trigger"
-              aria-label={t("nav.search")}
-              onClick={() => setCommandOpen(true)}
-            >
-              <Search size={16} />
-              <span>{t("nav.search")}</span>
-              <kbd>Ctrl K</kbd>
-            </button>
+            {pathname === `${base}/search` ? (
+              <Suspense fallback={searchTrigger}>
+                <TopbarSearchInput base={base} label={t("nav.search")} />
+              </Suspense>
+            ) : (
+              searchTrigger
+            )}
             <span className="topbar-spacer" />
-            {canCreate && (
+            {/* Canvas: + New อยู่บนแถบบนทุกหน้า · นอกโปรเจกต์สร้างในโปรเจกต์แรกที่เข้าถึงได้ */}
+            {(canCreate || (!selectedKey && workspace.role !== "guest" && !!projects.data?.items.length)) && (
               <Link
                 className="button button-primary topbar-new"
-                href={`${base}/p/${selectedKey}?new=1`}
+                href={`${base}/p/${encodeURIComponent(selectedKey ?? projects.data!.items[0].key)}?new=1`}
               >
                 {t("nav.new")}
               </Link>

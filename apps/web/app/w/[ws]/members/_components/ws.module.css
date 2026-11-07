@@ -18,7 +18,7 @@
 .ec.bad { background:#fee2e2; color:#991b1b; }
 .ec button { border:0; background:transparent; cursor:pointer; color:inherit; display:inline-flex; padding:2px; border-radius:99px; }
 .lb { font-size:13px; font-weight:600; }
-.opts { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; }
+.opts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 .opt { display:flex; flex-direction:column; gap:2px; text-align:left; padding:10px 12px; border:1px solid var(--input); border-radius:8px; background:#fff; font:inherit; font-size:13px; cursor:pointer; }
 .opt span:first-child { font-weight:600; }
 .opt[aria-pressed="true"] { border-color:var(--primary); background:var(--primary-soft); }
@@ -26,3 +26,14 @@
 .link { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 12px; border:1px dashed var(--input); border-radius:8px; font-size:13px; }
 .link code { flex:1 1 200px; overflow-wrap:anywhere; background:#f8f9fb; padding:4px 8px; border-radius:6px; }
 .link select { min-height:32px; border:1px solid var(--input); border-radius:8px; padding:0 8px; font:inherit; font-size:13px; background:#fff; }
+
+/* Canvas H: รายการโปรเจกต์ในหน้าต่างเชิญ */
+.projects { border:0; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; min-width:0; }
+.projects legend { padding:0; margin-bottom:6px; }
+.projRow { display:flex; align-items:center; gap:10px; justify-content:space-between; min-height:36px; }
+.projName { display:flex; align-items:center; gap:8px; font-size:13px; min-width:0; }
+.projName input { width:16px; height:16px; margin:0; }
+.dot { width:8px; height:8px; border-radius:50%; flex:none; }
+.projRow select { min-height:32px; border:1px solid var(--input); border-radius:8px; padding:0 8px; font:inherit; font-size:13px; background:#fff; min-width:120px; }
+.foot { border-top:1px solid var(--border); margin:4px -20px 0; padding:14px 20px 0; }
+@media (max-width:760px) { .opts { grid-template-columns:1fr; } }

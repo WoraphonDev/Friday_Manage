@@ -155,8 +155,7 @@ describe("Lead Dashboard (O1)", () => {
     expect(within(risks).getByRole("link", { name: "DE-12" })).toHaveAttribute("href", "/w/sample/p/DE/dashboard?issue=DE-12");
     expect(within(risks).getByRole("link", { name: "ดูงานใน Table" })).toHaveAttribute("href", "/w/sample/p/DE/table");
     expect(within(risks).getByRole("link", { name: "ดู Workload" })).toHaveAttribute("href", "/w/sample/p/DE/members");
-    expect(screen.getByRole("link", { name: "สร้างรายงานประจำสัปดาห์" })).toHaveAttribute("href", "/w/sample/p/DE/reports");
-    expect(screen.getByRole("link", { name: "Import / Export" })).toHaveAttribute("href", "/w/sample/import");
+    // ปุ่มสร้างรายงาน / Import / Export อยู่บนหัวโปรเจกต์แบบ Lead (ตรวจใน shell.test)
   });
 
   it("Heatmap Workload: 24 สัปดาห์, สีตามสัดส่วน capacity, ค่าสูงสุด และคลิกช่องดูงาน", async () => {

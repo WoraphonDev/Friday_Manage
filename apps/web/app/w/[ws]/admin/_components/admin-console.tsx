@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { ErrorState, Forbidden, LoadingState, NotFound } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 import { adminKey, isForbidden, isSection, NAV_GROUPS, wsPath, type AdminOverview, type Section } from "./types";
 import { OverviewSection, ProjectsSection } from "./overview-section";
 import { StandardsSection, TeamsSection, WorkloadSection } from "./org-sections";
@@ -17,7 +18,7 @@ import styles from "./admin.module.css";
 /** N1 · Admin Console (Owner / Admin ของ Workspace เท่านั้น · 04-permissions `ws.settings`) */
 export function AdminConsole({ ws, section }: { ws: string; section?: string }) {
   const t = useTranslations("admin-automation.admin");
-  const { workspace } = useWorkspace();
+  const { workspace, me } = useWorkspace();
   const isAdmin = workspace.role === "owner" || workspace.role === "admin";
   // ภาพรวมใช้ทั้งป้ายเมนู (จำนวนเรื่องที่ต้องทำ) และแท็บแดชบอร์ด/โปรเจกต์/แพ็กเกจ
   const overview = useQuery({ queryKey: adminKey(ws, "overview"), queryFn: () => api.get<AdminOverview>(`${wsPath(ws)}/admin/overview`), enabled: isAdmin });
@@ -32,7 +33,19 @@ export function AdminConsole({ ws, section }: { ws: string; section?: string }) 
   const actions = overview.data?.actions.length ?? 0;
   return (
     <div className={styles.body}>
-      <nav className={`${styles.card} ${styles.nav}`} aria-label={t("navLabel")}>
+      <nav className={styles.nav} aria-label={t("navLabel")}>
+        {/* Canvas N1: หัวเมนูบอก Workspace และแพ็กเกจที่ใช้อยู่ */}
+        <div className={styles.navHead}>
+          <b>{workspace.name}</b>
+          <span className={styles.muted}>{workspace.slug}</span>
+          {overview.data && (
+            <span className={`${styles.pill} ${overview.data.plan.status === "trialing" ? styles.warn : styles.neu}`}>
+              {overview.data.plan.status === "trialing" && overview.data.plan.trialEndsAt
+                ? t("planTrial", { plan: overview.data.plan.name, date: formatDate(overview.data.plan.trialEndsAt, me.yearFormat) })
+                : overview.data.plan.name}
+            </span>
+          )}
+        </div>
         {NAV_GROUPS.map((g) => (
           <div key={g.key} style={{ display: "contents" }}>
             <div className={styles.navSec} aria-hidden="true">{t(`nav.${g.key}`)}</div>

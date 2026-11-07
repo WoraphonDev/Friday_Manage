@@ -469,6 +469,13 @@ td {
   transform: translate(-50%, -50%);
   border-radius: 12px;
 }
+.dialog-medium {
+  width: min(680px, calc(100vw - 32px));
+  top: 60px;
+  transform: translateX(-50%);
+  max-height: calc(100dvh - 100px);
+  padding: 0 20px 16px;
+}
 .dialog-wide {
   width: min(860px, calc(100vw - 32px));
   top: 40px;
@@ -476,6 +483,7 @@ td {
   max-height: calc(100dvh - 80px);
   padding: 0 20px;
 }
+.dialog-medium > .dialog-heading,
 .dialog-wide > .dialog-heading {
   position: sticky;
   top: 0;
@@ -485,10 +493,12 @@ td {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
+.dialog-medium > .dialog-heading h2,
 .dialog-wide > .dialog-heading h2 {
   font-size: 17px;
   font-weight: 700;
 }
+.dialog-medium > .dialog-body,
 .dialog-wide > .dialog-body {
   margin-top: 0;
 }
@@ -580,6 +590,64 @@ td {
 }
 .drawer-body {
   padding-top: 12px;
+}
+/* K4: Toast แจ้งเตือนพื้นเข้ม รูป + ข้อความ + ปุ่ม */
+.toast-rich {
+  align-items: flex-start;
+  width: min(380px, calc(100vw - 32px));
+  background: #1b1f24;
+  color: white;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 12px 32px rgb(15 23 42 / 0.3);
+  gap: 10px;
+}
+.toast-rich .toast-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+.toast-meta {
+  color: #94a3b8;
+  font-size: 12px;
+}
+.toast-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.toast-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.toast-btn:hover {
+  color: white;
+  background: #2b3138;
+}
+.toast-btn-primary {
+  background: white;
+  border-color: white;
+  color: #1b1f24;
+}
+.toast-btn-primary:hover {
+  background: #e2e8f0;
+  color: #1b1f24;
+}
+.toast-rich .button-ghost {
+  color: #cbd5e1;
+  width: 28px;
+  height: 28px;
 }
 .toast-region {
   position: fixed;
@@ -744,6 +812,18 @@ td {
 .search-trigger > span {
   flex: 1;
 }
+.search-trigger > input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  outline: 0;
+}
+.search-trigger:focus-within {
+  border-color: #60a5fa;
+}
 kbd {
   font: 11px var(--font-sans);
   border: 1px solid #475569;
@@ -886,6 +966,10 @@ kbd {
 .admin-pill {
   background: #334155;
   color: #e2e8f0;
+}
+.topbar-lean .search-trigger,
+.topbar-lean .topbar-new {
+  display: none;
 }
 .topbar-back {
   color: #93c5fd;
@@ -1055,6 +1139,12 @@ kbd {
   background: #f1f3f5;
   color: var(--foreground);
 }
+.project-header-bare .project-title-row .badge,
+.project-header-bare .project-dates,
+.project-header-bare .project-actions,
+.project-actions-off {
+  display: none;
+}
 .project-header .tabs {
   margin-top: 10px;
   border-bottom: 0;
@@ -1166,6 +1256,10 @@ kbd {
   /* Canvas M2–M7 ไม่มี top bar มืด: แต่ละหน้ามีหัวขาวของตัวเอง เหลือเมนูล่าง 5 รายการ */
   .topbar-desktop {
     display: none;
+  }
+  /* เว้นที่ให้เมนูล่าง 56 px ทุกหน้า ปุ่มท้ายหน้าจึงไม่ถูกบัง (VD19) */
+  .workspace-body:not(.chrome-checkout):not(.chrome-admin) .workspace-main {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
   }
   .workspace-body {
     min-height: calc(100dvh - 56px);

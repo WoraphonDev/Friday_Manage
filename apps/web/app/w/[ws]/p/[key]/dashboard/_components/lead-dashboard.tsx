@@ -66,9 +66,7 @@ function ScopedDashboard({ ws, projectKey }: ViewProps) {
   const toolbar = <div className={styles.toolbar}>
     <span className={styles.muted}>{t("asOf", { date: formatDate(modules.data.asOf, yearFormat) })}</span>
     <span className={styles.pill} style={{ background: tone.bg, color: tone.fg }}>{t(`status.${summary.status}`)}</span>
-    <span className={styles.spacer} />
-    <Link className="button button-secondary" href={`${base}/reports`}>{t("createWeekly")}</Link>
-    <Link className="button button-secondary" href={`/w/${encodeURIComponent(ws)}/import`}>{t("importExport")}</Link>
+    {/* ปุ่มสร้างรายงาน / Import อยู่บนหัวโปรเจกต์แบบ Lead ตาม Canvas O1 */}
   </div>;
 
   if (!summary.taskCount) return <section className={styles.page} aria-label={t("dashboardTitle")}>

@@ -3,6 +3,7 @@
   "scale": { "label": "Scale", "day": "Day", "week": "Week", "month": "Month" },
   "level": { "label": "Expand level", "one": "ระดับ 1", "two": "2", "three": "3", "hint": "ระดับ {n}: {what}", "what1": "Module", "what2": "Module › กลุ่มงาน", "what3": "ทุกระดับถึง Sub-task" },
   "today": "Today",
+  "exportPdf": "Export PDF",
   "autoSchedule": "Auto-schedule",
   "critical": "Critical path",
   "baselineToggle": "แผน vs จริง",

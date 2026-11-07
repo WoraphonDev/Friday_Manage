@@ -30,6 +30,7 @@
   "emptyColumn": "ไม่มีงานในคอลัมน์นี้",
   "new": "+ สร้างงาน",
   "addCard": "+ เพิ่มการ์ด",
+  "addCardTo": "เพิ่มการ์ดใน {name}",
   "showOlder": "แสดงงานเก่า ({count}) · งานที่เสร็จเกิน 7 วัน",
   "hideOlder": "ซ่อนงานที่เสร็จเกิน 7 วัน",
   "left": "ย้าย {key} ไปคอลัมน์ซ้าย",
@@ -70,10 +71,10 @@
   "errorTitle": "โหลดบอร์ดไม่สำเร็จ",
   "retry": "ลองอีกครั้ง",
   "priorityValues": {
-    "urgent": "เร่งด่วน",
-    "high": "สูง",
-    "medium": "ปานกลาง",
-    "low": "ต่ำ"
+    "urgent": "Urgent",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
   },
   "typeValues": {
     "Task": "Task",

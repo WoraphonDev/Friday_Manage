@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -15,7 +15,6 @@ import { WorkloadHeatmap } from "./workload-heatmap";
 import { addDays, daysBetween, projectBase, projectEndpoint, round1, STATUS_TONE, weekStart, type ModuleStat, type ModulesResponse, type RiskItem, type RisksResponse, type WeeklyReport } from "./types";
 import styles from "./dashboard.module.css";
 
-interface ViewProps { ws: string; projectKey: string }
 type Sort = "start" | "md";
 
 const SEVERITY_STYLE: Record<RiskItem["severity"], { color: string; icon: string }> = {
@@ -25,107 +24,113 @@ const SEVERITY_STYLE: Record<RiskItem["severity"], { color: string; icon: string
 };
 
 /**
- * ส่วน "แผนทั้งโปรเจกต์" ท้ายหน้า Overview (เดิมเป็นหน้า O1 ภาพรวม Lead แยก)
- * ผู้ใช้ให้รวมเข้า Overview 2026-11-07 · คนที่ไม่มีสิทธิ์ดู Workload ไม่เห็นส่วนนี้
+ * ข้อมูลแผนทั้งโปรเจกต์ (เดิมหน้า O1 ภาพรวม Lead) ที่ Overview วางรวมในหน้าเดียว (ผู้ใช้ขอ 2026-11-07 และ 2026-11-08)
+ * คนที่ไม่มีสิทธิ์ดู Workload ไม่โหลดและไม่เห็นส่วนเหล่านี้
  */
-export function PlanSection(props: ViewProps) {
-  return <ScopedDashboard key={`${props.ws}/${props.projectKey}`} {...props} />;
-}
-
-function ScopedDashboard({ ws, projectKey }: ViewProps) {
-  const t = useTranslations("lead-dashboard-reports");
-  const { me } = useWorkspace();
-  const yearFormat: YearFormat = me.yearFormat;
-  const search = useSearchParams();
-  const pathname = usePathname();
-  const [sort, setSort] = useState<Sort>("start");
+export function usePlan(ws: string, projectKey: string) {
   const endpoint = projectEndpoint(ws, projectKey);
-  const base = projectBase(ws, projectKey);
   const now = todayIso();
-
   const permissions = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${endpoint}/my-permissions`) });
-  const perms = permissions.data?.permissions ?? [];
-  const allowed = !!permissions.data && !permissions.data.guestViewer && perms.includes("project.workload.view");
+  const allowed = !!permissions.data && !permissions.data.guestViewer && permissions.data.permissions.includes("project.workload.view");
   const risks = useQuery({ queryKey: ["lead-dashboard", ws, projectKey, "risks"], queryFn: () => api.get<RisksResponse>(`${endpoint}/insights/risks`), enabled: allowed });
   const modules = useQuery({ queryKey: ["lead-dashboard", ws, projectKey, "modules"], queryFn: () => api.get<ModulesResponse>(`${endpoint}/insights/modules`), enabled: allowed });
-  // KPI "เริ่มสัปดาห์นี้ / หน้า": รายงานของสัปดาห์ก่อนบอกงานที่เริ่มสัปดาห์นี้ · รายงานสัปดาห์นี้บอกสัปดาห์หน้า
+  // "เริ่มสัปดาห์นี้ / หน้า": รายงานของสัปดาห์ก่อนบอกงานที่เริ่มสัปดาห์นี้ · รายงานสัปดาห์นี้บอกสัปดาห์หน้า
   const thisWeek = useQuery({ queryKey: ["reports", ws, projectKey, "weekly", weekStart(now)], queryFn: () => api.get<WeeklyReport>(`${endpoint}/reports/weekly?week=${weekStart(now)}`), enabled: allowed });
   const lastWeek = useQuery({ queryKey: ["reports", ws, projectKey, "weekly", addDays(weekStart(now), -7)], queryFn: () => api.get<WeeklyReport>(`${endpoint}/reports/weekly?week=${addDays(weekStart(now), -7)}`), enabled: allowed });
+  // 403 จาก insights = ไม่มีสิทธิ์ส่วนนี้ ซ่อนเงียบ ๆ ไม่ขึ้นหน้าไม่มีสิทธิ์กลาง Overview
+  const forbidden = [risks.error, modules.error].some((e) => e instanceof ApiError && e.status === 403);
+  return { ws, projectKey, now, allowed: allowed && !forbidden, risks, modules, thisWeek, lastWeek };
+}
+export type Plan = ReturnType<typeof usePlan>;
 
-  // มาจากลิงก์ #planning (หรือ /dashboard เดิม): เลื่อนถึงหัวข้อหลังโหลดเสร็จ เพราะเบราว์เซอร์เลื่อนก่อนส่วนนี้มีความสูงจริง
-  const loaded = !!risks.data && !!modules.data;
-  useEffect(() => {
-    if (loaded && window.location.hash === "#planning") document.getElementById("planning")?.scrollIntoView({ block: "start" });
-  }, [loaded]);
-
-  const issueHref = (key: string) => {
+/** ลิงก์เปิดงานใน Drawer ของหน้าปัจจุบัน (คงตัวกรองอื่นใน URL) */
+function useIssueHref() {
+  const search = useSearchParams();
+  const pathname = usePathname();
+  return (key: string) => {
     const next = new URLSearchParams(search);
     next.delete("new");
     next.set("issue", key);
     return `${pathname}?${next}`;
   };
+}
 
-  const wrap = (node: React.ReactNode) => <section id="planning" className={styles.embedded} aria-labelledby="planning-title">
-    <div className={styles.sectionHead}><h2 id="planning-title">{t("planTitle")}</h2><span className={styles.muted}>{t("planSubtitle")}</span></div>
-    {node}
-  </section>;
-  const error = permissions.error ?? risks.error ?? modules.error;
-  const denied = (error instanceof ApiError && error.status === 403) || permissions.data?.guestViewer || (!!permissions.data && !allowed);
-  if (!permissions.data || denied) return null;
-  if (error) return wrap(<ErrorState error={error} retry={() => { void permissions.refetch(); void risks.refetch(); void modules.refetch(); }} />);
-  if (!risks.data || !modules.data) return wrap(<LoadingState />);
+/** ปุ่มของแผนวางบนแถบเครื่องมือของ Overview */
+export function PlanActions({ plan }: { plan: Plan }) {
+  const t = useTranslations("lead-dashboard-reports");
+  if (!plan.allowed) return null;
+  return <>
+    <Link className="button button-secondary button-small" href={`${projectBase(plan.ws, plan.projectKey)}/reports`}>{t("createWeekly")}</Link>
+    <Link className="button button-secondary button-small" href={`/w/${encodeURIComponent(plan.ws)}/import`}>{t("importExport")}</Link>
+  </>;
+}
 
-  const summary = modules.data.summary;
-  const tone = STATUS_TONE[summary.status];
-  const toolbar = <div className={styles.toolbar}>
-    <span className={styles.muted}>{t("asOf", { date: formatDate(modules.data.asOf, yearFormat) })}</span>
-    <span className={styles.pill} style={{ background: tone.bg, color: tone.fg }}>{t(`status.${summary.status}`)}</span>
-    <span className={styles.spacer} />
-    <Link className="button button-secondary" href={`${base}/reports`}>{t("createWeekly")}</Link>
-    <Link className="button button-secondary" href={`/w/${encodeURIComponent(ws)}/import`}>{t("importExport")}</Link>
-  </div>;
-
-  if (!summary.taskCount) return wrap(<>
-    {toolbar}
-    <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} action={<Link className="button button-primary" href={`/w/${encodeURIComponent(ws)}/import`}>{t("importPlan")}</Link>} />
-  </>);
-
-  const mods = modules.data.modules;
+/** ตัวเลขของแผนในการ์ดสรุปของ Overview · งานทั้งหมด / % อยู่ในการ์ดสรุปแล้วจึงไม่ซ้ำ */
+export function PlanFacts({ plan }: { plan: Plan }) {
+  const t = useTranslations("lead-dashboard-reports");
+  const { me } = useWorkspace();
+  const yearFormat: YearFormat = me.yearFormat;
+  const data = plan.modules.data;
+  if (!plan.allowed || !data?.summary.taskCount) return null;
+  const summary = data.summary;
+  const mods = data.modules;
   const starts = mods.map((m) => m.planStart).filter((d): d is string => !!d).sort();
   const ends = mods.map((m) => m.plannedEnd).filter((d): d is string => !!d).sort();
   const planStart = starts[0] ?? null;
   const planEnd = ends.at(-1) ?? null;
   const planWeeks = planStart && planEnd ? Math.max(1, Math.round((daysBetween(planStart, planEnd) + 1) / 7)) : null;
   const over = summary.gapWeeks !== null && summary.gapWeeks > 0;
-  const weekly = (q: typeof thisWeek) => q.data?.nextWeek.starting;
+  const weekly = (q: Plan["thisWeek"]) => q.data?.nextWeek.starting;
+  const { thisWeek, lastWeek } = plan;
+  return <div className={styles.facts} role="group" aria-label={t("planTitle")}>
+    <Kpi label={t("kpi.md")} value={round1(summary.totalMd)} note={t("kpi.mdNote", { done: round1(summary.doneMd), remaining: round1(summary.remainingMd) })} />
+    <Kpi label={t("kpi.span")} value={planWeeks === null ? "—" : t("weeks", { value: planWeeks })} note={planStart && planEnd ? formatDateRange(planStart, planEnd, yearFormat) : t("kpi.noDates")} />
+    <Kpi label={t("kpi.required")} danger={over}
+      value={summary.requiredWeeks === null ? "—" : t("weeks", { value: summary.requiredWeeks })}
+      note={summary.requiredWeeks === null ? t("kpi.noCapacity")
+        : `${t("kpi.requiredNote", { remaining: round1(summary.remainingMd), capacity: summary.capacityMdPerWeek })}${summary.gapWeeks !== null ? ` · ${summary.gapWeeks > 0 ? t("kpi.gapOver", { value: summary.gapWeeks }) : t("kpi.gapOk", { value: summary.weeksToGoLive ?? 0 })}` : ""}`} />
+    <Kpi label={t("kpi.starting")}
+      value={weekly(lastWeek) && weekly(thisWeek) ? t("kpi.startingValue", { now: weekly(lastWeek)!.count, next: weekly(thisWeek)!.count }) : "—"}
+      note={weekly(lastWeek) && weekly(thisWeek) ? t("kpi.startingNote", { now: weekly(lastWeek)!.md, next: weekly(thisWeek)!.md, overdue: thisWeek.data!.totals.overdue }) : (thisWeek.error || lastWeek.error) ? t("kpi.unavailable") : t("loading")} />
+  </div>;
+}
 
-  return wrap(<>
-    {toolbar}
+/** ความเสี่ยงที่ระบบพบ · วางคอลัมน์ข้างของ Overview */
+export function PlanRisks({ plan }: { plan: Plan }) {
+  const t = useTranslations("lead-dashboard-reports");
+  const issueHref = useIssueHref();
+  if (!plan.allowed) return null;
+  const { risks } = plan;
+  return <section id="planning" className={`${styles.card} ${styles.anchor}`} aria-label={t("risks.title")}>
+    <div className={styles.cardHead}><h2>{t("risks.title")}</h2>{risks.data && <span className={styles.pill} style={{ background: risks.data.items.length ? "#FEE2E2" : "#DCFCE7", color: risks.data.items.length ? "#991B1B" : "#166534" }}>{risks.data.items.length}</span>}</div>
+    {risks.error ? <ErrorState error={risks.error} retry={() => void risks.refetch()} />
+      : !risks.data ? <LoadingState />
+      : !risks.data.items.length ? <p className={styles.cardNote}>{t("risks.empty")}</p>
+      : <ul className={styles.risks}>{risks.data.items.map((risk) => <RiskRow key={risk.kind} risk={risk} ws={plan.ws} base={projectBase(plan.ws, plan.projectKey)} issueHref={issueHref} />)}</ul>}
+  </section>;
+}
 
-    <div className={styles.kpis}>
-      <Kpi label={t("kpi.tasks")} value={summary.taskCount} note={t("kpi.tasksNote", { modules: mods.filter((m) => m.id).length, progress: summary.progressPct })} />
-      <Kpi label={t("kpi.md")} value={round1(summary.totalMd)} note={t("kpi.mdNote", { done: round1(summary.doneMd), remaining: round1(summary.remainingMd) })} />
-      <Kpi label={t("kpi.span")} value={planWeeks === null ? "—" : t("weeks", { value: planWeeks })} note={planStart && planEnd ? formatDateRange(planStart, planEnd, yearFormat) : t("kpi.noDates")} />
-      <Kpi label={t("kpi.required")} danger={over}
-        value={summary.requiredWeeks === null ? "—" : t("weeks", { value: summary.requiredWeeks })}
-        note={summary.requiredWeeks === null ? t("kpi.noCapacity")
-          : `${t("kpi.requiredNote", { remaining: round1(summary.remainingMd), capacity: summary.capacityMdPerWeek })}${summary.gapWeeks !== null ? ` · ${summary.gapWeeks > 0 ? t("kpi.gapOver", { value: summary.gapWeeks }) : t("kpi.gapOk", { value: summary.weeksToGoLive ?? 0 })}` : ""}`} />
-      <Kpi label={t("kpi.starting")}
-        value={weekly(lastWeek) && weekly(thisWeek) ? t("kpi.startingValue", { now: weekly(lastWeek)!.count, next: weekly(thisWeek)!.count }) : "—"}
-        note={weekly(lastWeek) && weekly(thisWeek) ? t("kpi.startingNote", { now: weekly(lastWeek)!.md, next: weekly(thisWeek)!.md, overdue: thisWeek.data!.totals.overdue }) : (thisWeek.error || lastWeek.error) ? t("kpi.unavailable") : t("loading")} />
-    </div>
+/** Workload รายสัปดาห์ (heatmap) · เต็มความกว้างของ Overview */
+export function PlanWorkload({ plan }: { plan: Plan }) {
+  const { me } = useWorkspace();
+  const issueHref = useIssueHref();
+  if (!plan.allowed) return null;
+  return <WorkloadHeatmap ws={plan.ws} projectKey={plan.projectKey} today={plan.now} yearFormat={me.yearFormat} issueHref={issueHref} />;
+}
 
-    <section className={styles.card} aria-label={t("risks.title")}>
-      <div className={styles.cardHead}><h2>{t("risks.title")}</h2><span className={styles.pill} style={{ background: "#FEE2E2", color: "#991B1B" }}>{risks.data.items.length}</span></div>
-      {!risks.data.items.length ? <p className={styles.cardNote}>{t("risks.empty")}</p> : <ul className={styles.risks}>
-        {risks.data.items.map((risk) => <RiskRow key={risk.kind} risk={risk} ws={ws} base={base} issueHref={issueHref} />)}
-      </ul>}
-    </section>
-
-    <WorkloadHeatmap ws={ws} projectKey={projectKey} today={now} yearFormat={yearFormat} issueHref={issueHref} />
-
-    <ModuleTable modules={mods} sort={sort} setSort={setSort} today={modules.data.asOf} yearFormat={yearFormat} velocityDays={modules.data.velocity.windowDays} />
-  </>);
+/** ตาราง Module (ความคืบหน้า, คาดว่าจะจบ, แกนเวลา) · แทน "Progress by Module" ของ Overview เมื่อมีสิทธิ์ */
+export function PlanModules({ plan }: { plan: Plan }) {
+  const t = useTranslations("lead-dashboard-reports");
+  const { me } = useWorkspace();
+  const [sort, setSort] = useState<Sort>("start");
+  if (!plan.allowed) return null;
+  const { modules } = plan;
+  if (modules.error) return <section className={styles.card} aria-label={t("modules.title")}><ErrorState error={modules.error} retry={() => void modules.refetch()} /></section>;
+  if (!modules.data) return <section className={styles.card} aria-label={t("modules.title")}><LoadingState /></section>;
+  if (!modules.data.summary.taskCount) return <section className={styles.card} aria-label={t("modules.title")}>
+    <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} action={<Link className="button button-primary" href={`/w/${encodeURIComponent(plan.ws)}/import`}>{t("importPlan")}</Link>} />
+  </section>;
+  return <ModuleTable modules={modules.data.modules} sort={sort} setSort={setSort} today={modules.data.asOf} yearFormat={me.yearFormat} velocityDays={modules.data.velocity.windowDays} />;
 }
 
 function Kpi({ label, value, note, danger }: { label: string; value: string | number; note: string; danger?: boolean }) {

@@ -9,7 +9,9 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import messages from "../../messages/th/lead-dashboard-reports.json";
-import { PlanSection } from "../../app/w/[ws]/p/[key]/dashboard/_components/lead-dashboard";
+import ot from "../../messages/th/overview-table.json";
+import { overview } from "@/test/overview-fixture";
+import { OverviewPage } from "../../app/w/[ws]/p/[key]/table/_components/overview";
 import { heatLevel } from "../../app/w/[ws]/p/[key]/dashboard/_components/workload-heatmap";
 import { ReportsView } from "../../app/w/[ws]/p/[key]/reports/_components/reports-view";
 import { addDays, type ForecastResponse, type ModuleStat, type ModulesResponse, type RisksResponse, type TraceabilityResponse, type WeeklyReport, type WorkloadCell, type WorkloadResponse } from "../../app/w/[ws]/p/[key]/dashboard/_components/types";
@@ -111,6 +113,7 @@ beforeEach(() => {
   vi.setSystemTime(NOW);
   requests = []; sends = 0;
   server.use(
+    http.get("*/api/v1/w/:ws/projects/:key/overview", () => HttpResponse.json(overview())),
     http.get("*/api/v1/w/:ws/projects/:key/insights/risks", () => HttpResponse.json(risksData())),
     http.get("*/api/v1/w/:ws/projects/:key/insights/modules", () => HttpResponse.json(modulesData())),
     http.get("*/api/v1/w/:ws/projects/:key/workload", ({ request }) => {
@@ -132,27 +135,34 @@ beforeEach(() => {
 });
 afterEach(() => { vi.useRealTimers(); });
 
-const mountDashboard = () => { navigation.pathname = "/w/sample/p/DE/dashboard"; return renderWithProviders(<WorkspaceShell ws="sample"><PlanSection ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: { "lead-dashboard-reports": messages } }); };
+// ส่วนแผนอยู่ในหน้า Overview (รวมเป็นหน้าเดียว 2026-11-08) จึง mount หน้า Overview จริง
+const mountDashboard = () => { navigation.pathname = "/w/sample/p/DE"; navigation.search = ""; return renderWithProviders(<WorkspaceShell ws="sample"><OverviewPage ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: { "lead-dashboard-reports": messages, "overview-table": ot } }); };
 const mountReports = (search = "") => { navigation.pathname = "/w/sample/p/DE/reports"; navigation.search = search; return renderWithProviders(<WorkspaceShell ws="sample"><ReportsView ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: { "lead-dashboard-reports": messages } }); };
 
-describe("Lead Dashboard (O1)", () => {
-  it("แสดง KPI, สถานะ, ความเสี่ยงพร้อมลิงก์งาน และปุ่มไปหน้ารายงาน", async () => {
+describe("แผนทั้งโปรเจกต์ใน Overview (O1)", () => {
+  it("ตัวเลขแผนในการ์ดสรุป, ความเสี่ยงพร้อมลิงก์งาน และปุ่มรายงานบนแถบเครื่องมือ", async () => {
     mountDashboard();
     const required = await screen.findByRole("group", { name: "ต้องใช้จริงตาม capacity" });
     expect(required).toHaveTextContent("≈ 6 สัปดาห์");
     expect(required).toHaveTextContent("60 MD ที่เหลือ ÷ 10 MD/สัปดาห์ · เกินเวลาที่เหลือถึง Go-live 1.4 สัปดาห์");
-    expect(screen.getByRole("group", { name: "งานทั้งหมด" })).toHaveTextContent("303 Module · เสร็จ 14%");
+    // งานทั้งหมด / % อยู่ในการ์ดสรุปของ Overview แล้ว · ไม่ซ้ำในแถวตัวเลขแผน
+    expect(screen.queryByRole("group", { name: "งานทั้งหมด" })).not.toBeInTheDocument();
+    expect(required.closest("section")).toHaveAttribute("aria-label", "ความคืบหน้าโครงการ");
     expect(screen.getByRole("group", { name: "Man-Day ตามแผน" })).toHaveTextContent("70เสร็จ 10 · เหลือ 60 MD");
     expect(screen.getByRole("group", { name: "ช่วงแผน" })).toHaveTextContent("≈ 17 สัปดาห์");
     // สัปดาห์นี้มาจากรายงานของสัปดาห์ก่อน (nextWeek) · สัปดาห์หน้ามาจากรายงานสัปดาห์นี้
     await waitFor(() => expect(screen.getByRole("group", { name: "เริ่มสัปดาห์นี้ / หน้า" })).toHaveTextContent("5 / 7 งาน12 MD / 15.5 MD · Overdue 3"));
     expect(requests).toEqual(expect.arrayContaining([`weekly?${THIS_WEEK}`, "weekly?2026-11-23"]));
-    expect(screen.getByText("Off track")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "แผนทั้งโปรเจกต์" })).not.toBeInTheDocument();
 
     const risks = screen.getByRole("region", { name: "ความเสี่ยงที่ระบบพบในแผน" });
+    // หน้าเดียว: ตาราง Module แทน Progress by Module, ลิงก์ Health พาไปความเสี่ยง และไม่มีหัว "แผนทั้งโปรเจกต์" แยก
+    expect(screen.queryByRole("region", { name: "Progress by Module" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ดูความเสี่ยงในแผน" })).toHaveAttribute("href", "#planning");
+    expect(document.getElementById("planning")).toBe(risks);
     expect(within(risks).getAllByRole("listitem")).toHaveLength(2);
     expect(within(risks).getByRole("img", { name: "ความเสี่ยงสูง" })).toHaveTextContent("!");
-    expect(within(risks).getByRole("link", { name: "DE-12" })).toHaveAttribute("href", "/w/sample/p/DE/dashboard?issue=DE-12");
+    expect(within(risks).getByRole("link", { name: "DE-12" })).toHaveAttribute("href", "/w/sample/p/DE?issue=DE-12");
     expect(within(risks).getByRole("link", { name: "ดูงานใน Table" })).toHaveAttribute("href", "/w/sample/p/DE/table");
     expect(within(risks).getByRole("link", { name: "ดู Workload" })).toHaveAttribute("href", "/w/sample/p/DE/members");
     expect(screen.getByRole("link", { name: "สร้างรายงานประจำสัปดาห์" })).toHaveAttribute("href", "/w/sample/p/DE/reports");
@@ -176,7 +186,7 @@ describe("Lead Dashboard (O1)", () => {
 
     await user.click(within(rowA).getByRole("button", { name: `${devA.displayName} · สัปดาห์ 30/11 · 12 MD / 5` }));
     const panel = screen.getByRole("region", { name: /งานของ ผู้พัฒนาตัวอย่างหนึ่ง สัปดาห์/ });
-    expect(within(panel).getByRole("link", { name: "DE-11" })).toHaveAttribute("href", "/w/sample/p/DE/dashboard?issue=DE-11");
+    expect(within(panel).getByRole("link", { name: "DE-11" })).toHaveAttribute("href", "/w/sample/p/DE?issue=DE-11");
     expect(panel).toHaveTextContent("8 MD");
     await user.click(within(panel).getByRole("button", { name: "ปิด" }));
     expect(screen.queryByRole("region", { name: /งานของ/ })).not.toBeInTheDocument();
@@ -220,16 +230,19 @@ describe("Lead Dashboard (O1)", () => {
     expect(await screen.findByText("รหัสอ้างอิง: req_w15_001")).toBeInTheDocument();
     second.unmount();
 
-    // ไม่มีสิทธิ์: ส่วนแผนใน Overview ไม่แสดงเลย (ไม่ขึ้นหน้าไม่มีสิทธิ์กลาง Overview)
+    // ไม่มีสิทธิ์: ส่วนแผนใน Overview ไม่แสดงเลย (ไม่ขึ้นหน้าไม่มีสิทธิ์กลาง Overview) และกลับไปใช้ Progress by Module เดิม
     server.use(http.get("*/api/v1/w/:ws/projects/:key/insights/risks", () => HttpResponse.json({ error: { code: "forbidden", message: "ไม่มีสิทธิ์", details: {}, requestId: "req_w15_002" } }, { status: 403 })));
     const third = mountDashboard();
-    await waitFor(() => expect(screen.queryByRole("region", { name: "แผนทั้งโปรเจกต์" })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("region", { name: "ความเสี่ยงที่ระบบพบในแผน" })).not.toBeInTheDocument());
+    expect(await screen.findByRole("region", { name: "Progress by Module" })).toBeInTheDocument();
     expect(screen.queryByText("คุณยังไม่มีสิทธิ์เข้าถึง")).not.toBeInTheDocument();
     third.unmount();
 
     server.use(http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () => HttpResponse.json({ ...viewer, guestViewer: true, permissions: ["project.view"] })));
+    requests = [];
     mountDashboard();
-    await waitFor(() => expect(screen.queryByRole("region", { name: "แผนทั้งโปรเจกต์" })).not.toBeInTheDocument());
+    await screen.findByRole("region", { name: "Progress by Module" });
+    expect(screen.queryByRole("region", { name: "ความเสี่ยงที่ระบบพบในแผน" })).not.toBeInTheDocument();
     expect(requests.filter((r) => r.startsWith("workload"))).toHaveLength(0);
   });
 

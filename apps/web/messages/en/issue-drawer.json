@@ -249,7 +249,10 @@
     "checklist": "Checklist",
     "dependencies": "Dependency",
     "details": "Additional details",
-    "actualStart": "Actual Start"
+    "actualStart": "Actual Start",
+    "requirements": "Requirement",
+    "screens": "Screen",
+    "labelIds": "Labels"
   },
   "priority": {
     "urgent": "Urgent",
@@ -335,5 +338,25 @@
   "groupPlan": "Plan",
   "groupPlace": "Organize",
   "noDependenciesYet": "No dependencies yet",
-  "addDescription": "+ Add description"
+  "addDescription": "+ Add description",
+  "refs": {
+    "requirement": "Requirement",
+    "screen": "Screen",
+    "labels": "Labels",
+    "watchers": "Watchers",
+    "add_requirement": "+ FR / NFR",
+    "add_screen": "+ Screen",
+    "add_label": "+ Label",
+    "remove": "Remove {code}",
+    "requirementInput": "Requirement code",
+    "screenInput": "Screen code",
+    "labelInput": "Choose a label",
+    "requirementPlaceholder": "FR-02.3",
+    "screenPlaceholder": "SCR-203",
+    "requirementInvalid": "Use a code like FR-02.3 or NFR-01",
+    "screenInvalid": "Use a code like SCR-203",
+    "chooseLabel": "Choose a label",
+    "noLabels": "No labels yet · add them in Settings",
+    "newCodeHint": "New codes are created automatically"
+  }
 }

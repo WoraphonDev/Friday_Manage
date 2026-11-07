@@ -12,12 +12,12 @@
 | VD04 | ผ่านในสถานะที่ตรวจ | fix/canvas-shell-variants | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
 | VD05 | ผ่านในสถานะที่ตรวจ | fix/canvas-overview-table | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
 | VD06 | ผ่านในสถานะที่ตรวจ | fix/canvas-overview-table | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
-| VD07 | ยังไม่ปิด | fix/canvas-overview-table | Toolbar/Views แก้แล้ว แต่ FR/Screen ยังไม่มีข้อมูลในแถว API |
-| VD08 | ยังไม่ปิด | fix/canvas-overview-table | Status pill และ columns หลักตรงขึ้น; FR/Screen ยังขาด |
+| VD07 | ผ่านในสถานะที่ตรวจ | fix/canvas-overview-table · feat/issue-requirements-labels | API ส่ง requirements/screens ในแถว และค้นด้วยรหัส FR/SCR ได้ตาม placeholder ของ Canvas (8 พ.ย.) |
+| VD08 | ผ่านในสถานะที่ตรวจ | fix/canvas-overview-table · feat/issue-requirements-labels | เพิ่มคอลัมน์ FR / Screen กว้าง 124 px ระหว่าง Actual กับ Progress ตาม Canvas (8 พ.ย.) |
 | VD09 | ผ่านในสถานะที่ตรวจ | fix/canvas-overview-table | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
-| VD10 | ยังไม่ปิด | fix/canvas-issue-drawer | Drawer/บริบทสร้างงานแก้แล้ว; Requirement/Screen/Labels/Watchers ของฟอร์ม B ยังไม่ครบ |
+| VD10 | ผ่านในสถานะที่ตรวจ | fix/canvas-issue-drawer · feat/issue-requirements-labels | ฟอร์ม B มีแถว Requirement (+ FR / NFR, + Screen), Labels, Watchers ตามลำดับ Canvas · ยังไม่มีแถบเครื่องมือ Markdown (8 พ.ย.) |
 | VD11 | ผ่านในสถานะที่ตรวจ | fix/canvas-issue-drawer | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
-| VD12 | ยังไม่ปิด | fix/canvas-issue-drawer | โครงรายละเอียดและ QA ของ Sub-task แก้แล้ว; Requirement/Screen/Labels ยังไม่ครบ |
+| VD12 | ผ่านในสถานะที่ตรวจ | fix/canvas-issue-drawer · feat/issue-requirements-labels | การ์ดคุณสมบัติมี Requirement, Screen, Labels แก้ได้ในที่และบันทึก Activity (8 พ.ย.) |
 | VD13 | ผ่านในสถานะที่ตรวจ | fix/canvas-issue-drawer | Rail ของ desktop คงไว้; มือถือไม่ซ้ำ parent bar และ Commits แสดงทุกรายการพร้อมลิงก์/ผู้เขียน/วันที่ |
 | VD14 | ผ่านในสถานะที่ตรวจ | fix/canvas-pages | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
 | VD15 | ผ่านในสถานะที่ตรวจ | fix/canvas-overview-table | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
@@ -29,7 +29,7 @@
 | VD21 | ผ่านในสถานะที่ตรวจ | fix/canvas-pages | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
 | VD22 | ผ่านในสถานะที่ตรวจ | fix/canvas-issue-drawer | แก้เกณฑ์ audit เดิม: K3 ไม่มีตัวเพิ่ม Nวันแยก ต้องตรวจคู่วันที่และผลกระทบ preview แทน |
 | VD23 | ผ่านในสถานะที่ตรวจ | fix/canvas-issue-drawer | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
-| VD24 | ยังไม่ปิด | fix/canvas-pages | Toast รองรับ actor/secondary/actions และ Bell แสดงรายการ; ยังไม่ยืนยัน realtime/action ทุกเหตุการณ์กับบริการจริง |
+| VD24 | ผ่านในสถานะที่ตรวจ | fix/canvas-pages | 8 พ.ย. ตรวจกับ API + WebSocket จริงผ่าน Docker: คอมเมนต์จากผู้ใช้อื่น → Toast "เปิดงาน / ดูภายหลัง" เปิด Drawer ถูกงาน · คำขอเลื่อน Due → "อนุมัติ / ดูรายละเอียด" ไป Inbox แล้วอนุมัติได้ · ไม่ได้ไล่ทุกชนิดเหตุการณ์ |
 | VD25 | ผ่านในสถานะที่ตรวจ | fix/canvas-pages | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
 | VD26 | ผ่านในสถานะที่ตรวจ | fix/canvas-pages | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
 
@@ -202,3 +202,10 @@
 ## ผลตรวจ VD02 เดิม · 6 พฤศจิกายน 2569
 
 ผลตรวจรอบก่อนรวมอยู่ใน [รายงาน VD02](canvas-vd02-verification-2026-11-06.md) พร้อมภาพ 1440/390 px: desktop ผ่านตามขอบเขต และ fixture มือถือวัดได้ 200 px สถานะปัจจุบันให้ยึดตารางและรายงานวันที่ 7 พฤศจิกายนด้านบน
+
+## VD07 / VD08 / VD10 / VD12 / VD24 · รอบปิดงาน 8 พฤศจิกายน 2569 (`feat/issue-requirements-labels`)
+
+- API: `POST p/issues` รับ `requirements`, `screens`, `labelIds`, `watcherIds` ตาม 03-api · รหัส FR/NFR/SCR ที่ยังไม่มีในโปรเจกต์สร้างให้ · `PATCH i/` แทนทั้งชุดของ `requirements`/`screens`/`labelIds` เพิ่ม version และเขียน Activity · DTO ของงานมี `requirements`, `screens`, `labels` · `form-options` คืนรหัสที่มีอยู่ · ตัวกรอง `q` ค้นรหัส FR/SCR ด้วย
+- เว็บ: คอลัมน์ FR / Screen ใน Table, ชิปรหัสพร้อมตรวจรูปแบบในฟอร์ม B และการ์ดคุณสมบัติ, Label เลือกจากรายการของโปรเจกต์, Watchers ในฟอร์ม B
+- ยังไม่ทำ: ลิงก์ FR ไป Reports / SCR ไป Files ตาม Canvas C (ยังไม่มีหน้าปลายทางที่กรองตามรหัส), คำใบ้ "ค้นจาก SRS ใน Files"
+- ข้อสังเกตจากการทดสอบ: Drawer ที่เปิดค้างไม่รีเฟรชเมื่อคนอื่นแก้แผนของงานเดียวกัน (เห็นค่าเก่าจนเปิดใหม่)

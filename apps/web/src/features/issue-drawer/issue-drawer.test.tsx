@@ -68,6 +68,18 @@ describe('Issue drawer details', () => {
     expect(mutations('/assignees')[0]).toMatchObject({method:'PUT',body:{assigneeIds:[me.id,dev.id]},etag:'"3"'});
   });
 
+  it('shows Requirement / Screen / Labels and replaces each set with PATCH', async () => {
+    Object.assign(f.state.issues.get('DE-1')!,{requirements:['FR-06.2','NFR-01'],screens:['SCR-107'],labels:[formOptions.labels[0]]});
+    const user=userEvent.setup();mount();await loaded();
+    const props=screen.getByRole('complementary',{name:/คุณสมบัติ|Properties/});
+    expect(within(props).getByText('FR-06.2')).toBeInTheDocument();expect(within(props).getByText('SCR-107')).toBeInTheDocument();expect(within(props).getByText('backend')).toBeInTheDocument();
+    await user.click(within(props).getByRole('button',{name:'ลบ NFR-01'}));
+    await waitFor(()=>expect(mutations('/issues/DE-1')[0]).toMatchObject({body:{requirements:['FR-06.2']},etag:'"3"'}));
+    await user.click(await within(props).findByRole('button',{name:'+ Label'}));await user.selectOptions(within(props).getByLabelText('เลือก Label'),uid(81));
+    await waitFor(()=>expect(mutations('/issues/DE-1')[1]).toMatchObject({body:{labelIds:[uid(80),uid(81)]},etag:'"4"'}));
+    expect(await within(props).findByText('ตรวจซ้ำ')).toBeInTheDocument();
+  });
+
   it('requires confirmation before moving Done with incomplete subtasks', async () => {
     const user=userEvent.setup();const calls:Record<string,unknown>[]=[];
     server.use(http.post(`${issueEndpoint}/move`,async({request})=>{const body=await request.json() as Record<string,unknown>;calls.push(body);expect(request.headers.get('if-match')).toBe('"3"');if(!body.confirm)return failure(422,'subtasks_incomplete',{open:2,confirmable:true});const issue=f.state.issues.get('DE-1')!;issue.status=statuses[3];issue.version++;return HttpResponse.json({...issue,warnings:[]});}));
@@ -223,6 +235,23 @@ describe('Create issue',()=>{
     await user.click(within(drawer).getByRole('radio',{name:'High'}));await user.click(within(drawer).getByRole('radio',{name:'L'}));
     await user.click(within(drawer).getByRole('button',{name:'สร้างTask'}));
     await waitFor(()=>expect(mutations('/projects/DE/issues')[0]?.body).toMatchObject({type:'Task',title:'งานจากตาราง',priority:'high',size:'L'}));
+  });
+  it('B adds Requirement / Screen codes, Labels and Watchers and rejects malformed codes',async()=>{
+    const user=userEvent.setup();navigation.search='new=1&type=task';mount(undefined,{issueKey:undefined});
+    const drawer=await screen.findByRole('dialog',{name:'สร้างงานใหม่'});
+    await user.selectOptions(await within(drawer).findByLabelText('Module'),uid(10));await user.type(within(drawer).getByLabelText('ชื่อ Task'),'งานอ้างอิง SRS');
+    await user.click(within(drawer).getByRole('button',{name:'+ FR / NFR'}));
+    await user.type(within(drawer).getByLabelText('รหัส Requirement'),'REQ 1{Enter}');
+    expect(within(drawer).getByRole('alert')).toHaveTextContent('ใช้รูปแบบ FR-02.3 หรือ NFR-01');
+    await user.clear(within(drawer).getByLabelText('รหัส Requirement'));await user.type(within(drawer).getByLabelText('รหัส Requirement'),'fr-02.3{Enter}');
+    await user.click(within(drawer).getByRole('button',{name:'+ Screen'}));await user.type(within(drawer).getByLabelText('รหัส Screen'),'SCR-203{Enter}');
+    expect(within(drawer).getByText('FR-02.3')).toBeInTheDocument();
+    await user.click(within(drawer).getByRole('button',{name:'ลบ SCR-203'}));
+    await user.click(within(drawer).getByRole('button',{name:'+ Screen'}));await user.type(within(drawer).getByLabelText('รหัส Screen'),'scr-107{Enter}');
+    await user.click(within(drawer).getByRole('button',{name:'+ Label'}));await user.selectOptions(within(drawer).getByLabelText('เลือก Label'),uid(80));
+    expect(within(drawer).getByText('backend')).toBeInTheDocument();
+    await user.click(within(drawer).getByRole('button',{name:'สร้างTask'}));
+    await waitFor(()=>expect(mutations('/projects/DE/issues')[0]?.body).toMatchObject({requirements:['FR-02.3'],screens:['SCR-107'],labelIds:[uid(80)],watcherIds:[]}));
   });
   it('ignores expired drafts and supports creating another item',async()=>{
     const user=userEvent.setup();localStorage.setItem(`friday:issue-draft:sample:DE:${me.id}`,JSON.stringify({expiresAt:1,data:{type:'Task',title:'แบบหมดอายุ'}}));

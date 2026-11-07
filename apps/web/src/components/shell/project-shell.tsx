@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
-import { ChartGantt, Check, ChevronLeft, EyeOff, FileBarChart, LayoutDashboard, ListTodo, MoreHorizontal, Plus } from "lucide-react";
+import { ChartGantt, Check, ChevronLeft, EyeOff, FileBarChart, LayoutDashboard, ListTodo, MoreHorizontal, Plus, X } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { formatDateRange } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -258,6 +258,11 @@ export function ProjectShell({
   const visibleTabs = allowedTabs.filter(
     (tab) => !tab.optional || shownTabs.includes(tab.label) || isCurrentTab(tab),
   );
+  // ซ่อนแท็บของหน้าที่เปิดอยู่ต้องออกจากหน้านั้นด้วย ไม่งั้นแท็บยังค้าง (หน้าที่เปิดอยู่แสดงแท็บเสมอ)
+  function hideTab(tab: (typeof projectTabs)[number]) {
+    if (shownTabs.includes(tab.label)) toggleTab(tab.label);
+    if (isCurrentTab(tab)) router.push(base);
+  }
   // P2 Automation มี breadcrumb ของหน้าเอง · แท็บอื่นใช้หัวและแท็บชุดเดียวกันทุกหน้า
   // (Canvas O1/O2/M1 ตัดหัวให้สั้นลง แต่ผู้ใช้เลือกให้แท็บไม่ขยับและครบทุกหน้า · 2026-11-07)
   const headerVariant = route.startsWith("/automation") ? "none" : "full";
@@ -405,7 +410,8 @@ export function ProjectShell({
             </div>
           </div>
           <nav className="tabs" aria-label={t("nav.projectViews")}>
-            {visibleTabs.map((tab) => (
+            {visibleTabs.map((tab) => {
+              const link = (
                 <Link
                   key={tab.path}
                   className={`tab${"mobile" in tab ? "" : " desktop-project-tab"}`}
@@ -422,7 +428,25 @@ export function ProjectShell({
                     t(`nav.${tab.path === "/members" ? "projectMembers" : tab.label}`)
                   )}
                 </Link>
-              ))}
+              );
+              if (!tab.optional) return link;
+              // แท็บเสริมลบได้จากแถบแท็บโดยตรง (× โผล่เมื่อชี้)
+              const name = t(`nav.${tab.label}`);
+              return (
+                <span key={tab.path} className="tab-optional desktop-project-tab">
+                  {link}
+                  <button
+                    type="button"
+                    className="tab-remove"
+                    aria-label={t("nav.hideTab", { name })}
+                    title={t("nav.hideTab", { name })}
+                    onClick={() => hideTab(tab)}
+                  >
+                    <X size={12} aria-hidden="true" />
+                  </button>
+                </span>
+              );
+            })}
             {optionalTabs.length > 0 && (
               // แท็บเสริมเป็นแท็บจอใหญ่ทั้งหมด ปุ่มเลือกจึงไม่แสดงบนมือถือ
               // แบบเมนู "Board views": กดมุมมองแล้วเพิ่มเป็นแท็บและเปิดทันที · ซ่อนได้จากปุ่มท้ายแถว
@@ -450,7 +474,8 @@ export function ProjectShell({
                     </div>
                     <ul className="view-options">
                       {optionalTabs.map((tab) => {
-                        const shown = shownTabs.includes(tab.label);
+                        // แท็บที่เห็นอยู่ (เลือกไว้ หรือเป็นหน้าที่เปิดอยู่) ซ่อนได้เสมอ
+                        const shown = shownTabs.includes(tab.label) || isCurrentTab(tab);
                         const Icon = VIEW_ICONS[tab.label] ?? LayoutDashboard;
                         const name = t(`nav.${tab.label}`);
                         return (
@@ -480,7 +505,7 @@ export function ProjectShell({
                                 className="view-hide"
                                 aria-label={t("nav.hideTab", { name })}
                                 title={t("nav.hideTab", { name })}
-                                onClick={() => toggleTab(tab.label)}
+                                onClick={() => hideTab(tab)}
                               >
                                 <EyeOff size={15} aria-hidden="true" />
                               </button>

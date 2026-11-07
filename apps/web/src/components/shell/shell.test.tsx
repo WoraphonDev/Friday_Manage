@@ -428,6 +428,21 @@ describe("Workspace / Project shell", () => {
     expect(tabs.queryByRole("link", { name: "Gantt", hidden: true })).not.toBeInTheDocument();
   });
 
+  it("ซ่อนแท็บเสริมของหน้าที่เปิดอยู่แล้วกลับไป Overview · ลบจาก × บนแท็บได้", async () => {
+    navigation.pathname = "/w/sample/p/DE/backlog";
+    const user = userEvent.setup();
+    renderWithProviders(<ProjectExample />);
+    const tabs = within(await screen.findByRole("navigation", { name: "มุมมองโปรเจกต์" }));
+    // เข้าจากลิงก์ ไม่ได้เลือกไว้ แต่เป็นหน้าที่เปิดอยู่ จึงยังซ่อนได้จากเมนู
+    await user.click(tabs.getByRole("button", { name: "เพิ่มมุมมอง", hidden: true }));
+    const menu = within(await screen.findByRole("dialog", { name: "มุมมองเพิ่มเติม" }));
+    await user.click(menu.getByRole("button", { name: "ซ่อนแท็บ Backlog" }));
+    expect(router.push).toHaveBeenLastCalledWith("/w/sample/p/DE");
+    // × บนแท็บ
+    await user.click(tabs.getByRole("button", { name: "ซ่อนแท็บ Backlog", hidden: true }));
+    expect(router.push).toHaveBeenCalledTimes(2);
+  });
+
   it("เลือกแสดงแท็บเสริม (ภาพรวม Lead, Reports, Backlog, Gantt) ได้ และจำค่าไว้ต่อโปรเจกต์", async () => {
     navigation.pathname = "/w/sample/p/DE";
     const user = userEvent.setup();

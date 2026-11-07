@@ -1248,6 +1248,45 @@ kbd {
   cursor: pointer;
   padding: 0 10px;
 }
+/* แท็บเสริม: × ลบออกจากแถบ โผล่เมื่อชี้ (จอสัมผัสแสดงตลอด) */
+.tab-optional {
+  position: relative;
+  display: inline-flex;
+}
+.tab-optional > .tab {
+  padding-right: 22px;
+}
+.tab-remove {
+  position: absolute;
+  right: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+}
+.tab-optional:hover .tab-remove,
+.tab-remove:focus-visible {
+  opacity: 1;
+}
+.tab-remove:hover {
+  background: #e4e7eb;
+  color: var(--foreground);
+}
+@media (hover: none) {
+  .tab-remove {
+    opacity: 1;
+  }
+}
 /* เมนูเพิ่มมุมมอง (ปุ่ม + ท้ายแท็บ) */
 .view-picker {
   width: 320px;

@@ -8,9 +8,14 @@
 .grid { position:relative; }
 .row { display:flex; height:36px; border-bottom:1px solid #f1f3f5; }
 .headRow { height:60px; background:#f8f9fb; position:sticky; top:0; z-index:3; }
-.axisRow { position:relative; height:20px; }
-.wk { position:absolute; top:0; height:20px; font-size:11px; color:var(--muted); padding-left:3px; border-left:1px solid #eef0f3; white-space:nowrap; overflow:hidden; }
-.wkNow { background:#fee2e2; color:#991b1b; font-weight:600; border-radius:3px; }
+/* หัวแกนแบบ Gantt: ช่วงสัปดาห์ / เดือน + แถววัน (Day) */
+.axisUnits { position:relative; height:22px; border-bottom:1px solid #eef0f3; }
+.unit { position:absolute; top:0; bottom:0; padding:3px 8px; font-size:12px; font-weight:600; border-left:1px solid var(--border); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.axisDays { position:relative; height:26px; }
+.dy { position:absolute; top:0; bottom:0; text-align:center; font-size:10px; line-height:1.2; padding-top:1px; color:#3d4550; font-weight:500; }
+.dy b { display:block; font-size:11px; font-weight:inherit; }
+.dy.we { color:#8a94a0; background:rgb(148 163 184 / .12); }
+.dy.now { color:#dc2626; font-weight:700; }
 .lab { flex:0 0 290px; position:sticky; left:0; background:#fff; z-index:2; border-right:1px solid var(--border); display:flex; align-items:center; gap:6px; padding:0 8px; min-width:0; font-size:13px; }
 .headRow .lab { background:#f8f9fb; font-weight:600; font-size:12px; color:var(--muted); }
 .labText { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -22,15 +27,16 @@
 .drop { background:var(--primary-soft); }
 .tick { position:absolute; top:0; bottom:0; border-left:1px solid #eef0f3; font-size:11px; color:var(--foreground); padding-left:3px; white-space:nowrap; }
 .weekend { position:absolute; top:0; bottom:0; background:#f8f9fb; }
-.todayLine { position:absolute; top:0; bottom:0; border-left:2px solid #dc2626; z-index:1; pointer-events:none; }
-.b { position:absolute; top:9px; height:18px; border-radius:5px; display:flex; align-items:center; font-size:11px; color:#fff; overflow:hidden; white-space:nowrap; padding:0 6px; cursor:default; }
+.todayLine { position:absolute; top:0; bottom:0; border-left:2px solid #dc2626; z-index:0; pointer-events:none; }
+.b { position:absolute; z-index:1; top:9px; height:18px; border-radius:5px; display:flex; align-items:center; font-size:11px; color:#fff; overflow:hidden; white-space:nowrap; padding:0 6px; cursor:default; }
 .editable { cursor:grab; }
 .dragging { cursor:grabbing; opacity:.85; box-shadow:0 4px 12px rgb(15 23 42 / .25); }
 .b:focus-visible { outline:2px solid #1b1f24; outline-offset:1px; }
 .late { outline:2px solid #dc2626; outline-offset:1px; }
 .summary { top:13px; height:10px; border-radius:99px; padding:0; }
 .fill { position:absolute; left:0; top:0; bottom:0; border-radius:99px; }
-.barLabel { position:absolute; top:10px; font-size:12px; color:#3d4550; white-space:nowrap; pointer-events:none; }
+/* ตัวหนังสืออยู่เหนือเส้นวันนี้ · ขอบขาวให้อ่านออกเมื่อเส้นลากผ่าน */
+.barLabel { position:absolute; z-index:1; text-shadow:0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff; top:10px; font-size:12px; color:#3d4550; white-space:nowrap; pointer-events:none; }
 .barLate { color:#b91c1c; font-weight:600; }
 .cnt { flex:none; font-size:11px; font-weight:600; color:#3d4550; background:#eef0f3; border-radius:999px; padding:0 7px; }
 .add { margin-left:auto; width:22px; height:22px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; color:#5f6873; flex:none; }.add:hover { background:#eef0f3; }
@@ -42,6 +48,8 @@
 .sprint { position:absolute; top:5px; height:18px; border-radius:4px; background:#e0e7ff; color:#3730a3; font-size:11px; padding:0 6px; overflow:hidden; white-space:nowrap; }
 .sprint.active { background:#c7d2fe; font-weight:600; }
 .ms { position:absolute; top:6px; display:flex; align-items:center; gap:4px; font-size:11px; white-space:nowrap; transform:translateX(-6px); }
+.ms svg { flex:none; }
+.msName { min-width:0; overflow:hidden; text-overflow:ellipsis; }
 .toggle { border:0; background:transparent; cursor:pointer; padding:0; display:inline-flex; color:inherit; }
 .unsched { padding:12px 16px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; border-top:1px solid var(--border); }
 .chip { display:inline-flex; gap:6px; align-items:center; min-height:30px; padding:0 10px; border:1px dashed var(--input); border-radius:8px; background:#fff; font-size:12px; cursor:grab; }

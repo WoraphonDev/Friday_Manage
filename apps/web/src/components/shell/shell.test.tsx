@@ -348,11 +348,11 @@ describe("Workspace / Project shell", () => {
   it("กรอบหน้าตามบริบทของ Canvas (VD03)", () => {
     expect(shellChrome("/w/sample")).toBe("workspace");
     expect(shellChrome("/w/sample/p/DE/table")).toBe("workspace");
-    expect(shellChrome("/w/sample/p/DE/dashboard")).toBe("focus");
-    expect(shellChrome("/w/sample/p/DE/reports")).toBe("focus");
-    expect(shellChrome("/w/sample/p/DE/automation")).toBe("focus");
-    expect(shellChrome("/w/sample/search")).toBe("focus");
-    expect(shellChrome("/w/sample/import")).toBe("focus");
+    expect(shellChrome("/w/sample/p/DE/dashboard")).toBe("workspace");
+    expect(shellChrome("/w/sample/p/DE/reports")).toBe("workspace");
+    expect(shellChrome("/w/sample/p/DE/automation")).toBe("workspace");
+    expect(shellChrome("/w/sample/search")).toBe("workspace");
+    expect(shellChrome("/w/sample/import")).toBe("workspace");
     expect(shellChrome("/w/sample/admin/security")).toBe("admin");
     expect(shellChrome("/w/sample/billing")).toBe("workspace");
     expect(shellChrome("/w/sample/billing/checkout")).toBe("checkout");
@@ -402,7 +402,7 @@ describe("Workspace / Project shell", () => {
     expect(screen.queryByRole("navigation", { name: "เมนูหลัก", hidden: true })).not.toBeInTheDocument();
   });
 
-  it("Automation ใช้ breadcrumb ของหน้าเอง และ Lead ไม่มีปุ่มทีม/+ New (P2, O1)", async () => {
+  it("Automation ใช้ breadcrumb ของหน้าเอง · ภาพรวม Lead ใช้หัวและแท็บชุดเดียวกับหน้าอื่น (P2, O1)", async () => {
     navigation.pathname = "/w/sample/p/DE/automation";
     const { unmount } = renderWithProviders(<ProjectExample />);
     expect(await screen.findByText("หน้าโปรเจกต์")).toBeInTheDocument();
@@ -410,14 +410,10 @@ describe("Workspace / Project shell", () => {
     unmount();
     navigation.pathname = "/w/sample/p/DE/dashboard";
     renderWithProviders(<ProjectExample />);
-    expect(await screen.findByLabelText("มุมมองโปรเจกต์")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "เมนูโปรเจกต์" })).not.toBeInTheDocument();
-    expect(document.querySelector(".project-crumb")).toBeNull();
-    // O1: ปุ่มบนหัว + แท็บชุดของ Lead
-    expect(screen.getByRole("link", { name: "สร้างรายงานประจำสัปดาห์" })).toHaveAttribute("href", "/w/sample/p/DE/reports?report=weekly");
-    expect(screen.getByRole("link", { name: "Import / Export" })).toHaveAttribute("href", "/w/sample/import");
-    const tabs = within(screen.getByLabelText("มุมมองโปรเจกต์"));
-    expect(tabs.queryByRole("link", { name: "Timeline", hidden: true })).not.toBeInTheDocument();
+    const tabs = within(await screen.findByLabelText("มุมมองโปรเจกต์"));
+    // แท็บไม่ขยับเมื่อสลับไปภาพรวม Lead: มี breadcrumb และแท็บครบเหมือนหน้าอื่น
+    expect(document.querySelector(".project-crumb")).not.toBeNull();
+    expect(tabs.getByRole("link", { name: "Timeline", hidden: true })).toBeInTheDocument();
     expect(tabs.getByRole("link", { name: "Gantt", hidden: true })).toBeInTheDocument();
   });
 });

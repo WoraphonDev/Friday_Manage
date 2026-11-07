@@ -1,6 +1,6 @@
 {
   "title": "Timeline",
-  "zoom": { "label": "Range", "week": "Week", "month": "Month", "quarter": "Quarter" },
+  "zoom": { "label": "Range", "day": "Day", "week": "Week", "month": "Month" },
   "prev": "Move back",
   "next": "Move forward",
   "today": "Today",
@@ -12,7 +12,6 @@
   "addMilestone": "+ Milestone",
   "colors": { "module": "Module", "status": "Status", "assignee": "Assignee" },
   "rowsLabel": "Module › Task › Sub-task",
-  "sprints": "Sprint",
   "milestones": "Milestones",
   "todayLine": "Today ({date})",
   "lastEnd": "Last task {date}",

@@ -31,15 +31,22 @@ export interface TimelineData {
   unscheduled: { key: string; type: string; title: string; moduleId: string | null; parentKey: string | null }[];
 }
 
-export type Zoom = "week" | "month" | "quarter";
+export type Zoom = "day" | "week" | "month";
 /** Canvas Timeline: Week = 1 คอลัมน์ต่อสัปดาห์ (≈28 px) · Month / Quarter ย่อลงตามลำดับ */
-export const PX_PER_DAY: Record<Zoom, number> = { week: 4, month: 2, quarter: 1 };
+// เท่ากับสเกลของ Gantt เพื่อให้สองหน้าดูเหมือนกัน
+export const PX_PER_DAY: Record<Zoom, number> = { day: 21, week: 8, month: 3 };
 const DAY = 86_400_000;
 const LABEL_W = 290;
 const STATUS_COLOR: Record<Cat, string> = { todo: "#8a94a0", in_progress: "#2563eb", done: "#15803d" };
 const PALETTE = ["#1d4ed8", "#0f766e", "#b45309", "#7c3aed", "#be185d", "#0369a1", "#4d7c0f", "#c2410c"];
 
 export const toDay = (iso: string, from: string) => Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY);
+const weekday = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDay();
+const nextMonth = (iso: string) => {
+  const dt = new Date(`${iso.slice(0, 7)}-01T00:00:00Z`);
+  dt.setUTCMonth(dt.getUTCMonth() + 1);
+  return dt.toISOString().slice(0, 10);
+};
 export const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * DAY).toISOString().slice(0, 10);
 
 type Line =
@@ -58,7 +65,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const cache = useQueryClient();
   const toast = useToast();
   const base = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
-  const [zoom, setZoom] = useState<Zoom>("week");
+  const [zoom, setZoom] = useState<Zoom>("day");
   const [colorBy, setColorBy] = useState<"module" | "status" | "assignee">("module");
   const [level, setLevel] = useState<"module" | "task" | "subtask">("subtask");
   const [closed, setClosed] = useState<Set<string>>(new Set());
@@ -67,6 +74,8 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const [needReason, setNeedReason] = useState<Pending | null>(null);
   const [needRequest, setNeedRequest] = useState<Pending | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // ความกว้างที่มองเห็น: แกนเวลายาวอย่างน้อยเต็มจอ ไม่เหลือพื้นที่ว่างด้านขวา
+  const [viewW, setViewW] = useState(0);
   const dragged = useRef<string | null>(null);
   const dragRef = useRef<Drag | null>(null);
   dragRef.current = drag;
@@ -82,12 +91,21 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   // วันเริ่มของแกน = ต้นสัปดาห์ (จันทร์) ก่อนช่วงข้อมูล · เผื่อท้าย 14 วัน
   const axis = useMemo(() => {
     if (!q.data) return null;
-    const f = new Date(`${q.data.range.from}T00:00:00Z`);
-    f.setUTCDate(f.getUTCDate() - ((f.getUTCDay() + 6) % 7));
-    const from = f.toISOString().slice(0, 10);
-    const days = Math.max(28, toDay(q.data.range.to, from) + 14);
+    // แกนเวลาเต็มเดือน: เริ่มวันที่ 1 ของเดือนแรก จบวันสุดท้ายของเดือนสุดท้าย (และยาวอย่างน้อยเต็มจอ)
+    const from = `${q.data.range.from.slice(0, 7)}-01`;
+    const t = new Date(`${q.data.range.to.slice(0, 7)}-01T00:00:00Z`);
+    t.setUTCMonth(t.getUTCMonth() + 1);
+    const days = Math.max(28, toDay(t.toISOString().slice(0, 10), from), Math.ceil((viewW - LABEL_W) / PX_PER_DAY[zoom]));
     return { from, days };
-  }, [q.data]);
+  }, [q.data, viewW, zoom]);
+  const hasData = !!q.data;
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([entry]) => setViewW(entry!.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [hasData]);
 
   const lines = useMemo<Line[]>(() => {
     if (!q.data) return [];
@@ -159,22 +177,32 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const scrollToToday = () => scrollRef.current?.scrollTo?.({ left: Math.max(0, x(d.today) - 200), behavior: "smooth" });
   const scrollBy = (dir: number) => scrollRef.current?.scrollBy?.({ left: dir * (scrollRef.current.clientWidth - LABEL_W) * 0.8, behavior: "smooth" });
 
-  // หัวแกนเวลา 3 แถวตาม Canvas: เดือน · วันจันทร์ของแต่ละสัปดาห์ · เลขสัปดาห์ (สัปดาห์ปัจจุบันเน้นสีพร้อมชื่อ Sprint)
-  const ticks: { left: number; label: string; major: boolean }[] = [];
-  const weeks: { left: number; date: number; no: number; current: boolean; sprint: string | null }[] = [];
-  // ชื่อเดือนเต็มพร้อมปีตาม Canvas (เช่น พฤศจิกายน 2569) · ปฏิทินตามที่ผู้ใช้ตั้ง พ.ศ. / ค.ศ.
-  const monthName = new Intl.DateTimeFormat(`${locale === "en" ? "en-GB" : "th-TH"}-u-ca-${year === "BE" ? "buddhist" : "gregory"}`, { month: "long", year: "numeric", timeZone: "UTC" });
-  for (let i = 0; i <= ax.days; i++) {
+  // หัวแกนแบบเดียวกับ Gantt: แถวบน = ช่วงสัปดาห์ (Day / Week) หรือเดือน (Month) · แถวล่าง = ทุกวันพร้อมตัวย่อวัน (Day)
+  const short = (iso: string) => formatDate(iso, year).split(" ").slice(0, 2).join(" ");
+  const weekdayName = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "th-TH", { weekday: "narrow", timeZone: "UTC" });
+  const units: { left: number; width: number; label: string; title: string }[] = [];
+  for (let i = 0; i < ax.days; i++) {
     const day = addDays(ax.from, i);
-    const dt = new Date(`${day}T00:00:00Z`);
-    if (dt.getUTCDate() === 1) ticks.push({ left: i * px, label: zoom === "quarter" ? formatDate(day, year).split(" ").slice(1).join(" ") : monthName.format(dt), major: true });
-    if (dt.getUTCDay() === 1) {
-      const end = addDays(day, 6);
-      const sprint = d.sprints.find((sp) => sp.startDate <= end && sp.endDate >= day && sp.status === "active");
-      weeks.push({ left: i * px, date: dt.getUTCDate(), no: isoWeek(day), current: d.today >= day && d.today <= end, sprint: sprint?.name ?? null });
-    }
+    const isStart = i === 0 || (zoom === "month" ? day.endsWith("-01") : weekday(day) === 1);
+    if (!isStart) continue;
+    const len = zoom === "month" ? toDay(nextMonth(day), day) : 7 - ((weekday(day) + 6) % 7);
+    const unitEnd = Math.min(ax.days, i + len);
+    const last = addDays(ax.from, unitEnd - 1);
+    const w = (unitEnd - i) * px;
+    const range = `${short(day)} – ${short(last)}`;
+    // ช่องแคบ (สัปดาห์ในมุมมอง Week) แสดงแค่วันเริ่ม · ช่วงเต็มอยู่ใน title
+    const label = zoom === "month" ? formatDate(day, year).split(" ").slice(1).join(" ") : w >= 100 ? range : short(day);
+    units.push({ left: i * px, width: w, label, title: zoom === "month" ? label : range });
   }
-  const weekends: number[] = [];
+  const dayCells = zoom === "day" ? Array.from({ length: ax.days }, (_, i) => addDays(ax.from, i)) : [];
+  // ป้าย Milestone ที่อยู่ใกล้กันตัดด้วย … ไม่ให้ทับป้ายถัดไป (ชื่อเต็มอยู่ใน title)
+  const msSorted = [...d.milestones].sort((a, b) => a.date.localeCompare(b.date));
+  const msRoom = (id: string) => {
+    const i = msSorted.findIndex((m) => m.id === id);
+    const next = msSorted[i + 1];
+    return next ? Math.max(24, x(next.date) - x(msSorted[i]!.date) - 8) : undefined;
+  };
+  const weekends = zoom === "month" ? [] : Array.from({ length: ax.days }, (_, i) => i).filter((i) => [0, 6].includes(weekday(addDays(ax.from, i))));
   const issueHref = (key: string) => `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?issue=${encodeURIComponent(key)}`;
   const newHref = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?new=1&type=task`;
   const groupsOf = (moduleLineId: string) => d.modules.find((m) => `m:${m.id ?? "none"}` === moduleLineId)?.groups.length ?? 0;
@@ -190,7 +218,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const laneBg = (
     <>
       {weekends.map((i) => <span key={i} className={styles.weekend} style={{ left: i * px, width: px }} />)}
-      {ticks.filter((tk) => tk.major).map((tk) => <span key={tk.left} className={styles.tick} style={{ left: tk.left }} />)}
+      {units.map((u) => <span key={u.left} className={styles.tick} style={{ left: u.left }} />)}
       <span className={styles.todayLine} style={{ left: x(d.today) }} />
     </>
   );
@@ -211,7 +239,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
     <div className={styles.page}>
       <div className={styles.bar}>
         <div className={styles.seg} role="group" aria-label={t("zoom.label")}>
-          {(["week", "month", "quarter"] as const).map((z) => <button key={z} type="button" aria-pressed={zoom === z} onClick={() => setZoom(z)}>{t(`zoom.${z}`)}</button>)}
+          {(["day", "week", "month"] as const).map((z) => <button key={z} type="button" aria-pressed={zoom === z} onClick={() => setZoom(z)}>{t(`zoom.${z}`)}</button>)}
         </div>
         <Button size="icon" variant="ghost" aria-label={t("prev")} onClick={() => scrollBy(-1)}><ChevronLeft size={16} /></Button>
         <Button size="small" onClick={scrollToToday}>{t("today")}</Button>
@@ -235,9 +263,16 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
               <div className={`${styles.row} ${styles.headRow}`}>
                 <div className={styles.lab}>{t("rowsLabel")}</div>
                 <div className={styles.lane} style={{ width }} data-testid="axis">
-                  <div className={styles.axisRow}>{ticks.map((tk) => <span key={tk.left} className={styles.tick} style={{ left: tk.left, fontWeight: 600 }}>{tk.label}</span>)}</div>
-                  {zoom !== "quarter" && <div className={styles.axisRow}>{weeks.map((w) => <span key={w.left} className={styles.wk} style={{ left: w.left, width: 7 * px }}>{w.date}</span>)}</div>}
-                  <div className={styles.axisRow} aria-label={t("sprints")}>{weeks.map((w) => <span key={w.left} className={`${styles.wk} ${w.current ? styles.wkNow : ""}`} style={{ left: w.left, width: w.sprint && w.current ? 7 * px * 3 : 7 * px }} title={w.sprint ?? undefined}>{w.no}{w.current && w.sprint ? ` · ${w.sprint}` : ""}</span>)}</div>
+                  <div className={styles.axisUnits}>{units.map((u) => <span key={u.left} className={styles.unit} style={{ left: u.left, width: u.width }} title={u.title}>{u.label}</span>)}</div>
+                  {zoom === "day" && (
+                    <div className={styles.axisDays}>
+                      {dayCells.map((day, i) => (
+                        <span key={day} className={`${styles.dy} ${[0, 6].includes(weekday(day)) ? styles.we : ""} ${day === d.today ? styles.now : ""}`} style={{ left: i * px, width: px }}>
+                          {weekdayName.format(new Date(`${day}T00:00:00Z`))}<b>{Number(day.slice(8))}</b>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className={styles.row} aria-label={t("milestones")}>
@@ -245,8 +280,8 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                 <div className={styles.lane} style={{ width }}>
                   {laneBg}
                   {d.milestones.map((ms) => (
-                    <span key={ms.id} className={styles.ms} style={{ left: x(ms.date) }} title={`${ms.name} · ${formatDate(ms.date, year)}`}>
-                      <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill="#1b1f24" /></svg>{ms.name}
+                    <span key={ms.id} className={styles.ms} style={{ left: x(ms.date), maxWidth: msRoom(ms.id) }} title={`${ms.name} · ${formatDate(ms.date, year)}`}>
+                      <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill="#1b1f24" /></svg><span className={styles.msName}>{ms.name}</span>
                     </span>
                   ))}
                 </div>
@@ -296,7 +331,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                     <div className={`${styles.lab} ${ln.sub ? styles.sub : styles.task}`}>
                       {ln.hasKids && <button type="button" className={styles.toggle} aria-expanded={!closed.has(`t:${r.key}`)} aria-label={t(closed.has(`t:${r.key}`) ? "expand" : "collapse", { name: r.key })} onClick={() => toggle(`t:${r.key}`)}><ChevronDown size={14} style={{ transform: closed.has(`t:${r.key}`) ? "rotate(-90deg)" : undefined }} /></button>}
                       {!ln.hasKids && <span className={styles.dotStatus} style={{ borderColor: STATUS_COLOR[r.status.category], background: r.status.category === "done" ? STATUS_COLOR.done : "transparent" }} aria-hidden="true" />}
-                      <span className="muted" style={{ fontSize: 12 }}>{r.key}</span>
+                      <span className="muted" style={{ fontSize: 12, flex: "none", whiteSpace: "nowrap" }}>{r.key}</span>
                       {open ? <Link className={styles.labText} href={issueHref(r.key)} style={{ color: "var(--foreground)" }}>{r.title}</Link> : <span className={styles.labText}>{r.title}</span>}
                       {!guest && !!r.assignees?.length && <span className={styles.who}><AvatarStack people={r.assignees} max={1} /></span>}
                     </div>
@@ -352,14 +387,6 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
       {needRequest && <RequestDialog ws={ws} pending={needRequest} year={year} onClose={() => setNeedRequest(null)} onSent={async () => { const k = needRequest.key; setNeedRequest(null); toast({ message: t("requested", { key: k }) }); await cache.invalidateQueries({ queryKey: ["timeline", ws, projectKey] }); }} />}
     </div>
   );
-}
-
-/** เลขสัปดาห์แบบ ISO 8601 ของวันที่ YYYY-MM-DD */
-export function isoWeek(iso: string) {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + 3 - ((d.getUTCDay() + 6) % 7));
-  const first = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
-  return 1 + Math.round(((d.getTime() - first.getTime()) / DAY - 3 + ((first.getUTCDay() + 6) % 7)) / 7);
 }
 
 const minDate = (a: string, b: string) => (a < b ? a : b);

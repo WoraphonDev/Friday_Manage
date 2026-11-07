@@ -253,6 +253,23 @@
       "failed": "Could not save. Please try again.",
       "moduleMenu": "Manage module {name}",
       "renamePhaseNamed": "Rename task group {name}"
+    },
+    "cell": {
+      "search": "Search people",
+      "noPeople": "No members found",
+      "nobody": "Unassigned",
+      "chosen": "{count} selected",
+      "done": "Done",
+      "manDay": "Man-Day",
+      "save": "Save",
+      "sizeHint": "Pick a size to calculate Man-Day and Plan End · or enter Man-Day yourself",
+      "actualStart": "Actual Start",
+      "addSubtaskTo": "Add a sub-task to {key}",
+      "subtaskTitle": "New sub-task title in {key}",
+      "subtaskPlaceholder": "Sub-task title, then Enter · Esc to close",
+      "subtaskCreated": "Created {key}",
+      "add": "Add",
+      "cancel": "Cancel"
     }
   }
 }

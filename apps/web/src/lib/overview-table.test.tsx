@@ -173,6 +173,43 @@ describe("Table (2)", () => {
     await waitFor(() => expect(patches.at(-1)?.body).toEqual({ planEnd: "2026-12-09", planChangeReason: "ลูกค้าเพิ่มขอบเขต" }));
   });
 
+  it("แก้ Dev / BA / Size / Plan Start / Actual Start ในแถว และเพิ่ม Sub-task ใต้ Task", async () => {
+    const user = userEvent.setup(); const created: unknown[] = [];
+    server.use(http.post("*/api/v1/w/:ws/projects/:key/issues", async ({ request }) => { created.push(await request.json()); return HttpResponse.json({ key: `DE-${90 + created.length}` }, { status: 201 }); }));
+    mount(<TableView ws="sample" projectKey="DE" />);
+    // Dev หลายคน: ส่งครั้งเดียวเมื่อกดเสร็จ ไม่ส่งทุกคลิก
+    await user.click(await screen.findByRole("button", { name: "แก้ Dev ของ DE-1" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("option", { name: /ผู้พัฒนาสอง/ }));
+    expect(patches).toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: "เสร็จ" }));
+    await waitFor(() => expect(patches.at(-1)).toEqual({ key: "DE-1", body: { assigneeIds: ["u1", "u2"] }, etag: '"2"' }));
+    await user.click(screen.getByRole("button", { name: "แก้ BA ของ DE-1" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("option", { name: /ผู้พัฒนาสอง/ }));
+    await waitFor(() => expect(patches.at(-1)?.body).toEqual({ baId: "u2" }));
+    await user.click(screen.getByRole("button", { name: "แก้ Size · MD ของ DE-1" }));
+    await user.click(await screen.findByRole("button", { name: "L" }));
+    await waitFor(() => expect(patches.at(-1)?.body).toEqual({ size: "L" }));
+    await user.click(screen.getByRole("button", { name: "แก้ Size · MD ของ DE-1" }));
+    const md = await screen.findByLabelText("Man-Day"); await user.clear(md); await user.type(md, "4.5{Enter}");
+    await waitFor(() => expect(patches.at(-1)?.body).toEqual({ estimateMd: 4.5 }));
+    for (const [field, body] of [["Plan Start", { planStart: "2026-12-02" }], ["Actual Start", { actualStart: "2026-11-02" }]] as const) {
+      await user.click(screen.getByRole("button", { name: `แก้ ${field} ของ DE-1` }));
+      const input = screen.getByLabelText(`แก้ ${field} ของ DE-1`);
+      fireEvent.change(input, { target: { value: Object.values(body)[0] } });
+      fireEvent.blur(input);
+      await waitFor(() => expect(patches.at(-1)?.body).toEqual(body));
+    }
+    // + Sub-task เฉพาะแถว Task · Enter สร้างแล้วพิมพ์ต่อได้ · Esc ปิด
+    expect(screen.queryByRole("button", { name: "เพิ่ม Sub-task ใน DE-2" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "เพิ่ม Sub-task ใน DE-1" }));
+    const title = screen.getByLabelText("ชื่อ Sub-task ใหม่ใน DE-1");
+    await user.type(title, "เขียน test{Enter}");
+    await waitFor(() => expect(created).toEqual([{ type: "Task", parentKey: "DE-1", title: "เขียน test" }]));
+    expect(title).toHaveValue("");
+    await user.keyboard("{Escape}");
+    expect(screen.queryByLabelText("ชื่อ Sub-task ใหม่ใน DE-1")).not.toBeInTheDocument();
+  });
+
   it("เลือกหลายแถว → ย้าย Module / Due / Assignee และลบต้องพิมพ์ยืนยัน", async () => {
     const user = userEvent.setup();
     mount(<TableView ws="sample" projectKey="DE" />);

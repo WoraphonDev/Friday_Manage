@@ -253,6 +253,23 @@
       "failed": "บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง",
       "moduleMenu": "จัดการ Module {name}",
       "renamePhaseNamed": "เปลี่ยนชื่อกลุ่มงาน {name}"
+    },
+    "cell": {
+      "search": "ค้นหาชื่อ",
+      "noPeople": "ไม่พบสมาชิก",
+      "nobody": "ไม่ระบุ",
+      "chosen": "เลือก {count} คน",
+      "done": "เสร็จ",
+      "manDay": "Man-Day",
+      "save": "บันทึก",
+      "sizeHint": "เลือก Size แล้วระบบคิด Man-Day และ Plan End ให้ · ใส่ Man-Day เองได้",
+      "actualStart": "Actual Start",
+      "addSubtaskTo": "เพิ่ม Sub-task ใน {key}",
+      "subtaskTitle": "ชื่อ Sub-task ใหม่ใน {key}",
+      "subtaskPlaceholder": "ชื่อ Sub-task แล้วกด Enter · Esc เพื่อปิด",
+      "subtaskCreated": "สร้าง {key} แล้ว",
+      "add": "เพิ่ม",
+      "cancel": "ยกเลิก"
     }
   }
 }

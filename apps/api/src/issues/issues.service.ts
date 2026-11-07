@@ -65,6 +65,8 @@ export const PatchIssueBody = z
     estimateMd: manDay.nullable(),
     planStart: isoDate.nullable(),
     planEnd: isoDate.nullable(),
+    /** ตั้งอัตโนมัติเมื่อเริ่มทำ แต่แก้เองได้ (เริ่มก่อนกดสถานะ) · Actual End ตั้งจากสถานะ Done เท่านั้น */
+    actualStart: isoDate.nullable(),
     progressPct: z.number().int().min(0).max(100).nullable(),
     severity: z.enum(['critical', 'major', 'minor']).nullable(),
     environment: z.enum(['local', 'sit', 'uat', 'production']).nullable(),
@@ -476,6 +478,12 @@ export class IssuesService {
         const next = await this.checkStatus(tx, type.workflowId, input.statusId);
         await enforceWorkflowRules(tx, auth, issue, type.workflowId, next, { ...issue, ...set }, false);
         Object.assign(set, statusChange(issue, next));
+      }
+      if (input.actualStart !== undefined) {
+        const end = set.actualEnd !== undefined ? set.actualEnd : issue.actualEnd;
+        if (input.actualStart && input.actualStart > today()) throw new AppError(400, 'invalid_dates', 'Actual Start ต้องไม่เกินวันนี้');
+        if (input.actualStart && end && input.actualStart > end) throw new AppError(400, 'invalid_dates', 'Actual Start ต้องไม่หลัง Actual End');
+        set.actualStart = input.actualStart;
       }
 
       // แผน: Size → Man-Day · Plan End คำนวณใหม่เมื่อ Man-Day / Plan Start เปลี่ยนและไม่ได้ส่ง Plan End มาเอง (จำนวน Dev ไม่มีผล)
@@ -983,7 +991,7 @@ export function outsideParent(parent: Issue, start?: string | null, end?: string
   return out ? [{ code: 'outside_parent_range', message: `วันที่อยู่นอกช่วงของงานแม่ (${parent.planStart} – ${parent.planEnd})` }] : [];
 }
 
-const DIFF_FIELDS = ['title', 'description', 'statusId', 'priority', 'moduleId', 'phaseId', 'sprintId', 'baId', 'reviewerId', 'testerId', 'size', 'estimateMd', 'planStart', 'planEnd', 'progressPct', 'severity', 'environment', 'sharedWithGuests'] as const;
+const DIFF_FIELDS = ['title', 'description', 'statusId', 'priority', 'moduleId', 'phaseId', 'sprintId', 'baId', 'reviewerId', 'testerId', 'size', 'estimateMd', 'planStart', 'planEnd', 'actualStart', 'progressPct', 'severity', 'environment', 'sharedWithGuests'] as const;
 
 function diff(a: Issue, b: Issue) {
   return DIFF_FIELDS.filter((f) => a[f] !== b[f]).map((f) => ({ field: f as string, oldValue: a[f] as unknown, newValue: b[f] as unknown }));

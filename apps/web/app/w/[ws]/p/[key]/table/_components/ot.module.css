@@ -123,8 +123,36 @@
 .typeTask, .typeSub { width:18px; height:18px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; flex:none; color:#fff; }
 .typeTask { background:#1d4ed8; } .typeSub { background:#0e7490; }
 .avs :global(.avatar) { width:26px; height:26px; font-size:10px; border:2px solid #fff; }
-.cellBtn { border:0; background:transparent; font:inherit; font-size:13px; padding:2px 4px; margin-left:-4px; border-radius:6px; cursor:pointer; color:inherit; }
-.cellBtn:hover { background:#eef0f3; }
+/* ช่องที่แก้ในแถวได้: ชี้แถวแล้วเห็นกรอบจางทุกช่องที่แก้ได้ · ชี้ช่อง / เปิดอยู่เป็นพื้นเทา (ตารางไม่รกตอนไม่ได้ชี้) */
+.cellEdit { display:inline-flex; align-items:center; gap:4px; max-width:100%; min-height:30px; border:0; background:transparent; font:inherit; font-size:13px; color:inherit; padding:2px 6px; margin-left:-6px; border-radius:6px; cursor:pointer; text-align:left; white-space:nowrap; overflow:hidden; }
+.itemRow:hover .cellEdit { box-shadow:inset 0 0 0 1px var(--input); }
+.cellEdit:hover,.cellEdit[data-state="open"] { background:#eef0f3; box-shadow:inset 0 0 0 1px #c9cfd6; }
+.cellEdit:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
+.actualCell { display:flex; flex-direction:column; align-items:flex-start; font-size:12px; line-height:1.3; color:var(--muted); min-width:0; }
+.actualCell .cellEdit { font-size:12px; min-height:22px; padding:1px 6px; color:var(--foreground); }
+.noneAvatar { width:24px; height:24px; border-radius:50%; background:#eef0f3; display:inline-flex; align-items:center; justify-content:center; color:var(--muted); flex:none; }
+.popFoot { display:flex; align-items:center; justify-content:space-between; border-top:1px solid var(--border); margin-top:4px; padding-top:6px; font-size:12px; color:var(--muted); }
+.sizePop { width:240px; display:flex; flex-direction:column; gap:10px; }
+.sizeChoices { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; }
+.sizeChoices button { min-height:34px; border:1px solid var(--input); border-radius:8px; background:#fff; font:inherit; font-weight:700; font-size:13px; cursor:pointer; }
+.sizeChoices button:hover { background:#f6f8fa; }
+.sizeChoices button[aria-pressed="true"] { background:var(--primary-soft); border-color:var(--primary); color:var(--primary); }
+.mdForm { display:flex; align-items:flex-end; gap:6px; }
+.mdForm label { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; flex:1; }
+.mdForm input { min-height:34px; border:1px solid var(--input); border-radius:8px; padding:0 8px; font:inherit; font-size:13px; width:100%; }
+.popHint { margin:0; font-size:11px; color:var(--muted); }
+/* + Sub-task โผล่เมื่อชี้แถว Task · จอสัมผัสแสดงตลอด */
+.subAddBtn { display:inline-flex; align-items:center; gap:2px; flex:none; margin-left:auto; border:0; background:transparent; color:var(--primary); font:inherit; font-size:12px; font-weight:500; padding:2px 8px; min-height:26px; border-radius:6px; cursor:pointer; opacity:0; }
+.itemRow:hover .subAddBtn,.subAddBtn:focus-visible { opacity:1; }
+.subAddBtn:hover { background:#eff6ff; }
+@media (hover:none) { .subAddBtn { opacity:1; } }
+.subAddRow td { height:44px; background:#fbfcfe; }
+/* ไอคอนตรงกับแถว Sub-task: ระยะเยื้อง 54 + checkbox 16 + ช่องว่าง 8 */
+.subAdd { display:flex; align-items:center; gap:8px; padding-left:78px; }
+.subAdd input { flex:1; max-width:440px; min-height:32px; border:1px dashed var(--input); border-radius:8px; padding:0 10px; font:inherit; font-size:13px; background:#fff; }
+.subAdd input:focus { outline:2px solid var(--focus); outline-offset:0; border-style:solid; }
+.subAddCancel { border:0; background:transparent; color:var(--muted); font:inherit; font-size:13px; cursor:pointer; padding:0 8px; min-height:32px; border-radius:6px; }
+.subAddCancel:hover { background:#eef0f3; }
 .dueLate { color:#b91c1c; font-weight:600; } .dueToday { color:#b45309; font-weight:600; }
 .prog { display:flex; align-items:center; gap:8px; }
 .prog > span:first-child { flex:1; height:6px; background:#eef0f3; border-radius:99px; overflow:hidden; }

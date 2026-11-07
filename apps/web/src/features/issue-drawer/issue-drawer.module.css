@@ -11,7 +11,7 @@
 .extraProperties { display:flex; flex-direction:column; gap:14px; }.propertiesToggle { display:none; }.propsToggle { display:none; }
 .sidebar :global(.input),.sidebar :global(.picker-trigger) { min-height:34px; font-size:12px; padding:6px 9px; }.sidebar :global(.picker-trigger) { white-space:normal; }.sidebar :global(.field)>label { color:var(--muted); font-size:11px; font-weight:500; }
 .sidebar :global(.picker-trigger)>svg { flex:none; }.sidebar :global(.avatar-stack) { padding-top:4px; }
-.root,.panel { --editable-bg:#f3f5f8; }
+.root,.panel { --editable-bg:#fff; }
 /* ปุ่มคำสั่งที่เป็นข้อความ (+ เพิ่ม Dependency, แก้ไขคำอธิบาย) ใช้สี primary ให้รู้ว่ากดได้ */
 /* :global(.button) เพิ่มน้ำหนักให้ชนะ .button-ghost ของ globals.css ที่โหลดทีหลัง */
 .addAction:global(.button) { color:var(--primary); font-weight:500; }
@@ -85,8 +85,9 @@
 .pv :global(.select) { min-height:30px; border-color:transparent; background:transparent; }
 .pv :global(.select) > select { padding:0 24px 0 6px; font-size:13px; }
 .pv :global(.select-chevron) { right:6px; opacity:.55; }
-.pv :global(.select):not(:has(select:disabled)),.pv :global(.picker-trigger):not(:disabled),.pv :global(.input):not(:disabled),.pv .editValue:not(:disabled),.planBox :global(.picker-trigger):not(:disabled) { background-color:var(--editable-bg); }
-.pv :global(.select):not(:has(select:disabled)):hover,.pv :global(.picker-trigger):not(:disabled):hover,.pv :global(.input):not(:disabled):hover,.pv .editValue:not(:disabled):hover,.planBox :global(.picker-trigger):not(:disabled):hover { border-color:var(--input); background-color:#fff; }
+/* พื้นขาว + เส้นขอบบาง (เดิมพื้นเทาทุกช่องดูเป็นก้อนเดียว อ่านยาก) · ช่องที่แก้ไม่ได้ยังเป็นข้อความเรียบ */
+.pv :global(.select):not(:has(select:disabled)),.pv :global(.picker-trigger):not(:disabled),.pv :global(.input):not(:disabled),.pv .editValue:not(:disabled),.planBox :global(.picker-trigger):not(:disabled) { background-color:var(--editable-bg); border-color:var(--border); }
+.pv :global(.select):not(:has(select:disabled)):hover,.pv :global(.picker-trigger):not(:disabled):hover,.pv :global(.input):not(:disabled):hover,.pv .editValue:not(:disabled):hover,.planBox :global(.picker-trigger):not(:disabled):hover { border-color:var(--input); background-color:#f8f9fb; }
 .pv :global(.select):hover :global(.select-chevron),.pv :global(.select):focus-within :global(.select-chevron) { opacity:1; }
 .pv :global(.select):has(select:disabled) :global(.select-chevron) { display:none; }
 /* ชื่อคนยาวตัดเป็น … ในบรรทัดเดียว ไม่ห่อจนแถวสูงและจัดกลาง */
@@ -99,10 +100,11 @@
 .sizeRow,.progRow { display:flex; align-items:center; gap:6px; flex-wrap:nowrap; white-space:nowrap; }.sizeRow select { font-weight:700; }.progRow .subBar { flex:1 1 60px; max-width:none; }.progRow .inlineField { width:64px; }
 .planBox { display:grid; grid-template-columns:56px 1fr 1fr; gap:4px 8px; border:1px solid #eef0f3; border-radius:8px; padding:8px 10px; margin:6px 0; font-size:13px; align-items:center; white-space:nowrap; }
 .dueCell { grid-column:2 / -1; }
-.dueCell .dueLink { padding:0 6px; margin-left:-6px; }
+.dueCell .dueLink:global(.button) { padding:0 6px; margin-left:-6px; }
 .planBox :global(.field) > label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
 .planBox :global(.picker-trigger) { min-height:28px; border-color:transparent; background:transparent; padding:2px 6px; font-size:13px; white-space:nowrap; }
-.dueLink { align-self:flex-start; color:var(--primary); padding:0 4px; }
+.dueLink:global(.button) { align-self:flex-start; color:var(--primary); font-weight:500; padding:0 4px; }
+.dueLink:global(.button):hover:not(:disabled) { background:var(--primary-soft); }
 .hideS { min-width:0; }
 .mKeep { min-width:0; }
 .propsAll { min-width:0; }

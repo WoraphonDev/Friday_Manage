@@ -7,16 +7,17 @@ import { Button, Combobox, Dialog, DrawerClose, Input, Select, useToast } from '
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import { Failure, Section } from './shared';
+import { CodeChips, LabelChips } from './refs';
 import { issuePath, projectPath, type FormOptions, type Issue, type IssueType, type Scope } from './types';
 import styles from './issue-drawer.module.css';
 
 type ChildDraft = { id: string; title: string; size: string; assigneeId: string; planEnd: string };
-type Draft = { type: IssueType; subtask: boolean; parentKey: string; title: string; description: string; moduleId: string; phaseId: string; sprintId: string; statusId: string; priority: string; assigneeIds: string[]; baId: string; reviewerId: string; testerId: string; size: string; estimateMd: string; planStart: string; planEnd: string; severity: string; environment: string; details: Record<string, string>; acceptance: string; checklist: string; blockedBy: string; children: ChildDraft[]; shared: boolean };
+type Draft = { type: IssueType; subtask: boolean; parentKey: string; title: string; description: string; moduleId: string; phaseId: string; sprintId: string; statusId: string; priority: string; assigneeIds: string[]; baId: string; reviewerId: string; testerId: string; size: string; estimateMd: string; planStart: string; planEnd: string; severity: string; environment: string; details: Record<string, string>; acceptance: string; checklist: string; blockedBy: string; children: ChildDraft[]; shared: boolean; requirements: string[]; screens: string[]; labelIds: string[]; watcherIds: string[] };
 const supported: IssueType[] = ['Task', 'Story', 'Bug', 'Spike'];
 const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL'];
 function removeDraft(key: string) { try { localStorage.removeItem(key); } catch { /* storage access must not block server writes */ } }
 const lines = (value: string) => value.split('\n').map((line) => line.replace(/^\s*(?:[-*]\s*)?(?:\[[ xX]\]\s*)?/, '').trim()).filter(Boolean);
-const defaultDraft = (type: IssueType, parent?: Issue | null): Draft => ({ type, subtask: !!parent, parentKey: parent?.key ?? '', title: '', description: '', moduleId: parent?.moduleId ?? '', phaseId: parent?.phaseId ?? '', sprintId: parent?.sprintId ?? '', statusId: '', priority: 'medium', assigneeIds: [], baId: '', reviewerId: '', testerId: '', size: 'M', estimateMd: '', planStart: '', planEnd: '', severity: 'major', environment: 'sit', details: {}, acceptance: '', checklist: '', blockedBy: '', children: [], shared: false });
+const defaultDraft = (type: IssueType, parent?: Issue | null): Draft => ({ type, subtask: !!parent, parentKey: parent?.key ?? '', title: '', description: '', moduleId: parent?.moduleId ?? '', phaseId: parent?.phaseId ?? '', sprintId: parent?.sprintId ?? '', statusId: '', priority: 'medium', assigneeIds: [], baId: '', reviewerId: '', testerId: '', size: 'M', estimateMd: '', planStart: '', planEnd: '', severity: 'major', environment: 'sit', details: {}, acceptance: '', checklist: '', blockedBy: '', children: [], shared: false, requirements: [], screens: [], labelIds: [], watcherIds: [] });
 function readDraft(key: string, fallback: Draft): Draft | null {
   try {
     const saved = JSON.parse(localStorage.getItem(key) ?? 'null');
@@ -27,7 +28,10 @@ function readDraft(key: string, fallback: Draft): Draft | null {
       if (typeof fallback[name] === 'string' && typeof value === 'string') Object.assign(clean, { [name]: value });
       if (typeof fallback[name] === 'boolean' && typeof value === 'boolean') Object.assign(clean, { [name]: value });
     }
-    if (Array.isArray(saved.data.assigneeIds) && saved.data.assigneeIds.every((id: unknown) => typeof id === 'string')) clean.assigneeIds = saved.data.assigneeIds;
+    for (const name of ['assigneeIds', 'requirements', 'screens', 'labelIds', 'watcherIds'] as const) {
+      const list = saved.data[name];
+      if (Array.isArray(list) && list.every((id: unknown) => typeof id === 'string')) clean[name] = list;
+    }
     if (saved.data.details && typeof saved.data.details === 'object' && !Array.isArray(saved.data.details)) clean.details = Object.fromEntries(Object.entries(saved.data.details).filter((entry) => typeof entry[1] === 'string')) as Record<string, string>;
     if (Array.isArray(saved.data.children)) clean.children = saved.data.children.filter((child: ChildDraft) => child && ['id','title','size','assigneeId','planEnd'].every((field) => typeof child[field as keyof ChildDraft] === 'string'));
     return clean;
@@ -92,6 +96,10 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
           statusId: draft.statusId || undefined, assigneeIds: draft.assigneeIds, baId: draft.baId || undefined, reviewerId: draft.reviewerId || undefined, testerId: draft.testerId || undefined,
           size: draft.type === 'Spike' ? undefined : draft.size || undefined, estimateMd: estimateMd || undefined, planStart: draft.planStart || undefined, planEnd: draft.planEnd || undefined,
           ...((draft.type === 'Bug' || required.has('severity') || required.has('environment')) ? { severity: draft.severity, environment: draft.environment } : {}), details, sharedWithGuests: draft.shared,
+          requirements: draft.requirements, screens: draft.screens,
+          // Label / Watcher ที่ถูกลบออกจากโปรเจกต์ระหว่างเก็บร่าง ไม่ส่งไปให้ API ปฏิเสธทั้งฟอร์ม
+          labelIds: draft.labelIds.filter((id) => options.labels.some((label) => label.id === id)),
+          watcherIds: draft.watcherIds.filter((id) => options.members.some((person) => person.id === id)),
         };
         created.current = await api.post<Issue>(`${projectEndpoint}/issues`, input);
         setPartial(created.current);
@@ -154,6 +162,12 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
     {scope.access.permissions.includes('issue.edit') && <><label className="field">{t('checklistLines')}<textarea className="input" value={draft.checklist} onChange={(event) => set('checklist', event.target.value)} /></label><Input label={t('blockedByKeys')} value={draft.blockedBy} onChange={(event) => set('blockedBy', event.target.value)} /></>}
     <label className={styles.checkboxLabel}><input type="checkbox" checked={draft.shared} onChange={(event) => set('shared', event.target.checked)} />{t('sharedWithGuests')}</label>
   </>;
+  // Canvas B: Requirement (FR + Screen ในแถวเดียว) · Labels · Watchers
+  const requirementChips = <CodeChips kinds={['requirement', 'screen']} editable values={{ requirement: draft.requirements, screen: draft.screens }}
+    suggestions={{ requirement: options.requirements?.map((r) => r.code), screen: options.screens?.map((r) => r.code) }}
+    onChange={(kind, codes) => set(kind === 'requirement' ? 'requirements' : 'screens', codes)} />;
+  const labelChips = <LabelChips options={options.labels} value={draft.labelIds} editable onChange={(ids) => set('labelIds', ids)} />;
+  const watcherPicker = <Combobox label={t('refs.watchers')} multiple options={options.members.filter((person) => person.id !== scope.meId)} value={draft.watcherIds} onValueChange={(ids) => { if (!lock.current && !created.current) set('watcherIds', ids); }} />;
   const row = (label: string, control: React.ReactNode) => <div className={styles.frow}><span className={styles.fieldLabel}>{label}</span><div className={styles.fctl}>{control}</div></div>;
   const submitLabel = pending ? t('creating') : partial ? t('retryRemaining') : t('createType', { type: draft.subtask ? t('subtask') : t(`types.${draft.type}`) });
   const submitDisabled = pending || !type || (draft.subtask && (!parentIssue.data || !!parentIssue.error || !!parentIssue.data.parentKey));
@@ -184,6 +198,8 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
               <div className={styles.grid3}>{statusSelect}{personSelect('baId')}{personSelect('reviewerId')}</div>
               {!draft.subtask && <div className={styles.grid3}>{phaseSelect}<Input type="date" label={t('fields.planStart')} value={draft.planStart} onChange={(event) => set('planStart', event.target.value)} />{draft.type !== 'Spike' && <Select label={t('fields.size')} required={required.has('size')} value={draft.size} onChange={(event) => { set('size', event.target.value); set('estimateMd', ''); }}>{Object.entries(options.sizeMdMap).map(([size, md]) => <option value={size} key={size}>{size} · {t('md', { value: md })}</option>)}</Select>}</div>}
               {estimate}
+              {row(t('refs.requirement'), requirementChips)}
+              {row(t('refs.labels'), labelChips)}
               {draft.type !== 'Task' && description}
               {children}{extras}
             </div>
@@ -204,6 +220,9 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
             {row(t('planRange'), <>{dates}<small className="muted">{t('endCalculated')}</small></>)}
             {row(t('sizeMd'), sizeSegments)}
             {!draft.subtask && phases.length > 0 && row(t('fields.phaseId'), phaseSelect)}
+            {row(t('refs.requirement'), requirementChips)}
+            {row(t('refs.labels'), labelChips)}
+            {row(t('refs.watchers'), watcherPicker)}
           </div>
           {description}
           {children}

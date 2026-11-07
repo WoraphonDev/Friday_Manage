@@ -49,3 +49,9 @@
 - แผงแบ่งกลุ่ม คน / แผนงาน / จัดกลุ่ม · ไม่มีแถวสถานะซ้ำกับปุ่มบนหัว · Size + Man-Day บรรทัดเดียว · ขอเลื่อน Due อยู่ใต้แถว Due ในกล่องแผน · Actual Start แก้ได้ · Progress แถบกับ % แถวเดียว · ตัดข้อความ "คลิกค่าใดก็ได้"
 - ส่วนที่ว่าง (คำอธิบาย, Dependency) ย่อเหลือบรรทัดเดียวพร้อมปุ่มเพิ่ม
 - คำขอนอก lane: W00 `overlays.tsx` (ขอบลาก Drawer) และ `globals.css`
+
+### Requirement / Screen / Labels / Watchers — 2026-11-08
+
+- ฟอร์ม B: แถว Requirement (ชิป + "+ FR / NFR" / "+ Screen", ตรวจรูปแบบ FR-02.3 / NFR-01 / SCR-203 ก่อนส่ง), Labels (เลือกจาก Label ของโปรเจกต์), Watchers · K1 มี Requirement และ Labels ใน "รายละเอียดเพิ่มเติม" (Canvas K1 ชี้ไปฟอร์ม B สำหรับ Watchers)
+- Drawer C: Requirement, Screen, Labels ในกลุ่ม "จัดกลุ่ม" แก้ในที่ด้วย PATCH แทนทั้งชุด · Activity แสดงชื่อ Label แทน id
+- คำขอนอก lane: API ใน `apps/api/src/issues/**` (A03) เพิ่มฟิลด์ตามสเปก 03-api ที่ยังไม่ได้ทำ

@@ -125,7 +125,7 @@
   },
   "table": {
     "title": "Table",
-    "search": "ค้นหาชื่องาน / Key",
+    "search": "ค้นหางาน, รหัส DP-…, FR หรือ SCR",
     "filters": "ตัวกรอง",
     "status": "Status",
     "allStatus": "ทุกสถานะ",
@@ -206,6 +206,7 @@
       "start": "Plan Start",
       "end": "Plan End",
       "actual": "Actual",
+      "refs": "FR / Screen",
       "progress": "Progress",
       "priority": "Priority"
     },

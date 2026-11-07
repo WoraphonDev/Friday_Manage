@@ -41,7 +41,7 @@ const agg = (n = 1) => ({ taskCount: n, subtaskCount: 0, doneCount: 0, estimateM
 function row(key: string, over: Partial<Row> = {}): Row {
   return { id: `id-${key}`, key, type: "Task", parentKey: null, title: `งาน ${key}`, status: { id: "st-todo", name: "To do", category: "todo" }, priority: "medium", moduleId: "m-a", phaseId: null, size: "S", estimateMd: 3, progressPct: 0, planStart: "2026-12-01", planEnd: "2026-12-03", actualStart: null, actualEnd: null, version: 2, assignees: [person("u1", "ผู้พัฒนาหนึ่ง")], ba: null, ...over };
 }
-function table(items: Row[] = [row("DE-1"), row("DE-2", { parentKey: "DE-1" }), row("DE-3", { moduleId: "m-b" })]): TableData {
+function table(items: Row[] = [row("DE-1", { requirements: ["FR-01.2"], screens: ["SCR-101"] }), row("DE-2", { parentKey: "DE-1" }), row("DE-3", { moduleId: "m-b" })]): TableData {
   return { items, nextCursor: null, summary: { ...agg(2), subtaskCount: 1 }, modules: [{ id: "m-a", name: "Module A", color: "#1d4ed8", ...agg(), phases: [{ id: null, name: null, ...agg() }] }, { id: "m-b", name: "Module B", color: null, ...agg(), phases: [{ id: null, name: null, ...agg() }] }, { id: null, name: null, color: null, ...agg(0), phases: [{ id: null, name: null, ...agg(0) }] }] };
 }
 
@@ -141,6 +141,10 @@ describe("Table (2)", () => {
     expect(urls.at(-1)?.searchParams.get("view")).toBe("table");
     const rows = screen.getAllByRole("row").map((r) => r.textContent ?? "");
     expect(rows.findIndex((r) => r.includes("DE-2"))).toBe(rows.findIndex((r) => r.includes("DE-1")) + 1);
+    // คอลัมน์ FR / Screen ตาม Canvas · ค่าว่างแสดง —
+    expect(screen.getByRole("columnheader", { name: "FR / Screen" })).toBeInTheDocument();
+    expect(within(screen.getByTestId("row-DE-1")).getByText("FR-01.2 · SCR-101")).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "ค้นหางาน, รหัส DP-…, FR หรือ SCR" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "ย่อ Module A" }));
     expect(screen.queryByTestId("row-DE-1")).not.toBeInTheDocument();
     expect(screen.getByTestId("row-DE-3")).toBeInTheDocument();

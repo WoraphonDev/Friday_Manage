@@ -212,6 +212,65 @@ describe('Table และ form-options', () => {
     expect((await guest.get(`${projectUrl()}/form-options`)).status).toBe(403);
   });
 
+  it('Requirement / Screen / Label / Watcher: สร้างรหัสที่ยังไม่มี แทนทั้งชุดตอน PATCH และแสดงใน Table', async () => {
+    const label = (await t.owner.query("INSERT INTO labels (workspace_id,project_id,name,color) VALUES ($1,$2,'ป้ายอ้างอิงสมมติ','#0ea5e9') RETURNING id", [workspaceId, team.project.id])).rows[0].id as string;
+    const before = seen.length;
+    const issue = await create({ requirements: ['fr-02.3', 'FR-02.3', 'NFR-01'], screens: ['SCR-203'], labelIds: [label], watcherIds: [team.devId, team.leadId] });
+    expect(issue).toMatchObject({ requirements: ['FR-02.3', 'NFR-01'], screens: ['SCR-203'], labels: [{ id: label, name: 'ป้ายอ้างอิงสมมติ', color: '#0ea5e9' }] });
+    const kinds = (await t.owner.query('SELECT code, kind FROM requirements WHERE project_id=$1 ORDER BY code', [team.project.id])).rows;
+    expect(kinds).toEqual(expect.arrayContaining([{ code: 'FR-02.3', kind: 'FR' }, { code: 'NFR-01', kind: 'NFR' }]));
+    const watchers = (await t.owner.query('SELECT user_id, source FROM issue_watchers WHERE issue_id=$1 ORDER BY source::text', [issue.id])).rows;
+    expect(watchers).toEqual([{ user_id: team.leadId, source: 'auto_create' }, { user_id: team.devId, source: 'manual' }]);
+
+    // งานที่สองใช้รหัสเดิม: ไม่สร้างซ้ำ
+    const second = await create({ requirements: ['FR-02.3'] });
+    expect(second.requirements).toEqual(['FR-02.3']);
+    expect((await t.owner.query("SELECT count(*)::int AS n FROM requirements WHERE project_id=$1 AND code='FR-02.3'", [team.project.id])).rows[0].n).toBe(1);
+
+    const p = await team.lead.patch(url(issue.key), { requirements: ['FR-07'], screens: [], labelIds: [] }, issue.version);
+    expect(p.status, JSON.stringify(p.body)).toBe(200);
+    expect(p.body).toMatchObject({ requirements: ['FR-07'], screens: [], labels: [], version: issue.version + 1 });
+    const updated = seen.slice(before).find((e) => e.type === 'issue.updated' && e.issueId === issue.id);
+    expect(updated?.data.fields).toEqual(['requirements', 'screens', 'labelIds']);
+    const acts = (await t.owner.query("SELECT field, old_value, new_value FROM activities WHERE issue_id=$1 AND verb='updated' ORDER BY field", [issue.id])).rows;
+    expect(acts).toEqual([
+      { field: 'labelIds', old_value: [label], new_value: [] },
+      { field: 'requirements', old_value: ['FR-02.3', 'NFR-01'], new_value: ['FR-07'] },
+      { field: 'screens', old_value: ['SCR-203'], new_value: [] },
+    ]);
+    // ส่งชุดเดิมซ้ำ: ไม่เพิ่ม version
+    const same = await team.lead.patch(url(issue.key), { requirements: ['FR-07'] }, p.body.version);
+    expect(same.body.version).toBe(p.body.version);
+
+    const table = await team.lead.get(`${projectUrl()}/issues?view=table&fields=key,requirements,screens,labels&q=${second.key}`);
+    expect(table.body.items).toEqual([{ key: second.key, requirements: ['FR-02.3'], screens: [], labels: [] }]);
+    // ค้นด้วยรหัส FR / SCR ตาม placeholder ของ Canvas
+    const byFr = await team.lead.get(`${projectUrl()}/issues?fields=key&q=fr-07`);
+    expect(byFr.body.items).toEqual([{ key: issue.key }]);
+    await team.lead.patch(url(second.key), { screens: ['SCR-404'] }, second.version);
+    const byScreen = await team.lead.get(`${projectUrl()}/issues?fields=key&q=SCR-404`);
+    expect(byScreen.body.items).toEqual([{ key: second.key }]);
+    const opts = await team.dev.get(`${projectUrl()}/form-options`);
+    expect(opts.body.requirements.map((r: { code: string }) => r.code)).toEqual(expect.arrayContaining(['FR-02.3', 'FR-07', 'NFR-01']));
+    expect(opts.body.screens).toEqual(expect.arrayContaining([{ code: 'SCR-203', name: null }]));
+  });
+
+  it('Requirement / Screen / Label ที่ไม่ถูกต้องถูกปฏิเสธโดยไม่สร้างงาน', async () => {
+    const otherProject = await team.lead.post(`${team.ws}/projects`, { name: 'โปรเจกต์อื่นสมมติ', key: 'ORF', startDate: '2026-11-05', goliveDate: '2027-03-01' });
+    expect(otherProject.status).toBe(201);
+    const foreign = (await t.owner.query("INSERT INTO labels (workspace_id,project_id,name) VALUES ($1,$2,'ป้ายโปรเจกต์อื่น') RETURNING id", [workspaceId, otherProject.body.id])).rows[0].id;
+    const badCode = await team.lead.post(`${projectUrl()}/issues`, { title: 'รหัสผิดสมมติ', moduleId, requirements: ['REQ 1'] });
+    expect(badCode.status).toBe(400);
+    const badScreen = await team.lead.post(`${projectUrl()}/issues`, { title: 'รหัสผิดสมมติ', moduleId, screens: ['FR-01'] });
+    expect(badScreen.status).toBe(400);
+    const r = await team.lead.post(`${projectUrl()}/issues`, { title: 'ป้ายข้ามโปรเจกต์สมมติ', moduleId, labelIds: [foreign] });
+    expect(r.status).toBe(400);
+    expect(r.body.error.code).toBe('invalid_reference');
+    const outsiderWatch = await team.lead.post(`${projectUrl()}/issues`, { title: 'คนนอกสมมติ', moduleId, watcherIds: ['00000000-0000-4000-8000-000000000001'] });
+    expect(outsiderWatch.body.error.code).toBe('invalid_people');
+    expect((await t.owner.query("SELECT count(*)::int AS n FROM issues WHERE title IN ('รหัสผิดสมมติ','ป้ายข้ามโปรเจกต์สมมติ','คนนอกสมมติ')")).rows[0].n).toBe(0);
+  });
+
   it('ใช้ตัวกรอง Table ทุกช่องร่วมกัน รวม sprint=current, q ตาม key/title และ overdue', async () => {
     const match = await create({ title: 'ค้นหาสมมติ_100%', moduleId, phaseId, sprintId, priority: 'high', baId: team.devId, assigneeIds: [team.devId], planStart: '2020-01-01', planEnd: '2020-01-02' });
     await create({ title: 'ค้นหาสมมติX100x', sprintId: otherSprintId, priority: 'low', planEnd: '2099-12-31' });

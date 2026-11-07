@@ -154,6 +154,7 @@
 .subAddCancel { border:0; background:transparent; color:var(--muted); font:inherit; font-size:13px; cursor:pointer; padding:0 8px; min-height:32px; border-radius:6px; }
 .subAddCancel:hover { background:#eef0f3; }
 .dueLate { color:#b91c1c; font-weight:600; } .dueToday { color:#b45309; font-weight:600; }
+.refs { display:block; font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .prog { display:flex; align-items:center; gap:8px; }
 .prog > span:first-child { flex:1; height:6px; background:#eef0f3; border-radius:99px; overflow:hidden; }
 .prog > span:first-child > span { display:block; height:100%; }

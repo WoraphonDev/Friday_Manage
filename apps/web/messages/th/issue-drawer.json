@@ -249,7 +249,10 @@
     "checklist": "Checklist",
     "dependencies": "Dependency",
     "details": "รายละเอียดเพิ่มเติม",
-    "actualStart": "Actual Start"
+    "actualStart": "Actual Start",
+    "requirements": "Requirement",
+    "screens": "Screen",
+    "labelIds": "Labels"
   },
   "priority": {
     "urgent": "Urgent",
@@ -335,5 +338,25 @@
   "groupPlan": "แผนงาน",
   "groupPlace": "จัดกลุ่ม",
   "noDependenciesYet": "ยังไม่มี Dependency",
-  "addDescription": "+ เพิ่มคำอธิบาย"
+  "addDescription": "+ เพิ่มคำอธิบาย",
+  "refs": {
+    "requirement": "Requirement",
+    "screen": "Screen",
+    "labels": "Labels",
+    "watchers": "Watchers",
+    "add_requirement": "+ FR / NFR",
+    "add_screen": "+ Screen",
+    "add_label": "+ Label",
+    "remove": "ลบ {code}",
+    "requirementInput": "รหัส Requirement",
+    "screenInput": "รหัส Screen",
+    "labelInput": "เลือก Label",
+    "requirementPlaceholder": "FR-02.3",
+    "screenPlaceholder": "SCR-203",
+    "requirementInvalid": "ใช้รูปแบบ FR-02.3 หรือ NFR-01",
+    "screenInvalid": "ใช้รูปแบบ SCR-203",
+    "chooseLabel": "เลือก Label",
+    "noLabels": "ยังไม่มี Label · เพิ่มได้ใน Settings",
+    "newCodeHint": "รหัสที่ยังไม่มี ระบบสร้างให้"
+  }
 }

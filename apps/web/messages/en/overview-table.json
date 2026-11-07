@@ -125,7 +125,7 @@
   },
   "table": {
     "title": "Table",
-    "search": "Search task name / Key",
+    "search": "Search tasks, DP-… keys, FR or SCR",
     "filters": "Filters",
     "status": "Status",
     "allStatus": "All statuses",
@@ -206,6 +206,7 @@
       "start": "Plan Start",
       "end": "Plan End",
       "actual": "Actual",
+      "refs": "FR / Screen",
       "progress": "Progress",
       "priority": "Priority"
     },

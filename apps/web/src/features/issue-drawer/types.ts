@@ -11,6 +11,7 @@ export interface Issue {
   planStart: string | null; planEnd: string | null; actualStart: string | null; actualEnd: string | null;
   severity: string | null; environment: string | null; details: Record<string, unknown>; reopenCount: number;
   sharedWithGuests: boolean; version: number; createdAt: string; updatedAt: string;
+  requirements?: string[]; screens?: string[]; labels?: Named[];
   subtasks?: Issue[]; pendingDueRequest?: { id: string; requesterId: string; requestedDue: string; currentDue: string; createdAt: string } | null;
   warnings?: { code: string; message: string }[];
 }
@@ -22,6 +23,7 @@ export interface ProjectMeta {
 }
 export interface FormOptions extends Omit<ProjectMeta, 'id' | 'key' | 'name' | 'status' | 'statuses'> {
   members: Person[]; sizeMdMap: Record<string, number>; labels: Named[];
+  requirements?: { code: string; kind: string; title: string | null }[]; screens?: { code: string; name: string | null }[];
 }
 export interface Scope {
   ws: string; projectKey: string; meId: string; yearFormat: 'BE' | 'CE';

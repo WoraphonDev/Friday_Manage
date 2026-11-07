@@ -219,3 +219,14 @@
 .pgroup:first-child { border-top:0; padding-top:2px; }
 .pgTitle { margin:0 0 4px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
 .emptyLine { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+
+/* Requirement / Screen / Label (Canvas B .chipx / .prb) */
+.refChips { display:flex; gap:6px; flex-wrap:wrap; align-items:center; min-width:0; }
+.chipx { display:inline-flex; align-items:center; gap:4px; min-height:28px; padding:0 4px 0 10px; border:1px solid #d5dae0; border-radius:999px; background:#fff; font-size:12px; font-weight:500; max-width:100%; }
+.chipx:not(:has(.chipxX)) { padding-right:10px; }
+.chipxX { width:22px; height:22px; border:0; border-radius:50%; background:transparent; color:#5f6873; display:inline-flex; align-items:center; justify-content:center; padding:0; cursor:pointer; }
+.chipxX:hover { background:#f1f3f5; }
+.prb { min-height:30px; padding:0 10px; border:1px solid #d5dae0; border-radius:8px; background:#fff; font:inherit; font-size:13px; font-weight:500; color:#3d4550; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+.prb:hover { background:#f8f9fb; }
+.refAdd { display:inline-flex; flex-direction:column; gap:2px; }
+.refInput { min-height:30px; width:150px; font-size:13px; padding:2px 8px; }

@@ -415,15 +415,12 @@ describe("Workspace / Project shell", () => {
     const automationTabs = within(await screen.findByLabelText("มุมมองโปรเจกต์"));
     expect(automationTabs.getByRole("link", { name: "Settings", hidden: true })).toHaveAttribute("aria-current", "page");
     unmount();
-    navigation.pathname = "/w/sample/p/DE/dashboard";
+    navigation.pathname = "/w/sample/p/DE";
     renderWithProviders(<ProjectExample />);
     const tabs = within(await screen.findByLabelText("มุมมองโปรเจกต์"));
-    // แท็บไม่ขยับเมื่อสลับไปภาพรวม Lead: มี breadcrumb และแท็บครบเหมือนหน้าอื่น
     expect(document.querySelector(".project-crumb")).not.toBeNull();
-    expect(tabs.getByRole("link", { name: "Timeline", hidden: true })).toBeInTheDocument();
-    // ภาพรวม Lead เป็นแท็บเสริมที่ยังไม่ได้เลือก แต่เป็นหน้าที่เปิดอยู่จึงแสดง
-    expect(tabs.getByRole("link", { name: "ภาพรวม Lead", hidden: true })).toHaveAttribute("aria-current", "page");
-    expect(tabs.queryByRole("link", { name: "Gantt", hidden: true })).not.toBeInTheDocument();
+    // ภาพรวม Lead รวมเข้า Overview แล้ว ไม่มีแท็บแยก
+    expect(tabs.queryByRole("link", { name: "ภาพรวม Lead", hidden: true })).not.toBeInTheDocument();
   });
 
   it("ซ่อนแท็บเสริมของหน้าที่เปิดอยู่แล้วกลับไป Overview · ลบจาก × บนแท็บได้", async () => {
@@ -454,7 +451,7 @@ describe("Workspace / Project shell", () => {
       return within(await screen.findByRole("dialog", { name: "มุมมองเพิ่มเติม" }));
     };
     let menu = await open();
-    expect(menu.getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["ภาพรวม Lead", "Reports", "Backlog", "Gantt", "การแก้ไขแผน"]);
+    expect(menu.getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Reports", "Backlog", "Gantt", "การแก้ไขแผน"]);
     expect(menu.getByRole("button", { name: "Backlog" })).toHaveAccessibleDescription("วางแผน Sprint จากงานที่ยังไม่ได้อยู่ใน Sprint");
     await user.click(menu.getByRole("button", { name: "Backlog" }));
     expect(router.push).toHaveBeenLastCalledWith("/w/sample/p/DE/backlog");

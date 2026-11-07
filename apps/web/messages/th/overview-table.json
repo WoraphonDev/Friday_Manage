@@ -31,7 +31,8 @@
       "overdue": "Overdue {count} งาน",
       "top": "({name} {count})",
       "capacity": "ตาม capacity ต้องใช้ ≈ {need} สัปดาห์ แต่แผนมี ≈ {left} สัปดาห์",
-      "gap": "แผน {planned}% · ทำจริง {actual}%"
+      "gap": "แผน {planned}% · ทำจริง {actual}%",
+      "planLink": "ดูแผนทั้งโปรเจกต์ ↓"
     },
     "kpi": {
       "overdue": "Overdue",

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { EmptyState, ErrorState, Forbidden, LoadingState } from "@/components/ui";
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, formatDateRange, today as todayIso, type YearFormat } from "@/lib/format";
@@ -24,7 +24,11 @@ const SEVERITY_STYLE: Record<RiskItem["severity"], { color: string; icon: string
   low: { color: "#B45309", icon: "i" },
 };
 
-export function LeadDashboard(props: ViewProps) {
+/**
+ * ส่วน "แผนทั้งโปรเจกต์" ท้ายหน้า Overview (เดิมเป็นหน้า O1 ภาพรวม Lead แยก)
+ * ผู้ใช้ให้รวมเข้า Overview 2026-11-07 · คนที่ไม่มีสิทธิ์ดู Workload ไม่เห็นส่วนนี้
+ */
+export function PlanSection(props: ViewProps) {
   return <ScopedDashboard key={`${props.ws}/${props.projectKey}`} {...props} />;
 }
 
@@ -48,6 +52,12 @@ function ScopedDashboard({ ws, projectKey }: ViewProps) {
   const thisWeek = useQuery({ queryKey: ["reports", ws, projectKey, "weekly", weekStart(now)], queryFn: () => api.get<WeeklyReport>(`${endpoint}/reports/weekly?week=${weekStart(now)}`), enabled: allowed });
   const lastWeek = useQuery({ queryKey: ["reports", ws, projectKey, "weekly", addDays(weekStart(now), -7)], queryFn: () => api.get<WeeklyReport>(`${endpoint}/reports/weekly?week=${addDays(weekStart(now), -7)}`), enabled: allowed });
 
+  // มาจากลิงก์ #planning (หรือ /dashboard เดิม): เลื่อนถึงหัวข้อหลังโหลดเสร็จ เพราะเบราว์เซอร์เลื่อนก่อนส่วนนี้มีความสูงจริง
+  const loaded = !!risks.data && !!modules.data;
+  useEffect(() => {
+    if (loaded && window.location.hash === "#planning") document.getElementById("planning")?.scrollIntoView({ block: "start" });
+  }, [loaded]);
+
   const issueHref = (key: string) => {
     const next = new URLSearchParams(search);
     next.delete("new");
@@ -55,11 +65,15 @@ function ScopedDashboard({ ws, projectKey }: ViewProps) {
     return `${pathname}?${next}`;
   };
 
+  const wrap = (node: React.ReactNode) => <section id="planning" className={styles.embedded} aria-labelledby="planning-title">
+    <div className={styles.sectionHead}><h2 id="planning-title">{t("planTitle")}</h2><span className={styles.muted}>{t("planSubtitle")}</span></div>
+    {node}
+  </section>;
   const error = permissions.error ?? risks.error ?? modules.error;
   const denied = (error instanceof ApiError && error.status === 403) || permissions.data?.guestViewer || (!!permissions.data && !allowed);
-  if (denied) return <Forbidden />;
-  if (error) return <ErrorState error={error} retry={() => { void permissions.refetch(); void risks.refetch(); void modules.refetch(); }} />;
-  if (!risks.data || !modules.data) return <LoadingState />;
+  if (!permissions.data || denied) return null;
+  if (error) return wrap(<ErrorState error={error} retry={() => { void permissions.refetch(); void risks.refetch(); void modules.refetch(); }} />);
+  if (!risks.data || !modules.data) return wrap(<LoadingState />);
 
   const summary = modules.data.summary;
   const tone = STATUS_TONE[summary.status];
@@ -71,10 +85,10 @@ function ScopedDashboard({ ws, projectKey }: ViewProps) {
     <Link className="button button-secondary" href={`/w/${encodeURIComponent(ws)}/import`}>{t("importExport")}</Link>
   </div>;
 
-  if (!summary.taskCount) return <section className={styles.page} aria-label={t("dashboardTitle")}>
+  if (!summary.taskCount) return wrap(<>
     {toolbar}
     <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} action={<Link className="button button-primary" href={`/w/${encodeURIComponent(ws)}/import`}>{t("importPlan")}</Link>} />
-  </section>;
+  </>);
 
   const mods = modules.data.modules;
   const starts = mods.map((m) => m.planStart).filter((d): d is string => !!d).sort();
@@ -85,7 +99,7 @@ function ScopedDashboard({ ws, projectKey }: ViewProps) {
   const over = summary.gapWeeks !== null && summary.gapWeeks > 0;
   const weekly = (q: typeof thisWeek) => q.data?.nextWeek.starting;
 
-  return <section className={styles.page} aria-label={t("dashboardTitle")}>
+  return wrap(<>
     {toolbar}
 
     <div className={styles.kpis}>
@@ -111,7 +125,7 @@ function ScopedDashboard({ ws, projectKey }: ViewProps) {
     <WorkloadHeatmap ws={ws} projectKey={projectKey} today={now} yearFormat={yearFormat} issueHref={issueHref} />
 
     <ModuleTable modules={mods} sort={sort} setSort={setSort} today={modules.data.asOf} yearFormat={yearFormat} velocityDays={modules.data.velocity.windowDays} />
-  </section>;
+  </>);
 }
 
 function Kpi({ label, value, note, danger }: { label: string; value: string | number; note: string; danger?: boolean }) {

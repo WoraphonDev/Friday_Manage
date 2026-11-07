@@ -9,6 +9,7 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import ot from "../../messages/th/overview-table.json";
+import ldr from "../../messages/th/lead-dashboard-reports.json";
 import { OverviewPage } from "../../app/w/[ws]/p/[key]/table/_components/overview";
 import { TableView, buildDisplay } from "../../app/w/[ws]/p/[key]/table/_components/table-view";
 import type { Overview, Row, TableData } from "../../app/w/[ws]/p/[key]/table/_components/types";
@@ -69,7 +70,7 @@ beforeEach(() => {
     http.post("*/api/v1/w/:ws/projects/:key/issues/bulk", async ({ request }) => { const b = (await request.json()) as { keys: string[] }; bulks.push(b); return HttpResponse.json({ results: b.keys.map((key) => ({ key, ok: true })) }); }),
   );
 });
-const mount = (ui: React.ReactElement) => renderWithProviders(<WorkspaceShell ws="sample">{ui}</WorkspaceShell>, { messages: { "overview-table": ot } });
+const mount = (ui: React.ReactElement) => renderWithProviders(<WorkspaceShell ws="sample">{ui}</WorkspaceShell>, { messages: { "overview-table": ot, "lead-dashboard-reports": ldr } });
 
 describe("Overview (1 / M6)", () => {
   it("ความคืบหน้า, Health, KPI พร้อมรายการ, Module, Status, Milestone, Workload, Activity", async () => {
@@ -92,7 +93,10 @@ describe("Overview (1 / M6)", () => {
     expect(screen.getAllByText("Go-live ระยะแรก")).toHaveLength(3); // Milestone ถัดไป (จอใหญ่ + การ์ดมือถือ M6) + รายการ Milestones
     // M6: ความเสี่ยงสร้างจาก Health / Module บนมือถือ
     expect(screen.getByText("ผู้พัฒนาหนึ่ง มีงาน Overdue 4 งาน")).toBeInTheDocument();
-    expect(screen.getByText("6 / 5 MD · 120%")).toBeInTheDocument();
+    // ผู้ดู Workload ได้: การ์ด Workload สัปดาห์นี้ถูกแทนด้วยส่วนแผนทั้งโปรเจกต์ (เดิมหน้าภาพรวม Lead) ท้ายหน้า
+    expect(screen.queryByText("6 / 5 MD · 120%")).not.toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "แผนทั้งโปรเจกต์" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ดูแผนทั้งโปรเจกต์ ↓" })).toHaveAttribute("href", "#planning");
     expect(screen.getByRole("img", { name: /งานที่เสร็จรายวัน/ })).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("button", { name: "Burn-up" }));
     expect(screen.getByRole("img", { name: /Burn-up รายสัปดาห์/ })).toBeInTheDocument();

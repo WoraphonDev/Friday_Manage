@@ -45,12 +45,6 @@ export const projectTabs = [
   // optional: แท็บเสริมที่ซ่อนไว้ก่อน ผู้ใช้เลือกแสดงเองจากปุ่ม + ท้ายแถวแท็บ · หน้ายังเปิดจาก URL ได้ตามสิทธิ์
   { path: "", label: "overview", mobile: true },
   {
-    path: "/dashboard",
-    label: "dashboard",
-    permission: "project.reports.view",
-    optional: true,
-  },
-  {
     path: "/reports",
     label: "reports",
     permission: "project.reports.view",
@@ -75,7 +69,7 @@ export const projectTabs = [
   },
 ];
 /** ไอคอนของแท็บเสริมในเมนูเพิ่มมุมมอง */
-const VIEW_ICONS: Record<string, typeof Plus> = { dashboard: LayoutDashboard, reports: FileBarChart, backlog: ListTodo, gantt: ChartGantt, planChanges: History };
+const VIEW_ICONS: Record<string, typeof Plus> = { reports: FileBarChart, backlog: ListTodo, gantt: ChartGantt, planChanges: History };
 
 export function allowedProjectTab(
   tab: (typeof projectTabs)[number],

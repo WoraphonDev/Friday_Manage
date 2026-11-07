@@ -31,7 +31,8 @@
       "overdue": "Overdue {count, plural, one {{count} task} other {{count} tasks}}",
       "top": "({name} {count})",
       "capacity": "At current capacity it needs ≈ {need} weeks, but the plan has ≈ {left} weeks",
-      "gap": "Plan {planned}% · Actual {actual}%"
+      "gap": "Plan {planned}% · Actual {actual}%",
+      "planLink": "See the whole plan ↓"
     },
     "kpi": {
       "overdue": "Overdue",

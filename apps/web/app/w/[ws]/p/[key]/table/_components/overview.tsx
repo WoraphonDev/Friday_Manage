@@ -8,6 +8,9 @@ import { Avatar, AvatarStack, Badge, ErrorState, Forbidden, LoadingState, Select
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
+import { queryKeys } from "@/lib/query";
+import type { Permissions } from "@/lib/types";
+import { PlanSection } from "../../dashboard/_components/lead-dashboard";
 import type { Overview, OverviewItem } from "./types";
 import styles from "./ot.module.css";
 
@@ -33,6 +36,9 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
   const params = new URLSearchParams({ scope });
   if (moduleId) params.set("moduleId", moduleId);
   const q = useQuery({ queryKey: ["overview", ws, projectKey, params.toString()], queryFn: () => api.get<Overview>(`${base}/overview?${params}`) });
+  const perms = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${base}/my-permissions`) });
+  // ส่วนแผนทั้งโปรเจกต์ (เดิมหน้าภาพรวม Lead) ใช้สิทธิ์เดียวกับหน้านั้น
+  const canPlan = !!perms.data && !perms.data.guestViewer && perms.data.permissions.includes("project.workload.view");
   if (q.isPending) return <div className={styles.page}><LoadingState /></div>;
   if (q.error) return <div className={styles.page}>{q.error instanceof ApiError && q.error.status === 403 ? <Forbidden /> : <ErrorState error={q.error} retry={() => q.refetch()} />}</div>;
   const d = q.data;
@@ -142,6 +148,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
             {h.overdue.topAssignee ? ` ${t("health.top", { name: h.overdue.topAssignee.person.displayName, count: h.overdue.topAssignee.count })}` : ""}
             {h.capacity.weeksNeeded !== null ? ` · ${t("health.capacity", { need: h.capacity.weeksNeeded, left: h.capacity.weeksLeft })}` : ""}
             {` · ${t("health.gap", { planned: h.plannedPct, actual: h.actualPct })}`}
+            {canPlan && <> · <a href="#planning">{t("health.planLink")}</a></>}
           </div>
         </div>
       </section>
@@ -237,7 +244,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
               ))}
             </div>
           </section>
-          {d.workloadThisWeek && (
+          {d.workloadThisWeek && !canPlan && (
             <section className={styles.card}>
               <div className={styles.chead}><h2>{t("workload")} <span className="muted" style={{ fontWeight: 500 }}>· {formatDate(d.workloadThisWeek.from, year)} – {formatDate(d.workloadThisWeek.to, year)}</span></h2><Link href={`${page}/members`} style={{ fontSize: 13 }}>{t("seeAll")}</Link></div>
               <div className={styles.list}>
@@ -270,6 +277,8 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
           </section>
         </aside>
       </div>
+      {/* แผนทั้งโปรเจกต์ (O1) ต่อท้ายสถานะตอนนี้ · จอใหญ่เท่านั้นเหมือนหน้าเดิม */}
+      <div className={styles.desktopOnly}><PlanSection ws={ws} projectKey={projectKey} /></div>
     </div>
   );
 }

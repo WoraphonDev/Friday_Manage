@@ -211,5 +211,7 @@
     "filteredEmpty": "No Requirements match the filter",
     "noFr": "No FR",
     "assignFr": "Assign FR"
-  }
+  },
+  "planTitle": "Whole-project plan",
+  "planSubtitle": "Is the plan feasible, risks, and workload in the weeks ahead"
 }

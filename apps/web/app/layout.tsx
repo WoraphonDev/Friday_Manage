@@ -6,6 +6,8 @@ import "@fontsource/ibm-plex-sans-thai/400.css";
 import "@fontsource/ibm-plex-sans-thai/500.css";
 import "@fontsource/ibm-plex-sans-thai/600.css";
 import "@fontsource/ibm-plex-sans-thai/700.css";
+// wordmark ของโลโก้ใช้ Nunito เฉพาะน้ำหนัก 900 และตัวละติน
+import "@fontsource/nunito/latin-900.css";
 import "@/styles/globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {

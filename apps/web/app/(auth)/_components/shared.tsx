@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
+import { FridayLogo } from "@/components/brand/friday-logo";
 import { buttonVariants } from "@/components/ui";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -19,14 +20,19 @@ import styles from "./auth.module.css";
 
 export const NS = "auth-onboarding";
 
-export function Logo({ href = "/login" }: { href?: string }) {
+export function Logo({
+  href = "/login",
+  tone = "light",
+  size = "md",
+}: {
+  href?: string;
+  tone?: "light" | "dark";
+  size?: "md" | "lg";
+}) {
   const t = useTranslations(NS);
   return (
     <Link href={href} className={styles.logo}>
-      <span className={styles.logoMark} aria-hidden="true">
-        F
-      </span>
-      <span className={styles.logoText}>{t("brand.name")}</span>
+      <FridayLogo tone={tone} size={size} label={t("brand.name")} />
     </Link>
   );
 }
@@ -43,7 +49,7 @@ export function SplitLayout({
   return (
     <div className={styles.split}>
       <section className={styles.brand} aria-label={t("brand.name")}>
-        <Logo />
+        <Logo tone="dark" size="lg" />
         <div className={styles.brandBody}>
           <h2 className={styles.brandTitle}>
             {variant === "login" ? t("brand.loginTitle") : t("brand.signupTitle")}

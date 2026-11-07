@@ -1,0 +1,105 @@
+/* ขนาดตั้งด้วยตัวแปรเดียว เพื่อให้ไทล์, ตัวอักษร และ tagline ได้สัดส่วนเดียวกันทุกที่ */
+.logo {
+  --logo-font: 24px;
+  --logo-mark: 30px;
+  --logo-tagline: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: var(--logo-font);
+  line-height: 1.1;
+}
+.logo[data-size="lg"] {
+  --logo-font: 32px;
+  --logo-mark: 40px;
+  --logo-tagline: 10px;
+  gap: 11px;
+}
+.logo[data-size="sm"] {
+  --logo-font: 20px;
+  --logo-mark: 26px;
+  --logo-tagline: 7px;
+  gap: 8px;
+}
+
+.mark {
+  width: var(--logo-mark, 28px);
+  height: var(--logo-mark, 28px);
+  flex: none;
+  overflow: visible;
+}
+
+/* ไทล์เด้งทีละชิ้นตามเข็มนาฬิกา (เขียว → เหลือง → ม่วง → ชมพู) แล้วพักนิ่งก่อนรอบใหม่ */
+.tile {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tile-pop 3.2s ease-in-out infinite;
+}
+.tile:nth-child(2) { animation-delay: 0.2s; }
+.tile:nth-child(4) { animation-delay: 0.4s; }
+.tile:nth-child(3) { animation-delay: 0.6s; }
+@keyframes tile-pop {
+  0%, 40%, 100% { transform: scale(1); }
+  15% { transform: scale(0.72) rotate(-12deg); }
+  28% { transform: scale(1.08); }
+}
+
+.wordmark {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.name {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: "Nunito", var(--font-sans);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  background: linear-gradient(100deg, #2b2d42 0%, #4b3f8f 55%, #a67cea 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.i {
+  font-weight: inherit;
+  color: #a67cea;
+  -webkit-text-fill-color: #a67cea;
+}
+/* จุดท้ายคำเปลี่ยนสีตามไทล์แบบตัดทันที รอบเดียวกับไทล์ (3.2 วินาที) */
+.dot {
+  width: 0.2em;
+  height: 0.2em;
+  margin-left: 0.08em;
+  border-radius: 50%;
+  background: #54ca94;
+  animation: dot-cycle 3.2s steps(1) infinite;
+}
+@keyframes dot-cycle {
+  0% { background: #54ca94; }
+  25% { background: #ffd66d; }
+  50% { background: #a67cea; }
+  75% { background: #ff7896; }
+}
+.tagline {
+  font-size: var(--logo-tagline);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #8a8fa3;
+}
+
+.logo[data-tone="dark"] .name {
+  background-image: linear-gradient(100deg, #ffffff 0%, #e4dcff 55%, #c4a8f5 100%);
+}
+.logo[data-tone="dark"] .tagline {
+  color: #b4b8cc;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile,
+  .dot {
+    animation: none;
+  }
+}

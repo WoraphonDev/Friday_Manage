@@ -948,26 +948,10 @@ td {
 }
 .topbar-brand {
   display: flex;
+  flex: none;
   align-items: center;
-  gap: 10px;
   padding: 0 6px;
-  color: white;
-  font-weight: 700;
   white-space: nowrap;
-}
-.topbar-brand:hover {
-  color: white;
-}
-.brand-mark {
-  display: inline-flex;
-  width: 28px;
-  height: 28px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 7px;
-  background: var(--primary);
-  color: white;
-  font-weight: 700;
 }
 .workspace-switch > span:not(.workspace-logo) {
   overflow: hidden;
@@ -1289,11 +1273,6 @@ kbd {
   gap: 10px;
   color: var(--foreground);
   font-weight: 700;
-}
-.checkout-brand .workspace-logo {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
 }
 .checkout-secure {
   display: flex;

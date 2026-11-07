@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { FridayLogo } from "@/components/brand/friday-logo";
 import { buttonVariants } from "@/components/ui";
 import { LocaleSwitch } from "@/features/locale-switch";
 import { cn } from "@/lib/utils";
@@ -15,10 +16,7 @@ const SELLER_TAX_ID = process.env.NEXT_PUBLIC_SELLER_TAX_ID;
 export function Brand() {
   return (
     <Link href="/" className={styles.brand}>
-      <span className={styles.logo} aria-hidden="true">
-        F
-      </span>
-      Friday Manage
+      <FridayLogo />
     </Link>
   );
 }

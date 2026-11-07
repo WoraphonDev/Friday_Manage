@@ -10,6 +10,7 @@ import { WorkspaceShell, shellChrome } from "./workspace-shell";
 import { ProjectShell } from "./project-shell";
 import { Providers } from "../providers";
 import { api } from "@/lib/api";
+import mw from "../../../messages/th/members-workload.json";
 
 function ProjectExample() {
   return (
@@ -156,16 +157,19 @@ describe("Workspace / Project shell", () => {
       ),
     );
     const user = userEvent.setup();
-    renderWithProviders(<ProjectExample />);
+    renderWithProviders(<ProjectExample />, { messages: { "members-workload": mw } });
     expect(await screen.findByText("Off track")).toBeInTheDocument();
     expect(await screen.findByRole("img", { name: "Kaijeaw" })).toHaveTextContent("KJ");
     // สมาชิกที่ปิดบัญชีแล้วไม่แสดงใน Avatar stack
     expect(screen.queryByRole("img", { name: "Pond" })).not.toBeInTheDocument();
     expect(document.querySelector(".project-crumb")).not.toBeNull();
-    expect(screen.getByRole("link", { name: "Invite" })).toHaveAttribute(
-      "href",
-      "/w/sample/p/DE/members#invites",
-    );
+    // Invite เปิด Modal ทับหน้าเดิม ไม่พาไปแท็บ Members
+    await user.click(screen.getByRole("button", { name: "Invite" }));
+    const dialog = await screen.findByRole("dialog", { name: "Invite members" });
+    expect(within(dialog).getByLabelText("อีเมล (คั่นด้วย , ได้หลายคน)")).toBeInTheDocument();
+    expect(router.push).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole("button", { name: "ยกเลิก" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Invite members" })).not.toBeInTheDocument());
     const tabs = within(screen.getByLabelText("มุมมองโปรเจกต์"));
     expect(tabs.getByRole("link", { name: "Members", hidden: true })).toHaveAttribute(
       "href",

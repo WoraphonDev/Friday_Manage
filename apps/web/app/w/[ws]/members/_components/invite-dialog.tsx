@@ -7,7 +7,7 @@ import { Button, Dialog, Input, Select, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/lib/types";
-import { InviteLinks } from "../../p/[key]/members/_components/invite-panel";
+import { InviteLinks } from "@/features/project-invite/project-invite-dialog";
 import { copyText, isEmail, splitEmails } from "../../p/[key]/members/_components/shared";
 import type { InviteResult, ProjectRole } from "../../p/[key]/members/_components/types";
 import styles from "../../p/[key]/members/_components/members.module.css";

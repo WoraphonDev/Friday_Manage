@@ -4,6 +4,12 @@
 .subnav a[aria-current="true"] { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
 .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; }
 .group { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.search { width:240px; max-width:100%; }
+.rolesPop { width:min(420px, calc(100vw - 24px)); }
+.rolesPop .roles { padding:8px 6px; }
+.rolesPop .roles .badgeCol { flex-basis:72px; }
+/* หัวการ์ดมีเส้นล่างแล้ว รายการคำเชิญที่ต่อจากหัวจึงไม่ต้องมีเส้นบนซ้ำ */
+.chead + .pending { border-top:0; }
 .seg { display:inline-flex; border:1px solid var(--input); border-radius:8px; overflow:hidden; background:#fff; }
 .seg button { min-height:34px; padding:0 12px; border:0; background:transparent; font:inherit; font-size:13px; color:#3d4550; cursor:pointer; }
 .seg button[aria-pressed="true"] { background:var(--primary-soft); color:var(--primary); font-weight:600; }

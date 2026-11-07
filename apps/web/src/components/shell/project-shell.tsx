@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui";
 import { IssueDrawer } from "@/features/issue-drawer/IssueDrawer";
 import { withoutDrawerParams } from "@/features/issue-drawer/url";
+import { ProjectInviteDialog } from "@/features/project-invite/project-invite-dialog";
 import { useWorkspace } from "./workspace-shell";
 
 // ใช้ queryKey เดียวกับหน้า Overview และหน้า Members เพื่อไม่ยิง API ซ้ำเมื่อเปิดหน้านั้น
@@ -123,6 +124,7 @@ export function ProjectShell({
     enabled: canSeeTeam,
   });
   const headerRef = useRef<HTMLElement>(null);
+  const [inviting, setInviting] = useState(false);
   // Drawer รายละเอียด/สร้างงานเริ่มใต้หัวโปรเจกต์ตาม Canvas C / B · เก็บตำแหน่งเป็น CSS variable
   useEffect(() => {
     const root = document.documentElement;
@@ -303,12 +305,14 @@ export function ProjectShell({
                 </span>
               )}
               {team.data?.canInvite && (
-                <Link
+                // เปิด Modal ทับหน้าปัจจุบัน ไม่พาไปแท็บ Members (2026-11-07)
+                <button
+                  type="button"
                   className="button project-invite"
-                  href={`${base}/members#invites`}
+                  onClick={() => setInviting(true)}
                 >
                   {t("nav.invite")}
-                </Link>
+                </button>
               )}
               {(menuItems.length > 0 || canCreate) && (
                 <Popover.Root>
@@ -392,6 +396,7 @@ export function ProjectShell({
       {(issueKey || newIssue) && (
         <IssueDrawer issueKey={issueKey ?? undefined} onClose={closeDrawer} />
       )}
+      {inviting && <ProjectInviteDialog ws={ws} projectKey={projectKey} open onOpenChange={setInviting} />}
     </>
   );
 }

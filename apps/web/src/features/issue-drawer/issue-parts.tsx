@@ -88,6 +88,9 @@ export function DependencyPanel({ scope, issueKey }: { scope: Scope; issueKey: s
   if (query.error) return <ErrorState error={query.error} retry={() => void query.refetch()} />;
   if (!query.data) return <LoadingState />;
   // Canvas C: แถว "Blocked by / Blocks" เป็นชิป · ฟอร์มเพิ่มเปิดจากปุ่ม
+  // ยังไม่มีทั้งสองฝั่ง: ย่อเหลือบรรทัดเดียว ไม่ต้องแสดงสองแถวว่าง
+  const none = !query.data.blockedBy.length && !query.data.blocking.length && !adding;
+  if (none) return <div className={styles.emptyLine}><span className="muted">{t('noDependenciesYet')}</span>{canEdit && <Button size="small" variant="ghost" className={styles.addAction} onClick={() => setAdding(true)}>{t('addDependency')}</Button>}</div>;
   return <div className={styles.stack} style={{ gap: 6 }}>
     {(['blockedBy', 'blocking'] as const).map((side) => <div className={styles.depRow} key={side}>
       <span className={styles.k}>{t(side)}</span>

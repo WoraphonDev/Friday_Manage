@@ -248,7 +248,8 @@
     "sharedWithGuests": "Shared with Guests",
     "checklist": "Checklist",
     "dependencies": "Dependency",
-    "details": "Additional details"
+    "details": "Additional details",
+    "actualStart": "Actual Start"
   },
   "priority": {
     "urgent": "Urgent",
@@ -329,5 +330,10 @@
   },
   "mobileComplete": "Done",
   "commentPlaceholder": "Write a comment… @ to mention",
-  "commitsCount": "{count, plural, one {# commit} other {# commits}}"
+  "commitsCount": "{count, plural, one {# commit} other {# commits}}",
+  "groupPeople": "People",
+  "groupPlan": "Plan",
+  "groupPlace": "Organize",
+  "noDependenciesYet": "No dependencies yet",
+  "addDescription": "+ Add description"
 }

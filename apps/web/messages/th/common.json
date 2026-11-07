@@ -25,7 +25,8 @@
     "menu": "เมนู",
     "actions": "การกระทำ",
     "morePeople": "และอีก {count} คน",
-    "signOut": "ออกจากระบบ"
+    "signOut": "ออกจากระบบ",
+    "resizeDrawer": "ลากเพื่อปรับความกว้าง"
   },
   "nav": {
     "home": "Home",

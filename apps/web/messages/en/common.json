@@ -25,7 +25,8 @@
     "menu": "Menu",
     "actions": "Actions",
     "morePeople": "{count, plural, one {and {count} more person} other {and {count} more people}}",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "resizeDrawer": "Drag to resize"
   },
   "nav": {
     "home": "Home",

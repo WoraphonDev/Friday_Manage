@@ -11,6 +11,16 @@ Friday Manage: ระบบ Project Management สำหรับทีม Dev (
 - ฐานข้อมูล: `pnpm db:up && pnpm db:migrate && pnpm db:dev-roles` (Docker) · ไม่มี Docker / ไม่มี root (Codex): `bash scripts/setup-postgres.sh` ทำทั้งหมดให้และรันซ้ำได้ (เปิด PostgreSQL ใหม่ทุก session)
 - `pnpm typecheck` · `pnpm test` (ใช้ฐานข้อมูลจริง รันทีละแพ็กเกจ)
 
+## ส่งงานและทดสอบผ่าน Docker ในเครื่อง
+
+- ผู้ใช้กำหนดให้หลังแก้ไขเสร็จและผ่านการตรวจที่เกี่ยวข้อง ต้อง build แบบ production และ deploy เข้า Docker ในเครื่องก่อนส่งงาน เพื่อทดสอบใกล้เคียงการขึ้น server จริง
+- Build จาก branch/commit ที่มีงานแก้ไขครบจริง แล้วรัน `docker compose -f infra/docker/compose.web.yml up --build -d` จากราก checkout นั้น · ไม่ใช้ image เก่าหรือ dev server เป็นผลทดสอบสุดท้าย
+- ตรวจ container healthy, logs, หน้าเว็บ/static assets และ flow ที่แก้ไขผ่าน URL ของ container · งานเกี่ยวกับ auth/API/realtime ให้ตรวจการเชื่อมต่อจริงด้วย
+- URL หลักคือ `http://localhost:3000` ให้ตรงกับ Origin ของ API · วิธีเปลี่ยนพอร์ตและ API origin อยู่ใน `infra/docker/web.md`
+- ปัจจุบัน Compose นี้รันเฉพาะเว็บแบบ production ส่วน API ยังรันบนเครื่อง ถ้าแก้ API ต้อง build และเปิด API รุ่นที่แก้ไขด้วยก่อนทดสอบ ห้ามอ้างว่าทั้งระบบอยู่ใน Docker
+- ใช้ฐานข้อมูลและข้อมูลทดสอบเดิม ห้ามล้าง volume หรือ reseed ทับข้อมูลเพื่อ deploy · ถ้า build/deploy/check ไม่ผ่าน ให้แก้ก่อนส่งงาน หรือระบุสิ่งที่ติดขัดตามจริง
+- ตอนส่งงานแจ้ง URL, branch/commit ที่ deploy และผลตรวจโดยย่อ ไม่ต้องขออนุญาตซ้ำสำหรับการ build/deploy Docker ในเครื่องตามขั้นตอนนี้
+
 ## ที่มาของความจริง
 
 - สเปก: `docs/spec/01-entities.md` (ตาราง), `03-api.md` (endpoint, error, event), `04-permissions.md` (สิทธิ์, Guest) · ธรรมเนียมการวางแผนขององค์กร: `docs/decisions.md`

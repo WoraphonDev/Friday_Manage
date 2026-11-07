@@ -64,7 +64,7 @@ describe("Workspace / Project shell", () => {
     ).toHaveAttribute("href", "/w/other");
   });
 
-  it("เมนู Workspace มีตัวสลับภาษาและรูปแบบปี (W21)", async () => {
+  it("เมนู Workspace: สร้าง / ตั้งค่า Workspace · ไม่มีภาษาและออกจากระบบ (ย้ายไปเมนูบัญชี)", async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <WorkspaceShell ws="sample">
@@ -74,9 +74,32 @@ describe("Workspace / Project shell", () => {
     await user.click(
       await screen.findByRole("button", { name: "สลับ Workspace: ทีมตัวอย่าง" }),
     );
-    const language = screen.getByRole("group", { name: "ภาษาของระบบ" });
+    expect(screen.getByRole("link", { name: "สร้าง Workspace ใหม่" })).toHaveAttribute("href", "/onboarding");
+    expect(screen.getByRole("link", { name: "ตั้งค่า ทีมตัวอย่าง" })).toHaveAttribute("href", "/w/sample/admin");
+    expect(screen.queryByRole("group", { name: "ภาษาของระบบ" })).not.toBeInTheDocument();
+  });
+
+  it("เมนูบัญชีที่ avatar: โปรไฟล์ / การแจ้งเตือน / Workspace · ภาษาและปี (W21) · ออกจากระบบ", async () => {
+    const user = userEvent.setup();
+    let loggedOut = false;
+    server.use(http.post("*/api/v1/auth/logout", () => { loggedOut = true; return new HttpResponse(null, { status: 204 }); }));
+    renderWithProviders(
+      <WorkspaceShell ws="sample">
+        <p>Home</p>
+      </WorkspaceShell>,
+    );
+    await user.click(await screen.findByRole("button", { name: "เมนูบัญชี" }));
+    const menu = within(await screen.findByRole("dialog", { name: "เมนูบัญชี" }));
+    expect(menu.getByRole("link", { name: "โปรไฟล์ของฉัน" })).toHaveAttribute("href", "/w/sample/profile");
+    expect(menu.getByRole("link", { name: "การแจ้งเตือน" })).toHaveAttribute("href", "/w/sample/profile?tab=notify");
+    expect(menu.getByRole("link", { name: "สมาชิก & เชิญ" })).toHaveAttribute("href", "/w/sample/members");
+    expect(menu.getByRole("link", { name: "Admin Console" })).toHaveAttribute("href", "/w/sample/admin");
+    const language = menu.getByRole("group", { name: "ภาษาของระบบ" });
     expect(within(language).getByRole("button", { name: /English/ })).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "รูปแบบปี" })).toBeInTheDocument();
+    expect(menu.getByRole("group", { name: "รูปแบบปี" })).toBeInTheDocument();
+    await user.click(menu.getByRole("button", { name: "ออกจากระบบ" }));
+    await waitFor(() => expect(loggedOut).toBe(true));
+    expect(router.replace).toHaveBeenCalledWith("/login");
   });
 
   it("locale en: shell แสดงข้อความภาษาอังกฤษ (W21)", async () => {

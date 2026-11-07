@@ -88,7 +88,20 @@
       "backlog": "วางแผน Sprint จากงานที่ยังไม่ได้อยู่ใน Sprint",
       "gantt": "แผนงานพร้อม Dependency และ Baseline",
       "planChanges": "รายการแก้แผนหลังตั้ง Baseline พร้อมเหตุผล"
-    }
+    },
+    "searchWorkspace": "ค้นหา Workspace",
+    "noWorkspaceMatch": "ไม่พบ Workspace",
+    "addWorkspace": "สร้าง Workspace ใหม่",
+    "workspaceSettings": "ตั้งค่า {name}",
+    "switchHint": "คีย์ลัด: Ctrl 1–9 สลับ Workspace ตามลำดับ",
+    "accountMenu": "เมนูบัญชี",
+    "accountSection": "บัญชี",
+    "myProfile": "โปรไฟล์ของฉัน",
+    "notifySettings": "การแจ้งเตือน",
+    "workHours": "เวลาทำงาน / วันลา",
+    "securitySettings": "ความปลอดภัย",
+    "membersInvite": "สมาชิก & เชิญ",
+    "importPlan": "นำเข้าแผน"
   },
   "roles": {
     "owner": "Owner",

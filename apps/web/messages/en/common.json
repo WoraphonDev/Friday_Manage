@@ -88,7 +88,20 @@
       "backlog": "Plan sprints from work not in a sprint yet",
       "gantt": "Schedule with dependencies and baseline",
       "planChanges": "Plan changes after the baseline, with reasons"
-    }
+    },
+    "searchWorkspace": "Search workspaces",
+    "noWorkspaceMatch": "No workspace found",
+    "addWorkspace": "Add workspace",
+    "workspaceSettings": "{name} settings",
+    "switchHint": "Shortcut: Ctrl 1–9 switches workspaces in order",
+    "accountMenu": "Account menu",
+    "accountSection": "Account",
+    "myProfile": "My profile",
+    "notifySettings": "Notifications",
+    "workHours": "Working hours / leave",
+    "securitySettings": "Security",
+    "membersInvite": "Members & invites",
+    "importPlan": "Import plan"
   },
   "roles": {
     "owner": "Owner",

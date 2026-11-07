@@ -1,35 +1,37 @@
 # ติดตามการแก้ Design ตาม Canvas — 6 พฤศจิกายน 2569
 
-รายการมาจาก [canvas-design-audit-2026-11-06.md](canvas-design-audit-2026-11-06.md) · แก้ตามลำดับที่รายงานแนะนำ (W00 shell ก่อน)
+รายการมาจาก [canvas-design-audit-2026-11-06.md](https://github.com/WoraphonDev/Friday_Manage/blob/bf7739dc956ee35f9802bac6871a4e0ee4f8663b/docs/reviews/canvas-design-audit-2026-11-06.md) · แก้ตามลำดับที่รายงานแนะนำ (W00 shell ก่อน)
 
-| ID | สถานะ | PR | หมายเหตุ |
+อัปเดต 7 พฤศจิกายน 2569: ใช้ตารางล่าสุดและ [ผลตรวจ/ภาพ/การแก้ UX](ui-ux-review-2026-11-07.md) เป็นหลัก รายละเอียดด้านล่างเป็นบันทึกของแต่ละรอบ
+
+| ID | สถานะ | PR / branch | หมายเหตุ |
 |---|---|---|---|
-| VD01 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-shell-variants | ดูด้านล่าง |
-| VD02 | Codex ตรวจผ่าน desktop; mobile รอ VD04/VD15 | [#79](https://github.com/WoraphonDev/Friday_Manage/pull/79) | [ผลตรวจและภาพ](canvas-vd02-verification-2026-11-06.md) |
-| VD03 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-shell-variants | ดูด้านล่าง |
-| VD04 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-shell-variants | ดูด้านล่าง |
-| VD05 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
-| VD06 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
-| VD07 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ยังไม่มีคอลัมน์ FR / Screen (ดูด้านล่าง) |
-| VD08 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
-| VD09 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
-| VD10 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ดูด้านล่าง |
-| VD11 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ดูด้านล่าง |
-| VD12 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ยังไม่มีผลทดสอบ / Requirement / Screen / Labels (ดูด้านล่าง) |
-| VD13 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ดูด้านล่าง |
-| VD14 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | ดูด้านล่าง |
-| VD15 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-overview-table | ดูด้านล่าง |
-| VD16 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | ดูด้านล่าง |
-| VD17 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | รวมการ์ด Kanban บนจอใหญ่ |
-| VD18 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | ยังไม่มีแท็บ รายละเอียด / ผลทดสอบ / Commits / คอมเมนต์ ของ M4 |
-| VD19 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | ดูด้านล่าง |
-| VD20 | ตรงแล้ว (ไม่ต้องแก้) | fix/canvas-pages | การ์ดกลุ่มทีมมีอยู่แล้วใน source ปัจจุบัน · ตรวจภาพเทียบ Profile แล้ว |
-| VD21 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | ดูด้านล่าง |
-| VD22 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | Canvas K3 ไม่มีช่องเพิ่มวันทำการแยก (ดูด้านล่าง) |
-| VD23 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-issue-drawer | เพิ่ม API `DELETE issues/:key?subtasks=keep` |
-| VD24 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | รวมแก้ UI-02 (ชื่องานในกระดิ่ง) |
-| VD25 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | palette y=128 w=680 |
-| VD26 | แก้แล้ว รอ Codex ตรวจภาพ | fix/canvas-pages | ดูด้านล่าง |
+| VD01 | ผ่านในสถานะที่ตรวจ | fix/canvas-shell-variants | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD02 | ผ่านในสถานะที่ตรวจ | fix/canvas-project-header | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD03 | ต่างโดยตั้งใจ | fix/canvas-shell-variants | เลือกต่างจาก Canvas: คง Sidebar/แท็บเพื่อไม่ให้ทางนำทางเปลี่ยนเมื่อสลับหน้า ตามการตัดสินใจที่บันทึกไว้ 2026-11-07 |
+| VD04 | ผ่านในสถานะที่ตรวจ | fix/canvas-shell-variants | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD05 | ผ่านในสถานะที่ตรวจ | fix/canvas-overview-table | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD06 | ผ่านในสถานะที่ตรวจ | fix/canvas-overview-table | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD07 | ยังไม่ปิด | fix/canvas-overview-table | Toolbar/Views แก้แล้ว แต่ FR/Screen ยังไม่มีข้อมูลในแถว API |
+| VD08 | ยังไม่ปิด | fix/canvas-overview-table | Status pill และ columns หลักตรงขึ้น; FR/Screen ยังขาด |
+| VD09 | ผ่านในสถานะที่ตรวจ | fix/canvas-overview-table | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD10 | ยังไม่ปิด | fix/canvas-issue-drawer | Drawer/บริบทสร้างงานแก้แล้ว; Requirement/Screen/Labels/Watchers ของฟอร์ม B ยังไม่ครบ |
+| VD11 | ผ่านในสถานะที่ตรวจ | fix/canvas-issue-drawer | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD12 | ยังไม่ปิด | fix/canvas-issue-drawer | โครงรายละเอียดและ QA ของ Sub-task แก้แล้ว; Requirement/Screen/Labels ยังไม่ครบ |
+| VD13 | ผ่านในสถานะที่ตรวจ | fix/canvas-issue-drawer | Rail ของ desktop คงไว้; มือถือไม่ซ้ำ parent bar และ Commits แสดงทุกรายการพร้อมลิงก์/ผู้เขียน/วันที่ |
+| VD14 | ผ่านในสถานะที่ตรวจ | fix/canvas-pages | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD15 | ผ่านในสถานะที่ตรวจ | fix/canvas-overview-table | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD16 | ผ่านในสถานะที่ตรวจ | fix/canvas-pages | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD17 | ผ่านในสถานะที่ตรวจ | fix/canvas-pages | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD18 | ผ่านในสถานะที่ตรวจ | fix/canvas-issue-drawer | เพิ่มแท็บ M4, QA API, คุณสมบัติหลัก4แถว และ composer ที่กดส่งได้ทุกแท็บ |
+| VD19 | ผ่านในสถานะที่ตรวจ | fix/canvas-pages | ปุ่ม step2 ใช้ pointer ได้ และแก้กริดผลตรวจมือถือให้อ่านได้ |
+| VD20 | ผ่านในสถานะที่ตรวจ | fix/canvas-pages | source ปัจจุบันมีการ์ดกลุ่มทีมครบ4ใบ |
+| VD21 | ผ่านในสถานะที่ตรวจ | fix/canvas-pages | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD22 | ผ่านในสถานะที่ตรวจ | fix/canvas-issue-drawer | แก้เกณฑ์ audit เดิม: K3 ไม่มีตัวเพิ่ม Nวันแยก ต้องตรวจคู่วันที่และผลกระทบ preview แทน |
+| VD23 | ผ่านในสถานะที่ตรวจ | fix/canvas-issue-drawer | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD24 | ยังไม่ปิด | fix/canvas-pages | Toast รองรับ actor/secondary/actions และ Bell แสดงรายการ; ยังไม่ยืนยัน realtime/action ทุกเหตุการณ์กับบริการจริง |
+| VD25 | ผ่านในสถานะที่ตรวจ | fix/canvas-pages | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
+| VD26 | ผ่านในสถานะที่ตรวจ | fix/canvas-pages | ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction |
 
 ## VD02 · Project header
 
@@ -188,7 +190,15 @@
 - Timeline: หัวแกนเหมือน Gantt ตามที่ผู้ใช้เลือก (Day / Week / Month สเกลเดียวกับ Gantt · แถวบนเป็นช่วงสัปดาห์หรือเดือน · Day แสดงทุกวันพร้อมตัวย่อวัน · แรเงาเสาร์-อาทิตย์) แทนแกน 3 แถวของ Canvas
 - Timeline: แกนเวลาเต็มเดือน (เริ่มวันที่ 1 ของเดือนแรก จบสิ้นเดือนสุดท้าย) และยาวอย่างน้อยเต็มจอ, Key ของงานไม่ตัดบรรทัด, ป้ายของแถบอยู่เหนือเส้นวันนี้
 
+## ผลตรวจ Codex และการแก้ UX — 2026-11-07
 
-## ผลตรวจ Codex
+- เกณฑ์เดิม 26 รายการ: ผ่านในสถานะที่ตรวจ 20, ต่างโดยตั้งใจ 1 (กรอบนำทางคงที่), ยังไม่ปิด 5 ดู [ตารางและเหตุผล](ui-ux-review-2026-11-07.md)
+- แก้ 11 กลุ่มการใช้งาน รวม Module/กลุ่มงานใน Table, บริบท Task, HTTP cache ที่ทำให้ Module แสดงผิด, Milestone ใน Timeline, M4 QA/Commits/คอมเมนต์, สิทธิ์อ่าน และ Import/Search มือถือ
+- ผลล่าสุดแต่ละแพ็กเกจ: Web 436, API 571, DB 107, Ops API 20, Ops Web 53; browser workflow 15/15 ผ่าน; 6 real-plan tests ข้ามเพราะไม่มีไฟล์ส่วนตัว
+- ปรับเกณฑ์ VD22: Canvas K3 ไม่มีตัวเพิ่ม N วันแยก; ชื่อยาวใน VD02 ยอม wrap ตาม Canvas เอง
+- source ที่ตรวจ bb637785da6168016a694df617d22d13b43dbf44; ไม่ merge/deploy ในรอบนี้
 
-VD02 ผ่านตามขอบเขต desktop; อีก25รายการยังเปิดอยู่ ดู [ผลตรวจซ้ำ](canvas-vd02-verification-2026-11-06.md) และภาพ1440/390px ตัวเลขมือถือของ fixture ที่ Codexใช้คือ200px ไม่ใช่175px; Canvas M6ยังต้องแก้ใน VD04/VD15 ส่วนชื่อยาวมีพฤติกรรม wrap ใน Canvasเช่นกัน ไม่บังคับความสูง125pxกับทุกชื่อ
+
+## ผลตรวจ VD02 เดิม · 6 พฤศจิกายน 2569
+
+ผลตรวจรอบก่อนรวมอยู่ใน [รายงาน VD02](canvas-vd02-verification-2026-11-06.md) พร้อมภาพ 1440/390 px: desktop ผ่านตามขอบเขต และ fixture มือถือวัดได้ 200 px สถานะปัจจุบันให้ยึดตารางและรายงานวันที่ 7 พฤศจิกายนด้านบน

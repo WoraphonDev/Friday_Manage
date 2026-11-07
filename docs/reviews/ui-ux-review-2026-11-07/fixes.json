@@ -1,0 +1,57 @@
+[
+  {
+    "id": "UF01",
+    "title": "จัด Module/กลุ่มงานใน Table",
+    "change": "เพิ่ม Module, เปลี่ยนชื่อ Module, เพิ่ม/เปลี่ยนชื่อกลุ่มงานใน Dialog ของหน้าเดิม; แสดงกลุ่มว่างและเลื่อนไปกลุ่มใหม่แม้ตาราง virtualized"
+  },
+  {
+    "id": "UF02",
+    "title": "สร้าง Task ในบริบทที่กด",
+    "change": "+Task ของ Module/Phase ส่ง moduleId/phaseId ไปฟอร์ม พร้อมแยกร่างแต่ละกลุ่มและตัด ID ที่ไม่มีใน options"
+  },
+  {
+    "id": "UF03",
+    "title": "ข้อมูลหลังสร้างและการปิด Drawer",
+    "change": "รีเฟรช Table/Overview/Kanban/Timeline/Gantt/Calendar/Backlog หลังบันทึก; ล้าง type/moduleId/phaseId/statusId/parent เมื่อออกจากฟอร์ม; ใช้ cache=no-store เพื่อไม่ให้ HTTP cache คืน Module/ลูกงานเก่าหลัง invalidate แม้ ETag หลักคงเดิม"
+  },
+  {
+    "id": "UF04",
+    "title": "สร้างการ์ด Kanban ตามคอลัมน์",
+    "change": "เลือกสถานะจากคอลัมน์และ Module จาก swimlane/ตัวกรอง ไม่เริ่มฟอร์มว่างที่เสียบริบท"
+  },
+  {
+    "id": "UF05",
+    "title": "เพิ่ม Milestone ใน Timeline",
+    "change": "ปุ่ม +Milestone เปิดฟอร์มในหน้าเดิมและรีเฟรชเส้นเป้าหมาย ใช้ API ที่มีอยู่"
+  },
+  {
+    "id": "UF06",
+    "title": "Views Sprint/Backlog",
+    "change": "เพิ่มตัวกรอง Sprint ปัจจุบัน/Backlog ที่ API รองรับอยู่แล้ว แทนการเว้น controls ของ Canvas"
+  },
+  {
+    "id": "UF07",
+    "title": "Sub-task มือถือและผลทดสอบ",
+    "change": "4แท็บ รายละเอียด/ผลทดสอบ/Commits/คอมเมนต์; ใช้ QA API จริง บันทึกผลและสร้าง Bug จากผลไม่ผ่าน; composer คงร่างและส่งได้ทุกแท็บ; แสดงรายการ commit ทั้งหมดพร้อมลิงก์และลิงก์ไฟล์หลักฐาน QA"
+  },
+  {
+    "id": "UF08",
+    "title": "สิทธิ์อ่านเห็นข้อมูลสำคัญ",
+    "change": "แสดง Checklist/Dependencies ให้สมาชิกอ่านอย่างเดียว พร้อมปิดการแก้ไข แทนการซ่อนข้อมูลทั้งส่วน"
+  },
+  {
+    "id": "UF09",
+    "title": "ค้นหาในเมนู Projects มือถือ",
+    "change": "แก้ CSS ที่ซ่อนข้อความและเพิ่ม accessible name; ปุ่มค้นหากว้างเต็มแถว เปิด palette ได้จริง"
+  },
+  {
+    "id": "UF10",
+    "title": "ผลตรวจ Import มือถือ",
+    "change": "วางข้อความผลตรวจใต้ชื่องานในคอลัมน์กว้าง แทนการไหลลงช่องไอคอนจนอ่านแทบทีละตัวอักษร"
+  },
+  {
+    "id": "UF11",
+    "title": "เมนูคำสั่งใช้รูปแบบเดียวกัน",
+    "change": "ล้างกรอบ/พื้นของ browser จาก button.menu-item ให้คำสั่งใน popup เหมือนรายการที่ใช้ Link"
+  }
+]

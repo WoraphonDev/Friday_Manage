@@ -1,6 +1,10 @@
 {
   "overview": {
-    "scope": { "label": "มุมมอง", "all": "ทั้งโปรเจกต์", "mine": "งานของฉัน" },
+    "scope": {
+      "label": "มุมมอง",
+      "all": "ทั้งโปรเจกต์",
+      "mine": "งานของฉัน"
+    },
     "allModules": "ทุก Module",
     "moduleFilter": "กรอง Module",
     "progressTitle": "ความคืบหน้าโครงการ",
@@ -18,7 +22,11 @@
     "noMilestone": "ไม่มี Milestone ข้างหน้า",
     "health": {
       "title": "Health: {level}",
-      "levels": { "on_track": "On track", "at_risk": "At risk", "off_track": "Off track" },
+      "levels": {
+        "on_track": "On track",
+        "at_risk": "At risk",
+        "off_track": "Off track"
+      },
       "behind": "{count} งานช้ากว่าแผน",
       "overdue": "Overdue {count} งาน",
       "top": "({name} {count})",
@@ -48,7 +56,19 @@
     "noDoneStatus": "ประเภทงานนี้ไม่มีสถานะ Done",
     "conflict": "งานนี้ถูกแก้ไขโดยคนอื่น ลองใหม่อีกครั้ง",
     "progressLabel": "ความคืบหน้าโครงการ {pct} เปอร์เซ็นต์",
-    "mobile": { "updatedBy": "อัปเดต {time}", "line": "{done} / {total} งาน · เวลาผ่านไป {time}%", "openBugs": "Bug เปิด", "pending": "รออนุมัติ", "risks": "ความเสี่ยง", "noRisks": "ยังไม่พบความเสี่ยง", "riskOverdue": "{name} มีงาน Overdue {count} งาน", "riskCapacity": "งานเหลือเกิน capacity", "riskModule": "{name} มี Overdue {count} งาน", "riskPending": "คำขอเลื่อน Due รออนุมัติ {count} รายการ", "riskBugs": "Bug ที่ยังเปิด {count} รายการ" },
+    "mobile": {
+      "updatedBy": "อัปเดต {time}",
+      "line": "{done} / {total} งาน · เวลาผ่านไป {time}%",
+      "openBugs": "Bug เปิด",
+      "pending": "รออนุมัติ",
+      "risks": "ความเสี่ยง",
+      "noRisks": "ยังไม่พบความเสี่ยง",
+      "riskOverdue": "{name} มีงาน Overdue {count} งาน",
+      "riskCapacity": "งานเหลือเกิน capacity",
+      "riskModule": "{name} มี Overdue {count} งาน",
+      "riskPending": "คำขอเลื่อน Due รออนุมัติ {count} รายการ",
+      "riskBugs": "Bug ที่ยังเปิด {count} รายการ"
+    },
     "openInTable": "เปิดใน Table →",
     "listEmpty": "ไม่มีงานในรายการนี้",
     "lateDays": "เลย {days} วัน",
@@ -78,7 +98,11 @@
     "milestones": "Milestones",
     "timeline": "Timeline →",
     "milestoneLine": "{date} · งานที่ผูกไว้เสร็จ {pct}%",
-    "milestoneBasis": { "linked": "งานที่ผูกไว้", "module": "ทั้ง Module", "project": "ทั้งโปรเจกต์" },
+    "milestoneBasis": {
+      "linked": "งานที่ผูกไว้",
+      "module": "ทั้ง Module",
+      "project": "ทั้งโปรเจกต์"
+    },
     "daysLeft": "อีก {days} วัน",
     "daysPast": "ผ่านมา {days} วัน",
     "workload": "Workload สัปดาห์นี้",
@@ -86,7 +110,14 @@
     "workloadLine": "{md} / {cap} MD · {pct}%",
     "activity": "Recent activity",
     "activityEmpty": "ยังไม่มีความเคลื่อนไหว",
-    "verbs": { "created": "สร้าง", "updated": "แก้", "deleted": "ลบ", "imported": "นำเข้า", "commented": "คอมเมนต์ใน", "other": "อัปเดต" },
+    "verbs": {
+      "created": "สร้าง",
+      "updated": "แก้",
+      "deleted": "ลบ",
+      "imported": "นำเข้า",
+      "commented": "คอมเมนต์ใน",
+      "other": "อัปเดต"
+    },
     "fieldChange": "{field}",
     "system": "ระบบ",
     "hidden": "สมาชิก"
@@ -97,7 +128,11 @@
     "filters": "ตัวกรอง",
     "status": "Status",
     "allStatus": "ทุกสถานะ",
-    "statusCategory": { "todo": "To do", "in_progress": "In progress", "done": "Done" },
+    "statusCategory": {
+      "todo": "To do",
+      "in_progress": "In progress",
+      "done": "Done"
+    },
     "assignee": "Dev",
     "anyone": "ทุกคน",
     "me": "ฉัน",
@@ -116,12 +151,23 @@
     "myView": "งานของฉัน",
     "filter": "Filter",
     "groupBy": "Group by",
-    "groups": { "module": "Module › กลุ่มงาน", "status": "Status", "assignee": "Assignee", "priority": "Priority", "none": "None" },
+    "groups": {
+      "module": "Module › กลุ่มงาน",
+      "status": "Status",
+      "assignee": "Assignee",
+      "priority": "Priority",
+      "none": "None"
+    },
     "ba": "BA",
     "size": "Size",
     "allSizes": "ทั้งหมด",
     "sort": "Sort",
-    "sorts": { "rank": "Manual", "number": "Key", "planEnd": "Plan End", "priority": "Priority" },
+    "sorts": {
+      "rank": "Manual",
+      "number": "Key",
+      "planEnd": "Plan End",
+      "priority": "Priority"
+    },
     "columns": "Columns",
     "showCompleted": "Show completed",
     "importExport": "Import / Export Excel",
@@ -150,7 +196,18 @@
     "collapseAll": "Collapse all",
     "expand": "ขยาย {name}",
     "collapse": "ย่อ {name}",
-    "cols": { "name": "Name", "dev": "Dev", "ba": "BA", "status": "Status", "size": "Size · MD", "start": "Plan Start", "end": "Plan End", "actual": "Actual", "progress": "Progress", "priority": "Priority" },
+    "cols": {
+      "name": "Name",
+      "dev": "Dev",
+      "ba": "BA",
+      "status": "Status",
+      "size": "Size · MD",
+      "start": "Plan Start",
+      "end": "Plan End",
+      "actual": "Actual",
+      "progress": "Progress",
+      "priority": "Priority"
+    },
     "select": "เลือก {key}",
     "selectAll": "เลือกทั้งหมดที่แสดง",
     "selected": "{count} รายการที่เลือก",
@@ -178,6 +235,24 @@
     "empty": "ยังไม่มีงานในโปรเจกต์",
     "emptyFiltered": "ไม่พบงานตามตัวกรองนี้",
     "rows": "แสดง {shown} จาก {total} แถว",
-    "virtualHint": "ตารางโหลดทีละส่วนเมื่อเลื่อน · คลิกชื่องานเพื่อเปิดรายละเอียด"
+    "virtualHint": "ตารางโหลดทีละส่วนเมื่อเลื่อน · คลิกชื่องานเพื่อเปิดรายละเอียด",
+    "currentSprintView": "Sprint ปัจจุบัน",
+    "backlogView": "Backlog",
+    "structure": {
+      "createModule": "เพิ่ม Module",
+      "renameModule": "เปลี่ยนชื่อ Module",
+      "createPhase": "เพิ่มกลุ่มงาน",
+      "renamePhase": "เปลี่ยนชื่อกลุ่มงาน",
+      "moduleName": "ชื่อ Module",
+      "phaseName": "ชื่อกลุ่มงาน",
+      "color": "สี Module",
+      "cancel": "ยกเลิก",
+      "create": "เพิ่ม",
+      "save": "บันทึก",
+      "saved": "บันทึกโครงงานแล้ว",
+      "failed": "บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง",
+      "moduleMenu": "จัดการ Module {name}",
+      "renamePhaseNamed": "เปลี่ยนชื่อกลุ่มงาน {name}"
+    }
   }
 }

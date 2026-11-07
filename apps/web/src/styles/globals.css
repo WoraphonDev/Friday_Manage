@@ -1431,3 +1431,14 @@ kbd {
     padding: 16px;
   }
 }
+
+/* ช่องค้นหาในเมนู Projects มือถือไม่ใช้กฎซ่อนข้อความของ top bar */
+@media(max-width:760px) {
+  .drawer-search { flex:none; justify-content:flex-start; min-height:44px; padding:0 12px; border:1px solid var(--border); background:var(--background); }
+  .drawer-search > span { display:block; }
+}
+
+/* เมนูที่ใช้ button ต้องไม่มีกรอบและพื้นของ browser ต่างจากรายการที่ใช้ Link */
+button.menu-item { width:100%; border:0; background:transparent; font:inherit; text-align:left; cursor:pointer; gap:8px; }
+button.menu-item:hover,button.menu-item:focus-visible { background:#f1f3f5; }
+button.menu-item:disabled { cursor:default; opacity:.5; }

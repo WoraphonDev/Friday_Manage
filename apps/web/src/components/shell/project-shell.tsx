@@ -21,6 +21,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { IssueDrawer } from "@/features/issue-drawer/IssueDrawer";
+import { withoutDrawerParams } from "@/features/issue-drawer/url";
 import { useWorkspace } from "./workspace-shell";
 
 // ใช้ queryKey เดียวกับหน้า Overview และหน้า Members เพื่อไม่ยิง API ซ้ำเมื่อเปิดหน้านั้น
@@ -205,9 +206,7 @@ export function ProjectShell({
   const newIssue =
     search.get("new") === "1" && access.permissions.includes("issue.create");
   function closeDrawer() {
-    const params = new URLSearchParams(search);
-    params.delete("issue");
-    params.delete("new");
+    const params = withoutDrawerParams(search, pathname);
     router.replace(`${pathname}${params.size ? `?${params}` : ""}`, {
       scroll: false,
     });

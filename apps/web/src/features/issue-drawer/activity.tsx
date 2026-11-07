@@ -8,7 +8,7 @@ import { BodyText, Failure, PersonView, when } from './shared';
 import { issuePath, issueQuery, type Activity, type Comment, type Feed, type Scope } from './types';
 import styles from './issue-drawer.module.css';
 
-export function ActivityPanel({ scope, issueKey }: { scope: Scope; issueKey: string }) {
+export function ActivityPanel({ scope, issueKey, showFeed = true, showComposer = true, compact = false }: { scope: Scope; issueKey: string; showFeed?: boolean; showComposer?: boolean; compact?: boolean }) {
   const t = useTranslations('issue-drawer');
   const cache = useQueryClient();
   const endpoint = issuePath(scope.ws, issueKey);
@@ -54,6 +54,7 @@ export function ActivityPanel({ scope, issueKey }: { scope: Scope; issueKey: str
   if (!feed.data) return <LoadingState />;
   const items = feed.data.pages.flatMap((page) => page.items);
   return <div className={styles.stack}>
+    {showFeed && <>
     {items.length === 0 && <p className="muted">{t('noActivity')}</p>}
     <ol className={styles.feed}>{items.map((item) => <li key={`${item.kind}-${item.id}`} className={styles.feedItem}>
       <div className={styles.feedHeading}><PersonView person={item.kind === 'comment' ? item.author : item.actor} /><time dateTime={item.createdAt}>{when(item.createdAt, scope.yearFormat)}</time></div>
@@ -64,8 +65,9 @@ export function ActivityPanel({ scope, issueKey }: { scope: Scope; issueKey: str
       </div>}
     </li>)}</ol>
     {feed.hasNextPage && <Button disabled={feed.isFetchingNextPage} onClick={() => void feed.fetchNextPage()}>{t('loadMore')}</Button>}
-    {commentable && <form className={styles.composer} onSubmit={(event) => { event.preventDefault(); void change(() => api.post(`${endpoint}/comments`, { body }), () => setBody('')); }}>
-      <label className="field">{t('writeComment')}<textarea ref={textarea} className="input" required maxLength={20000} value={body} onChange={(event) => setBody(event.target.value)} disabled={pending} /></label>
+    </>}
+    {showComposer && commentable && <form className={`${styles.composer}${compact ? ` ${styles.compactComposer}` : ''}`} onSubmit={(event) => { event.preventDefault(); void change(() => api.post(`${endpoint}/comments`, { body }), () => setBody('')); }}>
+      <label className="field"><span className={compact ? "sr-only" : undefined}>{t('writeComment')}</span><textarea ref={textarea} rows={compact ? 1 : undefined} placeholder={compact ? t('commentPlaceholder') : undefined} className="input" required maxLength={20000} value={body} onChange={(event) => setBody(event.target.value)} disabled={pending} /></label>
       {suggestions.length > 0 && <div className={styles.mentionOptions} role="group" aria-label={t('mentionMembers')}>{suggestions.map((person) => <Button size="small" key={person.id} onClick={() => { setBody(body.slice(0, body.lastIndexOf('@')) + `@[${person.displayName}](${person.id}) `); textarea.current?.focus(); }}>{person.displayName}</Button>)}</div>}
       <div className={styles.composerFooter}><span className="muted">{t('markdownHint')}</span><Button type="submit" variant="primary" disabled={pending || !body.trim()}>{t('send')}</Button></div>
     </form>}

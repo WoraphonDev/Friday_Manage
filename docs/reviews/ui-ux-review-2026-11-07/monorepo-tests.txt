@@ -1,0 +1,153 @@
+> friday-manage@ test <isolated-checkout>
+> pnpm -r --workspace-concurrency=1 test
+
+Scope: 5 of 6 workspace projects
+
+> @friday/ops-web@0.0.0 test <isolated-checkout>/apps/ops-web
+> vitest run
+
+
+ RUN  v5.1.0 <isolated-checkout>/apps/ops-web
+
+
+ Test Files  7 passed (7)
+      Tests  53 passed (53)
+   Start at  01:24:40
+   Duration  9.02s (tests 53%, environment 23%, setup 12%, import 10%, transform 2%)
+
+    Isolate  7 workers spawned · ~363ms startup each (spawn + environment, per file)
+             at least ~2.18s faster with isolate: false — reuses workers across files instead of one per file
+
+
+> @friday/web@0.0.0 test <isolated-checkout>/apps/web
+> vitest run
+
+
+ RUN  v5.1.0 <isolated-checkout>/apps/web
+
+Not implemented: navigation to another Document
+
+ Test Files  25 passed (25)
+      Tests  435 passed (435)
+   Start at  01:24:50
+   Duration  99.42s (tests 70%, import 18%, environment 8%, setup 4%)
+
+    Isolate  25 workers spawned · ~401ms startup each (spawn + environment, per file)
+             at least ~9.62s faster with isolate: false — reuses workers across files instead of one per file
+
+
+> @friday/db@0.0.0 test <isolated-checkout>/packages/db
+> vitest run
+
+
+ RUN  v5.1.0 <isolated-checkout>/packages/db
+
+
+ Test Files  4 passed (4)
+      Tests  107 passed (107)
+   Start at  01:26:29
+   Duration  5.16s (tests 82%, import 15%, transform 3%)
+
+    Isolate  4 workers spawned · ~112ms startup each (spawn + environment, per file)
+             at least ~335ms faster with isolate: false — reuses workers across files instead of one per file
+
+
+> @friday/api@0.0.0 test <isolated-checkout>/apps/api
+> vitest run
+
+
+ RUN  v5.1.0 <isolated-checkout>/apps/api
+
+[Nest] 92326  - 11/07/2026, 1:26:38 AM    WARN [Realtime] notification poll failed: db down (ทดสอบ)
+(node:92336) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:92356) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:92357) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:92358) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:92362) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:92377) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [Jobs] channels.deliver (deliver-01a1b21d-d1f8-72e1-961e-dcacce45c9f7) ล้มครั้งที่ 1: smtp down
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [Jobs] channels.deliver (deliver-01a1b21d-d1f8-72e1-961e-dcacce45c9f7) ล้มครั้งที่ 2: smtp down
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [Jobs] channels.deliver (deliver-01a1b21d-d20c-7bb3-9a59-16f165d6d8ae) ล้มครั้งที่ 1: smtp down
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [Jobs] channels.deliver (deliver-01a1b21d-d20c-7bb3-9a59-16f165d6d8ae) ล้มครั้งที่ 2: smtp down
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [Jobs] channels.deliver (deliver-01a1b21d-d20c-7bb3-9a59-16f165d6d8ae) ล้มครั้งที่ 3: smtp down
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [ChannelDispatcher] delivery 01a1b21d-d20c-7bb3-9a59-16f165d6d8ae failed: smtp down
+[Nest] 92399  - 11/07/2026, 1:27:41 AM   ERROR [Jobs] channels.deliver (deliver-01a1b21d-d20c-7bb3-9a59-16f165d6d8ae) ล้มครั้งที่ 4: smtp down
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [Jobs] channels.deliver (deliver-01a1b21d-d2de-758a-9e42-f11d676865bc) ล้มครั้งที่ 1: Webhook ตอบ HTTP 500
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [Jobs] channels.deliver (deliver-01a1b21d-d2de-758a-9e42-f11d676865bc) ล้มครั้งที่ 2: Webhook ตอบ HTTP 502
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [Jobs] channels.deliver (deliver-01a1b21d-d301-73ee-9386-cf8811469b34) ล้มครั้งที่ 1: Webhook ตอบ HTTP 500
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [Jobs] channels.deliver (deliver-01a1b21d-d301-73ee-9386-cf8811469b34) ล้มครั้งที่ 2: Webhook ตอบ HTTP 500
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [Jobs] channels.deliver (deliver-01a1b21d-d301-73ee-9386-cf8811469b34) ล้มครั้งที่ 3: Webhook ตอบ HTTP 500
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [ChannelDispatcher] delivery 01a1b21d-d301-73ee-9386-cf8811469b34 failed: Webhook ตอบ HTTP 500
+[Nest] 92399  - 11/07/2026, 1:27:41 AM   ERROR [Jobs] channels.deliver (deliver-01a1b21d-d301-73ee-9386-cf8811469b34) ล้มครั้งที่ 4: Webhook ตอบ HTTP 500
+[Nest] 92399  - 11/05/2026, 8:30:00 AM    WARN [ChannelDispatcher] delivery 01a1b21d-d3df-74b2-9e72-76414b49a7f9 failed: ยกเลิกการส่ง: ผู้รับไม่มีสิทธิ์เห็นข้อมูลนี้แล้ว
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [ChannelDispatcher] delivery 01a1b21d-d3eb-700c-b195-c5fc904389eb failed: ยกเลิกการส่ง: ผู้รับไม่มีสิทธิ์เห็นข้อมูลนี้แล้ว
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [ChannelDispatcher] delivery 01a1b21d-d3ef-7e15-8764-b1fbb1e1726e failed: ยกเลิกการส่ง: ผู้รับไม่มีสิทธิ์เห็นข้อมูลนี้แล้ว
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [ChannelDispatcher] delivery 01a1b21d-d3f5-77a1-b7f2-7969541a9295 failed: ยกเลิกการส่ง: ผู้รับปิดช่องทางนี้ของเหตุการณ์นี้แล้ว
+[Nest] 92399  - 11/07/2026, 1:27:41 AM    WARN [ChannelDispatcher] delivery 01a1b21d-d42d-7fe8-bc93-f9e66f83d878 failed: ยกเลิกการส่ง: ผู้รับไม่มีสิทธิ์เห็นข้อมูลนี้แล้ว
+[Nest] 92399  - 11/07/2026, 1:27:42 AM   ERROR [Error] req_e28ca20d AppError: ส่งอีเมลทดสอบไม่สำเร็จ
+    at ChannelsService.testEmail (<isolated-checkout>/apps/api/src/channels/channels.service.ts:176:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-execution-context.js:81:62
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-proxy.js:9:17
+[Nest] 92402  - 11/07/2026, 1:27:43 AM   ERROR [Error] req_bb2185f4 AppError: ยังไม่ได้ตั้ง GITHUB_WEBHOOK_SECRET
+    at GitService.receive (<isolated-checkout>/apps/api/src/git/git.service.ts:160:24)
+    at GithubHooksController.hook (<isolated-checkout>/apps/api/src/git/git.controller.ts:90:21)
+    at /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-execution-context.js:50:37
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-execution-context.js:81:62
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-proxy.js:9:17
+[Nest] 92402  - 11/07/2026, 1:27:44 AM   ERROR [Error] req_4c9dada6 AppError: ดึงข้อมูลจาก GitHub ไม่สำเร็จ
+    at GitService.sync (<isolated-checkout>/apps/api/src/git/git.service.ts:138:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-execution-context.js:81:62
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-proxy.js:9:17
+[Nest] 92404  - 11/07/2026, 1:27:48 AM   ERROR [Error] req_0ce4485f AppError: เชื่อม LINE ไม่สำเร็จ · ตรวจ Channel access token
+    at LineService.testConfig (<isolated-checkout>/apps/api/src/line/line.service.ts:111:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-execution-context.js:81:62
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-proxy.js:9:17
+[Nest] 92404  - 11/07/2026, 1:27:48 AM   ERROR [Error] req_e854c99e AppError: ส่งข้อความไป LINE ไม่สำเร็จ
+    at LineService.testMine (<isolated-checkout>/apps/api/src/line/line.service.ts:163:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-execution-context.js:81:62
+    at async /Users/mickitang/Documents/Friday_Manage/Friday_Manage/node_modules/.pnpm/@nestjs+core@11.2.8_@nestjs+common@11.2.8_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_64aa98f3b73ec814662f900af4df5a48/node_modules/@nestjs/core/router/router-proxy.js:9:17
+[Nest] 92404  - 11/07/2026, 1:27:48 AM    WARN [ChannelDispatcher] delivery 01a1b21d-ef74-7bbb-9623-518dd83b46ee failed: LINE ตอบ HTTP 403
+[Nest] 92404  - 11/07/2026, 1:27:48 AM   ERROR [Jobs] channels.deliver (deliver-01a1b21d-ef74-7bbb-9623-518dd83b46ee) ล้มครั้งที่ 1: LINE ตอบ HTTP 403
+(node:92406) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[Nest] 92406  - 11/07/2026, 1:27:52 AM   ERROR [Exports] export 01a1b21d-fda4-7686-8ac8-e0c10ad67722 ล้มเหลว: ผู้ขอไม่ใช่ Owner / Admin ของ Workspace แล้ว
+(node:92410) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[Nest] 92438  - 11/07/2026, 1:28:05 AM    WARN [Jobs] test.flaky (3d1a9a52-c1e4-4997-b7fc-6c8330433948) ล้มครั้งที่ 1: ชั่วคราว
+[Nest] 92438  - 11/07/2026, 1:28:05 AM    WARN [Jobs] test.flaky (3d1a9a52-c1e4-4997-b7fc-6c8330433948) ล้มครั้งที่ 2: ชั่วคราว
+[Nest] 92438  - 11/07/2026, 1:28:05 AM    WARN [Jobs] test.broken (ad1ca829-dfae-496f-98fa-d178a74a9fef) ล้มครั้งที่ 1: เสียถาวร
+[Nest] 92438  - 11/07/2026, 1:28:05 AM    WARN [Jobs] test.broken (ad1ca829-dfae-496f-98fa-d178a74a9fef) ล้มครั้งที่ 2: เสียถาวร
+[Nest] 92438  - 11/07/2026, 1:28:05 AM    WARN [Jobs] test.broken (ad1ca829-dfae-496f-98fa-d178a74a9fef) ล้มครั้งที่ 3: เสียถาวร
+[Nest] 92438  - 11/07/2026, 1:28:05 AM   ERROR [Jobs] test.broken (ad1ca829-dfae-496f-98fa-d178a74a9fef) ล้มครั้งที่ 4: เสียถาวร
+[Nest] 92438  - 11/07/2026, 1:28:05 AM   ERROR [Jobs] test.unrecoverable (d27e9970-f5f0-40d5-aed7-e5cf0acfa02a) ล้มครั้งที่ 1: ข้อมูลผิด ลองใหม่ก็ไม่ผ่าน
+(node:92446) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ Test Files  37 passed | 1 skipped (38)
+      Tests  571 passed | 6 skipped (577)
+   Start at  01:26:35
+   Duration  103.00s (tests 66%, import 32%, transform 2%)
+
+
+> @friday/ops-api@0.0.0 test <isolated-checkout>/apps/ops-api
+> vitest run
+
+
+ RUN  v5.1.0 <isolated-checkout>/apps/ops-api
+
+
+ Test Files  1 passed (1)
+      Tests  20 passed (20)
+   Start at  01:28:18
+   Duration  1.56s (tests 51%, import 37%, transform 13%)

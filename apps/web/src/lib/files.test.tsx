@@ -158,6 +158,14 @@ describe("Files (8)", () => {
     expect(await screen.findByRole("heading", { name: /ผลการค้นหา “ตาราง”/ })).toBeInTheDocument();
   });
 
+  it("?file= จากลิงก์หลักฐานผลทดสอบเลือกไฟล์นั้นทันที", async () => {
+    navigation.search = `file=${F2}`;
+    mount();
+    const row = await screen.findByTestId("file-ตารางทดสอบ.xlsx");
+    await waitFor(() => expect(within(row).getByRole("button", { name: "ตารางทดสอบ.xlsx" })).toHaveAttribute("aria-pressed", "true"));
+    expect(within(screen.getByTestId("file-ข้อกำหนดระบบ.pdf")).getByRole("button", { name: "ข้อกำหนดระบบ.pdf" })).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("อัปโหลด 3 ขั้น (upload-url → PUT → ยืนยัน) จากปุ่มและการลากวาง · ไฟล์ใหญ่เกิน 100 MB ไม่ส่ง", async () => {
     const user = userEvent.setup();
     mount();

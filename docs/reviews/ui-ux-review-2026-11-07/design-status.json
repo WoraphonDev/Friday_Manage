@@ -1,0 +1,263 @@
+[
+  {
+    "id": "VD01",
+    "title": "Sidebar desktop กว้างและจัดเมนูต่างจากแบบ",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "Main",
+      "Table",
+      "Home",
+      "MyTasks",
+      "Inbox",
+      "Profile"
+    ]
+  },
+  {
+    "id": "VD02",
+    "title": "Project header สูญเสียองค์ประกอบและสูงกว่า Canvas",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "Main",
+      "Table",
+      "Kanban",
+      "Timeline",
+      "Gantt",
+      "Calendar",
+      "Members",
+      "Files",
+      "Backlog",
+      "ProjectSettings"
+    ]
+  },
+  {
+    "id": "VD03",
+    "title": "หน้าบริบทเฉพาะยังถูกครอบด้วย Workspace/Project shell เต็มชุด",
+    "status": "ต่างโดยตั้งใจ",
+    "note": "เลือกต่างจาก Canvas: คง Sidebar/แท็บเพื่อไม่ให้ทางนำทางเปลี่ยนเมื่อสลับหน้า ตามการตัดสินใจที่บันทึกไว้ 2026-11-07",
+    "boards": [
+      "AdminConsole",
+      "LeadDashboard",
+      "Reports",
+      "NotifyTemplates",
+      "Automation",
+      "Checkout"
+    ]
+  },
+  {
+    "id": "VD04",
+    "title": "Mobile app bar และ bottom navigation ไม่ตรง M2–M7",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "MobileHome",
+      "MobileMyTasks",
+      "MobileInbox",
+      "MobileOverview",
+      "MobileKanban"
+    ]
+  },
+  {
+    "id": "VD05",
+    "title": "Overview summary เปลี่ยนจากการ์ดรวมเป็น 5 การ์ด",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "Main",
+      "MobileOverview"
+    ]
+  },
+  {
+    "id": "VD06",
+    "title": "Overview KPI/list/ข้อมูลโปรเจกต์จัดใหม่คนละโครง",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "Main"
+    ]
+  },
+  {
+    "id": "VD07",
+    "title": "Table toolbar ขาดชุดควบคุมในแบบ",
+    "status": "ยังไม่ปิด",
+    "note": "Toolbar/Views แก้แล้ว แต่ FR/Screen ยังไม่มีข้อมูลในแถว API",
+    "boards": [
+      "Table"
+    ]
+  },
+  {
+    "id": "VD08",
+    "title": "Table ใช้ native select ทุกแถวและสลับชุดคอลัมน์",
+    "status": "ยังไม่ปิด",
+    "note": "Status pill และ columns หลักตรงขึ้น; FR/Screen ยังขาด",
+    "boards": [
+      "Table"
+    ]
+  },
+  {
+    "id": "VD09",
+    "title": "Table bulk bar และ action ของแถวอยู่ผิดตำแหน่ง",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "Table"
+    ]
+  },
+  {
+    "id": "VD10",
+    "title": "Task create drawer ใช้กรอบเดียวกับ detail และ form arrangement ต่าง",
+    "status": "ยังไม่ปิด",
+    "note": "Drawer/บริบทสร้างงานแก้แล้ว; Requirement/Screen/Labels/Watchers ของฟอร์ม B ยังไม่ครบ",
+    "boards": [
+      "TaskCreate"
+    ]
+  },
+  {
+    "id": "VD11",
+    "title": "สร้าง Bug/Story/Spike ใช้ drawer แทน centered modal",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "IssueCreate"
+    ]
+  },
+  {
+    "id": "VD12",
+    "title": "Task/Bug detail เปลี่ยน information architecture",
+    "status": "ยังไม่ปิด",
+    "note": "โครงรายละเอียดและ QA ของ Sub-task แก้แล้ว; Requirement/Screen/Labels ยังไม่ครบ",
+    "boards": [
+      "TaskDetail",
+      "BugDetail"
+    ]
+  },
+  {
+    "id": "VD13",
+    "title": "Sub-task มี parent navigation ซ้ำและ rail/พื้นที่เนื้อหาต่าง",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "Rail ของ desktop คงไว้; มือถือไม่ซ้ำ parent bar และ Commits แสดงทุกรายการพร้อมลิงก์/ผู้เขียน/วันที่",
+    "boards": [
+      "SubtaskModal",
+      "MobileSubtask"
+    ]
+  },
+  {
+    "id": "VD14",
+    "title": "Mobile Home ยังเป็น desktop ที่ยุบคอลัมน์",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "MobileHome"
+    ]
+  },
+  {
+    "id": "VD15",
+    "title": "Mobile Overview ไม่ใช้ summary compact ของ M6",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "MobileOverview"
+    ]
+  },
+  {
+    "id": "VD16",
+    "title": "Mobile My Tasks/Inbox ไม่ใช้โครง toolbar และ list ของ M2/M3",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "MobileMyTasks",
+      "MobileInbox"
+    ]
+  },
+  {
+    "id": "VD17",
+    "title": "Mobile Kanban toolbar/card actions ต่างจาก M7",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "MobileKanban"
+    ]
+  },
+  {
+    "id": "VD18",
+    "title": "Mobile Sub-task properties ดันเนื้อหาหลักพ้นจอ",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "เพิ่มแท็บ M4, QA API, คุณสมบัติหลัก4แถว และ composer ที่กดส่งได้ทุกแท็บ",
+    "boards": [
+      "MobileSubtask"
+    ]
+  },
+  {
+    "id": "VD19",
+    "title": "Import บนมือถือ: เมนูล่างบังปุ่มถัดไปจนแตะไม่ได้",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ปุ่ม step2 ใช้ pointer ได้ และแก้กริดผลตรวจมือถือให้อ่านได้",
+    "boards": [
+      "ImportExcel"
+    ]
+  },
+  {
+    "id": "VD20",
+    "title": "Profile notification connections ขาดการ์ดกลุ่มทีม",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "source ปัจจุบันมีการ์ดกลุ่มทีมครบ4ใบ",
+    "boards": [
+      "Profile"
+    ]
+  },
+  {
+    "id": "VD21",
+    "title": "Invite dialog ใช้ controls/สัดส่วนต่างจาก H",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "WorkspaceMembers"
+    ]
+  },
+  {
+    "id": "VD22",
+    "title": "Due request dialog ขาดตัวเพิ่มวันและจัดส่วนผลกระทบต่าง",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "แก้เกณฑ์ audit เดิม: K3 ไม่มีตัวเพิ่ม Nวันแยก ต้องตรวจคู่วันที่และผลกระทบ preview แทน",
+    "boards": [
+      "DueRequest"
+    ]
+  },
+  {
+    "id": "VD23",
+    "title": "Delete confirmation ไม่มีตัวเลือกจัดการ Sub-task ตาม P3",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "ConfirmDialogs"
+    ]
+  },
+  {
+    "id": "VD24",
+    "title": "Notification toast ไม่รองรับ action ใน Canvas K4",
+    "status": "ยังไม่ปิด",
+    "note": "Toast รองรับ actor/secondary/actions และ Bell แสดงรายการ; ยังไม่ยืนยัน realtime/action ทุกเหตุการณ์กับบริการจริง",
+    "boards": [
+      "Bell"
+    ]
+  },
+  {
+    "id": "VD25",
+    "title": "Command palette อยู่สูงกว่าแบบ 56 px",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "Search"
+    ]
+  },
+  {
+    "id": "VD26",
+    "title": "New Project template choices จัด grid ต่างจาก A",
+    "status": "ผ่านในสถานะที่ตรวจ",
+    "note": "ภาพและองค์ประกอบหลักผ่านใน fixture/state ที่ระบุ; ไม่ใช่การรับรองทุกข้อมูลและ interaction",
+    "boards": [
+      "NewProject"
+    ]
+  }
+]

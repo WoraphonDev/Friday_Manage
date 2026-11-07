@@ -1,6 +1,10 @@
 {
   "overview": {
-    "scope": { "label": "View", "all": "Whole project", "mine": "My tasks" },
+    "scope": {
+      "label": "View",
+      "all": "Whole project",
+      "mine": "My tasks"
+    },
     "allModules": "All Modules",
     "moduleFilter": "Filter Module",
     "progressTitle": "Project progress",
@@ -18,7 +22,11 @@
     "noMilestone": "No upcoming Milestones",
     "health": {
       "title": "Health: {level}",
-      "levels": { "on_track": "On track", "at_risk": "At risk", "off_track": "Off track" },
+      "levels": {
+        "on_track": "On track",
+        "at_risk": "At risk",
+        "off_track": "Off track"
+      },
       "behind": "{count, plural, one {{count} task behind plan} other {{count} tasks behind plan}}",
       "overdue": "Overdue {count, plural, one {{count} task} other {{count} tasks}}",
       "top": "({name} {count})",
@@ -48,7 +56,19 @@
     "noDoneStatus": "This issue type has no Done status",
     "conflict": "Someone else changed this task. Try again.",
     "progressLabel": "Project progress {pct} percent",
-    "mobile": { "updatedBy": "Updated {time}", "line": "{done} / {total} tasks · {time}% of time used", "openBugs": "Open bugs", "pending": "Pending approval", "risks": "Risks", "noRisks": "No risks found", "riskOverdue": "{name} has {count} overdue tasks", "riskCapacity": "Remaining work exceeds capacity", "riskModule": "{name} has {count} overdue", "riskPending": "{count} due-date requests pending", "riskBugs": "{count} open bugs" },
+    "mobile": {
+      "updatedBy": "Updated {time}",
+      "line": "{done} / {total} tasks · {time}% of time used",
+      "openBugs": "Open bugs",
+      "pending": "Pending approval",
+      "risks": "Risks",
+      "noRisks": "No risks found",
+      "riskOverdue": "{name} has {count} overdue tasks",
+      "riskCapacity": "Remaining work exceeds capacity",
+      "riskModule": "{name} has {count} overdue",
+      "riskPending": "{count} due-date requests pending",
+      "riskBugs": "{count} open bugs"
+    },
     "openInTable": "Open in Table →",
     "listEmpty": "No tasks in this list",
     "lateDays": "{days, plural, one {{days} day late} other {{days} days late}}",
@@ -78,7 +98,11 @@
     "milestones": "Milestones",
     "timeline": "Timeline →",
     "milestoneLine": "{date} · Linked tasks {pct}% done",
-    "milestoneBasis": { "linked": "Linked tasks", "module": "Whole Module", "project": "Whole project" },
+    "milestoneBasis": {
+      "linked": "Linked tasks",
+      "module": "Whole Module",
+      "project": "Whole project"
+    },
     "daysLeft": "{days, plural, one {in {days} day} other {in {days} days}}",
     "daysPast": "{days, plural, one {{days} day ago} other {{days} days ago}}",
     "workload": "Workload this week",
@@ -86,7 +110,14 @@
     "workloadLine": "{md} / {cap} MD · {pct}%",
     "activity": "Recent activity",
     "activityEmpty": "No activity yet",
-    "verbs": { "created": "created", "updated": "updated", "deleted": "deleted", "imported": "imported", "commented": "commented on", "other": "updated" },
+    "verbs": {
+      "created": "created",
+      "updated": "updated",
+      "deleted": "deleted",
+      "imported": "imported",
+      "commented": "commented on",
+      "other": "updated"
+    },
     "fieldChange": "{field}",
     "system": "System",
     "hidden": "Member"
@@ -97,7 +128,11 @@
     "filters": "Filters",
     "status": "Status",
     "allStatus": "All statuses",
-    "statusCategory": { "todo": "To do", "in_progress": "In progress", "done": "Done" },
+    "statusCategory": {
+      "todo": "To do",
+      "in_progress": "In progress",
+      "done": "Done"
+    },
     "assignee": "Dev",
     "anyone": "Anyone",
     "me": "Me",
@@ -116,12 +151,23 @@
     "myView": "My tasks",
     "filter": "Filter",
     "groupBy": "Group by",
-    "groups": { "module": "Module › Phase", "status": "Status", "assignee": "Assignee", "priority": "Priority", "none": "None" },
+    "groups": {
+      "module": "Module › Phase",
+      "status": "Status",
+      "assignee": "Assignee",
+      "priority": "Priority",
+      "none": "None"
+    },
     "ba": "BA",
     "size": "Size",
     "allSizes": "All",
     "sort": "Sort",
-    "sorts": { "rank": "Manual", "number": "Key", "planEnd": "Plan End", "priority": "Priority" },
+    "sorts": {
+      "rank": "Manual",
+      "number": "Key",
+      "planEnd": "Plan End",
+      "priority": "Priority"
+    },
     "columns": "Columns",
     "showCompleted": "Show completed",
     "importExport": "Import / Export Excel",
@@ -150,7 +196,18 @@
     "collapseAll": "Collapse all",
     "expand": "Expand {name}",
     "collapse": "Collapse {name}",
-    "cols": { "name": "Name", "dev": "Dev", "ba": "BA", "status": "Status", "size": "Size · MD", "start": "Plan Start", "end": "Plan End", "actual": "Actual", "progress": "Progress", "priority": "Priority" },
+    "cols": {
+      "name": "Name",
+      "dev": "Dev",
+      "ba": "BA",
+      "status": "Status",
+      "size": "Size · MD",
+      "start": "Plan Start",
+      "end": "Plan End",
+      "actual": "Actual",
+      "progress": "Progress",
+      "priority": "Priority"
+    },
     "select": "Select {key}",
     "selectAll": "Select all shown",
     "selected": "{count} selected",
@@ -178,6 +235,24 @@
     "empty": "No tasks in this project yet",
     "emptyFiltered": "No tasks match these filters",
     "rows": "Showing {shown} of {total} rows",
-    "virtualHint": "The table loads in chunks as you scroll · Click a task name to open details"
+    "virtualHint": "The table loads in chunks as you scroll · Click a task name to open details",
+    "currentSprintView": "Current sprint",
+    "backlogView": "Backlog",
+    "structure": {
+      "createModule": "Add module",
+      "renameModule": "Rename module",
+      "createPhase": "Add task group",
+      "renamePhase": "Rename task group",
+      "moduleName": "Module name",
+      "phaseName": "Task group name",
+      "color": "Module color",
+      "cancel": "Cancel",
+      "create": "Add",
+      "save": "Save",
+      "saved": "Project structure saved",
+      "failed": "Could not save. Please try again.",
+      "moduleMenu": "Manage module {name}",
+      "renamePhaseNamed": "Rename task group {name}"
+    }
   }
 }

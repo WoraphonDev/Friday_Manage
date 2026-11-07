@@ -1,16 +1,29 @@
 {
   "title": "Timeline",
-  "zoom": { "label": "Range", "day": "Day", "week": "Week", "month": "Month" },
+  "zoom": {
+    "label": "Range",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month"
+  },
   "prev": "Move back",
   "next": "Move forward",
   "today": "Today",
   "colorBy": "Color by",
   "levelLabel": "Levels shown",
-  "levels": { "module": "Module", "task": "+ Task", "subtask": "+ Sub-task" },
+  "levels": {
+    "module": "Module",
+    "task": "+ Task",
+    "subtask": "+ Sub-task"
+  },
   "groups": "{count, plural, one {{count} phase} other {{count} phases}}",
   "addIn": "Add task to {name}",
   "addMilestone": "+ Milestone",
-  "colors": { "module": "Module", "status": "Status", "assignee": "Assignee" },
+  "colors": {
+    "module": "Module",
+    "status": "Status",
+    "assignee": "Assignee"
+  },
   "rowsLabel": "Module › Task › Sub-task",
   "milestones": "Milestones",
   "todayLine": "Today ({date})",
@@ -27,7 +40,12 @@
   "unscheduledCount": "· {count, plural, one {{count} task has no dates} other {{count} tasks have no dates}}",
   "unscheduledHint": "Drop onto a Task or Module row to set dates",
   "dropHere": "Drop to set the start date",
-  "legend": { "module": "Module", "task": "Task", "subtask": "Sub-task", "late": "Overdue" },
+  "legend": {
+    "module": "Module",
+    "task": "Task",
+    "subtask": "Sub-task",
+    "late": "Overdue"
+  },
   "footer": "Drag a bar to move dates · Drag an edge to resize",
   "saved": "Moved {key} to {start} – {end}",
   "conflict": "This task was changed by someone else. Loaded the latest data",
@@ -41,8 +59,25 @@
   "requestTitle": "Request Due change",
   "requestBody": "You can't change the Due date of {key} yourself · Send a request to the approver to move it to {date}",
   "reason": "Reason",
-  "reasons": { "scope_added": "Scope added", "waiting_input": "Waiting for input", "blocked_by_dependency": "Blocked by a dependency", "estimate_wrong": "Estimate was off", "other": "Other" },
+  "reasons": {
+    "scope_added": "Scope added",
+    "waiting_input": "Waiting for input",
+    "blocked_by_dependency": "Blocked by a dependency",
+    "estimate_wrong": "Estimate was off",
+    "other": "Other"
+  },
   "detail": "Details",
   "send": "Send request",
-  "requested": "Due change request for {key} sent"
+  "requested": "Due change request for {key} sent",
+  "milestoneForm": {
+    "title": "Add milestone",
+    "name": "Milestone name",
+    "date": "Target date",
+    "module": "Module",
+    "allModules": "Whole project",
+    "cancel": "Cancel",
+    "create": "Add",
+    "created": "Milestone added",
+    "failed": "Could not add milestone. Please try again."
+  }
 }

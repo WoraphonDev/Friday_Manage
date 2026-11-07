@@ -7,6 +7,8 @@ import { Check, ChevronLeft, ChevronRight, Link2, MoreHorizontal, RotateCcw, Tra
 import { Avatar, AvatarStack, Badge, Button, Combobox, DatePicker, Dialog, DrawerClose, Input, Select, useToast, LoadingState, ErrorState } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/format';
+import { useIsMobile } from '@/lib/use-mobile';
+import { TestRuns } from './test-runs';
 import { ActivityPanel } from './activity';
 import { Checklist, DependencyPanel } from './issue-parts';
 import { DueRequest } from './due-request';
@@ -17,6 +19,8 @@ import styles from './issue-drawer.module.css';
 
 export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: Scope; issue: Issue; siblings?: Issue[]; onDeleted: (parentKey: string | null) => void }) {
   const t = useTranslations('issue-drawer');
+  const mobile = useIsMobile() && !!issue.parentKey && !scope.access.guestViewer;
+  const [mobileTab, setMobileTab] = useState<'details' | 'tests' | 'commits' | 'comments'>('details');
   const cache = useQueryClient(); const toast = useToast();
   const endpoint = issuePath(scope.ws, issue.key);
   const key = issueQuery(scope.ws, issue.key);
@@ -107,7 +111,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const pillTone = (category: string, name: string) => category === 'done' ? styles.sDone : /review/i.test(name) ? styles.sRev : category === 'in_progress' ? styles.sProg : styles.sTodo;
   const prioColor = { urgent: '#b91c1c', high: '#b45309', medium: '#1d4ed8', low: '#5f6873' }[issue.priority];
   const href = typeof window === 'undefined' ? '' : window.location.href;
-  return <div className={styles.panel} aria-busy={busy}>
+  return <div className={`${styles.panel}${mobile ? ` ${styles.subtaskMobile}` : ''}`} aria-busy={busy}>
     {/* Canvas C/D/K2: แถบหัว Drawer = breadcrumb + Watch / ลิงก์ / ⋯ / ปิด */}
     <div className={styles.dhead}>
       <nav aria-label={t('breadcrumb')} className={styles.crumb}>
@@ -145,7 +149,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
         <select className={`${styles.statusPill} ${pillTone(issue.status.category, issue.status.name)}`} aria-label={t('fields.statusId')} value={issue.status.id} disabled={!canEdit || disabled} onChange={(event) => void move(event.target.value)}>
           {(statuses.length ? statuses : [issue.status]).map((status) => <option key={status.id} value={status.id}>{status.name}</option>)}
         </select>
-        {canEdit && !isDone && doneStatus && issue.type !== 'Bug' && <Button size="small" className={styles.okButton} disabled={disabled} onClick={() => void move(doneStatus.id)}><Check size={15} />{t('markComplete')}</Button>}
+        {canEdit && !isDone && doneStatus && issue.type !== 'Bug' && <Button size="small" className={styles.okButton} disabled={disabled} onClick={() => void move(doneStatus.id)}><Check size={15} />{t(mobile ? 'mobileComplete' : 'markComplete')}</Button>}
         {issue.type === 'Bug' && issue.status.category === 'done' && canEdit && <Button size="small" onClick={() => setReopenOpen(true)} disabled={disabled}><RotateCcw size={14} />{t('reopen')}</Button>}
         <span className={styles.meta}>{t('metaLine', { name: reporter?.displayName ?? t('system'), created: formatDate(issue.createdAt, scope.yearFormat), updated: formatDate(issue.updatedAt, scope.yearFormat, true) })}</span>
       </div>
@@ -156,6 +160,13 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
     </div>
 
     <div className={styles.layout}><div className={styles.main}>
+      {mobile && <div className={styles.tabs} role="tablist" aria-label={t('mobileTabs.label')}>
+        {(['details', 'tests', 'commits', 'comments'] as const).map((tab) => <button key={tab} type="button" role="tab" id={`${issue.key}-tab-${tab}`} aria-selected={mobileTab === tab} tabIndex={mobileTab === tab ? 0 : -1} onKeyDown={(event) => {
+          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault(); const tabs = ['details', 'tests', 'commits', 'comments'] as const; const index = tabs.indexOf(tab); const next = tabs[event.key === 'Home' ? 0 : event.key === 'End' ? 3 : (index + (event.key === 'ArrowRight' ? 1 : 3)) % 4]; setMobileTab(next); document.getElementById(`${issue.key}-tab-${next}`)?.focus();
+        }} aria-controls={`${issue.key}-panel-${tab}`} onClick={() => setMobileTab(tab)}>{t(`mobileTabs.${tab}`)}</button>)}
+      </div>}
+      <div hidden={mobile && mobileTab !== 'details'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-details`} aria-labelledby={mobile ? `${issue.key}-tab-details` : undefined}>
       {(!isBug || issue.description) && <div className={styles.blk}>
         <h3>{t('description')}</h3>
         <BodyText>{issue.description || t('noDescription')}</BodyText>
@@ -170,20 +181,30 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       {(['Story', 'Spike'] as const).includes(issue.type as 'Story') && <div className={`${styles.blk} ${styles.storyFields}`}>
         {(issue.type === 'Story' ? ['as_a', 'i_want', 'so_that'] : ['question', 'timebox_hours', 'deliverable']).map((name) => <div key={name}><div className={styles.k}>{t(`detailFields.${name}`)}</div>{canEdit ? <InlineText label={t(`detailFields.${name}`)} value={String(issue.details[name] ?? '')} enabled multiline busy={disabled} onSave={(value) => patch({ details: { ...issue.details, [name]: name === 'timebox_hours' ? Number(value) : value }, ...(name === 'timebox_hours' ? { estimateMd: Number(value) / 8 } : {}) })} /> : <BodyText>{String(issue.details[name] ?? t('notSet'))}</BodyText>}</div>)}
       </div>}
-      {canEdit && !isBug && <div className={styles.blk}><Checklist scope={scope} issueKey={issue.key} /></div>}
+      {!guest && !isBug && <div className={styles.blk}><Checklist scope={scope} issueKey={issue.key} /></div>}
       {!issue.parentKey && !isBug && <div className={styles.blk}>
         <h3>{t('subtasks')} <span className="muted" style={{ fontWeight: 500 }}>{subDone}/{subtasks.length}</span><span className={styles.subBar}><span style={{ width: `${subtasks.length ? Math.round((subDone / subtasks.length) * 100) : 0}%` }} /></span><span className={styles.meta}>{t('subtaskProgressNote')}</span></h3>
         {subtasks.length === 0 && <p className="muted">{t('noSubtasks')}</p>}
         {subtasks.map((child) => <SubtaskRow key={child.key} scope={scope} child={child} canEdit={canEdit} onChanged={refresh} pillTone={pillTone} />)}
         {canCreate && <QuickSubtask scope={scope} parent={issue} onCreated={refresh} onFullForm={() => scope.createSubtask(issue)} />}
       </div>}
-      {canEdit && <div className={styles.blk}><h3>{t('dependencies')}</h3><DependencyPanel scope={scope} issueKey={issue.key} /></div>}
-      {!guest && <Development scope={scope} issue={issue} />}
+      {!guest && <div className={styles.blk}><h3>{t('dependencies')}</h3><DependencyPanel scope={scope} issueKey={issue.key} /></div>}
       {!guest && <Attachments scope={scope} issue={issue} />}
-      <div className={styles.blk} style={{ borderBottom: 0 }}><h3>{t('activity')}</h3><ActivityPanel scope={scope} issueKey={issue.key} /></div>
+      </div>
+      {!guest && issue.parentKey && <div hidden={mobile && mobileTab !== 'tests'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-tests`} aria-labelledby={mobile ? `${issue.key}-tab-tests` : undefined}><TestRuns scope={scope} issue={issue} /></div>}
+      {!guest && <div hidden={mobile && mobileTab !== 'commits'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-commits`} aria-labelledby={mobile ? `${issue.key}-tab-commits` : undefined}><Development scope={scope} issue={issue} /></div>}
+      <div hidden={mobile && mobileTab !== 'comments'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-comments`} aria-labelledby={mobile ? `${issue.key}-tab-comments` : undefined}><div className={styles.blk} style={{ borderBottom: 0 }}><h3>{t('activity')}</h3><ActivityPanel scope={scope} issueKey={issue.key} showComposer={!mobile} /></div></div>
     </div>
 
     <aside className={styles.sidebar} aria-label={t('properties')}>
+      {mobile && !allProps ? <div className={styles.props}>
+        <PropRow keep k={t('fields.assigneeIds')}>{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void action(() => api.request<Issue>(`${endpoint}/assignees`, { method: 'PUT', etag: issue.version, body: { assigneeIds: ids } })); }} /> : <AvatarStack people={devs} />}</PropRow>
+        <PropRow keep k="Due">{canEdit ? <DatePicker compact label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (disabled) return; if (value && issue.planEnd && value > issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly')) setDue(value); else void patch({ planEnd: value || null }); }} /> : formatDate(issue.planEnd, scope.yearFormat)}</PropRow>
+        <PropRow keep k={t('fields.priority')}>{fieldSelect('priority', issue.priority, ['urgent', 'high', 'medium', 'low'].map((id) => ({ id, name: t(`priority.${id}`) })), undefined, false)}</PropRow>
+        <PropRow keep k="Progress"><span>{issue.progressPct == null ? t('notSet') : `${issue.progressPct}%`}</span></PropRow>
+        <button type="button" className={styles.propsToggle} aria-expanded={false} onClick={() => setAllProps(true)}>{t('moreProperties')}</button>
+      </div> : <>
+
       <div className={`${styles.props}${allProps ? ` ${styles.propsAll}` : ''}`} id={`${issue.key}-props`}>
         <PropRow k={t('fields.statusId')}><span className={`${styles.pill} ${pillTone(issue.status.category, issue.status.name)}`}>{issue.status.name}</span></PropRow>
         {!guest && <PropRow keep k={t('dev')}>{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void action(() => api.request<Issue>(`${endpoint}/assignees`, { method: 'PUT', etag: issue.version, body: { assigneeIds: ids } })); }} /> : <span className={styles.who}><AvatarStack people={devs} /></span>}</PropRow>}
@@ -219,7 +240,9 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       </div>
       <button type="button" className={styles.propsToggle} aria-expanded={allProps} aria-controls={`${issue.key}-props`} onClick={() => setAllProps((value) => !value)}>{t(allProps ? 'lessProperties' : 'moreProperties')}</button>
       <p className={`${styles.meta} ${styles.wideOnly}`} style={{ padding: '10px 4px' }}>{t('propsHint')}</p>
+      </>}
     </aside></div>
+    {mobile && scope.access.permissions.includes('issue.comment') && <div className={styles.mobileComposer}><ActivityPanel scope={scope} issueKey={issue.key} showFeed={false} compact /></div>}
     {due !== null && <DueRequest key={`${issue.key}-${due}`} scope={scope} issue={issue} initialDue={due} onClose={() => { setDue(null); setError(null); }} />}
     <Dialog open={!!reasonIntent} title={t('planReasonTitle')} description={t('planReasonDescription')} onOpenChange={(open) => { if (!open && !busy) setReasonIntent(null); }}><form className={styles.stack} onSubmit={(event) => { event.preventDefault(); if (reasonIntent) void patch(reasonIntent, true); }}><Input label={t('planReason')} required value={planReason} maxLength={1000} onChange={(event) => setPlanReason(event.target.value)} /><Button type="submit" variant="primary" disabled={busy || !planReason.trim()}>{t('save')}</Button>{!!error && <Failure error={error} />}</form></Dialog>
     <Dialog open={!!confirmStatus} title={t('incompleteTitle')} description={t('incompleteDescription')} onOpenChange={(open) => { if (!open && !busy) { setConfirmStatus(null); setError(null); } }}><div className={styles.dialogActions}><Button disabled={busy} onClick={() => { setConfirmStatus(null); setError(null); }}>{t('cancel')}</Button><Button variant="primary" disabled={busy} onClick={() => { if (confirmStatus) void move(confirmStatus, true); }}>{t('confirmMove')}</Button></div></Dialog>

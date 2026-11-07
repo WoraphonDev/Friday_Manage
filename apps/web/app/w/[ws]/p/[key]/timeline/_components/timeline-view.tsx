@@ -12,6 +12,7 @@ import { formatDate, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
 import styles from "./tl.module.css";
+import { MilestoneDialog } from "./milestone-dialog";
 
 type Cat = "todo" | "in_progress" | "done";
 export interface TLRow {
@@ -65,6 +66,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const cache = useQueryClient();
   const toast = useToast();
   const base = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
+  const [milestoneOpen, setMilestoneOpen] = useState(false);
   const [zoom, setZoom] = useState<Zoom>("day");
   const [colorBy, setColorBy] = useState<"module" | "status" | "assignee">("module");
   const [level, setLevel] = useState<"module" | "task" | "subtask">("subtask");
@@ -253,7 +255,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
         <Select aria-label={t("colorBy")} size="small" prefix={t("colorBy")} value={colorBy} onChange={(e) => setColorBy(e.target.value as typeof colorBy)}>
           {(["module", "status", "assignee"] as const).filter((c) => !(guest && c === "assignee")).map((c) => <option key={c} value={c}>{t(`colors.${c}`)}</option>)}
         </Select>
-        {canSettings && <Link className="button button-small" href={`/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/settings/milestones`}>{t("addMilestone")}</Link>}
+        {canSettings && <Button size="small" onClick={() => setMilestoneOpen(true)}>{t("addMilestone")}</Button>}
       </div>
 
       <section className={styles.card}>
@@ -384,6 +386,10 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
       </section>
 
       {needReason && <ReasonDialog onClose={() => setNeedReason(null)} onSave={(reason) => { const p = needReason; setNeedReason(null); void commit({ ...p, reason }); }} />}
+      {milestoneOpen && <MilestoneDialog base={base} initialDate={d.today} modules={d.modules.filter((module): module is typeof module & { id: string } => !!module.id)} onClose={() => setMilestoneOpen(false)} onCreated={async () => {
+        await Promise.all([cache.invalidateQueries({ queryKey: ["timeline", ws, projectKey] }), cache.invalidateQueries({ queryKey: ["overview", ws, projectKey] }), cache.invalidateQueries({ queryKey: ["workspace", ws, "project", projectKey, "settings", "milestones"] })]);
+        toast({ message: t("milestoneForm.created") });
+      }} />}
       {needRequest && <RequestDialog ws={ws} pending={needRequest} year={year} onClose={() => setNeedRequest(null)} onSent={async () => { const k = needRequest.key; setNeedRequest(null); toast({ message: t("requested", { key: k }) }); await cache.invalidateQueries({ queryKey: ["timeline", ws, projectKey] }); }} />}
     </div>
   );

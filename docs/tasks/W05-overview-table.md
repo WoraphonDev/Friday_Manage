@@ -48,3 +48,11 @@
 `src/lib/overview-table.test.tsx` 10 ข้อ (MSW): Overview ทุกส่วน + สลับ KPI + Burn-up, scope / Module ส่ง query, Error + requestId / 403 · Table โครง Module › Task › Sub-task + ย่อ / ขยาย + ตัวกรองทุกตัว (รวม `?overdue=true` จาก Overview), แก้ในแถว + If-Match + เหตุผล Baseline, bulk (Module + Delete พร้อมพิมพ์ยืนยัน), ไม่มีสิทธิ์ / Guest, Saved view, 450 แถว virtualized + เลื่อนแล้ว render แถวใหม่, ว่าง, Error, `buildDisplay` · `pnpm --filter @friday/web typecheck test build` ผ่าน (web 137 test)
 
 **ยังไม่ได้เทียบภาพกับ Canvas ที่ 1440 / 390 px**
+
+### แก้ UX จากการตรวจ Canvas — 2026-11-07
+
+- ตามคำสั่งผู้ใช้ให้แก้ขั้นตอนที่ไม่สมเหตุสมผล: เพิ่ม/เปลี่ยนชื่อ Module และกลุ่มงานใน Table; กลุ่มว่างแสดงได้ และเลื่อนไปกลุ่มใหม่แม้มี 450 แถว
+- +Task ส่งบริบท Module/Phase ไป Drawer; แยกร่างแต่ละกลุ่ม; สร้างแล้วรีเฟรชรายการและล้าง query บริบทเมื่อปิด; เพิ่ม Views Sprint/Backlog ที่ API รองรับ
+- เพิ่มกลุ่มใหม่เปลี่ยนเป็น All tasks เพื่อให้เห็นกลุ่มที่ยังไม่มีงานตรงตัวกรองเดิม; การเปลี่ยนชื่อไม่ล้างตัวกรอง
+- คำขอนอก lane ที่ผู้ใช้อนุญาตแล้ว: W02 รับบริบท/QA/M4, W00 ApiClient ใช้ no-store กัน ETag เดิมคืนข้อมูลเก่าและปรับเมนูมือถือ, W06 สถานะจากคอลัมน์, W07 เพิ่ม Milestone ในหน้าเดิม, W14 ผลตรวจมือถือ
+- [รายงานและภาพ](../reviews/ui-ux-review-2026-11-07.md): web 436 tests และ browser workflow 15/15 ผ่าน; visual checkbox ยังไม่ติ๊กเพราะ FR/Screen และฟิลด์อ้างอิงยังไม่ครบ

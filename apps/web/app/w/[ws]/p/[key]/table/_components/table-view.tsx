@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,13 +15,14 @@ import { queryKeys } from "@/lib/query";
 import type { Permissions } from "@/lib/types";
 import type { Options, Row, SavedView, TableData } from "./types";
 import styles from "./ot.module.css";
+import { StructureDialog, type StructureAction } from "./structure-dialog";
 
 const ROW_H = 44;
 /** เกินจำนวนนี้จะ render เฉพาะแถวที่อยู่ในจอ (virtualized) */
 export const VIRTUAL_AFTER = 300;
 const PAGE = 500;
 const MAX_PAGES = 4;
-const FILTER_KEYS = ["q", "status", "assignee", "ba", "size", "priority", "level", "overdue", "hideDone"] as const;
+const FILTER_KEYS = ["q", "status", "assignee", "ba", "size", "priority", "level", "overdue", "hideDone", "sprint"] as const;
 type Filters = Partial<Record<(typeof FILTER_KEYS)[number], string>>;
 const SIZES = ["XS", "S", "M", "L", "XL"] as const;
 const GROUPS = ["module", "status", "assignee", "priority", "none"] as const;
@@ -34,7 +35,7 @@ const COL_W: Record<Col, number> = { dev: 84, ba: 40, status: 112, size: 78, sta
 
 type Display =
   | { kind: "module"; id: string; name: string; color: string | null; count: number; phases: number; md: number; pct: number; moduleId: string | null; from: string | null; to: string | null }
-  | { kind: "phase"; id: string; name: string; done: number; total: number; md: number }
+  | { kind: "phase"; id: string; moduleId: string | null; phaseId: string | null; name: string; done: number; total: number; md: number }
   | { kind: "issue"; row: Row; sub: boolean }
   | { kind: "add"; id: string; name: string; moduleId: string | null; phaseId: string | null }
   | { kind: "foot"; id: string; count: number; md: number };
@@ -47,7 +48,7 @@ function span(rows: Row[]) {
 }
 
 /** แถวที่แสดง: Module › กลุ่มงาน › Task › Sub-task (Sub-task ตามแม่ทันที) + แถวเพิ่มงานท้ายกลุ่ม + สรุปท้าย Module */
-export function buildDisplay(data: TableData, collapsed: Set<string>, noModule: string, noPhase: string): Display[] {
+export function buildDisplay(data: TableData, collapsed: Set<string>, noModule: string, noPhase: string, includeEmpty = false): Display[] {
   const out: Display[] = [];
   const keys = new Set(data.items.map((r) => r.key));
   const kids = new Map<string, Row[]>();
@@ -55,16 +56,16 @@ export function buildDisplay(data: TableData, collapsed: Set<string>, noModule: 
   for (const m of data.modules) {
     const mid = m.id ?? "none";
     const inModule = data.items.filter((r) => (r.moduleId ?? null) === m.id && !(r.parentKey && keys.has(r.parentKey)));
-    if (!inModule.length) continue;
-    const namedPhases = m.phases.filter((x) => x.id && inModule.some((r) => r.phaseId === x.id)).length;
+    if (!inModule.length && !(includeEmpty && m.id)) continue;
+    const namedPhases = m.phases.filter((x) => x.id && (includeEmpty || inModule.some((r) => r.phaseId === x.id))).length;
     out.push({ kind: "module", id: mid, name: m.name ?? noModule, color: m.color, count: m.taskCount, phases: namedPhases, md: m.estimateMd, pct: m.progressPct, moduleId: m.id, ...span(inModule) });
     if (collapsed.has(mid)) continue;
     for (const ph of m.phases) {
       const roots = inModule.filter((r) => (r.phaseId ?? null) === ph.id);
-      if (!roots.length) continue;
+      if (!roots.length && !(includeEmpty && (ph.id || namedPhases === 0))) continue;
       const pid = `${mid}:${ph.id ?? "none"}`;
       const showPhase = !!ph.id || namedPhases > 0;
-      if (showPhase) out.push({ kind: "phase", id: pid, name: ph.name ?? noPhase, done: ph.doneCount, total: ph.taskCount, md: ph.estimateMd });
+      if (showPhase) out.push({ kind: "phase", id: pid, moduleId: m.id, phaseId: ph.id, name: ph.name ?? noPhase, done: ph.doneCount, total: ph.taskCount, md: ph.estimateMd });
       if (collapsed.has(pid)) continue;
       for (const r of roots) {
         out.push({ kind: "issue", row: r, sub: !!r.parentKey });
@@ -120,6 +121,9 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [scrollTop, setScrollTop] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [structure, setStructure] = useState<StructureAction | null>(null);
+  const [reveal, setReveal] = useState<{ moduleId: string; phaseId?: string } | null>(null);
+  const scroller = useRef<HTMLDivElement>(null);
   const [deleting, setDeleting] = useState(false);
   const [reasonFor, setReasonFor] = useState<{ run: (reason: string) => Promise<void> } | null>(null);
 
@@ -140,6 +144,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   if (filters.priority) params.set("priority", filters.priority);
   if (filters.level) params.set("level", filters.level);
   if (filters.overdue) params.set("overdue", "true");
+  if (filters.sprint) params.set("sprint", filters.sprint);
   const tableKey = ["table", ws, projectKey, params.toString()];
   const table = useQuery({
     queryKey: tableKey,
@@ -161,11 +166,24 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const view = useMemo(() => (table.data && filters.size ? { ...table.data, items: table.data.items.filter((r) => r.size === filters.size) } : table.data), [table.data, filters.size]);
   const display = useMemo(() => {
     if (!view) return [];
-    if (groupBy === "module") return buildDisplay(view, collapsed, t("noModule"), t("noPhase"));
+    if (groupBy === "module") return buildDisplay(view, collapsed, t("noModule"), t("noPhase"), !FILTER_KEYS.some((key) => filters[key]));
     const label = (r: Row) =>
       groupBy === "status" ? r.status.name : groupBy === "assignee" ? (r.assignees?.[0]?.displayName ?? t("noAssignee")) : r.priority;
     return buildFlat(view, collapsed, groupBy, label);
-  }, [view, collapsed, groupBy, t]);
+  }, [view, collapsed, groupBy, filters, t]);
+  useEffect(() => {
+    if (!reveal || structure) return;
+    const index = display.findIndex((row) => reveal.phaseId ? row.kind === "phase" && row.phaseId === reveal.phaseId : row.kind === "module" && row.moduleId === reveal.moduleId);
+    if (index < 0) return;
+    // กลุ่มที่เพิ่งสร้างอาจอยู่พ้นช่วงที่ virtualized table render อยู่
+    if (display.length > VIRTUAL_AFTER && scroller.current) { scroller.current.scrollTop = index * ROW_H; setScrollTop(index * ROW_H); }
+    const frame = requestAnimationFrame(() => {
+      const selector = reveal.phaseId ? `[data-phase-id="${reveal.phaseId}"]` : `[data-module-id="${reveal.moduleId}"]`;
+      scroller.current?.querySelector(selector)?.scrollIntoView({ block: "center" });
+      setReveal(null);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [display, reveal, structure]);
   const statuses = options.data?.issueTypes.find((x) => x.name === "Task")?.statuses ?? [];
   const reload = () => cache.invalidateQueries({ queryKey: ["table", ws, projectKey] });
   const set = (k: keyof Filters, v: string) => { setFilters((f) => ({ ...f, [k]: v || undefined })); setSelected(new Set()); };
@@ -227,6 +245,25 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const span = cols.length + 1;
   const extra = (["status", "priority", "level"] as const).filter((k) => filters[k]).length;
   const activeView = (f: Filters) => JSON.stringify(f) === JSON.stringify(Object.fromEntries(Object.entries(filters).filter(([, x]) => x)));
+  const taskHref = (moduleId?: string | null, phaseId?: string | null) => {
+    const query = new URLSearchParams({ new: "1", type: "task" });
+    if (moduleId) query.set("moduleId", moduleId);
+    if (phaseId) query.set("phaseId", phaseId);
+    return `${page}/table?${query}`;
+  };
+  async function structureSaved(moduleId: string, phaseId?: string) {
+    if (structure?.kind === "createModule" || structure?.kind === "createPhase") { setFilters({}); setGroupBy("module"); setReveal({ moduleId, phaseId }); }
+    setCollapsed((old) => { const next = new Set(old); next.delete(moduleId); if (phaseId) next.delete(`${moduleId}:${phaseId}`); return next; });
+    await Promise.all([
+      reload(),
+      cache.invalidateQueries({ queryKey: ["form-options", ws, projectKey] }),
+      cache.invalidateQueries({ queryKey: ["issue-form-options", ws, projectKey] }),
+      cache.invalidateQueries({ queryKey: queryKeys.project(ws, projectKey), exact: true }),
+      cache.invalidateQueries({ queryKey: ["overview", ws, projectKey] }),
+      cache.invalidateQueries({ queryKey: ["workspace", ws, "project", projectKey, "settings", "modules"] }),
+    ]);
+    toast({ message: t("structure.saved") });
+  }
   const groupIds = display.filter((d) => d.kind === "module" || d.kind === "phase").map((d) => d.id);
 
   return (
@@ -236,6 +273,8 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
         <button type="button" className={styles.chip} aria-pressed={!filtered} onClick={() => setFilters({})}>{t("allTasks")}</button>
         <button type="button" className={styles.chip} aria-pressed={activeView({ assignee: "me" })} onClick={() => setFilters({ assignee: "me" })}>{t("myView")}</button>
         <button type="button" className={styles.chip} aria-pressed={activeView({ overdue: "true" })} onClick={() => setFilters({ overdue: "true" })}>{t("overdue")}</button>
+        <button type="button" className={styles.chip} aria-pressed={activeView({ sprint: "current" })} onClick={() => setFilters({ sprint: "current" })}>{t("currentSprintView")}</button>
+        <button type="button" className={styles.chip} aria-pressed={activeView({ sprint: "none" })} onClick={() => setFilters({ sprint: "none" })}>{t("backlogView")}</button>
         {views.data?.items.map((v) => (
           <span key={v.id} style={{ display: "inline-flex", alignItems: "center" }}>
             <button type="button" className={styles.chip} aria-pressed={activeView(v.filters as Filters)} onClick={() => setFilters(v.filters as Filters)}>{v.name}</button>
@@ -312,8 +351,8 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
           <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set())}>{t("expandAll")}</button>
           <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set(groupIds))}>{t("collapseAll")}</button>
           {canEdit && <Link className={styles.tbtn} href={`/w/${encodeURIComponent(ws)}/import`}>{t("importExport")}</Link>}
-          {canSettings && <Link className={styles.tbtn} href={`${page}/settings/modules`}>{t("addModule")}</Link>}
-          {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={`${page}/table?new=1&type=task`}>{t("addTask")}</Link>}
+          {canSettings && <button type="button" className={styles.tbtn} onClick={() => setStructure({ kind: "createModule" })}>{t("addModule")}</button>}
+          {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={taskHref()}>{t("addTask")}</Link>}
         </div>
       </div>
 
@@ -322,8 +361,9 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
       )}
 
       <section className={styles.card} style={{ overflow: "hidden" }}>
-        {!data.items.length ? <EmptyState title={filtered ? t("emptyFiltered") : t("empty")} /> : (
-          <div className={styles.tableWrap} style={virtual ? { height: viewH } : undefined} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)} data-testid="table-scroll">
+        {!data.items.length && display.length > 0 && <EmptyState title={t("empty")} />}
+        {!display.length ? <EmptyState title={filtered ? t("emptyFiltered") : t("empty")} /> : (
+          <div className={styles.tableWrap} style={virtual ? { height: viewH } : undefined} ref={scroller} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)} data-testid="table-scroll">
             <table className={styles.table} aria-rowcount={display.length + 1}>
               <colgroup><col />{cols.map((c) => <col key={c} style={{ width: COL_W[c] + 10 }} />)}</colgroup>
               <thead>
@@ -340,23 +380,30 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
               <tbody>
                 {virtual && start > 0 && <tr aria-hidden="true"><td colSpan={span} style={{ height: start * ROW_H, padding: 0 }} /></tr>}
                 {shown.map((d) => d.kind === "module" ? (
-                  <tr key={d.id} className={styles.moduleRow}>
+                  <tr key={d.id} data-module-id={d.moduleId ?? undefined} className={styles.moduleRow}>
                     <td colSpan={span}>
                       <div className={styles.mrow}>
                         <button type="button" className={styles.chv} aria-expanded={!collapsed.has(d.id)} aria-label={t(collapsed.has(d.id) ? "expand" : "collapse", { name: d.name })} onClick={() => toggle(d.id)}>
                           <ChevronDown size={16} style={{ transform: collapsed.has(d.id) ? "rotate(-90deg)" : undefined }} />
                         </button>
                         {d.color !== null && <span className={styles.swatch} style={{ background: d.color }} />}
-                        <span className={styles.mname}>{d.name}</span>
+                        <span className={styles.mname} onDoubleClick={canSettings && d.moduleId ? () => setStructure({ kind: "renameModule", id: d.moduleId!, name: d.name }) : undefined}>{d.name}</span>
+                        {groupBy === "module" && canSettings && d.moduleId && <Popover.Root>
+                          <Popover.Trigger asChild><button type="button" className={styles.chv} aria-label={t("structure.moduleMenu", { name: d.name })}>⋯</button></Popover.Trigger>
+                          <Popover.Portal><Popover.Content className="popover" align="start" sideOffset={4}>
+                            <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "renameModule", id: d.moduleId!, name: d.name })}>{t("structure.renameModule")}</button></Popover.Close>
+                            <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "createPhase", moduleId: d.moduleId!, moduleName: d.name })}>{t("structure.createPhase")}</button></Popover.Close>
+                          </Popover.Content></Popover.Portal>
+                        </Popover.Root>}
                         <span className={styles.muted} style={{ fontSize: 13 }}>{groupBy === "module" ? t("moduleTasks", { count: d.count, phases: d.phases }) : t("groupTasks", { count: d.count })}</span>
                         <span className={styles.mbar}><span><span style={{ width: `${d.pct}%`, background: d.color ?? "var(--primary)" }} /></span><b>{d.pct}%</b></span>
                         <span className={styles.muted} style={{ fontSize: 13, marginLeft: 8 }}>{d.from && d.to ? `${formatDate(d.from, year)} – ${formatDate(d.to, year)}` : `${d.md} MD`}</span>
-                        {groupBy === "module" && canCreate && <Link className={styles.addb} style={{ marginLeft: "auto" }} href={`${page}/table?new=1&type=task`}>{t("addTask")}</Link>}
+                        {groupBy === "module" && canCreate && <Link className={styles.addb} style={{ marginLeft: "auto" }} href={taskHref(d.moduleId)}>{t("addTask")}</Link>}
                       </div>
                     </td>
                   </tr>
                 ) : d.kind === "phase" ? (
-                  <tr key={d.id} className={styles.phaseRow}>
+                  <tr key={d.id} data-phase-id={d.phaseId ?? undefined} className={styles.phaseRow}>
                     <td colSpan={span}>
                       <div className={styles.prow}>
                         <button type="button" className={styles.chv} aria-expanded={!collapsed.has(d.id)} aria-label={t(collapsed.has(d.id) ? "expand" : "collapse", { name: d.name })} onClick={() => toggle(d.id)}>
@@ -364,13 +411,14 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                         </button>
                         <span className={styles.plabel}>{t("phaseLabel")}</span>
                         <b>{d.name}</b>
+                        {canSettings && d.moduleId && d.phaseId && <button type="button" className={styles.chv} aria-label={t("structure.renamePhaseNamed", { name: d.name })} onClick={() => setStructure({ kind: "renamePhase", id: d.phaseId!, moduleId: d.moduleId!, name: d.name })}>⋯</button>}
                         <span className={`${styles.pill} ${styles.sTodo}`}>{d.done}/{d.total}</span>
                         <span className={`${styles.muted} ${styles.small}`}>{d.md} MD</span>
                       </div>
                     </td>
                   </tr>
                 ) : d.kind === "add" ? (
-                  canCreate ? <tr key={d.id} className={styles.addRow}><td colSpan={span}><Link className={styles.addb} href={`${page}/table?new=1&type=task`}>{t("addTaskIn", { name: d.name })}</Link></td></tr> : null
+                  canCreate ? <tr key={d.id} className={styles.addRow}><td colSpan={span}><Link className={styles.addb} href={taskHref(d.moduleId, d.phaseId)}>{t("addTaskIn", { name: d.name })}</Link></td></tr> : null
                 ) : d.kind === "foot" ? (
                   <tr key={d.id} className={styles.footRow}><td colSpan={span}><span>{t("footTasks", { count: d.count })}</span><span>{t("footMd", { md: d.md })}</span></td></tr>
                 ) : (
@@ -384,13 +432,14 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
           </div>
         )}
         {groupBy === "module" && canSettings && (
-          <div style={{ padding: "10px 14px" }}><Link className={styles.newModule} href={`${page}/settings/modules`}>{t("newModule")}</Link></div>
+          <div style={{ padding: "10px 14px" }}><button type="button" className={styles.newModule} style={{ background: "none", border: 0, cursor: "pointer" }} onClick={() => setStructure({ kind: "createModule" })}>{t("newModule")}</button></div>
         )}
         <div className={styles.foot}>
           {t("summary", { tasks: s.taskCount, subs: s.subtaskCount, done: s.doneCount, md: s.estimateMd, pct: s.progressPct })} · {t("rows", { shown: issueRows.length, total: data.items.length })}{virtual ? ` · ${t("virtualHint")}` : ""}
         </div>
       </section>
 
+      {structure && <StructureDialog base={base} action={structure} onClose={() => setStructure(null)} onSaved={structureSaved} />}
       {saving && <SaveViewDialog onClose={() => setSaving(false)} onSave={async (name, shared) => {
         await api.post(`${base}/saved-views`, { name, viewType: "table", shared, filters: Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) });
         toast({ message: t("viewSaved", { name }) });

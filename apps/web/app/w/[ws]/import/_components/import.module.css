@@ -76,3 +76,10 @@
   .mp .arrow, .mp .sample { display:none; }
   .diffRow, .missRow { grid-template-columns:1fr; gap:4px; }
 }
+
+/* มือถือมี 4 ช่องที่มองเห็น แต่กริดมี 3 คอลัมน์: ผลตรวจต้องอยู่ใต้ชื่องาน ไม่ใช่ช่องไอคอน */
+@media(max-width:900px) {
+  .vr { align-items:start; }
+  .vr > :nth-child(5) { grid-column:3 / -1; overflow-wrap:anywhere; }
+  .vr.h > :nth-child(5) { display:none; }
+}

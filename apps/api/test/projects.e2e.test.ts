@@ -50,6 +50,18 @@ async function mkIssue(c: Client, key: string, body: Record<string, unknown>) {
   return r.body as { id: string; key: string; version: number };
 }
 
+describe('แคช HTTP ของ GET', () => {
+  it('ETag ใช้กับ If-Match เท่านั้น: เพิ่ม Module แล้ว GET ซ้ำด้วย If-None-Match ยังได้ข้อมูลใหม่ ไม่ใช่ 304', async () => {
+    const before = await team.lead.get(p('DP'));
+    expect(before.headers['cache-control']).toBe('no-store');
+    const created = await team.lead.post(p('DP', '/modules'), { name: 'Module หลังแคช', color: '#1d4ed8' });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const again = await team.lead.agent.get(`/api/v1${p('DP')}`).set('If-None-Match', before.headers.etag);
+    expect(again.status).toBe(200);
+    expect(again.body.modules.map((m: { id: string }) => m.id)).toContain(created.body.id);
+  });
+});
+
 describe('PATCH p/ (L2 › ทั่วไป)', () => {
   it('ต้องส่ง If-Match · version ไม่ตรงได้ 409 · แก้สำเร็จได้ ETag ใหม่ และบันทึก Audit', async () => {
     const got = await team.lead.get(p('DP'));

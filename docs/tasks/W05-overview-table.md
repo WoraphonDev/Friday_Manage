@@ -70,3 +70,8 @@
 - **ต่างจาก Canvas O1 / 1 โดยตั้งใจ** (ผู้ใช้ให้รวม เพราะข้อมูลทับกันและต้องจำว่าอยู่หน้าไหน): เนื้อหาหน้า O1 (ตัวเลขทั้งแผน, ความเสี่ยง, Workload หลายสัปดาห์, Module ตามวันเริ่ม) เป็นส่วน "แผนทั้งโปรเจกต์" ท้าย Overview (`#planning`) สำหรับคนที่มี `project.workload.view`
 - การ์ด Workload สัปดาห์นี้ใน Overview ซ่อนเมื่อเห็นส่วนแผน (ตารางหลายสัปดาห์ครอบคลุมแล้ว) · กล่อง Health มีลิงก์ลงไปที่ส่วนแผน
 - `/p/:key/dashboard` เปลี่ยนเป็น redirect ไป Overview `#planning` · เอาแท็บภาพรวม Lead ออกจากเมนู +
+
+### คอลัมน์ FR / Screen — 2026-11-08
+
+- คอลัมน์ "FR / Screen" (124 px) ระหว่าง Actual กับ Progress ตาม Canvas แสดง `FR-01.2 · SCR-101` ตัดด้วย … · แก้ใน Drawer
+- ช่องค้นหาใช้ข้อความ Canvas "ค้นหางาน, รหัส DP-…, FR หรือ SCR" · API ค้นรหัส FR/SCR ใน `q` (นอก lane: `apps/api/src/issues/table.ts` ของ A03)

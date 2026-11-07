@@ -2,14 +2,16 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { ChevronLeft, ChevronRight, Eye, Plus, RotateCcw, Trash2 } from 'lucide-react';
-import { AvatarStack, Badge, Button, Combobox, DatePicker, Dialog, Input, PriorityTag, Select, StatusPill, useToast, LoadingState, ErrorState } from '@/components/ui';
+import * as Popover from '@radix-ui/react-popover';
+import { Check, ChevronLeft, ChevronRight, Link2, MoreHorizontal, RotateCcw, Trash2, X } from 'lucide-react';
+import { Avatar, AvatarStack, Badge, Button, Combobox, DatePicker, Dialog, DrawerClose, Input, Select, useToast, LoadingState, ErrorState } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import { ActivityPanel } from './activity';
 import { Checklist, DependencyPanel } from './issue-parts';
 import { DueRequest } from './due-request';
-import { BodyText, Failure, InlineText, Section } from './shared';
+import { BodyText, Failure, InlineText } from './shared';
+import { Attachments, BugDetails, Development, PropRow, QuickSubtask, SubtaskRow } from './detail-parts';
 import { issuePath, issueQuery, projectPath, type Issue, type Named, type PublicPerson, type Scope } from './types';
 import styles from './issue-drawer.module.css';
 
@@ -21,8 +23,6 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const canEdit = !scope.access.guestViewer && scope.access.permissions.includes('issue.edit') && scope.project?.status !== 'archived';
   const canDelete = !scope.access.guestViewer && scope.access.permissions.includes('issue.delete');
   const guest = scope.access.guestViewer;
-  const [tab, setTab] = useState('details');
-  const [moreProperties, setMoreProperties] = useState(false);
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const [error, setError] = useState<unknown>(null);
@@ -32,11 +32,13 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const [planReason, setPlanReason] = useState('');
   const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [keepChildren, setKeepChildren] = useState(false);
+  const [allProps, setAllProps] = useState(false);
   const [cancelDue, setCancelDue] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
   const phases = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'phases', issue.moduleId], queryFn: ({ signal }) => api.get<{ items: Named[] }>(`${projectPath(scope.ws, scope.projectKey)}/modules/${encodeURIComponent(issue.moduleId!)}/phases`, { signal }), enabled: canEdit && !!issue.moduleId });
   const watchers = useQuery({ queryKey: [...key, 'watchers'], queryFn: ({ signal }) => api.get<{ items: { person: PublicPerson | null }[]; watching: boolean }>(`${endpoint}/watchers`, { signal }) });
-  const impact = useQuery({ queryKey: [...key, 'delete-impact'], queryFn: () => api.get<{ counts: { subtasks: number; files: number; dependencies: number } }>(`${endpoint}/delete-impact`), enabled: deleteOpen && canDelete });
+  const impact = useQuery({ queryKey: [...key, 'delete-impact'], queryFn: () => api.get<{ counts: { subtasks: number; files: number; dependencies: number }; subtasks?: Issue[] }>(`${endpoint}/delete-impact`), enabled: deleteOpen && canDelete });
   const type = scope.project?.issueTypes?.find((type) => type.name === issue.type);
   const statuses = scope.project?.statuses?.filter((status) => status.workflowId === type?.workflowId) ?? [];
   const index = siblings.findIndex((item) => item.key === issue.key);
@@ -84,63 +86,156 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   </Select>;
   const people = scope.people.map((person) => ({ id: person.id, name: person.displayName }));
   const pending = issue.pendingDueRequest;
+  const mod = scope.project?.modules.find((item) => item.id === issue.moduleId);
+  const phase = scope.project?.phases?.find((item) => item.id === issue.phaseId) ?? mod?.phases?.find((item) => item.id === issue.phaseId);
+  const sprint = scope.project?.sprints.find((item) => item.id === issue.sprintId);
+  const modColor = mod?.color ?? '#1d4ed8';
+  const doneStatus = statuses.find((status) => status.category === 'done');
+  // K2: Bug ที่แก้แล้ว (สถานะหลังสถานะทำงานแรก เช่น Fixed) รอทดสอบซ้ำ · ผ่าน = สถานะถัดไปใน Workflow, ไม่ผ่าน = กลับสถานะทำงานแรก
+  const statusIndex = statuses.findIndex((status) => status.id === issue.status.id);
+  const firstWork = statuses.find((status) => status.category === 'in_progress');
+  const awaitingRetest = issue.type === 'Bug' && issue.status.category === 'in_progress' && !!firstWork && firstWork.id !== issue.status.id;
+  const passStatus = statusIndex >= 0 ? statuses[statusIndex + 1] : undefined;
+  const reworkStatus = firstWork && firstWork.id !== issue.status.id ? firstWork : undefined;
+  const isDone = issue.status.category === 'done';
+  const reporter = scope.people.find((person) => person.id === issue.reporterId);
+  const isBug = issue.type === 'Bug';
+  const subtasks = issue.subtasks ?? [];
+  const subDone = subtasks.filter((child) => child.status.category === 'done').length;
+  const canCreate = scope.access.permissions.includes('issue.create') && !guest;
+  const devs = scope.people.filter((person) => issue.assigneeIds?.includes(person.id));
+  const pillTone = (category: string, name: string) => category === 'done' ? styles.sDone : /review/i.test(name) ? styles.sRev : category === 'in_progress' ? styles.sProg : styles.sTodo;
+  const prioColor = { urgent: '#b91c1c', high: '#b45309', medium: '#1d4ed8', low: '#5f6873' }[issue.priority];
+  const href = typeof window === 'undefined' ? '' : window.location.href;
   return <div className={styles.panel} aria-busy={busy}>
-    <div className={styles.topbar}><div className={styles.actions}><Badge tone={issue.type === 'Bug' ? 'red' : 'blue'}>{issue.parentKey ? t('subtask') : t(`types.${issue.type}`)}</Badge><span className="muted">{issue.key}</span>{issue.type === 'Bug' && issue.reopenCount > 0 && <Badge tone="amber">{t('reopenedCount', { count: issue.reopenCount })}</Badge>}</div>
-      <div className={styles.actions}>{watchers.data && <Button size="small" variant="ghost" disabled={disabled} aria-pressed={watchers.data.watching} onClick={() => void action(() => watchers.data!.watching ? api.delete(`${endpoint}/watch`) : api.post(`${endpoint}/watch`))}><Eye size={15} />{t(watchers.data.watching ? 'watching' : 'watch')} <span>{watchers.data.items.length}</span></Button>}
-        {canDelete && <Button size="small" variant="ghost" aria-label={t('deleteIssue')} disabled={disabled} onClick={() => setDeleteOpen(true)}><Trash2 size={15} /></Button>}
+    {/* Canvas C/D/K2: แถบหัว Drawer = breadcrumb + Watch / ลิงก์ / ⋯ / ปิด */}
+    <div className={styles.dhead}>
+      <nav aria-label={t('breadcrumb')} className={styles.crumb}>
+        {issue.type === 'Bug' && <span className={styles.bugIcon} aria-label={t('types.Bug')} role="img" />}
+        {mod && <span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod.name}</span>}
+        {phase && <span className="muted">› {phase.name}</span>}
+        {issue.parentKey && <><span className="muted">›</span><button className={styles.textLink} onClick={() => scope.navigate(issue.parentKey!)}>{issue.parentKey}</button></>}
+        <span className="muted">›</span><strong>{issue.key}</strong>
+        {issue.parentKey && <span className={styles.typeBadge}>{t('subtask')}</span>}
+        {issue.type !== 'Task' && !issue.parentKey && <span className={styles.typeBadge}>{t(`types.${issue.type}`)}</span>}
+        {issue.type === 'Bug' && issue.reopenCount > 0 && <Badge tone="amber">{t('reopenedCount', { count: issue.reopenCount })}</Badge>}
+      </nav>
+      <div className={styles.actions}>
+        {issue.parentKey && siblings.length > 0 && <span className={styles.wideOnly}>
+          <Button size="icon" variant="ghost" aria-label={t('previousSubtask')} disabled={index <= 0} onClick={() => scope.navigate(siblings[index - 1].key)}><ChevronLeft size={16} /></Button>
+          <span className="muted" style={{ fontSize: 12 }}>{index + 1}/{siblings.length}</span>
+          <Button size="icon" variant="ghost" aria-label={t('nextSubtask')} disabled={index < 0 || index >= siblings.length - 1} onClick={() => scope.navigate(siblings[index + 1].key)}><ChevronRight size={16} /></Button>
+        </span>}
+        {watchers.data && <Button size="small" className={styles.wideOnly} disabled={disabled} aria-pressed={watchers.data.watching} onClick={() => void action(() => watchers.data!.watching ? api.delete(`${endpoint}/watch`) : api.post(`${endpoint}/watch`))}>{t(watchers.data.watching ? 'watching' : 'watch')} · {watchers.data.items.length}</Button>}
+        <Button size="icon" variant="ghost" className={styles.wideOnly} aria-label={t('copyLink')} onClick={() => { void navigator.clipboard?.writeText(href).then(() => toast({ message: t('linkCopied') })); }}><Link2 size={16} /></Button>
+        {(canDelete || (canEdit && issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly') && !pending)) && <Popover.Root>
+          <Popover.Trigger asChild><Button size="icon" variant="ghost" aria-label={t('moreActions')}><MoreHorizontal size={16} /></Button></Popover.Trigger>
+          <Popover.Portal><Popover.Content className="popover project-menu" sideOffset={6} align="end">
+            {canEdit && issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly') && !pending && <Popover.Close asChild><button className="menu-item" disabled={disabled} onClick={() => setDue('')}>{t('requestDue')}</button></Popover.Close>}
+            {canDelete && <Popover.Close asChild><button className="menu-item" style={{ color: '#b91c1c' }} aria-label={t('deleteIssue')} disabled={disabled} onClick={() => setDeleteOpen(true)}><Trash2 size={15} />{t('deleteIssue')}</button></Popover.Close>}
+          </Popover.Content></Popover.Portal>
+        </Popover.Root>}
+        <DrawerClose asChild><Button size="icon" variant="ghost" aria-label={t('close')}><X size={18} /></Button></DrawerClose>
       </div>
     </div>
-    {issue.parentKey && <div className={styles.siblingBar}><button className={styles.textLink} onClick={() => scope.navigate(issue.parentKey!)}>↳ {issue.parentKey}</button><div className={styles.actions}><Button size="icon" variant="ghost" aria-label={t('previousSubtask')} disabled={index <= 0} onClick={() => scope.navigate(siblings[index - 1].key)}><ChevronLeft size={16} /></Button><Button size="icon" variant="ghost" aria-label={t('nextSubtask')} disabled={index < 0 || index >= siblings.length - 1} onClick={() => scope.navigate(siblings[index + 1].key)}><ChevronRight size={16} /></Button></div></div>}
-    <div className={styles.title}><InlineText label={t('fields.title')} value={issue.title} enabled={canEdit} busy={disabled} onSave={(title) => patch({ title })} /></div>
-    {conflict && <div role="alert" className={styles.conflict}><strong>{t('conflictTitle')}</strong><p>{t('conflictDescription')}</p>{!!(conflict.latest as Issue | undefined)?.title && <p>{t('latestTitle', { title: (conflict.latest as Issue).title })}</p>}{conflict.requestId && <code>{t('requestId', { id: conflict.requestId })}</code>}<Button size="small" onClick={async () => { await cache.invalidateQueries({ queryKey: key }); setConflict(null); setError(null); }}>{t('loadLatest')}</Button></div>}
-    {!!error && <Failure error={error} />}
-    {pending && !guest && <div className={styles.pending}><strong>{t('pendingDue', { date: formatDate(pending.requestedDue, scope.yearFormat, true) })}</strong><p>{t('waitingApproval')}</p>{pending.requesterId === scope.meId && <Button size="small" disabled={disabled} onClick={() => setCancelDue(true)}>{t('cancelRequest')}</Button>}</div>}
-    {scope.project?.status === 'archived' && <p className={styles.notice}>{t('archived')}</p>}
+
+    <div className={styles.headBlock}>
+      <div className={styles.title}><InlineText label={t('fields.title')} value={issue.title} enabled={canEdit} busy={disabled} onSave={(title) => patch({ title })} /></div>
+      <div className={styles.statusRow}>
+        <select className={`${styles.statusPill} ${pillTone(issue.status.category, issue.status.name)}`} aria-label={t('fields.statusId')} value={issue.status.id} disabled={!canEdit || disabled} onChange={(event) => void move(event.target.value)}>
+          {(statuses.length ? statuses : [issue.status]).map((status) => <option key={status.id} value={status.id}>{status.name}</option>)}
+        </select>
+        {canEdit && !isDone && doneStatus && issue.type !== 'Bug' && <Button size="small" className={styles.okButton} disabled={disabled} onClick={() => void move(doneStatus.id)}><Check size={15} />{t('markComplete')}</Button>}
+        {issue.type === 'Bug' && issue.status.category === 'done' && canEdit && <Button size="small" onClick={() => setReopenOpen(true)} disabled={disabled}><RotateCcw size={14} />{t('reopen')}</Button>}
+        <span className={styles.meta}>{t('metaLine', { name: reporter?.displayName ?? t('system'), created: formatDate(issue.createdAt, scope.yearFormat), updated: formatDate(issue.updatedAt, scope.yearFormat, true) })}</span>
+      </div>
+      {conflict && <div role="alert" className={styles.conflict}><strong>{t('conflictTitle')}</strong><p>{t('conflictDescription')}</p>{!!(conflict.latest as Issue | undefined)?.title && <p>{t('latestTitle', { title: (conflict.latest as Issue).title })}</p>}{conflict.requestId && <code>{t('requestId', { id: conflict.requestId })}</code>}<Button size="small" onClick={async () => { await cache.invalidateQueries({ queryKey: key }); setConflict(null); setError(null); }}>{t('loadLatest')}</Button></div>}
+      {!!error && <Failure error={error} />}
+      {pending && !guest && <div className={styles.pending}><strong>{t('pendingDue', { date: formatDate(pending.requestedDue, scope.yearFormat, true) })}</strong><p>{t('waitingApproval')}</p>{pending.requesterId === scope.meId && <Button size="small" disabled={disabled} onClick={() => setCancelDue(true)}>{t('cancelRequest')}</Button>}</div>}
+      {scope.project?.status === 'archived' && <p className={styles.notice}>{t('archived')}</p>}
+    </div>
+
     <div className={styles.layout}><div className={styles.main}>
-      <div className={styles.tabs} role="tablist" aria-label={t('issueSections')}>{['details', ...(canEdit ? ['checklist', 'dependencies'] : []), 'activity'].map((value) => <button key={value} id={`${issue.key}-${value}-tab`} role="tab" aria-selected={tab === value} aria-controls={`${issue.key}-${value}-panel`} tabIndex={tab === value ? 0 : -1} onKeyDown={(event) => { const tabs = ['details', ...(canEdit ? ['checklist', 'dependencies'] : []), 'activity']; const offset = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0; if (offset) { event.preventDefault(); const next = tabs[(tabs.indexOf(value) + offset + tabs.length) % tabs.length]; setTab(next); document.getElementById(`${issue.key}-${next}-tab`)?.focus(); } }} onClick={() => setTab(value)}>{t(value)}</button>)}</div>
-      <div role="tabpanel" id={`${issue.key}-${tab}-panel`} aria-labelledby={`${issue.key}-${tab}-tab`} className={styles.tabPanel}>
-        {tab === 'details' && <div className={styles.stack}>
-          <Section title={t('description')}><BodyText>{issue.description || t('noDescription')}</BodyText>{canEdit && <InlineText label={t('editDescription')} displayValue={t('editDescription')} value={issue.description ?? ''} enabled busy={disabled} multiline onSave={(description) => patch({ description: description || null })} />}</Section>
-          {issue.type === 'Bug' && ['steps', 'expected', 'actual', 'browser', 'found_in'].map((name) => <Section key={name} title={t(`detailFields.${name}`)}>{canEdit ? <InlineText label={t(`detailFields.${name}`)} value={String(issue.details[name] ?? '')} enabled multiline busy={disabled} onSave={(value) => patch({ details: { ...issue.details, [name]: name === 'timebox_hours' ? Number(value) : value }, ...(name === 'timebox_hours' ? { estimateMd: Number(value) / 8 } : {}) })} /> : <BodyText>{String(issue.details[name] ?? t('notSet'))}</BodyText>}</Section>)}
-          {issue.type === 'Story' && ['as_a', 'i_want', 'so_that'].map((name) => <Section key={name} title={t(`detailFields.${name}`)}>{canEdit ? <InlineText label={t(`detailFields.${name}`)} value={String(issue.details[name] ?? '')} enabled multiline busy={disabled} onSave={(value) => patch({ details: { ...issue.details, [name]: name === 'timebox_hours' ? Number(value) : value }, ...(name === 'timebox_hours' ? { estimateMd: Number(value) / 8 } : {}) })} /> : <BodyText>{String(issue.details[name] ?? t('notSet'))}</BodyText>}</Section>)}
-          {issue.type === 'Spike' && ['question', 'timebox_hours', 'deliverable'].map((name) => <Section key={name} title={t(`detailFields.${name}`)}>{canEdit ? <InlineText label={t(`detailFields.${name}`)} value={String(issue.details[name] ?? '')} enabled multiline busy={disabled} onSave={(value) => patch({ details: { ...issue.details, [name]: name === 'timebox_hours' ? Number(value) : value }, ...(name === 'timebox_hours' ? { estimateMd: Number(value) / 8 } : {}) })} /> : <BodyText>{String(issue.details[name] ?? t('notSet'))}</BodyText>}</Section>)}
-          {!issue.parentKey && <Section title={t('subtasks')} action={scope.access.permissions.includes('issue.create') && <Button size="small" variant="ghost" onClick={() => scope.createSubtask(issue)}><Plus size={14} />{t('addSubtask')}</Button>}>
-            {(issue.subtasks ?? []).length === 0 && <p className="muted">{t('noSubtasks')}</p>}
-            {issue.subtasks?.map((child) => <button key={child.key} className={styles.subtaskRow} onClick={() => scope.navigate(child.key)}><StatusPill status={child.status.category} label={child.status.name} /><span><small>{child.key}</small><strong>{child.title}</strong></span>{child.estimateMd !== null && <span className="muted">{t('md', { value: child.estimateMd })}</span>}<ChevronRight size={16} /></button>)}
-          </Section>}
-          {!guest && <Section title={t('watchers')}><div className={styles.people}>{watchers.data?.items.map((entry, index) => entry.person && <span key={entry.person.id ?? index} className={styles.watcher}>{entry.person.displayName}</span>)}</div></Section>}
-        </div>}
-        {tab === 'checklist' && canEdit && <Checklist scope={scope} issueKey={issue.key} />}
-        {tab === 'dependencies' && canEdit && <DependencyPanel scope={scope} issueKey={issue.key} />}
-        {tab === 'activity' && <ActivityPanel scope={scope} issueKey={issue.key} />}
-      </div>
+      {(!isBug || issue.description) && <div className={styles.blk}>
+        <h3>{t('description')}</h3>
+        <BodyText>{issue.description || t('noDescription')}</BodyText>
+        {canEdit && <InlineText label={t('editDescription')} displayValue={t('editDescription')} value={issue.description ?? ''} enabled busy={disabled} multiline onSave={(description) => patch({ description: description || null })} />}
+      </div>}
+      {awaitingRetest && canEdit && passStatus && <div className={styles.verify} role="group" aria-label={t('verifyGroup')}>
+        <div><strong>{t('verifyTitle', { status: issue.status.name })}</strong><p>{t('verifyDescription', { name: scope.people.find((person) => person.id === issue.testerId)?.displayName ?? t('tester') })}</p></div>
+        <Button size="small" className={styles.okButton} disabled={disabled} onClick={() => void move(passStatus.id)}>{t('verified', { status: passStatus.name })}</Button>
+        {reworkStatus && <Button size="small" className={styles.failButton} disabled={disabled} onClick={() => void move(reworkStatus.id)}>{t('notPassed')}</Button>}
+      </div>}
+      {issue.type === 'Bug' && <BugDetails issue={issue} canEdit={canEdit} disabled={disabled} save={(name, value) => patch({ details: { ...issue.details, [name]: value } })} />}
+      {(['Story', 'Spike'] as const).includes(issue.type as 'Story') && <div className={`${styles.blk} ${styles.storyFields}`}>
+        {(issue.type === 'Story' ? ['as_a', 'i_want', 'so_that'] : ['question', 'timebox_hours', 'deliverable']).map((name) => <div key={name}><div className={styles.k}>{t(`detailFields.${name}`)}</div>{canEdit ? <InlineText label={t(`detailFields.${name}`)} value={String(issue.details[name] ?? '')} enabled multiline busy={disabled} onSave={(value) => patch({ details: { ...issue.details, [name]: name === 'timebox_hours' ? Number(value) : value }, ...(name === 'timebox_hours' ? { estimateMd: Number(value) / 8 } : {}) })} /> : <BodyText>{String(issue.details[name] ?? t('notSet'))}</BodyText>}</div>)}
+      </div>}
+      {canEdit && !isBug && <div className={styles.blk}><Checklist scope={scope} issueKey={issue.key} /></div>}
+      {!issue.parentKey && !isBug && <div className={styles.blk}>
+        <h3>{t('subtasks')} <span className="muted" style={{ fontWeight: 500 }}>{subDone}/{subtasks.length}</span><span className={styles.subBar}><span style={{ width: `${subtasks.length ? Math.round((subDone / subtasks.length) * 100) : 0}%` }} /></span><span className={styles.meta}>{t('subtaskProgressNote')}</span></h3>
+        {subtasks.length === 0 && <p className="muted">{t('noSubtasks')}</p>}
+        {subtasks.map((child) => <SubtaskRow key={child.key} scope={scope} child={child} canEdit={canEdit} onChanged={refresh} pillTone={pillTone} />)}
+        {canCreate && <QuickSubtask scope={scope} parent={issue} onCreated={refresh} onFullForm={() => scope.createSubtask(issue)} />}
+      </div>}
+      {canEdit && <div className={styles.blk}><h3>{t('dependencies')}</h3><DependencyPanel scope={scope} issueKey={issue.key} /></div>}
+      {!guest && <Development scope={scope} issue={issue} />}
+      {!guest && <Attachments scope={scope} issue={issue} />}
+      <div className={styles.blk} style={{ borderBottom: 0 }}><h3>{t('activity')}</h3><ActivityPanel scope={scope} issueKey={issue.key} /></div>
     </div>
+
     <aside className={styles.sidebar} aria-label={t('properties')}>
-      {fieldSelect('statusId', issue.status.id, statuses.length ? statuses : [issue.status], (value) => void move(value), false)}
-      {issue.type === 'Bug' && issue.status.category === 'done' && canEdit && <Button size="small" onClick={() => setReopenOpen(true)} disabled={disabled}><RotateCcw size={14} />{t('reopen')}</Button>}
-      {!guest && (canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void action(() => api.request<Issue>(`${endpoint}/assignees`, { method: 'PUT', etag: issue.version, body: { assigneeIds: ids } })); }} /> : <div><span className={styles.label}>{t('fields.assigneeIds')}</span><AvatarStack people={scope.people.filter((person) => issue.assigneeIds?.includes(person.id))} /></div>)}
-      {fieldSelect('priority', issue.priority, ['urgent', 'high', 'medium', 'low'].map((id) => ({ id, name: t(`priority.${id}`) })), undefined, false)}
-      {canEdit ? <DatePicker label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (disabled) return; if (value && issue.planEnd && value > issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly')) setDue(value); else void patch({ planEnd: value || null }); }} /> : <p><span className={styles.label}>{t('fields.planEnd')}</span>{formatDate(issue.planEnd, scope.yearFormat)}</p>}
-      {canEdit && issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly') && !pending && <Button size="small" disabled={disabled} onClick={() => setDue('')}>{t('requestDue')}</Button>}
-      <InlineText label={t('fields.progressPct')} type="number" min={0} max={100} value={issue.progressPct?.toString() ?? ''} enabled={canEdit} busy={disabled} onSave={(value) => patch({ progressPct: value ? Number(value) : null })} />
-      <button className={styles.propertiesToggle} aria-expanded={moreProperties} aria-controls={`${issue.key}-more-properties`} onClick={() => setMoreProperties((value) => !value)}>{t('moreProperties')} <span aria-hidden="true">{moreProperties ? '−' : '+'}</span></button>
-      <div id={`${issue.key}-more-properties`} className={`${styles.extraProperties} ${moreProperties ? styles.expandedProperties : ''}`}>
-      {fieldSelect('size', issue.size, ['XS','S','M','L','XL'].map((id) => ({ id, name: id })))}
-      {canEdit ? <DatePicker label={t('fields.planStart')} value={issue.planStart ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (!disabled) void patch({ planStart: value || null }); }} /> : <p><span className={styles.label}>{t('fields.planStart')}</span>{formatDate(issue.planStart, scope.yearFormat)}</p>}
-      <InlineText label={t('fields.estimateMd')} type="number" step={0.25} min={0.25} max={9999} value={issue.estimateMd?.toString() ?? ''} enabled={canEdit} busy={disabled} onSave={(value) => patch({ estimateMd: value ? Number(value) : null })} />
-      {!issue.parentKey ? <>{fieldSelect('moduleId', issue.moduleId, scope.project?.modules ?? [], (value) => void patch({ moduleId: value, phaseId: null }), false)}{canEdit && phases.error ? <Failure error={phases.error} /> : fieldSelect('phaseId', issue.phaseId, phases.data?.items ?? [])}{fieldSelect('sprintId', issue.sprintId, scope.project?.sprints ?? [])}</> : <div className={styles.inherited}><span className={styles.label}>{t('inherited')}</span><p>{scope.project?.modules.find((module) => module.id === issue.moduleId)?.name ?? t('notSet')}</p><p>{scope.project?.sprints.find((sprint) => sprint.id === issue.sprintId)?.name ?? t('backlog')}</p></div>}
-      {!guest && ['baId', 'reviewerId', 'testerId'].map((field) => <div key={field}>{fieldSelect(field, issue[field as 'baId'], people)}</div>)}
-      {issue.type === 'Bug' && <>{fieldSelect('severity', issue.severity, ['critical', 'major', 'minor'].map((id) => ({ id, name: t(`severity.${id}`) })), undefined, false)}{fieldSelect('environment', issue.environment, ['local', 'sit', 'uat', 'production'].map((id) => ({ id, name: t(`environment.${id}`) })), undefined, false)}</>}
-      {!guest && canEdit && <label className={styles.checkboxLabel}><input type="checkbox" checked={issue.sharedWithGuests} disabled={disabled} onChange={(event) => void patch({ sharedWithGuests: event.target.checked })} />{t('sharedWithGuests')}</label>}
-      <small className="muted">{t('updatedAt', { date: formatDate(issue.updatedAt, scope.yearFormat, true) })}</small>
+      <div className={`${styles.props}${allProps ? ` ${styles.propsAll}` : ''}`} id={`${issue.key}-props`}>
+        <PropRow k={t('fields.statusId')}><span className={`${styles.pill} ${pillTone(issue.status.category, issue.status.name)}`}>{issue.status.name}</span></PropRow>
+        {!guest && <PropRow keep k={t('dev')}>{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void action(() => api.request<Issue>(`${endpoint}/assignees`, { method: 'PUT', etag: issue.version, body: { assigneeIds: ids } })); }} /> : <span className={styles.who}><AvatarStack people={devs} /></span>}</PropRow>}
+        {!guest && <PropRow k="BA">{fieldSelect('baId', issue.baId, people)}</PropRow>}
+        {!guest && <PropRow k="Reviewer">{fieldSelect('reviewerId', issue.reviewerId, people)}</PropRow>}
+        {!guest && (issue.type === 'Bug' || issue.testerId) && <PropRow k="Tester">{fieldSelect('testerId', issue.testerId, people)}</PropRow>}
+        <PropRow keep k={t('fields.priority')}><span className={styles.prio} style={{ color: prioColor }}>{fieldSelect('priority', issue.priority, ['urgent', 'high', 'medium', 'low'].map((id) => ({ id, name: t(`priority.${id}`) })), undefined, false)}</span></PropRow>
+        {issue.type === 'Bug' && <><PropRow k={t('fields.severity')}>{fieldSelect('severity', issue.severity, ['critical', 'major', 'minor'].map((id) => ({ id, name: t(`severity.${id}`) })), undefined, false)}</PropRow><PropRow k={t('fields.environment')}>{fieldSelect('environment', issue.environment, ['local', 'sit', 'uat', 'production'].map((id) => ({ id, name: t(`environment.${id}`) })), undefined, false)}</PropRow></>}
+        {isBug && <PropRow k={t('reporter')}><span className={styles.who}>{reporter ? <><Avatar size="small" person={reporter} />{reporter.displayName}</> : <span className="muted">—</span>}</span></PropRow>}
+        {isBug && <PropRow k="Due">{canEdit ? <DatePicker compact label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (!disabled) void patch({ planEnd: value || null }); }} /> : formatDate(issue.planEnd, scope.yearFormat)}</PropRow>}
+        {!isBug && <><PropRow k="Size"><div className={styles.sizeRow}>{fieldSelect('size', issue.size, ['XS','S','M','L','XL'].map((id) => ({ id, name: id })))}<InlineText label={t('fields.estimateMd')} type="number" step={0.25} min={0.25} max={9999} value={issue.estimateMd?.toString() ?? ''} enabled={canEdit} busy={disabled} onSave={(value) => patch({ estimateMd: value ? Number(value) : null })} />{devs.length > 0 && <span className="muted">· {t('devCount', { count: devs.length })}</span>}</div></PropRow>
+        <div className={styles.planBox}>
+          <span /><span className={styles.k}>{t('plan')}</span><span className={styles.k}>{t('actual')}</span>
+          <span className="muted">{t('start')}</span>
+          <span>{canEdit ? <DatePicker compact label={t('fields.planStart')} value={issue.planStart ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (!disabled) void patch({ planStart: value || null }); }} /> : formatDate(issue.planStart, scope.yearFormat)}</span>
+          <span>{issue.actualStart ? formatDate(issue.actualStart, scope.yearFormat) : '—'}</span>
+          <span className="muted">{t('end')}</span>
+          <span>{canEdit ? <DatePicker compact label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (disabled) return; if (value && issue.planEnd && value > issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly')) setDue(value); else void patch({ planEnd: value || null }); }} /> : formatDate(issue.planEnd, scope.yearFormat)}</span>
+          <span>{issue.actualEnd ? formatDate(issue.actualEnd, scope.yearFormat) : '—'}</span>
+        </div>
+        {canEdit && issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly') && !pending && <Button size="small" variant="ghost" className={styles.dueLink} disabled={disabled} onClick={() => setDue('')}>{t('requestDue')}</Button>}
+        <PropRow keep k="Progress"><div className={styles.progRow}><span className={styles.subBar} style={{ maxWidth: 'none' }}><span style={{ width: `${issue.progressPct ?? 0}%` }} /></span><InlineText label={t('fields.progressPct')} type="number" min={0} max={100} value={issue.progressPct?.toString() ?? ''} enabled={canEdit} busy={disabled} onSave={(value) => patch({ progressPct: value ? Number(value) : null })} /></div></PropRow></>}
+        {!issue.parentKey ? <>
+          <PropRow k="Module">{fieldSelect('moduleId', issue.moduleId, scope.project?.modules ?? [], (value) => void patch({ moduleId: value, phaseId: null }), false)}</PropRow>
+          {!isBug && <PropRow k={t('fields.phaseId')}>{canEdit && phases.error ? <Failure error={phases.error} /> : fieldSelect('phaseId', issue.phaseId, phases.data?.items ?? [])}</PropRow>}
+          <PropRow k="Sprint">{fieldSelect('sprintId', issue.sprintId, scope.project?.sprints ?? [])}</PropRow>
+        </> : <>
+          <PropRow k="Module"><span><span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod?.name ?? t('notSet')}</span> <span className="muted" style={{ fontSize: 12 }}>{t('fromParent')}</span></span></PropRow>
+          <PropRow k="Sprint"><span>{sprint?.name ?? t('backlog')}</span></PropRow>
+        </>}
+        {!guest && <PropRow k={t('watchers')}><span className={styles.who}>{watchers.data?.items.length ? <AvatarStack max={5} people={watchers.data.items.flatMap((entry, i) => entry.person ? [{ ...entry.person, id: entry.person.id ?? `w${i}` }] : [])} /> : <span className="muted">—</span>}</span></PropRow>}
+        {!guest && canEdit && <label className={styles.checkboxLabel}><input type="checkbox" checked={issue.sharedWithGuests} disabled={disabled} onChange={(event) => void patch({ sharedWithGuests: event.target.checked })} />{t('sharedWithGuests')}</label>}
       </div>
+      <button type="button" className={styles.propsToggle} aria-expanded={allProps} aria-controls={`${issue.key}-props`} onClick={() => setAllProps((value) => !value)}>{t(allProps ? 'lessProperties' : 'moreProperties')}</button>
+      <p className={`${styles.meta} ${styles.wideOnly}`} style={{ padding: '10px 4px' }}>{t('propsHint')}</p>
     </aside></div>
     {due !== null && <DueRequest key={`${issue.key}-${due}`} scope={scope} issue={issue} initialDue={due} onClose={() => { setDue(null); setError(null); }} />}
     <Dialog open={!!reasonIntent} title={t('planReasonTitle')} description={t('planReasonDescription')} onOpenChange={(open) => { if (!open && !busy) setReasonIntent(null); }}><form className={styles.stack} onSubmit={(event) => { event.preventDefault(); if (reasonIntent) void patch(reasonIntent, true); }}><Input label={t('planReason')} required value={planReason} maxLength={1000} onChange={(event) => setPlanReason(event.target.value)} /><Button type="submit" variant="primary" disabled={busy || !planReason.trim()}>{t('save')}</Button>{!!error && <Failure error={error} />}</form></Dialog>
     <Dialog open={!!confirmStatus} title={t('incompleteTitle')} description={t('incompleteDescription')} onOpenChange={(open) => { if (!open && !busy) { setConfirmStatus(null); setError(null); } }}><div className={styles.dialogActions}><Button disabled={busy} onClick={() => { setConfirmStatus(null); setError(null); }}>{t('cancel')}</Button><Button variant="primary" disabled={busy} onClick={() => { if (confirmStatus) void move(confirmStatus, true); }}>{t('confirmMove')}</Button></div></Dialog>
-    <Dialog open={deleteOpen} title={t('deleteIssue')} description={t('deleteIssueDescription', { key: issue.key })} onOpenChange={(open) => { if (!open && !busy) setDeleteOpen(false); }}>
-      {impact.isLoading && <LoadingState />}{impact.error && <ErrorState error={impact.error} retry={() => void impact.refetch()} />}{impact.data && <p className={styles.impact}>{t('deleteImpact', { ...impact.data.counts })}</p>}<p className="muted">{t('restoreThirtyDays')}</p>
-      <div className={styles.dialogActions}><Button disabled={busy} onClick={() => setDeleteOpen(false)}>{t('cancel')}</Button><Button variant="danger" disabled={disabled || !impact.data || !!impact.error} onClick={() => void action(() => api.delete(endpoint), () => { const deletedKey = issue.key; toast({ message: t('issueDeleted', { key: deletedKey }), undo: async () => { await api.post(`${endpoint}/restore`); await refresh(); scope.navigate(deletedKey); } }); setDeleteOpen(false); onDeleted(issue.parentKey); })}>{t('confirmDelete', { count: 1 + (impact.data?.counts.subtasks ?? 0) })}</Button></div>{!!error && <Failure error={error} />}
+    <Dialog open={deleteOpen} title={t('deleteIssueQuestion', { key: issue.key, title: issue.title })} description={`${issue.parentKey ? t('subtask') : t(`types.${issue.type}`)}${mod ? ` · ${mod.name}` : ''}`} onOpenChange={(open) => { if (!open && !busy) setDeleteOpen(false); }}>
+      {/* P3 ระดับ 2: บอกผลกระทบเป็นตัวเลข ให้เลือกวิธีจัดการ Sub-task และปุ่มยืนยันบอกผล */}
+      {impact.isLoading && <LoadingState />}{impact.error && <ErrorState error={impact.error} retry={() => void impact.refetch()} />}
+      {impact.data && <div className={styles.impactBox}>
+        <div className={styles.k}>{t('deleteLinked')}</div>
+        <div className={styles.imp}><span className={styles.impWarn} aria-hidden="true">!</span><span>{t('deleteImpactSubtasks', { count: impact.data.counts.subtasks, done: (impact.data.subtasks ?? []).filter((child) => child.status.category === 'done').length })}</span></div>
+        <div className={styles.imp}><span className={styles.impWarn} aria-hidden="true">!</span><span>{t('deleteImpact', { ...impact.data.counts })}</span></div>
+      </div>}
+      {impact.data && impact.data.counts.subtasks > 0 && <div className={styles.delOpts} role="radiogroup" aria-label={t('subtaskHandling')}>
+        {(['delete', 'keep'] as const).map((value) => <label key={value} className={styles.delOpt}><input type="radio" name="subtask-handling" checked={keepChildren === (value === 'keep')} onChange={() => setKeepChildren(value === 'keep')} /><span><b>{t(`deleteOption.${value}`)}</b><small className="muted">{t(`deleteOptionHint.${value}`, { count: impact.data!.counts.subtasks, module: mod?.name ?? t('notSet') })}</small></span></label>)}
+      </div>}
+      <p className="muted">{t('restoreThirtyDaysShort')}</p>
+      <div className={styles.dialogActions}><Button disabled={busy} onClick={() => setDeleteOpen(false)}>{t('cancel')}</Button><Button variant="danger" disabled={disabled || !impact.data || !!impact.error} onClick={() => void action(() => api.delete(keepChildren ? `${endpoint}?subtasks=keep` : endpoint), () => { const deletedKey = issue.key; toast({ message: t('issueDeleted', { key: deletedKey }), undo: async () => { await api.post(`${endpoint}/restore`); await refresh(); scope.navigate(deletedKey); } }); setDeleteOpen(false); onDeleted(issue.parentKey); })}>{keepChildren ? t('deleteOnlyTask', { type: t(`types.${issue.type}`) }) : impact.data?.counts.subtasks ? t('deleteWithSubtasks', { type: t(`types.${issue.type}`), count: impact.data.counts.subtasks }) : t('confirmDelete', { count: 1 })}</Button></div>{!!error && <Failure error={error} />}
     </Dialog>
     <Dialog open={cancelDue} title={t('cancelRequest')} onOpenChange={(open) => { if (!open && !busy) setCancelDue(false); }}><div className={styles.dialogActions}><Button disabled={busy} onClick={() => setCancelDue(false)}>{t('back')}</Button><Button variant="danger" disabled={disabled} onClick={() => { if (pending) void action(() => api.post(`/w/${encodeURIComponent(scope.ws)}/due-requests/${encodeURIComponent(pending.id)}/cancel`, {}), () => setCancelDue(false)); }}>{t('cancelRequest')}</Button></div></Dialog>
     <Dialog open={reopenOpen} title={t('reopen')} description={t('reopenDescription')} onOpenChange={(open) => { if (!open && !busy) setReopenOpen(false); }}><div className={styles.dialogActions}><Button disabled={busy} onClick={() => setReopenOpen(false)}>{t('cancel')}</Button><Button variant="primary" disabled={disabled} onClick={() => void action(() => api.post(`${endpoint}/reopen`), () => setReopenOpen(false))}>{t('reopen')}</Button></div></Dialog>

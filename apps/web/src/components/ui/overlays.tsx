@@ -35,7 +35,11 @@ export function Dialog({
   title,
   description,
   children,
-}: OverlayProps) {
+  size,
+}: OverlayProps & {
+  /** wide = หน้าต่างสร้างงาน K1 (860 px ชิดบน 40 px) */
+  size?: "wide";
+}) {
   const t = useTranslations("common.app");
   const returnFocus = useReturnFocus(open);
   return (
@@ -43,7 +47,7 @@ export function Dialog({
       <RadixDialog.Portal>
         <RadixDialog.Overlay className="overlay" />
         <RadixDialog.Content
-          className="dialog"
+          className={cn("dialog", size === "wide" && "dialog-wide")}
           onCloseAutoFocus={returnFocus}
           {...(!description ? { "aria-describedby": undefined } : {})}
         >
@@ -76,19 +80,35 @@ export function Drawer({
   depth = 1,
   parentLabel,
   onBack,
+  variant,
+  bare = false,
 }: OverlayProps & {
   depth?: 1 | 2;
   parentLabel?: string;
   onBack?: () => void;
+  /** ขนาด/ตำแหน่งตาม Canvas: detail = C/D (860 px ใต้หัวโปรเจกต์), wide = K2 (920 px เต็มสูง), create = B (640 px ใต้หัวโปรเจกต์) */
+  variant?: "detail" | "wide" | "create";
+  /** เนื้อหามีแถบหัวของตัวเอง (ใช้ DrawerClose) · ชื่อ Drawer ยังอยู่สำหรับโปรแกรมอ่านหน้าจอ */
+  bare?: boolean;
 }) {
   const t = useTranslations("common.app");
   const returnFocus = useReturnFocus(open);
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="overlay" />
+        <RadixDialog.Overlay
+          className={cn(
+            "overlay",
+            (variant === "detail" || variant === "create") && "overlay-below",
+          )}
+        />
         <RadixDialog.Content
-          className={cn("drawer", depth === 2 && "drawer-nested")}
+          className={cn(
+            "drawer",
+            depth === 2 && "drawer-nested",
+            variant && `drawer-${variant}`,
+            bare && "drawer-bare",
+          )}
           onCloseAutoFocus={returnFocus}
           {...(!description ? { "aria-describedby": undefined } : {})}
         >
@@ -102,14 +122,18 @@ export function Drawer({
               {parentLabel}
             </button>
           )}
-          <div className="dialog-heading">
-            <RadixDialog.Title>{title}</RadixDialog.Title>
-            <RadixDialog.Close asChild>
-              <Button variant="ghost" size="icon" aria-label={t("close")}>
-                <X size={20} />
-              </Button>
-            </RadixDialog.Close>
-          </div>
+          {bare ? (
+            <RadixDialog.Title className="sr-only">{title}</RadixDialog.Title>
+          ) : (
+            <div className="dialog-heading">
+              <RadixDialog.Title>{title}</RadixDialog.Title>
+              <RadixDialog.Close asChild>
+                <Button variant="ghost" size="icon" aria-label={t("close")}>
+                  <X size={20} />
+                </Button>
+              </RadixDialog.Close>
+            </div>
+          )}
           {description && (
             <RadixDialog.Description className="muted">
               {description}
@@ -121,6 +145,9 @@ export function Drawer({
     </RadixDialog.Root>
   );
 }
+
+/** ปุ่มปิดสำหรับ Drawer แบบ bare ที่วางแถบหัวเอง */
+export const DrawerClose = RadixDialog.Close;
 
 export function ConfirmDialog({
   onConfirm,

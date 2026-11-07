@@ -313,7 +313,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
           <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set(groupIds))}>{t("collapseAll")}</button>
           {canEdit && <Link className={styles.tbtn} href={`/w/${encodeURIComponent(ws)}/import`}>{t("importExport")}</Link>}
           {canSettings && <Link className={styles.tbtn} href={`${page}/settings/modules`}>{t("addModule")}</Link>}
-          {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={`${page}/table?new=1`}>{t("addTask")}</Link>}
+          {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={`${page}/table?new=1&type=task`}>{t("addTask")}</Link>}
         </div>
       </div>
 
@@ -351,7 +351,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                         <span className={styles.muted} style={{ fontSize: 13 }}>{groupBy === "module" ? t("moduleTasks", { count: d.count, phases: d.phases }) : t("groupTasks", { count: d.count })}</span>
                         <span className={styles.mbar}><span><span style={{ width: `${d.pct}%`, background: d.color ?? "var(--primary)" }} /></span><b>{d.pct}%</b></span>
                         <span className={styles.muted} style={{ fontSize: 13, marginLeft: 8 }}>{d.from && d.to ? `${formatDate(d.from, year)} – ${formatDate(d.to, year)}` : `${d.md} MD`}</span>
-                        {groupBy === "module" && canCreate && <Link className={styles.addb} style={{ marginLeft: "auto" }} href={`${page}/table?new=1`}>{t("addTask")}</Link>}
+                        {groupBy === "module" && canCreate && <Link className={styles.addb} style={{ marginLeft: "auto" }} href={`${page}/table?new=1&type=task`}>{t("addTask")}</Link>}
                       </div>
                     </td>
                   </tr>
@@ -370,7 +370,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                     </td>
                   </tr>
                 ) : d.kind === "add" ? (
-                  canCreate ? <tr key={d.id} className={styles.addRow}><td colSpan={span}><Link className={styles.addb} href={`${page}/table?new=1`}>{t("addTaskIn", { name: d.name })}</Link></td></tr> : null
+                  canCreate ? <tr key={d.id} className={styles.addRow}><td colSpan={span}><Link className={styles.addb} href={`${page}/table?new=1&type=task`}>{t("addTaskIn", { name: d.name })}</Link></td></tr> : null
                 ) : d.kind === "foot" ? (
                   <tr key={d.id} className={styles.footRow}><td colSpan={span}><span>{t("footTasks", { count: d.count })}</span><span>{t("footMd", { md: d.md })}</span></td></tr>
                 ) : (

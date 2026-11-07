@@ -250,8 +250,9 @@ export function ProjectShell({
     });
   }
   const activeTeam = (team.data?.items ?? []).filter((m) => m.active);
+  // Automation เป็นส่วนหนึ่งของ Settings แท็บ Settings จึงเลือกอยู่
   const isCurrentTab = (tab: (typeof projectTabs)[number]) =>
-    route === tab.path || (!!tab.path && route.startsWith(`${tab.path}/`));
+    route === tab.path || (!!tab.path && route.startsWith(`${tab.path}/`)) || (tab.path === "/settings" && route.startsWith("/automation"));
   const allowedTabs = projectTabs.filter((tab) => allowedProjectTab(tab, access));
   const optionalTabs = allowedTabs.filter((tab) => tab.optional);
   // หน้าที่เปิดอยู่แสดงแท็บเสมอแม้ไม่ได้เลือกไว้ (เข้าจากลิงก์ในหน้าอื่น) เพื่อให้รู้ว่าอยู่หน้าไหน
@@ -263,9 +264,8 @@ export function ProjectShell({
     if (shownTabs.includes(tab.label)) toggleTab(tab.label);
     if (isCurrentTab(tab)) router.push(base);
   }
-  // P2 Automation มี breadcrumb ของหน้าเอง · แท็บอื่นใช้หัวและแท็บชุดเดียวกันทุกหน้า
-  // (Canvas O1/O2/M1 ตัดหัวให้สั้นลง แต่ผู้ใช้เลือกให้แท็บไม่ขยับและครบทุกหน้า · 2026-11-07)
-  const headerVariant = route.startsWith("/automation") ? "none" : "full";
+  // ทุกหน้าใช้หัวและแท็บชุดเดียวกัน รวม Automation ที่อยู่ใต้ Settings
+  // (Canvas O1/O2/M1/P2 ตัดหัวให้สั้นลง แต่ผู้ใช้เลือกให้แท็บและเมนูไม่หายเมื่อสลับหน้า · 2026-11-07)
   const canCreate = access.permissions.includes("issue.create");
   const dates = formatDateRange(
     project.data.startDate,
@@ -288,7 +288,7 @@ export function ProjectShell({
   ].filter((item) => access.permissions.includes(item.permission));
   return (
     <>
-      {headerVariant !== "none" && (
+      {(
         <header
           className="project-header"
           ref={headerRef}

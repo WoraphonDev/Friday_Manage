@@ -43,18 +43,7 @@ export function ProjectSettings({ ws, projectKey, section }: { ws: string; proje
   const p = project.data;
   return (
     <div className={styles.body}>
-      <nav className={`${styles.card} ${styles.nav}`} aria-label={t("navLabel")}>
-        {SECTIONS.map((s) => (
-          <Link key={s} href={`${href}/settings/${s}`} className={`${styles.snav} ${s === "danger" ? styles.danger : ""}`} aria-current={s === current ? "page" : undefined}>
-            {t(`nav.${s}`)}
-          </Link>
-        ))}
-        {perms.data.permissions.includes("project.automation") && (
-          <Link href={`${href}/automation`} className={styles.snav}>
-            {t("nav.automation")} <span className={styles.tag}>Team</span>
-          </Link>
-        )}
-      </nav>
+      <SettingsNav ws={ws} projectKey={projectKey} current={current} canAutomation={perms.data.permissions.includes("project.automation")} />
       <section className={`${styles.card} ${styles.panel}`} aria-labelledby="settings-heading">
         {current === "general" && <GeneralSection key={p.version} ws={ws} projectKey={projectKey} project={p} members={members.data?.items ?? []} />}
         {current === "workflow" && <WorkflowSection ws={ws} projectKey={projectKey} />}
@@ -64,6 +53,36 @@ export function ProjectSettings({ ws, projectKey, section }: { ws: string; proje
         {(current === "notify" || current === "integ") && <ClosedSection section={current} />}
         {current === "danger" && <DangerSection ws={ws} projectKey={projectKey} project={p} access={perms.data} members={members.data?.items ?? []} />}
       </section>
+    </div>
+  );
+}
+
+/** เมนูซ้ายของ Settings · ใช้ร่วมกับหน้า Automation ให้เมนูไม่หายเมื่อเลือก Automation */
+export function SettingsNav({ ws, projectKey, current, canAutomation }: { ws: string; projectKey: string; current: Section | "automation"; canAutomation: boolean }) {
+  const t = useTranslations("project-settings-new.settings");
+  const href = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}`;
+  return (
+    <nav className={`${styles.card} ${styles.nav}`} aria-label={t("navLabel")}>
+      {SECTIONS.map((s) => (
+        <Link key={s} href={`${href}/settings/${s}`} className={`${styles.snav} ${s === "danger" ? styles.danger : ""}`} aria-current={s === current ? "page" : undefined}>
+          {t(`nav.${s}`)}
+        </Link>
+      ))}
+      {canAutomation && (
+        <Link href={`${href}/automation`} className={styles.snav} aria-current={current === "automation" ? "page" : undefined}>
+          {t("nav.automation")} <span className={styles.tag}>Team</span>
+        </Link>
+      )}
+    </nav>
+  );
+}
+
+/** โครง Settings (เมนูซ้าย + เนื้อหา) สำหรับหน้าที่อยู่นอก route settings เช่น Automation */
+export function SettingsFrame({ ws, projectKey, current, canAutomation, children }: { ws: string; projectKey: string; current: Section | "automation"; canAutomation: boolean; children: React.ReactNode }) {
+  return (
+    <div className={styles.body}>
+      <SettingsNav ws={ws} projectKey={projectKey} current={current} canAutomation={canAutomation} />
+      <div className={styles.frameMain}>{children}</div>
     </div>
   );
 }

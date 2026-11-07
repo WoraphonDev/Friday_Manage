@@ -411,11 +411,12 @@ describe("Workspace / Project shell", () => {
     expect(screen.queryByRole("navigation", { name: "เมนูหลัก", hidden: true })).not.toBeInTheDocument();
   });
 
-  it("Automation ใช้ breadcrumb ของหน้าเอง · ภาพรวม Lead ใช้หัวและแท็บชุดเดียวกับหน้าอื่น (P2, O1)", async () => {
+  it("Automation และภาพรวม Lead ใช้หัวและแท็บชุดเดียวกับหน้าอื่น · Automation อยู่ใต้แท็บ Settings (P2, O1)", async () => {
     navigation.pathname = "/w/sample/p/DE/automation";
     const { unmount } = renderWithProviders(<ProjectExample />);
     expect(await screen.findByText("หน้าโปรเจกต์")).toBeInTheDocument();
-    expect(screen.queryByLabelText("มุมมองโปรเจกต์")).not.toBeInTheDocument();
+    const automationTabs = within(await screen.findByLabelText("มุมมองโปรเจกต์"));
+    expect(automationTabs.getByRole("link", { name: "Settings", hidden: true })).toHaveAttribute("aria-current", "page");
     unmount();
     navigation.pathname = "/w/sample/p/DE/dashboard";
     renderWithProviders(<ProjectExample />);

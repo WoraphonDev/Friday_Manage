@@ -68,7 +68,13 @@
     "projectMembers": "Members",
     "invite": "Invite",
     "projectMenu": "Project menu",
-    "projectTeam": "{count} project members"
+    "projectTeam": "{count} project members",
+    "backToWorkspace": "← Back to Workspace",
+    "back": "Back",
+    "checkoutTitle": "Checkout · {name}",
+    "secure": "Encrypted connection",
+    "mainMenu": "Main menu",
+    "profileTab": "Profile"
   },
   "roles": {
     "owner": "Owner",

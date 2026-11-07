@@ -6,7 +6,7 @@ import { server } from "@/test/server";
 import { navigation, router } from "@/test/router";
 import { renderWithProviders } from "@/test/render";
 import { permissions, workspaces } from "@/test/fixtures";
-import { WorkspaceShell } from "./workspace-shell";
+import { WorkspaceShell, shellChrome } from "./workspace-shell";
 import { ProjectShell } from "./project-shell";
 import { Providers } from "../providers";
 import { api } from "@/lib/api";
@@ -161,6 +161,7 @@ describe("Workspace / Project shell", () => {
     expect(await screen.findByRole("img", { name: "Kaijeaw" })).toHaveTextContent("KJ");
     // สมาชิกที่ปิดบัญชีแล้วไม่แสดงใน Avatar stack
     expect(screen.queryByRole("img", { name: "Pond" })).not.toBeInTheDocument();
+    expect(document.querySelector(".project-crumb")).not.toBeNull();
     expect(screen.getByRole("link", { name: "Invite" })).toHaveAttribute(
       "href",
       "/w/sample/p/DE/members#invites",
@@ -340,5 +341,73 @@ describe("Workspace / Project shell", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("ถึงขีดจำกัดแล้ว")).toBeInTheDocument();
     window.history.replaceState({}, "", "/");
+  });
+
+  it("กรอบหน้าตามบริบทของ Canvas (VD03)", () => {
+    expect(shellChrome("/w/sample")).toBe("workspace");
+    expect(shellChrome("/w/sample/p/DE/table")).toBe("workspace");
+    expect(shellChrome("/w/sample/p/DE/dashboard")).toBe("focus");
+    expect(shellChrome("/w/sample/p/DE/reports")).toBe("focus");
+    expect(shellChrome("/w/sample/p/DE/automation")).toBe("focus");
+    expect(shellChrome("/w/sample/admin/security")).toBe("admin");
+    expect(shellChrome("/w/sample/billing")).toBe("workspace");
+    expect(shellChrome("/w/sample/billing/checkout")).toBe("checkout");
+  });
+
+  it("Admin Console อยู่ล่างสุดของ Sidebar และเมนูล่างมือถือมี 5 รายการตาม M5", async () => {
+    navigation.pathname = "/w/sample/inbox";
+    renderWithProviders(
+      <WorkspaceShell ws="sample">
+        <p>Inbox</p>
+      </WorkspaceShell>,
+    );
+    const sidebar = await screen.findByRole("complementary");
+    const footer = sidebar.querySelector(".nav-footer");
+    expect(footer).not.toBeNull();
+    expect(within(footer as HTMLElement).getByRole("link", { name: "Admin Console" })).toHaveAttribute("href", "/w/sample/admin");
+    const bottom = within(screen.getByRole("navigation", { name: "เมนูหลัก", hidden: true }));
+    expect(
+      bottom.getAllByRole("link", { hidden: true }).map((l) => l.textContent),
+    ).toEqual(["Home", "My Tasks", "Inbox3", expect.stringMatching(/Profile$/)]);
+    expect(bottom.getByRole("button", { name: /Projects/, hidden: true })).toBeInTheDocument();
+    expect(bottom.getByRole("link", { name: /Inbox/, hidden: true })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("Admin Console ไม่มี Sidebar ของ Workspace และมีลิงก์กลับ (N1)", async () => {
+    navigation.pathname = "/w/sample/admin";
+    renderWithProviders(
+      <WorkspaceShell ws="sample">
+        <p>Admin</p>
+      </WorkspaceShell>,
+    );
+    expect(await screen.findByRole("link", { name: "← กลับไปที่ Workspace" })).toHaveAttribute("href", "/w/sample");
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ค้นหางาน โปรเจกต์ ไฟล์" })).not.toBeInTheDocument();
+  });
+
+  it("ชำระเงินใช้หัวขาวเรียบ ไม่มีเมนูหรือกระดิ่ง (R2)", async () => {
+    navigation.pathname = "/w/sample/billing/checkout";
+    renderWithProviders(
+      <WorkspaceShell ws="sample">
+        <p>Checkout</p>
+      </WorkspaceShell>,
+    );
+    expect(await screen.findByText("ชำระเงิน · ทีมตัวอย่าง")).toBeInTheDocument();
+    expect(screen.getByText("เชื่อมต่อแบบเข้ารหัส")).toBeInTheDocument();
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "เมนูหลัก", hidden: true })).not.toBeInTheDocument();
+  });
+
+  it("Automation ใช้ breadcrumb ของหน้าเอง และ Lead ไม่มีปุ่มทีม/+ New (P2, O1)", async () => {
+    navigation.pathname = "/w/sample/p/DE/automation";
+    const { unmount } = renderWithProviders(<ProjectExample />);
+    expect(await screen.findByText("หน้าโปรเจกต์")).toBeInTheDocument();
+    expect(screen.queryByLabelText("มุมมองโปรเจกต์")).not.toBeInTheDocument();
+    unmount();
+    navigation.pathname = "/w/sample/p/DE/dashboard";
+    renderWithProviders(<ProjectExample />);
+    expect(await screen.findByLabelText("มุมมองโปรเจกต์")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "เมนูโปรเจกต์" })).not.toBeInTheDocument();
+    expect(document.querySelector(".project-crumb")).toBeNull();
   });
 });

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { LockKeyhole } from "lucide-react";
 import { Button, ErrorState, Forbidden, Input, LoadingState, Select, buttonVariants } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { ApiError, api } from "@/lib/api";
@@ -264,16 +263,8 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
 
   return (
     <div className={styles.page}>
-      <div className={styles.head}>
-        <div>
-          <h1>{t("title")}</h1>
-          <div className={styles.muted}>{t("subtitle", { workspace: workspace.name })}</div>
-        </div>
-        <span className={cn(styles.muted, styles.secure)}>
-          <LockKeyhole size={14} aria-hidden="true" />
-          {t("secure")}
-        </span>
-      </div>
+      {/* R2: ชื่อหน้าและ "เชื่อมต่อแบบเข้ารหัส" อยู่ในหัวของ shell แล้ว · คง h1 ไว้ให้โปรแกรมอ่านหน้าจอ */}
+      <h1 className="sr-only">{t("title")}</h1>
       <div className={styles.steps} aria-label={t("stepsLabel")}>
         {(["plan", "tax", "pay"] as const).map((s, i) => (
           <span key={s} className={cn(styles.step, styles.on)}>

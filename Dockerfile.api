@@ -1,0 +1,46 @@
+# API และ Worker ใช้ image เดียวกัน (โค้ดและ dependency เดียวกัน) ต่างกันแค่คำสั่ง:
+#   API    : node dist/main.js   (ค่าเริ่มต้น)
+#   Worker : node dist/worker.js
+#   Migrate: node /app/packages/db/deploy-migrate.mjs  (รันก่อนเปลี่ยน service ทุกครั้ง)
+FROM node:22-bookworm AS build
+WORKDIR /app
+RUN npm install --global pnpm@10.34.5
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json apps/api/package.json
+COPY packages/db/package.json packages/db/package.json
+RUN pnpm --filter @friday/api... install --frozen-lockfile
+COPY packages/db packages/db
+COPY apps/api apps/api
+RUN pnpm --filter @friday/api build
+# CA ของ RDS สำหรับตรวจใบรับรองตอนต่อฐานข้อมูลแบบ TLS (sslmode=verify-full) · โหลดในขั้น build เพราะ image รันไม่มี curl
+RUN curl -fsSL -o /tmp/rds-global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+
+# dependency สำหรับรันเท่านั้น · คงโครง workspace ไว้ เพราะ @friday/db ใช้ไฟล์ .ts ตรง ๆ
+# (Node 22 อ่าน type ได้เฉพาะไฟล์ที่ไม่อยู่ใน node_modules · symlink ของ pnpm ชี้ไป packages/db จึงใช้ได้)
+FROM node:22-bookworm-slim AS deps
+WORKDIR /app
+RUN npm install --global pnpm@10.34.5
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json apps/api/package.json
+COPY packages/db/package.json packages/db/package.json
+RUN pnpm --filter @friday/api... install --frozen-lockfile --prod
+
+FROM node:22-bookworm-slim AS runtime
+COPY --from=build /tmp/rds-global-bundle.pem /usr/local/share/friday/rds-global-bundle.pem
+ENV NODE_ENV=production \
+    PORT=3001 \
+    NODE_EXTRA_CA_CERTS=/usr/local/share/friday/rds-global-bundle.pem \
+    UPLOAD_DIR=/tmp/friday-uploads
+WORKDIR /app
+COPY --from=deps --chown=node:node /app ./
+COPY --from=build --chown=node:node /app/apps/api/dist ./apps/api/dist
+COPY --chown=node:node apps/api/openapi.json ./apps/api/openapi.json
+COPY --chown=node:node packages/db/src ./packages/db/src
+COPY --chown=node:node packages/db/migrations ./packages/db/migrations
+COPY --chown=node:node infra/docker/deploy-migrate.mjs ./packages/db/deploy-migrate.mjs
+COPY --chmod=755 infra/docker/api-entrypoint.sh /usr/local/bin/friday-entrypoint
+USER node
+WORKDIR /app/apps/api
+EXPOSE 3001
+ENTRYPOINT ["friday-entrypoint"]
+CMD ["node", "dist/main.js"]

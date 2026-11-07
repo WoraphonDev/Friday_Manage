@@ -9,6 +9,11 @@ COPY apps/web ./apps/web
 # Next บันทึก rewrite ลง standalone ตอน build จึงต้องส่งปลายทาง API ในขั้นนี้
 ARG API_ORIGIN=http://host.docker.internal:3001
 ENV API_ORIGIN=${API_ORIGIN}
+# GlitchTip ฝั่งเบราว์เซอร์ฝังตอน build · ว่าง = ปิด
+ARG NEXT_PUBLIC_SENTRY_DSN=
+ARG NEXT_PUBLIC_APP_VERSION=
+ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN} \
+    NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 RUN pnpm --filter @friday/web build \
     && mkdir -p apps/web/public
 

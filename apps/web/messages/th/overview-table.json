@@ -32,7 +32,7 @@
       "top": "({name} {count})",
       "capacity": "ตาม capacity ต้องใช้ ≈ {need} สัปดาห์ แต่แผนมี ≈ {left} สัปดาห์",
       "gap": "แผน {planned}% · ทำจริง {actual}%",
-      "planLink": "ดูแผนทั้งโปรเจกต์ ↓"
+      "planLink": "ดูความเสี่ยงในแผน"
     },
     "kpi": {
       "overdue": "Overdue",

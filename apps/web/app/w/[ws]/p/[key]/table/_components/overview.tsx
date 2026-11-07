@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
@@ -8,9 +8,7 @@ import { Avatar, AvatarStack, Badge, ErrorState, Forbidden, LoadingState, Select
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
-import { queryKeys } from "@/lib/query";
-import type { Permissions } from "@/lib/types";
-import { PlanSection } from "../../dashboard/_components/lead-dashboard";
+import { PlanActions, PlanFacts, PlanModules, PlanRisks, PlanWorkload, usePlan } from "../../dashboard/_components/lead-dashboard";
 import type { Overview, OverviewItem } from "./types";
 import styles from "./ot.module.css";
 
@@ -36,9 +34,14 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
   const params = new URLSearchParams({ scope });
   if (moduleId) params.set("moduleId", moduleId);
   const q = useQuery({ queryKey: ["overview", ws, projectKey, params.toString()], queryFn: () => api.get<Overview>(`${base}/overview?${params}`) });
-  const perms = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${base}/my-permissions`) });
-  // ส่วนแผนทั้งโปรเจกต์ (เดิมหน้าภาพรวม Lead) ใช้สิทธิ์เดียวกับหน้านั้น
-  const canPlan = !!perms.data && !perms.data.guestViewer && perms.data.permissions.includes("project.workload.view");
+  // ข้อมูลแผนทั้งโปรเจกต์ (เดิมหน้าภาพรวม Lead) วางรวมในหน้าเดียว · ใช้สิทธิ์ดู Workload เหมือนหน้าเดิม
+  const plan = usePlan(ws, projectKey);
+  const canPlan = plan.allowed;
+  // มาจาก #planning (ลิงก์ Health / /dashboard เดิม): เลื่อนหลังโหลดเสร็จ เพราะเบราว์เซอร์เลื่อนก่อนเนื้อหามีความสูงจริง
+  const ready = !!q.data && !!plan.risks.data;
+  useEffect(() => {
+    if (ready && window.location.hash === "#planning") document.getElementById("planning")?.scrollIntoView({ block: "start" });
+  }, [ready]);
   if (q.isPending) return <div className={styles.page}><LoadingState /></div>;
   if (q.error) return <div className={styles.page}>{q.error instanceof ApiError && q.error.status === 403 ? <Forbidden /> : <ErrorState error={q.error} retry={() => q.refetch()} />}</div>;
   const d = q.data;
@@ -101,6 +104,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
             <option value="">{t("allModules")}</option>
             {d.modules.filter((m) => m.id).map((m) => <option key={m.id} value={m.id!}>{m.name}</option>)}
           </Select>
+          <PlanActions plan={plan} />
         </div>
       </div>
 
@@ -141,6 +145,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
             {p.nextMilestone ? <><div style={{ fontSize: 16, fontWeight: 600, marginTop: 4 }}>{p.nextMilestone.name}</div><div className={`${styles.muted} ${styles.small}`}>{t("milestoneIn", { date: formatDate(p.nextMilestone.date, year), days: p.nextMilestone.daysLeft })}</div></> : <div style={{ marginTop: 4 }}>{t("noMilestone")}</div>}
           </div>
         </div>
+        <PlanFacts plan={plan} />
         <div className={`${styles.health} ${styles[h.level]}`} role="status" aria-label={t("health.title", { level: t(`health.levels.${h.level}`) })}>
           <div className={styles.healthTitle}><span className={styles.dot} />{t("health.title", { level: t(`health.levels.${h.level}`) })}</div>
           <div className={styles.healthText}>
@@ -175,6 +180,8 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
             {kpiValue[list] > 0 && <div className={styles.listFoot}><Link href={tableHref}>{t("seeAllList", { count: kpiValue[list] })}</Link></div>}
           </section>
 
+          <PlanModules plan={plan} />
+
           <section className={styles.card}>
             <div className={styles.chead}>
               <h2>{t("chartTitle")} <span className="muted" style={{ fontWeight: 500 }}>{t("chartSub")}</span></h2>
@@ -207,10 +214,12 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
               </div>
             </div>
           </section>
+
         </div>
 
         <aside className={styles.side}>
-          <section className={styles.card} aria-label={t("byModule")}>
+          <div className={styles.desktopOnly}><PlanRisks plan={plan} /></div>
+          {!canPlan && <section className={styles.card} aria-label={t("byModule")}>
             <div className={styles.chead}><h2>{t("byModule")}</h2></div>
             <div className={styles.list} style={{ gap: 16 }}>
               {d.modules.map((m) => (
@@ -221,7 +230,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
                 </div>
               ))}
             </div>
-          </section>
+          </section>}
           <section className={`${styles.card} ${styles.desktopOnly}`}>
             <div className={styles.chead}><h2>{t("statusTitle")}</h2><span className="muted" style={{ fontSize: 13 }}>{t("statusTotal", { count: statusTotal })}</span></div>
             <div style={{ padding: "16px 18px" }}>
@@ -277,8 +286,9 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
           </section>
         </aside>
       </div>
-      {/* แผนทั้งโปรเจกต์ (O1) ต่อท้ายสถานะตอนนี้ · จอใหญ่เท่านั้นเหมือนหน้าเดิม */}
-      <div className={styles.desktopOnly}><PlanSection ws={ws} projectKey={projectKey} /></div>
+      {/* Workload รายสัปดาห์กว้างหลายเดือน จึงใช้เต็มความกว้าง · จอใหญ่เท่านั้นเหมือนหน้า O1 เดิม */}
+      {canPlan && <div className={styles.desktopOnly}><PlanWorkload plan={plan} /></div>}
+
     </div>
   );
 }

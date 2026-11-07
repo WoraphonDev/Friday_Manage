@@ -32,7 +32,7 @@
       "top": "({name} {count})",
       "capacity": "At current capacity it needs ≈ {need} weeks, but the plan has ≈ {left} weeks",
       "gap": "Plan {planned}% · Actual {actual}%",
-      "planLink": "See the whole plan ↓"
+      "planLink": "See plan risks"
     },
     "kpi": {
       "overdue": "Overdue",

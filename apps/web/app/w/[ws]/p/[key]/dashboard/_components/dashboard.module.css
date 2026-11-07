@@ -84,8 +84,11 @@
   .risk { flex-wrap:wrap; }
   .riskAction { margin-left:38px; }
 }
-/* ส่วนแผนทั้งโปรเจกต์ใน Overview */
-.embedded { display:flex; flex-direction:column; gap:16px; margin-top:8px; padding-top:20px; border-top:1px solid var(--border); scroll-margin-top:72px; min-width:0; }
-.sectionHead { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
-.sectionHead h2 { margin:0; font-size:18px; }
+/* ตัวเลขแผนเป็นแถวในการ์ดสรุปของ Overview (ไม่ใช่การ์ดแยก) */
+.facts { flex:1 1 100%; display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:12px 24px; padding-top:14px; border-top:1px solid #EEF0F3; min-width:0; }
+.facts .kpi { border:0; background:transparent; padding:0; border-radius:0; }
+.facts .kpi b { font-size:20px; }
+.facts .kpiDanger b, .facts .kpiDanger .kpiNote { color:#B91C1C; }
+/* ลิงก์ #planning จากกล่อง Health / หน้า /dashboard เดิม เลื่อนมาไม่ให้หัวการ์ดอยู่ใต้แถบบน */
+.anchor { scroll-margin-top:72px; }
 

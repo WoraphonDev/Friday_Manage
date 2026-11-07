@@ -524,6 +524,48 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET / POST | `ops/payments?status=pending_review` · `{id}:confirm` · `:reject` | ตรวจสลิปและ 50 ทวิ |
 | CRUD | `ops/feature-flags` · `ops/announcements` | |
 
+### 3.13 Endpoint ที่โค้ดมีเพิ่ม (รวมจากบันทึกผล · D99 · 8 พ.ย. 2569)
+
+เทียบ `apps/api/openapi.json` (สร้างจากโค้ด มี test คุมว่าตรงกับ controller) กับตารางด้านบน · รายการนี้คือ path ที่ตารางยังไม่เขียนไว้ตรง ๆ · request / response ดูที่ `GET /api/v1/docs` (เปิดเฉพาะนอก production)
+
+| Method | Path | หมายเหตุ |
+|---|---|---|
+| GET | `auth/csrf` | ออก CSRF token (cookie `fm_csrf`) ก่อนคำขอที่แก้ข้อมูล |
+| GET | `auth/oauth/{provider}/callback` | ปลายทางของ Google / Microsoft (A13) · error หรือ `#mfaToken` ส่งกลับหน้า `/login` |
+| POST | `me/email:confirm` | ยืนยันอีเมลใหม่ด้วยรหัส 6 หลัก / ลิงก์ |
+| GET | `me/mfa` | สถานะ 2FA ของฉัน |
+| POST | `me/notifications/{id}:undone` | ย้อนสถานะ "เสร็จ" ของรายการใน Inbox |
+| GET | `ical/{file}` | ไฟล์ iCal สาธารณะ · ความลับอยู่ที่ token ในชื่อไฟล์ · ลบลิงก์ด้วย `DELETE me/calendar-feeds/{id}` |
+| GET | `public/legal` · `public/legal/{type}` | เอกสารกฎหมายรุ่นปัจจุบัน (A30 · หน้า Legal) |
+| PUT / GET | `storage/upload/{token}` · `storage/download/{token}` | ที่เก็บไฟล์ในเครื่องสำหรับพัฒนา · production ตั้ง `S3_BUCKET` แล้วใช้ presigned URL ของ S3 แทน |
+| GET | `/api/v1/docs` · `/api/v1/openapi.json` | Swagger UI / OpenAPI (A40) · 404 ใน production |
+| POST | `/api/v1/workspaces` | สร้าง Workspace (Q1) |
+| GET | `workspaces/deleted` | Workspace ที่ฉันลบและยังกู้คืนได้ (คู่กับ `workspaces/{slug}:restore`) |
+| POST | `w/access-requests/{id}:reject` | คู่กับ `:approve` |
+| GET | `w/members/{userId}/handover` | งานที่ต้องโอนก่อนปิดบัญชีสมาชิก (N1) |
+| GET | `w/home` | ข้อมูลหน้า Home ทั้งหน้าในคำขอเดียว (A10) |
+| GET | `w/automation-templates` | แม่แบบ Automation · Guest ไม่ได้ |
+| DELETE | `w/holiday-calendars/{id}` · `w/holidays/{id}` | Admin Console › วันหยุด |
+| GET | `w/integrations/git/install-url` · POST `w/integrations/git/{id}/sync` · DELETE `w/integrations/git/{id}` | ติดตั้ง GitHub App, ดึงข้อมูลซ้ำ, เลิกเชื่อม (A27) |
+| POST · DELETE | `w/leaves/{id}:approve` · `w/leaves/{id}` | อนุมัติ / ลบวันลา (A20) |
+| PATCH · GET | `w/data-requests/{id}` · `w/data-requests/{id}/result` | คำขอ PDPA: แก้สถานะ / ดาวน์โหลดผล (A31) |
+| GET | `w/exports/{id}/download` | ไฟล์ Export ทั้ง Workspace |
+| GET | `w/billing/invoices/{file}` · `w/billing/tax-documents/{file}` | PDF ใบแจ้งหนี้ / ใบกำกับภาษี (A33) |
+| GET | `p/issue-types` · `p/workflows` | รายการสำหรับหน้า Settings (L2) |
+| GET | `p/plan-changes.xlsx` | Export การแก้แผนพร้อมไฮไลต์ |
+| GET | `p/reports/module-forecast` · `p/reports/traceability` | คาดการณ์วันจบราย Module · ตาราง FR / Screen → งาน (A09) |
+| POST | `p/files/{id}:restore` | กู้ไฟล์จากถังขยะ |
+| GET | `i/watchers` | รายชื่อผู้ติดตาม (คู่กับ `i/:watch`) |
+| PATCH · DELETE | `i/comments/{id}` · DELETE `i/time-logs/{id}` | แก้ / ลบรายการของตัวเอง |
+| POST | `hooks/line/{workspaceId}` | LINE OA ของแต่ละ Workspace (ตาราง 3.11 เขียนเป็น `/hooks/line`) |
+
+ทุก `:action` ในโค้ดรับทั้ง `/action` และ `\:action` (ดูธรรมเนียม URL ข้างบน) · Webhook ขาเข้าอยู่ใต้ `/api/v1/hooks/...` ไม่ใช่ `/hooks/...`
+
+#### ฟิลด์ของงานที่เพิ่มหลังร่างแรก
+
+- `requirements`, `screens` (รหัส), `labels` (`{ id, name, color }`) อยู่ในทุก DTO ของงาน · `PATCH i/` รับ `requirements`, `screens`, `labelIds` แบบแทนทั้งชุด · ตัวกรอง `q` ของ `p/issues` ค้นรหัส FR / SCR ด้วย · `p/form-options` คืน `requirements` และ `screens` ที่มีในโปรเจกต์
+- `DELETE i/?subtasks=keep` เก็บ Sub-task ไว้เป็น Task เดี่ยว (หน้า P3)
+
 ---
 
 ## Event ที่ระบบส่งต่อ

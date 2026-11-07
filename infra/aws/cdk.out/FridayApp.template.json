@@ -1,0 +1,3704 @@
+{
+ "Resources": {
+  "Vpc8378EB38": {
+   "Type": "AWS::EC2::VPC",
+   "Properties": {
+    "CidrBlock": "10.0.0.0/16",
+    "EnableDnsHostnames": true,
+    "EnableDnsSupport": true,
+    "InstanceTenancy": "default",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/Resource"
+   }
+  },
+  "VpcpublicSubnet1Subnet2BB74ED7": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": {
+     "Fn::Select": [
+      0,
+      {
+       "Fn::GetAZs": ""
+      }
+     ]
+    },
+    "CidrBlock": "10.0.0.0/24",
+    "MapPublicIpOnLaunch": true,
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "public"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Public"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/publicSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/publicSubnet1/Subnet"
+   }
+  },
+  "VpcpublicSubnet1RouteTable15C15F8E": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/publicSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/publicSubnet1/RouteTable"
+   }
+  },
+  "VpcpublicSubnet1RouteTableAssociation4E83B6E4": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "VpcpublicSubnet1RouteTable15C15F8E"
+    },
+    "SubnetId": {
+     "Ref": "VpcpublicSubnet1Subnet2BB74ED7"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/publicSubnet1/RouteTableAssociation"
+   }
+  },
+  "VpcpublicSubnet1DefaultRouteB88F9E93": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "GatewayId": {
+     "Ref": "VpcIGWD7BA715C"
+    },
+    "RouteTableId": {
+     "Ref": "VpcpublicSubnet1RouteTable15C15F8E"
+    }
+   },
+   "DependsOn": [
+    "VpcVPCGWBF912B6E"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/publicSubnet1/DefaultRoute"
+   }
+  },
+  "VpcpublicSubnet1EIP411541E6": {
+   "Type": "AWS::EC2::EIP",
+   "Properties": {
+    "Domain": "vpc",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/publicSubnet1"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/publicSubnet1/EIP"
+   }
+  },
+  "VpcpublicSubnet1NATGatewayA036E8A6": {
+   "Type": "AWS::EC2::NatGateway",
+   "Properties": {
+    "AllocationId": {
+     "Fn::GetAtt": [
+      "VpcpublicSubnet1EIP411541E6",
+      "AllocationId"
+     ]
+    },
+    "SubnetId": {
+     "Ref": "VpcpublicSubnet1Subnet2BB74ED7"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/publicSubnet1"
+     }
+    ]
+   },
+   "DependsOn": [
+    "VpcpublicSubnet1DefaultRouteB88F9E93",
+    "VpcpublicSubnet1RouteTableAssociation4E83B6E4"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/publicSubnet1/NATGateway"
+   }
+  },
+  "VpcpublicSubnet2SubnetE34B022A": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": {
+     "Fn::Select": [
+      1,
+      {
+       "Fn::GetAZs": ""
+      }
+     ]
+    },
+    "CidrBlock": "10.0.1.0/24",
+    "MapPublicIpOnLaunch": true,
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "public"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Public"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/publicSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/publicSubnet2/Subnet"
+   }
+  },
+  "VpcpublicSubnet2RouteTableC5A6DF77": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/publicSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/publicSubnet2/RouteTable"
+   }
+  },
+  "VpcpublicSubnet2RouteTableAssociationCCE257FF": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "VpcpublicSubnet2RouteTableC5A6DF77"
+    },
+    "SubnetId": {
+     "Ref": "VpcpublicSubnet2SubnetE34B022A"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/publicSubnet2/RouteTableAssociation"
+   }
+  },
+  "VpcpublicSubnet2DefaultRoute732F0BEB": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "GatewayId": {
+     "Ref": "VpcIGWD7BA715C"
+    },
+    "RouteTableId": {
+     "Ref": "VpcpublicSubnet2RouteTableC5A6DF77"
+    }
+   },
+   "DependsOn": [
+    "VpcVPCGWBF912B6E"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/publicSubnet2/DefaultRoute"
+   }
+  },
+  "VpcappSubnet1SubnetAE489B2F": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": {
+     "Fn::Select": [
+      0,
+      {
+       "Fn::GetAZs": ""
+      }
+     ]
+    },
+    "CidrBlock": "10.0.4.0/22",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "app"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Private"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/appSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/appSubnet1/Subnet"
+   }
+  },
+  "VpcappSubnet1RouteTable072E8E09": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/appSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/appSubnet1/RouteTable"
+   }
+  },
+  "VpcappSubnet1RouteTableAssociation168BF781": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "VpcappSubnet1RouteTable072E8E09"
+    },
+    "SubnetId": {
+     "Ref": "VpcappSubnet1SubnetAE489B2F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/appSubnet1/RouteTableAssociation"
+   }
+  },
+  "VpcappSubnet1DefaultRoute64294A8F": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "NatGatewayId": {
+     "Ref": "VpcpublicSubnet1NATGatewayA036E8A6"
+    },
+    "RouteTableId": {
+     "Ref": "VpcappSubnet1RouteTable072E8E09"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/appSubnet1/DefaultRoute"
+   }
+  },
+  "VpcappSubnet2Subnet2449FB56": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": {
+     "Fn::Select": [
+      1,
+      {
+       "Fn::GetAZs": ""
+      }
+     ]
+    },
+    "CidrBlock": "10.0.8.0/22",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "app"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Private"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/appSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/appSubnet2/Subnet"
+   }
+  },
+  "VpcappSubnet2RouteTableB76BFC59": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/appSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/appSubnet2/RouteTable"
+   }
+  },
+  "VpcappSubnet2RouteTableAssociation81E96A75": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "VpcappSubnet2RouteTableB76BFC59"
+    },
+    "SubnetId": {
+     "Ref": "VpcappSubnet2Subnet2449FB56"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/appSubnet2/RouteTableAssociation"
+   }
+  },
+  "VpcappSubnet2DefaultRouteEBCCC1EA": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "NatGatewayId": {
+     "Ref": "VpcpublicSubnet1NATGatewayA036E8A6"
+    },
+    "RouteTableId": {
+     "Ref": "VpcappSubnet2RouteTableB76BFC59"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/appSubnet2/DefaultRoute"
+   }
+  },
+  "VpcdataSubnet1SubnetE2B009FB": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": {
+     "Fn::Select": [
+      0,
+      {
+       "Fn::GetAZs": ""
+      }
+     ]
+    },
+    "CidrBlock": "10.0.12.0/24",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "data"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Isolated"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/dataSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/dataSubnet1/Subnet"
+   }
+  },
+  "VpcdataSubnet1RouteTableAF5F53E0": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/dataSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/dataSubnet1/RouteTable"
+   }
+  },
+  "VpcdataSubnet1RouteTableAssociation9E9FDBBB": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "VpcdataSubnet1RouteTableAF5F53E0"
+    },
+    "SubnetId": {
+     "Ref": "VpcdataSubnet1SubnetE2B009FB"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/dataSubnet1/RouteTableAssociation"
+   }
+  },
+  "VpcdataSubnet2SubnetAD08DFFF": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": {
+     "Fn::Select": [
+      1,
+      {
+       "Fn::GetAZs": ""
+      }
+     ]
+    },
+    "CidrBlock": "10.0.13.0/24",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "data"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Isolated"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/dataSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/dataSubnet2/Subnet"
+   }
+  },
+  "VpcdataSubnet2RouteTable94FA483A": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc/dataSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/dataSubnet2/RouteTable"
+   }
+  },
+  "VpcdataSubnet2RouteTableAssociation6C8F2058": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "VpcdataSubnet2RouteTable94FA483A"
+    },
+    "SubnetId": {
+     "Ref": "VpcdataSubnet2SubnetAD08DFFF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/dataSubnet2/RouteTableAssociation"
+   }
+  },
+  "VpcIGWD7BA715C": {
+   "Type": "AWS::EC2::InternetGateway",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/IGW"
+   }
+  },
+  "VpcVPCGWBF912B6E": {
+   "Type": "AWS::EC2::VPCGatewayAttachment",
+   "Properties": {
+    "InternetGatewayId": {
+     "Ref": "VpcIGWD7BA715C"
+    },
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/VPCGW"
+   }
+  },
+  "VpcS3Endpoint4A3DE4B5": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "RouteTableIds": [
+     {
+      "Ref": "VpcappSubnet1RouteTable072E8E09"
+     },
+     {
+      "Ref": "VpcappSubnet2RouteTableB76BFC59"
+     },
+     {
+      "Ref": "VpcpublicSubnet1RouteTable15C15F8E"
+     },
+     {
+      "Ref": "VpcpublicSubnet2RouteTableC5A6DF77"
+     },
+     {
+      "Ref": "VpcdataSubnet1RouteTableAF5F53E0"
+     },
+     {
+      "Ref": "VpcdataSubnet2RouteTable94FA483A"
+     }
+    ],
+    "ServiceName": {
+     "Fn::Join": [
+      "",
+      [
+       "com.amazonaws.",
+       {
+        "Ref": "AWS::Region"
+       },
+       ".s3"
+      ]
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     },
+     {
+      "Key": "Name",
+      "Value": "FridayApp/Vpc"
+     }
+    ],
+    "VpcEndpointType": "Gateway",
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Vpc/S3Endpoint/Resource"
+   }
+  },
+  "AlbSg1155C1BE": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Friday ALB: HTTP/HTTPS from the internet",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "from 0.0.0.0/0:443",
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     },
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "from 0.0.0.0/0:80",
+      "FromPort": 80,
+      "IpProtocol": "tcp",
+      "ToPort": 80
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/AlbSg/Resource"
+   }
+  },
+  "AppSg898BCA4E": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Friday ECS tasks: api, worker, web",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/AppSg/Resource"
+   }
+  },
+  "AppSgfromFridayAppAlbSg3503D4CC3001FAF4A479": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "ALB to API",
+    "FromPort": 3001,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "AppSg898BCA4E",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "AlbSg1155C1BE",
+      "GroupId"
+     ]
+    },
+    "ToPort": 3001
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/AppSg/from FridayAppAlbSg3503D4CC:3001"
+   }
+  },
+  "AppSgfromFridayAppAlbSg3503D4CC30006E2FF3AC": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "ALB to Web",
+    "FromPort": 3000,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "AppSg898BCA4E",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "AlbSg1155C1BE",
+      "GroupId"
+     ]
+    },
+    "ToPort": 3000
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/AppSg/from FridayAppAlbSg3503D4CC:3000"
+   }
+  },
+  "DbSg495F8305": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Friday PostgreSQL: from app tasks only",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "255.255.255.255/32",
+      "Description": "Disallow all traffic",
+      "FromPort": 252,
+      "IpProtocol": "icmp",
+      "ToPort": 86
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/DbSg/Resource"
+   }
+  },
+  "DbSgfromFridayAppAppSg7A9B1971543240F556E8": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "from FridayAppAppSg7A9B1971:5432",
+    "FromPort": 5432,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "DbSg495F8305",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "AppSg898BCA4E",
+      "GroupId"
+     ]
+    },
+    "ToPort": 5432
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/DbSg/from FridayAppAppSg7A9B1971:5432"
+   }
+  },
+  "CacheSg89F87252": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Friday Valkey: from app tasks only",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "255.255.255.255/32",
+      "Description": "Disallow all traffic",
+      "FromPort": 252,
+      "IpProtocol": "icmp",
+      "ToPort": 86
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/CacheSg/Resource"
+   }
+  },
+  "CacheSgfromFridayAppAppSg7A9B19716379CCD1F0B8": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "from FridayAppAppSg7A9B1971:6379",
+    "FromPort": 6379,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "CacheSg89F87252",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "AppSg898BCA4E",
+      "GroupId"
+     ]
+    },
+    "ToPort": 6379
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/CacheSg/from FridayAppAppSg7A9B1971:6379"
+   }
+  },
+  "DbApiPassword144139F7": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "รหัสผ่านบัญชี friday_api (deploy-migrate ตั้งให้ใน PostgreSQL)",
+    "GenerateSecretString": {
+     "ExcludeCharacters": " %+~`#$&*()|[]{}:;<>?!'/@\"\\=,.^",
+     "ExcludePunctuation": true,
+     "PasswordLength": 40
+    },
+    "Name": "friday/db/api",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/DbApiPassword/Resource"
+   }
+  },
+  "DbWorkerPassword1A60669F": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "รหัสผ่านบัญชี friday_worker (deploy-migrate ตั้งให้ใน PostgreSQL)",
+    "GenerateSecretString": {
+     "ExcludeCharacters": " %+~`#$&*()|[]{}:;<>?!'/@\"\\=,.^",
+     "ExcludePunctuation": true,
+     "PasswordLength": 40
+    },
+    "Name": "friday/db/worker",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/DbWorkerPassword/Resource"
+   }
+  },
+  "AppSecretFAB5164C": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "ค่าลับของแอป · กรอก STRIPE_*, SMTP_PASS, SENTRY_DSN, GITHUB_* ใน Console ก่อน deploy service",
+    "GenerateSecretString": {
+     "ExcludePunctuation": true,
+     "GenerateStringKey": "AUTH_SECRET",
+     "PasswordLength": 64,
+     "SecretStringTemplate": "{\"STRIPE_SECRET_KEY\":\"\",\"STRIPE_WEBHOOK_SECRET\":\"\",\"SMTP_PASS\":\"\",\"SENTRY_DSN\":\"\",\"GITHUB_CLIENT_SECRET\":\"\",\"GITHUB_WEBHOOK_SECRET\":\"\",\"GITHUB_APP_PRIVATE_KEY\":\"\",\"ETAX_WEBHOOK_SECRET\":\"\"}"
+    },
+    "Name": "friday/app",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/AppSecret/Resource"
+   }
+  },
+  "DbSubnetGroup6F6C177A": {
+   "Type": "AWS::RDS::DBSubnetGroup",
+   "Properties": {
+    "DBSubnetGroupDescription": "Subnet group for Db database",
+    "SubnetIds": [
+     {
+      "Ref": "VpcdataSubnet1SubnetE2B009FB"
+     },
+     {
+      "Ref": "VpcdataSubnet2SubnetAD08DFFF"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Db/SubnetGroup/Default"
+   }
+  },
+  "DbParameterGroupB60E38C6": {
+   "Type": "AWS::RDS::DBParameterGroup",
+   "Properties": {
+    "Description": "Parameter group for postgres18",
+    "Family": "postgres18",
+    "Parameters": {
+     "rds.force_ssl": "1",
+     "timezone": "UTC"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Db/ParameterGroup/Resource"
+   }
+  },
+  "FridayAppDbSecret024BD041c42aa03cd122321422eb26aa8e92ccf7": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": {
+     "Fn::Join": [
+      "",
+      [
+       "Generated by the CDK for stack: ",
+       {
+        "Ref": "AWS::StackName"
+       }
+      ]
+     ]
+    },
+    "GenerateSecretString": {
+     "ExcludeCharacters": " %+~`#$&*()|[]{}:;<>?!'/@\"\\=,.^",
+     "GenerateStringKey": "password",
+     "PasswordLength": 30,
+     "SecretStringTemplate": "{\"username\":\"friday_owner\"}"
+    },
+    "Name": "friday/db/owner",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Db/Secret/Resource"
+   }
+  },
+  "DbSecretAttachment7AED447C": {
+   "Type": "AWS::SecretsManager::SecretTargetAttachment",
+   "Properties": {
+    "SecretId": {
+     "Ref": "FridayAppDbSecret024BD041c42aa03cd122321422eb26aa8e92ccf7"
+    },
+    "TargetId": {
+     "Ref": "Db5D02A0A9"
+    },
+    "TargetType": "AWS::RDS::DBInstance"
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Db/Secret/Attachment/Resource"
+   }
+  },
+  "Db5D02A0A9": {
+   "Type": "AWS::RDS::DBInstance",
+   "Properties": {
+    "AllocatedStorage": "20",
+    "BackupRetentionPeriod": 14,
+    "CopyTagsToSnapshot": true,
+    "DBInstanceClass": "db.t4g.small",
+    "DBName": "friday",
+    "DBParameterGroupName": {
+     "Ref": "DbParameterGroupB60E38C6"
+    },
+    "DBSubnetGroupName": {
+     "Ref": "DbSubnetGroup6F6C177A"
+    },
+    "DeletionProtection": true,
+    "EnableCloudwatchLogsExports": [
+     "postgresql"
+    ],
+    "EnablePerformanceInsights": false,
+    "Engine": "postgres",
+    "EngineVersion": "18",
+    "MasterUserPassword": {
+     "Fn::Join": [
+      "",
+      [
+       "{{resolve:secretsmanager:",
+       {
+        "Ref": "FridayAppDbSecret024BD041c42aa03cd122321422eb26aa8e92ccf7"
+       },
+       ":SecretString:password::}}"
+      ]
+     ]
+    },
+    "MasterUsername": "friday_owner",
+    "MaxAllocatedStorage": 200,
+    "MultiAZ": false,
+    "PubliclyAccessible": false,
+    "StorageEncrypted": true,
+    "StorageType": "gp3",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "VPCSecurityGroups": [
+     {
+      "Fn::GetAtt": [
+       "DbSg495F8305",
+       "GroupId"
+      ]
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Snapshot",
+   "DeletionPolicy": "Snapshot",
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Db/Resource"
+   }
+  },
+  "DbLogRetentionpostgresql52689C0A": {
+   "Type": "Custom::LogRetention",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A",
+      "Arn"
+     ]
+    },
+    "LogGroupName": {
+     "Fn::Join": [
+      "",
+      [
+       "/aws/rds/instance/",
+       {
+        "Ref": "Db5D02A0A9"
+       },
+       "/postgresql"
+      ]
+     ]
+    },
+    "RetentionInDays": 30
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Db/LogRetentionpostgresql/Resource"
+   }
+  },
+  "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/Resource"
+   }
+  },
+  "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "logs:DeleteRetentionPolicy",
+        "logs:PutRetentionPolicy"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB",
+    "Roles": [
+     {
+      "Ref": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Handler": "index.handler",
+    "Runtime": "nodejs24.x",
+    "Timeout": 900,
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-ap-southeast-7"
+     },
+     "S3Key": "2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d.zip"
+    },
+    "Role": {
+     "Fn::GetAtt": [
+      "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB",
+      "Arn"
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "DependsOn": [
+    "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB",
+    "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/Resource",
+    "aws:asset:path": "asset.2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "CacheParams": {
+   "Type": "AWS::ElastiCache::ParameterGroup",
+   "Properties": {
+    "CacheParameterGroupFamily": "valkey8",
+    "Description": "Friday BullMQ requires noeviction",
+    "Properties": {
+     "maxmemory-policy": "noeviction"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/CacheParams"
+   }
+  },
+  "CacheSubnets": {
+   "Type": "AWS::ElastiCache::SubnetGroup",
+   "Properties": {
+    "Description": "Friday Valkey",
+    "SubnetIds": [
+     {
+      "Ref": "VpcdataSubnet1SubnetE2B009FB"
+     },
+     {
+      "Ref": "VpcdataSubnet2SubnetAD08DFFF"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/CacheSubnets"
+   }
+  },
+  "Cache": {
+   "Type": "AWS::ElastiCache::ReplicationGroup",
+   "Properties": {
+    "AtRestEncryptionEnabled": true,
+    "AutomaticFailoverEnabled": false,
+    "CacheNodeType": "cache.t4g.micro",
+    "CacheParameterGroupName": {
+     "Ref": "CacheParams"
+    },
+    "CacheSubnetGroupName": {
+     "Ref": "CacheSubnets"
+    },
+    "Engine": "valkey",
+    "EngineVersion": "8.0",
+    "NumCacheClusters": 1,
+    "ReplicationGroupDescription": "Friday Manage queue",
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "CacheSg89F87252",
+       "GroupId"
+      ]
+     }
+    ],
+    "SnapshotRetentionLimit": 3,
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "TransitEncryptionEnabled": true
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Cache"
+   }
+  },
+  "Files8E6940B8": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "CorsConfiguration": {
+     "CorsRules": [
+      {
+       "AllowedHeaders": [
+        "*"
+       ],
+       "AllowedMethods": [
+        "GET",
+        "PUT",
+        "HEAD"
+       ],
+       "AllowedOrigins": [
+        "http://friday.example.com"
+       ],
+       "MaxAge": 3600
+      }
+     ]
+    },
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 2
+       },
+       "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 30
+       },
+       "Status": "Enabled"
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Files/Resource"
+   }
+  },
+  "FilesPolicyCFAB4773": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "Files8E6940B8"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "Files8E6940B8",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "Files8E6940B8",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Files/Policy/Resource"
+   }
+  },
+  "ClusterEB0386A7": {
+   "Type": "AWS::ECS::Cluster",
+   "Properties": {
+    "ClusterName": "friday",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Cluster/Resource"
+   }
+  },
+  "Cluster3DA9CCBA": {
+   "Type": "AWS::ECS::ClusterCapacityProviderAssociations",
+   "Properties": {
+    "CapacityProviders": [
+     "FARGATE",
+     "FARGATE_SPOT"
+    ],
+    "Cluster": {
+     "Ref": "ClusterEB0386A7"
+    },
+    "DefaultCapacityProviderStrategy": []
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Cluster/Cluster"
+   }
+  },
+  "Logs6819BB44": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/friday/app",
+    "RetentionInDays": 30,
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Logs/Resource"
+   }
+  },
+  "ApiTaskTaskRoleD15A20E9": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/ApiTask/TaskRole/Resource"
+   }
+  },
+  "ApiTaskTaskRoleDefaultPolicy850CEBFD": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:Abort*",
+        "s3:DeleteObject*",
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "Files8E6940B8",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "Files8E6940B8",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ApiTaskTaskRoleDefaultPolicy850CEBFD",
+    "Roles": [
+     {
+      "Ref": "ApiTaskTaskRoleD15A20E9"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/ApiTask/TaskRole/DefaultPolicy/Resource"
+   }
+  },
+  "ApiTask011D0955": {
+   "Type": "AWS::ECS::TaskDefinition",
+   "Properties": {
+    "ContainerDefinitions": [
+     {
+      "Environment": [
+       {
+        "Name": "NODE_ENV",
+        "Value": "production"
+       },
+       {
+        "Name": "PORT",
+        "Value": "3001"
+       },
+       {
+        "Name": "WEB_URL",
+        "Value": "http://friday.example.com"
+       },
+       {
+        "Name": "APP_URL",
+        "Value": "http://friday.example.com"
+       },
+       {
+        "Name": "API_PUBLIC_URL",
+        "Value": "http://friday.example.com"
+       },
+       {
+        "Name": "VALKEY_URL",
+        "Value": {
+         "Fn::Join": [
+          "",
+          [
+           "rediss://",
+           {
+            "Fn::GetAtt": [
+             "Cache",
+             "PrimaryEndPoint.Address"
+            ]
+           },
+           ":",
+           {
+            "Fn::GetAtt": [
+             "Cache",
+             "PrimaryEndPoint.Port"
+            ]
+           }
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "QUEUE_PREFIX",
+        "Value": "friday"
+       },
+       {
+        "Name": "S3_BUCKET",
+        "Value": {
+         "Ref": "Files8E6940B8"
+        }
+       },
+       {
+        "Name": "S3_REGION",
+        "Value": "ap-southeast-7"
+       },
+       {
+        "Name": "SENTRY_ENVIRONMENT",
+        "Value": "production"
+       },
+       {
+        "Name": "APP_VERSION",
+        "Value": "latest"
+       },
+       {
+        "Name": "DB_HOST",
+        "Value": {
+         "Fn::GetAtt": [
+          "Db5D02A0A9",
+          "Endpoint.Address"
+         ]
+        }
+       },
+       {
+        "Name": "DB_PORT",
+        "Value": {
+         "Fn::GetAtt": [
+          "Db5D02A0A9",
+          "Endpoint.Port"
+         ]
+        }
+       },
+       {
+        "Name": "DB_NAME",
+        "Value": "friday"
+       },
+       {
+        "Name": "DB_SSLMODE",
+        "Value": "verify-full"
+       }
+      ],
+      "Essential": true,
+      "HealthCheck": {
+       "Command": [
+        "CMD",
+        "node",
+        "-e",
+        "fetch('http://127.0.0.1:3001/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+       ],
+       "Interval": 15,
+       "Retries": 3,
+       "StartPeriod": 30,
+       "Timeout": 5
+      },
+      "Image": {
+       "Fn::Join": [
+        "",
+        [
+         {
+          "Fn::Select": [
+           4,
+           {
+            "Fn::Split": [
+             ":",
+             {
+              "Fn::ImportValue": "FridayRegistry:ExportsOutputFnGetAttapiC8550315Arn99FFC27D"
+             }
+            ]
+           }
+          ]
+         },
+         ".dkr.ecr.",
+         {
+          "Fn::Select": [
+           3,
+           {
+            "Fn::Split": [
+             ":",
+             {
+              "Fn::ImportValue": "FridayRegistry:ExportsOutputFnGetAttapiC8550315Arn99FFC27D"
+             }
+            ]
+           }
+          ]
+         },
+         ".",
+         {
+          "Ref": "AWS::URLSuffix"
+         },
+         "/",
+         {
+          "Fn::ImportValue": "FridayRegistry:ExportsOutputRefapiC855031500EF81AC"
+         },
+         ":latest"
+        ]
+       ]
+      },
+      "LogConfiguration": {
+       "LogDriver": "awslogs",
+       "Options": {
+        "awslogs-group": {
+         "Ref": "Logs6819BB44"
+        },
+        "awslogs-stream-prefix": "api",
+        "awslogs-region": "ap-southeast-7"
+       }
+      },
+      "Name": "api",
+      "PortMappings": [
+       {
+        "ContainerPort": 3001,
+        "Protocol": "tcp"
+       }
+      ],
+      "ReadonlyRootFilesystem": false,
+      "Secrets": [
+       {
+        "Name": "DB_API_PASSWORD",
+        "ValueFrom": {
+         "Ref": "DbApiPassword144139F7"
+        }
+       },
+       {
+        "Name": "DB_WORKER_PASSWORD",
+        "ValueFrom": {
+         "Ref": "DbWorkerPassword1A60669F"
+        }
+       },
+       {
+        "Name": "AUTH_SECRET",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":AUTH_SECRET::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "STRIPE_SECRET_KEY",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":STRIPE_SECRET_KEY::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "STRIPE_WEBHOOK_SECRET",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":STRIPE_WEBHOOK_SECRET::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "SMTP_PASS",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":SMTP_PASS::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "SENTRY_DSN",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":SENTRY_DSN::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "GITHUB_CLIENT_SECRET",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":GITHUB_CLIENT_SECRET::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "GITHUB_WEBHOOK_SECRET",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":GITHUB_WEBHOOK_SECRET::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "GITHUB_APP_PRIVATE_KEY",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":GITHUB_APP_PRIVATE_KEY::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "ETAX_WEBHOOK_SECRET",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":ETAX_WEBHOOK_SECRET::"
+          ]
+         ]
+        }
+       }
+      ]
+     }
+    ],
+    "Cpu": "512",
+    "ExecutionRoleArn": {
+     "Fn::GetAtt": [
+      "ApiTaskExecutionRoleC2344606",
+      "Arn"
+     ]
+    },
+    "Family": "friday-api",
+    "Memory": "1024",
+    "NetworkMode": "awsvpc",
+    "RequiresCompatibilities": [
+     "FARGATE"
+    ],
+    "RuntimePlatform": {
+     "CpuArchitecture": "ARM64",
+     "OperatingSystemFamily": "LINUX"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "TaskRoleArn": {
+     "Fn::GetAtt": [
+      "ApiTaskTaskRoleD15A20E9",
+      "Arn"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/ApiTask/Resource"
+   }
+  },
+  "ApiTaskExecutionRoleC2344606": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/ApiTask/ExecutionRole/Resource"
+   }
+  },
+  "ApiTaskExecutionRoleDefaultPolicyB5439AFC": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "FridayRegistry:ExportsOutputFnGetAttapiC8550315Arn99FFC27D"
+       }
+      },
+      {
+       "Action": "ecr:GetAuthorizationToken",
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "Logs6819BB44",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Ref": "AppSecretFAB5164C"
+        },
+        {
+         "Ref": "DbApiPassword144139F7"
+        },
+        {
+         "Ref": "DbWorkerPassword1A60669F"
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ApiTaskExecutionRoleDefaultPolicyB5439AFC",
+    "Roles": [
+     {
+      "Ref": "ApiTaskExecutionRoleC2344606"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/ApiTask/ExecutionRole/DefaultPolicy/Resource"
+   }
+  },
+  "WorkerTaskTaskRoleC4141168": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/WorkerTask/TaskRole/Resource"
+   }
+  },
+  "WorkerTaskTaskRoleDefaultPolicy242C79D9": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:Abort*",
+        "s3:DeleteObject*",
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "Files8E6940B8",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "Files8E6940B8",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "WorkerTaskTaskRoleDefaultPolicy242C79D9",
+    "Roles": [
+     {
+      "Ref": "WorkerTaskTaskRoleC4141168"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/WorkerTask/TaskRole/DefaultPolicy/Resource"
+   }
+  },
+  "WorkerTaskCBB1FEE3": {
+   "Type": "AWS::ECS::TaskDefinition",
+   "Properties": {
+    "ContainerDefinitions": [
+     {
+      "Command": [
+       "node",
+       "dist/worker.js"
+      ],
+      "Environment": [
+       {
+        "Name": "NODE_ENV",
+        "Value": "production"
+       },
+       {
+        "Name": "PORT",
+        "Value": "3001"
+       },
+       {
+        "Name": "WEB_URL",
+        "Value": "http://friday.example.com"
+       },
+       {
+        "Name": "APP_URL",
+        "Value": "http://friday.example.com"
+       },
+       {
+        "Name": "API_PUBLIC_URL",
+        "Value": "http://friday.example.com"
+       },
+       {
+        "Name": "VALKEY_URL",
+        "Value": {
+         "Fn::Join": [
+          "",
+          [
+           "rediss://",
+           {
+            "Fn::GetAtt": [
+             "Cache",
+             "PrimaryEndPoint.Address"
+            ]
+           },
+           ":",
+           {
+            "Fn::GetAtt": [
+             "Cache",
+             "PrimaryEndPoint.Port"
+            ]
+           }
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "QUEUE_PREFIX",
+        "Value": "friday"
+       },
+       {
+        "Name": "S3_BUCKET",
+        "Value": {
+         "Ref": "Files8E6940B8"
+        }
+       },
+       {
+        "Name": "S3_REGION",
+        "Value": "ap-southeast-7"
+       },
+       {
+        "Name": "SENTRY_ENVIRONMENT",
+        "Value": "production"
+       },
+       {
+        "Name": "APP_VERSION",
+        "Value": "latest"
+       },
+       {
+        "Name": "DB_HOST",
+        "Value": {
+         "Fn::GetAtt": [
+          "Db5D02A0A9",
+          "Endpoint.Address"
+         ]
+        }
+       },
+       {
+        "Name": "DB_PORT",
+        "Value": {
+         "Fn::GetAtt": [
+          "Db5D02A0A9",
+          "Endpoint.Port"
+         ]
+        }
+       },
+       {
+        "Name": "DB_NAME",
+        "Value": "friday"
+       },
+       {
+        "Name": "DB_SSLMODE",
+        "Value": "verify-full"
+       },
+       {
+        "Name": "WORKER_CONCURRENCY",
+        "Value": "5"
+       }
+      ],
+      "Essential": true,
+      "Image": {
+       "Fn::Join": [
+        "",
+        [
+         {
+          "Fn::Select": [
+           4,
+           {
+            "Fn::Split": [
+             ":",
+             {
+              "Fn::ImportValue": "FridayRegistry:ExportsOutputFnGetAttapiC8550315Arn99FFC27D"
+             }
+            ]
+           }
+          ]
+         },
+         ".dkr.ecr.",
+         {
+          "Fn::Select": [
+           3,
+           {
+            "Fn::Split": [
+             ":",
+             {
+              "Fn::ImportValue": "FridayRegistry:ExportsOutputFnGetAttapiC8550315Arn99FFC27D"
+             }
+            ]
+           }
+          ]
+         },
+         ".",
+         {
+          "Ref": "AWS::URLSuffix"
+         },
+         "/",
+         {
+          "Fn::ImportValue": "FridayRegistry:ExportsOutputRefapiC855031500EF81AC"
+         },
+         ":latest"
+        ]
+       ]
+      },
+      "LogConfiguration": {
+       "LogDriver": "awslogs",
+       "Options": {
+        "awslogs-group": {
+         "Ref": "Logs6819BB44"
+        },
+        "awslogs-stream-prefix": "worker",
+        "awslogs-region": "ap-southeast-7"
+       }
+      },
+      "Name": "worker",
+      "ReadonlyRootFilesystem": false,
+      "Secrets": [
+       {
+        "Name": "DB_API_PASSWORD",
+        "ValueFrom": {
+         "Ref": "DbApiPassword144139F7"
+        }
+       },
+       {
+        "Name": "DB_WORKER_PASSWORD",
+        "ValueFrom": {
+         "Ref": "DbWorkerPassword1A60669F"
+        }
+       },
+       {
+        "Name": "AUTH_SECRET",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":AUTH_SECRET::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "STRIPE_SECRET_KEY",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":STRIPE_SECRET_KEY::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "STRIPE_WEBHOOK_SECRET",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":STRIPE_WEBHOOK_SECRET::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "SMTP_PASS",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":SMTP_PASS::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "SENTRY_DSN",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":SENTRY_DSN::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "GITHUB_CLIENT_SECRET",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":GITHUB_CLIENT_SECRET::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "GITHUB_WEBHOOK_SECRET",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":GITHUB_WEBHOOK_SECRET::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "GITHUB_APP_PRIVATE_KEY",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":GITHUB_APP_PRIVATE_KEY::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "ETAX_WEBHOOK_SECRET",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":ETAX_WEBHOOK_SECRET::"
+          ]
+         ]
+        }
+       }
+      ]
+     }
+    ],
+    "Cpu": "256",
+    "ExecutionRoleArn": {
+     "Fn::GetAtt": [
+      "WorkerTaskExecutionRole9C03D68C",
+      "Arn"
+     ]
+    },
+    "Family": "friday-worker",
+    "Memory": "512",
+    "NetworkMode": "awsvpc",
+    "RequiresCompatibilities": [
+     "FARGATE"
+    ],
+    "RuntimePlatform": {
+     "CpuArchitecture": "ARM64",
+     "OperatingSystemFamily": "LINUX"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "TaskRoleArn": {
+     "Fn::GetAtt": [
+      "WorkerTaskTaskRoleC4141168",
+      "Arn"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/WorkerTask/Resource"
+   }
+  },
+  "WorkerTaskExecutionRole9C03D68C": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/WorkerTask/ExecutionRole/Resource"
+   }
+  },
+  "WorkerTaskExecutionRoleDefaultPolicyAF6178D4": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "FridayRegistry:ExportsOutputFnGetAttapiC8550315Arn99FFC27D"
+       }
+      },
+      {
+       "Action": "ecr:GetAuthorizationToken",
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "Logs6819BB44",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Ref": "AppSecretFAB5164C"
+        },
+        {
+         "Ref": "DbApiPassword144139F7"
+        },
+        {
+         "Ref": "DbWorkerPassword1A60669F"
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "WorkerTaskExecutionRoleDefaultPolicyAF6178D4",
+    "Roles": [
+     {
+      "Ref": "WorkerTaskExecutionRole9C03D68C"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/WorkerTask/ExecutionRole/DefaultPolicy/Resource"
+   }
+  },
+  "WebTaskTaskRole6A095794": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/WebTask/TaskRole/Resource"
+   }
+  },
+  "WebTaskTaskRoleDefaultPolicy9E67E471": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:Abort*",
+        "s3:DeleteObject*",
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "Files8E6940B8",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "Files8E6940B8",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "WebTaskTaskRoleDefaultPolicy9E67E471",
+    "Roles": [
+     {
+      "Ref": "WebTaskTaskRole6A095794"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/WebTask/TaskRole/DefaultPolicy/Resource"
+   }
+  },
+  "WebTask51ED7374": {
+   "Type": "AWS::ECS::TaskDefinition",
+   "Properties": {
+    "ContainerDefinitions": [
+     {
+      "Environment": [
+       {
+        "Name": "NODE_ENV",
+        "Value": "production"
+       },
+       {
+        "Name": "PORT",
+        "Value": "3000"
+       },
+       {
+        "Name": "HOSTNAME",
+        "Value": "0.0.0.0"
+       },
+       {
+        "Name": "SENTRY_ENVIRONMENT",
+        "Value": "production"
+       },
+       {
+        "Name": "APP_VERSION",
+        "Value": "latest"
+       }
+      ],
+      "Essential": true,
+      "Image": {
+       "Fn::Join": [
+        "",
+        [
+         {
+          "Fn::Select": [
+           4,
+           {
+            "Fn::Split": [
+             ":",
+             {
+              "Fn::ImportValue": "FridayRegistry:ExportsOutputFnGetAttweb08B6E5F3ArnD57DAEDE"
+             }
+            ]
+           }
+          ]
+         },
+         ".dkr.ecr.",
+         {
+          "Fn::Select": [
+           3,
+           {
+            "Fn::Split": [
+             ":",
+             {
+              "Fn::ImportValue": "FridayRegistry:ExportsOutputFnGetAttweb08B6E5F3ArnD57DAEDE"
+             }
+            ]
+           }
+          ]
+         },
+         ".",
+         {
+          "Ref": "AWS::URLSuffix"
+         },
+         "/",
+         {
+          "Fn::ImportValue": "FridayRegistry:ExportsOutputRefweb08B6E5F33DBC9FE9"
+         },
+         ":latest"
+        ]
+       ]
+      },
+      "LogConfiguration": {
+       "LogDriver": "awslogs",
+       "Options": {
+        "awslogs-group": {
+         "Ref": "Logs6819BB44"
+        },
+        "awslogs-stream-prefix": "web",
+        "awslogs-region": "ap-southeast-7"
+       }
+      },
+      "Name": "web",
+      "PortMappings": [
+       {
+        "ContainerPort": 3000,
+        "Protocol": "tcp"
+       }
+      ],
+      "ReadonlyRootFilesystem": false,
+      "Secrets": [
+       {
+        "Name": "SENTRY_DSN",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "AppSecretFAB5164C"
+           },
+           ":SENTRY_DSN::"
+          ]
+         ]
+        }
+       }
+      ]
+     }
+    ],
+    "Cpu": "256",
+    "ExecutionRoleArn": {
+     "Fn::GetAtt": [
+      "WebTaskExecutionRole28FA0566",
+      "Arn"
+     ]
+    },
+    "Family": "friday-web",
+    "Memory": "512",
+    "NetworkMode": "awsvpc",
+    "RequiresCompatibilities": [
+     "FARGATE"
+    ],
+    "RuntimePlatform": {
+     "CpuArchitecture": "ARM64",
+     "OperatingSystemFamily": "LINUX"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "TaskRoleArn": {
+     "Fn::GetAtt": [
+      "WebTaskTaskRole6A095794",
+      "Arn"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/WebTask/Resource"
+   }
+  },
+  "WebTaskExecutionRole28FA0566": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/WebTask/ExecutionRole/Resource"
+   }
+  },
+  "WebTaskExecutionRoleDefaultPolicy20822D46": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "FridayRegistry:ExportsOutputFnGetAttweb08B6E5F3ArnD57DAEDE"
+       }
+      },
+      {
+       "Action": "ecr:GetAuthorizationToken",
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "Logs6819BB44",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Ref": "AppSecretFAB5164C"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "WebTaskExecutionRoleDefaultPolicy20822D46",
+    "Roles": [
+     {
+      "Ref": "WebTaskExecutionRole28FA0566"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/WebTask/ExecutionRole/DefaultPolicy/Resource"
+   }
+  },
+  "MigrateTaskTaskRoleFFF8B11D": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/MigrateTask/TaskRole/Resource"
+   }
+  },
+  "MigrateTaskTaskRoleDefaultPolicyDED4FC54": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:Abort*",
+        "s3:DeleteObject*",
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "Files8E6940B8",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "Files8E6940B8",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "MigrateTaskTaskRoleDefaultPolicyDED4FC54",
+    "Roles": [
+     {
+      "Ref": "MigrateTaskTaskRoleFFF8B11D"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/MigrateTask/TaskRole/DefaultPolicy/Resource"
+   }
+  },
+  "MigrateTaskFA2E2E9A": {
+   "Type": "AWS::ECS::TaskDefinition",
+   "Properties": {
+    "ContainerDefinitions": [
+     {
+      "Command": [
+       "node",
+       "/app/packages/db/deploy-migrate.mjs"
+      ],
+      "Environment": [
+       {
+        "Name": "DB_HOST",
+        "Value": {
+         "Fn::GetAtt": [
+          "Db5D02A0A9",
+          "Endpoint.Address"
+         ]
+        }
+       },
+       {
+        "Name": "DB_PORT",
+        "Value": {
+         "Fn::GetAtt": [
+          "Db5D02A0A9",
+          "Endpoint.Port"
+         ]
+        }
+       },
+       {
+        "Name": "DB_NAME",
+        "Value": "friday"
+       },
+       {
+        "Name": "DB_SSLMODE",
+        "Value": "verify-full"
+       }
+      ],
+      "Essential": true,
+      "Image": {
+       "Fn::Join": [
+        "",
+        [
+         {
+          "Fn::Select": [
+           4,
+           {
+            "Fn::Split": [
+             ":",
+             {
+              "Fn::ImportValue": "FridayRegistry:ExportsOutputFnGetAttapiC8550315Arn99FFC27D"
+             }
+            ]
+           }
+          ]
+         },
+         ".dkr.ecr.",
+         {
+          "Fn::Select": [
+           3,
+           {
+            "Fn::Split": [
+             ":",
+             {
+              "Fn::ImportValue": "FridayRegistry:ExportsOutputFnGetAttapiC8550315Arn99FFC27D"
+             }
+            ]
+           }
+          ]
+         },
+         ".",
+         {
+          "Ref": "AWS::URLSuffix"
+         },
+         "/",
+         {
+          "Fn::ImportValue": "FridayRegistry:ExportsOutputRefapiC855031500EF81AC"
+         },
+         ":latest"
+        ]
+       ]
+      },
+      "LogConfiguration": {
+       "LogDriver": "awslogs",
+       "Options": {
+        "awslogs-group": {
+         "Ref": "Logs6819BB44"
+        },
+        "awslogs-stream-prefix": "migrate",
+        "awslogs-region": "ap-southeast-7"
+       }
+      },
+      "Name": "migrate",
+      "ReadonlyRootFilesystem": false,
+      "Secrets": [
+       {
+        "Name": "DB_OWNER_USER",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "DbSecretAttachment7AED447C"
+           },
+           ":username::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "DB_OWNER_PASSWORD",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "DbSecretAttachment7AED447C"
+           },
+           ":password::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "DB_API_PASSWORD",
+        "ValueFrom": {
+         "Ref": "DbApiPassword144139F7"
+        }
+       },
+       {
+        "Name": "DB_WORKER_PASSWORD",
+        "ValueFrom": {
+         "Ref": "DbWorkerPassword1A60669F"
+        }
+       }
+      ]
+     }
+    ],
+    "Cpu": "256",
+    "ExecutionRoleArn": {
+     "Fn::GetAtt": [
+      "MigrateTaskExecutionRole4FA39211",
+      "Arn"
+     ]
+    },
+    "Family": "friday-migrate",
+    "Memory": "512",
+    "NetworkMode": "awsvpc",
+    "RequiresCompatibilities": [
+     "FARGATE"
+    ],
+    "RuntimePlatform": {
+     "CpuArchitecture": "ARM64",
+     "OperatingSystemFamily": "LINUX"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "TaskRoleArn": {
+     "Fn::GetAtt": [
+      "MigrateTaskTaskRoleFFF8B11D",
+      "Arn"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/MigrateTask/Resource"
+   }
+  },
+  "MigrateTaskExecutionRole4FA39211": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/MigrateTask/ExecutionRole/Resource"
+   }
+  },
+  "MigrateTaskExecutionRoleDefaultPolicyE7F2A2A1": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "FridayRegistry:ExportsOutputFnGetAttapiC8550315Arn99FFC27D"
+       }
+      },
+      {
+       "Action": "ecr:GetAuthorizationToken",
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "Logs6819BB44",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Ref": "DbApiPassword144139F7"
+        },
+        {
+         "Ref": "DbSecretAttachment7AED447C"
+        },
+        {
+         "Ref": "DbWorkerPassword1A60669F"
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "MigrateTaskExecutionRoleDefaultPolicyE7F2A2A1",
+    "Roles": [
+     {
+      "Ref": "MigrateTaskExecutionRole4FA39211"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/MigrateTask/ExecutionRole/DefaultPolicy/Resource"
+   }
+  },
+  "ApiServiceC9037CF0": {
+   "Type": "AWS::ECS::Service",
+   "Properties": {
+    "CapacityProviderStrategy": [
+     {
+      "CapacityProvider": "FARGATE",
+      "Weight": 1
+     }
+    ],
+    "Cluster": {
+     "Ref": "ClusterEB0386A7"
+    },
+    "DeploymentConfiguration": {
+     "Alarms": {
+      "AlarmNames": [],
+      "Enable": false,
+      "Rollback": false
+     },
+     "DeploymentCircuitBreaker": {
+      "Enable": true,
+      "Rollback": true
+     },
+     "MaximumPercent": 200,
+     "MinimumHealthyPercent": 100
+    },
+    "DeploymentController": {
+     "Type": "ECS"
+    },
+    "DesiredCount": 1,
+    "EnableECSManagedTags": false,
+    "EnableExecuteCommand": false,
+    "HealthCheckGracePeriodSeconds": 60,
+    "LoadBalancers": [
+     {
+      "ContainerName": "api",
+      "ContainerPort": 3001,
+      "TargetGroupArn": {
+       "Ref": "AlbHttpApiGroup7C8FA22E"
+      }
+     }
+    ],
+    "NetworkConfiguration": {
+     "AwsvpcConfiguration": {
+      "AssignPublicIp": "DISABLED",
+      "SecurityGroups": [
+       {
+        "Fn::GetAtt": [
+         "AppSg898BCA4E",
+         "GroupId"
+        ]
+       }
+      ],
+      "Subnets": [
+       {
+        "Ref": "VpcappSubnet1SubnetAE489B2F"
+       },
+       {
+        "Ref": "VpcappSubnet2Subnet2449FB56"
+       }
+      ]
+     }
+    },
+    "ServiceName": "friday-api",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "TaskDefinition": {
+     "Ref": "ApiTask011D0955"
+    }
+   },
+   "DependsOn": [
+    "AlbHttpApiRule0EDADBD8",
+    "ApiTaskTaskRoleDefaultPolicy850CEBFD",
+    "ApiTaskTaskRoleD15A20E9"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/ApiService/Service"
+   }
+  },
+  "WebService7F8A1763": {
+   "Type": "AWS::ECS::Service",
+   "Properties": {
+    "CapacityProviderStrategy": [
+     {
+      "CapacityProvider": "FARGATE",
+      "Weight": 1
+     }
+    ],
+    "Cluster": {
+     "Ref": "ClusterEB0386A7"
+    },
+    "DeploymentConfiguration": {
+     "Alarms": {
+      "AlarmNames": [],
+      "Enable": false,
+      "Rollback": false
+     },
+     "DeploymentCircuitBreaker": {
+      "Enable": true,
+      "Rollback": true
+     },
+     "MaximumPercent": 200,
+     "MinimumHealthyPercent": 100
+    },
+    "DeploymentController": {
+     "Type": "ECS"
+    },
+    "DesiredCount": 1,
+    "EnableECSManagedTags": false,
+    "EnableExecuteCommand": false,
+    "HealthCheckGracePeriodSeconds": 60,
+    "LoadBalancers": [
+     {
+      "ContainerName": "web",
+      "ContainerPort": 3000,
+      "TargetGroupArn": {
+       "Ref": "AlbHttpWebGroupFB8A8200"
+      }
+     }
+    ],
+    "NetworkConfiguration": {
+     "AwsvpcConfiguration": {
+      "AssignPublicIp": "DISABLED",
+      "SecurityGroups": [
+       {
+        "Fn::GetAtt": [
+         "AppSg898BCA4E",
+         "GroupId"
+        ]
+       }
+      ],
+      "Subnets": [
+       {
+        "Ref": "VpcappSubnet1SubnetAE489B2F"
+       },
+       {
+        "Ref": "VpcappSubnet2Subnet2449FB56"
+       }
+      ]
+     }
+    },
+    "ServiceName": "friday-web",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "TaskDefinition": {
+     "Ref": "WebTask51ED7374"
+    }
+   },
+   "DependsOn": [
+    "AlbHttpApiGroup7C8FA22E",
+    "AlbHttpApiRule0EDADBD8",
+    "AlbHttp7966E42E",
+    "AlbHttpWebGroupFB8A8200",
+    "WebTaskTaskRoleDefaultPolicy9E67E471",
+    "WebTaskTaskRole6A095794"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/WebService/Service"
+   }
+  },
+  "WorkerService99815FA9": {
+   "Type": "AWS::ECS::Service",
+   "Properties": {
+    "CapacityProviderStrategy": [
+     {
+      "CapacityProvider": "FARGATE",
+      "Weight": 1
+     }
+    ],
+    "Cluster": {
+     "Ref": "ClusterEB0386A7"
+    },
+    "DeploymentConfiguration": {
+     "Alarms": {
+      "AlarmNames": [],
+      "Enable": false,
+      "Rollback": false
+     },
+     "DeploymentCircuitBreaker": {
+      "Enable": true,
+      "Rollback": true
+     },
+     "MaximumPercent": 200,
+     "MinimumHealthyPercent": 0
+    },
+    "DeploymentController": {
+     "Type": "ECS"
+    },
+    "DesiredCount": 1,
+    "EnableECSManagedTags": false,
+    "EnableExecuteCommand": false,
+    "NetworkConfiguration": {
+     "AwsvpcConfiguration": {
+      "AssignPublicIp": "DISABLED",
+      "SecurityGroups": [
+       {
+        "Fn::GetAtt": [
+         "AppSg898BCA4E",
+         "GroupId"
+        ]
+       }
+      ],
+      "Subnets": [
+       {
+        "Ref": "VpcappSubnet1SubnetAE489B2F"
+       },
+       {
+        "Ref": "VpcappSubnet2Subnet2449FB56"
+       }
+      ]
+     }
+    },
+    "ServiceName": "friday-worker",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "TaskDefinition": {
+     "Ref": "WorkerTaskCBB1FEE3"
+    }
+   },
+   "DependsOn": [
+    "WorkerTaskTaskRoleDefaultPolicy242C79D9",
+    "WorkerTaskTaskRoleC4141168"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/WorkerService/Service"
+   }
+  },
+  "Alb16C2F182": {
+   "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+   "Properties": {
+    "LoadBalancerAttributes": [
+     {
+      "Key": "deletion_protection.enabled",
+      "Value": "false"
+     },
+     {
+      "Key": "idle_timeout.timeout_seconds",
+      "Value": "300"
+     },
+     {
+      "Key": "routing.http.drop_invalid_header_fields.enabled",
+      "Value": "true"
+     }
+    ],
+    "Scheme": "internet-facing",
+    "SecurityGroups": [
+     {
+      "Fn::GetAtt": [
+       "AlbSg1155C1BE",
+       "GroupId"
+      ]
+     }
+    ],
+    "Subnets": [
+     {
+      "Ref": "VpcpublicSubnet1Subnet2BB74ED7"
+     },
+     {
+      "Ref": "VpcpublicSubnet2SubnetE34B022A"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "Type": "application"
+   },
+   "DependsOn": [
+    "VpcpublicSubnet1DefaultRouteB88F9E93",
+    "VpcpublicSubnet1RouteTableAssociation4E83B6E4",
+    "VpcpublicSubnet2DefaultRoute732F0BEB",
+    "VpcpublicSubnet2RouteTableAssociationCCE257FF"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Alb/Resource"
+   }
+  },
+  "AlbHttp7966E42E": {
+   "Type": "AWS::ElasticLoadBalancingV2::Listener",
+   "Properties": {
+    "DefaultActions": [
+     {
+      "TargetGroupArn": {
+       "Ref": "AlbHttpWebGroupFB8A8200"
+      },
+      "Type": "forward"
+     }
+    ],
+    "LoadBalancerArn": {
+     "Ref": "Alb16C2F182"
+    },
+    "Port": 80,
+    "Protocol": "HTTP",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Alb/Http/Resource"
+   }
+  },
+  "AlbHttpWebGroupFB8A8200": {
+   "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+   "Properties": {
+    "HealthCheckIntervalSeconds": 15,
+    "HealthCheckPath": "/login",
+    "Matcher": {
+     "HttpCode": "200"
+    },
+    "Port": 3000,
+    "Protocol": "HTTP",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "TargetGroupAttributes": [
+     {
+      "Key": "deregistration_delay.timeout_seconds",
+      "Value": "15"
+     },
+     {
+      "Key": "stickiness.enabled",
+      "Value": "false"
+     }
+    ],
+    "TargetType": "ip",
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Alb/Http/WebGroup/Resource"
+   }
+  },
+  "AlbHttpApiGroup7C8FA22E": {
+   "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+   "Properties": {
+    "HealthCheckIntervalSeconds": 15,
+    "HealthCheckPath": "/healthz",
+    "Matcher": {
+     "HttpCode": "200"
+    },
+    "Port": 3001,
+    "Protocol": "HTTP",
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ],
+    "TargetGroupAttributes": [
+     {
+      "Key": "deregistration_delay.timeout_seconds",
+      "Value": "30"
+     },
+     {
+      "Key": "stickiness.enabled",
+      "Value": "false"
+     }
+    ],
+    "TargetType": "ip",
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Alb/Http/ApiGroup/Resource"
+   }
+  },
+  "AlbHttpApiRule0EDADBD8": {
+   "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+   "Properties": {
+    "Actions": [
+     {
+      "TargetGroupArn": {
+       "Ref": "AlbHttpApiGroup7C8FA22E"
+      },
+      "Type": "forward"
+     }
+    ],
+    "Conditions": [
+     {
+      "Field": "path-pattern",
+      "PathPatternConfig": {
+       "Values": [
+        "/api/*"
+       ]
+      }
+     }
+    ],
+    "ListenerArn": {
+     "Ref": "AlbHttp7966E42E"
+    },
+    "Priority": 10,
+    "Tags": [
+     {
+      "Key": "app",
+      "Value": "friday-manage"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FridayApp/Alb/Http/ApiRule/Resource"
+   }
+  }
+ },
+ "Outputs": {
+  "LoadBalancerDns": {
+   "Description": "ชี้ DNS ของโดเมนมาที่นี่ (CNAME / Alias)",
+   "Value": {
+    "Fn::GetAtt": [
+     "Alb16C2F182",
+     "DNSName"
+    ]
+   }
+  },
+  "ClusterName": {
+   "Value": {
+    "Ref": "ClusterEB0386A7"
+   }
+  },
+  "MigrateTaskDefinition": {
+   "Value": {
+    "Ref": "MigrateTaskFA2E2E9A"
+   }
+  },
+  "TaskSubnets": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      {
+       "Ref": "VpcappSubnet1SubnetAE489B2F"
+      },
+      ",",
+      {
+       "Ref": "VpcappSubnet2Subnet2449FB56"
+      }
+     ]
+    ]
+   }
+  },
+  "TaskSecurityGroup": {
+   "Value": {
+    "Fn::GetAtt": [
+     "AppSg898BCA4E",
+     "GroupId"
+    ]
+   }
+  },
+  "FilesBucket": {
+   "Value": {
+    "Ref": "Files8E6940B8"
+   }
+  },
+  "AppSecretName": {
+   "Description": "กรอกค่าใน Secrets Manager ก่อน deploy service ครั้งแรก",
+   "Value": {
+    "Fn::Select": [
+     0,
+     {
+      "Fn::Split": [
+       "-",
+       {
+        "Fn::Select": [
+         6,
+         {
+          "Fn::Split": [
+           ":",
+           {
+            "Ref": "AppSecretFAB5164C"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

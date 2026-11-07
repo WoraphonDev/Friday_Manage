@@ -56,6 +56,7 @@ import {
   YearFormatContext,
   useToast,
 } from "@/components/ui";
+import { FridayLogo } from "@/components/brand/friday-logo";
 import { Bell } from "@/features/bell/Bell";
 import { CommandPalette } from "@/features/command-palette/CommandPalette";
 import { LocaleSwitch, LocaleSync } from "@/features/locale-switch";
@@ -530,8 +531,7 @@ export function WorkspaceShell({
           <header className="checkout-header">
             <div className="checkout-header-inner">
               <Link className="checkout-brand" href={base}>
-                <span className="workspace-logo">F</span>
-                Friday Manage
+                <FridayLogo size="sm" tagline={false} />
               </Link>
               <span className="muted">
                 {t("nav.checkoutTitle", { name: workspace.name })}
@@ -565,10 +565,9 @@ export function WorkspaceShell({
             >
               <Menu size={20} />
             </Button>
-            {/* ตัวสลับ Workspace ย้ายลงหัว Sidebar (ผู้ใช้ขอ 2026-11-07) · แถบบนเหลือชื่อระบบกลับ Home */}
+            {/* ตัวสลับ Workspace ย้ายลงหัว Sidebar (ผู้ใช้ขอ 2026-11-07) · แถบบนเหลือโลโก้ระบบกลับ Home · แถบบนสีเข้มจึงใช้ tone dark */}
             <Link className="topbar-brand" href={base}>
-              <span className="brand-mark" aria-hidden="true">F</span>
-              <span>Friday Manage</span>
+              <FridayLogo size="sm" tone="dark" tagline={false} />
             </Link>
             {pathname === `${base}/search` ? (
               <Suspense fallback={searchTrigger}>

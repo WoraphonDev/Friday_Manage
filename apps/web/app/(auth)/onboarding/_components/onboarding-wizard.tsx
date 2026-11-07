@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { FridayLogo } from "@/components/brand/friday-logo";
 import { Button, ErrorState, Input, LoadingState, Select, initials } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -222,12 +223,7 @@ export function OnboardingWizard() {
   return (
     <div className={styles.obRoot}>
       <header className={styles.topbar}>
-        <span className={styles.logo}>
-          <span className={styles.logoMark} aria-hidden="true">
-            F
-          </span>
-          <span className={styles.logoText}>{t("brand.name")}</span>
-        </span>
+        <FridayLogo label={t("brand.name")} />
         <div className={cn(styles.muted, styles.small)}>
           {me.data.email} ·{" "}
           <button type="button" className={styles.linkButton} onClick={logout}>

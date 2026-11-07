@@ -31,6 +31,7 @@ import {
   Tooltip,
   useToast,
 } from "@/components/ui";
+import { FridayMark } from "@/components/brand/friday-logo";
 import { api, ApiError } from "@/lib/api";
 import type { List, Workspace } from "@/lib/types";
 import { safeReturnTo } from "@/lib/utils";
@@ -85,7 +86,7 @@ export function UiGallery() {
   return (
     <main className="dev-page">
       <div className="row">
-        <span className="workspace-logo">F</span>
+        <FridayMark />
         <h1>
           {t("app.name")} · {t("dev.title")}
         </h1>

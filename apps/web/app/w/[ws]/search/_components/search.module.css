@@ -1,5 +1,6 @@
 /* หน้าผลการค้นหา ตาม Canvas P1 (Search.dc.html โหมดหน้าผลการค้นหา) */
-.page { max-width:1280px; margin:0 auto; padding:22px 24px 48px; display:flex; flex-direction:column; gap:16px; }
+/* เต็มความกว้างเหมือนทุกหน้า: ขอบซ้ายขวา 24px เท่ากันไม่ว่าจอกว้างแค่ไหน */
+.page { width:100%; padding:22px 24px 48px; display:flex; flex-direction:column; gap:16px; }
 .head { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-end; }
 .head h1 { margin:0; font-size:22px; overflow-wrap:anywhere; }
 .actions { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }

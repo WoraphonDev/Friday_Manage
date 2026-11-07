@@ -23,7 +23,7 @@
 
 ## เสร็จเมื่อ
 
-- [ ] `cdk synth` / `terraform plan` ผ่าน · image build ผ่านใน CI
+- [x] `cdk synth` / `terraform plan` ผ่าน · image build ผ่านใน CI
 
 ## บันทึกผล
 
@@ -51,3 +51,4 @@
 - ทดสอบในเครื่อง: build image API, migration กับฐานข้อมูลทดลอง 2 รอบ (13 ไฟล์, รันซ้ำได้), เปิด API (`/healthz`, CSRF, `public/plans`) และ Worker (ต่อ Valkey, งานตามเวลา 12 รายการ) จาก image เดียวกัน · build image เว็บที่มี Sentry แล้ว `/login` 200 · CDK test 8 ข้อ, synth ทั้งมีและไม่มีใบรับรอง
 - **ยังไม่ deploy จริง** ตามกติกา (รออนุมัติค่าใช้จ่าย) · ความเสี่ยงที่ต้องดูครั้งแรก: BYPASSRLS บน RDS, บริการที่มีใน ap-southeast-7, ค่าเริ่มต้นเป็น single-AZ, ยังไม่มี ClamAV (ดู README)
 - คำขอนอก lane: `apps/api/src/worker.ts` (Logger ของ GlitchTip), `apps/web/instrumentation*.ts` + `@sentry/nextjs` (W00), `packages/db/package.json` เพิ่ม `@opentelemetry/api` ให้ `drizzle-orm` เป็นชุดเดียวกับ API (ถ้าไม่ใส่ type ของ drizzle ชนกันหลังติดตั้ง Sentry · T00), `.github/workflows/deploy.yml` (T01), `Dockerfile.web` รับ DSN ตอน build
+- CI ของ PR #91: build image API / เว็บ (ARM64) และ CDK typecheck / test / synth ผ่าน · job Deploy ข้ามตามที่ตั้งใจ (รันเฉพาะ Run workflow)

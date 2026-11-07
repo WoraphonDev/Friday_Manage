@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
-import { ChartGantt, Check, ChevronLeft, EyeOff, FileBarChart, LayoutDashboard, ListTodo, MoreHorizontal, Plus, X } from "lucide-react";
+import { ChartGantt, Check, ChevronLeft, EyeOff, FileBarChart, LayoutDashboard, History, ListTodo, MoreHorizontal, Plus, X } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { formatDateRange } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -62,6 +62,8 @@ export const projectTabs = [
   { path: "/board", label: "board", hiddenForGuestViewer: true, mobile: true },
   { path: "/timeline", label: "timeline", desktop: true },
   { path: "/gantt", label: "gantt", hiddenForGuestViewer: true, desktop: true, optional: true },
+  // การแก้ไขแผนหลัง Baseline · เดิมอยู่ในเมนู ⋯ (ผู้ใช้ให้ย้ายมาเป็นมุมมองเสริม 2026-11-07)
+  { path: "/plan-changes", label: "planChanges", permission: "project.baseline", desktop: true, optional: true },
   { path: "/calendar", label: "calendar", hiddenForGuestViewer: true, mobile: true },
   { path: "/members", label: "members", permission: "project.workload.view" },
   { path: "/files", label: "files", hiddenForGuestViewer: true, mobile: true },
@@ -73,7 +75,7 @@ export const projectTabs = [
   },
 ];
 /** ไอคอนของแท็บเสริมในเมนูเพิ่มมุมมอง */
-const VIEW_ICONS: Record<string, typeof Plus> = { dashboard: LayoutDashboard, reports: FileBarChart, backlog: ListTodo, gantt: ChartGantt };
+const VIEW_ICONS: Record<string, typeof Plus> = { dashboard: LayoutDashboard, reports: FileBarChart, backlog: ListTodo, gantt: ChartGantt, planChanges: History };
 
 export function allowedProjectTab(
   tab: (typeof projectTabs)[number],
@@ -272,20 +274,6 @@ export function ProjectShell({
     project.data.goliveDate,
     me.yearFormat,
   );
-  // หน้าที่ไม่มีแท็บของตัวเอง เข้าจากเมนู ⋯ ตาม Canvas (Main มีปุ่ม ⋯ ข้าง Invite)
-  const menuItems = [
-    { path: "/settings", label: "settings", permission: "project.settings" },
-    {
-      path: "/automation",
-      label: "automation",
-      permission: "project.automation",
-    },
-    {
-      path: "/plan-changes",
-      label: "planChanges",
-      permission: "project.baseline",
-    },
-  ].filter((item) => access.permissions.includes(item.permission));
   return (
     <>
       {(
@@ -361,12 +349,14 @@ export function ProjectShell({
                   {t("nav.invite")}
                 </button>
               )}
-              {(menuItems.length > 0 || canCreate) && (
+              {/* เมนู ⋯ มีเฉพาะมือถือ (หัวมือถือไม่มีปุ่ม + New) · Settings / Automation / การแก้ไขแผน
+                  ซ้ำกับแท็บ เมนู Settings และเมนู + จึงเอาออกจากจอใหญ่ (ผู้ใช้ตัดสินใจ 2026-11-07) */}
+              {canCreate && (
                 <Popover.Root>
                   <Popover.Trigger asChild>
                     <button
                       type="button"
-                      className={`button button-icon project-menu-trigger${menuItems.length ? "" : " mobile-only"}`}
+                      className="button button-icon project-menu-trigger mobile-only"
                       aria-label={t("nav.projectMenu")}
                     >
                       <MoreHorizontal size={18} aria-hidden="true" />
@@ -379,24 +369,11 @@ export function ProjectShell({
                       align="end"
                     >
                       <nav aria-label={t("nav.projectMenu")}>
-                        {canCreate && (
-                          // มือถือไม่มีปุ่ม + New บนหัว จึงย้ายมาไว้ในเมนู ⋯
-                          <Popover.Close asChild>
-                            <Link className="menu-item mobile-only" href={`${base}?new=1`}>
-                              {t("nav.new")}
-                            </Link>
-                          </Popover.Close>
-                        )}
-                        {menuItems.map((item) => (
-                          <Popover.Close asChild key={item.path}>
-                            <Link
-                              className="menu-item desktop-only"
-                              href={`${base}${item.path}`}
-                            >
-                              {t(`nav.${item.label}`)}
-                            </Link>
-                          </Popover.Close>
-                        ))}
+                        <Popover.Close asChild>
+                          <Link className="menu-item" href={`${base}?new=1`}>
+                            {t("nav.new")}
+                          </Link>
+                        </Popover.Close>
                       </nav>
                     </Popover.Content>
                   </Popover.Portal>

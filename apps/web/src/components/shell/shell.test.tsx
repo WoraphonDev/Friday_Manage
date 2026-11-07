@@ -180,15 +180,12 @@ describe("Workspace / Project shell", () => {
       "href",
       "/w/sample/p/DE/members",
     );
-    await user.click(screen.getByRole("button", { name: "เมนูโปรเจกต์" }));
+    // เมนู ⋯ เหลือแค่ + New สำหรับมือถือ · Settings / Automation / การแก้ไขแผน ไม่ซ้ำในเมนูนี้แล้ว
+    const trigger = screen.getByRole("button", { name: "เมนูโปรเจกต์" });
+    expect(trigger).toHaveClass("mobile-only");
+    await user.click(trigger);
     const menu = within(await screen.findByRole("navigation", { name: "เมนูโปรเจกต์" }));
-    // ลิงก์แรก (+ New) แสดงเฉพาะมือถือที่ไม่มีปุ่ม + New บนหัว
-    expect(menu.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual([
-      "/w/sample/p/DE?new=1",
-      "/w/sample/p/DE/settings",
-      "/w/sample/p/DE/automation",
-      "/w/sample/p/DE/plan-changes",
-    ]);
+    expect(menu.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual(["/w/sample/p/DE?new=1"]);
   });
 
   it("Guest Viewer เห็นเฉพาะ Overview/Timeline และไม่มี New/Admin/New project", async () => {
@@ -457,7 +454,7 @@ describe("Workspace / Project shell", () => {
       return within(await screen.findByRole("dialog", { name: "มุมมองเพิ่มเติม" }));
     };
     let menu = await open();
-    expect(menu.getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["ภาพรวม Lead", "Reports", "Backlog", "Gantt"]);
+    expect(menu.getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["ภาพรวม Lead", "Reports", "Backlog", "Gantt", "การแก้ไขแผน"]);
     expect(menu.getByRole("button", { name: "Backlog" })).toHaveAccessibleDescription("วางแผน Sprint จากงานที่ยังไม่ได้อยู่ใน Sprint");
     await user.click(menu.getByRole("button", { name: "Backlog" }));
     expect(router.push).toHaveBeenLastCalledWith("/w/sample/p/DE/backlog");

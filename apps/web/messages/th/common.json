@@ -85,7 +85,8 @@
       "dashboard": "สรุปสุขภาพโปรเจกต์และความเสี่ยงสำหรับ Lead",
       "reports": "รายงานรายสัปดาห์และ Requirement Traceability",
       "backlog": "วางแผน Sprint จากงานที่ยังไม่ได้อยู่ใน Sprint",
-      "gantt": "แผนงานพร้อม Dependency และ Baseline"
+      "gantt": "แผนงานพร้อม Dependency และ Baseline",
+      "planChanges": "รายการแก้แผนหลังตั้ง Baseline พร้อมเหตุผล"
     }
   },
   "roles": {

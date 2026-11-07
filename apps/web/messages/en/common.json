@@ -85,7 +85,8 @@
       "dashboard": "Project health and risks for leads",
       "reports": "Weekly report and requirement traceability",
       "backlog": "Plan sprints from work not in a sprint yet",
-      "gantt": "Schedule with dependencies and baseline"
+      "gantt": "Schedule with dependencies and baseline",
+      "planChanges": "Plan changes after the baseline, with reasons"
     }
   },
   "roles": {

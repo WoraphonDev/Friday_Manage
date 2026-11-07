@@ -99,7 +99,7 @@ export function DependencyPanel({ scope, issueKey }: { scope: Scope; issueKey: s
         </span>)}
       </div>
     </div>)}
-    {canEdit && (!adding ? <Button size="small" variant="ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setAdding(true)}>{t('addDependency')}</Button> : <form className={styles.formGrid} onSubmit={(event) => { event.preventDefault(); void change(() => api.post<Dependencies>(endpoint, { [direction]: key.trim(), type, lagDays: Number(lagDays) })); }}>
+    {canEdit && (!adding ? <Button size="small" variant="ghost" className={styles.addAction} style={{ alignSelf: 'flex-start' }} onClick={() => setAdding(true)}>{t('addDependency')}</Button> : <form className={styles.formGrid} onSubmit={(event) => { event.preventDefault(); void change(() => api.post<Dependencies>(endpoint, { [direction]: key.trim(), type, lagDays: Number(lagDays) })); }}>
       <Input label={t('dependencyKey')} required pattern="[A-Za-z][A-Za-z0-9]{1,9}-[0-9]+" value={key} onChange={(event) => setKey(event.target.value.toUpperCase())} />
       <Select label={t('direction')} value={direction} onChange={(event) => setDirection(event.target.value as typeof direction)}><option value="predecessorKey">{t('blockedBy')}</option><option value="successorKey">{t('blocking')}</option></Select>
       <Select label={t('dependencyType')} value={type} onChange={(event) => setType(event.target.value)}>{['FS', 'SS', 'FF', 'SF'].map((value) => <option key={value}>{value}</option>)}</Select>

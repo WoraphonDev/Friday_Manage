@@ -10,8 +10,12 @@
 .extraProperties { display:flex; flex-direction:column; gap:14px; }.propertiesToggle { display:none; }.propsToggle { display:none; }
 .sidebar :global(.input),.sidebar :global(.picker-trigger) { min-height:34px; font-size:12px; padding:6px 9px; }.sidebar :global(.picker-trigger) { white-space:normal; }.sidebar :global(.field)>label { color:var(--muted); font-size:11px; font-weight:500; }
 .sidebar :global(.picker-trigger)>svg { flex:none; }.sidebar :global(.avatar-stack) { padding-top:4px; }
+.root,.panel { --editable-bg:#f3f5f8; }
+/* ปุ่มคำสั่งที่เป็นข้อความ (+ เพิ่ม Dependency, แก้ไขคำอธิบาย) ใช้สี primary ให้รู้ว่ากดได้ */
+.addAction { color:var(--primary); font-weight:500; }
+.addAction:hover:not(:disabled) { background:var(--primary-soft); }
 .inlineField { min-width:0; }.editValue { display:block; border:1px solid transparent; background:transparent; border-radius:6px; padding:5px 7px; text-align:left; width:100%; font:inherit; color:var(--foreground); overflow-wrap:anywhere; white-space:pre-wrap; }
-.editValue:hover:not(:disabled) { background:#f6f8fa; border-color:var(--border); }.editValue:disabled { cursor:default; opacity:1; }
+.editValue:hover:not(:disabled) { background:#f6f8fa; border-color:var(--border); }.editAction { display:inline-flex; width:auto; color:var(--primary); font-weight:500; }.editAction:hover:not(:disabled) { background:var(--primary-soft); border-color:transparent; }.editValue:disabled { cursor:default; opacity:1; }
 .inlineField textarea { min-height:130px; }.inlineField .actions { margin-top:6px; }
 .tabs { display:flex; border-bottom:1px solid var(--border); gap:14px; overflow-x:auto; }
 .tabs button { flex:none; min-height:40px; border:0; border-bottom:2px solid transparent; background:transparent; font:inherit; font-size:12px; color:var(--muted); padding:0 1px; }
@@ -45,6 +49,7 @@
 .headBlock { padding:18px 24px 6px; display:flex; flex-direction:column; gap:10px; }
 .statusRow { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .statusPill { appearance:none; -webkit-appearance:none; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid transparent; font:inherit; font-weight:600; cursor:pointer; }
+@supports (appearance: base-select) { .statusPill { appearance:base-select; display:inline-flex; align-items:center; } .statusPill::picker-icon { display:none; } }
 .statusPill.sProg { border-color:#bfdbfe; }.statusPill:disabled { cursor:default; opacity:1; }
 .okButton { background:#15803d; border-color:#15803d; color:#fff; min-height:36px; }.okButton:hover { background:#166534; color:#fff; }
 .failButton { color:#b91c1c; border-color:#fecaca; min-height:36px; }
@@ -70,17 +75,21 @@
 .props { border:1px solid var(--border); border-radius:12px; padding:10px 14px; display:flex; flex-direction:column; }
 .pr { display:grid; grid-template-columns:84px minmax(0,1fr); gap:8px; align-items:center; font-size:13px; min-height:34px; }.pr > .k { font-size:13px; font-weight:500; }
 .pv { min-width:0; }
-/* ช่องแก้ในการ์ดคุณสมบัติดูเป็นค่าธรรมดา (ไม่มีกรอบ) จนกว่าจะชี้ / โฟกัส · label ซ่อนไว้ให้โปรแกรมอ่านหน้าจอ */
+/* ช่องที่แก้ได้ในการ์ดคุณสมบัติต้องดูออกตั้งแต่ยังไม่ชี้: พื้นอ่อน + ลูกศร · ช่องที่แก้ไม่ได้เป็นข้อความเรียบ
+   label ซ่อนไว้ให้โปรแกรมอ่านหน้าจอ */
 .pv :global(.field) > label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 .pv :global(.field) { gap:0; }
 .pv :global(.input),.pv :global(.picker-trigger),.pv select { min-height:30px; border-color:transparent; background-color:transparent; padding:2px 6px; font-size:13px; box-shadow:none; }
-.pv :global(.input):hover,.pv :global(.picker-trigger):hover,.pv select:hover:not(:disabled) { border-color:var(--border); background-color:#fff; }
 .pv :global(.select) { min-height:30px; border-color:transparent; background:transparent; }
-.pv :global(.select):hover { border-color:var(--border); background:#fff; }
-.pv :global(.select) > select { padding:0 22px 0 6px; font-size:13px; }
-.pv :global(.select-chevron) { opacity:0; right:4px; }
+.pv :global(.select) > select { padding:0 24px 0 6px; font-size:13px; }
+.pv :global(.select-chevron) { right:6px; opacity:.55; }
+.pv :global(.select):not(:has(select:disabled)),.pv :global(.picker-trigger):not(:disabled),.pv :global(.input):not(:disabled),.pv .editValue:not(:disabled),.planBox :global(.picker-trigger):not(:disabled) { background-color:var(--editable-bg); }
+.pv :global(.select):not(:has(select:disabled)):hover,.pv :global(.picker-trigger):not(:disabled):hover,.pv :global(.input):not(:disabled):hover,.pv .editValue:not(:disabled):hover,.planBox :global(.picker-trigger):not(:disabled):hover { border-color:var(--input); background-color:#fff; }
 .pv :global(.select):hover :global(.select-chevron),.pv :global(.select):focus-within :global(.select-chevron) { opacity:1; }
-.pv :global(.select):has(select:disabled) { background:transparent; }
+.pv :global(.select):has(select:disabled) :global(.select-chevron) { display:none; }
+/* ชื่อคนยาวตัดเป็น … ในบรรทัดเดียว ไม่ห่อจนแถวสูงและจัดกลาง */
+.pv :global(.picker-trigger) { white-space:nowrap; text-align:left; }.pv :global(.picker-trigger) > span { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.pv :global(.select):has(select:disabled) > select { cursor:default; }
 .sizeRow :global(.field) { width:auto; flex:none; }.sizeRow :global(.select) { width:auto; }
 .pv .inlineField .label { display:none; }.pv .editValue { padding:2px 6px; }
 .prio select { color:inherit; font-weight:600; }
@@ -88,7 +97,7 @@
 .sizeRow,.progRow { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }.sizeRow select { font-weight:700; }.progRow .subBar { flex:1 1 60px; max-width:none; }.progRow .inlineField { width:64px; }
 .planBox { display:grid; grid-template-columns:44px 1fr 1fr; gap:4px 8px; border:1px solid #eef0f3; border-radius:8px; padding:8px 10px; margin:6px 0; font-size:13px; align-items:center; }
 .planBox :global(.field) > label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
-.planBox :global(.picker-trigger) { min-height:28px; border-color:transparent; background:transparent; padding:2px 4px; font-size:13px; }.planBox :global(.picker-trigger):hover { border-color:var(--border); }
+.planBox :global(.picker-trigger) { min-height:28px; border-color:transparent; background:transparent; padding:2px 6px; font-size:13px; white-space:nowrap; }
 .dueLink { align-self:flex-start; color:var(--primary); padding:0 4px; }
 .hideS { min-width:0; }
 .mKeep { min-width:0; }

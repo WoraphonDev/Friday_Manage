@@ -246,6 +246,102 @@ svg {
   min-height: 36px;
   font-size: 13px;
 }
+/* รายการของ <select> ใช้หน้าตาเดียวกับ popover ของเรา แทนเมนูสีเทาของระบบปฏิบัติการ
+   (Chromium 135+ · เบราว์เซอร์อื่นยังได้เมนูของระบบ แต่ทำงานเหมือนเดิมทุกอย่าง) */
+@supports (appearance: base-select) {
+  select,
+  select::picker(select),
+  .select > select {
+    appearance: base-select;
+  }
+  /* กล่องตอนปิดของ select ที่ไม่ได้ตกแต่งเอง: UA ของ base-select ใช้ขอบสีตัวอักษร จึงตั้งให้เหมือนช่องกรอกอื่น
+     (:where = ความเฉพาะเจาะจง 0 class ของแต่ละหน้าทับได้เสมอ) */
+  :where(select) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    gap: 6px;
+    padding: 4px 8px;
+    border: 1px solid var(--input);
+    border-radius: var(--radius-control);
+    background-color: white;
+    color: var(--foreground);
+  }
+  select::picker-icon {
+    content: "";
+    width: 14px;
+    height: 14px;
+    background: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+    opacity: 0.6;
+    transition: rotate 0.15s;
+  }
+  select:open::picker-icon {
+    rotate: 180deg;
+  }
+  /* Select ของ UI kit วางลูกศรเองแล้ว · base-select ไม่จัดข้อความกลางแนวตั้งให้ */
+  .select > select {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  /* ปุ่มค่าที่เลือกของ Select (ดู primitives.tsx): ข้อความยาวเกินช่องตัดเป็น … เหมือน select เดิม */
+  .select-value {
+    all: unset;
+    display: block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .select > select::picker-icon {
+    display: none;
+  }
+  select::picker(select) {
+    min-width: anchor-size(width);
+    max-height: min(320px, 60vh);
+    margin-block: 4px;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: white;
+    box-shadow: var(--shadow-menu);
+    color: var(--foreground);
+    font-weight: 400;
+  }
+  select option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: var(--foreground);
+    font-weight: 400;
+    cursor: pointer;
+  }
+  select option:hover,
+  select option:focus-visible {
+    background: var(--subtle);
+    outline: none;
+  }
+  select option:checked {
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-weight: 600;
+  }
+  select option::checkmark {
+    order: 1;
+    margin-left: auto;
+  }
+  select option:disabled {
+    color: var(--muted);
+    background: transparent;
+    cursor: default;
+  }
+}
 .select-prefix {
   flex: none;
   padding-left: 12px;

@@ -29,10 +29,10 @@ const SIZES = ["XS", "S", "M", "L", "XL"] as const;
 const GROUPS = ["module", "status", "assignee", "priority", "none"] as const;
 type GroupBy = (typeof GROUPS)[number];
 const SORTS = ["rank", "number", "planEnd", "priority"] as const;
-const OPTIONAL_COLS = ["dev", "ba", "status", "size", "start", "end", "actual", "progress"] as const;
+const OPTIONAL_COLS = ["dev", "ba", "status", "size", "start", "end", "actual", "refs", "progress"] as const;
 type Col = (typeof OPTIONAL_COLS)[number];
 /** ความกว้างคอลัมน์ตาม Canvas Table (.gr grid-template-columns) */
-const COL_W: Record<Col, number> = { dev: 84, ba: 40, status: 112, size: 78, start: 74, end: 82, actual: 96, progress: 96 };
+const COL_W: Record<Col, number> = { dev: 84, ba: 40, status: 112, size: 78, start: 74, end: 82, actual: 96, refs: 124, progress: 96 };
 
 type Display =
   | { kind: "module"; id: string; name: string; color: string | null; count: number; phases: number; md: number; pct: number; moduleId: string | null; from: string | null; to: string | null }
@@ -520,6 +520,7 @@ function IssueRow({ row, sub, cols, ws, projectKey, year, canEdit, statuses, peo
   const baView = row.ba ? <span className={styles.avs}><Avatar size="small" person={row.ba} /></span> : empty;
   const sizeView = <span style={{ whiteSpace: "nowrap" }}>{row.size ? <span className={`${styles.pill} ${styles.sTodo}`} style={{ fontWeight: 700 }}>{row.size}</span> : empty}{row.estimateMd !== null ? ` ${row.estimateMd}` : ""}</span>;
   const actualEndView = row.actualEnd ? <span className={actualLate ? styles.dueLate : undefined}>{t("actualEnd", { date: formatDate(row.actualEnd, year) })}{actualLate ? ` · ${t("actualLate", { days: lateBy })}` : ""}</span> : null;
+  const refs = [...(row.requirements ?? []), ...(row.screens ?? [])].join(" · ");
   const cell: Record<Col, React.ReactNode> = {
     dev: canEdit ? <PeopleCell multiple label={edit(t("cols.dev"))} people={people} value={row.assignees?.map((p) => p.id) ?? []} onChange={(ids) => onPatch({ assigneeIds: ids })}>{devView}</PeopleCell> : devView,
     ba: canEdit ? <PeopleCell label={edit(t("cols.ba"))} people={people} value={row.ba ? [row.ba.id] : []} onChange={(ids) => onPatch({ baId: ids[0] ?? null })}>{baView}</PeopleCell> : baView,
@@ -539,6 +540,8 @@ function IssueRow({ row, sub, cols, ws, projectKey, year, canEdit, statuses, peo
       </DateCell> : row.actualStart ? <span>{t("actualStart", { date: formatDate(row.actualStart, year) })}</span> : !row.actualEnd ? empty : null}
       {actualEndView}
     </span>,
+    // Canvas: "FR-01.2 · SCR-101" ตัวเล็กสีจาง ตัดด้วย … · แก้ใน Drawer
+    refs: refs ? <span className={styles.refs} title={refs}>{refs}</span> : empty,
     progress: <span className={styles.prog}><span><span style={{ width: `${row.progressPct ?? 0}%`, background: (row.progressPct ?? 0) >= 100 ? "#16a34a" : "var(--primary)" }} /></span><span>{row.progressPct ?? 0}%</span></span>,
   };
   return (

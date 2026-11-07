@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  createElement,
   forwardRef,
   useId,
+  useSyncExternalStore,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
@@ -90,7 +92,19 @@ type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "size"> &
 /**
  * ใช้ <select> ของ browser (keyboard / screen reader / มือถือได้ครบ) แต่ซ่อนลูกศรเดิม
  * เพราะลูกศรของ browser ไม่เว้นระยะจากข้อความและหน้าตาต่างกันแต่ละเครื่อง
+ * รายการที่เปิดออกมาแต่งใน globals.css ด้วย appearance: base-select
  */
+const noSubscribe = () => () => {};
+/** เบราว์เซอร์ที่ทำ <select> แบบ base-select ได้ (Chromium 135+) · ฝั่ง server และตอน hydrate เป็น false
+ * เพื่อให้ HTML ตรงกันทุกเบราว์เซอร์ แล้วค่อยเติมปุ่มหลังโหลด */
+function useCustomizableSelect() {
+  return useSyncExternalStore(
+    noSubscribe,
+    () => typeof CSS !== "undefined" && !!CSS.supports?.("appearance", "base-select"),
+    () => false,
+  );
+}
+
 export function Select({
   label,
   error,
@@ -104,6 +118,7 @@ export function Select({
 }: SelectProps) {
   const generated = useId();
   const selectId = id ?? generated;
+  const customizable = useCustomizableSelect();
   return (
     <div className="field">
       {label && <label htmlFor={selectId}>{label}</label>}
@@ -128,6 +143,12 @@ export function Select({
           }
           {...props}
         >
+          {/* ค่าที่เลือกอยู่ในปุ่มของเราเอง ข้อความยาวจึงตัดเป็น … ได้ (base-select ไม่ให้แต่งข้อความในกล่องเดิม) */}
+          {customizable && (
+            <button type="button" className="select-value">
+              {createElement("selectedcontent")}
+            </button>
+          )}
           {children}
         </select>
         <ChevronDown className="select-chevron" size={16} aria-hidden="true" />

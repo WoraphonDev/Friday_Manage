@@ -89,6 +89,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
     {(allowNone || !value) && <option value="" disabled={!allowNone}>{t('notSet')}</option>}{values.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
   </Select>;
   const people = scope.people.map((person) => ({ id: person.id, name: person.displayName }));
+  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
   const pending = issue.pendingDueRequest;
   const mod = scope.project?.modules.find((item) => item.id === issue.moduleId);
   const phase = scope.project?.phases?.find((item) => item.id === issue.phaseId) ?? mod?.phases?.find((item) => item.id === issue.phaseId);
@@ -169,8 +170,9 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       <div hidden={mobile && mobileTab !== 'details'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-details`} aria-labelledby={mobile ? `${issue.key}-tab-details` : undefined}>
       {(!isBug || issue.description) && <div className={styles.blk}>
         <h3>{t('description')}</h3>
-        <BodyText>{issue.description || t('noDescription')}</BodyText>
-        {canEdit && <InlineText label={t('editDescription')} displayValue={t('editDescription')} value={issue.description ?? ''} enabled busy={disabled} multiline onSave={(description) => patch({ description: description || null })} />}
+        {/* ยังไม่มีคำอธิบาย: บรรทัดเดียวพร้อมปุ่มเพิ่ม แทนข้อความว่าง + ปุ่มแยกบรรทัด */}
+        {issue.description ? <BodyText>{issue.description}</BodyText> : !canEdit && <p className="muted">{t('noDescription')}</p>}
+        {canEdit && <InlineText label={t(issue.description ? 'editDescription' : 'addDescription')} displayValue={t(issue.description ? 'editDescription' : 'addDescription')} value={issue.description ?? ''} enabled busy={disabled} multiline onSave={(description) => patch({ description: description || null })} />}
       </div>}
       {awaitingRetest && canEdit && passStatus && <div className={styles.verify} role="group" aria-label={t('verifyGroup')}>
         <div><strong>{t('verifyTitle', { status: issue.status.name })}</strong><p>{t('verifyDescription', { name: scope.people.find((person) => person.id === issue.testerId)?.displayName ?? t('tester') })}</p></div>
@@ -206,28 +208,38 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       </div> : <>
 
       <div className={`${styles.props}${allProps ? ` ${styles.propsAll}` : ''}`} id={`${issue.key}-props`}>
-        <PropRow k={t('fields.statusId')}><span className={`${styles.pill} ${pillTone(issue.status.category, issue.status.name)}`}>{issue.status.name}</span></PropRow>
-        {!guest && <PropRow keep k={t('dev')}>{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void action(() => api.request<Issue>(`${endpoint}/assignees`, { method: 'PUT', etag: issue.version, body: { assigneeIds: ids } })); }} /> : <span className={styles.who}><AvatarStack people={devs} /></span>}</PropRow>}
-        {!guest && <PropRow k="BA">{fieldSelect('baId', issue.baId, people)}</PropRow>}
-        {!guest && <PropRow k="Reviewer">{fieldSelect('reviewerId', issue.reviewerId, people)}</PropRow>}
-        {!guest && (issue.type === 'Bug' || issue.testerId) && <PropRow k="Tester">{fieldSelect('testerId', issue.testerId, people)}</PropRow>}
-        <PropRow keep k={t('fields.priority')}><span className={styles.prio} style={{ color: prioColor }}>{fieldSelect('priority', issue.priority, ['urgent', 'high', 'medium', 'low'].map((id) => ({ id, name: t(`priority.${id}`) })), undefined, false)}</span></PropRow>
-        {issue.type === 'Bug' && <><PropRow k={t('fields.severity')}>{fieldSelect('severity', issue.severity, ['critical', 'major', 'minor'].map((id) => ({ id, name: t(`severity.${id}`) })), undefined, false)}</PropRow><PropRow k={t('fields.environment')}>{fieldSelect('environment', issue.environment, ['local', 'sit', 'uat', 'production'].map((id) => ({ id, name: t(`environment.${id}`) })), undefined, false)}</PropRow></>}
-        {isBug && <PropRow k={t('reporter')}><span className={styles.who}>{reporter ? <><Avatar size="small" person={reporter} />{reporter.displayName}</> : <span className="muted">—</span>}</span></PropRow>}
-        {isBug && <PropRow k="Due">{canEdit ? <DatePicker compact label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (!disabled) void patch({ planEnd: value || null }); }} /> : formatDate(issue.planEnd, scope.yearFormat)}</PropRow>}
-        {!isBug && <><PropRow k="Size"><div className={styles.sizeRow}>{fieldSelect('size', issue.size, ['XS','S','M','L','XL'].map((id) => ({ id, name: id })))}<InlineText label={t('fields.estimateMd')} type="number" step={0.25} min={0.25} max={9999} value={issue.estimateMd?.toString() ?? ''} enabled={canEdit} busy={disabled} onSave={(value) => patch({ estimateMd: value ? Number(value) : null })} />{devs.length > 0 && <span className="muted">· {t('devCount', { count: devs.length })}</span>}</div></PropRow>
-        <div className={styles.planBox}>
-          <span /><span className={styles.k}>{t('plan')}</span><span className={styles.k}>{t('actual')}</span>
-          <span className="muted">{t('start')}</span>
-          <span>{canEdit ? <DatePicker compact label={t('fields.planStart')} value={issue.planStart ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (!disabled) void patch({ planStart: value || null }); }} /> : formatDate(issue.planStart, scope.yearFormat)}</span>
-          <span>{issue.actualStart ? formatDate(issue.actualStart, scope.yearFormat) : '—'}</span>
-          <span className="muted">{t('end')}</span>
-          <span>{canEdit ? <DatePicker compact label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (disabled) return; if (value && issue.planEnd && value > issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly')) setDue(value); else void patch({ planEnd: value || null }); }} /> : formatDate(issue.planEnd, scope.yearFormat)}</span>
-          <span>{issue.actualEnd ? formatDate(issue.actualEnd, scope.yearFormat) : '—'}</span>
-        </div>
-        {canEdit && issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly') && !pending && <Button size="small" variant="ghost" className={styles.dueLink} disabled={disabled} onClick={() => setDue('')}>{t('requestDue')}</Button>}
-        <PropRow keep k="Progress"><div className={styles.progRow}><span className={styles.subBar} style={{ maxWidth: 'none' }}><span style={{ width: `${issue.progressPct ?? 0}%` }} /></span><InlineText label={t('fields.progressPct')} type="number" min={0} max={100} value={issue.progressPct?.toString() ?? ''} enabled={canEdit} busy={disabled} onSave={(value) => patch({ progressPct: value ? Number(value) : null })} /></div></PropRow></>}
-        {!issue.parentKey ? <>
+        {/* จัดเป็นกลุ่ม คน / แผนงาน / จัดกลุ่ม · สถานะอยู่ที่ปุ่มบนหัวแล้วจึงไม่ซ้ำในแผงนี้ (ผู้ใช้ขอ 2026-11-07) */}
+        {(!guest || isBug) && <section className={styles.pgroup} aria-label={t('groupPeople')}>
+          <h4 className={styles.pgTitle}>{t('groupPeople')}</h4>
+          {!guest && <PropRow keep k={t('dev')}>{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void action(() => api.request<Issue>(`${endpoint}/assignees`, { method: 'PUT', etag: issue.version, body: { assigneeIds: ids } })); }} /> : <span className={styles.who}><AvatarStack people={devs} /></span>}</PropRow>}
+          {!guest && <PropRow k="BA">{fieldSelect('baId', issue.baId, people)}</PropRow>}
+          {!guest && <PropRow k="Reviewer">{fieldSelect('reviewerId', issue.reviewerId, people)}</PropRow>}
+          {!guest && (issue.type === 'Bug' || issue.testerId) && <PropRow k="Tester">{fieldSelect('testerId', issue.testerId, people)}</PropRow>}
+          {isBug && <PropRow k={t('reporter')}><span className={styles.who}>{reporter ? <><Avatar size="small" person={reporter} />{reporter.displayName}</> : <span className="muted">—</span>}</span></PropRow>}
+          {!guest && <PropRow k={t('watchers')}><span className={styles.who}>{watchers.data?.items.length ? <AvatarStack max={5} people={watchers.data.items.flatMap((entry, i) => entry.person ? [{ ...entry.person, id: entry.person.id ?? `w${i}` }] : [])} /> : <span className="muted">—</span>}</span></PropRow>}
+        </section>}
+        <section className={styles.pgroup} aria-label={t('groupPlan')}>
+          <h4 className={styles.pgTitle}>{t('groupPlan')}</h4>
+          {isBug && <PropRow k="Due">{canEdit ? <DatePicker compact label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (!disabled) void patch({ planEnd: value || null }); }} /> : formatDate(issue.planEnd, scope.yearFormat)}</PropRow>}
+          {!isBug && <><PropRow k="Size"><div className={styles.sizeRow}>{fieldSelect('size', issue.size, ['XS','S','M','L','XL'].map((id) => ({ id, name: id })))}<InlineText label={t('fields.estimateMd')} type="number" step={0.25} min={0.25} max={9999} value={issue.estimateMd?.toString() ?? ''} enabled={canEdit} busy={disabled} onSave={(value) => patch({ estimateMd: value ? Number(value) : null })} />{devs.length > 0 && <span className="muted">· {t('devCount', { count: devs.length })}</span>}</div></PropRow>
+          <div className={styles.planBox}>
+            <span /><span className={styles.k}>{t('plan')}</span><span className={styles.k}>{t('actual')}</span>
+            <span className="muted">{t('start')}</span>
+            <span>{canEdit ? <DatePicker compact label={t('fields.planStart')} value={issue.planStart ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (!disabled) void patch({ planStart: value || null }); }} /> : formatDate(issue.planStart, scope.yearFormat)}</span>
+            {/* Actual Start แก้เองได้ (เริ่มก่อนกดสถานะ) · Actual End ระบบตั้งเมื่อ Done */}
+            <span>{canEdit ? <DatePicker compact label={t('fields.actualStart')} value={issue.actualStart ?? undefined} max={issue.actualEnd ?? todayIso} yearFormat={scope.yearFormat} onValueChange={(value) => { if (!disabled && value) void patch({ actualStart: value }); }} /> : issue.actualStart ? formatDate(issue.actualStart, scope.yearFormat) : '—'}</span>
+            <span className="muted">{t('end')}</span>
+            <span>{canEdit ? <DatePicker compact label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (disabled) return; if (value && issue.planEnd && value > issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly')) setDue(value); else void patch({ planEnd: value || null }); }} /> : formatDate(issue.planEnd, scope.yearFormat)}</span>
+            <span>{issue.actualEnd ? formatDate(issue.actualEnd, scope.yearFormat) : '—'}</span>
+            {canEdit && issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly') && !pending && <><span /><span className={styles.dueCell}><Button size="small" variant="ghost" className={styles.dueLink} disabled={disabled} onClick={() => setDue('')}>{t('requestDue')}</Button></span></>}
+          </div>
+          <PropRow keep k="Progress"><div className={styles.progRow}><span className={styles.subBar} style={{ maxWidth: 'none' }}><span style={{ width: `${issue.progressPct ?? 0}%` }} /></span><InlineText label={t('fields.progressPct')} type="number" min={0} max={100} value={issue.progressPct?.toString() ?? ''} enabled={canEdit} busy={disabled} onSave={(value) => patch({ progressPct: value ? Number(value) : null })} /></div></PropRow></>}
+        </section>
+        <section className={styles.pgroup} aria-label={t('groupPlace')}>
+          <h4 className={styles.pgTitle}>{t('groupPlace')}</h4>
+          <PropRow keep k={t('fields.priority')}><span className={styles.prio} style={{ color: prioColor }}>{fieldSelect('priority', issue.priority, ['urgent', 'high', 'medium', 'low'].map((id) => ({ id, name: t(`priority.${id}`) })), undefined, false)}</span></PropRow>
+          {issue.type === 'Bug' && <><PropRow k={t('fields.severity')}>{fieldSelect('severity', issue.severity, ['critical', 'major', 'minor'].map((id) => ({ id, name: t(`severity.${id}`) })), undefined, false)}</PropRow><PropRow k={t('fields.environment')}>{fieldSelect('environment', issue.environment, ['local', 'sit', 'uat', 'production'].map((id) => ({ id, name: t(`environment.${id}`) })), undefined, false)}</PropRow></>}
+          {!issue.parentKey ? <>
           <PropRow k="Module">{fieldSelect('moduleId', issue.moduleId, scope.project?.modules ?? [], (value) => void patch({ moduleId: value, phaseId: null }), false)}</PropRow>
           {!isBug && <PropRow k={t('fields.phaseId')}>{canEdit && phases.error ? <Failure error={phases.error} /> : fieldSelect('phaseId', issue.phaseId, phases.data?.items ?? [])}</PropRow>}
           <PropRow k="Sprint">{fieldSelect('sprintId', issue.sprintId, scope.project?.sprints ?? [])}</PropRow>
@@ -235,11 +247,10 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
           <PropRow k="Module"><span><span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod?.name ?? t('notSet')}</span> <span className="muted" style={{ fontSize: 12 }}>{t('fromParent')}</span></span></PropRow>
           <PropRow k="Sprint"><span>{sprint?.name ?? t('backlog')}</span></PropRow>
         </>}
-        {!guest && <PropRow k={t('watchers')}><span className={styles.who}>{watchers.data?.items.length ? <AvatarStack max={5} people={watchers.data.items.flatMap((entry, i) => entry.person ? [{ ...entry.person, id: entry.person.id ?? `w${i}` }] : [])} /> : <span className="muted">—</span>}</span></PropRow>}
-        {!guest && canEdit && <label className={styles.checkboxLabel}><input type="checkbox" checked={issue.sharedWithGuests} disabled={disabled} onChange={(event) => void patch({ sharedWithGuests: event.target.checked })} />{t('sharedWithGuests')}</label>}
+          {!guest && canEdit && <label className={styles.checkboxLabel}><input type="checkbox" checked={issue.sharedWithGuests} disabled={disabled} onChange={(event) => void patch({ sharedWithGuests: event.target.checked })} />{t('sharedWithGuests')}</label>}
+        </section>
       </div>
       <button type="button" className={styles.propsToggle} aria-expanded={allProps} aria-controls={`${issue.key}-props`} onClick={() => setAllProps((value) => !value)}>{t(allProps ? 'lessProperties' : 'moreProperties')}</button>
-      <p className={`${styles.meta} ${styles.wideOnly}`} style={{ padding: '10px 4px' }}>{t('propsHint')}</p>
       </>}
     </aside></div>
     {mobile && scope.access.permissions.includes('issue.comment') && <div className={styles.mobileComposer}><ActivityPanel scope={scope} issueKey={issue.key} showFeed={false} compact /></div>}

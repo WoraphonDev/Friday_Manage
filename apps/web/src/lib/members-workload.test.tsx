@@ -225,16 +225,22 @@ describe("Members ของโปรเจกต์", () => {
   it("เชิญหลายอีเมล: คนใน Workspace เพิ่มตรง คนนอกได้คำเชิญพร้อมลิงก์ · อีเมลผิดรูปแบบ", async () => {
     const user = userEvent.setup();
     mount(<MembersView ws="sample" projectKey="DE" />);
-    const field = await screen.findByLabelText("อีเมล (คั่นด้วย , ได้หลายคน)");
+    // ฟอร์มเชิญอยู่ใน Modal ไม่ฝังในหน้า · ยังไม่กดส่งต้องไม่ขึ้นข้อความผิดพลาด
+    expect(screen.queryByLabelText("อีเมล (คั่นด้วย , ได้หลายคน)")).not.toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "+ Invite" }));
+    const dialog = await screen.findByRole("dialog", { name: "Invite members" });
+    const field = within(dialog).getByLabelText("อีเมล (คั่นด้วย , ได้หลายคน)");
+    expect(within(dialog).queryByText("ใส่อีเมลอย่างน้อย 1 อีเมล")).not.toBeInTheDocument();
+    expect(within(dialog).getByText("สร้างและแก้ไขงาน คอมเมนต์ อัปโหลดไฟล์ บันทึกเวลา")).toBeInTheDocument();
     await user.type(field, "bad-email, new@example.com");
-    await user.click(screen.getByRole("button", { name: "ส่งคำเชิญ (2)" }));
-    expect(screen.getByText("bad-email รูปแบบอีเมลไม่ถูกต้อง")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "ส่งคำเชิญ (2)" }));
+    expect(within(dialog).getByText("bad-email รูปแบบอีเมลไม่ถูกต้อง")).toBeInTheDocument();
     expect(calls).toHaveLength(0);
 
     await user.clear(field);
     await user.type(field, `new@example.com, ${U2.slice(0, 4)}@example.com, other@example.com`);
-    await user.selectOptions(screen.getByLabelText("Role"), "viewer");
-    await user.click(screen.getByRole("button", { name: "ส่งคำเชิญ (3)" }));
+    await user.selectOptions(within(dialog).getByLabelText("Role"), "viewer");
+    await user.click(within(dialog).getByRole("button", { name: "ส่งคำเชิญ (3)" }));
     await waitFor(() => expect(calls).toHaveLength(2));
     expect(calls[0]).toMatchObject({ method: "POST", path: "/w/sample/projects/DE/members", body: { userId: U2, role: "viewer", capacityHoursWeek: 40 } });
     expect(calls[1]).toMatchObject({ method: "POST", path: "/w/sample/invitations", body: { emails: ["new@example.com", "other@example.com"], projectKey: "DE", projectRole: "viewer", workspaceRole: "member" } });

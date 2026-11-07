@@ -9,6 +9,7 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import ot from "../../messages/th/overview-table.json";
+import ldr from "../../messages/th/lead-dashboard-reports.json";
 import { OverviewPage } from "../../app/w/[ws]/p/[key]/table/_components/overview";
 import { TableView, buildDisplay } from "../../app/w/[ws]/p/[key]/table/_components/table-view";
 import type { Overview, Row, TableData } from "../../app/w/[ws]/p/[key]/table/_components/types";
@@ -69,7 +70,7 @@ beforeEach(() => {
     http.post("*/api/v1/w/:ws/projects/:key/issues/bulk", async ({ request }) => { const b = (await request.json()) as { keys: string[] }; bulks.push(b); return HttpResponse.json({ results: b.keys.map((key) => ({ key, ok: true })) }); }),
   );
 });
-const mount = (ui: React.ReactElement) => renderWithProviders(<WorkspaceShell ws="sample">{ui}</WorkspaceShell>, { messages: { "overview-table": ot } });
+const mount = (ui: React.ReactElement) => renderWithProviders(<WorkspaceShell ws="sample">{ui}</WorkspaceShell>, { messages: { "overview-table": ot, "lead-dashboard-reports": ldr } });
 
 describe("Overview (1 / M6)", () => {
   it("ความคืบหน้า, Health, KPI พร้อมรายการ, Module, Status, Milestone, Workload, Activity", async () => {
@@ -92,7 +93,10 @@ describe("Overview (1 / M6)", () => {
     expect(screen.getAllByText("Go-live ระยะแรก")).toHaveLength(3); // Milestone ถัดไป (จอใหญ่ + การ์ดมือถือ M6) + รายการ Milestones
     // M6: ความเสี่ยงสร้างจาก Health / Module บนมือถือ
     expect(screen.getByText("ผู้พัฒนาหนึ่ง มีงาน Overdue 4 งาน")).toBeInTheDocument();
-    expect(screen.getByText("6 / 5 MD · 120%")).toBeInTheDocument();
+    // ผู้ดู Workload ได้: การ์ด Workload สัปดาห์นี้ถูกแทนด้วยส่วนแผนทั้งโปรเจกต์ (เดิมหน้าภาพรวม Lead) ท้ายหน้า
+    expect(screen.queryByText("6 / 5 MD · 120%")).not.toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "แผนทั้งโปรเจกต์" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ดูแผนทั้งโปรเจกต์ ↓" })).toHaveAttribute("href", "#planning");
     expect(screen.getByRole("img", { name: /งานที่เสร็จรายวัน/ })).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("button", { name: "Burn-up" }));
     expect(screen.getByRole("img", { name: /Burn-up รายสัปดาห์/ })).toBeInTheDocument();
@@ -173,6 +177,43 @@ describe("Table (2)", () => {
     await waitFor(() => expect(patches.at(-1)?.body).toEqual({ planEnd: "2026-12-09", planChangeReason: "ลูกค้าเพิ่มขอบเขต" }));
   });
 
+  it("แก้ Dev / BA / Size / Plan Start / Actual Start ในแถว และเพิ่ม Sub-task ใต้ Task", async () => {
+    const user = userEvent.setup(); const created: unknown[] = [];
+    server.use(http.post("*/api/v1/w/:ws/projects/:key/issues", async ({ request }) => { created.push(await request.json()); return HttpResponse.json({ key: `DE-${90 + created.length}` }, { status: 201 }); }));
+    mount(<TableView ws="sample" projectKey="DE" />);
+    // Dev หลายคน: ส่งครั้งเดียวเมื่อกดเสร็จ ไม่ส่งทุกคลิก
+    await user.click(await screen.findByRole("button", { name: "แก้ Dev ของ DE-1" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("option", { name: /ผู้พัฒนาสอง/ }));
+    expect(patches).toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: "เสร็จ" }));
+    await waitFor(() => expect(patches.at(-1)).toEqual({ key: "DE-1", body: { assigneeIds: ["u1", "u2"] }, etag: '"2"' }));
+    await user.click(screen.getByRole("button", { name: "แก้ BA ของ DE-1" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("option", { name: /ผู้พัฒนาสอง/ }));
+    await waitFor(() => expect(patches.at(-1)?.body).toEqual({ baId: "u2" }));
+    await user.click(screen.getByRole("button", { name: "แก้ Size · MD ของ DE-1" }));
+    await user.click(await screen.findByRole("button", { name: "L" }));
+    await waitFor(() => expect(patches.at(-1)?.body).toEqual({ size: "L" }));
+    await user.click(screen.getByRole("button", { name: "แก้ Size · MD ของ DE-1" }));
+    const md = await screen.findByLabelText("Man-Day"); await user.clear(md); await user.type(md, "4.5{Enter}");
+    await waitFor(() => expect(patches.at(-1)?.body).toEqual({ estimateMd: 4.5 }));
+    for (const [field, body] of [["Plan Start", { planStart: "2026-12-02" }], ["Actual Start", { actualStart: "2026-11-02" }]] as const) {
+      await user.click(screen.getByRole("button", { name: `แก้ ${field} ของ DE-1` }));
+      const input = screen.getByLabelText(`แก้ ${field} ของ DE-1`);
+      fireEvent.change(input, { target: { value: Object.values(body)[0] } });
+      fireEvent.blur(input);
+      await waitFor(() => expect(patches.at(-1)?.body).toEqual(body));
+    }
+    // + Sub-task เฉพาะแถว Task · Enter สร้างแล้วพิมพ์ต่อได้ · Esc ปิด
+    expect(screen.queryByRole("button", { name: "เพิ่ม Sub-task ใน DE-2" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "เพิ่ม Sub-task ใน DE-1" }));
+    const title = screen.getByLabelText("ชื่อ Sub-task ใหม่ใน DE-1");
+    await user.type(title, "เขียน test{Enter}");
+    await waitFor(() => expect(created).toEqual([{ type: "Task", parentKey: "DE-1", title: "เขียน test" }]));
+    expect(title).toHaveValue("");
+    await user.keyboard("{Escape}");
+    expect(screen.queryByLabelText("ชื่อ Sub-task ใหม่ใน DE-1")).not.toBeInTheDocument();
+  });
+
   it("เลือกหลายแถว → ย้าย Module / Due / Assignee และลบต้องพิมพ์ยืนยัน", async () => {
     const user = userEvent.setup();
     mount(<TableView ws="sample" projectKey="DE" />);
@@ -243,8 +284,10 @@ describe("Table (2)", () => {
     await screen.findByTestId("row-DE-1");
     expect(screen.queryByTestId("row-DE-400")).not.toBeInTheDocument();
     expect(screen.getAllByRole("row").length).toBeLessThan(120);
+    // ตารางใช้ scroll ของหน้าหลัก: จำลองว่าขอบบนตารางเลื่อนพ้นจอขึ้นไป 390 แถว
     const scroll = screen.getByTestId("table-scroll");
-    fireEvent.scroll(scroll, { target: { scrollTop: 44 * 390 } });
+    scroll.getBoundingClientRect = () => ({ top: -44 * 390, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: -44 * 390, toJSON: () => ({}) });
+    fireEvent.scroll(window);
     expect(await screen.findByTestId("row-DE-390")).toBeInTheDocument();
     expect(screen.queryByTestId("row-DE-1")).not.toBeInTheDocument();
     a.unmount();

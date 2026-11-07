@@ -53,3 +53,10 @@
 `src/lib/members-workload.test.tsx` 15 ข้อ (MSW): Workload ค่าเริ่มต้น + KPI + เกิน capacity + รายละเอียดช่วง, เปลี่ยนหน่วย / รายเดือน / ตำแหน่ง / Module / เลื่อนช่วง, ย้ายงาน (assignees ล่าสุด + If-Match), ว่าง / Error + requestId / 403, กำลังโหลด / Guest Viewer · Members: ตาราง + เปลี่ยน Role, แก้ Capacity + นำออกพร้อมโอนงาน, ไม่มีสิทธิ์ซ่อนปุ่ม, เชิญหลายอีเมล (สมาชิกเดิมเพิ่มตรง + ลิงก์ + อีเมลผิดรูปแบบ), Resend / Cancel + Member ไม่เห็นรายการ · หน้า H: KPI / แท็บ / โปรเจกต์ / ตัวกรอง, เปลี่ยน Workspace role + Resend, Dialog เชิญ (chip, Guest, โปรเจกต์, ลิงก์เชิญ), ปิดการใช้งาน + โอนงานแล้วเปิดใหม่, Member / Guest / Error · `pnpm --filter @friday/web typecheck test build` ผ่าน (web 209 test หลัง rebase)
 
 **ยังไม่ได้เทียบภาพกับ Canvas ที่ 1440 / 390 px**
+
+### เชิญสมาชิกเป็น Modal — 2026-11-07
+
+- **ต่างจาก Canvas 7 โดยตั้งใจ** (ผู้ใช้เลือก): ฟอร์ม Invite ไม่ฝังในหน้า Members แล้ว · ปุ่ม Invite ที่หัวโปรเจกต์เปิด Modal ทับหน้าปัจจุบันจากทุกแท็บ ไม่พาไปแท็บ Members · ใช้รูปแบบเดียวกับ Invite ของ Workspace (H)
+- Modal: อีเมลหลายรายการ, Role พร้อมคำอธิบายใต้ช่อง, Capacity · ข้อความผิดพลาดขึ้นหลังกดส่งเท่านั้น · มีลิงก์เชิญต้องส่งต่อเองจึงค้าง Modal ไว้ให้คัดลอก
+- แท็บ Invitations เหลือรายการคำเชิญที่รอ (Resend / Cancel) + ปุ่ม + Invite · การ์ด "สิทธิ์ของแต่ละ Role" ย้ายเป็น popover จากปุ่มในหัวตาราง Members
+- ไฟล์: `src/features/project-invite/` (ใช้ทั้ง ProjectShell และหน้า Members) · คำขอนอก lane: W00 `project-shell.tsx`

@@ -58,3 +58,9 @@
 - `pnpm typecheck`, `pnpm test`, `pnpm -r --if-present build` ผ่าน: Web 31 + DB 24 + API 54 = 109 tests; ข้าม 2 tests ที่ต้องใช้ไฟล์แผนจริง · จำนวนนี้เป็นของ branch W00 ที่แยกจาก T00 ซึ่งยังเป็น PR คนละงาน
 - ไม่มีคำขอนอก lane · แก้เฉพาะ `apps/web/**`, lockfile สำหรับ dependency และ checkbox/บันทึกผลของ W00
 - แก้หลัง merge (Select ชนลูกศร): ปรับ `Select` ใน UI kit ให้ซ่อนลูกศรของ browser แล้ววาง Chevron เอง เว้นขวา 34px · เพิ่ม `size="small"` (36px สำหรับแถบตัวกรอง) และ `prefix` (คำนำหน้าในกล่อง ค่าเป็นตัวหนาสีหลักตาม Canvas Kanban) · `className` ของ Select ไปอยู่ที่กล่องแทน `<select>` · ตรวจภาพที่ 364 px, 1440 px และฟอร์มใน /dev/ui
+
+### เมนู Workspace และเมนูบัญชีแบบใหม่ — 2026-11-07
+
+- ผู้ใช้ขอให้ออกแบบใหม่ตามตัวอย่าง monday: ตัวสลับ Workspace มีค้นหา (เมื่อมีมากกว่า 4), รายการ, สร้าง Workspace, ตั้งค่า Workspace (Owner / Admin) และคีย์ลัด Ctrl 1–9
+- avatar มุมขวาเป็นเมนูบัญชี (เดิมเป็นลิงก์ไป Profile): ชื่อ / อีเมล · คอลัมน์บัญชี (โปรไฟล์, การแจ้งเตือน, เวลาทำงาน, ความปลอดภัย) · คอลัมน์ Workspace (สมาชิก, นำเข้าแผน, Admin Console, แพ็กเกจ) · ภาษา / ปี และออกจากระบบย้ายมาไว้ที่นี่ · ต่างจาก Canvas Q1 ที่วางภาษาและออกจากระบบไว้ในเมนู Workspace
+- ย้ายตัวสลับ Workspace ลงหัว Sidebar (ผู้ใช้ขอ) · แถบบนซ้ายเหลือชื่อระบบ "Friday Manage" กลับ Home · หน้า Admin Console (ไม่มี Sidebar) ยังมีตัวสลับบนแถบบน

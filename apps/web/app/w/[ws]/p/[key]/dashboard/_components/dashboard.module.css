@@ -1,4 +1,5 @@
-.page { max-width:1360px; width:100%; margin:0 auto; padding:20px 24px 48px; display:flex; flex-direction:column; gap:16px; min-width:0; }
+/* เต็มความกว้างเหมือนทุกหน้า: ขอบซ้ายขวา 24px เท่ากันไม่ว่าจอกว้างแค่ไหน */
+.page { width:100%; padding:20px 24px 48px; display:flex; flex-direction:column; gap:16px; min-width:0; }
 .toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .spacer { flex:1; }
 .muted { color:var(--muted); font-size:13px; }
@@ -83,3 +84,8 @@
   .risk { flex-wrap:wrap; }
   .riskAction { margin-left:38px; }
 }
+/* ส่วนแผนทั้งโปรเจกต์ใน Overview */
+.embedded { display:flex; flex-direction:column; gap:16px; margin-top:8px; padding-top:20px; border-top:1px solid var(--border); scroll-margin-top:72px; min-width:0; }
+.sectionHead { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.sectionHead h2 { margin:0; font-size:18px; }
+

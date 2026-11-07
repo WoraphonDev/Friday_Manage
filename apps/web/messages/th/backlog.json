@@ -95,5 +95,8 @@
   "retroPlaceholder": "อะไรดี / อะไรควรปรับ / Action items",
   "completeAndMove": "ปิด Sprint และย้ายงาน",
   "completed": "ปิด {name} แล้ว · ย้ายงานค้าง {tasks} งาน (Sub-task {subtasks}) ไป {target}",
-  "completedClean": "ปิด {name} แล้ว"
+  "completedClean": "ปิด {name} แล้ว",
+  "intro": "Backlog คืองานที่ยังไม่อยู่ใน Sprint · วางแผนโดยลากงานขึ้นไปวางใน Sprint หรือกดปุ่ม ↑ ที่แถวงาน แล้วกด Start sprint เมื่อพร้อมเริ่มทำ",
+  "expandSprint": "แสดงงานใน {name}",
+  "collapseSprint": "พับ {name}"
 }

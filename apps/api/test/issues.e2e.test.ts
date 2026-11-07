@@ -181,6 +181,18 @@ describe('Bug และ Assignees', () => {
     expect(seen.find((e) => e.type === 'issue.assigned')?.data).toMatchObject({ userIds: [team.devId], removedUserIds: [team.leadId] });
     expect((await request([team.leadId], issue.version)).body.error.code).toBe('conflict');
   });
+  it('แก้ Actual Start เองได้ บันทึก Activity · ห้ามเกินวันนี้หรือหลัง Actual End', async () => {
+    const issue = await create();
+    const r = await team.lead.patch(url(issue.key), { actualStart: '2026-11-02' }, issue.version);
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body.actualStart).toBe('2026-11-02');
+    const activity = await t.owner.query("SELECT old_value, new_value FROM activities WHERE issue_id=$1 AND field='actualStart'", [issue.id]);
+    expect(activity.rows).toEqual([{ old_value: null, new_value: '2026-11-02' }]);
+    expect((await team.lead.patch(url(issue.key), { actualStart: '2099-01-01' }, r.body.version)).body.error.code).toBe('invalid_dates');
+    await t.owner.query("UPDATE issues SET actual_end='2026-11-03' WHERE id=$1", [issue.id]);
+    const current = (await team.lead.get(url(issue.key))).body;
+    expect((await team.lead.patch(url(issue.key), { actualStart: '2026-11-04' }, current.version)).body.error.code).toBe('invalid_dates');
+  });
 });
 
 describe('Table และ form-options', () => {

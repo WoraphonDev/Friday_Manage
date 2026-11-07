@@ -211,5 +211,7 @@
     "filteredEmpty": "ไม่มี Requirement ที่ตรงตัวกรอง",
     "noFr": "ไม่มี FR",
     "assignFr": "ระบุ FR"
-  }
+  },
+  "planTitle": "แผนทั้งโปรเจกต์",
+  "planSubtitle": "แผนไหวไหม ความเสี่ยง และ Workload สัปดาห์ข้างหน้า"
 }

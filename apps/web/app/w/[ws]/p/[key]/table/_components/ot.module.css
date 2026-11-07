@@ -68,7 +68,9 @@
 .list { padding:12px 18px; display:flex; flex-direction:column; gap:12px; }
 .line { display:flex; justify-content:space-between; gap:8px; font-size:13px; }
 .empty { padding:24px 18px; color:var(--muted); font-size:13px; }
-.tableWrap { overflow:auto; max-height:calc(100vh - 220px); position:relative; }
+/* ไม่มีกล่องเลื่อนแนวตั้งของตัวเอง ใช้ scroll ของหน้าหลัก หัวตารางจึงติดใต้ top bar ได้
+   (overflow: clip ไม่สร้าง scroll container · จอแคบกว่าตารางค่อยเลื่อนแนวนอนในกล่อง) */
+.tableWrap { overflow:clip; position:relative; }
 /* Table ตาม Canvas Table (.gr / .gh / .mrow) */
 .toolbar { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; }
 .search { display:flex; align-items:center; gap:8px; min-height:36px; padding:0 12px; border:1px solid var(--input); border-radius:8px; background:#fff; min-width:220px; color:var(--muted); }
@@ -87,10 +89,12 @@
 .pill { display:inline-flex; align-items:center; gap:6px; padding:1px 8px; border-radius:999px; font-size:12px; font-weight:500; white-space:nowrap; border:0; }
 .sTodo { background:#eef0f3; color:#3d4550; } .sProg { background:#dbeafe; color:#1e40af; } .sRev { background:#fef3c7; color:#92400e; } .sDone { background:#dcfce7; color:#166534; }
 /* select ที่ดูเหมือน pill: กดแล้วเปิดตัวเลือก (แก้ในแถวได้แต่ไม่โชว์ช่อง select ค้าง) */
-.pillSelect { appearance:none; -webkit-appearance:none; font-family:inherit; cursor:pointer; max-width:110px; padding:2px 10px; }
+.pillSelect { appearance:none; -webkit-appearance:none; font-family:inherit; cursor:pointer; max-width:110px; padding:2px 10px; border:0; min-height:0; }
+/* เปิดเป็น popover เดียวกับ Select กลาง (ดู globals.css) โดยตัว pill ไม่เปลี่ยน */
+@supports (appearance: base-select) { .pillSelect { appearance:base-select; } .pillSelect::picker-icon { display:none; } }
 .pillSelect:hover { box-shadow:inset 0 0 0 1px currentColor; }
 .tableWrap .table { width:100%; border-collapse:separate; border-spacing:0; font-size:14px; min-width:1100px; table-layout:fixed; }
-.table th { position:sticky; top:0; background:#f8f9fb; text-align:left; font-weight:600; font-size:12px; color:#5f6873; height:38px; padding:0 5px; border-bottom:1px solid var(--border); z-index:1; white-space:nowrap; }
+.table th { position:sticky; top:56px; background:#f8f9fb; text-align:left; font-weight:600; font-size:12px; color:#5f6873; height:38px; padding:0 5px; border-bottom:1px solid var(--border); z-index:1; white-space:nowrap; }
 .table th:first-child, .table td:first-child { padding-left:14px; }
 .table td { padding:0 5px; border-bottom:1px solid #eef0f3; height:44px; vertical-align:middle; }
 .nameHead { display:flex; align-items:center; gap:8px; padding-left:30px; }
@@ -119,8 +123,36 @@
 .typeTask, .typeSub { width:18px; height:18px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; flex:none; color:#fff; }
 .typeTask { background:#1d4ed8; } .typeSub { background:#0e7490; }
 .avs :global(.avatar) { width:26px; height:26px; font-size:10px; border:2px solid #fff; }
-.cellBtn { border:0; background:transparent; font:inherit; font-size:13px; padding:2px 4px; margin-left:-4px; border-radius:6px; cursor:pointer; color:inherit; }
-.cellBtn:hover { background:#eef0f3; }
+/* ช่องที่แก้ในแถวได้: ชี้แถวแล้วเห็นกรอบจางทุกช่องที่แก้ได้ · ชี้ช่อง / เปิดอยู่เป็นพื้นเทา (ตารางไม่รกตอนไม่ได้ชี้) */
+.cellEdit { display:inline-flex; align-items:center; gap:4px; max-width:100%; min-height:30px; border:0; background:transparent; font:inherit; font-size:13px; color:inherit; padding:2px 6px; margin-left:-6px; border-radius:6px; cursor:pointer; text-align:left; white-space:nowrap; overflow:hidden; }
+.itemRow:hover .cellEdit { box-shadow:inset 0 0 0 1px var(--input); }
+.cellEdit:hover,.cellEdit[data-state="open"] { background:#eef0f3; box-shadow:inset 0 0 0 1px #c9cfd6; }
+.cellEdit:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
+.actualCell { display:flex; flex-direction:column; align-items:flex-start; font-size:12px; line-height:1.3; color:var(--muted); min-width:0; }
+.actualCell .cellEdit { font-size:12px; min-height:22px; padding:1px 6px; color:var(--foreground); }
+.noneAvatar { width:24px; height:24px; border-radius:50%; background:#eef0f3; display:inline-flex; align-items:center; justify-content:center; color:var(--muted); flex:none; }
+.popFoot { display:flex; align-items:center; justify-content:space-between; border-top:1px solid var(--border); margin-top:4px; padding-top:6px; font-size:12px; color:var(--muted); }
+.sizePop { width:240px; display:flex; flex-direction:column; gap:10px; }
+.sizeChoices { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; }
+.sizeChoices button { min-height:34px; border:1px solid var(--input); border-radius:8px; background:#fff; font:inherit; font-weight:700; font-size:13px; cursor:pointer; }
+.sizeChoices button:hover { background:#f6f8fa; }
+.sizeChoices button[aria-pressed="true"] { background:var(--primary-soft); border-color:var(--primary); color:var(--primary); }
+.mdForm { display:flex; align-items:flex-end; gap:6px; }
+.mdForm label { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; flex:1; }
+.mdForm input { min-height:34px; border:1px solid var(--input); border-radius:8px; padding:0 8px; font:inherit; font-size:13px; width:100%; }
+.popHint { margin:0; font-size:11px; color:var(--muted); }
+/* + Sub-task โผล่เมื่อชี้แถว Task · จอสัมผัสแสดงตลอด */
+.subAddBtn { display:inline-flex; align-items:center; gap:2px; flex:none; margin-left:auto; border:0; background:transparent; color:var(--primary); font:inherit; font-size:12px; font-weight:500; padding:2px 8px; min-height:26px; border-radius:6px; cursor:pointer; opacity:0; }
+.itemRow:hover .subAddBtn,.subAddBtn:focus-visible { opacity:1; }
+.subAddBtn:hover { background:#eff6ff; }
+@media (hover:none) { .subAddBtn { opacity:1; } }
+.subAddRow td { height:44px; background:#fbfcfe; }
+/* ไอคอนตรงกับแถว Sub-task: ระยะเยื้อง 54 + checkbox 16 + ช่องว่าง 8 */
+.subAdd { display:flex; align-items:center; gap:8px; padding-left:78px; }
+.subAdd input { flex:1; max-width:440px; min-height:32px; border:1px dashed var(--input); border-radius:8px; padding:0 10px; font:inherit; font-size:13px; background:#fff; }
+.subAdd input:focus { outline:2px solid var(--focus); outline-offset:0; border-style:solid; }
+.subAddCancel { border:0; background:transparent; color:var(--muted); font:inherit; font-size:13px; cursor:pointer; padding:0 8px; min-height:32px; border-radius:6px; }
+.subAddCancel:hover { background:#eef0f3; }
 .dueLate { color:#b91c1c; font-weight:600; } .dueToday { color:#b45309; font-weight:600; }
 .prog { display:flex; align-items:center; gap:8px; }
 .prog > span:first-child { flex:1; height:6px; background:#eef0f3; border-radius:99px; overflow:hidden; }
@@ -162,8 +194,9 @@
 .risk > span { width:8px; height:8px; border-radius:50%; margin-top:7px; flex:none; }
 @media (max-width:760px) {
   .page { padding:12px; gap:12px; }
-  .tableWrap { max-height:none; }
   .desktopOnly { display:none !important; }
   .mobileOnly { display:flex; flex-direction:column; gap:12px; }
   .cols, .side { gap:12px; }
 }
+/* จอแคบกว่าตาราง: เลื่อนแนวนอนในกล่อง · กล่องกลายเป็น scroll container หัวตารางจึงติดที่ขอบกล่อง (top 0) แทน */
+@media (max-width:1380px) { .tableWrap { overflow-x:auto; } .table th { top:0; } }

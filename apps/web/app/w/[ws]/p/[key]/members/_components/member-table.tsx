@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import * as Popover from "@radix-ui/react-popover";
 import { MoreHorizontal } from "lucide-react";
 import { Avatar, Badge, Button, Dialog, EmptyState, Input, Select } from "@/components/ui";
 import { formatDate, type YearFormat } from "@/lib/format";
@@ -32,6 +33,7 @@ export function MemberTable({
 }) {
   const t = useTranslations("members-workload.members");
   const tr = useTranslations("members-workload.roles");
+  const ti = useTranslations("members-workload.invites");
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<ProjectMember | null>(null);
   const q = query.trim().toLowerCase();
@@ -42,8 +44,20 @@ export function MemberTable({
       <div className={styles.chead}>
         <h2 id="members-title">{t("title")} <span className={styles.muted}>{t("count", { count: members.length })}</span></h2>
         <div className={styles.group}>
-          <input className="input" type="search" placeholder={t("search")} aria-label={t("search")} value={query} onChange={(e) => setQuery(e.target.value)} />
-          <a className="button button-secondary" href="#roles">{t("rolesButton")}</a>
+          <input className={cn("input", styles.search)} type="search" placeholder={t("search")} aria-label={t("search")} value={query} onChange={(e) => setQuery(e.target.value)} />
+          {/* คำอธิบาย Role เปิดดูข้างตาราง (เดิมเป็นการ์ดแยกคู่กับฟอร์มเชิญที่ย้ายไปเป็น Modal) */}
+          <Popover.Root>
+            <Popover.Trigger asChild><button type="button" className="button button-secondary">{t("rolesButton")}</button></Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content className={cn("popover", styles.rolesPop)} align="end" sideOffset={6} aria-label={ti("rolesTitle")}>
+                <div className={styles.roles}>
+                  <div><span className={styles.badgeCol}><Badge tone="blue">{tr("admin")}</Badge></span><div>{ti("roleAdmin")}</div></div>
+                  <div><span className={styles.badgeCol}><Badge tone="green">{tr("member")}</Badge></span><div>{ti("roleMember")}</div></div>
+                  <div><span className={styles.badgeCol}><Badge>{tr("viewer")}</Badge></span><div>{ti("roleViewer")}</div></div>
+                </div>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
         </div>
       </div>
       <div className={styles.scroll}>

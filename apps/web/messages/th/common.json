@@ -25,7 +25,8 @@
     "menu": "เมนู",
     "actions": "การกระทำ",
     "morePeople": "และอีก {count} คน",
-    "signOut": "ออกจากระบบ"
+    "signOut": "ออกจากระบบ",
+    "resizeDrawer": "ลากเพื่อปรับความกว้าง"
   },
   "nav": {
     "home": "Home",
@@ -69,13 +70,38 @@
     "projectMembers": "Members",
     "invite": "Invite",
     "projectMenu": "เมนูโปรเจกต์",
+    "chooseTabs": "เพิ่มมุมมอง",
+    "moreTabs": "มุมมองเพิ่มเติม",
     "projectTeam": "ทีมในโปรเจกต์ {count} คน",
     "backToWorkspace": "← กลับไปที่ Workspace",
     "back": "กลับ",
     "checkoutTitle": "ชำระเงิน · {name}",
     "secure": "เชื่อมต่อแบบเข้ารหัส",
     "mainMenu": "เมนูหลัก",
-    "profileTab": "Profile"
+    "profileTab": "Profile",
+    "viewsHint": "เลือกเพื่อเพิ่มเป็นแท็บของโปรเจกต์นี้",
+    "tabShown": "แสดงเป็นแท็บแล้ว",
+    "hideTab": "ซ่อนแท็บ {name}",
+    "viewDesc": {
+      "dashboard": "สรุปสุขภาพโปรเจกต์และความเสี่ยงสำหรับ Lead",
+      "reports": "รายงานรายสัปดาห์และ Requirement Traceability",
+      "backlog": "วางแผน Sprint จากงานที่ยังไม่ได้อยู่ใน Sprint",
+      "gantt": "แผนงานพร้อม Dependency และ Baseline",
+      "planChanges": "รายการแก้แผนหลังตั้ง Baseline พร้อมเหตุผล"
+    },
+    "searchWorkspace": "ค้นหา Workspace",
+    "noWorkspaceMatch": "ไม่พบ Workspace",
+    "addWorkspace": "สร้าง Workspace ใหม่",
+    "workspaceSettings": "ตั้งค่า {name}",
+    "switchHint": "คีย์ลัด: Ctrl 1–9 สลับ Workspace ตามลำดับ",
+    "accountMenu": "เมนูบัญชี",
+    "accountSection": "บัญชี",
+    "myProfile": "โปรไฟล์ของฉัน",
+    "notifySettings": "การแจ้งเตือน",
+    "workHours": "เวลาทำงาน / วันลา",
+    "securitySettings": "ความปลอดภัย",
+    "membersInvite": "สมาชิก & เชิญ",
+    "importPlan": "นำเข้าแผน"
   },
   "roles": {
     "owner": "Owner",

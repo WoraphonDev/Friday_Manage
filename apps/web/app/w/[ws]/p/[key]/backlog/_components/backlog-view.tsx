@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Bookmark, Bug, CheckSquare, MoreHorizontal, Zap } from "lucide-react";
+import { Bookmark, Bug, CheckSquare, ChevronDown, MoreHorizontal, Zap } from "lucide-react";
 import { AvatarStack, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
@@ -61,6 +61,7 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
   const [creating, setCreating] = useState(false);
   const [starting, setStarting] = useState<Sprint | null>(null);
   const [completing, setCompleting] = useState<Sprint | null>(null);
+  const [opened, setOpened] = useState<Record<string, boolean>>({});
 
   const permissions = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${endpoint}/my-permissions`) });
   const allowed = !!permissions.data && !permissions.data.guestViewer;
@@ -205,6 +206,7 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
       </div>
     </div>
 
+    {!empty && <p className={styles.intro}>{t("intro")}</p>}
     {notice && <div className={styles.notice} role="status"><span>{notice.message}</span>{notice.undo && <Button size="small" disabled={moving} onClick={() => void notice.undo?.()}>{t("undo")}</Button>}<Button size="small" variant="ghost" aria-label={t("close")} onClick={() => setNotice(null)}>×</Button></div>}
     {!!moveError && <div className={styles.moveError} role="alert"><strong>{t("moveFailed")}</strong><span>{moveError instanceof ApiError && moveError.status === 409 ? t("conflict") : errorText(moveError, t("moveFailed"))}</span>{moveError instanceof ApiError && moveError.requestId && <code>{t("requestId", { id: moveError.requestId })}</code>}<Button size="small" onClick={() => { setMoveError(null); void backlog.refetch(); }}>{t("loadLatest")}</Button></div>}
 
@@ -234,10 +236,21 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
       {showActive && renderList(active.id, active.issues, t("sprintEmpty"))}
     </section>}
 
-    {planning.map((sprint) => <PlanningSprint key={sprint.id} sprint={sprint} canManage={canManage} hasActive={!!active} dates={sprintDates(sprint)}
-      onStart={() => setStarting(sprint)} saveGoal={async (goal) => { await api.request(`${endpoint}/sprints/${sprint.id}`, { method: "PATCH", body: { goal: goal || null } }); await cache.invalidateQueries({ queryKey: backlogKey }); }}>
-      {renderList(sprint.id, sprint.issues, t("sprintEmpty"))}
-    </PlanningSprint>)}
+    {/* กางเฉพาะ Sprint ถัดไปตาม Canvas L1 · Sprint หลังจากนั้นพับเป็นแถวเดียว Backlog จึงอยู่ใกล้ให้ลากได้ */}
+    {(() => {
+      const card = (sprint: Sprint, index: number) => {
+        const open = opened[sprint.id] ?? index === 0;
+        return <PlanningSprint key={sprint.id} sprint={sprint} canManage={canManage} hasActive={!!active} isNext={index === 0} open={open} dates={sprintDates(sprint)}
+          dropOver={dragging !== null && dropTarget?.container === sprint.id}
+          onToggle={() => setOpened((old) => ({ ...old, [sprint.id]: !open }))}
+          onDragOver={(event) => dragOver(event, sprint.id)} onDrop={(event) => drop(event, sprint.id)}
+          onStart={() => setStarting(sprint)} saveGoal={async (goal) => { await api.request(`${endpoint}/sprints/${sprint.id}`, { method: "PATCH", body: { goal: goal || null } }); await cache.invalidateQueries({ queryKey: backlogKey }); }}>
+          {renderList(sprint.id, sprint.issues, t("sprintEmpty"))}
+        </PlanningSprint>;
+      };
+      // Sprint หลังจากนั้นเรียงต่อกันเป็นรายการเดียว (ไม่เว้นช่องทีละการ์ด)
+      return <>{planning[0] && card(planning[0], 0)}{planning.length > 1 && <div className={styles.later}>{planning.slice(1).map((sprint, i) => card(sprint, i + 1))}</div>}</>;
+    })()}
 
     {!empty && <section className={styles.card} aria-label={t("backlog")}>
       <header className={styles.head}>
@@ -277,7 +290,11 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
   </section>;
 }
 
-function PlanningSprint({ sprint, canManage, hasActive, dates, onStart, saveGoal, children }: { sprint: Sprint; canManage: boolean; hasActive: boolean; dates: string; onStart: () => void; saveGoal: (goal: string) => Promise<void>; children: ReactNode }) {
+function PlanningSprint({ sprint, canManage, hasActive, isNext, open, dropOver, dates, onToggle, onDragOver, onDrop, onStart, saveGoal, children }: {
+  sprint: Sprint; canManage: boolean; hasActive: boolean; isNext: boolean; open: boolean; dropOver: boolean; dates: string;
+  onToggle: () => void; onDragOver: (event: DragEvent) => void; onDrop: (event: DragEvent) => void;
+  onStart: () => void; saveGoal: (goal: string) => Promise<void>; children: ReactNode;
+}) {
   const t = useTranslations("backlog");
   const [goal, setGoal] = useState(sprint.goal ?? "");
   const [goalError, setGoalError] = useState("");
@@ -290,14 +307,22 @@ function PlanningSprint({ sprint, canManage, hasActive, dates, onStart, saveGoal
     setGoalError("");
     try { await saveGoal(goal.trim()); } catch (error) { setGoalError(errorText(error, t("saveFailed"))); }
   }
-  return <section className={styles.card} aria-label={t("sprintRegion", { name: sprint.name, status: t("statusValues__planning") })}>
-    <header className={styles.head}>
+  // Sprint ที่พับไว้ยังรับงานที่ลากมาวางได้ทั้งการ์ด
+  return <section className={`${styles.card}${!open && dropOver ? ` ${styles.cardOver}` : ""}`} aria-label={t("sprintRegion", { name: sprint.name, status: t("statusValues__planning") })}
+    onDragOver={open ? undefined : onDragOver} onDrop={open ? undefined : onDrop}>
+    <header className={`${styles.head}${open ? "" : ` ${styles.headCollapsed}`}`}>
+      <button type="button" className={styles.toggle} aria-expanded={open} aria-label={t(open ? "collapseSprint" : "expandSprint", { name: sprint.name })} onClick={onToggle}>
+        <ChevronDown size={16} aria-hidden="true" style={{ transform: open ? undefined : "rotate(-90deg)" }} />
+      </button>
       <span className={`${styles.status} ${styles.statusPlanning}`}>{t("statusValues__planning")}</span>
       <h2>{sprint.name}</h2>
       <span className={styles.muted}>{dates} · {t("issueCount", { count: sprint.issues.length })}</span>
       <span className={styles.spacer} />
-      {canManage && <Button className={styles.startBtn} disabled={hasActive} title={hasActive ? t("activeExists") : undefined} onClick={onStart}>{t("startSprint")}</Button>}
+      {!open && <span className={capacity.overloaded ? styles.overText : styles.muted}>{t("capacityValue", { committed, capacity: capacity.capacityMd })}</span>}
+      {/* เริ่มได้เฉพาะ Sprint ถัดไป ไม่ให้มีปุ่มเริ่มซ้ำทุก Sprint */}
+      {canManage && isNext && <Button className={styles.startBtn} disabled={hasActive} title={hasActive ? t("activeExists") : undefined} onClick={onStart}>{t("startSprint")}</Button>}
     </header>
+    {open && <>
     <div className={styles.planBody}>
       {canManage
         ? <div className={styles.goalField}><Input label={t("goal")} value={goal} maxLength={10000} placeholder={t("goalPlaceholder")} onChange={(event) => setGoal(event.target.value)} onBlur={() => void commitGoal()} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} error={goalError || undefined} /></div>
@@ -322,6 +347,7 @@ function PlanningSprint({ sprint, canManage, hasActive, dates, onStart, saveGoal
       </li>)}
     </ul>}
     {children}
+    </>}
   </section>;
 }
 

@@ -88,6 +88,9 @@ export function DependencyPanel({ scope, issueKey }: { scope: Scope; issueKey: s
   if (query.error) return <ErrorState error={query.error} retry={() => void query.refetch()} />;
   if (!query.data) return <LoadingState />;
   // Canvas C: แถว "Blocked by / Blocks" เป็นชิป · ฟอร์มเพิ่มเปิดจากปุ่ม
+  // ยังไม่มีทั้งสองฝั่ง: ย่อเหลือบรรทัดเดียว ไม่ต้องแสดงสองแถวว่าง
+  const none = !query.data.blockedBy.length && !query.data.blocking.length && !adding;
+  if (none) return <div className={styles.emptyLine}><span className="muted">{t('noDependenciesYet')}</span>{canEdit && <Button size="small" variant="ghost" className={styles.addAction} onClick={() => setAdding(true)}>{t('addDependency')}</Button>}</div>;
   return <div className={styles.stack} style={{ gap: 6 }}>
     {(['blockedBy', 'blocking'] as const).map((side) => <div className={styles.depRow} key={side}>
       <span className={styles.k}>{t(side)}</span>
@@ -99,7 +102,7 @@ export function DependencyPanel({ scope, issueKey }: { scope: Scope; issueKey: s
         </span>)}
       </div>
     </div>)}
-    {canEdit && (!adding ? <Button size="small" variant="ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setAdding(true)}>{t('addDependency')}</Button> : <form className={styles.formGrid} onSubmit={(event) => { event.preventDefault(); void change(() => api.post<Dependencies>(endpoint, { [direction]: key.trim(), type, lagDays: Number(lagDays) })); }}>
+    {canEdit && (!adding ? <Button size="small" variant="ghost" className={styles.addAction} style={{ alignSelf: 'flex-start' }} onClick={() => setAdding(true)}>{t('addDependency')}</Button> : <form className={styles.formGrid} onSubmit={(event) => { event.preventDefault(); void change(() => api.post<Dependencies>(endpoint, { [direction]: key.trim(), type, lagDays: Number(lagDays) })); }}>
       <Input label={t('dependencyKey')} required pattern="[A-Za-z][A-Za-z0-9]{1,9}-[0-9]+" value={key} onChange={(event) => setKey(event.target.value.toUpperCase())} />
       <Select label={t('direction')} value={direction} onChange={(event) => setDirection(event.target.value as typeof direction)}><option value="predecessorKey">{t('blockedBy')}</option><option value="successorKey">{t('blocking')}</option></Select>
       <Select label={t('dependencyType')} value={type} onChange={(event) => setType(event.target.value)}>{['FS', 'SS', 'FF', 'SF'].map((value) => <option key={value}>{value}</option>)}</Select>

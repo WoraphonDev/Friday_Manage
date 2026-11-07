@@ -1,0 +1,10 @@
+.form { display:flex; flex-direction:column; gap:16px; padding:16px 0 20px; }
+.row { display:grid; grid-template-columns:minmax(0,1fr) 180px; gap:12px; align-items:start; }
+.actions { display:flex; justify-content:flex-end; gap:8px; }
+.muted { color:var(--muted); padding-bottom:20px; }
+.links { display:flex; flex-direction:column; gap:6px; padding:10px 12px; border-radius:8px; background:#f8f9fb; font-size:12px; }
+.links code { overflow-wrap:anywhere; }
+.links > div { display:flex; gap:8px; align-items:center; justify-content:space-between; }
+@media (max-width:760px) {
+  .row { grid-template-columns:minmax(0,1fr); }
+}

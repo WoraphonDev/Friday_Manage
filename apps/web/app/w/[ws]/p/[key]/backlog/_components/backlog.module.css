@@ -91,3 +91,17 @@
 /* Canvas Backlog: ปุ่ม Start sprint สีเขียว */
 .startBtn { background:#15803d; border-color:#15803d; color:#fff; }
 .startBtn:hover:not(:disabled) { background:#166534; color:#fff; }
+/* คำอธิบายสั้นบนสุดของหน้า: Backlog คืออะไร และวางแผนอย่างไร */
+.intro { margin:0; padding:10px 14px; border-radius:10px; background:#eff6ff; color:#1e3a8a; font-size:13px; }
+.toggle { width:28px; height:28px; flex:none; display:inline-flex; align-items:center; justify-content:center; border:0; border-radius:6px; background:transparent; color:#3d4550; cursor:pointer; padding:0; }
+.toggle:hover { background:#eef0f3; }
+.headCollapsed { border-bottom:0; }
+.cardOver { outline:2px dashed var(--primary); outline-offset:-4px; background:#eef2ff; }
+.later { display:flex; flex-direction:column; }
+.later > .card { border-radius:0; }
+.later > .card + .card { margin-top:-1px; }
+.later > .card:first-child { border-radius:12px 12px 0 0; }
+.later > .card:last-child { border-radius:0 0 12px 12px; }
+.later > .card:only-child { border-radius:12px; }
+.later .headCollapsed { padding-top:10px; padding-bottom:10px; }
+

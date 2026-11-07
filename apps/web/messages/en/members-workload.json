@@ -145,7 +145,10 @@
     "roleAdmin": "Manage members and permissions, project settings, Workflow and Modules, and delete tasks and files",
     "roleMember": "Create and edit tasks, comment, upload files, log time",
     "roleViewer": "View every tab and comment, but can't edit. Good for clients",
-    "noPermission": "You don't have permission to invite members to this project"
+    "noPermission": "You don't have permission to invite members to this project",
+    "open": "+ Invite",
+    "done": "Done",
+    "dismiss": "Cancel"
   },
   "ws": {
     "breadcrumb": "{workspace} / Settings",

@@ -9,7 +9,7 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import messages from "../../messages/th/lead-dashboard-reports.json";
-import { LeadDashboard } from "../../app/w/[ws]/p/[key]/dashboard/_components/lead-dashboard";
+import { PlanSection } from "../../app/w/[ws]/p/[key]/dashboard/_components/lead-dashboard";
 import { heatLevel } from "../../app/w/[ws]/p/[key]/dashboard/_components/workload-heatmap";
 import { ReportsView } from "../../app/w/[ws]/p/[key]/reports/_components/reports-view";
 import { addDays, type ForecastResponse, type ModuleStat, type ModulesResponse, type RisksResponse, type TraceabilityResponse, type WeeklyReport, type WorkloadCell, type WorkloadResponse } from "../../app/w/[ws]/p/[key]/dashboard/_components/types";
@@ -132,7 +132,7 @@ beforeEach(() => {
 });
 afterEach(() => { vi.useRealTimers(); });
 
-const mountDashboard = () => { navigation.pathname = "/w/sample/p/DE/dashboard"; return renderWithProviders(<WorkspaceShell ws="sample"><LeadDashboard ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: { "lead-dashboard-reports": messages } }); };
+const mountDashboard = () => { navigation.pathname = "/w/sample/p/DE/dashboard"; return renderWithProviders(<WorkspaceShell ws="sample"><PlanSection ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: { "lead-dashboard-reports": messages } }); };
 const mountReports = (search = "") => { navigation.pathname = "/w/sample/p/DE/reports"; navigation.search = search; return renderWithProviders(<WorkspaceShell ws="sample"><ReportsView ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: { "lead-dashboard-reports": messages } }); };
 
 describe("Lead Dashboard (O1)", () => {
@@ -220,14 +220,16 @@ describe("Lead Dashboard (O1)", () => {
     expect(await screen.findByText("รหัสอ้างอิง: req_w15_001")).toBeInTheDocument();
     second.unmount();
 
+    // ไม่มีสิทธิ์: ส่วนแผนใน Overview ไม่แสดงเลย (ไม่ขึ้นหน้าไม่มีสิทธิ์กลาง Overview)
     server.use(http.get("*/api/v1/w/:ws/projects/:key/insights/risks", () => HttpResponse.json({ error: { code: "forbidden", message: "ไม่มีสิทธิ์", details: {}, requestId: "req_w15_002" } }, { status: 403 })));
     const third = mountDashboard();
-    expect(await screen.findByText("คุณยังไม่มีสิทธิ์เข้าถึง")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("region", { name: "แผนทั้งโปรเจกต์" })).not.toBeInTheDocument());
+    expect(screen.queryByText("คุณยังไม่มีสิทธิ์เข้าถึง")).not.toBeInTheDocument();
     third.unmount();
 
     server.use(http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () => HttpResponse.json({ ...viewer, guestViewer: true, permissions: ["project.view"] })));
     mountDashboard();
-    expect(await screen.findByText("คุณยังไม่มีสิทธิ์เข้าถึง")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("region", { name: "แผนทั้งโปรเจกต์" })).not.toBeInTheDocument());
     expect(requests.filter((r) => r.startsWith("workload"))).toHaveLength(0);
   });
 

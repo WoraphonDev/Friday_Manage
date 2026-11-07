@@ -2,20 +2,21 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
-import { Check, ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
+import { Check, ChevronDown, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { AvatarStack, Avatar, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
-import type { Permissions } from "@/lib/types";
+import type { Permissions, Person } from "@/lib/types";
 import type { Options, Row, SavedView, TableData } from "./types";
 import styles from "./ot.module.css";
 import { StructureDialog, type StructureAction } from "./structure-dialog";
+import { DateCell, PeopleCell, SizeCell, SubtaskAdd } from "./cell-editors";
 
 const ROW_H = 44;
 /** เกินจำนวนนี้จะ render เฉพาะแถวที่อยู่ในจอ (virtualized) */
@@ -38,7 +39,22 @@ type Display =
   | { kind: "phase"; id: string; moduleId: string | null; phaseId: string | null; name: string; done: number; total: number; md: number }
   | { kind: "issue"; row: Row; sub: boolean }
   | { kind: "add"; id: string; name: string; moduleId: string | null; phaseId: string | null }
-  | { kind: "foot"; id: string; count: number; md: number };
+  | { kind: "foot"; id: string; count: number; md: number }
+  | { kind: "subAdd"; id: string; parentKey: string };
+
+/** แทรกแถวพิมพ์ Sub-task ต่อจาก Sub-task ตัวสุดท้ายของ Task ที่กด */
+function withSubtaskAdd(display: Display[], parentKey: string | null): Display[] {
+  if (!parentKey) return display;
+  let at = display.findIndex((d) => d.kind === "issue" && d.row.key === parentKey);
+  if (at < 0) return display;
+  at += 1;
+  while (at < display.length) {
+    const next = display[at];
+    if (next.kind !== "issue" || next.row.parentKey !== parentKey) break;
+    at += 1;
+  }
+  return [...display.slice(0, at), { kind: "subAdd", id: `${parentKey}:sub-add`, parentKey }, ...display.slice(at)];
+}
 
 /** ช่วงแผนของกลุ่ม: Plan Start แรกสุด – Plan End สุดท้าย */
 function span(rows: Row[]) {
@@ -120,12 +136,15 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [scrollTop, setScrollTop] = useState(0);
+  const [viewH, setViewH] = useState(800);
   const [saving, setSaving] = useState(false);
   const [structure, setStructure] = useState<StructureAction | null>(null);
   const [reveal, setReveal] = useState<{ moduleId: string; phaseId?: string } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const [deleting, setDeleting] = useState(false);
   const [reasonFor, setReasonFor] = useState<{ run: (reason: string) => Promise<void> } | null>(null);
+  const [subFor, setSubFor] = useState<string | null>(null);
+  const router = useRouter();
 
   const perms = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${base}/my-permissions`) });
   const canEdit = !!perms.data?.permissions.includes("issue.edit");
@@ -164,26 +183,44 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
 
   // API ยังไม่มีตัวกรอง Size จึงกรองจากแถวที่โหลดมาแล้ว
   const view = useMemo(() => (table.data && filters.size ? { ...table.data, items: table.data.items.filter((r) => r.size === filters.size) } : table.data), [table.data, filters.size]);
-  const display = useMemo(() => {
+  const grouped = useMemo(() => {
     if (!view) return [];
     if (groupBy === "module") return buildDisplay(view, collapsed, t("noModule"), t("noPhase"), !FILTER_KEYS.some((key) => filters[key]));
     const label = (r: Row) =>
       groupBy === "status" ? r.status.name : groupBy === "assignee" ? (r.assignees?.[0]?.displayName ?? t("noAssignee")) : r.priority;
     return buildFlat(view, collapsed, groupBy, label);
   }, [view, collapsed, groupBy, filters, t]);
+  const display = useMemo(() => withSubtaskAdd(grouped, subFor), [grouped, subFor]);
+  const virtual = display.length > VIRTUAL_AFTER;
+  // ตารางใช้ scroll ของหน้าหลัก (ไม่มีกล่องเลื่อนของตัวเอง): ระยะที่เลื่อนผ่านตาราง = ขอบบนของตารางที่พ้นจอขึ้นไป
+  useEffect(() => {
+    if (!virtual) return;
+    const update = () => {
+      setScrollTop(Math.max(0, -(scroller.current?.getBoundingClientRect().top ?? 0)));
+      setViewH(window.innerHeight);
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => { window.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
+  }, [virtual]);
   useEffect(() => {
     if (!reveal || structure) return;
     const index = display.findIndex((row) => reveal.phaseId ? row.kind === "phase" && row.phaseId === reveal.phaseId : row.kind === "module" && row.moduleId === reveal.moduleId);
     if (index < 0) return;
     // กลุ่มที่เพิ่งสร้างอาจอยู่พ้นช่วงที่ virtualized table render อยู่
-    if (display.length > VIRTUAL_AFTER && scroller.current) { scroller.current.scrollTop = index * ROW_H; setScrollTop(index * ROW_H); }
+    if (virtual && scroller.current) {
+      const root = document.scrollingElement ?? document.documentElement;
+      root.scrollTop = root.scrollTop + scroller.current.getBoundingClientRect().top + index * ROW_H - window.innerHeight / 2;
+      setScrollTop(index * ROW_H);
+    }
     const frame = requestAnimationFrame(() => {
       const selector = reveal.phaseId ? `[data-phase-id="${reveal.phaseId}"]` : `[data-module-id="${reveal.moduleId}"]`;
       scroller.current?.querySelector(selector)?.scrollIntoView({ block: "center" });
       setReveal(null);
     });
     return () => cancelAnimationFrame(frame);
-  }, [display, reveal, structure]);
+  }, [display, reveal, structure, virtual]);
   const statuses = options.data?.issueTypes.find((x) => x.name === "Task")?.statuses ?? [];
   const reload = () => cache.invalidateQueries({ queryKey: ["table", ws, projectKey] });
   const set = (k: keyof Filters, v: string) => { setFilters((f) => ({ ...f, [k]: v || undefined })); setSelected(new Set()); };
@@ -233,8 +270,6 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   if (err) return <div className={styles.page}>{err instanceof ApiError && err.status === 403 ? <Forbidden /> : <ErrorState error={err} retry={() => table.refetch()} />}</div>;
   const data = view!;
   const issueRows = display.filter((d): d is Extract<Display, { kind: "issue" }> => d.kind === "issue");
-  const virtual = display.length > VIRTUAL_AFTER;
-  const viewH = 640;
   const start = virtual ? Math.max(0, Math.floor(scrollTop / ROW_H) - 10) : 0;
   const end = virtual ? Math.min(display.length, start + Math.ceil(viewH / ROW_H) + 20) : display.length;
   const shown = display.slice(start, end);
@@ -352,7 +387,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
           <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set(groupIds))}>{t("collapseAll")}</button>
           {canEdit && <Link className={styles.tbtn} href={`/w/${encodeURIComponent(ws)}/import`}>{t("importExport")}</Link>}
           {canSettings && <button type="button" className={styles.tbtn} onClick={() => setStructure({ kind: "createModule" })}>{t("addModule")}</button>}
-          {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={taskHref()}>{t("addTask")}</Link>}
+          {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={taskHref()} scroll={false}>{t("addTask")}</Link>}
         </div>
       </div>
 
@@ -360,10 +395,10 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
         <BulkBar count={selected.size} options={options.data} statuses={statuses} canDelete={canDelete} onApply={(set) => bulk(set)} onStatus={(id) => void bulkStatus(id)} onDelete={() => setDeleting(true)} onClear={() => setSelected(new Set())} />
       )}
 
-      <section className={styles.card} style={{ overflow: "hidden" }}>
+      <section className={styles.card} style={{ overflow: "clip" }}>
         {!data.items.length && display.length > 0 && <EmptyState title={t("empty")} />}
         {!display.length ? <EmptyState title={filtered ? t("emptyFiltered") : t("empty")} /> : (
-          <div className={styles.tableWrap} style={virtual ? { height: viewH } : undefined} ref={scroller} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)} data-testid="table-scroll">
+          <div className={styles.tableWrap} ref={scroller} data-testid="table-scroll">
             <table className={styles.table} aria-rowcount={display.length + 1}>
               <colgroup><col />{cols.map((c) => <col key={c} style={{ width: COL_W[c] + 10 }} />)}</colgroup>
               <thead>
@@ -398,7 +433,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                         <span className={styles.muted} style={{ fontSize: 13 }}>{groupBy === "module" ? t("moduleTasks", { count: d.count, phases: d.phases }) : t("groupTasks", { count: d.count })}</span>
                         <span className={styles.mbar}><span><span style={{ width: `${d.pct}%`, background: d.color ?? "var(--primary)" }} /></span><b>{d.pct}%</b></span>
                         <span className={styles.muted} style={{ fontSize: 13, marginLeft: 8 }}>{d.from && d.to ? `${formatDate(d.from, year)} – ${formatDate(d.to, year)}` : `${d.md} MD`}</span>
-                        {groupBy === "module" && canCreate && <Link className={styles.addb} style={{ marginLeft: "auto" }} href={taskHref(d.moduleId)}>{t("addTask")}</Link>}
+                        {groupBy === "module" && canCreate && <Link className={styles.addb} style={{ marginLeft: "auto" }} href={taskHref(d.moduleId)} scroll={false}>{t("addTask")}</Link>}
                       </div>
                     </td>
                   </tr>
@@ -418,11 +453,18 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                     </td>
                   </tr>
                 ) : d.kind === "add" ? (
-                  canCreate ? <tr key={d.id} className={styles.addRow}><td colSpan={span}><Link className={styles.addb} href={taskHref(d.moduleId, d.phaseId)}>{t("addTaskIn", { name: d.name })}</Link></td></tr> : null
+                  canCreate ? <tr key={d.id} className={styles.addRow}><td colSpan={span}><Link className={styles.addb} href={taskHref(d.moduleId, d.phaseId)} scroll={false}>{t("addTaskIn", { name: d.name })}</Link></td></tr> : null
+                ) : d.kind === "subAdd" ? (
+                  <tr key={d.id} className={styles.subAddRow}><td colSpan={span}>
+                    <SubtaskAdd base={base} parentKey={d.parentKey} onClose={() => setSubFor(null)}
+                      onCreated={async (key) => { toast({ message: t("cell.subtaskCreated", { key }) }); await reload(); }}
+                      onFullForm={() => { setSubFor(null); router.replace(`${page}/table?${new URLSearchParams({ issue: d.parentKey, new: "1", parent: d.parentKey })}`, { scroll: false }); }} />
+                  </td></tr>
                 ) : d.kind === "foot" ? (
                   <tr key={d.id} className={styles.footRow}><td colSpan={span}><span>{t("footTasks", { count: d.count })}</span><span>{t("footMd", { md: d.md })}</span></td></tr>
                 ) : (
-                  <IssueRow key={d.row.key} row={d.row} sub={d.sub} cols={cols} ws={ws} projectKey={projectKey} year={year} canEdit={canEdit} statuses={statuses}
+                  <IssueRow key={d.row.key} row={d.row} sub={d.sub} cols={cols} ws={ws} projectKey={projectKey} year={year} canEdit={canEdit} statuses={statuses} people={options.data?.members ?? []}
+                    onAddSub={canCreate && !d.sub ? () => setSubFor(d.row.key) : undefined}
                     selected={selected.has(d.row.key)} onSelect={(on) => setSelected((c) => { const n = new Set(c); if (on) n.add(d.row.key); else n.delete(d.row.key); return n; })}
                     onPatch={(body) => patch(d.row, body)} />
                 ))}
@@ -458,12 +500,12 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   );
 }
 
-function IssueRow({ row, sub, cols, ws, projectKey, year, canEdit, statuses, selected, onSelect, onPatch }: {
+function IssueRow({ row, sub, cols, ws, projectKey, year, canEdit, statuses, people, selected, onSelect, onPatch, onAddSub }: {
   row: Row; sub: boolean; cols: Col[]; ws: string; projectKey: string; year: YearFormat; canEdit: boolean;
-  statuses: { id: string; name: string; category?: string }[]; selected: boolean; onSelect: (on: boolean) => void; onPatch: (body: Record<string, unknown>) => void;
+  statuses: { id: string; name: string; category?: string }[]; people: Person[]; selected: boolean; onSelect: (on: boolean) => void;
+  onPatch: (body: Record<string, unknown>) => void; onAddSub?: () => void;
 }) {
   const t = useTranslations("overview-table.table");
-  const [editEnd, setEditEnd] = useState(false);
   const href = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/table?issue=${encodeURIComponent(row.key)}`;
   const statusOptions = statuses.some((s) => s.id === row.status.id) ? statuses : [{ id: row.status.id, name: row.status.name }, ...statuses];
   const done = row.status.category === "done";
@@ -472,22 +514,31 @@ function IssueRow({ row, sub, cols, ws, projectKey, year, canEdit, statuses, sel
   const actualLate = !!(row.actualEnd && row.planEnd && row.actualEnd > row.planEnd);
   // นับเป็นวันปฏิทินจากวันที่ในแผน (YYYY-MM-DD) เพื่อบอกว่าเสร็จช้ากว่าแผนเท่าไร
   const lateBy = actualLate ? Math.round((Date.parse(row.actualEnd!) - Date.parse(row.planEnd!)) / 86400000) : 0;
+  const edit = (field: string) => t("edit", { field, key: row.key });
+  const empty = <span className={styles.muted}>—</span>;
+  const devView = row.assignees?.length ? <span className={styles.avs}><AvatarStack people={row.assignees} max={3} /></span> : empty;
+  const baView = row.ba ? <span className={styles.avs}><Avatar size="small" person={row.ba} /></span> : empty;
+  const sizeView = <span style={{ whiteSpace: "nowrap" }}>{row.size ? <span className={`${styles.pill} ${styles.sTodo}`} style={{ fontWeight: 700 }}>{row.size}</span> : empty}{row.estimateMd !== null ? ` ${row.estimateMd}` : ""}</span>;
+  const actualEndView = row.actualEnd ? <span className={actualLate ? styles.dueLate : undefined}>{t("actualEnd", { date: formatDate(row.actualEnd, year) })}{actualLate ? ` · ${t("actualLate", { days: lateBy })}` : ""}</span> : null;
   const cell: Record<Col, React.ReactNode> = {
-    dev: row.assignees?.length ? <span className={styles.avs}><AvatarStack people={row.assignees} max={3} /></span> : <span className={styles.muted}>—</span>,
-    ba: row.ba ? <span className={styles.avs}><Avatar size="small" person={row.ba} /></span> : <span className={styles.muted}>—</span>,
+    dev: canEdit ? <PeopleCell multiple label={edit(t("cols.dev"))} people={people} value={row.assignees?.map((p) => p.id) ?? []} onChange={(ids) => onPatch({ assigneeIds: ids })}>{devView}</PeopleCell> : devView,
+    ba: canEdit ? <PeopleCell label={edit(t("cols.ba"))} people={people} value={row.ba ? [row.ba.id] : []} onChange={(ids) => onPatch({ baId: ids[0] ?? null })}>{baView}</PeopleCell> : baView,
     status: canEdit && statuses.length ? (
-      <select className={`${styles.pill} ${styles.pillSelect} ${pillClass(row.status.category, row.status.name)}`} aria-label={t("edit", { field: t("cols.status"), key: row.key })} value={row.status.id} onChange={(e) => onPatch({ statusId: e.target.value })}>
+      <select className={`${styles.pill} ${styles.pillSelect} ${pillClass(row.status.category, row.status.name)}`} aria-label={edit(t("cols.status"))} value={row.status.id} onChange={(e) => onPatch({ statusId: e.target.value })}>
         {statusOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
       </select>
     ) : <span className={`${styles.pill} ${pillClass(row.status.category, row.status.name)}`}>{row.status.name}</span>,
-    size: <span style={{ whiteSpace: "nowrap" }}>{row.size ? <span className={`${styles.pill} ${styles.sTodo}`} style={{ fontWeight: 700 }}>{row.size}</span> : <span className={styles.muted}>—</span>}{row.estimateMd !== null ? ` ${row.estimateMd}` : ""}</span>,
-    start: formatDate(row.planStart, year),
-    end: canEdit && editEnd ? (
-      <input className={styles.inline} type="date" autoFocus aria-label={t("edit", { field: t("cols.end"), key: row.key })} defaultValue={row.planEnd ?? ""} onBlur={(e) => { setEditEnd(false); if (e.target.value && e.target.value !== row.planEnd) onPatch({ planEnd: e.target.value }); }} />
-    ) : canEdit ? (
-      <button type="button" className={`${styles.cellBtn} ${dueCls}`} aria-label={t("edit", { field: t("cols.end"), key: row.key })} onClick={() => setEditEnd(true)}>{row.planEnd ? formatDate(row.planEnd, year) : "—"}</button>
-    ) : <span className={dueCls}>{formatDate(row.planEnd, year)}</span>,
-    actual: <span className={actualLate ? styles.dueLate : styles.muted} style={{ fontSize: 12 }}>{row.actualEnd ? `${t("actualEnd", { date: formatDate(row.actualEnd, year) })}${actualLate ? ` · ${t("actualLate", { days: lateBy })}` : ""}` : row.actualStart ? t("actualStart", { date: formatDate(row.actualStart, year) }) : "—"}</span>,
+    size: canEdit ? <SizeCell label={edit(t("cols.size"))} size={row.size} md={row.estimateMd} onChange={onPatch}>{sizeView}</SizeCell> : sizeView,
+    start: canEdit ? <DateCell label={edit(t("cols.start"))} value={row.planStart} onChange={(v) => onPatch({ planStart: v })}>{row.planStart ? formatDate(row.planStart, year) : "—"}</DateCell> : formatDate(row.planStart, year),
+    end: canEdit ? <DateCell label={edit(t("cols.end"))} value={row.planEnd} className={dueCls} onChange={(v) => onPatch({ planEnd: v })}>{row.planEnd ? formatDate(row.planEnd, year) : "—"}</DateCell>
+      : <span className={dueCls}>{formatDate(row.planEnd, year)}</span>,
+    // Actual Start แก้เองได้ (เริ่มก่อนกดสถานะ) · Actual End ระบบตั้งเมื่อสถานะเป็น Done
+    actual: <span className={styles.actualCell}>
+      {canEdit ? <DateCell label={edit(t("cell.actualStart"))} value={row.actualStart} max={row.actualEnd ?? today} onChange={(v) => onPatch({ actualStart: v })}>
+        {row.actualStart ? t("actualStart", { date: formatDate(row.actualStart, year) }) : <span className={styles.muted}>—</span>}
+      </DateCell> : row.actualStart ? <span>{t("actualStart", { date: formatDate(row.actualStart, year) })}</span> : !row.actualEnd ? empty : null}
+      {actualEndView}
+    </span>,
     progress: <span className={styles.prog}><span><span style={{ width: `${row.progressPct ?? 0}%`, background: (row.progressPct ?? 0) >= 100 ? "#16a34a" : "var(--primary)" }} /></span><span>{row.progressPct ?? 0}%</span></span>,
   };
   return (
@@ -497,7 +548,9 @@ function IssueRow({ row, sub, cols, ws, projectKey, year, canEdit, statuses, sel
           {canEdit ? <input type="checkbox" className={styles.cb} aria-label={t("select", { key: row.key })} checked={selected} onChange={(e) => onSelect(e.target.checked)} /> : <span style={{ width: 16, flex: "none" }} />}
           <span role="img" aria-label={sub ? t("typeSubtask") : t("typeTask")} className={sub ? styles.typeSub : styles.typeTask}><Check size={12} strokeWidth={3} aria-hidden="true" /></span>
           <span className={styles.key}>{row.key}</span>
-          <Link href={href} className={`${styles.nm}${done ? ` ${styles.nmDone}` : ""}`} title={row.title}>{row.title}</Link>
+          {/* เปิด Drawer โดยไม่เด้งหน้ากลับบนสุด (ตารางใช้ scroll ของหน้าหลัก) */}
+          <Link href={href} scroll={false} className={`${styles.nm}${done ? ` ${styles.nmDone}` : ""}`} title={row.title}>{row.title}</Link>
+          {onAddSub && <button type="button" className={styles.subAddBtn} aria-label={t("cell.addSubtaskTo", { key: row.key })} onClick={onAddSub}><Plus size={13} aria-hidden="true" />Sub-task</button>}
         </div>
       </td>
       {cols.map((c) => <td key={c}>{cell[c]}</td>)}

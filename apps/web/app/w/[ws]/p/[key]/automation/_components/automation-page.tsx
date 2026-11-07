@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button, EmptyState, ErrorState, Forbidden, LoadingState, useToast } from "@/components/ui";
-import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { queryKeys } from "@/lib/query";
 import type { Permissions } from "@/lib/types";
+import { SettingsFrame } from "../../settings/_components/project-settings";
 import { RuleEditor } from "./rule-editor";
 import { blankRule, errorText, type FormOptions, type Rule, type RuleList, type RuleShape, type Run, type Template } from "./types";
 import styles from "./automation.module.css";
@@ -23,9 +22,7 @@ export function AutomationPage({ ws, projectKey }: { ws: string; projectKey: str
   const cache = useQueryClient();
   const toast = useToast();
   const base = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
-  const href = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}`;
   const listKey = ["workspace", ws, "project", projectKey, "automations"];
-  const projectName = useWorkspace().projects.find((p) => p.key === projectKey)?.name;
   const perms = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${base}/my-permissions`) });
   const allowed = !!perms.data?.permissions.includes("project.automation") && !perms.data.guestViewer;
   const rules = useQuery({ queryKey: listKey, queryFn: () => api.get<RuleList>(`${base}/automations`), enabled: allowed });
@@ -36,10 +33,12 @@ export function AutomationPage({ ws, projectKey }: { ws: string; projectKey: str
   const [selected, setSelected] = useState<string | null>(null);
   const [draft, setDraft] = useState<RuleShape | null>(null);
 
+  // อยู่ในโครง Settings: เมนูซ้ายไม่หายเมื่อเลือก Automation
+  const frame = (node: React.ReactNode) => <SettingsFrame ws={ws} projectKey={projectKey} current="automation" canAutomation={allowed}>{node}</SettingsFrame>;
   const error = perms.error ?? rules.error;
-  if ((error instanceof ApiError && error.status === 403) || (perms.data && !allowed)) return <div className={styles.page}><Forbidden /></div>;
-  if (error) return <div className={styles.page}><ErrorState error={error} retry={() => { void perms.refetch(); void rules.refetch(); }} /></div>;
-  if (!perms.data || !rules.data) return <div className={styles.page}><LoadingState /></div>;
+  if ((error instanceof ApiError && error.status === 403) || (perms.data && !allowed)) return frame(<div className={styles.page}><Forbidden /></div>);
+  if (error) return frame(<div className={styles.page}><ErrorState error={error} retry={() => { void perms.refetch(); void rules.refetch(); }} /></div>);
+  if (!perms.data || !rules.data) return frame(<div className={styles.page}><LoadingState /></div>);
 
   const list = rules.data.items;
   const current = draft ? null : (list.find((r) => r.id === selected) ?? list[0] ?? null);
@@ -60,11 +59,10 @@ export function AutomationPage({ ws, projectKey }: { ws: string; projectKey: str
     setTab("rules");
   }
 
-  return (
+  return frame(
     <div className={styles.page}>
       <div className={styles.top}>
         <div>
-          <div className={styles.muted}>{projectName && <><Link href={href}>{projectName}</Link> / </>}<Link href={`${href}/settings`}>{t("crumbSettings")}</Link> / {t("title")}</div>
           <h1>{t("title")} <span className={`${styles.pill} ${styles.ent}`}>{t("plan")}</span></h1>
           <div className={styles.muted}>{t("description")}</div>
         </div>

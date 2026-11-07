@@ -13,17 +13,25 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import * as Popover from "@radix-ui/react-popover";
 import {
+  Bell as BellIcon,
   Check,
   ChevronDown,
   CircleCheck,
+  Clock,
+  FileSpreadsheet,
   FolderKanban,
   Home,
   Inbox,
   CreditCard,
   Lock,
+  LogOut,
   Menu,
+  Plus,
   Search,
   Settings,
+  ShieldCheck,
+  User,
+  Users,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
@@ -230,6 +238,8 @@ export function WorkspaceShell({
   const toast = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
   const [switchOpen, setSwitchOpen] = useState(false);
+  const [wsQuery, setWsQuery] = useState("");
+  const [accountOpen, setAccountOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const me = useQuery({
     queryKey: queryKeys.me,
@@ -361,8 +371,13 @@ export function WorkspaceShell({
       {t("app.signOut")}
     </Button>
   );
+  const isWsAdmin = ["owner", "admin"].includes(workspace.role);
+  const closeSwitch = () => { setSwitchOpen(false); setWsQuery(""); };
+  const wsFilter = wsQuery.trim().toLowerCase();
+  const matching = (workspaces.data?.items ?? []).filter((item) => !wsFilter || item.name.toLowerCase().includes(wsFilter) || item.slug.toLowerCase().includes(wsFilter));
+  // แบบเมนู Workspace ของ monday: ค้นหา · รายการ · สร้าง / ตั้งค่า (ภาษา ปี และออกจากระบบอยู่ในเมนูบัญชีที่ avatar)
   const switcher = (
-    <Popover.Root open={switchOpen} onOpenChange={setSwitchOpen}>
+    <Popover.Root open={switchOpen} onOpenChange={(open) => (open ? setSwitchOpen(true) : closeSwitch())}>
       <Popover.Trigger asChild>
         <button
           className="workspace-switch"
@@ -379,33 +394,122 @@ export function WorkspaceShell({
           sideOffset={8}
           align="start"
         >
-          <div className="menu-label">
-            {t("nav.yourWorkspaces")} · {me.data.email}
-          </div>
-          {workspaceList(() => setSwitchOpen(false))}
+          {(workspaces.data?.items.length ?? 0) > 4 && (
+            <label className="menu-search">
+              <Search size={15} aria-hidden="true" />
+              <input
+                type="search"
+                autoFocus
+                placeholder={t("nav.searchWorkspace")}
+                aria-label={t("nav.searchWorkspace")}
+                value={wsQuery}
+                onChange={(event) => setWsQuery(event.target.value)}
+              />
+            </label>
+          )}
+          <div className="menu-label">{t("nav.yourWorkspaces")}</div>
+          <nav aria-label={t("nav.switchWorkspace")}>
+            {matching.map((item) => (
+              <Link
+                className="workspace-item"
+                key={item.id}
+                href={`/w/${encodeURIComponent(item.slug)}`}
+                aria-current={item.slug === ws ? "true" : undefined}
+                onClick={closeSwitch}
+              >
+                <span className="workspace-logo">{item.name.slice(0, 1)}</span>
+                <span className="workspace-item-text">
+                  <strong>{item.name}</strong>
+                  <small>{t(`roles.${item.role}`)}</small>
+                </span>
+                {unreadOf(item.slug) > 0 && <Badge tone="red">{unreadOf(item.slug)}</Badge>}
+                {item.slug === ws && <Check size={16} />}
+              </Link>
+            ))}
+            {!matching.length && <p className="menu-empty">{t("nav.noWorkspaceMatch")}</p>}
+          </nav>
           <div className="menu-divider" />
-          <Link
-            className="workspace-item"
-            href="/onboarding"
-            onClick={() => setSwitchOpen(false)}
-          >
-            {t("nav.createWorkspace")}
+          <Link className="menu-item menu-icon-item" href="/onboarding" onClick={closeSwitch}>
+            <Plus size={16} aria-hidden="true" />
+            {t("nav.addWorkspace")}
           </Link>
-          <div className="menu-divider" />
-          <LocaleSwitch
-            signedIn
-            showYearFormat
-            onChange={() => setSwitchOpen(false)}
-          />
-          {signOut}
+          {isWsAdmin && (
+            <Link className="menu-item menu-icon-item" href={`${base}/admin`} onClick={closeSwitch}>
+              <Settings size={16} aria-hidden="true" />
+              {t("nav.workspaceSettings", { name: workspace.name })}
+            </Link>
+          )}
+          <p className="menu-hint">{t("nav.switchHint")}</p>
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
   );
-  const profileLink = (
-    <Link href={`${base}/profile`} aria-label={t("nav.profile")}>
-      <Avatar person={me.data} />
-    </Link>
+  // เมนูบัญชีที่ avatar แบบ monday: บัญชี | Workspace · ภาษา / ปี · ออกจากระบบ
+  const accountLinks = [
+    { href: `${base}/profile`, icon: User, label: t("nav.myProfile") },
+    { href: `${base}/profile?tab=notify`, icon: BellIcon, label: t("nav.notifySettings") },
+    { href: `${base}/profile?tab=hours`, icon: Clock, label: t("nav.workHours") },
+    { href: `${base}/profile?tab=sec`, icon: ShieldCheck, label: t("nav.securitySettings") },
+  ];
+  const workspaceLinks = [
+    ...(workspace.role !== "guest" ? [{ href: `${base}/members`, icon: Users, label: t("nav.membersInvite") }] : []),
+    ...(workspace.role !== "guest" ? [{ href: `${base}/import`, icon: FileSpreadsheet, label: t("nav.importPlan") }] : []),
+    ...(isWsAdmin ? [{ href: `${base}/admin`, icon: Settings, label: t("nav.admin") }, { href: `${base}/billing`, icon: CreditCard, label: t("nav.billing") }] : []),
+  ];
+  const accountMenu = (
+    <Popover.Root open={accountOpen} onOpenChange={setAccountOpen}>
+      <Popover.Trigger asChild>
+        <button type="button" className="account-trigger" aria-label={t("nav.accountMenu")}>
+          <Avatar person={me.data} />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content className="popover account-menu" sideOffset={8} align="end" aria-label={t("nav.accountMenu")}>
+          <div className="account-head">
+            <Avatar person={me.data} />
+            <span className="account-who">
+              <strong>{me.data.displayName}</strong>
+              <small>{me.data.email}</small>
+            </span>
+          </div>
+          <div className="account-cols">
+            <nav aria-label={t("nav.accountSection")}>
+              <div className="menu-label">{t("nav.accountSection")}</div>
+              {accountLinks.map(({ href, icon: Icon, label }) => (
+                <Popover.Close asChild key={href}>
+                  <Link className="menu-item menu-icon-item" href={href}><Icon size={16} aria-hidden="true" />{label}</Link>
+                </Popover.Close>
+              ))}
+            </nav>
+            {workspaceLinks.length > 0 && (
+              <nav aria-label={workspace.name}>
+                <div className="menu-label">{workspace.name}</div>
+                {workspaceLinks.map(({ href, icon: Icon, label }) => (
+                  <Popover.Close asChild key={href}>
+                    <Link className="menu-item menu-icon-item" href={href}><Icon size={16} aria-hidden="true" />{label}</Link>
+                  </Popover.Close>
+                ))}
+              </nav>
+            )}
+          </div>
+          <div className="account-foot">
+            <LocaleSwitch signedIn showYearFormat onChange={() => setAccountOpen(false)} />
+            <button
+              type="button"
+              className="menu-item menu-icon-item account-logout"
+              onClick={() => {
+                void logout().catch((error: unknown) =>
+                  toast({ message: error instanceof Error ? error.message : t("app.unknownError") }),
+                );
+              }}
+            >
+              <LogOut size={16} aria-hidden="true" />
+              {t("app.signOut")}
+            </button>
+          </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
   return (
     <Context.Provider
@@ -447,7 +551,7 @@ export function WorkspaceShell({
             <Link className="topbar-back" href={base}>
               {t("nav.backToWorkspace")}
             </Link>
-            {profileLink}
+            {accountMenu}
           </header>
         ) : (
           // มือถือใช้หัวขาวของแต่ละหน้า + เมนูล่าง ตาม Canvas M2–M7 จึงซ่อน top bar
@@ -461,7 +565,11 @@ export function WorkspaceShell({
             >
               <Menu size={20} />
             </Button>
-            {switcher}
+            {/* ตัวสลับ Workspace ย้ายลงหัว Sidebar (ผู้ใช้ขอ 2026-11-07) · แถบบนเหลือชื่อระบบกลับ Home */}
+            <Link className="topbar-brand" href={base}>
+              <span className="brand-mark" aria-hidden="true">F</span>
+              <span>Friday Manage</span>
+            </Link>
             {pathname === `${base}/search` ? (
               <Suspense fallback={searchTrigger}>
                 <TopbarSearchInput base={base} label={t("nav.search")} />
@@ -480,12 +588,16 @@ export function WorkspaceShell({
               </Link>
             )}
             <Bell workspace={ws} unread={summary.data?.total ?? 0} />
-            {profileLink}
+            {accountMenu}
           </header>
         )}
         <div className={`workspace-body chrome-${chrome}`}>
           {chrome === "workspace" && (
             <aside className="sidebar">
+              <div className="sidebar-workspace">
+                <div className="menu-label">Workspace</div>
+                {switcher}
+              </div>
               <Navigation
                 workspace={workspace}
                 projects={projects.data?.items ?? []}

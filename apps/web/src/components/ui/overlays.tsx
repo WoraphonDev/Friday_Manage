@@ -1,7 +1,7 @@
 "use client";
 
 import * as RadixDialog from "@radix-ui/react-dialog";
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -71,6 +71,46 @@ export function Dialog({
   );
 }
 
+const DRAWER_WIDTH_KEY = "friday:drawer-detail-width";
+const DRAWER_MIN = 640;
+/** ความกว้าง Drawer รายละเอียดงานที่ผู้ใช้ลากไว้ · เก็บเป็น CSS variable ให้ Drawer ซ้อน (Sub-task) กว้างเท่ากัน */
+function applyDrawerWidth(width: number) {
+  const max = Math.max(DRAWER_MIN, window.innerWidth - 48);
+  const value = Math.round(Math.min(max, Math.max(DRAWER_MIN, width)));
+  document.documentElement.style.setProperty("--drawer-detail-w", `${value}px`);
+  return value;
+}
+function useStoredDrawerWidth(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled) return;
+    try {
+      const saved = Number(localStorage.getItem(DRAWER_WIDTH_KEY));
+      if (saved > 0) applyDrawerWidth(saved);
+    } catch {
+      /* อ่าน storage ไม่ได้ใช้ค่าเริ่มต้น */
+    }
+  }, [enabled]);
+}
+/** ลากขอบซ้ายของ Drawer เพื่อขยายพื้นที่ทำงานไปทางซ้าย (ผู้ใช้ขอ 2026-11-07) */
+function startDrawerResize(event: ReactPointerEvent<HTMLDivElement>) {
+  event.preventDefault();
+  const handle = event.currentTarget;
+  handle.setPointerCapture(event.pointerId);
+  document.body.classList.add("drawer-resizing");
+  let width = 0;
+  const move = (e: PointerEvent) => { width = applyDrawerWidth(window.innerWidth - e.clientX); };
+  const up = () => {
+    handle.removeEventListener("pointermove", move);
+    handle.removeEventListener("pointerup", up);
+    handle.removeEventListener("pointercancel", up);
+    document.body.classList.remove("drawer-resizing");
+    try { if (width) localStorage.setItem(DRAWER_WIDTH_KEY, String(width)); } catch { /* จำไม่ได้ก็ใช้ได้ใน session นี้ */ }
+  };
+  handle.addEventListener("pointermove", move);
+  handle.addEventListener("pointerup", up);
+  handle.addEventListener("pointercancel", up);
+}
+
 export function Drawer({
   open,
   onOpenChange,
@@ -93,6 +133,9 @@ export function Drawer({
 }) {
   const t = useTranslations("common.app");
   const returnFocus = useReturnFocus(open);
+  // Drawer ซ้อน (Sub-task) ใช้ความกว้างเดียวกับชั้นแรก จึงมีขอบลากแค่ชั้นแรก
+  const resizable = variant === "detail" && depth === 1;
+  useStoredDrawerWidth(resizable && open);
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
@@ -102,7 +145,22 @@ export function Drawer({
             (variant === "detail" || variant === "create") && "overlay-below",
           )}
         />
+        {resizable && (
+          <div
+            className="drawer-resize"
+            data-drawer-resize=""
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={t("resizeDrawer")}
+            title={t("resizeDrawer")}
+            onPointerDown={startDrawerResize}
+          />
+        )}
         <RadixDialog.Content
+          onPointerDownOutside={(event) => {
+            // กดขอบลากไม่นับเป็นการกดนอก Drawer (ไม่ปิด)
+            if ((event.target as HTMLElement | null)?.closest?.("[data-drawer-resize]")) event.preventDefault();
+          }}
           className={cn(
             "drawer",
             depth === 2 && "drawer-nested",

@@ -69,7 +69,7 @@ export function QuickSubtask({ scope, parent, onCreated, onFullForm }: { scope: 
   }
   return <div className={styles.quickAdd}>
     <input className={styles.dashed} value={title} disabled={busy} aria-label={t('quickSubtask')} placeholder={t('quickSubtaskPlaceholder')} onChange={(event) => setTitle(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void submit(); } }} />
-    <Button size="small" variant="ghost" onClick={onFullForm}>{t('addSubtask')}</Button>
+    <Button size="small" variant="ghost" className={styles.addAction} onClick={onFullForm}>{t('addSubtask')}</Button>
   </div>;
 }
 

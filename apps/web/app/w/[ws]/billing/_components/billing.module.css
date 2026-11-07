@@ -1,4 +1,7 @@
-.page { max-width:1160px; margin:0 auto; padding:22px 24px 48px; display:flex; flex-direction:column; gap:16px; }
+/* เต็มความกว้างเหมือนทุกหน้า: ขอบซ้ายขวา 24px เท่ากันไม่ว่าจอกว้างแค่ไหน */
+.page { width:100%; padding:22px 24px 48px; display:flex; flex-direction:column; gap:16px; }
+/* Checkout มีหัวของตัวเองที่จัดกลาง 1160px เนื้อหาจึงจัดกลางตาม */
+:global(.chrome-checkout) .page { max-width:1160px; margin:0 auto; }
 .muted { color:var(--muted); }
 .small { font-size:12px; }
 .mono { font-family:"IBM Plex Mono", ui-monospace, monospace; }

@@ -72,3 +72,9 @@
 5. A18 / A-Auth: นโยบาย IP Allowlist / โดเมนอีเมล / 2FA ยังเก็บค่าอย่างเดียว (ตามบันทึกของ A18) · หน้าเขียนบอกไว้ใต้ฟอร์ม
 
 Test: `src/lib/admin-automation.test.tsx` 22 tests (MSW + `WorkspaceShell`): สิทธิ์ (Member ไม่เรียก API, 403, NotFound, 500 + requestId) · แดชบอร์ด / โปรเจกต์ + เข้าร่วมในฐานะ Admin / Billing · ทีม (สร้าง, แก้, เพิ่ม / เอาออก, ลบ) · ค่ามาตรฐาน (ส่งเฉพาะที่เปลี่ยนโดยไม่มี If-Match, validation, override, นำเข้า ธปท., เพิ่ม / ลบวันหยุด, Template) · Workload (ช่วง 4 สัปดาห์, เกิน capacity, กรองทีม) · ความปลอดภัย (2FA + นโยบาย, 422 IP, support access ของ Owner / Admin) · Audit (ตัวกรอง, cursor, CSV) · ข้อมูล (ถังขยะ, เก็บรักษา, Export, คำขอลบต้องยืนยันอีเมล, ยินยอม, ลบ Workspace) · ช่องทาง (Safe mode, LINE ไม่ส่งค่าลับที่ว่าง, DNS, Webhook + signing secret แสดงครั้งเดียว) · Integrations (GitHub, API token แสดงครั้งเดียว, ยกเลิก) · N2 (3 ช่องทาง, สลับเหตุการณ์, โหมดปลอดภัยไม่บันทึก) · Automation (สิทธิ์ / error, รายการ + toggle, แก้ + ประโยค + dry run, แม่แบบ → ร่าง → POST, ลบ + ประวัติ, ฟังก์ชัน `toBody` / `incomplete` / `draftSentence`) · `pnpm --filter @friday/web typecheck`, `test` (291 tests หลัง rebase) และ `build` ผ่าน
+
+### Automation อยู่ในโครง Settings — 2026-11-07
+
+- **ต่างจาก Canvas P2 โดยตั้งใจ** (ผู้ใช้แจ้งว่าเมนูซ้ายหายเมื่อเลือก Automation): หน้า Automation ใช้หัวและแท็บโปรเจกต์ชุดเดียวกับหน้าอื่น (แท็บ Settings เลือกอยู่) และมีเมนูซ้ายของ Settings โดย Automation เป็นรายการที่เลือก · ตัด breadcrumb ของหน้าเองออก
+- แก้ช่องเลือกเหตุการณ์ (เมื่อ) ที่สูงผิดปกติ: `.in` มี flex-basis 140px ซึ่งในกล่องแนวตั้งกลายเป็นความสูง
+- คำขอนอก lane: W00 `project-shell.tsx`, W13 `project-settings.tsx` (แยก `SettingsNav` / `SettingsFrame` ให้ใช้ร่วม)

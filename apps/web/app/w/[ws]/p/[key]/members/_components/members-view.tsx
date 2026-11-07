@@ -9,10 +9,11 @@ import { api, ApiError } from "@/lib/api";
 import { today } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Project } from "@/lib/types";
+import { ProjectInviteDialog } from "@/features/project-invite/project-invite-dialog";
 import { InvitePanel } from "./invite-panel";
 import { MemberTable } from "./member-table";
 import { workloadRange } from "./shared";
-import type { Invitation, ProjectMember, ProjectMembers, ProjectRole, Workload, WorkspaceMember } from "./types";
+import type { Invitation, ProjectMember, ProjectMembers, ProjectRole, Workload } from "./types";
 import { WorkloadPanel, workloadKey, workloadParams } from "./workload-panel";
 import styles from "./members.module.css";
 
@@ -28,6 +29,7 @@ export function MembersView({ ws, projectKey }: { ws: string; projectKey: string
   const base = `${wsBase}/projects/${encodeURIComponent(projectKey)}`;
   const isWsAdmin = workspace.role === "owner" || workspace.role === "admin";
   const [section, setSection] = useState<(typeof SECTIONS)[number]>("workload");
+  const [inviting, setInviting] = useState(false);
   useEffect(() => {
     const fromHash = () => {
       const h = window.location.hash.slice(1);
@@ -44,7 +46,6 @@ export function MembersView({ ws, projectKey }: { ws: string; projectKey: string
   const canWorkload = !!perms.data?.permissions.includes("project.workload.view");
   const members = useQuery({ queryKey: ["project-members", ws, projectKey], queryFn: () => api.get<ProjectMembers>(`${base}/members`), enabled: allowed });
   const invitations = useQuery({ queryKey: ["invitations", ws], queryFn: () => api.get<{ items: Invitation[] }>(`${wsBase}/invitations`), enabled: allowed && isWsAdmin });
-  const directory = useQuery({ queryKey: ["workspace-members", ws], queryFn: () => api.get<{ items: WorkspaceMember[] }>(`${wsBase}/members`), enabled: allowed && workspace.role !== "guest" && !!members.data?.canInvite });
   // สัปดาห์นี้ของตาราง Members ใช้ query เดียวกับมุมมองเริ่มต้นของ Workload (ไม่โหลดซ้ำ)
   const defaultParams = workloadParams(workloadRange("week", today(), 0), "week", "md");
   const workload = useQuery({ queryKey: workloadKey(ws, projectKey, defaultParams), queryFn: () => api.get<Workload>(`${base}/workload?${defaultParams}`), enabled: allowed && canWorkload });
@@ -107,16 +108,15 @@ export function MembersView({ ws, projectKey }: { ws: string; projectKey: string
       <MemberTable members={list} year={me.yearFormat} canManage={canManage} thisWeek={thisWeek} onRole={onRole} onEdit={onEdit} onRemove={onRemove} />
       <InvitePanel
         ws={ws}
-        projectKey={projectKey}
         projectId={project.data?.id}
         year={me.yearFormat}
         canInvite={canInvite}
-        canAssignAdmin={canManage}
         canListInvitations={isWsAdmin}
         invitations={invitations.data?.items ?? []}
-        directory={directory.data?.items ?? []}
+        onInvite={() => setInviting(true)}
         onChanged={refresh}
       />
+      <ProjectInviteDialog ws={ws} projectKey={projectKey} open={inviting} onOpenChange={setInviting} />
     </div>
   );
 }

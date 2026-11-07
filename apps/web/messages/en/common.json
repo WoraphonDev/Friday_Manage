@@ -25,7 +25,8 @@
     "menu": "Menu",
     "actions": "Actions",
     "morePeople": "{count, plural, one {and {count} more person} other {and {count} more people}}",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "resizeDrawer": "Drag to resize"
   },
   "nav": {
     "home": "Home",
@@ -69,13 +70,38 @@
     "projectMembers": "Members",
     "invite": "Invite",
     "projectMenu": "Project menu",
+    "chooseTabs": "Add view",
+    "moreTabs": "More views",
     "projectTeam": "{count} project members",
     "backToWorkspace": "← Back to Workspace",
     "back": "Back",
     "checkoutTitle": "Checkout · {name}",
     "secure": "Encrypted connection",
     "mainMenu": "Main menu",
-    "profileTab": "Profile"
+    "profileTab": "Profile",
+    "viewsHint": "Pick one to add it as a tab in this project",
+    "tabShown": "Shown as a tab",
+    "hideTab": "Hide the {name} tab",
+    "viewDesc": {
+      "dashboard": "Project health and risks for leads",
+      "reports": "Weekly report and requirement traceability",
+      "backlog": "Plan sprints from work not in a sprint yet",
+      "gantt": "Schedule with dependencies and baseline",
+      "planChanges": "Plan changes after the baseline, with reasons"
+    },
+    "searchWorkspace": "Search workspaces",
+    "noWorkspaceMatch": "No workspace found",
+    "addWorkspace": "Add workspace",
+    "workspaceSettings": "{name} settings",
+    "switchHint": "Shortcut: Ctrl 1–9 switches workspaces in order",
+    "accountMenu": "Account menu",
+    "accountSection": "Account",
+    "myProfile": "My profile",
+    "notifySettings": "Notifications",
+    "workHours": "Working hours / leave",
+    "securitySettings": "Security",
+    "membersInvite": "Members & invites",
+    "importPlan": "Import plan"
   },
   "roles": {
     "owner": "Owner",

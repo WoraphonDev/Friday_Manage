@@ -1,12 +1,12 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
-import { ChevronLeft, MoreHorizontal } from "lucide-react";
+import { ChartGantt, Check, ChevronLeft, EyeOff, FileBarChart, LayoutDashboard, History, ListTodo, MoreHorizontal, Plus, X } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { formatDateRange } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui";
 import { IssueDrawer } from "@/features/issue-drawer/IssueDrawer";
 import { withoutDrawerParams } from "@/features/issue-drawer/url";
+import { ProjectInviteDialog } from "@/features/project-invite/project-invite-dialog";
 import { useWorkspace } from "./workspace-shell";
 
 // ใช้ queryKey เดียวกับหน้า Overview และหน้า Members เพื่อไม่ยิง API ซ้ำเมื่อเปิดหน้านั้น
@@ -41,23 +42,22 @@ interface HeaderMember {
 
 export const projectTabs = [
   // mobile: แท็บที่มีบนมือถือตาม Canvas M6/M7 (Overview, Kanban, List, Calendar, Files)
+  // optional: แท็บเสริมที่ซ่อนไว้ก่อน ผู้ใช้เลือกแสดงเองจากปุ่ม + ท้ายแถวแท็บ · หน้ายังเปิดจาก URL ได้ตามสิทธิ์
   { path: "", label: "overview", mobile: true },
-  {
-    path: "/dashboard",
-    label: "dashboard",
-    permission: "project.reports.view",
-  },
   {
     path: "/reports",
     label: "reports",
     permission: "project.reports.view",
     desktop: true,
+    optional: true,
   },
-  { path: "/backlog", label: "backlog", hiddenForGuestViewer: true },
+  { path: "/backlog", label: "backlog", hiddenForGuestViewer: true, optional: true },
   { path: "/table", label: "table", hiddenForGuestViewer: true, mobile: true },
   { path: "/board", label: "board", hiddenForGuestViewer: true, mobile: true },
   { path: "/timeline", label: "timeline", desktop: true },
-  { path: "/gantt", label: "gantt", hiddenForGuestViewer: true, desktop: true },
+  { path: "/gantt", label: "gantt", hiddenForGuestViewer: true, desktop: true, optional: true },
+  // การแก้ไขแผนหลัง Baseline · เดิมอยู่ในเมนู ⋯ (ผู้ใช้ให้ย้ายมาเป็นมุมมองเสริม 2026-11-07)
+  { path: "/plan-changes", label: "planChanges", permission: "project.baseline", desktop: true, optional: true },
   { path: "/calendar", label: "calendar", hiddenForGuestViewer: true, mobile: true },
   { path: "/members", label: "members", permission: "project.workload.view" },
   { path: "/files", label: "files", hiddenForGuestViewer: true, mobile: true },
@@ -68,7 +68,8 @@ export const projectTabs = [
     desktop: true,
   },
 ];
-/** แท็บของหัวแบบ Lead (Canvas O1/O2) */
+/** ไอคอนของแท็บเสริมในเมนูเพิ่มมุมมอง */
+const VIEW_ICONS: Record<string, typeof Plus> = { reports: FileBarChart, backlog: ListTodo, gantt: ChartGantt, planChanges: History };
 
 export function allowedProjectTab(
   tab: (typeof projectTabs)[number],
@@ -78,6 +79,35 @@ export function allowedProjectTab(
     !(tab.hiddenForGuestViewer && access.guestViewer) &&
     (!tab.permission || access.permissions.includes(tab.permission))
   );
+}
+
+/**
+ * แท็บเสริมที่ผู้ใช้เลือกแสดงในโปรเจกต์นี้ · เลือกเป็นรายคน เก็บใน browser (ผู้ใช้ตัดสินใจ 2026-11-07)
+ * อ่าน storage ไม่ได้ (private window, ถูกบล็อก) = ใช้แท็บหลักอย่างเดียว
+ */
+function useOptionalTabs(ws: string, projectKey: string) {
+  const storageKey = `friday:project-tabs:${ws}:${projectKey}`;
+  const [shown, setShown] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem(storageKey) ?? "[]");
+      setShown(Array.isArray(saved) ? saved.filter((v): v is string => typeof v === "string") : []);
+    } catch {
+      setShown([]);
+    }
+  }, [storageKey]);
+  function toggle(label: string) {
+    setShown((current) => {
+      const next = current.includes(label) ? current.filter((v) => v !== label) : [...current, label];
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {
+        /* บันทึกไม่ได้ก็ยังใช้ได้ใน session นี้ */
+      }
+      return next;
+    });
+  }
+  return [shown, toggle] as const;
 }
 
 export function ProjectShell({
@@ -105,6 +135,7 @@ export function ProjectShell({
     queryKey: queryKeys.permissions(ws, projectKey),
     queryFn: () => api.get<Permissions>(`${endpoint}/my-permissions`),
   });
+  const [shownTabs, toggleTab] = useOptionalTabs(ws, projectKey);
   const canSeeTeam = !!permissions.data && !permissions.data.guestViewer;
   const health = useQuery({
     queryKey: ["overview", ws, projectKey, "scope=all"],
@@ -123,12 +154,15 @@ export function ProjectShell({
     enabled: canSeeTeam,
   });
   const headerRef = useRef<HTMLElement>(null);
+  const [inviting, setInviting] = useState(false);
   // Drawer รายละเอียด/สร้างงานเริ่มใต้หัวโปรเจกต์ตาม Canvas C / B · เก็บตำแหน่งเป็น CSS variable
   useEffect(() => {
     const root = document.documentElement;
     const update = () => {
       const bottom = headerRef.current?.getBoundingClientRect().bottom ?? 0;
-      root.style.setProperty("--drawer-top", `${Math.max(0, Math.round(bottom))}px`);
+      // top bar ติดอยู่กับที่: เลื่อนหัวโปรเจกต์พ้นจอแล้ว Drawer ต้องเริ่มใต้ top bar ไม่ใช่ทับ
+      const bar = document.querySelector(".topbar")?.getBoundingClientRect().bottom ?? 0;
+      root.style.setProperty("--drawer-top", `${Math.max(0, Math.round(bar), Math.round(bottom))}px`);
     };
     update();
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
@@ -212,32 +246,31 @@ export function ProjectShell({
     });
   }
   const activeTeam = (team.data?.items ?? []).filter((m) => m.active);
-  // P2 Automation มี breadcrumb ของหน้าเอง · แท็บอื่นใช้หัวและแท็บชุดเดียวกันทุกหน้า
-  // (Canvas O1/O2/M1 ตัดหัวให้สั้นลง แต่ผู้ใช้เลือกให้แท็บไม่ขยับและครบทุกหน้า · 2026-11-07)
-  const headerVariant = route.startsWith("/automation") ? "none" : "full";
+  // Automation เป็นส่วนหนึ่งของ Settings แท็บ Settings จึงเลือกอยู่
+  const isCurrentTab = (tab: (typeof projectTabs)[number]) =>
+    route === tab.path || (!!tab.path && route.startsWith(`${tab.path}/`)) || (tab.path === "/settings" && route.startsWith("/automation"));
+  const allowedTabs = projectTabs.filter((tab) => allowedProjectTab(tab, access));
+  const optionalTabs = allowedTabs.filter((tab) => tab.optional);
+  // หน้าที่เปิดอยู่แสดงแท็บเสมอแม้ไม่ได้เลือกไว้ (เข้าจากลิงก์ในหน้าอื่น) เพื่อให้รู้ว่าอยู่หน้าไหน
+  const visibleTabs = allowedTabs.filter(
+    (tab) => !tab.optional || shownTabs.includes(tab.label) || isCurrentTab(tab),
+  );
+  // ซ่อนแท็บของหน้าที่เปิดอยู่ต้องออกจากหน้านั้นด้วย ไม่งั้นแท็บยังค้าง (หน้าที่เปิดอยู่แสดงแท็บเสมอ)
+  function hideTab(tab: (typeof projectTabs)[number]) {
+    if (shownTabs.includes(tab.label)) toggleTab(tab.label);
+    if (isCurrentTab(tab)) router.push(base);
+  }
+  // ทุกหน้าใช้หัวและแท็บชุดเดียวกัน รวม Automation ที่อยู่ใต้ Settings
+  // (Canvas O1/O2/M1/P2 ตัดหัวให้สั้นลง แต่ผู้ใช้เลือกให้แท็บและเมนูไม่หายเมื่อสลับหน้า · 2026-11-07)
   const canCreate = access.permissions.includes("issue.create");
   const dates = formatDateRange(
     project.data.startDate,
     project.data.goliveDate,
     me.yearFormat,
   );
-  // หน้าที่ไม่มีแท็บของตัวเอง เข้าจากเมนู ⋯ ตาม Canvas (Main มีปุ่ม ⋯ ข้าง Invite)
-  const menuItems = [
-    { path: "/settings", label: "settings", permission: "project.settings" },
-    {
-      path: "/automation",
-      label: "automation",
-      permission: "project.automation",
-    },
-    {
-      path: "/plan-changes",
-      label: "planChanges",
-      permission: "project.baseline",
-    },
-  ].filter((item) => access.permissions.includes(item.permission));
   return (
     <>
-      {headerVariant !== "none" && (
+      {(
         <header
           className="project-header"
           ref={headerRef}
@@ -301,19 +334,23 @@ export function ProjectShell({
                 </span>
               )}
               {team.data?.canInvite && (
-                <Link
+                // เปิด Modal ทับหน้าปัจจุบัน ไม่พาไปแท็บ Members (2026-11-07)
+                <button
+                  type="button"
                   className="button project-invite"
-                  href={`${base}/members#invites`}
+                  onClick={() => setInviting(true)}
                 >
                   {t("nav.invite")}
-                </Link>
+                </button>
               )}
-              {(menuItems.length > 0 || canCreate) && (
+              {/* เมนู ⋯ มีเฉพาะมือถือ (หัวมือถือไม่มีปุ่ม + New) · Settings / Automation / การแก้ไขแผน
+                  ซ้ำกับแท็บ เมนู Settings และเมนู + จึงเอาออกจากจอใหญ่ (ผู้ใช้ตัดสินใจ 2026-11-07) */}
+              {canCreate && (
                 <Popover.Root>
                   <Popover.Trigger asChild>
                     <button
                       type="button"
-                      className={`button button-icon project-menu-trigger${menuItems.length ? "" : " mobile-only"}`}
+                      className="button button-icon project-menu-trigger mobile-only"
                       aria-label={t("nav.projectMenu")}
                     >
                       <MoreHorizontal size={18} aria-hidden="true" />
@@ -326,24 +363,11 @@ export function ProjectShell({
                       align="end"
                     >
                       <nav aria-label={t("nav.projectMenu")}>
-                        {canCreate && (
-                          // มือถือไม่มีปุ่ม + New บนหัว จึงย้ายมาไว้ในเมนู ⋯
-                          <Popover.Close asChild>
-                            <Link className="menu-item mobile-only" href={`${base}?new=1`}>
-                              {t("nav.new")}
-                            </Link>
-                          </Popover.Close>
-                        )}
-                        {menuItems.map((item) => (
-                          <Popover.Close asChild key={item.path}>
-                            <Link
-                              className="menu-item desktop-only"
-                              href={`${base}${item.path}`}
-                            >
-                              {t(`nav.${item.label}`)}
-                            </Link>
-                          </Popover.Close>
-                        ))}
+                        <Popover.Close asChild>
+                          <Link className="menu-item" href={`${base}?new=1`}>
+                            {t("nav.new")}
+                          </Link>
+                        </Popover.Close>
                       </nav>
                     </Popover.Content>
                   </Popover.Portal>
@@ -357,19 +381,13 @@ export function ProjectShell({
             </div>
           </div>
           <nav className="tabs" aria-label={t("nav.projectViews")}>
-            {projectTabs
-              .filter((tab) => allowedProjectTab(tab, access))
-              .map((tab) => (
+            {visibleTabs.map((tab) => {
+              const link = (
                 <Link
                   key={tab.path}
                   className={`tab${"mobile" in tab ? "" : " desktop-project-tab"}`}
                   data-tab={tab.label}
-                  aria-current={
-                    route === tab.path ||
-                    (!!tab.path && route.startsWith(`${tab.path}/`))
-                      ? "page"
-                      : undefined
-                  }
+                  aria-current={isCurrentTab(tab) ? "page" : undefined}
                   href={`${base}${tab.path}`}
                 >
                   {tab.label === "table" ? (
@@ -381,7 +399,96 @@ export function ProjectShell({
                     t(`nav.${tab.path === "/members" ? "projectMembers" : tab.label}`)
                   )}
                 </Link>
-              ))}
+              );
+              if (!tab.optional) return link;
+              // แท็บเสริมลบได้จากแถบแท็บโดยตรง (× โผล่เมื่อชี้)
+              const name = t(`nav.${tab.label}`);
+              return (
+                <span key={tab.path} className="tab-optional desktop-project-tab">
+                  {link}
+                  <button
+                    type="button"
+                    className="tab-remove"
+                    aria-label={t("nav.hideTab", { name })}
+                    title={t("nav.hideTab", { name })}
+                    onClick={() => hideTab(tab)}
+                  >
+                    <X size={12} aria-hidden="true" />
+                  </button>
+                </span>
+              );
+            })}
+            {optionalTabs.length > 0 && (
+              // แท็บเสริมเป็นแท็บจอใหญ่ทั้งหมด ปุ่มเลือกจึงไม่แสดงบนมือถือ
+              // แบบเมนู "Board views": กดมุมมองแล้วเพิ่มเป็นแท็บและเปิดทันที · ซ่อนได้จากปุ่มท้ายแถว
+              <Popover.Root>
+                <Popover.Trigger asChild>
+                  <button
+                    type="button"
+                    className="tab desktop-project-tab project-tab-picker"
+                    aria-label={t("nav.chooseTabs")}
+                    title={t("nav.chooseTabs")}
+                  >
+                    <Plus size={16} aria-hidden="true" />
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="popover view-picker"
+                    sideOffset={6}
+                    align="start"
+                    aria-label={t("nav.moreTabs")}
+                  >
+                    <div className="view-picker-head">
+                      <strong>{t("nav.moreTabs")}</strong>
+                      <span className="muted">{t("nav.viewsHint")}</span>
+                    </div>
+                    <ul className="view-options">
+                      {optionalTabs.map((tab) => {
+                        // แท็บที่เห็นอยู่ (เลือกไว้ หรือเป็นหน้าที่เปิดอยู่) ซ่อนได้เสมอ
+                        const shown = shownTabs.includes(tab.label) || isCurrentTab(tab);
+                        const Icon = VIEW_ICONS[tab.label] ?? LayoutDashboard;
+                        const name = t(`nav.${tab.label}`);
+                        return (
+                          <li key={tab.path} className="view-option">
+                            <Popover.Close asChild>
+                              <button
+                                type="button"
+                                className="view-option-main"
+                                aria-label={name}
+                                aria-describedby={`view-desc-${tab.label}`}
+                                onClick={() => {
+                                  if (!shown) toggleTab(tab.label);
+                                  router.push(`${base}${tab.path}`);
+                                }}
+                              >
+                                <span className="view-icon"><Icon size={16} aria-hidden="true" /></span>
+                                <span className="view-text">
+                                  <b>{name}</b>
+                                  <small id={`view-desc-${tab.label}`}>{t(`nav.viewDesc.${tab.label}`)}</small>
+                                </span>
+                                {shown && <Check className="view-check" size={16} aria-label={t("nav.tabShown")} />}
+                              </button>
+                            </Popover.Close>
+                            {shown && (
+                              <button
+                                type="button"
+                                className="view-hide"
+                                aria-label={t("nav.hideTab", { name })}
+                                title={t("nav.hideTab", { name })}
+                                onClick={() => hideTab(tab)}
+                              >
+                                <EyeOff size={15} aria-hidden="true" />
+                              </button>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
+            )}
           </nav>
           <p className="muted mobile-project-note">{t("nav.mobileOnly")}</p>
         </header>
@@ -390,6 +497,7 @@ export function ProjectShell({
       {(issueKey || newIssue) && (
         <IssueDrawer issueKey={issueKey ?? undefined} onClose={closeDrawer} />
       )}
+      {inviting && <ProjectInviteDialog ws={ws} projectKey={projectKey} open onOpenChange={setInviting} />}
     </>
   );
 }

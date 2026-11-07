@@ -248,7 +248,8 @@
     "sharedWithGuests": "การแชร์ให้ Guest",
     "checklist": "Checklist",
     "dependencies": "Dependency",
-    "details": "รายละเอียดเพิ่มเติม"
+    "details": "รายละเอียดเพิ่มเติม",
+    "actualStart": "Actual Start"
   },
   "priority": {
     "urgent": "Urgent",
@@ -329,5 +330,10 @@
   },
   "mobileComplete": "เสร็จ",
   "commentPlaceholder": "เขียนคอมเมนต์… @ เพื่อ mention",
-  "commitsCount": "{count} commits"
+  "commitsCount": "{count} commits",
+  "groupPeople": "คน",
+  "groupPlan": "แผนงาน",
+  "groupPlace": "จัดกลุ่ม",
+  "noDependenciesYet": "ยังไม่มี Dependency",
+  "addDescription": "+ เพิ่มคำอธิบาย"
 }

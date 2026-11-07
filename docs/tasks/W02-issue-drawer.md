@@ -42,3 +42,10 @@
 - ข้อจำกัด/คำขอนอก lane: 409 ส่ง `latest` แต่ไม่มีผู้แก้ไข จึงใช้ข้อความ “ผู้ใช้อื่น” พร้อมข้อมูลล่าสุด/requestId; ขอ A03 เพิ่ม actor หากต้องแสดงชื่อ · การสร้างงานพร้อมรายการเสริมไม่มี transaction/idempotency key: ป้องกันส่งซ้ำเฉพาะขั้นที่ได้รับ ACK แล้ว แต่กรณีเซิร์ฟเวอร์สำเร็จและเครือข่ายตัดก่อนรับผลยังต้องตรวจงานที่สร้างก่อนลองใหม่ · API Checklist/Dependency ปัจจุบันกำหนด issue.edit แม้ GET จึงซ่อนแท็บสำหรับผู้อ่านอย่างเดียว
 - ตรวจจริงด้วย API และข้อมูลสมมติใน DB `friday_w02` แยกจากงานอื่น: Detail/New form ที่ 1440×1000 และ 390×844, Sub-task ที่ 390×844 และสลับ DE-2 → DE-3 สำเร็จ · ภาพอยู่ใน `apps/web/src/features/issue-drawer/__qa__/` (PNG DPR 2) · ตรวจเทียบโครงหน้าจอ Canvas C/D/B/K1/M4 และใช้ UI kit เดิม
 - MSW ของ W02 33 เคส รวม If-Match/409/422/Baseline, Due preview/submit/cancel, Checklist/Dependency/Activity, สร้างทุกประเภท/requiredFields/partial retry/draft, Guest/403/404/410, delete/Undo และแยก cache เมื่อเปลี่ยน Workspace · เว็บรวม 86 เคสผ่าน; typecheck ทั้ง repo และ production build ผ่าน; DB 105/API 177 เคสผ่าน (6 queue integration ข้ามเมื่อไม่มี Valkey ตามค่าเริ่มต้นของชุดทดสอบ) · Shell fixture เดิมไม่ได้ mock GET issue จึงมี MSW warning หนึ่งรายการ แต่ test ผ่าน
+
+### จัดแผงรายละเอียดงานใหม่ — 2026-11-07
+
+- **ต่างจาก Canvas C โดยตั้งใจ** (ผู้ใช้แจ้งว่าใช้ยากและข้อมูลแสดงไม่หมด): Drawer 1000px (Canvas 860) และลากขอบซ้ายขยาย / หดได้ จำความกว้างใน browser · แผงคุณสมบัติ 340px (Canvas 240)
+- แผงแบ่งกลุ่ม คน / แผนงาน / จัดกลุ่ม · ไม่มีแถวสถานะซ้ำกับปุ่มบนหัว · Size + Man-Day บรรทัดเดียว · ขอเลื่อน Due อยู่ใต้แถว Due ในกล่องแผน · Actual Start แก้ได้ · Progress แถบกับ % แถวเดียว · ตัดข้อความ "คลิกค่าใดก็ได้"
+- ส่วนที่ว่าง (คำอธิบาย, Dependency) ย่อเหลือบรรทัดเดียวพร้อมปุ่มเพิ่ม
+- คำขอนอก lane: W00 `overlays.tsx` (ขอบลาก Drawer) และ `globals.css`

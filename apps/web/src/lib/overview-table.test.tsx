@@ -243,8 +243,10 @@ describe("Table (2)", () => {
     await screen.findByTestId("row-DE-1");
     expect(screen.queryByTestId("row-DE-400")).not.toBeInTheDocument();
     expect(screen.getAllByRole("row").length).toBeLessThan(120);
+    // ตารางใช้ scroll ของหน้าหลัก: จำลองว่าขอบบนตารางเลื่อนพ้นจอขึ้นไป 390 แถว
     const scroll = screen.getByTestId("table-scroll");
-    fireEvent.scroll(scroll, { target: { scrollTop: 44 * 390 } });
+    scroll.getBoundingClientRect = () => ({ top: -44 * 390, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: -44 * 390, toJSON: () => ({}) });
+    fireEvent.scroll(window);
     expect(await screen.findByTestId("row-DE-390")).toBeInTheDocument();
     expect(screen.queryByTestId("row-DE-1")).not.toBeInTheDocument();
     a.unmount();

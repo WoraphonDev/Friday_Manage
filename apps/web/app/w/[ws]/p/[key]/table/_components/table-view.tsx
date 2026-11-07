@@ -120,6 +120,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [scrollTop, setScrollTop] = useState(0);
+  const [viewH, setViewH] = useState(800);
   const [saving, setSaving] = useState(false);
   const [structure, setStructure] = useState<StructureAction | null>(null);
   const [reveal, setReveal] = useState<{ moduleId: string; phaseId?: string } | null>(null);
@@ -171,19 +172,36 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
       groupBy === "status" ? r.status.name : groupBy === "assignee" ? (r.assignees?.[0]?.displayName ?? t("noAssignee")) : r.priority;
     return buildFlat(view, collapsed, groupBy, label);
   }, [view, collapsed, groupBy, filters, t]);
+  const virtual = display.length > VIRTUAL_AFTER;
+  // ตารางใช้ scroll ของหน้าหลัก (ไม่มีกล่องเลื่อนของตัวเอง): ระยะที่เลื่อนผ่านตาราง = ขอบบนของตารางที่พ้นจอขึ้นไป
+  useEffect(() => {
+    if (!virtual) return;
+    const update = () => {
+      setScrollTop(Math.max(0, -(scroller.current?.getBoundingClientRect().top ?? 0)));
+      setViewH(window.innerHeight);
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => { window.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
+  }, [virtual]);
   useEffect(() => {
     if (!reveal || structure) return;
     const index = display.findIndex((row) => reveal.phaseId ? row.kind === "phase" && row.phaseId === reveal.phaseId : row.kind === "module" && row.moduleId === reveal.moduleId);
     if (index < 0) return;
     // กลุ่มที่เพิ่งสร้างอาจอยู่พ้นช่วงที่ virtualized table render อยู่
-    if (display.length > VIRTUAL_AFTER && scroller.current) { scroller.current.scrollTop = index * ROW_H; setScrollTop(index * ROW_H); }
+    if (virtual && scroller.current) {
+      const page = document.scrollingElement ?? document.documentElement;
+      page.scrollTop = page.scrollTop + scroller.current.getBoundingClientRect().top + index * ROW_H - window.innerHeight / 2;
+      setScrollTop(index * ROW_H);
+    }
     const frame = requestAnimationFrame(() => {
       const selector = reveal.phaseId ? `[data-phase-id="${reveal.phaseId}"]` : `[data-module-id="${reveal.moduleId}"]`;
       scroller.current?.querySelector(selector)?.scrollIntoView({ block: "center" });
       setReveal(null);
     });
     return () => cancelAnimationFrame(frame);
-  }, [display, reveal, structure]);
+  }, [display, reveal, structure, virtual]);
   const statuses = options.data?.issueTypes.find((x) => x.name === "Task")?.statuses ?? [];
   const reload = () => cache.invalidateQueries({ queryKey: ["table", ws, projectKey] });
   const set = (k: keyof Filters, v: string) => { setFilters((f) => ({ ...f, [k]: v || undefined })); setSelected(new Set()); };
@@ -233,8 +251,6 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   if (err) return <div className={styles.page}>{err instanceof ApiError && err.status === 403 ? <Forbidden /> : <ErrorState error={err} retry={() => table.refetch()} />}</div>;
   const data = view!;
   const issueRows = display.filter((d): d is Extract<Display, { kind: "issue" }> => d.kind === "issue");
-  const virtual = display.length > VIRTUAL_AFTER;
-  const viewH = 640;
   const start = virtual ? Math.max(0, Math.floor(scrollTop / ROW_H) - 10) : 0;
   const end = virtual ? Math.min(display.length, start + Math.ceil(viewH / ROW_H) + 20) : display.length;
   const shown = display.slice(start, end);
@@ -352,7 +368,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
           <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set(groupIds))}>{t("collapseAll")}</button>
           {canEdit && <Link className={styles.tbtn} href={`/w/${encodeURIComponent(ws)}/import`}>{t("importExport")}</Link>}
           {canSettings && <button type="button" className={styles.tbtn} onClick={() => setStructure({ kind: "createModule" })}>{t("addModule")}</button>}
-          {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={taskHref()}>{t("addTask")}</Link>}
+          {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={taskHref()} scroll={false}>{t("addTask")}</Link>}
         </div>
       </div>
 
@@ -360,10 +376,10 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
         <BulkBar count={selected.size} options={options.data} statuses={statuses} canDelete={canDelete} onApply={(set) => bulk(set)} onStatus={(id) => void bulkStatus(id)} onDelete={() => setDeleting(true)} onClear={() => setSelected(new Set())} />
       )}
 
-      <section className={styles.card} style={{ overflow: "hidden" }}>
+      <section className={styles.card} style={{ overflow: "clip" }}>
         {!data.items.length && display.length > 0 && <EmptyState title={t("empty")} />}
         {!display.length ? <EmptyState title={filtered ? t("emptyFiltered") : t("empty")} /> : (
-          <div className={styles.tableWrap} style={virtual ? { height: viewH } : undefined} ref={scroller} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)} data-testid="table-scroll">
+          <div className={styles.tableWrap} ref={scroller} data-testid="table-scroll">
             <table className={styles.table} aria-rowcount={display.length + 1}>
               <colgroup><col />{cols.map((c) => <col key={c} style={{ width: COL_W[c] + 10 }} />)}</colgroup>
               <thead>
@@ -398,7 +414,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                         <span className={styles.muted} style={{ fontSize: 13 }}>{groupBy === "module" ? t("moduleTasks", { count: d.count, phases: d.phases }) : t("groupTasks", { count: d.count })}</span>
                         <span className={styles.mbar}><span><span style={{ width: `${d.pct}%`, background: d.color ?? "var(--primary)" }} /></span><b>{d.pct}%</b></span>
                         <span className={styles.muted} style={{ fontSize: 13, marginLeft: 8 }}>{d.from && d.to ? `${formatDate(d.from, year)} – ${formatDate(d.to, year)}` : `${d.md} MD`}</span>
-                        {groupBy === "module" && canCreate && <Link className={styles.addb} style={{ marginLeft: "auto" }} href={taskHref(d.moduleId)}>{t("addTask")}</Link>}
+                        {groupBy === "module" && canCreate && <Link className={styles.addb} style={{ marginLeft: "auto" }} href={taskHref(d.moduleId)} scroll={false}>{t("addTask")}</Link>}
                       </div>
                     </td>
                   </tr>
@@ -418,7 +434,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                     </td>
                   </tr>
                 ) : d.kind === "add" ? (
-                  canCreate ? <tr key={d.id} className={styles.addRow}><td colSpan={span}><Link className={styles.addb} href={taskHref(d.moduleId, d.phaseId)}>{t("addTaskIn", { name: d.name })}</Link></td></tr> : null
+                  canCreate ? <tr key={d.id} className={styles.addRow}><td colSpan={span}><Link className={styles.addb} href={taskHref(d.moduleId, d.phaseId)} scroll={false}>{t("addTaskIn", { name: d.name })}</Link></td></tr> : null
                 ) : d.kind === "foot" ? (
                   <tr key={d.id} className={styles.footRow}><td colSpan={span}><span>{t("footTasks", { count: d.count })}</span><span>{t("footMd", { md: d.md })}</span></td></tr>
                 ) : (
@@ -497,7 +513,8 @@ function IssueRow({ row, sub, cols, ws, projectKey, year, canEdit, statuses, sel
           {canEdit ? <input type="checkbox" className={styles.cb} aria-label={t("select", { key: row.key })} checked={selected} onChange={(e) => onSelect(e.target.checked)} /> : <span style={{ width: 16, flex: "none" }} />}
           <span role="img" aria-label={sub ? t("typeSubtask") : t("typeTask")} className={sub ? styles.typeSub : styles.typeTask}><Check size={12} strokeWidth={3} aria-hidden="true" /></span>
           <span className={styles.key}>{row.key}</span>
-          <Link href={href} className={`${styles.nm}${done ? ` ${styles.nmDone}` : ""}`} title={row.title}>{row.title}</Link>
+          {/* เปิด Drawer โดยไม่เด้งหน้ากลับบนสุด (ตารางใช้ scroll ของหน้าหลัก) */}
+          <Link href={href} scroll={false} className={`${styles.nm}${done ? ` ${styles.nmDone}` : ""}`} title={row.title}>{row.title}</Link>
         </div>
       </td>
       {cols.map((c) => <td key={c}>{cell[c]}</td>)}

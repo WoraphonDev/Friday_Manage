@@ -852,7 +852,11 @@ td {
 .skip-link:focus {
   top: 8px;
 }
+/* top bar และ Sidebar อยู่กับที่ ให้เนื้อหาหน้าเป็นส่วนเดียวที่เลื่อน (Drawer z 50 / popover z 80 ยังอยู่เหนือ) */
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   min-height: 56px;
   padding: 8px 16px;
   display: flex;
@@ -989,6 +993,11 @@ kbd {
   min-height: calc(100dvh - 56px);
 }
 .sidebar {
+  position: sticky;
+  top: 56px;
+  align-self: flex-start;
+  height: calc(100dvh - 56px);
+  overflow-y: auto;
   width: var(--sidebar-width);
   flex-shrink: 0;
   background: white;

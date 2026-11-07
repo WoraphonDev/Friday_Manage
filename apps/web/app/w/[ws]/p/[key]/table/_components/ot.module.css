@@ -68,7 +68,9 @@
 .list { padding:12px 18px; display:flex; flex-direction:column; gap:12px; }
 .line { display:flex; justify-content:space-between; gap:8px; font-size:13px; }
 .empty { padding:24px 18px; color:var(--muted); font-size:13px; }
-.tableWrap { overflow:auto; max-height:calc(100vh - 220px); position:relative; }
+/* ไม่มีกล่องเลื่อนแนวตั้งของตัวเอง ใช้ scroll ของหน้าหลัก หัวตารางจึงติดใต้ top bar ได้
+   (overflow: clip ไม่สร้าง scroll container · จอแคบกว่าตารางค่อยเลื่อนแนวนอนในกล่อง) */
+.tableWrap { overflow:clip; position:relative; }
 /* Table ตาม Canvas Table (.gr / .gh / .mrow) */
 .toolbar { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; }
 .search { display:flex; align-items:center; gap:8px; min-height:36px; padding:0 12px; border:1px solid var(--input); border-radius:8px; background:#fff; min-width:220px; color:var(--muted); }
@@ -92,7 +94,7 @@
 @supports (appearance: base-select) { .pillSelect { appearance:base-select; } .pillSelect::picker-icon { display:none; } }
 .pillSelect:hover { box-shadow:inset 0 0 0 1px currentColor; }
 .tableWrap .table { width:100%; border-collapse:separate; border-spacing:0; font-size:14px; min-width:1100px; table-layout:fixed; }
-.table th { position:sticky; top:0; background:#f8f9fb; text-align:left; font-weight:600; font-size:12px; color:#5f6873; height:38px; padding:0 5px; border-bottom:1px solid var(--border); z-index:1; white-space:nowrap; }
+.table th { position:sticky; top:56px; background:#f8f9fb; text-align:left; font-weight:600; font-size:12px; color:#5f6873; height:38px; padding:0 5px; border-bottom:1px solid var(--border); z-index:1; white-space:nowrap; }
 .table th:first-child, .table td:first-child { padding-left:14px; }
 .table td { padding:0 5px; border-bottom:1px solid #eef0f3; height:44px; vertical-align:middle; }
 .nameHead { display:flex; align-items:center; gap:8px; padding-left:30px; }
@@ -164,8 +166,9 @@
 .risk > span { width:8px; height:8px; border-radius:50%; margin-top:7px; flex:none; }
 @media (max-width:760px) {
   .page { padding:12px; gap:12px; }
-  .tableWrap { max-height:none; }
   .desktopOnly { display:none !important; }
   .mobileOnly { display:flex; flex-direction:column; gap:12px; }
   .cols, .side { gap:12px; }
 }
+/* จอแคบกว่าตาราง: เลื่อนแนวนอนในกล่อง · กล่องกลายเป็น scroll container หัวตารางจึงติดที่ขอบกล่อง (top 0) แทน */
+@media (max-width:1380px) { .tableWrap { overflow-x:auto; } .table th { top:0; } }

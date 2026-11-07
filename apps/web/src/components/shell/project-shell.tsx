@@ -128,7 +128,9 @@ export function ProjectShell({
     const root = document.documentElement;
     const update = () => {
       const bottom = headerRef.current?.getBoundingClientRect().bottom ?? 0;
-      root.style.setProperty("--drawer-top", `${Math.max(0, Math.round(bottom))}px`);
+      // top bar ติดอยู่กับที่: เลื่อนหัวโปรเจกต์พ้นจอแล้ว Drawer ต้องเริ่มใต้ top bar ไม่ใช่ทับ
+      const bar = document.querySelector(".topbar")?.getBoundingClientRect().bottom ?? 0;
+      root.style.setProperty("--drawer-top", `${Math.max(0, Math.round(bar), Math.round(bottom))}px`);
     };
     update();
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);

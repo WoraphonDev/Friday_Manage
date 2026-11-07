@@ -1,0 +1,36 @@
+{
+  "version": "55.0.0",
+  "files": {
+    "2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d": {
+      "displayName": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/Code",
+      "source": {
+        "path": "asset.2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "current_account-ap-southeast-7-a0a9ed87": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-ap-southeast-7",
+          "objectKey": "2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d.zip",
+          "region": "ap-southeast-7",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-ap-southeast-7"
+        }
+      }
+    },
+    "f1c8dc792f91150d22b7fd67807d290e88423a8813660684636965a4d0457196": {
+      "displayName": "FridayApp Template",
+      "source": {
+        "path": "FridayApp.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "current_account-ap-southeast-7-7075df3e": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-ap-southeast-7",
+          "objectKey": "f1c8dc792f91150d22b7fd67807d290e88423a8813660684636965a4d0457196.json",
+          "region": "ap-southeast-7",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-ap-southeast-7"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

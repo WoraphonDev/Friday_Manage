@@ -1,0 +1,1397 @@
+{
+  "/FridayApp": [
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    },
+    {
+      "type": "aws:cdk:acknowledged-rules",
+      "data": {
+        "CloudFormation-Validate::W3010": "Literal AZs in template are the result of accessing stack.availabilityZones, this is expected and safe"
+      },
+      "trace": [
+        "    ...new Vpc2 in aws-cdk-lib...",
+        "    at new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:46:17)",
+        "    at file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "    ...node internals..."
+      ]
+    },
+    {
+      "type": "aws:cdk:warning",
+      "data": "ไม่ได้ตั้ง certificateArn: ALB เปิดเฉพาะ HTTP · ใช้สำหรับ synth / ทดลองเท่านั้น [ack: friday:no-tls]",
+      "trace": [
+        "Annotations.addMessage (/Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/core/lib/annotations.js:1:3506)",
+        "Annotations.addWarningV2 (/Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/core/lib/annotations.js:1:2194)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:250:31)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14:1",
+        "ModuleJob.run (node:internal/modules/esm/module_job:343:25)",
+        "async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)",
+        "async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)"
+      ]
+    },
+    {
+      "type": "aws:cdk:templateFile",
+      "data": "FridayApp.template.json"
+    },
+    {
+      "type": "aws:cdk:stack-tags",
+      "data": [
+        {
+          "key": "app",
+          "value": "friday-manage"
+        }
+      ]
+    }
+  ],
+  "/FridayApp/CacheParams": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CacheParams"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:120:25)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/CacheSubnets": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CacheSubnets"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:125:26)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Cache": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "Cache"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:129:19)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/LoadBalancerDns": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "LoadBalancerDns"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:266:5)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/ClusterName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ClusterName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:267:5)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/MigrateTaskDefinition": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MigrateTaskDefinition"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:268:5)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/TaskSubnets": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "TaskSubnets"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:269:5)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/TaskSecurityGroup": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "TaskSecurityGroup"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:270:5)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/FilesBucket": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FilesBucket"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:271:5)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/AppSecretName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AppSecretName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:272:5)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "Vpc8378EB38"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Vpc2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:46:17)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/IGW": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcIGWD7BA715C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Vpc2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:46:17)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/VPCGW": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcVPCGWBF912B6E"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Vpc2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:46:17)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/AlbSg/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AlbSg1155C1BE"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new SecurityGroup2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:58:19)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/AppSg/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AppSg898BCA4E"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new SecurityGroup2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:61:19)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/AppSg/from FridayAppAlbSg3503D4CC:3001": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AppSgfromFridayAppAlbSg3503D4CC3001FAF4A479"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:62:11)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/AppSg/from FridayAppAlbSg3503D4CC:3000": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AppSgfromFridayAppAlbSg3503D4CC30006E2FF3AC"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:63:11)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/DbSg/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DbSg495F8305"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new SecurityGroup2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:64:18)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/DbSg/from FridayAppAppSg7A9B1971:5432": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DbSgfromFridayAppAppSg7A9B1971543240F556E8"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:65:10)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/CacheSg/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CacheSg89F87252"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new SecurityGroup2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:66:21)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/CacheSg/from FridayAppAppSg7A9B1971:6379": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CacheSgfromFridayAppAppSg7A9B19716379CCD1F0B8"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:67:13)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/DbApiPassword/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DbApiPassword144139F7"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Secret2 in aws-cdk-lib...",
+        "loginSecret (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:72:43)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:77:27)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/DbWorkerPassword/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DbWorkerPassword1A60669F"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Secret2 in aws-cdk-lib...",
+        "loginSecret (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:72:43)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:78:30)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/AppSecret/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AppSecretFAB5164C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Secret2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:80:23)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Db/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "Db5D02A0A9"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new DatabaseInstance2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:95:16)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new DatabaseInstance2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:95:16)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Files/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "Files8E6940B8"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Bucket2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:146:19)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Cluster/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ClusterEB0386A7"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Cluster2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:158:21)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Cluster/Cluster": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "Cluster3DA9CCBA"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/Logs/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "Logs6819BB44"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new LogGroup2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:159:22)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/ApiTask/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiTask011D0955"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new FargateTaskDefinition2 in aws-cdk-lib...",
+        "taskDef (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:189:19)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:196:20)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/WorkerTask/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WorkerTaskCBB1FEE3"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new FargateTaskDefinition2 in aws-cdk-lib...",
+        "taskDef (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:189:19)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:202:23)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/WebTask/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebTask51ED7374"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new FargateTaskDefinition2 in aws-cdk-lib...",
+        "taskDef (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:189:19)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:204:20)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/MigrateTask/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MigrateTaskFA2E2E9A"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new FargateTaskDefinition2 in aws-cdk-lib...",
+        "taskDef (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:189:19)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:212:24)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/ApiService/Service": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiServiceC9037CF0"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new FargateService2 in aws-cdk-lib...",
+        "service (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:225:120)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:234:24)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/WebService/Service": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebService7F8A1763"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new FargateService2 in aws-cdk-lib...",
+        "service (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:225:120)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:235:24)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/WorkerService/Service": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WorkerService99815FA9"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new FargateService2 in aws-cdk-lib...",
+        "service (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:225:120)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:237:5)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Alb/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "Alb16C2F182"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new ApplicationLoadBalancer2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:240:17)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/publicSubnet1/Subnet": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcpublicSubnet1Subnet2BB74ED7"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:287 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/publicSubnet1/RouteTable": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcpublicSubnet1RouteTable15C15F8E"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:287 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/publicSubnet1/RouteTableAssociation": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcpublicSubnet1RouteTableAssociation4E83B6E4"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:287 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/publicSubnet1/DefaultRoute": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcpublicSubnet1DefaultRouteB88F9E93"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:225 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...new Vpc2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:46:17)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/publicSubnet1/EIP": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcpublicSubnet1EIP411541E6"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Vpc2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:46:17)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/publicSubnet1/NATGateway": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcpublicSubnet1NATGatewayA036E8A6"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Vpc2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:46:17)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/publicSubnet2/Subnet": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcpublicSubnet2SubnetE34B022A"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:287 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/publicSubnet2/RouteTable": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcpublicSubnet2RouteTableC5A6DF77"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:287 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/publicSubnet2/RouteTableAssociation": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcpublicSubnet2RouteTableAssociationCCE257FF"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:287 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/publicSubnet2/DefaultRoute": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcpublicSubnet2DefaultRoute732F0BEB"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:225 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...new Vpc2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:46:17)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/appSubnet1/Subnet": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcappSubnet1SubnetAE489B2F"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:289 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/appSubnet1/RouteTable": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcappSubnet1RouteTable072E8E09"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:289 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/appSubnet1/RouteTableAssociation": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcappSubnet1RouteTableAssociation168BF781"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:289 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/appSubnet1/DefaultRoute": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcappSubnet1DefaultRoute64294A8F"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Vpc2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:46:17)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/appSubnet2/Subnet": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcappSubnet2Subnet2449FB56"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:289 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/appSubnet2/RouteTable": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcappSubnet2RouteTableB76BFC59"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:289 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/appSubnet2/RouteTableAssociation": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcappSubnet2RouteTableAssociation81E96A75"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:289 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/appSubnet2/DefaultRoute": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcappSubnet2DefaultRouteEBCCC1EA"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Vpc2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:46:17)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/dataSubnet1/Subnet": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcdataSubnet1SubnetE2B009FB"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:291 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/dataSubnet1/RouteTable": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcdataSubnet1RouteTableAF5F53E0"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:291 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/dataSubnet1/RouteTableAssociation": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcdataSubnet1RouteTableAssociation9E9FDBBB"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:291 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/dataSubnet2/Subnet": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcdataSubnet2SubnetAD08DFFF"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:291 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/dataSubnet2/RouteTable": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcdataSubnet2RouteTable94FA483A"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:291 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/dataSubnet2/RouteTableAssociation": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcdataSubnet2RouteTableAssociation6C8F2058"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:291 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/FridayApp/Vpc/S3Endpoint/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcS3Endpoint4A3DE4B5"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...PropertyInjectable.addGatewayEndpoint in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:55:9)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Db/SubnetGroup/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DbSubnetGroup6F6C177A"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new DatabaseInstance2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:95:16)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Db/ParameterGroup/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DbParameterGroupB60E38C6"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new DatabaseInstance2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:95:16)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Db/Secret/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FridayAppDbSecret024BD041c42aa03cd122321422eb26aa8e92ccf7"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new DatabaseInstance2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:95:16)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)"
+      ]
+    }
+  ],
+  "/FridayApp/Db/LogRetentionpostgresql/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DbLogRetentionpostgresql52689C0A"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new DatabaseInstance2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:95:16)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new DatabaseInstance2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:95:16)"
+      ]
+    }
+  ],
+  "/FridayApp/Files/Policy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FilesPolicyCFAB4773"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Bucket2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:146:19)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)"
+      ]
+    }
+  ],
+  "/FridayApp/ApiTask/TaskRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiTaskTaskRoleD15A20E9"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new FargateTaskDefinition2 in aws-cdk-lib...",
+        "taskDef (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:189:19)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:196:20)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/ApiTask/ExecutionRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiTaskExecutionRoleC2344606"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/WorkerTask/TaskRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WorkerTaskTaskRoleC4141168"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new FargateTaskDefinition2 in aws-cdk-lib...",
+        "taskDef (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:189:19)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:202:23)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/WorkerTask/ExecutionRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WorkerTaskExecutionRole9C03D68C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/WebTask/TaskRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebTaskTaskRole6A095794"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new FargateTaskDefinition2 in aws-cdk-lib...",
+        "taskDef (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:189:19)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:204:20)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/WebTask/ExecutionRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebTaskExecutionRole28FA0566"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/MigrateTask/TaskRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MigrateTaskTaskRoleFFF8B11D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new FargateTaskDefinition2 in aws-cdk-lib...",
+        "taskDef (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:189:19)",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:212:24)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/MigrateTask/ExecutionRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MigrateTaskExecutionRole4FA39211"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/Alb/Http/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AlbHttp7966E42E"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:248:13)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Db/Secret/Attachment/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DbSecretAttachment7AED447C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new DatabaseInstance2 in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:95:16)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/ApiTask/TaskRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiTaskTaskRoleDefaultPolicy850CEBFD"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/ApiTask/ExecutionRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiTaskExecutionRoleDefaultPolicyB5439AFC"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/WorkerTask/TaskRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WorkerTaskTaskRoleDefaultPolicy242C79D9"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/WorkerTask/ExecutionRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WorkerTaskExecutionRoleDefaultPolicyAF6178D4"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/WebTask/TaskRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebTaskTaskRoleDefaultPolicy9E67E471"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/WebTask/ExecutionRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WebTaskExecutionRoleDefaultPolicy20822D46"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/MigrateTask/TaskRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MigrateTaskTaskRoleDefaultPolicyDED4FC54"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/MigrateTask/ExecutionRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MigrateTaskExecutionRoleDefaultPolicyE7F2A2A1"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayApp/Alb/Http/WebGroup/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AlbHttpWebGroupFB8A8200"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:252:14)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Alb/Http/ApiGroup/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AlbHttpApiGroup7C8FA22E"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:258:14)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayApp/Alb/Http/ApiRule/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AlbHttpApiRule0EDADBD8"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new AppStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/app-stack.ts:258:14)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:14 (:)",
+        "...node internals..."
+      ]
+    }
+  ]
+}

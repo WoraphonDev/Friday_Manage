@@ -435,16 +435,18 @@ describe("Workspace / Project shell", () => {
     const nav = await screen.findByRole("navigation", { name: "มุมมองโปรเจกต์" });
     const tabs = within(nav);
     expect(tabs.queryByRole("link", { name: "Backlog", hidden: true })).not.toBeInTheDocument();
-    await user.click(tabs.getByRole("button", { name: "เลือกแท็บที่แสดง", hidden: true }));
-    const options = within(await screen.findByRole("group", { name: "แท็บเพิ่มเติม" }));
-    expect(options.getAllByRole("checkbox").map((c) => c.closest("label")?.textContent)).toEqual([
-      "ภาพรวม Lead",
-      "Reports",
-      "Backlog",
-      "Gantt",
-    ]);
-    await user.click(options.getByRole("checkbox", { name: "Backlog" }));
-    await user.click(options.getByRole("checkbox", { name: "Gantt" }));
+    // เมนูแบบ Board views: กดมุมมองแล้วเพิ่มเป็นแท็บและเปิดหน้านั้น
+    const open = async () => {
+      await user.click(tabs.getByRole("button", { name: "เพิ่มมุมมอง", hidden: true }));
+      return within(await screen.findByRole("dialog", { name: "มุมมองเพิ่มเติม" }));
+    };
+    let menu = await open();
+    expect(menu.getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["ภาพรวม Lead", "Reports", "Backlog", "Gantt"]);
+    expect(menu.getByRole("button", { name: "Backlog" })).toHaveAccessibleDescription("วางแผน Sprint จากงานที่ยังไม่ได้อยู่ใน Sprint");
+    await user.click(menu.getByRole("button", { name: "Backlog" }));
+    expect(router.push).toHaveBeenLastCalledWith("/w/sample/p/DE/backlog");
+    menu = await open();
+    await user.click(menu.getByRole("button", { name: "Gantt" }));
     // แท็บเสริมอยู่ตำแหน่งเดิมในลำดับ ไม่ต่อท้าย
     expect(tabs.getAllByRole("link", { hidden: true }).map((l) => l.textContent)).toEqual([
       "Overview",
@@ -458,7 +460,9 @@ describe("Workspace / Project shell", () => {
       "Files",
       "Settings",
     ]);
-    await user.click(options.getByRole("checkbox", { name: "Gantt" }));
+    menu = await open();
+    expect(menu.getAllByLabelText("แสดงเป็นแท็บแล้ว")).toHaveLength(2);
+    await user.click(menu.getByRole("button", { name: "ซ่อนแท็บ Gantt" }));
     expect(tabs.queryByRole("link", { name: "Gantt", hidden: true })).not.toBeInTheDocument();
     unmount();
     renderWithProviders(<ProjectExample />);

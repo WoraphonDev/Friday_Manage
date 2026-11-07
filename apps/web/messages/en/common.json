@@ -69,15 +69,24 @@
     "projectMembers": "Members",
     "invite": "Invite",
     "projectMenu": "Project menu",
-    "chooseTabs": "Choose tabs",
-    "moreTabs": "More tabs",
+    "chooseTabs": "Add view",
+    "moreTabs": "More views",
     "projectTeam": "{count} project members",
     "backToWorkspace": "← Back to Workspace",
     "back": "Back",
     "checkoutTitle": "Checkout · {name}",
     "secure": "Encrypted connection",
     "mainMenu": "Main menu",
-    "profileTab": "Profile"
+    "profileTab": "Profile",
+    "viewsHint": "Pick one to add it as a tab in this project",
+    "tabShown": "Shown as a tab",
+    "hideTab": "Hide the {name} tab",
+    "viewDesc": {
+      "dashboard": "Project health and risks for leads",
+      "reports": "Weekly report and requirement traceability",
+      "backlog": "Plan sprints from work not in a sprint yet",
+      "gantt": "Schedule with dependencies and baseline"
+    }
   },
   "roles": {
     "owner": "Owner",

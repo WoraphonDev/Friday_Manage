@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
-import { ChevronLeft, MoreHorizontal, Plus } from "lucide-react";
+import { ChartGantt, Check, ChevronLeft, EyeOff, FileBarChart, LayoutDashboard, ListTodo, MoreHorizontal, Plus } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { formatDateRange } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -72,6 +72,9 @@ export const projectTabs = [
     desktop: true,
   },
 ];
+/** ไอคอนของแท็บเสริมในเมนูเพิ่มมุมมอง */
+const VIEW_ICONS: Record<string, typeof Plus> = { dashboard: LayoutDashboard, reports: FileBarChart, backlog: ListTodo, gantt: ChartGantt };
+
 export function allowedProjectTab(
   tab: (typeof projectTabs)[number],
   access: Permissions,
@@ -422,6 +425,7 @@ export function ProjectShell({
               ))}
             {optionalTabs.length > 0 && (
               // แท็บเสริมเป็นแท็บจอใหญ่ทั้งหมด ปุ่มเลือกจึงไม่แสดงบนมือถือ
+              // แบบเมนู "Board views": กดมุมมองแล้วเพิ่มเป็นแท็บและเปิดทันที · ซ่อนได้จากปุ่มท้ายแถว
               <Popover.Root>
                 <Popover.Trigger asChild>
                   <button
@@ -435,23 +439,56 @@ export function ProjectShell({
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Content
-                    className="popover project-menu"
+                    className="popover view-picker"
                     sideOffset={6}
                     align="start"
+                    aria-label={t("nav.moreTabs")}
                   >
-                    <fieldset className="project-tab-options">
-                      <legend className="muted">{t("nav.moreTabs")}</legend>
-                      {optionalTabs.map((tab) => (
-                        <label key={tab.path} className="menu-item">
-                          <input
-                            type="checkbox"
-                            checked={shownTabs.includes(tab.label)}
-                            onChange={() => toggleTab(tab.label)}
-                          />
-                          {t(`nav.${tab.label}`)}
-                        </label>
-                      ))}
-                    </fieldset>
+                    <div className="view-picker-head">
+                      <strong>{t("nav.moreTabs")}</strong>
+                      <span className="muted">{t("nav.viewsHint")}</span>
+                    </div>
+                    <ul className="view-options">
+                      {optionalTabs.map((tab) => {
+                        const shown = shownTabs.includes(tab.label);
+                        const Icon = VIEW_ICONS[tab.label] ?? LayoutDashboard;
+                        const name = t(`nav.${tab.label}`);
+                        return (
+                          <li key={tab.path} className="view-option">
+                            <Popover.Close asChild>
+                              <button
+                                type="button"
+                                className="view-option-main"
+                                aria-label={name}
+                                aria-describedby={`view-desc-${tab.label}`}
+                                onClick={() => {
+                                  if (!shown) toggleTab(tab.label);
+                                  router.push(`${base}${tab.path}`);
+                                }}
+                              >
+                                <span className="view-icon"><Icon size={16} aria-hidden="true" /></span>
+                                <span className="view-text">
+                                  <b>{name}</b>
+                                  <small id={`view-desc-${tab.label}`}>{t(`nav.viewDesc.${tab.label}`)}</small>
+                                </span>
+                                {shown && <Check className="view-check" size={16} aria-label={t("nav.tabShown")} />}
+                              </button>
+                            </Popover.Close>
+                            {shown && (
+                              <button
+                                type="button"
+                                className="view-hide"
+                                aria-label={t("nav.hideTab", { name })}
+                                title={t("nav.hideTab", { name })}
+                                onClick={() => toggleTab(tab.label)}
+                              >
+                                <EyeOff size={15} aria-hidden="true" />
+                              </button>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </Popover.Content>
                 </Popover.Portal>
               </Popover.Root>

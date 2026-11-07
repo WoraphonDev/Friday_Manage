@@ -37,3 +37,9 @@
 - คำขอนอก lane: (ไม่บังคับ) ให้ A06 ส่งชื่อ Module และ assignees แบบ Person ใน issueDto ของ `GET p/backlog` และ velocity ย้อนหลัง เพื่อลดการเรียก `modules` / `members` และแสดงกล่องค่าเฉลี่ยตาม Canvas · ข้อสังเกตของ A06 เรื่อง `i/move` ยังย้ายงานเข้า Sprint ที่ completed ได้ไม่กระทบหน้านี้ เพราะหน้าแสดงเฉพาะ Sprint ที่ยังไม่จบเป็นปลายทาง
 - Test: `src/lib/backlog.test.tsx` 13 ข้อ (MSW, ข้อมูลสมมติ): แสดง Sprint/Burndown/capacity/Backlog, ปุ่มย้าย + CSRF + If-Match + เลิกทำ, ลากข้าม Sprint/Backlog และเรียงลำดับ, Dialog คีย์บอร์ด, 409 + requestId, Complete (ปลายทาง + Retrospective), Start (เตือนเกิน capacity / ปิดเมื่อมี active), แก้ goal, สร้าง Sprint, ตัวกรอง, Viewer ซ่อนปุ่ม, โหลด/ว่าง/Error/403 และ Guest Viewer · `pnpm --filter @friday/web typecheck`, `test` (160 ผ่าน) และ `build` ผ่าน
 - ยังไม่ได้เทียบภาพกับ Canvas ที่ 1440/390 px
+
+### ปรับให้ใช้ง่ายขึ้น — 2026-11-07
+
+- ผู้ใช้บอกว่าหน้า Backlog ใช้ยากและไม่เข้าใจ: เดิมกางทุก Sprint ที่วางแผนอยู่ (ทุกอันมีช่อง goal, capacity, พื้นที่วาง และปุ่ม Start sprint) รายการ Backlog จึงอยู่ล่างสุดและลากขึ้นไปไม่ถึง
+- กางเฉพาะ Sprint ถัดไปตาม Canvas L1 · Sprint หลังจากนั้นพับเป็นรายการเดียว (ชื่อ, วันที่, จำนวนงาน, MD / capacity) กดขยายได้ และลากงานมาวางบนแถวที่พับไว้ได้
+- ปุ่ม Start sprint อยู่ที่ Sprint ถัดไปเท่านั้น · เพิ่มคำอธิบายสั้นบนหน้าว่า Backlog คืออะไรและวางแผนอย่างไร

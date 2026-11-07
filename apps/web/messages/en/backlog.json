@@ -95,5 +95,8 @@
   "retroPlaceholder": "What went well / What to improve / Action items",
   "completeAndMove": "Complete Sprint and move tasks",
   "completed": "Completed {name} · Moved {tasks} unfinished tasks (Sub-task {subtasks}) to {target}",
-  "completedClean": "Completed {name}"
+  "completedClean": "Completed {name}",
+  "intro": "The backlog holds work that is not in a sprint yet · drag items up into a sprint or use the ↑ button on a row, then press Start sprint when ready",
+  "expandSprint": "Show work in {name}",
+  "collapseSprint": "Collapse {name}"
 }

@@ -565,7 +565,11 @@ export function WorkspaceShell({
             >
               <Menu size={20} />
             </Button>
-            {switcher}
+            {/* ตัวสลับ Workspace ย้ายลงหัว Sidebar (ผู้ใช้ขอ 2026-11-07) · แถบบนเหลือชื่อระบบกลับ Home */}
+            <Link className="topbar-brand" href={base}>
+              <span className="brand-mark" aria-hidden="true">F</span>
+              <span>Friday Manage</span>
+            </Link>
             {pathname === `${base}/search` ? (
               <Suspense fallback={searchTrigger}>
                 <TopbarSearchInput base={base} label={t("nav.search")} />
@@ -590,6 +594,10 @@ export function WorkspaceShell({
         <div className={`workspace-body chrome-${chrome}`}>
           {chrome === "workspace" && (
             <aside className="sidebar">
+              <div className="sidebar-workspace">
+                <div className="menu-label">Workspace</div>
+                {switcher}
+              </div>
               <Navigation
                 workspace={workspace}
                 projects={projects.data?.items ?? []}

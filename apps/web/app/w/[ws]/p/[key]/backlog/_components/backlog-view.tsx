@@ -1,12 +1,12 @@
 "use client";
 
-import { useRef, useState, type DragEvent, type FormEvent, type ReactNode } from "react";
+import { type DragEvent, type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Bookmark, Bug, CheckSquare, ChevronDown, MoreHorizontal, Zap } from "lucide-react";
-import { AvatarStack, Button, Dialog, EmptyState, ErrorState, FloatingNotice, Forbidden, Input, LoadingState, Select } from "@/components/ui";
+import { AvatarStack, Button, Dialog, EmptyState, ErrorState, FloatingNotice, Forbidden, Input, LoadingState, Select, useDismissToasts, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDateRange, today as todayIso, type YearFormat } from "@/lib/format";
@@ -54,7 +54,13 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
   const dragKey = useRef<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ container: Container; before?: string } | null>(null);
-  const [notice, setNotice] = useState<Notice | null>(null);
+  // แจ้งผลเป็น toast มุมขวาบน: ซ้อนกันได้ อันใหม่อยู่บน หายเอง (ผู้ใช้ขอ 2026-11-08)
+  const toast = useToast();
+  const dismissToasts = useDismissToasts();
+  const noticeGroup = `backlog:${ws}:${projectKey}`;
+  const setNotice = (next: Notice | null) => { if (next) toast({ ...next, group: noticeGroup }); }; // null = ไม่ต้องทำอะไร: ผลการย้ายหลายครั้งซ้อนกันได้
+  // เปลี่ยนโปรเจกต์ / ออกจากหน้า: Undo ของบอร์ดเดิมไม่ค้าง
+  useEffect(() => () => dismissToasts(noticeGroup), [dismissToasts, noticeGroup]);
   const [moveError, setMoveError] = useState<unknown>(null);
   const [picker, setPicker] = useState<BacklogIssue | null>(null);
   const [showActive, setShowActive] = useState(false);
@@ -207,7 +213,6 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
     </div>
 
     {!empty && <p className={styles.intro}>{t("intro")}</p>}
-    {notice && <FloatingNotice><span>{notice.message}</span>{notice.undo && <Button size="small" disabled={moving} onClick={() => void notice.undo?.()}>{t("undo")}</Button>}<Button size="small" variant="ghost" aria-label={t("close")} onClick={() => setNotice(null)}>×</Button></FloatingNotice>}
     {!!moveError && <FloatingNotice tone="error"><strong>{t("moveFailed")}</strong><span>{moveError instanceof ApiError && moveError.status === 409 ? t("conflict") : errorText(moveError, t("moveFailed"))}</span>{moveError instanceof ApiError && moveError.requestId && <code>{t("requestId", { id: moveError.requestId })}</code>}<Button size="small" onClick={() => { setMoveError(null); void backlog.refetch(); }}>{t("loadLatest")}</Button></FloatingNotice>}
 
     {empty && <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} action={canManage ? <Button variant="primary" onClick={() => setCreating(true)}>{t("createSprint")}</Button> : canCreate ? <Link className="button button-primary" href={href()}>{t("createIssue")}</Link> : undefined} />}

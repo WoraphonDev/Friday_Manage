@@ -1,12 +1,12 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type DragEvent, type RefObject } from "react";
+import { type DragEvent, type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, SlidersHorizontal, Bug, CheckSquare, ChevronLeft, ChevronRight, Flag, ListChecks, MessageCircle, Plus, Zap } from "lucide-react";
-import { AvatarStack, Badge, Button, Dialog, EmptyState, ErrorState, FloatingNotice, Forbidden, LoadingState, Select } from "@/components/ui";
+import { AvatarStack, Badge, Button, Dialog, EmptyState, ErrorState, FloatingNotice, Forbidden, LoadingState, Select, useDismissToasts, useToast } from "@/components/ui";
 import { api, ApiError, isConfirmCancelled } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -82,7 +82,13 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   useFlip(boardRef);
   const [picker, setPicker] = useState<BoardCard | null>(null);
   const [confirmation, setConfirmation] = useState<{ intent: MoveIntent; count: number; undoAction: boolean } | null>(null);
-  const [notice, setNotice] = useState<Notice | null>(null);
+  // แจ้งผลการย้ายเป็น toast มุมขวาบน: ซ้อนกันได้ อันใหม่อยู่บน หายเอง (ผู้ใช้ขอ 2026-11-08)
+  const toast = useToast();
+  const dismissToasts = useDismissToasts();
+  const noticeGroup = `kanban:${ws}:${projectKey}`;
+  const setNotice = (next: Notice | null) => { if (next) toast({ ...next, group: noticeGroup }); }; // null = ไม่ต้องทำอะไร: ผลการย้ายหลายครั้งซ้อนกันได้
+  // เปลี่ยนโปรเจกต์ / ออกจากหน้า: Undo ของบอร์ดเดิมไม่ค้าง
+  useEffect(() => () => dismissToasts(noticeGroup), [dismissToasts, noticeGroup]);
   const [moveError, setMoveError] = useState<unknown>(null);
   const endpoint = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
   const boardKey = ["kanban", ws, projectKey];
@@ -281,7 +287,6 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
         {hasFilters && <Button variant="ghost" onClick={() => { setModuleId(""); setMine(false); setOverdue(false); setLevel("all"); }}>{t("reset")}</Button>}
       </div>
     </div>
-    {notice && <FloatingNotice><span>{notice.message}</span>{notice.undo && <Button size="small" disabled={moving} onClick={() => void notice.undo?.()}>{t("undo")}</Button>}<Button size="small" variant="ghost" aria-label={t("close")} onClick={() => setNotice(null)}>×</Button></FloatingNotice>}
     {!!moveError && <FloatingNotice tone="error"><strong>{t("moveFailed")}</strong><span>{moveError instanceof ApiError && moveError.status === 409 ? t("conflict") : moveError instanceof Error ? moveError.message : t("moveFailed")}</span>{moveError instanceof ApiError && moveError.requestId && <code>{t("requestId", { id: moveError.requestId })}</code>}<Button size="small" onClick={() => { setMoveError(null); void board.refetch(); }}>{t("loadLatest")}</Button></FloatingNotice>}
     <div className={styles.mobileColumns} role="group" aria-label={t("columns")}>
       {data.columns.map((column) => <Button key={column.id} className={`${styles.chip} ${column.id === activeColumn ? styles.selected : ""}`} aria-pressed={column.id === activeColumn} onClick={() => setMobileColumn(column.id)}><span className={`${styles.dot} ${styles[column.category]}`} />{column.name} <span>{column.cards.filter((card) => filtered.includes(card)).length}</span></Button>)}

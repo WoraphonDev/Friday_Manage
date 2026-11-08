@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Button, ErrorState, FloatingNotice, Forbidden, LoadingState, Select } from "@/components/ui";
+import { Button, ErrorState, Forbidden, LoadingState, Select, useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, formatDateRange, today as todayIso, type YearFormat } from "@/lib/format";
 import { addDays, projectBase, projectEndpoint, STATUS_TONE, weekStart, type ReportSchedule, type WeeklyReport } from "../../dashboard/_components/types";
@@ -21,7 +21,9 @@ export function WeeklyReportView({ ws, projectKey, yearFormat, issueHref, canSen
   const [week, setWeek] = useState(current);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
-  const [notice, setNotice] = useState<Notice | null>(null);
+  // ผลคัดลอก / ส่งรายงานเป็น toast มุมขวาบน หายเอง (ผู้ใช้ขอ 2026-11-08)
+  const toast = useToast();
+  const setNotice = (next: Notice | null) => { if (next) toast({ message: next.message, tone: next.tone === "ok" ? "info" : "error" }); };
   const [sending, setSending] = useState(false);
   const report = useQuery({ queryKey: ["reports", ws, projectKey, "weekly", week], queryFn: () => api.get<WeeklyReport>(`${endpoint}/reports/weekly?week=${week}`) });
   // รอบส่งเป็นข้อมูลประกอบ · โหลดไม่ได้ก็ยังแสดงรายงาน
@@ -67,7 +69,6 @@ export function WeeklyReportView({ ws, projectKey, yearFormat, issueHref, canSen
       <Button disabled={!data} onClick={() => window.print()}>{t("weekly.pdf")}</Button>
       {canSend && week === current && <Button variant="primary" disabled={!data || sending} onClick={() => void send()}>{sending ? t("weekly.sending") : t("weekly.send")}</Button>}
     </div>
-    {notice && <FloatingNotice tone={notice.tone === "ok" ? "info" : "error"}><span>{notice.message}</span></FloatingNotice>}
     {report.error ? <ErrorState error={report.error} retry={() => void report.refetch()} />
       : !data ? <LoadingState />
         : editing ? <div className={styles.card}>

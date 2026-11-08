@@ -726,9 +726,11 @@ td {
   padding-top: 12px;
 }
 /* K4: Toast แจ้งเตือนพื้นเข้ม รูป + ข้อความ + ปุ่ม */
-.toast-rich {
+/* .toast.toast-rich ชนะสไตล์ .toast สีฟ้าที่ประกาศทีหลัง (แจ้งเตือน K4 ยังเป็นกล่องเข้ม) */
+.toast.toast-rich {
   align-items: flex-start;
   width: min(380px, calc(100vw - 32px));
+  border-color: transparent;
   background: #1b1f24;
   color: white;
   border-radius: 12px;
@@ -787,13 +789,18 @@ td {
   position: fixed;
   z-index: 100;
   right: 20px;
-  bottom: 20px;
+  top: calc(var(--topbar-h, 48px) + 12px);
   display: flex;
-  flex-direction: column;
+  /* มุมขวาบน ใต้แถบบน · อันใหม่ล่าสุดอยู่บนสุด อันเก่าเลื่อนลงข้างล่าง (ผู้ใช้ขอ 2026-11-08) */
+  flex-direction: column-reverse;
   gap: 8px;
   max-width: calc(100vw - 32px);
+  pointer-events: none;
 }
-/* กล่องแจ้งผลการกระทำ (FloatingNotice) อยู่ในกองเดียวกับ toast มุมขวาล่าง · สีเดิมของแต่ละแบบ */
+.toast-region > * {
+  pointer-events: auto;
+}
+/* กล่องแจ้งผลการกระทำ (FloatingNotice) อยู่ในกองเดียวกับ toast มุมขวาบน · สีเดิมของแต่ละแบบ */
 .floating-notice {
   display: flex;
   align-items: center;
@@ -830,12 +837,12 @@ td {
   position: fixed;
   z-index: 100;
   right: 20px;
-  bottom: 20px;
+  top: calc(var(--topbar-h, 48px) + 12px);
 }
 @keyframes notice-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(-8px);
   }
 }
 @media print {
@@ -846,16 +853,29 @@ td {
 }
 .toast {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
-  padding: 12px 14px;
-  background: #0f172a;
-  color: white;
+  width: min(360px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
   border-radius: 10px;
-  box-shadow: var(--shadow-menu);
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: var(--text-label);
+  box-shadow: 0 10px 28px rgb(16 24 40 / 0.16);
+  animation: notice-in 0.2s ease-out;
+}
+.toast > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .toast .button-ghost {
-  color: white;
+  color: inherit;
+}
+.toast-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
 }
 .tooltip {
   z-index: 100;
@@ -1881,11 +1901,11 @@ kbd {
   .toast-region {
     left: 16px;
     right: 16px;
-    bottom: 72px;
+    top: calc(var(--topbar-h, 48px) + 8px);
   }
   .floating-notice-alone {
     right: 16px;
-    bottom: 72px;
+    top: calc(var(--topbar-h, 48px) + 8px);
   }
   .toast {
     padding: 10px;

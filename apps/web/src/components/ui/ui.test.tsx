@@ -190,6 +190,24 @@ describe("UI kit", () => {
     expect(retry).toHaveBeenCalled();
   });
 
+  it("Toast ซ้อนกันได้ (อันใหม่อยู่ท้ายใน DOM = บนสุดเพราะ column-reverse) และหายเองใน 4 วินาที · มีเลิกทำ 5 วินาที", async () => {
+    vi.useFakeTimers();
+    try {
+      let push: ReturnType<typeof useToast> = () => undefined;
+      function Example() { push = useToast(); return null; }
+      renderWithProviders(<Example />);
+      const { act } = await import("@testing-library/react");
+      act(() => { push({ message: "อันแรก" }); push({ message: "อันที่สอง", undo: () => undefined }); });
+      const items = [...document.querySelectorAll(".toast-region .toast")].map((el) => el.textContent);
+      expect(items[0]).toContain("อันแรก"); expect(items[1]).toContain("อันที่สอง");
+      act(() => { vi.advanceTimersByTime(4100); });
+      expect(screen.queryByText("อันแรก")).not.toBeInTheDocument();
+      expect(screen.getByText("อันที่สอง")).toBeInTheDocument();
+      act(() => { vi.advanceTimersByTime(1000); });
+      expect(screen.queryByText("อันที่สอง")).not.toBeInTheDocument();
+    } finally { vi.useRealTimers(); }
+  });
+
   it("Toast แจ้งเตือน K4 แสดงผู้กระทำ บรรทัดรอง และปุ่มลิงก์ แล้วปิดเมื่อกด", async () => {
     function Example() {
       const toast = useToast();

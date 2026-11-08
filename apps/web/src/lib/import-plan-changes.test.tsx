@@ -233,7 +233,7 @@ describe("Import Excel (L3)", () => {
     const menu = await screen.findByRole("navigation", { name: "เมนู Import / Export" });
     expect(within(menu).getByRole("link", { name: "อัปเดตแผนจาก Excel" })).toHaveAttribute("href", "/w/sample/p/DE/import");
     expect(within(menu).getByRole("link", { name: "Export แผน + Timeline" })).toHaveAttribute("aria-current", "page");
-    expect(within(menu).getByRole("link", { name: "การแก้ไขแผน (Plan vs Baseline)" })).toHaveAttribute("href", "/w/sample/p/DE/plan-changes");
+    expect(within(menu).queryByRole("link", { name: /การแก้ไขแผน/ })).not.toBeInTheDocument();
     // โปรเจกต์ถูกกำหนดจากหน้า ไม่มีช่องเลือกโปรเจกต์ · ช่องละสัปดาห์เพิ่ม ?timeline=week
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(await screen.findByRole("link", { name: /ดาวน์โหลด Excel/ })).toHaveAttribute("href", "/api/v1/w/sample/projects/DE/export.xlsx");
@@ -372,10 +372,8 @@ describe("การแก้ไขแผน (Plan vs Baseline)", () => {
     Object.defineProperty(navigator, "clipboard", { value: { writeText: write }, configurable: true });
     mountChanges();
     expect(await screen.findByText("เทียบกับ Baseline v2")).toBeInTheDocument();
-    // อยู่ในเมนูด้านซ้ายเดียวกับหน้า Import / Export ของโปรเจกต์
-    expect(screen.getByRole("link", { name: "อัปเดตแผนจาก Excel" })).toHaveAttribute("href", "/w/sample/p/DE/import");
-    expect(screen.getByRole("link", { name: "การแก้ไขแผน (Plan vs Baseline)" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "การแก้ไขแผน (Plan vs Baseline)" })).toHaveAttribute("aria-current", "page");
+    // แท็บของตัวเอง ไม่อยู่ในเมนู Import / Export (ผู้ใช้ 2026-11-09)
+    expect(screen.queryByRole("navigation", { name: "เมนู Import / Export" })).not.toBeInTheDocument();
     expect(await screen.findAllByTestId("plan-change")).toHaveLength(2);
     expect(changeGets[0]).toBe("v2|");
     expect(screen.getByText("แก้ไขแล้ว 2 งาน · กระทบวันจบ 1 Module")).toBeInTheDocument();

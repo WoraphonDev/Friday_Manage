@@ -12,7 +12,6 @@ import { formatDate, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { List, Permissions, Person } from "@/lib/types";
 import type { GanttData, GRow } from "../../gantt/_components/gantt-view";
-import { ImportShell } from "../../import/_components/import-shell";
 import { showValue } from "../../../../import/_components/values";
 import type { Member } from "../../../../import/_components/types";
 import styles from "./plan-changes.module.css";
@@ -112,8 +111,8 @@ export function PlanChangesView({ ws, projectKey }: { ws: string; projectKey: st
 
   const canBaseline = has("project.baseline");
   const current = baselines.data!.items.find((b) => b.version === version) ?? null;
-  // เมนูด้านซ้ายเดียวกับหน้า Import / Export ของโปรเจกต์
-  const shell = (content: React.ReactNode) => <ImportShell ws={ws} projectKey={projectKey} active="changes"><div className={styles.body}>{content}</div></ImportShell>;
+  // แท็บของตัวเอง (ไม่อยู่ในเมนู Import / Export) · ติดตามการแก้แผนเทียบ Baseline จากทุกช่องทาง
+  const shell = (content: React.ReactNode) => <div className={styles.page}>{content}</div>;
 
   const value = (field: string, v: unknown) =>
     field === "assigneeIds" && Array.isArray(v) ? (v.length ? v.map((id) => names.get(String(id)) ?? String(id).slice(0, 8)).join(", ") : "—") : showValue(v, year);

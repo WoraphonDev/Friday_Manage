@@ -130,8 +130,7 @@
     "sections": "Import / Export menu",
     "section__import": "Update plan from Excel",
     "section__export": "Export plan + Timeline",
-    "section__changes": "Plan changes (Plan vs Baseline)",
-    "sectionNote": "Exports use the template columns · edit outside, then import back to update this project's plan"
+    "sectionNote": "Exports use the template columns · edit outside, then import back to update the plan · plan changes after a baseline are in the \"Plan changes\" tab"
   },
   "changes": {
     "compare": "Compare with Baseline v{version}",

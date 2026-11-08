@@ -11,12 +11,26 @@ import { AttachButton } from './task-v2';
 import { X } from 'lucide-react';
 import styles from './issue-drawer.module.css';
 
-export function ActivityPanel({ scope, issueKey, showFeed = true, showComposer = true, compact = false }: { scope: Scope; issueKey: string; showFeed?: boolean; showComposer?: boolean; compact?: boolean }) {
+/**
+ * mode = comments: คอมเมนต์อย่างเดียว (กลางหน้า Task) พร้อมช่องเขียน
+ * mode = log: ประวัติการเปลี่ยนแปลงอย่างเดียว ล่าสุดก่อน (กล่องด้านขวา) · แยกกันตามที่ผู้ใช้ขอ 2026-11-08
+ */
+export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = true, showComposer = true, compact = false }: { scope: Scope; issueKey: string; mode?: 'comments' | 'log'; showFeed?: boolean; showComposer?: boolean; compact?: boolean }) {
   const t = useTranslations('issue-drawer');
   const cache = useQueryClient();
   const endpoint = issuePath(scope.ws, issueKey);
-  const queryKey = [...issueQuery(scope.ws, issueKey), 'activity'];
-  const feed = useInfiniteQuery({ queryKey, initialPageParam: '', queryFn: ({ pageParam, signal }) => api.get<Feed>(`${endpoint}/activity?limit=30${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''}`, { signal }), getNextPageParam: (page) => page.nextCursor ?? undefined });
+  const log = mode === 'log';
+  const queryKey = [...issueQuery(scope.ws, issueKey), log ? 'activity-log' : 'comments'];
+  const feed = useInfiniteQuery({
+    queryKey, initialPageParam: '', enabled: showFeed,
+    queryFn: async ({ pageParam, signal }): Promise<Feed> => {
+      const cursor = pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : '';
+      if (log) return api.get<Feed>(`${endpoint}/activity?only=activity&order=desc&limit=20${cursor}`, { signal });
+      const page = await api.get<{ items: Omit<Comment, 'kind'>[]; nextCursor: string | null }>(`${endpoint}/comments?limit=30${cursor}`, { signal });
+      return { items: page.items.map((item) => ({ ...item, kind: 'comment' as const })), nextCursor: page.nextCursor };
+    },
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+  });
   const [body, setBody] = useState('');
   // ไฟล์ / รูปที่แนบกับคอมเมนต์ (ผู้ใช้ขอ 2026-11-08): อัปโหลดก่อน แล้วผูกกับคอมเมนต์หลังส่ง
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -55,18 +69,38 @@ export function ActivityPanel({ scope, issueKey, showFeed = true, showComposer =
     if (typeof raw === 'boolean') return t(raw ? 'yes' : 'no');
     return /^[\da-f-]{36}$/i.test(String(raw)) ? t('dataChanged') : String(raw);
   }
+  function checklistText(oldValue: unknown, newValue: unknown) {
+    type Item = { text?: string; done?: boolean; kind?: string; ids?: unknown };
+    const before = (oldValue ?? null) as Item | null; const after = (newValue ?? null) as Item | null;
+    const kind = (after ?? before)?.kind === 'acceptance' ? 'Acceptance criteria' : 'Checklist';
+    if (before?.ids) return t('checklistLog.reordered', { kind });
+    if (!before && after?.text) return t('checklistLog.added', { kind, text: after.text });
+    if (before?.text && !after) return t('checklistLog.removed', { kind, text: before.text });
+    if (before && after && before.done !== after.done) return t(after.done ? 'checklistLog.checked' : 'checklistLog.unchecked', { kind, text: after.text ?? '' });
+    if (before?.text && after?.text && before.text !== after.text) return t('checklistLog.renamed', { kind, old: before.text, new: after.text });
+    return null;
+  }
   function activityText(item: Activity) {
     const verb = t.has(`verbs.${item.verb}`) ? t(`verbs.${item.verb}`) : t('updated');
     if (!item.field) return verb;
+    if (item.field === 'checklist') { const text = checklistText(item.old, item.new); if (text) return text; }
     const field = t.has(`fields.${item.field}`) ? t(`fields.${item.field}`) : t('issueData');
     return t('changeDescription', { verb, field, old: value(item.field, item.old), new: value(item.field, item.new) });
   }
-  if (feed.error) return <ErrorState error={feed.error} retry={() => void feed.refetch()} />;
-  if (!feed.data) return <LoadingState />;
-  const items = feed.data.pages.flatMap((page) => page.items);
+  if (showFeed && feed.error) return <ErrorState error={feed.error} retry={() => void feed.refetch()} />;
+  if (showFeed && !feed.data) return <LoadingState />;
+  const items = feed.data?.pages.flatMap((page) => page.items) ?? [];
+  if (log) return <div className={styles.logBox}>
+    {items.length === 0 && <p className="muted">{t('noHistory')}</p>}
+    <ol className={styles.logList}>{items.map((item) => item.kind === 'activity' && <li key={item.id} className={styles.logItem}>
+      <div className={styles.logHead}><PersonView person={item.actor} /><time dateTime={item.createdAt}>{when(item.createdAt, scope.yearFormat)}</time></div>
+      <p className={styles.logText} title={activityText(item)}>{activityText(item)}</p>
+    </li>)}</ol>
+    {feed.hasNextPage && <Button size="small" variant="ghost" disabled={feed.isFetchingNextPage} onClick={() => void feed.fetchNextPage()}>{t('loadMore')}</Button>}
+  </div>;
   return <div className={styles.stack}>
     {showFeed && <>
-    {items.length === 0 && <p className="muted">{t('noActivity')}</p>}
+    {items.length === 0 && <p className="muted">{t('noComments')}</p>}
     <ol className={styles.feed}>{items.map((item) => <li key={`${item.kind}-${item.id}`} className={styles.feedItem}>
       <div className={styles.feedHeading}><PersonView person={item.kind === 'comment' ? item.author : item.actor} /><time dateTime={item.createdAt}>{when(item.createdAt, scope.yearFormat)}</time></div>
       {item.kind === 'activity' ? <p className={styles.activityText}>{activityText(item)}</p> : <div className={styles.commentBody}>

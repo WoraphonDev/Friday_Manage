@@ -3,7 +3,7 @@ import { Auth, type AuthInfo, Tenant, type TenantInfo } from '../common/request.
 import { TenantGuard } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
 import { z } from 'zod';
-import { CommentBody, CommentsService, PageQuery } from './comments.service.js';
+import { ActivityQuery, CommentBody, CommentsService, PageQuery } from './comments.service.js';
 
 @Controller('w/:ws/issues/:issueKey')
 @UseGuards(TenantGuard)
@@ -33,7 +33,7 @@ export class CommentsController {
 
   @Get('activity')
   activity(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('issueKey') key: string, @Query() query: unknown) {
-    return this.comments.activity(auth, tenant, key, parse(PageQuery, query));
+    return this.comments.activity(auth, tenant, key, parse(ActivityQuery, query));
   }
 
   @Get('watchers')

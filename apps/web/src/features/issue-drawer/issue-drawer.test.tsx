@@ -169,9 +169,18 @@ describe('Issue parts and comments',()=>{
     await user.click(screen.getByRole('button',{name:'แก้คอมเมนต์'}));await user.clear(screen.getByLabelText('คอมเมนต์'));await user.type(screen.getByLabelText('คอมเมนต์'),'แก้ไขข้อความ');await user.click(within(screen.getByRole('dialog',{name:'แก้คอมเมนต์'})).getByRole('button',{name:'บันทึก'}));await screen.findByText('แก้ไขข้อความ');
     await user.click(screen.getByRole('button',{name:'ลบคอมเมนต์'}));await user.click(within(screen.getByRole('dialog',{name:'ลบคอมเมนต์'})).getByRole('button',{name:'ลบคอมเมนต์'}));await screen.findByText('คอมเมนต์นี้ถูกลบแล้ว');
   });
-  it('paginates the activity feed using the supplied cursor',async()=>{
+  it('แยกคอมเมนต์ (กลางหน้า) กับ Activity (กล่องด้านขวา ล่าสุดก่อน แบ่งหน้าได้)',async()=>{
     const user=userEvent.setup();const urls:string[]=[];server.use(http.get(`${issueEndpoint}/activity`,({request})=>{urls.push(request.url);return HttpResponse.json(new URL(request.url).searchParams.has('cursor')?{items:[{id:uid(99),kind:'activity',actor:me,verb:'updated',field:'priority',old:'medium',new:'high',createdAt:'2026-11-06T04:00:00Z'}],nextCursor:null}:{...f.state.feed,nextCursor:'page-two'});}));
-    mount();await loaded();await user.click(await screen.findByRole('button',{name:'โหลดเพิ่ม'}));await screen.findByText(/Priority: Medium → High/);expect(urls.at(-1)).toContain('cursor=page-two');
+    mount();await loaded();const history=await screen.findByRole('region',{name:'Activity'});
+    expect(urls[0]).toContain('only=activity');expect(urls[0]).toContain('order=desc');
+    await within(history).findByText('สร้างงาน');expect(await screen.findByText('ยังไม่มีคอมเมนต์')).toBeInTheDocument();
+    await user.click(within(history).getByRole('button',{name:'โหลดเพิ่ม'}));await within(history).findByText(/Priority: Medium → High/);expect(urls.at(-1)).toContain('cursor=page-two');
+  });
+  it('Activity ของ Checklist บอกรายการที่เปลี่ยน ไม่ใช่ "ข้อมูลที่เกี่ยวข้อง"',async()=>{
+    const item={id:uid(70),text:'ตรวจหน้าจอ',kind:'checklist',done:false};
+    f.state.feed.items.push({id:uid(98),kind:'activity',actor:me,verb:'updated',field:'checklist',old:item,new:{...item,done:true},createdAt:'2026-11-06T05:00:00Z'} as never);
+    mount();await loaded();const history=await screen.findByRole('region',{name:'Activity'});
+    await within(history).findByText('ติ๊ก Checklist “ตรวจหน้าจอ”');
   });
 });
 

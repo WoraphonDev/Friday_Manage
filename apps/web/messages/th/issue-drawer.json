@@ -408,5 +408,17 @@
   "afterCreateNote": "Attachments, ผลทดสอบ QA, Development และ Activity / คอมเมนต์ เพิ่มได้หลังกดสร้าง หน้าจะเปลี่ยนเป็นหน้าดู Task ทันที",
   "afterStart": "หลังเริ่มงาน",
   "parentRange": "ต้องอยู่ในช่วงของ {key}: {start} – {end} (เกินได้ ระบบจะถามก่อนขยาย Task)",
-  "checkDoneBy": "ติ๊กโดย {name} · {date}"
+  "checkDoneBy": "ติ๊กโดย {name} · {date}",
+  "commentsTitle": "คอมเมนต์",
+  "historyTitle": "Activity",
+  "noComments": "ยังไม่มีคอมเมนต์",
+  "noHistory": "ยังไม่มีการเปลี่ยนแปลง",
+  "checklistLog": {
+    "added": "เพิ่ม {kind} “{text}”",
+    "removed": "ลบ {kind} “{text}”",
+    "checked": "ติ๊ก {kind} “{text}”",
+    "unchecked": "เอาติ๊กออก {kind} “{text}”",
+    "renamed": "แก้ {kind}: “{old}” → “{new}”",
+    "reordered": "จัดลำดับ {kind}"
+  }
 }

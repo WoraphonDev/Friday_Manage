@@ -198,6 +198,14 @@ describe('Comments / mentions / watchers', () => {
     expect(next.body.items[0].kind).toBe('comment');
     expect(next.body.nextCursor).toBeNull();
     expect((await team.lead.get(`${path(i.key)}/comments?cursor=${first.body.nextCursor}`)).status).toBe(400);
+
+    // กล่องประวัติด้านขวา: เฉพาะกิจกรรม ล่าสุดก่อน แบ่งหน้าได้
+    const log = await team.lead.get(`${path(i.key)}/activity?only=activity&order=desc&limit=1`);
+    expect(log.body.items.map((x: { kind: string; verb: string }) => [x.kind, x.verb])).toEqual([['activity', 'updated']]);
+    const older = await team.lead.get(`${path(i.key)}/activity?only=activity&order=desc&limit=1&cursor=${log.body.nextCursor}`);
+    expect(older.body.items.map((x: { verb: string }) => x.verb)).toEqual(['created']);
+    expect(older.body.nextCursor).toBeNull();
+    expect((await team.lead.get(`${path(i.key)}/activity?cursor=${log.body.nextCursor}`)).status).toBe(400);
   });
 
   it('Guest Viewer คุยได้เฉพาะงานที่แชร์และไม่เห็นชื่อ/id ของทีมในคอมเมนต์หรือกิจกรรม', async () => {

@@ -198,7 +198,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       </div>
       {!guest && <div hidden={mobile && mobileTab !== 'tests'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-tests`} aria-labelledby={mobile ? `${issue.key}-tab-tests` : undefined}><TestRuns scope={scope} issue={issue} /></div>}
       {!guest && <div hidden={mobile && mobileTab !== 'commits'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-commits`} aria-labelledby={mobile ? `${issue.key}-tab-commits` : undefined}><Development scope={scope} issue={issue} /></div>}
-      <div hidden={mobile && mobileTab !== 'comments'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-comments`} aria-labelledby={mobile ? `${issue.key}-tab-comments` : undefined}><div className={styles.blk} style={{ borderBottom: 0 }}><h3>{t('activity')}</h3><ActivityPanel scope={scope} issueKey={issue.key} showComposer={!mobile} /></div></div>
+      <div hidden={mobile && mobileTab !== 'comments'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-comments`} aria-labelledby={mobile ? `${issue.key}-tab-comments` : undefined}><div className={styles.blk} style={{ borderBottom: 0 }}><h3>{t('commentsTitle')}</h3><ActivityPanel scope={scope} issueKey={issue.key} showComposer={!mobile} /></div></div>
     </div>
 
     <aside className={styles.sidebar} aria-label={t('properties')}>
@@ -259,6 +259,11 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       </div>
       <button type="button" className={styles.propsToggle} aria-expanded={allProps} aria-controls={`${issue.key}-props`} onClick={() => setAllProps((value) => !value)}>{t(allProps ? 'lessProperties' : 'moreProperties')}</button>
       </>}
+      {/* ประวัติการเปลี่ยนแปลงแยกจากคอมเมนต์ อยู่กล่องด้านขวา (ผู้ใช้ขอ 2026-11-08) */}
+      <section className={`${styles.pgroup} ${styles.historyBox}`} aria-label={t('historyTitle')}>
+        <h4 className={styles.pgTitle}>{t('historyTitle')}</h4>
+        <ActivityPanel scope={scope} issueKey={issue.key} mode="log" showComposer={false} />
+      </section>
     </aside></div>
     {mobile && scope.access.permissions.includes('issue.comment') && <div className={styles.mobileComposer}><ActivityPanel scope={scope} issueKey={issue.key} showFeed={false} compact /></div>}
     {due !== null && <DueRequest key={`${issue.key}-${due}`} scope={scope} issue={issue} initialDue={due} onClose={() => { setDue(null); setError(null); }} />}

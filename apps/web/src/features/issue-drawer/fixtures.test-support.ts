@@ -63,7 +63,9 @@ export function fixture() {
     http.get(`${base}/issues/:key/watchers`, () => HttpResponse.json({items:state.watching?[{person:me}]:[],watching:state.watching})),
     http.post(`${base}/issues/:key/watch`, async ({request}) => {await mutation(request);state.watching=true;return HttpResponse.json({watching:true});}),
     http.delete(`${base}/issues/:key/watch`, async ({request}) => {await mutation(request);state.watching=false;return HttpResponse.json({watching:false});}),
-    http.get(`${base}/issues/:key/activity`, () => HttpResponse.json(state.feed)),
+    // คอมเมนต์กลางหน้า = GET comments · กล่อง Activity ด้านขวา = activity?only=activity&order=desc
+    http.get(`${base}/issues/:key/activity`, ({request}) => { const only = new URL(request.url).searchParams.get('only') === 'activity'; return HttpResponse.json(only ? { items: state.feed.items.filter((item) => item.kind === 'activity').reverse(), nextCursor: null } : state.feed); }),
+    http.get(`${base}/issues/:key/comments`, () => HttpResponse.json({ items: state.feed.items.filter((item) => item.kind === 'comment'), nextCursor: null })),
     http.post(`${base}/issues/:key/comments`, async ({request}) => {const m=await mutation(request);state.watching=true;const comment={id:uid(61+state.mutations.length),kind:'comment' as const,body:String(m.body.body),author:me,createdAt:'2026-11-06T04:00:00Z',editedAt:null,deletedAt:null,deletionReason:null,canEdit:true,canDelete:true};state.feed.items.push(comment);return HttpResponse.json(comment,{status:201});}),
     http.patch(`${base}/issues/:key/comments/:id`, async ({request,params}) => {const m=await mutation(request);const comment=state.feed.items.find((item)=>item.id===params.id)!;Object.assign(comment,m.body,{editedAt:'2026-11-06T04:05:00Z'});return HttpResponse.json(comment);}),
     http.delete(`${base}/issues/:key/comments/:id`, async ({request,params}) => {await mutation(request);const comment=state.feed.items.find((item)=>item.id===params.id)!;Object.assign(comment,{body:null,deletedAt:'2026-11-06T04:06:00Z',deletionReason:'author',canEdit:false,canDelete:false});return HttpResponse.json(comment);}),

@@ -125,9 +125,9 @@ export function PlanModules({ plan }: { plan: Plan }) {
   const [sort, setSort] = useState<Sort>("start");
   if (!plan.allowed) return null;
   const { modules } = plan;
-  if (modules.error) return <section className={styles.card} aria-label={t("modules.title")}><ErrorState error={modules.error} retry={() => void modules.refetch()} /></section>;
-  if (!modules.data) return <section className={styles.card} aria-label={t("modules.title")}><LoadingState /></section>;
-  if (!modules.data.summary.taskCount) return <section className={styles.card} aria-label={t("modules.title")}>
+  if (modules.error) return <section className={`${styles.card} ${styles.modCard}`} aria-label={t("modules.title")}><ErrorState error={modules.error} retry={() => void modules.refetch()} /></section>;
+  if (!modules.data) return <section className={`${styles.card} ${styles.modCard}`} aria-label={t("modules.title")}><LoadingState /></section>;
+  if (!modules.data.summary.taskCount) return <section className={`${styles.card} ${styles.modCard}`} aria-label={t("modules.title")}>
     <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} action={<Link className="button button-primary" href={`/w/${encodeURIComponent(plan.ws)}/import`}>{t("importPlan")}</Link>} />
   </section>;
   return <ModuleTable modules={modules.data.modules} sort={sort} setSort={setSort} today={modules.data.asOf} yearFormat={me.yearFormat} velocityDays={modules.data.velocity.windowDays} />;
@@ -184,7 +184,7 @@ function ModuleTable({ modules, sort, setSort, today, yearFormat, velocityDays }
   const fmt = monthFormat(yearFormat);
   const todayPct = t0 && t1 && today >= t0 && today <= t1 ? pct(today) : null;
 
-  return <section className={styles.card} aria-label={t("modules.title")}>
+  return <section className={`${styles.card} ${styles.modCard}`} aria-label={t("modules.title")}>
     <div className={styles.cardHead}>
       <h2>{t("modules.title")}</h2>
       <div className={styles.seg} role="group" aria-label={t("modules.sort")}>
@@ -199,7 +199,7 @@ function ModuleTable({ modules, sort, setSort, today, yearFormat, velocityDays }
         <span role="columnheader">{t("modules.md")}</span>
         <span role="columnheader" className={styles.hideSmall}>{t("modules.progress")}</span>
         <span role="columnheader" className={styles.hideSmall}>{t("modules.forecast")}</span>
-        <span role="columnheader" className={`${styles.hideSmall} ${styles.months}`}>{months.map((m) => <span key={m}>{fmt.format(new Date(`${m}T00:00:00Z`))}</span>)}</span>
+        <span role="columnheader" className={`${styles.hideSmall} ${styles.hideMedium} ${styles.months}`}>{months.map((m) => <span key={m}>{fmt.format(new Date(`${m}T00:00:00Z`))}</span>)}</span>
       </div>
       {rows.map((m) => {
         const left = m.planStart ? pct(m.planStart) : null;
@@ -215,8 +215,8 @@ function ModuleTable({ modules, sort, setSort, today, yearFormat, velocityDays }
             </span>
           </span>
           <span role="cell" className={styles.hideSmall}><Forecast module={m} yearFormat={yearFormat} /></span>
-          <span role="cell" className={`${styles.hideSmall} ${styles.track}`} title={range} style={{ backgroundSize: `${100 / Math.max(1, months.length)}% 100%` }}>
-            {left !== null && right !== null && <span className={styles.trackBar} style={{ left: `${left}%`, width: `${Math.max(1, right - left)}%` }} />}
+          <span role="cell" className={`${styles.hideSmall} ${styles.hideMedium} ${styles.track}`} title={range} style={{ backgroundSize: `${100 / Math.max(1, months.length)}% 100%` }}>
+            {left !== null && right !== null && <span className={styles.trackBar} style={{ left: `${clampPct(left)}%`, width: `${Math.max(1, clampPct(right) - clampPct(left))}%` }} />}
             {todayPct !== null && <span className={styles.todayLine} style={{ left: `${todayPct}%` }} aria-hidden="true" />}
           </span>
         </div>;
@@ -225,6 +225,9 @@ function ModuleTable({ modules, sort, setSort, today, yearFormat, velocityDays }
     <p className={styles.cardNote}>{t("modules.note", { days: velocityDays })}</p>
   </section>;
 }
+
+/** ตำแหน่งบนแถบเวลาอยู่ในช่วง 0–100% เสมอ (วันนอกช่วงไม่ล้นออกนอกช่อง) */
+const clampPct = (value: number) => Math.min(100, Math.max(0, value));
 
 function Forecast({ module: m, yearFormat }: { module: ModuleStat; yearFormat: YearFormat }) {
   const t = useTranslations("lead-dashboard-reports");

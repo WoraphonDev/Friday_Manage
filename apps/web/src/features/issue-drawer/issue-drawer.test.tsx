@@ -197,6 +197,14 @@ describe('Create issue',()=>{
     await user.click(screen.getByRole('button',{name:'สร้างBug'}));await waitFor(()=>expect(mutations('/projects/DE/issues')).toHaveLength(1));
     expect(mutations('/projects/DE/issues')[0].body).toMatchObject({type:'Bug',severity:'critical',environment:'uat',details:{steps:'เปิดหน้าแล้วกดปุ่ม',expected:'แสดงข้อมูล',actual:'ข้อมูลไม่แสดง'}});
   });
+  it('แก้ข้อความ Checklist ในแถวเดิม: ซ่อนปุ่มเลื่อน/ลบ · Esc ยกเลิก · Enter บันทึก',async()=>{
+    const user=userEvent.setup();mount();await loaded();await screen.findByLabelText('ตรวจสอบข้อมูล');
+    await user.click(screen.getByRole('button',{name:'ตรวจสอบข้อมูล'}));
+    expect(screen.getByLabelText('ข้อความ Checklist')).toHaveFocus();expect(screen.queryByRole('button',{name:'ลบ Checklist ตรวจสอบข้อมูล'})).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');expect(screen.queryByLabelText('ข้อความ Checklist')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button',{name:'ตรวจสอบข้อมูล'}));await user.clear(screen.getByLabelText('ข้อความ Checklist'));await user.type(screen.getByLabelText('ข้อความ Checklist'),'ตรวจข้อมูลใหม่{Enter}');
+    await waitFor(()=>expect(f.state.checklist.some((c: { text: string })=>c.text==='ตรวจข้อมูลใหม่')).toBe(true));
+  });
   it('creates Story acceptance criteria using the checklist endpoint',async()=>{
     const user=userEvent.setup();createMount();await user.selectOptions(await screen.findByLabelText('ประเภทงาน'),'Story');
     await user.type(screen.getByLabelText('ชื่อ Story'),'Story ตัวอย่าง');await user.type(screen.getByLabelText('ฉันต้องการ *'),'ดูสถานะของงาน');await user.type(screen.getByLabelText('เพิ่ม Acceptance criteria'),'   {Enter}');await user.click(screen.getByRole('button',{name:'สร้างStory'}));await screen.findByText('เพิ่มเกณฑ์การยอมรับอย่างน้อย 1 ข้อ');expect(mutations('/projects/DE/issues')).toHaveLength(0);await user.clear(screen.getByLabelText('เพิ่ม Acceptance criteria'));await user.type(screen.getByLabelText('เพิ่ม Acceptance criteria'),'ดูรายการได้{Enter}กรองสถานะได้{Enter}');await user.click(screen.getByRole('button',{name:'สร้างStory'}));

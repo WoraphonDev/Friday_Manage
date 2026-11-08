@@ -239,10 +239,17 @@
 .checkBox .checkHead { display:flex; align-items:center; gap:8px; margin:0; font-size:13px; font-weight:700; color:var(--foreground); }
 .checkHint { margin-left:auto; font-size:11px; font-weight:400; color:var(--muted); }
 .checkWarn { margin:0; font-size:11px; color:#92400e; }
-.checkBox .checkRow { padding:4px 0; border-bottom:0; align-items:center; font-size:13px; }
-.checkBox .checkRow>input { margin-top:0; width:18px; height:18px; }
+.checkBox .checkRow { padding:4px 0; border-bottom:0; align-items:flex-start; font-size:13px; line-height:20px; }
+.checkBox .checkRow>input { margin-top:1px; width:18px; height:18px; }
+.checkBox .kindTag { line-height:18px; margin-top:1px; }
+.checkBox .checkText { line-height:20px; }
+.checkBox .checkText>span { white-space:pre-wrap; overflow-wrap:anywhere; min-width:0; }
 .checkBox .checkRow .actions { opacity:0; transition:opacity .1s; }
 .checkBox .checkRow:hover .actions,.checkBox .checkRow:focus-within .actions { opacity:1; }
+.checkEdit { flex:1; min-width:0; display:flex; align-items:flex-start; gap:6px; margin-top:-5px; }
+.checkEdit :global(.input) { flex:1; min-width:0; min-height:30px; max-height:240px; padding:4px 10px; font:inherit; font-size:13px; line-height:20px; resize:none; overflow-y:auto; }
+.checkEdit button { flex:none; }
+.checkBox .checkRowEditing { background:var(--card); border-radius:6px; }
 .checkBox .checkText { display:flex; align-items:baseline; flex-wrap:wrap; column-gap:8px; row-gap:2px; }
 .checkBox .checkText .checkMeta { display:inline; margin-top:0; font-size:11px; color:var(--muted); text-decoration:none; white-space:nowrap; }
 .kindTag { display:inline-flex; align-items:center; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:500; flex:none; }

@@ -36,22 +36,36 @@ export function Checklist({ scope, issueKey }: { scope: Scope; issueKey: string 
   const items = query.data.items;
   const done = items.filter((item) => item.done).length;
   // C2: Acceptance criteria (เกณฑ์ที่ QA / Reviewer ตรวจ) และ Checklist (ขั้นตอนของผู้ทำงาน) แสดงสองกล่องเสมอ
+  const fitHeight = (el: HTMLTextAreaElement | null) => { if (!el) return; el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px`; };
   const doneByName = (id: string | null) => (id ? scope.people.find((person) => person.id === id)?.displayName ?? null : null);
-  const row = (item: ChecklistItem, index: number) => <div key={item.id} className={styles.checkRow}>
+  const row = (item: ChecklistItem, index: number) => { const editing = canEdit && edit?.id === item.id; return <div key={item.id} className={`${styles.checkRow} ${editing ? styles.checkRowEditing : ''}`}>
         <input type="checkbox" checked={item.done} aria-label={item.text} disabled={pending || !canEdit} onChange={(event) => void change(() => api.request(`${endpoint}/${item.id}`, { method: 'PATCH', body: { done: event.target.checked } }))} />
         <span className={`${styles.kindTag} ${item.kind === 'acceptance' ? styles.kindAcceptance : styles.kindChecklist}`}>{item.kind === 'acceptance' ? 'Acceptance' : 'Checklist'}</span>
-        {edit?.id === item.id && canEdit ? <form className={styles.grow} onSubmit={(event) => { event.preventDefault(); void change(() => api.request(`${endpoint}/${item.id}`, { method: 'PATCH', body: { text: edit.text } }), () => setEdit(null)); }}><Input aria-label={t('checklistText')} value={edit.text} onChange={(event) => setEdit({ ...edit, text: event.target.value })} required maxLength={5000} /><Button type="submit" size="small" disabled={pending}>{t('save')}</Button><Button size="small" onClick={() => setEdit(null)}>{t('cancel')}</Button></form>
+        {editing && edit ? <form className={styles.checkEdit} onSubmit={(event) => { event.preventDefault(); if (edit.text.trim()) void change(() => api.request(`${endpoint}/${item.id}`, { method: 'PATCH', body: { text: edit.text.trim() } }), () => setEdit(null)); }}>
+            {/* แก้ในแถวเดิม: ช่องสูงตามข้อความ (ข้อความยาวไม่ถูกซ่อน) · Enter บันทึก · Shift+Enter ขึ้นบรรทัดใหม่ · Esc ยกเลิก */}
+            <textarea className="input" rows={1} autoFocus aria-label={t('checklistText')} value={edit.text} ref={fitHeight}
+              onChange={(event) => { setEdit({ ...edit, text: event.target.value }); fitHeight(event.target); }}
+              onFocus={(event) => event.target.setSelectionRange(event.target.value.length, event.target.value.length)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') { event.preventDefault(); setEdit(null); }
+                // ไม่บันทึกระหว่างพิมพ์ภาษาไทยผ่าน IME ที่ยังไม่จบคำ
+                else if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); }
+              }}
+              required maxLength={5000} disabled={pending} />
+            <Button type="submit" size="small" variant="primary" disabled={pending || !edit.text.trim()}>{t('save')}</Button>
+            <Button size="small" onClick={() => setEdit(null)} disabled={pending}>{t('cancel')}</Button>
+          </form>
           : <button disabled={!canEdit} className={styles.checkText} onClick={() => setEdit({ id: item.id, text: item.text })}>
             {/* ขีดฆ่าเฉพาะข้อความ · คนติ๊กและวันที่ไม่ขีดฆ่า */}
             <span className={item.done ? styles.checked : undefined}>{item.text}</span>
             {item.done && item.doneAt && <small className={styles.checkMeta}>{doneByName(item.doneBy) ? t('checkDoneBy', { name: doneByName(item.doneBy)!, date: formatDate(item.doneAt, scope.yearFormat) }) : formatDate(item.doneAt, scope.yearFormat)}</small>}
           </button>}
-        {canEdit && <div className={styles.actions}>
+        {canEdit && !editing && <div className={styles.actions}>
           <Button variant="ghost" size="icon" aria-label={t('itemUp', { text: item.text })} disabled={pending || index === 0} onClick={() => { const ids = items.map((value) => value.id); [ids[index - 1], ids[index]] = [ids[index], ids[index - 1]]; void change(() => api.post(`${endpoint}/reorder`, { ids })); }}><ArrowUp size={14} /></Button>
           <Button variant="ghost" size="icon" aria-label={t('itemDown', { text: item.text })} disabled={pending || index === items.length - 1} onClick={() => { const ids = items.map((value) => value.id); [ids[index + 1], ids[index]] = [ids[index], ids[index + 1]]; void change(() => api.post(`${endpoint}/reorder`, { ids })); }}><ArrowDown size={14} /></Button>
           <Button variant="ghost" size="icon" aria-label={t('deleteChecklist', { text: item.text })} disabled={pending} onClick={() => void change(() => api.delete(`${endpoint}/${item.id}`))}><Trash2 size={14} /></Button>
         </div>}
-      </div>;
+      </div>; };
   const box = (kindName: 'acceptance' | 'checklist') => {
     const rows = items.map((item, index) => ({ item, index })).filter(({ item }) => item.kind === kindName);
     const doneCount = rows.filter(({ item }) => item.done).length;

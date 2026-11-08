@@ -128,10 +128,10 @@
     "role__sa": "SA",
     "role__qa": "QA",
     "sections": "Import / Export menu",
-    "section__import": "Import Excel",
+    "section__import": "Update plan from Excel",
     "section__export": "Export plan + Timeline",
     "section__changes": "Plan changes (Plan vs Baseline)",
-    "sectionNote": "Exports use the same columns as the template · edit outside, then import back as \"Update existing project\""
+    "sectionNote": "Exports use the template columns · edit outside, then import back to update this project's plan"
   },
   "changes": {
     "compare": "Compare with Baseline v{version}",
@@ -199,5 +199,11 @@
     "template": "Blank template",
     "download": "Download Excel",
     "noPermission": "You can't export this project's plan"
+  },
+  "create": {
+    "crumb": "Projects / New project",
+    "title": "Create a project from Excel",
+    "description": "Upload a plan (.xlsx) and the system creates modules and tasks from the file, with Baseline v1",
+    "back": "Back to New project"
   }
 }

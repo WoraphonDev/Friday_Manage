@@ -524,6 +524,10 @@ export function NewProjectWizard({ ws }: { ws: string }) {
           <Link className="button button-secondary" href={wsPath}>{t("cancel")}</Link>
         </div>
       </header>
+      {/* มีแผนใน Excel อยู่แล้ว: สร้างโปรเจกต์จากไฟล์แทนการกรอกทีละขั้น */}
+      <Link className={`${styles.card} ${styles.excelLink}`} href={`${wsPath}/new-project/excel`}>
+        <b>{t("fromExcel")}</b><span className={styles.muted}>{t("fromExcelHint")}</span><span aria-hidden="true">→</span>
+      </Link>
       <div className={styles.body}>
         <nav className={`${styles.card} ${styles.steps}`} aria-label={t("stepsLabel")}>
           {steps.map((n) => (

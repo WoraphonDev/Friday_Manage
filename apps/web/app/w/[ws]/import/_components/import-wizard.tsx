@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Badge, Button, ErrorState, Forbidden, Input, LoadingState, Select } from "@/components/ui";
@@ -10,9 +9,7 @@ import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
-import type { List, Permissions, Project } from "@/lib/types";
-import { ExportPanel } from "./export-panel";
-import { ImportHeader } from "./import-header";
+import type { List, Permissions } from "@/lib/types";
 import { type CommitResult, type Finding, type ImportJob, type JobPerson, type Member, personKey } from "./types";
 import { num, showValue } from "./values";
 import styles from "./import.module.css";
@@ -26,31 +23,32 @@ const CHIP: Record<Filter, string> = { issue: "#b45309", err: "#b91c1c", warn: "
 
 const fmtSize = (bytes: number) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 
-export function ImportWizard({ ws }: { ws: string }) {
+/**
+ * ขั้นตอนนำเข้า Excel · โหมดกำหนดตามที่เปิด (ผู้ใช้ตัดสิน 2026-11-09: Import / Export อยู่ในโปรเจกต์)
+ * projectKey = อัปเดตแผนของโปรเจกต์นั้น (หน้า /p/{key}/import) · ไม่มี = สร้างโปรเจกต์ใหม่จาก Excel (หน้า New project)
+ * คืนเฉพาะเนื้อหา · กรอบหน้า / เมนูด้านซ้ายเป็นของหน้าที่เรียก
+ */
+export function ImportWizard({ ws, projectKey }: { ws: string; projectKey?: string }) {
   const t = useTranslations("import-plan-changes.import");
   const { workspace, me } = useWorkspace();
   const year = me.yearFormat;
-  const search = useSearchParams();
   const cache = useQueryClient();
   const w = `/w/${encodeURIComponent(ws)}`;
-  const initialProject = search.get("project") ?? "";
+  const initialProject = projectKey ?? "";
 
   const [step, setStep] = useState<Step>(1);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [mode, setMode] = useState<Mode>(initialProject ? "update" : "create");
-  const [target, setTarget] = useState(initialProject);
+  const mode: Mode = projectKey ? "update" : "create";
+  const target = initialProject;
   const [job, setJob] = useState<ImportJob | null>(null);
   // ไฟล์ / โหมด / โปรเจกต์ที่ใช้สร้าง job ปัจจุบัน · เปลี่ยนอย่างใดอย่างหนึ่ง = อัปโหลดใหม่
   const [jobFor, setJobFor] = useState<{ file: File; mode: Mode; target: string } | null>(null);
   const [busy, setBusy] = useState<null | "upload" | "patch" | "commit">(null);
   const [error, setError] = useState<unknown>(null);
   const [result, setResult] = useState<CommitResult | null>(null);
-  const [section, setSection] = useState<"import" | "export">(search.get("section") === "export" ? "export" : "import");
 
-  const projects = useQuery({ queryKey: queryKeys.projects(ws), queryFn: () => api.get<List<Project>>(`${w}/projects`), enabled: workspace.role !== "guest" });
-  const headerKey = target || initialProject;
-  const headerProject = projects.data?.items.find((p) => p.key === headerKey);
+  const headerKey = target;
   const perms = useQuery({
     queryKey: queryKeys.permissions(ws, headerKey),
     queryFn: () => api.get<Permissions>(`${w}/projects/${encodeURIComponent(headerKey)}/my-permissions`),
@@ -59,7 +57,7 @@ export function ImportWizard({ ws }: { ws: string }) {
   const has = (p: string) => !!perms.data?.permissions.includes(p);
   const canUpdate = !!target && has("project.baseline");
 
-  if (workspace.role === "guest") return <div className={styles.page}><Forbidden /></div>;
+  if (workspace.role === "guest") return <Forbidden />;
 
   const fresh = !job || !jobFor || jobFor.file !== file || jobFor.mode !== mode || (mode === "update" && jobFor.target !== target);
 
@@ -118,32 +116,11 @@ export function ImportWizard({ ws }: { ws: string }) {
     setStep(1);
   }
 
-  const header = (
-    <ImportHeader ws={ws} projectKey={headerProject?.key} projectName={headerProject?.name} active="import" hideTabs />
-  );
-  // เมนูด้านซ้าย + เนื้อหาด้านขวา แบบหน้า Report (ผู้ใช้ขอ 2026-11-09)
-  const changesKey = headerKey && perms.isSuccess && has("project.baseline") ? headerKey : null;
-  const layout = (content: ReactNode) => (
-    <div className={styles.page}>
-      {header}
-      <div className={styles.layout}>
-        <nav className={`${styles.card} ${styles.sideNav}`} aria-label={t("sections")}>
-          {(["import", "export"] as const).map((s) => (
-            <button key={s} type="button" className={`${styles.navItem} ${section === s ? styles.navOn : ""}`} aria-current={section === s ? "page" : undefined} onClick={() => setSection(s)}>{t(`section__${s}`)}</button>
-          ))}
-          {changesKey && <Link className={styles.navItem} href={`${w}/p/${encodeURIComponent(changesKey)}/plan-changes`}>{t("section__changes")}</Link>}
-          <p className={styles.navNote}>{t("sectionNote")}</p>
-        </nav>
-        <div className={styles.main}>{content}</div>
-      </div>
-    </div>
-  );
-  if (section === "export") return layout(<ExportPanel ws={ws} projects={projects.data?.items} initialKey={target || initialProject} onProject={(k) => setTarget(k)} />);
-  if (result) return layout(<Done ws={ws} result={result} onAgain={restart} />);
+  if (result) return <Done ws={ws} result={result} onAgain={restart} />;
 
   const reach = (k: Step) => k === 1 || (!!job && !fresh);
   const stepNames = [t("step1"), t("step2"), t("step3"), t("step4")];
-  return layout(
+  return (
     <>
       <nav className={`${styles.card} ${styles.steps}`} aria-label={t("steps")}>
         {stepNames.map((n, i) => {
@@ -175,20 +152,7 @@ export function ImportWizard({ ws }: { ws: string }) {
             <span>{t("templateHint")}</span>
             <a className="button" href={`/api/v1/w/${encodeURIComponent(ws)}/import-template.xlsx`} download>{t("template")}</a>
           </div>
-          <div className={styles.modes} role="radiogroup" aria-label={t("mode")}>
-            <ModeCard on={mode === "create"} title={t("modeCreate")} hint={t("modeCreateHint")} onPick={() => setMode("create")} />
-            <ModeCard on={mode === "update"} title={t("modeUpdate")} hint={t("modeUpdateHint")} onPick={() => setMode("update")} />
-          </div>
-          {mode === "update" && (
-            <div style={{ maxWidth: 420 }}>
-              {projects.isPending ? <LoadingState /> : projects.data?.items.length ? (
-                <Select label={t("targetProject")} value={target} onChange={(e) => setTarget(e.target.value)} error={target && perms.isSuccess && !canUpdate ? t("noBaselinePerm") : undefined}>
-                  <option value="" disabled>{t("pickProject")}</option>
-                  {projects.data.items.map((p) => <option key={p.key} value={p.key}>{p.key} · {p.name}</option>)}
-                </Select>
-              ) : <p className="muted">{t("noProjects")}</p>}
-            </div>
-          )}
+          {mode === "update" && perms.isSuccess && !canUpdate && <p className="field-error">{t("noBaselinePerm")}</p>}
           <div className={styles.right}>
             {busy === "upload" && <span className="muted" role="status">{t("uploading")}</span>}
             <Button variant="primary" disabled={!file || busy !== null || (mode === "update" && !canUpdate)} onClick={() => void upload()}>{t("toStep2")}</Button>
@@ -264,14 +228,6 @@ function FilePicker({ file, job, error, onPick }: { file: File | null; job: Impo
   );
 }
 
-function ModeCard({ on, title, hint, onPick }: { on: boolean; title: string; hint: string; onPick: () => void }) {
-  return (
-    <label className={styles.mode} data-on={on}>
-      <input type="radio" name="import-mode" checked={on} onChange={onPick} />
-      <span><b>{title}</b><span className={`muted ${styles.small} ${styles.block}`}>{hint}</span></span>
-    </label>
-  );
-}
 
 function Mapping({ job, busy, onChange, onNext, year }: { job: ImportJob; busy: boolean; onChange: (header: string, field: string | null) => void; onNext: () => void; year: YearFormat }) {
   const t = useTranslations("import-plan-changes.import");

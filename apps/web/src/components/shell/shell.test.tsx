@@ -148,10 +148,8 @@ describe("Workspace / Project shell", () => {
       "Files",
       "Settings",
     ]);
-    expect(screen.getAllByRole("link", { name: "นำเข้าแผน", hidden: true })[0]).toHaveAttribute(
-      "href",
-      "/w/sample/import",
-    );
+    // Import / Export อยู่ใต้โปรเจกต์แล้ว (ผู้ใช้ตัดสิน 2026-11-09) · Sidebar ไม่มีลิงก์นำเข้าแผน
+    expect(screen.queryByRole("link", { name: "นำเข้าแผน", hidden: true })).not.toBeInTheDocument();
     expect(
       screen.getAllByRole("link", { name: "แพ็กเกจและการชำระเงิน", hidden: true })[0],
     ).toHaveAttribute("href", "/w/sample/billing");

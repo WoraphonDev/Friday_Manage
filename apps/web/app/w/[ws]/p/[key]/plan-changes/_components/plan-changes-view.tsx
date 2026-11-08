@@ -12,7 +12,7 @@ import { formatDate, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { List, Permissions, Person } from "@/lib/types";
 import type { GanttData, GRow } from "../../gantt/_components/gantt-view";
-import { ImportHeader } from "../../../../import/_components/import-header";
+import { ImportShell } from "../../import/_components/import-shell";
 import { showValue } from "../../../../import/_components/values";
 import type { Member } from "../../../../import/_components/types";
 import styles from "./plan-changes.module.css";
@@ -112,7 +112,8 @@ export function PlanChangesView({ ws, projectKey }: { ws: string; projectKey: st
 
   const canBaseline = has("project.baseline");
   const current = baselines.data!.items.find((b) => b.version === version) ?? null;
-  const header = <ImportHeader ws={ws} projectKey={projectKey} active="changes" canChanges compact />;
+  // เมนูด้านซ้ายเดียวกับหน้า Import / Export ของโปรเจกต์
+  const shell = (content: React.ReactNode) => <ImportShell ws={ws} projectKey={projectKey} active="changes"><div className={styles.body}>{content}</div></ImportShell>;
 
   const value = (field: string, v: unknown) =>
     field === "assigneeIds" && Array.isArray(v) ? (v.length ? v.map((id) => names.get(String(id)) ?? String(id).slice(0, 8)).join(", ") : "—") : showValue(v, year);
@@ -147,11 +148,10 @@ export function PlanChangesView({ ws, projectKey }: { ws: string; projectKey: st
 
   if (!current) {
     return (
-      <div className={styles.page}>
-        {header}
+      shell(<>
         <section className={styles.card}><EmptyState title={t("noBaselineTitle")} description={t("noBaselineHint")} action={openDialog || undefined} /></section>
         {baselineDialog}
-      </div>
+      </>)
     );
   }
 
@@ -159,8 +159,7 @@ export function PlanChangesView({ ws, projectKey }: { ws: string; projectKey: st
   const lateModules = mods.filter((m) => m.days > 0).length;
   const issueHref = (key: string) => `${pathname}?issue=${encodeURIComponent(key)}`;
   return (
-    <div className={styles.page}>
-      {header}
+    shell(<>
       <section className={`${styles.card} ${styles.top}`}>
         <div className={styles.topText}>
           <div className={styles.compare}>
@@ -218,7 +217,7 @@ export function PlanChangesView({ ws, projectKey }: { ws: string; projectKey: st
         <div className={`muted ${styles.foot}`}>{t("footer")}</div>
       </section>
       {baselineDialog}
-    </div>
+    </>)
   );
 }
 

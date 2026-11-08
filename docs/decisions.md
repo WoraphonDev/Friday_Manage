@@ -45,7 +45,7 @@
 | 12 | ไฟล์ Excel นำเข้า / ส่งออก | ชีต **Tasks**: Key, Parent Key, Module, Group, Title, Status, Priority, Business Analyst, System Analyst, Developer, QA / Reviewer, Size, Man-Day, Plan Start/End, Actual Start/End, Requirement, Screen, Label, Description + ชีตคำแนะนำ, ค่าที่ใช้ได้ (รายการเลือกในเซลล์) และ Holidays · จับคู่งานด้วย Key (ว่าง = งานใหม่) · Parent Key = Sub-task (Module ตาม Task แม่) · โหมดอัปเดตไม่แตะคอลัมน์ที่ไม่มีในไฟล์ · ดาวน์โหลด Template เปล่าได้ที่หน้านำเข้า · ไฟล์รูปแบบเดิมที่มีคอลัมน์ No. ยังจับคู่ด้วย No. เหมือนเดิม |
 | 13 | Table | มีคอลัมน์ SA (System Analyst) ถัดจาก BA แก้ในตารางได้ |
 | 14 | แก้แผนหลังตั้ง Baseline | แก้ได้เลยไม่ต้องใส่เหตุผล · ระบบบันทึกลง Activity และแท็บ "การแก้ไขแผน" (เหตุผลว่าง) · ใส่เหตุผลได้เมื่อมีช่องให้ เช่น นำเข้า Excel |
-| 15 | หน้า Import / Export | เมนูด้านซ้าย + เนื้อหาด้านขวาแบบหน้า Report: นำเข้า Excel · Export แผน + Timeline · การแก้ไขแผน · Export ได้ไฟล์ ณ วันนี้ (ชื่อไฟล์มีวันที่) คอลัมน์เดียวกับ Template + ชีต Timeline (Gantt ช่องละวันหรือสัปดาห์ สีตามสถานะ เลยกำหนดสีแดง เส้นวันนี้) |
+| 15 | หน้า Import / Export | อยู่ใต้โปรเจกต์ `/p/{key}/import` (ผู้ใช้ตัดสิน 9 พ.ย. 2569) · เมนูด้านซ้าย + เนื้อหาด้านขวาแบบหน้า Report: อัปเดตแผนจาก Excel · Export แผน + Timeline · การแก้ไขแผน · ไม่มีช่องเลือกโปรเจกต์ · สร้างโปรเจกต์ใหม่จาก Excel ย้ายไปอยู่ที่หน้า New project (`/new-project/excel`) · Sidebar ไม่มีลิงก์นำเข้าแผนแล้ว · ที่อยู่เดิม `/import` พาไปหน้าใหม่ · Export ได้ไฟล์ ณ วันนี้ คอลัมน์เดียวกับ Template + ชีต Timeline (Gantt ช่องละวันหรือสัปดาห์ สีตามสถานะ เลยกำหนดสีแดง เส้นวันนี้) |
 
 ## การแจ้งเตือนและเวลา
 

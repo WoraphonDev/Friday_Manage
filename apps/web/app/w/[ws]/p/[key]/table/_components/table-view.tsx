@@ -388,7 +388,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
         <div className={styles.bar}>
           <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set())}>{t("expandAll")}</button>
           <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set(groupIds))}>{t("collapseAll")}</button>
-          {canEdit && <Link className={styles.tbtn} href={`/w/${encodeURIComponent(ws)}/import`}>{t("importExport")}</Link>}
+          {canEdit && <Link className={styles.tbtn} href={`/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/import`}>{t("importExport")}</Link>}
           {canSettings && <button type="button" className={styles.tbtn} onClick={() => setStructure({ kind: "createModule" })}>{t("addModule")}</button>}
           {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={taskHref()} scroll={false}>{t("addTask")}</Link>}
         </div>

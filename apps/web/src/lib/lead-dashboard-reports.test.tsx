@@ -166,7 +166,7 @@ describe("แผนทั้งโปรเจกต์ใน Overview (O1)", ()
     expect(within(risks).getByRole("link", { name: "ดูงานใน Table" })).toHaveAttribute("href", "/w/sample/p/DE/table");
     expect(within(risks).getByRole("link", { name: "ดู Workload" })).toHaveAttribute("href", "/w/sample/p/DE/members");
     expect(screen.getByRole("link", { name: "สร้างรายงานประจำสัปดาห์" })).toHaveAttribute("href", "/w/sample/p/DE/reports");
-    expect(screen.getByRole("link", { name: "Import / Export" })).toHaveAttribute("href", "/w/sample/import");
+    expect(screen.getByRole("link", { name: "Import / Export" })).toHaveAttribute("href", "/w/sample/p/DE/import");
   });
 
   it("Heatmap Workload: 24 สัปดาห์, สีตามสัดส่วน capacity, ค่าสูงสุด และคลิกช่องดูงาน", async () => {
@@ -222,7 +222,7 @@ describe("แผนทั้งโปรเจกต์ใน Overview (O1)", ()
     const first = mountDashboard();
     expect(screen.getAllByLabelText("กำลังโหลด…").length).toBeGreaterThan(0);
     expect(await screen.findByText("ยังไม่มีงานในแผน")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Import แผนจาก Excel" })).toHaveAttribute("href", "/w/sample/import");
+    expect(screen.getByRole("link", { name: "Import แผนจาก Excel" })).toHaveAttribute("href", "/w/sample/p/DE/import");
     first.unmount();
 
     server.use(http.get("*/api/v1/w/:ws/projects/:key/insights/risks", () => errorBody(500)));
@@ -329,7 +329,7 @@ describe("Reports (O2)", () => {
     expect(rows[2]).toHaveTextContent("ยังไม่เริ่ม");
     expect(rows[3]).toHaveTextContent("เป้า ส่งมอบชุดแรก");
     expect(rows[3]).toHaveTextContent("เร็วกว่า 1 วัน");
-    expect(screen.getByRole("link", { name: "อัปเดต Actual จาก Excel" })).toHaveAttribute("href", "/w/sample/import");
+    expect(screen.getByRole("link", { name: "อัปเดต Actual จาก Excel" })).toHaveAttribute("href", "/w/sample/p/DE/import");
   });
 
   it("Traceability: KPI, ตาราง FR × งาน, ตัวกรองประเภท / ผลทดสอบ และงานที่ไม่มี FR", async () => {
@@ -358,6 +358,6 @@ describe("Reports (O2)", () => {
     server.use(http.get("*/api/v1/w/:ws/projects/:key/reports/traceability", () => HttpResponse.json({ ...traceData(), summary: { ...traceData().summary, requirements: { total: 0, uncovered: 0, untested: 0, partial: 0, passed: 0, failed: 0, blocked: 0 } }, requirements: [], screens: [] })));
     mountReports("report=trace");
     expect(await screen.findByText("ยังไม่ได้นำเข้ารายการ FR จาก SRS")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "นำเข้ารายการ FR" })).toHaveAttribute("href", "/w/sample/import");
+    expect(screen.getByRole("link", { name: "นำเข้ารายการ FR" })).toHaveAttribute("href", "/w/sample/p/DE/import");
   });
 });

@@ -18,7 +18,6 @@ import {
   ChevronDown,
   CircleCheck,
   Clock,
-  FileSpreadsheet,
   FolderKanban,
   Home,
   Inbox,
@@ -153,11 +152,6 @@ function Navigation({
           onClick={close}
         >
           {t("newProject")}
-        </Link>
-      )}
-      {workspace.role !== "guest" && (
-        <Link className="nav-link" href={`${base}/import`} onClick={close}>
-          {t("import")}
         </Link>
       )}
       {["owner", "admin"].includes(workspace.role) && (
@@ -454,7 +448,6 @@ export function WorkspaceShell({
   ];
   const workspaceLinks = [
     ...(workspace.role !== "guest" ? [{ href: `${base}/members`, icon: Users, label: t("nav.membersInvite") }] : []),
-    ...(workspace.role !== "guest" ? [{ href: `${base}/import`, icon: FileSpreadsheet, label: t("nav.importPlan") }] : []),
     ...(isWsAdmin ? [{ href: `${base}/admin`, icon: Settings, label: t("nav.admin") }, { href: `${base}/billing`, icon: CreditCard, label: t("nav.billing") }] : []),
   ];
   const accountMenu = (

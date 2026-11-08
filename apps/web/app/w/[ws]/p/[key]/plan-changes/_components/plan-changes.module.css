@@ -28,3 +28,6 @@
   .ch .hs { display:none; }
   .mod { grid-template-columns:minmax(0,1fr) 1fr; }
 }
+
+/* เนื้อหาในเมนู Import / Export ของโปรเจกต์ (กรอบหน้าอยู่ที่ ImportShell) */
+.body { display:flex; flex-direction:column; gap:16px; min-width:0; }

@@ -13,7 +13,9 @@
       "danger": "Danger zone",
       "automation": "Automation"
     },
-    "closed": { "title": "Not available yet" },
+    "closed": {
+      "title": "Not available yet"
+    },
     "notify": {
       "title": "Project notifications",
       "description": "Choose which events are sent to team groups · Each person sets their personal notifications in Profile",
@@ -87,7 +89,11 @@
       "moveDown": "Move {name} down",
       "statusNameOf": "Name of status {name}",
       "categoryOf": "Category of status {name}",
-      "categories": { "todo": "To do", "in_progress": "In progress", "done": "Done" },
+      "categories": {
+        "todo": "To do",
+        "in_progress": "In progress",
+        "done": "Done"
+      },
       "wipOf": "WIP limit of {name}",
       "issues": "{count, plural, one {{count} task} other {{count} tasks}}",
       "remove": "Delete status {name}",
@@ -117,10 +123,23 @@
       "enabled": "Enabled",
       "editFields": "Edit fields",
       "standardFields": "Standard fields",
-      "standard": { "ba": "BA (person)", "devs": "Multiple Devs", "screenId": "Screen ID", "frNfr": "FR / NFR", "planActual": "Plan / Actual Start–End" },
+      "standard": {
+        "ba": "BA (person)",
+        "devs": "Multiple Devs",
+        "screenId": "Screen ID",
+        "frNfr": "FR / NFR",
+        "planActual": "Plan / Actual Start–End"
+      },
       "standardHint": "On every task and can't be removed · Used to calculate Workload, Gantt and Requirement Traceability",
       "customFields": "Team custom fields",
-      "fieldTypes": { "text": "Text", "number": "Number", "select": "Select", "multi_select": "Multi-select", "user": "Person", "date": "Date" },
+      "fieldTypes": {
+        "text": "Text",
+        "number": "Number",
+        "select": "Select",
+        "multi_select": "Multi-select",
+        "user": "Person",
+        "date": "Date"
+      },
       "removeOf": "Delete {name}",
       "noFields": "No custom fields yet",
       "addField": "+ Add field",
@@ -178,7 +197,11 @@
       "saved": "{name} for {role}: saved",
       "failed": "Couldn't save permissions",
       "can": "Can",
-      "roles": { "admin": "Admin", "member": "Member", "viewer": "Viewer" },
+      "roles": {
+        "admin": "Admin",
+        "member": "Member",
+        "viewer": "Viewer"
+      },
       "rows": {
         "project__view": "View every tab and task",
         "issue__comment": "Comment",
@@ -235,11 +258,31 @@
     "stepsHint": "Steps 1–2 are required. The rest can be skipped and edited later in Project Settings",
     "stepOf": "Step {n} of 5",
     "steps": {
-      "1": { "title": "Basics", "short": "Name, Key, Template", "description": "Name the project and choose a Template that sets the initial task statuses and Modules" },
-      "2": { "title": "Duration", "short": "Start–end dates, working days", "description": "Used to calculate the project's Timeline, Gantt, Workload and Health" },
-      "3": { "title": "Scope", "short": "Scope, Modules, files", "description": "Define what's in and out of scope, with initial Modules (optional)" },
-      "4": { "title": "Team", "short": "PM, members, Capacity", "description": "Invite members and set permissions and capacity for the Workload chart (optional)" },
-      "5": { "title": "Settings", "short": "Workflow, Integrations", "description": "Defaults work right away. Edit them later in Project Settings (optional)" }
+      "1": {
+        "title": "Basics",
+        "short": "Name, Key, Template",
+        "description": "Name the project and choose a Template that sets the initial task statuses and Modules"
+      },
+      "2": {
+        "title": "Duration",
+        "short": "Start–end dates, working days",
+        "description": "Used to calculate the project's Timeline, Gantt, Workload and Health"
+      },
+      "3": {
+        "title": "Scope",
+        "short": "Scope, Modules, files",
+        "description": "Define what's in and out of scope, with initial Modules (optional)"
+      },
+      "4": {
+        "title": "Team",
+        "short": "PM, members, Capacity",
+        "description": "Invite members and set permissions and capacity for the Workload chart (optional)"
+      },
+      "5": {
+        "title": "Settings",
+        "short": "Workflow, Integrations",
+        "description": "Defaults work right away. Edit them later in Project Settings (optional)"
+      }
     },
     "back": "← Back",
     "next": "Next →",
@@ -267,23 +310,54 @@
     "descriptionPlaceholder": "What does this project do, and for whom",
     "template": "Template",
     "templates": {
-      "scrum": { "name": "Scrum", "description": "Work in Sprints with a Backlog", "makes": "Creates Sprints + Backlog + 4 statuses" },
-      "kanban": { "name": "Kanban", "description": "Continuous flow, no Sprints", "makes": "Creates a 4-column board + WIP limits" },
-      "waterfall": { "name": "Waterfall", "description": "Phased plan with dependencies", "makes": "Creates Requirement → Deploy phases as Modules" },
-      "blank": { "name": "Blank", "description": "Start from scratch", "makes": "Creates only the basic statuses" },
+      "scrum": {
+        "name": "Scrum",
+        "description": "Work in Sprints with a Backlog",
+        "makes": "Creates Sprints + Backlog + 4 statuses"
+      },
+      "kanban": {
+        "name": "Kanban",
+        "description": "Continuous flow, no Sprints",
+        "makes": "Creates a 4-column board + WIP limits"
+      },
+      "waterfall": {
+        "name": "Waterfall",
+        "description": "Phased plan with dependencies",
+        "makes": "Creates Requirement → Deploy phases as Modules"
+      },
+      "blank": {
+        "name": "Blank",
+        "description": "Start from scratch",
+        "makes": "Creates only the basic statuses"
+      },
       "workspace": "Workspace Template",
       "workspaceMakes": "Uses the statuses, task types and Modules from the Template"
     },
     "color": "Project color",
     "colorOf": "Color {name}",
-    "colors": { "0F766E": "Teal", "1D4ED8": "Blue", "7C3AED": "Purple", "B45309": "Orange", "BE185D": "Pink", "334155": "Dark gray" },
+    "colors": {
+      "0F766E": "Teal",
+      "1D4ED8": "Blue",
+      "7C3AED": "Purple",
+      "B45309": "Orange",
+      "BE185D": "Pink",
+      "334155": "Dark gray"
+    },
     "icon": "Icon",
     "startDate": "Start date",
     "goliveDate": "Target end date (Go-live)",
     "timezone": "Timezone",
     "span": "Duration {days} days · {working} working days (Mon–Fri, holidays not excluded yet)",
     "workDays": "Working days",
-    "days": { "mon": "Mo", "tue": "Tu", "wed": "We", "thu": "Th", "fri": "Fr", "sat": "Sa", "sun": "Su" },
+    "days": {
+      "mon": "Mo",
+      "tue": "Tu",
+      "wed": "We",
+      "thu": "Th",
+      "fri": "Fr",
+      "sat": "Sa",
+      "sun": "Su"
+    },
     "workDaysHint": "Uses the working days from the Workspace calendar · Admins can change them in the Admin Console",
     "holidays": "Holidays",
     "holidayCalendar": "Holiday calendar",
@@ -322,8 +396,14 @@
     "you": "{name} (you)",
     "visibility": "Visibility",
     "visibilityOptions": {
-      "private": { "name": "Private", "description": "Only invited members" },
-      "workspace": { "name": "Workspace", "description": "Everyone in the organization can view" }
+      "private": {
+        "name": "Private",
+        "description": "Only invited members"
+      },
+      "workspace": {
+        "name": "Workspace",
+        "description": "Everyone in the organization can view"
+      }
     },
     "members": "Members",
     "membersPlaceholder": "Type a name or email to invite (separate multiple with ,)",
@@ -334,7 +414,11 @@
     "roleCol": "Project role",
     "capacityCol": "Capacity (hrs/week)",
     "ownerTag": "{email} · Owner",
-    "roles": { "admin": "Admin", "member": "Member", "viewer": "Viewer" },
+    "roles": {
+      "admin": "Admin",
+      "member": "Member",
+      "viewer": "Viewer"
+    },
     "positionOf": "Position of {name}",
     "roleOf": "Role of {name}",
     "capacityOf": "Capacity of {name}",
@@ -352,13 +436,34 @@
     "progressCount": "Count Done tasks",
     "progressWeighted": "Weighted by Estimate",
     "priorities": "Priority levels",
-    "priority": { "urgent": "Urgent", "high": "High", "medium": "Medium", "low": "Low" },
+    "priority": {
+      "urgent": "Urgent",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
     "integrations": "Integrations",
     "integration": {
-      "github": { "ab": "GH", "name": "GitHub", "description": "Connect a repo · Link commits / PRs to tasks" },
-      "gitlab": { "ab": "GL", "name": "GitLab", "description": "Connect a repo and Merge requests" },
-      "line": { "ab": "LN", "name": "LINE", "description": "Notify the team's LINE group" },
-      "slack": { "ab": "SL", "name": "Slack", "description": "Notify a channel" }
+      "github": {
+        "ab": "GH",
+        "name": "GitHub",
+        "description": "Connect a repo · Link commits / PRs to tasks"
+      },
+      "gitlab": {
+        "ab": "GL",
+        "name": "GitLab",
+        "description": "Connect a repo and Merge requests"
+      },
+      "line": {
+        "ab": "LN",
+        "name": "LINE",
+        "description": "Notify the team's LINE group"
+      },
+      "slack": {
+        "ab": "SL",
+        "name": "Slack",
+        "description": "Notify a channel"
+      }
     },
     "connect": "Connect",
     "notYet": "Not available yet",
@@ -388,6 +493,8 @@
       "holidays": "{count, plural, one {{count} company holiday} other {{count} company holidays}}",
       "members": "Add {count, plural, one {{count} member} other {{count} members}}"
     },
-    "initialStatus": "Initial status: Planning · Health is calculated once there's a first task"
+    "initialStatus": "Initial status: Planning · Health is calculated once there's a first task",
+    "fromExcel": "Already have a plan in Excel? Create the project from the file",
+    "fromExcelHint": "Creates modules and tasks from the file instead of filling in each step"
   }
 }

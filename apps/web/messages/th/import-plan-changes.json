@@ -128,10 +128,10 @@
     "role__sa": "SA",
     "role__qa": "QA",
     "sections": "เมนู Import / Export",
-    "section__import": "นำเข้า Excel",
+    "section__import": "อัปเดตแผนจาก Excel",
     "section__export": "Export แผน + Timeline",
     "section__changes": "การแก้ไขแผน (Plan vs Baseline)",
-    "sectionNote": "ไฟล์ Export ใช้คอลัมน์เดียวกับ Template · แก้ข้างนอกแล้วนำเข้ากลับแบบ \"อัปเดตโปรเจกต์เดิม\" ได้"
+    "sectionNote": "ไฟล์ Export ใช้คอลัมน์เดียวกับ Template · แก้ข้างนอกแล้วนำกลับเข้ามาอัปเดตแผนของโปรเจกต์นี้ได้"
   },
   "changes": {
     "compare": "เทียบกับ Baseline v{version}",
@@ -199,5 +199,11 @@
     "template": "Template เปล่า",
     "download": "ดาวน์โหลด Excel",
     "noPermission": "ไม่มีสิทธิ์ Export แผนของโปรเจกต์นี้"
+  },
+  "create": {
+    "crumb": "Projects / New project",
+    "title": "สร้างโปรเจกต์ใหม่จาก Excel",
+    "description": "อัปโหลดแผนงาน (.xlsx) ระบบสร้าง Module และงานทั้งหมดตามไฟล์ พร้อมตั้ง Baseline v1",
+    "back": "กลับไปหน้า New project"
   }
 }

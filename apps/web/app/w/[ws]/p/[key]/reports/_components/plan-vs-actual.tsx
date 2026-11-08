@@ -23,7 +23,7 @@ export function PlanVsActual({ ws, projectKey, yearFormat }: Props) {
     <div className={`${styles.card} ${styles.banner} ${styles.bannerInfo}`}>
       <b>{t("pva.actualTitle")}</b>
       <span className={styles.bannerText}>{t("pva.actualNote")}</span>
-      <Link className="button button-secondary" href={`/w/${encodeURIComponent(ws)}/import`}>{t("pva.updateFromExcel")}</Link>
+      <Link className="button button-secondary" href={`/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/import`}>{t("pva.updateFromExcel")}</Link>
     </div>
     {!data.modules.length ? <EmptyState title={t("pva.emptyTitle")} description={t("pva.emptyDescription")} /> : <>
       <WeeklyChart weeks={data.weekly} yearFormat={yearFormat} />

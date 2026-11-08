@@ -42,7 +42,12 @@
   },
   "password": {
     "strength": "Strength: {level}",
-    "levels": { "weak": "Weak", "fair": "Fair", "good": "Good", "strong": "Strong" },
+    "levels": {
+      "weak": "Weak",
+      "fair": "Fair",
+      "good": "Good",
+      "strong": "Strong"
+    },
     "rules": {
       "length": "At least {n} characters",
       "upper": "Contains an uppercase letter",
@@ -125,7 +130,9 @@
     "linkInvalid": "The verification link is invalid or has expired",
     "linkInvalidDescription": "Sign in and request a new verification code",
     "continue": "Continue",
-    "goLogin": "Go to sign in"
+    "goLogin": "Go to sign in",
+    "skipVerify": "Skip for now, verify later",
+    "noDelivery": "Email sending isn't set up yet, so no code was sent · you can continue and verify your email later"
   },
   "forgot": {
     "stepLabel": "Step {step} of 3",
@@ -226,16 +233,40 @@
     "teamSize": "Team size",
     "method": "How does your team work",
     "roles": {
-      "pm": { "name": "PM / Lead", "description": "Plan and track work" },
-      "dev": { "name": "Developer", "description": "FE / BE / Mobile" },
-      "design": { "name": "Designer", "description": "UX / UI" },
-      "qa": { "name": "QA / Tester", "description": "Test and report Bugs" },
-      "other": { "name": "Other", "description": "Business, clients" }
+      "pm": {
+        "name": "PM / Lead",
+        "description": "Plan and track work"
+      },
+      "dev": {
+        "name": "Developer",
+        "description": "FE / BE / Mobile"
+      },
+      "design": {
+        "name": "Designer",
+        "description": "UX / UI"
+      },
+      "qa": {
+        "name": "QA / Tester",
+        "description": "Test and report Bugs"
+      },
+      "other": {
+        "name": "Other",
+        "description": "Business, clients"
+      }
     },
     "methods": {
-      "scrum": { "name": "Scrum", "description": "1–2 week Sprints with a Backlog" },
-      "kanban": { "name": "Kanban", "description": "Continuous flow of work" },
-      "waterfall": { "name": "Waterfall", "description": "Phased plan using Gantt" }
+      "scrum": {
+        "name": "Scrum",
+        "description": "1–2 week Sprints with a Backlog"
+      },
+      "kanban": {
+        "name": "Kanban",
+        "description": "Continuous flow of work"
+      },
+      "waterfall": {
+        "name": "Waterfall",
+        "description": "Phased plan using Gantt"
+      }
     },
     "inviteTitle": "Invite your team",
     "inviteSubtitle": "You can work alone, but Friday Manage works best with a team",
@@ -249,9 +280,18 @@
     "projectTitle": "Start your first project",
     "projectSubtitle": "Choose whichever is easiest",
     "starts": {
-      "sample": { "name": "Try a sample project", "description": "Comes with sample Modules, Sprints and Bugs to try every tab. Delete it later" },
-      "new": { "name": "Create a new project", "description": "Opens a 5-step Wizard: name, duration, scope, team" },
-      "import": { "name": "Import from a plan file", "description": "Import an Excel plan (e.g. a Development Plan)" }
+      "sample": {
+        "name": "Try a sample project",
+        "description": "Comes with sample Modules, Sprints and Bugs to try every tab. Delete it later"
+      },
+      "new": {
+        "name": "Create a new project",
+        "description": "Opens a 5-step Wizard: name, duration, scope, team"
+      },
+      "import": {
+        "name": "Import from a plan file",
+        "description": "Import an Excel plan (e.g. a Development Plan)"
+      }
     },
     "back": "← Back",
     "skip": "Skip for now",

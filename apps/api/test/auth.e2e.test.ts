@@ -113,6 +113,8 @@ describe('ยืนยันอีเมล (J2)', () => {
     const c = await client(t.app);
     const r = await c.post('/auth/signup', { email: 'ploy@example.com', password: 'Friday2026', displayName: 'Ploy', acceptTerms: true });
     expect(r.status).toBe(201);
+    // ไม่ได้ตั้ง SMTP ใน test → บอกหน้าเว็บว่าอีเมลยังไม่ถูกส่ง ให้ข้ามไปยืนยันภายหลังได้
+    expect(r.body.emailDelivery).toBe(!!process.env.SMTP_HOST);
     const code = r.headers['x-dev-token'];
     const link = r.headers['x-dev-link-token'];
     expect(code).toMatch(/^\d{6}$/);

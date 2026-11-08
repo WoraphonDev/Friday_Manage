@@ -233,6 +233,8 @@ describe("J2 · สมัครและยืนยันอีเมล", () =
       acceptTerms: true,
     });
     expect(screen.getByText("new@example.com")).toBeInTheDocument();
+    // ส่งอีเมลได้ตามปกติ = ไม่มีปุ่มข้าม
+    expect(screen.queryByRole("button", { name: "ข้ามไปก่อน ยืนยันภายหลัง" })).not.toBeInTheDocument();
     expect(screen.getByText("1:00")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ส่งรหัสใหม่" })).not.toBeInTheDocument();
 
@@ -243,6 +245,17 @@ describe("J2 · สมัครและยืนยันอีเมล", () =
     await user.click(screen.getByRole("button", { name: "ยืนยันและตั้งค่า Workspace" }));
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/onboarding"));
     expect(calls.filter((c) => c.path === "/api/v1/auth/verify-email").at(-1)?.body).toEqual({ code: "482913" });
+  });
+
+  it("ยังไม่ได้ตั้ง SMTP: บอกว่ารหัสยังไม่ถูกส่ง และข้ามไปก่อนแล้วยืนยันภายหลังได้", async () => {
+    server.use(http.post("*/api/v1/auth/signup", () => HttpResponse.json({ id: "u1", email: "new@example.com", displayName: "ผู้ทดสอบ", emailDelivery: false }, { status: 201 })));
+    const user = userEvent.setup();
+    render(<SignupForm />);
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: "สร้างบัญชี" }));
+    expect(await screen.findByText(/ระบบยังไม่ได้ตั้งค่าการส่งอีเมล/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ข้ามไปก่อน ยืนยันภายหลัง" }));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/onboarding"));
   });
 
   it("อีเมลซ้ำ → บอกที่ช่องพร้อมลิงก์เข้าสู่ระบบ (คง returnTo)", async () => {

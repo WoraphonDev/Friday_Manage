@@ -42,7 +42,12 @@
   },
   "password": {
     "strength": "ความปลอดภัย: {level}",
-    "levels": { "weak": "อ่อน", "fair": "พอใช้", "good": "ดี", "strong": "ดีมาก" },
+    "levels": {
+      "weak": "อ่อน",
+      "fair": "พอใช้",
+      "good": "ดี",
+      "strong": "ดีมาก"
+    },
     "rules": {
       "length": "อย่างน้อย {n} ตัวอักษร",
       "upper": "มีตัวพิมพ์ใหญ่",
@@ -125,7 +130,9 @@
     "linkInvalid": "ลิงก์ยืนยันอีเมลไม่ถูกต้องหรือหมดอายุแล้ว",
     "linkInvalidDescription": "เข้าสู่ระบบแล้วขอรหัสยืนยันใหม่ได้",
     "continue": "ไปต่อ",
-    "goLogin": "ไปหน้าเข้าสู่ระบบ"
+    "goLogin": "ไปหน้าเข้าสู่ระบบ",
+    "skipVerify": "ข้ามไปก่อน ยืนยันภายหลัง",
+    "noDelivery": "ระบบยังไม่ได้ตั้งค่าการส่งอีเมล รหัสยืนยันจึงยังไม่ถูกส่ง · ใช้งานต่อได้เลย แล้วยืนยันอีเมลภายหลัง"
   },
   "forgot": {
     "stepLabel": "ขั้นที่ {step} จาก 3",
@@ -226,16 +233,40 @@
     "teamSize": "ขนาดทีม",
     "method": "ทีมทำงานแบบไหน",
     "roles": {
-      "pm": { "name": "PM / Lead", "description": "วางแผนและติดตามงาน" },
-      "dev": { "name": "Developer", "description": "FE / BE / Mobile" },
-      "design": { "name": "Designer", "description": "UX / UI" },
-      "qa": { "name": "QA / Tester", "description": "ทดสอบและรายงาน Bug" },
-      "other": { "name": "อื่น ๆ", "description": "Business, ลูกค้า" }
+      "pm": {
+        "name": "PM / Lead",
+        "description": "วางแผนและติดตามงาน"
+      },
+      "dev": {
+        "name": "Developer",
+        "description": "FE / BE / Mobile"
+      },
+      "design": {
+        "name": "Designer",
+        "description": "UX / UI"
+      },
+      "qa": {
+        "name": "QA / Tester",
+        "description": "ทดสอบและรายงาน Bug"
+      },
+      "other": {
+        "name": "อื่น ๆ",
+        "description": "Business, ลูกค้า"
+      }
     },
     "methods": {
-      "scrum": { "name": "Scrum", "description": "Sprint 1–2 สัปดาห์ มี Backlog" },
-      "kanban": { "name": "Kanban", "description": "งานไหลต่อเนื่อง" },
-      "waterfall": { "name": "Waterfall", "description": "แผนเป็นเฟส ใช้ Gantt" }
+      "scrum": {
+        "name": "Scrum",
+        "description": "Sprint 1–2 สัปดาห์ มี Backlog"
+      },
+      "kanban": {
+        "name": "Kanban",
+        "description": "งานไหลต่อเนื่อง"
+      },
+      "waterfall": {
+        "name": "Waterfall",
+        "description": "แผนเป็นเฟส ใช้ Gantt"
+      }
     },
     "inviteTitle": "เชิญทีมของคุณ",
     "inviteSubtitle": "ทำงานคนเดียวก็ได้ แต่ Friday Manage ทำงานได้ดีที่สุดเมื่อมีทีม",
@@ -249,9 +280,18 @@
     "projectTitle": "เริ่มโปรเจกต์แรก",
     "projectSubtitle": "เลือกวิธีที่สะดวก",
     "starts": {
-      "sample": { "name": "ลองด้วยโปรเจกต์ตัวอย่าง", "description": "มีงาน Module, Sprint และ Bug ตัวอย่างพร้อมให้ลองทุก tab ลบทิ้งได้ทีหลัง" },
-      "new": { "name": "สร้างโปรเจกต์ใหม่", "description": "เปิด Wizard 5 ขั้น ตั้งชื่อ ระยะเวลา ขอบเขต ทีม" },
-      "import": { "name": "นำเข้าจากไฟล์แผนงาน", "description": "นำเข้า Excel แผนงาน (เช่น Development Plan)" }
+      "sample": {
+        "name": "ลองด้วยโปรเจกต์ตัวอย่าง",
+        "description": "มีงาน Module, Sprint และ Bug ตัวอย่างพร้อมให้ลองทุก tab ลบทิ้งได้ทีหลัง"
+      },
+      "new": {
+        "name": "สร้างโปรเจกต์ใหม่",
+        "description": "เปิด Wizard 5 ขั้น ตั้งชื่อ ระยะเวลา ขอบเขต ทีม"
+      },
+      "import": {
+        "name": "นำเข้าจากไฟล์แผนงาน",
+        "description": "นำเข้า Excel แผนงาน (เช่น Development Plan)"
+      }
     },
     "back": "← ย้อนกลับ",
     "skip": "ข้ามไปก่อน",

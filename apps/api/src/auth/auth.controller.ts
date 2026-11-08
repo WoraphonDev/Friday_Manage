@@ -85,7 +85,8 @@ export class AuthController {
     await this.sendVerifyEmail(userId, email, res);
     await this.login_.startSession(userId, false, req, res);
     res.status(201);
-    return { id: userId, email, displayName: input.displayName };
+    // emailDelivery = false: ยังไม่ได้ตั้ง SMTP รหัสยืนยันจึงไม่ถูกส่ง · หน้าเว็บให้ข้ามไปยืนยันภายหลัง (ผู้ใช้ขอ 2026-11-09)
+    return { id: userId, email, displayName: input.displayName, emailDelivery: this.account.emailDelivery };
   }
 
   /** J2 · ยืนยันอีเมลด้วยลิงก์ ({ token }) หรือรหัส 6 หลัก ({ email, code } · ไม่ส่ง email ใช้บัญชีที่ล็อกอินอยู่) */
@@ -120,7 +121,7 @@ export class AuthController {
       if (wait > 0) throw new AppError(429, 'resend_too_soon', `ส่งใหม่ได้ใน ${wait} วินาที`, { retryAfter: wait });
       await this.sendVerifyEmail(user.id, user.email, res);
     }
-    return { retryAfter: authTimes.resendSeconds };
+    return { retryAfter: authTimes.resendSeconds, emailDelivery: this.account.emailDelivery };
   }
 
   @Public()

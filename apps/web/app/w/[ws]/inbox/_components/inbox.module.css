@@ -1,35 +1,35 @@
 .head { background:var(--card); padding:20px 24px 0; border-bottom:1px solid var(--border); }
 .headRow { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; }
-.head h1 { margin:0; font-size:24px; }
+.head h1 { margin:0; font-size:22px; }
 .tabs { display:flex; gap:2px; overflow-x:auto; margin-top:10px; }
-.ftab { display:inline-flex; align-items:center; gap:6px; min-height:42px; padding:0 12px; border:0; border-bottom:2px solid transparent; background:transparent; font:inherit; font-weight:500; color:#56606b; cursor:pointer; white-space:nowrap; }
+.ftab { display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 12px; border:0; border-bottom:2px solid transparent; background:transparent; font:inherit; font-size:var(--text-label); font-weight:500; color:#56606b; cursor:pointer; white-space:nowrap; }
 .ftab[aria-pressed="true"] { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
-.count { display:inline-flex; padding:1px 8px; border-radius:999px; font-size:12px; background:var(--status-todo-bg); color:var(--status-todo-fg); }
+.count { display:inline-flex; padding:1px 8px; border-radius:999px; font-size:11px; background:var(--status-todo-bg); color:var(--status-todo-fg); }
 .layout { display:flex; flex-wrap:wrap; gap:20px; padding:20px 24px; align-items:flex-start; }
 .card { background:var(--card); border:1px solid var(--border); border-radius:12px; min-width:0; }
 .list { flex:1 1 480px; overflow:hidden; }
 .detail { flex:1 1 380px; }
-.gl { padding:8px 16px; font-size:12px; font-weight:600; color:var(--muted); background:#f8f9fb; border-bottom:1px solid #eef0f3; text-transform:uppercase; letter-spacing:.05em; }
-.nt { display:flex; gap:12px; width:100%; padding:12px 16px; border:0; border-bottom:1px solid #eef0f3; background:#fff; font:inherit; text-align:left; cursor:pointer; color:var(--foreground); align-items:flex-start; }
+.gl { padding:8px 16px; font-size:11px; font-weight:600; color:var(--muted); background:#f8f9fb; border-bottom:1px solid #eef0f3; text-transform:uppercase; letter-spacing:.05em; }
+.nt { display:flex; gap:12px; width:100%; padding:12px 16px; border:0; border-bottom:1px solid #eef0f3; background:#fff; font:inherit; font-size:var(--text-label); text-align:left; cursor:pointer; color:var(--foreground); align-items:flex-start; }
 .nt:hover { background:#fafbfc; }
 .unread { background:#f5f8ff; }
 .sel { box-shadow:inset 3px 0 0 var(--primary); background:var(--primary-soft); }
 .ntBody { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
-.ntTitle { font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.quote { color:var(--muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.meta { display:flex; gap:8px; align-items:center; font-size:12px; color:var(--muted); flex-wrap:wrap; }
+.ntTitle { font-weight:600; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.quote { color:var(--muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.meta { display:flex; gap:8px; align-items:center; font-size:11px; color:var(--muted); flex-wrap:wrap; }
 .dot { width:10px; height:10px; border-radius:50%; flex:none; background:var(--primary); margin-top:6px; }
 .dHead { padding:16px 20px; border-bottom:1px solid #eef0f3; display:flex; align-items:center; gap:12px; }
 .dBody { padding:16px 20px; display:flex; flex-direction:column; gap:14px; }
 .issueCard { display:block; border:1px solid var(--border); border-radius:10px; padding:12px 14px; text-decoration:none; color:var(--foreground); }
-.issueCard b { display:block; font-size:16px; }
+.issueCard b { display:block; font-size:15px; }
 .quoteBox { background:#f8f9fb; border:1px solid #eef0f3; border-radius:10px; padding:10px 14px; overflow-wrap:anywhere; }
 .diff { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .actions { display:flex; gap:8px; flex-wrap:wrap; }
 .approve { background:#15803d; border-color:#15803d; color:#fff; }
 .approve:hover { background:#166534; color:#fff; }
 .rejectBtn { color:#b91c1c; }
-.foot { border-top:1px solid #eef0f3; padding-top:12px; font-size:13px; }
+.foot { border-top:1px solid #eef0f3; padding-top:12px; font-size:12px; }
 .empty { padding:40px; text-align:center; color:var(--muted); }
 .back { display:none; }
 .more { padding:12px; text-align:center; }

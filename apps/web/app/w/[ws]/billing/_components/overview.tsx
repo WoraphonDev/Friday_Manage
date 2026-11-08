@@ -112,7 +112,7 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
         <div>
           <Badge tone={STATUS_TONE[sub.status]}>{t(`status.${sub.status}`)}</Badge>
           <h2>{trialDays !== null ? t("planTrial", { plan: o.plan.name, days: trialDays }) : o.plan.name}</h2>
-          <div className={cn(styles.muted)} style={{ fontSize: 13 }}>
+          <div className={cn(styles.muted)} style={{ fontSize: 12 }}>
             {description}
           </div>
         </div>
@@ -139,7 +139,7 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
       <section className={styles.card} aria-labelledby="bill-methods">
         <div className={styles.ch}>
           <h2 id="bill-methods">{t("methodsTitle")}</h2>
-          <span className={cn(styles.muted)} style={{ fontSize: 13 }}>{t("methodsHint")}</span>
+          <span className={cn(styles.muted)} style={{ fontSize: 12 }}>{t("methodsHint")}</span>
         </div>
         <div className={styles.profile}>
           {(["card", "promptpay", "transfer"] as const).map((m) => (
@@ -173,7 +173,7 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
       <section className={styles.card} aria-labelledby="bill-invoices">
         <div className={styles.ch}>
           <h2 id="bill-invoices">{t("invoicesTitle")}</h2>
-          <span className={cn(styles.muted)} style={{ fontSize: 13 }}>{t("invoicesHint")}</span>
+          <span className={cn(styles.muted)} style={{ fontSize: 12 }}>{t("invoicesHint")}</span>
         </div>
         {invoices.isPending ? (
           <LoadingState />

@@ -53,6 +53,22 @@ export interface MoveResult {
 }
 export type Swimlane = "none" | "module" | "assignee" | "priority";
 
+/** ย้ายการ์ดในข้อมูลบนเครื่องทันที (optimistic) ตามตำแหน่งเดียวกับที่ส่งให้ API · หาคอลัมน์ไม่เจอ = null */
+export function moveLocal(data: BoardData, key: string, body: MoveBody): BoardData | null {
+  const card = data.columns.flatMap((c) => c.cards).find((c) => c.key === key);
+  const target = data.columns.find((c) => c.id === body.statusId);
+  if (!card || !target) return null;
+  // Bug: คอลัมน์ไม่ใช่สถานะจริง (Fixed/Verified อยู่คอลัมน์เดียวกัน) จึงรอสถานะจาก API
+  const bug = data.board === "bug" || card.type.name === "Bug";
+  const moved = bug ? card : { ...card, status: { id: target.id, name: target.name, category: target.category } };
+  const columns = data.columns.map((c) => ({ ...c, cards: c.cards.filter((x) => x.key !== key) }));
+  const list = columns.find((c) => c.id === target.id)!.cards;
+  const before = body.beforeKey ? list.findIndex((x) => x.key === body.beforeKey) : -1;
+  const after = body.afterKey ? list.findIndex((x) => x.key === body.afterKey) : -1;
+  list.splice(before >= 0 ? before : after >= 0 ? after + 1 : list.length, 0, moved);
+  return { ...data, columns };
+}
+
 export function positionIntent(data: BoardData, key: string, columnId: string, beforeKey?: string): MoveIntent | null {
   const source = data.columns.find((c) => c.cards.some((card) => card.key === key));
   const target = data.columns.find((c) => c.id === columnId);

@@ -181,7 +181,7 @@ export function SearchPage({ ws }: { ws: string }) {
           <label className={styles.fchip}><input type="checkbox" checked={filters.archived} onChange={() => patch({ archived: !filters.archived })} /><span>{t("page.archived")}</span></label>
           <div className={styles.saved}>
             <b>{t("page.savedHeading")}</b>
-            {saved.error ? <span className="field-error">{saved.error.message}</span> : saved.data && !saved.data.items.length ? <span className="muted" style={{ fontSize: 13 }}>{t("page.savedEmpty")}</span> : null}
+            {saved.error ? <span className="field-error">{saved.error.message}</span> : saved.data && !saved.data.items.length ? <span className="muted" style={{ fontSize: 12 }}>{t("page.savedEmpty")}</span> : null}
             {saved.data?.items.map((s) => {
               const f = savedToFilters(s);
               return (

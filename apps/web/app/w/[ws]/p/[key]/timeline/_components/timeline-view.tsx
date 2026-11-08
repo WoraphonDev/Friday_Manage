@@ -122,16 +122,12 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
       const mcolor = m.color ?? PALETTE[mi % PALETTE.length];
       out.push({ kind: "module", id: mid, name: m.name, color: mcolor, s: m, count: m.taskCount });
       if (closed.has(mid)) return;
-      m.groups.forEach((g, gi) => {
-        const gid = `${mid}:g:${g.phase?.id ?? gi}`;
-        out.push({ kind: "group", id: gid, name: g.name, color: mcolor, s: g });
-        if (closed.has(gid)) return;
-        const colorOf = (r: TLRow) => (colorBy === "module" ? mcolor : colorBy === "status" ? STATUS_COLOR[r.status.category] : personColor(r));
-        for (const r of g.tasks) {
-          out.push({ kind: "task", row: r, color: colorOf(r), sub: false, hasKids: r.subtasks.length > 0 });
-          if (!closed.has(`t:${r.key}`)) for (const s of r.subtasks) out.push({ kind: "task", row: s, color: colorOf(s), sub: true, hasKids: false });
-        }
-      });
+      // Module › Task › Sub-task · เลิกใช้กลุ่มงาน (ผู้ใช้ตัดสิน 2026-11-08) จึงรวมงานทุกกลุ่มไว้ใต้ Module
+      const colorOf = (r: TLRow) => (colorBy === "module" ? mcolor : colorBy === "status" ? STATUS_COLOR[r.status.category] : personColor(r));
+      for (const r of m.groups.flatMap((g) => g.tasks)) {
+        out.push({ kind: "task", row: r, color: colorOf(r), sub: false, hasKids: r.subtasks.length > 0 });
+        if (!closed.has(`t:${r.key}`)) for (const s of r.subtasks) out.push({ kind: "task", row: s, color: colorOf(s), sub: true, hasKids: false });
+      }
     });
     return out;
   }, [q.data, closed, colorBy]);
@@ -207,7 +203,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const weekends = zoom === "month" ? [] : Array.from({ length: ax.days }, (_, i) => i).filter((i) => [0, 6].includes(weekday(addDays(ax.from, i))));
   const issueHref = (key: string) => `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?issue=${encodeURIComponent(key)}`;
   const newHref = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?new=1&type=task`;
-  const groupsOf = (moduleLineId: string) => d.modules.find((m) => `m:${m.id ?? "none"}` === moduleLineId)?.groups.length ?? 0;
+  const tasksOf = (moduleLineId: string) => d.modules.find((m) => `m:${m.id ?? "none"}` === moduleLineId)?.groups.reduce((n, g) => n + g.tasks.length, 0) ?? 0;
   // ระดับที่แสดง: Module = ย่อทุก Module · Task = เปิด Module ย่อ Sub-task · Sub-task = เปิดทั้งหมด
   const showLevel = (lv: "module" | "task" | "subtask") => {
     setLevel(lv);
@@ -246,7 +242,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
         <Button size="icon" variant="ghost" aria-label={t("prev")} onClick={() => scrollBy(-1)}><ChevronLeft size={16} /></Button>
         <Button size="small" onClick={scrollToToday}>{t("today")}</Button>
         <Button size="icon" variant="ghost" aria-label={t("next")} onClick={() => scrollBy(1)}><ChevronRight size={16} /></Button>
-        <span className="muted" style={{ fontSize: 13 }}>{formatDate(d.range.from, year)} – {formatDate(d.range.to, year)}</span>
+        <span className="muted" style={{ fontSize: 12 }}>{formatDate(d.range.from, year)} – {formatDate(d.range.to, year)}</span>
       </div>
       <div className={styles.bar}>
         <div className={styles.seg} role="group" aria-label={t("levelLabel")}>
@@ -297,7 +293,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                         <button type="button" className={styles.toggle} aria-expanded={!closed.has(ln.id)} aria-label={t(closed.has(ln.id) ? "expand" : "collapse", { name: ln.name })} onClick={() => toggle(ln.id)}><ChevronDown size={14} style={{ transform: closed.has(ln.id) ? "rotate(-90deg)" : undefined }} /></button>
                         <span style={{ width: ln.kind === "module" ? 12 : 16, height: ln.kind === "module" ? 12 : 16, borderRadius: ln.kind === "module" ? 3 : 4, background: ln.kind === "module" ? ln.color : `${ln.color}26`, border: ln.kind === "module" ? 0 : `1px solid ${ln.color}66`, flex: "none" }} aria-hidden="true" />
                         <span className={styles.labText}>{ln.name}</span>
-                        <span className={styles.cnt}>{ln.kind === "module" ? t("groups", { count: groupsOf(ln.id) }) : ln.s.taskCount}</span>
+                        <span className={styles.cnt}>{ln.kind === "module" ? t("tasks", { count: tasksOf(ln.id) }) : ln.s.taskCount}</span>
                         {canCreate && <Link className={styles.add} href={newHref} aria-label={t("addIn", { name: ln.name })}><Plus size={14} aria-hidden="true" /></Link>}
                       </div>
                       <div className={`${styles.lane} ${dropRow === ln.id ? styles.drop : ""}`} style={{ width }} onDragOver={(e) => { if (canEdit && dragged.current) { e.preventDefault(); setDropRow(ln.id); } }} onDragLeave={() => setDropRow(null)} onDrop={(e) => onDropRow(e, ln.id)} data-testid={`lane-${ln.id}`}>
@@ -333,7 +329,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                     <div className={`${styles.lab} ${ln.sub ? styles.sub : styles.task}`}>
                       {ln.hasKids && <button type="button" className={styles.toggle} aria-expanded={!closed.has(`t:${r.key}`)} aria-label={t(closed.has(`t:${r.key}`) ? "expand" : "collapse", { name: r.key })} onClick={() => toggle(`t:${r.key}`)}><ChevronDown size={14} style={{ transform: closed.has(`t:${r.key}`) ? "rotate(-90deg)" : undefined }} /></button>}
                       {!ln.hasKids && <span className={styles.dotStatus} style={{ borderColor: STATUS_COLOR[r.status.category], background: r.status.category === "done" ? STATUS_COLOR.done : "transparent" }} aria-hidden="true" />}
-                      <span className="muted" style={{ fontSize: 12, flex: "none", whiteSpace: "nowrap" }}>{r.key}</span>
+                      <span className="muted" style={{ fontSize: 11, flex: "none", whiteSpace: "nowrap" }}>{r.key}</span>
                       {open ? <Link className={styles.labText} href={issueHref(r.key)} style={{ color: "var(--foreground)" }}>{r.title}</Link> : <span className={styles.labText}>{r.title}</span>}
                       {!guest && !!r.assignees?.length && <span className={styles.who}><AvatarStack people={r.assignees} max={1} /></span>}
                     </div>
@@ -365,8 +361,8 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
         )}
         {d.unscheduled.length > 0 && (
           <div className={styles.unsched} aria-label={t("unscheduled")}>
-            <b>{t("unscheduled")}</b> <span className="muted" style={{ fontSize: 13 }}>{t("unscheduledCount", { count: d.unscheduled.length })}</span>
-            {canEdit && <span className="muted" style={{ fontSize: 12 }}>{t("unscheduledHint")}</span>}
+            <b>{t("unscheduled")}</b> <span className="muted" style={{ fontSize: 12 }}>{t("unscheduledCount", { count: d.unscheduled.length })}</span>
+            {canEdit && <span className="muted" style={{ fontSize: 11 }}>{t("unscheduledHint")}</span>}
             {d.unscheduled.map((u) => (
               <span key={u.key} className={styles.chip} draggable={canEdit} data-testid={`unscheduled-${u.key}`} onDragStart={(e) => { dragged.current = u.key; e.dataTransfer?.setData("text/plain", u.key); }}>
                 <span className="muted">{u.key}</span>{u.title}

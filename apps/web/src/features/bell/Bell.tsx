@@ -137,7 +137,7 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
           <div className={styles.top}>
             <b>{tb("title")}</b>
             <button type="button" className={styles.link} onClick={() => void readAll()}>{tb("readAll")}</button>
-            <Link href={`/w/${encodeURIComponent(workspace)}/profile`} style={{ fontSize: 13 }} onClick={() => setOpen(false)}>{tb("settings")}</Link>
+            <Link href={`/w/${encodeURIComponent(workspace)}/profile`} style={{ fontSize: 12 }} onClick={() => setOpen(false)}>{tb("settings")}</Link>
           </div>
           <div className={styles.tabs} role="tablist">
             {(["all", "unread", "mention"] as const).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={styles.tab} onClick={() => setTab(k)}>{tb(`tabs.${k}`)}</button>)}

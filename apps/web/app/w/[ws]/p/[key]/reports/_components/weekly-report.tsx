@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Button, ErrorState, Forbidden, LoadingState, Select } from "@/components/ui";
+import { Button, ErrorState, FloatingNotice, Forbidden, LoadingState, Select } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, formatDateRange, today as todayIso, type YearFormat } from "@/lib/format";
 import { addDays, projectBase, projectEndpoint, STATUS_TONE, weekStart, type ReportSchedule, type WeeklyReport } from "../../dashboard/_components/types";
@@ -67,7 +67,7 @@ export function WeeklyReportView({ ws, projectKey, yearFormat, issueHref, canSen
       <Button disabled={!data} onClick={() => window.print()}>{t("weekly.pdf")}</Button>
       {canSend && week === current && <Button variant="primary" disabled={!data || sending} onClick={() => void send()}>{sending ? t("weekly.sending") : t("weekly.send")}</Button>}
     </div>
-    {notice && <div className={notice.tone === "ok" ? styles.notice : styles.errorNotice} role={notice.tone === "ok" ? "status" : "alert"}>{notice.message}</div>}
+    {notice && <FloatingNotice tone={notice.tone === "ok" ? "info" : "error"}><span>{notice.message}</span></FloatingNotice>}
     {report.error ? <ErrorState error={report.error} retry={() => void report.refetch()} />
       : !data ? <LoadingState />
         : editing ? <div className={styles.card}>

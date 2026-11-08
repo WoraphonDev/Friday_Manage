@@ -1,7 +1,21 @@
 {
   "title": "Gantt",
-  "scale": { "label": "Scale", "day": "Day", "week": "Week", "month": "Month" },
-  "level": { "label": "Expand level", "one": "Level 1", "two": "2", "three": "3", "hint": "Level {n}: {what}", "what1": "Module", "what2": "Module › Task group", "what3": "All levels down to Sub-task" },
+  "scale": {
+    "label": "Scale",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month"
+  },
+  "level": {
+    "label": "Expand level",
+    "one": "Level 1",
+    "two": "2",
+    "three": "3",
+    "hint": "Level {n}: {what}",
+    "what1": "Module",
+    "what2": "Module › Task",
+    "what3": "All levels down to Sub-task"
+  },
   "today": "Today",
   "exportPdf": "Export PDF",
   "autoSchedule": "Auto-schedule",
@@ -11,7 +25,16 @@
   "baselineOption": "v{version} · {name}",
   "noBaseline": "No Baseline yet · Set a Baseline first to compare plans",
   "setBaseline": "Set as new plan (Baseline v{version})",
-  "cols": { "wbs": "WBS", "task": "Task", "owner": "Owner", "md": "MD", "start": "Start", "end": "End", "pct": "%", "pred": "Pred." },
+  "cols": {
+    "wbs": "WBS",
+    "task": "Task",
+    "owner": "Owner",
+    "md": "MD",
+    "start": "Start",
+    "end": "End",
+    "pct": "%",
+    "pred": "Pred."
+  },
   "bar": "{key} {title}: {start} – {end} · {pct}%",
   "barCritical": "On the Critical path",
   "slack": "{days, plural, one {{days} working day of slack} other {{days} working days of slack}}",
@@ -28,10 +51,21 @@
   "workload": "View Workload →",
   "criticalSummary": "Critical path {count, plural, one {{count} task} other {{count} tasks}} · {start} – {end}",
   "unscheduled": "{count, plural, one {{count} task has no dates} other {{count} tasks have no dates}} (see Timeline)",
-  "legend": { "task": "Task (dark fill = % done)", "critical": "Critical path", "summary": "Summary (Module / parent task)", "baseline": "Plan (Baseline) · main bar = actual / forecast" },
+  "legend": {
+    "task": "Task (dark fill = % done)",
+    "critical": "Critical path",
+    "summary": "Summary (Module / parent task)",
+    "baseline": "Plan (Baseline) · main bar = actual / forecast"
+  },
   "empty": "No scheduled tasks yet",
   "emptyHint": "Set Plan Start / Plan End on tasks to show them on the Gantt",
-  "baselineDialog": { "title": "Set as new plan", "body": "Saves the current Plan dates, Man-Days and Dev of every task as Baseline v{version} · After this, plan changes require a reason", "name": "Baseline name (optional)", "submit": "Set Baseline", "done": "Baseline v{version} set" },
+  "baselineDialog": {
+    "title": "Set as new plan",
+    "body": "Saves the current Plan dates, Man-Days and Dev of every task as Baseline v{version} · After this, plan changes require a reason",
+    "name": "Baseline name (optional)",
+    "submit": "Set Baseline",
+    "done": "Baseline v{version} set"
+  },
   "auto": {
     "title": "Auto-schedule (preview)",
     "loading": "Calculating from Dependencies…",
@@ -60,7 +94,13 @@
   "requestTitle": "Request Due change",
   "requestBody": "You can't change the Due date of {key} yourself · Send a request to the approver to move it to {date}",
   "reason": "Reason",
-  "reasons": { "scope_added": "Scope added", "waiting_input": "Waiting for input", "blocked_by_dependency": "Blocked by a dependency", "estimate_wrong": "Estimate was off", "other": "Other" },
+  "reasons": {
+    "scope_added": "Scope added",
+    "waiting_input": "Waiting for input",
+    "blocked_by_dependency": "Blocked by a dependency",
+    "estimate_wrong": "Estimate was off",
+    "other": "Other"
+  },
   "detail": "Details",
   "send": "Send request",
   "conflict": "This task was changed by someone else. Please try again"

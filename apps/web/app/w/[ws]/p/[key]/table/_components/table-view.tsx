@@ -18,7 +18,8 @@ import styles from "./ot.module.css";
 import { StructureDialog, type StructureAction } from "./structure-dialog";
 import { DateCell, PeopleCell, SizeCell, SubtaskAdd } from "./cell-editors";
 
-const ROW_H = 44;
+// ต้องตรงกับความสูงแถว .table td ใน ot.module.css (ใช้คำนวณ virtual scroll)
+const ROW_H = 38;
 /** เกินจำนวนนี้จะ render เฉพาะแถวที่อยู่ในจอ (virtualized) */
 export const VIRTUAL_AFTER = 300;
 const PAGE = 500;
@@ -29,10 +30,10 @@ const SIZES = ["XS", "S", "M", "L", "XL"] as const;
 const GROUPS = ["module", "status", "assignee", "priority", "none"] as const;
 type GroupBy = (typeof GROUPS)[number];
 const SORTS = ["rank", "number", "planEnd", "priority"] as const;
-const OPTIONAL_COLS = ["dev", "ba", "status", "size", "start", "end", "actual", "refs", "progress"] as const;
+const OPTIONAL_COLS = ["dev", "ba", "sa", "status", "size", "start", "end", "actual", "refs", "progress"] as const;
 type Col = (typeof OPTIONAL_COLS)[number];
 /** ความกว้างคอลัมน์ตาม Canvas Table (.gr grid-template-columns) */
-const COL_W: Record<Col, number> = { dev: 84, ba: 40, status: 112, size: 78, start: 74, end: 82, actual: 96, refs: 124, progress: 96 };
+const COL_W: Record<Col, number> = { dev: 84, ba: 40, sa: 40, status: 112, size: 78, start: 74, end: 82, actual: 96, refs: 124, progress: 96 };
 
 type Display =
   | { kind: "module"; id: string; name: string; color: string | null; count: number; phases: number; md: number; pct: number; moduleId: string | null; from: string | null; to: string | null }
@@ -63,7 +64,8 @@ function span(rows: Row[]) {
   return { from: starts[0] ?? null, to: ends.at(-1) ?? null };
 }
 
-/** แถวที่แสดง: Module › กลุ่มงาน › Task › Sub-task (Sub-task ตามแม่ทันที) + แถวเพิ่มงานท้ายกลุ่ม + สรุปท้าย Module */
+/** แถวที่แสดง: Module › Task › Sub-task (Sub-task ตามแม่ทันที) + แถวเพิ่มงานท้าย Module + สรุปท้าย Module
+ *  เลิกใช้กลุ่มงาน (Phase) ตามที่ผู้ใช้ตัดสิน 2026-11-08 · ข้อมูลกลุ่มงานเดิมยังอยู่ แค่ไม่แสดง */
 export function buildDisplay(data: TableData, collapsed: Set<string>, noModule: string, noPhase: string, includeEmpty = false): Display[] {
   const out: Display[] = [];
   const keys = new Set(data.items.map((r) => r.key));
@@ -73,22 +75,13 @@ export function buildDisplay(data: TableData, collapsed: Set<string>, noModule: 
     const mid = m.id ?? "none";
     const inModule = data.items.filter((r) => (r.moduleId ?? null) === m.id && !(r.parentKey && keys.has(r.parentKey)));
     if (!inModule.length && !(includeEmpty && m.id)) continue;
-    const namedPhases = m.phases.filter((x) => x.id && (includeEmpty || inModule.some((r) => r.phaseId === x.id))).length;
-    out.push({ kind: "module", id: mid, name: m.name ?? noModule, color: m.color, count: m.taskCount, phases: namedPhases, md: m.estimateMd, pct: m.progressPct, moduleId: m.id, ...span(inModule) });
+    out.push({ kind: "module", id: mid, name: m.name ?? noModule, color: m.color, count: m.taskCount, phases: 0, md: m.estimateMd, pct: m.progressPct, moduleId: m.id, ...span(inModule) });
     if (collapsed.has(mid)) continue;
-    for (const ph of m.phases) {
-      const roots = inModule.filter((r) => (r.phaseId ?? null) === ph.id);
-      if (!roots.length && !(includeEmpty && (ph.id || namedPhases === 0))) continue;
-      const pid = `${mid}:${ph.id ?? "none"}`;
-      const showPhase = !!ph.id || namedPhases > 0;
-      if (showPhase) out.push({ kind: "phase", id: pid, moduleId: m.id, phaseId: ph.id, name: ph.name ?? noPhase, done: ph.doneCount, total: ph.taskCount, md: ph.estimateMd });
-      if (collapsed.has(pid)) continue;
-      for (const r of roots) {
-        out.push({ kind: "issue", row: r, sub: !!r.parentKey });
-        for (const k of kids.get(r.key) ?? []) out.push({ kind: "issue", row: k, sub: true });
-      }
-      out.push({ kind: "add", id: `${pid}:add`, name: showPhase ? (ph.name ?? noPhase) : (m.name ?? noModule), moduleId: m.id, phaseId: ph.id });
+    for (const r of inModule) {
+      out.push({ kind: "issue", row: r, sub: !!r.parentKey });
+      for (const k of kids.get(r.key) ?? []) out.push({ kind: "issue", row: k, sub: true });
     }
+    out.push({ kind: "add", id: `${mid}:add`, name: m.name ?? noModule, moduleId: m.id, phaseId: null });
     out.push({ kind: "foot", id: `${mid}:foot`, count: m.taskCount, md: m.estimateMd });
   }
   return out;
@@ -132,7 +125,8 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const [filters, setFilters] = useState<Filters>(() => (search.get("overdue") === "true" ? { overdue: "true" } : {}));
   const [groupBy, setGroupBy] = useState<GroupBy>("module");
   const [sort, setSort] = useState<(typeof SORTS)[number]>("rank");
-  const [hidden, setHidden] = useState<Set<Col>>(new Set());
+  // FR / Screen ซ่อนไว้ก่อนตามที่ผู้ใช้สั่ง เปิดเองได้จากเมนู Columns
+  const [hidden, setHidden] = useState<Set<Col>>(new Set(["refs"]));
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [scrollTop, setScrollTop] = useState(0);
@@ -304,7 +298,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   return (
     <div className={styles.page}>
       <div className={styles.bar} role="group" aria-label={t("views")}>
-        <span className={styles.muted} style={{ fontSize: 13, marginRight: 4 }}>{t("views")}</span>
+        <span className={styles.muted} style={{ fontSize: 12, marginRight: 4 }}>{t("views")}</span>
         <button type="button" className={styles.chip} aria-pressed={!filtered} onClick={() => setFilters({})}>{t("allTasks")}</button>
         <button type="button" className={styles.chip} aria-pressed={activeView({ assignee: "me" })} onClick={() => setFilters({ assignee: "me" })}>{t("myView")}</button>
         <button type="button" className={styles.chip} aria-pressed={activeView({ overdue: "true" })} onClick={() => setFilters({ overdue: "true" })}>{t("overdue")}</button>
@@ -427,12 +421,11 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                           <Popover.Trigger asChild><button type="button" className={styles.chv} aria-label={t("structure.moduleMenu", { name: d.name })}>⋯</button></Popover.Trigger>
                           <Popover.Portal><Popover.Content className="popover" align="start" sideOffset={4}>
                             <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "renameModule", id: d.moduleId!, name: d.name })}>{t("structure.renameModule")}</button></Popover.Close>
-                            <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "createPhase", moduleId: d.moduleId!, moduleName: d.name })}>{t("structure.createPhase")}</button></Popover.Close>
                           </Popover.Content></Popover.Portal>
                         </Popover.Root>}
-                        <span className={styles.muted} style={{ fontSize: 13 }}>{groupBy === "module" ? t("moduleTasks", { count: d.count, phases: d.phases }) : t("groupTasks", { count: d.count })}</span>
+                        <span className={styles.muted} style={{ fontSize: 12 }}>{t("groupTasks", { count: d.count })}</span>
                         <span className={styles.mbar}><span><span style={{ width: `${d.pct}%`, background: d.color ?? "var(--primary)" }} /></span><b>{d.pct}%</b></span>
-                        <span className={styles.muted} style={{ fontSize: 13, marginLeft: 8 }}>{d.from && d.to ? `${formatDate(d.from, year)} – ${formatDate(d.to, year)}` : `${d.md} MD`}</span>
+                        <span className={styles.muted} style={{ fontSize: 12, marginLeft: 8 }}>{d.from && d.to ? `${formatDate(d.from, year)} – ${formatDate(d.to, year)}` : `${d.md} MD`}</span>
                         {groupBy === "module" && canCreate && <Link className={styles.addb} style={{ marginLeft: "auto" }} href={taskHref(d.moduleId)} scroll={false}>{t("addTask")}</Link>}
                       </div>
                     </td>
@@ -518,12 +511,14 @@ function IssueRow({ row, sub, cols, ws, projectKey, year, canEdit, statuses, peo
   const empty = <span className={styles.muted}>—</span>;
   const devView = row.assignees?.length ? <span className={styles.avs}><AvatarStack people={row.assignees} max={3} /></span> : empty;
   const baView = row.ba ? <span className={styles.avs}><Avatar size="small" person={row.ba} /></span> : empty;
+  const saView = row.sa ? <span className={styles.avs}><Avatar size="small" person={row.sa} /></span> : empty;
   const sizeView = <span style={{ whiteSpace: "nowrap" }}>{row.size ? <span className={`${styles.pill} ${styles.sTodo}`} style={{ fontWeight: 700 }}>{row.size}</span> : empty}{row.estimateMd !== null ? ` ${row.estimateMd}` : ""}</span>;
   const actualEndView = row.actualEnd ? <span className={actualLate ? styles.dueLate : undefined}>{t("actualEnd", { date: formatDate(row.actualEnd, year) })}{actualLate ? ` · ${t("actualLate", { days: lateBy })}` : ""}</span> : null;
   const refs = [...(row.requirements ?? []), ...(row.screens ?? [])].join(" · ");
   const cell: Record<Col, React.ReactNode> = {
     dev: canEdit ? <PeopleCell multiple label={edit(t("cols.dev"))} people={people} value={row.assignees?.map((p) => p.id) ?? []} onChange={(ids) => onPatch({ assigneeIds: ids })}>{devView}</PeopleCell> : devView,
     ba: canEdit ? <PeopleCell label={edit(t("cols.ba"))} people={people} value={row.ba ? [row.ba.id] : []} onChange={(ids) => onPatch({ baId: ids[0] ?? null })}>{baView}</PeopleCell> : baView,
+    sa: canEdit ? <PeopleCell label={edit(t("cols.sa"))} people={people} value={row.sa ? [row.sa.id] : []} onChange={(ids) => onPatch({ saId: ids[0] ?? null })}>{saView}</PeopleCell> : saView,
     status: canEdit && statuses.length ? (
       <select className={`${styles.pill} ${styles.pillSelect} ${pillClass(row.status.category, row.status.name)}`} aria-label={edit(t("cols.status"))} value={row.status.id} onChange={(e) => onPatch({ statusId: e.target.value })}>
         {statusOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}

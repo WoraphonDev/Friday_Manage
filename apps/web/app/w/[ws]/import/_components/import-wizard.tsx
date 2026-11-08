@@ -160,6 +160,10 @@ export function ImportWizard({ ws }: { ws: string }) {
               setFile(f);
             }}
           />
+          <div className={`muted ${styles.small} ${styles.template}`}>
+            <span>{t("templateHint")}</span>
+            <a className="button" href={`/api/v1/w/${encodeURIComponent(ws)}/import-template.xlsx`} download>{t("template")}</a>
+          </div>
           <div className={styles.modes} role="radiogroup" aria-label={t("mode")}>
             <ModeCard on={mode === "create"} title={t("modeCreate")} hint={t("modeCreateHint")} onPick={() => setMode("create")} />
             <ModeCard on={mode === "update"} title={t("modeUpdate")} hint={t("modeUpdateHint")} onPick={() => setMode("update")} />
@@ -312,7 +316,6 @@ function Validate({ job, year, busy, onMissing, onReupload, onBack, onNext }: {
       <section className={`${styles.card} ${styles.kpis}`} aria-label={t("step3")}>
         <Kpi label={t("kpiRows")} value={num(s.rows)} />
         <Kpi label={t("kpiModules")} value={num(s.modules)} />
-        <Kpi label={t("kpiPhases")} value={num(s.phases)} />
         <Kpi label={t("kpiManDay")} value={num(s.manDay)} />
         <Kpi label={t("kpiPeople")} value={`${s.devs} / ${s.bas}`} />
         <Kpi label={t("kpiRange")} value={s.planFrom ? `${formatDate(s.planFrom, year)} – ${formatDate(s.planTo, year)}` : "—"} range />
@@ -361,7 +364,7 @@ function FindingRow({ f }: { f: Finding }) {
       <span className={`${styles.hs} ${styles.ellipsis}`}>{f.module ?? "—"}</span>
       <span style={{ minWidth: 0 }}>
         <span className={styles.ellipsis} style={{ display: "block", fontWeight: 500 }}>{f.title ?? t("personRow")}</span>
-        {f.rowNo > 0 && <span className="muted" style={{ fontSize: 12 }}>{t("rowNo", { row: f.rowNo })}</span>}
+        {f.rowNo > 0 && <span className="muted" style={{ fontSize: 11 }}>{t("rowNo", { row: f.rowNo })}</span>}
       </span>
       <span>{f.problem}</span>
       <span className={styles.hs}>{f.fix}</span>
@@ -392,7 +395,7 @@ function DiffCard({ job, year, busy, onMissing }: { job: ImportJob; year: YearFo
         <div className={styles.diff}>
           <h3>{t("diffAdded")}</h3>
           {d.added.slice(0, 200).map((a) => (
-            <div key={a.no} className={styles.diffRow}><span className={styles.mono}>#{a.no}</span><span className={styles.ellipsis}>{a.title}</span><span className="muted">{a.module}</span></div>
+            <div key={a.no} className={styles.diffRow}><span className={styles.mono}>{a.number !== null ? `#${a.number}` : t("addedNew")}</span><span className={styles.ellipsis}>{a.title}</span><span className="muted">{a.module}</span></div>
           ))}
         </div>
       )}
@@ -469,7 +472,7 @@ function Confirm({ ws, job, busy, onPatch, onBack, onCommit }: {
           {create ? (
             <ul className={styles.list}>
               <li>{t.rich("sumProject", { b, name: name || "—" })}</li>
-              <li>{t("sumModules", { modules: s.modules, phases: s.phases })}</li>
+              <li>{t("sumModules", { modules: s.modules })}</li>
               <li>{t("sumSprint")}</li>
               <li>{t("sumRows", { ready: s.ready, backlog: s.backlog, skipped: s.skipped })}</li>
               <li>{t("sumDates")}</li>

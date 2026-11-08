@@ -6,7 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Bookmark, Bug, CheckSquare, ChevronDown, MoreHorizontal, Zap } from "lucide-react";
-import { AvatarStack, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select } from "@/components/ui";
+import { AvatarStack, Button, Dialog, EmptyState, ErrorState, FloatingNotice, Forbidden, Input, LoadingState, Select } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDateRange, today as todayIso, type YearFormat } from "@/lib/format";
@@ -207,8 +207,8 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
     </div>
 
     {!empty && <p className={styles.intro}>{t("intro")}</p>}
-    {notice && <div className={styles.notice} role="status"><span>{notice.message}</span>{notice.undo && <Button size="small" disabled={moving} onClick={() => void notice.undo?.()}>{t("undo")}</Button>}<Button size="small" variant="ghost" aria-label={t("close")} onClick={() => setNotice(null)}>×</Button></div>}
-    {!!moveError && <div className={styles.moveError} role="alert"><strong>{t("moveFailed")}</strong><span>{moveError instanceof ApiError && moveError.status === 409 ? t("conflict") : errorText(moveError, t("moveFailed"))}</span>{moveError instanceof ApiError && moveError.requestId && <code>{t("requestId", { id: moveError.requestId })}</code>}<Button size="small" onClick={() => { setMoveError(null); void backlog.refetch(); }}>{t("loadLatest")}</Button></div>}
+    {notice && <FloatingNotice><span>{notice.message}</span>{notice.undo && <Button size="small" disabled={moving} onClick={() => void notice.undo?.()}>{t("undo")}</Button>}<Button size="small" variant="ghost" aria-label={t("close")} onClick={() => setNotice(null)}>×</Button></FloatingNotice>}
+    {!!moveError && <FloatingNotice tone="error"><strong>{t("moveFailed")}</strong><span>{moveError instanceof ApiError && moveError.status === 409 ? t("conflict") : errorText(moveError, t("moveFailed"))}</span>{moveError instanceof ApiError && moveError.requestId && <code>{t("requestId", { id: moveError.requestId })}</code>}<Button size="small" onClick={() => { setMoveError(null); void backlog.refetch(); }}>{t("loadLatest")}</Button></FloatingNotice>}
 
     {empty && <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} action={canManage ? <Button variant="primary" onClick={() => setCreating(true)}>{t("createSprint")}</Button> : canCreate ? <Link className="button button-primary" href={href()}>{t("createIssue")}</Link> : undefined} />}
 

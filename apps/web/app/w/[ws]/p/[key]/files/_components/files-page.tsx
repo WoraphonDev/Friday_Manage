@@ -13,6 +13,7 @@ import { formatDate } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
 import type { Attachment, FileDetail, FileItem, FileList, Folder, FolderList, UploadTarget } from "./types";
+import { putFile, uploadUrl } from "@/lib/upload";
 import styles from "./files.module.css";
 
 /** ขีดจำกัดเดียวกับ API (413 file_too_large) · ตรวจก่อนเพื่อไม่ต้องขอ URL เปล่า ๆ */
@@ -83,35 +84,8 @@ export function flattenFolders(items: Folder[]) {
   return out;
 }
 
-/**
- * ที่เก็บในเครื่อง (dev / test) ออก URL ไปที่ origin ของ API ตรง ๆ ซึ่งไม่เปิด CORS ให้เว็บ
- * จึงส่งผ่าน proxy `/api/v1` ของเว็บเอง · S3 ใช้ URL ตามที่ได้ (CORS ตั้งที่ bucket)
- */
-export function uploadUrl(target: Pick<UploadTarget, "url" | "storage">) {
-  if (target.storage !== "local") return target.url;
-  try {
-    const u = new URL(target.url, "http://local");
-    if (u.pathname.startsWith("/api/v1/storage/")) return `${u.pathname}${u.search}`;
-  } catch {
-    // URL แปลก ๆ ใช้ตามเดิม
-  }
-  return target.url;
-}
-
-/** PUT ไฟล์ไปที่ URL ที่ API ออกให้ · ใช้ XHR เพราะ fetch ยังไม่มี progress ของการอัปโหลด */
-export function putFile(target: Pick<UploadTarget, "method" | "url" | "headers">, file: Blob, onProgress: (loaded: number) => void, register: (abort: () => void) => void) {
-  return new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open(target.method, target.url);
-    for (const [k, v] of Object.entries(target.headers)) xhr.setRequestHeader(k, v);
-    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded); };
-    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new ApiError(xhr.status, "upload_failed", "")));
-    xhr.onerror = () => reject(new ApiError(0, "network_error", ""));
-    xhr.onabort = () => reject(new DOMException("aborted", "AbortError"));
-    register(() => xhr.abort());
-    xhr.send(file);
-  });
-}
+// ย้ายไป @/lib/upload เพื่อใช้ร่วมกับหน้า Task · export ต่อให้ที่เดิมยังใช้ได้
+export { putFile, uploadUrl } from "@/lib/upload";
 
 const message = (e: unknown, fallback: string) => (e instanceof Error && e.message ? e.message : fallback);
 
@@ -407,12 +381,12 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
                         <span className={`${styles.muted} ${styles.small}`}>{t(`kinds.${kindOf(f)}`, { provider: t(`providers.${f.linkProvider ?? "other"}`) })}</span>
                       </div>
                     </div>
-                    <div role="cell" className={styles.ellipsis} style={{ fontSize: 13 }}>
+                    <div role="cell" className={styles.ellipsis} style={{ fontSize: 12 }}>
                       {f.evidence && <Badge tone="amber">{t("evidence")}</Badge>} {f.attachments ? t("linkedCount", { count: f.attachments }) : <span className={styles.muted}>—</span>}
                     </div>
                     <div role="cell" className={styles.who}>{f.uploader ? <><Avatar size="small" person={f.uploader} />{f.uploader.displayName}</> : "—"}</div>
-                    <div role="cell" className={styles.muted} style={{ fontSize: 13 }}>{formatDate(inTrash ? f.deletedAt : f.updatedAt, year)}</div>
-                    <div role="cell" className={styles.muted} style={{ fontSize: 13 }}>{f.kind === "link" ? t("link") : formatBytes(f.size)}</div>
+                    <div role="cell" className={styles.muted} style={{ fontSize: 12 }}>{formatDate(inTrash ? f.deletedAt : f.updatedAt, year)}</div>
+                    <div role="cell" className={styles.muted} style={{ fontSize: 12 }}>{f.kind === "link" ? t("link") : formatBytes(f.size)}</div>
                     <div role="cell">{f.versionNo ? <Badge>v{f.versionNo}</Badge> : <span className={styles.muted}>—</span>}</div>
                     <div role="cell">
                       {inTrash && canTrash ? <Button size="small" onClick={() => void restore(f)}>{t("restore")}</Button> : null}
@@ -427,7 +401,7 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
                 <button key={f.id} type="button" className={`${styles.gc} ${!inTrash && current?.id === f.id ? styles.gsel : ""}`} aria-pressed={!inTrash && current?.id === f.id} onClick={() => (inTrash ? undefined : setSelectedId(f.id))}>
                   <div className={`${styles.thumb} ${styles[`x-${extOf(f).tone}`]}`}>{extOf(f).label}</div>
                   <div className={styles.gbody}>
-                    <span className={styles.ellipsis} style={{ fontWeight: 600, fontSize: 13 }}>{f.name}</span>
+                    <span className={styles.ellipsis} style={{ fontWeight: 600, fontSize: 12 }}>{f.name}</span>
                     <span className={`${styles.muted} ${styles.small} ${styles.ellipsis}`}>{t(`kinds.${kindOf(f)}`, { provider: t(`providers.${f.linkProvider ?? "other"}`) })}</span>
                     <span className={`${styles.muted} ${styles.small}`}>{f.uploader?.displayName ?? "—"} · {formatDate(inTrash ? f.deletedAt : f.updatedAt, year)} · {f.kind === "link" ? t("link") : formatBytes(f.size)}</span>
                   </div>
@@ -537,8 +511,8 @@ function DetailPanel({ file, detail, detailError, base, pageHref, year, canUploa
     <section className={`${styles.card} ${styles.detail}`} aria-label={t("detail")}>
       <div className={styles.preview}>
         <div className={`${styles.big} ${styles[`x-${e.tone}`]}`}>
-          {kindOf(file) === "image" ? <img src={download} alt={file.name} className={styles.img} /> : <span style={{ fontSize: 30, fontWeight: 700 }}>{e.label}</span>}
-          <span style={{ fontSize: 13, fontWeight: 600 }}>{t(`kinds.${kindOf(file)}`, { provider: t(`providers.${file.linkProvider ?? "other"}`) })}</span>
+          {kindOf(file) === "image" ? <img src={download} alt={file.name} className={styles.img} /> : <span style={{ fontSize: 26, fontWeight: 700 }}>{e.label}</span>}
+          <span style={{ fontSize: 12, fontWeight: 600 }}>{t(`kinds.${kindOf(file)}`, { provider: t(`providers.${file.linkProvider ?? "other"}`) })}</span>
         </div>
         <div className={styles.row} style={{ marginTop: 12 }}>
           {file.kind === "link" && file.linkUrl
@@ -552,7 +526,7 @@ function DetailPanel({ file, detail, detailError, base, pageHref, year, canUploa
         <div className={styles.infoHead}>
           <div style={{ minWidth: 0 }}>
             <h3 className={styles.h3}>{file.name}</h3>
-            <div className={styles.muted} style={{ fontSize: 13 }}>{t("meta", { size: file.kind === "link" ? t("link") : formatBytes(file.size), who: file.uploader?.displayName ?? "—", date: formatDate(file.updatedAt, year) })}</div>
+            <div className={styles.muted} style={{ fontSize: 12 }}>{t("meta", { size: file.kind === "link" ? t("link") : formatBytes(file.size), who: file.uploader?.displayName ?? "—", date: formatDate(file.updatedAt, year) })}</div>
           </div>
           <div className={styles.row} style={{ gap: 6 }}>
             {canUpload && <Button size="small" onClick={onRename}>{t("rename")}</Button>}
@@ -569,7 +543,7 @@ function DetailPanel({ file, detail, detailError, base, pageHref, year, canUploa
                   {a.targetType === "issue" ? <Link href={`${pageHref}?issue=${encodeURIComponent(a.target)}`}>{label(a)}</Link> : <span>{label(a)}</span>}
                   {canUpload && <button type="button" className={styles.x} aria-label={t("detach", { target: label(a) })} onClick={() => onDetach(a)}><X size={14} /></button>}
                 </div>
-              )) : <div className={styles.muted} style={{ fontSize: 13 }}>{t("notLinked")}</div>}
+              )) : <div className={styles.muted} style={{ fontSize: 12 }}>{t("notLinked")}</div>}
               {canUpload && <Button size="small" style={{ marginTop: 6 }} onClick={onAttach}>{t("attachTask")}</Button>}
             </div>
             <div>
@@ -585,7 +559,7 @@ function DetailPanel({ file, detail, detailError, base, pageHref, year, canUploa
                     </div>
                   </div>
                 </div>
-              )) : <div className={styles.muted} style={{ fontSize: 13 }}>{t("linkNoVersions")}</div>}
+              )) : <div className={styles.muted} style={{ fontSize: 12 }}>{t("linkNoVersions")}</div>}
             </div>
           </div>
         )}

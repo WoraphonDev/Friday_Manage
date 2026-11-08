@@ -153,7 +153,7 @@
     "filter": "Filter",
     "groupBy": "Group by",
     "groups": {
-      "module": "Module › Phase",
+      "module": "Module",
       "status": "Status",
       "assignee": "Assignee",
       "priority": "Priority",
@@ -201,6 +201,7 @@
       "name": "Name",
       "dev": "Dev",
       "ba": "BA",
+      "sa": "SA",
       "status": "Status",
       "size": "Size · MD",
       "start": "Plan Start",

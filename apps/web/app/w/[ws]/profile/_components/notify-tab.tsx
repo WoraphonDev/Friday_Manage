@@ -91,7 +91,7 @@ export function NotifyTab({ ws }: { ws: string }) {
       <div className={styles.notifyHead}>
         <div>
           <h2>{t("title")}</h2>
-          <div className={styles.muted} style={{ fontSize: 13 }}>{t("description")}</div>
+          <div className={styles.muted} style={{ fontSize: 12 }}>{t("description")}</div>
         </div>
         <div className={styles.channels}>
           <div className={styles.chn}>
@@ -135,7 +135,7 @@ export function NotifyTab({ ws }: { ws: string }) {
                 {list.map((r) => (
                   <div className={styles.mx} role="row" key={r.eventType}>
                     <div role="rowheader" style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 14 }}>{r.label}</div>
+                      <div style={{ fontSize: 13 }}>{r.label}</div>
                       {r.hint && <div className={cn(styles.muted, styles.small)}>{r.hint}</div>}
                     </div>
                     {CHANNELS.map((c) => {

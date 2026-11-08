@@ -107,7 +107,7 @@ export function InboxPage({ ws }: { ws: string }) {
                 <button key={n.id} type="button" className={`${styles.nt} ${!n.readAt ? styles.unread : ""} ${n.id === selected ? styles.sel : ""}`} aria-current={n.id === selected ? "true" : undefined} onClick={() => setSelected(n.id)}>
                   <Avatar person={{ id: n.actor?.id ?? n.id, displayName: labels.actor(n), avatarUrl: n.actor?.avatarUrl ?? null }} />
                   <span className={styles.ntBody}>
-                    <span style={{ fontSize: 14 }}><b>{labels.actor(n)}</b> {labels.verb(n)}</span>
+                    <span style={{ fontSize: 13 }}><b>{labels.actor(n)}</b> {labels.verb(n)}</span>
                     <span className={styles.ntTitle}>{n.issue?.key ?? (n.payload.issueKey as string | undefined) ?? ""} {n.issue?.title ?? (n.payload.title as string | undefined) ?? ""}</span>
                     {typeof n.payload.message === "string" && <span className={styles.quote}>“{n.payload.message}”</span>}
                     <span className={styles.meta}>{n.project?.name ?? n.project?.key ?? ""} · {formatDate(n.createdAt, me.yearFormat)} {timeOf(n.createdAt)}<Badge tone={TONE[n.category] ?? "neutral"}>{labels.type(n)}</Badge></span>
@@ -139,13 +139,13 @@ function Detail({ ws, n, busy, onBack, run }: { ws: string; n: InboxNotification
       <div className={styles.dHead}>
         <Button className={styles.back} size="icon" variant="ghost" aria-label={t("back")} onClick={onBack}><ArrowLeft size={18} aria-hidden /></Button>
         <Avatar size="large" person={{ id: n.actor?.id ?? n.id, displayName: labels.actor(n) }} />
-        <div style={{ flex: 1, minWidth: 0 }}><div><b>{labels.actor(n)}</b> {labels.verb(n)}</div><div className="muted" style={{ fontSize: 12 }}>{n.project?.name ?? ""} · {formatDate(n.createdAt, year)} {timeOf(n.createdAt)}</div></div>
+        <div style={{ flex: 1, minWidth: 0 }}><div><b>{labels.actor(n)}</b> {labels.verb(n)}</div><div className="muted" style={{ fontSize: 11 }}>{n.project?.name ?? ""} · {formatDate(n.createdAt, year)} {timeOf(n.createdAt)}</div></div>
         <Badge tone={TONE[n.category] ?? "neutral"}>{labels.type(n)}</Badge>
       </div>
       <div className={styles.dBody}>
         {n.issue && !n.issue.deleted ? (
           <Link className={styles.issueCard} href={issueHref(ws, n.issue.key)}>
-            <span className="muted" style={{ fontSize: 12 }}>{n.issue.key} · {n.issue.type}{n.issue.moduleName ? ` · ${n.issue.moduleName}` : ""}</span>
+            <span className="muted" style={{ fontSize: 11 }}>{n.issue.key} · {n.issue.type}{n.issue.moduleName ? ` · ${n.issue.moduleName}` : ""}</span>
             <b>{n.issue.title}</b>
             <span className={styles.meta} style={{ marginTop: 8 }}>
               <Badge tone={n.issue.status.category === "done" ? "green" : n.issue.status.category === "in_progress" ? "blue" : "neutral"}>{n.issue.status.name}</Badge>
@@ -158,7 +158,7 @@ function Detail({ ws, n, busy, onBack, run }: { ws: string; n: InboxNotification
         {req && (
           <>
             <div className={styles.diff}><span className="muted">{t("dueDiff")}</span><span className="muted" style={{ textDecoration: "line-through" }}>{formatDate(req.currentDue, year)}</span><span aria-hidden="true">→</span><b>{formatDate(req.requestedDue, year)}</b></div>
-            <div className="muted" style={{ fontSize: 13 }}>{t("reasonLabel", { reason: req.reasonLabel })}{req.detail ? ` · ${req.detail}` : ""}</div>
+            <div className="muted" style={{ fontSize: 12 }}>{t("reasonLabel", { reason: req.reasonLabel })}{req.detail ? ` · ${req.detail}` : ""}</div>
             {req.status === "pending" && req.canDecide ? (
               <div className={styles.actions}>
                 <Button className={styles.approve} disabled={busy} onClick={() => run(`/w/${encodeURIComponent(ws)}/due-requests/${req.id}/approve`, t("approvedToast"))}>{t("approve")}</Button>

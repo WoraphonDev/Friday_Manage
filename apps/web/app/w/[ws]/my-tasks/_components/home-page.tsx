@@ -45,7 +45,7 @@ export function HomePage({ ws }: { ws: string }) {
       <header className={styles.head}>
         <div className={styles.headRow}>
           <div>
-            <div className="muted" style={{ fontSize: 13 }}>{formatDate(d.today, year, true)}</div>
+            <div className="muted" style={{ fontSize: 12 }}>{formatDate(d.today, year, true)}</div>
             <h1 className={styles.title}>{t(`greeting.${greeting}`, { name: me.displayName })}</h1>
             <div className={styles.sub} data-testid="summary-line">
               {t("summaryLine", { dueToday: t("dueTodayCount", { count: s.dueToday.team }), overdue: t("overdueCount", { count: s.overdue.team }), reviews: t("reviewsCount", { count: s.waitingReview }), approvals: t("approvalsCount", { count: s.pendingApprovals }) })}
@@ -146,7 +146,7 @@ function MobileHome({ data, ws, greeting, year }: { data: HomeData; ws: string; 
     <div>
       <header className={styles.mHead}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="muted" style={{ fontSize: 13 }}>{formatDate(data.today, year, true)}</div>
+          <div className="muted" style={{ fontSize: 12 }}>{formatDate(data.today, year, true)}</div>
           <h1 className={styles.mTitle}>{greeting}</h1>
         </div>
         <button type="button" className={styles.mIcon} aria-label={t("search")} onClick={() => openSearch?.()}><Search size={22} aria-hidden="true" /></button>
@@ -163,7 +163,7 @@ function MobileHome({ data, ws, greeting, year }: { data: HomeData; ws: string; 
             {!!error && <ErrorState error={error} />}
             {approvals.map((r) => (
               <div className={styles.mApprove} key={r.id}>
-                <div style={{ fontSize: 13 }}><b>{r.requester?.displayName ?? "-"}</b> {t("mobileAsksDue")}</div>
+                <div style={{ fontSize: 12 }}><b>{r.requester?.displayName ?? "-"}</b> {t("mobileAsksDue")}</div>
                 <Link className={styles.mApproveTitle} href={taskHref(ws, r.project.key, r.issue.key)}>{r.issue.key} {r.issue.title}</Link>
                 <div className={styles.mDueLine}><s>{formatDate(r.previousDue ?? r.issue.planEnd)}</s> → <b>{formatDate(r.requestedDue)}</b> <span className="muted">· {r.project.name}</span></div>
                 {r.canDecide && (
@@ -177,8 +177,8 @@ function MobileHome({ data, ws, greeting, year }: { data: HomeData; ws: string; 
           </section>
         )}
         <section aria-labelledby="m-today">
-          <div className={styles.mSec}><h2 id="m-today">{t("mobileMyToday")}</h2><Link href={my} style={{ fontSize: 13 }}>{t("seeAll")}</Link></div>
-          {data.waiting.reviews.length === 0 && <p className="muted" style={{ fontSize: 13, margin: "4px 0" }}>{t("waitingEmpty")}</p>}
+          <div className={styles.mSec}><h2 id="m-today">{t("mobileMyToday")}</h2><Link href={my} style={{ fontSize: 12 }}>{t("seeAll")}</Link></div>
+          {data.waiting.reviews.length === 0 && <p className="muted" style={{ fontSize: 12, margin: "4px 0" }}>{t("waitingEmpty")}</p>}
           {data.waiting.reviews.map((r) => (
             <Link key={r.key} className={styles.mToday} href={taskHref(ws, r.project.key, r.key)}>
               <span className={styles.mBar} aria-hidden="true" />
@@ -189,7 +189,7 @@ function MobileHome({ data, ws, greeting, year }: { data: HomeData; ws: string; 
         </section>
         {data.projects.length > 0 && (
           <section aria-labelledby="m-projects">
-            <div className={styles.mSec}><h2 id="m-projects">{t("mobileProjects")}</h2><span className="muted" style={{ fontSize: 13 }}>{data.projects.length}</span></div>
+            <div className={styles.mSec}><h2 id="m-projects">{t("mobileProjects")}</h2><span className="muted" style={{ fontSize: 12 }}>{data.projects.length}</span></div>
             <div className={styles.mProjects}>
               {data.projects.map((p) => (
                 <Link key={p.key} className={styles.mProject} href={projectHref(ws, p.key)}>
@@ -214,7 +214,7 @@ function Waiting({ data, ws }: { data: HomeData; ws: string }) {
     <section className={styles.card} aria-labelledby="waiting-title">
       <div className={styles.chead}>
         <h2 id="waiting-title">{t("waitingTitle")} <span className="muted" style={{ fontWeight: 500 }}>· {t("waitingSub")}</span></h2>
-        <Link href={`/w/${encodeURIComponent(ws)}/my-tasks`} style={{ fontSize: 13, fontWeight: 500 }}>{t("openMyTasks")}</Link>
+        <Link href={`/w/${encodeURIComponent(ws)}/my-tasks`} style={{ fontSize: 12, fontWeight: 500 }}>{t("openMyTasks")}</Link>
       </div>
       {!!error && <div style={{ padding: 12 }}><ErrorState error={error} /></div>}
       {rows.map((r) => (
@@ -281,17 +281,17 @@ function Projects({ data, ws, year }: { data: HomeData; ws: string; year: YearFo
               <Link className={styles.pc} key={p.key} href={projectHref(ws, p.key)}>
                 <div className={styles.pcTop}>
                   <span className={styles.pcIcon} style={{ background: color }}>{p.key.slice(0, 2)}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}><div className={styles.pcName}>{p.name}</div><div className="muted" style={{ fontSize: 12 }}>{t("projectRole", { key: p.key, count: p.myTasks })}</div></div>
+                  <div style={{ flex: 1, minWidth: 0 }}><div className={styles.pcName}>{p.name}</div><div className="muted" style={{ fontSize: 11 }}>{t("projectRole", { key: p.key, count: p.myTasks })}</div></div>
                   <Badge tone={HEALTH_TONE[p.health.level]}>{t(`health.${p.health.level}`)}</Badge>
                 </div>
                 <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}><span className="muted">{t("progress")}</span><b>{p.progressPct}%</b></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}><span className="muted">{t("progress")}</span><b>{p.progressPct}%</b></div>
                   <div className={styles.bar}><div style={{ width: `${p.progressPct}%`, background: color }} /></div>
                 </div>
                 <div className={styles.stats}>
                   <div><span className="muted">{t("overdueShort")}</span><b style={{ color: p.overdue ? "#b91c1c" : undefined }}>{p.overdue}</b></div>
                   <div><span className="muted">{t("myTasksShort")}</span><b>{p.myTasks}</b></div>
-                  <div><span className="muted">{t("goLive")}</span><b style={{ fontSize: 13 }}>{formatDate(p.goliveDate, year)}</b><span className="muted">{go}</span></div>
+                  <div><span className="muted">{t("goLive")}</span><b style={{ fontSize: 12 }}>{formatDate(p.goliveDate, year)}</b><span className="muted">{go}</span></div>
                 </div>
               </Link>
             );
@@ -342,7 +342,7 @@ function InboxCard({ ws, items, loading }: { ws: string; items?: InboxItem[]; lo
     <section className={styles.card} id="inbox">
       <div className={styles.chead}>
         <h2>{t("inbox")} {fresh > 0 && <Badge tone="red">{t("inboxNew", { count: fresh })}</Badge>}</h2>
-        <Link href={inboxHref(ws)} style={{ fontSize: 13 }}>{t("inboxAll")}</Link>
+        <Link href={inboxHref(ws)} style={{ fontSize: 12 }}>{t("inboxAll")}</Link>
       </div>
       {loading && <div className={styles.empty}>…</div>}
       {!loading && !items?.length && <div className={styles.empty}>{t("inboxEmpty")}</div>}
@@ -352,7 +352,7 @@ function InboxCard({ ws, items, loading }: { ws: string; items?: InboxItem[]; lo
         return (
           <Link className={styles.li} key={n.id} href={inboxHref(ws)}>
             <Avatar size="small" person={{ id: n.actor?.id ?? n.id, displayName: name }} />
-            <div style={{ flex: 1, minWidth: 0, fontSize: 13 }}>
+            <div style={{ flex: 1, minWidth: 0, fontSize: 12 }}>
               <div><b>{name}</b> {label(n.eventType)} <span style={{ fontWeight: 600 }}>{target}</span></div>
               {typeof n.payload.message === "string" && <div className={`muted ${styles.small}`} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>“{n.payload.message}”</div>}
               <div className={`muted ${styles.small}`}>{formatDate(n.createdAt)}</div>
@@ -381,7 +381,7 @@ function Upcoming({ data, year }: { data: HomeData; year: YearFormat }) {
             <div className={styles.upRow} key={`${e.date}-${e.type}-${i}`}>
               <div className={styles.upDate}><b>{p.d}</b><span className="muted" style={{ fontSize: 11 }}>{p.m}</span></div>
               <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill={e.type === "holiday" ? "#94a3b8" : "#1d4ed8"} /></svg>
-              <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600, fontSize: 13 }}>{t(`upcomingTypes.${e.type}`)} · {e.title}</div>{e.project && <div className={`muted ${styles.small}`}>{e.project}</div>}</div>
+              <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600, fontSize: 12 }}>{t(`upcomingTypes.${e.type}`)} · {e.title}</div>{e.project && <div className={`muted ${styles.small}`}>{e.project}</div>}</div>
               <Badge>{t("inDays", { days })}</Badge>
             </div>
           );
@@ -403,7 +403,7 @@ function Workload({ data, ws }: { data: HomeData; ws: string }) {
     <section className={styles.card}>
       <div className={styles.chead}>
         <h2>{t("workloadTitle")}</h2>
-        <span style={{ fontSize: 13, fontWeight: 600, color: w.team.md > w.team.capacityMd ? "#b91c1c" : undefined }}>{t("workloadTotal", { md: w.team.md.toFixed(1), capacity: w.team.capacityMd.toFixed(0) })}</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: w.team.md > w.team.capacityMd ? "#b91c1c" : undefined }}>{t("workloadTotal", { md: w.team.md.toFixed(1), capacity: w.team.capacityMd.toFixed(0) })}</span>
       </div>
       <div className={styles.chart} role="img" aria-label={`${t("workloadChart")}: ${label}`}>
         {cap > 0 && <span className={styles.cap} style={{ bottom: h(cap) }} />}

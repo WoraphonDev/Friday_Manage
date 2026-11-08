@@ -36,6 +36,13 @@
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
-  --sidebar-width: 220px;
+  /* ขนาดตัวอักษรและ layout ตาม FridayManagement (หน้าตา component คงเดิม) */
+  --sidebar-width: 216px;
+  --topbar-h: 46px;
+  --control-h: 32px;
+  --text-body: 13px;
+  --text-label: 12px;
+  --text-caption: 11px;
+  --text-title: 20px;
   --font-sans: "IBM Plex Sans Thai", system-ui, sans-serif;
 }

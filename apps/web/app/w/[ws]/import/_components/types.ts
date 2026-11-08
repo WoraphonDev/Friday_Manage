@@ -13,7 +13,7 @@ export interface Finding {
 export type PersonTarget = { userId: string } | { email: string } | null;
 export interface JobPerson {
   name: string;
-  roles: ("dev" | "ba")[];
+  roles: ("dev" | "ba" | "sa" | "qa")[];
   rows: number;
   /** false = ยังไม่พบในรายชื่อสมาชิกและยังไม่ได้เลือก */
   decided: boolean;
@@ -26,7 +26,7 @@ export interface FieldChange {
   new: unknown;
 }
 export interface UpdateDiff {
-  added: { no: number; number: number; title: string; module: string }[];
+  added: { no: number; number: number | null; title: string; module: string }[];
   changed: { no: number; key: string; title: string; fields: FieldChange[] }[];
   missing: { no: number; key: string; title: string; status: string }[];
   unchanged: number;

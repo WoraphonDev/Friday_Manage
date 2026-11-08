@@ -119,8 +119,8 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
             <text x="46" y="52" textAnchor="middle" fontSize="20" fontWeight="700" fill="#1b1f24">{p.pct}%</text>
           </svg>
           <div>
-            <div className={styles.muted} style={{ fontSize: 13 }}>{t("progressTitle")}</div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>{t("tasksDone", { done: p.tasks.done, total: p.tasks.total })}</div>
+            <div className={styles.muted} style={{ fontSize: 12 }}>{t("progressTitle")}</div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>{t("tasksDone", { done: p.tasks.done, total: p.tasks.total })}</div>
             <div className={`${styles.muted} ${styles.small}`}>{t("mdDone", { done: p.md.done, total: p.md.total, pct: p.md.pct })}</div>
           </div>
         </div>
@@ -136,13 +136,13 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
         </div>
         <div className={styles.facts}>
           <div>
-            <div className={styles.muted} style={{ fontSize: 13 }}>{t("remainTitle")}</div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{t("remainValue", { days: p.remainingWorkingDays })}</div>
+            <div className={styles.muted} style={{ fontSize: 12 }}>{t("remainTitle")}</div>
+            <div style={{ fontSize: 22, fontWeight: 700 }}>{t("remainValue", { days: p.remainingWorkingDays })}</div>
             <div className={`${styles.muted} ${styles.small}`}>{p.lastPlanEnd ? t("lastPlanEnd", { date: formatDate(p.lastPlanEnd, year) }) : t("noPlan")}</div>
           </div>
           <div>
-            <div className={styles.muted} style={{ fontSize: 13 }}>{t("nextMilestone")}</div>
-            {p.nextMilestone ? <><div style={{ fontSize: 16, fontWeight: 600, marginTop: 4 }}>{p.nextMilestone.name}</div><div className={`${styles.muted} ${styles.small}`}>{t("milestoneIn", { date: formatDate(p.nextMilestone.date, year), days: p.nextMilestone.daysLeft })}</div></> : <div style={{ marginTop: 4 }}>{t("noMilestone")}</div>}
+            <div className={styles.muted} style={{ fontSize: 12 }}>{t("nextMilestone")}</div>
+            {p.nextMilestone ? <><div style={{ fontSize: 15, fontWeight: 600, marginTop: 4 }}>{p.nextMilestone.name}</div><div className={`${styles.muted} ${styles.small}`}>{t("milestoneIn", { date: formatDate(p.nextMilestone.date, year), days: p.nextMilestone.daysLeft })}</div></> : <div style={{ marginTop: 4 }}>{t("noMilestone")}</div>}
           </div>
         </div>
         <PlanFacts plan={plan} />
@@ -173,7 +173,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
           <section className={styles.card}>
             <div className={styles.chead}>
               <h2>{t(`kpi.${list}`)} <span className="muted" style={{ fontWeight: 500 }}>{t("listCount", { count: kpiValue[list] })}</span></h2>
-              <Link href={tableHref} style={{ fontSize: 13, fontWeight: 500 }}>{t("openInTable")}</Link>
+              <Link href={tableHref} style={{ fontSize: 12, fontWeight: 500 }}>{t("openInTable")}</Link>
             </div>
             {!items.length && <div className={styles.empty}>{t("listEmpty")}</div>}
             {items.map((i) => <ListRow key={i.key} i={i} list={list} href={href} year={year} busy={busy === i.key} onToggle={(done) => void toggleDone(i, done)} />)}
@@ -232,7 +232,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
             </div>
           </section>}
           <section className={`${styles.card} ${styles.desktopOnly}`}>
-            <div className={styles.chead}><h2>{t("statusTitle")}</h2><span className="muted" style={{ fontSize: 13 }}>{t("statusTotal", { count: statusTotal })}</span></div>
+            <div className={styles.chead}><h2>{t("statusTitle")}</h2><span className="muted" style={{ fontSize: 12 }}>{t("statusTotal", { count: statusTotal })}</span></div>
             <div style={{ padding: "16px 18px" }}>
               <div className={styles.stack} role="img" aria-label={d.statusBreakdown.columns.map((c) => `${c.name} ${c.count}`).join(", ")}>{d.statusBreakdown.columns.map((c) => <div key={c.id} style={{ width: `${c.pct}%`, background: CAT_COLOR[c.category] }} />)}</div>
               <div className={styles.legend}>
@@ -241,7 +241,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
             </div>
           </section>
           <section className={`${styles.card} ${styles.desktopOnly}`}>
-            <div className={styles.chead}><h2>{t("milestones")}</h2><Link href={`${page}/timeline`} style={{ fontSize: 13 }}>{t("timeline")}</Link></div>
+            <div className={styles.chead}><h2>{t("milestones")}</h2><Link href={`${page}/timeline`} style={{ fontSize: 12 }}>{t("timeline")}</Link></div>
             <div style={{ padding: "6px 0" }}>
               {!d.milestones.length && <div className={styles.empty}>{t("noMilestone")}</div>}
               {d.milestones.map((m) => (
@@ -255,7 +255,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
           </section>
           {d.workloadThisWeek && !canPlan && (
             <section className={styles.card}>
-              <div className={styles.chead}><h2>{t("workload")} <span className="muted" style={{ fontWeight: 500 }}>· {formatDate(d.workloadThisWeek.from, year)} – {formatDate(d.workloadThisWeek.to, year)}</span></h2><Link href={`${page}/members`} style={{ fontSize: 13 }}>{t("seeAll")}</Link></div>
+              <div className={styles.chead}><h2>{t("workload")} <span className="muted" style={{ fontWeight: 500 }}>· {formatDate(d.workloadThisWeek.from, year)} – {formatDate(d.workloadThisWeek.to, year)}</span></h2><Link href={`${page}/members`} style={{ fontSize: 12 }}>{t("seeAll")}</Link></div>
               <div className={styles.list}>
                 {d.workloadThisWeek.people.map((w) => (
                   <div key={w.person.id} style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -276,7 +276,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
               {d.activity.slice(0, 8).map((a) => (
                 <div key={a.id} className={styles.act}>
                   <Avatar size="small" person={a.actor ?? { id: a.id, displayName: a.actorKind === "user" ? t("hidden") : t("system") }} />
-                  <div style={{ fontSize: 13, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, minWidth: 0 }}>
                     <b>{a.actor?.displayName ?? t("system")}</b> {t.has(`verbs.${a.verb}` as never) ? t(`verbs.${a.verb}` as never) : t("verbs.other")} {a.field ? `${a.field} ` : ""}{a.issue && <Link href={href(a.issue.key)}>{a.issue.key} {a.issue.title}</Link>}
                     <div className={`${styles.muted} ${styles.small}`}>{formatDate(a.createdAt, year)}</div>
                   </div>
@@ -350,7 +350,7 @@ function ListRow({ i, list, href, year, busy, onToggle }: { i: OverviewItem; lis
       : list === "dueToday"
         ? { text: t("todayLabel"), cls: styles.dtToday }
         : { text: i.planEnd ? formatDate(i.planEnd, year) : "", cls: styles.dtWeek };
-  const sub = [i.key, i.parentKey ? `↳ ${i.parentKey}` : null, i.phase?.name].filter(Boolean).join(" · ");
+  const sub = [i.key, i.parentKey ? `↳ ${i.parentKey}` : null].filter(Boolean).join(" · ");
   return (
     <div className={styles.row}>
       {done
@@ -383,7 +383,7 @@ function Burnup({ d }: { d: Overview }) {
         <polyline fill="none" stroke="#94a3b8" strokeWidth={2} points={line(pts.map((p) => p.planned))} />
         <polyline fill="none" stroke="#1d4ed8" strokeWidth={2.5} points={line(pts.map((p) => p.done))} />
       </svg>
-      <div className={styles.bar} style={{ fontSize: 12 }}><span style={{ color: "#94a3b8" }}>— {t("planned")}</span><span style={{ color: "#1d4ed8" }}>— {t("actual")}</span></div>
+      <div className={styles.bar} style={{ fontSize: 11 }}><span style={{ color: "#94a3b8" }}>— {t("planned")}</span><span style={{ color: "#1d4ed8" }}>— {t("actual")}</span></div>
     </div>
   );
 }

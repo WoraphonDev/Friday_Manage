@@ -79,12 +79,12 @@ describe("Timeline (4)", () => {
     expect(px(bar("DE-1"), "width")).toBe(5 * PX_PER_DAY.month);
     await user.click(screen.getByRole("button", { name: "ย่อ DE-1" }));
     expect(screen.queryByTestId("bar-DE-2")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "ย่อ กลุ่มงานแรก" }));
-    expect(screen.queryByTestId("bar-DE-1")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "ย่อ Module A" }));
+    // Module › Task › Sub-task: ไม่มีแถวกลุ่มงานแล้ว (ผู้ใช้ตัดสิน 2026-11-08)
     expect(screen.queryByRole("button", { name: /กลุ่มงานแรก/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ย่อ Module A" }));
+    expect(screen.queryByTestId("bar-DE-1")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "ขยาย Module A" }));
-    expect(screen.getByRole("button", { name: "ขยาย กลุ่มงานแรก" })).toBeInTheDocument();
+    expect(screen.getByTestId("bar-DE-1")).toBeInTheDocument();
     // ปุ่มระดับ: Module = ย่อทุก Module · + Sub-task = เปิดทั้งหมด
     const levels = within(screen.getByRole("group", { name: "ระดับที่แสดง" }));
     await user.click(levels.getByRole("button", { name: "Module" }));

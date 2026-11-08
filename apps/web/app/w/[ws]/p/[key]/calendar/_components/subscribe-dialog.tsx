@@ -89,7 +89,7 @@ export function SubscribeDialog({ ws, projectKey, onClose }: { ws: string; proje
         )}
         {!!error && <ErrorState error={error} />}
         <div className={styles.actions}>
-          {mine.length > 0 && !url && <span className="muted" style={{ fontSize: 12, marginRight: "auto" }}>{t("regenerateHint")}</span>}
+          {mine.length > 0 && !url && <span className="muted" style={{ fontSize: 11, marginRight: "auto" }}>{t("regenerateHint")}</span>}
           <Button variant="primary" disabled={busy || feeds.isPending} onClick={create}>{mine.length > 0 ? t("regenerate") : t("create")}</Button>
         </div>
       </div>

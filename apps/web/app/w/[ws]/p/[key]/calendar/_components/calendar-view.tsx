@@ -286,14 +286,14 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
           {!!unscheduled.data?.unscheduled.length && (
             <section className={styles.panel} aria-label={t("unscheduled")}>
               <h2>{t("unscheduled")}</h2>
-              <p className="muted" style={{ fontSize: 12, margin: "-6px 0 8px" }}>{t("unscheduledHint")}</p>
+              <p className="muted" style={{ fontSize: 11, margin: "-6px 0 8px" }}>{t("unscheduledHint")}</p>
               <div className={styles.unsched}>
                 {unscheduled.data.unscheduled.slice(0, 5).map((u) => (
                   <span key={u.key} className={styles.uItem} draggable={canEdit} data-testid={`unscheduled-${u.key}`} onDragStart={(e) => { dragged.current = u.key; e.dataTransfer?.setData("text/plain", u.key); }} title={u.title}>
                     <span className={styles.grip} aria-hidden="true">⋮⋮</span><span className={styles.evDot} aria-hidden="true" /><span className={styles.t}>{u.key} {u.title}</span>
                   </span>
                 ))}
-                {unscheduled.data.unscheduled.length > 5 && <span className="muted" style={{ fontSize: 12 }}>{t("moreUnscheduled", { count: unscheduled.data.unscheduled.length - 5 })}</span>}
+                {unscheduled.data.unscheduled.length > 5 && <span className="muted" style={{ fontSize: 11 }}>{t("moreUnscheduled", { count: unscheduled.data.unscheduled.length - 5 })}</span>}
               </div>
             </section>
           )}
@@ -316,7 +316,7 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
           </section>
         </aside>
       </div>
-      {canEdit && <div className="muted" style={{ fontSize: 12 }}>{t("footer")}</div>}
+      {canEdit && <div className="muted" style={{ fontSize: 11 }}>{t("footer")}</div>}
 
       {subscribe && <SubscribeDialog ws={ws} projectKey={d.project.key} onClose={() => setSubscribe(false)} />}
       {needReason && <ReasonDialog onClose={() => setNeedReason(null)} onSave={(reason) => { const p = needReason; setNeedReason(null); void commit({ ...p, reason }); }} />}

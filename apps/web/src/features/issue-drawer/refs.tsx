@@ -76,6 +76,6 @@ export function LabelChips({ options, value, editable, busy, onChange }: {
         </select>
       : rest.length > 0
         ? <button type="button" className={styles.prb} disabled={busy} onClick={() => setAdding(true)}>{t('add_label')}</button>
-        : !options.length && <span className="muted" style={{ fontSize: 12 }}>{t('noLabels')}</span>)}
+        : !options.length && <span className="muted" style={{ fontSize: 11 }}>{t('noLabels')}</span>)}
   </div>;
 }

@@ -2,22 +2,33 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Flag, Plus, Trash2, X } from 'lucide-react';
-import { Button, Combobox, Dialog, DrawerClose, Input, Select, useToast } from '@/components/ui';
+import { Info, Plus, Trash2, X } from 'lucide-react';
+import { Button, Combobox, DatePicker, Dialog, DrawerClose, Input, Select, useToast } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
-import { Failure, Section } from './shared';
+import { Failure } from './shared';
 import { CodeChips, LabelChips } from './refs';
+import { PropRow } from './detail-parts';
+import { DraftList, IssuePicker, useProjectIssues } from './task-v2';
 import { issuePath, projectPath, type FormOptions, type Issue, type IssueType, type Scope } from './types';
 import styles from './issue-drawer.module.css';
 
 type ChildDraft = { id: string; title: string; size: string; assigneeId: string; planEnd: string };
-type Draft = { type: IssueType; subtask: boolean; parentKey: string; title: string; description: string; moduleId: string; phaseId: string; sprintId: string; statusId: string; priority: string; assigneeIds: string[]; baId: string; reviewerId: string; testerId: string; size: string; estimateMd: string; planStart: string; planEnd: string; severity: string; environment: string; details: Record<string, string>; acceptance: string; checklist: string; blockedBy: string; children: ChildDraft[]; shared: boolean; requirements: string[]; screens: string[]; labelIds: string[]; watcherIds: string[] };
+type Draft = {
+  type: IssueType; subtask: boolean; parentKey: string; title: string; description: string; moduleId: string; phaseId: string; statusId: string; priority: string;
+  assigneeIds: string[]; baId: string; saId: string; reviewerId: string; size: string; estimateMd: string; planStart: string; planEnd: string;
+  severity: string; environment: string; details: Record<string, string>; acceptance: string[]; checklist: string[]; blockedBy: string[]; children: ChildDraft[];
+  shared: boolean; requirements: string[]; screens: string[]; labelIds: string[]; watcherIds: string[];
+};
 const supported: IssueType[] = ['Task', 'Story', 'Bug', 'Spike'];
 const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL'];
+const LIST_FIELDS = ['assigneeIds', 'requirements', 'screens', 'labelIds', 'watcherIds', 'acceptance', 'checklist', 'blockedBy'] as const;
 function removeDraft(key: string) { try { localStorage.removeItem(key); } catch { /* storage access must not block server writes */ } }
-const lines = (value: string) => value.split('\n').map((line) => line.replace(/^\s*(?:[-*]\s*)?(?:\[[ xX]\]\s*)?/, '').trim()).filter(Boolean);
-const defaultDraft = (type: IssueType, parent?: Issue | null): Draft => ({ type, subtask: !!parent, parentKey: parent?.key ?? '', title: '', description: '', moduleId: parent?.moduleId ?? '', phaseId: parent?.phaseId ?? '', sprintId: parent?.sprintId ?? '', statusId: '', priority: 'medium', assigneeIds: [], baId: '', reviewerId: '', testerId: '', size: 'M', estimateMd: '', planStart: '', planEnd: '', severity: 'major', environment: 'sit', details: {}, acceptance: '', checklist: '', blockedBy: '', children: [], shared: false, requirements: [], screens: [], labelIds: [], watcherIds: [] });
+const defaultDraft = (type: IssueType, parent?: Issue | null): Draft => ({
+  type, subtask: !!parent, parentKey: parent?.key ?? '', title: '', description: '', moduleId: parent?.moduleId ?? '', phaseId: parent?.phaseId ?? '', statusId: '', priority: 'medium',
+  assigneeIds: [], baId: '', saId: '', reviewerId: '', size: 'M', estimateMd: '', planStart: '', planEnd: '', severity: 'major', environment: 'sit', details: {},
+  acceptance: [], checklist: [], blockedBy: [], children: [], shared: false, requirements: [], screens: [], labelIds: [], watcherIds: [],
+});
 function readDraft(key: string, fallback: Draft): Draft | null {
   try {
     const saved = JSON.parse(localStorage.getItem(key) ?? 'null');
@@ -28,20 +39,25 @@ function readDraft(key: string, fallback: Draft): Draft | null {
       if (typeof fallback[name] === 'string' && typeof value === 'string') Object.assign(clean, { [name]: value });
       if (typeof fallback[name] === 'boolean' && typeof value === 'boolean') Object.assign(clean, { [name]: value });
     }
-    for (const name of ['assigneeIds', 'requirements', 'screens', 'labelIds', 'watcherIds'] as const) {
+    for (const name of LIST_FIELDS) {
       const list = saved.data[name];
       if (Array.isArray(list) && list.every((id: unknown) => typeof id === 'string')) clean[name] = list;
     }
     if (saved.data.details && typeof saved.data.details === 'object' && !Array.isArray(saved.data.details)) clean.details = Object.fromEntries(Object.entries(saved.data.details).filter((entry) => typeof entry[1] === 'string')) as Record<string, string>;
-    if (Array.isArray(saved.data.children)) clean.children = saved.data.children.filter((child: ChildDraft) => child && ['id','title','size','assigneeId','planEnd'].every((field) => typeof child[field as keyof ChildDraft] === 'string'));
+    if (Array.isArray(saved.data.children)) clean.children = saved.data.children.filter((child: ChildDraft) => child && ['id', 'title', 'size', 'assigneeId', 'planEnd'].every((field) => typeof child[field as keyof ChildDraft] === 'string'));
     return clean;
   } catch { return null; }
 }
 
-export function CreateIssue({ scope, options, parent, initialType = 'Task', initialContext, layout = 'drawer', onCreated, onClose, registerClose }: {
+/**
+ * B2: สร้างงานใช้หน้าตาเดียวกับหน้าดู Task (C2) · ผู้ใช้ตัดสิน 2026-11-08
+ * ซ้าย = ชื่อ คำอธิบาย Acceptance criteria / Checklist / Sub-task / Dependency · ขวา = ผู้รับผิดชอบ / แผนงาน / กลุ่มงาน
+ * ไฟล์แนบ ผลทดสอบ Development และคอมเมนต์ เพิ่มได้หลังสร้าง (หน้าเปลี่ยนเป็นหน้าดู Task)
+ */
+export function CreateIssue({ scope, options, parent, initialType = 'Task', initialContext, onCreated, onClose, registerClose }: {
   scope: Scope; options: FormOptions; parent?: Issue | null; initialType?: IssueType;
   initialContext?: { moduleId?: string; phaseId?: string; statusId?: string };
-  /** drawer = Canvas B (Task / Sub-task ใน Drawer 640 px) · modal = Canvas K1 (เลือกประเภทในหน้าต่างกลางจอ) */
+  /** เดิม modal = K1 · ตอนนี้ใช้หน้าตาเดียวกันทุกที่ คงไว้ให้ผู้เรียกเดิมส่งได้ */
   layout?: 'drawer' | 'modal';
   onCreated: (issue: Issue) => void; onClose: () => void; registerClose: (handler: (() => void) | null) => void;
 }) {
@@ -52,7 +68,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
   const initialPhase = initialPhases.find((phase) => phase.id === initialContext?.phaseId);
   const initialStatus = options.issueTypes.find((type) => type.name === initialType)?.statuses?.find((status) => status.id === initialContext?.statusId);
   const freshDraft = (type: IssueType): Draft => ({ ...defaultDraft(type, parent), ...(!parent ? { moduleId: initialModule?.id ?? '', phaseId: initialPhase?.id ?? '', statusId: initialStatus?.id ?? '' } : {}) });
-  // ร่างที่เริ่มใน Module/กลุ่มงานหนึ่งต้องไม่ไปแทนร่างของอีกกลุ่ม
+  // ร่างที่เริ่มใน Module หนึ่งต้องไม่ไปแทนร่างของอีก Module
   const contextKey = initialModule ? `:${initialModule.id}:${initialPhase?.id ?? ''}` : initialStatus ? `:status:${initialStatus.id}` : '';
   const draftKey = `friday:issue-draft:${scope.ws}:${scope.projectKey}:${scope.meId}${contextKey}`;
   const [restored] = useState(() => parent ? null : readDraft(draftKey, freshDraft(initialType)));
@@ -73,17 +89,17 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
   const required = new Set(type?.requiredFields ?? []);
   const parentKeyValid = new RegExp(`^${scope.projectKey}-[0-9]+$`, 'i').test(draft.parentKey);
   const parentIssue = useQuery({ queryKey: ['issue-parent', scope.ws, scope.projectKey, draft.parentKey], queryFn: ({ signal }) => api.get<Issue>(issuePath(scope.ws, draft.parentKey), { signal }), enabled: draft.subtask && parentKeyValid, initialData: parent?.key === draft.parentKey ? parent : undefined });
-  const candidates = useQuery({ queryKey: ['issue-drawer-list', scope.ws, scope.projectKey, 'parents'], queryFn: ({ signal }) => api.get<{ items: Issue[] }>(`${projectEndpoint}/issues?level=task&limit=100`, { signal }), enabled: draft.subtask || layout === 'modal' });
-  const parents = candidates.data?.items.filter((issue) => !issue.parentKey) ?? [];
+  const projectIssues = useProjectIssues(scope);
+  const parents = (projectIssues.data?.items ?? []).filter((issue) => !issue.parentKey);
   const dirty = JSON.stringify(draft) !== JSON.stringify(freshDraft(initialType));
   useEffect(() => { registerClose(() => { if (dirty || created.current) setCloseOpen(true); else onClose(); }); return () => registerClose(null); }, [dirty, onClose, registerClose]);
   function set<K extends keyof Draft>(name: K, value: Draft[K]) { setDraft((previous) => ({ ...previous, [name]: value })); }
   const setDetail = (name: string, value: string) => setDraft((previous) => ({ ...previous, details: { ...previous.details, [name]: value } }));
-  function switchType(value: IssueType) { setDraft((previous) => ({ ...previous, type: value, statusId: '', ...(['Story','Spike'].includes(value) ? { subtask: false, parentKey: '' } : {}) })); }
+  function switchType(value: IssueType) { setDraft((previous) => ({ ...previous, type: value, statusId: '', ...(['Story', 'Spike'].includes(value) ? { subtask: false, parentKey: '' } : {}) })); }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (lock.current || !type || (draft.subtask && (!parentIssue.data || parentIssue.error || parentIssue.data.parentKey))) return;
-    if (!created.current && required.has('acceptance_criteria') && !lines(draft.acceptance).length) { setError(new Error(t('acceptanceRequired'))); return; }
+    if (!created.current && required.has('acceptance_criteria') && !draft.acceptance.length) { setError(new Error(t('acceptanceRequired'))); return; }
     lock.current = true; setPending(true); setError(null);
     try {
       if (!created.current) {
@@ -92,12 +108,13 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
         const estimateMd = draft.type === 'Spike' ? Number(details.timebox_hours) / 8 : draft.estimateMd ? Number(draft.estimateMd) : options.sizeMdMap[draft.size];
         const input = {
           type: draft.type, title: draft.title.trim(), description: draft.description, priority: draft.priority,
-          ...(draft.subtask ? { parentKey: draft.parentKey.trim() } : { moduleId: draft.moduleId || undefined, phaseId: draft.phaseId || undefined, sprintId: draft.sprintId || null }),
-          statusId: draft.statusId || undefined, assigneeIds: draft.assigneeIds, baId: draft.baId || undefined, reviewerId: draft.reviewerId || undefined, testerId: draft.testerId || undefined,
+          // Sprint ไม่อยู่ในหน้า Task แล้ว (ผู้ใช้ตัดสิน 2026-11-08) งานใหม่เข้า Backlog แล้วจัดเข้า Sprint ที่หน้า Backlog
+          ...(draft.subtask ? { parentKey: draft.parentKey.trim() } : { moduleId: draft.moduleId || undefined, phaseId: draft.phaseId || undefined }),
+          statusId: draft.statusId || undefined, assigneeIds: draft.assigneeIds, baId: draft.baId || undefined, saId: draft.saId || undefined, reviewerId: draft.reviewerId || undefined,
           size: draft.type === 'Spike' ? undefined : draft.size || undefined, estimateMd: estimateMd || undefined, planStart: draft.planStart || undefined, planEnd: draft.planEnd || undefined,
           ...((draft.type === 'Bug' || required.has('severity') || required.has('environment')) ? { severity: draft.severity, environment: draft.environment } : {}), details, sharedWithGuests: draft.shared,
           requirements: draft.requirements, screens: draft.screens,
-          // Label / Watcher ที่ถูกลบออกจากโปรเจกต์ระหว่างเก็บร่าง ไม่ส่งไปให้ API ปฏิเสธทั้งฟอร์ม
+          // Label / ผู้ติดตามที่ถูกลบออกจากโปรเจกต์ระหว่างเก็บร่าง ไม่ส่งไปให้ API ปฏิเสธทั้งฟอร์ม
           labelIds: draft.labelIds.filter((id) => options.labels.some((label) => label.id === id)),
           watcherIds: draft.watcherIds.filter((id) => options.members.some((person) => person.id === id)),
         };
@@ -109,129 +126,160 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
       const issue = created.current;
       async function once(id: string, action: () => Promise<unknown>) { if (!completed.current.has(id)) { await action(); completed.current.add(id); } }
       if (!draft.subtask) for (const child of draft.children) await once(`child-${child.id}`, () => api.post(`${projectEndpoint}/issues`, { type: 'Task', parentKey: issue.key, title: child.title.trim(), size: child.size, assigneeIds: child.assigneeId ? [child.assigneeId] : [], ...(child.planEnd ? { planEnd: child.planEnd } : {}) }));
-      for (const [kind, content] of [['checklist', draft.checklist], ['acceptance', (draft.type === 'Story' || required.has('acceptance_criteria')) ? draft.acceptance : '']] as const) {
-        for (const [index, text] of lines(content).entries()) await once(`${kind}-${index}`, () => api.post(`${issuePath(scope.ws, issue.key)}/checklist`, { text, kind }));
+      for (const [kind, items] of [['acceptance', draft.acceptance], ['checklist', draft.checklist]] as const) {
+        for (const [index, text] of items.entries()) await once(`${kind}-${index}`, () => api.post(`${issuePath(scope.ws, issue.key)}/checklist`, { text, kind }));
       }
-      for (const peer of [...new Set(draft.blockedBy.split(/[\n,]/).map((key) => key.trim().toUpperCase()).filter(Boolean))]) await once(`dependency-${peer}`, () => api.post(`${issuePath(scope.ws, issue.key)}/dependencies`, { predecessorKey: peer, type: 'FS', lagDays: 0 }));
-      await Promise.all(['table', 'overview', 'kanban', 'timeline', 'gantt', 'calendar', 'backlog'].map((key) => cache.invalidateQueries({ queryKey: [key, scope.ws, scope.projectKey] })));
+      for (const peer of [...new Set(draft.blockedBy)]) await once(`dependency-${peer}`, () => api.post(`${issuePath(scope.ws, issue.key)}/dependencies`, { predecessorKey: peer, type: 'FS', lagDays: 0 }));
+      await Promise.all(['table', 'overview', 'kanban', 'timeline', 'gantt', 'calendar', 'backlog', 'issue-drawer-list'].map((key) => cache.invalidateQueries({ queryKey: [key, scope.ws, scope.projectKey] })));
       if (continueCreating) { toast({ message: t('issueCreated', { key: issue.key }) }); created.current = null; completed.current.clear(); setPartial(null); setDraft(freshDraft(draft.type)); form.current?.querySelector<HTMLInputElement>('input[name="title"]')?.focus(); }
       else onCreated(issue);
     } catch (failure) { setError(failure); }
     finally { lock.current = false; setPending(false); }
   }
-  // Browser / Found in เป็นข้อความบรรทัดเดียวตาม K1 · ช่องอื่นเป็นหลายบรรทัด (ขั้นตอนสูงกว่า)
+  // Browser / Found in เป็นข้อความบรรทัดเดียวตาม K1 · ช่องอื่นเป็นหลายบรรทัด
   const singleLine = new Set(['browser', 'found_in']);
   const detailInput = (name: string, isRequired = false, numeric = false) => <label className="field" key={name}>{t.has(`detailFields.${name}`) ? t(`detailFields.${name}`) : name}{isRequired ? ' *' : ''}{numeric ? <input className="input" type="number" min={2} step={2} required={isRequired} value={draft.details[name] ?? ''} onChange={(event) => setDetail(name, event.target.value)} /> : singleLine.has(name) ? <input className="input" required={isRequired} value={draft.details[name] ?? ''} onChange={(event) => setDetail(name, event.target.value)} /> : <textarea className={`input ${name === 'steps' ? styles.taSteps : styles.taShort}`} required={isRequired} value={draft.details[name] ?? ''} onChange={(event) => setDetail(name, event.target.value)} />}</label>;
-  const phases = options.phases?.filter((phase) => phase.moduleId === draft.moduleId) ?? options.modules.find((module) => module.id === draft.moduleId)?.phases ?? [];
   const canSubtask = draft.type === 'Task' || draft.type === 'Bug';
-  const members = <option value="">{t('notSet')}</option>;
-  // ---- ชิ้นส่วนที่ใช้ทั้ง B และ K1 ----
-  const moduleSelect = <Select label={`${t('fields.moduleId')}`} required={required.has('module') || draft.type === 'Task'} value={draft.moduleId} onChange={(event) => { set('moduleId', event.target.value); set('phaseId', ''); }}><option value="">{t('choose')}</option>{options.modules.map((module) => <option value={module.id} key={module.id}>{module.name}</option>)}</Select>;
-  const sprintSelect = <Select label={t('fields.sprintId')} value={draft.sprintId} onChange={(event) => set('sprintId', event.target.value)}><option value="">{t('backlog')}</option>{options.sprints.filter((sprint) => sprint.status !== 'completed').map((sprint) => <option value={sprint.id} key={sprint.id}>{sprint.name}</option>)}</Select>;
-  const phaseSelect = <Select label={t('fields.phaseId')} value={draft.phaseId} onChange={(event) => set('phaseId', event.target.value)}><option value="">{t('notSet')}</option>{phases.map((phase) => <option value={phase.id} key={phase.id}>{phase.name}</option>)}</Select>;
-  const titleInput = <Input name="title" className={styles.bigTitle} label={draft.subtask ? t('subtaskName') : t('typeName', { type: t(`types.${draft.type}`) })} required maxLength={300} value={draft.title} onChange={(event) => set('title', event.target.value)} />;
-  const parentPicker = <div className={styles.stack}><Input label={t('parentKey')} value={draft.parentKey} required pattern={`${scope.projectKey}-[0-9]+`} onChange={(event) => set('parentKey', event.target.value.toUpperCase())} />
-    {parents.length > 0 && <Select label={t('chooseParent')} value={parents.some((issue) => issue.key === draft.parentKey) ? draft.parentKey : ''} onChange={(event) => set('parentKey', event.target.value)}><option value="">{t('choose')}</option>{parents.map((item) => <option key={item.key} value={item.key}>{item.key} · {item.title}</option>)}</Select>}
-    {parentIssue.error && <Failure error={parentIssue.error} />}{parentIssue.data?.parentKey && <p className="field-error">{t('parentMustBeTask')}</p>}
-    {parentIssue.data && !parentIssue.data.parentKey && <p className={styles.inherited}>{t('inheritsFrom', { key: parentIssue.data.key })} · {formatDate(parentIssue.data.planStart, scope.yearFormat)} – {formatDate(parentIssue.data.planEnd, scope.yearFormat)}</p>}
-  </div>;
-  const statusSelect = <Select label={t('fields.statusId')} value={draft.statusId} onChange={(event) => set('statusId', event.target.value)}><option value="">{t('initialStatus')}</option>{type?.statuses?.map((status) => <option value={status.id} key={status.id}>{status.name}</option>)}</Select>;
-  const assignees = <Combobox label={t('fields.assigneeIds')} multiple options={options.members} value={draft.assigneeIds} onValueChange={(ids) => { if (!lock.current && !created.current) set('assigneeIds', ids); }} />;
-  const personSelect = (name: 'baId' | 'reviewerId' | 'testerId') => <Select key={name} label={t(`fields.${name}`)} value={draft[name]} onChange={(event) => set(name, event.target.value)}>{members}{options.members.map((person) => <option value={person.id} key={person.id}>{person.displayName}</option>)}</Select>;
-  const prioritySegments = <div className={styles.segs} role="radiogroup" aria-label={t('fields.priority')}>{(['urgent', 'high', 'medium', 'low'] as const).map((value) => <button type="button" role="radio" key={value} aria-checked={draft.priority === value} className={styles.seg} onClick={() => set('priority', value)}><Flag size={13} className={styles[`flag_${value}`]} aria-hidden="true" />{t(`priority.${value}`)}</button>)}</div>;
-  const prioritySelect = <Select label={t('fields.priority')} value={draft.priority} onChange={(event) => set('priority', event.target.value)}>{['urgent','high','medium','low'].map((priority) => <option value={priority} key={priority}>{t(`priority.${priority}`)}</option>)}</Select>;
-  const dates = <div className={styles.dateRange}><Input type="date" label={t('fields.planStart')} value={draft.planStart} onChange={(event) => set('planStart', event.target.value)} /><span aria-hidden="true">→</span><Input type="date" label={t('fields.planEnd')} value={draft.planEnd} onChange={(event) => set('planEnd', event.target.value)} /></div>;
-  const estimate = <Input label={t('fields.estimateMd')} type="number" min={0.25} max={9999} step={0.25} readOnly={draft.type === 'Spike'} value={draft.type === 'Spike' ? (draft.details.timebox_hours ? Number(draft.details.timebox_hours) / 8 : '') : draft.estimateMd || (options.sizeMdMap[draft.size] ?? '').toString()} onChange={(event) => set('estimateMd', event.target.value)} />;
-  const sizeSegments = <div className={styles.sizeLine}><div className={styles.segs} role="radiogroup" aria-label={t('fields.size')}>{Object.entries(options.sizeMdMap).sort(([a], [b]) => SIZE_ORDER.indexOf(a) - SIZE_ORDER.indexOf(b)).map(([size, md]) => <button type="button" role="radio" key={size} disabled={draft.type === 'Spike'} aria-checked={draft.size === size} title={t('md', { value: md })} className={styles.seg} onClick={() => { set('size', size); set('estimateMd', ''); }}>{size}</button>)}</div><div className={styles.mdBox}>{estimate}<span>MD</span></div></div>;
-  const description = <div className="field"><label className="field">{t('description')}<textarea className={`input ${styles.editor}`} value={draft.description} onChange={(event) => set('description', event.target.value)} maxLength={50000} /></label><small className="muted">{t('markdownHint')}</small></div>;
+  const isBug = draft.type === 'Bug';
+  const parentRow = draft.subtask ? parentIssue.data : null;
+  const moduleId = parentRow ? parentRow.moduleId : draft.moduleId;
+  const mod = options.modules.find((module) => module.id === moduleId);
+  const modColor = mod?.color ?? '#1d4ed8';
+  const people = options.members.map((person) => ({ id: person.id, name: person.displayName }));
+  const personSelect = (name: 'baId' | 'saId' | 'reviewerId', label: string) => <Select label={label} value={draft[name]} onChange={(event) => set(name, event.target.value)}><option value="">{t('notSet')}</option>{people.map((person) => <option value={person.id} key={person.id}>{person.name}</option>)}</Select>;
+  const sizeOptions = Object.entries(options.sizeMdMap).sort(([a], [b]) => SIZE_ORDER.indexOf(a) - SIZE_ORDER.indexOf(b));
+  const mdValue = draft.type === 'Spike' ? (draft.details.timebox_hours ? Number(draft.details.timebox_hours) / 8 : '') : draft.estimateMd || (options.sizeMdMap[draft.size] ?? '').toString();
   const bugSection = <div className={styles.typeSection}>
-    <div className={styles.grid2}><div className="field"><span className={styles.fieldLabel}>{t('fields.severity')}{required.has('severity') ? ' *' : ''}</span><div className={styles.segs} role="radiogroup" aria-label={t('fields.severity')}>{['critical','major','minor'].map((value) => <button type="button" role="radio" key={value} aria-checked={draft.severity === value} className={`${styles.seg} ${styles[`sev_${value}`]}`} onClick={() => set('severity', value)}>{t(`severity.${value}`)}</button>)}</div></div><Select label={t('fields.environment')} required={required.has('environment')} value={draft.environment} onChange={(event) => set('environment', event.target.value)}>{['local','sit','uat','production'].map((value) => <option value={value} key={value}>{t(`environment.${value}`)}</option>)}</Select></div>
     <div className={styles.grid2}>{detailInput('browser')}{detailInput('found_in')}</div>
     {detailInput('steps', required.has('steps'))}
     <div className={styles.grid2}>{detailInput('expected')}{detailInput('actual')}</div>
   </div>;
-  const storySection = <div className={styles.typeSection}>{detailInput('as_a')}{detailInput('i_want', required.has('user_story'))}{detailInput('so_that')}<label className="field">{t('acceptance')}{required.has('acceptance_criteria') ? ' *' : ''}<textarea className="input" required={required.has('acceptance_criteria')} value={draft.acceptance} onChange={(event) => set('acceptance', event.target.value)} /></label></div>;
+  const storySection = <div className={styles.typeSection}>{detailInput('as_a')}{detailInput('i_want', required.has('user_story'))}{detailInput('so_that')}</div>;
   const spikeSection = <div className={styles.typeSection}>{detailInput('question', required.has('question'))}{detailInput('timebox_hours', required.has('timebox'), true)}{detailInput('deliverable')}</div>;
-  const showBug = draft.type === 'Bug' || required.has('severity') || required.has('environment') || required.has('steps');
-  const showStory = draft.type === 'Story' || required.has('user_story') || required.has('acceptance_criteria');
+  const showBug = isBug || required.has('steps');
+  const showStory = draft.type === 'Story' || required.has('user_story');
   const showSpike = draft.type === 'Spike' || required.has('question') || required.has('timebox');
-  const children = !draft.subtask && <Section title={t('subtasks')} action={<Button size="small" disabled={draft.children.length >= 20} onClick={() => set('children', [...draft.children, { id: crypto.randomUUID(), title: '', size: 'XS', assigneeId: '', planEnd: '' }])}><Plus size={14} />{t('addSubtask')}</Button>}>
-    {draft.children.map((child, index) => <div className={styles.childDraft} key={child.id}><Input label={t('childTitle', { number: index + 1 })} required maxLength={300} value={child.title} onChange={(event) => set('children', draft.children.map((row) => row.id === child.id ? { ...row, title: event.target.value } : row))} /><Select label={t('fields.size')} value={child.size} onChange={(event) => set('children', draft.children.map((row) => row.id === child.id ? { ...row, size: event.target.value } : row))}>{Object.entries(options.sizeMdMap).map(([size, md]) => <option value={size} key={size}>{size} · {t('md', { value: md })}</option>)}</Select><Select label={t('fields.assigneeIds')} value={child.assigneeId} onChange={(event) => set('children', draft.children.map((row) => row.id === child.id ? { ...row, assigneeId: event.target.value } : row))}><option value="">{t('notSet')}</option>{options.members.map((person) => <option key={person.id} value={person.id}>{person.displayName}</option>)}</Select><Input type="date" label={t('fields.planEnd')} value={child.planEnd} onChange={(event) => set('children', draft.children.map((row) => row.id === child.id ? { ...row, planEnd: event.target.value } : row))} /><Button size="icon" variant="ghost" aria-label={t('removeChild', { number: index + 1 })} onClick={() => set('children', draft.children.filter((row) => row.id !== child.id))}><Trash2 size={14} /></Button></div>)}
-  </Section>;
-  const extras = <>
-    {scope.access.permissions.includes('issue.edit') && <><label className="field">{t('checklistLines')}<textarea className="input" value={draft.checklist} onChange={(event) => set('checklist', event.target.value)} /></label><Input label={t('blockedByKeys')} value={draft.blockedBy} onChange={(event) => set('blockedBy', event.target.value)} /></>}
-    <label className={styles.checkboxLabel}><input type="checkbox" checked={draft.shared} onChange={(event) => set('shared', event.target.checked)} />{t('sharedWithGuests')}</label>
-  </>;
-  // Canvas B: Requirement (FR + Screen ในแถวเดียว) · Labels · Watchers
-  const requirementChips = <CodeChips kinds={['requirement', 'screen']} editable values={{ requirement: draft.requirements, screen: draft.screens }}
-    suggestions={{ requirement: options.requirements?.map((r) => r.code), screen: options.screens?.map((r) => r.code) }}
-    onChange={(kind, codes) => set(kind === 'requirement' ? 'requirements' : 'screens', codes)} />;
-  const labelChips = <LabelChips options={options.labels} value={draft.labelIds} editable onChange={(ids) => set('labelIds', ids)} />;
-  const watcherPicker = <Combobox label={t('refs.watchers')} multiple options={options.members.filter((person) => person.id !== scope.meId)} value={draft.watcherIds} onValueChange={(ids) => { if (!lock.current && !created.current) set('watcherIds', ids); }} />;
-  const row = (label: string, control: React.ReactNode) => <div className={styles.frow}><span className={styles.fieldLabel}>{label}</span><div className={styles.fctl}>{control}</div></div>;
   const submitLabel = pending ? t('creating') : partial ? t('retryRemaining') : t('createType', { type: draft.subtask ? t('subtask') : t(`types.${draft.type}`) });
   const submitDisabled = pending || !type || (draft.subtask && (!parentIssue.data || !!parentIssue.error || !!parentIssue.data.parentKey));
   const cancel = () => { if (dirty || partial) setCloseOpen(true); else onClose(); };
+  const updateChild = (id: string, patch: Partial<ChildDraft>) => set('children', draft.children.map((row) => row.id === id ? { ...row, ...patch } : row));
   return <>
-    {layout === 'drawer' && !parent && <div className={styles.createHead}>
-      <h2>{t('createNew')}</h2>
-      {canSubtask && <div className={styles.toggle} role="group" aria-label={t('createAs')}><button type="button" aria-pressed={!draft.subtask} onClick={() => set('subtask', false)}>{t(`types.${draft.type}`)}</button><button type="button" aria-pressed={draft.subtask} onClick={() => { set('subtask', true); set('children', []); }}>{t('subtask')}</button></div>}
-      <DrawerClose asChild><Button size="icon" variant="ghost" aria-label={t('close')}><X size={18} /></Button></DrawerClose>
+    {/* แถบหัวเหมือนหน้าดู Task: ตำแหน่งงาน + ประเภท + Task / Sub-task + ปิด · Sub-task ที่เปิดจาก Task ใช้หัวของ Drawer ชั้นสอง */}
+    {!parent && <div className={styles.dhead}>
+      <nav aria-label={t('breadcrumb')} className={styles.crumb}>
+        {mod && <span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod.name}</span>}
+        {parentRow && <><span className="muted">›</span><span>{parentRow.key}</span></>}
+        {(mod || parentRow) && <span className="muted">›</span>}<strong>{draft.subtask ? t('newSubtask') : t('newOfType', { type: t(`types.${draft.type}`) })}</strong>
+      </nav>
+      <div className={styles.actions}>
+        {!draft.subtask && availableTypes.length > 1 && <select className={styles.typeSelect} aria-label={t('issueType')} value={draft.type} onChange={(event) => switchType(event.target.value as IssueType)}>{availableTypes.map((option) => <option key={option.id} value={option.name}>{t(`types.${option.name}`)}</option>)}</select>}
+        {canSubtask && <div className={styles.toggle} role="group" aria-label={t('createAs')}><button type="button" aria-pressed={!draft.subtask} onClick={() => set('subtask', false)}>{t(`types.${draft.type}`)}</button><button type="button" aria-pressed={draft.subtask} onClick={() => { set('subtask', true); set('children', []); }}>{t('subtask')}</button></div>}
+        <DrawerClose asChild><Button size="icon" variant="ghost" aria-label={t('close')}><X size={18} /></Button></DrawerClose>
+      </div>
     </div>}
-    {restored && !partial && <p className={styles.notice}>{t('draftRestored')}</p>}
-    {partial && <div className={styles.pending}><strong>{t('mainIssueCreated', { key: partial.key })}</strong><p>{t('resumeCreation')}</p><Button size="small" onClick={() => onCreated(partial)}>{t('openIssue', { key: partial.key })}</Button></div>}
-    <form ref={form} className={`${styles.createForm} ${layout === 'drawer' ? styles.createDrawer : styles.createModal}`} onSubmit={submit} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); form.current?.requestSubmit(); } }}>
+    {restored && !partial && <p className={styles.notice} style={{ margin: '12px 24px 0' }}>{t('draftRestored')}</p>}
+    {partial && <div className={styles.pending} style={{ margin: '12px 24px 0' }}><strong>{t('mainIssueCreated', { key: partial.key })}</strong><p>{t('resumeCreation')}</p><Button size="small" onClick={() => onCreated(partial)}>{t('openIssue', { key: partial.key })}</Button></div>}
+    <form ref={form} className={styles.createForm} onSubmit={submit} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); form.current?.requestSubmit(); } }}>
       <fieldset disabled={pending || !!partial} className={styles.createFields}>
-        {layout === 'modal' ? <>
-          {/* K1: การ์ดเลือกประเภท → Module / Sprint / งานแม่ → ชื่อ → ส่วนเฉพาะประเภท → ผู้รับผิดชอบ / Priority / Due / Tester */}
-          <div className="field"><span className={styles.fieldLabel}>{t('issueType')} *</span>
-            <div className={styles.typeCards} role="group" aria-label={t('issueType')}>{availableTypes.map((option) => <button type="button" key={option.id} aria-pressed={draft.type === option.name} aria-label={t(`types.${option.name}`)} className={styles.typeCard} onClick={() => switchType(option.name as IssueType)}><span className={`${styles.typeIcon} ${styles[`type_${option.name}`]}`} aria-hidden="true" /><span><b>{t(`types.${option.name}`)}</b><small>{t(`typeHints.${option.name}`)}</small></span></button>)}</div>
-          </div>
-          <div className={styles.grid3}>{!draft.subtask && moduleSelect}{!draft.subtask && sprintSelect}{canSubtask && <Select label={t('underIssue')} hint={t('underIssueHint', { type: t(`types.${draft.type}`) })} value={draft.subtask ? draft.parentKey : ''} onChange={(event) => { const key = event.target.value; setDraft((previous) => ({ ...previous, subtask: !!key, parentKey: key, ...(key ? { children: [] } : {}) })); }}><option value="">{t('noParent')}</option>{parents.map((item) => <option key={item.key} value={item.key}>{item.key} · {item.title}</option>)}</Select>}</div>
-          {draft.subtask && parentIssue.data && !parentIssue.data.parentKey && <p className={styles.inherited}>{t('inheritsFrom', { key: parentIssue.data.key })} · {formatDate(parentIssue.data.planStart, scope.yearFormat)} – {formatDate(parentIssue.data.planEnd, scope.yearFormat)}</p>}
-          {titleInput}
-          {showBug && bugSection}{showStory && storySection}{showSpike && spikeSection}
-          {draft.type === 'Task' && description}
-          <div className={styles.grid4}>{assignees}{prioritySelect}<Input type="date" label={t('due')} value={draft.planEnd} onChange={(event) => set('planEnd', event.target.value)} />{personSelect('testerId')}</div>
-          <details className={styles.more}><summary>{t('moreFields')}</summary>
-            <div className={styles.stack}>
-              <div className={styles.grid3}>{statusSelect}{personSelect('baId')}{personSelect('reviewerId')}</div>
-              {!draft.subtask && <div className={styles.grid3}>{phaseSelect}<Input type="date" label={t('fields.planStart')} value={draft.planStart} onChange={(event) => set('planStart', event.target.value)} />{draft.type !== 'Spike' && <Select label={t('fields.size')} required={required.has('size')} value={draft.size} onChange={(event) => { set('size', event.target.value); set('estimateMd', ''); }}>{Object.entries(options.sizeMdMap).map(([size, md]) => <option value={size} key={size}>{size} · {t('md', { value: md })}</option>)}</Select>}</div>}
-              {estimate}
-              {row(t('refs.requirement'), requirementChips)}
-              {row(t('refs.labels'), labelChips)}
-              {draft.type !== 'Task' && description}
-              {children}{extras}
+        <div className={styles.layout}>
+          <div className={styles.main}>
+            <div className={styles.createTitle}><Input name="title" label={draft.subtask ? t('subtaskName') : t('typeName', { type: t(`types.${draft.type}`) })} required maxLength={300} placeholder={t('titlePlaceholder')} value={draft.title} onChange={(event) => set('title', event.target.value)} /></div>
+            <div className={styles.statusRow}>
+              <select className={`${styles.statusPill} ${styles.sTodo}`} aria-label={t('fields.statusId')} value={draft.statusId} onChange={(event) => set('statusId', event.target.value)}>
+                <option value="">{t('initialStatus')}</option>{type?.statuses?.map((status) => <option value={status.id} key={status.id}>{status.name}</option>)}
+              </select>
             </div>
-          </details>
-        </> : <>
-          {/* B: Module / Sprint → ชื่อ → แถว "ชื่อ : ค่า" ของรายละเอียด → คำอธิบาย */}
-          {draft.subtask ? parentPicker : <div className={styles.grid2}>{moduleSelect}{sprintSelect}</div>}
-          {titleInput}
-          {(showBug || showStory || showSpike) && <>{showBug && bugSection}{showStory && storySection}{showSpike && spikeSection}</>}
-          <div className={styles.detailRows}>
-            <h3>{t('details')}</h3>
-            {row(t('fields.statusId'), statusSelect)}
-            {row('Dev', assignees)}
-            {row('BA', personSelect('baId'))}
-            {row('Reviewer', personSelect('reviewerId'))}
-            {(draft.type === 'Bug' || draft.testerId) && row('Tester', personSelect('testerId'))}
-            {row(t('fields.priority'), prioritySegments)}
-            {row(t('planRange'), <>{dates}<small className="muted">{t('endCalculated')}</small></>)}
-            {row(t('sizeMd'), sizeSegments)}
-            {!draft.subtask && phases.length > 0 && row(t('fields.phaseId'), phaseSelect)}
-            {row(t('refs.requirement'), requirementChips)}
-            {row(t('refs.labels'), labelChips)}
-            {row(t('refs.watchers'), watcherPicker)}
+            {(showBug || showStory || showSpike) && <div className={styles.blk}>{showBug && bugSection}{showStory && storySection}{showSpike && spikeSection}</div>}
+            <div className={styles.blk}>
+              <h3>{t('description')}</h3>
+              <textarea className={`input ${styles.editor}`} aria-label={t('description')} placeholder={t('descriptionPlaceholder')} value={draft.description} onChange={(event) => set('description', event.target.value)} maxLength={50000} />
+              <small className="muted">{t('markdownHint')}</small>
+            </div>
+            <div className={styles.blk}>
+              <section className={`${styles.checkBox} ${styles.checkBoxAcceptance}`} aria-label={t('acceptance')}>
+                <h4 className={styles.checkHead}>{t('acceptance')}{required.has('acceptance_criteria') && <span className={styles.req}> *</span>}<span className={styles.checkHint}>{required.has('acceptance_criteria') ? t('acceptanceRequiredHint') : t('acceptanceHint')}</span></h4>
+                <DraftList label={t('addAcceptance')} placeholder={t('addAcceptancePlaceholder')} items={draft.acceptance} onChange={(items) => set('acceptance', items)} tag="Acceptance" tone="acceptance" />
+              </section>
+              <section className={styles.checkBox} aria-label={t('checklist')}>
+                <h4 className={styles.checkHead}>{t('checklist')}<span className={styles.checkHint}>{t('checklistHint')}</span></h4>
+                <DraftList label={t('addChecklist')} placeholder={t('addChecklistPlaceholder')} items={draft.checklist} onChange={(items) => set('checklist', items)} tag="Checklist" tone="checklist" />
+              </section>
+            </div>
+            {!draft.subtask && <div className={styles.blk}>
+              <h3>{t('subtasks')}<Button size="small" variant="ghost" className={styles.addAction} style={{ marginLeft: 'auto' }} disabled={draft.children.length >= 20} onClick={() => set('children', [...draft.children, { id: crypto.randomUUID(), title: '', size: 'XS', assigneeId: '', planEnd: '' }])}><Plus size={14} />{t('addSubtask')}</Button></h3>
+              {draft.children.length === 0 && <p className="muted">{t('subtaskCreateHint')}</p>}
+              {draft.children.map((child, index) => <div className={styles.childRow} key={child.id}>
+                <Input label={t('childTitle', { number: index + 1 })} required maxLength={300} value={child.title} onChange={(event) => updateChild(child.id, { title: event.target.value })} />
+                <Select label={t('fields.size')} value={child.size} onChange={(event) => updateChild(child.id, { size: event.target.value })}>{sizeOptions.map(([size, md]) => <option value={size} key={size}>{size} · {t('md', { value: md })}</option>)}</Select>
+                <Select label="Developer" value={child.assigneeId} onChange={(event) => updateChild(child.id, { assigneeId: event.target.value })}><option value="">{t('notSet')}</option>{people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</Select>
+                <DatePicker compact label={t('fields.planEnd')} value={child.planEnd || undefined} yearFormat={scope.yearFormat} onValueChange={(value) => updateChild(child.id, { planEnd: value })} />
+                <Button size="icon" variant="ghost" aria-label={t('removeChild', { number: index + 1 })} onClick={() => set('children', draft.children.filter((row) => row.id !== child.id))}><Trash2 size={14} /></Button>
+              </div>)}
+            </div>}
+            {scope.access.permissions.includes('issue.edit') && <div className={styles.blk}>
+              <h3>{t('dependencies')}</h3>
+              {draft.blockedBy.length > 0 && <div className={styles.chips}>{draft.blockedBy.map((key) => { const item = projectIssues.data?.items.find((issue) => issue.key === key); return <span key={key} className={`${styles.depChip} ${styles.sTodo}`}><span className={styles.depLink}>{t('waitFor')} {key}{item ? ` ${item.title}` : ''}</span><button type="button" className={styles.chipX} aria-label={t('removeDependency', { key })} onClick={() => set('blockedBy', draft.blockedBy.filter((value) => value !== key))}><X size={12} /></button></span>; })}</div>}
+              <IssuePicker label={t('dependencyKey')} value={null} placeholder={t('searchIssue')} issues={(projectIssues.data?.items ?? []).filter((issue) => !draft.blockedBy.includes(issue.key))} onChange={(key) => set('blockedBy', [...draft.blockedBy, key])} />
+            </div>}
+            <p className={styles.afterCreate}><Info size={15} aria-hidden="true" />{t('afterCreateNote')}</p>
           </div>
-          {description}
-          {children}
-          {extras}
-        </>}
-        {layout === 'drawer' && <label className={styles.checkboxLabel}><input type="checkbox" checked={continueCreating} onChange={(event) => setContinueCreating(event.target.checked)} />{t('continueCreating')}</label>}
+
+          <aside className={styles.sidebar} aria-label={t('properties')}><div className={`${styles.props} ${styles.propsAll}`}>
+            <section className={styles.pgroup} aria-label={t('groupPeople')}>
+              <h4 className={styles.pgTitle}>{t('groupPeople')}</h4>
+              <PropRow k="Business Analyst">{personSelect('baId', 'Business Analyst')}</PropRow>
+              <PropRow k="System Analyst">{personSelect('saId', 'System Analyst')}</PropRow>
+              <PropRow k="Developer"><Combobox label={t('fields.assigneeIds')} multiple options={options.members} value={draft.assigneeIds} onValueChange={(ids) => { if (!lock.current && !created.current) set('assigneeIds', ids); }} /></PropRow>
+              <PropRow k={t('qaReviewer')}>{personSelect('reviewerId', t('qaReviewer'))}</PropRow>
+              <PropRow k={t('watchers')}><Combobox label={t('refs.watchers')} multiple options={options.members.filter((person) => person.id !== scope.meId)} value={draft.watcherIds} onValueChange={(ids) => { if (!lock.current && !created.current) set('watcherIds', ids); }} /></PropRow>
+            </section>
+            <section className={styles.pgroup} aria-label={t('groupPlan')}>
+              <h4 className={styles.pgTitle}>{t('groupPlan')}</h4>
+              <PropRow k="Size"><div className={styles.sizeRow}>
+                <Select label={t('fields.size')} required={required.has('size')} disabled={draft.type === 'Spike'} value={draft.size} onChange={(event) => { set('size', event.target.value); set('estimateMd', ''); }}>{sizeOptions.map(([size]) => <option value={size} key={size}>{size}</option>)}</Select>
+                <Input label={t('fields.estimateMd')} type="number" min={0.25} max={9999} step={0.25} readOnly={draft.type === 'Spike'} value={mdValue} onChange={(event) => set('estimateMd', event.target.value)} />
+                <span className="muted">Man-Day</span>
+              </div></PropRow>
+              <div className={styles.planBox}>
+                <span /><span className={styles.k}>{t('plan')}</span><span className={styles.k}>{t('actual')}</span>
+                <span className="muted">{t('start')}</span>
+                <span><DatePicker compact label={t('fields.planStart')} value={draft.planStart || undefined} yearFormat={scope.yearFormat} onValueChange={(value) => set('planStart', value)} /></span>
+                <span className="muted">{t('afterStart')}</span>
+                <span className="muted">{t('end')}</span>
+                <span><DatePicker compact label={t('fields.planEnd')} value={draft.planEnd || undefined} min={draft.planStart || undefined} yearFormat={scope.yearFormat} onValueChange={(value) => set('planEnd', value)} /></span>
+                <span className="muted">{t('afterStart')}</span>
+              </div>
+              <small className="muted">{t('endCalculated')}</small>
+              {parentRow && <small className={styles.inherited}>{t('parentRange', { key: parentRow.key, start: formatDate(parentRow.planStart, scope.yearFormat), end: formatDate(parentRow.planEnd, scope.yearFormat) })}</small>}
+            </section>
+            <section className={styles.pgroup} aria-label={t('groupPlace')}>
+              <h4 className={styles.pgTitle}>{t('groupPlace')}</h4>
+              <PropRow k={t('fields.priority')}><Select label={t('fields.priority')} value={draft.priority} onChange={(event) => set('priority', event.target.value)}>{['urgent', 'high', 'medium', 'low'].map((priority) => <option value={priority} key={priority}>{t(`priority.${priority}`)}</option>)}</Select></PropRow>
+              {(isBug || required.has('severity') || required.has('environment')) && <>
+                <PropRow k={t('fields.severity')}><Select label={t('fields.severity')} required={required.has('severity')} value={draft.severity} onChange={(event) => set('severity', event.target.value)}>{['critical', 'major', 'minor'].map((value) => <option value={value} key={value}>{t(`severity.${value}`)}</option>)}</Select></PropRow>
+                <PropRow k={t('fields.environment')}><Select label={t('fields.environment')} required={required.has('environment')} value={draft.environment} onChange={(event) => set('environment', event.target.value)}>{['local', 'sit', 'uat', 'production'].map((value) => <option value={value} key={value}>{t(`environment.${value}`)}</option>)}</Select></PropRow>
+              </>}
+              {draft.subtask ? <>
+                <PropRow k={t('parentTask')}>{parent
+                  ? <span>{parent.key} · {parent.title}</span>
+                  : <IssuePicker label={t('parentTask')} value={draft.parentKey || null} issues={parents} groupOf={(issue) => options.modules.find((module) => module.id === issue.moduleId)?.name ?? t('notSet')} onChange={(key) => set('parentKey', key)} />}</PropRow>
+                {parentIssue.error && <Failure error={parentIssue.error} />}{parentIssue.data?.parentKey && <p className="field-error">{t('parentMustBeTask')}</p>}
+                <PropRow k="Module"><span><span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod?.name ?? t('notSet')}</span> <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span></PropRow>
+              </> : <PropRow k="Module"><Select label={t('fields.moduleId')} required={required.has('module') || draft.type === 'Task'} value={draft.moduleId} onChange={(event) => { set('moduleId', event.target.value); set('phaseId', ''); }}><option value="">{t('choose')}</option>{options.modules.map((module) => <option value={module.id} key={module.id}>{module.name}</option>)}</Select></PropRow>}
+              <PropRow k={t('refs.requirement')}><CodeChips kinds={['requirement']} editable values={{ requirement: draft.requirements, screen: [] }} suggestions={{ requirement: options.requirements?.map((r) => r.code) }} onChange={(_, codes) => set('requirements', codes)} /></PropRow>
+              <PropRow k={t('refs.screen')}><CodeChips kinds={['screen']} editable values={{ requirement: [], screen: draft.screens }} suggestions={{ screen: options.screens?.map((r) => r.code) }} onChange={(_, codes) => set('screens', codes)} /></PropRow>
+              <PropRow k={t('refs.labels')}><LabelChips options={options.labels} value={draft.labelIds} editable onChange={(ids) => set('labelIds', ids)} /></PropRow>
+              <label className={styles.checkboxLabel}><input type="checkbox" checked={draft.shared} onChange={(event) => set('shared', event.target.checked)} />{t('sharedWithGuests')}</label>
+            </section>
+          </div></aside>
+        </div>
       </fieldset>
-      {!!error && <Failure error={error} />}
-      <div className={styles.createFooter}>{layout === 'modal' ? <label className={`${styles.checkboxLabel} ${styles.footLeft}`}><input type="checkbox" checked={continueCreating} disabled={pending || !!partial} onChange={(event) => setContinueCreating(event.target.checked)} />{t('continueCreating')}</label> : <span className="muted">{t('createShortcut')}</span>}<Button onClick={cancel} disabled={pending}>{t('cancel')}</Button><Button type="submit" variant="primary" disabled={submitDisabled}>{submitLabel}</Button></div>
+      {!!error && <div style={{ padding: '0 24px' }}><Failure error={error} /></div>}
+      <div className={styles.createFooter}>
+        <label className={`${styles.checkboxLabel} ${styles.footLeft}`}><input type="checkbox" checked={continueCreating} disabled={pending || !!partial} onChange={(event) => setContinueCreating(event.target.checked)} />{t('continueCreating')}</label>
+        <span className="muted">{t('createShortcut')}</span>
+        <Button onClick={cancel} disabled={pending}>{t('cancel')}</Button><Button type="submit" variant="primary" disabled={submitDisabled}>{submitLabel}</Button>
+      </div>
     </form>
     <Dialog open={closeOpen} title={t(partial ? 'partialCloseTitle' : 'unsavedTitle')} description={t(partial ? 'partialCloseDescription' : 'unsavedDescription')} onOpenChange={setCloseOpen}>
       {draftError && <p className="field-error">{t('draftSaveFailed')}</p>}<div className={styles.dialogActions}><Button onClick={() => setCloseOpen(false)}>{t('keepEditing')}</Button>{!partial && <Button onClick={() => { try { localStorage.setItem(draftKey, JSON.stringify({ expiresAt: Date.now() + 7 * 86400000, data: draft })); onClose(); } catch { setDraftError(true); } }}>{t('saveDraft')}</Button>}<Button variant="danger" onClick={() => { removeDraft(draftKey); onClose(); }}>{t(partial ? 'close' : 'discard')}</Button></div>

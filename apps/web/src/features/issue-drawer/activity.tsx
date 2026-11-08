@@ -5,7 +5,10 @@ import { useTranslations } from 'next-intl';
 import { Button, Input, LoadingState, ErrorState, Dialog } from '@/components/ui';
 import { api } from '@/lib/api';
 import { BodyText, Failure, PersonView, when } from './shared';
-import { issuePath, issueQuery, type Activity, type Comment, type Feed, type Scope } from './types';
+import { issuePath, issueQuery, projectPath, type Activity, type Comment, type Feed, type Scope } from './types';
+import type { UploadedFile } from '@/lib/upload';
+import { AttachButton } from './task-v2';
+import { X } from 'lucide-react';
 import styles from './issue-drawer.module.css';
 
 export function ActivityPanel({ scope, issueKey, showFeed = true, showComposer = true, compact = false }: { scope: Scope; issueKey: string; showFeed?: boolean; showComposer?: boolean; compact?: boolean }) {
@@ -15,6 +18,8 @@ export function ActivityPanel({ scope, issueKey, showFeed = true, showComposer =
   const queryKey = [...issueQuery(scope.ws, issueKey), 'activity'];
   const feed = useInfiniteQuery({ queryKey, initialPageParam: '', queryFn: ({ pageParam, signal }) => api.get<Feed>(`${endpoint}/activity?limit=30${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''}`, { signal }), getNextPageParam: (page) => page.nextCursor ?? undefined });
   const [body, setBody] = useState('');
+  // ไฟล์ / รูปที่แนบกับคอมเมนต์ (ผู้ใช้ขอ 2026-11-08): อัปโหลดก่อน แล้วผูกกับคอมเมนต์หลังส่ง
+  const [files, setFiles] = useState<UploadedFile[]>([]);
   const [editing, setEditing] = useState<Comment | null>(null);
   const [editBody, setEditBody] = useState('');
   const [deleting, setDeleting] = useState<Comment | null>(null);
@@ -66,16 +71,18 @@ export function ActivityPanel({ scope, issueKey, showFeed = true, showComposer =
       <div className={styles.feedHeading}><PersonView person={item.kind === 'comment' ? item.author : item.actor} /><time dateTime={item.createdAt}>{when(item.createdAt, scope.yearFormat)}</time></div>
       {item.kind === 'activity' ? <p className={styles.activityText}>{activityText(item)}</p> : <div className={styles.commentBody}>
         {item.deletedAt ? <p className="muted">{t(item.deletionReason === 'admin' ? 'deletedByAdmin' : 'deletedComment')}</p> : <BodyText>{item.body ?? ''}</BodyText>}
+        {!item.deletedAt && !!item.files?.length && <div className={styles.fileChips}>{item.files.map((file) => <a key={file.id} className={styles.chipSoft} href={`/w/${encodeURIComponent(scope.ws)}/p/${encodeURIComponent(scope.projectKey)}/files?file=${encodeURIComponent(file.id)}`}>{file.name}</a>)}</div>}
         {item.editedAt && !item.deletedAt && <small className="muted">{t('edited')}</small>}
         <div className={styles.actions}>{item.canEdit && <Button size="small" variant="ghost" disabled={pending} onClick={() => { setEditing(item); setEditBody(item.body ?? ''); }}>{t('editComment')}</Button>}{item.canDelete && <Button size="small" variant="ghost" disabled={pending} onClick={() => setDeleting(item)}>{t('deleteComment')}</Button>}</div>
       </div>}
     </li>)}</ol>
     {feed.hasNextPage && <Button disabled={feed.isFetchingNextPage} onClick={() => void feed.fetchNextPage()}>{t('loadMore')}</Button>}
     </>}
-    {showComposer && commentable && <form className={`${styles.composer}${compact ? ` ${styles.compactComposer}` : ''}`} onSubmit={(event) => { event.preventDefault(); void change(() => api.post(`${endpoint}/comments`, { body }), () => setBody('')); }}>
+    {showComposer && commentable && <form className={`${styles.composer}${compact ? ` ${styles.compactComposer}` : ''}`} onSubmit={(event) => { event.preventDefault(); void change(async () => { const created = await api.post<Comment>(`${endpoint}/comments`, { body }); for (const file of files) await api.post(`${projectPath(scope.ws, scope.projectKey)}/files/${file.id}/attachments`, { targetType: 'comment', target: created.id }); }, () => { setBody(''); setFiles([]); }); }}>
       <label className="field"><span className={compact ? "sr-only" : undefined}>{t('writeComment')}</span><textarea ref={textarea} rows={compact ? 1 : undefined} placeholder={compact ? t('commentPlaceholder') : undefined} className="input" required maxLength={20000} value={body} onChange={(event) => setBody(event.target.value)} disabled={pending} /></label>
       {suggestions.length > 0 && <div className={styles.mentionOptions} role="group" aria-label={t('mentionMembers')}>{suggestions.map((person) => <Button size="small" key={person.id} onClick={() => { setBody(body.slice(0, body.lastIndexOf('@')) + `@[${person.displayName}](${person.id}) `); textarea.current?.focus(); }}>{person.displayName}</Button>)}</div>}
-      <div className={styles.composerFooter}><span className="muted">{t('markdownHint')}</span><Button type="submit" variant="primary" disabled={pending || !body.trim()}>{t('send')}</Button></div>
+      {files.length > 0 && <div className={styles.fileChips}>{files.map((file) => <span key={file.id} className={styles.chipSoft}>{file.name}<button type="button" className={styles.chipX} aria-label={t('removeItem', { text: file.name })} onClick={() => setFiles(files.filter((item) => item.id !== file.id))}><X size={12} aria-hidden="true" /></button></span>)}</div>}
+      <div className={styles.composerFooter}>{!compact && <AttachButton scope={scope} label={t('attachToComment')} disabled={pending} onUploaded={(added) => setFiles((current) => [...current, ...added])} />}<span className="muted">{t('markdownHint')}</span><Button type="submit" variant="primary" disabled={pending || !body.trim()}>{t('send')}</Button></div>
     </form>}
     {!!error && <Failure error={error} />}
     <Dialog open={!!editing} title={t('editComment')} onOpenChange={(open) => { if (!open && !pending) setEditing(null); }}>

@@ -123,9 +123,13 @@ describe("Table (2)", () => {
     expect(urls.at(-1)?.searchParams.get("view")).toBe("table");
     const rows = screen.getAllByRole("row").map((r) => r.textContent ?? "");
     expect(rows.findIndex((r) => r.includes("DE-2"))).toBe(rows.findIndex((r) => r.includes("DE-1")) + 1);
-    // คอลัมน์ FR / Screen ตาม Canvas · ค่าว่างแสดง —
+    // FR / Screen ซ่อนไว้ก่อน เปิดได้จากเมนู Columns
+    expect(screen.queryByRole("columnheader", { name: "FR / Screen" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("checkbox", { name: "FR / Screen" }));
     expect(screen.getByRole("columnheader", { name: "FR / Screen" })).toBeInTheDocument();
     expect(within(screen.getByTestId("row-DE-1")).getByText("FR-01.2 · SCR-101")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
     expect(screen.getByRole("searchbox", { name: "ค้นหางาน, รหัส DP-…, FR หรือ SCR" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "ย่อ Module A" }));
     expect(screen.queryByTestId("row-DE-1")).not.toBeInTheDocument();
@@ -272,7 +276,7 @@ describe("Table (2)", () => {
     expect(screen.getAllByRole("row").length).toBeLessThan(120);
     // ตารางใช้ scroll ของหน้าหลัก: จำลองว่าขอบบนตารางเลื่อนพ้นจอขึ้นไป 390 แถว
     const scroll = screen.getByTestId("table-scroll");
-    scroll.getBoundingClientRect = () => ({ top: -44 * 390, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: -44 * 390, toJSON: () => ({}) });
+    scroll.getBoundingClientRect = () => ({ top: -38 * 390, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: -38 * 390, toJSON: () => ({}) });
     fireEvent.scroll(window);
     expect(await screen.findByTestId("row-DE-390")).toBeInTheDocument();
     expect(screen.queryByTestId("row-DE-1")).not.toBeInTheDocument();
@@ -307,18 +311,14 @@ describe("จัดโครงงานใน Table", () => {
     expect(creates).toEqual([{ name: "Module ใหม่", color: "#1d4ed8" }]);
     expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน Module ใหม่" })).toHaveAttribute("href", "/w/sample/p/DE/table?new=1&type=task&moduleId=m-new");
   });
-  it("เพิ่มกลุ่มงานว่างใน Module และส่งบริบทเข้า Task", async () => {
+  it("เลิกใช้กลุ่มงาน: เมนู Module ไม่มีเพิ่มกลุ่มงาน และเพิ่ม Task ส่งบริบท Module", async () => {
     const user = userEvent.setup();
-    server.use(http.post("*/api/v1/w/:ws/projects/:key/modules/:id/phases", async ({ request }) => {
-      expect(await request.json()).toEqual({ name: "กลุ่มใหม่" }); tableData.modules[0].phases.push({ id: "ph-new", name: "กลุ่มใหม่", ...agg(0) }); return HttpResponse.json({ id: "ph-new" }, { status: 201 });
-    }));
     mount(<TableView ws="sample" projectKey="DE" />);
     await user.click(await screen.findByRole("button", { name: "จัดการ Module Module A" }));
-    await user.click(screen.getByRole("button", { name: "เพิ่มกลุ่มงาน" }));
-    await user.type(screen.getByLabelText("ชื่อกลุ่มงาน"), "กลุ่มใหม่");
-    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มใหม่" })).toHaveAttribute("href", "/w/sample/p/DE/table?new=1&type=task&moduleId=m-a&phaseId=ph-new");
+    expect(screen.queryByRole("button", { name: "เพิ่มกลุ่มงาน" })).not.toBeInTheDocument();
+    const add = screen.getByRole("link", { name: "+ เพิ่ม Task ใน Module A" });
+    expect(add.getAttribute("href")).toContain("moduleId=m-a");
+    expect(add.getAttribute("href")).not.toContain("phaseId=");
   });
   it("เมื่อบันทึกไม่ผ่านคงข้อมูลและ requestId ให้แก้", async () => {
     const user = userEvent.setup(); server.use(http.post("*/api/v1/w/:ws/projects/:key/modules", () => errorBody(500)));

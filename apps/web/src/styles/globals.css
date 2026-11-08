@@ -11,7 +11,7 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font: 14px/1.5 var(--font-sans);
+  font: var(--text-body) / 1.5 var(--font-sans);
 }
 button,
 input,
@@ -50,15 +50,15 @@ p {
   margin: 0;
 }
 h1 {
-  font-size: 22px;
+  font-size: var(--text-title);
   font-weight: 700;
 }
 h2 {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
 }
 h3 {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
 }
 svg {
@@ -102,12 +102,13 @@ svg {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: var(--control-h);
+  padding: 0 11px;
   border: 1px solid var(--input);
   border-radius: var(--radius-control);
   background: white;
   color: var(--foreground);
+  font-size: var(--text-label);
   font-weight: 500;
   white-space: nowrap;
   text-decoration: none;
@@ -140,13 +141,13 @@ svg {
   border-color: transparent;
 }
 .button-small {
-  min-height: 30px;
-  padding: 0 10px;
-  font-size: 12px;
+  min-height: 26px;
+  padding: 0 8px;
+  font-size: var(--text-caption);
 }
 .button-icon {
-  width: 38px;
-  height: 38px;
+  width: var(--control-h);
+  height: var(--control-h);
   padding: 0;
   flex-shrink: 0;
 }
@@ -157,22 +158,22 @@ svg {
   min-width: 0;
 }
 .field > label {
-  font-size: 13px;
+  font-size: var(--text-label);
   font-weight: 600;
 }
 .field > .muted,
 .field-error {
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 .field-error {
   color: #b91c1c;
 }
 .input {
   width: 100%;
-  min-height: 40px;
+  min-height: var(--control-h);
   border: 1px solid #c9cfd6;
   border-radius: var(--radius-control);
-  padding: 8px 10px;
+  padding: 6px 10px;
   background: white;
   color: var(--foreground);
 }
@@ -190,7 +191,7 @@ svg {
   align-items: center;
   width: 100%;
   min-width: 0;
-  min-height: 40px;
+  min-height: var(--control-h);
   border: 1px solid #c9cfd6;
   border-radius: var(--radius-control);
   background: white;
@@ -243,8 +244,8 @@ svg {
   pointer-events: none;
 }
 .select-small {
-  min-height: 36px;
-  font-size: 13px;
+  min-height: 28px;
+  font-size: var(--text-label);
 }
 /* รายการของ <select> ใช้หน้าตาเดียวกับ popover ของเรา แทนเมนูสีเทาของระบบปฏิบัติการ
    (Chromium 135+ · เบราว์เซอร์อื่นยังได้เมนูของระบบ แต่ทำงานเหมือนเดิมทุกอย่าง) */
@@ -259,9 +260,9 @@ svg {
   :where(select) {
     display: inline-flex;
     align-items: center;
-    min-height: 32px;
+    min-height: 28px;
     gap: 6px;
-    padding: 4px 8px;
+    padding: 3px 8px;
     border: 1px solid var(--input);
     border-radius: var(--radius-control);
     background-color: white;
@@ -315,8 +316,8 @@ svg {
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 36px;
-    padding: 6px 10px;
+    min-height: 32px;
+    padding: 5px 10px;
     border-radius: 6px;
     color: var(--foreground);
     font-weight: 400;
@@ -355,7 +356,7 @@ svg {
 }
 .picker-trigger {
   justify-content: flex-start;
-  min-height: 40px;
+  min-height: var(--control-h);
 }
 .picker-trigger > svg:last-child {
   margin-left: auto;
@@ -379,7 +380,7 @@ svg {
   min-width: 240px;
 }
 [cmdk-input] {
-  min-height: 40px;
+  min-height: 36px;
   border: 0;
   border-bottom: 1px solid var(--border);
   width: 100%;
@@ -391,7 +392,7 @@ svg {
   padding-top: 4px;
 }
 [cmdk-item] {
-  min-height: 42px;
+  min-height: 34px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -415,7 +416,7 @@ svg {
   gap: 6px;
   border-radius: 999px;
   padding: 1px 8px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -502,8 +503,9 @@ svg {
 .tab {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
-  padding: 0 14px;
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: var(--text-label);
   color: #56606b;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -528,16 +530,17 @@ table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  font-size: var(--text-label);
 }
 th {
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--muted);
   font-weight: 600;
   background: #f8f9fb;
 }
 th,
 td {
-  padding: 12px 16px;
+  padding: 7px 10px;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
@@ -591,7 +594,7 @@ td {
 }
 .dialog-medium > .dialog-heading h2,
 .dialog-wide > .dialog-heading h2 {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
 }
 .dialog-medium > .dialog-body,
@@ -606,7 +609,7 @@ td {
   margin-bottom: 12px;
 }
 .dialog-heading h2 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
 }
 .dialog-body {
@@ -739,11 +742,11 @@ td {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 .toast-meta {
   color: #94a3b8;
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 .toast-actions {
   display: flex;
@@ -758,7 +761,7 @@ td {
   border-radius: 6px;
   border: 1px solid #475569;
   color: white;
-  font-size: 13px;
+  font-size: var(--text-label);
   font-weight: 600;
   text-decoration: none;
 }
@@ -790,6 +793,57 @@ td {
   gap: 8px;
   max-width: calc(100vw - 32px);
 }
+/* กล่องแจ้งผลการกระทำ (FloatingNotice) อยู่ในกองเดียวกับ toast มุมขวาล่าง · สีเดิมของแต่ละแบบ */
+.floating-notice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  width: min(360px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: var(--text-label);
+  box-shadow: 0 10px 28px rgb(16 24 40 / 0.16);
+  animation: notice-in 0.2s ease-out;
+}
+.floating-notice > span:first-child {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+/* หัวข้อของกล่องข้อผิดพลาดขึ้นบรรทัดของตัวเอง */
+.floating-notice > strong {
+  flex-basis: 100%;
+}
+.floating-notice code {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.floating-notice-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+.floating-notice-alone {
+  position: fixed;
+  z-index: 100;
+  right: 20px;
+  bottom: 20px;
+}
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media print {
+  .toast-region,
+  .floating-notice {
+    display: none;
+  }
+}
 .toast {
   display: flex;
   gap: 12px;
@@ -809,7 +863,7 @@ td {
   color: white;
   padding: 6px 10px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   max-width: 250px;
 }
 .tooltip svg {
@@ -892,11 +946,11 @@ td {
   position: sticky;
   top: 0;
   z-index: 40;
-  min-height: 56px;
-  padding: 8px 16px;
+  min-height: var(--topbar-h);
+  padding: 0 16px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   background: var(--topbar);
   color: #e2e8f0;
 }
@@ -904,7 +958,7 @@ td {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: var(--control-h);
   padding: 0 8px;
   background: transparent;
   color: white;
@@ -930,7 +984,7 @@ td {
   width: 100%;
   margin: 0;
   padding: 0 10px 0 6px;
-  min-height: 44px;
+  min-height: 38px;
   border: 1px solid var(--border);
   background: white;
   color: var(--foreground);
@@ -946,11 +1000,19 @@ td {
   flex: none;
   color: var(--muted);
 }
+/* โลโก้อยู่กึ่งกลางคอลัมน์ Sidebar (พื้นที่โลโก้กว้างเท่า Sidebar)
+   เว้นขวาให้ช่องค้นหาเริ่มตรงกับขอบเนื้อหาหน้า: ระยะขอบหน้า 24px − ช่องห่างของแถบบน 14px */
+.topbar-desktop {
+  padding-left: 0;
+}
 .topbar-brand {
   display: flex;
   flex: none;
   align-items: center;
-  padding: 0 6px;
+  justify-content: center;
+  width: var(--sidebar-width);
+  margin-right: 10px;
+  padding: 0;
   white-space: nowrap;
 }
 .workspace-switch > span:not(.workspace-logo) {
@@ -960,8 +1022,8 @@ td {
 }
 .workspace-logo {
   display: inline-flex;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   align-items: center;
   justify-content: center;
   border-radius: 7px;
@@ -976,8 +1038,8 @@ td {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 38px;
-  padding: 0 12px;
+  min-height: 30px;
+  padding: 0 10px;
   border: 1px solid #334155;
   border-radius: 8px;
   background: var(--topbar-field);
@@ -1031,8 +1093,8 @@ kbd {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
-  min-height: 52px;
+  padding: 6px 10px;
+  min-height: 44px;
   border-radius: 8px;
   color: var(--foreground);
 }
@@ -1070,7 +1132,7 @@ kbd {
   gap: 8px;
   margin: 2px 2px 4px;
   padding: 0 10px;
-  min-height: 38px;
+  min-height: var(--control-h);
   border: 1px solid var(--input);
   border-radius: 8px;
   color: var(--muted);
@@ -1092,7 +1154,7 @@ kbd {
 .menu-hint {
   margin: 0;
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--muted);
 }
 .menu-icon-item {
@@ -1164,19 +1226,19 @@ kbd {
 }
 .workspace-body {
   display: flex;
-  min-height: calc(100dvh - 56px);
+  min-height: calc(100dvh - var(--topbar-h));
 }
 .sidebar {
   position: sticky;
-  top: 56px;
+  top: var(--topbar-h);
   align-self: flex-start;
-  height: calc(100dvh - 56px);
+  height: calc(100dvh - var(--topbar-h));
   overflow-y: auto;
   width: var(--sidebar-width);
   flex-shrink: 0;
   background: white;
   border-right: 1px solid var(--border);
-  padding: 16px 12px;
+  padding: 12px 10px;
   display: flex;
   flex-direction: column;
 }
@@ -1199,11 +1261,12 @@ kbd {
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 38px;
-  padding: 0 10px;
+  gap: 9px;
+  min-height: 34px;
+  padding: 0 9px;
   border-radius: 8px;
   color: #3d4550;
+  font-size: var(--text-label);
 }
 .nav-link:hover {
   background: #f1f3f5;
@@ -1220,7 +1283,7 @@ kbd {
 /* ชื่อโปรเจกต์ยาวขึ้นบรรทัดใหม่ตาม Canvas แทนการตัด */
 .nav-link .project-name {
   min-width: 0;
-  padding: 8px 0;
+  padding: 7px 0;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
@@ -1230,7 +1293,7 @@ kbd {
   letter-spacing: 0.06em;
   font-weight: 600;
   text-transform: uppercase;
-  padding: 16px 10px 6px;
+  padding: 14px 9px 6px;
 }
 .project-dot {
   width: 10px;
@@ -1248,7 +1311,7 @@ kbd {
 }
 .topbar-back {
   color: #93c5fd;
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 .topbar-back:hover {
   color: #bfdbfe;
@@ -1278,7 +1341,7 @@ kbd {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 .workspace-body.chrome-checkout {
   display: block;
@@ -1308,7 +1371,7 @@ kbd {
   justify-content: center;
 }
 .page-content {
-  padding: 24px;
+  padding: 22px 24px;
 }
 .page-title {
   margin-bottom: 20px;
@@ -1316,7 +1379,7 @@ kbd {
 .project-header {
   background: white;
   border-bottom: 1px solid var(--border);
-  padding: 16px 24px 0;
+  padding: 14px 24px 0;
 }
 /* ขนาดตาม Canvas Main: ไอคอน 32 px, ชื่อ 22 px อยู่บรรทัดเดียวกับสถานะและวันที่ */
 .project-header-row {
@@ -1331,7 +1394,7 @@ kbd {
   flex: 1 1 auto;
 }
 .project-crumb {
-  font-size: 12px;
+  font-size: var(--text-caption);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1345,13 +1408,13 @@ kbd {
 }
 .project-title-row h1 {
   min-width: 0;
-  font-size: 22px;
+  font-size: var(--text-title);
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
 .project-icon {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
   color: white;
   display: flex;
@@ -1359,11 +1422,11 @@ kbd {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 .project-dates {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 .project-back,
 .project-subline,
@@ -1398,7 +1461,7 @@ kbd {
 .menu-item {
   display: flex;
   align-items: center;
-  min-height: 36px;
+  min-height: 32px;
   padding: 0 10px;
   border-radius: 6px;
   color: var(--foreground);
@@ -1465,10 +1528,10 @@ kbd {
   display: flex;
   flex-direction: column;
   padding: 6px 10px 8px;
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 .view-picker-head .muted {
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 .view-options {
   list-style: none;
@@ -1516,12 +1579,12 @@ kbd {
   line-height: 1.35;
 }
 .view-text b {
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 600;
 }
 .view-text small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 .view-check {
   margin-left: auto;
@@ -1611,10 +1674,10 @@ kbd {
 }
 @media (max-width: 760px) {
   body {
-    font-size: 15px;
+    font-size: 14px;
   }
   h1 {
-    font-size: 18px;
+    font-size: 17px;
   }
   .topbar {
     gap: 6px;
@@ -1817,6 +1880,10 @@ kbd {
   }
   .toast-region {
     left: 16px;
+    right: 16px;
+    bottom: 72px;
+  }
+  .floating-notice-alone {
     right: 16px;
     bottom: 72px;
   }

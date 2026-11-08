@@ -136,7 +136,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
       <header className={styles.head}>
         <div className={styles.headRow}>
           <div>
-            <h1 className={styles.title} style={{ fontSize: 24 }}>{t("title")}</h1>
+            <h1 className={styles.title} style={{ fontSize: 22 }}>{t("title")}</h1>
             <div className={styles.sub}>
               {t("owner", { name: me.displayName })} · <b>{t("openCount", { count: data.counts[tab] })}</b> · {t("estSum", { md: estSum.toFixed(1) })}
             </div>
@@ -163,7 +163,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
             )}
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <span className="muted" style={{ fontSize: 13 }}>{t("groupBy")}</span>
+            <span className="muted" style={{ fontSize: 12 }}>{t("groupBy")}</span>
             <div className={styles.seg} role="group" aria-label={t("groupBy")}>
               {GROUPS.map((g) => <button type="button" key={g} aria-pressed={group === g} onClick={() => setGroup(g)}>{t(`group.${g}`)}</button>)}
             </div>
@@ -238,7 +238,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
             </section>
           )}
           <section className={styles.card}>
-            <div className={styles.chead}><h2>{t("weekTitle")}</h2><span style={{ fontSize: 13, fontWeight: 600 }}>{t("weekTotal", { md: wk.reduce((a, b) => a + b, 0).toFixed(1) })}</span></div>
+            <div className={styles.chead}><h2>{t("weekTitle")}</h2><span style={{ fontSize: 12, fontWeight: 600 }}>{t("weekTotal", { md: wk.reduce((a, b) => a + b, 0).toFixed(1) })}</span></div>
             <div className={styles.chart} style={{ height: 90, gap: 10 }} role="img" aria-label={t("weekChart", { days: wk.map((v, i) => `${dayNames[i]} ${v.toFixed(1)}`).join(" ") })}>
               <span className={styles.cap} style={{ bottom: Math.round((1 / maxWk) * 70) }} />
               {wk.map((v, i) => <div className={styles.chartCol} key={i}><i style={{ height: Math.max(3, Math.round((v / maxWk) * 70)), background: v > 1 ? "#ea580c" : "#93b4f5", maxWidth: 32 }} /></div>)}
@@ -272,7 +272,7 @@ function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
     <div className={styles.mTasks}>
       <header className={styles.mHeadCol}>
         <div className={styles.mHeadRow}>
-          <h1 className={styles.mTitle} style={{ fontSize: 24, flex: 1 }}>{t("title")} <span className={styles.mOwner}>· {name}</span></h1>
+          <h1 className={styles.mTitle} style={{ fontSize: 22, flex: 1 }}>{t("title")} <span className={styles.mOwner}>· {name}</span></h1>
           <button type="button" className={styles.mIcon} aria-label={t("search")} onClick={() => openSearch?.()}><Search size={22} aria-hidden="true" /></button>
           <button type="button" className={styles.mIcon} aria-label={t("filter")} aria-expanded={showTabs} onClick={() => setShowTabs((v) => !v)}><Filter size={22} aria-hidden="true" /></button>
         </div>
@@ -339,9 +339,9 @@ function TaskRow({ item, ws, year, busy, onToggle, onMove, onDragStart }: { item
         </div>
       </div>
       <span className="hideMobile"><StatusBadge category={item.status.category} name={item.status.name} /></span>
-      <span className={`hideMobile ${styles["pr-" + item.priority]}`} style={{ fontSize: 13, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 4 }}><Flag size={13} aria-hidden="true" />{tp(item.priority)}</span>
+      <span className={`hideMobile ${styles["pr-" + item.priority]}`} style={{ fontSize: 12, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 4 }}><Flag size={13} aria-hidden="true" />{tp(item.priority)}</span>
       <span className={`${styles.dt} ${due.cls}`}>{due.text}</span>
-      <span className="muted hideMobile" style={{ fontSize: 12, textAlign: "right" }}>{item.estimateMd ? t("estimate", { md: item.estimateMd }) : t("noEstimate")}</span>
+      <span className="muted hideMobile" style={{ fontSize: 11, textAlign: "right" }}>{item.estimateMd ? t("estimate", { md: item.estimateMd }) : t("noEstimate")}</span>
       <Button size="icon" variant="ghost" aria-label={t("moveDueFor", { key: item.key })} disabled={done || busy} onClick={onMove}><CalendarClock size={16} aria-hidden /></Button>
     </div>
   );

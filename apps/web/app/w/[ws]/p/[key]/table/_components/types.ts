@@ -63,7 +63,7 @@ export interface Row {
   size: string | null; estimateMd: number | null; progressPct: number | null;
   planStart: string | null; planEnd: string | null; actualStart: string | null; actualEnd: string | null;
   version: number;
-  assignees?: Person[]; ba?: Person | null;
+  assignees?: Person[]; ba?: Person | null; sa?: Person | null;
   requirements?: string[]; screens?: string[];
 }
 interface Agg { taskCount: number; subtaskCount: number; doneCount: number; estimateMd: number; progressPct: number }

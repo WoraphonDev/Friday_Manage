@@ -172,7 +172,7 @@ export function PlanChangesView({ ws, projectKey }: { ws: string; projectKey: st
             )}
             <span className="muted">{t("baselineMeta", { date: formatDate(current.createdAt, year, true), by: current.createdBy ? t("by", { name: current.createdBy.displayName }) : "" })}</span>
           </div>
-          <div className="muted" style={{ fontSize: 13 }}>{t("counts", { issues: issueCount, modules: lateModules })}</div>
+          <div className="muted" style={{ fontSize: 12 }}>{t("counts", { issues: issueCount, modules: lateModules })}</div>
         </div>
         <div className={styles.actions}>
           <Button disabled={!items.length} onClick={() => void copy()}>{t("copy")}</Button>
@@ -184,7 +184,7 @@ export function PlanChangesView({ ws, projectKey }: { ws: string; projectKey: st
       <section className={styles.card} aria-label={t("modulesTitle")}>
         <div className={styles.cardHead}><b>{t("modulesTitle")}</b></div>
         {gantt.isPending ? <LoadingState /> : gantt.error ? <ErrorState error={gantt.error} retry={() => void gantt.refetch()} /> : mods.length === 0 ? (
-          <div className="muted" style={{ padding: "12px 16px", fontSize: 13 }}>{t("noModules")}</div>
+          <div className="muted" style={{ padding: "12px 16px", fontSize: 12 }}>{t("noModules")}</div>
         ) : mods.map((m) => (
           <div key={m.name} className={styles.mod} data-testid="module-end">
             <b>{m.name}</b>
@@ -208,8 +208,8 @@ export function PlanChangesView({ ws, projectKey }: { ws: string; projectKey: st
             </span>
             <span>{c.fieldLabel}</span>
             <span><span className={styles.old}>{value(c.field, c.oldValue)}</span> → <span className={styles.new}>{value(c.field, c.newValue)}</span></span>
-            <span className={styles.hs} style={{ fontSize: 13 }}>{c.reason ?? <span className="muted">{t("noReason")}</span>}{c.impact && <span className={`muted ${styles.sub}`}>{c.impact}</span>}</span>
-            <span className={`${styles.hs} muted`} style={{ fontSize: 12 }}>{c.changedBy?.displayName ?? t("system")}<br />{when(c.changedAt, year)}</span>
+            <span className={styles.hs} style={{ fontSize: 12 }}>{c.reason ?? <span className="muted">{t("noReason")}</span>}{c.impact && <span className={`muted ${styles.sub}`}>{c.impact}</span>}</span>
+            <span className={`${styles.hs} muted`} style={{ fontSize: 11 }}>{c.changedBy?.displayName ?? t("system")}<br />{when(c.changedAt, year)}</span>
           </div>
         ))}
         {changes.hasNextPage && (

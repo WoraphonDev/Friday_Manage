@@ -91,8 +91,8 @@ function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
   async function created(value: Issue) { await cache.invalidateQueries({ queryKey: ['issue-drawer-list', ws, projectKey] }); navigate(value.key); }
   const requestedParam = search.get('type')?.toLowerCase();
   const requestedType: IssueType = requestedParam === 'bug' ? 'Bug' : requestedParam === 'story' ? 'Story' : requestedParam === 'spike' ? 'Spike' : 'Task';
-  // B: "+ Task" ในหน้า Table/Kanban (type=task) และ Sub-task ใช้ Drawer · K1: "+ New" เลือกประเภทในหน้าต่างกลางจอ
-  const createLayout: 'drawer' | 'modal' = newParentKey || requestedParam === 'task' ? 'drawer' : 'modal';
+  // B2 (ผู้ใช้ตัดสิน 2026-11-08): สร้างงานทุกแบบใช้ Drawer หน้าตาเดียวกับหน้าดู Task · เลือกประเภทที่แถบหัวแทนหน้าต่างกลางจอ K1
+  const createLayout = 'drawer' as 'drawer' | 'modal';
   const loading = permissions.isPending || (!guest && project.isPending) || (!!activeKey && issue.isPending) || (!!parentKey && parent.isPending);
   const error = permissions.error ?? (!guest ? project.error : null) ?? issue.error;
   function content() {
@@ -111,20 +111,20 @@ function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
     if (!options.data || (newParentKey && !parent.data)) return <LoadingState />;
     return <CreateIssue key={`${newParentKey ?? 'root'}:${search.get('moduleId') ?? ''}:${search.get('phaseId') ?? ''}:${search.get('statusId') ?? ''}`} initialContext={{ moduleId: search.get('moduleId') ?? undefined, phaseId: search.get('phaseId') ?? undefined, statusId: search.get('statusId') ?? undefined }} layout={createLayout} scope={scope} options={options.data} parent={newParentKey ? parent.data : null} initialType={requestedType} onCreated={(issue) => void created(issue)} onClose={closeNew} registerClose={registerClose} />;
   }
-  // ขนาดตาม Canvas: สร้างงาน = B (640), Bug = K2 (920 เต็มสูง), งานอื่น = C (860 ใต้หัวโปรเจกต์)
+  // ขนาด: สร้างงานกว้างเท่าหน้าดู (B2 = C2), Bug = K2 (920 เต็มสูง), งานอื่น = C2
   const showingPanel = !(creating && !newParentKey) && !!rootIssue && !error && !loading;
   const modalCreate = creating && !newParentKey && createLayout === 'modal';
   // ฟอร์ม B มีแถบหัว + ปุ่มปิดของตัวเอง · ระหว่างโหลด / ไม่มีสิทธิ์ใช้หัวของ Drawer
   const createReady = creating && !newParentKey && !!canCreate && !!options.data && !options.error && !loading && !error;
   const closeRoot = (open: boolean) => { if (!open) { if (creating && !newParentKey && guard.current) guard.current(); else onClose(); } };
-  const variant = creating && !newParentKey ? 'create' : rootIssue?.type === 'Bug' ? 'wide' : 'detail';
+  const variant = creating && !newParentKey ? 'detail' : rootIssue?.type === 'Bug' ? 'wide' : 'detail';
   return <>
     {modalCreate ? <Dialog open size="wide" title={t('newIssueIn', { project: project.data?.name ?? projectKey })} onOpenChange={closeRoot}><div className={styles.root}>{content()}</div></Dialog> :
     <Drawer open variant={variant} bare={showingPanel || createReady} title={creating && !newParentKey ? t('newIssue') : t('issueTitle', { key: rootIssue?.key ?? rootName.current ?? activeKey ?? '' })} onOpenChange={(open) => { if (!open) { if (creating && !newParentKey && guard.current) guard.current(); else onClose(); } }}>
       <div className={styles.root}>{content()}</div>
     </Drawer>}
     {nested && issue.data && <Drawer open depth={2} variant="detail" bare title={t('issueTitle', { key: issue.data.key })} parentLabel={mobile ? undefined : `${parent.data!.key} · ${parent.data!.title}`} onBack={() => navigate(parent.data!.key)} onOpenChange={(open) => { if (!open) navigate(parent.data!.key); }}><div className={styles.root}><IssuePanel key={issue.data.key} scope={scope} issue={issue.data} siblings={parent.data!.subtasks} onDeleted={(parentKey) => parentKey ? navigate(parentKey) : onClose()} /></div></Drawer>}
-    {newParentKey && <Drawer open depth={2} variant="create" title={t('newSubtask')} parentLabel={parent.data ? `${parent.data.key} · ${parent.data.title}` : newParentKey} onBack={() => guard.current ? guard.current() : closeNew()} onOpenChange={(open) => { if (!open) { if (guard.current) guard.current(); else closeNew(); } }}><div className={styles.root}>{parent.error ? <ErrorState error={parent.error} retry={() => void parent.refetch()} /> : createForm()}</div></Drawer>}
+    {newParentKey && <Drawer open depth={2} variant="detail" title={t('newSubtask')} parentLabel={parent.data ? `${parent.data.key} · ${parent.data.title}` : newParentKey} onBack={() => guard.current ? guard.current() : closeNew()} onOpenChange={(open) => { if (!open) { if (guard.current) guard.current(); else closeNew(); } }}><div className={styles.root}>{parent.error ? <ErrorState error={parent.error} retry={() => void parent.refetch()} /> : createForm()}</div></Drawer>}
   </>;
 }
 function DeletedIssue({ scope, issueKey, error }: { scope: Scope; issueKey: string; error: ApiError }) {

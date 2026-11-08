@@ -75,7 +75,7 @@ export function HoursTab({ ws }: { ws: string }) {
   return (
     <div className={styles.section}>
       <h2>{t("title")}</h2>
-      <div className={styles.muted} style={{ fontSize: 13 }}>{t("description")}</div>
+      <div className={styles.muted} style={{ fontSize: 12 }}>{t("description")}</div>
       <div className={styles.grid3}>
         <Input label={t("capacity")} type="number" min={0} max={80} step={1} value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
         <Input label={t("start")} type="time" value={form.workStart} onChange={(e) => setForm({ ...form, workStart: e.target.value })} />

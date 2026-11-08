@@ -61,7 +61,7 @@ type Line =
   | { kind: "task"; wbs: string; row: GRow; depth: 2 | 3 }
   | { kind: "ms"; id: string; wbs: string; name: string; date: string };
 
-/** แตก WBS เป็นแถวตามระดับที่ขยาย · 1 = Module, 2 = + กลุ่มงาน, 3 = ถึง Sub-task */
+/** แตก WBS เป็นแถวตามระดับที่ขยาย · 1 = Module, 2 = + Task, 3 = ถึง Sub-task (เลิกใช้กลุ่มงาน · ผู้ใช้ตัดสิน 2026-11-08) */
 export function buildLines(d: GanttData, level: 1 | 2 | 3): Line[] {
   const out: Line[] = [];
   let msNo = 0;
@@ -73,15 +73,10 @@ export function buildLines(d: GanttData, level: 1 | 2 | 3): Line[] {
     const mw = String(mi + 1);
     out.push({ kind: "module", id: `m:${m.id ?? "none"}`, wbs: mw, name: m.name, s: m });
     if (level < 2) return;
-    m.groups.forEach((g, gi) => {
-      const gw = `${mw}.${gi + 1}`;
-      out.push({ kind: "group", id: `m:${m.id ?? "none"}:g:${g.phase?.id ?? gi}`, wbs: gw, name: g.name, s: g });
-      if (level < 3) return;
-      g.tasks.forEach((r, ti) => {
-        const tw = `${gw}.${ti + 1}`;
-        out.push({ kind: "task", wbs: tw, row: r, depth: 2 });
-        r.subtasks.forEach((sub, si) => out.push({ kind: "task", wbs: `${tw}.${si + 1}`, row: sub, depth: 3 }));
-      });
+    m.groups.flatMap((g) => g.tasks).forEach((r, ti) => {
+      const tw = `${mw}.${ti + 1}`;
+      out.push({ kind: "task", wbs: tw, row: r, depth: 2 });
+      if (level >= 3) r.subtasks.forEach((sub, si) => out.push({ kind: "task", wbs: `${tw}.${si + 1}`, row: sub, depth: 3 }));
     });
     if (level >= 2) ms(m.id);
   });
@@ -207,7 +202,7 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
           ))}
         </div>
         <Button size="small" onClick={scrollToToday}>{t("today")}</Button>
-        <b style={{ fontSize: 14 }}>{formatDate(d.range.from, year)} – {formatDate(d.range.to, year)}</b>
+        <b style={{ fontSize: 13 }}>{formatDate(d.range.from, year)} – {formatDate(d.range.to, year)}</b>
       </div>
       {/* Canvas: แถวที่สองเป็นเครื่องมือของแผน */}
       <div className={styles.bar}>
@@ -467,7 +462,7 @@ function AutoScheduleDialog({ ws, base, year, onClose, onChanged }: { ws: string
                     <tbody>
                       {p.items.map((it) => (
                         <tr key={it.key} data-testid={`preview-${it.key}`}>
-                          <td><b>{it.key}</b> {it.title}{it.because.length > 0 && <div className="muted" style={{ fontSize: 12 }}>{t("auto.because", { keys: it.because.join(", ") })}</div>}</td>
+                          <td><b>{it.key}</b> {it.title}{it.because.length > 0 && <div className="muted" style={{ fontSize: 11 }}>{t("auto.because", { keys: it.because.join(", ") })}</div>}</td>
                           <td className="muted">{fmt(it.previousStart, it.previousEnd)}</td>
                           <td>{fmt(it.planStart, it.planEnd)}</td>
                           <td>{t("auto.shift", { days: it.shiftDays })}</td>

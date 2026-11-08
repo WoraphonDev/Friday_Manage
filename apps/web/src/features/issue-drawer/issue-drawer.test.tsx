@@ -7,7 +7,7 @@ import { renderWithProviders } from '@/test/render';
 import { server } from '@/test/server';
 import { navigation, router } from '@/test/router';
 import { IssueDrawerHost } from './IssueDrawer';
-import { failure, fixture, formOptions, me, dev, statuses, uid } from './fixtures.test-support';
+import { failure, fixture, formOptions, makeIssue, me, dev, statuses, uid } from './fixtures.test-support';
 import type { Issue, Feed } from './types';
 
 let f: ReturnType<typeof fixture>;
@@ -151,15 +151,15 @@ describe('Issue parts and comments',()=>{
     const user=userEvent.setup();mount();await loaded();await screen.findByLabelText('ตรวจสอบข้อมูล');
     await user.click(screen.getByLabelText('ตรวจสอบข้อมูล'));await waitFor(()=>expect(f.state.checklist[0].done).toBe(true));
     await user.click(screen.getByRole('button',{name:'เลื่อน ยืนยันผลลัพธ์ ขึ้น'}));await waitFor(()=>expect(f.state.checklist[0].text).toBe('ยืนยันผลลัพธ์'));
-    await user.type(screen.getByLabelText('ข้อความ Checklist'),'ตรวจรับงานใหม่');await user.selectOptions(screen.getByLabelText('ประเภท Checklist'),'acceptance');await user.click(screen.getByRole('button',{name:'เพิ่ม'}));await screen.findByLabelText('ตรวจรับงานใหม่');
+    const acceptance=screen.getByRole('region',{name:'Acceptance criteria'});await user.type(within(acceptance).getByLabelText('เพิ่ม Acceptance criteria'),'ตรวจรับงานใหม่');await user.click(within(acceptance).getByRole('button',{name:'เพิ่ม'}));await screen.findByLabelText('ตรวจรับงานใหม่');
     expect(mutations('/checklist').at(-1)?.body).toEqual({text:'ตรวจรับงานใหม่',kind:'acceptance'});
     await user.click(screen.getByRole('button',{name:'ลบ Checklist ตรวจรับงานใหม่'}));await waitFor(()=>expect(screen.queryByLabelText('ตรวจรับงานใหม่')).not.toBeInTheDocument());
   });
   it('adds typed dependency with lag, displays cycle failure and removes an edge',async()=>{
     const user=userEvent.setup();mount();await loaded();await screen.findByRole('button',{name:/DE-9.*งานที่ต้องรอ/});
-    await user.click(screen.getByRole('button',{name:'เพิ่ม Dependency'}));await user.type(screen.getByLabelText('รหัสงานที่เชื่อม'),'DE-4');await user.selectOptions(screen.getByLabelText('ชนิด Dependency'),'SS');await user.clear(screen.getByLabelText('ระยะห่างวันทำการ'));await user.type(screen.getByLabelText('ระยะห่างวันทำการ'),'2');await user.click(screen.getByRole('button',{name:'เพิ่ม Dependency'}));
+    await user.click(screen.getByRole('button',{name:'เพิ่ม Dependency'}));await user.click(screen.getByRole('button',{name:'รหัสงานที่เชื่อม'}));await user.type(screen.getByLabelText('ค้นหารหัสหรือชื่องาน เช่น DEMO-7'),'DE-4');await user.click(await screen.findByRole('option',{name:/DE-4/}));await user.selectOptions(screen.getByLabelText('ชนิด Dependency'),'SS');await user.clear(screen.getByLabelText('ระยะห่างวันทำการ'));await user.type(screen.getByLabelText('ระยะห่างวันทำการ'),'2');await user.click(screen.getByRole('button',{name:'เพิ่ม Dependency'}));
     await waitFor(()=>expect(mutations('/dependencies').at(-1)?.body).toEqual({predecessorKey:'DE-4',type:'SS',lagDays:2}));
-    server.use(http.post(`${issueEndpoint}/dependencies`,()=>failure(409,'dependency_cycle')));await user.type(screen.getByLabelText('รหัสงานที่เชื่อม'),'DE-3');await user.click(screen.getByRole('button',{name:'เพิ่ม Dependency'}));await screen.findByText(/req_drawer_test/);
+    server.use(http.post(`${issueEndpoint}/dependencies`,()=>failure(409,'dependency_cycle')));await user.click(screen.getByRole('button',{name:'รหัสงานที่เชื่อม'}));await user.click(await screen.findByRole('option',{name:/DE-9/}));await user.click(screen.getByRole('button',{name:'เพิ่ม Dependency'}));await screen.findByText(/req_drawer_test/);
     await user.click(screen.getByRole('button',{name:'ยกเลิก Dependency DE-9'}));await waitFor(()=>expect(f.state.dependencies.blockedBy).toHaveLength(0));
   });
   it('auto-watches through comments, inserts stable mentions, edits and deletes comment',async()=>{
@@ -190,27 +190,27 @@ describe('Create issue',()=>{
     expect(router.replace).toHaveBeenLastCalledWith('/w/sample/p/DE/board?filter=open&issue=DE-20',{scroll:false});
   });
   it('creates Bug with required steps, severity/environment and supplied details',async()=>{
-    const user=userEvent.setup();createMount();await screen.findByRole('button',{name:'Bug'});await user.click(screen.getByRole('button',{name:'Bug'}));
-    await user.type(screen.getByLabelText('ชื่อ Bug'),'Bug ที่พบใหม่');await user.click(screen.getByRole('radio',{name:'Critical'}));await user.selectOptions(screen.getByLabelText('Environment'),'uat');
+    const user=userEvent.setup();createMount();await user.selectOptions(await screen.findByLabelText('ประเภทงาน'),'Bug');
+    await user.type(screen.getByLabelText('ชื่อ Bug'),'Bug ที่พบใหม่');await user.selectOptions(screen.getByLabelText('Severity'),'critical');await user.selectOptions(screen.getByLabelText('Environment'),'uat');
     await user.click(screen.getByRole('button',{name:'สร้างBug'}));expect(mutations('/projects/DE/issues')).toHaveLength(0);
     await user.type(screen.getByLabelText('ขั้นตอนทำซ้ำ *'),'เปิดหน้าแล้วกดปุ่ม');await user.type(screen.getByLabelText('ผลที่ควรเป็น'),'แสดงข้อมูล');await user.type(screen.getByLabelText('ผลที่เกิดขึ้นจริง'),'ข้อมูลไม่แสดง');
     await user.click(screen.getByRole('button',{name:'สร้างBug'}));await waitFor(()=>expect(mutations('/projects/DE/issues')).toHaveLength(1));
     expect(mutations('/projects/DE/issues')[0].body).toMatchObject({type:'Bug',severity:'critical',environment:'uat',details:{steps:'เปิดหน้าแล้วกดปุ่ม',expected:'แสดงข้อมูล',actual:'ข้อมูลไม่แสดง'}});
   });
   it('creates Story acceptance criteria using the checklist endpoint',async()=>{
-    const user=userEvent.setup();createMount();await screen.findByRole('button',{name:'Story'});await user.click(screen.getByRole('button',{name:'Story'}));
-    await user.type(screen.getByLabelText('ชื่อ Story'),'Story ตัวอย่าง');await user.type(screen.getByLabelText('ฉันต้องการ *'),'ดูสถานะของงาน');await user.type(screen.getByLabelText('Acceptance criteria *'),'   ');await user.click(screen.getByRole('button',{name:'สร้างStory'}));await screen.findByText('เพิ่มเกณฑ์การยอมรับอย่างน้อย 1 ข้อ');expect(mutations('/projects/DE/issues')).toHaveLength(0);await user.clear(screen.getByLabelText('Acceptance criteria *'));await user.type(screen.getByLabelText('Acceptance criteria *'),'ดูรายการได้\nกรองสถานะได้');await user.click(screen.getByRole('button',{name:'สร้างStory'}));
+    const user=userEvent.setup();createMount();await user.selectOptions(await screen.findByLabelText('ประเภทงาน'),'Story');
+    await user.type(screen.getByLabelText('ชื่อ Story'),'Story ตัวอย่าง');await user.type(screen.getByLabelText('ฉันต้องการ *'),'ดูสถานะของงาน');await user.type(screen.getByLabelText('เพิ่ม Acceptance criteria'),'   {Enter}');await user.click(screen.getByRole('button',{name:'สร้างStory'}));await screen.findByText('เพิ่มเกณฑ์การยอมรับอย่างน้อย 1 ข้อ');expect(mutations('/projects/DE/issues')).toHaveLength(0);await user.clear(screen.getByLabelText('เพิ่ม Acceptance criteria'));await user.type(screen.getByLabelText('เพิ่ม Acceptance criteria'),'ดูรายการได้{Enter}กรองสถานะได้{Enter}');await user.click(screen.getByRole('button',{name:'สร้างStory'}));
     await waitFor(()=>expect(mutations('/checklist')).toHaveLength(2));expect(mutations('/checklist').map((m)=>m.body)).toEqual([{text:'ดูรายการได้',kind:'acceptance'},{text:'กรองสถานะได้',kind:'acceptance'}]);
     expect(mutations('/projects/DE/issues')[0].body).toMatchObject({type:'Story',details:{i_want:'ดูสถานะของงาน'}});
   });
   it('creates Spike with numeric timebox',async()=>{
-    const user=userEvent.setup();createMount();await screen.findByRole('button',{name:'Spike'});await user.click(screen.getByRole('button',{name:'Spike'}));
+    const user=userEvent.setup();createMount();await user.selectOptions(await screen.findByLabelText('ประเภทงาน'),'Spike');
     await user.type(screen.getByLabelText('ชื่อ Spike'),'Spike ตัวอย่าง');await user.type(screen.getByLabelText('คำถามที่ต้องหาคำตอบ *'),'เลือกแนวทางใด');await user.type(screen.getByLabelText('Timebox (ชั่วโมง) *'),'8');await user.click(screen.getByRole('button',{name:'สร้างSpike'}));
     await waitFor(()=>expect(mutations('/projects/DE/issues')[0]?.body).toMatchObject({type:'Spike',details:{question:'เลือกแนวทางใด',timebox_hours:8}}));
   });
   it('creates a Sub-task from its parent without sending inherited fields',async()=>{
     const user=userEvent.setup();mount();await loaded();await user.click(screen.getByRole('button',{name:'เพิ่ม Sub-task'}));
-    const form=await screen.findByRole('dialog',{name:'สร้าง Sub-task'});await waitFor(()=>expect(within(form).getByLabelText('รหัสงานแม่')).toHaveValue('DE-1'));
+    const form=await screen.findByRole('dialog',{name:'สร้าง Sub-task'});const props=await within(form).findByRole('complementary',{name:/คุณสมบัติ|Properties/});expect(within(props).getByText('DE-1 · งานตัวอย่าง DE-1')).toBeInTheDocument();
     await user.type(within(form).getByLabelText('ชื่อ Sub-task'),'งานย่อยใหม่');await user.click(within(form).getByRole('button',{name:'สร้างSub-task'}));
     await waitFor(()=>expect(mutations('/projects/DE/issues')).toHaveLength(1));const body=mutations('/projects/DE/issues')[0].body;
     expect(body.parentKey).toBe('DE-1');expect(body).not.toHaveProperty('moduleId');expect(body).not.toHaveProperty('sprintId');
@@ -218,7 +218,7 @@ describe('Create issue',()=>{
   });
   it('retries partial checklist failure without creating main issue or completed child twice',async()=>{
     const user=userEvent.setup();let fail=true;server.use(http.post(`${issueEndpoint}/checklist`,async({request})=>{const body=await request.json() as Record<string,unknown>;if(fail)return failure(500,'temporary_failure');f.state.mutations.push({method:'POST',path:'/api/v1/w/sample/issues/DE-20/checklist',body,etag:null});return HttpResponse.json({id:uid(600),...body},{status:201});}));
-    createMount();await taskFields(user);await user.click(screen.getByRole('button',{name:'เพิ่ม Sub-task'}));await user.type(screen.getByLabelText('ชื่อ Sub-task 1'),'งานย่อยพร้อมกัน');await user.type(screen.getByLabelText('Checklist · หนึ่งรายการต่อบรรทัด'),'ตรวจงาน');await user.click(screen.getByRole('button',{name:'สร้างTask'}));
+    createMount();await taskFields(user);await user.click(screen.getByRole('button',{name:'เพิ่ม Sub-task'}));await user.type(screen.getByLabelText('ชื่อ Sub-task 1'),'งานย่อยพร้อมกัน');await user.type(screen.getByLabelText('เพิ่ม Checklist'),'ตรวจงาน{Enter}');await user.click(screen.getByRole('button',{name:'สร้างTask'}));
     await screen.findByText(/สร้างงานหลัก DE-20 แล้ว/);await screen.findByText(/req_drawer_test/);expect(mutations('/projects/DE/issues')).toHaveLength(2);
     fail=false;await user.click(screen.getByRole('button',{name:'ทำรายการที่เหลือต่อ'}));await screen.findByRole('button',{name:'งานที่สร้างใหม่'});expect(mutations('/projects/DE/issues')).toHaveLength(2);expect(mutations('/checklist')).toHaveLength(1);
   });
@@ -228,11 +228,11 @@ describe('Create issue',()=>{
     const restored=createMount();await screen.findByText('กู้แบบร่างที่บันทึกไว้บนเครื่องนี้แล้ว');expect(screen.getByLabelText('ชื่อ Task')).toHaveValue('แบบร่างส่วนตัว');
     restored.rerender(<IssueDrawerHost ws="sample" projectKey="DE" meId={dev.id} onClose={close} />);await waitFor(()=>expect(screen.getByLabelText('ชื่อ Task')).toHaveValue(''));expect(screen.queryByText('กู้แบบร่างที่บันทึกไว้บนเครื่องนี้แล้ว')).not.toBeInTheDocument();
   });
-  it('type=task opens the B drawer with Task / Sub-task toggle and segmented priority',async()=>{
+  it('type=task opens the B2 drawer (same layout as task detail) with Task / Sub-task toggle',async()=>{
     const user=userEvent.setup();navigation.search='new=1&type=task';mount(undefined,{issueKey:undefined});
-    const drawer=await screen.findByRole('dialog',{name:'สร้างงานใหม่'});expect(drawer).toHaveClass('drawer-create');
+    const drawer=await screen.findByRole('dialog',{name:'สร้างงานใหม่'});expect(drawer).toHaveClass('drawer-detail');expect(await within(drawer).findByRole('group',{name:'สร้างเป็น'})).toBeInTheDocument();
     await user.selectOptions(await within(drawer).findByLabelText('Module'),uid(10));await user.type(within(drawer).getByLabelText('ชื่อ Task'),'งานจากตาราง');
-    await user.click(within(drawer).getByRole('radio',{name:'High'}));await user.click(within(drawer).getByRole('radio',{name:'L'}));
+    await user.selectOptions(within(drawer).getByLabelText('Priority'),'high');await user.selectOptions(within(drawer).getByLabelText('Size'),'L');
     await user.click(within(drawer).getByRole('button',{name:'สร้างTask'}));
     await waitFor(()=>expect(mutations('/projects/DE/issues')[0]?.body).toMatchObject({type:'Task',title:'งานจากตาราง',priority:'high',size:'L'}));
   });
@@ -305,7 +305,7 @@ it('renders configured required fields even when added to another issue type',as
 
 it('prefills and submits Table module/phase and Kanban status context', async () => {
   const user = userEvent.setup(); navigation.search = `new=1&type=task&moduleId=${uid(10)}&phaseId=${uid(11)}&statusId=${statuses[1].id}`; mount(undefined, { issueKey: undefined });
-  await screen.findByRole('textbox', { name: 'ชื่อ Task' }); expect(screen.getByLabelText('Module')).toHaveValue(uid(10)); expect(screen.getByLabelText('กลุ่มงาน')).toHaveValue(uid(11)); expect(screen.getByLabelText('สถานะ')).toHaveValue(statuses[1].id);
+  await screen.findByRole('textbox', { name: 'ชื่อ Task' }); expect(screen.getByLabelText('Module')).toHaveValue(uid(10)); expect(screen.getByLabelText('สถานะ')).toHaveValue(statuses[1].id);
   await user.type(screen.getByLabelText('ชื่อ Task'), 'งานในกลุ่มที่เลือก'); await user.click(screen.getByRole('button', { name: 'สร้างTask' })); await waitFor(() => expect(mutations('/projects/DE/issues')).toHaveLength(1)); expect(mutations('/projects/DE/issues')[0].body).toMatchObject({ moduleId: uid(10), phaseId: uid(11), statusId: statuses[1].id });
 });
 it('ignores unavailable module/phase/status context IDs', async () => {
@@ -313,11 +313,11 @@ it('ignores unavailable module/phase/status context IDs', async () => {
 });
 it('gates recording test results on issue.record_test, not issue.edit', async () => {
   f.state.access = { role: 'member', guestViewer: false, permissions: ['project.view', 'issue.record_test'] }; mount('DE-2');
-  expect(await screen.findByRole('button', { name: 'บันทึกผลทดสอบ' })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: '+ บันทึกผลทดสอบ' })).toBeInTheDocument();
 });
 it('hides recording test results without issue.record_test', async () => {
   f.state.access = { role: 'member', guestViewer: false, permissions: ['project.view', 'issue.edit'] }; mount('DE-2');
-  await screen.findByText('ยังไม่มีผลทดสอบ'); expect(screen.queryByRole('button', { name: 'บันทึกผลทดสอบ' })).not.toBeInTheDocument();
+  await screen.findByText('ยังไม่มีผลทดสอบ'); expect(screen.queryByRole('button', { name: '+ บันทึกผลทดสอบ' })).not.toBeInTheDocument();
 });
 it('keeps the Kanban Bug board when moving between issues', async () => {
   const user = userEvent.setup(); navigation.search = 'type=bug&issue=DE-1'; mount(); await loaded();
@@ -329,21 +329,26 @@ it('read-only members see checklist and dependencies without edit controls', asy
   f.state.access = { role: 'viewer', guestViewer: false, permissions: ['project.view'] }; mount(); await loaded();
   expect(await screen.findByRole('checkbox', { name: 'ตรวจสอบข้อมูล' })).toBeDisabled();
   expect(await screen.findByRole('button', { name: /DE-9/ })).toBeInTheDocument();
-  expect(screen.queryByLabelText('ข้อความ Checklist')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('เพิ่ม Checklist')).not.toBeInTheDocument();
   expect(f.state.mutations).toHaveLength(0);
 });
 it('records a Sub-task test result using the QA API', async () => {
   const user = userEvent.setup(); const runs: unknown[] = [];
   server.use(http.get('*/api/v1/w/:ws/issues/DE-2/test-runs', () => HttpResponse.json({ items: runs })), http.post('*/api/v1/w/:ws/issues/DE-2/test-runs', async ({ request }) => {
-    const body = await request.json() as object; expect(body).toMatchObject({ result: 'failed', note: 'บันทึกผิดพลาด', passedCount: 2, totalCount: 3 });
+    // ผลตรวจของ Reviewer: ผ่าน/ไม่ผ่าน + ผู้ตรวจ + Environment + ขั้นตอนที่พบปัญหา · ไม่มีจำนวนเคส / Commit
+    const body = await request.json() as object; expect(body).toMatchObject({ kind: 'qa', result: 'failed', note: 'บันทึกผิดพลาด', environment: 'uat', testerId: me.id }); expect(body).not.toHaveProperty('passedCount'); expect(body).not.toHaveProperty('commitSha');
     const run = { id: uid(400), runNo: 1, createdAt: '2026-11-07T00:00:00Z', tester: me, files: [], bugs: [], commitSha: null, ...body }; runs.push(run); return HttpResponse.json(run, { status: 201 });
   }));
-  mount('DE-2'); await user.click(await screen.findByRole('button', { name: 'บันทึกผลทดสอบ' })); await user.selectOptions(screen.getByLabelText('ผลการทดสอบ'), 'failed'); await user.type(screen.getByLabelText('จำนวนที่ผ่าน'), '2'); await user.type(screen.getByLabelText('จำนวนทั้งหมด'), '3'); await user.type(screen.getByLabelText('บันทึก / ขั้นตอนที่พบปัญหา'), 'บันทึกผิดพลาด'); await user.click(screen.getByRole('button', { name: 'บันทึกผล' })); await screen.findByText('บันทึกผิดพลาด'); expect(screen.getByRole('button', { name: 'สร้าง Bug จากผลทดสอบ' })).toBeInTheDocument();
+  mount('DE-2'); await user.click(await screen.findByRole('button', { name: '+ บันทึกผลทดสอบ' }));
+  expect(screen.getByRole('radiogroup', { name: 'ผลการทดสอบ' })).toBeInTheDocument(); expect(screen.queryByRole('radio', { name: 'ติดเงื่อนไข' })).not.toBeInTheDocument(); expect(screen.queryByLabelText('จำนวนที่ผ่าน')).not.toBeInTheDocument(); expect(screen.queryByLabelText('Commit SHA')).not.toBeInTheDocument();
+  await user.click(screen.getByRole('radio', { name: 'ไม่ผ่าน' })); await user.selectOptions(screen.getByLabelText('ผู้ตรวจ'), me.id); await user.selectOptions(screen.getByLabelText('Environment'), 'uat');
+  await user.type(screen.getByLabelText('ขั้นตอนที่พบปัญหา'), 'บันทึกผิดพลาด'); await user.click(screen.getByRole('button', { name: 'บันทึกผล' })); await screen.findByText('บันทึกผิดพลาด');
+  expect(screen.getByText(`ตรวจโดย ${me.displayName}`, { exact: false })).toBeInTheDocument(); expect(screen.getByRole('button', { name: 'สร้าง Bug จากผลทดสอบ' })).toBeInTheDocument();
 });
 it('mobile Sub-task tabs retain the test draft when switching sections', async () => {
   vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true, media: '(max-width: 760px)', onchange: null, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn() } as MediaQueryList));
   try {
-    const user = userEvent.setup(); mount('DE-2'); await user.click(await screen.findByRole('tab', { name: 'ผลทดสอบ' })); await user.click(await screen.findByRole('button', { name: 'บันทึกผลทดสอบ' })); await user.type(screen.getByLabelText('บันทึก / ขั้นตอนที่พบปัญหา'), 'ร่างผลทดสอบ'); await user.click(screen.getByRole('tab', { name: 'คอมเมนต์' })); await user.click(screen.getByRole('tab', { name: 'ผลทดสอบ' })); expect(screen.getByLabelText('บันทึก / ขั้นตอนที่พบปัญหา')).toHaveValue('ร่างผลทดสอบ');
+    const user = userEvent.setup(); mount('DE-2'); await user.click(await screen.findByRole('tab', { name: 'ผลทดสอบ' })); await user.click(await screen.findByRole('button', { name: '+ บันทึกผลทดสอบ' })); await user.type(screen.getByLabelText('บันทึก'), 'ร่างผลทดสอบ'); await user.click(screen.getByRole('tab', { name: 'คอมเมนต์' })); await user.click(screen.getByRole('tab', { name: 'ผลทดสอบ' })); expect(screen.getByLabelText('บันทึก')).toHaveValue('ร่างผลทดสอบ');
   } finally { vi.unstubAllGlobals(); }
 });
 
@@ -355,3 +360,42 @@ it('Commits แสดงทุกรายการพร้อมลิงก�
   ] })));
   mount(); await loaded(); expect(await screen.findByRole('link', { name: 'abcdef1' })).toHaveAttribute('href', 'https://example.com/commit/abcdef1'); expect(screen.getByRole('link', { name: 'fedcba1' })).toHaveAttribute('href', 'https://example.com/commit/fedcba1'); expect(screen.getByText('เพิ่มการทดสอบ')).toBeInTheDocument();
 });
+
+describe('Task v2 (ผู้ใช้ตัดสิน 2026-11-08)', () => {
+  it('Sub-task เปลี่ยน Task แม่ได้เฉพาะ Task ใน Module เดียวกัน', async () => {
+    const user = userEvent.setup();
+    f.state.issues.set('DE-7', makeIssue('DE-7', { title: 'Task ใน Module อื่น', moduleId: uid(12) }));
+    mount('DE-2'); await screen.findByRole('button', { name: 'งานย่อยหนึ่ง' });
+    await user.click(screen.getByRole('button', { name: 'Task แม่' }));
+    expect(screen.queryByRole('option', { name: /DE-7/ })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('option', { name: /DE-9/ }));
+    await waitFor(() => expect(mutations('/issues/DE-2').at(-1)).toMatchObject({ body: { parentKey: 'DE-9' } }));
+  });
+
+  it('แผงขวาแบ่งผู้รับผิดชอบ / แผนงาน / กลุ่มงาน และไม่มีช่อง Sprint, กลุ่มงานเดิม และ Tester', async () => {
+    mount(); await loaded();
+    const props = screen.getByRole('complementary', { name: /คุณสมบัติ|Properties/ });
+    for (const name of ['ผู้รับผิดชอบ', 'แผนงาน', 'กลุ่มงาน']) expect(within(props).getByRole('region', { name })).toBeInTheDocument();
+    expect(within(props).getByRole('combobox', { name: 'System Analyst' })).toBeInTheDocument();
+    expect(within(props).getByRole('combobox', { name: 'QA / Reviewer' })).toBeInTheDocument();
+    expect(within(props).queryByText('Sprint')).not.toBeInTheDocument();
+    expect(within(props).queryByText('Tester')).not.toBeInTheDocument();
+  });
+
+  it('Dev แนบผล Unit test พร้อม Coverage ในส่วน Development', async () => {
+    const user = userEvent.setup(); const runs: Record<string, unknown>[] = [];
+    server.use(http.get('*/api/v1/w/:ws/issues/DE-1/test-runs', () => HttpResponse.json({ items: runs })), http.post('*/api/v1/w/:ws/issues/DE-1/test-runs', async ({ request }) => {
+      const body = await request.json() as Record<string, unknown>;
+      const run = { id: uid(401), runNo: 1, createdAt: '2026-11-08T00:00:00Z', tester: me, files: [], bugs: [], commitSha: null, environment: null, note: null, passedCount: null, totalCount: null, coveragePct: null, ...body };
+      runs.push(run); return HttpResponse.json(run, { status: 201 });
+    }));
+    mount(); await loaded();
+    await user.click(await screen.findByRole('button', { name: '+ แนบผล Unit test' }));
+    await user.type(screen.getByLabelText('จำนวนที่ผ่าน'), '48'); await user.type(screen.getByLabelText('จำนวนทั้งหมด'), '48'); await user.type(screen.getByLabelText('Coverage (%)'), '82.5');
+    await user.click(screen.getByRole('button', { name: 'บันทึกผล' }));
+    await screen.findByText('Coverage 82.5%');
+    expect(runs[0]).toMatchObject({ kind: 'unit', result: 'passed', passedCount: 48, totalCount: 48, coveragePct: 82.5 });
+    expect(runs[0]).not.toHaveProperty('environment', 'sit');
+  });
+});
+

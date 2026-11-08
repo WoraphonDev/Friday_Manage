@@ -335,6 +335,8 @@ describe('เชิญสมาชิก (H, J4)', () => {
     expect(r.status).toBe(201);
     expect(r.body.items.map((x: { status: string }) => x.status)).toEqual(['invited', 'already_member']);
     token = r.body.items[0].inviteUrl.split('/join/')[1];
+    // ลิงก์ชี้ไปที่เว็บ (APP_URL / WEB_URL) ไม่ใช่ Host ของคำขอที่วิ่งผ่าน proxy ของเว็บ
+    expect(r.body.items[0].inviteUrl.split('/join/')[0]).toBe((process.env.APP_URL ?? process.env.WEB_URL ?? 'http://localhost:3000').replace(/\/$/, ''));
     const anon = await request(app.getHttpServer()).get(`/api/v1/invitations/${token}`);
     expect(anon.body).toMatchObject({ status: 'pending', email: 'new.dev@example.com', workspace: { slug: 'friday-dev' }, invitedBy: 'Mick', project: { key: 'DP' }, projectRole: 'member' });
   });

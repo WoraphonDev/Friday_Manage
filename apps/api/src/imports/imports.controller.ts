@@ -1,11 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Res, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { config } from '../config.js';
-import { type AppRequest, Auth, type AuthInfo, Tenant, type TenantInfo } from '../common/request.js';
+import { Auth, type AuthInfo, Tenant, type TenantInfo } from '../common/request.js';
 import { TenantGuard } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
 import { ImportsService, PatchImportBody } from './imports.service.js';
+import { webUrl } from '../auth/auth.config.js';
 
 /** L3 · Import Excel */
 @Controller('w/:ws/import-jobs')
@@ -31,8 +32,9 @@ export class ImportsController {
   }
 
   @Post(':id/commit')
-  commit(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('id') id: string, @Req() req: AppRequest) {
-    return this.imports.commit(auth, tenant, id, process.env.APP_URL ?? `${req.protocol}://${req.get('host')}`);
+  commit(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('id') id: string) {
+    // ลิงก์เชิญของคนที่เลือก "เชิญด้วยอีเมล" ใช้ที่อยู่ของเว็บ ไม่ใช่ Host ของคำขอที่ผ่าน proxy
+    return this.imports.commit(auth, tenant, id, (process.env.APP_URL ?? webUrl()).replace(/\/$/, ''));
   }
 }
 

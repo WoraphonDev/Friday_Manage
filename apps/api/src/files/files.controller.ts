@@ -6,7 +6,8 @@ import { parse } from '../common/validate.js';
 import { AttachBody, CreateFileBody, DeleteFileBody, FilesService, FolderBody, ListFilesQuery, PatchFileBody, PatchFolderBody, UploadUrlBody, VersionBody } from './files.service.js';
 
 const Id = z.uuid();
-const VersionQuery = z.object({ version: z.coerce.number().int().min(1).optional() });
+/** inline=1: ขอแสดงในหน้าดูตัวอย่าง (มีผลเฉพาะ PDF) */
+const VersionQuery = z.object({ version: z.coerce.number().int().min(1).optional(), inline: z.enum(['1', 'true']).optional() });
 const ConfirmQuery = z.object({ confirm: z.stringbool().optional() });
 
 /** หน้า 8 · Files · ทุก route อยู่ใต้ `w/:ws/projects/:key` · Guest → 403 */
@@ -62,7 +63,8 @@ export class FilesController {
   @Get('files/:id/download')
   @Redirect()
   async download(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Param('id') id: string, @Query() query: unknown) {
-    return { url: await this.files.download(auth, tenant, key, id, parse(VersionQuery, query).version), statusCode: 302 };
+    const q = parse(VersionQuery, query);
+    return { url: await this.files.download(auth, tenant, key, id, q.version, !!q.inline), statusCode: 302 };
   }
 
   @Post('files/:id/attachments')

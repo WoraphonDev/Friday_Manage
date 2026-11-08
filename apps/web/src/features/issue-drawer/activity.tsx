@@ -5,7 +5,8 @@ import { useTranslations } from 'next-intl';
 import { Button, Input, LoadingState, ErrorState, Dialog } from '@/components/ui';
 import { api } from '@/lib/api';
 import { BodyText, Failure, PersonView, when } from './shared';
-import { issuePath, issueQuery, projectPath, type Activity, type Comment, type Feed, type Scope } from './types';
+import { filesPageHref, issuePath, issueQuery, previewBase, projectPath, type Activity, type Comment, type Feed, type Scope } from './types';
+import { FilePreview, useFilePreview } from '@/components/file-preview';
 import type { UploadedFile } from '@/lib/upload';
 import { AttachButton } from './task-v2';
 import { X } from 'lucide-react';
@@ -41,6 +42,7 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
   const [error, setError] = useState<unknown>(null);
   const lock = useRef(false);
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const preview = useFilePreview();
   const commentable = scope.access.permissions.includes('issue.comment');
   const tail = /@([^@\n]*)$/.exec(body);
   const suggestions = tail && !tail[1].includes('](') ? scope.people.filter((person) => person.displayName.toLocaleLowerCase().includes(tail[1].toLocaleLowerCase())).slice(0, 8) : [];
@@ -107,7 +109,8 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
       <div className={styles.feedHeading}><PersonView person={item.kind === 'comment' ? item.author : item.actor} /><time dateTime={item.createdAt}>{when(item.createdAt, scope.yearFormat)}</time></div>
       {item.kind === 'activity' ? <p className={styles.activityText}>{activityText(item)}</p> : <div className={styles.commentBody}>
         {item.deletedAt ? <p className="muted">{t(item.deletionReason === 'admin' ? 'deletedByAdmin' : 'deletedComment')}</p> : <BodyText>{item.body ?? ''}</BodyText>}
-        {!item.deletedAt && !!item.files?.length && <div className={styles.fileChips}>{item.files.map((file) => <a key={file.id} className={styles.chipSoft} href={`/w/${encodeURIComponent(scope.ws)}/p/${encodeURIComponent(scope.projectKey)}/files?file=${encodeURIComponent(file.id)}`}>{file.name}</a>)}</div>}
+        {/* กดไฟล์แนบ = ป๊อปอัปดูตัวอย่าง (ผู้ใช้ขอ 2026-11-08) */}
+        {!item.deletedAt && !!item.files?.length && <div className={styles.fileChips}>{item.files.map((file, index) => <button type="button" key={file.id} className={`${styles.chipSoft} ${styles.chipButton}`} aria-label={t('previewFile', { name: file.name })} onClick={() => preview.open(item.files!, index)}>{file.name}</button>)}</div>}
         {item.editedAt && !item.deletedAt && <small className="muted">{t('edited')}</small>}
         <div className={styles.actions}>{item.canEdit && <Button size="small" variant="ghost" disabled={pending} onClick={() => { setEditing(item); setEditBody(item.body ?? ''); }}>{t('editComment')}</Button>}{item.canDelete && <Button size="small" variant="ghost" disabled={pending} onClick={() => setDeleting(item)}>{t('deleteComment')}</Button>}</div>
       </div>}
@@ -121,6 +124,7 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
       <div className={styles.composerFooter}>{!compact && <AttachButton scope={scope} label={t('attachToComment')} disabled={pending} onUploaded={(added) => setFiles((current) => [...current, ...added])} />}<span className="muted">{t('markdownHint')}</span><Button type="submit" variant="primary" disabled={pending || !body.trim()}>{t('send')}</Button></div>
     </form>}
     {!!error && <Failure error={error} />}
+    {preview.props && <FilePreview {...preview.props} base={previewBase(scope)} filesHref={filesPageHref(scope)} />}
     <Dialog open={!!editing} title={t('editComment')} onOpenChange={(open) => { if (!open && !pending) setEditing(null); }}>
       <form className={styles.stack} onSubmit={(event) => { event.preventDefault(); if (editing) void change(() => api.request(`${endpoint}/comments/${editing.id}`, { method: 'PATCH', body: { body: editBody } }), () => setEditing(null)); }}>
         <label className="field">{t('comment')}<textarea className="input" required maxLength={20000} value={editBody} onChange={(event) => setEditBody(event.target.value)} /></label><Button type="submit" variant="primary" disabled={pending || !editBody.trim()}>{t('save')}</Button>{!!error && <Failure error={error} />}

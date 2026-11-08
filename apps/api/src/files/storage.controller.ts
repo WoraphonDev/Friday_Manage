@@ -2,7 +2,7 @@ import { Controller, Get, Header, HttpCode, Param, Put, Req, Res } from '@nestjs
 import type { Request, Response } from 'express';
 import { AppError } from '../common/errors.js';
 import { Public } from '../common/request.js';
-import { contentDisposition, LocalStorage, MAX_FILE_BYTES } from './storage.js';
+import { contentDisposition, INLINE_MIME, LocalStorage, MAX_FILE_BYTES } from './storage.js';
 
 /**
  * ปลายทางของที่เก็บไฟล์ในเครื่อง (dev / test / Codex) แทน S3 presigned URL
@@ -40,7 +40,7 @@ export class StorageController {
     if (!claims) throw new AppError(403, 'invalid_download_url', 'ลิงก์ดาวน์โหลดหมดอายุแล้ว · กดดาวน์โหลดใหม่อีกครั้ง');
     if (!(await this.local.stat(claims.k))) throw new AppError(404, 'not_found', 'ไม่พบไฟล์');
     res.setHeader('content-type', String(claims.m ?? 'application/octet-stream'));
-    res.setHeader('content-disposition', contentDisposition(String(claims.n ?? 'file')));
+    res.setHeader('content-disposition', contentDisposition(String(claims.n ?? 'file'), claims.i === 1 && INLINE_MIME.has(String(claims.m))));
     res.setHeader('x-content-type-options', 'nosniff');
     this.local.read(claims.k).pipe(res);
   }

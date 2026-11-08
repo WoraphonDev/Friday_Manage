@@ -10,7 +10,8 @@ import { formatDate } from '@/lib/format';
 import type { UploadedFile } from '@/lib/upload';
 import { Failure } from './shared';
 import { AttachButton } from './task-v2';
-import { issuePath, issueQuery, type Issue, type Scope } from './types';
+import { filesPageHref, issuePath, issueQuery, previewBase, type Issue, type Scope } from './types';
+import { FilePreview, useFilePreview } from '@/components/file-preview';
 import styles from './issue-drawer.module.css';
 
 interface TestRun {
@@ -77,7 +78,7 @@ export function TestRuns({ scope, issue, kind = 'qa', embedded = false }: { scop
     } catch (failure) { setError(failure); }
     finally { lock.current = false; setPending(false); }
   }
-  const fileHref = (id: string) => `/w/${encodeURIComponent(scope.ws)}/p/${encodeURIComponent(scope.projectKey)}/files?file=${encodeURIComponent(id)}`;
+  const preview = useFilePreview();
   const body = <>
     {query.isPending && <LoadingState />}{query.error != null && <ErrorState error={query.error} retry={() => void query.refetch()} />}
     {query.data && runs.length === 0 && !editing && <p className="muted">{t(unit ? 'unitEmpty' : 'empty')}</p>}
@@ -87,7 +88,7 @@ export function TestRuns({ scope, issue, kind = 'qa', embedded = false }: { scop
         {run.commitSha && <code className="muted">{run.commitSha.slice(0, 7)}</code>}
         <span className={`muted ${styles.runMeta}`}>{run.tester && (unit ? run.tester.displayName : t('checkedBy', { name: run.tester.displayName }))}{run.tester && ' · '}{formatDate(run.createdAt.slice(0, 10), scope.yearFormat)}{run.environment && !unit && ` · ${run.environment.toUpperCase()}`}</span></div>
       {run.note && <div className={styles.runNote}>{!unit && <span className={styles.runNoteLabel}>{t(run.result === 'passed' ? 'noteLabel' : 'stepsLabel')}</span>}<p>{run.note}</p></div>}
-      {run.files.length > 0 && <div className={styles.fileChips}>{run.files.map((file) => <a key={file.id} className={styles.chipSoft} href={fileHref(file.id)}>{file.name}</a>)}</div>}
+      {run.files.length > 0 && <div className={styles.fileChips}>{run.files.map((file, index) => <button type="button" key={file.id} className={`${styles.chipSoft} ${styles.chipButton}`} aria-label={t('previewFile', { name: file.name })} onClick={() => preview.open(run.files, index)}>{file.name}</button>)}</div>}
       {run.bugs.map((bug) => <Button key={bug.key} size="small" onClick={() => scope.navigate(bug.key)}>{bug.key} · {bug.title}</Button>)}
       {!unit && run.result === 'failed' && !run.bugs.length && scope.access.permissions.includes('issue.create') && scope.project?.status !== 'archived' && <Button size="small" disabled={pending} onClick={() => void createBug(run)}>{t('createBug')}</Button>}
     </article>)}
@@ -120,6 +121,7 @@ export function TestRuns({ scope, issue, kind = 'qa', embedded = false }: { scop
       <div className={styles.dialogActions}><Button type="button" onClick={reset} disabled={pending}>{t('cancel')}</Button><Button type="submit" variant="primary" disabled={pending}>{t('save')}</Button></div>
     </form>}
     {error != null && <Failure error={error} />}
+    {preview.props && <FilePreview {...preview.props} base={previewBase(scope)} filesHref={filesPageHref(scope)} />}
   </>;
   const addButton = canRecord && !editing && <Button size="small" style={{ marginLeft: 'auto' }} onClick={() => { setError(null); setEditing(true); }}>{t(unit ? 'addUnit' : 'add')}</Button>;
   // embedded = กล่องผล Unit test ในส่วน Development · ไม่ใช่ = หัวข้อผลทดสอบ QA ของงาน

@@ -239,5 +239,15 @@
     "fallbackTitle": "ยืนยันการเปลี่ยนแปลง",
     "fallbackAction": "ยืนยัน",
     "cancel": "ยกเลิก"
+  },
+  "preview": {
+    "download": "ดาวน์โหลด",
+    "cannotPreview": "ไม่สามารถแสดงตัวอย่างไฟล์นี้ได้ · ดาวน์โหลดไปเปิดในเครื่องแทน",
+    "loading": "กำลังโหลด…",
+    "count": "{current} / {total}",
+    "openInFiles": "เปิดในหน้า Files",
+    "close": "ปิด",
+    "previous": "ไฟล์ก่อนหน้า",
+    "next": "ไฟล์ถัดไป"
   }
 }

@@ -33,9 +33,9 @@ beforeAll(async () => {
 afterAll(() => t.close());
 
 /** อัปโหลดครบขั้น: ขอ URL → PUT → ยืนยัน */
-async function upload(c: Client, name: string, content: string | Buffer, extra: { folderId?: string; fileId?: string; note?: string } = {}) {
+async function upload(c: Client, name: string, content: string | Buffer, extra: { folderId?: string; fileId?: string; note?: string; mime?: string } = {}) {
   const buf = Buffer.isBuffer(content) ? content : Buffer.from(content);
-  const u = await c.post(`${base}/files/upload-url`, { name, size: buf.length, mime: 'text/plain', ...(extra.folderId ? { folderId: extra.folderId } : {}), ...(extra.fileId ? { fileId: extra.fileId } : {}) });
+  const u = await c.post(`${base}/files/upload-url`, { name, size: buf.length, mime: extra.mime ?? 'text/plain', ...(extra.folderId ? { folderId: extra.folderId } : {}), ...(extra.fileId ? { fileId: extra.fileId } : {}) });
   expect(u.status, JSON.stringify(u.body)).toBe(200);
   const put = await anon().put(new URL(u.body.url).pathname).set('content-type', 'application/octet-stream').send(buf);
   expect(put.status, JSON.stringify(put.body)).toBe(200);
@@ -46,6 +46,20 @@ async function upload(c: Client, name: string, content: string | Buffer, extra: 
 const body = async (path: string) => (await anon().get(path)).text;
 
 describe('อัปโหลด → ยืนยัน → ดาวน์โหลด', () => {
+  it('ดูตัวอย่าง: inline=1 แสดงในหน้าได้เฉพาะ PDF · HTML / ข้อความยังเป็น attachment', async () => {
+    const disposition = async (name: string, mime: string, inline: boolean) => {
+      const f = await upload(team.lead, name, 'ตัวอย่าง', { mime });
+      expect(f.status, JSON.stringify(f.body)).toBe(201);
+      const dl = await team.lead.get(`${base}/files/${f.body.id}/download${inline ? '?inline=1' : ''}`).redirects(0);
+      const file = await anon().get(new URL(dl.headers.location).pathname);
+      return String(file.headers['content-disposition']).split(';')[0];
+    };
+    expect(await disposition('สเปก.pdf', 'application/pdf', true)).toBe('inline');
+    expect(await disposition('สเปก.pdf', 'application/pdf', false)).toBe('attachment');
+    expect(await disposition('หน้า.html', 'text/html', true)).toBe('attachment');
+    expect(await disposition('บันทึก.txt', 'text/plain', true)).toBe('attachment');
+  });
+
   it('ขอ URL (PUT) → ส่งไฟล์ → ยืนยัน แล้วดาวน์โหลดผ่าน redirect ที่หมดอายุ', async () => {
     const u = await team.dev.post(`${base}/files/upload-url`, { name: 'สเปกวงเงิน.txt', size: 11, mime: 'text/plain' });
     expect(u.body).toMatchObject({ method: 'PUT', storage: 'local', maxBytes: 100 * 1024 * 1024, uploadToken: expect.any(String), url: expect.stringContaining('/api/v1/storage/upload/') });

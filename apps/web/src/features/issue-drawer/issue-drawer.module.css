@@ -312,3 +312,8 @@ a.chipSoft:hover { background:#e4e7eb; color:var(--foreground); }
 .groupNew { display:flex; align-items:center; gap:6px; flex-wrap:wrap; width:100%; }
 .groupNew :global(.input) { flex:1 1 100%; min-width:0; height:32px; min-height:32px; }
 .groupNew > button:first-of-type { margin-left:auto; }
+
+/* ไฟล์แนบที่กดแล้วเปิดดูตัวอย่าง (ปุ่มแทนลิงก์) */
+.chipButton { border:0; font:inherit; font-size:11px; cursor:pointer; }
+.chipButton:hover { background:#e2e6ec; }
+.fileButton { border:1px solid var(--border); background:transparent; font:inherit; color:inherit; text-align:left; cursor:pointer; }

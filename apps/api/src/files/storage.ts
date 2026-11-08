@@ -24,7 +24,7 @@ export interface StorageDriver {
   readonly kind: 'local' | 's3';
   presignUpload(key: string, o: { size: number; mime: string }): Promise<UploadTarget>;
   stat(key: string): Promise<{ size: number } | null>;
-  presignDownload(key: string, o: { filename: string; mime: string }): Promise<string>;
+  presignDownload(key: string, o: { filename: string; mime: string; inline?: boolean }): Promise<string>;
   /**
    * ย้ายไฟล์จาก staging (ที่ client มีลิงก์ PUT) ไป key ถาวรที่ไม่มีลิงก์ PUT ใด ๆ (BUG-06)
    * ห้ามเขียนทับของเดิม · staging ไม่มีแล้ว (ถูกยืนยันไปแล้ว) → throw StagingGone
@@ -42,7 +42,12 @@ export class StagingGone extends Error {
   }
 }
 
-const disposition = (filename: string) => `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`;
+/**
+ * inline ใช้ได้เฉพาะ PDF (หน้าดูตัวอย่างไฟล์แสดงใน iframe) · ชนิดอื่นเป็น attachment เสมอ
+ * กันไฟล์ HTML / SVG ที่ผู้ใช้อัปโหลดถูกเปิดเป็นหน้าเว็บบน Origin เดียวกับแอป
+ */
+export const INLINE_MIME = new Set(['application/pdf']);
+const disposition = (filename: string, inline = false) => `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(filename)}`;
 
 /** ที่เก็บในเครื่อง (dev / test / Codex) · ใช้ลิงก์ที่ลงลายมือชื่อไปที่ API เอง (StorageController) */
 @Injectable()
@@ -71,8 +76,8 @@ export class LocalStorage implements StorageDriver {
     }
   }
 
-  async presignDownload(key: string, o: { filename: string; mime: string }) {
-    const token = signToken('storage-get', { k: key, n: o.filename, m: o.mime }, DOWNLOAD_TTL_SECONDS);
+  async presignDownload(key: string, o: { filename: string; mime: string; inline?: boolean }) {
+    const token = signToken('storage-get', { k: key, n: o.filename, m: o.mime, ...(o.inline && INLINE_MIME.has(o.mime) ? { i: 1 } : {}) }, DOWNLOAD_TTL_SECONDS);
     return `${apiPublicUrl()}/api/v1/storage/download/${token}`;
   }
 
@@ -163,8 +168,8 @@ export class S3Storage implements StorageDriver {
     }
   }
 
-  presignDownload(key: string, o: { filename: string; mime: string }) {
-    return getSignedUrl(this.s3, new GetObjectCommand({ Bucket: this.bucket, Key: key, ResponseContentDisposition: disposition(o.filename), ResponseContentType: o.mime }), { expiresIn: DOWNLOAD_TTL_SECONDS });
+  presignDownload(key: string, o: { filename: string; mime: string; inline?: boolean }) {
+    return getSignedUrl(this.s3, new GetObjectCommand({ Bucket: this.bucket, Key: key, ResponseContentDisposition: disposition(o.filename, !!o.inline && INLINE_MIME.has(o.mime)), ResponseContentType: o.mime }), { expiresIn: DOWNLOAD_TTL_SECONDS });
   }
 
   async commit(stagingKey: string, finalKey: string) {

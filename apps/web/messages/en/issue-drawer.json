@@ -351,7 +351,8 @@
     "me": "Me",
     "noteLabel": "Notes",
     "stepsLabel": "Steps where it failed",
-    "stepsPlaceholder": "1. Open …\n2. Click …\n3. Actual … / Expected …"
+    "stepsPlaceholder": "1. Open …\n2. Click …\n3. Actual … / Expected …",
+    "previewFile": "Preview {name}"
   },
   "mobileComplete": "Done",
   "commentPlaceholder": "Write a comment… @ to mention",
@@ -427,5 +428,6 @@
   "groupName": "New group name",
   "groupNamePlaceholder": "e.g. Group A",
   "groupNeedsModule": "Choose a module first",
-  "groupCreateFailed": "Could not create the group"
+  "groupCreateFailed": "Could not create the group",
+  "previewFile": "Preview {name}"
 }

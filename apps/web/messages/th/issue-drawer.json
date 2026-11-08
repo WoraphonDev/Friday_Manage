@@ -351,7 +351,8 @@
     "me": "ฉัน",
     "noteLabel": "บันทึก",
     "stepsLabel": "ขั้นตอนที่พบปัญหา",
-    "stepsPlaceholder": "1. เปิดหน้า …\n2. กด …\n3. ผลที่ได้ … / ผลที่ควรเป็น …"
+    "stepsPlaceholder": "1. เปิดหน้า …\n2. กด …\n3. ผลที่ได้ … / ผลที่ควรเป็น …",
+    "previewFile": "ดูตัวอย่าง {name}"
   },
   "mobileComplete": "เสร็จ",
   "commentPlaceholder": "เขียนคอมเมนต์… @ เพื่อ mention",
@@ -427,5 +428,6 @@
   "groupName": "ชื่อกลุ่มใหม่",
   "groupNamePlaceholder": "เช่น กลุ่ม A",
   "groupNeedsModule": "เลือก Module ก่อน",
-  "groupCreateFailed": "สร้างกลุ่มไม่สำเร็จ"
+  "groupCreateFailed": "สร้างกลุ่มไม่สำเร็จ",
+  "previewFile": "ดูตัวอย่าง {name}"
 }

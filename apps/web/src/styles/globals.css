@@ -1940,3 +1940,162 @@ kbd {
 button.menu-item { width:100%; border:0; background:transparent; font:inherit; text-align:left; cursor:pointer; gap:8px; }
 button.menu-item:hover,button.menu-item:focus-visible { background:#f1f3f5; }
 button.menu-item:disabled { cursor:default; opacity:.5; }
+
+/* ดูตัวอย่างไฟล์แนบ (FilePreview) · พื้นมืดเต็มจอแบบหน้าดูไฟล์ทั่วไป */
+.file-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgb(12 14 18 / 0.94);
+}
+.file-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  color: #f3f4f6;
+  outline: none;
+}
+.file-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgb(0 0 0 / 0.35);
+}
+.file-preview-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-preview-count {
+  font-size: 12px;
+  color: #cbd5e1;
+  flex: none;
+}
+.file-preview-actions {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.file-preview-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.file-preview-btn:hover,
+.file-preview-nav:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+.file-preview-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 64px 24px;
+}
+.file-preview-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.file-preview-img,
+.file-preview-media {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.4);
+}
+.file-preview-img {
+  background: #fff;
+}
+.file-preview-frame {
+  width: min(1000px, 100%);
+  height: 100%;
+  border: 0;
+  border-radius: 4px;
+  background: #fff;
+}
+.file-preview-text {
+  width: min(1000px, 100%);
+  max-height: 100%;
+  margin: 0;
+  overflow: auto;
+  padding: 20px 24px;
+  border-radius: 4px;
+  background: #fff;
+  color: #111827;
+  font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.file-preview-none {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 420px;
+  padding: 32px 28px;
+  border-radius: 12px;
+  background: #1f2937;
+  text-align: center;
+}
+.file-preview-none b {
+  overflow-wrap: anywhere;
+}
+.file-preview-none p {
+  margin: 0 0 6px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+.file-preview-loading {
+  color: #cbd5e1;
+}
+.file-preview-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.35);
+  color: #fff;
+  cursor: pointer;
+}
+.file-preview-prev {
+  left: 12px;
+}
+.file-preview-next {
+  right: 12px;
+}
+@media (max-width: 760px) {
+  .file-preview-stage {
+    padding: 8px 8px 16px;
+  }
+  .file-preview-nav {
+    top: auto;
+    bottom: 16px;
+    transform: none;
+  }
+}

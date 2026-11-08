@@ -186,6 +186,22 @@ describe('Issue parts and comments',()=>{
     await user.click(screen.getByRole('button',{name:'แก้คอมเมนต์'}));await user.clear(screen.getByLabelText('คอมเมนต์'));await user.type(screen.getByLabelText('คอมเมนต์'),'แก้ไขข้อความ');await user.click(within(screen.getByRole('dialog',{name:'แก้คอมเมนต์'})).getByRole('button',{name:'บันทึก'}));await screen.findByText('แก้ไขข้อความ');
     await user.click(screen.getByRole('button',{name:'ลบคอมเมนต์'}));await user.click(within(screen.getByRole('dialog',{name:'ลบคอมเมนต์'})).getByRole('button',{name:'ลบคอมเมนต์'}));await screen.findByText('คอมเมนต์นี้ถูกลบแล้ว');
   });
+  it('กดไฟล์แนบในคอมเมนต์ → ป๊อปอัปดูตัวอย่าง (รูปแสดงเลย · ไฟล์ที่ดูไม่ได้มีปุ่มดาวน์โหลด) เลื่อนไฟล์ถัดไปได้',async()=>{
+    const user=userEvent.setup();
+    const comment={id:uid(95),kind:'comment',body:'แนบหลักฐาน',author:me,createdAt:'2026-11-06T03:00:00Z',editedAt:null,deletedAt:null,deletionReason:null,canEdit:true,canDelete:true,files:[{id:uid(96),name:'หน้าจอ.png',mime:'image/png'},{id:uid(97),name:'สัญญา.docx',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}]};
+    server.use(http.get(`${issueEndpoint}/comments`,()=>HttpResponse.json({items:[comment],nextCursor:null})));
+    mount();await loaded();
+    await user.click(await screen.findByRole('button',{name:'ดูตัวอย่าง หน้าจอ.png'}));
+    const dialog=await screen.findByRole('dialog',{name:'หน้าจอ.png'});
+    expect(within(dialog).getByRole('img',{name:'หน้าจอ.png'})).toHaveAttribute('src',`/api/v1/w/sample/projects/DE/files/${uid(96)}/download`);
+    expect(within(dialog).getByText('1 / 2')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button',{name:'ไฟล์ถัดไป'}));
+    const next=await screen.findByRole('dialog',{name:'สัญญา.docx'});
+    expect(within(next).getByText(/ไม่สามารถแสดงตัวอย่างไฟล์นี้ได้/)).toBeInTheDocument();
+    expect(within(next).getAllByRole('link',{name:/ดาวน์โหลด/})[0]).toHaveAttribute('href',`/api/v1/w/sample/projects/DE/files/${uid(97)}/download`);
+    await user.keyboard('{Escape}');
+    await waitFor(()=>expect(screen.queryByRole('dialog',{name:'สัญญา.docx'})).not.toBeInTheDocument());
+  });
   it('แยกคอมเมนต์ (กลางหน้า) กับ Activity (กล่องด้านขวา ล่าสุดก่อน แบ่งหน้าได้)',async()=>{
     const user=userEvent.setup();const urls:string[]=[];server.use(http.get(`${issueEndpoint}/activity`,({request})=>{urls.push(request.url);return HttpResponse.json(new URL(request.url).searchParams.has('cursor')?{items:[{id:uid(99),kind:'activity',actor:me,verb:'updated',field:'priority',old:'medium',new:'high',createdAt:'2026-11-06T04:00:00Z'}],nextCursor:null}:{...f.state.feed,nextCursor:'page-two'});}));
     mount();await loaded();const history=await screen.findByRole('region',{name:'Activity'});

@@ -10,7 +10,8 @@ import { formatDate } from '@/lib/format';
 import { BodyText, InlineText } from './shared';
 import { TestRuns } from './test-runs';
 import { AttachButton } from './task-v2';
-import { issuePath, projectPath, type Issue, type Scope } from './types';
+import { filesPageHref, type Issue, issuePath, previewBase, projectPath, type Scope } from './types';
+import { FilePreview, useFilePreview } from '@/components/file-preview';
 import styles from './issue-drawer.module.css';
 
 /** แถว "ชื่อ : ค่า" ในการ์ดคุณสมบัติ · ช่องแก้ไขข้างในยังมี label ของตัวเองสำหรับโปรแกรมอ่านหน้าจอ */
@@ -112,20 +113,27 @@ interface Attached { id: string; name: string; mime: string | null; kind: 'uploa
 export function Attachments({ scope, issue }: { scope: Scope; issue: Issue }) {
   const t = useTranslations('issue-drawer');
   const canAttach = !scope.access.guestViewer && scope.access.permissions.includes('issue.edit') && scope.project?.status !== 'archived';
+  const preview = useFilePreview();
   const files = useQuery({ queryKey: ['issue-files', scope.ws, issue.key], queryFn: ({ signal }) => api.get<{ items: Attached[] }>(`${projectPath(scope.ws, scope.projectKey)}/files?target=${encodeURIComponent(`issue:${issue.key}`)}`, { signal }), retry: false });
   if (files.error) return null;
   const items = files.data?.items ?? [];
+  const uploads = items.filter((f) => f.kind !== 'link');
   const ext = (f: Attached) => (f.name.split('.').pop() ?? '').slice(0, 4).toUpperCase();
   const tone = (e: string) => e === 'PDF' ? styles.fPdf : ['XLSX', 'XLS', 'CSV'].includes(e) ? styles.fXls : ['PNG', 'JPG', 'JPEG', 'GIF', 'MP4'].includes(e) ? styles.fImg : styles.fDoc;
   return <div className={styles.blk}>
     <h3>{t('attachments')} <span className="muted" style={{ fontWeight: 500 }}>{items.length}</span>{canAttach && <span style={{ marginLeft: 'auto' }}><AttachButton scope={scope} attach={{ targetType: 'issue', target: issue.key }} onUploaded={async () => { await files.refetch(); }} /></span>}</h3>
     {!items.length && files.data && <p className="muted">{t('noAttachments')}</p>}
     <div className={styles.files}>
-      {items.map((f) => <a key={f.id} className={styles.file} href={f.kind === 'link' && f.linkUrl ? f.linkUrl : `/w/${encodeURIComponent(scope.ws)}/p/${encodeURIComponent(scope.projectKey)}/files?file=${f.id}`} target={f.kind === 'link' ? '_blank' : undefined} rel="noopener noreferrer">
-        <span className={`${styles.fIcon} ${tone(ext(f))}`}>{ext(f) || 'FILE'}</span>
-        <span style={{ minWidth: 0 }}><b>{f.name}</b><small className="muted">{f.uploader?.displayName ?? ''} · {formatDate(f.createdAt, scope.yearFormat)}</small></span>
-      </a>)}
+      {items.map((f) => {
+        const inner = <><span className={`${styles.fIcon} ${tone(ext(f))}`}>{ext(f) || 'FILE'}</span>
+          <span style={{ minWidth: 0 }}><b>{f.name}</b><small className="muted">{f.uploader?.displayName ?? ''} · {formatDate(f.createdAt, scope.yearFormat)}</small></span></>;
+        // ลิงก์ภายนอกเปิดแท็บใหม่ · ไฟล์ที่อัปโหลดเปิดป๊อปอัปดูตัวอย่าง
+        return f.kind === 'link' && f.linkUrl
+          ? <a key={f.id} className={styles.file} href={f.linkUrl} target="_blank" rel="noopener noreferrer">{inner}</a>
+          : <button type="button" key={f.id} className={`${styles.file} ${styles.fileButton}`} aria-label={t('previewFile', { name: f.name })} onClick={() => preview.open(uploads, uploads.findIndex((u) => u.id === f.id))}>{inner}</button>;
+      })}
     </div>
+    {preview.props && <FilePreview {...preview.props} base={previewBase(scope)} filesHref={filesPageHref(scope)} />}
   </div>;
 }
 

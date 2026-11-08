@@ -389,7 +389,7 @@ export class FilesService {
   }
 
   /** URL หมดอายุใน 5 นาที · เว็บเรียกแล้ว redirect 302 */
-  async download(auth: AuthInfo, tenant: TenantInfo, key: string, id: string, version?: number) {
+  async download(auth: AuthInfo, tenant: TenantInfo, key: string, id: string, version?: number, inline = false) {
     const { f, v } = await this.db.run(auth, tenant, async (tx) => {
       const { project } = await this.ctx(tx, auth, tenant, key);
       const f = await this.fileOf(tx, project, id, false);
@@ -398,7 +398,7 @@ export class FilesService {
       if (!v) throw notFound('เวอร์ชันของไฟล์');
       return { f, v };
     });
-    return this.driver.presignDownload(v.storageKey, { filename: f.name, mime: f.mime ?? 'application/octet-stream' });
+    return this.driver.presignDownload(v.storageKey, { filename: f.name, mime: f.mime ?? 'application/octet-stream', inline });
   }
 
   // ---------------------------------------------------------------------------

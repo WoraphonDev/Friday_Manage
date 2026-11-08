@@ -239,5 +239,15 @@
     "fallbackTitle": "Confirm change",
     "fallbackAction": "Confirm",
     "cancel": "Cancel"
+  },
+  "preview": {
+    "download": "Download",
+    "cannotPreview": "This file can’t be previewed · download it to open on your device",
+    "loading": "Loading…",
+    "count": "{current} / {total}",
+    "openInFiles": "Open in Files",
+    "close": "Close",
+    "previous": "Previous file",
+    "next": "Next file"
   }
 }

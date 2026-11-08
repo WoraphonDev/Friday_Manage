@@ -229,7 +229,12 @@ describe("Import Excel (L3)", () => {
     mountImport();
     expect(await screen.findByText("Projects / แผนพัฒนาผลิตภัณฑ์")).toBeInTheDocument();
     expect(await screen.findByRole("link", { name: "การแก้ไขแผน (Plan vs Baseline)" })).toHaveAttribute("href", "/w/sample/p/DE/plan-changes");
-    expect(screen.getByRole("link", { name: "Export Excel (พร้อมสี)" })).toHaveAttribute("href", "/api/v1/w/sample/projects/DE/export.xlsx");
+    // Export อยู่ในเมนูด้านซ้าย (แบบหน้า Report): เลือกโปรเจกต์ไว้แล้ว · ช่องละสัปดาห์เพิ่ม ?timeline=week
+    await user.click(screen.getByRole("button", { name: "Export แผน + Timeline" }));
+    expect(await screen.findByRole("link", { name: /ดาวน์โหลด Excel/ })).toHaveAttribute("href", "/api/v1/w/sample/projects/DE/export.xlsx");
+    await user.click(screen.getByRole("radio", { name: "ช่องละสัปดาห์" }));
+    expect(screen.getByRole("link", { name: /ดาวน์โหลด Excel/ })).toHaveAttribute("href", "/api/v1/w/sample/projects/DE/export.xlsx?timeline=week");
+    await user.click(screen.getByRole("button", { name: "นำเข้า Excel" }));
     expect(screen.getByRole("radio", { name: /อัปเดตโปรเจกต์เดิม/ })).toBeChecked();
     expect(await screen.findByRole("combobox", { name: "โปรเจกต์ที่จะอัปเดต" })).toHaveValue("DE");
     await user.upload(screen.getByLabelText("ไฟล์ Excel (.xlsx)"), xlsx());

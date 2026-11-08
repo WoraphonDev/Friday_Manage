@@ -126,7 +126,12 @@
     "templateHint": "Start from the template: same columns as the export, with instructions, allowed values and a Holidays sheet",
     "addedNew": "New",
     "role__sa": "SA",
-    "role__qa": "QA"
+    "role__qa": "QA",
+    "sections": "Import / Export menu",
+    "section__import": "Import Excel",
+    "section__export": "Export plan + Timeline",
+    "section__changes": "Plan changes (Plan vs Baseline)",
+    "sectionNote": "Exports use the same columns as the template · edit outside, then import back as \"Update existing project\""
   },
   "changes": {
     "compare": "Compare with Baseline v{version}",
@@ -170,5 +175,29 @@
     "cancel": "Cancel",
     "submit": "Set Baseline",
     "created": "Baseline v{version} set"
+  },
+  "export": {
+    "title": "Export current plan + Timeline",
+    "description": "An .xlsx of today's data with the template columns, plus a Timeline (Gantt) sheet to share or plan outside",
+    "project": "Project",
+    "pickProject": "Choose a project",
+    "noProjects": "No projects yet",
+    "scale": "Timeline",
+    "scale__day": "One column per day",
+    "scale__week": "One column per week",
+    "sheets": "The file contains",
+    "sheet__tasks": "Tasks",
+    "sheet__timeline": "Timeline",
+    "sheet__values": "Allowed values",
+    "sheet__guide": "Instructions",
+    "sheet__holidays": "Holidays",
+    "sheetHint__tasks": "All tasks and sub-tasks with the template columns; can be imported back",
+    "sheetHint__timeline": "A plan bar per task, coloured by status, red when overdue, with a today line",
+    "sheetHint__values": "Status, Priority, Size, Module and members to pick in cells",
+    "sheetHint__guide": "What each column means",
+    "sheetHint__holidays": "Holidays used for working days",
+    "template": "Blank template",
+    "download": "Download Excel",
+    "noPermission": "You can't export this project's plan"
   }
 }

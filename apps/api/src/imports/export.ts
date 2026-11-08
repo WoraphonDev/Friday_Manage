@@ -1,6 +1,8 @@
 import { schema, type Tx } from '@friday/db';
 import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
+import { today } from '../common/dates.js';
+import { addTimelineSheet, type TimelineInput, type TimelineRow } from './timeline-sheet.js';
 
 const s = schema;
 
@@ -50,10 +52,16 @@ interface SheetData {
   modules: string[];
   people: string[];
   holidays: { date: string; name: string }[];
+  /** ชีต Timeline (เฉพาะ Export แผนของโปรเจกต์) */
+  timeline?: TimelineInput;
 }
 
 /** แผนงานของโปรเจกต์เป็น .xlsx: Task + Sub-task (ไม่รวม Bug) เรียง Task แล้วตามด้วย Sub-task ของมัน */
-export async function buildPlanXlsx(tx: Tx, project: { id: string; key: string; workspaceId: string; holidayCalendarId: string | null }): Promise<Buffer> {
+export async function buildPlanXlsx(
+  tx: Tx,
+  project: { id: string; key: string; name: string; startDate: string; goliveDate: string; workspaceId: string; holidayCalendarId: string | null },
+  options: { scale?: 'day' | 'week'; today?: string } = {},
+): Promise<Buffer> {
   const [taskType] = await tx.select({ id: s.issueTypes.id, workflowId: s.issueTypes.workflowId }).from(s.issueTypes).where(and(eq(s.issueTypes.projectId, project.id), eq(s.issueTypes.name, 'Task')));
   const issues = await tx
     .select()
@@ -65,7 +73,7 @@ export async function buildPlanXlsx(tx: Tx, project: { id: string; key: string; 
   const [mods, phs, sts, users, asg, reqs, scrs, lbls] = await Promise.all([
     tx.select({ id: s.modules.id, name: s.modules.name }).from(s.modules).where(eq(s.modules.projectId, project.id)).orderBy(asc(s.modules.sort)),
     tx.select({ id: s.phases.id, name: s.phases.name }).from(s.phases).where(eq(s.phases.projectId, project.id)),
-    tx.select({ id: s.workflowStatuses.id, name: s.workflowStatuses.name }).from(s.workflowStatuses).where(eq(s.workflowStatuses.workflowId, taskType.workflowId)).orderBy(asc(s.workflowStatuses.sort)),
+    tx.select({ id: s.workflowStatuses.id, name: s.workflowStatuses.name, category: s.workflowStatuses.category }).from(s.workflowStatuses).where(eq(s.workflowStatuses.workflowId, taskType.workflowId)).orderBy(asc(s.workflowStatuses.sort)),
     tx.select({ id: s.users.id, name: s.users.displayName }).from(s.users),
     some(() => tx.select({ issueId: s.issueAssignees.issueId, userId: s.issueAssignees.userId }).from(s.issueAssignees).where(inArray(s.issueAssignees.issueId, ids)).orderBy(asc(s.issueAssignees.sort))),
     some(() => tx.select({ issueId: s.issueRequirements.issueId, code: s.requirements.code }).from(s.issueRequirements).innerJoin(s.requirements, eq(s.requirements.id, s.issueRequirements.requirementId)).where(inArray(s.issueRequirements.issueId, ids))),
@@ -128,7 +136,24 @@ export async function buildPlanXlsx(tx: Tx, project: { id: string; key: string; 
     ...(calendarId ? await tx.select({ date: s.holidays.date, name: s.holidays.name }).from(s.holidays).where(eq(s.holidays.calendarId, calendarId)) : []),
     ...(await tx.select({ date: s.projectHolidays.date, name: s.projectHolidays.name }).from(s.projectHolidays).where(eq(s.projectHolidays.projectId, project.id))),
   ];
-  return render({ rows, subRows, statuses: sts.map((x) => x.name), modules: mods.map((m) => m.name), people: await memberNames(tx), holidays });
+  // Timeline: เรียงตาม Module แล้ว Task (ลำดับเดียวกับชีต Tasks) และ Sub-task ใต้แม่
+  const category = new Map(sts.map((x) => [x.id, x.category]));
+  const taskRow = (i: (typeof issues)[number]): TimelineRow => {
+    const cat = category.get(i.statusId) ?? 'todo';
+    return { kind: 'task', key: `${project.key}-${i.number}`, title: i.title, sub: !!i.parentId, status: statusName.get(i.statusId) ?? '', category: cat, progress: i.progressPct ?? (cat === 'done' ? 100 : 0), start: i.planStart, end: i.planEnd };
+  };
+  const timelineRows: TimelineRow[] = [];
+  for (const m of [...mods.map((x) => ({ id: x.id as string | null, name: x.name })), { id: null, name: 'ไม่ระบุ Module' }]) {
+    const inModule = ordered.filter((i) => (i.moduleId ?? null) === m.id);
+    if (!inModule.length) continue;
+    const startsM = inModule.map((i) => i.planStart).filter((d): d is string => !!d).sort();
+    const endsM = inModule.map((i) => i.planEnd).filter((d): d is string => !!d).sort();
+    timelineRows.push({ kind: 'module', name: m.name, start: startsM[0] ?? null, end: endsM.at(-1) ?? null }, ...inModule.map(taskRow));
+  }
+  return render({
+    rows, subRows, statuses: sts.map((x) => x.name), modules: mods.map((m) => m.name), people: await memberNames(tx), holidays,
+    timeline: { projectName: project.name, today: options.today ?? today(), from: project.startDate, to: project.goliveDate, scale: options.scale ?? 'day', holidays: new Set(holidays.map((h) => h.date)), rows: timelineRows },
+  });
 }
 
 /** Template เปล่าสำหรับเริ่มแผนใหม่ (สร้างโปรเจกต์จากไฟล์) · มีรายชื่อสมาชิกและวันหยุดของ Workspace ให้เลือก */
@@ -169,6 +194,7 @@ async function render(d: SheetData): Promise<Buffer> {
   });
   for (const c of [COL['Plan Start'], COL['Plan End'], COL['Actual Start'], COL['Actual End']]) ws.getColumn(c).numFmt = 'yyyy-mm-dd';
   ws.columns.forEach((c, n) => (c.width = WIDTH[n]));
+  if (d.timeline) addTimelineSheet(wb, d.timeline);
 
   // ชีตค่าที่ใช้ได้ + รายการเลือกในเซลล์ (พิมพ์ค่าอื่นได้ ระบบตรวจตอนนำเข้า)
   const lists: [string, string[]][] = [

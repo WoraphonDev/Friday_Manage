@@ -126,7 +126,12 @@
     "templateHint": "เริ่มจาก Template: คอลัมน์เดียวกับไฟล์ Export มีคำแนะนำ รายการค่าที่ใช้ได้ และชีต Holidays",
     "addedNew": "ใหม่",
     "role__sa": "SA",
-    "role__qa": "QA"
+    "role__qa": "QA",
+    "sections": "เมนู Import / Export",
+    "section__import": "นำเข้า Excel",
+    "section__export": "Export แผน + Timeline",
+    "section__changes": "การแก้ไขแผน (Plan vs Baseline)",
+    "sectionNote": "ไฟล์ Export ใช้คอลัมน์เดียวกับ Template · แก้ข้างนอกแล้วนำเข้ากลับแบบ \"อัปเดตโปรเจกต์เดิม\" ได้"
   },
   "changes": {
     "compare": "เทียบกับ Baseline v{version}",
@@ -170,5 +175,29 @@
     "cancel": "ยกเลิก",
     "submit": "ตั้ง Baseline",
     "created": "ตั้ง Baseline v{version} แล้ว"
+  },
+  "export": {
+    "title": "Export แผนปัจจุบัน + Timeline",
+    "description": "ไฟล์ .xlsx ข้อมูล ณ วันนี้ คอลัมน์เดียวกับ Template · พร้อมชีต Timeline (Gantt) สำหรับส่งต่อหรือวางแผนต่อข้างนอก",
+    "project": "โปรเจกต์",
+    "pickProject": "เลือกโปรเจกต์",
+    "noProjects": "ยังไม่มีโปรเจกต์",
+    "scale": "Timeline",
+    "scale__day": "ช่องละวัน",
+    "scale__week": "ช่องละสัปดาห์",
+    "sheets": "ในไฟล์มี",
+    "sheet__tasks": "Tasks",
+    "sheet__timeline": "Timeline",
+    "sheet__values": "ค่าที่ใช้ได้",
+    "sheet__guide": "คำแนะนำ",
+    "sheet__holidays": "Holidays",
+    "sheetHint__tasks": "งานทั้งหมด (Task + Sub-task) คอลัมน์เดียวกับ Template นำเข้ากลับได้",
+    "sheetHint__timeline": "แถบแผนของแต่ละงาน สีตามสถานะ เลยกำหนดเป็นสีแดง มีเส้นวันนี้",
+    "sheetHint__values": "Status, Priority, Size, Module, สมาชิก ให้เลือกในเซลล์",
+    "sheetHint__guide": "ความหมายของแต่ละคอลัมน์",
+    "sheetHint__holidays": "วันหยุดที่ใช้คำนวณวันทำงาน",
+    "template": "Template เปล่า",
+    "download": "ดาวน์โหลด Excel",
+    "noPermission": "ไม่มีสิทธิ์ Export แผนของโปรเจกต์นี้"
   }
 }

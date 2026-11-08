@@ -362,12 +362,13 @@ export class ImportsService {
   }
 
   /** `GET projects/:key/export.xlsx` · เห็นโปรเจกต์ได้ก็ export ได้ ยกเว้น Guest */
-  async exportXlsx(auth: AuthInfo, tenant: TenantInfo, key: string) {
+  async exportXlsx(auth: AuthInfo, tenant: TenantInfo, key: string, scale: 'day' | 'week' = 'day') {
     return this.db.run(auth, tenant, async (tx) => {
       const { project, access } = await this.projects.load(tx, auth, tenant, key);
       requirePerm(access, 'project.view');
       if (access.guestViewer || tenant.role === 'guest') throw new AppError(403, 'guest_view_limited', 'Guest export แผนงานไม่ได้', { allowed: ['overview', 'timeline'] });
-      return { filename: `${project.key}-plan.xlsx`, buffer: await buildPlanXlsx(tx, project) };
+      // ชื่อไฟล์บอกวันที่ Export (แผน ณ วันนั้น)
+      return { filename: `${project.key}-plan-${today()}.xlsx`, buffer: await buildPlanXlsx(tx, project, { scale }) };
     });
   }
 

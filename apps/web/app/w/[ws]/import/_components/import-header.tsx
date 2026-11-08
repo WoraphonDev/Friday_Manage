@@ -17,6 +17,7 @@ export function ImportHeader({
   canExport,
   canChanges,
   compact,
+  hideTabs,
 }: {
   ws: string;
   projectKey?: string;
@@ -26,6 +27,8 @@ export function ImportHeader({
   canChanges?: boolean;
   /** อยู่ใต้ project shell ซึ่งมีหัวโปรเจกต์แล้ว · แสดงแค่แท็บ */
   compact?: boolean;
+  /** หน้านำเข้า / Export ใช้เมนูด้านซ้ายแทนแท็บ (แบบหน้า Report) */
+  hideTabs?: boolean;
 }) {
   const t = useTranslations("import-plan-changes.header");
   const w = `/w/${encodeURIComponent(ws)}`;
@@ -52,12 +55,12 @@ export function ImportHeader({
           )}
         </div>
       )}
-      <nav className={styles.tabs} aria-label={t("sections")}>
+      {!hideTabs && <nav className={styles.tabs} aria-label={t("sections")}>
         <Link className={styles.ttab} href={importHref} aria-current={active === "import" ? "page" : undefined}>{t("tabImport")}</Link>
         {p && canChanges && (
           <Link className={styles.ttab} href={`${p}/plan-changes`} aria-current={active === "changes" ? "page" : undefined}>{t("tabChanges")}</Link>
         )}
-      </nav>
+      </nav>}
     </>
   );
 }

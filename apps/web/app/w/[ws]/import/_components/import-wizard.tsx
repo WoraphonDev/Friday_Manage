@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { List, Permissions, Project } from "@/lib/types";
+import { ExportPanel } from "./export-panel";
 import { ImportHeader } from "./import-header";
 import { type CommitResult, type Finding, type ImportJob, type JobPerson, type Member, personKey } from "./types";
 import { num, showValue } from "./values";
@@ -45,6 +46,7 @@ export function ImportWizard({ ws }: { ws: string }) {
   const [busy, setBusy] = useState<null | "upload" | "patch" | "commit">(null);
   const [error, setError] = useState<unknown>(null);
   const [result, setResult] = useState<CommitResult | null>(null);
+  const [section, setSection] = useState<"import" | "export">(search.get("section") === "export" ? "export" : "import");
 
   const projects = useQuery({ queryKey: queryKeys.projects(ws), queryFn: () => api.get<List<Project>>(`${w}/projects`), enabled: workspace.role !== "guest" });
   const headerKey = target || initialProject;
@@ -117,23 +119,32 @@ export function ImportWizard({ ws }: { ws: string }) {
   }
 
   const header = (
-    <ImportHeader
-      ws={ws}
-      projectKey={headerProject?.key}
-      projectName={headerProject?.name}
-      active="import"
-      canExport={perms.isSuccess && !perms.data.guestViewer && has("project.view")}
-      canChanges={perms.isSuccess && has("project.baseline")}
-    />
+    <ImportHeader ws={ws} projectKey={headerProject?.key} projectName={headerProject?.name} active="import" hideTabs />
   );
-
-  if (result) return <div className={styles.page}>{header}<Done ws={ws} result={result} onAgain={restart} /></div>;
+  // เมนูด้านซ้าย + เนื้อหาด้านขวา แบบหน้า Report (ผู้ใช้ขอ 2026-11-09)
+  const changesKey = headerKey && perms.isSuccess && has("project.baseline") ? headerKey : null;
+  const layout = (content: ReactNode) => (
+    <div className={styles.page}>
+      {header}
+      <div className={styles.layout}>
+        <nav className={`${styles.card} ${styles.sideNav}`} aria-label={t("sections")}>
+          {(["import", "export"] as const).map((s) => (
+            <button key={s} type="button" className={`${styles.navItem} ${section === s ? styles.navOn : ""}`} aria-current={section === s ? "page" : undefined} onClick={() => setSection(s)}>{t(`section__${s}`)}</button>
+          ))}
+          {changesKey && <Link className={styles.navItem} href={`${w}/p/${encodeURIComponent(changesKey)}/plan-changes`}>{t("section__changes")}</Link>}
+          <p className={styles.navNote}>{t("sectionNote")}</p>
+        </nav>
+        <div className={styles.main}>{content}</div>
+      </div>
+    </div>
+  );
+  if (section === "export") return layout(<ExportPanel ws={ws} projects={projects.data?.items} initialKey={target || initialProject} onProject={(k) => setTarget(k)} />);
+  if (result) return layout(<Done ws={ws} result={result} onAgain={restart} />);
 
   const reach = (k: Step) => k === 1 || (!!job && !fresh);
   const stepNames = [t("step1"), t("step2"), t("step3"), t("step4")];
-  return (
-    <div className={styles.page}>
-      {header}
+  return layout(
+    <>
       <nav className={`${styles.card} ${styles.steps}`} aria-label={t("steps")}>
         {stepNames.map((n, i) => {
           const k = (i + 1) as Step;
@@ -200,7 +211,7 @@ export function ImportWizard({ ws }: { ws: string }) {
       )}
 
       {step === 4 && job && <Confirm ws={ws} job={job} busy={busy} onPatch={(b) => void patch(b)} onBack={() => setStep(3)} onCommit={(pending) => void commit(pending)} />}
-    </div>
+    </>
   );
 }
 

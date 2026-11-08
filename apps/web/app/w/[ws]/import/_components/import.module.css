@@ -85,3 +85,22 @@
   .vr > :nth-child(5) { grid-column:3 / -1; overflow-wrap:anywhere; }
   .vr.h > :nth-child(5) { display:none; }
 }
+
+/* เมนูด้านซ้าย + เนื้อหาด้านขวา แบบหน้า Report */
+.layout { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; min-width:0; }
+.sideNav { flex:1 1 220px; max-width:250px; padding:8px; display:flex; flex-direction:column; gap:2px; }
+.navItem { display:flex; align-items:center; gap:10px; width:100%; min-height:36px; padding:0 12px; border:0; border-radius:8px; background:transparent; font:inherit; font-size:var(--text-label); text-align:left; cursor:pointer; color:#3D4550; text-decoration:none; }
+.navItem:hover { background:#F1F3F5; color:#3D4550; }
+.navOn, .navOn:hover { background:var(--primary-soft); color:var(--primary); font-weight:600; }
+.navNote { margin:6px 0 0; padding:10px 12px; border-top:1px solid #EEF0F3; font-size:11px; color:var(--muted); }
+.main { flex:999 1 640px; min-width:0; display:flex; flex-direction:column; gap:16px; }
+@media (max-width:760px) { .sideNav { max-width:none; flex-direction:row; flex-wrap:wrap; } .sideNav .navItem { width:auto; } .navNote { display:none; } }
+.sectionTitle { margin:0; font-size:16px; }
+.exportForm { display:grid; grid-template-columns:minmax(0,420px) auto; gap:16px; align-items:end; }
+@media (max-width:760px) { .exportForm { grid-template-columns:minmax(0,1fr); } }
+.seg { display:inline-flex; justify-self:start; width:max-content; border:1px solid var(--input); border-radius:8px; overflow:hidden; background:#fff; }
+.seg button { min-height:36px; padding:0 14px; border:0; background:transparent; font:inherit; font-size:12px; cursor:pointer; color:#3D4550; }
+.seg button[aria-checked="true"] { background:var(--primary-soft); color:var(--primary); font-weight:600; }
+.sheetList { margin:8px 0 0; padding:0; list-style:none; display:grid; gap:6px; }
+.sheetList li { display:grid; grid-template-columns:120px minmax(0,1fr); gap:12px; font-size:12px; padding:8px 12px; border:1px solid #EEF0F3; border-radius:8px; }
+.exportActions { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; }

@@ -84,7 +84,7 @@ describe('สร้างโปรเจกต์จากไฟล์แล้�
   it('GET p/export.xlsx: ชีต Tasks 20 คอลัมน์ + คำแนะนำ + ค่าที่ใช้ได้ + Holidays · Guest/คนนอกไม่ได้', async () => {
     const res = await download(team.lead, `${team.ws}/projects/IMP/export.xlsx`);
     expect(res.status).toBe(200);
-    expect(res.headers['content-disposition']).toContain('IMP-plan.xlsx');
+    expect(res.headers['content-disposition']).toMatch(/IMP-plan-\d{4}-\d{2}-\d{2}\.xlsx/);
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(res.body as unknown as ArrayBuffer);
     const table = wb.getWorksheet('Tasks')!;
@@ -93,7 +93,20 @@ describe('สร้างโปรเจกต์จากไฟล์แล้�
     expect(table.rowCount).toBe(5);
     const row = table.getRow(3).values as unknown[];
     expect(Array.from({ length: 14 }, (_, i) => row[i + 1] ?? null)).toEqual(['IMP-2', null, 'Drawdown', null, 'Approve', 'In progress', 'Medium', 'Mick', null, 'Kaijeaw', null, 'S', 2, d('2026-11-12')]);
-    expect(wb.worksheets.map((w) => w.name)).toEqual(['Tasks', 'ค่าที่ใช้ได้', 'คำแนะนำ', 'Holidays']);
+    expect(wb.worksheets.map((w) => w.name)).toEqual(['Tasks', 'Timeline', 'ค่าที่ใช้ได้', 'คำแนะนำ', 'Holidays']);
+    // Timeline: หัวคอลัมน์ข้อมูล + ช่องวัน · แถว Module แล้วงานในนั้น · ช่องในช่วง Plan ถูกระบายสี
+    const tl = wb.getWorksheet('Timeline')!;
+    expect((tl.getRow(3).values as unknown[]).slice(1, 7)).toEqual(['Key', 'Task', 'Status', 'Plan Start', 'Plan End', '%']);
+    const names = Array.from({ length: tl.rowCount }, (_, i) => tl.getRow(i + 1).getCell(2).value);
+    expect(names).toEqual(expect.arrayContaining(['Credit Line', 'Login', 'Drawdown', 'Approve']));
+    const approve = tl.getRow(names.indexOf('Approve') + 1);
+    const days = tl.columnCount - 6;
+    const filled = Array.from({ length: days }, (_, i) => approve.getCell(7 + i).fill as { fgColor?: { argb?: string } } | undefined).filter((f) => f?.fgColor?.argb && f.fgColor.argb !== 'FFF3F4F6');
+    expect(filled.length).toBe(2); // Plan 12–13 พ.ย. = 2 ช่อง (ช่องละวัน)
+    const weekly = await download(team.lead, `${team.ws}/projects/IMP/export.xlsx?timeline=week`);
+    const wbw = new ExcelJS.Workbook();
+    await wbw.xlsx.load(weekly.body as unknown as ArrayBuffer);
+    expect(String(wbw.getWorksheet('Timeline')!.getCell(1, 1).value)).toContain('ช่องละสัปดาห์');
     const values = wb.getWorksheet('ค่าที่ใช้ได้')!;
     expect((values.getRow(1).values as unknown[]).slice(1)).toEqual(['Status', 'Priority', 'Size', 'Module', 'สมาชิก']);
     expect(values.getColumn(1).values.slice(2)).toEqual(['To do', 'In progress', 'Review', 'Done']);

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, Res, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { config } from '../config.js';
@@ -60,8 +60,9 @@ export class PlanExportController {
 
   /** ดาวน์โหลดแผนงานของโปรเจกต์เป็น .xlsx (ชีต Tasks + คำแนะนำ + ค่าที่ใช้ได้ + Holidays) นำเข้ากลับโหมดอัปเดตได้ */
   @Get('export.xlsx')
-  async export(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Res({ passthrough: true }) res: Response) {
-    const file = await this.imports.exportXlsx(auth, tenant, key);
+  async export(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Query('timeline') timeline: string | undefined, @Res({ passthrough: true }) res: Response) {
+    // timeline=week: ชีต Timeline ช่องละสัปดาห์ (ค่าเริ่มต้น ช่องละวัน)
+    const file = await this.imports.exportXlsx(auth, tenant, key, timeline === 'week' ? 'week' : 'day');
     res.set({
       'Content-Type': XLSX,
       'Content-Disposition': `attachment; filename="${file.filename}"`,

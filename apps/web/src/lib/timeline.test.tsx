@@ -62,6 +62,9 @@ describe("Timeline (4)", () => {
     expect(screen.getAllByText("Go-live ระยะแรก").length).toBeGreaterThan(0);
     expect(screen.getByText(/วันนี้ \(/)).toBeInTheDocument();
     expect(bar("DE-1")).toHaveAccessibleName(/DE-1 งาน DE-1: .* · ผู้พัฒนาหนึ่ง/);
+    // ป้ายท้ายแถบ: คน · สถานะ · % · ช่วงวัน (ผู้ใช้ขอ 2026-11-08)
+    expect(screen.getByText(/^ผู้พัฒนาหนึ่ง · In progress · 40% · 30 พ\.ย\. 69 – 4 ธ\.ค\. 69$/)).toBeInTheDocument();
+    expect(screen.getByText(/^DE-3 · To do · .*3.* · 7 ธ\.ค\. 69 – 18 ธ\.ค\. 69$/)).toBeInTheDocument();
     expect(bar("DE-3")).toHaveAccessibleName(/เลยกำหนด 3 วัน/);
     expect(bar("DE-2")).toBeInTheDocument();
     expect(screen.getByTestId("unscheduled-DE-9")).toHaveTextContent("งานยังไม่มีวัน");

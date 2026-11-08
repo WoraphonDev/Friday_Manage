@@ -313,6 +313,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                   );
                 }
                 const r = ln.row;
+                // ป้ายท้ายแถบ: คน · สถานะ · % · ช่วงวัน (ผู้ใช้ขอ 2026-11-08) · ขณะลากใช้วันที่ใหม่
                 const live = drag?.key === r.key ? drag : null;
                 const start = live ? (live.mode === "end" ? r.start : addDays(r.start, live.delta)) : r.start;
                 const end = live ? (live.mode === "start" ? r.end : addDays(r.end, live.delta)) : r.end;
@@ -357,7 +358,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                         {canEdit && <span className={`${styles.handle} ${styles.end}`} aria-label={t("resizeEnd", { key: r.key })} data-testid={`end-${r.key}`} onMouseDown={startDrag("end")} />}
                       </span>
                       {/* Canvas: ชื่อผู้รับผิดชอบ · % หรือ "เลย N วัน" อยู่ขวาของแท่ง */}
-                      <span className={`${styles.barLabel} ${r.lateDays ? styles.barLate : ""}`} style={{ left: x(end) + px + 6 }} aria-hidden="true">{[names || r.key, r.lateDays ? t("late", { days: r.lateDays }) : `${r.progressPct}%`].join(" · ")}</span>
+                      <span className={`${styles.barLabel} ${r.lateDays ? styles.barLate : ""}`} style={{ left: x(end) + px + 6 }} aria-hidden="true">{[names || r.key, r.status.name, r.lateDays ? t("late", { days: r.lateDays }) : `${r.progressPct}%`, start === end ? formatDate(end, year) : `${formatDate(start, year)} – ${formatDate(end, year)}`].join(" · ")}</span>
                     </div>
                   </div>
                 );

@@ -68,9 +68,9 @@
 .list { padding:12px 18px; display:flex; flex-direction:column; gap:12px; }
 .line { display:flex; justify-content:space-between; gap:8px; font-size:12px; }
 .empty { padding:24px 18px; color:var(--muted); font-size:12px; }
-/* ไม่มีกล่องเลื่อนแนวตั้งของตัวเอง ใช้ scroll ของหน้าหลัก หัวตารางจึงติดใต้ top bar ได้
-   (overflow: clip ไม่สร้าง scroll container · จอแคบกว่าตารางค่อยเลื่อนแนวนอนในกล่อง) */
-.tableWrap { overflow:clip; position:relative; }
+/* กล่องเลื่อนของตารางเอง ทั้งแนวตั้งและแนวนอน (ผู้ใช้ขอ 2026-11-09: เลื่อนไปขวาเพื่อเพิ่มคอลัมน์ได้)
+   สูงไม่เกินจอ แถบเลื่อนแนวนอนจึงอยู่ในจอเสมอ · หัวตารางติดขอบบนกล่อง · คอลัมน์ชื่องานติดซ้าย */
+.tableWrap { overflow:auto; position:relative; max-height:calc(100dvh - var(--topbar-h) - 16px); container-type:inline-size; }
 /* Table ตาม Canvas Table (.gr / .gh / .mrow) */
 .toolbar { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; }
 .search { display:flex; align-items:center; gap:8px; min-height:32px; padding:0 12px; border:1px solid var(--input); border-radius:8px; background:#fff; min-width:220px; color:var(--muted); }
@@ -94,7 +94,7 @@
 @supports (appearance: base-select) { .pillSelect { appearance:base-select; } .pillSelect::picker-icon { display:none; } }
 .pillSelect:hover { box-shadow:inset 0 0 0 1px currentColor; }
 .tableWrap .table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; min-width:1100px; table-layout:fixed; }
-.table th { position:sticky; top:var(--topbar-h); background:#f8f9fb; text-align:left; font-weight:600; font-size:11px; color:#5f6873; height:32px; padding:0 5px; border-bottom:1px solid var(--border); z-index:1; white-space:nowrap; }
+.table th { position:sticky; top:0; background:#f8f9fb; text-align:left; font-weight:600; font-size:11px; color:#5f6873; height:32px; padding:0 5px; border-bottom:1px solid var(--border); z-index:1; white-space:nowrap; }
 .table th:first-child, .table td:first-child { padding-left:14px; }
 .table td { padding:0 5px; border-bottom:1px solid #eef0f3; height:38px; font-size:var(--text-label); vertical-align:middle; }
 .nameHead { display:flex; align-items:center; gap:8px; padding-left:30px; }
@@ -200,4 +200,19 @@
   .cols, .side { gap:12px; }
 }
 /* จอแคบกว่าตาราง: เลื่อนแนวนอนในกล่อง · กล่องกลายเป็น scroll container หัวตารางจึงติดที่ขอบกล่อง (top 0) แทน */
-@media (max-width:1380px) { .tableWrap { overflow-x:auto; } .table th { top:0; } }
+/* คอลัมน์ชื่องานค้างอยู่ซ้ายเมื่อเลื่อนไปขวา · แถว Module / กลุ่ม (colspan) ค้างทั้งแถว */
+.table th:first-child { left:0; z-index:3; }
+.table td:first-child { position:sticky; left:0; z-index:1; background:#fff; }
+.itemRow:hover td:first-child { background:#fafbfc; }
+.sel td:first-child, .sel:hover td:first-child { background:#eff6ff; }
+.moduleRow td:first-child { background:#f8f9fb; }
+.phaseRow td:first-child { background:#fafbfc; }
+/* แถวเต็มความกว้าง (Module / กลุ่ม / เพิ่มงาน / สรุป) ไม่ค้างทั้งช่อง แต่เนื้อหาข้างในค้างอยู่ในส่วนที่มองเห็น (100cqw = ความกว้างกล่อง) */
+.table td[colspan] { position:static; }
+.mrow { position:sticky; left:14px; width:calc(100cqw - 28px); }
+.prow { position:sticky; left:34px; width:calc(100cqw - 48px); }
+.addRow td > *, .subAddRow td > * { position:sticky; left:76px; }
+.subAddRow td > * { left:14px; }
+.footInner { position:sticky; left:14px; width:calc(100cqw - 30px); text-align:right; }
+.footInner span + span { margin-left:18px; }
+.table th:first-child, .itemRow td:first-child { box-shadow:inset -1px 0 0 #eef0f3; }

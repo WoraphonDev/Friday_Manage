@@ -123,6 +123,10 @@ describe("Table (2)", () => {
     expect(urls.at(-1)?.searchParams.get("view")).toBe("table");
     const rows = screen.getAllByRole("row").map((r) => r.textContent ?? "");
     expect(rows.findIndex((r) => r.includes("DE-2"))).toBe(rows.findIndex((r) => r.includes("DE-1")) + 1);
+    // Actual แยกเป็นสองคอลัมน์ · ตารางกว้างตามคอลัมน์ที่เปิด (เลื่อนแนวนอนในกล่อง)
+    expect(screen.getByRole("columnheader", { name: "Actual Start" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Actual End" })).toBeInTheDocument();
+    expect(Number.parseInt(screen.getByRole("table").style.minWidth)).toBeGreaterThan(1100);
     // FR / Screen ซ่อนไว้ก่อน เปิดได้จากเมนู Columns
     expect(screen.queryByRole("columnheader", { name: "FR / Screen" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Columns" }));
@@ -274,10 +278,10 @@ describe("Table (2)", () => {
     await screen.findByTestId("row-DE-1");
     expect(screen.queryByTestId("row-DE-400")).not.toBeInTheDocument();
     expect(screen.getAllByRole("row").length).toBeLessThan(120);
-    // ตารางใช้ scroll ของหน้าหลัก: จำลองว่าขอบบนตารางเลื่อนพ้นจอขึ้นไป 390 แถว
+    // ตารางมีกล่องเลื่อนของตัวเอง: จำลองว่าเลื่อนลงไป 390 แถว
     const scroll = screen.getByTestId("table-scroll");
-    scroll.getBoundingClientRect = () => ({ top: -38 * 390, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: -38 * 390, toJSON: () => ({}) });
-    fireEvent.scroll(window);
+    scroll.scrollTop = 38 * 390;
+    fireEvent.scroll(scroll);
     expect(await screen.findByTestId("row-DE-390")).toBeInTheDocument();
     expect(screen.queryByTestId("row-DE-1")).not.toBeInTheDocument();
     a.unmount();

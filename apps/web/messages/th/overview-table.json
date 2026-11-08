@@ -206,7 +206,8 @@
       "size": "Size · MD",
       "start": "Plan Start",
       "end": "Plan End",
-      "actual": "Actual",
+      "actualStart": "Actual Start",
+      "actualEnd": "Actual End",
       "refs": "FR / Screen",
       "progress": "Progress",
       "priority": "Priority"

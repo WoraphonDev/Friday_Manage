@@ -30,10 +30,13 @@ const SIZES = ["XS", "S", "M", "L", "XL"] as const;
 const GROUPS = ["module", "status", "assignee", "priority", "none"] as const;
 type GroupBy = (typeof GROUPS)[number];
 const SORTS = ["rank", "number", "planEnd", "priority"] as const;
-const OPTIONAL_COLS = ["dev", "ba", "sa", "status", "size", "start", "end", "actual", "refs", "progress"] as const;
+// Actual แยกเป็นสองคอลัมน์ (ผู้ใช้ขอ 2026-11-09) · ตารางเลื่อนแนวนอนได้ จึงเพิ่มคอลัมน์ได้โดยไม่บีบชื่องาน
+const OPTIONAL_COLS = ["dev", "ba", "sa", "status", "size", "start", "end", "actualStart", "actualEnd", "refs", "progress"] as const;
 type Col = (typeof OPTIONAL_COLS)[number];
 /** ความกว้างคอลัมน์ตาม Canvas Table (.gr grid-template-columns) */
-const COL_W: Record<Col, number> = { dev: 84, ba: 40, sa: 40, status: 112, size: 78, start: 74, end: 82, actual: 96, refs: 124, progress: 96 };
+const COL_W: Record<Col, number> = { dev: 84, ba: 40, sa: 40, status: 112, size: 78, start: 74, end: 82, actualStart: 84, actualEnd: 110, refs: 124, progress: 96 };
+/** ชื่องานกว้างอย่างน้อยเท่านี้ · ตารางกว้างกว่าจอเมื่อไรเลื่อนแนวนอนในกล่อง */
+const NAME_MIN_W = 340;
 
 type Display =
   | { kind: "module"; id: string; name: string; color: string | null; count: number; phases: number; md: number; pct: number; moduleId: string | null; from: string | null; to: string | null }
@@ -192,17 +195,18 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   }, [view, collapsed, groupBy, filters, t]);
   const display = useMemo(() => withSubtaskAdd(grouped, subFor), [grouped, subFor]);
   const virtual = display.length > VIRTUAL_AFTER;
-  // ตารางใช้ scroll ของหน้าหลัก (ไม่มีกล่องเลื่อนของตัวเอง): ระยะที่เลื่อนผ่านตาราง = ขอบบนของตารางที่พ้นจอขึ้นไป
+  // ตารางมีกล่องเลื่อนของตัวเอง: แถวที่ render ตาม scrollTop / ความสูงของกล่อง
   useEffect(() => {
-    if (!virtual) return;
+    const box = scroller.current;
+    if (!virtual || !box) return;
     const update = () => {
-      setScrollTop(Math.max(0, -(scroller.current?.getBoundingClientRect().top ?? 0)));
-      setViewH(window.innerHeight);
+      setScrollTop(box.scrollTop);
+      setViewH(box.clientHeight || window.innerHeight);
     };
     update();
-    window.addEventListener("scroll", update, { passive: true });
+    box.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
-    return () => { window.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
+    return () => { box.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
   }, [virtual]);
   useEffect(() => {
     if (!reveal || structure) return;
@@ -210,9 +214,8 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
     if (index < 0) return;
     // กลุ่มที่เพิ่งสร้างอาจอยู่พ้นช่วงที่ virtualized table render อยู่
     if (virtual && scroller.current) {
-      const root = document.scrollingElement ?? document.documentElement;
-      root.scrollTop = root.scrollTop + scroller.current.getBoundingClientRect().top + index * ROW_H - window.innerHeight / 2;
-      setScrollTop(index * ROW_H);
+      scroller.current.scrollTop = Math.max(0, index * ROW_H - scroller.current.clientHeight / 2);
+      setScrollTop(scroller.current.scrollTop);
     }
     const frame = requestAnimationFrame(() => {
       const selector = reveal.phaseId ? `[data-phase-id="${reveal.phaseId}"]` : `[data-module-id="${reveal.moduleId}"]`;
@@ -399,7 +402,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
         {!data.items.length && display.length > 0 && <EmptyState title={t("empty")} />}
         {!display.length ? <EmptyState title={filtered ? t("emptyFiltered") : t("empty")} /> : (
           <div className={styles.tableWrap} ref={scroller} data-testid="table-scroll">
-            <table className={styles.table} aria-rowcount={display.length + 1}>
+            <table className={styles.table} aria-rowcount={display.length + 1} style={{ minWidth: NAME_MIN_W + cols.reduce((n, c) => n + COL_W[c] + 10, 0) }}>
               <colgroup><col />{cols.map((c) => <col key={c} style={{ width: COL_W[c] + 10 }} />)}</colgroup>
               <thead>
                 <tr>
@@ -467,7 +470,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                       onFullForm={() => { setSubFor(null); router.replace(`${page}/table?${new URLSearchParams({ issue: d.parentKey, new: "1", parent: d.parentKey })}`, { scroll: false }); }} />
                   </td></tr>
                 ) : d.kind === "foot" ? (
-                  <tr key={d.id} className={styles.footRow}><td colSpan={span}><span>{t("footTasks", { count: d.count })}</span><span>{t("footMd", { md: d.md })}</span></td></tr>
+                  <tr key={d.id} className={styles.footRow}><td colSpan={span}><div className={styles.footInner}><span>{t("footTasks", { count: d.count })}</span><span>{t("footMd", { md: d.md })}</span></div></td></tr>
                 ) : (
                   <IssueRow key={d.row.key} row={d.row} sub={d.sub} cols={cols} ws={ws} projectKey={projectKey} year={year} canEdit={canEdit} statuses={statuses} people={options.data?.members ?? []}
                     onAddSub={canCreate && !d.sub ? () => setSubFor(d.row.key) : undefined}
@@ -526,7 +529,6 @@ function IssueRow({ row, sub, cols, ws, projectKey, year, canEdit, statuses, peo
   const baView = row.ba ? <span className={styles.avs}><Avatar size="small" person={row.ba} /></span> : empty;
   const saView = row.sa ? <span className={styles.avs}><Avatar size="small" person={row.sa} /></span> : empty;
   const sizeView = <span style={{ whiteSpace: "nowrap" }}>{row.size ? <span className={`${styles.pill} ${styles.sTodo}`} style={{ fontWeight: 700 }}>{row.size}</span> : empty}{row.estimateMd !== null ? ` ${row.estimateMd}` : ""}</span>;
-  const actualEndView = row.actualEnd ? <span className={actualLate ? styles.dueLate : undefined}>{t("actualEnd", { date: formatDate(row.actualEnd, year) })}{actualLate ? ` · ${t("actualLate", { days: lateBy })}` : ""}</span> : null;
   const refs = [...(row.requirements ?? []), ...(row.screens ?? [])].join(" · ");
   const cell: Record<Col, React.ReactNode> = {
     dev: canEdit ? <PeopleCell multiple label={edit(t("cols.dev"))} people={people} value={row.assignees?.map((p) => p.id) ?? []} onChange={(ids) => onPatch({ assigneeIds: ids })}>{devView}</PeopleCell> : devView,
@@ -542,12 +544,10 @@ function IssueRow({ row, sub, cols, ws, projectKey, year, canEdit, statuses, peo
     end: canEdit ? <DateCell label={edit(t("cols.end"))} value={row.planEnd} className={dueCls} onChange={(v) => onPatch({ planEnd: v })}>{row.planEnd ? formatDate(row.planEnd, year) : "—"}</DateCell>
       : <span className={dueCls}>{formatDate(row.planEnd, year)}</span>,
     // Actual Start แก้เองได้ (เริ่มก่อนกดสถานะ) · Actual End ระบบตั้งเมื่อสถานะเป็น Done
-    actual: <span className={styles.actualCell}>
-      {canEdit ? <DateCell label={edit(t("cell.actualStart"))} value={row.actualStart} max={row.actualEnd ?? today} onChange={(v) => onPatch({ actualStart: v })}>
-        {row.actualStart ? t("actualStart", { date: formatDate(row.actualStart, year) }) : <span className={styles.muted}>—</span>}
-      </DateCell> : row.actualStart ? <span>{t("actualStart", { date: formatDate(row.actualStart, year) })}</span> : !row.actualEnd ? empty : null}
-      {actualEndView}
-    </span>,
+    actualStart: canEdit ? <DateCell label={edit(t("cell.actualStart"))} value={row.actualStart} max={row.actualEnd ?? today} onChange={(v) => onPatch({ actualStart: v })}>
+        {row.actualStart ? formatDate(row.actualStart, year) : "—"}
+      </DateCell> : row.actualStart ? formatDate(row.actualStart, year) : empty,
+    actualEnd: row.actualEnd ? <span className={styles.actualCell}><span className={actualLate ? styles.dueLate : undefined}>{formatDate(row.actualEnd, year)}</span>{actualLate && <span className={styles.dueLate}>{t("actualLate", { days: lateBy })}</span>}</span> : empty,
     // Canvas: "FR-01.2 · SCR-101" ตัวเล็กสีจาง ตัดด้วย … · แก้ใน Drawer
     refs: refs ? <span className={styles.refs} title={refs}>{refs}</span> : empty,
     progress: <span className={styles.prog}><span><span style={{ width: `${row.progressPct ?? 0}%`, background: (row.progressPct ?? 0) >= 100 ? "#16a34a" : "var(--primary)" }} /></span><span>{row.progressPct ?? 0}%</span></span>,

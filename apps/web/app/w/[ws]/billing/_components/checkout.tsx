@@ -6,7 +6,7 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { useTranslations } from "next-intl";
 import { Button, ErrorState, Forbidden, Input, LoadingState, Select, buttonVariants } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
-import { ApiError, api } from "@/lib/api";
+import { ApiError, api, supportId } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PAID_PLANS, baht, fitPlan, isPaidPlan, type Cycle, type PaidPlan, type PublicPlans, type Usage } from "@/features/plan-limits";
@@ -420,7 +420,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
           {problemText && (
             <div role="alert" className={cn(styles.warn, styles.small)}>
               {problemText}
-              {problem instanceof ApiError && problem.requestId && <div className={styles.mono}>{t("requestId", { id: problem.requestId })}</div>}
+              {problem instanceof ApiError && supportId(problem) && <div className={styles.mono}>{t("requestId", { id: supportId(problem) ?? "" })}</div>}
             </div>
           )}
           {expired ? (

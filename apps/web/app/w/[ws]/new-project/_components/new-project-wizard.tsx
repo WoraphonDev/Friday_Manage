@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Avatar, Badge, Button, Forbidden, Input, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, supportId } from "@/lib/api";
 import { formatDate, formatDateRange, today } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import {
@@ -252,7 +252,7 @@ export function NewProjectWizard({ ws }: { ws: string }) {
       router.push(`${wsPath}/p/${encodeURIComponent(project.key)}`);
     } catch (e) {
       setCreating(false);
-      const message = e instanceof ApiError && e.requestId ? `${e.message} (${e.requestId})` : e instanceof Error ? e.message : t("errors.failed");
+      const message = e instanceof ApiError && supportId(e) ? `${e.message} (${supportId(e)})` : e instanceof Error ? e.message : t("errors.failed");
       if (e instanceof ApiError && e.code === "key_taken") {
         setErrors({ key: e.message });
         setStep(1);

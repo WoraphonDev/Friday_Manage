@@ -1,4 +1,4 @@
-import { ApiError } from "@/lib/api";
+import { ApiError, supportId } from "@/lib/api";
 import type { Person } from "@/lib/types";
 
 /** "เมื่อ … ถ้า … ให้ …" ตาม apps/api/src/automation/rules.ts (A26) */
@@ -131,6 +131,6 @@ export function incomplete(r: RuleShape) {
 }
 
 export function errorText(error: unknown, fallback: string) {
-  if (error instanceof ApiError) return error.requestId ? `${error.message} (${error.requestId})` : error.message;
+  if (error instanceof ApiError) return supportId(error) ? `${error.message} (${supportId(error)})` : error.message;
   return error instanceof Error ? error.message : fallback;
 }

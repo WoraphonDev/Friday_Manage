@@ -170,7 +170,7 @@ describe("Backlog + Sprint planning (W12)", () => {
     await user.click(await within(await screen.findByRole("listitem", { name: "งาน DE-5" })).findByRole("button", { name: "↓ Backlog" }));
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("งานนี้ถูกแก้ไขโดยคนอื่นแล้ว");
-    expect(alert).toHaveTextContent("รหัสคำขอ req_w12_001");
+    expect(alert).not.toHaveTextContent("req_w12_001"); // 4xx ผู้ใช้แก้เองได้ ไม่แสดงรหัสอ้างอิง (ผู้ใช้ขอ 2026-11-09)
     await user.click(within(alert).getByRole("button", { name: "ปิด" }));
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });

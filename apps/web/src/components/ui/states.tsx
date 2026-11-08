@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import { ApiError } from "@/lib/api";
+import { ApiError, supportId } from "@/lib/api";
 import { Button, Skeleton } from "./primitives";
 
 function State({
@@ -72,9 +72,9 @@ export function ErrorState({
           error instanceof Error ? error.message : t("app.unknownError")
         }
       >
-        {apiError?.requestId && (
+        {supportId(apiError) && (
           <code className="request-id">
-            {t("app.requestId", { id: apiError.requestId })}
+            {t("app.requestId", { id: supportId(apiError) ?? "" })}
           </code>
         )}
         {retry && (

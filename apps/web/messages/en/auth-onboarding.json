@@ -132,7 +132,8 @@
     "continue": "Continue",
     "goLogin": "Go to sign in",
     "skipVerify": "Skip for now, verify later",
-    "noDelivery": "Email sending isn't set up yet, so no code was sent · you can continue and verify your email later"
+    "noDelivery": "Email sending isn't set up yet, so no code was sent · you can continue and verify your email later",
+    "invalidEmail": "Enter a valid email, e.g. name@company.com"
   },
   "forgot": {
     "stepLabel": "Step {step} of 3",

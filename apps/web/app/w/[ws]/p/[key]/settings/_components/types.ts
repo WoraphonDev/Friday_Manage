@@ -1,4 +1,4 @@
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, supportId } from "@/lib/api";
 
 /** แท็บของ L2 ตามลำดับใน Canvas · notify / integ ยังไม่มี API (03-api › 3.5 p/notification-rules, p/repositories) */
 // import / export / plan-changes = Import / Export ของโปรเจกต์ (ผู้ใช้ตัดสิน 2026-11-09) เนื้อหาเดียวกับ Popup ในแท็บ Table
@@ -134,7 +134,7 @@ export interface HolidayCalendar {
 
 /** ข้อความ error พร้อม requestId ให้ผู้ใช้แจ้งทีมได้ */
 export function errorText(error: unknown, fallback: string) {
-  if (error instanceof ApiError) return error.requestId ? `${error.message} (${error.requestId})` : error.message;
+  if (error instanceof ApiError) return supportId(error) ? `${error.message} (${supportId(error)})` : error.message;
   return error instanceof Error ? error.message : fallback;
 }
 export const isForbidden = (error: unknown) => error instanceof ApiError && error.status === 403;

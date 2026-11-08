@@ -72,7 +72,9 @@ function SignupFlow() {
   function validate(): Errors {
     const out: Errors = {};
     if (!displayName.trim()) out.displayName = t("signup.required");
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) out.email = t("signup.required");
+    // ไม่รับช่องว่าง , ; ในอีเมล (เช่น "tang@gg.co," จากการคัดลอก) · ว่าง = ต้องกรอก
+    if (!email.trim()) out.email = t("signup.required");
+    else if (!/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]{2,}$/.test(email.trim())) out.email = t("signup.invalidEmail");
     if (!checkPassword(password).valid) out.password = t("password.tooWeak");
     if (!accept) out.acceptTerms = t("signup.mustAccept");
     return out;

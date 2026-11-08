@@ -15,6 +15,16 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * รหัสอ้างอิงที่ควรโชว์ผู้ใช้ (ผู้ใช้ขอ 2026-11-09: ไม่แสดงตอน error ทั่วไป)
+ * แสดงเฉพาะความผิดพลาดของระบบ (5xx) หรือเชื่อมต่อไม่ได้ ซึ่งผู้ใช้ต้องใช้รหัสตอนแจ้งปัญหา
+ * error ที่แก้เองได้ (กรอกผิด ไม่มีสิทธิ์ ข้อมูลชนกัน ฯลฯ) ไม่แสดง
+ */
+export function supportId(error: unknown): string | null {
+  if (!(error instanceof ApiError) || !error.requestId) return null;
+  return error.status >= 500 || error.status === 0 ? error.requestId : null;
+}
+
 export const API_UNAUTHORIZED = "friday:unauthorized";
 export const API_PLAN_LIMIT = "friday:plan-limit";
 export const ifMatch = (version: string | number) =>

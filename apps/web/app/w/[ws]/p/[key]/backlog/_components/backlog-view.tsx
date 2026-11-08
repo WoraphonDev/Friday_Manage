@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { Bookmark, Bug, CheckSquare, ChevronDown, MoreHorizontal, Zap } from "lucide-react";
 import { AvatarStack, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useDismissToasts, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, supportId } from "@/lib/api";
 import { formatDateRange, today as todayIso, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
@@ -63,7 +63,7 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
   const setMoveError = (error: unknown) => {
     if (!error) return;
     const reason = error instanceof ApiError && error.status === 409 ? t("conflict") : errorText(error, "");
-    const request = error instanceof ApiError && error.requestId ? t("requestId", { id: error.requestId }) : null;
+    const request = error instanceof ApiError && supportId(error) ? t("requestId", { id: supportId(error) ?? "" }) : null;
     toast({ tone: "error", group: noticeGroup, duration: 5000, message: [t("moveFailed"), reason, request].filter(Boolean).join(" · ") });
   };
   // เปลี่ยนโปรเจกต์ / ออกจากหน้า: Undo ของบอร์ดเดิมไม่ค้าง
@@ -364,7 +364,7 @@ function PlanningSprint({ sprint, canManage, hasActive, isNext, open, dropOver, 
 function DialogError({ error }: { error: unknown }) {
   const t = useTranslations("backlog");
   if (!error) return null;
-  return <div className={styles.dialogError} role="alert"><span>{errorText(error, t("saveFailed"))}</span>{error instanceof ApiError && error.requestId && <code>{t("requestId", { id: error.requestId })}</code>}</div>;
+  return <div className={styles.dialogError} role="alert"><span>{errorText(error, t("saveFailed"))}</span>{error instanceof ApiError && supportId(error) && <code>{t("requestId", { id: supportId(error) ?? "" })}</code>}</div>;
 }
 
 function CreateSprintDialog({ endpoint, data, onClose, onCreated }: { endpoint: string; data: BacklogData; onClose: () => void; onCreated: (name: string) => Promise<void> }) {

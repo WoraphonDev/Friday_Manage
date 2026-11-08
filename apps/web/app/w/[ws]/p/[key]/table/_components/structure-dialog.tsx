@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Dialog, Input } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, supportId } from "@/lib/api";
 
 export type StructureAction =
   | { kind: "createModule" }
@@ -55,7 +55,7 @@ export function StructureDialog({ base, action, onClose, onSaved }: {
       {removing ? <p>{t("deletePhaseBody", { name: action.name })}</p>
         : <Input label={t(phase ? "phaseName" : "moduleName")} value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required autoFocus disabled={pending} />}
       {action.kind === "createModule" && <label style={{ display: "flex", alignItems: "center", gap: 12 }}>{t("color")}<input type="color" value={color} onChange={(e) => setColor(e.target.value)} disabled={pending} /></label>}
-      {error != null && <p role="alert" className="field-error">{error instanceof Error ? error.message : t("failed")}{error instanceof ApiError && error.requestId ? ` · ${error.requestId}` : ""}</p>}
+      {error != null && <p role="alert" className="field-error">{error instanceof Error ? error.message : t("failed")}{error instanceof ApiError && supportId(error) ? ` · ${supportId(error)}` : ""}</p>}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
         <Button type="button" disabled={pending} onClick={onClose}>{t("cancel")}</Button>
         <Button type="submit" variant={removing ? "danger" : "primary"} disabled={pending || !name.trim()} aria-busy={pending}>{t(removing ? "deletePhase" : action.kind.startsWith("create") ? "create" : "save")}</Button>

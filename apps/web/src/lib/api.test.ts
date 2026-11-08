@@ -7,10 +7,19 @@ import {
   ApiError,
   ifMatch,
   setConfirmHandler,
+  supportId,
 } from "./api";
 import { server } from "@/test/server";
 
 describe("API client", () => {
+  it("supportId แสดงรหัสอ้างอิงเฉพาะความผิดพลาดของระบบ (5xx / เชื่อมต่อไม่ได้) ไม่ใช่ error ที่ผู้ใช้แก้เองได้", () => {
+    expect(supportId(new ApiError(400, "invalid_input", "x", {}, "req_400"))).toBeNull();
+    expect(supportId(new ApiError(409, "conflict", "x", {}, "req_409"))).toBeNull();
+    expect(supportId(new ApiError(500, "internal_error", "x", {}, "req_500"))).toBe("req_500");
+    expect(supportId(new ApiError(0, "network", "x", {}, "req_0"))).toBe("req_0");
+    expect(supportId(new Error("x"))).toBeNull();
+  });
+
   it("GET ส่ง cookie และคืน ETag สำหรับ If-Match", async () => {
     let credentials = "";
     let cache = "";

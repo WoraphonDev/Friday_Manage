@@ -247,7 +247,7 @@ describe("Kanban", () => {
     // toast สีแดงที่หายเอง · บอร์ดโหลดค่าล่าสุดให้เอง
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("งานนี้มีการเปลี่ยนแปลงแล้ว โหลดข้อมูลล่าสุดก่อนย้ายอีกครั้ง");
-    expect(alert).toHaveTextContent("req_kanban_001");
+    expect(alert).not.toHaveTextContent("req_kanban_001"); // 4xx ผู้ใช้แก้เองได้ ไม่แสดงรหัสอ้างอิง (ผู้ใช้ขอ 2026-11-09)
     expect(within(column("To do")).getByText("งานตัวอย่าง DE-1")).toBeInTheDocument();
   });
 

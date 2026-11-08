@@ -93,7 +93,7 @@ describe("J1 · เข้าสู่ระบบ", () => {
     await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("ลองได้อีก 4 ครั้งก่อนบัญชีถูกล็อก 15 นาที");
-    expect(alert).toHaveTextContent("req_test01");
+    expect(alert).not.toHaveTextContent("req_test01"); // 4xx ผู้ใช้แก้เองได้ ไม่แสดงรหัสอ้างอิง (ผู้ใช้ขอ 2026-11-09)
     expect(screen.getByLabelText("รหัสผ่าน")).toHaveAttribute("aria-invalid", "true");
 
     await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
@@ -258,6 +258,17 @@ describe("J2 · สมัครและยืนยันอีเมล", () =
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/onboarding"));
   });
 
+  it("อีเมลมี , ท้าย (คัดลอกมา) → บอกที่ช่องเป็นภาษาไทย ไม่ส่งคำขอ", async () => {
+    const calls: Captured = [];
+    capture(calls);
+    const user = userEvent.setup();
+    render(<SignupForm />);
+    await fill(user, "tang@gg.co,");
+    await user.click(screen.getByRole("button", { name: "สร้างบัญชี" }));
+    expect(await screen.findByText("รูปแบบอีเมลไม่ถูกต้อง เช่น name@company.com")).toBeInTheDocument();
+    expect(calls.some((c) => c.path === "/api/v1/auth/signup")).toBe(false);
+  });
+
   it("อีเมลซ้ำ → บอกที่ช่องพร้อมลิงก์เข้าสู่ระบบ (คง returnTo)", async () => {
     navigation.search = "returnTo=%2Fjoin%2Ftok";
     server.use(http.post("*/api/v1/auth/signup", () => apiError(409, "email_taken", "อีเมลนี้มีบัญชีแล้ว")));
@@ -308,7 +319,7 @@ describe("J2 · สมัครและยืนยันอีเมล", () =
     server.use(http.post("*/api/v1/auth/verify-email", () => apiError(400, "invalid_token", "ลิงก์หรือรหัสไม่ถูกต้อง", {}, "req_link9")));
     render(<SignupForm />);
     expect(await screen.findByRole("heading", { name: "ลิงก์ยืนยันอีเมลไม่ถูกต้องหรือหมดอายุแล้ว" })).toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent("req_link9");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("req_link9"); // 4xx ผู้ใช้แก้เองได้ ไม่แสดงรหัสอ้างอิง (ผู้ใช้ขอ 2026-11-09)
   });
 });
 

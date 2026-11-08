@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Dialog, Input, Select } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, supportId } from "@/lib/api";
 
 export function MilestoneDialog({ base, initialDate, modules, onClose, onCreated }: {
   base: string; initialDate: string; modules: { id: string; name: string }[];
@@ -31,7 +31,7 @@ export function MilestoneDialog({ base, initialDate, modules, onClose, onCreated
       <Input label={t("name")} value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required autoFocus disabled={pending} />
       <Input type="date" label={t("date")} value={date} onChange={(e) => setDate(e.target.value)} required disabled={pending} />
       <Select label={t("module")} value={moduleId} onChange={(e) => setModuleId(e.target.value)} disabled={pending}><option value="">{t("allModules")}</option>{modules.map((module) => <option key={module.id} value={module.id}>{module.name}</option>)}</Select>
-      {error != null && <p role="alert" className="field-error">{error instanceof Error ? error.message : t("failed")}{error instanceof ApiError && error.requestId ? ` · ${error.requestId}` : ""}</p>}
+      {error != null && <p role="alert" className="field-error">{error instanceof Error ? error.message : t("failed")}{error instanceof ApiError && supportId(error) ? ` · ${supportId(error)}` : ""}</p>}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}><Button type="button" onClick={onClose} disabled={pending}>{t("cancel")}</Button><Button type="submit" variant="primary" disabled={pending || !name.trim() || !date} aria-busy={pending}>{t("create")}</Button></div>
     </form>
   </Dialog>;

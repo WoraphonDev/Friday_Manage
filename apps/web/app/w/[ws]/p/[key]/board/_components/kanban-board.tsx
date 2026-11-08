@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, SlidersHorizontal, Bug, CheckSquare, ChevronLeft, ChevronRight, Flag, ListChecks, MessageCircle, Plus, Zap } from "lucide-react";
 import { AvatarStack, Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, LoadingState, Select, useDismissToasts, useToast } from "@/components/ui";
-import { api, ApiError, isConfirmCancelled } from "@/lib/api";
+import { api, ApiError, isConfirmCancelled, supportId } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions } from "@/lib/types";
@@ -91,7 +91,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   const setMoveError = (error: unknown) => {
     if (!error) return;
     const reason = error instanceof ApiError && error.status === 409 ? t("conflict") : error instanceof Error ? error.message : null;
-    const request = error instanceof ApiError && error.requestId ? t("requestId", { id: error.requestId }) : null;
+    const request = error instanceof ApiError && supportId(error) ? t("requestId", { id: supportId(error) ?? "" }) : null;
     toast({ tone: "error", group: noticeGroup, duration: 5000, message: [t("moveFailed"), reason, request].filter(Boolean).join(" · ") });
   };
   // เปลี่ยนโปรเจกต์ / ออกจากหน้า: Undo ของบอร์ดเดิมไม่ค้าง

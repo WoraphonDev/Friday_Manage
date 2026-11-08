@@ -261,7 +261,7 @@ describe("Project Settings (L2)", () => {
     await user.click(due);
     await waitFor(() => expect(calls[0]).toMatchObject({ method: "PUT", path: "/w/sample/projects/DE/role-permissions", body: { role: "member", permission: "issue.change_due_directly", allowed: true } }));
     expect(due).toBeChecked();
-    server.use(http.put(`${P}/role-permissions`, () => errorBody(403)));
+    server.use(http.put(`${P}/role-permissions`, () => errorBody(500)));
     const invite = within(table).getByRole("checkbox", { name: "เชิญสมาชิกเข้าโปรเจกต์ สำหรับ Viewer" });
     await user.click(invite);
     expect(await screen.findByText(/req_w13_001/)).toBeInTheDocument();

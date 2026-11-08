@@ -1,4 +1,4 @@
-import { ApiError } from "@/lib/api";
+import { ApiError, supportId } from "@/lib/api";
 
 /** แท็บของ N1 ตามเมนูใน Canvas · `notify-templates` = หน้า N2 */
 export const SECTIONS = ["overview", "projects", "teams", "std", "load", "security", "audit", "data", "notify", "integ", "bill"] as const;
@@ -241,7 +241,7 @@ export const wsPath = (ws: string) => `/w/${encodeURIComponent(ws)}`;
 export const adminKey = (ws: string, ...rest: string[]) => ["workspace", ws, "admin", ...rest];
 
 export function errorText(error: unknown, fallback: string) {
-  if (error instanceof ApiError) return error.requestId ? `${error.message} (${error.requestId})` : error.message;
+  if (error instanceof ApiError) return supportId(error) ? `${error.message} (${supportId(error)})` : error.message;
   return error instanceof Error ? error.message : fallback;
 }
 export const isForbidden = (error: unknown) => error instanceof ApiError && error.status === 403;

@@ -224,7 +224,8 @@ describe("Import Excel (L3)", () => {
     // ไฟล์ใหม่ = ขั้นถัดไปถูกล็อกจนกว่าจะอัปโหลด
     expect(screen.getByRole("button", { name: /จับคู่คอลัมน์$/ })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "ถัดไป: จับคู่คอลัมน์ →" }));
-    expect(await screen.findByText(/req_w14_001/)).toBeInTheDocument();
+    expect(await screen.findByText(/ข้อผิดพลาดทดสอบ/)).toBeInTheDocument();
+    expect(screen.queryByText(/req_w14_001/)).not.toBeInTheDocument(); // 4xx ผู้ใช้แก้เองได้ ไม่แสดงรหัสอ้างอิง (ผู้ใช้ขอ 2026-11-09)
   });
 
   it("Popup Import / Export ใน Table: เมนูซ้าย 3 เมนู · Export แผน + Timeline ของโปรเจกต์นี้", async () => {

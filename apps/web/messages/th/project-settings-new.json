@@ -11,7 +11,10 @@
       "notify": "การแจ้งเตือน",
       "integ": "Integrations",
       "danger": "Danger zone",
-      "automation": "Automation"
+      "automation": "Automation",
+      "import": "อัปเดตแผนจาก Excel",
+      "export": "Export แผน + Timeline",
+      "plan-changes": "การแก้ไขแผน"
     },
     "closed": {
       "title": "ยังไม่เปิดใช้งาน"

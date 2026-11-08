@@ -14,10 +14,11 @@ import { WorkflowSection } from "./workflow-section";
 import { ModulesSection, TypesSection } from "./structure-sections";
 import { PermsSection } from "./perms-section";
 import {
-  DEFAULT_SIZE_MD, errorText, isForbidden, isSection, SECTIONS, SIZES,
+  BASELINE_SECTIONS, DEFAULT_SIZE_MD, errorText, isForbidden, isSection, SECTIONS, SIZES,
   type DeleteImpact, type HolidayCalendar, type Member, type ProjectDetail, type Section, type Size,
 } from "./types";
 import { membersKey, projectEndpoint, SectionHead } from "./shared";
+import { PlanIoContent } from "@/features/plan-io/plan-io";
 import styles from "./settings.module.css";
 
 
@@ -41,9 +42,23 @@ export function ProjectSettings({ ws, projectKey, section }: { ws: string; proje
   if (!canEdit || perms.data.guestViewer) return <Forbidden />;
 
   const p = project.data;
+  const canBaseline = perms.data.permissions.includes("project.baseline");
+  if (BASELINE_SECTIONS.includes(current) && !canBaseline) return <Forbidden />;
+  const nav = <SettingsNav ws={ws} projectKey={projectKey} current={current} canAutomation={perms.data.permissions.includes("project.automation")} canBaseline={canBaseline} />;
+  // Import / Export / การแก้ไขแผน: เนื้อหามีการ์ดของตัวเอง จึงไม่ซ้อนในกล่อง panel
+  if (current === "import" || current === "export" || current === "plan-changes") {
+    return (
+      <div className={styles.body}>
+        {nav}
+        <div className={styles.frameMain}>
+          <PlanIoContent ws={ws} projectKey={projectKey} section={current === "plan-changes" ? "changes" : current} changesHref={`${href}/settings/plan-changes`} />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={styles.body}>
-      <SettingsNav ws={ws} projectKey={projectKey} current={current} canAutomation={perms.data.permissions.includes("project.automation")} />
+      {nav}
       <section className={`${styles.card} ${styles.panel}`} aria-labelledby="settings-heading">
         {current === "general" && <GeneralSection key={p.version} ws={ws} projectKey={projectKey} project={p} members={members.data?.items ?? []} />}
         {current === "workflow" && <WorkflowSection ws={ws} projectKey={projectKey} />}
@@ -58,12 +73,12 @@ export function ProjectSettings({ ws, projectKey, section }: { ws: string; proje
 }
 
 /** เมนูซ้ายของ Settings · ใช้ร่วมกับหน้า Automation ให้เมนูไม่หายเมื่อเลือก Automation */
-export function SettingsNav({ ws, projectKey, current, canAutomation }: { ws: string; projectKey: string; current: Section | "automation"; canAutomation: boolean }) {
+export function SettingsNav({ ws, projectKey, current, canAutomation, canBaseline = true }: { ws: string; projectKey: string; current: Section | "automation"; canAutomation: boolean; canBaseline?: boolean }) {
   const t = useTranslations("project-settings-new.settings");
   const href = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}`;
   return (
     <nav className={`${styles.card} ${styles.nav}`} aria-label={t("navLabel")}>
-      {SECTIONS.map((s) => (
+      {SECTIONS.filter((s) => canBaseline || !BASELINE_SECTIONS.includes(s)).map((s) => (
         <Link key={s} href={`${href}/settings/${s}`} className={`${styles.snav} ${s === "danger" ? styles.danger : ""}`} aria-current={s === current ? "page" : undefined}>
           {t(`nav.${s}`)}
         </Link>

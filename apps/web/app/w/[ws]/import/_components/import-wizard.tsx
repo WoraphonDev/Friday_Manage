@@ -28,7 +28,7 @@ const fmtSize = (bytes: number) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 10
  * projectKey = อัปเดตแผนของโปรเจกต์นั้น (หน้า /p/{key}/import) · ไม่มี = สร้างโปรเจกต์ใหม่จาก Excel (หน้า New project)
  * คืนเฉพาะเนื้อหา · กรอบหน้า / เมนูด้านซ้ายเป็นของหน้าที่เรียก
  */
-export function ImportWizard({ ws, projectKey }: { ws: string; projectKey?: string }) {
+export function ImportWizard({ ws, projectKey, changesHref }: { ws: string; projectKey?: string; changesHref?: string }) {
   const t = useTranslations("import-plan-changes.import");
   const { workspace, me } = useWorkspace();
   const year = me.yearFormat;
@@ -104,6 +104,8 @@ export function ImportWizard({ ws, projectKey }: { ws: string; projectKey?: stri
     if (done) {
       setResult(done);
       void cache.invalidateQueries({ queryKey: queryKeys.projects(ws) });
+      // อัปเดตแผนจาก Popup ใน Table: แถวในตารางเปลี่ยนตามทันที
+      if (projectKey) void cache.invalidateQueries({ queryKey: ["table", ws, projectKey] });
     }
   }
 
@@ -116,7 +118,7 @@ export function ImportWizard({ ws, projectKey }: { ws: string; projectKey?: stri
     setStep(1);
   }
 
-  if (result) return <Done ws={ws} result={result} onAgain={restart} />;
+  if (result) return <Done ws={ws} result={result} onAgain={restart} changesHref={changesHref} />;
 
   const reach = (k: Step) => k === 1 || (!!job && !fresh);
   const stepNames = [t("step1"), t("step2"), t("step3"), t("step4")];
@@ -514,7 +516,7 @@ function PersonRow({ p, members, disabled, onPatch }: { p: JobPerson; members: M
   );
 }
 
-function Done({ ws, result, onAgain }: { ws: string; result: CommitResult; onAgain: () => void }) {
+function Done({ ws, result, onAgain, changesHref }: { ws: string; result: CommitResult; onAgain: () => void; changesHref?: string }) {
   const t = useTranslations("import-plan-changes.import");
   const p = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(result.project.key)}`;
   const lines = useMemo(() => {
@@ -533,7 +535,7 @@ function Done({ ws, result, onAgain }: { ws: string; result: CommitResult; onAga
       {lines.map((l) => <div key={l}>{l}</div>)}
       <div className={styles.actions}>
         <Link className="button button-primary" href={`${p}/table`}>{t("openTable")}</Link>
-        {(result.mode === "update" || result.baseline) && <Link className="button" href={`${p}/plan-changes`}>{t("openChanges")}</Link>}
+        {(result.mode === "update" || result.baseline) && <Link className="button" href={changesHref ?? `${p}/table?io=changes`}>{t("openChanges")}</Link>}
         <Button onClick={onAgain}>{t("again")}</Button>
       </div>
     </section>

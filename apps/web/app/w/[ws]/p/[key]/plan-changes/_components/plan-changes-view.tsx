@@ -63,7 +63,8 @@ export function moduleEnds(d: GanttData): ModuleEnd[] {
   return out;
 }
 
-export function PlanChangesView({ ws, projectKey }: { ws: string; projectKey: string }) {
+/** embedded = แสดงใน Popup Import / Export ของ Table หรือเมนู Settings (กรอบหน้าเป็นของผู้เรียก) */
+export function PlanChangesView({ ws, projectKey, embedded = false }: { ws: string; projectKey: string; embedded?: boolean }) {
   const t = useTranslations("import-plan-changes.changes");
   const { me } = useWorkspace();
   const year: YearFormat = me.yearFormat;
@@ -105,14 +106,14 @@ export function PlanChangesView({ ws, projectKey }: { ws: string; projectKey: st
 
   const has = (p: string) => !!perms.data?.permissions.includes(p);
   const err = perms.error ?? baselines.error;
-  if (perms.isPending || (allowed && baselines.isPending)) return <div className={styles.page}><LoadingState /></div>;
-  if (perms.data?.guestViewer || (err instanceof ApiError && err.status === 403)) return <div className={styles.page}><Forbidden /></div>;
-  if (err) return <div className={styles.page}><ErrorState error={err} retry={() => { void perms.refetch(); void baselines.refetch(); }} /></div>;
+  if (perms.isPending || (allowed && baselines.isPending)) return <div className={embedded ? styles.body : styles.page}><LoadingState /></div>;
+  if (perms.data?.guestViewer || (err instanceof ApiError && err.status === 403)) return <div className={embedded ? styles.body : styles.page}><Forbidden /></div>;
+  if (err) return <div className={embedded ? styles.body : styles.page}><ErrorState error={err} retry={() => { void perms.refetch(); void baselines.refetch(); }} /></div>;
 
   const canBaseline = has("project.baseline");
   const current = baselines.data!.items.find((b) => b.version === version) ?? null;
-  // แท็บของตัวเอง (ไม่อยู่ในเมนู Import / Export) · ติดตามการแก้แผนเทียบ Baseline จากทุกช่องทาง
-  const shell = (content: React.ReactNode) => <div className={styles.page}>{content}</div>;
+  // อยู่ใน Popup Import / Export และเมนู Settings (ผู้ใช้ตัดสิน 2026-11-09) · ติดตามการแก้แผนเทียบ Baseline จากทุกช่องทาง
+  const shell = (content: React.ReactNode) => <div className={embedded ? styles.body : styles.page}>{content}</div>;
 
   const value = (field: string, v: unknown) =>
     field === "assigneeIds" && Array.isArray(v) ? (v.length ? v.map((id) => names.get(String(id)) ?? String(id).slice(0, 8)).join(", ") : "—") : showValue(v, year);

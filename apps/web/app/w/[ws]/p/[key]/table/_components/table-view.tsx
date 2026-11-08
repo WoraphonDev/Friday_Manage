@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { PlanIoDialog, usePlanIoSections } from "@/features/plan-io/plan-io";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
@@ -148,6 +149,13 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const [reasonFor, setReasonFor] = useState<{ run: (reason: string) => Promise<void> } | null>(null);
   const [subFor, setSubFor] = useState<string | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
+  const ioSections = usePlanIoSections(ws, projectKey);
+  const openIo = (section: string) => {
+    const next = new URLSearchParams(search);
+    next.set("io", section);
+    router.replace(`${pathname}?${next}`, { scroll: false });
+  };
 
   const perms = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${base}/my-permissions`) });
   const canEdit = !!perms.data?.permissions.includes("issue.edit");
@@ -388,7 +396,8 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
         <div className={styles.bar}>
           <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set())}>{t("expandAll")}</button>
           <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set(groupIds))}>{t("collapseAll")}</button>
-          {canEdit && <Link className={styles.tbtn} href={`/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/import`}>{t("importExport")}</Link>}
+          {/* Import / Export เปิดเป็น Popup (ผู้ใช้ตัดสิน 2026-11-09) · สมาชิกทั่วไปเห็นเฉพาะ Export */}
+          {ioSections.length > 0 && <button type="button" className={styles.tbtn} onClick={() => openIo(ioSections[0])}>{t("importExport")}</button>}
           {canSettings && <button type="button" className={styles.tbtn} onClick={() => setStructure({ kind: "createModule" })}>{t("addModule")}</button>}
           {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={taskHref()} scroll={false}>{t("addTask")}</Link>}
         </div>
@@ -490,6 +499,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
         </div>
       </section>
 
+      <PlanIoDialog ws={ws} projectKey={projectKey} />
       {structure && <StructureDialog base={base} action={structure} onClose={() => setStructure(null)} onSaved={structureSaved} />}
       {saving && <SaveViewDialog onClose={() => setSaving(false)} onSave={async (name, shared) => {
         await api.post(`${base}/saved-views`, { name, viewType: "table", shared, filters: Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) });

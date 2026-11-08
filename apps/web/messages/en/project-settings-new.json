@@ -11,7 +11,10 @@
       "notify": "Notifications",
       "integ": "Integrations",
       "danger": "Danger zone",
-      "automation": "Automation"
+      "automation": "Automation",
+      "import": "Update plan from Excel",
+      "export": "Export plan + Timeline",
+      "plan-changes": "Plan changes"
     },
     "closed": {
       "title": "Not available yet"

@@ -104,7 +104,7 @@ function PaletteBody({ ws, close }: { ws: string; close: () => void }) {
       { id: "cmd:home", icon: "command", text: t("commands.home"), href: base, show: true },
       { id: "cmd:project", icon: "command", iconLabel: "+", text: t("commands.newProject"), href: `${base}/new-project`, show: workspace.role !== "guest" },
       // Import / Export อยู่ใต้โปรเจกต์ (ผู้ใช้ตัดสิน 2026-11-09)
-      { id: "cmd:import", icon: "command", text: t("commands.import"), href: `${base}/p/${projectKey}/import`, show: workspace.role !== "guest" && !!projectKey },
+      { id: "cmd:import", icon: "command", text: t("commands.import"), href: `${base}/p/${projectKey}/table?io=import`, show: workspace.role !== "guest" && !!projectKey },
       { id: "cmd:profile", icon: "command", text: t("commands.profile"), href: `${base}/profile`, show: true },
       { id: "cmd:search", icon: "command", text: t("commands.search"), href: `${base}/search`, show: true },
     ];

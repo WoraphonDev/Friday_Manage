@@ -113,10 +113,14 @@ const mount = (ui: React.ReactElement) => renderWithProviders(<WorkspaceShell ws
 const settings = (section?: string) => mount(<ProjectSettings ws="sample" projectKey="DE" section={section} />);
 
 describe("Project Settings (L2)", () => {
-  it("เมนู 8 หมวด + Automation · หมวดที่ API ยังไม่มีแสดงว่ายังไม่เปิด · หมวดที่ไม่รู้จัก = ไม่พบหน้า", async () => {
+  it("เมนู 8 หมวด + Import / Export 3 เมนู + Automation · หมวดที่ API ยังไม่มีแสดงว่ายังไม่เปิด · หมวดที่ไม่รู้จัก = ไม่พบหน้า", async () => {
     const a = settings("notify");
     const nav = await screen.findByRole("navigation", { name: "หมวดการตั้งค่า" });
-    expect(within(nav).getAllByRole("link")).toHaveLength(9);
+    expect(within(nav).getAllByRole("link")).toHaveLength(12);
+    // Import / Export อยู่ใน Settings ด้วย (ผู้ใช้ตัดสิน 2026-11-09)
+    expect(within(nav).getByRole("link", { name: "อัปเดตแผนจาก Excel" })).toHaveAttribute("href", "/w/sample/p/DE/settings/import");
+    expect(within(nav).getByRole("link", { name: "Export แผน + Timeline" })).toHaveAttribute("href", "/w/sample/p/DE/settings/export");
+    expect(within(nav).getByRole("link", { name: "การแก้ไขแผน" })).toHaveAttribute("href", "/w/sample/p/DE/settings/plan-changes");
     expect(within(nav).getByRole("link", { name: "การแจ้งเตือน" })).toHaveAttribute("aria-current", "page");
     expect(within(nav).getByRole("link", { name: "Workflow" })).toHaveAttribute("href", "/w/sample/p/DE/settings/workflow");
     expect(within(nav).getByRole("link", { name: /Automation/ })).toHaveAttribute("href", "/w/sample/p/DE/automation");

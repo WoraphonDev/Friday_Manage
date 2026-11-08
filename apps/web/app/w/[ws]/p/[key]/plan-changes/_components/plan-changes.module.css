@@ -28,3 +28,6 @@
   .ch .hs { display:none; }
   .mod { grid-template-columns:minmax(0,1fr) 1fr; }
 }
+
+/* ฝังใน Popup / Settings: ไม่มีระยะขอบของหน้า */
+.body { display:flex; flex-direction:column; gap:16px; min-width:0; }

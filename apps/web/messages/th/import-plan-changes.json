@@ -130,7 +130,10 @@
     "sections": "เมนู Import / Export",
     "section__import": "อัปเดตแผนจาก Excel",
     "section__export": "Export แผน + Timeline",
-    "sectionNote": "ไฟล์ Export ใช้คอลัมน์เดียวกับ Template · แก้ข้างนอกแล้วนำกลับเข้ามาอัปเดตแผนได้ · การแก้แผนหลัง Baseline ดูได้ที่แท็บ \"การแก้ไขแผน\""
+    "sectionNote": "ไฟล์ Export ใช้คอลัมน์เดียวกับ Template · แก้ข้างนอกแล้วนำกลับเข้ามาอัปเดตแผนได้ · การนำเข้าและการแก้ไขแผนเห็นเฉพาะคนที่มีสิทธิ์ตั้ง Baseline",
+    "dialogTitle": "Import / Export",
+    "close": "ปิด",
+    "section__changes": "การแก้ไขแผน (Plan vs Baseline)"
   },
   "changes": {
     "compare": "เทียบกับ Baseline v{version}",

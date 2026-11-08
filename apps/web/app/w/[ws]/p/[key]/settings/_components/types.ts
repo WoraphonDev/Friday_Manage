@@ -1,7 +1,10 @@
 import { api, ApiError } from "@/lib/api";
 
 /** แท็บของ L2 ตามลำดับใน Canvas · notify / integ ยังไม่มี API (03-api › 3.5 p/notification-rules, p/repositories) */
-export const SECTIONS = ["general", "workflow", "types", "modules", "perms", "notify", "integ", "danger"] as const;
+// import / export / plan-changes = Import / Export ของโปรเจกต์ (ผู้ใช้ตัดสิน 2026-11-09) เนื้อหาเดียวกับ Popup ในแท็บ Table
+export const SECTIONS = ["general", "workflow", "types", "modules", "perms", "notify", "integ", "import", "export", "plan-changes", "danger"] as const;
+/** เมนูที่ต้องมีสิทธิ์ project.baseline */
+export const BASELINE_SECTIONS: readonly string[] = ["import", "plan-changes"];
 export type Section = (typeof SECTIONS)[number];
 export const isSection = (v: string | undefined): v is Section => !!v && (SECTIONS as readonly string[]).includes(v);
 

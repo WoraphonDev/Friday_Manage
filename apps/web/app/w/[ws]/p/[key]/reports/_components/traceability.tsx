@@ -48,7 +48,7 @@ export function Traceability({ ws, projectKey, issueHref }: Props) {
     {noRequirements && <div className={`${styles.card} ${styles.banner} ${styles.bannerWarn}`}>
       <b>{t("trace.noFrTitle")}</b>
       <span className={styles.bannerText}>{t("trace.noFrNote")}</span>
-      <Link className="button button-secondary" href={`/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/import`}>{t("trace.importFr")}</Link>
+      <Link className="button button-secondary" href={`/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/table?io=import`}>{t("trace.importFr")}</Link>
     </div>}
     <div className={styles.filters}>
       <div role="group" aria-label={t("trace.kind")} className={styles.filters}>

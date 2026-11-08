@@ -130,7 +130,10 @@
     "sections": "Import / Export menu",
     "section__import": "Update plan from Excel",
     "section__export": "Export plan + Timeline",
-    "sectionNote": "Exports use the template columns · edit outside, then import back to update the plan · plan changes after a baseline are in the \"Plan changes\" tab"
+    "sectionNote": "Exports use the template columns · edit outside, then import back to update the plan · importing and plan changes need the baseline permission",
+    "dialogTitle": "Import / Export",
+    "close": "Close",
+    "section__changes": "Plan changes (Plan vs Baseline)"
   },
   "changes": {
     "compare": "Compare with Baseline v{version}",

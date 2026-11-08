@@ -472,7 +472,7 @@ describe("Workspace / Project shell", () => {
       return within(await screen.findByRole("dialog", { name: "มุมมองเพิ่มเติม" }));
     };
     let menu = await open();
-    expect(menu.getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Reports", "Backlog", "Gantt", "การแก้ไขแผน"]);
+    expect(menu.getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Reports", "Backlog", "Gantt"]); // การแก้ไขแผนย้ายไป Popup Import / Export ของ Table และ Settings (2026-11-09)
     expect(menu.getByRole("button", { name: "Backlog" })).toHaveAccessibleDescription("วางแผน Sprint จากงานที่ยังไม่ได้อยู่ใน Sprint");
     await user.click(menu.getByRole("button", { name: "Backlog" }));
     expect(router.push).toHaveBeenLastCalledWith("/w/sample/p/DE/backlog");

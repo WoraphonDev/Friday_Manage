@@ -5,12 +5,12 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { renderWithProviders } from "@/test/render";
 import { server } from "@/test/server";
-import { navigation } from "@/test/router";
+import { navigation, router } from "@/test/router";
 import { permissions, workspaces } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import messages from "../../messages/th/import-plan-changes.json";
 import { CreateFromExcel } from "../../app/w/[ws]/new-project/excel/create-from-excel";
-import { ProjectImport } from "../../app/w/[ws]/p/[key]/import/_components/project-import";
+import { PlanIoDialog } from "@/features/plan-io/plan-io";
 import type { ImportJob } from "../../app/w/[ws]/import/_components/types";
 import { PlanChangesView, moduleEnds, type Baseline, type PlanChange } from "../../app/w/[ws]/p/[key]/plan-changes/_components/plan-changes-view";
 import type { GanttData, GRow } from "../../app/w/[ws]/p/[key]/gantt/_components/gantt-view";
@@ -118,7 +118,8 @@ function importHandlers(initial: () => ImportJob) {
 const xlsx = (name = "แผนตัวอย่าง.xlsx") => new File(["fake"], name, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 // ผู้ใช้ตัดสิน 2026-11-09: สร้างโปรเจกต์จาก Excel อยู่ที่ New project · อัปเดต / Export อยู่ในโปรเจกต์ (/p/{key}/import)
 const mountImport = () => renderWithProviders(<WorkspaceShell ws="sample"><CreateFromExcel ws="sample" /></WorkspaceShell>, { messages: ns });
-const mountProjectImport = () => renderWithProviders(<WorkspaceShell ws="sample"><ProjectImport ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: ns });
+// Popup Import / Export ในแท็บ Table (ผู้ใช้ตัดสิน 2026-11-09) · เปิดด้วย ?io=
+const mountProjectImport = (io = "import") => { navigation.pathname = "/w/sample/p/DE/table"; navigation.search = `io=${io}`; return renderWithProviders(<WorkspaceShell ws="sample"><PlanIoDialog ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: ns }); };
 
 beforeEach(() => {
   uploads = [];
@@ -226,26 +227,30 @@ describe("Import Excel (L3)", () => {
     expect(await screen.findByText(/req_w14_001/)).toBeInTheDocument();
   });
 
-  it("หน้า Import / Export ของโปรเจกต์: เมนูด้านซ้าย · Export แผน + Timeline ของโปรเจกต์นี้", async () => {
-    navigation.search = "section=export";
+  it("Popup Import / Export ใน Table: เมนูซ้าย 3 เมนู · Export แผน + Timeline ของโปรเจกต์นี้", async () => {
     const user = userEvent.setup();
-    mountProjectImport();
-    const menu = await screen.findByRole("navigation", { name: "เมนู Import / Export" });
-    expect(within(menu).getByRole("link", { name: "อัปเดตแผนจาก Excel" })).toHaveAttribute("href", "/w/sample/p/DE/import");
-    expect(within(menu).getByRole("link", { name: "Export แผน + Timeline" })).toHaveAttribute("aria-current", "page");
-    expect(within(menu).queryByRole("link", { name: /การแก้ไขแผน/ })).not.toBeInTheDocument();
-    // โปรเจกต์ถูกกำหนดจากหน้า ไม่มีช่องเลือกโปรเจกต์ · ช่องละสัปดาห์เพิ่ม ?timeline=week
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: /ดาวน์โหลด Excel/ })).toHaveAttribute("href", "/api/v1/w/sample/projects/DE/export.xlsx");
-    await user.click(screen.getByRole("radio", { name: "ช่องละสัปดาห์" }));
-    expect(screen.getByRole("link", { name: /ดาวน์โหลด Excel/ })).toHaveAttribute("href", "/api/v1/w/sample/projects/DE/export.xlsx?timeline=week");
+    mountProjectImport("export");
+    const dialog = await screen.findByRole("dialog", { name: "Import / Export" });
+    const menu = within(dialog).getByRole("navigation", { name: "เมนู Import / Export" });
+    expect(within(menu).getAllByRole("button").map((b) => b.textContent)).toEqual(["อัปเดตแผนจาก Excel", "Export แผน + Timeline", "การแก้ไขแผน (Plan vs Baseline)"]);
+    expect(within(menu).getByRole("button", { name: "Export แผน + Timeline" })).toHaveAttribute("aria-current", "page");
+    // เปลี่ยนเมนูผ่าน ?io= ใน URL
+    await user.click(within(menu).getByRole("button", { name: "การแก้ไขแผน (Plan vs Baseline)" }));
+    expect(router.replace).toHaveBeenLastCalledWith("/w/sample/p/DE/table?io=changes", { scroll: false });
+    // โปรเจกต์กำหนดจาก Table ไม่มีช่องเลือกโปรเจกต์ · ช่องละสัปดาห์เพิ่ม ?timeline=week
+    expect(within(dialog).queryByRole("combobox")).not.toBeInTheDocument();
+    expect(await within(dialog).findByRole("link", { name: /ดาวน์โหลด Excel/ })).toHaveAttribute("href", "/api/v1/w/sample/projects/DE/export.xlsx");
+    await user.click(within(dialog).getByRole("radio", { name: "ช่องละสัปดาห์" }));
+    expect(within(dialog).getByRole("link", { name: /ดาวน์โหลด Excel/ })).toHaveAttribute("href", "/api/v1/w/sample/projects/DE/export.xlsx?timeline=week");
+    await user.click(within(dialog).getByRole("button", { name: "ปิด" }));
+    expect(router.replace).toHaveBeenLastCalledWith("/w/sample/p/DE/table", { scroll: false });
   });
 
   it("อัปเดตแผนของโปรเจกต์: ส่ง projectKey, diff, งานที่หายจากไฟล์, เหตุผลบันทึกก่อน commit", async () => {
     importHandlers(updateJob);
     const user = userEvent.setup();
     mountProjectImport();
-    expect(await screen.findByRole("link", { name: "อัปเดตแผนจาก Excel" })).toHaveAttribute("aria-current", "page");
+    expect(await screen.findByRole("button", { name: "อัปเดตแผนจาก Excel" })).toHaveAttribute("aria-current", "page");
     expect(screen.queryByRole("radio", { name: /นำเข้าเป็นโปรเจกต์ใหม่/ })).not.toBeInTheDocument();
     await user.upload(screen.getByLabelText("ไฟล์ Excel (.xlsx)"), xlsx());
     await user.click(screen.getByRole("button", { name: "ถัดไป: จับคู่คอลัมน์ →" }));
@@ -269,23 +274,22 @@ describe("Import Excel (L3)", () => {
     expect(await screen.findByRole("heading", { name: "นำเข้าเสร็จแล้ว" })).toBeInTheDocument();
     expect(patches).toContainEqual({ planChangeReason: "ปรับตามขอบเขตใหม่" });
     expect(screen.getByText(/เปลี่ยน 1 · เพิ่ม 1 · ลบ 1 · บันทึกการแก้ไขแผน 1 รายการ/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ดูการแก้ไขแผน" })).toHaveAttribute("href", "/w/sample/p/DE/plan-changes");
+    expect(screen.getByRole("link", { name: "ดูการแก้ไขแผน" })).toHaveAttribute("href", "/w/sample/p/DE/table?io=changes");
   });
 
-  it("ไม่มีสิทธิ์ตั้ง Baseline อัปเดตไม่ได้ · Guest เข้าไม่ได้", async () => {
-    importHandlers(updateJob);
+  it("สมาชิกทั่วไป (ไม่มีสิทธิ์ตั้ง Baseline) เห็นแค่ Export · Guest Viewer ไม่เห็น Popup", async () => {
     server.use(http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () => HttpResponse.json({ ...permissions, role: "member", permissions: ["project.view", "issue.edit"] })));
-    const user = userEvent.setup();
-    const view = mountProjectImport();
-    expect(await screen.findByText("คุณไม่มีสิทธิ์อัปเดตแผนของโปรเจกต์นี้ (ต้องมีสิทธิ์ตั้ง Baseline)")).toBeInTheDocument();
-    await user.upload(screen.getByLabelText("ไฟล์ Excel (.xlsx)"), xlsx());
-    expect(screen.getByRole("button", { name: "ถัดไป: จับคู่คอลัมน์ →" })).toBeDisabled();
+    // ขอเมนูนำเข้า แต่ไม่มีสิทธิ์ → เปิด Export แทน
+    const view = mountProjectImport("import");
+    const dialog = await screen.findByRole("dialog", { name: "Import / Export" });
+    expect(within(dialog).getAllByRole("button", { name: /อัปเดตแผน|Export|การแก้ไขแผน/ }).map((b) => b.textContent)).toEqual(["Export แผน + Timeline"]);
+    expect(within(dialog).queryByLabelText("ไฟล์ Excel (.xlsx)")).not.toBeInTheDocument();
+    expect(await within(dialog).findByRole("link", { name: /ดาวน์โหลด Excel/ })).toBeInTheDocument();
     view.unmount();
 
-    server.use(http.get("*/api/v1/me/workspaces", () => HttpResponse.json({ items: [{ ...workspaces[0], role: "guest" }] })));
-    mountProjectImport();
-    expect(await screen.findByRole("heading", { name: /ไม่มีสิทธิ์/ })).toBeInTheDocument();
-    expect(screen.queryByLabelText("ไฟล์ Excel (.xlsx)")).not.toBeInTheDocument();
+    server.use(http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () => HttpResponse.json({ ...permissions, role: "viewer", guestViewer: true, permissions: ["project.view"] })));
+    mountProjectImport("export");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Import / Export" })).not.toBeInTheDocument());
   });
 });
 

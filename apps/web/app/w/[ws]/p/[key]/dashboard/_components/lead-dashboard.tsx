@@ -61,7 +61,7 @@ export function PlanActions({ plan }: { plan: Plan }) {
   if (!plan.allowed) return null;
   return <>
     <Link className="button button-secondary button-small" href={`${projectBase(plan.ws, plan.projectKey)}/reports`}>{t("createWeekly")}</Link>
-    <Link className="button button-secondary button-small" href={`/w/${encodeURIComponent(plan.ws)}/p/${encodeURIComponent(plan.projectKey)}/import`}>{t("importExport")}</Link>
+    <Link className="button button-secondary button-small" href={`/w/${encodeURIComponent(plan.ws)}/p/${encodeURIComponent(plan.projectKey)}/table?io=import`}>{t("importExport")}</Link>
   </>;
 }
 
@@ -128,7 +128,7 @@ export function PlanModules({ plan }: { plan: Plan }) {
   if (modules.error) return <section className={`${styles.card} ${styles.modCard}`} aria-label={t("modules.title")}><ErrorState error={modules.error} retry={() => void modules.refetch()} /></section>;
   if (!modules.data) return <section className={`${styles.card} ${styles.modCard}`} aria-label={t("modules.title")}><LoadingState /></section>;
   if (!modules.data.summary.taskCount) return <section className={`${styles.card} ${styles.modCard}`} aria-label={t("modules.title")}>
-    <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} action={<Link className="button button-primary" href={`/w/${encodeURIComponent(plan.ws)}/p/${encodeURIComponent(plan.projectKey)}/import`}>{t("importPlan")}</Link>} />
+    <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} action={<Link className="button button-primary" href={`/w/${encodeURIComponent(plan.ws)}/p/${encodeURIComponent(plan.projectKey)}/table?io=import`}>{t("importPlan")}</Link>} />
   </section>;
   return <ModuleTable modules={modules.data.modules} sort={sort} setSort={setSort} today={modules.data.asOf} yearFormat={me.yearFormat} velocityDays={modules.data.velocity.windowDays} />;
 }

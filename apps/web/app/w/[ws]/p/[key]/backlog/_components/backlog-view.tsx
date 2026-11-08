@@ -6,7 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Bookmark, Bug, CheckSquare, ChevronDown, MoreHorizontal, Zap } from "lucide-react";
-import { AvatarStack, Button, Dialog, EmptyState, ErrorState, FloatingNotice, Forbidden, Input, LoadingState, Select, useDismissToasts, useToast } from "@/components/ui";
+import { AvatarStack, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useDismissToasts, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDateRange, today as todayIso, type YearFormat } from "@/lib/format";
@@ -59,9 +59,15 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
   const dismissToasts = useDismissToasts();
   const noticeGroup = `backlog:${ws}:${projectKey}`;
   const setNotice = (next: Notice | null) => { if (next) toast({ ...next, group: noticeGroup }); }; // null = ไม่ต้องทำอะไร: ผลการย้ายหลายครั้งซ้อนกันได้
+  // ย้ายไม่สำเร็จเป็น toast สีแดงที่หายเองเหมือนกัน (ผู้ใช้ขอ 2026-11-08) · บอร์ดโหลดค่าล่าสุดให้เองแทนปุ่ม "โหลดข้อมูลล่าสุด"
+  const setMoveError = (error: unknown) => {
+    if (!error) return;
+    const reason = error instanceof ApiError && error.status === 409 ? t("conflict") : errorText(error, "");
+    const request = error instanceof ApiError && error.requestId ? t("requestId", { id: error.requestId }) : null;
+    toast({ tone: "error", group: noticeGroup, duration: 5000, message: [t("moveFailed"), reason, request].filter(Boolean).join(" · ") });
+  };
   // เปลี่ยนโปรเจกต์ / ออกจากหน้า: Undo ของบอร์ดเดิมไม่ค้าง
   useEffect(() => () => dismissToasts(noticeGroup), [dismissToasts, noticeGroup]);
-  const [moveError, setMoveError] = useState<unknown>(null);
   const [picker, setPicker] = useState<BacklogIssue | null>(null);
   const [showActive, setShowActive] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -107,7 +113,7 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
       await cache.invalidateQueries({ queryKey: backlogKey });
     } catch (error) {
       setMoveError(error);
-      if (error instanceof ApiError && error.status === 409) await cache.invalidateQueries({ queryKey: backlogKey });
+      await cache.invalidateQueries({ queryKey: backlogKey });
     } finally { moveLock.current = false; setMoving(false); clearDrag(); }
   }
   function move(key: string, target: Container, anchor?: { before?: string; after?: string }) {
@@ -213,7 +219,6 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
     </div>
 
     {!empty && <p className={styles.intro}>{t("intro")}</p>}
-    {!!moveError && <FloatingNotice tone="error"><strong>{t("moveFailed")}</strong><span>{moveError instanceof ApiError && moveError.status === 409 ? t("conflict") : errorText(moveError, t("moveFailed"))}</span>{moveError instanceof ApiError && moveError.requestId && <code>{t("requestId", { id: moveError.requestId })}</code>}<Button size="small" onClick={() => { setMoveError(null); void backlog.refetch(); }}>{t("loadLatest")}</Button></FloatingNotice>}
 
     {empty && <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} action={canManage ? <Button variant="primary" onClick={() => setCreating(true)}>{t("createSprint")}</Button> : canCreate ? <Link className="button button-primary" href={href()}>{t("createIssue")}</Link> : undefined} />}
 

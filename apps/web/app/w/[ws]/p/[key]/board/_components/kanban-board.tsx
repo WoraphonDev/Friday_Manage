@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, SlidersHorizontal, Bug, CheckSquare, ChevronLeft, ChevronRight, Flag, ListChecks, MessageCircle, Plus, Zap } from "lucide-react";
-import { AvatarStack, Badge, Button, Dialog, EmptyState, ErrorState, FloatingNotice, Forbidden, LoadingState, Select, useDismissToasts, useToast } from "@/components/ui";
+import { AvatarStack, Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, LoadingState, Select, useDismissToasts, useToast } from "@/components/ui";
 import { api, ApiError, isConfirmCancelled } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -87,9 +87,15 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   const dismissToasts = useDismissToasts();
   const noticeGroup = `kanban:${ws}:${projectKey}`;
   const setNotice = (next: Notice | null) => { if (next) toast({ ...next, group: noticeGroup }); }; // null = ไม่ต้องทำอะไร: ผลการย้ายหลายครั้งซ้อนกันได้
+  // ย้ายไม่สำเร็จเป็น toast สีแดงที่หายเองเหมือนกัน (ผู้ใช้ขอ 2026-11-08) · บอร์ดโหลดค่าล่าสุดให้เองแทนปุ่ม "โหลดข้อมูลล่าสุด"
+  const setMoveError = (error: unknown) => {
+    if (!error) return;
+    const reason = error instanceof ApiError && error.status === 409 ? t("conflict") : error instanceof Error ? error.message : null;
+    const request = error instanceof ApiError && error.requestId ? t("requestId", { id: error.requestId }) : null;
+    toast({ tone: "error", group: noticeGroup, duration: 5000, message: [t("moveFailed"), reason, request].filter(Boolean).join(" · ") });
+  };
   // เปลี่ยนโปรเจกต์ / ออกจากหน้า: Undo ของบอร์ดเดิมไม่ค้าง
   useEffect(() => () => dismissToasts(noticeGroup), [dismissToasts, noticeGroup]);
-  const [moveError, setMoveError] = useState<unknown>(null);
   const endpoint = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
   const boardKey = ["kanban", ws, projectKey];
   const permissions = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${endpoint}/my-permissions`) });
@@ -161,7 +167,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
         setConfirmation({ intent, count: Number(error.details.open ?? 0), undoAction });
       } else {
         setConfirmation(null); setMoveError(error);
-        if (error instanceof ApiError && error.status === 409) await cache.invalidateQueries({ queryKey: boardKey });
+        await cache.invalidateQueries({ queryKey: boardKey });
       }
     } finally { moveLock.current = false; setMoving(false); clearDrag(); }
   }
@@ -287,7 +293,6 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
         {hasFilters && <Button variant="ghost" onClick={() => { setModuleId(""); setMine(false); setOverdue(false); setLevel("all"); }}>{t("reset")}</Button>}
       </div>
     </div>
-    {!!moveError && <FloatingNotice tone="error"><strong>{t("moveFailed")}</strong><span>{moveError instanceof ApiError && moveError.status === 409 ? t("conflict") : moveError instanceof Error ? moveError.message : t("moveFailed")}</span>{moveError instanceof ApiError && moveError.requestId && <code>{t("requestId", { id: moveError.requestId })}</code>}<Button size="small" onClick={() => { setMoveError(null); void board.refetch(); }}>{t("loadLatest")}</Button></FloatingNotice>}
     <div className={styles.mobileColumns} role="group" aria-label={t("columns")}>
       {data.columns.map((column) => <Button key={column.id} className={`${styles.chip} ${column.id === activeColumn ? styles.selected : ""}`} aria-pressed={column.id === activeColumn} onClick={() => setMobileColumn(column.id)}><span className={`${styles.dot} ${styles[column.category]}`} />{column.name} <span>{column.cards.filter((card) => filtered.includes(card)).length}</span></Button>)}
       <Button className={styles.mobileFilterToggle} aria-expanded={filtersOpen} aria-label={t("filters")} onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal size={16} aria-hidden="true" /></Button>

@@ -163,7 +163,7 @@ describe("Backlog + Sprint planning (W12)", () => {
     expect(moves[1].body).toMatchObject({ sprintId: "sp-1" });
   });
 
-  it("409 จาก If-Match แสดงข้อความชนกันพร้อม requestId และโหลดค่าล่าสุด", async () => {
+  it("409 จาก If-Match แสดงข้อความชนกันพร้อม requestId (toast ที่ปิดได้ / หายเอง) และโหลดค่าล่าสุดเอง", async () => {
     const user = userEvent.setup();
     server.use(http.post("*/api/v1/w/:ws/issues/:key/move", () => errorBody(409, "version_conflict")));
     mount();
@@ -171,7 +171,7 @@ describe("Backlog + Sprint planning (W12)", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("งานนี้ถูกแก้ไขโดยคนอื่นแล้ว");
     expect(alert).toHaveTextContent("รหัสคำขอ req_w12_001");
-    await user.click(within(alert).getByRole("button", { name: "โหลดค่าล่าสุด" }));
+    await user.click(within(alert).getByRole("button", { name: "ปิด" }));
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 

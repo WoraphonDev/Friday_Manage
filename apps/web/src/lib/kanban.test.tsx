@@ -244,8 +244,10 @@ describe("Kanban", () => {
   it("move conflict แสดงคำแนะนำ/requestId และไม่ย้ายการ์ดใน UI ล่วงหน้า", async () => {
     const user = userEvent.setup(); server.use(http.post("*/api/v1/w/:ws/issues/:key/move", () => errorResponse(409, "conflict")));
     mount(); await user.click(await screen.findByRole("button", { name: "ย้าย DE-1 ไปคอลัมน์ขวา" }));
-    await screen.findByText("งานนี้มีการเปลี่ยนแปลงแล้ว โหลดข้อมูลล่าสุดก่อนย้ายอีกครั้ง");
-    expect(screen.getByRole("alert")).toHaveTextContent("req_kanban_001");
+    // toast สีแดงที่หายเอง · บอร์ดโหลดค่าล่าสุดให้เอง
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("งานนี้มีการเปลี่ยนแปลงแล้ว โหลดข้อมูลล่าสุดก่อนย้ายอีกครั้ง");
+    expect(alert).toHaveTextContent("req_kanban_001");
     expect(within(column("To do")).getByText("งานตัวอย่าง DE-1")).toBeInTheDocument();
   });
 

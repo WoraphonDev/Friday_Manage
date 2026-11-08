@@ -2099,3 +2099,29 @@ button.menu-item:disabled { cursor:default; opacity:.5; }
     transform: none;
   }
 }
+
+/* ปุ่มย้อนกลับของหน้าย่อย (Admin, Billing, สมาชิก, New project, โปรไฟล์, ค้นหา) · ผู้ใช้ขอ 2026-11-09 */
+.page-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 24px 0;
+  padding: 4px 10px 4px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-label);
+  font-weight: 500;
+  cursor: pointer;
+}
+.page-back:hover {
+  background: #eef0f3;
+  color: var(--foreground);
+}
+@media (max-width: 760px) {
+  .page-back {
+    margin: 10px 16px 0;
+  }
+}

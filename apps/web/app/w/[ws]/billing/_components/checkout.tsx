@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { Lock } from "lucide-react";
 import { Button, ErrorState, Forbidden, Input, LoadingState, Select, buttonVariants } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { ApiError, api, supportId } from "@/lib/api";
@@ -50,6 +51,7 @@ function Option({ on, onClick, title, hint, disabled }: { on: boolean; onClick: 
 /** R2 · ชำระเงิน (บัตร / PromptPay / โอน + หัก ณ ที่จ่าย) */
 export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initialPlan?: string; initialCycle?: string }) {
   const t = useTranslations("saas-pages.checkout");
+  const tc = useTranslations("common");
   const { workspace } = useWorkspace();
   const cache = useQueryClient();
   const base = `/w/${encodeURIComponent(ws)}`;
@@ -263,8 +265,11 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
 
   return (
     <div className={styles.page}>
-      {/* R2: ชื่อหน้าและ "เชื่อมต่อแบบเข้ารหัส" อยู่ในหัวของ shell แล้ว · คง h1 ไว้ให้โปรแกรมอ่านหน้าจอ */}
-      <h1 className="sr-only">{t("title")}</h1>
+      {/* R2: เดิมชื่อหน้าและ "เชื่อมต่อแบบเข้ารหัส" อยู่ในหัวขาวของหน้าชำระเงิน · ตอนนี้ใช้กรอบปกติที่มี Sidebar (ผู้ใช้ขอ 2026-11-09) จึงย้ายมาไว้ในหน้า */}
+      <div className={styles.checkoutHead}>
+        <h1>{t("title")}</h1>
+        <span className={styles.secure}><Lock size={14} aria-hidden="true" />{tc("nav.secure")}</span>
+      </div>
       <div className={styles.steps} aria-label={t("stepsLabel")}>
         {(["plan", "tax", "pay"] as const).map((s, i) => (
           <span key={s} className={cn(styles.step, styles.on)}>

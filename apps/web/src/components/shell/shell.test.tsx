@@ -6,7 +6,7 @@ import { server } from "@/test/server";
 import { navigation, router } from "@/test/router";
 import { renderWithProviders } from "@/test/render";
 import { permissions, workspaces } from "@/test/fixtures";
-import { WorkspaceShell, shellChrome } from "./workspace-shell";
+import { WorkspaceShell, hasBackButton, shellChrome } from "./workspace-shell";
 import { ProjectShell } from "./project-shell";
 import { Providers } from "../providers";
 import { api } from "@/lib/api";
@@ -382,7 +382,10 @@ describe("Workspace / Project shell", () => {
     expect(shellChrome("/w/sample/import")).toBe("workspace");
     expect(shellChrome("/w/sample/admin/security")).toBe("admin");
     expect(shellChrome("/w/sample/billing")).toBe("workspace");
-    expect(shellChrome("/w/sample/billing/checkout")).toBe("checkout");
+    expect(shellChrome("/w/sample/billing/checkout")).toBe("workspace"); // มี Sidebar ทุกหน้า (ผู้ใช้ขอ 2026-11-09)
+    // ปุ่มย้อนกลับเฉพาะหน้าย่อย ไม่ใช่หน้าหลักใน Sidebar / แท็บของโปรเจกต์
+    for (const path of ["/w/sample/admin", "/w/sample/billing/checkout", "/w/sample/members", "/w/sample/new-project/excel", "/w/sample/profile", "/w/sample/search"]) expect(hasBackButton(path)).toBe(true);
+    for (const path of ["/w/sample", "/w/sample/inbox", "/w/sample/my-tasks", "/w/sample/p/DE/table"]) expect(hasBackButton(path)).toBe(false);
   });
 
   it("Admin Console อยู่ล่างสุดของ Sidebar และเมนูล่างมือถือมี 5 รายการตาม M5", async () => {
@@ -404,7 +407,7 @@ describe("Workspace / Project shell", () => {
     expect(bottom.getByRole("link", { name: /Inbox/, hidden: true })).toHaveAttribute("aria-current", "page");
   });
 
-  it("Admin Console ไม่มี Sidebar ของ Workspace และมีลิงก์กลับ (N1)", async () => {
+  it("Admin Console มี Sidebar เหมือนทุกหน้า · ลิงก์กลับ Workspace และปุ่มย้อนกลับ (ผู้ใช้ขอ 2026-11-09)", async () => {
     navigation.pathname = "/w/sample/admin";
     renderWithProviders(
       <WorkspaceShell ws="sample">
@@ -412,21 +415,24 @@ describe("Workspace / Project shell", () => {
       </WorkspaceShell>,
     );
     expect(await screen.findByRole("link", { name: "← กลับไปที่ Workspace" })).toHaveAttribute("href", "/w/sample");
-    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(screen.getByRole("complementary")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ย้อนกลับ" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ค้นหางาน โปรเจกต์ ไฟล์" })).not.toBeInTheDocument();
   });
 
-  it("ชำระเงินใช้หัวขาวเรียบ ไม่มีเมนูหรือกระดิ่ง (R2)", async () => {
+  it("ชำระเงินมี Sidebar เหมือนทุกหน้า และปุ่มย้อนกลับไปหน้าก่อนหน้า (ผู้ใช้ขอ 2026-11-09)", async () => {
     navigation.pathname = "/w/sample/billing/checkout";
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/w/sample/billing");
     renderWithProviders(
       <WorkspaceShell ws="sample">
         <p>Checkout</p>
       </WorkspaceShell>,
     );
-    expect(await screen.findByText("ชำระเงิน · ทีมตัวอย่าง")).toBeInTheDocument();
-    expect(screen.getByText("เชื่อมต่อแบบเข้ารหัส")).toBeInTheDocument();
-    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: "เมนูหลัก", hidden: true })).not.toBeInTheDocument();
+    expect(await screen.findByRole("complementary")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ย้อนกลับ" }));
+    expect(router.back).toHaveBeenCalled();
+    window.history.replaceState({}, "", "/");
   });
 
   it("Automation และภาพรวม Lead ใช้หัวและแท็บชุดเดียวกับหน้าอื่น · Automation อยู่ใต้แท็บ Settings (P2, O1)", async () => {

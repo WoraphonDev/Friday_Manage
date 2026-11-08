@@ -84,3 +84,8 @@
   .aside { position:static; }
   .inv .no { width:auto; }
 }
+
+/* หัวหน้าชำระเงิน: ชื่อหน้า + เชื่อมต่อแบบเข้ารหัส (ย้ายมาจากหัวขาวเดิม) */
+.checkoutHead { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.checkoutHead h1 { margin:0; font-size:22px; }
+.secure { display:inline-flex; align-items:center; gap:6px; font-size:var(--text-label); color:var(--muted); }

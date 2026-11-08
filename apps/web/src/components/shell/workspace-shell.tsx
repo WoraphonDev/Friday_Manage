@@ -22,7 +22,7 @@ import {
   Home,
   Inbox,
   CreditCard,
-  Lock,
+  ArrowLeft,
   LogOut,
   Menu,
   Plus,
@@ -177,14 +177,31 @@ function Navigation({
  *   Canvas O1 Lead, O2 Reports, P2 Automation, P1 Search, L1 Import ไม่มี Sidebar
  *   แต่ผู้ใช้เลือกให้แสดงตลอดเพื่อไม่ให้เมนูหายระหว่างสลับแท็บ (2026-11-07)
  * - admin: top bar ของ Admin Console + เมนูของหน้าเอง (N1, N2)
- * - checkout: หัวขาวเรียบ ไม่มีเมนู (R2)
+ * - หน้าชำระเงิน (R2) เดิมเป็นหัวขาวไม่มีเมนู · ผู้ใช้ขอให้มี Sidebar ทุกหน้า (2026-11-09) จึงใช้กรอบ workspace
+ * ทุกกรอบแสดง Sidebar (ผู้ใช้ขอ 2026-11-09: Sidebar ต้องอยู่ทุกหน้า)
  */
-export type ShellChrome = "workspace" | "admin" | "checkout";
+export type ShellChrome = "workspace" | "admin";
 export function shellChrome(pathname: string): ShellChrome {
   const rest = pathname.replace(/^\/w\/[^/]+/, "");
-  if (/^\/billing\/checkout(\/|$)/.test(rest)) return "checkout";
   if (/^\/admin(\/|$)/.test(rest)) return "admin";
   return "workspace";
+}
+
+/** หน้าย่อยที่มีปุ่มย้อนกลับ (ไม่ใช่หน้าหลักใน Sidebar หรือแท็บของโปรเจกต์) */
+export function hasBackButton(pathname: string): boolean {
+  const rest = pathname.replace(/^\/w\/[^/]+/, "");
+  return /^\/(admin|billing|members|new-project|profile|search)(\/|$)/.test(rest);
+}
+
+/** ย้อนกลับหน้าก่อนหน้า · เปิดมาจากลิงก์ตรง (ไม่มีประวัติ) = กลับหน้า Home ของ Workspace */
+function BackButton({ fallback, label }: { fallback: string; label: string }) {
+  const router = useRouter();
+  return (
+    <button type="button" className="page-back" onClick={() => (window.history.length > 1 ? router.back() : router.push(fallback))}>
+      <ArrowLeft size={16} aria-hidden="true" />
+      {label}
+    </button>
+  );
 }
 
 /** ช่องค้นหาบนแถบบนของหน้าผลการค้นหา (Canvas P1): Enter = ค้นใหม่โดยคงตัวกรองอื่นไว้ */
@@ -520,23 +537,7 @@ export function WorkspaceShell({
         <a className="skip-link" href="#main-content">
           {t("app.skip")}
         </a>
-        {chrome === "checkout" ? (
-          <header className="checkout-header">
-            <div className="checkout-header-inner">
-              <Link className="checkout-brand" href={base}>
-                <FridayLogo size="sm" tagline={false} />
-              </Link>
-              <span className="muted">
-                {t("nav.checkoutTitle", { name: workspace.name })}
-              </span>
-              <span className="topbar-spacer" />
-              <span className="muted checkout-secure">
-                <Lock size={14} aria-hidden="true" />
-                {t("nav.secure")}
-              </span>
-            </div>
-          </header>
-        ) : chrome === "admin" ? (
+        {chrome === "admin" ? (
           <header className="topbar">
             {switcher}
             <Badge className="admin-pill">{t("nav.admin")}</Badge>
@@ -584,81 +585,76 @@ export function WorkspaceShell({
           </header>
         )}
         <div className={`workspace-body chrome-${chrome}`}>
-          {chrome === "workspace" && (
-            <aside className="sidebar">
-              <div className="sidebar-workspace">
-                <div className="menu-label">Workspace</div>
-                {switcher}
-              </div>
-              <Navigation
-                workspace={workspace}
-                projects={projects.data?.items ?? []}
-                unread={unread}
+          <aside className="sidebar">
+            <div className="sidebar-workspace">
+              <div className="menu-label">Workspace</div>
+              {switcher}
+            </div>
+            <Navigation
+              workspace={workspace}
+              projects={projects.data?.items ?? []}
+              unread={unread}
+            />
+            {projects.isPending && <LoadingState />}
+            {projects.error && (
+              <ErrorState
+                error={projects.error}
+                retry={() => void projects.refetch()}
               />
-              {projects.isPending && <LoadingState />}
-              {projects.error && (
-                <ErrorState
-                  error={projects.error}
-                  retry={() => void projects.refetch()}
-                />
-              )}
-            </aside>
-          )}
-          <main className="workspace-main" id="main-content">
-            {chrome !== "checkout" && (
-              <WorkspaceBanners ws={ws} role={workspace.role} />
             )}
+          </aside>
+          <main className="workspace-main" id="main-content">
+            <WorkspaceBanners ws={ws} role={workspace.role} />
+            {hasBackButton(pathname) && <BackButton fallback={base} label={t("nav.back")} />}
             {children}
           </main>
         </div>
-        {chrome !== "checkout" && chrome !== "admin" && (
-          <nav className="mobile-bottom-nav" aria-label={t("nav.mainMenu")}>
-            {[
-              { suffix: "", icon: Home, key: "home" },
-              { suffix: "/my-tasks", icon: CircleCheck, key: "myTasks" },
-            ].map(({ suffix, icon: Icon, key }) => (
-              <Link
-                key={key}
-                className="nav-link"
-                href={`${base}${suffix}`}
-                aria-current={
-                  pathname === `${base}${suffix}` ? "page" : undefined
-                }
-              >
-                <Icon size={22} />
-                {t(`nav.${key}`)}
-              </Link>
-            ))}
-            <button
-              type="button"
-              className="nav-link"
-              aria-current={selectedKey ? "page" : undefined}
-              onClick={() => setMenuOpen(true)}
-            >
-              <FolderKanban size={22} />
-              {t("nav.projects")}
-            </button>
+        <nav className="mobile-bottom-nav" aria-label={t("nav.mainMenu")}>
+          {[
+            { suffix: "", icon: Home, key: "home" },
+            { suffix: "/my-tasks", icon: CircleCheck, key: "myTasks" },
+          ].map(({ suffix, icon: Icon, key }) => (
             <Link
+              key={key}
               className="nav-link"
-              href={`${base}/inbox`}
-              aria-current={pathname === `${base}/inbox` ? "page" : undefined}
-            >
-              <Inbox size={22} />
-              {t("nav.inbox")}
-              {unread > 0 && <span className="bottom-nav-count">{unread}</span>}
-            </Link>
-            <Link
-              className="nav-link"
-              href={`${base}/profile`}
+              href={`${base}${suffix}`}
               aria-current={
-                pathname.startsWith(`${base}/profile`) ? "page" : undefined
+                pathname === `${base}${suffix}` ? "page" : undefined
               }
             >
-              <Avatar person={me.data} size="small" />
-              {t("nav.profileTab")}
+              <Icon size={22} />
+              {t(`nav.${key}`)}
             </Link>
-          </nav>
-        )}
+          ))}
+          <button
+            type="button"
+            className="nav-link"
+            aria-current={selectedKey ? "page" : undefined}
+            onClick={() => setMenuOpen(true)}
+          >
+            <FolderKanban size={22} />
+            {t("nav.projects")}
+          </button>
+          <Link
+            className="nav-link"
+            href={`${base}/inbox`}
+            aria-current={pathname === `${base}/inbox` ? "page" : undefined}
+          >
+            <Inbox size={22} />
+            {t("nav.inbox")}
+            {unread > 0 && <span className="bottom-nav-count">{unread}</span>}
+          </Link>
+          <Link
+            className="nav-link"
+            href={`${base}/profile`}
+            aria-current={
+              pathname.startsWith(`${base}/profile`) ? "page" : undefined
+            }
+          >
+            <Avatar person={me.data} size="small" />
+            {t("nav.profileTab")}
+          </Link>
+        </nav>
         <Drawer
           open={menuOpen}
           onOpenChange={setMenuOpen}

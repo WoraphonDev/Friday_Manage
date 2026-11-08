@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/inbox/**` · `apps/web/src/features/bell/**` · `apps/web/messages/th/inbox-bell.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/inbox/**` · `apps/web/src/features/bell/**` · `apps/web/messages/th/inbox-bell.json` |
 | หน้าจอ | G (`design/canvas/Inbox.dc.html`) · K4 (`design/canvas/Bell.dc.html`) · M3 (`design/canvas/MobileInbox.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · 03-api › 3.9 แถว `me/notifications*` |
 

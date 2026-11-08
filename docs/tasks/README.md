@@ -37,7 +37,7 @@
 | `docker-compose.yml` | A16 |
 | `.github/**`, `scripts/**`, `package.json` ที่ราก | T01 (ยกเว้น `scripts/setup-valkey.sh` ของ A16) |
 | `apps/*/package.json`, `pnpm-lock.yaml` | ทุกงานเพิ่ม dependency ได้เมื่อจำเป็น · ชนกันตอน rebase: เก็บของทั้งสองฝั่งแล้วรัน `pnpm install` |
-| `apps/web/src/components/ui/**`, `src/lib/**`, `app/w/[ws]/layout.tsx`, `app/w/[ws]/p/[key]/layout.tsx`, `messages/th/common.json` | W00 · งานอื่นเพิ่มไฟล์ใหม่ได้ |
+| `apps/web/src/components/ui/**`, `src/lib/**`, `app/work/[ws]/layout.tsx`, `app/work/[ws]/p/[key]/layout.tsx`, `messages/th/common.json` | W00 · งานอื่นเพิ่มไฟล์ใหม่ได้ |
 | `docs/spec/**`, `README.md` ทุกไฟล์, `docs/decisions.md` | D99 · งานอื่นเขียนในบันทึกผลของตัวเอง |
 | `docs/tasks/<ID>-*.md` | งานนั้น (เฉพาะบันทึกผลและ checkbox) |
 | `design/**` | อ่านอย่างเดียว |
@@ -103,23 +103,23 @@
 | [A17](A17-realtime.md) | Realtime (WebSocket) | 1 | — | `apps/api/src/realtime/**` · `apps/api/test/realtime.e2e.test.ts` |
 | [W01](W01-auth-onboarding.md) | Login, สมัคร, ลืมรหัสผ่าน, รับคำเชิญ, Onboarding | 1 | W00, A13 | `apps/web/app/(auth)/**` · `apps/web/messages/th/auth-onboarding.json` |
 | [W02](W02-issue-drawer.md) | Drawer งาน (Task / Sub-task / Bug), ฟอร์มสร้างงาน, ขอเลื่อน Due, Dialog ยืนยัน | 1 | W00, A01, A02, A03 | `apps/web/src/features/issue-drawer/**` · `apps/web/messages/th/issue-drawer.json` |
-| [W03](W03-home-my-tasks.md) | Home และ My Tasks (รวมมือถือ) | 1 | W00, A10 | `apps/web/app/w/[ws]/page.tsx` · `apps/web/app/w/[ws]/my-tasks/**` |
-| [W04](W04-inbox-bell.md) | Inbox และกระดิ่ง | 1 | W00 | `apps/web/app/w/[ws]/inbox/**` · `apps/web/src/features/bell/**` |
-| [W05](W05-overview-table.md) | Overview และ Table ของโปรเจกต์ | 1 | W00, A03, A08 | `apps/web/app/w/[ws]/p/[key]/page.tsx` · `apps/web/app/w/[ws]/p/[key]/table/**` |
-| [W06](W06-kanban.md) | Kanban (รวมมือถือ) | 1 | W00 | `apps/web/app/w/[ws]/p/[key]/board/**` · `apps/web/messages/th/kanban.json` |
-| [W07](W07-timeline.md) | Timeline (SVG เขียนเอง) | 1 | W00 | `apps/web/app/w/[ws]/p/[key]/timeline/**` · `apps/web/messages/th/timeline.json` |
-| [W08](W08-gantt.md) | Gantt (SVG เขียนเอง) | 1 | W00, A07, A02 | `apps/web/app/w/[ws]/p/[key]/gantt/**` · `apps/web/messages/th/gantt.json` |
-| [W09](W09-calendar.md) | Calendar | 1 | W00, A21 | `apps/web/app/w/[ws]/p/[key]/calendar/**` · `apps/web/messages/th/calendar.json` |
-| [W10](W10-members-workload.md) | สมาชิกโปรเจกต์ + Workload และสมาชิก Workspace | 1 | W00, A04, A08, A14 | `apps/web/app/w/[ws]/p/[key]/members/**` · `apps/web/app/w/[ws]/members/**` |
-| [W11](W11-files.md) | Files | 1 | W00, A11 | `apps/web/app/w/[ws]/p/[key]/files/**` · `apps/web/messages/th/files.json` |
-| [W12](W12-backlog.md) | Backlog + Sprint planning | 1 | W00, A06 | `apps/web/app/w/[ws]/p/[key]/backlog/**` · `apps/web/messages/th/backlog.json` |
-| [W13](W13-project-settings-new.md) | Project Settings และสร้างโปรเจกต์ (Wizard) | 1 | W00, A04, A05 | `apps/web/app/w/[ws]/p/[key]/settings/**` · `apps/web/app/w/[ws]/new-project/**` |
-| [W14](W14-import-plan-changes.md) | Import Excel และการแก้ไขแผน | 1 | W00, A07 | `apps/web/app/w/[ws]/import/**` · `apps/web/app/w/[ws]/p/[key]/plan-changes/**` |
-| [W15](W15-lead-dashboard-reports.md) | Lead Dashboard และ Reports | 1 | W00, A09 | `apps/web/app/w/[ws]/p/[key]/dashboard/**` · `apps/web/app/w/[ws]/p/[key]/reports/**` |
-| [W16](W16-search-palette.md) | ค้นหาและ Command palette (Ctrl K) | 1 | W00, A22 | `apps/web/app/w/[ws]/search/**` · `apps/web/src/features/command-palette/**` |
-| [W17](W17-profile.md) | Profile และการตั้งค่าแจ้งเตือนของฉัน | 1 | W00, A13, A20 | `apps/web/app/w/[ws]/profile/**` · `apps/web/messages/th/profile.json` |
-| [W18](W18-admin-automation.md) | Admin Console, หน้าตาข้อความแจ้งเตือน และ Automation | 1 | W00, A18 | `apps/web/app/w/[ws]/admin/**` · `apps/web/app/w/[ws]/p/[key]/automation/**` |
-| [W19](W19-saas-pages.md) | Landing, ราคา, ชำระเงิน, เกินแพ็กเกจ, กฎหมาย + Cookie | 1 | W00, A29, A30 | `apps/web/app/(public)/**` · `apps/web/app/w/[ws]/billing/**` |
+| [W03](W03-home-my-tasks.md) | Home และ My Tasks (รวมมือถือ) | 1 | W00, A10 | `apps/web/app/work/[ws]/page.tsx` · `apps/web/app/work/[ws]/my-tasks/**` |
+| [W04](W04-inbox-bell.md) | Inbox และกระดิ่ง | 1 | W00 | `apps/web/app/work/[ws]/inbox/**` · `apps/web/src/features/bell/**` |
+| [W05](W05-overview-table.md) | Overview และ Table ของโปรเจกต์ | 1 | W00, A03, A08 | `apps/web/app/work/[ws]/p/[key]/page.tsx` · `apps/web/app/work/[ws]/p/[key]/table/**` |
+| [W06](W06-kanban.md) | Kanban (รวมมือถือ) | 1 | W00 | `apps/web/app/work/[ws]/p/[key]/board/**` · `apps/web/messages/th/kanban.json` |
+| [W07](W07-timeline.md) | Timeline (SVG เขียนเอง) | 1 | W00 | `apps/web/app/work/[ws]/p/[key]/timeline/**` · `apps/web/messages/th/timeline.json` |
+| [W08](W08-gantt.md) | Gantt (SVG เขียนเอง) | 1 | W00, A07, A02 | `apps/web/app/work/[ws]/p/[key]/gantt/**` · `apps/web/messages/th/gantt.json` |
+| [W09](W09-calendar.md) | Calendar | 1 | W00, A21 | `apps/web/app/work/[ws]/p/[key]/calendar/**` · `apps/web/messages/th/calendar.json` |
+| [W10](W10-members-workload.md) | สมาชิกโปรเจกต์ + Workload และสมาชิก Workspace | 1 | W00, A04, A08, A14 | `apps/web/app/work/[ws]/p/[key]/members/**` · `apps/web/app/work/[ws]/members/**` |
+| [W11](W11-files.md) | Files | 1 | W00, A11 | `apps/web/app/work/[ws]/p/[key]/files/**` · `apps/web/messages/th/files.json` |
+| [W12](W12-backlog.md) | Backlog + Sprint planning | 1 | W00, A06 | `apps/web/app/work/[ws]/p/[key]/backlog/**` · `apps/web/messages/th/backlog.json` |
+| [W13](W13-project-settings-new.md) | Project Settings และสร้างโปรเจกต์ (Wizard) | 1 | W00, A04, A05 | `apps/web/app/work/[ws]/p/[key]/settings/**` · `apps/web/app/work/[ws]/new-project/**` |
+| [W14](W14-import-plan-changes.md) | Import Excel และการแก้ไขแผน | 1 | W00, A07 | `apps/web/app/work/[ws]/import/**` · `apps/web/app/work/[ws]/p/[key]/plan-changes/**` |
+| [W15](W15-lead-dashboard-reports.md) | Lead Dashboard และ Reports | 1 | W00, A09 | `apps/web/app/work/[ws]/p/[key]/dashboard/**` · `apps/web/app/work/[ws]/p/[key]/reports/**` |
+| [W16](W16-search-palette.md) | ค้นหาและ Command palette (Ctrl K) | 1 | W00, A22 | `apps/web/app/work/[ws]/search/**` · `apps/web/src/features/command-palette/**` |
+| [W17](W17-profile.md) | Profile และการตั้งค่าแจ้งเตือนของฉัน | 1 | W00, A13, A20 | `apps/web/app/work/[ws]/profile/**` · `apps/web/messages/th/profile.json` |
+| [W18](W18-admin-automation.md) | Admin Console, หน้าตาข้อความแจ้งเตือน และ Automation | 1 | W00, A18 | `apps/web/app/work/[ws]/admin/**` · `apps/web/app/work/[ws]/p/[key]/automation/**` |
+| [W19](W19-saas-pages.md) | Landing, ราคา, ชำระเงิน, เกินแพ็กเกจ, กฎหมาย + Cookie | 1 | W00, A29, A30 | `apps/web/app/(public)/**` · `apps/web/app/work/[ws]/billing/**` |
 | [W20](W20-ops-web.md) | หน้าเว็บหลังบ้านทีม Friday | 1 | W00, A32 | `apps/ops-web/**` |
 | [A04](A04-project-core.md) | ข้อมูลโปรเจกต์, สมาชิกโปรเจกต์, Archive / โอน / ลบ, Template | 2 | T00 | `apps/api/src/projects/**` · `apps/api/test/projects.e2e.test.ts` |
 | [A09](A09-lead-dashboard-reports.md) | Lead Dashboard และ Reports | 2 | A08 | `apps/api/src/reports/**` · `apps/api/test/reports.e2e.test.ts` |

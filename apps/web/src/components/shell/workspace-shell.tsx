@@ -88,7 +88,7 @@ function Navigation({
 }) {
   const t = useTranslations("common.nav");
   const pathname = usePathname();
-  const base = `/w/${encodeURIComponent(workspace.slug)}`;
+  const base = `/work/${encodeURIComponent(workspace.slug)}`;
   return (
     <nav aria-label={t("workspaceNav")}>
       <Link
@@ -182,14 +182,14 @@ function Navigation({
  */
 export type ShellChrome = "workspace" | "admin";
 export function shellChrome(pathname: string): ShellChrome {
-  const rest = pathname.replace(/^\/w\/[^/]+/, "");
+  const rest = pathname.replace(/^\/work\/[^/]+/, "");
   if (/^\/admin(\/|$)/.test(rest)) return "admin";
   return "workspace";
 }
 
 /** หน้าย่อยที่มีปุ่มย้อนกลับ (ไม่ใช่หน้าหลักใน Sidebar หรือแท็บของโปรเจกต์) */
 export function hasBackButton(pathname: string): boolean {
-  const rest = pathname.replace(/^\/w\/[^/]+/, "");
+  const rest = pathname.replace(/^\/work\/[^/]+/, "");
   return /^\/(admin|billing|members|new-project|profile|search)(\/|$)/.test(rest);
 }
 
@@ -302,7 +302,7 @@ export function WorkspaceShell({
       const index = Number(event.key) - 1;
       if (/^[1-9]$/.test(event.key) && workspaces.data?.items[index]) {
         event.preventDefault();
-        router.push(`/w/${workspaces.data.items[index].slug}`);
+        router.push(`/work/${workspaces.data.items[index].slug}`);
       }
     }
     document.addEventListener("keydown", shortcut);
@@ -324,7 +324,7 @@ export function WorkspaceShell({
   if (workspace.status === "suspended" || workspace.status === "pending_delete")
     return <Forbidden />;
   if (!me.data) return <LoadingState />;
-  const base = `/w/${encodeURIComponent(ws)}`;
+  const base = `/work/${encodeURIComponent(ws)}`;
   async function logout() {
     await api.post("/auth/logout");
     cache.clear();
@@ -351,7 +351,7 @@ export function WorkspaceShell({
         <Link
           className="workspace-item"
           key={item.id}
-          href={`/w/${encodeURIComponent(item.slug)}`}
+          href={`/work/${encodeURIComponent(item.slug)}`}
           aria-current={item.slug === ws ? "true" : undefined}
           onClick={close}
         >
@@ -425,7 +425,7 @@ export function WorkspaceShell({
               <Link
                 className="workspace-item"
                 key={item.id}
-                href={`/w/${encodeURIComponent(item.slug)}`}
+                href={`/work/${encodeURIComponent(item.slug)}`}
                 aria-current={item.slug === ws ? "true" : undefined}
                 onClick={closeSwitch}
               >

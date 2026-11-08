@@ -52,9 +52,9 @@ export function PlanLimitDialog({
   const planName = PLAN_NAMES[d.plan ?? ""] ?? d.plan ?? "";
   const suggested = d.suggestedPlan ? PLAN_NAMES[d.suggestedPlan] ?? d.suggestedPlan : null;
   const upgrade = suggested && d.suggestedPlan !== "enterprise" ? t("upgradeTo", { plan: suggested }) : t("changePlan");
-  const base = ws ? `/w/${encodeURIComponent(ws)}` : "/";
+  const base = ws ? `/work/${encodeURIComponent(ws)}` : "/";
   // จัดการไฟล์อยู่ในแต่ละโปรเจกต์: ถ้าเปิดจากหน้าโปรเจกต์ให้ไปหน้าไฟล์ของโปรเจกต์นั้น
-  const project = pathname.match(/^\/w\/[^/]+\/p\/([^/]+)/)?.[1];
+  const project = pathname.match(/^\/work\/[^/]+\/p\/([^/]+)/)?.[1];
 
   let content: { tag: string; tone: string; title: string; description: string; bar?: { label: string; value: string; color: string }; points: string[]; manage?: { label: string; href: string } };
   if (d.kind === "seats") {
@@ -150,7 +150,7 @@ export function PlanLimitDialog({
 export function PlanLimitHost() {
   const pathname = usePathname() ?? "";
   const [error, setError] = useState<ApiError | null>(null);
-  const ws = pathname.match(/^\/w\/([^/]+)/)?.[1];
+  const ws = pathname.match(/^\/work\/([^/]+)/)?.[1];
   useEffect(() => {
     const listener = (event: Event) => setError((event as CustomEvent<ApiError>).detail);
     window.addEventListener(API_PLAN_LIMIT, listener);

@@ -19,7 +19,7 @@ function mount(issueKey: string | undefined = 'DE-1', props: Partial<Parameters<
 }
 const loaded = () => screen.findByRole('button', { name: 'งานตัวอย่าง DE-1' });
 const mutations = (suffix: string) => f.state.mutations.filter((row) => row.path.endsWith(suffix));
-beforeEach(() => { f = fixture(); server.use(...f.handlers); close.mockClear(); localStorage.clear(); navigation.pathname='/w/sample/p/DE/board'; navigation.search='issue=DE-1&filter=open'; });
+beforeEach(() => { f = fixture(); server.use(...f.handlers); close.mockClear(); localStorage.clear(); navigation.pathname='/work/sample/p/DE/board'; navigation.search='issue=DE-1&filter=open'; });
 
 describe('Issue drawer details', () => {
   it('loads issue properties, subtasks and safe Markdown; unavailable tabs stay hidden', async () => {
@@ -121,7 +121,7 @@ describe('Issue drawer details', () => {
     const child=await screen.findByRole('dialog',{name:'รายละเอียดงาน DE-2'});
     await waitFor(()=>expect(screen.getByRole('dialog',{name:'รายละเอียดงาน DE-2'})).toHaveClass('drawer-nested'));
     const childPanel=screen.getByRole('dialog',{name:'รายละเอียดงาน DE-2'});
-    expect(router.replace).toHaveBeenLastCalledWith('/w/sample/p/DE/board?filter=open&issue=DE-2',{scroll:false});
+    expect(router.replace).toHaveBeenLastCalledWith('/work/sample/p/DE/board?filter=open&issue=DE-2',{scroll:false});
     await user.click(within(childPanel).getByRole('button',{name:'Sub-task ถัดไป'}));
     await screen.findByRole('dialog',{name:'รายละเอียดงาน DE-3'});
     fireEvent.keyDown(document.body,{key:'ArrowLeft'});
@@ -229,7 +229,7 @@ describe('Create issue',()=>{
     await waitFor(()=>expect(mutations('/projects/DE/issues')).toHaveLength(1));
     expect(mutations('/projects/DE/issues')[0].body).toMatchObject({type:'Task',title:'งานที่สร้างใหม่',moduleId:uid(10),size:'M',estimateMd:5,description:'คำอธิบายใหม่'});
     await screen.findByRole('button',{name:'งานที่สร้างใหม่'});
-    expect(router.replace).toHaveBeenLastCalledWith('/w/sample/p/DE/board?filter=open&issue=DE-20',{scroll:false});
+    expect(router.replace).toHaveBeenLastCalledWith('/work/sample/p/DE/board?filter=open&issue=DE-20',{scroll:false});
   });
   it('creates Bug with required steps, severity/environment and supplied details',async()=>{
     const user=userEvent.setup();createMount();await user.selectOptions(await screen.findByLabelText('ประเภทงาน'),'Bug');
@@ -372,7 +372,7 @@ it('hides recording test results without issue.record_test', async () => {
 it('keeps the Kanban Bug board when moving between issues', async () => {
   const user = userEvent.setup(); navigation.search = 'type=bug&issue=DE-1'; mount(); await loaded();
   await user.click(screen.getByRole('button', { name: /DE-2.*งานย่อยหนึ่ง/ }));
-  await waitFor(() => expect(router.replace).toHaveBeenLastCalledWith('/w/sample/p/DE/board?type=bug&issue=DE-2', { scroll: false }));
+  await waitFor(() => expect(router.replace).toHaveBeenLastCalledWith('/work/sample/p/DE/board?type=bug&issue=DE-2', { scroll: false }));
 });
 
 it('read-only members see checklist and dependencies without edit controls', async () => {

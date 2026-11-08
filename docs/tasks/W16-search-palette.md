@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00, A22 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/search/**` · `apps/web/src/features/command-palette/**` · `apps/web/messages/th/search-palette.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/search/**` · `apps/web/src/features/command-palette/**` · `apps/web/messages/th/search-palette.json` |
 | หน้าจอ | P1 (`design/canvas/Search.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · `GET w/search` (A22) |
 
@@ -28,7 +28,7 @@
 | ส่วน | ไฟล์ | API |
 |---|---|---|
 | Command palette (Ctrl K) | `src/features/command-palette/CommandPalette.tsx` (+ `palette.module.css`) | `GET w/:ws/search?q&limit=8` (`@ชื่อ` ส่ง `type=person` ด้วย) · `GET projects/:key/my-permissions` (cache เดียวกับ shell) |
-| หน้าผลการค้นหา | `app/w/[ws]/search/page.tsx` · `_components/search-page.tsx` (+ `search.module.css`) | `GET w/:ws/search?q&limit=100&sort&project&archived[&type]` · `GET/POST w/:ws/saved-searches` · `DELETE w/:ws/saved-searches/:id` · `GET w/:ws/my-issues?tab=assigned` (ตัวกรอง "มอบหมายให้ฉัน") |
+| หน้าผลการค้นหา | `app/work/[ws]/search/page.tsx` · `_components/search-page.tsx` (+ `search.module.css`) | `GET w/:ws/search?q&limit=100&sort&project&archived[&type]` · `GET/POST w/:ws/saved-searches` · `DELETE w/:ws/saved-searches/:id` · `GET w/:ws/my-issues?tab=assigned` (ตัวกรอง "มอบหมายให้ฉัน") |
 | ของที่ใช้ร่วมกัน | `src/features/command-palette/search-shared.tsx` | ชนิดผลค้นหา, ลิงก์ของแต่ละชนิด, `Highlight` (`<mark>`), ไอคอนตามชนิด, สถานะ |
 
 - คง contract `CommandPalette({workspace,open,onOpenChange})` และไม่แก้ shell · ชื่อ dialog ("ค้นหาใน Workspace"), ช่องพิมพ์ ("ค้นหา") และปุ่มแว่นขยาย ("ค้นหา" ไปหน้าค้นหา) ใช้ข้อความเดิมใน `common` ทำให้ `shell.test.tsx` เดิมยังผ่าน

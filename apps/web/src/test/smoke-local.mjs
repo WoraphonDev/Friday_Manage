@@ -99,8 +99,8 @@ const projectRoutes = [
 ];
 const paths = [
   ...publicRoutes,
-  ...workspaceRoutes.map((path) => `/w/${slug}${path}`),
-  ...projectRoutes.map((path) => `/w/${slug}/p/DE${path}`),
+  ...workspaceRoutes.map((path) => `/work/${slug}${path}`),
+  ...projectRoutes.map((path) => `/work/${slug}/p/DE${path}`),
 ];
 for (const path of paths) {
   const response = await fetch(`${origin}${path}`, {

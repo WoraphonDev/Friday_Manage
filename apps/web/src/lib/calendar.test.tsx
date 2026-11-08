@@ -9,7 +9,7 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import calendar from "../../messages/th/calendar.json";
-import { CalendarView, addDays, mondayOf, monthDays, shiftMonth, type CalIssue, type CalendarData } from "../../app/w/[ws]/p/[key]/calendar/_components/calendar-view";
+import { CalendarView, addDays, mondayOf, monthDays, shiftMonth, type CalIssue, type CalendarData } from "../../app/work/[ws]/p/[key]/calendar/_components/calendar-view";
 
 const person = (id: string, displayName: string) => ({ id, displayName });
 const issue = (key: string, planEnd: string, over: Partial<CalIssue> = {}): CalIssue => ({
@@ -55,7 +55,7 @@ const errorBody = (status: number) => HttpResponse.json({ error: { code: status 
 beforeEach(() => {
   months = []; patches = []; requests = []; deleted = []; d = december();
   feeds = [{ id: "f-other", projectKey: null, createdAt: "2026-11-01T03:00:00Z" }];
-  navigation.pathname = "/w/sample/p/DE/calendar";
+  navigation.pathname = "/work/sample/p/DE/calendar";
   server.use(
     http.get("*/api/v1/w/:ws/projects/:key/calendar", ({ request }) => {
       const month = new URL(request.url).searchParams.get("month");
@@ -119,8 +119,8 @@ describe("Calendar (6)", () => {
     // 4 งานในวันเดียว = แสดง 3 + ปุ่ม +1 more
     expect(screen.queryByTestId("task-DE-9")).not.toBeInTheDocument();
     await user.click(within(day("2026-12-16")).getByRole("button", { name: "+1 more" }));
-    expect(task("DE-9")).toHaveAttribute("href", "/w/sample/p/DE/calendar?issue=DE-9");
-    expect(screen.getByRole("link", { name: "+ Task" })).toHaveAttribute("href", "/w/sample/p/DE/calendar?new=1&type=task");
+    expect(task("DE-9")).toHaveAttribute("href", "/work/sample/p/DE/calendar?issue=DE-9");
+    expect(screen.getByRole("link", { name: "+ Task" })).toHaveAttribute("href", "/work/sample/p/DE/calendar?new=1&type=task");
   });
 
   it("เลื่อนเดือน ก่อนหน้า / ถัดไป / Today", async () => {

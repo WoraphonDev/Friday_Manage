@@ -6,8 +6,8 @@ import { useTranslations } from "next-intl";
 import { Button, Dialog, Input, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
-import { copyText, isEmail, splitEmails } from "../../../app/w/[ws]/p/[key]/members/_components/shared";
-import type { InviteResult, ProjectMembers, ProjectRole, WorkspaceMember } from "../../../app/w/[ws]/p/[key]/members/_components/types";
+import { copyText, isEmail, splitEmails } from "../../../app/work/[ws]/p/[key]/members/_components/shared";
+import type { InviteResult, ProjectMembers, ProjectRole, WorkspaceMember } from "../../../app/work/[ws]/p/[key]/members/_components/types";
 import styles from "./project-invite.module.css";
 
 const num = new Intl.NumberFormat("th-TH", { maximumFractionDigits: 1 });

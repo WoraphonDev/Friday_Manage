@@ -446,12 +446,12 @@ describe('เปลี่ยนรหัสผ่านและอีเมล'
 describe('Google / Microsoft (OAuth + PKCE กับ provider ปลอม)', () => {
   it('start ส่งไป provider พร้อม PKCE S256 · สมัครบัญชีใหม่ให้ถ้ายังไม่มี', async () => {
     const c = await client(t.app);
-    const { authorize, location } = await oauth(c, 'google', { sub: 'g-1001', email: 'Nok@Example.com', email_verified: true, name: 'Nok' }, '?next=/w/friday-dev&remember=true');
+    const { authorize, location } = await oauth(c, 'google', { sub: 'g-1001', email: 'Nok@Example.com', email_verified: true, name: 'Nok' }, '?next=/work/friday-dev&remember=true');
     expect(authorize.origin + authorize.pathname).toBe(`${process.env.OAUTH_GOOGLE_AUTHORIZE_URL}`);
     expect(authorize.searchParams.get('code_challenge_method')).toBe('S256');
     expect(authorize.searchParams.get('redirect_uri')).toBe('http://api.example.test/api/v1/auth/oauth/google/callback');
     expect(tokenRequests.at(-1)?.code_verifier).toMatch(/^[A-Za-z0-9_-]{43,128}$/);
-    expect(location.toString()).toBe('http://web.example.test/w/friday-dev');
+    expect(location.toString()).toBe('http://web.example.test/work/friday-dev');
 
     const me = await c.get('/me');
     expect(me.body).toMatchObject({ email: 'nok@example.com', displayName: 'Nok', emailVerified: true });
@@ -512,12 +512,12 @@ describe('Google / Microsoft (OAuth + PKCE กับ provider ปลอม)', ()
 
   it('ผูกเพิ่มจากหน้า Profile (mode=link) · ลบได้จนเหลือวิธีสุดท้าย', async () => {
     const dev = team.dev;
-    const { location } = await oauth(dev, 'google', { sub: 'g-4004', email: 'kaijeaw.personal@example.com', email_verified: true }, '?mode=link&next=/w/friday-dev/profile');
-    expect(location.pathname).toBe('/w/friday-dev/profile');
+    const { location } = await oauth(dev, 'google', { sub: 'g-4004', email: 'kaijeaw.personal@example.com', email_verified: true }, '?mode=link&next=/work/friday-dev/profile');
+    expect(location.pathname).toBe('/work/friday-dev/profile');
     expect(location.searchParams.get('linked')).toBe('google');
 
     // บัญชี Google ที่ผูกกับคนอื่นแล้ว ผูกซ้ำไม่ได้
-    const taken = await oauth(dev, 'google', { sub: 'g-1001', email: 'nok@example.com', email_verified: true }, '?mode=link&next=/w/friday-dev/profile');
+    const taken = await oauth(dev, 'google', { sub: 'g-1001', email: 'nok@example.com', email_verified: true }, '?mode=link&next=/work/friday-dev/profile');
     expect(taken.location.searchParams.get('error')).toBe('identity_in_use');
     expect((await request(t.app.getHttpServer()).get('/api/v1/auth/oauth/google/start?mode=link')).status).toBe(401);
 

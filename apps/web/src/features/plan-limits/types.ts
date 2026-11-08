@@ -79,6 +79,6 @@ export function baht(satang: number) {
 
 /** ลิงก์ไปหน้าชำระเงินพร้อมแพ็กเกจที่แนะนำ */
 export function checkoutHref(ws: string, plan?: PlanCode | null) {
-  const base = `/w/${encodeURIComponent(ws)}/billing/checkout`;
+  const base = `/work/${encodeURIComponent(ws)}/billing/checkout`;
   return isPaidPlan(plan) ? `${base}?plan=${plan}` : base;
 }

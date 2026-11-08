@@ -24,7 +24,7 @@ afterEach(() => {
   cleanup();
   server.resetHandlers();
   vi.clearAllMocks();
-  navigation.pathname = "/w/sample";
+  navigation.pathname = "/work/sample";
   navigation.search = "";
   document.cookie = "fm_csrf=; Max-Age=0; path=/";
   localStorage.clear();

@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00, A11 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/p/[key]/files/**` · `apps/web/messages/th/files.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/p/[key]/files/**` · `apps/web/messages/th/files.json` |
 | หน้าจอ | 8 (`design/canvas/Files.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · 03-api › 3.8 |
 
@@ -27,7 +27,7 @@
 
 ### หน้าที่เพิ่ม
 
-- `app/w/[ws]/p/[key]/files/page.tsx` (server) → `_components/files-page.tsx` (client) + `files.module.css` + `types.ts` · ข้อความ `messages/th/files.json` (namespace `files`)
+- `app/work/[ws]/p/[key]/files/page.tsx` (server) → `_components/files-page.tsx` (client) + `files.module.css` + `types.ts` · ข้อความ `messages/th/files.json` (namespace `files`)
 - แถบซ้าย: รากของโปรเจกต์ + ต้นไม้โฟลเดอร์ (ซ้อนได้ เยื้องตามระดับ) พร้อมจำนวนไฟล์ · `+ New folder` · ขนาดรวม · Trash พร้อมจำนวน
 - กล่องลากวาง / เลือกไฟล์ (หลายไฟล์) · แถบความคืบหน้าต่อไฟล์ พร้อมยกเลิก (XHR abort) และข้อความเมื่อล้มเหลว · ไฟล์เกิน 100 MB ไม่ส่ง
 - รายการแบบ List (คอลัมน์ตาม Canvas: ชื่อไฟล์ · ผูกกับ · ผู้อัปโหลด · แก้ไขล่าสุด · ขนาด · Ver.) และ Grid · ค้นหาชื่อ (ทั้งโปรเจกต์) · กรองผู้อัปโหลด · เรียง 4 แบบ · breadcrumb เมื่ออยู่ในโฟลเดอร์ · เปลี่ยนชื่อ / ลบโฟลเดอร์

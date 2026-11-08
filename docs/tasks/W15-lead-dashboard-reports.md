@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00, A09 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/p/[key]/dashboard/**` · `apps/web/app/w/[ws]/p/[key]/reports/**` · `apps/web/messages/th/lead-dashboard-reports.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/p/[key]/dashboard/**` · `apps/web/app/work/[ws]/p/[key]/reports/**` · `apps/web/messages/th/lead-dashboard-reports.json` |
 | หน้าจอ | O1 (`design/canvas/LeadDashboard.dc.html`) · O2 (`design/canvas/Reports.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · 03-api › 3.9 แถว insights, reports |
 

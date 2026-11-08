@@ -70,7 +70,7 @@ export class GitService {
     const [ws] = await this.system.select().from(s.workspaces).where(and(eq(s.workspaces.id, claims.w), isNull(s.workspaces.deletedAt)));
     const [member] = await this.system.select({ role: s.workspaceMembers.role }).from(s.workspaceMembers).where(and(eq(s.workspaceMembers.workspaceId, claims.w), eq(s.workspaceMembers.userId, claims.u), eq(s.workspaceMembers.status, 'active')));
     if (!ws || !member || !['owner', 'admin'].includes(member.role)) throw new AppError(403, 'forbidden', 'ผู้เริ่มติดตั้งไม่มีสิทธิ์ตั้งค่า Integration แล้ว', { permission: 'ws.settings' });
-    if (action === 'request') return `${webUrl()}/w/${ws.slug}/admin/integrations?github=pending`;
+    if (action === 'request') return `${webUrl()}/work/${ws.slug}/admin/integrations?github=pending`;
     // state ที่ผู้ใช้ขอเองพิสูจน์แค่ Workspace · installation_id มาจาก query จึงต้องพิสูจน์ด้วยตัวตน GitHub ของผู้ติดตั้ง (BUG-01)
     if (!code) throw new AppError(400, 'github_user_authorization_required', 'GitHub ไม่ได้ส่งการยืนยันตัวตนของผู้ติดตั้งมา · เริ่มติดตั้งใหม่จาก Admin Console');
     if (!this.github.configured) throw new AppError(409, 'github_not_configured', 'ยังไม่ได้ตั้งค่า GitHub App ของระบบ');
@@ -83,7 +83,7 @@ export class GitService {
       : await this.system.insert(s.gitInstallations).values({ workspaceId: ws.id, provider: 'github', accountName: account.accountName, externalInstallationId: installationId }).returning();
     await this.syncRepos(inst!);
     await this.system.insert(s.auditLogs).values({ workspaceId: ws.id, actorId: claims.u, actorKind: 'user', category: 'secu', action: 'integration.github_installed', targetType: 'git_installation', targetId: inst!.id, summary: account.accountName });
-    return `${webUrl()}/w/${ws.slug}/admin/integrations?github=connected`;
+    return `${webUrl()}/work/${ws.slug}/admin/integrations?github=connected`;
   }
 
   private async syncRepos(inst: typeof s.gitInstallations.$inferSelect) {

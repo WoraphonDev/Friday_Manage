@@ -188,11 +188,11 @@ export function OnboardingWizard() {
   async function finish() {
     if (!workspace) return;
     const base = `/w/${workspace.slug}`;
-    if (start === "new") return router.push(`${base}/new-project?method=${method}`);
-    if (start === "import") return router.push(`${base}/new-project/excel`);
+    if (start === "new") return router.push(`/work/${workspace.slug}/new-project?method=${method}`);
+    if (start === "import") return router.push(`/work/${workspace.slug}/new-project/excel`);
     await act(async () => {
       const project = await api.post<{ key: string }>(`${base}/projects/sample`, {});
-      router.push(`${base}/p/${project.key}`);
+      router.push(`/work/${workspace.slug}/p/${project.key}`);
     });
   }
 

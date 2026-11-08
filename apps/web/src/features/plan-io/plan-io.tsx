@@ -8,9 +8,9 @@ import { X } from "lucide-react";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/query";
 import type { Permissions } from "@/lib/types";
-import { ExportPanel } from "../../../app/w/[ws]/import/_components/export-panel";
-import { ImportWizard } from "../../../app/w/[ws]/import/_components/import-wizard";
-import { PlanChangesView } from "../../../app/w/[ws]/p/[key]/plan-changes/_components/plan-changes-view";
+import { ExportPanel } from "../../../app/work/[ws]/import/_components/export-panel";
+import { ImportWizard } from "../../../app/work/[ws]/import/_components/import-wizard";
+import { PlanChangesView } from "../../../app/work/[ws]/p/[key]/plan-changes/_components/plan-changes-view";
 import styles from "./plan-io.module.css";
 
 /**

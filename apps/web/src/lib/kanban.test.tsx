@@ -6,9 +6,9 @@ import { renderWithProviders } from "@/test/render";
 import { server } from "@/test/server";
 import { navigation, router } from "@/test/router";
 import kanban from "../../messages/th/kanban.json";
-import { KanbanBoard } from "../../app/w/[ws]/p/[key]/board/_components/kanban-board";
-import type { BoardCard, BoardData, MoveBody } from "../../app/w/[ws]/p/[key]/board/_components/types";
-import { moveLocal } from "../../app/w/[ws]/p/[key]/board/_components/types";
+import { KanbanBoard } from "../../app/work/[ws]/p/[key]/board/_components/kanban-board";
+import type { BoardCard, BoardData, MoveBody } from "../../app/work/[ws]/p/[key]/board/_components/types";
+import { moveLocal } from "../../app/work/[ws]/p/[key]/board/_components/types";
 
 const person = { id: "dev-one", displayName: "ผู้ทดสอบหนึ่ง", initials: "ท1" };
 function card(key: string, overrides: Partial<BoardCard> = {}): BoardCard {
@@ -33,7 +33,7 @@ const column = (name: string) => screen.getByRole("region", { name: `คอล�
 const errorResponse = (status: number, code: string, details = {}) => HttpResponse.json({ error: { code, message: "ข้อผิดพลาดทดสอบ", details, requestId: "req_kanban_001" } }, { status });
 
 beforeEach(() => {
-  navigation.pathname = "/w/sample/p/DE/board";
+  navigation.pathname = "/work/sample/p/DE/board";
   data = initialBoard(); requests = []; moves = [];
   server.use(
     http.get("*/api/v1/w/:ws/projects/:key/board", ({ request }) => { requests.push(new URL(request.url)); return HttpResponse.json(data); }),
@@ -64,7 +64,7 @@ describe("Kanban", () => {
     expect(within(article("DE-1")).getByTitle("คอมเมนต์ 2")).toBeInTheDocument();
     expect(within(article("DE-1")).getByText("เลย 2 วัน")).toBeInTheDocument();
     expect(within(article("DE-5")).getByText("Verified")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "งานตัวอย่าง DE-1" })).toHaveAttribute("href", "/w/sample/p/DE/board?issue=DE-1");
+    expect(screen.getByRole("link", { name: "งานตัวอย่าง DE-1" })).toHaveAttribute("href", "/work/sample/p/DE/board?issue=DE-1");
     expect(screen.getAllByRole("link", { name: "+ เพิ่มการ์ด" })).toHaveLength(4);
   });
 
@@ -176,7 +176,7 @@ describe("Kanban", () => {
     const user = userEvent.setup(); navigation.search = "issue=DE-1";
     const view = mount(); await screen.findByRole("article", { name: "การ์ด DE-1" });
     await user.selectOptions(screen.getByLabelText("ประเภทบอร์ด"), "bug");
-    expect(router.replace).toHaveBeenCalledWith("/w/sample/p/DE/board?issue=DE-1&type=bug", { scroll: false });
+    expect(router.replace).toHaveBeenCalledWith("/work/sample/p/DE/board?issue=DE-1&type=bug", { scroll: false });
     navigation.search = "type=bug";
     view.rerender(<KanbanBoard ws="sample" projectKey="DE" />);
     await waitFor(() => expect(requests.at(-1)?.searchParams.get("type")).toBe("bug"));
@@ -237,7 +237,7 @@ describe("Kanban", () => {
   it("บอร์ดว่างและคอลัมน์ว่างมีสถานะและปุ่มสร้างตามสิทธิ์", async () => {
     data.columns.forEach((column) => { column.cards = []; column.count = 0; });
     mount(); await screen.findByText("ยังไม่มีงานบนบอร์ด");
-    expect(screen.getByRole("link", { name: "+ สร้างงาน" })).toHaveAttribute("href", "/w/sample/p/DE/board?new=1&type=task");
+    expect(screen.getByRole("link", { name: "+ สร้างงาน" })).toHaveAttribute("href", "/work/sample/p/DE/board?new=1&type=task");
     expect(screen.getAllByText("ไม่มีงานในคอลัมน์นี้")).toHaveLength(4);
   });
 

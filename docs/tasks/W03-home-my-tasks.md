@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00, A10 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/page.tsx` · `apps/web/app/w/[ws]/my-tasks/**` · `apps/web/messages/th/home-my-tasks.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/page.tsx` · `apps/web/app/work/[ws]/my-tasks/**` · `apps/web/messages/th/home-my-tasks.json` |
 | หน้าจอ | E (`design/canvas/Home.dc.html`) · F (`design/canvas/MyTasks.dc.html`) · M2 (`design/canvas/MobileMyTasks.dc.html`) · M5 (`design/canvas/MobileHome.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · 03-api › 2 หน้า E, F |
 
@@ -35,7 +35,7 @@
 
 **สถานะตาม M1**: กำลังโหลด (`LoadingState`) · ว่าง (`EmptyState`) · Error พร้อม requestId (`ErrorState`) · 403 (`Forbidden`) · ปุ่มอนุมัติซ่อนตาม `canDecide`
 
-ไฟล์: `app/w/[ws]/page.tsx`, `app/w/[ws]/my-tasks/page.tsx`, `app/w/[ws]/my-tasks/_components/*` (Home ใช้ component จากโฟลเดอร์นี้เพื่ออยู่ใน lane), `messages/th/home-my-tasks.json`, test `src/lib/home-my-tasks.test.tsx`
+ไฟล์: `app/work/[ws]/page.tsx`, `app/work/[ws]/my-tasks/page.tsx`, `app/work/[ws]/my-tasks/_components/*` (Home ใช้ component จากโฟลเดอร์นี้เพื่ออยู่ใน lane), `messages/th/home-my-tasks.json`, test `src/lib/home-my-tasks.test.tsx`
 
 ### คำตัดสินที่เลือกเอง / ต่างจาก Canvas
 

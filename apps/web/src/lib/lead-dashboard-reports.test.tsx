@@ -11,10 +11,10 @@ import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import messages from "../../messages/th/lead-dashboard-reports.json";
 import ot from "../../messages/th/overview-table.json";
 import { overview } from "@/test/overview-fixture";
-import { OverviewPage } from "../../app/w/[ws]/p/[key]/table/_components/overview";
-import { heatLevel } from "../../app/w/[ws]/p/[key]/dashboard/_components/workload-heatmap";
-import { ReportsView } from "../../app/w/[ws]/p/[key]/reports/_components/reports-view";
-import { addDays, type ForecastResponse, type ModuleStat, type ModulesResponse, type RisksResponse, type TraceabilityResponse, type WeeklyReport, type WorkloadCell, type WorkloadResponse } from "../../app/w/[ws]/p/[key]/dashboard/_components/types";
+import { OverviewPage } from "../../app/work/[ws]/p/[key]/table/_components/overview";
+import { heatLevel } from "../../app/work/[ws]/p/[key]/dashboard/_components/workload-heatmap";
+import { ReportsView } from "../../app/work/[ws]/p/[key]/reports/_components/reports-view";
+import { addDays, type ForecastResponse, type ModuleStat, type ModulesResponse, type RisksResponse, type TraceabilityResponse, type WeeklyReport, type WorkloadCell, type WorkloadResponse } from "../../app/work/[ws]/p/[key]/dashboard/_components/types";
 
 // วันนี้สมมติ: พ. 2 ธ.ค. 2569 → สัปดาห์นี้เริ่ม 30 พ.ย.
 const NOW = new Date("2026-12-02T10:00:00+07:00");
@@ -136,8 +136,8 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); });
 
 // ส่วนแผนอยู่ในหน้า Overview (รวมเป็นหน้าเดียว 2026-11-08) จึง mount หน้า Overview จริง
-const mountDashboard = () => { navigation.pathname = "/w/sample/p/DE"; navigation.search = ""; return renderWithProviders(<WorkspaceShell ws="sample"><OverviewPage ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: { "lead-dashboard-reports": messages, "overview-table": ot } }); };
-const mountReports = (search = "") => { navigation.pathname = "/w/sample/p/DE/reports"; navigation.search = search; return renderWithProviders(<WorkspaceShell ws="sample"><ReportsView ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: { "lead-dashboard-reports": messages } }); };
+const mountDashboard = () => { navigation.pathname = "/work/sample/p/DE"; navigation.search = ""; return renderWithProviders(<WorkspaceShell ws="sample"><OverviewPage ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: { "lead-dashboard-reports": messages, "overview-table": ot } }); };
+const mountReports = (search = "") => { navigation.pathname = "/work/sample/p/DE/reports"; navigation.search = search; return renderWithProviders(<WorkspaceShell ws="sample"><ReportsView ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: { "lead-dashboard-reports": messages } }); };
 
 describe("แผนทั้งโปรเจกต์ใน Overview (O1)", () => {
   it("ตัวเลขแผนในการ์ดสรุป, ความเสี่ยงพร้อมลิงก์งาน และปุ่มรายงานบนแถบเครื่องมือ", async () => {
@@ -162,11 +162,11 @@ describe("แผนทั้งโปรเจกต์ใน Overview (O1)", ()
     expect(document.getElementById("planning")).toBe(risks);
     expect(within(risks).getAllByRole("listitem")).toHaveLength(2);
     expect(within(risks).getByRole("img", { name: "ความเสี่ยงสูง" })).toHaveTextContent("!");
-    expect(within(risks).getByRole("link", { name: "DE-12" })).toHaveAttribute("href", "/w/sample/p/DE?issue=DE-12");
-    expect(within(risks).getByRole("link", { name: "ดูงานใน Table" })).toHaveAttribute("href", "/w/sample/p/DE/table");
-    expect(within(risks).getByRole("link", { name: "ดู Workload" })).toHaveAttribute("href", "/w/sample/p/DE/members");
-    expect(screen.getByRole("link", { name: "สร้างรายงานประจำสัปดาห์" })).toHaveAttribute("href", "/w/sample/p/DE/reports");
-    expect(screen.getByRole("link", { name: "Import / Export" })).toHaveAttribute("href", "/w/sample/p/DE/table?io=import");
+    expect(within(risks).getByRole("link", { name: "DE-12" })).toHaveAttribute("href", "/work/sample/p/DE?issue=DE-12");
+    expect(within(risks).getByRole("link", { name: "ดูงานใน Table" })).toHaveAttribute("href", "/work/sample/p/DE/table");
+    expect(within(risks).getByRole("link", { name: "ดู Workload" })).toHaveAttribute("href", "/work/sample/p/DE/members");
+    expect(screen.getByRole("link", { name: "สร้างรายงานประจำสัปดาห์" })).toHaveAttribute("href", "/work/sample/p/DE/reports");
+    expect(screen.getByRole("link", { name: "Import / Export" })).toHaveAttribute("href", "/work/sample/p/DE/table?io=import");
   });
 
   it("Heatmap Workload: 24 สัปดาห์, สีตามสัดส่วน capacity, ค่าสูงสุด และคลิกช่องดูงาน", async () => {
@@ -186,7 +186,7 @@ describe("แผนทั้งโปรเจกต์ใน Overview (O1)", ()
 
     await user.click(within(rowA).getByRole("button", { name: `${devA.displayName} · สัปดาห์ 30/11 · 12 MD / 5` }));
     const panel = screen.getByRole("region", { name: /งานของ ผู้พัฒนาตัวอย่างหนึ่ง สัปดาห์/ });
-    expect(within(panel).getByRole("link", { name: "DE-11" })).toHaveAttribute("href", "/w/sample/p/DE?issue=DE-11");
+    expect(within(panel).getByRole("link", { name: "DE-11" })).toHaveAttribute("href", "/work/sample/p/DE?issue=DE-11");
     expect(panel).toHaveTextContent("8 MD");
     await user.click(within(panel).getByRole("button", { name: "ปิด" }));
     expect(screen.queryByRole("region", { name: /งานของ/ })).not.toBeInTheDocument();
@@ -222,7 +222,7 @@ describe("แผนทั้งโปรเจกต์ใน Overview (O1)", ()
     const first = mountDashboard();
     expect(screen.getAllByLabelText("กำลังโหลด…").length).toBeGreaterThan(0);
     expect(await screen.findByText("ยังไม่มีงานในแผน")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Import แผนจาก Excel" })).toHaveAttribute("href", "/w/sample/p/DE/table?io=import");
+    expect(screen.getByRole("link", { name: "Import แผนจาก Excel" })).toHaveAttribute("href", "/work/sample/p/DE/table?io=import");
     first.unmount();
 
     server.use(http.get("*/api/v1/w/:ws/projects/:key/insights/risks", () => errorBody(500)));
@@ -265,7 +265,7 @@ describe("Reports (O2)", () => {
     expect(doc).toHaveTextContent("10 / 70");
     expect(doc).toHaveTextContent("เสร็จแล้ว 4 งาน (9 MD) · กำลังทำ 6 งาน · รอ Review 2 งาน");
     expect(doc).toHaveTextContent(`งานเลยกำหนด 3 งาน: ${devA.displayName} 3`);
-    expect(within(doc).getByRole("link", { name: "DE-40" })).toHaveAttribute("href", "/w/sample/p/DE/reports?issue=DE-40");
+    expect(within(doc).getByRole("link", { name: "DE-40" })).toHaveAttribute("href", "/work/sample/p/DE/reports?issue=DE-40");
     expect(doc).toHaveTextContent("หยุด 7 ธ.ค. 69");
     expect(doc).toHaveTextContent("เริ่มตามแผน 7 งาน (15.5 MD): ระบบตัวอย่าง A 4 · ระบบตัวอย่าง B 3");
     expect(doc).toHaveTextContent("ปิด Sprint 3 11 ธ.ค. 69");
@@ -329,7 +329,7 @@ describe("Reports (O2)", () => {
     expect(rows[2]).toHaveTextContent("ยังไม่เริ่ม");
     expect(rows[3]).toHaveTextContent("เป้า ส่งมอบชุดแรก");
     expect(rows[3]).toHaveTextContent("เร็วกว่า 1 วัน");
-    expect(screen.getByRole("link", { name: "อัปเดต Actual จาก Excel" })).toHaveAttribute("href", "/w/sample/p/DE/table?io=import");
+    expect(screen.getByRole("link", { name: "อัปเดต Actual จาก Excel" })).toHaveAttribute("href", "/work/sample/p/DE/table?io=import");
   });
 
   it("Traceability: KPI, ตาราง FR × งาน, ตัวกรองประเภท / ผลทดสอบ และงานที่ไม่มี FR", async () => {
@@ -344,9 +344,9 @@ describe("Reports (O2)", () => {
     expect(fr).toHaveTextContent("SCR-01");
     expect(fr).toHaveTextContent("ผ่าน");
     expect(within(fr).getByRole("meter", { name: "ความคืบหน้า FR-01" })).toHaveAttribute("aria-valuenow", "100");
-    expect(within(fr).getByRole("link", { name: "DE-1" })).toHaveAttribute("href", "/w/sample/p/DE/reports?issue=DE-1");
+    expect(within(fr).getByRole("link", { name: "DE-1" })).toHaveAttribute("href", "/work/sample/p/DE/reports?issue=DE-1");
     expect(within(table).getByRole("row", { name: /^NFR-01/ })).toHaveTextContent("ไม่ผ่าน");
-    expect(within(table).getByRole("link", { name: "ระบุ FR" })).toHaveAttribute("href", "/w/sample/p/DE/reports?issue=DE-50");
+    expect(within(table).getByRole("link", { name: "ระบุ FR" })).toHaveAttribute("href", "/work/sample/p/DE/reports?issue=DE-50");
 
     await user.click(screen.getByRole("button", { name: "NFR" }));
     await waitFor(() => expect(requests).toContain("trace?kind=NFR"));
@@ -358,6 +358,6 @@ describe("Reports (O2)", () => {
     server.use(http.get("*/api/v1/w/:ws/projects/:key/reports/traceability", () => HttpResponse.json({ ...traceData(), summary: { ...traceData().summary, requirements: { total: 0, uncovered: 0, untested: 0, partial: 0, passed: 0, failed: 0, blocked: 0 } }, requirements: [], screens: [] })));
     mountReports("report=trace");
     expect(await screen.findByText("ยังไม่ได้นำเข้ารายการ FR จาก SRS")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "นำเข้ารายการ FR" })).toHaveAttribute("href", "/w/sample/p/DE/table?io=import");
+    expect(screen.getByRole("link", { name: "นำเข้ารายการ FR" })).toHaveAttribute("href", "/work/sample/p/DE/table?io=import");
   });
 });

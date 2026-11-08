@@ -2228,7 +2228,7 @@
       "files": [
         "apps/web/src/components/shell/workspace-shell.tsx",
         "apps/web/src/components/shell/project-shell.tsx",
-        "apps/web/app/w/[ws]/admin/_components/admin-console.tsx"
+        "apps/web/app/work/[ws]/admin/_components/admin-console.tsx"
       ],
       "expected": "N1/O1/O2/N2/P2/R2 ใช้ header/navigation เฉพาะบริบทตามแต่ละบอร์ด",
       "actual": "Admin/Reports มีเมนู Workspace ซ้อนกับเมนูของหน้า; Lead/Reports/Automation มี project header เต็ม; Checkout มี sidebar/search/bell ที่แบบ R2 ไม่มี",
@@ -2267,8 +2267,8 @@
       ],
       "lane": "W05",
       "files": [
-        "apps/web/app/w/[ws]/p/[key]/table/_components/overview.tsx",
-        "apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css"
+        "apps/web/app/work/[ws]/p/[key]/table/_components/overview.tsx",
+        "apps/web/app/work/[ws]/p/[key]/table/_components/ot.module.css"
       ],
       "expected": "การ์ดรวมมี donut progress, เวลา/งานเสร็จ, Go-live, Milestone และ Health ภายในกรอบเดียว",
       "actual": "ใช้ .top grid 5 cards; ไม่มี donut; Health อยู่อีกกรอบ แยกการอ่านออกจากกัน",
@@ -2284,8 +2284,8 @@
       ],
       "lane": "W05",
       "files": [
-        "apps/web/app/w/[ws]/p/[key]/table/_components/overview.tsx",
-        "apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css"
+        "apps/web/app/work/[ws]/p/[key]/table/_components/overview.tsx",
+        "apps/web/app/work/[ws]/p/[key]/table/_components/ot.module.css"
       ],
       "expected": "4 KPI cards แยกกรอบพร้อมจุดสี/เส้นเลือก; รายการมี checkbox และบรรทัด Module/กลุ่มงาน; ข้อมูลโปรเจกต์มีเป้าหมาย ขอบเขต เอกสาร อยู่ใต้กราฟด้านซ้าย",
       "actual": "KPI เชื่อมเป็น tab strip ใน list card; รายการลดเป็นบรรทัดเดียว; project info ย้ายไปคอลัมน์ขวาและเหลือ Lead/จำนวนสมาชิก",
@@ -2301,7 +2301,7 @@
       ],
       "lane": "W05",
       "files": [
-        "apps/web/app/w/[ws]/p/[key]/table/_components/table-view.tsx"
+        "apps/web/app/work/[ws]/p/[key]/table/_components/table-view.tsx"
       ],
       "expected": "มี Views งานของฉัน/Overdue/Sprint/Backlog; Filter, Group by, BA, Dev, Size, Sort, Columns, Import/Export, +Module/+Task",
       "actual": "ใช้ search + select Status/Dev/Priority/ระดับ กับสอง toggle; ชุด Group by/BA/Size/Sort/Columns และ action หลายตัวไม่อยู่ใน toolbar ตามแบบ",
@@ -2317,8 +2317,8 @@
       ],
       "lane": "W05",
       "files": [
-        "apps/web/app/w/[ws]/p/[key]/table/_components/table-view.tsx",
-        "apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css"
+        "apps/web/app/work/[ws]/p/[key]/table/_components/table-view.tsx",
+        "apps/web/app/work/[ws]/p/[key]/table/_components/ot.module.css"
       ],
       "expected": "สถานะเป็น pill/ตัวบ่งชี้สีในแถว; มี FR/Screen; header/column widths และแถวกลุ่มตามแบบ",
       "actual": "Status/Priority เป็น select box ค้างทุกแถว, เพิ่ม Priority column แต่ไม่มี FR/Screen แบบ; row density และสี group ต่าง",
@@ -2334,8 +2334,8 @@
       ],
       "lane": "W05",
       "files": [
-        "apps/web/app/w/[ws]/p/[key]/table/_components/table-view.tsx",
-        "apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css"
+        "apps/web/app/work/[ws]/p/[key]/table/_components/table-view.tsx",
+        "apps/web/app/work/[ws]/p/[key]/table/_components/ot.module.css"
       ],
       "expected": "เลือกแถวแล้ว bulk bar อยู่เหนือหัวตาราง; แถว Module/Phase มี action เพิ่มงานและท้ายกลุ่ม",
       "actual": "bulk bar เป็นแถบ sticky ล่าง; action inline และแถวเพิ่ม Task/สรุปท้ายกลุ่มไม่ครบตามแบบ",
@@ -2424,7 +2424,7 @@
       ],
       "lane": "W03",
       "files": [
-        "apps/web/app/w/[ws]/my-tasks/_components/home-page.tsx"
+        "apps/web/app/work/[ws]/my-tasks/_components/home-page.tsx"
       ],
       "expected": "M5 มีหัวต้อนรับ/ค้นหา, KPI 3 ช่องแถวเดียว, รออนุมัติ/วันนี้ก่อนโปรเจกต์ ใน 844 px",
       "actual": "เพิ่ม top bar และ +New project; KPI desktop 5 ช่องกินหลายแถว ทำให้สิ่งที่ต้องทำเลื่อนลงมาก",
@@ -2440,7 +2440,7 @@
       ],
       "lane": "W05 + W00",
       "files": [
-        "apps/web/app/w/[ws]/p/[key]/table/_components/overview.tsx",
+        "apps/web/app/work/[ws]/p/[key]/table/_components/overview.tsx",
         "apps/web/src/components/shell/project-shell.tsx"
       ],
       "expected": "M6 header รวม tabs สูง 127 px และ summary compact ที่มี progress/KPI 3 ช่อง ก่อน Milestone/ความเสี่ยง",
@@ -2458,8 +2458,8 @@
       ],
       "lane": "W03/W04 + W00",
       "files": [
-        "apps/web/app/w/[ws]/my-tasks/_components/my-tasks-page.tsx",
-        "apps/web/app/w/[ws]/inbox/_components/inbox-page.tsx"
+        "apps/web/app/work/[ws]/my-tasks/_components/my-tasks-page.tsx",
+        "apps/web/app/work/[ws]/inbox/_components/inbox-page.tsx"
       ],
       "expected": "My Tasks มี avatar filters/search/filter icon และรายการกะทัดรัด; Inbox มี title/read-all inline และ 3 filter chips",
       "actual": "ยังมีแถบ header กลางและชุด desktop filter/action button; Inbox filter หลายชุดและใช้พื้นที่แนวตั้งมากกว่า",
@@ -2475,8 +2475,8 @@
       ],
       "lane": "W06 + W00",
       "files": [
-        "apps/web/app/w/[ws]/p/[key]/board/_components/kanban-board.tsx",
-        "apps/web/app/w/[ws]/p/[key]/board/_components/kanban.module.css"
+        "apps/web/app/work/[ws]/p/[key]/board/_components/kanban-board.tsx",
+        "apps/web/app/work/[ws]/p/[key]/board/_components/kanban.module.css"
       ],
       "expected": "M7 app bar ขาว, status chips กับ WIP notice, card กระชับและปุ่มย้ายไป",
       "actual": "มี dark globalbar/project header/filters หลายแถว; card แสดงปุ่มลูกศร/เรียงหลายปุ่มเพิ่ม",
@@ -2509,7 +2509,7 @@
       ],
       "lane": "W14 + W00",
       "files": [
-        "apps/web/app/w/[ws]/import/_components/import.module.css",
+        "apps/web/app/work/[ws]/import/_components/import.module.css",
         "apps/web/src/styles/globals.css"
       ],
       "expected": "CTA ต้องอยู่เหนือ fixed navigation และแตะได้ที่ 390×844",
@@ -2526,7 +2526,7 @@
       ],
       "lane": "W17",
       "files": [
-        "apps/web/app/w/[ws]/profile/_components/notify-tab.tsx"
+        "apps/web/app/work/[ws]/profile/_components/notify-tab.tsx"
       ],
       "expected": "I มี In-app, Email, LINE ส่วนตัว และ dashed card กลุ่มทีม LINE/Webhook ลิงก์ไป Project Settings",
       "actual": "UI แสดง 3 personal connection cards ไม่มีตัวอธิบาย/ทางเข้ากลุ่มทีมตามแบบ",
@@ -2542,7 +2542,7 @@
       ],
       "lane": "W10",
       "files": [
-        "apps/web/app/w/[ws]/members/_components/invite-dialog.tsx"
+        "apps/web/app/work/[ws]/members/_components/invite-dialog.tsx"
       ],
       "expected": "Invite modal ตาม H มี role cards และข้อมูลเชิญ/โปรเจกต์/ตัวเลือกเสริมเรียงตามแบบ",
       "actual": "เปิด modal ได้ แต่ใช้ select/field layout ทั่วไปและกรอบ Dialog ร่วม ทำให้ตำแหน่ง/ความกว้างไม่ตรง",
@@ -2623,7 +2623,7 @@
       ],
       "lane": "W13",
       "files": [
-        "apps/web/app/w/[ws]/new-project/_components"
+        "apps/web/app/work/[ws]/new-project/_components"
       ],
       "expected": "A วาง Scrum/Kanban/Waterfall 3 ตัวเลือกในแถวและ Blank แถวถัดไป",
       "actual": "UI วาง 4 ตัวเลือกเป็น 2×2 ทำให้ความสูงและแนวปุ่มถัดไปเปลี่ยน",

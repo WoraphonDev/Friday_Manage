@@ -21,7 +21,7 @@ import styles from './issue-drawer.module.css';
 export function IssueDrawer({ issueKey, onClose }: { issueKey?: string; onClose: () => void }) {
   const { workspace, me } = useWorkspace();
   const pathname = usePathname();
-  const route = /^\/w\/[^/]+\/p\/([^/?]+)/.exec(pathname);
+  const route = /^\/work\/[^/]+\/p\/([^/?]+)/.exec(pathname);
   const projectKey = route ? decodeURIComponent(route[1]) : issueKey?.replace(/-\d+$/, '') ?? '';
   return <IssueDrawerHost key={`${workspace.slug}/${projectKey}/${me.id}`} ws={workspace.slug} projectKey={projectKey} meId={me.id} yearFormat={me.yearFormat} issueKey={issueKey} onClose={onClose} />;
 }

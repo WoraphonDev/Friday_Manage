@@ -67,7 +67,7 @@ function PaletteBody({ ws, close }: { ws: string; close: () => void }) {
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
   const [recent] = useState(() => readRecent(ws));
-  const base = `/w/${encodeURIComponent(ws)}`;
+  const base = `/work/${encodeURIComponent(ws)}`;
 
   // อยู่ในโปรเจกต์ = แสดงขอบเขต และให้ผลของโปรเจกต์นั้นขึ้นก่อน
   const projectKey = pathname.match(/\/p\/([^/]+)/)?.[1];

@@ -90,7 +90,7 @@ describe('ติดตั้ง GitHub App', () => {
     const state = new URL((await team.lead.get(`${team.ws}/integrations/git/install-url`)).body.url).searchParams.get('state')!;
     const r = await anon().get(`/api/v1/hooks/github/setup?installation_id=${INSTALL}&setup_action=install&code=owner-code&state=${encodeURIComponent(state)}`).redirects(0);
     expect(r.status).toBe(302);
-    expect(r.headers.location).toBe(`https://app.friday.test/w/${team.slug}/admin/integrations?github=connected`);
+    expect(r.headers.location).toBe(`https://app.friday.test/work/${team.slug}/admin/integrations?github=connected`);
     const list = await team.lead.get(`${team.ws}/integrations/git`);
     expect(list.body).toMatchObject({ configured: true, items: [{ provider: 'github', accountName: `org-${INSTALL}`, status: 'active', repositories: [{ fullName: REPO, defaultBranch: 'main', projects: [] }, { fullName: 'friday-org/portal', defaultBranch: 'develop' }] }] });
     instId = list.body.items[0].id;

@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00, A04, A05 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/p/[key]/settings/**` · `apps/web/app/w/[ws]/new-project/**` · `apps/web/messages/th/project-settings-new.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/p/[key]/settings/**` · `apps/web/app/work/[ws]/new-project/**` · `apps/web/messages/th/project-settings-new.json` |
 | หน้าจอ | L2 (`design/canvas/ProjectSettings.dc.html`) · A (`design/canvas/NewProject.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · 03-api › 3.4, 3.5 |
 

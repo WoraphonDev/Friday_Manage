@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00, A07, A02 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/p/[key]/gantt/**` · `apps/web/messages/th/gantt.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/p/[key]/gantt/**` · `apps/web/messages/th/gantt.json` |
 | หน้าจอ | 5 (`design/canvas/Gantt.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · `GET p/gantt` (A07) |
 

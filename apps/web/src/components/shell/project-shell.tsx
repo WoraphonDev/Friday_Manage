@@ -125,7 +125,7 @@ export function ProjectShell({
   const cache = useQueryClient();
   const ws = workspace.slug;
   const endpoint = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
-  const base = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}`;
+  const base = `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}`;
   const project = useQuery({
     queryKey: queryKeys.project(ws, projectKey),
     queryFn: () => api.get<Project>(endpoint),
@@ -282,7 +282,7 @@ export function ProjectShell({
               <div className="project-title-row">
                 <Link
                   className="button button-ghost button-icon project-back"
-                  href={`/w/${encodeURIComponent(ws)}`}
+                  href={`/work/${encodeURIComponent(ws)}`}
                   aria-label={t("nav.back")}
                 >
                   <ChevronLeft size={22} aria-hidden="true" />

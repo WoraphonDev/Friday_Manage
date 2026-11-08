@@ -51,5 +51,5 @@ export const issuePath = (ws: string, key: string) => `/w/${encodeURIComponent(w
 export const projectPath = (ws: string, key: string) => `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(key)}`;
 /** สำหรับหน้าดูตัวอย่างไฟล์ (FilePreview): ที่อยู่ API ของโปรเจกต์ และลิงก์ไปหน้า Files */
 export const previewBase = (scope: { ws: string; projectKey: string }) => `/api/v1${projectPath(scope.ws, scope.projectKey)}`;
-export const filesPageHref = (scope: { ws: string; projectKey: string }) => (id: string) => `/w/${encodeURIComponent(scope.ws)}/p/${encodeURIComponent(scope.projectKey)}/files?file=${encodeURIComponent(id)}`;
+export const filesPageHref = (scope: { ws: string; projectKey: string }) => (id: string) => `/work/${encodeURIComponent(scope.ws)}/p/${encodeURIComponent(scope.projectKey)}/files?file=${encodeURIComponent(id)}`;
 export const issueQuery = (ws: string, key: string) => ['issue-drawer', ws, key] as const;

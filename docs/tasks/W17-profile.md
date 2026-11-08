@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00, A13, A20 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/profile/**` · `apps/web/messages/th/profile.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/profile/**` · `apps/web/messages/th/profile.json` |
 | หน้าจอ | I (`design/canvas/Profile.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · 03-api › 3.1, 3.9 แถว notification-prefs |
 

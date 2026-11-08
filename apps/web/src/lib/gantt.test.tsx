@@ -9,7 +9,7 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import gantt from "../../messages/th/gantt.json";
-import { GanttView, SCALE_PX, depPath, type GRow, type GanttData, type Preview } from "../../app/w/[ws]/p/[key]/gantt/_components/gantt-view";
+import { GanttView, SCALE_PX, depPath, type GRow, type GanttData, type Preview } from "../../app/work/[ws]/p/[key]/gantt/_components/gantt-view";
 
 const person = (id: string, displayName: string) => ({ id, displayName });
 const row = (key: string, start: string, end: string, over: Partial<GRow> = {}): GRow => ({ key, type: "Task", title: `งาน ${key}`, status: { name: "In progress", category: "in_progress" }, start, end, estimateMd: 2, progressPct: 40, lateDays: 0, assignees: [person("u1", "ผู้พัฒนาหนึ่ง")], subtasks: [], critical: false, slackDays: 2, ...over });
@@ -67,7 +67,7 @@ const errorBody = (status: number) => HttpResponse.json({ error: { code: status 
 
 beforeEach(() => {
   gets = []; patches = []; posts = []; empty = false;
-  navigation.pathname = "/w/sample/p/DE/gantt";
+  navigation.pathname = "/work/sample/p/DE/gantt";
   server.use(
     http.get("*/api/v1/w/:ws/projects/:key/gantt", ({ request }) => {
       const b = new URL(request.url).searchParams.get("baseline");
@@ -101,7 +101,7 @@ describe("Gantt (5)", () => {
     expect(screen.getByText("กลุ่มงานแรก")).toBeInTheDocument();
     expect(screen.getByTestId("pred-DE-3")).toHaveTextContent("1.1.1 FS");
     expect(screen.getByTestId("pred-DE-6")).toHaveTextContent("1.1.1 FS+2");
-    expect(screen.getByRole("link", { name: "DE-3 งาน DE-3" })).toHaveAttribute("href", "/w/sample/p/DE/gantt?issue=DE-3");
+    expect(screen.getByRole("link", { name: "DE-3 งาน DE-3" })).toHaveAttribute("href", "/work/sample/p/DE/gantt?issue=DE-3");
     // งานแม่ (มี Sub-task) เป็น Summary bar · Sub-task เป็น bar
     expect(screen.getByRole("img", { name: /^DE-4 งาน DE-4:/ })).toBeInTheDocument();
     expect(screen.queryByTestId("bar-DE-4")).not.toBeInTheDocument();

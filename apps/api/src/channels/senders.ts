@@ -106,7 +106,7 @@ export class EmailSender implements ChannelSender {
   async send(ctx: SendContext) {
     const via = await this.resolve(ctx.workspaceId);
     if (!via) throw new UnrecoverableError('ยังไม่ได้ตั้งค่าการส่งอีเมล');
-    const mail = renderEmail(ctx.msg, ctx.why, `${webUrl()}/w/${ctx.workspaceSlug}/profile`);
+    const mail = renderEmail(ctx.msg, ctx.why, `${webUrl()}/work/${ctx.workspaceSlug}/profile`);
     await this.mailer.send({ to: ctx.targetRef, ...mail, from: via.from, replyTo: via.replyTo }, via.smtp);
   }
 }

@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00, A04, A08, A14 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/p/[key]/members/**` · `apps/web/app/w/[ws]/members/**` · `apps/web/messages/th/members-workload.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/p/[key]/members/**` · `apps/web/app/work/[ws]/members/**` · `apps/web/messages/th/members-workload.json` |
 | หน้าจอ | 7 (`design/canvas/Members.dc.html`) · H (`design/canvas/WorkspaceMembers.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · 03-api › 3.2, 3.5 แถว `p/members` |
 

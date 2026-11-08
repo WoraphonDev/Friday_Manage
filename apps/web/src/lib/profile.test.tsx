@@ -10,11 +10,11 @@ import { me as baseMe, workspaces } from "@/test/fixtures";
 import { today } from "@/lib/format";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import json from "../../messages/th/profile.json";
-import { ProfilePage } from "../../app/w/[ws]/profile/_components/profile-page";
-import { profileChanges } from "../../app/w/[ws]/profile/_components/personal-tab";
-import { hoursChanges } from "../../app/w/[ws]/profile/_components/hours-tab";
-import { deviceLabel } from "../../app/w/[ws]/profile/_components/security-tab";
-import type { Membership, NotifySettings, PrefRow } from "../../app/w/[ws]/profile/_components/types";
+import { ProfilePage } from "../../app/work/[ws]/profile/_components/profile-page";
+import { profileChanges } from "../../app/work/[ws]/profile/_components/personal-tab";
+import { hoursChanges } from "../../app/work/[ws]/profile/_components/hours-tab";
+import { deviceLabel } from "../../app/work/[ws]/profile/_components/security-tab";
+import type { Membership, NotifySettings, PrefRow } from "../../app/work/[ws]/profile/_components/types";
 
 const me = { ...baseMe, emailVerified: true, firstName: "สมมติ", lastName: "ทดสอบ", phone: null, about: null, avatarUrl: null };
 const membership = (over: Partial<Membership> = {}): Membership => ({
@@ -57,7 +57,7 @@ beforeEach(() => {
   calls = [];
   line = { linked: false, displayName: null, boundAt: null };
   mfa = { enabled: false, enabledAt: null, backupCodesLeft: 0, setupPending: false, requiredByPolicy: false };
-  navigation.pathname = "/w/sample/profile";
+  navigation.pathname = "/work/sample/profile";
   server.use(
     http.get("*/api/v1/me", () => HttpResponse.json(me)),
     http.patch("*/api/v1/me", async ({ request }) => {
@@ -307,7 +307,7 @@ describe("Profile (I)", () => {
     expect(await screen.findByText("เปลี่ยนรหัสผ่านแล้ว · ออกจากระบบอุปกรณ์อื่น 1 เครื่อง")).toBeInTheDocument();
 
     expect(screen.getByText("เข้าสู่ระบบด้วย Google").closest("div")).toHaveTextContent("เชื่อมแล้ว");
-    expect(screen.getByRole("link", { name: "เชื่อม" })).toHaveAttribute("href", "/api/v1/auth/oauth/microsoft/start?mode=link&next=%2Fw%2Fsample%2Fprofile%3Ftab%3Dsec");
+    expect(screen.getByRole("link", { name: "เชื่อม" })).toHaveAttribute("href", "/api/v1/auth/oauth/microsoft/start?mode=link&next=%2Fwork%2Fsample%2Fprofile%3Ftab%3Dsec");
   });
 
   it("2FA: setup → ยืนยัน → Backup code แสดงครั้งเดียว ปิดแล้วไม่เห็นอีก · บังคับโดย Workspace ซ่อนปุ่มปิด", async () => {

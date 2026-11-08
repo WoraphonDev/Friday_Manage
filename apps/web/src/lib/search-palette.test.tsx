@@ -10,7 +10,7 @@ import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import type { SavedSearch, SearchHit, SearchResult, SearchType } from "@/features/command-palette/search-shared";
 import sp from "../../messages/th/search-palette.json";
-import { SearchPage } from "../../app/w/[ws]/search/_components/search-page";
+import { SearchPage } from "../../app/work/[ws]/search/_components/search-page";
 
 const project = { key: "DE", name: "แผนพัฒนาผลิตภัณฑ์" };
 const hits: SearchHit[] = [
@@ -79,7 +79,7 @@ async function openPalette() {
 
 describe("Command palette (Ctrl K)", () => {
   it("ยังไม่พิมพ์: เปิดล่าสุดจากเครื่อง + คำสั่งที่ใช้บ่อย · ปุ่ม ลอง: ใส่ตัวนำหน้า", async () => {
-    localStorage.setItem("friday:palette-recent:sample", JSON.stringify([{ id: "x", icon: "task", text: "DE-7 งานที่เปิดล่าสุด", href: "/w/sample/p/DE?issue=DE-7" }]));
+    localStorage.setItem("friday:palette-recent:sample", JSON.stringify([{ id: "x", icon: "task", text: "DE-7 งานที่เปิดล่าสุด", href: "/work/sample/p/DE?issue=DE-7" }]));
     const { user, dialog, input } = await openPalette();
     expect(dialog.getByRole("group", { name: "เปิดล่าสุด" })).toHaveTextContent("DE-7 งานที่เปิดล่าสุด");
     const frequent = dialog.getByRole("group", { name: "คำสั่งที่ใช้บ่อย" });
@@ -104,8 +104,8 @@ describe("Command palette (Ctrl K)", () => {
     expect(searches.at(-1)?.searchParams.get("q")).toBe("สัญญาตัวอย่าง");
     expect(dialog.getAllByRole("option")[0]).toHaveAttribute("aria-selected", "true");
     await user.keyboard("{ArrowDown}{Enter}");
-    expect(router.push).toHaveBeenCalledWith("/w/sample/p/DE?issue=DE-40");
-    expect(JSON.parse(localStorage.getItem("friday:palette-recent:sample") ?? "[]")[0]).toMatchObject({ href: "/w/sample/p/DE?issue=DE-40" });
+    expect(router.push).toHaveBeenCalledWith("/work/sample/p/DE?issue=DE-40");
+    expect(JSON.parse(localStorage.getItem("friday:palette-recent:sample") ?? "[]")[0]).toMatchObject({ href: "/work/sample/p/DE?issue=DE-40" });
   });
 
   it("#DE-39 ไปที่งานทันที (ลิงก์ ?issue=KEY) และผลที่ตรงรหัสขึ้นก่อน", async () => {
@@ -113,7 +113,7 @@ describe("Command palette (Ctrl K)", () => {
     await user.type(input, "#de-39");
     expect(dialog.getAllByRole("option")[0]).toHaveTextContent(/DE-39/);
     await user.keyboard("{Enter}");
-    expect(router.push).toHaveBeenCalledWith("/w/sample/p/DE?issue=DE-39");
+    expect(router.push).toHaveBeenCalledWith("/work/sample/p/DE?issue=DE-39");
   });
 
   it("@ชื่อ ค้นเฉพาะคน (type=person)", async () => {
@@ -127,19 +127,19 @@ describe("Command palette (Ctrl K)", () => {
   });
 
   it("> คำสั่ง ไม่เรียก API · ในโปรเจกต์มีขอบเขต + สร้างงานใหม่ตามสิทธิ์ issue.create", async () => {
-    navigation.pathname = "/w/sample/p/DE/table";
+    navigation.pathname = "/work/sample/p/DE/table";
     const { user, dialog, input } = await openPalette();
     expect(dialog.getByText("ใน: แผนพัฒนาผลิตภัณฑ์")).toBeInTheDocument();
     await user.type(input, "> kanban");
     const cmds = dialog.getByRole("group", { name: "คำสั่ง · 1" });
     await user.keyboard("{Enter}");
     expect(within(cmds).getByRole("option")).toHaveTextContent("เปิด Kanban ของโปรเจกต์นี้");
-    expect(router.push).toHaveBeenCalledWith("/w/sample/p/DE/board");
+    expect(router.push).toHaveBeenCalledWith("/work/sample/p/DE/board");
     expect(searches).toHaveLength(0);
   });
 
   it("ไม่มีสิทธิ์ issue.create = ไม่มีคำสั่งสร้างงาน", async () => {
-    navigation.pathname = "/w/sample/p/DE";
+    navigation.pathname = "/work/sample/p/DE";
     server.use(http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () => HttpResponse.json({ ...permissions, role: "viewer", permissions: ["project.view"] })));
     const { user, dialog, input } = await openPalette();
     await user.type(input, ">");
@@ -148,11 +148,11 @@ describe("Command palette (Ctrl K)", () => {
   });
 
   it("มีสิทธิ์ issue.create = มีคำสั่งสร้างงาน ?new=1", async () => {
-    navigation.pathname = "/w/sample/p/DE";
+    navigation.pathname = "/work/sample/p/DE";
     const { user, dialog, input } = await openPalette();
     await user.type(input, "> สร้างงาน");
     await user.click(await dialog.findByRole("option", { name: /สร้างงานใหม่/ }));
-    expect(router.push).toHaveBeenCalledWith("/w/sample/p/DE?new=1");
+    expect(router.push).toHaveBeenCalledWith("/work/sample/p/DE?new=1");
   });
 
   it("ไม่พบ → ค้นแบบละเอียด · Ctrl Enter ไปหน้าผลทั้งหมด · Error มี requestId", async () => {
@@ -160,12 +160,12 @@ describe("Command palette (Ctrl K)", () => {
     await user.type(input, "ไม่มีอะไร");
     expect(await dialog.findByText('ไม่พบ "ไม่มีอะไร"')).toBeInTheDocument();
     await user.click(dialog.getByRole("button", { name: "ค้นแบบละเอียด" }));
-    expect(router.push).toHaveBeenCalledWith(`/w/sample/search?q=${encodeURIComponent("ไม่มีอะไร")}`);
+    expect(router.push).toHaveBeenCalledWith(`/work/sample/search?q=${encodeURIComponent("ไม่มีอะไร")}`);
 
     const again = await openPalette();
     await again.user.type(again.input, "สัญญา");
     await again.user.keyboard("{Control>}{Enter}{/Control}");
-    expect(router.push).toHaveBeenCalledWith(`/w/sample/search?q=${encodeURIComponent("สัญญา")}`);
+    expect(router.push).toHaveBeenCalledWith(`/work/sample/search?q=${encodeURIComponent("สัญญา")}`);
   });
 
   it("Error ของการค้นหาแสดง requestId", async () => {
@@ -177,7 +177,7 @@ describe("Command palette (Ctrl K)", () => {
 });
 
 const mountPage = (search: string) => {
-  navigation.pathname = "/w/sample/search";
+  navigation.pathname = "/work/sample/search";
   navigation.search = search;
   return renderWithProviders(<WorkspaceShell ws="sample"><SearchPage ws="sample" /></WorkspaceShell>, { messages: { "search-palette": sp } });
 };
@@ -190,11 +190,11 @@ describe("หน้าผลการค้นหา", () => {
     const results = screen.getByRole("region", { name: "ผลการค้นหา" });
     const issues = within(results).getByRole("group", { name: "งาน" });
     expect(within(issues).getAllByRole("link")).toHaveLength(3);
-    expect(within(issues).getByRole("link", { name: /DE-39 ฟอร์มสัญญาตัวอย่าง 3 แบบ/ })).toHaveAttribute("href", "/w/sample/p/DE?issue=DE-39");
+    expect(within(issues).getByRole("link", { name: /DE-39 ฟอร์มสัญญาตัวอย่าง 3 แบบ/ })).toHaveAttribute("href", "/work/sample/p/DE?issue=DE-39");
     expect(within(issues).getByText("…กดบันทึกสัญญาตัวอย่างแล้วขึ้นข้อผิดพลาด…".slice(0, 9), { exact: false })).toBeInTheDocument();
     expect(within(issues).getByText("Review")).toBeInTheDocument();
     expect(within(results).getByRole("group", { name: "ไฟล์ และคอมเมนต์" })).toBeInTheDocument();
-    expect(within(within(results).getByRole("group", { name: "โปรเจกต์" })).getByRole("link")).toHaveAttribute("href", "/w/sample/p/DE");
+    expect(within(within(results).getByRole("group", { name: "โปรเจกต์" })).getByRole("link")).toHaveAttribute("href", "/work/sample/p/DE");
     const filters = screen.getByRole("complementary", { name: "ตัวกรอง" });
     expect(within(filters).getByRole("checkbox", { name: /งาน \/ Story/ }).closest("label")).toHaveTextContent("งาน / Story1");
     expect(searches[0]?.searchParams.get("limit")).toBe("100");
@@ -286,7 +286,7 @@ describe("หน้าผลการค้นหา", () => {
     const box = await screen.findByRole("searchbox", { name: "คำค้น" });
     await user.type(box, "DE-39{Enter}");
     await waitFor(() => expect(searches.at(-1)?.searchParams.get("q")).toBe("DE-39"));
-    expect(router.replace).toHaveBeenLastCalledWith("/w/sample/search?q=DE-39", { scroll: false });
+    expect(router.replace).toHaveBeenLastCalledWith("/work/sample/search?q=DE-39", { scroll: false });
     expect(await screen.findByRole("link", { name: /DE-39/ })).toBeInTheDocument();
   });
 });

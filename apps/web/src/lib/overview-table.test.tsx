@@ -11,9 +11,9 @@ import { overview } from "@/test/overview-fixture";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import ot from "../../messages/th/overview-table.json";
 import ldr from "../../messages/th/lead-dashboard-reports.json";
-import { OverviewPage } from "../../app/w/[ws]/p/[key]/table/_components/overview";
-import { TableView, buildDisplay } from "../../app/w/[ws]/p/[key]/table/_components/table-view";
-import type { Overview, Row, TableData } from "../../app/w/[ws]/p/[key]/table/_components/types";
+import { OverviewPage } from "../../app/work/[ws]/p/[key]/table/_components/overview";
+import { TableView, buildDisplay } from "../../app/work/[ws]/p/[key]/table/_components/table-view";
+import type { Overview, Row, TableData } from "../../app/work/[ws]/p/[key]/table/_components/types";
 
 const person = (id: string, displayName: string) => ({ id, displayName });
 const agg = (n = 1) => ({ taskCount: n, subtaskCount: 0, doneCount: 0, estimateMd: 3, progressPct: 10 });
@@ -33,7 +33,7 @@ const errorBody = (status: number) => HttpResponse.json({ error: { code: status 
 
 beforeEach(() => {
   urls = []; patches = []; bulks = []; views = []; tableData = table();
-  navigation.pathname = "/w/sample/p/DE";
+  navigation.pathname = "/work/sample/p/DE";
   server.use(
     http.get("*/api/v1/w/:ws/projects/:key/overview", ({ request }) => { urls.push(new URL(request.url)); return HttpResponse.json(overview()); }),
     // ตรวจโครง Overview พื้นฐาน (ไม่มีสิทธิ์ดู Workload) · ส่วนแผนที่รวมเข้ามาตรวจใน lead-dashboard-reports.test.tsx
@@ -63,9 +63,9 @@ describe("Overview (1 / M6)", () => {
     expect(health).toHaveTextContent("(ผู้พัฒนาหนึ่ง 4)");
     expect(health).toHaveTextContent("≈ 29 สัปดาห์ แต่แผนมี ≈ 24 สัปดาห์");
     expect(screen.getByRole("button", { name: /Overdue7/ })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("link", { name: "งานที่เลยกำหนด" })).toHaveAttribute("href", "/w/sample/p/DE?issue=DE-23");
+    expect(screen.getByRole("link", { name: "งานที่เลยกำหนด" })).toHaveAttribute("href", "/work/sample/p/DE?issue=DE-23");
     expect(screen.getByText("เลย 9 วัน")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "เปิดใน Table →" })).toHaveAttribute("href", "/w/sample/p/DE/table?overdue=true");
+    expect(screen.getByRole("link", { name: "เปิดใน Table →" })).toHaveAttribute("href", "/work/sample/p/DE/table?overdue=true");
     expect(screen.getByRole("img", { name: "ความคืบหน้าโครงการ 22 เปอร์เซ็นต์" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Overdue7/ })).toHaveTextContent("เลยกำหนดส่งและยังไม่ Done");
     await userEvent.setup().click(screen.getByRole("button", { name: /Due today2/ }));
@@ -313,7 +313,7 @@ describe("จัดโครงงานใน Table", () => {
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(creates).toEqual([{ name: "Module ใหม่", color: "#1d4ed8" }]);
-    expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน Module ใหม่" })).toHaveAttribute("href", "/w/sample/p/DE/table?new=1&type=task&moduleId=m-new");
+    expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน Module ใหม่" })).toHaveAttribute("href", "/work/sample/p/DE/table?new=1&type=task&moduleId=m-new");
   });
   it("กลุ่ม (ไม่บังคับ): เพิ่มกลุ่มจากเมนู Module แล้วเพิ่ม Task ในกลุ่มนั้น · ลบกลุ่มแล้วงานไม่มีกลุ่ม", async () => {
     const user = userEvent.setup();
@@ -331,7 +331,7 @@ describe("จัดโครงงานใน Table", () => {
     await user.type(screen.getByLabelText("ชื่อกลุ่ม"), "กลุ่มใหม่");
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มใหม่" })).toHaveAttribute("href", "/w/sample/p/DE/table?new=1&type=task&moduleId=m-a&phaseId=ph-new");
+    expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มใหม่" })).toHaveAttribute("href", "/work/sample/p/DE/table?new=1&type=task&moduleId=m-a&phaseId=ph-new");
     // Task ที่ไม่มีกลุ่มอยู่ใต้ Module ก่อนหัวกลุ่ม
     const add = screen.getByRole("link", { name: "+ เพิ่ม Task ใน Module A" });
     expect(add.getAttribute("href")).not.toContain("phaseId=");

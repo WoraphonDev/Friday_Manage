@@ -56,7 +56,7 @@ export class OAuthController {
     private readonly security: SecurityService,
   ) {}
 
-  /** ?next=/w/... กลับไปหน้าเดิม · ?remember=true จำ 30 วัน · ?mode=link ผูกกับบัญชีที่ล็อกอินอยู่ (หน้า Profile) */
+  /** ?next=/work/... กลับไปหน้าเดิม · ?remember=true จำ 30 วัน · ?mode=link ผูกกับบัญชีที่ล็อกอินอยู่ (หน้า Profile) */
   @Public()
   @Get(':provider/start')
   start(

@@ -9,11 +9,11 @@ import { router } from "@/test/router";
 import { permissions, projects, workspaces } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import json from "../../messages/th/admin-automation.json";
-import { AdminConsole } from "../../app/w/[ws]/admin/_components/admin-console";
-import { workloadRange } from "../../app/w/[ws]/admin/_components/org-sections";
-import { AutomationPage } from "../../app/w/[ws]/p/[key]/automation/_components/automation-page";
-import { draftSentence } from "../../app/w/[ws]/p/[key]/automation/_components/rule-editor";
-import { incomplete, toBody, type Rule } from "../../app/w/[ws]/p/[key]/automation/_components/types";
+import { AdminConsole } from "../../app/work/[ws]/admin/_components/admin-console";
+import { workloadRange } from "../../app/work/[ws]/admin/_components/org-sections";
+import { AutomationPage } from "../../app/work/[ws]/p/[key]/automation/_components/automation-page";
+import { draftSentence } from "../../app/work/[ws]/p/[key]/automation/_components/rule-editor";
+import { incomplete, toBody, type Rule } from "../../app/work/[ws]/p/[key]/automation/_components/types";
 
 type Call = { method: string; path: string; search: string; body: unknown; ifMatch: string | null };
 let calls: Call[];
@@ -111,7 +111,7 @@ describe("Admin Console (N1) · ภาพรวมและโปรเจกต
     const nav = await screen.findByRole("navigation", { name: "เมนู Admin Console" });
     expect(within(nav).getAllByRole("link")).toHaveLength(12);
     expect(within(nav).getByRole("link", { name: /แดชบอร์ด/ })).toHaveAttribute("aria-current", "page");
-    expect(within(nav).getByRole("link", { name: /สมาชิก & คำเชิญ/ })).toHaveAttribute("href", "/w/sample/members");
+    expect(within(nav).getByRole("link", { name: /สมาชิก & คำเชิญ/ })).toHaveAttribute("href", "/work/sample/members");
     expect(await within(nav).findByLabelText("ต้องดำเนินการ 2 เรื่อง")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "แดชบอร์ด" })).toBeInTheDocument();
     expect(screen.getByText("/ 25 seats")).toBeInTheDocument();
@@ -120,8 +120,8 @@ describe("Admin Console (N1) · ภาพรวมและโปรเจกต
     expect(screen.getByText("เปิดอยู่ 312")).toBeInTheDocument();
     expect(screen.getByText("มี 2 คนที่ยังไม่เปิด 2FA ทั้งที่องค์กรบังคับ")).toBeInTheDocument();
     const links = screen.getAllByRole("link", { name: "ดู" });
-    expect(links[0]).toHaveAttribute("href", "/w/sample/admin/security");
-    expect(links[1]).toHaveAttribute("href", "/w/sample/admin/load");
+    expect(links[0]).toHaveAttribute("href", "/work/sample/admin/security");
+    expect(links[1]).toHaveAttribute("href", "/work/sample/admin/load");
     expect(screen.getByRole("img", { name: "ผู้ใช้ Active รายสัปดาห์ จาก 5 เป็น 8 คน" })).toBeInTheDocument();
   });
 
@@ -137,7 +137,7 @@ describe("Admin Console (N1) · ภาพรวมและโปรเจกต
     expect(within(card).getByText("PM: ผู้จัดการตัวอย่าง")).toBeInTheDocument();
     expect(within(card).getByText("ยังไม่มีกิจกรรม")).toBeInTheDocument();
     await user.click(await within(card).findByRole("button", { name: "เข้าร่วมในฐานะ Admin" }));
-    expect(within(card).getByRole("link", { name: "เปิด" })).toHaveAttribute("href", "/w/sample/p/DE");
+    expect(within(card).getByRole("link", { name: "เปิด" })).toHaveAttribute("href", "/work/sample/p/DE");
     await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "POST", path: "/w/sample/projects/FN/join-as-admin" }));
     expect(await screen.findByText(/เข้าร่วม FN ในฐานะ Admin แล้ว/)).toBeInTheDocument();
   });
@@ -146,7 +146,7 @@ describe("Admin Console (N1) · ภาพรวมและโปรเจกต
     admin("bill");
     expect(await screen.findByText("Team M")).toBeInTheDocument();
     expect(screen.getByText("9 / 25")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "จัดการแพ็กเกจและการชำระเงิน" })).toHaveAttribute("href", "/w/sample/billing");
+    expect(screen.getByRole("link", { name: "จัดการแพ็กเกจและการชำระเงิน" })).toHaveAttribute("href", "/work/sample/billing");
   });
 });
 
@@ -441,7 +441,7 @@ describe("Admin Console (N1) · ระบบ", () => {
     expect(safe).toHaveAttribute("aria-checked", "true");
     await user.click(safe);
     await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "PATCH", path: "/w/sample/settings", body: { safeMode: false } }));
-    expect(screen.getByRole("link", { name: "ดูตัวอย่างข้อความ" })).toHaveAttribute("href", "/w/sample/admin/notify-templates");
+    expect(screen.getByRole("link", { name: "ดูตัวอย่างข้อความ" })).toHaveAttribute("href", "/work/sample/admin/notify-templates");
 
     const line = screen.getByRole("region", { name: "LINE Official Account" });
     expect(within(line).getByLabelText("Channel secret")).toHaveAttribute("placeholder", "•••• ab12");

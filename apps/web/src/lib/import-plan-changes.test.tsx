@@ -9,11 +9,11 @@ import { navigation, router } from "@/test/router";
 import { permissions, workspaces } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import messages from "../../messages/th/import-plan-changes.json";
-import { CreateFromExcel } from "../../app/w/[ws]/new-project/excel/create-from-excel";
+import { CreateFromExcel } from "../../app/work/[ws]/new-project/excel/create-from-excel";
 import { PlanIoDialog } from "@/features/plan-io/plan-io";
-import type { ImportJob } from "../../app/w/[ws]/import/_components/types";
-import { PlanChangesView, moduleEnds, type Baseline, type PlanChange } from "../../app/w/[ws]/p/[key]/plan-changes/_components/plan-changes-view";
-import type { GanttData, GRow } from "../../app/w/[ws]/p/[key]/gantt/_components/gantt-view";
+import type { ImportJob } from "../../app/work/[ws]/import/_components/types";
+import { PlanChangesView, moduleEnds, type Baseline, type PlanChange } from "../../app/work/[ws]/p/[key]/plan-changes/_components/plan-changes-view";
+import type { GanttData, GRow } from "../../app/work/[ws]/p/[key]/gantt/_components/gantt-view";
 
 const ns = { "import-plan-changes": messages };
 const errorBody = (status: number, code = status === 403 ? "forbidden" : "internal_error") =>
@@ -119,13 +119,13 @@ const xlsx = (name = "แผนตัวอย่าง.xlsx") => new File(["fak
 // ผู้ใช้ตัดสิน 2026-11-09: สร้างโปรเจกต์จาก Excel อยู่ที่ New project · อัปเดต / Export อยู่ในโปรเจกต์ (/p/{key}/import)
 const mountImport = () => renderWithProviders(<WorkspaceShell ws="sample"><CreateFromExcel ws="sample" /></WorkspaceShell>, { messages: ns });
 // Popup Import / Export ในแท็บ Table (ผู้ใช้ตัดสิน 2026-11-09) · เปิดด้วย ?io=
-const mountProjectImport = (io = "import") => { navigation.pathname = "/w/sample/p/DE/table"; navigation.search = `io=${io}`; return renderWithProviders(<WorkspaceShell ws="sample"><PlanIoDialog ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: ns }); };
+const mountProjectImport = (io = "import") => { navigation.pathname = "/work/sample/p/DE/table"; navigation.search = `io=${io}`; return renderWithProviders(<WorkspaceShell ws="sample"><PlanIoDialog ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: ns }); };
 
 beforeEach(() => {
   uploads = [];
   patches = [];
   commits = 0;
-  navigation.pathname = "/w/sample/import";
+  navigation.pathname = "/work/sample/import";
 });
 
 describe("Import Excel (L3)", () => {
@@ -199,7 +199,7 @@ describe("Import Excel (L3)", () => {
     expect(commits).toBe(1);
     expect(screen.getByText(/สร้างโปรเจกต์ แผนตัวอย่าง · 11 งาน/)).toBeInTheDocument();
     expect(screen.getByText("ส่งคำเชิญ 1 คน")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "เปิด Table ของโปรเจกต์" })).toHaveAttribute("href", "/w/sample/p/NP/table");
+    expect(screen.getByRole("link", { name: "เปิด Table ของโปรเจกต์" })).toHaveAttribute("href", "/work/sample/p/NP/table");
   });
 
   it("รับเฉพาะ .xlsx · เปลี่ยนไฟล์หลังอัปโหลด = อัปโหลดใหม่ · Error แสดง requestId", async () => {
@@ -237,14 +237,14 @@ describe("Import Excel (L3)", () => {
     expect(within(menu).getByRole("button", { name: "Export แผน + Timeline" })).toHaveAttribute("aria-current", "page");
     // เปลี่ยนเมนูผ่าน ?io= ใน URL
     await user.click(within(menu).getByRole("button", { name: "การแก้ไขแผน (Plan vs Baseline)" }));
-    expect(router.replace).toHaveBeenLastCalledWith("/w/sample/p/DE/table?io=changes", { scroll: false });
+    expect(router.replace).toHaveBeenLastCalledWith("/work/sample/p/DE/table?io=changes", { scroll: false });
     // โปรเจกต์กำหนดจาก Table ไม่มีช่องเลือกโปรเจกต์ · ช่องละสัปดาห์เพิ่ม ?timeline=week
     expect(within(dialog).queryByRole("combobox")).not.toBeInTheDocument();
     expect(await within(dialog).findByRole("link", { name: /ดาวน์โหลด Excel/ })).toHaveAttribute("href", "/api/v1/w/sample/projects/DE/export.xlsx");
     await user.click(within(dialog).getByRole("radio", { name: "ช่องละสัปดาห์" }));
     expect(within(dialog).getByRole("link", { name: /ดาวน์โหลด Excel/ })).toHaveAttribute("href", "/api/v1/w/sample/projects/DE/export.xlsx?timeline=week");
     await user.click(within(dialog).getByRole("button", { name: "ปิด" }));
-    expect(router.replace).toHaveBeenLastCalledWith("/w/sample/p/DE/table", { scroll: false });
+    expect(router.replace).toHaveBeenLastCalledWith("/work/sample/p/DE/table", { scroll: false });
   });
 
   it("อัปเดตแผนของโปรเจกต์: ส่ง projectKey, diff, งานที่หายจากไฟล์, เหตุผลบันทึกก่อน commit", async () => {
@@ -275,7 +275,7 @@ describe("Import Excel (L3)", () => {
     expect(await screen.findByRole("heading", { name: "นำเข้าเสร็จแล้ว" })).toBeInTheDocument();
     expect(patches).toContainEqual({ planChangeReason: "ปรับตามขอบเขตใหม่" });
     expect(screen.getByText(/เปลี่ยน 1 · เพิ่ม 1 · ลบ 1 · บันทึกการแก้ไขแผน 1 รายการ/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ดูการแก้ไขแผน" })).toHaveAttribute("href", "/w/sample/p/DE/table?io=changes");
+    expect(screen.getByRole("link", { name: "ดูการแก้ไขแผน" })).toHaveAttribute("href", "/work/sample/p/DE/table?io=changes");
   });
 
   it("สมาชิกทั่วไป (ไม่มีสิทธิ์ตั้ง Baseline) เห็นแค่ Export · Guest Viewer ไม่เห็น Popup", async () => {
@@ -360,7 +360,7 @@ describe("การแก้ไขแผน (Plan vs Baseline)", () => {
     list = baselines;
     changeGets = [];
     baselinePosts = [];
-    navigation.pathname = "/w/sample/p/DE/plan-changes";
+    navigation.pathname = "/work/sample/p/DE/plan-changes";
     changesHandlers();
   });
 
@@ -382,7 +382,7 @@ describe("การแก้ไขแผน (Plan vs Baseline)", () => {
     expect(await screen.findAllByTestId("plan-change")).toHaveLength(2);
     expect(changeGets[0]).toBe("v2|");
     expect(screen.getByText("แก้ไขแล้ว 2 งาน · กระทบวันจบ 1 Module")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "หน้าจอสมมติ" })).toHaveAttribute("href", "/w/sample/p/DE/plan-changes?issue=DE-3");
+    expect(screen.getByRole("link", { name: "หน้าจอสมมติ" })).toHaveAttribute("href", "/work/sample/p/DE/plan-changes?issue=DE-3");
     expect(await screen.findByText("นักพัฒนาตัวอย่าง, หัวหน้าทีมตัวอย่าง")).toHaveClass(/new/);
     expect(screen.getByText("นำเข้า")).toBeInTheDocument();
 

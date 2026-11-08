@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00, A18 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/admin/**` · `apps/web/app/w/[ws]/p/[key]/automation/**` · `apps/web/messages/th/admin-automation.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/admin/**` · `apps/web/app/work/[ws]/p/[key]/automation/**` · `apps/web/messages/th/admin-automation.json` |
 | หน้าจอ | N1 (`design/canvas/AdminConsole.dc.html`) · N2 (`design/canvas/NotifyTemplates.dc.html`) · P2 (`design/canvas/Automation.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · 03-api › 3.3, 3.9 แถว automations |
 

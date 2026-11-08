@@ -211,7 +211,7 @@ describe("UI kit", () => {
   it("Toast แจ้งเตือน K4 แสดงผู้กระทำ บรรทัดรอง และปุ่มลิงก์ แล้วปิดเมื่อกด", async () => {
     function Example() {
       const toast = useToast();
-      return <button onClick={() => toast({ actor: { id: "u1", displayName: "ผู้ทดสอบ" }, message: "ส่งงานเข้า Review DE-2", meta: "ยังไม่อ่าน 1 รายการ", actions: [{ label: "เปิดงาน", href: "/w/sample/p/DE?issue=DE-2", primary: true }, { label: "ดูภายหลัง", href: "/w/sample/inbox" }] })}>แจ้ง</button>;
+      return <button onClick={() => toast({ actor: { id: "u1", displayName: "ผู้ทดสอบ" }, message: "ส่งงานเข้า Review DE-2", meta: "ยังไม่อ่าน 1 รายการ", actions: [{ label: "เปิดงาน", href: "/work/sample/p/DE?issue=DE-2", primary: true }, { label: "ดูภายหลัง", href: "/work/sample/inbox" }] })}>แจ้ง</button>;
     }
     const user = userEvent.setup();
     renderWithProviders(<Example />);
@@ -219,7 +219,7 @@ describe("UI kit", () => {
     const toast = (await screen.findByText("ยังไม่อ่าน 1 รายการ")).closest(".toast") as HTMLElement;
     expect(toast).toHaveTextContent("ผู้ทดสอบ ส่งงานเข้า Review DE-2");
     expect(within(toast).getByText("ยังไม่อ่าน 1 รายการ")).toBeInTheDocument();
-    expect(within(toast).getByRole("link", { name: "เปิดงาน" })).toHaveAttribute("href", "/w/sample/p/DE?issue=DE-2");
+    expect(within(toast).getByRole("link", { name: "เปิดงาน" })).toHaveAttribute("href", "/work/sample/p/DE?issue=DE-2");
     await user.click(within(toast).getByRole("link", { name: "ดูภายหลัง" }));
     await waitFor(() => expect(screen.queryByText("ส่งงานเข้า Review DE-2")).not.toBeInTheDocument());
   });

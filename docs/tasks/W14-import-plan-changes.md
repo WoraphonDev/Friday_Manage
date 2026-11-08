@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00, A07 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/import/**` · `apps/web/app/w/[ws]/p/[key]/plan-changes/**` · `apps/web/messages/th/import-plan-changes.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/import/**` · `apps/web/app/work/[ws]/p/[key]/plan-changes/**` · `apps/web/messages/th/import-plan-changes.json` |
 | หน้าจอ | L3 (`design/canvas/ImportExcel.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · 03-api › 3.6 แถว import-jobs, plan-changes |
 

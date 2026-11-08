@@ -395,7 +395,7 @@
     "/api/v1/auth/oauth/{provider}/start": {
       "get": {
         "operationId": "OAuth_start",
-        "summary": "?next=/w/... กลับไปหน้าเดิม · ?remember=true จำ 30 วัน · ?mode=link ผูกกับบัญชีที่ล็อกอินอยู่ (หน้า Profile)",
+        "summary": "?next=/work/... กลับไปหน้าเดิม · ?remember=true จำ 30 วัน · ?mode=link ผูกกับบัญชีที่ล็อกอินอยู่ (หน้า Profile)",
         "tags": [
           "OAuth"
         ],

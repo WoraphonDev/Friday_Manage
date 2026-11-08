@@ -1,26 +1,34 @@
 import { WorkCalendar, planEndFor } from '../projects/calendar.js';
 import { type Cell, type ParsedWorkbook, toIsoDate } from './excel.js';
 
-/** ฟิลด์ปลายทางของการจับคู่คอลัมน์ (หน้า L3 › จับคู่คอลัมน์) */
+/**
+ * ฟิลด์ปลายทางของการจับคู่คอลัมน์ (หน้า L3 › จับคู่คอลัมน์) · เรียงตามคอลัมน์ของไฟล์รูปแบบใหม่ (ชีต Tasks)
+ * alias รวมหัวคอลัมน์ของไฟล์รูปแบบเดิม (ID / No. / Module Task / Dev / Remark) เพื่อให้ไฟล์เก่านำเข้าได้เหมือนเดิม
+ */
 export const FIELDS = {
-  /** เลขงานในระบบ (DP-39 = ID 39) · ถ้าไม่มีคอลัมน์นี้ใช้ No. แทน */
-  id: { label: 'รหัสงาน (ID) → เลขงาน', aliases: ['id', 'รหัส'] },
-  no: { label: 'ลำดับ (ใช้จับคู่ตอนอัปเดต)', aliases: ['no', 'no.', 'ลำดับ'] },
+  /** รหัสงาน เช่น DP-12 หรือ 12 · ว่าง = งานใหม่ (ระบบออกเลขให้) */
+  key: { label: 'Key (รหัสงาน · ว่าง = งานใหม่)', aliases: ['key', 'issue key', 'id', 'รหัส', 'รหัสงาน'] },
+  parentKey: { label: 'Parent Key (Task แม่ของ Sub-task)', aliases: ['parent key', 'parent', 'task แม่'] },
+  /** ไฟล์รูปแบบเดิมเท่านั้น: ลำดับแถวในแผน ใช้จับคู่ตอนอัปเดต */
+  no: { label: 'No. (ไฟล์รูปแบบเดิม · ใช้จับคู่ตอนอัปเดต)', aliases: ['no', 'no.', 'ลำดับ'] },
   module: { label: 'Module', aliases: ['module'] },
-  phase: { label: 'กลุ่มงาน (Phase) ใน Module', aliases: ['sprint', 'phase', 'กลุ่มงาน'] },
-  title: { label: 'ชื่องาน', aliases: ['module task', 'task', 'ชื่องาน', 'งาน'] },
-  screen: { label: 'Screen ID', aliases: ['screen', 'screen id'] },
-  requirement: { label: 'Requirement (FR / NFR)', aliases: ['fr / nfr', 'fr', 'requirement'] },
-  ba: { label: 'BA', aliases: ['ba'] },
+  title: { label: 'ชื่องาน', aliases: ['title', 'ชื่องาน', 'module task', 'task', 'งาน'] },
   status: { label: 'Status', aliases: ['status', 'สถานะ'] },
-  devs: { label: 'Dev (หลายคน คั่นด้วย ,)', aliases: ['dev', 'developer', 'assignee'] },
+  priority: { label: 'Priority', aliases: ['priority', 'ความสำคัญ'] },
+  ba: { label: 'Business Analyst', aliases: ['business analyst', 'ba'] },
+  sa: { label: 'System Analyst', aliases: ['system analyst', 'sa'] },
+  devs: { label: 'Developer (หลายคน คั่นด้วย ,)', aliases: ['developer', 'developers', 'dev', 'assignee'] },
+  reviewer: { label: 'QA / Reviewer', aliases: ['qa / reviewer', 'reviewer', 'qa', 'tester'] },
   size: { label: 'Size', aliases: ['size'] },
   estimateMd: { label: 'Man-Day (รวมทั้งทีม)', aliases: ['man-day', 'manday', 'md'] },
   planStart: { label: 'Plan Start', aliases: ['plan start'] },
   planEnd: { label: 'Plan End', aliases: ['plan end'] },
   actualStart: { label: 'Actual Start', aliases: ['actual start'] },
   actualEnd: { label: 'Actual End', aliases: ['actual end'] },
-  remark: { label: 'หมายเหตุ', aliases: ['remark', 'หมายเหตุ', 'note'] },
+  requirement: { label: 'Requirement (FR / NFR)', aliases: ['requirement', 'requirements', 'fr / nfr', 'fr'] },
+  screen: { label: 'Screen', aliases: ['screen', 'screens', 'screen id'] },
+  labels: { label: 'Label (หลายค่า คั่นด้วย ,)', aliases: ['label', 'labels'] },
+  remark: { label: 'รายละเอียด', aliases: ['description', 'รายละเอียด', 'remark', 'หมายเหตุ', 'note'] },
 } as const;
 export type Field = keyof typeof FIELDS;
 export type ColumnMapping = Record<string, Field | null>;
@@ -66,11 +74,31 @@ const list = (v: Cell) =>
         .map((x) => x.trim())
         .filter((x) => x && x !== '-' && x !== '—');
 
+export const PRIORITIES = ['urgent', 'high', 'medium', 'low'] as const;
+export type Priority = (typeof PRIORITIES)[number];
+const PRIORITY: Record<string, Priority> = { urgent: 'urgent', highest: 'urgent', 'ด่วนมาก': 'urgent', high: 'high', 'สูง': 'high', medium: 'medium', normal: 'medium', 'กลาง': 'medium', low: 'low', 'ต่ำ': 'low' };
+
+/** Key ในไฟล์: "DP-12" / "dp-12" / 12 → { prefix, number } · undefined = รูปแบบไม่ถูกต้อง */
+export function parseKey(v: Cell): { prefix: string | null; number: number } | null | undefined {
+  if (v === null) return null;
+  if (typeof v === 'number') return Number.isInteger(v) && v > 0 ? { prefix: null, number: v } : undefined;
+  const m = /^(?:([A-Za-z][A-Za-z0-9]*)-)?(\d+)$/.exec(String(v).trim());
+  return m && Number(m[2]) > 0 ? { prefix: m[1]?.toUpperCase() ?? null, number: Number(m[2]) } : undefined;
+}
+
+export type Role = 'dev' | 'ba' | 'sa' | 'qa';
+
 export interface PlanRow {
   rowNo: number;
+  /**
+   * ตัวระบุแถวภายในไฟล์ (ใช้กับ skip / diff)
+   * ไฟล์รูปแบบเดิม = No. (เก็บใน excel_row_no) · รูปแบบใหม่ = แถวใน Excel (ไม่เก็บ)
+   */
   no: number;
-  /** เลขงาน = ID ถ้ามี ไม่อย่างนั้น = No. */
-  number: number;
+  /** เลขงานจาก Key · null = งานใหม่ ระบบออกเลขให้ */
+  number: number | null;
+  /** เลขงานของ Task แม่ (Sub-task) */
+  parentNumber: number | null;
   module: string;
   phase: string | null;
   title: string;
@@ -79,8 +107,12 @@ export interface PlanRow {
   /** ค่าในคอลัมน์ FR ที่ไม่ใช่รหัส FR / NFR เช่น "SRS" */
   requirementText: string | null;
   ba: string | null;
+  sa: string | null;
+  reviewer: string | null;
   status: string;
+  priority: Priority | null;
   devs: string[];
+  labels: string[];
   size: Size | null;
   estimateMd: number | null;
   planStart: string | null;
@@ -103,20 +135,25 @@ export interface Finding {
 
 export interface Person {
   name: string;
-  roles: ('dev' | 'ba')[];
+  roles: Role[];
   rows: number;
 }
 
 export interface PlanCheck {
   rows: PlanRow[];
   findings: Finding[];
-  /** No. ของแถวที่ต้องแก้ (ข้ามตอนนำเข้า) */
+  /** no ของแถวที่ต้องแก้ (ข้ามตอนนำเข้า) */
   skip: Set<number>;
   people: Person[];
+  /** ไฟล์รูปแบบใหม่ (ไม่มีคอลัมน์ No.) · จับคู่งานด้วย Key */
+  keyed: boolean;
+  /** ฟิลด์ที่มีคอลัมน์ในไฟล์ · โหมดอัปเดตเทียบเฉพาะฟิลด์เหล่านี้ (ไฟล์ไม่มีคอลัมน์ = ไม่แตะค่าเดิม) */
+  mapped: Set<Field>;
   summary: {
     rows: number;
     modules: number;
     phases: number;
+    subtasks: number;
     manDay: number;
     devs: number;
     bas: number;
@@ -138,6 +175,10 @@ export interface CheckOptions {
   noDerivedSize?: boolean;
   /** ชื่อสถานะจริงใน Workflow ของโปรเจกต์ (โหมดอัปเดต) · ตรงชื่อก่อนใช้ตารางแปลงมาตรฐาน */
   statuses?: string[];
+  /** โหมดอัปเดต: Key ของโปรเจกต์ · Key ในไฟล์ที่ขึ้นต้นด้วยรหัสอื่นถือว่าผิดโปรเจกต์ */
+  projectKey?: string;
+  /** โหมดอัปเดต: Task ระดับบนที่มีอยู่ในระบบ (เลขงาน → Module) ให้ Sub-task ในไฟล์อ้างถึงได้ */
+  parents?: Map<number, { module: string }>;
 }
 
 export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkCalendar, knownPeople: Set<string>, opts: CheckOptions = {}): PlanCheck {
@@ -148,7 +189,15 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     const f = mapping[h];
     if (f) idx[f] = i;
   });
+  const mapped = new Set(Object.keys(idx) as Field[]);
+  // ไฟล์รูปแบบเดิมมีคอลัมน์ No. เป็นตัวจับคู่ · รูปแบบใหม่ใช้ Key
+  const keyed = idx.no === undefined;
   const get = (cells: Cell[], f: Field) => (idx[f] === undefined ? null : cells[idx[f]]);
+  const text = (v: Cell) => (v === null ? null : String(v).trim() || null);
+  const person = (v: Cell) => {
+    const x = text(v);
+    return x && x !== '-' && x !== '—' ? x : null;
+  };
 
   const rows: PlanRow[] = [];
   const findings: Finding[] = [];
@@ -156,50 +205,60 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
   const seen = new Set<number>();
   const seenNumber = new Set<number>();
   const people = new Map<string, Person>();
-  const addPerson = (name: string, role: 'dev' | 'ba') => {
+  const addPerson = (name: string, role: Role) => {
     const k = personKey(name);
     const p = people.get(k) ?? { name, roles: [], rows: 0 };
     if (!p.roles.includes(role)) p.roles.push(role);
     p.rows++;
     people.set(k, p);
   };
+  const findingOf = (r: PlanRow) => ({ no: keyed ? null : r.no, rowNo: r.rowNo, module: r.module || null, title: r.title || null });
 
   for (const { rowNo, cells } of wb.table.rows) {
+    const module = text(get(cells, 'module'));
+    const title = text(get(cells, 'title'));
     const rawNo = get(cells, 'no');
-    const no = typeof rawNo === 'number' ? rawNo : Number(rawNo);
-    const module = get(cells, 'module');
-    const title = get(cells, 'title');
-    const base = { rowNo, no: Number.isInteger(no) ? no : null, module: module === null ? null : String(module), title: title === null ? null : String(title) };
+    const legacyNo = typeof rawNo === 'number' ? rawNo : Number(rawNo);
+    const no = keyed ? rowNo : legacyNo;
+    const base = { rowNo, no: !keyed && Number.isInteger(legacyNo) ? legacyNo : null, module, title };
     const err = (problem: string, fix: string) => findings.push({ level: 'err', ...base, problem, fix });
     const warn = (problem: string, fix: string) => findings.push({ level: 'warn', ...base, problem, fix });
 
-    if (!Number.isInteger(no) || no < 1) {
-      err('No. ว่างหรือไม่ใช่ตัวเลข', 'แก้ไขใน Excel');
-      continue;
-    }
-    if (seen.has(no)) {
-      err(`No. ${no} ซ้ำ`, 'แก้ไขใน Excel');
-      skip.add(no);
-      continue;
-    }
-    seen.add(no);
-    let number = no;
-    if (idx.id !== undefined) {
-      const rawId = get(cells, 'id');
-      const id = typeof rawId === 'number' ? rawId : Number(rawId);
-      if (!Number.isInteger(id) || id < 1) {
-        err('ID ว่างหรือไม่ใช่ตัวเลข', 'แก้ไขใน Excel');
+    if (!keyed) {
+      if (!Number.isInteger(no) || no < 1) {
+        err('No. ว่างหรือไม่ใช่ตัวเลข', 'แก้ไขใน Excel');
+        continue;
+      }
+      if (seen.has(no)) {
+        err(`No. ${no} ซ้ำ`, 'แก้ไขใน Excel');
         skip.add(no);
         continue;
       }
-      number = id;
+      seen.add(no);
     }
-    if (seenNumber.has(number)) {
-      err(`ID ${number} ซ้ำ`, 'แก้ไขใน Excel');
+    // เลขงาน: Key ในไฟล์ · ไฟล์รูปแบบเดิมที่ไม่มีคอลัมน์ ID ใช้ No.
+    let number: number | null = keyed ? null : no;
+    if (idx.key !== undefined) {
+      const k = parseKey(get(cells, 'key'));
+      if (k === undefined || (k === null && !keyed)) {
+        err(k === undefined ? `Key "${get(cells, 'key')}" รูปแบบไม่ถูกต้อง` : 'ID ว่างหรือไม่ใช่ตัวเลข', 'ใช้รูปแบบ DP-12 หรือเว้นว่างสำหรับงานใหม่');
+        skip.add(no);
+        continue;
+      }
+      if (k?.prefix && opts.projectKey && k.prefix !== opts.projectKey.toUpperCase()) {
+        err(`Key ${k.prefix}-${k.number} ไม่ใช่งานของโปรเจกต์ ${opts.projectKey}`, 'แก้ Key หรือเว้นว่างเพื่อสร้างเป็นงานใหม่');
+        skip.add(no);
+        continue;
+      }
+      number = k?.number ?? null;
+    }
+    if (number !== null && seenNumber.has(number)) {
+      err(`${keyed ? 'Key' : 'ID'} ${number} ซ้ำ`, 'แก้ไขใน Excel');
       skip.add(no);
       continue;
     }
-    seenNumber.add(number);
+    if (number !== null) seenNumber.add(number);
+    const parent = parseKey(get(cells, 'parentKey'));
 
     const dates = Object.fromEntries(
       (['planStart', 'planEnd', 'actualStart', 'actualEnd'] as const).map((f) => [f, toIsoDate(get(cells, f))]),
@@ -209,42 +268,52 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     const sizeRaw = get(cells, 'size');
     const size = sizeRaw && (SIZES as readonly string[]).includes(String(sizeRaw).toUpperCase()) ? (String(sizeRaw).toUpperCase() as Size) : null;
     const statusRaw = get(cells, 'status');
+    const priorityRaw = text(get(cells, 'priority'));
     const reqs = list(get(cells, 'requirement'));
-    const ba = get(cells, 'ba') === null ? null : String(get(cells, 'ba')).trim();
-    const devs = list(get(cells, 'devs'));
 
     const row: PlanRow = {
       rowNo,
       no,
       number,
-      module: base.module ?? '',
-      phase: get(cells, 'phase') === null ? null : String(get(cells, 'phase')),
-      title: base.title ?? '',
+      parentNumber: parent?.number ?? null,
+      module: module ?? '',
+      // เลิกใช้กลุ่มงาน (ผู้ใช้ตัดสิน 2026-11-08): คอลัมน์ Sprint / Phase ในไฟล์ไม่ถูกนำเข้า
+      phase: null,
+      title: title ?? '',
       screens: list(get(cells, 'screen')).filter((x) => /^SCR-/i.test(x)),
       requirements: reqs.filter((x) => /^N?FR-/i.test(x)).map((x) => x.toUpperCase()),
       requirementText: reqs.filter((x) => !/^N?FR-/i.test(x)).join(', ') || null,
-      ba: ba && ba !== '-' ? ba : null,
+      ba: person(get(cells, 'ba')),
+      sa: person(get(cells, 'sa')),
+      reviewer: person(get(cells, 'reviewer')),
       status: resolveStatus(statusRaw) ?? 'To do',
-      devs,
+      priority: priorityRaw ? (PRIORITY[priorityRaw.toLowerCase()] ?? null) : null,
+      devs: list(get(cells, 'devs')),
+      labels: [...new Set(String(get(cells, 'labels') ?? '').split(/[,\n]+/).map((x) => x.trim()).filter(Boolean))],
       size: size ?? (!opts.noDerivedSize && md && md > 0 ? sizeFromMd(md) : null),
       estimateMd: md !== null && Number.isFinite(md) && md > 0 ? md : null,
       planStart: dates.planStart ?? null,
       planEnd: dates.planEnd ?? null,
       actualStart: dates.actualStart ?? null,
       actualEnd: dates.actualEnd ?? null,
-      remark: get(cells, 'remark') === null ? null : String(get(cells, 'remark')),
+      remark: text(get(cells, 'remark')),
     };
 
     // ต้องแก้ (ข้ามตอนนำเข้า)
     const blocking: [string, string][] = [];
     if (!row.title) blocking.push(['ไม่มีชื่องาน', 'แก้ไขใน Excel']);
-    if (!row.module) blocking.push(['ไม่มี Module', 'แก้ไขใน Excel']);
+    // Sub-task ใช้ Module ของ Task แม่ (ตรวจหลังอ่านครบทุกแถว)
+    if (parent === undefined) blocking.push([`Parent Key "${get(cells, 'parentKey')}" รูปแบบไม่ถูกต้อง`, 'ใช้รูปแบบ DP-12']);
+    else if (parent && number !== null && parent.number === number) blocking.push(['Parent Key ชี้มาที่ตัวเอง', 'แก้ไขใน Excel']);
+    if (!row.module && !parent) blocking.push(['ไม่มี Module', 'แก้ไขใน Excel']);
     for (const f of ['planStart', 'planEnd', 'actualStart', 'actualEnd'] as const) {
       if (dates[f] === undefined) blocking.push([`${FIELDS[f].label} รูปแบบวันที่ไม่ถูกต้อง`, 'แก้ไขใน Excel']);
     }
     if (mdRaw !== null && row.estimateMd === null) blocking.push(['Man-Day ไม่ใช่ตัวเลขที่มากกว่า 0', 'แก้ไขใน Excel']);
     const scheduled = !!(row.planStart || row.planEnd);
-    if (scheduled && !row.ba && !opts.baOptional) blocking.push(['ไม่มี BA', 'ระบุ BA ใน Excel']);
+    // BA บังคับเฉพาะ Task ที่ลงแผนแล้วในไฟล์รูปแบบเดิม (หน้า L3) · รูปแบบใหม่และ Sub-task เป็นแค่คำเตือน
+    const baRequired = !opts.baOptional && !keyed;
+    if (scheduled && !row.ba && baRequired && !parent) blocking.push(['ไม่มี BA', 'ระบุ BA ใน Excel']);
     if (blocking.length) {
       blocking.forEach(([p, f]) => err(p, f));
       skip.add(no);
@@ -253,10 +322,11 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     }
 
     // เตือน (นำเข้าได้)
-    if (scheduled && !row.ba && opts.baOptional) warn('ไม่มี BA', 'ยังไม่ระบุ BA');
+    if (scheduled && !row.ba && !baRequired && !parent && mapped.has('ba')) warn('ไม่มี BA', 'ยังไม่ระบุ BA');
     if (!scheduled) warn('ไม่มี Plan Start / End', 'นำเข้าเป็น Backlog ยังไม่ลงแผน');
     if (statusRaw === null) warn('ไม่มีค่า Status', 'ใช้ To do');
     else if (!resolveStatus(statusRaw)) warn(`Status "${statusRaw}" ไม่รู้จัก`, 'ใช้ To do');
+    if (priorityRaw && !row.priority) warn(`Priority "${priorityRaw}" ไม่รู้จัก`, 'ใช้ Medium');
     if (row.planStart && !cal.isWorkingDay(row.planStart)) {
       const moved = cal.onOrAfter(row.planStart);
       warn(`Plan Start ${row.planStart} ตรงวันหยุด`, `เริ่มนับวันทำงานถัดไป (${moved})`);
@@ -271,21 +341,45 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
       err('Plan End ก่อน Plan Start', 'แก้ไขใน Excel');
       skip.add(no);
     }
-    row.devs.forEach((d) => addPerson(d, 'dev'));
-    if (row.ba) addPerson(row.ba, 'ba');
     rows.push(row);
   }
 
-  // คอลัมน์ Sprint (กลุ่มงาน) ที่ใส่ชื่องานแทน: Module ที่กลุ่มอื่นเป็น "Sprint N : …" แต่แถวนี้ไม่ใช่
-  const SPRINT_LIKE = /^(sprint|phase|provider)\s*\d*\s*:/i;
-  const byModule = new Map<string, PlanRow[]>();
-  rows.filter((r) => !skip.has(r.no) && r.phase).forEach((r) => byModule.set(r.module, [...(byModule.get(r.module) ?? []), r]));
-  for (const list of byModule.values()) {
-    const like = list.filter((r) => SPRINT_LIKE.test(r.phase!)).length;
-    if (like < list.length / 2) continue;
-    for (const r of list.filter((x) => !SPRINT_LIKE.test(x.phase!))) {
-      findings.push({ level: 'warn', no: r.no, rowNo: r.rowNo, module: r.module, title: r.title, problem: `คอลัมน์ Sprint เป็น "${r.phase!.slice(0, 40)}" ดูไม่ใช่ชื่อกลุ่มงาน`, fix: 'นำเข้าเป็นกลุ่มงานตามค่าเดิม · แก้ชื่อได้ภายหลัง' });
+  // Sub-task: Task แม่ต้องอยู่ในไฟล์ (หรือในระบบ ตอนอัปเดต) และเป็นงานระดับ Task · Module ตามแม่
+  const byNumber = new Map(rows.filter((r) => r.number !== null).map((r) => [r.number!, r]));
+  for (const r of rows) {
+    if (r.parentNumber === null || skip.has(r.no)) continue;
+    const err = (problem: string, fix: string) => {
+      findings.push({ level: 'err', ...findingOf(r), problem, fix });
+      skip.add(r.no);
+    };
+    const inFile = byNumber.get(r.parentNumber);
+    const inSystem = opts.parents?.get(r.parentNumber);
+    if (inFile && inFile.parentNumber !== null) {
+      err(`Task แม่ ${r.parentNumber} เป็น Sub-task อยู่แล้ว`, 'Sub-task ต้องอยู่ใต้งานระดับ Task เท่านั้น');
+      continue;
     }
+    if (inFile && skip.has(inFile.no)) {
+      err(`Task แม่ ${r.parentNumber} มีข้อผิดพลาด`, 'แก้แถวของ Task แม่ก่อน');
+      continue;
+    }
+    const parentModule = inFile?.module ?? inSystem?.module;
+    if (!parentModule) {
+      err(`ไม่พบ Task แม่ ${r.parentNumber}`, 'ใส่ Key ของ Task ที่อยู่ในไฟล์หรือในโปรเจกต์');
+      continue;
+    }
+    if (r.module && r.module !== parentModule) findings.push({ level: 'warn', ...findingOf(r), problem: `Module "${r.module}" ไม่ตรงกับ Task แม่`, fix: `ใช้ Module ของ Task แม่ (${parentModule})` });
+    r.module = parentModule;
+    if (inFile && ((r.planStart && inFile.planStart && r.planStart < inFile.planStart) || (r.planEnd && inFile.planEnd && r.planEnd > inFile.planEnd))) {
+      findings.push({ level: 'warn', ...findingOf(r), problem: `วันที่อยู่นอกช่วงของ Task แม่ ${r.parentNumber}`, fix: 'นำเข้าตามไฟล์ · ขยายช่วงของ Task แม่ได้ภายหลัง' });
+    }
+  }
+
+  for (const r of rows) {
+    if (skip.has(r.no)) continue;
+    r.devs.forEach((d) => addPerson(d, 'dev'));
+    if (r.ba) addPerson(r.ba, 'ba');
+    if (r.sa) addPerson(r.sa, 'sa');
+    if (r.reviewer) addPerson(r.reviewer, 'qa');
   }
 
   // คนที่ยังไม่อยู่ในรายชื่อสมาชิก (เตือนครั้งเดียวต่อคน)
@@ -299,7 +393,6 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
   const starts = ok.map((r) => r.planStart).filter((x): x is string => !!x).sort();
   const ends = ok.map((r) => r.planEnd).filter((x): x is string => !!x).sort();
   const modules = new Set(ok.map((r) => r.module));
-  const phases = new Set(ok.filter((r) => r.phase).map((r) => `${r.module}\u0000${r.phase}`));
   const backlog = ok.filter((r) => !r.planStart && !r.planEnd).length;
   const all = [...people.values()];
   return {
@@ -307,10 +400,13 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     findings,
     skip,
     people: all,
+    keyed,
+    mapped,
     summary: {
       rows: rows.length,
       modules: modules.size,
-      phases: phases.size,
+      phases: 0,
+      subtasks: ok.filter((r) => r.parentNumber !== null).length,
       // ยอดรวมของทั้งไฟล์ (รวมแถวที่ต้องแก้) ตามหน้า L3
       manDay: rows.reduce((n, r) => n + (r.estimateMd ?? 0), 0),
       devs: all.filter((p) => p.roles.includes('dev')).length,

@@ -1,87 +1,215 @@
 import { schema, type Tx } from '@friday/db';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
-import { WorkCalendar } from '../projects/calendar.js';
 
 const s = schema;
 
-/** 18 คอลัมน์แบบไฟล์แผนต้นฉบับ · หัวคอลัมน์ต้องตรง alias ใน plan.ts (autoMap) เพื่อให้นำเข้ากลับได้ */
-export const EXPORT_HEADERS = ['ID', 'No.', 'Module', 'Sprint', 'Module Task', 'Screen ID', 'FR / NFR', 'BA', 'Status', 'Dev', 'Size', 'Man-Day', 'Plan Start', 'Plan End', 'Actual Start', 'Actual End', 'Remark', 'Working Days'] as const;
+/**
+ * คอลัมน์ของชีต Tasks (รูปแบบใหม่) · หัวคอลัมน์ต้องตรง alias ใน plan.ts (autoMap) เพื่อให้นำเข้ากลับได้
+ * Key ว่าง = งานใหม่ · Parent Key = Sub-task ของ Task นั้น · ไม่มีคอลัมน์ No. (จับคู่ด้วย Key)
+ */
+export const EXPORT_HEADERS = [
+  'Key',
+  'Parent Key',
+  'Module',
+  'Title',
+  'Status',
+  'Priority',
+  'Business Analyst',
+  'System Analyst',
+  'Developer',
+  'QA / Reviewer',
+  'Size',
+  'Man-Day',
+  'Plan Start',
+  'Plan End',
+  'Actual Start',
+  'Actual End',
+  'Requirement',
+  'Screen',
+  'Label',
+  'Description',
+] as const;
+const COL = Object.fromEntries(EXPORT_HEADERS.map((h, i) => [h, i + 1])) as Record<(typeof EXPORT_HEADERS)[number], number>;
+const WIDTH = [10, 11, 22, 44, 13, 10, 18, 18, 24, 18, 7, 9, 12, 12, 12, 12, 18, 16, 16, 40];
+
+const PRIORITY_LABEL = { urgent: 'Urgent', high: 'High', medium: 'Medium', low: 'Low' } as const;
+const SIZES = ['XS', 'S', 'M', 'L', 'XL'];
+const DEFAULT_STATUSES = ['To do', 'In progress', 'Review', 'Done'];
+const VALUES = 'ค่าที่ใช้ได้';
+const MAX_ROWS = 2000;
 
 const asDate = (d: string | null) => (d ? new Date(`${d}T00:00:00Z`) : null);
 
-/** แผนงานของโปรเจกต์เป็น .xlsx (ชีต Table + Holidays) · งานระดับ Task เท่านั้น ไม่รวม Sub-task / Bug */
-export async function buildPlanXlsx(tx: Tx, project: { id: string; workspaceId: string; holidayCalendarId: string | null }): Promise<Buffer> {
-  const [taskType] = await tx.select({ id: s.issueTypes.id }).from(s.issueTypes).where(and(eq(s.issueTypes.projectId, project.id), eq(s.issueTypes.name, 'Task')));
+interface SheetData {
+  rows: (string | number | Date | null)[][];
+  /** แถวที่เป็น Sub-task (index ใน rows) แสดงย่อหน้าชื่องาน */
+  subRows: Set<number>;
+  statuses: string[];
+  modules: string[];
+  people: string[];
+  holidays: { date: string; name: string }[];
+}
+
+/** แผนงานของโปรเจกต์เป็น .xlsx: Task + Sub-task (ไม่รวม Bug) เรียง Task แล้วตามด้วย Sub-task ของมัน */
+export async function buildPlanXlsx(tx: Tx, project: { id: string; key: string; workspaceId: string; holidayCalendarId: string | null }): Promise<Buffer> {
+  const [taskType] = await tx.select({ id: s.issueTypes.id, workflowId: s.issueTypes.workflowId }).from(s.issueTypes).where(and(eq(s.issueTypes.projectId, project.id), eq(s.issueTypes.name, 'Task')));
   const issues = await tx
     .select()
     .from(s.issues)
-    .where(and(eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt), isNull(s.issues.parentId), eq(s.issues.issueTypeId, taskType.id)))
+    .where(and(eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt), eq(s.issues.issueTypeId, taskType.id)))
     .orderBy(asc(s.issues.number));
-  const [mods, phs, sts, users, asg, reqs, scrs] = await Promise.all([
-    tx.select({ id: s.modules.id, name: s.modules.name }).from(s.modules).where(eq(s.modules.projectId, project.id)),
-    tx.select({ id: s.phases.id, name: s.phases.name }).from(s.phases).where(eq(s.phases.projectId, project.id)),
-    tx.select({ id: s.workflowStatuses.id, name: s.workflowStatuses.name }).from(s.workflowStatuses),
+  const ids = issues.map((i) => i.id);
+  const some = <T>(q: () => Promise<T[]>) => (ids.length ? q() : Promise.resolve([] as T[]));
+  const [mods, sts, users, asg, reqs, scrs, lbls] = await Promise.all([
+    tx.select({ id: s.modules.id, name: s.modules.name }).from(s.modules).where(eq(s.modules.projectId, project.id)).orderBy(asc(s.modules.sort)),
+    tx.select({ id: s.workflowStatuses.id, name: s.workflowStatuses.name }).from(s.workflowStatuses).where(eq(s.workflowStatuses.workflowId, taskType.workflowId)).orderBy(asc(s.workflowStatuses.sort)),
     tx.select({ id: s.users.id, name: s.users.displayName }).from(s.users),
-    tx.select({ issueId: s.issueAssignees.issueId, userId: s.issueAssignees.userId, sort: s.issueAssignees.sort }).from(s.issueAssignees).innerJoin(s.issues, eq(s.issues.id, s.issueAssignees.issueId)).where(eq(s.issues.projectId, project.id)).orderBy(asc(s.issueAssignees.sort)),
-    tx.select({ issueId: s.issueRequirements.issueId, code: s.requirements.code }).from(s.issueRequirements).innerJoin(s.requirements, eq(s.requirements.id, s.issueRequirements.requirementId)).where(eq(s.requirements.projectId, project.id)),
-    tx.select({ issueId: s.issueScreens.issueId, code: s.screens.code }).from(s.issueScreens).innerJoin(s.screens, eq(s.screens.id, s.issueScreens.screenId)).where(eq(s.screens.projectId, project.id)),
+    some(() => tx.select({ issueId: s.issueAssignees.issueId, userId: s.issueAssignees.userId }).from(s.issueAssignees).where(inArray(s.issueAssignees.issueId, ids)).orderBy(asc(s.issueAssignees.sort))),
+    some(() => tx.select({ issueId: s.issueRequirements.issueId, code: s.requirements.code }).from(s.issueRequirements).innerJoin(s.requirements, eq(s.requirements.id, s.issueRequirements.requirementId)).where(inArray(s.issueRequirements.issueId, ids))),
+    some(() => tx.select({ issueId: s.issueScreens.issueId, code: s.screens.code }).from(s.issueScreens).innerJoin(s.screens, eq(s.screens.id, s.issueScreens.screenId)).where(inArray(s.issueScreens.issueId, ids))),
+    some(() => tx.select({ issueId: s.issueLabels.issueId, name: s.labels.name }).from(s.issueLabels).innerJoin(s.labels, eq(s.labels.id, s.issueLabels.labelId)).where(inArray(s.issueLabels.issueId, ids))),
   ]);
-  const name = (m: { id: string; name: string }[]) => new Map(m.map((x) => [x.id, x.name]));
-  const [moduleName, phaseName, statusName, userName] = [name(mods), name(phs), name(sts), name(users)];
-  const group = <T extends { issueId: string }>(rows: T[], pick: (r: T) => string) => {
+  const moduleName = new Map(mods.map((x) => [x.id, x.name]));
+  const userName = new Map(users.map((x) => [x.id, x.name]));
+  const statusName = new Map(sts.map((x) => [x.id, x.name]));
+  const group = <T extends { issueId: string }>(list: T[], pick: (r: T) => string) => {
     const out = new Map<string, string[]>();
-    for (const r of rows) out.set(r.issueId, [...(out.get(r.issueId) ?? []), pick(r)]);
+    for (const r of list) out.set(r.issueId, [...(out.get(r.issueId) ?? []), pick(r)]);
     return out;
   };
-  const [devsOf, reqsOf, scrsOf] = [group(asg, (r) => userName.get(r.userId) ?? ''), group(reqs, (r) => r.code), group(scrs, (r) => r.code)];
+  const [devsOf, reqsOf, scrsOf, lblsOf] = [group(asg, (r) => userName.get(r.userId) ?? ''), group(reqs, (r) => r.code), group(scrs, (r) => r.code), group(lbls, (r) => r.name)];
+  const byId = new Map(issues.map((i) => [i.id, i]));
+  const join = (list: string[] | undefined) => (list?.length ? list.join(', ') : null);
+  const person = (id: string | null) => (id ? (userName.get(id) ?? null) : null);
 
-  // งานที่ยังไม่มี No. (สร้างในระบบ) ได้เลขต่อจาก No. สูงสุด · นำเข้ากลับจะจับคู่ด้วย ID แล้วบันทึก No. ให้
-  let nextNo = Math.max(0, ...issues.map((i) => i.excelRowNo ?? 0)) + 1;
-  const cal = await WorkCalendar.load(tx, project);
+  // Task เรียงตามลำดับในแผนเดิม (ถ้ามี) แล้วตามเลขงาน · Sub-task ต่อท้าย Task แม่
+  const tops = issues.filter((i) => !i.parentId).sort((a, b) => (a.excelRowNo ?? Infinity) - (b.excelRowNo ?? Infinity) || a.number - b.number);
+  const kids = group(issues.filter((i) => i.parentId && byId.has(i.parentId)).map((i) => ({ issueId: i.parentId!, id: i.id })), (r) => r.id);
+  const ordered = tops.flatMap((t) => [t, ...(kids.get(t.id) ?? []).map((id) => byId.get(id)!)]);
 
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('Table');
-  ws.addRow([...EXPORT_HEADERS]).font = { bold: true };
-  ws.views = [{ state: 'frozen', ySplit: 1 }];
-  for (const i of issues) {
+  const rows: SheetData['rows'] = [];
+  const subRows = new Set<number>();
+  for (const i of ordered) {
+    const parent = i.parentId ? byId.get(i.parentId) : undefined;
     const details = (i.details ?? {}) as { requirementText?: string };
-    const fr = [...(reqsOf.get(i.id) ?? []), ...(details.requirementText ? [details.requirementText] : [])];
-    const days = i.planStart && i.planEnd ? cal.workingDaysIn(i.planStart, i.planEnd) : null;
-    ws.addRow([
-      i.number,
-      i.excelRowNo ?? nextNo++,
-      i.moduleId ? (moduleName.get(i.moduleId) ?? '') : '',
-      i.phaseId ? (phaseName.get(i.phaseId) ?? null) : null,
+    if (parent) subRows.add(rows.length);
+    rows.push([
+      `${project.key}-${i.number}`,
+      parent ? `${project.key}-${parent.number}` : null,
+      i.moduleId ? (moduleName.get(i.moduleId) ?? null) : null,
       i.title,
-      (scrsOf.get(i.id) ?? []).join(', ') || null,
-      fr.join(', ') || null,
-      i.baId ? (userName.get(i.baId) ?? null) : null,
       statusName.get(i.statusId) ?? null,
-      (devsOf.get(i.id) ?? []).join(', ') || null,
+      PRIORITY_LABEL[i.priority],
+      person(i.baId),
+      person(i.saId),
+      join(devsOf.get(i.id)),
+      person(i.reviewerId),
       i.size,
       i.estimateMd === null ? null : Number(i.estimateMd),
       asDate(i.planStart),
       asDate(i.planEnd),
       asDate(i.actualStart),
       asDate(i.actualEnd),
+      join([...(reqsOf.get(i.id) ?? []), ...(details.requirementText ? [details.requirementText] : [])]),
+      join(scrsOf.get(i.id)),
+      join(lblsOf.get(i.id)),
       i.description,
-      days,
     ]);
   }
-  for (const col of [13, 14, 15, 16]) ws.getColumn(col).numFmt = 'yyyy-mm-dd';
-  ws.columns.forEach((c, n) => (c.width = [8, 6, 22, 24, 48, 18, 18, 14, 14, 24, 7, 10, 12, 12, 12, 12, 30, 13][n]));
 
-  const hs = wb.addWorksheet('Holidays');
-  hs.addRow(['Date', 'Name']).font = { bold: true };
   const [ws0] = await tx.select({ cal: s.workspaceSettings.holidayCalendarId }).from(s.workspaceSettings).where(eq(s.workspaceSettings.workspaceId, project.workspaceId));
   const calendarId = project.holidayCalendarId ?? ws0?.cal ?? null;
-  const rows = [
+  const holidays = [
     ...(calendarId ? await tx.select({ date: s.holidays.date, name: s.holidays.name }).from(s.holidays).where(eq(s.holidays.calendarId, calendarId)) : []),
     ...(await tx.select({ date: s.projectHolidays.date, name: s.projectHolidays.name }).from(s.projectHolidays).where(eq(s.projectHolidays.projectId, project.id))),
   ];
+  return render({ rows, subRows, statuses: sts.map((x) => x.name), modules: mods.map((m) => m.name), people: await memberNames(tx), holidays });
+}
+
+/** Template เปล่าสำหรับเริ่มแผนใหม่ (สร้างโปรเจกต์จากไฟล์) · มีรายชื่อสมาชิกและวันหยุดของ Workspace ให้เลือก */
+export async function buildTemplateXlsx(tx: Tx, workspaceId: string): Promise<Buffer> {
+  const [ws0] = await tx.select({ cal: s.workspaceSettings.holidayCalendarId }).from(s.workspaceSettings).where(eq(s.workspaceSettings.workspaceId, workspaceId));
+  const holidays = ws0?.cal ? await tx.select({ date: s.holidays.date, name: s.holidays.name }).from(s.holidays).where(eq(s.holidays.calendarId, ws0.cal)) : [];
+  return render({ rows: [], subRows: new Set(), statuses: DEFAULT_STATUSES, modules: [], people: await memberNames(tx), holidays });
+}
+
+/** สมาชิกที่จับคู่ได้ตอนนำเข้า (ไม่รวม Guest) */
+async function memberNames(tx: Tx) {
+  const rows = await tx
+    .select({ name: s.users.displayName })
+    .from(s.workspaceMembers)
+    .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
+    .where(and(eq(s.workspaceMembers.status, 'active'), ne(s.workspaceMembers.role, 'guest')));
+  return [...new Set(rows.map((r) => r.name))].sort((a, b) => a.localeCompare(b));
+}
+
+const HEAD_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
+const KEY_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+const SUB_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
+
+async function render(d: SheetData): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Tasks', { views: [{ state: 'frozen', xSplit: COL.Title, ySplit: 1 }] });
+  const head = ws.addRow([...EXPORT_HEADERS]);
+  head.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  head.eachCell((c) => (c.fill = HEAD_FILL));
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: EXPORT_HEADERS.length } };
+  d.rows.forEach((r, i) => {
+    const row = ws.addRow(r);
+    row.getCell(COL.Key).fill = KEY_FILL;
+    if (d.subRows.has(i)) {
+      row.getCell(COL.Title).alignment = { indent: 2 };
+      row.getCell(COL['Parent Key']).fill = SUB_FILL;
+    }
+  });
+  for (const c of [COL['Plan Start'], COL['Plan End'], COL['Actual Start'], COL['Actual End']]) ws.getColumn(c).numFmt = 'yyyy-mm-dd';
+  ws.columns.forEach((c, n) => (c.width = WIDTH[n]));
+
+  // ชีตค่าที่ใช้ได้ + รายการเลือกในเซลล์ (พิมพ์ค่าอื่นได้ ระบบตรวจตอนนำเข้า)
+  const lists: [string, string[]][] = [
+    ['Status', d.statuses],
+    ['Priority', Object.values(PRIORITY_LABEL)],
+    ['Size', SIZES],
+    ['Module', d.modules],
+    ['สมาชิก', d.people],
+  ];
+  const vs = wb.addWorksheet(VALUES);
+  vs.addRow(lists.map(([h]) => h)).font = { bold: true };
+  const longest = Math.max(...lists.map(([, v]) => v.length));
+  for (let i = 0; i < longest; i++) vs.addRow(lists.map(([, v]) => v[i] ?? null));
+  vs.columns.forEach((c) => (c.width = 22));
+  const validations = (ws as unknown as { dataValidations: { add: (range: string, v: ExcelJS.DataValidation) => void } }).dataValidations;
+  const letter = (n: number) => ws.getColumn(n).letter;
+  const pick = (col: number, list: number) => {
+    const n = lists[list][1].length;
+    if (!n) return;
+    const src = vs.getColumn(list + 1).letter;
+    validations.add(`${letter(col)}2:${letter(col)}${MAX_ROWS}`, {
+      type: 'list',
+      allowBlank: true,
+      showErrorMessage: false,
+      formulae: [`'${VALUES}'!$${src}$2:$${src}$${n + 1}`],
+    });
+  };
+  pick(COL.Status, 0);
+  pick(COL.Priority, 1);
+  pick(COL.Size, 2);
+  pick(COL.Module, 3);
+  for (const c of [COL['Business Analyst'], COL['System Analyst'], COL['QA / Reviewer']]) pick(c, 4);
+
+  const guide = wb.addWorksheet('คำแนะนำ');
+  guide.addRow(['คอลัมน์', 'ความหมาย', 'จำเป็น']).font = { bold: true };
+  for (const r of GUIDE) guide.addRow(r);
+  guide.addRow([]);
+  for (const line of NOTES) guide.addRow([line]);
+  guide.columns.forEach((c, n) => (c.width = [18, 80, 10][n]));
+  guide.getColumn(2).alignment = { wrapText: true, vertical: 'top' };
+
+  const hs = wb.addWorksheet('Holidays');
+  hs.addRow(['Date', 'Name']).font = { bold: true };
   const seen = new Set<string>();
-  for (const h of rows.sort((a, b) => a.date.localeCompare(b.date))) {
+  for (const h of [...d.holidays].sort((a, b) => a.date.localeCompare(b.date))) {
     if (seen.has(h.date)) continue;
     seen.add(h.date);
     hs.addRow([asDate(h.date), h.name]);
@@ -89,5 +217,35 @@ export async function buildPlanXlsx(tx: Tx, project: { id: string; workspaceId: 
   hs.getColumn(1).numFmt = 'yyyy-mm-dd';
   hs.columns.forEach((c, n) => (c.width = [12, 36][n]));
 
+  // เปิดไฟล์มาเจอชีต Tasks ก่อน
+  wb.views = [{ x: 0, y: 0, width: 20000, height: 12000, firstSheet: 0, activeTab: 0, visibility: 'visible' }];
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
+
+const GUIDE: [string, string, string][] = [
+  ['Key', 'รหัสงานในระบบ เช่น DP-12 · แถวที่มี Key = แก้งานเดิม · เว้นว่าง = สร้างงานใหม่ (ระบบออกเลขให้) · อย่าแก้ Key ของงานเดิม', '—'],
+  ['Parent Key', 'Key ของ Task แม่ ถ้าแถวนี้เป็น Sub-task · Task แม่ต้องอยู่ในไฟล์หรือในโปรเจกต์ และต้องไม่เป็น Sub-task เอง', '—'],
+  ['Module', 'ชื่อ Module · ยังไม่มีในโปรเจกต์ = สร้างให้ · Sub-task ใช้ Module ของ Task แม่เสมอ', 'Task'],
+  ['Title', 'ชื่องาน', 'ใช่'],
+  ['Status', 'สถานะตาม Workflow ของโปรเจกต์ (ดูชีตค่าที่ใช้ได้) · ว่าง = To do', '—'],
+  ['Priority', 'Urgent / High / Medium / Low · ว่าง = Medium (งานใหม่) หรือคงค่าเดิม', '—'],
+  ['Business Analyst', 'ชื่อที่แสดงของสมาชิก 1 คน', '—'],
+  ['System Analyst', 'ชื่อที่แสดงของสมาชิก 1 คน', '—'],
+  ['Developer', 'ชื่อสมาชิก หลายคนคั่นด้วย ,', '—'],
+  ['QA / Reviewer', 'ผู้ตรวจงาน 1 คน', '—'],
+  ['Size', 'XS / S / M / L / XL · ว่างแต่มี Man-Day = คำนวณให้ (งานใหม่)', '—'],
+  ['Man-Day', 'จำนวนวันทำงานรวมทั้งทีม (ตัวเลขมากกว่า 0)', '—'],
+  ['Plan Start / Plan End', 'วันที่ YYYY-MM-DD · ไม่มีทั้งคู่ = Backlog · Plan End ว่าง = คำนวณจาก Man-Day ตามวันทำงาน', '—'],
+  ['Actual Start / Actual End', 'วันที่เริ่ม / เสร็จจริง YYYY-MM-DD', '—'],
+  ['Requirement', 'รหัส FR-xxx / NFR-xxx หลายค่าคั่นด้วย ,', '—'],
+  ['Screen', 'รหัส SCR-xxx หลายค่าคั่นด้วย ,', '—'],
+  ['Label', 'ชื่อ Label หลายค่าคั่นด้วย , · ยังไม่มี = สร้างให้', '—'],
+  ['Description', 'รายละเอียดงาน', '—'],
+];
+
+const NOTES = [
+  'นำเข้า: หน้า Import / Export › เลือก "สร้างโปรเจกต์ใหม่" หรือ "อัปเดตแผนของโปรเจกต์เดิม" แล้วอัปโหลดไฟล์นี้',
+  'อัปเดตแผน: งานที่อยู่ในระบบแต่ลบแถวออกจากไฟล์ ระบบจะถามก่อนว่าเก็บไว้หรือลบ · คอลัมน์ที่ลบออกจากไฟล์ = ไม่แตะค่าเดิมในระบบ',
+  'ชีต Holidays: วันหยุดที่ใช้คำนวณ Plan End · วันที่ไม่มีในปฏิทินของ Workspace จะเพิ่มเป็นวันหยุดของโปรเจกต์ (ตอนสร้างโปรเจกต์)',
+  'ไฟล์รูปแบบเดิม (มีคอลัมน์ No.) ยังนำเข้าได้ ระบบจับคู่ด้วย No. เหมือนเดิม',
+];

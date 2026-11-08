@@ -58,6 +58,18 @@ describe('test-runs', () => {
     expect((await t.owner.query(`SELECT 1 FROM activities WHERE issue_id = $1 AND verb = 'test_run_recorded'`, [task.id])).rowCount).toBe(3);
   });
 
+  it('ผลตรวจของ Reviewer: ระบุผู้ตรวจได้ (ค่าเริ่มต้น = คนบันทึก) · ผู้ตรวจต้องเป็นสมาชิกที่ไม่ใช่ Guest', async () => {
+    const task = await issue('ผลตรวจ Reviewer');
+    const r = await team.lead.post(`${base}/${task.key}/test-runs`, { result: 'failed', testerId: team.devId, environment: 'uat', note: '1. เปิดหน้า\n2. กดบันทึก → ค้าง' });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(r.body).toMatchObject({ result: 'failed', environment: 'uat', tester: { displayName: 'Kaijeaw' }, passedCount: null, commitSha: null });
+    expect((await team.lead.post(`${base}/${task.key}/test-runs`, { result: 'passed' })).body.tester).toMatchObject({ displayName: 'Mick' });
+    const guestId = (await t.owner.query(`SELECT u.id FROM users u WHERE u.email = 'guest@qa.example.com'`)).rows[0].id;
+    const bad = await team.lead.post(`${base}/${task.key}/test-runs`, { result: 'passed', testerId: guestId });
+    expect(bad.status).toBe(400);
+    expect(bad.body.error.code).toBe('invalid_people');
+  });
+
   it('บันทึกพร้อมกันได้เลขรอบไม่ซ้ำ', async () => {
     const task = await issue('บันทึกพร้อมกัน');
     const rs = await Promise.all([1, 2, 3, 4].map(() => team.lead.post(`${base}/${task.key}/test-runs`, { result: 'passed' })));
@@ -245,3 +257,23 @@ describe('time-logs', () => {
     expect([403, 404]).toContain((await guest.get(`${base}/${task.key}/time-logs`)).status);
   });
 });
+
+describe('ผล Unit test ของ Dev (ผู้ใช้เพิ่ม 2026-11-08)', () => {
+  it('เลขรอบแยกจาก QA · เก็บ Coverage · latest เป็นผล QA · Unit test ไม่ผ่านไม่ส่ง test_run.failed', async () => {
+    const task = await issue('งาน Unit test สมมติ');
+    const before = events.length;
+    const unit1 = await team.dev.post(`${base}/${task.key}/test-runs`, { kind: 'unit', result: 'failed', passedCount: 45, totalCount: 48, coveragePct: 79.5, commitSha: '9f8e7d6' });
+    expect(unit1.status, JSON.stringify(unit1.body)).toBe(201);
+    expect(unit1.body).toMatchObject({ kind: 'unit', runNo: 1, coveragePct: 79.5 });
+    expect(events.slice(before).some((e) => e.type === 'test_run.failed')).toBe(false);
+    const qa1 = await team.lead.post(`${base}/${task.key}/test-runs`, { result: 'passed' });
+    expect(qa1.body).toMatchObject({ kind: 'qa', runNo: 1, coveragePct: null });
+    const unit2 = await team.dev.post(`${base}/${task.key}/test-runs`, { kind: 'unit', result: 'passed', passedCount: 48, totalCount: 48, coveragePct: 82 });
+    expect(unit2.body.runNo).toBe(2);
+    const list = (await team.dev.get(`${base}/${task.key}/test-runs`)).body;
+    expect(list.items).toHaveLength(3);
+    expect(list.latest).toMatchObject({ kind: 'qa', runNo: 1 });
+    expect((await team.dev.post(`${base}/${task.key}/test-runs`, { kind: 'unit', result: 'passed', coveragePct: 101 })).status).toBe(400);
+  });
+});
+

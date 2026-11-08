@@ -111,16 +111,17 @@ export async function listIssues<T extends { id: string; key: string; number: nu
   if (q.view === 'table' && page.length) {
     const ids = page.map((r) => r.issue.id);
     const assignmentRows = await tx.select().from(s.issueAssignees).where(inArray(s.issueAssignees.issueId, ids)).orderBy(asc(s.issueAssignees.sort));
-    const people = await loadPeople(tx, [...assignmentRows.map((a) => a.userId), ...page.map((r) => r.issue.baId)]);
+    const people = await loadPeople(tx, [...assignmentRows.map((a) => a.userId), ...page.flatMap((r) => [r.issue.baId, r.issue.saId])]);
     const progress = progressCalculator(progressRows!, project.progressMethod === 'weighted');
     items = items.map((item, index) => ({ ...item, progressPct: progress(page[index].issue),
       assignees: assignmentRows.filter((a) => a.issueId === item.id).map((a) => people.get(a.userId)).filter(Boolean),
       ba: people.get(page[index].issue.baId ?? '') ?? null,
+      sa: people.get(page[index].issue.saId ?? '') ?? null,
     }));
   }
   if (q.fields) {
     const requested = new Set(q.fields.split(',').filter(Boolean));
-    const allowed = new Set(['id', 'key', 'number', 'projectKey', 'type', 'parentKey', 'title', 'description', 'status', 'priority', 'moduleId', 'phaseId', 'sprintId', 'size', 'estimateMd', 'progressPct', 'planStart', 'planEnd', 'actualStart', 'actualEnd', 'reopenCount', 'severity', 'environment', 'details', 'sharedWithGuests', 'version', 'createdAt', 'updatedAt', 'assigneeIds', 'baId', 'reviewerId', 'testerId', 'reporterId', 'assignees', 'ba', 'labels', 'requirements', 'screens']);
+    const allowed = new Set(['id', 'key', 'number', 'projectKey', 'type', 'parentKey', 'title', 'description', 'status', 'priority', 'moduleId', 'phaseId', 'sprintId', 'size', 'estimateMd', 'progressPct', 'planStart', 'planEnd', 'actualStart', 'actualEnd', 'reopenCount', 'severity', 'environment', 'details', 'sharedWithGuests', 'version', 'createdAt', 'updatedAt', 'assigneeIds', 'baId', 'saId', 'reviewerId', 'testerId', 'reporterId', 'assignees', 'ba', 'sa', 'labels', 'requirements', 'screens']);
     if ([...requested].some((key) => !allowed.has(key))) throw new AppError(400, 'invalid_fields', 'ชื่อฟิลด์ที่ขอไม่ถูกต้อง');
     requested.add('key');
     items = items.map((item) => Object.fromEntries(Object.entries(item).filter(([key]) => requested.has(key))));

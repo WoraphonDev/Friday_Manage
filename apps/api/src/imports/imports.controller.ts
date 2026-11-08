@@ -36,18 +36,34 @@ export class ImportsController {
   }
 }
 
+const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+/** L3 › Template เปล่าสำหรับเริ่มแผนใหม่ (คอลัมน์เดียวกับไฟล์ Export) */
+@Controller('w/:ws')
+@UseGuards(TenantGuard)
+export class ImportTemplateController {
+  constructor(private readonly imports: ImportsService) {}
+
+  @Get('import-template.xlsx')
+  async template(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Res({ passthrough: true }) res: Response) {
+    const file = await this.imports.templateXlsx(auth, tenant);
+    res.set({ 'Content-Type': XLSX, 'Content-Disposition': `attachment; filename="${file.filename}"` });
+    return new StreamableFile(file.buffer);
+  }
+}
+
 /** L3 › Export แผนงาน (ไฟล์เดียวกับที่นำเข้าโหมดอัปเดตได้) */
 @Controller('w/:ws/projects/:key')
 @UseGuards(TenantGuard)
 export class PlanExportController {
   constructor(private readonly imports: ImportsService) {}
 
-  /** ดาวน์โหลดแผนงานของโปรเจกต์เป็น .xlsx (18 คอลัมน์ + ชีต Holidays) นำเข้ากลับโหมดอัปเดตได้ */
+  /** ดาวน์โหลดแผนงานของโปรเจกต์เป็น .xlsx (ชีต Tasks + คำแนะนำ + ค่าที่ใช้ได้ + Holidays) นำเข้ากลับโหมดอัปเดตได้ */
   @Get('export.xlsx')
   async export(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Res({ passthrough: true }) res: Response) {
     const file = await this.imports.exportXlsx(auth, tenant, key);
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type': XLSX,
       'Content-Disposition': `attachment; filename="${file.filename}"`,
     });
     return new StreamableFile(file.buffer);

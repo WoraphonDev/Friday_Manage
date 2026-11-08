@@ -10,6 +10,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   primaryKey,
   smallint,
@@ -30,6 +31,7 @@ import {
   requestStatus,
   severity,
   size,
+  testKind,
   testResult,
   watchSource,
 } from './enums.ts';
@@ -90,6 +92,8 @@ export const issues = pgTable(
     priority: priority().notNull().default('medium'),
 
     baId: uuid().references(() => users.id),
+    /** System Analyst ของงาน (ผู้ใช้เพิ่ม 2026-11-08) */
+    saId: uuid().references(() => users.id),
     reviewerId: uuid().references(() => users.id),
     testerId: uuid().references(() => users.id),
     reporterId: uuid().references(() => users.id),
@@ -383,12 +387,15 @@ export const testRuns = pgTable(
     id: pk(),
     workspaceId: workspaceId(),
     issueId: uuid().notNull(),
+    kind: testKind().notNull().default('qa'),
     runNo: smallint().notNull(),
     result: testResult().notNull(),
     passedCount: smallint(),
     totalCount: smallint(),
     environment: environment(),
     commitSha: text(),
+    /** Coverage % ของผล Unit test (ไม่บังคับ) */
+    coveragePct: numeric({ precision: 5, scale: 2, mode: 'number' }),
     note: text(),
     testerId: uuid().references(() => users.id),
     createdAt: createdAt(),
@@ -396,8 +403,10 @@ export const testRuns = pgTable(
   (t) => [
     unique('test_runs_workspace_id_key').on(t.workspaceId, t.id),
     inIssue('test_runs', t),
-    uniqueIndex('test_runs_issue_run_key').on(t.issueId, t.runNo),
+    // เลขรอบนับแยกตามประเภท: QA รอบ 1, 2 และ Unit test รอบ 1, 2
+    uniqueIndex('test_runs_issue_kind_run_key').on(t.issueId, t.kind, t.runNo),
     check('test_runs_counts', sql`${t.passedCount} <= ${t.totalCount}`),
+    check('test_runs_coverage_range', sql`${t.coveragePct} between 0 and 100`),
   ],
 );
 

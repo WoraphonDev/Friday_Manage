@@ -153,7 +153,7 @@ export class ReportsService {
       const plan = await loadPlan(tx, project);
       const byId = new Map(plan.items.map((i) => [i.id, i]));
       const runs = plan.items.length
-        ? await tx.select().from(s.testRuns).where(inArray(s.testRuns.issueId, plan.items.map((i) => i.id))).orderBy(desc(s.testRuns.runNo))
+        ? await tx.select().from(s.testRuns).where(and(inArray(s.testRuns.issueId, plan.items.map((i) => i.id)), eq(s.testRuns.kind, 'qa'))).orderBy(desc(s.testRuns.runNo))
         : [];
       // ผลทดสอบล่าสุดของแต่ละงาน (runNo สูงสุด)
       const latest = new Map<string, (typeof runs)[number]>();

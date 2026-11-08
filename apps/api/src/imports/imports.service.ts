@@ -16,8 +16,9 @@ import { WorkCalendar } from '../projects/calendar.js';
 import { requirePerm } from '../projects/permissions.js';
 import { projectKey, ProjectsService } from '../projects/projects.service.js';
 import { type ParsedWorkbook, readPlanWorkbook } from './excel.js';
-import { applyUpdate, computeUpdate, statusNames, type UpdateDiff, type UpdatePlan } from './update.js';
-import { buildPlanXlsx } from './export.js';
+import { applyUpdate, computeUpdate, parentTasks, statusNames, type UpdateDiff, type UpdatePlan } from './update.js';
+import { buildPlanXlsx, buildTemplateXlsx } from './export.js';
+import { insertRows } from './insert.js';
 import { autoMap, type CheckOptions, checkPlan, type ColumnMapping, FIELDS, type Field, personKey, type PlanCheck } from './plan.js';
 
 const s = schema;
@@ -199,16 +200,6 @@ export class ImportsService {
       if (extra.length) await tx.insert(s.projectHolidays).values(extra.map((h) => ({ ...base, date: h.date, name: h.name }))).onConflictDoNothing();
 
       const moduleId = new Map((await tx.select({ id: s.modules.id, name: s.modules.name }).from(s.modules).where(eq(s.modules.projectId, project.id))).map((m) => [m.name, m.id]));
-      // กลุ่มงานตามลำดับที่พบในไฟล์
-      const phaseKeys = [...new Set(rows.filter((r) => r.phase).map((r) => `${r.module}\u0000${r.phase}`))];
-      const phaseRows = phaseKeys.length
-        ? await tx
-            .insert(s.phases)
-            .values(phaseKeys.map((k, i) => ({ ...base, moduleId: moduleId.get(k.split('\u0000')[0])!, name: k.split('\u0000')[1], sort: i })))
-            .returning({ id: s.phases.id, moduleId: s.phases.moduleId, name: s.phases.name })
-        : [];
-      const phaseId = new Map(phaseRows.map((x) => [`${x.moduleId}\u0000${x.name}`, x.id]));
-
       const [taskType] = await tx.select().from(s.issueTypes).where(and(eq(s.issueTypes.projectId, project.id), eq(s.issueTypes.name, 'Task')));
       const statusId = new Map(
         (await tx.select({ id: s.workflowStatuses.id, name: s.workflowStatuses.name }).from(s.workflowStatuses).where(and(eq(s.workflowStatuses.workflowId, taskType.workflowId)))).map((x) => [x.name, x.id]),
@@ -219,82 +210,41 @@ export class ImportsService {
         return t && 'userId' in t ? t.userId : null;
       };
 
-      // Requirement / Screen ที่ถูกอ้างถึง
-      const codes = async (table: typeof s.requirements | typeof s.screens, list: string[]) => {
-        const uniq = [...new Set(list)];
-        if (!uniq.length) return new Map<string, string>();
-        const inserted = await tx
-          .insert(table)
-          .values(uniq.map((code) => ({ ...base, code, ...(table === s.requirements ? { kind: code.startsWith('NFR') ? 'NFR' : 'FR' } : {}) })))
-          .returning({ id: table.id, code: table.code });
-        return new Map(inserted.map((x) => [x.code, x.id]));
-      };
-      const reqId = await codes(s.requirements, rows.flatMap((r) => r.requirements));
-      const scrId = await codes(s.screens, rows.flatMap((r) => r.screens));
-
-      // งาน: เลขงาน = ID ในไฟล์ (DP-39 = ID 39 ตาม Prototype) · No. เก็บใน excel_row_no ใช้จับคู่ตอนอัปเดตแผน
-      const issueIds = new Map<number, string>();
-      for (const chunk of chunks(rows, 200)) {
-        const inserted = await tx
-          .insert(s.issues)
-          .values(
-            chunk.map((r) => {
-              const unmatched = { devs: r.devs.filter((d) => !userOf(d)), ba: r.ba && !userOf(r.ba) ? r.ba : null };
-              const mid = moduleId.get(r.module)!;
-              return {
-                ...base,
-                number: r.number,
-                excelRowNo: r.no,
-                issueTypeId: taskType.id,
-                moduleId: mid,
-                phaseId: r.phase ? (phaseId.get(`${mid}\u0000${r.phase}`) ?? null) : null,
-                title: r.title,
-                description: r.remark,
-                statusId: statusId.get(r.status) ?? statusId.get('To do')!,
-                baId: userOf(r.ba),
-                reporterId: auth.userId,
-                createdBy: auth.userId,
-                size: r.size,
-                estimateMd: r.estimateMd,
-                planStart: r.planStart,
-                planEnd: r.planEnd,
-                actualStart: r.actualStart,
-                actualEnd: r.actualEnd,
-                details: {
-                  ...(r.requirementText ? { requirementText: r.requirementText } : {}),
-                  ...(unmatched.devs.length || unmatched.ba ? { importedPeople: unmatched } : {}),
-                },
-              };
-            }),
-          )
-          .returning({ id: s.issues.id, number: s.issues.number });
-        const noOf = new Map(chunk.map((r) => [r.number, r.no]));
-        inserted.forEach((x) => issueIds.set(noOf.get(x.number)!, x.id));
-      }
-      await tx.update(s.projects).set({ issueSeq: Math.max(0, ...rows.map((r) => r.number)) }).where(eq(s.projects.id, project.id));
-
-      const ws = { workspaceId: tenant.workspaceId };
-      const assignees = rows.flatMap((r) =>
-        [...new Set(r.devs.map(userOf).filter((u): u is string => !!u))].map((userId, i) => ({ ...ws, issueId: issueIds.get(r.no)!, userId, sort: i })),
+      // งาน: เลขงาน = Key / ID ในไฟล์ (DP-39 = 39) · ไฟล์รูปแบบเดิมเก็บ No. ใน excel_row_no ใช้จับคู่ตอนอัปเดตแผน
+      const made = await insertRows(
+        tx,
+        {
+          workspaceId: tenant.workspaceId,
+          projectId: project.id,
+          projectKey: project.key,
+          actorId: auth.userId,
+          taskTypeId: taskType.id,
+          fileName: job.fileName,
+          keepRowNo: !check.keyed,
+          moduleId,
+          statusIdOf: (name) => statusId.get(name) ?? statusId.get('To do')!,
+          userOf,
+          taken: new Set(),
+          seq: 0,
+          parents: new Map(),
+          details: (r) => {
+            const unmatched = { devs: r.devs.filter((d) => !userOf(d)), ba: r.ba && !userOf(r.ba) ? r.ba : null };
+            return unmatched.devs.length || unmatched.ba ? { importedPeople: unmatched } : {};
+          },
+        },
+        rows,
       );
-      const reqLinks = rows.flatMap((r) => [...new Set(r.requirements)].map((c) => ({ ...ws, issueId: issueIds.get(r.no)!, requirementId: reqId.get(c)! })));
-      const scrLinks = rows.flatMap((r) => [...new Set(r.screens)].map((c) => ({ ...ws, issueId: issueIds.get(r.no)!, screenId: scrId.get(c)! })));
-      for (const c of chunks(assignees, 500)) await tx.insert(s.issueAssignees).values(c);
-      for (const c of chunks(reqLinks, 500)) await tx.insert(s.issueRequirements).values(c);
-      for (const c of chunks(scrLinks, 500)) await tx.insert(s.issueScreens).values(c);
-      for (const c of chunks(rows, 500)) {
-        await tx.insert(s.activities).values(c.map((r) => ({ ...base, issueId: issueIds.get(r.no)!, actorId: auth.userId, actorKind: 'import' as const, verb: 'imported', newValue: { fileName: job.fileName, no: r.no } })));
-      }
+      const ws = { workspaceId: tenant.workspaceId };
 
       // Baseline v1 ใช้เทียบ Plan กับ Actual และบันทึกการแก้แผนหลังจากนี้
       if (prev.setBaseline) {
         const [bl] = await tx.insert(s.planBaselines).values({ ...base, version: 1, name: 'Baseline v1', source: 'import', createdBy: auth.userId }).returning();
         const devsOf = new Map<string, string[]>();
-        assignees.forEach((a) => devsOf.set(a.issueId, [...(devsOf.get(a.issueId) ?? []), a.userId]));
+        made.assignees.forEach((a) => devsOf.set(a.issueId, [...(devsOf.get(a.issueId) ?? []), a.userId]));
         for (const c of chunks(rows, 500)) {
           await tx.insert(s.baselineItems).values(
             c.map((r) => {
-              const issueId = issueIds.get(r.no)!;
+              const issueId = made.idOf.get(r)!;
               return { ...ws, baselineId: bl.id, issueId, planStart: r.planStart, planEnd: r.planEnd, estimateMd: r.estimateMd, assigneeIds: devsOf.get(issueId) ?? [] };
             }),
           );
@@ -369,10 +319,13 @@ export class ImportsService {
       baOptional: true,
       noDerivedSize: true,
       statuses: await statusNames(tx, project.id),
+      projectKey: project.key,
+      parents: await parentTasks(tx, project.id),
     });
-    const plan: UpdatePlan = await computeUpdate(tx, project, base.check, Object.values(columnMapping).includes('id'));
+    const plan: UpdatePlan = await computeUpdate(tx, project, base.check, Object.values(columnMapping).includes('key'));
     const state: JobState = { ...base.state, diff: plan.diff, ...keep };
-    state.summary = { ...state.summary, ready: plan.diff.changed.length + plan.diff.added.length };
+    // computeUpdate อาจพบแถวที่ต้องแก้เพิ่ม (เช่น Task ที่มี Sub-task ถูกย้ายไปเป็น Sub-task)
+    state.summary = { ...state.summary, ready: plan.diff.changed.length + plan.diff.added.length, skipped: base.check.skip.size };
     return { ...base, state, plan };
   }
 
@@ -418,6 +371,12 @@ export class ImportsService {
     });
   }
 
+  /** `GET import-template.xlsx` · Template เปล่ารูปแบบเดียวกับไฟล์ Export · คนที่สร้างโปรเจกต์ได้ (ไม่ใช่ Guest) */
+  async templateXlsx(auth: AuthInfo, tenant: TenantInfo) {
+    if (tenant.role === 'guest') throw forbidden('ws.project.create');
+    return this.db.run(auth, tenant, async (tx) => ({ filename: 'friday-plan-template.xlsx', buffer: await buildTemplateXlsx(tx, tenant.workspaceId) }));
+  }
+
   // ---------------------------------------------------------------------------
 
   private async parse(buffer: Buffer): Promise<ParsedWorkbook> {
@@ -425,7 +384,7 @@ export class ImportsService {
       return await readPlanWorkbook(buffer);
     } catch (e) {
       if ((e as Error).message === 'no_table_sheet') {
-        throw new AppError(400, 'no_table_sheet', 'ไม่พบชีตตารางงาน (ต้องมีหัวคอลัมน์ No. และ Module ในแถวแรก)');
+        throw new AppError(400, 'no_table_sheet', 'ไม่พบชีตตารางงาน (แถวแรกต้องมีหัวคอลัมน์ Module และ Title · ดาวน์โหลด Template ได้ที่หน้านำเข้า)');
       }
       throw new AppError(400, 'invalid_file', 'อ่านไฟล์ Excel ไม่ได้');
     }

@@ -21,11 +21,10 @@ describe.skipIf(!file)('ไฟล์แผนจริง', () => {
     console.log({ sheet: wb.table.name, mapped, holidays: wb.holidays.length, summary: r.summary });
     console.log(r.findings.filter((f) => f.no !== null).reduce<Record<string, number>>((m, f) => ((m[`${f.level} ${f.problem.replace(/[\d-]{6,}|\d+/g, '#')}`] = (m[`${f.level} ${f.problem.replace(/[\d-]{6,}|\d+/g, '#')}`] ?? 0) + 1), m), {}));
     expect(mapped).toBe(17);
-    // หน้าจอ L3 ประมาณกลุ่มงานไว้ 60 · ไฟล์จริงมี 62 (นับแยกตาม Module)
-    expect(r.summary).toMatchObject({ rows: 334, modules: 11, phases: 62, planFrom: '2026-11-05', planTo: '2027-04-21', ready: 310, backlog: 23, skipped: 1 });
-    // ตรงกับ docs/review-round-2.md: Plan Start ตรงวันหยุด 11 งาน · ค่าในคอลัมน์ Sprint ผิด 9 แถว
+    // เลิกใช้กลุ่มงานแล้ว (ผู้ใช้ตัดสิน 2026-11-08) คอลัมน์ Sprint ไม่ถูกนำเข้า
+    expect(r.summary).toMatchObject({ rows: 334, modules: 11, phases: 0, planFrom: '2026-11-05', planTo: '2027-04-21', ready: 310, backlog: 23, skipped: 1 });
+    // ตรงกับ docs/review-round-2.md: Plan Start ตรงวันหยุด 11 งาน
     expect(r.findings.filter((f) => f.problem.includes('ตรงวันหยุด'))).toHaveLength(11);
-    expect(r.findings.filter((f) => f.problem.includes('ดูไม่ใช่ชื่อกลุ่มงาน'))).toHaveLength(9);
     expect(r.summary.manDay).toBe(944);
   });
 });

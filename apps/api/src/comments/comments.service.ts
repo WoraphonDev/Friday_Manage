@@ -187,6 +187,12 @@ export class CommentsService {
   private async commentDtos(tx: Tx, rows: Comment[], auth: AuthInfo, access: ProjectAccess) {
     const mentions = rows.length ? await tx.select().from(s.commentMentions).where(inArray(s.commentMentions.commentId, rows.map((c) => c.id))) : [];
     const people = await loadPeople(tx, [...rows.flatMap((r) => [r.authorId, r.deletedBy]), ...mentions.map((m) => m.userId)]);
+    // ไฟล์ที่แนบกับคอมเมนต์ (ผู้ใช้เพิ่ม 2026-11-08) · Guest Viewer เข้า Files ไม่ได้จึงไม่ส่งรายการไฟล์
+    const files = rows.length && !access.guestViewer
+      ? await tx.select({ commentId: s.fileAttachments.targetId, id: s.files.id, name: s.files.name, mime: s.files.mime }).from(s.fileAttachments)
+        .innerJoin(s.files, eq(s.files.id, s.fileAttachments.fileId))
+        .where(and(eq(s.fileAttachments.targetType, 'comment'), inArray(s.fileAttachments.targetId, rows.map((c) => c.id)), isNull(s.files.deletedAt)))
+      : [];
     return rows.map((r) => {
       const ids = mentions.filter((m) => m.commentId === r.id).map((m) => m.userId);
       let body: string | null = r.deletedAt ? null : r.body;
@@ -199,6 +205,7 @@ export class CommentsService {
       }
       return { id: r.id, body, author: this.person(r.authorId, people, auth, access), mentions: ids.map((id) => this.person(id, people, auth, access)), createdAt: r.createdAt, editedAt: r.editedAt,
         deletedAt: r.deletedAt, deletedBy: this.person(r.deletedBy, people, auth, access), deletionReason: r.deletedAt ? (r.deletedBy !== r.authorId ? 'admin' : 'author') : null,
+        files: r.deletedAt ? [] : files.filter((f) => f.commentId === r.id).map(({ commentId: _, ...f }) => f),
         canEdit: !r.deletedAt && r.authorId === auth.userId && access.perms.has('issue.comment'), canDelete: !r.deletedAt && (r.authorId === auth.userId || access.role === 'admin') && access.perms.has('issue.comment') };
     });
   }

@@ -14,6 +14,8 @@ export const priority = pgEnum('priority', ['urgent', 'high', 'medium', 'low']);
 export const size = pgEnum('size', ['XS', 'S', 'M', 'L', 'XL']);
 export const severity = pgEnum('severity', ['critical', 'major', 'minor']);
 export const testResult = pgEnum('test_result', ['passed', 'failed', 'blocked']);
+/** qa = ผลทดสอบของ QA / Reviewer · unit = ผล Unit test ที่ Dev แนบเองในส่วน Development */
+export const testKind = pgEnum('test_kind', ['qa', 'unit']);
 export const requestStatus = pgEnum('request_status', ['pending', 'approved', 'rejected', 'cancelled']);
 export const invitationStatus = pgEnum('invitation_status', ['pending', 'accepted', 'declined', 'revoked', 'expired']);
 export const identityProvider = pgEnum('identity_provider', ['password', 'google', 'microsoft', 'saml', 'oidc']);

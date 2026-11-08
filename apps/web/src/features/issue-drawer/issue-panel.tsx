@@ -19,6 +19,9 @@ import { issuePath, issueQuery, projectPath, type Issue, type Named, type Public
 import { GroupSelect, IssuePicker, useProjectIssues } from './task-v2';
 import styles from './issue-drawer.module.css';
 
+/** API ขอเหตุผลการแก้แผน: ไม่ใช่ error ที่ต้องแสดง แต่เปิดกล่องให้กรอกเหตุผลแล้วบันทึกซ้ำ */
+class NeedsPlanReason extends Error {}
+
 export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: Scope; issue: Issue; siblings?: Issue[]; onDeleted: (parentKey: string | null) => void }) {
   const t = useTranslations('issue-drawer');
   const mobile = useIsMobile() && !!issue.parentKey && !scope.access.guestViewer;
@@ -68,6 +71,8 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       success?.(result);
       await refresh(); return true;
     } catch (failure) {
+      // แผนหลังตั้ง Baseline: เปิดกล่องใส่เหตุผลแทนแถบ error แล้วบันทึกต่อ
+      if (failure instanceof NeedsPlanReason) return false;
       if (failure instanceof ApiError && failure.status === 409) setConflict(failure);
       else setError(failure);
       return false;
@@ -76,10 +81,12 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   async function patch(body: Record<string, unknown>, withReason = false): Promise<boolean> {
     if (!canEdit) return false;
     const saved = await action(async () => {
-      try { return await api.patch<Issue>(endpoint, { ...body, ...(withReason ? { planChangeReason: planReason } : {}) }, issue.version); }
+      const payload = { ...body, ...(withReason ? { planChangeReason: planReason } : {}) };
+      // Developer ใช้ PUT assignees (สัญญาเดิม) แต่ขอเหตุผลการแก้แผนแบบเดียวกัน
+      try { return 'assigneeIds' in body && Object.keys(body).length === 1 ? await api.request<Issue>(`${endpoint}/assignees`, { method: 'PUT', etag: issue.version, body: payload }) : await api.patch<Issue>(endpoint, payload, issue.version); }
       catch (failure) {
         if (failure instanceof ApiError && failure.code === 'due_change_requires_approval' && failure.details.canRequest) { setDue(String(failure.details.requestedDue)); }
-        if (failure instanceof ApiError && failure.code === 'plan_change_reason_required') { setReasonIntent(body); setPlanReason(''); }
+        if (failure instanceof ApiError && failure.code === 'plan_change_reason_required' && !withReason) { setReasonIntent(body); setPlanReason(''); throw new NeedsPlanReason(); }
         throw failure;
       }
     });
@@ -207,7 +214,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
 
     <aside className={styles.sidebar} aria-label={t('properties')}>
       {mobile && !allProps ? <div className={styles.props}>
-        <PropRow keep k={t('fields.assigneeIds')}>{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void action(() => api.request<Issue>(`${endpoint}/assignees`, { method: 'PUT', etag: issue.version, body: { assigneeIds: ids } })); }} /> : <AvatarStack people={devs} />}</PropRow>
+        <PropRow keep k={t('fields.assigneeIds')}>{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void patch({ assigneeIds: ids }); }} /> : <AvatarStack people={devs} />}</PropRow>
         <PropRow keep k="Due">{canEdit ? <DatePicker compact label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (disabled) return; if (value && issue.planEnd && value > issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly')) setDue(value); else void patch({ planEnd: value || null }); }} /> : formatDate(issue.planEnd, scope.yearFormat)}</PropRow>
         <PropRow keep k={t('fields.priority')}>{fieldSelect('priority', issue.priority, ['urgent', 'high', 'medium', 'low'].map((id) => ({ id, name: t(`priority.${id}`) })), undefined, false)}</PropRow>
         <PropRow keep k="Progress"><span>{issue.progressPct == null ? t('notSet') : `${issue.progressPct}%`}</span></PropRow>
@@ -221,7 +228,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
           <h4 className={styles.pgTitle}>{t('groupPeople')}</h4>
           <PropRow k="Business Analyst">{fieldSelect('baId', issue.baId, people)}</PropRow>
           <PropRow k="System Analyst">{fieldSelect('saId', issue.saId, people)}</PropRow>
-          <PropRow keep k="Developer">{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void action(() => api.request<Issue>(`${endpoint}/assignees`, { method: 'PUT', etag: issue.version, body: { assigneeIds: ids } })); }} /> : <span className={styles.who}><AvatarStack people={devs} /></span>}</PropRow>
+          <PropRow keep k="Developer">{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void patch({ assigneeIds: ids }); }} /> : <span className={styles.who}><AvatarStack people={devs} /></span>}</PropRow>
           <PropRow k={t('qaReviewer')}>{fieldSelect('reviewerId', issue.reviewerId, people)}</PropRow>
           {isBug && <PropRow k={t('reporter')}><span className={styles.who}>{reporter ? <><Avatar size="small" person={reporter} />{reporter.displayName}</> : <span className="muted">—</span>}</span></PropRow>}
           <PropRow k={t('watchers')}><span className={styles.who}>{watchers.data?.items.length ? <AvatarStack max={5} people={watchers.data.items.flatMap((entry, i) => entry.person ? [{ ...entry.person, id: entry.person.id ?? `w${i}` }] : [])} /> : <span className="muted">—</span>}</span></PropRow>

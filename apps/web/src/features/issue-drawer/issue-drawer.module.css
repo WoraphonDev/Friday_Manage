@@ -216,7 +216,10 @@
 .commitLine > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .commitLine > small { grid-column:2; }
 /* กลุ่มในแผงคุณสมบัติ */
-.pgroup { display:flex; flex-direction:column; padding:10px 0; border-top:1px solid #eef0f3; }
+.pgroup { display:flex; flex-direction:column; gap:6px; padding:12px 0; border-top:1px solid #eef0f3; }
+/* ช่องที่มีหลายบรรทัด (เช่น สร้างกลุ่มใหม่) ให้ป้ายชื่ออยู่บรรทัดแรก ไม่ลอยกลาง */
+.pgroup .pr:has(.groupNew) { align-items:start; }
+.pgroup .pr:has(.groupNew) > .k { padding-top:7px; }
 .pgroup:first-child { border-top:0; padding-top:2px; }
 .pgTitle { margin:0 0 4px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
 .emptyLine { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }

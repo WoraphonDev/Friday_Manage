@@ -60,6 +60,23 @@ describe('Issue drawer details', () => {
     expect(screen.getByLabelText('ชื่อเรื่อง')).toHaveValue('แบบที่กำลังแก้');
   });
 
+  it('แก้ Developer หลังตั้ง Baseline: ถามเหตุผลแทนแถบ error แล้วส่งซ้ำพร้อม planChangeReason', async () => {
+    const user = userEvent.setup(); const bodies: Record<string, unknown>[] = [];
+    server.use(http.put(`${issueEndpoint}/assignees`, async ({ request }) => {
+      const body = await request.json() as Record<string, unknown>; bodies.push(body);
+      if (!body.planChangeReason) return failure(400, 'plan_change_reason_required');
+      return HttpResponse.json(makeIssue('DE-1', { assigneeIds: body.assigneeIds as string[], version: 4 }));
+    }));
+    mount(); await loaded();
+    await user.click(screen.getByRole('button',{name:'ผู้รับผิดชอบ'}));
+    await user.click(within(screen.getByRole('listbox')).getByRole('option',{name:new RegExp(dev.displayName)}));
+    const dialog = await screen.findByRole('dialog', { name: 'เหตุผลที่แก้แผน' });
+    expect(screen.queryByText('req_drawer_test')).not.toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText('เหตุผลการเปลี่ยนแผน'), 'เพิ่มคนช่วยงาน');
+    await user.click(within(dialog).getByRole('button', { name: 'บันทึก' }));
+    await waitFor(() => expect(bodies.at(-1)).toMatchObject({ assigneeIds: [me.id, dev.id], planChangeReason: 'เพิ่มคนช่วยงาน' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'เหตุผลที่แก้แผน' })).not.toBeInTheDocument());
+  });
   it('PUT assignees sends If-Match and member ids from the real member contract', async () => {
     const user=userEvent.setup();mount();await loaded();
     await user.click(screen.getByRole('button',{name:'ผู้รับผิดชอบ'}));

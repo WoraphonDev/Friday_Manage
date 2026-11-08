@@ -12,6 +12,8 @@ export const FIELDS = {
   /** ไฟล์รูปแบบเดิมเท่านั้น: ลำดับแถวในแผน ใช้จับคู่ตอนอัปเดต */
   no: { label: 'No. (ไฟล์รูปแบบเดิม · ใช้จับคู่ตอนอัปเดต)', aliases: ['no', 'no.', 'ลำดับ'] },
   module: { label: 'Module', aliases: ['module'] },
+  /** กลุ่มของ Task ใต้ Module (ไม่บังคับ) · Sub-task ใช้กลุ่มของ Task แม่ */
+  group: { label: 'Group (กลุ่ม · ไม่บังคับ)', aliases: ['group', 'กลุ่ม'] },
   title: { label: 'ชื่องาน', aliases: ['title', 'ชื่องาน', 'module task', 'task', 'งาน'] },
   status: { label: 'Status', aliases: ['status', 'สถานะ'] },
   priority: { label: 'Priority', aliases: ['priority', 'ความสำคัญ'] },
@@ -277,8 +279,8 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
       number,
       parentNumber: parent?.number ?? null,
       module: module ?? '',
-      // เลิกใช้กลุ่มงาน (ผู้ใช้ตัดสิน 2026-11-08): คอลัมน์ Sprint / Phase ในไฟล์ไม่ถูกนำเข้า
-      phase: null,
+      // กลุ่มจากคอลัมน์ Group (ไม่บังคับ) · คอลัมน์ Sprint ของไฟล์แผนเดิมไม่ถูกนำเข้า
+      phase: text(get(cells, 'group')),
       title: title ?? '',
       screens: list(get(cells, 'screen')).filter((x) => /^SCR-/i.test(x)),
       requirements: reqs.filter((x) => /^N?FR-/i.test(x)).map((x) => x.toUpperCase()),
@@ -367,6 +369,8 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
       err(`ไม่พบ Task แม่ ${r.parentNumber}`, 'ใส่ Key ของ Task ที่อยู่ในไฟล์หรือในโปรเจกต์');
       continue;
     }
+    // Sub-task อยู่กลุ่มเดียวกับ Task แม่เสมอ
+    if (inFile) r.phase = inFile.phase;
     if (r.module && r.module !== parentModule) findings.push({ level: 'warn', ...findingOf(r), problem: `Module "${r.module}" ไม่ตรงกับ Task แม่`, fix: `ใช้ Module ของ Task แม่ (${parentModule})` });
     r.module = parentModule;
     if (inFile && ((r.planStart && inFile.planStart && r.planStart < inFile.planStart) || (r.planEnd && inFile.planEnd && r.planEnd > inFile.planEnd))) {
@@ -405,7 +409,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     summary: {
       rows: rows.length,
       modules: modules.size,
-      phases: 0,
+      phases: new Set(ok.filter((r) => r.phase && r.parentNumber === null).map((r) => `${r.module}\u0000${r.phase}`)).size,
       subtasks: ok.filter((r) => r.parentNumber !== null).length,
       // ยอดรวมของทั้งไฟล์ (รวมแถวที่ต้องแก้) ตามหน้า L3
       manDay: rows.reduce((n, r) => n + (r.estimateMd ?? 0), 0),

@@ -62,7 +62,9 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
     }
     if (typeof raw === 'object') return t('dataChanged');
     const person = scope.people.find((p) => p.id === raw);
-    const named = [...(scope.project?.modules ?? []), ...(scope.project?.statuses ?? []), ...(scope.project?.sprints ?? [])].find((item) => item.id === raw);
+    // กลุ่มมาจาก form-options ที่หน้า Task / หน้าสร้างโหลดไว้
+    const groups = [['issue-options', scope.ws, scope.projectKey, 'form-options'], ['issue-form-options', scope.ws, scope.projectKey]].flatMap((queryKey) => cache.getQueryData<{ phases?: { id: string; name: string }[] }>(queryKey)?.phases ?? []);
+    const named = [...(scope.project?.modules ?? []), ...(scope.project?.statuses ?? []), ...(scope.project?.sprints ?? []), ...(scope.project?.phases ?? []), ...groups].find((item) => item.id === raw);
     if (person) return person.displayName;
     if (named) return named.name;
     if (field === 'priority' && t.has(`priority.${raw}`)) return t(`priority.${raw}`);

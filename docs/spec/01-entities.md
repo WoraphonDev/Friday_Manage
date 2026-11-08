@@ -76,7 +76,7 @@ Workspace เลือกปฏิทินหลัก + เพิ่มวั�
 | `project_member` | สมาชิกในโปรเจกต์ | project_id, user_id, role (admin · member · viewer), position (PM · UX/UI · Frontend · Backend · QA · BA), capacity_hours_week (เฉพาะชั่วโมงที่ให้โปรเจกต์นี้), joined_at | A, 7 |
 | `project_role_permission` | ตารางสิทธิ์ที่ปรับได้รายโปรเจกต์ (เก็บเฉพาะค่าที่ต่างจากค่าเริ่มต้น) | project_id, role (member · viewer), permission (เช่น `issue.change_due_directly`), allowed | L2 |
 | `module` | Module ในโปรเจกต์ | project_id, name, color, owner_user_id (Dev หลัก), sort | A, L2, 2 |
-| `phase` | **กลุ่มงาน (Phase) ใน Module** · เลิกใช้ตั้งแต่ 8 พ.ย. 2569 (Module → Task → Sub-task) เก็บข้อมูลเดิมไว้เท่านั้น | project_id, module_id, name, sort | 2, L3 |
+| `phase` | **กลุ่ม (Group) ใน Module ไม่บังคับ** · Module → กลุ่ม → Task → Sub-task · Sub-task อยู่กลุ่มเดียวกับ Task แม่ (ย้าย Task แล้ว Sub-task ตาม) · ในหน้าจอเรียกว่า "กลุ่ม" (ผู้ใช้ขอ 8 พ.ย. 2569) |
 | `milestone` | Milestone บน Timeline / Gantt | project_id, module_id (ไม่บังคับ), name, date | A, 1, 4 |
 | `milestone_issue` | งานที่ผูกกับ Milestone (ใช้คิด % ของ Milestone) | milestone_id, issue_id | 1 |
 | `sprint` | Sprint ระดับโปรเจกต์ | project_id, number, name, start_date, end_date, goal, status (planning · active · completed), retrospective, completed_at, completed_by | L1 |

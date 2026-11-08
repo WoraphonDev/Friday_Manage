@@ -94,13 +94,13 @@ const px = (el: Element, prop: "left" | "width") => Number((el as HTMLElement).s
 const asViewer = () => server.use(http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () => HttpResponse.json({ ...permissions, role: "viewer", permissions: ["project.view"] })));
 
 describe("Gantt (5)", () => {
-  it("WBS: Module › Task › Sub-task (เลิกใช้กลุ่มงาน) พร้อมคอลัมน์ Owner / MD / Start / End / % / Pred. และ Milestone", async () => {
+  it("WBS: Module › กลุ่ม › Task › Sub-task (กลุ่มไม่บังคับ) พร้อมคอลัมน์ Owner / MD / Start / End / % / Pred. และ Milestone", async () => {
     mount();
     expect(await screen.findByTestId("bar-DE-1")).toBeInTheDocument();
-    for (const w of ["1", "1.1", "1.2", "1.3", "1.3.1", "1.4", "M1"]) expect(screen.getByText(w, { selector: "div" })).toBeInTheDocument();
-    expect(screen.queryByText("กลุ่มงานแรก")).not.toBeInTheDocument();
-    expect(screen.getByTestId("pred-DE-3")).toHaveTextContent("1.1 FS");
-    expect(screen.getByTestId("pred-DE-6")).toHaveTextContent("1.1 FS+2");
+    for (const w of ["1", "1.1", "1.1.1", "1.1.2", "1.1.3", "1.1.3.1", "1.1.4", "M1"]) expect(screen.getByText(w, { selector: "div" })).toBeInTheDocument();
+    expect(screen.getByText("กลุ่มงานแรก")).toBeInTheDocument();
+    expect(screen.getByTestId("pred-DE-3")).toHaveTextContent("1.1.1 FS");
+    expect(screen.getByTestId("pred-DE-6")).toHaveTextContent("1.1.1 FS+2");
     expect(screen.getByRole("link", { name: "DE-3 งาน DE-3" })).toHaveAttribute("href", "/w/sample/p/DE/gantt?issue=DE-3");
     // งานแม่ (มี Sub-task) เป็น Summary bar · Sub-task เป็น bar
     expect(screen.getByRole("img", { name: /^DE-4 งาน DE-4:/ })).toBeInTheDocument();

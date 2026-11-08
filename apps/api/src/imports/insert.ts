@@ -23,8 +23,8 @@ export interface InsertContext {
   /** เลขงานที่ใช้ไปแล้วในโปรเจกต์ (รวมงานที่ลบ) และเลขล่าสุด */
   taken: Set<number>;
   seq: number;
-  /** Task ระดับบนที่มีอยู่ในระบบ (เลขงาน → id) ให้ Sub-task ใหม่อ้างถึง */
-  parents: Map<number, string>;
+  /** Task ระดับบนที่มีอยู่ในระบบ (เลขงาน → id และกลุ่ม) ให้ Sub-task ใหม่อ้างถึง */
+  parents: Map<number, { id: string; phaseId: string | null }>;
   /** ข้อมูลเพิ่มใน details ของแต่ละแถว (เช่น ชื่อคนที่ยังไม่จับคู่) */
   details?: (row: PlanRow) => Record<string, unknown>;
 }
@@ -66,6 +66,17 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
   if (needScr.length) (await tx.insert(s.screens).values(needScr.map((code) => ({ ...base, code }))).returning({ id: s.screens.id, code: s.screens.code })).forEach((x) => scrId.set(x.code, x.id));
   if (needLabel.length) (await tx.insert(s.labels).values(needLabel.map(([, name]) => ({ ...base, name }))).returning({ id: s.labels.id, name: s.labels.name })).forEach((x) => labelId.set(x.name.toLowerCase(), x.id));
 
+  // กลุ่ม (ไม่บังคับ) ของ Task: ใช้กลุ่มเดิมใน Module ชื่อเดียวกัน ที่ยังไม่มีสร้างให้ · Sub-task ใช้กลุ่มของแม่
+  const phaseKey = (moduleId: string, name: string) => `${moduleId}\u0000${name.toLowerCase()}`;
+  const phaseId = new Map((await tx.select({ id: s.phases.id, moduleId: s.phases.moduleId, name: s.phases.name }).from(s.phases).where(eq(s.phases.projectId, ctx.projectId))).map((p) => [phaseKey(p.moduleId, p.name), p.id]));
+  for (const r of rows.filter((x) => x.parentNumber === null && x.phase)) {
+    const mid = ctx.moduleId.get(r.module)!;
+    if (phaseId.has(phaseKey(mid, r.phase!))) continue;
+    const [made] = await tx.insert(s.phases).values({ ...base, moduleId: mid, name: r.phase!, sort: phaseId.size }).returning({ id: s.phases.id });
+    phaseId.set(phaseKey(mid, r.phase!), made.id);
+  }
+  const phaseOf = (r: PlanRow) => (r.phase ? (phaseId.get(phaseKey(ctx.moduleId.get(r.module)!, r.phase)) ?? null) : null);
+
   if (ctx.keepRowNo) {
     // No. ที่เคยใช้กับงานที่ลบแล้ว: ปล่อยเลขแถวให้ใช้ซ้ำได้ (unique ต่อโปรเจกต์)
     const nos = rows.map((r) => r.no);
@@ -75,9 +86,10 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
   const idOf = new Map<PlanRow, string>();
   // แม่ในไฟล์ใช้เลขงานเดิมในไฟล์อ้างถึง
   const fileParent = new Map(rows.filter((r) => r.number !== null && r.parentNumber === null).map((r) => [r.number!, r]));
-  const parentIdOf = (r: PlanRow) => {
+  const parentOf = (r: PlanRow): { id: string; phaseId: string | null } | null => {
     const p = fileParent.get(r.parentNumber!);
-    return (p && idOf.get(p)) ?? ctx.parents.get(r.parentNumber!) ?? null;
+    if (p && idOf.get(p)) return { id: idOf.get(p)!, phaseId: phaseOf(p) };
+    return ctx.parents.get(r.parentNumber!) ?? null;
   };
   const tops = rows.filter((r) => r.parentNumber === null);
   const subs = rows.filter((r) => r.parentNumber !== null);
@@ -91,8 +103,9 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
             number: assigned.get(r)!,
             excelRowNo: ctx.keepRowNo ? r.no : null,
             issueTypeId: ctx.taskTypeId,
-            parentId: r.parentNumber === null ? null : parentIdOf(r),
+            parentId: r.parentNumber === null ? null : (parentOf(r)?.id ?? null),
             moduleId: ctx.moduleId.get(r.module)!,
+            phaseId: r.parentNumber === null ? phaseOf(r) : (parentOf(r)?.phaseId ?? null),
             title: r.title,
             description: r.remark,
             statusId: ctx.statusIdOf(r.status),
@@ -138,7 +151,8 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
     at: new Date(),
   }));
   await tx.update(s.projects).set({ issueSeq: seq }).where(eq(s.projects.id, ctx.projectId));
-  return { idOf, numberOf: assigned, assignees, events, seq };
+  const phaseIdOf = new Map(rows.map((r) => [r, r.parentNumber === null ? phaseOf(r) : (parentOf(r)?.phaseId ?? null)]));
+  return { idOf, numberOf: assigned, phaseIdOf, assignees, events, seq };
 }
 
 async function codes(tx: Tx, table: typeof s.requirements | typeof s.screens, projectId: string) {

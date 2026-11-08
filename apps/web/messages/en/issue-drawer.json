@@ -231,7 +231,7 @@
     "statusId": "Status",
     "priority": "Priority",
     "moduleId": "Module",
-    "phaseId": "Task group",
+    "phaseId": "Group",
     "sprintId": "Sprint",
     "assigneeIds": "Assignees",
     "baId": "BA",
@@ -358,7 +358,7 @@
   "commitsCount": "{count, plural, one {# commit} other {# commits}}",
   "groupPeople": "People",
   "groupPlan": "Plan",
-  "groupPlace": "Grouping",
+  "groupPlace": "Classification",
   "noDependenciesYet": "No dependencies yet",
   "addDescription": "+ Add description",
   "refs": {
@@ -420,5 +420,12 @@
     "unchecked": "Unchecked {kind} “{text}”",
     "renamed": "Edited {kind}: “{old}” → “{new}”",
     "reordered": "Reordered {kind}"
-  }
+  },
+  "group": "Group",
+  "noGroup": "No group",
+  "newGroup": "+ New group…",
+  "groupName": "New group name",
+  "groupNamePlaceholder": "e.g. Group A",
+  "groupNeedsModule": "Choose a module first",
+  "groupCreateFailed": "Could not create the group"
 }

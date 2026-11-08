@@ -311,14 +311,30 @@ describe("จัดโครงงานใน Table", () => {
     expect(creates).toEqual([{ name: "Module ใหม่", color: "#1d4ed8" }]);
     expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน Module ใหม่" })).toHaveAttribute("href", "/w/sample/p/DE/table?new=1&type=task&moduleId=m-new");
   });
-  it("เลิกใช้กลุ่มงาน: เมนู Module ไม่มีเพิ่มกลุ่มงาน และเพิ่ม Task ส่งบริบท Module", async () => {
+  it("กลุ่ม (ไม่บังคับ): เพิ่มกลุ่มจากเมนู Module แล้วเพิ่ม Task ในกลุ่มนั้น · ลบกลุ่มแล้วงานไม่มีกลุ่ม", async () => {
     const user = userEvent.setup();
+    server.use(
+      http.post("*/api/v1/w/:ws/projects/:key/modules/:id/phases", async ({ request }) => {
+        expect(await request.json()).toEqual({ name: "กลุ่มใหม่" }); tableData.modules[0].phases.unshift({ id: "ph-new", name: "กลุ่มใหม่", ...agg(0) }); return HttpResponse.json({ id: "ph-new" }, { status: 201 });
+      }),
+      http.delete("*/api/v1/w/:ws/projects/:key/modules/:id/phases/:phase", async ({ request, params }) => {
+        expect(await request.json()).toEqual({ moveTo: "none" }); tableData.modules[0].phases = tableData.modules[0].phases.filter((p) => p.id !== params.phase); return HttpResponse.json({ movedIssues: 0, moveTo: null });
+      }),
+    );
     mount(<TableView ws="sample" projectKey="DE" />);
     await user.click(await screen.findByRole("button", { name: "จัดการ Module Module A" }));
-    expect(screen.queryByRole("button", { name: "เพิ่มกลุ่มงาน" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "เพิ่มกลุ่ม" }));
+    await user.type(screen.getByLabelText("ชื่อกลุ่ม"), "กลุ่มใหม่");
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มใหม่" })).toHaveAttribute("href", "/w/sample/p/DE/table?new=1&type=task&moduleId=m-a&phaseId=ph-new");
+    // Task ที่ไม่มีกลุ่มอยู่ใต้ Module ก่อนหัวกลุ่ม
     const add = screen.getByRole("link", { name: "+ เพิ่ม Task ใน Module A" });
-    expect(add.getAttribute("href")).toContain("moduleId=m-a");
     expect(add.getAttribute("href")).not.toContain("phaseId=");
+    await user.click(screen.getByRole("button", { name: "จัดการกลุ่ม กลุ่มใหม่" }));
+    await user.click(screen.getByRole("button", { name: "ลบกลุ่ม" }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "ลบกลุ่ม" }));
+    await waitFor(() => expect(screen.queryByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มใหม่" })).not.toBeInTheDocument());
   });
   it("เมื่อบันทึกไม่ผ่านคงข้อมูลและ requestId ให้แก้", async () => {
     const user = userEvent.setup(); server.use(http.post("*/api/v1/w/:ws/projects/:key/modules", () => errorBody(500)));

@@ -122,12 +122,18 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
       const mcolor = m.color ?? PALETTE[mi % PALETTE.length];
       out.push({ kind: "module", id: mid, name: m.name, color: mcolor, s: m, count: m.taskCount });
       if (closed.has(mid)) return;
-      // Module › Task › Sub-task · เลิกใช้กลุ่มงาน (ผู้ใช้ตัดสิน 2026-11-08) จึงรวมงานทุกกลุ่มไว้ใต้ Module
+      // Module › (Task ที่ไม่มีกลุ่ม) › กลุ่ม › Task › Sub-task · กลุ่มไม่บังคับ (ผู้ใช้ขอ 2026-11-08)
       const colorOf = (r: TLRow) => (colorBy === "module" ? mcolor : colorBy === "status" ? STATUS_COLOR[r.status.category] : personColor(r));
-      for (const r of m.groups.flatMap((g) => g.tasks)) {
+      const tasks = (rows: TLRow[]) => { for (const r of rows) {
         out.push({ kind: "task", row: r, color: colorOf(r), sub: false, hasKids: r.subtasks.length > 0 });
         if (!closed.has(`t:${r.key}`)) for (const s of r.subtasks) out.push({ kind: "task", row: s, color: colorOf(s), sub: true, hasKids: false });
-      }
+      } };
+      for (const g of m.groups.filter((x) => !x.phase)) tasks(g.tasks);
+      m.groups.filter((x) => x.phase).forEach((g) => {
+        const gid = `${mid}:g:${g.phase!.id}`;
+        out.push({ kind: "group", id: gid, name: g.name, color: mcolor, s: g });
+        if (!closed.has(gid)) tasks(g.tasks);
+      });
     });
     return out;
   }, [q.data, closed, colorBy]);

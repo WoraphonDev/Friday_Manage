@@ -64,8 +64,8 @@ function span(rows: Row[]) {
   return { from: starts[0] ?? null, to: ends.at(-1) ?? null };
 }
 
-/** แถวที่แสดง: Module › Task › Sub-task (Sub-task ตามแม่ทันที) + แถวเพิ่มงานท้าย Module + สรุปท้าย Module
- *  เลิกใช้กลุ่มงาน (Phase) ตามที่ผู้ใช้ตัดสิน 2026-11-08 · ข้อมูลกลุ่มงานเดิมยังอยู่ แค่ไม่แสดง */
+/** แถวที่แสดง: Module › (Task ที่ไม่มีกลุ่ม) › กลุ่ม › Task › Sub-task (Sub-task ตามแม่ทันที) + แถวเพิ่มงาน + สรุปท้าย Module
+ *  กลุ่มไม่บังคับ (ผู้ใช้ขอ 2026-11-08): Task ที่ไม่มีกลุ่มอยู่ใต้ Module โดยตรง ไม่มีหัวกลุ่ม */
 export function buildDisplay(data: TableData, collapsed: Set<string>, noModule: string, noPhase: string, includeEmpty = false): Display[] {
   const out: Display[] = [];
   const keys = new Set(data.items.map((r) => r.key));
@@ -75,13 +75,19 @@ export function buildDisplay(data: TableData, collapsed: Set<string>, noModule: 
     const mid = m.id ?? "none";
     const inModule = data.items.filter((r) => (r.moduleId ?? null) === m.id && !(r.parentKey && keys.has(r.parentKey)));
     if (!inModule.length && !(includeEmpty && m.id)) continue;
-    out.push({ kind: "module", id: mid, name: m.name ?? noModule, color: m.color, count: m.taskCount, phases: 0, md: m.estimateMd, pct: m.progressPct, moduleId: m.id, ...span(inModule) });
+    const named = m.phases.filter((x) => x.id && (includeEmpty || inModule.some((r) => r.phaseId === x.id)));
+    out.push({ kind: "module", id: mid, name: m.name ?? noModule, color: m.color, count: m.taskCount, phases: named.length, md: m.estimateMd, pct: m.progressPct, moduleId: m.id, ...span(inModule) });
     if (collapsed.has(mid)) continue;
-    for (const r of inModule) {
-      out.push({ kind: "issue", row: r, sub: !!r.parentKey });
-      for (const k of kids.get(r.key) ?? []) out.push({ kind: "issue", row: k, sub: true });
-    }
+    const rowsOf = (phaseId: string | null) => inModule.filter((r) => (r.phaseId ?? null) === phaseId).flatMap((r) => [{ kind: "issue" as const, row: r, sub: !!r.parentKey }, ...(kids.get(r.key) ?? []).map((k) => ({ kind: "issue" as const, row: k, sub: true }))]);
+    out.push(...rowsOf(null));
     out.push({ kind: "add", id: `${mid}:add`, name: m.name ?? noModule, moduleId: m.id, phaseId: null });
+    for (const ph of named) {
+      const pid = `${mid}:${ph.id}`;
+      out.push({ kind: "phase", id: pid, moduleId: m.id, phaseId: ph.id, name: ph.name ?? noPhase, done: ph.doneCount, total: ph.taskCount, md: ph.estimateMd });
+      if (collapsed.has(pid)) continue;
+      out.push(...rowsOf(ph.id));
+      out.push({ kind: "add", id: `${pid}:add`, name: ph.name ?? noPhase, moduleId: m.id, phaseId: ph.id });
+    }
     out.push({ kind: "foot", id: `${mid}:foot`, count: m.taskCount, md: m.estimateMd });
   }
   return out;
@@ -417,13 +423,14 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                         </button>
                         {d.color !== null && <span className={styles.swatch} style={{ background: d.color }} />}
                         <span className={styles.mname} onDoubleClick={canSettings && d.moduleId ? () => setStructure({ kind: "renameModule", id: d.moduleId!, name: d.name }) : undefined}>{d.name}</span>
-                        {groupBy === "module" && canSettings && d.moduleId && <Popover.Root>
+                        {groupBy === "module" && (canSettings || canCreate) && d.moduleId && <Popover.Root>
                           <Popover.Trigger asChild><button type="button" className={styles.chv} aria-label={t("structure.moduleMenu", { name: d.name })}>⋯</button></Popover.Trigger>
                           <Popover.Portal><Popover.Content className="popover" align="start" sideOffset={4}>
-                            <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "renameModule", id: d.moduleId!, name: d.name })}>{t("structure.renameModule")}</button></Popover.Close>
+                            {canSettings && <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "renameModule", id: d.moduleId!, name: d.name })}>{t("structure.renameModule")}</button></Popover.Close>}
+                            <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "createPhase", moduleId: d.moduleId!, moduleName: d.name })}>{t("structure.createPhase")}</button></Popover.Close>
                           </Popover.Content></Popover.Portal>
                         </Popover.Root>}
-                        <span className={styles.muted} style={{ fontSize: 12 }}>{t("groupTasks", { count: d.count })}</span>
+                        <span className={styles.muted} style={{ fontSize: 12 }}>{groupBy === "module" && d.phases ? t("moduleTasks", { count: d.count, phases: d.phases }) : t("groupTasks", { count: d.count })}</span>
                         <span className={styles.mbar}><span><span style={{ width: `${d.pct}%`, background: d.color ?? "var(--primary)" }} /></span><b>{d.pct}%</b></span>
                         <span className={styles.muted} style={{ fontSize: 12, marginLeft: 8 }}>{d.from && d.to ? `${formatDate(d.from, year)} – ${formatDate(d.to, year)}` : `${d.md} MD`}</span>
                         {groupBy === "module" && canCreate && <Link className={styles.addb} style={{ marginLeft: "auto" }} href={taskHref(d.moduleId)} scroll={false}>{t("addTask")}</Link>}
@@ -439,7 +446,13 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                         </button>
                         <span className={styles.plabel}>{t("phaseLabel")}</span>
                         <b>{d.name}</b>
-                        {canSettings && d.moduleId && d.phaseId && <button type="button" className={styles.chv} aria-label={t("structure.renamePhaseNamed", { name: d.name })} onClick={() => setStructure({ kind: "renamePhase", id: d.phaseId!, moduleId: d.moduleId!, name: d.name })}>⋯</button>}
+                        {canSettings && d.moduleId && d.phaseId && <Popover.Root>
+                          <Popover.Trigger asChild><button type="button" className={styles.chv} aria-label={t("structure.phaseMenu", { name: d.name })}>⋯</button></Popover.Trigger>
+                          <Popover.Portal><Popover.Content className="popover" align="start" sideOffset={4}>
+                            <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "renamePhase", id: d.phaseId!, moduleId: d.moduleId!, name: d.name })}>{t("structure.renamePhase")}</button></Popover.Close>
+                            <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "deletePhase", id: d.phaseId!, moduleId: d.moduleId!, name: d.name })}>{t("structure.deletePhase")}</button></Popover.Close>
+                          </Popover.Content></Popover.Portal>
+                        </Popover.Root>}
                         <span className={`${styles.pill} ${styles.sTodo}`}>{d.done}/{d.total}</span>
                         <span className={`${styles.muted} ${styles.small}`}>{d.md} MD</span>
                       </div>

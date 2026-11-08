@@ -31,18 +31,18 @@
 
 | # | เรื่อง | ข้อสรุป |
 |---|---|---|
-| 1 | ลำดับงาน | **Module → Task → Sub-task** · เลิกใช้กลุ่มงาน (Phase): ไม่แสดงใน Table, Gantt, Timeline, Kanban และหน้า Task · Excel ไม่นำเข้า / ส่งออกคอลัมน์ Sprint / กลุ่มงาน · ข้อมูลเดิมยังเก็บไว้ |
+| 1 | ลำดับงาน | **Module → กลุ่ม (ไม่บังคับ) → Task → Sub-task** · กลุ่มใช้แบ่งกลุ่มการทำงานใน Module: เลือกหรือสร้างกลุ่มใหม่ได้ตอนสร้าง Task (คนที่สร้าง Task ได้) · ย้าย Task ไปกลุ่มอื่นจากหน้า Task แล้ว Sub-task ย้ายตาม · Task ที่ไม่มีกลุ่มอยู่ใต้ Module โดยตรง · เปลี่ยนชื่อ / ลบกลุ่มต้องมีสิทธิ์ Settings (ลบแล้วงานไม่มีกลุ่ม) · แสดงใน Table, Gantt, Timeline · Excel มีคอลัมน์ Group (คอลัมน์ Sprint ของไฟล์แผนเดิมไม่นำเข้า) · ตอนแรกเลิกใช้กลุ่มงาน แล้วผู้ใช้ขอกลับมาแบบไม่บังคับ (8 พ.ย. 2569) |
 | 2 | หน้าสร้างกับหน้าดู Task | ใช้หน้าตาเดียวกัน: ซ้าย = ชื่อ, สถานะ, คำอธิบาย, Acceptance criteria, Checklist, Sub-task, Dependency (ค้นหารหัสงานได้), Attachments, ผลทดสอบ QA, Development, Activity และคอมเมนต์ · ขวา = ผู้รับผิดชอบ / แผนงาน / กลุ่มงาน |
 | 3 | ผู้รับผิดชอบ | Business Analyst, System Analyst (ช่องใหม่), Developer (หลายคน), QA / Reviewer (รวม Tester กับ Reviewer เป็นช่องเดียว), ผู้ติดตาม |
 | 4 | แผนงาน | Size, Man-Day, Plan Start–End, Actual Start–End, Progress |
-| 5 | กลุ่มงาน (หัวข้อในหน้า Task) | Priority, Module, Requirement, Screen, Label, แชร์งานนี้ให้ Guest · Bug มี Severity / Environment เพิ่ม |
+| 5 | หมวดหมู่ (หัวข้อในหน้า Task) | Priority, Module, กลุ่ม, Requirement, Screen, Label, แชร์งานนี้ให้ Guest · Bug มี Severity / Environment เพิ่ม |
 | 6 | Acceptance criteria / Checklist | แยกสองกล่องเสมอ เพิ่มในกล่องไหนเป็นประเภทนั้น · ย้ายไป Done ทั้งที่ Acceptance criteria ยังติ๊กไม่ครบ ต้องยืนยันก่อน |
 | 7 | Sub-task | รายละเอียดเหมือน Task (รวมไฟล์แนบและผลทดสอบ QA) · วันที่เกินช่วง Task: เตือน ยืนยัน แล้วขยาย Task ให้ครอบ Sub-task และบันทึกลงประวัติการแก้แผน · เปลี่ยน Task แม่ได้เฉพาะ Task ใน Module เดียวกัน |
 | 8 | ผลทดสอบ | ผลทดสอบ QA (QA / Reviewer) แยกจากผล Unit test (Dev แนบเองในส่วน Development พร้อม Coverage) · ผล Unit test แสดงอย่างเดียว ไม่เตือนตอนย้ายงาน |
 | 9 | ไฟล์แนบ | แนบได้ทั้งระดับงาน คอมเมนต์ และผลทดสอบ โดยอัปโหลดจากหน้า Task ได้เลย |
 | 10 | Status และ Bug | ใช้เหมือนเดิม |
 | 11 | ผลตรวจของ QA / Reviewer | เก็บแค่ ผล (ผ่าน / ไม่ผ่าน), ผู้ตรวจ (ค่าเริ่มต้น = QA / Reviewer ของงาน), Environment, บันทึก / ขั้นตอนที่พบปัญหา (บังคับเมื่อไม่ผ่าน) และไฟล์หลักฐาน ทั้ง Task และ Sub-task · จำนวนเคส / Commit / Coverage เป็นของผล Unit test เท่านั้น · API ยังรับค่าเดิม (`blocked`, `passedCount`) จากเครื่องมืออื่นได้ |
-| 12 | ไฟล์ Excel นำเข้า / ส่งออก | ชีต **Tasks**: Key, Parent Key, Module, Title, Status, Priority, Business Analyst, System Analyst, Developer, QA / Reviewer, Size, Man-Day, Plan Start/End, Actual Start/End, Requirement, Screen, Label, Description + ชีตคำแนะนำ, ค่าที่ใช้ได้ (รายการเลือกในเซลล์) และ Holidays · จับคู่งานด้วย Key (ว่าง = งานใหม่) · Parent Key = Sub-task (Module ตาม Task แม่) · โหมดอัปเดตไม่แตะคอลัมน์ที่ไม่มีในไฟล์ · ดาวน์โหลด Template เปล่าได้ที่หน้านำเข้า · ไฟล์รูปแบบเดิมที่มีคอลัมน์ No. ยังจับคู่ด้วย No. เหมือนเดิม |
+| 12 | ไฟล์ Excel นำเข้า / ส่งออก | ชีต **Tasks**: Key, Parent Key, Module, Group, Title, Status, Priority, Business Analyst, System Analyst, Developer, QA / Reviewer, Size, Man-Day, Plan Start/End, Actual Start/End, Requirement, Screen, Label, Description + ชีตคำแนะนำ, ค่าที่ใช้ได้ (รายการเลือกในเซลล์) และ Holidays · จับคู่งานด้วย Key (ว่าง = งานใหม่) · Parent Key = Sub-task (Module ตาม Task แม่) · โหมดอัปเดตไม่แตะคอลัมน์ที่ไม่มีในไฟล์ · ดาวน์โหลด Template เปล่าได้ที่หน้านำเข้า · ไฟล์รูปแบบเดิมที่มีคอลัมน์ No. ยังจับคู่ด้วย No. เหมือนเดิม |
 | 13 | Table | มีคอลัมน์ SA (System Analyst) ถัดจาก BA แก้ในตารางได้ |
 
 ## การแจ้งเตือนและเวลา

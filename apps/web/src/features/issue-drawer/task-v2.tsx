@@ -1,12 +1,12 @@
 'use client';
 // ชิ้นส่วนของหน้า Task v2 (Canvas B2 / C2 / D2 · ผู้ใช้ตัดสิน 2026-11-08) ที่ใช้ทั้งหน้าดูและหน้าสร้างงาน
 import { useRef, useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
 import { Check, ChevronDown, Paperclip, X } from 'lucide-react';
-import { Button, useToast } from '@/components/ui';
+import { Button, Select, useToast } from '@/components/ui';
 import { api } from '@/lib/api';
 import { uploadToProject, type UploadedFile } from '@/lib/upload';
 import { projectPath, type Issue, type Scope } from './types';
@@ -104,4 +104,59 @@ export function DraftList({ label, placeholder, items, onChange, tag, tone }: {
       onChange={(event) => setText(event.target.value)}
       onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); if (text.trim()) { onChange([...items, text.trim()]); setText(''); } } }} />
   </div>;
+}
+
+type Group = { id: string; name: string; moduleId: string };
+
+/**
+ * กลุ่มของ Task ภายใต้ Module (ไม่บังคับ · ผู้ใช้ขอ 2026-11-08): Module → กลุ่ม → Task → Sub-task
+ * สร้างกลุ่มใหม่ได้จากตรงนี้ (คนที่สร้าง Task ได้) · ย้าย Task ไปกลุ่มอื่นแล้ว Sub-task ตามไปเอง (API)
+ * ไม่ใช้ <form> ซ้อน เพราะหน้าสร้าง Task เป็น form อยู่แล้ว
+ */
+export function GroupSelect({ scope, moduleId, value, groups, disabled = false, onChange }: {
+  scope: Scope; moduleId: string | null; value: string | null; groups: Group[]; disabled?: boolean; onChange: (id: string | null) => void;
+}) {
+  const t = useTranslations('issue-drawer');
+  const cache = useQueryClient();
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState('');
+  const [made, setMade] = useState<Group[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const perms = scope.access.permissions;
+  const canCreate = !scope.access.guestViewer && (perms.includes('issue.create') || perms.includes('project.settings')) && scope.project?.status !== 'archived';
+  if (!moduleId) return <span className="muted">{t('groupNeedsModule')}</span>;
+  const list = [...groups.filter((group) => group.moduleId === moduleId), ...made.filter((group) => group.moduleId === moduleId && !groups.some((item) => item.id === group.id))];
+  async function create() {
+    const trimmed = name.trim();
+    if (!trimmed || busy) return;
+    setBusy(true); setError(null);
+    try {
+      const group = await api.post<Group>(`${projectPath(scope.ws, scope.projectKey)}/modules/${moduleId}/phases`, { name: trimmed });
+      setMade((current) => [...current, group]); setAdding(false); setName('');
+      onChange(group.id);
+      // รายการกลุ่มอยู่ในข้อมูลโปรเจกต์ / form-options / Table ของโปรเจกต์นี้
+      await cache.invalidateQueries({ predicate: (query) => query.queryKey.includes(scope.projectKey) && !query.queryKey.includes('issue-parent') });
+    } catch { setError(t('groupCreateFailed')); }
+    finally { setBusy(false); }
+  }
+  if (adding) return <div className={styles.groupNew}>
+    <input className="input" autoFocus aria-label={t('groupName')} placeholder={t('groupNamePlaceholder')} maxLength={120} value={name} disabled={busy}
+      onChange={(event) => setName(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void create(); }
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setAdding(false); }
+      }} />
+    <Button size="small" variant="primary" disabled={busy || !name.trim()} onClick={() => void create()}>{t('add')}</Button>
+    <Button size="small" disabled={busy} onClick={() => setAdding(false)}>{t('cancel')}</Button>
+    {error && <span className="field-error">{error}</span>}
+  </div>;
+  return <Select label={t('group')} value={value ?? ''} disabled={disabled} onChange={(event) => {
+    if (event.target.value === '__new') { setAdding(true); return; }
+    onChange(event.target.value || null);
+  }}>
+    <option value="">{t('noGroup')}</option>
+    {list.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+    {canCreate && <option value="__new">{t('newGroup')}</option>}
+  </Select>;
 }

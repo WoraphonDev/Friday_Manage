@@ -389,14 +389,39 @@ describe('Task v2 (ผู้ใช้ตัดสิน 2026-11-08)', () => {
     await waitFor(() => expect(mutations('/issues/DE-2').at(-1)).toMatchObject({ body: { parentKey: 'DE-9' } }));
   });
 
-  it('แผงขวาแบ่งผู้รับผิดชอบ / แผนงาน / กลุ่มงาน และไม่มีช่อง Sprint, กลุ่มงานเดิม และ Tester', async () => {
+  it('แผงขวาแบ่งผู้รับผิดชอบ / แผนงาน / หมวดหมู่ (มีช่องกลุ่ม) และไม่มีช่อง Sprint และ Tester', async () => {
     mount(); await loaded();
     const props = screen.getByRole('complementary', { name: /คุณสมบัติ|Properties/ });
-    for (const name of ['ผู้รับผิดชอบ', 'แผนงาน', 'กลุ่มงาน']) expect(within(props).getByRole('region', { name })).toBeInTheDocument();
+    for (const name of ['ผู้รับผิดชอบ', 'แผนงาน', 'หมวดหมู่']) expect(within(props).getByRole('region', { name })).toBeInTheDocument();
+    expect(within(props).getByRole('combobox', { name: 'กลุ่ม' })).toBeInTheDocument();
     expect(within(props).getByRole('combobox', { name: 'System Analyst' })).toBeInTheDocument();
     expect(within(props).getByRole('combobox', { name: 'QA / Reviewer' })).toBeInTheDocument();
     expect(within(props).queryByText('Sprint')).not.toBeInTheDocument();
     expect(within(props).queryByText('Tester')).not.toBeInTheDocument();
+  });
+
+  it('กลุ่ม: ย้าย Task ไปไม่มีกลุ่ม · สร้างกลุ่มใหม่แล้วย้ายเข้าไป (Sub-task ตามที่ API)', async () => {
+    const user = userEvent.setup(); const created: unknown[] = [];
+    server.use(http.post('*/api/v1/w/:ws/projects/:project/modules/:module/phases', async ({ request, params }) => { const body = await request.json() as { name: string }; created.push(body); return HttpResponse.json({ id: uid(12345), moduleId: params.module, name: body.name, sort: 1 }, { status: 201 }); }));
+    mount(); await loaded();
+    const props = screen.getByRole('complementary', { name: /คุณสมบัติ|Properties/ });
+    const group = within(props).getByRole('combobox', { name: 'กลุ่ม' });
+    expect(group).toHaveValue(uid(11));
+    await user.selectOptions(group, '');
+    await waitFor(() => expect(mutations('/issues/DE-1').at(-1)?.body).toEqual({ phaseId: null }));
+    await user.selectOptions(within(props).getByRole('combobox', { name: 'กลุ่ม' }), '__new');
+    await user.type(within(props).getByLabelText('ชื่อกลุ่มใหม่'), 'กลุ่ม A{Enter}');
+    await waitFor(() => expect(created).toEqual([{ name: 'กลุ่ม A' }]));
+    await waitFor(() => expect(mutations('/issues/DE-1').at(-1)?.body).toEqual({ phaseId: uid(12345) }));
+  });
+
+  it('หน้าสร้าง Task: เลือกกลุ่มของ Module ได้ และส่ง phaseId', async () => {
+    const user = userEvent.setup(); navigation.search = 'new=1&type=task'; mount(undefined, { issueKey: undefined });
+    await user.type(await screen.findByRole('textbox', { name: 'ชื่อ Task' }), 'งานในกลุ่ม');
+    await user.selectOptions(screen.getByLabelText('Module'), uid(10));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'กลุ่ม' }), uid(11));
+    await user.click(screen.getByRole('button', { name: 'สร้างTask' }));
+    await waitFor(() => expect(mutations('/projects/DE/issues')[0]?.body).toMatchObject({ moduleId: uid(10), phaseId: uid(11) }));
   });
 
   it('Dev แนบผล Unit test พร้อม Coverage ในส่วน Development', async () => {

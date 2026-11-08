@@ -58,7 +58,7 @@ const nextMonth = (iso: string) => addDays(`${iso.slice(0, 8)}01`, 32).slice(0, 
 
 type Line =
   | { kind: "module" | "group"; id: string; wbs: string; name: string; s: Summary }
-  | { kind: "task"; wbs: string; row: GRow; depth: 2 | 3 }
+  | { kind: "task"; wbs: string; row: GRow; depth: number }
   | { kind: "ms"; id: string; wbs: string; name: string; date: string };
 
 /** แตก WBS เป็นแถวตามระดับที่ขยาย · 1 = Module, 2 = + Task, 3 = ถึง Sub-task (เลิกใช้กลุ่มงาน · ผู้ใช้ตัดสิน 2026-11-08) */
@@ -73,11 +73,21 @@ export function buildLines(d: GanttData, level: 1 | 2 | 3): Line[] {
     const mw = String(mi + 1);
     out.push({ kind: "module", id: `m:${m.id ?? "none"}`, wbs: mw, name: m.name, s: m });
     if (level < 2) return;
-    m.groups.flatMap((g) => g.tasks).forEach((r, ti) => {
-      const tw = `${mw}.${ti + 1}`;
-      out.push({ kind: "task", wbs: tw, row: r, depth: 2 });
-      if (level >= 3) r.subtasks.forEach((sub, si) => out.push({ kind: "task", wbs: `${tw}.${si + 1}`, row: sub, depth: 3 }));
+    // Module › (Task ที่ไม่มีกลุ่ม) › กลุ่ม › Task › Sub-task · กลุ่มไม่บังคับ (ผู้ใช้ขอ 2026-11-08)
+    let n = 0;
+    const tasks = (rows: GRow[], prefix: string, depth: number) => rows.forEach((r) => {
+      const tw = `${prefix}.${++n}`;
+      out.push({ kind: "task", wbs: tw, row: r, depth });
+      if (level >= 3) r.subtasks.forEach((sub, si) => out.push({ kind: "task", wbs: `${tw}.${si + 1}`, row: sub, depth: depth + 1 }));
     });
+    for (const g of m.groups.filter((x) => !x.phase)) tasks(g.tasks, mw, 2);
+    for (const g of m.groups.filter((x) => x.phase)) {
+      const gw = `${mw}.${++n}`;
+      out.push({ kind: "group", id: `m:${m.id ?? "none"}:g:${g.phase!.id}`, wbs: gw, name: g.name, s: g });
+      const before = n; n = 0;
+      tasks(g.tasks, gw, 3);
+      n = before;
+    }
     if (level >= 2) ms(m.id);
   });
   // Milestone ที่ไม่ผูก Module (หรือ Module ที่ไม่อยู่ในรายการ) ไว้ท้ายสุด

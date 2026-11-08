@@ -9,7 +9,7 @@ import { formatDate } from '@/lib/format';
 import { Failure } from './shared';
 import { CodeChips, LabelChips } from './refs';
 import { PropRow } from './detail-parts';
-import { DraftList, IssuePicker, useProjectIssues } from './task-v2';
+import { DraftList, GroupSelect, IssuePicker, useProjectIssues } from './task-v2';
 import { issuePath, projectPath, type FormOptions, type Issue, type IssueType, type Scope } from './types';
 import styles from './issue-drawer.module.css';
 
@@ -142,6 +142,8 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
   const canSubtask = draft.type === 'Task' || draft.type === 'Bug';
   const isBug = draft.type === 'Bug';
   const parentRow = draft.subtask ? parentIssue.data : null;
+  const groups = (options.phases ?? options.modules.flatMap((module) => (module.phases ?? []).map((phase) => ({ ...phase, moduleId: module.id })))) as { id: string; name: string; moduleId: string }[];
+  const groupName = (id: string | null | undefined) => (id ? groups.find((group) => group.id === id)?.name ?? null : null);
   const moduleId = parentRow ? parentRow.moduleId : draft.moduleId;
   const mod = options.modules.find((module) => module.id === moduleId);
   const modColor = mod?.color ?? '#1d4ed8';
@@ -265,7 +267,11 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
                   : <IssuePicker label={t('parentTask')} value={draft.parentKey || null} issues={parents} groupOf={(issue) => options.modules.find((module) => module.id === issue.moduleId)?.name ?? t('notSet')} onChange={(key) => set('parentKey', key)} />}</PropRow>
                 {parentIssue.error && <Failure error={parentIssue.error} />}{parentIssue.data?.parentKey && <p className="field-error">{t('parentMustBeTask')}</p>}
                 <PropRow k="Module"><span><span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod?.name ?? t('notSet')}</span> <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span></PropRow>
-              </> : <PropRow k="Module"><Select label={t('fields.moduleId')} required={required.has('module') || draft.type === 'Task'} value={draft.moduleId} onChange={(event) => { set('moduleId', event.target.value); set('phaseId', ''); }}><option value="">{t('choose')}</option>{options.modules.map((module) => <option value={module.id} key={module.id}>{module.name}</option>)}</Select></PropRow>}
+                {parentIssue.data && <PropRow k={t('group')}><span>{groupName(parentIssue.data.phaseId) ?? <span className="muted">{t('noGroup')}</span>} <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span></PropRow>}
+              </> : <>
+                <PropRow k="Module"><Select label={t('fields.moduleId')} required={required.has('module') || draft.type === 'Task'} value={draft.moduleId} onChange={(event) => { set('moduleId', event.target.value); set('phaseId', ''); }}><option value="">{t('choose')}</option>{options.modules.map((module) => <option value={module.id} key={module.id}>{module.name}</option>)}</Select></PropRow>
+                <PropRow k={t('group')}><GroupSelect scope={scope} moduleId={draft.moduleId || null} value={draft.phaseId || null} groups={groups} onChange={(id) => set('phaseId', id ?? '')} /></PropRow>
+              </>}
               <PropRow k={t('refs.requirement')}><CodeChips kinds={['requirement']} editable values={{ requirement: draft.requirements, screen: [] }} suggestions={{ requirement: options.requirements?.map((r) => r.code) }} onChange={(_, codes) => set('requirements', codes)} /></PropRow>
               <PropRow k={t('refs.screen')}><CodeChips kinds={['screen']} editable values={{ requirement: [], screen: draft.screens }} suggestions={{ screen: options.screens?.map((r) => r.code) }} onChange={(_, codes) => set('screens', codes)} /></PropRow>
               <PropRow k={t('refs.labels')}><LabelChips options={options.labels} value={draft.labelIds} editable onChange={(ids) => set('labelIds', ids)} /></PropRow>

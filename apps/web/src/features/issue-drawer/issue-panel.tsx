@@ -16,7 +16,7 @@ import { BodyText, Failure, InlineText } from './shared';
 import { Attachments, BugDetails, Development, PropRow, QuickSubtask, SubtaskRow } from './detail-parts';
 import { CodeChips, LabelChips } from './refs';
 import { issuePath, issueQuery, projectPath, type Issue, type Named, type PublicPerson, type Scope } from './types';
-import { IssuePicker, useProjectIssues } from './task-v2';
+import { GroupSelect, IssuePicker, useProjectIssues } from './task-v2';
 import styles from './issue-drawer.module.css';
 
 export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: Scope; issue: Issue; siblings?: Issue[]; onDeleted: (parentKey: string | null) => void }) {
@@ -45,7 +45,8 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const watchers = useQuery({ queryKey: [...key, 'watchers'], queryFn: ({ signal }) => api.get<{ items: { person: PublicPerson | null }[]; watching: boolean }>(`${endpoint}/watchers`, { signal }) });
   // รายการ Label ของโปรเจกต์ใช้เฉพาะตอนแก้ · การแสดงผลใช้ชื่อ/สีที่มากับงาน
   const labelOptions = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'labels'], queryFn: ({ signal }) => api.get<{ items: Named[] }>(`${projectPath(scope.ws, scope.projectKey)}/labels`, { signal }), enabled: canEdit });
-  const refOptions = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'form-options'], queryFn: ({ signal }) => api.get<{ requirements?: { code: string }[]; screens?: { code: string }[] }>(`${projectPath(scope.ws, scope.projectKey)}/form-options`, { signal }), enabled: canEdit && scope.access.permissions.includes('issue.create'), staleTime: 60_000 });
+  // form-options ให้ทั้งรหัส FR / Screen และรายการกลุ่มของแต่ละ Module
+  const refOptions = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'form-options'], queryFn: ({ signal }) => api.get<{ requirements?: { code: string }[]; screens?: { code: string }[]; phases?: { id: string; name: string; moduleId: string }[] }>(`${projectPath(scope.ws, scope.projectKey)}/form-options`, { signal }), enabled: !scope.access.guestViewer, staleTime: 60_000 });
   // D2: เปลี่ยน Task แม่ได้เฉพาะ Task ใน Module เดียวกัน (ผู้ใช้ตัดสิน 2026-11-08)
   const projectIssues = useProjectIssues(scope, canEdit && !!issue.parentKey);
   const impact = useQuery({ queryKey: [...key, 'delete-impact'], queryFn: () => api.get<{ counts: { subtasks: number; files: number; dependencies: number }; subtasks?: Issue[] }>(`${endpoint}/delete-impact`), enabled: deleteOpen && canDelete });
@@ -53,7 +54,8 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const statuses = scope.project?.statuses?.filter((status) => status.workflowId === type?.workflowId) ?? [];
   const index = siblings.findIndex((item) => item.key === issue.key);
   async function refresh() {
-    await Promise.all([cache.invalidateQueries({ queryKey: key }), cache.invalidateQueries({ queryKey: ['kanban', scope.ws, scope.projectKey] }), cache.invalidateQueries({ queryKey: ['issue-drawer-list', scope.ws, scope.projectKey] })]);
+    // Table ไม่พึ่ง realtime อย่างเดียว (เช่น ย้ายกลุ่มแล้วแถวต้องย้ายตามทันที)
+    await Promise.all([cache.invalidateQueries({ queryKey: key }), cache.invalidateQueries({ queryKey: ['kanban', scope.ws, scope.projectKey] }), cache.invalidateQueries({ queryKey: ['issue-drawer-list', scope.ws, scope.projectKey] }), cache.invalidateQueries({ queryKey: ['table', scope.ws, scope.projectKey] })]);
     if (issue.parentKey) await cache.invalidateQueries({ queryKey: issueQuery(scope.ws, issue.parentKey) });
   }
   async function action(fn: () => Promise<unknown>, success?: (result: unknown) => void): Promise<boolean> {
@@ -99,6 +101,8 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const pending = issue.pendingDueRequest;
   const mod = scope.project?.modules.find((item) => item.id === issue.moduleId);
   const modColor = mod?.color ?? '#1d4ed8';
+  const groups = (refOptions.data?.phases ?? scope.project?.phases ?? []) as { id: string; name: string; moduleId: string }[];
+  const groupName = issue.phaseId ? groups.find((group) => group.id === issue.phaseId)?.name ?? issue.group?.name ?? null : null;
   const doneStatus = statuses.find((status) => status.category === 'done');
   // K2: Bug ที่แก้แล้ว (สถานะหลังสถานะทำงานแรก เช่น Fixed) รอทดสอบซ้ำ · ผ่าน = สถานะถัดไปใน Workflow, ไม่ผ่าน = กลับสถานะทำงานแรก
   const statusIndex = statuses.findIndex((status) => status.id === issue.status.id);
@@ -249,7 +253,14 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
               ? <IssuePicker label={t('parentTask')} value={issue.parentKey} disabled={disabled} issues={(projectIssues.data?.items ?? []).filter((item) => !item.parentKey && item.moduleId === issue.moduleId)} groupOf={() => t('sameModuleTasks', { module: mod?.name ?? t('notSet') })} onChange={(key) => { if (key !== issue.parentKey) void patch({ parentKey: key }); }} />
               : <button type="button" className={styles.textLink} onClick={() => scope.navigate(issue.parentKey!)}>{issue.parentKey}</button>}</PropRow>
             <PropRow k="Module"><span><span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod?.name ?? t('notSet')}</span> <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span></PropRow>
-          </> : <PropRow k="Module">{fieldSelect('moduleId', issue.moduleId, scope.project?.modules ?? [], (value) => void patch({ moduleId: value, phaseId: null }), false)}</PropRow>}
+            <PropRow k={t('group')}><span>{groupName ?? <span className="muted">{t('noGroup')}</span>} <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span></PropRow>
+          </> : <>
+            <PropRow k="Module">{fieldSelect('moduleId', issue.moduleId, scope.project?.modules ?? [], (value) => void patch({ moduleId: value, phaseId: null }), false)}</PropRow>
+            {/* ย้าย Task ไปกลุ่มอื่น → Sub-task ย้ายตาม (API) */}
+            <PropRow k={t('group')}>{canEdit
+              ? <GroupSelect scope={scope} moduleId={issue.moduleId} value={issue.phaseId} groups={groups} disabled={disabled} onChange={(id) => { if (id !== issue.phaseId) void patch({ phaseId: id }); }} />
+              : (groupName ?? <span className="muted">{t('noGroup')}</span>)}</PropRow>
+          </>}
           {/* Requirement · Screen · Label แก้แล้วแทนทั้งชุด */}
           <PropRow k={t('refs.requirement')}><CodeChips kinds={['requirement']} editable={canEdit} busy={disabled} values={{ requirement: issue.requirements ?? [], screen: [] }} suggestions={{ requirement: refOptions.data?.requirements?.map((r) => r.code) }} onChange={(_, codes) => void patch({ requirements: codes })} /></PropRow>
           <PropRow k={t('refs.screen')}><CodeChips kinds={['screen']} editable={canEdit} busy={disabled} values={{ requirement: [], screen: issue.screens ?? [] }} suggestions={{ screen: refOptions.data?.screens?.map((r) => r.code) }} onChange={(_, codes) => void patch({ screens: codes })} /></PropRow>

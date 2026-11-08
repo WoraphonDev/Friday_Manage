@@ -6,6 +6,8 @@ export interface Issue {
   id: string; key: string; projectKey: string; type: IssueType; parentKey: string | null;
   title: string; description: string | null; status: Status; priority: 'urgent' | 'high' | 'medium' | 'low';
   moduleId: string | null; phaseId: string | null; sprintId: string | null;
+  /** ชื่อกลุ่ม (เฉพาะ GET issue) */
+  group?: { id: string; name: string } | null;
   assigneeIds?: string[]; baId?: string | null; saId?: string | null; reviewerId?: string | null; testerId?: string | null; reporterId?: string;
   size: string | null; estimateMd: number | null; progressPct: number | null;
   planStart: string | null; planEnd: string | null; actualStart: string | null; actualEnd: string | null;

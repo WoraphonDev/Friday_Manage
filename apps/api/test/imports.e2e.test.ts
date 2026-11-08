@@ -26,9 +26,9 @@ async function sourceWorkbook() {
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
 
-// ไฟล์ส่งออกรูปแบบใหม่ (ชีต Tasks): Key(1), Parent Key(2), Module(3), Title(4), Status(5), Priority(6), BA(7), SA(8), Developer(9),
-// QA / Reviewer(10), Size(11), Man-Day(12), Plan Start(13), Plan End(14), Actual Start(15), Actual End(16), Requirement(17), Screen(18), Label(19), Description(20)
-const TASK_HEADERS = ['Key', 'Parent Key', 'Module', 'Title', 'Status', 'Priority', 'Business Analyst', 'System Analyst', 'Developer', 'QA / Reviewer', 'Size', 'Man-Day', 'Plan Start', 'Plan End', 'Actual Start', 'Actual End', 'Requirement', 'Screen', 'Label', 'Description'];
+// ไฟล์ส่งออกรูปแบบใหม่ (ชีต Tasks) · อ้างคอลัมน์ด้วยชื่อผ่าน col() เพื่อไม่ผูกกับลำดับ
+const TASK_HEADERS = ['Key', 'Parent Key', 'Module', 'Group', 'Title', 'Status', 'Priority', 'Business Analyst', 'System Analyst', 'Developer', 'QA / Reviewer', 'Size', 'Man-Day', 'Plan Start', 'Plan End', 'Actual Start', 'Actual End', 'Requirement', 'Screen', 'Label', 'Description'];
+const col = (name: string) => TASK_HEADERS.indexOf(name) + 1;
 async function edit(buf: Buffer, fn: (ws: ExcelJS.Worksheet) => void) {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buf as unknown as ArrayBuffer);
@@ -92,7 +92,7 @@ describe('สร้างโปรเจกต์จากไฟล์แล้�
     expect(header).toEqual(TASK_HEADERS);
     expect(table.rowCount).toBe(5);
     const row = table.getRow(3).values as unknown[];
-    expect(Array.from({ length: 13 }, (_, i) => row[i + 1] ?? null)).toEqual(['IMP-2', null, 'Drawdown', 'Approve', 'In progress', 'Medium', 'Mick', null, 'Kaijeaw', null, 'S', 2, d('2026-11-12')]);
+    expect(Array.from({ length: 14 }, (_, i) => row[i + 1] ?? null)).toEqual(['IMP-2', null, 'Drawdown', null, 'Approve', 'In progress', 'Medium', 'Mick', null, 'Kaijeaw', null, 'S', 2, d('2026-11-12')]);
     expect(wb.worksheets.map((w) => w.name)).toEqual(['Tasks', 'ค่าที่ใช้ได้', 'คำแนะนำ', 'Holidays']);
     const values = wb.getWorksheet('ค่าที่ใช้ได้')!;
     expect((values.getRow(1).values as unknown[]).slice(1)).toEqual(['Status', 'Priority', 'Size', 'Module', 'สมาชิก']);
@@ -119,7 +119,7 @@ describe('อัปเดตแผนจากไฟล์', () => {
   });
 
   it('แก้ Man-Day 1 แถว → ผลตรวจรายฟิลด์ → plan_change 1 รายการ (source import)', async () => {
-    const file = await edit(await exportOf('IMP'), (ws) => (ws.getRow(3).getCell(12).value = 3));
+    const file = await edit(await exportOf('IMP'), (ws) => (ws.getRow(3).getCell(col('Man-Day')).value = 3));
     const job = await updateJob('IMP', file);
     expect(job.diff.changed).toEqual([{ no: 3, key: 'IMP-2', title: 'Approve', fields: [{ field: 'estimateMd', label: 'Man-Day', old: 2, new: 3 }] }]);
     expect(job.diff.unchanged).toBe(3);
@@ -147,11 +147,11 @@ describe('อัปเดตแผนจากไฟล์', () => {
 
   it('เหตุผลที่ระบุเอง · เปลี่ยนชื่อ/สถานะ/Dev/วัน แล้วแจกแจงทีละฟิลด์', async () => {
     const file = await edit(await exportOf('IMP'), (ws) => {
-      ws.getRow(2).getCell(4).value = 'Login (แก้ชื่อ)'; // title: ไม่ใช่ฟิลด์แผน
-      ws.getRow(2).getCell(5).value = 'Done';
-      ws.getRow(4).getCell(9).value = 'Mick'; // Dev Kaijeaw → Mick
-      ws.getRow(4).getCell(13).value = d('2026-11-17');
-      ws.getRow(4).getCell(14).value = d('2026-11-23');
+      ws.getRow(2).getCell(col('Title')).value = 'Login (แก้ชื่อ)'; // title: ไม่ใช่ฟิลด์แผน
+      ws.getRow(2).getCell(col('Status')).value = 'Done';
+      ws.getRow(4).getCell(col('Developer')).value = 'Mick'; // Dev Kaijeaw → Mick
+      ws.getRow(4).getCell(col('Plan Start')).value = d('2026-11-17');
+      ws.getRow(4).getCell(col('Plan End')).value = d('2026-11-23');
     });
     const job = await updateJob('IMP', file);
     // no = แถวใน Excel (ไฟล์รูปแบบใหม่ไม่มีคอลัมน์ No.)
@@ -180,7 +180,7 @@ describe('อัปเดตแผนจากไฟล์', () => {
 
   it('งานใหม่ในไฟล์ถูกเพิ่ม · งานที่หายไปไม่ถูกลบเอง ให้เลือก keep / delete', async () => {
     const file = await edit(await exportOf('IMP'), (ws) => {
-      ws.addRow(['IMP-9', null, 'Drawdown', 'งานใหม่จากไฟล์', 'Not Start', null, 'Mick', null, 'Kaijeaw', null, null, 2, d('2026-11-24'), d('2026-11-25'), null, null, 'FR-009', 'SCR-009', null, null]);
+      ws.addRow(['IMP-9', null, 'Drawdown', null, 'งานใหม่จากไฟล์', 'Not Start', null, 'Mick', null, 'Kaijeaw', null, null, 2, d('2026-11-24'), d('2026-11-25'), null, null, 'FR-009', 'SCR-009', null, null]);
       ws.spliceRows(5, 1); // ลบแถว IMP-4 (Backlog item) ออกจากไฟล์
     });
     const job = await updateJob('IMP', file);
@@ -211,7 +211,7 @@ describe('อัปเดตแผนจากไฟล์', () => {
 
   it('แถวที่ต้องแก้ถูกข้าม ไม่นับเป็นงานที่หายไป · missingAll ใช้กับทุกงาน', async () => {
     const file = await edit(await exportOf('IMP'), (ws) => {
-      ws.getRow(2).getCell(12).value = 'abc'; // Man-Day ผิดรูปแบบ → ข้ามแถว
+      ws.getRow(2).getCell(col('Man-Day')).value = 'abc'; // Man-Day ผิดรูปแบบ → ข้ามแถว
     });
     const job = await updateJob('IMP', file);
     expect(job.summary.skipped).toBe(1);
@@ -275,7 +275,7 @@ describe('งานที่สร้างในระบบ (ไม่มี N
     src.getWorksheet('Tasks')!.eachRow((r, i) => {
       if (i === 1) return;
       const v = (c: number) => r.getCell(c).value ?? null;
-      ws.addRow([Number(String(v(1)).split('-')[1]), i - 1, v(3), v(4), v(7), v(5), v(9), v(11), v(12), v(13), v(14), v(20)]);
+      ws.addRow([Number(String(v(col('Key'))).split('-')[1]), i - 1, ...['Module', 'Title', 'Business Analyst', 'Status', 'Developer', 'Size', 'Man-Day', 'Plan Start', 'Plan End', 'Description'].map((h) => v(col(h)))]);
     });
     const file = Buffer.from(await legacy.xlsx.writeBuffer());
     const job = await updateJob('APP', file);
@@ -341,12 +341,37 @@ describe('ไฟล์รูปแบบใหม่: Template, Sub-task แล�
     expect((await team.lead.post(`${team.ws}/projects/KEY/issues`, { title: 'ถัดไป', moduleId: (await team.lead.get(`${team.ws}/issues/KEY-1`)).body.moduleId })).body.key).toBe('KEY-4');
   });
 
+  it('Group: สร้างกลุ่มตามไฟล์ · Sub-task อยู่กลุ่มเดียวกับแม่ · ย้าย Task ไปกลุ่มอื่นแล้ว Sub-task ตาม', async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Tasks');
+    ws.addRow(TASK_HEADERS);
+    ws.addRow(row({ Key: 'G-1', Module: 'Core', Group: 'กลุ่ม A', Title: 'Task ในกลุ่ม' }));
+    ws.addRow(row({ 'Parent Key': 'G-1', Title: 'Sub ในกลุ่ม' }));
+    ws.addRow(row({ Module: 'Core', Title: 'Task ไม่มีกลุ่ม' }));
+    const up = await team.lead.upload(`${team.ws}/import-jobs`, Buffer.from(await wb.xlsx.writeBuffer()), 'Grp.xlsx', { mode: 'create' });
+    expect(up.status, JSON.stringify(up.body)).toBe(201);
+    expect(up.body.summary.phases).toBe(1);
+    await team.lead.patch(`${team.ws}/import-jobs/${up.body.id}`, { project: { key: 'GRP', name: 'Groups' } });
+    await commit(up.body.id);
+    const groups = async () => (await t.owner.query(`SELECT i.number, ph.name FROM issues i JOIN projects p ON p.id = i.project_id LEFT JOIN phases ph ON ph.id = i.phase_id WHERE p.key = 'GRP' ORDER BY i.number`)).rows;
+    expect(await groups()).toEqual([{ number: 1, name: 'กลุ่ม A' }, { number: 2, name: 'กลุ่ม A' }, { number: 3, name: null }]);
+
+    const file = await edit(await exportOf('GRP'), (sheet) => {
+      expect(sheet.getRow(2).getCell(col('Group')).value).toBe('กลุ่ม A');
+      sheet.getRow(2).getCell(col('Group')).value = 'กลุ่ม B';
+    });
+    const job = await updateJob('GRP', file);
+    expect(job.diff.changed.map((c: { key: string; fields: { field: string }[] }) => [c.key, c.fields.map((f) => f.field)])).toEqual([['GRP-1', ['group']]]);
+    await commit(job.id);
+    expect(await groups()).toEqual([{ number: 1, name: 'กลุ่ม B' }, { number: 2, name: 'กลุ่ม B' }, { number: 3, name: null }]);
+  });
+
   it('อัปเดต: เปลี่ยน SA / Label / Task แม่ · เพิ่ม Sub-task ใหม่ · Task ที่มี Sub-task เป็น Sub-task ไม่ได้ · Key ต่างโปรเจกต์ผิด', async () => {
     const file = await edit(await exportOf('KEY'), (ws) => {
-      expect(ws.getRow(3).getCell(1).value).toBe('KEY-2'); // Sub-task ต่อท้าย Task แม่
-      ws.getRow(2).getCell(8).value = 'Mick'; // SA ของ KEY-1
-      ws.getRow(2).getCell(19).value = 'api';
-      ws.getRow(3).getCell(2).value = 'KEY-3'; // ย้าย KEY-2 ไปอยู่ใต้ KEY-3
+      expect(ws.getRow(3).getCell(col('Key')).value).toBe('KEY-2'); // Sub-task ต่อท้าย Task แม่
+      ws.getRow(2).getCell(col('System Analyst')).value = 'Mick'; // SA ของ KEY-1
+      ws.getRow(2).getCell(col('Label')).value = 'api';
+      ws.getRow(3).getCell(col('Parent Key')).value = 'KEY-3'; // ย้าย KEY-2 ไปอยู่ใต้ KEY-3
       ws.addRow(row({ 'Parent Key': 'KEY-3', Title: 'Child B' }));
       ws.addRow(row({ Key: 'ZZ-1', Module: 'Core', Title: 'ผิดโปรเจกต์' }));
     });
@@ -364,8 +389,8 @@ describe('ไฟล์รูปแบบใหม่: Template, Sub-task แล�
     expect(await issueRow('KEY', 5)).toMatchObject({ title: 'Child B', parent: 3, module: 'Core' });
 
     const bad = await updateJob('KEY', await edit(await exportOf('KEY'), (ws) => {
-      expect(ws.getRow(3).getCell(1).value).toBe('KEY-3');
-      ws.getRow(3).getCell(2).value = 'KEY-1'; // KEY-3 มี Sub-task (KEY-2, KEY-5) อยู่
+      expect(ws.getRow(3).getCell(col('Key')).value).toBe('KEY-3');
+      ws.getRow(3).getCell(col('Parent Key')).value = 'KEY-1'; // KEY-3 มี Sub-task (KEY-2, KEY-5) อยู่
     }));
     expect(bad.findings.some((f: { level: string; problem: string }) => f.level === 'err' && f.problem.includes('มี Sub-task อยู่'))).toBe(true);
     expect(bad.diff.changed).toEqual([]);

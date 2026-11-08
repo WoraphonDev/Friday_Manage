@@ -12,6 +12,7 @@ const LABELS = {
   title: 'ชื่องาน',
   parent: 'Task แม่',
   module: 'Module',
+  group: 'กลุ่ม',
   status: 'Status',
   priority: 'Priority',
   size: 'Size',
@@ -33,6 +34,7 @@ const COLUMN: Record<DiffField, Field> = {
   title: 'title',
   parent: 'parentKey',
   module: 'module',
+  group: 'group',
   status: 'status',
   priority: 'priority',
   size: 'size',
@@ -49,7 +51,7 @@ const COLUMN: Record<DiffField, Field> = {
   remark: 'remark',
 };
 /** ชื่อฟิลด์ใน activities / plan_changes */
-const ACTIVITY_FIELD: Partial<Record<DiffField, string>> = { devs: 'assigneeIds', ba: 'baId', sa: 'saId', reviewer: 'reviewerId', parent: 'parentKey', labels: 'labelIds', remark: 'description' };
+const ACTIVITY_FIELD: Partial<Record<DiffField, string>> = { group: 'phaseId', devs: 'assigneeIds', ba: 'baId', sa: 'saId', reviewer: 'reviewerId', parent: 'parentKey', labels: 'labelIds', remark: 'description' };
 const PLAN_FIELDS = new Set<DiffField>(['planStart', 'planEnd', 'estimateMd', 'devs']);
 
 export interface FieldChange {
@@ -72,6 +74,7 @@ interface Existing {
   rows: Issue[];
   moduleName: Map<string, string>;
   moduleId: Map<string, string>;
+  phases: { id: string; moduleId: string; name: string }[];
   statusName: Map<string, string>;
   statusId: Map<string, string>;
   assignees: Map<string, string[]>;
@@ -85,6 +88,7 @@ async function loadExisting(tx: Tx, projectId: string): Promise<Existing> {
   // รวมงานที่ลบแล้ว: excel_row_no / เลขงาน ซ้ำกันไม่ได้ (unique) จึงต้องรู้ว่าเลขไหนถูกใช้
   const rows = await tx.select().from(s.issues).where(eq(s.issues.projectId, projectId));
   const mods = await tx.select({ id: s.modules.id, name: s.modules.name }).from(s.modules).where(eq(s.modules.projectId, projectId));
+  const phases = await tx.select({ id: s.phases.id, moduleId: s.phases.moduleId, name: s.phases.name }).from(s.phases).where(eq(s.phases.projectId, projectId));
   const [taskType] = await tx.select().from(s.issueTypes).where(and(eq(s.issueTypes.projectId, projectId), eq(s.issueTypes.name, 'Task')));
   const sts = await tx.select({ id: s.workflowStatuses.id, name: s.workflowStatuses.name }).from(s.workflowStatuses).where(eq(s.workflowStatuses.workflowId, taskType.workflowId));
   const usedStatus = [...new Set(rows.map((r) => r.statusId))];
@@ -106,6 +110,7 @@ async function loadExisting(tx: Tx, projectId: string): Promise<Existing> {
     rows,
     moduleName: new Map(mods.map((m) => [m.id, m.name])),
     moduleId: new Map(mods.map((m) => [m.name, m.id])),
+    phases,
     statusName: new Map([...sts, ...allStatus].map((x) => [x.id, x.name])),
     statusId: new Map(sts.map((x) => [x.name, x.id])),
     assignees: group(asg.map((a) => ({ issueId: a.issueId, v: a.userId }))),
@@ -145,6 +150,8 @@ export interface UpdatePlan {
   /** ไฟล์รูปแบบเดิม: งานที่สร้างในระบบ (ยังไม่มี No.) แต่จับคู่ด้วย ID ได้ → บันทึก No. ให้ ครั้งต่อไปจับคู่ด้วย No. */
   assignNos: { issueId: string; no: number }[];
   keyed: boolean;
+  /** ไฟล์มีคอลัมน์ Group · ไม่มี = ไม่แตะกลุ่มเดิม (ยกเว้นย้าย Module) */
+  groupMapped: boolean;
   existing: Existing;
 }
 
@@ -197,6 +204,9 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     if (issue.title !== row.title) add('title', issue.title, row.title);
     if (!eq0(oldParent?.number, row.parentNumber)) add('parent', keyOf(oldParent?.number), keyOf(row.parentNumber));
     if (!eq0(ex.moduleName.get(issue.moduleId ?? ''), row.module) && row.module) add('module', ex.moduleName.get(issue.moduleId ?? '') ?? null, row.module);
+    // กลุ่มเทียบเฉพาะ Task (Sub-task ตามกลุ่มของแม่)
+    const oldGroup = issue.phaseId ? (ex.phases.find((p) => p.id === issue.phaseId)?.name ?? null) : null;
+    if (!issue.parentId && row.parentNumber === null && (oldGroup ?? '').toLowerCase() !== (row.phase ?? '').toLowerCase()) add('group', oldGroup, row.phase);
     if (!eq0(ex.statusName.get(issue.statusId), row.status)) add('status', ex.statusName.get(issue.statusId) ?? null, row.status);
     // Priority ว่างในไฟล์ = คงค่าเดิม (ทุกงานต้องมี Priority)
     if (row.priority && issue.priority !== row.priority) add('priority', issue.priority, row.priority);
@@ -230,7 +240,7 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     }
   }
   diff.missing.sort((a, b) => a.no - b.no);
-  return { diff, edits, adds, assignNos, keyed: check.keyed, existing: ex };
+  return { diff, edits, adds, assignNos, keyed: check.keyed, groupMapped: check.mapped.has('group'), existing: ex };
 }
 
 export interface ApplyInput {
@@ -273,7 +283,7 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
 
   // งานใหม่ในไฟล์ก่อน: งานเดิมที่ย้ายไปอยู่ใต้ Task ใหม่ต้องรู้ id ของแม่
   const live = ex.rows.filter((r) => !r.deletedAt);
-  const parents = new Map(live.filter((r) => !r.parentId && r.issueTypeId === ex.taskTypeId).map((r) => [r.number, r.id]));
+  const parents = new Map(live.filter((r) => !r.parentId && r.issueTypeId === ex.taskTypeId).map((r) => [r.number, { id: r.id, phaseId: r.phaseId }]));
   if (plan.adds.length) {
     const made = await insertRows(
       tx,
@@ -295,11 +305,20 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
       plan.adds,
     );
     events.push(...made.events);
-    for (const r of plan.adds) if (r.parentNumber === null && r.number !== null) parents.set(r.number, made.idOf.get(r)!);
+    for (const r of plan.adds) if (r.parentNumber === null && r.number !== null) parents.set(r.number, { id: made.idOf.get(r)!, phaseId: made.phaseIdOf.get(r) ?? null });
   }
 
   // การแก้ไขแผนเทียบ Baseline ล่าสุด (ถ้ามี) · ไม่มี Baseline = ไม่มีอะไรให้เทียบ ตามกติกาเดียวกับการแก้งานทีละงาน
   const [baseline] = await tx.select({ id: s.planBaselines.id }).from(s.planBaselines).where(eq(s.planBaselines.projectId, project.id)).orderBy(sql`${s.planBaselines.version} desc`).limit(1);
+  // กลุ่มตามชื่อใน Module · ที่ยังไม่มีสร้างให้
+  const phaseKey = (moduleId: string, name: string) => `${moduleId}\u0000${name.toLowerCase()}`;
+  const phaseId = new Map((await tx.select({ id: s.phases.id, moduleId: s.phases.moduleId, name: s.phases.name }).from(s.phases).where(eq(s.phases.projectId, project.id))).map((p) => [phaseKey(p.moduleId, p.name), p.id]));
+  const phaseIdOf = async (moduleId: string | null, name: string | null) => {
+    if (!moduleId || !name) return null;
+    const k = phaseKey(moduleId, name);
+    if (!phaseId.has(k)) phaseId.set(k, (await tx.insert(s.phases).values({ ...base, moduleId, name, sort: phaseId.size }).returning({ id: s.phases.id }))[0].id);
+    return phaseId.get(k)!;
+  };
   const labelId = new Map((await tx.select({ id: s.labels.id, name: s.labels.name }).from(s.labels).where(eq(s.labels.projectId, project.id))).map((l) => [l.name.toLowerCase(), l.id]));
   const labelIdOf = async (name: string) => {
     const k = name.toLowerCase();
@@ -318,10 +337,14 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
     const mid = row.module ? moduleId.get(row.module)! : issue.moduleId;
     const set: Partial<typeof s.issues.$inferInsert> = {};
     if (has('title')) set.title = row.title;
-    if (has('parent')) set.parentId = row.parentNumber === null ? null : (parents.get(row.parentNumber) ?? null);
-    if (has('module') || has('parent')) {
-      set.moduleId = mid;
-      set.phaseId = null;
+    const newParent = row.parentNumber === null ? null : (parents.get(row.parentNumber) ?? null);
+    if (has('parent')) set.parentId = newParent?.id ?? null;
+    if (has('module') || has('parent')) set.moduleId = mid;
+    // กลุ่ม: Sub-task ตามแม่ · Task ใช้ค่าในคอลัมน์ Group (ไฟล์ไม่มีคอลัมน์ Group แล้วย้าย Module = ไม่มีกลุ่ม)
+    if (has('parent') || has('module') || has('group')) {
+      const nested = has('parent') ? !!newParent : !!issue.parentId;
+      if (nested) { if (has('parent')) set.phaseId = newParent?.phaseId ?? null; }
+      else set.phaseId = plan.groupMapped ? await phaseIdOf(mid, row.phase) : null;
     }
     if (has('status')) set.statusId = statusIdOf(row.status);
     if (has('priority')) set.priority = row.priority!;
@@ -344,8 +367,8 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
       const ids = [...new Set(await Promise.all(row.labels.map(labelIdOf)))];
       if (ids.length) await tx.insert(s.issueLabels).values(ids.map((id) => ({ ...w, issueId: issue.id, labelId: id })));
     }
-    // ย้าย Module ของ Task แล้ว Sub-task ย้ายตาม
-    if (has('module') && !issue.parentId) await tx.update(s.issues).set({ moduleId: mid, phaseId: null }).where(eq(s.issues.parentId, issue.id));
+    // ย้าย Module / กลุ่มของ Task แล้ว Sub-task ย้ายตาม
+    if ((has('module') || has('group')) && !issue.parentId && set.phaseId !== undefined) await tx.update(s.issues).set({ moduleId: mid, phaseId: set.phaseId }).where(eq(s.issues.parentId, issue.id));
 
     await tx.insert(s.activities).values(fields.map((f) => ({ ...base, issueId: issue.id, actorId: auth.userId, actorKind: 'import' as const, verb: 'updated', field: ACTIVITY_FIELD[f.field] ?? f.field, oldValue: f.old, newValue: f.new })));
     const planFields = fields.filter((f) => PLAN_FIELDS.has(f.field) && (f.field !== 'devs' || idsChanged));

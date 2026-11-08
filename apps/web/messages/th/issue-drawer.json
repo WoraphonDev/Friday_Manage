@@ -231,7 +231,7 @@
     "statusId": "สถานะ",
     "priority": "Priority",
     "moduleId": "Module",
-    "phaseId": "กลุ่มงาน",
+    "phaseId": "กลุ่ม",
     "sprintId": "Sprint",
     "assigneeIds": "ผู้รับผิดชอบ",
     "baId": "BA",
@@ -358,7 +358,7 @@
   "commitsCount": "{count} commits",
   "groupPeople": "ผู้รับผิดชอบ",
   "groupPlan": "แผนงาน",
-  "groupPlace": "กลุ่มงาน",
+  "groupPlace": "หมวดหมู่",
   "noDependenciesYet": "ยังไม่มี Dependency",
   "addDescription": "+ เพิ่มคำอธิบาย",
   "refs": {
@@ -420,5 +420,12 @@
     "unchecked": "เอาติ๊กออก {kind} “{text}”",
     "renamed": "แก้ {kind}: “{old}” → “{new}”",
     "reordered": "จัดลำดับ {kind}"
-  }
+  },
+  "group": "กลุ่ม",
+  "noGroup": "ไม่มีกลุ่ม",
+  "newGroup": "+ สร้างกลุ่มใหม่…",
+  "groupName": "ชื่อกลุ่มใหม่",
+  "groupNamePlaceholder": "เช่น กลุ่ม A",
+  "groupNeedsModule": "เลือก Module ก่อน",
+  "groupCreateFailed": "สร้างกลุ่มไม่สำเร็จ"
 }

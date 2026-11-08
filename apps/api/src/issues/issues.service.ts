@@ -280,8 +280,11 @@ export class IssuesService {
             .select()
             .from(s.dueChangeRequests)
             .where(and(eq(s.dueChangeRequests.issueId, issue.id), eq(s.dueChangeRequests.status, 'pending')));
+      // ชื่อกลุ่ม (Module → กลุ่ม → Task) ให้คนที่ไม่มีสิทธิ์โหลด form-options เห็นด้วย
+      const [group] = issue.phaseId ? await tx.select({ id: s.phases.id, name: s.phases.name }).from(s.phases).where(eq(s.phases.id, issue.phaseId)) : [];
       return {
         ...(await this.dto(tx, project, issue, access)),
+        group: group ?? null,
         subtasks: await this.dtos(tx, project, visibleSubs, access),
         pendingDueRequest: pending
           ? { id: pending.id, requesterId: pending.requesterId, currentDue: pending.currentDue, requestedDue: pending.requestedDue, reasonCode: pending.reasonCode, createdAt: pending.createdAt }

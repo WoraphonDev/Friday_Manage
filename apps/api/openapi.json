@@ -7846,6 +7846,7 @@
                             "parentKey",
                             "no",
                             "module",
+                            "group",
                             "title",
                             "status",
                             "priority",

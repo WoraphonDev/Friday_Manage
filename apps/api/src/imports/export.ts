@@ -12,6 +12,7 @@ export const EXPORT_HEADERS = [
   'Key',
   'Parent Key',
   'Module',
+  'Group',
   'Title',
   'Status',
   'Priority',
@@ -31,7 +32,7 @@ export const EXPORT_HEADERS = [
   'Description',
 ] as const;
 const COL = Object.fromEntries(EXPORT_HEADERS.map((h, i) => [h, i + 1])) as Record<(typeof EXPORT_HEADERS)[number], number>;
-const WIDTH = [10, 11, 22, 44, 13, 10, 18, 18, 24, 18, 7, 9, 12, 12, 12, 12, 18, 16, 16, 40];
+const WIDTH = [10, 11, 22, 18, 44, 13, 10, 18, 18, 24, 18, 7, 9, 12, 12, 12, 12, 18, 16, 16, 40];
 
 const PRIORITY_LABEL = { urgent: 'Urgent', high: 'High', medium: 'Medium', low: 'Low' } as const;
 const SIZES = ['XS', 'S', 'M', 'L', 'XL'];
@@ -61,8 +62,9 @@ export async function buildPlanXlsx(tx: Tx, project: { id: string; key: string; 
     .orderBy(asc(s.issues.number));
   const ids = issues.map((i) => i.id);
   const some = <T>(q: () => Promise<T[]>) => (ids.length ? q() : Promise.resolve([] as T[]));
-  const [mods, sts, users, asg, reqs, scrs, lbls] = await Promise.all([
+  const [mods, phs, sts, users, asg, reqs, scrs, lbls] = await Promise.all([
     tx.select({ id: s.modules.id, name: s.modules.name }).from(s.modules).where(eq(s.modules.projectId, project.id)).orderBy(asc(s.modules.sort)),
+    tx.select({ id: s.phases.id, name: s.phases.name }).from(s.phases).where(eq(s.phases.projectId, project.id)),
     tx.select({ id: s.workflowStatuses.id, name: s.workflowStatuses.name }).from(s.workflowStatuses).where(eq(s.workflowStatuses.workflowId, taskType.workflowId)).orderBy(asc(s.workflowStatuses.sort)),
     tx.select({ id: s.users.id, name: s.users.displayName }).from(s.users),
     some(() => tx.select({ issueId: s.issueAssignees.issueId, userId: s.issueAssignees.userId }).from(s.issueAssignees).where(inArray(s.issueAssignees.issueId, ids)).orderBy(asc(s.issueAssignees.sort))),
@@ -71,6 +73,7 @@ export async function buildPlanXlsx(tx: Tx, project: { id: string; key: string; 
     some(() => tx.select({ issueId: s.issueLabels.issueId, name: s.labels.name }).from(s.issueLabels).innerJoin(s.labels, eq(s.labels.id, s.issueLabels.labelId)).where(inArray(s.issueLabels.issueId, ids))),
   ]);
   const moduleName = new Map(mods.map((x) => [x.id, x.name]));
+  const groupName = new Map(phs.map((x) => [x.id, x.name]));
   const userName = new Map(users.map((x) => [x.id, x.name]));
   const statusName = new Map(sts.map((x) => [x.id, x.name]));
   const group = <T extends { issueId: string }>(list: T[], pick: (r: T) => string) => {
@@ -98,6 +101,7 @@ export async function buildPlanXlsx(tx: Tx, project: { id: string; key: string; 
       `${project.key}-${i.number}`,
       parent ? `${project.key}-${parent.number}` : null,
       i.moduleId ? (moduleName.get(i.moduleId) ?? null) : null,
+      i.phaseId ? (groupName.get(i.phaseId) ?? null) : null,
       i.title,
       statusName.get(i.statusId) ?? null,
       PRIORITY_LABEL[i.priority],
@@ -226,6 +230,7 @@ const GUIDE: [string, string, string][] = [
   ['Key', 'รหัสงานในระบบ เช่น DP-12 · แถวที่มี Key = แก้งานเดิม · เว้นว่าง = สร้างงานใหม่ (ระบบออกเลขให้) · อย่าแก้ Key ของงานเดิม', '—'],
   ['Parent Key', 'Key ของ Task แม่ ถ้าแถวนี้เป็น Sub-task · Task แม่ต้องอยู่ในไฟล์หรือในโปรเจกต์ และต้องไม่เป็น Sub-task เอง', '—'],
   ['Module', 'ชื่อ Module · ยังไม่มีในโปรเจกต์ = สร้างให้ · Sub-task ใช้ Module ของ Task แม่เสมอ', 'Task'],
+  ['Group', 'กลุ่มของ Task ใต้ Module (ไม่บังคับ) · ยังไม่มี = สร้างให้ · ว่าง = ไม่มีกลุ่ม · Sub-task อยู่กลุ่มเดียวกับ Task แม่เสมอ', '—'],
   ['Title', 'ชื่องาน', 'ใช่'],
   ['Status', 'สถานะตาม Workflow ของโปรเจกต์ (ดูชีตค่าที่ใช้ได้) · ว่าง = To do', '—'],
   ['Priority', 'Urgent / High / Medium / Low · ว่าง = Medium (งานใหม่) หรือคงค่าเดิม', '—'],

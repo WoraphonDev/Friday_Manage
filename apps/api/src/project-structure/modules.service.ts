@@ -109,7 +109,7 @@ export class ModulesService {
   }
 
   async createPhase(auth: AuthInfo, tenant: TenantInfo, key: string, moduleId: string, input: z.infer<typeof CreatePhaseBody>) {
-    return this.write(auth, tenant, key, async (tx, { project }) => {
+    return this.write(auth, tenant, key, 'group', async (tx, { project }) => {
       await this.module(tx, project.id, moduleId);
       const current = await this.phases(tx, moduleId);
       const [row] = await tx.insert(s.phases).values({ workspaceId: tenant.workspaceId, projectId: project.id, moduleId, name: input.name, sort: nextSort(current) }).returning();
@@ -220,9 +220,10 @@ export class ModulesService {
     return this.db.run(auth, tenant, async (tx) => fn(tx, await loadContext(tx, this.projects, auth, tenant, key, mode)));
   }
 
-  private async write<T>(auth: AuthInfo, tenant: TenantInfo, key: string, fn: (tx: Tx, ctx: Context, events: DomainEvent[]) => Promise<T>) {
+  private async write<T>(auth: AuthInfo, tenant: TenantInfo, key: string, modeOrFn: 'group' | ((tx: Tx, ctx: Context, events: DomainEvent[]) => Promise<T>), maybeFn?: (tx: Tx, ctx: Context, events: DomainEvent[]) => Promise<T>) {
     const events: DomainEvent[] = [];
-    const result = await this.db.run(auth, tenant, async (tx) => fn(tx, await loadContext(tx, this.projects, auth, tenant, key, 'write'), events));
+    const [mode, fn] = typeof modeOrFn === 'string' ? [modeOrFn, maybeFn!] : ['write' as const, modeOrFn];
+    const result = await this.db.run(auth, tenant, async (tx) => fn(tx, await loadContext(tx, this.projects, auth, tenant, key, mode), events));
     await this.events.publish(events);
     return result;
   }

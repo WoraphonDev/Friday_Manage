@@ -304,3 +304,8 @@ a.chipSoft:hover { background:#e4e7eb; color:var(--foreground); }
 .logHead { display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--muted); font-size:11px; }
 .logHead time { flex:none; }
 .logText { margin:2px 0 0; color:var(--foreground); overflow-wrap:anywhere; line-height:18px; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3; overflow:hidden; }
+
+/* สร้างกลุ่มใหม่ในช่องกลุ่ม (หน้าสร้าง / หน้าดู Task) */
+.groupNew { display:flex; align-items:center; gap:6px; flex-wrap:wrap; width:100%; }
+.groupNew :global(.input) { flex:1 1 100%; min-width:0; height:32px; min-height:32px; }
+.groupNew > button:first-of-type { margin-left:auto; }

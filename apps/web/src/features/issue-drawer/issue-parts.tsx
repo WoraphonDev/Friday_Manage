@@ -36,11 +36,16 @@ export function Checklist({ scope, issueKey }: { scope: Scope; issueKey: string 
   const items = query.data.items;
   const done = items.filter((item) => item.done).length;
   // C2: Acceptance criteria (เกณฑ์ที่ QA / Reviewer ตรวจ) และ Checklist (ขั้นตอนของผู้ทำงาน) แสดงสองกล่องเสมอ
+  const doneByName = (id: string | null) => (id ? scope.people.find((person) => person.id === id)?.displayName ?? null : null);
   const row = (item: ChecklistItem, index: number) => <div key={item.id} className={styles.checkRow}>
         <input type="checkbox" checked={item.done} aria-label={item.text} disabled={pending || !canEdit} onChange={(event) => void change(() => api.request(`${endpoint}/${item.id}`, { method: 'PATCH', body: { done: event.target.checked } }))} />
         <span className={`${styles.kindTag} ${item.kind === 'acceptance' ? styles.kindAcceptance : styles.kindChecklist}`}>{item.kind === 'acceptance' ? 'Acceptance' : 'Checklist'}</span>
         {edit?.id === item.id && canEdit ? <form className={styles.grow} onSubmit={(event) => { event.preventDefault(); void change(() => api.request(`${endpoint}/${item.id}`, { method: 'PATCH', body: { text: edit.text } }), () => setEdit(null)); }}><Input aria-label={t('checklistText')} value={edit.text} onChange={(event) => setEdit({ ...edit, text: event.target.value })} required maxLength={5000} /><Button type="submit" size="small" disabled={pending}>{t('save')}</Button><Button size="small" onClick={() => setEdit(null)}>{t('cancel')}</Button></form>
-          : <button disabled={!canEdit} className={`${styles.checkText} ${item.done ? styles.checked : ''}`} onClick={() => setEdit({ id: item.id, text: item.text })}>{item.text}<small>{item.doneAt && ` · ${formatDate(item.doneAt, scope.yearFormat)}`}</small></button>}
+          : <button disabled={!canEdit} className={styles.checkText} onClick={() => setEdit({ id: item.id, text: item.text })}>
+            {/* ขีดฆ่าเฉพาะข้อความ · คนติ๊กและวันที่ไม่ขีดฆ่า */}
+            <span className={item.done ? styles.checked : undefined}>{item.text}</span>
+            {item.done && item.doneAt && <small className={styles.checkMeta}>{doneByName(item.doneBy) ? t('checkDoneBy', { name: doneByName(item.doneBy)!, date: formatDate(item.doneAt, scope.yearFormat) }) : formatDate(item.doneAt, scope.yearFormat)}</small>}
+          </button>}
         {canEdit && <div className={styles.actions}>
           <Button variant="ghost" size="icon" aria-label={t('itemUp', { text: item.text })} disabled={pending || index === 0} onClick={() => { const ids = items.map((value) => value.id); [ids[index - 1], ids[index]] = [ids[index], ids[index - 1]]; void change(() => api.post(`${endpoint}/reorder`, { ids })); }}><ArrowUp size={14} /></Button>
           <Button variant="ghost" size="icon" aria-label={t('itemDown', { text: item.text })} disabled={pending || index === items.length - 1} onClick={() => { const ids = items.map((value) => value.id); [ids[index + 1], ids[index]] = [ids[index], ids[index + 1]]; void change(() => api.post(`${endpoint}/reorder`, { ids })); }}><ArrowDown size={14} /></Button>

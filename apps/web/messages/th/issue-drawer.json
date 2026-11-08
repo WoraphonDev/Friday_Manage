@@ -407,5 +407,6 @@
   "waitFor": "รอ",
   "afterCreateNote": "Attachments, ผลทดสอบ QA, Development และ Activity / คอมเมนต์ เพิ่มได้หลังกดสร้าง หน้าจะเปลี่ยนเป็นหน้าดู Task ทันที",
   "afterStart": "หลังเริ่มงาน",
-  "parentRange": "ต้องอยู่ในช่วงของ {key}: {start} – {end} (เกินได้ ระบบจะถามก่อนขยาย Task)"
+  "parentRange": "ต้องอยู่ในช่วงของ {key}: {start} – {end} (เกินได้ ระบบจะถามก่อนขยาย Task)",
+  "checkDoneBy": "ติ๊กโดย {name} · {date}"
 }

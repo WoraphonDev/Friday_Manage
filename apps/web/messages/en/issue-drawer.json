@@ -407,5 +407,6 @@
   "waitFor": "Waits for",
   "afterCreateNote": "Attachments, QA results, Development and comments can be added after you create; the page then switches to the task view",
   "afterStart": "After start",
-  "parentRange": "Must be within {key}: {start} – {end} (you will be asked before the task is extended)"
+  "parentRange": "Must be within {key}: {start} – {end} (you will be asked before the task is extended)",
+  "checkDoneBy": "Done by {name} · {date}"
 }

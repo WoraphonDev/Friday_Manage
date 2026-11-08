@@ -137,7 +137,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 |---|---|---|---|
 | `plan_baseline` | Baseline v1, v2 … | project_id, version, name, source (import · manual), created_by, created_at | L3, 5 |
 | `baseline_item` | ค่าของแต่ละงานตอนตั้ง Baseline | baseline_id, issue_id, plan_start, plan_end, estimate_md, assignee_ids[] | 5, L3 |
-| `plan_change` | แท็บ "การแก้ไขแผน" · การแก้หลังมี Baseline ต้องใส่เหตุผล | project_id, issue_id, baseline_id, field, old_value, new_value, reason, impact, changed_by, changed_at, source (manual · import · due_request) | L3 |
+| `plan_change` | แท็บ "การแก้ไขแผน" · การแก้หลังมี Baseline บันทึกทุกครั้ง · เหตุผลไม่บังคับ (ผู้ใช้ขอ 8 พ.ย. 2569: ไม่ต้องเตือน ให้ลง Activity ก็พอ) | project_id, issue_id, baseline_id, field, old_value, new_value, reason, impact, changed_by, changed_at, source (manual · import · due_request) | L3 |
 | `import_job` | งานนำเข้า Excel | project_id (null = โปรเจกต์ใหม่), mode (create · update), file_name, storage_key, column_mapping (jsonb), person_mapping (jsonb), validation (jsonb: แถวที่ต้องแก้), status, row_total, row_imported, row_skipped, error, created_by, completed_at | L3 |
 
 ## H. ไฟล์

@@ -589,16 +589,13 @@ export class IssuesService {
       const planChanged = PLAN_FIELDS.filter((f) => before[f] !== after[f]);
       const assigneesChanged = input.assigneeIds !== undefined && !sameSet(oldAssignees, input.assigneeIds);
 
-      // หลังตั้ง Baseline การแก้แผนต้องมีเหตุผล และบันทึกในแท็บ "การแก้ไขแผน"
+      // หลังตั้ง Baseline การแก้แผนบันทึกในแท็บ "การแก้ไขแผน" และ Activity · เหตุผลไม่บังคับ (ผู้ใช้ขอ 2026-11-08: ไม่ต้องเตือน ให้ลง Activity ก็พอ)
       const [baseline] = await tx
         .select({ id: s.planBaselines.id })
         .from(s.planBaselines)
         .where(eq(s.planBaselines.projectId, project.id))
         .orderBy(sql`${s.planBaselines.version} desc`)
         .limit(1);
-      if (baseline && (planChanged.length || assigneesChanged) && !input.planChangeReason) {
-        throw new AppError(400, 'plan_change_reason_required', 'แก้แผนหลังตั้ง Baseline ต้องใส่เหตุผล', { fields: planChanged });
-      }
 
       // รายชื่อ Dev อยู่อีกตาราง แถวงานไม่เปลี่ยน trigger จึงไม่เพิ่ม version ให้ · ต้องเพิ่มเองเพื่อให้ If-Match ยังจับการแก้ชนกันได้
       if (assigneesChanged || refChanges.length) set.version = expected + 1;
@@ -648,7 +645,7 @@ export class IssuesService {
       if (baseline && (planChanged.length || assigneesChanged)) {
         const planRows = changes.filter((c) => (PLAN_FIELDS as readonly string[]).includes(c.field) || c.field === 'assigneeIds');
         await tx.insert(s.planChanges).values(
-          planRows.map((c) => ({ ...base, baselineId: baseline.id, field: c.field, oldValue: c.oldValue, newValue: c.newValue, reason: input.planChangeReason, changedBy: auth.userId })),
+          planRows.map((c) => ({ ...base, baselineId: baseline.id, field: c.field, oldValue: c.oldValue, newValue: c.newValue, reason: input.planChangeReason ?? null, changedBy: auth.userId })),
         );
       }
       events.push(...(await this.changeEvents(tx, auth, tenant, project, issue, updated, assigneesChanged ? { before: oldAssignees, after: assignees } : null, newParent ? [...refChanges, 'parentKey'] : refChanges)));

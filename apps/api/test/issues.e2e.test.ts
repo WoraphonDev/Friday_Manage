@@ -449,18 +449,22 @@ describe('Bulk ใช้กติกา PATCH ต่อรายงาน', () =
     expect((await team.lead.post(`${url(parent.key)}/restore`)).status).toBe(200);
   });
 
-  it('Baseline บังคับเหตุผลทั้ง bulk และ PUT Assignees พร้อม plan_changes/event', async () => {
+  it('Baseline: แก้แผนได้โดยไม่ต้องใส่เหตุผล (บันทึกใน plan_changes / Activity) · ใส่เหตุผลได้ถ้าต้องการ', async () => {
     const issue = await create({ assigneeIds: [team.leadId], planEnd: '2026-12-20' });
     await t.owner.query("INSERT INTO plan_baselines (workspace_id,project_id,version,source,created_by) VALUES ($1,$2,1,'manual',$3)", [workspaceId, team.project.id, team.leadId]);
-    const missing = await team.lead.post(`${projectUrl()}/issues/bulk`, { keys: [issue.key], set: { planEnd: '2026-12-15' } });
-    expect(missing.body.results[0].error.code).toBe('plan_change_reason_required');
-    const assignMissing = await team.lead.put(`${url(issue.key)}/assignees`, { assigneeIds: [team.devId] }).set('If-Match', `"${issue.version}"`);
-    expect(assignMissing.body.error.code).toBe('plan_change_reason_required');
+    // ผู้ใช้ขอ 2026-11-08: ไม่ต้องเตือนให้ใส่เหตุผล
+    const quiet = await team.lead.post(`${projectUrl()}/issues/bulk`, { keys: [issue.key], set: { planEnd: '2026-12-15' } });
+    expect(quiet.body.results[0].ok).toBe(true);
+    const current = (await team.lead.get(url(issue.key))).body;
+    const assign = await team.lead.put(`${url(issue.key)}/assignees`, { assigneeIds: [team.devId] }).set('If-Match', `"${current.version}"`);
+    expect(assign.status, JSON.stringify(assign.body)).toBe(200);
+    const acts = await t.owner.query(`SELECT field FROM activities WHERE issue_id=$1 AND verb='updated' ORDER BY field`, [issue.id]);
+    expect(acts.rows.map((x: { field: string }) => x.field)).toEqual(expect.arrayContaining(['assigneeIds', 'planEnd']));
     seen.length = 0;
-    const r = await team.lead.post(`${projectUrl()}/issues/bulk`, { keys: [issue.key], set: { planEnd: '2026-12-15', assigneeIds: [team.devId], planChangeReason: 'ปรับแผนสมมติ' } });
+    const r = await team.lead.post(`${projectUrl()}/issues/bulk`, { keys: [issue.key], set: { planEnd: '2026-12-14', planChangeReason: 'ปรับแผนสมมติ' } });
     expect(r.body.results[0].ok).toBe(true);
-    const changes = await t.owner.query('SELECT field,reason FROM plan_changes WHERE issue_id=$1 ORDER BY field', [issue.id]);
-    expect(changes.rows).toEqual([{ field: 'assigneeIds', reason: 'ปรับแผนสมมติ' }, { field: 'planEnd', reason: 'ปรับแผนสมมติ' }]);
+    const changes = await t.owner.query('SELECT field,reason FROM plan_changes WHERE issue_id=$1 ORDER BY changed_at, field', [issue.id]);
+    expect(changes.rows).toEqual([{ field: 'planEnd', reason: null }, { field: 'assigneeIds', reason: null }, { field: 'planEnd', reason: 'ปรับแผนสมมติ' }]);
     expect(seen.find((e) => e.type === 'plan.changed')?.data.reason).toBe('ปรับแผนสมมติ');
   });
 });

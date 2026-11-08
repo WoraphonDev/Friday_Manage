@@ -262,16 +262,16 @@ describe('แก้ไขงาน และกติกาการเปลี
     expect(prog.body.error.code).toBe('progress_from_subtasks');
   });
 
-  it('หลังตั้ง Baseline การแก้แผนต้องมีเหตุผล และบันทึกในการแก้ไขแผน', async () => {
+  it('หลังตั้ง Baseline การแก้แผนบันทึกในการแก้ไขแผน · เหตุผลไม่บังคับ', async () => {
     await owner.query(
       `INSERT INTO plan_baselines (workspace_id, project_id, version, source) SELECT workspace_id, id, 1, 'import' FROM projects WHERE key = 'DP'`,
     );
     const noReason = await mick.patch('/w/friday-dev/issues/DP-2', { planEnd: '2026-12-10' }, 4);
-    expect(noReason.body.error.code).toBe('plan_change_reason_required');
-    const ok = await mick.patch('/w/friday-dev/issues/DP-2', { planEnd: '2026-12-11', planChangeReason: 'BA เพิ่ม Template แบบ Fleet' }, 4);
+    expect(noReason.status, JSON.stringify(noReason.body)).toBe(200);
+    const ok = await mick.patch('/w/friday-dev/issues/DP-2', { planEnd: '2026-12-11', planChangeReason: 'BA เพิ่ม Template แบบ Fleet' }, noReason.body.version);
     expect(ok.status).toBe(200);
-    const rows = await owner.query(`SELECT field, reason, new_value FROM plan_changes`);
-    expect(rows.rows).toEqual([{ field: 'planEnd', reason: 'BA เพิ่ม Template แบบ Fleet', new_value: '2026-12-11' }]);
+    const rows = await owner.query(`SELECT field, reason, new_value FROM plan_changes ORDER BY changed_at`);
+    expect(rows.rows).toEqual([{ field: 'planEnd', reason: null, new_value: '2026-12-10' }, { field: 'planEnd', reason: 'BA เพิ่ม Template แบบ Fleet', new_value: '2026-12-11' }]);
   });
 });
 
@@ -466,11 +466,11 @@ describe('Import Excel (L3)', () => {
              (SELECT issue_seq FROM projects WHERE key = 'PLAN') AS seq`);
     expect(counts.rows[0]).toEqual({ phases: 0, baseline: 6, reqs: 4, seq: 10 });
 
-    // หลังนำเข้า สร้างงานใหม่ได้เลขถัดจาก No. สูงสุด และแก้แผนต้องมีเหตุผลเพราะมี Baseline
+    // หลังนำเข้า สร้างงานใหม่ได้เลขถัดจาก No. สูงสุด · แก้แผนได้เลย (มี Baseline จึงลงการแก้ไขแผน)
     const next = await mick.post('/w/friday-dev/projects/PLAN/issues', { title: 'งานใหม่', moduleId: p3.body.moduleId });
     expect(next.body.key).toBe('PLAN-11');
     const edit = await mick.patch('/w/friday-dev/issues/PLAN-6', { planEnd: '2026-12-16' }, p3.body.version);
-    expect(edit.body.error.code).toBe('plan_change_reason_required');
+    expect(edit.status, JSON.stringify(edit.body)).toBe(200);
 
     const again = await mick.post(`/w/friday-dev/import-jobs/${jobId}/commit`);
     expect(again.body.error.code).toBe('import_not_editable');

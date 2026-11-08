@@ -44,6 +44,7 @@
 | 11 | ผลตรวจของ QA / Reviewer | เก็บแค่ ผล (ผ่าน / ไม่ผ่าน), ผู้ตรวจ (ค่าเริ่มต้น = QA / Reviewer ของงาน), Environment, บันทึก / ขั้นตอนที่พบปัญหา (บังคับเมื่อไม่ผ่าน) และไฟล์หลักฐาน ทั้ง Task และ Sub-task · จำนวนเคส / Commit / Coverage เป็นของผล Unit test เท่านั้น · API ยังรับค่าเดิม (`blocked`, `passedCount`) จากเครื่องมืออื่นได้ |
 | 12 | ไฟล์ Excel นำเข้า / ส่งออก | ชีต **Tasks**: Key, Parent Key, Module, Group, Title, Status, Priority, Business Analyst, System Analyst, Developer, QA / Reviewer, Size, Man-Day, Plan Start/End, Actual Start/End, Requirement, Screen, Label, Description + ชีตคำแนะนำ, ค่าที่ใช้ได้ (รายการเลือกในเซลล์) และ Holidays · จับคู่งานด้วย Key (ว่าง = งานใหม่) · Parent Key = Sub-task (Module ตาม Task แม่) · โหมดอัปเดตไม่แตะคอลัมน์ที่ไม่มีในไฟล์ · ดาวน์โหลด Template เปล่าได้ที่หน้านำเข้า · ไฟล์รูปแบบเดิมที่มีคอลัมน์ No. ยังจับคู่ด้วย No. เหมือนเดิม |
 | 13 | Table | มีคอลัมน์ SA (System Analyst) ถัดจาก BA แก้ในตารางได้ |
+| 14 | แก้แผนหลังตั้ง Baseline | แก้ได้เลยไม่ต้องใส่เหตุผล · ระบบบันทึกลง Activity และแท็บ "การแก้ไขแผน" (เหตุผลว่าง) · ใส่เหตุผลได้เมื่อมีช่องให้ เช่น นำเข้า Excel |
 
 ## การแจ้งเตือนและเวลา
 

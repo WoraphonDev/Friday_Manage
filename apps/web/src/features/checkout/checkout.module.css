@@ -50,7 +50,7 @@
 .pillWait { background:var(--warning-soft); color:var(--warning-text); }
 
 .panel { border:1px solid var(--border); border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:10px; }
-.qrRow { display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
+.qrRow { flex-direction:row; flex-wrap:wrap; align-items:center; gap:18px; }
 .qr { width:176px; height:176px; border:1px solid var(--input); border-radius:10px; display:flex; align-items:center; justify-content:center; background:var(--card); font-size:12px; color:var(--muted); flex:none; overflow:hidden; }
 .qr img { width:100%; height:100%; display:block; }
 .qrText { flex:1 1 220px; display:flex; flex-direction:column; gap:6px; font-size:13px; }

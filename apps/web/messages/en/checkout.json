@@ -1,10 +1,11 @@
 {
-  "back": "Back",
   "title": "Pay for {plan}",
   "invoiceLine": "Invoice {number} · due {date}",
   "draftLine": "The invoice is issued when you pay",
   "status": {
-    "unpaid": "Awaiting payment"
+    "unpaid": "Awaiting payment",
+    "paid": "Paid",
+    "review": "Awaiting slip check"
   },
   "secure": "Secure connection",
   "tax": {
@@ -94,7 +95,7 @@
   },
   "summary": {
     "title": "Summary",
-    "seats": "{n} seats · {from} – {to}",
+    "seats": "{n, plural, one {# seat} other {# seats}} · {from} – {to}",
     "plan": "Plan",
     "cycle": "Billing cycle",
     "monthly": "Monthly",
@@ -132,7 +133,7 @@
       "transfer": "Transfer confirmed at {time}"
     },
     "reviewVia": "The Friday team checks the slip within 4 business hours · if the amount doesn't match we'll email you; your access isn't cut off",
-    "plan": "{plan} · {seats} seats · valid until {date}",
+    "plan": "{plan} · {seats, plural, one {# seat} other {# seats}} · valid until {date}",
     "taxDoc": "The e-Tax invoice was sent to {email}",
     "receipt": "The receipt was sent to {email}",
     "taxDocLater": "The tax invoice will be sent to {email} after the slip is approved",

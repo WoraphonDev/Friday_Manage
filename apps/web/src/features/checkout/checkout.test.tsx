@@ -117,7 +117,6 @@ describe("ชำระเงิน (W22)", () => {
     mount({ plan: "team_m" });
     expect(await screen.findByRole("heading", { level: 1, name: /ชำระเงินแพ็กเกจ Team M/ })).toBeInTheDocument();
     expect(screen.getByText("รอชำระ")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ย้อนกลับ" })).toHaveAttribute("href", "/work/sample/billing");
     expect(await screen.findByLabelText("ชื่อนิติบุคคล")).toHaveValue("บริษัท ตัวอย่าง จำกัด");
     expect(screen.getByText("ใช้ข้อมูลจากครั้งก่อน แก้ได้")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /PromptPay QR/ })).toHaveAttribute("aria-checked", "true");

@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, Copy, Lock } from "lucide-react";
+import { Check, Copy, Lock } from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -298,10 +298,6 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
 
   return (
     <div className={styles.page}>
-      <Link className={styles.back} href={`${home}/billing`}>
-        <ArrowLeft size={14} aria-hidden="true" />
-        {t("back")}
-      </Link>
       <div className={styles.head}>
         <div>
           <h1>
@@ -676,6 +672,7 @@ function TransferPanel({ base, result, slip, setSlip, slipAmount, setSlipAmount 
 /** ชำระแล้ว: ต่ออายุทันที · แจ้งว่าส่ง e-Tax / ใบเสร็จทางอีเมลแล้ว · สลิปรอตรวจ = ใช้งานได้ทันที */
 function Done({ ws, phase, planName, seats, email, vatRegistered, whtOn }: { ws: string; phase: Extract<Phase, { kind: "done" }>; planName: string; seats: number; email: string; vatRegistered: boolean; whtOn: boolean }) {
   const t = useTranslations("checkout.done");
+  const ts = useTranslations("checkout.status");
   const f = useFormatter();
   const home = `/work/${encodeURIComponent(ws)}`;
   const inv = phase.invoice;
@@ -685,7 +682,7 @@ function Done({ ws, phase, planName, seats, email, vatRegistered, whtOn }: { ws:
   return (
     <div className={styles.page}>
       <section className={cn(styles.card, styles.done)} aria-labelledby="done-title">
-        <span className={cn(styles.pill, review ? styles.pillWait : styles.pillOk)}>{review ? `${t("review")}` : t("paid")}</span>
+        <span className={cn(styles.pill, review ? styles.pillWait : styles.pillOk)}>{review ? ts("review") : ts("paid")}</span>
         <h1 id="done-title">{review ? t("review") : t("paid")}</h1>
         <div className={styles.muted}>{review ? t("reviewVia") : t(`via.${phase.method}`, { time: paidAt })}</div>
         <ul>

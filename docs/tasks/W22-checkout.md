@@ -3,17 +3,17 @@
 | | |
 |---|---|
 | Wave | O-1 |
-| รอ merge | A35 |
+| รอ merge | A35a (ใช้ตัวจำลองผู้ให้บริการได้จนกว่า A35b เสร็จ) |
 | Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/billing/checkout/**` · `apps/web/src/features/checkout/**` · `apps/web/messages/th/checkout.json` |
 | หน้าจอ | Checkout (4b) |
 | สเปก | decisions › SaaS |
 
-อ่าน [README](README.md) ก่อนเริ่ม: กติกา lane, ไฟล์กลาง และวิธีส่งงาน · หน้าจอทั้งหมดของ Friday Ops อยู่ใน `design/canvas/ops/` (สำเนาของ [Canvas Friday Ops](https://claude.ai/artifact/Q8tsmLfQqS1aUJ2rNrkw9r) รุ่นที่ 39) · ทำเฉพาะสิ่งที่ติดป้าย **เฟส 1**
+อ่าน [README](README.md) ก่อนเริ่ม: กติกา lane, ไฟล์กลาง และวิธีส่งงาน · หน้าจอทั้งหมดของ Friday Ops อยู่ใน `design/canvas/ops/` (สำเนาของ [Canvas Friday Ops](https://claude.ai/artifact/Q8tsmLfQqS1aUJ2rNrkw9r) รุ่นที่ 40) · ทำเฉพาะสิ่งที่ติดป้าย **เฟส 1**
 
 ## ทำอะไร
 
 - ข้อมูลออกใบกำกับภาษี (นิติบุคคล / บุคคลธรรมดา) และสวิตช์หัก ณ ที่จ่าย 3% (ปิดตัวเลือกบัตร)
-- วิธีชำระ 3 แบบ: PromptPay QR (หน้าเปลี่ยนเองเมื่อเงินเข้า · realtime หรือ poll), บัตร (ตัดอัตโนมัติ), Bill Payment (Ref.1 / Ref.2 + อัปโหลดสลิปทางสำรอง)
+- วิธีชำระเฟส 1: PromptPay QR (หน้าเปลี่ยนเองเมื่อเงินเข้า · realtime หรือ poll), บัตร (ตัดอัตโนมัติ), โอนเข้าบัญชีพร้อมอัปโหลดสลิป (ทีมตรวจเอง) · Bill Payment เป็นเฟส 2 · ซ่อนบรรทัด VAT และเปลี่ยน "ใบกำกับภาษี" เป็น "ใบเสร็จ" เมื่อบริษัทยังไม่จด VAT
 - สถานะชำระแล้ว: ต่ออายุทันทีและแจ้งว่าส่ง e-Tax ทางอีเมลแล้ว
 - แบบสอบถามตอนยกเลิกแพ็กเกจ (เหตุผล · ฟีเจอร์ที่ขาด · ย้ายไปใช้อะไร)
 

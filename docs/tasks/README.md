@@ -1,6 +1,6 @@
 # งานที่เหลือของ Friday Manage (สำหรับ Codex)
 
-แบ่งเป็นงานย่อย 59 งาน + Friday Ops เฟส 1 อีก 16 งาน · 1 งาน = 1 branch = 1 PR · หลาย agent ทำพร้อมกันได้เพราะแต่ละงานมี **lane** ของตัวเอง: รายการไฟล์ที่งานนั้นแก้ได้ ไม่ทับกับงานอื่น · อ่านได้ทุกไฟล์ใน repo
+แบ่งเป็นงานย่อย 59 งาน + Friday Ops เฟส 1 อีก 17 งาน · 1 งาน = 1 branch = 1 PR · หลาย agent ทำพร้อมกันได้เพราะแต่ละงานมี **lane** ของตัวเอง: รายการไฟล์ที่งานนั้นแก้ได้ ไม่ทับกับงานอื่น · อ่านได้ทุกไฟล์ใน repo
 
 ## ขั้นตอน
 
@@ -145,19 +145,20 @@
 
 ## Friday Ops เฟส 1 (ออกแบบใหม่ 9 พ.ย. 2569)
 
-หน้าจอ: `design/canvas/ops/` (สำเนาของ [Canvas Friday Ops](https://claude.ai/artifact/Q8tsmLfQqS1aUJ2rNrkw9r) รุ่นที่ 39) · ทำเฉพาะสิ่งที่ติดป้าย **เฟส 1** · สเปก: [05-business-metrics](../spec/05-business-metrics.md), [06-ops-roles](../spec/06-ops-roles.md) · คำตัดสิน: [decisions.md](../decisions.md) › "Friday Ops: บทบาทพนักงาน"
+หน้าจอ: `design/canvas/ops/` (สำเนาของ [Canvas Friday Ops](https://claude.ai/artifact/Q8tsmLfQqS1aUJ2rNrkw9r) รุ่นที่ 40) · ทำเฉพาะสิ่งที่ติดป้าย **เฟส 1** · สเปก: [05-business-metrics](../spec/05-business-metrics.md), [06-ops-roles](../spec/06-ops-roles.md) · คำตัดสิน: [decisions.md](../decisions.md) › "Friday Ops: บทบาทพนักงาน"
 
-แทนหน้าจอเดิมของ A32 / W20 (ของเดิมใช้ต่อได้ แต่ต้องปรับตามดีไซน์ใหม่) · ลำดับ: O00 → O01 และ A34 / A35 → O02–O06 และ O10 → หน้าเว็บ O11–O15
+แทนหน้าจอเดิมของ A32 / W20 (ของเดิมใช้ต่อได้ แต่ต้องปรับตามดีไซน์ใหม่) · ลำดับ: O00 → O01, A34 และ A35a → O02–O06, O10 และ W22 → หน้าเว็บ O11–O15 · A35b เริ่มเมื่อผู้ใช้เลือก Gateway
 
 | งาน | ชื่อ | Wave | รอ merge | Lane หลัก |
 |---|---|---|---|---|
 | [O00](O00-ops-db-phase1.md) | ตารางของ Friday Ops เฟส 1 และข้อมูลธุรกิจ | O-0 | — | `packages/db/**` |
 | [O01](O01-ops-roles-approvals.md) | ops-api: แยก module, บทบาท, วงเงิน, อนุมัติ, สิทธิ์ฉุกเฉิน, พนักงาน | O-1 | O00 | `apps/ops-api/src/{auth,staff,approvals}` + `ops.controller.ts` |
 | [A34](A34-analytics-collection.md) | API: เก็บข้อมูลธุรกิจตั้งแต่วันแรก | O-1 | O00 | `apps/api/src/analytics/**` |
-| [A35](A35-payments-auto-verify.md) | API: ยืนยันการชำระเงินอัตโนมัติ · **รอเลือกผู้ให้บริการ** | O-1 | O00 | `apps/api/src/payments/**` |
-| [W22](W22-checkout.md) | เว็บ: หน้าชำระเงินฝั่งลูกค้าและแบบสอบถามตอนยกเลิก | O-1 | A35 | `apps/web/app/work/[ws]/billing/checkout/**` |
+| [A35a](A35a-payments-core.md) | API: แกนการชำระเงิน · VAT เป็นการตั้งค่า · สลิปให้ทีมตรวจ · ตัวจำลองผู้ให้บริการ | O-1 | O00 | `apps/api/src/payments/**` (ยกเว้น `providers/`) |
+| [A35b](A35b-payments-gateway.md) | API: ต่อ Gateway จริง · **รอเลือก Opn หรือ Stripe** | O-1 | A35a | `apps/api/src/payments/providers/**` |
+| [W22](W22-checkout.md) | เว็บ: หน้าชำระเงินฝั่งลูกค้าและแบบสอบถามตอนยกเลิก | O-1 | A35a | `apps/web/app/work/[ws]/billing/checkout/**` |
 | [O02](O02-ops-customers.md) | ops-api: ลูกค้าและผู้ใช้ | O-2 | O01 | `apps/ops-api/src/{workspaces,users}` |
-| [O03](O03-ops-money.md) | ops-api: เงิน | O-2 | O01, A35 | `apps/ops-api/src/{payments,billing}` |
+| [O03](O03-ops-money.md) | ops-api: เงิน | O-2 | O01, A35a | `apps/ops-api/src/{payments,billing}` |
 | [O04](O04-ops-support-system.md) | ops-api: Ticket สถานะระบบ เหตุขัดข้อง | O-2 | O01 | `apps/ops-api/src/{support,system}` |
 | [O05](O05-ops-privacy-legal.md) | ops-api: PDPA และเอกสารกฎหมาย | O-2 | O01 | `apps/ops-api/src/{privacy,legal}` |
 | [O06](O06-ops-metrics.md) | ops-api: ภาพรวม และธุรกิจและกำไร | O-2 | O01, A34 | `apps/ops-api/src/metrics` |

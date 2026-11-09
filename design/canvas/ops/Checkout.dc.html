@@ -82,7 +82,7 @@ h1{letter-spacing:-.015em}
       </button>
       <div style="flex: 1 1 300px">
         <h1 style="margin: 0; font-size: 24px; font-weight: 700">ชำระเงินแพ็กเกจ Team</h1>
-        <p class="muted" style="margin: 4px 0 0; font-size: 13px">ใบแจ้งหนี้ <span class="mono">INV-2569-1150</span> · ครบกำหนด 16 พ.ย. 2569 · ราคาเป็นตัวอย่าง (ยังไม่กำหนดราคาจริง)</p>
+        <p class="muted" style="margin: 4px 0 0; font-size: 13px">ใบแจ้งหนี้ <span class="mono">INV-2569-1150</span> · ครบกำหนด 16 พ.ย. 2569 · ราคาเป็นตัวอย่าง (ยังไม่กำหนดราคาจริง) · ถ้าบริษัทยังไม่จด VAT ซ่อนบรรทัด VAT และออกใบเสร็จแทนใบกำกับภาษี · เฟส 1 Bill Payment ยังไม่เปิด ใช้โอนเข้าบัญชี + อัปโหลดสลิปแทน</p>
       </div>
       <span class="{{statusCls}}">{{statusText}}</span>
     </section>
@@ -279,7 +279,7 @@ class Component extends DCLogic {
     const methods = [
       { key: 'qr', name: 'PromptPay QR', desc: 'สแกนจ่ายจากแอปธนาคาร ยืนยันภายในไม่กี่วินาที', tag: 'แนะนำ', tagCls: 'pill p-purple' },
       { key: 'card', name: 'บัตรเครดิต / เดบิต', desc: whtOn ? 'ใช้ไม่ได้เมื่อหัก ณ ที่จ่าย เพราะตัดบัตรเต็มยอด' : 'ตัดอัตโนมัติทุกรอบ ไม่ต้องจำวันจ่าย', tag: 'ต่ออายุอัตโนมัติ', tagCls: 'pill p-gray', blocked: whtOn },
-      { key: 'bill', name: 'Bill Payment สำหรับบริษัท', desc: 'จ่ายจากบัญชีบริษัทด้วย Ref.1 / Ref.2 · ฝ่ายบัญชีอนุมัติในแอปธนาคารได้', tag: 'เหมาะกับฝ่ายบัญชี', tagCls: 'pill p-teal' },
+      { key: 'bill', name: 'Bill Payment สำหรับบริษัท', desc: 'จ่ายจากบัญชีบริษัทด้วย Ref.1 / Ref.2 · ฝ่ายบัญชีอนุมัติในแอปธนาคารได้', tag: 'เฟส 2', tagCls: 'pill p-purple' },
     ].map((m) => ({
       ...m, on: method === m.key ? 'true' : 'false', off: m.blocked ? 'true' : 'false',
       pick: () => { if (!m.blocked) this.setState({ method: m.key }); },

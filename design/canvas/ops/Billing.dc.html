@@ -451,8 +451,8 @@ class Component extends DCLogic {
     const channels = [
       { name: 'PromptPay QR', how: 'Gateway ส่ง webhook ทันทีที่เงินเข้า', auto: '37', total: '38', pct: '97%', health: 'ปกติ', healthCls: 'pill p-green', foot: 'webhook ล่าสุด 2 นาทีที่แล้ว · จ่ายซ้ำ 1' },
       { name: 'บัตรเครดิต / เดบิต', how: 'ตัดบัตรตามรอบ · ล้มแล้วลองใหม่วันที่ 1, 3, 5', auto: '12', total: '12', pct: '100%', health: 'ปกติ', healthCls: 'pill p-green', foot: 'ตัดไม่ผ่าน 2 ราย รอลองใหม่ (ไม่ต้องตรวจ)' },
-      { name: 'Bill Payment', how: 'ธนาคารแจ้งยอดพร้อม Ref.1 / Ref.2', auto: '5', total: '6', pct: '83%', health: 'ปกติ', healthCls: 'pill p-green', foot: 'Ref ไม่ตรง 1 · กระทบยอด 06:00 ตรง' },
-      { name: 'สลิปโอน', how: 'ตรวจสลิปกับธนาคารผ่าน Slip API', auto: '6', total: '10', pct: '60%', health: 'โควตา 412/500', healthCls: 'pill p-amber', foot: 'ผิดปกติ 4 · ควรชวนลูกค้าเปลี่ยนไปใช้ QR' },
+      { name: 'Bill Payment · เฟส 2', how: 'ธนาคารแจ้งยอดพร้อม Ref.1 / Ref.2', auto: '5', total: '6', pct: '83%', health: 'ปกติ', healthCls: 'pill p-green', foot: 'Ref ไม่ตรง 1 · กระทบยอด 06:00 ตรง' },
+      { name: 'สลิปโอน', how: 'เฟส 1 ทีมตรวจเอง · เฟส 2 ตรวจผ่าน Slip API', auto: '6', total: '10', pct: '60%', health: 'โควตา 412/500', healthCls: 'pill p-amber', foot: 'ผิดปกติ 4 · ควรชวนลูกค้าเปลี่ยนไปใช้ QR' },
     ];
     // แต่ละกรณีมีผลตรวจ ลำดับเหตุการณ์ และปุ่มตัดสินของตัวเอง
     const ok = (text) => ({ tag: 'ตรง', cls: 'pill p-green', text });

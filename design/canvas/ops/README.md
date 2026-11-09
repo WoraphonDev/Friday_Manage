@@ -1,6 +1,6 @@
 # Friday Ops · หน้าจอ (สำเนาจาก Canvas)
 
-สำเนาของ [Canvas Friday Ops](https://claude.ai/artifact/Q8tsmLfQqS1aUJ2rNrkw9r) รุ่นที่ 39 (9 พ.ย. 2569) · อ่านอย่างเดียว · แก้ที่ Canvas แล้วคัดลอกมาใหม่
+สำเนาของ [Canvas Friday Ops](https://claude.ai/artifact/Q8tsmLfQqS1aUJ2rNrkw9r) รุ่นที่ 40 (9 พ.ย. 2569) · อ่านอย่างเดียว · แก้ที่ Canvas แล้วคัดลอกมาใหม่
 
 - ทุกหน้ามีป้ายเฟสที่แถบบน และชื่อบอร์ดใน `canvas.json` ขึ้นต้นด้วย `[เฟส N]` · Modal แต่ละรายการในบอร์ด `Modals-*` มีป้ายเฟสของตัวเอง
 - บอร์ด M0–M5 (`Modals-*.dc.html`) รวม Modal / Drawer / Popover ทั้ง 70 รายการ พร้อมรหัส (เช่น C4) และปุ่มที่เปิด

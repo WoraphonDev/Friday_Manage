@@ -20,9 +20,9 @@
 
 ## เสร็จเมื่อ
 
-- [ ] test ครอบคลุมทุกข้อใน "ทำอะไร" · สิทธิ์แต่ละบทบาท (ได้ / 403) และกรณีเกินวงเงินที่ต้องสร้างคำขออนุมัติ
-- [ ] ทุกการกระทำกับลูกค้าเขียน Audit log พร้อมเหตุผล · error ใช้ `AppError` ข้อความไทย
-- [ ] `pnpm --filter @friday/ops-api typecheck` และ `test` ผ่าน · `pnpm typecheck` ที่รากผ่าน
+- [x] test ครอบคลุมทุกข้อใน "ทำอะไร" · สิทธิ์แต่ละบทบาท (ได้ / 403) และกรณีเกินวงเงินที่ต้องสร้างคำขออนุมัติ
+- [x] ทุกการกระทำกับลูกค้าเขียน Audit log พร้อมเหตุผล · error ใช้ `AppError` ข้อความไทย
+- [x] `pnpm --filter @friday/ops-api typecheck` และ `test` ผ่าน · `pnpm typecheck` ที่รากผ่าน
 
 ## ไม่อยู่ในงานนี้
 
@@ -31,3 +31,53 @@
 ## บันทึกผล
 
 <!-- ผู้ทำงานเขียนตอนส่งงาน: endpoint / หน้าที่เพิ่ม, สิ่งที่ต่างจากสเปกหรือหน้าจอ, คำตัดสินที่เลือกเอง, คำขอนอก lane, คำถามที่ค้าง -->
+
+**ส่งงาน 2026-11-09** · test `customers.e2e.test.ts` 14 ข้อ · ops-api ทั้งชุด 46 ผ่าน · `pnpm typecheck` ที่รากผ่าน
+
+**Endpoint**
+- `GET ops/workspaces`: `q`, `plan`, `status`, `feature` (`line` · `webhook` · `github` · `api_token` · `automation` · `import` · `no_project`) และ `sort` (`newest` · `recent_activity` · `mrr` · `health`), หน้าละ 50 · คืน `total` และต่อแถว ที่นั่ง / เพดาน, ผู้ใช้งาน 30 วัน, พื้นที่, การเชื่อมต่อ, สุขภาพ, MRR, `paymentState`
+- แท็บรายละเอียด:
+  - `GET ops/workspaces/:id` (ภาพรวม): รูปแบบเดิมของ A32 และเพิ่ม `health`, `economics`, `upgradeSignals`, `notes`, `acquisition`, `topFeatures` / `unusedFeatures`, `legalName`
+  - `GET ops/workspaces/:id/{usage|projects|members|integrations|security|billing|support|audit}`
+- การกระทำ:
+  - `GET :id/change-plan/preview` (C4)
+  - `POST :id/change-plan` เพิ่ม `cycle`, ตรวจที่นั่ง (`seats_exceed_plan`) และบันทึก `subscription_changes` (`actor_kind = staff`)
+  - `POST :id/transfer-owner` (C7, แตะ key ซ้ำ, ตอบ 202 เสมอ)
+  - `POST :id/support-access-request` (C2)
+  - `POST :id/notes`
+- ผู้ใช้:
+  - `GET ops/users?q&status` และ `GET ops/users/:id`
+  - `POST ops/users/:id/{unlock|resend-verification|sign-out-all}`
+  - `reset-2fa`, `change-email` และ `close` ต้องแตะ key ซ้ำ (G4) · ทุกข้อต้องมี `ticketNo` และ `reason`
+
+**สิทธิ์และการตัดข้อมูล**
+- อ่านได้ทุกบทบาท
+- ยอดเงินรายลูกค้าเห็นเฉพาะ Owner / การเงิน / ผู้ตรวจ · Support เห็นแค่สถานะ
+- วิศวกรไม่เห็นอีเมล / IP และเปิดแท็บการเงินกับ Audit ไม่ได้
+- ค้นผู้ใช้ได้เฉพาะ Owner / Support · การกระทำกับผู้ใช้เป็นของ Support
+
+**คำตัดสินที่เลือกเอง**
+- **บันทึกภายใน** เก็บใน `staff_audit_logs` (`action = ops.note`) เพราะไม่มีตารางแยก และตารางนี้ append-only จึงแก้ / ลบไม่ได้ ซึ่งตรงกับหน้าจอที่มีแค่ "เพิ่มบันทึก"
+- **โอนความเป็นเจ้าของ**: คำขออนุมัติมีอายุ 14 วัน · อนุมัติก่อนครบ 7 วันหลังแจ้ง Owner เดิมได้ 409 `objection_window_open` และคำขอยังรออยู่ · Owner เดิมคัดค้านทาง Ticket / ตอบอีเมล แล้วผู้อนุมัติกด "ไม่อนุมัติ" (ยังไม่มีปุ่มคัดค้านในแอปลูกค้า) · หลักฐานหนังสือบริษัทเป็นการยืนยันว่าแนบใน Ticket แล้ว (ยังไม่มีการอัปโหลดไฟล์) · หลังโอน Owner เดิมเป็น Admin
+- **ขอสิทธิ์จากลูกค้า (C2)**: ส่งอีเมลให้ Owner ไปเปิดที่ Admin Console (ยังไม่มีปุ่ม "อนุญาต" ในอีเมล ต้องทำฝั่งแอปลูกค้า) · เฟส 1 ขอได้เฉพาะอ่านอย่างเดียว
+- **เปลี่ยนแพ็กเกจ**:
+  - ยังไม่ออกใบแจ้งหนี้ส่วนต่าง เพราะต้องใช้ขั้นตอนชำระของ API ลูกค้า (หลัง A35b)
+  - ตัวอย่างยอดคำนวณให้แล้ว ทั้งอัปเกรดตามวันที่เหลือ และเปลี่ยนรอบบิลพร้อมเครดิตคืน
+  - ลดแพ็กเกจในตัวอย่างแสดงว่ามีผลรอบถัดไป แต่ `POST change-plan` ยังเปลี่ยนทันที (ยังไม่มีที่เก็บการเปลี่ยนที่ตั้งเวลาไว้)
+  - ไม่ผ่าน `@Approval` เพราะไม่มีวงเงินกำหนดใน 06 › 3
+- **คะแนนสุขภาพ / กำไร / สัญญาณอัปเกรด** อยู่ที่ `workspaces/economics.ts` · O06 ควร import จากที่นี่หรือย้ายไป metrics แล้วให้ที่นี่ import กลับ ไม่เขียนซ้ำ · กำไรคิดจาก `daily_usages` × `cost_rates` 30 วัน (ยังไม่รวมส่วนแบ่งเซิร์ฟเวอร์ ซึ่งรอ O06)
+- **ผู้ใช้**:
+  - ส่งอีเมลยืนยันซ้ำและเปลี่ยนอีเมลใช้ลิงก์ `auth_tokens` แบบเดียวกับ API ลูกค้า (`/signup?token=`) แต่ไม่มีรหัส 6 หลัก เพราะ HMAC อยู่ฝั่ง API ลูกค้า
+  - อีเมลเปลี่ยนจริงเมื่อเจ้าของอีเมลใหม่กดลิงก์
+  - ปิดบัญชีจะปิดสมาชิกทุก Workspace (คืนที่นั่ง) · ปิดไม่ได้ถ้าเป็น Owner คนเดียว
+  - ทุกการกระทำเขียน `audit_logs` ของทุก Workspace ที่ผู้ใช้เป็นสมาชิก
+
+**ยังไม่ทำ**
+- การกระทำหลายรายพร้อมกันในหน้า Workspaces (ขยายทดลอง / คูปอง): หน้าเว็บเรียกทีละรายการได้
+- ระงับแบบ "ดูได้แต่แก้ไม่ได้" กับ "ปิดทั้งหมด" (C6): `workspaces.status` มีแค่ `suspended`
+- ระยะเวลาเข้าบัญชีใน C1: `support_sessions` ไม่มีคอลัมน์หมดเวลา → O04
+
+**นอก lane**
+- `approvals.service.ts`: อายุคำขอ `workspace.transfer_owner` 14 วัน
+- `test/ops.e2e.test.ts`: ผลของ change-plan มี `cycle`
+

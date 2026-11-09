@@ -267,7 +267,7 @@ describe('แพ็กเกจและสถานะ Workspace', () => {
     expect((await finance.agent.post(`/ops/workspaces/${c.id}:discount`).send({ percent: 120, reason: 'เกิน' })).status).toBe(400);
 
     const cp = await finance.agent.post(`/ops/workspaces/${c.id}:change-plan`).send({ plan: 'enterprise', reason: 'ตามสัญญา ENT-2026-01' });
-    expect(cp.body).toEqual({ plan: 'enterprise', previous: 'team_s' });
+    expect(cp.body).toEqual({ plan: 'enterprise', cycle: 'monthly', previous: 'team_s' });
     expect(await t.owner.query(`SELECT p.code, s.status FROM subscriptions s JOIN plans p ON p.id = s.plan_id WHERE s.id = $1`, [c.sub]).then((r) => r.rows[0])).toEqual({ code: 'enterprise', status: 'active' });
     expect((await finance.agent.post(`/ops/workspaces/${c.id}:change-plan`).send({ plan: 'platinum', reason: 'ไม่มีแพ็กเกจนี้' })).status).toBe(400);
     expect((await support.agent.post(`/ops/workspaces/${c.id}:extend-trial`).send({ days: 3, reason: 'หลังเปลี่ยนเป็น active' })).body.error.code).toBe('not_trialing');

@@ -5,13 +5,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button, ConfirmDialog, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { queryKeys } from "@/lib/query";
+import type { CustomFieldDef, FieldMode, FieldProfile } from "@/lib/field-profile";
+import { FieldProfileEditor, TemplateSource, type EditorValue } from "@/features/field-profile/field-profile-editor";
 import { projectEndpoint, SectionHead } from "./shared";
 import { errorText, isForbidden, move, patchPlain, type CustomField, type IssueType, type IssueTypes, type Label, type Member, type Module } from "./types";
 import styles from "./settings.module.css";
 import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 
 const FIELD_TYPES: CustomField["fieldType"][] = ["text", "number", "select", "multi_select", "user", "date"];
-const STANDARD_FIELDS = ["ba", "devs", "screenId", "frNfr", "planActual"] as const;
+const MODES: FieldMode[] = ["optional", "required", "hidden"];
 
 function useRun(reload: () => Promise<unknown>) {
   const toast = useToast();
@@ -42,7 +45,7 @@ export function TypesSection({ ws, projectKey }: { ws: string; projectKey: strin
   const [editing, setEditing] = useState<IssueType | null>(null);
   const [required, setRequired] = useState<string[]>([]);
   const [fieldOpen, setFieldOpen] = useState(false);
-  const [field, setField] = useState({ name: "", fieldType: "text" as CustomField["fieldType"], choices: "" });
+  const [field, setField] = useState({ name: "", fieldType: "text" as CustomField["fieldType"], choices: "", taskMode: "optional" as FieldMode, subtaskMode: "optional" as FieldMode });
   const [labelOpen, setLabelOpen] = useState(false);
   const [label, setLabel] = useState({ name: "", color: DEFAULT_ITEM_COLOR });
   const [removing, setRemoving] = useState<{ kind: "field" | "label"; id: string; name: string } | null>(null);
@@ -61,10 +64,13 @@ export function TypesSection({ ws, projectKey }: { ws: string; projectKey: strin
   }
   async function addField() {
     const choices = field.choices.split(",").map((c) => c.trim()).filter(Boolean);
-    const body = { name: field.name.trim(), fieldType: field.fieldType, ...(isChoice ? { options: { choices: choices.map((c) => ({ label: c })) } } : {}) };
+    const body = { name: field.name.trim(), fieldType: field.fieldType, taskMode: field.taskMode, subtaskMode: field.subtaskMode, ...(isChoice ? { options: { choices: choices.map((c) => ({ label: c })) } } : {}) };
     if (await run(() => api.post(`${base}/custom-fields`, body), t("fieldAdded"))) {
       setFieldOpen(false);
-      setField({ name: "", fieldType: "text", choices: "" });
+      setField({ name: "", fieldType: "text", choices: "", taskMode: "optional", subtaskMode: "optional" });
+      // ฟิลด์ใหม่ขึ้นเป็นคอลัมน์ใน Table · ชุดฟิลด์ / ฟอร์มสร้างงานต้องโหลดใหม่
+      await cache.invalidateQueries({ queryKey: [...prefix, "field-profile"] });
+      await cache.invalidateQueries({ queryKey: queryKeys.project(ws, projectKey), exact: true });
     }
   }
   async function addLabel() {
@@ -92,11 +98,7 @@ export function TypesSection({ ws, projectKey }: { ws: string; projectKey: strin
             <Button size="small" onClick={() => { setEditing(type); setRequired(type.requiredFields); }}>{t("editFields")}</Button>
           </div>
         ))}
-        <div className={styles.fld}>
-          <span className={styles.lb}>{t("standardFields")}</span>
-          <div className={styles.pills}>{STANDARD_FIELDS.map((f) => <span key={f} className={styles.pill}>{t(`standard.${f}`)}</span>)}</div>
-          <span className={styles.muted}>{t("standardHint")}</span>
-        </div>
+        <FieldSetBlock ws={ws} projectKey={projectKey} />
         <div className={styles.fld}>
           <span className={styles.lb}>{t("customFields")}</span>
           <div className={styles.pills}>
@@ -152,6 +154,12 @@ export function TypesSection({ ws, projectKey }: { ws: string; projectKey: strin
             {FIELD_TYPES.map((x) => <option key={x} value={x}>{t(`fieldTypes.${x}`)}</option>)}
           </Select>
           {isChoice && <Input label={t("choices")} hint={t("choicesHint")} value={field.choices} onChange={(e) => setField({ ...field, choices: e.target.value })} />}
+          <Select label={t("taskMode")} value={field.taskMode} onChange={(e) => setField({ ...field, taskMode: e.target.value as FieldMode })}>
+            {MODES.map((m) => <option key={m} value={m}>{t(`modes.${m}`)}</option>)}
+          </Select>
+          <Select label={t("subtaskMode")} value={field.subtaskMode} onChange={(e) => setField({ ...field, subtaskMode: e.target.value as FieldMode })}>
+            {MODES.map((m) => <option key={m} value={m}>{t(`modes.${m}`)}</option>)}
+          </Select>
           <div className="dialog-actions">
             <Button onClick={() => setFieldOpen(false)}>{t("cancel")}</Button>
             <Button type="submit" variant="primary" disabled={!field.name.trim() || (isChoice && !field.choices.trim())}>{t("add")}</Button>
@@ -181,9 +189,72 @@ export function TypesSection({ ws, projectKey }: { ws: string; projectKey: strin
           if (!removing) return;
           await api.delete(`${base}/${removing.kind === "field" ? "custom-fields" : "labels"}/${removing.id}`);
           await cache.invalidateQueries({ queryKey: [...prefix, removing.kind === "field" ? "custom-fields" : "labels"] });
+          if (removing.kind === "field") await cache.invalidateQueries({ queryKey: [...prefix, "field-profile"] });
         }}
       />
     </>
+  );
+}
+
+/**
+ * ชุดฟิลด์ของ Task / Sub-task + คอลัมน์ Table (ผู้ใช้ตัดสิน 2026-11-09: แก้หลังสร้างโปรเจกต์ได้ · ซ่อนแล้วค่าเดิมยังอยู่)
+ * ฟิลด์มาตรฐานบันทึกด้วย PUT field-profile · โหมดของ Custom field บันทึกทีละฟิลด์ด้วย PATCH custom-fields
+ */
+function FieldSetBlock({ ws, projectKey }: { ws: string; projectKey: string }) {
+  const t = useTranslations("project-settings-new.settings.types");
+  const cache = useQueryClient();
+  const toast = useToast();
+  const base = projectEndpoint(ws, projectKey);
+  const queryKey = ["workspace", ws, "project", projectKey, "settings", "field-profile"];
+  const profile = useQuery({ queryKey, queryFn: () => api.get<{ fieldProfile: FieldProfile; customFields: CustomFieldDef[] }>(`${base}/field-profile`) });
+  const [draft, setDraft] = useState<EditorValue | null>(null);
+  const [saving, setSaving] = useState(false);
+  if (profile.error) return <ErrorState error={profile.error} retry={() => void profile.refetch()} />;
+  if (!profile.data) return <LoadingState />;
+  const original: EditorValue = {
+    fields: profile.data.fieldProfile.fields,
+    columns: profile.data.fieldProfile.columns,
+    custom: profile.data.customFields.map((f) => ({ key: `cf:${f.id}`, name: f.name, fieldType: f.fieldType, taskMode: f.taskMode, subtaskMode: f.subtaskMode })),
+  };
+  // รายการ Custom field เปลี่ยน (เพิ่ม / ลบ) ระหว่างแก้ = เริ่มร่างใหม่จากค่าล่าสุด
+  const value = draft && draft.custom.map((f) => f.key).join() === original.custom.map((f) => f.key).join() ? draft : original;
+  const dirty = JSON.stringify(value) !== JSON.stringify(original);
+  async function save() {
+    setSaving(true);
+    try {
+      await api.put(`${base}/field-profile`, { fields: value.fields, columns: value.columns });
+      for (const f of value.custom) {
+        const before = original.custom.find((x) => x.key === f.key);
+        if (before && (before.taskMode !== f.taskMode || before.subtaskMode !== f.subtaskMode)) {
+          await patchPlain(`${base}/custom-fields/${f.key.slice(3)}`, { taskMode: f.taskMode, subtaskMode: f.subtaskMode });
+        }
+      }
+      // คอลัมน์ที่ซ่อนอยู่ตอนส่ง PUT ยังถูกตัด จึงส่งลำดับคอลัมน์ซ้ำหลังโหมดของ Custom field เปลี่ยน
+      if (value.custom.some((f) => value.columns.includes(f.key))) await api.put(`${base}/field-profile`, { columns: value.columns });
+      toast({ message: t("fieldSetSaved") });
+      setDraft(null);
+    } catch (e) {
+      toast({ message: errorText(e, t("failed")) });
+    } finally {
+      setSaving(false);
+      await Promise.all([
+        cache.invalidateQueries({ queryKey }),
+        cache.invalidateQueries({ queryKey: ["workspace", ws, "project", projectKey, "settings", "custom-fields"] }),
+        cache.invalidateQueries({ queryKey: queryKeys.project(ws, projectKey), exact: true }),
+        cache.invalidateQueries({ queryKey: ["table", ws, projectKey] }),
+        cache.invalidateQueries({ queryKey: ["issue-form-options", ws, projectKey] }),
+      ]);
+    }
+  }
+  return (
+    <div className={styles.fld}>
+      <span className={styles.lb}>{t("fieldSet")} <TemplateSource template={profile.data.fieldProfile.template} /></span>
+      <FieldProfileEditor value={value} onChange={setDraft} disabled={saving} />
+      <div className="dialog-actions" style={{ justifyContent: "flex-start" }}>
+        <Button variant="primary" disabled={!dirty || saving} onClick={() => void save()}>{t("fieldSetSave")}</Button>
+        {dirty && <Button disabled={saving} onClick={() => setDraft(null)}>{t("cancel")}</Button>}
+      </div>
+    </div>
   );
 }
 

@@ -9301,6 +9301,15 @@
                   },
                   "confirm": {
                     "type": "boolean"
+                  },
+                  "customFields": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "additionalProperties": {}
                   }
                 }
               }
@@ -13107,6 +13116,25 @@
                   "config": {
                     "type": "object",
                     "properties": {
+                      "category": {
+                        "type": "string",
+                        "enum": [
+                          "software",
+                          "service",
+                          "work",
+                          "product",
+                          "marketing",
+                          "customer_service",
+                          "hr",
+                          "finance",
+                          "design",
+                          "personal",
+                          "operations",
+                          "legal",
+                          "sales",
+                          "analytics"
+                        ]
+                      },
                       "workflow": {
                         "minItems": 2,
                         "maxItems": 20,
@@ -13212,7 +13240,23 @@
                                 "date"
                               ]
                             },
-                            "options": {}
+                            "options": {},
+                            "taskMode": {
+                              "type": "string",
+                              "enum": [
+                                "hidden",
+                                "optional",
+                                "required"
+                              ]
+                            },
+                            "subtaskMode": {
+                              "type": "string",
+                              "enum": [
+                                "hidden",
+                                "optional",
+                                "required"
+                              ]
+                            }
                           },
                           "required": [
                             "name",
@@ -13327,8 +13371,68 @@
                       },
                       "timeLogEnabled": {
                         "type": "boolean"
+                      },
+                      "fields": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string",
+                          "enum": [
+                            "ba",
+                            "sa",
+                            "reviewer",
+                            "priority",
+                            "size",
+                            "actual",
+                            "progress",
+                            "requirements",
+                            "screens",
+                            "labels",
+                            "remark"
+                          ]
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "properties": {
+                            "task": {
+                              "type": "string",
+                              "enum": [
+                                "hidden",
+                                "optional",
+                                "required"
+                              ]
+                            },
+                            "subtask": {
+                              "type": "string",
+                              "enum": [
+                                "hidden",
+                                "optional",
+                                "required"
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      },
+                      "columns": {
+                        "maxItems": 60,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 80
+                        }
                       }
                     }
+                  },
+                  "fromBuiltin": {
+                    "type": "string",
+                    "enum": [
+                      "development",
+                      "scrum",
+                      "kanban",
+                      "waterfall",
+                      "blank"
+                    ]
                   }
                 },
                 "required": [
@@ -13460,6 +13564,25 @@
                   "config": {
                     "type": "object",
                     "properties": {
+                      "category": {
+                        "type": "string",
+                        "enum": [
+                          "software",
+                          "service",
+                          "work",
+                          "product",
+                          "marketing",
+                          "customer_service",
+                          "hr",
+                          "finance",
+                          "design",
+                          "personal",
+                          "operations",
+                          "legal",
+                          "sales",
+                          "analytics"
+                        ]
+                      },
                       "workflow": {
                         "minItems": 2,
                         "maxItems": 20,
@@ -13565,7 +13688,23 @@
                                 "date"
                               ]
                             },
-                            "options": {}
+                            "options": {},
+                            "taskMode": {
+                              "type": "string",
+                              "enum": [
+                                "hidden",
+                                "optional",
+                                "required"
+                              ]
+                            },
+                            "subtaskMode": {
+                              "type": "string",
+                              "enum": [
+                                "hidden",
+                                "optional",
+                                "required"
+                              ]
+                            }
                           },
                           "required": [
                             "name",
@@ -13680,6 +13819,56 @@
                       },
                       "timeLogEnabled": {
                         "type": "boolean"
+                      },
+                      "fields": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string",
+                          "enum": [
+                            "ba",
+                            "sa",
+                            "reviewer",
+                            "priority",
+                            "size",
+                            "actual",
+                            "progress",
+                            "requirements",
+                            "screens",
+                            "labels",
+                            "remark"
+                          ]
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "properties": {
+                            "task": {
+                              "type": "string",
+                              "enum": [
+                                "hidden",
+                                "optional",
+                                "required"
+                              ]
+                            },
+                            "subtask": {
+                              "type": "string",
+                              "enum": [
+                                "hidden",
+                                "optional",
+                                "required"
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      },
+                      "columns": {
+                        "maxItems": 60,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 80
+                        }
                       }
                     }
                   }
@@ -13964,6 +14153,16 @@
                     "type": "string",
                     "format": "uuid",
                     "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "builtinTemplate": {
+                    "type": "string",
+                    "enum": [
+                      "development",
+                      "scrum",
+                      "kanban",
+                      "waterfall",
+                      "blank"
+                    ]
                   },
                   "holidayCalendarId": {
                     "type": "string",
@@ -16379,6 +16578,22 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "taskMode": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "optional",
+                      "required"
+                    ]
+                  },
+                  "subtaskMode": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "optional",
+                      "required"
+                    ]
                   }
                 },
                 "required": [
@@ -16522,6 +16737,22 @@
                       {
                         "type": "null"
                       }
+                    ]
+                  },
+                  "taskMode": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "optional",
+                      "required"
+                    ]
+                  },
+                  "subtaskMode": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "optional",
+                      "required"
                     ]
                   }
                 },
@@ -16690,6 +16921,165 @@
           },
           "404": {
             "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/projects/{key}/field-profile": {
+      "get": {
+        "operationId": "Projects_fieldProfile",
+        "summary": "ชุดฟิลด์ของ Task / Sub-task และคอลัมน์ Table",
+        "tags": [
+          "Projects"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "Projects_setFieldProfile",
+        "summary": "PUT w/{ws}/projects/{key}/field-profile",
+        "tags": [
+          "Projects"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fields": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "enum": [
+                        "ba",
+                        "sa",
+                        "reviewer",
+                        "priority",
+                        "size",
+                        "actual",
+                        "progress",
+                        "requirements",
+                        "screens",
+                        "labels",
+                        "remark"
+                      ]
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "task": {
+                          "type": "string",
+                          "enum": [
+                            "hidden",
+                            "optional",
+                            "required"
+                          ]
+                        },
+                        "subtask": {
+                          "type": "string",
+                          "enum": [
+                            "hidden",
+                            "optional",
+                            "required"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "columns": {
+                    "maxItems": 60,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
           }
         }
       }
@@ -19316,6 +19706,16 @@
                   "extendParent": {
                     "default": false,
                     "type": "boolean"
+                  },
+                  "customFields": {
+                    "default": {},
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "additionalProperties": {}
                   }
                 },
                 "required": [
@@ -25458,6 +25858,44 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/projects/template-catalog": {
+      "get": {
+        "operationId": "Projects_templateCatalog",
+        "summary": "Template ที่เลือกได้ตอนสร้างโปรเจกต์ (ในตัว + ขององค์กร) จัดตามหมวด",
+        "tags": [
+          "Projects"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }

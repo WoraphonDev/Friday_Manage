@@ -88,7 +88,9 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
     const verb = t.has(`verbs.${item.verb}`) ? t(`verbs.${item.verb}`) : t('updated');
     if (!item.field) return verb;
     if (item.field === 'checklist') { const text = checklistText(item.old, item.new); if (text) return text; }
-    const field = t.has(`fields.${item.field}`) ? t(`fields.${item.field}`) : t('issueData');
+    // Custom field บันทึกเป็น cf:<id> · ชื่อมาจากชุดฟิลด์ของโปรเจกต์ (ฟิลด์ที่ถูกลบแล้วใช้คำกลาง)
+    const custom = item.field.startsWith('cf:') ? scope.project?.customFields?.find((f) => `cf:${f.id}` === item.field)?.name : undefined;
+    const field = custom ?? (t.has(`fields.${item.field}`) ? t(`fields.${item.field}`) : t('issueData'));
     return t('changeDescription', { verb, field, old: value(item.field, item.old), new: value(item.field, item.new) });
   }
   if (showFeed && feed.error) return <ErrorState error={feed.error} retry={() => void feed.refetch()} />;

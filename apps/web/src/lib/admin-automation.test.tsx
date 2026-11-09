@@ -211,8 +211,9 @@ describe("Admin Console (N1) · องค์กร", () => {
       }),
       http.post(`${W}/holidays`, ok({ holiday: {}, recalculated: { projects: 1, issues: 4 } }, 201)),
       http.delete(`${W}/holidays/:id`, ok({ deleted: true, recalculated: { projects: 0, issues: 0 } })),
-      http.get(`${W}/project-templates`, () => HttpResponse.json({ items: [{ id: "tp1", name: "Scrum ตัวอย่าง", description: "Story / Task / Bug", usageCount: 2 }] })),
+      http.get(`${W}/project-templates`, () => HttpResponse.json({ items: [{ id: "tp1", name: "Scrum ตัวอย่าง", description: "Story / Task / Bug", usageCount: 2, config: { category: "operations", fields: { ba: { task: "hidden", subtask: "hidden" } }, columns: ["dev", "status", "cf:ลูกค้า"], customFields: [{ name: "ลูกค้า", fieldType: "text", taskMode: "required", subtaskMode: "hidden" }], workflow: ["To do", "Done"] } }] })),
       http.post(`${W}/project-templates`, ok({ id: "tp2" }, 201)),
+      http.patch(`${W}/project-templates/:id`, ok({ id: "tp1" })),
       http.delete(`${W}/project-templates/:id`, ok({ deleted: true })),
     );
     const user = userEvent.setup();
@@ -255,7 +256,34 @@ describe("Admin Console (N1) · องค์กร", () => {
     const tpl = await screen.findByRole("dialog", { name: "สร้าง Template" });
     await user.type(within(tpl).getByLabelText("ชื่อ Template"), "Kanban ตัวอย่าง");
     await user.click(within(tpl).getByRole("button", { name: "บันทึก" }));
-    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "POST", path: "/w/sample/project-templates", body: { name: "Kanban ตัวอย่าง", description: null } }));
+    // ค่าเริ่มต้น: คัดลอกจาก Template ในตัว Development · หมวด Software development
+    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "POST", path: "/w/sample/project-templates", body: { name: "Kanban ตัวอย่าง", description: null, fromBuiltin: "development", config: { category: "software" } } }));
+
+    // ชุดฟิลด์ของ Template ขององค์กร: แก้โหมด / เพิ่ม Custom field แล้ว PATCH config (คงค่าอื่นของ config ไว้)
+    expect(screen.getByText("Operations")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ชุดฟิลด์" }));
+    const fields = await screen.findByRole("dialog", { name: "ชุดฟิลด์ของ Template Scrum ตัวอย่าง" });
+    expect(within(fields).getByLabelText("Business Analyst ระดับ Task")).toHaveValue("hidden");
+    expect(within(fields).getByLabelText("ลูกค้า ระดับ Task")).toHaveValue("required");
+    await user.selectOptions(within(fields).getByLabelText("Size ระดับ Sub-task"), "hidden");
+    await user.type(within(fields).getByLabelText("ชื่อฟิลด์"), "ระดับ");
+    await user.selectOptions(within(fields).getByLabelText("ชนิด"), "select");
+    await user.type(within(fields).getByLabelText("ตัวเลือก"), "P1, P2");
+    await user.click(within(fields).getByRole("button", { name: "+ เพิ่มฟิลด์" }));
+    await user.selectOptions(within(fields).getByLabelText("ระดับ ระดับ Sub-task"), "hidden");
+    await user.click(within(fields).getByRole("button", { name: "บันทึก" }));
+    await waitFor(() => expect(calls.at(-1)).toMatchObject({
+      method: "PATCH", path: "/w/sample/project-templates/tp1",
+      body: { config: {
+        category: "operations", workflow: ["To do", "Done"],
+        fields: { ba: { task: "hidden", subtask: "hidden" }, size: { task: "optional", subtask: "hidden" } },
+        columns: ["dev", "status", "cf:ลูกค้า", "cf:ระดับ"],
+        customFields: [
+          { name: "ลูกค้า", fieldType: "text", taskMode: "required", subtaskMode: "hidden" },
+          { name: "ระดับ", fieldType: "select", options: { choices: [{ id: "c1", label: "P1" }, { id: "c2", label: "P2" }] }, taskMode: "optional", subtaskMode: "hidden" },
+        ],
+      } },
+    }));
   });
 
   it("Workload รวม: 4 สัปดาห์ · เกิน capacity มีกรอบแดง · กรองตามทีม", async () => {

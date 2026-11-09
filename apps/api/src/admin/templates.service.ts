@@ -6,6 +6,7 @@ import { AppError, notFound } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { TemplateConfig } from '../projects/projects.service.js';
+import { BUILTIN_TEMPLATE_IDS, builtinTemplate, mergeProfile, resolveProfile } from '../projects/field-profile.js';
 import { assertAdmin, audit } from './shared.js';
 
 const s = schema;
@@ -16,7 +17,16 @@ export const TemplateBody = z.object({
   /** รูปแบบเดียวกับที่ `POST w/projects` ใช้ (Workflow, ประเภทงาน, Custom field, Label …) */
   config: TemplateConfig.default({}),
 });
+export const CreateTemplateBody = TemplateBody.extend({
+  /** เริ่มจาก Template ในตัว (คัดลอก config มา แล้วค่าใน config ที่ส่งมาทับ) */
+  fromBuiltin: z.enum(BUILTIN_TEMPLATE_IDS).optional(),
+});
 export const PatchTemplateBody = TemplateBody.partial().strict();
+
+/** ฟิลด์ที่ตั้งเป็นฟิลด์บังคับไม่ได้ (เช่น Actual, Progress) ตอบ 400 ตั้งแต่ตอนบันทึก Template */
+function assertFields(config: z.infer<typeof TemplateConfig> | undefined) {
+  if (config?.fields) mergeProfile(resolveProfile({}), { fields: config.fields }, []);
+}
 
 type Row = typeof s.projectTemplates.$inferSelect;
 const dto = (r: Row) => ({ id: r.id, name: r.name, description: r.description, config: r.config, usageCount: r.usageCount, createdAt: r.createdAt, updatedAt: r.updatedAt });
@@ -36,11 +46,18 @@ export class TemplatesService {
     return this.db.run(auth, tenant, async (tx) => dto(await this.find(tx, id)));
   }
 
-  async create(auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof TemplateBody>) {
+  async create(auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof CreateTemplateBody>) {
     assertAdmin(tenant);
+    // เก็บ config ของ Template ในตัวตามที่เขียนไว้ (สถานะเป็นชื่อ) · ตรวจรูปแบบด้วย TemplateConfig ก่อน
+    const base = input.fromBuiltin ? structuredClone(builtinTemplate(input.fromBuiltin)!.config) : {};
+    TemplateConfig.parse(base);
+    // ชุดฟิลด์รวมรายฟิลด์ (ส่งมาเฉพาะฟิลด์ที่ต่างจาก Template ในตัวได้)
+    const baseFields = (base as { fields?: Record<string, object> }).fields;
+    const config = { ...base, ...input.config, ...(baseFields && input.config.fields ? { fields: { ...baseFields, ...input.config.fields } } : {}) };
+    assertFields(config);
     return this.db.run(auth, tenant, async (tx) => {
       await this.assertNameFree(tx, tenant, input.name);
-      const [row] = await tx.insert(s.projectTemplates).values({ workspaceId: tenant.workspaceId, name: input.name, description: input.description ?? null, config: input.config }).returning();
+      const [row] = await tx.insert(s.projectTemplates).values({ workspaceId: tenant.workspaceId, name: input.name, description: input.description ?? null, config }).returning();
       await audit(tx, auth, tenant, 'data', 'template.created', `สร้าง Template ${row.name}`, { type: 'project_template', id: row.id });
       return dto(row);
     });
@@ -48,6 +65,7 @@ export class TemplatesService {
 
   async patch(auth: AuthInfo, tenant: TenantInfo, id: string, input: z.infer<typeof PatchTemplateBody>) {
     assertAdmin(tenant);
+    assertFields(input.config);
     return this.db.run(auth, tenant, async (tx) => {
       const cur = await this.find(tx, id);
       if (input.name && input.name.toLowerCase() !== cur.name.toLowerCase()) await this.assertNameFree(tx, tenant, input.name, cur.id);

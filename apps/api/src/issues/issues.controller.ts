@@ -17,7 +17,7 @@ export class IssuesController {
 
   @Post('projects/:key/issues')
   create(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Body() body: unknown) {
-    return this.issues.create(auth, tenant, key, parse(CreateIssueBody, body));
+    return this.issues.create(auth, tenant, key, parse(CreateIssueBody, body), { strict: true });
   }
 
   @Get('projects/:key/form-options')
@@ -80,7 +80,7 @@ export class IssuesController {
     @Body() body: unknown,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const issue = await this.issues.patch(auth, tenant, issueKey, ifMatch, parse(PatchIssueBody, body));
+    const issue = await this.issues.patch(auth, tenant, issueKey, ifMatch, parse(PatchIssueBody, body), { strict: true });
     res.setHeader('ETag', `"${issue.version}"`);
     return issue;
   }

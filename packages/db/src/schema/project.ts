@@ -24,6 +24,7 @@ import { createdAt, deletedAt, manDay, pk, tstz, updatedAt } from './_common.ts'
 import {
   customFieldType,
   estimateUnit,
+  fieldMode,
   progressMethod,
   projectRole,
   projectStatus,
@@ -82,6 +83,11 @@ export const projects = pgTable(
     workEnd: time(),
     sizeMdMap: jsonb(),
     timeLogEnabled: boolean().notNull().default(false),
+    /**
+     * ชุดฟิลด์ของโปรเจกต์ (คัดลอกจาก Template ตอนสร้าง แก้ต่อได้ใน Settings)
+     * { fields: { ba: { task, subtask }, … }, columns: ['dev', 'ba', 'cf:<id>', …] } · คีย์ที่ไม่มี = ค่าเริ่มต้น
+     */
+    fieldProfile: jsonb().notNull().default(sql`'{}'::jsonb`),
     /** เลขงานล่าสุด ออกเลขด้วย UPDATE … RETURNING ในธุรกรรมเดียวกับการสร้างงาน */
     issueSeq: integer().notNull().default(0),
     budgetSatang: bigint({ mode: 'number' }),
@@ -389,6 +395,9 @@ export const customFields = pgTable(
     name: text().notNull(),
     fieldType: customFieldType().notNull(),
     options: jsonb(),
+    /** แสดง / บังคับในระดับ Task และ Sub-task แยกกัน */
+    taskMode: fieldMode().notNull().default('optional'),
+    subtaskMode: fieldMode().notNull().default('optional'),
     sort: integer().notNull().default(0),
   },
   (t) => [unique('custom_fields_workspace_id_key').on(t.workspaceId, t.id), inProject('custom_fields', t)],

@@ -7,6 +7,7 @@ import { AddMemberBody, ProjectMembersService, RemoveMemberBody, UpdateMemberBod
 import {
   CreateProjectBody,
   DeleteProjectBody,
+  FieldProfileBody,
   ListProjectsQuery,
   PatchProjectBody,
   projectKey,
@@ -34,6 +35,12 @@ export class ProjectsController {
   @Get('key-available')
   keyAvailable(@Tenant() tenant: TenantInfo, @Query('key') key: string) {
     return this.projects.keyAvailable(tenant, parse(projectKey, key));
+  }
+
+  /** Template ที่เลือกได้ตอนสร้างโปรเจกต์ (ในตัว + ขององค์กร) จัดตามหมวด */
+  @Get('template-catalog')
+  templateCatalog(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo) {
+    return this.projects.templateCatalog(auth, tenant);
   }
 
   @Post()
@@ -94,6 +101,17 @@ export class ProjectsController {
   @HttpCode(200)
   transfer(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Body() body: unknown) {
     return this.projects.transfer(auth, tenant, key, parse(TransferBody, body));
+  }
+
+  /** ชุดฟิลด์ของ Task / Sub-task และคอลัมน์ Table */
+  @Get(':key/field-profile')
+  fieldProfile(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string) {
+    return this.projects.getFieldProfile(auth, tenant, key);
+  }
+
+  @Put(':key/field-profile')
+  setFieldProfile(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Body() body: unknown) {
+    return this.projects.setFieldProfile(auth, tenant, key, parse(FieldProfileBody, body));
   }
 
   @Get(':key/my-permissions')

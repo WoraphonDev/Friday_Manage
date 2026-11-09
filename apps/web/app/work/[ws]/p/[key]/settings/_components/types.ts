@@ -103,6 +103,9 @@ export interface CustomField {
   name: string;
   fieldType: "text" | "number" | "select" | "multi_select" | "user" | "date";
   options: { choices?: { id: string; label: string }[] } | null;
+  /** แสดง / บังคับในระดับ Task และ Sub-task (ชุดฟิลด์) */
+  taskMode?: "hidden" | "optional" | "required";
+  subtaskMode?: "hidden" | "optional" | "required";
 }
 export interface Label {
   id: string;

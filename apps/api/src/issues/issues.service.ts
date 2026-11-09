@@ -15,6 +15,8 @@ import { isLegacyRank, PLAIN_RANK, rankAfter, rankBetween, spreadRanks } from '.
 import { type ProjectRow, ProjectsService } from '../projects/projects.service.js';
 import { listIssues, TableListQuery } from './table.js';
 import { enforceWorkflowRules, workflowRuleEnabled } from './rules.js';
+import { checkCustomValues, checkProfile, type CustomFieldDef, type CustomValues, CustomValuesBody, displayValue, readCustomValues, writeCustomValues } from './custom-values.js';
+import type { Level, ProfileValues } from '../projects/field-profile.js';
 
 const s = schema;
 const ISSUE_KEY_PATTERN = /^([A-Za-z][A-Za-z0-9]{1,9})-(\d{1,9})$/;
@@ -65,6 +67,8 @@ export const CreateIssueBody = z.object({
   watcherIds: z.array(uuid).max(50).default([]),
   /** ยืนยันขยายช่วงของ Task แม่เมื่อวันที่ของ Sub-task เกินช่วง (ได้ 422 subtask_outside_parent ก่อน) */
   extendParent: z.boolean().default(false),
+  /** ค่า Custom field ของโปรเจกต์ { [fieldId]: ค่า } */
+  customFields: CustomValuesBody.default({}),
 });
 
 export const PatchIssueBody = z
@@ -105,6 +109,8 @@ export const PatchIssueBody = z
     extendParent: z.boolean(),
     /** ยืนยันย้ายไป Done ทั้งที่ Acceptance criteria ยังไม่ครบ */
     confirm: z.boolean(),
+    /** แก้เฉพาะฟิลด์ที่ส่งมา · null = ล้างค่า */
+    customFields: CustomValuesBody,
   })
   .partial();
 
@@ -137,8 +143,13 @@ export const MoveIssueBody = z.object({
 });
 
 type Issue = typeof s.issues.$inferSelect;
-type CreateIssueInput = Omit<z.infer<typeof CreateIssueBody>, 'requirements' | 'screens' | 'labelIds' | 'watcherIds' | 'extendParent'>
-  & Partial<Pick<z.infer<typeof CreateIssueBody>, 'requirements' | 'screens' | 'labelIds' | 'watcherIds' | 'extendParent'>>;
+type CreateIssueInput = Omit<z.infer<typeof CreateIssueBody>, 'requirements' | 'screens' | 'labelIds' | 'watcherIds' | 'extendParent' | 'customFields'>
+  & Partial<Pick<z.infer<typeof CreateIssueBody>, 'requirements' | 'screens' | 'labelIds' | 'watcherIds' | 'extendParent' | 'customFields'>>;
+/**
+ * strict = คำขอจากผู้ใช้ผ่าน API ต้องเคารพชุดฟิลด์ของโปรเจกต์ (ฟิลด์ที่ซ่อน / ฟิลด์บังคับ)
+ * ผู้เรียกภายใน (Automation, โปรเจกต์ตัวอย่าง, Bug จากผลทดสอบ) ไม่ส่ง เพื่อไม่ให้กติกาของโปรเจกต์ทำให้งานอัตโนมัติล้ม
+ */
+export type WriteOptions = { strict?: boolean };
 type Status = typeof s.workflowStatuses.$inferSelect;
 type Warning = { code: string; message: string };
 const ISSUE_KEY = ISSUE_KEY_PATTERN;
@@ -155,9 +166,9 @@ export class IssuesService {
   // ---------------------------------------------------------------------------
   // สร้าง (หน้า B, K1)
   // ---------------------------------------------------------------------------
-  async create(auth: AuthInfo, tenant: TenantInfo, projectKey: string, raw: CreateIssueInput) {
+  async create(auth: AuthInfo, tenant: TenantInfo, projectKey: string, raw: CreateIssueInput, opts: WriteOptions = {}) {
     // ผู้เรียกภายใน (Automation, สร้าง Bug จากผลทดสอบ) ไม่ผ่าน zod จึงเติมค่าเริ่มต้นของข้อมูลอ้างอิงเอง
-    const input = { requirements: [], screens: [], labelIds: [], watcherIds: [], ...raw };
+    const input = { requirements: [], screens: [], labelIds: [], watcherIds: [], customFields: {}, ...raw };
     const events: DomainEvent[] = [];
     const result = await this.db.run(auth, tenant, async (tx) => {
       const { project, access } = await this.projects.load(tx, auth, tenant, projectKey);
@@ -187,6 +198,13 @@ export class IssuesService {
       const sprintId = parent ? parent.sprintId : (input.sprintId ?? null);
 
       this.checkRequired(type.requiredFields, { ...input, moduleId: moduleId ?? undefined });
+      // ชุดฟิลด์ของ Task / Sub-task (Template ของโปรเจกต์) · Bug ใช้ฟิลด์บังคับของประเภทงานแทน
+      const level: Level = parent ? 'subtask' : 'task';
+      const { fieldProfile, customFields: defs } = await this.projects.fieldsOf(tx, project);
+      const strict = !!opts.strict && type.name !== 'Bug';
+      if (strict) checkProfile(fieldProfile, level, profileValues(input), { creating: true });
+      const custom = checkCustomValues(defs as CustomFieldDef[], level, input.customFields, { strict, creating: true });
+      await this.checkPeople(tx, customPeople(defs as CustomFieldDef[], custom));
       await this.checkInProject(tx, project.id, { moduleId, phaseId, sprintId });
       await this.checkPeople(tx, [...input.assigneeIds, input.baId, input.saId, input.reviewerId, input.testerId, ...input.watcherIds]);
       await this.checkLabels(tx, project.id, input.labelIds);
@@ -252,6 +270,7 @@ export class IssuesService {
         ...input.watcherIds.filter((id) => id !== auth.userId).map((userId) => ({ workspaceId: tenant.workspaceId, issueId: issue.id, userId, source: 'manual' as const })),
       ]);
       await this.writeRefs(tx, project, issue.id, { requirements: input.requirements, screens: input.screens, labelIds: input.labelIds });
+      await writeCustomValues(tx, tenant.workspaceId, issue.id, Object.fromEntries(Object.entries(custom).filter(([, v]) => v !== null)));
       await tx.insert(s.activities).values({ ...base, issueId: issue.id, actorId: auth.userId, verb: 'created' });
 
       const ev = eventFor(auth, tenant, project, issue);
@@ -323,7 +342,8 @@ export class IssuesService {
       // รหัสที่ใช้อยู่แล้วในโปรเจกต์ ให้ฟอร์มแนะนำแทนการพิมพ์รหัสใหม่ซ้ำแบบสะกดต่าง
       const requirements = await tx.select({ code: s.requirements.code, kind: s.requirements.kind, title: s.requirements.title }).from(s.requirements).where(eq(s.requirements.projectId, project.id)).orderBy(asc(s.requirements.code));
       const screens = await tx.select({ code: s.screens.code, name: s.screens.name }).from(s.screens).where(eq(s.screens.projectId, project.id)).orderBy(asc(s.screens.code));
-      return { modules: modules.map((m) => ({ ...m, phases: phases.filter((p) => p.moduleId === m.id) })), phases, sprints, requirements, screens,
+      const { fieldProfile, customFields } = await this.projects.fieldsOf(tx, project);
+      return { modules: modules.map((m) => ({ ...m, phases: phases.filter((p) => p.moduleId === m.id) })), phases, sprints, requirements, screens, fieldProfile, customFields,
         members: [...people.values()].map((p) => ({ ...p, role: members.find((m) => m.userId === p.id)?.role ?? 'admin' })),
         sizeMdMap: (project.sizeMdMap as Record<string, number> | null) ?? await this.workspaceSizeMap(tx, project.workspaceId), labels,
         issueTypes: issueTypes.map((type) => ({ ...type, statuses: statuses.filter((st) => st.workflowId === type.workflowId) })) };
@@ -489,7 +509,7 @@ export class IssuesService {
   // ---------------------------------------------------------------------------
   // แก้ไข (PATCH + If-Match)
   // ---------------------------------------------------------------------------
-  async patch(auth: AuthInfo, tenant: TenantInfo, issueKey: string, ifMatch: string | undefined, input: z.infer<typeof PatchIssueBody>) {
+  async patch(auth: AuthInfo, tenant: TenantInfo, issueKey: string, ifMatch: string | undefined, input: z.infer<typeof PatchIssueBody>, opts: WriteOptions = {}) {
     const expected = parseIfMatch(ifMatch);
     const events: DomainEvent[] = [];
     const result = await this.db.run(auth, tenant, async (tx) => {
@@ -532,6 +552,16 @@ export class IssuesService {
       if (input.labelIds) await this.checkLabels(tx, project.id, input.labelIds);
       const [oldRefs] = await this.readRefs(tx, [issue.id]);
       const refChanges = REF_FIELDS.filter((f) => input[f] !== undefined && !sameSet(oldRefs[f], input[f]!));
+
+      // ชุดฟิลด์: ฟิลด์ที่ซ่อนรับค่าใหม่ไม่ได้ (ค่าเดิมยังเก็บไว้) · ล้างฟิลด์บังคับไม่ได้
+      const level: Level = issue.parentId ? 'subtask' : 'task';
+      const { fieldProfile, customFields: defs } = await this.projects.fieldsOf(tx, project);
+      const strict = !!opts.strict && type.name !== 'Bug';
+      if (strict) checkProfile(fieldProfile, level, changedProfileValues(issue, oldRefs, input), { creating: false });
+      const currentCustom = (await readCustomValues(tx, [issue.id])).get(issue.id) ?? {};
+      const custom = input.customFields ? checkCustomValues(defs as CustomFieldDef[], level, input.customFields, { strict, creating: false, current: currentCustom }) : {};
+      await this.checkPeople(tx, customPeople(defs as CustomFieldDef[], custom));
+      const customChanged = Object.entries(custom).some(([id, v]) => JSON.stringify(currentCustom[id] ?? null) !== JSON.stringify(v));
 
       // ความคืบหน้ากรอกเองได้เฉพาะงานที่ไม่มีลูก
       if (input.progressPct !== undefined) {
@@ -603,7 +633,7 @@ export class IssuesService {
         .limit(1);
 
       // รายชื่อ Dev อยู่อีกตาราง แถวงานไม่เปลี่ยน trigger จึงไม่เพิ่ม version ให้ · ต้องเพิ่มเองเพื่อให้ If-Match ยังจับการแก้ชนกันได้
-      if (assigneesChanged || refChanges.length) set.version = expected + 1;
+      if (assigneesChanged || refChanges.length || customChanged) set.version = expected + 1;
       const [updated] = await tx
         .update(s.issues)
         .set(set)
@@ -626,6 +656,7 @@ export class IssuesService {
       }
 
       if (refChanges.length) await this.writeRefs(tx, project, issue.id, Object.fromEntries(refChanges.map((f) => [f, input[f]])), true);
+      const customChanges = customChanged ? await writeCustomValues(tx, tenant.workspaceId, issue.id, custom, currentCustom) : [];
       if (newParent && issue.parentId) {
         const [oldParent] = await tx.select().from(s.issues).where(eq(s.issues.id, issue.parentId));
         const childKey = `${project.key}-${issue.number}`;
@@ -644,6 +675,11 @@ export class IssuesService {
       const changes = diff(issue, updated);
       if (assigneesChanged) changes.push({ field: 'assigneeIds', oldValue: oldAssignees, newValue: assignees });
       for (const f of refChanges) changes.push({ field: f, oldValue: oldRefs[f], newValue: input[f] });
+      // Activity เก็บค่าที่อ่านได้ (ชื่อตัวเลือก) · field = cf:<id> ให้หน้าเว็บแสดงชื่อฟิลด์
+      for (const c of customChanges) {
+        const def = (defs as CustomFieldDef[]).find((d) => d.id === c.fieldId);
+        changes.push({ field: `cf:${c.fieldId}`, oldValue: displayValue(def, c.oldValue), newValue: displayValue(def, c.newValue) });
+      }
       if (changes.length) {
         await tx.insert(s.activities).values(changes.map((c) => ({ ...base, actorId: auth.userId, verb: 'updated', field: c.field, oldValue: c.oldValue, newValue: c.newValue })));
       }
@@ -653,7 +689,8 @@ export class IssuesService {
           planRows.map((c) => ({ ...base, baselineId: baseline.id, field: c.field, oldValue: c.oldValue, newValue: c.newValue, reason: input.planChangeReason ?? null, changedBy: auth.userId })),
         );
       }
-      events.push(...(await this.changeEvents(tx, auth, tenant, project, issue, updated, assigneesChanged ? { before: oldAssignees, after: assignees } : null, newParent ? [...refChanges, 'parentKey'] : refChanges)));
+      const extra: string[] = [...refChanges, ...(newParent ? ['parentKey'] : []), ...(customChanges.length ? ['customFields'] : [])];
+      events.push(...(await this.changeEvents(tx, auth, tenant, project, issue, updated, assigneesChanged ? { before: oldAssignees, after: assignees } : null, extra)));
       if (baseline && (planChanged.length || assigneesChanged)) {
         events.push(eventFor(auth, tenant, project, updated)('plan.changed', { fields: assigneesChanged ? [...planChanged, 'assigneeIds'] : [...planChanged], reason: input.planChangeReason }));
       }
@@ -1097,6 +1134,7 @@ export class IssuesService {
       ? []
       : await tx.select({ issueId: s.issueAssignees.issueId, userId: s.issueAssignees.userId }).from(s.issueAssignees).where(inArray(s.issueAssignees.issueId, ids)).orderBy(asc(s.issueAssignees.sort));
     const refs = await this.readRefs(tx, ids);
+    const custom = access.guestViewer ? new Map<string, CustomValues>() : await readCustomValues(tx, ids);
 
     return issues.map((i, index) => {
       const m = byId.get(i.id)!;
@@ -1145,9 +1183,43 @@ export class IssuesService {
         reviewerId: i.reviewerId,
         testerId: i.testerId,
         reporterId: i.reporterId,
+        customFields: custom.get(i.id) ?? {},
       };
     });
   }
+}
+
+/** ค่าของฟิลด์ในชุดฟิลด์จากคำขอสร้างงาน · Priority มีค่าเริ่มต้นเสมอจึงไม่นับเป็นการเขียนฟิลด์ที่ซ่อน */
+function profileValues(input: CreateIssueInput): ProfileValues {
+  return {
+    ba: input.baId, sa: input.saId, reviewer: input.reviewerId, size: input.size,
+    requirements: input.requirements, screens: input.screens, labels: input.labelIds, remark: input.remark,
+  };
+}
+
+/** เฉพาะฟิลด์ที่ส่งมาและต่างจากค่าเดิม · ส่งค่าเดิมซ้ำไม่ถือว่าเขียนฟิลด์ที่ซ่อน */
+function changedProfileValues(issue: Issue, refs: { requirements: string[]; screens: string[]; labelIds: string[] }, input: z.infer<typeof PatchIssueBody>): ProfileValues {
+  const out: ProfileValues = {};
+  const scalar = (key: keyof ProfileValues, value: unknown, current: unknown) => {
+    if (value !== undefined && value !== current) out[key] = value;
+  };
+  scalar('ba', input.baId, issue.baId);
+  scalar('sa', input.saId, issue.saId);
+  scalar('reviewer', input.reviewerId, issue.reviewerId);
+  scalar('priority', input.priority, issue.priority);
+  scalar('size', input.size, issue.size);
+  scalar('actual', input.actualStart, issue.actualStart);
+  scalar('progress', input.progressPct, issue.progressPct);
+  scalar('remark', input.remark === '' ? null : input.remark, issue.remark);
+  if (input.requirements && !sameSet(refs.requirements, input.requirements)) out.requirements = input.requirements;
+  if (input.screens && !sameSet(refs.screens, input.screens)) out.screens = input.screens;
+  if (input.labelIds && !sameSet(refs.labelIds, input.labelIds)) out.labels = input.labelIds;
+  return out;
+}
+
+/** Custom field ชนิดคนต้องเป็นสมาชิกของ Workspace */
+function customPeople(defs: CustomFieldDef[], values: Record<string, unknown>) {
+  return defs.filter((d) => d.fieldType === 'user' && typeof values[d.id] === 'string').map((d) => values[d.id] as string);
 }
 
 function parseIfMatch(v: string | undefined) {

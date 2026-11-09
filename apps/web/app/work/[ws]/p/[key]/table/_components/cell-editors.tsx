@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import type { Person } from "@/lib/types";
+import type { CustomFieldDef } from "@/lib/field-profile";
 import styles from "./ot.module.css";
 
 const SIZES = ["XS", "S", "M", "L", "XL"] as const;
@@ -208,6 +209,73 @@ export function RemarkCell({ label, value, onChange, children }: {
               <button type="submit" className={styles.addb}>{t("save")}</button>
             </div>
           </form>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+/**
+ * ค่า Custom field ในแถว (ชุดฟิลด์ของโปรเจกต์) · คนใช้ PeopleCell · ชนิดอื่นแก้ใน popover แล้วกดบันทึก
+ * ตัวเลือกเดียวบันทึกทันทีที่เลือก · ล้างค่า = ส่ง null
+ */
+export function CustomCell({ label, field, value, people, onChange, children }: {
+  label: string; field: CustomFieldDef; value: unknown; people: Person[]; onChange: (value: unknown) => void; children: ReactNode;
+}) {
+  const t = useTranslations("overview-table.table.cell");
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<unknown>(null);
+  if (field.fieldType === "user") {
+    return <PeopleCell label={label} people={people} value={typeof value === "string" ? [value] : []} onChange={(ids) => onChange(ids[0] ?? null)}>{children}</PeopleCell>;
+  }
+  const choices = field.options?.choices ?? [];
+  const save = (next: unknown) => {
+    setOpen(false);
+    const empty = next === "" || next === null || (Array.isArray(next) && !next.length);
+    const normalized = empty ? null : field.fieldType === "number" ? Number(next) : next;
+    if (JSON.stringify(normalized) !== JSON.stringify(value ?? null)) onChange(normalized);
+  };
+  const picked = Array.isArray(draft) ? (draft as string[]) : [];
+  return (
+    <Popover.Root open={open} onOpenChange={(next) => {
+      if (next) setDraft(field.fieldType === "multi_select" ? (Array.isArray(value) ? value : []) : (value ?? ""));
+      else if (field.fieldType === "multi_select") save(draft);
+      setOpen(next);
+    }}>
+      <Popover.Trigger asChild>
+        <button type="button" className={styles.cellEdit} aria-label={label}>{children}</button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content className={`popover ${styles.remarkPop}`} align="start" sideOffset={4}>
+          {field.fieldType === "select" || field.fieldType === "multi_select" ? (
+            <div role="group" aria-label={label} className={styles.choiceList}>
+              {choices.map((c) => field.fieldType === "select" ? (
+                <button key={c.id} type="button" className="menu-item" aria-pressed={value === c.id} onClick={() => save(c.id)}>
+                  <span className={styles.grow}>{c.label}</span>{value === c.id && <Check size={16} aria-hidden="true" />}
+                </button>
+              ) : (
+                <label key={c.id} className="menu-item">
+                  <input type="checkbox" checked={picked.includes(c.id)} onChange={(e) => setDraft(e.target.checked ? [...picked, c.id] : picked.filter((x) => x !== c.id))} />
+                  {c.label}
+                </label>
+              ))}
+              <div className={styles.popFoot}>
+                <button type="button" className={styles.subAddCancel} onClick={() => { setDraft([]); save(null); }}>{t("clear")}</button>
+                {field.fieldType === "multi_select" && <Popover.Close asChild><button type="button" className={styles.addb}>{t("done")}</button></Popover.Close>}
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={(e) => { e.preventDefault(); save(draft); }}>
+              {field.fieldType === "text"
+                ? <textarea className="input" autoFocus aria-label={label} value={String(draft ?? "")} maxLength={5000} onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(draft); } }} />
+                : <input className="input" autoFocus aria-label={label} type={field.fieldType === "number" ? "number" : "date"} step="any" value={String(draft ?? "")} onChange={(e) => setDraft(e.target.value)} />}
+              <div className={styles.popFoot}>
+                <button type="button" className={styles.subAddCancel} onClick={() => save(null)}>{t("clear")}</button>
+                <button type="submit" className={styles.addb}>{t("save")}</button>
+              </div>
+            </form>
+          )}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

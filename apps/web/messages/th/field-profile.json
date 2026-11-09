@@ -1,0 +1,82 @@
+{
+  "fields": {
+    "ba": "Business Analyst",
+    "sa": "System Analyst",
+    "reviewer": "QA / Reviewer",
+    "priority": "Priority",
+    "size": "Size",
+    "actual": "Actual Start / End",
+    "progress": "Progress",
+    "requirements": "Requirement (FR / NFR)",
+    "screens": "Screen",
+    "labels": "Label",
+    "remark": "Remark (หมายเหตุ)"
+  },
+  "columns": {
+    "dev": "Developer",
+    "ba": "BA",
+    "sa": "SA",
+    "reviewer": "QA / Reviewer",
+    "status": "สถานะ",
+    "priority": "Priority",
+    "size": "Size / Man-Day",
+    "start": "Plan Start",
+    "end": "Plan End",
+    "actualStart": "Actual Start",
+    "actualEnd": "Actual End",
+    "refs": "FR / Screen",
+    "labels": "Label",
+    "progress": "Progress",
+    "remark": "Remark"
+  },
+  "modes": {
+    "hidden": "ซ่อน",
+    "optional": "แสดง",
+    "required": "บังคับ"
+  },
+  "levels": {
+    "task": "Task",
+    "subtask": "Sub-task"
+  },
+  "fieldTypes": {
+    "text": "ข้อความ",
+    "number": "ตัวเลข",
+    "select": "ตัวเลือกเดียว",
+    "multi_select": "หลายตัวเลือก",
+    "user": "สมาชิก",
+    "date": "วันที่"
+  },
+  "editor": {
+    "title": "ชุดฟิลด์ของ Task / Sub-task",
+    "hint": "กำหนดว่าแต่ละระดับแสดงหรือบังคับฟิลด์ไหน · ซ่อนแล้วค่าเดิมยังเก็บไว้ เปิดกลับมาก็เห็นค่าเดิม · ชื่องาน, สถานะ, Developer, Plan Start / End, Man-Day และ Module ซ่อนไม่ได้",
+    "field": "ฟิลด์",
+    "column": "คอลัมน์ Table",
+    "core": "ฟิลด์หลัก (ซ่อนไม่ได้)",
+    "coreList": "ชื่องาน · สถานะ · Developer · Plan Start / End · Man-Day · Module / กลุ่ม",
+    "custom": "ฟิลด์ที่ทีมเพิ่มเอง",
+    "noCustom": "ยังไม่มีฟิลด์ที่ทีมเพิ่มเอง",
+    "modeOf": "{field} ระดับ {level}",
+    "showColumn": "แสดง {field} เป็นคอลัมน์ใน Table",
+    "order": "ลำดับคอลัมน์ใน Table",
+    "orderHint": "คอลัมน์ที่ทุกคนเห็นเมื่อเปิด Table ครั้งแรก · แต่ละคนซ่อน / เปิดเพิ่มได้จากเมนู Columns",
+    "noColumns": "ยังไม่ได้เลือกคอลัมน์",
+    "up": "เลื่อน {name} ขึ้น",
+    "down": "เลื่อน {name} ลง",
+    "from": "สร้างจาก Template {name}",
+    "fromNone": "ใช้ชุดฟิลด์มาตรฐาน",
+    "save": "บันทึกชุดฟิลด์",
+    "saved": "บันทึกชุดฟิลด์แล้ว",
+    "reset": "ยกเลิกการแก้",
+    "requiredNote": "บังคับ = ต้องกรอกตอนสร้างงานและล้างค่าไม่ได้ (Bug ใช้ฟิลด์บังคับของประเภทงาน)",
+    "notRequirable": "ฟิลด์นี้ระบบตั้งค่าให้ จึงตั้งเป็นบังคับไม่ได้"
+  },
+  "values": {
+    "notSet": "ยังไม่ระบุ",
+    "choose": "เลือก",
+    "section": "ฟิลด์เพิ่มเติม",
+    "edit": "แก้ {field}",
+    "save": "บันทึก",
+    "cancel": "ยกเลิก",
+    "clear": "ล้างค่า"
+  }
+}

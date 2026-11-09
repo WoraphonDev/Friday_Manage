@@ -211,7 +211,9 @@
       "refs": "FR / Screen",
       "progress": "Progress",
       "remark": "Remark",
-      "priority": "Priority"
+      "priority": "Priority",
+      "reviewer": "QA / Reviewer",
+      "labels": "Label"
     },
     "select": "Select {key}",
     "selectAll": "Select all shown",
@@ -279,7 +281,11 @@
       "add": "Add",
       "cancel": "Cancel",
       "remarkPlaceholder": "Remark for this task",
-      "remarkHint": "⌘/Ctrl + Enter to save"
-    }
+      "remarkHint": "⌘/Ctrl + Enter to save",
+      "clear": "Clear"
+    },
+    "columnsReset": "Reset to project default",
+    "columnsHint": "Your column choices are saved on this device · the default is set in Settings › Issue types",
+    "notUsedAtLevel": "Not used at this level"
   }
 }

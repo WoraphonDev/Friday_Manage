@@ -91,3 +91,11 @@ textarea.in { padding:8px 10px; min-height:64px; }
   .al { grid-template-columns:minmax(0,1fr); gap:2px; }
   .alHead { display:none; }
 }
+
+/* ชุดฟิลด์ของ Template (Admin Console) */
+.fieldAdd { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding-top:8px; border-top:1px solid var(--border); }
+.fieldAdd > b { width:100%; font-size:13px; }
+.fieldAddRow { display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; width:100%; }
+.fieldAddRow > * { flex:1 1 160px; }
+.fieldAddRow > button { flex:0 0 auto; }
+.pillX { border:0; background:transparent; color:inherit; cursor:pointer; padding:0 2px; font-size:13px; }

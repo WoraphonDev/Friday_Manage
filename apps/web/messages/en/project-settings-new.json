@@ -166,7 +166,18 @@
       "removeFieldHint": "This field's values will be removed from every task",
       "removeLabelHint": "This Label will be removed from every task",
       "remove": "Delete",
-      "removed": "Deleted {name}"
+      "removed": "Deleted {name}",
+      "fieldSet": "Task / Sub-task fields",
+      "fieldSetSave": "Save fields",
+      "fieldSetSaved": "Fields saved",
+      "failed": "Something went wrong",
+      "taskMode": "Task level",
+      "subtaskMode": "Sub-task level",
+      "modes": {
+        "hidden": "Hidden",
+        "optional": "Shown",
+        "required": "Required"
+      }
     },
     "modules": {
       "title": "Modules",
@@ -313,6 +324,11 @@
     "descriptionPlaceholder": "What does this project do, and for whom",
     "template": "Template",
     "templates": {
+      "development": {
+        "name": "Development",
+        "description": "Software delivery plan: Module → Group → Task → Sub-task",
+        "makes": "Creates Sprints + 4 statuses + BA / SA / Dev / QA fields, Size → Man-Day, Plan / Actual and the delivery-plan Table columns"
+      },
       "scrum": {
         "name": "Scrum",
         "description": "Work in Sprints with a Backlog",
@@ -334,7 +350,7 @@
         "makes": "Creates only the basic statuses"
       },
       "workspace": "Workspace Template",
-      "workspaceMakes": "Uses the statuses, task types and Modules from the Template"
+      "workspaceMakes": "Uses the template's statuses, issue types, fields and modules"
     },
     "color": "Project color",
     "colorOf": "Color {name}",
@@ -499,6 +515,22 @@
     },
     "initialStatus": "Initial status: Planning · Health is calculated once there's a first task",
     "fromExcel": "Already have a plan in Excel? Create the project from the file",
-    "fromExcelHint": "Creates modules and tasks from the file instead of filling in each step"
+    "fromExcelHint": "Creates modules and tasks from the file instead of filling in each step",
+    "categories": {
+      "software": "Software development",
+      "service": "Service management",
+      "work": "Work management",
+      "product": "Product management",
+      "marketing": "Marketing",
+      "customer_service": "Customer service",
+      "hr": "Human resources",
+      "finance": "Finance",
+      "design": "Design",
+      "personal": "Personal",
+      "operations": "Operations",
+      "legal": "Legal",
+      "sales": "Sales",
+      "analytics": "Analytics"
+    }
   }
 }

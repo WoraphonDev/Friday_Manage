@@ -166,7 +166,18 @@
       "removeFieldHint": "ค่าของฟิลด์นี้ในทุกงานจะถูกลบด้วย",
       "removeLabelHint": "Label นี้จะหลุดออกจากทุกงาน",
       "remove": "ลบ",
-      "removed": "ลบ {name} แล้ว"
+      "removed": "ลบ {name} แล้ว",
+      "fieldSet": "ชุดฟิลด์ของ Task / Sub-task",
+      "fieldSetSave": "บันทึกชุดฟิลด์",
+      "fieldSetSaved": "บันทึกชุดฟิลด์แล้ว",
+      "failed": "ทำรายการไม่สำเร็จ",
+      "taskMode": "ระดับ Task",
+      "subtaskMode": "ระดับ Sub-task",
+      "modes": {
+        "hidden": "ซ่อน",
+        "optional": "แสดง",
+        "required": "บังคับ"
+      }
     },
     "modules": {
       "title": "Modules",
@@ -313,6 +324,11 @@
     "descriptionPlaceholder": "โปรเจกต์นี้ทำอะไร เพื่อใคร",
     "template": "Template",
     "templates": {
+      "development": {
+        "name": "Development",
+        "description": "แผนพัฒนาระบบ Module → กลุ่ม → Task → Sub-task",
+        "makes": "สร้าง Sprint + 4 สถานะ + ฟิลด์ BA / SA / Dev / QA, Size → Man-Day, Plan / Actual และคอลัมน์ Table ตามแผนพัฒนา"
+      },
       "scrum": {
         "name": "Scrum",
         "description": "ทำงานเป็น Sprint มี Backlog",
@@ -334,7 +350,7 @@
         "makes": "สร้างเฉพาะสถานะพื้นฐาน"
       },
       "workspace": "Template ของ Workspace",
-      "workspaceMakes": "ใช้สถานะ, ประเภทงาน และ Module ตาม Template"
+      "workspaceMakes": "ใช้สถานะ, ประเภทงาน, ชุดฟิลด์ และ Module ตาม Template"
     },
     "color": "สีโปรเจกต์",
     "colorOf": "สี {name}",
@@ -499,6 +515,22 @@
     },
     "initialStatus": "สถานะเริ่มต้น: Planning · Health คำนวณเมื่อมีงานแรก",
     "fromExcel": "มีแผนใน Excel อยู่แล้ว? สร้างโปรเจกต์จากไฟล์ Excel",
-    "fromExcelHint": "สร้าง Module และงานทั้งหมดตามไฟล์ แทนการกรอกทีละขั้น"
+    "fromExcelHint": "สร้าง Module และงานทั้งหมดตามไฟล์ แทนการกรอกทีละขั้น",
+    "categories": {
+      "software": "Software development",
+      "service": "Service management",
+      "work": "Work management",
+      "product": "Product management",
+      "marketing": "Marketing",
+      "customer_service": "Customer service",
+      "hr": "Human resources",
+      "finance": "Finance",
+      "design": "Design",
+      "personal": "Personal",
+      "operations": "Operations",
+      "legal": "Legal",
+      "sales": "Sales",
+      "analytics": "Analytics"
+    }
   }
 }

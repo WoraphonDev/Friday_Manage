@@ -6,7 +6,7 @@ import { parse } from '../common/validate.js';
 import { AdminService, AuditQuery, PatchSecurityBody, PatchSettingsBody } from './admin.service.js';
 import { CalendarsService, CreateCalendarBody, CreateHolidayBody, HolidaysQuery } from './calendars.service.js';
 import { MembersBody, PatchTeamBody, TeamBody, TeamsService } from './teams.service.js';
-import { PatchTemplateBody, TemplateBody, TemplatesService } from './templates.service.js';
+import { CreateTemplateBody, PatchTemplateBody, TemplatesService } from './templates.service.js';
 
 /** Admin Console (N1) · 03-api › 3.3 · Owner / Admin ทุกข้อ */
 @Controller('w/:ws')
@@ -79,7 +79,7 @@ export class AdminController {
   }
   @Post('project-templates')
   createTemplate(@Auth() a: AuthInfo, @Tenant() t: TenantInfo, @Body() body: unknown) {
-    return this.templates.create(a, t, parse(TemplateBody, body));
+    return this.templates.create(a, t, parse(CreateTemplateBody, body));
   }
   @Patch('project-templates/:id')
   patchTemplate(@Auth() a: AuthInfo, @Tenant() t: TenantInfo, @Param('id') id: string, @Body() body: unknown) {

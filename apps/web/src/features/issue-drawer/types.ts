@@ -1,4 +1,5 @@
 import type { Person, Permissions } from '@/lib/types';
+import type { CustomFieldDef, FieldProfile } from '@/lib/field-profile';
 export type IssueType = 'Task' | 'Story' | 'Bug' | 'Spike';
 export interface Status { id: string; name: string; category: 'todo' | 'in_progress' | 'done'; workflowId?: string }
 export interface Named { id: string; name: string; color?: string | null }
@@ -17,6 +18,8 @@ export interface Issue {
   severity: string | null; environment: string | null; details: Record<string, unknown>; reopenCount: number;
   sharedWithGuests: boolean; version: number; createdAt: string; updatedAt: string;
   requirements?: string[]; screens?: string[]; labels?: Named[];
+  /** ค่า Custom field { [fieldId]: ค่า } · Guest ไม่ได้รับ */
+  customFields?: Record<string, unknown>;
   subtasks?: Issue[]; pendingDueRequest?: { id: string; requesterId: string; requestedDue: string; currentDue: string; createdAt: string } | null;
   warnings?: { code: string; message: string }[];
 }
@@ -25,9 +28,12 @@ export interface ProjectMeta {
   id: string; key: string; name: string; status: string; modules: (Named & { phases?: Named[] })[];
   phases?: (Named & { moduleId: string })[]; sprints: (Named & { status: string; number?: number })[];
   statuses: Status[]; issueTypes: IssueTypeOption[];
+  /** ชุดฟิลด์ของ Task / Sub-task ตาม Template ของโปรเจกต์ */
+  fieldProfile?: FieldProfile; customFields?: CustomFieldDef[];
 }
 export interface FormOptions extends Omit<ProjectMeta, 'id' | 'key' | 'name' | 'status' | 'statuses'> {
   members: Person[]; sizeMdMap: Record<string, number>; labels: Named[];
+  fieldProfile?: FieldProfile; customFields?: CustomFieldDef[];
   requirements?: { code: string; kind: string; title: string | null }[]; screens?: { code: string; name: string | null }[];
 }
 export interface Scope {

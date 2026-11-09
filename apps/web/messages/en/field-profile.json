@@ -1,0 +1,82 @@
+{
+  "fields": {
+    "ba": "Business Analyst",
+    "sa": "System Analyst",
+    "reviewer": "QA / Reviewer",
+    "priority": "Priority",
+    "size": "Size",
+    "actual": "Actual Start / End",
+    "progress": "Progress",
+    "requirements": "Requirement (FR / NFR)",
+    "screens": "Screen",
+    "labels": "Label",
+    "remark": "Remark"
+  },
+  "columns": {
+    "dev": "Developer",
+    "ba": "BA",
+    "sa": "SA",
+    "reviewer": "QA / Reviewer",
+    "status": "Status",
+    "priority": "Priority",
+    "size": "Size / Man-Day",
+    "start": "Plan Start",
+    "end": "Plan End",
+    "actualStart": "Actual Start",
+    "actualEnd": "Actual End",
+    "refs": "FR / Screen",
+    "labels": "Label",
+    "progress": "Progress",
+    "remark": "Remark"
+  },
+  "modes": {
+    "hidden": "Hidden",
+    "optional": "Shown",
+    "required": "Required"
+  },
+  "levels": {
+    "task": "Task",
+    "subtask": "Sub-task"
+  },
+  "fieldTypes": {
+    "text": "Text",
+    "number": "Number",
+    "select": "Single choice",
+    "multi_select": "Multiple choice",
+    "user": "Member",
+    "date": "Date"
+  },
+  "editor": {
+    "title": "Task / Sub-task fields",
+    "hint": "Choose which fields each level shows or requires · hidden fields keep their values and come back when shown again · Title, Status, Developer, Plan Start / End, Man-Day and Module cannot be hidden",
+    "field": "Field",
+    "column": "Table column",
+    "core": "Core fields (always shown)",
+    "coreList": "Title · Status · Developer · Plan Start / End · Man-Day · Module / Group",
+    "custom": "Team fields",
+    "noCustom": "No team fields yet",
+    "modeOf": "{field} for {level}",
+    "showColumn": "Show {field} as a Table column",
+    "order": "Table column order",
+    "orderHint": "Columns everyone sees when opening the Table · each person can hide or add columns from the Columns menu",
+    "noColumns": "No columns selected",
+    "up": "Move {name} up",
+    "down": "Move {name} down",
+    "from": "Created from template {name}",
+    "fromNone": "Uses the standard field set",
+    "save": "Save fields",
+    "saved": "Fields saved",
+    "reset": "Discard changes",
+    "requiredNote": "Required = must be filled when creating and cannot be cleared (Bugs use their issue type's required fields)",
+    "notRequirable": "The system sets this field, so it cannot be required"
+  },
+  "values": {
+    "notSet": "Not set",
+    "choose": "Choose",
+    "section": "More fields",
+    "edit": "Edit {field}",
+    "save": "Save",
+    "cancel": "Cancel",
+    "clear": "Clear"
+  }
+}

@@ -211,7 +211,9 @@
       "refs": "FR / Screen",
       "progress": "Progress",
       "remark": "หมายเหตุ",
-      "priority": "Priority"
+      "priority": "Priority",
+      "reviewer": "QA / Reviewer",
+      "labels": "Label"
     },
     "select": "เลือก {key}",
     "selectAll": "เลือกทั้งหมดที่แสดง",
@@ -279,7 +281,11 @@
       "add": "เพิ่ม",
       "cancel": "ยกเลิก",
       "remarkPlaceholder": "หมายเหตุของงาน",
-      "remarkHint": "⌘/Ctrl + Enter เพื่อบันทึก"
-    }
+      "remarkHint": "⌘/Ctrl + Enter เพื่อบันทึก",
+      "clear": "ล้างค่า"
+    },
+    "columnsReset": "คืนค่าตามโปรเจกต์",
+    "columnsHint": "คอลัมน์ที่ซ่อน / เปิดเพิ่มจำไว้ในเครื่องนี้ · ค่าเริ่มต้นตั้งที่ Settings › ประเภทงาน",
+    "notUsedAtLevel": "ไม่ใช้ในระดับนี้"
   }
 }

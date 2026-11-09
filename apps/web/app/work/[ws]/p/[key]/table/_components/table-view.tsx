@@ -17,7 +17,8 @@ import type { Permissions, Person } from "@/lib/types";
 import type { Options, Row, SavedView, TableData } from "./types";
 import styles from "./ot.module.css";
 import { StructureDialog, type StructureAction } from "./structure-dialog";
-import { DateCell, PeopleCell, RemarkCell, SizeCell, SubtaskAdd } from "./cell-editors";
+import { CustomCell, DateCell, PeopleCell, RemarkCell, SizeCell, SubtaskAdd } from "./cell-editors";
+import { availableColumns, columnShowsAt, customText, DEFAULT_PROFILE, type CustomFieldDef, type FieldProfile, type Level } from "@/lib/field-profile";
 
 // ต้องตรงกับความสูงแถว .table td ใน ot.module.css (ใช้คำนวณ virtual scroll)
 const ROW_H = 38;
@@ -31,12 +32,13 @@ const SIZES = ["XS", "S", "M", "L", "XL"] as const;
 const GROUPS = ["module", "status", "assignee", "priority", "none"] as const;
 type GroupBy = (typeof GROUPS)[number];
 const SORTS = ["rank", "number", "planEnd", "priority"] as const;
-// Actual แยกเป็นสองคอลัมน์ (ผู้ใช้ขอ 2026-11-09) · ตารางเลื่อนแนวนอนได้ จึงเพิ่มคอลัมน์ได้โดยไม่บีบชื่องาน
-// หมายเหตุอยู่ท้ายสุด (ผู้ใช้ขอ 2026-11-09)
-const OPTIONAL_COLS = ["dev", "ba", "sa", "status", "size", "start", "end", "actualStart", "actualEnd", "refs", "progress", "remark"] as const;
-type Col = (typeof OPTIONAL_COLS)[number];
-/** ความกว้างคอลัมน์ตาม Canvas Table (.gr grid-template-columns) */
-const COL_W: Record<Col, number> = { dev: 84, ba: 40, sa: 40, status: 112, size: 78, start: 74, end: 82, actualStart: 84, actualEnd: 110, refs: 124, progress: 96, remark: 220 };
+// คอลัมน์มาจากชุดฟิลด์ของโปรเจกต์ (Template · ผู้ใช้ตัดสิน 2026-11-09) · แต่ละคนซ่อน / เปิดเพิ่มได้จากเมนู Columns (จำในเครื่อง)
+type Col = string;
+/** ความกว้างคอลัมน์ตาม Canvas Table (.gr grid-template-columns) · คอลัมน์ใหม่ / Custom field ใช้ค่ากลาง */
+const COL_W: Record<string, number> = { dev: 84, ba: 40, sa: 40, reviewer: 56, status: 112, priority: 84, size: 78, start: 74, end: 82, actualStart: 84, actualEnd: 110, refs: 124, labels: 124, progress: 96, remark: 220 };
+const colWidth = (c: Col) => COL_W[c] ?? 140;
+const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
+type ProjectFields = { fieldProfile?: FieldProfile; customFields?: CustomFieldDef[] };
 /** ชื่องานกว้างอย่างน้อยเท่านี้ · ตารางกว้างกว่าจอเมื่อไรเลื่อนแนวนอนในกล่อง */
 const NAME_MIN_W = 340;
 
@@ -180,8 +182,19 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const [filters, setFilters] = useState<Filters>(() => (search.get("overdue") === "true" ? { overdue: "true" } : {}));
   const [groupBy, setGroupBy] = useState<GroupBy>("module");
   const [sort, setSort] = useState<(typeof SORTS)[number]>("rank");
-  // FR / Screen ซ่อนไว้ก่อนตามที่ผู้ใช้สั่ง เปิดเองได้จากเมนู Columns
-  const [hidden, setHidden] = useState<Set<Col>>(new Set(["refs"]));
+  // คอลัมน์ที่คนนี้เลือกเอง (null = ตามโปรเจกต์) · จำในเครื่องต่อโปรเจกต์ · อ่านหลัง mount เพื่อไม่ให้ HTML จาก server ไม่ตรง
+  const colsKey = `friday:table-cols:${ws}:${projectKey}`;
+  const [userCols, setUserCols] = useState<Col[] | null>(null);
+  useEffect(() => {
+    try {
+      const saved: unknown = JSON.parse(window.localStorage.getItem(colsKey) ?? "null");
+      setUserCols(Array.isArray(saved) ? saved.filter((x): x is string => typeof x === "string") : null);
+    } catch { setUserCols(null); }
+  }, [colsKey]);
+  const chooseCols = (next: Col[] | null) => {
+    setUserCols(next);
+    try { if (next) window.localStorage.setItem(colsKey, JSON.stringify(next)); else window.localStorage.removeItem(colsKey); } catch { /* ไม่มี storage ก็ใช้ได้เฉพาะรอบนี้ */ }
+  };
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [scrollTop, setScrollTop] = useState(0);
@@ -217,6 +230,16 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const canDelete = !!perms.data?.permissions.includes("issue.delete") || perms.data?.role === "admin";
   const options = useQuery({ queryKey: ["form-options", ws, projectKey], queryFn: () => api.get<Options>(`${base}/form-options`), enabled: !!perms.data && !perms.data.guestViewer });
   const views = useQuery({ queryKey: ["saved-views", ws, projectKey], queryFn: () => api.get<{ items: SavedView[] }>(`${base}/saved-views`) });
+  // ชุดฟิลด์ / Custom field มากับข้อมูลโปรเจกต์ (cache เดียวกับ Drawer)
+  const project = useQuery({ queryKey: queryKeys.project(ws, projectKey), queryFn: () => api.get<ProjectFields>(base), enabled: !!perms.data && !perms.data.guestViewer });
+  const profile = project.data?.fieldProfile ?? DEFAULT_PROFILE;
+  const customFields = project.data?.customFields ?? [];
+  const available = availableColumns(profile, customFields);
+  const chosen = userCols ?? profile.columns;
+  const cols = available.filter((c) => chosen.includes(c));
+  // ตัวกรองของฟิลด์ที่ซ่อนทั้ง Task และ Sub-task ไม่มีประโยชน์ จึงไม่แสดง
+  const usedField = (f: "ba" | "size") => profile.fields[f]?.task !== "hidden" || profile.fields[f]?.subtask !== "hidden";
+  const colLabel = (c: Col) => c.startsWith("cf:") ? (customFields.find((f) => `cf:${f.id}` === c)?.name ?? c) : t(`cols.${c}`);
 
   const params = new URLSearchParams({ view: "table", limit: String(PAGE), sort });
   if (filters.q) params.set("q", filters.q);
@@ -317,7 +340,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
       head.removeEventListener("wheel", wheelHead);
       observer?.disconnect();
     };
-  }, [display.length > 0, hidden, table.data]);
+  }, [display.length > 0, cols.join(), table.data]);
   useEffect(() => {
     if (!reveal || structure) return;
     const index = display.findIndex((row) => reveal.phaseId ? row.kind === "phase" && row.phaseId === reveal.phaseId : row.kind === "module" && row.moduleId === reveal.moduleId);
@@ -390,7 +413,6 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const allSelected = issueRows.length > 0 && issueRows.every((d) => selected.has(d.row.key));
   const filtered = FILTER_KEYS.some((k) => filters[k]);
   const s = data.summary;
-  const cols = OPTIONAL_COLS.filter((c) => !hidden.has(c));
   const span = cols.length + 1;
   const extra = (["status", "priority", "level"] as const).filter((k) => filters[k]).length;
   const activeView = (f: Filters) => JSON.stringify(f) === JSON.stringify(Object.fromEntries(Object.entries(filters).filter(([, x]) => x)));
@@ -414,8 +436,8 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
     toast({ message: t("structure.saved") });
   }
   const groupIds = display.filter((d) => d.kind === "module" || d.kind === "phase").map((d) => d.id);
-  const tableMinW = NAME_MIN_W + cols.reduce((n, c) => n + COL_W[c] + 10, 0);
-  const colgroup = <colgroup><col />{cols.map((c) => <col key={c} style={{ width: COL_W[c] + 10 }} />)}</colgroup>;
+  const tableMinW = NAME_MIN_W + cols.reduce((n, c) => n + colWidth(c) + 10, 0);
+  const colgroup = <colgroup><col />{cols.map((c) => <col key={c} style={{ width: colWidth(c) + 10 }} />)}</colgroup>;
   const stuckModule = ctx.module !== null ? display[ctx.module] : undefined;
   const stuckPhase = ctx.phase !== null ? display[ctx.phase] : undefined;
   const ctxModule = stuckModule?.kind === "module" ? stuckModule : null;
@@ -492,20 +514,20 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
               {GROUPS.map((g) => <option key={g} value={g}>{t(`groups.${g}`)}</option>)}
             </select>
           </label>
-          <select className={styles.tbtn} aria-label={t("ba")} value={filters.ba ?? ""} onChange={(e) => set("ba", e.target.value)}>
+          {usedField("ba") && <select className={styles.tbtn} aria-label={t("ba")} value={filters.ba ?? ""} onChange={(e) => set("ba", e.target.value)}>
             <option value="">{t("ba")}: {t("anyone")}</option>
             {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
-          </select>
+          </select>}
           <select className={styles.tbtn} aria-label={t("assignee")} value={filters.assignee ?? ""} onChange={(e) => set("assignee", e.target.value)}>
             <option value="">{t("assignee")}: {t("anyone")}</option>
             <option value="me">{t("me")}</option>
             <option value="none">{t("none")}</option>
             {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
           </select>
-          <select className={styles.tbtn} aria-label={t("size")} value={filters.size ?? ""} onChange={(e) => set("size", e.target.value)}>
+          {usedField("size") && <select className={styles.tbtn} aria-label={t("size")} value={filters.size ?? ""} onChange={(e) => set("size", e.target.value)}>
             <option value="">{t("size")}: {t("allSizes")}</option>
             {SIZES.map((z) => <option key={z} value={z}>{z}</option>)}
-          </select>
+          </select>}
           <label className={styles.tbtn}>{t("sort")}:
             <select className={styles.tsel} aria-label={t("sort")} value={sort} onChange={(e) => setSort(e.target.value as (typeof SORTS)[number])}>
               {SORTS.map((o) => <option key={o} value={o}>{t(`sorts.${o}`)}</option>)}
@@ -514,11 +536,13 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
           <Popover.Root>
             <Popover.Trigger asChild><button type="button" className={styles.tbtn}>{t("columns")}</button></Popover.Trigger>
             <Popover.Content className={`popover ${styles.pop}`} sideOffset={6} align="start">
-              {OPTIONAL_COLS.map((c) => (
+              {available.map((c) => (
                 <label key={c} className={styles.colCheck}>
-                  <input type="checkbox" checked={!hidden.has(c)} onChange={() => setHidden((h) => { const n = new Set(h); if (n.has(c)) n.delete(c); else n.add(c); return n; })} />{t(`cols.${c}`)}
+                  <input type="checkbox" checked={cols.includes(c)} onChange={() => chooseCols(cols.includes(c) ? cols.filter((x) => x !== c) : [...cols, c])} />{colLabel(c)}
                 </label>
               ))}
+              <p className={styles.popHint}>{t("columnsHint")}</p>
+              {userCols && <Button size="small" variant="ghost" onClick={() => chooseCols(null)}>{t("columnsReset")}</Button>}
             </Popover.Content>
           </Popover.Root>
           <label className={styles.tbtn} style={{ cursor: "pointer" }}>
@@ -556,7 +580,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                         {t("cols.name")}
                       </div>
                     </th>
-                    {cols.map((c) => <th key={c}>{t(`cols.${c}`)}</th>)}
+                    {cols.map((c) => <th key={c}>{colLabel(c)}</th>)}
                   </tr>
                 </thead>
               </table>
@@ -632,7 +656,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                 ) : d.kind === "foot" ? (
                   <tr key={d.id} data-i={start + n} className={styles.footRow}><td colSpan={span}><div className={styles.footInner}><span>{t("footTasks", { count: d.count })}</span><span>{t("footMd", { md: d.md })}</span></div></td></tr>
                 ) : (
-                  <IssueRow key={d.row.key} index={start + n} row={d.row} sub={d.sub} cols={cols} ws={ws} projectKey={projectKey} year={year} canEdit={canEdit} statuses={statuses} people={options.data?.members ?? []}
+                  <IssueRow key={d.row.key} index={start + n} row={d.row} sub={d.sub} cols={cols} profile={profile} customFields={customFields} ws={ws} projectKey={projectKey} year={year} canEdit={canEdit} statuses={statuses} people={options.data?.members ?? []}
                     onAddSub={canCreate && !d.sub ? () => setSubFor(d.row.key) : undefined}
                     selected={selected.has(d.row.key)} onSelect={(on) => setSelected((c) => { const n = new Set(c); if (on) n.add(d.row.key); else n.delete(d.row.key); return n; })}
                     onPatch={(body) => patch(d.row, body)} />
@@ -672,8 +696,8 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   );
 }
 
-function IssueRow({ index, row, sub, cols, ws, projectKey, year, canEdit, statuses, people, selected, onSelect, onPatch, onAddSub }: {
-  index: number; row: Row; sub: boolean; cols: Col[]; ws: string; projectKey: string; year: YearFormat; canEdit: boolean;
+function IssueRow({ index, row, sub, cols, profile, customFields, ws, projectKey, year, canEdit, statuses, people, selected, onSelect, onPatch, onAddSub }: {
+  index: number; row: Row; sub: boolean; cols: Col[]; profile: FieldProfile; customFields: CustomFieldDef[]; ws: string; projectKey: string; year: YearFormat; canEdit: boolean;
   statuses: { id: string; name: string; category?: string }[]; people: Person[]; selected: boolean; onSelect: (on: boolean) => void;
   onPatch: (body: Record<string, unknown>) => void; onAddSub?: () => void;
 }) {
@@ -694,10 +718,20 @@ function IssueRow({ index, row, sub, cols, ws, projectKey, year, canEdit, status
   const sizeView = <span style={{ whiteSpace: "nowrap" }}>{row.size ? <span className={`${styles.pill} ${styles.sTodo}`} style={{ fontWeight: 700 }}>{row.size}</span> : empty}{row.estimateMd !== null ? ` ${row.estimateMd}` : ""}</span>;
   const refs = [...(row.requirements ?? []), ...(row.screens ?? [])].join(" · ");
   const remarkView = row.remark ? <span className={styles.remarkText} title={row.remark}>{row.remark}</span> : empty;
-  const cell: Record<Col, React.ReactNode> = {
+  const reviewerView = row.reviewer ? <span className={styles.avs}><Avatar size="small" person={row.reviewer} /></span> : empty;
+  const labelText = (row.labels ?? []).map((l) => l.name).join(", ");
+  const level: Level = sub ? "subtask" : "task";
+  const cell: Record<string, React.ReactNode> = {
     dev: canEdit ? <PeopleCell multiple label={edit(t("cols.dev"))} people={people} value={row.assignees?.map((p) => p.id) ?? []} onChange={(ids) => onPatch({ assigneeIds: ids })}>{devView}</PeopleCell> : devView,
     ba: canEdit ? <PeopleCell label={edit(t("cols.ba"))} people={people} value={row.ba ? [row.ba.id] : []} onChange={(ids) => onPatch({ baId: ids[0] ?? null })}>{baView}</PeopleCell> : baView,
     sa: canEdit ? <PeopleCell label={edit(t("cols.sa"))} people={people} value={row.sa ? [row.sa.id] : []} onChange={(ids) => onPatch({ saId: ids[0] ?? null })}>{saView}</PeopleCell> : saView,
+    reviewer: canEdit ? <PeopleCell label={edit(t("cols.reviewer"))} people={people} value={row.reviewer ? [row.reviewer.id] : []} onChange={(ids) => onPatch({ reviewerId: ids[0] ?? null })}>{reviewerView}</PeopleCell> : reviewerView,
+    priority: canEdit ? (
+      <select className={`${styles.pill} ${styles.pillSelect} ${styles.sTodo}`} aria-label={edit(t("cols.priority"))} value={row.priority} onChange={(e) => onPatch({ priority: e.target.value })}>
+        {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+      </select>
+    ) : <span className={`${styles.pill} ${styles.sTodo}`}>{row.priority}</span>,
+    labels: labelText ? <span className={styles.refs} title={labelText}>{labelText}</span> : empty,
     status: canEdit && statuses.length ? (
       <select className={`${styles.pill} ${styles.pillSelect} ${pillClass(row.status.category, row.status.name)}`} aria-label={edit(t("cols.status"))} value={row.status.id} onChange={(e) => onPatch({ statusId: e.target.value })}>
         {statusOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -717,6 +751,14 @@ function IssueRow({ index, row, sub, cols, ws, projectKey, year, canEdit, status
     progress: <span className={styles.prog}><span><span style={{ width: `${row.progressPct ?? 0}%`, background: (row.progressPct ?? 0) >= 100 ? "var(--success-solid)" : "var(--primary)" }} /></span><span>{row.progressPct ?? 0}%</span></span>,
     remark: canEdit ? <RemarkCell label={edit(t("cols.remark"))} value={row.remark ?? null} onChange={(v) => onPatch({ remark: v })}>{remarkView}</RemarkCell> : remarkView,
   };
+  function customCell(c: Col) {
+    const field = customFields.find((f) => `cf:${f.id}` === c);
+    if (!field) return empty;
+    const value = row.customFields?.[field.id] ?? null;
+    const text = customText(field, value, people, (iso) => formatDate(iso, year));
+    const view = text ? <span className={styles.cfText} title={text}>{text}</span> : empty;
+    return canEdit ? <CustomCell label={edit(field.name)} field={field} value={value} people={people} onChange={(v) => onPatch({ customFields: { [field.id]: v } })}>{view}</CustomCell> : view;
+  }
   return (
     <tr className={`${styles.itemRow}${selected ? ` ${styles.sel}` : ""}`} data-i={index} data-testid={`row-${row.key}`}>
       <td>
@@ -729,7 +771,11 @@ function IssueRow({ index, row, sub, cols, ws, projectKey, year, canEdit, status
           {onAddSub && <button type="button" className={styles.subAddBtn} aria-label={t("cell.addSubtaskTo", { key: row.key })} onClick={onAddSub}><Plus size={13} aria-hidden="true" />Sub-task</button>}
         </div>
       </td>
-      {cols.map((c) => <td key={c}>{cell[c]}</td>)}
+      {cols.map((c) => <td key={c}>{
+        // ฟิลด์ที่ซ่อนในระดับของแถวนี้ (เช่น Size ของ Sub-task) ไม่แสดงค่าและแก้ไม่ได้
+        !columnShowsAt(c, level, profile, customFields) ? <span className={styles.muted} title={t("notUsedAtLevel")}>—</span>
+          : c.startsWith("cf:") ? customCell(c) : cell[c]
+      }</td>)}
     </tr>
   );
 }

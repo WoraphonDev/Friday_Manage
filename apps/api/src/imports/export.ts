@@ -3,6 +3,8 @@ import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
 import { today } from '../common/dates.js';
 import { addTimelineSheet, type TimelineInput, type TimelineRow } from './timeline-sheet.js';
+import type { ProfileField, ResolvedProfile } from '../projects/field-profile.js';
+import { type CustomFieldDef, displayValue, readCustomValues } from '../issues/custom-values.js';
 
 const s = schema;
 
@@ -34,8 +36,14 @@ export const EXPORT_HEADERS = [
   'Description',
   'Remark',
 ] as const;
-const COL = Object.fromEntries(EXPORT_HEADERS.map((h, i) => [h, i + 1])) as Record<(typeof EXPORT_HEADERS)[number], number>;
+type Header = (typeof EXPORT_HEADERS)[number];
 const WIDTH = [10, 11, 22, 18, 44, 13, 10, 18, 18, 24, 18, 7, 9, 12, 12, 12, 12, 18, 16, 16, 40, 32];
+const WIDTH_OF = Object.fromEntries(EXPORT_HEADERS.map((h, i) => [h, WIDTH[i]])) as Record<Header, number>;
+/** คอลัมน์ที่ขึ้นกับชุดฟิลด์ของโปรเจกต์ · ฟิลด์ที่ซ่อนทั้ง Task และ Sub-task ไม่ส่งออก (นำเข้ากลับแล้วไม่แตะค่าเดิม) */
+const HEADER_FIELD: Partial<Record<Header, ProfileField>> = {
+  Priority: 'priority', 'Business Analyst': 'ba', 'System Analyst': 'sa', 'QA / Reviewer': 'reviewer', Size: 'size',
+  'Actual Start': 'actual', 'Actual End': 'actual', Requirement: 'requirements', Screen: 'screens', Label: 'labels', Remark: 'remark',
+};
 
 const PRIORITY_LABEL = { urgent: 'Urgent', high: 'High', medium: 'Medium', low: 'Low' } as const;
 const SIZES = ['XS', 'S', 'M', 'L', 'XL'];
@@ -46,6 +54,8 @@ const MAX_ROWS = 2000;
 const asDate = (d: string | null) => (d ? new Date(`${d}T00:00:00Z`) : null);
 
 interface SheetData {
+  /** หัวคอลัมน์ตามลำดับ (มาตรฐานที่แสดง + Custom field) */
+  headers?: string[];
   rows: (string | number | Date | null)[][];
   /** แถวที่เป็น Sub-task (index ใน rows) แสดงย่อหน้าชื่องาน */
   subRows: Set<number>;
@@ -61,8 +71,18 @@ interface SheetData {
 export async function buildPlanXlsx(
   tx: Tx,
   project: { id: string; key: string; name: string; startDate: string; goliveDate: string; workspaceId: string; holidayCalendarId: string | null },
-  options: { scale?: 'day' | 'week'; today?: string } = {},
+  options: { scale?: 'day' | 'week'; today?: string; profile?: ResolvedProfile; customFields?: CustomFieldDef[] } = {},
 ): Promise<Buffer> {
+  const shown = (h: Header) => {
+    const f = HEADER_FIELD[h];
+    const rule = f ? options.profile?.fields[f] : undefined;
+    return !rule || rule.task !== 'hidden' || rule.subtask !== 'hidden';
+  };
+  const standard = EXPORT_HEADERS.filter(shown);
+  // Custom field ที่ซ่อนทั้งสองระดับไม่ส่งออก · ชื่อชนกับคอลัมน์มาตรฐานต่อท้าย (Custom)
+  const customs = (options.customFields ?? []).filter((f) => f.taskMode !== 'hidden' || f.subtaskMode !== 'hidden');
+  const taken = new Set(EXPORT_HEADERS.map((h) => h.toLowerCase()));
+  const customHeaders = customs.map((f) => (taken.has(f.name.toLowerCase()) ? `${f.name} (Custom)` : f.name));
   const [taskType] = await tx.select({ id: s.issueTypes.id, workflowId: s.issueTypes.workflowId }).from(s.issueTypes).where(and(eq(s.issueTypes.projectId, project.id), eq(s.issueTypes.name, 'Task')));
   const issues = await tx
     .select()
@@ -100,13 +120,22 @@ export async function buildPlanXlsx(
   const kids = group(issues.filter((i) => i.parentId && byId.has(i.parentId)).map((i) => ({ issueId: i.parentId!, id: i.id })), (r) => r.id);
   const ordered = tops.flatMap((t) => [t, ...(kids.get(t.id) ?? []).map((id) => byId.get(id)!)]);
 
+  const customOf = await readCustomValues(tx, ids);
+  const userText = (v: unknown) => (typeof v === 'string' ? (userName.get(v) ?? v) : v);
+  const cell = (f: CustomFieldDef, v: unknown): string | number | Date | null => {
+    const shownValue = f.fieldType === 'user' ? userText(v) : displayValue(f, v);
+    if (shownValue === null || shownValue === undefined) return null;
+    if (f.fieldType === 'date') return asDate(String(shownValue));
+    if (Array.isArray(shownValue)) return shownValue.join(', ');
+    return typeof shownValue === 'number' ? shownValue : String(shownValue);
+  };
   const rows: SheetData['rows'] = [];
   const subRows = new Set<number>();
   for (const i of ordered) {
     const parent = i.parentId ? byId.get(i.parentId) : undefined;
     const details = (i.details ?? {}) as { requirementText?: string };
     if (parent) subRows.add(rows.length);
-    rows.push([
+    const full: (string | number | Date | null)[] = [
       `${project.key}-${i.number}`,
       parent ? `${project.key}-${parent.number}` : null,
       i.moduleId ? (moduleName.get(i.moduleId) ?? null) : null,
@@ -129,7 +158,9 @@ export async function buildPlanXlsx(
       join(lblsOf.get(i.id)),
       i.description,
       i.remark,
-    ]);
+    ];
+    const values = customOf.get(i.id) ?? {};
+    rows.push([...EXPORT_HEADERS.flatMap((h, n) => (shown(h) ? [full[n]] : [])), ...customs.map((f) => cell(f, values[f.id] ?? null))]);
   }
 
   const [ws0] = await tx.select({ cal: s.workspaceSettings.holidayCalendarId }).from(s.workspaceSettings).where(eq(s.workspaceSettings.workspaceId, project.workspaceId));
@@ -153,7 +184,7 @@ export async function buildPlanXlsx(
     timelineRows.push({ kind: 'module', name: m.name, start: startsM[0] ?? null, end: endsM.at(-1) ?? null }, ...inModule.map(taskRow));
   }
   return render({
-    rows, subRows, statuses: sts.map((x) => x.name), modules: mods.map((m) => m.name), people: await memberNames(tx), holidays,
+    headers: [...standard, ...customHeaders], rows, subRows, statuses: sts.map((x) => x.name), modules: mods.map((m) => m.name), people: await memberNames(tx), holidays,
     timeline: { projectName: project.name, today: options.today ?? today(), from: project.startDate, to: project.goliveDate, scale: options.scale ?? 'day', holidays: new Set(holidays.map((h) => h.date)), rows: timelineRows },
   });
 }
@@ -180,12 +211,15 @@ const KEY_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { a
 const SUB_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
 
 async function render(d: SheetData): Promise<Buffer> {
+  const headers = d.headers ?? [...EXPORT_HEADERS];
+  // คอลัมน์ที่ไม่ได้ส่งออกได้เลข 0 · ใช้กับการจัดรูปแบบที่ข้ามคอลัมน์ที่ไม่มี
+  const COL = Object.fromEntries(EXPORT_HEADERS.map((h) => [h, headers.indexOf(h) + 1])) as Record<Header, number>;
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Tasks', { views: [{ state: 'frozen', xSplit: COL.Title, ySplit: 1 }] });
-  const head = ws.addRow([...EXPORT_HEADERS]);
+  const head = ws.addRow(headers);
   head.font = { bold: true, color: { argb: 'FFFFFFFF' } };
   head.eachCell((c) => (c.fill = HEAD_FILL));
-  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: EXPORT_HEADERS.length } };
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
   d.rows.forEach((r, i) => {
     const row = ws.addRow(r);
     row.getCell(COL.Key).fill = KEY_FILL;
@@ -194,8 +228,8 @@ async function render(d: SheetData): Promise<Buffer> {
       row.getCell(COL['Parent Key']).fill = SUB_FILL;
     }
   });
-  for (const c of [COL['Plan Start'], COL['Plan End'], COL['Actual Start'], COL['Actual End']]) ws.getColumn(c).numFmt = 'yyyy-mm-dd';
-  ws.columns.forEach((c, n) => (c.width = WIDTH[n]));
+  for (const c of [COL['Plan Start'], COL['Plan End'], COL['Actual Start'], COL['Actual End']]) if (c) ws.getColumn(c).numFmt = 'yyyy-mm-dd';
+  ws.columns.forEach((c, n) => (c.width = WIDTH_OF[headers[n] as Header] ?? 18));
   if (d.timeline) addTimelineSheet(wb, d.timeline);
 
   // ชีตค่าที่ใช้ได้ + รายการเลือกในเซลล์ (พิมพ์ค่าอื่นได้ ระบบตรวจตอนนำเข้า)
@@ -215,7 +249,7 @@ async function render(d: SheetData): Promise<Buffer> {
   const letter = (n: number) => ws.getColumn(n).letter;
   const pick = (col: number, list: number) => {
     const n = lists[list][1].length;
-    if (!n) return;
+    if (!n || !col) return;
     const src = vs.getColumn(list + 1).letter;
     validations.add(`${letter(col)}2:${letter(col)}${MAX_ROWS}`, {
       type: 'list',

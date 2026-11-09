@@ -319,3 +319,7 @@ a.chipSoft:hover { background:var(--subtle); color:var(--foreground); }
 .chipButton { border:0; font:inherit; font-size:11px; cursor:pointer; }
 .chipButton:hover { background:var(--hover); }
 .fileButton { border:1px solid var(--border); background:transparent; font:inherit; color:inherit; text-align:left; cursor:pointer; }
+
+/* ค่า Custom field แบบหลายตัวเลือก (ชุดฟิลด์ของโปรเจกต์) */
+.cfChoices { display:flex; flex-wrap:wrap; gap:4px 12px; }
+.planBox.noActual { grid-template-columns:56px 1fr; }

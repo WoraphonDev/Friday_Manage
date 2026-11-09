@@ -7,6 +7,7 @@ import { AppError, notFound } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { ProjectsService } from '../projects/projects.service.js';
+import { DEFAULT_COLUMNS, FIELD_MODES } from '../projects/field-profile.js';
 import { audit, color, type Context, loadContext, name, nextSort, nonEmpty } from './context.js';
 
 const fieldType = z.enum(['text', 'number', 'select', 'multi_select', 'user', 'date']);
@@ -15,9 +16,11 @@ const choice = z.object({ id: z.string().trim().min(1).max(64).optional(), label
 const options = z.object({ choices: z.array(choice).min(1).max(200) }).strict();
 
 const isSelect = (t: string) => t === 'select' || t === 'multi_select';
-export const CreateCustomFieldBody = z.object({ name, fieldType, options: options.nullish() }).strict()
+/** แสดง / บังคับในระดับ Task และ Sub-task (ชุดฟิลด์ของโปรเจกต์) */
+const fieldMode = z.enum(FIELD_MODES);
+export const CreateCustomFieldBody = z.object({ name, fieldType, options: options.nullish(), taskMode: fieldMode.optional(), subtaskMode: fieldMode.optional() }).strict()
   .refine((v) => isSelect(v.fieldType) === !!v.options, { path: ['options'], message: 'ฟิลด์แบบตัวเลือกต้องมี options.choices · ฟิลด์แบบอื่นไม่ต้องส่ง' });
-export const PatchCustomFieldBody = z.object({ name: name.optional(), fieldType: fieldType.optional(), options: options.nullish() }).strict()
+export const PatchCustomFieldBody = z.object({ name: name.optional(), fieldType: fieldType.optional(), options: options.nullish(), taskMode: fieldMode.optional(), subtaskMode: fieldMode.optional() }).strict()
   .refine((v) => Object.keys(v).length > 0, nonEmpty);
 export const CreateLabelBody = z.object({ name: z.string().trim().min(1).max(60), color: color.nullish() }).strict();
 export const PatchLabelBody = CreateLabelBody.partial().refine((v) => Object.keys(v).length > 0, nonEmpty);
@@ -47,8 +50,12 @@ export class FieldsService {
       assertUniqueName(current, input.name, 'custom_field_exists', 'ฟิลด์');
       const [row] = await tx.insert(s.customFields).values({
         workspaceId: tenant.workspaceId, projectId: project.id, name: input.name, fieldType: input.fieldType,
-        options: withIds(input.options ?? null), sort: nextSort(current),
+        options: withIds(input.options ?? null), taskMode: input.taskMode ?? 'optional', subtaskMode: input.subtaskMode ?? 'optional', sort: nextSort(current),
       }).returning();
+      // ฟิลด์ใหม่ขึ้นเป็นคอลัมน์ท้ายสุดของ Table · ซ่อนเองได้ที่ชุดฟิลด์
+      const profile = (project.fieldProfile ?? {}) as { columns?: string[] };
+      const columns = Array.isArray(profile.columns) ? profile.columns : DEFAULT_COLUMNS;
+      await tx.update(s.projects).set({ fieldProfile: { ...profile, columns: [...columns, `cf:${row.id}`] } }).where(eq(s.projects.id, project.id));
       await audit(tx, auth, tenant, project, 'project.custom_field_created', `เพิ่มฟิลด์ ${row.name}`);
       return fieldDto(row);
     });
@@ -76,7 +83,9 @@ export class FieldsService {
         for (const c of removed) if (await this.choiceUsed(tx, id, c.id)) used.push(c.label);
         if (used.length) throw new AppError(409, 'choice_in_use', `ตัวเลือก ${used.join(', ')} มีงานใช้อยู่`, { choices: used });
       }
-      const [row] = await tx.update(s.customFields).set({ name: input.name ?? field.name, fieldType: nextType, options: nextOptions }).where(eq(s.customFields.id, id)).returning();
+      const [row] = await tx.update(s.customFields)
+        .set({ name: input.name ?? field.name, fieldType: nextType, options: nextOptions, taskMode: input.taskMode ?? field.taskMode, subtaskMode: input.subtaskMode ?? field.subtaskMode })
+        .where(eq(s.customFields.id, id)).returning();
       return fieldDto(row);
     });
   }
@@ -179,7 +188,7 @@ function withIds(o: { choices: { id?: string; label: string; color?: string | nu
 }
 
 function fieldDto(f: Field) {
-  return { id: f.id, name: f.name, fieldType: f.fieldType, options: f.options as Options, sort: f.sort };
+  return { id: f.id, name: f.name, fieldType: f.fieldType, options: f.options as Options, taskMode: f.taskMode, subtaskMode: f.subtaskMode, sort: f.sort };
 }
 
 function labelDto(l: typeof s.labels.$inferSelect) {

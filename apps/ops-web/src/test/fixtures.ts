@@ -4,10 +4,22 @@ import type { Announcement, Flag, Metrics, OpenSession, PaymentRow, Staff, Works
 const future = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString();
 const past = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
 
-export const staff: Record<Staff["role"], Staff> = {
-  admin: { id: "00000000-0000-4000-8000-000000000001", email: "admin@example.com", name: "แอดมินตัวอย่าง", role: "admin" },
-  support: { id: "00000000-0000-4000-8000-000000000002", email: "support@example.com", name: "ซัพพอร์ตตัวอย่าง", role: "support" },
-  finance: { id: "00000000-0000-4000-8000-000000000003", email: "finance@example.com", name: "การเงินตัวอย่าง", role: "finance" },
+const limits = { refundSatang: 1_000_000, creditSatang: 500_000, discountPct: 30, discountCycles: 12, trialDays: 30, trialTimes: 2 };
+/** admin = Owner ทีมเล็กที่ทำทุกงานเอง (แบบ preset ของ ops-api test) */
+export const staff: Record<Staff["role"] | "engineer" | "auditor", Staff> = {
+  admin: { id: "00000000-0000-4000-8000-000000000001", email: "admin@example.com", name: "แอดมินตัวอย่าง", role: "admin", roles: ["owner", "finance", "support", "engineer"], elevated: [], effectiveRoles: ["owner", "finance", "support", "engineer"], department: "ผู้บริหาร", limits },
+  support: { id: "00000000-0000-4000-8000-000000000002", email: "support@example.com", name: "ซัพพอร์ตตัวอย่าง", role: "support", roles: ["support"], elevated: [], effectiveRoles: ["support"], department: "ปฏิบัติการ", limits },
+  finance: { id: "00000000-0000-4000-8000-000000000003", email: "finance@example.com", name: "การเงินตัวอย่าง", role: "finance", roles: ["finance"], elevated: [], effectiveRoles: ["finance"], department: "การเงิน", limits },
+  engineer: { id: "00000000-0000-4000-8000-000000000004", email: "eng@example.com", name: "วิศวกรตัวอย่าง", role: "support", roles: ["engineer"], elevated: [], effectiveRoles: ["engineer"], department: "เทคโนโลยี", limits },
+  auditor: { id: "00000000-0000-4000-8000-000000000005", email: "audit@office.example.com", name: "ผู้ตรวจตัวอย่าง", role: "support", roles: ["auditor"], elevated: [], effectiveRoles: ["auditor"], department: "ภายนอก", limits },
+};
+
+/** ops/overview (O06) */
+export const overview = {
+  month: "2026-11",
+  money: { mrr: 18_450_000, arr: 221_400_000, payingWorkspaces: 7, arpa: 2_635_714, movement: {}, netNewMrr: 0, churn: { logoPct: 0, revenuePct: 0, paymentFailures: 0 }, nrrPct: null },
+  trialing: 3,
+  tasks: { paymentExceptions: 7, slipsToReview: 1, approvals: 2, ticketsBreached: 0, ticketsUnassigned: 6, incidentsOpen: 3, invoicesOverdue: 0, trialEndingSoon: 0, privacyDueSoon: 2, breachesOpen: 0 },
 };
 
 export const metrics: Metrics = {

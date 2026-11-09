@@ -51,6 +51,19 @@ describe("Login ด้วย Security key", () => {
     expect(router.replace).not.toHaveBeenCalled();
   });
 
+  it("พนักงานที่ลงทะเบียนกุญแจไม่ครบ 2 อัน (S2): บอกให้เปิดลิงก์เชิญอีกครั้ง", async () => {
+    server.use(
+      http.post(`${OPS}/auth/login/options`, () => HttpResponse.json({ options: loginOptions, challengeToken: "t" })),
+      http.post(`${OPS}/auth/login/verify`, () => opsError(403, "enrollment_incomplete", "ลงทะเบียนกุญแจยังไม่ครบ")),
+    );
+    vi.mocked(startAuthentication).mockResolvedValue(assertion as never);
+    renderWithProviders(<LoginForm />);
+    expect(screen.getByText(/ไม่มีรหัสผ่านและไม่มี "จำฉันไว้"/)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("อีเมลพนักงาน"), "new@example.com");
+    await userEvent.click(screen.getByRole("button", { name: "เข้าสู่ระบบด้วย Security key" }));
+    expect(await screen.findByText(/ยังลงทะเบียนกุญแจไม่ครบ 2 อัน/)).toBeInTheDocument();
+  });
+
   it("ผู้ใช้กดยกเลิกที่ key: บอกให้ลองใหม่ ไม่ส่ง verify", async () => {
     const verify = vi.fn();
     server.use(
@@ -99,9 +112,11 @@ describe("ลงทะเบียน Security key", () => {
       }),
       http.post(`${OPS}/auth/register/verify`, async ({ request }) => {
         verifyBody = await request.json();
-        return HttpResponse.json({ registered: true, credentialId: "cred-new", keys: 1 });
+        keys += 1;
+        return HttpResponse.json({ registered: true, credentialId: `cred-${keys}`, keys });
       }),
     );
+    let keys = 0;
     vi.mocked(startRegistration).mockResolvedValue(attestation as never);
     renderWithProviders(<EnrollPage token="sample-enroll-token-123" />);
     expect(screen.getByLabelText("โทเค็นลงทะเบียน")).toHaveValue("sample-enroll-token-123");
@@ -112,6 +127,13 @@ describe("ลงทะเบียน Security key", () => {
     expect(optionsBody).toEqual({ enrollToken: "sample-enroll-token-123", name: "YubiKey หลัก" });
     expect(startRegistration).toHaveBeenCalledWith({ optionsJSON: regOptions });
     expect(verifyBody).toEqual({ challengeToken: "signed-reg-token", response: attestation, name: "YubiKey หลัก" });
+    // S2: ต้องมีกุญแจ 2 อันก่อนใช้งาน · อันที่สองใช้โทเค็นเดิม
+    expect(screen.queryByRole("link", { name: "ไปหน้าเข้าสู่ระบบ" })).not.toBeInTheDocument();
+    await userEvent.clear(screen.getByLabelText("ชื่อ key"));
+    await userEvent.type(screen.getByLabelText("ชื่อ key"), "YubiKey สำรอง");
+    await userEvent.click(screen.getByRole("button", { name: "ลงทะเบียนกุญแจอันที่สอง" }));
+    expect(await screen.findByText("ลงทะเบียนครบ 2 อันแล้ว · เข้าสู่ระบบได้เลย")).toBeInTheDocument();
+    expect(optionsBody).toEqual({ enrollToken: "sample-enroll-token-123", name: "YubiKey สำรอง" });
     expect(screen.getByRole("link", { name: "ไปหน้าเข้าสู่ระบบ" })).toHaveAttribute("href", "/login");
   });
 

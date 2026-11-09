@@ -7,6 +7,8 @@ import "@fontsource/ibm-plex-sans-thai/500.css";
 import "@fontsource/ibm-plex-sans-thai/600.css";
 import "@fontsource/ibm-plex-sans-thai/700.css";
 import "@/styles/globals.css";
+import "@/components/styles/tokens.css";
+import "@/components/styles/ops.css";
 
 export const metadata: Metadata = {
   title: messages.ops.app.name,

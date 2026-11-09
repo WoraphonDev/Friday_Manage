@@ -1,11 +1,29 @@
 // รูปแบบ response จริงของ apps/ops-api (ดู src/**/*.service.ts) · วันที่มาเป็น ISO string · เงินเป็นสตางค์
 
+/** บทบาทแบบเดิม (ops-api ยังส่ง `role` ให้หน้าเดิมจนกว่า O11–O15 จะย้ายไปใช้ `roles`) */
 export type StaffRole = "admin" | "support" | "finance";
+/** บทบาทของทีม Friday (06-ops-roles) · 1 คนมีได้หลายบทบาท */
+export type OpsRole = "owner" | "finance" | "support" | "engineer" | "auditor";
+export const OPS_ROLES: OpsRole[] = ["owner", "finance", "support", "engineer", "auditor"];
+export interface Limits {
+  refundSatang: number;
+  creditSatang: number;
+  discountPct: number;
+  discountCycles: number;
+  trialDays: number;
+  trialTimes: number;
+}
 export interface Staff {
   id: string;
   email: string;
   name: string;
   role: StaffRole;
+  roles?: OpsRole[];
+  /** บทบาทที่เปิดชั่วคราวด้วยสิทธิ์ฉุกเฉิน */
+  elevated?: OpsRole[];
+  effectiveRoles?: OpsRole[];
+  department?: string | null;
+  limits?: Limits;
 }
 
 export interface Metrics {

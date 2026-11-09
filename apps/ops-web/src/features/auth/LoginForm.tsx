@@ -8,12 +8,14 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Button, InlineError, Input } from "@/components/ui";
+import { ApiError } from "@/lib/api";
 import { keys } from "@/lib/query";
 import { keyErrorKind, loginWithKey } from "./webauthn";
 
 export function LoginForm() {
   const t = useTranslations("ops.auth");
   const tApp = useTranslations("ops.app");
+  const tc = useTranslations("common.auth");
   const router = useRouter();
   const cache = useQueryClient();
   const [email, setEmail] = useState("");
@@ -42,11 +44,13 @@ export function LoginForm() {
           login.mutate();
         }}
       >
-        <div className="brand brand-light">
-          <span className="brand-mark">F</span>
+        <div className="auth-brand">
+          <span className="ops-brand-mark" aria-hidden="true">
+            F
+          </span>
           <div>
             <b>{tApp("name")}</b>
-            <div className="muted small">{tApp("tagline")}</div>
+            <div className="muted small">{tc("audited")}</div>
           </div>
         </div>
         <div>
@@ -63,6 +67,10 @@ export function LoginForm() {
           <div className="inline-error" role="alert">
             {t(kind)}
           </div>
+        ) : login.error instanceof ApiError && login.error.code === "enrollment_incomplete" ? (
+          <div className="inline-error" role="alert">
+            {tc("incomplete")}
+          </div>
         ) : (
           <InlineError error={login.error} />
         )}
@@ -70,6 +78,8 @@ export function LoginForm() {
           <KeyRound size={16} />
           {login.isPending ? t("waiting") : t("login")}
         </Button>
+        <p className="muted small">{tc("noPassword")}</p>
+        <p className="muted small">{tc("lostKey")}</p>
         <Link href="/enroll" className="small">
           {t("haveToken")}
         </Link>

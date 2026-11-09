@@ -73,7 +73,7 @@ Workspace เลือกปฏิทินหลัก + เพิ่มวั�
 | `project_key_alias` | Key เดิมหลังเปลี่ยน Key · ใช้ redirect ลิงก์เก่า | project_id, old_key | L2 |
 | `project_scope_item` | In-scope, Out-of-scope, Deliverables, Acceptance criteria, สมมติฐาน | project_id, kind, text, sort | A, 1 |
 | `project_holiday` | วันหยุดเฉพาะโปรเจกต์ | project_id, date, name | A, L2 |
-| `project_member` | สมาชิกในโปรเจกต์ | project_id, user_id, role (admin · member · viewer), position (PM · UX/UI · Frontend · Backend · QA · BA), capacity_hours_week (เฉพาะชั่วโมงที่ให้โปรเจกต์นี้), joined_at | A, 7 |
+| `project_member` | สมาชิกในโปรเจกต์ | project_id, user_id, role (admin · member · viewer), position (PM · UX/UI · Frontend · Backend · QA · BA), capacity_hours_week (เฉพาะชั่วโมงที่ให้โปรเจกต์นี้), pm_deputy (ทำแทน PM: รับแจ้งเตือนแบบ PM และอนุมัติคำขอเลื่อน Due · 9 พ.ย. 2569), joined_at | A, 7 |
 | `project_role_permission` | ตารางสิทธิ์ที่ปรับได้รายโปรเจกต์ (เก็บเฉพาะค่าที่ต่างจากค่าเริ่มต้น) | project_id, role (member · viewer), permission (เช่น `issue.change_due_directly`), allowed | L2 |
 | `module` | Module ในโปรเจกต์ | project_id, name, color, owner_user_id (Dev หลัก), sort | A, L2, 2 |
 | `phase` | **กลุ่ม (Group) ใน Module ไม่บังคับ** · Module → กลุ่ม → Task → Sub-task · Sub-task อยู่กลุ่มเดียวกับ Task แม่ (ย้าย Task แล้ว Sub-task ตาม) · ในหน้าจอเรียกว่า "กลุ่ม" (ผู้ใช้ขอ 8 พ.ย. 2569) |

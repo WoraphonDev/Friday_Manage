@@ -189,9 +189,40 @@ describe('Module และกลุ่มงาน', () => {
     expect(seen.filter((e) => e.event.type === 'issue.updated').map((e) => e.event.issueId).sort()).toEqual([task.id, sub.id].sort());
     expect(seen.every((e) => e.committed)).toBe(true);
   });
+  it('ลบ Module เลือกกลุ่มงานปลายทางได้ · กลุ่มงานต้องอยู่ใน Module ปลายทาง', async () => {
+    const from = (await team.lead.post(p('/modules'), { name: 'Payment' })).body;
+    const to = team.project.modules[0].id;
+    const oldPhase = (await team.lead.post(p(`/modules/${from.id}/phases`), { name: 'กลุ่มเดิม' })).body;
+    const target = (await team.lead.post(p(`/modules/${to}/phases`), { name: 'กลุ่มปลายทาง' })).body;
+    const elsewhere = (await team.lead.post(p(`/modules/${team.project.modules[1].id}/phases`), { name: 'กลุ่มของ Module อื่น' })).body;
+    const task = await createIssue({ moduleId: from.id, phaseId: oldPhase.id });
+    const plain = await createIssue({ moduleId: from.id });
+
+    expect((await team.lead.delete(p(`/modules/${from.id}`), { moveTo: to, moveToPhase: elsewhere.id })).status).toBe(404);
+    const r = await team.lead.delete(p(`/modules/${from.id}`), { moveTo: to, moveToPhase: target.id });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ movedIssues: 2, moveTo: to, moveToPhase: target.id });
+    const { rows } = await t.owner.query(`SELECT module_id, phase_id FROM issues WHERE id = ANY($1)`, [[task.id, plain.id]]);
+    expect(rows.every((x) => x.module_id === to && x.phase_id === target.id)).toBe(true);
+    const acts = await t.owner.query(`SELECT issue_id, old_value, new_value FROM activities WHERE verb = 'updated' AND field = 'phaseId' AND issue_id = ANY($1)`, [[task.id, plain.id]]);
+    expect(acts.rows).toHaveLength(2);
+  });
 });
 
 describe('Milestone', () => {
+  it('% ถ่วงด้วย Man-Day ไม่ขึ้นกับ progress_method · Task ที่มี Sub-task ใช้ MD ของ Sub-task', async () => {
+    const ms = (await team.lead.post(p('/milestones'), { name: 'ถ่วง MD', date: '2027-04-01' })).body;
+    const big = await createIssue({ title: 'งานใหญ่ 8 MD', estimateMd: 8 });
+    const small = await createIssue({ title: 'งานเล็ก 2 MD เสร็จแล้ว', estimateMd: 2, statusId: statusId('Done') });
+    const parent = await createIssue({ title: 'Task มี Sub-task' });
+    await createIssue({ parentKey: parent.key, estimateMd: 5, statusId: statusId('Done') });
+    await createIssue({ parentKey: parent.key, estimateMd: 5 });
+    await team.lead.post(p(`/milestones/${ms.id}/issues`), { keys: [big.key, small.key, parent.key] });
+    const row = (await team.lead.get(p('/milestones'))).body.items.find((m: { id: string }) => m.id === ms.id);
+    // (0×8 + 100×2 + 50×10) ÷ 20 = 35 · นับจำนวนงานจะได้ 33
+    expect(row).toMatchObject({ issueCount: 3, doneCount: 1, progressPct: 35 });
+  });
+
   it('CRUD และผูกงานเพื่อคิด % · Guest ที่เป็น Viewer ไม่เห็น Bug', async () => {
     const created = await team.lead.post(p('/milestones'), { name: 'Drawdown UAT', date: '2027-03-01', moduleId: team.project.modules[1].id });
     expect(created.status).toBe(201);

@@ -386,7 +386,9 @@
     "screenInvalid": "ใช้รูปแบบ SCR-203",
     "chooseLabel": "เลือก Label",
     "noLabels": "ยังไม่มี Label · เพิ่มได้ใน Settings",
-    "newCodeHint": "รหัสที่ยังไม่มี ระบบสร้างให้"
+    "newCodeHint": "รหัสที่ยังไม่มี ระบบสร้างให้",
+    "open_requirement": "ดู {code} ใน Reports › Traceability",
+    "open_screen": "ค้นไฟล์ {code} ใน Files"
   },
   "pickIssue": "เลือกงาน",
   "searchIssue": "ค้นหารหัสหรือชื่องาน เช่น DEMO-7",

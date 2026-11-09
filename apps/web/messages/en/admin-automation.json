@@ -242,7 +242,12 @@
       "over": "{n, plural, one {Over capacity for {n} week} other {Over capacity for {n} weeks}}",
       "within": "Within capacity",
       "alloc": "Allocated to projects {a} / {c} hrs",
-      "hint": "Includes every project in the Workspace · Red border = over capacity · Man-Days of tasks with multiple Devs are split equally · \"Allocated to projects\" = the hours entered in each project added up, compared with the person's total time. If it's over, it turns red and the Admin is notified"
+      "hint": "Includes every project in the Workspace · Red border = over capacity · Man-Days of tasks with multiple Devs are split equally · \"Allocated to projects\" = the hours entered in each project added up, compared with the person's total time. If it's over, it turns red and the Admin is notified",
+      "basisLabel": "Basis",
+      "basis_plan": "Planned",
+      "basis_actual": "Actual",
+      "compare": "Actual {actual} / plan {plan} MD ({pct}%)",
+      "compareHint": "Totals in this range: work actually done compared with the plan"
     },
     "security": {
       "ssoTitle": "Single Sign-On (SSO)",

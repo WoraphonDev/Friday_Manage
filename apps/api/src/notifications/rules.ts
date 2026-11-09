@@ -45,11 +45,14 @@ export const REASONS = {
   owner: 'คุณรับผิดชอบงานนี้',
   projectMember: 'คุณเป็นสมาชิกโปรเจกต์นี้',
   pm: 'คุณเป็น PM (Project Owner) ของโปรเจกต์นี้',
+  pmAdmin: 'คุณเป็น Admin ของโปรเจกต์นี้',
+  pmDeputy: 'คุณได้รับมอบหมายให้ทำแทน PM ในโปรเจกต์นี้',
   addedToProject: 'คุณถูกเพิ่มเข้าโปรเจกต์นี้',
   importer: 'คุณเป็นผู้นำเข้าไฟล์นี้',
   dueSoon: 'งานของคุณใกล้ครบกำหนด · ตั้งเวลาเตือนได้ที่ Profile › การแจ้งเตือน',
   overdue: 'งานของคุณเลยกำหนดแล้ว',
-  overdueSummary: 'สรุปงานเลยกำหนดของโปรเจกต์ที่คุณเป็น PM (วันทำการ 09:30)',
+  overdueRepeat: 'งานของคุณยังเลยกำหนด · แจ้งทุกวันทำการจนกว่างานจะเสร็จหรือเลื่อน Due',
+  overdueSummary: 'สรุปงานเลยกำหนดของโปรเจกต์ที่คุณดูแล (วันทำการ 09:30)',
   digest: 'สรุปรายวันที่คุณเปิดไว้ใน Profile',
 } as const;
 
@@ -67,3 +70,41 @@ export const SCHEDULES = {
   overdueSummary: '30 9 * * *',
   digest: '30 8 * * *',
 } as const;
+
+/**
+ * "ทำไมฉันได้รับแจ้ง" ภาษาอังกฤษสำหรับ Email / LINE ของผู้ใช้ที่เลือกภาษาอังกฤษ (W21)
+ * แถวแจ้งเตือนเก็บเหตุผลเป็นข้อความไทย จึงแปลตอนส่ง · ข้อความที่ไม่มีในนี้ส่งตามเดิม
+ */
+const REASONS_EN: Record<string, string> = {
+  [REASONS.assignee]: 'you are assigned to this task',
+  [REASONS.unassigned]: 'you were removed from this task',
+  [REASONS.watcher]: 'you watch this task',
+  [REASONS.parentAssignee]: 'you own the parent task of this sub-task',
+  [REASONS.reviewer]: 'you are the reviewer of this task',
+  [REASONS.mentioned]: 'someone @mentioned you in a comment',
+  [REASONS.bugAssignee]: 'you own this bug',
+  [REASONS.ba]: 'you are the BA of this task',
+  [REASONS.owner]: 'you own this task',
+  [REASONS.projectMember]: 'you are a member of this project',
+  [REASONS.pm]: 'you are the PM (Project Owner) of this project',
+  [REASONS.pmAdmin]: 'you are an Admin of this project',
+  [REASONS.pmDeputy]: 'you act for the PM in this project',
+  [REASONS.addedToProject]: 'you were added to this project',
+  [REASONS.importer]: 'you imported this file',
+  [REASONS.dueSoon]: 'your task is due soon · change the reminder in Profile › Notifications',
+  [REASONS.overdue]: 'your task is overdue',
+  [REASONS.overdueRepeat]: 'your task is still overdue · sent every working day until it is done or the due date moves',
+  [REASONS.overdueSummary]: 'overdue summary for a project you look after (working days 09:30)',
+  [REASONS.digest]: 'you turned on the daily summary in Profile',
+  'คุณเป็นผู้อนุมัติ (Project Owner)': 'you approve due date requests (Project Owner)',
+  'คุณเป็นผู้อนุมัติคำขอเลื่อน Due ของโปรเจกต์นี้': 'you approve due date requests in this project',
+  'คุณเป็นผู้ขอเลื่อน Due': 'you asked to move the due date',
+  'คุณเป็น Project Owner': 'you are the Project Owner',
+  'คุณได้รับโอนเป็น Project Owner': 'you became the Project Owner',
+  'คุณเป็นผู้เชิญ': 'you sent the invitation',
+  'คุณอยู่ในรายชื่อผู้รับรายงานรายสัปดาห์ของโปรเจกต์นี้': 'you receive the weekly report of this project',
+  'คุณมอบหมายงาน หรือเป็น PM ของงานที่ผู้ลารับผิดชอบอยู่': 'you assigned work to, or are the PM of, someone taking leave',
+  'มีเหตุการณ์ที่เกี่ยวข้องกับคุณ': 'something related to you happened',
+};
+
+export const reasonIn = (locale: 'th' | 'en', why: string) => (locale === 'en' ? (REASONS_EN[why] ?? why) : why);

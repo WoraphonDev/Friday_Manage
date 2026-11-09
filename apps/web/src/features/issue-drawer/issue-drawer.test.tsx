@@ -105,6 +105,9 @@ describe('Issue drawer details', () => {
     const user=userEvent.setup();mount();await loaded();
     const props=screen.getByRole('complementary',{name:/คุณสมบัติ|Properties/});
     expect(within(props).getByText('FR-06.2')).toBeInTheDocument();expect(within(props).getByText('SCR-107')).toBeInTheDocument();expect(within(props).getByText('backend')).toBeInTheDocument();
+    // Canvas C: FR ลิงก์ไป Reports › Traceability · SCR ลิงก์ไป Files พร้อมค้นรหัส
+    expect(within(props).getByRole('link',{name:'FR-06.2'})).toHaveAttribute('href',expect.stringMatching(/\/p\/DE\/reports\?report=trace&fr=FR-06\.2$/));
+    expect(within(props).getByRole('link',{name:'SCR-107'})).toHaveAttribute('href',expect.stringMatching(/\/p\/DE\/files\?q=SCR-107$/));
     await user.click(within(props).getByRole('button',{name:'ลบ NFR-01'}));
     await waitFor(()=>expect(mutations('/issues/DE-1')[0]).toMatchObject({body:{requirements:['FR-06.2']},etag:'"3"'}));
     await user.click(await within(props).findByRole('button',{name:'+ Label'}));await user.selectOptions(within(props).getByLabelText('เลือก Label'),uid(81));

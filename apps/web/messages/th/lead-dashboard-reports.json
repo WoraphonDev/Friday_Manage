@@ -210,7 +210,10 @@
     "progressOf": "ความคืบหน้า {code}",
     "filteredEmpty": "ไม่มี Requirement ที่ตรงตัวกรอง",
     "noFr": "ไม่มี FR",
-    "assignFr": "ระบุ FR"
+    "assignFr": "ระบุ FR",
+    "onlyCode": "แสดงเฉพาะ {code} (มาจากงาน)",
+    "onlyCodeMissing": "ไม่พบ {code} ในรายการ Requirement ของโปรเจกต์นี้",
+    "showAll": "แสดงทั้งหมด"
   },
   "planTitle": "แผนทั้งโปรเจกต์",
   "planSubtitle": "แผนไหวไหม ความเสี่ยง และ Workload สัปดาห์ข้างหน้า"

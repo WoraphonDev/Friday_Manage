@@ -20,11 +20,15 @@ export interface WorkloadPerson {
   capacityHoursWeek: number;
   cells: WorkloadCell[];
   total: { value: number; capacity: number | null; utilizationPct: number | null; leaveDays: number };
+  /** ยอดรวมในช่วงตามแผนเทียบกับที่ทำจริง (performance) */
+  compare?: { plan: number; actual: number; actualVsPlanPct: number | null };
 }
+export type Basis = "plan" | "actual";
 export interface Workload {
   range: { from: string; to: string };
   unit: Unit;
   group: Group;
+  basis?: Basis;
   hoursPerMd: number;
   buckets: { start: string; end: string }[];
   people: WorkloadPerson[];
@@ -56,6 +60,8 @@ export interface ProjectMember {
   position: string | null;
   capacityHoursWeek: number | null;
   capacityMdWeek: number | null;
+  /** ทำงานแทน PM: รับแจ้งเตือนแบบ PM และอนุมัติคำขอเลื่อน Due */
+  pmDeputy?: boolean;
   openIssues: number;
   overdueIssues: number;
   openMd: number;

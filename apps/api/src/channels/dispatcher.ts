@@ -7,7 +7,8 @@ import { Audience } from '../notifications/audience.js';
 import { Notifier } from '../notifications/notifier.js';
 import { WorkCalendar } from '../projects/calendar.js';
 import { SYSTEM_DB } from '../db/db.module.js';
-import { buildMessage, isCritical, isUrgent, type Msg } from './message.js';
+import { reasonIn } from '../notifications/rules.js';
+import { buildMessage, isCritical, isUrgent, toLocale, type Msg } from './message.js';
 import { nextSendTime, type QuietRule } from './quiet.js';
 import { ChannelRegistry, type ExternalChannel } from './senders.js';
 
@@ -286,14 +287,16 @@ export class ChannelDispatcher implements OnModuleInit {
 
     const [ws] = await this.db.select({ slug: s.workspaces.slug }).from(s.workspaces).where(eq(s.workspaces.id, n.workspaceId));
     const [settings] = await this.db.select({ safeMode: s.workspaceSettings.safeMode }).from(s.workspaceSettings).where(eq(s.workspaceSettings.workspaceId, n.workspaceId));
+    // ช่องทางส่วนตัวใช้ภาษาของผู้รับ (Profile) · ช่องทางกลุ่มคนอ่านหลายคน จึงใช้ภาษาหลักของระบบ (ไทย)
+    const locale = GROUP_CHANNELS.has(d.channel as ExternalChannel) ? 'th' : await this.localeOf(n.recipientId);
     const msg: Msg = buildMessage(
       { eventType: n.eventType, payload: payloadOf(n), projectKey: project?.key, projectName: project?.name },
       // โหมดปลอดภัยเปิดเป็นค่าเริ่มต้น (workspace_settings.safe_mode) · ส่งเฉพาะหัวข้อ + ลิงก์
-      { safe: settings?.safeMode ?? true, webUrl: webUrl(), workspaceSlug: ws?.slug ?? '' },
+      { safe: settings?.safeMode ?? true, webUrl: webUrl(), workspaceSlug: ws?.slug ?? '', locale },
     );
     const attempts = d.attempts + 1;
     try {
-      await sender.send({ workspaceId: n.workspaceId, workspaceSlug: ws?.slug ?? '', recipientId: n.recipientId, targetRef: d.targetRef, msg, why: n.reason ?? 'มีเหตุการณ์ที่เกี่ยวข้องกับคุณ' });
+      await sender.send({ workspaceId: n.workspaceId, workspaceSlug: ws?.slug ?? '', recipientId: n.recipientId, targetRef: d.targetRef, msg, why: reasonIn(locale, n.reason ?? 'มีเหตุการณ์ที่เกี่ยวข้องกับคุณ') });
       await this.db.update(s.notificationDeliveries).set({ status: 'sent', attempts, sentAt: now, lastError: null }).where(eq(s.notificationDeliveries.id, d.id));
       if (d.channel === 'webhook') await this.db.update(s.webhookEndpoints).set({ consecutiveFailures: 0 }).where(eq(s.webhookEndpoints.id, d.targetRef));
     } catch (err) {
@@ -303,6 +306,11 @@ export class ChannelDispatcher implements OnModuleInit {
       if (final && d.channel === 'webhook') await this.pauseWebhook(n.workspaceId, d.targetRef, message);
       throw err;
     }
+  }
+
+  private async localeOf(userId: string) {
+    const [u] = await this.db.select({ locale: s.users.locale }).from(s.users).where(eq(s.users.id, userId));
+    return toLocale(u?.locale);
   }
 
   private async fail(id: string, message: string, final: boolean, attempts?: number) {

@@ -65,3 +65,8 @@
   - A26 / A27: config ของ Automation และการย้ายสถานะอัตโนมัติของ Repository ที่อ้าง id สถานะต้องรับมือเมื่อสถานะถูกลบ (งานนี้จัดการเฉพาะงาน, คอลัมน์บอร์ด และ workflow_rules)
 - คำถามที่ค้าง: % ของ Milestone นับตามจำนวนงาน (ไม่ถ่วง Man-Day) · ลบกลุ่มงานย้ายข้าม Module ไม่ได้ · ลบ Module ล้างกลุ่มงานของงานที่ย้ายแทนการให้เลือกกลุ่มงานปลายทาง · `catalog` ของ Workflow Bug ไม่แสดง `subtasks_done` แม้ fallback ของ A03 เปิดกฎนี้ให้ทุก Workflow
 - ตรวจผ่าน: `pnpm typecheck`, `pnpm test` ทั้ง workspace: DB 105, API 118 (ใหม่ 19 ใน `project-structure.e2e.test.ts`) + 2 skipped ตาม environment เดิม, Web 52 · ทดสอบด้วยฐาน `friday_a05` แยกจากงานอื่น
+
+### คำตัดสินของผู้ใช้ (9 พ.ย. 2569)
+
+- `DELETE p/modules/{id}` รับ `moveToPhase` (กลุ่มงานใน Module ปลายทาง · กลุ่มงานของ Module อื่นได้ 404) · ไม่ส่ง = ไม่ระบุกลุ่มงาน · หน้า Settings › Module มีช่องเลือกกลุ่มงานปลายทาง
+- `progressPct` ของ Milestone ถ่วงด้วย Man-Day (Task ที่มี Sub-task ใช้ MD ของ Sub-task · ไม่มี MD ใช้ค่าเฉลี่ย)

@@ -23,6 +23,19 @@ describe("วันที่และหน่วยงาน", () => {
     expect(formatOverdue("2026-12-01", "2026-12-04")).toBe("เลยกำหนด 3 วัน");
     expect(formatManDay(0.25)).toBe("0.25 MD");
   });
+  it("หน้าภาษาอังกฤษ (html lang=en) แสดงวันที่และข้อความแบบอังกฤษ ตามรูปแบบปีของผู้ใช้", () => {
+    document.documentElement.lang = "en";
+    try {
+      expect(formatDate("2026-12-01", "CE")).toBe("Dec 1, 26");
+      expect(formatDate("2026-12-01", "CE", true)).toBe("Dec 1, 2026");
+      expect(formatDate(null)).toBe("No date set");
+      expect(formatOverdue("2026-12-01", "2026-12-02")).toBe("1 day overdue");
+      expect(formatOverdue("2026-12-01", "2026-12-04")).toBe("3 days overdue");
+      expect(formatOverdue("2026-12-04", "2026-12-04")).toBe("Today");
+    } finally {
+      document.documentElement.lang = "th";
+    }
+  });
   it("returnTo รับเฉพาะ path ภายใน", () => {
     expect(safeReturnTo("/w/sample?issue=DE-1")).toBe("/w/sample?issue=DE-1");
     for (const value of [

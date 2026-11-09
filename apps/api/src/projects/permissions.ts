@@ -59,7 +59,7 @@ export interface ProjectAccess {
 export async function projectAccess(tx: Tx, auth: AuthInfo, tenant: TenantInfo, project: ProjectRef): Promise<ProjectAccess> {
   const isOwner = project.ownerUserId === auth.userId;
   const [m] = await tx
-    .select({ role: projectMembers.role })
+    .select({ role: projectMembers.role, pmDeputy: projectMembers.pmDeputy })
     .from(projectMembers)
     .where(and(eq(projectMembers.projectId, project.id), eq(projectMembers.userId, auth.userId)));
 
@@ -82,6 +82,8 @@ export async function projectAccess(tx: Tx, auth: AuthInfo, tenant: TenantInfo, 
     }
   }
   if (role) FIXED[role].forEach((p) => perms.add(p));
+  // ผู้ทำแทน PM อนุมัติคำขอเลื่อน Due ได้แม้ Role ไม่มีสิทธิ์นี้ · Guest เป็นผู้ทำแทนไม่ได้ (ตรวจตอนตั้งค่า)
+  if (m?.pmDeputy && !isGuest) perms.add('due_request.approve');
 
   // ข้อ 4: เพดานของ Guest ที่ปรับในหน้า L2 ไม่ได้
   const guestViewer = isGuest && role === 'viewer';
@@ -103,7 +105,7 @@ export async function projectAccess(tx: Tx, auth: AuthInfo, tenant: TenantInfo, 
 
 /**
  * ทุกคนในโปรเจกต์ที่มีสิทธิ์ใน L2 แถวนี้ (เช่น ผู้อนุมัติคำขอเลื่อน Due)
- * = Project Owner + Admin + Role ที่ PM เปิดสิทธิ์นี้ให้ · เฉพาะสมาชิก Workspace ที่ active
+ * = Project Owner + Admin + Role ที่ PM เปิดสิทธิ์นี้ให้ (+ ผู้ทำแทน PM สำหรับคำขอเลื่อน Due) · เฉพาะสมาชิก Workspace ที่ active
  */
 export async function usersWithPerm(tx: Tx, project: ProjectRef, permission: keyof typeof L2_PERMISSIONS) {
   const overrides = await tx
@@ -117,14 +119,15 @@ export async function usersWithPerm(tx: Tx, project: ProjectRef, permission: key
   if (ov.get('viewer') ?? viewerDefault) roles.add('viewer');
 
   const rows = await tx
-    .select({ userId: projectMembers.userId, role: projectMembers.role })
+    .select({ userId: projectMembers.userId, role: projectMembers.role, pmDeputy: projectMembers.pmDeputy })
     .from(projectMembers)
     .innerJoin(
       workspaceMembers,
       and(eq(workspaceMembers.workspaceId, projectMembers.workspaceId), eq(workspaceMembers.userId, projectMembers.userId), eq(workspaceMembers.status, 'active')),
     )
     .where(eq(projectMembers.projectId, project.id));
-  const ids = new Set(rows.filter((r) => roles.has(r.role)).map((r) => r.userId));
+  const deputyPerms = new Set<string>(['due_request.approve']);
+  const ids = new Set(rows.filter((r) => roles.has(r.role) || (r.pmDeputy && deputyPerms.has(permission))).map((r) => r.userId));
   ids.add(project.ownerUserId);
   return [...ids];
 }

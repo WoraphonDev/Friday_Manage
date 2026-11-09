@@ -1,5 +1,6 @@
 'use client';
 import { useId, useState } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import type { Named } from './types';
@@ -13,13 +14,15 @@ type Kind = 'requirement' | 'screen';
 const PATTERN: Record<Kind, RegExp> = { requirement: REQUIREMENT_CODE, screen: SCREEN_CODE };
 
 /** ชิปรหัส + ปุ่ม "+ FR / NFR" / "+ Screen" (Canvas B › Requirement, C › Requirement / Screen) */
-export function CodeChips({ kinds, values, suggestions, editable, busy, onChange }: {
+export function CodeChips({ kinds, values, suggestions, editable, busy, onChange, hrefOf }: {
   kinds: Kind[];
   values: Record<Kind, string[]>;
   suggestions?: Partial<Record<Kind, string[]>>;
   editable: boolean;
   busy?: boolean;
   onChange: (kind: Kind, codes: string[]) => void;
+  /** ลิงก์ของรหัส (Canvas C: FR → Reports › Traceability · SCR → Files) · ไม่ส่ง = ข้อความ */
+  hrefOf?: (kind: Kind, code: string) => string | undefined;
 }) {
   const t = useTranslations('issue-drawer.refs');
   const [adding, setAdding] = useState<Kind | null>(null);
@@ -36,7 +39,7 @@ export function CodeChips({ kinds, values, suggestions, editable, busy, onChange
   }
   if (!editable && !chips.length) return <span className="muted">—</span>;
   return <div className={styles.refChips}>
-    {chips.map(({ kind, code }) => <span key={`${kind}-${code}`} className={styles.chipx}>{code}
+    {chips.map(({ kind, code }) => <span key={`${kind}-${code}`} className={styles.chipx}>{hrefOf?.(kind, code) ? <Link className={styles.chipLink} href={hrefOf(kind, code)!} title={t(`open_${kind}`, { code })}>{code}</Link> : code}
       {editable && <button type="button" className={styles.chipxX} disabled={busy} aria-label={t('remove', { code })} onClick={() => onChange(kind, values[kind].filter((value) => value !== code))}><X size={12} aria-hidden="true" /></button>}
     </span>)}
     {editable && (adding ? <span className={styles.refAdd}>

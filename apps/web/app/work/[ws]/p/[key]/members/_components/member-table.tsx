@@ -28,7 +28,7 @@ export function MemberTable({
   /** Man-Day สัปดาห์นี้ต่อคน (จาก Workload) · ไม่มีข้อมูล = แสดง — */
   thisWeek: Map<string, { value: number; capacity: number | null }>;
   onRole: (member: ProjectMember, role: ProjectRole) => Promise<void>;
-  onEdit: (member: ProjectMember, body: { position: string | null; capacityHoursWeek: number | null }) => Promise<void>;
+  onEdit: (member: ProjectMember, body: { position: string | null; capacityHoursWeek: number | null; pmDeputy?: boolean }) => Promise<void>;
   onRemove: (member: ProjectMember, reassignTo: string | null) => Promise<void>;
 }) {
   const t = useTranslations("members-workload.members");
@@ -93,6 +93,7 @@ export function MemberTable({
                 ) : (
                   tr(m.role)
                 )}
+                {m.pmDeputy && m.role !== "admin" && <> <Badge tone="blue">{t("pmDeputyBadge")}</Badge></>}
               </div>
               <div>{m.capacityHoursWeek === null ? <span className={styles.muted}>{t("capacityDefault")}</span> : t("capacity", { hours: m.capacityHoursWeek, md: num.format(m.capacityHoursWeek / HOURS_PER_MD) })}</div>
               <div>{m.openIssues}</div>
@@ -141,13 +142,16 @@ function MemberDialog({
   member: ProjectMember;
   others: ProjectMember[];
   onClose: () => void;
-  onSave: (body: { position: string | null; capacityHoursWeek: number | null }) => Promise<void>;
+  onSave: (body: { position: string | null; capacityHoursWeek: number | null; pmDeputy?: boolean }) => Promise<void>;
   onRemove: (reassignTo: string | null) => Promise<void>;
 }) {
   const t = useTranslations("members-workload.members");
   const tc = useTranslations("common.app");
   const [position, setPosition] = useState(member.position ?? "");
   const [capacity, setCapacity] = useState(member.capacityHoursWeek === null ? "" : String(member.capacityHoursWeek));
+  const [deputy, setDeputy] = useState(!!member.pmDeputy);
+  // Owner / Admin เป็น PM อยู่แล้ว · Guest ทำแทน PM ไม่ได้
+  const canDeputy = !member.isOwner && member.role !== "admin" && !member.isGuest;
   const [to, setTo] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -168,11 +172,20 @@ function MemberDialog({
         className={styles.dialogBody}
         onSubmit={(e) => {
           e.preventDefault();
-          void run(() => onSave({ position: position.trim() || null, capacityHoursWeek: capacity === "" ? null : Number(capacity) }));
+          void run(() => onSave({ position: position.trim() || null, capacityHoursWeek: capacity === "" ? null : Number(capacity), ...(canDeputy ? { pmDeputy: deputy } : {}) }));
         }}
       >
         <Input label={t("position")} value={position} maxLength={60} onChange={(e) => setPosition(e.target.value)} />
         <Input label={t("capacityHours")} type="number" min={0} max={168} value={capacity} hint={t("capacityHint")} onChange={(e) => setCapacity(e.target.value)} />
+        {canDeputy && (
+          <label className={styles.check}>
+            <input type="checkbox" checked={deputy} onChange={(e) => setDeputy(e.target.checked)} />
+            <span>
+              <strong>{t("pmDeputy")}</strong>
+              <span className={cn(styles.muted, styles.small)}>{t("pmDeputyHint")}</span>
+            </span>
+          </label>
+        )}
         <div className={styles.actions}>
           <Button type="submit" variant="primary" disabled={pending}>{pending ? tc("saving") : tc("save")}</Button>
         </div>

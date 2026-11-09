@@ -269,11 +269,13 @@ export function ModulesSection({ ws, projectKey, members }: { ws: string; projec
   const [name, setName] = useState("");
   const [removing, setRemoving] = useState<Module | null>(null);
   const [moveTo, setMoveTo] = useState("");
+  const [moveToPhase, setMoveToPhase] = useState("");
 
   if (isForbidden(modules.error)) return <Forbidden />;
   if (modules.error) return <ErrorState error={modules.error} retry={() => void modules.refetch()} />;
   if (!modules.data) return <LoadingState />;
   const items = modules.data.items;
+  const targetPhases = items.find((x) => x.id === moveTo)?.phases ?? [];
   const people = members.filter((m) => m.active);
 
   async function add() {
@@ -284,7 +286,7 @@ export function ModulesSection({ ws, projectKey, members }: { ws: string; projec
   }
   async function remove() {
     if (!removing) return;
-    const body = removing.issueCount ? { moveTo } : {};
+    const body = removing.issueCount ? { moveTo, ...(moveToPhase ? { moveToPhase } : {}) } : {};
     if (await run(() => api.delete(`${base}/modules/${removing.id}`, { body }), t("removed", { name: removing.name }))) setRemoving(null);
   }
 
@@ -314,7 +316,7 @@ export function ModulesSection({ ws, projectKey, members }: { ws: string; projec
                 {people.map((p) => <option key={p.userId} value={p.userId}>{p.displayName}</option>)}
               </select>
               <span className={`${styles.muted} ${styles.hs}`}>{t("issues", { count: m.issueCount })}</span>
-              <button type="button" className={styles.x} aria-label={t("remove", { name: m.name })} onClick={() => { setRemoving(m); setMoveTo(items.find((x) => x.id !== m.id)?.id ?? ""); }}>×</button>
+              <button type="button" className={styles.x} aria-label={t("remove", { name: m.name })} onClick={() => { setRemoving(m); setMoveTo(items.find((x) => x.id !== m.id)?.id ?? ""); setMoveToPhase(""); }}>×</button>
             </div>
           ))}
         </div>
@@ -338,8 +340,12 @@ export function ModulesSection({ ws, projectKey, members }: { ws: string; projec
           {removing?.issueCount ? (
             <>
               <p className={styles.muted}>{t("removeHasIssues", { count: removing.issueCount })}</p>
-              <Select label={t("moveTo")} value={moveTo} onChange={(e) => setMoveTo(e.target.value)}>
+              <Select label={t("moveTo")} value={moveTo} onChange={(e) => { setMoveTo(e.target.value); setMoveToPhase(""); }}>
                 {items.filter((x) => x.id !== removing.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+              </Select>
+              <Select label={t("moveToPhase")} value={moveToPhase} onChange={(e) => setMoveToPhase(e.target.value)}>
+                <option value="">{t("noPhase")}</option>
+                {targetPhases.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
               </Select>
             </>
           ) : (

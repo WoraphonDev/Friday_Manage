@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button, ErrorState, Forbidden, LoadingState, Select } from "@/components/ui";
@@ -26,6 +27,16 @@ export function Traceability({ ws, projectKey, issueHref }: Props) {
   const t = useTranslations("lead-dashboard-reports");
   const [kind, setKind] = useState<Kind>("all");
   const [result, setResult] = useState<TraceResult | "">("");
+  // ?fr=FR-12 มาจากลิงก์รหัสใน Drawer งาน (Canvas C): แสดงเฉพาะ Requirement นั้น
+  const search = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const only = search.get("fr")?.toUpperCase() ?? "";
+  const clearOnly = () => {
+    const next = new URLSearchParams(search);
+    next.delete("fr");
+    router.replace(next.size ? `${pathname}?${next}` : pathname, { scroll: false });
+  };
   const params = new URLSearchParams();
   if (kind !== "all") params.set("kind", kind);
   if (result) params.set("result", result);
@@ -34,7 +45,8 @@ export function Traceability({ ws, projectKey, issueHref }: Props) {
   if (trace.error instanceof ApiError && trace.error.status === 403) return <Forbidden />;
   if (trace.error) return <ErrorState error={trace.error} retry={() => void trace.refetch()} />;
   if (!trace.data) return <LoadingState />;
-  const { summary, requirements, screens } = trace.data;
+  const { summary, screens } = trace.data;
+  const requirements = only ? trace.data.requirements.filter((r) => r.code.toUpperCase() === only) : trace.data.requirements;
   const noRequirements = summary.requirements.total === 0;
 
   // Screen ของแต่ละ Requirement = Screen ที่มีงานร่วมกัน (API ผูก FR และ Screen กับงานแยกกัน)
@@ -49,6 +61,10 @@ export function Traceability({ ws, projectKey, issueHref }: Props) {
       <b>{t("trace.noFrTitle")}</b>
       <span className={styles.bannerText}>{t("trace.noFrNote")}</span>
       <Link className="button button-secondary" href={`/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/table?io=import`}>{t("trace.importFr")}</Link>
+    </div>}
+    {only && <div className={`${styles.card} ${styles.banner}`} role="status">
+      <span className={styles.bannerText}>{requirements.length ? t("trace.onlyCode", { code: only }) : t("trace.onlyCodeMissing", { code: only })}</span>
+      <Button size="small" onClick={clearOnly}>{t("trace.showAll")}</Button>
     </div>}
     <div className={styles.filters}>
       <div role="group" aria-label={t("trace.kind")} className={styles.filters}>

@@ -6,7 +6,13 @@ export type WebhookFormat = 'json' | 'discord' | 'slack' | 'teams' | 'telegram';
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const hexToInt = (hex: string) => parseInt(hex.replace('#', ''), 16);
 
+const FOOTER = {
+  th: { because: (why: string) => `คุณได้รับอีเมลนี้เพราะ${why}`, settings: 'ตั้งค่าการแจ้งเตือน', open: 'เปิดในแอป' },
+  en: { because: (why: string) => `You received this email because: ${why}`, settings: 'Notification settings', open: 'Open in app' },
+} as const;
+
 export function renderEmail(m: Msg, why: string, settingsUrl: string) {
+  const F = FOOTER[m.locale ?? 'th'];
   const subject = `[Friday] ${m.head}${m.title ? `: ${m.title}` : ''}`;
   const text = [
     `${m.head}: ${m.title}`,
@@ -14,9 +20,9 @@ export function renderEmail(m: Msg, why: string, settingsUrl: string) {
     ...m.rows.map(([k, v]) => `${k}: ${v}`),
     m.note ? `“${m.note}”` : '',
     '',
-    `${m.buttons[0]?.label ?? 'เปิดในแอป'}: ${m.url}`,
+    `${m.buttons[0]?.label ?? F.open}: ${m.url}`,
     '',
-    `คุณได้รับอีเมลนี้เพราะ${why} · ตั้งค่าการแจ้งเตือน: ${settingsUrl}`,
+    `${F.because(why)} · ${F.settings}: ${settingsUrl}`,
   ]
     .filter((l, i, a) => l !== '' || a[i - 1] !== '')
     .join('\n');
@@ -26,8 +32,8 @@ export function renderEmail(m: Msg, why: string, settingsUrl: string) {
 <div style="color:#5F6873">${esc(m.project)}</div>
 ${m.rows.map(([k, v]) => `<div><b>${esc(k)}</b> ${esc(v)}</div>`).join('')}
 ${m.note ? `<blockquote>${esc(m.note)}</blockquote>` : ''}
-<p><a href="${esc(m.url)}" style="background:#1D4ED8;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">${esc(m.buttons[0]?.label ?? 'เปิดในแอป')}</a></p>
-<p style="color:#5F6873;font-size:12px">คุณได้รับอีเมลนี้เพราะ${esc(why)} · <a href="${esc(settingsUrl)}">ตั้งค่าการแจ้งเตือน</a></p>
+<p><a href="${esc(m.url)}" style="background:#1D4ED8;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">${esc(m.buttons[0]?.label ?? F.open)}</a></p>
+<p style="color:#5F6873;font-size:12px">${esc(F.because(why))} · <a href="${esc(settingsUrl)}">${esc(F.settings)}</a></p>
 </div></div>`;
   return { subject, text, html };
 }

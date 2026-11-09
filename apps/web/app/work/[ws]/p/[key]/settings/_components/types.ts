@@ -119,6 +119,7 @@ export interface Module {
   color: string | null;
   owner: { id: string; displayName: string } | null;
   issueCount: number;
+  phases?: { id: string; name: string }[];
 }
 export interface DeleteImpact {
   key: string;

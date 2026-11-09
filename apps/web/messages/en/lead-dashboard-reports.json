@@ -210,7 +210,10 @@
     "progressOf": "Progress of {code}",
     "filteredEmpty": "No Requirements match the filter",
     "noFr": "No FR",
-    "assignFr": "Assign FR"
+    "assignFr": "Assign FR",
+    "onlyCode": "Showing only {code} (from a task)",
+    "onlyCodeMissing": "{code} is not in this project's requirements",
+    "showAll": "Show all"
   },
   "planTitle": "Whole-project plan",
   "planSubtitle": "Is the plan feasible, risks, and workload in the weeks ahead"

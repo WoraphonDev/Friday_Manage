@@ -42,6 +42,8 @@ const unitGroup = {
   /** Man-Day · ชั่วโมง (1 MD = 8 ชม.) · จำนวนงาน */
   unit: z.enum(['md', 'hour', 'count']).default('md'),
   group: z.enum(['day', 'week', 'month']).default('week'),
+  /** plan = ตามแผน · actual = ตามที่ทำจริง (งานที่เสร็จใช้วันที่ทำจริง) */
+  basis: z.enum(['plan', 'actual']).default('plan'),
 };
 
 export const ProjectWorkloadQuery = z
@@ -136,17 +138,17 @@ export class OverviewService {
         const kids = childrenOf.get(i.id);
         return kids ? kids.reduce((n, k) => n + mdOf(k), 0) : (i.estimateMd ?? 0);
       };
-      const progressOf = (i: Issue): number => {
+      const progressOf = (i: Issue, byMd = weighted): number => {
         if (isDone(i)) return 100;
         const kids = childrenOf.get(i.id);
-        if (kids?.length) return rollup(kids.map((k) => ({ w: weighted ? mdOf(k) : 1, pct: progressOf(k) })));
+        if (kids?.length) return rollup(kids.map((k) => ({ w: byMd ? mdOf(k) : 1, pct: progressOf(k, byMd) })));
         return i.progressPct ?? 0;
       };
       /** ความคืบหน้ารวมของชุดงาน: ใช้เฉพาะงานบนสุดในชุด (ลูกคิดผ่านแม่แล้ว) */
-      const progressOfSet = (set: Issue[]) => {
+      const progressOfSet = (set: Issue[], byMd = weighted) => {
         const ids = new Set(set.map((i) => i.id));
         const roots = set.filter((i) => !i.parentId || !ids.has(i.parentId));
-        return rollup(roots.map((i) => ({ w: weighted ? mdOf(i) : 1, pct: progressOf(i) })));
+        return rollup(roots.map((i) => ({ w: byMd ? mdOf(i) : 1, pct: progressOf(i, byMd) })));
       };
 
       const completedOn = (i: Issue) => (i.completedAt ? localDate(i.completedAt) : null);
@@ -287,7 +289,8 @@ export class OverviewService {
         // ไม่ได้ผูกงานไว้: ใช้ความคืบหน้าของ Module (เช่น "Credit Line ครบตามแผน" = Module Credit Line)
         const basis = linked.length ? 'linked' : m.moduleId ? 'module' : 'project';
         const set = linked.length ? linked : m.moduleId ? moduleIssues : plan;
-        return { id: m.id, name: m.name, date: m.date, moduleId: m.moduleId, daysLeft: daysBetween(now, m.date), linkedIssues: linked.length, donePct: progressOfSet(set), basis };
+        // % ของ Milestone ถ่วงด้วย Man-Day เสมอ ไม่ขึ้นกับ progress_method (ผู้ใช้ตัดสิน 9 พ.ย. 2026)
+        return { id: m.id, name: m.name, date: m.date, moduleId: m.moduleId, daysLeft: daysBetween(now, m.date), linkedIssues: linked.length, donePct: progressOfSet(set, true), basis };
       });
 
       // --- Workload สัปดาห์นี้ (Guest ไม่เห็น) ---
@@ -466,7 +469,7 @@ export class OverviewService {
       // Guest ที่เป็น Viewer ไม่มี project.workload.view (04-permissions ข้อ 4)
       requirePerm(access, 'project.workload.view');
       const { from, to } = resolveRange(q);
-      const w = await projectWorkload(tx, project, { from, to, group: q.group, unit: q.unit, moduleId: q.moduleId, position: q.position });
+      const w = await projectWorkload(tx, project, { from, to, group: q.group, unit: q.unit, basis: q.basis, compare: true, moduleId: q.moduleId, position: q.position });
       const unit = q.unit;
       const hoursPerWeekOf = new Map(w.people.map((p) => [p.userId, { hours: p.projectCapacity ?? p.wsCapacity, position: p.position ?? p.jobTitle, role: p.role }]));
 
@@ -479,6 +482,7 @@ export class OverviewService {
             projectRole: info.role,
             capacityHoursWeek: info.hours,
             ...personSeries(cells, unit),
+            compare: compareOf(cells, w.other?.rows.get(userId), q.basis, unit),
           };
         })
         .filter((p) => p.person)
@@ -516,6 +520,7 @@ export class OverviewService {
         range: { from, to },
         unit,
         group: q.group,
+        basis: q.basis,
         hoursPerMd: HOURS_PER_MD,
         buckets: w.result.buckets,
         people: people.map(({ raw: _, ...p }) => p),
@@ -538,7 +543,7 @@ export class OverviewService {
         if (!team) throw new AppError(404, 'team_not_found', 'ไม่พบทีม');
       }
       const { from, to } = resolveRange(q);
-      const w = await workspaceWorkload(tx, tenant.workspaceId, { from, to, group: q.group, unit: q.unit, teamId: q.team });
+      const w = await workspaceWorkload(tx, tenant.workspaceId, { from, to, group: q.group, unit: q.unit, basis: q.basis, teamId: q.team });
       const projectOf = new Map(w.projects.map((p) => [p.id, p]));
       const memberOf = new Map(w.members.map((m) => [m.userId, m]));
       const people = [...w.result.rows.entries()]
@@ -563,12 +568,26 @@ export class OverviewService {
               }),
             })),
             total: series.total,
+            compare: compareOf(cells, w.other.rows.get(userId), q.basis, q.unit),
           };
         })
         .sort((a, b) => a.person.displayName.localeCompare(b.person.displayName));
-      return { range: { from, to }, unit: q.unit, group: q.group, hoursPerMd: HOURS_PER_MD, teamId: q.team ?? null, buckets: w.result.buckets, people };
+      return { range: { from, to }, unit: q.unit, group: q.group, basis: q.basis, hoursPerMd: HOURS_PER_MD, teamId: q.team ?? null, buckets: w.result.buckets, people };
     });
   }
+}
+
+/**
+ * ยอดรวมในช่วงที่ขอทั้งตามแผนและตามจริง ไว้ดู performance ของแต่ละคน
+ * doneOnPlanPct = ส่วนที่ทำจริงเทียบกับที่ควรทำตามแผนในช่วงเดียวกัน (100 = ตรงแผน)
+ */
+function compareOf(cells: WorkloadCell[], other: WorkloadCell[] | undefined, basis: 'plan' | 'actual', unit: WorkloadUnit) {
+  const sum = (list: WorkloadCell[] | undefined) => (list ? inUnit(mergeCells(list), unit).value : 0);
+  const mine = sum(cells);
+  const alt = sum(other);
+  const plan = basis === 'plan' ? mine : alt;
+  const actual = basis === 'actual' ? mine : alt;
+  return { plan, actual, actualVsPlanPct: plan > 0 ? Math.round((actual / plan) * 100) : null };
 }
 
 /** รวมหลายช่องเป็นช่องเดียว · งานเดียวกันนับครั้งเดียว */

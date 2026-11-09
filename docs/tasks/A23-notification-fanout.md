@@ -59,3 +59,8 @@
   - A20 / W17: เก็บ pref ด้วย `event_type` = ชื่อ Event และ `channel = in_app` · แถวที่ล็อกใน Canvas I ไม่ต้องให้ปิด
 - คำถามที่ค้าง: PM = Project Owner คนเดียว (ไม่รวม Admin ของโปรเจกต์) · งานเลยกำหนดแจ้ง Assignee แค่วันแรกที่เลยกำหนด ไม่แจ้งซ้ำทุกวัน
 
+
+### คำตัดสินของผู้ใช้ (9 พ.ย. 2569)
+
+- ผู้รับแบบ PM (`Audience.pmRecipients`) = Project Owner + Admin + สมาชิกที่ `pm_deputy` (migration 0016) · เหตุผลแยกตามบทบาท · ใช้กับ `plan.changed`, `project.health_changed`, `member.*`, `issue.overdue` และสรุป 09:30 · ผู้ทำแทน PM ได้ `due_request.approve` จึงได้รับและอนุมัติคำขอเลื่อน Due
+- งานเลยกำหนด: วันทำการแรกแจ้งทีละงานเหมือนเดิม · วันทำการถัดไปสรุปเป็นรายการเดียวต่อคน (`payload.summary`, `mine`, dedupe `overdue_mine:{date}`) จนงานเสร็จหรือเลื่อน Due

@@ -10,7 +10,7 @@ import { api, ApiError } from "@/lib/api";
 import { formatDateRange, today, type YearFormat } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { workloadRange } from "./shared";
-import type { Group, ProjectMember, Unit, Workload, WorkloadPerson } from "./types";
+import type { Group, ProjectMember, Unit, Workload, WorkloadPerson, Basis } from "./types";
 import styles from "./members.module.css";
 
 const short = new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", timeZone: "UTC" });
@@ -48,6 +48,7 @@ export function WorkloadPanel({
   const toast = useToast();
   const [group, setGroup] = useState<Group>("week");
   const [unit, setUnit] = useState<Unit>("md");
+  const [basis, setBasis] = useState<Basis>("plan");
   const [offset, setOffset] = useState(0);
   const [position, setPosition] = useState("");
   const [moduleId, setModuleId] = useState("");
@@ -58,6 +59,8 @@ export function WorkloadPanel({
   const params = workloadParams(range, group, unit);
   if (position) params.set("position", position);
   if (moduleId) params.set("moduleId", moduleId);
+  // ตามแผนเป็นค่าเริ่มต้นของ API · ไม่ใส่ไว้ใน key เพื่อใช้ข้อมูลร่วมกับตาราง Members
+  if (basis === "actual") params.set("basis", "actual");
   const key = workloadKey(ws, projectKey, params);
   const workload = useQuery({
     queryKey: key,
@@ -115,6 +118,11 @@ export function WorkloadPanel({
         </span>
       </div>
       <div className={styles.group}>
+        <div className={styles.seg} role="group" aria-label={t("basisLabel")}>
+          {(["plan", "actual"] as const).map((b) => (
+            <button key={b} type="button" aria-pressed={basis === b} title={t(`basisHint_${b}`)} onClick={() => { setBasis(b); setSelected(null); }}>{t(`basis_${b}`)}</button>
+          ))}
+        </div>
         <Select size="small" prefix={t("metric")} aria-label={t("metricLabel")} value={unit} onChange={(e) => setUnit(e.target.value as Unit)}>
           {(["md", "hour", "count"] as const).map((u) => <option key={u} value={u}>{t(`unit_${u}`)}</option>)}
         </Select>
@@ -214,6 +222,11 @@ export function WorkloadPanel({
                       <div className={cn(styles.small, (p.total.utilizationPct ?? 101) > 100 && p.total.value > 0 ? styles.up : styles.muted)}>
                         {p.total.utilizationPct === null ? t("averageUnknown") : t("average", { pct: p.total.utilizationPct })}
                       </div>
+                      {p.compare && data.unit !== "count" && (p.compare.plan > 0 || p.compare.actual > 0) && (
+                        <div className={cn(styles.muted, styles.small)} title={t("compareHint")}>
+                          {t("compare", { actual: fmt(p.compare.actual), plan: fmt(p.compare.plan), pct: p.compare.actualVsPlanPct ?? "—" })}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className={styles.bars} style={grid}>

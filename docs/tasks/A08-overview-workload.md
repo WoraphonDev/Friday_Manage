@@ -89,3 +89,9 @@
 - `overview.e2e.test.ts` 10 tests: ตัวแบ่งช่วง, MD ของงาน 2 Dev แบ่งครึ่ง, วันหยุดและวันลาเต็มวัน/ครึ่งวันลด capacity, เกิน capacity, หน่วย hour / count / day, ไม่นับ MD ซ้ำของ Task ที่มี Sub-task และ Bug ใต้ Task, capacity ของโปรเจกต์ + กรองตำแหน่ง, 400 / 403, Workload รวมทุกโปรเจกต์ + ทีม + สิทธิ์, Health 3 ระดับรวมค่าขอบ 5 และ 15, KPI / รายการ / Burn-up / Module / Milestone / Activity / งานของฉัน / Module filter และการตัดข้อมูลของ Guest
 - วันที่ใน test ตายตัว (Workload ใช้ ธ.ค. 2569, Health ใช้งานปี 2563 คู่ 2642) หรือคิดจาก `today()` เฉพาะ KPI ที่ขึ้นกับวันนี้ ไม่ขึ้นกับวันที่รัน
 - `pnpm typecheck` ผ่าน · `pnpm test` ผ่าน: web 52, DB 105, API 109 tests (API มี 2 tests เดิมที่ skip) · ใช้ฐานทดสอบแยก `friday_a08`
+
+### คำตัดสินของผู้ใช้ (9 พ.ย. 2569)
+
+- Health 5 / 15 และฐาน Man-Day ระดับล่างสุดไม่นับ Bug: ใช้ตามเดิม · วันลา `pending` ลด capacity: ใช้ตามเดิม
+- Workload มี 2 ชุด `?basis=plan|actual` (`workSpans` ใน `workload.ts`) · `people[].compare` = ยอดตามแผน / ตามจริง / % ในช่วงที่ขอ · หน้า 7 และ Admin Console › Workload รวมมีตัวสลับ "ตามแผน / ตามจริง"
+- % ของ Milestone ใน Overview ถ่วงด้วย Man-Day เสมอ

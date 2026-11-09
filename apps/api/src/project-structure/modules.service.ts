@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { schema as s, type Tx } from '@friday/db';
-import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { AppError, notFound } from '../common/errors.js';
 import { loadPeople } from '../common/people.js';
@@ -16,8 +16,8 @@ const isoDate = z.iso.date();
 
 export const CreateModuleBody = z.object({ name, color: color.nullish(), ownerUserId: z.uuid().nullish() }).strict();
 export const PatchModuleBody = CreateModuleBody.partial().refine((v) => Object.keys(v).length > 0, nonEmpty);
-/** moveTo = Module ปลายทางของงานทั้งหมด (บังคับเมื่อมีงาน) */
-export const DeleteModuleBody = z.object({ moveTo: z.uuid().optional() }).strict();
+/** moveTo = Module ปลายทางของงานทั้งหมด (บังคับเมื่อมีงาน) · moveToPhase = กลุ่มงานใน Module ปลายทาง (ไม่ส่ง = ไม่ระบุกลุ่มงาน) */
+export const DeleteModuleBody = z.object({ moveTo: z.uuid().optional(), moveToPhase: z.uuid().optional() }).strict();
 export const CreatePhaseBody = z.object({ name }).strict();
 export const PatchPhaseBody = CreatePhaseBody;
 /** moveTo = กลุ่มงานอื่นใน Module เดียวกัน หรือ "none" = ไม่ระบุกลุ่มงาน */
@@ -67,7 +67,10 @@ export class ModulesService {
     });
   }
 
-  /** ลบ Module: งาน (รวมงานในถังขยะ) ย้ายไป moveTo และล้างกลุ่มงาน · กลุ่มงานของ Module ถูกลบตาม · Milestone ไม่ผูก Module */
+  /**
+   * ลบ Module: งาน (รวมงานในถังขยะ) ย้ายไป moveTo และเข้ากลุ่มงาน moveToPhase ของ Module นั้น (ไม่ส่ง = ไม่ระบุกลุ่มงาน)
+   * กลุ่มงานของ Module ที่ลบถูกลบตาม · Milestone ไม่ผูก Module
+   */
   async deleteModule(auth: AuthInfo, tenant: TenantInfo, key: string, id: string, input: z.infer<typeof DeleteModuleBody>) {
     return this.write(auth, tenant, key, async (tx, { project }, events) => {
       const mod = await this.module(tx, project.id, id);
@@ -75,18 +78,22 @@ export class ModulesService {
       if (input.moveTo === id) throw new AppError(400, 'invalid_move_to', 'ต้องย้ายงานไป Module อื่น');
       if (live && !input.moveTo) throw new AppError(409, 'module_has_issues', `Module นี้มีงาน ${live} งาน ต้องเลือก Module ที่จะย้ายงานไป`, { issueCount: live });
       const target = input.moveTo ? await this.module(tx, project.id, input.moveTo) : null;
+      if (input.moveToPhase && !target) throw new AppError(400, 'invalid_move_to', 'ต้องเลือก Module ปลายทางก่อนเลือกกลุ่มงาน');
+      const phase = input.moveToPhase && target ? await this.phase(tx, project.id, target.id, input.moveToPhase) : null;
 
       // ต้องอ่านกลุ่มงานเดิมก่อนแก้ เพื่อเขียนประวัติได้ถูก
       const before = await tx.select().from(s.issues).where(eq(s.issues.moduleId, id)).orderBy(asc(s.issues.number));
-      await tx.update(s.issues).set({ moduleId: target?.id ?? null, phaseId: null }).where(eq(s.issues.moduleId, id));
+      // งานในถังขยะไม่มี Module ปลายทางเมื่อไม่มีงานที่ยังอยู่ จึงไม่มีกลุ่มงานด้วย
+      const phaseId = target ? (phase?.id ?? null) : null;
+      await tx.update(s.issues).set({ moduleId: target?.id ?? null, phaseId }).where(eq(s.issues.moduleId, id));
       await this.recordMoves(tx, tenant, auth, project, before, events, (i) => [
         { field: 'moduleId', oldValue: id, newValue: target?.id ?? null },
-        ...(before[i].phaseId ? [{ field: 'phaseId', oldValue: before[i].phaseId, newValue: null }] : []),
+        ...(before[i].phaseId !== phaseId ? [{ field: 'phaseId', oldValue: before[i].phaseId, newValue: phaseId }] : []),
       ]);
       await tx.update(s.milestones).set({ moduleId: null }).where(eq(s.milestones.moduleId, id));
       await tx.delete(s.modules).where(eq(s.modules.id, id));
-      await audit(tx, auth, tenant, project, 'project.module_deleted', `ลบ Module ${mod.name}${target ? ` ย้ายงาน ${live} งานไป ${target.name}` : ''}`);
-      return { id, movedIssues: live, moveTo: target?.id ?? null };
+      await audit(tx, auth, tenant, project, 'project.module_deleted', `ลบ Module ${mod.name}${target ? ` ย้ายงาน ${live} งานไป ${target.name}${phase ? ` › ${phase.name}` : ''}` : ''}`);
+      return { id, movedIssues: live, moveTo: target?.id ?? null, moveToPhase: phase?.id ?? null };
     });
   }
 
@@ -295,20 +302,55 @@ export class ModulesService {
     return rows.map((p) => ({ ...phaseDto(p), issueCount: byId.get(p.id) ?? 0 }));
   }
 
-  /** % ของ Milestone = งานที่ผูกและเสร็จแล้ว ÷ งานที่ผูกทั้งหมด · Guest ที่เป็น Viewer ไม่นับ Bug */
+  /**
+   * % ของ Milestone ถ่วงด้วย Man-Day ของงานที่ผูก (ผู้ใช้ตัดสิน 9 พ.ย. 2026) · Task ที่มี Sub-task ใช้ MD และความคืบหน้ารวมของ Sub-task
+   * ถ้างานที่ผูกไม่มี MD เลย ใช้ค่าเฉลี่ยแทน · Guest ที่เป็น Viewer ไม่นับ Bug
+   */
   private async milestoneDtos(tx: Tx, ctx: Context, rows: Milestone[]) {
     if (!rows.length) return [];
+    const cols = {
+      id: s.issues.id,
+      parentId: s.issues.parentId,
+      estimateMd: s.issues.estimateMd,
+      progressPct: s.issues.progressPct,
+      category: s.workflowStatuses.category,
+      type: s.issueTypes.name,
+    };
     const linked = await tx
-      .select({ milestoneId: s.milestoneIssues.milestoneId, category: s.workflowStatuses.category, type: s.issueTypes.name })
+      .select({ milestoneId: s.milestoneIssues.milestoneId, ...cols })
       .from(s.milestoneIssues)
       .innerJoin(s.issues, eq(s.issues.id, s.milestoneIssues.issueId))
       .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
       .innerJoin(s.issueTypes, eq(s.issueTypes.id, s.issues.issueTypeId))
       .where(and(inArray(s.milestoneIssues.milestoneId, rows.map((r) => r.id)), isNull(s.issues.deletedAt)));
+    const parentIds = [...new Set(linked.map((l) => l.id))];
+    const kids = parentIds.length
+      ? await tx
+          .select(cols)
+          .from(s.issues)
+          .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
+          .innerJoin(s.issueTypes, eq(s.issueTypes.id, s.issues.issueTypeId))
+          .where(and(inArray(s.issues.parentId, parentIds), isNull(s.issues.deletedAt), ne(s.issueTypes.name, 'Bug')))
+      : [];
+    const childrenOf = new Map<string, typeof kids>();
+    for (const k of kids) childrenOf.set(k.parentId!, [...(childrenOf.get(k.parentId!) ?? []), k]);
+    type Row = (typeof kids)[number];
+    const mdOf = (i: Row): number => {
+      const c = childrenOf.get(i.id);
+      return c?.length ? c.reduce((n, k) => n + mdOf(k), 0) : Number(i.estimateMd ?? 0);
+    };
+    const pctOf = (i: Row): number => {
+      if (i.category === 'done') return 100;
+      const c = childrenOf.get(i.id);
+      return c?.length ? weightedPct(c.map((k) => ({ md: mdOf(k), pct: pctOf(k) }))) : (i.progressPct ?? 0);
+    };
     const mods = await tx.select({ id: s.modules.id, name: s.modules.name, color: s.modules.color }).from(s.modules).where(eq(s.modules.projectId, ctx.project.id));
     return rows.map((m) => {
       const mine = linked.filter((l) => l.milestoneId === m.id && !(ctx.access.guestViewer && l.type === 'Bug'));
       const done = mine.filter((l) => l.category === 'done').length;
+      // ผูกทั้ง Task และ Sub-task ของมัน: นับที่ Task (ลูกคิดผ่านแม่แล้ว) ไม่ให้ MD ซ้ำ
+      const ids = new Set(mine.map((l) => l.id));
+      const roots = mine.filter((l) => !l.parentId || !ids.has(l.parentId));
       return {
         id: m.id,
         name: m.name,
@@ -317,7 +359,7 @@ export class ModulesService {
         module: mods.find((x) => x.id === m.moduleId) ?? null,
         issueCount: mine.length,
         doneCount: done,
-        progressPct: mine.length ? Math.round((done / mine.length) * 100) : 0,
+        progressPct: weightedPct(roots.map((l) => ({ md: mdOf(l), pct: pctOf(l) }))),
       };
     });
   }
@@ -377,4 +419,12 @@ async function issueCounts(tx: Tx, projectId: string) {
 async function assertProjectMember(tx: Tx, projectId: string, userId: string) {
   const [m] = await tx.select({ userId: s.projectMembers.userId }).from(s.projectMembers).where(and(eq(s.projectMembers.projectId, projectId), eq(s.projectMembers.userId, userId)));
   if (!m) throw new AppError(400, 'invalid_people', 'เจ้าของ Module ต้องเป็นสมาชิกของโปรเจกต์', { userIds: [userId] });
+}
+
+/** ค่าเฉลี่ยถ่วง Man-Day · ไม่มี MD เลยใช้ค่าเฉลี่ยธรรมดา */
+function weightedPct(items: { md: number; pct: number }[]) {
+  if (!items.length) return 0;
+  const total = items.reduce((n, x) => n + x.md, 0);
+  if (!total) return Math.round(items.reduce((n, x) => n + x.pct, 0) / items.length);
+  return Math.round(items.reduce((n, x) => n + x.pct * x.md, 0) / total);
 }

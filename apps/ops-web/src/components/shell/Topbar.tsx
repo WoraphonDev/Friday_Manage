@@ -46,7 +46,7 @@ export function SearchPalette({ staff, open, onOpenChange, onApprovals }: { staf
   }, [staff, t, query, onApprovals]);
 
   const hits: Hit[] = [
-    ...(ws.data?.items ?? []).map((w) => ({ id: `w-${w.id}`, group: "workspaces" as const, title: w.name, sub: `${w.slug}${w.plan ? ` · ${w.plan}` : ""}`, href: `/workspaces?id=${w.id}` })),
+    ...(ws.data?.items ?? []).map((w) => ({ id: `w-${w.id}`, group: "workspaces" as const, title: w.name, sub: `${w.slug}${w.plan ? ` · ${w.plan}` : ""}`, href: `/workspaces/${w.id}` })),
     ...(users.data?.items ?? []).map((u) => ({ id: `u-${u.id}`, group: "users" as const, title: u.email, sub: u.firstWorkspace ?? u.displayName, href: `/users?id=${u.id}` })),
     ...(invoices.data?.items ?? []).map((i) => ({ id: `i-${i.id}`, group: "invoices" as const, title: i.number, sub: `${i.workspace.name} · ${i.status}`, href: `/billing?tab=invoices&q=${encodeURIComponent(i.number)}` })),
     ...(tickets.data?.items ?? []).map((k) => ({ id: `t-${k.id}`, group: "tickets" as const, title: `#${k.number} · ${k.subject}`, sub: k.status, href: `/support?ticket=${k.id}` })),

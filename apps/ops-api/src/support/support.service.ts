@@ -13,13 +13,16 @@ import { Mailer } from '../mail.js';
 const s = schema;
 export const StartSessionBody = z
   .object({
-    ticketNo: z.string().trim().min(3).max(40),
+    ticketNo: z.string().trim().min(3).max(40).optional(),
+    /** Ticket ในระบบ (O04) · ใส่แทน ticketNo ได้ */
+    ticketId: z.uuid().optional(),
     reason: z.string().trim().min(10, 'ระบุเหตุผลอย่างน้อย 10 ตัวอักษร').max(500),
     mode: z.enum(['read', 'write']).default('read'),
     /** โหมดแก้ไข: ผู้อนุมัติคนที่ 2 (พนักงานอีกคน) */
     secondApproverId: z.uuid().optional(),
   })
-  .strict();
+  .strict()
+  .refine((b) => b.ticketNo || b.ticketId, { message: 'ระบุ Ticket ที่ผูกกับการเข้าบัญชี', path: ['ticketId'] });
 
 /** การเข้าบัญชีลูกค้าเพื่อช่วยเหลือ (Q3) · ต้องมี grant จากลูกค้า, Ticket, เหตุผล และผู้อนุมัติคนที่ 2 ในโหมดแก้ไข */
 @Injectable()
@@ -47,15 +50,23 @@ export class SupportService {
       const [approver] = await this.db.select({ id: s.staffUsers.id, roles: s.staffUsers.roles, status: s.staffUsers.status }).from(s.staffUsers).where(eq(s.staffUsers.id, input.secondApproverId));
       if (!approver || approver.status !== 'active' || !approver.roles.includes('owner')) throw new AppError(422, 'second_approver_invalid', 'ผู้อนุมัติคนที่ 2 ต้องเป็น Owner ที่ใช้งานอยู่');
     }
+    // Ticket ในระบบต้องเป็นของ Workspace นี้และยังไม่ปิด
+    let ticketNo = input.ticketNo ?? '';
+    if (input.ticketId) {
+      const [t] = await this.db.select().from(s.supportTickets).where(eq(s.supportTickets.id, input.ticketId));
+      if (!t || t.workspaceId !== workspaceId) throw new AppError(422, 'ticket_other_workspace', 'Ticket นี้ไม่ใช่ของ Workspace นี้');
+      if (t.status === 'solved' || t.status === 'closed') throw new AppError(422, 'ticket_not_open', 'Ticket นี้ปิดแล้ว');
+      ticketNo = `#${t.number}`;
+    }
     const [open] = await this.db.select({ id: s.supportSessions.id }).from(s.supportSessions).where(and(eq(s.supportSessions.workspaceId, workspaceId), eq(s.supportSessions.staffId, staff.id), isNull(s.supportSessions.endedAt)));
     if (open) throw new AppError(409, 'session_already_open', 'คุณมี session ที่ยังเปิดอยู่กับ Workspace นี้', { sessionId: open.id });
 
     const session = await this.db.transaction(async (tx) => {
       const [row] = await tx
         .insert(s.supportSessions)
-        .values({ workspaceId, staffId: staff.id, ticketNo: input.ticketNo, reason: input.reason, mode: input.mode, secondApproverId: input.mode === 'write' ? input.secondApproverId : null })
+        .values({ workspaceId, staffId: staff.id, ticketNo, ticketId: input.ticketId ?? null, reason: input.reason, mode: input.mode, secondApproverId: input.mode === 'write' ? input.secondApproverId : null })
         .returning();
-      await audit(tx, staff, workspaceId, 'secu', 'support.session_started', `เริ่มเข้าช่วยเหลือ · Ticket ${input.ticketNo} · ${input.mode === 'write' ? 'แก้ไขได้' : 'อ่านอย่างเดียว'} · ${input.reason}`, { type: 'support_session', id: row.id });
+      await audit(tx, staff, workspaceId, 'secu', 'support.session_started', `เริ่มเข้าช่วยเหลือ · Ticket ${ticketNo} · ${input.mode === 'write' ? 'แก้ไขได้' : 'อ่านอย่างเดียว'} · ${input.reason}`, { type: 'support_session', id: row.id });
       return row;
     });
 
@@ -71,8 +82,8 @@ export class SupportService {
         try {
           await this.mail.send({
             to: a.email,
-            subject: `ทีม Friday เข้าช่วยเหลือ Workspace ${ws.name} (Ticket ${input.ticketNo})`,
-            text: `ทีม Friday (${staff.name}) เริ่มเข้าช่วยเหลือ Workspace ${ws.name}\nTicket: ${input.ticketNo}\nเหตุผล: ${input.reason}\nโหมด: ${input.mode === 'write' ? 'แก้ไขได้ (อนุมัติโดยพนักงาน 2 คน)' : 'อ่านอย่างเดียว'}\n\nดูประวัติได้ที่ ${config.appUrl}/${ws.slug}/admin · ปิดสิทธิ์ได้ทุกเมื่อที่ Admin Console › การเข้าช่วยเหลือจากทีม Friday`,
+            subject: `ทีม Friday เข้าช่วยเหลือ Workspace ${ws.name} (Ticket ${ticketNo})`,
+            text: `ทีม Friday (${staff.name}) เริ่มเข้าช่วยเหลือ Workspace ${ws.name}\nTicket: ${ticketNo}\nเหตุผล: ${input.reason}\nโหมด: ${input.mode === 'write' ? 'แก้ไขได้ (อนุมัติโดยพนักงาน 2 คน)' : 'อ่านอย่างเดียว'}\n\nดูประวัติได้ที่ ${config.appUrl}/work/${ws.slug}/admin · ปิดสิทธิ์ได้ทุกเมื่อที่ Admin Console › การเข้าช่วยเหลือจากทีม Friday`,
           });
           notified++;
         } catch {
@@ -109,6 +120,6 @@ export class SupportService {
   }
 
   private dto(r: typeof s.supportSessions.$inferSelect) {
-    return { id: r.id, workspaceId: r.workspaceId, staffId: r.staffId, ticketNo: r.ticketNo, reason: r.reason, mode: r.mode, secondApproverId: r.secondApproverId, startedAt: r.startedAt, endedAt: r.endedAt };
+    return { id: r.id, workspaceId: r.workspaceId, staffId: r.staffId, ticketNo: r.ticketNo, ticketId: r.ticketId, reason: r.reason, mode: r.mode, secondApproverId: r.secondApproverId, startedAt: r.startedAt, endedAt: r.endedAt };
   }
 }

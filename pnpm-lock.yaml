@@ -140,6 +140,9 @@ importers:
       '@simplewebauthn/server':
         specifier: ^14.0.3
         version: 14.0.3
+      bullmq:
+        specifier: ~6.4.2
+        version: 6.4.2(ioredis@5.11.1)(pg@8.23.1)
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7

@@ -452,7 +452,7 @@ describe('Import Excel (L3)', () => {
     expect(r.body.invitations.map((i: { email: string; status: string }) => `${i.email}:${i.status}`)).toEqual(['donut@example.com:invited']);
 
     const p3 = await mick.get('/w/friday-dev/issues/PLAN-6'); // No. 3 · ID 6
-    expect(p3.body).toMatchObject({ planStart: '2026-12-08', planEnd: '2026-12-15', size: 'M', estimateMd: 5, assigneeIds: [kaijeawId], description: 'ใช้ร่วมกับ DP-38' });
+    expect(p3.body).toMatchObject({ planStart: '2026-12-08', planEnd: '2026-12-15', size: 'M', estimateMd: 5, assigneeIds: [kaijeawId], description: null, remark: 'ใช้ร่วมกับ DP-38' }); // คอลัมน์ Remark ของไฟล์เดิมเข้าช่อง Remark (ผู้ใช้ตัดสิน 2026-11-09)
     const p2 = await mick.get('/w/friday-dev/issues/PLAN-5');
     expect(p2.body.assigneeIds).toEqual([kaijeawId]);
     expect(p2.body.details).toMatchObject({ requirementText: 'SRS', importedPeople: { devs: ['Pond'], ba: 'Donut' } });

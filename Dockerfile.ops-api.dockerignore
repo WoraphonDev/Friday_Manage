@@ -1,0 +1,15 @@
+**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!apps/
+!apps/ops-api/
+!apps/ops-api/**
+!packages/
+!packages/db/
+!packages/db/**
+**/node_modules
+apps/ops-api/dist
+apps/ops-api/test
+apps/ops-api/.env*
+packages/db/test

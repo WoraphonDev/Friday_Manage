@@ -1,5 +1,6 @@
 "use client";
 
+import { FridayMark } from "@/components/brand/FridayMark";
 import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { KeyRound } from "lucide-react";
@@ -45,9 +46,7 @@ export function LoginForm() {
         }}
       >
         <div className="auth-brand">
-          <span className="ops-brand-mark" aria-hidden="true">
-            F
-          </span>
+          <FridayMark />
           <div>
             <b>{tApp("name")}</b>
             <div className="muted small">{tc("audited")}</div>

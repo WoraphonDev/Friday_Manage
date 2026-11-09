@@ -1,0 +1,11 @@
+**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!apps/
+!apps/ops-web/
+!apps/ops-web/**
+apps/ops-web/node_modules
+apps/ops-web/.next
+apps/ops-web/coverage
+apps/ops-web/.env*

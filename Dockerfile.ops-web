@@ -1,0 +1,27 @@
+# Friday Ops (หลังบ้าน) · Next.js standalone · โครงเดียวกับ Dockerfile.web
+FROM node:22-bookworm AS build
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm install --global pnpm@10.34.5
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/ops-web/package.json ./apps/ops-web/package.json
+RUN pnpm --filter @friday/ops-web... install --frozen-lockfile
+COPY apps/ops-web ./apps/ops-web
+# Next บันทึก rewrite (/ops-api → ops-api) ลง standalone ตอน build จึงต้องส่งปลายทางในขั้นนี้
+ARG OPS_API_ORIGIN=http://ops-api:4001
+ENV OPS_API_ORIGIN=${OPS_API_ORIGIN}
+RUN pnpm --filter @friday/ops-web build \
+    && mkdir -p apps/ops-web/public
+
+FROM node:22-bookworm-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    HOSTNAME=0.0.0.0 \
+    PORT=4000
+COPY --from=build --chown=node:node /app/apps/ops-web/.next/standalone ./
+COPY --from=build --chown=node:node /app/apps/ops-web/.next/static ./apps/ops-web/.next/static
+COPY --from=build --chown=node:node /app/apps/ops-web/public ./apps/ops-web/public
+USER node
+EXPOSE 4000
+CMD ["node", "apps/ops-web/server.js"]

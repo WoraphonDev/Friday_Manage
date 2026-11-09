@@ -619,7 +619,7 @@ function CreateTicket({ onClose, onCreated }: { onClose: () => void; onCreated: 
   );
 }
 
-function Stats() {
+export function Stats() {
   const t = useTranslations("ss.support");
   const q = useQuery({
     queryKey: [...key, "stats"],
@@ -672,7 +672,7 @@ function Stats() {
   );
 }
 
-function Sessions() {
+export function Sessions() {
   const t = useTranslations("ss.support");
   const fmt = useFmt();
   const toast = useToast();

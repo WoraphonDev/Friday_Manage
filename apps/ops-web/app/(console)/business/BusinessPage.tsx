@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { hasAny } from "@/components/access";
 import { ErrorBlock, NoAccess, Notice, PageHead } from "@/components/kit";
 import { Button, errorToast, LoadingState, useToast } from "@/components/ui";
@@ -297,7 +297,7 @@ function Losers({ b }: { b: Business }) {
 }
 
 const FUNNEL = ["signups", "emailVerified", "firstProject", "secondMember", "activated", "paid"] as const;
-function Funnel({ b }: { b: Business }) {
+export function Funnel({ b }: { b: Business }) {
   const t = useTranslations("ob.biz");
   const fmt = useFmt();
   const n = (k: (typeof FUNNEL)[number]) => Number(b.funnel[k] ?? 0);
@@ -326,7 +326,7 @@ function Funnel({ b }: { b: Business }) {
   );
 }
 
-function Cohorts({ b }: { b: Business }) {
+export function Cohorts({ b }: { b: Business }) {
   const t = useTranslations("ob.biz");
   const f = useFormatter();
   const cols = Math.min(6, Math.max(1, ...b.cohorts.map((c) => c.retention.length)));
@@ -378,7 +378,7 @@ function Cohorts({ b }: { b: Business }) {
   );
 }
 
-function Channels({ b }: { b: Business }) {
+export function Channels({ b }: { b: Business }) {
   const t = useTranslations("ob.biz");
   const fmt = useFmt();
   const label = (s: string) => (t.has(`sources.${s}` as "sources.direct") ? t(`sources.${s}` as "sources.direct") : s);
@@ -432,7 +432,7 @@ function Channels({ b }: { b: Business }) {
   );
 }
 
-function Reasons({ b }: { b: Business }) {
+export function Reasons({ b }: { b: Business }) {
   const t = useTranslations("ob.biz");
   const total = b.cancellationReasons.reduce((n, r) => n + r.n, 0);
   return (
@@ -460,7 +460,7 @@ function Reasons({ b }: { b: Business }) {
   );
 }
 
-function Features({ b }: { b: Business }) {
+export function Features({ b }: { b: Business }) {
   const t = useTranslations("ob.biz");
   return (
     <section className="card" id="adoption">
@@ -487,7 +487,7 @@ function Features({ b }: { b: Business }) {
   );
 }
 
-function Upgrade({ b }: { b: Business }) {
+export function Upgrade({ b }: { b: Business }) {
   const t = useTranslations("ob.biz");
   return (
     <section className="card" style={{ padding: 0, overflow: "hidden" }}>
@@ -564,5 +564,34 @@ function Cash({ b }: { b: Business }) {
         />
       </div>
     </section>
+  );
+}
+
+/** หน้าย่อยของเมนูวิเคราะห์ (Funnel และ Retention · การใช้ฟีเจอร์) · ใช้ข้อมูลชุดเดียวกับหน้าธุรกิจ (cache ของ ops-api) */
+export function BusinessSubPage({ title, desc, children }: { title: string; desc: string; children: (b: Business) => ReactNode }) {
+  const t = useTranslations("ob.biz");
+  const f = useFormatter();
+  const me = useMe().data;
+  const read = hasAny(me, "owner", "finance", "auditor");
+  const q = useQuery({ queryKey: ["ops", "business"], queryFn: () => api.get<Business>("/business"), enabled: !!me && read });
+  if (me && !read) return <NoAccess need={["owner", "finance", "auditor"]} />;
+  return (
+    <>
+      <PageHead
+        title={title}
+        desc={
+          <>
+            {desc}
+            {q.data && <span className="muted"> · {t("computed", { time: f.dateTime(new Date(q.data.computedAt), { dateStyle: "medium", timeStyle: "short" }) })}</span>}
+          </>
+        }
+        actions={
+          <Link className="link-button small" href="/business">
+            {t("title")}
+          </Link>
+        }
+      />
+      {q.isPending ? <LoadingState /> : q.error ? <ErrorBlock error={q.error} retry={() => void q.refetch()} /> : children(q.data)}
+    </>
   );
 }

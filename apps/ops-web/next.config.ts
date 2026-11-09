@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const config: NextConfig = {
+  // Docker (compose.ops.yml) ใช้ standalone เหมือนเว็บลูกค้า
+  output: "standalone",
   // proxy ไป ops-api ใน origin เดียว: cookie `fm_ops` (SameSite=Strict) และ Origin ของคำขอเขียนตรงกับ OPS_WEB_ORIGIN โดยไม่ต้องเปิด CORS
   async rewrites() {
     return [

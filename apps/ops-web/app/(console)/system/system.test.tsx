@@ -30,9 +30,7 @@ const base = {
     failed: 3,
     completed: 900,
   },
-  deliveries: [
-    { channel: "email", total: 120, sent: 118, failed: 2, pending: 0 },
-  ],
+  deliveries: [{ channel: "email", total: 120, sent: 118, failed: 2, pending: 0 }],
   heavyWorkspaces: [
     {
       id: "10000000-0000-4000-8000-00000000000a",
@@ -65,17 +63,10 @@ describe("สถานะระบบ", () => {
     expect(await screen.findByText("99.97%")).toBeInTheDocument();
     expect(screen.getByText("ทุกบริการปกติ")).toBeInTheDocument();
     expect(screen.getByText("84 ms")).toBeInTheDocument();
-    expect(
-      screen.getByText("รอเชื่อม GlitchTip / CloudWatch"),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "สยามเดโม" })).toHaveAttribute(
-      "href",
-      "/workspaces/10000000-0000-4000-8000-00000000000a",
-    );
+    expect(screen.getByText("รอเชื่อม GlitchTip / CloudWatch")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "สยามเดโม" })).toHaveAttribute("href", "/workspaces/10000000-0000-4000-8000-00000000000a");
     expect(screen.getByText("แจ้งเตือน LINE ล่าช้า")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "แจ้งเหตุขัดข้องถึงลูกค้า" }),
-    ).toHaveAttribute("href", "/incidents?new=1");
+    expect(screen.getByRole("link", { name: "แจ้งเหตุขัดข้องถึงลูกค้า" })).toHaveAttribute("href", "/incidents?new=1");
   });
 
   it("API ล่ม · คิวยังไม่ได้เชื่อม", async () => {
@@ -94,9 +85,7 @@ describe("สถานะระบบ", () => {
     );
     renderWithProviders(<SystemPage />);
     expect(await screen.findByText("API ตอบไม่ได้")).toBeInTheDocument();
-    expect(
-      screen.getByText("ยังไม่เชื่อมคิว (ตั้ง VALKEY_URL)"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("ยังไม่เชื่อมคิว (ตั้ง VALKEY_URL)")).toBeInTheDocument();
     expect(screen.getByText("ไม่มีเหตุขัดข้อง")).toBeInTheDocument();
   });
 });

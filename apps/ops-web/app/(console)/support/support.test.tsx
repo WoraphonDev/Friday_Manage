@@ -58,10 +58,7 @@ const page = (search = "") => {
   server.use(
     http.get(`${OPS}/tickets`, ({ request }) => {
       const q = new URL(request.url).searchParams;
-      const items =
-        q.get("assignee") === "none" || q.get("status") === "closed"
-          ? []
-          : [row];
+      const items = q.get("assignee") === "none" || q.get("status") === "closed" ? [] : [row];
       return HttpResponse.json({
         items,
         summary: {
@@ -98,11 +95,7 @@ describe("Support", () => {
     asRole("support");
     page();
     expect(await screen.findByText("นำเข้า Excel ไม่ได้")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /เปิดอยู่ 4 · ยังไม่มีคนรับ 2 · เกิน SLA 1 · ตอบครั้งแรกเฉลี่ย 42 นาที · ความพึงพอใจ 4.6\/5/,
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/เปิดอยู่ 4 · ยังไม่มีคนรับ 2 · เกิน SLA 1 · ตอบครั้งแรกเฉลี่ย 42 นาที · ความพึงพอใจ 4.6\/5/)).toBeInTheDocument();
     expect(screen.getByText("ซัพพอร์ตตัวอย่าง")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /#512/ }));
     expect(router.replace).toHaveBeenCalledWith(`/support?ticket=${T}`);
@@ -113,31 +106,19 @@ describe("Support", () => {
   it("รับเรื่อง · บันทึกภายใน · ปิดเรื่อง (T5)", async () => {
     asRole("support");
     const calls: { path: string; body: unknown }[] = [];
-    const record = (path: string) =>
-      http.post(
-        `${OPS}/tickets/${T}/${path}`,
-        async ({ request }) => (
-          calls.push({ path, body: await request.json().catch(() => null) }),
-          HttpResponse.json({ ok: true })
-        ),
-      );
+    const record = (path: string) => http.post(`${OPS}/tickets/${T}/${path}`, async ({ request }) => (calls.push({ path, body: await request.json().catch(() => null) }), HttpResponse.json({ ok: true })));
     server.use(record("claim"), record("messages"), record("solve"));
     page(`ticket=${T}`);
     expect(await screen.findByText("กดนำเข้าแล้วค้าง")).toBeInTheDocument();
     const aside = screen.getByRole("complementary", { name: "ลูกค้า" });
     expect(within(aside).getByText("ตอบภายใน 4 ชม. ทำการ")).toBeInTheDocument();
-    expect(
-      within(aside).getByText("ลูกค้ายังไม่เปิดสิทธิ์เข้าบัญชี"),
-    ).toBeInTheDocument();
+    expect(within(aside).getByText("ลูกค้ายังไม่เปิดสิทธิ์เข้าบัญชี")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "รับเรื่องนี้" }));
     await waitFor(() => expect(calls.map((c) => c.path)).toContain("claim"));
 
     await userEvent.click(screen.getByRole("button", { name: "บันทึกภายใน" }));
-    await userEvent.type(
-      screen.getByLabelText("บันทึกภายใน (ลูกค้าไม่เห็น)"),
-      "ไฟล์มีแถวว่าง",
-    );
+    await userEvent.type(screen.getByLabelText("บันทึกภายใน (ลูกค้าไม่เห็น)"), "ไฟล์มีแถวว่าง");
     await userEvent.click(screen.getByRole("button", { name: "ส่ง" }));
     await waitFor(() =>
       expect(calls.find((c) => c.path === "messages")?.body).toEqual({
@@ -151,14 +132,8 @@ describe("Support", () => {
     const dlg = await screen.findByRole("dialog", { name: "ปิด #512?" });
     const submit = within(dlg).getByRole("button", { name: "ปิดเรื่อง" });
     expect(submit).toBeDisabled();
-    await userEvent.type(
-      within(dlg).getByLabelText("ผลลัพธ์ (ส่งถึงลูกค้า)"),
-      "แก้ไฟล์ให้แล้ว",
-    );
-    await userEvent.type(
-      within(dlg).getByLabelText("สาเหตุจริง"),
-      "แถวว่างในไฟล์",
-    );
+    await userEvent.type(within(dlg).getByLabelText("ผลลัพธ์ (ส่งถึงลูกค้า)"), "แก้ไฟล์ให้แล้ว");
+    await userEvent.type(within(dlg).getByLabelText("สาเหตุจริง"), "แถวว่างในไฟล์");
     await userEvent.click(submit);
     await waitFor(() =>
       expect(calls.find((c) => c.path === "solve")?.body).toEqual({
@@ -173,14 +148,8 @@ describe("Support", () => {
     asRole("auditor");
     page(`ticket=${T}`);
     expect(await screen.findByText("กดนำเข้าแล้วค้าง")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "รับเรื่องนี้" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "สร้าง Ticket" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "ส่ง" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "รับเรื่องนี้" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "สร้าง Ticket" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ส่ง" })).not.toBeInTheDocument();
   });
 });

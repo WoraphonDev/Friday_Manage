@@ -42,9 +42,7 @@ const page = (search = "") => {
   navigation.pathname = "/incidents";
   navigation.search = search;
   server.use(
-    http.get(`${OPS}/incidents`, () =>
-      HttpResponse.json({ items: [incident], subscribers: 37 }),
-    ),
+    http.get(`${OPS}/incidents`, () => HttpResponse.json({ items: [incident], subscribers: 37 })),
     http.get(`${OPS}/maintenance`, () =>
       HttpResponse.json({
         items: [
@@ -60,9 +58,7 @@ const page = (search = "") => {
         active: null,
       }),
     ),
-    http.get(`${OPS}/jobs/failed`, () =>
-      HttpResponse.json({ configured: true, items: jobs }),
-    ),
+    http.get(`${OPS}/jobs/failed`, () => HttpResponse.json({ configured: true, items: jobs })),
   );
   return renderWithProviders(
     <AppShell>
@@ -72,18 +68,8 @@ const page = (search = "") => {
 };
 const posts = () => {
   const calls: { path: string; body: unknown }[] = [];
-  const rec = (
-    path: string,
-    res: () => Response = () =>
-      HttpResponse.json({ ok: true, notified: 37, items: [{ retried: true }] }),
-  ) =>
-    http.post(
-      `${OPS}/${path}`,
-      async ({ request }) => (
-        calls.push({ path, body: await request.json().catch(() => null) }),
-        res()
-      ),
-    );
+  const rec = (path: string, res: () => Response = () => HttpResponse.json({ ok: true, notified: 37, items: [{ retried: true }] })) =>
+    http.post(`${OPS}/${path}`, async ({ request }) => (calls.push({ path, body: await request.json().catch(() => null) }), res()));
   return { calls, rec };
 };
 
@@ -96,23 +82,12 @@ describe("เหตุขัดข้องและปิดปรับปร�
     const card = await screen.findByRole("article", {
       name: "แจ้งเตือน LINE ล่าช้า",
     });
-    expect(
-      screen.getByText("ผู้ติดตาม 37 คน", { exact: false }),
-    ).toBeInTheDocument();
-    expect(
-      within(
-        screen.getByRole("region", { name: "ตัวอย่างหน้าสถานะสาธารณะ" }),
-      ).getByText("บางบริการใช้ไม่ได้"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("ผู้ติดตาม 37 คน", { exact: false })).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "ตัวอย่างหน้าสถานะสาธารณะ" })).getByText("บางบริการใช้ไม่ได้")).toBeInTheDocument();
     // Support ไม่เห็นปิดปรับปรุงและงานที่ล้ม (วิศวกร)
     expect(screen.queryByText("งานเบื้องหลังที่ล้ม")).not.toBeInTheDocument();
-    await userEvent.type(
-      within(card).getByLabelText("ข้อความอัปเดตถึงลูกค้า"),
-      "พบสาเหตุที่ผู้ให้บริการ",
-    );
-    await userEvent.click(
-      within(card).getByRole("button", { name: "เผยแพร่อัปเดต" }),
-    );
+    await userEvent.type(within(card).getByLabelText("ข้อความอัปเดตถึงลูกค้า"), "พบสาเหตุที่ผู้ให้บริการ");
+    await userEvent.click(within(card).getByRole("button", { name: "เผยแพร่อัปเดต" }));
     await waitFor(() =>
       expect(calls[0]?.body).toEqual({
         status: "identified",
@@ -121,9 +96,7 @@ describe("เหตุขัดข้องและปิดปรับปร�
         showBanner: false,
       }),
     );
-    expect(
-      await screen.findByText("เผยแพร่อัปเดตแล้ว · อีเมล 37 คน"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("เผยแพร่อัปเดตแล้ว · อีเมล 37 คน")).toBeInTheDocument();
   });
 
   it("เปิดเหตุขัดข้องใหม่ (Y3) จากลิงก์ ?new=1", async () => {
@@ -137,20 +110,10 @@ describe("เหตุขัดข้องและปิดปรับปร�
     const submit = within(drawer).getByRole("button", {
       name: "เปิดเหตุขัดข้อง",
     });
-    await userEvent.type(
-      within(drawer).getByLabelText("หัวข้อ (ลูกค้าเห็น)"),
-      "อัปโหลดไฟล์ช้า",
-    );
-    await userEvent.click(
-      within(drawer).getByRole("button", { name: "ไฟล์แนบ" }),
-    );
-    await userEvent.type(
-      within(drawer).getByLabelText("ข้อความแรก"),
-      "กำลังตรวจสอบ",
-    );
-    await userEvent.click(
-      within(drawer).getByLabelText("ภายในทีมเท่านั้น (ไม่ขึ้นหน้าสถานะ)"),
-    );
+    await userEvent.type(within(drawer).getByLabelText("หัวข้อ (ลูกค้าเห็น)"), "อัปโหลดไฟล์ช้า");
+    await userEvent.click(within(drawer).getByRole("button", { name: "ไฟล์แนบ" }));
+    await userEvent.type(within(drawer).getByLabelText("ข้อความแรก"), "กำลังตรวจสอบ");
+    await userEvent.click(within(drawer).getByLabelText("ภายในทีมเท่านั้น (ไม่ขึ้นหน้าสถานะ)"));
     await userEvent.click(submit);
     await waitFor(() =>
       expect(calls[0]?.body).toEqual({
@@ -189,28 +152,13 @@ describe("เหตุขัดข้องและปิดปรับปร�
     );
     page();
     expect(await screen.findByText(/ย้ายฐานข้อมูล/)).toBeInTheDocument();
-    await userEvent.click(
-      screen.getByRole("button", { name: "ขอปิดปรับปรุง" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "ขอปิดปรับปรุง" }));
     const drawer = await screen.findByRole("dialog", { name: "ปิดปรับปรุง" });
-    await userEvent.click(
-      within(drawer).getByRole("button", { name: "เปิดทันที" }),
-    );
-    await userEvent.type(
-      within(drawer).getByLabelText("สิ้นสุด (ประมาณ)"),
-      "2026-11-20T02:00",
-    );
-    await userEvent.type(
-      within(drawer).getByLabelText("ข้อความที่ลูกค้าเห็น"),
-      "ปรับปรุงระบบฉุกเฉิน",
-    );
-    await userEvent.type(
-      within(drawer).getByLabelText("เหตุผล (ผู้อนุมัติเห็น)"),
-      "แก้ช่องโหว่",
-    );
-    await userEvent.click(
-      within(drawer).getByRole("button", { name: "ส่งขออนุมัติ" }),
-    );
+    await userEvent.click(within(drawer).getByRole("button", { name: "เปิดทันที" }));
+    await userEvent.type(within(drawer).getByLabelText("สิ้นสุด (ประมาณ)"), "2026-11-20T02:00");
+    await userEvent.type(within(drawer).getByLabelText("ข้อความที่ลูกค้าเห็น"), "ปรับปรุงระบบฉุกเฉิน");
+    await userEvent.type(within(drawer).getByLabelText("เหตุผล (ผู้อนุมัติเห็น)"), "แก้ช่องโหว่");
+    await userEvent.click(within(drawer).getByRole("button", { name: "ส่งขออนุมัติ" }));
     expect(await screen.findByText("ส่งขออนุมัติแล้ว")).toBeInTheDocument();
     expect(calls[0]?.body).toMatchObject({
       scope: "read_only",
@@ -226,9 +174,7 @@ describe("เหตุขัดข้องและปิดปรับปร�
       name: /ยกเลิก · อ่านอย่างเดียว/,
     });
     await userEvent.click(within(dlg).getByRole("button", { name: "ยืนยัน" }));
-    await waitFor(() =>
-      expect(calls.map((c) => c.path)).toContain("maintenance/m1/end"),
-    );
+    await waitFor(() => expect(calls.map((c) => c.path)).toContain("maintenance/m1/end"));
   });
 
   it("งานที่ล้ม: ลองใหม่ที่เลือก · ทิ้งต้องมีเหตุผล", async () => {
@@ -237,27 +183,16 @@ describe("เหตุขัดข้องและปิดปรับปร�
     server.use(rec("jobs/retry"), rec("jobs/41/discard"));
     page();
     expect(await screen.findByText("LINE API 500")).toBeInTheDocument();
-    await userEvent.click(
-      screen.getByRole("checkbox", { name: "งาน notify.line 41" }),
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: "ลองใหม่ทั้งหมดที่เลือก" }),
-    );
-    await waitFor(() =>
-      expect(calls[0]).toEqual({ path: "jobs/retry", body: { ids: ["41"] } }),
-    );
-    expect(
-      await screen.findByText("ส่งกลับเข้าคิวแล้ว 1 งาน"),
-    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("checkbox", { name: "งาน notify.line 41" }));
+    await userEvent.click(screen.getByRole("button", { name: "ลองใหม่ทั้งหมดที่เลือก" }));
+    await waitFor(() => expect(calls[0]).toEqual({ path: "jobs/retry", body: { ids: ["41"] } }));
+    expect(await screen.findByText("ส่งกลับเข้าคิวแล้ว 1 งาน")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "ทิ้ง" }));
     const dlg = await screen.findByRole("dialog", {
       name: "ทิ้งงาน notify.line?",
     });
-    await userEvent.type(
-      within(dlg).getByLabelText("เหตุผล (บันทึกใน Audit log)"),
-      "ลูกค้ายกเลิก LINE แล้ว",
-    );
+    await userEvent.type(within(dlg).getByLabelText("เหตุผล (บันทึกใน Audit log)"), "ลูกค้ายกเลิก LINE แล้ว");
     await userEvent.click(within(dlg).getByRole("button", { name: "ยืนยัน" }));
     await waitFor(() =>
       expect(calls[1]).toEqual({

@@ -68,8 +68,7 @@ export function SystemPage() {
     refetchInterval: 30_000,
   });
   if (q.isPending) return <LoadingState />;
-  if (q.error)
-    return <ErrorBlock error={q.error} retry={() => void q.refetch()} />;
+  if (q.error) return <ErrorBlock error={q.error} retry={() => void q.refetch()} />;
   const d = q.data;
   const down = d.api.last && !d.api.last.ok;
   const ms = (n: number | null) => (n == null ? "—" : t("ms", { n }));
@@ -84,20 +83,12 @@ export function SystemPage() {
           </Link>
         }
       />
-      {down ? (
-        <Notice tone="bad" title={t("down")} />
-      ) : (
-        d.api.probes > 0 && <Notice tone="ok" title={t("ok")} />
-      )}
+      {down ? <Notice tone="bad" title={t("down")} /> : d.api.probes > 0 && <Notice tone="ok" title={t("ok")} />}
       <div className="grid-3">
         <section className="card">
           <span className="muted small">{t("uptime")}</span>
-          <span className="page-title">
-            {d.api.uptimePct == null ? "—" : `${d.api.uptimePct}%`}
-          </span>
-          <span className="muted small">
-            {d.api.probes ? `${d.api.probes} checks` : t("noProbe")}
-          </span>
+          <span className="page-title">{d.api.uptimePct == null ? "—" : `${d.api.uptimePct}%`}</span>
+          <span className="muted small">{d.api.probes ? `${d.api.probes} checks` : t("noProbe")}</span>
         </section>
         <section className="card">
           <span className="muted small">
@@ -110,12 +101,8 @@ export function SystemPage() {
         </section>
         <section className="card">
           <span className="muted small">{t("errorRate")}</span>
-          <span className="page-title">
-            {d.api.errorRate == null ? "—" : `${d.api.errorRate}%`}
-          </span>
-          <span className="muted small">
-            {d.api.errorRate == null ? t("notConnected") : ""}
-          </span>
+          <span className="page-title">{d.api.errorRate == null ? "—" : `${d.api.errorRate}%`}</span>
+          <span className="muted small">{d.api.errorRate == null ? t("notConnected") : ""}</span>
         </section>
       </div>
       <section className="card">
@@ -140,14 +127,7 @@ export function SystemPage() {
                   flex: 1,
                   height: "100%",
                   borderRadius: 3,
-                  background:
-                    pct == null
-                      ? "var(--subtle)"
-                      : pct === 1
-                        ? "var(--status-done-dot)"
-                        : pct > 0.9
-                          ? "var(--status-progress-dot)"
-                          : "var(--status-overdue-dot)",
+                  background: pct == null ? "var(--subtle)" : pct === 1 ? "var(--status-done-dot)" : pct > 0.9 ? "var(--status-progress-dot)" : "var(--status-overdue-dot)",
                 }}
               />
             );
@@ -164,22 +144,15 @@ export function SystemPage() {
             <>
               <table className="tbl">
                 <tbody>
-                  {(["waiting", "active", "delayed", "failed"] as const).map(
-                    (k) => (
-                      <tr key={k}>
-                        <td>{t(k)}</td>
-                        <td className="num">
-                          {d.queue.configured ? d.queue[k] : 0}
-                        </td>
-                      </tr>
-                    ),
-                  )}
+                  {(["waiting", "active", "delayed", "failed"] as const).map((k) => (
+                    <tr key={k}>
+                      <td>{t(k)}</td>
+                      <td className="num">{d.queue.configured ? d.queue[k] : 0}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
-              <Link
-                className={buttonClass("ghost", "small")}
-                href="/incidents#jobs"
-              >
+              <Link className={buttonClass("ghost", "small")} href="/incidents#jobs">
                 {t("openFailed")}
               </Link>
             </>
@@ -206,13 +179,7 @@ export function SystemPage() {
                   <tr key={x.channel}>
                     <td>{x.channel}</td>
                     <td className="num">{x.sent}</td>
-                    <td className="num">
-                      {x.failed ? (
-                        <span className="pill bad">{x.failed}</span>
-                      ) : (
-                        0
-                      )}
-                    </td>
+                    <td className="num">{x.failed ? <span className="pill bad">{x.failed}</span> : 0}</td>
                     <td className="num">{x.pending}</td>
                   </tr>
                 ))}
@@ -245,10 +212,7 @@ export function SystemPage() {
                 {d.heavyWorkspaces.map((w) => (
                   <tr key={w.id}>
                     <td>
-                      <Link href={`/workspaces/${w.id}`}>{w.name}</Link>{" "}
-                      <span className="muted mono small">
-                        {w.id.slice(0, 8)}
-                      </span>
+                      <Link href={`/workspaces/${w.id}`}>{w.name}</Link> <span className="muted mono small">{w.id.slice(0, 8)}</span>
                     </td>
                     <td className="num">{fmt.num(w.apiCalls)}</td>
                     <td className="num">{fmt.num(w.automationRuns)}</td>
@@ -269,11 +233,7 @@ export function SystemPage() {
         ) : (
           d.incidents.map((i) => (
             <div key={i.id} className="row small">
-              <span
-                className={i.status === "resolved" ? "pill ok" : "pill bad"}
-              >
-                {to(`state.${i.status}` as "state.resolved")}
-              </span>
+              <span className={i.status === "resolved" ? "pill ok" : "pill bad"}>{to(`state.${i.status}` as "state.resolved")}</span>
               <span>{i.title}</span>
               <span className="muted">· {fmt.dateTime(i.startedAt)}</span>
               {i.internal && <span className="pill">{to("internal")}</span>}

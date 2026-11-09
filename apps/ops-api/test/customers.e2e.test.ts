@@ -42,7 +42,7 @@ beforeAll(async () => {
   await t.owner.query(`INSERT INTO subscription_changes (workspace_id, kind, plan_to, mrr_before_satang, mrr_after_satang, actor_kind, effective_at) VALUES ($1, 'new', 'team_m', 0, 300000, 'user', now() - interval '40 days')`, [a.id]);
   await t.owner.query(`INSERT INTO cost_rates (resource, unit_cost_satang, effective_from) VALUES ('line_message', 4, '2026-01-01'), ('email', 1, '2026-01-01')`);
   await t.owner.query(`INSERT INTO daily_usages (workspace_id, date, line_messages, emails, active_users) VALUES ($1, current_date - 1, 1000, 500, 16), ($1, current_date - 2, 580, 320, 15)`, [a.id]);
-  await t.owner.query(`INSERT INTO product_events (workspace_id, name, props) VALUES ($1, 'feature.used', '{"feature":"gantt"}'), ($1, 'limit.hit', '{"limit":"automation"}'), ($1, 'limit.hit', '{"limit":"automation"}')`, [a.id]);
+  await t.owner.query(`INSERT INTO product_events (workspace_id, name, props) VALUES ($1, 'feature.used', '{"feature":"gantt"}'), ($1, 'limit.hit', '{"limit":"automation"}'), ($1, 'limit.hit', '{"limit":"automation"}'), ($1, 'limit.hit', '{"limit":"automation"}')`, [a.id]);
 });
 afterAll(() => t.close());
 

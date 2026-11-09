@@ -1,4 +1,9 @@
-import common from "../../messages/th/common.json";
+import commonTh from "../../messages/th/common.json";
+import commonEn from "../../messages/en/common.json";
+import { pageLocale } from "./format";
+
+/** ข้อความ error ของ client เองตามภาษาของหน้า (W21) · error จาก API ใช้ข้อความที่ API ส่งมา */
+const appText = () => (pageLocale() === "en" ? { ...commonTh.app, ...commonEn.app } : commonTh.app);
 
 export class ApiError extends Error {
   readonly latest: unknown;
@@ -80,7 +85,7 @@ export class ApiClient {
             throw new ApiError(
               response.status,
               "csrf_failed",
-              common.app.unknownError,
+              appText().unknownError,
             );
           return ((await response.json()) as { csrfToken: string }).csrfToken;
         })
@@ -125,7 +130,7 @@ export class ApiClient {
       });
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") throw error;
-      throw new ApiError(0, "network_error", common.app.networkError);
+      throw new ApiError(0, "network_error", appText().networkError);
     }
     const data =
       response.status === 204
@@ -136,7 +141,7 @@ export class ApiClient {
       const error = new ApiError(
         response.status,
         payload?.code ?? "unknown_error",
-        payload?.message ?? common.app.unknownError,
+        payload?.message ?? appText().unknownError,
         payload?.details ?? {},
         payload?.requestId,
       );
@@ -149,7 +154,7 @@ export class ApiClient {
       if (confirmer && error.details.confirmable === true && typeof field === "string" && plain && !(body as Record<string, unknown>)[field]) {
         const ok = await confirmer({ code: error.code, message: error.message, details: error.details });
         if (ok) return this.requestWithMeta<T>(path, { ...options, body: { ...(body as Record<string, unknown>), [field]: true } });
-        throw new ApiError(error.status, "confirm_cancelled", common.app.confirmCancelled, error.details, error.requestId);
+        throw new ApiError(error.status, "confirm_cancelled", appText().confirmCancelled, error.details, error.requestId);
       }
       throw error;
     }

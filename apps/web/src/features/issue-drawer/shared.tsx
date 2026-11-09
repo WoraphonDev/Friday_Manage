@@ -7,6 +7,7 @@ import { ApiError, isConfirmCancelled, supportId } from '@/lib/api';
 import { Avatar, Button, Input } from '@/components/ui';
 import type { PublicPerson } from './types';
 import styles from './issue-drawer.module.css';
+import { intlLocale } from '@/lib/format';
 
 export function BodyText({ children }: { children: string }) {
   return <div className={styles.markdown}><Markdown remarkPlugins={[remarkGfm]} skipHtml components={{
@@ -43,5 +44,5 @@ export function Section({ title, children, action }: { title: string; children: 
 }
 export function when(value: string, yearFormat: 'BE' | 'CE') {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(`th-TH-u-ca-${yearFormat === 'BE' ? 'buddhist' : 'gregory'}`, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }).format(date);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(intlLocale(yearFormat), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }).format(date);
 }

@@ -17,9 +17,9 @@
 ## เสร็จเมื่อ
 
 - [x] หน้าตรงกับไฟล์ Canvas ที่ 1440 px และ 390 px (เทียบภาพ) · ใช้ UI kit ของ W00
-- [ ] ครบทุกสถานะตาม M1: กำลังโหลด, ว่าง, Error พร้อม requestId, 403 / ไม่มีสิทธิ์ (ซ่อนปุ่มตาม `my-permissions`)
+- [x] ครบทุกสถานะตาม M1: กำลังโหลด, ว่าง, Error พร้อม requestId, 403 / ไม่มีสิทธิ์ (ซ่อนปุ่มตาม `my-permissions`)
 - [x] component test ด้วย MSW ครอบคลุมทุกข้อใน "ทำอะไร" · `pnpm --filter @friday/web typecheck test build` ผ่าน
-- [ ] ข้อความทั้งหมดอยู่ใน namespace ของงานนี้
+- [x] ข้อความทั้งหมดอยู่ใน namespace ของงานนี้
 
 ## บันทึกผล
 
@@ -196,3 +196,10 @@
 - ข้อ 7: `format.ts` ใช้ภาษาของหน้า (`<html lang>`) กับ `formatDate`, `formatManDay`, `formatOverdue` และข้อความ `common.format` ของภาษานั้น · ยังใช้รูปแบบปีที่ผู้ใช้เลือก · ฝั่ง server ยังเป็นไทย (หน้าส่วนใหญ่โหลดข้อมูลฝั่ง client จึงไม่กระทบ)
 - ข้อ 6: ฟอร์มเลือกภาษาใน Profile มีอยู่แล้ว (`personal-tab.tsx`) บันทึกแล้ว `LocaleSync` เขียน cookie และ refresh
 - ยังเหลือ: ข้อ 8 (`Intl` ที่เขียน `"th-TH"` ตรงใน 18 ไฟล์ และ metadata ที่ import `messages/th`) และ checkbox M1 / namespace ด้านบน
+
+### ปิดงาน (9 พ.ย. 2569)
+
+- ข้อ 8: เลิกเขียน `"th-TH"` ตรงใน 18 ไฟล์ · `format.ts` มี `appLocale()`, `intlLocale(year)`, `localeDateFormat()`, `localeNumberFormat()` ที่เลือกภาษาตอนเรียก format (สลับภาษาด้วย `router.refresh()` ไม่โหลดโมดูลใหม่ จึงประกาศไว้ระดับ module ได้) · Timeline ใช้ `useLocale()` อยู่แล้วไม่ต้องแก้
+- `<title>` ของ login, signup, forgot-password, join, onboarding, pricing, legal ใช้ `generateMetadata` + `getTranslations` ตามภาษาของคำขอ · ข้อความ error ฝั่ง client ใน `api.ts` และตัวแก้ชุดฟิลด์ (field-profile) ใช้ข้อความ EN เมื่อหน้าเป็น EN
+- Namespace: ข้อความของตัวสลับภาษา / ปี / ธีม ย้ายจาก `labels.ts` และค่าคงที่ใน `ThemeSwitch.tsx` ไป `messages/{th,en}/locale-switch.json` · เพิ่มใน `src/i18n/messages.ts` เพราะตัวสลับอยู่ใน shell ทุกหน้า
+- M1: ตัวสลับไม่มีข้อมูลให้โหลดหรือสถานะว่าง · ระหว่างบันทึกกลุ่มปุ่ม `aria-busy` และกดซ้ำไม่ได้ · Error แสดงข้อความจาก API พร้อมรหัสอ้างอิง (`supportId`) · ไม่ต้องใช้สิทธิ์ (ทุกคนตั้งภาษาของตัวเองได้ · ยังไม่ล็อกอินบันทึกแค่ cookie และไม่แสดงตัวเลือกปี) · test ครอบคลุมทั้งสามกรณี

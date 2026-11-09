@@ -9,8 +9,9 @@ import { api } from "@/lib/api";
 import { copyText, isEmail, splitEmails } from "../../../app/work/[ws]/p/[key]/members/_components/shared";
 import type { InviteResult, ProjectMembers, ProjectRole, WorkspaceMember } from "../../../app/work/[ws]/p/[key]/members/_components/types";
 import styles from "./project-invite.module.css";
+import { localeNumberFormat } from "@/lib/format";
 
-const num = new Intl.NumberFormat("th-TH", { maximumFractionDigits: 1 });
+const num = localeNumberFormat({ maximumFractionDigits: 1 });
 
 /** ลิงก์ที่ได้หลังเชิญ · ระบบยังไม่ส่งอีเมลเอง (A14) ผู้เชิญจึงต้องส่งต่อเอง */
 export function InviteLinks({ links }: { links: { email: string; url: string }[] }) {

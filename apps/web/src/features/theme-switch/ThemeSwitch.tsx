@@ -2,9 +2,8 @@
 
 // ตัวเลือกธีม สว่าง / มืด / ตามระบบ · วางคู่กับตัวสลับภาษา (เมนูบัญชี, เมนูมือถือ, หน้าสาธารณะ)
 import { useSyncExternalStore } from "react";
-import { useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Monitor, Moon, Sun } from "lucide-react";
-import { isLocale } from "@/features/locale-switch/locale";
 import {
   DEFAULT_THEME,
   THEME_EVENT,
@@ -15,11 +14,7 @@ import {
 } from "./theme";
 import styles from "./theme-switch.module.css";
 
-// ข้อความอยู่ใน feature แบบเดียวกับตัวสลับภาษา เพราะต้องแสดงได้ทุกหน้า รวมหน้าสาธารณะ
-const LABELS = {
-  th: { theme: "ธีม", light: "สว่าง", dark: "มืด", system: "ตามระบบ" },
-  en: { theme: "Theme", light: "Light", dark: "Dark", system: "System" },
-} as const;
+// ข้อความอยู่ใน namespace locale-switch (โหลดทุกหน้า รวมหน้าสาธารณะ) ร่วมกับตัวสลับภาษา
 
 const ICONS = { light: Sun, dark: Moon, system: Monitor } satisfies Record<ThemePref, unknown>;
 
@@ -41,13 +36,12 @@ export function ThemeSwitch({
   /** ใช้หัวข้อของฟอร์มเป็นชื่อกลุ่มแทนคำว่า "ธีม" */
   "aria-labelledby"?: string;
 }) {
-  const locale = useLocale();
-  const labels = LABELS[isLocale(locale) ? locale : "th"];
+  const t = useTranslations("locale-switch.theme");
   // server ไม่รู้ค่าในหน้าที่เปิดอยู่ จึงเริ่มจากค่าเริ่มต้นแล้วอ่านจาก <html> หลัง hydrate
   const pref = useSyncExternalStore(subscribe, readThemePref, () => DEFAULT_THEME);
 
   return (
-    <div className={[styles.seg, className].filter(Boolean).join(" ")} role="group" aria-label={labelledBy ? undefined : labels.theme} aria-labelledby={labelledBy}>
+    <div className={[styles.seg, className].filter(Boolean).join(" ")} role="group" aria-label={labelledBy ? undefined : t("label")} aria-labelledby={labelledBy}>
       {THEME_PREFS.map((option) => {
         const Icon = ICONS[option];
         return (
@@ -55,8 +49,8 @@ export function ThemeSwitch({
             key={option}
             type="button"
             aria-pressed={option === pref}
-            aria-label={showLabels ? undefined : labels[option]}
-            title={labels[option]}
+            aria-label={showLabels ? undefined : t(option)}
+            title={t(option)}
             onClick={() => {
               if (option === pref) return;
               applyThemePref(option);
@@ -64,7 +58,7 @@ export function ThemeSwitch({
             }}
           >
             <Icon size={15} aria-hidden="true" />
-            {showLabels && <span>{labels[option]}</span>}
+            {showLabels && <span>{t(option)}</span>}
           </button>
         );
       })}

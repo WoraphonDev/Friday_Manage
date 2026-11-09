@@ -7,7 +7,7 @@ import { Avatar, Badge, Button, Dialog, Input, useToast } from "@/components/ui"
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/query";
-import { today } from "@/lib/format";
+import { today, localeDateFormat } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { errorText, wsPath } from "./shared";
 import { type Leave, type LineStatus, type Membership, type ProfileMe, profileKeys } from "./types";
@@ -33,7 +33,7 @@ function useClock(timezone: string) {
     return () => clearInterval(id);
   }, []);
   try {
-    const time = new Intl.DateTimeFormat("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: timezone }).format(now);
+    const time = localeDateFormat({ hour: "2-digit", minute: "2-digit", hour12: false, timeZone: timezone }).format(now);
     const offset = new Intl.DateTimeFormat("en-US", { timeZone: timezone, timeZoneName: "shortOffset" }).formatToParts(now).find((p) => p.type === "timeZoneName")?.value ?? "";
     return `${time} (${offset})`;
   } catch {

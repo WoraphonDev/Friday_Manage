@@ -9,7 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import { Avatar, Badge, Button, ErrorState, Forbidden, LoadingState, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
-import { formatDate, today } from "@/lib/format";
+import { formatDate, today, localeDateFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import { inboxKey, type Filter, type InboxNotification, type InboxPage as Page } from "./types";
 import styles from "./inbox.module.css";
@@ -18,7 +18,7 @@ const FILTERS: Filter[] = ["all", "unread", "assign", "mention", "activity", "du
 const TONE: Record<string, "blue" | "purple" | "teal" | "amber" | "red" | "neutral"> = { assign: "blue", mention: "purple", activity: "teal", due: "amber" };
 const issueHref = (ws: string, key: string) => `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(key.split("-")[0])}/board?issue=${encodeURIComponent(key)}`;
 const bkkDate = (iso: string) => today(new Date(iso));
-const timeOf = (iso: string) => new Intl.DateTimeFormat("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }).format(new Date(iso));
+const timeOf = (iso: string) => localeDateFormat({ hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }).format(new Date(iso));
 
 export function useLabels() {
   const t = useTranslations("inbox-bell.inbox");

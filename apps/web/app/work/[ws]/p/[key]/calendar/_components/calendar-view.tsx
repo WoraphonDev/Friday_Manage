@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button, buttonVariants, Dialog, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
-import { formatDate, type YearFormat } from "@/lib/format";
+import { formatDate, type YearFormat, intlLocale } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
 import { SubscribeDialog } from "./subscribe-dialog";
@@ -63,7 +63,7 @@ export function monthDays(month: string) {
   return out;
 }
 const monthLabel = (month: string, year: YearFormat) =>
-  new Intl.DateTimeFormat(`th-TH-u-ca-${year === "BE" ? "buddhist" : "gregory"}`, { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`));
+  new Intl.DateTimeFormat(intlLocale(year), { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`));
 const dayMonth = (iso: string, year: YearFormat) => formatDate(iso, year).split(" ").slice(0, 2).join(" ");
 
 export function CalendarView({ ws, projectKey }: { ws: string; projectKey: string }) {

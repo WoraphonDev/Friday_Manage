@@ -4,6 +4,9 @@ import {
   formatDateRange,
   formatManDay,
   formatOverdue,
+  intlLocale,
+  localeDateFormat,
+  localeNumberFormat,
   today,
 } from "./format";
 import { safeReturnTo } from "./utils";
@@ -32,6 +35,23 @@ describe("วันที่และหน่วยงาน", () => {
       expect(formatOverdue("2026-12-01", "2026-12-02")).toBe("1 day overdue");
       expect(formatOverdue("2026-12-01", "2026-12-04")).toBe("3 days overdue");
       expect(formatOverdue("2026-12-04", "2026-12-04")).toBe("Today");
+    } finally {
+      document.documentElement.lang = "th";
+    }
+  });
+  it("ตัวจัดรูปแบบที่ประกาศไว้ก่อนเลือกภาษาตอนเรียก format (สลับภาษาแล้วไม่ต้องโหลดโมดูลใหม่)", () => {
+    const num = localeNumberFormat({ maximumFractionDigits: 1 });
+    const month = localeDateFormat({ month: "long", timeZone: "UTC" });
+    const withYear = localeDateFormat({ month: "short", year: "numeric", timeZone: "UTC" }, "BE");
+    const date = new Date("2026-12-01T00:00:00Z");
+    expect(month.format(date)).toBe("ธันวาคม");
+    expect(withYear.format(date)).toBe("ธ.ค. 2569");
+    document.documentElement.lang = "en";
+    try {
+      expect(num.format(1234.56)).toBe("1,234.6");
+      expect(month.format(date)).toBe("December");
+      expect(withYear.format(date)).toBe("Dec 2569 BE");
+      expect(intlLocale("CE")).toBe("en-US-u-ca-gregory");
     } finally {
       document.documentElement.lang = "th";
     }

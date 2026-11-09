@@ -1,4 +1,5 @@
 // รูปแบบข้อมูลจาก API จริง (A29 billing, A30 public) · เงินเป็นสตางค์ทั้งหมด
+import { localeNumberFormat } from "@/lib/format";
 
 export type PlanCode = "free" | "team_s" | "team_m" | "team_l" | "enterprise";
 export type PaidPlan = "team_s" | "team_m" | "team_l";
@@ -71,7 +72,7 @@ export const bytesToGb = (bytes: number) => Math.round((bytes / GB) * 100) / 100
 
 /** สตางค์ → "3,210" หรือ "3,210.50" */
 export function baht(satang: number) {
-  return new Intl.NumberFormat("th-TH", {
+  return localeNumberFormat({
     minimumFractionDigits: satang % 100 ? 2 : 0,
     maximumFractionDigits: 2,
   }).format(satang / 100);

@@ -11,9 +11,10 @@ import { SettingsFrame } from "../../settings/_components/project-settings";
 import { RuleEditor } from "./rule-editor";
 import { blankRule, errorText, type FormOptions, type Rule, type RuleList, type RuleShape, type Run, type Template } from "./types";
 import styles from "./automation.module.css";
+import { localeDateFormat } from "@/lib/format";
 
 type Tab = "rules" | "tpl" | "log";
-const thTime = new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" });
+const thTime = localeDateFormat({ day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" });
 const RESULT_TONE: Record<Run["result"], string> = { success: "ok", skipped: "neu", failed: "bad", retried: "warn" };
 
 /** หน้า P2 · Automation ของโปรเจกต์ (`project.automation`) */

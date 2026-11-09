@@ -1,9 +1,13 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import common from "../../../messages/th/common.json";
+import { getTranslations } from "next-intl/server";
 import { SignupForm } from "./_components/signup-form";
 
-export const metadata: Metadata = { title: common.auth.signup };
+// ชื่อแท็บตามภาษาของคำขอ (W21)
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.auth");
+  return { title: t("signup") };
+}
 
 export default function Page() {
   return (

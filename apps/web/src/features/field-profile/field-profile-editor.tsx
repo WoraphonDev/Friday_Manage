@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { NextIntlClientProvider, useLocale, useMessages, useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, ChevronDown, X } from "lucide-react";
 import thMessages from "../../../messages/th/field-profile.json";
+import enMessages from "../../../messages/en/field-profile.json";
 import {
   PROFILE_FIELDS, REQUIRABLE, STANDARD_COLUMNS,
   type CustomFieldType, type FieldMode, type FieldRule, type Level, type ProfileField,
@@ -22,12 +23,12 @@ const FIELD_COLUMNS: Record<ProfileField, string[]> = {
 export interface EditorCustomField { key: string; name: string; fieldType: CustomFieldType; taskMode: FieldMode; subtaskMode: FieldMode }
 export interface EditorValue { fields: Record<ProfileField, FieldRule>; columns: string[]; custom: EditorCustomField[] }
 
-/** ข้อความของตัวแก้ใช้ร่วมกันหลายหน้า (Settings, Admin) · หน้าที่ไม่ได้โหลด namespace นี้ใช้ภาษาไทยในไฟล์ */
+/** ข้อความของตัวแก้ใช้ร่วมกันหลายหน้า (Settings, Admin) · หน้าที่ไม่ได้โหลด namespace นี้ใช้ข้อความในไฟล์ตามภาษาของหน้า (EN ทับไทย) */
 export function FieldProfileMessages({ children }: { children: ReactNode }) {
   const messages = useMessages();
   const locale = useLocale();
   if (messages["field-profile"]) return <>{children}</>;
-  return <NextIntlClientProvider locale={locale} messages={{ ...messages, "field-profile": thMessages }}>{children}</NextIntlClientProvider>;
+  return <NextIntlClientProvider locale={locale} messages={{ ...messages, "field-profile": locale === "en" ? { ...thMessages, ...enMessages } : thMessages }}>{children}</NextIntlClientProvider>;
 }
 
 export function FieldProfileEditor(props: { value: EditorValue; onChange: (next: EditorValue) => void; disabled?: boolean }) {

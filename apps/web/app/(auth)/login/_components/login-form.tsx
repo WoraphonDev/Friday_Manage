@@ -19,6 +19,7 @@ import {
   safeReturnTo,
   styles,
 } from "../../_components/shared";
+import { appLocale } from "@/lib/format";
 
 type LoginResult = { id: string } | { mfaRequired: true; mfaToken: string; email: string };
 interface Mfa {
@@ -137,7 +138,7 @@ export function LoginForm() {
       const until = typeof error.details.lockedUntil === "string" ? new Date(error.details.lockedUntil) : null;
       return until && !Number.isNaN(until.getTime())
         ? t("login.locked", {
-            time: until.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
+            time: until.toLocaleTimeString(appLocale(), { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
           })
         : t("login.lockedNow");
     }

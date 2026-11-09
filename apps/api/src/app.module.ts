@@ -8,6 +8,7 @@ import type { AppRequest } from './common/request.js';
 import { CoreModule } from './core/core.module.js';
 import { DbModule } from './db/db.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { AnalyticsModule } from './analytics/analytics.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { AutomationModule } from './automation/automation.module.js';
 import { BillingModule } from './billing/billing.module.js';
@@ -51,6 +52,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     DbModule,
     CoreModule,
     AdminModule,
+    AnalyticsModule,
     AuthModule,
     AutomationModule,
     BillingModule,

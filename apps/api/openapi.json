@@ -15,6 +15,9 @@
       "name": "Admin"
     },
     {
+      "name": "Analytics"
+    },
+    {
       "name": "ApiTokens"
     },
     {
@@ -598,6 +601,41 @@
                   "acceptTerms": {
                     "type": "boolean",
                     "const": true
+                  },
+                  "attribution": {
+                    "type": "object",
+                    "properties": {
+                      "utmSource": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "utmMedium": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "utmCampaign": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "utmTerm": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "referrer": {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      "landingPath": {
+                        "type": "string",
+                        "maxLength": 300
+                      },
+                      "firstSeenAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                      }
+                    },
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -5257,6 +5295,107 @@
         }
       }
     },
+    "/api/v1/w/{ws}/cancellation-feedback": {
+      "post": {
+        "operationId": "Analytics_cancellation",
+        "summary": "แบบสอบถามตอนกดยกเลิกแพ็กเกจ (W22)",
+        "tags": [
+          "Analytics"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "too_expensive",
+                      "missing_feature",
+                      "switched_tool",
+                      "project_ended",
+                      "hard_to_use",
+                      "company_closed",
+                      "other"
+                    ]
+                  },
+                  "missingFeature": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "switchedTo": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "detail": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "offerShown": {
+                    "default": "none",
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "discount",
+                      "pause"
+                    ]
+                  },
+                  "outcome": {
+                    "type": "string",
+                    "enum": [
+                      "canceled",
+                      "kept"
+                    ]
+                  }
+                },
+                "required": [
+                  "reason",
+                  "outcome"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/w/{ws}/channels/deliveries": {
       "get": {
         "operationId": "Channels_deliveries",
@@ -7060,6 +7199,269 @@
                     "maxLength": 2000
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/events": {
+      "post": {
+        "operationId": "Analytics_track",
+        "summary": "เหตุการณ์จากหน้าเว็บ (สูงสุด 50 รายการต่อครั้ง) · ตอบ 202 เสมอเมื่อข้อมูลถูกรูปแบบ แม้บันทึกไม่สำเร็จ",
+        "tags": [
+          "Analytics"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "events": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "const": "feature.used"
+                            },
+                            "props": {
+                              "type": "object",
+                              "properties": {
+                                "feature": {
+                                  "type": "string",
+                                  "enum": [
+                                    "table",
+                                    "kanban",
+                                    "gantt",
+                                    "timeline",
+                                    "calendar",
+                                    "workload",
+                                    "due_request",
+                                    "import",
+                                    "automation",
+                                    "saved_view",
+                                    "git",
+                                    "api",
+                                    "line",
+                                    "report"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "feature"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "props"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "const": "limit.hit"
+                            },
+                            "props": {
+                              "type": "object",
+                              "properties": {
+                                "limit": {
+                                  "type": "string",
+                                  "enum": [
+                                    "seats",
+                                    "storage",
+                                    "automation",
+                                    "projects",
+                                    "guests",
+                                    "feature"
+                                  ]
+                                },
+                                "current": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "max": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "limit"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "props"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "enum": [
+                                "upgrade.prompt_shown",
+                                "upgrade.prompt_clicked"
+                              ]
+                            },
+                            "props": {
+                              "type": "object",
+                              "properties": {
+                                "placement": {
+                                  "type": "string",
+                                  "maxLength": 40
+                                },
+                                "planFrom": {
+                                  "type": "string",
+                                  "maxLength": 40
+                                },
+                                "planTo": {
+                                  "type": "string",
+                                  "maxLength": 40
+                                }
+                              },
+                              "required": [
+                                "placement"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "props"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "const": "onboarding.step_done"
+                            },
+                            "props": {
+                              "type": "object",
+                              "properties": {
+                                "step": {
+                                  "type": "string",
+                                  "maxLength": 40
+                                }
+                              },
+                              "required": [
+                                "step"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "props"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "enum": [
+                                "checkout.started",
+                                "checkout.method_selected"
+                              ]
+                            },
+                            "props": {
+                              "type": "object",
+                              "properties": {
+                                "plan": {
+                                  "type": "string",
+                                  "maxLength": 40
+                                },
+                                "cycle": {
+                                  "type": "string",
+                                  "enum": [
+                                    "monthly",
+                                    "yearly"
+                                  ]
+                                },
+                                "method": {
+                                  "type": "string",
+                                  "enum": [
+                                    "card",
+                                    "promptpay",
+                                    "transfer",
+                                    "bill_payment"
+                                  ]
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "props"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "events"
+                ],
+                "additionalProperties": false
               }
             }
           }

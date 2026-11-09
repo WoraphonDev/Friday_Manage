@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Inject, Post, Query } from '@nestjs/common';
+import { AnalyticsService } from '../analytics/analytics.service.js';
 import { type Db, schema } from '@friday/db';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -21,7 +22,10 @@ const RESERVED = new Set(['api', 'app', 'admin', 'ops', 'join', 'login', 'signup
 
 @Controller('workspaces')
 export class WorkspacesController {
-  constructor(@Inject(SYSTEM_DB) private readonly db: Db) {}
+  constructor(
+    @Inject(SYSTEM_DB) private readonly db: Db,
+    private readonly analytics: AnalyticsService,
+  ) {}
 
   @Get('slug-available')
   async slugAvailable(@Query('slug') value: string) {
@@ -43,6 +47,7 @@ export class WorkspacesController {
       await tx.insert(securityPolicies).values({ workspaceId: ws.id });
       await tx.insert(workspaceMembers).values({ workspaceId: ws.id, userId: auth.userId, role: 'owner' });
       await tx.insert(auditLogs).values({ workspaceId: ws.id, actorId: auth.userId, actorKind: 'user', category: 'data', action: 'workspace.created', targetType: 'workspace', targetId: ws.id, summary: ws.name });
+      await this.analytics.copyAcquisition(tx, ws.id, auth.userId);
       return { id: ws.id, slug: ws.slug, name: ws.name, status: ws.status, role: 'owner' };
     });
   }

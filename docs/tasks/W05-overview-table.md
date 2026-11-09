@@ -65,6 +65,17 @@
 - คำขอนอก lane: A03 `PatchIssueBody.actualStart` + test ใน `issues.e2e.test.ts` + OpenAPI · D99 ปรับข้อ 9 ของ `01-entities.md` ตามข้อข้างบน
 
 
+### Overview เป็นหน้าเดียว — 2026-11-08
+
+ผู้ใช้ขอให้จัดหน้า Overview ใหม่ให้เป็นหน้าเดียวกัน (เดิมส่วน "แผนทั้งโปรเจกต์" ต่อท้ายเหมือนหน้าที่สอง และข้อมูลซ้ำกับด้านบน)
+
+- แถบบน: ปุ่ม "สร้างรายงานประจำสัปดาห์" / "Import / Export" อยู่ข้างตัวกรอง (ไม่มีหัวส่วนแยก)
+- การ์ดสรุป: เพิ่มแถวตัวเลขแผน (Man-Day ตามแผน, ช่วงแผน, ต้องใช้จริงตาม capacity, เริ่มสัปดาห์นี้ / หน้า) · ตัด "งานทั้งหมด" และป้ายสถานะแผนที่ซ้ำกับการ์ดสรุป / Health
+- คอลัมน์หลัก: รายการงานตาม KPI → ตาราง Module (แทน Progress by Module) → งานที่เสร็จ → ข้อมูลโปรเจกต์ · คอลัมน์ข้าง: ความเสี่ยงที่ระบบพบ (`#planning`) → Status → Milestones → Recent activity · Workload รายสัปดาห์เต็มความกว้างท้ายหน้า
+- คนที่ไม่มีสิทธิ์ดู Workload เห็นแบบเดิม (Progress by Module, Workload สัปดาห์นี้) · มือถือไม่เปลี่ยน (M6)
+- ลิงก์ในกล่อง Health เปลี่ยนเป็น "ดูความเสี่ยงในแผน" · `/dashboard` เดิมยัง redirect มาที่ `#planning`
+- คำขอนอก lane: `dashboard/_components/lead-dashboard.tsx` (W15) แยก `PlanSection` เป็น `usePlan`, `PlanActions`, `PlanFacts`, `PlanRisks`, `PlanModules`, `PlanWorkload` · test ของ O1 mount หน้า Overview จริง · fixture ของ Overview ย้ายไป `src/test/overview-fixture.ts`
+
 ### รวมภาพรวม Lead (O1) เข้า Overview — 2026-11-07
 
 - **ต่างจาก Canvas O1 / 1 โดยตั้งใจ** (ผู้ใช้ให้รวม เพราะข้อมูลทับกันและต้องจำว่าอยู่หน้าไหน): เนื้อหาหน้า O1 (ตัวเลขทั้งแผน, ความเสี่ยง, Workload หลายสัปดาห์, Module ตามวันเริ่ม) เป็นส่วน "แผนทั้งโปรเจกต์" ท้าย Overview (`#planning`) สำหรับคนที่มี `project.workload.view`

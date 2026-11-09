@@ -9,11 +9,11 @@ import { router } from "@/test/router";
 import { permissions, workspaces } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import json from "../../messages/th/project-settings-new.json";
-import { ProjectSettings, generalChanges } from "../../app/w/[ws]/p/[key]/settings/_components/project-settings";
-import { bugColumns } from "../../app/w/[ws]/p/[key]/settings/_components/workflow-section";
-import type { ProjectDetail, Workflow } from "../../app/w/[ws]/p/[key]/settings/_components/types";
-import { NewProjectWizard } from "../../app/w/[ws]/new-project/_components/new-project-wizard";
-import { spanDays, sprintCount, suggestKey } from "../../app/w/[ws]/new-project/_components/plan";
+import { ProjectSettings, generalChanges } from "../../app/work/[ws]/p/[key]/settings/_components/project-settings";
+import { bugColumns } from "../../app/work/[ws]/p/[key]/settings/_components/workflow-section";
+import type { ProjectDetail, Workflow } from "../../app/work/[ws]/p/[key]/settings/_components/types";
+import { NewProjectWizard } from "../../app/work/[ws]/new-project/_components/new-project-wizard";
+import { spanDays, sprintCount, suggestKey } from "../../app/work/[ws]/new-project/_components/plan";
 
 const project = (over: Partial<ProjectDetail> = {}): ProjectDetail => ({
   id: "p1", key: "DE", name: "แผนพัฒนาผลิตภัณฑ์", clientName: null, description: null, color: "#334155",
@@ -113,13 +113,17 @@ const mount = (ui: React.ReactElement) => renderWithProviders(<WorkspaceShell ws
 const settings = (section?: string) => mount(<ProjectSettings ws="sample" projectKey="DE" section={section} />);
 
 describe("Project Settings (L2)", () => {
-  it("เมนู 8 หมวด + Automation · หมวดที่ API ยังไม่มีแสดงว่ายังไม่เปิด · หมวดที่ไม่รู้จัก = ไม่พบหน้า", async () => {
+  it("เมนู 8 หมวด + Import / Export 3 เมนู + Automation · หมวดที่ API ยังไม่มีแสดงว่ายังไม่เปิด · หมวดที่ไม่รู้จัก = ไม่พบหน้า", async () => {
     const a = settings("notify");
     const nav = await screen.findByRole("navigation", { name: "หมวดการตั้งค่า" });
-    expect(within(nav).getAllByRole("link")).toHaveLength(9);
+    expect(within(nav).getAllByRole("link")).toHaveLength(12);
+    // Import / Export อยู่ใน Settings ด้วย (ผู้ใช้ตัดสิน 2026-11-09)
+    expect(within(nav).getByRole("link", { name: "อัปเดตแผนจาก Excel" })).toHaveAttribute("href", "/work/sample/p/DE/settings/import");
+    expect(within(nav).getByRole("link", { name: "Export แผน + Timeline" })).toHaveAttribute("href", "/work/sample/p/DE/settings/export");
+    expect(within(nav).getByRole("link", { name: "การแก้ไขแผน" })).toHaveAttribute("href", "/work/sample/p/DE/settings/plan-changes");
     expect(within(nav).getByRole("link", { name: "การแจ้งเตือน" })).toHaveAttribute("aria-current", "page");
-    expect(within(nav).getByRole("link", { name: "Workflow" })).toHaveAttribute("href", "/w/sample/p/DE/settings/workflow");
-    expect(within(nav).getByRole("link", { name: /Automation/ })).toHaveAttribute("href", "/w/sample/p/DE/automation");
+    expect(within(nav).getByRole("link", { name: "Workflow" })).toHaveAttribute("href", "/work/sample/p/DE/settings/workflow");
+    expect(within(nav).getByRole("link", { name: /Automation/ })).toHaveAttribute("href", "/work/sample/p/DE/automation");
     expect(screen.getByText("ยังไม่เปิดใช้งาน")).toBeInTheDocument();
     a.unmount();
     settings("integ");
@@ -164,7 +168,7 @@ describe("Project Settings (L2)", () => {
     await user.clear(key);
     await user.type(key, "dp");
     await user.click(screen.getByRole("button", { name: "บันทึก" }));
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/w/sample/p/DP/settings/general"));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/work/sample/p/DP/settings/general"));
     expect(calls[0].body).toEqual({ key: "DP" });
   });
 
@@ -221,7 +225,7 @@ describe("Project Settings (L2)", () => {
     const label = await screen.findByRole("dialog", { name: "เพิ่ม Label" });
     await user.type(within(label).getByLabelText("ชื่อ Label"), "hotfix");
     await user.click(within(label).getByRole("button", { name: "เพิ่ม" }));
-    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "POST", path: "/w/sample/projects/DE/labels", body: { name: "hotfix", color: "#1d4ed8" } }));
+    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "POST", path: "/w/sample/projects/DE/labels", body: { name: "hotfix", color: "#5b3fc4" } }));
     await user.click(screen.getByRole("button", { name: "ลบ Release version" }));
     await user.click(within(await screen.findByRole("dialog", { name: "ลบ Release version" })).getByRole("button", { name: "ลบ" }));
     await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "DELETE", path: "/w/sample/projects/DE/custom-fields/f1" }));
@@ -257,7 +261,7 @@ describe("Project Settings (L2)", () => {
     await user.click(due);
     await waitFor(() => expect(calls[0]).toMatchObject({ method: "PUT", path: "/w/sample/projects/DE/role-permissions", body: { role: "member", permission: "issue.change_due_directly", allowed: true } }));
     expect(due).toBeChecked();
-    server.use(http.put(`${P}/role-permissions`, () => errorBody(403)));
+    server.use(http.put(`${P}/role-permissions`, () => errorBody(500)));
     const invite = within(table).getByRole("checkbox", { name: "เชิญสมาชิกเข้าโปรเจกต์ สำหรับ Viewer" });
     await user.click(invite);
     expect(await screen.findByText(/req_w13_001/)).toBeInTheDocument();
@@ -274,7 +278,7 @@ describe("Project Settings (L2)", () => {
     await user.type(screen.getByLabelText("พิมพ์ DE เพื่อยืนยัน"), "de");
     await user.click(del);
     await waitFor(() => expect(calls[0]).toMatchObject({ method: "DELETE", path: "/w/sample/projects/DE", body: { confirmKey: "de" } }));
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/w/sample"));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/work/sample"));
 
     await user.click(screen.getByRole("button", { name: "Archive" }));
     await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Archive" }));
@@ -401,7 +405,7 @@ describe("สร้างโปรเจกต์ (Wizard 5 ขั้น)", () =
       workflow: ["To do", { name: "In progress", wipLimit: 5 }, { name: "Review", wipLimit: 3 }, "QA", "Done"],
       estimateUnit: "man_day", progressMethod: "weighted",
     });
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/w/sample/p/DLV"));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/work/sample/p/DLV"));
   });
 
   it("สร้างเลยจากขั้น 2 · Scrum สร้าง Sprint · Go-live ก่อนวันเริ่มไม่ผ่าน · Error จาก API แสดง requestId", async () => {

@@ -39,10 +39,14 @@ export const CreateIssueBody = z.object({
   sprintId: uuid.nullish(),
   title: z.string().trim().min(1).max(300),
   description: z.string().max(50_000).optional(),
+  /** หมายเหตุ (Remark) แยกจากรายละเอียด */
+  remark: z.string().max(10_000).optional(),
   statusId: uuid.optional(),
   priority: z.enum(['urgent', 'high', 'medium', 'low']).default('medium'),
   assigneeIds: z.array(uuid).max(20).default([]),
   baId: uuid.optional(),
+  /** System Analyst (ผู้ใช้เพิ่ม 2026-11-08) */
+  saId: uuid.optional(),
   reviewerId: uuid.optional(),
   testerId: uuid.optional(),
   size: z.enum(SIZES).optional(),
@@ -59,12 +63,15 @@ export const CreateIssueBody = z.object({
   labelIds: labelIdList.default([]),
   /** ผู้ติดตามเพิ่มเติมนอกจากผู้สร้าง (ผู้สร้างติดตามอัตโนมัติ) */
   watcherIds: z.array(uuid).max(50).default([]),
+  /** ยืนยันขยายช่วงของ Task แม่เมื่อวันที่ของ Sub-task เกินช่วง (ได้ 422 subtask_outside_parent ก่อน) */
+  extendParent: z.boolean().default(false),
 });
 
 export const PatchIssueBody = z
   .object({
     title: z.string().trim().min(1).max(300),
     description: z.string().max(50_000).nullable(),
+    remark: z.string().max(10_000).nullable(),
     statusId: uuid,
     priority: z.enum(['urgent', 'high', 'medium', 'low']),
     moduleId: uuid,
@@ -72,8 +79,11 @@ export const PatchIssueBody = z
     sprintId: uuid.nullable(),
     assigneeIds: z.array(uuid).max(20).refine((ids) => new Set(ids).size === ids.length, 'รายชื่อผู้รับผิดชอบซ้ำ'),
     baId: uuid.nullable(),
+    saId: uuid.nullable(),
     reviewerId: uuid.nullable(),
     testerId: uuid.nullable(),
+    /** ย้าย Sub-task ไปอยู่ใต้ Task อื่นใน Module เดียวกัน */
+    parentKey: z.string().regex(ISSUE_KEY_PATTERN),
     size: z.enum(SIZES).nullable(),
     estimateMd: manDay.nullable(),
     planStart: isoDate.nullable(),
@@ -91,6 +101,10 @@ export const PatchIssueBody = z
     labelIds: labelIdList,
     /** ต้องมีเมื่อแก้แผน (Plan Start / End, Man-Day, Dev) หลังตั้ง Baseline */
     planChangeReason: z.string().trim().min(1).max(1000),
+    /** ยืนยันขยายช่วงของ Task แม่ (ดู CreateIssueBody.extendParent) */
+    extendParent: z.boolean(),
+    /** ยืนยันย้ายไป Done ทั้งที่ Acceptance criteria ยังไม่ครบ */
+    confirm: z.boolean(),
   })
   .partial();
 
@@ -123,8 +137,8 @@ export const MoveIssueBody = z.object({
 });
 
 type Issue = typeof s.issues.$inferSelect;
-type CreateIssueInput = Omit<z.infer<typeof CreateIssueBody>, 'requirements' | 'screens' | 'labelIds' | 'watcherIds'>
-  & Partial<Pick<z.infer<typeof CreateIssueBody>, 'requirements' | 'screens' | 'labelIds' | 'watcherIds'>>;
+type CreateIssueInput = Omit<z.infer<typeof CreateIssueBody>, 'requirements' | 'screens' | 'labelIds' | 'watcherIds' | 'extendParent'>
+  & Partial<Pick<z.infer<typeof CreateIssueBody>, 'requirements' | 'screens' | 'labelIds' | 'watcherIds' | 'extendParent'>>;
 type Status = typeof s.workflowStatuses.$inferSelect;
 type Warning = { code: string; message: string };
 const ISSUE_KEY = ISSUE_KEY_PATTERN;
@@ -174,7 +188,7 @@ export class IssuesService {
 
       this.checkRequired(type.requiredFields, { ...input, moduleId: moduleId ?? undefined });
       await this.checkInProject(tx, project.id, { moduleId, phaseId, sprintId });
-      await this.checkPeople(tx, [...input.assigneeIds, input.baId, input.reviewerId, input.testerId, ...input.watcherIds]);
+      await this.checkPeople(tx, [...input.assigneeIds, input.baId, input.saId, input.reviewerId, input.testerId, ...input.watcherIds]);
       await this.checkLabels(tx, project.id, input.labelIds);
 
       const statusId = input.statusId ?? (await this.firstStatus(tx, type.workflowId));
@@ -194,9 +208,8 @@ export class IssuesService {
       let planEnd = input.planEnd;
       if (!planEnd && planStart && estimateMd) planEnd = planEndFor(cal, planStart, estimateMd);
       if (planStart && planEnd && planEnd < planStart) throw new AppError(400, 'invalid_dates', 'Plan End ต้องไม่ก่อน Plan Start');
-      if (parent) warnings.push(...outsideParent(parent, planStart, planEnd));
-
       const number = await this.nextNumber(tx, project.id);
+      if (parent) warnings.push(...await this.fitParent(tx, auth, tenant, project, access, parent, planStart, planEnd, `${project.key}-${number}`, input.extendParent ?? false, events));
       const rank = await this.rankAtEnd(tx, project.id);
       const [issue] = await tx
         .insert(s.issues)
@@ -211,9 +224,11 @@ export class IssuesService {
           sprintId,
           title: input.title,
           description: input.description,
+          remark: input.remark || null,
           statusId,
           priority: input.priority,
           baId: input.baId,
+          saId: input.saId,
           reviewerId: input.reviewerId,
           testerId: input.testerId,
           reporterId: auth.userId,
@@ -269,8 +284,11 @@ export class IssuesService {
             .select()
             .from(s.dueChangeRequests)
             .where(and(eq(s.dueChangeRequests.issueId, issue.id), eq(s.dueChangeRequests.status, 'pending')));
+      // ชื่อกลุ่ม (Module → กลุ่ม → Task) ให้คนที่ไม่มีสิทธิ์โหลด form-options เห็นด้วย
+      const [group] = issue.phaseId ? await tx.select({ id: s.phases.id, name: s.phases.name }).from(s.phases).where(eq(s.phases.id, issue.phaseId)) : [];
       return {
         ...(await this.dto(tx, project, issue, access)),
+        group: group ?? null,
         subtasks: await this.dtos(tx, project, visibleSubs, access),
         pendingDueRequest: pending
           ? { id: pending.id, requesterId: pending.requesterId, currentDue: pending.currentDue, requestedDue: pending.requestedDue, reasonCode: pending.reasonCode, createdAt: pending.createdAt }
@@ -483,8 +501,9 @@ export class IssuesService {
       const warnings: Warning[] = [];
       const [type] = await tx.select().from(s.issueTypes).where(eq(s.issueTypes.id, issue.issueTypeId));
       const set: Partial<typeof s.issues.$inferInsert> = {};
-      const copy = ['title', 'description', 'priority', 'baId', 'reviewerId', 'testerId', 'severity', 'environment', 'details', 'sharedWithGuests', 'size'] as const;
+      const copy = ['title', 'description', 'remark', 'priority', 'baId', 'saId', 'reviewerId', 'testerId', 'severity', 'environment', 'details', 'sharedWithGuests', 'size'] as const;
       for (const k of copy) if (input[k] !== undefined) (set as Record<string, unknown>)[k] = input[k];
+      if (set.remark === '') set.remark = null;
 
       // Sub-task สืบทอด Module / กลุ่มงาน / Sprint จากงานแม่
       if (issue.parentId && (input.moduleId !== undefined || input.phaseId !== undefined || input.sprintId !== undefined)) {
@@ -494,7 +513,22 @@ export class IssuesService {
       if (input.phaseId !== undefined) set.phaseId = input.phaseId;
       if (input.sprintId !== undefined && input.sprintId !== issue.sprintId) set.sprintId = input.sprintId;
       await this.checkInProject(tx, project.id, { moduleId: set.moduleId, phaseId: set.phaseId, sprintId: set.sprintId });
-      await this.checkPeople(tx, [...(input.assigneeIds ?? []), input.baId, input.reviewerId, input.testerId]);
+      await this.checkPeople(tx, [...(input.assigneeIds ?? []), input.baId, input.saId, input.reviewerId, input.testerId]);
+
+      // ย้าย Sub-task ไปใต้ Task อื่น: เฉพาะ Task ใน Module เดียวกัน (ผู้ใช้ตัดสิน 2026-11-08) · สืบทอดกลุ่มงาน / Sprint จากแม่ใหม่
+      let newParent: Issue | null = null;
+      if (input.parentKey !== undefined) {
+        if (!issue.parentId) throw new AppError(422, 'not_a_subtask', 'เปลี่ยน Task แม่ได้เฉพาะ Sub-task');
+        const target = await this.findByKey(tx, project, input.parentKey);
+        if (target.id !== issue.parentId) {
+          if (target.id === issue.id || target.parentId) throw new AppError(422, 'issue_depth_exceeded', 'Sub-task ต้องอยู่ใต้งานระดับ Task เท่านั้น');
+          if (target.moduleId !== issue.moduleId) throw new AppError(422, 'parent_other_module', 'ย้าย Sub-task ได้เฉพาะไปใต้ Task ใน Module เดียวกัน');
+          [newParent] = await tx.select().from(s.issues).where(eq(s.issues.id, target.id)).for('update');
+          set.parentId = newParent.id;
+          set.phaseId = newParent.phaseId;
+          set.sprintId = newParent.sprintId;
+        }
+      }
       if (input.labelIds) await this.checkLabels(tx, project.id, input.labelIds);
       const [oldRefs] = await this.readRefs(tx, [issue.id]);
       const refChanges = REF_FIELDS.filter((f) => input[f] !== undefined && !sameSet(oldRefs[f], input[f]!));
@@ -509,6 +543,8 @@ export class IssuesService {
       if (input.statusId !== undefined && input.statusId !== issue.statusId) {
         const next = await this.checkStatus(tx, type.workflowId, input.statusId);
         await enforceWorkflowRules(tx, auth, issue, type.workflowId, next, { ...issue, ...set }, false);
+        const [current] = await tx.select().from(s.workflowStatuses).where(eq(s.workflowStatuses.id, issue.statusId));
+        await this.acceptanceGate(tx, issue.id, current, next, input.confirm ?? false, warnings);
         Object.assign(set, statusChange(issue, next));
       }
       if (input.actualStart !== undefined) {
@@ -545,8 +581,11 @@ export class IssuesService {
         });
       }
       if (issue.parentId) {
-        const [parent] = await tx.select().from(s.issues).where(eq(s.issues.id, issue.parentId));
-        warnings.push(...outsideParent(parent, planStart ?? undefined, planEnd ?? undefined));
+        const [parent] = newParent ? [newParent] : await tx.select().from(s.issues).where(eq(s.issues.id, issue.parentId));
+        // ตรวจเมื่อวันที่หรือแม่เปลี่ยนเท่านั้น งานเก่าที่เกินช่วงอยู่แล้วแก้ช่องอื่นได้ตามปกติ (แค่เตือน)
+        if (newParent || planStart !== issue.planStart || planEnd !== issue.planEnd) {
+          warnings.push(...await this.fitParent(tx, auth, tenant, project, access, parent, planStart, planEnd, `${project.key}-${issue.number}`, input.extendParent ?? false, events));
+        } else warnings.push(...outsideParent(parent, planStart ?? undefined, planEnd ?? undefined));
       }
 
       const before = { planStart: issue.planStart, planEnd: issue.planEnd, estimateMd: issue.estimateMd };
@@ -555,16 +594,13 @@ export class IssuesService {
       const planChanged = PLAN_FIELDS.filter((f) => before[f] !== after[f]);
       const assigneesChanged = input.assigneeIds !== undefined && !sameSet(oldAssignees, input.assigneeIds);
 
-      // หลังตั้ง Baseline การแก้แผนต้องมีเหตุผล และบันทึกในแท็บ "การแก้ไขแผน"
+      // หลังตั้ง Baseline การแก้แผนบันทึกในแท็บ "การแก้ไขแผน" และ Activity · เหตุผลไม่บังคับ (ผู้ใช้ขอ 2026-11-08: ไม่ต้องเตือน ให้ลง Activity ก็พอ)
       const [baseline] = await tx
         .select({ id: s.planBaselines.id })
         .from(s.planBaselines)
         .where(eq(s.planBaselines.projectId, project.id))
         .orderBy(sql`${s.planBaselines.version} desc`)
         .limit(1);
-      if (baseline && (planChanged.length || assigneesChanged) && !input.planChangeReason) {
-        throw new AppError(400, 'plan_change_reason_required', 'แก้แผนหลังตั้ง Baseline ต้องใส่เหตุผล', { fields: planChanged });
-      }
 
       // รายชื่อ Dev อยู่อีกตาราง แถวงานไม่เปลี่ยน trigger จึงไม่เพิ่ม version ให้ · ต้องเพิ่มเองเพื่อให้ If-Match ยังจับการแก้ชนกันได้
       if (assigneesChanged || refChanges.length) set.version = expected + 1;
@@ -590,6 +626,19 @@ export class IssuesService {
       }
 
       if (refChanges.length) await this.writeRefs(tx, project, issue.id, Object.fromEntries(refChanges.map((f) => [f, input[f]])), true);
+      if (newParent && issue.parentId) {
+        const [oldParent] = await tx.select().from(s.issues).where(eq(s.issues.id, issue.parentId));
+        const childKey = `${project.key}-${issue.number}`;
+        const oldKey = `${project.key}-${oldParent.number}`;
+        const newKey = `${project.key}-${newParent.number}`;
+        // ประวัติทั้งสามงาน: ลูกเปลี่ยนแม่ · แม่เดิมเสีย Sub-task · แม่ใหม่ได้ Sub-task
+        await tx.insert(s.activities).values([
+          { workspaceId: tenant.workspaceId, projectId: project.id, issueId: issue.id, actorId: auth.userId, verb: 'updated', field: 'parentKey', oldValue: oldKey, newValue: newKey },
+          { workspaceId: tenant.workspaceId, projectId: project.id, issueId: oldParent.id, actorId: auth.userId, verb: 'subtask_moved_out', field: 'subtasks', oldValue: childKey, newValue: newKey },
+          { workspaceId: tenant.workspaceId, projectId: project.id, issueId: newParent.id, actorId: auth.userId, verb: 'subtask_moved_in', field: 'subtasks', oldValue: oldKey, newValue: childKey },
+        ]);
+        events.push(eventFor(auth, tenant, project, oldParent)('issue.updated', { fields: ['subtasks'] }), eventFor(auth, tenant, project, newParent)('issue.updated', { fields: ['subtasks'] }));
+      }
 
       const base = { workspaceId: tenant.workspaceId, projectId: project.id, issueId: issue.id };
       const changes = diff(issue, updated);
@@ -601,10 +650,10 @@ export class IssuesService {
       if (baseline && (planChanged.length || assigneesChanged)) {
         const planRows = changes.filter((c) => (PLAN_FIELDS as readonly string[]).includes(c.field) || c.field === 'assigneeIds');
         await tx.insert(s.planChanges).values(
-          planRows.map((c) => ({ ...base, baselineId: baseline.id, field: c.field, oldValue: c.oldValue, newValue: c.newValue, reason: input.planChangeReason, changedBy: auth.userId })),
+          planRows.map((c) => ({ ...base, baselineId: baseline.id, field: c.field, oldValue: c.oldValue, newValue: c.newValue, reason: input.planChangeReason ?? null, changedBy: auth.userId })),
         );
       }
-      events.push(...(await this.changeEvents(tx, auth, tenant, project, issue, updated, assigneesChanged ? { before: oldAssignees, after: assignees } : null, refChanges)));
+      events.push(...(await this.changeEvents(tx, auth, tenant, project, issue, updated, assigneesChanged ? { before: oldAssignees, after: assignees } : null, newParent ? [...refChanges, 'parentKey'] : refChanges)));
       if (baseline && (planChanged.length || assigneesChanged)) {
         events.push(eventFor(auth, tenant, project, updated)('plan.changed', { fields: assigneesChanged ? [...planChanged, 'assigneeIds'] : [...planChanged], reason: input.planChangeReason }));
       }
@@ -646,6 +695,7 @@ export class IssuesService {
           }
           if (open.n > 0) warnings.push({ code: 'subtasks_incomplete', message: `ย้ายไป ${target.name} ทั้งที่ Sub-task ยังไม่เสร็จ ${open.n} งาน` });
         }
+        await this.acceptanceGate(tx, issue.id, current, target, input.confirm, warnings);
         Object.assign(set, { statusId: target.id, ...statusChange(issue, target) });
       }
 
@@ -847,6 +897,58 @@ export class IssuesService {
     }
   }
 
+  /**
+   * Acceptance criteria ยังติ๊กไม่ครบตอนย้ายไป Done: เตือนให้ยืนยันก่อน (ผู้ใช้ตัดสิน 2026-11-08)
+   * confirmField บอกหน้าเว็บว่าส่งช่องไหนกลับมาเพื่อยืนยัน
+   */
+  private async acceptanceGate(tx: Tx, issueId: string, current: Status, target: Status, confirm: boolean, warnings: Warning[]) {
+    if (target.category !== 'done' || current.category === 'done') return;
+    const [row] = await tx
+      .select({ total: sql<number>`count(*)::int`, open: sql<number>`(count(*) filter (where not ${s.checklistItems.done}))::int` })
+      .from(s.checklistItems)
+      .where(and(eq(s.checklistItems.issueId, issueId), eq(s.checklistItems.kind, 'acceptance')));
+    if (!row?.open) return;
+    const done = row.total - row.open;
+    if (!confirm) {
+      throw new AppError(422, 'acceptance_incomplete', `Acceptance criteria ยังติ๊กไม่ครบ (${done}/${row.total} ข้อ)`, { open: row.open, total: row.total, confirmable: true, confirmField: 'confirm' });
+    }
+    warnings.push({ code: 'acceptance_incomplete', message: `ย้ายไป ${target.name} ทั้งที่ Acceptance criteria ยังไม่ครบ (${done}/${row.total} ข้อ)` });
+  }
+
+  /**
+   * Sub-task ต้องอยู่ในช่วงของ Task แม่ (ผู้ใช้ตัดสิน 2026-11-08): เกินช่วงและยังไม่ยืนยัน = 422 ให้หน้าเว็บถาม
+   * ยืนยันแล้ว = ขยาย Task แม่ให้ครอบวันเริ่มต่ำสุด / วันจบสูงสุด และบันทึกลงประวัติ (มี Baseline ลงการแก้ไขแผนด้วย)
+   */
+  private async fitParent(tx: Tx, auth: AuthInfo, tenant: TenantInfo, project: ProjectRow, access: ProjectAccess, parentRow: Issue,
+    start: string | null | undefined, end: string | null | undefined, childKey: string, confirmed: boolean, events: DomainEvent[]): Promise<Warning[]> {
+    const [parent] = await tx.select().from(s.issues).where(eq(s.issues.id, parentRow.id)).for('update');
+    const nextStart = parent.planStart && start && start < parent.planStart ? start : parent.planStart;
+    const nextEnd = parent.planEnd && end && end > parent.planEnd ? end : parent.planEnd;
+    if (nextStart === parent.planStart && nextEnd === parent.planEnd) return [];
+    const parentKey = `${project.key}-${parent.number}`;
+    if (!confirmed) {
+      throw new AppError(422, 'subtask_outside_parent', `วันที่ของ Sub-task เกินช่วงของ ${parentKey} (${parent.planStart} – ${parent.planEnd})`, {
+        confirmable: true, confirmField: 'extendParent', parentKey, parentStart: parent.planStart, parentEnd: parent.planEnd, nextStart, nextEnd,
+      });
+    }
+    // เลื่อนวันจบของแม่ออกไปเท่ากับเลื่อน Due ของแม่ จึงใช้สิทธิ์เดียวกับการแก้ Due โดยตรง
+    if (nextEnd !== parent.planEnd && !access.perms.has('issue.change_due_directly')) {
+      throw new AppError(403, 'parent_extension_requires_approval', `ขยายวันจบของ ${parentKey} ต้องมีสิทธิ์แก้ Due โดยตรง · ส่งคำขอเลื่อน Due ของ ${parentKey} ก่อน`, { parentKey });
+    }
+    const [updated] = await tx.update(s.issues).set({ planStart: nextStart, planEnd: nextEnd }).where(eq(s.issues.id, parent.id)).returning();
+    const base = { workspaceId: tenant.workspaceId, projectId: project.id, issueId: parent.id };
+    const changes = diff(parent, updated);
+    if (changes.length) await tx.insert(s.activities).values(changes.map((c) => ({ ...base, actorId: auth.userId, verb: 'updated', field: c.field, oldValue: c.oldValue, newValue: c.newValue })));
+    const [baseline] = await tx.select({ id: s.planBaselines.id }).from(s.planBaselines).where(eq(s.planBaselines.projectId, project.id)).orderBy(sql`${s.planBaselines.version} desc`).limit(1);
+    const reason = `ขยายช่วงตาม Sub-task ${childKey}`;
+    if (baseline && changes.length) {
+      await tx.insert(s.planChanges).values(changes.map((c) => ({ ...base, baselineId: baseline.id, field: c.field, oldValue: c.oldValue, newValue: c.newValue, reason, changedBy: auth.userId })));
+      events.push(eventFor(auth, tenant, project, updated)('plan.changed', { fields: changes.map((c) => c.field), reason }));
+    }
+    events.push(...(await this.changeEvents(tx, auth, tenant, project, parent, updated, null)));
+    return [{ code: 'parent_extended', message: `ขยายช่วงของ ${parentKey} เป็น ${nextStart} – ${nextEnd} ตาม Sub-task ${childKey}` }];
+  }
+
   private async lockProject(tx: Tx, projectId: string) {
     await tx.select({ id: s.projects.id }).from(s.projects).where(eq(s.projects.id, projectId)).for('update');
   }
@@ -874,7 +976,7 @@ export class IssuesService {
   }
 
   /** ฟิลด์บังคับตามประเภทงาน (L2 › ประเภทงาน) */
-  private checkRequired(required: string[], v: z.infer<typeof CreateIssueBody> & { moduleId?: string | null }) {
+  private checkRequired(required: string[], v: CreateIssueInput & { moduleId?: string | null }) {
     const has: Record<string, boolean> = {
       title: !!v.title,
       module: !!v.moduleId,
@@ -1035,8 +1137,11 @@ export class IssuesService {
       if (access.guestViewer) return base;
       return {
         ...base,
+        // หมายเหตุเป็นบันทึกภายในทีม ไม่ส่งให้ Guest
+        remark: i.remark,
         assigneeIds: people.filter((p) => p.issueId === i.id).map((p) => p.userId),
         baId: i.baId,
+        saId: i.saId,
         reviewerId: i.reviewerId,
         testerId: i.testerId,
         reporterId: i.reporterId,
@@ -1089,7 +1194,7 @@ export function outsideParent(parent: Issue, start?: string | null, end?: string
 /** ข้อมูลอ้างอิงที่อยู่ตารางเชื่อม แก้ผ่าน PATCH แบบแทนทั้งชุด */
 const REF_FIELDS = ['requirements', 'screens', 'labelIds'] as const;
 
-const DIFF_FIELDS = ['title', 'description', 'statusId', 'priority', 'moduleId', 'phaseId', 'sprintId', 'baId', 'reviewerId', 'testerId', 'size', 'estimateMd', 'planStart', 'planEnd', 'actualStart', 'progressPct', 'severity', 'environment', 'sharedWithGuests'] as const;
+const DIFF_FIELDS = ['title', 'description', 'remark', 'statusId', 'priority', 'moduleId', 'phaseId', 'sprintId', 'baId', 'saId', 'reviewerId', 'testerId', 'size', 'estimateMd', 'planStart', 'planEnd', 'actualStart', 'progressPct', 'severity', 'environment', 'sharedWithGuests'] as const;
 
 function diff(a: Issue, b: Issue) {
   return DIFF_FIELDS.filter((f) => a[f] !== b[f]).map((f) => ({ field: f as string, oldValue: a[f] as unknown, newValue: b[f] as unknown }));

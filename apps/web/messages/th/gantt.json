@@ -1,7 +1,21 @@
 {
   "title": "Gantt",
-  "scale": { "label": "Scale", "day": "Day", "week": "Week", "month": "Month" },
-  "level": { "label": "Expand level", "one": "ระดับ 1", "two": "2", "three": "3", "hint": "ระดับ {n}: {what}", "what1": "Module", "what2": "Module › กลุ่มงาน", "what3": "ทุกระดับถึง Sub-task" },
+  "scale": {
+    "label": "Scale",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month"
+  },
+  "level": {
+    "label": "Expand level",
+    "one": "ระดับ 1",
+    "two": "2",
+    "three": "3",
+    "hint": "ระดับ {n}: {what}",
+    "what1": "Module",
+    "what2": "Module › Task",
+    "what3": "ทุกระดับถึง Sub-task"
+  },
   "today": "Today",
   "exportPdf": "Export PDF",
   "autoSchedule": "Auto-schedule",
@@ -11,7 +25,16 @@
   "baselineOption": "v{version} · {name}",
   "noBaseline": "ยังไม่มี Baseline · ตั้ง Baseline ก่อนเพื่อเทียบแผน",
   "setBaseline": "ตั้งเป็นแผนใหม่ (Baseline v{version})",
-  "cols": { "wbs": "WBS", "task": "Task", "owner": "Owner", "md": "MD", "start": "Start", "end": "End", "pct": "%", "pred": "Pred." },
+  "cols": {
+    "wbs": "WBS",
+    "task": "Task",
+    "owner": "Owner",
+    "md": "MD",
+    "start": "Start",
+    "end": "End",
+    "pct": "%",
+    "pred": "Pred."
+  },
   "bar": "{key} {title}: {start} – {end} · {pct}%",
   "barCritical": "อยู่บน Critical path",
   "slack": "เผื่อได้ {days} วันทำการ",
@@ -28,10 +51,21 @@
   "workload": "ดู Workload →",
   "criticalSummary": "Critical path {count} งาน · {start} – {end}",
   "unscheduled": "{count} งานยังไม่มีวันที่ (ดูใน Timeline)",
-  "legend": { "task": "Task (แถบเข้ม = % เสร็จ)", "critical": "Critical path", "summary": "Summary (Module / Task แม่)", "baseline": "แผน (Baseline) · แถบหลัก = จริง / คาดการณ์" },
+  "legend": {
+    "task": "Task (แถบเข้ม = % เสร็จ)",
+    "critical": "Critical path",
+    "summary": "Summary (Module / Task แม่)",
+    "baseline": "แผน (Baseline) · แถบหลัก = จริง / คาดการณ์"
+  },
   "empty": "ยังไม่มีงานที่ลงแผน",
   "emptyHint": "กำหนด Plan Start / Plan End ให้งานเพื่อแสดงบน Gantt",
-  "baselineDialog": { "title": "ตั้งเป็นแผนใหม่", "body": "เก็บวัน Plan, Man-Day และ Dev ของทุกงานตอนนี้เป็น Baseline v{version} · หลังจากนี้การแก้แผนต้องใส่เหตุผล", "name": "ชื่อ Baseline (ไม่บังคับ)", "submit": "ตั้ง Baseline", "done": "ตั้ง Baseline v{version} แล้ว" },
+  "baselineDialog": {
+    "title": "ตั้งเป็นแผนใหม่",
+    "body": "เก็บวัน Plan, Man-Day และ Dev ของทุกงานตอนนี้เป็น Baseline v{version} · หลังจากนี้การแก้แผนต้องใส่เหตุผล",
+    "name": "ชื่อ Baseline (ไม่บังคับ)",
+    "submit": "ตั้ง Baseline",
+    "done": "ตั้ง Baseline v{version} แล้ว"
+  },
   "auto": {
     "title": "Auto-schedule (ตัวอย่าง)",
     "loading": "กำลังคำนวณตาม Dependency…",
@@ -60,7 +94,13 @@
   "requestTitle": "ขอเลื่อน Due",
   "requestBody": "คุณไม่มีสิทธิ์เลื่อน Due ของ {key} เอง · ส่งคำขอให้ผู้อนุมัติเป็น {date}",
   "reason": "เหตุผล",
-  "reasons": { "scope_added": "ขอบเขตเพิ่ม", "waiting_input": "รอข้อมูล", "blocked_by_dependency": "ติดงานที่ต้องทำก่อน", "estimate_wrong": "ประเมินคลาดเคลื่อน", "other": "อื่น ๆ" },
+  "reasons": {
+    "scope_added": "ขอบเขตเพิ่ม",
+    "waiting_input": "รอข้อมูล",
+    "blocked_by_dependency": "ติดงานที่ต้องทำก่อน",
+    "estimate_wrong": "ประเมินคลาดเคลื่อน",
+    "other": "อื่น ๆ"
+  },
   "detail": "รายละเอียด",
   "send": "ส่งคำขอ",
   "conflict": "งานถูกแก้โดยคนอื่น ลองใหม่อีกครั้ง"

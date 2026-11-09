@@ -109,7 +109,7 @@ export function JoinInvite({ token }: { token: string }) {
   async function joinWorkspace() {
     const result = await api.post<{ workspace: { slug: string } }>(`/invitations/${encodeURIComponent(token)}/accept`);
     cache.removeQueries({ queryKey: ["me"] });
-    router.replace(`/w/${result.workspace.slug}`);
+    router.replace(`/work/${result.workspace.slug}`);
   }
 
   async function run(action: () => Promise<void>) {
@@ -238,7 +238,7 @@ export function JoinInvite({ token }: { token: string }) {
           <div className={styles.sectionTitle}>{t("join.usedTitle")}</div>
           <div className={cn(styles.muted, styles.small)}>{t("join.usedDescription")}</div>
         </div>
-        <Link href={user ? `/w/${inv.workspace.slug}` : loginHref} className={cn("button button-primary", styles.button)}>
+        <Link href={user ? `/work/${inv.workspace.slug}` : loginHref} className={cn("button button-primary", styles.button)}>
           {user ? t("join.joinWorkspace", { workspace: inv.workspace.name }) : t("join.login")}
         </Link>
       </>

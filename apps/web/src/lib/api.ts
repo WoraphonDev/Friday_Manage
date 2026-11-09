@@ -15,6 +15,16 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * รหัสอ้างอิงที่ควรโชว์ผู้ใช้ (ผู้ใช้ขอ 2026-11-09: ไม่แสดงตอน error ทั่วไป)
+ * แสดงเฉพาะความผิดพลาดของระบบ (5xx) หรือเชื่อมต่อไม่ได้ ซึ่งผู้ใช้ต้องใช้รหัสตอนแจ้งปัญหา
+ * error ที่แก้เองได้ (กรอกผิด ไม่มีสิทธิ์ ข้อมูลชนกัน ฯลฯ) ไม่แสดง
+ */
+export function supportId(error: unknown): string | null {
+  if (!(error instanceof ApiError) || !error.requestId) return null;
+  return error.status >= 500 || error.status === 0 ? error.requestId : null;
+}
+
 export const API_UNAUTHORIZED = "friday:unauthorized";
 export const API_PLAN_LIMIT = "friday:plan-limit";
 export const ifMatch = (version: string | number) =>
@@ -28,6 +38,17 @@ export interface RequestOptions extends Omit<RequestInit, "body"> {
   etag?: string | number;
   redirectOnUnauthorized?: boolean;
 }
+
+/** API ที่ตอบ 422 พร้อม details.confirmable + confirmField ให้ถามผู้ใช้แล้วส่งคำขอเดิมซ้ำพร้อมช่องยืนยัน */
+export interface ConfirmRequest { code: string; message: string; details: Record<string, unknown> }
+let confirmer: ((request: ConfirmRequest) => Promise<boolean>) | null = null;
+/** ConfirmHost (ใน Providers) ลงทะเบียนกล่องยืนยันกลาง · ไม่ลงทะเบียน = ส่ง error ให้ผู้เรียกตามเดิม */
+export function setConfirmHandler(handler: typeof confirmer) {
+  confirmer = handler;
+}
+/** ผู้ใช้กดยกเลิกในกล่องยืนยัน · หน้าจอไม่ต้องแสดงเป็นข้อผิดพลาด */
+export const isConfirmCancelled = (error: unknown) =>
+  error instanceof ApiError && error.code === "confirm_cancelled";
 
 function emit(name: string, detail: unknown) {
   if (typeof window !== "undefined")
@@ -122,6 +143,14 @@ export class ApiClient {
       if (response.status === 401 && redirectOnUnauthorized)
         emit(API_UNAUTHORIZED, error);
       if (response.status === 402) emit(API_PLAN_LIMIT, error);
+      // เช่น Sub-task วันที่เกินช่วง Task แม่ หรือ Acceptance criteria ยังไม่ครบ: ทุกหน้าใช้กล่องยืนยันเดียวกัน
+      const field = error.details.confirmField;
+      const plain = typeof body === "object" && body !== null && !form && !Array.isArray(body);
+      if (confirmer && error.details.confirmable === true && typeof field === "string" && plain && !(body as Record<string, unknown>)[field]) {
+        const ok = await confirmer({ code: error.code, message: error.message, details: error.details });
+        if (ok) return this.requestWithMeta<T>(path, { ...options, body: { ...(body as Record<string, unknown>), [field]: true } });
+        throw new ApiError(error.status, "confirm_cancelled", common.app.confirmCancelled, error.details, error.requestId);
+      }
       throw error;
     }
     return { data: data as T, etag: response.headers.get("etag") };

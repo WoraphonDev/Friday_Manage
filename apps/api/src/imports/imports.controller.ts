@@ -1,11 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, Res, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Res, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { config } from '../config.js';
-import { type AppRequest, Auth, type AuthInfo, Tenant, type TenantInfo } from '../common/request.js';
+import { Auth, type AuthInfo, Tenant, type TenantInfo } from '../common/request.js';
 import { TenantGuard } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
 import { ImportsService, PatchImportBody } from './imports.service.js';
+import { webUrl } from '../auth/auth.config.js';
 
 /** L3 · Import Excel */
 @Controller('w/:ws/import-jobs')
@@ -31,8 +32,25 @@ export class ImportsController {
   }
 
   @Post(':id/commit')
-  commit(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('id') id: string, @Req() req: AppRequest) {
-    return this.imports.commit(auth, tenant, id, process.env.APP_URL ?? `${req.protocol}://${req.get('host')}`);
+  commit(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('id') id: string) {
+    // ลิงก์เชิญของคนที่เลือก "เชิญด้วยอีเมล" ใช้ที่อยู่ของเว็บ ไม่ใช่ Host ของคำขอที่ผ่าน proxy
+    return this.imports.commit(auth, tenant, id, (process.env.APP_URL ?? webUrl()).replace(/\/$/, ''));
+  }
+}
+
+const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+/** L3 › Template เปล่าสำหรับเริ่มแผนใหม่ (คอลัมน์เดียวกับไฟล์ Export) */
+@Controller('w/:ws')
+@UseGuards(TenantGuard)
+export class ImportTemplateController {
+  constructor(private readonly imports: ImportsService) {}
+
+  @Get('import-template.xlsx')
+  async template(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Res({ passthrough: true }) res: Response) {
+    const file = await this.imports.templateXlsx(auth, tenant);
+    res.set({ 'Content-Type': XLSX, 'Content-Disposition': `attachment; filename="${file.filename}"` });
+    return new StreamableFile(file.buffer);
   }
 }
 
@@ -42,12 +60,13 @@ export class ImportsController {
 export class PlanExportController {
   constructor(private readonly imports: ImportsService) {}
 
-  /** ดาวน์โหลดแผนงานของโปรเจกต์เป็น .xlsx (18 คอลัมน์ + ชีต Holidays) นำเข้ากลับโหมดอัปเดตได้ */
+  /** ดาวน์โหลดแผนงานของโปรเจกต์เป็น .xlsx (ชีต Tasks + คำแนะนำ + ค่าที่ใช้ได้ + Holidays) นำเข้ากลับโหมดอัปเดตได้ */
   @Get('export.xlsx')
-  async export(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Res({ passthrough: true }) res: Response) {
-    const file = await this.imports.exportXlsx(auth, tenant, key);
+  async export(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Query('timeline') timeline: string | undefined, @Res({ passthrough: true }) res: Response) {
+    // timeline=week: ชีต Timeline ช่องละสัปดาห์ (ค่าเริ่มต้น ช่องละวัน)
+    const file = await this.imports.exportXlsx(auth, tenant, key, timeline === 'week' ? 'week' : 'day');
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type': XLSX,
       'Content-Disposition': `attachment; filename="${file.filename}"`,
     });
     return new StreamableFile(file.buffer);

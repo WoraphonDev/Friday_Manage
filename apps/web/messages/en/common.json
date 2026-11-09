@@ -26,7 +26,8 @@
     "actions": "Actions",
     "morePeople": "{count, plural, one {and {count} more person} other {and {count} more people}}",
     "signOut": "Sign out",
-    "resizeDrawer": "Drag to resize"
+    "resizeDrawer": "Drag to resize",
+    "confirmCancelled": "Change cancelled"
   },
   "nav": {
     "home": "Home",
@@ -223,5 +224,30 @@
     "on_track": "On track",
     "at_risk": "At risk",
     "off_track": "Off track"
+  },
+  "confirmRequest": {
+    "subtask_outside_parent": {
+      "title": "Dates are outside {parentKey}",
+      "description": "{message} · Saving will extend {parentKey} to {start} – {end} to cover the sub-task and record it in the plan history",
+      "action": "Extend task and save"
+    },
+    "acceptance_incomplete": {
+      "title": "Acceptance criteria not complete",
+      "description": "{message} · Move this task to Done anyway?",
+      "action": "Move anyway"
+    },
+    "fallbackTitle": "Confirm change",
+    "fallbackAction": "Confirm",
+    "cancel": "Cancel"
+  },
+  "preview": {
+    "download": "Download",
+    "cannotPreview": "This file can’t be previewed · download it to open on your device",
+    "loading": "Loading…",
+    "count": "{current} / {total}",
+    "openInFiles": "Open in Files",
+    "close": "Close",
+    "previous": "Previous file",
+    "next": "Next file"
   }
 }

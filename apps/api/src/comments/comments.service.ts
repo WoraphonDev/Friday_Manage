@@ -13,10 +13,12 @@ import { type ProjectAccess, requirePerm } from '../projects/permissions.js';
 export const CommentBody = z.object({ body: z.string().trim().min(1).max(20000) });
 export const PageQuery = z.object({ limit: z.coerce.number().int().min(1).max(100).default(50), cursor: z.string().max(500).optional() });
 type Page = z.infer<typeof PageQuery>;
+/** only=activity: เฉพาะประวัติการเปลี่ยนแปลง (กล่องด้านขวาของหน้า Task) · order=desc: ล่าสุดก่อน */
+export const ActivityQuery = PageQuery.extend({ only: z.enum(['activity']).optional(), order: z.enum(['asc', 'desc']).default('asc') });
 type Comment = typeof s.comments.$inferSelect;
 type Loaded = Awaited<ReturnType<IssuesService['loadIssue']>>;
-type Cursor = { id: string; time: string; issueId: string; feed: 'comments' | 'activity' };
-const CursorBody = z.object({ id: z.uuid(), time: z.string().regex(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d(?:\.\d{1,6})?[+-]\d\d(?::\d\d)?$/), issueId: z.uuid(), feed: z.enum(['comments', 'activity']) });
+type Cursor = { id: string; time: string; issueId: string; feed: 'comments' | 'activity' | 'log' | 'log-desc' };
+const CursorBody = z.object({ id: z.uuid(), time: z.string().regex(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d(?:\.\d{1,6})?[+-]\d\d(?::\d\d)?$/), issueId: z.uuid(), feed: z.enum(['comments', 'activity', 'log', 'log-desc']) });
 const hiddenPerson = { displayName: 'ทีมพัฒนา', initials: '', avatarUrl: null };
 const personFields = new Set(['assigneeIds', 'baId', 'reviewerId', 'testerId', 'createdBy', 'deletedBy', 'ownerUserId']);
 
@@ -85,19 +87,21 @@ export class CommentsService {
     });
   }
 
-  async activity(auth: AuthInfo, tenant: TenantInfo, key: string, query: Page) {
+  async activity(auth: AuthInfo, tenant: TenantInfo, key: string, query: z.infer<typeof ActivityQuery>) {
     return this.db.run(auth, tenant, async (tx) => {
       const { issue, access } = await this.load(tx, auth, tenant, key);
-      const cursor = this.cursor(query, issue.id, 'activity');
+      const desc = query.order === 'desc';
+      // cursor ผูกกับรูปแบบรายการ กันเอาตัวแบ่งหน้าของรายการแบบหนึ่งไปใช้กับอีกแบบ
+      const feedName: Cursor['feed'] = query.only ? (desc ? 'log-desc' : 'log') : desc ? 'log-desc' : 'activity';
+      const cursor = this.cursor(query, issue.id, feedName);
       // ใช้เวลาเต็มจาก PostgreSQL เพื่อไม่ตกหล่นเมื่อหลายรายการเกิดในมิลลิวินาทีเดียวกัน
       const feed = await tx.execute<{ id: string; kind: 'comment' | 'activity'; time: string }>(sql`
         select id, kind, created_at::text as time from (
-          select id, 'comment' as kind, created_at from ${s.comments} where issue_id = ${issue.id}
-          union all
+          ${query.only ? sql`` : sql`select id, 'comment' as kind, created_at from ${s.comments} where issue_id = ${issue.id} union all`}
           select id, 'activity' as kind, created_at from ${s.activities} where issue_id = ${issue.id}
         ) feed
-        ${cursor ? sql`where (created_at, id) > (${cursor.time}::timestamptz, ${cursor.id}::uuid)` : sql``}
-        order by created_at asc, id asc limit ${query.limit + 1}
+        ${cursor ? (desc ? sql`where (created_at, id) < (${cursor.time}::timestamptz, ${cursor.id}::uuid)` : sql`where (created_at, id) > (${cursor.time}::timestamptz, ${cursor.id}::uuid)`) : sql``}
+        ${desc ? sql`order by created_at desc, id desc` : sql`order by created_at asc, id asc`} limit ${query.limit + 1}
       `);
       const page = feed.rows.slice(0, query.limit);
       const commentIds = page.filter((r) => r.kind === 'comment').map((r) => r.id);
@@ -111,7 +115,7 @@ export class CommentsService {
         verb: a.verb, field: a.field, old: access.guestViewer && a.field && personFields.has(a.field) ? null : a.oldValue,
         new: access.guestViewer && a.field && personFields.has(a.field) ? null : a.newValue, createdAt: a.createdAt,
       }]));
-      return { items: page.map((r) => r.kind === 'comment' ? { kind: 'comment', ...dtos.get(r.id)! } : activityDtos.get(r.id)!), nextCursor: feed.rows.length > query.limit ? this.encode({ id: page.at(-1)!.id, time: page.at(-1)!.time, issueId: issue.id, feed: 'activity' }) : null };
+      return { items: page.map((r) => r.kind === 'comment' ? { kind: 'comment', ...dtos.get(r.id)! } : activityDtos.get(r.id)!), nextCursor: feed.rows.length > query.limit ? this.encode({ id: page.at(-1)!.id, time: page.at(-1)!.time, issueId: issue.id, feed: feedName }) : null };
     });
   }
 
@@ -187,6 +191,12 @@ export class CommentsService {
   private async commentDtos(tx: Tx, rows: Comment[], auth: AuthInfo, access: ProjectAccess) {
     const mentions = rows.length ? await tx.select().from(s.commentMentions).where(inArray(s.commentMentions.commentId, rows.map((c) => c.id))) : [];
     const people = await loadPeople(tx, [...rows.flatMap((r) => [r.authorId, r.deletedBy]), ...mentions.map((m) => m.userId)]);
+    // ไฟล์ที่แนบกับคอมเมนต์ (ผู้ใช้เพิ่ม 2026-11-08) · Guest Viewer เข้า Files ไม่ได้จึงไม่ส่งรายการไฟล์
+    const files = rows.length && !access.guestViewer
+      ? await tx.select({ commentId: s.fileAttachments.targetId, id: s.files.id, name: s.files.name, mime: s.files.mime }).from(s.fileAttachments)
+        .innerJoin(s.files, eq(s.files.id, s.fileAttachments.fileId))
+        .where(and(eq(s.fileAttachments.targetType, 'comment'), inArray(s.fileAttachments.targetId, rows.map((c) => c.id)), isNull(s.files.deletedAt)))
+      : [];
     return rows.map((r) => {
       const ids = mentions.filter((m) => m.commentId === r.id).map((m) => m.userId);
       let body: string | null = r.deletedAt ? null : r.body;
@@ -199,6 +209,7 @@ export class CommentsService {
       }
       return { id: r.id, body, author: this.person(r.authorId, people, auth, access), mentions: ids.map((id) => this.person(id, people, auth, access)), createdAt: r.createdAt, editedAt: r.editedAt,
         deletedAt: r.deletedAt, deletedBy: this.person(r.deletedBy, people, auth, access), deletionReason: r.deletedAt ? (r.deletedBy !== r.authorId ? 'admin' : 'author') : null,
+        files: r.deletedAt ? [] : files.filter((f) => f.commentId === r.id).map(({ commentId: _, ...f }) => f),
         canEdit: !r.deletedAt && r.authorId === auth.userId && access.perms.has('issue.comment'), canDelete: !r.deletedAt && (r.authorId === auth.userId || access.role === 'admin') && access.perms.has('issue.comment') };
     });
   }

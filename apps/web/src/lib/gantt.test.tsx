@@ -9,7 +9,7 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import gantt from "../../messages/th/gantt.json";
-import { GanttView, SCALE_PX, depPath, type GRow, type GanttData, type Preview } from "../../app/w/[ws]/p/[key]/gantt/_components/gantt-view";
+import { GanttView, SCALE_PX, depPath, type GRow, type GanttData, type Preview } from "../../app/work/[ws]/p/[key]/gantt/_components/gantt-view";
 
 const person = (id: string, displayName: string) => ({ id, displayName });
 const row = (key: string, start: string, end: string, over: Partial<GRow> = {}): GRow => ({ key, type: "Task", title: `งาน ${key}`, status: { name: "In progress", category: "in_progress" }, start, end, estimateMd: 2, progressPct: 40, lateDays: 0, assignees: [person("u1", "ผู้พัฒนาหนึ่ง")], subtasks: [], critical: false, slackDays: 2, ...over });
@@ -67,7 +67,7 @@ const errorBody = (status: number) => HttpResponse.json({ error: { code: status 
 
 beforeEach(() => {
   gets = []; patches = []; posts = []; empty = false;
-  navigation.pathname = "/w/sample/p/DE/gantt";
+  navigation.pathname = "/work/sample/p/DE/gantt";
   server.use(
     http.get("*/api/v1/w/:ws/projects/:key/gantt", ({ request }) => {
       const b = new URL(request.url).searchParams.get("baseline");
@@ -94,13 +94,14 @@ const px = (el: Element, prop: "left" | "width") => Number((el as HTMLElement).s
 const asViewer = () => server.use(http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () => HttpResponse.json({ ...permissions, role: "viewer", permissions: ["project.view"] })));
 
 describe("Gantt (5)", () => {
-  it("WBS: Module › กลุ่มงาน › Task › Sub-task พร้อมคอลัมน์ Owner / MD / Start / End / % / Pred. และ Milestone", async () => {
+  it("WBS: Module › กลุ่ม › Task › Sub-task (กลุ่มไม่บังคับ) พร้อมคอลัมน์ Owner / MD / Start / End / % / Pred. และ Milestone", async () => {
     mount();
     expect(await screen.findByTestId("bar-DE-1")).toBeInTheDocument();
     for (const w of ["1", "1.1", "1.1.1", "1.1.2", "1.1.3", "1.1.3.1", "1.1.4", "M1"]) expect(screen.getByText(w, { selector: "div" })).toBeInTheDocument();
+    expect(screen.getByText("กลุ่มงานแรก")).toBeInTheDocument();
     expect(screen.getByTestId("pred-DE-3")).toHaveTextContent("1.1.1 FS");
     expect(screen.getByTestId("pred-DE-6")).toHaveTextContent("1.1.1 FS+2");
-    expect(screen.getByRole("link", { name: "DE-3 งาน DE-3" })).toHaveAttribute("href", "/w/sample/p/DE/gantt?issue=DE-3");
+    expect(screen.getByRole("link", { name: "DE-3 งาน DE-3" })).toHaveAttribute("href", "/work/sample/p/DE/gantt?issue=DE-3");
     // งานแม่ (มี Sub-task) เป็น Summary bar · Sub-task เป็น bar
     expect(screen.getByRole("img", { name: /^DE-4 งาน DE-4:/ })).toBeInTheDocument();
     expect(screen.queryByTestId("bar-DE-4")).not.toBeInTheDocument();
@@ -120,14 +121,14 @@ describe("Gantt (5)", () => {
     expect(px(bar("DE-1"), "width")).toBe(5 * SCALE_PX.week);
     await user.click(screen.getByRole("button", { name: "Month" }));
     expect(px(bar("DE-1"), "width")).toBe(5 * SCALE_PX.month);
+    // ระดับ 1 = Module · 2 = + Task · 3 = + Sub-task (ไม่มีชั้นกลุ่มงานแล้ว)
     await user.click(screen.getByRole("button", { name: "ระดับ 1" }));
     expect(screen.queryByTestId("bar-DE-1")).not.toBeInTheDocument();
-    expect(screen.queryByText("กลุ่มงานแรก")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "2" }));
-    expect(screen.getByText("กลุ่มงานแรก")).toBeInTheDocument();
-    expect(screen.queryByTestId("bar-DE-1")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "3" }));
     expect(bar("DE-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("bar-DE-5")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "3" }));
+    expect(bar("DE-5")).toBeInTheDocument();
   });
 
   it("Dependency arrows และ Critical path · ปิด Critical path แล้วไม่เน้นสีแดง", async () => {

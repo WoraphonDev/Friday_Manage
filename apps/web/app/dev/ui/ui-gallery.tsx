@@ -71,7 +71,7 @@ export function UiGallery() {
         safeReturnTo(
           returnTo,
           workspaces.items[0]
-            ? `/w/${workspaces.items[0].slug}`
+            ? `/work/${workspaces.items[0].slug}`
             : "/onboarding",
         ),
       );

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { FridayLogo } from "@/components/brand/friday-logo";
 import { buttonVariants } from "@/components/ui";
 import { LocaleSwitch } from "@/features/locale-switch";
+import { ThemeSwitch } from "@/features/theme-switch";
 import { cn } from "@/lib/utils";
 import { openCookieSettings } from "./cookie-consent";
 import styles from "./public.module.css";
@@ -34,7 +35,11 @@ export function SiteHeader() {
           <a href="/#faq">{t("faq")}</a>
         </nav>
         <span className={styles.spacer} />
-        <LocaleSwitch />
+        {/* รวมภาษา + ธีมเป็นกลุ่มเดียว แต่งเป็นแถบโปร่งให้เบากว่าปุ่มหลักของหัวหน้า */}
+        <div className={styles.prefs}>
+          <LocaleSwitch />
+          <ThemeSwitch />
+        </div>
         <Link href="/login" className={styles.login}>
           {t("login")}
         </Link>

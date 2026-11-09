@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ดู Sub-task</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1d4ed8;text-decoration:none}a:hover{color:#1e3a8a}
+.sec{display:flex;flex-direction:column;gap:10px;padding:16px 0;border-top:1px solid #eef0f3}
+.sech{display:flex;align-items:center;gap:8px;margin:0;font-size:14px;font-weight:600}
+.cnt{font-size:12px;font-weight:500;color:#5f6873}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 11px;border:1px solid #d5dae0;border-radius:8px;background:#fff;color:#1b1f24;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.link{border:0;background:none;padding:0;color:#1d4ed8;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.inp{box-sizing:border-box;width:100%;min-height:32px;padding:6px 10px;border:1px solid #c9cfd6;border-radius:8px;background:#fff;color:#1b1f24;font:inherit;font-size:13px}
+.pill{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:500;white-space:nowrap}
+.av{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;color:#fff;font-size:10px;font-weight:600;flex:none}
+.row{display:flex;align-items:center;gap:10px}
+.pk{width:118px;flex:none;font-size:12px;color:#5f6873}
+.pv{flex:1;min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:32px}
+.sel{box-sizing:border-box;flex:1;display:flex;align-items:center;gap:6px;min-height:32px;padding:0 10px;border:1px solid #e4e7eb;border-radius:8px;background:#fff;font-size:12px}
+.lock{background:#f6f7f9;color:#5f6873}
+.grp{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-top:1px solid #eef0f3}
+.grph{margin:0 0 4px;font-size:12px;font-weight:600;color:#3d4550}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;background:#eef0f3;color:#3d4550;font-size:11px;font-weight:500}
+</style>
+</helmet>
+<div style="width:1000px;min-height:1500px;box-sizing:border-box;background:#fff;color:#1b1f24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:13px;line-height:1.5;display:flex;flex-direction:column">
+
+  <header style="display:flex;align-items:center;gap:10px;padding:12px 24px;border-bottom:1px solid #e4e7eb">
+    <nav aria-label="ตำแหน่งงาน" style="display:flex;align-items:center;gap:6px;flex:1;font-size:12px">
+      <a href="#" class="pill" style="background:#eef2ff;color:#1d4ed8">Module · หน้าร้าน</a>
+      <span aria-hidden="true" style="color:#8a94a0">›</span>
+      <a href="TaskDetailV2.dc.html">DEMO-1 หน้ารายการเมนูและค้นหา</a>
+      <span aria-hidden="true" style="color:#8a94a0">›</span>
+      <strong>DEMO-3</strong>
+      <span class="pill" style="background:#ede9fe;color:#5b21b6">Sub-task</span>
+    </nav>
+    <button type="button" class="btn">กำลังติดตาม · 2</button>
+    <button type="button" class="btn" aria-label="ปิด">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+    </button>
+  </header>
+
+  <div style="display:flex;align-items:flex-start;gap:24px;padding:20px 24px 32px;flex:1">
+
+    <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;line-height:1.35">กรองเมนูตามหมวด</h1>
+      <div class="row" style="margin-bottom:12px;flex-wrap:wrap">
+        <span class="sel" style="flex:none;background:#dbeafe;border-color:#bfdbfe;color:#1e40af;font-weight:600">In progress</span>
+        <span style="font-size:12px;color:#5f6873">สร้างโดย อรทัย · 8 พ.ย. 69</span>
+      </div>
+
+      <section class="sec" aria-label="คำอธิบาย">
+        <h2 class="sech">คำอธิบาย</h2>
+        <div style="padding:10px 12px;border:1px solid #e4e7eb;border-radius:8px;color:#3d4550">ปุ่มหมวดด้านบนรายการเมนู กดแล้วแสดงเฉพาะเมนูในหมวดนั้น</div>
+      </section>
+
+      <section class="sec" aria-label="Acceptance criteria และ Checklist">
+        <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid #e4e7eb;border-radius:8px;background:#fbfcfd">
+          <h2 class="sech">Acceptance criteria <span class="cnt">0/1</span></h2>
+          <label class="row"><input type="checkbox"> <span class="pill" style="background:#ede9fe;color:#5b21b6">Acceptance</span> <span>เลือก "ทั้งหมด" แล้วกลับมาแสดงทุกเมนู</span></label>
+          <input class="inp" type="text" placeholder="+ เพิ่ม Acceptance criteria แล้วกด Enter" aria-label="เพิ่ม Acceptance criteria">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid #e4e7eb;border-radius:8px">
+          <h2 class="sech">Checklist <span class="cnt">0/1</span></h2>
+          <label class="row"><input type="checkbox"> <span class="pill" style="background:#eef0f3;color:#3d4550">Checklist</span> <span>ปุ่มหมวดเรียงตามที่ร้านตั้งไว้</span></label>
+          <input class="inp" type="text" placeholder="+ เพิ่ม Checklist แล้วกด Enter" aria-label="เพิ่ม Checklist">
+        </div>
+      </section>
+
+      <section class="sec" aria-label="ไฟล์แนบ">
+        <div class="row"><h2 class="sech" style="flex:1">Attachments <span class="cnt">1</span></h2><button type="button" class="btn">+ แนบไฟล์</button></div>
+        <div class="row" style="padding:8px 10px;border:1px solid #e4e7eb;border-radius:8px"><span class="chip">PNG</span><span style="flex:1">ปุ่มหมวด-mockup.png</span><span style="font-size:11px;color:#5f6873">180 KB · อรทัย</span></div>
+      </section>
+
+      <section class="sec" aria-label="ผลทดสอบ QA">
+        <div class="row"><h2 class="sech" style="flex:1">ผลทดสอบ QA <span class="cnt">1 รอบ</span></h2><button type="button" class="btn">+ บันทึกผลทดสอบ</button></div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid #e4e7eb;border-radius:8px">
+          <div class="row"><strong style="font-size:12px">รอบที่ 1</strong><span class="pill" style="background:#fee2e2;color:#991b1b">ไม่ผ่าน 4/5</span><span style="flex:1;font-size:12px;color:#5f6873">วิชัย · 13 พ.ย. 69 · Staging</span></div>
+          <p style="margin:0;color:#3d4550">เลือกหมวดว่างแล้วไม่แสดงข้อความ "ยังไม่มีเมนูในหมวดนี้"</p>
+          <div class="row"><span class="chip">รูป 1</span><span class="chip">รูป 2</span></div>
+        </div>
+      </section>
+
+      <section class="sec" aria-label="Development">
+        <h2 class="sech">Development</h2>
+        <div class="row" style="padding:8px 12px;border:1px solid #e4e7eb;border-radius:8px;flex-wrap:wrap">
+          <span class="chip">Branch</span><code style="font-size:12px">feature/DEMO-3-category-filter</code>
+          <span style="flex:1"></span><span class="chip">PR #45</span><span class="pill" style="background:#dbeafe;color:#1e40af">Open</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid #e4e7eb;border-radius:8px">
+          <div class="row"><strong style="flex:1;font-size:13px">ผล Unit test <span class="cnt">1 รอบ</span></strong><button type="button" class="btn">+ แนบผล Unit test</button></div>
+          <div class="row" style="flex-wrap:wrap"><strong style="font-size:12px">รอบที่ 1</strong><span class="pill" style="background:#dcfce7;color:#166534">ผ่าน 12/12</span><span class="chip">Coverage 76%</span><code style="font-size:11px;color:#5f6873">4c5d6e7</code><span style="flex:1;font-size:12px;color:#5f6873;text-align:right">ปกรณ์ · 12 พ.ย. 69</span></div>
+          <div class="row"><span class="chip">unit-report.html</span></div>
+        </div>
+      </section>
+
+      <p style="margin:12px 0 0;font-size:12px;color:#5f6873">Dependency, Activity และคอมเมนต์ ใช้แบบเดียวกับ Task · Sub-task เพิ่ม Sub-task ซ้อนอีกชั้นไม่ได้</p>
+    </main>
+
+    <aside aria-label="ข้อมูลงาน" style="width:340px;flex:none;border:1px solid #e4e7eb;border-radius:12px;background:#fff">
+      <div class="grp" style="border-top:0">
+        <h3 class="grph">ผู้รับผิดชอบ</h3>
+        <div class="row"><span class="pk">Business Analyst</span><span class="pv"><span class="sel"><span class="av" style="background:#be185d">อร</span>อรทัย</span></span></div>
+        <div class="row"><span class="pk">System Analyst</span><span class="pv"><span class="sel"><span class="av" style="background:#4338ca">มน</span>มานี</span></span></div>
+        <div class="row"><span class="pk">Developer</span><span class="pv"><span class="sel"><span class="av" style="background:#7c3aed">ปก</span>ปกรณ์</span></span></div>
+        <div class="row"><span class="pk">QA / Reviewer</span><span class="pv"><span class="sel"><span class="av" style="background:#0f766e">วช</span>วิชัย</span></span></div>
+        <div class="row"><span class="pk">ผู้ติดตาม</span><span class="pv"><span class="av" style="background:#be185d">อร</span><span class="av" style="background:#7c3aed">ปก</span><button type="button" class="link">+ เพิ่ม</button></span></div>
+      </div>
+      <div class="grp">
+        <h3 class="grph">แผนงาน</h3>
+        <div class="row"><span class="pk">Size</span><span class="pv"><span class="sel" style="flex:none;width:72px">S</span><span class="sel" style="flex:none;width:64px">3</span><span style="font-size:12px;color:#5f6873">Man-Day</span></span></div>
+        <div style="display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;background:#eef2ff;color:#1e3a8a;font-size:12px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="flex:none"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
+          <span>ต้องอยู่ในช่วงของ DEMO-1: 9 – 13 พ.ย. 69</span>
+        </div>
+        <div style="display:grid;grid-template-columns:70px repeat(2,minmax(0,1fr));gap:6px;align-items:center;padding:8px;border:1px solid #eef0f3;border-radius:8px;font-size:12px">
+          <span></span><span style="color:#5f6873">แผน</span><span style="color:#5f6873">จริง</span>
+          <span style="color:#5f6873">เริ่ม</span><span class="sel">11 พ.ย. 69</span><span class="sel">11 พ.ย. 69</span>
+          <span style="color:#5f6873">จบ</span><span class="sel" style="border-color:#dc2626;color:#991b1b;background:#fef2f2">15 พ.ย. 69</span><span class="sel" style="color:#8a94a0">—</span>
+        </div>
+        <div role="alertdialog" aria-label="วันที่เกินช่วงของ Task" style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid #fcd34d;border-radius:8px;background:#fffbeb;color:#92400e;font-size:12px">
+          <strong>วันจบเกินช่วงของ DEMO-1 (13 พ.ย. 69)</strong>
+          <span>ถ้าบันทึก ระบบจะขยายวันจบของ DEMO-1 เป็น 15 พ.ย. 69 ตาม Sub-task ที่จบช้าสุด และบันทึกลงประวัติการแก้แผน</span>
+          <div class="row" style="justify-content:flex-end"><button type="button" class="btn">ยกเลิก</button><button type="button" class="btn" style="background:#b45309;color:#fff;border-color:#b45309">ขยาย Task และบันทึก</button></div>
+        </div>
+        <div class="row"><span class="pk">Progress</span><span class="pv"><span style="flex:1;height:6px;border-radius:99px;background:#eef0f3;overflow:hidden"><span style="display:block;width:30%;height:100%;background:#1d4ed8"></span></span><span style="font-size:12px;font-weight:600">30%</span></span></div>
+      </div>
+      <div class="grp">
+        <h3 class="grph">กลุ่มงาน</h3>
+        <div class="row" style="align-items:flex-start"><span class="pk" style="padding-top:7px">Task แม่</span>
+          <span class="pv" style="flex-direction:column;align-items:stretch;gap:6px">
+            <span class="sel" style="border-color:#2563eb;box-shadow:0 0 0 2px #dbeafe"><span style="color:#5f6873">DEMO-1</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">หน้ารายการเมนูและค้นหา</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
+            <span style="display:flex;flex-direction:column;gap:2px;padding:6px;border:1px solid #e4e7eb;border-radius:10px;background:#fff;box-shadow:0 12px 28px rgb(15 23 42 / .14)">
+              <input class="inp" type="search" placeholder="ค้นหารหัสหรือชื่อ Task" aria-label="ค้นหา Task แม่">
+              <span style="padding:6px 8px 2px;font-size:11px;color:#5f6873">Task ใน Module หน้าร้าน</span>
+              <span class="row" style="padding:6px 8px;border-radius:6px;background:#eef2ff"><span style="font-size:12px;color:#5f6873;width:52px">DEMO-1</span><span style="flex:1">หน้ารายการเมนูและค้นหา</span><span style="font-size:11px;color:#1d4ed8">ปัจจุบัน</span></span>
+              <span class="row" style="padding:6px 8px"><span style="font-size:12px;color:#5f6873;width:52px">DEMO-4</span><span style="flex:1">หน้ารายละเอียดเมนูและตัวเลือกเพิ่มเติม</span></span>
+            </span>
+            <span style="font-size:11px;color:#5f6873">เปลี่ยนได้เฉพาะ Task ใน Module เดียวกัน · วันที่เกินช่วง Task ใหม่ใช้กติกาเตือนและขยายเหมือนกัน</span>
+          </span>
+        </div>
+        <div class="row"><span class="pk">Module</span><span class="pv"><span class="sel lock">หน้าร้าน · ตาม Task แม่</span></span></div>
+        <div class="row"><span class="pk">Priority</span><span class="pv"><span class="sel">Medium</span></span></div>
+        <div class="row"><span class="pk">Requirement</span><span class="pv"><span class="chip">FR-01.2</span><button type="button" class="link">+ FR / NFR</button></span></div>
+        <div class="row"><span class="pk">Screen</span><span class="pv"><span class="chip">SCR-101</span><button type="button" class="link">+ Screen</button></span></div>
+        <div class="row"><span class="pk">Label</span><span class="pv"><button type="button" class="link">+ Label</button></span></div>
+        <label class="row" style="margin-top:6px;padding:8px 10px;border:1px solid #e4e7eb;border-radius:8px"><input type="checkbox" checked="checked"><span style="flex:1">แชร์งานนี้ให้ Guest</span></label>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1000,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

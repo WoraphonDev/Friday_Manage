@@ -76,7 +76,7 @@ Workspace เลือกปฏิทินหลัก + เพิ่มวั�
 | `project_member` | สมาชิกในโปรเจกต์ | project_id, user_id, role (admin · member · viewer), position (PM · UX/UI · Frontend · Backend · QA · BA), capacity_hours_week (เฉพาะชั่วโมงที่ให้โปรเจกต์นี้), joined_at | A, 7 |
 | `project_role_permission` | ตารางสิทธิ์ที่ปรับได้รายโปรเจกต์ (เก็บเฉพาะค่าที่ต่างจากค่าเริ่มต้น) | project_id, role (member · viewer), permission (เช่น `issue.change_due_directly`), allowed | L2 |
 | `module` | Module ในโปรเจกต์ | project_id, name, color, owner_user_id (Dev หลัก), sort | A, L2, 2 |
-| `phase` | **กลุ่มงาน (Phase) ใน Module** · มาจากคอลัมน์ "Sprint" ในไฟล์ Excel | project_id, module_id, name, sort | 2, L3 |
+| `phase` | **กลุ่ม (Group) ใน Module ไม่บังคับ** · Module → กลุ่ม → Task → Sub-task · Sub-task อยู่กลุ่มเดียวกับ Task แม่ (ย้าย Task แล้ว Sub-task ตาม) · ในหน้าจอเรียกว่า "กลุ่ม" (ผู้ใช้ขอ 8 พ.ย. 2569) |
 | `milestone` | Milestone บน Timeline / Gantt | project_id, module_id (ไม่บังคับ), name, date | A, 1, 4 |
 | `milestone_issue` | งานที่ผูกกับ Milestone (ใช้คิด % ของ Milestone) | milestone_id, issue_id | 1 |
 | `sprint` | Sprint ระดับโปรเจกต์ | project_id, number, name, start_date, end_date, goal, status (planning · active · completed), retrospective, completed_at, completed_by | L1 |
@@ -137,7 +137,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 |---|---|---|---|
 | `plan_baseline` | Baseline v1, v2 … | project_id, version, name, source (import · manual), created_by, created_at | L3, 5 |
 | `baseline_item` | ค่าของแต่ละงานตอนตั้ง Baseline | baseline_id, issue_id, plan_start, plan_end, estimate_md, assignee_ids[] | 5, L3 |
-| `plan_change` | แท็บ "การแก้ไขแผน" · การแก้หลังมี Baseline ต้องใส่เหตุผล | project_id, issue_id, baseline_id, field, old_value, new_value, reason, impact, changed_by, changed_at, source (manual · import · due_request) | L3 |
+| `plan_change` | แท็บ "การแก้ไขแผน" · การแก้หลังมี Baseline บันทึกทุกครั้ง · เหตุผลไม่บังคับ (ผู้ใช้ขอ 8 พ.ย. 2569: ไม่ต้องเตือน ให้ลง Activity ก็พอ) | project_id, issue_id, baseline_id, field, old_value, new_value, reason, impact, changed_by, changed_at, source (manual · import · due_request) | L3 |
 | `import_job` | งานนำเข้า Excel | project_id (null = โปรเจกต์ใหม่), mode (create · update), file_name, storage_key, column_mapping (jsonb), person_mapping (jsonb), validation (jsonb: แถวที่ต้องแก้), status, row_total, row_imported, row_skipped, error, created_by, completed_at | L3 |
 
 ## H. ไฟล์

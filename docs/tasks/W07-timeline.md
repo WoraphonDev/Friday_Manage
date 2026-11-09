@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/p/[key]/timeline/**` · `apps/web/messages/th/timeline.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/p/[key]/timeline/**` · `apps/web/messages/th/timeline.json` |
 | หน้าจอ | 4 (`design/canvas/Timeline.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · `GET p/timeline` (มีแล้ว) |
 

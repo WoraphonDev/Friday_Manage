@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslations } from 'next-intl';
-import { ApiError } from '@/lib/api';
+import { ApiError, isConfirmCancelled, supportId } from '@/lib/api';
 import { Avatar, Button, Input } from '@/components/ui';
 import type { PublicPerson } from './types';
 import styles from './issue-drawer.module.css';
@@ -16,7 +16,9 @@ export function BodyText({ children }: { children: string }) {
 }
 export function Failure({ error }: { error: unknown }) {
   const t = useTranslations('issue-drawer');
-  return <div role="alert" className={styles.error}><span>{error instanceof Error ? error.message : t('error')}</span>{error instanceof ApiError && error.requestId && <code>{t('requestId', { id: error.requestId })}</code>}</div>;
+  // ผู้ใช้กดยกเลิกในกล่องยืนยันกลางเอง ไม่ใช่ข้อผิดพลาด
+  if (isConfirmCancelled(error)) return null;
+  return <div role="alert" className={styles.error}><span>{error instanceof Error ? error.message : t('error')}</span>{error instanceof ApiError && supportId(error) && <code>{t('requestId', { id: supportId(error) ?? "" })}</code>}</div>;
 }
 export function PersonView({ person }: { person: PublicPerson | null }) {
   const t = useTranslations('issue-drawer');

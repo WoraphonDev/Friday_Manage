@@ -4,9 +4,14 @@ export interface Status { id: string; name: string; category: 'todo' | 'in_progr
 export interface Named { id: string; name: string; color?: string | null }
 export interface Issue {
   id: string; key: string; projectKey: string; type: IssueType; parentKey: string | null;
-  title: string; description: string | null; status: Status; priority: 'urgent' | 'high' | 'medium' | 'low';
+  title: string; description: string | null;
+  /** หมายเหตุ · Guest ไม่ได้รับ */
+  remark?: string | null;
+  status: Status; priority: 'urgent' | 'high' | 'medium' | 'low';
   moduleId: string | null; phaseId: string | null; sprintId: string | null;
-  assigneeIds?: string[]; baId?: string | null; reviewerId?: string | null; testerId?: string | null; reporterId?: string;
+  /** ชื่อกลุ่ม (เฉพาะ GET issue) */
+  group?: { id: string; name: string } | null;
+  assigneeIds?: string[]; baId?: string | null; saId?: string | null; reviewerId?: string | null; testerId?: string | null; reporterId?: string;
   size: string | null; estimateMd: number | null; progressPct: number | null;
   planStart: string | null; planEnd: string | null; actualStart: string | null; actualEnd: string | null;
   severity: string | null; environment: string | null; details: Record<string, unknown>; reopenCount: number;
@@ -34,7 +39,7 @@ export interface ChecklistItem { id: string; text: string; kind: 'checklist' | '
 export interface Dependency { id: string; key: string; title: string; type: string; lagDays: number; status: Status; planStart: string | null; planEnd: string | null }
 export interface Dependencies { blockedBy: Dependency[]; blocking: Dependency[]; warnings?: { code: string; message: string }[] }
 export interface PublicPerson { id?: string; displayName: string; initials?: string; avatarUrl?: string | null }
-export interface Comment { id: string; kind: 'comment'; body: string | null; author: PublicPerson | null; createdAt: string; editedAt: string | null; deletedAt: string | null; deletionReason: 'admin' | 'author' | null; canEdit: boolean; canDelete: boolean }
+export interface Comment { id: string; kind: 'comment'; body: string | null; author: PublicPerson | null; createdAt: string; editedAt: string | null; deletedAt: string | null; deletionReason: 'admin' | 'author' | null; canEdit: boolean; canDelete: boolean; files?: { id: string; name: string; mime?: string | null }[] }
 export interface Activity { id: string; kind: 'activity'; actor: PublicPerson | null; verb: string; field: string | null; old: unknown; new: unknown; createdAt: string }
 export interface Feed { items: (Comment | Activity)[]; nextCursor: string | null }
 export interface DueImpact {
@@ -47,4 +52,7 @@ export interface DueImpact {
 }
 export const issuePath = (ws: string, key: string) => `/w/${encodeURIComponent(ws)}/issues/${encodeURIComponent(key)}`;
 export const projectPath = (ws: string, key: string) => `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(key)}`;
+/** สำหรับหน้าดูตัวอย่างไฟล์ (FilePreview): ที่อยู่ API ของโปรเจกต์ และลิงก์ไปหน้า Files */
+export const previewBase = (scope: { ws: string; projectKey: string }) => `/api/v1${projectPath(scope.ws, scope.projectKey)}`;
+export const filesPageHref = (scope: { ws: string; projectKey: string }) => (id: string) => `/work/${encodeURIComponent(scope.ws)}/p/${encodeURIComponent(scope.projectKey)}/files?file=${encodeURIComponent(id)}`;
 export const issueQuery = (ws: string, key: string) => ['issue-drawer', ws, key] as const;

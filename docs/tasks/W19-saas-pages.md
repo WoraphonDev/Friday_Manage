@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00, A29, A30 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/(public)/**` · `apps/web/app/w/[ws]/billing/**` · `apps/web/src/features/plan-limits/**` · `apps/web/messages/th/saas-pages.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/(public)/**` · `apps/web/app/work/[ws]/billing/**` · `apps/web/src/features/plan-limits/**` · `apps/web/messages/th/saas-pages.json` |
 | หน้าจอ | R1 (`design/canvas/Landing.dc.html`) · R2 (`design/canvas/Checkout.dc.html`) · Q2 (`design/canvas/PlanLimits.dc.html`) · R4 (`design/canvas/Legal.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · 03-api › 3.10 |
 

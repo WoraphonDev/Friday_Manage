@@ -242,8 +242,8 @@ export class CalendarService {
           start,
           end,
           summary: `[${k}] ${r.i.title}`,
-          description: `${r.projectName} · ครบกำหนด ${end}\n${webUrl()}/w/${feed.slug}/p/${r.key}/table?issue=${k}`,
-          url: `${webUrl()}/w/${feed.slug}/p/${r.key}/table?issue=${k}`,
+          description: `${r.projectName} · ครบกำหนด ${end}\n${webUrl()}/work/${feed.slug}/p/${r.key}/table?issue=${k}`,
+          url: `${webUrl()}/work/${feed.slug}/p/${r.key}/table?issue=${k}`,
           category: r.projectName,
         });
       }

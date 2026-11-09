@@ -35,5 +35,6 @@ Friday Manage: ระบบ Project Management สำหรับทีม Dev (
 - สิทธิ์ใช้ `projectAccess` / `requirePerm` · ตัดข้อมูลของ Guest ที่ API ก่อนตอบ
 - เหตุการณ์ (`issue.created` ฯลฯ) ส่งด้วย `EventBus.publish` หลัง commit · ผู้ฟังลงทะเบียนด้วย `EventBus.on` ใน `onModuleInit` ของ module ตัวเอง
 - วันที่ในแผนเป็น `YYYY-MM-DD` · วันทำการใช้ `WorkCalendar` · วันนี้ใช้ `today()` (Asia/Bangkok) · Man-Day ตามธรรมเนียมใน `docs/decisions.md`
+- สีทั้งหมดมาจาก token ใน `apps/web/src/styles/tokens.css` (ชุดสีตาม logo มีโหมดสว่าง/มืด ผู้ใช้เลือกแทนสีใน Canvas เมื่อ 2026-11-09) · ห้ามเขียน hex ใน CSS อื่น ต้องเพิ่ม token ทั้งสองโหมด (`src/lib/theme.test.tsx` ตรวจไว้) · สีที่ผู้ใช้เลือกเองใช้ `readableColor` / `tint` จาก `@/lib/colors`
 - ข้อมูลใน test และตัวอย่างเป็นข้อมูลสมมติเท่านั้น · repo นี้เป็น Public
 - Commit: หัวข้อภาษาอังกฤษแบบคำสั่ง (`Add comments and mentions`) · เนื้อหาเป็น bullet สั้น ๆ

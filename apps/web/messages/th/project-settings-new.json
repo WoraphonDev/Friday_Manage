@@ -11,9 +11,14 @@
       "notify": "การแจ้งเตือน",
       "integ": "Integrations",
       "danger": "Danger zone",
-      "automation": "Automation"
+      "automation": "Automation",
+      "import": "อัปเดตแผนจาก Excel",
+      "export": "Export แผน + Timeline",
+      "plan-changes": "การแก้ไขแผน"
     },
-    "closed": { "title": "ยังไม่เปิดใช้งาน" },
+    "closed": {
+      "title": "ยังไม่เปิดใช้งาน"
+    },
     "notify": {
       "title": "การแจ้งเตือนของโปรเจกต์",
       "description": "กำหนดว่าเหตุการณ์ไหนส่งเข้ากลุ่มทีม · ข้อความส่วนตัวแต่ละคนตั้งเองที่ Profile",
@@ -87,7 +92,11 @@
       "moveDown": "เลื่อน {name} ลง",
       "statusNameOf": "ชื่อสถานะ {name}",
       "categoryOf": "หมวดของสถานะ {name}",
-      "categories": { "todo": "To do", "in_progress": "In progress", "done": "Done" },
+      "categories": {
+        "todo": "To do",
+        "in_progress": "In progress",
+        "done": "Done"
+      },
       "wipOf": "WIP limit ของ {name}",
       "issues": "{count} งาน",
       "remove": "ลบสถานะ {name}",
@@ -117,10 +126,23 @@
       "enabled": "เปิดใช้",
       "editFields": "แก้ฟิลด์",
       "standardFields": "ฟิลด์มาตรฐาน",
-      "standard": { "ba": "BA (คน)", "devs": "Dev หลายคน", "screenId": "Screen ID", "frNfr": "FR / NFR", "planActual": "Plan / Actual Start–End" },
+      "standard": {
+        "ba": "BA (คน)",
+        "devs": "Dev หลายคน",
+        "screenId": "Screen ID",
+        "frNfr": "FR / NFR",
+        "planActual": "Plan / Actual Start–End"
+      },
       "standardHint": "มีในทุกงาน ลบไม่ได้ · ใช้คำนวณ Workload, Gantt และ Requirement Traceability",
       "customFields": "Custom fields ของทีม",
-      "fieldTypes": { "text": "ข้อความ", "number": "ตัวเลข", "select": "ตัวเลือก", "multi_select": "หลายตัวเลือก", "user": "คน", "date": "วันที่" },
+      "fieldTypes": {
+        "text": "ข้อความ",
+        "number": "ตัวเลข",
+        "select": "ตัวเลือก",
+        "multi_select": "หลายตัวเลือก",
+        "user": "คน",
+        "date": "วันที่"
+      },
       "removeOf": "ลบ {name}",
       "noFields": "ยังไม่มี Custom field",
       "addField": "+ เพิ่มฟิลด์",
@@ -178,7 +200,11 @@
       "saved": "{name} สำหรับ {role}: บันทึกแล้ว",
       "failed": "บันทึกสิทธิ์ไม่สำเร็จ",
       "can": "สิ่งที่ทำได้",
-      "roles": { "admin": "Admin", "member": "Member", "viewer": "Viewer" },
+      "roles": {
+        "admin": "Admin",
+        "member": "Member",
+        "viewer": "Viewer"
+      },
       "rows": {
         "project__view": "ดูทุก tab และงาน",
         "issue__comment": "คอมเมนต์",
@@ -235,11 +261,31 @@
     "stepsHint": "ขั้นที่ 1–2 บังคับ ที่เหลือข้ามได้ และแก้ภายหลังใน Project Settings",
     "stepOf": "ขั้นที่ {n} จาก 5",
     "steps": {
-      "1": { "title": "ข้อมูลพื้นฐาน", "short": "ชื่อ, Key, Template", "description": "ตั้งชื่อและเลือก Template ที่กำหนดสถานะงานและ Module เริ่มต้น" },
-      "2": { "title": "ระยะเวลา", "short": "วันเริ่ม–จบ, วันทำงาน", "description": "ใช้คำนวณ Timeline, Gantt, Workload และ Health ของโปรเจกต์" },
-      "3": { "title": "ขอบเขตงาน", "short": "Scope, Module, ไฟล์", "description": "กำหนดสิ่งที่ทำและไม่ทำ พร้อม Module เริ่มต้น (ไม่บังคับ)" },
-      "4": { "title": "ทีม", "short": "PM, สมาชิก, Capacity", "description": "เชิญสมาชิก กำหนดสิทธิ์และ capacity สำหรับกราฟ Workload (ไม่บังคับ)" },
-      "5": { "title": "การตั้งค่า", "short": "Workflow, Integrations", "description": "ค่าเริ่มต้นใช้ได้เลย แก้ภายหลังได้ใน Project Settings (ไม่บังคับ)" }
+      "1": {
+        "title": "ข้อมูลพื้นฐาน",
+        "short": "ชื่อ, Key, Template",
+        "description": "ตั้งชื่อและเลือก Template ที่กำหนดสถานะงานและ Module เริ่มต้น"
+      },
+      "2": {
+        "title": "ระยะเวลา",
+        "short": "วันเริ่ม–จบ, วันทำงาน",
+        "description": "ใช้คำนวณ Timeline, Gantt, Workload และ Health ของโปรเจกต์"
+      },
+      "3": {
+        "title": "ขอบเขตงาน",
+        "short": "Scope, Module, ไฟล์",
+        "description": "กำหนดสิ่งที่ทำและไม่ทำ พร้อม Module เริ่มต้น (ไม่บังคับ)"
+      },
+      "4": {
+        "title": "ทีม",
+        "short": "PM, สมาชิก, Capacity",
+        "description": "เชิญสมาชิก กำหนดสิทธิ์และ capacity สำหรับกราฟ Workload (ไม่บังคับ)"
+      },
+      "5": {
+        "title": "การตั้งค่า",
+        "short": "Workflow, Integrations",
+        "description": "ค่าเริ่มต้นใช้ได้เลย แก้ภายหลังได้ใน Project Settings (ไม่บังคับ)"
+      }
     },
     "back": "← ย้อนกลับ",
     "next": "ถัดไป →",
@@ -267,23 +313,55 @@
     "descriptionPlaceholder": "โปรเจกต์นี้ทำอะไร เพื่อใคร",
     "template": "Template",
     "templates": {
-      "scrum": { "name": "Scrum", "description": "ทำงานเป็น Sprint มี Backlog", "makes": "สร้าง Sprint + Backlog + 4 สถานะ" },
-      "kanban": { "name": "Kanban", "description": "งานไหลต่อเนื่อง ไม่มี Sprint", "makes": "สร้างบอร์ด 4 คอลัมน์ + WIP limit" },
-      "waterfall": { "name": "Waterfall", "description": "แผนเป็นเฟส มี dependency", "makes": "สร้างเฟส Requirement → Deploy เป็น Module" },
-      "blank": { "name": "Blank", "description": "เริ่มจากศูนย์", "makes": "สร้างเฉพาะสถานะพื้นฐาน" },
+      "scrum": {
+        "name": "Scrum",
+        "description": "ทำงานเป็น Sprint มี Backlog",
+        "makes": "สร้าง Sprint + Backlog + 4 สถานะ"
+      },
+      "kanban": {
+        "name": "Kanban",
+        "description": "งานไหลต่อเนื่อง ไม่มี Sprint",
+        "makes": "สร้างบอร์ด 4 คอลัมน์ + WIP limit"
+      },
+      "waterfall": {
+        "name": "Waterfall",
+        "description": "แผนเป็นเฟส มี dependency",
+        "makes": "สร้างเฟส Requirement → Deploy เป็น Module"
+      },
+      "blank": {
+        "name": "Blank",
+        "description": "เริ่มจากศูนย์",
+        "makes": "สร้างเฉพาะสถานะพื้นฐาน"
+      },
       "workspace": "Template ของ Workspace",
       "workspaceMakes": "ใช้สถานะ, ประเภทงาน และ Module ตาม Template"
     },
     "color": "สีโปรเจกต์",
     "colorOf": "สี {name}",
-    "colors": { "0F766E": "เขียวน้ำทะเล", "1D4ED8": "น้ำเงิน", "7C3AED": "ม่วง", "B45309": "ส้ม", "BE185D": "ชมพู", "334155": "เทาเข้ม" },
+    "colors": {
+      "5B3FC4": "ม่วงคราม",
+      "0F766E": "เขียวน้ำทะเล",
+      "1D4ED8": "น้ำเงิน",
+      "7C3AED": "ม่วง",
+      "B45309": "ส้ม",
+      "BE185D": "ชมพู",
+      "334155": "เทาเข้ม"
+    },
     "icon": "ไอคอน",
     "startDate": "วันเริ่มต้น",
     "goliveDate": "วันสิ้นสุดเป้าหมาย (Go-live)",
     "timezone": "Timezone",
     "span": "ระยะเวลา {days} วัน · {working} วันทำการ (จ.–ศ. ยังไม่หักวันหยุด)",
     "workDays": "วันทำงาน",
-    "days": { "mon": "จ", "tue": "อ", "wed": "พ", "thu": "พฤ", "fri": "ศ", "sat": "ส", "sun": "อา" },
+    "days": {
+      "mon": "จ",
+      "tue": "อ",
+      "wed": "พ",
+      "thu": "พฤ",
+      "fri": "ศ",
+      "sat": "ส",
+      "sun": "อา"
+    },
     "workDaysHint": "ใช้วันทำงานตามปฏิทินของ Workspace · Admin เปลี่ยนได้ที่ Admin Console",
     "holidays": "วันหยุด",
     "holidayCalendar": "ปฏิทินวันหยุด",
@@ -322,8 +400,14 @@
     "you": "{name} (คุณ)",
     "visibility": "การมองเห็น",
     "visibilityOptions": {
-      "private": { "name": "Private", "description": "เฉพาะสมาชิกที่เชิญ" },
-      "workspace": { "name": "Workspace", "description": "ทุกคนในองค์กรดูได้" }
+      "private": {
+        "name": "Private",
+        "description": "เฉพาะสมาชิกที่เชิญ"
+      },
+      "workspace": {
+        "name": "Workspace",
+        "description": "ทุกคนในองค์กรดูได้"
+      }
     },
     "members": "สมาชิก",
     "membersPlaceholder": "พิมพ์ชื่อหรืออีเมลเพื่อเชิญ (คั่นด้วย , ได้หลายคน)",
@@ -334,7 +418,11 @@
     "roleCol": "Project role",
     "capacityCol": "Capacity (ชม./สัปดาห์)",
     "ownerTag": "{email} · Owner",
-    "roles": { "admin": "Admin", "member": "Member", "viewer": "Viewer" },
+    "roles": {
+      "admin": "Admin",
+      "member": "Member",
+      "viewer": "Viewer"
+    },
     "positionOf": "ตำแหน่งของ {name}",
     "roleOf": "Role ของ {name}",
     "capacityOf": "Capacity ของ {name}",
@@ -352,13 +440,34 @@
     "progressCount": "นับจำนวนงานที่ Done",
     "progressWeighted": "ถ่วงน้ำหนักด้วย Estimate",
     "priorities": "ระดับความสำคัญ",
-    "priority": { "urgent": "Urgent", "high": "High", "medium": "Medium", "low": "Low" },
+    "priority": {
+      "urgent": "Urgent",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
     "integrations": "Integrations",
     "integration": {
-      "github": { "ab": "GH", "name": "GitHub", "description": "ผูก repo · ลิงก์ commit / PR กับงาน" },
-      "gitlab": { "ab": "GL", "name": "GitLab", "description": "ผูก repo และ Merge request" },
-      "line": { "ab": "LN", "name": "LINE", "description": "แจ้งเตือนเข้ากลุ่ม LINE ของทีม" },
-      "slack": { "ab": "SL", "name": "Slack", "description": "แจ้งเตือนเข้า channel" }
+      "github": {
+        "ab": "GH",
+        "name": "GitHub",
+        "description": "ผูก repo · ลิงก์ commit / PR กับงาน"
+      },
+      "gitlab": {
+        "ab": "GL",
+        "name": "GitLab",
+        "description": "ผูก repo และ Merge request"
+      },
+      "line": {
+        "ab": "LN",
+        "name": "LINE",
+        "description": "แจ้งเตือนเข้ากลุ่ม LINE ของทีม"
+      },
+      "slack": {
+        "ab": "SL",
+        "name": "Slack",
+        "description": "แจ้งเตือนเข้า channel"
+      }
     },
     "connect": "Connect",
     "notYet": "ยังไม่เปิด",
@@ -388,6 +497,8 @@
       "holidays": "วันหยุดบริษัท {count} วัน",
       "members": "เพิ่มสมาชิก {count} คน"
     },
-    "initialStatus": "สถานะเริ่มต้น: Planning · Health คำนวณเมื่อมีงานแรก"
+    "initialStatus": "สถานะเริ่มต้น: Planning · Health คำนวณเมื่อมีงานแรก",
+    "fromExcel": "มีแผนใน Excel อยู่แล้ว? สร้างโปรเจกต์จากไฟล์ Excel",
+    "fromExcelHint": "สร้าง Module และงานทั้งหมดตามไฟล์ แทนการกรอกทีละขั้น"
   }
 }

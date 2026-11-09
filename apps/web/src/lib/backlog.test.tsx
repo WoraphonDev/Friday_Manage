@@ -9,8 +9,8 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import backlog from "../../messages/th/backlog.json";
-import { BacklogView } from "../../app/w/[ws]/p/[key]/backlog/_components/backlog-view";
-import type { BacklogData, BacklogIssue, MoveBody, Sprint } from "../../app/w/[ws]/p/[key]/backlog/_components/types";
+import { BacklogView } from "../../app/work/[ws]/p/[key]/backlog/_components/backlog-view";
+import type { BacklogData, BacklogIssue, MoveBody, Sprint } from "../../app/work/[ws]/p/[key]/backlog/_components/types";
 
 const devA = { id: "dev-a", displayName: "ผู้พัฒนาตัวอย่างหนึ่ง", initials: "ผน" };
 const devB = { id: "dev-b", displayName: "ผู้พัฒนาตัวอย่างสอง", initials: "ผส" };
@@ -56,7 +56,7 @@ function findList(key: string) {
 }
 
 beforeEach(() => {
-  navigation.pathname = "/w/sample/p/DE/backlog";
+  navigation.pathname = "/work/sample/p/DE/backlog";
   data = initial(); moves = []; posts = [];
   server.use(
     http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () => HttpResponse.json(perms)),
@@ -100,7 +100,7 @@ describe("Backlog + Sprint planning (W12)", () => {
     expect(within(active).getByText("2 / 11")).toBeInTheDocument();
     expect(within(active).getByRole("img", { name: "Burndown: เหลือ 9 MD จาก 10 MD" })).toBeInTheDocument();
     expect(within(active).getByTestId("burndown-actual")).toHaveAttribute("points");
-    expect(within(active).getByRole("link", { name: "เปิดบอร์ด" })).toHaveAttribute("href", "/w/sample/p/DE/board");
+    expect(within(active).getByRole("link", { name: "เปิดบอร์ด" })).toHaveAttribute("href", "/work/sample/p/DE/board");
 
     const planning = screen.getByRole("region", { name: "Sprint 2 (Planning)" });
     expect(within(planning).getByRole("meter", { name: "Commit vs capacity" })).toHaveAttribute("aria-valuenow", "3");
@@ -111,7 +111,7 @@ describe("Backlog + Sprint planning (W12)", () => {
     expect(within(row("DE-6")).getByRole("img", { name: devB.displayName })).toBeInTheDocument();
 
     expect(screen.getByText("3 งาน · 6 MD · 1 งานยังไม่ประเมิน")).toBeInTheDocument();
-    expect(within(row("DE-7")).getByRole("link", { name: "งานตัวอย่าง DE-7" })).toHaveAttribute("href", "/w/sample/p/DE/backlog?issue=DE-7");
+    expect(within(row("DE-7")).getByRole("link", { name: "งานตัวอย่าง DE-7" })).toHaveAttribute("href", "/work/sample/p/DE/backlog?issue=DE-7");
     expect(await within(row("DE-8")).findByText("ระบบตัวอย่าง B")).toBeInTheDocument();
   });
 
@@ -163,15 +163,15 @@ describe("Backlog + Sprint planning (W12)", () => {
     expect(moves[1].body).toMatchObject({ sprintId: "sp-1" });
   });
 
-  it("409 จาก If-Match แสดงข้อความชนกันพร้อม requestId และโหลดค่าล่าสุด", async () => {
+  it("409 จาก If-Match แสดงข้อความชนกันพร้อม requestId (toast ที่ปิดได้ / หายเอง) และโหลดค่าล่าสุดเอง", async () => {
     const user = userEvent.setup();
     server.use(http.post("*/api/v1/w/:ws/issues/:key/move", () => errorBody(409, "version_conflict")));
     mount();
     await user.click(await within(await screen.findByRole("listitem", { name: "งาน DE-5" })).findByRole("button", { name: "↓ Backlog" }));
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("งานนี้ถูกแก้ไขโดยคนอื่นแล้ว");
-    expect(alert).toHaveTextContent("รหัสคำขอ req_w12_001");
-    await user.click(within(alert).getByRole("button", { name: "โหลดค่าล่าสุด" }));
+    expect(alert).not.toHaveTextContent("req_w12_001"); // 4xx ผู้ใช้แก้เองได้ ไม่แสดงรหัสอ้างอิง (ผู้ใช้ขอ 2026-11-09)
+    await user.click(within(alert).getByRole("button", { name: "ปิด" }));
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 

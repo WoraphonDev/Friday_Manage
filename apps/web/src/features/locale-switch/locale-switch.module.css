@@ -1,8 +1,8 @@
 /* Canvas R3 · segmented control · ปุ่มยืดตามข้อความ (EN ยาวกว่าไทย 20–40%) ห้ามกำหนดความกว้างตายตัว */
 .root { display:inline-flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .seg { display:inline-flex; border:1px solid var(--input); border-radius:10px; overflow:hidden; background:var(--card); }
-.seg button { min-height:36px; padding:0 12px; border:0; background:var(--card); font:inherit; cursor:pointer; color:#3d4550; white-space:nowrap; }
+.seg button { min-height:32px; padding:0 12px; border:0; background:var(--card); font:inherit; font-size:var(--text-label); cursor:pointer; color:var(--foreground-soft); white-space:nowrap; }
 .seg button + button { border-left:1px solid var(--input); }
-.seg button[aria-pressed="true"] { background:var(--foreground); color:#fff; font-weight:600; }
+.seg button[aria-pressed="true"] { background:var(--contrast-bg); color:var(--contrast-ink); font-weight:600; }
 .seg button:disabled { cursor:progress; }
 .seg button:focus-visible { outline:2px solid var(--focus); outline-offset:-2px; }

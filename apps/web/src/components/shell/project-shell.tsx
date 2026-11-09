@@ -24,6 +24,7 @@ import { IssueDrawer } from "@/features/issue-drawer/IssueDrawer";
 import { withoutDrawerParams } from "@/features/issue-drawer/url";
 import { ProjectInviteDialog } from "@/features/project-invite/project-invite-dialog";
 import { useWorkspace } from "./workspace-shell";
+import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 
 // ใช้ queryKey เดียวกับหน้า Overview และหน้า Members เพื่อไม่ยิง API ซ้ำเมื่อเปิดหน้านั้น
 type HealthLevel = "on_track" | "at_risk" | "off_track";
@@ -56,8 +57,7 @@ export const projectTabs = [
   { path: "/board", label: "board", hiddenForGuestViewer: true, mobile: true },
   { path: "/timeline", label: "timeline", desktop: true },
   { path: "/gantt", label: "gantt", hiddenForGuestViewer: true, desktop: true, optional: true },
-  // การแก้ไขแผนหลัง Baseline · เดิมอยู่ในเมนู ⋯ (ผู้ใช้ให้ย้ายมาเป็นมุมมองเสริม 2026-11-07)
-  { path: "/plan-changes", label: "planChanges", permission: "project.baseline", desktop: true, optional: true },
+  // การแก้ไขแผน: ย้ายจากแท็บเสริมไปอยู่ใน Popup Import / Export ของ Table และเมนู Settings (ผู้ใช้ตัดสิน 2026-11-09)
   { path: "/calendar", label: "calendar", hiddenForGuestViewer: true, mobile: true },
   { path: "/members", label: "members", permission: "project.workload.view" },
   { path: "/files", label: "files", hiddenForGuestViewer: true, mobile: true },
@@ -126,7 +126,7 @@ export function ProjectShell({
   const cache = useQueryClient();
   const ws = workspace.slug;
   const endpoint = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
-  const base = `/w/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}`;
+  const base = `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}`;
   const project = useQuery({
     queryKey: queryKeys.project(ws, projectKey),
     queryFn: () => api.get<Project>(endpoint),
@@ -283,14 +283,14 @@ export function ProjectShell({
               <div className="project-title-row">
                 <Link
                   className="button button-ghost button-icon project-back"
-                  href={`/w/${encodeURIComponent(ws)}`}
+                  href={`/work/${encodeURIComponent(ws)}`}
                   aria-label={t("nav.back")}
                 >
                   <ChevronLeft size={22} aria-hidden="true" />
                 </Link>
                 <span
                   className="project-icon"
-                  style={{ background: project.data.color ?? "#334155" }}
+                  style={{ background: project.data.color ?? FALLBACK_PROJECT_COLOR }}
                   aria-hidden="true"
                 >
                   {projectKey.slice(0, 2)}

@@ -67,6 +67,8 @@
     "yearBE": "Buddhist Era (2569)",
     "yearCE": "Common Era (2026)",
     "datePreview": "Dates will show as {date}",
+    "theme": "Theme",
+    "themeHint": "Applies to this device and changes right away, no need to save",
     "about": "About me",
     "aboutPlaceholder": "A short intro so your team gets to know you",
     "saved": "Personal info saved"

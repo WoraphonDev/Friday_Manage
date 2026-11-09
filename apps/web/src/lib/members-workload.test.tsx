@@ -9,10 +9,10 @@ import { navigation } from "@/test/router";
 import { permissions, workspaces } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import mw from "../../messages/th/members-workload.json";
-import { MembersView } from "../../app/w/[ws]/p/[key]/members/_components/members-view";
-import { WorkspaceMembers } from "../../app/w/[ws]/members/_components/workspace-members";
-import { workloadRange } from "../../app/w/[ws]/p/[key]/members/_components/shared";
-import type { Invitation, ProjectMember, Workload, WorkspaceMember } from "../../app/w/[ws]/p/[key]/members/_components/types";
+import { MembersView } from "../../app/work/[ws]/p/[key]/members/_components/members-view";
+import { WorkspaceMembers } from "../../app/work/[ws]/members/_components/workspace-members";
+import { workloadRange } from "../../app/work/[ws]/p/[key]/members/_components/shared";
+import type { Invitation, ProjectMember, Workload, WorkspaceMember } from "../../app/work/[ws]/p/[key]/members/_components/types";
 
 const U1 = "11111111-1111-4111-8111-111111111111";
 const U2 = "22222222-2222-4222-8222-222222222222";
@@ -74,7 +74,7 @@ beforeEach(() => {
   projectMembers = [member(LEAD, "หัวหน้าทีมตัวอย่าง", { role: "admin", isOwner: true, openIssues: 0, overdueIssues: 0 }), member(U1, "ผู้พัฒนาหนึ่ง"), member(U2, "ผู้พัฒนาสอง", { overdueIssues: 0 })];
   directory = [wsMember(LEAD, "หัวหน้าทีมตัวอย่าง", { role: "owner" }), wsMember(U1, "ผู้พัฒนาหนึ่ง"), wsMember(U2, "ผู้พัฒนาสอง"), wsMember(U3, "ผู้ทดสอบสาม", { status: "deactivated", role: "guest", jobTitle: null, lastActiveAt: null })];
   invites = [invitation("inv-1", "pending-one@example.com"), invitation("inv-2", "client@example.com", { workspaceRole: "guest", projectRole: "viewer", projectId: null })];
-  navigation.pathname = "/w/sample/p/DE/members";
+  navigation.pathname = "/work/sample/p/DE/members";
   server.use(
     http.get("*/api/v1/w/:ws/projects/:key/workload", ({ request }) => { const url = new URL(request.url); urls.push(url); return HttpResponse.json(workload(url)); }),
     http.get("*/api/v1/w/:ws/projects/:key/form-options", () => HttpResponse.json({ modules: [{ id: "m-a", name: "Module A" }] })),
@@ -114,7 +114,7 @@ describe("Workload รายสัปดาห์ (หน้า 7)", () => {
     expect(screen.getByText("Utilization 110%")).toBeInTheDocument();
     expect(screen.getByText("1 คน")).toBeInTheDocument();
     expect(screen.getByText("ผู้พัฒนาหนึ่ง 160%")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ยังไม่มี BA · ระบุ BA →" })).toHaveAttribute("href", "/w/sample/p/DE/table");
+    expect(screen.getByRole("link", { name: "ยังไม่มี BA · ระบุ BA →" })).toHaveAttribute("href", "/work/sample/p/DE/table");
     expect(screen.getByText("ไม่มีวันในแผน 2 · ไม่มี Man-Day 1")).toBeInTheDocument();
     expect(screen.getByText("เฉลี่ย 160%")).toHaveClass(/up/);
     expect(bar.className).toMatch(/over/);
@@ -122,7 +122,7 @@ describe("Workload รายสัปดาห์ (หน้า 7)", () => {
 
     await user.click(bar);
     const detail = screen.getByRole("complementary", { name: "รายละเอียดช่วงที่เลือก" });
-    expect(within(detail).getByRole("link", { name: "หน้าจอวงเงินตัวอย่าง" })).toHaveAttribute("href", "/w/sample/p/DE/members?issue=DE-7");
+    expect(within(detail).getByRole("link", { name: "หน้าจอวงเงินตัวอย่าง" })).toHaveAttribute("href", "/work/sample/p/DE/members?issue=DE-7");
     expect(within(detail).getByText("8 / 5 MD (160%)")).toBeInTheDocument();
   });
 
@@ -269,7 +269,7 @@ describe("Members ของโปรเจกต์", () => {
 
 describe("สมาชิก Workspace (หน้า H)", () => {
   beforeEach(() => {
-    navigation.pathname = "/w/sample/members";
+    navigation.pathname = "/work/sample/members";
   });
 
   it("KPI, แท็บสถานะ, โปรเจกต์ของแต่ละคน, ตัวกรอง และคำเชิญที่รอ", async () => {

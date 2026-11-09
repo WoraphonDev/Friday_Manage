@@ -60,6 +60,9 @@
       "name": "Ical"
     },
     {
+      "name": "ImportTemplate"
+    },
+    {
       "name": "Imports"
     },
     {
@@ -392,7 +395,7 @@
     "/api/v1/auth/oauth/{provider}/start": {
       "get": {
         "operationId": "OAuth_start",
-        "summary": "?next=/w/... กลับไปหน้าเดิม · ?remember=true จำ 30 วัน · ?mode=link ผูกกับบัญชีที่ล็อกอินอยู่ (หน้า Profile)",
+        "summary": "?next=/work/... กลับไปหน้าเดิม · ?remember=true จำ 30 วัน · ?mode=link ผูกกับบัญชีที่ล็อกอินอยู่ (หน้า Profile)",
         "tags": [
           "OAuth"
         ],
@@ -7839,22 +7842,28 @@
                         {
                           "type": "string",
                           "enum": [
-                            "id",
+                            "key",
+                            "parentKey",
                             "no",
                             "module",
-                            "phase",
+                            "group",
                             "title",
-                            "screen",
-                            "requirement",
-                            "ba",
                             "status",
+                            "priority",
+                            "ba",
+                            "sa",
                             "devs",
+                            "reviewer",
                             "size",
                             "estimateMd",
                             "planStart",
                             "planEnd",
                             "actualStart",
                             "actualEnd",
+                            "requirement",
+                            "screen",
+                            "labels",
+                            "description",
                             "remark"
                           ]
                         },
@@ -8026,6 +8035,44 @@
                 "additionalProperties": true
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/import-template.xlsx": {
+      "get": {
+        "operationId": "ImportTemplate_template",
+        "summary": "GET w/{ws}/import-template.xlsx",
+        "tags": [
+          "ImportTemplate"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -8985,6 +9032,17 @@
                       }
                     ]
                   },
+                  "remark": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 10000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "statusId": {
                     "type": "string",
                     "format": "uuid",
@@ -9049,6 +9107,18 @@
                       }
                     ]
                   },
+                  "saId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "reviewerId": {
                     "anyOf": [
                       {
@@ -9072,6 +9142,10 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "parentKey": {
+                    "type": "string",
+                    "pattern": "^([A-Za-z][A-Za-z0-9]{1,9})-(\\d{1,9})$"
                   },
                   "size": {
                     "anyOf": [
@@ -9221,6 +9295,12 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 1000
+                  },
+                  "extendParent": {
+                    "type": "boolean"
+                  },
+                  "confirm": {
+                    "type": "boolean"
                   }
                 }
               }
@@ -9271,6 +9351,30 @@
             "schema": {
               "type": "string",
               "maxLength": 500
+            }
+          },
+          {
+            "name": "only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "activity"
+              ]
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
             }
           }
         ],
@@ -11025,6 +11129,14 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "kind": {
+                    "default": "qa",
+                    "type": "string",
+                    "enum": [
+                      "qa",
+                      "unit"
+                    ]
+                  },
                   "result": {
                     "type": "string",
                     "enum": [
@@ -11032,6 +11144,12 @@
                       "failed",
                       "blocked"
                     ]
+                  },
+                  "coveragePct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "multipleOf": 0.01
                   },
                   "passedCount": {
                     "type": "integer",
@@ -11059,6 +11177,11 @@
                   "note": {
                     "type": "string",
                     "maxLength": 5000
+                  },
+                  "testerId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                   },
                   "fileIds": {
                     "default": [],
@@ -16528,7 +16651,7 @@
     "/api/v1/w/{ws}/projects/{key}/export.xlsx": {
       "get": {
         "operationId": "PlanExport_export",
-        "summary": "ดาวน์โหลดแผนงานของโปรเจกต์เป็น .xlsx (18 คอลัมน์ + ชีต Holidays) นำเข้ากลับโหมดอัปเดตได้",
+        "summary": "ดาวน์โหลดแผนงานของโปรเจกต์เป็น .xlsx (ชีต Tasks + คำแนะนำ + ค่าที่ใช้ได้ + Holidays) นำเข้ากลับโหมดอัปเดตได้",
         "tags": [
           "PlanExport"
         ],
@@ -17405,6 +17528,18 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "inline",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1",
+                "true"
+              ]
             }
           }
         ],
@@ -19039,6 +19174,10 @@
                     "type": "string",
                     "maxLength": 50000
                   },
+                  "remark": {
+                    "type": "string",
+                    "maxLength": 10000
+                  },
                   "statusId": {
                     "type": "string",
                     "format": "uuid",
@@ -19065,6 +19204,11 @@
                     }
                   },
                   "baId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "saId": {
                     "type": "string",
                     "format": "uuid",
                     "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
@@ -19168,6 +19312,10 @@
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                     }
+                  },
+                  "extendParent": {
+                    "default": false,
+                    "type": "boolean"
                   }
                 },
                 "required": [

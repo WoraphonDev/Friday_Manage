@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { schema as s, type Tx } from '@friday/db';
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { today } from '../common/dates.js';
 import { AppError, forbidden, notFound } from '../common/errors.js';
@@ -16,12 +16,18 @@ const isoDate = z.iso.date();
 
 export const CreateTestRunBody = z
   .object({
+    /** qa = ผลทดสอบของ QA / Reviewer · unit = ผล Unit test ที่ Dev แนบเอง */
+    kind: z.enum(['qa', 'unit']).default('qa'),
     result: z.enum(['passed', 'failed', 'blocked']),
+    /** Coverage % ของ Unit test (ไม่บังคับ) */
+    coveragePct: z.number().min(0).max(100).multipleOf(0.01).optional(),
     passedCount: z.number().int().min(0).max(32767).optional(),
     totalCount: z.number().int().min(0).max(32767).optional(),
     environment: z.enum(['local', 'sit', 'uat', 'production']).optional(),
     commitSha: z.string().trim().regex(/^[0-9a-fA-F]{7,40}$/, 'commit ต้องเป็น hex 7–40 ตัว').optional(),
     note: z.string().trim().max(5000).optional(),
+    /** ผู้ตรวจ (QA / Reviewer) · ไม่ส่ง = คนที่บันทึก · ต้องเป็นสมาชิกของ Workspace ที่ไม่ใช่ Guest */
+    testerId: Id.optional(),
     /** ไฟล์หลักฐาน (id ใน Files ของโปรเจกต์เดียวกัน) ที่แนบกับรอบนี้ */
     fileIds: z.array(Id).max(20).default([]),
   })
@@ -69,10 +75,12 @@ export class QaService {
     if (guest) {
       return runs.map((r) => ({
         id: r.id,
+        kind: r.kind,
         runNo: r.runNo,
         result: r.result,
         passedCount: r.passedCount,
         totalCount: r.totalCount,
+        coveragePct: r.coveragePct,
         environment: r.environment,
         commitSha: null,
         note: null,
@@ -87,10 +95,12 @@ export class QaService {
     const bugs = await tx.select({ runId: s.issues.foundInTestRunId, number: s.issues.number, title: s.issues.title }).from(s.issues).where(inArray(s.issues.foundInTestRunId, runs.map((r) => r.id)));
     return runs.map((r) => ({
       id: r.id,
+      kind: r.kind,
       runNo: r.runNo,
       result: r.result,
       passedCount: r.passedCount,
       totalCount: r.totalCount,
+      coveragePct: r.coveragePct,
       environment: r.environment,
       commitSha: r.commitSha,
       note: r.note,
@@ -106,7 +116,8 @@ export class QaService {
       const { project, access, issue } = await this.issues.loadIssue(tx, auth, tenant, key);
       const runs = await tx.select().from(s.testRuns).where(eq(s.testRuns.issueId, issue.id)).orderBy(desc(s.testRuns.runNo));
       const items = await this.runDto(tx, runs, project.key, access.guestViewer);
-      return { items, latest: items[0] ?? null };
+      // latest = ผล QA ล่าสุด (ผล Unit test ไม่นับเป็นผลทดสอบของงาน)
+      return { items, latest: items.find((r) => r.kind === 'qa') ?? null };
     });
   }
 
@@ -118,23 +129,30 @@ export class QaService {
       if (project.archivedAt || project.status === 'archived') throw new AppError(403, 'project_archived', 'โปรเจกต์ที่เก็บถาวรแก้ไขไม่ได้');
       // เลขรอบเพิ่มเอง · ล็อกต่องาน กันสองคนบันทึกพร้อมกันได้เลขซ้ำ
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'test-run:' + issue.id}, 0))`);
-      const [last] = await tx.select({ n: sql<number>`coalesce(max(${s.testRuns.runNo}), 0)::int` }).from(s.testRuns).where(eq(s.testRuns.issueId, issue.id));
+      // เลขรอบนับแยกตามประเภท (QA รอบ 1, 2 · Unit test รอบ 1, 2)
+      const [last] = await tx.select({ n: sql<number>`coalesce(max(${s.testRuns.runNo}), 0)::int` }).from(s.testRuns).where(and(eq(s.testRuns.issueId, issue.id), eq(s.testRuns.kind, body.kind)));
       const runNo = (last?.n ?? 0) + 1;
       if (runNo > 32767) throw new AppError(422, 'too_many_runs', 'งานนี้มีผลทดสอบมากเกินไป');
+      const testerId = body.testerId ?? auth.userId;
+      if (testerId !== auth.userId) {
+        const [member] = await tx.select({ id: s.workspaceMembers.userId }).from(s.workspaceMembers).where(and(eq(s.workspaceMembers.userId, testerId), eq(s.workspaceMembers.status, 'active'), ne(s.workspaceMembers.role, 'guest')));
+        if (!member) throw new AppError(400, 'invalid_people', 'ผู้ตรวจต้องเป็นสมาชิกของ Workspace', { fields: ['testerId'] });
+      }
       const [run] = await tx
         .insert(s.testRuns)
-        .values({ workspaceId: tenant.workspaceId, issueId: issue.id, runNo, result: body.result, passedCount: body.passedCount, totalCount: body.totalCount, environment: body.environment, commitSha: body.commitSha, note: body.note, testerId: auth.userId })
+        .values({ workspaceId: tenant.workspaceId, issueId: issue.id, kind: body.kind, runNo, result: body.result, passedCount: body.passedCount, totalCount: body.totalCount, coveragePct: body.coveragePct, environment: body.environment, commitSha: body.commitSha, note: body.note, testerId })
         .returning();
       if (body.fileIds.length) {
         const found = await tx.select({ id: s.files.id }).from(s.files).where(and(inArray(s.files.id, body.fileIds), eq(s.files.projectId, project.id)));
         if (found.length !== new Set(body.fileIds).size) throw new AppError(404, 'file_not_found', 'ไม่พบไฟล์หลักฐานบางไฟล์ในโปรเจกต์นี้');
         await tx.insert(s.fileAttachments).values(found.map((f) => ({ workspaceId: tenant.workspaceId, fileId: f.id, targetType: 'test_run' as const, targetId: run.id, createdBy: auth.userId }))).onConflictDoNothing();
       }
-      await tx.insert(s.activities).values({ workspaceId: tenant.workspaceId, projectId: project.id, issueId: issue.id, actorId: auth.userId, actorKind: 'user', verb: 'test_run_recorded', field: 'test_run', newValue: { runNo, result: body.result } });
+      await tx.insert(s.activities).values({ workspaceId: tenant.workspaceId, projectId: project.id, issueId: issue.id, actorId: auth.userId, actorKind: 'user', verb: 'test_run_recorded', field: body.kind === 'unit' ? 'unit_test' : 'test_run', newValue: { runNo, result: body.result, kind: body.kind } });
       const issueKey = `${project.key}-${issue.number}`;
       return { dto: (await this.runDto(tx, [run], project.key))[0]!, run, project, issue, issueKey };
     });
-    if (body.result === 'failed') {
+    // Unit test ไม่ผ่านแค่แสดงผล ไม่ส่งเหตุการณ์ที่ Automation ใช้เปิดงานใหม่ (ผู้ใช้ตัดสิน 2026-11-08)
+    if (body.result === 'failed' && body.kind === 'qa') {
       await this.events.publish({
         type: 'test_run.failed',
         workspaceId: tenant.workspaceId,

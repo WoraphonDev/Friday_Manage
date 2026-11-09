@@ -9,7 +9,7 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import tl from "../../messages/th/timeline.json";
-import { PX_PER_DAY, TimelineView, addDays, toDay, type TLRow, type TimelineData } from "../../app/w/[ws]/p/[key]/timeline/_components/timeline-view";
+import { PX_PER_DAY, TimelineView, addDays, toDay, type TLRow, type TimelineData } from "../../app/work/[ws]/p/[key]/timeline/_components/timeline-view";
 
 const person = (id: string, displayName: string) => ({ id, displayName });
 const row = (key: string, start: string, end: string, over: Partial<TLRow> = {}): TLRow => ({ key, type: "Task", title: `งาน ${key}`, status: { name: "In progress", category: "in_progress" }, start, end, progressPct: 40, lateDays: 0, assignees: [person("u1", "ผู้พัฒนาหนึ่ง")], subtasks: [], ...over });
@@ -34,7 +34,7 @@ const errorBody = (status: number) => HttpResponse.json({ error: { code: status 
 
 beforeEach(() => {
   patches = []; requests = []; d = data();
-  navigation.pathname = "/w/sample/p/DE/timeline";
+  navigation.pathname = "/work/sample/p/DE/timeline";
   server.use(
     http.get("*/api/v1/w/:ws/projects/:key/timeline", () => HttpResponse.json(d)),
     http.get("*/api/v1/w/:ws/issues/:key", () => HttpResponse.json({ version: 5 })),
@@ -62,6 +62,9 @@ describe("Timeline (4)", () => {
     expect(screen.getAllByText("Go-live ระยะแรก").length).toBeGreaterThan(0);
     expect(screen.getByText(/วันนี้ \(/)).toBeInTheDocument();
     expect(bar("DE-1")).toHaveAccessibleName(/DE-1 งาน DE-1: .* · ผู้พัฒนาหนึ่ง/);
+    // ป้ายท้ายแถบ: คน · สถานะ · % · ช่วงวัน (ผู้ใช้ขอ 2026-11-08)
+    expect(screen.getByText(/^ผู้พัฒนาหนึ่ง · In progress · 40% · 30 พ\.ย\. 69 – 4 ธ\.ค\. 69$/)).toBeInTheDocument();
+    expect(screen.getByText(/^DE-3 · To do · .*3.* · 7 ธ\.ค\. 69 – 18 ธ\.ค\. 69$/)).toBeInTheDocument();
     expect(bar("DE-3")).toHaveAccessibleName(/เลยกำหนด 3 วัน/);
     expect(bar("DE-2")).toBeInTheDocument();
     expect(screen.getByTestId("unscheduled-DE-9")).toHaveTextContent("งานยังไม่มีวัน");
@@ -158,9 +161,9 @@ describe("Timeline (4)", () => {
     await screen.findByTestId("bar-DE-3");
     expect(bar("DE-3").style.background).toBe("rgb(29, 78, 216)");
     await user.selectOptions(screen.getByLabelText("สีตาม"), "status");
-    expect(bar("DE-3").style.background).toBe("rgb(138, 148, 160)");
+    expect(bar("DE-3").style.background).toBe("var(--status-todo-dot)");
     await user.selectOptions(screen.getByLabelText("สีตาม"), "assignee");
-    expect(bar("DE-3").style.background).toBe("rgb(148, 163, 184)"); // ไม่มีผู้รับผิดชอบ = เทา
+    expect(bar("DE-3").style.background).toBe("var(--chart-neutral)"); // ไม่มีผู้รับผิดชอบ = เทา
   });
 
   it("Guest: ไม่มีชื่อคน ไม่มีสีตาม Assignee ลากไม่ได้ และเปิดได้เฉพาะงานที่แชร์", async () => {
@@ -199,5 +202,5 @@ describe("Timeline (4)", () => {
 
 it("เพิ่ม Milestone ใน Timeline แล้วรีเฟรชโดยไม่ไป Settings", async () => {
   const user = userEvent.setup(); server.use(http.post("*/api/v1/w/:ws/projects/:key/milestones", async ({ request }) => { const body = await request.json() as { name: string; date: string; moduleId: string | null }; expect(body).toEqual({ name: "เป้าหมายใหม่", date: "2026-12-02", moduleId: "m-a" }); d.milestones.push({ id: "ms-new", ...body }); return HttpResponse.json({ id: "ms-new", ...body }, { status: 201 }); }));
-  mount(); await user.click(await screen.findByRole("button", { name: "+ Milestone" })); const dialog = within(screen.getByRole("dialog", { name: "เพิ่ม Milestone" })); await user.type(dialog.getByLabelText("ชื่อ Milestone"), "เป้าหมายใหม่"); await user.selectOptions(dialog.getByLabelText("Module"), "m-a"); await user.click(dialog.getByRole("button", { name: "เพิ่ม" })); await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument()); expect(screen.getByText("เป้าหมายใหม่")).toBeInTheDocument(); expect(navigation.pathname).toBe("/w/sample/p/DE/timeline");
+  mount(); await user.click(await screen.findByRole("button", { name: "+ Milestone" })); const dialog = within(screen.getByRole("dialog", { name: "เพิ่ม Milestone" })); await user.type(dialog.getByLabelText("ชื่อ Milestone"), "เป้าหมายใหม่"); await user.selectOptions(dialog.getByLabelText("Module"), "m-a"); await user.click(dialog.getByRole("button", { name: "เพิ่ม" })); await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument()); expect(screen.getByText("เป้าหมายใหม่")).toBeInTheDocument(); expect(navigation.pathname).toBe("/work/sample/p/DE/timeline");
 });

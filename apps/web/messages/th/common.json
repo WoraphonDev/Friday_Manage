@@ -26,7 +26,8 @@
     "actions": "การกระทำ",
     "morePeople": "และอีก {count} คน",
     "signOut": "ออกจากระบบ",
-    "resizeDrawer": "ลากเพื่อปรับความกว้าง"
+    "resizeDrawer": "ลากเพื่อปรับความกว้าง",
+    "confirmCancelled": "ยกเลิกการเปลี่ยนแปลงแล้ว"
   },
   "nav": {
     "home": "Home",
@@ -74,7 +75,7 @@
     "moreTabs": "มุมมองเพิ่มเติม",
     "projectTeam": "ทีมในโปรเจกต์ {count} คน",
     "backToWorkspace": "← กลับไปที่ Workspace",
-    "back": "กลับ",
+    "back": "ย้อนกลับ",
     "checkoutTitle": "ชำระเงิน · {name}",
     "secure": "เชื่อมต่อแบบเข้ารหัส",
     "mainMenu": "เมนูหลัก",
@@ -223,5 +224,30 @@
     "on_track": "On track",
     "at_risk": "At risk",
     "off_track": "Off track"
+  },
+  "confirmRequest": {
+    "subtask_outside_parent": {
+      "title": "วันที่เกินช่วงของ {parentKey}",
+      "description": "{message} · ถ้าบันทึก ระบบจะขยาย {parentKey} เป็น {start} – {end} ให้ครอบ Sub-task และบันทึกลงประวัติการแก้แผน",
+      "action": "ขยาย Task และบันทึก"
+    },
+    "acceptance_incomplete": {
+      "title": "Acceptance criteria ยังไม่ครบ",
+      "description": "{message} · ยืนยันย้ายงานไป Done หรือไม่",
+      "action": "ยืนยันย้าย"
+    },
+    "fallbackTitle": "ยืนยันการเปลี่ยนแปลง",
+    "fallbackAction": "ยืนยัน",
+    "cancel": "ยกเลิก"
+  },
+  "preview": {
+    "download": "ดาวน์โหลด",
+    "cannotPreview": "ไม่สามารถแสดงตัวอย่างไฟล์นี้ได้ · ดาวน์โหลดไปเปิดในเครื่องแทน",
+    "loading": "กำลังโหลด…",
+    "count": "{current} / {total}",
+    "openInFiles": "เปิดในหน้า Files",
+    "close": "ปิด",
+    "previous": "ไฟล์ก่อนหน้า",
+    "next": "ไฟล์ถัดไป"
   }
 }

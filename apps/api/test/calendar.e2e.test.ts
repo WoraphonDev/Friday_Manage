@@ -148,7 +148,7 @@ describe('iCal feeds', () => {
     expect(events).toHaveLength(2);
     const one = events.find((e) => e.UID === `${a.id}@friday-manage`)!;
     expect(one).toMatchObject({ 'DTSTART;VALUE=DATE': '20261215', 'DTEND;VALUE=DATE': '20261216', SUMMARY: `[${a.key}] งานของ lead\\, 1 วัน`, CATEGORIES: 'Development Plan' });
-    expect(one.URL).toContain(`/w/${team.slug}/p/${team.key}/table?issue=${a.key}`);
+    expect(one.URL).toContain(`/work/${team.slug}/p/${team.key}/table?issue=${a.key}`);
     const span = events.find((e) => e.UID === `${b.id}@friday-manage`)!;
     expect(span['DTSTART;VALUE=DATE']).toBe('20261202');
     expect(span['DTEND;VALUE=DATE']).toBe('20261205');

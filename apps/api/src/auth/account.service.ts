@@ -35,6 +35,11 @@ export class AccountService {
 
   link = (path: string, token: string) => `${webUrl()}${path}?token=${encodeURIComponent(token)}`;
 
+  /** ระบบส่งอีเมลได้จริงหรือไม่ (ตั้ง SMTP แล้ว) · ปิดอยู่ = หน้ายืนยันอีเมลให้ข้ามไปก่อนได้ */
+  get emailDelivery() {
+    return this.mailer.enabled;
+  }
+
   async mail(to: string, subject: string, lines: string[]) {
     await this.mailer.send({ to, subject, text: lines.join('\n\n') });
   }

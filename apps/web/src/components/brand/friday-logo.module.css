@@ -87,13 +87,17 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   white-space: nowrap;
-  color: #8a8fa3;
+  /* ตัวอักษรเล็ก 8–10px ต้องผ่าน 4.5:1 บนพื้นสว่าง */
+  color: #5f656d;
 }
 
-.logo[data-tone="dark"] .name {
+.logo[data-tone="dark"] .name,
+:global(:root[data-theme="dark"]) .logo .name {
   background-image: linear-gradient(100deg, #ffffff 0%, #e4dcff 55%, #c4a8f5 100%);
 }
-.logo[data-tone="dark"] .tagline {
+/* โหมดมืด: logo แบบพื้นสว่าง (หน้าสาธารณะ ฟอร์ม Login) ใช้แบบพื้นเข้มให้อ่านออก */
+.logo[data-tone="dark"] .tagline,
+:global(:root[data-theme="dark"]) .logo .tagline {
   color: #b4b8cc;
 }
 

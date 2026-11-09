@@ -91,7 +91,7 @@ export function buildMessage(src: MsgSource, ctx: Ctx): Msg {
   const issueKey = str(p.issueKey);
   const projectKey = src.projectKey ?? str(p.projectKey);
   const project = [src.projectName ?? str(p.projectName), projectKey].filter(Boolean)[0] ?? '';
-  const base = `${ctx.webUrl}/w/${ctx.workspaceSlug}`;
+  const base = `${ctx.webUrl}/work/${ctx.workspaceSlug}`;
   const url = issueKey && projectKey ? `${base}/p/${projectKey}/table?issue=${encodeURIComponent(issueKey)}` : projectKey ? `${base}/p/${projectKey}` : base;
   const title = [issueKey, str(p.issueTitle)].filter(Boolean).join(' ') || str(p.title) || project;
   const excerpt = str(p.excerpt);

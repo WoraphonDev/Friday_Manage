@@ -16,7 +16,12 @@ import { BodyText, Failure, InlineText } from './shared';
 import { Attachments, BugDetails, Development, PropRow, QuickSubtask, SubtaskRow } from './detail-parts';
 import { CodeChips, LabelChips } from './refs';
 import { issuePath, issueQuery, projectPath, type Issue, type Named, type PublicPerson, type Scope } from './types';
+import { GroupSelect, IssuePicker, useProjectIssues } from './task-v2';
 import styles from './issue-drawer.module.css';
+import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
+
+/** API ขอเหตุผลการแก้แผน: ไม่ใช่ error ที่ต้องแสดง แต่เปิดกล่องให้กรอกเหตุผลแล้วบันทึกซ้ำ */
+class NeedsPlanReason extends Error {}
 
 export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: Scope; issue: Issue; siblings?: Issue[]; onDeleted: (parentKey: string | null) => void }) {
   const t = useTranslations('issue-drawer');
@@ -41,17 +46,20 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const [allProps, setAllProps] = useState(false);
   const [cancelDue, setCancelDue] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
-  const phases = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'phases', issue.moduleId], queryFn: ({ signal }) => api.get<{ items: Named[] }>(`${projectPath(scope.ws, scope.projectKey)}/modules/${encodeURIComponent(issue.moduleId!)}/phases`, { signal }), enabled: canEdit && !!issue.moduleId });
   const watchers = useQuery({ queryKey: [...key, 'watchers'], queryFn: ({ signal }) => api.get<{ items: { person: PublicPerson | null }[]; watching: boolean }>(`${endpoint}/watchers`, { signal }) });
   // รายการ Label ของโปรเจกต์ใช้เฉพาะตอนแก้ · การแสดงผลใช้ชื่อ/สีที่มากับงาน
   const labelOptions = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'labels'], queryFn: ({ signal }) => api.get<{ items: Named[] }>(`${projectPath(scope.ws, scope.projectKey)}/labels`, { signal }), enabled: canEdit });
-  const refOptions = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'form-options'], queryFn: ({ signal }) => api.get<{ requirements?: { code: string }[]; screens?: { code: string }[] }>(`${projectPath(scope.ws, scope.projectKey)}/form-options`, { signal }), enabled: canEdit && scope.access.permissions.includes('issue.create'), staleTime: 60_000 });
+  // form-options ให้ทั้งรหัส FR / Screen และรายการกลุ่มของแต่ละ Module
+  const refOptions = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'form-options'], queryFn: ({ signal }) => api.get<{ requirements?: { code: string }[]; screens?: { code: string }[]; phases?: { id: string; name: string; moduleId: string }[] }>(`${projectPath(scope.ws, scope.projectKey)}/form-options`, { signal }), enabled: !scope.access.guestViewer, staleTime: 60_000 });
+  // D2: เปลี่ยน Task แม่ได้เฉพาะ Task ใน Module เดียวกัน (ผู้ใช้ตัดสิน 2026-11-08)
+  const projectIssues = useProjectIssues(scope, canEdit && !!issue.parentKey);
   const impact = useQuery({ queryKey: [...key, 'delete-impact'], queryFn: () => api.get<{ counts: { subtasks: number; files: number; dependencies: number }; subtasks?: Issue[] }>(`${endpoint}/delete-impact`), enabled: deleteOpen && canDelete });
   const type = scope.project?.issueTypes?.find((type) => type.name === issue.type);
   const statuses = scope.project?.statuses?.filter((status) => status.workflowId === type?.workflowId) ?? [];
   const index = siblings.findIndex((item) => item.key === issue.key);
   async function refresh() {
-    await Promise.all([cache.invalidateQueries({ queryKey: key }), cache.invalidateQueries({ queryKey: ['kanban', scope.ws, scope.projectKey] }), cache.invalidateQueries({ queryKey: ['issue-drawer-list', scope.ws, scope.projectKey] })]);
+    // Table ไม่พึ่ง realtime อย่างเดียว (เช่น ย้ายกลุ่มแล้วแถวต้องย้ายตามทันที)
+    await Promise.all([cache.invalidateQueries({ queryKey: key }), cache.invalidateQueries({ queryKey: ['kanban', scope.ws, scope.projectKey] }), cache.invalidateQueries({ queryKey: ['issue-drawer-list', scope.ws, scope.projectKey] }), cache.invalidateQueries({ queryKey: ['table', scope.ws, scope.projectKey] })]);
     if (issue.parentKey) await cache.invalidateQueries({ queryKey: issueQuery(scope.ws, issue.parentKey) });
   }
   async function action(fn: () => Promise<unknown>, success?: (result: unknown) => void): Promise<boolean> {
@@ -64,6 +72,8 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       success?.(result);
       await refresh(); return true;
     } catch (failure) {
+      // แผนหลังตั้ง Baseline: เปิดกล่องใส่เหตุผลแทนแถบ error แล้วบันทึกต่อ
+      if (failure instanceof NeedsPlanReason) return false;
       if (failure instanceof ApiError && failure.status === 409) setConflict(failure);
       else setError(failure);
       return false;
@@ -72,10 +82,12 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   async function patch(body: Record<string, unknown>, withReason = false): Promise<boolean> {
     if (!canEdit) return false;
     const saved = await action(async () => {
-      try { return await api.patch<Issue>(endpoint, { ...body, ...(withReason ? { planChangeReason: planReason } : {}) }, issue.version); }
+      const payload = { ...body, ...(withReason ? { planChangeReason: planReason } : {}) };
+      // Developer ใช้ PUT assignees (สัญญาเดิม) แต่ขอเหตุผลการแก้แผนแบบเดียวกัน
+      try { return 'assigneeIds' in body && Object.keys(body).length === 1 ? await api.request<Issue>(`${endpoint}/assignees`, { method: 'PUT', etag: issue.version, body: payload }) : await api.patch<Issue>(endpoint, payload, issue.version); }
       catch (failure) {
         if (failure instanceof ApiError && failure.code === 'due_change_requires_approval' && failure.details.canRequest) { setDue(String(failure.details.requestedDue)); }
-        if (failure instanceof ApiError && failure.code === 'plan_change_reason_required') { setReasonIntent(body); setPlanReason(''); }
+        if (failure instanceof ApiError && failure.code === 'plan_change_reason_required' && !withReason) { setReasonIntent(body); setPlanReason(''); throw new NeedsPlanReason(); }
         throw failure;
       }
     });
@@ -96,9 +108,9 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
   const pending = issue.pendingDueRequest;
   const mod = scope.project?.modules.find((item) => item.id === issue.moduleId);
-  const phase = scope.project?.phases?.find((item) => item.id === issue.phaseId) ?? mod?.phases?.find((item) => item.id === issue.phaseId);
-  const sprint = scope.project?.sprints.find((item) => item.id === issue.sprintId);
-  const modColor = mod?.color ?? '#1d4ed8';
+  const modColor = mod?.color ?? DEFAULT_ITEM_COLOR;
+  const groups = (refOptions.data?.phases ?? scope.project?.phases ?? []) as { id: string; name: string; moduleId: string }[];
+  const groupName = issue.phaseId ? groups.find((group) => group.id === issue.phaseId)?.name ?? issue.group?.name ?? null : null;
   const doneStatus = statuses.find((status) => status.category === 'done');
   // K2: Bug ที่แก้แล้ว (สถานะหลังสถานะทำงานแรก เช่น Fixed) รอทดสอบซ้ำ · ผ่าน = สถานะถัดไปใน Workflow, ไม่ผ่าน = กลับสถานะทำงานแรก
   const statusIndex = statuses.findIndex((status) => status.id === issue.status.id);
@@ -114,15 +126,14 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const canCreate = scope.access.permissions.includes('issue.create') && !guest;
   const devs = scope.people.filter((person) => issue.assigneeIds?.includes(person.id));
   const pillTone = (category: string, name: string) => category === 'done' ? styles.sDone : /review/i.test(name) ? styles.sRev : category === 'in_progress' ? styles.sProg : styles.sTodo;
-  const prioColor = { urgent: '#b91c1c', high: '#b45309', medium: '#1d4ed8', low: '#5f6873' }[issue.priority];
+  const prioColor = { urgent: 'var(--danger-text)', high: 'var(--warning-text)', medium: 'var(--primary-text)', low: 'var(--muted)' }[issue.priority];
   const href = typeof window === 'undefined' ? '' : window.location.href;
   return <div className={`${styles.panel}${mobile ? ` ${styles.subtaskMobile}` : ''}`} aria-busy={busy}>
     {/* Canvas C/D/K2: แถบหัว Drawer = breadcrumb + Watch / ลิงก์ / ⋯ / ปิด */}
     <div className={styles.dhead}>
       <nav aria-label={t('breadcrumb')} className={styles.crumb}>
         {issue.type === 'Bug' && <span className={styles.bugIcon} aria-label={t('types.Bug')} role="img" />}
-        {mod && <span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod.name}</span>}
-        {phase && <span className="muted">› {phase.name}</span>}
+        {mod && <span className={styles.modPill} style={{ background: tint(modColor, 10), color: readableColor(modColor) }}>{mod.name}</span>}
         {issue.parentKey && <><span className="muted">›</span><button className={styles.textLink} onClick={() => scope.navigate(issue.parentKey!)}>{issue.parentKey}</button></>}
         <span className="muted">›</span><strong>{issue.key}</strong>
         {issue.parentKey && <span className={styles.typeBadge}>{t('subtask')}</span>}
@@ -132,7 +143,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       <div className={styles.actions}>
         {issue.parentKey && siblings.length > 0 && <span className={styles.wideOnly}>
           <Button size="icon" variant="ghost" aria-label={t('previousSubtask')} disabled={index <= 0} onClick={() => scope.navigate(siblings[index - 1].key)}><ChevronLeft size={16} /></Button>
-          <span className="muted" style={{ fontSize: 12 }}>{index + 1}/{siblings.length}</span>
+          <span className="muted" style={{ fontSize: 11 }}>{index + 1}/{siblings.length}</span>
           <Button size="icon" variant="ghost" aria-label={t('nextSubtask')} disabled={index < 0 || index >= siblings.length - 1} onClick={() => scope.navigate(siblings[index + 1].key)}><ChevronRight size={16} /></Button>
         </span>}
         {watchers.data && <Button size="small" className={styles.wideOnly} disabled={disabled} aria-pressed={watchers.data.watching} onClick={() => void action(() => watchers.data!.watching ? api.delete(`${endpoint}/watch`) : api.post(`${endpoint}/watch`))}>{t(watchers.data.watching ? 'watching' : 'watch')} · {watchers.data.items.length}</Button>}
@@ -141,7 +152,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
           <Popover.Trigger asChild><Button size="icon" variant="ghost" aria-label={t('moreActions')}><MoreHorizontal size={16} /></Button></Popover.Trigger>
           <Popover.Portal><Popover.Content className="popover project-menu" sideOffset={6} align="end">
             {canEdit && issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly') && !pending && <Popover.Close asChild><button className="menu-item" disabled={disabled} onClick={() => setDue('')}>{t('requestDue')}</button></Popover.Close>}
-            {canDelete && <Popover.Close asChild><button className="menu-item" style={{ color: '#b91c1c' }} aria-label={t('deleteIssue')} disabled={disabled} onClick={() => setDeleteOpen(true)}><Trash2 size={15} />{t('deleteIssue')}</button></Popover.Close>}
+            {canDelete && <Popover.Close asChild><button className="menu-item" style={{ color: 'var(--danger-text)' }} aria-label={t('deleteIssue')} disabled={disabled} onClick={() => setDeleteOpen(true)}><Trash2 size={15} />{t('deleteIssue')}</button></Popover.Close>}
           </Popover.Content></Popover.Portal>
         </Popover.Root>}
         <DrawerClose asChild><Button size="icon" variant="ghost" aria-label={t('close')}><X size={18} /></Button></DrawerClose>
@@ -178,8 +189,14 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
         {issue.description ? <BodyText>{issue.description}</BodyText> : !canEdit && <p className="muted">{t('noDescription')}</p>}
         {canEdit && <InlineText label={t(issue.description ? 'editDescription' : 'addDescription')} displayValue={t(issue.description ? 'editDescription' : 'addDescription')} value={issue.description ?? ''} enabled busy={disabled} multiline onSave={(description) => patch({ description: description || null })} />}
       </div>}
+      {/* หมายเหตุ (Remark) ของ Task / Sub-task แยกจากคำอธิบาย · ข้อความธรรมดา แก้ด้วย Textarea */}
+      {issue.remark !== undefined && <div className={styles.blk}>
+        <h3>{t('remark')}</h3>
+        {issue.remark ? <p className={styles.remark}>{issue.remark}</p> : !canEdit && <p className="muted">{t('noRemark')}</p>}
+        {canEdit && <InlineText label={t(issue.remark ? 'editRemark' : 'addRemark')} displayValue={t(issue.remark ? 'editRemark' : 'addRemark')} value={issue.remark ?? ''} enabled busy={disabled} multiline onSave={(remark) => patch({ remark: remark.trim() ? remark : null })} />}
+      </div>}
       {awaitingRetest && canEdit && passStatus && <div className={styles.verify} role="group" aria-label={t('verifyGroup')}>
-        <div><strong>{t('verifyTitle', { status: issue.status.name })}</strong><p>{t('verifyDescription', { name: scope.people.find((person) => person.id === issue.testerId)?.displayName ?? t('tester') })}</p></div>
+        <div><strong>{t('verifyTitle', { status: issue.status.name })}</strong><p>{t('verifyDescription', { name: scope.people.find((person) => person.id === (issue.reviewerId ?? issue.testerId))?.displayName ?? t('qaReviewer') })}</p></div>
         <Button size="small" className={styles.okButton} disabled={disabled} onClick={() => void move(passStatus.id)}>{t('verified', { status: passStatus.name })}</Button>
         {reworkStatus && <Button size="small" className={styles.failButton} disabled={disabled} onClick={() => void move(reworkStatus.id)}>{t('notPassed')}</Button>}
       </div>}
@@ -197,14 +214,14 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       {!guest && <div className={styles.blk}><h3>{t('dependencies')}</h3><DependencyPanel scope={scope} issueKey={issue.key} /></div>}
       {!guest && <Attachments scope={scope} issue={issue} />}
       </div>
-      {!guest && issue.parentKey && <div hidden={mobile && mobileTab !== 'tests'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-tests`} aria-labelledby={mobile ? `${issue.key}-tab-tests` : undefined}><TestRuns scope={scope} issue={issue} /></div>}
+      {!guest && <div hidden={mobile && mobileTab !== 'tests'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-tests`} aria-labelledby={mobile ? `${issue.key}-tab-tests` : undefined}><TestRuns scope={scope} issue={issue} /></div>}
       {!guest && <div hidden={mobile && mobileTab !== 'commits'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-commits`} aria-labelledby={mobile ? `${issue.key}-tab-commits` : undefined}><Development scope={scope} issue={issue} /></div>}
-      <div hidden={mobile && mobileTab !== 'comments'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-comments`} aria-labelledby={mobile ? `${issue.key}-tab-comments` : undefined}><div className={styles.blk} style={{ borderBottom: 0 }}><h3>{t('activity')}</h3><ActivityPanel scope={scope} issueKey={issue.key} showComposer={!mobile} /></div></div>
+      <div hidden={mobile && mobileTab !== 'comments'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-comments`} aria-labelledby={mobile ? `${issue.key}-tab-comments` : undefined}><div className={styles.blk} style={{ borderBottom: 0 }}><h3>{t('commentsTitle')}</h3><ActivityPanel scope={scope} issueKey={issue.key} showComposer={!mobile} /></div></div>
     </div>
 
     <aside className={styles.sidebar} aria-label={t('properties')}>
       {mobile && !allProps ? <div className={styles.props}>
-        <PropRow keep k={t('fields.assigneeIds')}>{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void action(() => api.request<Issue>(`${endpoint}/assignees`, { method: 'PUT', etag: issue.version, body: { assigneeIds: ids } })); }} /> : <AvatarStack people={devs} />}</PropRow>
+        <PropRow keep k={t('fields.assigneeIds')}>{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void patch({ assigneeIds: ids }); }} /> : <AvatarStack people={devs} />}</PropRow>
         <PropRow keep k="Due">{canEdit ? <DatePicker compact label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (disabled) return; if (value && issue.planEnd && value > issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly')) setDue(value); else void patch({ planEnd: value || null }); }} /> : formatDate(issue.planEnd, scope.yearFormat)}</PropRow>
         <PropRow keep k={t('fields.priority')}>{fieldSelect('priority', issue.priority, ['urgent', 'high', 'medium', 'low'].map((id) => ({ id, name: t(`priority.${id}`) })), undefined, false)}</PropRow>
         <PropRow keep k="Progress"><span>{issue.progressPct == null ? t('notSet') : `${issue.progressPct}%`}</span></PropRow>
@@ -213,14 +230,15 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
 
       <div className={`${styles.props}${allProps ? ` ${styles.propsAll}` : ''}`} id={`${issue.key}-props`}>
         {/* จัดเป็นกลุ่ม คน / แผนงาน / จัดกลุ่ม · สถานะอยู่ที่ปุ่มบนหัวแล้วจึงไม่ซ้ำในแผงนี้ (ผู้ใช้ขอ 2026-11-07) */}
-        {(!guest || isBug) && <section className={styles.pgroup} aria-label={t('groupPeople')}>
+        {/* C2 / D2: ผู้รับผิดชอบ / แผนงาน / กลุ่มงาน · QA กับ Reviewer รวมเป็นช่องเดียว (ผู้ใช้ตัดสิน 2026-11-08) */}
+        {!guest && <section className={styles.pgroup} aria-label={t('groupPeople')}>
           <h4 className={styles.pgTitle}>{t('groupPeople')}</h4>
-          {!guest && <PropRow keep k={t('dev')}>{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void action(() => api.request<Issue>(`${endpoint}/assignees`, { method: 'PUT', etag: issue.version, body: { assigneeIds: ids } })); }} /> : <span className={styles.who}><AvatarStack people={devs} /></span>}</PropRow>}
-          {!guest && <PropRow k="BA">{fieldSelect('baId', issue.baId, people)}</PropRow>}
-          {!guest && <PropRow k="Reviewer">{fieldSelect('reviewerId', issue.reviewerId, people)}</PropRow>}
-          {!guest && (issue.type === 'Bug' || issue.testerId) && <PropRow k="Tester">{fieldSelect('testerId', issue.testerId, people)}</PropRow>}
+          <PropRow k="Business Analyst">{fieldSelect('baId', issue.baId, people)}</PropRow>
+          <PropRow k="System Analyst">{fieldSelect('saId', issue.saId, people)}</PropRow>
+          <PropRow keep k="Developer">{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void patch({ assigneeIds: ids }); }} /> : <span className={styles.who}><AvatarStack people={devs} /></span>}</PropRow>
+          <PropRow k={t('qaReviewer')}>{fieldSelect('reviewerId', issue.reviewerId, people)}</PropRow>
           {isBug && <PropRow k={t('reporter')}><span className={styles.who}>{reporter ? <><Avatar size="small" person={reporter} />{reporter.displayName}</> : <span className="muted">—</span>}</span></PropRow>}
-          {!guest && <PropRow k={t('watchers')}><span className={styles.who}>{watchers.data?.items.length ? <AvatarStack max={5} people={watchers.data.items.flatMap((entry, i) => entry.person ? [{ ...entry.person, id: entry.person.id ?? `w${i}` }] : [])} /> : <span className="muted">—</span>}</span></PropRow>}
+          <PropRow k={t('watchers')}><span className={styles.who}>{watchers.data?.items.length ? <AvatarStack max={5} people={watchers.data.items.flatMap((entry, i) => entry.person ? [{ ...entry.person, id: entry.person.id ?? `w${i}` }] : [])} /> : <span className="muted">—</span>}</span></PropRow>
         </section>}
         <section className={styles.pgroup} aria-label={t('groupPlan')}>
           <h4 className={styles.pgTitle}>{t('groupPlan')}</h4>
@@ -243,15 +261,21 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
           <h4 className={styles.pgTitle}>{t('groupPlace')}</h4>
           <PropRow keep k={t('fields.priority')}><span className={styles.prio} style={{ color: prioColor }}>{fieldSelect('priority', issue.priority, ['urgent', 'high', 'medium', 'low'].map((id) => ({ id, name: t(`priority.${id}`) })), undefined, false)}</span></PropRow>
           {issue.type === 'Bug' && <><PropRow k={t('fields.severity')}>{fieldSelect('severity', issue.severity, ['critical', 'major', 'minor'].map((id) => ({ id, name: t(`severity.${id}`) })), undefined, false)}</PropRow><PropRow k={t('fields.environment')}>{fieldSelect('environment', issue.environment, ['local', 'sit', 'uat', 'production'].map((id) => ({ id, name: t(`environment.${id}`) })), undefined, false)}</PropRow></>}
-          {!issue.parentKey ? <>
-          <PropRow k="Module">{fieldSelect('moduleId', issue.moduleId, scope.project?.modules ?? [], (value) => void patch({ moduleId: value, phaseId: null }), false)}</PropRow>
-          {!isBug && <PropRow k={t('fields.phaseId')}>{canEdit && phases.error ? <Failure error={phases.error} /> : fieldSelect('phaseId', issue.phaseId, phases.data?.items ?? [])}</PropRow>}
-          <PropRow k="Sprint">{fieldSelect('sprintId', issue.sprintId, scope.project?.sprints ?? [])}</PropRow>
-        </> : <>
-          <PropRow k="Module"><span><span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod?.name ?? t('notSet')}</span> <span className="muted" style={{ fontSize: 12 }}>{t('fromParent')}</span></span></PropRow>
-          <PropRow k="Sprint"><span>{sprint?.name ?? t('backlog')}</span></PropRow>
-        </>}
-          {/* Canvas C: Requirement · Screen · Labels ต่อจาก Module / Sprint · แก้แล้วแทนทั้งชุด */}
+          {/* Task: เลือก Module ได้ · Sub-task: เปลี่ยน Task แม่ได้ (Module เดียวกัน) และใช้ Module ตามแม่ */}
+          {issue.parentKey ? <>
+            <PropRow k={t('parentTask')}>{canEdit
+              ? <IssuePicker label={t('parentTask')} value={issue.parentKey} disabled={disabled} issues={(projectIssues.data?.items ?? []).filter((item) => !item.parentKey && item.moduleId === issue.moduleId)} groupOf={() => t('sameModuleTasks', { module: mod?.name ?? t('notSet') })} onChange={(key) => { if (key !== issue.parentKey) void patch({ parentKey: key }); }} />
+              : <button type="button" className={styles.textLink} onClick={() => scope.navigate(issue.parentKey!)}>{issue.parentKey}</button>}</PropRow>
+            <PropRow k="Module"><span><span className={styles.modPill} style={{ background: tint(modColor, 10), color: readableColor(modColor) }}>{mod?.name ?? t('notSet')}</span> <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span></PropRow>
+            <PropRow k={t('group')}><span>{groupName ?? <span className="muted">{t('noGroup')}</span>} <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span></PropRow>
+          </> : <>
+            <PropRow k="Module">{fieldSelect('moduleId', issue.moduleId, scope.project?.modules ?? [], (value) => void patch({ moduleId: value, phaseId: null }), false)}</PropRow>
+            {/* ย้าย Task ไปกลุ่มอื่น → Sub-task ย้ายตาม (API) */}
+            <PropRow k={t('group')}>{canEdit
+              ? <GroupSelect scope={scope} moduleId={issue.moduleId} value={issue.phaseId} groups={groups} disabled={disabled} onChange={(id) => { if (id !== issue.phaseId) void patch({ phaseId: id }); }} />
+              : (groupName ?? <span className="muted">{t('noGroup')}</span>)}</PropRow>
+          </>}
+          {/* Requirement · Screen · Label แก้แล้วแทนทั้งชุด */}
           <PropRow k={t('refs.requirement')}><CodeChips kinds={['requirement']} editable={canEdit} busy={disabled} values={{ requirement: issue.requirements ?? [], screen: [] }} suggestions={{ requirement: refOptions.data?.requirements?.map((r) => r.code) }} onChange={(_, codes) => void patch({ requirements: codes })} /></PropRow>
           <PropRow k={t('refs.screen')}><CodeChips kinds={['screen']} editable={canEdit} busy={disabled} values={{ requirement: [], screen: issue.screens ?? [] }} suggestions={{ screen: refOptions.data?.screens?.map((r) => r.code) }} onChange={(_, codes) => void patch({ screens: codes })} /></PropRow>
           <PropRow k={t('refs.labels')}><LabelChips options={labelOptions.data?.items ?? issue.labels ?? []} value={(issue.labels ?? []).map((label) => label.id)} editable={canEdit} busy={disabled} onChange={(ids) => void patch({ labelIds: ids })} /></PropRow>
@@ -260,6 +284,11 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       </div>
       <button type="button" className={styles.propsToggle} aria-expanded={allProps} aria-controls={`${issue.key}-props`} onClick={() => setAllProps((value) => !value)}>{t(allProps ? 'lessProperties' : 'moreProperties')}</button>
       </>}
+      {/* ประวัติการเปลี่ยนแปลงแยกจากคอมเมนต์ อยู่กล่องด้านขวา (ผู้ใช้ขอ 2026-11-08) */}
+      <section className={`${styles.pgroup} ${styles.historyBox}`} aria-label={t('historyTitle')}>
+        <h4 className={styles.pgTitle}>{t('historyTitle')}</h4>
+        <ActivityPanel scope={scope} issueKey={issue.key} mode="log" showComposer={false} />
+      </section>
     </aside></div>
     {mobile && scope.access.permissions.includes('issue.comment') && <div className={styles.mobileComposer}><ActivityPanel scope={scope} issueKey={issue.key} showFeed={false} compact /></div>}
     {due !== null && <DueRequest key={`${issue.key}-${due}`} scope={scope} issue={issue} initialDue={due} onClose={() => { setDue(null); setError(null); }} />}

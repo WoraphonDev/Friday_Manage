@@ -8,4 +8,4 @@ export const router = {
   forward: vi.fn(),
   prefetch: vi.fn(),
 };
-export const navigation = { pathname: "/w/sample", search: "" };
+export const navigation = { pathname: "/work/sample", search: "" };

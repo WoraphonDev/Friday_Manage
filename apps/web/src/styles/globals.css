@@ -4,14 +4,12 @@
 * {
   box-sizing: border-box;
 }
-html {
-  color-scheme: light;
-}
+/* color-scheme มาจาก tokens.css ตามโหมด (ฟอร์ม แถบเลื่อน และปฏิทินของ browser เปลี่ยนตาม) */
 body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font: 14px/1.5 var(--font-sans);
+  font: var(--text-body) / 1.5 var(--font-sans);
 }
 button,
 input,
@@ -33,11 +31,11 @@ button:disabled {
   opacity: 0.55;
 }
 a {
-  color: var(--primary);
+  color: var(--primary-text);
   text-decoration: none;
 }
 a:hover {
-  color: #1e3a8a;
+  color: var(--primary-text);
 }
 :focus-visible {
   outline: 2px solid var(--focus);
@@ -50,15 +48,15 @@ p {
   margin: 0;
 }
 h1 {
-  font-size: 22px;
+  font-size: var(--text-title);
   font-weight: 700;
 }
 h2 {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
 }
 h3 {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
 }
 svg {
@@ -102,51 +100,53 @@ svg {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: var(--control-h);
+  padding: 0 11px;
   border: 1px solid var(--input);
   border-radius: var(--radius-control);
-  background: white;
+  background: var(--card);
   color: var(--foreground);
+  font-size: var(--text-label);
   font-weight: 500;
   white-space: nowrap;
   text-decoration: none;
   transition: background 0.12s;
 }
 .button:hover {
-  background: #f1f3f5;
+  background: var(--hover);
   color: var(--foreground);
 }
 .button-primary {
-  color: white;
+  color: var(--on-primary);
   background: var(--primary);
   border-color: var(--primary);
 }
 .button-primary:hover {
   background: var(--primary-hover);
-  color: white;
+  color: var(--on-primary);
 }
 .button-danger {
-  background: #b91c1c;
-  color: white;
-  border-color: #b91c1c;
+  background: var(--danger-solid);
+  color: var(--on-primary);
+  border-color: var(--danger-solid);
 }
 .button-danger:hover {
-  background: #991b1b;
-  color: white;
+  background: var(--danger-solid-hover);
+  border-color: var(--danger-solid-hover);
+  color: var(--on-primary);
 }
 .button-ghost {
   background: transparent;
   border-color: transparent;
 }
 .button-small {
-  min-height: 30px;
-  padding: 0 10px;
-  font-size: 12px;
+  min-height: 26px;
+  padding: 0 8px;
+  font-size: var(--text-caption);
 }
 .button-icon {
-  width: 38px;
-  height: 38px;
+  width: var(--control-h);
+  height: var(--control-h);
   padding: 0;
   flex-shrink: 0;
 }
@@ -157,23 +157,23 @@ svg {
   min-width: 0;
 }
 .field > label {
-  font-size: 13px;
+  font-size: var(--text-label);
   font-weight: 600;
 }
 .field > .muted,
 .field-error {
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 .field-error {
-  color: #b91c1c;
+  color: var(--danger-text);
 }
 .input {
   width: 100%;
-  min-height: 40px;
-  border: 1px solid #c9cfd6;
+  min-height: var(--control-h);
+  border: 1px solid var(--input);
   border-radius: var(--radius-control);
-  padding: 8px 10px;
-  background: white;
+  padding: 6px 10px;
+  background: var(--card);
   color: var(--foreground);
 }
 .input[aria-invalid="true"] {
@@ -190,14 +190,14 @@ svg {
   align-items: center;
   width: 100%;
   min-width: 0;
-  min-height: 40px;
-  border: 1px solid #c9cfd6;
+  min-height: var(--control-h);
+  border: 1px solid var(--input);
   border-radius: var(--radius-control);
-  background: white;
+  background: var(--card);
   color: var(--foreground);
 }
 .select:hover {
-  border-color: #aab2bc;
+  border-color: var(--faint);
 }
 .select:has(select:focus-visible) {
   outline: 2px solid var(--focus);
@@ -243,8 +243,8 @@ svg {
   pointer-events: none;
 }
 .select-small {
-  min-height: 36px;
-  font-size: 13px;
+  min-height: 28px;
+  font-size: var(--text-label);
 }
 /* รายการของ <select> ใช้หน้าตาเดียวกับ popover ของเรา แทนเมนูสีเทาของระบบปฏิบัติการ
    (Chromium 135+ · เบราว์เซอร์อื่นยังได้เมนูของระบบ แต่ทำงานเหมือนเดิมทุกอย่าง) */
@@ -259,12 +259,12 @@ svg {
   :where(select) {
     display: inline-flex;
     align-items: center;
-    min-height: 32px;
+    min-height: 28px;
     gap: 6px;
-    padding: 4px 8px;
+    padding: 3px 8px;
     border: 1px solid var(--input);
     border-radius: var(--radius-control);
-    background-color: white;
+    background-color: var(--card);
     color: var(--foreground);
   }
   select::picker-icon {
@@ -306,7 +306,7 @@ svg {
     padding: 6px;
     border: 1px solid var(--border);
     border-radius: 10px;
-    background: white;
+    background: var(--card);
     box-shadow: var(--shadow-menu);
     color: var(--foreground);
     font-weight: 400;
@@ -315,8 +315,8 @@ svg {
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 36px;
-    padding: 6px 10px;
+    min-height: 32px;
+    padding: 5px 10px;
     border-radius: 6px;
     color: var(--foreground);
     font-weight: 400;
@@ -329,7 +329,7 @@ svg {
   }
   select option:checked {
     background: var(--primary-soft);
-    color: var(--primary);
+    color: var(--primary-text);
     font-weight: 600;
   }
   select option::checkmark {
@@ -351,18 +351,18 @@ svg {
 .select-prefixed > select {
   padding-left: 6px;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 .picker-trigger {
   justify-content: flex-start;
-  min-height: 40px;
+  min-height: var(--control-h);
 }
 .picker-trigger > svg:last-child {
   margin-left: auto;
 }
 .popover {
   z-index: 80;
-  background: white;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: var(--shadow-menu);
@@ -379,7 +379,7 @@ svg {
   min-width: 240px;
 }
 [cmdk-input] {
-  min-height: 40px;
+  min-height: 36px;
   border: 0;
   border-bottom: 1px solid var(--border);
   width: 100%;
@@ -391,7 +391,7 @@ svg {
   padding-top: 4px;
 }
 [cmdk-item] {
-  min-height: 42px;
+  min-height: 34px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -415,37 +415,58 @@ svg {
   gap: 6px;
   border-radius: 999px;
   padding: 1px 8px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   font-weight: 500;
   white-space: nowrap;
 }
+/* tone = ความหมายทั่วไปตามชื่อสี · สถานะงานใช้ .status-pill-* (สีไทล์ของ logo) แยกกัน */
 .tone-neutral {
+  background: var(--subtle);
+  color: var(--foreground-soft);
+}
+.tone-blue {
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+.tone-amber {
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+.tone-green {
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+.tone-red {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+.status-pill-todo {
   background: var(--status-todo-bg);
   color: var(--status-todo-fg);
 }
-.tone-blue {
+.status-pill-in_progress {
   background: var(--status-progress-bg);
   color: var(--status-progress-fg);
 }
-.tone-amber {
+.status-pill-review {
   background: var(--status-review-bg);
   color: var(--status-review-fg);
 }
-.tone-green {
+.status-pill-done {
   background: var(--status-done-bg);
   color: var(--status-done-fg);
 }
-.tone-red {
+.status-pill-overdue {
   background: var(--status-overdue-bg);
   color: var(--status-overdue-fg);
 }
 .tone-purple {
-  background: #ede9fe;
-  color: #5b21b6;
+  background: var(--accent-purple-soft);
+  color: var(--accent-purple-text);
 }
 .tone-teal {
-  background: #ccfbf1;
-  color: #115e59;
+  background: var(--accent-teal-soft);
+  color: var(--accent-teal-text);
 }
 .status-dot {
   width: 6px;
@@ -460,8 +481,8 @@ svg {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  color: white;
-  border: 2px solid white;
+  color: var(--on-primary);
+  border: 2px solid var(--card);
   font-size: 11px;
   font-weight: 600;
   overflow: hidden;
@@ -502,9 +523,10 @@ svg {
 .tab {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
-  padding: 0 14px;
-  color: #56606b;
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: var(--text-label);
+  color: var(--muted);
   border: 0;
   border-bottom: 2px solid transparent;
   background: none;
@@ -513,7 +535,7 @@ svg {
 }
 .tab[aria-current="page"],
 .tab[data-state="active"] {
-  color: var(--primary);
+  color: var(--primary-text);
   border-bottom-color: var(--primary);
   font-weight: 600;
 }
@@ -528,16 +550,17 @@ table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  font-size: var(--text-label);
 }
 th {
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--muted);
   font-weight: 600;
-  background: #f8f9fb;
+  background: var(--surface-2);
 }
 th,
 td {
-  padding: 12px 16px;
+  padding: 7px 10px;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
@@ -545,14 +568,14 @@ td {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgb(15 23 42 / 0.38);
+  background: var(--overlay);
   animation: fade-in 0.15s ease-out;
 }
 .dialog,
 .drawer {
   position: fixed;
   z-index: 51;
-  background: white;
+  background: var(--card);
   box-shadow: var(--shadow-menu);
   max-height: 90dvh;
   overflow-y: auto;
@@ -584,14 +607,14 @@ td {
   position: sticky;
   top: 0;
   z-index: 3;
-  background: white;
+  background: var(--card);
   margin: 0 -20px;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
 .dialog-medium > .dialog-heading h2,
 .dialog-wide > .dialog-heading h2 {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
 }
 .dialog-medium > .dialog-body,
@@ -606,7 +629,7 @@ td {
   margin-bottom: 12px;
 }
 .dialog-heading h2 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
 }
 .dialog-body {
@@ -706,15 +729,15 @@ td {
 .drawer-nested > .drawer-body, .drawer-nested > p { grid-column: 2; }
 .drawer-nested.drawer-detail { width: min(var(--drawer-detail-w, 1000px), calc(100vw - 48px)); grid-template-columns: 44px minmax(0, 1fr); column-gap: 0; padding: 0; }
 .drawer-nested.drawer-create { width: min(640px, 100vw); }
-.drawer-nested.drawer-bare > .drawer-parent { padding: 16px 12px; font-size: 13px; font-weight: 600; background: #fff; color: var(--foreground); border-right: 1px solid var(--border); }
-.drawer-nested.drawer-bare > .drawer-parent:hover { background: #f8f9fb; color: var(--primary); }
+.drawer-nested.drawer-bare > .drawer-parent { padding: 16px 12px; font-size: 13px; font-weight: 600; background: var(--card); color: var(--foreground); border-right: 1px solid var(--border); }
+.drawer-nested.drawer-bare > .drawer-parent:hover { background: var(--surface-2); color: var(--primary-text); }
 .drawer-parent {
   display: flex;
   align-items: center;
   gap: 8px;
   border: 0;
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--primary-text);
   padding: 8px 12px;
   border-radius: 6px;
   margin-bottom: 16px;
@@ -723,14 +746,16 @@ td {
   padding-top: 12px;
 }
 /* K4: Toast แจ้งเตือนพื้นเข้ม รูป + ข้อความ + ปุ่ม */
-.toast-rich {
+/* .toast.toast-rich ชนะสไตล์ .toast สีฟ้าที่ประกาศทีหลัง (แจ้งเตือน K4 ยังเป็นกล่องเข้ม) */
+.toast.toast-rich {
   align-items: flex-start;
   width: min(380px, calc(100vw - 32px));
-  background: #1b1f24;
-  color: white;
+  border-color: transparent;
+  background: var(--inverse-bg);
+  color: var(--inverse-ink);
   border-radius: 12px;
   padding: 12px 14px;
-  box-shadow: 0 12px 32px rgb(15 23 42 / 0.3);
+  box-shadow: var(--shadow-menu);
   gap: 10px;
 }
 .toast-rich .toast-body {
@@ -739,11 +764,11 @@ td {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 .toast-meta {
-  color: #94a3b8;
-  font-size: 12px;
+  color: var(--inverse-muted);
+  font-size: var(--text-caption);
 }
 .toast-actions {
   display: flex;
@@ -756,27 +781,27 @@ td {
   min-height: 30px;
   padding: 0 10px;
   border-radius: 6px;
-  border: 1px solid #475569;
-  color: white;
-  font-size: 13px;
+  border: 1px solid var(--inverse-border);
+  color: var(--inverse-ink);
+  font-size: var(--text-label);
   font-weight: 600;
   text-decoration: none;
 }
 .toast-btn:hover {
-  color: white;
-  background: #2b3138;
+  color: var(--inverse-ink);
+  background: var(--inverse-bg-2);
 }
 .toast-btn-primary {
-  background: white;
-  border-color: white;
-  color: #1b1f24;
+  background: var(--inverse-ink);
+  border-color: var(--inverse-ink);
+  color: var(--inverse-bg);
 }
 .toast-btn-primary:hover {
-  background: #e2e8f0;
-  color: #1b1f24;
+  background: var(--inverse-link-hover);
+  color: var(--inverse-bg);
 }
 .toast-rich .button-ghost {
-  color: #cbd5e1;
+  color: var(--inverse-muted);
   width: 28px;
   height: 28px;
 }
@@ -784,41 +809,110 @@ td {
   position: fixed;
   z-index: 100;
   right: 20px;
-  bottom: 20px;
+  top: calc(var(--topbar-h, 48px) + 12px);
   display: flex;
-  flex-direction: column;
+  /* มุมขวาบน ใต้แถบบน · อันใหม่ล่าสุดอยู่บนสุด อันเก่าเลื่อนลงข้างล่าง (ผู้ใช้ขอ 2026-11-08) */
+  flex-direction: column-reverse;
   gap: 8px;
   max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+.toast-region > * {
+  pointer-events: auto;
+}
+/* กล่องแจ้งผลการกระทำ (FloatingNotice) อยู่ในกองเดียวกับ toast มุมขวาบน · สีเดิมของแต่ละแบบ */
+.floating-notice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  width: min(360px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border: 1px solid var(--primary-border);
+  border-radius: 10px;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font-size: var(--text-label);
+  box-shadow: var(--shadow-menu);
+  animation: notice-in 0.2s ease-out;
+}
+.floating-notice > span:first-child {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+/* หัวข้อของกล่องข้อผิดพลาดขึ้นบรรทัดของตัวเอง */
+.floating-notice > strong {
+  flex-basis: 100%;
+}
+.floating-notice code {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.floating-notice-error {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+.floating-notice-alone {
+  position: fixed;
+  z-index: 100;
+  right: 20px;
+  top: calc(var(--topbar-h, 48px) + 12px);
+}
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@media print {
+  .toast-region,
+  .floating-notice {
+    display: none;
+  }
 }
 .toast {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
-  padding: 12px 14px;
-  background: #0f172a;
-  color: white;
+  width: min(360px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border: 1px solid var(--primary-border);
   border-radius: 10px;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font-size: var(--text-label);
   box-shadow: var(--shadow-menu);
+  animation: notice-in 0.2s ease-out;
+}
+.toast > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .toast .button-ghost {
-  color: white;
+  color: inherit;
+}
+.toast-error {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger-text);
 }
 .tooltip {
   z-index: 100;
-  background: #0f172a;
-  color: white;
+  background: var(--topbar);
+  color: var(--on-primary);
   padding: 6px 10px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   max-width: 250px;
 }
 .tooltip svg {
-  fill: #0f172a;
+  fill: var(--topbar);
 }
 .skeleton {
   display: block;
   border-radius: 6px;
-  background: linear-gradient(90deg, #e9edf1 25%, #f6f7f9 50%, #e9edf1 75%);
+  background: linear-gradient(90deg, var(--subtle) 25%, var(--background) 50%, var(--subtle) 75%);
   background-size: 200% 100%;
   animation: skeleton 1.6s ease-in-out infinite;
   height: 18px;
@@ -853,7 +947,7 @@ td {
   width: 48px;
   height: 48px;
   border: 1px solid var(--border);
-  background: white;
+  background: var(--card);
   border-radius: 12px;
   color: var(--muted);
 }
@@ -872,14 +966,14 @@ td {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
-  background: #fffbeb;
-  color: #92400e;
+  background: var(--warning-soft);
+  color: var(--warning-text);
 }
 .skip-link {
   position: fixed;
   top: -100px;
   left: 16px;
-  background: white;
+  background: var(--card);
   z-index: 200;
   padding: 10px;
   border-radius: 8px;
@@ -892,22 +986,22 @@ td {
   position: sticky;
   top: 0;
   z-index: 40;
-  min-height: 56px;
-  padding: 8px 16px;
+  min-height: var(--topbar-h);
+  padding: 0 16px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   background: var(--topbar);
-  color: #e2e8f0;
+  color: var(--inverse-ink);
 }
 .workspace-switch {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: var(--control-h);
   padding: 0 8px;
   background: transparent;
-  color: white;
+  color: var(--on-primary);
   border: 0;
   border-radius: 8px;
   font-weight: 600;
@@ -930,27 +1024,35 @@ td {
   width: 100%;
   margin: 0;
   padding: 0 10px 0 6px;
-  min-height: 44px;
+  min-height: 38px;
   border: 1px solid var(--border);
-  background: white;
+  background: var(--card);
   color: var(--foreground);
   text-align: left;
 }
 .sidebar-workspace .workspace-switch:hover,
 .sidebar-workspace .workspace-switch[data-state="open"] {
   border-color: var(--input);
-  background: #f8f9fb;
+  background: var(--surface-2);
 }
 .sidebar-workspace .workspace-switch > svg {
   margin-left: auto;
   flex: none;
   color: var(--muted);
 }
+/* โลโก้อยู่กึ่งกลางคอลัมน์ Sidebar (พื้นที่โลโก้กว้างเท่า Sidebar)
+   เว้นขวาให้ช่องค้นหาเริ่มตรงกับขอบเนื้อหาหน้า: ระยะขอบหน้า 24px − ช่องห่างของแถบบน 14px */
+.topbar-desktop {
+  padding-left: 0;
+}
 .topbar-brand {
   display: flex;
   flex: none;
   align-items: center;
-  padding: 0 6px;
+  justify-content: center;
+  width: var(--sidebar-width);
+  margin-right: 10px;
+  padding: 0;
   white-space: nowrap;
 }
 .workspace-switch > span:not(.workspace-logo) {
@@ -960,13 +1062,13 @@ td {
 }
 .workspace-logo {
   display: inline-flex;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   align-items: center;
   justify-content: center;
   border-radius: 7px;
   background: var(--primary);
-  color: white;
+  color: var(--on-primary);
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -976,12 +1078,12 @@ td {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 38px;
-  padding: 0 12px;
-  border: 1px solid #334155;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--inverse-border);
   border-radius: 8px;
   background: var(--topbar-field);
-  color: #94a3b8;
+  color: var(--inverse-muted);
   text-align: left;
 }
 .search-trigger > span {
@@ -992,16 +1094,16 @@ td {
   min-width: 0;
   border: 0;
   background: transparent;
-  color: #fff;
+  color: var(--inverse-ink);
   font: inherit;
   outline: 0;
 }
 .search-trigger:focus-within {
-  border-color: #60a5fa;
+  border-color: var(--inverse-link);
 }
 kbd {
   font: 11px var(--font-sans);
-  border: 1px solid #475569;
+  border: 1px solid var(--border-strong);
   border-radius: 4px;
   padding: 0 6px;
   white-space: nowrap;
@@ -1009,11 +1111,14 @@ kbd {
 .topbar-spacer {
   flex: 1;
 }
+.search-trigger kbd {
+  border-color: var(--inverse-border);
+}
 .topbar .avatar {
-  border-color: #334155;
+  border-color: var(--inverse-border);
 }
 .topbar .button-ghost {
-  color: #e2e8f0;
+  color: var(--inverse-ink);
 }
 .topbar .button-ghost:hover {
   background: var(--topbar-field);
@@ -1031,13 +1136,13 @@ kbd {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
-  min-height: 52px;
+  padding: 6px 10px;
+  min-height: 44px;
   border-radius: 8px;
   color: var(--foreground);
 }
 .workspace-item:hover {
-  background: #f1f3f5;
+  background: var(--hover);
 }
 .workspace-item[aria-current="true"] {
   background: var(--primary-soft);
@@ -1070,7 +1175,7 @@ kbd {
   gap: 8px;
   margin: 2px 2px 4px;
   padding: 0 10px;
-  min-height: 38px;
+  min-height: var(--control-h);
   border: 1px solid var(--input);
   border-radius: 8px;
   color: var(--muted);
@@ -1092,7 +1197,7 @@ kbd {
 .menu-hint {
   margin: 0;
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--muted);
 }
 .menu-icon-item {
@@ -1151,6 +1256,12 @@ kbd {
   padding: 10px 14px;
   border-top: 1px solid var(--border);
 }
+.account-prefs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .account-foot .account-logout {
   width: auto;
 }
@@ -1164,19 +1275,19 @@ kbd {
 }
 .workspace-body {
   display: flex;
-  min-height: calc(100dvh - 56px);
+  min-height: calc(100dvh - var(--topbar-h));
 }
 .sidebar {
   position: sticky;
-  top: 56px;
+  top: var(--topbar-h);
   align-self: flex-start;
-  height: calc(100dvh - 56px);
+  height: calc(100dvh - var(--topbar-h));
   overflow-y: auto;
   width: var(--sidebar-width);
   flex-shrink: 0;
-  background: white;
+  background: var(--card);
   border-right: 1px solid var(--border);
-  padding: 16px 12px;
+  padding: 12px 10px;
   display: flex;
   flex-direction: column;
 }
@@ -1199,19 +1310,20 @@ kbd {
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 38px;
-  padding: 0 10px;
+  gap: 9px;
+  min-height: 34px;
+  padding: 0 9px;
   border-radius: 8px;
-  color: #3d4550;
+  color: var(--foreground-soft);
+  font-size: var(--text-label);
 }
 .nav-link:hover {
-  background: #f1f3f5;
+  background: var(--hover);
   color: var(--foreground);
 }
 .nav-link[aria-current="page"] {
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--primary-text);
   font-weight: 600;
 }
 .nav-link .badge {
@@ -1220,7 +1332,7 @@ kbd {
 /* ชื่อโปรเจกต์ยาวขึ้นบรรทัดใหม่ตาม Canvas แทนการตัด */
 .nav-link .project-name {
   min-width: 0;
-  padding: 8px 0;
+  padding: 7px 0;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
@@ -1230,7 +1342,7 @@ kbd {
   letter-spacing: 0.06em;
   font-weight: 600;
   text-transform: uppercase;
-  padding: 16px 10px 6px;
+  padding: 14px 9px 6px;
 }
 .project-dot {
   width: 10px;
@@ -1243,18 +1355,18 @@ kbd {
   min-width: 0;
 }
 .admin-pill {
-  background: #334155;
-  color: #e2e8f0;
+  background: var(--inverse-bg-2);
+  color: var(--inverse-ink);
 }
 .topbar-back {
-  color: #93c5fd;
-  font-size: 13px;
+  color: var(--inverse-link);
+  font-size: var(--text-label);
 }
 .topbar-back:hover {
-  color: #bfdbfe;
+  color: var(--inverse-link-hover);
 }
 .checkout-header {
-  background: white;
+  background: var(--card);
   border-bottom: 1px solid var(--border);
 }
 .checkout-header-inner {
@@ -1278,7 +1390,7 @@ kbd {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 .workspace-body.chrome-checkout {
   display: block;
@@ -1299,8 +1411,8 @@ kbd {
   height: 18px;
   padding: 0 4px;
   border-radius: 9px;
-  background: #dc2626;
-  color: white;
+  background: var(--danger-solid);
+  color: var(--on-primary);
   font-size: 11px;
   font-weight: 700;
   display: flex;
@@ -1308,15 +1420,15 @@ kbd {
   justify-content: center;
 }
 .page-content {
-  padding: 24px;
+  padding: 22px 24px;
 }
 .page-title {
   margin-bottom: 20px;
 }
 .project-header {
-  background: white;
+  background: var(--card);
   border-bottom: 1px solid var(--border);
-  padding: 16px 24px 0;
+  padding: 14px 24px 0;
 }
 /* ขนาดตาม Canvas Main: ไอคอน 32 px, ชื่อ 22 px อยู่บรรทัดเดียวกับสถานะและวันที่ */
 .project-header-row {
@@ -1331,7 +1443,7 @@ kbd {
   flex: 1 1 auto;
 }
 .project-crumb {
-  font-size: 12px;
+  font-size: var(--text-caption);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1345,25 +1457,25 @@ kbd {
 }
 .project-title-row h1 {
   min-width: 0;
-  font-size: 22px;
+  font-size: var(--text-title);
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
 .project-icon {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
-  color: white;
+  color: var(--on-primary);
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 .project-dates {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 .project-back,
 .project-subline,
@@ -1389,7 +1501,7 @@ kbd {
   height: 28px;
   margin-left: -8px;
   font-size: 11px;
-  border: 2px solid white;
+  border: 2px solid var(--card);
 }
 .project-menu {
   min-width: 200px;
@@ -1398,7 +1510,7 @@ kbd {
 .menu-item {
   display: flex;
   align-items: center;
-  min-height: 36px;
+  min-height: 32px;
   padding: 0 10px;
   border-radius: 6px;
   color: var(--foreground);
@@ -1406,7 +1518,7 @@ kbd {
 }
 .menu-item:hover,
 .menu-item:focus-visible {
-  background: #f1f3f5;
+  background: var(--hover);
   color: var(--foreground);
 }
 .project-header .tabs {
@@ -1448,7 +1560,7 @@ kbd {
   opacity: 1;
 }
 .tab-remove:hover {
-  background: #e4e7eb;
+  background: var(--subtle);
   color: var(--foreground);
 }
 @media (hover: none) {
@@ -1465,10 +1577,10 @@ kbd {
   display: flex;
   flex-direction: column;
   padding: 6px 10px 8px;
-  font-size: 13px;
+  font-size: var(--text-label);
 }
 .view-picker-head .muted {
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 .view-options {
   list-style: none;
@@ -1481,7 +1593,7 @@ kbd {
   border-radius: 8px;
 }
 .view-option:hover {
-  background: #f1f3f5;
+  background: var(--hover);
 }
 .view-option-main {
   flex: 1;
@@ -1507,7 +1619,7 @@ kbd {
   justify-content: center;
   border-radius: 8px;
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 .view-text {
   display: flex;
@@ -1516,17 +1628,17 @@ kbd {
   line-height: 1.35;
 }
 .view-text b {
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 600;
 }
 .view-text small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 .view-check {
   margin-left: auto;
   flex: none;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 .view-hide {
   flex: none;
@@ -1543,7 +1655,7 @@ kbd {
   cursor: pointer;
 }
 .view-hide:hover {
-  background: #e4e7eb;
+  background: var(--subtle);
   color: var(--foreground);
 }
 .mobile-menu,
@@ -1559,7 +1671,7 @@ kbd {
   top: 0;
   right: 0;
   background: var(--danger);
-  color: white;
+  color: var(--on-primary);
   border: 2px solid var(--topbar);
   border-radius: 10px;
   min-width: 18px;
@@ -1611,10 +1723,10 @@ kbd {
 }
 @media (max-width: 760px) {
   body {
-    font-size: 15px;
+    font-size: 14px;
   }
   h1 {
-    font-size: 18px;
+    font-size: 17px;
   }
   .topbar {
     gap: 6px;
@@ -1764,7 +1876,7 @@ kbd {
     right: 0;
     min-height: 56px;
     padding-bottom: env(safe-area-inset-bottom);
-    background: white;
+    background: var(--card);
     border-top: 1px solid var(--border);
     z-index: 20;
   }
@@ -1780,11 +1892,11 @@ kbd {
     border: 0;
     border-radius: 0;
     background: none;
-    color: #5f6873;
+    color: var(--muted);
   }
   .mobile-bottom-nav .nav-link[aria-current="page"] {
     background: none;
-    color: var(--primary);
+    color: var(--primary-text);
     font-weight: 700;
   }
   .mobile-bottom-nav .badge {
@@ -1818,7 +1930,11 @@ kbd {
   .toast-region {
     left: 16px;
     right: 16px;
-    bottom: 72px;
+    top: calc(var(--topbar-h, 48px) + 8px);
+  }
+  .floating-notice-alone {
+    right: 16px;
+    top: calc(var(--topbar-h, 48px) + 8px);
   }
   .toast {
     padding: 10px;
@@ -1851,5 +1967,190 @@ kbd {
 
 /* เมนูที่ใช้ button ต้องไม่มีกรอบและพื้นของ browser ต่างจากรายการที่ใช้ Link */
 button.menu-item { width:100%; border:0; background:transparent; font:inherit; text-align:left; cursor:pointer; gap:8px; }
-button.menu-item:hover,button.menu-item:focus-visible { background:#f1f3f5; }
+button.menu-item:hover,button.menu-item:focus-visible { background:var(--hover); }
 button.menu-item:disabled { cursor:default; opacity:.5; }
+
+/* ดูตัวอย่างไฟล์แนบ (FilePreview) · พื้นมืดเต็มจอแบบหน้าดูไฟล์ทั่วไป */
+.file-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgb(12 14 18 / 0.94);
+}
+.file-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  color: var(--inverse-ink);
+  outline: none;
+}
+.file-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgb(0 0 0 / 0.35);
+}
+.file-preview-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-preview-count {
+  font-size: 12px;
+  color: var(--inverse-muted);
+  flex: none;
+}
+.file-preview-actions {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.file-preview-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.file-preview-btn:hover,
+.file-preview-nav:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+.file-preview-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 64px 24px;
+}
+.file-preview-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.file-preview-img,
+.file-preview-media {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.4);
+}
+.file-preview-img {
+  background: #fff;
+}
+.file-preview-frame {
+  width: min(1000px, 100%);
+  height: 100%;
+  border: 0;
+  border-radius: 4px;
+  background: #fff;
+}
+.file-preview-text {
+  width: min(1000px, 100%);
+  max-height: 100%;
+  margin: 0;
+  overflow: auto;
+  padding: 20px 24px;
+  border-radius: 4px;
+  background: #fff;
+  color: #111827;
+  font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.file-preview-none {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 420px;
+  padding: 32px 28px;
+  border-radius: 12px;
+  background: var(--inverse-bg);
+  text-align: center;
+}
+.file-preview-none b {
+  overflow-wrap: anywhere;
+}
+.file-preview-none p {
+  margin: 0 0 6px;
+  color: var(--inverse-muted);
+  font-size: 13px;
+}
+.file-preview-loading {
+  color: var(--inverse-muted);
+}
+.file-preview-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.35);
+  color: var(--on-primary);
+  cursor: pointer;
+}
+.file-preview-prev {
+  left: 12px;
+}
+.file-preview-next {
+  right: 12px;
+}
+@media (max-width: 760px) {
+  .file-preview-stage {
+    padding: 8px 8px 16px;
+  }
+  .file-preview-nav {
+    top: auto;
+    bottom: 16px;
+    transform: none;
+  }
+}
+
+/* ปุ่มย้อนกลับของหน้าย่อย (Admin, Billing, สมาชิก, New project, โปรไฟล์, ค้นหา) · ผู้ใช้ขอ 2026-11-09 */
+.page-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 24px 0;
+  padding: 4px 10px 4px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-label);
+  font-weight: 500;
+  cursor: pointer;
+}
+.page-back:hover {
+  background: var(--subtle);
+  color: var(--foreground);
+}
+@media (max-width: 760px) {
+  .page-back {
+    margin: 10px 16px 0;
+  }
+}

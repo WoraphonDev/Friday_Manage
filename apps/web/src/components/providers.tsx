@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { PlanLimitHost } from "@/features/plan-limits";
+import { ConfirmHost } from "./confirm-host";
 import { API_UNAUTHORIZED } from "@/lib/api";
 import { createQueryClient } from "@/lib/query";
-import { ToastProvider } from "./ui";
+import { FloatingNotice, ToastProvider } from "./ui";
 
 function ApiEvents() {
   const router = useRouter();
@@ -35,12 +36,13 @@ function ApiEvents() {
   return (
     <>
       {offline && (
-        <div className="notice" role="status">
-          {t("states.offline")}
-        </div>
+        <FloatingNotice>
+          <span>{t("states.offline")}</span>
+        </FloatingNotice>
       )}
       {/* 402 → Dialog ของ Q2 แยกตามชนิดขีดจำกัด (W19) */}
       <PlanLimitHost />
+      <ConfirmHost />
     </>
   );
 }

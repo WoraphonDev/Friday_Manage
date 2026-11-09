@@ -47,19 +47,19 @@ describe("J1 · เข้าสู่ระบบ", () => {
     await user.type(screen.getByLabelText("รหัสผ่าน"), "Friday2026");
     await user.click(screen.getByRole("checkbox", { name: "จดจำฉันไว้ 30 วัน" }));
     await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/w/friday-dev"));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/work/friday-dev"));
     expect(calls.find((c) => c.path === "/api/v1/auth/login")?.body).toEqual({ email: "lead@example.com", password: "Friday2026", remember: false });
   });
 
   it("กลับไปหน้าเดิมจาก returnTo · ไม่มี Workspace ไป Onboarding · กัน returnTo นอกเว็บ", async () => {
     server.use(http.post("*/api/v1/auth/login", () => HttpResponse.json({ id: "u1" })));
     const user = userEvent.setup();
-    navigation.search = "returnTo=%2Fw%2Ffriday-dev%2Fp%2FDP%2Fboard";
+    navigation.search = "returnTo=%2Fwork%2Ffriday-dev%2Fp%2FDP%2Fboard";
     const first = render(<LoginForm />);
     await user.type(screen.getByLabelText("อีเมล"), "lead@example.com");
     await user.type(screen.getByLabelText("รหัสผ่าน"), "Friday2026");
     await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/w/friday-dev/p/DP/board"));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/work/friday-dev/p/DP/board"));
     first.unmount();
 
     navigation.search = "returnTo=%2F%2Fevil.example.com";
@@ -93,7 +93,7 @@ describe("J1 · เข้าสู่ระบบ", () => {
     await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("ลองได้อีก 4 ครั้งก่อนบัญชีถูกล็อก 15 นาที");
-    expect(alert).toHaveTextContent("req_test01");
+    expect(alert).not.toHaveTextContent("req_test01"); // 4xx ผู้ใช้แก้เองได้ ไม่แสดงรหัสอ้างอิง (ผู้ใช้ขอ 2026-11-09)
     expect(screen.getByLabelText("รหัสผ่าน")).toHaveAttribute("aria-invalid", "true");
 
     await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
@@ -131,7 +131,7 @@ describe("J1 · เข้าสู่ระบบ", () => {
     expect(calls.find((c) => c.path === "/api/v1/auth/login/mfa")?.body).toEqual({ mfaToken: "mfa-1", code: "123456", trustDevice: true });
 
     await user.click(screen.getByRole("button", { name: "ยืนยันและเข้าสู่ระบบ" }));
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/w/friday-dev"));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/work/friday-dev"));
   });
 
   it("Backup code แจ้งจำนวนที่เหลือ · mfaToken หมดอายุกลับไปขั้นรหัสผ่าน", async () => {
@@ -159,25 +159,25 @@ describe("J1 · เข้าสู่ระบบ", () => {
     await user.clear(screen.getByLabelText("อีเมล"));
     await login();
     expect(await screen.findByText("เข้าสู่ระบบด้วย Backup code แล้ว · เหลืออีก 7 รหัส")).toBeInTheDocument();
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/w/friday-dev"));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/work/friday-dev"));
   });
 
   it("OAuth: ปุ่มชี้ไป API พร้อม returnTo · error จากผู้ให้บริการ · 2FA ผ่าน fragment", async () => {
-    navigation.search = "error=oauth_email_unverified&returnTo=%2Fw%2Ffriday-dev";
+    navigation.search = "error=oauth_email_unverified&returnTo=%2Fwork%2Ffriday-dev";
     const user = userEvent.setup();
     const first = render(<LoginForm />);
     expect(screen.getByRole("alert")).toHaveTextContent("อีเมลในบัญชีผู้ให้บริการยังไม่ได้ยืนยัน");
     expect(screen.getByRole("link", { name: /Google/ })).toHaveAttribute(
       "href",
-      "/api/v1/auth/oauth/google/start?next=%2Fw%2Ffriday-dev&remember=true",
+      "/api/v1/auth/oauth/google/start?next=%2Fwork%2Ffriday-dev&remember=true",
     );
     await user.click(screen.getByRole("checkbox", { name: "จดจำฉันไว้ 30 วัน" }));
-    expect(screen.getByRole("link", { name: /Microsoft/ })).toHaveAttribute("href", "/api/v1/auth/oauth/microsoft/start?next=%2Fw%2Ffriday-dev");
+    expect(screen.getByRole("link", { name: /Microsoft/ })).toHaveAttribute("href", "/api/v1/auth/oauth/microsoft/start?next=%2Fwork%2Ffriday-dev");
     expect(screen.getByRole("button", { name: "SSO ขององค์กร (SAML)" })).toBeDisabled();
     first.unmount();
 
     navigation.search = "";
-    window.history.replaceState(null, "", "/login#mfaToken=oauth-mfa&email=lead%40example.com&next=%2Fw%2Ffriday-dev%2Finbox");
+    window.history.replaceState(null, "", "/login#mfaToken=oauth-mfa&email=lead%40example.com&next=%2Fwork%2Ffriday-dev%2Finbox");
     render(<LoginForm />);
     expect(await screen.findByRole("heading", { name: "ยืนยันตัวตน 2 ขั้นตอน" })).toBeInTheDocument();
     expect(window.location.hash).toBe("");
@@ -233,6 +233,8 @@ describe("J2 · สมัครและยืนยันอีเมล", () =
       acceptTerms: true,
     });
     expect(screen.getByText("new@example.com")).toBeInTheDocument();
+    // ส่งอีเมลได้ตามปกติ = ไม่มีปุ่มข้าม
+    expect(screen.queryByRole("button", { name: "ข้ามไปก่อน ยืนยันภายหลัง" })).not.toBeInTheDocument();
     expect(screen.getByText("1:00")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ส่งรหัสใหม่" })).not.toBeInTheDocument();
 
@@ -243,6 +245,28 @@ describe("J2 · สมัครและยืนยันอีเมล", () =
     await user.click(screen.getByRole("button", { name: "ยืนยันและตั้งค่า Workspace" }));
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/onboarding"));
     expect(calls.filter((c) => c.path === "/api/v1/auth/verify-email").at(-1)?.body).toEqual({ code: "482913" });
+  });
+
+  it("ยังไม่ได้ตั้ง SMTP: บอกว่ารหัสยังไม่ถูกส่ง และข้ามไปก่อนแล้วยืนยันภายหลังได้", async () => {
+    server.use(http.post("*/api/v1/auth/signup", () => HttpResponse.json({ id: "u1", email: "new@example.com", displayName: "ผู้ทดสอบ", emailDelivery: false }, { status: 201 })));
+    const user = userEvent.setup();
+    render(<SignupForm />);
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: "สร้างบัญชี" }));
+    expect(await screen.findByText(/ระบบยังไม่ได้ตั้งค่าการส่งอีเมล/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ข้ามไปก่อน ยืนยันภายหลัง" }));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/onboarding"));
+  });
+
+  it("อีเมลมี , ท้าย (คัดลอกมา) → บอกที่ช่องเป็นภาษาไทย ไม่ส่งคำขอ", async () => {
+    const calls: Captured = [];
+    capture(calls);
+    const user = userEvent.setup();
+    render(<SignupForm />);
+    await fill(user, "tang@gg.co,");
+    await user.click(screen.getByRole("button", { name: "สร้างบัญชี" }));
+    expect(await screen.findByText("รูปแบบอีเมลไม่ถูกต้อง เช่น name@company.com")).toBeInTheDocument();
+    expect(calls.some((c) => c.path === "/api/v1/auth/signup")).toBe(false);
   });
 
   it("อีเมลซ้ำ → บอกที่ช่องพร้อมลิงก์เข้าสู่ระบบ (คง returnTo)", async () => {
@@ -295,7 +319,7 @@ describe("J2 · สมัครและยืนยันอีเมล", () =
     server.use(http.post("*/api/v1/auth/verify-email", () => apiError(400, "invalid_token", "ลิงก์หรือรหัสไม่ถูกต้อง", {}, "req_link9")));
     render(<SignupForm />);
     expect(await screen.findByRole("heading", { name: "ลิงก์ยืนยันอีเมลไม่ถูกต้องหรือหมดอายุแล้ว" })).toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent("req_link9");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("req_link9"); // 4xx ผู้ใช้แก้เองได้ ไม่แสดงรหัสอ้างอิง (ผู้ใช้ขอ 2026-11-09)
   });
 });
 
@@ -395,7 +419,7 @@ describe("J4 · รับคำเชิญ", () => {
     expect(accept).toBeDisabled();
     await user.click(screen.getByRole("checkbox"));
     await user.click(accept);
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/w/friday-dev"));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/work/friday-dev"));
     expect(calls.find((c) => c.path === "/api/v1/auth/signup")?.body).toEqual({
       email: "kl@example.com",
       password: "Friday2026",
@@ -521,7 +545,7 @@ describe("J5 · Onboarding", () => {
       { emails: ["pm@example.com"], workspaceRole: "admin" },
     ]);
     await user.click(screen.getByRole("button", { name: "เปิดโปรเจกต์ตัวอย่าง" }));
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/w/friday-dev/p/DEMO"));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/work/friday-dev/p/DEMO"));
   });
 
   it("URL ซ้ำบล็อกการไปต่อ · ข้ามการเชิญ · สร้างโปรเจกต์ใหม่ส่งวิธีทำงานต่อ · ย้อนกลับไม่สร้าง Workspace ซ้ำ", async () => {
@@ -554,7 +578,7 @@ describe("J5 · Onboarding", () => {
     await user.click(await screen.findByRole("button", { name: "ข้ามไปก่อน" }));
     await user.click(await screen.findByRole("button", { name: /สร้างโปรเจกต์ใหม่/ }));
     await user.click(screen.getByRole("button", { name: "ไปสร้างโปรเจกต์" }));
-    expect(router.push).toHaveBeenCalledWith("/w/my-team/new-project?method=scrum");
+    expect(router.push).toHaveBeenCalledWith("/work/my-team/new-project?method=scrum");
     expect(calls.filter((c) => c.path === "/api/v1/workspaces" && c.method === "POST")).toHaveLength(1);
   });
 

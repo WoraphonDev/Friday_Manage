@@ -100,7 +100,7 @@
 
 **แก้เสร็จเมื่อ:** กำหนด shell ตาม route/context ไม่ลบเมนูร่วมทุกหน้าแบบเหมารวม; พื้นที่เนื้อหาและจุดเริ่ม x/y ตรงบอร์ดของหน้านั้น
 
-ไฟล์: `apps/web/src/components/shell/workspace-shell.tsx`, `apps/web/src/components/shell/project-shell.tsx`, `apps/web/app/w/[ws]/admin/_components/admin-console.tsx` · บอร์ด: AdminConsole, LeadDashboard, Reports, NotifyTemplates, Automation, Checkout
+ไฟล์: `apps/web/src/components/shell/workspace-shell.tsx`, `apps/web/src/components/shell/project-shell.tsx`, `apps/web/app/work/[ws]/admin/_components/admin-console.tsx` · บอร์ด: AdminConsole, LeadDashboard, Reports, NotifyTemplates, Automation, Checkout
 
 ### VD04 · Mobile app bar และ bottom navigation ไม่ตรง M2–M7
 
@@ -120,7 +120,7 @@
 
 **แก้เสร็จเมื่อ:** คืนโครง summary card desktop ตาม Main; mobile ใช้องค์ประกอบ M6 โดยไม่ stack 5 card desktop
 
-ไฟล์: `apps/web/app/w/[ws]/p/[key]/table/_components/overview.tsx`, `apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css` · บอร์ด: Main, MobileOverview
+ไฟล์: `apps/web/app/work/[ws]/p/[key]/table/_components/overview.tsx`, `apps/web/app/work/[ws]/p/[key]/table/_components/ot.module.css` · บอร์ด: Main, MobileOverview
 
 ### VD06 · Overview KPI/list/ข้อมูลโปรเจกต์จัดใหม่คนละโครง
 
@@ -130,7 +130,7 @@
 
 **แก้เสร็จเมื่อ:** คืนลำดับชั้นและตำแหน่ง section; อย่าใช้จำนวนรายการตัวอย่างเป็นเงื่อนไขจัด layout
 
-ไฟล์: `apps/web/app/w/[ws]/p/[key]/table/_components/overview.tsx`, `apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css` · บอร์ด: Main
+ไฟล์: `apps/web/app/work/[ws]/p/[key]/table/_components/overview.tsx`, `apps/web/app/work/[ws]/p/[key]/table/_components/ot.module.css` · บอร์ด: Main
 
 ### VD07 · Table toolbar ขาดชุดควบคุมในแบบ
 
@@ -140,7 +140,7 @@
 
 **แก้เสร็จเมื่อ:** ทำ inventory คอนโทรลตาม Table.dc.html ให้ครบ จัดแถวและระยะห่างตรงที่ 1440 พร้อมทางเข้าที่ใช้ได้บน 390
 
-ไฟล์: `apps/web/app/w/[ws]/p/[key]/table/_components/table-view.tsx` · บอร์ด: Table
+ไฟล์: `apps/web/app/work/[ws]/p/[key]/table/_components/table-view.tsx` · บอร์ด: Table
 
 ### VD08 · Table ใช้ native select ทุกแถวและสลับชุดคอลัมน์
 
@@ -150,7 +150,7 @@
 
 **แก้เสร็จเมื่อ:** แสดงค่าปกติให้เหมือน pill/cell ใน Canvas และเปิด editor เมื่อแก้; คืนคอลัมน์/width และ group hierarchy โดยยังคง edit ได้
 
-ไฟล์: `apps/web/app/w/[ws]/p/[key]/table/_components/table-view.tsx`, `apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css` · บอร์ด: Table
+ไฟล์: `apps/web/app/work/[ws]/p/[key]/table/_components/table-view.tsx`, `apps/web/app/work/[ws]/p/[key]/table/_components/ot.module.css` · บอร์ด: Table
 
 ### VD09 · Table bulk bar และ action ของแถวอยู่ผิดตำแหน่ง
 
@@ -160,7 +160,7 @@
 
 **แก้เสร็จเมื่อ:** เลือก 2 แถวแล้วเทียบตำแหน่ง bulk bar และ action ต่อ Module/Phase; ไม่บังแถวล่างบนมือถือ
 
-ไฟล์: `apps/web/app/w/[ws]/p/[key]/table/_components/table-view.tsx`, `apps/web/app/w/[ws]/p/[key]/table/_components/ot.module.css` · บอร์ด: Table
+ไฟล์: `apps/web/app/work/[ws]/p/[key]/table/_components/table-view.tsx`, `apps/web/app/work/[ws]/p/[key]/table/_components/ot.module.css` · บอร์ด: Table
 
 ### VD10 · Task create drawer ใช้กรอบเดียวกับ detail และ form arrangement ต่าง
 
@@ -210,7 +210,7 @@
 
 **แก้เสร็จเมื่อ:** วาง hierarchy ของ M5 โดยเฉพาะ; หน้าจอแรกต้องเห็นรายการที่รอการตัดสินใจเมื่อมีข้อมูล
 
-ไฟล์: `apps/web/app/w/[ws]/my-tasks/_components/home-page.tsx` · บอร์ด: MobileHome
+ไฟล์: `apps/web/app/work/[ws]/my-tasks/_components/home-page.tsx` · บอร์ด: MobileHome
 
 ### VD15 · Mobile Overview ไม่ใช้ summary compact ของ M6
 
@@ -220,7 +220,7 @@
 
 **แก้เสร็จเมื่อ:** header รวมใกล้ 127 px ตามแบบ และ summary/card order ของ M6; ไม่ถือว่าการไม่ล้นแนวนอนคือผ่าน Design
 
-ไฟล์: `apps/web/app/w/[ws]/p/[key]/table/_components/overview.tsx`, `apps/web/src/components/shell/project-shell.tsx` · บอร์ด: MobileOverview
+ไฟล์: `apps/web/app/work/[ws]/p/[key]/table/_components/overview.tsx`, `apps/web/src/components/shell/project-shell.tsx` · บอร์ด: MobileOverview
 
 ### VD16 · Mobile My Tasks/Inbox ไม่ใช้โครง toolbar และ list ของ M2/M3
 
@@ -230,7 +230,7 @@
 
 **แก้เสร็จเมื่อ:** เทียบ 390×844 ด้วย list state เดียวกัน; ให้ controls/spacing และจำนวนรายการที่มองเห็นใกล้แบบ ไม่ใช้จำนวนข้อมูลมาชดเชย
 
-ไฟล์: `apps/web/app/w/[ws]/my-tasks/_components/my-tasks-page.tsx`, `apps/web/app/w/[ws]/inbox/_components/inbox-page.tsx` · บอร์ด: MobileMyTasks, MobileInbox
+ไฟล์: `apps/web/app/work/[ws]/my-tasks/_components/my-tasks-page.tsx`, `apps/web/app/work/[ws]/inbox/_components/inbox-page.tsx` · บอร์ด: MobileMyTasks, MobileInbox
 
 ### VD17 · Mobile Kanban toolbar/card actions ต่างจาก M7
 
@@ -240,7 +240,7 @@
 
 **แก้เสร็จเมื่อ:** เทียบคอลัมน์ In progress ที่เลือกตรงกัน; ลด action ให้ตรง M7 และคงการย้ายงานที่มือถือใช้ได้
 
-ไฟล์: `apps/web/app/w/[ws]/p/[key]/board/_components/kanban-board.tsx`, `apps/web/app/w/[ws]/p/[key]/board/_components/kanban.module.css` · บอร์ด: MobileKanban
+ไฟล์: `apps/web/app/work/[ws]/p/[key]/board/_components/kanban-board.tsx`, `apps/web/app/work/[ws]/p/[key]/board/_components/kanban.module.css` · บอร์ด: MobileKanban
 
 ### VD18 · Mobile Sub-task properties ดันเนื้อหาหลักพ้นจอ
 
@@ -260,7 +260,7 @@
 
 **แก้เสร็จเมื่อ:** เพิ่ม safe-area/scroll padding/sticky footer ให้ปุ่มทั้งหมดพ้น bottom nav; ตรวจ pointer click ได้โดยไม่ force/keyboard workaround
 
-ไฟล์: `apps/web/app/w/[ws]/import/_components/import.module.css`, `apps/web/src/styles/globals.css` · บอร์ด: ImportExcel
+ไฟล์: `apps/web/app/work/[ws]/import/_components/import.module.css`, `apps/web/src/styles/globals.css` · บอร์ด: ImportExcel
 
 ### VD20 · Profile notification connections ขาดการ์ดกลุ่มทีม
 
@@ -270,7 +270,7 @@
 
 **แก้เสร็จเมื่อ:** คืนการ์ดกลุ่มทีมและอธิบายว่าตั้งโดย PM ไม่ใช่ personal channel; matrix/connection spacing ตรง I
 
-ไฟล์: `apps/web/app/w/[ws]/profile/_components/notify-tab.tsx` · บอร์ด: Profile
+ไฟล์: `apps/web/app/work/[ws]/profile/_components/notify-tab.tsx` · บอร์ด: Profile
 
 ### VD21 · Invite dialog ใช้ controls/สัดส่วนต่างจาก H
 
@@ -280,7 +280,7 @@
 
 **แก้เสร็จเมื่อ:** เทียบสถานะ Invite เปิดแล้วทั้งสองขนาด พร้อม email หลายรายการและ role/permission ที่เหมือนกัน
 
-ไฟล์: `apps/web/app/w/[ws]/members/_components/invite-dialog.tsx` · บอร์ด: WorkspaceMembers
+ไฟล์: `apps/web/app/work/[ws]/members/_components/invite-dialog.tsx` · บอร์ด: WorkspaceMembers
 
 ### VD22 · Due request dialog ขาดตัวเพิ่มวันและจัดส่วนผลกระทบต่าง
 
@@ -330,7 +330,7 @@
 
 **แก้เสร็จเมื่อ:** จัด template grid/summary/stepper ตาม A ที่1440 และ responsive ที่390; ใช้สถานะกรอกข้อมูลเดียวกันก่อนเทียบ
 
-ไฟล์: `apps/web/app/w/[ws]/new-project/_components` · บอร์ด: NewProject
+ไฟล์: `apps/web/app/work/[ws]/new-project/_components` · บอร์ด: NewProject
 
 ## ตารางความครอบคลุมรายบอร์ด
 

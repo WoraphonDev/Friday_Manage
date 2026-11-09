@@ -9,8 +9,8 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import files from "../../messages/th/files.json";
-import { FilesPage, extOf, flattenFolders, formatBytes, uploadUrl } from "../../app/w/[ws]/p/[key]/files/_components/files-page";
-import type { FileDetail, FileItem, Folder } from "../../app/w/[ws]/p/[key]/files/_components/types";
+import { FilesPage, extOf, flattenFolders, formatBytes, uploadUrl } from "../../app/work/[ws]/p/[key]/files/_components/files-page";
+import type { FileDetail, FileItem, Folder } from "../../app/work/[ws]/p/[key]/files/_components/types";
 
 const person = (id: string, displayName: string) => ({ id, displayName, initials: displayName.slice(0, 2), avatarUrl: null });
 const A = person("u1", "ผู้พัฒนาหนึ่ง");
@@ -51,7 +51,7 @@ beforeEach(() => {
   trashed = [file("00000000-0000-4000-8000-0000000000aa", "ไฟล์เก่า.png", { deletedAt: "2026-11-04T03:00:00Z" })];
   urls = []; posts = []; deletes = []; patches = []; puts = 0;
   perm = { ...permissions, permissions: [...permissions.permissions, "file.upload", "file.delete", "project.trash"] };
-  navigation.pathname = "/w/sample/p/DE/files";
+  navigation.pathname = "/work/sample/p/DE/files";
   server.use(
     http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () => HttpResponse.json(perm)),
     http.get("*/api/v1/w/:ws/projects/:key/folders", () => HttpResponse.json({ rootFileCount: root.length, items: folders })),
@@ -137,7 +137,7 @@ describe("Files (8)", () => {
     const panel = screen.getByRole("region", { name: "รายละเอียดไฟล์" });
     expect(await within(panel).findByText("แก้ตามความเห็นผู้ใช้ (ปัจจุบัน)")).toBeInTheDocument();
     expect(within(panel).getByText("อัปโหลดครั้งแรก")).toBeInTheDocument();
-    expect(within(panel).getByRole("link", { name: "DE-39" })).toHaveAttribute("href", "/w/sample/p/DE/files?issue=DE-39");
+    expect(within(panel).getByRole("link", { name: "DE-39" })).toHaveAttribute("href", "/work/sample/p/DE/files?issue=DE-39");
     expect(within(panel).getAllByRole("link", { name: "Download" })[0]).toHaveAttribute("href", `/api/v1/w/sample/projects/DE/files/${F1}/download`);
     expect(within(panel).getAllByRole("link", { name: "Download" })[1]).toHaveAttribute("href", `/api/v1/w/sample/projects/DE/files/${F1}/download?version=1`);
 

@@ -147,7 +147,7 @@
          <Link href="/login" className={styles.login}>
 ```
 
-6. `apps/web/app/w/[ws]/profile/_components/personal-tab.tsx` (W17) เปลี่ยนภาษาในฟอร์มแล้วตั้งปีเริ่มต้นตามภาษา และหลังบันทึกให้หน้าเปลี่ยนภาษาทันที
+6. `apps/web/app/work/[ws]/profile/_components/personal-tab.tsx` (W17) เปลี่ยนภาษาในฟอร์มแล้วตั้งปีเริ่มต้นตามภาษา และหลังบันทึกให้หน้าเปลี่ยนภาษาทันที
 
 ```diff
 +import { defaultYearFormat, isLocale, writeLocaleCookie } from "@/features/locale-switch";

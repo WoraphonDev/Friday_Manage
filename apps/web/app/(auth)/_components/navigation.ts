@@ -8,5 +8,5 @@ interface WorkspaceItem {
 export async function destinationAfterLogin(returnTo: string | null) {
   if (returnTo) return returnTo;
   const { items } = await api.get<{ items: WorkspaceItem[] }>("/me/workspaces");
-  return items[0] ? `/w/${items[0].slug}` : "/onboarding";
+  return items[0] ? `/work/${items[0].slug}` : "/onboarding";
 }

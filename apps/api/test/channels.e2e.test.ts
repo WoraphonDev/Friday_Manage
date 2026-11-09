@@ -112,7 +112,7 @@ describe('ท่อส่ง Email ตาม pref', () => {
     expect(mails).toHaveLength(1);
     expect(mails[0]).toMatchObject({ to: `dev@${team.slug}.example.com`, from: 'Friday Manage <notify@friday.test>' });
     expect(mails[0].subject).toBe('[Friday] Mick มอบหมายงานให้คุณ: DP-1 งานทดสอบ');
-    expect(mails[0].text).toContain(`/w/${team.slug}/p/DP/table?issue=DP-1`);
+    expect(mails[0].text).toContain(`/work/${team.slug}/p/DP/table?issue=DP-1`);
     expect(mails[0].text).toContain('คุณเป็น Assignee ของงานนี้');
     expect(await deliveries()).toMatchObject([{ channel: 'email', status: 'sent', attempts: 1, last_error: null }]);
   });

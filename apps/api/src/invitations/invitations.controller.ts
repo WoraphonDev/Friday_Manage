@@ -3,8 +3,10 @@ import { type AppRequest, Auth, type AuthInfo, Public, Tenant, type TenantInfo }
 import { TenantGuard } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
 import { CreateInvitationsBody, InvitationsService } from './invitations.service.js';
+import { webUrl } from '../auth/auth.config.js';
 
-const appUrl = (req: AppRequest) => process.env.APP_URL ?? `${req.protocol}://${req.get('host')}`;
+// ลิงก์เชิญต้องเป็นที่อยู่ของเว็บ ไม่ใช่ Host ของคำขอ (ผ่าน proxy ของเว็บแล้ว Host = ที่อยู่ภายในของ API เช่น host.docker.internal:3001)
+const appUrl = (_req: AppRequest) => (process.env.APP_URL ?? webUrl()).replace(/\/$/, '');
 
 @Controller('w/:ws/invitations')
 @UseGuards(TenantGuard)

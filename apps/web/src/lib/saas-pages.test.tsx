@@ -15,11 +15,11 @@ import { Landing, PricingPage } from "../../app/(public)/_components/landing";
 import { LegalView } from "../../app/(public)/_components/legal";
 import { CONSENT_KEY, CookieConsent } from "../../app/(public)/_components/cookie-consent";
 import { SiteFooter } from "../../app/(public)/_components/site";
-import { Billing } from "../../app/w/[ws]/billing/_components/billing";
-import type { BillingProfile, CheckoutResult, Invoice } from "../../app/w/[ws]/billing/_components/types";
+import { Billing } from "../../app/work/[ws]/billing/_components/billing";
+import type { BillingProfile, CheckoutResult, Invoice } from "../../app/work/[ws]/billing/_components/types";
 
 const stripe = vi.hoisted(() => ({ enabled: true, confirm: vi.fn(), mount: vi.fn() }));
-vi.mock("../../app/w/[ws]/billing/_components/stripe", () => ({
+vi.mock("../../app/work/[ws]/billing/_components/stripe", () => ({
   STRIPE_KEY: "pk_test_sample",
   loadStripe: async () =>
     stripe.enabled
@@ -105,7 +105,7 @@ beforeEach(() => {
   } catch {
     /* jsdom */
   }
-  navigation.pathname = "/w/sample/billing/checkout";
+  navigation.pathname = "/work/sample/billing/checkout";
   server.use(
     http.get("*/api/v1/public/plans", () => HttpResponse.json(plansBody)),
     http.get("*/api/v1/w/:ws/usage", () => HttpResponse.json(usageBody)),
@@ -338,8 +338,8 @@ describe("ชำระเงิน (R2)", () => {
     expect(post).toMatchObject({ method: "POST", path: "/w/sample/billing/checkout", body: { plan: "team_m", cycle: "monthly", method: "card", wht: false, poNumber: "PO-001" } });
     expect(post.key).toMatch(/^[A-Za-z0-9_.:-]{8,128}$/);
     expect(stripe.confirm).toHaveBeenCalledWith("pi_sample_secret_sample", expect.objectContaining({ payment_method: expect.objectContaining({ billing_details: { name: "บริษัท ตัวอย่าง จำกัด", email: "account@example.com" } }) }));
-    expect(screen.getByRole("link", { name: "ดู Billing" })).toHaveAttribute("href", "/w/sample/billing");
-    expect(screen.getByRole("link", { name: "กลับไปทำงาน" })).toHaveAttribute("href", "/w/sample");
+    expect(screen.getByRole("link", { name: "ดู Billing" })).toHaveAttribute("href", "/work/sample/billing");
+    expect(screen.getByRole("link", { name: "กลับไปทำงาน" })).toHaveAttribute("href", "/work/sample");
   });
 
   it("Idempotency-Key: ใช้ซ้ำเมื่อ retry หลัง 5xx · ได้ key ใหม่เมื่อเปลี่ยนรายละเอียด", async () => {
@@ -495,7 +495,7 @@ describe("แพ็กเกจ & Billing", () => {
   });
   let items: Invoice[];
   beforeEach(() => {
-    navigation.pathname = "/w/sample/billing";
+    navigation.pathname = "/work/sample/billing";
     items = [
       invoice({ method: "transfer", whtAmount: 9_000, amountDue: 312_000, whtDueBy: "2099-12-06" }),
       invoice({ id: "inv-paid", number: "FRI-2610-0002", status: "paid", method: "card", taxDocument: { id: "tx-1", number: "TX-2610-0002", status: "issued", sentAt: null, pdfUrl: "/api/v1/w/sample/billing/tax-documents/tx-1.pdf" } }),
@@ -518,7 +518,7 @@ describe("แพ็กเกจ & Billing", () => {
     expect(screen.getByText("ทดลองใช้")).toBeInTheDocument();
     expect(screen.getByText("9 / 25 คน")).toBeInTheDocument();
     expect(screen.getByText("1.2 / 250 GB")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ชำระเงิน" })).toHaveAttribute("href", "/w/sample/billing/checkout?plan=team_s");
+    expect(screen.getByRole("link", { name: "ชำระเงิน" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_s");
     expect(screen.getByText("บริษัท ตัวอย่าง จำกัด")).toBeInTheDocument();
 
     const rows = await screen.findAllByRole("listitem");
@@ -579,15 +579,15 @@ describe("เกินแพ็กเกจ (Q2)", () => {
   };
 
   it("1. ทีมโตเกินแพ็กเกจ (402 seats) · Owner เห็นทางออกและเปลี่ยนแพ็กเกจที่แนะนำ", async () => {
-    navigation.pathname = "/w/sample/members";
+    navigation.pathname = "/work/sample/members";
     renderWithProviders(<PlanLimitHost />, { messages });
     await trigger({ kind: "seats", limit: 10, current: 12, increment: 1, plan: "team_s", suggestedPlan: "team_m", exits: ["deactivate_members", "upgrade"] });
     const dialog = await screen.findByRole("dialog", { name: "เชิญคนที่ 13 ไม่ได้ในตอนนี้" });
     expect(within(dialog).getByText(/Guest \(ลูกค้า\) ยังเชิญได้ไม่จำกัด/)).toBeInTheDocument();
     expect(within(dialog).getByText("12 / 10 คน")).toBeInTheDocument();
     expect(await within(dialog).findByText("Team M รองรับ 25 คน")).toBeInTheDocument();
-    expect(await within(dialog).findByRole("link", { name: "เปลี่ยนเป็น Team M" })).toHaveAttribute("href", "/w/sample/billing/checkout?plan=team_m");
-    expect(within(dialog).getByRole("link", { name: "ดูสมาชิกที่ไม่ใช้งาน" })).toHaveAttribute("href", "/w/sample/members");
+    expect(await within(dialog).findByRole("link", { name: "เปลี่ยนเป็น Team M" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_m");
+    expect(within(dialog).getByRole("link", { name: "ดูสมาชิกที่ไม่ใช้งาน" })).toHaveAttribute("href", "/work/sample/members");
   });
 
   it("2. Free ครบ 3 โปรเจกต์ · Member เห็น ขอให้ Admin อัปเกรด", async () => {
@@ -609,7 +609,7 @@ describe("เกินแพ็กเกจ (Q2)", () => {
   it("3. ฟีเจอร์ของแพ็กเกจเสียเงิน (Gantt บน Free) · ไม่ซ่อน tab แต่บอกทางออก", async () => {
     const { unmount } = renderWithProviders(<FeatureLock ws="sample" feature="Gantt" canManage><p>เนื้อหา Gantt ตัวอย่าง</p></FeatureLock>, { messages });
     expect(screen.getByRole("heading", { name: "Gantt ใช้ได้ในแพ็กเกจ Team" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "อัปเกรดเป็น Team" })).toHaveAttribute("href", "/w/sample/billing/checkout?plan=team_s");
+    expect(screen.getByRole("link", { name: "อัปเกรดเป็น Team" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_s");
     expect(screen.getByRole("link", { name: "ดูแพ็กเกจ" })).toHaveAttribute("href", "/pricing");
     expect(screen.getByText("เนื้อหา Gantt ตัวอย่าง").parentElement).toHaveAttribute("aria-hidden", "true");
     unmount();
@@ -621,7 +621,7 @@ describe("เกินแพ็กเกจ (Q2)", () => {
     usageBody = usage({ status: "trialing", trial: { endsAt: "2026-11-09T00:00:00Z", daysLeft: 3, expired: false } });
     const owner = renderWithProviders(<UsageBanner ws="sample" />, { messages });
     expect(await screen.findByText("ทดลอง Team S เหลือ 3 วัน")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "เลือกแพ็กเกจ" })).toHaveAttribute("href", "/w/sample/billing/checkout");
+    expect(screen.getByRole("link", { name: "เลือกแพ็กเกจ" })).toHaveAttribute("href", "/work/sample/billing/checkout");
     owner.unmount();
 
     usageBody = usage({ canManageBilling: false, status: "trialing", trial: { endsAt: "2026-11-09T00:00:00Z", daysLeft: 3, expired: false } });
@@ -643,9 +643,9 @@ describe("เกินแพ็กเกจ (Q2)", () => {
     usageBody = usage({ status: "past_due", seats: { used: 12, limit: 10, ratio: 1, over: true } });
     const { unmount } = renderWithProviders(<UsageBanner ws="sample" />, { messages });
     expect(await screen.findByText("มีใบแจ้งหนี้เลยกำหนดชำระ")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ดูใบแจ้งหนี้" })).toHaveAttribute("href", "/w/sample/billing");
+    expect(screen.getByRole("link", { name: "ดูใบแจ้งหนี้" })).toHaveAttribute("href", "/work/sample/billing");
     expect(screen.getByText("ทีมมี 12 คน เกิน Team S (10 คน)")).toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: "เปลี่ยนเป็น Team M" })).toHaveAttribute("href", "/w/sample/billing/checkout?plan=team_m");
+    expect(await screen.findByRole("link", { name: "เปลี่ยนเป็น Team M" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_m");
     unmount();
     const urls: string[] = [];
     server.use(http.get("*/api/v1/w/:ws/usage", ({ request }) => {
@@ -658,20 +658,20 @@ describe("เกินแพ็กเกจ (Q2)", () => {
   });
 
   it("6. พื้นที่ไฟล์เต็ม (402 storage_bytes) · ลิงก์ไปไฟล์ของโปรเจกต์ที่เปิดอยู่", async () => {
-    navigation.pathname = "/w/sample/p/DE/files";
+    navigation.pathname = "/work/sample/p/DE/files";
     renderWithProviders(<PlanLimitHost />, { messages });
     await trigger({ kind: "storage_bytes", limit: 120 * 1024 ** 3, current: 120 * 1024 ** 3, increment: 85 * 1024 ** 2, plan: "team_l", suggestedPlan: "enterprise" });
     const dialog = await screen.findByRole("dialog", { name: "พื้นที่ไฟล์เต็ม" });
     expect(within(dialog).getByText("อัปโหลดไฟล์ขนาด 85 MB ไม่ได้ · ไฟล์เดิมทั้งหมดยังเปิดได้ตามปกติ")).toBeInTheDocument();
     expect(within(dialog).getByText("120 / 120 GB")).toBeInTheDocument();
-    expect(await within(dialog).findByRole("link", { name: "จัดการไฟล์" })).toHaveAttribute("href", "/w/sample/p/DE/files");
-    expect(within(dialog).getByRole("link", { name: "เปลี่ยนแพ็กเกจ" })).toHaveAttribute("href", "/w/sample/billing/checkout");
+    expect(await within(dialog).findByRole("link", { name: "จัดการไฟล์" })).toHaveAttribute("href", "/work/sample/p/DE/files");
+    expect(within(dialog).getByRole("link", { name: "เปลี่ยนแพ็กเกจ" })).toHaveAttribute("href", "/work/sample/billing/checkout");
   });
 
   it("7. Automation ครบโควตา · ต่ำกว่าโควตาไม่แสดง", () => {
-    const { unmount } = renderWithProviders(<AutomationQuotaBanner usage={{ runsThisMonth: 1000, quota: 1000 }} canManage href="/w/sample/p/DE/automation" />, { messages });
+    const { unmount } = renderWithProviders(<AutomationQuotaBanner usage={{ runsThisMonth: 1000, quota: 1000 }} canManage href="/work/sample/p/DE/automation" />, { messages });
     expect(screen.getByText("Automation ทำงานครบ 1,000 ครั้งของเดือนนี้")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ดูกฎที่ทำงานบ่อย" })).toHaveAttribute("href", "/w/sample/p/DE/automation");
+    expect(screen.getByRole("link", { name: "ดูกฎที่ทำงานบ่อย" })).toHaveAttribute("href", "/work/sample/p/DE/automation");
     unmount();
     const below = renderWithProviders(<AutomationQuotaBanner usage={{ runsThisMonth: 999, quota: 1000 }} canManage />, { messages });
     expect(screen.queryByRole("status")).not.toBeInTheDocument();

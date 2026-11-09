@@ -95,7 +95,7 @@ function Document({ doc, onVersion }: { doc: LegalDocument; onVersion: (v: strin
           <h1>{t(`types.${doc.type}`)}</h1>
           <div className={cn(styles.muted, styles.meta)}>
             <span>{t("version", { version: doc.version })}</span>·<span>{t("effective", { date: formatDate(doc.effectiveAt, "BE", true) })}</span>·
-            <button type="button" className={styles.linkButton} style={{ color: "var(--primary)" }} onClick={() => window.print()}>
+            <button type="button" className={styles.linkButton} style={{ color: "var(--primary-text)" }} onClick={() => window.print()}>
               {t("print")}
             </button>
             {doc.versions.length > 1 && (

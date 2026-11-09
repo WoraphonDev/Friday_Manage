@@ -160,10 +160,17 @@ describe('งาน', () => {
     expect(sub.body).toMatchObject({ key: 'DP-3', parentKey: 'DP-1', moduleId: creditLine, planEnd: '2026-12-08' });
     const deep = await mick.post('/w/friday-dev/projects/DP/issues', { title: 'ลึกเกิน', parentKey: 'DP-3' });
     expect(deep.body.error.code).toBe('issue_depth_exceeded');
-    const out = await mick.post('/w/friday-dev/projects/DP/issues', { title: 'เกินช่วงแม่', parentKey: 'DP-1', planStart: '2026-12-16', planEnd: '2026-12-17' });
-    expect(out.body.warnings.map((w: { code: string }) => w.code)).toContain('outside_parent_range');
+    // วันที่เกินช่วงแม่: ต้องยืนยันก่อน แล้วระบบขยายช่วงของแม่ให้ (ผู้ใช้ตัดสิน 2026-11-08)
+    const ask = await mick.post('/w/friday-dev/projects/DP/issues', { title: 'เกินช่วงแม่', parentKey: 'DP-1', planStart: '2026-12-16', planEnd: '2026-12-17' });
+    expect(ask.status).toBe(422);
+    expect(ask.body.error).toMatchObject({ code: 'subtask_outside_parent', details: { confirmable: true, confirmField: 'extendParent', parentKey: 'DP-1', nextEnd: '2026-12-17' } });
+    // ยืนยันแล้วขยายแม่ทดสอบใน issues.e2e · ที่นี่จำลองงานเก่าที่เกินช่วงอยู่แล้ว (เช่น นำเข้า) ให้ Timeline ด้านล่างใช้
+    const out = await mick.post('/w/friday-dev/projects/DP/issues', { title: 'เกินช่วงแม่', parentKey: 'DP-1' });
+    expect(out.status).toBe(201);
+    await owner.query(`UPDATE issues SET plan_start = '2026-12-16', plan_end = '2026-12-17' WHERE id = $1`, [out.body.id]);
 
     const detail = await mick.get('/w/friday-dev/issues/DP-1');
+    expect(detail.body.planEnd).toBe('2026-12-15');
     expect(detail.headers.etag).toBe('"1"');
     expect(detail.body.subtasks.map((x: { key: string }) => x.key)).toEqual(['DP-3', 'DP-4']);
   });
@@ -255,16 +262,16 @@ describe('แก้ไขงาน และกติกาการเปลี
     expect(prog.body.error.code).toBe('progress_from_subtasks');
   });
 
-  it('หลังตั้ง Baseline การแก้แผนต้องมีเหตุผล และบันทึกในการแก้ไขแผน', async () => {
+  it('หลังตั้ง Baseline การแก้แผนบันทึกในการแก้ไขแผน · เหตุผลไม่บังคับ', async () => {
     await owner.query(
       `INSERT INTO plan_baselines (workspace_id, project_id, version, source) SELECT workspace_id, id, 1, 'import' FROM projects WHERE key = 'DP'`,
     );
     const noReason = await mick.patch('/w/friday-dev/issues/DP-2', { planEnd: '2026-12-10' }, 4);
-    expect(noReason.body.error.code).toBe('plan_change_reason_required');
-    const ok = await mick.patch('/w/friday-dev/issues/DP-2', { planEnd: '2026-12-11', planChangeReason: 'BA เพิ่ม Template แบบ Fleet' }, 4);
+    expect(noReason.status, JSON.stringify(noReason.body)).toBe(200);
+    const ok = await mick.patch('/w/friday-dev/issues/DP-2', { planEnd: '2026-12-11', planChangeReason: 'BA เพิ่ม Template แบบ Fleet' }, noReason.body.version);
     expect(ok.status).toBe(200);
-    const rows = await owner.query(`SELECT field, reason, new_value FROM plan_changes`);
-    expect(rows.rows).toEqual([{ field: 'planEnd', reason: 'BA เพิ่ม Template แบบ Fleet', new_value: '2026-12-11' }]);
+    const rows = await owner.query(`SELECT field, reason, new_value FROM plan_changes ORDER BY changed_at`);
+    expect(rows.rows).toEqual([{ field: 'planEnd', reason: null, new_value: '2026-12-10' }, { field: 'planEnd', reason: 'BA เพิ่ม Template แบบ Fleet', new_value: '2026-12-11' }]);
   });
 });
 
@@ -328,6 +335,8 @@ describe('เชิญสมาชิก (H, J4)', () => {
     expect(r.status).toBe(201);
     expect(r.body.items.map((x: { status: string }) => x.status)).toEqual(['invited', 'already_member']);
     token = r.body.items[0].inviteUrl.split('/join/')[1];
+    // ลิงก์ชี้ไปที่เว็บ (APP_URL / WEB_URL) ไม่ใช่ Host ของคำขอที่วิ่งผ่าน proxy ของเว็บ
+    expect(r.body.items[0].inviteUrl.split('/join/')[0]).toBe((process.env.APP_URL ?? process.env.WEB_URL ?? 'http://localhost:3000').replace(/\/$/, ''));
     const anon = await request(app.getHttpServer()).get(`/api/v1/invitations/${token}`);
     expect(anon.body).toMatchObject({ status: 'pending', email: 'new.dev@example.com', workspace: { slug: 'friday-dev' }, invitedBy: 'Mick', project: { key: 'DP' }, projectRole: 'member' });
   });
@@ -399,11 +408,13 @@ async function planWorkbook() {
 describe('Import Excel (L3)', () => {
   let jobId = '';
 
-  it('อัปโหลดแล้วจับคู่คอลัมน์ 17 ช่อง (รวม ID) และตรวจข้อมูลตามหน้า L3', async () => {
+  // คอลัมน์ Sprint ในไฟล์ไม่ถูกจับคู่แล้ว (เลิกใช้กลุ่มงาน · ผู้ใช้ตัดสิน 2026-11-08)
+  it('อัปโหลดแล้วจับคู่คอลัมน์ 16 ช่อง (รวม ID) และตรวจข้อมูลตามหน้า L3', async () => {
     const r = await mick.upload('/w/friday-dev/import-jobs', await planWorkbook(), 'Plan Demo 2026 (2026-11-05).xlsx', { mode: 'create' });
     expect(r.status).toBe(201);
     jobId = r.body.id;
-    expect(r.body.columns.filter((c: { field: string | null }) => c.field)).toHaveLength(17);
+    expect(r.body.columns.filter((c: { field: string | null }) => c.field)).toHaveLength(16);
+    expect(r.body.columns.find((c: { header: string }) => c.header === 'Sprint')?.field).toBeNull();
     expect(r.body.summary).toMatchObject({ rows: 7, modules: 3, ready: 5, backlog: 1, skipped: 1, manDay: 14, planFrom: '2026-11-05', planTo: '2026-12-15' });
     expect(r.body.project).toEqual({ name: 'Plan Demo 2026', key: 'PD' });
     const problems = r.body.findings.map((f: { level: string; no: number | null; problem: string }) => `${f.level}:${f.no ?? '-'}:${f.problem}`);
@@ -413,7 +424,6 @@ describe('Import Excel (L3)', () => {
         'warn:3:Plan Start 2026-12-07 ตรงวันหยุด',
         'warn:5:ไม่มี Plan Start / End',
         'warn:6:ไม่มีค่า Status',
-        'warn:6:คอลัมน์ Sprint เป็น "Database 4 tables (X, Y)" ดูไม่ใช่ชื่อกลุ่มงาน',
         'warn:-:ไม่พบ "Tung" ในรายชื่อสมาชิก (1 แถว)',
       ]),
     );
@@ -442,7 +452,7 @@ describe('Import Excel (L3)', () => {
     expect(r.body.invitations.map((i: { email: string; status: string }) => `${i.email}:${i.status}`)).toEqual(['donut@example.com:invited']);
 
     const p3 = await mick.get('/w/friday-dev/issues/PLAN-6'); // No. 3 · ID 6
-    expect(p3.body).toMatchObject({ planStart: '2026-12-08', planEnd: '2026-12-15', size: 'M', estimateMd: 5, assigneeIds: [kaijeawId], description: 'ใช้ร่วมกับ DP-38' });
+    expect(p3.body).toMatchObject({ planStart: '2026-12-08', planEnd: '2026-12-15', size: 'M', estimateMd: 5, assigneeIds: [kaijeawId], description: null, remark: 'ใช้ร่วมกับ DP-38' }); // คอลัมน์ Remark ของไฟล์เดิมเข้าช่อง Remark (ผู้ใช้ตัดสิน 2026-11-09)
     const p2 = await mick.get('/w/friday-dev/issues/PLAN-5');
     expect(p2.body.assigneeIds).toEqual([kaijeawId]);
     expect(p2.body.details).toMatchObject({ requirementText: 'SRS', importedPeople: { devs: ['Pond'], ba: 'Donut' } });
@@ -456,13 +466,13 @@ describe('Import Excel (L3)', () => {
              (SELECT count(*)::int FROM baseline_items bi JOIN plan_baselines b ON b.id = bi.baseline_id JOIN projects p ON p.id = b.project_id WHERE p.key = 'PLAN') AS baseline,
              (SELECT count(*)::int FROM issue_requirements ir JOIN issues i ON i.id = ir.issue_id JOIN projects p ON p.id = i.project_id WHERE p.key = 'PLAN') AS reqs,
              (SELECT issue_seq FROM projects WHERE key = 'PLAN') AS seq`);
-    expect(counts.rows[0]).toEqual({ phases: 5, baseline: 6, reqs: 4, seq: 10 });
+    expect(counts.rows[0]).toEqual({ phases: 0, baseline: 6, reqs: 4, seq: 10 });
 
-    // หลังนำเข้า สร้างงานใหม่ได้เลขถัดจาก No. สูงสุด และแก้แผนต้องมีเหตุผลเพราะมี Baseline
+    // หลังนำเข้า สร้างงานใหม่ได้เลขถัดจาก No. สูงสุด · แก้แผนได้เลย (มี Baseline จึงลงการแก้ไขแผน)
     const next = await mick.post('/w/friday-dev/projects/PLAN/issues', { title: 'งานใหม่', moduleId: p3.body.moduleId });
     expect(next.body.key).toBe('PLAN-11');
     const edit = await mick.patch('/w/friday-dev/issues/PLAN-6', { planEnd: '2026-12-16' }, p3.body.version);
-    expect(edit.body.error.code).toBe('plan_change_reason_required');
+    expect(edit.status, JSON.stringify(edit.body)).toBe(200);
 
     const again = await mick.post(`/w/friday-dev/import-jobs/${jobId}/commit`);
     expect(again.body.error.code).toBe('import_not_editable');

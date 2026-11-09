@@ -1,6 +1,9 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { z } from 'zod';
+import { z } from 'zod';
 import { AppError } from './errors.js';
+
+// ข้อความตรวจข้อมูลที่ส่งกลับไปแสดงใต้ช่องกรอกเป็นภาษาไทย (เดิม "Invalid email address" ฯลฯ ของ zod เป็นภาษาอังกฤษ)
+z.config(z.locales.th());
 
 /**
  * โหมดสำรวจสำหรับสร้าง OpenAPI (src/openapi): เรียก handler ของ controller กับ service ปลอม แล้วจด schema ที่ส่งเข้า `parse`

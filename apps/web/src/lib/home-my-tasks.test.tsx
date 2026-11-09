@@ -8,9 +8,9 @@ import { asMobile } from "@/test/mobile";
 import { server } from "@/test/server";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import hmt from "../../messages/th/home-my-tasks.json";
-import { HomePage } from "../../app/w/[ws]/my-tasks/_components/home-page";
-import { MyTasksPage, dropTarget, weekLoad, weekStartOf } from "../../app/w/[ws]/my-tasks/_components/my-tasks-page";
-import type { HomeData, MyIssues, TaskItem } from "../../app/w/[ws]/my-tasks/_components/types";
+import { HomePage } from "../../app/work/[ws]/my-tasks/_components/home-page";
+import { MyTasksPage, dropTarget, weekLoad, weekStartOf } from "../../app/work/[ws]/my-tasks/_components/my-tasks-page";
+import type { HomeData, MyIssues, TaskItem } from "../../app/work/[ws]/my-tasks/_components/types";
 
 const person = (id: string, displayName: string) => ({ id, displayName, initials: displayName.slice(0, 2) });
 const errorBody = (status: number, code: string) => HttpResponse.json({ error: { code, message: "ข้อผิดพลาดทดสอบ", requestId: "req_w03_001" } }, { status });
@@ -98,9 +98,9 @@ describe("Home (E / M5)", () => {
     expect(screen.getByTestId("summary-line")).toHaveTextContent("2 งาน ครบกำหนดวันนี้ และ 7 งาน เลยกำหนด");
     expect(screen.getByRole("link", { name: /ครบกำหนดวันนี้ \(ทีม\)/ })).toHaveTextContent("DE-35, DE-60");
     expect(screen.getByRole("link", { name: /Overdue \(ทีม\)/ })).toHaveTextContent("ผู้พัฒนาหนึ่ง 4 · ผู้พัฒนาสอง 3");
-    expect(screen.getByRole("link", { name: /ผู้พัฒนาหนึ่ง ขอเลื่อน Due · DE-30/ })).toHaveAttribute("href", "/w/sample/p/DE/board?issue=DE-30");
+    expect(screen.getByRole("link", { name: /ผู้พัฒนาหนึ่ง ขอเลื่อน Due · DE-30/ })).toHaveAttribute("href", "/work/sample/p/DE/board?issue=DE-30");
     const project = screen.getByRole("link", { name: /แผนพัฒนาผลิตภัณฑ์.*Off track/s });
-    expect(project).toHaveAttribute("href", "/w/sample/p/DE");
+    expect(project).toHaveAttribute("href", "/work/sample/p/DE");
     expect(within(project).getByText("22%")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /DE-39 ฟอร์มตัวอย่าง/ })).toBeInTheDocument();
     expect(await screen.findByText("บั๊กตัวอย่าง", { exact: false })).toBeInTheDocument();
@@ -167,7 +167,7 @@ describe("My Tasks (F / M2)", () => {
     expect(screen.getByRole("button", { name: /ฉันสร้าง 5/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ย่อกลุ่ม เลยกำหนด" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: "ขยายกลุ่ม ภายหลัง" })).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByRole("link", { name: "งานตัวอย่าง DE-23" })).toHaveAttribute("href", "/w/sample/p/DE/board?issue=DE-23");
+    expect(screen.getByRole("link", { name: "งานตัวอย่าง DE-23" })).toHaveAttribute("href", "/work/sample/p/DE/board?issue=DE-23");
     expect(within(screen.getByTestId("task-DE-23")).getByText("เลย 2 วัน")).toBeInTheDocument();
     expect(within(screen.getByTestId("task-DE-40")).getByText("Sub-task")).toBeInTheDocument();
     const summary = screen.getByRole("region", { name: "สรุปของฉัน" });

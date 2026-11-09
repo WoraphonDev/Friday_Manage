@@ -31,7 +31,8 @@ function plain(v: ExcelJS.CellValue): Cell {
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9ก-๙]/g, '');
 
 /**
- * อ่านไฟล์แผนงาน: ชีตตารางงานคือชีตชื่อ "Table" หรือชีตแรกที่แถวหัวมี No. และ Module
+ * อ่านไฟล์แผนงาน: ชีตตารางงานคือชีต "Tasks" (รูปแบบใหม่) / "Table" (รูปแบบเดิม)
+ * หรือชีตแรกที่แถวหัวมี Module คู่กับ Key / Title / No.
  * ชีต "Holidays" (ถ้ามี) = วันหยุดที่ไฟล์ใช้คำนวณ Plan End
  */
 export async function readPlanWorkbook(buffer: Buffer): Promise<ParsedWorkbook> {
@@ -45,9 +46,10 @@ export async function readPlanWorkbook(buffer: Buffer): Promise<ParsedWorkbook> 
   };
   const isTable = (ws: ExcelJS.Worksheet) => {
     const h = headerOf(ws).map(norm);
-    return h.includes('no') && h.includes('module');
+    return h.includes('module') && ['no', 'key', 'id', 'title', 'moduletask', 'ชื่องาน'].some((x) => h.includes(x));
   };
-  const ws = wb.worksheets.find((w) => w.name.toLowerCase() === 'table' && isTable(w)) ?? wb.worksheets.find(isTable);
+  const named = (n: string) => wb.worksheets.find((w) => w.name.toLowerCase() === n && isTable(w));
+  const ws = named('tasks') ?? named('table') ?? wb.worksheets.find(isTable);
   if (!ws) throw new Error('no_table_sheet');
 
   const headers = headerOf(ws);

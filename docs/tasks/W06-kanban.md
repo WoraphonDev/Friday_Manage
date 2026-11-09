@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/p/[key]/board/**` · `apps/web/messages/th/kanban.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/p/[key]/board/**` · `apps/web/messages/th/kanban.json` |
 | หน้าจอ | 3 (`design/canvas/Kanban.dc.html`) · M7 (`design/canvas/MobileKanban.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · `GET p/board`, `POST i/move` (มีแล้ว) |
 

@@ -65,12 +65,16 @@ function SignupFlow() {
   const [changing, setChanging] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [info, setInfo] = useState<string | null>(null);
+  // false = ระบบยังไม่ได้ตั้ง SMTP รหัสยืนยันจึงไม่ถูกส่ง · ให้ข้ามไปก่อนแล้วยืนยันภายหลังได้ (ผู้ใช้ขอ 2026-11-09)
+  const [emailDelivery, setEmailDelivery] = useState(true);
   const countdown = useCountdown();
 
   function validate(): Errors {
     const out: Errors = {};
     if (!displayName.trim()) out.displayName = t("signup.required");
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) out.email = t("signup.required");
+    // ไม่รับช่องว่าง , ; ในอีเมล (เช่น "tang@gg.co," จากการคัดลอก) · ว่าง = ต้องกรอก
+    if (!email.trim()) out.email = t("signup.required");
+    else if (!/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]{2,}$/.test(email.trim())) out.email = t("signup.invalidEmail");
     if (!checkPassword(password).valid) out.password = t("password.tooWeak");
     if (!accept) out.acceptTerms = t("signup.mustAccept");
     return out;
@@ -84,12 +88,13 @@ function SignupFlow() {
     if (Object.keys(local).length) return;
     setBusy(true);
     try {
-      await api.post("/auth/signup", {
+      const created = await api.post<{ emailDelivery?: boolean }>("/auth/signup", {
         email: email.trim(),
         password,
         displayName: displayName.trim(),
         acceptTerms: true,
       });
+      setEmailDelivery(created?.emailDelivery !== false);
       setStep("verify");
       setCode("");
       countdown.start(60);
@@ -123,7 +128,8 @@ function SignupFlow() {
       const result =
         mode === "change"
           ? await api.post<{ retryAfter: number }>("/me/email:change", { newEmail: email, password })
-          : await api.post<{ retryAfter: number }>("/auth/verify-email:resend", {});
+          : await api.post<{ retryAfter: number; emailDelivery?: boolean }>("/auth/verify-email:resend", {});
+      if ("emailDelivery" in result && result.emailDelivery === false) setEmailDelivery(false);
       countdown.start(result.retryAfter ?? 60);
       setInfo(t("common.resent"));
     } catch (err) {
@@ -191,12 +197,19 @@ function SignupFlow() {
           </form>
         ) : (
           <form className={styles.form} onSubmit={verify} noValidate>
+            {!emailDelivery && <FormAlert tone="info" message={t("signup.noDelivery")} />}
             {info && <FormAlert tone="success" message={info} />}
             {!!error && <FormAlert error={error} message={invalidCode ? t("signup.codeInvalid") : undefined} />}
             <OtpInput value={code} onChange={setCode} invalid={invalidCode} autoFocus />
             <Button type="submit" variant="primary" className={styles.button} disabled={busy || code.length !== 6}>
               {busy ? t("common.working") : t("signup.verifySubmit")}
             </Button>
+            {!emailDelivery && (
+              // ยังส่งอีเมลไม่ได้: บัญชีใช้งานได้แล้ว (API ไม่บังคับยืนยัน) ยืนยันอีเมลภายหลังได้เมื่อเปิดระบบอีเมล
+              <Button className={styles.button} disabled={busy} onClick={() => router.replace(returnTo ?? "/onboarding")}>
+                {t("signup.skipVerify")}
+              </Button>
+            )}
             <div className={cn(styles.muted, styles.small)}>
               {t("signup.noEmail")}{" "}
               {countdown.left > 0 ? (

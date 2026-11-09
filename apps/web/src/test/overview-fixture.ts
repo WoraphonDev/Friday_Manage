@@ -1,5 +1,5 @@
 // ข้อมูลสมมติของ GET p/overview ใช้ร่วมใน test ของ Overview (W05) และส่วนแผน (W15)
-import type { Overview } from "../../app/w/[ws]/p/[key]/table/_components/types";
+import type { Overview } from "../../app/work/[ws]/p/[key]/table/_components/types";
 
 export const person = (id: string, displayName: string) => ({ id, displayName });
 export function overview(): Overview {

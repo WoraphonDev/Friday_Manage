@@ -14,7 +14,7 @@ import { useTranslations } from "next-intl";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
 import { FridayLogo } from "@/components/brand/friday-logo";
 import { buttonVariants } from "@/components/ui";
-import { ApiError } from "@/lib/api";
+import { ApiError, supportId } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import styles from "./auth.module.css";
 
@@ -149,9 +149,9 @@ export function FormAlert({
       <div className={styles.alertBody}>
         {text && <span>{text}</span>}
         {children}
-        {apiError?.requestId && (
+        {supportId(apiError) && (
           <code className={styles.requestId}>
-            {t("common.requestId", { id: apiError.requestId })}
+            {t("common.requestId", { id: supportId(apiError) ?? "" })}
           </code>
         )}
       </div>

@@ -18,7 +18,7 @@ export interface SavedSearch { id: string; name: string; query: string; filters:
 
 /** สีและตัวย่อของไอคอนต่อชนิด ตาม Canvas P1 */
 export const TYPE_ICON: Record<SearchType | "command", { color: string; ab: string }> = {
-  task: { color: "#1D4ED8", ab: "T" },
+  task: { color: "#5B3FC4", ab: "T" },
   sub: { color: "#64748B", ab: "S" },
   bug: { color: "#DC2626", ab: "B" },
   project: { color: "#0F766E", ab: "P" },
@@ -40,7 +40,7 @@ export const GROUPS = [
 export const KEY_RE = /^#?([A-Za-z][A-Za-z0-9]{1,9})-(\d{1,9})$/;
 export const isIssue = (h: SearchHit): h is IssueHit => h.type === "task" || h.type === "sub" || h.type === "bug";
 
-const base = (ws: string) => `/w/${encodeURIComponent(ws)}`;
+const base = (ws: string) => `/work/${encodeURIComponent(ws)}`;
 // project layout เปิด Drawer งานจาก ?issue=KEY
 export const issueHref = (ws: string, projectKey: string, key: string) => `${base(ws)}/p/${encodeURIComponent(projectKey)}?issue=${encodeURIComponent(key)}`;
 export function hitHref(ws: string, h: SearchHit) {

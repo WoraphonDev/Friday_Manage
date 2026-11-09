@@ -1,0 +1,72 @@
+/* อยู่ในโครง Settings ที่เว้นขอบให้แล้ว */
+.page { width:100%; padding:0 0 48px; display:flex; flex-direction:column; gap:16px; min-width:0; }
+.top { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+.top h1 { margin:2px 0 0; font-size:22px; }
+.topRight { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.usage { min-width:220px; }
+.usageRow { display:flex; justify-content:space-between; gap:8px; font-size:11px; }
+.meter { height:6px; background:var(--subtle); border-radius:99px; overflow:hidden; margin-top:4px; }
+.meter span { display:block; height:100%; background:var(--primary); }
+.muted { color:var(--muted); font-size:11px; }
+.mono { font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:11px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; min-width:0; }
+.pill { display:inline-flex; align-items:center; gap:6px; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; vertical-align:middle; }
+.ok { background:var(--success-soft); color:var(--success-text); }
+.warn { background:var(--warning-soft); color:var(--warning-text); }
+.bad { background:var(--danger-soft); color:var(--danger-text); }
+.neu { background:var(--subtle); color:var(--foreground-soft); }
+.ent { background:var(--accent-purple-soft); color:var(--accent-purple-text); }
+.tabs { border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; }
+.tab { display:inline-flex; align-items:center; min-height:32px; padding:0 4px; margin-right:18px; border:0; border-bottom:2px solid transparent; color:var(--muted); background:transparent; font:inherit; font-size:var(--text-label); cursor:pointer; }
+.tab[aria-selected="true"] { border-bottom-color:var(--primary); color:var(--primary-text); font-weight:700; }
+.split { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+.list { flex:1 1 380px; overflow:hidden; }
+.ruleRow { display:flex; align-items:stretch; border-bottom:1px solid var(--border); }
+.rl { display:flex; gap:12px; align-items:flex-start; padding:14px 16px; cursor:pointer; flex:1; min-width:0; background:var(--card); border:0; border-left:3px solid transparent; font:inherit; font-size:var(--text-label); text-align:left; color:var(--foreground); }
+.rl:hover { background:var(--surface-2); }
+.rl[aria-current="true"] { background:var(--hover); border-left-color:var(--primary); }
+.grow { flex:1; min-width:0; }
+.swWrap { display:flex; align-items:center; padding:0 14px; background:var(--card); }
+.switch { flex:none; width:40px; height:24px; border-radius:999px; border:0; background:var(--switch-off); position:relative; cursor:pointer; padding:0; }
+.switch span { position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:var(--card); transition:left .15s; }
+.switch[aria-checked="true"] { background:var(--primary); }
+.switch[aria-checked="true"] span { left:19px; }
+.editor { flex:1.4 1 520px; }
+.edHead { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; padding:14px 18px; border-bottom:1px solid var(--border); }
+.name { flex:1 1 260px; font-weight:600; }
+.edBody { padding:16px 18px; display:flex; flex-direction:column; gap:10px; background:var(--surface-2); border-radius:0 0 12px 12px; }
+.blk { border:1px solid var(--border); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:8px; background:var(--card); }
+.bh { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; letter-spacing:.04em; }
+.when { color:var(--primary-text); }
+.whenPill { background:var(--primary-soft); color:var(--primary-text); }
+.ifC { color:var(--warning-text); }
+.ifPill { background:var(--warning-soft); color:var(--warning-text); }
+.thenC { color:var(--success-text); }
+.thenPill { background:var(--success-soft); color:var(--success-text); }
+.in { min-height:32px; border:1px solid var(--input); border-radius:8px; padding:0 10px; font:inherit; font-size:13px; background:var(--card); color:var(--foreground); min-width:0; flex:1 1 140px; }
+.narrow { flex:0 1 120px; }
+.row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+/* .in ยืดตามแถวแนวนอน (flex-basis 140px) · ในกล่องแนวตั้งค่านั้นกลายเป็นความสูง ช่องจึงสูงผิดปกติ */
+.blk > .in { flex:none; }
+.idx { width:18px; text-align:right; font-size:11px; color:var(--muted); }
+.x { width:36px; height:36px; border:1px solid var(--input); border-radius:8px; background:var(--card); cursor:pointer; font-size:15px; color:var(--muted); padding:0; }
+.x:hover:not(:disabled) { background:var(--danger-soft); color:var(--danger-text); }
+.x:disabled { opacity:.4; cursor:default; }
+.line { width:2px; height:16px; background:var(--border-strong); margin:-4px auto; }
+.sentence { margin-top:4px; border-radius:10px; background:var(--card); border:1px dashed var(--input); padding:10px 12px; font-size:12px; }
+.dry { border-radius:10px; background:var(--success-soft); border:1px solid var(--success-border); padding:10px 12px; font-size:12px; display:flex; flex-direction:column; gap:6px; }
+.dryTitle { color:var(--success-text); }
+.would { margin:2px 0 0; padding-left:18px; }
+.warnText { color:var(--warning-text); }
+.footRow { display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
+.tpls { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+.tp { border:1px solid var(--border); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:8px; background:var(--card); }
+.tp > .pill { align-self:flex-start; }
+.lg { display:grid; grid-template-columns:120px minmax(0,1.3fr) minmax(0,1.6fr) 110px; gap:10px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--border); font-size:12px; }
+.lgHead { font-size:11px; font-weight:700; color:var(--muted); background:var(--surface-2); border-radius:12px 12px 0 0; }
+.more { padding:12px 16px; }
+@media (max-width:760px) {
+  .page { padding:12px; }
+  .lg { grid-template-columns:1fr 1fr; }
+  .list, .editor { flex-basis:100%; }
+}

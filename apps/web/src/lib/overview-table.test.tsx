@@ -11,9 +11,9 @@ import { overview } from "@/test/overview-fixture";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import ot from "../../messages/th/overview-table.json";
 import ldr from "../../messages/th/lead-dashboard-reports.json";
-import { OverviewPage } from "../../app/w/[ws]/p/[key]/table/_components/overview";
-import { TableView, buildDisplay } from "../../app/w/[ws]/p/[key]/table/_components/table-view";
-import type { Overview, Row, TableData } from "../../app/w/[ws]/p/[key]/table/_components/types";
+import { OverviewPage } from "../../app/work/[ws]/p/[key]/table/_components/overview";
+import { TableView, buildDisplay, stuckGroups } from "../../app/work/[ws]/p/[key]/table/_components/table-view";
+import type { Overview, Row, TableData } from "../../app/work/[ws]/p/[key]/table/_components/types";
 
 const person = (id: string, displayName: string) => ({ id, displayName });
 const agg = (n = 1) => ({ taskCount: n, subtaskCount: 0, doneCount: 0, estimateMd: 3, progressPct: 10 });
@@ -33,7 +33,7 @@ const errorBody = (status: number) => HttpResponse.json({ error: { code: status 
 
 beforeEach(() => {
   urls = []; patches = []; bulks = []; views = []; tableData = table();
-  navigation.pathname = "/w/sample/p/DE";
+  navigation.pathname = "/work/sample/p/DE";
   server.use(
     http.get("*/api/v1/w/:ws/projects/:key/overview", ({ request }) => { urls.push(new URL(request.url)); return HttpResponse.json(overview()); }),
     // ตรวจโครง Overview พื้นฐาน (ไม่มีสิทธิ์ดู Workload) · ส่วนแผนที่รวมเข้ามาตรวจใน lead-dashboard-reports.test.tsx
@@ -63,9 +63,9 @@ describe("Overview (1 / M6)", () => {
     expect(health).toHaveTextContent("(ผู้พัฒนาหนึ่ง 4)");
     expect(health).toHaveTextContent("≈ 29 สัปดาห์ แต่แผนมี ≈ 24 สัปดาห์");
     expect(screen.getByRole("button", { name: /Overdue7/ })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("link", { name: "งานที่เลยกำหนด" })).toHaveAttribute("href", "/w/sample/p/DE?issue=DE-23");
+    expect(screen.getByRole("link", { name: "งานที่เลยกำหนด" })).toHaveAttribute("href", "/work/sample/p/DE?issue=DE-23");
     expect(screen.getByText("เลย 9 วัน")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "เปิดใน Table →" })).toHaveAttribute("href", "/w/sample/p/DE/table?overdue=true");
+    expect(screen.getByRole("link", { name: "เปิดใน Table →" })).toHaveAttribute("href", "/work/sample/p/DE/table?overdue=true");
     expect(screen.getByRole("img", { name: "ความคืบหน้าโครงการ 22 เปอร์เซ็นต์" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Overdue7/ })).toHaveTextContent("เลยกำหนดส่งและยังไม่ Done");
     await userEvent.setup().click(screen.getByRole("button", { name: /Due today2/ }));
@@ -123,9 +123,20 @@ describe("Table (2)", () => {
     expect(urls.at(-1)?.searchParams.get("view")).toBe("table");
     const rows = screen.getAllByRole("row").map((r) => r.textContent ?? "");
     expect(rows.findIndex((r) => r.includes("DE-2"))).toBe(rows.findIndex((r) => r.includes("DE-1")) + 1);
-    // คอลัมน์ FR / Screen ตาม Canvas · ค่าว่างแสดง —
+    // Actual แยกเป็นสองคอลัมน์ · ตารางกว้างตามคอลัมน์ที่เปิด (เลื่อนแนวนอนในกล่อง)
+    expect(screen.getByRole("columnheader", { name: "Actual Start" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Actual End" })).toBeInTheDocument();
+    // หัวตารางแยกเป็นตารางของตัวเอง (ติดใต้ top bar) กว้างเท่าตัวตารางเสมอ คอลัมน์จึงตรงกัน
+    const [head, body] = screen.getAllByRole("table");
+    expect(Number.parseInt(body.style.minWidth)).toBeGreaterThan(1100);
+    expect(head.style.minWidth).toBe(body.style.minWidth);
+    // FR / Screen ซ่อนไว้ก่อน เปิดได้จากเมนู Columns
+    expect(screen.queryByRole("columnheader", { name: "FR / Screen" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("checkbox", { name: "FR / Screen" }));
     expect(screen.getByRole("columnheader", { name: "FR / Screen" })).toBeInTheDocument();
     expect(within(screen.getByTestId("row-DE-1")).getByText("FR-01.2 · SCR-101")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
     expect(screen.getByRole("searchbox", { name: "ค้นหางาน, รหัส DP-…, FR หรือ SCR" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "ย่อ Module A" }));
     expect(screen.queryByTestId("row-DE-1")).not.toBeInTheDocument();
@@ -200,6 +211,39 @@ describe("Table (2)", () => {
     expect(screen.queryByLabelText("ชื่อ Sub-task ใหม่ใน DE-1")).not.toBeInTheDocument();
   });
 
+  it("หมายเหตุ: แสดงในคอลัมน์ · แก้ใน Textarea แล้วบันทึกด้วย ⌘/Ctrl+Enter · ล้างข้อความ = null", async () => {
+    const user = userEvent.setup();
+    tableData = table([row("DE-1", { remark: "รอข้อมูลจากทีมบัญชี\nบรรทัดที่สอง" }), row("DE-3", { moduleId: "m-b" })]);
+    mount(<TableView ws="sample" projectKey="DE" />);
+    expect(await screen.findByRole("columnheader", { name: "หมายเหตุ" })).toBeInTheDocument();
+    expect(screen.getByTitle(/รอข้อมูลจากทีมบัญชี/)).toHaveTextContent("รอข้อมูลจากทีมบัญชี");
+    await user.click(screen.getByRole("button", { name: "แก้ หมายเหตุ ของ DE-3" }));
+    const box = within(await screen.findByRole("dialog")).getByRole("textbox", { name: "แก้ หมายเหตุ ของ DE-3" });
+    await user.type(box, "ลูกค้าขอเลื่อน{Shift>}{Enter}{/Shift}รอยืนยัน");
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    await waitFor(() => expect(patches.at(-1)).toEqual({ key: "DE-3", body: { remark: "ลูกค้าขอเลื่อน\nรอยืนยัน" }, etag: '"2"' }));
+    await user.click(screen.getByRole("button", { name: "แก้ หมายเหตุ ของ DE-1" }));
+    const filled = within(await screen.findByRole("dialog")).getByRole("textbox");
+    await user.clear(filled);
+    await user.click(screen.getByRole("button", { name: "บันทึก" }));
+    await waitFor(() => expect(patches.at(-1)?.body).toEqual({ remark: null }));
+  });
+
+  it("Module / กลุ่มที่ดูอยู่ค้างใต้หัวตารางเมื่อเลื่อนผ่านแถวของมัน", () => {
+    const data = table([row("DE-1", { phaseId: "p-1" }), row("DE-3", { moduleId: "m-b" })]);
+    data.modules[0].phases.push({ ...data.modules[0].phases[0], id: "p-1", name: "Sprint 1" });
+    const display = buildDisplay(data, new Set(), "-", "-");
+    // แต่ละแถวสูง 40px เริ่มที่ y = 0 · หัวตารางสิ้นสุดที่ line
+    const box = document.createElement("div");
+    box.innerHTML = `<table><tbody>${display.map((_, i) => `<tr data-i="${i}"></tr>`).join("")}</tbody></table>`;
+    box.querySelectorAll("tr").forEach((tr, i) => { tr.getBoundingClientRect = () => ({ top: i * 40 - 1000, bottom: i * 40 + 40 - 1000 }) as DOMRect; });
+    const at = (kind: string, name?: string) => display.findIndex((d) => d.kind === kind && (!name || ("name" in d && d.name === name)));
+    const lineAt = (i: number) => i * 40 - 1000 + 1;
+    expect(stuckGroups(box, display, -1000, 0)).toEqual({ module: null, phase: null });
+    expect(stuckGroups(box, display, lineAt(display.findIndex((d) => d.kind === "issue" && d.row.key === "DE-1")), -1000)).toEqual({ module: at("module", "Module A"), phase: at("phase") });
+    expect(stuckGroups(box, display, lineAt(display.findIndex((d) => d.kind === "issue" && d.row.key === "DE-3")), -1000)).toEqual({ module: at("module", "Module B"), phase: null });
+  });
+
   it("เลือกหลายแถว → ย้าย Module / Due / Assignee และลบต้องพิมพ์ยืนยัน", async () => {
     const user = userEvent.setup();
     mount(<TableView ws="sample" projectKey="DE" />);
@@ -270,9 +314,9 @@ describe("Table (2)", () => {
     await screen.findByTestId("row-DE-1");
     expect(screen.queryByTestId("row-DE-400")).not.toBeInTheDocument();
     expect(screen.getAllByRole("row").length).toBeLessThan(120);
-    // ตารางใช้ scroll ของหน้าหลัก: จำลองว่าขอบบนตารางเลื่อนพ้นจอขึ้นไป 390 แถว
+    // ตารางใช้ scroll ของหน้า: จำลองว่าขอบบนตัวตารางเลื่อนพ้นหัวตารางขึ้นไป 390 แถว
     const scroll = screen.getByTestId("table-scroll");
-    scroll.getBoundingClientRect = () => ({ top: -44 * 390, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: -44 * 390, toJSON: () => ({}) });
+    scroll.getBoundingClientRect = () => ({ top: -38 * 390, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: -38 * 390, toJSON: () => ({}) });
     fireEvent.scroll(window);
     expect(await screen.findByTestId("row-DE-390")).toBeInTheDocument();
     expect(screen.queryByTestId("row-DE-1")).not.toBeInTheDocument();
@@ -304,21 +348,33 @@ describe("จัดโครงงานใน Table", () => {
     await user.type(screen.getByLabelText("ชื่อ Module"), "Module ใหม่");
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(creates).toEqual([{ name: "Module ใหม่", color: "#1d4ed8" }]);
-    expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน Module ใหม่" })).toHaveAttribute("href", "/w/sample/p/DE/table?new=1&type=task&moduleId=m-new");
+    expect(creates).toEqual([{ name: "Module ใหม่", color: "#5b3fc4" }]);
+    expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน Module ใหม่" })).toHaveAttribute("href", "/work/sample/p/DE/table?new=1&type=task&moduleId=m-new");
   });
-  it("เพิ่มกลุ่มงานว่างใน Module และส่งบริบทเข้า Task", async () => {
+  it("กลุ่ม (ไม่บังคับ): เพิ่มกลุ่มจากเมนู Module แล้วเพิ่ม Task ในกลุ่มนั้น · ลบกลุ่มแล้วงานไม่มีกลุ่ม", async () => {
     const user = userEvent.setup();
-    server.use(http.post("*/api/v1/w/:ws/projects/:key/modules/:id/phases", async ({ request }) => {
-      expect(await request.json()).toEqual({ name: "กลุ่มใหม่" }); tableData.modules[0].phases.push({ id: "ph-new", name: "กลุ่มใหม่", ...agg(0) }); return HttpResponse.json({ id: "ph-new" }, { status: 201 });
-    }));
+    server.use(
+      http.post("*/api/v1/w/:ws/projects/:key/modules/:id/phases", async ({ request }) => {
+        expect(await request.json()).toEqual({ name: "กลุ่มใหม่" }); tableData.modules[0].phases.unshift({ id: "ph-new", name: "กลุ่มใหม่", ...agg(0) }); return HttpResponse.json({ id: "ph-new" }, { status: 201 });
+      }),
+      http.delete("*/api/v1/w/:ws/projects/:key/modules/:id/phases/:phase", async ({ request, params }) => {
+        expect(await request.json()).toEqual({ moveTo: "none" }); tableData.modules[0].phases = tableData.modules[0].phases.filter((p) => p.id !== params.phase); return HttpResponse.json({ movedIssues: 0, moveTo: null });
+      }),
+    );
     mount(<TableView ws="sample" projectKey="DE" />);
     await user.click(await screen.findByRole("button", { name: "จัดการ Module Module A" }));
-    await user.click(screen.getByRole("button", { name: "เพิ่มกลุ่มงาน" }));
-    await user.type(screen.getByLabelText("ชื่อกลุ่มงาน"), "กลุ่มใหม่");
+    await user.click(screen.getByRole("button", { name: "เพิ่มกลุ่ม" }));
+    await user.type(screen.getByLabelText("ชื่อกลุ่ม"), "กลุ่มใหม่");
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มใหม่" })).toHaveAttribute("href", "/w/sample/p/DE/table?new=1&type=task&moduleId=m-a&phaseId=ph-new");
+    expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มใหม่" })).toHaveAttribute("href", "/work/sample/p/DE/table?new=1&type=task&moduleId=m-a&phaseId=ph-new");
+    // Task ที่ไม่มีกลุ่มอยู่ใต้ Module ก่อนหัวกลุ่ม
+    const add = screen.getByRole("link", { name: "+ เพิ่ม Task ใน Module A" });
+    expect(add.getAttribute("href")).not.toContain("phaseId=");
+    await user.click(screen.getByRole("button", { name: "จัดการกลุ่ม กลุ่มใหม่" }));
+    await user.click(screen.getByRole("button", { name: "ลบกลุ่ม" }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "ลบกลุ่ม" }));
+    await waitFor(() => expect(screen.queryByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มใหม่" })).not.toBeInTheDocument());
   });
   it("เมื่อบันทึกไม่ผ่านคงข้อมูลและ requestId ให้แก้", async () => {
     const user = userEvent.setup(); server.use(http.post("*/api/v1/w/:ws/projects/:key/modules", () => errorBody(500)));

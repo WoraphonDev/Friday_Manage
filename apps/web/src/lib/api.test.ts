@@ -6,10 +6,20 @@ import {
   ApiClient,
   ApiError,
   ifMatch,
+  setConfirmHandler,
+  supportId,
 } from "./api";
 import { server } from "@/test/server";
 
 describe("API client", () => {
+  it("supportId แสดงรหัสอ้างอิงเฉพาะความผิดพลาดของระบบ (5xx / เชื่อมต่อไม่ได้) ไม่ใช่ error ที่ผู้ใช้แก้เองได้", () => {
+    expect(supportId(new ApiError(400, "invalid_input", "x", {}, "req_400"))).toBeNull();
+    expect(supportId(new ApiError(409, "conflict", "x", {}, "req_409"))).toBeNull();
+    expect(supportId(new ApiError(500, "internal_error", "x", {}, "req_500"))).toBe("req_500");
+    expect(supportId(new ApiError(0, "network", "x", {}, "req_0"))).toBe("req_0");
+    expect(supportId(new Error("x"))).toBeNull();
+  });
+
   it("GET ส่ง cookie และคืน ETag สำหรับ If-Match", async () => {
     let credentials = "";
     let cache = "";
@@ -192,3 +202,45 @@ describe("API client", () => {
     ).rejects.toBeInstanceOf(TypeError);
   });
 });
+
+describe("คำขอที่ต้องยืนยัน (422 + confirmField)", () => {
+  function confirmServer() {
+    const bodies: Record<string, unknown>[] = [];
+    server.use(
+      http.patch("*/api/v1/issues/DE-2", async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        bodies.push(body);
+        if (!body.extendParent)
+          return HttpResponse.json({ error: { code: "subtask_outside_parent", message: "เกินช่วง", details: { confirmable: true, confirmField: "extendParent", parentKey: "DE-1" } } }, { status: 422 });
+        return HttpResponse.json({ version: 4 });
+      }),
+    );
+    return bodies;
+  }
+
+  it("ยืนยันแล้วส่งคำขอเดิมซ้ำพร้อมช่องยืนยัน", async () => {
+    const bodies = confirmServer();
+    const ask = vi.fn().mockResolvedValue(true);
+    setConfirmHandler(ask);
+    try {
+      expect(await new ApiClient().patch("/issues/DE-2", { planEnd: "2026-12-20" }, 3)).toEqual({ version: 4 });
+      expect(ask).toHaveBeenCalledWith(expect.objectContaining({ code: "subtask_outside_parent", details: expect.objectContaining({ parentKey: "DE-1" }) }));
+      expect(bodies).toEqual([{ planEnd: "2026-12-20" }, { planEnd: "2026-12-20", extendParent: true }]);
+    } finally { setConfirmHandler(null); }
+  });
+
+  it("ยกเลิกแล้วไม่ส่งซ้ำ และได้ error confirm_cancelled", async () => {
+    const bodies = confirmServer();
+    setConfirmHandler(vi.fn().mockResolvedValue(false));
+    try {
+      await expect(new ApiClient().patch("/issues/DE-2", { planEnd: "2026-12-20" }, 3)).rejects.toMatchObject({ code: "confirm_cancelled" });
+      expect(bodies).toHaveLength(1);
+    } finally { setConfirmHandler(null); }
+  });
+
+  it("ไม่มีกล่องยืนยัน = ส่ง error 422 ให้ผู้เรียกตามเดิม", async () => {
+    confirmServer();
+    await expect(new ApiClient().patch("/issues/DE-2", { planEnd: "2026-12-20" }, 3)).rejects.toMatchObject({ status: 422, code: "subtask_outside_parent" });
+  });
+});
+

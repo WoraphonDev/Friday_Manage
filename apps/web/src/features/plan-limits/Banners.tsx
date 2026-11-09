@@ -48,7 +48,7 @@ export function UsageBanner({ ws, isGuest = false }: { ws: string; isGuest?: boo
   const u = usage.data;
   if (!u) return null;
   const own = u.canManageBilling;
-  const billing = `/w/${encodeURIComponent(ws)}/billing`;
+  const billing = `/work/${encodeURIComponent(ws)}/billing`;
   const ack = (id: string) => {
     const key = dismissKey(ws, id);
     if (!own && isDismissed(key)) return null;

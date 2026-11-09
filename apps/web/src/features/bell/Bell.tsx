@@ -82,7 +82,7 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
       const key = typeof latest.payload.issueKey === "string" ? latest.payload.issueKey : null;
       const typeKey = latest.eventType.replace(/\./g, "__");
       const verb = ti.has(`verbs.${typeKey}` as never) ? ti(`verbs.${typeKey}` as never) : ti("verbs.other");
-      const inbox = `/w/${encodeURIComponent(slug)}/inbox?n=${latest.id}`;
+      const inbox = `/work/${encodeURIComponent(slug)}/inbox?n=${latest.id}`;
       toast({
         actor: { id: latest.actor?.id ?? latest.id, displayName: who },
         message: [verb, key, titleOf(latest)].filter(Boolean).join(" "),
@@ -91,7 +91,7 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
         actions: latest.eventType === "due_request.created"
           ? [{ label: tb("toastReview"), href: inbox, primary: true }]
           : key
-            ? [{ label: tb("toastOpenIssue"), href: `/w/${encodeURIComponent(slug)}/p/${encodeURIComponent(key.replace(/-\d+$/, ""))}?issue=${encodeURIComponent(key)}`, primary: true }, { label: tb("toastLater"), href: inbox }]
+            ? [{ label: tb("toastOpenIssue"), href: `/work/${encodeURIComponent(slug)}/p/${encodeURIComponent(key.replace(/-\d+$/, ""))}?issue=${encodeURIComponent(key)}`, primary: true }, { label: tb("toastLater"), href: inbox }]
             : [{ label: tb("toastOpen"), href: inbox, primary: true }],
       });
     } catch {
@@ -106,7 +106,7 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
     enabled: open,
   });
   const slugOf = (id: string) => summary.data?.workspaces.find((w) => w.id === id)?.slug ?? workspace;
-  const inboxHref = `/w/${encodeURIComponent(workspace)}/inbox`;
+  const inboxHref = `/work/${encodeURIComponent(workspace)}/inbox`;
 
   async function readAll() {
     await api.post("/me/notifications/read-all", {});
@@ -137,7 +137,7 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
           <div className={styles.top}>
             <b>{tb("title")}</b>
             <button type="button" className={styles.link} onClick={() => void readAll()}>{tb("readAll")}</button>
-            <Link href={`/w/${encodeURIComponent(workspace)}/profile`} style={{ fontSize: 13 }} onClick={() => setOpen(false)}>{tb("settings")}</Link>
+            <Link href={`/work/${encodeURIComponent(workspace)}/profile`} style={{ fontSize: 12 }} onClick={() => setOpen(false)}>{tb("settings")}</Link>
           </div>
           <div className={styles.tabs} role="tablist">
             {(["all", "unread", "mention"] as const).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={styles.tab} onClick={() => setTab(k)}>{tb(`tabs.${k}`)}</button>)}
@@ -149,7 +149,7 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
               const who = n.actor?.displayName ?? (n.payload.actorName as string | undefined) ?? "Friday";
               const target = [n.payload.issueKey, titleOf(n)].filter(Boolean).join(" ");
               return (
-                <Link key={n.id} className={`${styles.item} ${!n.readAt ? styles.unread : ""}`} href={`/w/${encodeURIComponent(slugOf(n.workspaceId))}/inbox?n=${n.id}`} onClick={() => setOpen(false)}>
+                <Link key={n.id} className={`${styles.item} ${!n.readAt ? styles.unread : ""}`} href={`/work/${encodeURIComponent(slugOf(n.workspaceId))}/inbox?n=${n.id}`} onClick={() => setOpen(false)}>
                   <Avatar size="small" person={{ id: n.actor?.id ?? n.id, displayName: who }} />
                   <span className={styles.text}><span><b>{who}</b> {target}</span><span className={styles.meta}>{typeof n.payload.message === "string" ? `“${n.payload.message}” · ` : ""}{formatDate(n.createdAt)}</span></span>
                   {!n.readAt && <span className={styles.dot} />}

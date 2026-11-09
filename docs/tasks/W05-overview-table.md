@@ -4,7 +4,7 @@
 |---|---|
 | Wave | 1 · ขนานกันได้ |
 | รอ merge | W00, A03, A08 |
-| Lane (แก้ได้เฉพาะ) | `apps/web/app/w/[ws]/p/[key]/page.tsx` · `apps/web/app/w/[ws]/p/[key]/table/**` · `apps/web/messages/th/overview-table.json` |
+| Lane (แก้ได้เฉพาะ) | `apps/web/app/work/[ws]/p/[key]/page.tsx` · `apps/web/app/work/[ws]/p/[key]/table/**` · `apps/web/messages/th/overview-table.json` |
 | หน้าจอ | 1 (`design/canvas/Main.dc.html`) · 2 (`design/canvas/Table.dc.html`) · M6 (`design/canvas/MobileOverview.dc.html`) |
 | สเปก | 03-api › 2 หน้าจอ → API (แถวของหน้าที่ระบุ) · 03-api › 2 หน้า 1, 2 |
 

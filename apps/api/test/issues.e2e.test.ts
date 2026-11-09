@@ -449,18 +449,22 @@ describe('Bulk ใช้กติกา PATCH ต่อรายงาน', () =
     expect((await team.lead.post(`${url(parent.key)}/restore`)).status).toBe(200);
   });
 
-  it('Baseline บังคับเหตุผลทั้ง bulk และ PUT Assignees พร้อม plan_changes/event', async () => {
+  it('Baseline: แก้แผนได้โดยไม่ต้องใส่เหตุผล (บันทึกใน plan_changes / Activity) · ใส่เหตุผลได้ถ้าต้องการ', async () => {
     const issue = await create({ assigneeIds: [team.leadId], planEnd: '2026-12-20' });
     await t.owner.query("INSERT INTO plan_baselines (workspace_id,project_id,version,source,created_by) VALUES ($1,$2,1,'manual',$3)", [workspaceId, team.project.id, team.leadId]);
-    const missing = await team.lead.post(`${projectUrl()}/issues/bulk`, { keys: [issue.key], set: { planEnd: '2026-12-15' } });
-    expect(missing.body.results[0].error.code).toBe('plan_change_reason_required');
-    const assignMissing = await team.lead.put(`${url(issue.key)}/assignees`, { assigneeIds: [team.devId] }).set('If-Match', `"${issue.version}"`);
-    expect(assignMissing.body.error.code).toBe('plan_change_reason_required');
+    // ผู้ใช้ขอ 2026-11-08: ไม่ต้องเตือนให้ใส่เหตุผล
+    const quiet = await team.lead.post(`${projectUrl()}/issues/bulk`, { keys: [issue.key], set: { planEnd: '2026-12-15' } });
+    expect(quiet.body.results[0].ok).toBe(true);
+    const current = (await team.lead.get(url(issue.key))).body;
+    const assign = await team.lead.put(`${url(issue.key)}/assignees`, { assigneeIds: [team.devId] }).set('If-Match', `"${current.version}"`);
+    expect(assign.status, JSON.stringify(assign.body)).toBe(200);
+    const acts = await t.owner.query(`SELECT field FROM activities WHERE issue_id=$1 AND verb='updated' ORDER BY field`, [issue.id]);
+    expect(acts.rows.map((x: { field: string }) => x.field)).toEqual(expect.arrayContaining(['assigneeIds', 'planEnd']));
     seen.length = 0;
-    const r = await team.lead.post(`${projectUrl()}/issues/bulk`, { keys: [issue.key], set: { planEnd: '2026-12-15', assigneeIds: [team.devId], planChangeReason: 'ปรับแผนสมมติ' } });
+    const r = await team.lead.post(`${projectUrl()}/issues/bulk`, { keys: [issue.key], set: { planEnd: '2026-12-14', planChangeReason: 'ปรับแผนสมมติ' } });
     expect(r.body.results[0].ok).toBe(true);
-    const changes = await t.owner.query('SELECT field,reason FROM plan_changes WHERE issue_id=$1 ORDER BY field', [issue.id]);
-    expect(changes.rows).toEqual([{ field: 'assigneeIds', reason: 'ปรับแผนสมมติ' }, { field: 'planEnd', reason: 'ปรับแผนสมมติ' }]);
+    const changes = await t.owner.query('SELECT field,reason FROM plan_changes WHERE issue_id=$1 ORDER BY changed_at, field', [issue.id]);
+    expect(changes.rows).toEqual([{ field: 'planEnd', reason: null }, { field: 'assigneeIds', reason: null }, { field: 'planEnd', reason: 'ปรับแผนสมมติ' }]);
     expect(seen.find((e) => e.type === 'plan.changed')?.data.reason).toBe('ปรับแผนสมมติ');
   });
 });
@@ -583,3 +587,88 @@ describe('Sprint ที่จบแล้วและการปิด Sprint �
     expect((await team.lead.get(url(child.key))).body.sprintId).toBeNull();
   });
 });
+
+describe('หน้า Task v2 (ผู้ใช้ตัดสิน 2026-11-08)', () => {
+  it('System Analyst สร้าง แก้ และซ่อนจาก Guest Viewer', async () => {
+    const task = await create({ saId: team.devId, sharedWithGuests: true });
+    expect(task.saId).toBe(team.devId);
+    const patched = await team.lead.patch(url(task.key), { saId: team.leadId }, task.version);
+    expect(patched.status, JSON.stringify(patched.body)).toBe(200);
+    expect(patched.body.saId).toBe(team.leadId);
+    expect((await guest.get(url(task.key))).body.saId).toBeUndefined();
+    const bad = await team.lead.patch(url(task.key), { saId: '00000000-0000-4000-8000-000000000000' }, patched.body.version);
+    expect(bad.body.error.code).toBe('invalid_people');
+  });
+
+  it('หมายเหตุ (Remark): สร้าง แก้ ล้างเป็น null บันทึก Activity แสดงใน Table และซ่อนจาก Guest Viewer', async () => {
+    const task = await create({ remark: 'รอข้อมูลสมมติจากทีมบัญชี', sharedWithGuests: true });
+    expect(task.remark).toBe('รอข้อมูลสมมติจากทีมบัญชี');
+    const child = await create({ parentKey: task.key, remark: 'Sub-task มีหมายเหตุของตัวเอง' });
+    expect(child.remark).toBe('Sub-task มีหมายเหตุของตัวเอง');
+    const patched = await team.lead.patch(url(task.key), { remark: 'บรรทัดแรก\nบรรทัดที่สอง' }, task.version);
+    expect(patched.status, JSON.stringify(patched.body)).toBe(200);
+    expect(patched.body.remark).toBe('บรรทัดแรก\nบรรทัดที่สอง');
+    const rows = (await team.lead.get(`${projectUrl()}/issues?view=table&q=${task.key}`)).body.items;
+    expect(rows.find((row: { key: string }) => row.key === task.key).remark).toBe('บรรทัดแรก\nบรรทัดที่สอง');
+    const activity = await t.owner.query("SELECT old_value, new_value FROM activities WHERE issue_id=$1 AND field='remark'", [task.id]);
+    expect(activity.rows).toEqual([{ old_value: 'รอข้อมูลสมมติจากทีมบัญชี', new_value: 'บรรทัดแรก\nบรรทัดที่สอง' }]);
+    expect((await guest.get(url(task.key))).body.remark).toBeUndefined();
+    const cleared = await team.lead.patch(url(task.key), { remark: '' }, patched.body.version);
+    expect(cleared.body.remark).toBeNull();
+    const tooLong = await team.lead.patch(url(task.key), { remark: 'ก'.repeat(10_001) }, cleared.body.version);
+    expect(tooLong.status).toBe(400);
+  });
+
+  it('ย้าย Sub-task ไปใต้ Task อื่นได้เฉพาะ Module เดียวกัน และบันทึกประวัติทั้งสามงาน', async () => {
+    const a = await create();
+    const b = await create();
+    const child = await create({ parentKey: a.key });
+    const otherModule = (await t.owner.query(`INSERT INTO modules (workspace_id,project_id,name) VALUES ($1,$2,'Module สมมติอื่น') RETURNING id`, [workspaceId, team.project.id])).rows[0].id;
+    const elsewhere = await create({ moduleId: otherModule });
+    const blocked = await team.lead.patch(url(child.key), { parentKey: elsewhere.key }, child.version);
+    expect(blocked.body.error.code).toBe('parent_other_module');
+    expect((await team.lead.patch(url(a.key), { parentKey: b.key }, a.version)).body.error.code).toBe('not_a_subtask');
+    const moved = await team.lead.patch(url(child.key), { parentKey: b.key }, child.version);
+    expect(moved.status, JSON.stringify(moved.body)).toBe(200);
+    expect(moved.body.parentKey).toBe(b.key);
+    expect((await team.lead.get(url(a.key))).body.subtasks).toHaveLength(0);
+    expect((await team.lead.get(url(b.key))).body.subtasks.map((x: { key: string }) => x.key)).toEqual([child.key]);
+    const verbs = (await t.owner.query('SELECT verb FROM activities WHERE issue_id = ANY($1) ORDER BY created_at', [[a.id, b.id]])).rows.map((r: { verb: string }) => r.verb);
+    expect(verbs).toEqual(expect.arrayContaining(['subtask_moved_out', 'subtask_moved_in']));
+  });
+
+  it('PATCH วันที่ Sub-task เกิน Task แม่: 422 ให้ยืนยัน แล้วขยายแม่ทั้งวันเริ่มและวันจบ', async () => {
+    const parent = await create({ planStart: '2026-12-01', planEnd: '2026-12-04' });
+    const child = await create({ parentKey: parent.key, planStart: '2026-12-02', planEnd: '2026-12-03' });
+    const ask = await team.lead.patch(url(child.key), { planStart: '2026-11-30', planEnd: '2026-12-08', planChangeReason: 'ทดสอบขยายช่วง' }, child.version);
+    expect(ask.status).toBe(422);
+    expect(ask.body.error.details).toMatchObject({ confirmField: 'extendParent', nextStart: '2026-11-30', nextEnd: '2026-12-08' });
+    // ชุด test นี้ตั้ง Baseline ไว้ก่อนหน้า จึงต้องมีเหตุผลการแก้แผน
+    const ok = await team.lead.patch(url(child.key), { planStart: '2026-11-30', planEnd: '2026-12-08', extendParent: true, planChangeReason: 'ทดสอบขยายช่วง' }, child.version);
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    const after = (await team.lead.get(url(parent.key))).body;
+    expect(after).toMatchObject({ planStart: '2026-11-30', planEnd: '2026-12-08' });
+    // แก้ช่องอื่นของ Sub-task ไม่ต้องยืนยันซ้ำ
+    expect((await team.lead.patch(url(child.key), { title: 'เปลี่ยนชื่อสมมติ' }, ok.body.version)).status).toBe(200);
+    const changes = (await t.owner.query('SELECT reason FROM plan_changes WHERE issue_id = $1', [parent.id])).rows.map((r: { reason: string }) => r.reason);
+    expect(changes).toContain(`ขยายช่วงตาม Sub-task ${child.key}`);
+  });
+
+  it('Acceptance criteria ยังไม่ครบ: move และ PATCH ไป Done ต้องยืนยันก่อน', async () => {
+    const task = await create();
+    const item = await team.lead.post(`${url(task.key)}/checklist`, { text: 'เกณฑ์สมมติ', kind: 'acceptance' });
+    expect(item.status, JSON.stringify(item.body)).toBe(201);
+    await team.lead.post(`${url(task.key)}/checklist`, { text: 'ขั้นตอนสมมติ', kind: 'checklist' });
+    const done = status('Done');
+    const ask = await team.lead.post(`${url(task.key)}/move`, { statusId: done });
+    expect(ask.status).toBe(422);
+    expect(ask.body.error).toMatchObject({ code: 'acceptance_incomplete', details: { open: 1, total: 1, confirmable: true, confirmField: 'confirm' } });
+    const latest = (await team.lead.get(url(task.key))).body;
+    const patchAsk = await team.lead.patch(url(task.key), { statusId: done }, latest.version);
+    expect(patchAsk.body.error.code).toBe('acceptance_incomplete');
+    const moved = await team.lead.post(`${url(task.key)}/move`, { statusId: done, confirm: true });
+    expect(moved.status, JSON.stringify(moved.body)).toBe(200);
+    expect(moved.body.warnings.map((w: { code: string }) => w.code)).toContain('acceptance_incomplete');
+  });
+});
+

@@ -1,0 +1,39 @@
+.head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+.head h1 { margin:2px 0 4px; font-size:20px; }
+.seat { display:block; height:6px; border-radius:99px; background:var(--subtle); overflow:hidden; margin-top:4px; }
+.seat > span { display:block; height:100%; background:var(--primary); }
+.chip { display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px; border-radius:999px; border:1px solid var(--input); background:var(--card); font:inherit; font-size:12px; color:var(--foreground-soft); cursor:pointer; }
+.chip span { font-size:11px; color:var(--muted); }
+.chip[aria-pressed="true"] { background:var(--contrast-bg); border-color:var(--contrast-bg); color:var(--contrast-ink); }
+.chip[aria-pressed="true"] span { color:color-mix(in srgb, var(--contrast-ink) 72%, var(--contrast-bg)); }
+.mr { display:grid; grid-template-columns:minmax(240px,2.2fr) 1fr 140px minmax(160px,1.4fr) 120px 110px 150px; gap:10px; align-items:center; padding:10px 18px; border-bottom:1px solid var(--border); font-size:12px; min-width:1000px; }
+.mr select { min-height:32px; border:1px solid var(--input); border-radius:8px; padding:0 8px; font:inherit; font-size:12px; background:var(--card); }
+.h { font-size:11px; font-weight:600; color:var(--muted); background:var(--surface-2); padding-top:8px; padding-bottom:8px; }
+.pills { display:flex; flex-wrap:wrap; gap:4px; }
+.inline { display:flex; gap:4px; justify-content:flex-end; }
+.emailBox { display:flex; flex-wrap:wrap; gap:6px; align-items:center; min-height:32px; padding:6px 8px; border:1px solid var(--input); border-radius:8px; background:var(--card); }
+.emailBox:focus-within { outline:2px solid var(--focus); outline-offset:1px; }
+.emailBox input { flex:1 1 200px; border:0; outline:0; font:inherit; font-size:13px; min-width:120px; background:transparent; }
+.ec { display:inline-flex; align-items:center; gap:4px; padding:2px 4px 2px 10px; border-radius:999px; background:var(--primary-soft); color:var(--primary-text); font-size:12px; }
+.ec.bad { background:var(--danger-soft); color:var(--danger-text); }
+.ec button { border:0; background:transparent; cursor:pointer; color:inherit; display:inline-flex; padding:2px; border-radius:99px; }
+.lb { font-size:12px; font-weight:600; }
+.opts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.opt { display:flex; flex-direction:column; gap:2px; text-align:left; padding:10px 12px; border:1px solid var(--input); border-radius:8px; background:var(--card); font:inherit; font-size:12px; cursor:pointer; }
+.opt span:first-child { font-weight:600; }
+.opt[aria-pressed="true"] { border-color:var(--primary); background:var(--primary-soft); }
+.two { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+.link { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 12px; border:1px dashed var(--input); border-radius:8px; font-size:12px; }
+.link code { flex:1 1 200px; overflow-wrap:anywhere; background:var(--surface-2); padding:4px 8px; border-radius:6px; }
+.link select { min-height:32px; border:1px solid var(--input); border-radius:8px; padding:0 8px; font:inherit; font-size:12px; background:var(--card); }
+
+/* Canvas H: รายการโปรเจกต์ในหน้าต่างเชิญ */
+.projects { border:0; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; min-width:0; }
+.projects legend { padding:0; margin-bottom:6px; }
+.projRow { display:flex; align-items:center; gap:10px; justify-content:space-between; min-height:32px; }
+.projName { display:flex; align-items:center; gap:8px; font-size:12px; min-width:0; }
+.projName input { width:16px; height:16px; margin:0; }
+.dot { width:8px; height:8px; border-radius:50%; flex:none; }
+.projRow select { min-height:32px; border:1px solid var(--input); border-radius:8px; padding:0 8px; font:inherit; font-size:12px; background:var(--card); min-width:120px; }
+.foot { border-top:1px solid var(--border); margin:4px -20px 0; padding:14px 20px 0; }
+@media (max-width:760px) { .opts { grid-template-columns:1fr; } }

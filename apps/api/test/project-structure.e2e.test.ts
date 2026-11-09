@@ -141,6 +141,24 @@ describe('Module และกลุ่มงาน', () => {
     expect(rows[0].n).toBe(0);
   });
 
+  it('กลุ่ม: คนที่สร้าง Task ได้ (ไม่มี project.settings) สร้างกลุ่มใหม่ได้ แต่เปลี่ยนชื่อ / ลบไม่ได้ · ย้าย Task ข้ามกลุ่มแล้ว Sub-task ตาม', async () => {
+    const moduleId = team.project.modules[0].id;
+    const made = await team.dev.post(p(`/modules/${moduleId}/phases`), { name: 'กลุ่ม A' });
+    expect(made.status, JSON.stringify(made.body)).toBe(201);
+    expect((await team.dev.patch(p(`/modules/${moduleId}/phases/${made.body.id}`), { name: 'x' })).status).toBe(403);
+    expect((await team.dev.delete(p(`/modules/${moduleId}/phases/${made.body.id}`), { moveTo: 'none' })).status).toBe(403);
+    expect((await guest.post(p(`/modules/${moduleId}/phases`), { name: 'x' })).status).toBe(403);
+    const other = (await team.lead.post(p(`/modules/${moduleId}/phases`), { name: 'กลุ่ม B' })).body;
+    const task = await createIssue({ moduleId, phaseId: made.body.id });
+    const sub = await createIssue({ parentKey: task.key });
+    expect((await issue(sub.key)).phaseId).toBe(made.body.id);
+    const current = await issue(task.key);
+    expect((await team.lead.patch(`${team.ws}/issues/${task.key}`, { phaseId: other.id }, current.version)).status).toBe(200);
+    expect((await issue(sub.key)).phaseId).toBe(other.id);
+    expect((await team.lead.patch(`${team.ws}/issues/${task.key}`, { phaseId: null }, (await issue(task.key)).version)).status).toBe(200);
+    expect((await issue(sub.key)).phaseId).toBeNull();
+  });
+
   it('ลบ Module ที่มีงานต้องส่ง moveTo · งานและ Sub-task ย้ายตาม, กลุ่มงานถูกลบ, Milestone เลิกผูก', async () => {
     const from = (await team.lead.post(p('/modules'), { name: 'Campaign' })).body;
     const to = team.project.modules[0].id;

@@ -9,8 +9,8 @@ import { navigation } from "@/test/router";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import { Bell } from "@/features/bell/Bell";
 import ib from "../../messages/th/inbox-bell.json";
-import { InboxPage } from "../../app/w/[ws]/inbox/_components/inbox-page";
-import type { Filter, InboxNotification } from "../../app/w/[ws]/inbox/_components/types";
+import { InboxPage } from "../../app/work/[ws]/inbox/_components/inbox-page";
+import type { Filter, InboxNotification } from "../../app/work/[ws]/inbox/_components/types";
 
 const now = new Date().toISOString();
 const old = "2026-10-01T03:00:00Z";
@@ -64,7 +64,7 @@ describe("Inbox (G / M3)", () => {
     mount();
     await user.click(await screen.findByRole("button", { name: /ผู้พัฒนาหนึ่ง มอบหมายงานให้คุณ/ }));
     const detail = screen.getByRole("complementary", { name: "รายละเอียดการแจ้งเตือน" });
-    expect(within(detail).getByRole("link", { name: /งานตัวอย่างหนึ่ง/ })).toHaveAttribute("href", "/w/sample/p/DE/board?issue=DE-1");
+    expect(within(detail).getByRole("link", { name: /งานตัวอย่างหนึ่ง/ })).toHaveAttribute("href", "/work/sample/p/DE/board?issue=DE-1");
     expect(within(detail).getByText("คุณเป็นผู้รับผิดชอบ")).toBeInTheDocument();
     await waitFor(() => expect(calls).toContain("read:n1:{}"));
     await user.click(within(detail).getByRole("button", { name: "รับทราบ" }));
@@ -130,12 +130,12 @@ describe("กระดิ่ง (K4)", () => {
     renderWithProviders(<Bell workspace="sample" unread={2} />, { messages: { "inbox-bell": ib } });
     await user.click(screen.getByRole("link", { name: "การแจ้งเตือน 2 รายการยังไม่อ่าน" }));
     const pop = await screen.findByRole("dialog", { name: "การแจ้งเตือน" });
-    expect(await within(pop).findByRole("link", { name: /ผู้พัฒนาหนึ่ง DE-1/ })).toHaveAttribute("href", "/w/sample/inbox?n=n1");
+    expect(await within(pop).findByRole("link", { name: /ผู้พัฒนาหนึ่ง DE-1/ })).toHaveAttribute("href", "/work/sample/inbox?n=n1");
     await user.click(within(pop).getByRole("tab", { name: "Mention" }));
     await waitFor(() => expect(lists.at(-1)?.searchParams.get("filter")).toBe("mention"));
     expect(lists.at(-1)?.searchParams.get("workspace")).toBeNull(); // กระดิ่งรวมทุก Workspace
     await user.click(within(pop).getByRole("button", { name: "อ่านทั้งหมด" }));
     await waitFor(() => expect(calls).toContain("read-all:{}"));
-    expect(within(pop).getByRole("link", { name: "เปิด Inbox ทั้งหมด →" })).toHaveAttribute("href", "/w/sample/inbox");
+    expect(within(pop).getByRole("link", { name: "เปิด Inbox ทั้งหมด →" })).toHaveAttribute("href", "/work/sample/inbox");
   });
 });

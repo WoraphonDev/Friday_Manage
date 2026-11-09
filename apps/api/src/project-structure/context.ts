@@ -11,8 +11,9 @@ import type { ProjectRow, ProjectsService } from '../projects/projects.service.j
  * - view: ข้อมูลที่หน้าอื่นใช้ด้วย (Milestone บน Overview / Timeline) · ทุกคนที่มี project.view รวม Guest
  * - read: แท็บของ Settings · project.view แต่ Guest ไม่เห็น Settings (04-permissions ข้อ 4)
  * - write: project.settings และโปรเจกต์ต้องไม่ถูกเก็บถาวร
+ * - group: สร้างกลุ่มใหม่ตอนสร้าง Task ได้ด้วย issue.create (ผู้ใช้ขอ 2026-11-08) หรือ project.settings
  */
-export type Mode = 'view' | 'read' | 'write';
+export type Mode = 'view' | 'read' | 'write' | 'group';
 
 export async function loadContext(tx: Tx, projects: ProjectsService, auth: AuthInfo, tenant: TenantInfo, key: string, mode: Mode) {
   const { project, access } = await projects.load(tx, auth, tenant, key);
@@ -20,8 +21,8 @@ export async function loadContext(tx: Tx, projects: ProjectsService, auth: AuthI
   if (mode !== 'view' && tenant.role === 'guest') {
     throw new AppError(403, 'guest_settings_hidden', 'Guest ไม่เห็น Project Settings', { permission: 'project.settings' });
   }
-  if (mode === 'write') {
-    requirePerm(access, 'project.settings');
+  if (mode === 'write' || mode === 'group') {
+    requirePerm(access, mode === 'group' && !access.perms.has('project.settings') ? 'issue.create' : 'project.settings');
     if (project.archivedAt || project.status === 'archived') throw new AppError(403, 'project_archived', 'โปรเจกต์ที่เก็บถาวรแก้ไขไม่ได้');
   }
   return { project, access };

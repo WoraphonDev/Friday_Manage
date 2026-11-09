@@ -1,0 +1,106 @@
+.page { padding:20px 24px; display:flex; flex-direction:column; gap:16px; min-width:0; }
+.toolbar,.filters { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.toolbar { justify-content:space-between; }
+.filters :global(.select) { max-width:240px; }
+.chip { border-radius:999px; min-height:32px; font-size:12px; padding:0 12px; white-space:nowrap; }
+.selected,.selected:hover { background:var(--contrast-bg); color:var(--contrast-ink); border-color:var(--contrast-bg); }
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; min-width:0; }
+.head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 16px; border-bottom:1px solid var(--border); }
+.head h2 { margin:0; font-size:15px; font-weight:700; }
+.spacer { flex:1; }
+.muted { color:var(--muted); font-size:12px; }
+.status { font-size:11px; font-weight:700; letter-spacing:.04em; padding:2px 8px; border-radius:999px; text-transform:uppercase; }
+.statusActive { background:var(--status-progress-bg); color:var(--status-progress-fg); }
+.statusPlanning { background:var(--status-todo-bg); color:var(--status-todo-fg); }
+.complete { background:var(--success-solid); border-color:var(--success-solid); }
+.complete:hover { background:var(--success-solid-hover); border-color:var(--success-solid); }
+.label { display:block; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.goal { margin:4px 0 0; font-weight:500; overflow-wrap:anywhere; }
+.activeBody { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,380px); gap:20px; padding:16px; }
+.activeInfo { display:flex; flex-direction:column; gap:14px; }
+.stats { display:flex; gap:12px; flex-wrap:wrap; margin:0; }
+.stats > div { flex:1 1 120px; background:var(--subtle); border-radius:10px; padding:10px 12px; }
+.stats dt { font-size:11px; color:var(--muted); }
+.stats dd { margin:2px 0 0; font-size:16px; font-weight:700; }
+.burndown { margin:0; display:flex; flex-direction:column; gap:6px; }
+.burndownHead { display:flex; justify-content:space-between; gap:8px; font-size:11px; font-weight:600; color:var(--muted); flex-wrap:wrap; }
+.legend { display:inline-flex; align-items:center; gap:4px; font-weight:400; }
+.legendIdeal,.legendActual { display:inline-block; width:14px; height:0; border-top:2px dashed var(--input); }
+.legendActual { border-top:3px solid var(--primary); }
+.burndownSvg { width:100%; height:auto; }
+.toggleRow { padding:4px 12px; border-top:1px solid var(--border); }
+.planBody { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px; padding:14px 16px; align-items:start; }
+.goalField :global(.field) { gap:4px; }
+.capacity { display:flex; flex-direction:column; gap:6px; }
+.capacityHead { display:flex; justify-content:space-between; gap:8px; font-size:12px; }
+.capBar { height:10px; background:var(--subtle); border-radius:99px; overflow:hidden; }
+.capFill,.capGood,.capOver { height:100%; border-radius:99px; background:var(--primary); transition:width .2s; }
+.capGood { background:var(--success-solid); }
+.capOver { background:var(--danger-solid); }
+.capNote { margin:0; font-size:11px; color:var(--muted); }
+.overText,.overText b { color:var(--danger-text) !important; }
+.people { list-style:none; margin:0; padding:0 16px 12px; display:flex; flex-wrap:wrap; gap:8px; }
+.people li { display:inline-flex; align-items:center; gap:6px; padding:3px 10px 3px 3px; border:1px solid var(--border); border-radius:999px; font-size:11px; }
+.initials { width:22px; height:22px; border-radius:50%; background:var(--primary); color:var(--on-primary); font-size:10px; font-weight:600; display:inline-flex; align-items:center; justify-content:center; }
+.zone { min-height:56px; border-top:1px solid var(--border); }
+.zoneOver { background:var(--primary-soft); outline:2px dashed var(--focus); outline-offset:-4px; }
+.zoneEmpty { margin:0; padding:18px 16px; color:var(--muted); text-align:center; font-size:12px; }
+.item { display:grid; grid-template-columns:14px 20px 62px minmax(0,1fr) 128px 40px 28px auto; column-gap:10px; align-items:center; min-height:46px; padding:0 16px; border-bottom:1px solid var(--border); background:var(--card); }
+.item[draggable=true] { cursor:grab; }
+.item:hover { background:var(--surface-2); }
+.dragging { opacity:.4; }
+.dropBefore { box-shadow:inset 0 2px 0 var(--primary); }
+.done .title a { color:var(--muted); text-decoration:line-through; }
+.handle { color:var(--faint); font-size:11px; letter-spacing:-2px; }
+.typeIcon { width:20px; height:20px; border-radius:5px; color:var(--on-primary); display:inline-flex; align-items:center; justify-content:center; }
+.key { font-size:11px; font-weight:500; color:var(--muted); text-decoration:none; }
+.key:hover { color:var(--primary-text); }
+.title { min-width:0; display:flex; align-items:baseline; gap:6px; }
+.title a { color:var(--foreground); text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.title a:hover { color:var(--primary-text); }
+.subtasks { flex:none; font-size:11px; color:var(--muted); }
+.module { display:inline-block; max-width:128px; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.md { display:inline-flex; align-items:center; justify-content:center; min-width:28px; height:22px; border-radius:11px; background:var(--subtle); font-size:11px; font-weight:700; }
+.noEstimate { background:var(--warning-soft); color:var(--warning-text); }
+.actions { display:flex; align-items:center; justify-content:flex-end; gap:4px; }
+.moveButton { color:var(--primary-text); font-weight:600; font-size:11px; }
+.addRow { padding:10px 16px; border-top:1px solid var(--border); font-size:12px; }
+.hint { margin:0; font-size:11px; color:var(--muted); }
+.dialogError { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 14px; border-radius:10px; font-size:12px; }
+.dialogError { background:var(--danger-soft); color:var(--danger-text); }
+.options { display:flex; flex-direction:column; gap:8px; }
+.options > button { justify-content:space-between; }
+.optionRow { display:flex; gap:8px; }
+.optionRow > button { flex:1; }
+.form { display:flex; flex-direction:column; gap:12px; }
+.dateRow { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.warning { margin:0 0 8px; padding:8px 12px; border-radius:8px; background:var(--warning-soft); color:var(--warning-text); font-size:12px; }
+.destination { border:1px solid var(--border); border-radius:10px; margin:14px 0; padding:10px 14px; display:flex; flex-direction:column; gap:6px; }
+.destination legend { font-weight:600; padding:0 4px; }
+.destination label { display:flex; align-items:center; gap:8px; min-height:32px; }
+.retro { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:500; margin-bottom:12px; }
+.retro textarea { min-height:72px; padding:8px 10px; }
+@media (max-width:760px) {
+  .page { padding:16px; }
+  .activeBody,.planBody { grid-template-columns:1fr; }
+  .item { grid-template-columns:20px 56px minmax(0,1fr) 32px 36px; padding:0 12px; }
+  .handle,.hideSmall { display:none !important; }
+}
+
+/* Canvas Backlog: ปุ่ม Start sprint สีเขียว */
+.startBtn { background:var(--success-solid); border-color:var(--success-solid); color:var(--on-primary); }
+.startBtn:hover:not(:disabled) { background:var(--success-solid-hover); color:var(--on-primary); }
+/* คำอธิบายสั้นบนสุดของหน้า: Backlog คืออะไร และวางแผนอย่างไร */
+.intro { margin:0; padding:10px 14px; border-radius:10px; background:var(--primary-soft); color:var(--primary-text); font-size:12px; }
+.toggle { width:28px; height:28px; flex:none; display:inline-flex; align-items:center; justify-content:center; border:0; border-radius:6px; background:transparent; color:var(--foreground-soft); cursor:pointer; padding:0; }
+.toggle:hover { background:var(--subtle); }
+.headCollapsed { border-bottom:0; }
+.cardOver { outline:2px dashed var(--primary); outline-offset:-4px; background:var(--primary-soft); }
+.later { display:flex; flex-direction:column; }
+.later > .card { border-radius:0; }
+.later > .card + .card { margin-top:-1px; }
+.later > .card:first-child { border-radius:12px 12px 0 0; }
+.later > .card:last-child { border-radius:0 0 12px 12px; }
+.later > .card:only-child { border-radius:12px; }
+.later .headCollapsed { padding-top:10px; padding-bottom:10px; }
+

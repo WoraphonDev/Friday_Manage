@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>สร้าง Task</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1d4ed8;text-decoration:none}a:hover{color:#1e3a8a}
+.sec{display:flex;flex-direction:column;gap:10px;padding:16px 0;border-top:1px solid #eef0f3}
+.sech{display:flex;align-items:center;gap:8px;margin:0;font-size:14px;font-weight:600}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 11px;border:1px solid #d5dae0;border-radius:8px;background:#fff;color:#1b1f24;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.link{border:0;background:none;padding:0;color:#1d4ed8;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.inp{box-sizing:border-box;width:100%;min-height:32px;padding:6px 10px;border:1px solid #c9cfd6;border-radius:8px;background:#fff;color:#1b1f24;font:inherit;font-size:13px}
+.pill{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:500;white-space:nowrap}
+.av{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;color:#fff;font-size:10px;font-weight:600;flex:none}
+.row{display:flex;align-items:center;gap:10px}
+.pk{width:118px;flex:none;font-size:12px;color:#5f6873}
+.pv{flex:1;min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:32px}
+.sel{box-sizing:border-box;flex:1;display:flex;align-items:center;gap:6px;min-height:32px;padding:0 10px;border:1px solid #e4e7eb;border-radius:8px;background:#fff;font-size:12px}
+.ph{color:#8a94a0}
+.grp{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-top:1px solid #eef0f3}
+.grph{margin:0 0 4px;font-size:12px;font-weight:600;color:#3d4550}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;background:#eef0f3;color:#3d4550;font-size:11px;font-weight:500}
+.req{color:#b91c1c}
+</style>
+</helmet>
+<div style="width:1000px;min-height:1180px;box-sizing:border-box;background:#fff;color:#1b1f24;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:13px;line-height:1.5;display:flex;flex-direction:column">
+
+  <header style="display:flex;align-items:center;gap:10px;padding:12px 24px;border-bottom:1px solid #e4e7eb">
+    <div style="display:flex;align-items:center;gap:6px;flex:1;font-size:12px">
+      <span class="pill" style="background:#eef2ff;color:#1d4ed8">Module · หน้าร้าน</span>
+      <span aria-hidden="true" style="color:#8a94a0">›</span>
+      <strong>Task ใหม่</strong>
+    </div>
+    <div class="row" style="gap:0" role="group" aria-label="ประเภทงาน">
+      <button type="button" class="btn" aria-pressed="true" style="border-radius:8px 0 0 8px;background:#1d4ed8;color:#fff;border-color:#1d4ed8">Task</button>
+      <button type="button" class="btn" aria-pressed="false" style="border-radius:0 8px 8px 0;margin-left:-1px">Sub-task</button>
+    </div>
+    <button type="button" class="btn" aria-label="ปิด">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+    </button>
+  </header>
+
+  <div style="display:flex;align-items:flex-start;gap:24px;padding:20px 24px 24px;flex:1">
+
+    <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <label for="title" style="font-size:12px;font-weight:600;margin-bottom:6px">ชื่อ Task <span class="req">*</span></label>
+      <input id="title" class="inp" type="text" placeholder="เช่น หน้ารายการเมนูและค้นหา" style="font-size:18px;font-weight:600;min-height:44px">
+      <div class="row" style="margin:10px 0 12px">
+        <span class="sel" style="flex:none;background:#eef0f3;border-color:#e4e7eb;font-weight:600">To do (สถานะเริ่มต้น)</span>
+      </div>
+
+      <section class="sec" aria-label="คำอธิบาย">
+        <h2 class="sech">คำอธิบาย</h2>
+        <textarea class="inp" rows="4" placeholder="รายละเอียดงาน" aria-label="คำอธิบาย"></textarea>
+      </section>
+
+      <section class="sec" aria-label="Acceptance criteria และ Checklist">
+        <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid #e4e7eb;border-radius:8px;background:#fbfcfd">
+          <h2 class="sech">Acceptance criteria <span class="req">*</span><span style="flex:1"></span><span style="font-size:11px;font-weight:400;color:#5f6873">โปรเจกต์นี้บังคับอย่างน้อย 1 ข้อ</span></h2>
+          <div class="row"><span class="pill" style="background:#ede9fe;color:#5b21b6">Acceptance</span><span style="flex:1">ค้นหาคำว่า "เค้ก" แล้วพบเมนูที่มีคำนี้</span><button type="button" class="link" style="color:#5f6873">ลบ</button></div>
+          <input class="inp" type="text" placeholder="+ เพิ่ม Acceptance criteria แล้วกด Enter" aria-label="เพิ่ม Acceptance criteria">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid #e4e7eb;border-radius:8px">
+          <h2 class="sech">Checklist<span style="flex:1"></span><span style="font-size:11px;font-weight:400;color:#5f6873">ขั้นตอนที่ผู้ทำงานต้องทำ</span></h2>
+          <input class="inp" type="text" placeholder="+ เพิ่ม Checklist แล้วกด Enter" aria-label="เพิ่ม Checklist">
+        </div>
+      </section>
+
+      <section class="sec" aria-label="Sub-task">
+        <h2 class="sech">Sub-task</h2>
+        <div class="row" style="padding:8px 12px;border:1px dashed #c9cfd6;border-radius:8px">
+          <span style="flex:1">การ์ดเมนูพร้อมรูปและราคา</span>
+          <span class="chip">S · 2 MD</span>
+          <button type="button" class="link" style="color:#5f6873">ลบ</button>
+        </div>
+        <input class="inp" type="text" placeholder="+ เพิ่ม Sub-task แล้วกด Enter (สร้างพร้อม Task)" aria-label="เพิ่ม Sub-task">
+      </section>
+
+      <section class="sec" aria-label="Dependency">
+        <h2 class="sech">Dependency</h2>
+        <input class="inp" type="search" placeholder="ค้นหารหัสงานหรือชื่องาน เช่น DEMO-7" aria-label="ค้นหางานที่ต้องรอ">
+      </section>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:8px;background:#f6f7f9;color:#5f6873;font-size:12px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="flex:none;margin-top:2px"><circle cx="12" cy="12" r="9"></circle><path d="M12 8h.01M11 12h1v4h1"></path></svg>
+        <span>Attachments, ผลทดสอบ QA, Development และ Activity / คอมเมนต์ เพิ่มได้หลังกดสร้าง หน้าจะเปลี่ยนเป็นหน้าดู Task ทันที</span>
+      </div>
+    </main>
+
+    <aside aria-label="ข้อมูลงาน" style="width:340px;flex:none;border:1px solid #e4e7eb;border-radius:12px;background:#fff">
+      <div class="grp" style="border-top:0">
+        <h3 class="grph">ผู้รับผิดชอบ</h3>
+        <div class="row"><span class="pk">Business Analyst</span><span class="pv"><span class="sel ph">ไม่ระบุ</span></span></div>
+        <div class="row"><span class="pk">System Analyst</span><span class="pv"><span class="sel ph">ไม่ระบุ</span></span></div>
+        <div class="row"><span class="pk">Developer</span><span class="pv"><span class="sel ph">เลือก (ได้หลายคน)</span></span></div>
+        <div class="row"><span class="pk">QA / Reviewer</span><span class="pv"><span class="sel ph">ไม่ระบุ</span></span></div>
+        <div class="row"><span class="pk">ผู้ติดตาม</span><span class="pv"><span class="av" style="background:#be185d">อร</span><span style="font-size:11px;color:#5f6873">คุณ (ผู้สร้าง)</span><button type="button" class="link">+ เพิ่ม</button></span></div>
+      </div>
+      <div class="grp">
+        <h3 class="grph">แผนงาน</h3>
+        <div class="row"><span class="pk">Size</span><span class="pv"><span class="sel" style="flex:none;width:72px">M</span><span class="sel" style="flex:none;width:64px">5</span><span style="font-size:12px;color:#5f6873">Man-Day</span></span></div>
+        <div style="display:grid;grid-template-columns:70px repeat(2,minmax(0,1fr));gap:6px;align-items:center;padding:8px;border:1px solid #eef0f3;border-radius:8px;font-size:12px">
+          <span></span><span style="color:#5f6873">แผน</span><span style="color:#5f6873">จริง</span>
+          <span style="color:#5f6873">เริ่ม</span><span class="sel">9 พ.ย. 69</span><span class="sel ph" style="background:#f6f7f9">หลังเริ่มงาน</span>
+          <span style="color:#5f6873">จบ</span><span class="sel">13 พ.ย. 69</span><span class="sel ph" style="background:#f6f7f9">หลังเริ่มงาน</span>
+        </div>
+        <p style="margin:0;font-size:11px;color:#5f6873">ไม่ใส่วันจบ ระบบคำนวณจาก Man-Day และวันทำการ</p>
+        <div class="row"><span class="pk">Progress</span><span class="pv"><span style="font-size:12px;color:#8a94a0">0% · คำนวณจาก Sub-task</span></span></div>
+      </div>
+      <div class="grp">
+        <h3 class="grph">กลุ่มงาน</h3>
+        <div class="row"><span class="pk">Priority</span><span class="pv"><span class="sel">Medium</span></span></div>
+        <div class="row"><span class="pk">Module <span class="req">*</span></span><span class="pv"><span class="sel">หน้าร้าน</span></span></div>
+        <div class="row"><span class="pk">Requirement</span><span class="pv"><button type="button" class="link">+ FR / NFR</button></span></div>
+        <div class="row"><span class="pk">Screen</span><span class="pv"><button type="button" class="link">+ Screen</button></span></div>
+        <div class="row"><span class="pk">Label</span><span class="pv"><button type="button" class="link">+ Label</button></span></div>
+        <label class="row" style="margin-top:6px;padding:8px 10px;border:1px solid #e4e7eb;border-radius:8px"><input type="checkbox"><span style="flex:1">แชร์งานนี้ให้ Guest</span></label>
+      </div>
+    </aside>
+  </div>
+
+  <footer style="display:flex;align-items:center;gap:10px;padding:12px 24px;border-top:1px solid #e4e7eb;background:#fff">
+    <label class="row" style="font-size:12px"><input type="checkbox"> สร้างต่ออีกรายการ</label>
+    <span style="flex:1;font-size:11px;color:#5f6873">Ctrl / ⌘ + Enter เพื่อสร้าง</span>
+    <button type="button" class="btn">ยกเลิก</button>
+    <button type="button" class="btn" style="background:#1d4ed8;color:#fff;border-color:#1d4ed8">สร้าง Task</button>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1000,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

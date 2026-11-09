@@ -353,8 +353,9 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | POST | `p/schedule:preview` | `issue.edit` | Auto-schedule คืนรายการวันที่จะเปลี่ยนโดยยังไม่บันทึก · ยืนยันด้วย `POST issues/bulk` |
 | POST | `w/import-jobs` | `ws.project.create` (ใหม่) หรือ `project.settings` (อัปเดต) | อัปโหลดไฟล์แล้วอ่านหัวคอลัมน์ · จับคู่อัตโนมัติ |
 | GET / PATCH | `w/import-jobs/{id}` | ผู้สร้าง | แก้การจับคู่คอลัมน์และคน · ระบบตรวจซ้ำทุกครั้ง |
-| POST | `w/import-jobs/{id}:commit` | ผู้สร้าง | 202 · ความคืบหน้าทาง WebSocket · ตั้ง Baseline v1 ถ้าเลือก · โหมดอัปเดตจับคู่ด้วย `excel_row_no` และเขียน `plan_change` · Event `import.completed` · **รอบแรก (apps/api) ทำแบบ synchronous ตอบ 201** เพราะแผน 334 แถวใช้ไม่ถึง 1 วินาที · รองรับเฉพาะโหมดสร้างโปรเจกต์ใหม่ |
-| GET | `p/export.xlsx` | `project.view` | |
+| POST | `w/import-jobs/{id}:commit` | ผู้สร้าง | 202 · ความคืบหน้าทาง WebSocket · ตั้ง Baseline v1 ถ้าเลือก · โหมดอัปเดตจับคู่ด้วย Key (ไฟล์รูปแบบเดิม: `excel_row_no`) และเขียน `plan_change` · Event `import.completed` · **รอบแรก (apps/api) ทำแบบ synchronous ตอบ 201** เพราะแผน 334 แถวใช้ไม่ถึง 1 วินาที · รองรับเฉพาะโหมดสร้างโปรเจกต์ใหม่ |
+| GET | `p/export.xlsx` | `project.view` (ไม่ใช่ Guest) | ชีต Tasks (Key / Parent Key …) + Timeline + คำแนะนำ + ค่าที่ใช้ได้ + Holidays · `?timeline=week` = ชีต Timeline ช่องละสัปดาห์ · นำเข้ากลับโหมดอัปเดตได้ |
+| GET | `w/import-template.xlsx` | สมาชิกที่ไม่ใช่ Guest | Template เปล่า คอลัมน์เดียวกับ Export · รายชื่อสมาชิกและวันหยุดของ Workspace |
 
 ### 3.7 งาน
 
@@ -378,7 +379,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET / POST / PATCH / DELETE | `i/comments` | ดู: `project.view` · เขียน: `issue.comment` · แก้ / ลบ: เจ้าของ | แยก @mention → Event `issue.mentioned` · Auto-watch ผู้เขียน |
 | GET | `i/activity` | `project.view` | |
 | GET / POST / DELETE | `i/time-logs` | `issue.edit` · เปิดเมื่อโปรเจกต์เปิด Time log เท่านั้น | |
-| GET / POST | `i/test-runs` | บันทึก: `issue.edit` (BA / Tester) | ผลไม่ผ่าน → Event `test_run.failed` |
+| GET / POST | `i/test-runs` | บันทึก: `issue.record_test` | `kind` = qa (ผลตรวจ QA / Reviewer: result, `testerId` ผู้ตรวจ, environment, note, fileIds) หรือ unit (ผล Unit test: จำนวนเคส, coveragePct, commitSha) · ผล QA ไม่ผ่าน → Event `test_run.failed` |
 | POST | `i/test-runs/{id}:create-bug` | `issue.create` | สร้าง Bug ใต้งานเดียวกัน กรอกขั้นตอน / หลักฐานจากผลทดสอบให้ |
 | GET | `i/git` | `project.view` | Commit และ PR ที่ผูก |
 | GET | `i/due-requests:preview?due=` | `issue.edit` หรือ `due_request.approve` | วันทำการที่เพิ่ม, Workload ของ Dev ในช่วงที่เลื่อนออก (เทียบ capacity), งานที่รออยู่, Milestone / Go-live ที่กระทบ, งานแม่, ผู้อนุมัติ |
@@ -447,7 +448,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 
 - ใช้กับทุกทางที่ทำให้ plan_end ของ Task หรือ Sub-task **เลื่อนออกไป**: แก้ในหน้างาน, แก้ในแถวของ Table, ลาก bar ใน Timeline / Gantt, ลากในปฏิทิน, ลากไปกลุ่ม "สัปดาห์หน้า" ใน My Tasks, แก้ Man-Day จน Plan End คำนวณใหม่, และ `POST issues/bulk`
 - **ดึงเข้ามาให้เร็วขึ้น ไม่ต้องขออนุมัติ** (ตัดสิน 5 พ.ย. 2569)
-- แก้ตรงหรืออนุมัติแล้ว ระบบเขียน `plan_change` ทุกครั้ง · หลังมี Baseline ต้องมีเหตุผล (แก้ตรง = ผู้แก้ใส่ · ผ่านคำขอ = ใช้เหตุผลในคำขอ)
+- แก้ตรงหรืออนุมัติแล้ว ระบบเขียน `plan_change` ทุกครั้ง · หลังมี Baseline เหตุผลไม่บังคับ (ผู้ใช้ขอ 8 พ.ย. 2569: ไม่ต้องเตือน ให้ลง Activity ก็พอ) (แก้ตรง = ผู้แก้ใส่ · ผ่านคำขอ = ใช้เหตุผลในคำขอ)
 - เปิดหรือปิดสิทธิ์นี้บันทึกใน Audit log · ปิดระหว่างที่มีคนแก้อยู่ ให้ยึดสิทธิ์ ณ เวลาที่ API ได้รับคำขอ
 - ถ้ามีคำขอค้างอยู่ แล้ว PM เปิดสิทธิ์ให้ Member คำขอที่ค้างยังรออนุมัติตามเดิม ผู้ขอยกเลิกเองแล้วแก้ตรงได้
 

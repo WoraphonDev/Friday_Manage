@@ -6,8 +6,9 @@ import { renderWithProviders } from "@/test/render";
 import { server } from "@/test/server";
 import { navigation, router } from "@/test/router";
 import kanban from "../../messages/th/kanban.json";
-import { KanbanBoard } from "../../app/w/[ws]/p/[key]/board/_components/kanban-board";
-import type { BoardCard, BoardData, MoveBody } from "../../app/w/[ws]/p/[key]/board/_components/types";
+import { KanbanBoard } from "../../app/work/[ws]/p/[key]/board/_components/kanban-board";
+import type { BoardCard, BoardData, MoveBody } from "../../app/work/[ws]/p/[key]/board/_components/types";
+import { moveLocal } from "../../app/work/[ws]/p/[key]/board/_components/types";
 
 const person = { id: "dev-one", displayName: "ผู้ทดสอบหนึ่ง", initials: "ท1" };
 function card(key: string, overrides: Partial<BoardCard> = {}): BoardCard {
@@ -32,7 +33,7 @@ const column = (name: string) => screen.getByRole("region", { name: `คอล�
 const errorResponse = (status: number, code: string, details = {}) => HttpResponse.json({ error: { code, message: "ข้อผิดพลาดทดสอบ", details, requestId: "req_kanban_001" } }, { status });
 
 beforeEach(() => {
-  navigation.pathname = "/w/sample/p/DE/board";
+  navigation.pathname = "/work/sample/p/DE/board";
   data = initialBoard(); requests = []; moves = [];
   server.use(
     http.get("*/api/v1/w/:ws/projects/:key/board", ({ request }) => { requests.push(new URL(request.url)); return HttpResponse.json(data); }),
@@ -63,7 +64,7 @@ describe("Kanban", () => {
     expect(within(article("DE-1")).getByTitle("คอมเมนต์ 2")).toBeInTheDocument();
     expect(within(article("DE-1")).getByText("เลย 2 วัน")).toBeInTheDocument();
     expect(within(article("DE-5")).getByText("Verified")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "งานตัวอย่าง DE-1" })).toHaveAttribute("href", "/w/sample/p/DE/board?issue=DE-1");
+    expect(screen.getByRole("link", { name: "งานตัวอย่าง DE-1" })).toHaveAttribute("href", "/work/sample/p/DE/board?issue=DE-1");
     expect(screen.getAllByRole("link", { name: "+ เพิ่มการ์ด" })).toHaveLength(4);
   });
 
@@ -175,7 +176,7 @@ describe("Kanban", () => {
     const user = userEvent.setup(); navigation.search = "issue=DE-1";
     const view = mount(); await screen.findByRole("article", { name: "การ์ด DE-1" });
     await user.selectOptions(screen.getByLabelText("ประเภทบอร์ด"), "bug");
-    expect(router.replace).toHaveBeenCalledWith("/w/sample/p/DE/board?issue=DE-1&type=bug", { scroll: false });
+    expect(router.replace).toHaveBeenCalledWith("/work/sample/p/DE/board?issue=DE-1&type=bug", { scroll: false });
     navigation.search = "type=bug";
     view.rerender(<KanbanBoard ws="sample" projectKey="DE" />);
     await waitFor(() => expect(requests.at(-1)?.searchParams.get("type")).toBe("bug"));
@@ -215,7 +216,9 @@ describe("Kanban", () => {
     expect(filters).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(button); fireEvent.click(button);
     await waitFor(() => expect(calls).toBe(1));
-    expect(button).toBeDisabled();
+    // การ์ดย้ายไปคอลัมน์ใหม่ทันทีระหว่างรอ API และปุ่มย้ายถูกปิดกันกดซ้ำ
+    expect(within(column("In progress")).getByRole("article", { name: "การ์ด DE-1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ย้าย DE-1 ไปคอลัมน์ขวา" })).toBeDisabled();
     release();
     await screen.findByText("ย้าย DE-1 ไป In progress แล้ว");
     expect(calls).toBe(1);
@@ -234,15 +237,17 @@ describe("Kanban", () => {
   it("บอร์ดว่างและคอลัมน์ว่างมีสถานะและปุ่มสร้างตามสิทธิ์", async () => {
     data.columns.forEach((column) => { column.cards = []; column.count = 0; });
     mount(); await screen.findByText("ยังไม่มีงานบนบอร์ด");
-    expect(screen.getByRole("link", { name: "+ สร้างงาน" })).toHaveAttribute("href", "/w/sample/p/DE/board?new=1&type=task");
+    expect(screen.getByRole("link", { name: "+ สร้างงาน" })).toHaveAttribute("href", "/work/sample/p/DE/board?new=1&type=task");
     expect(screen.getAllByText("ไม่มีงานในคอลัมน์นี้")).toHaveLength(4);
   });
 
   it("move conflict แสดงคำแนะนำ/requestId และไม่ย้ายการ์ดใน UI ล่วงหน้า", async () => {
     const user = userEvent.setup(); server.use(http.post("*/api/v1/w/:ws/issues/:key/move", () => errorResponse(409, "conflict")));
     mount(); await user.click(await screen.findByRole("button", { name: "ย้าย DE-1 ไปคอลัมน์ขวา" }));
-    await screen.findByText("งานนี้มีการเปลี่ยนแปลงแล้ว โหลดข้อมูลล่าสุดก่อนย้ายอีกครั้ง");
-    expect(screen.getByRole("alert")).toHaveTextContent("req_kanban_001");
+    // toast สีแดงที่หายเอง · บอร์ดโหลดค่าล่าสุดให้เอง
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("งานนี้มีการเปลี่ยนแปลงแล้ว โหลดข้อมูลล่าสุดก่อนย้ายอีกครั้ง");
+    expect(alert).not.toHaveTextContent("req_kanban_001"); // 4xx ผู้ใช้แก้เองได้ ไม่แสดงรหัสอ้างอิง (ผู้ใช้ขอ 2026-11-09)
     expect(within(column("To do")).getByText("งานตัวอย่าง DE-1")).toBeInTheDocument();
   });
 
@@ -303,5 +308,25 @@ describe("Kanban", () => {
     await screen.findByText("ยังไม่มีงานบนบอร์ด");
     expect(screen.queryByRole("article", { name: "การ์ด DE-1" })).not.toBeInTheDocument();
     expect(requests.at(-1)?.pathname).toContain("/w/other/projects/XY/board");
+  });
+});
+
+describe("moveLocal (ย้ายบนจอก่อน API ตอบ)", () => {
+  const keys = (board: BoardData, id: string) => board.columns.find((c) => c.id === id)!.cards.map((c) => c.key);
+  it("วางตาม beforeKey / afterKey / ท้ายคอลัมน์ และเปลี่ยนสถานะตามคอลัมน์", () => {
+    const board = initialBoard();
+    expect(keys(moveLocal(board, "DE-3", { statusId: "todo", beforeKey: "DE-1" })!, "todo")).toEqual(["DE-3", "DE-1", "DE-2"]);
+    expect(keys(moveLocal(board, "DE-1", { statusId: "progress", afterKey: "DE-4" })!, "progress")).toEqual(["DE-4", "DE-1"]);
+    const done = moveLocal(board, "DE-2", { statusId: "done" })!;
+    expect(keys(done, "done")).toEqual(["DE-2"]);
+    expect(keys(done, "todo")).toEqual(["DE-1", "DE-3"]);
+    expect(done.columns[3].cards[0].status).toEqual({ id: "done", name: "Done", category: "done" });
+    // ไม่แก้ข้อมูลเดิม (ใช้คืนค่าเมื่อ API ล้มเหลว)
+    expect(keys(board, "todo")).toEqual(["DE-1", "DE-2", "DE-3"]);
+  });
+  it("Bug คงสถานะจริง และสถานะที่ไม่ใช่คอลัมน์คืน null", () => {
+    const board = initialBoard();
+    expect(moveLocal(board, "DE-5", { statusId: "done" })!.columns[3].cards[0].status.name).toBe("Verified");
+    expect(moveLocal(board, "DE-5", { statusId: "bug-verified" })).toBeNull();
   });
 });

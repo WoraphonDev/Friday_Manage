@@ -330,7 +330,7 @@ export class ChannelsService {
     const safe = q.safe ? q.safe === 'true' : (cfg?.safeMode ?? true);
     const { msg, why } = this.sampleMessage(event, tenant.slug, safe);
     const rendered =
-      q.channel === 'email' ? renderEmail(msg, why, `${webUrl()}/w/${tenant.slug}/profile`) : q.channel === 'webhook' ? renderWebhook(q.format, msg, tenant.slug) : jsonPayload(msg, tenant.slug);
+      q.channel === 'email' ? renderEmail(msg, why, `${webUrl()}/work/${tenant.slug}/profile`) : q.channel === 'webhook' ? renderWebhook(q.format, msg, tenant.slug) : jsonPayload(msg, tenant.slug);
     return { event, channel: q.channel, safeMode: safe, message: msg, rendered };
   }
 

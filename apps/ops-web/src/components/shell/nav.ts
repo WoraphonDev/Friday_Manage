@@ -88,9 +88,9 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
   {
     group: "security",
     items: [
-      { key: "privacy", href: "/privacy", built: false, roles: ["owner", "support", "auditor"], badge: ["privacyDueSoon"] },
+      { key: "privacy", href: "/privacy", built: true, roles: ["owner", "support", "engineer", "auditor"], badge: ["privacyDueSoon"] },
       { key: "abuse", roles: ["owner", "engineer"] },
-      { key: "legal", href: "/legal", built: false, roles: ["owner", "auditor"] },
+      { key: "legal", href: "/legal", built: true, roles: ["owner", "auditor"] },
       { key: "restore", roles: ["owner"] },
       { key: "jit", roles: ["owner"] },
     ],

@@ -792,9 +792,10 @@ textarea.input {
   z-index: 50;
   background: var(--overlay);
 }
+/* overlay / dialog / drawer อยู่ชั้นเดียวกัน ให้ลำดับใน DOM ตัดสิน: Modal ที่เปิดจาก Drawer จึงบังทั้ง Drawer */
 .dialog {
   position: fixed;
-  z-index: 51;
+  z-index: 50;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -837,7 +838,7 @@ textarea.input {
 }
 .drawer {
   position: fixed;
-  z-index: 51;
+  z-index: 50;
   top: 0;
   right: 0;
   bottom: 0;
@@ -1181,6 +1182,112 @@ textarea.input {
 @media (max-width: 1100px) {
   .support-split,
   .ticket-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* ตัวเลขสรุปบนหัวหน้า (O14 · O15) */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+.stat {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.stat b {
+  font-size: 24px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+.stat-warn b {
+  color: var(--warning-text);
+}
+.stat-bad b {
+  color: var(--danger-text);
+}
+.stat-ok b {
+  color: var(--success-text);
+}
+/* ขั้นตอนแบบมีเลข (คำขอ PDPA · เหตุละเมิด) */
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.steps li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.step-n {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--subtle);
+  color: var(--muted);
+}
+.step-done .step-n {
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+.step-now .step-n {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+/* เทียบความต่างของเอกสาร (A7) */
+.diff {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 420px;
+  overflow: auto;
+}
+.diff ins {
+  display: block;
+  text-decoration: none;
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+.diff del {
+  display: block;
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+.diff .diff-same {
+  display: block;
+  color: var(--muted);
+  font-style: italic;
+}
+/* หน้าเอกสารกฎหมาย: รายการเอกสาร | รายละเอียด */
+.legal-split {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .legal-split {
     grid-template-columns: minmax(0, 1fr);
   }
 }

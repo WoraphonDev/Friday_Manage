@@ -4,16 +4,15 @@
 // ล็อกอินแล้ว: บันทึกที่บัญชีผ่าน PATCH /me (แจ้งเตือนส่งตามภาษาของผู้รับ) + cookie
 // หน้าสาธารณะ: cookie `NEXT_LOCALE` อย่างเดียว · แล้ว router.refresh() ให้ server โหลดข้อความภาษาใหม่
 import { useEffect, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, supportId } from "@/lib/api";
 import type { YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Me } from "@/lib/types";
 import { readLocaleCookie, writeLocaleCookie } from "./cookie";
-import { LABELS } from "./labels";
 import {
   DEFAULT_LOCALE,
   LANGUAGE_NAMES,
@@ -45,7 +44,7 @@ export function LocaleSwitch({
 }: LocaleSwitchProps) {
   const intlLocale = useLocale();
   const locale: AppLocale = isLocale(intlLocale) ? intlLocale : DEFAULT_LOCALE;
-  const labels = LABELS[locale];
+  const t = useTranslations("locale-switch");
   const router = useRouter();
   const cache = useQueryClient();
   const toast = useToast();
@@ -84,12 +83,10 @@ export function LocaleSwitch({
       }
       onChange?.({ locale: next, yearFormat: nextYear });
     } catch (error) {
-      toast({
-        message:
-          error instanceof ApiError && error.message
-            ? error.message
-            : labels.failed,
-      });
+      // M1: Error แสดงรหัสอ้างอิงให้แจ้งทีม Support ได้
+      const message = error instanceof ApiError && error.message ? error.message : t("failed");
+      const id = error instanceof ApiError ? supportId(error) : undefined;
+      toast({ message: id ? t("failedWithId", { message, id }) : message });
     } finally {
       setPending(false);
     }
@@ -100,7 +97,7 @@ export function LocaleSwitch({
       <div
         className={styles.seg}
         role="group"
-        aria-label={labels.language}
+        aria-label={t("language")}
         aria-busy={pending || undefined}
       >
         {LOCALES.map((option) => (
@@ -123,7 +120,7 @@ export function LocaleSwitch({
         <div
           className={styles.seg}
           role="group"
-          aria-label={labels.yearFormat}
+          aria-label={t("yearFormat")}
           aria-busy={pending || undefined}
         >
           {YEARS.map((option) => (
@@ -134,7 +131,7 @@ export function LocaleSwitch({
               disabled={pending}
               onClick={() => option !== year && void save(locale, option)}
             >
-              {labels[option]}
+              {t(option)}
             </button>
           ))}
         </div>

@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
-import { formatDate, type YearFormat } from "@/lib/format";
+import { formatDate, type YearFormat, localeDateFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { List, Permissions, Person } from "@/lib/types";
 import type { GanttData, GRow } from "../../gantt/_components/gantt-view";
@@ -223,7 +223,7 @@ export function PlanChangesView({ ws, projectKey, embedded = false }: { ws: stri
 
 /** "6 พ.ย. 10:20" ตาม Canvas · เวลา Asia/Bangkok */
 function when(iso: string, year: YearFormat) {
-  const time = new Intl.DateTimeFormat("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Bangkok" }).format(new Date(iso));
+  const time = localeDateFormat({ hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Bangkok" }).format(new Date(iso));
   return `${formatDate(iso, year).split(" ").slice(0, 2).join(" ")} ${time}`;
 }
 

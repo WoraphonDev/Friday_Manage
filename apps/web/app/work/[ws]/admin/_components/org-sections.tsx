@@ -7,7 +7,7 @@ import { addDays, format, parseISO } from "date-fns";
 import { Avatar, Button, ConfirmDialog, Dialog, EmptyState, ErrorState, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
-import { formatDate, formatDateRange, today } from "@/lib/format";
+import { formatDate, formatDateRange, today, localeNumberFormat } from "@/lib/format";
 import { Card, patch, Switch, usePatchSettings, useSettings } from "./shared";
 import {
   adminKey, errorText, SIZES, wsPath,
@@ -519,7 +519,7 @@ export function WorkloadSection({ ws }: { ws: string }) {
   if (team) params.set("team", team);
   const teams = useQuery({ queryKey: adminKey(ws, "teams"), queryFn: () => api.get<{ items: Team[] }>(`${wsPath(ws)}/teams`) });
   const workload = useQuery({ queryKey: adminKey(ws, "workload", params.toString()), queryFn: () => api.get<WorkspaceWorkload>(`${wsPath(ws)}/workload?${params}`) });
-  const num = new Intl.NumberFormat("th-TH", { maximumFractionDigits: 1 });
+  const num = localeNumberFormat({ maximumFractionDigits: 1 });
   const w = workload.data;
   return (
     <Card

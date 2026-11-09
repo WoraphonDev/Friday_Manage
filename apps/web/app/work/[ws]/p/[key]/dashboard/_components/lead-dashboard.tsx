@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
-import { formatDate, formatDateRange, today as todayIso, type YearFormat } from "@/lib/format";
+import { formatDate, formatDateRange, today as todayIso, type YearFormat, intlLocale } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions } from "@/lib/types";
 import { WorkloadHeatmap } from "./workload-heatmap";
@@ -164,7 +164,7 @@ function RiskRow({ risk, ws, base, issueHref }: { risk: RiskItem; ws: string; ba
 
 /** วันที่ 1 ของเดือนถัดไป */
 const nextMonth = (date: string) => `${addDays(`${date.slice(0, 7)}-01`, 32).slice(0, 7)}-01`;
-const monthFormat = (year: YearFormat) => new Intl.DateTimeFormat(`th-TH-u-ca-${year === "BE" ? "buddhist" : "gregory"}`, { month: "short", timeZone: "UTC" });
+const monthFormat = (year: YearFormat) => new Intl.DateTimeFormat(intlLocale(year), { month: "short", timeZone: "UTC" });
 
 function ModuleTable({ modules, sort, setSort, today, yearFormat, velocityDays }: { modules: ModuleStat[]; sort: Sort; setSort: (sort: Sort) => void; today: string; yearFormat: YearFormat; velocityDays: number }) {
   const t = useTranslations("lead-dashboard-reports");

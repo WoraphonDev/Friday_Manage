@@ -5,12 +5,12 @@ import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
 import { MoreHorizontal } from "lucide-react";
 import { Avatar, Badge, Button, Dialog, EmptyState, Input, Select } from "@/components/ui";
-import { formatDate, type YearFormat } from "@/lib/format";
+import { formatDate, type YearFormat, localeNumberFormat } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ProjectMember, ProjectRole } from "./types";
 import styles from "./members.module.css";
 
-const num = new Intl.NumberFormat("th-TH", { maximumFractionDigits: 1 });
+const num = localeNumberFormat({ maximumFractionDigits: 1 });
 const HOURS_PER_MD = 8;
 
 export function MemberTable({

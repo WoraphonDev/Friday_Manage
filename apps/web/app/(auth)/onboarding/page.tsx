@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
-import common from "../../../messages/th/common.json";
+import { getTranslations } from "next-intl/server";
 import { OnboardingWizard } from "./_components/onboarding-wizard";
 
-export const metadata: Metadata = { title: common.auth.onboarding };
+// ชื่อแท็บตามภาษาของคำขอ (W21)
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.auth");
+  return { title: t("onboarding") };
+}
 
 export default function Page() {
   return <OnboardingWizard />;

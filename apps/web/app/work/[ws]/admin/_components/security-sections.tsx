@@ -9,7 +9,7 @@ import { addDays, format, parseISO } from "date-fns";
 import { Button, Dialog, EmptyState, ErrorState, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
-import { formatDate, today } from "@/lib/format";
+import { formatDate, today, localeDateFormat } from "@/lib/format";
 import { Card, Closed, OptionGroup, patch, Switch, usePatchSettings, useSettings } from "./shared";
 import {
   adminKey, errorText, formatBytes, workPath, wsPath,
@@ -17,7 +17,7 @@ import {
 } from "./types";
 import styles from "./admin.module.css";
 
-const thTime = new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" });
+const thTime = localeDateFormat({ day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" });
 const when = (iso: string) => thTime.format(new Date(iso));
 /** ตัวเลือกตาม Canvas + ค่าปัจจุบัน (ถ้าตั้งไว้นอกตัวเลือก) */
 const withCurrent = <T,>(list: T[], current: T) => (list.includes(current) ? list : [...list, current]);

@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button, buttonVariants, useToast } from "@/components/ui";
 import { ApiError, api } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { formatDate, appLocale } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { RequestUpgradeButton } from "./PlanLimitDialog";
 import styles from "./plan-limits.module.css";
@@ -136,7 +136,7 @@ export function AutomationQuotaBanner({
   return (
     <Banner
       tone="amber"
-      title={t("title", { quota: usage.quota.toLocaleString("th-TH") })}
+      title={t("title", { quota: usage.quota.toLocaleString(appLocale()) })}
       description={canManage ? t("owner", { date: formatDate(next.toISOString().slice(0, 10), "BE", true) }) : t("member")}
       action={canManage && href ? <Link className={buttonVariants({ variant: "primary", size: "small" })} href={href}>{t("cta")}</Link> : undefined}
     />

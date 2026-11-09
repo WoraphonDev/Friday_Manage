@@ -11,8 +11,22 @@ type DateLocale = "th" | "en";
  */
 export const pageLocale = (): DateLocale =>
   typeof document !== "undefined" && document.documentElement.lang === "en" ? "en" : "th";
-const intlLocale = (year: YearFormat, lang: DateLocale = pageLocale()) =>
-  `${lang === "en" ? "en-US" : "th-TH"}-u-ca-${year === "BE" ? "buddhist" : "gregory"}`;
+/** locale ของ Intl สำหรับตัวเลขและเวลา (ไม่มีปี) ตามภาษาของหน้า */
+export const appLocale = (lang: DateLocale = pageLocale()) => (lang === "en" ? "en-US" : "th-TH");
+/** locale ของ Intl ที่รวมปฏิทินตามรูปแบบปีของผู้ใช้ เช่น en-US + gregory · th-TH + buddhist */
+export const intlLocale = (year: YearFormat, lang: DateLocale = pageLocale()) =>
+  `${appLocale(lang)}-u-ca-${year === "BE" ? "buddhist" : "gregory"}`;
+
+/**
+ * ตัวจัดรูปแบบวันที่ / ตัวเลขที่เลือกภาษาตอนเรียก format (ไม่ใช่ตอน import)
+ * ใช้แทน `new Intl.*("th-TH")` ที่ประกาศไว้ระดับ module เพราะสลับภาษาด้วย router.refresh() ไม่โหลดโมดูลใหม่
+ */
+export function localeDateFormat(options: Intl.DateTimeFormatOptions, year?: YearFormat) {
+  return { format: (value: Date | number) => new Intl.DateTimeFormat(year ? intlLocale(year) : appLocale(), options).format(value) };
+}
+export function localeNumberFormat(options?: Intl.NumberFormatOptions) {
+  return { format: (value: number) => new Intl.NumberFormat(appLocale(), options).format(value) };
+}
 const strings = (lang: DateLocale = pageLocale()) => (lang === "en" ? commonEn.format : commonTh.format);
 
 export function formatDate(
@@ -46,7 +60,7 @@ export function formatDateRange(
 export const formatManDay = (value: number) =>
   strings().manDay.replace(
     "{value}",
-    new Intl.NumberFormat(pageLocale() === "en" ? "en-US" : "th-TH", { maximumFractionDigits: 2 }).format(value),
+    new Intl.NumberFormat(appLocale(), { maximumFractionDigits: 2 }).format(value),
   );
 export const today = (now = new Date()) =>
   new Intl.DateTimeFormat("en-CA", {

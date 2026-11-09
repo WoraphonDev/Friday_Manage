@@ -1,3 +1,4 @@
+import { appLocale } from "@/lib/format";
 /**
  * ชุดฟิลด์ของโปรเจกต์ (ผู้ใช้ตัดสิน 2026-11-09) · ตรงกับ apps/api/src/projects/field-profile.ts
  * Template กำหนดว่า Task / Sub-task แสดง / บังคับฟิลด์ไหน และ Table แสดงคอลัมน์อะไรตามลำดับไหน
@@ -77,7 +78,7 @@ export function customText(f: CustomFieldDef, value: unknown, people: { id: stri
     case "multi_select": return Array.isArray(value) ? value.map(label).join(", ") : label(value);
     case "user": return people.find((p) => p.id === value)?.displayName ?? "";
     case "date": return formatDate ? formatDate(String(value)) : String(value);
-    case "number": return typeof value === "number" ? value.toLocaleString("th-TH") : String(value);
+    case "number": return typeof value === "number" ? value.toLocaleString(appLocale()) : String(value);
     default: return String(value);
   }
 }

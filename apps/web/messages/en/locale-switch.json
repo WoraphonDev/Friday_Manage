@@ -1,0 +1,16 @@
+{
+  "language": "Language",
+  "yearFormat": "Year format",
+  "BE": "B.E.",
+  "CE": "A.D.",
+  "yearHint": "Default: Thai = B.E. · English = A.D.",
+  "saving": "Saving language",
+  "failed": "Couldn't change the language. Please try again",
+  "failedWithId": "{message} · Reference: {id}",
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  }
+}

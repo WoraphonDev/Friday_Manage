@@ -27,6 +27,7 @@ import {
 } from "@/features/locale-switch";
 import { getRequestLocale, loadMessages } from "@/features/locale-switch/server";
 import enCommon from "../../messages/en/common.json";
+import enLocaleSwitch from "../../messages/en/locale-switch.json";
 
 const requestCookies = new Map<string, string>();
 const requestHeaders = new Map<string, string>();
@@ -56,7 +57,7 @@ const patchMe = (status = 200) =>
 
 /** ห่อด้วย provider ภาษาอังกฤษ เพื่อจำลองหน้าที่ server render เป็น EN แล้ว */
 const English = ({ children }: { children: ReactNode }) => (
-  <NextIntlClientProvider locale="en" messages={{ common: enCommon }} timeZone="Asia/Bangkok">
+  <NextIntlClientProvider locale="en" messages={{ common: enCommon, "locale-switch": enLocaleSwitch }} timeZone="Asia/Bangkok">
     {children}
   </NextIntlClientProvider>
 );
@@ -183,11 +184,32 @@ describe("LocaleSwitch", () => {
     expect(readLocaleCookie()).toBe("th");
   });
 
+  it("M1 · ระหว่างบันทึก: กลุ่มปุ่ม aria-busy และกดซ้ำไม่ได้ จนบันทึกเสร็จ", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    server.use(
+      http.patch("*/api/v1/me", async ({ request }) => {
+        patches.push((await request.json()) as Partial<Me>);
+        await gate;
+        return HttpResponse.json({ ...me, locale: "en", yearFormat: "CE" });
+      }),
+    );
+    renderWithProviders(<LocaleSwitch signedIn />);
+    await userEvent.click(screen.getByRole("button", { name: "English" }));
+    const group = screen.getByRole("group", { name: "ภาษาของระบบ" });
+    await waitFor(() => expect(group).toHaveAttribute("aria-busy", "true"));
+    expect(screen.getByRole("button", { name: "ไทย" })).toBeDisabled();
+    release();
+    await waitFor(() => expect(group).not.toHaveAttribute("aria-busy"));
+    expect(patches).toHaveLength(1);
+  });
+
   it("PATCH /me ไม่สำเร็จ: แจ้งข้อความ error และไม่เปลี่ยน cookie / ไม่ refresh", async () => {
     server.use(patchMe(500));
     renderWithProviders(<LocaleSwitch signedIn />);
     await userEvent.click(screen.getByRole("button", { name: "English" }));
-    expect(await screen.findByText("ข้อผิดพลาดทดสอบ")).toBeInTheDocument();
+    // M1: Error แสดงรหัสอ้างอิงด้วย
+    expect(await screen.findByText("ข้อผิดพลาดทดสอบ · รหัสอ้างอิง: req_w21_001")).toBeInTheDocument();
     expect(patches).toEqual([{ locale: "en", yearFormat: "CE" }]);
     expect(readLocaleCookie()).toBeNull();
     expect(router.refresh).not.toHaveBeenCalled();

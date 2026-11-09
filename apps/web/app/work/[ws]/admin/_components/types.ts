@@ -1,4 +1,5 @@
 import { ApiError, supportId } from "@/lib/api";
+import { localeNumberFormat } from "@/lib/format";
 
 /** แท็บของ N1 ตามเมนูใน Canvas · `notify-templates` = หน้า N2 */
 export const SECTIONS = ["overview", "projects", "teams", "std", "load", "security", "audit", "data", "notify", "integ", "bill"] as const;
@@ -263,6 +264,6 @@ export const isForbidden = (error: unknown) => error instanceof ApiError && erro
 export function formatBytes(bytes: number | null) {
   if (bytes === null) return "—";
   const gb = bytes / 1024 ** 3;
-  if (gb >= 0.1) return `${new Intl.NumberFormat("th-TH", { maximumFractionDigits: 1 }).format(gb)} GB`;
-  return `${new Intl.NumberFormat("th-TH", { maximumFractionDigits: 1 }).format(bytes / 1024 ** 2)} MB`;
+  if (gb >= 0.1) return `${localeNumberFormat({ maximumFractionDigits: 1 }).format(gb)} GB`;
+  return `${localeNumberFormat({ maximumFractionDigits: 1 }).format(bytes / 1024 ** 2)} MB`;
 }

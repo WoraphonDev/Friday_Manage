@@ -2,6 +2,8 @@ import common from "../../messages/th/common.json";
 import inboxBell from "../../messages/th/inbox-bell.json";
 import saasPages from "../../messages/th/saas-pages.json";
 import searchPalette from "../../messages/th/search-palette.json";
+import localeSwitch from "../../messages/th/locale-switch.json";
+import localeSwitchEn from "../../messages/en/locale-switch.json";
 import commonEn from "../../messages/en/common.json";
 import inboxBellEn from "../../messages/en/inbox-bell.json";
 import saasPagesEn from "../../messages/en/saas-pages.json";
@@ -16,6 +18,8 @@ export const messages = {
   "inbox-bell": inboxBell,
   "search-palette": searchPalette,
   "saas-pages": saasPages,
+  // locale-switch: ตัวสลับภาษา / ปี / ธีม อยู่ใน shell และหน้าสาธารณะทุกหน้า (W21)
+  "locale-switch": localeSwitch,
 };
 
 /** ข้อความ EN ของ namespace เดียวกัน (W21) · test ใช้ผ่าน renderWithProviders({ locale: "en" }) */
@@ -24,4 +28,5 @@ export const messagesEn = {
   "inbox-bell": inboxBellEn,
   "search-palette": searchPaletteEn,
   "saas-pages": saasPagesEn,
+  "locale-switch": localeSwitchEn,
 };

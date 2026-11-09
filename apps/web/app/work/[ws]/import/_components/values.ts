@@ -1,6 +1,6 @@
-import { formatDate, type YearFormat } from "@/lib/format";
+import { formatDate, type YearFormat, localeNumberFormat } from "@/lib/format";
 
-export const num = (n: number) => new Intl.NumberFormat("th-TH", { maximumFractionDigits: 2 }).format(n);
+export const num = (n: number) => localeNumberFormat({ maximumFractionDigits: 2 }).format(n);
 
 /** ค่าในเซลล์ตัวอย่าง / ค่าก่อน-หลังใน diff ให้อ่านง่าย */
 export function showValue(v: unknown, year: YearFormat): string {

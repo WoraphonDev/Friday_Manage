@@ -7,15 +7,15 @@ import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Avatar, Button, EmptyState, ErrorState, Forbidden, LoadingState, Select, useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
-import { formatDateRange, today, type YearFormat } from "@/lib/format";
+import { formatDateRange, today, type YearFormat, localeDateFormat, localeNumberFormat } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { workloadRange } from "./shared";
 import type { Group, ProjectMember, Unit, Workload, WorkloadPerson, Basis } from "./types";
 import styles from "./members.module.css";
 
-const short = new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", timeZone: "UTC" });
-const monthName = new Intl.DateTimeFormat("th-TH", { month: "long", timeZone: "UTC" });
-const num = new Intl.NumberFormat("th-TH", { maximumFractionDigits: 1 });
+const short = localeDateFormat({ day: "numeric", month: "short", timeZone: "UTC" });
+const monthName = localeDateFormat({ month: "long", timeZone: "UTC" });
+const num = localeNumberFormat({ maximumFractionDigits: 1 });
 const asDate = (d: string) => new Date(`${d}T00:00:00Z`);
 
 export const workloadParams = (range: { from: string; to: string }, group: Group, unit: Unit) => new URLSearchParams({ from: range.from, to: range.to, group, unit });

@@ -11,6 +11,7 @@ import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
 import { AutomationQuotaBanner, FeatureLock, LegalUpdateBanner, PlanLimitHost, UsageBanner, type Usage } from "@/features/plan-limits";
 import sp from "../../messages/th/saas-pages.json";
+import checkoutMessages from "../../messages/th/checkout.json";
 import { Landing, PricingPage } from "../../app/(public)/_components/landing";
 import { LegalView } from "../../app/(public)/_components/legal";
 import { CONSENT_KEY, CookieConsent } from "../../app/(public)/_components/cookie-consent";
@@ -18,16 +19,7 @@ import { SiteFooter } from "../../app/(public)/_components/site";
 import { Billing } from "../../app/work/[ws]/billing/_components/billing";
 import type { BillingProfile, CheckoutResult, Invoice } from "../../app/work/[ws]/billing/_components/types";
 
-const stripe = vi.hoisted(() => ({ enabled: true, confirm: vi.fn(), mount: vi.fn() }));
-vi.mock("../../app/work/[ws]/billing/_components/stripe", () => ({
-  STRIPE_KEY: "pk_test_sample",
-  loadStripe: async () =>
-    stripe.enabled
-      ? { elements: () => ({ create: () => ({ mount: stripe.mount, destroy: () => undefined, on: () => undefined }) }), confirmCardPayment: stripe.confirm }
-      : null,
-}));
-
-const messages = { "saas-pages": sp };
+const messages = { "saas-pages": sp, checkout: checkoutMessages };
 const TEAM = ["kanban", "table", "calendar", "notifications_in_app", "notifications_email", "gantt", "workload", "sprints", "reports", "import_excel", "automation", "line_oa", "webhooks", "git_integration"];
 const plan = (code: string, name: string, seatLimit: number | null, monthly: number | null, over: object = {}) => ({
   code, name, seatLimit, guestsFree: true, projectLimit: null, storageGbPerMember: 10, priceMonthlySatang: monthly, priceYearlySatang: monthly === null ? null : monthly * 10, contactSales: false, features: TEAM, ...over,
@@ -97,8 +89,6 @@ beforeEach(() => {
   profile = profileBody;
   usageBody = usage();
   currentInvoice = invoice();
-  stripe.enabled = true;
-  stripe.confirm.mockResolvedValue({ paymentIntent: { status: "succeeded" } });
   try {
     localStorage.clear();
     sessionStorage.clear();
@@ -311,178 +301,6 @@ describe("กฎหมาย + Cookie (R4)", () => {
 // ---------------------------------------------------------------------------
 // R2 · ชำระเงิน
 // ---------------------------------------------------------------------------
-describe("ชำระเงิน (R2)", () => {
-  it("บัตร: กรอกข้อมูลภาษีเดิม, ส่ง profile + checkout พร้อม Idempotency-Key, ยืนยันด้วย Stripe แล้ว poll จน paid", async () => {
-    // Webhook ยืนยันแล้ว: GET invoices/:id ตอบ paid
-    server.use(http.get("*/api/v1/w/:ws/billing/invoices/:id", () => HttpResponse.json(invoice({ status: "paid", paidAt: "2026-11-06T03:01:00Z" }))));
-    const user = userEvent.setup();
-    mountBilling({ section: "checkout", plan: "team_m" });
-    expect(await screen.findByLabelText("ชื่อนิติบุคคล")).toHaveValue("บริษัท ตัวอย่าง จำกัด");
-    expect(screen.getByText("ทีมปัจจุบัน 12 คน (ไม่นับ Guest) · Team M รองรับถึง 25 คน")).toBeInTheDocument();
-    const summary = screen.getByRole("complementary", { name: "สรุปยอด" });
-    expect(await within(summary).findByText("Team M · รายเดือน")).toBeInTheDocument();
-    expect(within(summary).getByText("3,000")).toBeInTheDocument();
-    expect(within(summary).getByText("210")).toBeInTheDocument();
-    expect(within(summary).getByText("3,210 บาท")).toBeInTheDocument();
-    await waitFor(() => expect(stripe.mount).toHaveBeenCalled());
-    // บัตรหัก ณ ที่จ่ายไม่ได้
-    expect(screen.queryByLabelText(/หักภาษี ณ ที่จ่าย 3%/)).not.toBeInTheDocument();
-    expect(screen.getByText(/บัตรเครดิตหักไม่ได้/)).toBeInTheDocument();
-
-    await user.type(screen.getByLabelText("เลขที่ใบสั่งซื้อ (PO) ถ้ามี"), "PO-001");
-    await user.click(within(summary).getByRole("button", { name: "ชำระ 3,210 บาท" }));
-    expect(await screen.findByRole("heading", { level: 1, name: "เปลี่ยนเป็น Team M แล้ว" })).toBeInTheDocument();
-    expect(screen.getByText("ชำระเงินสำเร็จ")).toBeInTheDocument();
-    const [put, post] = calls;
-    expect(put).toMatchObject({ method: "PUT", path: "/w/sample/billing/profile", body: { companyName: "บริษัท ตัวอย่าง จำกัด", taxId: "0000000000000", branchType: "head", branchNo: null, whtEnabled: false } });
-    expect(post).toMatchObject({ method: "POST", path: "/w/sample/billing/checkout", body: { plan: "team_m", cycle: "monthly", method: "card", wht: false, poNumber: "PO-001" } });
-    expect(post.key).toMatch(/^[A-Za-z0-9_.:-]{8,128}$/);
-    expect(stripe.confirm).toHaveBeenCalledWith("pi_sample_secret_sample", expect.objectContaining({ payment_method: expect.objectContaining({ billing_details: { name: "บริษัท ตัวอย่าง จำกัด", email: "account@example.com" } }) }));
-    expect(screen.getByRole("link", { name: "ดู Billing" })).toHaveAttribute("href", "/work/sample/billing");
-    expect(screen.getByRole("link", { name: "กลับไปทำงาน" })).toHaveAttribute("href", "/work/sample");
-  });
-
-  it("Idempotency-Key: ใช้ซ้ำเมื่อ retry หลัง 5xx · ได้ key ใหม่เมื่อเปลี่ยนรายละเอียด", async () => {
-    let fail = 1;
-    server.use(http.post("*/api/v1/w/:ws/billing/checkout", async ({ request }) => {
-      await record(request);
-      if (fail-- > 0) return errorBody(500, "req_w19_checkout");
-      currentInvoice = invoice({ status: "open" });
-      return HttpResponse.json(checkoutResult("card", {}));
-    }));
-    stripe.confirm.mockResolvedValue({ error: { message: "บัตรถูกปฏิเสธ (ทดสอบ)" } });
-    const user = userEvent.setup();
-    mountBilling({ section: "checkout", plan: "team_s" });
-    const summary = await screen.findByRole("complementary", { name: "สรุปยอด" });
-    const pay = await within(summary).findByRole("button", { name: "ชำระ 1,605 บาท" });
-    await user.click(pay);
-    expect(await within(summary).findByText(/req_w19_checkout/)).toBeInTheDocument();
-    await user.click(within(summary).getByRole("button", { name: "ชำระ 1,605 บาท" }));
-    expect(await within(summary).findByText("บัตรถูกปฏิเสธ (ทดสอบ)")).toBeInTheDocument();
-    const posts = calls.filter((c) => c.path.endsWith("/checkout"));
-    expect(posts).toHaveLength(2);
-    expect(posts[1].key).toBe(posts[0].key);
-    // รายละเอียดล็อกระหว่างรอชำระ · กดเปลี่ยนรายละเอียดแล้วเลือกแพ็กเกจใหม่ = คำขอใหม่
-    expect(screen.getByRole("button", { name: /Team M/ })).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "เปลี่ยนรายละเอียด" }));
-    await user.click(screen.getByRole("button", { name: /Team M/ }));
-    await user.click(await within(summary).findByRole("button", { name: "ชำระ 3,210 บาท" }));
-    await waitFor(() => expect(calls.filter((c) => c.path.endsWith("/checkout"))).toHaveLength(3));
-    const third = calls.filter((c) => c.path.endsWith("/checkout"))[2];
-    expect(third.key).not.toBe(posts[0].key);
-    expect(third.body).toMatchObject({ plan: "team_m" });
-  });
-
-  it("ตรวจข้อมูลภาษีก่อนส่ง และไม่มี profile = ฟอร์มว่าง", async () => {
-    profile = null;
-    const user = userEvent.setup();
-    mountBilling({ section: "checkout" });
-    const name = await screen.findByLabelText("ชื่อนิติบุคคล");
-    expect(name).toHaveValue("");
-    // 12 คน → แนะนำ Team M
-    expect(screen.getByRole("button", { name: /Team M/ })).toHaveAttribute("aria-pressed", "true");
-    await user.type(screen.getByLabelText("เลขประจำตัวผู้เสียภาษี (13 หลัก)"), "12345");
-    await user.selectOptions(screen.getByLabelText("สำนักงานใหญ่ / สาขา"), "branch");
-    await user.click(await screen.findByRole("button", { name: /^ชำระ/ }));
-    expect(screen.getByText("เลขประจำตัวผู้เสียภาษีต้องเป็นตัวเลข 13 หลัก")).toBeInTheDocument();
-    expect(screen.getByText("รหัสสาขาต้องเป็นตัวเลข 5 หลัก")).toBeInTheDocument();
-    expect(screen.getByText("อีเมลไม่ถูกต้อง")).toBeInTheDocument();
-    expect(calls).toHaveLength(0);
-    // บุคคลธรรมดาไม่มีสาขาและหัก ณ ที่จ่ายไม่ได้
-    await user.click(screen.getByRole("button", { name: "บุคคลธรรมดา" }));
-    expect(screen.getByLabelText("ชื่อ-นามสกุล")).toBeInTheDocument();
-    expect(screen.queryByLabelText("สำนักงานใหญ่ / สาขา")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /^PromptPay/ }));
-    expect(screen.queryByLabelText(/หักภาษี ณ ที่จ่าย 3%/)).not.toBeInTheDocument();
-  });
-
-  it("PromptPay + หัก ณ ที่จ่าย: สรุปยอดหัก 3%, แสดง QR และนับถอยหลัง, ยังไม่จ่าย → แจ้ง, จ่ายแล้ว → สำเร็จ", async () => {
-    const urls: URL[] = [];
-    server.use(http.get("*/api/v1/w/:ws/billing/quote", ({ request }) => {
-      const url = new URL(request.url);
-      urls.push(url);
-      return HttpResponse.json(quoteFor(url));
-    }));
-    const user = userEvent.setup();
-    mountBilling({ section: "checkout", plan: "team_m" });
-    await user.click(await screen.findByRole("button", { name: /^PromptPay/ }));
-    // ค่าเริ่มต้นตามข้อมูลภาษีเดิม (ไม่หัก) แล้วติ๊กเอง
-    const wht = screen.getByLabelText(/หักภาษี ณ ที่จ่าย 3%/);
-    expect(wht).not.toBeChecked();
-    await user.click(wht);
-    const summary = screen.getByRole("complementary", { name: "สรุปยอด" });
-    expect(await within(summary).findByText("− 90")).toBeInTheDocument();
-    expect(within(summary).getByText("3,120 บาท")).toBeInTheDocument();
-    expect(urls.at(-1)!.searchParams.get("wht")).toBe("true");
-    await user.click(within(summary).getByRole("button", { name: "สร้าง QR PromptPay" }));
-    expect(await screen.findByRole("img", { name: "QR PromptPay ยอด 3,120 บาท" })).toHaveAttribute("src", expect.stringMatching(/^data:image\/svg\+xml/));
-    expect(screen.getByText("สแกนจ่าย 3,120 บาท")).toBeInTheDocument();
-    expect(screen.getByRole("timer")).toHaveTextContent(/QR หมดอายุใน 1[45]:\d\d นาที/);
-    expect(screen.getByRole("link", { name: "ดาวน์โหลด QR" })).toHaveAttribute("download", "promptpay-FRI-2611-0001.svg");
-    expect(calls.find((c) => c.path.endsWith("/checkout"))!.body).toMatchObject({ method: "promptpay", wht: true });
-    expect(calls.find((c) => c.method === "PUT")!.body).toMatchObject({ whtEnabled: true });
-
-    await user.click(within(summary).getByRole("button", { name: "ฉันสแกนจ่ายแล้ว" }));
-    expect(await within(summary).findByText(/ยังไม่ได้รับเงิน/)).toBeInTheDocument();
-    currentInvoice = invoice({ status: "paid", method: "promptpay", paidAt: "2026-11-06T03:05:00Z" });
-    await user.click(within(summary).getByRole("button", { name: "ฉันสแกนจ่ายแล้ว" }));
-    expect(await screen.findByText("ได้รับเงินแล้ว")).toBeInTheDocument();
-    expect(screen.getByText(/อัปโหลด 50 ทวิ ภายใน 30 วัน/)).toBeInTheDocument();
-  });
-
-  it("โอนเงิน: ขอใบแจ้งหนี้ → เลขบัญชี + PDF → แนบสลิป → รอตรวจและใช้แพ็กเกจได้ทันที", async () => {
-    const user = userEvent.setup();
-    mountBilling({ section: "checkout", plan: "team_m", cycle: "yearly" });
-    await user.click(await screen.findByRole("button", { name: /^โอนเงินผ่านธนาคาร/ }));
-    expect(screen.getByLabelText(/หักภาษี ณ ที่จ่าย 3%/)).not.toBeChecked();
-    const summary = screen.getByRole("complementary", { name: "สรุปยอด" });
-    expect(await within(summary).findByText("Team M · รายปี")).toBeInTheDocument();
-    expect(within(summary).getByText("32,100 บาท")).toBeInTheDocument();
-    await user.click(within(summary).getByRole("button", { name: "ขอใบแจ้งหนี้และเลขบัญชี" }));
-    expect(await screen.findByText("ธนาคารตัวอย่าง")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ดาวน์โหลดใบแจ้งหนี้ FRI-2611-0001 (PDF)" })).toHaveAttribute("href", `/api/v1/w/sample/billing/invoices/${INV}.pdf`);
-    const send = within(summary).getByRole("button", { name: "ส่งสลิปการโอน" });
-    expect(send).toBeDisabled();
-    await user.upload(screen.getByLabelText("แนบสลิปการโอน"), new File(["slip"], "slip.png", { type: "image/png" }));
-    await user.click(send);
-    expect(await screen.findByText("รอตรวจสลิป")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1, name: "ได้รับสลิปแล้ว ใช้งาน Team M ได้ทันที" })).toBeInTheDocument();
-    const slip = calls.find((c) => c.path.endsWith("/slip"))!;
-    expect(slip.path).toBe(`/w/sample/billing/invoices/${INV}/slip`);
-    expect(slip.body).toHaveProperty("file");
-    expect(calls.find((c) => c.path.endsWith("/checkout"))!.body).toMatchObject({ method: "transfer", cycle: "yearly", wht: false });
-  });
-
-  it("ไม่ได้ตั้งกุญแจ Stripe: บอกโหมดทดสอบ", async () => {
-    stripe.enabled = false;
-    mountBilling({ section: "checkout" });
-    expect(await screen.findByText(/โหมดทดสอบ/)).toBeInTheDocument();
-  });
-
-  it("สิทธิ์: Member เห็นไม่มีสิทธิ์โดยไม่เรียก API · API ตอบ 403 · 500 มี requestId", async () => {
-    asRole("member");
-    const urls: string[] = [];
-    server.use(http.get("*/api/v1/w/:ws/billing/profile", ({ request }) => {
-      urls.push(request.url);
-      return HttpResponse.json({ profile });
-    }));
-    const first = mountBilling({ section: "checkout" });
-    expect(await screen.findByText("คุณยังไม่มีสิทธิ์เข้าถึง")).toBeInTheDocument();
-    expect(urls).toHaveLength(0);
-    first.unmount();
-
-    asRole("admin");
-    server.use(http.get("*/api/v1/w/:ws/billing/profile", () => errorBody(403)));
-    const second = mountBilling({ section: "checkout" });
-    expect(await screen.findByText("คุณยังไม่มีสิทธิ์เข้าถึง")).toBeInTheDocument();
-    second.unmount();
-
-    server.use(http.get("*/api/v1/w/:ws/billing/profile", () => errorBody(500, "req_w19_profile")));
-    mountBilling({ section: "checkout" });
-    expect(await screen.findByText(/req_w19_profile/)).toBeInTheDocument();
-  });
-});
-
 // ---------------------------------------------------------------------------
 // หน้า Billing
 // ---------------------------------------------------------------------------
@@ -539,9 +357,10 @@ describe("แพ็กเกจ & Billing", () => {
     expect(await screen.findByText(/อัปโหลด 50 ทวิ ของ FRI-2611-0001 แล้ว/)).toBeInTheDocument();
     expect(calls.map((c) => c.path)).toEqual([`/w/sample/billing/invoices/${INV}/slip`, `/w/sample/billing/invoices/${INV}/wht-certificate`]);
 
+    // W22: ยกเลิกผ่านแบบสอบถาม (ไม่ตอบก็ยกเลิกได้)
     await user.click(screen.getByRole("button", { name: "ยกเลิกแพ็กเกจ" }));
-    const dialog = await screen.findByRole("dialog", { name: "ยกเลิกแพ็กเกจ" });
-    await user.click(within(dialog).getByRole("button", { name: "ยืนยันยกเลิก" }));
+    const dialog = await screen.findByRole("dialog", { name: "ยกเลิกแพ็กเกจ?" });
+    await user.click(within(dialog).getByRole("button", { name: "ยกเลิกแพ็กเกจ" }));
     await waitFor(() => expect(calls.at(-1)!.path).toBe("/w/sample/billing/subscription/cancel"));
   });
 

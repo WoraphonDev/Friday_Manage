@@ -4,12 +4,13 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Badge, Button, ConfirmDialog, EmptyState, ErrorState, Forbidden, LoadingState, buttonVariants, useToast, type Tone } from "@/components/ui";
+import { Badge, Button, EmptyState, ErrorState, Forbidden, LoadingState, buttonVariants, useToast, type Tone } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { ApiError, api } from "@/lib/api";
 import { formatDate, today } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { baht, checkoutHref, type SubscriptionStatus, type Usage } from "@/features/plan-limits";
+import { CancelSurvey } from "@/features/checkout/CancelSurvey";
 import type { BillingOverview, Invoice, InvoiceStatus } from "./types";
 import styles from "./billing.module.css";
 
@@ -232,17 +233,13 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
         />
       </section>
 
-      <ConfirmDialog
+      <CancelSurvey
         open={cancelling}
         onOpenChange={setCancelling}
-        title={t("cancelTitle")}
-        description={t("cancelDescription", { date: formatDate(sub.status === "trialing" ? sub.trialEndsAt : sub.currentPeriodEnd, "BE", true) })}
-        confirmLabel={t("cancelConfirm")}
-        successMessage={t("cancelled")}
-        onConfirm={async () => {
-          await api.post(`${base}/billing/subscription/cancel`);
-          await refresh();
-        }}
+        base={base}
+        isOwner={workspace.role === "owner"}
+        until={formatDate(sub.status === "trialing" ? sub.trialEndsAt : sub.currentPeriodEnd, "BE", true)}
+        onCancelled={refresh}
       />
     </div>
   );

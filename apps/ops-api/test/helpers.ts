@@ -25,9 +25,14 @@ export async function startOps(): Promise<TestOps> {
   return { app, owner, close: async () => { await app.close(); await owner.end(); } };
 }
 
+type Role = 'owner' | 'finance' | 'support' | 'engineer' | 'auditor';
+/** ชุดบทบาทที่ test ใช้บ่อย · `admin` = Owner ทีมเล็กที่ทำทุกงานเอง */
+const PRESET: Record<string, Role[]> = { admin: ['owner', 'finance', 'support', 'engineer'], support: ['support'], finance: ['finance'] };
+
 /** พนักงานหนึ่งคน = agent + Security key จำลอง */
-export async function staff(t: TestOps, email: string, name: string, role: 'admin' | 'support' | 'finance') {
-  const row = await t.owner.query(`INSERT INTO staff_users (email, name, role) VALUES ($1, $2, $3) RETURNING id`, [email, name, role]);
+export async function staff(t: TestOps, email: string, name: string, role: 'admin' | 'support' | 'finance' | Role[]) {
+  const roles = Array.isArray(role) ? role : PRESET[role];
+  const row = await t.owner.query(`INSERT INTO staff_users (email, name, roles) VALUES ($1, $2, $3) RETURNING id`, [email, name, roles]);
   const id = row.rows[0].id as string;
   const key = new SoftKey();
   const agent = request.agent(t.app.getHttpServer());
@@ -37,7 +42,15 @@ export async function staff(t: TestOps, email: string, name: string, role: 'admi
   expect(reg.status, JSON.stringify(reg.body)).toBe(200);
   const login = await signIn(agent, email, key);
   expect(login.status, JSON.stringify(login.body)).toBe(200);
-  return { id, email, name, role, key, agent };
+  return { id, email, name, roles, key, agent };
+}
+
+/** ยืนยันตัวตนซ้ำ (G4) ด้วย key เดิม · cookie อยู่ใน agent */
+export async function reauth(st: { agent: ReturnType<typeof request.agent>; key: SoftKey }) {
+  const o = await st.agent.post('/ops/auth/reauth/options').send({});
+  expect(o.status, JSON.stringify(o.body)).toBe(200);
+  const v = await st.agent.post('/ops/auth/reauth/verify').send({ challengeToken: o.body.challengeToken, response: st.key.assert(o.body.options) });
+  expect(v.status, JSON.stringify(v.body)).toBe(200);
 }
 
 export async function signIn(agent: ReturnType<typeof request.agent>, email: string, key: SoftKey) {

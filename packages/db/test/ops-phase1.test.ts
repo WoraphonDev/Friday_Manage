@@ -90,13 +90,6 @@ afterAll(async () => {
 });
 
 describe('บทบาทพนักงาน (06-ops-roles)', () => {
-  it('เขียนแค่ role แบบเดิม → trigger เติม roles ให้ · admin กลายเป็น owner', async () => {
-    const id = await insert('staff_users', { email: 'legacy@o00.example.com', name: 'เดิม', role: 'admin' });
-    expect((await rows(owner, 'SELECT roles FROM staff_users WHERE id = $1', [id]))[0].roles).toEqual(['owner']);
-    await owner.query(`UPDATE staff_users SET role = 'finance' WHERE id = $1`, [id]);
-    expect((await rows(owner, 'SELECT roles FROM staff_users WHERE id = $1', [id]))[0].roles).toEqual(['finance']);
-  });
-
   it('ต้องมีอย่างน้อย 1 บทบาท และใช้ได้เฉพาะบทบาทที่กำหนด', async () => {
     await expect(insert('staff_users', { email: 'none@o00.example.com', name: 'ไม่มีบทบาท' })).rejects.toThrow(/staff_users_roles_valid/);
     await expect(insert('staff_users', { email: 'bad@o00.example.com', name: 'ผิด', roles: ['superuser'] })).rejects.toThrow(/staff_users_roles_valid/);

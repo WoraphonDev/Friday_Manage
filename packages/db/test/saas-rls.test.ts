@@ -125,7 +125,7 @@ beforeAll(async () => {
   for (const [user, ws] of [[U.lead, W.one], [U.member, W.one], [U.other, W.two]]) {
     await insert('legal_acceptances', { user_id: user, workspace_id: ws, document_id: document });
   }
-  const staff = await insert('staff_users', { email: 'staff@example.com', name: 'ทดสอบ', role: 'support' });
+  const staff = await insert('staff_users', { email: 'staff@example.com', name: 'ทดสอบ', roles: ['support'] });
   await insert('support_sessions', { workspace_id: W.one, staff_id: staff, ticket_no: 'T00', reason: 'ทดสอบ' });
   const flag = await insert('feature_flags', { key: 't00' });
   await insert('feature_flag_overrides', { flag_id: flag, workspace_id: W.one, enabled: true });

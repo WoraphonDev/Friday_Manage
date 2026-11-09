@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { config } from '../config.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
-import { SESSION_PURPOSE } from './auth.guard.js';
+import { REAUTH_PURPOSE, REAUTH_SECONDS, SESSION_PURPOSE } from './auth.guard.js';
 import { sign, verify } from './tokens.js';
 
 const s = schema;
@@ -22,6 +22,7 @@ export interface StoredCredential {
   transports?: string[];
   name: string;
   createdAt: string;
+  lastUsedAt?: string;
 }
 
 export const EnrollBody = z.object({ enrollToken: z.string().min(10).optional(), name: z.string().trim().min(1).max(60).default('Security key') });
@@ -78,8 +79,11 @@ export class AuthService {
     const c = v.registrationInfo.credential;
     const next: StoredCredential = { id: c.id, publicKey: Buffer.from(c.publicKey).toString('base64url'), counter: c.counter, transports: c.transports, name: body.name ?? 'Security key', createdAt: new Date().toISOString() };
     if (this.creds(row).some((x) => x.id === next.id)) throw new AppError(409, 'credential_exists', 'Security key นี้ลงทะเบียนแล้ว');
-    await this.db.update(s.staffUsers).set({ webauthnCredentials: [...this.creds(row), next], updatedAt: new Date() }).where(eq(s.staffUsers.id, row.id));
-    return { registered: true, credentialId: next.id, keys: this.creds(row).length + 1 };
+    const keys = this.creds(row).length + 1;
+    // พนักงานใหม่ใช้งานได้เมื่อมีกุญแจ 2 อัน (กันล็อกตัวเองออกเมื่อกุญแจหาย · S2)
+    const activate = row.status === 'invited' && keys >= 2;
+    await this.db.update(s.staffUsers).set({ webauthnCredentials: [...this.creds(row), next], ...(activate ? { status: 'active' } : {}), updatedAt: new Date() }).where(eq(s.staffUsers.id, row.id));
+    return { registered: true, credentialId: next.id, keys, status: activate ? 'active' : row.status };
   }
 
   async loginOptions(email: string) {
@@ -92,8 +96,34 @@ export class AuthService {
 
   /** ตรวจลายเซ็นของ key แล้วออก session (cookie) · counter ต้องเพิ่มขึ้น (กันโคลน key) */
   async loginVerify(body: z.infer<typeof VerifyBody>) {
+    const row = await this.assertion('ops-login', body);
+    if (row.status === 'invited') throw new AppError(403, 'enrollment_incomplete', 'ลงทะเบียน Security key ให้ครบ 2 อันก่อนเข้าใช้งาน');
+    if (row.status !== 'active' || (row.expiresAt && row.expiresAt.getTime() <= Date.now())) throw new AppError(401, 'login_failed', 'เข้าสู่ระบบไม่สำเร็จ');
+    const token = sign(SESSION_PURPOSE, { sid: row.id }, config.sessionHours * 3600);
+    return { token, staff: { id: row.id, email: row.email, name: row.name, roles: row.roles, department: row.department } };
+  }
+
+  /** เริ่มยืนยันตัวตนซ้ำ (G4) · ใช้ key ของพนักงานที่ล็อกอินอยู่เท่านั้น */
+  async reauthOptions(staffId: string) {
+    const row = await this.staff(staffId);
+    if (!row) throw new AppError(404, 'not_found', 'ไม่พบพนักงาน');
+    const options = await generateAuthenticationOptions({ rpID: config.rpId, userVerification: 'preferred', allowCredentials: this.creds(row).map((c) => ({ id: c.id, transports: c.transports as never })) });
+    return { options, challengeToken: sign('ops-reauth-ch', { sid: staffId, challenge: options.challenge }, CHALLENGE_TTL) };
+  }
+
+  /** ยืนยันตัวตนซ้ำสำเร็จ → โทเค็นอายุ 15 นาที (cookie แยกจาก session) */
+  async reauthVerify(staffId: string, body: z.infer<typeof VerifyBody>) {
+    const ch = verify<{ sid: string; challenge: string }>('ops-reauth-ch', body.challengeToken);
+    if (!ch || ch.sid !== staffId) throw new AppError(400, 'challenge_invalid', 'Challenge หมดอายุหรือไม่ถูกต้อง · เริ่มใหม่');
+    const row = await this.assertion('ops-reauth-ch', body);
+    if (row.id !== staffId) throw new AppError(401, 'reauth_failed', 'Security key ไม่ใช่ของบัญชีนี้');
+    return { token: sign(REAUTH_PURPOSE, { sid: staffId }, REAUTH_SECONDS), expiresInSeconds: REAUTH_SECONDS };
+  }
+
+  /** ตรวจลายเซ็นของ key กับ challenge แล้วเลื่อน counter · คืนแถวพนักงานเจ้าของ key */
+  private async assertion(purpose: string, body: z.infer<typeof VerifyBody>) {
     const fail = () => new AppError(401, 'login_failed', 'เข้าสู่ระบบไม่สำเร็จ');
-    const ch = verify<{ challenge: string }>('ops-login', body.challengeToken);
+    const ch = verify<{ challenge: string }>(purpose, body.challengeToken);
     if (!ch) throw new AppError(400, 'challenge_invalid', 'Challenge หมดอายุหรือไม่ถูกต้อง · เริ่มใหม่');
     const response = body.response as unknown as AuthenticationResponseJSON;
     const [row] = await this.db.select().from(s.staffUsers).where(sql`${s.staffUsers.webauthnCredentials} @> ${JSON.stringify([{ id: response.id }])}::jsonb`);
@@ -113,8 +143,7 @@ export class AuthService {
       throw fail();
     }
     if (!v.verified) throw fail();
-    await this.db.update(s.staffUsers).set({ webauthnCredentials: this.creds(row).map((c) => (c.id === cred.id ? { ...c, counter: v.authenticationInfo.newCounter } : c)), updatedAt: new Date() }).where(eq(s.staffUsers.id, row.id));
-    const token = sign(SESSION_PURPOSE, { sid: row.id }, config.sessionHours * 3600);
-    return { token, staff: { id: row.id, email: row.email, name: row.name, role: row.role } };
+    await this.db.update(s.staffUsers).set({ webauthnCredentials: this.creds(row).map((c) => (c.id === cred.id ? { ...c, counter: v.authenticationInfo.newCounter, lastUsedAt: new Date().toISOString() } : c)), updatedAt: new Date() }).where(eq(s.staffUsers.id, row.id));
+    return row;
   }
 }

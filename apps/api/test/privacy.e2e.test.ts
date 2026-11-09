@@ -251,7 +251,7 @@ describe('สิทธิ์ทีม Friday (support access)', () => {
   });
 
   it('ประวัติการเข้า: เห็นเฉพาะของ Workspace ตัวเอง พร้อม Ticket และระยะเวลา', async () => {
-    const staff = await t.owner.query(`INSERT INTO staff_users (email, name, role) VALUES ('staff@friday.example.com', 'Support Staff', 'support') RETURNING id`);
+    const staff = await t.owner.query(`INSERT INTO staff_users (email, name, roles) VALUES ('staff@friday.example.com', 'Support Staff', '{support}') RETURNING id`);
     const other = await t.owner.query(`INSERT INTO workspaces (slug, name) VALUES ('someone-else', 'Other') RETURNING id`);
     await t.owner.query(`INSERT INTO support_sessions (workspace_id, staff_id, ticket_no, reason, mode, started_at, ended_at) VALUES ($1, $2, '#4702', 'ช่วยกู้ข้อมูล', 'read', now() - interval '20 minutes', now() - interval '6 minutes')`, [wsId, staff.rows[0].id]);
     await t.owner.query(`INSERT INTO support_sessions (workspace_id, staff_id, ticket_no, reason, mode) VALUES ($1, $2, '#9999', 'ของคนอื่น', 'read')`, [other.rows[0].id, staff.rows[0].id]);

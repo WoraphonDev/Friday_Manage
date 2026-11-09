@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · สยามโค้ด</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f8;-webkit-font-smoothing:antialiased}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+h1{letter-spacing:-.015em}
+.card{background:#fff;border:1px solid #e6e8ec;border-radius:14px;padding:18px 20px;box-sizing:border-box;min-width:0;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03)}
+.h2{margin:0;font-size:15px;font-weight:650;color:#24272c;letter-spacing:-.005em}
+.muted{color:#5f656d}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;letter-spacing:.01em}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:9px;border:1px solid #d6dae0;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap;box-shadow:0 1px 2px rgba(16,24,40,.05);transition:background .12s,border-color .12s}
+.btn:hover{background:#f1f3f5;border-color:#c3c8cf;color:#24272c;text-decoration:none}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff;box-shadow:0 1px 2px rgba(91,63,196,.3),inset 0 1px 0 rgba(255,255,255,.12)}.btn-primary:hover{background:#4a33a8;border-color:#4a33a8;color:#fff}
+.btn-danger{color:#a01d3c;border-color:#f6b8c6}.btn-danger:hover{background:#fdecf0;color:#a01d3c}
+.btn-sm{min-height:30px;padding:0 10px;font-size:12px}
+.btn:focus-visible,.tab:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e3e6e9;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #eef0f2;font-size:13px}
+.kv:last-child{border-bottom:0}
+.kv > span:last-child{text-align:right}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:600;color:#6b717a;font-size:12px;padding:10px 12px;border-bottom:1px solid #eceef1;white-space:nowrap;background:#fafbfc}
+.t td{padding:11px 12px;border-bottom:1px solid #eef0f2;white-space:nowrap;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+.t tbody tr:hover td{background:#fafaff}
+.ch{display:flex;flex-direction:column;gap:2px}
+.bar{width:90px;height:6px;border-radius:999px;background:#eef0f2;overflow:hidden;display:inline-block;vertical-align:middle}
+.grid2{display:flex;flex-wrap:wrap;gap:16px;align-items:stretch}
+.hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid #eceef1}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c; background: #f4f5f8">
+  <div style="flex: 1 1 232px; max-width: 100%; background: #141619">
+    <dc-import name="Sidebar" active="customers" hint-size="100%,1560px"></dc-import>
+  </div>
+  <main style="flex: 999 1 560px; min-width: 0; padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+    <div style="margin: -20px -28px 4px"><dc-import name="Topbar" group="Workspaces" group-href="Customers.dc.html" page="สยามโค้ด" phase="1" hint-size="100%,60px"></dc-import></div>
+    <sc-if value="{{saIn}}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 12px; background: #24272c; color: #fff; font-size: 13px">
+      <span class="pill p-amber">อ่านอย่างเดียว</span>
+      <span>กำลังดูบัญชี <b>สยามโค้ด</b> ในนาม Friday Owner · Ticket #512 · เหลือ {{saLeft}} · ลูกค้าเห็นว่ามีพนักงานเข้ามา</span>
+      <button type="button" class="btn btn-sm" style="margin-left: auto" onClick="{{exitSA}}">ออกจากบัญชีลูกค้า</button>
+    </div>
+    </sc-if>
+
+    <section class="card" style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+      <span aria-hidden="true" style="width: 56px; height: 56px; border-radius: 14px; background: #5b3fc4; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700">ส</span>
+      <div style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 6px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+          <h1 style="margin: 0; font-size: 22px; font-weight: 700">สยามโค้ด</h1>
+          <span class="pill p-purple">Team M</span>
+          <span class="pill p-green">จ่ายเงิน · รายเดือน</span>
+          <span class="pill p-green num">สุขภาพ 86</span>
+        </div>
+        <div class="muted" style="font-size: 13px; display: flex; flex-wrap: wrap; gap: 14px">
+          <span class="mono">siamcode</span><span>เจ้าของ: owner@siamcode.example</span><span>สมัคร 14 มี.ค. 2569</span><span>Data region: ประเทศไทย</span><span>บริษัท สยามโค้ด จำกัด</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <button type="button" class="btn btn-primary" onClick="{{openSA}}">{{saBtn}}</button>
+        <button type="button" class="btn">ให้ส่วนลด / คูปอง</button>
+        <button type="button" class="btn">เปลี่ยนแพ็กเกจ</button>
+        <button type="button" class="btn">ขยายทดลองใช้</button>
+        <button type="button" class="btn btn-danger">ระงับ</button>
+      </div>
+    </section>
+
+    <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: #fff6d9; border: 1px solid #f3d27a; font-size: 13px; color: #7a4700">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4M12 16h.01"></path></svg>
+      <span>ลูกค้าเปิดสิทธิ์ให้ทีม Friday เข้าบัญชีได้ถึง 12 พ.ย. 2569 · ต้องผูกกับ Ticket ที่เปิดอยู่ และทุกครั้งบันทึกลง Audit log ที่ลูกค้าเห็น</span>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="ข้อมูลลูกค้า">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="9">
+        <button type="button" role="tab" class="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+
+    <!-- ภาพรวม -->
+    <sc-if value="{{is.overview}}" hint-placeholder-val="{{ true }}">
+    <section style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+      <div style="flex: 2 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px">
+          <sc-for list="{{usage}}" as="u" hint-placeholder-count="4">
+            <div class="card" style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+              <span class="muted" style="font-size: 12px">{{u.label}}</span>
+              <span class="num" style="font-size: 20px; font-weight: 700">{{u.value}}</span>
+              <span style="height: 6px; border-radius: 999px; background: #eef0f2; overflow: hidden"><span style="display: block; height: 100%; width: {{u.w}}; background: {{u.color}}"></span></span>
+              <span class="muted" style="font-size: 12px">{{u.note}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div class="card" style="display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <h2 class="h2">ผู้ใช้งานรายวัน 30 วัน</h2>
+            <span class="muted" style="font-size: 12px; margin-left: auto">เฉลี่ย 16 คน/วัน · วันทำการ</span>
+          </div>
+          <div role="img" aria-label="ผู้ใช้งานรายวัน 30 วัน อยู่ระหว่าง 12 ถึง 20 คน ลดลงในวันหยุด" style="display: flex; align-items: flex-end; gap: 4px; height: 120px; border-bottom: 1px solid #e3e6e9">
+            <sc-for list="{{daily}}" as="d" hint-placeholder-count="30">
+              <span style="flex: 1; height: {{d.h}}; background: {{d.color}}; border-radius: 3px 3px 0 0"></span>
+            </sc-for>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px">
+            <span>ใช้มากสุด: <b>Table</b>, <b>Kanban</b>, <b>Gantt</b></span>
+            <span>ยังไม่เคยใช้: <b>LINE OA</b>, <b>Automation</b></span>
+          </div>
+        </div>
+        <div class="card" style="display: flex; flex-direction: column; gap: 12px">
+          <h2 class="h2">คะแนนสุขภาพ 86 / 100</h2>
+          <sc-for list="{{healthParts}}" as="h" hint-placeholder-count="4">
+            <div style="display: grid; grid-template-columns: 160px minmax(0, 1fr) 48px; align-items: center; gap: 12px; font-size: 13px">
+              <span>{{h.label}}</span>
+              <span style="height: 8px; border-radius: 999px; background: #eef0f2; overflow: hidden"><span style="display: block; height: 100%; width: {{h.w}}; background: {{h.color}}"></span></span>
+              <span class="num" style="text-align: right; font-weight: 600">{{h.score}}</span>
+            </div>
+          </sc-for>
+          <p class="muted" style="margin: 0; font-size: 12px">คิดจาก การใช้งาน 40% · การชำระเงิน 25% · Support 20% · การเติบโตของทีม 15%</p>
+        </div>
+        <div class="card" style="display: flex; flex-direction: column; gap: 4px">
+          <h2 class="h2" style="margin-bottom: 8px">ไทม์ไลน์</h2>
+          <sc-for list="{{timeline}}" as="e" hint-placeholder-count="6">
+            <div style="display: grid; grid-template-columns: 110px 14px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 0">
+              <span class="muted num" style="font-size: 12px">{{e.date}}</span>
+              <span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; background: {{e.color}}"></span>
+              <span style="font-size: 13px">{{e.text}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+        <div class="card">
+          <h2 class="h2" style="margin-bottom: 8px">แพ็กเกจและการเรียกเก็บเงิน</h2>
+          <div class="kv"><span class="muted">แพ็กเกจ</span><span>Team M · ≤ 25 คน (+5 ถึง 31 ธ.ค.)</span></div>
+          <div class="kv"><span class="muted">ราคา</span><span class="num">฿[ราคา Team M] / เดือน</span></div>
+          <div class="kv"><span class="muted">รอบถัดไป</span><span class="num">1 ธ.ค. 2569</span></div>
+          <div class="kv"><span class="muted">วิธีชำระ</span><span>PromptPay</span></div>
+          <div class="kv"><span class="muted">ส่วนลดที่ใช้อยู่</span><span><span class="pill p-purple mono">LAUNCH20</span> เหลือ 4 รอบ</span></div>
+          <div class="kv"><span class="muted">เครดิตคงเหลือ</span><span class="num">฿0</span></div>
+        </div>
+        <div class="card" style="display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; align-items: center; gap: 8px"><h2 class="h2">กำไรจากลูกค้ารายนี้</h2><span class="pill p-green" style="margin-left: auto">84%</span></div>
+          <sc-for list="{{marginRows}}" as="m" hint-placeholder-count="6">
+            <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 13px"><span class="{{m.labelCls}}">{{m.label}}</span><span class="{{m.cls}}">{{m.value}}</span></div>
+          </sc-for>
+          <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 700; border-top: 1px solid #eceef1; padding-top: 8px"><span>กำไรขั้นต้น</span><span class="num">84% ของรายได้</span></div>
+          <div class="kv"><span class="muted">มาจาก</span><span>บทความ / SEO · คำค้น "โปรแกรมบริหารโปรเจกต์"</span></div>
+          <div class="kv"><span class="muted">เริ่มใช้จริง</span><span>วันที่ 3 หลังสมัคร (เร็วกว่าค่าเฉลี่ย 2 วัน)</span></div>
+          <div class="kv"><span class="muted">LTV โดยประมาณ</span><span class="num">฿121,000 · ค่าหาลูกค้า ฿5,000</span></div>
+        </div>
+        <div class="card" style="display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; align-items: center; gap: 8px"><h2 class="h2">สัญญาณพร้อมอัปเกรด</h2><span class="pill p-green" style="margin-left: auto">3 ข้อ</span></div>
+          <sc-for list="{{upsellSignals}}" as="u" hint-placeholder-count="3">
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px">
+              <span><span style="display: block">{{u.text}}</span><span class="muted" style="font-size: 12px">{{u.sub}}</span></span>
+              <span class="{{u.cls}}">{{u.tag}}</span>
+            </div>
+          </sc-for>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap">
+            <button type="button" class="btn btn-sm btn-primary">สร้าง Lead · Enterprise</button>
+            <button type="button" class="btn btn-sm">เสนอเพิ่มที่นั่ง</button>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display: flex; align-items: center; margin-bottom: 8px"><h2 class="h2">การตั้งค่าของ Workspace</h2><button type="button" class="btn btn-sm" style="margin-left: auto" onClick="{{goSecurity}}">ทั้งหมด</button></div>
+          <div class="kv"><span class="muted">บังคับ 2FA</span><span>Owner และ Admin</span></div>
+          <div class="kv"><span class="muted">วิธีล็อกอิน</span><span>รหัสผ่าน, Google</span></div>
+          <div class="kv"><span class="muted">อนุญาต Guest</span><span>ได้ · ใช้อยู่ 4 คน</span></div>
+          <div class="kv"><span class="muted">วันทำงาน / เวลา</span><span>จ.–ศ. 09:00–18:00</span></div>
+          <div class="kv"><span class="muted">ปฏิทินวันหยุด</span><span>วันหยุดราชการไทย 2569</span></div>
+          <div class="kv"><span class="muted">ภาษา / ปี</span><span>ไทย · พ.ศ.</span></div>
+        </div>
+        <div class="card">
+          <div style="display: flex; align-items: center; margin-bottom: 8px"><h2 class="h2">การเชื่อมต่อ</h2><button type="button" class="btn btn-sm" style="margin-left: auto" onClick="{{goIntegrations}}">ทั้งหมด</button></div>
+          <sc-for list="{{integrationSummary}}" as="i" hint-placeholder-count="5">
+            <div class="kv"><span class="muted">{{i.name}}</span><span class="{{i.cls}}">{{i.state}}</span></div>
+          </sc-for>
+        </div>
+        <div class="card" style="display: flex; flex-direction: column; gap: 10px">
+          <h2 class="h2">บันทึกภายใน</h2>
+          <p class="muted" style="margin: 0; font-size: 12px">ลูกค้าไม่เห็นส่วนนี้</p>
+          <div style="padding: 10px 12px; border-radius: 10px; background: #f8f9fa; font-size: 13px">สนใจ Enterprise ไตรมาสหน้า ถ้าทีมเกิน 25 คน · ขอใบเสนอราคาแบบรายปี <span class="muted" style="font-size: 12px">— Friday Owner, 2 พ.ย.</span></div>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 500">เพิ่มบันทึก
+            <textarea rows="3" style="border: 1px solid #868c94; border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px; resize: vertical"></textarea>
+          </label>
+          <button type="button" class="btn" style="align-self: flex-end">บันทึก</button>
+        </div>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- การใช้งาน -->
+    <sc-if value="{{is.usage}}" hint-placeholder-val="{{ false }}">
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px" aria-label="กิจกรรม 30 วัน">
+      <sc-for list="{{activity}}" as="a" hint-placeholder-count="6">
+        <div class="card" style="padding: 14px 16px"><div class="muted" style="font-size: 12px">{{a.label}}</div><div class="num" style="font-size: 20px; font-weight: 700; margin-top: 4px">{{a.value}}</div><div class="muted" style="font-size: 12px; margin-top: 2px">{{a.note}}</div></div>
+      </sc-for>
+    </section>
+    <section class="grid2">
+      <div class="card" style="flex: 1 1 420px; padding: 0; overflow: hidden">
+        <div class="hd"><h2 class="h2">การใช้เทียบขีดจำกัดของแพ็กเกจ</h2></div>
+        <div style="overflow-x: auto"><table class="t">
+          <thead><tr><th scope="col">ขีดจำกัด</th><th scope="col">ใช้ไป</th><th scope="col">เพดาน</th><th scope="col"></th></tr></thead>
+          <tbody><sc-for list="{{limits}}" as="l" hint-placeholder-count="6"><tr><td>{{l.name}}</td><td class="num" style="font-weight: 600">{{l.used}}</td><td class="num muted">{{l.max}}</td><td><span class="bar" aria-hidden="true"><span style="display: block; height: 100%; width: {{l.w}}; background: {{l.color}}"></span></span></td></tr></sc-for></tbody>
+        </table></div>
+      </div>
+      <div class="card" style="flex: 1 1 520px; padding: 0; overflow: hidden">
+        <div class="hd"><h2 class="h2">การใช้แต่ละฟีเจอร์ 30 วัน</h2><span class="muted" style="font-size: 12px">จาก event ในแอปลูกค้า</span></div>
+        <div style="overflow-x: auto"><table class="t">
+          <thead><tr><th scope="col">ฟีเจอร์</th><th scope="col">ผู้ใช้</th><th scope="col">ครั้ง</th><th scope="col">ใช้ล่าสุด</th></tr></thead>
+          <tbody><sc-for list="{{features}}" as="f" hint-placeholder-count="12"><tr><td>{{f.name}}</td><td class="num">{{f.users}}</td><td class="num">{{f.count}}</td><td class="{{f.lastCls}}">{{f.last}}</td></tr></sc-for></tbody>
+        </table></div>
+      </div>
+    </section>
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div class="hd"><h2 class="h2">นำเข้า / ส่งออกล่าสุด</h2><span class="muted" style="font-size: 12px">ใช้ตอบ Ticket เรื่องข้อมูลหาย / วันที่เพี้ยน</span></div>
+      <div style="overflow-x: auto"><table class="t">
+        <thead><tr><th scope="col">เวลา</th><th scope="col">ประเภท</th><th scope="col">โปรเจกต์</th><th scope="col">ไฟล์</th><th scope="col">ผล</th><th scope="col">โดย</th></tr></thead>
+        <tbody><sc-for list="{{imports}}" as="i" hint-placeholder-count="4"><tr><td class="num muted">{{i.when}}</td><td>{{i.kind}}</td><td class="mono" style="font-size: 12px">{{i.project}}</td><td class="mono" style="font-size: 12px">{{i.file}}</td><td><span class="{{i.cls}}">{{i.result}}</span></td><td class="muted">{{i.by}}</td></tr></sc-for></tbody>
+      </table></div>
+    </section>
+    </sc-if>
+
+    <!-- โปรเจกต์ -->
+    <sc-if value="{{is.projects}}" hint-placeholder-val="{{ false }}">
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div class="hd"><h2 class="h2">โปรเจกต์ 14</h2><span class="muted" style="font-size: 12px">ใช้งาน 12 · เก็บถาวร 2 · ทีม Friday ดูได้เฉพาะสรุป เปิดงานจริงต้องเข้าบัญชีเพื่อช่วยเหลือ</span></div>
+      <div style="overflow-x: auto"><table class="t">
+        <thead><tr><th scope="col">โปรเจกต์</th><th scope="col">Template</th><th scope="col">สมาชิก</th><th scope="col">งานเปิด / ทั้งหมด</th><th scope="col">ความคืบหน้า</th><th scope="col">Health</th><th scope="col">Go-live</th><th scope="col">เคลื่อนไหวล่าสุด</th></tr></thead>
+        <tbody><sc-for list="{{projects}}" as="p" hint-placeholder-count="8"><tr>
+          <td><span class="mono muted" style="font-size: 12px">{{p.key}}</span> <span style="font-weight: 500">{{p.name}}</span></td>
+          <td class="muted">{{p.template}}</td><td class="num">{{p.members}}</td><td class="num">{{p.tasks}}</td>
+          <td><span class="bar" aria-hidden="true"><span style="display: block; height: 100%; width: {{p.pct}}; background: #5b3fc4"></span></span> <span class="num">{{p.pct}}</span></td>
+          <td><span class="{{p.healthCls}}">{{p.health}}</span></td><td class="num muted">{{p.golive}}</td><td class="muted">{{p.last}}</td>
+        </tr></sc-for></tbody>
+      </table></div>
+    </section>
+    </sc-if>
+
+    <!-- ผู้ใช้ -->
+    <sc-if value="{{is.users}}" hint-placeholder-val="{{ false }}">
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div class="hd"><h2 class="h2">สมาชิก 21 คน · Guest 4</h2><span class="muted" style="font-size: 12px">ที่นั่งนับเฉพาะสมาชิก (Guest ไม่นับ)</span><button type="button" class="btn btn-sm" style="margin-left: auto">โอนความเป็นเจ้าของ</button></div>
+      <div style="overflow-x: auto"><table class="t">
+        <thead><tr><th scope="col">ผู้ใช้</th><th scope="col">บทบาท</th><th scope="col">ตำแหน่ง</th><th scope="col">โปรเจกต์</th><th scope="col">ล็อกอินด้วย</th><th scope="col">2FA</th><th scope="col">ใช้งานล่าสุด</th><th scope="col">สถานะ</th><th scope="col"><span style="position: absolute; left: -9999px">การกระทำ</span></th></tr></thead>
+        <tbody><sc-for list="{{members}}" as="m" hint-placeholder-count="8"><tr>
+          <td><div class="ch"><span style="font-weight: 600">{{m.name}}</span><span class="muted" style="font-size: 12px">{{m.email}}</span></div></td>
+          <td><span class="{{m.roleCls}}">{{m.role}}</span></td><td class="muted">{{m.position}}</td><td class="num">{{m.projects}}</td><td class="muted">{{m.login}}</td>
+          <td><span class="{{m.mfaCls}}">{{m.mfa}}</span></td><td class="muted">{{m.last}}</td><td><span class="{{m.stCls}}">{{m.status}}</span></td>
+          <td><span style="display: inline-flex; gap: 6px"><button type="button" class="btn btn-sm">รีเซ็ต 2FA</button><button type="button" class="btn btn-sm">ออกจากทุกอุปกรณ์</button></span></td>
+        </tr></sc-for></tbody>
+      </table></div>
+      <div style="padding: 12px 16px; border-top: 1px solid #eceef1; font-size: 13px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+        <span><b>คำเชิญที่ค้าง 2</b> · dev.new@siamcode.example (ส่ง 3 วันก่อน) · qa.temp@partner.example (Guest)</span>
+        <span class="muted" style="margin-left: auto">ลิงก์เชิญที่เปิดอยู่ 1 · หมดอายุ 16 พ.ย.</span>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- การเชื่อมต่อ -->
+    <sc-if value="{{is.integrations}}" hint-placeholder-val="{{ false }}">
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px">
+      <sc-for list="{{integrationCards}}" as="c" hint-placeholder-count="4">
+        <div class="card" style="display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; align-items: center; gap: 8px"><b style="font-size: 14px">{{c.name}}</b><span class="{{c.cls}}" style="margin-left: auto">{{c.state}}</span></div>
+          <span class="muted" style="font-size: 13px">{{c.detail}}</span>
+          <span class="muted" style="font-size: 12px">{{c.meta}}</span>
+        </div>
+      </sc-for>
+    </section>
+    <section class="grid2">
+      <div class="card" style="flex: 1 1 520px; padding: 0; overflow: hidden">
+        <div class="hd"><h2 class="h2">Webhook</h2><a href="Deliveries.dc.html" style="margin-left: auto; font-size: 13px">ประวัติการส่ง</a></div>
+        <div style="overflow-x: auto"><table class="t">
+          <thead><tr><th scope="col">ชื่อ</th><th scope="col">รูปแบบ</th><th scope="col">เหตุการณ์</th><th scope="col">ส่งสำเร็จ 7 วัน</th><th scope="col">สถานะ</th></tr></thead>
+          <tbody><sc-for list="{{webhooks}}" as="w" hint-placeholder-count="2"><tr><td style="font-weight: 500">{{w.name}}</td><td>{{w.format}}</td><td class="muted" style="white-space: normal">{{w.events}}</td><td class="num">{{w.rate}}</td><td><span class="{{w.cls}}">{{w.state}}</span></td></tr></sc-for></tbody>
+        </table></div>
+      </div>
+      <div class="card" style="flex: 1 1 420px; padding: 0; overflow: hidden">
+        <div class="hd"><h2 class="h2">API token</h2><span class="muted" style="font-size: 12px">เห็นแค่ชื่อและสิทธิ์ ไม่เห็นค่า token</span></div>
+        <div style="overflow-x: auto"><table class="t">
+          <thead><tr><th scope="col">ชื่อ</th><th scope="col">สิทธิ์</th><th scope="col">สร้างโดย</th><th scope="col">ใช้ล่าสุด</th></tr></thead>
+          <tbody><sc-for list="{{tokens}}" as="k" hint-placeholder-count="2"><tr><td class="mono" style="font-size: 12px">{{k.name}}</td><td>{{k.scope}}</td><td class="muted">{{k.by}}</td><td class="muted">{{k.last}}</td></tr></sc-for></tbody>
+        </table></div>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ความปลอดภัย -->
+    <sc-if value="{{is.security}}" hint-placeholder-val="{{ false }}">
+    <section class="grid2">
+      <div class="card" style="flex: 1 1 380px">
+        <h2 class="h2" style="margin-bottom: 8px">การตั้งค่าความปลอดภัยของลูกค้า</h2>
+        <sc-for list="{{securitySettings}}" as="s" hint-placeholder-count="9">
+          <div class="kv"><span class="muted">{{s.k}}</span><span>{{s.v}}</span></div>
+        </sc-for>
+      </div>
+      <div class="card" style="flex: 2 1 520px; padding: 0; overflow: hidden">
+        <div class="hd"><h2 class="h2">เหตุการณ์ด้านความปลอดภัย 30 วัน</h2></div>
+        <div style="overflow-x: auto"><table class="t">
+          <thead><tr><th scope="col">เวลา</th><th scope="col">เหตุการณ์</th><th scope="col">ผู้ใช้</th><th scope="col">ที่มา</th></tr></thead>
+          <tbody><sc-for list="{{securityEvents}}" as="e" hint-placeholder-count="6"><tr><td class="num muted">{{e.when}}</td><td><span class="{{e.cls}}">{{e.what}}</span></td><td>{{e.who}}</td><td class="muted">{{e.from}}</td></tr></sc-for></tbody>
+        </table></div>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- การเงิน -->
+    <sc-if value="{{is.billing}}" hint-placeholder-val="{{ false }}">
+    <section class="grid2">
+      <div class="card" style="flex: 1 1 340px">
+        <h2 class="h2" style="margin-bottom: 8px">ข้อมูลออกใบกำกับภาษี</h2>
+        <div class="kv"><span class="muted">ชื่อนิติบุคคล</span><span>บริษัท สยามโค้ด จำกัด</span></div>
+        <div class="kv"><span class="muted">เลขผู้เสียภาษี</span><span class="mono">0105xxxxxxxxx</span></div>
+        <div class="kv"><span class="muted">สาขา</span><span>สำนักงานใหญ่</span></div>
+        <div class="kv"><span class="muted">ที่อยู่</span><span>[ที่อยู่ตามใบกำกับ]</span></div>
+        <div class="kv"><span class="muted">ผู้รับใบแจ้งหนี้</span><span>account@siamcode.example</span></div>
+        <div class="kv"><span class="muted">หัก ณ ที่จ่าย</span><span>3% · ส่ง 50 ทวิ ภายใน 7 วัน</span></div>
+        <div class="kv"><span class="muted">รอบบิล</span><span>รายเดือน · ทุกวันที่ 1</span></div>
+      </div>
+      <div class="card" style="flex: 2 1 520px; padding: 0; overflow: hidden">
+        <div class="hd"><h2 class="h2">ใบแจ้งหนี้และการชำระ</h2><span class="muted" style="font-size: 12px">จ่ายตรงเวลา 8 / 8 รอบ</span></div>
+        <div style="overflow-x: auto"><table class="t">
+          <thead><tr><th scope="col">เลขที่</th><th scope="col">รอบ</th><th scope="col">ยอด</th><th scope="col">ช่องทาง</th><th scope="col">สถานะ</th><th scope="col">เอกสาร</th></tr></thead>
+          <tbody><sc-for list="{{invoices}}" as="i" hint-placeholder-count="6"><tr><td class="mono" style="font-size: 12px">{{i.no}}</td><td class="muted">{{i.period}}</td><td class="num">{{i.amount}}</td><td class="muted">{{i.method}}</td><td><span class="{{i.cls}}">{{i.status}}</span></td><td class="muted">{{i.docs}}</td></tr></sc-for></tbody>
+        </table></div>
+      </div>
+    </section>
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div class="hd"><h2 class="h2">ประวัติแพ็กเกจ ส่วนลด และเครดิต</h2></div>
+      <div style="overflow-x: auto"><table class="t">
+        <thead><tr><th scope="col">วันที่</th><th scope="col">รายการ</th><th scope="col">รายละเอียด</th><th scope="col">โดย</th></tr></thead>
+        <tbody><sc-for list="{{planHistory}}" as="h" hint-placeholder-count="5"><tr><td class="num muted">{{h.date}}</td><td><span class="{{h.cls}}">{{h.kind}}</span></td><td style="white-space: normal">{{h.detail}}</td><td class="muted">{{h.by}}</td></tr></sc-for></tbody>
+      </table></div>
+    </section>
+    </sc-if>
+
+    <!-- Support -->
+    <sc-if value="{{is.support}}" hint-placeholder-val="{{ false }}">
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div class="hd"><h2 class="h2">Ticket ของลูกค้านี้</h2><span class="muted" style="font-size: 12px">SLA ของแพ็กเกจ: ตอบภายใน 4 ชม. ทำการ · ความพึงพอใจเฉลี่ย 4.6</span><a href="Support.dc.html" class="btn btn-sm" style="margin-left: auto">เปิด Support</a></div>
+      <div style="overflow-x: auto"><table class="t">
+        <thead><tr><th scope="col">Ticket</th><th scope="col">เรื่อง</th><th scope="col">ประเภท</th><th scope="col">ผู้รับผิดชอบ</th><th scope="col">เปิด</th><th scope="col">สถานะ</th><th scope="col">คะแนน</th></tr></thead>
+        <tbody><sc-for list="{{tickets}}" as="t" hint-placeholder-count="5"><tr><td class="mono" style="font-size: 12px">#{{t.no}}</td><td style="white-space: normal">{{t.title}}</td><td class="muted">{{t.cat}}</td><td>{{t.owner}}</td><td class="muted num">{{t.opened}}</td><td><span class="{{t.cls}}">{{t.status}}</span></td><td class="num">{{t.csat}}</td></tr></sc-for></tbody>
+      </table></div>
+    </section>
+    </sc-if>
+
+    <!-- Audit log -->
+    <sc-if value="{{is.audit}}" hint-placeholder-val="{{ false }}">
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div class="hd"><h2 class="h2">Audit log ของ Workspace</h2><span class="muted" style="font-size: 12px">ชุดเดียวกับที่ Owner / Admin ของลูกค้าเห็นในหน้า Admin Console · รายการของทีม Friday มีป้ายกำกับ</span></div>
+      <div style="overflow-x: auto"><table class="t">
+        <thead><tr><th scope="col">เวลา</th><th scope="col">ผู้กระทำ</th><th scope="col">หมวด</th><th scope="col">การกระทำ</th><th scope="col">IP</th></tr></thead>
+        <tbody><sc-for list="{{audit}}" as="a" hint-placeholder-count="8"><tr><td class="num muted">{{a.when}}</td><td><span style="font-weight: 500">{{a.who}}</span> <sc-if value="{{a.friday}}" hint-placeholder-val="{{ false }}"><span class="pill p-purple">ทีม Friday</span></sc-if></td><td class="muted">{{a.cat}}</td><td style="white-space: normal">{{a.what}}</td><td class="mono muted" style="font-size: 12px">{{a.ip}}</td></tr></sc-for></tbody>
+      </table></div>
+    </section>
+    </sc-if>
+
+    <sc-if value="{{saForm}}" hint-placeholder-val="{{ false }}">
+    <div aria-hidden="true" onClick="{{closeSA}}" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,22,25,.40); z-index: 30"></div>
+    <div role="dialog" aria-label="เข้าบัญชี สยามโค้ด" class="card" style="position: fixed; top: 10vh; left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 32px)); max-height: 80vh; overflow-y: auto; z-index: 31; display: flex; flex-direction: column; gap: 14px; padding: 20px 22px; box-shadow: 0 24px 48px rgba(16,24,40,.22)">
+      <div style="display: flex; align-items: flex-start; gap: 8px"><div><h2 class="h2" style="font-size: 17px">เข้าบัญชี สยามโค้ด</h2><div class="muted" style="font-size: 13px; margin-top: 4px">ลูกค้าเปิดสิทธิ์ให้ทีม Friday ไว้ถึง 12 พ.ย. 2569 · ต้องผูกกับ Ticket ที่เปิดอยู่</div></div>
+        <button type="button" class="btn btn-sm" aria-label="ปิด" onClick="{{closeSA}}" style="margin-left: auto; width: 32px; padding: 0">✕</button></div>
+      <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600"><span>Ticket <span style="color:#c8264a">*</span></span><div class="in" style="display: flex; align-items: center; min-height: 38px; padding: 0 12px; border: 1px solid #868c94; border-radius: 9px; font-size: 13px; font-weight: 400">#512 · นำเข้า Excel แล้ววันที่เลื่อน</div></div>
+      <div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 12px; font-weight: 600">โหมด</span>
+        <sc-for list="{{saModes}}" as="m" hint-placeholder-count="2">
+          <button type="button" onClick="{{m.pick}}" style="display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 10px; align-items: start; text-align: left; padding: 12px 14px; border-radius: 12px; border: {{m.border}}; background: {{m.bg}}; font: inherit; font-size: 13px; cursor: pointer">
+            <span style="width: 16px; height: 16px; border-radius: 50%; border: {{m.ring}}; box-sizing: border-box; margin-top: 2px"></span>
+            <span><b style="display: block">{{m.title}}</b><span class="muted" style="font-size: 12px">{{m.desc}}</span></span><span class="{{m.tagCls}}">{{m.tag}}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600">ระยะเวลา
+        <div class="seg" role="group" aria-label="ระยะเวลา" style="align-self: flex-start"><sc-for list="{{saDur}}" as="d" hint-placeholder-count="3"><button type="button" aria-pressed="{{d.on}}" onClick="{{d.pick}}">{{d.label}}</button></sc-for></div></div>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600">เหตุผล (ลูกค้าเห็นใน Audit log) <span style="color:#c8264a; display: none">*</span>
+        <textarea rows="2" style="border: 1px solid #868c94; border-radius: 9px; padding: 8px 12px; font: inherit; font-size: 13px; font-weight: 400; resize: vertical">ตรวจไฟล์นำเข้า plan-oct.xlsx ที่ลูกค้าแจ้งว่าวันที่เลื่อนไป 1 วัน</textarea></label>
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 13px"><input type="checkbox" checked> แจ้ง Owner และ Admin ของลูกค้าทางอีเมลตอนเริ่มและตอนออก</label>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; border-top: 1px solid #eceef1; padding-top: 14px"><span class="muted" style="font-size: 12px; margin-right: auto; align-self: center">ไม่มี Ticket เข้าไม่ได้</span><button type="button" class="btn" onClick="{{closeSA}}">ยกเลิก</button><button type="button" class="btn btn-primary" onClick="{{confirmSA}}">{{saConfirm}}</button></div>
+    </div>
+    </sc-if>
+    <sc-if value="{{saKey}}" hint-placeholder-val="{{ false }}">
+    <div aria-hidden="true" onClick="{{closeSA}}" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,22,25,.40); z-index: 30"></div>
+    <div role="dialog" aria-label="ยืนยันตัวตนก่อนขอโหมดแก้ไข" class="card" style="position: fixed; top: 10vh; left: 50%; transform: translateX(-50%); width: min(440px, calc(100% - 32px)); max-height: 80vh; overflow-y: auto; z-index: 31; display: flex; flex-direction: column; gap: 14px; padding: 20px 22px; box-shadow: 0 24px 48px rgba(16,24,40,.22)">
+      <div style="display: flex; align-items: flex-start; gap: 8px"><div><h2 class="h2" style="font-size: 17px">ยืนยันตัวตนก่อนขอโหมดแก้ไข</h2><div class="muted" style="font-size: 13px; margin-top: 4px">โหมดแก้ไขต้องแตะ Security key และมีคนที่สองอนุมัติ</div></div>
+        <button type="button" class="btn btn-sm" aria-label="ปิด" onClick="{{closeSA}}" style="margin-left: auto; width: 32px; padding: 0">✕</button></div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 0"><span style="width: 64px; height: 64px; border-radius: 50%; background: #efe9fd; color: #5b3fc4; display: flex; align-items: center; justify-content: center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.7-8.7M17 6l2 2M15 8l2 2"/></svg></span><b style="font-size: 14px">แตะ Security key เพื่อยืนยัน</b><span class="muted" style="font-size: 12px">รายการนี้ต้องยืนยันตัวตนซ้ำ (G4)</span></div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; border-top: 1px solid #eceef1; padding-top: 14px"><button type="button" class="btn" onClick="{{closeSA}}">ยกเลิก</button><button type="button" class="btn btn-primary" onClick="{{keySA}}">จำลอง: แตะกุญแจแล้ว</button></div>
+    </div>
+    </sc-if>
+    <sc-if value="{{toastOn}}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position: fixed; right: 24px; bottom: 24px; z-index: 40; width: min(420px, calc(100% - 48px)); display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; background: #fff; border: 1px solid #c6ead6; border-radius: 14px; box-shadow: 0 16px 40px rgba(16,24,40,.18); font-size: 13px">
+      <span style="width: 26px; height: 26px; border-radius: 8px; background: #e3f6ec; color: #17633f; display: flex; align-items: center; justify-content: center; flex: none">✓</span>
+      <span style="flex: 1"><b>{{toast}}</b><br><span class="muted">บันทึกใน Audit log แล้ว</span></span>
+      <button type="button" class="btn btn-sm" onClick="{{closeToast}}" aria-label="ปิด" style="width: 30px; padding: 0">✕</button>
+    </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1640}}'>
+class Component extends DCLogic {
+  state = { tab: 'overview', sa: null, saMode: 0, saDur: 1, toast: '' };
+  renderVals() {
+    const go = (tab) => () => this.setState({ tab });
+    const tabs = [['overview', 'ภาพรวม'], ['usage', 'การใช้งาน'], ['projects', 'โปรเจกต์ (14)'], ['users', 'ผู้ใช้ (21)'], ['integrations', 'การเชื่อมต่อ'], ['security', 'ความปลอดภัย'], ['billing', 'การเงิน'], ['support', 'Support (2)'], ['audit', 'Audit log']]
+      .map(([key, label]) => ({ label, on: this.state.tab === key ? 'true' : 'false', pick: go(key) }));
+    const is = {};
+    ['overview', 'usage', 'projects', 'users', 'integrations', 'security', 'billing', 'support', 'audit'].forEach((k) => { is[k] = this.state.tab === k; });
+
+    const usage = [
+      { label: 'ที่นั่ง', value: '21 / 30', w: '70%', color: '#5b3fc4', note: 'แพ็กเกจ 25 + ปรับเฉพาะราย 5 ถึง 31 ธ.ค.' },
+      { label: 'ผู้ใช้งาน 30 วัน', value: '19', w: '90%', color: '#0e8a77', note: '90% ของที่นั่งที่ใช้' },
+      { label: 'โปรเจกต์', value: '14', w: '28%', color: '#8b5cf6', note: 'ใช้งาน 12 · เก็บถาวร 2' },
+      { label: 'พื้นที่ไฟล์', value: '38 / 100 GB', w: '38%', color: '#b86e00', note: 'โต 4 GB / เดือน' },
+    ];
+    const pattern = [14, 16, 17, 15, 18, 4, 3, 15, 17, 18, 19, 16, 5, 3, 16, 18, 17, 19, 20, 4, 4, 17, 18, 19, 18, 17, 5, 3, 18, 19];
+    const daily = pattern.map((n) => ({ h: Math.round((n / 21) * 100) + '%', color: n < 8 ? '#e3e6e9' : '#8b5cf6' }));
+    const healthParts = [
+      { label: 'การใช้งาน', score: '92', w: '92%', color: '#1e7a4f' },
+      { label: 'การชำระเงิน', score: '100', w: '100%', color: '#1e7a4f' },
+      { label: 'Support', score: '70', w: '70%', color: '#b86e00' },
+      { label: 'การเติบโตของทีม', score: '74', w: '74%', color: '#1e7a4f' },
+    ];
+    const marginRows = [
+      { label: 'รายได้ (หลังส่วนลด LAUNCH20)', value: '฿[ราคา Team M]', cls: '' },
+      { label: 'ส่วนแบ่งเซิร์ฟเวอร์', value: '−฿110', cls: 'muted' },
+      { label: 'LINE 1,580 ข้อความ', value: '−฿180', cls: 'muted' },
+      { label: 'พื้นที่ไฟล์ 12 GB', value: '−฿60', cls: 'muted' },
+      { label: 'ค่าธรรมเนียม PromptPay', value: '−฿43', cls: 'muted' },
+      { label: 'อีเมล 820 ฉบับ', value: '−฿25', cls: 'muted' },
+    ].map((m) => ({ ...m, labelCls: m.cls, cls: m.cls ? 'num ' + m.cls : 'num' }));
+    const upsellSignals = [
+      { text: 'ที่นั่ง 21 / 25', sub: 'เพิ่ม 4 คนใน 60 วัน · เต็มใน ~2 เดือน', tag: '84%', cls: 'pill p-amber' },
+      { text: 'ชนขีดจำกัด Automation 2 ครั้ง', sub: 'ใน 14 วัน · ต้องการกฎที่ 11', tag: 'ขีดจำกัด', cls: 'pill p-amber' },
+      { text: 'บันทึกภายใน: สนใจ Enterprise', sub: 'ขอใบเสนอราคารายปี · 2 พ.ย.', tag: 'ทีมขาย', cls: 'pill p-purple' },
+    ];
+    const timeline = [
+      { date: '8 พ.ย. 2569', color: '#5b3fc4', text: 'อัปเกรดจาก Team S เป็น Team M (ทำเองในหน้าชำระเงิน)' },
+      { date: '1 พ.ย. 2569', color: '#1e7a4f', text: 'ชำระ INV-2569-1104 ผ่าน PromptPay · ใบกำกับภาษีออกอัตโนมัติ' },
+      { date: '28 ต.ค. 2569', color: '#b86e00', text: 'Ticket #482 "นำเข้า Excel แล้ววันที่เลื่อน" · ปิดใน 3 ชม.' },
+      { date: '2 ต.ค. 2569', color: '#5b3fc4', text: 'ใช้คูปอง LAUNCH20 (ลด 20% 6 รอบ)' },
+      { date: '14 มี.ค. 2569', color: '#0e8a77', text: 'สมัครและเริ่มทดลองใช้ Team S' },
+    ];
+    const on = 'pill p-green', off = 'pill p-gray', warn = 'pill p-amber';
+    const integrationSummary = [
+      { name: 'LINE OA', state: 'ยังไม่เชื่อม', cls: off },
+      { name: 'Webhook', state: '2 ปลายทาง', cls: on },
+      { name: 'GitHub', state: '2 repo', cls: on },
+      { name: 'API token', state: '1 ใช้งาน', cls: on },
+      { name: 'Automation', state: 'ยังไม่สร้างกฎ', cls: off },
+    ];
+
+    const activity = [
+      { label: 'งานที่สร้าง', value: '412', note: 'Task 168 · Sub-task 226 · Bug 18' },
+      { label: 'งานที่ปิด', value: '365', note: 'ตรงแผน 81%' },
+      { label: 'คอมเมนต์', value: '1,208', note: '@mention 342' },
+      { label: 'ไฟล์ที่อัปโหลด', value: '96', note: '3.9 GB' },
+      { label: 'คำขอเลื่อน Due', value: '18', note: 'อนุมัติ 15 · ปฏิเสธ 3' },
+      { label: 'ผลทดสอบ QA', value: '74', note: 'ผ่าน 62 · ไม่ผ่าน 12' },
+    ];
+    const lim = (name, used, max, pct) => ({ name, used, max, w: pct + '%', color: pct >= 90 ? '#c8264a' : pct >= 75 ? '#b86e00' : '#5b3fc4' });
+    const limits = [
+      lim('ที่นั่ง', '21', '30 (ปรับเฉพาะราย)', 70),
+      lim('พื้นที่ไฟล์', '38 GB', '100 GB', 38),
+      lim('Automation ต่อเดือน', '0', '20,000', 0),
+      lim('API ต่อนาที (สูงสุด)', '42', '120', 35),
+      lim('Guest', '4', 'ไม่จำกัด', 4),
+      lim('เก็บประวัติ Activity', '238 วัน', '1 ปี', 65),
+    ];
+    const ft = (name, users, count, last, cold) => ({ name, users, count, last, lastCls: cold ? 'muted' : '' });
+    const features = [
+      ft('Table', '19', '8,412', 'วันนี้'),
+      ft('Kanban', '16', '3,920', 'วันนี้'),
+      ft('Gantt และ Baseline', '6', '611', 'วันนี้'),
+      ft('Timeline', '9', '540', 'เมื่อวาน'),
+      ft('Calendar', '7', '233', 'เมื่อวาน'),
+      ft('Backlog / Sprint', '5', '188', '3 วันก่อน'),
+      ft('Reports / Lead dashboard', '3', '96', '2 วันก่อน'),
+      ft('Import Excel', '2', '3', '28 ต.ค.'),
+      ft('ผลทดสอบ QA', '4', '74', 'วันนี้'),
+      ft('GitHub', '11', '502 commit', 'วันนี้'),
+      ft('LINE OA', '0', '0', 'ไม่เคยใช้', true),
+      ft('Automation', '0', '0', 'ไม่เคยใช้', true),
+    ];
+    const imports = [
+      { when: '28 ต.ค. 09:12', kind: 'นำเข้า · โหมดอัปเดต', project: 'SCP', file: 'plan-oct.xlsx', result: '214 แถว · เตือน 6', cls: warn, by: 'pm@siamcode.example' },
+      { when: '2 ต.ค. 14:40', kind: 'ส่งออก แผน + Timeline', project: 'SCP', file: 'SCP-2569-10-02.xlsx', result: 'สำเร็จ', cls: on, by: 'owner@siamcode.example' },
+      { when: '20 ก.ย. 10:05', kind: 'นำเข้า · สร้างโปรเจกต์', project: 'HRM', file: 'hrm-plan.xlsx', result: '96 แถว', cls: on, by: 'pm@siamcode.example' },
+      { when: '14 มี.ค. 16:20', kind: 'นำเข้า · สร้างโปรเจกต์', project: 'SCP', file: 'siamcode-plan.xlsx', result: 'ไม่ผ่าน · ชีต Tasks ไม่พบ', cls: 'pill p-red', by: 'owner@siamcode.example' },
+    ];
+
+    const hp = { on: ['ตามแผน', on], risk: ['เสี่ยง', warn], off: ['ล่าช้า', 'pill p-red'], done: ['เก็บถาวร', off] };
+    const pj = (key, name, template, members, tasks, pct, health, golive, last) => ({ key, name, template, members, tasks, pct: pct + '%', health: hp[health][0], healthCls: hp[health][1], golive, last });
+    const projects = [
+      pj('SCP', 'ระบบสินเชื่อ Core Platform', 'Development', '14', '86 / 412', 71, 'on', '15 ม.ค. 70', 'เมื่อสักครู่'),
+      pj('HRM', 'ระบบบุคคลภายใน', 'Development', '6', '41 / 96', 52, 'risk', '28 ก.พ. 70', '1 ชม.ก่อน'),
+      pj('MOB', 'แอปมือถือลูกค้า', 'Scrum', '8', '58 / 133', 44, 'on', '31 มี.ค. 70', 'วันนี้'),
+      pj('API', 'Public API v2', 'Kanban', '4', '22 / 61', 64, 'on', '—', 'เมื่อวาน'),
+      pj('DWH', 'Data warehouse', 'Waterfall', '5', '37 / 70', 31, 'off', '30 ธ.ค. 69', '3 วันก่อน'),
+      pj('QA', 'ทดสอบระบบสินเชื่อ', 'Development', '6', '19 / 88', 78, 'on', '15 ม.ค. 70', 'วันนี้'),
+      pj('WEB', 'เว็บไซต์บริษัท', 'Blank', '3', '0 / 24', 100, 'done', 'ส.ค. 69', 'ก.ย.'),
+      pj('POC', 'ทดลองระบบ OCR', 'Blank', '2', '0 / 12', 100, 'done', 'มิ.ย. 69', 'ก.ค.'),
+    ];
+
+    const role = { owner: ['Owner', 'pill p-purple'], admin: ['Admin', 'pill p-teal'], member: ['Member', 'pill p-gray'], guest: ['Guest', 'pill p-amber'] };
+    const mb = (name, email, r, position, projects, login, mfa, last, status) => ({
+      name, email, role: role[r][0], roleCls: role[r][1], position, projects, login, mfa: mfa ? 'เปิด' : 'ปิด', mfaCls: mfa ? on : (r === 'owner' || r === 'admin' ? 'pill p-red' : off), last,
+      status: status ?? 'ใช้งาน', stCls: status ? warn : on,
+    });
+    const members = [
+      mb('Owner สยามโค้ด', 'owner@siamcode.example', 'owner', 'CEO', '14', 'Google', true, 'วันนี้ 09:02'),
+      mb('PM สยามโค้ด', 'pm@siamcode.example', 'admin', 'PM', '9', 'รหัสผ่าน', true, 'วันนี้ 09:40'),
+      mb('BA หลัก', 'ba@siamcode.example', 'member', 'BA', '5', 'รหัสผ่าน', false, 'วันนี้ 08:55'),
+      mb('Dev 1', 'dev1@siamcode.example', 'member', 'Backend', '3', 'Google', true, 'วันนี้ 09:31'),
+      mb('Dev 2', 'dev2@siamcode.example', 'member', 'Frontend', '3', 'Google', false, 'เมื่อวาน'),
+      mb('QA 1', 'qa1@siamcode.example', 'member', 'QA', '4', 'รหัสผ่าน', false, 'วันนี้ 08:20'),
+      mb('ผู้ใช้ที่ถูกล็อก', 'dev7@siamcode.example', 'member', 'Backend', '2', 'รหัสผ่าน', false, '3 วันก่อน', 'ล็อก · ใส่รหัสผิด 5 ครั้ง'),
+      mb('ลูกค้าของลูกค้า', 'client@bank.example', 'guest', '—', '1', 'รหัสผ่าน', false, '2 วันก่อน'),
+    ];
+
+    const integrationCards = [
+      { name: 'LINE OA', state: 'ยังไม่เชื่อม', cls: off, detail: 'ยังไม่ตั้งค่า Channel · ผู้ใช้ผูก LINE ส่วนตัว 0 คน', meta: 'แพ็กเกจรองรับ · เสนอให้ลองใช้ได้' },
+      { name: 'GitHub', state: 'เชื่อมแล้ว', cls: on, detail: 'siamcode/core-platform, siamcode/mobile-app', meta: 'Commit ผูกกับงาน 502 ครั้งใน 30 วัน · webhook ล่าสุด 09:28' },
+      { name: 'อีเมลผู้ส่ง', state: 'ของ Friday', cls: off, detail: 'ส่งจาก notify@fridaymanage.com', meta: 'ยังไม่ตั้ง SMTP ของตัวเอง' },
+      { name: 'Automation', state: 'ยังไม่สร้างกฎ', cls: off, detail: '0 กฎ · เพดาน 20,000 ครั้ง/เดือน', meta: 'ลูกค้าที่ใช้ Automation มี churn ต่ำกว่า' },
+    ];
+    const webhooks = [
+      { name: 'Discord #dev-alerts', format: 'Discord', events: 'Bug ใหม่, งานเลยกำหนด', rate: '100%', state: 'ใช้งาน', cls: on },
+      { name: 'Slack #releases', format: 'Slack', events: 'Sprint เริ่ม / จบ, เปลี่ยนแผน', rate: '96%', state: 'ลองส่งซ้ำ', cls: warn },
+    ];
+    const tokens = [
+      { name: 'ci-reporter', scope: 'อ่านงาน · เขียนผลทดสอบ', by: 'pm@siamcode.example', last: '09:15 วันนี้' },
+      { name: 'old-script', scope: 'อ่านอย่างเดียว', by: 'dev2@siamcode.example', last: 'ไม่ใช้ 120 วัน' },
+    ];
+
+    const securitySettings = [
+      { k: 'บังคับ 2FA', v: 'Owner และ Admin' },
+      { k: 'ผู้ใช้ที่เปิด 2FA', v: '9 / 21 คน' },
+      { k: 'วิธีล็อกอิน', v: 'รหัสผ่าน, Google' },
+      { k: 'SSO / SAML', v: 'ไม่มีในแพ็กเกจ' },
+      { k: 'อายุ session', v: '30 วัน (จำอุปกรณ์)' },
+      { k: 'จำกัด IP', v: 'ไม่ได้ตั้ง' },
+      { k: 'อนุญาต Guest', v: 'ได้ · เห็นเฉพาะงานที่แชร์' },
+      { k: 'เปิดสิทธิ์ให้ทีม Friday', v: 'ถึง 12 พ.ย. 2569' },
+      { k: 'Data region', v: 'ประเทศไทย' },
+    ];
+    const securityEvents = [
+      { when: '6 พ.ย. 22:14', what: 'ใส่รหัสผิด 5 ครั้ง · ล็อก 15 นาที', cls: 'pill p-red', who: 'dev7@siamcode.example', from: 'IP ใหม่ · เบราว์เซอร์ Chrome' },
+      { when: '5 พ.ย. 10:02', what: 'ล็อกอินจากอุปกรณ์ใหม่', cls: warn, who: 'pm@siamcode.example', from: 'iPhone · กรุงเทพฯ' },
+      { when: '2 พ.ย. 15:40', what: 'สร้าง API token', cls: off, who: 'pm@siamcode.example', from: 'ci-reporter' },
+      { when: '30 ต.ค. 09:00', what: 'เปิดบังคับ 2FA สำหรับ Admin', cls: on, who: 'owner@siamcode.example', from: 'Admin Console' },
+      { when: '28 ต.ค. 10:12', what: 'ทีม Friday เข้าบัญชีเพื่อช่วยเหลือ', cls: 'pill p-purple', who: 'Support A', from: 'Ticket #482 · 28 นาที' },
+    ];
+
+    const invoices = [
+      { no: 'INV-2569-1104', period: 'พ.ย. 2569', amount: '฿[ยอด]', method: 'PromptPay', status: 'ชำระแล้ว', cls: on, docs: 'ใบกำกับ · 50 ทวิ รอรับ' },
+      { no: 'INV-2569-0987', period: 'ต.ค. 2569', amount: '฿[ยอด]', method: 'PromptPay', status: 'ชำระแล้ว', cls: on, docs: 'ใบกำกับ · 50 ทวิ' },
+      { no: 'INV-2569-0871', period: 'ก.ย. 2569', amount: '฿[ยอด]', method: 'โอนธนาคาร', status: 'ชำระแล้ว', cls: on, docs: 'ใบกำกับ · 50 ทวิ' },
+      { no: 'CN-2569-011', period: 'พ.ย. 2569', amount: '−฿[ยอด]', method: 'ใบลดหนี้', status: 'ออกแล้ว', cls: off, docs: 'คิดตามสัดส่วนตอนอัปเกรด' },
+      { no: 'INV-2569-0755', period: 'ส.ค. 2569', amount: '฿[ยอด]', method: 'PromptPay', status: 'ชำระแล้ว', cls: on, docs: 'ใบกำกับ · 50 ทวิ' },
+    ];
+    const planHistory = [
+      { date: '8 พ.ย. 2569', kind: 'อัปเกรด', cls: 'pill p-purple', detail: 'Team S → Team M · คิดเงินตามสัดส่วน 22 วัน', by: 'ลูกค้า' },
+      { date: '8 พ.ย. 2569', kind: 'ปรับเฉพาะราย', cls: 'pill p-teal', detail: 'ที่นั่ง 25 → 30 ถึง 31 ธ.ค. 2569', by: 'Friday Owner' },
+      { date: '2 ต.ค. 2569', kind: 'คูปอง', cls: 'pill p-purple', detail: 'LAUNCH20 · ลด 20% 6 รอบ (เหลือ 4)', by: 'ลูกค้า' },
+      { date: '13 เม.ย. 2569', kind: 'เริ่มจ่ายเงิน', cls: on, detail: 'ทดลองใช้ครบ 30 วัน → Team S รายเดือน', by: 'ลูกค้า' },
+    ];
+
+    const tickets = [
+      { no: '505', title: 'Gantt เลื่อนวันแล้ว Sub-task ไม่ตาม', cat: 'บั๊ก', owner: 'Support B', opened: '7 พ.ย.', status: 'รอเราตอบ', cls: warn, csat: '—' },
+      { no: '497', title: 'ขอเพิ่มที่นั่งกลางรอบบิล', cat: 'การเงิน', owner: 'Friday Finance', opened: '4 พ.ย.', status: 'รอลูกค้า', cls: 'pill p-teal', csat: '—' },
+      { no: '482', title: 'นำเข้า Excel แล้ววันที่เลื่อน', cat: 'นำเข้าข้อมูล', owner: 'Support A', opened: '28 ต.ค.', status: 'ปิดแล้ว', cls: off, csat: '5' },
+      { no: '431', title: 'ตั้งค่า Webhook ไป Slack', cat: 'วิธีใช้งาน', owner: 'Support C', opened: '12 ต.ค.', status: 'ปิดแล้ว', cls: off, csat: '4' },
+    ];
+
+    const audit = [
+      { when: 'วันนี้ 09:40', who: 'pm@siamcode.example', friday: false, cat: 'โปรเจกต์', what: 'ตั้ง Baseline ของโปรเจกต์ SCP', ip: '203.0.113.50' },
+      { when: '8 พ.ย. 14:02', who: 'Friday Owner', friday: true, cat: 'แพ็กเกจ', what: 'ปรับที่นั่งเป็น 30 ถึง 31 ธ.ค. · เหตุผล: ทีมเพิ่มชั่วคราว', ip: '203.0.113.10' },
+      { when: '8 พ.ย. 13:55', who: 'owner@siamcode.example', friday: false, cat: 'การเงิน', what: 'อัปเกรดเป็น Team M', ip: '203.0.113.48' },
+      { when: '6 พ.ย. 11:20', who: 'pm@siamcode.example', friday: false, cat: 'สมาชิก', what: 'เปลี่ยน dev3@siamcode.example จาก Member เป็น Admin', ip: '203.0.113.50' },
+      { when: '2 พ.ย. 15:40', who: 'pm@siamcode.example', friday: false, cat: 'ความปลอดภัย', what: 'สร้าง API token "ci-reporter"', ip: '203.0.113.50' },
+      { when: '30 ต.ค. 09:00', who: 'owner@siamcode.example', friday: false, cat: 'ความปลอดภัย', what: 'บังคับ 2FA สำหรับ Admin', ip: '203.0.113.48' },
+      { when: '28 ต.ค. 10:12', who: 'Support A', friday: true, cat: 'เข้าบัญชีลูกค้า', what: 'เข้าบัญชี 28 นาที · Ticket #482', ip: '203.0.113.31' },
+      { when: '20 ต.ค. 16:30', who: 'owner@siamcode.example', friday: false, cat: 'ข้อมูล', what: 'ส่งออกข้อมูลทั้ง Workspace (ZIP)', ip: '203.0.113.48' },
+    ];
+
+    const saStep = this.state.sa;
+    const saModes = [['อ่านอย่างเดียว', 'ดูหน้าจอแบบที่ลูกค้าเห็น แก้อะไรไม่ได้', 'ใช้ได้ทันที', 'pill p-green'], ['แก้ไขได้', 'ยังไม่เปิด · ต้องมีผู้อนุมัติคนที่สองก่อน (Owner อนุมัติตัวเองไม่ได้สำหรับเรื่องนี้)', 'ยังไม่เปิด', 'pill p-gray']]
+      .map(([title, desc, tag, tagCls], i) => { const on = this.state.saMode === i; return { title, desc, tag, tagCls,
+        border: on ? '1px solid #5b3fc4' : '1px solid #e0e3e7', bg: on ? '#faf8ff' : i === 1 ? '#f6f7f9' : '#fff', ring: on ? '5px solid #5b3fc4' : '2px solid #b7bcc3', pick: () => { if (i === 0) this.setState({ saMode: i }); }, }; });
+    const durs = ['30 นาที', '1 ชั่วโมง', '2 ชั่วโมง'];
+    const saDur = durs.map((label, i) => ({ label, on: this.state.saDur === i ? 'true' : 'false', pick: () => this.setState({ saDur: i }) }));
+    const saExtra = {
+      saForm: saStep === 'form', saKey: saStep === 'key', saIn: saStep === 'in', saLeft: durs[this.state.saDur],
+      saBtn: saStep === 'in' ? 'อยู่ในบัญชีลูกค้า' : 'เข้าบัญชีเพื่อช่วยเหลือ', saModes, saDur,
+      saConfirm: this.state.saMode === 0 ? 'เข้าบัญชี' : 'ขอโหมดแก้ไข',
+      openSA: () => { if (saStep !== 'in') this.setState({ sa: 'form' }); },
+      closeSA: () => this.setState({ sa: null }),
+      confirmSA: () => this.setState(this.state.saMode === 0 ? { sa: 'in', toast: 'เข้าบัญชีสยามโค้ดแบบอ่านอย่างเดียวแล้ว · แจ้ง Owner และ Admin แล้ว' } : { sa: 'key' }),
+      keySA: () => this.setState({ sa: null, toast: 'ส่งขอโหมดแก้ไขแล้ว · รอ Friday Finance อนุมัติ (หมดอายุ 24 ชม.)' }),
+      exitSA: () => this.setState({ sa: null, toast: 'ออกจากบัญชีลูกค้าแล้ว · ใช้เวลา 12 นาที · แจ้ง Owner แล้ว' }),
+      toast: this.state.toast, toastOn: !!this.state.toast, closeToast: () => this.setState({ toast: '' }),
+    };
+    return { ...saExtra, marginRows, upsellSignals, tabs, is, usage, daily, healthParts, timeline, integrationSummary, goSecurity: go('security'), goIntegrations: go('integrations'),
+      activity, limits, features, imports, projects, members, integrationCards, webhooks, tokens, securitySettings, securityEvents,
+      invoices, planHistory, tickets, audit };
+  }
+}
+</script>
+</body>
+</html>

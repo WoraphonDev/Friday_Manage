@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · ภาพรวม</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f5f6f7}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+.card{background:#fff;border:1px solid #e3e6e9;border-radius:12px;padding:18px 20px;box-sizing:border-box;min-width:0}
+.h2{margin:0;font-size:15px;font-weight:600;color:#24272c}
+.muted{color:#5f656d}
+.num{font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid #cfd4d9;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#f1f3f5;color:#24272c;text-decoration:none}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff}.btn-primary:hover{background:#4a33a8;color:#fff}
+.seg{display:inline-flex;border:1px solid #cfd4d9;border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:transparent;font:inherit;font-size:13px;padding:0 12px;min-height:34px;color:#3a3f45;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#efe9fd;color:#5b3fc4;font-weight:600}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:500;color:#5f656d;font-size:12px;padding:8px 10px;border-bottom:1px solid #e3e6e9;white-space:nowrap}
+.t td{padding:10px;border-bottom:1px solid #eef0f2;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+.todo{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;border:1px solid #eef0f2;text-decoration:none;color:#24272c}
+.todo:hover{background:#f8f9fa;text-decoration:none;color:#24272c}
+/* ขัดเกลา UI ชุดเดียวกันทุกหน้า */
+body{background:#f4f5f8;-webkit-font-smoothing:antialiased}
+h1{letter-spacing:-.015em}
+.card{border-color:#e6e8ec;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03)}
+.h2{font-weight:650;letter-spacing:-.005em}
+.btn{border-radius:9px;border-color:#d6dae0;box-shadow:0 1px 2px rgba(16,24,40,.05);transition:background .12s,border-color .12s,box-shadow .12s}
+.btn:hover{border-color:#c3c8cf}
+.btn-primary{border-color:#5b3fc4;box-shadow:0 1px 2px rgba(91,63,196,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+.btn-primary:hover{border-color:#4a33a8}
+.btn-danger{border-color:#f6b8c6}.btn-ok{border-color:#1e7a4f}
+.pill{font-weight:600;letter-spacing:.01em}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.sw:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+table.t th{background:#fafbfc;color:#6b717a;font-weight:600;border-bottom-color:#eceef1}
+table.t tbody tr:hover td{background:#fafaff}
+.in,.sel,textarea{transition:border-color .12s,box-shadow .12s}
+.in:focus,.sel:focus,textarea:focus{outline:none;border-color:#6b4fd8;box-shadow:0 0 0 3px #efe9fd}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c; background: #f5f6f7">
+  <div style="flex: 1 1 232px; max-width: 100%; background: #141619">
+    <dc-import name="Sidebar" active="home" hint-size="100%,980px"></dc-import>
+  </div>
+  <main style="flex: 999 1 560px; min-width: 0; padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box">
+    <div style="margin: -20px -28px 0"><dc-import name="Topbar" group="ภาพรวม" page="แดชบอร์ด" phase="1" hint-size="100%,60px"></dc-import></div>
+
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px">
+      <div style="flex: 1 1 320px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700">ภาพรวม</h1>
+        <p class="muted" style="margin: 4px 0 0; font-size: 13px">วันจันทร์ 9 พ.ย. 2569 · อัปเดตล่าสุด 09:42 น.</p>
+      </div>
+      <div class="seg" role="group" aria-label="ช่วงเวลา">
+        <button type="button" aria-pressed="false">7 วัน</button>
+        <button type="button" aria-pressed="true">30 วัน</button>
+        <button type="button" aria-pressed="false">12 เดือน</button>
+      </div>
+      <button type="button" class="btn">ส่งออกรายงาน</button>
+    </section>
+
+    <section aria-label="ตัวชี้วัดหลัก" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+      <sc-for list="{{kpis}}" as="k" hint-placeholder-count="6">
+        <div class="card" style="padding: 16px">
+          <div class="muted" style="font-size: 12px">{{k.label}}</div>
+          <div class="num" style="font-size: 24px; font-weight: 700; margin-top: 6px">{{k.value}}</div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px">
+            <span class="{{k.deltaCls}}">{{k.delta}}</span>
+            <span class="muted">{{k.note}}</span>
+          </div>
+        </div>
+      </sc-for>
+    </section>
+
+    <section style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+      <div class="card" style="flex: 2 1 560px; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+          <h2 class="h2">รายได้ประจำ (MRR) 12 เดือน</h2>
+          <span class="muted" style="font-size: 12px">บาท / เดือน</span>
+          <a href="Billing.dc.html" style="margin-left: auto; font-size: 13px">ดูรายได้ทั้งหมด</a>
+        </div>
+        <div role="img" aria-label="กราฟ MRR 12 เดือน เพิ่มจาก 286,000 เป็น 482,300 บาท" style="display: flex; align-items: flex-end; gap: 10px; height: 200px; padding: 0 4px; border-bottom: 1px solid #e3e6e9">
+          <sc-for list="{{months}}" as="m" hint-placeholder-count="12">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end">
+              <div style="width: 100%; max-width: 38px; border-radius: 6px 6px 0 0; height: {{m.h}}; background: {{m.color}}"></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; gap: 10px; padding: 0 4px; margin-top: -8px">
+          <sc-for list="{{months}}" as="m" hint-placeholder-count="12">
+            <span class="muted" style="flex: 1; text-align: center; font-size: 11px">{{m.label}}</span>
+          </sc-for>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; padding-top: 4px; border-top: 1px solid #eef0f2">
+          <sc-for list="{{movement}}" as="mv" hint-placeholder-count="5">
+            <div style="display: flex; flex-direction: column; gap: 2px; padding-top: 10px">
+              <span class="muted" style="font-size: 12px">{{mv.label}}</span>
+              <span class="num" style="font-size: 16px; font-weight: 600; color: {{mv.color}}">{{mv.value}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div class="card" style="flex: 1 1 340px; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <h2 class="h2">ต้องจัดการวันนี้</h2>
+          <span class="pill p-red num">{{todoTotal}}</span>
+        </div>
+        <sc-for list="{{todos}}" as="td" hint-placeholder-count="6">
+          <a class="todo" href="{{td.href}}">
+            <span class="{{td.cls}}" style="min-width: 34px; justify-content: center">{{td.count}}</span>
+            <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
+              <span style="font-size: 13px; font-weight: 500">{{td.title}}</span>
+              <span class="muted" style="font-size: 12px">{{td.who}}</span>
+            </span>
+            <svg style="margin-left: auto; flex: none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5f656d" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+          </a>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+      <div class="card" style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 14px">
+        <h2 class="h2">ลูกค้าตามแพ็กเกจ</h2>
+        <sc-for list="{{plans}}" as="p" hint-placeholder-count="5">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; align-items: baseline; gap: 8px; font-size: 13px">
+              <span style="font-weight: 500">{{p.name}}</span>
+              <span class="muted" style="font-size: 12px">{{p.size}}</span>
+              <span class="num" style="margin-left: auto; font-weight: 600">{{p.count}}</span>
+            </div>
+            <div style="height: 8px; border-radius: 999px; background: #eef0f2; overflow: hidden">
+              <div style="height: 100%; width: {{p.w}}; background: {{p.color}}; border-radius: 999px"></div>
+            </div>
+          </div>
+        </sc-for>
+        <p class="muted" style="margin: 0; font-size: 12px">Trial → จ่ายเงิน ใน 30 วันที่ผ่านมา <b class="num" style="color: #24272c">28%</b></p>
+      </div>
+
+      <div class="card" style="flex: 2 1 520px; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <h2 class="h2">ลูกค้าเสี่ยงยกเลิก</h2>
+          <span class="muted" style="font-size: 12px">คะแนนสุขภาพต่ำกว่า 50</span>
+          <a href="Customers.dc.html" style="margin-left: auto; font-size: 13px">ดูทั้งหมด</a>
+        </div>
+        <div style="overflow-x: auto">
+          <table class="t">
+            <thead><tr><th scope="col">Workspace</th><th scope="col">แพ็กเกจ</th><th scope="col">สุขภาพ</th><th scope="col">สาเหตุหลัก</th><th scope="col">MRR</th></tr></thead>
+            <tbody>
+              <sc-for list="{{risky}}" as="r" hint-placeholder-count="4">
+                <tr>
+                  <td><a href="CustomerDetail.dc.html" style="font-weight: 500">{{r.name}}</a></td>
+                  <td><span class="pill p-gray">{{r.plan}}</span></td>
+                  <td><span class="{{r.cls}} num">{{r.score}}</span></td>
+                  <td class="muted">{{r.reason}}</td>
+                  <td class="num">{{r.mrr}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" style="display: flex; flex-direction: column; gap: 14px" aria-label="การใช้งานระบบของลูกค้า">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <h2 class="h2">การใช้งานระบบของลูกค้า 30 วัน</h2>
+        <span class="muted" style="font-size: 12px">รวมทุก Workspace · จาก event ในแอปลูกค้า</span>
+        <a href="ComingSoon.dc.html" style="margin-left: auto; font-size: 13px">วิเคราะห์ต่อ (เร็ว ๆ นี้)</a>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px">
+        <sc-for list="{{appUsage}}" as="a" hint-placeholder-count="6">
+          <div style="padding: 10px 12px; border-radius: 10px; background: #f8f9fa; display: flex; flex-direction: column; gap: 2px">
+            <span class="muted" style="font-size: 12px">{{a.label}}</span>
+            <span class="num" style="font-size: 17px; font-weight: 700">{{a.value}}</span>
+            <span class="muted" style="font-size: 11px">{{a.note}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span class="muted" style="font-size: 12px">% ของ Workspace ที่จ่ายเงินซึ่งใช้ฟีเจอร์นี้ใน 30 วัน</span>
+        <sc-for list="{{adoption}}" as="f" hint-placeholder-count="8">
+          <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr) 48px; align-items: center; gap: 12px; font-size: 13px">
+            <span>{{f.name}}</span>
+            <span style="height: 8px; border-radius: 999px; background: #eef0f2; overflow: hidden"><span style="display: block; height: 100%; width: {{f.pct}}; background: #8b5cf6"></span></span>
+            <span class="num" style="text-align: right; font-weight: 600">{{f.pct}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+      <div class="card" style="flex: 1 1 360px; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <h2 class="h2">สถานะระบบ</h2>
+          <span class="pill p-amber">LINE ช้ากว่าปกติ</span>
+          <a href="System.dc.html" style="margin-left: auto; font-size: 13px">รายละเอียด</a>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <sc-for list="{{health}}" as="h" hint-placeholder-count="6">
+            <div style="padding: 10px 12px; border-radius: 10px; background: #f8f9fa; display: flex; flex-direction: column; gap: 2px">
+              <span class="muted" style="font-size: 12px">{{h.label}}</span>
+              <span class="num" style="font-size: 15px; font-weight: 600">{{h.value}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div class="card" style="flex: 2 1 520px; display: flex; flex-direction: column; gap: 4px">
+        <h2 class="h2" style="margin-bottom: 8px">กิจกรรมล่าสุด</h2>
+        <sc-for list="{{feed}}" as="f" hint-placeholder-count="6">
+          <div style="display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eef0f2">
+            <span class="{{f.cls}}" style="flex: none; min-width: 72px; justify-content: center">{{f.tag}}</span>
+            <span style="flex: 1; font-size: 13px; min-width: 0">{{f.text}}</span>
+            <span class="muted num" style="font-size: 12px; white-space: nowrap">{{f.time}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const up = 'pill p-green', down = 'pill p-red', flat = 'pill p-gray';
+    const kpis = [
+      { label: 'MRR', value: '฿482,300', delta: '+8.2%', deltaCls: up, note: 'จากต้นเดือน ฿445,800' },
+      { label: 'ARR', value: '฿5.79 ล้าน', delta: '+41%', deltaCls: up, note: 'จากปีก่อน' },
+      { label: 'ลูกค้าที่จ่ายเงิน', value: '214', delta: '+9', deltaCls: up, note: 'ใน 30 วัน' },
+      { label: 'กำลังทดลองใช้', value: '61', delta: '17 ใกล้หมด', deltaCls: 'pill p-amber', note: 'ใน 7 วัน' },
+      { label: 'ยกเลิก (Churn) 30 วัน', value: '1.8%', delta: '−0.4', deltaCls: up, note: 'จุด' },
+      { label: 'Net revenue retention', value: '104%', delta: '0', deltaCls: flat, note: 'คงที่' },
+    ];
+    const vals = [286, 301, 318, 329, 344, 362, 377, 398, 421, 436, 446, 482];
+    const labels = ['ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.'];
+    const months = vals.map((v, i) => ({ label: labels[i], h: Math.round((v / 500) * 100) + '%', color: i === vals.length - 1 ? '#5b3fc4' : '#cbbcf6' }));
+    const movement = [
+      { label: 'ลูกค้าใหม่', value: '+฿38,400', color: '#17633f' },
+      { label: 'อัปเกรด', value: '+฿12,100', color: '#17633f' },
+      { label: 'ลดแพ็กเกจ', value: '−฿4,200', color: '#a01d3c' },
+      { label: 'ยกเลิก', value: '−฿9,800', color: '#a01d3c' },
+      { label: 'สุทธิ', value: '+฿36,500', color: '#24272c' },
+    ];
+    const todos = [
+      { count: '7', cls: 'pill p-red', title: 'การชำระเงินผิดปกติ (ระบบยืนยันเองไม่ได้)', who: 'finance · เก่าสุดรอ 3 ชม.', href: 'Billing.dc.html' },
+      { count: '2', cls: 'pill p-amber', title: 'หนังสือหัก ณ ที่จ่าย (50 ทวิ) รอรับ', who: 'finance', href: 'Billing.dc.html' },
+      { count: '3', cls: 'pill p-red', title: 'ค้างชำระเกิน 7 วัน', who: 'finance · ค้างทั้งหมด 7 ราย ฿61,800', href: 'Billing.dc.html' },
+      { count: '2', cls: 'pill p-red', title: 'Ticket เกิน SLA', who: 'support · ด่วน 1', href: 'Support.dc.html' },
+      { count: '9', cls: 'pill p-amber', title: 'ทดลองใช้หมดใน 3 วัน', who: 'ทีมขาย · ยังไม่ติดต่อ 6', href: 'Customers.dc.html' },
+      { count: '1', cls: 'pill p-purple', title: 'คำขอเข้าบัญชีลูกค้ารอลูกค้ายืนยัน', who: 'support', href: 'Support.dc.html' },
+    ];
+    const plans = [
+      { name: 'Free', size: '≤ 5 คน', count: '412', w: '100%', color: '#cfd4d9' },
+      { name: 'Team S', size: '≤ 10 คน', count: '96', w: '23%', color: '#cbbcf6' },
+      { name: 'Team M', size: '≤ 25 คน', count: '71', w: '17%', color: '#8b5cf6' },
+      { name: 'Team L', size: '≤ 50 คน', count: '35', w: '9%', color: '#5b3fc4' },
+      { name: 'Enterprise', size: '50+ คน', count: '12', w: '3%', color: '#3a2a8c' },
+    ];
+    const risky = [
+      { name: 'บริษัท ภูผาซอฟต์', plan: 'Team M', score: '32', cls: 'pill p-red', reason: 'ผู้ใช้งานลดลง 60% ใน 30 วัน', mrr: '฿[ราคา]' },
+      { name: 'Lumen Studio', plan: 'Team S', score: '41', cls: 'pill p-red', reason: 'ค้างชำระ 12 วัน', mrr: '฿[ราคา]' },
+      { name: 'Orbit Apps', plan: 'Team L', score: '46', cls: 'pill p-amber', reason: 'Ticket ไม่พอใจ 2 ครั้ง', mrr: '฿[ราคา]' },
+      { name: 'บ้านไร่ดิจิทัล', plan: 'Team S', score: '48', cls: 'pill p-amber', reason: 'ไม่มีใครล็อกอิน 14 วัน', mrr: '฿[ราคา]' },
+    ];
+    const health = [
+      { label: 'API uptime 30 วัน', value: '99.98%' },
+      { label: 'เวลาตอบ p95', value: '182 ms' },
+      { label: 'Error rate 24 ชม.', value: '0.04%' },
+      { label: 'คิวงานค้าง', value: '0 งาน' },
+      { label: 'Email ส่งสำเร็จ', value: '99.6%' },
+      { label: 'LINE ส่งสำเร็จ', value: '99.9%' },
+    ];
+    const feed = [
+      { tag: 'สมัครใหม่', cls: 'pill p-teal', text: 'Siam Robotics เริ่มทดลองใช้ Team M (8 คน)', time: '09:31' },
+      { tag: 'ชำระเงิน', cls: 'pill p-green', text: 'ยืนยันการโอนของ Northwind Dev · ใบกำกับภาษี INV-2569-1182 ออกแล้ว', time: '09:12' },
+      { tag: 'อัปเกรด', cls: 'pill p-purple', text: 'สยามโค้ด เปลี่ยนจาก Team S เป็น Team M', time: '08:47' },
+      { tag: 'Ticket', cls: 'pill p-amber', text: 'Orbit Apps แจ้งว่านำเข้า Excel ไม่ได้ · มอบให้ Support', time: '08:20' },
+      { tag: 'ระบบ', cls: 'pill p-gray', text: 'Friday Owner เปิด flag gantt-pdf ให้ 3 Workspace (เหตุผล: ทดสอบกับลูกค้านำร่อง)', time: 'เมื่อวาน' },
+      { tag: 'ลดแพ็กเกจ', cls: 'pill p-amber', text: 'Pixel Forge ลดจาก Team M เป็น Team S · เหตุผล: ทีมเล็กลงหลังจบโปรเจกต์', time: 'เมื่อวาน' },
+    ];
+    const appUsage = [
+      { label: 'โปรเจกต์ที่มีความเคลื่อนไหว', value: '2,184', note: 'จาก 3,020 โปรเจกต์' },
+      { label: 'งานที่สร้าง', value: '48,210', note: 'ปิดแล้ว 41,377' },
+      { label: 'คอมเมนต์', value: '126,904', note: '@mention 31,220' },
+      { label: 'ไฟล์ที่อัปโหลด', value: '9,412', note: '412 GB' },
+      { label: 'ข้อความ LINE ที่ส่ง', value: '188,330', note: 'ส่งถึง 99.9%' },
+      { label: 'Automation ที่ทำงาน', value: '64,021', note: '38 Workspace' },
+      { label: 'เรียก API', value: '2.1 ล้าน', note: '91 token' },
+      { label: 'นำเข้า Excel', value: '318', note: 'ล้ม 14 (4%)' },
+    ];
+    const adoption = [
+      { name: 'Table', pct: '98%' }, { name: 'Kanban', pct: '74%' }, { name: 'Gantt และ Baseline', pct: '61%' },
+      { name: 'Import Excel', pct: '43%' }, { name: 'GitHub', pct: '35%' }, { name: 'LINE OA', pct: '22%' },
+      { name: 'Automation', pct: '18%' }, { name: 'API token', pct: '15%' },
+    ];
+    return { kpis, months, movement, todos, todoTotal: '22', plans, risky, health, feed, appUsage, adoption };
+  }
+}
+</script>
+</body>
+</html>

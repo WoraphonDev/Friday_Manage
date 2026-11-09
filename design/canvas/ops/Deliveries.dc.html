@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · ประวัติการส่งแจ้งเตือน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f5f6f7}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+.card{background:#fff;border:1px solid #e3e6e9;border-radius:12px;padding:18px 20px;box-sizing:border-box;min-width:0}
+.h2{margin:0;font-size:15px;font-weight:600;color:#24272c}
+.muted{color:#5f656d}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid #cfd4d9;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#f1f3f5;color:#24272c;text-decoration:none}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff}.btn-primary:hover{background:#4a33a8;color:#fff}
+.btn-sm{min-height:30px;padding:0 10px;font-size:12px}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 10px;border-radius:999px;border:1px solid #cfd4d9;background:#fff;font:inherit;font-size:12px;color:#3a3f45;cursor:pointer}
+.chip[aria-pressed="true"]{background:#24272c;border-color:#24272c;color:#fff}
+.sel{min-height:34px;border:1px solid #868c94;border-radius:8px;padding:0 10px;font:inherit;font-size:13px;background:#fff}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:500;color:#5f656d;font-size:12px;padding:10px 12px;border-bottom:1px solid #e3e6e9;white-space:nowrap;background:#f8f9fa}
+.t td{padding:11px 12px;border-bottom:1px solid #eef0f2;white-space:nowrap;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+.row-on td{background:#f6f2ff}
+.ev{display:grid;grid-template-columns:70px 12px minmax(0,1fr);gap:10px;align-items:start;font-size:13px;padding:6px 0}
+/* ขัดเกลา UI ชุดเดียวกันทุกหน้า */
+body{background:#f4f5f8;-webkit-font-smoothing:antialiased}
+h1{letter-spacing:-.015em}
+.card{border-color:#e6e8ec;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03)}
+.h2{font-weight:650;letter-spacing:-.005em}
+.btn{border-radius:9px;border-color:#d6dae0;box-shadow:0 1px 2px rgba(16,24,40,.05);transition:background .12s,border-color .12s,box-shadow .12s}
+.btn:hover{border-color:#c3c8cf}
+.btn-primary{border-color:#5b3fc4;box-shadow:0 1px 2px rgba(91,63,196,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+.btn-primary:hover{border-color:#4a33a8}
+.btn-danger{border-color:#f6b8c6}.btn-ok{border-color:#1e7a4f}
+.pill{font-weight:600;letter-spacing:.01em}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.sw:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+table.t th{background:#fafbfc;color:#6b717a;font-weight:600;border-bottom-color:#eceef1}
+table.t tbody tr:hover td{background:#fafaff}
+.in,.sel,textarea{transition:border-color .12s,box-shadow .12s}
+.in:focus,.sel:focus,textarea:focus{outline:none;border-color:#6b4fd8;box-shadow:0 0 0 3px #efe9fd}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c; background: #f5f6f7">
+  <div style="flex: 1 1 232px; max-width: 100%; background: #141619">
+    <dc-import name="Sidebar" active="deliveries" hint-size="100%,1480px"></dc-import>
+  </div>
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+    <div style="margin: -24px -28px 4px"><dc-import name="Topbar" group="ระบบ" group-href="System.dc.html" page="ประวัติการส่งแจ้งเตือน" phase="2" hint-size="100%,60px"></dc-import></div>
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px">
+      <div style="flex: 1 1 320px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700">ประวัติการส่งแจ้งเตือน</h1>
+        <p class="muted" style="margin: 4px 0 0; font-size: 13px">ทุกข้อความที่ส่งออกนอกแอป (Email, LINE, Webhook) · เก็บ 90 วัน · ใช้ตอบลูกค้าว่า "ทำไมไม่ได้รับ"</p>
+      </div>
+    </section>
+
+    <section aria-label="สรุป 24 ชั่วโมง" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px">
+      <sc-for list="{{stats}}" as="s" hint-placeholder-count="5">
+        <div class="card" style="padding: 14px 16px">
+          <div class="muted" style="font-size: 12px">{{s.label}}</div>
+          <div class="num" style="font-size: 22px; font-weight: 700; margin-top: 4px; color: {{s.color}}">{{s.value}}</div>
+          <div class="muted" style="font-size: 12px; margin-top: 2px">{{s.note}}</div>
+        </div>
+      </sc-for>
+    </section>
+
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #e3e6e9">
+        <label style="flex: 1 1 260px; display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 10px; border: 1px solid #868c94; border-radius: 8px; max-width: 380px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5f656d" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+          <span style="position: absolute; left: -9999px">ค้นหา</span>
+          <input type="search" value="orbit" placeholder="อีเมลผู้รับ, Workspace, เลข Ticket, requestId" style="flex: 1; border: 0; outline: none; font: inherit; font-size: 13px; min-width: 0">
+        </label>
+        <div role="group" aria-label="ช่องทาง" style="display: flex; flex-wrap: wrap; gap: 6px">
+          <sc-for list="{{channels}}" as="c" hint-placeholder-count="4">
+            <button type="button" class="chip" aria-pressed="{{c.on}}" onClick="{{c.pick}}">{{c.label}}</button>
+          </sc-for>
+        </div>
+        <label class="muted" style="display: flex; align-items: center; gap: 6px; font-size: 12px; margin-left: auto">สถานะ
+          <select class="sel"><option>ทั้งหมด</option><option>ส่งถึง</option><option>ล้ม</option><option>ข้ามเพราะช่วงงดส่ง</option><option>ถูกบล็อก (bounce / เลิกรับ)</option></select>
+        </label>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: stretch">
+        <div style="flex: 2 1 620px; min-width: 0; overflow-x: auto">
+          <table class="t">
+            <thead><tr><th scope="col">เวลา</th><th scope="col">ช่องทาง</th><th scope="col">ผู้รับ</th><th scope="col">เหตุการณ์</th><th scope="col">สถานะ</th><th scope="col">ครั้งที่</th></tr></thead>
+            <tbody>
+              <sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+                <tr class="{{r.rowCls}}" onClick="{{r.pick}}" style="cursor: pointer">
+                  <td class="num muted">{{r.time}}</td>
+                  <td><span class="{{r.chCls}}">{{r.ch}}</span></td>
+                  <td>{{r.to}}</td>
+                  <td>{{r.event}}</td>
+                  <td><span class="{{r.stCls}}">{{r.status}}</span></td>
+                  <td class="num muted">{{r.attempts}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <aside aria-label="รายละเอียดการส่ง" style="flex: 1 1 320px; min-width: 0; border-left: 1px solid #e3e6e9; padding: 16px; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box">
+          <div style="display: flex; align-items: center; gap: 8px"><h2 class="h2">Webhook ล้ม · Orbit Apps</h2><span class="pill p-red" style="margin-left: auto">ล้ม 3/3</span></div>
+          <div class="muted" style="font-size: 12px">ปลายทาง <span class="mono">Discord dev-alerts</span> · เหตุการณ์ bug.created · DP-118</div>
+          <div>
+            <sc-for list="{{timeline}}" as="e" hint-placeholder-count="5">
+              <div class="ev"><span class="muted num" style="font-size: 12px">{{e.time}}</span><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; background: {{e.color}}"></span><span>{{e.text}}</span></div>
+            </sc-for>
+          </div>
+          <div style="padding: 10px 12px; border-radius: 10px; background: #f8f9fa; font-size: 12px">
+            <div class="muted" style="margin-bottom: 4px">คำตอบจากปลายทาง</div>
+            <code class="mono" style="font-size: 12px; white-space: pre-wrap; word-break: break-all">HTTP 404 {"message": "Unknown Webhook", "code": 10015}</code>
+          </div>
+          <div style="padding: 10px 12px; border-radius: 10px; background: #fff6d9; font-size: 12px; color: #7a4700">น่าจะถูกลบที่ Discord แล้ว · Webhook นี้ถูกปิดชั่วคราวและแจ้ง Admin ของ Workspace แล้ว</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <button type="button" class="btn btn-sm">ส่งซ้ำ</button>
+            <button type="button" class="btn btn-sm">ดูข้อความที่ส่ง</button>
+            <button type="button" class="btn btn-sm">แนบใน Ticket</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="padding: 14px 16px; border-bottom: 1px solid #e3e6e9; display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <h2 class="h2">รายชื่อที่ไม่ส่งอีเมลให้ (Suppression list)</h2>
+        <span class="muted" style="font-size: 12px">ระบบเพิ่มเองเมื่อ bounce ถาวร / ผู้รับกดรายงานสแปม · เอาออกได้เมื่อลูกค้ายืนยันว่าแก้แล้ว</span>
+      </div>
+      <div style="overflow-x: auto">
+        <table class="t">
+          <thead><tr><th scope="col">อีเมล</th><th scope="col">เหตุผล</th><th scope="col">Workspace</th><th scope="col">ตั้งแต่</th><th scope="col"><span style="position: absolute; left: -9999px">การกระทำ</span></th></tr></thead>
+          <tbody>
+            <sc-for list="{{suppressed}}" as="s" hint-placeholder-count="3">
+              <tr><td class="mono" style="font-size: 12px">{{s.email}}</td><td><span class="{{s.cls}}">{{s.reason}}</span></td><td class="muted">{{s.ws}}</td><td class="muted num">{{s.since}}</td><td><button type="button" class="btn btn-sm">เอาออกจากรายการ</button></td></tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  state = { ch: 'all', sel: 0 };
+  renderVals() {
+    const stats = [
+      { label: 'ส่งทั้งหมด 24 ชม.', value: '18,402', note: 'Email 11,230 · LINE 6,901 · Webhook 271', color: '#24272c' },
+      { label: 'ส่งถึง', value: '99.4%', note: '', color: '#17633f' },
+      { label: 'ล้ม', value: '41', note: 'Webhook 33 · Email 8', color: '#a01d3c' },
+      { label: 'รอส่งหลังช่วงงดส่ง', value: '1,208', note: 'ส่งต่อ 09:30 พรุ่งนี้', color: '#7a4700' },
+      { label: 'Bounce / เลิกรับ', value: '0.3%', note: 'ต่ำกว่าเกณฑ์ผู้ให้บริการ 2%', color: '#24272c' },
+    ];
+    const channels = [['all', 'ทั้งหมด'], ['email', 'Email'], ['line', 'LINE'], ['webhook', 'Webhook']]
+      .map(([key, label]) => ({ label, on: this.state.ch === key ? 'true' : 'false', pick: () => this.setState({ ch: key }) }));
+    const ch = { email: ['Email', 'pill p-purple'], line: ['LINE', 'pill p-green'], webhook: ['Webhook', 'pill p-teal'] };
+    const st = { ok: ['ส่งถึง', 'pill p-green'], fail: ['ล้ม', 'pill p-red'], quiet: ['รอช่วงงดส่ง', 'pill p-amber'], blocked: ['ถูกบล็อก', 'pill p-gray'], retry: ['กำลังลองใหม่', 'pill p-amber'] };
+    const raw = [
+      ['09:41', 'webhook', 'Discord dev-alerts', 'Bug ใหม่ DP-118', 'fail', '3'],
+      ['09:38', 'email', 'ops@orbit.example', 'มอบหมายงาน DP-117', 'ok', '1'],
+      ['09:30', 'line', 'Orbit Apps (กลุ่ม Dev)', 'สรุปงานเลยกำหนด', 'ok', '1'],
+      ['09:12', 'email', 'qa@orbit.example', 'Review ที่ขอ DP-115', 'blocked', '0'],
+      ['08:55', 'line', 'คุณ PM (LINE ส่วนตัว)', 'คำขอเลื่อน Due DP-110', 'ok', '1'],
+      ['08:40', 'email', 'pm@orbit.example', 'สรุปรายวัน', 'quiet', '0'],
+      ['08:22', 'webhook', 'Slack #releases', 'Sprint เริ่ม', 'retry', '2'],
+      ['08:01', 'email', 'dev2@orbit.example', 'ถูก @mention ใน DP-109', 'ok', '1'],
+    ];
+    const rows = raw.filter((r) => this.state.ch === 'all' || r[1] === this.state.ch).map(([time, c, to, event, s, attempts], i) => ({
+      time, to, event, attempts, ch: ch[c][0], chCls: ch[c][1], status: st[s][0], stCls: st[s][1],
+      rowCls: this.state.sel === i ? 'row-on' : '', pick: () => this.setState({ sel: i }),
+    }));
+    const timeline = [
+      { time: '09:41:02', color: '#5b3fc4', text: 'สร้างรายการส่งจากกฎของโปรเจกต์ DP' },
+      { time: '09:41:03', color: '#c8264a', text: 'ครั้งที่ 1 · HTTP 404 · ลองใหม่ใน 30 วินาที' },
+      { time: '09:41:34', color: '#c8264a', text: 'ครั้งที่ 2 · HTTP 404 · ลองใหม่ใน 2 นาที' },
+      { time: '09:43:35', color: '#c8264a', text: 'ครั้งที่ 3 · HTTP 404 · หยุดลอง' },
+      { time: '09:43:35', color: '#b86e00', text: 'ปิด Webhook ชั่วคราวและแจ้ง Owner / Admin ของ Workspace' },
+    ];
+    const suppressed = [
+      { email: 'qa@orbit.example', reason: 'Bounce ถาวร (กล่องไม่มีอยู่)', cls: 'pill p-red', ws: 'Orbit Apps', since: '7 พ.ย.' },
+      { email: 'old.pm@lumen.example', reason: 'กดรายงานสแปม', cls: 'pill p-amber', ws: 'Lumen Studio', since: '21 ต.ค.' },
+      { email: 'intern@kanit.example', reason: 'กล่องเต็มติดต่อกัน 5 วัน', cls: 'pill p-gray', ws: 'Kanit Labs', since: '2 พ.ย.' },
+    ];
+    return { stats, channels, rows, timeline, suppressed };
+  }
+}
+</script>
+</body>
+</html>

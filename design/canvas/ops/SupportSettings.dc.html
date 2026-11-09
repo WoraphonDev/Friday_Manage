@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · ตั้งค่าการแจกงาน Support</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f5f6f7}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+.card{background:#fff;border:1px solid #e3e6e9;border-radius:12px;padding:18px 20px;box-sizing:border-box;min-width:0}
+.h2{margin:0;font-size:15px;font-weight:600;color:#24272c}
+.muted{color:#5f656d}
+.num{font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid #cfd4d9;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#f1f3f5;color:#24272c;text-decoration:none}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff}.btn-primary:hover{background:#4a33a8;color:#fff}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:500;color:#5f656d;font-size:12px;padding:10px 12px;border-bottom:1px solid #e3e6e9;white-space:nowrap;background:#f8f9fa}
+.t td{padding:10px 12px;border-bottom:1px solid #eef0f2;white-space:nowrap;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+.in{min-height:34px;border:1px solid #868c94;border-radius:8px;padding:0 10px;font:inherit;font-size:13px;background:#fff;box-sizing:border-box}
+.opt{display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid #e3e6e9;border-radius:10px;font-size:13px;cursor:pointer}
+.opt-on{border-color:#5b3fc4;background:#f6f2ff}
+.sw{position:relative;width:40px;height:22px;border-radius:999px;border:0;background:#cdd2d7;cursor:pointer;padding:0;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}
+.sw[aria-checked="true"]{background:#5b3fc4}
+.sw[aria-checked="true"]::after{left:21px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #eef0f2;font-size:13px}
+.row:last-child{border-bottom:0}
+/* ขัดเกลา UI ชุดเดียวกันทุกหน้า */
+body{background:#f4f5f8;-webkit-font-smoothing:antialiased}
+h1{letter-spacing:-.015em}
+.card{border-color:#e6e8ec;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03)}
+.h2{font-weight:650;letter-spacing:-.005em}
+.btn{border-radius:9px;border-color:#d6dae0;box-shadow:0 1px 2px rgba(16,24,40,.05);transition:background .12s,border-color .12s,box-shadow .12s}
+.btn:hover{border-color:#c3c8cf}
+.btn-primary{border-color:#5b3fc4;box-shadow:0 1px 2px rgba(91,63,196,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+.btn-primary:hover{border-color:#4a33a8}
+.btn-danger{border-color:#f6b8c6}.btn-ok{border-color:#1e7a4f}
+.pill{font-weight:600;letter-spacing:.01em}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.sw:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+table.t th{background:#fafbfc;color:#6b717a;font-weight:600;border-bottom-color:#eceef1}
+table.t tbody tr:hover td{background:#fafaff}
+.in,.sel,textarea{transition:border-color .12s,box-shadow .12s}
+.in:focus,.sel:focus,textarea:focus{outline:none;border-color:#6b4fd8;box-shadow:0 0 0 3px #efe9fd}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c; background: #f5f6f7">
+  <div style="flex: 1 1 232px; max-width: 100%; background: #141619">
+    <dc-import name="Sidebar" active="supportSettings" hint-size="100%,980px"></dc-import>
+  </div>
+  <main style="flex: 999 1 560px; min-width: 0; padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+    <div style="margin: -20px -28px 4px"><dc-import name="Topbar" group="Support" group-href="Support.dc.html" page="ตั้งค่าการแจกงาน" phase="2" hint-size="100%,60px"></dc-import></div>
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px">
+      <div style="flex: 1 1 320px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700">ตั้งค่าการแจกงาน Support</h1>
+        <p class="muted" style="margin: 4px 0 0; font-size: 13px">เฉพาะ Owner · ทุกการเปลี่ยนบันทึกลง Audit log</p>
+      </div>
+      <button type="button" class="btn">ยกเลิก</button>
+      <button type="button" class="btn btn-primary">บันทึก</button>
+    </section>
+
+    <section class="card" style="display: flex; flex-direction: column; gap: 12px">
+      <h2 class="h2">วิธีแจก Ticket ใหม่</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px" role="radiogroup" aria-label="วิธีแจกงาน">
+        <sc-for list="{{modes}}" as="m" hint-placeholder-count="3">
+          <button type="button" role="radio" aria-checked="{{m.checked}}" class="{{m.cls}}" onClick="{{m.pick}}" style="font: inherit; text-align: left; background: inherit">
+            <span aria-hidden="true" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid {{m.ring}}; box-sizing: border-box; margin-top: 2px; flex: none; display: flex; align-items: center; justify-content: center"><span style="width: 8px; height: 8px; border-radius: 50%; background: {{m.dot}}"></span></span>
+            <span style="display: flex; flex-direction: column; gap: 4px"><b>{{m.title}}</b><span class="muted" style="font-size: 12px">{{m.text}}</span></span>
+          </button>
+        </sc-for>
+      </div>
+      <div class="row">
+        <span style="flex: 1 1 260px">เพดานงานที่เปิดค้างต่อคน (ค่าเริ่มต้น)</span>
+        <input class="in num" style="width: 80px" value="8" aria-label="เพดานงานต่อคน"> <span class="muted">เรื่อง · ตั้งรายคนได้ในตารางด้านล่าง</span>
+      </div>
+      <div class="row">
+        <span style="flex: 1 1 260px">ไม่แจกงานให้คนที่มีสถานะ "ไม่ว่าง" หรือ "ออฟไลน์"</span>
+        <button type="button" class="sw" role="switch" aria-checked="true" aria-label="ไม่แจกให้คนไม่ว่าง"></button>
+      </div>
+      <div class="row">
+        <span style="flex: 1 1 260px">ลูกค้าตอบกลับ Ticket ที่ปิดแล้วภายใน</span>
+        <input class="in num" style="width: 80px" value="7" aria-label="จำนวนวันเปิดใหม่"> <span class="muted">วัน = เปิดใหม่และกลับไปหาคนเดิม</span>
+      </div>
+      <div class="row">
+        <span style="flex: 1 1 260px">ผู้รับผิดชอบเปลี่ยนเป็นออฟไลน์หรือลา</span>
+        <select class="in" aria-label="เมื่อผู้รับผิดชอบไม่อยู่"><option>คืนงานเข้าคิวกลางอัตโนมัติ</option><option>ถามหัวหน้าทีมก่อน</option><option>คงไว้ที่คนเดิม</option></select>
+      </div>
+    </section>
+
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="padding: 14px 16px; border-bottom: 1px solid #e3e6e9; display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <h2 class="h2">กฎแยกตามประเภท</h2>
+        <span class="muted" style="font-size: 12px">ตรวจจากบนลงล่าง ตรงข้อแรกแล้วหยุด · ทีมยังเล็กปิดกฎไว้ก่อนได้ ทุกเรื่องจะไปกลุ่ม "ทุกคน"</span>
+        <button type="button" class="btn" style="margin-left: auto">เพิ่มกฎ</button>
+      </div>
+      <div style="overflow-x: auto">
+        <table class="t">
+          <thead><tr><th scope="col">ลำดับ</th><th scope="col">ถ้า</th><th scope="col">ส่งไปกลุ่ม</th><th scope="col">ความสำคัญเริ่มต้น</th><th scope="col">เปิดใช้</th></tr></thead>
+          <tbody>
+            <sc-for list="{{rules}}" as="r" hint-placeholder-count="6">
+              <tr>
+                <td class="num muted">{{r.n}}</td>
+                <td style="white-space: normal; min-width: 260px">{{r.when}}</td>
+                <td><span class="{{r.groupCls}}">{{r.group}}</span></td>
+                <td><span class="{{r.prioCls}}">{{r.prio}}</span></td>
+                <td><button type="button" class="sw" role="switch" aria-checked="{{r.on}}" aria-label="เปิดกฎ {{r.n}}" onClick="{{r.toggle}}"></button></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+      <div class="card" style="flex: 1 1 460px; padding: 0; overflow: hidden">
+        <div style="padding: 14px 16px; border-bottom: 1px solid #e3e6e9"><h2 class="h2">SLA ตามแพ็กเกจ</h2></div>
+        <div style="overflow-x: auto">
+          <table class="t">
+            <thead><tr><th scope="col">แพ็กเกจ</th><th scope="col">ตอบครั้งแรก</th><th scope="col">ปิดเรื่อง (เป้าหมาย)</th><th scope="col">ช่องทาง</th></tr></thead>
+            <tbody>
+              <sc-for list="{{sla}}" as="s" hint-placeholder-count="4">
+                <tr><td style="font-weight: 500">{{s.plan}}</td><td><input class="in" style="width: 130px" value="{{s.first}}" aria-label="ตอบครั้งแรก {{s.plan}}"></td><td><input class="in" style="width: 130px" value="{{s.resolve}}" aria-label="ปิดเรื่อง {{s.plan}}"></td><td class="muted">{{s.channel}}</td></tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <div style="padding: 12px 16px; border-top: 1px solid #eef0f2; font-size: 13px; display: flex; flex-direction: column; gap: 6px">
+          <span>เตือนผู้รับผิดชอบเมื่อเหลือเวลา <b class="num">25%</b> · เกิน SLA แจ้งหัวหน้าทีมและย้ายขึ้นบนสุดของคิว</span>
+          <span class="muted" style="font-size: 12px">นับเฉพาะเวลาทำการ · ความสำคัญ "ด่วน" (ระบบใช้ไม่ได้) นับ 24 ชม. ทุกแพ็กเกจ</span>
+        </div>
+      </div>
+
+      <div class="card" style="flex: 1 1 360px; display: flex; flex-direction: column; gap: 10px">
+        <h2 class="h2">เวลาทำการของทีม</h2>
+        <sc-for list="{{hours}}" as="h" hint-placeholder-count="7">
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 13px">
+            <span style="width: 70px">{{h.day}}</span>
+            <sc-if value="{{h.open}}" hint-placeholder-val="{{ true }}">
+              <input class="in num" style="width: 80px" value="{{h.from}}" aria-label="เริ่ม {{h.day}}"><span class="muted">–</span><input class="in num" style="width: 80px" value="{{h.to}}" aria-label="สิ้นสุด {{h.day}}">
+            </sc-if>
+            <sc-if value="{{h.closed}}" hint-placeholder-val="{{ false }}"><span class="muted">ปิด</span></sc-if>
+          </div>
+        </sc-for>
+        <p class="muted" style="margin: 0; font-size: 12px">ใช้ปฏิทินวันหยุดราชการไทย · นอกเวลาทำการ ลูกค้าเห็นข้อความ "ทีมจะตอบในวันทำการถัดไป"</p>
+      </div>
+    </section>
+
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="padding: 14px 16px; border-bottom: 1px solid #e3e6e9; display: flex; align-items: center; gap: 8px">
+        <h2 class="h2">พนักงานในแต่ละกลุ่ม</h2>
+        <span class="muted" style="font-size: 12px">อยู่ได้หลายกลุ่ม · หัวหน้าทีมได้แจ้งเตือนเมื่อเกิน SLA</span>
+      </div>
+      <div style="overflow-x: auto">
+        <table class="t">
+          <thead><tr><th scope="col">พนักงาน</th><th scope="col">ระดับ 1</th><th scope="col">ระดับ 2</th><th scope="col">การเงิน</th><th scope="col">หัวหน้าทีม</th><th scope="col">เพดานงาน</th><th scope="col">ผู้ดูแลประจำบัญชี (Enterprise)</th></tr></thead>
+          <tbody>
+            <sc-for list="{{members}}" as="m" hint-placeholder-count="5">
+              <tr>
+                <td style="font-weight: 500">{{m.name}}</td>
+                <td><input type="checkbox" checked="{{m.l1}}" aria-label="{{m.name}} ระดับ 1"></td>
+                <td><input type="checkbox" checked="{{m.l2}}" aria-label="{{m.name}} ระดับ 2"></td>
+                <td><input type="checkbox" checked="{{m.fin}}" aria-label="{{m.name}} การเงิน"></td>
+                <td><input type="checkbox" checked="{{m.lead}}" aria-label="{{m.name}} หัวหน้าทีม"></td>
+                <td><input class="in num" style="width: 70px" value="{{m.cap}}" aria-label="เพดานงาน {{m.name}}"></td>
+                <td class="muted">{{m.accounts}}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1700}}'>
+class Component extends DCLogic {
+  state = { mode: 'least', off: {} };
+  renderVals() {
+    const modes = [
+      ['least', 'งานน้อยที่สุดก่อน (แนะนำ)', 'แจกให้คนที่ออนไลน์และมีงานเปิดน้อยที่สุดในกลุ่ม ไม่เกินเพดาน'],
+      ['round', 'วนตามลำดับ', 'แจกวนทีละคนเท่า ๆ กัน ไม่ดูว่าใครงานค้างเท่าไร'],
+      ['manual', 'ไม่แจกอัตโนมัติ', 'ทุกเรื่องเข้าคิวกลาง ให้ทีมกด "รับเรื่องนี้" เอง · เหมาะกับทีม 1–2 คน'],
+    ].map(([key, title, text]) => {
+      const on = this.state.mode === key;
+      return { title, text, checked: on ? 'true' : 'false', cls: on ? 'opt opt-on' : 'opt', ring: on ? '#5b3fc4' : '#868c94', dot: on ? '#5b3fc4' : 'transparent', pick: () => this.setState({ mode: key }) };
+    });
+    const g = { l1: ['ระดับ 1', 'pill p-teal'], l2: ['ระดับ 2', 'pill p-purple'], fin: ['การเงิน', 'pill p-amber'], acct: ['ผู้ดูแลประจำบัญชี', 'pill p-green'], all: ['ทุกคน', 'pill p-gray'] };
+    const p = { urgent: ['ด่วน', 'pill p-red'], high: ['สูง', 'pill p-amber'], normal: ['ปกติ', 'pill p-gray'] };
+    const raw = [
+      ['ลูกค้าแพ็กเกจ Enterprise', 'acct', 'high'],
+      ['ประเภท = การเงิน, ใบกำกับภาษี หรือการชำระเงิน', 'fin', 'normal'],
+      ['ประเภท = ระบบใช้ไม่ได้ (ล่ม / ล็อกอินไม่ได้ทั้งทีม)', 'l2', 'urgent'],
+      ['ประเภท = บั๊ก, นำเข้าข้อมูล, LINE / แจ้งเตือน, API', 'l2', 'high'],
+      ['ประเภท = วิธีใช้งาน หรือขอฟีเจอร์', 'l1', 'normal'],
+      ['เรื่องอื่นทั้งหมด', 'all', 'normal'],
+    ];
+    const rules = raw.map(([when, group, prio], i) => {
+      const on = i in this.state.off ? this.state.off[i] : true;
+      return { n: String(i + 1), when, group: g[group][0], groupCls: g[group][1], prio: p[prio][0], prioCls: p[prio][1], on: on ? 'true' : 'false', toggle: () => this.setState({ off: { ...this.state.off, [i]: !on } }) };
+    });
+    const sla = [
+      { plan: 'Free', first: '2 วันทำการ', resolve: 'ไม่กำหนด', channel: 'อีเมล / ฟอร์มในแอป' },
+      { plan: 'Team S / M', first: '4 ชม. ทำการ', resolve: '3 วันทำการ', channel: 'อีเมล / แชตในแอป' },
+      { plan: 'Team L', first: '2 ชม. ทำการ', resolve: '2 วันทำการ', channel: 'อีเมล / แชตในแอป' },
+      { plan: 'Enterprise', first: '1 ชม.', resolve: '1 วันทำการ', channel: 'ทุกช่องทาง + LINE ของผู้ดูแลบัญชี' },
+    ];
+    const hours = [['จันทร์', 1], ['อังคาร', 1], ['พุธ', 1], ['พฤหัสบดี', 1], ['ศุกร์', 1], ['เสาร์', 0], ['อาทิตย์', 0]]
+      .map(([day, o]) => ({ day, open: !!o, closed: !o, from: '09:00', to: '18:00' }));
+    const members = [
+      { name: 'Support A', l1: true, l2: false, fin: false, lead: true, cap: '8', accounts: '—' },
+      { name: 'Support B', l1: false, l2: true, fin: false, lead: false, cap: '8', accounts: 'TechNova' },
+      { name: 'Support C', l1: true, l2: false, fin: false, lead: false, cap: '8', accounts: '—' },
+      { name: 'Support D', l1: true, l2: true, fin: false, lead: false, cap: '6', accounts: '—' },
+      { name: 'Friday Finance', l1: false, l2: false, fin: true, lead: false, cap: '6', accounts: '—' },
+    ];
+    return { modes, rules, sla, hours, members };
+  }
+}
+</script>
+</body>
+</html>

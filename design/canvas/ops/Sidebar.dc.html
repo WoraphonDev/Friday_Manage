@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · เมนู</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.nav{display:flex;align-items:center;gap:10px;min-height:34px;padding:0 10px;border-radius:9px;color:#c4c9cf;font-size:13px;text-decoration:none;transition:background .12s,color .12s}
+.nav:hover{background:#23262c;color:#fff;text-decoration:none}
+.nav:focus-visible{outline:2px solid #b9a6ff;outline-offset:1px}
+.nav-on{background:#2f2753;color:#fff;font-weight:600;box-shadow:inset 0 0 0 1px #3f3470}
+.nav-on:hover{background:#352c5e}
+.nav-soon{color:#8a9199;min-height:30px;font-size:12.5px}
+.nav-soon .ic{opacity:.55}
+.ic{flex:none;color:#8a9199}
+.nav-on .ic{color:#c9b8ff}
+.badge{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#c8264a;color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
+.soon{margin-left:auto;height:18px;padding:0 6px;border-radius:999px;background:#23262c;color:#9aa1a9;font-size:10px;display:inline-flex;align-items:center;white-space:nowrap}
+.glabel{font-size:11px;font-weight:600;letter-spacing:.04em;color:#7a8088;padding:0 10px 4px}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<nav aria-label="เมนูหลักของ Friday Ops" style="box-sizing: border-box; width: 100%; min-height: 100%; background: #141619; color: #eceef0; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; padding: 18px 12px; display: flex; flex-direction: column; gap: 16px">
+  <div style="display: flex; align-items: center; gap: 10px; padding: 2px 8px">
+    <div aria-hidden="true" style="width: 34px; height: 34px; border-radius: 10px; background: #5b3fc4; box-shadow: inset 0 -2px 0 rgba(0,0,0,.18); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 17px; color: #fff">F</div>
+    <div style="display: flex; flex-direction: column; gap: 1px">
+      <span style="font-weight: 700; font-size: 15px; color: #fff; letter-spacing: -.01em">Friday Ops</span>
+      <span style="font-size: 11px; color: #9aa1a9">ระบบหลังบ้าน · ภายในเท่านั้น</span>
+    </div>
+  </div>
+  <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 9px; background: #1d2024; border: 1px solid #262a30; font-size: 12px; color: #c4c9cf">
+    <span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #86efac; box-shadow: 0 0 0 3px rgba(134,239,172,.15)"></span>
+    <span>Production</span>
+    <span style="margin-left: auto; color: #8a9199">ap-southeast-7</span>
+  </div>
+  <sc-for list="{{groups}}" as="g" hint-placeholder-count="10">
+    <div style="display: flex; flex-direction: column; gap: 1px">
+      <sc-if value="{{g.hasLabel}}" hint-placeholder-val="{{ true }}">
+        <span class="glabel">{{g.label}}</span>
+      </sc-if>
+      <sc-for list="{{g.items}}" as="item" hint-placeholder-count="3">
+        <a class="{{item.cls}}" href="{{item.href}}">
+          <svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.d}}"></path></svg>
+          <span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{item.label}}</span>
+          <sc-if value="{{item.hasBadge}}" hint-placeholder-val="{{ false }}"><span class="badge">{{item.badge}}</span></sc-if>
+          <sc-if value="{{item.soon}}" hint-placeholder-val="{{ false }}"><span class="soon">เร็ว ๆ นี้</span></sc-if>
+        </a>
+      </sc-for>
+    </div>
+  </sc-for>
+  <div style="margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 11px; background: #1d2024; border: 1px solid #262a30">
+    <div aria-hidden="true" style="width: 32px; height: 32px; border-radius: 50%; background: #3a3068; color: #e4dcff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">FA</div>
+    <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
+      <span style="font-size: 13px; font-weight: 600; color: #fff">Friday Owner</span>
+      <span style="font-size: 11px; color: #9aa1a9">Owner · การเงิน · Support</span>
+    </div>
+  </div>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["home","customers","users","billing","refunds","promotions","entitlements","support","supportSettings","system","ops","deliveries","flags","privacy","abuse","legal","staff","audit","soon"],"default":"home"},"$preview":{"width":248,"height":1560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.props.active ?? 'home';
+    const I = {
+      home: 'M3 11l9-8 9 8M5 10v10h14V10',
+      customers: 'M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 20v-2a4 4 0 0 0-3-3.9M16 2.1a4 4 0 0 1 0 7.8',
+      users: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+      success: 'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z',
+      renewals: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+      leads: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+      quotes: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5',
+      billing: 'M3 3v18h18M7 15l4-4 3 3 5-6',
+      verify: 'M4 2v20l3-2 3 2 3-2 3 2 3-2V2l-3 2-3-2-3 2-3-2-3 2zM8 11l2 2 4-4',
+      refunds: 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5',
+      accounting: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3',
+      promotions: 'M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8zM7 7h.01',
+      entitlements: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6',
+      announce: 'M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1zM16 8a5 5 0 0 1 0 8',
+      changelog: 'M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z',
+      onboarding: 'M9 6h12M9 12h12M9 18h12M3 6l1 1 2-2M3 12l1 1 2-2M3 18l1 1 2-2',
+      funnel: 'M3 4h18l-7 8v6l-4 2v-8z',
+      adoption: 'M12 20V10M18 20V4M6 20v-4',
+      support: 'M22 12h-6l-2 3h-4l-2-3H2M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z',
+      sessions: 'M3 14v-2a9 9 0 0 1 18 0v2M21 14v3a2 2 0 0 1-2 2h-1v-6h3zM3 14v3a2 2 0 0 0 2 2h1v-6H3z',
+      supportSettings: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
+      help: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15zM20 17v5H6.5A2.5 2.5 0 0 1 4 19.5',
+      bugs: 'M9 7.1V6a3 3 0 1 1 6 0v1.1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6zM12 20v-9M6 13H3M21 13h-3',
+      system: 'M2 4h20v6H2zM2 14h20v6H2zM6 7h.01M6 17h.01',
+      ops: 'M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01',
+      deliveries: 'M22 2L11 13M22 2l-7 20-4-9-9-4z',
+      flags: 'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7',
+      ratelimit: 'M12 14l4-4M3.3 19a10 10 0 1 1 17.4 0',
+      scripts: 'M4 17l6-6-6-6M12 19h8',
+      privacy: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+      abuse: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM12 8v4M12 16h.01',
+      legal: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
+      restore: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+      jit: 'M21 2l-2 2M11.4 11.6a5.5 5.5 0 1 1-7.8 7.8 5.5 5.5 0 0 1 7.8-7.8zM15.5 7.5l3 3L22 7l-3-3',
+      staff: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM19 8v6M22 11h-6',
+      audit: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+      business: 'M3 3v18h18M7 15l4-4 3 3 5-6',
+      soon: 'M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4zM8 2v16M16 6v16',
+    };
+    // ไม่มี href = ยังไม่ออกแบบ · พาไปหน้าแผนฟีเจอร์
+    const item = (key, label, href, badge) => ({
+      label, d: I[key] ?? I.soon, href: href ?? 'ComingSoon.dc.html', badge: badge ?? '', hasBadge: !!badge, soon: !href,
+      cls: key === active ? 'nav nav-on' : href ? 'nav' : 'nav nav-soon',
+    });
+    const groups = [
+      { label: '', items: [item('home', 'ภาพรวม', 'Main.dc.html')] },
+      { label: 'ลูกค้า', items: [item('customers', 'Workspaces', 'Customers.dc.html'), item('users', 'ผู้ใช้ทั้งหมด', 'Users.dc.html'), item('success', 'สุขภาพและ Playbook'), item('renewals', 'วันต่อสัญญา')] },
+      { label: 'ขายองค์กร', items: [item('leads', 'Lead และดีล'), item('quotes', 'ใบเสนอราคาและสัญญา')] },
+      { label: 'เงิน', items: [item('billing', 'รายได้และใบแจ้งหนี้', 'Billing.dc.html'), item('verify', 'กรณีชำระผิดปกติ', 'Billing.dc.html', '7'), item('refunds', 'คืนเงินและอนุมัติ', 'Refunds.dc.html', '2'), item('accounting', 'ส่งออกให้บัญชี', 'Billing.dc.html')] },
+      { label: 'แพ็กเกจและการตลาด', items: [item('promotions', 'แพ็กเกจและโปรโมชัน', 'Promotions.dc.html'), item('entitlements', 'สิทธิ์และขีดจำกัด', 'Entitlements.dc.html'), item('announce', 'ประกาศถึงลูกค้า', 'Promotions.dc.html'), item('changelog', 'Changelog และ NPS'), item('onboarding', 'Onboarding checklist')] },
+      { label: 'วิเคราะห์', items: [item('business', 'ธุรกิจและกำไร', 'Business.dc.html'), item('funnel', 'Funnel และ Retention', 'Business.dc.html'), item('adoption', 'การใช้ฟีเจอร์', 'Business.dc.html')] },
+      { label: 'Support', items: [item('support', 'Ticket', 'Support.dc.html', '6'), item('sessions', 'การเข้าช่วยเหลือ', 'Support.dc.html'), item('supportSettings', 'ตั้งค่าการแจกงาน', 'SupportSettings.dc.html'), item('help', 'ศูนย์ช่วยเหลือ'), item('bugs', 'ส่งบั๊กให้ทีมพัฒนา')] },
+      { label: 'ระบบ', items: [item('system', 'สถานะระบบ', 'System.dc.html'), item('ops', 'เหตุขัดข้องและปิดปรับปรุง', 'Operations.dc.html', '3'), item('deliveries', 'ประวัติการส่งแจ้งเตือน', 'Deliveries.dc.html'), item('flags', 'Feature flags', 'System.dc.html'), item('ratelimit', 'Rate limit ต่อลูกค้า'), item('scripts', 'สคริปต์ดูแลข้อมูล')] },
+      { label: 'ความปลอดภัยและกฎหมาย', items: [item('privacy', 'คำขอ PDPA', 'Privacy.dc.html', '2'), item('abuse', 'ตรวจจับการใช้ผิด', 'Abuse.dc.html', '4'), item('legal', 'เอกสารกฎหมาย', 'Legal.dc.html'), item('restore', 'กู้คืนข้อมูลลูกค้า'), item('jit', 'ขอสิทธิ์ชั่วคราว')] },
+      { label: 'ทีมภายใน', items: [item('staff', 'พนักงานและสิทธิ์', 'Staff.dc.html'), item('audit', 'Audit log', 'Staff.dc.html'), item('soon', 'แผนฟีเจอร์ทั้งหมด', 'ComingSoon.dc.html')] },
+    ].map((g) => ({ ...g, hasLabel: !!g.label }));
+    return { groups };
+  }
+}
+</script>
+</body>
+</html>

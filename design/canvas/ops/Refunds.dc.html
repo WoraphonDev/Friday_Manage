@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · คืนเงิน เครดิต และอนุมัติ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f5f6f7}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+.card{background:#fff;border:1px solid #e3e6e9;border-radius:12px;padding:18px 20px;box-sizing:border-box;min-width:0}
+.h2{margin:0;font-size:15px;font-weight:600;color:#24272c}
+.muted{color:#5f656d}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid #cfd4d9;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#f1f3f5;color:#24272c;text-decoration:none}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff}.btn-primary:hover{background:#4a33a8;color:#fff}
+.btn-ok{background:#1e7a4f;border-color:#1e7a4f;color:#fff}.btn-ok:hover{background:#17633f;color:#fff}
+.btn-danger{color:#a01d3c;border-color:#f6b8c6}.btn-danger:hover{background:#fdecf0;color:#a01d3c}
+.btn-sm{min-height:30px;padding:0 10px;font-size:12px}
+.f{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:500;color:#3a3f45}
+.in{min-height:36px;border:1px solid #868c94;border-radius:8px;padding:0 10px;font:inherit;font-size:13px;background:#fff;box-sizing:border-box;width:100%}
+.seg{display:flex;border:1px solid #cfd4d9;border-radius:8px;overflow:hidden;background:#fff}
+.seg button{flex:1;border:0;background:transparent;font:inherit;font-size:13px;padding:0 10px;min-height:34px;color:#3a3f45;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#efe9fd;color:#5b3fc4;font-weight:600}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:500;color:#5f656d;font-size:12px;padding:10px 12px;border-bottom:1px solid #e3e6e9;white-space:nowrap;background:#f8f9fa}
+.t td{padding:11px 12px;border-bottom:1px solid #eef0f2;white-space:nowrap;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+.appr{display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid #e3e6e9;border-radius:12px}
+/* ขัดเกลา UI ชุดเดียวกันทุกหน้า */
+body{background:#f4f5f8;-webkit-font-smoothing:antialiased}
+h1{letter-spacing:-.015em}
+.card{border-color:#e6e8ec;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03)}
+.h2{font-weight:650;letter-spacing:-.005em}
+.btn{border-radius:9px;border-color:#d6dae0;box-shadow:0 1px 2px rgba(16,24,40,.05);transition:background .12s,border-color .12s,box-shadow .12s}
+.btn:hover{border-color:#c3c8cf}
+.btn-primary{border-color:#5b3fc4;box-shadow:0 1px 2px rgba(91,63,196,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+.btn-primary:hover{border-color:#4a33a8}
+.btn-danger{border-color:#f6b8c6}.btn-ok{border-color:#1e7a4f}
+.pill{font-weight:600;letter-spacing:.01em}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.sw:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+table.t th{background:#fafbfc;color:#6b717a;font-weight:600;border-bottom-color:#eceef1}
+table.t tbody tr:hover td{background:#fafaff}
+.in,.sel,textarea{transition:border-color .12s,box-shadow .12s}
+.in:focus,.sel:focus,textarea:focus{outline:none;border-color:#6b4fd8;box-shadow:0 0 0 3px #efe9fd}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c; background: #f5f6f7">
+  <div style="flex: 1 1 232px; max-width: 100%; background: #141619">
+    <dc-import name="Sidebar" active="refunds" hint-size="100%,1480px"></dc-import>
+  </div>
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+    <div style="margin: -24px -28px 4px"><dc-import name="Topbar" group="เงิน" group-href="Billing.dc.html" page="คืนเงิน เครดิต และอนุมัติ" phase="1" hint-size="100%,60px"></dc-import></div>
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px">
+      <div style="flex: 1 1 320px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700">คืนเงิน เครดิต และการอนุมัติ</h1>
+        <p class="muted" style="margin: 4px 0 0; font-size: 13px">ทุกการคืนเงินออกใบลดหนี้ (e-Tax) อัตโนมัติ · คนขอกับคนอนุมัติต้องเป็นคนละคน</p>
+      </div>
+      <button type="button" class="btn btn-primary" onClick="{{openDrawer}}">ขอคืนเงิน / ให้เครดิต</button>
+    </section>
+
+    <section class="card" style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <h2 class="h2">รออนุมัติ</h2>
+        <span class="pill p-amber">{{nPending}}</span>
+        <span class="muted" style="font-size: 12px">คุณอนุมัติได้เฉพาะรายการที่คนอื่นขอ</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px">
+        <sc-for list="{{pending}}" as="p" hint-placeholder-count="2">
+          <div class="appr">
+            <div style="display: flex; align-items: center; gap: 8px"><span class="{{p.typeCls}}">{{p.type}}</span><b style="font-size: 14px">{{p.ws}}</b><span class="num" style="margin-left: auto; font-size: 18px; font-weight: 700">{{p.amount}}</span></div>
+            <div class="muted" style="font-size: 12px">{{p.ref}} · ขอโดย {{p.by}} · {{p.when}}</div>
+            <div style="font-size: 13px">{{p.reason}}</div>
+            <div style="font-size: 12px; color: #7a4700">{{p.rule}}</div>
+            <div style="display: flex; gap: 8px; margin-top: 4px">
+              <button type="button" class="btn btn-ok btn-sm" style="flex: 1" onClick="{{p.approve}}">อนุมัติ</button>
+              <button type="button" class="btn btn-danger btn-sm" style="flex: 1" onClick="{{p.reject}}">ไม่อนุมัติ</button>
+            </div>
+          </div>
+        </sc-for>
+        <sc-if value="{{noPending}}" hint-placeholder-val="{{ false }}">
+          <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 24px; text-align: center"><span style="width: 44px; height: 44px; border-radius: 50%; background: #e3f6ec; color: #17633f; display: flex; align-items: center; justify-content: center; font-size: 20px">✓</span><b>ไม่มีรายการรออนุมัติ</b><button type="button" class="btn btn-sm" onClick="{{resetAp}}">เริ่มต้นแบบใหม่ (เฉพาะต้นแบบ)</button></div>
+        </sc-if>
+      </div>
+    </section>
+
+    <section>
+      <div class="card" style="padding: 0; overflow: hidden">
+        <div style="padding: 14px 16px; border-bottom: 1px solid #e3e6e9; display: flex; align-items: center; gap: 8px"><h2 class="h2">ประวัติ</h2><span class="muted" style="font-size: 12px">คืนเงิน · ใบลดหนี้ · เครดิตสะสม</span></div>
+        <div style="overflow-x: auto">
+          <table class="t">
+            <thead><tr><th scope="col">วันที่</th><th scope="col">ประเภท</th><th scope="col">Workspace</th><th scope="col">อ้างอิง</th><th scope="col">ยอด</th><th scope="col">ขอ / อนุมัติ</th><th scope="col">สถานะ</th></tr></thead>
+            <tbody>
+              <sc-for list="{{history}}" as="h" hint-placeholder-count="6">
+                <tr>
+                  <td class="num muted">{{h.date}}</td>
+                  <td><span class="{{h.typeCls}}">{{h.type}}</span></td>
+                  <td style="font-weight: 500">{{h.ws}}</td>
+                  <td class="mono" style="font-size: 12px">{{h.ref}}</td>
+                  <td class="num">{{h.amount}}</td>
+                  <td class="muted">{{h.people}}</td>
+                  <td><span class="{{h.stCls}}">{{h.status}}</span></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <sc-if value="{{drawerOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closeDrawer}}" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,22,25,.32); z-index: 20"></div>
+      <form class="card" role="dialog" aria-label="ขอคืนเงินหรือให้เครดิต" style="position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100%); border-radius: 16px 0 0 16px; z-index: 21; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 22px 24px; box-shadow: -12px 0 40px rgba(16,24,40,.18)">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <h2 class="h2">ขอคืนเงิน / ให้เครดิต</h2>
+          <button type="button" class="btn btn-sm" aria-label="ปิด" onClick="{{closeDrawer}}" style="margin-left: auto; width: 34px; padding: 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+        </div>
+        <div class="seg" role="group" aria-label="ประเภท">
+          <sc-for list="{{kinds}}" as="k" hint-placeholder-count="3"><button type="button" aria-pressed="{{k.on}}" onClick="{{k.pick}}">{{k.label}}</button></sc-for>
+        </div>
+        <label class="f">Workspace และใบแจ้งหนี้<input class="in" value="Orbit Apps · INV-2569-1127"></label>
+        <label class="f">ยอด<input class="in num" value="{{amount}}"></label>
+        <label class="f">ช่องทาง<select class="in"><option>{{channel}}</option></select></label>
+        <label class="f">เหตุผล (ลูกค้าเห็นในใบลดหนี้)<textarea rows="2" class="in" style="padding: 8px 10px">ชดเชยปัญหานำเข้า Excel ทำงานไม่ได้ 2 วัน (Ticket #512)</textarea></label>
+        <div style="padding: 10px 12px; border-radius: 10px; background: #f6f2ff; font-size: 12px">{{hint}}</div>
+        <button type="button" class="btn btn-primary" style="align-self: flex-end">ส่งขออนุมัติ</button>
+      </form>
+      </sc-if>
+    </section>
+
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="padding: 14px 16px; border-bottom: 1px solid #e3e6e9; display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <h2 class="h2">กฎการอนุมัติ</h2>
+        <span class="muted" style="font-size: 12px">ใช้ทั้งระบบ ไม่ใช่แค่การเงิน · แก้ได้เฉพาะ Owner · มีผู้อนุมัติคนเดียว: คำขอของ Owner อนุมัติตัวเองได้และติดป้าย</span>
+        <button type="button" class="btn btn-sm" style="margin-left: auto">เพิ่มกฎ</button>
+      </div>
+      <div style="overflow-x: auto">
+        <table class="t">
+          <thead><tr><th scope="col">การกระทำ</th><th scope="col">ต้องอนุมัติเมื่อ</th><th scope="col">ผู้อนุมัติ</th><th scope="col">หมดเวลาอนุมัติ</th></tr></thead>
+          <tbody>
+            <sc-for list="{{rules}}" as="r" hint-placeholder-count="6">
+              <tr><td style="font-weight: 500">{{r.action}}</td><td style="white-space: normal">{{r.when}}</td><td>{{r.who}}</td><td class="muted">{{r.expire}}</td></tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <sc-if value="{{apKey}}" hint-placeholder-val="{{ false }}">
+    <div aria-hidden="true" onClick="{{closeAp}}" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,22,25,.40); z-index: 30"></div>
+    <div role="dialog" aria-label="อนุมัติ {{apTitle}}" class="card" style="position: fixed; top: 10vh; left: 50%; transform: translateX(-50%); width: min(440px, calc(100% - 32px)); max-height: 80vh; overflow-y: auto; z-index: 31; display: flex; flex-direction: column; gap: 14px; padding: 20px 22px; box-shadow: 0 24px 48px rgba(16,24,40,.22)">
+      <div style="display: flex; align-items: flex-start; gap: 8px"><div><h2 class="h2" style="font-size: 17px">อนุมัติ {{apTitle}}</h2><div class="muted" style="font-size: 13px; margin-top: 4px">{{apSum}}</div></div>
+        <button type="button" class="btn btn-sm" aria-label="ปิด" onClick="{{closeAp}}" style="margin-left: auto; width: 32px; padding: 0">✕</button></div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 0"><span style="width: 64px; height: 64px; border-radius: 50%; background: #efe9fd; color: #5b3fc4; display: flex; align-items: center; justify-content: center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.7-8.7M17 6l2 2M15 8l2 2"/></svg></span><b style="font-size: 14px">แตะ Security key เพื่อยืนยัน</b><span class="muted" style="font-size: 12px">รายการนี้ต้องยืนยันตัวตนซ้ำ (G4)</span></div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; border-top: 1px solid #eceef1; padding-top: 14px"><button type="button" class="btn" onClick="{{closeAp}}">ยกเลิก</button><button type="button" class="btn btn-ok" onClick="{{doApprove}}">จำลอง: แตะกุญแจแล้ว</button></div>
+    </div>
+    </sc-if>
+    <sc-if value="{{apReject}}" hint-placeholder-val="{{ false }}">
+    <div aria-hidden="true" onClick="{{closeAp}}" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,22,25,.40); z-index: 30"></div>
+    <div role="dialog" aria-label="ไม่อนุมัติ {{apTitle}}" class="card" style="position: fixed; top: 10vh; left: 50%; transform: translateX(-50%); width: min(480px, calc(100% - 32px)); max-height: 80vh; overflow-y: auto; z-index: 31; display: flex; flex-direction: column; gap: 14px; padding: 20px 22px; box-shadow: 0 24px 48px rgba(16,24,40,.22)">
+      <div style="display: flex; align-items: flex-start; gap: 8px"><div><h2 class="h2" style="font-size: 17px">ไม่อนุมัติ {{apTitle}}</h2><div class="muted" style="font-size: 13px; margin-top: 4px">ผู้ขอได้รับแจ้งพร้อมเหตุผล</div></div>
+        <button type="button" class="btn btn-sm" aria-label="ปิด" onClick="{{closeAp}}" style="margin-left: auto; width: 32px; padding: 0">✕</button></div>
+      <div style="padding: 10px 12px; border-radius: 10px; background: #f6f7f9; border: 1px solid #eceef1; font-size: 13px">{{apSum}}</div>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600">เหตุผลที่ไม่อนุมัติ (ผู้ขอเห็น)
+        <textarea rows="3" style="border: 1px solid #868c94; border-radius: 9px; padding: 8px 12px; font: inherit; font-size: 13px; font-weight: 400; resize: vertical">ให้เป็นเครดิตแทนการคืนเงิน เพราะลูกค้ายังใช้งานต่อ</textarea></label>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; border-top: 1px solid #eceef1; padding-top: 14px"><button type="button" class="btn" onClick="{{closeAp}}">ยกเลิก</button><button type="button" class="btn btn-danger" style="background: #c8264a; color: #fff; border-color: #c8264a" onClick="{{doReject}}">ไม่อนุมัติ</button></div>
+    </div>
+    </sc-if>
+    <sc-if value="{{toastOn}}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position: fixed; right: 24px; bottom: 24px; z-index: 40; width: min(420px, calc(100% - 48px)); display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; background: #fff; border: 1px solid #c6ead6; border-radius: 14px; box-shadow: 0 16px 40px rgba(16,24,40,.18); font-size: 13px">
+      <span style="width: 26px; height: 26px; border-radius: 8px; background: #e3f6ec; color: #17633f; display: flex; align-items: center; justify-content: center; flex: none">✓</span>
+      <span style="flex: 1"><b>{{toast}}</b><br><span class="muted">บันทึกใน Audit log แล้ว</span></span>
+      <button type="button" class="btn btn-sm" onClick="{{closeToast}}" aria-label="ปิด" style="width: 30px; padding: 0">✕</button>
+    </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  state = { kind: 'credit', ap: null, apStep: null, resolved: {}, toast: '' };
+  renderVals() {
+    const pending = [
+      { type: 'คืนเงิน', typeCls: 'pill p-red', ws: 'Kanit Labs', amount: '฿12,600', ref: 'INV-2569-1140 · โอนซ้ำ 2 ครั้ง', by: 'Friday Finance', when: '40 นาทีที่แล้ว', reason: 'ลูกค้าโอนซ้ำ ยอดตรงกับใบแจ้งหนี้ คืนเข้าบัญชีเดิม', rule: 'ต้องอนุมัติ: คืนเงินเกิน ฿10,000' },
+      { type: 'ส่วนลด', typeCls: 'pill p-purple', ws: 'Northwind Dev', amount: '35% · 12 รอบ', ref: 'ต่อสัญญารายปี', by: 'Support A', when: '2 ชม.ที่แล้ว', reason: 'ลูกค้าเทียบราคากับคู่แข่ง ขอส่วนลดเพื่อต่อสัญญารายปี', rule: 'ต้องอนุมัติ: ส่วนลดเกิน 30%' },
+    ];
+    const history = [
+      { date: '7 พ.ย.', type: 'เครดิต', typeCls: 'pill p-teal', ws: 'Orbit Apps', ref: 'CR-2569-031', amount: '฿2,000', people: 'Finance / Admin', status: 'ใช้แล้วบางส่วน', stCls: 'pill p-gray' },
+      { date: '5 พ.ย.', type: 'คืนเงิน', typeCls: 'pill p-red', ws: 'Mekong Systems', ref: 'CN-2569-012', amount: '฿[ยอด]', people: 'Finance / —', status: 'คืนแล้ว · ใบลดหนี้ออกแล้ว', stCls: 'pill p-green' },
+      { date: '1 พ.ย.', type: 'ใบลดหนี้', typeCls: 'pill p-amber', ws: 'สยามโค้ด', ref: 'CN-2569-011', amount: '฿[ยอด]', people: 'ระบบ (อัปเกรดกลางรอบ)', status: 'ออกแล้ว', stCls: 'pill p-green' },
+      { date: '28 ต.ค.', type: 'คืนเงิน', typeCls: 'pill p-red', ws: 'Pixel Forge', ref: 'CN-2569-010', amount: '฿18,000', people: 'Finance / Admin', status: 'ไม่อนุมัติ', stCls: 'pill p-red' },
+      { date: '20 ต.ค.', type: 'เครดิต', typeCls: 'pill p-teal', ws: 'TechNova', ref: 'CR-2569-029', amount: '฿5,000', people: 'Support / Admin', status: 'ใช้ครบแล้ว', stCls: 'pill p-gray' },
+      { date: '14 ต.ค.', type: 'คืนเงิน', typeCls: 'pill p-red', ws: 'Lumen Studio', ref: 'CN-2569-009', amount: '฿[ยอด]', people: 'Finance / —', status: 'คืนแล้ว · บัตรเครดิต', stCls: 'pill p-green' },
+    ];
+    const k = this.state.kind;
+    const kinds = [['credit', 'เครดิตสะสม'], ['refund', 'คืนเงิน'], ['note', 'ใบลดหนี้อย่างเดียว']]
+      .map(([key, label]) => ({ label, on: k === key ? 'true' : 'false', pick: () => this.setState({ kind: key }) }));
+    const amount = k === 'refund' ? '฿4,500' : k === 'credit' ? '฿2,000' : '฿1,500';
+    const channel = k === 'refund' ? 'คืนเข้าช่องทางเดิม (โอน PromptPay)' : k === 'credit' ? 'หักจากใบแจ้งหนี้รอบถัดไป' : 'ปรับยอดใบแจ้งหนี้ที่ยังไม่ชำระ';
+    const hint = k === 'refund' ? 'ไม่เกิน ฿10,000 ไม่ต้องอนุมัติ · ออกใบลดหนี้และส่งให้ลูกค้าอัตโนมัติ' : k === 'credit' ? 'เครดิตหักอัตโนมัติจากรอบบิลถัดไป ไม่หมดอายุ · ไม่เกิน ฿5,000 ไม่ต้องอนุมัติ' : 'ใช้แก้ใบแจ้งหนี้ที่ออกผิด ไม่มีเงินคืน';
+    const rules = [
+      { action: 'คืนเงิน', when: 'ยอดเกิน ฿10,000 หรือเกิน 30 วันหลังชำระ', who: 'Owner', expire: '48 ชม.' },
+      { action: 'ให้เครดิต', when: 'ยอดเกิน ฿5,000', who: 'Owner', expire: '48 ชม.' },
+      { action: 'ส่วนลด / คูปองเฉพาะราย', when: 'เกิน 30% หรือนานเกิน 12 รอบ', who: 'Owner', expire: '72 ชม.' },
+      { action: 'ปรับสิทธิ์เฉพาะราย', when: 'เกินแพ็กเกจเกิน 20% หรือไม่มีวันหมดอายุ', who: 'Owner', expire: '72 ชม.' },
+      { action: 'ลบข้อมูลตามคำขอ PDPA', when: 'ทุกครั้ง', who: 'Owner', expire: '7 วัน' },
+      { action: 'ระงับ Workspace ที่จ่ายเงิน', when: 'ทุกครั้ง ยกเว้นค้างชำระตามนโยบาย', who: 'Owner', expire: '24 ชม.' },
+    ];
+    const resolved = this.state.resolved || {};
+    const apI = this.state.ap;
+    const apItem = apI === null ? pending[0] : pending[apI];
+    const pend = pending.map((p, i) => ({ ...p, i })).filter((p) => !resolved[p.i]).map((p) => ({ ...p,
+      approve: () => this.setState({ ap: p.i, apStep: 'key' }), reject: () => this.setState({ ap: p.i, apStep: 'reject' }) }));
+    const done = (msg) => this.setState({ resolved: { ...resolved, [apI]: true }, ap: null, apStep: null, toast: msg });
+    const apExtra = {
+      nPending: String(pend.length), noPending: pend.length === 0,
+      apKey: this.state.apStep === 'key', apReject: this.state.apStep === 'reject',
+      apTitle: apItem.type + ' ' + apItem.ws, apSum: apItem.amount + ' · ' + apItem.ref + ' · ขอโดย ' + apItem.by,
+      closeAp: () => this.setState({ ap: null, apStep: null }),
+      doApprove: () => done('อนุมัติ' + apItem.type + ' ' + apItem.ws + ' ' + apItem.amount + ' แล้ว · ' + (apItem.type === 'คืนเงิน' ? 'ออกใบลดหนี้และคืนเข้าบัญชีเดิม' : 'ส่วนลดมีผลรอบถัดไป')),
+      doReject: () => this.setState({ resolved: { ...resolved, [apI]: 'no' }, ap: null, apStep: null, toast: 'ไม่อนุมัติ' + apItem.type + ' ' + apItem.ws + ' · แจ้ง ' + apItem.by + ' แล้ว' }),
+      resetAp: () => this.setState({ resolved: {}, toast: '' }),
+      toast: this.state.toast, toastOn: !!this.state.toast, closeToast: () => this.setState({ toast: '' }),
+    };
+    const added = pending.map((p, i) => ({ p, i })).filter((x) => resolved[x.i]).map(({ p, i }) => ({ date: '10 พ.ย.', type: p.type, typeCls: p.typeCls, ws: p.ws, ref: p.ref.split(' · ')[0], amount: p.amount, people: p.by + ' / Friday Owner',
+      status: resolved[i] === 'no' ? 'ไม่อนุมัติ' : 'อนุมัติแล้ว', stCls: resolved[i] === 'no' ? 'pill p-red' : 'pill p-green' }));
+    return { ...apExtra, pending: pend, history: [...added, ...history], kinds, amount, channel, hint, rules,
+      drawerOpen: !!this.state.drawer, openDrawer: () => this.setState({ drawer: true }), closeDrawer: () => this.setState({ drawer: false }) };
+  }
+}
+</script>
+</body>
+</html>

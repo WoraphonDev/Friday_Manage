@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · M1 · เข้าสู่ระบบและสถานะของหน้า</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f8;-webkit-font-smoothing:antialiased}
+a{color:#5b3fc4;text-decoration:none}
+.muted{color:#5f656d}.num{font-variant-numeric:tabular-nums}.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:9px;border:1px solid #d6dae0;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff;box-shadow:0 1px 2px rgba(91,63,196,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+.btn-danger{background:#c8264a;border-color:#c8264a;color:#fff}
+.btn-ok{background:#1e7a4f;border-color:#1e7a4f;color:#fff}
+.btn-ghost{border-color:transparent;box-shadow:none;background:transparent;color:#5f656d}
+.btn-sm{min-height:30px;padding:0 10px;font-size:12px}
+.board{max-width:1440px;margin:0 auto;padding:36px 40px 56px;box-sizing:border-box;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;color:#24272c}
+.gal{columns:2 600px;column-gap:28px}
+.item{break-inside:avoid;display:inline-block;width:100%;margin:0 0 28px;vertical-align:top}
+.cap{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}
+.cap b{font-size:15px}
+.id{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px;background:#24272c;color:#fff}
+.src{font-size:12px;color:#5f656d;width:100%}
+.stage{border-radius:16px;padding:28px 24px;background:#cfd3db;background-image:linear-gradient(180deg,rgba(36,39,44,.20),rgba(36,39,44,.34));box-sizing:border-box}
+.stage.light{background:#eceef2;background-image:none}
+.stage.right{display:flex;justify-content:flex-end;padding:0;overflow:hidden}
+.m{background:#fff;border-radius:16px;box-shadow:0 24px 48px rgba(16,24,40,.22),0 2px 6px rgba(16,24,40,.08);margin:0 auto;max-width:100%;overflow:hidden;display:flex;flex-direction:column}
+.drawer{border-radius:16px 0 0 16px;margin:0;min-height:560px}
+.mh{display:flex;align-items:flex-start;gap:12px;padding:20px 22px 0}
+.mh h3{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em}
+.mh p{margin:4px 0 0;font-size:13px;color:#5f656d}
+.ic{width:36px;height:36px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center}
+.ic-danger{background:#fdecf0;color:#c8264a}.ic-warn{background:#fff6d9;color:#b86e00}.ic-info{background:#efe9fd;color:#5b3fc4}.ic-ok{background:#e3f6ec;color:#1e7a4f}
+.x{margin-left:auto;width:32px;height:32px;border-radius:8px;border:0;background:transparent;color:#5f656d;display:flex;align-items:center;justify-content:center;flex:none}
+.mb{padding:16px 22px;display:flex;flex-direction:column;gap:14px}
+.mf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:14px 22px;border-top:1px solid #eceef1;background:#fafbfc}
+.mf .note{font-size:12px;color:#5f656d;flex:1 1 200px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.full{grid-column:1/-1}
+.f{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:#3a3f45;min-width:0}
+.f .req{color:#c8264a}
+.in{min-height:38px;border:1px solid #868c94;border-radius:9px;padding:8px 12px;font-size:13px;font-weight:400;color:#24272c;background:#fff;box-sizing:border-box;display:flex;align-items:center;gap:8px;line-height:1.5}
+.in.ph{color:#8a9099}
+.in.sel::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid #5f656d;border-bottom:2px solid #5f656d;transform:rotate(45deg) translateY(-3px);flex:none}
+.in.ta{min-height:76px;align-items:flex-start}
+.in.focus{border-color:#6b4fd8;box-shadow:0 0 0 3px #efe9fd}
+.hint{font-size:12px;font-weight:400;color:#5f656d}
+.rc{display:grid;gap:8px}
+.rco{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:start;padding:12px 14px;border:1px solid #e0e3e7;border-radius:12px;font-size:13px}
+.rco.on{border-color:#5b3fc4;background:#faf8ff;box-shadow:0 0 0 3px #efe9fd}
+.rd{width:18px;height:18px;border-radius:50%;border:2px solid #b7bcc3;box-sizing:border-box;margin-top:1px;display:flex;align-items:center;justify-content:center}
+.on .rd{border-color:#5b3fc4}.on .rd::after{content:"";width:8px;height:8px;border-radius:50%;background:#5b3fc4}
+.seg{display:inline-flex;padding:3px;background:#eef0f2;border-radius:10px;gap:2px;flex-wrap:wrap;align-self:flex-start}
+.seg span{font-size:13px;padding:6px 12px;border-radius:8px;color:#5f656d}
+.seg span.on{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.ck{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.5}
+.cb{width:18px;height:18px;border-radius:5px;border:2px solid #b7bcc3;box-sizing:border-box;flex:none;margin-top:1px;display:flex;align-items:center;justify-content:center}
+.cb.on{background:#5b3fc4;border-color:#5b3fc4}
+.cb.on::after{content:"";width:5px;height:9px;border-right:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(45deg) translate(-1px,-1px)}
+.info{padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.55}
+.t-info{background:#f6f2ff;border:1px solid #e4dbfb}.t-warn{background:#fff8e6;border:1px solid #f5e1a8;color:#5c3a00}.t-danger{background:#fdf1f4;border:1px solid #f6c9d4;color:#7d1530}.t-ok{background:#effaf4;border:1px solid #c6ead6;color:#14532f}.t-gray{background:#f6f7f9;border:1px solid #eceef1}
+.kv{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 14px;font-size:13px}
+.kv .k{color:#5f656d}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:600;color:#6b717a;font-size:12px;padding:8px 10px;border-bottom:1px solid #eceef1;background:#fafbfc;white-space:nowrap}
+.t td{padding:9px 10px;border-bottom:1px solid #eef0f2;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+.tw{border:1px solid #eceef1;border-radius:10px;overflow:hidden}
+.li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid #eef0f2;font-size:13px}
+.li:last-child{border-bottom:0}
+.li.on{background:#f6f2ff}
+.lis{border:1px solid #eceef1;border-radius:10px;overflow:hidden}
+.h{font-size:12px;font-weight:700;color:#5f656d;letter-spacing:.02em;margin-bottom:-6px}
+.pv{border:1px solid #e6e8ec;border-radius:12px;overflow:hidden}
+.pvh{padding:8px 12px;background:#fafbfc;border-bottom:1px solid #eceef1;font-size:12px;color:#5f656d}
+.pvb{padding:12px 14px;font-size:13px;line-height:1.6}
+.steps{display:flex;flex-direction:column;gap:0}
+.st{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;font-size:13px;padding:6px 0;position:relative}
+.dot{width:14px;height:14px;border-radius:50%;margin-top:3px;box-sizing:border-box}
+.d-done{background:#1e7a4f}.d-now{background:#fff;border:3px solid #5b3fc4}.d-next{background:#fff;border:2px solid #c3c8cf}
+.pop{background:#fff;border-radius:14px;box-shadow:0 16px 40px rgba(16,24,40,.18),0 2px 6px rgba(16,24,40,.08);border:1px solid #e6e8ec;overflow:hidden}
+.trig{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:#3a3f45}
+</style>
+</helmet>
+<div class="board">
+  <header style="display:flex;flex-direction:column;gap:10px;margin-bottom:28px">
+    <h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-.015em">M1 · เข้าสู่ระบบและสถานะของหน้า</h1>
+    <p class="muted" style="margin:0;font-size:14px;max-width:960px">หน้าที่เห็นก่อนเข้าระบบ และสถานะกำลังโหลด / ว่าง / ล้ม / ไม่มีสิทธิ์ ที่ทุกตารางและการ์ดต้องมี</p>
+    <div class="legend"><span><span class="pill p-purple">Modal</span> กลางจอ ใช้กับการกระทำสั้น ๆ</span><span><span class="pill p-purple">Drawer ด้านขวา</span> ฟอร์มยาวหรือต้องดูข้อมูลประกอบ</span><span><span class="pill p-teal">Popover</span> เลือกเร็ว ไม่บังหน้า</span><span>ทุกการกระทำกับบัญชีลูกค้าต้องมีเหตุผล และลง Audit log</span></div>
+  </header>
+  <div class="gal"><div class="item"><div class="cap"><span class="id">S1</span><b>หน้าเข้าสู่ระบบ</b><span class="pill p-teal">หน้าเต็ม</span><span class="pill p-green">เฟส 1</span><span class="src">เปิดจาก: เปิด ops.fridaymanage.com โดยยังไม่ล็อกอิน</span></div><div class="stage light"><div style="display:grid;grid-template-columns:1fr 1fr;border-radius:16px;overflow:hidden;border:1px solid #e6e8ec;background:#fff;min-height:420px">
+<div style="background:#141619;color:#fff;padding:28px;display:flex;flex-direction:column;gap:12px"><span style="display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:9px;background:#5b3fc4;display:flex;align-items:center;justify-content:center;font-weight:700">F</span><b>Friday Ops</b></span><span style="margin-top:auto;font-size:20px;font-weight:700;line-height:1.4">ระบบหลังบ้าน<br>สำหรับทีม Friday เท่านั้น</span><span style="font-size:12px;color:#b7bcc3">ทุกการเข้าใช้ถูกบันทึก · เข้าจากเครือข่ายบริษัทหรือ VPN</span></div>
+<div style="padding:28px;display:flex;flex-direction:column;gap:14px;justify-content:center"><b style="font-size:18px">เข้าสู่ระบบ</b>
+<div class="f"><span>อีเมลพนักงาน</span><div class="in">admin@friday.test</div></div>
+<span class="btn btn-primary" style="min-height:42px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.7-8.7M17 6l2 2M15 8l2 2"/></svg> ใช้ Security key / Passkey</span>
+<span class="muted" style="font-size:12px">ไม่มีรหัสผ่าน · กุญแจหาย? ใช้กุญแจสำรอง หรือให้ Owner ออกลิงก์ลงทะเบียนใหม่</span></div></div></div><ul style="margin:10px 0 0;padding-left:18px;font-size:12px;color:#3a3f45;line-height:1.7"><li>ไม่มีรหัสผ่านและไม่มี "จำฉันไว้" · เซสชันอายุ 8 ชม. และหมดเมื่อไม่ใช้งาน 30 นาที</li><li>ล็อกอินผิดเกิน 5 ครั้งใน 10 นาที ล็อกอีเมลนั้น 15 นาทีและแจ้ง Owner</li></ul></div><div class="item"><div class="cap"><span class="id">S2</span><b>ลงทะเบียนกุญแจครั้งแรก</b><span class="pill p-teal">หน้าเต็ม</span><span class="pill p-green">เฟส 1</span><span class="src">เปิดจาก: ลิงก์เชิญพนักงานใหม่ (A1)</span></div><div class="stage light"><div class="stage" style="padding:24px"><div class="m" style="width:520px"><div class="mh"><span class="ic ic-info"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.7-8.7M17 6l2 2M15 8l2 2"/></svg></span><div><h3>ลงทะเบียน Security key อันแรก</h3><p>ลิงก์เชิญจาก Friday Owner · หมดอายุใน 23 ชม.</p></div></div>
+<div class="mb"><div class="steps"><div class="st"><span class="dot d-done"></span><span>ยืนยันอีเมล new.hire@friday.test</span></div><div class="st"><span class="dot d-now"></span><span><b>แตะกุญแจอันแรก</b> · ตั้งชื่อ เช่น "YubiKey สีดำ"</span></div><div class="st"><span class="dot d-next"></span><span>ลงทะเบียนกุญแจสำรองอันที่สอง (บังคับ)</span></div></div>
+<div class="f"><span>ชื่อกุญแจ</span><div class="in">YubiKey สีดำ</div></div><div class="info t-warn">ต้องมีกุญแจ 2 อันก่อนใช้งาน เพื่อไม่ให้ล็อกตัวเองออกจากระบบเมื่อกุญแจหาย</div></div>
+<div class="mf"><span class="note"></span><span class="btn btn-primary">แตะกุญแจ</span></div></div></div></div></div><div class="item"><div class="cap"><span class="id">S3</span><b>เซสชันหมดอายุ</b><span class="pill p-teal">หน้าเต็ม</span><span class="pill p-green">เฟส 1</span><span class="src">เปิดจาก: ไม่มีการใช้งาน 30 นาที</span></div><div class="stage light"><div class="stage" style="padding:24px"><div class="m" style="width:440px"><div class="mh"><span class="ic ic-warn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.7-8.7M17 6l2 2M15 8l2 2"/></svg></span><div><h3>เซสชันหมดอายุ</h3><p>ไม่มีการใช้งาน 30 นาที · ข้อความที่พิมพ์ไว้ยังอยู่</p></div></div>
+<div class="mb"><div class="info t-gray">แตะ Security key เพื่อทำต่อจากหน้าเดิม</div></div><div class="mf"><span class="note"></span><span class="btn">ออกจากระบบ</span><span class="btn btn-primary">แตะกุญแจ</span></div></div></div></div></div><div class="item"><div class="cap"><span class="id">S4</span><b>กำลังโหลด</b><span class="pill p-teal">สถานะหน้า</span><span class="pill p-green">เฟส 1</span><span class="src">เปิดจาก: ทุกตารางและการ์ด</span></div><div class="stage light"><div style="background:#fff;border-radius:14px;border:1px solid #e6e8ec;min-height:260px;display:flex;flex-direction:column;overflow:hidden"><div style="padding:18px;display:flex;flex-direction:column;gap:14px"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"><div style="border:1px solid #eef0f2;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px"><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:20px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span></div><div style="border:1px solid #eef0f2;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px"><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:20px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span></div><div style="border:1px solid #eef0f2;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px"><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:20px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span></div></div><div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px"><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span></div><div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px"><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span></div><div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px"><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span></div><div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px"><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span><span style="display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f2,#f6f7f9,#eef0f2)"></span></div></div></div></div><ul style="margin:10px 0 0;padding-left:18px;font-size:12px;color:#3a3f45;line-height:1.7"><li>แสดงโครงตามรูปร่างจริงของหน้า ไม่ใช้วงกลมหมุนกลางจอ</li></ul></div><div class="item"><div class="cap"><span class="id">S5</span><b>ว่าง</b><span class="pill p-teal">สถานะหน้า</span><span class="pill p-green">เฟส 1</span><span class="src">เปิดจาก: ตารางที่ไม่มีข้อมูล</span></div><div class="stage light"><div style="background:#fff;border-radius:14px;border:1px solid #e6e8ec;min-height:260px;display:flex;flex-direction:column;overflow:hidden"><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:28px;text-align:center"><span class="ic ic-ok" style="width:48px;height:48px">✓</span><b style="font-size:15px">ไม่มีกรณีผิดปกติ</b><span class="muted" style="font-size:13px">ระบบยืนยันเงินเข้าครบทุกรายการแล้ววันนี้</span><span class="btn btn-sm">ดูรายการเงินเข้าทั้งหมด</span></div></div></div><ul style="margin:10px 0 0;padding-left:18px;font-size:12px;color:#3a3f45;line-height:1.7"><li>บอกว่าทำไมว่างและพาไปที่ที่ควรไปต่อ</li><li>ว่างเพราะตัวกรอง: แสดงปุ่ม "ล้างตัวกรอง"</li></ul></div><div class="item"><div class="cap"><span class="id">S6</span><b>โหลดไม่สำเร็จ</b><span class="pill p-teal">สถานะหน้า</span><span class="pill p-green">เฟส 1</span><span class="src">เปิดจาก: API ล้มหรือ timeout</span></div><div class="stage light"><div style="background:#fff;border-radius:14px;border:1px solid #e6e8ec;min-height:260px;display:flex;flex-direction:column;overflow:hidden"><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:28px;text-align:center"><span class="ic ic-danger" style="width:48px;height:48px">!</span><b style="font-size:15px">โหลดข้อมูลไม่สำเร็จ</b><span class="muted" style="font-size:13px">ops-api ไม่ตอบภายใน 10 วินาที · requestId <span class="mono">req_91c0de</span></span><span style="display:flex;gap:8px"><span class="btn btn-sm">คัดลอก requestId</span><span class="btn btn-sm btn-primary">ลองใหม่</span></span></div></div></div><ul style="margin:10px 0 0;padding-left:18px;font-size:12px;color:#3a3f45;line-height:1.7"><li>แสดง requestId ทุกครั้ง</li><li>ข้อมูลส่วนอื่นของหน้ายังแสดงได้ ล้มเฉพาะส่วน</li></ul></div><div class="item"><div class="cap"><span class="id">S7</span><b>ไม่มีสิทธิ์</b><span class="pill p-teal">สถานะหน้า</span><span class="pill p-green">เฟส 1</span><span class="src">เปิดจาก: บทบาทเข้าหน้าไม่ได้ (403)</span></div><div class="stage light"><div style="background:#fff;border-radius:14px;border:1px solid #e6e8ec;min-height:260px;display:flex;flex-direction:column;overflow:hidden"><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:28px;text-align:center"><span class="ic ic-warn" style="width:48px;height:48px">🔒</span><b style="font-size:15px">บทบาท Support ดูหน้านี้ไม่ได้</b><span class="muted" style="font-size:13px">รายได้และการชำระเงินเปิดให้ Owner และการเงิน</span><span class="btn btn-sm">ขอบทบาทเพิ่มจาก Owner</span></div></div></div><ul style="margin:10px 0 0;padding-left:18px;font-size:12px;color:#3a3f45;line-height:1.7"><li>เมนูที่ไม่มีสิทธิ์ซ่อนตั้งแต่แรก หน้านี้ใช้เมื่อเปิดจากลิงก์ตรง</li></ul></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

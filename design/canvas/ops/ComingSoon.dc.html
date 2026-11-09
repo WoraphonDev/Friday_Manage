@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · เร็ว ๆ นี้</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#f5f6f7}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+.card{background:#fff;border:1px solid #e3e6e9;border-radius:12px;padding:18px 20px;box-sizing:border-box;min-width:0}
+.h2{margin:0;font-size:15px;font-weight:600;color:#24272c}
+.muted{color:#5f656d}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid #cfd4d9;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#f1f3f5;color:#24272c;text-decoration:none}
+.item{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid #eef0f2}
+.item:last-child{border-bottom:0}
+/* ขัดเกลา UI ชุดเดียวกันทุกหน้า */
+body{background:#f4f5f8;-webkit-font-smoothing:antialiased}
+h1{letter-spacing:-.015em}
+.card{border-color:#e6e8ec;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03)}
+.h2{font-weight:650;letter-spacing:-.005em}
+.btn{border-radius:9px;border-color:#d6dae0;box-shadow:0 1px 2px rgba(16,24,40,.05);transition:background .12s,border-color .12s,box-shadow .12s}
+.btn:hover{border-color:#c3c8cf}
+.btn-primary{border-color:#5b3fc4;box-shadow:0 1px 2px rgba(91,63,196,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+.btn-primary:hover{border-color:#4a33a8}
+.btn-danger{border-color:#f6b8c6}.btn-ok{border-color:#1e7a4f}
+.pill{font-weight:600;letter-spacing:.01em}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.sw:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+table.t th{background:#fafbfc;color:#6b717a;font-weight:600;border-bottom-color:#eceef1}
+table.t tbody tr:hover td{background:#fafaff}
+.in,.sel,textarea{transition:border-color .12s,box-shadow .12s}
+.in:focus,.sel:focus,textarea:focus{outline:none;border-color:#6b4fd8;box-shadow:0 0 0 3px #efe9fd}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c; background: #f5f6f7">
+  <div style="flex: 1 1 232px; max-width: 100%; background: #141619">
+    <dc-import name="Sidebar" active="soon" hint-size="100%,1480px"></dc-import>
+  </div>
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+    <div style="margin: -24px -28px 4px"><dc-import name="Topbar" group="ทีมภายใน" group-href="Staff.dc.html" page="แผนฟีเจอร์ทั้งหมด" phase="3" hint-size="100%,60px"></dc-import></div>
+    <section class="card" style="display: flex; flex-wrap: wrap; align-items: center; gap: 20px; padding: 28px">
+      <div aria-hidden="true" style="width: 64px; height: 64px; border-radius: 16px; background: #efe9fd; display: flex; align-items: center; justify-content: center; flex: none">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#5b3fc4" stroke-width="1.8"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+      </div>
+      <div style="flex: 1 1 360px; display: flex; flex-direction: column; gap: 6px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700">เร็ว ๆ นี้</h1>
+        <p class="muted" style="margin: 0; font-size: 14px">เมนูที่มีป้าย "เร็ว ๆ นี้" ยังอยู่ระหว่างพัฒนา ทยอยเปิดทีละฟีเจอร์ตามลำดับด้านล่าง ระหว่างนี้ใช้วิธีเดิมไปก่อนได้ เช่น ขอทีมพัฒนาส่งออกข้อมูลให้</p>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap">
+        <a class="btn" href="Main.dc.html">กลับหน้าภาพรวม</a>
+      </div>
+    </section>
+
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px" aria-label="ความคืบหน้า">
+      <sc-for list="{{summary}}" as="s" hint-placeholder-count="4">
+        <div class="card" style="padding: 14px 16px">
+          <div class="muted" style="font-size: 12px">{{s.label}}</div>
+          <div style="font-size: 22px; font-weight: 700; margin-top: 4px">{{s.value}}</div>
+        </div>
+      </sc-for>
+    </section>
+
+    <sc-for list="{{phases}}" as="p" hint-placeholder-count="3">
+      <section class="card" style="display: flex; flex-direction: column; gap: 4px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px">
+          <h2 class="h2">{{p.title}}</h2>
+          <span class="{{p.cls}}">{{p.tag}}</span>
+          <span class="muted" style="font-size: 12px">{{p.note}}</span>
+        </div>
+        <sc-for list="{{p.items}}" as="i" hint-placeholder-count="5">
+          <div class="item">
+            <span style="flex: 0 1 220px; font-size: 13px; font-weight: 600">{{i.name}}</span>
+            <span class="muted" style="flex: 1 1 360px; font-size: 13px">{{i.text}}</span>
+            <span class="{{i.cls}}">{{i.status}}</span>
+          </div>
+        </sc-for>
+      </section>
+    </sc-for>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const designed = ['ออกแบบแล้ว', 'pill p-green'], soon = ['เร็ว ๆ นี้', 'pill p-gray'];
+    const it = (name, text, s) => ({ name, text, status: s[0], cls: s[1] });
+    const phases = [
+      { title: 'เฟส 1 · ต้องมีก่อนเปิดตัว', tag: 'กำลังทำ', cls: 'pill p-purple', note: 'ออกแบบครบแล้ว ทำทีละฟีเจอร์ตามลำดับนี้', items: [
+        it('สิทธิ์และขีดจำกัด', 'ตารางฟีเจอร์ตามแพ็กเกจ ขีดจำกัด และการปรับเฉพาะรายพร้อมวันหมดอายุ', designed),
+        it('คำขอ PDPA', 'ขอดู / ส่งออก / แก้ไข / ลบข้อมูล พร้อมนับวันครบกำหนดตามกฎหมาย', designed),
+        it('ประวัติการส่งแจ้งเตือน', 'Email / LINE / Webhook ถึงหรือไม่ ล้มเพราะอะไร ส่งซ้ำได้ และรายชื่อ bounce', designed),
+        it('เหตุขัดข้องและปิดปรับปรุง', 'หน้าสถานะสาธารณะ ตั้งเวลาปิดปรับปรุง และสั่งงานที่ล้มให้ลองใหม่', designed),
+        it('คืนเงิน เครดิต และอนุมัติ', 'ใบลดหนี้ เครดิตสะสม คืนเงิน และขั้นตอนอนุมัติเมื่อยอดสูง', designed),
+        it('เอกสารกฎหมาย', 'เวอร์ชันข้อกำหนดและนโยบาย พร้อมประวัติว่าใครยอมรับเวอร์ชันไหน', designed),
+        it('ตรวจจับการใช้ผิด', 'สมัครปลอม บัตรโจร สแปมผ่านคำเชิญ และรายชื่อที่ถูกบล็อก', designed),
+        it('กู้คืนข้อมูลลูกค้า', 'กู้โปรเจกต์หรืองานที่ลูกค้าลบผิด และลบ Workspace แบบมีระยะผ่อนผัน', soon),
+        it('ผู้ใช้ทั้งหมด', 'ค้นผู้ใช้ข้ามทุก Workspace ปลดล็อก รีเซ็ต 2FA และออกจากทุกอุปกรณ์', designed),
+      ] },
+      { title: 'เฟส 2 · หลังมีลูกค้าจ่ายเงิน', tag: 'วางแผน', cls: 'pill p-amber', note: 'เริ่มเมื่อมีข้อมูลการใช้งานจริงพอ', items: [
+        it('ธุรกิจและกำไร', 'กำไรต่อลูกค้าและแพ็กเกจ ต้นทุนการให้บริการ ที่มาของลูกค้า ค่าหาลูกค้า เหตุผลที่ยกเลิก และเงินสด', designed),
+        it('Funnel และ Retention', 'สมัคร → เริ่มใช้งานจริง → จ่ายเงิน และอัตราที่ยังใช้อยู่แยกตามเดือนที่สมัคร', designed),
+        it('การใช้ฟีเจอร์', 'แต่ละฟีเจอร์มีลูกค้าใช้กี่ % ใช้ตัดสินใจว่าจะพัฒนาอะไรต่อ', designed),
+        it('Changelog และ NPS', 'ประกาศฟีเจอร์ใหม่ในแอป แบบสำรวจความพึงพอใจ และคำถามตอนยกเลิก', soon),
+        it('Onboarding checklist', 'ขั้นตอนเริ่มต้นใช้งานในแอป และดูว่าลูกค้าติดอยู่ขั้นไหน', soon),
+        it('ศูนย์ช่วยเหลือ', 'บทความคู่มือที่ลูกค้าค้นเองได้ก่อนเปิด Ticket', soon),
+        it('ส่งบั๊กให้ทีมพัฒนา', 'ผูก Ticket กับงานใน Friday Manage และแจ้งลูกค้าเมื่อแก้เสร็จ', soon),
+        it('ส่งออกให้บัญชี', 'ไฟล์รายได้ ใบกำกับภาษี และ 50 ทวิสำหรับโปรแกรมบัญชี', designed),
+        it('Rate limit ต่อลูกค้า', 'ดูและปรับเพดานการเรียก API ของแต่ละ Workspace', soon),
+      ] },
+      { title: 'เฟส 3 · ขยายทีมและลูกค้าองค์กร', tag: 'อนาคต', cls: 'pill p-gray', note: 'ทำเมื่อทีมเกิน 5 คนหรือเริ่มขาย Enterprise จริงจัง', items: [
+        it('สุขภาพลูกค้าและ Playbook', 'แผนรับมือเป็นขั้นตอนเมื่อคะแนนสุขภาพตก', soon),
+        it('วันต่อสัญญา', 'ติดตามสัญญารายปีที่ใกล้ครบ และงานที่ต้องทำก่อนต่อสัญญา', soon),
+        it('Lead และดีล', 'รายชื่อลูกค้าที่สนใจจากฟอร์มติดต่อฝ่ายขายและลูกค้าทดลองที่เข้าเกณฑ์', soon),
+        it('ใบเสนอราคาและสัญญา', 'ราคาพิเศษ สัญญารายปี และส่วนลดตามสัญญา', soon),
+        it('สคริปต์ดูแลข้อมูล', 'สั่งงานแก้ข้อมูลจากหลังบ้านพร้อมบันทึก log', soon),
+        it('ขอสิทธิ์ชั่วคราว', 'พนักงานขอสิทธิ์สูงเป็นช่วงเวลาสั้น ๆ โดยมีคนอนุมัติ', soon),
+      ] },
+    ];
+    const count = (s) => phases.reduce((n, p) => n + p.items.filter((i) => i.status === s).length, 0);
+    const summary = [
+      { label: 'หน้าที่ออกแบบแล้วทั้งหมด', value: '18' },
+      { label: 'ฟีเจอร์เฟส 1 ที่ออกแบบแล้ว', value: String(count('ออกแบบแล้ว')) },
+      { label: 'เร็ว ๆ นี้', value: String(count('เร็ว ๆ นี้')) },
+      { label: 'เฟสปัจจุบัน', value: 'เฟส 1' },
+    ];
+    return { phases, summary };
+  }
+}
+</script>
+</body>
+</html>

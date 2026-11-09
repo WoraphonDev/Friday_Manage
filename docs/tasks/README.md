@@ -1,6 +1,6 @@
 # งานที่เหลือของ Friday Manage (สำหรับ Codex)
 
-แบ่งเป็นงานย่อย 59 งาน · 1 งาน = 1 branch = 1 PR · หลาย agent ทำพร้อมกันได้เพราะแต่ละงานมี **lane** ของตัวเอง: รายการไฟล์ที่งานนั้นแก้ได้ ไม่ทับกับงานอื่น · อ่านได้ทุกไฟล์ใน repo
+แบ่งเป็นงานย่อย 59 งาน + Friday Ops เฟส 1 อีก 16 งาน · 1 งาน = 1 branch = 1 PR · หลาย agent ทำพร้อมกันได้เพราะแต่ละงานมี **lane** ของตัวเอง: รายการไฟล์ที่งานนั้นแก้ได้ ไม่ทับกับงานอื่น · อ่านได้ทุกไฟล์ใน repo
 
 ## ขั้นตอน
 
@@ -33,7 +33,7 @@
 | `apps/api/src/auth/**` | A13 แล้วต่อด้วย A28 |
 | `apps/api/src/bootstrap.ts` · `main.ts` | A17 · I01 |
 | `apps/api/test/helpers.ts`, `api.e2e.test.ts`, `events.e2e.test.ts` | ไม่มีใคร |
-| `packages/db/**` | T00 |
+| `packages/db/**` | T00 · O00 (Friday Ops เฟส 1) |
 | `docker-compose.yml` | A16 |
 | `.github/**`, `scripts/**`, `package.json` ที่ราก | T01 (ยกเว้น `scripts/setup-valkey.sh` ของ A16) |
 | `apps/*/package.json`, `pnpm-lock.yaml` | ทุกงานเพิ่ม dependency ได้เมื่อจำเป็น · ชนกันตอน rebase: เก็บของทั้งสองฝั่งแล้วรัน `pnpm install` |
@@ -142,6 +142,33 @@
 | [D99](D99-docs-sync.md) | รวมบันทึกผลเข้าเอกสาร | 3 | ทุกงาน | `apps/api/README.md` · `docs/spec/**` |
 | [I01](I01-deploy-aws.md) | Deploy บน AWS + GlitchTip | 3 | T01 | `infra/**` · `Dockerfile*` |
 | [W21](W21-english.md) | ภาษาอังกฤษ (EN) | 3 | W00, ทุกงาน W | `apps/web/messages/en/**` · `apps/web/src/features/locale-switch/**` |
+
+## Friday Ops เฟส 1 (ออกแบบใหม่ 9 พ.ย. 2569)
+
+หน้าจอ: `design/canvas/ops/` (สำเนาของ [Canvas Friday Ops](https://claude.ai/artifact/Q8tsmLfQqS1aUJ2rNrkw9r) รุ่นที่ 39) · ทำเฉพาะสิ่งที่ติดป้าย **เฟส 1** · สเปก: [05-business-metrics](../spec/05-business-metrics.md), [06-ops-roles](../spec/06-ops-roles.md) · คำตัดสิน: [decisions.md](../decisions.md) › "Friday Ops: บทบาทพนักงาน"
+
+แทนหน้าจอเดิมของ A32 / W20 (ของเดิมใช้ต่อได้ แต่ต้องปรับตามดีไซน์ใหม่) · ลำดับ: O00 → O01 และ A34 / A35 → O02–O06 และ O10 → หน้าเว็บ O11–O15
+
+| งาน | ชื่อ | Wave | รอ merge | Lane หลัก |
+|---|---|---|---|---|
+| [O00](O00-ops-db-phase1.md) | ตารางของ Friday Ops เฟส 1 และข้อมูลธุรกิจ | O-0 | — | `packages/db/**` |
+| [O01](O01-ops-roles-approvals.md) | ops-api: แยก module, บทบาท, วงเงิน, อนุมัติ, สิทธิ์ฉุกเฉิน, พนักงาน | O-1 | O00 | `apps/ops-api/src/{auth,staff,approvals}` + `ops.controller.ts` |
+| [A34](A34-analytics-collection.md) | API: เก็บข้อมูลธุรกิจตั้งแต่วันแรก | O-1 | O00 | `apps/api/src/analytics/**` |
+| [A35](A35-payments-auto-verify.md) | API: ยืนยันการชำระเงินอัตโนมัติ · **รอเลือกผู้ให้บริการ** | O-1 | O00 | `apps/api/src/payments/**` |
+| [W22](W22-checkout.md) | เว็บ: หน้าชำระเงินฝั่งลูกค้าและแบบสอบถามตอนยกเลิก | O-1 | A35 | `apps/web/app/work/[ws]/billing/checkout/**` |
+| [O02](O02-ops-customers.md) | ops-api: ลูกค้าและผู้ใช้ | O-2 | O01 | `apps/ops-api/src/{workspaces,users}` |
+| [O03](O03-ops-money.md) | ops-api: เงิน | O-2 | O01, A35 | `apps/ops-api/src/{payments,billing}` |
+| [O04](O04-ops-support-system.md) | ops-api: Ticket สถานะระบบ เหตุขัดข้อง | O-2 | O01 | `apps/ops-api/src/{support,system}` |
+| [O05](O05-ops-privacy-legal.md) | ops-api: PDPA และเอกสารกฎหมาย | O-2 | O01 | `apps/ops-api/src/{privacy,legal}` |
+| [O06](O06-ops-metrics.md) | ops-api: ภาพรวม และธุรกิจและกำไร | O-2 | O01, A34 | `apps/ops-api/src/metrics` |
+| [O10](O10-ops-web-shell.md) | ops-web: Shell, เข้าสู่ระบบ, ชิ้นส่วนมาตรฐาน, Modal กลาง, พนักงาน | O-2 | O01 | `apps/ops-web/src/components` + layout, login, staff |
+| [O11](O11-ops-web-customers.md) | ops-web: Workspaces, รายละเอียดลูกค้า, ผู้ใช้ | O-3 | O10, O02 | `apps/ops-web/app/(console)/{workspaces,users}` |
+| [O12](O12-ops-web-money.md) | ops-web: รายได้และการชำระเงิน, คืนเงิน | O-3 | O10, O03 | `apps/ops-web/app/(console)/{payments,refunds}` |
+| [O13](O13-ops-web-support-system.md) | ops-web: Ticket, สถานะระบบ, เหตุขัดข้อง | O-3 | O10, O04 | `apps/ops-web/app/(console)/{support,system,incidents}` |
+| [O14](O14-ops-web-privacy-legal.md) | ops-web: PDPA, เอกสารกฎหมาย | O-3 | O10, O05 | `apps/ops-web/app/(console)/{privacy,legal}` |
+| [O15](O15-ops-web-overview-business.md) | ops-web: ภาพรวม, ธุรกิจและกำไร | O-3 | O10, O06 | `apps/ops-web/app/(console)/{page.tsx,business}` |
+
+ไฟล์กลางของ ops: `apps/ops-api/src/app.module.ts` และ `ops.controller.ts` แก้ได้เฉพาะ O01 (งานอื่นลงทะเบียน module ผ่านคำขอนอก lane หรือ O01 เตรียม module ว่างไว้ให้) · `apps/ops-web/src/components/**`, `app/layout.tsx`, `app/(console)/layout.tsx` แก้ได้เฉพาะ O10 · `apps/ops-api/test/helpers.ts` ไม่มีใครแก้
 
 ## ตั้ง environment ของ Codex
 

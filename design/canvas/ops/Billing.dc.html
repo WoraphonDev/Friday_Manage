@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · รายได้และการชำระเงิน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f5f6f7}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+.card{background:#fff;border:1px solid #e3e6e9;border-radius:12px;padding:18px 20px;box-sizing:border-box;min-width:0}
+.h2{margin:0;font-size:15px;font-weight:600;color:#24272c}
+.muted{color:#5f656d}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid #cfd4d9;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#f1f3f5;color:#24272c;text-decoration:none}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff}.btn-primary:hover{background:#4a33a8;color:#fff}
+.btn-ok{background:#1e7a4f;border-color:#1e7a4f;color:#fff}.btn-ok:hover{background:#17633f;color:#fff}
+.btn-danger{color:#a01d3c;border-color:#f6b8c6}.btn-danger:hover{background:#fdecf0;color:#a01d3c}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e3e6e9;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:500;color:#5f656d;font-size:12px;padding:10px 12px;border-bottom:1px solid #e3e6e9;white-space:nowrap;background:#f8f9fa}
+.t td{padding:12px;border-bottom:1px solid #eef0f2;vertical-align:middle;white-space:nowrap}
+.t tr:last-child td{border-bottom:0}
+.row-on td{background:#f6f2ff}
+.check{display:flex;align-items:center;gap:8px;font-size:13px;padding:6px 0}
+/* ขัดเกลา UI ชุดเดียวกันทุกหน้า */
+body{background:#f4f5f8;-webkit-font-smoothing:antialiased}
+h1{letter-spacing:-.015em}
+.card{border-color:#e6e8ec;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03)}
+.h2{font-weight:650;letter-spacing:-.005em}
+.btn{border-radius:9px;border-color:#d6dae0;box-shadow:0 1px 2px rgba(16,24,40,.05);transition:background .12s,border-color .12s,box-shadow .12s}
+.btn:hover{border-color:#c3c8cf}
+.btn-primary{border-color:#5b3fc4;box-shadow:0 1px 2px rgba(91,63,196,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+.btn-primary:hover{border-color:#4a33a8}
+.btn-danger{border-color:#f6b8c6}.btn-ok{border-color:#1e7a4f}
+.pill{font-weight:600;letter-spacing:.01em}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.sw:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+table.t th{background:#fafbfc;color:#6b717a;font-weight:600;border-bottom-color:#eceef1}
+table.t tbody tr:hover td{background:#fafaff}
+.in,.sel,textarea{transition:border-color .12s,box-shadow .12s}
+.chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;font:inherit;font-size:12px;color:#3a3f45;cursor:pointer}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.t .r{text-align:right}
+.btn-sm{min-height:30px;padding:0 10px;font-size:12px}
+.mini{padding:10px 12px;border-radius:10px;background:#fafbfc;border:1px solid #eceef1;font-size:13px}
+.in:focus,.sel:focus,textarea:focus{outline:none;border-color:#6b4fd8;box-shadow:0 0 0 3px #efe9fd}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c; background: #f5f6f7">
+  <div style="flex: 1 1 232px; max-width: 100%; background: #141619">
+    <dc-import name="Sidebar" active="billing" hint-size="100%,980px"></dc-import>
+  </div>
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+    <div style="margin: -24px -28px 4px"><dc-import name="Topbar" group="เงิน" group-href="Billing.dc.html" page="รายได้และการชำระเงิน" phase="1" hint-size="100%,60px"></dc-import></div>
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px">
+      <div style="flex: 1 1 320px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700">รายได้และการชำระเงิน</h1>
+        <p class="muted" style="margin: 4px 0 0; font-size: 13px">พฤศจิกายน 2569 · ราคาแพ็กเกจยังไม่กำหนด ตัวเลขเป็นข้อมูลตัวอย่าง</p>
+      </div>
+      <button type="button" class="btn">ส่งออกรายงานให้บัญชี</button>
+      <button type="button" class="btn btn-primary">สร้างใบแจ้งหนี้ด้วยมือ</button>
+    </section>
+
+    <section aria-label="สรุปเดือนนี้" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+      <sc-for list="{{stats}}" as="s" hint-placeholder-count="5">
+        <div class="card" style="padding: 14px 16px">
+          <div class="muted" style="font-size: 12px">{{s.label}}</div>
+          <div class="num" style="font-size: 22px; font-weight: 700; margin-top: 4px">{{s.value}}</div>
+          <div class="muted" style="font-size: 12px; margin-top: 4px">{{s.note}}</div>
+        </div>
+      </sc-for>
+    </section>
+
+    <div class="tabs" role="tablist" aria-label="หมวดการเงิน">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="6">
+        <button type="button" role="tab" class="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{is.verify}}" hint-placeholder-val="{{ true }}">
+    <section aria-label="ยืนยันอัตโนมัติวันนี้" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px">
+      <sc-for list="{{channels}}" as="c" hint-placeholder-count="4">
+        <div class="card" style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span style="font-weight: 600; font-size: 13px">{{c.name}}</span>
+            <span class="{{c.healthCls}}" style="margin-left: auto">{{c.health}}</span>
+          </div>
+          <div class="muted" style="font-size: 12px">{{c.how}}</div>
+          <div style="display: flex; align-items: baseline; gap: 8px">
+            <span class="num" style="font-size: 20px; font-weight: 700">{{c.auto}}</span>
+            <span class="muted num" style="font-size: 12px">จาก {{c.total}} รายการ ยืนยันเอง</span>
+          </div>
+          <span style="height: 6px; border-radius: 999px; background: #fdecf0; overflow: hidden"><span style="display: block; height: 100%; width: {{c.pct}}; background: #1e7a4f"></span></span>
+          <div class="muted" style="font-size: 12px">{{c.foot}}</div>
+        </div>
+      </sc-for>
+    </section>
+
+    <section>
+      <div class="card" style="padding: 0; overflow: hidden">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #eceef1">
+          <h2 class="h2">กรณีผิดปกติ {{nLeft}} รายการ</h2>
+          <span class="muted" style="font-size: 12px">รายการที่ตรงครบระบบยืนยันเองแล้ว ที่นี่เหลือเฉพาะที่ต้องให้คนตัดสิน · SLA 4 ชม. ทำการ</span>
+          <span class="muted" style="font-size: 12px; margin-left: auto">กดแถวเพื่อดูหลักฐานและสิ่งที่ระบบแนะนำ</span>
+        </div>
+        <sc-if value="{{allDone}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 36px 16px; text-align: center">
+          <span style="width: 48px; height: 48px; border-radius: 50%; background: #e3f6ec; color: #17633f; display: flex; align-items: center; justify-content: center; font-size: 22px">✓</span>
+          <b style="font-size: 15px">ไม่มีกรณีผิดปกติ</b>
+          <span class="muted" style="font-size: 13px">จัดการครบทุกรายการแล้ว · รายการใหม่จะเข้ามาเองเมื่อระบบยืนยันไม่ได้</span>
+          <button type="button" class="btn btn-sm" onClick="{{resetQueue}}">เริ่มต้นแบบใหม่ (เฉพาะต้นแบบ)</button>
+        </div>
+        </sc-if>
+        <div style="overflow-x: auto">
+          <table class="t">
+            <thead><tr><th scope="col">ปัญหา</th><th scope="col">Workspace</th><th scope="col">ใบแจ้งหนี้</th><th scope="col">ต้องได้</th><th scope="col">ได้รับ</th><th scope="col">ช่องทาง</th><th scope="col">รอ</th><th scope="col">ระบบแนะนำ</th></tr></thead>
+            <tbody>
+              <sc-for list="{{queue}}" as="q" hint-placeholder-count="7">
+                <tr class="{{q.rowCls}}" onClick="{{q.pick}}" style="cursor: pointer">
+                  <td><span class="{{q.typeCls}}">{{q.type}}</span></td>
+                  <td style="font-weight: 500">{{q.ws}}</td>
+                  <td class="mono" style="font-size: 12px">{{q.inv}}</td>
+                  <td class="num">{{q.due}}</td>
+                  <td class="num">{{q.got}}</td>
+                  <td>{{q.method}}</td>
+                  <td class="{{q.waitCls}}">{{q.wait}}</td>
+                  <td class="muted">{{q.hint}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <sc-if value="{{drawerOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closeDrawer}}" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,22,25,.32); z-index: 20"></div>
+      <aside class="card" role="dialog" aria-label="ตัดสินกรณีที่เลือก" style="position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 100%); border-radius: 16px 0 0 16px; z-index: 21; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 22px 24px; box-shadow: -12px 0 40px rgba(16,24,40,.18)">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span class="{{sel.typeCls}}">{{sel.type}}</span>
+          <h2 class="h2">{{sel.ws}}</h2>
+          <span class="pill p-amber" style="margin-left: auto">{{sel.wait}}</span>
+          <button type="button" class="btn btn-sm" aria-label="ปิด" onClick="{{closeDrawer}}" style="width: 34px; padding: 0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        <div class="muted mono" style="font-size: 12px">{{sel.inv}} · {{sel.method}} · ต้องได้ {{sel.due}} · ได้รับ {{sel.got}}</div>
+        <div style="padding: 12px 14px; border-radius: 10px; background: #f6f2ff; border: 1px solid #e4dbfb; font-size: 13px">
+          <div style="font-weight: 600; color: #5b3fc4; font-size: 12px">ระบบแนะนำ</div>
+          <div style="margin-top: 4px">{{sel.advice}}</div>
+        </div>
+        <div>
+          <div class="muted" style="font-size: 12px; font-weight: 600; margin-bottom: 4px">ผลตรวจอัตโนมัติ</div>
+          <sc-for list="{{selChecks}}" as="k" hint-placeholder-count="4">
+            <div class="check"><span class="{{k.cls}}">{{k.tag}}</span> {{k.text}}</div>
+          </sc-for>
+        </div>
+        <div>
+          <div class="muted" style="font-size: 12px; font-weight: 600; margin-bottom: 6px">ลำดับเหตุการณ์</div>
+          <sc-for list="{{selTimeline}}" as="e" hint-placeholder-count="3">
+            <div style="display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 10px; font-size: 13px; padding: 4px 0">
+              <span class="muted mono num" style="font-size: 12px">{{e.at}}</span><span>{{e.text}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 500">เหตุผล (บันทึกใน Audit log · ลูกค้าเห็นเมื่อไม่ผ่าน)
+          <textarea rows="2" style="border: 1px solid #868c94; border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px; resize: vertical"></textarea>
+        </label>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{selActions}}" as="a" hint-placeholder-count="2">
+            <button type="button" class="{{a.cls}}" style="flex: 1 1 180px" onClick="{{a.go}}">{{a.label}}</button>
+          </sc-for>
+        </div>
+        <p class="muted" style="margin: 0; font-size: 12px">ผ่าน = ต่ออายุทันทีและส่ง e-Tax invoice · ไม่ผ่าน = แจ้งลูกค้าพร้อมเหตุผล · เงินเกินเก็บเป็นเครดิตหรือคืนผ่านหน้าคืนเงิน (ยอดสูงต้องมีคนอนุมัติ)</p>
+      </aside>
+      </sc-if>
+    </section>
+
+    <section style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+      <div class="card" style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 12px">
+        <h2 class="h2">การเปลี่ยนแปลง MRR เดือนนี้</h2>
+        <sc-for list="{{waterfall}}" as="w" hint-placeholder-count="6">
+          <div style="display: grid; grid-template-columns: 110px minmax(0, 1fr) 100px; align-items: center; gap: 12px; font-size: 13px">
+            <span>{{w.label}}</span>
+            <span style="height: 18px; position: relative">
+              <span style="position: absolute; top: 0; bottom: 0; left: {{w.left}}; width: {{w.width}}; background: {{w.color}}; border-radius: 4px"></span>
+            </span>
+            <span class="num" style="text-align: right; font-weight: 600">{{w.value}}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div class="card" style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <h2 class="h2">ค้างชำระ</h2>
+          <span class="pill p-red num">฿61,800</span>
+          <span class="muted" style="font-size: 12px; margin-left: auto">เตือนอัตโนมัติวันที่ 1, 3, 7 · ระงับวันที่ 14</span>
+        </div>
+        <table class="t">
+          <thead><tr><th scope="col">Workspace</th><th scope="col">เลยกำหนด</th><th scope="col">ขั้นถัดไป</th><th scope="col"><span style="position: absolute; left: -9999px">การกระทำ</span></th></tr></thead>
+          <tbody>
+            <sc-for list="{{overdue}}" as="o" hint-placeholder-count="4">
+              <tr>
+                <td style="font-weight: 500">{{o.ws}}</td>
+                <td><span class="{{o.cls}} num">{{o.days}}</span></td>
+                <td class="muted">{{o.next}}</td>
+                <td><button type="button" class="btn" style="min-height: 30px; padding: 0 10px">ติดต่อ</button></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card" style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <h2 class="h2">รอบบิลที่จะถึง 7 วัน</h2>
+          <span class="pill p-gray num">฿[ยอดรวม]</span>
+          <span class="muted" style="font-size: 12px; margin-left: auto">ใบแจ้งหนี้ออกอัตโนมัติ 3 วันก่อนรอบ</span>
+        </div>
+        <table class="t">
+          <thead><tr><th scope="col">Workspace</th><th scope="col">รอบ</th><th scope="col">ช่องทาง</th><th scope="col">ข้อควรรู้</th></tr></thead>
+          <tbody>
+            <sc-for list="{{renewals}}" as="r" hint-placeholder-count="4">
+              <tr><td style="font-weight: 500">{{r.ws}}</td><td class="num">{{r.date}}</td><td class="muted">{{r.method}}</td><td><span class="{{r.cls}}">{{r.note}}</span></td></tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card" style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 12px">
+        <h2 class="h2">ช่องทางชำระของลูกค้าที่จ่ายเงิน</h2>
+        <sc-for list="{{methods}}" as="m" hint-placeholder-count="4">
+          <div style="display: grid; grid-template-columns: 130px minmax(0, 1fr) 56px; align-items: center; gap: 12px; font-size: 13px">
+            <span>{{m.name}}</span>
+            <span style="height: 8px; border-radius: 999px; background: #eef0f2; overflow: hidden"><span style="display: block; height: 100%; width: {{m.pct}}; background: #5b3fc4"></span></span>
+            <span class="num" style="text-align: right; font-weight: 600">{{m.pct}}</span>
+          </div>
+        </sc-for>
+        <p class="muted" style="margin: 0; font-size: 12px">หัก ณ ที่จ่าย 3% · 61 ราย (29%) · ขอใบกำกับภาษีเต็มรูป 100% · สลิปโอนลดจาก 31% หลังเปิด QR และ Bill Payment</p>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- รายการเงินเข้า -->
+    <sc-if value="{{is.incoming}}" hint-placeholder-val="{{ false }}">
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px">
+      <sc-for list="{{inStats}}" as="s" hint-placeholder-count="4">
+        <div class="card" style="padding: 14px 16px"><div class="muted" style="font-size: 12px">{{s.label}}</div><div class="num" style="font-size: 20px; font-weight: 700; margin-top: 4px">{{s.value}}</div><div class="muted" style="font-size: 12px; margin-top: 4px">{{s.note}}</div></div>
+      </sc-for>
+    </section>
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #eceef1">
+        <h2 class="h2">เงินเข้าวันนี้</h2>
+        <sc-for list="{{inFilters}}" as="f" hint-placeholder-count="4"><button type="button" class="chip" aria-pressed="{{f.on}}" onClick="{{f.pick}}">{{f.label}}</button></sc-for>
+        <span class="muted" style="font-size: 12px; margin-left: auto">ทุกรายการผูกกับใบแจ้งหนี้และเลขอ้างอิงของธนาคาร / Gateway</span>
+      </div>
+      <div style="overflow-x: auto"><table class="t">
+        <thead><tr><th scope="col">เวลา</th><th scope="col">Workspace</th><th scope="col">ใบแจ้งหนี้</th><th scope="col">ช่องทาง</th><th scope="col" class="r">ยอด</th><th scope="col">ยืนยันโดย</th><th scope="col">เลขอ้างอิง</th><th scope="col">สถานะ</th></tr></thead>
+        <tbody><sc-for list="{{incoming}}" as="r" hint-placeholder-count="8">
+          <tr><td class="num muted">{{r.at}}</td><td style="font-weight: 500">{{r.ws}}</td><td class="mono" style="font-size: 12px">{{r.inv}}</td><td>{{r.method}}</td><td class="r num">{{r.amount}}</td><td><span class="{{r.byCls}}">{{r.by}}</span></td><td class="mono muted" style="font-size: 12px">{{r.ref}}</td><td><span class="{{r.stCls}}">{{r.status}}</span></td></tr>
+        </sc-for></tbody>
+      </table></div>
+    </section>
+    </sc-if>
+
+    <!-- ใบแจ้งหนี้ -->
+    <sc-if value="{{is.invoices}}" hint-placeholder-val="{{ false }}">
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #eceef1">
+        <h2 class="h2">ใบแจ้งหนี้ พ.ย. 2569</h2>
+        <sc-for list="{{invFilters}}" as="f" hint-placeholder-count="5"><button type="button" class="chip" aria-pressed="{{f.on}}" onClick="{{f.pick}}">{{f.label}}</button></sc-for>
+        <span class="muted" style="font-size: 12px; margin-left: auto">ออกอัตโนมัติ 3 วันก่อนรอบ · ยกเลิกใบที่ชำระแล้วต้องออกใบลดหนี้</span>
+      </div>
+      <div style="overflow-x: auto"><table class="t">
+        <thead><tr><th scope="col">เลขที่</th><th scope="col">Workspace</th><th scope="col">รอบ</th><th scope="col" class="r">รวม VAT</th><th scope="col" class="r">หัก ณ ที่จ่าย</th><th scope="col" class="r">ยอดชำระ</th><th scope="col">ครบกำหนด</th><th scope="col">สถานะ</th><th scope="col">e-Tax</th><th scope="col"><span style="position: absolute; left: -9999px">การกระทำ</span></th></tr></thead>
+        <tbody><sc-for list="{{invoices}}" as="r" hint-placeholder-count="8">
+          <tr><td class="mono" style="font-size: 12px">{{r.no}}</td><td style="font-weight: 500">{{r.ws}}</td><td class="muted">{{r.period}}</td><td class="r num">{{r.total}}</td><td class="r num muted">{{r.wht}}</td><td class="r num" style="font-weight: 600">{{r.due}}</td><td class="num">{{r.date}}</td><td><span class="{{r.stCls}}">{{r.status}}</span></td><td><span class="{{r.taxCls}}">{{r.tax}}</span></td><td><button type="button" class="btn btn-sm">{{r.action}}</button></td></tr>
+        </sc-for></tbody>
+      </table></div>
+    </section>
+    </sc-if>
+
+    <!-- ค้างชำระ -->
+    <sc-if value="{{is.overdue}}" hint-placeholder-val="{{ false }}">
+    <section class="card" style="flex-direction: row">
+      <div style="display: flex; flex-wrap: wrap; gap: 0; align-items: stretch">
+        <sc-for list="{{dunning}}" as="d" hint-placeholder-count="6">
+          <div style="flex: 1 1 140px; padding: 4px 14px; border-left: 3px solid {{d.color}}; display: flex; flex-direction: column; gap: 2px">
+            <span class="muted num" style="font-size: 12px">{{d.day}}</span>
+            <span style="font-size: 13px; font-weight: 600">{{d.what}}</span>
+            <span class="muted" style="font-size: 12px">{{d.how}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #eceef1">
+        <h2 class="h2">ค้างชำระ 7 ราย</h2><span class="pill p-red num">฿61,800</span>
+        <span class="muted" style="font-size: 12px; margin-left: auto">ระบบเตือนเองตามขั้นด้านบน · คนเข้ามาเมื่อเกิน 7 วันหรือเป็นลูกค้ารายปี</span>
+      </div>
+      <div style="overflow-x: auto"><table class="t">
+        <thead><tr><th scope="col">Workspace</th><th scope="col" class="r">ยอด</th><th scope="col">เลยกำหนด</th><th scope="col">เตือนแล้ว</th><th scope="col">ขั้นถัดไป</th><th scope="col">ผู้ติดต่อ</th><th scope="col"><span style="position: absolute; left: -9999px">การกระทำ</span></th></tr></thead>
+        <tbody><sc-for list="{{overdueAll}}" as="o" hint-placeholder-count="7">
+          <tr><td style="font-weight: 500">{{o.ws}}</td><td class="r num">{{o.amount}}</td><td><span class="{{o.cls}} num">{{o.days}}</span></td><td class="muted" style="white-space: normal">{{o.sent}}</td><td>{{o.next}}</td><td class="muted">{{o.contact}}</td>
+            <td><span style="display: flex; gap: 6px"><button type="button" class="btn btn-sm">ติดต่อ</button><button type="button" class="btn btn-sm">ขยายเวลา</button></span></td></tr>
+        </sc-for></tbody>
+      </table></div>
+    </section>
+    </sc-if>
+
+    <!-- ภาษี -->
+    <sc-if value="{{is.tax}}" hint-placeholder-val="{{ false }}">
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px">
+      <sc-for list="{{taxStats}}" as="s" hint-placeholder-count="4">
+        <div class="card" style="padding: 14px 16px"><div class="muted" style="font-size: 12px">{{s.label}}</div><div class="num" style="font-size: 20px; font-weight: 700; margin-top: 4px">{{s.value}}</div><div class="muted" style="font-size: 12px; margin-top: 4px">{{s.note}}</div></div>
+      </sc-for>
+    </section>
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 16px; align-items: stretch">
+      <div class="card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #eceef1"><h2 class="h2">e-Tax invoice ที่ต้องดู</h2><span class="muted" style="font-size: 12px; margin-left: auto">ส่งสำเร็จแล้วไม่แสดง</span></div>
+        <div style="overflow-x: auto"><table class="t">
+          <thead><tr><th scope="col">เลขที่</th><th scope="col">Workspace</th><th scope="col">ปัญหา</th><th scope="col"><span style="position: absolute; left: -9999px">การกระทำ</span></th></tr></thead>
+          <tbody><sc-for list="{{etax}}" as="r" hint-placeholder-count="3"><tr><td class="mono" style="font-size: 12px">{{r.no}}</td><td style="font-weight: 500">{{r.ws}}</td><td style="white-space: normal"><span class="{{r.cls}}">{{r.tag}}</span> {{r.text}}</td><td><button type="button" class="btn btn-sm">{{r.action}}</button></td></tr></sc-for></tbody>
+        </table></div>
+        <div style="padding: 12px 16px; margin-top: auto" class="muted"><span style="font-size: 12px">ใบกำกับภาษีออกเมื่อเงินเข้า · แก้ข้อมูลผู้ซื้อหลังออกแล้วต้องยกเลิกและออกใบแทน</span></div>
+      </div>
+      <div class="card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #eceef1"><h2 class="h2">หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ)</h2><span class="pill p-amber" style="margin-left: auto">รอรับ ฿3,240</span></div>
+        <div style="overflow-x: auto"><table class="t">
+          <thead><tr><th scope="col">Workspace</th><th scope="col">ใบแจ้งหนี้</th><th scope="col" class="r">ภาษีที่หัก</th><th scope="col">สถานะ</th><th scope="col"><span style="position: absolute; left: -9999px">การกระทำ</span></th></tr></thead>
+          <tbody><sc-for list="{{wht}}" as="r" hint-placeholder-count="5"><tr><td style="font-weight: 500">{{r.ws}}</td><td class="mono" style="font-size: 12px">{{r.inv}}</td><td class="r num">{{r.amount}}</td><td><span class="{{r.cls}}">{{r.status}}</span></td><td><button type="button" class="btn btn-sm">{{r.action}}</button></td></tr></sc-for></tbody>
+        </table></div>
+        <div style="padding: 12px 16px; margin-top: auto"><span class="muted" style="font-size: 12px">ขอเอกสารอัตโนมัติวันที่ 7 และ 30 หลังชำระ · หักผ่าน e-Withholding Tax ปิดรายการเองเมื่อระบบสรรพากรแจ้ง</span></div>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- คืนเงิน -->
+    <sc-if value="{{is.refunds}}" hint-placeholder-val="{{ false }}">
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #eceef1">
+        <h2 class="h2">คืนเงิน เครดิต และใบลดหนี้ล่าสุด</h2><span class="pill p-amber">รออนุมัติ 2</span>
+        <a href="Refunds.dc.html" class="btn btn-sm" style="margin-left: auto">เปิดหน้าคืนเงินและอนุมัติ</a>
+      </div>
+      <div style="overflow-x: auto"><table class="t">
+        <thead><tr><th scope="col">วันที่</th><th scope="col">Workspace</th><th scope="col">ประเภท</th><th scope="col" class="r">ยอด</th><th scope="col">เหตุผล</th><th scope="col">สถานะ</th></tr></thead>
+        <tbody><sc-for list="{{refundRows}}" as="r" hint-placeholder-count="5"><tr><td class="num muted">{{r.date}}</td><td style="font-weight: 500">{{r.ws}}</td><td>{{r.kind}}</td><td class="r num">{{r.amount}}</td><td class="muted" style="white-space: normal">{{r.why}}</td><td><span class="{{r.cls}}">{{r.status}}</span></td></tr></sc-for></tbody>
+      </table></div>
+    </section>
+    </sc-if>
+
+    <!-- รายงานรายได้ -->
+    <sc-if value="{{is.revenue}}" hint-placeholder-val="{{ false }}">
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #eceef1">
+        <h2 class="h2">รายงานรายได้รายเดือน</h2>
+        <span class="muted" style="font-size: 12px">รับรู้รายได้ตามเดือนที่ให้บริการ · รายปีกระจาย 12 เดือน</span>
+        <span style="margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap"><a href="Business.dc.html" class="btn btn-sm">วิเคราะห์กำไร</a><button type="button" class="btn btn-sm">ส่งออก CSV ให้บัญชี</button><button type="button" class="btn btn-sm">รายงานภาษีขาย</button></span>
+      </div>
+      <div style="overflow-x: auto"><table class="t">
+        <thead><tr><th scope="col">เดือน</th><th scope="col" class="r">รายได้รับรู้</th><th scope="col" class="r">เงินสดรับ</th><th scope="col" class="r">VAT ขาย</th><th scope="col" class="r">ถูกหัก ณ ที่จ่าย</th><th scope="col" class="r">ค่าธรรมเนียมรับเงิน</th><th scope="col" class="r">คืนเงิน / ลดหนี้</th><th scope="col" class="r">รับล่วงหน้าคงเหลือ</th><th scope="col">ปิดงวด</th></tr></thead>
+        <tbody><sc-for list="{{revenueRows}}" as="r" hint-placeholder-count="6"><tr><td style="font-weight: 600">{{r.month}}</td><td class="r num">{{r.rev}}</td><td class="r num">{{r.cash}}</td><td class="r num muted">{{r.vat}}</td><td class="r num muted">{{r.wht}}</td><td class="r num muted">{{r.fee}}</td><td class="r num muted">{{r.refund}}</td><td class="r num">{{r.deferred}}</td><td><span class="{{r.cls}}">{{r.close}}</span></td></tr></sc-for></tbody>
+      </table></div>
+      <div style="padding: 12px 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px">
+        <div class="mini"><div class="muted" style="font-size: 12px">ส่งให้สำนักงานบัญชีทุกวันที่ 5</div>CSV รายการขาย + ใบกำกับภาษี + 50 ทวิ ของเดือนก่อน</div>
+        <div class="mini"><div class="muted" style="font-size: 12px">ปิดงวดแล้วแก้ไม่ได้</div>รายการย้อนหลังต้องออกเป็นใบลดหนี้ / เพิ่มหนี้ในเดือนปัจจุบัน</div>
+      </div>
+    </section>
+    </sc-if>
+
+    <sc-if value="{{modalPick}}" hint-placeholder-val="{{ false }}">
+    <div aria-hidden="true" onClick="{{closeModal}}" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,22,25,.40); z-index: 30"></div>
+    <div role="dialog" aria-label="เลือกใบแจ้งหนี้" class="card" style="position: fixed; top: 12vh; left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 32px)); z-index: 31; display: flex; flex-direction: column; gap: 12px; padding: 20px 22px; box-shadow: 0 24px 48px rgba(16,24,40,.22)">
+      <div style="display: flex; align-items: flex-start; gap: 8px"><div><h2 class="h2" style="font-size: 17px">เลือกใบแจ้งหนี้ให้เงินเข้า ฿[ยอด]</h2><div class="muted" style="font-size: 13px; margin-top: 4px">Bill Payment 11:40 · Ref.1 ORBIT0017 · Ref.2 25691172 (ไม่พบ)</div></div>
+        <button type="button" class="btn btn-sm" aria-label="ปิด" onClick="{{closeModal}}" style="margin-left: auto; width: 32px; padding: 0">✕</button></div>
+      <div style="border: 1px solid #eceef1; border-radius: 10px; overflow: hidden">
+        <sc-for list="{{pickList}}" as="p" hint-placeholder-count="3">
+          <button type="button" onClick="{{p.pick}}" style="display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; text-align: left; padding: 12px 14px; border: 0; border-bottom: 1px solid #eef0f2; background: {{p.bg}}; font: inherit; font-size: 13px; cursor: pointer">
+            <span style="width: 16px; height: 16px; border-radius: 50%; border: {{p.ring}}; box-sizing: border-box"></span>
+            <span><b style="display: block; font-weight: 600">{{p.title}}</b><span class="muted" style="font-size: 12px">{{p.sub}}</span></span>
+            <span class="{{p.tagCls}}">{{p.tag}}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div class="muted" style="font-size: 12px">ยอดเกินใบแจ้งหนี้: ส่วนเกินเป็นเครดิต · ยอดขาด: ใบแจ้งหนี้ยังค้างส่วนที่เหลือ</div>
+      <div style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" class="btn" onClick="{{closeModal}}">ยกเลิก</button><button type="button" class="btn btn-ok" onClick="{{confirmPick}}">ผูกและผ่าน</button></div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{modalReject}}" hint-placeholder-val="{{ false }}">
+    <div aria-hidden="true" onClick="{{closeModal}}" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,22,25,.40); z-index: 30"></div>
+    <div role="dialog" aria-label="แจ้งลูกค้า" class="card" style="position: fixed; top: 12vh; left: 50%; transform: translateX(-50%); width: min(520px, calc(100% - 32px)); z-index: 31; display: flex; flex-direction: column; gap: 12px; padding: 20px 22px; box-shadow: 0 24px 48px rgba(16,24,40,.22)">
+      <div style="display: flex; align-items: flex-start; gap: 8px"><div><h2 class="h2" style="font-size: 17px">แจ้ง {{sel.ws}}</h2><div class="muted" style="font-size: 13px; margin-top: 4px">{{sel.inv}} · {{sel.type}}</div></div>
+        <button type="button" class="btn btn-sm" aria-label="ปิด" onClick="{{closeModal}}" style="margin-left: auto; width: 32px; padding: 0">✕</button></div>
+      <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600">เหตุผลที่ลูกค้าเห็น
+        <div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{rejectReasons}}" as="r" hint-placeholder-count="3"><button type="button" class="chip" aria-pressed="{{r.on}}" onClick="{{r.pick}}">{{r.label}}</button></sc-for></div>
+      </div>
+      <div style="border: 1px solid #e6e8ec; border-radius: 12px; overflow: hidden"><div style="padding: 8px 12px; background: #fafbfc; border-bottom: 1px solid #eceef1; font-size: 12px" class="muted">ข้อความถึงลูกค้า (อีเมล + กระดิ่งใน Admin Console)</div><div style="padding: 12px 14px; font-size: 13px; line-height: 1.6">{{rejectText}}</div></div>
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 13px"><input type="checkbox" checked> แนบลิงก์จ่ายด้วย QR (ยืนยันอัตโนมัติ)</label>
+      <div style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" class="btn" onClick="{{closeModal}}">ยกเลิก</button><button type="button" class="btn btn-danger" style="background: #c8264a; color: #fff; border-color: #c8264a" onClick="{{confirmReject}}">ส่งถึงลูกค้า</button></div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{toastOn}}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position: fixed; right: 24px; bottom: 24px; z-index: 40; width: min(420px, calc(100% - 48px)); display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; background: #fff; border: 1px solid #c6ead6; border-radius: 14px; box-shadow: 0 16px 40px rgba(16,24,40,.18); font-size: 13px">
+      <span style="width: 26px; height: 26px; border-radius: 8px; background: #e3f6ec; color: #17633f; display: flex; align-items: center; justify-content: center; flex: none">✓</span>
+      <span style="flex: 1"><b>{{toast}}</b><br><span class="muted">บันทึกใน Audit log แล้ว</span></span>
+      <button type="button" class="btn btn-sm" onClick="{{closeToast}}" aria-label="ปิด" style="width: 30px; padding: 0">✕</button>
+    </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1760}}'>
+class Component extends DCLogic {
+  state = { tab: 'verify', sel: 0, drawer: false, done: {}, modal: null, toast: '', pickSel: 0, reason: 0 };
+  renderVals() {
+    const stats = [
+      { label: 'รายได้ที่เก็บแล้วเดือนนี้', value: '฿412,900', note: '86% ของที่ออกใบแจ้งหนี้' },
+      { label: 'รอชำระ (ยังไม่เลยกำหนด)', value: '฿7,600', note: '11 ใบ' },
+      { label: 'ค้างชำระ', value: '฿61,800', note: '7 ราย · เก่าสุด 12 วัน' },
+      { label: 'หัก ณ ที่จ่ายรอรับ 50 ทวิ', value: '฿3,240', note: '2 ใบ' },
+      { label: 'ยืนยันอัตโนมัติวันนี้', value: '91%', note: '60 จาก 66 รายการ · ที่เหลืออยู่ในคิว' },
+    ];
+    const tabs = [['verify', 'กรณีผิดปกติ (' + (Object.keys(this.state.done || {}).length ? 7 - Object.keys(this.state.done).length : 7) + ')'], ['incoming', 'รายการเงินเข้า'], ['invoices', 'ใบแจ้งหนี้'], ['overdue', 'ค้างชำระ (7)'], ['tax', 'ใบกำกับภาษี / 50 ทวิ'], ['refunds', 'คืนเงิน'], ['revenue', 'รายงานรายได้']]
+      .map(([key, label]) => ({ label, on: this.state.tab === key ? 'true' : 'false', pick: () => this.setState({ tab: key }) }));
+    const channels = [
+      { name: 'PromptPay QR', how: 'Gateway ส่ง webhook ทันทีที่เงินเข้า', auto: '37', total: '38', pct: '97%', health: 'ปกติ', healthCls: 'pill p-green', foot: 'webhook ล่าสุด 2 นาทีที่แล้ว · จ่ายซ้ำ 1' },
+      { name: 'บัตรเครดิต / เดบิต', how: 'ตัดบัตรตามรอบ · ล้มแล้วลองใหม่วันที่ 1, 3, 5', auto: '12', total: '12', pct: '100%', health: 'ปกติ', healthCls: 'pill p-green', foot: 'ตัดไม่ผ่าน 2 ราย รอลองใหม่ (ไม่ต้องตรวจ)' },
+      { name: 'Bill Payment', how: 'ธนาคารแจ้งยอดพร้อม Ref.1 / Ref.2', auto: '5', total: '6', pct: '83%', health: 'ปกติ', healthCls: 'pill p-green', foot: 'Ref ไม่ตรง 1 · กระทบยอด 06:00 ตรง' },
+      { name: 'สลิปโอน', how: 'ตรวจสลิปกับธนาคารผ่าน Slip API', auto: '6', total: '10', pct: '60%', health: 'โควตา 412/500', healthCls: 'pill p-amber', foot: 'ผิดปกติ 4 · ควรชวนลูกค้าเปลี่ยนไปใช้ QR' },
+    ];
+    // แต่ละกรณีมีผลตรวจ ลำดับเหตุการณ์ และปุ่มตัดสินของตัวเอง
+    const ok = (text) => ({ tag: 'ตรง', cls: 'pill p-green', text });
+    const warn = (text) => ({ tag: 'ตรวจเอง', cls: 'pill p-amber', text });
+    const bad = (text) => ({ tag: 'ไม่ผ่าน', cls: 'pill p-red', text });
+    const pass = { label: 'ผ่าน · ออกใบกำกับภาษี', cls: 'btn btn-ok' };
+    const reject = { label: 'ไม่ผ่าน', cls: 'btn btn-danger' };
+    const cases = [
+      { type: 'หัก ณ ที่จ่ายไม่ได้แจ้ง', typeCls: 'pill p-amber', ws: 'Kanit Labs', inv: 'INV-2569-1140', due: '฿[ยอดเต็ม]', got: '฿[ขาด 3%]', method: 'สลิปโอน', wait: 'รอ 40 นาที', waitCls: 'muted',
+        hint: 'ขอ 50 ทวิ แล้วผ่าน', advice: 'ยอดที่ได้รับเท่ากับยอดหลังหัก 3% พอดี ลูกค้าน่าจะหัก ณ ที่จ่ายแต่ไม่ได้เปิดตัวเลือกตอนจ่าย ผ่านได้แล้วขอ 50 ทวิ',
+        checks: [ok('สลิปมีจริงในระบบธนาคาร เข้าบัญชีบริษัท'), warn('ขาดไป 3% ของราคาก่อน VAT พอดี'), ok('เลขอ้างอิงสลิปไม่ซ้ำ')],
+        timeline: [['13:18', 'ลูกค้าอัปโหลดสลิป'], ['13:18', 'Slip API: สลิปจริง ยอดไม่ตรงใบแจ้งหนี้'], ['13:18', 'ส่งเข้าคิว · แจ้งลูกค้าว่ากำลังตรวจ']],
+        actions: [{ label: 'ผ่าน · ขอ 50 ทวิ ใน 30 วัน', cls: 'btn btn-ok' }, { label: 'แจ้งให้โอนส่วนที่ขาด', cls: 'btn' }] },
+      { type: 'สลิปซ้ำ', typeCls: 'pill p-red', ws: 'บ้านไร่ดิจิทัล', inv: 'INV-2569-1142', due: '฿[ยอด]', got: '—', method: 'สลิปโอน', wait: 'รอ 10 นาที', waitCls: 'muted',
+        hint: 'ไม่ผ่าน', advice: 'สลิปนี้เคยใช้จ่าย INV-2569-1088 ไปแล้วเมื่อ 3 ต.ค. ไม่มีเงินเข้าใหม่ ให้ไม่ผ่านและขอสลิปที่ถูกต้อง',
+        checks: [ok('สลิปมีจริงในระบบธนาคาร'), bad('เลขอ้างอิงตรงกับสลิปของ INV-2569-1088'), ok('ยอดตรงกับใบแจ้งหนี้')],
+        timeline: [['13:48', 'ลูกค้าอัปโหลดสลิป'], ['13:48', 'ระบบพบเลขอ้างอิงซ้ำ · ส่งเข้าคิว']],
+        actions: [reject, { label: 'เปิดใบแจ้งหนี้เดิม', cls: 'btn' }] },
+      { type: 'ชื่อผู้โอนไม่ตรง', typeCls: 'pill p-amber', ws: 'Lumen Studio', inv: 'INV-2569-1131', due: '฿[ยอด]', got: '฿[ยอด]', method: 'สลิปโอน', wait: 'รอ 3 ชม.', waitCls: 'pill p-amber',
+        hint: 'ผ่านได้', advice: 'ยอดและบัญชีปลายทางตรง ผู้โอนเป็นบุคคลที่เป็นเจ้าของ Workspace น่าจะโอนจากบัญชีส่วนตัว',
+        checks: [ok('ยอดตรงกับใบแจ้งหนี้'), ok('โอนเข้าบัญชีบริษัท ···4821'), warn('ผู้โอนชื่อบุคคล ไม่ใช่ชื่อบริษัทในใบแจ้งหนี้'), ok('เลขอ้างอิงไม่ซ้ำ')],
+        timeline: [['10:52', 'ลูกค้าอัปโหลดสลิป'], ['10:52', 'Slip API: สลิปจริง · ชื่อผู้โอนไม่ตรง'], ['12:52', 'เตือนทีม: ใกล้ครบ SLA']],
+        actions: [pass, reject] },
+      { type: 'เงินเข้าไม่มีใบแจ้งหนี้', typeCls: 'pill p-purple', ws: 'Orbit Apps (คาดว่า)', inv: '—', due: '—', got: '฿[ยอด]', method: 'Bill Payment', wait: 'รอ 2 ชม.', waitCls: 'muted',
+        hint: 'ผูกกับ INV-2569-1127', advice: 'Ref.2 พิมพ์ผิด 1 หลัก แต่ Ref.1 และยอดตรงกับ INV-2569-1127 ของ Orbit Apps ที่ยังค้างอยู่',
+        checks: [ok('ธนาคารยืนยันเงินเข้าแล้ว'), ok('Ref.1 ตรงรหัสลูกค้า ORBIT0017'), bad('Ref.2 ไม่ตรงใบแจ้งหนี้ใด'), ok('ยอดตรง INV-2569-1127')],
+        timeline: [['11:40', 'ธนาคารแจ้งยอด Bill Payment'], ['11:40', 'จับคู่ใบแจ้งหนี้ไม่ได้ · ส่งเข้าคิว']],
+        actions: [{ label: 'ผูกกับ INV-2569-1127 และผ่าน', cls: 'btn btn-ok' }, { label: 'เลือกใบแจ้งหนี้อื่น', cls: 'btn' }] },
+      { type: 'จ่ายซ้ำ', typeCls: 'pill p-purple', ws: 'Northwind Dev', inv: 'INV-2569-1136', due: '฿[ยอด]', got: '฿[ยอด × 2]', method: 'บัตร + PromptPay', wait: 'รอ 25 นาที', waitCls: 'muted',
+        hint: 'เก็บเป็นเครดิต', advice: 'ใบแจ้งหนี้ชำระแล้วด้วยบัตร แล้วลูกค้าสแกน QR อีกครั้ง ถามลูกค้าว่าจะเก็บเป็นเครดิตรอบหน้าหรือขอคืน',
+        checks: [ok('การตัดบัตรสำเร็จ 13:20'), ok('PromptPay เข้า 13:23'), warn('ยอดรวมเกินใบแจ้งหนี้ 1 เท่า')],
+        timeline: [['13:20', 'ตัดบัตรสำเร็จ · ใบแจ้งหนี้ชำระแล้ว'], ['13:23', 'PromptPay เข้าจาก QR เก่าที่เปิดค้างไว้'], ['13:23', 'ส่งเข้าคิว · ปิด QR เก่าอัตโนมัติ']],
+        actions: [{ label: 'เก็บเป็นเครดิตรอบหน้า', cls: 'btn btn-ok' }, { label: 'คืนเงิน (ไปหน้าคืนเงิน)', cls: 'btn' }] },
+      { type: '50 ทวิ', typeCls: 'pill p-teal', ws: 'TechNova', inv: 'INV-2569-1098', due: '฿[ภาษีหัก]', got: 'เอกสาร', method: 'หัก ณ ที่จ่าย 3%', wait: 'รอ 1 วัน', waitCls: 'pill p-red',
+        hint: 'ตรวจเลขผู้เสียภาษี', advice: 'ยอดภาษีตรง ตรวจว่าเลขผู้เสียภาษีของผู้รับเงินเป็นของเรา แล้วปิดยอดค้างรับ',
+        checks: [ok('ยอดภาษีตรง 3% ของราคาก่อน VAT'), warn('อ่านเลขผู้เสียภาษีผู้รับเงินจากภาพไม่ได้'), ok('ลงวันที่อยู่ในเดือนที่ชำระ')],
+        timeline: [['เมื่อวาน', 'ลูกค้าอัปโหลด 50 ทวิ'], ['เมื่อวาน', 'ระบบอ่านเอกสารได้บางส่วน · ส่งเข้าคิว']],
+        actions: [{ label: 'รับเอกสาร · ปิดยอดค้าง', cls: 'btn btn-ok' }, { label: 'ขอไฟล์ใหม่', cls: 'btn' }] },
+      { type: 'ตรวจสลิปไม่ได้', typeCls: 'pill p-gray', ws: 'สยามโค้ด', inv: 'INV-2569-1104', due: '฿[ยอด]', got: '?', method: 'สลิปโอน', wait: 'รอ 2 ชม.', waitCls: 'muted',
+        hint: 'เทียบ statement', advice: 'ภาพสลิปถูกครอปจน QR หาย Slip API อ่านไม่ได้ ให้เทียบกับ statement ธนาคารของวันนี้ หรือขอให้ลูกค้าส่งใหม่',
+        checks: [bad('ไม่พบ QR บนสลิป'), warn('ยอดที่อ่านจากภาพตรงกับใบแจ้งหนี้'), warn('ยังไม่พบยอดนี้ใน statement รอบ 06:00')],
+        timeline: [['11:30', 'ลูกค้าอัปโหลดสลิป'], ['11:30', 'Slip API: อ่าน QR ไม่ได้ · ส่งเข้าคิว']],
+        actions: [{ label: 'พบใน statement · ผ่าน', cls: 'btn btn-ok' }, { label: 'ขอให้ส่งสลิปใหม่', cls: 'btn' }] },
+    ];
+    const doneMap = this.state.done || {};
+    const left = cases.map((c, i) => ({ c, i })).filter((x) => !doneMap[x.i]);
+    const queue = left.map(({ c, i }) => ({ ...c,
+      rowCls: this.state.drawer && this.state.sel === i ? 'row-on' : '', pick: () => this.setState({ sel: i, drawer: true, toast: '' }),
+    }));
+    const nLeft = left.length;
+    const si = this.state.sel;
+    const sel = cases[si] ?? cases[0];
+    // ปิดเคส: เอาออกจากคิว ปิดแผง และแสดงผลลัพธ์
+    const finish = (msg) => this.setState({ done: { ...doneMap, [si]: true }, drawer: false, modal: null, toast: msg });
+    const actOf = (a) => (a.cls.includes('btn-ok') ? 'pass' : a.label.includes('เลือกใบแจ้งหนี้อื่น') ? 'pick' : a.label.includes('คืนเงิน') ? 'refund' : a.label.includes('เปิดใบแจ้งหนี้เดิม') ? 'open' : 'reject');
+    const selActions = sel.actions.map((a) => ({ ...a, go: () => {
+      const k = actOf(a);
+      if (k === 'pass') finish(sel.ws + ' · ' + a.label);
+      else if (k === 'pick') this.setState({ modal: 'pick', pickSel: 0 });
+      else if (k === 'reject') this.setState({ modal: 'reject', reason: 0 });
+      else if (k === 'refund') finish('ส่งเรื่องคืนเงิน ' + sel.ws + ' ไปหน้าคืนเงินและอนุมัติแล้ว');
+      else this.setState({ toast: 'เปิด INV-2569-1088 ในแท็บใหม่' });
+    } }));
+    const picks = [
+      ['INV-2569-1127 · Orbit Apps', 'ยอด ฿[ยอด] · ครบกำหนด 1 ธ.ค. · ยอดตรง', 'แนะนำ', 'pill p-purple'],
+      ['INV-2569-1102 · Orbit Apps', 'ยอด ฿[ยอดอื่น] · ชำระแล้ว', 'ชำระแล้ว', 'pill p-gray'],
+      ['INV-2569-1155 · Orbit Labs', 'ยอด ฿[ยอดอื่น] · ยอดไม่ตรง', '', ''],
+    ];
+    const pickList = picks.map(([title, sub, tag, tagCls], i) => ({ title, sub, tag, tagCls,
+      bg: this.state.pickSel === i ? '#f6f2ff' : '#fff', ring: this.state.pickSel === i ? '5px solid #5b3fc4' : '2px solid #b7bcc3',
+      pick: () => this.setState({ pickSel: i }) }));
+    const reasonsBy = sel.type === 'สลิปซ้ำ' ? ['สลิปนี้เคยใช้ชำระใบแจ้งหนี้อื่นแล้ว', 'สลิปไม่ตรงกับบัญชีของเรา', 'อื่น ๆ']
+      : sel.type === 'หัก ณ ที่จ่ายไม่ได้แจ้ง' ? ['ยอดขาด กรุณาโอนส่วนที่เหลือ', 'ถ้าหัก ณ ที่จ่าย กรุณาส่ง 50 ทวิ', 'อื่น ๆ']
+      : ['ภาพสลิปอ่านไม่ได้ กรุณาส่งใหม่', 'ไฟล์ไม่ครบ กรุณาส่งใหม่', 'อื่น ๆ'];
+    const rejectReasons = reasonsBy.map((label, i) => ({ label, on: this.state.reason === i ? 'true' : 'false', pick: () => this.setState({ reason: i }) }));
+    const rejectText = 'เรียน ' + sel.ws + ' · ' + reasonsBy[this.state.reason] + ' (' + sel.inv + ') หากชำระด้วย QR ระบบจะยืนยันให้ทันทีโดยไม่ต้องส่งสลิป';
+    const is = {}; ['verify', 'incoming', 'invoices', 'overdue', 'tax', 'refunds', 'revenue'].forEach((k) => { is[k] = this.state.tab === k; });
+    const chips = (keyName, list) => list.map(([key, label]) => ({ label, on: (this.state[keyName] ?? list[0][0]) === key ? 'true' : 'false', pick: () => this.setState({ [keyName]: key }) }));
+    const green = 'pill p-green', amber = 'pill p-amber', red = 'pill p-red', gray = 'pill p-gray', purple = 'pill p-purple', teal = 'pill p-teal';
+    const inStats = [
+      { label: 'เงินเข้าวันนี้', value: '฿148,600', note: '66 รายการ' },
+      { label: 'ยืนยันเองโดยระบบ', value: '60 รายการ', note: '91% · ไม่มีคนแตะ' },
+      { label: 'กระทบยอด statement 06:00', value: 'ตรง 64 / 65', note: 'เงินเข้าไม่มีใบแจ้งหนี้ 1 (อยู่ในคิว)' },
+      { label: 'โอนเข้าบัญชีบริษัทรอบถัดไป', value: '฿96,300', note: 'Gateway โอนทุกวันอังคาร' },
+    ];
+    const inFilters = chips('inF', [['all', 'ทั้งหมด 66'], ['auto', 'ยืนยันเอง 60'], ['manual', 'คนตัดสิน 4'], ['queue', 'ยังอยู่ในคิว 2']]);
+    const pay = (at, ws, inv, method, amount, by, byCls, ref, status, stCls) => ({ at, ws, inv, method, amount, by, byCls, ref, status, stCls });
+    const incoming = [
+      pay('14:02', 'Lumen Studio', 'INV-2569-1150', 'PromptPay QR', '฿[ยอด]', 'Webhook', green, 'chrg_…8f21', 'ชำระแล้ว', green),
+      pay('13:48', 'บ้านไร่ดิจิทัล', 'INV-2569-1142', 'สลิปโอน', '—', 'Slip API', amber, '014…22981', 'อยู่ในคิว · สลิปซ้ำ', red),
+      pay('13:23', 'Northwind Dev', 'INV-2569-1136', 'PromptPay QR', '฿[ยอด]', 'Webhook', green, 'chrg_…a90c', 'จ่ายซ้ำ · อยู่ในคิว', amber),
+      pay('13:20', 'Northwind Dev', 'INV-2569-1136', 'บัตร Visa ···4242', '฿[ยอด]', 'Webhook', green, 'chrg_…a7b1', 'ชำระแล้ว', green),
+      pay('12:10', 'Orbit Apps', 'INV-2569-1127', 'Bill Payment', '฿[ยอด]', 'พนักงาน (ผูกใบแจ้งหนี้)', purple, 'SCB…77310', 'ชำระแล้ว', green),
+      pay('11:05', 'TechNova', 'INV-2569-1144', 'Bill Payment', '฿[ยอด]', 'ธนาคาร', green, 'KBK…10293', 'ชำระแล้ว', green),
+      pay('10:52', 'Lumen Studio', 'INV-2569-1131', 'สลิปโอน', '฿[ยอด]', 'พนักงาน', purple, '004…55120', 'ชำระแล้ว', green),
+      pay('09:31', 'Pixel Forge', 'INV-2569-1138', 'บัตร Mastercard ···8810', '฿[ยอด]', 'Webhook', green, 'chrg_…3c4d', 'ตัดไม่ผ่าน · ลองใหม่ 15 พ.ย.', amber),
+    ];
+    const invFilters = chips('invF', [['all', 'ทั้งหมด 228'], ['open', 'รอชำระ 11'], ['review', 'รอตรวจ 7'], ['paid', 'ชำระแล้ว 203'], ['void', 'ยกเลิก 2']]);
+    const inv = (no, ws, period, total, wht, due, date, status, stCls, tax, taxCls, action) => ({ no, ws, period, total, wht, due, date, status, stCls, tax, taxCls, action });
+    const invoices = [
+      inv('INV-2569-1150', 'Lumen Studio', 'ธ.ค. 69 – พ.ย. 70', '฿[รวม]', '−฿[3%]', '฿[ชำระ]', '16 พ.ย.', 'ชำระแล้ว', green, 'ส่งแล้ว', green, 'ดู PDF'),
+      inv('INV-2569-1144', 'TechNova', 'ธ.ค. 69', '฿[รวม]', '−฿[3%]', '฿[ชำระ]', '1 ธ.ค.', 'ชำระแล้ว', green, 'ส่งแล้ว', green, 'ดู PDF'),
+      inv('INV-2569-1142', 'บ้านไร่ดิจิทัล', 'ธ.ค. 69', '฿[รวม]', '—', '฿[ชำระ]', '1 ธ.ค.', 'รอตรวจ', amber, '—', 'muted', 'เปิดในคิว'),
+      inv('INV-2569-1140', 'Kanit Labs', 'ธ.ค. 69', '฿[รวม]', '—', '฿[ชำระ]', '1 ธ.ค.', 'รอตรวจ', amber, '—', 'muted', 'เปิดในคิว'),
+      inv('INV-2569-1138', 'Pixel Forge', 'ธ.ค. 69', '฿[รวม]', '—', '฿[ชำระ]', '1 ธ.ค.', 'รอชำระ · ตัดบัตรไม่ผ่าน', red, '—', 'muted', 'ส่งลิงก์จ่าย'),
+      inv('INV-2569-1131', 'Lumen Studio', 'พ.ย. 69', '฿[รวม]', '—', '฿[ชำระ]', '1 พ.ย.', 'ชำระแล้ว', green, 'ส่งแล้ว', green, 'ดู PDF'),
+      inv('INV-2569-1112', 'Bangsue Data', 'ต.ค. 69', '฿[รวม]', '—', '฿[ชำระ]', '1 ต.ค.', 'ค้าง 40 วัน', red, '—', 'muted', 'ติดตาม'),
+      inv('INV-2569-1090', 'Chiang Mai Craft', 'ต.ค. 69', '฿[รวม]', '—', '฿0', '1 ต.ค.', 'ยกเลิก · ออกใบลดหนี้', gray, 'ใบลดหนี้ส่งแล้ว', teal, 'ดูเอกสาร'),
+    ];
+    const dunning = [
+      { day: 'ก่อนรอบ 3 วัน', what: 'ออกใบแจ้งหนี้', how: 'อีเมล + กระดิ่งใน Admin Console', color: '#cfd4d9' },
+      { day: 'วันครบกำหนด', what: 'ตัดบัตร / รอ QR', how: 'ล้มแล้วลองใหม่วันที่ 1, 3, 5', color: '#cfd4d9' },
+      { day: 'เลย 1 และ 3 วัน', what: 'เตือนทางอีเมล + LINE', how: 'ส่งถึง Owner และผู้รับใบแจ้งหนี้', color: '#e0a100' },
+      { day: 'เลย 7 วัน', what: 'แบนเนอร์ในแอป + พนักงานโทร', how: 'ลูกค้ารายปีเข้าคิวทีมขายทันที', color: '#e0a100' },
+      { day: 'เลย 14 วัน', what: 'ระงับ (อ่านอย่างเดียว)', how: 'ยังส่งออกข้อมูลได้', color: '#c8264a' },
+      { day: 'เลย 60 วัน', what: 'แจ้งลบข้อมูล', how: 'ลบจริงหลังแจ้ง 30 วัน', color: '#a01d3c' },
+    ];
+    const od = (ws, amount, days, cls, sent, next, contact) => ({ ws, amount, days, cls, sent, next, contact });
+    const overdueAll = [
+      od('Bangsue Data', '฿[ยอด]', '40 วัน', red, 'อีเมล 4 · LINE 2 · โทร 1', 'ระงับแล้ว · แจ้งลบ 9 ธ.ค.', 'owner@bangsue.example'),
+      od('Lumen Studio', '฿[ยอด]', '12 วัน', red, 'อีเมล 3 · LINE 2', 'ระงับ 14 พ.ย.', 'billing@lumen.example'),
+      od('Pixel Forge', '฿[ยอด]', '8 วัน', amber, 'อีเมล 3 · LINE 1 · โทร 1', 'เตือนครั้งสุดท้าย 15 พ.ย.', 'admin@pixelforge.example'),
+      od('สยามวิศวกรรม', '฿[ยอด]', '6 วัน', amber, 'อีเมล 2 · LINE 2', 'โทร 13 พ.ย. · รอ PO จากจัดซื้อ', 'ap@siameng.example'),
+      od('Chiang Mai Craft', '฿[ยอด]', '3 วัน', amber, 'อีเมล 2', 'เตือน 13 พ.ย.', 'hello@cmcraft.example'),
+      od('Delta Apps', '฿[ยอด]', '2 วัน', gray, 'อีเมล 1', 'เตือน 12 พ.ย.', 'team@delta.example'),
+      od('Mango Labs', '฿[ยอด]', '1 วัน', gray, 'อีเมล 1 · ตัดบัตรไม่ผ่าน', 'ลองตัดบัตร 12 พ.ย.', 'ops@mango.example'),
+    ];
+    const taxStats = [
+      { label: 'ภาษีขาย (VAT) พ.ย.', value: '฿[VAT ขาย]', note: 'ยื่น ภ.พ.30 ภายใน 15 ธ.ค.' },
+      { label: 'e-Tax invoice ส่งแล้ว', value: '214 ฉบับ', note: 'ล้ม 2 · รอส่ง 1' },
+      { label: '50 ทวิ ได้รับแล้ว', value: '59 / 61 ราย', note: 'รอรับ 2 ใบ · ฿3,240' },
+      { label: 'ภาษีถูกหัก ณ ที่จ่ายปีนี้', value: '฿[ภาษีถูกหัก]', note: 'ใช้เครดิตตอนยื่น ภ.ง.ด.50' },
+    ];
+    const etax = [
+      { no: 'TAX-2569-0912', ws: 'Orbit Apps', tag: 'ล้ม', cls: red, text: 'เลขผู้เสียภาษีไม่ครบ 13 หลัก', action: 'ขอข้อมูลใหม่' },
+      { no: 'TAX-2569-0915', ws: 'Delta Apps', tag: 'ล้ม', cls: red, text: 'อีเมลผู้รับตีกลับ', action: 'ส่งใหม่' },
+      { no: 'TAX-2569-0920', ws: 'Mango Labs', tag: 'รอส่ง', cls: amber, text: 'รอผู้ให้บริการ e-Tax ตอบกลับ (เกิน 1 ชม.)', action: 'ตรวจสถานะ' },
+    ];
+    const wht = [
+      { ws: 'TechNova', inv: 'INV-2569-1098', amount: '฿[3%]', status: 'อยู่ในคิวตรวจ', cls: amber, action: 'เปิดในคิว' },
+      { ws: 'สยามโค้ด', inv: 'INV-2569-1104', amount: '฿[3%]', status: 'รอรับ · ขอแล้ว 1 ครั้ง', cls: amber, action: 'ขออีกครั้ง' },
+      { ws: 'Lumen Studio', inv: 'INV-2569-1150', amount: '฿[3%]', status: 'รอรับ · ชำระวันนี้', cls: gray, action: '—' },
+      { ws: 'Kanit Labs', inv: 'INV-2569-1140', amount: '฿[3%]', status: 'รอยืนยันว่าหักจริง', cls: amber, action: 'เปิดในคิว' },
+      { ws: 'Orbit Apps', inv: 'INV-2569-1127', amount: '฿[1%]', status: 'e-WHT · ปิดเอง', cls: green, action: '—' },
+    ];
+    const refundRows = [
+      { date: '9 พ.ย.', ws: 'Northwind Dev', kind: 'เครดิตสะสม', amount: '฿[ยอด]', why: 'จ่ายซ้ำ (บัตร + QR) · ลูกค้าขอเก็บไว้รอบหน้า', status: 'รออนุมัติ', cls: amber },
+      { date: '7 พ.ย.', ws: 'Kanit Labs', kind: 'คืนเงิน', amount: '฿[ยอด]', why: 'ยกเลิกภายใน 14 วันแรก', status: 'รออนุมัติ (ยอดสูง)', cls: amber },
+      { date: '3 พ.ย.', ws: 'Chiang Mai Craft', kind: 'ใบลดหนี้', amount: '฿[ยอด]', why: 'ลดที่นั่งกลางรอบ', status: 'ออกแล้ว', cls: green },
+      { date: '28 ต.ค.', ws: 'Delta Apps', kind: 'เครดิตสะสม', amount: '฿[ยอด]', why: 'ชดเชยระบบล่ม 26 ต.ค.', status: 'ใช้แล้ว', cls: gray },
+      { date: '15 ต.ค.', ws: 'Mango Labs', kind: 'คืนเงิน', amount: '฿[ยอด]', why: 'ตัดบัตรผิดแพ็กเกจ', status: 'คืนแล้ว', cls: green },
+    ];
+    const revenueRows = [
+      { month: 'พ.ย. 2569', rev: '฿482,300', cash: '฿412,900', vat: '฿[VAT]', wht: '฿[หัก]', fee: '฿11,900', refund: '฿0', deferred: '฿1.26 ล้าน', close: 'เปิดอยู่', cls: amber },
+      { month: 'ต.ค. 2569', rev: '฿445,800', cash: '฿468,200', vat: '฿[VAT]', wht: '฿[หัก]', fee: '฿11,100', refund: '฿2,400', deferred: '฿1.19 ล้าน', close: 'ปิดแล้ว 5 พ.ย.', cls: green },
+      { month: 'ก.ย. 2569', rev: '฿421,500', cash: '฿430,900', vat: '฿[VAT]', wht: '฿[หัก]', fee: '฿10,400', refund: '฿0', deferred: '฿1.11 ล้าน', close: 'ปิดแล้ว', cls: green },
+      { month: 'ส.ค. 2569', rev: '฿398,200', cash: '฿402,700', vat: '฿[VAT]', wht: '฿[หัก]', fee: '฿9,800', refund: '฿1,100', deferred: '฿0.98 ล้าน', close: 'ปิดแล้ว', cls: green },
+      { month: 'ก.ค. 2569', rev: '฿371,900', cash: '฿455,600', vat: '฿[VAT]', wht: '฿[หัก]', fee: '฿9,200', refund: '฿0', deferred: '฿0.94 ล้าน', close: 'ปิดแล้ว', cls: green },
+      { month: 'มิ.ย. 2569', rev: '฿344,100', cash: '฿351,000', vat: '฿[VAT]', wht: '฿[หัก]', fee: '฿8,600', refund: '฿0', deferred: '฿0.81 ล้าน', close: 'ปิดแล้ว', cls: green },
+    ];
+    const waterfall = [
+      { label: 'ต้นเดือน', value: '฿445,800', left: '0%', width: '74%', color: '#cfd4d9' },
+      { label: 'ลูกค้าใหม่', value: '+฿38,400', left: '74%', width: '6%', color: '#1e7a4f' },
+      { label: 'อัปเกรด', value: '+฿12,100', left: '80%', width: '2%', color: '#1e7a4f' },
+      { label: 'ลดแพ็กเกจ', value: '−฿4,200', left: '81.3%', width: '0.7%', color: '#c8264a' },
+      { label: 'ยกเลิก', value: '−฿9,800', left: '79.7%', width: '1.6%', color: '#c8264a' },
+      { label: 'สิ้นเดือน', value: '฿482,300', left: '0%', width: '80%', color: '#5b3fc4' },
+    ];
+    const overdue = [
+      { ws: 'Lumen Studio', days: '12 วัน', cls: 'pill p-red', next: 'ระงับ 14 พ.ย.' },
+      { ws: 'Bangsue Data', days: '40 วัน', cls: 'pill p-red', next: 'ระงับแล้ว · เก็บข้อมูลถึง 9 ธ.ค.' },
+      { ws: 'Pixel Forge', days: '8 วัน', cls: 'pill p-amber', next: 'เตือนครั้งสุดท้าย 15 พ.ย.' },
+      { ws: 'Chiang Mai Craft', days: '3 วัน', cls: 'pill p-amber', next: 'เตือน 13 พ.ย.' },
+    ];
+    const renewals = [
+      { ws: 'TechNova', date: '12 พ.ย.', method: 'โอน · สัญญารายปี', note: 'ต่อสัญญา Enterprise · ใบเสนอราคาส่งแล้ว', cls: 'pill p-purple' },
+      { ws: 'Northwind Dev', date: '13 พ.ย.', method: 'บัตรเครดิต', note: 'บัตรหมดอายุ 11/26', cls: 'pill p-amber' },
+      { ws: 'Orbit Apps', date: '14 พ.ย.', method: 'PromptPay', note: 'มีเครดิต ฿2,000 หักอัตโนมัติ', cls: 'pill p-teal' },
+      { ws: 'Kanit Labs', date: '16 พ.ย.', method: '—', note: 'ทดลองใช้หมด · ยังไม่เลือกแพ็กเกจ', cls: 'pill p-amber' },
+    ];
+    const methods = [
+      { name: 'PromptPay QR', pct: '46%' }, { name: 'สลิปโอน', pct: '15%' }, { name: 'บัตรเครดิต', pct: '19%' }, { name: 'Bill Payment', pct: '16%' }, { name: 'ใบแจ้งหนี้รายปี', pct: '4%' },
+    ];
+    return { is, inStats, inFilters, incoming, invFilters, invoices, dunning, overdueAll, taxStats, etax, wht, refundRows, revenueRows, stats, tabs, channels, queue, waterfall, overdue, renewals, methods,
+      drawerOpen: !!this.state.drawer, closeDrawer: () => this.setState({ drawer: false }),
+      sel, selChecks: sel.checks, selActions, nLeft, allDone: nLeft === 0, pickList, rejectReasons, rejectText,
+      modalPick: this.state.modal === 'pick', modalReject: this.state.modal === 'reject', closeModal: () => this.setState({ modal: null }),
+      confirmPick: () => finish('ผูกเงินเข้า ' + picks[this.state.pickSel][0] + ' และผ่านแล้ว'), confirmReject: () => finish('แจ้ง ' + sel.ws + ' แล้ว · รอลูกค้าดำเนินการ'),
+      toast: this.state.toast, toastOn: !!this.state.toast, closeToast: () => this.setState({ toast: '' }), resetQueue: () => this.setState({ done: {}, toast: '' }), selTimeline: sel.timeline.map(([at, text]) => ({ at, text })) };
+  }
+}
+</script>
+</body>
+</html>

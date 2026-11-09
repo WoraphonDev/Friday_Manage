@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · สิทธิ์และขีดจำกัด</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f5f6f7}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+.card{background:#fff;border:1px solid #e3e6e9;border-radius:12px;padding:18px 20px;box-sizing:border-box;min-width:0}
+.h2{margin:0;font-size:15px;font-weight:600;color:#24272c}
+.muted{color:#5f656d}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid #cfd4d9;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#f1f3f5;color:#24272c;text-decoration:none}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff}.btn-primary:hover{background:#4a33a8;color:#fff}
+.btn-sm{min-height:30px;padding:0 10px;font-size:12px}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:500;color:#5f656d;font-size:12px;padding:10px 12px;border-bottom:1px solid #e3e6e9;white-space:nowrap;background:#f8f9fa}
+.t td{padding:10px 12px;border-bottom:1px solid #eef0f2;white-space:nowrap;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+.t .grp td{background:#f8f9fa;font-size:12px;font-weight:600;color:#3a3f45}
+.yes{color:#17633f;font-weight:600}.no{color:#7a8088}
+.f{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:500;color:#3a3f45}
+.in{min-height:36px;border:1px solid #868c94;border-radius:8px;padding:0 10px;font:inherit;font-size:13px;background:#fff;box-sizing:border-box;width:100%}
+/* ขัดเกลา UI ชุดเดียวกันทุกหน้า */
+body{background:#f4f5f8;-webkit-font-smoothing:antialiased}
+h1{letter-spacing:-.015em}
+.card{border-color:#e6e8ec;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03)}
+.h2{font-weight:650;letter-spacing:-.005em}
+.btn{border-radius:9px;border-color:#d6dae0;box-shadow:0 1px 2px rgba(16,24,40,.05);transition:background .12s,border-color .12s,box-shadow .12s}
+.btn:hover{border-color:#c3c8cf}
+.btn-primary{border-color:#5b3fc4;box-shadow:0 1px 2px rgba(91,63,196,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+.btn-primary:hover{border-color:#4a33a8}
+.btn-danger{border-color:#f6b8c6}.btn-ok{border-color:#1e7a4f}
+.pill{font-weight:600;letter-spacing:.01em}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.sw:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+table.t th{background:#fafbfc;color:#6b717a;font-weight:600;border-bottom-color:#eceef1}
+table.t tbody tr:hover td{background:#fafaff}
+.in,.sel,textarea{transition:border-color .12s,box-shadow .12s}
+.in:focus,.sel:focus,textarea:focus{outline:none;border-color:#6b4fd8;box-shadow:0 0 0 3px #efe9fd}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c; background: #f5f6f7">
+  <div style="flex: 1 1 232px; max-width: 100%; background: #141619">
+    <dc-import name="Sidebar" active="entitlements" hint-size="100%,1480px"></dc-import>
+  </div>
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+    <div style="margin: -24px -28px 4px"><dc-import name="Topbar" group="แพ็กเกจและการตลาด" group-href="Promotions.dc.html" page="สิทธิ์และขีดจำกัด" phase="2" hint-size="100%,60px"></dc-import></div>
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px">
+      <div style="flex: 1 1 320px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700">สิทธิ์และขีดจำกัด</h1>
+        <p class="muted" style="margin: 4px 0 0; font-size: 13px">แพ็กเกจไหนได้ฟีเจอร์อะไร ใช้ได้เท่าไร และการปรับเฉพาะราย · แก้ที่นี่มีผลทันทีโดยไม่ต้องแก้โค้ด</p>
+      </div>
+      <button type="button" class="btn">ดูประวัติการแก้</button>
+      <button type="button" class="btn btn-primary">บันทึกเป็นเวอร์ชันใหม่</button>
+    </section>
+
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="padding: 14px 16px; border-bottom: 1px solid #e3e6e9; display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <h2 class="h2">ตารางสิทธิ์ตามแพ็กเกจ</h2>
+        <span class="pill p-gray">เวอร์ชัน 4 · ใช้ตั้งแต่ 1 พ.ย. 2569</span>
+        <span class="muted" style="font-size: 12px">ลดสิทธิ์ของแพ็กเกจจะกระทบลูกค้าเดิม ระบบจะแสดงจำนวนที่กระทบก่อนบันทึก</span>
+      </div>
+      <div style="overflow-x: auto">
+        <table class="t">
+          <thead><tr><th scope="col">ฟีเจอร์ / ขีดจำกัด</th><th scope="col">Free</th><th scope="col">Team S</th><th scope="col">Team M</th><th scope="col">Team L</th><th scope="col">Enterprise</th></tr></thead>
+          <tbody>
+            <sc-for list="{{matrix}}" as="r" hint-placeholder-count="16">
+              <sc-if value="{{r.isGroup}}" hint-placeholder-val="{{ false }}">
+                <tr class="grp"><td colspan="6">{{r.label}}</td></tr>
+              </sc-if>
+              <sc-if value="{{r.isRow}}" hint-placeholder-val="{{ true }}">
+                <tr>
+                  <td><span style="font-weight: 500">{{r.label}}</span> <span class="mono muted" style="font-size: 11px">{{r.key}}</span></td>
+                  <td class="{{r.c0}}">{{r.v0}}</td><td class="{{r.c1}}">{{r.v1}}</td><td class="{{r.c2}}">{{r.v2}}</td><td class="{{r.c3}}">{{r.v3}}</td><td class="{{r.c4}}">{{r.v4}}</td>
+                </tr>
+              </sc-if>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <div class="card" style="padding: 0; overflow: hidden">
+        <div style="padding: 14px 16px; border-bottom: 1px solid #eceef1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+          <h2 class="h2">ปรับเฉพาะราย (Override)</h2>
+          <span class="muted" style="font-size: 12px">ใช้แทนค่าของแพ็กเกจ · ทุกรายการต้องมีเหตุผลและวันหมดอายุ (ยกเว้นตามสัญญา Enterprise)</span>
+          <button type="button" class="btn btn-primary" style="margin-left: auto" onClick="{{openDrawer}}">เพิ่มการปรับเฉพาะราย</button>
+        </div>
+        <div style="overflow-x: auto">
+          <table class="t">
+            <thead><tr><th scope="col">Workspace</th><th scope="col">สิทธิ์</th><th scope="col">แพ็กเกจให้</th><th scope="col">ปรับเป็น</th><th scope="col">หมดอายุ</th><th scope="col">เหตุผล</th><th scope="col">โดย</th></tr></thead>
+            <tbody>
+              <sc-for list="{{overrides}}" as="o" hint-placeholder-count="5">
+                <tr>
+                  <td style="font-weight: 500">{{o.ws}}</td>
+                  <td>{{o.what}}</td>
+                  <td class="muted num">{{o.base}}</td>
+                  <td class="num" style="font-weight: 600; color: #5b3fc4">{{o.value}}</td>
+                  <td><span class="{{o.expCls}}">{{o.exp}}</span></td>
+                  <td class="muted" style="white-space: normal; min-width: 200px">{{o.reason}}</td>
+                  <td class="muted">{{o.by}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <sc-if value="{{drawerOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closeDrawer}}" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,22,25,.32); z-index: 20"></div>
+      <form class="card" role="dialog" aria-label="เพิ่มการปรับเฉพาะราย" style="position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100%); border-radius: 16px 0 0 16px; z-index: 21; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 22px 24px; box-shadow: -12px 0 40px rgba(16,24,40,.18)">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <h2 class="h2">เพิ่มการปรับเฉพาะราย</h2>
+          <button type="button" class="btn btn-sm" aria-label="ปิด" onClick="{{closeDrawer}}" style="margin-left: auto; width: 34px; padding: 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+        </div>
+        <label class="f">Workspace<input class="in" value="สยามโค้ด (siamcode)"></label>
+        <label class="f">สิทธิ์<select class="in"><option>จำนวนที่นั่ง</option><option>พื้นที่ไฟล์</option><option>API ต่อนาที</option><option>Automation ต่อเดือน</option><option>เปิดฟีเจอร์ SSO</option></select></label>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <label class="f">แพ็กเกจให้<input class="in num" value="25" disabled></label>
+          <label class="f">ปรับเป็น<input class="in num" value="30"></label>
+        </div>
+        <label class="f">หมดอายุ<input class="in" type="date" value="2026-12-31"></label>
+        <label class="f">เหตุผล (ลูกค้าเห็นใน Audit log)<textarea rows="2" class="in" style="padding: 8px 10px">ทีมเพิ่มชั่วคราวช่วงขึ้นระบบ รอย้ายไป Team L ต้นปี</textarea></label>
+        <div style="padding: 10px 12px; border-radius: 10px; background: #fff6d9; font-size: 12px; color: #7a4700">เกินแพ็กเกจเกิน 20% ต้องให้ Owner อนุมัติ · ครบกำหนดระบบแจ้งเตือนเจ้าของรายการล่วงหน้า 7 วัน</div>
+        <button type="button" class="btn btn-primary" style="align-self: flex-end">ส่งขออนุมัติ</button>
+      </form>
+      </sc-if>
+    </section>
+
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="padding: 14px 16px; border-bottom: 1px solid #e3e6e9; display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <h2 class="h2">ใกล้ชนเพดาน</h2>
+        <span class="pill p-amber">23 ราย</span>
+        <span class="muted" style="font-size: 12px">ใช้เกิน 85% ของขีดจำกัด · ส่งต่อให้ทีมขายเสนอแพ็กเกจใหญ่ขึ้น</span>
+      </div>
+      <div style="overflow-x: auto">
+        <table class="t">
+          <thead><tr><th scope="col">Workspace</th><th scope="col">แพ็กเกจ</th><th scope="col">ขีดจำกัดที่ใกล้เต็ม</th><th scope="col">ใช้ไป</th><th scope="col">คาดว่าจะเต็ม</th><th scope="col"><span style="position: absolute; left: -9999px">การกระทำ</span></th></tr></thead>
+          <tbody>
+            <sc-for list="{{near}}" as="n" hint-placeholder-count="4">
+              <tr>
+                <td style="font-weight: 500">{{n.ws}}</td><td><span class="pill p-gray">{{n.plan}}</span></td><td>{{n.what}}</td>
+                <td><span style="display: inline-flex; align-items: center; gap: 8px"><span style="width: 90px; height: 6px; border-radius: 999px; background: #eef0f2; overflow: hidden"><span style="display: block; height: 100%; width: {{n.w}}; background: {{n.color}}"></span></span><span class="num">{{n.used}}</span></span></td>
+                <td class="muted">{{n.eta}}</td>
+                <td><button type="button" class="btn btn-sm">ส่งให้ทีมขาย</button></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  state = { drawer: false };
+  renderVals() {
+    const g = (label) => ({ isGroup: true, isRow: false, label });
+    const r = (label, key, vals) => {
+      const row = { isGroup: false, isRow: true, label, key };
+      vals.forEach((v, i) => { row['v' + i] = v === true ? 'ได้' : v === false ? '—' : v; row['c' + i] = v === true ? 'yes' : v === false ? 'no' : 'num'; });
+      return row;
+    };
+    const matrix = [
+      g('ขีดจำกัด'),
+      r('ที่นั่ง', 'seats', ['5', '10', '25', '50', 'ตามสัญญา']),
+      r('โปรเจกต์', 'projects', ['3', 'ไม่จำกัด', 'ไม่จำกัด', 'ไม่จำกัด', 'ไม่จำกัด']),
+      r('พื้นที่ไฟล์', 'storage_gb', ['2 GB', '50 GB', '100 GB', '250 GB', 'ตามสัญญา']),
+      r('Automation ต่อเดือน', 'automation_runs', ['100', '5,000', '20,000', '50,000', 'ไม่จำกัด']),
+      r('API ต่อนาที', 'api_rpm', ['—', '60', '120', '300', '1,000']),
+      r('เก็บประวัติ Activity', 'history_days', ['30 วัน', '1 ปี', '1 ปี', '3 ปี', 'ตามสัญญา']),
+      g('ฟีเจอร์'),
+      r('Gantt และ Baseline', 'gantt', [false, true, true, true, true]),
+      r('Import Excel โหมดอัปเดต', 'import_update', [false, true, true, true, true]),
+      r('LINE OA และ Webhook', 'channels', [false, true, true, true, true]),
+      r('Automation', 'automation', [false, true, true, true, true]),
+      r('API token', 'api', [false, true, true, true, true]),
+      r('Guest', 'guests', [false, true, true, true, true]),
+      r('SSO / SAML', 'sso', [false, false, false, false, true]),
+      r('SLA และผู้ดูแลประจำบัญชี', 'sla', [false, false, false, false, true]),
+    ];
+    const overrides = [
+      { ws: 'สยามโค้ด', what: 'ที่นั่ง', base: '25', value: '30', exp: '31 ธ.ค. 2569', expCls: 'pill p-gray', reason: 'ทีมเพิ่มชั่วคราว รอย้ายไป Team L ต้นปี', by: 'Friday Owner' },
+      { ws: 'TechNova', what: 'ที่นั่ง', base: 'ตามสัญญา', value: '120', exp: 'ตามสัญญา (31 มี.ค. 70)', expCls: 'pill p-purple', reason: 'สัญญา Enterprise ENT-2569-004', by: 'Friday Owner' },
+      { ws: 'Kanit Labs', what: 'เปิดฟีเจอร์ SSO', base: '—', value: 'ได้', exp: 'เหลือ 6 วัน', expCls: 'pill p-amber', reason: 'ทดลองก่อนตัดสินใจซื้อ Enterprise', by: 'Friday Owner' },
+      { ws: 'Orbit Apps', what: 'API ต่อนาที', base: '300', value: '600', exp: '30 พ.ย. 2569', expCls: 'pill p-gray', reason: 'ย้ายข้อมูลจากระบบเก่าผ่าน API', by: 'Support B' },
+      { ws: 'มหาวิทยาลัยตัวอย่าง', what: 'พื้นที่ไฟล์', base: '100 GB', value: '200 GB', exp: '30 ก.ย. 2570', expCls: 'pill p-gray', reason: 'โครงการสถาบันการศึกษา (EDU-FREE)', by: 'Friday Finance' },
+    ];
+    const near = [
+      { ws: 'Chiang Mai Craft', plan: 'Team S', what: 'ที่นั่ง', used: '9/10', w: '90%', color: '#c8264a', eta: '~2 สัปดาห์' },
+      { ws: 'Lumen Studio', plan: 'Team S', what: 'ที่นั่ง', used: '9/10', w: '90%', color: '#c8264a', eta: 'เดือนนี้' },
+      { ws: 'Northwind Dev', plan: 'Team L', what: 'ที่นั่ง', used: '44/50', w: '88%', color: '#b86e00', eta: '~2 เดือน' },
+      { ws: 'Pixel Forge', plan: 'Team S', what: 'พื้นที่ไฟล์', used: '46/50 GB', w: '92%', color: '#c8264a', eta: '~1 สัปดาห์' },
+    ];
+    return { matrix, overrides, near,
+      drawerOpen: !!this.state.drawer, openDrawer: () => this.setState({ drawer: true }), closeDrawer: () => this.setState({ drawer: false }) };
+  }
+}
+</script>
+</body>
+</html>

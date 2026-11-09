@@ -10,6 +10,8 @@ UI ล็อกเป็น **v1.0** เมื่อ 5 พ.ย. 2569 หลั�
 | 2 | [ERD](02-erd.md) | ร่างแรก |
 | 3 | [API ของแต่ละหน้า](03-api.md) | ครบทุก endpoint ในโค้ด (D99 · 8 พ.ย. 2569) |
 | 4 | [สิทธิ์ของแต่ละ Role](04-permissions.md) | ร่างแรก |
+| 5 | [ข้อมูลธุรกิจและตัวชี้วัด](05-business-metrics.md) | ร่างแรก · ยังไม่มี migration · ต้องทำส่วนที่ 1 ก่อนเปิดตัว |
+| 6 | [บทบาทพนักงานใน Friday Ops](06-ops-roles.md) | ร่างแรก · ต้องแก้ `staff_users` และ guard ของ ops-api |
 
 ## คำตัดสินด้านข้อมูล (5 พ.ย. 2569)
 
@@ -51,6 +53,8 @@ UI ล็อกเป็น **v1.0** เมื่อ 5 พ.ย. 2569 หลั�
 | 8 พ.ย. 2569 | 03-api › 3.13 | เพิ่ม endpoint ที่โค้ดมีแต่ตารางยังไม่เขียน (44 รายการ) · ธรรมเนียม `:action` รับทั้ง `/action` · Webhook อยู่ใต้ `/api/v1/hooks` · `hooks/line/{workspaceId}` | บันทึกผล A01–A40 · `apps/api/openapi.json` |
 | 8 พ.ย. 2569 | 03-api › 3.13 | ฟิลด์ `requirements` / `screens` / `labels` ในงาน · `DELETE i/?subtasks=keep` (P3) | VD07–VD12, VD23 |
 | 9 พ.ย. 2569 | 01-entities, 03-api | `project_member.pm_deputy` · `p/workload` และ `w/workload` รับ `basis` · ลบ Module รับ `moveToPhase` | คำตัดสินข้อ 1–10 ใน decisions.md |
+| 9 พ.ย. 2569 | 05-business-metrics | ร่างแรก: ที่มาของลูกค้า, เหตุการณ์ในแอป, ประวัติแพ็กเกจ, เหตุผลที่ยกเลิก, ต้นทุนต่อลูกค้า และนิยามตัวชี้วัด | หน้าจอ Friday Ops "ธุรกิจและกำไร" |
+| 9 พ.ย. 2569 | 06-ops-roles | ร่างแรก: บทบาทหลายบทบาท, Owner, วงเงิน, อนุมัติตัวเองช่วงมี Owner คนเดียว, สิทธิ์ฉุกเฉิน | คำตัดสิน Friday Ops: บทบาทพนักงาน |
 
 ตรวจซ้ำได้ด้วยการเทียบ path ใน `apps/api/openapi.json` กับ path ที่เขียนใน `03-api.md` (ตารางใช้ตัวย่อ `w/` `p/` `i/` ตามส่วน 3)
 

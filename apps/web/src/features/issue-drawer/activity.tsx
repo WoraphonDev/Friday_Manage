@@ -34,7 +34,13 @@ export function ActivityPanel({ scope, issueKey, showFeed = true, showComposer =
   }
   function value(field: string | null, raw: unknown): string {
     if (raw === null || raw === undefined) return t('notSet');
-    if (Array.isArray(raw)) return raw.map((item) => value(field, item)).join(', ');
+    if (Array.isArray(raw)) return raw.length ? raw.map((item) => value(field, item)).join(', ') : t('notSet');
+    // Label เก็บเป็น id · ใช้ชื่อจากรายการ Label ของโปรเจกต์ที่ Drawer โหลดไว้
+    if (field === 'labelIds') {
+      const labels = cache.getQueryData<{ items: { id: string; name: string }[] }>(['issue-options', scope.ws, scope.projectKey, 'labels'])?.items;
+      const label = labels?.find((item) => item.id === raw);
+      if (label) return label.name;
+    }
     if (typeof raw === 'object') return t('dataChanged');
     const person = scope.people.find((p) => p.id === raw);
     const named = [...(scope.project?.modules ?? []), ...(scope.project?.statuses ?? []), ...(scope.project?.sprints ?? [])].find((item) => item.id === raw);

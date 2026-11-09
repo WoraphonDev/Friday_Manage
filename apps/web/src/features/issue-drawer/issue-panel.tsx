@@ -14,6 +14,7 @@ import { Checklist, DependencyPanel } from './issue-parts';
 import { DueRequest } from './due-request';
 import { BodyText, Failure, InlineText } from './shared';
 import { Attachments, BugDetails, Development, PropRow, QuickSubtask, SubtaskRow } from './detail-parts';
+import { CodeChips, LabelChips } from './refs';
 import { issuePath, issueQuery, projectPath, type Issue, type Named, type PublicPerson, type Scope } from './types';
 import styles from './issue-drawer.module.css';
 
@@ -42,6 +43,9 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const [reopenOpen, setReopenOpen] = useState(false);
   const phases = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'phases', issue.moduleId], queryFn: ({ signal }) => api.get<{ items: Named[] }>(`${projectPath(scope.ws, scope.projectKey)}/modules/${encodeURIComponent(issue.moduleId!)}/phases`, { signal }), enabled: canEdit && !!issue.moduleId });
   const watchers = useQuery({ queryKey: [...key, 'watchers'], queryFn: ({ signal }) => api.get<{ items: { person: PublicPerson | null }[]; watching: boolean }>(`${endpoint}/watchers`, { signal }) });
+  // รายการ Label ของโปรเจกต์ใช้เฉพาะตอนแก้ · การแสดงผลใช้ชื่อ/สีที่มากับงาน
+  const labelOptions = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'labels'], queryFn: ({ signal }) => api.get<{ items: Named[] }>(`${projectPath(scope.ws, scope.projectKey)}/labels`, { signal }), enabled: canEdit });
+  const refOptions = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'form-options'], queryFn: ({ signal }) => api.get<{ requirements?: { code: string }[]; screens?: { code: string }[] }>(`${projectPath(scope.ws, scope.projectKey)}/form-options`, { signal }), enabled: canEdit && scope.access.permissions.includes('issue.create'), staleTime: 60_000 });
   const impact = useQuery({ queryKey: [...key, 'delete-impact'], queryFn: () => api.get<{ counts: { subtasks: number; files: number; dependencies: number }; subtasks?: Issue[] }>(`${endpoint}/delete-impact`), enabled: deleteOpen && canDelete });
   const type = scope.project?.issueTypes?.find((type) => type.name === issue.type);
   const statuses = scope.project?.statuses?.filter((status) => status.workflowId === type?.workflowId) ?? [];
@@ -247,6 +251,10 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
           <PropRow k="Module"><span><span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod?.name ?? t('notSet')}</span> <span className="muted" style={{ fontSize: 12 }}>{t('fromParent')}</span></span></PropRow>
           <PropRow k="Sprint"><span>{sprint?.name ?? t('backlog')}</span></PropRow>
         </>}
+          {/* Canvas C: Requirement · Screen · Labels ต่อจาก Module / Sprint · แก้แล้วแทนทั้งชุด */}
+          <PropRow k={t('refs.requirement')}><CodeChips kinds={['requirement']} editable={canEdit} busy={disabled} values={{ requirement: issue.requirements ?? [], screen: [] }} suggestions={{ requirement: refOptions.data?.requirements?.map((r) => r.code) }} onChange={(_, codes) => void patch({ requirements: codes })} /></PropRow>
+          <PropRow k={t('refs.screen')}><CodeChips kinds={['screen']} editable={canEdit} busy={disabled} values={{ requirement: [], screen: issue.screens ?? [] }} suggestions={{ screen: refOptions.data?.screens?.map((r) => r.code) }} onChange={(_, codes) => void patch({ screens: codes })} /></PropRow>
+          <PropRow k={t('refs.labels')}><LabelChips options={labelOptions.data?.items ?? issue.labels ?? []} value={(issue.labels ?? []).map((label) => label.id)} editable={canEdit} busy={disabled} onChange={(ids) => void patch({ labelIds: ids })} /></PropRow>
           {!guest && canEdit && <label className={styles.checkboxLabel}><input type="checkbox" checked={issue.sharedWithGuests} disabled={disabled} onChange={(event) => void patch({ sharedWithGuests: event.target.checked })} />{t('sharedWithGuests')}</label>}
         </section>
       </div>

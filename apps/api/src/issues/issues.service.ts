@@ -23,6 +23,13 @@ const uuid = z.uuid();
 const manDay = z.number().positive().max(9999).multipleOf(0.25);
 const SIZES = ['XS', 'S', 'M', 'L', 'XL'] as const;
 const DEFAULT_SIZE_MD: Record<string, number> = { XS: 1, S: 3, M: 5, L: 8, XL: 12 };
+/** รหัสอ้างอิงเก็บเป็นตัวพิมพ์ใหญ่ให้ตรงกับที่ Import อ่านจาก Excel (FR-02.3, NFR-01, SCR-203) */
+const refCodes = (pattern: RegExp, label: string) =>
+  z.array(z.string().trim().toUpperCase().regex(pattern, `${label} ต้องอยู่ในรูปแบบเช่น ${label === 'Requirement' ? 'FR-02.3' : 'SCR-203'}`)).max(50)
+    .transform((codes) => [...new Set(codes)]);
+const requirementCodes = refCodes(/^N?FR-[A-Z0-9][A-Z0-9._-]{0,30}$/, 'Requirement');
+const screenCodes = refCodes(/^SCR-[A-Z0-9][A-Z0-9._-]{0,30}$/, 'Screen');
+const labelIdList = z.array(uuid).max(20).transform((ids) => [...new Set(ids)]);
 
 export const CreateIssueBody = z.object({
   type: z.enum(['Story', 'Task', 'Bug', 'Spike']).default('Task'),
@@ -46,6 +53,12 @@ export const CreateIssueBody = z.object({
   environment: z.enum(['local', 'sit', 'uat', 'production']).optional(),
   details: z.record(z.string(), z.unknown()).default({}),
   sharedWithGuests: z.boolean().default(false),
+  /** ส่งเป็นรหัส · ถ้ายังไม่มีในโปรเจกต์ ระบบสร้างให้ (03-api › POST p/issues) */
+  requirements: requirementCodes.default([]),
+  screens: screenCodes.default([]),
+  labelIds: labelIdList.default([]),
+  /** ผู้ติดตามเพิ่มเติมนอกจากผู้สร้าง (ผู้สร้างติดตามอัตโนมัติ) */
+  watcherIds: z.array(uuid).max(50).default([]),
 });
 
 export const PatchIssueBody = z
@@ -72,6 +85,10 @@ export const PatchIssueBody = z
     environment: z.enum(['local', 'sit', 'uat', 'production']).nullable(),
     details: z.record(z.string(), z.unknown()),
     sharedWithGuests: z.boolean(),
+    /** แทนที่ทั้งชุด · รหัสที่ยังไม่มีในโปรเจกต์ระบบสร้างให้ */
+    requirements: requirementCodes,
+    screens: screenCodes,
+    labelIds: labelIdList,
     /** ต้องมีเมื่อแก้แผน (Plan Start / End, Man-Day, Dev) หลังตั้ง Baseline */
     planChangeReason: z.string().trim().min(1).max(1000),
   })
@@ -106,6 +123,8 @@ export const MoveIssueBody = z.object({
 });
 
 type Issue = typeof s.issues.$inferSelect;
+type CreateIssueInput = Omit<z.infer<typeof CreateIssueBody>, 'requirements' | 'screens' | 'labelIds' | 'watcherIds'>
+  & Partial<Pick<z.infer<typeof CreateIssueBody>, 'requirements' | 'screens' | 'labelIds' | 'watcherIds'>>;
 type Status = typeof s.workflowStatuses.$inferSelect;
 type Warning = { code: string; message: string };
 const ISSUE_KEY = ISSUE_KEY_PATTERN;
@@ -122,7 +141,9 @@ export class IssuesService {
   // ---------------------------------------------------------------------------
   // สร้าง (หน้า B, K1)
   // ---------------------------------------------------------------------------
-  async create(auth: AuthInfo, tenant: TenantInfo, projectKey: string, input: z.infer<typeof CreateIssueBody>) {
+  async create(auth: AuthInfo, tenant: TenantInfo, projectKey: string, raw: CreateIssueInput) {
+    // ผู้เรียกภายใน (Automation, สร้าง Bug จากผลทดสอบ) ไม่ผ่าน zod จึงเติมค่าเริ่มต้นของข้อมูลอ้างอิงเอง
+    const input = { requirements: [], screens: [], labelIds: [], watcherIds: [], ...raw };
     const events: DomainEvent[] = [];
     const result = await this.db.run(auth, tenant, async (tx) => {
       const { project, access } = await this.projects.load(tx, auth, tenant, projectKey);
@@ -153,7 +174,8 @@ export class IssuesService {
 
       this.checkRequired(type.requiredFields, { ...input, moduleId: moduleId ?? undefined });
       await this.checkInProject(tx, project.id, { moduleId, phaseId, sprintId });
-      await this.checkPeople(tx, [...input.assigneeIds, input.baId, input.reviewerId, input.testerId]);
+      await this.checkPeople(tx, [...input.assigneeIds, input.baId, input.reviewerId, input.testerId, ...input.watcherIds]);
+      await this.checkLabels(tx, project.id, input.labelIds);
 
       const statusId = input.statusId ?? (await this.firstStatus(tx, type.workflowId));
       await this.checkStatus(tx, type.workflowId, statusId);
@@ -210,7 +232,11 @@ export class IssuesService {
       if (input.assigneeIds.length) {
         await tx.insert(s.issueAssignees).values(input.assigneeIds.map((userId, i) => ({ workspaceId: tenant.workspaceId, issueId: issue.id, userId, sort: i })));
       }
-      await tx.insert(s.issueWatchers).values({ workspaceId: tenant.workspaceId, issueId: issue.id, userId: auth.userId, source: 'auto_create' });
+      await tx.insert(s.issueWatchers).values([
+        { workspaceId: tenant.workspaceId, issueId: issue.id, userId: auth.userId, source: 'auto_create' as const },
+        ...input.watcherIds.filter((id) => id !== auth.userId).map((userId) => ({ workspaceId: tenant.workspaceId, issueId: issue.id, userId, source: 'manual' as const })),
+      ]);
+      await this.writeRefs(tx, project, issue.id, { requirements: input.requirements, screens: input.screens, labelIds: input.labelIds });
       await tx.insert(s.activities).values({ ...base, issueId: issue.id, actorId: auth.userId, verb: 'created' });
 
       const ev = eventFor(auth, tenant, project, issue);
@@ -276,7 +302,10 @@ export class IssuesService {
       const issueTypes = await tx.select().from(s.issueTypes).where(and(eq(s.issueTypes.projectId, project.id), eq(s.issueTypes.enabled, true))).orderBy(asc(s.issueTypes.sort));
       const statuses = await tx.select().from(s.workflowStatuses).where(eq(s.workflowStatuses.projectId, project.id)).orderBy(asc(s.workflowStatuses.sort));
       const labels = await tx.select().from(s.labels).where(eq(s.labels.projectId, project.id)).orderBy(asc(s.labels.name));
-      return { modules: modules.map((m) => ({ ...m, phases: phases.filter((p) => p.moduleId === m.id) })), phases, sprints,
+      // รหัสที่ใช้อยู่แล้วในโปรเจกต์ ให้ฟอร์มแนะนำแทนการพิมพ์รหัสใหม่ซ้ำแบบสะกดต่าง
+      const requirements = await tx.select({ code: s.requirements.code, kind: s.requirements.kind, title: s.requirements.title }).from(s.requirements).where(eq(s.requirements.projectId, project.id)).orderBy(asc(s.requirements.code));
+      const screens = await tx.select({ code: s.screens.code, name: s.screens.name }).from(s.screens).where(eq(s.screens.projectId, project.id)).orderBy(asc(s.screens.code));
+      return { modules: modules.map((m) => ({ ...m, phases: phases.filter((p) => p.moduleId === m.id) })), phases, sprints, requirements, screens,
         members: [...people.values()].map((p) => ({ ...p, role: members.find((m) => m.userId === p.id)?.role ?? 'admin' })),
         sizeMdMap: (project.sizeMdMap as Record<string, number> | null) ?? await this.workspaceSizeMap(tx, project.workspaceId), labels,
         issueTypes: issueTypes.map((type) => ({ ...type, statuses: statuses.filter((st) => st.workflowId === type.workflowId) })) };
@@ -466,6 +495,9 @@ export class IssuesService {
       if (input.sprintId !== undefined && input.sprintId !== issue.sprintId) set.sprintId = input.sprintId;
       await this.checkInProject(tx, project.id, { moduleId: set.moduleId, phaseId: set.phaseId, sprintId: set.sprintId });
       await this.checkPeople(tx, [...(input.assigneeIds ?? []), input.baId, input.reviewerId, input.testerId]);
+      if (input.labelIds) await this.checkLabels(tx, project.id, input.labelIds);
+      const [oldRefs] = await this.readRefs(tx, [issue.id]);
+      const refChanges = REF_FIELDS.filter((f) => input[f] !== undefined && !sameSet(oldRefs[f], input[f]!));
 
       // ความคืบหน้ากรอกเองได้เฉพาะงานที่ไม่มีลูก
       if (input.progressPct !== undefined) {
@@ -535,7 +567,7 @@ export class IssuesService {
       }
 
       // รายชื่อ Dev อยู่อีกตาราง แถวงานไม่เปลี่ยน trigger จึงไม่เพิ่ม version ให้ · ต้องเพิ่มเองเพื่อให้ If-Match ยังจับการแก้ชนกันได้
-      if (assigneesChanged) set.version = expected + 1;
+      if (assigneesChanged || refChanges.length) set.version = expected + 1;
       const [updated] = await tx
         .update(s.issues)
         .set(set)
@@ -557,9 +589,12 @@ export class IssuesService {
           .where(eq(s.issues.parentId, issue.id));
       }
 
+      if (refChanges.length) await this.writeRefs(tx, project, issue.id, Object.fromEntries(refChanges.map((f) => [f, input[f]])), true);
+
       const base = { workspaceId: tenant.workspaceId, projectId: project.id, issueId: issue.id };
       const changes = diff(issue, updated);
       if (assigneesChanged) changes.push({ field: 'assigneeIds', oldValue: oldAssignees, newValue: assignees });
+      for (const f of refChanges) changes.push({ field: f, oldValue: oldRefs[f], newValue: input[f] });
       if (changes.length) {
         await tx.insert(s.activities).values(changes.map((c) => ({ ...base, actorId: auth.userId, verb: 'updated', field: c.field, oldValue: c.oldValue, newValue: c.newValue })));
       }
@@ -569,7 +604,7 @@ export class IssuesService {
           planRows.map((c) => ({ ...base, baselineId: baseline.id, field: c.field, oldValue: c.oldValue, newValue: c.newValue, reason: input.planChangeReason, changedBy: auth.userId })),
         );
       }
-      events.push(...(await this.changeEvents(tx, auth, tenant, project, issue, updated, assigneesChanged ? { before: oldAssignees, after: assignees } : null)));
+      events.push(...(await this.changeEvents(tx, auth, tenant, project, issue, updated, assigneesChanged ? { before: oldAssignees, after: assignees } : null, refChanges)));
       if (baseline && (planChanged.length || assigneesChanged)) {
         events.push(eventFor(auth, tenant, project, updated)('plan.changed', { fields: assigneesChanged ? [...planChanged, 'assigneeIds'] : [...planChanged], reason: input.planChangeReason }));
       }
@@ -723,11 +758,12 @@ export class IssuesService {
   // ตัวช่วย
   // ---------------------------------------------------------------------------
   /** เหตุการณ์จากการแก้งาน: issue.updated · issue.status_changed · issue.assigned (ส่งหลัง commit) */
-  private async changeEvents(tx: Tx, auth: AuthInfo, tenant: TenantInfo, project: ProjectRow, before: Issue, after: Issue, assignees: { before: string[]; after: string[] } | null) {
+  private async changeEvents(tx: Tx, auth: AuthInfo, tenant: TenantInfo, project: ProjectRow, before: Issue, after: Issue, assignees: { before: string[]; after: string[] } | null, extraFields: readonly string[] = []) {
     const ev = eventFor(auth, tenant, project, after);
     const out: DomainEvent[] = [];
     const fields = diff(before, after).map((c) => c.field);
     if (assignees) fields.push('assigneeIds');
+    fields.push(...extraFields);
     if (fields.length) out.push(ev('issue.updated', { fields }));
     if (before.statusId !== after.statusId) {
       const rows = await tx.select().from(s.workflowStatuses).where(inArray(s.workflowStatuses.id, [before.statusId, after.statusId]));
@@ -871,6 +907,60 @@ export class IssuesService {
     return !!r;
   }
 
+  private async checkLabels(tx: Tx, projectId: string, ids: string[]) {
+    if (!ids.length) return;
+    const rows = await tx.select({ id: s.labels.id }).from(s.labels).where(and(eq(s.labels.projectId, projectId), inArray(s.labels.id, ids)));
+    const missing = ids.filter((id) => !rows.some((r) => r.id === id));
+    if (missing.length) throw new AppError(400, 'invalid_reference', 'Label ไม่อยู่ในโปรเจกต์นี้', { labelIds: missing });
+  }
+
+  /** Requirement / Screen / Label ของหลายงานในครั้งเดียว (ใช้ทั้ง DTO และเทียบก่อนแก้) */
+  private async readRefs(tx: Tx, ids: string[]) {
+    // ทีละ query เพราะ transaction เดียวใช้ connection เดียว
+    const reqs = await tx.select({ issueId: s.issueRequirements.issueId, code: s.requirements.code }).from(s.issueRequirements)
+      .innerJoin(s.requirements, eq(s.requirements.id, s.issueRequirements.requirementId)).where(inArray(s.issueRequirements.issueId, ids)).orderBy(asc(s.requirements.code));
+    const scrs = await tx.select({ issueId: s.issueScreens.issueId, code: s.screens.code }).from(s.issueScreens)
+      .innerJoin(s.screens, eq(s.screens.id, s.issueScreens.screenId)).where(inArray(s.issueScreens.issueId, ids)).orderBy(asc(s.screens.code));
+    const lbls = await tx.select({ issueId: s.issueLabels.issueId, id: s.labels.id, name: s.labels.name, color: s.labels.color }).from(s.issueLabels)
+      .innerJoin(s.labels, eq(s.labels.id, s.issueLabels.labelId)).where(inArray(s.issueLabels.issueId, ids)).orderBy(asc(s.labels.name));
+    return ids.map((id) => {
+      const labels = lbls.filter((l) => l.issueId === id).map(({ issueId: _, ...l }) => l);
+      return {
+        requirements: reqs.filter((r) => r.issueId === id).map((r) => r.code),
+        screens: scrs.filter((r) => r.issueId === id).map((r) => r.code),
+        labelIds: labels.map((l) => l.id),
+        labels,
+      };
+    });
+  }
+
+  /** เขียนชุดใหม่ทั้งชุด · รหัสที่ยังไม่มีในโปรเจกต์สร้างให้ (03-api) */
+  private async writeRefs(tx: Tx, project: ProjectRow, issueId: string, refs: Partial<Record<(typeof REF_FIELDS)[number], string[]>>, replace = false) {
+    const ws = { workspaceId: project.workspaceId };
+    const ensure = async (table: typeof s.requirements | typeof s.screens, codes: string[]) => {
+      if (!codes.length) return [];
+      await tx.insert(table)
+        .values(codes.map((code) => ({ ...ws, projectId: project.id, code, ...(table === s.requirements ? { kind: code.startsWith('NFR') ? 'NFR' : 'FR' } : {}) })))
+        .onConflictDoNothing();
+      const rows = await tx.select({ id: table.id }).from(table).where(and(eq(table.projectId, project.id), inArray(table.code, codes)));
+      return rows.map((r) => r.id);
+    };
+    if (refs.requirements) {
+      if (replace) await tx.delete(s.issueRequirements).where(eq(s.issueRequirements.issueId, issueId));
+      const ids = await ensure(s.requirements, refs.requirements);
+      if (ids.length) await tx.insert(s.issueRequirements).values(ids.map((requirementId) => ({ ...ws, issueId, requirementId })));
+    }
+    if (refs.screens) {
+      if (replace) await tx.delete(s.issueScreens).where(eq(s.issueScreens.issueId, issueId));
+      const ids = await ensure(s.screens, refs.screens);
+      if (ids.length) await tx.insert(s.issueScreens).values(ids.map((screenId) => ({ ...ws, issueId, screenId })));
+    }
+    if (refs.labelIds) {
+      if (replace) await tx.delete(s.issueLabels).where(eq(s.issueLabels.issueId, issueId));
+      if (refs.labelIds.length) await tx.insert(s.issueLabels).values(refs.labelIds.map((labelId) => ({ ...ws, issueId, labelId })));
+    }
+  }
+
   private async assigneeIds(tx: Tx, issueId: string) {
     const rows = await tx.select({ userId: s.issueAssignees.userId }).from(s.issueAssignees).where(eq(s.issueAssignees.issueId, issueId)).orderBy(asc(s.issueAssignees.sort));
     return rows.map((r) => r.userId);
@@ -904,9 +994,11 @@ export class IssuesService {
     const people = access.guestViewer
       ? []
       : await tx.select({ issueId: s.issueAssignees.issueId, userId: s.issueAssignees.userId }).from(s.issueAssignees).where(inArray(s.issueAssignees.issueId, ids)).orderBy(asc(s.issueAssignees.sort));
+    const refs = await this.readRefs(tx, ids);
 
-    return issues.map((i) => {
+    return issues.map((i, index) => {
       const m = byId.get(i.id)!;
+      const { requirements, screens, labels } = refs[index];
       const base = {
         id: i.id,
         key: `${project.key}-${i.number}`,
@@ -933,6 +1025,9 @@ export class IssuesService {
         environment: i.environment,
         details: i.details,
         sharedWithGuests: i.sharedWithGuests,
+        requirements,
+        screens,
+        labels,
         version: i.version,
         createdAt: i.createdAt,
         updatedAt: i.updatedAt,
@@ -990,6 +1085,9 @@ export function outsideParent(parent: Issue, start?: string | null, end?: string
   const out = (parent.planStart && start && start < parent.planStart) || (parent.planEnd && end && end > parent.planEnd);
   return out ? [{ code: 'outside_parent_range', message: `วันที่อยู่นอกช่วงของงานแม่ (${parent.planStart} – ${parent.planEnd})` }] : [];
 }
+
+/** ข้อมูลอ้างอิงที่อยู่ตารางเชื่อม แก้ผ่าน PATCH แบบแทนทั้งชุด */
+const REF_FIELDS = ['requirements', 'screens', 'labelIds'] as const;
 
 const DIFF_FIELDS = ['title', 'description', 'statusId', 'priority', 'moduleId', 'phaseId', 'sprintId', 'baId', 'reviewerId', 'testerId', 'size', 'estimateMd', 'planStart', 'planEnd', 'actualStart', 'progressPct', 'severity', 'environment', 'sharedWithGuests'] as const;
 

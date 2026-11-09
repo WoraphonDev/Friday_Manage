@@ -49,8 +49,18 @@ export const payments = pgTable('payments', {
   id: pk(), workspaceId: workspaceId(), invoiceId: uuid().notNull(), method: paymentMethod().notNull(),
   amount: bigint({ mode: 'number' }).notNull(), providerRef: text(), slipFileKey: text(),
   status: paymentStatus().notNull().default('pending_review'), reviewedBy: uuid().references(() => staffUsers.id), reviewedAt: tstz(),
+  /** ใครยืนยันเงินเข้า (Friday Ops เฟส 1) · null = ยังไม่ยืนยัน */
+  verifiedBy: text(),
+  /** เหตุที่ระบบยืนยันเองไม่ได้ · มีค่า = อยู่ในคิวกรณีผิดปกติ */
+  exceptionReason: text(),
+  /** ใบแจ้งหนี้ที่พนักงานผูกให้เมื่อเงินเข้าไม่ตรงใบเดิม */
+  matchedInvoiceId: uuid(),
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [tenantFk('payments_invoice_fk', t.workspaceId, t.invoiceId, invoices),
+  tenantFk('payments_matched_invoice_fk', t.workspaceId, t.matchedInvoiceId, invoices),
+  index('payments_exception_idx').on(t.exceptionReason).where(sql`${t.exceptionReason} IS NOT NULL`),
+  check('payments_verified_by_valid', sql`${t.verifiedBy} IS NULL OR ${t.verifiedBy} IN ('webhook', 'bank', 'slip_api', 'staff')`),
+  check('payments_exception_reason_valid', sql`${t.exceptionReason} IS NULL OR ${t.exceptionReason} IN ('amount_mismatch', 'wht_not_declared', 'duplicate_slip', 'payer_name_mismatch', 'unmatched', 'double_payment', 'wht_certificate', 'unreadable_slip')`),
   uniqueIndex('payments_provider_ref_key').on(t.method, t.providerRef), index('payments_invoice_idx').on(t.invoiceId),
   check('payments_amount_positive', sql`${t.amount} > 0`)]);
 

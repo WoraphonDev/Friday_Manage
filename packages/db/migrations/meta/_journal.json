@@ -120,6 +120,20 @@
       "when": 1794210826308,
       "tag": "0016_project_member_pm_deputy",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794238518230,
+      "tag": "0017_ops_phase1",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794238518974,
+      "tag": "0018_ops_phase1_rls",
+      "breakpoints": true
     }
   ]
 }

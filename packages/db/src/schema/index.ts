@@ -15,3 +15,5 @@ export * from './automation.ts';
 export * from './privacy.ts';
 export * from './billing.ts';
 export * from './ops.ts';
+export * from './money.ts';
+export * from './metrics.ts';

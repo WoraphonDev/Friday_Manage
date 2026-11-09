@@ -209,6 +209,9 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `wht_certificate` | หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) | invoice_id, file_key, uploaded_by, status, reviewed_by | R2, Q3 |
 | `legal_document` | ข้อกำหนด, นโยบาย, DPA (ระดับระบบ) | doc_type, version, effective_at, summary | R4 |
 | `legal_acceptance` | ใครรับทราบฉบับไหน | user_id, workspace_id, document_id, accepted_at, ip | R4, J2 |
+| `credit_note` | ใบลดหนี้ · คืนเงิน ให้เครดิต หรือยกเลิกใบที่ออกใบกำกับแล้ว (Friday Ops เฟส 1) | workspace_id, invoice_id, number, kind (refund · credit · void), amount_satang, vat_satang, reason, status (draft · issued · sent), refund_method, approval_request_id, issued_at | Ops 4, 13 |
+| `workspace_credit` | สมุดเครดิต · ยอดคงเหลือ = ผลรวม (บวกได้ · ลบใช้หัก) | workspace_id, amount_satang, source (credit_note · overpayment · goodwill · applied), credit_note_id, invoice_id, note | Ops 4, 13 |
+| `dunning_event` | ประวัติการตามหนี้ | workspace_id, invoice_id, step, channel, result, by_staff | Ops 4 |
 
 ## N. หลังบ้านทีม Friday (ระดับระบบ · แยกฐานสิทธิ์จากลูกค้า)
 
@@ -220,6 +223,31 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `feature_flag` | | key, description, default_on | Q3 |
 | `feature_flag_override` | เปิดให้บางลูกค้า | flag_id, workspace_id, enabled | Q3 |
 | `announcement` | ประกาศถึงลูกค้า | message, audience (all · owners_admins), channels (banner · email), scheduled_at, sent_at | Q3 |
+| `staff_elevation` | สิทธิ์ฉุกเฉิน: Owner เปิดบทบาทให้ตัวเองชั่วคราว ≤ 1 ชม. | staff_id, role, reason, started_at, ends_at, ended_at, ended_by | Ops 8 |
+| `approval_request` | คำขออนุมัติเมื่อเกินวงเงิน | kind, workspace_id (null = ระดับระบบ), target_type, target_id, payload, amount_satang, requested_by, reason, status, decided_by, self_approved, expires_at | Ops G7, G8, G12 |
+| `staff_audit_log` | การกระทำของทีม Friday ที่ไม่ผูก Workspace · append-only (แม้ role ของ ops) | staff_id, roles, action, target_type, target_id, workspace_id, reason, approved_by, self_approved, ip | Ops 8 |
+| `support_ticket` | Ticket · เฟส 1 คิวกลาง | number, workspace_id, requester_user_id / requester_email, channel, category, priority, subject, status, assignee_id, SLA due, cause, csat | Ops 6 |
+| `support_ticket_message` | ข้อความใน Ticket · internal = ลูกค้าไม่เห็น | ticket_id, author_kind, author_user_id / author_staff_id, body, internal, attachments | Ops 6 |
+| `incident` | เหตุขัดข้องในหน้าสถานะ · internal = ยังไม่เผยแพร่ | title, impact, status, services[], owner_id, started_at, resolved_at | Ops 12 |
+| `incident_update` | อัปเดตของเหตุขัดข้อง | incident_id, status, message, notify_subscribers, show_banner, created_by | Ops 12 |
+| `maintenance_window` | ปิดปรับปรุง · API ฝั่งลูกค้าอ่านเพื่อเปลี่ยนเป็นอ่านอย่างเดียว | scope, message, starts_at, ends_at, notify_plan, status, approval_request_id | Ops 12 |
+| `status_subscriber` | ผู้ติดตามหน้าสถานะ | email, confirmed_at, unsubscribed_at | Ops 12 |
+
+`staff_users` (Friday Ops เฟส 1 · [06-ops-roles](06-ops-roles.md)): `roles` (owner · finance · support · engineer · auditor, อย่างน้อย 1), `department`, `limits`, `status`, `expires_at` · `role` เดิมเลิกใช้ trigger เติม `roles` ให้จนกว่า O01 ย้ายโค้ด · `payments` เพิ่ม `verified_by`, `exception_reason`, `matched_invoice_id` · `support_sessions` เพิ่ม `ticket_id`
+
+## O. ข้อมูลธุรกิจ ([05-business-metrics](05-business-metrics.md))
+
+| Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
+|---|---|---|---|
+| `signup_attribution` | ช่องทางที่ผู้ใช้มาครั้งแรก (1:1) | user_id, utm_*, referrer_host, landing_path, via, invited_by_user_id, invited_workspace_id | Ops 16 |
+| `workspace_acquisition` | ที่มาของ Workspace | workspace_id, source, medium, campaign, referrer_host, via, referring_workspace_id | Ops 16 |
+| `product_event` | เหตุการณ์ในแอปที่หาจากตารางอื่นไม่ได้ · append-only | workspace_id, user_id, name, props, occurred_at | Ops 16 |
+| `subscription_change` | ทุกครั้งที่ MRR เปลี่ยน · append-only | workspace_id, kind, plan_from / to, seats_from / to, mrr_before / after_satang, actor_kind, effective_at | Ops 1, 16 |
+| `cancellation_response` | คำตอบตอนกดยกเลิกแพ็กเกจ | workspace_id, user_id, reason, missing_feature, switched_to, offer_shown, outcome | Ops 16 |
+| `daily_usage` | ยอดใช้ต่อ Workspace ต่อวัน | workspace_id, date, line_messages, emails, webhook_calls, storage_bytes, api_calls, automation_runs, active_users | Ops 16 |
+| `cost_rate` | ต้นทุนต่อหน่วย | resource, unit_cost_satang หรือ pct, effective_from | Ops 16 (B9) |
+| `infra_cost` | ค่าใช้จ่ายส่วนกลางรายเดือน | month, category, amount_satang | Ops 16 |
+| `marketing_cost` | ค่าการตลาดรายเดือนตามช่องทาง | month, source, amount_satang, note | Ops 16 (B10) |
 
 ---
 

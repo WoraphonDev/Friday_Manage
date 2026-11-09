@@ -50,8 +50,8 @@ export class PaymentsController {
 
   @Post('invoices/:id/slip')
   @UseInterceptors(upload())
-  slip(@Auth() a: AuthInfo, @Tenant() t: TenantInfo, @Param('id') id: string, @UploadedFile() file: Express.Multer.File | undefined) {
-    return this.invoices.slip(a, t, id, file);
+  slip(@Auth() a: AuthInfo, @Tenant() t: TenantInfo, @Param('id') id: string, @UploadedFile() file: Express.Multer.File | undefined, @Body() body: unknown) {
+    return this.invoices.slip(a, t, id, file, body);
   }
 
   @Post('invoices/:id/wht-certificate')

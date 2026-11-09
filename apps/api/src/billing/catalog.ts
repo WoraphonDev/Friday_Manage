@@ -64,9 +64,9 @@ export function priceFor(spec: PlanSpec, cycle: Cycle, override?: { monthly: num
   return spec.monthlySatang || null;
 }
 
-/** VAT 7% คิดจากยอดก่อนภาษี · หัก ณ ที่จ่าย 3% คิดจากยอดก่อน VAT · ใบกำกับภาษียังออกเต็มจำนวน */
-export function computeQuote(spec: PlanSpec, cycle: Cycle, wht: boolean, subtotal: number): Quote {
-  const vat = Math.round(subtotal * VAT_RATE);
+/** VAT 7% คิดจากยอดก่อนภาษี (เฉพาะเมื่อบริษัทจด VAT) · หัก ณ ที่จ่าย 3% คิดจากยอดก่อน VAT · ใบกำกับภาษียังออกเต็มจำนวน */
+export function computeQuote(spec: PlanSpec, cycle: Cycle, wht: boolean, subtotal: number, vatRegistered = true): Quote {
+  const vat = vatRegistered ? Math.round(subtotal * VAT_RATE) : 0;
   const total = subtotal + vat;
   const whtAmount = wht ? Math.round(subtotal * WHT_RATE) : 0;
   return { plan: spec.code, planName: spec.name, cycle, wht, subtotal, vat, total, whtAmount, amountDue: total - whtAmount };

@@ -93,11 +93,13 @@ export class OpsPaymentsService {
     if (p.status === 'confirmed') throw new AppError(409, 'already_confirmed', 'ยืนยันรายการนี้แล้ว');
     const meta = await this.meta(inv.id);
     await this.db.transaction(async (tx) => {
-      await tx.update(s.payments).set({ status: 'confirmed', reviewedBy: staff.id, reviewedAt: new Date(), updatedAt: new Date() }).where(eq(s.payments.id, p.id));
+      await tx.update(s.payments).set({ status: 'confirmed', verifiedBy: 'staff', reviewedBy: staff.id, reviewedAt: new Date(), updatedAt: new Date() }).where(eq(s.payments.id, p.id));
       await tx.update(s.invoices).set({ status: 'paid', paidAt: new Date(), updatedAt: new Date() }).where(eq(s.invoices.id, inv.id));
       const granted = await this.activate(tx, inv, meta);
-      // ออกใบกำกับภาษีหลังยืนยันชำระ · สถานะ pending จนกว่างาน e-Tax ของ API ลูกค้าจะรับไปส่งต่อ
-      await tx.insert(s.taxDocuments).values({ workspaceId: inv.workspaceId, invoiceId: inv.id, docType: 'tax_invoice_receipt', number: `TX-${inv.number.slice(4)}` }).onConflictDoNothing();
+      // จด VAT: ใบกำกับภาษี (pending จนงาน e-Tax ของ API ลูกค้ารับไปส่ง) · ยังไม่จด: ใบเสร็จ ออกทันที (ตั้งค่า VAT_REGISTERED ให้ตรงกับ API ลูกค้า)
+      await tx.insert(s.taxDocuments).values(process.env.VAT_REGISTERED !== 'false'
+        ? { workspaceId: inv.workspaceId, invoiceId: inv.id, docType: 'tax_invoice_receipt', number: `TX-${inv.number.slice(4)}` }
+        : { workspaceId: inv.workspaceId, invoiceId: inv.id, docType: 'receipt', number: `RC-${inv.number.slice(4)}`, status: 'issued', sentAt: new Date() }).onConflictDoNothing();
       await audit(tx, staff, inv.workspaceId, 'plan', 'ops.payment_confirmed', `ยืนยันการชำระ ${inv.number} · ${p.method} · ${p.amount / 100} บาท${granted ? '' : ' · ไม่เปลี่ยนแพ็กเกจ (มีใบที่ใหม่กว่าเปิดสิทธิ์อยู่)'}${input.note ? ` · ${input.note}` : ''}`, { type: 'payment', id: p.id });
     });
     return { id: p.id, status: 'confirmed' as const, invoice: inv.number };

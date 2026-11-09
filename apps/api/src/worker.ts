@@ -1,5 +1,6 @@
 // Worker ของคิวงานเบื้องหลัง · โปรเซสแยกจาก API แต่โหลด AppModule เดียวกัน
 // ทุก module จึง define งานของตัวเองใน onModuleInit เหมือนตอนรัน API
+import { SentryLogger } from './instrument.js';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
@@ -11,7 +12,8 @@ if (jobsConfigFromEnv().mode !== 'bullmq') {
   process.exit(1);
 }
 
-const ctx = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn'] });
+// Error ของงานเบื้องหลังส่ง GlitchTip ด้วย Logger เดียวกับ API (ปิดอยู่ถ้าไม่ตั้ง SENTRY_DSN)
+const ctx = await NestFactory.createApplicationContext(AppModule, { logger: new SentryLogger('Worker', { logLevels: ['error', 'warn'] }) });
 // SIGTERM → ปิด Worker หลังงานที่กำลังรันเสร็จ (Jobs.onModuleDestroy)
 ctx.enableShutdownHooks();
 const jobs = ctx.get(Jobs);

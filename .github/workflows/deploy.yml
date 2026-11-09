@@ -1,0 +1,155 @@
+name: Deploy
+
+# ตรวจ image และ IaC ทุก PR / push ที่เกี่ยวข้อง · deploy จริงต้องกด Run workflow เองและผ่านการอนุมัติของ environment "production"
+# (I01: ไม่ deploy จริงจนกว่าผู้ใช้อนุมัติค่าใช้จ่าย)
+on:
+  pull_request:
+    paths: ['apps/api/**', 'apps/web/**', 'packages/db/**', 'infra/**', 'Dockerfile*', 'pnpm-lock.yaml', '.github/workflows/deploy.yml']
+  push:
+    branches: [main]
+    paths: ['apps/api/**', 'apps/web/**', 'packages/db/**', 'infra/**', 'Dockerfile*', 'pnpm-lock.yaml', '.github/workflows/deploy.yml']
+  workflow_dispatch:
+    inputs:
+      first_deploy:
+        description: 'deploy ครั้งแรก (ยังไม่มีฐานข้อมูล): สร้าง stack โดยหยุด service → migrate → เปิด service'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
+jobs:
+  images:
+    name: Build ${{ matrix.image }} image (ARM64)
+    # Fargate รันบน Graviton · build บน runner ARM แทนการจำลองด้วย QEMU ที่ช้ามาก
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [api, web]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v3
+      - name: Build without pushing
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.${{ matrix.image }}
+          platforms: linux/arm64
+          push: false
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  infra:
+    name: CDK typecheck, test and synth
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: infra/aws
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: infra/aws/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Synth with a placeholder certificate (no AWS account needed)
+        run: npx cdk synth --quiet -c imageTag=${{ github.sha }} -c certificateArn=arn:aws:acm:ap-southeast-7:111111111111:certificate/00000000-0000-0000-0000-000000000000
+
+  deploy:
+    name: Deploy to AWS
+    if: github.event_name == 'workflow_dispatch'
+    needs: [images, infra]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    # ตั้ง required reviewers ใน Settings › Environments › production · secrets/vars อยู่ใน environment นี้
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-southeast-7' }}
+      TAG: ${{ github.sha }}
+      CDK_CONTEXT: >-
+        -c imageTag=${{ github.sha }}
+        -c domainName=${{ vars.DOMAIN_NAME }}
+        -c certificateArn=${{ vars.CERTIFICATE_ARN }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check required settings
+        run: |
+          test -n "${{ vars.DOMAIN_NAME }}" || { echo "ตั้ง vars.DOMAIN_NAME ใน environment production"; exit 1; }
+          test -n "${{ vars.CERTIFICATE_ARN }}" || { echo "ตั้ง vars.CERTIFICATE_ARN (ACM ใน region เดียวกัน)"; exit 1; }
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - uses: docker/setup-buildx-action@v3
+      - name: Push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.api
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/friday-api:${{ github.sha }}
+          cache-from: type=gha,scope=api
+      - name: Push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.web
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/friday-web:${{ github.sha }}
+          cache-from: type=gha,scope=web
+          build-args: |
+            API_ORIGIN=https://${{ vars.DOMAIN_NAME }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.WEB_SENTRY_DSN }}
+            NEXT_PUBLIC_APP_VERSION=${{ github.sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: infra/aws/package-lock.json
+      - run: npm ci
+        working-directory: infra/aws
+
+      - name: First deploy — create everything with services paused
+        if: inputs.first_deploy
+        working-directory: infra/aws
+        run: npx cdk deploy FridayApp $CDK_CONTEXT -c pauseServices=true --require-approval never
+
+      # Migration ก่อนเปลี่ยนโค้ดของ service: ลงทะเบียน revision ใหม่ของ friday-migrate ด้วย image ของ commit นี้ แล้วรันครั้งเดียว
+      - name: Run database migration with the new image
+        run: |
+          set -euo pipefail
+          out() { aws cloudformation describe-stacks --stack-name FridayApp --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
+          CLUSTER=$(out ClusterName); SUBNETS=$(out TaskSubnets); SG=$(out TaskSecurityGroup)
+          IMAGE="${{ steps.ecr.outputs.registry }}/friday-api:${TAG}"
+          aws ecs describe-task-definition --task-definition friday-migrate --query taskDefinition > td.json
+          jq --arg image "$IMAGE" '.containerDefinitions[0].image = $image
+            | {family, taskRoleArn, executionRoleArn, networkMode, containerDefinitions, requiresCompatibilities, cpu, memory, runtimePlatform}' td.json > new-td.json
+          TD=$(aws ecs register-task-definition --cli-input-json file://new-td.json --query taskDefinition.taskDefinitionArn --output text)
+          TASK=$(aws ecs run-task --cluster "$CLUSTER" --task-definition "$TD" --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${SUBNETS}],securityGroups=[${SG}],assignPublicIp=DISABLED}" \
+            --query 'tasks[0].taskArn' --output text)
+          echo "migration task: $TASK"
+          aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK"
+          CODE=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK" --query 'tasks[0].containers[0].exitCode' --output text)
+          test "$CODE" = "0" || { echo "migration ล้มเหลว (exit $CODE) · ดู log กลุ่ม /friday/app สตรีม migrate"; exit 1; }
+
+      - name: Deploy services
+        working-directory: infra/aws
+        run: npx cdk deploy FridayApp $CDK_CONTEXT --require-approval never

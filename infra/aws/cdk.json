@@ -1,0 +1,21 @@
+{
+  "app": "node bin/friday.ts",
+  "watch": {
+    "include": [
+      "bin/**",
+      "lib/**"
+    ]
+  },
+  "context": {
+    "region": "ap-southeast-7",
+    "githubRepo": "WoraphonDev/Friday_Manage",
+    "domainName": "friday.example.com",
+    "certificateArn": "",
+    "imageTag": "latest",
+    "@aws-cdk/core:checkSecretUsage": true,
+    "@aws-cdk/aws-iam:minimizePolicies": true,
+    "@aws-cdk/aws-ecs:arnFormatIncludesClusterName": true,
+    "@aws-cdk/aws-rds:auroraClusterChangeScopeOfInstanceParameterGroupWithEachParameters": true,
+    "@aws-cdk/core:defaultCrossStackReferences": "strong"
+  }
+}

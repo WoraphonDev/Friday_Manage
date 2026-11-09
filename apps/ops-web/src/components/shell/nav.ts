@@ -59,9 +59,9 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
   {
     group: "analytics",
     items: [
-      { key: "business", href: "/business", built: false, roles: MONEY },
-      { key: "funnel", href: "/business?tab=funnel", built: false, roles: MONEY },
-      { key: "adoption", href: "/business?tab=adoption", built: false, roles: MONEY },
+      { key: "business", href: "/business", built: true, roles: MONEY },
+      { key: "funnel", href: "/business#funnel", built: true, roles: MONEY },
+      { key: "adoption", href: "/business#adoption", built: true, roles: MONEY },
     ],
   },
   {

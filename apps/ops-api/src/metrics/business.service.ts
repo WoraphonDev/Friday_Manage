@@ -124,6 +124,16 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
         (select count(*)::int from privacy_requests where status = 'open' and due_date <= ${todayBkk()}::date + 7) as "privacyDueSoon",
         (select count(*)::int from data_breaches where closed_at is null) as "breachesOpen"`);
     const movement = Object.fromEntries(moves.map((m) => [m.kind, { count: m.n, mrrDelta: m.delta }]));
+    // MRR สิ้นเดือนย้อนหลัง 11 เดือน (จากประวัติ subscription_changes) + เดือนนี้ = ตอนนี้ · ไว้วาดกราฟ 12 เดือนหน้าภาพรวม
+    const mrrHistory: { month: string; mrrSatang: number }[] = [];
+    if (money) {
+      for (let n = 11; n >= 1; n--) {
+        const m = addMonths(month, -n);
+        const end = await this.mrrAt(new Date(`${monthStart(addMonths(m, 1))}T00:00:00+07:00`));
+        mrrHistory.push({ month: m, mrrSatang: [...end.values()].reduce((x, v) => x + v, 0) });
+      }
+      mrrHistory.push({ month, mrrSatang: mrr });
+    }
     return {
       month,
       money: money
@@ -136,6 +146,8 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
             netNewMrr: moves.reduce((n, m) => n + m.delta, 0),
             churn: { logoPct: pct(churned.reduce((n, m) => n + m.n, 0), atStart.size), revenuePct: pct(churned.reduce((n, m) => n + m.lost, 0), startMrr), paymentFailures: moves.find((m) => m.kind === 'churn_payment')?.n ?? 0 },
             nrrPct: base12 > 0 ? pct(kept12, base12) : null,
+            startMrr,
+            mrrHistory,
           }
         : null,
       trialing: Number(counts.trialing),

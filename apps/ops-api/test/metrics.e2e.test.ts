@@ -70,6 +70,10 @@ describe('ภาพรวม (Main)', () => {
     expect(m.churn.revenuePct).toBeGreaterThan(9);
     // 12 เดือนก่อน: c 150,000 + d 300,000 · ตอนนี้ d 550,000 → 122.2%
     expect(m.nrrPct).toBe(122.2);
+    // กราฟ 12 เดือน: เดือนนี้ = MRR ตอนนี้ · 11 เดือนก่อนมีแค่ c 150,000 + d 300,000
+    expect(m.mrrHistory).toHaveLength(12);
+    expect(m.mrrHistory[11]).toEqual({ month: r.body.month, mrrSatang: 1_401_000 });
+    expect(m.mrrHistory[0].mrrSatang).toBe(450_000);
     expect(r.body.tasks).toMatchObject({ paymentExceptions: 1, invoicesOverdue: 1, approvals: 0, incidentsOpen: 0 });
     const sp = await support.agent.get('/ops/overview');
     expect(sp.body.money).toBeNull();

@@ -1,0 +1,90 @@
+import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
+import { describe, expect, it } from "vitest";
+import { renderWithProviders } from "@/test/render";
+import { overview } from "@/test/fixtures";
+import { asRole, OPS, server } from "@/test/server";
+import MainPage from "../page";
+
+const history = Array.from({ length: 12 }, (_, i) => ({ month: `${i < 1 ? 2025 : 2026}-${String(((i + 11) % 12) + 1).padStart(2, "0")}`, mrrSatang: 10_000_000 + i * 700_000 }));
+history[11] = { month: "2026-11", mrrSatang: 18_450_000 };
+const data = {
+  ...overview,
+  money: {
+    ...overview.money,
+    startMrr: 17_000_000,
+    netNewMrr: 1_450_000,
+    movement: { new: { count: 2, mrrDelta: 1_200_000 }, upgrade: { count: 1, mrrDelta: 500_000 }, cancel: { count: 1, mrrDelta: -250_000 } },
+    churn: { logoPct: 12.5, revenuePct: 1.5, paymentFailures: 0 },
+    nrrPct: 104,
+    mrrHistory: history,
+  },
+};
+const rows = [
+  { id: "w1", name: "ภูผาซอฟต์", plan: "team_m", seats: 10, active30: 3, health: 32, mrr: 690_000, paymentState: "ok" },
+  { id: "w2", name: "ลูเมนสตูดิโอ", plan: "team_s", seats: 5, active30: 5, health: 41, mrr: 290_000, paymentState: "overdue" },
+  { id: "w3", name: "แข็งแรงดี", plan: "team_l", seats: 20, active30: 19, health: 88, mrr: 1_500_000, paymentState: "ok" },
+];
+const page = (d: object = data) => {
+  server.use(
+    http.get(`${OPS}/overview`, () => HttpResponse.json(d)),
+    http.get(`${OPS}/workspaces`, ({ request }) => {
+      const u = new URL(request.url);
+      if (u.searchParams.get("sort") === "health") return HttpResponse.json({ items: rows, total: 3 });
+      return HttpResponse.json({ items: [], total: { free: 412, team_s: 96, team_m: 71, team_l: 35, enterprise: 12 }[u.searchParams.get("plan") ?? "free"] });
+    }),
+    http.get(`${OPS}/system/status`, () =>
+      HttpResponse.json({ api: { probes: 100, uptimePct: 99.98, p95Ms: 182, last: { ok: true } }, database: { ok: true, ms: 3 }, queue: { configured: true, failed: 0 }, deliveries: [{ channel: "email", total: 1000, sent: 996, failed: 4 }] }),
+    ),
+  );
+  return renderWithProviders(<MainPage />);
+};
+
+describe("ภาพรวม", () => {
+  it("การเงินเห็นตัวเลขเงิน กราฟ MRR 12 เดือน ความเคลื่อนไหว และงานของการเงิน", async () => {
+    asRole("finance");
+    page();
+    const kpi = await screen.findByRole("region", { name: "KPI" });
+    expect(within(kpi).getByText("฿184,500")).toBeInTheDocument();
+    expect(within(kpi).getByText("+8.5%")).toBeInTheDocument();
+    expect(within(kpi).getByText("104%")).toBeInTheDocument();
+    const chart = screen.getByRole("list", { name: "รายได้ประจำ (MRR) 12 เดือน" });
+    expect(within(chart).getAllByRole("listitem")).toHaveLength(12);
+    // ป้ายค่าเฉพาะเดือนล่าสุด · hover แท่งอื่นเห็นค่า
+    await userEvent.hover(within(chart).getAllByRole("listitem")[0]!);
+    expect(within(chart).getByText(/฿100,000$/)).toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole("button", { name: "ดูเป็นตาราง" })[0]!);
+    expect(screen.getByRole("table", { name: "รายได้ประจำ (MRR) 12 เดือน" })).toBeInTheDocument();
+    expect(screen.getByText("+฿12,000")).toBeInTheDocument();
+    expect(screen.getByText("−฿2,500")).toBeInTheDocument();
+    const todo = screen.getByRole("region", { name: "ต้องจัดการวันนี้" });
+    expect(within(todo).getByText("การชำระเงินผิดปกติ (ระบบยืนยันเองไม่ได้)")).toBeInTheDocument();
+    expect(within(todo).queryByText("Ticket ที่ยังไม่มีคนรับ")).not.toBeInTheDocument();
+    expect(await screen.findByText("ภูผาซอฟต์")).toBeInTheDocument();
+    expect(screen.queryByText("แข็งแรงดี")).not.toBeInTheDocument();
+    expect(screen.getByText("ใช้งาน 3 / 10 คนใน 30 วัน")).toBeInTheDocument();
+    expect(screen.getByText("ค้างชำระ")).toBeInTheDocument();
+    expect(await screen.findByText("412")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "สถานะระบบ" })).not.toBeInTheDocument();
+  });
+
+  it("Support ไม่เห็นตัวเลขเงิน เห็นงานของ Support", async () => {
+    asRole("support");
+    page({ ...data, money: null });
+    expect(await screen.findByText("กำลังทดลองใช้")).toBeInTheDocument();
+    expect(screen.queryByText("MRR")).not.toBeInTheDocument();
+    const todo = screen.getByRole("region", { name: "ต้องจัดการวันนี้" });
+    expect(within(todo).getByText("Ticket ที่ยังไม่มีคนรับ")).toBeInTheDocument();
+    expect(within(todo).getByText("เหตุขัดข้องที่เปิดอยู่")).toBeInTheDocument();
+    expect(within(todo).queryByText("สลิปรอตรวจ")).not.toBeInTheDocument();
+  });
+
+  it("วิศวกรเห็นสถานะระบบ", async () => {
+    asRole("engineer");
+    page({ ...data, money: null });
+    const sys = await screen.findByRole("region", { name: "สถานะระบบ" });
+    expect(await within(sys).findByText("99.98%")).toBeInTheDocument();
+    expect(within(sys).getByText("99.6%")).toBeInTheDocument();
+  });
+});

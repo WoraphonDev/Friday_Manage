@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { has, type Staff } from '../auth/auth.guard.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
-import { healthScore, mrrOf, profitOf, upgradeSignals } from './economics.js';
+import { healthScore, mrrOf, profitOf, upgradeSignals } from '../metrics/economics.js';
 
 const s = schema;
 const PLAN_CODES = ['free', 'team_s', 'team_m', 'team_l', 'enterprise'] as const;
@@ -189,10 +189,9 @@ export class CustomersService {
       .orderBy(desc(s.staffAuditLogs.createdAt))
       .limit(20);
     const money = seesMoney(staff);
-    const paidMonths = Number(raw.paidTotal ?? 0) * (raw.cycle === 'yearly' ? 12 : 1);
     const signals = upgradeSignals({
-      plan: x.plan, cycle: x.cycle, subStatus: x.subStatus, seats: x.seats, seatLimit: x.seatLimit, storageBytes: x.storageBytes,
-      storageGbPerMember: (raw.storageGbPerMember as number | null) ?? null, limitHits14d: hits, paidMonths,
+      plan: x.plan, cycle: x.cycle, subStatus: x.subStatus, seats: x.seats, seatLimit: x.seatLimit, guests: Number(raw.guests ?? 0), storageBytes: x.storageBytes,
+      storageGbPerMember: (raw.storageGbPerMember as number | null) ?? null, limitHits14d: hits, paidOnTimeMonths: Number(raw.paidOnTime ?? 0),
     });
     return {
       id: x.id,

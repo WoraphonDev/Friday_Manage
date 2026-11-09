@@ -2,8 +2,8 @@ import { type Db, schema } from '@friday/db';
 import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 
 /**
- * ตัวคำนวณของหน้า Workspaces / รายละเอียดลูกค้า (O02)
- * O06 (ธุรกิจและกำไร) ใช้สูตรเดียวกัน · ถ้า O06 ย้ายไปไว้ที่ metrics ให้ import จากที่นั่นแทน ไม่เขียนซ้ำ
+ * ตัวคำนวณกำไร สุขภาพ และสัญญาณพร้อมอัปเกรด (O06 · 05-business-metrics › 2)
+ * ใช้ร่วมกันระหว่างหน้า ธุรกิจและกำไร (metrics/) และรายละเอียดลูกค้า (workspaces/ · O02)
  */
 const s = schema;
 const DAY = 86_400_000;
@@ -41,8 +41,8 @@ export function mrrOf(sub: { status: string; cycle: string; discount: unknown } 
   return Math.round(base * (1 - pct / 100));
 }
 
-/** กำไรขั้นต้นต่อลูกค้า 30 วันล่าสุด: รายได้ (MRR) − ต้นทุนผันแปรจาก daily_usages × cost_rates */
-export async function profitOf(db: Db, workspaceId: string, mrr: number, paymentMethod: string | null) {
+/** กำไรขั้นต้นต่อลูกค้า 30 วันล่าสุด: รายได้ (MRR) − ต้นทุนผันแปรจาก daily_usages × cost_rates − ส่วนแบ่งค่าเซิร์ฟเวอร์ */
+export async function profitOf(db: Db, workspaceId: string, mrr: number, paymentMethod: string | null, infraShareSatang = 0) {
   const since = new Date(Date.now() - 30 * DAY).toISOString().slice(0, 10);
   const today = new Date().toISOString().slice(0, 10);
   const [u] = await db
@@ -62,8 +62,9 @@ export async function profitOf(db: Db, workspaceId: string, mrr: number, payment
     emails: { qty: u.emails, satang: Math.round(u.emails * unit('email')) },
     storage: { gb: Math.round((u.storage / 1024 ** 3) * 10) / 10, satang: Math.round((u.storage / 1024 ** 3) * unit('storage_gb_month')) },
     paymentFee: { satang: Math.round((mrr * Number(fee?.pct ?? 0)) / 100) },
+    infraShare: { satang: Math.round(infraShareSatang) },
   };
-  const totalCost = costs.lineMessages.satang + costs.emails.satang + costs.storage.satang + costs.paymentFee.satang;
+  const totalCost = costs.lineMessages.satang + costs.emails.satang + costs.storage.satang + costs.paymentFee.satang + costs.infraShare.satang;
   return { revenueSatang: mrr, costs, costSatang: totalCost, grossSatang: mrr - totalCost, marginPct: mrr > 0 ? Math.round(((mrr - totalCost) / mrr) * 100) : null };
 }
 
@@ -73,21 +74,27 @@ export interface SignalInput {
   subStatus: string | null;
   seats: number;
   seatLimit: number | null;
+  guests: number;
   storageBytes: number;
   storageGbPerMember: number | null;
   limitHits14d: { limit: string; n: number }[];
-  paidMonths: number;
+  /** รอบรายเดือนที่จ่ายตรงเวลา */
+  paidOnTimeMonths: number;
 }
 
-/** สัญญาณพร้อมอัปเกรด (หน้าจอ: "สัญญาณพร้อมอัปเกรด") */
+/**
+ * สัญญาณพร้อมอัปเกรด (05 › 2): ที่นั่ง ≥ 80% · limit.hit ≥ 3 ครั้งใน 14 วัน · Guest ≥ ที่นั่ง · พื้นที่ ≥ 90%
+ * · จ่ายรายเดือนตรงเวลา ≥ 6 รอบ (เสนอรายปี)
+ */
 export function upgradeSignals(x: SignalInput) {
   const out: { code: string; message: string }[] = [];
   if (x.seatLimit && x.seats / x.seatLimit >= 0.8) out.push({ code: 'seats_near_limit', message: `ที่นั่ง ${x.seats} / ${x.seatLimit} (${Math.round((x.seats / x.seatLimit) * 100)}%)` });
+  for (const h of x.limitHits14d) if (h.n >= 3) out.push({ code: 'limit_hit', message: `ชนขีดจำกัด ${h.limit} ${h.n} ครั้งใน 14 วัน` });
+  if (x.seats > 0 && x.guests >= x.seats) out.push({ code: 'many_guests', message: `Guest ${x.guests} คน เท่ากับหรือมากกว่าสมาชิก` });
   if (x.storageGbPerMember && x.seats > 0) {
     const cap = x.storageGbPerMember * x.seats * 1024 ** 3;
-    if (x.storageBytes / cap >= 0.8) out.push({ code: 'storage_near_limit', message: `พื้นที่ไฟล์ใช้ ${Math.round((x.storageBytes / cap) * 100)}% ของแพ็กเกจ` });
+    if (x.storageBytes / cap >= 0.9) out.push({ code: 'storage_near_limit', message: `พื้นที่ไฟล์ใช้ ${Math.round((x.storageBytes / cap) * 100)}% ของแพ็กเกจ` });
   }
-  for (const h of x.limitHits14d) if (h.n >= 2) out.push({ code: 'limit_hit', message: `ชนขีดจำกัด ${h.limit} ${h.n} ครั้งใน 14 วัน` });
-  if (x.cycle === 'monthly' && x.subStatus === 'active' && x.paidMonths >= 6) out.push({ code: 'yearly_candidate', message: `จ่ายรายเดือนมาแล้ว ${x.paidMonths} รอบ · เสนอรายปี` });
+  if (x.cycle === 'monthly' && x.subStatus === 'active' && x.paidOnTimeMonths >= 6) out.push({ code: 'yearly_candidate', message: `จ่ายรายเดือนตรงเวลา ${x.paidOnTimeMonths} รอบ · เสนอรายปี` });
   return out;
 }

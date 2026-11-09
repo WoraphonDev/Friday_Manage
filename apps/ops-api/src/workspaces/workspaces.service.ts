@@ -9,7 +9,7 @@ import { OPS_DB } from '../db.js';
 import { config } from '../config.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
-import { mrrOf } from './economics.js';
+import { mrrOf } from '../metrics/economics.js';
 
 const s = schema;
 const DAY = 86_400_000;

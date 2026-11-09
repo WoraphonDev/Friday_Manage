@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { AnalyticsService, classifyChange } from '../analytics/analytics.service.js';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { canGrant, type Db, schema, type Tx } from '@friday/db';
 import { and, count, eq, inArray, like, sql } from 'drizzle-orm';
@@ -72,6 +73,7 @@ export class PaymentsService implements OnModuleInit {
     @Inject(ETAX_PROVIDER) readonly etax: ETaxProvider,
     private readonly jobs: Jobs,
     private readonly mailer: Mailer,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   async onModuleInit() {
@@ -219,7 +221,11 @@ export class PaymentsService implements OnModuleInit {
       const meta = await this.meta(invoice.id);
       await tx.update(s.payments).set({ status: 'confirmed', updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
       await tx.update(s.invoices).set({ status: 'paid', paidAt: new Date(), updatedAt: new Date() }).where(eq(s.invoices.id, invoice.id));
+      const [prev] = await tx.select({ status: s.subscriptions.status, cycle: s.subscriptions.cycle, plan: s.plans.code }).from(s.subscriptions).leftJoin(s.plans, eq(s.plans.id, s.subscriptions.planId)).where(eq(s.subscriptions.id, invoice.subscriptionId));
       const granted = await this.activate(tx, invoice, meta);
+      // A34: MRR movement · MRR = ยอดก่อน VAT หลังส่วนลด (รายปีหาร 12)
+      const kind = granted ? classifyChange({ plan: prev?.plan ?? null, status: prev?.status ?? null, cycle: prev?.cycle ?? null }, { plan: meta.plan, cycle: meta.cycle }) : null;
+      if (kind) await this.analytics.subscriptionChanged(tx, { workspaceId: invoice.workspaceId, kind, planFrom: prev?.plan ?? null, planTo: meta.plan, mrrAfterSatang: meta.cycle === 'yearly' ? invoice.subtotal / 12 : invoice.subtotal, actorKind: 'system', actorId: null });
       const [doc] = await tx
         .insert(s.taxDocuments)
         .values({ workspaceId: invoice.workspaceId, invoiceId: invoice.id, docType: 'tax_invoice_receipt', number: `TX-${invoice.number.slice(4)}` })

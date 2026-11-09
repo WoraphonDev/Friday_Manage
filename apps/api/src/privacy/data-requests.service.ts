@@ -1,4 +1,5 @@
 import { createReadStream } from 'node:fs';
+import { AnalyticsService } from '../analytics/analytics.service.js';
 import { mkdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Inject, Injectable } from '@nestjs/common';
@@ -35,6 +36,7 @@ export class DataRequestsService {
   constructor(
     private readonly db: TenantDb,
     @Inject(SYSTEM_DB) private readonly sys: Db,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   async list(auth: AuthInfo, tenant: TenantInfo, q: z.infer<typeof ListQuery>) {
@@ -137,6 +139,7 @@ export class DataRequestsService {
     await this.sys.delete(s.userIdentities).where(eq(s.userIdentities.userId, userId));
     await this.sys.delete(s.mfaFactors).where(eq(s.mfaFactors.userId, userId));
     await this.sys.delete(s.authTokens).where(eq(s.authTokens.userId, userId));
+    await this.analytics.forgetUser(userId);
     return true;
   }
 

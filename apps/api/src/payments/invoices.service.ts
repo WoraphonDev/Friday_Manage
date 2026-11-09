@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { AnalyticsService } from '../analytics/analytics.service.js';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { Inject, Injectable } from '@nestjs/common';
@@ -43,6 +44,7 @@ export class InvoicesService {
     private readonly db: TenantDb,
     @Inject(SYSTEM_DB) private readonly sys: Db,
     private readonly payments: PaymentsService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   private requireBilling(tenant: TenantInfo) {
@@ -230,6 +232,11 @@ export class InvoicesService {
     const endsAt = sub.status === 'trialing' ? (sub.trialEndsAt ?? new Date()) : (sub.currentPeriodEnd ?? new Date());
     await this.sys.transaction(async (tx) => {
       await tx.update(s.subscriptions).set({ status: 'canceled', currentPeriodEnd: endsAt, updatedAt: new Date() }).where(eq(s.subscriptions.id, sub.id));
+      // A34: ยกเลิกช่วงทดลองไม่กระทบ MRR · ยกเลิกแพ็กเกจที่จ่ายเงิน MRR เป็น 0 เมื่อสิ้นรอบ
+      if (sub.status !== 'trialing') {
+        const [plan] = await tx.select({ code: s.plans.code }).from(s.plans).where(eq(s.plans.id, sub.planId));
+        await this.analytics.subscriptionChanged(tx, { workspaceId: tenant.workspaceId, kind: 'cancel', planFrom: plan?.code ?? null, planTo: null, mrrAfterSatang: 0, actorKind: 'user', actorId: auth.userId, effectiveAt: endsAt });
+      }
       await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'plan', action: 'billing.subscription_canceled', targetType: 'subscription', targetId: sub.id, summary: `ยกเลิกแพ็กเกจ · ใช้ได้ถึง ${endsAt.toISOString().slice(0, 10)}` });
     });
     return { status: 'canceled' as const, endsAt, today: today() };

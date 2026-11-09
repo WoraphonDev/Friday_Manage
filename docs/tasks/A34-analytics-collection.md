@@ -22,8 +22,8 @@
 
 ## เสร็จเมื่อ
 
-- [ ] test ครอบคลุมทุกข้อ · `pnpm --filter @friday/api typecheck test` ผ่าน
-- [ ] ไม่มี SDK วิเคราะห์ของบุคคลที่สาม
+- [x] test ครอบคลุมทุกข้อ · `pnpm --filter @friday/api typecheck test` ผ่าน
+- [x] ไม่มี SDK วิเคราะห์ของบุคคลที่สาม
 
 ## ไม่อยู่ในงานนี้
 
@@ -31,4 +31,31 @@
 
 ## บันทึกผล
 
-<!-- ผู้ทำงานเขียนตอนส่งงาน: endpoint / หน้าที่เพิ่ม, สิ่งที่ต่างจากสเปกหรือหน้าจอ, คำตัดสินที่เลือกเอง, คำขอนอก lane, คำถามที่ค้าง -->
+### สิ่งที่เพิ่ม
+
+- module `analytics` (Global) + `AnalyticsService`
+- `POST w/{ws}/events` (202): `feature.used` (14 ฟีเจอร์ · นับครั้งแรกของวันต่อคนต่อฟีเจอร์), `limit.hit`, `upgrade.prompt_shown / clicked`, `onboarding.step_done`, `checkout.started / method_selected` · props เป็น strict object ทุกชนิด จึงใส่เนื้อหาของลูกค้าไม่ได้ · บันทึกไม่สำเร็จตอบ `{ accepted: 0 }` ไม่ล้ม
+- `POST w/{ws}/cancellation-feedback` (Owner) → `cancellation_responses`
+- `POST auth/signup` รับ `attribution` (utm_*, referrer, landingPath, firstSeenAt) → `signup_attributions` · เก็บแค่ host ของ referrer และตัด query ของ path
+- สร้าง Workspace → `workspace_acquisitions` คัดลอกจากผู้สร้าง · **ผู้สร้างเคยเป็นสมาชิก (ไม่ใช่ Owner) ของ Workspace อื่น = `invited_user`** พร้อม `referring_workspace_id` (ไม่ต้องแก้ขั้นตอนรับคำเชิญ)
+- `subscription_changes`: ชำระเงินสำเร็จ (`payments.service.settle`) บันทึก new / upgrade / downgrade / cycle_change / reactivate ตาม `classifyChange` · MRR = subtotal (รายปีหาร 12) · ยกเลิกแพ็กเกจที่จ่ายเงินบันทึก `cancel` MRR 0 ณ สิ้นรอบ (ยกเลิกช่วงทดลองไม่บันทึก)
+- งาน `analytics.daily_usage` ทุกวัน 01:00 → `daily_usages` ของเมื่อวาน (LINE, อีเมล, Webhook ที่ส่งสำเร็จ · พื้นที่ไฟล์ · Automation · ผู้ใช้ที่ active) · รันซ้ำได้
+- PDPA: `anonymizeIfOrphan` เรียก `forgetUser` → ลบ `signup_attributions` และตั้ง `user_id` เป็น null ใน `product_events` / `cancellation_responses`
+
+### คำขอนอก lane (ทำแล้วในงานนี้)
+
+- `app.module.ts` ลงทะเบียน `AnalyticsModule` (module ใหม่ ไม่มีที่ว่างรอไว้)
+- `auth/auth.controller.ts` (SignupBody + บันทึกที่มา), `workspaces/workspaces.controller.ts`, `payments/payments.service.ts`, `payments/invoices.service.ts`, `privacy/data-requests.service.ts` เรียก `AnalyticsService` บรรทัดเดียวในแต่ละจุด
+- `apps/api/openapi.json` สร้างใหม่
+
+### ยังไม่ได้ทำ
+
+- หน้าเว็บยังไม่ส่ง `attribution` ตอนสมัคร และยังไม่ส่ง `feature.used` (งานเว็บ · บันทึกไว้ให้ W01 / W22 / งานหน้าเว็บที่เกี่ยวข้อง)
+- `api_calls` ใน `daily_usages` ยังเป็น 0 จนกว่าจะเก็บ log ของ API token
+- สมัครด้วย Google / Microsoft ยังไม่เก็บที่มา (ขั้นตอน redirect ไม่มีที่ส่งข้อมูล) · Workspace ของผู้ใช้เหล่านี้ยังได้ `workspace_acquisitions` (via = signup หรือ invited_user)
+- ops-api เปลี่ยนแพ็กเกจเองยังไม่บันทึก `subscription_changes` (เพิ่มใน O02)
+
+### ทดสอบ
+
+- `analytics.e2e.test.ts` 11 ข้อผ่าน · API ทั้งชุด 624 ข้อผ่าน (รวม openapi) · `pnpm typecheck` ผ่าน
+

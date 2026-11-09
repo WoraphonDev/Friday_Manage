@@ -60,15 +60,15 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
     group: "analytics",
     items: [
       { key: "business", href: "/business", built: true, roles: MONEY },
-      { key: "funnel", href: "/business#funnel", built: true, roles: MONEY },
-      { key: "adoption", href: "/business#adoption", built: true, roles: MONEY },
+      { key: "funnel", href: "/business/funnel", built: true, roles: MONEY },
+      { key: "adoption", href: "/business/adoption", built: true, roles: MONEY },
     ],
   },
   {
     group: "support",
     items: [
       { key: "support", href: "/support", built: true, roles: ["owner", "support"], badge: ["ticketsUnassigned"] },
-      { key: "sessions", href: "/support#sessions", built: true, roles: ["owner", "support"] },
+      { key: "sessions", href: "/support/sessions", built: true, roles: ["owner", "support"] },
       { key: "supportSettings", roles: ["owner", "support"] },
       { key: "help", roles: ["owner", "support"] },
       { key: "bugs", roles: ["owner", "support", "engineer"] },

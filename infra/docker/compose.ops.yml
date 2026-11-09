@@ -1,0 +1,57 @@
+# Friday Ops ในเครื่อง: หน้าเว็บ :4000 · API :4001 · ใช้ฐานข้อมูลและ API ลูกค้าชุดเดิมบนเครื่อง (ดู ops.md)
+name: friday-ops
+
+services:
+  ops-api:
+    image: friday-manage-ops-api:local
+    build:
+      context: ../..
+      dockerfile: Dockerfile.ops-api
+    ports:
+      - "127.0.0.1:${OPS_API_PORT:-4001}:4001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # หลังบ้านต้องใช้ role ที่ข้าม RLS (friday_worker ของ dev) · ค่าเริ่มต้น = ฐานข้อมูลทดสอบ friday_canvas_qa
+      OPS_DATABASE_URL: ${OPS_DATABASE_URL:-postgres://friday_worker:friday_worker_dev@host.docker.internal:54329/friday_canvas_qa}
+      # secret ของ dev (อยู่ใน repo อยู่แล้ว) · ห้ามใช้ค่านี้ที่อื่นนอกเครื่อง
+      OPS_AUTH_SECRET: ${OPS_AUTH_SECRET:-ops-dev-secret-change-me-0123456789abcdef}
+      OPS_WEB_ORIGIN: ${OPS_WEB_ORIGIN:-http://localhost:4000}
+      OPS_RP_ID: ${OPS_RP_ID:-localhost}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      API_HEALTH_URL: ${API_HEALTH_URL:-http://host.docker.internal:3001/healthz}
+      # ไฟล์สลิป / 50 ทวิ ที่ API ลูกค้าเก็บไว้ในเครื่อง (อ่านอย่างเดียว)
+      UPLOAD_DIR: /data/uploads
+      # งานเบื้องหลัง (ทวงหนี้ ส่งอีเมล ปิด Ticket ฯลฯ) ปิดไว้กับข้อมูลทดสอบ · เปิดด้วย OPS_JOBS=on
+      OPS_JOBS: ${OPS_JOBS:-off}
+      VALKEY_URL: ${OPS_VALKEY_URL:-}
+    volumes:
+      - ../../apps/api/var/uploads:/data/uploads:ro
+    restart: unless-stopped
+    healthcheck:
+      # ยังไม่ล็อกอิน = 401 ก็ถือว่า API ตอบได้
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4001/ops/auth/me').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  ops-web:
+    image: friday-manage-ops-web:local
+    build:
+      context: ../..
+      dockerfile: Dockerfile.ops-web
+      args:
+        OPS_API_ORIGIN: ${OPS_WEB_API_ORIGIN:-http://ops-api:4001}
+    ports:
+      - "127.0.0.1:${OPS_WEB_PORT:-4000}:4000"
+    depends_on:
+      ops-api:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3

@@ -1,5 +1,6 @@
 "use client";
 
+import { FridayMark } from "@/components/brand/FridayMark";
 import { useQuery } from "@tanstack/react-query";
 import {
   Archive,
@@ -72,9 +73,7 @@ export function Sidebar({ staff, pathname, search, open, onNavigate }: { staff: 
   return (
     <aside className="ops-side" aria-label={t("app.navLabel")} data-open={open}>
       <div className="ops-brand">
-        <span className="ops-brand-mark" aria-hidden="true">
-          F
-        </span>
+        <FridayMark />
         <div>
           <b>{t("app.name")}</b>
           <span>{t("app.tagline")}</span>

@@ -58,6 +58,45 @@ a {
   gap: 10px;
   padding: 2px 8px;
 }
+/* โลโก้ไทล์ 4 สี (Sidebar · Login) · เด้งทีละชิ้นแบบหน้าเว็บลูกค้า */
+.ops-logo-mark {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  overflow: visible;
+}
+.ops-logo-tile {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ops-tile-pop 3.2s ease-in-out infinite;
+}
+.ops-logo-tile:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.ops-logo-tile:nth-child(4) {
+  animation-delay: 0.4s;
+}
+.ops-logo-tile:nth-child(3) {
+  animation-delay: 0.6s;
+}
+@keyframes ops-tile-pop {
+  0%,
+  40%,
+  100% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(0.72) rotate(-12deg);
+  }
+  28% {
+    transform: scale(1.08);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ops-logo-tile {
+    animation: none;
+  }
+}
 .ops-brand-mark {
   width: 34px;
   height: 34px;

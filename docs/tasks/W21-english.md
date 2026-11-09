@@ -203,3 +203,4 @@
 - `<title>` ของ login, signup, forgot-password, join, onboarding, pricing, legal ใช้ `generateMetadata` + `getTranslations` ตามภาษาของคำขอ · ข้อความ error ฝั่ง client ใน `api.ts` และตัวแก้ชุดฟิลด์ (field-profile) ใช้ข้อความ EN เมื่อหน้าเป็น EN
 - Namespace: ข้อความของตัวสลับภาษา / ปี / ธีม ย้ายจาก `labels.ts` และค่าคงที่ใน `ThemeSwitch.tsx` ไป `messages/{th,en}/locale-switch.json` · เพิ่มใน `src/i18n/messages.ts` เพราะตัวสลับอยู่ใน shell ทุกหน้า
 - M1: ตัวสลับไม่มีข้อมูลให้โหลดหรือสถานะว่าง · ระหว่างบันทึกกลุ่มปุ่ม `aria-busy` และกดซ้ำไม่ได้ · Error แสดงข้อความจาก API พร้อมรหัสอ้างอิง (`supportId`) · ไม่ต้องใช้สิทธิ์ (ทุกคนตั้งภาษาของตัวเองได้ · ยังไม่ล็อกอินบันทึกแค่ cookie และไม่แสดงตัวเลือกปี) · test ครอบคลุมทั้งสามกรณี
+- วันที่ที่ server render: `pageLocale()` ฝั่ง server อ่าน `useLocale()` ของ next-intl ระหว่าง render (แยกตามคำขอ) · ฝั่ง browser ใช้ `<html lang>` ตามเดิม · HTML แรกจึงเป็นภาษาของผู้ใช้และไม่ mismatch ตอน hydrate · test `format-ssr.test.tsx`

@@ -14,10 +14,10 @@
 
 ## ทำอะไร
 
-- ที่มาของลูกค้า: รับ UTM / referrer ตอนสมัครแล้วเขียน `signup_attribution` · คัดลอกเป็น `workspace_acquisition` ตอนสร้าง Workspace
+- ที่มาของลูกค้า: รับ UTM / referrer ตอนสมัครแล้วเขียน `signup_attributions` · คัดลอกเป็น `workspace_acquisitions` ตอนสร้าง Workspace
 - `POST w/events` รับ `feature.used` และ `limit.hit` เป็นชุด (สูงสุด 50) · ตรวจชื่อจากรายการที่อนุญาต · props ห้ามมีเนื้อหาลูกค้า · ล้มแล้วทิ้ง ไม่ทำให้คำขอของลูกค้าช้า
-- ผู้ฟัง `EventBus` เขียน `subscription_changes` ทุกครั้งที่ MRR เปลี่ยน และ `cancellation_feedback` จากแบบสอบถามตอนยกเลิก
-- job 01:00 สรุป `usage_daily` (ใช้ `SYSTEM_DB` พร้อมเหตุผลในคอมเมนต์)
+- ผู้ฟัง `EventBus` เขียน `subscription_changes` ทุกครั้งที่ MRR เปลี่ยน และ `cancellation_responses` จากแบบสอบถามตอนยกเลิก
+- job 01:00 สรุป `daily_usages` (ใช้ `SYSTEM_DB` พร้อมเหตุผลในคอมเมนต์)
 - ลบบัญชีแล้วลบ / ทำให้ระบุตัวไม่ได้ตาม 05 › 3
 
 ## เสร็จเมื่อ

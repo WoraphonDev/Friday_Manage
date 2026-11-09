@@ -1291,3 +1291,163 @@ textarea.input {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+/* กราฟ (O15) · แกนเดียว · แท่งบาง ปลายมน 4px · ป้ายค่าเฉพาะจุดสำคัญ · hover / focus เห็นค่า */
+.chart {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.chart-tools {
+  display: flex;
+  justify-content: flex-end;
+}
+.chart-cols {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding-top: 22px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+}
+.chart-col {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  outline: none;
+}
+.chart-col:focus-visible .chart-bar {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.chart-bar {
+  width: 100%;
+  max-width: 36px;
+  border-radius: 4px 4px 0 0;
+  background: var(--chart-primary-soft);
+}
+.chart-bar-primary {
+  background: var(--chart-primary);
+}
+.chart-bar-forecast {
+  background: color-mix(in srgb, var(--chart-primary-soft) 45%, var(--card));
+  border: 1px dashed var(--chart-primary);
+  border-bottom: 0;
+}
+.chart-bar-on {
+  background: var(--chart-primary);
+}
+.chart-axis {
+  position: absolute;
+  bottom: -20px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.chart-value,
+.chart-tip {
+  position: absolute;
+  top: -20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--foreground);
+}
+.chart-tip {
+  z-index: 2;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--contrast-bg);
+  color: var(--contrast-ink);
+  font-weight: 500;
+}
+.chart-col:first-child .chart-tip {
+  left: 0;
+}
+.chart-col:last-child .chart-tip {
+  right: 0;
+}
+.hbars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hbars li {
+  display: grid;
+  /* คอลัมน์ค่ากว้างคงที่ ให้แท่งทุกแถวเริ่ม-จบตรงกัน */
+  grid-template-columns: minmax(110px, 1.2fr) minmax(80px, 2fr) 112px;
+  gap: 10px;
+  align-items: center;
+  border-radius: 6px;
+  outline: none;
+}
+.hbars li:hover,
+.hbars li:focus-visible {
+  background: var(--hover);
+}
+.hbar-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13px;
+}
+.hbar-track {
+  height: 10px;
+  border-radius: 4px;
+  background: var(--subtle);
+  overflow: hidden;
+}
+.hbar {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+}
+.hbar-primary {
+  background: var(--chart-primary);
+}
+.hbar-soft {
+  background: var(--chart-primary-soft);
+}
+.hbar-neutral {
+  background: var(--chart-neutral);
+}
+.hbar-warn {
+  background: var(--warning-solid);
+}
+.hbar-bad {
+  background: var(--danger-solid);
+}
+.hbar-value {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cohort td.cell {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  border-bottom: 2px solid var(--card);
+  border-left: 2px solid var(--card);
+}
+.grid-main {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .grid-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

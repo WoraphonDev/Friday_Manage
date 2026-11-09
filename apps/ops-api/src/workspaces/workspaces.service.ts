@@ -1,24 +1,20 @@
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
 import { type Db, schema } from '@friday/db';
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApprovalsService, type ApprovalContext } from '../approvals/approvals.service.js';
-import { type Approval, audit } from '../audit.js';
+import { type Approval, audit, staffAudit } from '../audit.js';
 import { has, type Staff } from '../auth/auth.guard.js';
 import { OPS_DB } from '../db.js';
+import { config } from '../config.js';
 import { AppError } from '../errors.js';
+import { Mailer } from '../mail.js';
+import { mrrOf } from './economics.js';
 
 const s = schema;
 const DAY = 86_400_000;
 const PLAN_CODES = ['free', 'team_s', 'team_m', 'team_l', 'enterprise'] as const;
 
-export const ListQuery = z.object({
-  plan: z.enum(PLAN_CODES).optional(),
-  status: z.enum(['trial', 'active', 'suspended', 'pending_delete', 'trialing', 'canceled', 'past_due']).optional(),
-  q: z.string().trim().max(100).optional(),
-  limit: z.coerce.number().int().min(1).max(200).default(50),
-  offset: z.coerce.number().int().min(0).default(0),
-});
 export const ExtendTrialBody = z.object({ days: z.number().int().min(1).max(60), reason: z.string().trim().min(3).max(300) }).strict();
 export const DiscountBody = z
   .object({
@@ -28,7 +24,29 @@ export const DiscountBody = z
     reason: z.string().trim().min(3).max(300),
   })
   .strict();
-export const ChangePlanBody = z.object({ plan: z.enum(PLAN_CODES), reason: z.string().trim().min(3).max(300) }).strict();
+export const ChangePlanBody = z.object({ plan: z.enum(PLAN_CODES), cycle: z.enum(['monthly', 'yearly']).optional(), reason: z.string().trim().min(3).max(300) }).strict();
+export const PreviewQuery = z.object({ plan: z.enum(PLAN_CODES), cycle: z.enum(['monthly', 'yearly']).optional() });
+export const TransferOwnerBody = z
+  .object({
+    newOwnerUserId: z.uuid(),
+    ticketNo: z.string().trim().min(3).max(40),
+    reason: z.string().trim().min(10, 'ระบุเหตุผลอย่างน้อย 10 ตัวอักษร').max(500),
+    /** หลักฐานที่ต้องครบ (C7): หนังสือจากบริษัทลงนามโดยผู้มีอำนาจ (แนบใน Ticket) และชื่อนิติบุคคลตรงกับข้อมูลออกใบกำกับภาษี */
+    evidence: z.object({ companyLetter: z.boolean(), legalNameMatches: z.boolean() }).strict(),
+  })
+  .strict();
+export const AccessRequestBody = z
+  .object({
+    ticketNo: z.string().trim().min(3).max(40),
+    /** เฟส 1 ขอได้เฉพาะอ่านอย่างเดียว (โหมดแก้ไขยังไม่เปิด) */
+    mode: z.literal('read').default('read'),
+    hours: z.number().int().min(1).max(168).default(1),
+    reason: z.string().trim().min(10, 'ระบุเหตุผลอย่างน้อย 10 ตัวอักษร').max(500),
+  })
+  .strict();
+export const NoteBody = z.object({ text: z.string().trim().min(1).max(2000) }).strict();
+/** Owner เดิมคัดค้านได้ภายใน 7 วันหลังได้อีเมลแจ้ง (C7) */
+export const OBJECTION_DAYS = 7;
 export const SuspendBody = z
   .object({
     reason: z.string().trim().min(3).max(300),
@@ -37,6 +55,15 @@ export const SuspendBody = z
   })
   .strict();
 export const ResumeBody = z.object({ reason: z.string().trim().min(3).max(300) }).strict();
+
+interface TransferPayload {
+  [k: string]: unknown;
+  workspaceId: string;
+  newOwnerUserId: string;
+  previousOwnerIds: string[];
+  ticketNo: string;
+  noticeSentAt: string;
+}
 
 /** ผลของรายการที่ต้องอนุมัติ: ทำเลย หรือสร้างคำขอแล้ว (controller ตอบ 202) */
 export type Gated<T> = T | { pendingApproval: NonNullable<Awaited<ReturnType<ApprovalsService['gate']>>> };
@@ -48,84 +75,15 @@ export class WorkspacesService implements OnModuleInit {
   constructor(
     @Inject(OPS_DB) private readonly db: Db,
     private readonly approvals: ApprovalsService,
+    private readonly mail: Mailer,
   ) {}
 
   /** อนุมัติแล้วทำรายการในนามผู้ขอ (06 › 4) */
   onModuleInit() {
     this.approvals.register('workspace.discount', (p, ctx) => this.applyDiscount(ctx.requester, p.workspaceId as string, p.input as z.infer<typeof DiscountBody>, ctx));
     this.approvals.register('workspace.extend_trial', (p, ctx) => this.applyExtendTrial(ctx.requester, p.workspaceId as string, p.input as z.infer<typeof ExtendTrialBody>, ctx));
+    this.approvals.register('workspace.transfer_owner', (p, ctx) => this.applyTransfer(ctx.requester, p as TransferPayload, ctx));
     this.approvals.register('workspace.suspend', (p, ctx) => this.setStatus(ctx.requester, p.workspaceId as string, 'suspended', (p.input as { reason: string }).reason, ctx));
-  }
-
-  async list(q: z.infer<typeof ListQuery>) {
-    const where = and(
-      sql`${s.workspaces.deletedAt} is null`,
-      q.q ? or(ilike(s.workspaces.name, `%${q.q}%`), ilike(s.workspaces.slug, `%${q.q}%`)) : undefined,
-      q.plan ? eq(s.plans.code, q.plan) : undefined,
-      q.status ? (q.status === 'trialing' || q.status === 'canceled' || q.status === 'past_due' ? eq(s.subscriptions.status, q.status) : eq(s.workspaces.status, q.status)) : undefined,
-    );
-    const rows = await this.db
-      .select({
-        id: s.workspaces.id,
-        slug: s.workspaces.slug,
-        name: s.workspaces.name,
-        status: s.workspaces.status,
-        createdAt: s.workspaces.createdAt,
-        plan: s.plans.code,
-        subStatus: s.subscriptions.status,
-        cycle: s.subscriptions.cycle,
-        trialEndsAt: s.subscriptions.trialEndsAt,
-        periodEnd: s.subscriptions.currentPeriodEnd,
-        seats: sql<number>`(select count(*)::int from workspace_members m where m.workspace_id = ${s.workspaces.id} and m.status = 'active' and m.role <> 'guest')`,
-        projects: sql<number>`(select count(*)::int from projects p where p.workspace_id = ${s.workspaces.id} and p.deleted_at is null and p.archived_at is null)`,
-      })
-      .from(s.workspaces)
-      .leftJoin(s.subscriptions, eq(s.subscriptions.workspaceId, s.workspaces.id))
-      .leftJoin(s.plans, eq(s.plans.id, s.subscriptions.planId))
-      .where(where)
-      .orderBy(desc(s.workspaces.createdAt))
-      .limit(q.limit)
-      .offset(q.offset);
-    return { items: rows, limit: q.limit, offset: q.offset };
-  }
-
-  async get(id: string) {
-    const [ws] = await this.db
-      .select({ ws: s.workspaces, sub: s.subscriptions, plan: s.plans.code })
-      .from(s.workspaces)
-      .leftJoin(s.subscriptions, eq(s.subscriptions.workspaceId, s.workspaces.id))
-      .leftJoin(s.plans, eq(s.plans.id, s.subscriptions.planId))
-      .where(this.byId(id));
-    if (!ws) throw new AppError(404, 'not_found', 'ไม่พบ Workspace');
-    const owners = await this.db
-      .select({ id: s.users.id, email: s.users.email, displayName: s.users.displayName, role: s.workspaceMembers.role })
-      .from(s.workspaceMembers)
-      .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
-      .where(and(eq(s.workspaceMembers.workspaceId, ws.ws.id), eq(s.workspaceMembers.status, 'active'), sql`${s.workspaceMembers.role} in ('owner', 'admin')`));
-    const usageRes = await this.db.execute(sql`
-      select
-        (select count(*)::int from workspace_members where workspace_id = ${ws.ws.id} and status = 'active' and role <> 'guest') as members,
-        (select count(*)::int from workspace_members where workspace_id = ${ws.ws.id} and status = 'active' and role = 'guest') as guests,
-        (select count(*)::int from projects where workspace_id = ${ws.ws.id} and deleted_at is null) as projects,
-        (select count(*)::int from issues where workspace_id = ${ws.ws.id} and deleted_at is null) as issues,
-        (select coalesce(sum(size_bytes), 0)::text from file_versions where workspace_id = ${ws.ws.id}) as storage`);
-    const [usage] = ((usageRes as unknown as { rows?: unknown[] }).rows ?? (usageRes as unknown as unknown[])) as { members: number; guests: number; projects: number; issues: number; storage: string }[];
-    const [grant] = await this.db.select().from(s.supportAccessGrants).where(eq(s.supportAccessGrants.workspaceId, ws.ws.id));
-    const sessions = await this.db.select().from(s.supportSessions).where(eq(s.supportSessions.workspaceId, ws.ws.id)).orderBy(desc(s.supportSessions.startedAt)).limit(10);
-    const invoices = await this.db.select({ id: s.invoices.id, number: s.invoices.number, status: s.invoices.status, total: s.invoices.total, amountDue: s.invoices.amountDue, createdAt: s.invoices.createdAt }).from(s.invoices).where(eq(s.invoices.workspaceId, ws.ws.id)).orderBy(desc(s.invoices.createdAt)).limit(10);
-    return {
-      id: ws.ws.id,
-      slug: ws.ws.slug,
-      name: ws.ws.name,
-      status: ws.ws.status,
-      createdAt: ws.ws.createdAt,
-      subscription: ws.sub ? { plan: ws.plan, status: ws.sub.status, cycle: ws.sub.cycle, trialEndsAt: ws.sub.trialEndsAt, currentPeriodEnd: ws.sub.currentPeriodEnd, paymentMethod: ws.sub.paymentMethod, discount: ws.sub.discount } : null,
-      usage: { ...usage, storageBytes: Number(usage.storage) },
-      owners,
-      supportAccess: grant ? { until: grant.until, maxMode: grant.maxMode, notifyAdmins: grant.notifyAdmins, active: !grant.until || grant.until.getTime() > Date.now() } : null,
-      supportSessions: sessions,
-      invoices,
-    };
   }
 
   private byId(id: string) {
@@ -200,19 +158,196 @@ export class WorkspacesService implements OnModuleInit {
     return { discount };
   }
 
-  /** เปลี่ยนแพ็กเกจโดยทีม Friday (เช่น ย้ายไป Enterprise ตามสัญญา) · ไม่ออกใบแจ้งหนี้ */
+  private async planRow(code: string) {
+    const [plan] = await this.db.select().from(s.plans).where(eq(s.plans.code, code));
+    if (!plan) throw new AppError(404, 'plan_not_found', `ไม่พบแพ็กเกจ ${code}`);
+    return plan;
+  }
+  private async seatsInUse(id: string) {
+    const [r] = await this.db.select({ n: sql<number>`count(*)::int` }).from(s.workspaceMembers).where(and(eq(s.workspaceMembers.workspaceId, id), eq(s.workspaceMembers.status, 'active'), ne(s.workspaceMembers.role, 'guest')));
+    return r.n;
+  }
+  private static price(plan: typeof s.plans.$inferSelect, cycle: string) {
+    return cycle === 'yearly' ? plan.priceYearlySatang : plan.priceMonthlySatang;
+  }
+
+  /**
+   * ตัวอย่างยอดก่อนเปลี่ยนแพ็กเกจ (C4) · อัปเกรดมีผลทันทีคิดส่วนต่างตามวันที่เหลือ · ลดแพ็กเกจมีผลรอบถัดไป
+   * ใช้คนเกินที่นั่งของแพ็กเกจใหม่ไม่ได้ · Enterprise ไม่มีราคาตายตัว (ตามสัญญา)
+   */
+  async preview(id: string, q: z.infer<typeof PreviewQuery>) {
+    const { sub } = await this.sub(id);
+    if (!sub) throw new AppError(409, 'no_subscription', 'Workspace นี้ยังไม่มีแพ็กเกจ');
+    const [cur, next] = [await this.planRowById(sub.planId), await this.planRow(q.plan)];
+    const cycle = q.cycle ?? sub.cycle;
+    const seats = await this.seatsInUse(id);
+    const oldPrice = WorkspacesService.price(cur, sub.cycle);
+    const newPrice = WorkspacesService.price(next, cycle);
+    const monthly = (p: number | null, c: string) => (p == null ? null : c === 'yearly' ? p / 12 : p);
+    const upgrade = (monthly(newPrice, cycle) ?? Infinity) > (monthly(oldPrice, sub.cycle) ?? 0) || cycle !== sub.cycle;
+    const blocked = next.seatLimit != null && seats > next.seatLimit ? { code: 'seats_exceed_plan', message: `ใช้อยู่ ${seats} คน เกินที่นั่งของ ${q.plan} (${next.seatLimit})` } : null;
+    const lines: { label: string; satang: number }[] = [];
+    let effective: 'now' | 'next_cycle' = upgrade ? 'now' : 'next_cycle';
+    if (newPrice == null) effective = 'now';
+    else if (sub.status === 'trialing') lines.push({ label: `${q.plan} ${cycle === 'yearly' ? 'รายปี' : 'รายเดือน'} (เริ่มเมื่อชำระ)`, satang: newPrice });
+    else if (effective === 'now') {
+      const start = sub.currentPeriodStart?.getTime() ?? Date.now();
+      const end = sub.currentPeriodEnd?.getTime() ?? Date.now();
+      const total = Math.max(1, Math.round((end - start) / DAY));
+      const left = Math.max(0, Math.ceil((end - Date.now()) / DAY));
+      if (cycle === sub.cycle) lines.push({ label: `${q.plan} ${left} วันที่เหลือของรอบนี้`, satang: Math.round(((newPrice - (oldPrice ?? 0)) * left) / total) });
+      else {
+        lines.push({ label: `${q.plan} ${cycle === 'yearly' ? 'รายปี' : 'รายเดือน'}`, satang: newPrice });
+        if (oldPrice) lines.push({ label: `เครดิตคืน ${cur.code} ที่ยังไม่ใช้ (${left} วัน)`, satang: -Math.round((oldPrice * left) / total) });
+      }
+    }
+    const subtotal = Math.max(0, lines.reduce((n, l) => n + l.satang, 0));
+    const vat = process.env.VAT_REGISTERED !== 'false' ? Math.round(subtotal * 0.07) : 0;
+    return {
+      current: { plan: cur.code, cycle: sub.cycle, priceSatang: oldPrice, seatLimit: cur.seatLimit },
+      next: { plan: next.code, cycle, priceSatang: newPrice, seatLimit: next.seatLimit },
+      seatsInUse: seats,
+      blocked,
+      contract: newPrice == null,
+      effective,
+      lines,
+      subtotalSatang: subtotal,
+      vatSatang: vat,
+      totalSatang: subtotal + vat,
+    };
+  }
+  private async planRowById(planId: string) {
+    const [plan] = await this.db.select().from(s.plans).where(eq(s.plans.id, planId));
+    return plan;
+  }
+
+  /**
+   * เปลี่ยนแพ็กเกจโดยทีม Friday (เช่น ย้ายไป Enterprise ตามสัญญา หรือลูกค้าขอผ่าน Ticket) · มีผลทันที
+   * เฟส 1 ยังไม่ออกใบแจ้งหนี้ส่วนต่าง (ต้องใช้ขั้นตอนชำระเงินของ API ลูกค้า) · บันทึก subscription_changes ให้ MRR ตรง
+   */
   async changePlan(staff: Staff, id: string, input: z.infer<typeof ChangePlanBody>) {
     const { sub } = await this.sub(id);
     if (!sub) throw new AppError(409, 'no_subscription', 'Workspace นี้ยังไม่มีแพ็กเกจ');
-    const [plan] = await this.db.select({ id: s.plans.id }).from(s.plans).where(eq(s.plans.code, input.plan));
-    if (!plan) throw new AppError(404, 'plan_not_found', `ไม่พบแพ็กเกจ ${input.plan}`);
-    const [prev] = await this.db.select({ code: s.plans.code }).from(s.plans).where(eq(s.plans.id, sub.planId));
+    const plan = await this.planRow(input.plan);
+    const prev = await this.planRowById(sub.planId);
+    const cycle = input.cycle ?? sub.cycle;
+    if (plan.id === prev.id && cycle === sub.cycle && sub.status === 'active') throw new AppError(409, 'no_change', 'ใช้แพ็กเกจนี้อยู่แล้ว');
+    const seats = await this.seatsInUse(id);
+    if (plan.seatLimit != null && seats > plan.seatLimit) throw new AppError(409, 'seats_exceed_plan', `ใช้อยู่ ${seats} คน เกินที่นั่งของแพ็กเกจ ${input.plan} (${plan.seatLimit})`, { seats, seatLimit: plan.seatLimit });
+    const before = mrrOf(sub, prev);
+    const after = mrrOf({ status: 'active', cycle, discount: sub.discount }, plan);
     await this.db.transaction(async (tx) => {
       // แพ็กเกจที่ทีมกำหนดเอง = เปิดใช้ทันที ไม่นับเป็นช่วงทดลอง
-      await tx.update(s.subscriptions).set({ planId: plan.id, status: 'active', trialEndsAt: null, updatedAt: new Date() }).where(eq(s.subscriptions.id, sub.id));
-      await audit(tx, staff, id, 'plan', 'ops.plan_changed', `เปลี่ยนแพ็กเกจ ${prev?.code ?? '-'} → ${input.plan} · ${input.reason}`, { type: 'subscription', id: sub.id });
+      await tx.update(s.subscriptions).set({ planId: plan.id, cycle, status: 'active', trialEndsAt: null, updatedAt: new Date() }).where(eq(s.subscriptions.id, sub.id));
+      await tx.insert(s.subscriptionChanges).values({
+        workspaceId: id, kind: sub.status === 'trialing' ? 'new' : after > before ? 'upgrade' : after < before ? 'downgrade' : 'cycle_change',
+        planFrom: prev.code, planTo: plan.code, mrrBeforeSatang: sub.status === 'trialing' ? 0 : before, mrrAfterSatang: after, actorKind: 'staff', actorId: staff.id, effectiveAt: new Date(),
+      });
+      await audit(tx, staff, id, 'plan', 'ops.plan_changed', `เปลี่ยนแพ็กเกจ ${prev.code} → ${input.plan}${cycle !== sub.cycle ? ` (${cycle === 'yearly' ? 'รายปี' : 'รายเดือน'})` : ''} · ${input.reason}`, { type: 'subscription', id: sub.id });
     });
-    return { plan: input.plan, previous: prev?.code ?? null };
+    return { plan: input.plan, cycle, previous: prev.code };
+  }
+
+  /**
+   * โอนความเป็นเจ้าของ (C7): ใช้เมื่อ Owner เดิมลาออกหรือติดต่อไม่ได้ · ต้องมีหลักฐานครบ และให้คนที่สองอนุมัติทุกครั้ง
+   * ส่งอีเมลแจ้ง Owner เดิมทันที · อนุมัติแล้วจะโอนได้เมื่อครบ 7 วันโดยไม่มีการคัดค้าน (คัดค้านทาง Ticket → ผู้อนุมัติกดไม่อนุมัติ)
+   */
+  async transferOwner(staff: Staff, id: string, input: z.infer<typeof TransferOwnerBody>) {
+    const { ws } = await this.sub(id);
+    if (ws.status === 'pending_delete') throw new AppError(409, 'workspace_deleted', 'Workspace นี้ถูกลบแล้ว');
+    const missing = [!input.evidence.companyLetter && 'companyLetter', !input.evidence.legalNameMatches && 'legalNameMatches'].filter(Boolean);
+    if (missing.length) throw new AppError(422, 'evidence_incomplete', 'หลักฐานยังไม่ครบ', { missing });
+    const members = await this.db
+      .select({ userId: s.workspaceMembers.userId, role: s.workspaceMembers.role, status: s.workspaceMembers.status, email: s.users.email, disabledAt: s.users.disabledAt })
+      .from(s.workspaceMembers)
+      .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
+      .where(eq(s.workspaceMembers.workspaceId, id));
+    const next = members.find((m) => m.userId === input.newOwnerUserId);
+    if (!next || next.status !== 'active' || next.disabledAt) throw new AppError(422, 'new_owner_not_member', 'Owner ใหม่ต้องเป็นสมาชิกที่ใช้งานอยู่ของ Workspace นี้');
+    if (next.role === 'guest') throw new AppError(422, 'new_owner_guest', 'Guest เป็น Owner ไม่ได้');
+    if (next.role === 'owner') throw new AppError(409, 'already_owner', 'ผู้ใช้นี้เป็น Owner อยู่แล้ว');
+    const previous = members.filter((m) => m.role === 'owner' && m.status === 'active');
+    const [open] = await this.db.select({ id: s.approvalRequests.id }).from(s.approvalRequests).where(and(eq(s.approvalRequests.workspaceId, id), eq(s.approvalRequests.kind, 'workspace.transfer_owner'), eq(s.approvalRequests.status, 'pending')));
+    if (open) throw new AppError(409, 'transfer_pending', 'มีคำขอโอนความเป็นเจ้าของที่รออยู่แล้ว', { approvalId: open.id });
+
+    const noticeSentAt = new Date();
+    const availableAt = new Date(noticeSentAt.getTime() + OBJECTION_DAYS * DAY);
+    for (const o of previous) {
+      await this.notify(o.email, `แจ้งขอโอนความเป็นเจ้าของ Workspace ${ws.name}`, [
+        `ทีม Friday ได้รับคำขอโอนความเป็นเจ้าของ Workspace ${ws.name} ไปยัง ${next.email} (Ticket ${input.ticketNo})`,
+        `ถ้าคุณไม่ได้ยินยอม ตอบกลับอีเมลนี้หรือ Ticket ${input.ticketNo} ภายใน ${OBJECTION_DAYS} วัน (ถึง ${availableAt.toISOString().slice(0, 10)}) ทีม Friday จะยกเลิกคำขอ`,
+      ]);
+    }
+    const payload: TransferPayload = { workspaceId: id, newOwnerUserId: input.newOwnerUserId, previousOwnerIds: previous.map((p) => p.userId), ticketNo: input.ticketNo, noticeSentAt: noticeSentAt.toISOString() };
+    const pending = await this.approvals.gate(staff, {
+      kind: 'workspace.transfer_owner', workspaceId: id, target: { type: 'workspace', id }, payload, reason: `${input.reason} · Ticket ${input.ticketNo}`,
+      exceeds: true, rule: `โอนความเป็นเจ้าของต้องอนุมัติทุกครั้ง · โอนได้หลังแจ้ง Owner เดิมครบ ${OBJECTION_DAYS} วัน`,
+    });
+    await audit(this.db, staff, id, 'perm', 'ops.owner_transfer_requested', `ขอโอนความเป็นเจ้าของให้ ${next.email} · แจ้ง Owner เดิม ${previous.length} คน · โอนได้ตั้งแต่ ${availableAt.toISOString().slice(0, 10)} · Ticket ${input.ticketNo} · ${input.reason}`, { type: 'workspace', id });
+    return { pendingApproval: pending!, availableAt, notified: previous.length };
+  }
+
+  private async applyTransfer(staff: Staff, p: TransferPayload, ctx: ApprovalContext) {
+    const availableAt = new Date(new Date(p.noticeSentAt).getTime() + OBJECTION_DAYS * DAY);
+    if (Date.now() < availableAt.getTime()) throw new AppError(409, 'objection_window_open', `ยังอยู่ในช่วงให้ Owner เดิมคัดค้าน โอนได้ตั้งแต่ ${availableAt.toISOString().slice(0, 10)}`, { availableAt });
+    const [next] = await this.db
+      .select({ status: s.workspaceMembers.status, role: s.workspaceMembers.role, email: s.users.email })
+      .from(s.workspaceMembers)
+      .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
+      .where(and(eq(s.workspaceMembers.workspaceId, p.workspaceId), eq(s.workspaceMembers.userId, p.newOwnerUserId)));
+    if (!next || next.status !== 'active' || next.role === 'guest') throw new AppError(409, 'new_owner_not_member', 'Owner ใหม่ไม่ได้เป็นสมาชิกที่ใช้งานอยู่แล้ว');
+    await this.db.transaction(async (tx) => {
+      await tx.update(s.workspaceMembers).set({ role: 'owner' }).where(and(eq(s.workspaceMembers.workspaceId, p.workspaceId), eq(s.workspaceMembers.userId, p.newOwnerUserId)));
+      // Owner เดิมยังอยู่ในทีมเป็น Admin · ลูกค้าเอาออกเองได้ภายหลัง
+      if (p.previousOwnerIds.length) await tx.update(s.workspaceMembers).set({ role: 'admin' }).where(and(eq(s.workspaceMembers.workspaceId, p.workspaceId), inArray(s.workspaceMembers.userId, p.previousOwnerIds)));
+      await audit(tx, staff, p.workspaceId, 'perm', 'ops.owner_transferred', `โอนความเป็นเจ้าของให้ ${next.email} · Owner เดิมเป็น Admin · Ticket ${p.ticketNo}`, { type: 'workspace', id: p.workspaceId }, approvalOf(ctx));
+    });
+    await this.notify(next.email, 'คุณเป็น Owner ของ Workspace แล้ว', [`ทีม Friday โอนความเป็นเจ้าของ Workspace ให้คุณแล้วตาม Ticket ${p.ticketNo}`]);
+    return { workspaceId: p.workspaceId, newOwnerUserId: p.newOwnerUserId };
+  }
+
+  /** ขอสิทธิ์เข้าบัญชีจากลูกค้า (C2) เมื่อลูกค้ายังไม่เปิด · ส่งอีเมลถึง Owner ให้เปิดที่ Admin Console */
+  async requestAccess(staff: Staff, id: string, input: z.infer<typeof AccessRequestBody>) {
+    const { ws } = await this.sub(id);
+    const [grant] = await this.db.select().from(s.supportAccessGrants).where(eq(s.supportAccessGrants.workspaceId, id));
+    if (grant && (!grant.until || grant.until.getTime() > Date.now())) throw new AppError(409, 'support_access_already_granted', 'ลูกค้าเปิดสิทธิ์ให้อยู่แล้ว เข้าบัญชีได้เลย', { until: grant.until, maxMode: grant.maxMode });
+    const owners = await this.db
+      .select({ email: s.users.email })
+      .from(s.workspaceMembers)
+      .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
+      .where(and(eq(s.workspaceMembers.workspaceId, id), eq(s.workspaceMembers.status, 'active'), eq(s.workspaceMembers.role, 'owner')));
+    if (!owners.length) throw new AppError(409, 'no_owner', 'Workspace นี้ไม่มี Owner ที่ใช้งานอยู่ ใช้การโอนความเป็นเจ้าของก่อน');
+    let sent = 0;
+    for (const o of owners) {
+      if (
+        await this.notify(o.email, `ทีม Friday ขอเข้าดูบัญชี ${ws.name} (Ticket ${input.ticketNo})`, [
+          `ทีม Friday (${staff.name}) ขอเข้าดูบัญชี ${ws.name} แบบอ่านอย่างเดียว ${input.hours} ชั่วโมง`,
+          `เหตุผล: ${input.reason} (Ticket ${input.ticketNo})`,
+          `อนุญาตได้ที่ ${config.appUrl}/${ws.slug}/admin › การเข้าช่วยเหลือจากทีม Friday · ถ้าไม่อนุญาต ไม่ต้องทำอะไร`,
+        ])
+      )
+        sent++;
+    }
+    await audit(this.db, staff, id, 'secu', 'support.access_requested', `ขอสิทธิ์เข้าบัญชีแบบอ่านอย่างเดียว ${input.hours} ชม. · Ticket ${input.ticketNo} · ${input.reason}`, { type: 'workspace', id });
+    return { sent, owners: owners.length };
+  }
+
+  /** บันทึกภายใน (ลูกค้าไม่เห็น) · เก็บใน staff_audit_logs ซึ่งแก้ / ลบไม่ได้ จึงเป็นประวัติตามจริง */
+  async addNote(staff: Staff, id: string, input: z.infer<typeof NoteBody>) {
+    await this.sub(id);
+    await staffAudit(this.db, staff, 'ops.note', input.text, { type: 'workspace', id }, id);
+    const [row] = await this.db.select({ id: s.staffAuditLogs.id, text: s.staffAuditLogs.reason, createdAt: s.staffAuditLogs.createdAt }).from(s.staffAuditLogs).where(and(eq(s.staffAuditLogs.workspaceId, id), eq(s.staffAuditLogs.action, 'ops.note'), eq(s.staffAuditLogs.staffId, staff.id))).orderBy(sql`${s.staffAuditLogs.createdAt} desc`).limit(1);
+    return { ...row, staffId: staff.id, staffName: staff.name };
+  }
+
+  /** ส่งอีเมลไม่ได้ไม่ทำให้รายการล้ม (Mailer บันทึก log แล้ว) */
+  private async notify(to: string, subject: string, lines: string[]) {
+    try {
+      await this.mail.send({ to, subject, text: lines.join('\n') });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**

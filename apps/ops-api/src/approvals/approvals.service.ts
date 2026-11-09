@@ -15,7 +15,7 @@ const HOUR = 3_600_000;
 /** อนุมัติตัวเองไม่ได้เลย แม้มี Owner คนเดียว (06 › 4) */
 export const NO_SELF_APPROVAL = new Set(['support.write_session', 'privacy.erase']);
 /** อายุคำขอ (ชั่วโมง) ตามหน้าคืนเงินและอนุมัติ · ไม่ระบุ = 48 */
-const EXPIRES_HOURS: Record<string, number> = { 'workspace.suspend': 24, 'workspace.discount': 72, 'privacy.erase': 168 };
+const EXPIRES_HOURS: Record<string, number> = { 'workspace.suspend': 24, 'workspace.discount': 72, 'privacy.erase': 168, 'workspace.transfer_owner': 14 * 24 };
 
 export const ApprovalsQuery = z.object({ status: z.enum(['pending', 'approved', 'rejected', 'expired', 'cancelled']).optional(), limit: z.coerce.number().int().min(1).max(200).default(50) });
 export const DecisionBody = z.object({ note: z.string().trim().max(500).optional() }).strict();

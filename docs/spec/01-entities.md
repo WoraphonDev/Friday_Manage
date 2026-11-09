@@ -207,7 +207,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `payment` | การชำระ | invoice_id, method, amount, provider_ref, slip_file_key, status (pending_review · confirmed · rejected), reviewed_by, reviewed_at | R2, Q3 |
 | `tax_document` | e-Tax Invoice & e-Receipt | invoice_id, doc_type, number, provider_ref, status, sent_at | Q3 |
 | `wht_certificate` | หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) | invoice_id, file_key, uploaded_by, status, reviewed_by | R2, Q3 |
-| `legal_document` | ข้อกำหนด, นโยบาย, DPA (ระดับระบบ) | doc_type, version, effective_at, summary | R4 |
+| `legal_document` | ข้อกำหนด, นโยบาย, DPA (ระดับระบบ) · ทุกเวอร์ชันเก็บถาวร | doc_type, version, effective_at, summary, requires_acceptance (ต้องยอมรับใหม่ · false = แจ้งให้ทราบ), created_by_staff | R4, Ops A7 |
 | `legal_acceptance` | ใครรับทราบฉบับไหน | user_id, workspace_id, document_id, accepted_at, ip | R4, J2 |
 | `credit_note` | ใบลดหนี้ · คืนเงิน ให้เครดิต หรือยกเลิกใบที่ออกใบกำกับแล้ว (Friday Ops เฟส 1) | workspace_id, invoice_id, number, kind (refund · credit · void), amount_satang, vat_satang, reason, status (draft · issued · sent), refund_method, approval_request_id, issued_at | Ops 4, 13 |
 | `workspace_credit` | สมุดเครดิต · ยอดคงเหลือ = ผลรวม (บวกได้ · ลบใช้หัก) | workspace_id, amount_satang, source (credit_note · overpayment · goodwill · applied), credit_note_id, invoice_id, note | Ops 4, 13 |
@@ -232,6 +232,8 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `incident_update` | อัปเดตของเหตุขัดข้อง | incident_id, status, message, notify_subscribers, show_banner, created_by | Ops 12 |
 | `maintenance_window` | ปิดปรับปรุง · API ฝั่งลูกค้าอ่านเพื่อเปลี่ยนเป็นอ่านอย่างเดียว | scope, message, starts_at, ends_at, notify_plan, status, approval_request_id | Ops 12 |
 | `status_subscriber` | ผู้ติดตามหน้าสถานะ | email, confirmed_at, unsubscribed_at | Ops 12 |
+| `privacy_request` | คำขอ PDPA ที่ส่งถึงทีม Friday (ผู้ควบคุมข้อมูลบัญชี) · ต่างจาก `data_subject_request` ที่ Workspace รับเอง | number, request_type (access · export · rectify · erase · object · restrict), requester_email, user_id, workspace_ids[], received_at, due_date (+30 วัน), identity, step 1–5, status, rejection_reason, handled_by, approval_request_id | Ops 10, A3, A5, A6 |
+| `data_breach` | เหตุละเมิดข้อมูลส่วนบุคคล · แจ้ง สคส. ภายใน 72 ชม. | number, discovered_at, owner_id, description, data_types[], affected_count, workspace_ids[], risk, containment, assessment, pdpc_notified_at, subjects_notified_at, closed_at | Ops 10, A4 |
 
 `staff_users` (Friday Ops เฟส 1 · [06-ops-roles](06-ops-roles.md)): `roles` (owner · finance · support · engineer · auditor, อย่างน้อย 1), `department`, `limits`, `status`, `expires_at` · `role` เดิมลบแล้วใน migration 0019 (O01) · `payments` เพิ่ม `verified_by`, `exception_reason`, `matched_invoice_id` · `support_sessions` เพิ่ม `ticket_id`
 

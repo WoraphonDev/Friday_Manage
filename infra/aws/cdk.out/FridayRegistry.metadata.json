@@ -1,0 +1,125 @@
+{
+  "/FridayRegistry": [
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:12: (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:12:1)",
+        "...node internals..."
+      ]
+    },
+    {
+      "type": "aws:cdk:templateFile",
+      "data": "FridayRegistry.template.json"
+    }
+  ],
+  "/FridayRegistry/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayRegistry/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayRegistry/api/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "apiC8550315"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Repository2 in aws-cdk-lib...",
+        "repo (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/registry-stack.ts:13:36)",
+        "new RegistryStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/registry-stack.ts:25:16)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:12: (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:12:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayRegistry/web/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "web08B6E5F3"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Repository2 in aws-cdk-lib...",
+        "repo (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/registry-stack.ts:13:36)",
+        "new RegistryStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/registry-stack.ts:26:16)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:12: (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:12:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayRegistry/Exports/Output{\"Fn::GetAtt\":[\"apiC8550315\",\"Arn\"]}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputFnGetAttapiC8550315Arn99FFC27D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayRegistry/Exports/Output{\"Fn::GetAtt\":[\"web08B6E5F3\",\"Arn\"]}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputFnGetAttweb08B6E5F3ArnD57DAEDE"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayRegistry/Exports/Output{\"Ref\":\"apiC8550315\"}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputRefapiC855031500EF81AC"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayRegistry/Exports/Output{\"Ref\":\"web08B6E5F3\"}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputRefweb08B6E5F33DBC9FE9"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ]
+}

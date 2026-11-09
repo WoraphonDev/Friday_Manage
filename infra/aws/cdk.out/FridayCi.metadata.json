@@ -1,0 +1,136 @@
+{
+  "/FridayCi": [
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:13 (:)",
+        "...node internals..."
+      ]
+    },
+    {
+      "type": "aws:cdk:templateFile",
+      "data": "FridayCi.template.json"
+    }
+  ],
+  "/FridayCi/Custom::AWSCDKOpenIdConnectProviderCustomResourceProvider": [
+    {
+      "type": "aws:cdk:is-custom-resource-handler-customResourceProvider",
+      "data": true
+    }
+  ],
+  "/FridayCi/DeployRoleArn": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DeployRoleArn"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new CiStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/ci-stack.ts:46:5)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:13 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayCi/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayCi/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/FridayCi/Custom::AWSCDKOpenIdConnectProviderCustomResourceProvider/Role": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CustomAWSCDKOpenIdConnectProviderCustomResourceProviderRole517FED65"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new OpenIdConnectProvider2 in aws-cdk-lib...",
+        "new CiStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/ci-stack.ts:21:9)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:13 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayCi/Custom::AWSCDKOpenIdConnectProviderCustomResourceProvider/Handler": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CustomAWSCDKOpenIdConnectProviderCustomResourceProviderHandlerF2C543E0"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new OpenIdConnectProvider2 in aws-cdk-lib...",
+        "new CiStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/ci-stack.ts:21:9)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:13 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayCi/DeployRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DeployRole885297C3"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Role2 in aws-cdk-lib...",
+        "new CiStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/ci-stack.ts:23:18)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:13 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayCi/GitHub/Resource/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "GitHub38B7EEC4"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new OpenIdConnectProvider2 in aws-cdk-lib...",
+        "new CiStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/ci-stack.ts:21:9)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:13 (:)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/FridayCi/DeployRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DeployRoleDefaultPolicyDC930F96"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...Grant.addToPrincipal in aws-cdk-lib...",
+        "new CiStack (file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/lib/ci-stack.ts:34:15)",
+        "file:///Users/mickitang/Documents/Friday_Manage/Friday_Manage/infra/aws/bin/friday.ts:13 (:)",
+        "...node internals..."
+      ]
+    }
+  ]
+}

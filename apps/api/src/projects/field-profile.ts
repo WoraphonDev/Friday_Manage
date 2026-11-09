@@ -168,23 +168,23 @@ export type BuiltinTemplateId = (typeof BUILTIN_TEMPLATE_IDS)[number];
 export const BUILTIN_TEMPLATES: { id: BuiltinTemplateId; category: TemplateCategory; name: string; description: string; config: Record<string, unknown> }[] = [
   {
     id: 'development', category: 'software', name: 'Development',
-    description: 'แผนพัฒนาระบบ: Module → กลุ่ม → Task → Sub-task · BA / SA / Developer / QA · Size → Man-Day · Plan / Actual',
+    description: 'แผนพัฒนาระบบ แบ่งงานเป็น Module → กลุ่ม → Task → Sub-task',
     config: { category: 'software', workflow: STANDARD_FLOW, sprintLengthWeeks: 2, estimateUnit: 'man_day', progressMethod: 'weighted', fields: ALL_OPTIONAL, columns: DEFAULT_COLUMNS },
   },
   {
-    id: 'scrum', category: 'software', name: 'Scrum', description: 'ทำงานเป็น Sprint · มี Backlog และ Burndown',
+    id: 'scrum', category: 'software', name: 'Scrum', description: 'ทำงานเป็นรอบ Sprint ดึงงานจาก Backlog เข้ารอบ',
     config: { category: 'software', workflow: STANDARD_FLOW, sprintLengthWeeks: 2, fields: ALL_OPTIONAL, columns: DEFAULT_COLUMNS },
   },
   {
-    id: 'kanban', category: 'software', name: 'Kanban', description: 'งานไหลต่อเนื่อง ไม่มี Sprint · จำกัดงานค้างในแต่ละสถานะ',
+    id: 'kanban', category: 'software', name: 'Kanban', description: 'งานไหลต่อเนื่อง ไม่แบ่งรอบ Sprint',
     config: { category: 'software', workflow: [{ name: 'To do' }, { name: 'In progress', wipLimit: 5 }, { name: 'Review', wipLimit: 3 }, { name: 'Done' }], sprintLengthWeeks: null, fields: ALL_OPTIONAL, columns: DEFAULT_COLUMNS },
   },
   {
-    id: 'waterfall', category: 'software', name: 'Waterfall', description: 'ทำทีละเฟสตามลำดับ',
+    id: 'waterfall', category: 'software', name: 'Waterfall', description: 'ทำทีละเฟสตามลำดับ ไม่แบ่งรอบ Sprint',
     config: { category: 'software', workflow: STANDARD_FLOW, sprintLengthWeeks: null, modules: ['Requirement', 'Design', 'Development', 'Testing', 'Deploy'], fields: ALL_OPTIONAL, columns: DEFAULT_COLUMNS },
   },
   {
-    id: 'blank', category: 'software', name: 'Blank', description: 'เริ่มจากโปรเจกต์ว่าง',
+    id: 'blank', category: 'software', name: 'Blank', description: 'เริ่มจากโครงเปล่า แล้วตั้งค่าเองภายหลัง',
     config: { category: 'software', workflow: ['To do', 'Done'], sprintLengthWeeks: null, fields: ALL_OPTIONAL, columns: DEFAULT_COLUMNS },
   },
 ];

@@ -480,7 +480,7 @@ describe("สร้างโปรเจกต์ (Wizard 5 ขั้น)", () =
     wizard();
     const software = await screen.findByRole("group", { name: "Template · Software development" });
     expect(within(software).getAllByRole("button").map((b) => b.querySelector("b")?.textContent)).toEqual(["Development", "Scrum", "Kanban", "Waterfall", "Blank"]);
-    expect(within(software).getByRole("button", { name: /Development/ })).toHaveAttribute("aria-pressed", "true");
+    expect(within(software).getByRole("button", { name: /^Development/ })).toHaveAttribute("aria-pressed", "true");
     const ops = await screen.findByRole("group", { name: "Template · Operations" });
     expect(screen.queryByRole("group", { name: "Template · Service management" })).not.toBeInTheDocument();
     expect(screen.queryByText("Template เสีย")).not.toBeInTheDocument();

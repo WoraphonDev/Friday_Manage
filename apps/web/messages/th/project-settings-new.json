@@ -326,28 +326,28 @@
     "templates": {
       "development": {
         "name": "Development",
-        "description": "แผนพัฒนาระบบ Module → กลุ่ม → Task → Sub-task",
-        "makes": "สร้าง Sprint + 4 สถานะ + ฟิลด์ BA / SA / Dev / QA, Size → Man-Day, Plan / Actual และคอลัมน์ Table ตามแผนพัฒนา"
+        "description": "แผนพัฒนาระบบ แบ่งงานเป็น Module → กลุ่ม → Task → Sub-task",
+        "makes": "Sprint 2 สัปดาห์ · 4 สถานะ · BA / SA / Dev / QA · Size → Man-Day · Plan / Actual"
       },
       "scrum": {
         "name": "Scrum",
-        "description": "ทำงานเป็น Sprint มี Backlog",
-        "makes": "สร้าง Sprint + Backlog + 4 สถานะ"
+        "description": "ทำงานเป็นรอบ Sprint ดึงงานจาก Backlog เข้ารอบ",
+        "makes": "Sprint 2 สัปดาห์ · 4 สถานะ · Backlog"
       },
       "kanban": {
         "name": "Kanban",
-        "description": "งานไหลต่อเนื่อง ไม่มี Sprint",
-        "makes": "สร้างบอร์ด 4 คอลัมน์ + WIP limit"
+        "description": "งานไหลต่อเนื่อง ไม่แบ่งรอบ Sprint",
+        "makes": "บอร์ด 4 คอลัมน์ · จำกัดงานค้าง In progress 5 / Review 3"
       },
       "waterfall": {
         "name": "Waterfall",
-        "description": "แผนเป็นเฟส มี dependency",
-        "makes": "สร้างเฟส Requirement → Deploy เป็น Module"
+        "description": "ทำทีละเฟสตามลำดับ ไม่แบ่งรอบ Sprint",
+        "makes": "5 เฟสเป็น Module: Requirement → Design → Development → Testing → Deploy"
       },
       "blank": {
         "name": "Blank",
-        "description": "เริ่มจากศูนย์",
-        "makes": "สร้างเฉพาะสถานะพื้นฐาน"
+        "description": "เริ่มจากโครงเปล่า แล้วตั้งค่าเองภายหลัง",
+        "makes": "2 สถานะ (To do / Done) · ไม่มี Sprint และ Module"
       },
       "workspace": "Template ของ Workspace",
       "workspaceMakes": "ใช้สถานะ, ประเภทงาน, ชุดฟิลด์ และ Module ตาม Template"

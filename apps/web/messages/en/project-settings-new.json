@@ -326,28 +326,28 @@
     "templates": {
       "development": {
         "name": "Development",
-        "description": "Software delivery plan: Module → Group → Task → Sub-task",
-        "makes": "Creates Sprints + 4 statuses + BA / SA / Dev / QA fields, Size → Man-Day, Plan / Actual and the delivery-plan Table columns"
+        "description": "Software delivery plan split into Module → Group → Task → Sub-task",
+        "makes": "2-week Sprints · 4 statuses · BA / SA / Dev / QA · Size → Man-Day · Plan / Actual"
       },
       "scrum": {
         "name": "Scrum",
-        "description": "Work in Sprints with a Backlog",
-        "makes": "Creates Sprints + Backlog + 4 statuses"
+        "description": "Work in Sprints, pulling issues from the Backlog",
+        "makes": "2-week Sprints · 4 statuses · Backlog"
       },
       "kanban": {
         "name": "Kanban",
-        "description": "Continuous flow, no Sprints",
-        "makes": "Creates a 4-column board + WIP limits"
+        "description": "Continuous flow without Sprints",
+        "makes": "4-column board · WIP limits In progress 5 / Review 3"
       },
       "waterfall": {
         "name": "Waterfall",
-        "description": "Phased plan with dependencies",
-        "makes": "Creates Requirement → Deploy phases as Modules"
+        "description": "One phase after another, without Sprints",
+        "makes": "5 phases as Modules: Requirement → Design → Development → Testing → Deploy"
       },
       "blank": {
         "name": "Blank",
-        "description": "Start from scratch",
-        "makes": "Creates only the basic statuses"
+        "description": "Start from an empty setup and configure later",
+        "makes": "2 statuses (To do / Done) · no Sprints or Modules"
       },
       "workspace": "Workspace Template",
       "workspaceMakes": "Uses the template's statuses, issue types, fields and modules"

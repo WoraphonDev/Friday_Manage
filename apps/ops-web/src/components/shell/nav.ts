@@ -40,10 +40,10 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
   {
     group: "money",
     items: [
-      { key: "billing", href: "/payments", built: true, roles: MONEY },
+      { key: "billing", href: "/payments?tab=invoices", built: true, roles: MONEY },
       { key: "verify", href: "/payments", built: true, roles: MONEY, badge: ["paymentExceptions"] },
-      { key: "refunds", href: "/refunds", built: false, roles: MONEY, badge: ["approvals"] },
-      { key: "accounting", href: "/billing?tab=revenue", built: false, roles: MONEY },
+      { key: "refunds", href: "/refunds", built: true, roles: MONEY, badge: ["approvals"] },
+      { key: "accounting", href: "/payments?tab=revenue", built: true, roles: MONEY },
     ],
   },
   {

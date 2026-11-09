@@ -39,7 +39,19 @@ export function InboxPage({ ws }: { ws: string }) {
   const cache = useQueryClient();
   const toast = useToast();
   const [filter, setFilter] = useState<Filter>("all");
-  const [selected, setSelected] = useState<string | null>(search.get("n"));
+  const urlN = search.get("n");
+  const [selected, setSelected] = useState<string | null>(urlN);
+  // ?n= เปลี่ยนโดยไม่ remount (คลิกกระดิ่งขณะอยู่ใน Inbox, Back/Forward) → เลือกตาม URL ใหม่
+  const [seenN, setSeenN] = useState(urlN);
+  /** รายการที่ URL ขอแต่ยังไม่อยู่ในหน้าที่โหลด · โหลดหน้าถัดไปจนเจอหรือหมด */
+  const [target, setTarget] = useState<string | null>(urlN);
+  if (urlN !== seenN) {
+    setSeenN(urlN);
+    setSelected(urlN);
+    setTarget(urlN);
+    // ตัวกรองที่เลือกอยู่อาจซ่อนรายการเป้าหมาย
+    if (urlN) setFilter("all");
+  }
   const labels = useLabels();
   const query = useInfiniteQuery({
     queryKey: [...inboxKey(ws), filter],
@@ -62,6 +74,13 @@ export function InboxPage({ ws }: { ws: string }) {
   const items = query.data?.pages.flatMap((p) => p.items) ?? [];
   const counts = query.data?.pages[0]?.counts;
   const current = items.find((n) => n.id === selected) ?? null;
+
+  useEffect(() => {
+    if (!target || !query.data || query.isFetching) return;
+    if (query.data.pages.some((p) => p.items.some((n) => n.id === target)) || !query.hasNextPage) setTarget(null);
+    else void query.fetchNextPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, query.data, query.isFetching, query.hasNextPage]);
 
   // เปิดรายการแล้วถือว่าอ่าน
   useEffect(() => {

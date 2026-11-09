@@ -10,6 +10,7 @@ import { TenantDb } from '../common/tenant.js';
 import { REASONS } from '../due-requests/due-requests.service.js';
 import { addDays } from '../projects/calendar.js';
 import { type ProjectAccess, projectAccess } from '../projects/permissions.js';
+import { RealtimeService } from '../realtime/realtime.service.js';
 
 const s = schema;
 const n = s.notifications;
@@ -56,7 +57,15 @@ const active = () => [isNull(n.doneAt), or(isNull(n.snoozedUntil), lte(n.snoozed
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly db: TenantDb) {}
+  constructor(
+    private readonly db: TenantDb,
+    private readonly realtime: RealtimeService,
+  ) {}
+
+  /** ให้ session อื่นของผู้ใช้ (แท็บ / อุปกรณ์อื่น) อัปเดตตัวนับ · เป็นแค่สัญญาณ ล้มเหลวไม่กระทบคำสั่งที่ commit แล้ว */
+  private signalUnread(auth: AuthInfo) {
+    void this.realtime.unreadChanged(auth.userId).catch(() => undefined);
+  }
 
   // ---------------------------------------------------------------------------
   // G · Inbox
@@ -130,7 +139,7 @@ export class NotificationsService {
 
   async readAll(auth: AuthInfo, body: z.infer<typeof ReadAllBody>) {
     const tenant = body.workspace ? await this.db.tenant(auth, body.workspace) : null;
-    return this.db.run(auth, tenant, async (tx) => {
+    const result = await this.db.run(auth, tenant, async (tx) => {
       const rows = await tx
         .update(n)
         .set({ readAt: new Date() })
@@ -138,12 +147,15 @@ export class NotificationsService {
         .returning({ id: n.id });
       return { updated: rows.length };
     });
+    this.signalUnread(auth);
+    return result;
   }
 
   private async update(auth: AuthInfo, id: string, set: Record<string, unknown>) {
     if (!z.uuid().safeParse(id).success) throw new AppError(404, 'not_found', 'ไม่พบการแจ้งเตือน');
     const [row] = await this.db.run(auth, null, (tx) => tx.update(n).set(set).where(eq(n.id, id)).returning());
     if (!row) throw new AppError(404, 'not_found', 'ไม่พบการแจ้งเตือน');
+    this.signalUnread(auth);
     return this.dto(row);
   }
 

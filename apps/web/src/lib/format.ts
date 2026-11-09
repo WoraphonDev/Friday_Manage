@@ -1,4 +1,5 @@
 import { differenceInCalendarDays, isValid, parseISO } from "date-fns";
+import { useLocale } from "next-intl";
 import commonTh from "../../messages/th/common.json";
 import commonEn from "../../messages/en/common.json";
 
@@ -6,11 +7,21 @@ export type YearFormat = "BE" | "CE";
 type DateLocale = "th" | "en";
 
 /**
- * ภาษาของวันที่ = ภาษาของหน้า (`<html lang>` ที่ layout ตั้งจากภาษาของผู้ใช้) · ฝั่ง server ใช้ไทย
- * ใช้ค่าจาก DOM แทน hook เพราะ formatDate ถูกเรียกเป็นฟังก์ชันธรรมดาทั่วทั้งแอป
+ * ภาษาของวันที่ = ภาษาของคำขอ
+ * - browser: `<html lang>` ที่ layout ตั้งจากภาษาของผู้ใช้ (ตัวสลับภาษาแก้ค่านี้ด้วย) · เรียกได้ทั้งตอน render และใน event handler
+ * - server: `useLocale()` ของ next-intl ระหว่าง render ซึ่งแยกตามคำขอ จึงตรงกับ `<html lang>` ที่ส่งไป ไม่เกิด hydration mismatch
+ *   formatDate ถูกเรียกเป็นฟังก์ชันธรรมดาระหว่าง render ทั่วทั้งแอป · useLocale อ่าน context อย่างเดียว ไม่เพิ่ม hook slot จึงไม่กระทบลำดับ hook
+ *   เรียกนอกการ render บน server (ไม่มี context) ใช้ไทย
  */
-export const pageLocale = (): DateLocale =>
-  typeof document !== "undefined" && document.documentElement.lang === "en" ? "en" : "th";
+export const pageLocale = (): DateLocale => {
+  if (typeof document !== "undefined") return document.documentElement.lang === "en" ? "en" : "th";
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- อ่าน context ภาษาของคำขอ (ดูคำอธิบายด้านบน)
+    return useLocale() === "en" ? "en" : "th";
+  } catch {
+    return "th";
+  }
+};
 /** locale ของ Intl สำหรับตัวเลขและเวลา (ไม่มีปี) ตามภาษาของหน้า */
 export const appLocale = (lang: DateLocale = pageLocale()) => (lang === "en" ? "en-US" : "th-TH");
 /** locale ของ Intl ที่รวมปฏิทินตามรูปแบบปีของผู้ใช้ เช่น en-US + gregory · th-TH + buddhist */

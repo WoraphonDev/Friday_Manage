@@ -12,7 +12,7 @@ import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import ot from "../../messages/th/overview-table.json";
 import ldr from "../../messages/th/lead-dashboard-reports.json";
 import { OverviewPage } from "../../app/work/[ws]/p/[key]/table/_components/overview";
-import { TableView, buildDisplay } from "../../app/work/[ws]/p/[key]/table/_components/table-view";
+import { TableView, buildDisplay, stuckGroups } from "../../app/work/[ws]/p/[key]/table/_components/table-view";
 import type { Overview, Row, TableData } from "../../app/work/[ws]/p/[key]/table/_components/types";
 
 const person = (id: string, displayName: string) => ({ id, displayName });
@@ -126,7 +126,10 @@ describe("Table (2)", () => {
     // Actual แยกเป็นสองคอลัมน์ · ตารางกว้างตามคอลัมน์ที่เปิด (เลื่อนแนวนอนในกล่อง)
     expect(screen.getByRole("columnheader", { name: "Actual Start" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Actual End" })).toBeInTheDocument();
-    expect(Number.parseInt(screen.getByRole("table").style.minWidth)).toBeGreaterThan(1100);
+    // หัวตารางแยกเป็นตารางของตัวเอง (ติดใต้ top bar) กว้างเท่าตัวตารางเสมอ คอลัมน์จึงตรงกัน
+    const [head, body] = screen.getAllByRole("table");
+    expect(Number.parseInt(body.style.minWidth)).toBeGreaterThan(1100);
+    expect(head.style.minWidth).toBe(body.style.minWidth);
     // FR / Screen ซ่อนไว้ก่อน เปิดได้จากเมนู Columns
     expect(screen.queryByRole("columnheader", { name: "FR / Screen" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Columns" }));
@@ -208,6 +211,39 @@ describe("Table (2)", () => {
     expect(screen.queryByLabelText("ชื่อ Sub-task ใหม่ใน DE-1")).not.toBeInTheDocument();
   });
 
+  it("หมายเหตุ: แสดงในคอลัมน์ · แก้ใน Textarea แล้วบันทึกด้วย ⌘/Ctrl+Enter · ล้างข้อความ = null", async () => {
+    const user = userEvent.setup();
+    tableData = table([row("DE-1", { remark: "รอข้อมูลจากทีมบัญชี\nบรรทัดที่สอง" }), row("DE-3", { moduleId: "m-b" })]);
+    mount(<TableView ws="sample" projectKey="DE" />);
+    expect(await screen.findByRole("columnheader", { name: "หมายเหตุ" })).toBeInTheDocument();
+    expect(screen.getByTitle(/รอข้อมูลจากทีมบัญชี/)).toHaveTextContent("รอข้อมูลจากทีมบัญชี");
+    await user.click(screen.getByRole("button", { name: "แก้ หมายเหตุ ของ DE-3" }));
+    const box = within(await screen.findByRole("dialog")).getByRole("textbox", { name: "แก้ หมายเหตุ ของ DE-3" });
+    await user.type(box, "ลูกค้าขอเลื่อน{Shift>}{Enter}{/Shift}รอยืนยัน");
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    await waitFor(() => expect(patches.at(-1)).toEqual({ key: "DE-3", body: { remark: "ลูกค้าขอเลื่อน\nรอยืนยัน" }, etag: '"2"' }));
+    await user.click(screen.getByRole("button", { name: "แก้ หมายเหตุ ของ DE-1" }));
+    const filled = within(await screen.findByRole("dialog")).getByRole("textbox");
+    await user.clear(filled);
+    await user.click(screen.getByRole("button", { name: "บันทึก" }));
+    await waitFor(() => expect(patches.at(-1)?.body).toEqual({ remark: null }));
+  });
+
+  it("Module / กลุ่มที่ดูอยู่ค้างใต้หัวตารางเมื่อเลื่อนผ่านแถวของมัน", () => {
+    const data = table([row("DE-1", { phaseId: "p-1" }), row("DE-3", { moduleId: "m-b" })]);
+    data.modules[0].phases.push({ ...data.modules[0].phases[0], id: "p-1", name: "Sprint 1" });
+    const display = buildDisplay(data, new Set(), "-", "-");
+    // แต่ละแถวสูง 40px เริ่มที่ y = 0 · หัวตารางสิ้นสุดที่ line
+    const box = document.createElement("div");
+    box.innerHTML = `<table><tbody>${display.map((_, i) => `<tr data-i="${i}"></tr>`).join("")}</tbody></table>`;
+    box.querySelectorAll("tr").forEach((tr, i) => { tr.getBoundingClientRect = () => ({ top: i * 40 - 1000, bottom: i * 40 + 40 - 1000 }) as DOMRect; });
+    const at = (kind: string, name?: string) => display.findIndex((d) => d.kind === kind && (!name || ("name" in d && d.name === name)));
+    const lineAt = (i: number) => i * 40 - 1000 + 1;
+    expect(stuckGroups(box, display, -1000, 0)).toEqual({ module: null, phase: null });
+    expect(stuckGroups(box, display, lineAt(display.findIndex((d) => d.kind === "issue" && d.row.key === "DE-1")), -1000)).toEqual({ module: at("module", "Module A"), phase: at("phase") });
+    expect(stuckGroups(box, display, lineAt(display.findIndex((d) => d.kind === "issue" && d.row.key === "DE-3")), -1000)).toEqual({ module: at("module", "Module B"), phase: null });
+  });
+
   it("เลือกหลายแถว → ย้าย Module / Due / Assignee และลบต้องพิมพ์ยืนยัน", async () => {
     const user = userEvent.setup();
     mount(<TableView ws="sample" projectKey="DE" />);
@@ -278,10 +314,10 @@ describe("Table (2)", () => {
     await screen.findByTestId("row-DE-1");
     expect(screen.queryByTestId("row-DE-400")).not.toBeInTheDocument();
     expect(screen.getAllByRole("row").length).toBeLessThan(120);
-    // ตารางมีกล่องเลื่อนของตัวเอง: จำลองว่าเลื่อนลงไป 390 แถว
+    // ตารางใช้ scroll ของหน้า: จำลองว่าขอบบนตัวตารางเลื่อนพ้นหัวตารางขึ้นไป 390 แถว
     const scroll = screen.getByTestId("table-scroll");
-    scroll.scrollTop = 38 * 390;
-    fireEvent.scroll(scroll);
+    scroll.getBoundingClientRect = () => ({ top: -38 * 390, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: -38 * 390, toJSON: () => ({}) });
+    fireEvent.scroll(window);
     expect(await screen.findByTestId("row-DE-390")).toBeInTheDocument();
     expect(screen.queryByTestId("row-DE-1")).not.toBeInTheDocument();
     a.unmount();

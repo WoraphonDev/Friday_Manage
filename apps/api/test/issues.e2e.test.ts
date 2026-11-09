@@ -600,6 +600,25 @@ describe('หน้า Task v2 (ผู้ใช้ตัดสิน 2026-11-08)
     expect(bad.body.error.code).toBe('invalid_people');
   });
 
+  it('หมายเหตุ (Remark): สร้าง แก้ ล้างเป็น null บันทึก Activity แสดงใน Table และซ่อนจาก Guest Viewer', async () => {
+    const task = await create({ remark: 'รอข้อมูลสมมติจากทีมบัญชี', sharedWithGuests: true });
+    expect(task.remark).toBe('รอข้อมูลสมมติจากทีมบัญชี');
+    const child = await create({ parentKey: task.key, remark: 'Sub-task มีหมายเหตุของตัวเอง' });
+    expect(child.remark).toBe('Sub-task มีหมายเหตุของตัวเอง');
+    const patched = await team.lead.patch(url(task.key), { remark: 'บรรทัดแรก\nบรรทัดที่สอง' }, task.version);
+    expect(patched.status, JSON.stringify(patched.body)).toBe(200);
+    expect(patched.body.remark).toBe('บรรทัดแรก\nบรรทัดที่สอง');
+    const rows = (await team.lead.get(`${projectUrl()}/issues?view=table&q=${task.key}`)).body.items;
+    expect(rows.find((row: { key: string }) => row.key === task.key).remark).toBe('บรรทัดแรก\nบรรทัดที่สอง');
+    const activity = await t.owner.query("SELECT old_value, new_value FROM activities WHERE issue_id=$1 AND field='remark'", [task.id]);
+    expect(activity.rows).toEqual([{ old_value: 'รอข้อมูลสมมติจากทีมบัญชี', new_value: 'บรรทัดแรก\nบรรทัดที่สอง' }]);
+    expect((await guest.get(url(task.key))).body.remark).toBeUndefined();
+    const cleared = await team.lead.patch(url(task.key), { remark: '' }, patched.body.version);
+    expect(cleared.body.remark).toBeNull();
+    const tooLong = await team.lead.patch(url(task.key), { remark: 'ก'.repeat(10_001) }, cleared.body.version);
+    expect(tooLong.status).toBe(400);
+  });
+
   it('ย้าย Sub-task ไปใต้ Task อื่นได้เฉพาะ Module เดียวกัน และบันทึกประวัติทั้งสามงาน', async () => {
     const a = await create();
     const b = await create();

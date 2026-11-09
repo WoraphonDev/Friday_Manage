@@ -4,7 +4,10 @@ export interface Status { id: string; name: string; category: 'todo' | 'in_progr
 export interface Named { id: string; name: string; color?: string | null }
 export interface Issue {
   id: string; key: string; projectKey: string; type: IssueType; parentKey: string | null;
-  title: string; description: string | null; status: Status; priority: 'urgent' | 'high' | 'medium' | 'low';
+  title: string; description: string | null;
+  /** หมายเหตุ · Guest ไม่ได้รับ */
+  remark?: string | null;
+  status: Status; priority: 'urgent' | 'high' | 'medium' | 'low';
   moduleId: string | null; phaseId: string | null; sprintId: string | null;
   /** ชื่อกลุ่ม (เฉพาะ GET issue) */
   group?: { id: string; name: string } | null;

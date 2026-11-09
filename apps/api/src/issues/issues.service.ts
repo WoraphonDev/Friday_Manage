@@ -39,6 +39,8 @@ export const CreateIssueBody = z.object({
   sprintId: uuid.nullish(),
   title: z.string().trim().min(1).max(300),
   description: z.string().max(50_000).optional(),
+  /** หมายเหตุ (Remark) แยกจากรายละเอียด */
+  remark: z.string().max(10_000).optional(),
   statusId: uuid.optional(),
   priority: z.enum(['urgent', 'high', 'medium', 'low']).default('medium'),
   assigneeIds: z.array(uuid).max(20).default([]),
@@ -69,6 +71,7 @@ export const PatchIssueBody = z
   .object({
     title: z.string().trim().min(1).max(300),
     description: z.string().max(50_000).nullable(),
+    remark: z.string().max(10_000).nullable(),
     statusId: uuid,
     priority: z.enum(['urgent', 'high', 'medium', 'low']),
     moduleId: uuid,
@@ -221,6 +224,7 @@ export class IssuesService {
           sprintId,
           title: input.title,
           description: input.description,
+          remark: input.remark || null,
           statusId,
           priority: input.priority,
           baId: input.baId,
@@ -497,8 +501,9 @@ export class IssuesService {
       const warnings: Warning[] = [];
       const [type] = await tx.select().from(s.issueTypes).where(eq(s.issueTypes.id, issue.issueTypeId));
       const set: Partial<typeof s.issues.$inferInsert> = {};
-      const copy = ['title', 'description', 'priority', 'baId', 'saId', 'reviewerId', 'testerId', 'severity', 'environment', 'details', 'sharedWithGuests', 'size'] as const;
+      const copy = ['title', 'description', 'remark', 'priority', 'baId', 'saId', 'reviewerId', 'testerId', 'severity', 'environment', 'details', 'sharedWithGuests', 'size'] as const;
       for (const k of copy) if (input[k] !== undefined) (set as Record<string, unknown>)[k] = input[k];
+      if (set.remark === '') set.remark = null;
 
       // Sub-task สืบทอด Module / กลุ่มงาน / Sprint จากงานแม่
       if (issue.parentId && (input.moduleId !== undefined || input.phaseId !== undefined || input.sprintId !== undefined)) {
@@ -1132,6 +1137,8 @@ export class IssuesService {
       if (access.guestViewer) return base;
       return {
         ...base,
+        // หมายเหตุเป็นบันทึกภายในทีม ไม่ส่งให้ Guest
+        remark: i.remark,
         assigneeIds: people.filter((p) => p.issueId === i.id).map((p) => p.userId),
         baId: i.baId,
         saId: i.saId,
@@ -1187,7 +1194,7 @@ export function outsideParent(parent: Issue, start?: string | null, end?: string
 /** ข้อมูลอ้างอิงที่อยู่ตารางเชื่อม แก้ผ่าน PATCH แบบแทนทั้งชุด */
 const REF_FIELDS = ['requirements', 'screens', 'labelIds'] as const;
 
-const DIFF_FIELDS = ['title', 'description', 'statusId', 'priority', 'moduleId', 'phaseId', 'sprintId', 'baId', 'saId', 'reviewerId', 'testerId', 'size', 'estimateMd', 'planStart', 'planEnd', 'actualStart', 'progressPct', 'severity', 'environment', 'sharedWithGuests'] as const;
+const DIFF_FIELDS = ['title', 'description', 'remark', 'statusId', 'priority', 'moduleId', 'phaseId', 'sprintId', 'baId', 'saId', 'reviewerId', 'testerId', 'size', 'estimateMd', 'planStart', 'planEnd', 'actualStart', 'progressPct', 'severity', 'environment', 'sharedWithGuests'] as const;
 
 function diff(a: Issue, b: Issue) {
   return DIFF_FIELDS.filter((f) => a[f] !== b[f]).map((f) => ({ field: f as string, oldValue: a[f] as unknown, newValue: b[f] as unknown }));

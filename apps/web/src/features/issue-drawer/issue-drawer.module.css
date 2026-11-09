@@ -160,6 +160,8 @@
 .delOpt input { margin-top:4px; }.delOpt b { display:block; font-size:13px; }.delOpt small { display:block; font-size:11px; }
 .dueFooter { border-top:1px solid var(--border); padding-top:14px; margin-top:4px; }
 .taSteps { min-height:84px; }.taShort { min-height:60px; }
+/* หมายเหตุเป็นข้อความธรรมดา คงการขึ้นบรรทัดตามที่พิมพ์ */
+.remark { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.6; }
 .footLeft { margin-right:auto; }
 .editor { min-height:140px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; }
 .more { border:1px solid var(--border); border-radius:10px; padding:10px 14px; }

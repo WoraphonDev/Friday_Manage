@@ -47,6 +47,21 @@ describe('Issue drawer details', () => {
     expect(mutations('/issues/DE-1')[1]).toMatchObject({body:{priority:'high'},etag:'"4"'});
   });
 
+  it('หมายเหตุ: เพิ่มด้วย Textarea คงการขึ้นบรรทัด · ล้างข้อความแล้วส่ง null', async () => {
+    const user=userEvent.setup();mount();await loaded();
+    await user.click(screen.getByRole('button',{name:'+ เพิ่มหมายเหตุ'}));
+    const box=screen.getByRole('textbox',{name:'+ เพิ่มหมายเหตุ'});
+    expect(box.tagName).toBe('TEXTAREA');
+    await user.type(box,'รอข้อมูลจากทีมบัญชี{Enter}นัดคุยวันศุกร์');
+    await user.click(screen.getByRole('button',{name:'บันทึก'}));
+    await waitFor(()=>expect(mutations('/issues/DE-1')[0]).toMatchObject({body:{remark:'รอข้อมูลจากทีมบัญชี\nนัดคุยวันศุกร์'},etag:'"3"'}));
+    expect(await screen.findByText(/รอข้อมูลจากทีมบัญชี/)).toHaveTextContent('รอข้อมูลจากทีมบัญชี นัดคุยวันศุกร์');
+    await user.click(screen.getByRole('button',{name:'แก้ไขหมายเหตุ'}));
+    await user.clear(screen.getByRole('textbox',{name:'แก้ไขหมายเหตุ'}));
+    await user.click(screen.getByRole('button',{name:'บันทึก'}));
+    await waitFor(()=>expect(mutations('/issues/DE-1')[1]).toMatchObject({body:{remark:null}}));
+  });
+
   it('keeps the draft and blocks further changes after409 until loading latest', async () => {
     const user=userEvent.setup();
     server.use(http.patch(issueEndpoint,async({request})=>{const body=await request.json() as Record<string,unknown>;f.state.issues.get('DE-1')!.title='ชื่อจากผู้อื่น';f.state.issues.get('DE-1')!.version=9;return failure(409,'conflict',{latest:f.state.issues.get('DE-1')});}));
@@ -224,10 +239,10 @@ describe('Create issue',()=>{
     await user.selectOptions(screen.getByLabelText('Module'),uid(10));await user.type(screen.getByLabelText('ชื่อ Task'),title);
   }
   it('creates Task with form-options, required fields and Ctrl+Enter',async()=>{
-    const user=userEvent.setup();createMount();await taskFields(user);await user.type(screen.getByLabelText('คำอธิบาย'),'คำอธิบายใหม่');
+    const user=userEvent.setup();createMount();await taskFields(user);await user.type(screen.getByLabelText('คำอธิบาย'),'คำอธิบายใหม่');await user.type(screen.getByLabelText('หมายเหตุ'),'รอยืนยันขอบเขต');
     fireEvent.keyDown(screen.getByLabelText('ชื่อ Task'),{key:'Enter',ctrlKey:true});
     await waitFor(()=>expect(mutations('/projects/DE/issues')).toHaveLength(1));
-    expect(mutations('/projects/DE/issues')[0].body).toMatchObject({type:'Task',title:'งานที่สร้างใหม่',moduleId:uid(10),size:'M',estimateMd:5,description:'คำอธิบายใหม่'});
+    expect(mutations('/projects/DE/issues')[0].body).toMatchObject({type:'Task',title:'งานที่สร้างใหม่',moduleId:uid(10),size:'M',estimateMd:5,description:'คำอธิบายใหม่',remark:'รอยืนยันขอบเขต'});
     await screen.findByRole('button',{name:'งานที่สร้างใหม่'});
     expect(router.replace).toHaveBeenLastCalledWith('/work/sample/p/DE/board?filter=open&issue=DE-20',{scroll:false});
   });

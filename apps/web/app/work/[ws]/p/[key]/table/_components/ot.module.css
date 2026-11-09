@@ -68,9 +68,28 @@
 .list { padding:12px 18px; display:flex; flex-direction:column; gap:12px; }
 .line { display:flex; justify-content:space-between; gap:8px; font-size:12px; }
 .empty { padding:24px 18px; color:var(--muted); font-size:12px; }
-/* กล่องเลื่อนของตารางเอง ทั้งแนวตั้งและแนวนอน (ผู้ใช้ขอ 2026-11-09: เลื่อนไปขวาเพื่อเพิ่มคอลัมน์ได้)
-   สูงไม่เกินจอ แถบเลื่อนแนวนอนจึงอยู่ในจอเสมอ · หัวตารางติดขอบบนกล่อง · คอลัมน์ชื่องานติดซ้าย */
-.tableWrap { overflow:auto; position:relative; max-height:calc(100dvh - var(--topbar-h) - 16px); container-type:inline-size; }
+/* แนวตั้งใช้ scroll ของหน้าชั้นเดียว (ผู้ใช้ตัดสิน 2026-11-09: ไม่เอากล่องเลื่อนซ้อน) · แนวนอนเลื่อนเฉพาะตัวตาราง
+   overflow-x:auto ทำให้กล่องเป็น scroll container (CSS บังคับ overflow-y เป็น auto ด้วย) sticky แนวตั้งข้างในจึงใช้ไม่ได้
+   หัวตารางจึงแยกเป็นตารางของตัวเองใน .stickyHead ที่ติดใต้ top bar และเลื่อนซ้ายขวาตามตัวตารางด้วย JS
+   แถบเลื่อนของกล่องซ่อนไว้ ใช้ .hbar ที่ติดขอบล่างจอแทน (แถบจริงจะอยู่ท้ายตารางซึ่งมักพ้นจอ) */
+.tableWrap { overflow-x:auto; overflow-y:hidden; position:relative; container-type:inline-size; scrollbar-width:none; }
+.tableWrap::-webkit-scrollbar { display:none; }
+.stickyHead { position:sticky; top:var(--topbar-h); z-index:4; }
+.headScroll { overflow:hidden; }
+.hbar { position:sticky; bottom:0; z-index:4; overflow-x:auto; overflow-y:hidden; background:#f8f9fb; border-top:1px solid var(--border); }
+.hbar > div { height:1px; }
+/* macOS ซ่อน scrollbar จนกว่าจะเลื่อน (overlay) แถบนี้จึงสูง 0 จนมองไม่เห็น · กำหนดรูปแถบเองให้แสดงตลอด
+   (ห้ามตั้ง scrollbar-width / scrollbar-color ที่นี่ Chrome จะไม่ใช้ ::-webkit-scrollbar) */
+.hbar::-webkit-scrollbar { height:12px; }
+.hbar::-webkit-scrollbar-track { background:#f8f9fb; }
+.hbar::-webkit-scrollbar-thumb { background:#c9cfd6; border-radius:99px; border:3px solid #f8f9fb; }
+.hbar::-webkit-scrollbar-thumb:hover { background:#9aa3ad; }
+/* Module / กลุ่มที่กำลังดูอยู่ ค้างใต้หัวตารางเมื่อแถวจริงเลื่อนพ้นขึ้นไป · absolute จึงไม่ดันเนื้อหาตารางตอนโผล่
+   overflow hidden: ตอนแถว Module ถัดไปดันแถบขึ้น แถบหายใต้เส้นหัวตาราง ไม่ทับหัวคอลัมน์ */
+.ctx { position:absolute; top:100%; left:0; right:0; overflow:hidden; }
+.ctxModule { display:flex; align-items:center; gap:10px; min-height:52px; flex-wrap:wrap; padding:0 14px; background:#f8f9fb; border-bottom:1px solid var(--border); position:relative; z-index:2; }
+.ctxPhase { display:flex; align-items:center; gap:10px; min-height:38px; padding:0 14px 0 34px; background:#fafbfc; border-bottom:1px solid #eef0f3; position:relative; z-index:1; box-shadow:0 2px 4px rgb(16 24 40 / .05); }
+.ctxModule:last-child { box-shadow:0 2px 4px rgb(16 24 40 / .05); }
 /* Table ตาม Canvas Table (.gr / .gh / .mrow) */
 .toolbar { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; }
 .search { display:flex; align-items:center; gap:8px; min-height:32px; padding:0 12px; border:1px solid var(--input); border-radius:8px; background:#fff; min-width:220px; color:var(--muted); }
@@ -93,8 +112,8 @@
 /* เปิดเป็น popover เดียวกับ Select กลาง (ดู globals.css) โดยตัว pill ไม่เปลี่ยน */
 @supports (appearance: base-select) { .pillSelect { appearance:base-select; } .pillSelect::picker-icon { display:none; } }
 .pillSelect:hover { box-shadow:inset 0 0 0 1px currentColor; }
-.tableWrap .table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; min-width:1100px; table-layout:fixed; }
-.table th { position:sticky; top:0; background:#f8f9fb; text-align:left; font-weight:600; font-size:11px; color:#5f6873; height:32px; padding:0 5px; border-bottom:1px solid var(--border); z-index:1; white-space:nowrap; }
+.table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; min-width:1100px; table-layout:fixed; }
+.table th { position:sticky; background:#f8f9fb; text-align:left; font-weight:600; font-size:11px; color:#5f6873; height:32px; padding:0 5px; border-bottom:1px solid var(--border); z-index:1; white-space:nowrap; }
 .table th:first-child, .table td:first-child { padding-left:14px; }
 .table td { padding:0 5px; border-bottom:1px solid #eef0f3; height:38px; font-size:var(--text-label); vertical-align:middle; }
 .nameHead { display:flex; align-items:center; gap:8px; padding-left:30px; }
@@ -199,7 +218,6 @@
   .mobileOnly { display:flex; flex-direction:column; gap:12px; }
   .cols, .side { gap:12px; }
 }
-/* จอแคบกว่าตาราง: เลื่อนแนวนอนในกล่อง · กล่องกลายเป็น scroll container หัวตารางจึงติดที่ขอบกล่อง (top 0) แทน */
 /* คอลัมน์ชื่องานค้างอยู่ซ้ายเมื่อเลื่อนไปขวา · แถว Module / กลุ่ม (colspan) ค้างทั้งแถว */
 .table th:first-child { left:0; z-index:3; }
 .table td:first-child { position:sticky; left:0; z-index:1; background:#fff; }
@@ -216,3 +234,8 @@
 .footInner { position:sticky; left:14px; width:calc(100cqw - 30px); text-align:right; }
 .footInner span + span { margin-left:18px; }
 .table th:first-child, .itemRow td:first-child { box-shadow:inset -1px 0 0 #eef0f3; }
+/* หมายเหตุ: บรรทัดเดียวตัดด้วย … · กดแล้วแก้ใน Textarea */
+.remarkCell { width:100%; }
+.remarkText { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#3d4550; }
+.remarkPop { width:340px; display:flex; flex-direction:column; gap:8px; }
+.remarkPop textarea { width:100%; min-height:120px; resize:vertical; font-size:12px; line-height:1.5; }

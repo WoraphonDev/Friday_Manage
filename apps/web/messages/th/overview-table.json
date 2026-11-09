@@ -210,6 +210,7 @@
       "actualEnd": "Actual End",
       "refs": "FR / Screen",
       "progress": "Progress",
+      "remark": "หมายเหตุ",
       "priority": "Priority"
     },
     "select": "เลือก {key}",
@@ -276,7 +277,9 @@
       "subtaskPlaceholder": "ชื่อ Sub-task แล้วกด Enter · Esc เพื่อปิด",
       "subtaskCreated": "สร้าง {key} แล้ว",
       "add": "เพิ่ม",
-      "cancel": "ยกเลิก"
+      "cancel": "ยกเลิก",
+      "remarkPlaceholder": "หมายเหตุของงาน",
+      "remarkHint": "⌘/Ctrl + Enter เพื่อบันทึก"
     }
   }
 }

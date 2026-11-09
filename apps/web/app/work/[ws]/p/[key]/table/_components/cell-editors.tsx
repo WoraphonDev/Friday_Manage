@@ -179,3 +179,37 @@ export function SubtaskAdd({ base, parentKey, onCreated, onClose, onFullForm }: 
     </div>
   );
 }
+
+/** หมายเหตุในแถว: แสดงบรรทัดเดียว กดแล้วแก้ใน Textarea · ⌘/Ctrl+Enter = บันทึก, Esc = ปิดโดยไม่บันทึก */
+export function RemarkCell({ label, value, onChange, children }: {
+  label: string; value: string | null; onChange: (value: string | null) => void; children: ReactNode;
+}) {
+  const t = useTranslations("overview-table.table.cell");
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  function save() {
+    setOpen(false);
+    const next = draft.trim() ? draft : null;
+    if (next !== (value || null)) onChange(next);
+  }
+  return (
+    <Popover.Root open={open} onOpenChange={(next) => { if (next) setDraft(value ?? ""); setOpen(next); }}>
+      <Popover.Trigger asChild>
+        <button type="button" className={`${styles.cellEdit} ${styles.remarkCell}`} aria-label={label}>{children}</button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content className={`popover ${styles.remarkPop}`} align="start" sideOffset={4}>
+          <form onSubmit={(e) => { e.preventDefault(); save(); }}>
+            <textarea className="input" autoFocus aria-label={label} value={draft} maxLength={10000} placeholder={t("remarkPlaceholder")}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); } }} />
+            <div className={styles.popFoot}>
+              <span>{t("remarkHint")}</span>
+              <button type="submit" className={styles.addb}>{t("save")}</button>
+            </div>
+          </form>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}

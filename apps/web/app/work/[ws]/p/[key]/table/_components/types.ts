@@ -65,6 +65,8 @@ export interface Row {
   version: number;
   assignees?: Person[]; ba?: Person | null; sa?: Person | null;
   requirements?: string[]; screens?: string[];
+  /** หมายเหตุ · Guest ไม่ได้รับ */
+  remark?: string | null;
 }
 interface Agg { taskCount: number; subtaskCount: number; doneCount: number; estimateMd: number; progressPct: number }
 export interface TableData {

@@ -88,6 +88,8 @@ export const issues = pgTable(
 
     title: text().notNull(),
     description: text(),
+    /** หมายเหตุ (Remark) ของ Task / Sub-task · แยกจากรายละเอียด (ผู้ใช้เพิ่ม 2026-11-09) */
+    remark: text(),
     statusId: uuid().notNull(),
     priority: priority().notNull().default('medium'),
 

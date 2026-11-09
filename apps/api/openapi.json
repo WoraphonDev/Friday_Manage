@@ -7863,6 +7863,7 @@
                             "requirement",
                             "screen",
                             "labels",
+                            "description",
                             "remark"
                           ]
                         },
@@ -9025,6 +9026,17 @@
                       {
                         "type": "string",
                         "maxLength": 50000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "remark": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 10000
                       },
                       {
                         "type": "null"
@@ -19161,6 +19173,10 @@
                   "description": {
                     "type": "string",
                     "maxLength": 50000
+                  },
+                  "remark": {
+                    "type": "string",
+                    "maxLength": 10000
                   },
                   "statusId": {
                     "type": "string",

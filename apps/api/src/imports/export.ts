@@ -32,9 +32,10 @@ export const EXPORT_HEADERS = [
   'Screen',
   'Label',
   'Description',
+  'Remark',
 ] as const;
 const COL = Object.fromEntries(EXPORT_HEADERS.map((h, i) => [h, i + 1])) as Record<(typeof EXPORT_HEADERS)[number], number>;
-const WIDTH = [10, 11, 22, 18, 44, 13, 10, 18, 18, 24, 18, 7, 9, 12, 12, 12, 12, 18, 16, 16, 40];
+const WIDTH = [10, 11, 22, 18, 44, 13, 10, 18, 18, 24, 18, 7, 9, 12, 12, 12, 12, 18, 16, 16, 40, 32];
 
 const PRIORITY_LABEL = { urgent: 'Urgent', high: 'High', medium: 'Medium', low: 'Low' } as const;
 const SIZES = ['XS', 'S', 'M', 'L', 'XL'];
@@ -127,6 +128,7 @@ export async function buildPlanXlsx(
       join(scrsOf.get(i.id)),
       join(lblsOf.get(i.id)),
       i.description,
+      i.remark,
     ]);
   }
 
@@ -272,6 +274,7 @@ const GUIDE: [string, string, string][] = [
   ['Screen', 'รหัส SCR-xxx หลายค่าคั่นด้วย ,', '—'],
   ['Label', 'ชื่อ Label หลายค่าคั่นด้วย , · ยังไม่มี = สร้างให้', '—'],
   ['Description', 'รายละเอียดงาน', '—'],
+  ['Remark', 'หมายเหตุของงาน · ไม่ใช่รายละเอียด (แยกกันคนละช่อง)', '—'],
 ];
 
 const NOTES = [

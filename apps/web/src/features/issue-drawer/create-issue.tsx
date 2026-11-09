@@ -15,7 +15,7 @@ import styles from './issue-drawer.module.css';
 
 type ChildDraft = { id: string; title: string; size: string; assigneeId: string; planEnd: string };
 type Draft = {
-  type: IssueType; subtask: boolean; parentKey: string; title: string; description: string; moduleId: string; phaseId: string; statusId: string; priority: string;
+  type: IssueType; subtask: boolean; parentKey: string; title: string; description: string; remark: string; moduleId: string; phaseId: string; statusId: string; priority: string;
   assigneeIds: string[]; baId: string; saId: string; reviewerId: string; size: string; estimateMd: string; planStart: string; planEnd: string;
   severity: string; environment: string; details: Record<string, string>; acceptance: string[]; checklist: string[]; blockedBy: string[]; children: ChildDraft[];
   shared: boolean; requirements: string[]; screens: string[]; labelIds: string[]; watcherIds: string[];
@@ -25,7 +25,7 @@ const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL'];
 const LIST_FIELDS = ['assigneeIds', 'requirements', 'screens', 'labelIds', 'watcherIds', 'acceptance', 'checklist', 'blockedBy'] as const;
 function removeDraft(key: string) { try { localStorage.removeItem(key); } catch { /* storage access must not block server writes */ } }
 const defaultDraft = (type: IssueType, parent?: Issue | null): Draft => ({
-  type, subtask: !!parent, parentKey: parent?.key ?? '', title: '', description: '', moduleId: parent?.moduleId ?? '', phaseId: parent?.phaseId ?? '', statusId: '', priority: 'medium',
+  type, subtask: !!parent, parentKey: parent?.key ?? '', title: '', description: '', remark: '', moduleId: parent?.moduleId ?? '', phaseId: parent?.phaseId ?? '', statusId: '', priority: 'medium',
   assigneeIds: [], baId: '', saId: '', reviewerId: '', size: 'M', estimateMd: '', planStart: '', planEnd: '', severity: 'major', environment: 'sit', details: {},
   acceptance: [], checklist: [], blockedBy: [], children: [], shared: false, requirements: [], screens: [], labelIds: [], watcherIds: [],
 });
@@ -107,7 +107,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
         if (draft.type === 'Spike' && details.timebox_hours) details.timebox_hours = Number(details.timebox_hours);
         const estimateMd = draft.type === 'Spike' ? Number(details.timebox_hours) / 8 : draft.estimateMd ? Number(draft.estimateMd) : options.sizeMdMap[draft.size];
         const input = {
-          type: draft.type, title: draft.title.trim(), description: draft.description, priority: draft.priority,
+          type: draft.type, title: draft.title.trim(), description: draft.description, remark: draft.remark.trim() ? draft.remark : undefined, priority: draft.priority,
           // Sprint ไม่อยู่ในหน้า Task แล้ว (ผู้ใช้ตัดสิน 2026-11-08) งานใหม่เข้า Backlog แล้วจัดเข้า Sprint ที่หน้า Backlog
           ...(draft.subtask ? { parentKey: draft.parentKey.trim() } : { moduleId: draft.moduleId || undefined, phaseId: draft.phaseId || undefined }),
           statusId: draft.statusId || undefined, assigneeIds: draft.assigneeIds, baId: draft.baId || undefined, saId: draft.saId || undefined, reviewerId: draft.reviewerId || undefined,
@@ -196,6 +196,10 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
               <h3>{t('description')}</h3>
               <textarea className={`input ${styles.editor}`} aria-label={t('description')} placeholder={t('descriptionPlaceholder')} value={draft.description} onChange={(event) => set('description', event.target.value)} maxLength={50000} />
               <small className="muted">{t('markdownHint')}</small>
+            </div>
+            <div className={styles.blk}>
+              <h3>{t('remark')}</h3>
+              <textarea className={`input ${styles.taShort}`} aria-label={t('remark')} placeholder={t('remarkPlaceholder')} value={draft.remark} onChange={(event) => set('remark', event.target.value)} maxLength={10000} />
             </div>
             <div className={styles.blk}>
               <section className={`${styles.checkBox} ${styles.checkBoxAcceptance}`} aria-label={t('acceptance')}>

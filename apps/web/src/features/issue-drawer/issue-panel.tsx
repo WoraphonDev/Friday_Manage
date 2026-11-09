@@ -188,6 +188,12 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
         {issue.description ? <BodyText>{issue.description}</BodyText> : !canEdit && <p className="muted">{t('noDescription')}</p>}
         {canEdit && <InlineText label={t(issue.description ? 'editDescription' : 'addDescription')} displayValue={t(issue.description ? 'editDescription' : 'addDescription')} value={issue.description ?? ''} enabled busy={disabled} multiline onSave={(description) => patch({ description: description || null })} />}
       </div>}
+      {/* หมายเหตุ (Remark) ของ Task / Sub-task แยกจากคำอธิบาย · ข้อความธรรมดา แก้ด้วย Textarea */}
+      {issue.remark !== undefined && <div className={styles.blk}>
+        <h3>{t('remark')}</h3>
+        {issue.remark ? <p className={styles.remark}>{issue.remark}</p> : !canEdit && <p className="muted">{t('noRemark')}</p>}
+        {canEdit && <InlineText label={t(issue.remark ? 'editRemark' : 'addRemark')} displayValue={t(issue.remark ? 'editRemark' : 'addRemark')} value={issue.remark ?? ''} enabled busy={disabled} multiline onSave={(remark) => patch({ remark: remark.trim() ? remark : null })} />}
+      </div>}
       {awaitingRetest && canEdit && passStatus && <div className={styles.verify} role="group" aria-label={t('verifyGroup')}>
         <div><strong>{t('verifyTitle', { status: issue.status.name })}</strong><p>{t('verifyDescription', { name: scope.people.find((person) => person.id === (issue.reviewerId ?? issue.testerId))?.displayName ?? t('qaReviewer') })}</p></div>
         <Button size="small" className={styles.okButton} disabled={disabled} onClick={() => void move(passStatus.id)}>{t('verified', { status: passStatus.name })}</Button>

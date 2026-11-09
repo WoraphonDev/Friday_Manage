@@ -26,7 +26,8 @@ const LABELS = {
   devs: 'Developer',
   reviewer: 'QA / Reviewer',
   labels: 'Label',
-  remark: 'รายละเอียด',
+  description: 'Description',
+  remark: 'Remark',
 } as const;
 type DiffField = keyof typeof LABELS;
 /** ฟิลด์ใน diff → คอลัมน์ในไฟล์ที่ต้องมีจึงจะเทียบ */
@@ -48,10 +49,11 @@ const COLUMN: Record<DiffField, Field> = {
   devs: 'devs',
   reviewer: 'reviewer',
   labels: 'labels',
+  description: 'description',
   remark: 'remark',
 };
 /** ชื่อฟิลด์ใน activities / plan_changes */
-const ACTIVITY_FIELD: Partial<Record<DiffField, string>> = { group: 'phaseId', devs: 'assigneeIds', ba: 'baId', sa: 'saId', reviewer: 'reviewerId', parent: 'parentKey', labels: 'labelIds', remark: 'description' };
+const ACTIVITY_FIELD: Partial<Record<DiffField, string>> = { group: 'phaseId', devs: 'assigneeIds', ba: 'baId', sa: 'saId', reviewer: 'reviewerId', parent: 'parentKey', labels: 'labelIds' };
 const PLAN_FIELDS = new Set<DiffField>(['planStart', 'planEnd', 'estimateMd', 'devs']);
 
 export interface FieldChange {
@@ -218,7 +220,8 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     if (names(oldDevs).join('|') !== names(row.devs).join('|')) add('devs', oldDevs, row.devs);
     if (!samePerson(userName(issue.reviewerId), row.reviewer)) add('reviewer', userName(issue.reviewerId), row.reviewer);
     if (names(oldLabels).join('|') !== names(row.labels).join('|')) add('labels', oldLabels, row.labels);
-    if (!eq0(issue.description || null, row.remark || null)) add('remark', issue.description || null, row.remark);
+    if (!eq0(issue.description || null, row.description || null)) add('description', issue.description || null, row.description);
+    if (!eq0(issue.remark || null, row.remark || null)) add('remark', issue.remark || null, row.remark);
     if (!fields.length) {
       diff.unchanged++;
       continue;
@@ -354,7 +357,8 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
     if (has('ba')) set.baId = keepPerson(row.ba, issue.baId);
     if (has('sa')) set.saId = keepPerson(row.sa, issue.saId);
     if (has('reviewer')) set.reviewerId = keepPerson(row.reviewer, issue.reviewerId);
-    if (has('remark')) set.description = row.remark;
+    if (has('description')) set.description = row.description;
+    if (has('remark')) set.remark = row.remark;
     const idsChanged = has('devs') && [...oldDevIds].sort().join() !== [...newDevIds].sort().join();
     if (idsChanged || has('labels') || has('parent')) set.version = issue.version + 1;
     if (Object.keys(set).length) await tx.update(s.issues).set(set).where(eq(s.issues.id, issue.id));

@@ -3,7 +3,7 @@ import { type Cell, type ParsedWorkbook, toIsoDate } from './excel.js';
 
 /**
  * ฟิลด์ปลายทางของการจับคู่คอลัมน์ (หน้า L3 › จับคู่คอลัมน์) · เรียงตามคอลัมน์ของไฟล์รูปแบบใหม่ (ชีต Tasks)
- * alias รวมหัวคอลัมน์ของไฟล์รูปแบบเดิม (ID / No. / Module Task / Dev / Remark) เพื่อให้ไฟล์เก่านำเข้าได้เหมือนเดิม
+ * alias รวมหัวคอลัมน์ของไฟล์รูปแบบเดิม (ID / No. / Module Task / Dev) เพื่อให้ไฟล์เก่านำเข้าได้ · คอลัมน์ Remark ของไฟล์เดิมเข้าช่อง Remark
  */
 export const FIELDS = {
   /** รหัสงาน เช่น DP-12 หรือ 12 · ว่าง = งานใหม่ (ระบบออกเลขให้) */
@@ -30,7 +30,9 @@ export const FIELDS = {
   requirement: { label: 'Requirement (FR / NFR)', aliases: ['requirement', 'requirements', 'fr / nfr', 'fr'] },
   screen: { label: 'Screen', aliases: ['screen', 'screens', 'screen id'] },
   labels: { label: 'Label (หลายค่า คั่นด้วย ,)', aliases: ['label', 'labels'] },
-  remark: { label: 'รายละเอียด', aliases: ['description', 'รายละเอียด', 'remark', 'หมายเหตุ', 'note'] },
+  // รายละเอียด → Description · Remark / หมายเหตุ → Remark ของงาน (ผู้ใช้ตัดสิน 2026-11-09 · เดิมรวมเป็นช่องเดียว)
+  description: { label: 'Description (รายละเอียด)', aliases: ['description', 'รายละเอียด'] },
+  remark: { label: 'Remark (หมายเหตุ)', aliases: ['remark', 'หมายเหตุ', 'note'] },
 } as const;
 export type Field = keyof typeof FIELDS;
 export type ColumnMapping = Record<string, Field | null>;
@@ -121,6 +123,7 @@ export interface PlanRow {
   planEnd: string | null;
   actualStart: string | null;
   actualEnd: string | null;
+  description: string | null;
   remark: string | null;
 }
 
@@ -298,6 +301,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
       planEnd: dates.planEnd ?? null,
       actualStart: dates.actualStart ?? null,
       actualEnd: dates.actualEnd ?? null,
+      description: text(get(cells, 'description')),
       remark: text(get(cells, 'remark')),
     };
 

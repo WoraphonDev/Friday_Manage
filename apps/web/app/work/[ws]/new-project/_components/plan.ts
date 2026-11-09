@@ -1,13 +1,15 @@
 /** คำนวณของ Wizard ที่ไม่ต้องเรียก API (ทดสอบแยกได้) */
 
-export type BuiltinTemplate = "scrum" | "kanban" | "waterfall" | "blank";
-export const BUILTIN_TEMPLATES: BuiltinTemplate[] = ["scrum", "kanban", "waterfall", "blank"];
+/** Template ในตัว (ตรงกับ BUILTIN_TEMPLATES ของ API) · Development = ชุดฟิลด์ของแผน Development Plan (ผู้ใช้ตัดสิน 2026-11-09) */
+export type BuiltinTemplate = "development" | "scrum" | "kanban" | "waterfall" | "blank";
+export const BUILTIN_TEMPLATES: BuiltinTemplate[] = ["development", "scrum", "kanban", "waterfall", "blank"];
 export interface WorkflowStep {
   name: string;
   wipLimit?: number;
 }
 /** Template ในตัว: กำหนดค่าที่ส่งใน POST w/projects (ค่าใน body ชนะ Template ของ Workspace เสมอ) */
-export const TEMPLATE_PRESETS: Record<BuiltinTemplate, { workflow: WorkflowStep[]; sprint: boolean; modules?: string[] }> = {
+export const TEMPLATE_PRESETS: Record<BuiltinTemplate, { workflow: WorkflowStep[]; sprint: boolean; modules?: string[]; progressMethod?: "count" | "weighted" }> = {
+  development: { workflow: [{ name: "To do" }, { name: "In progress" }, { name: "Review" }, { name: "Done" }], sprint: true, progressMethod: "weighted" },
   scrum: { workflow: [{ name: "To do" }, { name: "In progress" }, { name: "Review" }, { name: "Done" }], sprint: true },
   kanban: { workflow: [{ name: "To do" }, { name: "In progress", wipLimit: 5 }, { name: "Review", wipLimit: 3 }, { name: "Done" }], sprint: false },
   // Waterfall: เฟสเป็น Module เรียงตามลำดับ เพราะ API ยังไม่มีเฟสระดับโปรเจกต์

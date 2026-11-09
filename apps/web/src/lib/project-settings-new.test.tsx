@@ -90,7 +90,10 @@ beforeEach(() => {
     http.patch(`${P}/issue-types/:id`, mutation()),
     http.get(`${P}/custom-fields`, () => HttpResponse.json({ items: [{ id: "f1", name: "Release version", fieldType: "select", options: { choices: [{ id: "c1", label: "1.0" }] } }] })),
     http.post(`${P}/custom-fields`, mutation(201)),
+    http.patch(`${P}/custom-fields/:id`, mutation()),
     http.delete(`${P}/custom-fields/:id`, mutation(204)),
+    http.get(`${P}/field-profile`, () => HttpResponse.json(fieldProfile)),
+    http.put(`${P}/field-profile`, mutation()),
     http.get(`${P}/labels`, () => HttpResponse.json({ items: [{ id: "l1", name: "frontend", color: "#1d4ed8", issueCount: 3 }] })),
     http.post(`${P}/labels`, mutation(201)),
     http.get(`${P}/modules`, () => HttpResponse.json({ items: [
@@ -109,6 +112,11 @@ beforeEach(() => {
   );
 });
 
+const ALL_OPTIONAL = Object.fromEntries(["ba", "sa", "reviewer", "priority", "size", "actual", "progress", "requirements", "screens", "labels", "remark"].map((f) => [f, { task: "optional", subtask: "optional" }]));
+const fieldProfile = {
+  fieldProfile: { fields: ALL_OPTIONAL, columns: ["dev", "ba", "sa", "status", "size", "start", "end", "actualStart", "actualEnd", "progress", "remark", "cf:f1"], template: { id: "development", name: "Development", builtin: true } },
+  customFields: [{ id: "f1", name: "Release version", fieldType: "select", options: { choices: [{ id: "c1", label: "1.0" }] }, taskMode: "optional", subtaskMode: "optional", sort: 0 }],
+};
 const mount = (ui: React.ReactElement) => renderWithProviders(<WorkspaceShell ws="sample">{ui}</WorkspaceShell>, { messages: { "project-settings-new": json } });
 const settings = (section?: string) => mount(<ProjectSettings ws="sample" projectKey="DE" section={section} />);
 
@@ -231,6 +239,36 @@ describe("Project Settings (L2)", () => {
     await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "DELETE", path: "/w/sample/projects/DE/custom-fields/f1" }));
   });
 
+  it("ชุดฟิลด์ของ Task / Sub-task: บอกที่มา Template · ซ่อนแล้วคอลัมน์หาย · บังคับ · เรียงคอลัมน์ · โหมดของ Custom field", async () => {
+    const user = userEvent.setup();
+    settings("types");
+    expect(await screen.findByText("สร้างจาก Template Development")).toBeInTheDocument();
+    const save = screen.getByRole("button", { name: "บันทึกชุดฟิลด์" });
+    expect(save).toBeDisabled();
+    // Actual / Progress ระบบตั้งค่าให้ จึงเลือก "บังคับ" ไม่ได้
+    expect(within(screen.getByLabelText("Progress ระดับ Task")).getByRole("option", { name: "บังคับ" })).toBeDisabled();
+    await user.selectOptions(screen.getByLabelText("Business Analyst ระดับ Task"), "hidden");
+    await user.selectOptions(screen.getByLabelText("Business Analyst ระดับ Sub-task"), "hidden");
+    expect(screen.getByRole("checkbox", { name: "แสดง Business Analyst เป็นคอลัมน์ใน Table" })).toBeDisabled();
+    const order = screen.getByRole("list", { name: "ลำดับคอลัมน์ใน Table" });
+    expect(within(order).queryByText("BA")).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Size ระดับ Task"), "required");
+    await user.selectOptions(screen.getByLabelText("Size ระดับ Sub-task"), "hidden");
+    await user.click(screen.getByRole("button", { name: "เลื่อน สถานะ ขึ้น" }));
+    await user.selectOptions(screen.getByLabelText("Release version ระดับ Sub-task"), "hidden");
+    await user.click(screen.getByRole("checkbox", { name: "แสดง Label เป็นคอลัมน์ใน Table" }));
+    await user.click(save);
+    await waitFor(() => expect(calls.find((c) => c.method === "PUT")).toMatchObject({
+      path: "/w/sample/projects/DE/field-profile",
+      body: {
+        fields: { ba: { task: "hidden", subtask: "hidden" }, size: { task: "required", subtask: "hidden" }, sa: { task: "optional", subtask: "optional" } },
+        columns: ["dev", "status", "sa", "size", "start", "end", "actualStart", "actualEnd", "progress", "remark", "cf:f1", "labels"],
+      },
+    }));
+    await waitFor(() => expect(calls.find((c) => c.method === "PATCH" && c.path.endsWith("/custom-fields/f1"))).toMatchObject({ body: { taskMode: "optional", subtaskMode: "hidden" } }));
+    expect(await screen.findByText("บันทึกชุดฟิลด์แล้ว")).toBeInTheDocument();
+  });
+
   it("Modules: เปลี่ยน Owner, เรียงลำดับ, ลบ Module ที่มีงานต้องเลือกปลายทาง, เพิ่ม", async () => {
     const user = userEvent.setup();
     settings("modules");
@@ -327,8 +365,15 @@ describe("สร้างโปรเจกต์ (Wizard 5 ขั้น)", () =
   beforeEach(() => {
     created = null;
     server.use(
-      // Member ของ Workspace ได้ 403 จาก Template ของ Admin · หน้าใช้ Template ในตัวต่อได้
-      http.get("*/api/v1/w/:ws/project-templates", () => errorBody(403)),
+      // Template ในตัว + ขององค์กร (สมาชิกทุกคนเห็น) · Template ที่ config ผิดไม่แสดง
+      http.get("*/api/v1/w/:ws/projects/template-catalog", () => HttpResponse.json({
+        categories: ["software", "service", "operations"],
+        items: [
+          { id: "development", source: "builtin", category: "software", name: "Development", description: null, config: {}, invalid: false, usageCount: null },
+          { id: "tpl-ops", source: "workspace", category: "operations", name: "งานปฏิบัติการ", description: "ชุดฟิลด์สั้น", config: {}, invalid: false, usageCount: 2 },
+          { id: "tpl-bad", source: "workspace", category: "service", name: "Template เสีย", description: null, config: {}, invalid: true, usageCount: 0 },
+        ],
+      })),
       http.get("*/api/v1/w/:ws/projects/key-available", ({ request }) => {
         const key = new URL(request.url).searchParams.get("key");
         return HttpResponse.json({ key, available: key !== "DE" });
@@ -403,7 +448,7 @@ describe("สร้างโปรเจกต์ (Wizard 5 ขั้น)", () =
       scope: { in: ["ระบบสั่งงาน"], deliverables: ["ระบบเว็บ", "คู่มือ"] },
       members: [{ userId: "u-dev", role: "viewer", position: "Backend Dev", capacityHoursWeek: 32 }],
       workflow: ["To do", { name: "In progress", wipLimit: 5 }, { name: "Review", wipLimit: 3 }, "QA", "Done"],
-      estimateUnit: "man_day", progressMethod: "weighted",
+      estimateUnit: "man_day", progressMethod: "weighted", builtinTemplate: "kanban",
     });
     await waitFor(() => expect(router.push).toHaveBeenCalledWith("/work/sample/p/DLV"));
   });
@@ -426,7 +471,27 @@ describe("สร้างโปรเจกต์ (Wizard 5 ขั้น)", () =
     expect(await screen.findByText(/req_w13_001/)).toBeInTheDocument();
     server.use(http.post("*/api/v1/w/:ws/projects", async ({ request }) => { created = (await request.json()) as Record<string, unknown>; return HttpResponse.json({ key: "SP", created: { modules: 0, statuses: 4, milestones: 0, sprints: 4, members: 1 } }, { status: 201 }); }));
     await user.click(screen.getByRole("button", { name: "สร้างเลย (ตั้งค่าที่เหลือทีหลัง)" }));
-    await waitFor(() => expect(created).toMatchObject({ key: "SP", sprintLengthWeeks: 2, workflow: ["To do", "In progress", "Review", "Done"] }));
+    // ค่าเริ่มต้น = Template Development (ชุดฟิลด์ของแผนพัฒนา) · Sprint 2 สัปดาห์ · ความคืบหน้าถ่วงน้ำหนัก
+    await waitFor(() => expect(created).toMatchObject({ key: "SP", sprintLengthWeeks: 2, workflow: ["To do", "In progress", "Review", "Done"], builtinTemplate: "development", progressMethod: "weighted" }));
+  });
+
+  it("Template จัดตามหมวด: Development เลือกไว้ก่อน · Template ขององค์กรอยู่หมวดของตัวเอง · เลือกแล้วส่ง templateId", async () => {
+    const user = userEvent.setup();
+    wizard();
+    const software = await screen.findByRole("group", { name: "Template · Software development" });
+    expect(within(software).getAllByRole("button").map((b) => b.querySelector("b")?.textContent)).toEqual(["Development", "Scrum", "Kanban", "Waterfall", "Blank"]);
+    expect(within(software).getByRole("button", { name: /^Development/ })).toHaveAttribute("aria-pressed", "true");
+    const ops = await screen.findByRole("group", { name: "Template · Operations" });
+    expect(screen.queryByRole("group", { name: "Template · Service management" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Template เสีย")).not.toBeInTheDocument();
+    await user.click(within(ops).getByRole("button", { name: /งานปฏิบัติการ/ }));
+    await user.type(screen.getByLabelText("ชื่อโปรเจกต์ *"), "Ops Board");
+    await user.click(screen.getByRole("button", { name: "ถัดไป →" }));
+    fireEvent.change(await screen.findByLabelText("วันเริ่มต้น *"), { target: { value: "2026-11-09" } });
+    fireEvent.change(screen.getByLabelText("วันสิ้นสุดเป้าหมาย (Go-live) *"), { target: { value: "2026-12-30" } });
+    await user.click(screen.getByRole("button", { name: "สร้างเลย (ตั้งค่าที่เหลือทีหลัง)" }));
+    await waitFor(() => expect(created).toMatchObject({ key: "OB", templateId: "tpl-ops" }));
+    expect(created).not.toHaveProperty("builtinTemplate");
   });
 
   it("บันทึกร่างในเครื่อง · Guest สร้างโปรเจกต์ไม่ได้", async () => {

@@ -15,6 +15,11 @@ import {
 } from "./types";
 import styles from "./admin.module.css";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
+import { TemplateFieldsDialog } from "./template-fields";
+
+/** Template ในตัวที่คัดลอกมาเป็น Template ขององค์กรได้ (ตรงกับ API) · หมวดตามรายการที่ผู้ใช้ให้ 2026-11-09 */
+const BUILTINS = ["development", "scrum", "kanban", "waterfall", "blank"] as const;
+const CATEGORIES = ["software", "service", "work", "product", "marketing", "customer_service", "hr", "finance", "design", "personal", "operations", "legal", "sales", "analytics"] as const;
 
 const TEAM_COLORS = ["#5B3FC4", "#1D4ED8", "#A21CAF", "#334155", "#0F766E", "#B45309", "#BE185D"];
 
@@ -408,17 +413,32 @@ function TemplatesCard({ ws }: { ws: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [fromBuiltin, setFromBuiltin] = useState<string>("development");
+  const [category, setCategory] = useState<string>("software");
   const [removing, setRemoving] = useState<ProjectTemplate | null>(null);
+  const [editing, setEditing] = useState<ProjectTemplate | null>(null);
+  const refresh = () => Promise.all([cache.invalidateQueries({ queryKey: key }), cache.invalidateQueries({ queryKey: ["workspace", ws, "template-catalog"] })]);
   async function create() {
     try {
-      await api.post(`${wsPath(ws)}/project-templates`, { name: name.trim(), description: description.trim() || null });
+      await api.post(`${wsPath(ws)}/project-templates`, { name: name.trim(), description: description.trim() || null, ...(fromBuiltin ? { fromBuiltin } : {}), config: { category } });
       toast({ message: t("created", { name: name.trim() }) });
       setOpen(false);
       setName("");
       setDescription("");
-      await cache.invalidateQueries({ queryKey: key });
+      await refresh();
     } catch (e) {
       toast({ message: errorText(e, t("failed")) });
+    }
+  }
+  async function saveConfig(tpl: ProjectTemplate, config: ProjectTemplate["config"]) {
+    try {
+      await api.request(`${wsPath(ws)}/project-templates/${tpl.id}`, { method: "PATCH", body: { config } });
+      toast({ message: t("fieldsSaved", { name: tpl.name }) });
+      await refresh();
+      return true;
+    } catch (e) {
+      toast({ message: errorText(e, t("failed")) });
+      return false;
     }
   }
   return (
@@ -434,7 +454,9 @@ function TemplatesCard({ ws }: { ws: string }) {
           {templates.data.items.map((tpl) => (
             <div key={tpl.id} className={styles.row}>
               <span className={styles.grow}><b>{tpl.name}</b><div className={styles.muted}>{tpl.description ?? ""}</div></span>
+              <span className={`${styles.pill} ${styles.neu}`}>{t(`categories.${tpl.config?.category ?? "software"}`)}</span>
               <span className={`${styles.pill} ${styles.neu}`}>{t("used", { n: tpl.usageCount })}</span>
+              <Button size="small" onClick={() => setEditing(tpl)}>{t("editFields")}</Button>
               <Button size="small" variant="ghost" aria-label={t("remove", { name: tpl.name })} onClick={() => setRemoving(tpl)}>×</Button>
             </div>
           ))}
@@ -444,12 +466,20 @@ function TemplatesCard({ ws }: { ws: string }) {
         <div className={styles.dialogForm}>
           <Input label={t("name")} value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
           <Input label={t("description")} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} />
+          <Select label={t("startFrom")} value={fromBuiltin} onChange={(e) => setFromBuiltin(e.target.value)}>
+            {BUILTINS.map((b) => <option key={b} value={b}>{t(`builtins.${b}`)}</option>)}
+            <option value="">{t("startEmpty")}</option>
+          </Select>
+          <Select label={t("category")} value={category} onChange={(e) => setCategory(e.target.value)}>
+            {CATEGORIES.map((c) => <option key={c} value={c}>{t(`categories.${c}`)}</option>)}
+          </Select>
           <div className="dialog-actions">
             <Button onClick={() => setOpen(false)}>{t("cancel")}</Button>
             <Button variant="primary" disabled={!name.trim()} onClick={() => void create()}>{t("save")}</Button>
           </div>
         </div>
       </Dialog>
+      {editing && <TemplateFieldsDialog template={editing} onClose={() => setEditing(null)} onSave={(config) => saveConfig(editing, config)} />}
       <ConfirmDialog
         open={!!removing}
         onOpenChange={(v) => !v && setRemoving(null)}

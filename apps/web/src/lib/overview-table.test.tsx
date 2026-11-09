@@ -158,6 +158,51 @@ describe("Table (2)", () => {
     await waitFor(() => expect(urls.at(-1)?.searchParams.get("status")).toBe("todo,in_progress"));
   });
 
+  it("คอลัมน์ตามชุดฟิลด์ของโปรเจกต์: ลำดับ, ฟิลด์ที่ซ่อน, Custom field · ซ่อนเฉพาะระดับ Sub-task · เลือกคอลัมน์เองจำในเครื่อง", async () => {
+    const user = userEvent.setup();
+    window.localStorage.clear();
+    const opt = { task: "optional", subtask: "optional" };
+    server.use(http.get("*/api/v1/w/:ws/projects/:key", () => HttpResponse.json({
+      key: "DE",
+      fieldProfile: {
+        fields: { ba: { task: "hidden", subtask: "hidden" }, sa: opt, reviewer: opt, priority: opt, size: { task: "required", subtask: "hidden" }, actual: opt, progress: opt, requirements: opt, screens: opt, labels: opt, remark: opt },
+        columns: ["dev", "status", "cf:cf1", "size", "end"],
+        template: { id: "t1", name: "งานปฏิบัติการ", builtin: false },
+      },
+      customFields: [{ id: "cf1", name: "ลูกค้า", fieldType: "select", options: { choices: [{ id: "k1", label: "ร้าน ก" }, { id: "k2", label: "ร้าน ข" }] }, taskMode: "optional", subtaskMode: "optional" }],
+    })));
+    tableData = table([row("DE-1", { customFields: { cf1: "k1" } }), row("DE-2", { parentKey: "DE-1", size: "XS" })]);
+    const a = mount(<TableView ws="sample" projectKey="DE" />);
+    await screen.findByTestId("row-DE-1");
+    await waitFor(() => expect(screen.getByRole("columnheader", { name: "ลูกค้า" })).toBeInTheDocument());
+    expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Name", "Dev", "Status", "ลูกค้า", "Size · MD", "Plan End"]);
+    // BA ซ่อนทั้งสองระดับ: ไม่มีตัวกรอง BA · Size ยังใช้ใน Task จึงกรองได้
+    expect(screen.queryByLabelText("BA")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Size")).toBeInTheDocument();
+    expect(within(screen.getByTestId("row-DE-1")).getByText("ร้าน ก")).toBeInTheDocument();
+    // Size ซ่อนในระดับ Sub-task: แถว Sub-task ไม่แสดงค่าและแก้ไม่ได้
+    expect(within(screen.getByTestId("row-DE-2")).queryByRole("button", { name: /แก้ Size/ })).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("row-DE-2")).getByTitle("ไม่ใช้ในระดับนี้")).toBeInTheDocument();
+    // แก้ค่า Custom field ในแถว
+    await user.click(within(screen.getByTestId("row-DE-1")).getByRole("button", { name: "แก้ ลูกค้า ของ DE-1" }));
+    await user.click(await screen.findByRole("button", { name: "ร้าน ข" }));
+    await waitFor(() => expect(patches.at(-1)).toMatchObject({ key: "DE-1", body: { customFields: { cf1: "k2" } }, etag: '"2"' }));
+    // เมนู Columns: BA ซ่อนทั้งสองระดับจึงไม่มีให้เลือก · เปิด SA เพิ่มแล้วจำไว้ในเครื่อง
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    expect(screen.queryByRole("checkbox", { name: "BA" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: "SA" }));
+    expect(screen.getByRole("columnheader", { name: "SA" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    a.unmount();
+    mount(<TableView ws="sample" projectKey="DE" />);
+    await screen.findByTestId("row-DE-1");
+    await waitFor(() => expect(screen.getByRole("columnheader", { name: "SA" })).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("button", { name: "คืนค่าตามโปรเจกต์" }));
+    expect(screen.queryByRole("columnheader", { name: "SA" })).not.toBeInTheDocument();
+    window.localStorage.clear();
+  });
+
   it("แก้ในแถว: Status ส่ง If-Match · แก้แผนหลัง Baseline ถามเหตุผลแล้วส่งซ้ำ", async () => {
     const user = userEvent.setup();
     mount(<TableView ws="sample" projectKey="DE" />);

@@ -31,10 +31,14 @@ interface WsMember {
   jobTitle: string | null;
   capacityHoursWeek: number | null;
 }
+/** Template ที่เลือกได้ (GET projects/template-catalog) · ในตัวแสดงชื่อจากไฟล์ภาษา */
 interface Template {
   id: string;
+  source: "builtin" | "workspace";
+  category: string;
   name: string;
   description: string | null;
+  invalid?: boolean;
 }
 interface Calendar {
   id: string;
@@ -79,11 +83,11 @@ interface Draft {
   progressMethod: "count" | "weighted";
 }
 const initialDraft = (): Draft => ({
-  name: "", key: "", keyTouched: false, clientName: "", description: "", template: "scrum", color: COLORS[0],
+  name: "", key: "", keyTouched: false, clientName: "", description: "", template: "development", color: COLORS[0],
   startDate: today(), goliveDate: "", timezone: "Asia/Bangkok", holidayCalendarId: "", holidays: [], sprintLengthWeeks: 2,
   milestones: [], inScope: [], outScope: [], modules: [], deliverables: "", acceptance: "", assumptions: "",
-  visibility: "private", members: [], workflow: TEMPLATE_PRESETS.scrum.workflow, workflowTouched: false,
-  estimateUnit: "man_day", progressMethod: "count",
+  visibility: "private", members: [], workflow: TEMPLATE_PRESETS.development.workflow, workflowTouched: false,
+  estimateUnit: "man_day", progressMethod: TEMPLATE_PRESETS.development.progressMethod ?? "count",
 });
 const draftKey = (ws: string) => `friday:new-project-draft:${ws}`;
 type Errors = Partial<Record<"name" | "key" | "startDate" | "goliveDate" | "milestones" | "workflow", string>>;
@@ -105,7 +109,8 @@ export function buildBody(d: Draft) {
     key: d.key.trim().toUpperCase(),
     ...(d.clientName.trim() ? { clientName: d.clientName.trim() } : {}),
     ...(d.description.trim() ? { description: d.description.trim() } : {}),
-    ...(builtin ? {} : { templateId: d.template.slice(3) }),
+    // Template ในตัวส่งชื่อให้ API คัดลอกชุดฟิลด์ / คอลัมน์ Table · ค่าใน body (Workflow, Sprint) ชนะ Template เสมอ
+    ...(builtin ? { builtinTemplate: d.template } : { templateId: d.template.slice(3) }),
     color: d.color,
     startDate: d.startDate,
     goliveDate: d.goliveDate,
@@ -143,13 +148,15 @@ export function NewProjectWizard({ ws }: { ws: string }) {
   const isAdmin = workspace.role === "owner" || workspace.role === "admin";
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((x) => ({ ...x, [k]: v }));
 
-  // Template / ปฏิทินวันหยุดของ Workspace อ่านได้เฉพาะ Admin · Member ได้ 403 จึงไม่เรียกและใช้ Template ในตัวแทน
+  // Template ในตัว + ขององค์กร จัดตามหมวด · สมาชิกทุกคนที่สร้างโปรเจกต์ได้เห็น (ปฏิทินวันหยุดยังอ่านได้เฉพาะ Admin)
+  // โหลดไม่ได้ก็ยังเลือก Template ในตัวได้
   const templates = useQuery({
-    queryKey: ["workspace", ws, "project-templates"],
-    queryFn: () => api.get<{ items: Template[] }>(`${wsPath}/project-templates`),
-    enabled: isAdmin,
+    queryKey: ["workspace", ws, "template-catalog"],
+    queryFn: () => api.get<{ categories: string[]; items: Template[] }>(`${wsPath}/projects/template-catalog`),
+    enabled: workspace.role !== "guest",
     retry: false,
   });
+  const orgTemplates = (templates.data?.items ?? []).filter((x) => x.source === "workspace" && !x.invalid);
   const calendars = useQuery({
     queryKey: ["workspace", ws, "holiday-calendars"],
     queryFn: () => api.get<{ items: Calendar[] }>(`${wsPath}/holiday-calendars`),
@@ -178,7 +185,9 @@ export function NewProjectWizard({ ws }: { ws: string }) {
   const preset = d.template.startsWith("ws:") ? null : TEMPLATE_PRESETS[d.template as BuiltinTemplate];
   const isScrum = !!preset?.sprint;
   const sprints = isScrum ? sprintCount(d.startDate, d.goliveDate, d.sprintLengthWeeks) : 0;
-  const templateName = preset ? t(`templates.${d.template}.name`) : (templates.data?.items.find((x) => `ws:${x.id}` === d.template)?.name ?? t("templates.workspace"));
+  const templateName = preset ? t(`templates.${d.template}.name`) : (orgTemplates.find((x) => `ws:${x.id}` === d.template)?.name ?? t("templates.workspace"));
+  // หมวดที่มี Template (ตอนนี้ในตัวมีเฉพาะ Software development) · เรียงตามรายการหมวดของ API
+  const categories = (templates.data?.categories ?? ["software"]).filter((c) => c === "software" || orgTemplates.some((x) => x.category === c));
   const capacity = d.members.reduce((sum, m) => sum + (m.capacityHoursWeek || 0), 0);
   const steps = [1, 2, 3, 4, 5] as const;
 
@@ -226,6 +235,7 @@ export function NewProjectWizard({ ws }: { ws: string }) {
         template,
         workflow: p && !x.workflowTouched ? p.workflow : x.workflow,
         modules: p?.modules && !x.modules.length ? p.modules : x.modules,
+        progressMethod: p?.progressMethod ?? x.progressMethod,
       };
     });
   }
@@ -305,22 +315,27 @@ export function NewProjectWizard({ ws }: { ws: string }) {
         </div>
         <div className={styles.fld}>
           <span className={styles.lb}>{t("template")} *</span>
-          <div className={styles.opts} role="group" aria-label={t("template")}>
-            {BUILTIN_TEMPLATES.map((x) => (
-              <button key={x} type="button" className={styles.opt} aria-pressed={d.template === x} onClick={() => pickTemplate(x)}>
-                <b>{t(`templates.${x}.name`)}</b>
-                <span className={styles.muted}>{t(`templates.${x}.description`)}</span>
-                <span className={styles.makes}>{t(`templates.${x}.makes`)}</span>
-              </button>
-            ))}
-            {templates.data?.items.map((x) => (
-              <button key={x.id} type="button" className={styles.opt} aria-pressed={d.template === `ws:${x.id}`} onClick={() => pickTemplate(`ws:${x.id}`)}>
-                <b>{x.name}</b>
-                <span className={styles.muted}>{x.description ?? t("templates.workspace")}</span>
-                <span className={styles.makes}>{t("templates.workspaceMakes")}</span>
-              </button>
-            ))}
-          </div>
+          {categories.map((category) => (
+            <div key={category} className={styles.fld}>
+              <span className={styles.muted}>{t(`categories.${category}`)}</span>
+              <div className={styles.opts} role="group" aria-label={`${t("template")} · ${t(`categories.${category}`)}`}>
+                {category === "software" && BUILTIN_TEMPLATES.map((x) => (
+                  <button key={x} type="button" className={styles.opt} aria-pressed={d.template === x} onClick={() => pickTemplate(x)}>
+                    <b>{t(`templates.${x}.name`)}</b>
+                    <span className={styles.muted}>{t(`templates.${x}.description`)}</span>
+                    <span className={styles.makes}>{t(`templates.${x}.makes`)}</span>
+                  </button>
+                ))}
+                {orgTemplates.filter((x) => x.category === category).map((x) => (
+                  <button key={x.id} type="button" className={styles.opt} aria-pressed={d.template === `ws:${x.id}`} onClick={() => pickTemplate(`ws:${x.id}`)}>
+                    <b>{x.name}</b>
+                    <span className={styles.muted}>{x.description ?? t("templates.workspace")}</span>
+                    <span className={styles.makes}>{t("templates.workspaceMakes")}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
         <div className={styles.inline}>
           <div className={styles.fld}>

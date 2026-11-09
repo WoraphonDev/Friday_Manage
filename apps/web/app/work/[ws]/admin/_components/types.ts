@@ -74,11 +74,20 @@ export interface Holidays {
   editable?: boolean;
   items: { id: string; date: string; name: string; kind: "bank" | "company" }[];
 }
+/** project_templates.config (รูปแบบเดียวกับ TemplateConfig ของ API) · เก็บค่าอื่นที่หน้านี้ไม่ได้แก้ไว้ตามเดิม */
+export interface TemplateConfig {
+  category?: string;
+  fields?: Partial<Record<import("@/lib/field-profile").ProfileField, { task?: import("@/lib/field-profile").FieldMode; subtask?: import("@/lib/field-profile").FieldMode }>>;
+  columns?: string[];
+  customFields?: { name: string; fieldType: import("@/lib/field-profile").CustomFieldType; options?: unknown; taskMode?: import("@/lib/field-profile").FieldMode; subtaskMode?: import("@/lib/field-profile").FieldMode }[];
+  [key: string]: unknown;
+}
 export interface ProjectTemplate {
   id: string;
   name: string;
   description: string | null;
   usageCount: number;
+  config?: TemplateConfig;
 }
 
 export interface Team {

@@ -435,5 +435,7 @@
   "groupNamePlaceholder": "เช่น กลุ่ม A",
   "groupNeedsModule": "เลือก Module ก่อน",
   "groupCreateFailed": "สร้างกลุ่มไม่สำเร็จ",
-  "previewFile": "ดูตัวอย่าง {name}"
+  "previewFile": "ดูตัวอย่าง {name}",
+  "groupCustom": "ฟิลด์เพิ่มเติม",
+  "requiredMissing": "กรอกฟิลด์บังคับให้ครบ: {fields}"
 }

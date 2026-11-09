@@ -239,3 +239,9 @@
 .remarkText { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--foreground-soft); }
 .remarkPop { width:340px; display:flex; flex-direction:column; gap:8px; }
 .remarkPop textarea { width:100%; min-height:120px; resize:vertical; font-size:12px; line-height:1.5; }
+
+/* ค่า Custom field แบบตัวเลือก (ชุดฟิลด์ของโปรเจกต์) */
+.choiceList { display: flex; flex-direction: column; gap: 2px; min-width: 200px; }
+.choiceList .grow { flex: 1; }
+.grow { flex: 1; min-width: 0; }
+.cfText { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

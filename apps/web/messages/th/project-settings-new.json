@@ -166,7 +166,18 @@
       "removeFieldHint": "ค่าของฟิลด์นี้ในทุกงานจะถูกลบด้วย",
       "removeLabelHint": "Label นี้จะหลุดออกจากทุกงาน",
       "remove": "ลบ",
-      "removed": "ลบ {name} แล้ว"
+      "removed": "ลบ {name} แล้ว",
+      "fieldSet": "ชุดฟิลด์ของ Task / Sub-task",
+      "fieldSetSave": "บันทึกชุดฟิลด์",
+      "fieldSetSaved": "บันทึกชุดฟิลด์แล้ว",
+      "failed": "ทำรายการไม่สำเร็จ",
+      "taskMode": "ระดับ Task",
+      "subtaskMode": "ระดับ Sub-task",
+      "modes": {
+        "hidden": "ซ่อน",
+        "optional": "แสดง",
+        "required": "บังคับ"
+      }
     },
     "modules": {
       "title": "Modules",
@@ -313,28 +324,33 @@
     "descriptionPlaceholder": "โปรเจกต์นี้ทำอะไร เพื่อใคร",
     "template": "Template",
     "templates": {
+      "development": {
+        "name": "Development",
+        "description": "แผนพัฒนาระบบ แบ่งงานเป็น Module → กลุ่ม → Task → Sub-task",
+        "makes": "Sprint 2 สัปดาห์ · 4 สถานะ · BA / SA / Dev / QA · Size → Man-Day · Plan / Actual"
+      },
       "scrum": {
         "name": "Scrum",
-        "description": "ทำงานเป็น Sprint มี Backlog",
-        "makes": "สร้าง Sprint + Backlog + 4 สถานะ"
+        "description": "ทำงานเป็นรอบ Sprint ดึงงานจาก Backlog เข้ารอบ",
+        "makes": "Sprint 2 สัปดาห์ · 4 สถานะ · Backlog"
       },
       "kanban": {
         "name": "Kanban",
-        "description": "งานไหลต่อเนื่อง ไม่มี Sprint",
-        "makes": "สร้างบอร์ด 4 คอลัมน์ + WIP limit"
+        "description": "งานไหลต่อเนื่อง ไม่แบ่งรอบ Sprint",
+        "makes": "บอร์ด 4 คอลัมน์ · จำกัดงานค้าง In progress 5 / Review 3"
       },
       "waterfall": {
         "name": "Waterfall",
-        "description": "แผนเป็นเฟส มี dependency",
-        "makes": "สร้างเฟส Requirement → Deploy เป็น Module"
+        "description": "ทำทีละเฟสตามลำดับ ไม่แบ่งรอบ Sprint",
+        "makes": "5 เฟสเป็น Module: Requirement → Design → Development → Testing → Deploy"
       },
       "blank": {
         "name": "Blank",
-        "description": "เริ่มจากศูนย์",
-        "makes": "สร้างเฉพาะสถานะพื้นฐาน"
+        "description": "เริ่มจากโครงเปล่า แล้วตั้งค่าเองภายหลัง",
+        "makes": "2 สถานะ (To do / Done) · ไม่มี Sprint และ Module"
       },
       "workspace": "Template ของ Workspace",
-      "workspaceMakes": "ใช้สถานะ, ประเภทงาน และ Module ตาม Template"
+      "workspaceMakes": "ใช้สถานะ, ประเภทงาน, ชุดฟิลด์ และ Module ตาม Template"
     },
     "color": "สีโปรเจกต์",
     "colorOf": "สี {name}",
@@ -499,6 +515,22 @@
     },
     "initialStatus": "สถานะเริ่มต้น: Planning · Health คำนวณเมื่อมีงานแรก",
     "fromExcel": "มีแผนใน Excel อยู่แล้ว? สร้างโปรเจกต์จากไฟล์ Excel",
-    "fromExcelHint": "สร้าง Module และงานทั้งหมดตามไฟล์ แทนการกรอกทีละขั้น"
+    "fromExcelHint": "สร้าง Module และงานทั้งหมดตามไฟล์ แทนการกรอกทีละขั้น",
+    "categories": {
+      "software": "Software development",
+      "service": "Service management",
+      "work": "Work management",
+      "product": "Product management",
+      "marketing": "Marketing",
+      "customer_service": "Customer service",
+      "hr": "Human resources",
+      "finance": "Finance",
+      "design": "Design",
+      "personal": "Personal",
+      "operations": "Operations",
+      "legal": "Legal",
+      "sales": "Sales",
+      "analytics": "Analytics"
+    }
   }
 }

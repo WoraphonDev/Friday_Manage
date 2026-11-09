@@ -7,7 +7,7 @@ import { renderWithProviders } from '@/test/render';
 import { server } from '@/test/server';
 import { navigation, router } from '@/test/router';
 import { IssueDrawerHost } from './IssueDrawer';
-import { failure, fixture, formOptions, makeIssue, me, dev, statuses, uid } from './fixtures.test-support';
+import { failure, fixture, formOptions, makeIssue, me, dev, project, statuses, uid } from './fixtures.test-support';
 import type { Issue, Feed } from './types';
 
 let f: ReturnType<typeof fixture>;
@@ -151,6 +151,76 @@ describe('Issue drawer details', () => {
     await user.click(within(screen.getByRole('dialog',{name:'เปิด Bug อีกครั้ง'})).getByRole('button',{name:'เปิด Bug อีกครั้ง'}));
     await waitFor(()=>expect(mutations('/reopen')).toHaveLength(1));
     await screen.findByText('เปิดใหม่ 1 ครั้ง');
+  });
+});
+
+describe('ชุดฟิลด์ของโปรเจกต์ (Template)', () => {
+  const opt = { task: 'optional', subtask: 'optional' } as const;
+  const custom = [
+    { id: uid(700), name: 'ลูกค้า', fieldType: 'text' as const, options: null, taskMode: 'required' as const, subtaskMode: 'hidden' as const },
+    { id: uid(701), name: 'ระดับ', fieldType: 'select' as const, options: { choices: [{ id: 'p1', label: 'P1' }, { id: 'p2', label: 'P2' }] }, taskMode: 'optional' as const, subtaskMode: 'optional' as const },
+  ];
+  const profile = {
+    fields: { ba: { task: 'hidden', subtask: 'hidden' }, sa: { task: 'required', subtask: 'hidden' }, reviewer: opt, priority: opt, size: { task: 'optional', subtask: 'hidden' }, actual: { task: 'hidden', subtask: 'hidden' }, progress: opt, requirements: { task: 'hidden', subtask: 'hidden' }, screens: opt, labels: opt, remark: { task: 'optional', subtask: 'required' } },
+    columns: ['dev', 'status'], template: null,
+  } as const;
+  function withProfile() {
+    server.use(
+      http.get(projectEndpoint, () => HttpResponse.json({ ...project, fieldProfile: profile, customFields: custom })),
+      http.get(`${projectEndpoint}/form-options`, () => HttpResponse.json({ ...formOptions, fieldProfile: profile, customFields: custom })),
+    );
+  }
+
+  it('หน้า Task: ซ่อนฟิลด์ที่ปิด · * ที่ฟิลด์บังคับ · แก้ Custom field แล้วส่ง PATCH customFields', async () => {
+    withProfile();
+    f.state.issues.get('DE-1')!.customFields = { [uid(700)]: 'ร้าน ก' };
+    const user = userEvent.setup(); mount(); await loaded();
+    const sidebar = screen.getByRole('complementary', { name: 'คุณสมบัติงาน' });
+    expect(within(sidebar).queryByText('Business Analyst')).not.toBeInTheDocument();
+    expect(within(sidebar).getByText('System Analyst *')).toBeInTheDocument();
+    expect(within(sidebar).queryByText('Requirement')).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText('Actual')).not.toBeInTheDocument();
+    const extra = within(sidebar).getByRole('region', { name: 'ฟิลด์เพิ่มเติม' });
+    expect(within(extra).getByText('ลูกค้า *')).toBeInTheDocument();
+    expect(within(extra).getByRole('button', { name: 'ร้าน ก' })).toBeInTheDocument();
+    await user.selectOptions(within(extra).getByLabelText('ระดับ'), 'p2');
+    await waitFor(() => expect(mutations('/issues/DE-1').at(-1)).toMatchObject({ body: { customFields: { [uid(701)]: 'p2' } }, etag: '"3"' }));
+  });
+
+  it('หน้า Sub-task ใช้กฎระดับ Sub-task: ไม่มี Size, ลูกค้า ซ่อน, Remark บังคับ', async () => {
+    withProfile();
+    navigation.search = 'issue=DE-2';
+    mount('DE-2');
+    await screen.findByRole('button', { name: 'งานย่อยหนึ่ง' });
+    const sidebars = screen.getAllByRole('complementary', { name: 'คุณสมบัติงาน' });
+    const sub = sidebars.at(-1)!;
+    expect(within(sub).queryByText('Size')).not.toBeInTheDocument();
+    expect(within(sub).getAllByText('Man-Day').length).toBeGreaterThan(0);
+    expect(within(sub).queryByText('ลูกค้า *')).not.toBeInTheDocument();
+    expect(within(sub).getByLabelText('ระดับ')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'หมายเหตุ *' }).length).toBeGreaterThan(0);
+  });
+
+  it('สร้าง Task: ไม่ส่งฟิลด์ที่ซ่อน · เตือนฟิลด์บังคับก่อนส่ง · ส่งค่า Custom field', async () => {
+    withProfile();
+    navigation.search = 'new=1';
+    const user = userEvent.setup(); mount(undefined, { issueKey: undefined });
+    await screen.findByRole('textbox', { name: 'ชื่อ Task' });
+    expect(screen.queryByLabelText('Business Analyst')).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Module'), uid(10));
+    await user.type(screen.getByLabelText('ชื่อ Task'), 'ติดตั้งเครื่อง');
+    await user.selectOptions(screen.getByLabelText('System Analyst'), dev.id);
+    await user.selectOptions(screen.getByLabelText('ระดับ'), 'p1');
+    // ลูกค้า (บังคับ) ยังว่าง: เบราว์เซอร์ไม่ส่งฟอร์ม · ตรวจเพิ่มในโค้ดด้วยกรณีที่ช่องตรวจเองไม่ได้
+    fireEvent.submit(screen.getByLabelText('ชื่อ Task').closest('form')!);
+    expect(await screen.findByText('กรอกฟิลด์บังคับให้ครบ: ลูกค้า')).toBeInTheDocument();
+    expect(mutations('/projects/DE/issues')).toHaveLength(0);
+    await user.type(screen.getByLabelText('ลูกค้า'), 'ร้าน ข');
+    await user.click(screen.getByRole('button', { name: 'สร้างTask' }));
+    await waitFor(() => expect(mutations('/projects/DE/issues')).toHaveLength(1));
+    const body = mutations('/projects/DE/issues')[0].body;
+    expect(body).toMatchObject({ title: 'ติดตั้งเครื่อง', saId: dev.id, size: 'M', customFields: { [uid(700)]: 'ร้าน ข', [uid(701)]: 'p1' }, requirements: [] });
+    expect(body.baId).toBeUndefined();
   });
 });
 

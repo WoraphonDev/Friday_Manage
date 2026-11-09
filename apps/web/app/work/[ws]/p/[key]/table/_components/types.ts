@@ -63,8 +63,10 @@ export interface Row {
   size: string | null; estimateMd: number | null; progressPct: number | null;
   planStart: string | null; planEnd: string | null; actualStart: string | null; actualEnd: string | null;
   version: number;
-  assignees?: Person[]; ba?: Person | null; sa?: Person | null;
-  requirements?: string[]; screens?: string[];
+  assignees?: Person[]; ba?: Person | null; sa?: Person | null; reviewer?: Person | null;
+  requirements?: string[]; screens?: string[]; labels?: { id: string; name: string; color: string | null }[];
+  /** ค่า Custom field { [fieldId]: ค่า } (ชุดฟิลด์ของโปรเจกต์) */
+  customFields?: Record<string, unknown>;
   /** หมายเหตุ · Guest ไม่ได้รับ */
   remark?: string | null;
 }

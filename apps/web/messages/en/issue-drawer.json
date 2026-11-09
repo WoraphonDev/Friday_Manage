@@ -435,5 +435,7 @@
   "groupNamePlaceholder": "e.g. Group A",
   "groupNeedsModule": "Choose a module first",
   "groupCreateFailed": "Could not create the group",
-  "previewFile": "Preview {name}"
+  "previewFile": "Preview {name}",
+  "groupCustom": "More fields",
+  "requiredMissing": "Fill in the required fields: {fields}"
 }

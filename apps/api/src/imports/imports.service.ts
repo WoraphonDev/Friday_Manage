@@ -18,6 +18,7 @@ import { projectKey, ProjectsService } from '../projects/projects.service.js';
 import { type ParsedWorkbook, readPlanWorkbook } from './excel.js';
 import { applyUpdate, computeUpdate, parentTasks, statusNames, type UpdateDiff, type UpdatePlan } from './update.js';
 import { buildPlanXlsx, buildTemplateXlsx } from './export.js';
+import type { CustomFieldDef } from '../issues/custom-values.js';
 import { insertRows } from './insert.js';
 import { autoMap, type CheckOptions, checkPlan, type ColumnMapping, FIELDS, type Field, personKey, type PlanCheck } from './plan.js';
 
@@ -368,7 +369,7 @@ export class ImportsService {
       requirePerm(access, 'project.view');
       if (access.guestViewer || tenant.role === 'guest') throw new AppError(403, 'guest_view_limited', 'Guest export แผนงานไม่ได้', { allowed: ['overview', 'timeline'] });
       // ชื่อไฟล์บอกวันที่ Export (แผน ณ วันนั้น)
-      return { filename: `${project.key}-plan-${today()}.xlsx`, buffer: await buildPlanXlsx(tx, project, { scale }) };
+      return { filename: `${project.key}-plan-${today()}.xlsx`, buffer: await buildPlanXlsx(tx, project, { scale, ...(await this.projects.fieldsOf(tx, project).then((f) => ({ profile: f.fieldProfile, customFields: f.customFields as CustomFieldDef[] }))) }) };
     });
   }
 

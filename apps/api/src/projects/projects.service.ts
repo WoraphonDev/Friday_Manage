@@ -12,6 +12,10 @@ import { today } from '../common/dates.js';
 import { addDays } from './calendar.js';
 import { L2_GROUPS, L2_PERMISSIONS, projectAccess, type ProjectAccess, requirePerm } from './permissions.js';
 import { defaultWorkflowRules } from '../project-structure/rules.js';
+import {
+  BUILTIN_TEMPLATE_IDS, BUILTIN_TEMPLATES, builtinTemplate, ColumnsSpec, FIELD_MODES, FieldProfileBody, FieldsSpec, mergeProfile,
+  resolveProfile, storeProfile, TEMPLATE_CATEGORIES, templateColumns, type StoredProfile,
+} from './field-profile.js';
 
 const s = schema;
 
@@ -45,6 +49,8 @@ const WorkflowSpec = z.array(StatusSpec).min(2).max(20);
  * ค่าที่ผู้สร้างส่งมาใน POST w/projects ชนะค่าจาก Template เสมอ
  */
 export const TemplateConfig = z.object({
+  /** หมวดของ Template (Software development ฯลฯ) · ใช้จัดกลุ่มในหน้าสร้างโปรเจกต์ */
+  category: z.enum(TEMPLATE_CATEGORIES).optional(),
   workflow: WorkflowSpec.optional(),
   issueTypes: z
     .array(
@@ -65,6 +71,8 @@ export const TemplateConfig = z.object({
         name: z.string().trim().min(1).max(120),
         fieldType: z.enum(['text', 'number', 'select', 'multi_select', 'user', 'date']),
         options: z.unknown().optional(),
+        taskMode: z.enum(FIELD_MODES).optional(),
+        subtaskMode: z.enum(FIELD_MODES).optional(),
       }),
     )
     .max(50)
@@ -76,6 +84,10 @@ export const TemplateConfig = z.object({
   progressMethod: z.enum(['count', 'weighted']).optional(),
   sizeMdMap: SizeMdMap.optional(),
   timeLogEnabled: z.boolean().optional(),
+  /** ชุดฟิลด์ของ Task / Sub-task (ดู field-profile.ts) */
+  fields: FieldsSpec.optional(),
+  /** คอลัมน์ Table ตามลำดับ · Custom field อ้างด้วย `cf:<ชื่อฟิลด์>` */
+  columns: ColumnsSpec.optional(),
 });
 export type TemplateConfig = z.infer<typeof TemplateConfig>;
 
@@ -106,13 +118,18 @@ export const CreateProjectBody = z
     estimateUnit: z.enum(['man_day', 'hour']).optional(),
     progressMethod: z.enum(['count', 'weighted']).optional(),
     templateId: z.uuid().optional(),
+    /** Template ในตัวของระบบ (Development, Scrum …) · ใช้คู่กับ templateId ไม่ได้ */
+    builtinTemplate: z.enum(BUILTIN_TEMPLATE_IDS).optional(),
     holidayCalendarId: z.uuid().optional(),
     extraHolidays: z.array(z.object({ date: isoDate, name: z.string().trim().min(1).max(120) })).max(100).optional(),
     scope: z.object({ in: scopeList, out: scopeList, deliverables: scopeList, acceptance: scopeList, assumptions: scopeList }).partial().optional(),
     members: z.array(InitialMember).max(200).optional(),
     workflow: WorkflowSpec.optional(),
   })
-  .refine((v) => v.goliveDate >= v.startDate, { path: ['goliveDate'], message: 'วัน Go-live ต้องไม่ก่อนวันเริ่ม' });
+  .refine((v) => v.goliveDate >= v.startDate, { path: ['goliveDate'], message: 'วัน Go-live ต้องไม่ก่อนวันเริ่ม' })
+  .refine((v) => !(v.templateId && v.builtinTemplate), { path: ['builtinTemplate'], message: 'เลือก Template ได้แบบเดียว' });
+
+export { FieldProfileBody };
 
 /** L2 › ทั่วไป · ส่งเฉพาะฟิลด์ที่เปลี่ยน + If-Match */
 export const PatchProjectBody = z
@@ -287,13 +304,20 @@ export class ProjectsService {
     await this.limits.assert(tx, tenant.workspaceId, 'projects');
 
     const template = input.templateId ? await this.loadTemplate(tx, input.templateId) : null;
-    const cfg: TemplateConfig = template?.config ?? {};
+    const builtin = input.builtinTemplate ? builtinTemplate(input.builtinTemplate) : undefined;
+    const cfg: TemplateConfig = template?.config ?? (builtin ? TemplateConfig.parse(builtin.config) : {});
     if (input.holidayCalendarId) await this.assertCalendar(tx, input.holidayCalendarId);
     const seen = new Set([auth.userId]);
     const members = (input.members ?? []).filter((m) => !seen.has(m.userId) && !!seen.add(m.userId));
     await checkNewMembers(tx, members);
     const statuses = normalizeWorkflow(input.workflow ?? cfg.workflow) ?? STANDARD;
     const sprintLengthWeeks = input.sprintLengthWeeks !== undefined ? input.sprintLengthWeeks : cfg.sprintLengthWeeks !== undefined ? cfg.sprintLengthWeeks : 2;
+
+    // ชุดฟิลด์คัดลอกจาก Template ตอนสร้าง (แก้ Template ทีหลังไม่กระทบ) · id ของ Custom field สร้างก่อนเพื่อแปลง `cf:<ชื่อ>` ในคอลัมน์
+    const customFields = (cfg.customFields ?? []).map((f) => ({ ...f, id: randomUUID(), taskMode: f.taskMode ?? 'optional', subtaskMode: f.subtaskMode ?? 'optional' }));
+    const profile = resolveProfile({ fields: cfg.fields, columns: templateColumns(cfg.columns, customFields) }, customFields);
+    const source = template ? { id: template.id, name: template.name, builtin: false } : builtin ? { id: builtin.id, name: builtin.name, builtin: true } : null;
+    const fieldProfile: StoredProfile & { template?: typeof source } = { ...storeProfile(profile), ...(source ? { template: source } : {}) };
 
     // ไม่ใช้ RETURNING: policy ฝั่ง SELECT ตรวจด้วย accessible_project_ids() ซึ่งยังไม่เห็นแถวที่กำลัง INSERT ในคำสั่งเดียวกัน
     // Member ของ Workspace (ไม่ใช่ Owner / Admin) จึงโดน RLS ปฏิเสธ · อ่านกลับในคำสั่งถัดไปแทน
@@ -320,6 +344,7 @@ export class ProjectsService {
         holidayCalendarId: input.holidayCalendarId,
         sizeMdMap: cfg.sizeMdMap,
         timeLogEnabled: cfg.timeLogEnabled ?? false,
+        fieldProfile,
       });
     const [project] = await tx.select().from(s.projects).where(eq(s.projects.id, projectId));
     const base = { workspaceId: tenant.workspaceId, projectId: project.id };
@@ -347,8 +372,8 @@ export class ProjectsService {
       ...defaultWorkflowRules('standard').map((r) => ({ ...base, workflowId: stdWf.id, ...r })),
       ...defaultWorkflowRules('bug').map((r) => ({ ...base, workflowId: bugWf.id, ...r })),
     ]);
-    if (cfg.customFields?.length) {
-      await tx.insert(s.customFields).values(cfg.customFields.map((f, i) => ({ ...base, name: f.name, fieldType: f.fieldType, options: f.options ?? null, sort: i })));
+    if (customFields.length) {
+      await tx.insert(s.customFields).values(customFields.map((f, i) => ({ ...base, id: f.id, name: f.name, fieldType: f.fieldType, options: choiceIds(f.options), taskMode: f.taskMode, subtaskMode: f.subtaskMode, sort: i })));
     }
     if (cfg.labels?.length) {
       await tx.insert(s.labels).values(cfg.labels.map((l) => ({ ...base, name: l.name, color: l.color }))).onConflictDoNothing();
@@ -377,7 +402,7 @@ export class ProjectsService {
     if (template) {
       await tx.update(s.projectTemplates).set({ usageCount: sql`${s.projectTemplates.usageCount} + 1` }).where(eq(s.projectTemplates.id, template.id));
     }
-    await this.audit(tx, auth, tenant, project, 'data', 'project.created', `${project.key} · ${project.name}${template ? ` · Template ${template.name}` : ''}`);
+    await this.audit(tx, auth, tenant, project, 'data', 'project.created', `${project.key} · ${project.name}${source ? ` · Template ${source.name}` : ''}`);
     return {
       project,
       created: {
@@ -433,7 +458,55 @@ export class ProjectsService {
           .from(s.sprints)
           .where(eq(s.sprints.projectId, project.id))
           .orderBy(asc(s.sprints.number));
-      return { ...this.dto(project, access.role, true), modules, statuses, issueTypes, sprints, permissions: [...access.perms].sort() };
+      const { fieldProfile, customFields } = await this.fieldsOf(tx, project);
+      return { ...this.dto(project, access.role, true), modules, statuses, issueTypes, sprints, fieldProfile, customFields, permissions: [...access.perms].sort() };
+    });
+  }
+
+  /** ชุดฟิลด์ที่ใช้จริง + Custom field ของโปรเจกต์ (Table, Drawer, ฟอร์มสร้างงาน, Export ใช้ร่วมกัน) */
+  async fieldsOf(tx: Tx, project: ProjectRow) {
+    const rows = await tx.select().from(s.customFields).where(eq(s.customFields.projectId, project.id)).orderBy(asc(s.customFields.sort), asc(s.customFields.name));
+    const customFields = rows.map((f) => ({ id: f.id, name: f.name, fieldType: f.fieldType, options: f.options as { choices: { id: string; label: string; color?: string | null }[] } | null, taskMode: f.taskMode, subtaskMode: f.subtaskMode, sort: f.sort }));
+    const stored = (project.fieldProfile ?? {}) as StoredProfile & { template?: { id: string; name: string; builtin: boolean } | null };
+    return { fieldProfile: { ...resolveProfile(stored, customFields), template: stored.template ?? null }, customFields };
+  }
+
+  async getFieldProfile(auth: AuthInfo, tenant: TenantInfo, key: string) {
+    return this.db.run(auth, tenant, async (tx) => {
+      const { project } = await this.load(tx, auth, tenant, key);
+      return this.fieldsOf(tx, project);
+    });
+  }
+
+  /** L2 › ประเภทงานและฟิลด์ › ชุดฟิลด์ · แก้หลังสร้างโปรเจกต์ได้ (ผู้ใช้ตัดสิน 2026-11-09) · ฟิลด์ที่ซ่อนยังเก็บค่าเดิมไว้ */
+  async setFieldProfile(auth: AuthInfo, tenant: TenantInfo, key: string, input: z.infer<typeof FieldProfileBody>) {
+    return this.db.run(auth, tenant, async (tx) => {
+      const { project, access } = await this.load(tx, auth, tenant, key);
+      requirePerm(access, 'project.settings');
+      const { fieldProfile: current, customFields } = await this.fieldsOf(tx, project);
+      const next = mergeProfile(current, input, customFields);
+      const stored = { ...storeProfile(next), ...(current.template ? { template: current.template } : {}) };
+      const [updated] = await tx.update(s.projects).set({ fieldProfile: stored }).where(eq(s.projects.id, project.id)).returning();
+      await this.audit(tx, auth, tenant, project, 'data', 'project.field_profile_updated', `${project.key} · ${[input.fields ? 'ฟิลด์' : null, input.columns ? 'คอลัมน์ Table' : null].filter(Boolean).join(', ')}`);
+      return this.fieldsOf(tx, updated);
+    });
+  }
+
+  /**
+   * Template ที่เลือกได้ตอนสร้างโปรเจกต์: ในตัว + ขององค์กร · สมาชิกทุกคนที่สร้างโปรเจกต์ได้อ่านได้ (Guest ไม่ได้)
+   * Template ขององค์กรที่ config ผิดรูปแบบยังแสดง แต่ติด invalid เพื่อให้ Admin แก้
+   */
+  async templateCatalog(auth: AuthInfo, tenant: TenantInfo) {
+    if (tenant.role === 'guest') throw forbidden('ws.project.create');
+    return this.db.run(auth, tenant, async (tx) => {
+      const rows = await tx.select().from(s.projectTemplates).orderBy(asc(s.projectTemplates.name));
+      const workspace = rows.map((r) => {
+        const parsed = TemplateConfig.safeParse(r.config ?? {});
+        const config = parsed.success ? parsed.data : {};
+        return { id: r.id, source: 'workspace' as const, category: config.category ?? 'software', name: r.name, description: r.description, config, invalid: !parsed.success, usageCount: r.usageCount };
+      });
+      const builtins = BUILTIN_TEMPLATES.map((b) => ({ id: b.id, source: 'builtin' as const, category: b.category, name: b.name, description: b.description, config: TemplateConfig.parse(b.config), invalid: false, usageCount: null }));
+      return { categories: TEMPLATE_CATEGORIES, items: [...builtins, ...workspace] };
     });
   }
 
@@ -793,6 +866,13 @@ function issueTypesFor(cfg: TemplateConfig) {
     }
   }
   return types;
+}
+
+/** ตัวเลือกของ Custom field ใน Template อาจไม่มี id · ค่าในงานอ้างตัวเลือกด้วย id จึงต้องมีเสมอ */
+function choiceIds(options: unknown) {
+  const choices = (options as { choices?: unknown } | null | undefined)?.choices;
+  if (!Array.isArray(choices)) return options ?? null;
+  return { choices: choices.filter((c) => c && typeof c === 'object' && typeof (c as { label?: unknown }).label === 'string').map((c) => ({ ...(c as object), id: typeof (c as { id?: unknown }).id === 'string' ? (c as { id: string }).id : randomUUID() })) };
 }
 
 /** Sprint ระดับโปรเจกต์: เริ่มจันทร์แรกตั้งแต่วันเริ่มโปรเจกต์ จบวันศุกร์ของสัปดาห์สุดท้าย จนถึง Go-live */

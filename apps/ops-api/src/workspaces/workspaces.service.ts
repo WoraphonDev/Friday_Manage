@@ -323,7 +323,7 @@ export class WorkspacesService implements OnModuleInit {
         await this.notify(o.email, `ทีม Friday ขอเข้าดูบัญชี ${ws.name} (Ticket ${input.ticketNo})`, [
           `ทีม Friday (${staff.name}) ขอเข้าดูบัญชี ${ws.name} แบบอ่านอย่างเดียว ${input.hours} ชั่วโมง`,
           `เหตุผล: ${input.reason} (Ticket ${input.ticketNo})`,
-          `อนุญาตได้ที่ ${config.appUrl}/${ws.slug}/admin › การเข้าช่วยเหลือจากทีม Friday · ถ้าไม่อนุญาต ไม่ต้องทำอะไร`,
+          `อนุญาตได้ที่ ${config.appUrl}/work/${ws.slug}/admin › การเข้าช่วยเหลือจากทีม Friday · ถ้าไม่อนุญาต ไม่ต้องทำอะไร`,
         ])
       )
         sent++;

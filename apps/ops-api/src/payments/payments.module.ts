@@ -2,14 +2,14 @@ import { Body, Controller, Get, HttpCode, Module, Param, Post, Query, Req, Res, 
 import type { Response } from 'express';
 import { type OpsRequest, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
-import { ConfirmBody, OpsPaymentsService, PaymentsQuery, RejectBody } from './ops-payments.service.js';
+import { ConfirmBody, CreditBody, ExceptionsQuery, FlagBody, IncomingQuery, MatchBody, OpsPaymentsService, PaymentsQuery, RejectBody } from './ops-payments.service.js';
 
 const stream = (res: Response, f: { stream: NodeJS.ReadableStream; size: number; filename: string }) => {
   res.set({ 'Content-Type': 'application/octet-stream', 'Content-Length': String(f.size), 'Content-Disposition': `attachment; filename="${f.filename}"`, 'Cache-Control': 'private, no-store' });
   return new StreamableFile(f.stream as never);
 };
 
-/** ตรวจการชำระเงิน (O03 ขยายเป็นคิวกรณีผิดปกติ) · ดูได้: การเงิน, Owner, ผู้ตรวจ · ตัดสิน: การเงิน */
+/** ตรวจการชำระเงินและคิวกรณีผิดปกติ (O03) · ดูได้: การเงิน, Owner, ผู้ตรวจ · ตัดสิน: การเงิน */
 @Controller('ops')
 export class PaymentsController {
   constructor(private readonly payments: OpsPaymentsService) {}
@@ -18,6 +18,34 @@ export class PaymentsController {
   @Get('payments')
   listPayments(@Query() q: unknown) {
     return this.payments.list(parse(PaymentsQuery, q));
+  }
+  @Roles('finance', 'owner', 'auditor')
+  @Get('payments/exceptions')
+  exceptions(@Query() q: unknown) {
+    return this.payments.exceptions(parse(ExceptionsQuery, q));
+  }
+  @Roles('finance', 'owner', 'auditor')
+  @Get('payments/incoming')
+  incoming(@Query() q: unknown) {
+    return this.payments.incoming(parse(IncomingQuery, q));
+  }
+  @Roles('finance')
+  @Post(['payments/:id/flag', 'payments/:id\\:flag'])
+  @HttpCode(200)
+  flag(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.payments.flag(req.staff!, id, parse(FlagBody, body));
+  }
+  @Roles('finance')
+  @Post(['payments/:id/match', 'payments/:id\\:match'])
+  @HttpCode(200)
+  match(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.payments.match(req.staff!, id, parse(MatchBody, body));
+  }
+  @Roles('finance')
+  @Post(['payments/:id/to-credit', 'payments/:id\\:to-credit'])
+  @HttpCode(200)
+  toCredit(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.payments.toCredit(req.staff!, id, parse(CreditBody, body));
   }
   @Roles('finance', 'owner')
   @Get('payments/:id/slip')

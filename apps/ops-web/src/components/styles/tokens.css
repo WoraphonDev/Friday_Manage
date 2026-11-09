@@ -1,0 +1,155 @@
+/*
+ * token สีของ Friday Ops · ชุดเดียวกับแอปลูกค้า (apps/web/src/styles/tokens.css · สีตาม logo) · เฟส 1 โหมดสว่างอย่างเดียว
+ * เพิ่มเฉพาะ token ของหลังบ้าน (เมนูซ้ายพื้นเข้ม, ป้ายเฟส) ไว้ท้ายไฟล์ · ไฟล์อื่นห้ามเขียนสีตรง ให้ใช้ var(--…)
+ * อัปเดตเมื่อ tokens.css ของแอปลูกค้าเปลี่ยน (คัดลอกส่วน :root)
+ */
+:root {
+  color-scheme: light;
+
+  /* พื้นและตัวอักษร: เทากลาง ไม่อมสี */
+  --background: #f5f6f7;
+  --foreground: #24272c;
+  --foreground-soft: #3a3f45;
+  --card: #fff;
+  --popover: #fff;
+  --muted: #5f656d;
+  /* ไอคอน ตัวจับลาก placeholder · ไม่ใช้กับข้อความที่ต้องอ่าน (3:1 แต่ไม่ถึง 4.5:1) */
+  --faint: #7a8088;
+  --subtle: #eef0f2;
+  --surface-2: #f8f9fa;
+  --hover: #f1f3f5;
+  --border: #e3e6e9;
+  --border-strong: #cfd4d9;
+  --input: #868c94;
+  --switch-off: #cdd2d7;
+
+  /* สีหลัก: ม่วงจาก wordmark */
+  --primary: #5b3fc4;
+  --primary-hover: #4a33a8;
+  --primary-soft: #efe9fd;
+  --primary-border: #cbbcf6;
+  --primary-text: #5b3fc4;
+  --on-primary: #fff;
+  --focus: #6b4fd8;
+
+  /* ปุ่ม/ชิปที่ถูกเลือก: เข้มในโหมดสว่าง สลับเป็นอ่อนในโหมดมืด */
+  --contrast-bg: #24272c;
+  --contrast-ink: #fff;
+
+  /* พื้นเข้มทั้งสองโหมด: toast, แถบเลือกหลายแถว, tooltip, แผงแบรนด์, ตัวดูไฟล์ */
+  --inverse-bg: #26292e;
+  --inverse-bg-2: #363a40;
+  --inverse-border: #4b5057;
+  --inverse-ink: #eceef0;
+  --inverse-muted: #b4b9bf;
+  --inverse-link: #c9b8ff;
+  --inverse-link-hover: #e4dcff;
+  --inverse-success: #86efac;
+
+  /* แถบบน */
+  --topbar: #1c1f23;
+  --topbar-field: #2b2f35;
+
+  /* ความหมาย */
+  --danger: #c8264a;
+  --danger-solid: #c8264a;
+  --danger-solid-hover: #a81d3d;
+  --danger-text: #a01d3c;
+  --danger-soft: #fdecf0;
+  --danger-border: #f6b8c6;
+  --success-solid: #1e7a4f;
+  --success-solid-hover: #17633f;
+  --success-text: #17633f;
+  --success-soft: #e3f6ec;
+  --success-border: #a9e3c5;
+  --warning-solid: #b86e00;
+  --warning-text: #7a4700;
+  --warning-soft: #fff6d9;
+  --warning-border: #f3d27a;
+  --accent-purple: #8b5cf6;
+  --accent-purple-text: #6a3fb5;
+  --accent-purple-soft: #f1e9fd;
+  --accent-teal: #0e8a77;
+  --accent-teal-text: #0f6b5a;
+  --accent-teal-soft: #ddf5ee;
+  --accent-pink-text: #a3264f;
+  --accent-pink-soft: #ffe8ee;
+  --highlight: #ffe9a8;
+
+  /* สถานะงาน: สีไทล์ใน logo · ป้ายใช้ตัวอักษรเข้มโทนเดียวกับพื้น */
+  --status-todo-bg: #e6e8eb;
+  --status-todo-fg: #3a3f45;
+  --status-progress-bg: #ffd66d;
+  --status-progress-fg: #5c4300;
+  --status-review-bg: #a67cea;
+  --status-review-fg: #2a1452;
+  --status-done-bg: #54ca94;
+  --status-done-fg: #0f3d29;
+  --status-overdue-bg: #ff7896;
+  --status-overdue-fg: #5c0a22;
+  /* จุด/แถบสถานะบนพื้นการ์ด ต้องเห็นได้ 3:1 จึงเข้มกว่าพื้นป้ายในโหมดสว่าง */
+  --status-todo-dot: #868c94;
+  --status-progress-dot: #e8a917;
+  --status-review-dot: #9466e0;
+  --status-done-dot: #2fb27a;
+  --status-overdue-dot: #e8496b;
+
+  /* กราฟและแถบโหลดงาน */
+  --chart-primary: #5b3fc4;
+  --chart-primary-soft: #c4b5f4;
+  --chart-neutral: #a3a9b0;
+  --chart-strong: #3a3f45;
+
+  --module-auth: #efe9fd;
+  --module-appointment: #e3f6ec;
+  --module-payment: #fff6d9;
+  --module-admin: #ffe8ee;
+
+  --overlay: rgb(18 14 38 / 0.45);
+  --shadow-card: 0 1px 2px rgb(20 16 40 / 0.06);
+  --shadow-menu: 0 16px 40px rgb(20 16 40 / 0.18);
+
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  /* ขนาดตัวอักษรและ layout ตาม FridayManagement (หน้าตา component คงเดิม) */
+  --sidebar-width: 216px;
+  --topbar-h: 46px;
+  --control-h: 32px;
+  --text-body: 13px;
+  --text-label: 12px;
+  --text-caption: 11px;
+  --text-title: 20px;
+  --font-sans: "IBM Plex Sans Thai", system-ui, sans-serif;
+
+  /* --- Friday Ops: เมนูซ้ายพื้นเข้มตาม Canvas Sidebar --- */
+  --side-bg: #141619;
+  --side-panel: #1d2024;
+  --side-panel-border: #262a30;
+  --side-ink: #eceef0;
+  --side-text: #c4c9cf;
+  --side-muted: #8a9199;
+  --side-label: #7a8088;
+  --side-hover: #23262c;
+  --side-on: #2f2753;
+  --side-on-hover: #352c5e;
+  --side-on-ring: #3f3470;
+  --side-on-icon: #c9b8ff;
+  --side-avatar: #3a3068;
+  --side-avatar-ink: #e4dcff;
+  --side-focus: #b9a6ff;
+  --side-live: #86efac;
+  --side-live-ring: rgb(134 239 172 / 0.15);
+  --topbar-glass: rgb(255 255 255 / 0.92);
+  /* แถบแจ้งด้านบน (G11): ส้ม = อยู่ในบัญชีลูกค้า · แดง = สิทธิ์ฉุกเฉิน */
+  --banner-session-bg: #b45309;
+  --banner-session-ink: #fff;
+  --banner-elevated-bg: #b42318;
+  --banner-elevated-ink: #fff;
+  --shadow-drawer: -12px 0 40px rgb(20 16 40 / 0.18);
+}

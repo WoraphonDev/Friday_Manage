@@ -112,12 +112,27 @@ export function Dialog({ open, onOpenChange, title, description, children }: { o
   );
 }
 
-// Toast -------------------------------------------------------------------------
-const ToastContext = createContext<(message: string) => void>(() => undefined);
+// Toast (G10) -----------------------------------------------------------------------
+/** สำเร็จ: หายเองใน 5 วินาที · มีปุ่มย้อนกลับเมื่อย้อนได้ · ล้ม: ค้างจนกว่าจะปิด และแสดง requestId */
+export interface ToastInput {
+  message: string;
+  detail?: string;
+  tone?: "ok" | "error";
+  requestId?: string;
+  undo?: () => void;
+}
+type ToastItem = ToastInput & { id: number };
+const ToastContext = createContext<(input: string | ToastInput) => void>(() => undefined);
 export const useToast = () => useContext(ToastContext);
+/** แปลง error เป็น toast ที่มี requestId */
+export const errorToast = (e: unknown): ToastInput => ({
+  message: e instanceof Error ? e.message : "",
+  tone: "error",
+  requestId: e instanceof ApiError ? e.requestId : undefined,
+});
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const t = useTranslations("ops.ui");
-  const [items, setItems] = useState<{ id: number; message: string }[]>([]);
+  const t = useTranslations("common");
+  const [items, setItems] = useState<ToastItem[]>([]);
   const next = useRef(0);
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
   const dismiss = useCallback((id: number) => {
@@ -126,10 +141,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }, []);
   const push = useCallback(
-    (message: string) => {
-      const id = ++next.current;
-      setItems((prev) => [...prev, { id, message }]);
-      timers.current.set(id, setTimeout(() => dismiss(id), 5000));
+    (input: string | ToastInput) => {
+      const item: ToastItem = { ...(typeof input === "string" ? { message: input } : input), id: ++next.current };
+      setItems((prev) => [...prev, item]);
+      if (item.tone !== "error") timers.current.set(item.id, setTimeout(() => dismiss(item.id), 5000));
     },
     [dismiss],
   );
@@ -142,9 +157,35 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="toast-region" aria-live="polite">
         {items.map((item) => (
-          <div className="toast" role="status" key={item.id}>
-            <span>{item.message}</span>
-            <Button size="icon" variant="ghost" aria-label={t("close")} onClick={() => dismiss(item.id)}>
+          <div className={clsx("toast", item.tone === "error" && "toast-error")} role={item.tone === "error" ? "alert" : "status"} key={item.id}>
+            <span className="toast-icon" aria-hidden="true">
+              {item.tone === "error" ? "!" : "✓"}
+            </span>
+            <span className="toast-body">
+              <span>{item.tone === "error" && !item.message ? t("toast.failed") : item.message}</span>
+              {item.detail && <small>{item.detail}</small>}
+              {item.requestId && (
+                <small>
+                  requestId <code className="mono">{item.requestId}</code>{" "}
+                  <button type="button" className="link-button" onClick={() => void navigator.clipboard?.writeText(item.requestId!).catch(() => undefined)}>
+                    {t("toast.copy")}
+                  </button>
+                </small>
+              )}
+            </span>
+            {item.undo && (
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => {
+                  item.undo!();
+                  dismiss(item.id);
+                }}
+              >
+                {t("toast.undo")}
+              </button>
+            )}
+            <Button size="icon" variant="ghost" aria-label={t("dialog.close")} onClick={() => dismiss(item.id)}>
               <X size={16} />
             </Button>
           </div>

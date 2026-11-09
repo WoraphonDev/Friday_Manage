@@ -51,7 +51,8 @@ export class OpsClient {
         // ops-api ยังไม่ใส่ requestId ใน body (คำขอนอก lane) · รองรับทั้งใน body และ header ของ reverse proxy
         payload?.requestId ?? response.headers.get("x-request-id") ?? undefined,
       );
-      if (response.status === 401 && redirectOnUnauthorized && typeof window !== "undefined") window.dispatchEvent(new CustomEvent(OPS_UNAUTHORIZED));
+      // reauth_required (ต้องแตะกุญแจซ้ำ) ก็ตอบ 401 แต่ session ยังอยู่ → ให้ useReauth จัดการ ไม่ใช่เซสชันหมดอายุ
+      if (response.status === 401 && error.code !== "reauth_required" && redirectOnUnauthorized && typeof window !== "undefined") window.dispatchEvent(new CustomEvent(OPS_UNAUTHORIZED));
       throw error;
     }
     return data as T;

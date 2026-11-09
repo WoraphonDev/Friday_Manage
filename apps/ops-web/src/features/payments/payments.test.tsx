@@ -149,7 +149,7 @@ describe("ตรวจสลิปและ 50 ทวิ", () => {
       }),
     );
     view();
-    expect(await screen.findByText("ไม่มีสิทธิ์เข้าหน้านี้")).toBeInTheDocument();
+    expect(await screen.findByText("บทบาท Support ดูหน้านี้ไม่ได้")).toBeInTheDocument();
     expect(called).toBe(false);
   });
 });

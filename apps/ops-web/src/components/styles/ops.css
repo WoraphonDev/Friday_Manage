@@ -1167,3 +1167,20 @@ textarea.input {
 .tbl .num {
   white-space: nowrap;
 }
+/* หน้า Support: รายการ Ticket | รายละเอียด · รายละเอียด | ข้อมูลลูกค้า */
+.support-split {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+  gap: 16px;
+}
+.ticket-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+  gap: 16px;
+}
+@media (max-width: 1100px) {
+  .support-split,
+  .ticket-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

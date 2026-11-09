@@ -1,6 +1,6 @@
 // N. หลังบ้าน Friday · ยกเว้น support_access_grants ที่ลูกค้าเปิด/ปิดสิทธิ์เองผ่าน A31
 import { sql } from 'drizzle-orm';
-import { type AnyPgColumn, bigint, boolean, check, foreignKey, index, integer, jsonb, pgTable, smallint, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { type AnyPgColumn, bigint, boolean, check, date, foreignKey, index, integer, jsonb, pgTable, smallint, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, pk, tstz, updatedAt } from './_common.ts';
 import { users } from './identity.ts';
 import { workspaceId } from './project.ts';
@@ -170,3 +170,41 @@ export const maintenanceWindows = pgTable('maintenance_windows', {
 export const statusSubscribers = pgTable('status_subscribers', {
   id: pk(), email: text().notNull(), confirmTokenHash: text(), confirmedAt: tstz(), unsubscribedAt: tstz(), createdAt: createdAt(),
 }, (t) => [uniqueIndex('status_subscribers_email_key').on(sql`lower(${t.email})`)]);
+
+export const PRIVACY_REQUEST_TYPES = ['access', 'export', 'rectify', 'erase', 'object', 'restrict'] as const;
+
+/**
+ * คำขอ PDPA ที่ส่งถึงทีม Friday ในฐานะผู้ควบคุมข้อมูลบัญชี (O05 · A3) · ต่างจาก data_subject_requests ที่ลูกค้าแต่ละ Workspace รับเอง
+ * ขั้นตอน 1 รับ · 2 ยืนยันตัวตน · 3 ตรวจขอบเขต · 4 ดำเนินการ · 5 แจ้งผล · ประวัติทุกขั้นอยู่ใน staff_audit_logs
+ */
+export const privacyRequests = pgTable('privacy_requests', {
+  id: pk(), number: integer().generatedAlwaysAsIdentity().notNull().unique(),
+  requestType: text().notNull(), requesterEmail: text().notNull(),
+  /** บัญชีที่ตรงกับอีเมล · null = ไม่พบหรือถูกลบแล้ว */
+  userId: uuid().references(() => users.id, { onDelete: 'set null' }),
+  /** ขอบเขต · ว่าง = ทุก Workspace ที่เป็นสมาชิก */
+  workspaceIds: uuid().array().notNull().default(sql`'{}'`),
+  details: text(), receivedAt: tstz().notNull(), dueDate: date().notNull(),
+  identity: text().notNull().default('unverified'), step: smallint().notNull().default(1), status: text().notNull().default('open'),
+  rejectionReason: text(), handledBy: uuid().references(() => staffUsers.id), approvalRequestId: uuid().references(() => approvalRequests.id),
+  completedAt: tstz(), createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [index('privacy_requests_status_idx').on(t.status, t.dueDate),
+  check('privacy_requests_type_valid', oneOf(t.requestType, PRIVACY_REQUEST_TYPES)),
+  check('privacy_requests_identity_valid', oneOf(t.identity, ['unverified', 'email_match', 'link_confirmed'])),
+  check('privacy_requests_status_valid', oneOf(t.status, ['open', 'completed', 'rejected'])),
+  check('privacy_requests_step', sql`${t.step} BETWEEN 1 AND 5`),
+  check('privacy_requests_rejected', sql`(${t.status} = 'rejected') = (${t.rejectionReason} IS NOT NULL)`)]);
+
+/** เหตุละเมิดข้อมูลส่วนบุคคล (O05 · A4) · ต้องแจ้ง สคส. ภายใน 72 ชม. นับจาก discovered_at ถ้าความเสี่ยงไม่ต่ำ */
+export const dataBreaches = pgTable('data_breaches', {
+  id: pk(), number: integer().generatedAlwaysAsIdentity().notNull().unique(),
+  discoveredAt: tstz().notNull(), ownerId: uuid().notNull().references(() => staffUsers.id),
+  description: text().notNull(), dataTypes: text().array().notNull().default(sql`'{}'`), affectedCount: integer(),
+  workspaceIds: uuid().array().notNull().default(sql`'{}'`), risk: text().notNull().default('medium'),
+  containment: text(), containedAt: tstz(), assessment: text(),
+  pdpcNotifiedAt: tstz(), subjectsNotifiedAt: tstz(), closedAt: tstz(),
+  createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [index('data_breaches_open_idx').on(t.closedAt, t.discoveredAt),
+  check('data_breaches_risk_valid', oneOf(t.risk, ['low', 'medium', 'high'])),
+  check('data_breaches_affected', sql`${t.affectedCount} IS NULL OR ${t.affectedCount} >= 0`)]);
+

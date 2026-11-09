@@ -78,7 +78,11 @@ export const whtCertificates = pgTable('wht_certificates', {
 
 export const legalDocuments = pgTable('legal_documents', {
   id: pk(), docType: text().notNull(), version: text().notNull(), effectiveAt: tstz().notNull(),
-  summary: text().notNull(), body: text().notNull(), locale: text().notNull().default('th'), createdAt: createdAt(),
+  summary: text().notNull(), body: text().notNull(), locale: text().notNull().default('th'),
+  /** true = เปลี่ยนสาระสำคัญ ผู้ใช้ต้องกดยอมรับใหม่ · false = แจ้งให้ทราบ (แบนเนอร์) อย่างเดียว (O05) */
+  requiresAcceptance: boolean().notNull().default(true),
+  /** พนักงานที่สร้างเวอร์ชัน · null = seed / ก่อนมีหลังบ้าน */
+  createdByStaff: uuid(), createdAt: createdAt(),
 }, (t) => [uniqueIndex('legal_documents_version_key').on(t.docType, t.version, t.locale)]);
 
 export const legalAcceptances = pgTable('legal_acceptances', {

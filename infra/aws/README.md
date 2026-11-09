@@ -53,8 +53,8 @@ docker run --rm -e DB_HOST=host.docker.internal -e DB_PORT=54329 -e DB_NAME=<ฐ
 ## Deploy ครั้งแรก (หลังอนุมัติค่าใช้จ่าย)
 
 1. ผู้ดูแลบัญชี AWS: `npx cdk bootstrap aws://<account>/ap-southeast-7` แล้ว `npx cdk deploy FridayRegistry FridayCi` (ถ้าบัญชีมี OIDC ของ GitHub อยู่แล้ว ส่ง `-c githubOidcProviderArn=...`)
-2. ขอใบรับรอง ACM ของโดเมนใน `ap-southeast-7`
-3. GitHub › Settings › Environments › `production`: เปิด Required reviewers · secret `AWS_DEPLOY_ROLE_ARN` (output ของ `FridayCi`) · vars `DOMAIN_NAME`, `CERTIFICATE_ARN`, `WEB_SENTRY_DSN` (ไม่บังคับ)
+2. ขอใบรับรอง ACM ของโดเมนใน `ap-southeast-7` · โดเมนคือ `fridaymanage.com` ตาม [docs/decisions.md](../../docs/decisions.md) ตัวแอปใช้ `app.fridaymanage.com`
+3. GitHub › Settings › Environments › `production`: เปิด Required reviewers · secret `AWS_DEPLOY_ROLE_ARN` (output ของ `FridayCi`) · vars `DOMAIN_NAME` (`app.fridaymanage.com`), `CERTIFICATE_ARN`, `WEB_SENTRY_DSN` (ไม่บังคับ) · `cdk.json` และ test ใช้ `friday.example.com` ต่อไป เพราะค่าจริงมาจาก `vars.DOMAIN_NAME`
 4. Actions › Deploy › Run workflow เลือก `first_deploy` · ระบบสร้าง stack โดยหยุด service ไว้ → รัน migration → เปิด service
    - service จะยังไม่ healthy จนกว่าจะกรอกค่าใน Secrets Manager `friday/app` (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SMTP_PASS`, `SENTRY_DSN`, `GITHUB_*`) เพราะ secret นี้สร้างพร้อม stack และ API ไม่เปิดใน production ถ้าไม่มี Stripe · กรอกแล้วกด Run workflow อีกครั้ง (ไม่เลือก `first_deploy`)
 5. ตรวจ `https://<โดเมน>/login` และ `https://<โดเมน>/api/v1/auth/csrf` · log อยู่ใน CloudWatch กลุ่ม `/friday/app`

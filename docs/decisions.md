@@ -59,3 +59,4 @@
 - ราคาเหมาตามขนาดทีม: Free ≤ 5 คน · Team S ≤ 10 · Team M ≤ 25 · Team L ≤ 50 · Enterprise 50+ · ทุกแพ็กเกจ Team มีฟีเจอร์เท่ากัน · ยังไม่กำหนดราคาจริง
 - ชำระด้วยบัตรเครดิต, PromptPay และโอนเงิน พร้อมใบกำกับภาษี e-Tax และรองรับหัก ณ ที่จ่าย 3% (50 ทวิ)
 - ทีม Friday เข้าบัญชีลูกค้าได้เฉพาะเมื่อลูกค้าเปิดสิทธิ์ไว้ล่วงหน้า ต้องมี Ticket และบันทึก Audit log
+- **โดเมน: `fridaymanage.com`** (9 พ.ย. 2569) · หน้าเว็บแนะนำผลิตภัณฑ์ใช้ `fridaymanage.com` ตัวแอปใช้ `app.fridaymanage.com` · ตอนเลือกยังไม่ได้จด ควรจดผ่าน Route 53 · `fridaymanagement.com`, `fridays.com` มีคนจดแล้ว · ตัวสำรองคือ `fridaysprint.com`, `fridaytasks.com`

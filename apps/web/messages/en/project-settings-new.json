@@ -339,6 +339,7 @@
     "color": "Project color",
     "colorOf": "Color {name}",
     "colors": {
+      "5B3FC4": "Indigo",
       "0F766E": "Teal",
       "1D4ED8": "Blue",
       "7C3AED": "Purple",

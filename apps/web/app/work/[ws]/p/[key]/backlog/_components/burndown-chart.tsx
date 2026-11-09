@@ -31,14 +31,14 @@ export function BurndownChart({ burndown, yearFormat }: { burndown: Burndown; ye
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className={styles.burndownSvg}>
       <title>{label}</title>
       {[0, 0.5, 1].map((ratio) => <g key={ratio}>
-        <line x1={PAD.left} x2={W - PAD.right} y1={y(max * ratio)} y2={y(max * ratio)} stroke="#EEF0F3" />
-        <text x={PAD.left - 4} y={y(max * ratio) + 4} textAnchor="end" fontSize="10" fill="#5F6873">{Math.round(max * ratio)}</text>
+        <line x1={PAD.left} x2={W - PAD.right} y1={y(max * ratio)} y2={y(max * ratio)} stroke="var(--border)" />
+        <text x={PAD.left - 4} y={y(max * ratio) + 4} textAnchor="end" fontSize="10" fill="var(--muted)">{Math.round(max * ratio)}</text>
       </g>)}
-      <polyline points={ideal} fill="none" stroke="#9AA3AE" strokeWidth="1.5" strokeDasharray="4 3" data-testid="burndown-ideal" />
-      {actualPoints.length > 0 && <polyline points={actual} fill="none" stroke="#1D4ED8" strokeWidth="2.5" data-testid="burndown-actual" />}
-      {actualPoints.map((point) => <circle key={point.date} cx={x(point.index)} cy={y(point.remainingMd)} r="3" fill="#1D4ED8"><title>{t("burndownPoint", { date: formatDate(point.date, yearFormat), remaining: point.remainingMd })}</title></circle>)}
-      <text x={PAD.left} y={H - 6} fontSize="10" fill="#5F6873">{formatDate(dates[1] ?? dates[0], yearFormat)}</text>
-      <text x={W - PAD.right} y={H - 6} fontSize="10" fill="#5F6873" textAnchor="end">{formatDate(dates.at(-1), yearFormat)}</text>
+      <polyline points={ideal} fill="none" stroke="var(--chart-neutral)" strokeWidth="1.5" strokeDasharray="4 3" data-testid="burndown-ideal" />
+      {actualPoints.length > 0 && <polyline points={actual} fill="none" stroke="var(--chart-primary)" strokeWidth="2.5" data-testid="burndown-actual" />}
+      {actualPoints.map((point) => <circle key={point.date} cx={x(point.index)} cy={y(point.remainingMd)} r="3" fill="var(--chart-primary)"><title>{t("burndownPoint", { date: formatDate(point.date, yearFormat), remaining: point.remainingMd })}</title></circle>)}
+      <text x={PAD.left} y={H - 6} fontSize="10" fill="var(--muted)">{formatDate(dates[1] ?? dates[0], yearFormat)}</text>
+      <text x={W - PAD.right} y={H - 6} fontSize="10" fill="var(--muted)" textAnchor="end">{formatDate(dates.at(-1), yearFormat)}</text>
     </svg>
   </figure>;
 }

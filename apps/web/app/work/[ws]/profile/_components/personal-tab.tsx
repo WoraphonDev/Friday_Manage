@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button, Dialog, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
+import { ThemeSwitch } from "@/features/theme-switch";
 import { api, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -149,6 +150,12 @@ export function PersonalTab({ ws }: { ws: string }) {
           <option value="BE">{t("yearBE")}</option>
           <option value="CE">{t("yearCE")}</option>
         </Select>
+        {/* ธีมเป็นค่าของอุปกรณ์ (cookie) จึงเปลี่ยนทันที ไม่รวมกับปุ่มบันทึกของฟอร์ม · มือถือเข้าถึงได้จากแท็บ Profile */}
+        <div className="field">
+          <span id="profile-theme" className={styles.fieldLabel}>{t("theme")}</span>
+          <ThemeSwitch showLabels aria-labelledby="profile-theme" />
+          <span className="muted">{t("themeHint")}</span>
+        </div>
         <div className={cn("field", styles.full)}>
           <label htmlFor="profile-about">{t("about")}</label>
           <textarea id="profile-about" className={cn("input", styles.textarea)} value={form.about} maxLength={500} placeholder={t("aboutPlaceholder")} onChange={(e) => set("about", e.target.value)} />

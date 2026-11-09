@@ -18,6 +18,7 @@ import { CodeChips, LabelChips } from './refs';
 import { issuePath, issueQuery, projectPath, type Issue, type Named, type PublicPerson, type Scope } from './types';
 import { GroupSelect, IssuePicker, useProjectIssues } from './task-v2';
 import styles from './issue-drawer.module.css';
+import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 
 /** API ขอเหตุผลการแก้แผน: ไม่ใช่ error ที่ต้องแสดง แต่เปิดกล่องให้กรอกเหตุผลแล้วบันทึกซ้ำ */
 class NeedsPlanReason extends Error {}
@@ -107,7 +108,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
   const pending = issue.pendingDueRequest;
   const mod = scope.project?.modules.find((item) => item.id === issue.moduleId);
-  const modColor = mod?.color ?? '#1d4ed8';
+  const modColor = mod?.color ?? DEFAULT_ITEM_COLOR;
   const groups = (refOptions.data?.phases ?? scope.project?.phases ?? []) as { id: string; name: string; moduleId: string }[];
   const groupName = issue.phaseId ? groups.find((group) => group.id === issue.phaseId)?.name ?? issue.group?.name ?? null : null;
   const doneStatus = statuses.find((status) => status.category === 'done');
@@ -125,14 +126,14 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const canCreate = scope.access.permissions.includes('issue.create') && !guest;
   const devs = scope.people.filter((person) => issue.assigneeIds?.includes(person.id));
   const pillTone = (category: string, name: string) => category === 'done' ? styles.sDone : /review/i.test(name) ? styles.sRev : category === 'in_progress' ? styles.sProg : styles.sTodo;
-  const prioColor = { urgent: '#b91c1c', high: '#b45309', medium: '#1d4ed8', low: '#5f6873' }[issue.priority];
+  const prioColor = { urgent: 'var(--danger-text)', high: 'var(--warning-text)', medium: 'var(--primary-text)', low: 'var(--muted)' }[issue.priority];
   const href = typeof window === 'undefined' ? '' : window.location.href;
   return <div className={`${styles.panel}${mobile ? ` ${styles.subtaskMobile}` : ''}`} aria-busy={busy}>
     {/* Canvas C/D/K2: แถบหัว Drawer = breadcrumb + Watch / ลิงก์ / ⋯ / ปิด */}
     <div className={styles.dhead}>
       <nav aria-label={t('breadcrumb')} className={styles.crumb}>
         {issue.type === 'Bug' && <span className={styles.bugIcon} aria-label={t('types.Bug')} role="img" />}
-        {mod && <span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod.name}</span>}
+        {mod && <span className={styles.modPill} style={{ background: tint(modColor, 10), color: readableColor(modColor) }}>{mod.name}</span>}
         {issue.parentKey && <><span className="muted">›</span><button className={styles.textLink} onClick={() => scope.navigate(issue.parentKey!)}>{issue.parentKey}</button></>}
         <span className="muted">›</span><strong>{issue.key}</strong>
         {issue.parentKey && <span className={styles.typeBadge}>{t('subtask')}</span>}
@@ -151,7 +152,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
           <Popover.Trigger asChild><Button size="icon" variant="ghost" aria-label={t('moreActions')}><MoreHorizontal size={16} /></Button></Popover.Trigger>
           <Popover.Portal><Popover.Content className="popover project-menu" sideOffset={6} align="end">
             {canEdit && issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly') && !pending && <Popover.Close asChild><button className="menu-item" disabled={disabled} onClick={() => setDue('')}>{t('requestDue')}</button></Popover.Close>}
-            {canDelete && <Popover.Close asChild><button className="menu-item" style={{ color: '#b91c1c' }} aria-label={t('deleteIssue')} disabled={disabled} onClick={() => setDeleteOpen(true)}><Trash2 size={15} />{t('deleteIssue')}</button></Popover.Close>}
+            {canDelete && <Popover.Close asChild><button className="menu-item" style={{ color: 'var(--danger-text)' }} aria-label={t('deleteIssue')} disabled={disabled} onClick={() => setDeleteOpen(true)}><Trash2 size={15} />{t('deleteIssue')}</button></Popover.Close>}
           </Popover.Content></Popover.Portal>
         </Popover.Root>}
         <DrawerClose asChild><Button size="icon" variant="ghost" aria-label={t('close')}><X size={18} /></Button></DrawerClose>
@@ -265,7 +266,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
             <PropRow k={t('parentTask')}>{canEdit
               ? <IssuePicker label={t('parentTask')} value={issue.parentKey} disabled={disabled} issues={(projectIssues.data?.items ?? []).filter((item) => !item.parentKey && item.moduleId === issue.moduleId)} groupOf={() => t('sameModuleTasks', { module: mod?.name ?? t('notSet') })} onChange={(key) => { if (key !== issue.parentKey) void patch({ parentKey: key }); }} />
               : <button type="button" className={styles.textLink} onClick={() => scope.navigate(issue.parentKey!)}>{issue.parentKey}</button>}</PropRow>
-            <PropRow k="Module"><span><span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod?.name ?? t('notSet')}</span> <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span></PropRow>
+            <PropRow k="Module"><span><span className={styles.modPill} style={{ background: tint(modColor, 10), color: readableColor(modColor) }}>{mod?.name ?? t('notSet')}</span> <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span></PropRow>
             <PropRow k={t('group')}><span>{groupName ?? <span className="muted">{t('noGroup')}</span>} <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span></PropRow>
           </> : <>
             <PropRow k="Module">{fieldSelect('moduleId', issue.moduleId, scope.project?.modules ?? [], (value) => void patch({ moduleId: value, phaseId: null }), false)}</PropRow>

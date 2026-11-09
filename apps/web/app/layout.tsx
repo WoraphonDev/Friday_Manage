@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { Providers } from "@/components/providers";
+import { DEFAULT_THEME, THEME_COOKIE, THEME_SCRIPT, isThemePref } from "@/features/theme-switch/theme";
 import "@fontsource/ibm-plex-sans-thai/400.css";
 import "@fontsource/ibm-plex-sans-thai/500.css";
 import "@fontsource/ibm-plex-sans-thai/600.css";
@@ -22,9 +24,16 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [locale, allMessages] = await Promise.all([getLocale(), getMessages()]);
+  const [locale, allMessages, jar] = await Promise.all([getLocale(), getMessages(), cookies()]);
+  const savedTheme = jar.get(THEME_COOKIE)?.value;
+  const themePref = isThemePref(savedTheme) ? savedTheme : DEFAULT_THEME;
   return (
-    <html lang={locale}>
+    // data-theme ตั้งโดย THEME_SCRIPT ก่อนวาดหน้า (ค่า "ตามระบบ" รู้ได้เฉพาะฝั่ง browser)
+    // จึงต้องปิดคำเตือน hydration ของ <html> เฉพาะ attribute นี้
+    <html lang={locale} data-theme-pref={themePref} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body>
         <NextIntlClientProvider
           locale={locale}

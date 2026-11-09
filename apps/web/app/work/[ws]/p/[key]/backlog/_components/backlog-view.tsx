@@ -15,6 +15,7 @@ import type { Permissions, Person } from "@/lib/types";
 import { BurndownChart } from "./burndown-chart";
 import { listOf, placement, remainingWorkingDays, round, type BacklogData, type BacklogIssue, type CompleteResult, type Container, type MemberItem, type ModuleItem, type MoveBody, type MoveIntent, type MoveResult, type Sprint } from "./types";
 import styles from "./backlog.module.css";
+import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 
 type Notice = { message: string; undo?: () => Promise<void> };
 type TypeFilter = "all" | "Task" | "Bug";
@@ -22,7 +23,7 @@ interface ViewProps { ws: string; projectKey: string }
 
 const TYPE_ICON: Record<string, { icon: typeof Bug; color: string }> = {
   Story: { icon: Bookmark, color: "#15803D" },
-  Task: { icon: CheckSquare, color: "#1D4ED8" },
+  Task: { icon: CheckSquare, color: "#5B3FC4" },
   Bug: { icon: Bug, color: "#DC2626" },
   Spike: { icon: Zap, color: "#7C3AED" },
 };
@@ -169,7 +170,7 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
         <Link href={href(issue.key)} draggable={false}>{issue.title}</Link>
         {!!issue.subtasks?.length && <span className={styles.subtasks}>{t("subtaskCount", { count: issue.subtasks.length })}</span>}
       </span>
-      <span className={styles.hideSmall}>{module && <span className={styles.module} style={{ color: module.color ?? "#1D4ED8", background: `${module.color ?? "#1D4ED8"}1A` }}>{module.name}</span>}</span>
+      <span className={styles.hideSmall}>{module && <span className={styles.module} style={{ color: readableColor(module.color ?? DEFAULT_ITEM_COLOR), background: tint(module.color ?? DEFAULT_ITEM_COLOR, 10) }}>{module.name}</span>}</span>
       <span className={`${styles.md} ${issue.estimateMd === null ? styles.noEstimate : ""}`} title={issue.estimateMd === null ? t("unestimated") : t("manDay")}>{issue.estimateMd ?? "?"}</span>
       <span className={styles.hideSmall}>{assignees.length > 0 && <AvatarStack people={assignees} max={1} />}</span>
       <span className={styles.actions}>

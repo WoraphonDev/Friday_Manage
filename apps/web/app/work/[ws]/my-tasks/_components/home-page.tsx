@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Search } from "lucide-react";
-import { Avatar, Badge, Button, EmptyState, ErrorState, Forbidden, LoadingState, Select, useToast } from "@/components/ui";
+import { Avatar, Badge, Button, EmptyState, ErrorState, Forbidden, LoadingState, Select, StatusPill, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, formatManDay, type YearFormat } from "@/lib/format";
@@ -13,6 +13,7 @@ import type { HomeData, Health, InboxItem } from "./types";
 import { bkkHour, projectHref, taskHref } from "./shared";
 import { useIsMobile } from "@/lib/use-mobile";
 import styles from "./hmt.module.css";
+import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 
 const HEALTH_TONE = { on_track: "green", at_risk: "amber", off_track: "red", unknown: "neutral" } as const;
 const HEALTH_ORDER: Record<Health, number> = { off_track: 0, at_risk: 1, on_track: 2, unknown: 3 };
@@ -87,27 +88,27 @@ function Kpis({ data, ws, year }: { data: HomeData; ws: string; year: YearFormat
   return (
     <div className={styles.kpis}>
       <Link className={styles.kpi} href={my}>
-        <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "#d97706" }} />{t("dueToday")}</span>
+        <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "var(--warning-solid)" }} />{t("dueToday")}</span>
         <span className={styles.kpiValue}>{s.dueToday.team}</span>
         <span className={styles.kpiNote}>{s.dueToday.keys.join(", ") || t("none")}</span>
       </Link>
       <Link className={styles.kpi} href={my}>
-        <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "#dc2626" }} />{t("overdue")}</span>
-        <span className={styles.kpiValue} style={{ color: "#b91c1c" }}>{s.overdue.team}</span>
+        <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "var(--danger)" }} />{t("overdue")}</span>
+        <span className={styles.kpiValue} style={{ color: "var(--danger-text)" }}>{s.overdue.team}</span>
         <span className={styles.kpiNote}>{byAssignee || t("none")}</span>
       </Link>
       <Link className={styles.kpi} href={`/work/${encodeURIComponent(ws)}/my-tasks`}>
-        <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "#2563eb" }} />{t("dueThisWeek")}</span>
+        <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "var(--chart-primary)" }} />{t("dueThisWeek")}</span>
         <span className={styles.kpiValue}>{s.dueThisWeek.team}</span>
         <span className={styles.kpiNote}>{t("untilDay", { date: formatDate(s.dueThisWeek.until, year) })}</span>
       </Link>
       <a className={styles.kpi} href="#review">
-        <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "#f59e0b" }} />{t("review")}</span>
+        <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "var(--status-review-dot)" }} />{t("review")}</span>
         <span className={styles.kpiValue}>{s.waitingReview}</span>
         <span className={styles.kpiNote}>{t("andApprovals", { count: s.pendingApprovals })}</span>
       </a>
       <a className={styles.kpi} href="#inbox">
-        <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "#7c3aed" }} />{t("mentions")}</span>
+        <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "var(--accent-teal)" }} />{t("mentions")}</span>
         <span className={styles.kpiValue}>{s.unreadMentions.count}</span>
         <span className={styles.kpiNote}>{s.unreadMentions.latestFrom ? t("mentionsFrom", { name: s.unreadMentions.latestFrom }) : t("none")}</span>
       </a>
@@ -153,8 +154,8 @@ function MobileHome({ data, ws, greeting, year }: { data: HomeData; ws: string; 
       </header>
       <div className={styles.mBody}>
         <div className={styles.mKpis}>
-          <Link className={styles.mKpi} href={my}><span>{tk("overdue")}</span><b style={{ color: "#b91c1c" }}>{s.overdue.team}</b></Link>
-          <Link className={styles.mKpi} href={my}><span>{t("mobileToday")}</span><b style={{ color: "#b45309" }}>{s.dueToday.mine}</b></Link>
+          <Link className={styles.mKpi} href={my}><span>{tk("overdue")}</span><b style={{ color: "var(--danger-text)" }}>{s.overdue.team}</b></Link>
+          <Link className={styles.mKpi} href={my}><span>{t("mobileToday")}</span><b style={{ color: "var(--warning-text)" }}>{s.dueToday.mine}</b></Link>
           <Link className={styles.mKpi} href={my}><span>{tk("review")}</span><b>{s.waitingReview}</b></Link>
         </div>
         {approvals.length > 0 && (
@@ -193,7 +194,7 @@ function MobileHome({ data, ws, greeting, year }: { data: HomeData; ws: string; 
             <div className={styles.mProjects}>
               {data.projects.map((p) => (
                 <Link key={p.key} className={styles.mProject} href={projectHref(ws, p.key)}>
-                  <span className={styles.mProjIcon} style={{ background: p.color ?? "#334155" }}>{p.key.slice(0, 2)}</span>
+                  <span className={styles.mProjIcon} style={{ background: p.color ?? FALLBACK_PROJECT_COLOR }}>{p.key.slice(0, 2)}</span>
                   <span style={{ minWidth: 0 }}><b>{p.name}</b><small className="muted">{p.progressPct}% · {t("mobileMine", { count: p.myTasks })}</small></span>
                 </Link>
               ))}
@@ -241,7 +242,7 @@ function Waiting({ data, ws }: { data: HomeData; ws: string }) {
             <Link className={styles.rowTitle} href={taskHref(ws, r.project.key, r.key)}>{t("reviewRow", { key: r.key, title: r.title })}</Link>
             <div className={styles.rowMeta}><span>{r.project.name}</span>{r.from && <span>{t("reviewFrom", { name: r.from.displayName })}</span>}</div>
           </div>
-          <Badge tone="amber">{r.status.name}</Badge>
+          <StatusPill status="review" label={r.status.name} />
           <DueText planEnd={r.planEnd} today={data.today} />
         </div>
       ))}
@@ -275,7 +276,7 @@ function Projects({ data, ws, year }: { data: HomeData; ws: string; year: YearFo
       {!list.length ? <EmptyState title={t("projectsEmpty")} description={t("projectsEmptyHint")} /> : (
         <div className={styles.pgrid}>
           {list.map((p) => {
-            const color = p.color ?? "#334155";
+            const color = p.color ?? FALLBACK_PROJECT_COLOR;
             const go = p.daysToGolive === null ? t("noGolive") : p.daysToGolive >= 0 ? t("daysToGolive", { days: p.daysToGolive }) : t("golivePassed", { days: -p.daysToGolive });
             return (
               <Link className={styles.pc} key={p.key} href={projectHref(ws, p.key)}>
@@ -289,7 +290,7 @@ function Projects({ data, ws, year }: { data: HomeData; ws: string; year: YearFo
                   <div className={styles.bar}><div style={{ width: `${p.progressPct}%`, background: color }} /></div>
                 </div>
                 <div className={styles.stats}>
-                  <div><span className="muted">{t("overdueShort")}</span><b style={{ color: p.overdue ? "#b91c1c" : undefined }}>{p.overdue}</b></div>
+                  <div><span className="muted">{t("overdueShort")}</span><b style={{ color: p.overdue ? "var(--danger-text)" : undefined }}>{p.overdue}</b></div>
                   <div><span className="muted">{t("myTasksShort")}</span><b>{p.myTasks}</b></div>
                   <div><span className="muted">{t("goLive")}</span><b style={{ fontSize: 12 }}>{formatDate(p.goliveDate, year)}</b><span className="muted">{go}</span></div>
                 </div>
@@ -324,7 +325,7 @@ function Reviews({ data, ws }: { data: HomeData; ws: string }) {
       {!data.waiting.reviews.length && <div className={styles.empty}>{t("reviewEmpty")}</div>}
       {data.waiting.reviews.map((r) => (
         <Link className={styles.li} key={r.key} href={taskHref(ws, r.project.key, r.key)}>
-          <Badge tone="amber">{r.status.name}</Badge>
+          <StatusPill status="review" label={r.status.name} />
           <div style={{ flex: 1, minWidth: 0 }}><div className={styles.liTitle}>{r.key} {r.title}</div><div className={`muted ${styles.small}`}>{r.from ? `${r.from.displayName} · ` : ""}{r.project.name}</div></div>
           <DueText planEnd={r.planEnd} today={data.today} />
         </Link>
@@ -357,7 +358,7 @@ function InboxCard({ ws, items, loading }: { ws: string; items?: InboxItem[]; lo
               {typeof n.payload.message === "string" && <div className={`muted ${styles.small}`} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>“{n.payload.message}”</div>}
               <div className={`muted ${styles.small}`}>{formatDate(n.createdAt)}</div>
             </div>
-            {!n.readAt && <span className={styles.dot} style={{ background: "#1d4ed8", marginTop: 6 }} role="img" aria-label={t("inboxUnread")} />}
+            {!n.readAt && <span className={styles.dot} style={{ background: "var(--primary)", marginTop: 6 }} role="img" aria-label={t("inboxUnread")} />}
           </Link>
         );
       })}
@@ -380,7 +381,7 @@ function Upcoming({ data, year }: { data: HomeData; year: YearFormat }) {
           return (
             <div className={styles.upRow} key={`${e.date}-${e.type}-${i}`}>
               <div className={styles.upDate}><b>{p.d}</b><span className="muted" style={{ fontSize: 11 }}>{p.m}</span></div>
-              <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill={e.type === "holiday" ? "#94a3b8" : "#1d4ed8"} /></svg>
+              <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill={e.type === "holiday" ? "var(--chart-neutral)" : "var(--chart-primary)"} /></svg>
               <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600, fontSize: 12 }}>{t(`upcomingTypes.${e.type}`)} · {e.title}</div>{e.project && <div className={`muted ${styles.small}`}>{e.project}</div>}</div>
               <Badge>{t("inDays", { days })}</Badge>
             </div>
@@ -403,18 +404,18 @@ function Workload({ data, ws }: { data: HomeData; ws: string }) {
     <section className={styles.card}>
       <div className={styles.chead}>
         <h2>{t("workloadTitle")}</h2>
-        <span style={{ fontSize: 12, fontWeight: 600, color: w.team.md > w.team.capacityMd ? "#b91c1c" : undefined }}>{t("workloadTotal", { md: w.team.md.toFixed(1), capacity: w.team.capacityMd.toFixed(0) })}</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: w.team.md > w.team.capacityMd ? "var(--danger-text)" : undefined }}>{t("workloadTotal", { md: w.team.md.toFixed(1), capacity: w.team.capacityMd.toFixed(0) })}</span>
       </div>
       <div className={styles.chart} role="img" aria-label={`${t("workloadChart")}: ${label}`}>
         {cap > 0 && <span className={styles.cap} style={{ bottom: h(cap) }} />}
         {people.map((p, i) => (
           <div className={styles.chartCol} key={p.person?.id ?? i}>
             <span style={{ fontSize: 11, fontWeight: 600 }}>{formatManDay(p.md).replace(/\s?MD$/, "")}</span>
-            <i style={{ height: h(p.md), background: p.md > p.capacityMd ? "#ea580c" : "#93b4f5" }} />
+            <i style={{ height: h(p.md), background: p.md > p.capacityMd ? "var(--warning-solid)" : "var(--chart-primary-soft)" }} />
           </div>
         ))}
       </div>
-      <div className={styles.chartLabels}>{people.map((p, i) => <span key={p.person?.id ?? i} style={{ fontWeight: p.md > p.capacityMd ? 700 : 500, color: p.md > p.capacityMd ? "#b91c1c" : "#5f6873" }}>{p.person?.displayName ?? "-"}</span>)}</div>
+      <div className={styles.chartLabels}>{people.map((p, i) => <span key={p.person?.id ?? i} style={{ fontWeight: p.md > p.capacityMd ? 700 : 500, color: p.md > p.capacityMd ? "var(--danger-text)" : "var(--muted)" }}>{p.person?.displayName ?? "-"}</span>)}</div>
       <div className={styles.hint}>{t("workloadNote")} · <Link href={`/work/${encodeURIComponent(ws)}/members`}>{t("workloadAll")}</Link></div>
     </section>
   );

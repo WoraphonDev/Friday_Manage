@@ -161,9 +161,9 @@ describe("Timeline (4)", () => {
     await screen.findByTestId("bar-DE-3");
     expect(bar("DE-3").style.background).toBe("rgb(29, 78, 216)");
     await user.selectOptions(screen.getByLabelText("สีตาม"), "status");
-    expect(bar("DE-3").style.background).toBe("rgb(138, 148, 160)");
+    expect(bar("DE-3").style.background).toBe("var(--status-todo-dot)");
     await user.selectOptions(screen.getByLabelText("สีตาม"), "assignee");
-    expect(bar("DE-3").style.background).toBe("rgb(148, 163, 184)"); // ไม่มีผู้รับผิดชอบ = เทา
+    expect(bar("DE-3").style.background).toBe("var(--chart-neutral)"); // ไม่มีผู้รับผิดชอบ = เทา
   });
 
   it("Guest: ไม่มีชื่อคน ไม่มีสีตาม Assignee ลากไม่ได้ และเปิดได้เฉพาะงานที่แชร์", async () => {

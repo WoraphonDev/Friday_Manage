@@ -64,7 +64,7 @@ export function PlanLimitDialog({
       tone: styles.amber,
       title: t("seats.title", { next: (d.current ?? 0) + (d.increment ?? 1) }),
       description: `${error?.message ?? ""} · ${t("seats.guests")}`,
-      bar: { label: t("seats.bar"), value: t("seats.barValue", { current: d.current ?? 0, limit: d.limit ?? 0 }), color: "#dc2626" },
+      bar: { label: t("seats.bar"), value: t("seats.barValue", { current: d.current ?? 0, limit: d.limit ?? 0 }), color: "var(--danger)" },
       points: [
         target?.seatLimit ? t("seats.pointPlan", { plan: target.name, seats: target.seatLimit }) : t("seats.pointUpgrade"),
         t("seats.pointDeactivate"),
@@ -77,7 +77,7 @@ export function PlanLimitDialog({
       tone: styles.neutral,
       title: t("projects.title", { plan: planName, limit: d.limit ?? 0 }),
       description: t("projects.description", { current: d.current ?? 0 }),
-      bar: { label: t("projects.bar"), value: `${d.current ?? 0} / ${d.limit ?? 0}`, color: "#d97706" },
+      bar: { label: t("projects.bar"), value: `${d.current ?? 0} / ${d.limit ?? 0}`, color: "var(--warning-solid)" },
       points: [t("projects.pointTeam"), t("projects.pointArchive")],
       manage: { label: t("projects.manage"), href: base },
     };
@@ -88,7 +88,7 @@ export function PlanLimitDialog({
       tone: styles.red,
       title: t("storage.title"),
       description: size ? t("storage.description", { size }) : t("storage.descriptionPlain"),
-      bar: { label: t("storage.bar"), value: t("storage.barValue", { current: bytesToGb(d.current ?? 0), limit: bytesToGb(d.limit ?? 0) }), color: "#dc2626" },
+      bar: { label: t("storage.bar"), value: t("storage.barValue", { current: bytesToGb(d.current ?? 0), limit: bytesToGb(d.limit ?? 0) }), color: "var(--danger)" },
       points: [t("storage.pointTrash"), t("storage.pointOpen")],
       manage: { label: t("storage.manage"), href: project ? `${base}/p/${project}/files` : base },
     };

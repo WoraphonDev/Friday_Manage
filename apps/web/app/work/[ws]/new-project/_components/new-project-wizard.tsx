@@ -16,7 +16,7 @@ import {
 } from "./plan";
 import styles from "./wizard.module.css";
 
-const COLORS = ["#0F766E", "#1D4ED8", "#7C3AED", "#B45309", "#BE185D", "#334155"] as const;
+const COLORS = ["#5B3FC4", "#0F766E", "#1D4ED8", "#7C3AED", "#B45309", "#BE185D", "#334155"] as const;
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 const POSITIONS = ["Project Manager", "Lead / PM", "BA", "UX/UI Designer", "Frontend Dev", "Backend Dev", "Developer", "QA Engineer"];
 const INTEGRATIONS = ["github", "gitlab", "line", "slack"] as const;

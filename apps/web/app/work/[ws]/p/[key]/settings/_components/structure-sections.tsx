@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { projectEndpoint, SectionHead } from "./shared";
 import { errorText, isForbidden, move, patchPlain, type CustomField, type IssueType, type IssueTypes, type Label, type Member, type Module } from "./types";
 import styles from "./settings.module.css";
+import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 
 const FIELD_TYPES: CustomField["fieldType"][] = ["text", "number", "select", "multi_select", "user", "date"];
 const STANDARD_FIELDS = ["ba", "devs", "screenId", "frNfr", "planActual"] as const;
@@ -43,7 +44,7 @@ export function TypesSection({ ws, projectKey }: { ws: string; projectKey: strin
   const [fieldOpen, setFieldOpen] = useState(false);
   const [field, setField] = useState({ name: "", fieldType: "text" as CustomField["fieldType"], choices: "" });
   const [labelOpen, setLabelOpen] = useState(false);
-  const [label, setLabel] = useState({ name: "", color: "#1d4ed8" });
+  const [label, setLabel] = useState({ name: "", color: DEFAULT_ITEM_COLOR });
   const [removing, setRemoving] = useState<{ kind: "field" | "label"; id: string; name: string } | null>(null);
 
   const error = types.error ?? fields.error ?? labels.error;
@@ -69,7 +70,7 @@ export function TypesSection({ ws, projectKey }: { ws: string; projectKey: strin
   async function addLabel() {
     if (await run(() => api.post(`${base}/labels`, { name: label.name.trim(), color: label.color }), t("labelAdded"))) {
       setLabelOpen(false);
-      setLabel({ name: "", color: "#1d4ed8" });
+      setLabel({ name: "", color: DEFAULT_ITEM_COLOR });
     }
   }
 
@@ -79,7 +80,7 @@ export function TypesSection({ ws, projectKey }: { ws: string; projectKey: strin
       <div className={styles.sb}>
         {types.data.items.map((type) => (
           <div key={type.id} className={styles.typeRow}>
-            <span className={styles.ty} style={{ background: type.color ?? "#5f6873" }} aria-hidden="true" />
+            <span className={styles.ty} style={{ background: type.color ?? "var(--muted)" }} aria-hidden="true" />
             <div>
               <b>{type.name}</b> <span className={styles.muted}>· {t("workflowOf", { name: type.workflow.name })}</span>
               <div className={styles.muted}>{t("requiredOf", { fields: type.requiredFields.map(fieldLabel).join(", ") })}</div>
@@ -113,7 +114,7 @@ export function TypesSection({ ws, projectKey }: { ws: string; projectKey: strin
           <span className={styles.lb}>{t("labels")}</span>
           <div className={styles.pills}>
             {labels.data.items.map((l) => (
-              <span key={l.id} className={styles.pill} style={l.color ? { background: `${l.color}1f`, color: l.color } : undefined}>
+              <span key={l.id} className={styles.pill} style={l.color ? { background: tint(l.color, 12), color: readableColor(l.color) } : undefined}>
                 {l.name}
                 <button type="button" className={styles.pillBtn} aria-label={t("removeOf", { name: l.name })} onClick={() => setRemoving({ kind: "label", id: l.id, name: l.name })}>×</button>
               </span>

@@ -12,6 +12,7 @@ import { PropRow } from './detail-parts';
 import { DraftList, GroupSelect, IssuePicker, useProjectIssues } from './task-v2';
 import { issuePath, projectPath, type FormOptions, type Issue, type IssueType, type Scope } from './types';
 import styles from './issue-drawer.module.css';
+import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 
 type ChildDraft = { id: string; title: string; size: string; assigneeId: string; planEnd: string };
 type Draft = {
@@ -146,7 +147,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
   const groupName = (id: string | null | undefined) => (id ? groups.find((group) => group.id === id)?.name ?? null : null);
   const moduleId = parentRow ? parentRow.moduleId : draft.moduleId;
   const mod = options.modules.find((module) => module.id === moduleId);
-  const modColor = mod?.color ?? '#1d4ed8';
+  const modColor = mod?.color ?? DEFAULT_ITEM_COLOR;
   const people = options.members.map((person) => ({ id: person.id, name: person.displayName }));
   const personSelect = (name: 'baId' | 'saId' | 'reviewerId', label: string) => <Select label={label} value={draft[name]} onChange={(event) => set(name, event.target.value)}><option value="">{t('notSet')}</option>{people.map((person) => <option value={person.id} key={person.id}>{person.name}</option>)}</Select>;
   const sizeOptions = Object.entries(options.sizeMdMap).sort(([a], [b]) => SIZE_ORDER.indexOf(a) - SIZE_ORDER.indexOf(b));
@@ -169,7 +170,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
     {/* แถบหัวเหมือนหน้าดู Task: ตำแหน่งงาน + ประเภท + Task / Sub-task + ปิด · Sub-task ที่เปิดจาก Task ใช้หัวของ Drawer ชั้นสอง */}
     {!parent && <div className={styles.dhead}>
       <nav aria-label={t('breadcrumb')} className={styles.crumb}>
-        {mod && <span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod.name}</span>}
+        {mod && <span className={styles.modPill} style={{ background: tint(modColor, 10), color: readableColor(modColor) }}>{mod.name}</span>}
         {parentRow && <><span className="muted">›</span><span>{parentRow.key}</span></>}
         {(mod || parentRow) && <span className="muted">›</span>}<strong>{draft.subtask ? t('newSubtask') : t('newOfType', { type: t(`types.${draft.type}`) })}</strong>
       </nav>
@@ -270,7 +271,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
                   ? <span>{parent.key} · {parent.title}</span>
                   : <IssuePicker label={t('parentTask')} value={draft.parentKey || null} issues={parents} groupOf={(issue) => options.modules.find((module) => module.id === issue.moduleId)?.name ?? t('notSet')} onChange={(key) => set('parentKey', key)} />}</PropRow>
                 {parentIssue.error && <Failure error={parentIssue.error} />}{parentIssue.data?.parentKey && <p className="field-error">{t('parentMustBeTask')}</p>}
-                <PropRow k="Module"><span><span className={styles.modPill} style={{ background: `${modColor}1a`, color: modColor }}>{mod?.name ?? t('notSet')}</span> <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span></PropRow>
+                <PropRow k="Module"><span><span className={styles.modPill} style={{ background: tint(modColor, 10), color: readableColor(modColor) }}>{mod?.name ?? t('notSet')}</span> <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span></PropRow>
                 {parentIssue.data && <PropRow k={t('group')}><span>{groupName(parentIssue.data.phaseId) ?? <span className="muted">{t('noGroup')}</span>} <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span></PropRow>}
               </> : <>
                 <PropRow k="Module"><Select label={t('fields.moduleId')} required={required.has('module') || draft.type === 'Task'} value={draft.moduleId} onChange={(event) => { set('moduleId', event.target.value); set('phaseId', ''); }}><option value="">{t('choose')}</option>{options.modules.map((module) => <option value={module.id} key={module.id}>{module.name}</option>)}</Select></PropRow>

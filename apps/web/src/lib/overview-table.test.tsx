@@ -348,7 +348,7 @@ describe("จัดโครงงานใน Table", () => {
     await user.type(screen.getByLabelText("ชื่อ Module"), "Module ใหม่");
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(creates).toEqual([{ name: "Module ใหม่", color: "#1d4ed8" }]);
+    expect(creates).toEqual([{ name: "Module ใหม่", color: "#5b3fc4" }]);
     expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน Module ใหม่" })).toHaveAttribute("href", "/work/sample/p/DE/table?new=1&type=task&moduleId=m-new");
   });
   it("กลุ่ม (ไม่บังคับ): เพิ่มกลุ่มจากเมนู Module แล้วเพิ่ม Task ในกลุ่มนั้น · ลบกลุ่มแล้วงานไม่มีกลุ่ม", async () => {

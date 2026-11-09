@@ -99,7 +99,7 @@ export function NotifyTab({ ws }: { ws: string }) {
             <div className={styles.chnText}><div className={styles.chnTitle}>{t("inAppTitle")}</div><div className={cn(styles.muted, styles.small)}>{t("inAppHint")}</div></div>
           </div>
           <div className={styles.chn}>
-            <span className={styles.chnIcon} style={{ background: "#1D4ED8" }} aria-hidden="true">@</span>
+            <span className={styles.chnIcon} style={{ background: "#5B3FC4" }} aria-hidden="true">@</span>
             <div className={styles.chnText}><div className={styles.chnTitle}>Email</div><div className={cn(styles.muted, styles.small)} style={{ overflowWrap: "anywhere" }}>{me.email}</div></div>
             <Badge tone={emailOn ? "green" : "neutral"}>{emailOn ? t("on") : t("off")}</Badge>
           </div>

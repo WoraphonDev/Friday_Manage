@@ -164,7 +164,7 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
     if (it.kind === "ms")
       return (
         <span key={it.id} className={`${styles.ev} ${styles.ms}`} title={it.name}>
-          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" style={{ flex: "none" }}><rect x="1.5" y="1.5" width="7" height="7" transform="rotate(45 5 5)" fill="#fff" /></svg>
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" style={{ flex: "none" }}><rect x="1.5" y="1.5" width="7" height="7" transform="rotate(45 5 5)" fill="var(--contrast-ink)" /></svg>
           <span className={styles.t}>{it.name}</span>
         </span>
       );

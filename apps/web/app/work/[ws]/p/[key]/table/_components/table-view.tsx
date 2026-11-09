@@ -714,7 +714,7 @@ function IssueRow({ index, row, sub, cols, ws, projectKey, year, canEdit, status
     actualEnd: row.actualEnd ? <span className={styles.actualCell}><span className={actualLate ? styles.dueLate : undefined}>{formatDate(row.actualEnd, year)}</span>{actualLate && <span className={styles.dueLate}>{t("actualLate", { days: lateBy })}</span>}</span> : empty,
     // Canvas: "FR-01.2 · SCR-101" ตัวเล็กสีจาง ตัดด้วย … · แก้ใน Drawer
     refs: refs ? <span className={styles.refs} title={refs}>{refs}</span> : empty,
-    progress: <span className={styles.prog}><span><span style={{ width: `${row.progressPct ?? 0}%`, background: (row.progressPct ?? 0) >= 100 ? "#16a34a" : "var(--primary)" }} /></span><span>{row.progressPct ?? 0}%</span></span>,
+    progress: <span className={styles.prog}><span><span style={{ width: `${row.progressPct ?? 0}%`, background: (row.progressPct ?? 0) >= 100 ? "var(--success-solid)" : "var(--primary)" }} /></span><span>{row.progressPct ?? 0}%</span></span>,
     remark: canEdit ? <RemarkCell label={edit(t("cols.remark"))} value={row.remark ?? null} onChange={(v) => onPatch({ remark: v })}>{remarkView}</RemarkCell> : remarkView,
   };
   return (
@@ -766,7 +766,7 @@ function BulkBar({ count, options, statuses, canDelete, onApply, onStatus, onDel
         <select aria-label={t("bulkModule")} value={moduleId} onChange={(e) => setModuleId(e.target.value)}><option value="">{t("bulkModule")}</option>{options?.modules.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
         <Button size="small" disabled={!moduleId} onClick={() => onApply({ moduleId })}>{t("apply")}</Button>
       </>)}
-      {canDelete && <button type="button" className={styles.bulkBtn} style={{ color: "#fca5a5" }} onClick={onDelete}>{t("delete")}</button>}
+      {canDelete && <button type="button" className={styles.bulkBtn} style={{ color: "var(--status-overdue-bg)" }} onClick={onDelete}>{t("delete")}</button>}
       <button type="button" className={`${styles.bulkBtn} ${styles.bulkClear}`} onClick={onClear}>{t("unselect")}</button>
     </div>
   );

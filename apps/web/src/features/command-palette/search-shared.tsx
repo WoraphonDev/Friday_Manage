@@ -18,7 +18,7 @@ export interface SavedSearch { id: string; name: string; query: string; filters:
 
 /** สีและตัวย่อของไอคอนต่อชนิด ตาม Canvas P1 */
 export const TYPE_ICON: Record<SearchType | "command", { color: string; ab: string }> = {
-  task: { color: "#1D4ED8", ab: "T" },
+  task: { color: "#5B3FC4", ab: "T" },
   sub: { color: "#64748B", ab: "S" },
   bug: { color: "#DC2626", ab: "B" },
   project: { color: "#0F766E", ab: "P" },

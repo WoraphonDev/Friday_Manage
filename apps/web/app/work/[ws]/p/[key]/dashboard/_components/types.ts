@@ -150,9 +150,9 @@ export const projectBase = (ws: string, key: string) => `/work/${encodeURICompon
 
 /** สีตามระดับ Health (ตรงกับ pill ใน Canvas O1 / O2) */
 export const STATUS_TONE: Record<HealthStatus, { bg: string; fg: string }> = {
-  on_track: { bg: "#DCFCE7", fg: "#166534" },
-  at_risk: { bg: "#FEF3C7", fg: "#92400E" },
-  off_track: { bg: "#FEE2E2", fg: "#991B1B" },
-  done: { bg: "#DCFCE7", fg: "#166534" },
-  no_forecast: { bg: "#EEF0F3", fg: "#3D4550" },
+  on_track: { bg: "var(--success-soft)", fg: "var(--success-text)" },
+  at_risk: { bg: "var(--warning-soft)", fg: "var(--warning-text)" },
+  off_track: { bg: "var(--danger-soft)", fg: "var(--danger-text)" },
+  done: { bg: "var(--success-soft)", fg: "var(--success-text)" },
+  no_forecast: { bg: "var(--subtle)", fg: "var(--foreground-soft)" },
 };

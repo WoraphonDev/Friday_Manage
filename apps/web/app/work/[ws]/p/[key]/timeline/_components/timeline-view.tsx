@@ -38,8 +38,11 @@ export type Zoom = "day" | "week" | "month";
 export const PX_PER_DAY: Record<Zoom, number> = { day: 21, week: 8, month: 3 };
 const DAY = 86_400_000;
 const LABEL_W = 290;
-const STATUS_COLOR: Record<Cat, string> = { todo: "#8a94a0", in_progress: "#2563eb", done: "#15803d" };
-const PALETTE = ["#1d4ed8", "#0f766e", "#b45309", "#7c3aed", "#be185d", "#0369a1", "#4d7c0f", "#c2410c"];
+const STATUS_COLOR: Record<Cat, string> = { todo: "var(--status-todo-dot)", in_progress: "var(--status-progress-dot)", done: "var(--status-done-dot)" };
+// Review อยู่กลุ่ม in_progress แต่มีสีของตัวเอง (แยกด้วยชื่อแบบเดียวกับป้ายสถานะใน Table)
+const statusColor = (s: { name: string; category: Cat }) => (/review/i.test(s.name) ? "var(--status-review-dot)" : STATUS_COLOR[s.category]);
+// สีข้อมูลต้องเป็น hex เพราะนำไปต่อค่าความโปร่งใส (`${color}33`)
+const PALETTE = ["#5b3fc4", "#0f766e", "#b45309", "#1d4ed8", "#be185d", "#0369a1", "#4d7c0f", "#c2410c"];
 
 export const toDay = (iso: string, from: string) => Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY);
 const weekday = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDay();
@@ -114,7 +117,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
     const out: Line[] = [];
     const personColor = (r: TLRow) => {
       const id = r.assignees?.[0]?.id;
-      if (!id) return "#94a3b8";
+      if (!id) return "var(--chart-neutral)";
       return PALETTE[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % PALETTE.length];
     };
     q.data.modules.forEach((m, mi) => {
@@ -123,7 +126,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
       out.push({ kind: "module", id: mid, name: m.name, color: mcolor, s: m, count: m.taskCount });
       if (closed.has(mid)) return;
       // Module › (Task ที่ไม่มีกลุ่ม) › กลุ่ม › Task › Sub-task · กลุ่มไม่บังคับ (ผู้ใช้ขอ 2026-11-08)
-      const colorOf = (r: TLRow) => (colorBy === "module" ? mcolor : colorBy === "status" ? STATUS_COLOR[r.status.category] : personColor(r));
+      const colorOf = (r: TLRow) => (colorBy === "module" ? mcolor : colorBy === "status" ? statusColor(r.status) : personColor(r));
       const tasks = (rows: TLRow[]) => { for (const r of rows) {
         out.push({ kind: "task", row: r, color: colorOf(r), sub: false, hasKids: r.subtasks.length > 0 });
         if (!closed.has(`t:${r.key}`)) for (const s of r.subtasks) out.push({ kind: "task", row: s, color: colorOf(s), sub: true, hasKids: false });
@@ -280,12 +283,12 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                 </div>
               </div>
               <div className={styles.row} aria-label={t("milestones")}>
-                <div className={`${styles.lab} ${styles.mod}`}><svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill="#1b1f24" /></svg>{t("milestones")}</div>
+                <div className={`${styles.lab} ${styles.mod}`}><svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill="var(--chart-strong)" /></svg>{t("milestones")}</div>
                 <div className={styles.lane} style={{ width }}>
                   {laneBg}
                   {d.milestones.map((ms) => (
                     <span key={ms.id} className={styles.ms} style={{ left: x(ms.date), maxWidth: msRoom(ms.id) }} title={`${ms.name} · ${formatDate(ms.date, year)}`}>
-                      <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill="#1b1f24" /></svg><span className={styles.msName}>{ms.name}</span>
+                      <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill="var(--chart-strong)" /></svg><span className={styles.msName}>{ms.name}</span>
                     </span>
                   ))}
                 </div>
@@ -305,7 +308,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                       <div className={`${styles.lane} ${dropRow === ln.id ? styles.drop : ""}`} style={{ width }} onDragOver={(e) => { if (canEdit && dragged.current) { e.preventDefault(); setDropRow(ln.id); } }} onDragLeave={() => setDropRow(null)} onDrop={(e) => onDropRow(e, ln.id)} data-testid={`lane-${ln.id}`}>
                         {laneBg}
                         {s.start && s.end && <>
-                          <span className={`${styles.b} ${styles.summary}`} style={{ left: x(s.start), width: Math.max(px, (toDay(s.end, s.start) + 1) * px), background: ln.kind === "module" ? "#e4e7eb" : `${ln.color}33` }}><span className={styles.fill} style={{ width: `${s.progressPct}%`, background: ln.color }} /></span>
+                          <span className={`${styles.b} ${styles.summary}`} style={{ left: x(s.start), width: Math.max(px, (toDay(s.end, s.start) + 1) * px), background: ln.kind === "module" ? "var(--subtle)" : `${ln.color}33` }}><span className={styles.fill} style={{ width: `${s.progressPct}%`, background: ln.color }} /></span>
                           <span className={styles.barLabel} style={{ left: x(s.end) + px + 6 }}>{s.progressPct}% · {formatDate(s.start, year)} – {formatDate(s.end, year)}</span>
                         </>}
                       </div>
@@ -335,7 +338,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                   <div key={`${r.key}${ln.sub ? ":s" : ""}`} className={styles.row}>
                     <div className={`${styles.lab} ${ln.sub ? styles.sub : styles.task}`}>
                       {ln.hasKids && <button type="button" className={styles.toggle} aria-expanded={!closed.has(`t:${r.key}`)} aria-label={t(closed.has(`t:${r.key}`) ? "expand" : "collapse", { name: r.key })} onClick={() => toggle(`t:${r.key}`)}><ChevronDown size={14} style={{ transform: closed.has(`t:${r.key}`) ? "rotate(-90deg)" : undefined }} /></button>}
-                      {!ln.hasKids && <span className={styles.dotStatus} style={{ borderColor: STATUS_COLOR[r.status.category], background: r.status.category === "done" ? STATUS_COLOR.done : "transparent" }} aria-hidden="true" />}
+                      {!ln.hasKids && <span className={styles.dotStatus} style={{ borderColor: statusColor(r.status), background: r.status.category === "done" ? STATUS_COLOR.done : "transparent" }} aria-hidden="true" />}
                       <span className="muted" style={{ fontSize: 11, flex: "none", whiteSpace: "nowrap" }}>{r.key}</span>
                       {open ? <Link className={styles.labText} href={issueHref(r.key)} style={{ color: "var(--foreground)" }}>{r.title}</Link> : <span className={styles.labText}>{r.title}</span>}
                       {!guest && !!r.assignees?.length && <span className={styles.who}><AvatarStack people={r.assignees} max={1} /></span>}
@@ -380,10 +383,10 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
         <div className={styles.foot}>
           <span>{t("todayLine", { date: formatDate(d.today, year) })}</span>
           {d.lastEnd && <span>{t("lastEnd", { date: formatDate(d.lastEnd, year) })}</span>}
-          <span className={styles.legend}><i style={{ background: "#334155", height: 12 }} />{t("legend.module")}</span>
-          <span className={styles.legend}><i style={{ background: "#2563eb" }} />{t("legend.task")}</span>
-          <span className={styles.legend}><i style={{ background: "#2563eb", opacity: 0.8 }} />{t("legend.subtask")}</span>
-          <span className={styles.legend}><i style={{ outline: "2px solid #dc2626" }} />{t("legend.late")}</span>
+          <span className={styles.legend}><i style={{ background: "var(--chart-strong)", height: 12 }} />{t("legend.module")}</span>
+          <span className={styles.legend}><i style={{ background: "var(--chart-primary)" }} />{t("legend.task")}</span>
+          <span className={styles.legend}><i style={{ background: "var(--chart-primary)", opacity: 0.8 }} />{t("legend.subtask")}</span>
+          <span className={styles.legend}><i style={{ outline: "2px solid var(--danger)" }} />{t("legend.late")}</span>
           {canEdit && <span>{t("footer")}</span>}
         </div>
       </section>

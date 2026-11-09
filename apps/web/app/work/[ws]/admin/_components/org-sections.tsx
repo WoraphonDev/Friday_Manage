@@ -14,8 +14,9 @@ import {
   type HolidayCalendar, type Holidays, type ProjectTemplate, type Size, type Team, type TeamDetail, type WorkspaceMember, type WorkspaceSettings, type WorkspaceWorkload,
 } from "./types";
 import styles from "./admin.module.css";
+import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 
-const TEAM_COLORS = ["#1D4ED8", "#A21CAF", "#334155", "#0F766E", "#B45309", "#BE185D"];
+const TEAM_COLORS = ["#5B3FC4", "#1D4ED8", "#A21CAF", "#334155", "#0F766E", "#B45309", "#BE185D"];
 
 function useMembers(ws: string) {
   return useQuery({ queryKey: ["workspace-members", ws], queryFn: () => api.get<{ items: WorkspaceMember[] }>(`${wsPath(ws)}/members`) });
@@ -46,7 +47,7 @@ export function TeamsSection({ ws }: { ws: string }) {
         <div className={styles.teams}>
           {teams.data.items.map((team) => (
             <div key={team.id} className={styles.team}>
-              <div className={styles.teamBar} style={{ background: team.color ?? "#334155" }} />
+              <div className={styles.teamBar} style={{ background: team.color ?? FALLBACK_PROJECT_COLOR }} />
               <b>{team.name}</b>
               <span className={styles.muted}>{t("lead", { name: team.lead?.displayName ?? t("noLead") })}</span>
               <span className={styles.chips}>
@@ -516,8 +517,8 @@ export function WorkloadSection({ ws }: { ws: string }) {
                 <span style={{ minWidth: 0 }}>
                   <b>{p.person.displayName}</b>
                   <div className={styles.muted}>{p.jobTitle ?? ""}</div>
-                  <div className={styles.small} style={{ color: p.overPeriods ? "#b91c1c" : "#166534" }}>{p.overPeriods ? t("over", { n: p.overPeriods }) : t("within")}</div>
-                  <div className={styles.small} style={{ color: p.overAllocated ? "#b91c1c" : undefined }}>{t("alloc", { a: p.allocatedHoursWeek, c: p.capacityHoursWeek })}</div>
+                  <div className={styles.small} style={{ color: p.overPeriods ? "var(--danger-text)" : "var(--success-text)" }}>{p.overPeriods ? t("over", { n: p.overPeriods }) : t("within")}</div>
+                  <div className={styles.small} style={{ color: p.overAllocated ? "var(--danger-text)" : undefined }}>{t("alloc", { a: p.allocatedHoursWeek, c: p.capacityHoursWeek })}</div>
                 </span>
               </div>
               {p.cells.map((c, i) => (

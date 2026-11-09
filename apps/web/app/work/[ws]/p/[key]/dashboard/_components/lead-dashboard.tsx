@@ -102,7 +102,7 @@ export function PlanRisks({ plan }: { plan: Plan }) {
   if (!plan.allowed) return null;
   const { risks } = plan;
   return <section id="planning" className={`${styles.card} ${styles.anchor}`} aria-label={t("risks.title")}>
-    <div className={styles.cardHead}><h2>{t("risks.title")}</h2>{risks.data && <span className={styles.pill} style={{ background: risks.data.items.length ? "#FEE2E2" : "#DCFCE7", color: risks.data.items.length ? "#991B1B" : "#166534" }}>{risks.data.items.length}</span>}</div>
+    <div className={styles.cardHead}><h2>{t("risks.title")}</h2>{risks.data && <span className={styles.pill} style={{ background: risks.data.items.length ? "var(--danger-soft)" : "var(--success-soft)", color: risks.data.items.length ? "var(--danger-text)" : "var(--success-text)" }}>{risks.data.items.length}</span>}</div>
     {risks.error ? <ErrorState error={risks.error} retry={() => void risks.refetch()} />
       : !risks.data ? <LoadingState />
       : !risks.data.items.length ? <p className={styles.cardNote}>{t("risks.empty")}</p>

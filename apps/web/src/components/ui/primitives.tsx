@@ -194,18 +194,12 @@ export function StatusPill({
   label?: string;
 }) {
   const t = useTranslations("common.status");
-  const tone: Record<typeof status, Tone> = {
-    todo: "neutral",
-    in_progress: "blue",
-    review: "amber",
-    done: "green",
-    overdue: "red",
-  };
+  // สีสถานะมาจากไทล์ของ logo (tokens.css) ไม่ใช่ tone ทั่วไป เพื่อให้ตรงกับป้ายสถานะทุกหน้า
   return (
-    <Badge tone={tone[status]}>
+    <span className={cn("badge", `status-pill-${status}`)}>
       <span className="status-dot" />
       {label ?? t(status)}
-    </Badge>
+    </span>
   );
 }
 export function PriorityTag({
@@ -234,7 +228,7 @@ export function PriorityTag({
   );
 }
 
-const colors = ["#1d4ed8", "#b45309", "#0f766e", "#7c3aed", "#be185d"];
+const colors = ["#5b3fc4", "#b45309", "#0f766e", "#1d4ed8", "#be185d"];
 export function initials(name: string) {
   return name
     .trim()

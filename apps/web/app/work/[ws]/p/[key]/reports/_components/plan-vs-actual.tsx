@@ -83,15 +83,15 @@ function WeeklyChart({ weeks, yearFormat }: { weeks: WeekPoint[]; yearFormat: Ye
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className={styles.chartSvg}>
       <title>{label}</title>
       {[0, 0.5, 1].map((ratio) => <g key={ratio}>
-        <line x1={PAD.left} x2={W - PAD.right} y1={y(max * ratio)} y2={y(max * ratio)} stroke="#EEF0F3" />
-        <text x={PAD.left - 4} y={y(max * ratio) + 4} textAnchor="end" fontSize="10" fill="#5F6873">{round1(max * ratio)}</text>
+        <line x1={PAD.left} x2={W - PAD.right} y1={y(max * ratio)} y2={y(max * ratio)} stroke="var(--border)" />
+        <text x={PAD.left - 4} y={y(max * ratio) + 4} textAnchor="end" fontSize="10" fill="var(--muted)">{round1(max * ratio)}</text>
       </g>)}
       {weeks.map((w, index) => {
         const cx = PAD.left + slot * index + slot / 2;
         return <g key={w.weekStart} data-testid="pva-week">
-          <rect x={cx - bar - 1} y={y(w.plannedMd)} width={bar} height={Math.max(0, y(0) - y(w.plannedMd))} fill="#BFDBFE" rx="2"><title>{t("pva.barPlan", { week: formatDate(w.weekStart, yearFormat), value: w.plannedMd })}</title></rect>
-          <rect x={cx + 1} y={y(w.doneMd)} width={bar} height={Math.max(0, y(0) - y(w.doneMd))} fill="#1D4ED8" rx="2"><title>{t("pva.barDone", { week: formatDate(w.weekStart, yearFormat), value: w.doneMd })}</title></rect>
-          <text x={cx} y={H - 8} fontSize="10" fill="#5F6873" textAnchor="middle">{`${Number(w.weekStart.slice(8, 10))}/${Number(w.weekStart.slice(5, 7))}`}</text>
+          <rect x={cx - bar - 1} y={y(w.plannedMd)} width={bar} height={Math.max(0, y(0) - y(w.plannedMd))} fill="var(--chart-primary-soft)" rx="2"><title>{t("pva.barPlan", { week: formatDate(w.weekStart, yearFormat), value: w.plannedMd })}</title></rect>
+          <rect x={cx + 1} y={y(w.doneMd)} width={bar} height={Math.max(0, y(0) - y(w.doneMd))} fill="var(--chart-primary)" rx="2"><title>{t("pva.barDone", { week: formatDate(w.weekStart, yearFormat), value: w.doneMd })}</title></rect>
+          <text x={cx} y={H - 8} fontSize="10" fill="var(--muted)" textAnchor="middle">{`${Number(w.weekStart.slice(8, 10))}/${Number(w.weekStart.slice(5, 7))}`}</text>
         </g>;
       })}
     </svg>

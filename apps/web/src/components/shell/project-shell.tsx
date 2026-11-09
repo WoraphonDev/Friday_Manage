@@ -24,6 +24,7 @@ import { IssueDrawer } from "@/features/issue-drawer/IssueDrawer";
 import { withoutDrawerParams } from "@/features/issue-drawer/url";
 import { ProjectInviteDialog } from "@/features/project-invite/project-invite-dialog";
 import { useWorkspace } from "./workspace-shell";
+import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 
 // ใช้ queryKey เดียวกับหน้า Overview และหน้า Members เพื่อไม่ยิง API ซ้ำเมื่อเปิดหน้านั้น
 type HealthLevel = "on_track" | "at_risk" | "off_track";
@@ -289,7 +290,7 @@ export function ProjectShell({
                 </Link>
                 <span
                   className="project-icon"
-                  style={{ background: project.data.color ?? "#334155" }}
+                  style={{ background: project.data.color ?? FALLBACK_PROJECT_COLOR }}
                   aria-hidden="true"
                 >
                   {projectKey.slice(0, 2)}

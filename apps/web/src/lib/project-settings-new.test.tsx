@@ -225,7 +225,7 @@ describe("Project Settings (L2)", () => {
     const label = await screen.findByRole("dialog", { name: "เพิ่ม Label" });
     await user.type(within(label).getByLabelText("ชื่อ Label"), "hotfix");
     await user.click(within(label).getByRole("button", { name: "เพิ่ม" }));
-    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "POST", path: "/w/sample/projects/DE/labels", body: { name: "hotfix", color: "#1d4ed8" } }));
+    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "POST", path: "/w/sample/projects/DE/labels", body: { name: "hotfix", color: "#5b3fc4" } }));
     await user.click(screen.getByRole("button", { name: "ลบ Release version" }));
     await user.click(within(await screen.findByRole("dialog", { name: "ลบ Release version" })).getByRole("button", { name: "ลบ" }));
     await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "DELETE", path: "/w/sample/projects/DE/custom-fields/f1" }));

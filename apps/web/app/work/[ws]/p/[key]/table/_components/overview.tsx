@@ -11,11 +11,14 @@ import { formatDate, type YearFormat } from "@/lib/format";
 import { PlanActions, PlanFacts, PlanModules, PlanRisks, PlanWorkload, usePlan } from "../../dashboard/_components/lead-dashboard";
 import type { Overview, OverviewItem } from "./types";
 import styles from "./ot.module.css";
+import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 
 type ListKey = keyof Overview["lists"];
 const LIST_KEYS: ListKey[] = ["overdue", "dueToday", "laterThisWeek", "doneLast7Days"];
-const CAT_COLOR = { todo: "#94a3b8", in_progress: "#2563eb", done: "#16a34a" } as const;
-const KPI_DOT: Record<ListKey, string> = { overdue: "#dc2626", dueToday: "#d97706", laterThisWeek: "#2563eb", doneLast7Days: "#16a34a" };
+const CAT_COLOR = { todo: "var(--status-todo-dot)", in_progress: "var(--status-progress-dot)", done: "var(--status-done-dot)" } as const;
+// Review อยู่กลุ่ม in_progress แต่มีสีของตัวเอง (แยกด้วยชื่อแบบเดียวกับป้ายสถานะใน Table)
+const columnColor = (c: { name: string; category: keyof typeof CAT_COLOR }) => (/review/i.test(c.name) ? "var(--status-review-dot)" : CAT_COLOR[c.category]);
+const KPI_DOT: Record<ListKey, string> = { overdue: "var(--danger)", dueToday: "var(--warning-solid)", laterThisWeek: "var(--chart-primary)", doneLast7Days: "var(--success-solid)" };
 
 export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: string }) {
   const t = useTranslations("overview-table.overview");
@@ -114,9 +117,9 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
       <section className={`${styles.card} ${styles.summary} ${styles.desktopOnly}`} aria-label={t("progressTitle")}>
         <div className={styles.donutBox}>
           <svg width="92" height="92" viewBox="0 0 92 92" role="img" aria-label={t("progressLabel", { pct: p.pct })}>
-            <circle cx="46" cy="46" r="38" fill="none" stroke="#e4e7eb" strokeWidth="10" />
-            <circle cx="46" cy="46" r="38" fill="none" stroke="#1d4ed8" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(ring * Math.min(100, p.pct)) / 100} ${ring}`} transform="rotate(-90 46 46)" />
-            <text x="46" y="52" textAnchor="middle" fontSize="20" fontWeight="700" fill="#1b1f24">{p.pct}%</text>
+            <circle cx="46" cy="46" r="38" fill="none" stroke="var(--subtle)" strokeWidth="10" />
+            <circle cx="46" cy="46" r="38" fill="none" stroke="var(--chart-primary)" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(ring * Math.min(100, p.pct)) / 100} ${ring}`} transform="rotate(-90 46 46)" />
+            <text x="46" y="52" textAnchor="middle" fontSize="20" fontWeight="700" fill="var(--foreground)">{p.pct}%</text>
           </svg>
           <div>
             <div className={styles.muted} style={{ fontSize: 12 }}>{t("progressTitle")}</div>
@@ -127,7 +130,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
         <div className={styles.bars}>
           <div>
             <div className={styles.line}><span>{t("timeTitle")}</span><b>{t("timeValue", { pct: p.time.pct, elapsed: p.time.elapsedWorkingDays, total: p.time.totalWorkingDays })}</b></div>
-            <div className={styles.progress} style={{ marginTop: 4 }}><div style={{ width: `${p.time.pct}%`, background: "#94a3b8" }} /></div>
+            <div className={styles.progress} style={{ marginTop: 4 }}><div style={{ width: `${p.time.pct}%`, background: "var(--chart-neutral)" }} /></div>
           </div>
           <div>
             <div className={styles.line}><span>{t("doneTitle")}</span><b>{p.pct}%</b></div>
@@ -190,7 +193,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
             {chart === "daily" ? (
               <div className={styles.chartBox}>
                 <div className={styles.chart} role="img" aria-label={t("dailyLabel", { values: d.doneDaily.map((x) => `${formatDate(x.date, year)} ${x.count}`).join(", ") })}>
-                  {d.doneDaily.map((x) => <div key={x.date}><span>{x.count}</span><i style={{ height: Math.max(3, Math.round((x.count / maxDaily) * 120)), background: x.workingDay ? (x.date === d.today ? "#1d4ed8" : "#93b4f5") : "#e4e7eb" }} /></div>)}
+                  {d.doneDaily.map((x) => <div key={x.date}><span>{x.count}</span><i style={{ height: Math.max(3, Math.round((x.count / maxDaily) * 120)), background: x.workingDay ? (x.date === d.today ? "var(--chart-primary)" : "var(--chart-primary-soft)") : "var(--subtle)" }} /></div>)}
                 </div>
                 <div className={styles.labels}>{d.doneDaily.map((x) => <span key={x.date}>{weekday.format(new Date(`${x.date}T00:00:00+07:00`))}</span>)}</div>
                 <div className={`${styles.muted} ${styles.small}`} style={{ marginTop: 10 }}>{t("chartNote", { total: total7, prev: d.kpis.doneLast7Days - d.kpis.doneDelta })}</div>
@@ -234,9 +237,9 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
           <section className={`${styles.card} ${styles.desktopOnly}`}>
             <div className={styles.chead}><h2>{t("statusTitle")}</h2><span className="muted" style={{ fontSize: 12 }}>{t("statusTotal", { count: statusTotal })}</span></div>
             <div style={{ padding: "16px 18px" }}>
-              <div className={styles.stack} role="img" aria-label={d.statusBreakdown.columns.map((c) => `${c.name} ${c.count}`).join(", ")}>{d.statusBreakdown.columns.map((c) => <div key={c.id} style={{ width: `${c.pct}%`, background: CAT_COLOR[c.category] }} />)}</div>
+              <div className={styles.stack} role="img" aria-label={d.statusBreakdown.columns.map((c) => `${c.name} ${c.count}`).join(", ")}>{d.statusBreakdown.columns.map((c) => <div key={c.id} style={{ width: `${c.pct}%`, background: columnColor(c) }} />)}</div>
               <div className={styles.legend}>
-                {d.statusBreakdown.columns.map((c) => <div key={c.id}><span className={styles.dot} style={{ background: CAT_COLOR[c.category], borderRadius: 3 }} /><span style={{ flex: 1 }}>{c.name}</span><b>{c.count}</b></div>)}
+                {d.statusBreakdown.columns.map((c) => <div key={c.id}><span className={styles.dot} style={{ background: columnColor(c), borderRadius: 3 }} /><span style={{ flex: 1 }}>{c.name}</span><b>{c.count}</b></div>)}
               </div>
             </div>
           </section>
@@ -246,7 +249,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
               {!d.milestones.length && <div className={styles.empty}>{t("noMilestone")}</div>}
               {d.milestones.map((m) => (
                 <div key={m.id} className={styles.mile}>
-                  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 7 7 13 1 7z" fill={m.daysLeft < 0 ? "#94a3b8" : "#1d4ed8"} /></svg>
+                  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 7 7 13 1 7z" fill={m.daysLeft < 0 ? "var(--chart-neutral)" : "var(--chart-primary)"} /></svg>
                   <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600 }}>{m.name}</div><div className={`${styles.muted} ${styles.small}`}>{t("milestoneLine", { date: formatDate(m.date, year), pct: m.donePct })} ({t(`milestoneBasis.${m.basis}`)})</div></div>
                   <Badge>{m.daysLeft >= 0 ? t("daysLeft", { days: m.daysLeft }) : t("daysPast", { days: -m.daysLeft })}</Badge>
                 </div>
@@ -262,7 +265,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
                     <Avatar size="small" person={w.person} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className={styles.line}><span style={{ fontWeight: 500 }}>{w.person.displayName}</span><b className={w.over ? styles.bad : undefined}>{t("workloadLine", { md: w.md, cap: w.capacityMd, pct: w.utilizationPct ?? 0 })}</b></div>
-                      <div className={styles.progress} style={{ height: 6, marginTop: 4 }}><div style={{ width: `${Math.min(100, w.utilizationPct ?? 0)}%`, background: w.over ? "#ea580c" : "#93b4f5" }} /></div>
+                      <div className={styles.progress} style={{ height: 6, marginTop: 4 }}><div style={{ width: `${Math.min(100, w.utilizationPct ?? 0)}%`, background: w.over ? "var(--warning-solid)" : "var(--chart-primary-soft)" }} /></div>
                     </div>
                   </div>
                 ))}
@@ -300,11 +303,11 @@ function MobileSummary({ d, time, year }: { d: Overview; time: string; year: Yea
   const h = d.health;
   const tone = { on_track: styles.sDoneM, at_risk: styles.sRevM, off_track: styles.sLateM }[h.level];
   const risks: { text: string; sub?: string; color: string }[] = [];
-  if (h.overdue.topAssignee) risks.push({ text: t("mobile.riskOverdue", { name: h.overdue.topAssignee.person.displayName, count: h.overdue.topAssignee.count }), color: "#dc2626" });
-  if (h.capacity.weeksNeeded !== null && h.capacity.weeksNeeded > h.capacity.weeksLeft) risks.push({ text: t("mobile.riskCapacity"), sub: t("health.capacity", { need: h.capacity.weeksNeeded, left: h.capacity.weeksLeft }), color: "#dc2626" });
-  for (const m of d.modules.filter((x) => x.overdue > 0).slice(0, 2)) risks.push({ text: t("mobile.riskModule", { name: m.name, count: m.overdue }), color: "#d97706" });
-  if (d.counts?.pendingDueRequests) risks.push({ text: t("mobile.riskPending", { count: d.counts.pendingDueRequests }), color: "#d97706" });
-  if (d.counts?.openBugs) risks.push({ text: t("mobile.riskBugs", { count: d.counts.openBugs }), color: "#d97706" });
+  if (h.overdue.topAssignee) risks.push({ text: t("mobile.riskOverdue", { name: h.overdue.topAssignee.person.displayName, count: h.overdue.topAssignee.count }), color: "var(--danger)" });
+  if (h.capacity.weeksNeeded !== null && h.capacity.weeksNeeded > h.capacity.weeksLeft) risks.push({ text: t("mobile.riskCapacity"), sub: t("health.capacity", { need: h.capacity.weeksNeeded, left: h.capacity.weeksLeft }), color: "var(--danger)" });
+  for (const m of d.modules.filter((x) => x.overdue > 0).slice(0, 2)) risks.push({ text: t("mobile.riskModule", { name: m.name, count: m.overdue }), color: "var(--warning-solid)" });
+  if (d.counts?.pendingDueRequests) risks.push({ text: t("mobile.riskPending", { count: d.counts.pendingDueRequests }), color: "var(--warning-solid)" });
+  if (d.counts?.openBugs) risks.push({ text: t("mobile.riskBugs", { count: d.counts.openBugs }), color: "var(--warning-solid)" });
   const next = p.nextMilestone;
   return (
     <div className={styles.mobileOnly}>
@@ -342,7 +345,7 @@ function ListRow({ i, list, href, year, busy, onToggle }: { i: OverviewItem; lis
   const t = useTranslations("overview-table.overview");
   const open = i.canOpen !== false;
   const done = i.status.category === "done" || !!i.completedOn;
-  const color = i.module?.color ?? "#1d4ed8";
+  const color = i.module?.color ?? DEFAULT_ITEM_COLOR;
   const date = i.completedOn
     ? { text: t("doneOn", { date: formatDate(i.completedOn, year) }), cls: styles.dtDone }
     : i.lateDays > 0
@@ -354,12 +357,12 @@ function ListRow({ i, list, href, year, busy, onToggle }: { i: OverviewItem; lis
   return (
     <div className={styles.row}>
       {done
-        ? <svg width="18" height="18" viewBox="0 0 24 24" role="img" aria-label={t("doneTitle")} style={{ flex: "none" }}><circle cx="12" cy="12" r="10" fill="#16a34a" /><path d="m7.5 12.5 3 3 6-6.5" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        ? <svg width="18" height="18" viewBox="0 0 24 24" role="img" aria-label={t("doneTitle")} style={{ flex: "none" }}><circle cx="12" cy="12" r="10" fill="var(--success-solid)" /><path d="m7.5 12.5 3 3 6-6.5" fill="none" stroke="var(--on-primary)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
         : <input type="checkbox" className={styles.check} disabled={busy || !open} aria-label={t("markDone", { title: i.title })} onChange={(e) => onToggle(e.target.checked)} />}
       <div style={{ flex: "1 1 auto", minWidth: 0 }}>
         {open ? <Link className={styles.rowTitle} href={href(i.key)}>{i.title}</Link> : <span className={styles.rowTitle}>{i.title}</span>}
         <div className={styles.rowMeta}>
-          {i.module && <span className={styles.modPill} style={{ background: `${color}1a`, color }}>{i.module.name}</span>}
+          {i.module && <span className={styles.modPill} style={{ background: tint(color, 10), color: readableColor(color) }}>{i.module.name}</span>}
           <span className={`${styles.muted} ${styles.small}`}>{sub}</span>
         </div>
       </div>
@@ -379,11 +382,11 @@ function Burnup({ d }: { d: Overview }) {
   return (
     <div style={{ padding: "12px 18px" }}>
       <svg viewBox={`0 0 ${W} ${H + 4}`} width="100%" height={H + 4} role="img" aria-label={t("burnupLabel", { unit: d.burnup.unit === "md" ? "MD" : "งาน" })}>
-        <line x1={0} x2={W} y1={y(d.burnup.total)} y2={y(d.burnup.total)} stroke="#cbd5e1" strokeDasharray="4 4" />
-        <polyline fill="none" stroke="#94a3b8" strokeWidth={2} points={line(pts.map((p) => p.planned))} />
-        <polyline fill="none" stroke="#1d4ed8" strokeWidth={2.5} points={line(pts.map((p) => p.done))} />
+        <line x1={0} x2={W} y1={y(d.burnup.total)} y2={y(d.burnup.total)} stroke="var(--border-strong)" strokeDasharray="4 4" />
+        <polyline fill="none" stroke="var(--chart-neutral)" strokeWidth={2} points={line(pts.map((p) => p.planned))} />
+        <polyline fill="none" stroke="var(--chart-primary)" strokeWidth={2.5} points={line(pts.map((p) => p.done))} />
       </svg>
-      <div className={styles.bar} style={{ fontSize: 11 }}><span style={{ color: "#94a3b8" }}>— {t("planned")}</span><span style={{ color: "#1d4ed8" }}>— {t("actual")}</span></div>
+      <div className={styles.bar} style={{ fontSize: 11 }}><span style={{ color: "var(--muted)" }}>— {t("planned")}</span><span style={{ color: "var(--primary-text)" }}>— {t("actual")}</span></div>
     </div>
   );
 }

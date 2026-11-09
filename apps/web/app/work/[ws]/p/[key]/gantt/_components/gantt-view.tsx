@@ -47,7 +47,7 @@ export type Scale = "day" | "week" | "month";
 export const SCALE_PX: Record<Scale, number> = { day: 21, week: 8, month: 3 };
 export const RH = 36;
 const DAY = 86_400_000;
-const PALETTE = ["#1d4ed8", "#b45309", "#0f766e", "#7c3aed", "#be185d", "#0369a1", "#4d7c0f", "#c2410c"];
+const PALETTE = ["#5b3fc4", "#b45309", "#0f766e", "#1d4ed8", "#be185d", "#0369a1", "#4d7c0f", "#c2410c"];
 const WD = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
 
 export const toDay = (iso: string, from: string) => Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY);
@@ -230,7 +230,7 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
 
       {(lateCount > 0 || slipCount > 0 || d.ignoredDependencies > 0) && (
         <div className={styles.alert} role="status">
-          <TriangleAlert size={18} color="#c2410c" aria-hidden="true" />
+          <TriangleAlert size={18} color="var(--warning-text)" aria-hidden="true" />
           <span>{[lateCount && t("alertLate", { count: lateCount }), slipCount && t("alertSlip", { count: slipCount, version: d.baseline!.version }), d.ignoredDependencies && t("alertIgnored", { count: d.ignoredDependencies })].filter(Boolean).join(" · ")}</span>
           <Link href={`/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/members`}>{t("workload")}</Link>
         </div>
@@ -298,14 +298,14 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
                   const y = i * RH;
                   if (ln.kind === "ms") return (
                     <span key={ln.id}>
-                      <svg className={styles.ms} style={{ left: x(ln.date) + px - 9, top: y + 9 }} width="18" height="18" viewBox="0 0 18 18" role="img" aria-label={t("milestone", { name: ln.name, date: formatDate(ln.date, year) })}><rect x="3.5" y="3.5" width="11" height="11" transform="rotate(45 9 9)" fill="#1b1f24" /></svg>
+                      <svg className={styles.ms} style={{ left: x(ln.date) + px - 9, top: y + 9 }} width="18" height="18" viewBox="0 0 18 18" role="img" aria-label={t("milestone", { name: ln.name, date: formatDate(ln.date, year) })}><rect x="3.5" y="3.5" width="11" height="11" transform="rotate(45 9 9)" fill="var(--chart-strong)" /></svg>
                       <span className={styles.msLabel} style={{ left: x(ln.date) + px + 13, top: y + 8 }}>{ln.name}</span>
                     </span>
                   );
                   const summary = ln.kind !== "task" ? ln.s : ln.row.subtasks.length ? ln.row : null;
                   if (summary) {
                     if (!summary.start || !summary.end) return null;
-                    const sc = ln.kind === "module" ? "#1b1f24" : "#5f6873";
+                    const sc = ln.kind === "module" ? "var(--chart-strong)" : "var(--muted)";
                     const name = ln.kind === "task" ? `${ln.row.key} ${ln.row.title}` : ln.name;
                     return <span key={ln.kind === "task" ? ln.row.key : ln.id} className={styles.sb} role="img" aria-label={t("summaryBar", { name, start: formatDate(summary.start, year), end: formatDate(summary.end, year), pct: summary.progressPct })} style={{ left: x(summary.start), width: Math.max(3, (toDay(summary.end, summary.start) + 1) * px), top: y + 12, background: sc, "--sc": sc } as CSSProperties} />;
                   }
@@ -322,8 +322,8 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
                     slip > 0 && t("slipLate", { days: slip }),
                     slip < 0 && t("slipEarly", { days: -slip }),
                   ].filter(Boolean).join(" · ");
-                  const fill = <span style={{ width: `${r.progressPct}%`, background: crit ? "#dc2626" : "#2563eb" }} />;
-                  const barStyle = { ...pos, top: y + 8, background: crit ? "#fecaca" : "#bfdbfe" };
+                  const fill = <span style={{ width: `${r.progressPct}%`, background: crit ? "var(--danger)" : "var(--chart-primary)" }} />;
+                  const barStyle = { ...pos, top: y + 8, background: crit ? "var(--danger-border)" : "var(--chart-primary-soft)" };
                   const bl = d.baseline && r.baseline?.start && r.baseline.end ? r.baseline : null;
                   return (
                     <span key={r.key}>
@@ -343,8 +343,8 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
                 <svg className={styles.deps} width={width} height={height} aria-hidden="true">
                   {arrows.map((a) => (
                     <g key={a.id} data-testid={`dep-${a.id}`} data-critical={a.critical || undefined}>
-                      <path d={a.path} fill="none" stroke={a.critical ? "#dc2626" : "#6b7480"} strokeWidth={a.critical ? 1.8 : 1.5} />
-                      <path d={a.head} fill={a.critical ? "#dc2626" : "#6b7480"} />
+                      <path d={a.path} fill="none" stroke={a.critical ? "var(--danger)" : "var(--muted)"} strokeWidth={a.critical ? 1.8 : 1.5} />
+                      <path d={a.head} fill={a.critical ? "var(--danger)" : "var(--muted)"} />
                     </g>
                   ))}
                 </svg>
@@ -356,10 +356,10 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
       )}
 
       <div className={styles.legend}>
-        <span><span className={styles.sw} style={{ background: "#bfdbfe" }}><i style={{ background: "#2563eb" }} /></span>{t("legend.task")}</span>
-        <span><span className={styles.sw} style={{ background: "#fecaca" }}><i style={{ background: "#dc2626" }} /></span>{t("legend.critical")}</span>
-        <span><span className={styles.sw} style={{ height: 6, borderRadius: 0, background: "#1b1f24" }} />{t("legend.summary")}</span>
-        <span><span className={styles.sw} style={{ height: 5, background: "#a3acb8" }} />{t("legend.baseline")}</span>
+        <span><span className={styles.sw} style={{ background: "var(--chart-primary-soft)" }}><i style={{ background: "var(--chart-primary)" }} /></span>{t("legend.task")}</span>
+        <span><span className={styles.sw} style={{ background: "var(--danger-border)" }}><i style={{ background: "var(--danger)" }} /></span>{t("legend.critical")}</span>
+        <span><span className={styles.sw} style={{ height: 6, borderRadius: 0, background: "var(--chart-strong)" }} />{t("legend.summary")}</span>
+        <span><span className={styles.sw} style={{ height: 5, background: "var(--chart-neutral)" }} />{t("legend.baseline")}</span>
         {d.criticalPath.keys.length > 0 && <span>{t("criticalSummary", { count: d.criticalPath.keys.length, start: formatDate(d.criticalPath.startDate, year), end: formatDate(d.criticalPath.endDate, year) })}</span>}
         {d.unscheduled.length > 0 && <span>{t("unscheduled", { count: d.unscheduled.length })}</span>}
       </div>

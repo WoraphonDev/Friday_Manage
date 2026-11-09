@@ -3,23 +3,23 @@
 /* ---------- แบบแบ่งครึ่ง (J1 Login, J2 Signup) ---------- */
 .split { display: flex; flex-wrap: wrap; min-height: 100vh; background: var(--card); }
 .brand {
-  flex: 1 1 420px; background: var(--topbar); color: #e2e8f0; padding: 48px;
+  flex: 1 1 420px; background: var(--topbar); color: var(--inverse-ink); padding: 48px;
   display: flex; flex-direction: column; justify-content: space-between; gap: 40px;
 }
 .logo { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
 .logo:hover { color: inherit; }
 .brandBody { max-width: 460px; }
-.brandTitle { font-size: 34px; line-height: 1.25; margin: 0 0 16px; color: white; }
-.brandList { margin: 0; padding-left: 20px; list-style: disc; display: flex; flex-direction: column; gap: 8px; color: #cbd5e1; }
-.brandSteps { display: flex; flex-direction: column; gap: 12px; color: #cbd5e1; }
+.brandTitle { font-size: 34px; line-height: 1.25; margin: 0 0 16px; color: var(--on-primary); }
+.brandList { margin: 0; padding-left: 20px; list-style: disc; display: flex; flex-direction: column; gap: 8px; color: var(--inverse-muted); }
+.brandSteps { display: flex; flex-direction: column; gap: 12px; color: var(--inverse-muted); }
 .brandStep { display: flex; gap: 12px; align-items: center; }
 .brandStepNo {
-  width: 28px; height: 28px; border-radius: 50%; background: #334155; color: white; flex: none;
+  width: 28px; height: 28px; border-radius: 50%; background: var(--inverse-bg-2); color: var(--on-primary); flex: none;
   display: inline-flex; align-items: center; justify-content: center; font-weight: 700;
 }
 .brandStepNo[data-on="true"] { background: var(--primary); }
-.brandFoot { font-size: 12px; color: #94a3b8; }
-.brandFoot a { color: #93c5fd; }
+.brandFoot { font-size: 12px; color: var(--inverse-muted); }
+.brandFoot a { color: var(--inverse-link); }
 .formSide { flex: 1 1 480px; display: flex; align-items: center; justify-content: center; padding: 48px 24px; }
 .box { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px; }
 
@@ -41,11 +41,11 @@
 .dots { display: flex; gap: 8px; align-items: center; }
 .dots span { height: 6px; border-radius: 3px; background: var(--input); width: 28px; }
 .dots span[data-state="on"] { background: var(--primary); width: 44px; }
-.dots span[data-state="done"] { background: #93b4f5; }
+.dots span[data-state="done"] { background: var(--chart-primary-soft); }
 .icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex: none; }
-.iconBlue { background: var(--primary-soft); color: var(--primary); }
-.iconGreen { background: var(--status-done-bg); color: #15803d; }
-.iconRed { background: var(--status-overdue-bg); color: #b91c1c; }
+.iconBlue { background: var(--primary-soft); color: var(--primary-text); }
+.iconGreen { background: var(--status-done-bg); color: var(--success-text); }
+.iconRed { background: var(--status-overdue-bg); color: var(--danger-text); }
 
 /* ---------- ข้อความ ---------- */
 .heading { display: flex; flex-direction: column; gap: 2px; }
@@ -61,7 +61,7 @@
 /* ---------- ฟอร์ม (ช่อง 44 px และปุ่ม 46 px ตาม Canvas) ---------- */
 .form { display: flex; flex-direction: column; gap: 16px; }
 .input { min-height: 44px; border-radius: 10px; padding: 0 12px; }
-.input:read-only { background: var(--subtle); color: #3d4550; }
+.input:read-only { background: var(--subtle); color: var(--foreground-soft); }
 .labelRow { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 600; }
 .labelRow a { font-weight: 500; }
 .fieldLabel { font-size: 13px; font-weight: 600; }
@@ -70,14 +70,14 @@
 .passwordWrap .input { padding-right: 72px; }
 .reveal {
   position: absolute; right: 6px; top: 6px; height: 32px; padding: 0 8px; border: 0; background: transparent;
-  color: var(--primary); font-weight: 600; cursor: pointer; border-radius: 6px;
+  color: var(--primary-text); font-weight: 600; cursor: pointer; border-radius: 6px;
 }
 .check { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
 .check input { width: 18px; height: 18px; margin: 2px 0 0; flex: none; accent-color: var(--primary); }
 .button { min-height: 46px; width: 100%; border-radius: 10px; font-weight: 600; gap: 10px; }
 .buttonAuto { width: auto; }
-.linkButton { border: 0; background: transparent; padding: 0; color: var(--primary); cursor: pointer; font: inherit; text-align: left; }
-.linkButton:hover { color: #1e3a8a; }
+.linkButton { border: 0; background: transparent; padding: 0; color: var(--primary-text); cursor: pointer; font: inherit; text-align: left; }
+.linkButton:hover { color: var(--primary-text); }
 .linkButton:disabled { color: var(--muted); cursor: default; }
 .linkMuted { border: 0; background: transparent; padding: 0; color: var(--muted); cursor: pointer; font: inherit; text-decoration: underline; }
 .backLink { align-self: flex-start; }
@@ -89,21 +89,21 @@
 /* ---------- แจ้งเตือนในฟอร์ม ---------- */
 .alert {
   display: flex; gap: 10px; align-items: flex-start; border-radius: 10px; padding: 10px 12px; font-size: 13px;
-  background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
+  background: var(--danger-soft); border: 1px solid var(--danger-border); color: var(--danger-text);
 }
 .alert svg { flex: none; margin-top: 2px; }
 .alertBody { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.alertInfo { background: #eff6ff; border-color: #bfdbfe; color: #1e3a8a; }
-.alertSuccess { background: var(--status-done-bg); border-color: #bbf7d0; color: var(--status-done-fg); }
+.alertInfo { background: var(--primary-soft); border-color: var(--primary-border); color: var(--primary-text); }
+.alertSuccess { background: var(--status-done-bg); border-color: var(--success-border); color: var(--status-done-fg); }
 .requestId { font: 12px ui-monospace, monospace; overflow-wrap: anywhere; opacity: 0.85; }
-.ok { color: #166534; font-size: 12px; }
-.bad { color: #b91c1c; font-size: 12px; }
+.ok { color: var(--success-text); font-size: 12px; }
+.bad { color: var(--danger-text); font-size: 12px; }
 
 /* ---------- รหัส 6 หลัก ---------- */
 .otp { display: flex; gap: 10px; }
 .otp input {
-  flex: 1 1 0; min-width: 0; max-width: 52px; height: 58px; border: 1px solid #c9cfd6; border-radius: 10px;
-  text-align: center; font: inherit; font-size: 22px; font-weight: 700; background: white; color: var(--foreground);
+  flex: 1 1 0; min-width: 0; max-width: 52px; height: 58px; border: 1px solid var(--input); border-radius: 10px;
+  text-align: center; font: inherit; font-size: 22px; font-weight: 700; background: var(--card); color: var(--foreground);
 }
 .otp input:focus { outline: 2px solid var(--primary); border-color: var(--primary); }
 .otp[aria-invalid="true"] input { border-color: var(--danger); }
@@ -111,38 +111,38 @@
 /* ---------- ความแข็งแรงของรหัสผ่าน ---------- */
 .meter { display: flex; gap: 4px; margin-top: 2px; }
 .meter span { flex: 1; height: 5px; border-radius: 3px; background: var(--border); }
-.meter span[data-on="true"][data-level="weak"] { background: #dc2626; }
-.meter span[data-on="true"][data-level="fair"] { background: #d97706; }
+.meter span[data-on="true"][data-level="weak"] { background: var(--danger-solid); }
+.meter span[data-on="true"][data-level="fair"] { background: var(--warning-solid); }
 .meter span[data-on="true"][data-level="good"],
-.meter span[data-on="true"][data-level="strong"] { background: #15803d; }
+.meter span[data-on="true"][data-level="strong"] { background: var(--success-solid); }
 .strength { font-size: 12px; font-weight: 600; }
-.strength[data-level="weak"] { color: #b91c1c; }
-.strength[data-level="fair"] { color: #92400e; }
-.strength[data-level="good"], .strength[data-level="strong"] { color: #166534; }
+.strength[data-level="weak"] { color: var(--danger-text); }
+.strength[data-level="fair"] { color: var(--warning-text); }
+.strength[data-level="good"], .strength[data-level="strong"] { color: var(--success-text); }
 .rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 12px; margin: 0; padding: 0; list-style: none; }
 .rule { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-.rule[data-ok="true"] { color: #166534; }
+.rule[data-ok="true"] { color: var(--success-text); }
 
 /* ---------- J4 รับคำเชิญ ---------- */
 .inviteAvatars { display: flex; align-items: center; }
 .avatarRound, .avatarSquare {
-  width: 52px; height: 52px; color: white; display: inline-flex; align-items: center; justify-content: center;
-  font-weight: 700; border: 3px solid white;
+  width: 52px; height: 52px; color: var(--on-primary); display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; border: 3px solid var(--card);
 }
 .avatarRound { border-radius: 50%; background: var(--primary); }
 .avatarSquare { border-radius: 14px; background: var(--topbar); margin-left: -10px; }
 .pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 .pill { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .pillGreen { background: var(--status-done-bg); color: var(--status-done-fg); }
-.pillSlate { background: #e2e8f0; color: #1e293b; }
+.pillSlate { background: var(--subtle); color: var(--foreground); }
 .quote {
-  background: #f8f9fb; border: 1px solid var(--subtle); border-radius: 10px; padding: 10px 14px;
+  background: var(--surface-2); border: 1px solid var(--subtle); border-radius: 10px; padding: 10px 14px;
   font-size: 14px; text-align: left; width: 100%; overflow-wrap: anywhere;
 }
 .person { display: flex; align-items: center; gap: 12px; border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
 .person > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .personAvatar {
-  width: 40px; height: 40px; border-radius: 50%; background: #94a3b8; color: white; flex: none;
+  width: 40px; height: 40px; border-radius: 50%; background: var(--inverse-bg-2); color: var(--on-primary); flex: none;
   display: inline-flex; align-items: center; justify-content: center; font-weight: 700;
 }
 .sectionTitle { font-size: 15px; font-weight: 600; }
@@ -165,14 +165,14 @@
 .obCard .heading h1 { font-size: 26px; }
 .wsPreview { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
 .wsMark {
-  width: 64px; height: 64px; border-radius: 14px; background: var(--topbar); color: white; flex: none;
+  width: 64px; height: 64px; border-radius: 14px; background: var(--topbar); color: var(--on-primary); flex: none;
   display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px;
 }
-.prefix { display: flex; align-items: center; border: 1px solid #c9cfd6; border-radius: 10px; overflow: hidden; background: white; }
+.prefix { display: flex; align-items: center; border: 1px solid var(--input); border-radius: 10px; overflow: hidden; background: var(--card); }
 .prefix:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 .prefix span {
-  padding: 0 12px; background: #f1f3f5; min-height: 44px; display: flex; align-items: center; color: var(--muted);
-  border-right: 1px solid #c9cfd6; white-space: nowrap;
+  padding: 0 12px; background: var(--hover); min-height: 44px; display: flex; align-items: center; color: var(--muted);
+  border-right: 1px solid var(--input); white-space: nowrap;
 }
 .prefix input { border: 0; min-height: 44px; padding: 0 12px; font: inherit; flex: 1; min-width: 0; outline: 0; background: transparent; }
 .prefix[data-invalid="true"] { border-color: var(--danger); }
@@ -181,18 +181,18 @@
 .optionsStart { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 .opt {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 14px; border: 1px solid var(--input);
-  border-radius: 12px; background: white; font: inherit; text-align: left; cursor: pointer; color: var(--foreground);
+  border-radius: 12px; background: var(--card); font: inherit; text-align: left; cursor: pointer; color: var(--foreground);
 }
-.opt:hover { border-color: #94a3b8; }
-.opt[aria-pressed="true"] { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); background: #f8faff; }
+.opt:hover { border-color: var(--input); }
+.opt[aria-pressed="true"] { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); background: var(--hover); }
 .optionsStart .opt { min-height: 130px; }
 .optionsStart .opt b { font-size: 15px; }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip {
-  min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--input); background: white;
-  font: inherit; cursor: pointer; color: #3d4550;
+  min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--input); background: var(--card);
+  font: inherit; cursor: pointer; color: var(--foreground-soft);
 }
-.chip[aria-pressed="true"] { background: var(--foreground); border-color: var(--foreground); color: white; }
+.chip[aria-pressed="true"] { background: var(--contrast-bg); border-color: var(--contrast-bg); color: var(--contrast-ink); }
 .inviteRow { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 10px; align-items: start; }
 .inviteRow :global(.select) { min-height: 44px; border-radius: 10px; }
 .actions { display: flex; gap: 10px; align-items: center; border-top: 1px solid var(--subtle); padding-top: 16px; flex-wrap: wrap; }

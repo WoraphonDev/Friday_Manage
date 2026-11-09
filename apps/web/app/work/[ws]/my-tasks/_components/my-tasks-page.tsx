@@ -14,10 +14,11 @@ import { formatDate, type YearFormat } from "@/lib/format";
 import type { FormOptions, GroupBy, MyIssues, Tab, TaskGroup, TaskItem } from "./types";
 import { StatusBadge, taskHref, useDueText } from "./shared";
 import styles from "./hmt.module.css";
+import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 
 const TABS: Tab[] = ["assigned", "reviewer", "watching", "created"];
 const GROUPS: GroupBy[] = ["due", "project", "status"];
-const GROUP_COLOR: Record<string, string> = { late: "#dc2626", today: "#d97706", this_week: "#2563eb", next_week: "#0f766e", later: "#94a3b8", none: "#94a3b8", done_today: "#15803d" };
+const GROUP_COLOR: Record<string, string> = { late: "var(--danger)", today: "var(--warning-solid)", this_week: "var(--chart-primary)", next_week: "var(--accent-teal)", later: "var(--chart-neutral)", none: "var(--chart-neutral)", done_today: "var(--success-solid)" };
 const DROPPABLE = new Set(["today", "this_week", "next_week"]);
 const REASONS = ["scope_added", "waiting_input", "blocked_by_dependency", "estimate_wrong", "other"] as const;
 
@@ -123,7 +124,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
   const byProject = (all.data?.groups ?? [])
     .map((g) => {
       const items = g.items.filter((i) => i.status.category !== "done");
-      return { key: g.key, name: g.label, color: g.items[0]?.project.color ?? "#334155", n: items.length, md: items.reduce((n, i) => n + (i.estimateMd ?? 0), 0) };
+      return { key: g.key, name: g.label, color: g.items[0]?.project.color ?? FALLBACK_PROJECT_COLOR, n: items.length, md: items.reduce((n, i) => n + (i.estimateMd ?? 0), 0) };
     })
     .filter((p) => p.n);
   const maxProject = Math.max(1, ...byProject.map((x) => x.n));
@@ -198,8 +199,8 @@ export function MyTasksPage({ ws }: { ws: string }) {
                   onDrop={(e) => onDrop(e, g)}
                 >
                   <ChevronDown size={16} aria-hidden style={{ transform: isClosed ? "rotate(-90deg)" : undefined }} />
-                  <span className={styles.dot} style={{ background: group === "due" ? GROUP_COLOR[g.key] : (g.items[0]?.project.color ?? "#94a3b8") }} />
-                  <span className={styles.ghName} style={{ color: g.key === "late" ? "#b91c1c" : undefined }}>{g.label}</span>
+                  <span className={styles.dot} style={{ background: group === "due" ? GROUP_COLOR[g.key] : (g.items[0]?.project.color ?? FALLBACK_PROJECT_COLOR) }} />
+                  <span className={styles.ghName} style={{ color: g.key === "late" ? "var(--danger-text)" : undefined }}>{g.label}</span>
                   <Badge>{g.count}</Badge>
                   <span className={styles.ghSub}>{sub}</span>
                 </button>
@@ -215,10 +216,10 @@ export function MyTasksPage({ ws }: { ws: string }) {
           <section className={styles.card} aria-label={t("summaryTitle")}>
             <div className={styles.chead}><h2>{t("summaryTitle")}</h2></div>
             <div className={styles.twoCol}>
-              <div><span className={`muted ${styles.small}`}>{t("summary.late")}</span><b style={{ color: "#b91c1c" }}>{count("late")}</b></div>
-              <div><span className={`muted ${styles.small}`}>{t("summary.today")}</span><b style={{ color: "#b45309" }}>{count("today")}</b></div>
+              <div><span className={`muted ${styles.small}`}>{t("summary.late")}</span><b style={{ color: "var(--danger-text)" }}>{count("late")}</b></div>
+              <div><span className={`muted ${styles.small}`}>{t("summary.today")}</span><b style={{ color: "var(--warning-text)" }}>{count("today")}</b></div>
               <div><span className={`muted ${styles.small}`}>{t("summary.week")}</span><b>{count("this_week") + count("today")}</b></div>
-              <div><span className={`muted ${styles.small}`}>{t("summary.done")}</span><b style={{ color: "#15803d" }}>{count("done_today")}</b></div>
+              <div><span className={`muted ${styles.small}`}>{t("summary.done")}</span><b style={{ color: "var(--success-text)" }}>{count("done_today")}</b></div>
             </div>
           </section>
           {byProject.length > 0 && (
@@ -241,7 +242,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
             <div className={styles.chead}><h2>{t("weekTitle")}</h2><span style={{ fontSize: 12, fontWeight: 600 }}>{t("weekTotal", { md: wk.reduce((a, b) => a + b, 0).toFixed(1) })}</span></div>
             <div className={styles.chart} style={{ height: 90, gap: 10 }} role="img" aria-label={t("weekChart", { days: wk.map((v, i) => `${dayNames[i]} ${v.toFixed(1)}`).join(" ") })}>
               <span className={styles.cap} style={{ bottom: Math.round((1 / maxWk) * 70) }} />
-              {wk.map((v, i) => <div className={styles.chartCol} key={i}><i style={{ height: Math.max(3, Math.round((v / maxWk) * 70)), background: v > 1 ? "#ea580c" : "#93b4f5", maxWidth: 32 }} /></div>)}
+              {wk.map((v, i) => <div className={styles.chartCol} key={i}><i style={{ height: Math.max(3, Math.round((v / maxWk) * 70)), background: v > 1 ? "var(--warning-solid)" : "var(--chart-primary-soft)", maxWidth: 32 }} /></div>)}
             </div>
             <div className={styles.chartLabels} style={{ gap: 10, paddingBottom: 14 }}>{dayNames.map((d) => <span key={d}>{d}</span>)}</div>
           </section>
@@ -288,7 +289,7 @@ function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
       {groups.length === 0 && <EmptyState title={t("empty")} description={t("emptyHint")} />}
       {groups.map((g) => (
         <div key={g.key} role="group" aria-label={g.label}>
-          <div className={styles.mGroup}><span style={{ background: GROUP_COLOR[g.key] ?? "#94a3b8" }} /><b style={{ color: g.key === "late" ? "#b91c1c" : undefined }}>{g.label}</b><span className="muted">{g.items.length}</span></div>
+          <div className={styles.mGroup}><span style={{ background: GROUP_COLOR[g.key] ?? "var(--chart-neutral)" }} /><b style={{ color: g.key === "late" ? "var(--danger-text)" : undefined }}>{g.label}</b><span className="muted">{g.items.length}</span></div>
           {g.items.map((i) => {
             const done = i.status.category === "done";
             const due = dueText(i, year);
@@ -297,7 +298,7 @@ function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
                 <input type="checkbox" checked={done} disabled={busy === i.key} aria-label={t(done ? "markUndone" : "markDone", { title: i.title })} onChange={(e) => onToggle(i, e.target.checked)} />
                 <Link href={taskHref(ws, i.project.key, i.key)} className={styles.mItemMain}>
                   <span className={styles.mItemTitle} style={done ? { textDecoration: "line-through", color: "var(--muted)" } : undefined}>{i.title}</span>
-                  <span className={styles.mItemMeta}><span className={styles.mType} aria-hidden="true" />{i.key} · <span className={styles.mProjDot} style={{ background: i.project.color ?? "#334155" }} />{i.project.name}</span>
+                  <span className={styles.mItemMeta}><span className={styles.mType} aria-hidden="true" />{i.key} · <span className={styles.mProjDot} style={{ background: i.project.color ?? FALLBACK_PROJECT_COLOR }} />{i.project.name}</span>
                 </Link>
                 <span className={`${styles.mDue} ${due.cls}`}>{due.text}</span>
               </div>
@@ -333,7 +334,7 @@ function TaskRow({ item, ws, year, busy, onToggle, onMove, onDragStart }: { item
       <div style={{ minWidth: 0 }}>
         <Link className={`${styles.rowTitle} ${done ? styles.strike : ""}`} href={taskHref(ws, item.project.key, item.key)}>{item.title}</Link>
         <div className={styles.rowMeta}>
-          <span style={{ width: 8, height: 8, borderRadius: 2, background: item.project.color ?? "#334155" }} />
+          <span style={{ width: 8, height: 8, borderRadius: 2, background: item.project.color ?? FALLBACK_PROJECT_COLOR }} />
           <span>{item.key}</span><span>·</span><span>{item.project.name}</span>
           {item.parentKey && <Badge>{t("subtask")}</Badge>}
         </div>

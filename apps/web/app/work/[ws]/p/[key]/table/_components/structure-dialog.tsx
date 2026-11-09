@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Dialog, Input } from "@/components/ui";
 import { api, ApiError, supportId } from "@/lib/api";
+import { DEFAULT_ITEM_COLOR } from "@/lib/colors";
 
 export type StructureAction =
   | { kind: "createModule" }
@@ -19,7 +20,7 @@ export function StructureDialog({ base, action, onClose, onSaved }: {
 }) {
   const t = useTranslations("overview-table.table.structure");
   const [name, setName] = useState("name" in action ? action.name : "");
-  const [color, setColor] = useState("#1d4ed8");
+  const [color, setColor] = useState(DEFAULT_ITEM_COLOR);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const lock = useRef(false);

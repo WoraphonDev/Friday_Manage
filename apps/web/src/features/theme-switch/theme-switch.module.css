@@ -1,0 +1,7 @@
+/* รูปแบบเดียวกับตัวสลับภาษา (segmented control) เพื่อให้วางเรียงกันในเมนูบัญชีได้กลมกลืน */
+.seg { display:inline-flex; align-self:flex-start; border:1px solid var(--input); border-radius:10px; overflow:hidden; background:var(--card); }
+.seg button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:34px; min-height:32px; padding:0 10px; border:0; background:var(--card); font:inherit; font-size:var(--text-label); cursor:pointer; color:var(--foreground-soft); white-space:nowrap; }
+.seg button + button { border-left:1px solid var(--input); }
+.seg button:hover { background:var(--hover); }
+.seg button[aria-pressed="true"] { background:var(--contrast-bg); color:var(--contrast-ink); font-weight:600; }
+.seg button:focus-visible { outline:2px solid var(--focus); outline-offset:-2px; }

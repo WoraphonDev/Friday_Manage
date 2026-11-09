@@ -5,7 +5,7 @@
 .muted { color:var(--muted); font-size:12px; }
 .pill { display:inline-flex; align-items:center; gap:6px; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; }
 .card { background:var(--card); border:1px solid var(--border); border-radius:12px; min-width:0; overflow:clip; }
-.cardHead { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid #EEF0F3; }
+.cardHead { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--border); }
 .cardHead h2 { margin:0; font-size:14px; }
 .headNote { color:var(--muted); font-weight:500; }
 .cardNote { margin:0; padding:10px 18px; font-size:11px; color:var(--muted); }
@@ -15,14 +15,14 @@
 .kpi b { display:block; font-size:22px; line-height:1.2; }
 .kpiLabel { color:var(--muted); font-size:12px; }
 .kpiNote { color:var(--muted); font-size:11px; overflow-wrap:anywhere; }
-.kpiDanger { border-color:#FCA5A5; background:#FEF2F2; }
-.kpiDanger b { color:#B91C1C; }
-.kpiDanger .kpiNote { color:#7F1D1D; }
+.kpiDanger { border-color:var(--danger-border); background:var(--danger-soft); }
+.kpiDanger b { color:var(--danger-text); }
+.kpiDanger .kpiNote { color:var(--danger-text); }
 
 .risks { list-style:none; margin:0; padding:0; }
-.risk { display:flex; gap:12px; align-items:flex-start; padding:12px 18px; border-bottom:1px solid #F1F3F5; }
+.risk { display:flex; gap:12px; align-items:flex-start; padding:12px 18px; border-bottom:1px solid var(--border); }
 .risk:last-child { border-bottom:0; }
-.level { width:26px; height:26px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-weight:700; flex:none; }
+.level { width:26px; height:26px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; color:var(--on-primary); font-weight:700; flex:none; }
 .riskBody { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; overflow-wrap:anywhere; }
 .keys { display:flex; gap:8px; flex-wrap:wrap; font-size:11px; }
 .riskAction { flex:none; }
@@ -34,48 +34,48 @@
 .heat { min-width:1120px; display:flex; flex-direction:column; gap:3px; }
 .heatRow { display:grid; gap:3px; align-items:center; }
 .weekLabel { font-size:10px; text-align:center; color:var(--muted); font-weight:500; }
-.thisWeek { color:#DC2626; font-weight:700; }
+.thisWeek { color:var(--danger); font-weight:700; }
 .peakHead { font-size:11px; text-align:right; color:var(--muted); }
 .personCell { font-weight:600; font-size:12px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .personCell span { display:block; font-size:11px; font-weight:500; color:var(--muted); }
 .heatCell { width:100%; height:30px; border:0; border-radius:4px; display:flex; align-items:center; justify-content:center; font:inherit; font-size:11px; font-weight:600; padding:0; cursor:pointer; }
 .heatCell:disabled { cursor:default; }
 .heatActive { outline:2px solid var(--foreground); outline-offset:1px; }
-.empty { background:#F6F7F9; color:#94A3B8; }
-.low { background:#DBEAFE; color:#1E3A8A; }
-.full { background:#60A5FA; color:#0B1F4D; }
-.over { background:#FDBA74; color:#7C2D12; }
-.critical { background:#B91C1C; color:#fff; }
+.empty { background:var(--background); color:var(--faint); }
+.low { background:var(--primary-soft); color:var(--primary-text); }
+.full { background:var(--chart-primary-soft); color:var(--foreground); }
+.over { background:var(--warning-border); color:var(--warning-text); }
+.critical { background:var(--danger-solid); color:var(--on-primary); }
 .peak { text-align:right; font-weight:700; }
-.peakOk { color:#166534; }
-.peakOver { color:#C2410C; }
-.peakCritical { color:#B91C1C; }
-.weekPanel { margin:8px 18px 0; border:1px solid var(--border); border-radius:10px; background:#F8F9FB; }
+.peakOk { color:var(--success-text); }
+.peakOver { color:var(--warning-text); }
+.peakCritical { color:var(--danger-text); }
+.weekPanel { margin:8px 18px 0; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); }
 .weekPanelHead { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 12px; border-bottom:1px solid var(--border); }
 .weekPanelHead b { flex:1; min-width:0; }
 .weekPanel ul { list-style:none; margin:0; padding:8px 12px; display:flex; flex-direction:column; gap:4px; font-size:12px; }
 .issueTitle { overflow-wrap:anywhere; }
 
-.seg { display:inline-flex; border:1px solid var(--input); border-radius:8px; overflow:hidden; background:#fff; }
-.seg button { min-height:32px; padding:0 12px; border:0; background:transparent; font:inherit; font-size:12px; color:#3D4550; cursor:pointer; }
-.seg button[aria-pressed="true"] { background:var(--primary-soft); color:var(--primary); font-weight:600; }
+.seg { display:inline-flex; border:1px solid var(--input); border-radius:8px; overflow:hidden; background:var(--card); }
+.seg button { min-height:32px; padding:0 12px; border:0; background:transparent; font:inherit; font-size:12px; color:var(--foreground-soft); cursor:pointer; }
+.seg button[aria-pressed="true"] { background:var(--primary-soft); color:var(--primary-text); font-weight:600; }
 /* คอลัมน์หดตามความกว้างการ์ดได้ (เดิมความกว้างขั้นต่ำรวมเกินการ์ด แถบไทม์ไลน์จึงล้นออกนอกการ์ด) */
-.modRow { display:grid; grid-template-columns:minmax(120px,1.3fr) 40px 44px minmax(90px,120px) minmax(110px,150px) minmax(0,2fr); gap:10px; align-items:center; padding:10px 18px; border-bottom:1px solid #F1F3F5; font-size:12px; }
-.modHead { font-size:11px; font-weight:700; color:var(--muted); background:#F8F9FB; }
+.modRow { display:grid; grid-template-columns:minmax(120px,1.3fr) 40px 44px minmax(90px,120px) minmax(110px,150px) minmax(0,2fr); gap:10px; align-items:center; padding:10px 18px; border-bottom:1px solid var(--border); font-size:12px; }
+.modHead { font-size:11px; font-weight:700; color:var(--muted); background:var(--surface-2); }
 .modName { min-width:0; display:flex; flex-direction:column; }
 .modName b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.overdue { font-size:11px; color:#B91C1C; font-weight:600; }
+.overdue { font-size:11px; color:var(--danger-text); font-weight:600; }
 .months { display:flex; justify-content:space-between; min-width:0; overflow:hidden; gap:4px; }
 .months > span { white-space:nowrap; }
 .progress { display:inline-flex; align-items:center; gap:6px; width:100%; min-width:0; font-size:11px; }
-.progressBar { flex:1; height:8px; background:#EEF0F3; border-radius:99px; overflow:hidden; }
-.progressBar span { display:block; height:100%; background:#15803D; }
-.track { position:relative; height:16px; min-width:0; overflow:hidden; background-image:linear-gradient(to right, #F1F3F5 1px, transparent 1px); }
-.trackBar { position:absolute; top:3px; height:10px; border-radius:5px; background:#3B82F6; }
-.todayLine { position:absolute; top:0; bottom:0; width:2px; background:#DC2626; }
-.ok { color:#166534; font-weight:600; }
-.warn { color:#B45309; font-weight:600; }
-.bad { color:#B91C1C; font-weight:600; }
+.progressBar { flex:1; height:8px; background:var(--subtle); border-radius:99px; overflow:hidden; }
+.progressBar span { display:block; height:100%; background:var(--success-solid); }
+.track { position:relative; height:16px; min-width:0; overflow:hidden; background-image:linear-gradient(to right, var(--hover) 1px, transparent 1px); }
+.trackBar { position:absolute; top:3px; height:10px; border-radius:5px; background:var(--chart-primary); }
+.todayLine { position:absolute; top:0; bottom:0; width:2px; background:var(--danger-solid); }
+.ok { color:var(--success-text); font-weight:600; }
+.warn { color:var(--warning-text); font-weight:600; }
+.bad { color:var(--danger-text); font-weight:600; }
 
 /* ตามความกว้างของการ์ด Module เอง (ไม่ใช่ขนาดจอ): การ์ดแคบ ซ่อนแถบไทม์ไลน์ก่อน แล้วจึงซ่อนความคืบหน้า / คาดว่าจะจบ */
 .modCard { container-type:inline-size; }
@@ -97,10 +97,10 @@
   .riskAction { margin-left:38px; }
 }
 /* ตัวเลขแผนเป็นแถวในการ์ดสรุปของ Overview (ไม่ใช่การ์ดแยก) */
-.facts { flex:1 1 100%; display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:12px 24px; padding-top:14px; border-top:1px solid #EEF0F3; min-width:0; }
+.facts { flex:1 1 100%; display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:12px 24px; padding-top:14px; border-top:1px solid var(--border); min-width:0; }
 .facts .kpi { border:0; background:transparent; padding:0; border-radius:0; }
 .facts .kpi b { font-size:18px; }
-.facts .kpiDanger b, .facts .kpiDanger .kpiNote { color:#B91C1C; }
+.facts .kpiDanger b, .facts .kpiDanger .kpiNote { color:var(--danger-text); }
 /* ลิงก์ #planning จากกล่อง Health / หน้า /dashboard เดิม เลื่อนมาไม่ให้หัวการ์ดอยู่ใต้แถบบน */
 .anchor { scroll-margin-top:72px; }
 

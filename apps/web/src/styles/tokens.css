@@ -1,35 +1,118 @@
+/*
+ * ชุดสี Friday · ดึงจาก logo (ไทล์ 4 สี + ม่วงของ wordmark) · ผู้ใช้เลือกแบบ C เมื่อ 2026-11-09
+ * สีกลาง (พื้น ขอบ ตัวอักษรรอง แถบบน) เป็นเทาไม่อมม่วง ผู้ใช้ขอเพราะเทาอมม่วงทำให้ปวดตาเมื่อมองนาน (2026-11-09)
+ * โหมดสว่างอยู่ที่ :root · โหมดมืดอยู่ที่ [data-theme="dark"] (layout ใส่ค่าตาม cookie `fm-theme`,
+ * ค่า "ตามระบบ" ให้สคริปต์ใน <head> เลือกก่อนวาดหน้า) · ทุกคู่สีตัวอักษร/พื้นผ่าน WCAG AA ทั้งสองโหมด
+ * ห้ามเขียนสีตรงในไฟล์อื่น ให้เพิ่ม token ที่นี่ทั้งสองโหมดแทน ไม่อย่างนั้นโหมดมืดจะมีจุดสีค้าง
+ */
 :root {
-  --background: #f6f7f9;
-  --foreground: #1b1f24;
+  color-scheme: light;
+
+  /* พื้นและตัวอักษร: เทากลาง ไม่อมสี */
+  --background: #f5f6f7;
+  --foreground: #24272c;
+  --foreground-soft: #3a3f45;
   --card: #fff;
-  --muted: #5f6873;
-  --subtle: #eef0f3;
-  --border: #e4e7eb;
-  --input: #d5dae0;
-  --primary: #1d4ed8;
-  --primary-hover: #1e40af;
-  --primary-soft: #eef2ff;
-  --focus: #2563eb;
-  --topbar: #0f172a;
-  --topbar-field: #1e293b;
-  --danger: #dc2626;
-  --status-todo-bg: #eef0f3;
-  --status-todo-fg: #3d4550;
-  --status-progress-bg: #dbeafe;
-  --status-progress-fg: #1e40af;
-  --status-review-bg: #fef3c7;
-  --status-review-fg: #92400e;
-  --status-done-bg: #dcfce7;
-  --status-done-fg: #166534;
-  --status-overdue-bg: #fee2e2;
-  --status-overdue-fg: #991b1b;
-  --module-auth: #dbeafe;
-  --module-appointment: #ccfbf1;
-  --module-payment: #fef3c7;
-  --module-admin: #ede9fe;
+  --popover: #fff;
+  --muted: #5f656d;
+  /* ไอคอน ตัวจับลาก placeholder · ไม่ใช้กับข้อความที่ต้องอ่าน (3:1 แต่ไม่ถึง 4.5:1) */
+  --faint: #7a8088;
+  --subtle: #eef0f2;
+  --surface-2: #f8f9fa;
+  --hover: #f1f3f5;
+  --border: #e3e6e9;
+  --border-strong: #cfd4d9;
+  --input: #868c94;
+  --switch-off: #cdd2d7;
+
+  /* สีหลัก: ม่วงจาก wordmark */
+  --primary: #5b3fc4;
+  --primary-hover: #4a33a8;
+  --primary-soft: #efe9fd;
+  --primary-border: #cbbcf6;
+  --primary-text: #5b3fc4;
+  --on-primary: #fff;
+  --focus: #6b4fd8;
+
+  /* ปุ่ม/ชิปที่ถูกเลือก: เข้มในโหมดสว่าง สลับเป็นอ่อนในโหมดมืด */
+  --contrast-bg: #24272c;
+  --contrast-ink: #fff;
+
+  /* พื้นเข้มทั้งสองโหมด: toast, แถบเลือกหลายแถว, tooltip, แผงแบรนด์, ตัวดูไฟล์ */
+  --inverse-bg: #26292e;
+  --inverse-bg-2: #363a40;
+  --inverse-border: #4b5057;
+  --inverse-ink: #eceef0;
+  --inverse-muted: #b4b9bf;
+  --inverse-link: #c9b8ff;
+  --inverse-link-hover: #e4dcff;
+  --inverse-success: #86efac;
+
+  /* แถบบน */
+  --topbar: #1c1f23;
+  --topbar-field: #2b2f35;
+
+  /* ความหมาย */
+  --danger: #c8264a;
+  --danger-solid: #c8264a;
+  --danger-solid-hover: #a81d3d;
+  --danger-text: #a01d3c;
+  --danger-soft: #fdecf0;
+  --danger-border: #f6b8c6;
+  --success-solid: #1e7a4f;
+  --success-solid-hover: #17633f;
+  --success-text: #17633f;
+  --success-soft: #e3f6ec;
+  --success-border: #a9e3c5;
+  --warning-solid: #b86e00;
+  --warning-text: #7a4700;
+  --warning-soft: #fff6d9;
+  --warning-border: #f3d27a;
+  --accent-purple: #8b5cf6;
+  --accent-purple-text: #6a3fb5;
+  --accent-purple-soft: #f1e9fd;
+  --accent-teal: #0e8a77;
+  --accent-teal-text: #0f6b5a;
+  --accent-teal-soft: #ddf5ee;
+  --accent-pink-text: #a3264f;
+  --accent-pink-soft: #ffe8ee;
+  --highlight: #ffe9a8;
+
+  /* สถานะงาน: สีไทล์ใน logo · ป้ายใช้ตัวอักษรเข้มโทนเดียวกับพื้น */
+  --status-todo-bg: #e6e8eb;
+  --status-todo-fg: #3a3f45;
+  --status-progress-bg: #ffd66d;
+  --status-progress-fg: #5c4300;
+  --status-review-bg: #a67cea;
+  --status-review-fg: #2a1452;
+  --status-done-bg: #54ca94;
+  --status-done-fg: #0f3d29;
+  --status-overdue-bg: #ff7896;
+  --status-overdue-fg: #5c0a22;
+  /* จุด/แถบสถานะบนพื้นการ์ด ต้องเห็นได้ 3:1 จึงเข้มกว่าพื้นป้ายในโหมดสว่าง */
+  --status-todo-dot: #868c94;
+  --status-progress-dot: #e8a917;
+  --status-review-dot: #9466e0;
+  --status-done-dot: #2fb27a;
+  --status-overdue-dot: #e8496b;
+
+  /* กราฟและแถบโหลดงาน */
+  --chart-primary: #5b3fc4;
+  --chart-primary-soft: #c4b5f4;
+  --chart-neutral: #a3a9b0;
+  --chart-strong: #3a3f45;
+
+  --module-auth: #efe9fd;
+  --module-appointment: #e3f6ec;
+  --module-payment: #fff6d9;
+  --module-admin: #ffe8ee;
+
+  --overlay: rgb(18 14 38 / 0.45);
+  --shadow-card: 0 1px 2px rgb(20 16 40 / 0.06);
+  --shadow-menu: 0 16px 40px rgb(20 16 40 / 0.18);
+
   --radius-control: 8px;
   --radius-card: 12px;
-  --shadow-menu: 0 16px 40px rgb(15 23 42 / 0.2);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -45,4 +128,89 @@
   --text-caption: 11px;
   --text-title: 20px;
   --font-sans: "IBM Plex Sans Thai", system-ui, sans-serif;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: #141517;
+  --foreground: #e8eaed;
+  --foreground-soft: #cdd1d6;
+  --card: #1c1e21;
+  --popover: #23262a;
+  --muted: #a1a7ae;
+  --faint: #868c94;
+  --subtle: #25282c;
+  --surface-2: #202326;
+  --hover: #2a2d31;
+  --border: #2e3135;
+  --border-strong: #3d4146;
+  --input: #737a82;
+  --switch-off: #474c52;
+
+  --primary: #6d4fd6;
+  --primary-hover: #7c5ce6;
+  --primary-soft: #2c2650;
+  --primary-border: #4d4387;
+  --primary-text: #b9a3ff;
+  --on-primary: #fff;
+  --focus: #9d85f2;
+
+  --contrast-bg: #e8eaed;
+  --contrast-ink: #141517;
+
+  --inverse-bg: #2c2f34;
+  --inverse-bg-2: #3a3e44;
+  --inverse-border: #50555c;
+
+  --topbar: #0f1012;
+  --topbar-field: #222528;
+
+  --danger: #ff6b88;
+  --danger-solid: #d6385c;
+  --danger-solid-hover: #b02244;
+  --danger-text: #ff9db0;
+  --danger-soft: #3a1824;
+  --danger-border: #6b2639;
+  --success-solid: #23845a;
+  --success-solid-hover: #1e7a4f;
+  --success-text: #8fe5bd;
+  --success-soft: #17332a;
+  --success-border: #24533f;
+  --warning-solid: #d18b12;
+  --warning-text: #ffd98a;
+  --warning-soft: #3a3015;
+  --warning-border: #5e4c18;
+  --accent-purple: #a67cea;
+  --accent-purple-text: #d3bdf9;
+  --accent-purple-soft: #2f2547;
+  --accent-teal: #3cc2a8;
+  --accent-teal-text: #8fe0cb;
+  --accent-teal-soft: #16312c;
+  --accent-pink-text: #ffb3c6;
+  --accent-pink-soft: #3a1a26;
+  --highlight: #5c4a12;
+
+  /* ป้ายสถานะคงสีไทล์เดิม เด่นขึ้นบนพื้นเข้ม · เฉพาะ To do เปลี่ยนเป็นเทาเข้ม */
+  --status-todo-bg: #393c41;
+  --status-todo-fg: #d9dce0;
+  --status-todo-dot: #868c94;
+  --status-progress-dot: #ffd66d;
+  --status-review-dot: #a67cea;
+  --status-done-dot: #54ca94;
+  --status-overdue-dot: #ff7896;
+
+  --chart-primary: #8b6ff0;
+  --chart-primary-soft: #4f4690;
+  --chart-neutral: #5f656d;
+  --chart-strong: #c4c9cf;
+
+  --module-auth: #2c2650;
+  --module-appointment: #17332a;
+  --module-payment: #3a3015;
+  --module-admin: #3a1a26;
+
+  --overlay: rgb(0 0 0 / 0.6);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-menu: 0 16px 40px rgb(0 0 0 / 0.55);
 }

@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { errorText, wsPath } from "./shared";
 import { type Leave, type LineStatus, type Membership, type ProfileMe, profileKeys } from "./types";
 import styles from "./profile.module.css";
+import { DEFAULT_ITEM_COLOR, FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 
 const DAY_KEYS = ["", "mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
@@ -67,7 +68,7 @@ export function SummaryCard({ ws }: { ws: string }) {
     <aside className={cn("card", styles.summary)} aria-label={t("label")}>
       <div className={styles.summaryHead}>
         <span className={styles.bigAvatar}>
-          <Avatar person={{ id: me.id, displayName: me.displayName, avatarUrl: me.avatarUrl, color: "#1D4ED8" }} size="large" />
+          <Avatar person={{ id: me.id, displayName: me.displayName, avatarUrl: me.avatarUrl, color: DEFAULT_ITEM_COLOR }} size="large" />
         </span>
         <Button size="small" onClick={() => setAvatarOpen(true)}>{t("changePhoto")}</Button>
         <div className={styles.name}>{me.displayName}</div>
@@ -90,7 +91,7 @@ export function SummaryCard({ ws }: { ws: string }) {
         {joined.length === 0 && <div className={cn(styles.muted, styles.small)}>{t("noProjects")}</div>}
         {joined.map((p) => (
           <div className={styles.kv} key={p.id}>
-            <span className={styles.projectName}><span className={styles.projectDot} style={{ background: p.color ?? "#334155" }} />{p.name}</span>
+            <span className={styles.projectName}><span className={styles.projectDot} style={{ background: p.color ?? FALLBACK_PROJECT_COLOR }} />{p.name}</span>
             {p.myRole && <Badge tone="blue">{tr(p.myRole as "admin")}</Badge>}
           </div>
         ))}

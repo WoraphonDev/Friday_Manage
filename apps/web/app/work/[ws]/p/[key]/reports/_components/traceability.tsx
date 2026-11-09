@@ -14,12 +14,12 @@ interface Props { ws: string; projectKey: string; yearFormat: YearFormat; issueH
 type Kind = "all" | "FR" | "NFR";
 const RESULTS: TraceResult[] = ["uncovered", "untested", "partial", "passed", "failed", "blocked"];
 const RESULT_TONE: Record<TraceResult, { bg: string; fg: string }> = {
-  uncovered: { bg: "#FEF3C7", fg: "#92400E" },
-  untested: { bg: "#EEF0F3", fg: "#3D4550" },
-  partial: { bg: "#DBEAFE", fg: "#1E40AF" },
-  passed: { bg: "#DCFCE7", fg: "#166534" },
-  failed: { bg: "#FEE2E2", fg: "#991B1B" },
-  blocked: { bg: "#EDE9FE", fg: "#5B21B6" },
+  uncovered: { bg: "var(--warning-soft)", fg: "var(--warning-text)" },
+  untested: { bg: "var(--subtle)", fg: "var(--foreground-soft)" },
+  partial: { bg: "var(--primary-soft)", fg: "var(--primary-text)" },
+  passed: { bg: "var(--success-soft)", fg: "var(--success-text)" },
+  failed: { bg: "var(--danger-soft)", fg: "var(--danger-text)" },
+  blocked: { bg: "var(--accent-purple-soft)", fg: "var(--accent-purple-text)" },
 };
 
 export function Traceability({ ws, projectKey, issueHref }: Props) {
@@ -62,7 +62,7 @@ export function Traceability({ ws, projectKey, issueHref }: Props) {
     <div className={styles.kpis}>
       <div className={styles.card} role="group" aria-label={t("trace.kpiFr")}><span className={styles.kpiLabel}>{t("trace.kpiFr")}</span><b>{summary.requirements.total}</b></div>
       <div className={styles.card} role="group" aria-label={t("trace.kpiScreens")}><span className={styles.kpiLabel}>{t("trace.kpiScreens")}</span><b>{summary.screens.total}</b></div>
-      <div className={styles.card} role="group" aria-label={t("trace.kpiNoFr")}><span className={styles.kpiLabel}>{t("trace.kpiNoFr")}</span><b style={{ color: summary.issuesWithoutRequirement.count ? "#B45309" : "#166534" }}>{summary.issuesWithoutRequirement.count}</b></div>
+      <div className={styles.card} role="group" aria-label={t("trace.kpiNoFr")}><span className={styles.kpiLabel}>{t("trace.kpiNoFr")}</span><b style={{ color: summary.issuesWithoutRequirement.count ? "var(--warning-text)" : "var(--success-text)" }}>{summary.issuesWithoutRequirement.count}</b></div>
       <div className={styles.card} role="group" aria-label={t("trace.kpiDone")}><span className={styles.kpiLabel}>{t("trace.kpiDone")}</span><b>{donePct}%</b></div>
     </div>
     <div className={`${styles.card} ${styles.tableScroll}`}>

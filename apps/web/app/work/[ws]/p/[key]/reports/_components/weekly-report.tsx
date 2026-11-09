@@ -94,7 +94,7 @@ function Document({ report: r, yearFormat, issueHref, schedule, settingsHref }: 
       <div><dt>{t("weekly.status")}</dt><dd style={{ color: tone.fg }}>{t(`status.${r.status}`)}</dd></div>
       <div><dt>{t("weekly.doneTotal")}</dt><dd>{t("weekly.doneTotalValue", { done: r.totals.doneCount, total: r.totals.taskCount })}</dd></div>
       <div><dt>{t("weekly.mdUsed")}</dt><dd>{r.totals.usedMd} / {r.totals.totalMd}</dd></div>
-      <div><dt>{t("weekly.late")}</dt><dd style={{ color: r.totals.overdue ? "#B91C1C" : undefined }}>{r.totals.overdue}</dd></div>
+      <div><dt>{t("weekly.late")}</dt><dd style={{ color: r.totals.overdue ? "var(--danger-text)" : undefined }}>{r.totals.overdue}</dd></div>
     </dl>
 
     <div>

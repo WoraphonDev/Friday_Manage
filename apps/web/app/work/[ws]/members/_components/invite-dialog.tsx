@@ -12,6 +12,7 @@ import { copyText, isEmail, splitEmails } from "../../p/[key]/members/_component
 import type { InviteResult, ProjectRole } from "../../p/[key]/members/_components/types";
 import styles from "../../p/[key]/members/_components/members.module.css";
 import local from "./ws.module.css";
+import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 
 type InviteRole = "admin" | "member" | "guest";
 const ROLE_DESC = { admin: "roleAdminDesc", member: "roleMemberDesc", guest: "roleGuestDesc" } as const;
@@ -148,7 +149,7 @@ export function InviteDialog({
               <div key={p.key} className={local.projRow}>
                 <label className={local.projName}>
                   <input type="checkbox" checked={projectKey === p.key} onChange={(e) => setProjectKey(e.target.checked ? p.key : "")} />
-                  <span className={local.dot} style={{ background: p.color ?? "#334155" }} aria-hidden="true" />
+                  <span className={local.dot} style={{ background: p.color ?? FALLBACK_PROJECT_COLOR }} aria-hidden="true" />
                   {p.name}
                 </label>
                 <select aria-label={t("projectRoleFor", { name: p.name })} value={role === "guest" ? "viewer" : projectRole} disabled={projectKey !== p.key || role === "guest"} onChange={(e) => setProjectRole(e.target.value as ProjectRole)}>

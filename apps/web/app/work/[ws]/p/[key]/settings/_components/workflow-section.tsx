@@ -21,8 +21,8 @@ export function bugColumns(bug: Workflow, standard: Workflow | undefined) {
   return [...columns].map(([column, names]) => `${names.join(", ")} → ${column}`).join(" · ");
 }
 
-/** สีของสถานะตามกลุ่ม (Review = เหลือง) เหมือน Canvas L2 */
-const statusColor = (s: Pick<Status, "name" | "category">) => s.category === "done" ? "#16a34a" : /review/i.test(s.name) ? "#d97706" : s.category === "in_progress" ? "#2563eb" : "#94a3b8";
+/** กลุ่มสีของสถานะ (Review แยกจาก In progress) ใช้ token สถานะชุดเดียวกับป้ายทั้งแอป */
+const statusTone = (s: Pick<Status, "name" | "category">) => s.category === "done" ? "done" : /review/i.test(s.name) ? "review" : s.category === "in_progress" ? "progress" : "todo";
 
 export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: string }) {
   const t = useTranslations("project-settings-new.settings.workflow");
@@ -94,7 +94,7 @@ export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: st
           {wf.statuses.map((s, i) => (
             <span key={s.id} className={styles.flow}>
               {i > 0 && <span className={styles.muted} aria-hidden="true">→</span>}
-              <span className={styles.pill} style={{ background: `${statusColor(s)}22`, color: statusColor(s) === "#94a3b8" ? "#3d4550" : statusColor(s) }}>{s.name}</span>
+              <span className={styles.pill} style={{ background: `var(--status-${statusTone(s)}-bg)`, color: `var(--status-${statusTone(s)}-fg)` }}>{s.name}</span>
             </span>
           ))}
         </div>
@@ -114,7 +114,7 @@ export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: st
                 <span className={styles.grip} aria-hidden="true">⋮⋮</span>
                 <button type="button" className={`${styles.icon} ${styles.orderBtn}`} disabled={i === 0} aria-label={t("moveUp", { name: s.name })} onClick={() => void reorder(i, -1)}>↑</button>
                 <button type="button" className={`${styles.icon} ${styles.orderBtn}`} disabled={i === wf.statuses.length - 1} aria-label={t("moveDown", { name: s.name })} onClick={() => void reorder(i, 1)}>↓</button>
-                <span className={styles.swatch} style={{ background: statusColor(s) }} aria-hidden="true" />
+                <span className={styles.swatch} style={{ background: `var(--status-${statusTone(s)}-dot)` }} aria-hidden="true" />
               </span>
               <input
                 className={styles.in}

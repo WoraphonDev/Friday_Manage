@@ -281,7 +281,7 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
             <FolderButton key={f.id} on={place === f.id && !q} onClick={() => go(f.id)} count={f.fileCount} depth={f.depth}>{f.name}</FolderButton>
           ))}
           {!tree.length && <div className={`${styles.muted} ${styles.hint}`}>{t("noFolders")}</div>}
-          {canUpload && <button type="button" className={styles.fo} style={{ color: "var(--primary)" }} onClick={() => setDialog("folder")}>{t("newFolder")}</button>}
+          {canUpload && <button type="button" className={styles.fo} style={{ color: "var(--primary-text)" }} onClick={() => setDialog("folder")}>{t("newFolder")}</button>}
           <div className={styles.sideFoot}>
             <div className={styles.line}><span className={styles.muted}>{t("totalHere")}</span><b>{formatBytes(allFiles.data?.totalBytes ?? data.totalBytes)}</b></div>
             {canTrash && (
@@ -531,7 +531,7 @@ function DetailPanel({ file, detail, detailError, base, pageHref, year, canUploa
           <div className={styles.row} style={{ gap: 6 }}>
             {canUpload && <Button size="small" onClick={onRename}>{t("rename")}</Button>}
             {canUpload && <Button size="small" onClick={onMove}>{t("move")}</Button>}
-            {canDelete && <Button size="small" style={{ color: "#b91c1c" }} onClick={onDelete}>{t("delete")}</Button>}
+            {canDelete && <Button size="small" style={{ color: "var(--danger-text)" }} onClick={onDelete}>{t("delete")}</Button>}
           </div>
         </div>
         {detailError ? <p className={styles.err} role="alert">{message(detailError, t("failed"))}</p> : !detail ? <p className={styles.muted}>{t("loadingDetail")}</p> : (

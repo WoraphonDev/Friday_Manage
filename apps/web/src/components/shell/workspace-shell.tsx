@@ -59,7 +59,9 @@ import { FridayLogo } from "@/components/brand/friday-logo";
 import { Bell } from "@/features/bell/Bell";
 import { CommandPalette } from "@/features/command-palette/CommandPalette";
 import { LocaleSwitch, LocaleSync } from "@/features/locale-switch";
+import { ThemeSwitch } from "@/features/theme-switch";
 import { WorkspaceBanners } from "@/features/plan-limits";
+import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 
 interface ShellContext {
   me: Me;
@@ -136,7 +138,7 @@ function Navigation({
           >
             <span
               className="project-dot"
-              style={{ background: project.color ?? "#334155" }}
+              style={{ background: project.color ?? FALLBACK_PROJECT_COLOR }}
             />
             <span className="project-name">{project.name}</span>
           </Link>
@@ -504,7 +506,11 @@ export function WorkspaceShell({
             )}
           </div>
           <div className="account-foot">
-            <LocaleSwitch signedIn showYearFormat onChange={() => setAccountOpen(false)} />
+            <div className="account-prefs">
+              <LocaleSwitch signedIn showYearFormat onChange={() => setAccountOpen(false)} />
+              {/* เปลี่ยนธีมแล้วเมนูยังเปิดอยู่ ให้เห็นผลและสลับต่อได้ทันที */}
+              <ThemeSwitch />
+            </div>
             <button
               type="button"
               className="menu-item menu-icon-item account-logout"
@@ -695,6 +701,7 @@ export function WorkspaceShell({
             showYearFormat
             onChange={() => setMenuOpen(false)}
           />
+          <ThemeSwitch showLabels />
           {signOut}
         </Drawer>
         <CommandPalette

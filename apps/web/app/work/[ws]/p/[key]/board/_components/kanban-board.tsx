@@ -13,6 +13,7 @@ import { queryKeys } from "@/lib/query";
 import type { Permissions } from "@/lib/types";
 import { moveLocal, positionIntent, type BoardCard, type BoardColumn, type BoardData, type MoveBody, type MoveIntent, type MoveResult, type Swimlane } from "./types";
 import styles from "./kanban.module.css";
+import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 
 type Notice = { message: string; undo?: () => Promise<void> };
 
@@ -251,7 +252,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
       <div className={styles.cardTop}>
         <span className={styles.typeIcon} style={{ background: card.type.color }} title={card.parentKey ? t("typeValues.subtask") : t.has(`typeValues.${card.type.name}`) ? t(`typeValues.${card.type.name}`) : card.type.name}><TypeIcon size={12} aria-hidden="true" /></span>
         <span className={styles.key}>{card.key}</span>
-        {card.module && <span className={styles.module} style={{ background: `${card.module.color ?? "#1d4ed8"}1a`, color: card.module.color ?? "#1d4ed8" }}>{card.module.name}</span>}
+        {card.module && <span className={styles.module} style={{ background: tint(card.module.color ?? DEFAULT_ITEM_COLOR, 10), color: readableColor(card.module.color ?? DEFAULT_ITEM_COLOR) }}>{card.module.name}</span>}
         {card.type.name === "Bug" && <Badge tone="red">{card.status.name}</Badge>}
         <span className={`${styles.priority} ${styles[card.priority]}`} role="img" aria-label={t(`priorityValues.${card.priority}`)} title={t(`priorityValues.${card.priority}`)}><Flag size={14} aria-hidden="true" /></span>
       </div>
@@ -278,7 +279,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
     {/* Canvas Kanban: แถวแรก = ชิป Module + งานของฉัน / Overdue · แถวสอง = แสดง, Swimlane, Reset */}
     <div className={`${styles.moduleFilters} ${filtersOpen ? styles.expanded : ""}`} role="group" aria-label={t("modules")}>
       <Button className={`${styles.chip} ${!moduleId ? styles.selected : ""}`} aria-pressed={!moduleId} onClick={() => setModuleId("")}>{t("allModules")} <span>{cards.length}</span></Button>
-      {modules.map((module) => <Button key={module.id} className={`${styles.chip} ${moduleId === module.id ? styles.selected : ""}`} aria-pressed={moduleId === module.id} onClick={() => setModuleId(module.id)}><span className={styles.dot} style={{ background: module.color ?? "#1d4ed8" }} />{module.name} <span>{cards.filter((card) => card.module?.id === module.id).length}</span></Button>)}
+      {modules.map((module) => <Button key={module.id} className={`${styles.chip} ${moduleId === module.id ? styles.selected : ""}`} aria-pressed={moduleId === module.id} onClick={() => setModuleId(module.id)}><span className={styles.dot} style={{ background: module.color ?? DEFAULT_ITEM_COLOR }} />{module.name} <span>{cards.filter((card) => card.module?.id === module.id).length}</span></Button>)}
       <span className={styles.sep} aria-hidden="true" />
       <Button className={`${styles.chip} ${styles.secondaryFilter} ${mine ? styles.selected : ""}`} aria-pressed={mine} onClick={() => setMine(!mine)}>{t("mine")}</Button>
       <Button className={`${styles.chip} ${styles.secondaryFilter} ${overdue ? styles.selected : ""}`} aria-pressed={overdue} onClick={() => setOverdue(!overdue)}>{t("overdue")}</Button>
@@ -294,7 +295,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
       </div>
     </div>
     <div className={styles.mobileColumns} role="group" aria-label={t("columns")}>
-      {data.columns.map((column) => <Button key={column.id} className={`${styles.chip} ${column.id === activeColumn ? styles.selected : ""}`} aria-pressed={column.id === activeColumn} onClick={() => setMobileColumn(column.id)}><span className={`${styles.dot} ${styles[column.category]}`} />{column.name} <span>{column.cards.filter((card) => filtered.includes(card)).length}</span></Button>)}
+      {data.columns.map((column) => <Button key={column.id} className={`${styles.chip} ${column.id === activeColumn ? styles.selected : ""}`} aria-pressed={column.id === activeColumn} onClick={() => setMobileColumn(column.id)}><span className={`${styles.dot} ${styles[/review/i.test(column.name) ? "review" : column.category]}`} />{column.name} <span>{column.cards.filter((card) => filtered.includes(card)).length}</span></Button>)}
       <Button className={styles.mobileFilterToggle} aria-expanded={filtersOpen} aria-label={t("filters")} onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal size={16} aria-hidden="true" /></Button>
     </div>
     {!filtered.length && <EmptyState title={t(hasFilters ? "filteredEmpty" : "emptyTitle")} description={hasFilters ? undefined : t("emptyDescription")} action={hasFilters ? <Button onClick={() => { setModuleId(""); setMine(false); setOverdue(false); setLevel("all"); }}>{t("reset")}</Button> : canCreate ? <Link className="button button-primary" href={href()}>{t("new")}</Link> : undefined} />}
@@ -305,7 +306,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
           if (slot) { const at = dropTarget.before ? laneCards.findIndex((card) => card.key === dropTarget.before) : -1; items.splice(at < 0 ? items.length : at, 0, <div key="slot" className={styles.slot} style={{ height: slotHeight }} data-flip={`${group.id}:${dragging}`} aria-hidden="true" />); }
           return <section key={column.id} aria-label={t("column", { name: column.name })} data-mobile-active={column.id === activeColumn} className={`${styles.column} ${column.wip.exceeded ? styles.exceeded : ""} ${slot ? styles.dropColumn : ""}`}
           onDragOver={(event) => dragOver(event, group.id, column.id)} onDrop={(event) => drop(event, column.id)}>
-          <header className={styles.columnHeader}><span className={`${styles.dot} ${styles[column.category]}`} /><h3>{column.name}</h3><span className={styles.count}>{column.cards.filter((card) => filtered.includes(card) && inGroup(card, group.id)).length}</span>{column.wip.limit !== null && <span className={`${styles.wip} ${column.wip.exceeded ? styles.wipOver : ""}`}>{t("wip", { current: column.wip.current, limit: column.wip.limit })}</span>}{canCreate && <Link className={styles.colAdd} href={href(undefined, column.id, swimlane === "module" ? group.id : undefined)} aria-label={t("addCardTo", { name: column.name })}><Plus size={16} aria-hidden="true" /></Link>}</header>
+          <header className={styles.columnHeader}><span className={`${styles.dot} ${styles[/review/i.test(column.name) ? "review" : column.category]}`} /><h3>{column.name}</h3><span className={styles.count}>{column.cards.filter((card) => filtered.includes(card) && inGroup(card, group.id)).length}</span>{column.wip.limit !== null && <span className={`${styles.wip} ${column.wip.exceeded ? styles.wipOver : ""}`}>{t("wip", { current: column.wip.current, limit: column.wip.limit })}</span>}{canCreate && <Link className={styles.colAdd} href={href(undefined, column.id, swimlane === "module" ? group.id : undefined)} aria-label={t("addCardTo", { name: column.name })}><Plus size={16} aria-hidden="true" /></Link>}</header>
           {column.wip.exceeded && <p className={styles.mobileWip} role="status">{t("overWip", { current: column.wip.current, limit: column.wip.limit! })}</p>}
           <div className={styles.cardList}>{items}
             {!laneCards.length && !slot && <p className={styles.emptyColumn}>{t("emptyColumn")}</p>}

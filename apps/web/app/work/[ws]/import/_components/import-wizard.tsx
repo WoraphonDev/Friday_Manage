@@ -18,8 +18,8 @@ type Step = 1 | 2 | 3 | 4;
 type Mode = "create" | "update";
 type Filter = "issue" | "err" | "warn";
 const PAGE = 100;
-const LEVEL = { err: { color: "#b91c1c", sym: "!" }, warn: { color: "#b45309", sym: "!" } } as const;
-const CHIP: Record<Filter, string> = { issue: "#b45309", err: "#b91c1c", warn: "#b45309" };
+const LEVEL = { err: { color: "var(--danger-text)", sym: "!" }, warn: { color: "var(--warning-text)", sym: "!" } } as const;
+const CHIP: Record<Filter, string> = { issue: "var(--warning-solid)", err: "var(--danger)", warn: "var(--warning-solid)" };
 
 const fmtSize = (bytes: number) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 

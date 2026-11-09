@@ -1,0 +1,380 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-09T09:30:00Z"
+  },
+  "title": "Friday Ops · ออกแบบใหม่",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1560,
+      "title": "[เฟส 1] 1 · ภาพรวม",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Customers.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 1240,
+      "title": "[เฟส 1] 2 · ลูกค้า (Workspaces)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "CustomerDetail.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 1940,
+      "title": "[เฟส 1] 3 · รายละเอียดลูกค้า",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Users.dc.html": {
+      "x": 4560,
+      "y": 0,
+      "w": 1440,
+      "h": 1240,
+      "title": "[เฟส 1] 2b · ผู้ใช้ทั้งหมด",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Billing.dc.html": {
+      "x": 0,
+      "y": 2340,
+      "w": 1440,
+      "h": 1760,
+      "title": "[เฟส 1] 4 · รายได้ และคิวกรณีผิดปกติ",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Promotions.dc.html": {
+      "x": 1520,
+      "y": 2340,
+      "w": 1440,
+      "h": 1560,
+      "title": "[เฟส 2] 5 · แพ็กเกจและโปรโมชัน",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Support.dc.html": {
+      "x": 0,
+      "y": 4520,
+      "w": 1440,
+      "h": 1560,
+      "title": "[เฟส 1] 6 · Support",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "System.dc.html": {
+      "x": 1520,
+      "y": 4520,
+      "w": 1440,
+      "h": 1460,
+      "title": "[เฟส 1] 7 · สถานะระบบและ Feature flags",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Staff.dc.html": {
+      "x": 3040,
+      "y": 4520,
+      "w": 1440,
+      "h": 1360,
+      "title": "[เฟส 1] 8 · พนักงาน สิทธิ์ และ Audit log",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "SupportSettings.dc.html": {
+      "x": 4560,
+      "y": 4520,
+      "w": 1440,
+      "h": 1700,
+      "title": "[เฟส 2] 6b · ตั้งค่าการแจกงาน Support",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Entitlements.dc.html": {
+      "x": 0,
+      "y": 6640,
+      "w": 1440,
+      "h": 1500,
+      "title": "[เฟส 2] 9 · สิทธิ์ตามแพ็กเกจและขีดจำกัด",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Privacy.dc.html": {
+      "x": 1520,
+      "y": 6640,
+      "w": 1440,
+      "h": 1500,
+      "title": "[เฟส 1] 10 · คำขอ PDPA และการเก็บข้อมูล",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Deliveries.dc.html": {
+      "x": 3040,
+      "y": 6640,
+      "w": 1440,
+      "h": 1500,
+      "title": "[เฟส 2] 11 · ประวัติการส่งแจ้งเตือน",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Operations.dc.html": {
+      "x": 4560,
+      "y": 6640,
+      "w": 1440,
+      "h": 1500,
+      "title": "[เฟส 1] 12 · เหตุขัดข้อง ปิดปรับปรุง และงานที่ล้ม",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Refunds.dc.html": {
+      "x": 0,
+      "y": 8560,
+      "w": 1440,
+      "h": 1500,
+      "title": "[เฟส 1] 13 · คืนเงิน เครดิต และการอนุมัติ",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Legal.dc.html": {
+      "x": 1520,
+      "y": 8560,
+      "w": 1440,
+      "h": 1500,
+      "title": "[เฟส 1] 14 · เอกสารกฎหมายและการยอมรับ",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Abuse.dc.html": {
+      "x": 3040,
+      "y": 8560,
+      "w": 1440,
+      "h": 1500,
+      "title": "[เฟส 3] 15 · ตรวจจับการใช้ผิดวัตถุประสงค์",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "ComingSoon.dc.html": {
+      "x": 4560,
+      "y": 8560,
+      "w": 1440,
+      "h": 1500,
+      "title": "[เฟส 3] เร็ว ๆ นี้ · แผนฟีเจอร์ทั้งหมด",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Sidebar.dc.html": {
+      "x": -420,
+      "y": 0,
+      "w": 248,
+      "h": 1560,
+      "title": "เมนูซ้าย (ใช้ร่วมทุกหน้า)",
+      "is_interactive": true
+    },
+    "Topbar.dc.html": {
+      "x": -1700,
+      "y": 0,
+      "w": 1200,
+      "h": 60,
+      "title": "แถบบน (ใช้ร่วมทุกหน้า)"
+    },
+    "Checkout.dc.html": {
+      "x": 3040,
+      "y": 2340,
+      "w": 1440,
+      "h": 1240,
+      "title": "[เฟส 1] 4b · หน้าชำระเงิน (ฝั่งลูกค้า)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Business.dc.html": {
+      "x": 6080,
+      "y": 0,
+      "w": 1440,
+      "h": 2400,
+      "title": "[เฟส 1] 16 · ธุรกิจและกำไร",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Modals-Global.dc.html": {
+      "x": 0,
+      "y": 10660,
+      "w": 1440,
+      "h": 3300,
+      "title": "M0 · ส่วนกลาง: ค้นหา แจ้งเตือน ยืนยัน และขออนุมัติ",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Modals-States.dc.html": {
+      "x": 1520,
+      "y": 10660,
+      "w": 1440,
+      "h": 2000,
+      "title": "M1 · เข้าสู่ระบบและสถานะของหน้า",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Modals-Customers.dc.html": {
+      "x": 3040,
+      "y": 10660,
+      "w": 1440,
+      "h": 4200,
+      "title": "M2 · ลูกค้าและผู้ใช้",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Modals-Money.dc.html": {
+      "x": 4560,
+      "y": 10660,
+      "w": 1440,
+      "h": 4600,
+      "title": "M3 · เงิน แพ็กเกจ และโปรโมชัน",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Modals-Support.dc.html": {
+      "x": 6080,
+      "y": 10660,
+      "w": 1440,
+      "h": 4200,
+      "title": "M4 · Support และระบบ",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Modals-Security.dc.html": {
+      "x": 7600,
+      "y": 10660,
+      "w": 1440,
+      "h": 3800,
+      "title": "M5 · ทีมภายใน ความปลอดภัย และกฎหมาย",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Mobile.dc.html": {
+      "x": 9120,
+      "y": 10660,
+      "w": 1440,
+      "h": 1120,
+      "title": "[เฟส 2] M6 · มือถือ (อนุมัติ · เหตุขัดข้อง · คิวชำระ)",
+      "expand": "fill",
+      "is_interactive": true
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Sidebar.dc.html",
+    "Customers.dc.html",
+    "CustomerDetail.dc.html",
+    "Users.dc.html",
+    "Business.dc.html",
+    "Billing.dc.html",
+    "Checkout.dc.html",
+    "Promotions.dc.html",
+    "Support.dc.html",
+    "System.dc.html",
+    "Staff.dc.html",
+    "SupportSettings.dc.html",
+    "Entitlements.dc.html",
+    "Privacy.dc.html",
+    "Deliveries.dc.html",
+    "Operations.dc.html",
+    "Refunds.dc.html",
+    "Legal.dc.html",
+    "Abuse.dc.html",
+    "ComingSoon.dc.html",
+    "Topbar.dc.html",
+    "Modals-Global.dc.html",
+    "Modals-States.dc.html",
+    "Modals-Customers.dc.html",
+    "Modals-Money.dc.html",
+    "Modals-Support.dc.html",
+    "Modals-Security.dc.html",
+    "Mobile.dc.html"
+  ],
+  "notes": {
+    "row1": {
+      "x": 0,
+      "y": -300,
+      "text": "ภาพรวม ลูกค้า และธุรกิจ",
+      "kind": "title1",
+      "maxW": 7520
+    },
+    "row2": {
+      "x": 0,
+      "y": 2040,
+      "text": "เงิน แพ็กเกจ โปรโมชัน และการชำระเงิน",
+      "kind": "title1",
+      "maxW": 4480
+    },
+    "row3": {
+      "x": 0,
+      "y": 4220,
+      "text": "Support ระบบ และทีมภายใน",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "row4": {
+      "x": 0,
+      "y": 6340,
+      "text": "ต้องมีก่อนเปิดตัว (1/2)",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "row5": {
+      "x": 0,
+      "y": 8260,
+      "text": "ต้องมีก่อนเปิดตัว (2/2) และเร็ว ๆ นี้",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "sitemap": {
+      "x": -420,
+      "y": 1680,
+      "w": 320,
+      "size": "s",
+      "fill": "blue",
+      "text": "Friday Ops · โครงเมนู\n\nเมนูครบทุกด้านของหลังบ้าน SaaS · เมนูที่ยังไม่ออกแบบมีป้าย \"เร็ว ๆ นี้\" และพาไปหน้าแผนฟีเจอร์\n\nออกแบบแล้ว: ภาพรวม, ธุรกิจและกำไร, Workspaces, รายได้, คิวกรณีผิดปกติ, หน้าชำระเงินฝั่งลูกค้า, คืนเงิน, แพ็กเกจ/โปรโมชัน, สิทธิ์และขีดจำกัด, Support (3 หน้า), สถานะระบบ, เหตุขัดข้อง, ประวัติการส่ง, Feature flags, PDPA, ตรวจจับการใช้ผิด, เอกสารกฎหมาย, พนักงาน, Audit log\n\nหน้าย่อยทั้งหมด: แถวล่างสุด M0–M5 · แต่ละรายการมีรหัส (เช่น C4) และบอกว่าเปิดจากปุ่มไหน\n\nตัวเลขทั้งหมดเป็นข้อมูลตัวอย่าง · ราคาแพ็กเกจยังไม่กำหนด"
+    },
+    "rules": {
+      "x": -420,
+      "y": 2480,
+      "w": 320,
+      "size": "s",
+      "fill": "orange",
+      "text": "กติกาที่ใช้ทุกหน้า\n\n• ล็อกอินด้วย Passkey / Security key เท่านั้น\n• ทุกการกระทำกับบัญชีลูกค้าต้องกรอกเหตุผล และลูกค้าเห็นใน Audit Log\n• เข้าบัญชีลูกค้าได้เมื่อลูกค้าเปิดสิทธิ์ไว้และมี Ticket\n• บทบาท: Owner / การเงิน / Support / วิศวกร / ผู้ตรวจ · 1 คนมีได้หลายบทบาท · แผนกไม่ให้สิทธิ์\n• Owner อนุมัติได้ทุกเรื่อง แต่ไม่ได้ผ่านทุกอย่างอัตโนมัติ · ช่วงมี Owner คนเดียว: อนุมัติตัวเองได้ (ติดป้าย) ยกเว้นโหมดแก้ไขในบัญชีลูกค้าและลบข้อมูล\n• การกระทำที่เสี่ยง (คืนเงินยอดสูง ส่วนลดสูง ลบข้อมูล) ต้องมีคนที่สองอนุมัติ\n• ราคาแพ็กเกจและยอดของลูกค้ารายเดียวใช้ ฿[...] จนกว่าจะกำหนดราคา · ยอดรวม (MRR, รายได้, ต้นทุน) เป็นตัวเลขตัวอย่าง\n• เฟสแรกใช้โหมดสว่างอย่างเดียว · ตอนสร้างใช้ token ชุดเดียวกับแอปลูกค้า เพื่อเพิ่มโหมดมืดภายหลังได้โดยไม่ต้องออกแบบใหม่\n• ชิ้นส่วน (ชิป ปุ่มสลับ แท็บ ช่องกรอก สวิตช์) ใช้ชุดมาตรฐานเดียวกันทุกหน้า"
+    },
+    "payflow": {
+      "x": 4560,
+      "y": 2340,
+      "w": 420,
+      "size": "s",
+      "fill": "green",
+      "text": "การยืนยันการชำระเงินอัตโนมัติ\n\n1) PromptPay QR (ช่องทางหลัก): QR ผูกยอดและใบแจ้งหนี้ · Gateway ส่ง webhook เมื่อเงินเข้า → ใบแจ้งหนี้ชำระแล้ว ต่ออายุ ส่ง e-Tax invoice\n2) บัตร: ตัดตามรอบอัตโนมัติ ล้มแล้วลองใหม่วันที่ 1, 3, 5\n3) Bill Payment สำหรับบริษัท: Ref.1 = รหัสลูกค้า, Ref.2 = ใบแจ้งหนี้ · ธนาคารแจ้งยอด\n4) สลิปโอน (ทางสำรอง): ตรวจกับธนาคารผ่าน Slip API · ไม่ตรงค่อยเข้าคิว\n5) กระทบยอดกับ statement ธนาคารทุกเช้า จับ webhook ที่หลุด\n\nคิวใน Friday Ops มีแค่กรณีผิดปกติ: ยอดไม่ตรง, สลิปซ้ำ, ชื่อไม่ตรง, เงินเข้าไม่มีใบแจ้งหนี้, จ่ายซ้ำ, 50 ทวิ, อ่านสลิปไม่ได้\n\nหัก ณ ที่จ่าย: ลูกค้าเปิดตัวเลือกก่อนจ่าย ยอดลดลง 3% · บัตรใช้ไม่ได้ในกรณีนี้\n\nยังไม่เลือกผู้ให้บริการ · Bill Payment และ Slip API อยู่เฟส 2 · ราคาเป็นตัวอย่าง"
+    },
+    "row6": {
+      "x": 0,
+      "y": 10360,
+      "text": "Modal, Drawer, Popover, สถานะหน้า และมือถือ",
+      "kind": "title1",
+      "maxW": 10560
+    },
+    "phases": {
+      "x": -420,
+      "y": 2900,
+      "w": 320,
+      "size": "s",
+      "fill": "green",
+      "text": "แบ่งเฟส (ผู้ใช้ตัดสิน 9 พ.ย. 2569)\n\nเฟส 1 · ก่อนเปิดรับเงินจริง: ภาพรวม, Workspaces + รายละเอียด, ผู้ใช้, ธุรกิจและกำไร, รายได้และการชำระเงิน (ทุกแท็บ), หน้าชำระเงินฝั่งลูกค้า, คืนเงินแบบง่าย, Ticket, สถานะระบบ, เหตุขัดข้อง, PDPA, เอกสารกฎหมาย, พนักงาน + Audit log, เข้าสู่ระบบและสถานะหน้า\n\nเฟส 2 · หลังมีลูกค้าจ่ายเงิน: แพ็กเกจและโปรโมชัน, สิทธิ์และขีดจำกัด (ช่วงแรกตั้งค่าในไฟล์), ประวัติการส่ง, ตั้งค่าการแจกงาน, มือถือ, โหมดแก้ไขในบัญชีลูกค้า\n\nเฟส 3: ตรวจจับการใช้ผิด, หน้า Feature flags, Lead และเมนูเร็ว ๆ นี้ทั้งหมด\n\nการชำระเงิน: เฟส 1 = PromptPay QR + บัตร (Gateway ยังไม่เลือก) + โอนพร้อมสลิปที่ทีมตรวจเอง · เฟส 2 = Bill Payment ผ่านธนาคาร และ Slip API · สถานะ VAT เป็นการตั้งค่า (รอผู้ทำบัญชี)"
+    }
+  },
+  "designSystems": []
+}

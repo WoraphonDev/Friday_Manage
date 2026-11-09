@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · ผู้ใช้ทั้งหมด</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f8;-webkit-font-smoothing:antialiased}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+h1{letter-spacing:-.015em}
+.card{background:#fff;border:1px solid #e6e8ec;border-radius:14px;padding:18px 20px;box-sizing:border-box;min-width:0;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03)}
+.h2{margin:0;font-size:15px;font-weight:650;color:#24272c}
+.muted{color:#5f656d}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:9px;border:1px solid #d6dae0;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+.btn:hover{background:#f1f3f5;border-color:#c3c8cf;color:#24272c;text-decoration:none}
+.btn-danger{color:#a01d3c;border-color:#f6b8c6}.btn-danger:hover{background:#fdecf0;color:#a01d3c}
+.btn-sm{min-height:30px;padding:0 10px;font-size:12px}
+.btn:focus-visible,.chip:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 10px;border-radius:999px;border:1px solid #cfd4d9;background:#fff;font:inherit;font-size:12px;color:#3a3f45;cursor:pointer}
+.chip[aria-pressed="true"]{background:#24272c;border-color:#24272c;color:#fff}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:600;color:#6b717a;font-size:12px;padding:10px 12px;border-bottom:1px solid #eceef1;white-space:nowrap;background:#fafbfc}
+.t td{padding:11px 12px;border-bottom:1px solid #eef0f2;white-space:nowrap;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+.t tbody tr:hover td{background:#fafaff}
+.row-on td{background:#f6f2ff}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #eef0f2;font-size:13px}
+.kv:last-child{border-bottom:0}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c; background: #f4f5f8">
+  <div style="flex: 1 1 232px; max-width: 100%; background: #141619">
+    <dc-import name="Sidebar" active="users" hint-size="100%,1560px"></dc-import>
+  </div>
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+    <div style="margin: -24px -28px 4px"><dc-import name="Topbar" group="ลูกค้า" group-href="Customers.dc.html" page="ผู้ใช้ทั้งหมด" phase="1" hint-size="100%,60px"></dc-import></div>
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px">
+      <div style="flex: 1 1 320px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700">ผู้ใช้ทั้งหมด</h1>
+        <p class="muted" style="margin: 4px 0 0; font-size: 13px">ค้นผู้ใช้ข้ามทุก Workspace · การกระทำกับบัญชีผู้ใช้ต้องผูกกับ Ticket และยืนยันตัวตนเจ้าของบัญชีก่อน</p>
+      </div>
+      <button type="button" class="btn">ส่งออก CSV</button>
+    </section>
+
+    <section aria-label="สรุป" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px">
+      <sc-for list="{{stats}}" as="s" hint-placeholder-count="6">
+        <div class="card" style="padding: 14px 16px"><div class="muted" style="font-size: 12px">{{s.label}}</div><div class="num" style="font-size: 20px; font-weight: 700; margin-top: 4px; color: {{s.color}}">{{s.value}}</div><div class="muted" style="font-size: 12px; margin-top: 2px">{{s.note}}</div></div>
+      </sc-for>
+    </section>
+
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #eceef1">
+        <label style="flex: 1 1 280px; display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 10px; border: 1px solid #868c94; border-radius: 8px; max-width: 420px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5f656d" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+          <span style="position: absolute; left: -9999px">ค้นหาผู้ใช้</span>
+          <input type="search" placeholder="อีเมล, ชื่อ, เบอร์โทร, LINE user" style="flex: 1; border: 0; outline: none; font: inherit; font-size: 13px; min-width: 0">
+        </label>
+        <div role="group" aria-label="ตัวกรอง" style="display: flex; flex-wrap: wrap; gap: 6px">
+          <sc-for list="{{filters}}" as="f" hint-placeholder-count="5"><button type="button" class="chip" aria-pressed="{{f.on}}" onClick="{{f.pick}}">{{f.label}} <span class="num">{{f.count}}</span></button></sc-for>
+        </div>
+        <span class="muted" style="font-size: 12px; margin-left: auto">กดแถวเพื่อดูรายละเอียดและจัดการบัญชี</span>
+      </div>
+      <div style="overflow-x: auto">
+        <table class="t">
+          <thead><tr><th scope="col">ผู้ใช้</th><th scope="col">Workspace</th><th scope="col">ล็อกอินด้วย</th><th scope="col">2FA</th><th scope="col">LINE</th><th scope="col">ภาษา</th><th scope="col">ใช้งานล่าสุด</th><th scope="col">สถานะ</th></tr></thead>
+          <tbody>
+            <sc-for list="{{rows}}" as="r" hint-placeholder-count="10">
+              <tr class="{{r.rowCls}}" onClick="{{r.pick}}" style="cursor: pointer">
+                <td><div style="display: flex; flex-direction: column"><span style="font-weight: 600">{{r.name}}</span><span class="muted" style="font-size: 12px">{{r.email}}</span></div></td>
+                <td style="white-space: normal; min-width: 180px">{{r.ws}}</td>
+                <td class="muted">{{r.login}}</td>
+                <td><span class="{{r.mfaCls}}">{{r.mfa}}</span></td>
+                <td class="muted">{{r.line}}</td>
+                <td class="muted">{{r.lang}}</td>
+                <td class="muted">{{r.last}}</td>
+                <td><span class="{{r.stCls}}">{{r.status}}</span></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-top: 1px solid #eceef1; font-size: 13px">
+        <span class="muted">แสดง 1–10 จาก 7,412</span>
+        <div style="margin-left: auto; display: flex; gap: 6px"><button type="button" class="btn" disabled>ก่อนหน้า</button><button type="button" class="btn">ถัดไป</button></div>
+      </div>
+
+      <sc-if value="{{drawerOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closeDrawer}}" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,22,25,.32); z-index: 20"></div>
+      <aside class="card" role="dialog" aria-label="รายละเอียดผู้ใช้" style="position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 100%); border-radius: 16px 0 0 16px; z-index: 21; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 22px 24px; box-shadow: -12px 0 40px rgba(16,24,40,.18)">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span aria-hidden="true" style="width: 40px; height: 40px; border-radius: 50%; background: #efe9fd; color: #5b3fc4; font-weight: 700; display: flex; align-items: center; justify-content: center">{{sel.initial}}</span>
+          <div style="display: flex; flex-direction: column; min-width: 0"><b style="font-size: 15px">{{sel.name}}</b><span class="muted" style="font-size: 12px">{{sel.email}}</span></div>
+          <button type="button" class="btn btn-sm" aria-label="ปิด" onClick="{{closeDrawer}}" style="margin-left: auto; width: 34px; padding: 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+        </div>
+        <div>
+          <div class="kv"><span class="muted">สถานะ</span><span class="{{sel.stCls}}">{{sel.status}}</span></div>
+          <div class="kv"><span class="muted">ยืนยันอีเมล</span><span>{{sel.verified}}</span></div>
+          <div class="kv"><span class="muted">ล็อกอินด้วย</span><span>{{sel.login}}</span></div>
+          <div class="kv"><span class="muted">2FA</span><span>{{sel.mfa}}</span></div>
+          <div class="kv"><span class="muted">ผูก LINE</span><span>{{sel.line}}</span></div>
+          <div class="kv"><span class="muted">ภาษา / ปี / เขตเวลา</span><span>{{sel.lang}} · Asia/Bangkok</span></div>
+          <div class="kv"><span class="muted">สมัครเมื่อ</span><span>{{sel.joined}}</span></div>
+        </div>
+        <div>
+          <h3 class="h2" style="font-size: 14px; margin-bottom: 6px">เป็นสมาชิก</h3>
+          <sc-for list="{{sel.memberships}}" as="m" hint-placeholder-count="2">
+            <div class="kv"><a href="CustomerDetail.dc.html">{{m.ws}}</a><span><span class="{{m.roleCls}}">{{m.role}}</span> <span class="muted" style="font-size: 12px">{{m.projects}}</span></span></div>
+          </sc-for>
+        </div>
+        <div>
+          <h3 class="h2" style="font-size: 14px; margin-bottom: 6px">อุปกรณ์ที่ล็อกอินอยู่</h3>
+          <sc-for list="{{sel.devices}}" as="d" hint-placeholder-count="2"><div class="kv"><span>{{d.name}}</span><span class="muted">{{d.last}}</span></div></sc-for>
+        </div>
+        <div style="padding: 10px 12px; border-radius: 10px; background: #fff6d9; font-size: 12px; color: #7a4700">ยืนยันตัวตนเจ้าของบัญชีก่อน (อีเมลที่ลงทะเบียน + รหัส 6 หลัก) · ทุกการกระทำแจ้งผู้ใช้ทางอีเมลและบันทึกใน Audit log</div>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 500">Ticket ที่เกี่ยวข้อง<input value="#513" style="min-height: 36px; border: 1px solid #868c94; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 13px"></label>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <button type="button" class="btn btn-sm">ปลดล็อกบัญชี</button>
+          <button type="button" class="btn btn-sm">ส่งอีเมลยืนยันอีกครั้ง</button>
+          <button type="button" class="btn btn-sm">รีเซ็ต 2FA</button>
+          <button type="button" class="btn btn-sm">ออกจากทุกอุปกรณ์</button>
+          <button type="button" class="btn btn-sm">เปลี่ยนอีเมล (ยืนยันทั้งสองอีเมล)</button>
+          <button type="button" class="btn btn-sm btn-danger">ปิดบัญชีทั้งระบบ</button>
+        </div>
+      </aside>
+      </sc-if>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  state = { f: 'all', sel: 0, drawer: false };
+  renderVals() {
+    const stats = [
+      { label: 'ผู้ใช้ทั้งหมด', value: '7,412', note: 'อยู่หลาย Workspace 312 คน', color: '#24272c' },
+      { label: 'ใช้งาน 30 วัน', value: '5,903', note: '80%', color: '#24272c' },
+      { label: 'เปิด 2FA', value: '41%', note: 'Owner / Admin 88%', color: '#24272c' },
+      { label: 'ผูก LINE ส่วนตัว', value: '22%', note: '1,631 คน', color: '#24272c' },
+      { label: 'ยังไม่ยืนยันอีเมล', value: '118', note: 'สมัครเกิน 7 วัน 31', color: '#7a4700' },
+      { label: 'ถูกล็อกตอนนี้', value: '3', note: 'ใส่รหัสผิดเกิน 5 ครั้ง', color: '#a01d3c' },
+    ];
+    const filters = [['all', 'ทั้งหมด', '7,412'], ['locked', 'ถูกล็อก', '3'], ['unverified', 'ยังไม่ยืนยันอีเมล', '118'], ['nomfa', 'Admin ที่ไม่เปิด 2FA', '27'], ['disabled', 'ปิดบัญชีแล้ว', '41']]
+      .map(([key, label, count]) => ({ label, count, on: this.state.f === key ? 'true' : 'false', pick: () => this.setState({ f: key, sel: 0, drawer: false }) }));
+    const role = { owner: ['Owner', 'pill p-purple'], admin: ['Admin', 'pill p-teal'], member: ['Member', 'pill p-gray'], guest: ['Guest', 'pill p-amber'] };
+    const ms = (ws, r, projects) => ({ ws, role: role[r][0], roleCls: role[r][1], projects });
+    const st = { ok: ['ใช้งาน', 'pill p-green'], locked: ['ถูกล็อก', 'pill p-red'], unverified: ['ยังไม่ยืนยันอีเมล', 'pill p-amber'], disabled: ['ปิดบัญชี', 'pill p-gray'] };
+    const u = (name, email, memberships, login, mfa, line, lang, last, s, joined, devices) => ({
+      name, email, memberships, login, mfa: mfa ? 'เปิด' : 'ปิด', mfaCls: mfa ? 'pill p-green' : 'pill p-gray', line, lang, last,
+      status: st[s][0], stCls: st[s][1], verified: s === 'unverified' ? 'ยังไม่ยืนยัน' : 'ยืนยันแล้ว', joined, devices,
+      ws: memberships.map((m) => m.ws + ' (' + m.role + ')').join(', '), initial: name.slice(0, 1),
+    });
+    const all = [
+      u('PM สยามโค้ด', 'pm@siamcode.example', [ms('สยามโค้ด', 'admin', '9 โปรเจกต์')], 'รหัสผ่าน', true, 'ผูกแล้ว', 'ไทย', 'วันนี้ 09:40', 'ok', '14 มี.ค. 2569', [{ name: 'Chrome · macOS · กรุงเทพฯ', last: 'วันนี้' }, { name: 'iPhone · แอปเว็บ', last: '5 พ.ย.' }]),
+      u('ผู้ใช้ที่ถูกล็อก', 'dev7@siamcode.example', [ms('สยามโค้ด', 'member', '2 โปรเจกต์')], 'รหัสผ่าน', false, '—', 'ไทย', '3 วันก่อน', 'locked', '2 มิ.ย. 2569', [{ name: 'Chrome · Windows', last: '6 พ.ย.' }]),
+      u('Freelance Dev', 'freelance@mail.example', [ms('Northwind Dev', 'member', '3 โปรเจกต์'), ms('Pixel Forge', 'guest', '1 โปรเจกต์')], 'Google', true, 'ผูกแล้ว', 'English', 'วันนี้ 08:12', 'ok', '9 ม.ค. 2569', [{ name: 'Firefox · Linux', last: 'วันนี้' }]),
+      u('ผู้บริหาร TechNova', 'admin@technova.example', [ms('TechNova', 'owner', '22 โปรเจกต์')], 'Microsoft', true, 'ผูกแล้ว', 'ไทย', 'เมื่อสักครู่', 'ok', '1 ก.พ. 2569', [{ name: 'Edge · Windows', last: 'วันนี้' }, { name: 'Android · LINE', last: 'วันนี้' }]),
+      u('ผู้สมัครใหม่', 'ceo@kanit.example', [ms('Kanit Labs', 'owner', '1 โปรเจกต์')], 'รหัสผ่าน', false, '—', 'ไทย', '12 นาทีก่อน', 'ok', '9 พ.ย. 2569', [{ name: 'Safari · macOS', last: 'วันนี้' }]),
+      u('ยังไม่ยืนยัน', 'newbie@mail.example', [ms('Pixel Forge', 'member', '0 โปรเจกต์')], 'รหัสผ่าน', false, '—', 'ไทย', '—', 'unverified', '1 พ.ย. 2569', []),
+      u('ลูกค้าของลูกค้า', 'client@bank.example', [ms('สยามโค้ด', 'guest', '1 โปรเจกต์')], 'รหัสผ่าน', false, '—', 'ไทย', '2 วันก่อน', 'ok', '20 ส.ค. 2569', [{ name: 'Chrome · Windows', last: '7 พ.ย.' }]),
+      u('PM Orbit', 'ops@orbit.example', [ms('Orbit Apps', 'owner', '11 โปรเจกต์')], 'Google', true, 'ผูกแล้ว', 'ไทย', '1 ชม.ก่อน', 'ok', '3 พ.ค. 2569', [{ name: 'Chrome · macOS', last: 'วันนี้' }]),
+      u('อดีตพนักงานลูกค้า', 'old.pm@lumen.example', [ms('Lumen Studio', 'member', '0 โปรเจกต์')], 'รหัสผ่าน', false, '—', 'ไทย', '41 วันก่อน', 'disabled', '5 เม.ย. 2569', []),
+      u('QA Northwind', 'qa@northwind.example', [ms('Northwind Dev', 'member', '4 โปรเจกต์')], 'Google', false, 'ผูกแล้ว', 'English', 'วันนี้ 09:05', 'ok', '8 ก.พ. 2569', [{ name: 'Chrome · macOS', last: 'วันนี้' }]),
+    ];
+    const fl = this.state.f;
+    const list = all.filter((x) => fl === 'all' || (fl === 'locked' && x.status === st.locked[0]) || (fl === 'unverified' && x.status === st.unverified[0]) || (fl === 'disabled' && x.status === st.disabled[0]) || (fl === 'nomfa' && x.mfa === 'ปิด' && x.memberships.some((m) => m.role === 'Owner' || m.role === 'Admin')));
+    const rows = list.map((x, i) => ({ ...x, rowCls: this.state.drawer && this.state.sel === i ? 'row-on' : '', pick: () => this.setState({ sel: i, drawer: true }) }));
+    const sel = rows[this.state.sel] ?? rows[0] ?? all[0];
+    return { stats, filters, rows, sel, drawerOpen: !!this.state.drawer, closeDrawer: () => this.setState({ drawer: false }) };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · คำขอ PDPA</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f5f6f7}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+.card{background:#fff;border:1px solid #e3e6e9;border-radius:12px;padding:18px 20px;box-sizing:border-box;min-width:0}
+.h2{margin:0;font-size:15px;font-weight:600;color:#24272c}
+.muted{color:#5f656d}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid #cfd4d9;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#f1f3f5;color:#24272c;text-decoration:none}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff}.btn-primary:hover{background:#4a33a8;color:#fff}
+.btn-danger{color:#a01d3c;border-color:#f6b8c6}.btn-danger:hover{background:#fdecf0;color:#a01d3c}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:500;color:#5f656d;font-size:12px;padding:10px 12px;border-bottom:1px solid #e3e6e9;white-space:nowrap;background:#f8f9fa}
+.t td{padding:12px;border-bottom:1px solid #eef0f2;white-space:nowrap;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+.row-on td{background:#f6f2ff}
+.step{display:flex;align-items:flex-start;gap:10px;font-size:13px;padding:8px 0}
+.num-c{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}
+/* ขัดเกลา UI ชุดเดียวกันทุกหน้า */
+body{background:#f4f5f8;-webkit-font-smoothing:antialiased}
+h1{letter-spacing:-.015em}
+.card{border-color:#e6e8ec;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03)}
+.h2{font-weight:650;letter-spacing:-.005em}
+.btn{border-radius:9px;border-color:#d6dae0;box-shadow:0 1px 2px rgba(16,24,40,.05);transition:background .12s,border-color .12s,box-shadow .12s}
+.btn:hover{border-color:#c3c8cf}
+.btn-primary{border-color:#5b3fc4;box-shadow:0 1px 2px rgba(91,63,196,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+.btn-primary:hover{border-color:#4a33a8}
+.btn-danger{border-color:#f6b8c6}.btn-ok{border-color:#1e7a4f}
+.pill{font-weight:600;letter-spacing:.01em}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.sw:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+table.t th{background:#fafbfc;color:#6b717a;font-weight:600;border-bottom-color:#eceef1}
+table.t tbody tr:hover td{background:#fafaff}
+.in,.sel,textarea{transition:border-color .12s,box-shadow .12s}
+.in:focus,.sel:focus,textarea:focus{outline:none;border-color:#6b4fd8;box-shadow:0 0 0 3px #efe9fd}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c; background: #f5f6f7">
+  <div style="flex: 1 1 232px; max-width: 100%; background: #141619">
+    <dc-import name="Sidebar" active="privacy" hint-size="100%,1480px"></dc-import>
+  </div>
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+    <div style="margin: -24px -28px 4px"><dc-import name="Topbar" group="ความปลอดภัยและกฎหมาย" group-href="Privacy.dc.html" page="คำขอ PDPA" phase="1" hint-size="100%,60px"></dc-import></div>
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px">
+      <div style="flex: 1 1 320px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700">คำขอ PDPA และการเก็บข้อมูล</h1>
+        <p class="muted" style="margin: 4px 0 0; font-size: 13px">คำขอจากเจ้าของข้อมูลต้องตอบภายใน 30 วัน · เหตุละเมิดข้อมูลต้องแจ้ง สคส. ภายใน 72 ชั่วโมง</p>
+      </div>
+      <button type="button" class="btn">บันทึกคำขอที่มาทางอีเมล</button>
+      <button type="button" class="btn btn-danger">แจ้งเหตุละเมิดข้อมูล</button>
+    </section>
+
+    <section aria-label="สรุป" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px">
+      <sc-for list="{{stats}}" as="s" hint-placeholder-count="4">
+        <div class="card" style="padding: 14px 16px">
+          <div class="muted" style="font-size: 12px">{{s.label}}</div>
+          <div class="num" style="font-size: 22px; font-weight: 700; margin-top: 4px; color: {{s.color}}">{{s.value}}</div>
+        </div>
+      </sc-for>
+    </section>
+
+    <section>
+      <div class="card" style="padding: 0; overflow: hidden">
+        <div style="padding: 14px 16px; border-bottom: 1px solid #eceef1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><h2 class="h2">คำขอจากเจ้าของข้อมูล</h2><span class="muted" style="font-size: 12px; margin-left: auto">กดแถวเพื่อดูขั้นตอนและดำเนินการ</span></div>
+        <div style="overflow-x: auto">
+          <table class="t">
+            <thead><tr><th scope="col">เลขคำขอ</th><th scope="col">ประเภท</th><th scope="col">ผู้ขอ</th><th scope="col">Workspace</th><th scope="col">ยืนยันตัวตน</th><th scope="col">ครบกำหนด</th><th scope="col">สถานะ</th></tr></thead>
+            <tbody>
+              <sc-for list="{{requests}}" as="r" hint-placeholder-count="6">
+                <tr class="{{r.rowCls}}" onClick="{{r.pick}}" style="cursor: pointer">
+                  <td class="mono" style="font-size: 12px">{{r.no}}</td>
+                  <td><span class="{{r.typeCls}}">{{r.type}}</span></td>
+                  <td>{{r.who}}</td>
+                  <td class="muted">{{r.ws}}</td>
+                  <td><span class="{{r.idCls}}">{{r.id}}</span></td>
+                  <td><span class="{{r.dueCls}} num">{{r.due}}</span></td>
+                  <td>{{r.status}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <sc-if value="{{drawerOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closeDrawer}}" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,22,25,.32); z-index: 20"></div>
+      <aside class="card" role="dialog" aria-label="รายละเอียดคำขอ" style="position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100%); border-radius: 16px 0 0 16px; z-index: 21; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 22px 24px; box-shadow: -12px 0 40px rgba(16,24,40,.18)">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span class="mono muted" style="font-size: 12px">{{selNo}}</span>
+          <span class="{{selTypeCls}}">{{selType}}</span>
+          <span class="{{selDueCls}}" style="margin-left: auto">{{selDue}}</span>
+          <button type="button" class="btn btn-sm" aria-label="ปิด" onClick="{{closeDrawer}}" style="width: 34px; padding: 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+        </div>
+        <p class="muted" style="margin: 0; font-size: 13px">ผู้ขอ: {{selWho}} · Workspace: {{selWs}}</p>
+        <div>
+          <sc-for list="{{steps}}" as="st" hint-placeholder-count="5">
+            <div class="step">
+              <span class="num-c" style="background: {{st.bg}}; color: {{st.fg}}">{{st.n}}</span>
+              <span style="display: flex; flex-direction: column; gap: 2px"><b style="font-weight: 600">{{st.title}}</b><span class="muted" style="font-size: 12px">{{st.text}}</span></span>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{notErase}}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 10px 12px; border-radius: 10px; background: #f6f2ff; font-size: 13px">ขั้นตอนเหมือนกันทุกประเภท · ขั้นที่ 4 จะเปลี่ยนตามคำขอ เช่น รวบรวมไฟล์ส่งออก แก้ข้อมูล หรือหยุดใช้ข้อมูลตามที่คัดค้าน</div>
+          <div style="display: flex; gap: 8px"><button type="button" class="btn btn-primary" style="flex: 1">ดำเนินการขั้นถัดไป</button><button type="button" class="btn">ปฏิเสธพร้อมเหตุผล</button></div>
+        </sc-if>
+        <sc-if value="{{isErase}}" hint-placeholder-val="{{ true }}">
+        <div style="padding: 10px 12px; border-radius: 10px; background: #f8f9fa; font-size: 12px; display: flex; flex-direction: column; gap: 4px">
+          <b style="font-size: 13px">สิ่งที่จะถูกลบ / ทำให้ระบุตัวไม่ได้</b>
+          <span>บัญชีผู้ใช้ รูปโปรไฟล์ อีเมล เบอร์โทร การผูก LINE</span>
+          <span>คอมเมนต์และงานที่เคยทำ: เปลี่ยนชื่อเป็น "ผู้ใช้ที่ลบแล้ว" (งานของลูกค้ายังอยู่)</span>
+          <span class="muted">เก็บต่อตามกฎหมาย: ใบกำกับภาษีที่ออกในชื่อบริษัท 5 ปี</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <button type="button" class="btn btn-danger" style="flex: 1">ลบตามคำขอ (ต้องมีคนที่สองอนุมัติ)</button>
+          <button type="button" class="btn">ปฏิเสธพร้อมเหตุผล</button>
+        </div>
+        </sc-if>
+      </aside>
+      </sc-if>
+    </section>
+
+    <section style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+      <div class="card" style="flex: 1 1 460px; padding: 0; overflow: hidden">
+        <div style="padding: 14px 16px; border-bottom: 1px solid #e3e6e9; display: flex; align-items: center; gap: 8px">
+          <h2 class="h2">Workspace ที่รอลบ</h2>
+          <span class="muted" style="font-size: 12px">ระยะผ่อนผัน 30 วัน · ลูกค้ากู้คืนเองได้จนกว่าจะครบ</span>
+        </div>
+        <div style="overflow-x: auto">
+          <table class="t">
+            <thead><tr><th scope="col">Workspace</th><th scope="col">ขอลบโดย</th><th scope="col">ลบจริง</th><th scope="col"><span style="position: absolute; left: -9999px">การกระทำ</span></th></tr></thead>
+            <tbody>
+              <sc-for list="{{deletions}}" as="d" hint-placeholder-count="3">
+                <tr><td style="font-weight: 500">{{d.ws}}</td><td class="muted">{{d.by}}</td><td><span class="{{d.cls}}">{{d.when}}</span></td><td><button type="button" class="btn" style="min-height: 30px; padding: 0 10px">{{d.action}}</button></td></tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="flex: 1 1 460px; padding: 0; overflow: hidden">
+        <div style="padding: 14px 16px; border-bottom: 1px solid #e3e6e9; display: flex; align-items: center; gap: 8px">
+          <h2 class="h2">นโยบายการเก็บข้อมูล</h2>
+          <span class="muted" style="font-size: 12px">ระบบลบเองเมื่อครบ ยกเว้นมี Legal hold</span>
+        </div>
+        <div style="overflow-x: auto">
+          <table class="t">
+            <thead><tr><th scope="col">ข้อมูล</th><th scope="col">เก็บนาน</th><th scope="col">เหตุผล</th></tr></thead>
+            <tbody>
+              <sc-for list="{{retention}}" as="r" hint-placeholder-count="6">
+                <tr><td>{{r.what}}</td><td class="num" style="font-weight: 600">{{r.keep}}</td><td class="muted" style="white-space: normal">{{r.why}}</td></tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <div style="padding: 12px 16px; border-top: 1px solid #eef0f2; font-size: 13px; display: flex; align-items: center; gap: 8px">
+          <span class="pill p-red">Legal hold 1</span>
+          <span>Bangsue Data · ห้ามลบระหว่างข้อพิพาทการชำระเงิน</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  state = { sel: 0 };
+  renderVals() {
+    const stats = [
+      { label: 'คำขอที่เปิดอยู่', value: '5', color: '#24272c' },
+      { label: 'ใกล้ครบกำหนด (≤ 7 วัน)', value: '2', color: '#7a4700' },
+      { label: 'เกินกำหนด', value: '0', color: '#17633f' },
+      { label: 'เวลาตอบเฉลี่ย 90 วัน', value: '6 วัน', color: '#24272c' },
+    ];
+    const type = { erase: ['ขอลบข้อมูล', 'pill p-red'], export: ['ขอสำเนา / ส่งออก', 'pill p-purple'], fix: ['ขอแก้ไข', 'pill p-teal'], object: ['คัดค้าน / ระงับการใช้', 'pill p-amber'] };
+    const raw = [
+      ['DSR-0019', 'erase', 'former.dev@example.com', 'Lumen Studio, Pixel Forge', ['ยืนยันแล้ว', 'pill p-green'], ['เหลือ 6 วัน', 'pill p-amber'], 'รออนุมัติการลบ'],
+      ['DSR-0021', 'export', 'pm@northwind.example', 'Northwind Dev', ['ยืนยันแล้ว', 'pill p-green'], ['เหลือ 4 วัน', 'pill p-amber'], 'กำลังรวบรวมไฟล์'],
+      ['DSR-0022', 'fix', 'qa@kanit.example', 'Kanit Labs', ['รอผู้ขอ', 'pill p-amber'], ['เหลือ 18 วัน', 'pill p-gray'], 'ขอเอกสารยืนยันตัวตน'],
+      ['DSR-0023', 'object', 'guest@client.example', 'TechNova', ['ยืนยันแล้ว', 'pill p-green'], ['เหลือ 25 วัน', 'pill p-gray'], 'ส่งให้ Workspace ตัดสิน'],
+      ['DSR-0024', 'export', 'dev@pixelforge.example', 'Pixel Forge', ['ยังไม่ยืนยัน', 'pill p-gray'], ['เหลือ 29 วัน', 'pill p-gray'], 'รับคำขอแล้ว'],
+    ];
+    const requests = raw.map(([no, t, who, ws, id, due, status], i) => ({
+      no, who, ws, status, type: type[t][0], typeCls: type[t][1], id: id[0], idCls: id[1], due: due[0], dueCls: due[1],
+      rowCls: this.state.drawer && this.state.sel === i ? 'row-on' : '', pick: () => this.setState({ sel: i, drawer: true }),
+    }));
+    const r = requests[this.state.sel] ?? requests[0];
+    const erase = r.type === type.erase[0];
+    const done = (n, title, text) => ({ n, title, text, bg: '#e3f6ec', fg: '#17633f' });
+    const now = (n, title, text) => ({ n, title, text, bg: '#5b3fc4', fg: '#fff' });
+    const next = (n, title, text) => ({ n, title, text, bg: '#eef0f2', fg: '#5f656d' });
+    const steps = [
+      done('1', 'รับคำขอ', '9 ต.ค. ผ่านฟอร์มในหน้า Profile'),
+      done('2', 'ยืนยันตัวตน', 'ยืนยันผ่านอีเมลที่ลงทะเบียน + รหัส 6 หลัก'),
+      done('3', 'แจ้ง Workspace ที่เกี่ยวข้อง', 'แจ้ง Owner ของ 2 Workspace ให้โอนงานที่ค้างก่อน'),
+      now('4', 'ลบ / ทำให้ระบุตัวไม่ได้', 'รอ Owner อนุมัติ'),
+      next('5', 'ตอบกลับผู้ขอ', 'ส่งหนังสือยืนยันการลบ พร้อมรายการที่ต้องเก็บตามกฎหมาย'),
+    ];
+    const deletions = [
+      { ws: 'Mekong Systems', by: 'Owner · 2 พ.ย.', when: 'อีก 23 วัน', cls: 'pill p-gray', action: 'ดูรายละเอียด' },
+      { ws: 'Old Demo Co.', by: 'ระบบ · ไม่ใช้งาน 12 เดือน', when: 'อีก 4 วัน', cls: 'pill p-amber', action: 'เลื่อนการลบ' },
+      { ws: 'Bangsue Data', by: 'Owner · 30 ต.ค.', when: 'ระงับไว้ (Legal hold)', cls: 'pill p-red', action: 'ดูเหตุผล' },
+    ];
+    const retention = [
+      { what: 'ข้อมูลงานของ Workspace ที่ยกเลิก', keep: '90 วัน', why: 'ให้ลูกค้ากลับมาหรือส่งออกได้' },
+      { what: 'ถังขยะ (งาน / ไฟล์ที่ลบ)', keep: '30 วัน', why: 'กู้คืนสิ่งที่ลบผิด' },
+      { what: 'Activity และ Audit log ของลูกค้า', keep: 'ตามแพ็กเกจ', why: 'Free 30 วัน · Team 1–3 ปี' },
+      { what: 'Log ระบบ (IP, User agent)', keep: '90 วัน', why: 'ความปลอดภัยและสืบสวนเหตุ' },
+      { what: 'ใบกำกับภาษีและหลักฐานการชำระ', keep: '5 ปี', why: 'ประมวลรัษฎากร' },
+      { what: 'Audit log ของทีม Friday', keep: '2 ปี', why: 'ตรวจสอบการเข้าถึงข้อมูลลูกค้า' },
+    ];
+    return { stats, requests, steps, deletions, retention,
+      drawerOpen: !!this.state.drawer, closeDrawer: () => this.setState({ drawer: false }), isErase: erase, notErase: !erase,
+      selNo: r.no, selType: r.type, selTypeCls: r.typeCls, selDue: r.due, selDueCls: r.dueCls, selWho: r.who, selWs: r.ws };
+  }
+}
+</script>
+</body>
+</html>

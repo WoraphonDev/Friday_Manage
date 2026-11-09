@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · แถบบน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+.tb-a{color:#5f656d;text-decoration:none}
+.tb-a:hover{color:#24272c;text-decoration:underline}
+.tb-icon{position:relative;width:38px;height:38px;border-radius:10px;border:1px solid transparent;background:transparent;display:inline-flex;align-items:center;justify-content:center;color:#3a3f45;cursor:pointer}
+.tb-icon:hover{background:#f1f3f5;border-color:#e3e6e9}
+.tb-icon:focus-visible,.tb-search input:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+.tb-dot{position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#c8264a;color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border:2px solid #fff}
+.tb-search{transition:border-color .12s,box-shadow .12s}
+.tb-search:focus-within{border-color:#6b4fd8;box-shadow:0 0 0 3px #efe9fd;background:#fff}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<header style="box-sizing: border-box; width: 100%; min-height: 60px; padding: 10px 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; background: rgba(255,255,255,.92); border-bottom: 1px solid #e6e8ec; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c">
+  <nav aria-label="ตำแหน่ง" style="display: flex; align-items: center; gap: 8px; font-size: 13px; flex: 0 1 auto; min-width: 0">
+    <a class="tb-a" href="Main.dc.html">Friday Ops</a>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa1a9" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+    <a class="tb-a" href="{{groupHref}}">{{group}}</a>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa1a9" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+    <span aria-current="page" style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{page}}</span>
+    <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: {{phaseBg}}; color: {{phaseFg}}; white-space: nowrap">{{phaseLabel}}</span>
+  </nav>
+  <label class="tb-search" style="flex: 1 1 280px; max-width: 520px; margin-left: auto; display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 10px 0 12px; border: 1px solid #e3e6e9; border-radius: 10px; background: #f6f7f9">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5f656d" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+    <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">ค้นหาทั้งระบบ</span>
+    <input type="search" placeholder="ค้นหาลูกค้า ผู้ใช้ ใบแจ้งหนี้ Ticket…" style="flex: 1; border: 0; outline: none; font: inherit; font-size: 13px; background: transparent; min-width: 0; color: #24272c">
+    <kbd style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5f656d; background: #fff; border: 1px solid #e3e6e9; border-radius: 6px; padding: 1px 6px">Ctrl K</kbd>
+  </label>
+  <div style="display: flex; align-items: center; gap: 4px">
+    <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; background: #fff6d9; color: #7a4700; font-size: 12px; font-weight: 600; margin-right: 6px">ข้อมูลตัวอย่าง</span>
+    <button type="button" class="tb-icon" aria-label="คู่มือการใช้ Friday Ops">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"></path></svg>
+    </button>
+    <button type="button" class="tb-icon" aria-label="การแจ้งเตือน 3 รายการ">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+      <span class="tb-dot" aria-hidden="true">3</span>
+    </button>
+    <button type="button" class="tb-icon" aria-label="บัญชี Friday Owner" style="width: auto; padding: 0 6px; gap: 8px">
+      <span aria-hidden="true" style="width: 28px; height: 28px; border-radius: 50%; background: #efe9fd; color: #5b3fc4; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">FA</span>
+    </button>
+  </div>
+</header>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"group":{"editor":null,"default":"ภาพรวม"},"page":{"editor":null,"default":"แดชบอร์ด"},"groupHref":{"editor":null,"default":"Main.dc.html"},"phase":{"editor":null,"default":"1"},"$preview":{"width":1200,"height":60}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const ph = String(this.props.phase ?? '1');
+    const tone = { '1': ['#e3f6ec', '#17633f'], '2': ['#efe9fd', '#5b3fc4'], '3': ['#eef0f2', '#3a3f45'] }[ph] || ['#eef0f2', '#3a3f45'];
+    return { group: this.props.group ?? 'ภาพรวม', page: this.props.page ?? 'แดชบอร์ด', groupHref: this.props.groupHref ?? 'Main.dc.html', phaseLabel: 'เฟส ' + ph, phaseBg: tone[0], phaseFg: tone[1] };
+  }
+}
+</script>
+</body>
+</html>

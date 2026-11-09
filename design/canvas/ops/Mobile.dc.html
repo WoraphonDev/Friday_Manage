@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · มือถือ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f8;-webkit-font-smoothing:antialiased}
+.board{max-width:1440px;margin:0 auto;padding:36px 40px 56px;box-sizing:border-box;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;color:#24272c}
+.muted{color:#5f656d}.num{font-variant-numeric:tabular-nums}.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid #d6dae0;background:#fff;color:#24272c;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff}
+.btn-ok{background:#1e7a4f;border-color:#1e7a4f;color:#fff}
+.btn-danger{background:#fff;border-color:#f6b8c6;color:#a01d3c}
+.btn-sm{min-height:36px;padding:0 12px;font-size:13px;border-radius:10px}
+.btn:focus-visible,button:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+.phones{display:grid;grid-template-columns:repeat(auto-fit,minmax(390px,1fr));gap:32px;justify-items:center}
+.col{display:flex;flex-direction:column;gap:12px;width:390px}
+.cap{display:flex;align-items:center;gap:8px}
+.id{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px;background:#24272c;color:#fff}
+.phone{width:390px;height:800px;border-radius:44px;background:#141619;padding:12px;box-sizing:border-box;box-shadow:0 30px 60px rgba(16,24,40,.25)}
+.screen{width:100%;height:100%;border-radius:34px;background:#f4f5f8;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.sb{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:13px;font-weight:600;flex:none}
+.top{display:flex;align-items:center;gap:10px;padding:6px 16px 10px;flex:none}
+.top h2{margin:0;font-size:20px;font-weight:700;flex:1}
+.icon{width:40px;height:40px;border-radius:12px;border:0;background:#fff;display:flex;align-items:center;justify-content:center;color:#3a3f45;position:relative;cursor:pointer;box-shadow:0 1px 2px rgba(16,24,40,.06)}
+.dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#c8264a;border:2px solid #fff}
+.body{flex:1;overflow-y:auto;padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.card{background:#fff;border:1px solid #e6e8ec;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;text-align:left;font:inherit;color:inherit}
+button.card{cursor:pointer;width:100%}
+.nav{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid #e6e8ec;padding:6px 6px 18px;flex:none}
+.nav span{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:#5f656d;padding:4px 0}
+.nav span.on{color:#5b3fc4;font-weight:600}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;box-shadow:0 -12px 40px rgba(16,24,40,.22);padding:10px 16px 24px;display:flex;flex-direction:column;gap:12px;z-index:3}
+.grab{width:40px;height:5px;border-radius:3px;background:#d6dae0;align-self:center}
+.dim{position:absolute;inset:0;background:rgba(20,22,25,.40);z-index:2}
+.kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:6px 10px;font-size:13px}
+.kv .k{color:#5f656d}
+.seg{display:flex;padding:3px;background:#eef0f2;border-radius:12px;gap:2px;flex-wrap:wrap}
+.seg button{flex:1 1 0;white-space:nowrap;border:0;background:transparent;font:inherit;font-size:12px;padding:8px 8px;border-radius:9px;color:#5f656d;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+textarea{border:1px solid #868c94;border-radius:12px;padding:10px 12px;font:inherit;font-size:14px;resize:none}
+.sw{position:relative;width:44px;height:26px;border-radius:999px;border:0;background:#cdd2d7;cursor:pointer;padding:0;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.sw[aria-checked="true"]{background:#5b3fc4}.sw[aria-checked="true"]::after{left:21px}
+.notes{margin:0;padding-left:18px;font-size:12px;color:#3a3f45;line-height:1.7}
+</style>
+</helmet>
+<div class="board">
+  <header style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px">
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">M6 · Friday Ops บนมือถือ</h1>
+    <p class="muted" style="margin: 0; font-size: 14px; max-width: 980px">3 งานที่มักต้องทำนอกเวลาทำงาน ออกแบบให้ทำจบบนมือถือได้ · หน้าอื่นบนมือถือดูได้อย่างเดียว (ตารางเลื่อนแนวนอน เมนูซ้ายย่อเป็นปุ่มเมนู) · กดได้จริงทุกจอ</p>
+  </header>
+  <div class="phones">
+
+    <!-- 1 · อนุมัติ -->
+    <div class="col">
+      <div class="cap"><span class="id">M6.1</span><b>อนุมัติ</b><span class="muted" style="font-size: 12px">เปิดจากแจ้งเตือนในมือถือ</span></div>
+      <div class="phone"><div class="screen">
+        <div class="sb"><span>21:42</span><span>●●● 5G</span></div>
+        <sc-if value="{{a.list}}" hint-placeholder-val="{{ true }}">
+        <div class="top"><h2>รออนุมัติ</h2><button type="button" class="icon" aria-label="แจ้งเตือน">🔔<span class="dot"></span></button></div>
+        <div class="body">
+          <sc-for list="{{a.items}}" as="p" hint-placeholder-count="2">
+            <button type="button" class="card" onClick="{{p.open}}">
+              <span style="display: flex; align-items: center; gap: 8px"><span class="{{p.cls}}">{{p.type}}</span><b>{{p.ws}}</b><b class="num" style="margin-left: auto; font-size: 16px">{{p.amount}}</b></span>
+              <span class="muted" style="font-size: 12px">{{p.meta}}</span>
+              <span style="font-size: 12px; color: #7a4700">{{p.rule}}</span>
+            </button>
+          </sc-for>
+          <div class="card" style="gap: 6px"><b style="font-size: 13px">ตัดสินแล้ววันนี้</b>
+            <span style="display: flex; justify-content: space-between; font-size: 13px"><span>เครดิต Orbit Apps ฿2,000</span><span class="pill p-green">อนุมัติ</span></span>
+            <span style="display: flex; justify-content: space-between; font-size: 13px"><span>คืนเงิน Pixel Forge ฿18,000</span><span class="pill p-red">ไม่อนุมัติ</span></span></div>
+          <sc-if value="{{a.empty}}" hint-placeholder-val="{{ false }}">
+            <div class="card" style="align-items: center; text-align: center; padding: 28px 14px"><span style="font-size: 28px">✓</span><b>ไม่มีรายการรออนุมัติ</b><button type="button" class="btn btn-sm" onClick="{{a.reset}}">เริ่มใหม่ (ต้นแบบ)</button></div>
+          </sc-if>
+        </div>
+        </sc-if>
+        <sc-if value="{{a.detail}}" hint-placeholder-val="{{ false }}">
+        <div class="top"><button type="button" class="icon" aria-label="ย้อนกลับ" onClick="{{a.back}}">‹</button><h2 style="font-size: 17px">{{a.cur.type}} {{a.cur.ws}}</h2></div>
+        <div class="body">
+          <div class="card" style="align-items: center; text-align: center"><span class="muted" style="font-size: 12px">ยอด</span><b class="num" style="font-size: 28px">{{a.cur.amount}}</b><span class="muted" style="font-size: 12px">{{a.cur.meta}}</span></div>
+          <div class="card"><div class="kv"><span class="k">เหตุผลผู้ขอ</span><span>{{a.cur.reason}}</span><span class="k">กฎ</span><span>{{a.cur.rule}}</span><span class="k">ลูกค้า</span><span>{{a.cur.fact}}</span></div></div>
+          <textarea rows="2" aria-label="หมายเหตุผู้อนุมัติ" placeholder="หมายเหตุ (ไม่บังคับ)"></textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; padding: 12px 16px 28px; background: #fff; border-top: 1px solid #e6e8ec">
+          <button type="button" class="btn btn-danger" onClick="{{a.reject}}">ไม่อนุมัติ</button>
+          <button type="button" class="btn btn-ok" onClick="{{a.approve}}">อนุมัติ</button>
+        </div>
+        </sc-if>
+        <sc-if value="{{a.key}}" hint-placeholder-val="{{ false }}">
+        <div class="dim"></div>
+        <div class="sheet"><span class="grab"></span>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0"><span style="width: 64px; height: 64px; border-radius: 50%; background: #efe9fd; color: #5b3fc4; display: flex; align-items: center; justify-content: center; font-size: 26px">🔑</span><b>ยืนยันด้วย Passkey ในมือถือ</b><span class="muted" style="font-size: 12px">Face ID / ลายนิ้วมือ · หรือแตะ Security key ที่หลังเครื่อง</span></div>
+          <button type="button" class="btn btn-primary" onClick="{{a.confirm}}">จำลอง: ยืนยันแล้ว</button>
+          <button type="button" class="btn" onClick="{{a.cancelKey}}">ยกเลิก</button>
+        </div>
+        </sc-if>
+        <sc-if value="{{a.done}}" hint-placeholder-val="{{ false }}">
+        <div class="body" style="align-items: center; justify-content: center; text-align: center; gap: 10px">
+          <span style="width: 72px; height: 72px; border-radius: 50%; background: #e3f6ec; color: #17633f; display: flex; align-items: center; justify-content: center; font-size: 34px">✓</span>
+          <b style="font-size: 18px">{{a.doneText}}</b>
+          <span class="muted" style="font-size: 13px">บันทึกใน Audit log · แจ้งผู้ขอแล้ว</span>
+          <button type="button" class="btn" onClick="{{a.back}}" style="margin-top: 8px">กลับไปรายการ</button>
+        </div>
+        </sc-if>
+        <nav class="nav" aria-label="เมนู"><span class="on"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><rect x="3" y="3" width="18" height="18" rx="4"/></svg>อนุมัติ</span><span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg>คิวชำระ</span><span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>เหตุขัดข้อง</span><span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>เมนู</span></nav>
+      </div></div>
+      <ul class="notes"><li>อนุมัติต้องยืนยันด้วย Passkey ทุกครั้ง · ปุ่มสูง 44 px ขึ้นไป</li><li>แสดงข้อมูลลูกค้าพอให้ตัดสินได้ ไม่ต้องเปิดหน้าอื่น</li></ul>
+    </div>
+
+    <!-- 2 · เหตุขัดข้อง -->
+    <div class="col">
+      <div class="cap"><span class="id">M6.2</span><b>เหตุขัดข้อง</b><span class="muted" style="font-size: 12px">เปิดจากแจ้งเตือน "Error rate เกิน"</span></div>
+      <div class="phone"><div class="screen">
+        <div class="sb"><span>02:14</span><span>●●● 5G</span></div>
+        <div class="top"><h2>เหตุขัดข้อง</h2><span class="pill p-red">1 เปิดอยู่</span></div>
+        <div class="body">
+          <div class="card">
+            <span style="display: flex; align-items: center; gap: 8px"><span class="{{inc.cls}}">{{inc.label}}</span><span class="muted" style="font-size: 12px; margin-left: auto">เปิด 01:52</span></span>
+            <b style="font-size: 16px">นำเข้า Excel ช้ากว่าปกติ</b>
+            <span class="muted" style="font-size: 12px">กระทบ: นำเข้า / ส่งออก Excel · ผลกระทบบางส่วน</span>
+          </div>
+          <div class="card">
+            <b style="font-size: 13px">สถานะใหม่</b>
+            <div class="seg" role="group" aria-label="สถานะ"><sc-for list="{{inc.states}}" as="s" hint-placeholder-count="4"><button type="button" aria-pressed="{{s.on}}" onClick="{{s.pick}}">{{s.label}}</button></sc-for></div>
+            <div role="textbox" aria-label="ข้อความอัปเดต" style="border: 1px solid #868c94; border-radius: 12px; padding: 10px 12px; font-size: 14px; line-height: 1.5; min-height: 66px">{{inc.text}}</div>
+            <span style="display: flex; align-items: center; gap: 10px; font-size: 13px"><button type="button" class="sw" role="switch" aria-checked="{{inc.mail}}" aria-label="อีเมลถึงผู้ติดตาม" onClick="{{inc.toggleMail}}"></button>อีเมลถึงผู้ติดตาม (214)</span>
+          </div>
+          <div class="card">
+            <b style="font-size: 13px">อัปเดตที่ผ่านมา</b>
+            <sc-for list="{{inc.log}}" as="l" hint-placeholder-count="2"><span style="display: grid; grid-template-columns: 44px 1fr; gap: 8px; font-size: 13px"><span class="muted num">{{l.t}}</span><span>{{l.x}}</span></span></sc-for>
+          </div>
+          <div class="card">
+            <b style="font-size: 13px">บริการ</b>
+            <sc-for list="{{inc.svc}}" as="v" hint-placeholder-count="4"><span style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span style="width: 8px; height: 8px; border-radius: 50%; background: {{v.dot}}"></span>{{v.name}}<span class="muted" style="margin-left: auto; font-size: 12px">{{v.state}}</span></span></sc-for>
+          </div>
+        </div>
+        <div style="padding: 12px 16px 10px; background: #fff; border-top: 1px solid #e6e8ec"><button type="button" class="btn btn-primary" style="width: 100%" onClick="{{inc.publish}}">{{inc.btn}}</button></div>
+        <nav class="nav" aria-label="เมนู"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><rect x="3" y="3" width="18" height="18" rx="4"/></svg>อนุมัติ</span><span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg>คิวชำระ</span><span class="on"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>เหตุขัดข้อง</span><span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>เมนู</span></nav>
+      </div></div>
+      <ul class="notes"><li>เปลี่ยนสถานะแล้วข้อความแนะนำเปลี่ยนตาม แก้ต่อได้</li><li>ปุ่มเผยแพร่อยู่ล่างจอ กดได้ด้วยนิ้วโป้ง</li></ul>
+    </div>
+
+    <!-- 3 · คิวชำระ -->
+    <div class="col">
+      <div class="cap"><span class="id">M6.3</span><b>คิวชำระผิดปกติ</b><span class="muted" style="font-size: 12px">เปิดจากแจ้งเตือน "ใกล้ครบ SLA"</span></div>
+      <div class="phone"><div class="screen">
+        <div class="sb"><span>17:05</span><span>●●● 5G</span></div>
+        <div class="top"><h2>คิวชำระ</h2><span class="pill p-amber">{{q.count}} รายการ</span></div>
+        <div class="body">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+            <div class="card" style="gap: 2px"><span class="muted" style="font-size: 12px">ยืนยันเองวันนี้</span><b class="num" style="font-size: 20px">91%</b></div>
+            <div class="card" style="gap: 2px"><span class="muted" style="font-size: 12px">ใกล้ครบ SLA</span><b class="num" style="font-size: 20px; color: #a01d3c">1</b></div>
+          </div>
+          <sc-for list="{{q.items}}" as="c" hint-placeholder-count="4">
+            <button type="button" class="card" onClick="{{c.open}}">
+              <span style="display: flex; align-items: center; gap: 8px"><span class="{{c.cls}}">{{c.type}}</span><span class="{{c.waitCls}}" style="margin-left: auto; font-size: 12px">{{c.wait}}</span></span>
+              <b>{{c.ws}}</b>
+              <span class="muted" style="font-size: 12px">แนะนำ: {{c.hint}}</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{q.empty}}" hint-placeholder-val="{{ false }}">
+            <div class="card" style="align-items: center; text-align: center; padding: 28px 14px"><span style="font-size: 28px">✓</span><b>ไม่มีกรณีผิดปกติ</b><button type="button" class="btn btn-sm" onClick="{{q.reset}}">เริ่มใหม่ (ต้นแบบ)</button></div>
+          </sc-if>
+        </div>
+        <sc-if value="{{q.open}}" hint-placeholder-val="{{ false }}">
+        <div class="dim" onClick="{{q.close}}"></div>
+        <div class="sheet"><span class="grab"></span>
+          <span style="display: flex; align-items: center; gap: 8px"><span class="{{q.cur.cls}}">{{q.cur.type}}</span><b>{{q.cur.ws}}</b></span>
+          <div style="padding: 10px 12px; border-radius: 12px; background: #f6f2ff; border: 1px solid #e4dbfb; font-size: 13px"><b style="color: #5b3fc4; font-size: 12px; display: block">ระบบแนะนำ</b>{{q.cur.advice}}</div>
+          <sc-for list="{{q.cur.checks}}" as="k" hint-placeholder-count="3"><span style="display: flex; gap: 8px; font-size: 13px; align-items: center"><span class="{{k.cls}}">{{k.tag}}</span>{{k.text}}</span></sc-for>
+          <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; margin-top: 4px">
+            <button type="button" class="btn btn-danger" onClick="{{q.reject}}">{{q.cur.no}}</button>
+            <button type="button" class="btn btn-ok" onClick="{{q.pass}}">{{q.cur.yes}}</button>
+          </div>
+        </div>
+        </sc-if>
+        <sc-if value="{{q.toastOn}}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="position: absolute; left: 16px; right: 16px; bottom: 92px; z-index: 4; display: flex; gap: 10px; align-items: center; padding: 12px 14px; background: #24272c; color: #fff; border-radius: 14px; font-size: 13px">✓ <span style="flex: 1">{{q.toast}}</span><button type="button" class="btn btn-sm" onClick="{{q.closeToast}}" style="min-height: 30px; background: transparent; color: #fff; border-color: #5f656d">ปิด</button></div>
+        </sc-if>
+        <nav class="nav" aria-label="เมนู"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><rect x="3" y="3" width="18" height="18" rx="4"/></svg>อนุมัติ</span><span class="on"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg>คิวชำระ</span><span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>เหตุขัดข้อง</span><span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>เมนู</span></nav>
+      </div></div>
+      <ul class="notes"><li>การ์ดบอกสิ่งที่ระบบแนะนำ ตัดสินได้จาก bottom sheet โดยไม่ออกจากรายการ</li><li>กรณีซับซ้อน (ผูกใบแจ้งหนี้อื่น, 50 ทวิ) มีปุ่ม "ทำต่อบนคอมพิวเตอร์"</li></ul>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  state = { aScr: 'list', aSel: 0, aDone: {}, aText: '', incS: 1, mail: true, published: false, qOpen: null, qDone: {}, qToast: '' };
+  renderVals() {
+    const st = this.state;
+    // 1 · อนุมัติ
+    const ap = [
+      { type: 'คืนเงิน', cls: 'pill p-red', ws: 'Kanit Labs', amount: '฿12,600', meta: 'ขอโดย Friday Finance · 40 นาทีที่แล้ว', rule: 'ต้องอนุมัติ: คืนเงินเกิน ฿10,000', reason: 'ลูกค้าโอนซ้ำ ยอดตรงกับใบแจ้งหนี้ คืนเข้าบัญชีเดิม', fact: 'สมัคร 28 ต.ค. · จ่าย 1 รอบ · ไม่เคยขอคืน' },
+      { type: 'ส่วนลด', cls: 'pill p-purple', ws: 'Northwind Dev', amount: '35% · 12 รอบ', meta: 'ขอโดย Support A · 2 ชม.ที่แล้ว', rule: 'ต้องอนุมัติ: ส่วนลดเกิน 30%', reason: 'ต่อสัญญารายปี ลูกค้าเทียบราคากับคู่แข่ง', fact: 'ลูกค้า 14 เดือน · จ่ายตรงทุกรอบ' },
+    ];
+    const left = ap.map((p, i) => ({ ...p, i })).filter((p) => !st.aDone[p.i]);
+    const cur = ap[st.aSel];
+    const finishA = (txt) => this.setState({ aScr: 'done', aDone: { ...st.aDone, [st.aSel]: true }, aText: txt });
+    const a = {
+      list: st.aScr === 'list', detail: st.aScr === 'detail' || st.aScr === 'key', key: st.aScr === 'key', done: st.aScr === 'done',
+      items: left.map((p) => ({ ...p, open: () => this.setState({ aScr: 'detail', aSel: p.i }) })), empty: left.length === 0, cur, doneText: st.aText,
+      back: () => this.setState({ aScr: 'list' }), approve: () => this.setState({ aScr: 'key' }), cancelKey: () => this.setState({ aScr: 'detail' }),
+      confirm: () => finishA('อนุมัติ' + cur.type + ' ' + cur.ws + ' แล้ว'), reject: () => finishA('ไม่อนุมัติ' + cur.type + ' ' + cur.ws),
+      reset: () => this.setState({ aDone: {}, aScr: 'list' }),
+    };
+    // 2 · เหตุขัดข้อง
+    const labels = ['ตรวจสอบ', 'พบสาเหตุ', 'ติดตาม', 'แก้แล้ว'];
+    const clsOf = ['pill p-red', 'pill p-amber', 'pill p-amber', 'pill p-green'];
+    const texts = ['กำลังตรวจสอบสาเหตุ การนำเข้าใช้เวลานานกว่าปกติ ข้อมูลไม่สูญหาย', 'พบว่าคิวงานนำเข้าค้าง กำลังเพิ่มเครื่องประมวลผล', 'การนำเข้ากลับมาปกติแล้ว ติดตามต่อ 1 ชั่วโมง', 'แก้ไขเรียบร้อย ไฟล์ที่ค้างนำเข้าครบแล้ว'];
+    const log = [{ t: '01:52', x: 'กำลังตรวจสอบ · เปิดเหตุจากแจ้งเตือนอัตโนมัติ' }];
+    if (st.published) log.unshift({ t: '02:15', x: labels[st.incS] + ' · ' + texts[st.incS] });
+    const svcState = st.published && st.incS === 3 ? ['ปกติ', '#1e7a4f'] : ['ช้ากว่าปกติ', '#b86e00'];
+    const inc = {
+      label: st.published ? labels[st.incS] : 'กำลังตรวจสอบ', cls: st.published ? clsOf[st.incS] : 'pill p-red',
+      states: labels.map((label, i) => ({ label, on: st.incS === i ? 'true' : 'false', pick: () => this.setState({ incS: i, published: false }) })),
+      text: texts[st.incS], mail: st.mail ? 'true' : 'false', toggleMail: () => this.setState({ mail: !st.mail }), log,
+      svc: [{ name: 'เว็บแอป', state: 'ปกติ', dot: '#1e7a4f' }, { name: 'API', state: 'ปกติ', dot: '#1e7a4f' }, { name: 'นำเข้า / ส่งออก Excel', state: svcState[0], dot: svcState[1] }, { name: 'แจ้งเตือน LINE', state: 'ปกติ', dot: '#1e7a4f' }],
+      btn: st.published ? '✓ เผยแพร่แล้ว' + (st.mail ? ' · ส่งอีเมล 214 คน' : '') : 'เผยแพร่อัปเดต', publish: () => this.setState({ published: true }),
+    };
+    // 3 · คิวชำระ
+    const ok = (t) => ({ tag: 'ตรง', cls: 'pill p-green', text: t }), warn = (t) => ({ tag: 'ตรวจเอง', cls: 'pill p-amber', text: t }), bad = (t) => ({ tag: 'ไม่ผ่าน', cls: 'pill p-red', text: t });
+    const cases = [
+      { type: 'ชื่อผู้โอนไม่ตรง', cls: 'pill p-amber', ws: 'Lumen Studio', wait: 'เหลือ 1 ชม.', waitCls: 'pill p-red', hint: 'ผ่านได้', advice: 'ยอดและบัญชีตรง ผู้โอนเป็นเจ้าของ Workspace โอนจากบัญชีส่วนตัว', checks: [ok('ยอดตรงกับใบแจ้งหนี้'), ok('เข้าบัญชีบริษัท'), warn('ชื่อผู้โอนเป็นบุคคล')], yes: 'ผ่าน', no: 'ไม่ผ่าน' },
+      { type: 'สลิปซ้ำ', cls: 'pill p-red', ws: 'บ้านไร่ดิจิทัล', wait: 'รอ 10 นาที', waitCls: 'muted', hint: 'ไม่ผ่าน', advice: 'สลิปนี้เคยใช้จ่าย INV-2569-1088 แล้ว ไม่มีเงินเข้าใหม่', checks: [ok('สลิปมีจริง'), bad('เลขอ้างอิงซ้ำ')], yes: 'ผ่านอยู่ดี', no: 'ไม่ผ่าน · แจ้งลูกค้า' },
+      { type: 'จ่ายซ้ำ', cls: 'pill p-purple', ws: 'Northwind Dev', wait: 'รอ 25 นาที', waitCls: 'muted', hint: 'เก็บเป็นเครดิต', advice: 'จ่ายด้วยบัตรแล้วสแกน QR ซ้ำ เก็บเป็นเครดิตรอบหน้า', checks: [ok('บัตรสำเร็จ 13:20'), ok('PromptPay เข้า 13:23')], yes: 'เก็บเป็นเครดิต', no: 'คืนเงิน' },
+      { type: 'หัก ณ ที่จ่ายไม่ได้แจ้ง', cls: 'pill p-amber', ws: 'Kanit Labs', wait: 'รอ 40 นาที', waitCls: 'muted', hint: 'ขอ 50 ทวิ แล้วผ่าน', advice: 'ยอดขาด 3% พอดี น่าจะหัก ณ ที่จ่าย', checks: [ok('สลิปมีจริง'), warn('ขาด 3% พอดี')], yes: 'ผ่าน · ขอ 50 ทวิ', no: 'ให้โอนส่วนที่ขาด' },
+    ];
+    const qLeft = cases.map((c, i) => ({ ...c, i })).filter((c) => !st.qDone[c.i]);
+    const qc = st.qOpen === null ? cases[0] : cases[st.qOpen];
+    const finishQ = (msg) => this.setState({ qDone: { ...st.qDone, [st.qOpen]: true }, qOpen: null, qToast: msg });
+    const q = {
+      count: String(qLeft.length), items: qLeft.map((c) => ({ ...c, open: () => this.setState({ qOpen: c.i }) })), empty: qLeft.length === 0,
+      open: st.qOpen !== null, cur: qc, close: () => this.setState({ qOpen: null }),
+      pass: () => finishQ(qc.ws + ' · ' + qc.yes), reject: () => finishQ(qc.ws + ' · ' + qc.no),
+      toast: st.qToast, toastOn: !!st.qToast, closeToast: () => this.setState({ qToast: '' }), reset: () => this.setState({ qDone: {}, qToast: '' }),
+    };
+    return { a, inc, q };
+  }
+}
+</script>
+</body>
+</html>

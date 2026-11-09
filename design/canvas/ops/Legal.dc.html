@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · เอกสารกฎหมาย</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f5f6f7}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+.card{background:#fff;border:1px solid #e3e6e9;border-radius:12px;padding:18px 20px;box-sizing:border-box;min-width:0}
+.h2{margin:0;font-size:15px;font-weight:600;color:#24272c}
+.muted{color:#5f656d}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid #cfd4d9;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#f1f3f5;color:#24272c;text-decoration:none}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff}.btn-primary:hover{background:#4a33a8;color:#fff}
+.btn-sm{min-height:30px;padding:0 10px;font-size:12px}
+.doc{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border:0;border-bottom:1px solid #eef0f2;background:#fff;font:inherit;text-align:left;cursor:pointer;width:100%}
+.doc:hover{background:#f8f9fa}
+.doc-on{background:#f6f2ff}.doc-on:hover{background:#f1ebff}
+.f{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:500;color:#3a3f45}
+.in{min-height:36px;border:1px solid #868c94;border-radius:8px;padding:0 10px;font:inherit;font-size:13px;background:#fff;box-sizing:border-box;width:100%}
+.diff-add{background:#e3f6ec;color:#17633f;padding:1px 3px;border-radius:3px}
+.diff-del{background:#fdecf0;color:#a01d3c;text-decoration:line-through;padding:1px 3px;border-radius:3px}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:500;color:#5f656d;font-size:12px;padding:10px 12px;border-bottom:1px solid #e3e6e9;white-space:nowrap;background:#f8f9fa}
+.t td{padding:11px 12px;border-bottom:1px solid #eef0f2;white-space:nowrap;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+/* ขัดเกลา UI ชุดเดียวกันทุกหน้า */
+body{background:#f4f5f8;-webkit-font-smoothing:antialiased}
+h1{letter-spacing:-.015em}
+.card{border-color:#e6e8ec;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03)}
+.h2{font-weight:650;letter-spacing:-.005em}
+.btn{border-radius:9px;border-color:#d6dae0;box-shadow:0 1px 2px rgba(16,24,40,.05);transition:background .12s,border-color .12s,box-shadow .12s}
+.btn:hover{border-color:#c3c8cf}
+.btn-primary{border-color:#5b3fc4;box-shadow:0 1px 2px rgba(91,63,196,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+.btn-primary:hover{border-color:#4a33a8}
+.btn-danger{border-color:#f6b8c6}.btn-ok{border-color:#1e7a4f}
+.pill{font-weight:600;letter-spacing:.01em}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.sw:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+table.t th{background:#fafbfc;color:#6b717a;font-weight:600;border-bottom-color:#eceef1}
+table.t tbody tr:hover td{background:#fafaff}
+.in,.sel,textarea{transition:border-color .12s,box-shadow .12s}
+.in:focus,.sel:focus,textarea:focus{outline:none;border-color:#6b4fd8;box-shadow:0 0 0 3px #efe9fd}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c; background: #f5f6f7">
+  <div style="flex: 1 1 232px; max-width: 100%; background: #141619">
+    <dc-import name="Sidebar" active="legal" hint-size="100%,1480px"></dc-import>
+  </div>
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+    <div style="margin: -24px -28px 4px"><dc-import name="Topbar" group="ความปลอดภัยและกฎหมาย" group-href="Privacy.dc.html" page="เอกสารกฎหมาย" phase="1" hint-size="100%,60px"></dc-import></div>
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px">
+      <div style="flex: 1 1 320px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700">เอกสารกฎหมาย</h1>
+        <p class="muted" style="margin: 4px 0 0; font-size: 13px">ทุกเวอร์ชันเก็บถาวร แก้ย้อนหลังไม่ได้ · เก็บหลักฐานว่าใครยอมรับเวอร์ชันไหน เมื่อไร จาก IP ใด</p>
+      </div>
+      <button type="button" class="btn btn-primary">สร้างเวอร์ชันใหม่</button>
+    </section>
+
+    <section style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+      <div class="card" style="flex: 1 1 280px; padding: 0; overflow: hidden; display: flex; flex-direction: column">
+        <sc-for list="{{docs}}" as="d" hint-placeholder-count="5">
+          <button type="button" class="{{d.cls}}" onClick="{{d.pick}}">
+            <span style="display: flex; align-items: center; gap: 6px; width: 100%"><span style="font-size: 13px; font-weight: 600; color: #24272c">{{d.name}}</span><span class="{{d.stCls}}" style="margin-left: auto">{{d.status}}</span></span>
+            <span class="muted" style="font-size: 12px">{{d.version}} · {{d.since}}</span>
+          </button>
+        </sc-for>
+        <div style="margin-top: auto; padding: 14px; border-top: 1px solid #eceef1; display: flex; flex-direction: column; gap: 8px; font-size: 12px">
+          <span class="muted">เผยแพร่ที่ fridaymanage.com/legal · ทุกเวอร์ชันมีลิงก์ถาวรให้อ้างอิงในสัญญา</span>
+          <button type="button" class="btn btn-sm">ดูหน้าที่ลูกค้าเห็น</button>
+        </div>
+      </div>
+
+      <div class="card" style="flex: 2 1 520px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+          <h2 class="h2">ข้อกำหนดการใช้งาน · ร่าง v3</h2>
+          <span class="pill p-amber">ร่าง</span>
+          <span class="muted" style="font-size: 12px; margin-left: auto">เทียบกับ v2 (ใช้อยู่ตั้งแต่ 1 ก.ค. 2569)</span>
+        </div>
+        <div style="padding: 14px; border-radius: 10px; background: #f8f9fa; font-size: 13px; line-height: 1.8">
+          <b>ข้อ 7 การชำระเงินและการคืนเงิน</b><br>
+          7.2 ผู้ใช้สามารถขอคืนเงินได้ภายใน <span class="diff-del">7 วัน</span> <span class="diff-add">14 วัน</span> นับจากวันที่ชำระเงินรอบแรก<br>
+          <span class="diff-add">7.5 เครดิตที่ได้รับจากการชดเชยไม่สามารถแลกเป็นเงินสดได้</span><br><br>
+          <b>ข้อ 11 การเก็บและลบข้อมูล</b><br>
+          11.3 เมื่อยกเลิกบริการ ระบบจะเก็บข้อมูลไว้ <span class="diff-del">30 วัน</span> <span class="diff-add">90 วัน</span> ก่อนลบถาวร
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px">
+          <label class="f">ประเภทการเปลี่ยนแปลง<select class="in"><option>มีสาระสำคัญ · ต้องให้ยอมรับใหม่</option><option>แก้ถ้อยคำ · แจ้งให้ทราบอย่างเดียว</option></select></label>
+          <label class="f">มีผลวันที่<input class="in" type="date" value="2026-12-15"></label>
+          <label class="f">แจ้งลูกค้าล่วงหน้า<select class="in"><option>30 วัน (อีเมล + แบนเนอร์)</option><option>14 วัน</option></select></label>
+        </div>
+        <label class="f">สรุปการเปลี่ยนแปลงที่ลูกค้าเห็น<textarea rows="2" class="in" style="padding: 8px 10px">ขยายระยะขอคืนเงินเป็น 14 วัน และเก็บข้อมูลหลังยกเลิกนานขึ้นเป็น 90 วัน เพื่อให้กลับมาใช้ต่อได้สะดวก</textarea></label>
+        <div style="padding: 10px 12px; border-radius: 10px; background: #fff6d9; font-size: 12px; color: #7a4700">ตั้งแต่วันที่มีผล ผู้ใช้ทุกคนต้องกดยอมรับก่อนใช้งานต่อ · Owner ของ Workspace ที่ยังไม่ยอมรับจะถูกเตือนทุกครั้งที่เข้าแอป</div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end">
+          <button type="button" class="btn">ดูตัวอย่างหน้าที่ลูกค้าเห็น</button>
+          <button type="button" class="btn btn-primary">ตั้งเวลาเผยแพร่</button>
+        </div>
+      </div>
+    </section>
+
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px" aria-label="การยอมรับ v2">
+      <sc-for list="{{accept}}" as="a" hint-placeholder-count="4">
+        <div class="card" style="padding: 14px 16px">
+          <div class="muted" style="font-size: 12px">{{a.label}}</div>
+          <div class="num" style="font-size: 22px; font-weight: 700; margin-top: 4px">{{a.value}}</div>
+          <div class="muted" style="font-size: 12px; margin-top: 2px">{{a.note}}</div>
+        </div>
+      </sc-for>
+    </section>
+
+    <section class="card" style="padding: 0; overflow: hidden">
+      <div style="padding: 14px 16px; border-bottom: 1px solid #e3e6e9; display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <h2 class="h2">ประวัติการยอมรับ</h2>
+        <span class="muted" style="font-size: 12px">ค้นด้วยอีเมลหรือ Workspace เพื่อใช้เป็นหลักฐาน</span>
+        <button type="button" class="btn btn-sm" style="margin-left: auto">ส่งออก CSV</button>
+      </div>
+      <div style="overflow-x: auto">
+        <table class="t">
+          <thead><tr><th scope="col">เวลา</th><th scope="col">ผู้ใช้</th><th scope="col">Workspace</th><th scope="col">เอกสาร</th><th scope="col">เวอร์ชัน</th><th scope="col">ช่องทาง</th><th scope="col">IP</th></tr></thead>
+          <tbody>
+            <sc-for list="{{log}}" as="l" hint-placeholder-count="6">
+              <tr><td class="num muted">{{l.time}}</td><td>{{l.user}}</td><td class="muted">{{l.ws}}</td><td>{{l.doc}}</td><td><span class="pill p-gray">{{l.ver}}</span></td><td class="muted">{{l.via}}</td><td class="mono muted" style="font-size: 12px">{{l.ip}}</td></tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  state = { sel: 0 };
+  renderVals() {
+    const raw = [
+      ['ข้อกำหนดการใช้งาน', 'v2 ใช้อยู่ · v3 ร่าง', 'มีผล 1 ก.ค. 2569', 'มีร่างใหม่', 'pill p-amber'],
+      ['นโยบายความเป็นส่วนตัว', 'v4', 'มีผล 1 ก.ค. 2569', 'ใช้อยู่', 'pill p-green'],
+      ['ข้อตกลงการประมวลผลข้อมูล (DPA)', 'v1', 'มีผล 1 ก.ค. 2569', 'ใช้อยู่', 'pill p-green'],
+      ['นโยบายคุกกี้', 'v2', 'มีผล 1 ส.ค. 2569', 'ใช้อยู่', 'pill p-green'],
+      ['ข้อตกลงระดับบริการ (SLA) Enterprise', 'v1', 'แนบสัญญา', 'ใช้อยู่', 'pill p-green'],
+    ];
+    const docs = raw.map(([name, version, since, status, stCls], i) => ({ name, version, since, status, stCls, cls: this.state.sel === i ? 'doc doc-on' : 'doc', pick: () => this.setState({ sel: i }) }));
+    const accept = [
+      { label: 'ผู้ใช้ที่ยอมรับ v2 แล้ว', value: '98.6%', note: '7,308 จาก 7,412 คน' },
+      { label: 'ยังไม่ยอมรับ', value: '104', note: 'ส่วนใหญ่ไม่ได้เข้าใช้เกิน 90 วัน' },
+      { label: 'Workspace ที่เซ็น DPA', value: '38', note: 'Team L และ Enterprise' },
+      { label: 'ยอมรับคุกกี้ไม่จำเป็น', value: '41%', note: 'จากผู้เข้าชมหน้าเว็บ 30 วัน' },
+    ];
+    const log = [
+      { time: '09:31', user: 'ceo@siamrobotics.example', ws: 'Siam Robotics', doc: 'ข้อกำหนดการใช้งาน', ver: 'v2', via: 'สมัครใช้งาน', ip: '203.0.113.88' },
+      { time: '09:31', user: 'ceo@siamrobotics.example', ws: 'Siam Robotics', doc: 'นโยบายความเป็นส่วนตัว', ver: 'v4', via: 'สมัครใช้งาน', ip: '203.0.113.88' },
+      { time: '08:12', user: 'new.member@siamcode.example', ws: 'สยามโค้ด', doc: 'ข้อกำหนดการใช้งาน', ver: 'v2', via: 'รับคำเชิญ', ip: '198.51.100.12' },
+      { time: 'เมื่อวาน', user: 'admin@technova.example', ws: 'TechNova', doc: 'ข้อตกลงการประมวลผลข้อมูล', ver: 'v1', via: 'ลงนามออนไลน์ (Owner)', ip: '198.51.100.40' },
+      { time: '8 พ.ย.', user: 'pm@northwind.example', ws: 'Northwind Dev', doc: 'ข้อกำหนดการใช้งาน', ver: 'v2', via: 'ป๊อปอัปเวอร์ชันใหม่', ip: '203.0.113.21' },
+      { time: '7 พ.ย.', user: 'ผู้เยี่ยมชม (ไม่ล็อกอิน)', ws: '—', doc: 'นโยบายคุกกี้', ver: 'v2', via: 'แบนเนอร์คุกกี้ · ปฏิเสธที่ไม่จำเป็น', ip: '203.0.113.150' },
+    ];
+    return { docs, accept, log };
+  }
+}
+</script>
+</body>
+</html>

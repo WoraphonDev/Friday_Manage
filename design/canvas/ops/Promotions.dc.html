@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · แพ็กเกจและโปรโมชัน</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f5f6f7}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+.card{background:#fff;border:1px solid #e3e6e9;border-radius:12px;padding:18px 20px;box-sizing:border-box;min-width:0}
+.h2{margin:0;font-size:15px;font-weight:600;color:#24272c}
+.muted{color:#5f656d}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid #cfd4d9;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#f1f3f5;color:#24272c;text-decoration:none}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff}.btn-primary:hover{background:#4a33a8;color:#fff}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e3e6e9;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:500;color:#5f656d;font-size:12px;padding:10px 12px;border-bottom:1px solid #e3e6e9;white-space:nowrap;background:#f8f9fa}
+.t td{padding:12px;border-bottom:1px solid #eef0f2;vertical-align:middle;white-space:nowrap}
+.t tr:last-child td{border-bottom:0}
+.f{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:500;color:#3a3f45}
+.in{min-height:36px;border:1px solid #868c94;border-radius:8px;padding:0 10px;font:inherit;font-size:13px;background:#fff;box-sizing:border-box;width:100%}
+.opt{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;color:#24272c}
+.seg{display:inline-flex;border:1px solid #cfd4d9;border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:transparent;font:inherit;font-size:13px;padding:0 12px;min-height:34px;color:#3a3f45;cursor:pointer;flex:1}
+.seg button[aria-pressed="true"]{background:#efe9fd;color:#5b3fc4;font-weight:600}
+/* ขัดเกลา UI ชุดเดียวกันทุกหน้า */
+body{background:#f4f5f8;-webkit-font-smoothing:antialiased}
+h1{letter-spacing:-.015em}
+.card{border-color:#e6e8ec;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03)}
+.h2{font-weight:650;letter-spacing:-.005em}
+.btn{border-radius:9px;border-color:#d6dae0;box-shadow:0 1px 2px rgba(16,24,40,.05);transition:background .12s,border-color .12s,box-shadow .12s}
+.btn:hover{border-color:#c3c8cf}
+.btn-primary{border-color:#5b3fc4;box-shadow:0 1px 2px rgba(91,63,196,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+.btn-primary:hover{border-color:#4a33a8}
+.btn-danger{border-color:#f6b8c6}.btn-ok{border-color:#1e7a4f}
+.pill{font-weight:600;letter-spacing:.01em}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible,.sw:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+table.t th{background:#fafbfc;color:#6b717a;font-weight:600;border-bottom-color:#eceef1}
+table.t tbody tr:hover td{background:#fafaff}
+.in,.sel,textarea{transition:border-color .12s,box-shadow .12s}
+.in:focus,.sel:focus,textarea:focus{outline:none;border-color:#6b4fd8;box-shadow:0 0 0 3px #efe9fd}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c; background: #f5f6f7">
+  <div style="flex: 1 1 232px; max-width: 100%; background: #141619">
+    <dc-import name="Sidebar" active="promotions" hint-size="100%,980px"></dc-import>
+  </div>
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+    <div style="margin: -24px -28px 4px"><dc-import name="Topbar" group="แพ็กเกจและการตลาด" group-href="Promotions.dc.html" page="แพ็กเกจและโปรโมชัน" phase="2" hint-size="100%,60px"></dc-import></div>
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px">
+      <div style="flex: 1 1 320px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700">แพ็กเกจและโปรโมชัน</h1>
+        <p class="muted" style="margin: 4px 0 0; font-size: 13px">ราคา ขีดจำกัด คูปอง แคมเปญ และประกาศถึงลูกค้า</p>
+      </div>
+    </section>
+
+    <div class="tabs" role="tablist" aria-label="หมวดการตลาด">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+        <button type="button" role="tab" class="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+
+    <section aria-label="แพ็กเกจ" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px">
+      <sc-for list="{{plans}}" as="p" hint-placeholder-count="5">
+        <div class="card" style="display: flex; flex-direction: column; gap: 10px; padding: 16px">
+          <div style="display: flex; align-items: center; gap: 6px">
+            <span style="font-weight: 700; font-size: 15px">{{p.name}}</span>
+            <sc-if value="{{p.hasTag}}" hint-placeholder-val="{{ false }}"><span class="pill p-purple">{{p.tag}}</span></sc-if>
+          </div>
+          <div><span class="num" style="font-size: 20px; font-weight: 700">{{p.price}}</span> <span class="muted" style="font-size: 12px">{{p.per}}</span></div>
+          <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #3a3f45; display: flex; flex-direction: column; gap: 3px">
+            <sc-for list="{{p.limits}}" as="l" hint-placeholder-count="3"><li>{{l}}</li></sc-for>
+          </ul>
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 8px; border-top: 1px solid #eef0f2; font-size: 12px">
+            <span class="muted">ลูกค้า</span><span class="num" style="font-weight: 600">{{p.count}}</span>
+            <button type="button" class="btn" style="margin-left: auto; min-height: 30px; padding: 0 10px">แก้ไข</button>
+          </div>
+        </div>
+      </sc-for>
+    </section>
+    <p class="muted" style="margin: -6px 0 0; font-size: 12px">แก้ราคามีผลกับลูกค้าใหม่ทันที · ลูกค้าเดิมคงราคาเดิมจนกว่าจะเลือกย้าย (grandfathering) · ทุกการแก้ไขเก็บเป็นเวอร์ชัน</p>
+
+    <section>
+      <div class="card" style="padding: 0; overflow: hidden">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #eceef1">
+          <h2 class="h2">คูปองและโค้ดส่วนลด</h2>
+          <span class="muted" style="font-size: 12px">ใช้งานอยู่ 4 · ส่วนลดที่ให้ไปเดือนนี้ ฿18,240</span>
+          <button type="button" class="btn btn-primary" style="margin-left: auto" onClick="{{openDrawer}}">สร้างคูปอง</button>
+        </div>
+        <div style="overflow-x: auto">
+          <table class="t">
+            <thead><tr><th scope="col">โค้ด</th><th scope="col">ส่วนลด</th><th scope="col">ระยะเวลา</th><th scope="col">ใช้กับ</th><th scope="col">ใช้ไป / สิทธิ์</th><th scope="col">หมดอายุ</th><th scope="col">สถานะ</th><th scope="col">ลูกค้าที่จ่ายต่อหลังหมดส่วนลด</th></tr></thead>
+            <tbody>
+              <sc-for list="{{coupons}}" as="c" hint-placeholder-count="6">
+                <tr>
+                  <td><span class="mono" style="font-weight: 500">{{c.code}}</span><div class="muted" style="font-size: 11px">{{c.desc}}</div></td>
+                  <td class="num">{{c.off}}</td>
+                  <td>{{c.dur}}</td>
+                  <td>{{c.plans}}</td>
+                  <td class="num">{{c.used}}</td>
+                  <td class="num">{{c.exp}}</td>
+                  <td><span class="{{c.cls}}">{{c.status}}</span></td>
+                  <td class="num">{{c.retain}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <sc-if value="{{drawerOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closeDrawer}}" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,22,25,.32); z-index: 20"></div>
+      <form class="card" role="dialog" aria-label="สร้างคูปอง" style="position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100%); border-radius: 16px 0 0 16px; z-index: 21; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 22px 24px; box-shadow: -12px 0 40px rgba(16,24,40,.18)">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <h2 class="h2">สร้างคูปองใหม่</h2>
+          <button type="button" class="btn btn-sm" aria-label="ปิด" onClick="{{closeDrawer}}" style="margin-left: auto; width: 34px; padding: 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+        </div>
+        <label class="f">โค้ด<input class="in mono" value="NEWYEAR2570"></label>
+        <label class="f">คำอธิบาย (ภายใน)<input class="in" value="โปรปีใหม่ ลูกค้าใหม่เท่านั้น"></label>
+        <div class="f">ประเภทส่วนลด
+          <div class="seg" role="group" aria-label="ประเภทส่วนลด">
+            <button type="button" aria-pressed="{{pctOn}}" onClick="{{pickPct}}">เปอร์เซ็นต์</button>
+            <button type="button" aria-pressed="{{bahtOn}}" onClick="{{pickBaht}}">จำนวนเงิน (บาท)</button>
+            <button type="button" aria-pressed="{{monthsOn}}" onClick="{{pickMonths}}">ใช้ฟรี N เดือน</button>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <label class="f">มูลค่า<input class="in num" value="{{amount}}"></label>
+          <label class="f">ระยะเวลา<select class="in"><option>3 รอบบิลแรก</option><option>ครั้งเดียว</option><option>ตลอดไป</option></select></label>
+        </div>
+        <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px">
+          <legend class="f" style="margin-bottom: 6px">ใช้กับแพ็กเกจ</legend>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px">
+            <label class="opt"><input type="checkbox" checked> Team S</label>
+            <label class="opt"><input type="checkbox" checked> Team M</label>
+            <label class="opt"><input type="checkbox" checked> Team L</label>
+            <label class="opt"><input type="checkbox"> Enterprise</label>
+          </div>
+        </fieldset>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <label class="f">จำนวนสิทธิ์ทั้งหมด<input class="in num" value="200"></label>
+          <label class="f">หมดอายุ<input class="in" type="date" value="2027-01-31"></label>
+        </div>
+        <label class="opt"><input type="checkbox" checked> เฉพาะลูกค้าใหม่ (ยังไม่เคยจ่ายเงิน)</label>
+        <label class="opt"><input type="checkbox"> ใช้คู่กับคูปองอื่นได้</label>
+        <div style="padding: 12px; border-radius: 10px; background: #f6f2ff; font-size: 13px">
+          <div class="muted" style="font-size: 12px; margin-bottom: 4px">ลูกค้าจะเห็นในหน้าชำระเงิน</div>
+          <b>{{preview}}</b>
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end">
+          <button type="button" class="btn">บันทึกร่าง</button>
+          <button type="button" class="btn btn-primary">เปิดใช้คูปอง</button>
+        </div>
+      </form>
+      </sc-if>
+    </section>
+
+    <section style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+      <sc-for list="{{campaigns}}" as="c" hint-placeholder-count="3">
+        <div class="card" style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <h2 class="h2">{{c.title}}</h2>
+            <span class="{{c.cls}}" style="margin-left: auto">{{c.status}}</span>
+          </div>
+          <p class="muted" style="margin: 0; font-size: 13px">{{c.text}}</p>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 6px; font-size: 12px">
+            <span class="muted">{{c.metric}}</span>
+            <button type="button" class="btn" style="margin-left: auto; min-height: 30px; padding: 0 10px">ตั้งค่า</button>
+          </div>
+        </div>
+      </sc-for>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  state = { tab: 'plans', kind: 'pct' };
+  renderVals() {
+    const tabs = [['plans', 'แพ็กเกจและคูปอง'], ['campaigns', 'แคมเปญ'], ['announce', 'ประกาศถึงลูกค้า'], ['history', 'ประวัติราคา']]
+      .map(([key, label]) => ({ label, on: this.state.tab === key ? 'true' : 'false', pick: () => this.setState({ tab: key }) }));
+    const plans = [
+      { name: 'Free', tag: '', price: '฿0', per: '', limits: ['≤ 5 คน', '3 โปรเจกต์', 'พื้นที่ 2 GB'], count: '412' },
+      { name: 'Team S', tag: '', price: '฿[ราคา]', per: '/ เดือน', limits: ['≤ 10 คน', 'ทุกฟีเจอร์ Team', 'พื้นที่ 50 GB'], count: '96' },
+      { name: 'Team M', tag: 'นิยมสุด', price: '฿[ราคา]', per: '/ เดือน', limits: ['≤ 25 คน', 'ทุกฟีเจอร์ Team', 'พื้นที่ 100 GB'], count: '71' },
+      { name: 'Team L', tag: '', price: '฿[ราคา]', per: '/ เดือน', limits: ['≤ 50 คน', 'ทุกฟีเจอร์ Team', 'พื้นที่ 250 GB'], count: '35' },
+      { name: 'Enterprise', tag: '', price: 'ตามใบเสนอราคา', per: '', limits: ['50+ คน', 'SSO, SLA', 'พื้นที่ตามสัญญา'], count: '12' },
+    ].map((p) => ({ ...p, hasTag: !!p.tag }));
+    const coupons = [
+      { code: 'LAUNCH20', desc: 'เปิดตัว · ลูกค้าใหม่', off: '20%', dur: '6 รอบแรก', plans: 'Team ทุกขนาด', used: '84 / 100', exp: '31 ธ.ค. 69', status: 'ใช้งานอยู่', cls: 'pill p-green', retain: '91%' },
+      { code: 'STARTUP50', desc: 'โครงการสตาร์ตอัป', off: '50%', dur: '12 รอบแรก', plans: 'Team S, M', used: '17 / 50', exp: '30 มิ.ย. 70', status: 'ใช้งานอยู่', cls: 'pill p-green', retain: '—' },
+      { code: 'EDU-FREE', desc: 'สถาบันการศึกษา', off: 'ฟรี 6 เดือน', dur: '6 เดือน', plans: 'Team M', used: '6 / ไม่จำกัด', exp: 'ไม่หมดอายุ', status: 'ใช้งานอยู่', cls: 'pill p-green', retain: '67%' },
+      { code: 'WINBACK', desc: 'ลูกค้าที่ยกเลิกไปแล้ว', off: '฿1,000', dur: 'ครั้งเดียว', plans: 'Team ทุกขนาด', used: '3 / 40', exp: '31 ม.ค. 70', status: 'ใช้งานอยู่', cls: 'pill p-green', retain: '—' },
+      { code: 'BKKMEETUP', desc: 'งานอีเวนต์ ต.ค.', off: '30%', dur: '3 รอบแรก', plans: 'Team S', used: '22 / 30', exp: '31 ต.ค. 69', status: 'หมดอายุ', cls: 'pill p-gray', retain: '73%' },
+      { code: 'NEWYEAR2570', desc: 'โปรปีใหม่', off: '25%', dur: '3 รอบแรก', plans: 'Team S, M, L', used: '0 / 200', exp: '31 ม.ค. 70', status: 'ร่าง', cls: 'pill p-amber', retain: '—' },
+    ];
+    const k = this.state.kind;
+    const set = (kind) => () => this.setState({ kind });
+    const amount = k === 'pct' ? '25%' : k === 'baht' ? '฿500' : '2 เดือน';
+    const preview = k === 'pct' ? 'ลด 25% 3 รอบบิลแรก · ใช้ได้ถึง 31 ม.ค. 2570' : k === 'baht' ? 'ลด ฿500 3 รอบบิลแรก · ใช้ได้ถึง 31 ม.ค. 2570' : 'ใช้ฟรี 2 เดือน แล้วจ่ายราคาปกติ · ใช้ได้ถึง 31 ม.ค. 2570';
+    const campaigns = [
+      { title: 'ขยายทดลองใช้อัตโนมัติ', status: 'เปิดอยู่', cls: 'pill p-green', text: 'ทีมที่เชิญสมาชิกครบ 3 คนในทดลองใช้ ได้ทดลองต่ออีก 7 วันอัตโนมัติ', metric: 'ใช้ไป 23 ทีม · จ่ายเงินต่อ 41%' },
+      { title: 'แนะนำเพื่อน (Referral)', status: 'ร่าง', cls: 'pill p-amber', text: 'ผู้แนะนำได้ส่วนลด 1 เดือนเมื่อทีมที่แนะนำจ่ายเงินรอบแรก', metric: 'ยังไม่เริ่ม' },
+      { title: 'ชวนกลับลูกค้าที่ยกเลิก', status: 'ปิดอยู่', cls: 'pill p-gray', text: 'ส่งอีเมลพร้อมโค้ด WINBACK หลังยกเลิก 30 วัน', metric: 'ครั้งล่าสุด ต.ค. · กลับมา 3 ทีม' },
+    ];
+    return { tabs, plans, coupons, amount, preview, campaigns,
+      drawerOpen: !!this.state.drawer, openDrawer: () => this.setState({ drawer: true }), closeDrawer: () => this.setState({ drawer: false }),
+      pctOn: k === 'pct' ? 'true' : 'false', bahtOn: k === 'baht' ? 'true' : 'false', monthsOn: k === 'months' ? 'true' : 'false',
+      pickPct: set('pct'), pickBaht: set('baht'), pickMonths: set('months') };
+  }
+}
+</script>
+</body>
+</html>

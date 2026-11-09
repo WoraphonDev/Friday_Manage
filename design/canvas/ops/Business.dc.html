@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Friday Ops · ธุรกิจและกำไร</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#f4f5f8;-webkit-font-smoothing:antialiased}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+h1{letter-spacing:-.015em}
+.card{background:#fff;border:1px solid #e6e8ec;border-radius:14px;padding:18px 20px;box-sizing:border-box;min-width:0;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03);display:flex;flex-direction:column;gap:12px}
+.h2{margin:0;font-size:15px;font-weight:650;color:#24272c;letter-spacing:-.005em}
+.hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.muted{color:#5f656d}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:9px;border:1px solid #d6dae0;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+.btn:hover{background:#f1f3f5;border-color:#c3c8cf}
+.btn-sm{min-height:30px;padding:0 10px;font-size:12px}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff}.btn-primary:hover{background:#4a33a8;color:#fff}
+.btn:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid #6b4fd8;outline-offset:2px}
+.seg{display:inline-flex;padding:3px;background:#eef0f2;border-radius:10px;gap:2px}
+.seg button{border:0;background:transparent;font:inherit;font-size:13px;padding:6px 12px;border-radius:8px;color:#5f656d;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:600;color:#6b717a;font-size:12px;padding:9px 12px;border-bottom:1px solid #eceef1;white-space:nowrap;background:#fafbfc}
+.t td{padding:10px 12px;border-bottom:1px solid #eef0f2;vertical-align:middle;white-space:nowrap}
+.t tr:last-child td{border-bottom:0}
+.t .r{text-align:right}
+.t tbody tr:hover td{background:#fafaff}
+.bar{height:10px;border-radius:999px;background:#eef0f2;overflow:hidden}
+.bar>span{display:block;height:100%;border-radius:999px}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:16px;align-items:stretch}
+.insight{padding:10px 12px;border-radius:10px;background:#f6f2ff;border:1px solid #e4dbfb;font-size:13px}
+.cell{height:30px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+
+/* ชิ้นส่วนมาตรฐาน Friday Ops · ทุกหน้าใช้ชุดเดียวกัน (อยู่ท้ายสุดเพื่อให้ทับค่าเดิมของหน้า) */
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;height:auto;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font:inherit;font-size:12px;font-weight:500;cursor:pointer}
+.chip:hover{border-color:#c3c8cf;background:#f8f9fa}
+.chip[aria-pressed="true"]{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.chip[aria-pressed="true"] .c{opacity:1}
+.seg{padding:3px;background:#eef0f2;border:0;border-radius:10px;gap:2px;overflow:visible}
+.seg button{min-height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#5f656d;font:inherit;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.in,.sel{border-color:#868c94;border-radius:9px}
+.sw,.switch{width:40px;height:22px;background:#cdd2d7}
+.sw[aria-checked="true"],.switch[aria-checked="true"]{background:#5b3fc4}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #24272c; background: #f4f5f8">
+  <div style="flex: 1 1 232px; max-width: 100%; background: #141619">
+    <dc-import name="Sidebar" active="business" hint-size="100%,980px"></dc-import>
+  </div>
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+    <div style="margin: -24px -28px 4px"><dc-import name="Topbar" group="วิเคราะห์" group-href="Business.dc.html" page="ธุรกิจและกำไร" phase="1" hint-size="100%,60px"></dc-import></div>
+
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px">
+      <div style="flex: 1 1 320px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700">ธุรกิจและกำไร</h1>
+        <p class="muted" style="margin: 4px 0 0; font-size: 13px">ลูกค้าแต่ละรายกำไรไหม · คนสมัครแล้วติดตรงไหน · มาจากไหน · ใครจะยกเลิก ใครพร้อมจ่ายเพิ่ม · ตัวเลขเป็นข้อมูลตัวอย่าง</p>
+      </div>
+      <div class="seg" role="group" aria-label="ช่วงเวลา">
+        <sc-for list="{{ranges}}" as="r" hint-placeholder-count="3"><button type="button" aria-pressed="{{r.on}}" onClick="{{r.pick}}">{{r.label}}</button></sc-for>
+      </div>
+      <button type="button" class="btn">กรอกค่าการตลาดเดือนนี้</button>
+      <button type="button" class="btn">ส่งออก</button>
+    </section>
+
+    <section aria-label="ตัวเลขหลัก" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px">
+      <sc-for list="{{kpis}}" as="k" hint-placeholder-count="6">
+        <div class="card" style="padding: 14px 16px; gap: 4px">
+          <span class="muted" style="font-size: 12px">{{k.label}}</span>
+          <span class="num" style="font-size: 22px; font-weight: 700">{{k.value}}</span>
+          <span style="display: flex; align-items: center; gap: 6px; font-size: 12px"><span class="{{k.cls}}">{{k.delta}}</span><span class="muted">{{k.note}}</span></span>
+        </div>
+      </sc-for>
+    </section>
+
+    <!-- 1 · กำไรต่อลูกค้า -->
+    <section class="row2">
+      <div class="card" style="padding: 0; gap: 0; overflow: hidden">
+        <div class="hd" style="padding: 16px 18px 12px"><h2 class="h2">กำไรขั้นต้นตามแพ็กเกจ</h2><span class="muted" style="font-size: 12px">รายได้ − ต้นทุนที่ขึ้นตามการใช้ − ค่าธรรมเนียมรับเงิน − ส่วนแบ่งค่าเซิร์ฟเวอร์</span></div>
+        <div style="overflow-x: auto"><table class="t">
+          <thead><tr><th scope="col">แพ็กเกจ</th><th scope="col" class="r">ลูกค้า</th><th scope="col" class="r">MRR</th><th scope="col" class="r">ต้นทุน</th><th scope="col">กำไรขั้นต้น</th><th scope="col">ขาดทุน</th></tr></thead>
+          <tbody><sc-for list="{{plans}}" as="p" hint-placeholder-count="5">
+            <tr><td style="font-weight: 600">{{p.name}}</td><td class="r num">{{p.count}}</td><td class="r num">{{p.mrr}}</td><td class="r num muted">{{p.cost}}</td>
+              <td><span style="display: flex; align-items: center; gap: 8px"><span class="bar" style="width: 90px"><span style="width: {{p.w}}; background: {{p.color}}"></span></span><span class="num" style="font-weight: 600">{{p.margin}}</span></span></td>
+              <td><span class="{{p.lossCls}}">{{p.loss}}</span></td></tr>
+          </sc-for></tbody>
+          <tfoot><tr><td style="font-weight: 700; border-top: 1px solid #e6e8ec">รวม</td><td class="r num" style="font-weight: 700; border-top: 1px solid #e6e8ec">1,454</td><td class="r num" style="font-weight: 700; border-top: 1px solid #e6e8ec">฿482,300</td><td class="r num" style="font-weight: 700; border-top: 1px solid #e6e8ec">฿91,600</td><td style="font-weight: 700; border-top: 1px solid #e6e8ec">81%</td><td style="border-top: 1px solid #e6e8ec"><span class="pill p-red">3 ราย</span></td></tr></tfoot>
+        </table></div>
+        <div style="padding: 12px 18px 16px; margin-top: auto">
+          <div class="insight"><b>Free กินต้นทุน ฿9,900/เดือน</b> ส่วนใหญ่เป็นค่า LINE · Team S มี 3 รายที่ต้นทุนเกินรายได้ เพราะส่ง LINE เกิน 15,000 ข้อความ/เดือน → ควรใส่โควตา LINE ในแพ็กเกจ</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2 class="h2">ต้นทุนการให้บริการเดือนนี้</h2><span class="pill p-gray num" style="margin-left: auto">฿91,600 · 19% ของรายได้</span></div>
+        <sc-for list="{{costs}}" as="c" hint-placeholder-count="7">
+          <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr) 84px; align-items: center; gap: 12px; font-size: 13px" title="{{c.tip}}">
+            <span><span style="display: block">{{c.name}}</span><span class="muted" style="font-size: 11px">{{c.basis}}</span></span>
+            <span class="bar"><span style="width: {{c.w}}; background: #8b74e0"></span></span>
+            <span class="num" style="text-align: right; font-weight: 600">{{c.value}}</span>
+          </div>
+        </sc-for>
+        <div class="muted" style="font-size: 12px; margin-top: auto">ต้นทุนต่อหน่วยตั้งในหน้า "ตั้งค่าต้นทุน" (ค่า LINE ต่อข้อความ, อีเมล, GB) · ค่า AWS ดึงจาก Cost Explorer รายวัน</div>
+      </div>
+    </section>
+
+    <section class="card" style="padding: 0; gap: 0; overflow: hidden">
+      <div class="hd" style="padding: 16px 18px 12px"><h2 class="h2">ลูกค้าที่ต้นทุนเกินรายได้</h2><span class="pill p-red">3 ราย</span><span class="muted" style="font-size: 12px; margin-left: auto">คำนวณทุกคืน · ส่งให้ทีมขายเสนอแพ็กเกจที่เหมาะ</span></div>
+      <div style="overflow-x: auto"><table class="t">
+        <thead><tr><th scope="col">Workspace</th><th scope="col">แพ็กเกจ</th><th scope="col" class="r">รายได้/เดือน</th><th scope="col" class="r">ต้นทุน/เดือน</th><th scope="col">สาเหตุหลัก</th><th scope="col">ทำอะไรต่อ</th></tr></thead>
+        <tbody><sc-for list="{{losers}}" as="l" hint-placeholder-count="3">
+          <tr><td style="font-weight: 600"><a href="CustomerDetail.dc.html">{{l.ws}}</a></td><td>{{l.plan}}</td><td class="r num">{{l.rev}}</td><td class="r num" style="color: #a01d3c; font-weight: 600">{{l.cost}}</td><td class="muted">{{l.why}}</td><td><button type="button" class="btn btn-sm">{{l.action}}</button></td></tr>
+        </sc-for></tbody>
+      </table></div>
+    </section>
+
+    <!-- 2 · Funnel + cohort -->
+    <section class="row2">
+      <div class="card">
+        <div class="hd"><h2 class="h2">จากสมัครถึงจ่ายเงิน</h2><span class="muted" style="font-size: 12px">ผู้สมัคร 30 วันล่าสุด · นับเป็น Workspace</span></div>
+        <sc-for list="{{funnel}}" as="f" hint-placeholder-count="6">
+          <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 96px; align-items: center; gap: 12px; font-size: 13px" title="{{f.tip}}">
+            <span>{{f.label}}</span>
+            <span style="height: 22px; background: #f4f2fb; border-radius: 6px; overflow: hidden"><span style="display: block; height: 100%; width: {{f.w}}; background: {{f.color}}; border-radius: 6px"></span></span>
+            <span class="num" style="text-align: right"><b>{{f.n}}</b> <span class="{{f.dropCls}}" style="font-size: 12px">{{f.drop}}</span></span>
+          </div>
+        </sc-for>
+        <div class="insight" style="margin-top: auto"><b>หลุดมากสุดตอนชวนทีม (−44%)</b> · Workspace ที่มีสมาชิก 3 คนขึ้นไปใน 7 วันจ่ายเงิน 41% ส่วนที่ใช้คนเดียวจ่ายแค่ 3% → ปรับ Onboarding ให้ชวนทีมตั้งแต่ขั้นแรก</div>
+        <div class="muted" style="font-size: 12px">เริ่มใช้จริง = สมาชิก ≥ 3 คน และสร้างงาน ≥ 10 งาน ภายใน 7 วัน (นิยามรอยืนยัน)</div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2 class="h2">ลูกค้ายังจ่ายอยู่กี่ % ตามเดือนที่เริ่มจ่าย</h2><span class="muted" style="font-size: 12px">ยิ่งเข้มยิ่งอยู่ต่อมาก</span></div>
+        <div style="overflow-x: auto">
+          <div style="display: grid; grid-template-columns: 96px 52px repeat(6, minmax(44px, 1fr)); gap: 4px; min-width: 460px; font-size: 12px">
+            <span class="muted">เริ่มจ่าย</span><span class="muted" style="text-align: right">ราย</span>
+            <sc-for list="{{cohortHead}}" as="h" hint-placeholder-count="6"><span class="muted" style="text-align: center">{{h}}</span></sc-for>
+            <sc-for list="{{cohortCells}}" as="c" hint-placeholder-count="48">
+              <span class="cell num" style="background: {{c.bg}}; color: {{c.fg}}; justify-content: {{c.align}}" title="{{c.tip}}">{{c.text}}</span>
+            </sc-for>
+          </div>
+        </div>
+        <div class="insight" style="margin-top: auto">เดือนแรกหลุดมากสุด (เฉลี่ย 8%) แล้วนิ่งที่ประมาณ 85% · กลุ่ม ก.ค. ดีกว่ากลุ่มอื่นหลังเปิดนำเข้า Excel</div>
+      </div>
+    </section>
+
+    <!-- 3 · ช่องทาง -->
+    <section class="card" style="padding: 0; gap: 0; overflow: hidden">
+      <div class="hd" style="padding: 16px 18px 12px"><h2 class="h2">ลูกค้ามาจากไหน และคุ้มไหม</h2><span class="muted" style="font-size: 12px">30 วัน · ช่องทางจาก UTM / referrer ตอนสมัคร · LTV = รายได้เฉลี่ย × กำไรขั้นต้น ÷ อัตรายกเลิก</span></div>
+      <div style="overflow-x: auto"><table class="t">
+        <thead><tr><th scope="col">ช่องทาง</th><th scope="col" class="r">สมัคร</th><th scope="col" class="r">จ่ายเงิน</th><th scope="col" class="r">อัตราแปลง</th><th scope="col" class="r">ค่าใช้จ่าย</th><th scope="col" class="r">ค่าหาลูกค้า/ราย</th><th scope="col" class="r">LTV</th><th scope="col">LTV : ค่าหาลูกค้า</th></tr></thead>
+        <tbody><sc-for list="{{channels}}" as="c" hint-placeholder-count="6">
+          <tr><td style="font-weight: 600">{{c.name}}</td><td class="r num">{{c.signups}}</td><td class="r num">{{c.paid}}</td><td class="r num">{{c.conv}}</td><td class="r num muted">{{c.spend}}</td><td class="r num">{{c.cac}}</td><td class="r num">{{c.ltv}}</td><td><span class="{{c.ratioCls}}">{{c.ratio}}</span></td></tr>
+        </sc-for></tbody>
+      </table></div>
+      <div style="padding: 12px 18px 16px; display: flex; flex-wrap: wrap; gap: 12px">
+        <div class="insight" style="flex: 1 1 360px"><b>คนที่ถูกชวนเข้า Workspace แล้วไปเปิด Workspace เอง 27 ราย</b> (7% ของผู้สมัครใหม่) · เป็นช่องทางที่ไม่ต้องจ่ายและอยู่ต่อนานที่สุด</div>
+        <div class="insight" style="flex: 1 1 360px">Facebook ได้คนสมัครเยอะแต่จ่ายน้อย · LTV : ค่าหาลูกค้าต่ำกว่าช่องทางอื่น ลองย้ายงบไปบทความ / SEO</div>
+      </div>
+    </section>
+
+    <!-- 4 · ยกเลิก + การใช้ฟีเจอร์ -->
+    <section class="row2">
+      <div class="card">
+        <div class="hd"><h2 class="h2">เหตุผลที่ยกเลิก</h2><span class="muted" style="font-size: 12px">90 วัน · 23 ราย · ลูกค้าเลือกตอนกดยกเลิก</span></div>
+        <sc-for list="{{reasons}}" as="r" hint-placeholder-count="6">
+          <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 44px; align-items: center; gap: 12px; font-size: 13px">
+            <span><span style="display: block">{{r.label}}</span><span class="muted" style="font-size: 11px">{{r.sub}}</span></span>
+            <span class="bar"><span style="width: {{r.w}}; background: #8b74e0"></span></span>
+            <span class="num" style="text-align: right; font-weight: 600">{{r.pct}}</span>
+          </div>
+        </sc-for>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: auto">
+          <div style="padding: 10px 12px; border-radius: 10px; background: #fafbfc; border: 1px solid #eceef1; font-size: 13px"><div class="muted" style="font-size: 12px">ยกเลิกเพราะตัดบัตรไม่ผ่าน</div><b class="num">2 ราย</b> · กู้คืนได้ 1</div>
+          <div style="padding: 10px 12px; border-radius: 10px; background: #fafbfc; border: 1px solid #eceef1; font-size: 13px"><div class="muted" style="font-size: 12px">เสนอส่วนลด / พักแพ็กเกจ</div><b class="num">9 ราย</b> · อยู่ต่อ 3</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2 class="h2">การใช้ฟีเจอร์</h2><span class="muted" style="font-size: 12px">% ของลูกค้าที่จ่ายเงินที่ใช้ใน 30 วัน · เทียบอัตรายกเลิก</span></div>
+        <sc-for list="{{features}}" as="f" hint-placeholder-count="9">
+          <div style="display: grid; grid-template-columns: 120px minmax(0, 1fr) 44px 120px; align-items: center; gap: 12px; font-size: 13px">
+            <span>{{f.name}}</span>
+            <span class="bar"><span style="width: {{f.w}}; background: #5b3fc4"></span></span>
+            <span class="num" style="text-align: right; font-weight: 600">{{f.pct}}</span>
+            <span class="muted" style="font-size: 12px">{{f.note}}</span>
+          </div>
+        </sc-for>
+        <div class="insight" style="margin-top: auto">ลูกค้าที่ผูก LINE ยกเลิกน้อยกว่า 2.4 เท่า แต่ใช้แค่ 33% → ดัน LINE ใน Onboarding · Git ใช้แค่ 9% ยังไม่ควรลงทุนเพิ่ม</div>
+      </div>
+    </section>
+
+    <!-- 5 · อัปเกรด + เงินสด -->
+    <section class="row2">
+      <div class="card" style="padding: 0; gap: 0; overflow: hidden">
+        <div class="hd" style="padding: 16px 18px 12px"><h2 class="h2">พร้อมอัปเกรด</h2><span class="pill p-green">MRR เพิ่มได้ ~฿41,000</span><span class="muted" style="font-size: 12px; margin-left: auto">ที่นั่ง ≥ 80% · ชนขีดจำกัดบ่อย · Guest เยอะ</span></div>
+        <div style="overflow-x: auto"><table class="t">
+          <thead><tr><th scope="col">Workspace</th><th scope="col">ตอนนี้</th><th scope="col">สัญญาณ</th><th scope="col"><span style="position: absolute; left: -9999px">การกระทำ</span></th></tr></thead>
+          <tbody><sc-for list="{{upsell}}" as="u" hint-placeholder-count="5">
+            <tr><td style="font-weight: 600"><a href="CustomerDetail.dc.html">{{u.ws}}</a></td><td class="muted">{{u.plan}}</td><td style="white-space: normal">{{u.signal}}</td><td><button type="button" class="btn btn-sm">สร้าง Lead</button></td></tr>
+          </sc-for></tbody>
+        </table></div>
+        <div style="padding: 12px 18px 16px; margin-top: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px">
+          <div style="padding: 10px 12px; border-radius: 10px; background: #fafbfc; border: 1px solid #eceef1; font-size: 13px"><div class="muted" style="font-size: 12px">อัปเกรดจากรายการนี้ 30 วันก่อน</div><b class="num">4 ราย</b> · +฿9,600 MRR</div>
+          <div style="padding: 10px 12px; border-radius: 10px; background: #fafbfc; border: 1px solid #eceef1; font-size: 13px"><div class="muted" style="font-size: 12px">เปลี่ยนรายเดือนเป็นรายปี</div><b class="num">2 ราย</b> · รับเงินล่วงหน้า ฿52,800</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2 class="h2">เงินสด</h2></div>
+        <div class="muted" style="font-size: 12px; font-weight: 600">ค้างรับตามอายุ · รวม ฿61,800</div>
+        <sc-for list="{{aging}}" as="a" hint-placeholder-count="3">
+          <div style="display: grid; grid-template-columns: 100px minmax(0, 1fr) 84px; align-items: center; gap: 12px; font-size: 13px">
+            <span>{{a.label}}</span><span class="bar"><span style="width: {{a.w}}; background: {{a.color}}"></span></span><span class="num" style="text-align: right; font-weight: 600">{{a.value}}</span>
+          </div>
+        </sc-for>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px">
+          <div style="padding: 10px 12px; border-radius: 10px; background: #fafbfc; border: 1px solid #eceef1"><div class="muted" style="font-size: 12px">รับล่วงหน้าแพ็กเกจรายปี (ยังไม่รับรู้รายได้)</div><div class="num" style="font-size: 18px; font-weight: 700">฿1.26 ล้าน</div></div>
+          <div style="padding: 10px 12px; border-radius: 10px; background: #fafbfc; border: 1px solid #eceef1"><div class="muted" style="font-size: 12px">รับเงินสดเดือนนี้</div><div class="num" style="font-size: 18px; font-weight: 700">฿412,900</div></div>
+        </div>
+        <div class="muted" style="font-size: 12px; font-weight: 600">คาดการณ์ MRR (จากแนวโน้ม 6 เดือน · ช่วง ±6%)</div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; align-items: end; height: 120px">
+          <sc-for list="{{forecast}}" as="f" hint-placeholder-count="4">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end" title="{{f.tip}}">
+              <span class="num" style="font-size: 12px; font-weight: 600">{{f.value}}</span>
+              <span style="width: 60%; height: {{f.h}}; background: {{f.color}}; border-radius: 4px 4px 0 0; border: {{f.border}}; box-sizing: border-box"></span>
+              <span class="muted" style="font-size: 12px">{{f.label}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2400}}'>
+class Component extends DCLogic {
+  state = { range: '30d' };
+  renderVals() {
+    const up = 'pill p-green', down = 'pill p-red', flat = 'pill p-gray';
+    const ranges = [['30d', '30 วัน'], ['qtr', 'ไตรมาส'], ['12m', '12 เดือน']]
+      .map(([key, label]) => ({ label, on: this.state.range === key ? 'true' : 'false', pick: () => this.setState({ range: key }) }));
+    const kpis = [
+      { label: 'MRR', value: '฿482,300', delta: '+8.2%', cls: up, note: 'จากต้นเดือน' },
+      { label: 'กำไรขั้นต้น', value: '81%', delta: '฿390,700', cls: flat, note: 'ต่อเดือน' },
+      { label: 'Net revenue retention', value: '104%', delta: '0', cls: flat, note: 'คงที่' },
+      { label: 'ค่าหาลูกค้า / ราย', value: '฿8,850', delta: '−฿1,200', cls: up, note: 'จากเดือนก่อน' },
+      { label: 'คืนทุนค่าหาลูกค้า', value: '4.8 เดือน', delta: 'ดี', cls: up, note: 'เป้า < 12 เดือน' },
+      { label: 'ทดลองใช้ → จ่ายเงิน', value: '22%', delta: '13 / 58', cls: flat, note: 'ทดลองที่หมดใน 30 วัน' },
+    ];
+    const plan = (name, count, mrr, cost, m, loss) => ({ name, count, mrr, cost, margin: m === null ? '−' : m + '%',
+      w: (m === null ? 0 : m) + '%', color: m === null ? '#c8264a' : m >= 80 ? '#1e7a4f' : '#b86e00',
+      loss: loss || '—', lossCls: loss ? 'pill p-red' : 'muted' });
+    const plans = [
+      plan('Free', '1,240', '฿0', '฿9,900', null, 'ทั้งกลุ่ม'),
+      plan('Team S', '120', '฿132,000', '฿29,000', 78, '3 ราย'),
+      plan('Team M', '68', '฿176,800', '฿28,300', 84),
+      plan('Team L', '21', '฿109,500', '฿15,300', 86),
+      plan('Enterprise', '5', '฿64,000', '฿9,100', 86),
+    ];
+    const maxCost = 38200;
+    const costs = [
+      ['เซิร์ฟเวอร์ AWS', 'ส่วนกลาง แบ่งตามผู้ใช้งาน', 38200],
+      ['LINE Messaging', '188,330 ข้อความ · เกินโควตาฟรี', 21400],
+      ['ค่าธรรมเนียมรับเงิน', 'Gateway 1.65–3.65% + Slip API', 11900],
+      ['เครื่องมือและเอกสาร', 'Monitoring, Backup, e-Tax invoice', 12200],
+      ['พื้นที่ไฟล์', '412 GB + ส่งออก', 4800],
+      ['อีเมลแจ้งเตือน', '96,000 ฉบับ', 3100],
+    ].map(([name, basis, v]) => ({ name, basis, value: '฿' + v.toLocaleString('en-US'), w: Math.round((v / maxCost) * 100) + '%', tip: name + ' ฿' + v.toLocaleString('en-US') }));
+    const losers = [
+      { ws: 'Pixel Forge', plan: 'Team S', rev: '฿[ราคา Team S]', cost: '฿2,640', why: 'LINE 21,400 ข้อความ · แจ้งทุกการเปลี่ยนสถานะ', action: 'เสนอ Team M' },
+      { ws: 'Chiang Mai Craft', plan: 'Team S', rev: '฿[ราคา Team S]', cost: '฿1,820', why: 'LINE 15,100 ข้อความ · Automation ส่งซ้ำ', action: 'แนะนำตั้งค่า' },
+      { ws: 'Bangsue Data', plan: 'Team S', rev: '฿[ราคา Team S]', cost: '฿1,310', why: 'ไฟล์ 38 GB เกินโควตาต่อคน', action: 'เสนอพื้นที่เสริม' },
+    ];
+    const steps = [
+      ['สมัคร', 412], ['ยืนยันอีเมล', 371], ['สร้างโปรเจกต์แรก', 268], ['ชวนเพื่อนร่วมทีม', 151], ['เริ่มใช้จริง', 118], ['จ่ายแล้ว (61 รายยังทดลองอยู่)', 13],
+    ];
+    const funnel = steps.map(([label, n], i) => {
+      const prev = i ? steps[i - 1][1] : n;
+      const drop = i ? Math.round((1 - n / prev) * 100) : 0;
+      return { label, n: n.toLocaleString('en-US'), w: Math.max(2, Math.round((n / 412) * 100)) + '%',
+        color: i === 3 ? '#b86e00' : '#5b3fc4', drop: i ? '−' + drop + '%' : '', dropCls: i === 3 ? 'pill p-amber' : 'muted',
+        tip: label + ': ' + n + (i ? ' (หลุด ' + drop + '% จากขั้นก่อน)' : '') };
+    });
+    const cohortHead = ['เดือน 0', '1', '2', '3', '4', '5'];
+    const cohorts = [
+      ['พ.ค. 2569', 18, [100, 89, 83, 83, 78, 78]],
+      ['มิ.ย. 2569', 22, [100, 91, 86, 82, 82]],
+      ['ก.ค. 2569', 25, [100, 96, 92, 92]],
+      ['ส.ค. 2569', 27, [100, 93, 89]],
+      ['ก.ย. 2569', 31, [100, 90]],
+      ['ต.ค. 2569', 34, [100]],
+    ];
+    // สีลำดับเดียว (ม่วง) อ่อน→เข้ม ตามสัดส่วนที่อยู่ต่อ
+    const shade = (v) => { const t = Math.max(0, (v - 70) / 30); const l = Math.round(94 - t * 52); return 'hsl(253, 55%, ' + l + '%)'; };
+    const cohortCells = [];
+    for (const [name, n, vals] of cohorts) {
+      cohortCells.push({ text: name, bg: 'transparent', fg: '#3a3f45', align: 'flex-start', tip: '' });
+      cohortCells.push({ text: String(n), bg: 'transparent', fg: '#5f656d', align: 'flex-end', tip: '' });
+      for (let i = 0; i < 6; i++) {
+        const v = vals[i];
+        cohortCells.push(v === undefined
+          ? { text: '', bg: '#f6f7f9', fg: '#5f656d', align: 'center', tip: 'ยังไม่ถึงเดือนนี้' }
+          : { text: v + '%', bg: shade(v), fg: v >= 88 ? '#fff' : '#24272c', align: 'center', tip: name + ' เดือน ' + i + ': ยังจ่าย ' + v + '%' });
+      }
+    }
+    const ch = (name, signups, paid, spend, cac, ltv, ratio, cls) => ({ name, signups, paid, conv: Math.round((paid / signups) * 1000) / 10 + '%', spend, cac, ltv, ratio, ratioCls: cls });
+    const channels = [
+      ch('Google Ads', 118, 4, '฿48,000', '฿12,000', '฿84,000', '7.0×', 'pill p-green'),
+      ch('บทความ / SEO', 96, 3, '฿15,000', '฿5,000', '฿96,000', '19×', 'pill p-green'),
+      ch('ถูกชวนเข้า Workspace', 27, 3, '฿0', '฿0', '฿118,000', 'ไม่มีต้นทุน', 'pill p-teal'),
+      ch('Facebook', 131, 2, '฿22,000', '฿11,000', '฿52,000', '4.7×', 'pill p-amber'),
+      ch('ทีมขาย (Enterprise)', 4, 1, '฿30,000', '฿30,000', '฿610,000', '20×', 'pill p-green'),
+      ch('ไม่ทราบที่มา', 36, 0, '—', '—', '—', '—', 'muted'),
+    ];
+    const reasons = [
+      ['ราคาแพงเกินไป', 'ส่วนใหญ่ Team S ทีม 3–5 คน', 31],
+      ['ขาดฟีเจอร์', 'บันทึกเวลา, แอปมือถือ, ใบแจ้งหนี้ลูกค้า', 22],
+      ['ย้ายไปเครื่องมืออื่น', 'ระบุชื่อ 4 ราย', 17],
+      ['โปรเจกต์จบแล้ว', 'ทีม outsource รายงาน', 14],
+      ['ใช้ยาก', 'ตั้งค่า Workflow', 9],
+      ['อื่น ๆ', '', 7],
+    ].map(([label, sub, p]) => ({ label, sub, pct: p + '%', w: Math.round((p / 31) * 100) + '%' }));
+    const features = [
+      ['Table', 98, ''], ['Kanban', 91, ''], ['Gantt', 64, ''], ['Workload', 41, 'ยกเลิกน้อยกว่า 1.8×'], ['ขอเลื่อน Due', 38, ''],
+      ['LINE', 33, 'ยกเลิกน้อยกว่า 2.4×'], ['นำเข้า Excel', 29, ''], ['Automation', 18, ''], ['Git', 9, ''],
+    ].map(([name, p, note]) => ({ name, pct: p + '%', w: p + '%', note }));
+    const upsell = [
+      { ws: 'สยามโค้ด', plan: 'Team M', signal: 'ที่นั่ง 21 / 25 (84%) · บันทึกว่าสนใจ Enterprise' },
+      { ws: 'TechNova', plan: 'Team L', signal: 'ชนขีดจำกัด Automation 6 ครั้งใน 14 วัน' },
+      { ws: 'Orbit Apps', plan: 'Team S', signal: 'ที่นั่งเต็ม 10 / 10 · Guest 9 คน' },
+      { ws: 'Northwind Dev', plan: 'Team M', signal: 'พื้นที่ไฟล์ 92% · เพิ่มสมาชิก 6 คนใน 30 วัน' },
+      { ws: 'Lumen Studio', plan: 'Team S รายเดือน', signal: 'จ่ายตรง 11 รอบ · เสนอรายปีได้' },
+    ];
+    const aging = [
+      { label: '0–30 วัน', value: '฿41,200', w: '67%', color: '#b86e00' },
+      { label: '31–60 วัน', value: '฿12,800', w: '21%', color: '#c8264a' },
+      { label: 'เกิน 60 วัน', value: '฿7,800', w: '13%', color: '#a01d3c' },
+    ];
+    const forecast = [
+      ['พ.ย. (จริง)', 482, '#5b3fc4', 'none'], ['ธ.ค.', 512, '#ddd5f8', '1px dashed #8b74e0'], ['ม.ค.', 541, '#ddd5f8', '1px dashed #8b74e0'], ['ก.พ.', 569, '#ddd5f8', '1px dashed #8b74e0'],
+    ].map(([label, k, color, border]) => ({ label, value: '฿' + k + 'k', h: Math.round((k / 569) * 80) + '%', color, border, tip: label + ' MRR ฿' + k + ',000' }));
+    return { ranges, kpis, plans, costs, losers, funnel, cohortHead, cohortCells, channels, reasons, features, upsell, aging, forecast };
+  }
+}
+</script>
+</body>
+</html>

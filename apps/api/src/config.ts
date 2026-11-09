@@ -1,6 +1,11 @@
 import { resolve } from 'node:path';
 
 export const config = {
+  /**
+   * บริษัทจด VAT แล้วหรือยัง (decisions › Friday Ops ข้อ 9 · รอผู้ทำบัญชี) · จดแล้ว = คิด VAT 7% และออกใบกำกับภาษี / e-Tax
+   * ยังไม่จด (`VAT_REGISTERED=false`) = ไม่คิด VAT และออกใบเสร็จ · test เปลี่ยนค่าระหว่างรันได้
+   */
+  vatRegistered: process.env.VAT_REGISTERED !== 'false',
   port: Number(process.env.PORT ?? 3001),
   /** บัญชีที่เป็นสมาชิกของ friday_app (ถูกบังคับด้วย RLS) */
   appDbUrl: process.env.DATABASE_APP_URL ?? 'postgres://friday_api:friday_api_dev@localhost:54329/friday',

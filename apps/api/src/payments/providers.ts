@@ -24,12 +24,25 @@ export interface GatewayEvent {
   invoiceId: string | null;
 }
 
+/** รายการที่ผู้ให้บริการรับเงินสำเร็จ (ใช้กระทบยอดทุกเช้า จับ Webhook ที่หลุด) */
+export interface SettledPayment {
+  providerRef: string;
+  invoiceId: string | null;
+  amount: number;
+  at: Date;
+}
+
+/**
+ * ผู้ให้บริการรับชำระ (A35a) · ตัวจริงเลือกใน A35b (Opn หรือ Stripe) · โค้ดส่วนอื่นใช้ผ่าน interface นี้เท่านั้น
+ */
 export interface PaymentGateway {
   readonly name: 'stripe' | 'fake';
   createCard(r: GatewayRequest): Promise<GatewayPayment>;
   createPromptPay(r: GatewayRequest): Promise<GatewayPayment>;
   /** ตรวจลายเซ็นของ Webhook ขาเข้า (`Stripe-Signature`) แล้วแปลงเป็นเหตุการณ์ของเรา · ลายเซ็นผิด → throw */
   verifyWebhook(raw: Buffer, signature: string | undefined): GatewayEvent;
+  /** รายการที่รับเงินสำเร็จตั้งแต่เวลาที่กำหนด */
+  listSettled(since: Date): Promise<SettledPayment[]>;
 }
 export const PAYMENT_GATEWAY = Symbol('PAYMENT_GATEWAY');
 
@@ -80,6 +93,8 @@ const webhookSecret = () => process.env.STRIPE_WEBHOOK_SECRET ?? 'whsec_dev_fake
 export class FakeGateway implements PaymentGateway {
   readonly name = 'fake' as const;
   readonly calls: { kind: 'card' | 'promptpay'; request: GatewayRequest }[] = [];
+  /** test / dev: รายการที่ถือว่าผู้ให้บริการรับเงินแล้ว (จำลองกรณี Webhook หลุด) */
+  readonly settled: SettledPayment[] = [];
 
   async createCard(r: GatewayRequest): Promise<GatewayPayment> {
     this.calls.push({ kind: 'card', request: r });
@@ -97,6 +112,10 @@ export class FakeGateway implements PaymentGateway {
   verifyWebhook(raw: Buffer, signature: string | undefined) {
     verifyStripeSignature(raw, signature, webhookSecret());
     return parseStripeEvent(raw);
+  }
+
+  async listSettled(since: Date) {
+    return this.settled.filter((p) => p.at >= since);
   }
 }
 
@@ -144,6 +163,22 @@ export class StripeGateway implements PaymentGateway {
   verifyWebhook(raw: Buffer, signature: string | undefined) {
     verifyStripeSignature(raw, signature, this.whSecret);
     return parseStripeEvent(raw);
+  }
+
+  async listSettled(since: Date) {
+    const out: SettledPayment[] = [];
+    let after: string | undefined;
+    // ดึงทีละ 100 จนครบ (Stripe แบ่งหน้าด้วย starting_after)
+    for (let page = 0; page < 20; page++) {
+      const q = new URLSearchParams({ limit: '100', 'created[gte]': String(Math.floor(since.getTime() / 1000)), ...(after ? { starting_after: after } : {}) });
+      const res = await fetch(`https://api.stripe.com/v1/payment_intents?${q}`, { headers: { Authorization: `Bearer ${this.secretKey}` } });
+      const json = (await res.json()) as { data?: { id: string; status: string; amount_received: number; created: number; metadata?: { invoice_id?: string } }[]; has_more?: boolean };
+      if (!res.ok) throw new Error(`stripe_error: ${res.status}`);
+      for (const p of json.data ?? []) if (p.status === 'succeeded') out.push({ providerRef: p.id, invoiceId: p.metadata?.invoice_id ?? null, amount: p.amount_received, at: new Date(p.created * 1000) });
+      if (!json.has_more || !json.data?.length) break;
+      after = json.data[json.data.length - 1].id;
+    }
+    return out;
   }
 }
 

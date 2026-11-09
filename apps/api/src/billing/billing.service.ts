@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { config } from '../config.js';
 import { type Db, schema, type Tx } from '@friday/db';
 import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -124,7 +125,8 @@ export class BillingService {
     const override = await this.priceOverride(q.plan);
     const subtotal = priceFor(spec, q.cycle as Cycle, override);
     if (subtotal === null) throw new AppError(422, 'plan_not_purchasable', 'แพ็กเกจนี้ยังไม่เปิดขายออนไลน์ · ติดต่อฝ่ายขาย', { plan: q.plan });
-    return { ...computeQuote(spec, q.cycle as Cycle, q.wht, subtotal), currentPlan: sub.planCode };
+    // ยังไม่จด VAT: ไม่คิด VAT และเอกสารเป็นใบเสร็จ (หน้าชำระเงินซ่อนบรรทัด VAT ตาม documentType)
+    return { ...computeQuote(spec, q.cycle as Cycle, q.wht, subtotal, config.vatRegistered), currentPlan: sub.planCode, vatRegistered: config.vatRegistered, documentType: config.vatRegistered ? 'tax_invoice_receipt' : 'receipt' };
   }
 
   /** แคตตาล็อกแพ็กเกจเป็นข้อมูลระดับระบบ ไม่มี Workspace → อ่านด้วย SYSTEM_DB */

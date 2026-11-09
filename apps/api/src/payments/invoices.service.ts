@@ -1,14 +1,15 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { AnalyticsService } from '../analytics/analytics.service.js';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { Inject, Injectable } from '@nestjs/common';
 import { type Db, schema, type Tx } from '@friday/db';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { today } from '../common/dates.js';
 import { AppError, forbidden, notFound } from '../common/errors.js';
+import { parse } from '../common/validate.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { SYSTEM_DB } from '../db/db.module.js';
@@ -21,6 +22,21 @@ export const SLIP_MAX_BYTES = 5 * 1024 * 1024;
 /** 50 ทวิ ต้องส่งภายใน 30 วัน */
 export const WHT_DEADLINE_DAYS = 30;
 const PLAN_NAMES: Record<string, string> = { team_s: 'Team S', team_m: 'Team M', team_l: 'Team L' };
+
+/** ยอดที่ลูกค้าแจ้งตอนแนบสลิป (สตางค์) · ไม่บังคับ */
+const SlipBody = z.object({ amount: z.coerce.number().int().positive().optional() });
+/** ยอดคลาดได้ไม่เกิน 1 บาท (ปัดเศษของธนาคาร) */
+const AMOUNT_TOLERANCE = 100;
+
+/**
+ * เทียบยอดที่ลูกค้าแจ้งกับใบแจ้งหนี้ (A35a) · null = ตรง
+ * ใบไม่มีหัก ณ ที่จ่าย แต่ยอดเท่ากับหัก 3% แล้ว = ลูกค้าหักแต่ไม่ได้แจ้ง (ต้องขอ 50 ทวิ แล้วออกใบใหม่)
+ */
+export function slipAmountIssue(declared: number, invoice: { amountDue: number; subtotal: number; whtAmount: number }) {
+  if (Math.abs(declared - invoice.amountDue) <= AMOUNT_TOLERANCE) return null;
+  if (invoice.whtAmount === 0 && Math.abs(declared - (invoice.amountDue - Math.round(invoice.subtotal * 0.03))) <= AMOUNT_TOLERANCE) return 'wht_not_declared' as const;
+  return 'amount_mismatch' as const;
+}
 
 /** ตรวจชนิดไฟล์จากไบต์แรก ไม่เชื่อ Content-Type ของลูกค้า */
 export function sniff(buf: Buffer): { ext: string; mime: string } | null {
@@ -174,9 +190,10 @@ export class InvoicesService {
   }
 
   /** แนบสลิป → ใบแจ้งหนี้ `pending_review` แต่เปิดใช้แพ็กเกจใหม่ได้ทันที (03-api 3.10) */
-  async slip(auth: AuthInfo, tenant: TenantInfo, id: string, file: { buffer: Buffer } | undefined) {
+  async slip(auth: AuthInfo, tenant: TenantInfo, id: string, file: { buffer: Buffer } | undefined, body: unknown = {}) {
     this.requireBilling(tenant);
     const type = this.validateUpload(file);
+    const { amount: declared } = parse(SlipBody, body ?? {});
     const { invoice, payment } = await this.db.run(auth, tenant, async (tx) => {
       const invoice = await this.find(tx, id);
       if (invoice.status === 'paid' || invoice.status === 'void') throw new AppError(409, 'invoice_closed', 'ใบแจ้งหนี้นี้ปิดแล้ว แนบสลิปไม่ได้', { status: invoice.status });
@@ -186,13 +203,19 @@ export class InvoicesService {
     });
     const slipFileKey = await this.save('slips', invoice.id, file!.buffer, type.ext);
     const meta = await this.payments.meta(invoice.id);
+    // สลิปซ้ำ: ไฟล์เดียวกันเคยแนบกับใบแจ้งหนี้อื่น (ทุก Workspace จึงใช้ SYSTEM_DB) · Slip API ที่อ่านเลขอ้างอิงธนาคารมาในเฟส 2
+    const ref = `slip:${createHash('sha256').update(file!.buffer).digest('hex')}`;
+    const [dupe] = await this.sys.select({ invoiceId: s.payments.invoiceId }).from(s.payments).where(and(eq(s.payments.method, 'transfer'), eq(s.payments.providerRef, ref), ne(s.payments.id, payment.id)));
+    const exception = dupe ? ('duplicate_slip' as const) : declared === undefined ? null : slipAmountIssue(declared, invoice);
     // payments / invoices / subscriptions แก้ผ่านแอปไม่ได้ (เงิน) จึงเขียนด้วย SYSTEM_DB หลังตรวจเจ้าของใบแจ้งหนี้ด้านบนแล้ว
     await this.sys.transaction(async (tx) => {
-      await tx.update(s.payments).set({ slipFileKey, status: 'pending_review', updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
+      // ช่วงแรกทีมตรวจสลิปเองทุกใบ (pending_review) · exception_reason ทำให้ขึ้นคิวกรณีผิดปกติของ Friday Ops
+      await tx.update(s.payments).set({ slipFileKey, providerRef: dupe ? payment.providerRef : ref, exceptionReason: exception, status: 'pending_review', updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
       await tx.update(s.invoices).set({ status: 'pending_review', updatedAt: new Date() }).where(eq(s.invoices.id, invoice.id));
-      // เก็บสลิปเสมอ แต่เปิดสิทธิ์ชั่วคราวเฉพาะเมื่อใบนี้ยังไม่ถูกแทนที่ด้วยใบที่ใหม่กว่า (N02)
-      const granted = await this.payments.activate(tx, invoice, meta);
-      await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'plan', action: 'billing.slip_uploaded', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · ${type.mime} · ${granted ? `เปิดแพ็กเกจ ${meta.plan} ระหว่างรอตรวจ` : 'ไม่เปลี่ยนแพ็กเกจ (มีใบที่ใหม่กว่าเปิดสิทธิ์อยู่)'}` });
+      // เก็บสลิปเสมอ แต่เปิดสิทธิ์ชั่วคราวเฉพาะเมื่อใบนี้ยังไม่ถูกแทนที่ด้วยใบที่ใหม่กว่า (N02) และสลิปไม่ซ้ำ
+      const granted = exception === 'duplicate_slip' ? false : await this.payments.activate(tx, invoice, meta);
+      const note = exception ? ` · ผิดปกติ: ${exception}${declared !== undefined ? ` (แจ้ง ${declared / 100} บาท)` : ''}` : '';
+      await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'plan', action: 'billing.slip_uploaded', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · ${type.mime} · ${granted ? `เปิดแพ็กเกจ ${meta.plan} ระหว่างรอตรวจ` : exception === 'duplicate_slip' ? 'ไม่เปิดแพ็กเกจ (สลิปซ้ำ)' : 'ไม่เปลี่ยนแพ็กเกจ (มีใบที่ใหม่กว่าเปิดสิทธิ์อยู่)'}${note}` });
     });
     return this.get(auth, tenant, id);
   }

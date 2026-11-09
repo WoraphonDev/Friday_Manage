@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { AnalyticsService, classifyChange } from '../analytics/analytics.service.js';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { canGrant, type Db, schema, type Tx } from '@friday/db';
-import { and, count, eq, inArray, like, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, like, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { today } from '../common/dates.js';
 import { AppError, forbidden } from '../common/errors.js';
@@ -12,6 +12,7 @@ import { BillingService } from '../billing/billing.service.js';
 import { Mailer } from '../core/mail.js';
 import { PlanLimits } from '../core/plan-limits.js';
 import { SYSTEM_DB } from '../db/db.module.js';
+import { config } from '../config.js';
 import { Jobs } from '../queue/jobs.js';
 import { ETAX_PROVIDER, type ETaxProvider, PAYMENT_GATEWAY, type PaymentGateway, verifyETaxSignature } from './providers.js';
 
@@ -81,11 +82,60 @@ export class PaymentsService implements OnModuleInit {
     // ใบกำกับภาษีที่หลังบ้าน (ops-api) สร้างตอนยืนยันสลิปโอน อยู่ในสถานะ pending โดยไม่มีใครส่งงานให้ → กวาดส่งทุก 10 นาที
     this.jobs.define('payments.etax-sweep', () => this.sweepETax());
     await this.jobs.every('payments.etax-sweep', '*/10 * * * *');
+    // กระทบยอดกับผู้ให้บริการทุกเช้า 06:00 จับ Webhook ที่หลุด (A35a)
+    this.jobs.define('payments.reconcile', () => this.reconcile(new Date(Date.now() - 3 * DAY)));
+    await this.jobs.every('payments.reconcile', '0 6 * * *');
+  }
+
+  /**
+   * กระทบยอด: รายการที่ผู้ให้บริการรับเงินแล้วแต่ระบบยังไม่ยืนยัน → ยืนยันเหมือนได้ Webhook
+   * ยอดไม่ตรง → เข้าคิวกรณีผิดปกติ · ใบแจ้งหนี้ชำระด้วยรายการอื่นไปแล้ว → จ่ายซ้ำ · ไม่รู้จักเลขอ้างอิง → คืนในผลให้ทีม Friday ตรวจ
+   */
+  async reconcile(since: Date) {
+    const result = { checked: 0, settled: 0, exceptions: 0, unmatched: [] as { providerRef: string; invoiceId: string | null; amount: number }[] };
+    for (const p of await this.gateway.listSettled(since)) {
+      result.checked++;
+      const [payment] = await this.sys.select().from(s.payments).where(and(inArray(s.payments.method, ['card', 'promptpay']), eq(s.payments.providerRef, p.providerRef)));
+      if (!payment) {
+        result.unmatched.push({ providerRef: p.providerRef, invoiceId: p.invoiceId, amount: p.amount });
+        continue;
+      }
+      if (payment.status === 'confirmed' || payment.exceptionReason) continue;
+      if (p.amount !== payment.amount) {
+        await this.flag(payment, 'amount_mismatch', `ผู้ให้บริการรับ ${p.amount / 100} บาท · ใบแจ้งหนี้ ${payment.amount / 100} บาท`);
+        result.exceptions++;
+        continue;
+      }
+      const outcome = await this.succeed(payment);
+      if (outcome === 'settled') result.settled++;
+      else result.exceptions++;
+    }
+    if (result.settled || result.exceptions || result.unmatched.length) this.log.warn(`กระทบยอด: ยืนยันเพิ่ม ${result.settled} · ผิดปกติ ${result.exceptions} · ไม่รู้จัก ${result.unmatched.length}`);
+    return result;
+  }
+
+  /** รับเงินสำเร็จ: ใบแจ้งหนี้ชำระด้วยรายการอื่นไปแล้ว = จ่ายซ้ำ (ไม่เปิดสิทธิ์ซ้ำ รอทีมตัดสินว่าเก็บเป็นเครดิตหรือคืน) */
+  private async succeed(payment: Payment): Promise<'settled' | 'double_payment'> {
+    const [invoice] = await this.sys.select({ status: s.invoices.status }).from(s.invoices).where(eq(s.invoices.id, payment.invoiceId));
+    if (invoice?.status === 'paid') {
+      await this.flag(payment, 'double_payment', 'ใบแจ้งหนี้นี้ชำระด้วยรายการอื่นแล้ว');
+      return 'double_payment';
+    }
+    await this.settle(payment);
+    return 'settled';
+  }
+
+  /** ส่งเข้าคิวกรณีผิดปกติของ Friday Ops (O03) */
+  async flag(payment: Payment, reason: 'amount_mismatch' | 'double_payment' | 'duplicate_slip' | 'wht_not_declared' | 'unmatched', note: string) {
+    await this.sys.transaction(async (tx) => {
+      await tx.update(s.payments).set({ status: 'pending_review', exceptionReason: reason, updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
+      await tx.insert(s.auditLogs).values({ workspaceId: payment.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.payment_exception', targetType: 'invoice', targetId: payment.invoiceId, summary: `${reason} · ${note}` });
+    });
   }
 
   /** ส่ง e-Tax ของเอกสารที่ค้างสถานะ pending เกิน 1 นาที (ให้ผู้สร้างเอกสารมีเวลาส่งงานเอง) */
   async sweepETax() {
-    const rows = await this.sys.select({ id: s.taxDocuments.id }).from(s.taxDocuments).where(and(eq(s.taxDocuments.status, 'pending'), sql`${s.taxDocuments.createdAt} < now() - interval '1 minute'`)).limit(50);
+    const rows = await this.sys.select({ id: s.taxDocuments.id }).from(s.taxDocuments).where(and(eq(s.taxDocuments.status, 'pending'), ne(s.taxDocuments.docType, 'receipt'), sql`${s.taxDocuments.createdAt} < now() - interval '1 minute'`)).limit(50);
     let submitted = 0;
     for (const r of rows) {
       try {
@@ -219,22 +269,25 @@ export class PaymentsService implements OnModuleInit {
     const created = await this.sys.transaction(async (tx) => {
       const [invoice] = await tx.select().from(s.invoices).where(eq(s.invoices.id, payment.invoiceId));
       const meta = await this.meta(invoice.id);
-      await tx.update(s.payments).set({ status: 'confirmed', updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
+      await tx.update(s.payments).set({ status: 'confirmed', verifiedBy: 'webhook', updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
       await tx.update(s.invoices).set({ status: 'paid', paidAt: new Date(), updatedAt: new Date() }).where(eq(s.invoices.id, invoice.id));
       const [prev] = await tx.select({ status: s.subscriptions.status, cycle: s.subscriptions.cycle, plan: s.plans.code }).from(s.subscriptions).leftJoin(s.plans, eq(s.plans.id, s.subscriptions.planId)).where(eq(s.subscriptions.id, invoice.subscriptionId));
       const granted = await this.activate(tx, invoice, meta);
       // A34: MRR movement · MRR = ยอดก่อน VAT หลังส่วนลด (รายปีหาร 12)
       const kind = granted ? classifyChange({ plan: prev?.plan ?? null, status: prev?.status ?? null, cycle: prev?.cycle ?? null }, { plan: meta.plan, cycle: meta.cycle }) : null;
       if (kind) await this.analytics.subscriptionChanged(tx, { workspaceId: invoice.workspaceId, kind, planFrom: prev?.plan ?? null, planTo: meta.plan, mrrAfterSatang: meta.cycle === 'yearly' ? invoice.subtotal / 12 : invoice.subtotal, actorKind: 'system', actorId: null });
+      // ยังไม่จด VAT: ออกใบเสร็จ (ไม่ต้องส่ง e-Tax จึงถือว่าออกแล้ว)
       const [doc] = await tx
         .insert(s.taxDocuments)
-        .values({ workspaceId: invoice.workspaceId, invoiceId: invoice.id, docType: 'tax_invoice_receipt', number: `TX-${invoice.number.slice(4)}` })
+        .values(config.vatRegistered
+          ? { workspaceId: invoice.workspaceId, invoiceId: invoice.id, docType: 'tax_invoice_receipt', number: `TX-${invoice.number.slice(4)}` }
+          : { workspaceId: invoice.workspaceId, invoiceId: invoice.id, docType: 'receipt', number: `RC-${invoice.number.slice(4)}`, status: 'issued', sentAt: new Date() })
         .onConflictDoNothing()
         .returning();
       await tx.insert(s.auditLogs).values({ workspaceId: invoice.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.payment_confirmed', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · ${payment.method} · ${payment.amount / 100} บาท · ${granted ? `เปิดแพ็กเกจ ${meta.plan}` : 'ไม่เปลี่ยนแพ็กเกจ (มีใบที่ใหม่กว่าเปิดสิทธิ์อยู่)'}` });
       return doc;
     });
-    if (created) await this.jobs.enqueue('payments.etax', { taxDocumentId: created.id });
+    if (created?.docType === 'tax_invoice_receipt') await this.jobs.enqueue('payments.etax', { taxDocumentId: created.id });
   }
 
   // ---------------------------------------------------------------------------
@@ -255,8 +308,9 @@ export class PaymentsService implements OnModuleInit {
 
     if (ev.type === 'payment.succeeded') {
       if (payment.status === 'confirmed') return { received: true, duplicate: true };
-      await this.settle(payment);
-      return { received: true };
+      if (payment.exceptionReason) return { received: true, exception: payment.exceptionReason };
+      const outcome = await this.succeed(payment);
+      return outcome === 'settled' ? { received: true } : { received: true, exception: outcome };
     }
     // ล้มเหลว / ยกเลิก (เช่น QR หมดอายุ): ไม่ย้อนการชำระที่ยืนยันแล้ว
     if (payment.status === 'confirmed') return { received: true, ignored: true };

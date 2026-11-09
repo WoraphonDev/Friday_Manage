@@ -122,6 +122,8 @@ export interface WorkspaceWorkload {
     overAllocated: boolean;
     overPeriods: number;
     cells: { value: number; capacity: number | null; over: boolean; byProject: { key: string; name: string; color: string | null; value: number }[] }[];
+    /** ยอดในช่วงตามแผนเทียบกับที่ทำจริง */
+    compare?: { plan: number; actual: number; actualVsPlanPct: number | null };
   }[];
 }
 

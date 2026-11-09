@@ -155,6 +155,8 @@ export const projectMembers = pgTable(
     position: text(),
     /** ชั่วโมงที่แบ่งให้โปรเจกต์นี้ · แสดงเป็น MD (8 ชม. = 1 MD) */
     capacityHoursWeek: smallint(),
+    /** ทำงานแทน PM: รับแจ้งเตือนแบบ PM และอนุมัติคำขอเลื่อน Due ได้ โดยไม่ต้องเป็น Admin */
+    pmDeputy: boolean().notNull().default(false),
     joinedAt: createdAt(),
   },
   (t) => [

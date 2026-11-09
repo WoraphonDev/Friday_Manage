@@ -12,6 +12,8 @@ import { IN_APP_LOCKED, isReviewStatus, JOBS, NO_INBOX, REASONS, SCHEDULES, SENT
 type QueuedEvent = Omit<DomainEvent, 'at'> & { at: string | Date };
 
 /** ผู้รับ 1 ชุดของ 1 eventType · ผู้รับคนเดียวมีหลายบทบาทได้ ใช้เหตุผลแรกที่ใส่ */
+const PM_REASON = { owner: REASONS.pm, admin: REASONS.pmAdmin, deputy: REASONS.pmDeputy } as const;
+
 class Send {
   readonly reasons = new Map<string, string>();
   constructor(
@@ -107,7 +109,11 @@ export class NotificationFanout implements OnModuleInit {
     const d = event.data ?? {};
     const assignees = async () => (issue ? ((await this.audience.assignees([issue.id])).get(issue.id) ?? []) : []);
     const watchers = async () => (issue ? this.audience.watchers(issue.id) : []);
-    const pm = (send: Send) => send.add([project.ownerUserId], REASONS.pm);
+    const pmPeople = await this.audience.pmRecipients(project);
+    const pm = (send: Send) => {
+      for (const [id, kind] of pmPeople) send.add([id], PM_REASON[kind]);
+      return send;
+    };
 
     switch (event.type) {
       case 'issue.assigned':

@@ -200,8 +200,10 @@
       "cancel": "Cancel",
       "addConfirm": "Add",
       "removeTitle": "Delete Module {name}",
-      "removeHasIssues": "This Module has {count, plural, one {{count} task} other {{count} tasks}} · Choose a Module to move them to (the task group of moved tasks is cleared)",
+      "removeHasIssues": "This Module has {count, plural, one {{count} task} other {{count} tasks}} · Choose a Module and task group to move them to",
       "moveTo": "Move tasks to",
+      "moveToPhase": "Target task group",
+      "noPhase": "No task group",
       "removeEmpty": "No tasks in this Module. It can be deleted right away",
       "removeConfirm": "Delete Module"
     },

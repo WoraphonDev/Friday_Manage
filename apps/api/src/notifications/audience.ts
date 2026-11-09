@@ -106,6 +106,20 @@ export class Audience {
     return [...new Set([project.ownerUserId, ...rows.map((r) => r.userId)])];
   }
 
+  /**
+   * ผู้รับแจ้งเตือนแบบ PM = Project Owner + Admin ของโปรเจกต์ + สมาชิกที่ตั้งให้ทำแทน PM (ผู้ใช้ตัดสิน 9 พ.ย. 2026)
+   * คืนเหตุผลต่อคนให้ "ทำไมฉันได้รับแจ้ง" ตรงกับบทบาท · การตรวจว่ายังเห็นโปรเจกต์ได้อยู่ที่ visible()
+   */
+  async pmRecipients(project: ProjectCtx) {
+    const rows = await this.db
+      .select({ userId: s.projectMembers.userId, role: s.projectMembers.role, pmDeputy: s.projectMembers.pmDeputy })
+      .from(s.projectMembers)
+      .where(and(eq(s.projectMembers.projectId, project.id), sql`(${s.projectMembers.role} = 'admin' OR ${s.projectMembers.pmDeputy})`));
+    const out = new Map<string, 'owner' | 'admin' | 'deputy'>([[project.ownerUserId, 'owner']]);
+    for (const r of rows) if (!out.has(r.userId)) out.set(r.userId, r.role === 'admin' ? 'admin' : 'deputy');
+    return out;
+  }
+
   async names(ids: string[]) {
     const out = new Map<string, string>();
     if (!ids.length) return out;

@@ -224,7 +224,7 @@ describe('คำเชิญ · ส่งซ้ำ, Seat, Event', () => {
     expect((await team.lead.post(`${team.ws}/invitations/${first.invitationId}/resend`)).body.error.code).toBe('invitation_not_pending');
   });
 
-  it('PM ได้แจ้ง member.joined ครั้งเดียว (ผู้เชิญเป็น PM) · ผู้เชิญที่ไม่ใช่ PM ได้แยกอีกรายการ', async () => {
+  it('PM ได้แจ้ง member.joined ครั้งเดียว (ผู้เชิญเป็น Owner หรือ Admin ของโปรเจกต์ ซึ่งนับเป็น PM) · ไม่ได้ซ้ำในฐานะผู้เชิญ', async () => {
     const ask = async (email: string, inviter: Client) => {
       const inv = await inviter.post(`${team.ws}/invitations`, { emails: [email], projectKey: team.key });
       expect(inv.status, JSON.stringify(inv.body)).toBe(201);

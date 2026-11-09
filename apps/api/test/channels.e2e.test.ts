@@ -117,6 +117,24 @@ describe('ท่อส่ง Email ตาม pref', () => {
     expect(await deliveries()).toMatchObject([{ channel: 'email', status: 'sent', attempts: 1, last_error: null }]);
   });
 
+  it('ผู้รับเลือกภาษาอังกฤษ → หัวข้อ ปุ่ม และเหตุผลเป็นภาษาอังกฤษ (W21)', async () => {
+    await t.owner.query(`UPDATE users SET locale = 'en' WHERE id = $1`, [team.devId]);
+    try {
+      await t.app.get(Notifier).notify({
+        workspaceId: wsId, recipientIds: [team.devId], eventType: 'issue.assigned', actorId: team.leadId, projectId,
+        payload: { projectKey: team.key, projectName: 'Development Plan', issueKey: 'DP-1', issueTitle: 'งานทดสอบ', actorName: 'Mick' },
+        reason: 'คุณได้รับมอบหมายงานนี้',
+      });
+      expect(mails).toHaveLength(1);
+      expect(mails[0].subject).toBe('[Friday] Mick assigned you a task: DP-1 งานทดสอบ');
+      expect(mails[0].text).toContain('Open in app: ');
+      expect(mails[0].text).toContain('You received this email because: you are assigned to this task');
+      expect(mails[0].html).toContain('Notification settings');
+    } finally {
+      await t.owner.query(`UPDATE users SET locale = 'th' WHERE id = $1`, [team.devId]);
+    }
+  });
+
   it('เหตุการณ์ที่ปิด Email เป็นค่าเริ่มต้น → ไม่ส่ง จนกว่าผู้ใช้เปิดเอง', async () => {
     await notify('issue.commented', [team.devId]);
     expect(mails).toHaveLength(0);

@@ -219,6 +219,41 @@ describe('ผู้รับตาม 03-api › Event ที่ระบบส�
     );
   });
 
+  it('แจ้งเตือนแบบ PM ส่งถึง Owner + Admin + ผู้ทำแทน PM · ผู้ทำแทนอนุมัติคำขอเลื่อน Due ได้ · Guest ทำแทนไม่ได้', async () => {
+    const members = `${team.ws}/projects/DP/members`;
+    expect((await team.lead.patch(`${members}/${people.watcher.id}`, { role: 'admin' })).status).toBe(200);
+    const set = await team.lead.patch(`${members}/${people.ba.id}`, { pmDeputy: true });
+    expect(set.status).toBe(200);
+    expect(set.body).toMatchObject({ pmDeputy: true, role: 'member' });
+    expect((await team.lead.patch(`${members}/${people.guest.id}`, { pmDeputy: true })).body.error.code).toBe('guest_cannot_be_pm_deputy');
+    // คนอื่นที่ไม่มี project.settings ตั้งผู้ทำแทนไม่ได้
+    expect((await people.reviewer.c.patch(`${members}/${people.reviewer.id}`, { pmDeputy: true })).status).toBe(403);
+
+    try {
+      const m = await mark();
+      await publish({ type: 'project.health_changed', actorId: null, data: { from: 'on_track', to: 'at_risk' } });
+      const rows = await since(m);
+      expect(pairs(rows)).toEqual(['project.health_changed→ba', 'project.health_changed→lead', 'project.health_changed→watcher']);
+      expect(Object.fromEntries(rows.map((r) => [r.recipient, r.reason]))).toEqual({
+        lead: 'คุณเป็น PM (Project Owner) ของโปรเจกต์นี้',
+        watcher: 'คุณเป็น Admin ของโปรเจกต์นี้',
+        ba: 'คุณได้รับมอบหมายให้ทำแทน PM ในโปรเจกต์นี้',
+      });
+
+      // ผู้ทำแทน PM ได้รับคำขอเลื่อน Due และอนุมัติได้
+      const issue = await createIssue({ title: 'ขอเลื่อนให้ผู้ทำแทนอนุมัติ', assigneeIds: [team.devId] });
+      const m2 = await mark();
+      const req = await team.dev.post(`${team.ws}/issues/${issue.key}/due-requests`, { requestedDue: '2026-12-15', reasonCode: 'scope_added', detail: 'เพิ่มขอบเขต' });
+      expect(req.status, JSON.stringify(req.body)).toBe(201);
+      expect(pairs(await since(m2)).filter((x) => x.startsWith('due_request.created'))).toContain('due_request.created→ba');
+      const ok = await people.ba.c.post(`${team.ws}/due-requests/${req.body.id}/approve`, {});
+      expect(ok.status, JSON.stringify(ok.body)).toBeLessThan(300);
+    } finally {
+      await team.lead.patch(`${members}/${people.ba.id}`, { pmDeputy: false });
+      await team.lead.patch(`${members}/${people.watcher.id}`, { role: 'member' });
+    }
+  });
+
   it('issue.created, issue.deleted, report.weekly ไม่มีผู้รับเริ่มต้น · due_request.* และ project.admin_joined ไม่ส่งซ้ำ', async () => {
     const issue = await createIssue({ title: 'ขอเลื่อน', assigneeIds: [team.devId] });
     const m = await mark();
@@ -336,6 +371,44 @@ describe('แจ้งเตือนตามเวลา (A16)', () => {
     expect((await since(again)).filter((r) => mine.has(r.issue_key!)).map((r) => `${r.event_type}:${r.issue_key}→${r.recipient}`).sort()).toEqual(
       [`issue.due_soon:${tomorrow.key}→dev`, `issue.due_soon:${tomorrow.key}→reviewer`, `issue.overdue:${today.key}→reviewer`].sort(),
     );
+  });
+
+  it('งานเลยกำหนดเกินวันทำการแรก สรุปให้ Assignee รายการเดียวทุกวันทำการ · วันหยุดไม่ส่ง · รันซ้ำไม่ซ้ำ', async () => {
+    // ใช้วันที่ที่ test อื่นยังไม่รัน เพราะสรุปกันซ้ำวันละครั้งต่อคน
+    const qa = await planned('เลยกำหนดหลายวัน (สรุปรายวัน)', '2026-12-03', [people.ba.id]);
+    const repeatOf = (rows: Row[]) => rows.filter((r) => r.event_type === 'issue.overdue' && r.recipient === 'ba' && r.payload.mine === true);
+    const keys = (row: Row) => (row.payload.issues as { issueKey: string }[]).map((i) => i.issueKey);
+
+    // Due 3 ธ.ค. → วันทำการแรกที่เลยกำหนดคือ 4 ธ.ค.: แจ้งทีละงานเท่านั้น
+    let m = await mark();
+    await run(JOBS.dueReminders, '2026-12-04');
+    const first = await since(m);
+    expect(first.filter((r) => r.issue_key === qa.key).map((r) => r.recipient)).toEqual(['ba']);
+    expect(repeatOf(first)).toEqual([]);
+
+    // 8 ธ.ค. (7 ธ.ค. เป็นวันหยุด) สรุปรายการเดียว · รันซ้ำไม่ซ้ำ
+    m = await mark();
+    await run(JOBS.dueReminders, '2026-12-08');
+    await run(JOBS.dueReminders, '2026-12-08');
+    const rows = repeatOf(await since(m));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ reason: 'งานของคุณยังเลยกำหนด · แจ้งทุกวันทำการจนกว่างานจะเสร็จหรือเลื่อน Due', actor: null });
+    expect(rows[0].payload).toMatchObject({ summary: true, date: '2026-12-08', count: keys(rows[0]).length });
+    expect(keys(rows[0])).toContain(qa.key);
+
+    // 10 ธ.ค. เป็นวันหยุดในชุดทดสอบ: ไม่ส่ง · 14 ธ.ค. ส่งอีกครั้ง
+    m = await mark();
+    await run(JOBS.dueReminders, '2026-12-10');
+    expect(repeatOf(await since(m))).toEqual([]);
+    m = await mark();
+    await run(JOBS.dueReminders, '2026-12-14');
+    expect(keys(repeatOf(await since(m))[0])).toContain(qa.key);
+
+    // เสร็จแล้วไม่อยู่ในสรุปอีก
+    await move(qa.key, status('Done'));
+    m = await mark();
+    await run(JOBS.dueReminders, '2026-12-16');
+    expect(repeatOf(await since(m)).flatMap(keys)).not.toContain(qa.key);
   });
 
   it('09:30 วันทำการ สรุปงานเลยกำหนดให้ PM โปรเจกต์ละ 1 รายการ · วันหยุดไม่ส่ง', async () => {

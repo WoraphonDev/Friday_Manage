@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import { UnrecoverableError } from '../queue/jobs.js';
 import { openSecret } from '../channels/secrets.js';
 import type { ChannelSender, ExternalChannel, SendContext } from '../channels/senders.js';
-import type { Msg } from '../channels/message.js';
+import { labelsOf, type Msg } from '../channels/message.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { LineApi, type LineMessage } from './line-api.js';
 import { postbackData } from './line.service.js';
@@ -14,8 +14,15 @@ const s = schema;
 const text = (m: Msg) =>
   [m.head, m.title, m.project, ...m.rows.map(([k, v]) => `${k}: ${v}`), m.note ? `“${m.note}”` : '', m.url].filter(Boolean).join('\n');
 
+const FLEX = {
+  th: { more: 'รายละเอียดดูได้ในแอปหลังเข้าสู่ระบบ', approve: 'อนุมัติ', reject: 'ปฏิเสธ' },
+  en: { more: 'Sign in to the app to see the details', approve: 'Approve', reject: 'Reject' },
+} as const;
+
 /** ข้อความ Flex พร้อมปุ่มอนุมัติ / ปฏิเสธ (ทำงานใน LINE ได้ทันที) */
 function approvalFlex(m: Msg, requestId: string): LineMessage {
+  const F = FLEX[m.locale ?? 'th'];
+  const L = labelsOf(m.locale ?? 'th');
   const row = ([k, v]: [string, string]) => ({ type: 'box', layout: 'baseline', contents: [{ type: 'text', text: k, size: 'sm', color: '#5F6873', flex: 3 }, { type: 'text', text: v, size: 'sm', wrap: true, flex: 5 }] });
   return {
     type: 'flex',
@@ -23,15 +30,15 @@ function approvalFlex(m: Msg, requestId: string): LineMessage {
     contents: {
       type: 'bubble',
       header: { type: 'box', layout: 'vertical', backgroundColor: m.color, contents: [{ type: 'text', text: m.head, color: '#FFFFFF', weight: 'bold', wrap: true }] },
-      body: { type: 'box', layout: 'vertical', spacing: 'sm', contents: [{ type: 'text', text: m.title, weight: 'bold', wrap: true }, { type: 'text', text: m.project, size: 'xs', color: '#5F6873', wrap: true }, ...m.rows.map(row), { type: 'text', text: 'รายละเอียดดูได้ในแอปหลังเข้าสู่ระบบ', size: 'xs', color: '#5F6873', wrap: true }] },
+      body: { type: 'box', layout: 'vertical', spacing: 'sm', contents: [{ type: 'text', text: m.title, weight: 'bold', wrap: true }, { type: 'text', text: m.project, size: 'xs', color: '#5F6873', wrap: true }, ...m.rows.map(row), { type: 'text', text: F.more, size: 'xs', color: '#5F6873', wrap: true }] },
       footer: {
         type: 'box',
         layout: 'vertical',
         spacing: 'sm',
         contents: [
-          { type: 'button', style: 'primary', color: '#15803D', action: { type: 'postback', label: 'อนุมัติ', data: postbackData(requestId, 'approve'), displayText: 'อนุมัติ' } },
-          { type: 'button', style: 'primary', color: '#B91C1C', action: { type: 'postback', label: 'ปฏิเสธ', data: postbackData(requestId, 'reject'), displayText: 'ปฏิเสธ' } },
-          { type: 'button', style: 'link', action: { type: 'uri', label: 'เปิดในแอป', uri: m.url } },
+          { type: 'button', style: 'primary', color: '#15803D', action: { type: 'postback', label: F.approve, data: postbackData(requestId, 'approve'), displayText: F.approve } },
+          { type: 'button', style: 'primary', color: '#B91C1C', action: { type: 'postback', label: F.reject, data: postbackData(requestId, 'reject'), displayText: F.reject } },
+          { type: 'button', style: 'link', action: { type: 'uri', label: L.openApp, uri: m.url } },
         ],
       },
     },

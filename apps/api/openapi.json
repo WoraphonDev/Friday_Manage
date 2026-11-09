@@ -20464,6 +20464,9 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "pmDeputy": {
+                    "type": "boolean"
                   }
                 }
               }
@@ -25717,6 +25720,19 @@
             }
           },
           {
+            "name": "basis",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "plan",
+              "type": "string",
+              "enum": [
+                "plan",
+                "actual"
+              ]
+            }
+          },
+          {
             "name": "moduleId",
             "in": "query",
             "required": false,
@@ -27306,6 +27322,19 @@
                 "day",
                 "week",
                 "month"
+              ]
+            }
+          },
+          {
+            "name": "basis",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "plan",
+              "type": "string",
+              "enum": [
+                "plan",
+                "actual"
               ]
             }
           },

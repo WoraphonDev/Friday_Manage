@@ -27,6 +27,13 @@ function workingDayBefore(cal: WorkCalendar, date: string, n: number) {
   return d;
 }
 
+/** วันทำการแรกหลัง date = วันแรกที่งานนับว่าเลยกำหนด */
+function firstWorkingDayAfter(cal: WorkCalendar, date: string) {
+  let d = addDays(date, 1);
+  for (let guard = 0; !cal.isWorkingDay(d) && guard < 400; guard++) d = addDays(d, 1);
+  return d;
+}
+
 /** ควรเตือน "ใกล้ครบกำหนด" วันนี้ไหม (I · Profile › แจ้งเตือนก่อนครบกำหนด) · นับวันทำการตามปฏิทินโปรเจกต์ */
 export function dueSoonToday(setting: DueReminder, planEnd: string, date: string, cal: WorkCalendar) {
   if (planEnd === date) return setting !== '3d';
@@ -57,29 +64,69 @@ export class Reminders {
     this.audience = new Audience(db);
   }
 
-  /** 08:00 · ใกล้ครบกำหนดตาม due_reminder ของแต่ละคน และแจ้ง Assignee ครั้งแรกที่งานเลยกำหนด */
+  /**
+   * 08:00 · ใกล้ครบกำหนดตาม due_reminder ของแต่ละคน และแจ้งงานเลยกำหนด
+   * เลยกำหนดวันทำการแรก: แจ้ง Assignee ทีละงาน · วันทำการถัดไป: สรุปงานที่ยังเลยกำหนดรวมเป็นรายการเดียวต่อคนทุกวันทำการ
+   * จนกว่างานจะเสร็จหรือเลื่อน Due (ผู้ใช้ตัดสิน 9 พ.ย. 2026)
+   */
   async dueReminders(date = today()) {
     const open = await this.openIssues(addDays(date, 21));
     const assignees = await this.audience.assignees(open.map((o) => o.issue.id));
     const users = [...new Set([...assignees.values()].flat())];
     const settings = await this.settings(users);
     const calendars = await this.calendars(open.map((o) => o.project));
+    /** workspaceId:userId → งานที่เลยกำหนดมาเกินวันทำการแรกแล้ว */
+    const repeat = new Map<string, OpenIssue[]>();
     let sent = 0;
     for (const o of open) {
       const people = assignees.get(o.issue.id) ?? [];
       if (!people.length) continue;
+      const cal = calendars.get(o.project.id)!;
       if (o.planEnd < date) {
+        // dedupeKey ผูกกับ planEnd: แจ้งทีละงานครั้งเดียวต่อ Due · ถ้างานเพิ่งเลยกำหนดวันนี้ จบที่รายการนี้
         sent += await this.send(o, people, 'issue.overdue', REASONS.overdue, `overdue:${o.issue.id}:${o.planEnd}`, { planEnd: o.planEnd, daysLate: daysBetween(o.planEnd, date) });
+        if (cal.isWorkingDay(date) && firstWorkingDayAfter(cal, o.planEnd) < date) {
+          for (const u of people) repeat.set(`${o.project.workspaceId}:${u}`, [...(repeat.get(`${o.project.workspaceId}:${u}`) ?? []), o]);
+        }
         continue;
       }
-      const cal = calendars.get(o.project.id)!;
       const due = people.filter((u) => dueSoonToday(settings.get(`${o.project.workspaceId}:${u}`)?.dueReminder ?? '1d_and_today', o.planEnd, date, cal));
       sent += await this.send(o, due, 'issue.due_soon', REASONS.dueSoon, `due_soon:${o.issue.id}:${o.planEnd}:${date}`, { planEnd: o.planEnd, daysLeft: daysBetween(date, o.planEnd) });
     }
+    for (const [k, list] of repeat) sent += await this.overdueRepeat(k.split(':')[0], k.split(':')[1], list, date);
     return { date, sent };
   }
 
-  /** 09:30 วันทำการ · สรุปงานเลยกำหนดของแต่ละโปรเจกต์ให้ PM (Project Owner) 1 รายการ */
+  /** สรุปงานเลยกำหนดของคนหนึ่งคนใน Workspace หนึ่ง (เฉพาะงานที่ยังเห็นได้) · In-app ของ issue.overdue ปิดไม่ได้ */
+  private async overdueRepeat(workspaceId: string, userId: string, list: OpenIssue[], date: string) {
+    const mine: OpenIssue[] = [];
+    for (const o of list) if ((await this.audience.visible([userId], o.project, o.issue)).size) mine.push(o);
+    if (!mine.length) return 0;
+    mine.sort((a, b) => a.planEnd.localeCompare(b.planEnd) || a.issue.key.localeCompare(b.issue.key));
+    const projects = [...new Set(mine.map((o) => o.project.id))];
+    const single = projects.length === 1 ? mine[0].project : null;
+    await this.notifier.notify({
+      workspaceId,
+      recipientIds: [userId],
+      eventType: 'issue.overdue',
+      actorId: null,
+      projectId: single?.id,
+      payload: {
+        ...(single ? { projectKey: single.key, projectName: single.name } : {}),
+        summary: true,
+        mine: true,
+        date,
+        count: mine.length,
+        title: `งานของคุณที่ยังเลยกำหนด ${mine.length} งาน`,
+        issues: mine.slice(0, MAX_SUMMARY_ITEMS).map((o) => ({ issueKey: o.issue.key, title: o.issue.title, planEnd: o.planEnd, daysLate: daysBetween(o.planEnd, date), projectKey: o.project.key })),
+      },
+      reason: REASONS.overdueRepeat,
+      dedupeKey: `overdue_mine:${date}`,
+    });
+    return 1;
+  }
+
+  /** 09:30 วันทำการ · สรุปงานเลยกำหนดของแต่ละโปรเจกต์ให้ PM (Owner + Admin + ผู้ทำแทน PM) คนละ 1 รายการ */
   async overdueSummary(date = today()) {
     const open = (await this.openIssues(addDays(date, -1))).filter((o) => o.planEnd < date);
     const byProject = new Map<string, OpenIssue[]>();
@@ -91,7 +138,7 @@ export class Reminders {
     for (const list of byProject.values()) {
       const project = list[0].project;
       if (!calendars.get(project.id)!.isWorkingDay(date)) continue;
-      const visible = await this.audience.visible([project.ownerUserId], project);
+      const visible = await this.audience.visible([...(await this.audience.pmRecipients(project)).keys()], project);
       if (!visible.size) continue;
       list.sort((a, b) => a.planEnd.localeCompare(b.planEnd) || a.issue.key.localeCompare(b.issue.key));
       await this.notifier.notify({

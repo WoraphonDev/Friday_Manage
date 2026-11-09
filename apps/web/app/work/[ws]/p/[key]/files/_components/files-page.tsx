@@ -98,12 +98,13 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
   const base = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
   const pageHref = `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/files`;
   const [place, setPlace] = useState<Place>("all");
-  const [qInput, setQInput] = useState("");
-  const [q, setQ] = useState("");
+  const search = useSearchParams();
+  // ?q=SCR-107 มาจากลิงก์รหัส Screen ใน Drawer งาน (Canvas C): เริ่มค้นด้วยรหัสนั้น
+  const [qInput, setQInput] = useState(() => search.get("q") ?? "");
+  const [q, setQ] = useState(() => search.get("q")?.trim() ?? "");
   const [uploader, setUploader] = useState("");
   const [sort, setSort] = useState<Sort>("newest");
   const [view, setView] = useState<"list" | "grid">("list");
-  const search = useSearchParams();
   // ?file=<id> มาจากลิงก์หลักฐานผลทดสอบใน Drawer ให้เปิดไฟล์นั้นทันที
   const [selectedId, setSelectedId] = useState<string | null>(() => search.get("file"));
   const [jobs, setJobs] = useState<UploadJob[]>([]);

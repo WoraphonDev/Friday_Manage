@@ -200,8 +200,10 @@
       "cancel": "ยกเลิก",
       "addConfirm": "เพิ่ม",
       "removeTitle": "ลบ Module {name}",
-      "removeHasIssues": "Module นี้มีงาน {count} งาน · เลือก Module ที่จะย้ายงานไป (กลุ่มงานของงานที่ย้ายจะถูกล้าง)",
+      "removeHasIssues": "Module นี้มีงาน {count} งาน · เลือก Module และกลุ่มงานที่จะย้ายงานไป",
       "moveTo": "ย้ายงานไปที่",
+      "moveToPhase": "กลุ่มงานปลายทาง",
+      "noPhase": "ไม่ระบุกลุ่มงาน",
       "removeEmpty": "ไม่มีงานใน Module นี้ ลบได้ทันที",
       "removeConfirm": "ลบ Module"
     },

@@ -91,6 +91,26 @@ describe('workload.ts (คำนวณล้วน)', () => {
     expect(r.rows.get('b')![0]).toMatchObject({ md: 1.5, capacityMd: 4.5, leaveDays: 0.5 });
   });
 
+  it('Workload 2 ชุด: plan กระจายตามแผน · actual ใช้วันที่ทำจริงของงานที่เสร็จ และส่วนที่เหลือจากวันนี้', () => {
+    const cal = new WorkCalendar(new Set([1, 2, 3, 4, 5]), new Set());
+    const base = { projectId: 'p', moduleId: null, assigneeIds: ['a'] };
+    const items = [
+      // แผน 30 พ.ย.–4 ธ.ค. แต่ทำจริง 7–8 ธ.ค.
+      { ...base, id: 'late', key: 'DP-1', title: 'เสร็จช้ากว่าแผน', estimateMd: 2, planStart: '2026-11-30', planEnd: '2026-12-04', done: true, actualStart: '2026-12-07', actualEnd: '2026-12-08' },
+      // ยังไม่เสร็จ คืบหน้า 50% · วันนี้ 9 ธ.ค. · ส่วนที่ทำแล้วอยู่ก่อนวันนี้ ส่วนที่เหลือ 9–11 ธ.ค.
+      { ...base, id: 'open', key: 'DP-2', title: 'ทำอยู่', estimateMd: 4, planStart: '2026-12-01', planEnd: '2026-12-11', progressPct: 50, actualStart: '2026-12-01' },
+    ];
+    const run = (basis: 'plan' | 'actual') =>
+      computeWorkload({ from: '2026-11-30', to: '2026-12-13', group: 'week', items, people: [{ userId: 'a', capacityHoursWeek: 40 }], leaves: [], calendarOf: () => cal, capacityCalendar: cal, basis, today: '2026-12-09' });
+    const plan = run('plan').rows.get('a')!;
+    const actual = run('actual').rows.get('a')!;
+    // plan: DP-1 ทั้ง 2 MD ในสัปดาห์แรก · DP-2 4 MD ใน 9 วันทำการ (1–11 ธ.ค.) → 4 วันแรก 1.78, 5 วันหลัง 2.22
+    expect(plan.map((c) => c.md)).toEqual([3.78, 2.22]);
+    // actual: DP-1 ย้ายไปสัปดาห์ที่สอง · DP-2 2 MD ที่ทำแล้วกระจาย 1–8 ธ.ค. (6 วันทำการ) + 2 MD ที่เหลือ 9–11 ธ.ค.
+    expect(actual.map((c) => c.md)).toEqual([1.33, 4.67]);
+    expect(actual[1].items.map((i) => i.key).sort()).toEqual(['DP-1', 'DP-2']);
+  });
+
   it('Health: ช้ากว่าแผนไม่เกิน 5 = on track · ไม่เกิน 15 = at risk · เกิน = off track', () => {
     expect(healthLevel(-20)).toBe('on_track');
     expect(healthLevel(5)).toBe('on_track');
@@ -171,6 +191,7 @@ describe('GET p/workload', () => {
     expect((await team.lead.get(`${team.ws}/projects/DP/workload?from=2026-12-10&to=2026-12-01`)).status).toBe(400);
     expect((await team.lead.get(`${team.ws}/projects/DP/workload?from=2026-01-01&to=2027-06-01`)).status).toBe(400);
     expect((await team.lead.get(`${team.ws}/projects/DP/workload?unit=day`)).status).toBe(400);
+    expect((await team.lead.get(`${team.ws}/projects/DP/workload?basis=done`)).status).toBe(400);
     const def = await team.dev.get(`${team.ws}/projects/DP/workload`);
     expect(def.status).toBe(200);
     expect(def.body.buckets).toHaveLength(8);

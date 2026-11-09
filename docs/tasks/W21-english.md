@@ -189,3 +189,10 @@
 - ข้อ 1–5 ของคำขอนอก lane ทำแล้ว: `src/i18n/request.ts` ใช้ `getRequestLocale()` + `loadMessages()` · `app/layout.tsx` ใช้ `getLocale()` ใน `<html lang>` และ provider, metadata เป็น `generateMetadata` · `messagesEn` + `renderWithProviders({ locale: "en" })` · ตัวสลับภาษา + ปีอยู่ในเมนู Workspace และ `LocaleSync` ใน shell · ตัวสลับอยู่ที่หัวเว็บสาธารณะ
 - ตรวจกับ production build: cookie `NEXT_LOCALE=en` หรือ `Accept-Language: en` → `<html lang="en">` และข้อความ EN · ไม่มี → ไทย
 - ยังไม่ได้ทำ: ข้อ 6 (ฟอร์มภาษาใน Profile), ข้อ 7–8 (`format.ts` / `Intl` ที่ล็อก `th-TH` และหน้าที่ import `messages/th` ตรงเพื่อทำ metadata เช่น `<title>` ของ /pricing ยังเป็นไทย) · วันที่จึงยังแสดงแบบไทยในโหมด EN
+
+### ต่อหลังคำตัดสิน 9 พ.ย. 2569
+
+- Email / LINE ส่วนตัวใช้ `users.locale` ของผู้รับ: หัวข้อ, ป้ายรายละเอียด, ปุ่ม, ท้ายอีเมล, ปุ่มอนุมัติใน LINE และ "ทำไมฉันได้รับแจ้ง" (`reasonIn` ใน `notifications/rules.ts` แปลข้อความไทยที่เก็บในแถว) · Webhook และกลุ่ม LINE ยังเป็นไทย · test `channels.e2e` ตรวจอีเมลภาษาอังกฤษ
+- ข้อ 7: `format.ts` ใช้ภาษาของหน้า (`<html lang>`) กับ `formatDate`, `formatManDay`, `formatOverdue` และข้อความ `common.format` ของภาษานั้น · ยังใช้รูปแบบปีที่ผู้ใช้เลือก · ฝั่ง server ยังเป็นไทย (หน้าส่วนใหญ่โหลดข้อมูลฝั่ง client จึงไม่กระทบ)
+- ข้อ 6: ฟอร์มเลือกภาษาใน Profile มีอยู่แล้ว (`personal-tab.tsx`) บันทึกแล้ว `LocaleSync` เขียน cookie และ refresh
+- ยังเหลือ: ข้อ 8 (`Intl` ที่เขียน `"th-TH"` ตรงใน 18 ไฟล์ และ metadata ที่ import `messages/th`) และ checkbox M1 / namespace ด้านบน

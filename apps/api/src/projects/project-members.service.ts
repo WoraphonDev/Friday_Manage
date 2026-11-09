@@ -24,7 +24,7 @@ export const AddMemberBody = z.object({
 });
 
 export const UpdateMemberBody = z
-  .object({ role: projectRole, position: position.nullable(), capacityHoursWeek: capacity.nullable() })
+  .object({ role: projectRole, position: position.nullable(), capacityHoursWeek: capacity.nullable(), pmDeputy: z.boolean() })
   .partial()
   .refine((v) => Object.keys(v).length > 0, 'ต้องระบุค่าที่จะแก้');
 
@@ -95,13 +95,18 @@ export class ProjectMembersService {
         throw new AppError(409, 'owner_role_fixed', 'Project Owner เป็น Admin เสมอ · โอนความเป็นเจ้าของก่อนเปลี่ยน Role');
       }
       if (input.role === 'admin') await checkNewMembers(tx, [{ userId, role: 'admin' }]);
+      // Guest ทำแทน PM ไม่ได้ เพราะต้องเห็นงานและคนทั้งโปรเจกต์ (04-permissions ข้อ 4)
+      if (input.pmDeputy && current.workspaceRole === 'guest') throw new AppError(409, 'guest_cannot_be_pm_deputy', 'Guest ทำแทน PM ไม่ได้');
       await tx
         .update(s.projectMembers)
-        .set({ role: input.role, position: input.position, capacityHoursWeek: input.capacityHoursWeek })
+        .set({ role: input.role, position: input.position, capacityHoursWeek: input.capacityHoursWeek, pmDeputy: input.pmDeputy })
         .where(and(eq(s.projectMembers.projectId, project.id), eq(s.projectMembers.userId, userId)));
       const member = await this.one(tx, project, userId, tenant);
       if (input.role && input.role !== current.role) {
         await this.audit(tx, auth, tenant, project, 'project.member_role_changed', `${project.key} · ${member.displayName} · ${current.role} → ${input.role}`);
+      }
+      if (input.pmDeputy !== undefined && input.pmDeputy !== current.pmDeputy) {
+        await this.audit(tx, auth, tenant, project, 'project.member_pm_deputy', `${project.key} · ${member.displayName} · ${input.pmDeputy ? 'ตั้งให้ทำแทน PM' : 'เลิกทำแทน PM'}`);
       }
       return member;
     });
@@ -209,6 +214,7 @@ export class ProjectMembersService {
         role: s.projectMembers.role,
         position: s.projectMembers.position,
         capacityHoursWeek: s.projectMembers.capacityHoursWeek,
+        pmDeputy: s.projectMembers.pmDeputy,
         joinedAt: s.projectMembers.joinedAt,
         displayName: s.users.displayName,
         email: s.users.email,
@@ -256,6 +262,7 @@ export class ProjectMembersService {
       position: r.position,
       capacityHoursWeek: r.capacityHoursWeek,
       capacityMdWeek: r.capacityHoursWeek === null ? null : Math.round((r.capacityHoursWeek / HOURS_PER_MD) * 100) / 100,
+      pmDeputy: r.pmDeputy,
       openIssues: work?.open ?? 0,
       overdueIssues: work?.overdue ?? 0,
       openMd: work?.md ?? 0,

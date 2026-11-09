@@ -511,8 +511,11 @@ export function WorkloadSection({ ws }: { ws: string }) {
   const t = useTranslations("admin-automation.admin.load");
   const { me } = useWorkspace();
   const [team, setTeam] = useState("");
+  const [basis, setBasis] = useState<"plan" | "actual">("plan");
   const range = workloadRange();
   const params = new URLSearchParams({ ...range, group: "week", unit: "md" });
+  // ตามแผนเป็นค่าเริ่มต้นของ API
+  if (basis === "actual") params.set("basis", "actual");
   if (team) params.set("team", team);
   const teams = useQuery({ queryKey: adminKey(ws, "teams"), queryFn: () => api.get<{ items: Team[] }>(`${wsPath(ws)}/teams`) });
   const workload = useQuery({ queryKey: adminKey(ws, "workload", params.toString()), queryFn: () => api.get<WorkspaceWorkload>(`${wsPath(ws)}/workload?${params}`) });
@@ -522,10 +525,16 @@ export function WorkloadSection({ ws }: { ws: string }) {
     <Card
       title={t("title")}
       actions={
-        <Select aria-label={t("team")} value={team} onChange={(e) => setTeam(e.target.value)}>
-          <option value="">{t("allTeams")}</option>
-          {teams.data?.items.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-        </Select>
+        <>
+          <Select aria-label={t("basisLabel")} value={basis} onChange={(e) => setBasis(e.target.value as "plan" | "actual")}>
+            <option value="plan">{t("basis_plan")}</option>
+            <option value="actual">{t("basis_actual")}</option>
+          </Select>
+          <Select aria-label={t("team")} value={team} onChange={(e) => setTeam(e.target.value)}>
+            <option value="">{t("allTeams")}</option>
+            {teams.data?.items.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+          </Select>
+        </>
       }
     >
       {workload.error ? (
@@ -549,6 +558,9 @@ export function WorkloadSection({ ws }: { ws: string }) {
                   <div className={styles.muted}>{p.jobTitle ?? ""}</div>
                   <div className={styles.small} style={{ color: p.overPeriods ? "var(--danger-text)" : "var(--success-text)" }}>{p.overPeriods ? t("over", { n: p.overPeriods }) : t("within")}</div>
                   <div className={styles.small} style={{ color: p.overAllocated ? "var(--danger-text)" : undefined }}>{t("alloc", { a: p.allocatedHoursWeek, c: p.capacityHoursWeek })}</div>
+                  {p.compare && (p.compare.plan > 0 || p.compare.actual > 0) && (
+                    <div className={styles.small} title={t("compareHint")}>{t("compare", { actual: num.format(p.compare.actual), plan: num.format(p.compare.plan), pct: p.compare.actualVsPlanPct ?? "—" })}</div>
+                  )}
                 </span>
               </div>
               {p.cells.map((c, i) => (

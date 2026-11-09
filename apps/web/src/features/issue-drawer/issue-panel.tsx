@@ -52,6 +52,11 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   // รายการ Label ของโปรเจกต์ใช้เฉพาะตอนแก้ · การแสดงผลใช้ชื่อ/สีที่มากับงาน
   const labelOptions = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'labels'], queryFn: ({ signal }) => api.get<{ items: Named[] }>(`${projectPath(scope.ws, scope.projectKey)}/labels`, { signal }), enabled: canEdit });
   // form-options ให้ทั้งรหัส FR / Screen และรายการกลุ่มของแต่ละ Module
+  // Guest ที่เป็น Viewer ไม่เห็น Reports / Files จึงแสดงรหัสเป็นข้อความ
+  const refHref = scope.access.guestViewer ? undefined : (kind: 'requirement' | 'screen', code: string) => {
+    const base = `/work/${encodeURIComponent(scope.ws)}/p/${encodeURIComponent(scope.projectKey)}`;
+    return kind === 'requirement' ? `${base}/reports?report=trace&fr=${encodeURIComponent(code)}` : `${base}/files?q=${encodeURIComponent(code)}`;
+  };
   const refOptions = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'form-options'], queryFn: ({ signal }) => api.get<{ requirements?: { code: string }[]; screens?: { code: string }[]; phases?: { id: string; name: string; moduleId: string }[] }>(`${projectPath(scope.ws, scope.projectKey)}/form-options`, { signal }), enabled: !scope.access.guestViewer, staleTime: 60_000 });
   // D2: เปลี่ยน Task แม่ได้เฉพาะ Task ใน Module เดียวกัน (ผู้ใช้ตัดสิน 2026-11-08)
   const projectIssues = useProjectIssues(scope, canEdit && !!issue.parentKey);
@@ -284,8 +289,8 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
               : (groupName ?? <span className="muted">{t('noGroup')}</span>)}</PropRow>
           </>}
           {/* Requirement · Screen · Label แก้แล้วแทนทั้งชุด */}
-          {show('requirements') && <PropRow k={star('requirements', t('refs.requirement'))}><CodeChips kinds={['requirement']} editable={canEdit} busy={disabled} values={{ requirement: issue.requirements ?? [], screen: [] }} suggestions={{ requirement: refOptions.data?.requirements?.map((r) => r.code) }} onChange={(_, codes) => void patch({ requirements: codes })} /></PropRow>}
-          {show('screens') && <PropRow k={star('screens', t('refs.screen'))}><CodeChips kinds={['screen']} editable={canEdit} busy={disabled} values={{ requirement: [], screen: issue.screens ?? [] }} suggestions={{ screen: refOptions.data?.screens?.map((r) => r.code) }} onChange={(_, codes) => void patch({ screens: codes })} /></PropRow>}
+          {show('requirements') && <PropRow k={star('requirements', t('refs.requirement'))}><CodeChips kinds={['requirement']} editable={canEdit} busy={disabled} values={{ requirement: issue.requirements ?? [], screen: [] }} suggestions={{ requirement: refOptions.data?.requirements?.map((r) => r.code) }} onChange={(_, codes) => void patch({ requirements: codes })} hrefOf={refHref} /></PropRow>}
+          {show('screens') && <PropRow k={star('screens', t('refs.screen'))}><CodeChips kinds={['screen']} editable={canEdit} busy={disabled} values={{ requirement: [], screen: issue.screens ?? [] }} suggestions={{ screen: refOptions.data?.screens?.map((r) => r.code) }} onChange={(_, codes) => void patch({ screens: codes })} hrefOf={refHref} /></PropRow>}
           {show('labels') && <PropRow k={star('labels', t('refs.labels'))}><LabelChips options={labelOptions.data?.items ?? issue.labels ?? []} value={(issue.labels ?? []).map((label) => label.id)} editable={canEdit} busy={disabled} onChange={(ids) => void patch({ labelIds: ids })} /></PropRow>}
           {!guest && canEdit && <label className={styles.checkboxLabel}><input type="checkbox" checked={issue.sharedWithGuests} disabled={disabled} onChange={(event) => void patch({ sharedWithGuests: event.target.checked })} />{t('sharedWithGuests')}</label>}
         </section>

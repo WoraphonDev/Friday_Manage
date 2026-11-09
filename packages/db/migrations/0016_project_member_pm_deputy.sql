@@ -1,0 +1,1 @@
+ALTER TABLE "project_members" ADD COLUMN "pm_deputy" boolean DEFAULT false NOT NULL;

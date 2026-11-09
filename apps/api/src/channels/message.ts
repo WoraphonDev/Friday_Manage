@@ -1,7 +1,13 @@
 // ข้อความแจ้งเตือนที่ส่งออกนอกแอป (N2) · โครงสร้างเดียวกันทุกช่องทาง แล้ว render ตามช่องทางอีกที
 
+export type Locale = 'th' | 'en';
+/** ภาษาที่รองรับ · ค่าอื่นใช้ไทย */
+export const toLocale = (v: unknown): Locale => (v === 'en' ? 'en' : 'th');
+
 export interface Msg {
   event: string;
+  /** ภาษาของข้อความ (ช่องทางส่วนตัวใช้ users.locale ของผู้รับ) */
+  locale: Locale;
   head: string;
   title: string;
   project: string;
@@ -25,6 +31,8 @@ interface Ctx {
   safe: boolean;
   webUrl: string;
   workspaceSlug: string;
+  /** ไม่ส่ง = ไทย */
+  locale?: Locale;
 }
 
 const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
@@ -60,8 +68,42 @@ const HEADS: Record<string, { head: (p: Record<string, unknown>, who: string) =>
   'channel.webhook_paused': { head: () => 'Webhook ถูกปิดชั่วคราว', color: '#B91C1C' },
 };
 
+/** หัวข้อภาษาอังกฤษ (W21) · เหตุการณ์ที่ไม่มีในนี้ใช้ชื่อเหตุการณ์ */
+const HEADS_EN: Record<string, (p: Record<string, unknown>, who: string) => string> = {
+  'issue.assigned': (p, who) => (p.removed ? `${who} removed you from a task` : `${who} assigned you a task`),
+  'issue.review_requested': (_p, who) => `${who} asked you to review`,
+  'issue.mentioned': (_p, who) => `${who} mentioned you in a comment`,
+  'issue.commented': (_p, who) => `${who} commented on a task you watch`,
+  'issue.status_changed': (_p, who) => `${who} changed a task status`,
+  'issue.updated': (_p, who) => `${who} updated a task you watch`,
+  'issue.due_soon': () => 'Your task is due soon',
+  'issue.overdue': () => 'Task overdue',
+  'bug.created': (p) => `New bug${str(p.severity) ? ` · ${p.severity}` : ''}`,
+  'bug.reopened': () => 'Bug reopened',
+  'test_run.failed': () => 'Test failed',
+  'due_request.created': (_p, who) => `${who} asked to move a due date`,
+  'due_request.decided': () => 'Due date request decided',
+  'sprint.started': () => 'Sprint started',
+  'sprint.completed': () => 'Sprint completed',
+  'plan.changed': (_p, who) => `${who} changed the plan`,
+  'project.health_changed': () => 'Project health changed',
+  'member.joined': () => 'New member joined the project',
+  'member.invited': () => 'New member invited',
+  'import.completed': () => 'Import finished',
+  'digest.daily': () => 'Your day at a glance',
+  'report.weekly': () => 'Weekly summary report',
+  'channel.webhook_paused': () => 'Webhook paused',
+};
+
+const LABELS = {
+  th: { status: 'สถานะ', due: 'ครบกำหนด', fields: 'ฟิลด์ที่เปลี่ยน', reason: 'เหตุผล', count: 'จำนวนงาน', done: 'เสร็จใน 7 วัน', open: 'งานที่ยังเปิด', dueToday: 'ครบกำหนดวันนี้', inReview: 'รอ Review', system: 'ระบบ', openApp: 'เปิดในแอป', viewRequest: 'ดูคำขอในแอป' },
+  en: { status: 'Status', due: 'Due', fields: 'Changed fields', reason: 'Reason', count: 'Tasks', done: 'Done in 7 days', open: 'Open tasks', dueToday: 'Due today', inReview: 'In review', system: 'System', openApp: 'Open in app', viewRequest: 'View request in app' },
+} as const;
+export const labelsOf = (locale: Locale) => LABELS[locale];
+
 /** รายละเอียดที่ซ่อนในโหมดปลอดภัย */
-function details(p: Record<string, unknown>): Array<[string, string]> {
+function details(p: Record<string, unknown>, locale: Locale = 'th'): Array<[string, string]> {
+  const L = LABELS[locale];
   const rows: Array<[string, string]> = [];
   const add = (k: string, v: unknown) => {
     const s = typeof v === 'number' ? String(v) : str(v);
@@ -69,40 +111,51 @@ function details(p: Record<string, unknown>): Array<[string, string]> {
   };
   const from = nameOf(p.from);
   const to = nameOf(p.to);
-  if (from || to) rows.push(['สถานะ', `${from ?? '—'} → ${to ?? '—'}`]);
-  add('ครบกำหนด', p.planEnd);
+  if (from || to) rows.push([L.status, `${from ?? '—'} → ${to ?? '—'}`]);
+  add(L.due, p.planEnd);
   add('Severity', p.severity);
   add('Priority', p.priority);
-  if (Array.isArray(p.fields) && p.fields.length) rows.push(['ฟิลด์ที่เปลี่ยน', p.fields.filter((f) => typeof f === 'string').join(', ')]);
-  add('เหตุผล', p.reason);
-  add('จำนวนงาน', p.count);
+  if (Array.isArray(p.fields) && p.fields.length) rows.push([L.fields, p.fields.filter((f) => typeof f === 'string').join(', ')]);
+  add(L.reason, p.reason);
+  add(L.count, p.count);
   add('Overdue', p.overdue);
-  add('เสร็จใน 7 วัน', p.done);
-  add('งานที่ยังเปิด', p.open);
-  add('ครบกำหนดวันนี้', p.dueToday);
-  add('รอ Review', p.inReview);
+  add(L.done, p.done);
+  add(L.open, p.open);
+  add(L.dueToday, p.dueToday);
+  add(L.inReview, p.inReview);
   return rows;
 }
 
 export function buildMessage(src: MsgSource, ctx: Ctx): Msg {
   const p = src.payload ?? {};
+  const locale = ctx.locale ?? 'th';
+  const L = LABELS[locale];
   const spec = HEADS[src.eventType];
-  const who = str(p.actorName) ?? 'ระบบ';
+  const who = str(p.actorName) ?? L.system;
   const issueKey = str(p.issueKey);
   const projectKey = src.projectKey ?? str(p.projectKey);
   const project = [src.projectName ?? str(p.projectName), projectKey].filter(Boolean)[0] ?? '';
   const base = `${ctx.webUrl}/work/${ctx.workspaceSlug}`;
   const url = issueKey && projectKey ? `${base}/p/${projectKey}/table?issue=${encodeURIComponent(issueKey)}` : projectKey ? `${base}/p/${projectKey}` : base;
-  const title = [issueKey, str(p.issueTitle)].filter(Boolean).join(' ') || str(p.title) || project;
+  // สรุปงานเลยกำหนดไม่มีงานเดียว: ตั้งหัวเรื่องจากจำนวนตามภาษาของผู้รับ
+  const summaryTitle =
+    p.summary === true && typeof p.count === 'number'
+      ? locale === 'en'
+        ? `${p.count} overdue task${p.count === 1 ? '' : 's'}`
+        : `งานเลยกำหนด ${p.count} งาน`
+      : undefined;
+  const title = [issueKey, str(p.issueTitle)].filter(Boolean).join(' ') || summaryTitle || str(p.title) || project;
   const excerpt = str(p.excerpt);
+  const headEn = locale === 'en' ? HEADS_EN[src.eventType] : undefined;
   return {
     event: src.eventType,
-    head: spec ? spec.head(p, who) : src.eventType,
+    locale,
+    head: headEn ? headEn(p, who) : spec ? spec.head(p, who) : src.eventType,
     title,
     project,
-    rows: ctx.safe ? [] : details(p),
+    rows: ctx.safe ? [] : details(p, locale),
     note: ctx.safe || !excerpt ? '' : excerpt,
-    buttons: [{ label: src.eventType === 'due_request.created' ? 'ดูคำขอในแอป' : 'เปิดในแอป', url }],
+    buttons: [{ label: src.eventType === 'due_request.created' ? L.viewRequest : L.openApp, url }],
     color: spec?.color ?? '#3D4550',
     url,
     safe: ctx.safe,

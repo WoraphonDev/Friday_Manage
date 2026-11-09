@@ -3,16 +3,23 @@
 //   * Man-Day ของงานกระจายเท่ากันตามวันทำการระหว่าง Plan Start–End แล้วแบ่งเท่ากันต่อ Dev
 //   * นับเฉพาะงานระดับล่างสุด (Task ที่ไม่มี Sub-task หรือ Sub-task) เพราะ Estimate ของ Task ที่มี Sub-task = ผลรวม Sub-task
 //   * capacity = ชั่วโมงต่อสัปดาห์ ÷ 8 (1 MD) ÷ จำนวนวันทำงานต่อสัปดาห์ ต่อวันทำการ · หักวันหยุดและวันลา
+//   * มี 2 ชุด (ผู้ใช้ตัดสิน 9 พ.ย. 2026): plan = ตามแผนเสมอ · actual = ตามที่ทำจริง ใช้ดู performance
+//     actual: งานที่เสร็จกระจายตาม Actual Start–End (ไม่มีใช้ Plan Start และวันที่เสร็จ) · งานที่ยังไม่เสร็จ
+//     ส่วนที่คืบหน้าแล้วอยู่ก่อนวันนี้ ส่วนที่เหลือกระจายจากวันนี้ถึง Plan End (เลยกำหนดแล้วตกที่วันนี้)
 import { schema as s, type Tx } from '@friday/db';
 import { and, eq, inArray, isNull, lte, gte, sql } from 'drizzle-orm';
+import { today } from '../common/dates.js';
 import { loadPeople, type Person } from '../common/people.js';
+import { config } from '../config.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
 
 export const HOURS_PER_MD = 8;
+const localDate = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: config.timezone }).format(d);
 /** ช่วงยาวสุดที่ขอได้ในครั้งเดียว · กันคำขอที่วนวันเป็นหมื่นรอบ */
 export const MAX_RANGE_DAYS = 366;
 
 export type WorkloadUnit = 'md' | 'hour' | 'count';
+export type WorkloadBasis = 'plan' | 'actual';
 export type WorkloadGroup = 'day' | 'week' | 'month';
 
 export interface Bucket {
@@ -31,6 +38,12 @@ export interface WorkItem {
   planStart: string | null;
   planEnd: string | null;
   assigneeIds: string[];
+  /** ใช้กับ basis = actual · ไม่ส่ง = ถือว่ายังไม่เสร็จและยังไม่เริ่ม */
+  done?: boolean;
+  progressPct?: number | null;
+  actualStart?: string | null;
+  /** Actual End หรือวันที่เสร็จ (เวลาไทย) */
+  actualEnd?: string | null;
 }
 
 export interface CapacityPerson {
@@ -57,6 +70,10 @@ export interface WorkloadInput {
   calendarOf: (projectId: string) => WorkCalendar;
   /** ปฏิทินที่ใช้คิด capacity ของคน */
   capacityCalendar: WorkCalendar;
+  /** ค่าเริ่มต้น plan */
+  basis?: WorkloadBasis;
+  /** วันนี้ (เวลาไทย) ใช้แบ่งส่วนที่ทำแล้ว / ที่เหลือของ basis = actual */
+  today?: string;
 }
 
 export interface CellItem {
@@ -125,6 +142,33 @@ export function dailyShare(cal: WorkCalendar, item: Pick<WorkItem, 'estimateMd' 
   return { days, perPersonPerDay: item.estimateMd / days.length / item.assigneeIds.length };
 }
 
+/** ช่วงวันและ Man-Day ที่ใช้กระจายของงานหนึ่งตาม basis */
+export function workSpans(item: WorkItem, basis: WorkloadBasis, today: string): { start: string; end: string; md: number }[] {
+  const md = item.estimateMd ?? 0;
+  if (!md) return [];
+  if (basis === 'plan') return item.planStart && item.planEnd ? [{ start: item.planStart, end: item.planEnd, md }] : [];
+  if (item.done) {
+    const end = item.actualEnd ?? item.planEnd;
+    if (!end) return [];
+    const start = item.actualStart ?? item.planStart ?? end;
+    return [{ start: start <= end ? start : end, end, md }];
+  }
+  const out: { start: string; end: string; md: number }[] = [];
+  const doneMd = (md * Math.min(100, Math.max(0, item.progressPct ?? 0))) / 100;
+  const started = item.actualStart ?? item.planStart;
+  const yesterday = addDays(today, -1);
+  // ส่วนที่คืบหน้าแล้วเกิดก่อนวันนี้ · ยังไม่ถึงวันเริ่มให้รวมไปกับส่วนที่เหลือ
+  const pastShare = doneMd > 0 && started && started <= yesterday ? doneMd : 0;
+  if (pastShare) out.push({ start: started!, end: yesterday, md: pastShare });
+  const left = md - pastShare;
+  if (left > 0) {
+    const start = item.planStart && item.planStart > today ? item.planStart : today;
+    const end = item.planEnd && item.planEnd > start ? item.planEnd : start;
+    out.push({ start, end, md: left });
+  }
+  return out;
+}
+
 /** MD ของงานที่ควรเสร็จตามแผนภายในวันที่ asOf (นับวันทำการแบบเดียวกับ Workload) */
 export function plannedMdBy(cal: WorkCalendar, item: Pick<WorkItem, 'estimateMd' | 'planStart' | 'planEnd'>, asOf: string) {
   if (!item.estimateMd || !item.planStart || !item.planEnd) return 0;
@@ -178,19 +222,24 @@ export function computeWorkload(input: WorkloadInput): WorkloadResult {
   }
 
   const wanted = new Set(input.people.map((p) => p.userId));
+  const basis = input.basis ?? 'plan';
+  const now = input.today ?? input.from;
   for (const item of input.items) {
-    const share = dailyShare(input.calendarOf(item.projectId), item);
-    if (!share) continue;
-    for (const d of share.days) {
-      const i = indexOf.get(d);
-      if (i === undefined) continue;
-      for (const userId of item.assigneeIds) {
-        if (!wanted.has(userId)) continue;
-        const cell = rowOf(userId)[i];
-        cell.md += share.perPersonPerDay;
-        const ci = cell.items.get(item.id) ?? { id: item.id, projectId: item.projectId, key: item.key, title: item.title, md: 0 };
-        ci.md += share.perPersonPerDay;
-        cell.items.set(item.id, ci);
+    const cal = input.calendarOf(item.projectId);
+    for (const span of workSpans(item, basis, now)) {
+      const share = dailyShare(cal, { estimateMd: span.md, planStart: span.start, planEnd: span.end, assigneeIds: item.assigneeIds });
+      if (!share) continue;
+      for (const d of share.days) {
+        const i = indexOf.get(d);
+        if (i === undefined) continue;
+        for (const userId of item.assigneeIds) {
+          if (!wanted.has(userId)) continue;
+          const cell = rowOf(userId)[i];
+          cell.md += share.perPersonPerDay;
+          const ci = cell.items.get(item.id) ?? { id: item.id, projectId: item.projectId, key: item.key, title: item.title, md: 0 };
+          ci.md += share.perPersonPerDay;
+          cell.items.set(item.id, ci);
+        }
       }
     }
   }
@@ -223,13 +272,16 @@ export const utilization = (md: number, capacityMd: number) => (capacityMd > 0 ?
 // โหลดข้อมูลจากฐานข้อมูล (ทุก query ผ่าน tx ที่ตั้ง RLS แล้ว)
 // ---------------------------------------------------------------------------
 
-type IssueRow = Pick<typeof s.issues.$inferSelect, 'id' | 'projectId' | 'number' | 'title' | 'parentId' | 'estimateMd' | 'planStart' | 'planEnd' | 'moduleId'>;
+type IssueRow = Pick<
+  typeof s.issues.$inferSelect,
+  'id' | 'projectId' | 'number' | 'title' | 'parentId' | 'estimateMd' | 'planStart' | 'planEnd' | 'moduleId' | 'progressPct' | 'actualStart' | 'actualEnd' | 'completedAt'
+>;
 
 /** งานระดับล่างสุดพร้อม Dev · ตัดงานที่มี Sub-task ที่ยังไม่ถูกลบ */
 export async function loadWorkItems(tx: Tx, projects: { id: string; key: string }[]): Promise<WorkItem[]> {
   if (!projects.length) return [];
   const keyOf = new Map(projects.map((p) => [p.id, p.key]));
-  const rows: (IssueRow & { bug: boolean })[] = await tx
+  const rows: (IssueRow & { bug: boolean; done: boolean })[] = await tx
     .select({
       id: s.issues.id,
       projectId: s.issues.projectId,
@@ -240,10 +292,16 @@ export async function loadWorkItems(tx: Tx, projects: { id: string; key: string 
       planStart: s.issues.planStart,
       planEnd: s.issues.planEnd,
       moduleId: s.issues.moduleId,
+      progressPct: s.issues.progressPct,
+      actualStart: s.issues.actualStart,
+      actualEnd: s.issues.actualEnd,
+      completedAt: s.issues.completedAt,
       bug: sql<boolean>`${s.issueTypes.name} = 'Bug'`,
+      done: sql<boolean>`${s.workflowStatuses.category} = 'done'`,
     })
     .from(s.issues)
     .innerJoin(s.issueTypes, eq(s.issueTypes.id, s.issues.issueTypeId))
+    .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
     .where(and(inArray(s.issues.projectId, [...keyOf.keys()]), isNull(s.issues.deletedAt)));
   // Bug ใต้ Task ไม่ได้แบ่ง Man-Day ของ Task จึงไม่ทำให้ Task หยุดเป็นงานระดับล่างสุด
   const parents = new Set(rows.filter((r) => r.parentId && !r.bug).map((r) => r.parentId!));
@@ -259,6 +317,10 @@ export async function loadWorkItems(tx: Tx, projects: { id: string; key: string 
     planStart: r.planStart,
     planEnd: r.planEnd,
     assigneeIds: assignees.get(r.id) ?? [],
+    done: r.done,
+    progressPct: r.progressPct,
+    actualStart: r.actualStart,
+    actualEnd: r.actualEnd ?? (r.completedAt ? localDate(r.completedAt) : null),
   }));
 }
 
@@ -306,6 +368,9 @@ export interface ProjectWorkloadOptions {
   to: string;
   group: WorkloadGroup;
   unit: WorkloadUnit;
+  basis?: WorkloadBasis;
+  /** คำนวณอีก basis หนึ่งไว้เทียบด้วย */
+  compare?: boolean;
   moduleId?: string;
   /** ตำแหน่งใน project_members (เช่น Backend) ไม่สนตัวพิมพ์เล็กใหญ่ */
   position?: string;
@@ -353,21 +418,28 @@ export async function projectWorkload(tx: Tx, project: ProjectLike, opts: Projec
   const position = opts.position?.toLowerCase();
   const people = members.filter((m) => !position || (m.position ?? m.jobTitle ?? '').toLowerCase() === position);
   const leaves = await loadLeaves(tx, people.map((p) => p.userId), opts.from, opts.to);
-  const result = computeWorkload({
-    from: opts.from,
-    to: opts.to,
-    group: opts.group,
-    items,
-    people: people.map((p) => ({ userId: p.userId, capacityHoursWeek: p.projectCapacity ?? p.wsCapacity })),
-    leaves,
-    calendarOf: () => cal,
-    capacityCalendar: cal,
-  });
+  const run = (basis: WorkloadBasis) =>
+    computeWorkload({
+      from: opts.from,
+      to: opts.to,
+      group: opts.group,
+      items,
+      people: people.map((p) => ({ userId: p.userId, capacityHoursWeek: p.projectCapacity ?? p.wsCapacity })),
+      leaves,
+      calendarOf: () => cal,
+      capacityCalendar: cal,
+      basis,
+      today: today(),
+    });
+  const basis = opts.basis ?? 'plan';
+  const result = run(basis);
+  // อีกชุดไว้เทียบแผนกับที่ทำจริง (performance) · ขอเฉพาะเมื่อหน้าจอต้องการ
+  const other = opts.compare ? run(basis === 'plan' ? 'actual' : 'plan') : null;
 
   // งานที่คำนวณไม่ได้: ยังไม่ Done, มี Dev แต่ไม่มีวันในแผนหรือ Man-Day
   const unscheduled = await countUnscheduled(tx, project.id, items);
   const profiles = await loadPeople(tx, people.map((p) => p.userId));
-  return { cal, result, people, profiles, unscheduled };
+  return { cal, result, other, people, profiles, unscheduled };
 }
 
 async function countUnscheduled(tx: Tx, projectId: string, items: WorkItem[]) {
@@ -396,6 +468,7 @@ export interface WorkspaceWorkloadOptions {
   to: string;
   group: WorkloadGroup;
   unit: WorkloadUnit;
+  basis?: WorkloadBasis;
   teamId?: string;
 }
 
@@ -438,18 +511,24 @@ export async function workspaceWorkload(tx: Tx, workspaceId: string, opts: Works
     : [];
   const capacityCalendar = await loadWorkspaceCalendar(tx, workspaceId);
   const leaves = await loadLeaves(tx, ids, opts.from, opts.to);
-  const result = computeWorkload({
-    from: opts.from,
-    to: opts.to,
-    group: opts.group,
-    items,
-    people: members,
-    leaves,
-    calendarOf: (id) => calendars.get(id)!,
-    capacityCalendar,
-  });
+  const run = (basis: WorkloadBasis) =>
+    computeWorkload({
+      from: opts.from,
+      to: opts.to,
+      group: opts.group,
+      items,
+      people: members,
+      leaves,
+      calendarOf: (id) => calendars.get(id)!,
+      capacityCalendar,
+      basis,
+      today: today(),
+    });
+  const basis = opts.basis ?? 'plan';
+  const result = run(basis);
+  const other = run(basis === 'plan' ? 'actual' : 'plan');
   const profiles = await loadPeople(tx, ids);
-  return { projects, members, allocations: new Map(allocations.map((a) => [a.userId, a.hours])), result, profiles };
+  return { projects, members, allocations: new Map(allocations.map((a) => [a.userId, a.hours])), result, other, profiles };
 }
 
 export type { Person };

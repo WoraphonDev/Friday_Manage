@@ -249,8 +249,16 @@ export class InvitationsService {
       });
       // J4: "เมื่อตอบรับ ระบบจะแจ้งผู้เชิญ และ PM ของโปรเจกต์ใน Inbox"
       // PM ได้รับผ่าน Event member.joined (fan-out ของ A23) จึงแจ้งผู้เชิญเองเฉพาะเมื่อผู้เชิญไม่ใช่ PM (ไม่งั้นได้ซ้ำ 2 รายการ)
+      // PM = Owner + Admin ของโปรเจกต์ + ผู้ทำแทน PM ตาม Audience.pmRecipients
       const [proj] = r.inv.projectId ? await tx.select({ owner: s.projects.ownerUserId }).from(s.projects).where(eq(s.projects.id, r.inv.projectId)) : [];
-      if (!proj || proj.owner !== r.inv.invitedBy) {
+      const [inviterPm] = r.inv.projectId
+        ? await tx
+            .select({ role: s.projectMembers.role, pmDeputy: s.projectMembers.pmDeputy })
+            .from(s.projectMembers)
+            .where(and(eq(s.projectMembers.projectId, r.inv.projectId), eq(s.projectMembers.userId, r.inv.invitedBy)))
+        : [];
+      const inviterIsPm = !!proj && (proj.owner === r.inv.invitedBy || inviterPm?.role === 'admin' || !!inviterPm?.pmDeputy);
+      if (!inviterIsPm) {
         await tx.insert(s.notifications).values({
           workspaceId: r.workspace.id,
           recipientId: r.inv.invitedBy,

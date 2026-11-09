@@ -125,7 +125,7 @@ API ตอบทันทีแล้วส่งงานเข้าคิว�
 | 4 · Timeline | **`GET projects/{key}/timeline?from&to`** (Module › Task › Sub-task + Milestone + งานไม่มีวันที่) | ลาก bar `PATCH issues/{key}` (plan_start / plan_end) · `POST milestones` |
 | 5 · Gantt | **`GET projects/{key}/gantt?from&to&baseline=v1`** (WBS, Dependency, Baseline, Critical path) | `POST issues/{key}/dependencies` · `POST projects/{key}/schedule:preview` (Auto-schedule) · `POST baselines` · `GET gantt.pdf` |
 | 6 · Calendar | **`GET projects/{key}/calendar?month=2026-12`** (งาน, Sprint, วันหยุด, วันลา) | ลากวาง `PATCH issues/{key}` · `POST me/calendar-feeds` (iCal) |
-| 7 · Members + Workload | **`GET projects/{key}/workload?from&to&unit=md`** + **`GET projects/{key}/members`** + `GET projects/{key}/invitations` | `PATCH members/{userId}` (Role, Capacity) · `POST invitations` · Resend / Cancel |
+| 7 · Members + Workload | **`GET projects/{key}/workload?from&to&unit=md`** + **`GET projects/{key}/members`** + `GET projects/{key}/invitations` | `PATCH members/{userId}` (Role, Capacity, `pmDeputy`) · `POST invitations` · Resend / Cancel |
 | 8 · Files | **`GET projects/{key}/files?folder=`** + `GET projects/{key}/folders` | อัปโหลด `POST files:upload-url` → PUT S3 → `POST files` · `POST files/{id}/versions` · ผูกงาน `POST files/{id}/attachments` · Rename / Move / Delete |
 | L1 · Backlog | **`GET projects/{key}/backlog`** (Sprint ทั้งหมด + Backlog + Burndown + capacity) | `POST sprints` · `POST sprints/{id}:start` · `POST sprints/{id}:complete` · ลากงาน `POST issues/{key}/move` (sprint + rank) |
 | L2 · Project Settings | **`GET projects/{key}/settings`** (ทุกแท็บในครั้งเดียว) | แต่ละแท็บมี `PATCH`/`POST` ของตัวเอง (ดูหมวด 3.5) · Danger zone: `:archive`, `:transfer`, `DELETE` |
@@ -241,7 +241,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET / POST | `w/access-requests` · `{id}:approve` · `:reject` | ขอ: ล็อกอินแล้ว · ตัดสิน: Admin | ใช้ทั้งขอเข้า Workspace (โดเมนเดียวกัน) และขอเข้าโปรเจกต์ |
 | CRUD | `w/teams` · `w/teams/{id}/members` | `ws.settings` | |
 | GET / POST / DELETE | `w/leaves` (`?user=`) | ของตัวเอง: self · ของคนอื่น: `ws.members.manage` | Event `leave.created` แจ้งคนที่มอบหมายงาน |
-| GET | `w/workload?from&to&team=` | `ws.workload.view` | Workload รวมทุกโปรเจกต์ (N1) |
+| GET | `w/workload?from&to&team=&basis=plan\|actual` | `ws.workload.view` | Workload รวมทุกโปรเจกต์ (N1) · `basis` ตามแผน / ตามจริง และ `compare` ต่อคน |
 
 ### 3.3 Admin Console (N1)
 
@@ -279,7 +279,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | POST | `w/projects:sample` | `ws.project.create` | โปรเจกต์ตัวอย่างที่ใช้ข้อมูลสมมติ (ห้ามใช้ข้อมูลจริงของที่ทำงาน) |
 | GET / PATCH | `p/` | ดู: `project.view` · แก้: `project.settings` | เปลี่ยน Key เพิ่ม alias อัตโนมัติ |
 | GET | `p/overview` · `p/board` · `p/timeline` · `p/gantt` · `p/calendar` · `p/backlog` | `project.view` | Guest ได้เฉพาะ `overview` และ `timeline` แบบตัดชื่อคน · Timeline ของ Guest แสดงทั้งแผนยกเว้น Bug และบอก `canOpen` ว่างานไหนแชร์ให้เปิดได้ |
-| GET | `p/workload` | `project.workload.view` | Guest ไม่ได้ |
+| GET | `p/workload` | `project.workload.view` | Guest ไม่ได้ · `?basis=plan\|actual` · `people[].compare` = ยอดตามแผนเทียบตามจริงในช่วง |
 | GET | `p/form-options` | `issue.create` | |
 | GET | `p/my-permissions` | `project.view` | ชุดสิทธิ์ของผู้เรียกในโปรเจกต์นี้ ใช้ซ่อนปุ่มในหน้าจอ |
 | POST | `p/join-as-admin` | Workspace Owner / Admin | เข้าร่วมโปรเจกต์ Private เป็น Admin · Audit + แจ้ง Project Owner (ดู 04-permissions ข้อ 6) |
@@ -331,7 +331,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET | `p/settings` | รวมทุกแท็บ |
 | GET / POST / PATCH / DELETE | `p/members` · `p/members/{userId}` | เพิ่มคน: `project.invite` · ลบคนที่มีงานค้างต้องส่ง `reassignTo` (P3) |
 | GET / PUT | `p/role-permissions` | ตาราง 10 รายการในหน้า L2 · Admin เปิดทุกอย่างเสมอ |
-| CRUD + `:reorder` | `p/modules` · `p/modules/{id}/phases` | ลบ Module ที่มีงานต้องระบุ `moveTo` |
+| CRUD + `:reorder` | `p/modules` · `p/modules/{id}/phases` | ลบ Module ที่มีงานต้องระบุ `moveTo` · เลือกกลุ่มงานปลายทางด้วย `moveToPhase` ได้ |
 | CRUD | `p/milestones` · `p/milestones/{id}/issues` | |
 | CRUD + `:reorder` | `p/workflows/{id}/statuses` | ลบสถานะที่มีงานต้องระบุ `moveTo` |
 | CRUD | `p/workflows/{id}/rules` | |

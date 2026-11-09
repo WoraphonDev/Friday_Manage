@@ -3,7 +3,8 @@ import { type Db, schema } from '@friday/db';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { audit } from '../audit.js';
-import type { Staff } from '../auth/auth.guard.js';
+import { ApprovalsService } from '../approvals/approvals.service.js';
+import { has, type Staff } from '../auth/auth.guard.js';
 import { config } from '../config.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
@@ -26,6 +27,7 @@ export class SupportService {
   constructor(
     @Inject(OPS_DB) private readonly db: Db,
     private readonly mail: Mailer,
+    private readonly approvals: ApprovalsService,
   ) {}
 
   async start(staff: Staff, workspaceId: string, input: z.infer<typeof StartSessionBody>) {
@@ -38,10 +40,12 @@ export class SupportService {
     }
     if (input.mode === 'write' && grant.maxMode !== 'write') throw new AppError(403, 'support_mode_not_allowed', 'ลูกค้าอนุญาตเฉพาะโหมดอ่านอย่างเดียว', { maxMode: grant.maxMode });
     if (input.mode === 'write') {
+      // คำตัดสิน 9 พ.ย. 2569 (ทางเลือก ข): ยังไม่เปิดโหมดแก้ไขจนกว่าจะมี Owner คนที่สอง
+      if (await this.approvals.singleApprover()) throw new AppError(403, 'write_mode_disabled', 'โหมดแก้ไขยังไม่เปิด · ต้องมีผู้อนุมัติคนที่สองก่อน');
       if (!input.secondApproverId) throw new AppError(422, 'second_approver_required', 'โหมดแก้ไขต้องมีผู้อนุมัติคนที่ 2');
       if (input.secondApproverId === staff.id) throw new AppError(422, 'second_approver_must_differ', 'ผู้อนุมัติคนที่ 2 ต้องเป็นคนละคนกับผู้เข้า');
-      const [approver] = await this.db.select({ id: s.staffUsers.id }).from(s.staffUsers).where(eq(s.staffUsers.id, input.secondApproverId));
-      if (!approver) throw new AppError(422, 'second_approver_invalid', 'ไม่พบผู้อนุมัติคนที่ 2');
+      const [approver] = await this.db.select({ id: s.staffUsers.id, roles: s.staffUsers.roles, status: s.staffUsers.status }).from(s.staffUsers).where(eq(s.staffUsers.id, input.secondApproverId));
+      if (!approver || approver.status !== 'active' || !approver.roles.includes('owner')) throw new AppError(422, 'second_approver_invalid', 'ผู้อนุมัติคนที่ 2 ต้องเป็น Owner ที่ใช้งานอยู่');
     }
     const [open] = await this.db.select({ id: s.supportSessions.id }).from(s.supportSessions).where(and(eq(s.supportSessions.workspaceId, workspaceId), eq(s.supportSessions.staffId, staff.id), isNull(s.supportSessions.endedAt)));
     if (open) throw new AppError(409, 'session_already_open', 'คุณมี session ที่ยังเปิดอยู่กับ Workspace นี้', { sessionId: open.id });
@@ -84,7 +88,7 @@ export class SupportService {
     const [row] = await this.db.select().from(s.supportSessions).where(eq(s.supportSessions.id, id));
     if (!row) throw new AppError(404, 'not_found', 'ไม่พบ session');
     if (row.endedAt) throw new AppError(409, 'session_ended', 'session นี้จบไปแล้ว');
-    if (row.staffId !== staff.id && staff.role !== 'admin') throw new AppError(403, 'forbidden', 'จบ session ของคนอื่นได้เฉพาะ Admin');
+    if (row.staffId !== staff.id && !has(staff, 'owner')) throw new AppError(403, 'forbidden', 'จบ session ของคนอื่นได้เฉพาะ Owner');
     const [ended] = await this.db.transaction(async (tx) => {
       const r = await tx.update(s.supportSessions).set({ endedAt: new Date() }).where(eq(s.supportSessions.id, id)).returning();
       await audit(tx, staff, row.workspaceId, 'secu', 'support.session_ended', `จบการเข้าช่วยเหลือ · Ticket ${row.ticketNo}`, { type: 'support_session', id });

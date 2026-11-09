@@ -13,13 +13,9 @@ const oneOf = (col: AnyPgColumn, values: readonly string[]) => sql`${col} IN (${
 export const STAFF_ROLES = ['owner', 'finance', 'support', 'engineer', 'auditor'] as const;
 export const STAFF_STATUSES = ['invited', 'active', 'suspended', 'disabled'] as const;
 
-/**
- * พนักงานทีม Friday (06-ops-roles) · 1 คนมีได้หลายบทบาทใน `roles`
- * `role` เดิมเลิกใช้แล้ว แต่ยังเก็บไว้ให้โค้ด ops-api เดิมทำงานได้จนกว่า O01 จะย้ายไปใช้ `roles`
- * trigger `staff_users_sync_roles` (migration 0018) เติม `roles` จาก `role` เมื่อเขียนมาแค่ `role`
- */
+/** พนักงานทีม Friday (06-ops-roles) · 1 คนมีได้หลายบทบาทใน `roles` · `role` เดิมลบใน migration 0019 (O01) */
 export const staffUsers = pgTable('staff_users', {
-  id: pk(), email: text().notNull(), name: text().notNull(), role: text(),
+  id: pk(), email: text().notNull(), name: text().notNull(),
   roles: text().array().notNull().default(sql`'{}'`),
   department: text(),
   /** วงเงินทำเองรายคน · null = ใช้ค่าเริ่มต้น (refund_satang, credit_satang, discount_pct, discount_cycles, trial_days, trial_times) */

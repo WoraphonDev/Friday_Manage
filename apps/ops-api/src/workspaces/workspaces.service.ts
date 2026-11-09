@@ -1,9 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
 import { type Db, schema } from '@friday/db';
 import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { audit } from '../audit.js';
-import type { Staff } from '../auth/auth.guard.js';
+import { ApprovalsService, type ApprovalContext } from '../approvals/approvals.service.js';
+import { type Approval, audit } from '../audit.js';
+import { has, type Staff } from '../auth/auth.guard.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 
@@ -28,12 +29,33 @@ export const DiscountBody = z
   })
   .strict();
 export const ChangePlanBody = z.object({ plan: z.enum(PLAN_CODES), reason: z.string().trim().min(3).max(300) }).strict();
-export const SuspendBody = z.object({ reason: z.string().trim().min(3).max(300) }).strict();
+export const SuspendBody = z
+  .object({
+    reason: z.string().trim().min(3).max(300),
+    /** ระงับตามนโยบายค้างชำระ (การเงินทำได้ ไม่ต้องอนุมัติ) */
+    policy: z.literal('overdue').optional(),
+  })
+  .strict();
+export const ResumeBody = z.object({ reason: z.string().trim().min(3).max(300) }).strict();
+
+/** ผลของรายการที่ต้องอนุมัติ: ทำเลย หรือสร้างคำขอแล้ว (controller ตอบ 202) */
+export type Gated<T> = T | { pendingApproval: NonNullable<Awaited<ReturnType<ApprovalsService['gate']>>> };
+const approvalOf = (ctx?: ApprovalContext): Approval | undefined => (ctx ? { approvedBy: ctx.approver.id, selfApproved: ctx.selfApproved } : undefined);
 
 /** Workspace ของลูกค้า (ฝั่งหลังบ้าน) · ข้ามขอบเขต RLS เพราะเป็นทีมระบบ · ทุกการแก้เขียน audit_logs ของ Workspace นั้น */
 @Injectable()
-export class WorkspacesService {
-  constructor(@Inject(OPS_DB) private readonly db: Db) {}
+export class WorkspacesService implements OnModuleInit {
+  constructor(
+    @Inject(OPS_DB) private readonly db: Db,
+    private readonly approvals: ApprovalsService,
+  ) {}
+
+  /** อนุมัติแล้วทำรายการในนามผู้ขอ (06 › 4) */
+  onModuleInit() {
+    this.approvals.register('workspace.discount', (p, ctx) => this.applyDiscount(ctx.requester, p.workspaceId as string, p.input as z.infer<typeof DiscountBody>, ctx));
+    this.approvals.register('workspace.extend_trial', (p, ctx) => this.applyExtendTrial(ctx.requester, p.workspaceId as string, p.input as z.infer<typeof ExtendTrialBody>, ctx));
+    this.approvals.register('workspace.suspend', (p, ctx) => this.setStatus(ctx.requester, p.workspaceId as string, 'suspended', (p.input as { reason: string }).reason, ctx));
+  }
 
   async list(q: z.infer<typeof ListQuery>) {
     const where = and(
@@ -118,8 +140,29 @@ export class WorkspacesService {
     return row;
   }
 
-  /** ต่อช่วงทดลอง: เฉพาะที่ยังอยู่ในสถานะทดลอง (ทดลองหมดแล้วต้องเปลี่ยนแพ็กเกจหรือให้ลูกค้าชำระ) */
-  async extendTrial(staff: Staff, id: string, input: z.infer<typeof ExtendTrialBody>) {
+  /** ต่อช่วงทดลอง: เฉพาะที่ยังอยู่ในสถานะทดลอง · เกินวงเงินรวม (วัน / ครั้ง) ต้องอนุมัติ */
+  async extendTrial(staff: Staff, id: string, input: z.infer<typeof ExtendTrialBody>): Promise<Gated<{ trialEndsAt: Date }>> {
+    const { sub } = await this.sub(id);
+    if (!sub) throw new AppError(409, 'no_subscription', 'Workspace นี้ยังไม่มีแพ็กเกจ');
+    if (sub.status !== 'trialing') throw new AppError(409, 'not_trialing', 'ต่อช่วงทดลองได้เฉพาะ Workspace ที่อยู่ในช่วงทดลอง', { status: sub.status });
+    const prior = await this.trialExtensions(id);
+    const { trialDays, trialTimes } = staff.limits;
+    const pending = await this.approvals.gate(staff, {
+      kind: 'workspace.extend_trial', workspaceId: id, target: { type: 'subscription', id: sub.id }, payload: { workspaceId: id, input }, reason: input.reason,
+      exceeds: prior.times + 1 > trialTimes || prior.days + input.days > trialDays,
+      rule: `ขยายทดลองรวมเกิน ${trialDays} วัน หรือเกิน ${trialTimes} ครั้ง (เคยขยาย ${prior.times} ครั้ง ${prior.days} วัน)`,
+    });
+    if (pending) return { pendingApproval: pending };
+    return this.applyExtendTrial(staff, id, input);
+  }
+
+  /** การขยายทดลองที่ผ่านมา · นับจาก Audit log ที่ service นี้เขียนเอง ("ต่อช่วงทดลอง N วัน") */
+  private async trialExtensions(id: string) {
+    const rows = await this.db.select({ summary: s.auditLogs.summary }).from(s.auditLogs).where(and(eq(s.auditLogs.workspaceId, id), eq(s.auditLogs.action, 'ops.trial_extended')));
+    return { times: rows.length, days: rows.reduce((n, r) => n + Number(/ต่อช่วงทดลอง (\d+) วัน/.exec(r.summary ?? '')?.[1] ?? 0), 0) };
+  }
+
+  private async applyExtendTrial(staff: Staff, id: string, input: z.infer<typeof ExtendTrialBody>, ctx?: ApprovalContext) {
     const { sub } = await this.sub(id);
     if (!sub) throw new AppError(409, 'no_subscription', 'Workspace นี้ยังไม่มีแพ็กเกจ');
     if (sub.status !== 'trialing') throw new AppError(409, 'not_trialing', 'ต่อช่วงทดลองได้เฉพาะ Workspace ที่อยู่ในช่วงทดลอง', { status: sub.status });
@@ -127,18 +170,32 @@ export class WorkspacesService {
     const trialEndsAt = new Date(base.getTime() + input.days * DAY);
     await this.db.transaction(async (tx) => {
       await tx.update(s.subscriptions).set({ trialEndsAt, currentPeriodEnd: trialEndsAt, updatedAt: new Date() }).where(eq(s.subscriptions.id, sub.id));
-      await audit(tx, staff, id, 'plan', 'ops.trial_extended', `ต่อช่วงทดลอง ${input.days} วัน → ${trialEndsAt.toISOString().slice(0, 10)} · ${input.reason}`, { type: 'subscription', id: sub.id });
+      await audit(tx, staff, id, 'plan', 'ops.trial_extended', `ต่อช่วงทดลอง ${input.days} วัน → ${trialEndsAt.toISOString().slice(0, 10)} · ${input.reason}`, { type: 'subscription', id: sub.id }, approvalOf(ctx));
     });
     return { trialEndsAt };
   }
 
-  async discount(staff: Staff, id: string, input: z.infer<typeof DiscountBody>) {
+  /** ส่วนลดเกิน % หรือจำนวนรอบในวงเงิน (ไม่ระบุรอบ = ตลอดไป) ต้องอนุมัติ */
+  async discount(staff: Staff, id: string, input: z.infer<typeof DiscountBody>): Promise<Gated<{ discount: Record<string, unknown> }>> {
+    const { sub } = await this.sub(id);
+    if (!sub) throw new AppError(409, 'no_subscription', 'Workspace นี้ยังไม่มีแพ็กเกจ');
+    const { discountPct, discountCycles } = staff.limits;
+    const pending = await this.approvals.gate(staff, {
+      kind: 'workspace.discount', workspaceId: id, target: { type: 'subscription', id: sub.id }, payload: { workspaceId: id, input }, reason: input.reason,
+      exceeds: input.percent > discountPct || input.months == null || input.months > discountCycles,
+      rule: `ส่วนลดเกิน ${discountPct}% หรือเกิน ${discountCycles} รอบ`,
+    });
+    if (pending) return { pendingApproval: pending };
+    return this.applyDiscount(staff, id, input);
+  }
+
+  private async applyDiscount(staff: Staff, id: string, input: z.infer<typeof DiscountBody>, ctx?: ApprovalContext) {
     const { sub } = await this.sub(id);
     if (!sub) throw new AppError(409, 'no_subscription', 'Workspace นี้ยังไม่มีแพ็กเกจ');
     const discount = { percent: input.percent, months: input.months ?? null, reason: input.reason, setBy: staff.id, setAt: new Date().toISOString() };
     await this.db.transaction(async (tx) => {
       await tx.update(s.subscriptions).set({ discount, updatedAt: new Date() }).where(eq(s.subscriptions.id, sub.id));
-      await audit(tx, staff, id, 'plan', 'ops.discount_set', `ส่วนลด ${input.percent}%${input.months ? ` นาน ${input.months} รอบ` : ''} · ${input.reason}`, { type: 'subscription', id: sub.id });
+      await audit(tx, staff, id, 'plan', 'ops.discount_set', `ส่วนลด ${input.percent}%${input.months ? ` นาน ${input.months} รอบ` : ''} · ${input.reason}`, { type: 'subscription', id: sub.id }, approvalOf(ctx));
     });
     return { discount };
   }
@@ -158,19 +215,36 @@ export class WorkspacesService {
     return { plan: input.plan, previous: prev?.code ?? null };
   }
 
-  async suspend(staff: Staff, id: string, input: z.infer<typeof SuspendBody>) {
+  /**
+   * ระงับ: ตามนโยบายค้างชำระ (การเงิน · ต้องเป็น past_due) ไม่ต้องอนุมัติ
+   * Workspace ที่จ่ายเงินอยู่ต้องให้ Owner อนุมัติทุกครั้ง · ช่วงทดลอง / ยกเลิกแล้ว Owner ระงับได้เลย
+   */
+  async suspend(staff: Staff, id: string, input: z.infer<typeof SuspendBody>): Promise<Gated<{ id: string; status: string }>> {
+    const { sub, ws } = await this.sub(id);
+    if (ws.status === 'pending_delete') throw new AppError(409, 'workspace_deleted', 'Workspace นี้ถูกลบแล้ว');
+    if (input.policy === 'overdue') {
+      if (sub?.status !== 'past_due') throw new AppError(422, 'not_overdue', 'ระงับตามนโยบายค้างชำระได้เฉพาะ Workspace ที่ค้างชำระ', { status: sub?.status ?? null });
+      return this.setStatus(staff, id, 'suspended', `${input.reason} (ค้างชำระตามนโยบาย)`);
+    }
+    if (!has(staff, 'owner')) throw new AppError(403, 'forbidden', 'ระงับนอกนโยบายค้างชำระได้เฉพาะ Owner');
+    if (ws.status === 'suspended') throw new AppError(409, 'no_change', 'Workspace ถูกระงับอยู่แล้ว');
+    const pending = await this.approvals.gate(staff, {
+      kind: 'workspace.suspend', workspaceId: id, target: { type: 'workspace', id }, payload: { workspaceId: id, input }, reason: input.reason,
+      exceeds: sub?.status === 'active', rule: 'ระงับ Workspace ที่จ่ายเงินต้องอนุมัติทุกครั้ง',
+    });
+    if (pending) return { pendingApproval: pending };
     return this.setStatus(staff, id, 'suspended', input.reason);
   }
-  async resume(staff: Staff, id: string, input: z.infer<typeof SuspendBody>) {
+  async resume(staff: Staff, id: string, input: z.infer<typeof ResumeBody>) {
     return this.setStatus(staff, id, 'active', input.reason);
   }
-  private async setStatus(staff: Staff, id: string, status: 'suspended' | 'active', reason: string) {
+  private async setStatus(staff: Staff, id: string, status: 'suspended' | 'active', reason: string, ctx?: ApprovalContext) {
     const { ws } = await this.sub(id);
     if (ws.status === 'pending_delete') throw new AppError(409, 'workspace_deleted', 'Workspace นี้ถูกลบแล้ว');
     if (ws.status === status) throw new AppError(409, 'no_change', status === 'suspended' ? 'Workspace ถูกระงับอยู่แล้ว' : 'Workspace ไม่ได้ถูกระงับ');
     await this.db.transaction(async (tx) => {
       await tx.update(s.workspaces).set({ status, updatedAt: new Date() }).where(eq(s.workspaces.id, id));
-      await audit(tx, staff, id, 'secu', status === 'suspended' ? 'ops.workspace_suspended' : 'ops.workspace_resumed', `${status === 'suspended' ? 'ระงับ' : 'เปิดใช้งานอีกครั้ง'} Workspace · ${reason}`, { type: 'workspace', id });
+      await audit(tx, staff, id, 'secu', status === 'suspended' ? 'ops.workspace_suspended' : 'ops.workspace_resumed', `${status === 'suspended' ? 'ระงับ' : 'เปิดใช้งานอีกครั้ง'} Workspace · ${reason}`, { type: 'workspace', id }, approvalOf(ctx));
     });
     return { id, status };
   }

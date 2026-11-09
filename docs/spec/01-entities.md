@@ -233,7 +233,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `maintenance_window` | ปิดปรับปรุง · API ฝั่งลูกค้าอ่านเพื่อเปลี่ยนเป็นอ่านอย่างเดียว | scope, message, starts_at, ends_at, notify_plan, status, approval_request_id | Ops 12 |
 | `status_subscriber` | ผู้ติดตามหน้าสถานะ | email, confirmed_at, unsubscribed_at | Ops 12 |
 
-`staff_users` (Friday Ops เฟส 1 · [06-ops-roles](06-ops-roles.md)): `roles` (owner · finance · support · engineer · auditor, อย่างน้อย 1), `department`, `limits`, `status`, `expires_at` · `role` เดิมเลิกใช้ trigger เติม `roles` ให้จนกว่า O01 ย้ายโค้ด · `payments` เพิ่ม `verified_by`, `exception_reason`, `matched_invoice_id` · `support_sessions` เพิ่ม `ticket_id`
+`staff_users` (Friday Ops เฟส 1 · [06-ops-roles](06-ops-roles.md)): `roles` (owner · finance · support · engineer · auditor, อย่างน้อย 1), `department`, `limits`, `status`, `expires_at` · `role` เดิมลบแล้วใน migration 0019 (O01) · `payments` เพิ่ม `verified_by`, `exception_reason`, `matched_invoice_id` · `support_sessions` เพิ่ม `ticket_id`
 
 ## O. ข้อมูลธุรกิจ ([05-business-metrics](05-business-metrics.md))
 

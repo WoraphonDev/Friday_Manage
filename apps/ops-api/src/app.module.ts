@@ -1,32 +1,35 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { ApprovalsModule } from './approvals/approvals.module.js';
 import { AuthController } from './auth/auth.controller.js';
 import { AuthGuard } from './auth/auth.guard.js';
 import { AuthService } from './auth/auth.service.js';
+import { BillingModule } from './billing/billing.module.js';
 import { DbModule } from './db.js';
 import { ErrorFilter } from './errors.js';
-import { FlagsService } from './flags/flags.service.js';
-import { Mailer } from './mail.js';
-import { MetricsService } from './metrics.service.js';
-import { OpsController } from './ops.controller.js';
-import { OpsPaymentsService } from './payments/ops-payments.service.js';
-import { SupportService } from './support/support.service.js';
-import { WorkspacesService } from './workspaces/workspaces.service.js';
+import { FlagsModule } from './flags/flags.module.js';
+import { LegalModule } from './legal/legal.module.js';
+import { MailModule } from './mail.module.js';
+import { MetricsModule } from './metrics/metrics.module.js';
+import { PaymentsModule } from './payments/payments.module.js';
+import { PrivacyModule } from './privacy/privacy.module.js';
+import { StaffModule } from './staff/staff.module.js';
+import { SupportModule } from './support/support.module.js';
+import { SystemModule } from './system/system.module.js';
+import { UsersModule } from './users/users.module.js';
+import { WorkspacesModule } from './workspaces/workspaces.module.js';
 
-/** หลังบ้านทีม Friday (ops.friday.app) · แอปแยกจาก apps/api: โดเมน, session และบัญชีฐานข้อมูลของตัวเอง */
+/**
+ * หลังบ้านทีม Friday (ops.fridaymanage.com) · แอปแยกจาก apps/api: โดเมน, session และบัญชีฐานข้อมูลของตัวเอง
+ * 1 เรื่อง = 1 module (lane ของงาน O02–O06) · ไฟล์นี้แก้เฉพาะ O01
+ */
 @Module({
-  imports: [DbModule],
-  controllers: [AuthController, OpsController],
-  providers: [
-    AuthService,
-    Mailer,
-    MetricsService,
-    WorkspacesService,
-    SupportService,
-    OpsPaymentsService,
-    FlagsService,
-    { provide: APP_GUARD, useClass: AuthGuard },
-    { provide: APP_FILTER, useClass: ErrorFilter },
+  imports: [
+    DbModule, MailModule, ApprovalsModule, StaffModule, MetricsModule,
+    WorkspacesModule, UsersModule, SupportModule, SystemModule,
+    PaymentsModule, BillingModule, PrivacyModule, LegalModule, FlagsModule,
   ],
+  controllers: [AuthController],
+  providers: [AuthService, { provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_FILTER, useClass: ErrorFilter }],
 })
 export class AppModule {}

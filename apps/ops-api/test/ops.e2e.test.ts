@@ -8,12 +8,14 @@ import { signEnrollToken } from '../src/auth/auth.service.js';
 import { signToken } from './token.js';
 import { Mailer } from '../src/mail.js';
 import { SoftKey } from './authenticator.js';
-import { customer, type Customer, signIn, staff, type Staff, startOps, type TestOps } from './helpers.js';
+import { customer, type Customer, reauth, signIn, staff, type Staff, startOps, type TestOps } from './helpers.js';
 
 let t: TestOps;
 let admin: Staff;
 let support: Staff;
 let finance: Staff;
+/** Owner คนที่สอง (สร้างในชุด support session) · ทำให้โหมดแก้ไขเปิดและอนุมัติให้ admin ได้ */
+let owner2: Staff;
 let mail: Mailer;
 const uploadRoot = resolve(process.env.UPLOAD_DIR ?? '../api/var/uploads');
 
@@ -36,7 +38,7 @@ describe('ล็อกอินด้วย Security key (WebAuthn)', () => {
   });
 
   it('ลงทะเบียน key ด้วยโทเค็นเท่านั้น · key ซ้ำ / challenge ผิด / origin ผิด ถูกปฏิเสธ', async () => {
-    const row = await t.owner.query(`INSERT INTO staff_users (email, name, role) VALUES ('new@friday.example.com', 'New', 'support') RETURNING id`);
+    const row = await t.owner.query(`INSERT INTO staff_users (email, name, roles) VALUES ('new@friday.example.com', 'New', '{support}') RETURNING id`);
     const id = row.rows[0].id;
     const agent = request.agent(t.app.getHttpServer());
     expect((await agent.post('/ops/auth/register/options').send({})).status).toBe(401);
@@ -70,7 +72,7 @@ describe('ล็อกอินด้วย Security key (WebAuthn)', () => {
     const assertion = key.assert(o.body.options);
     const ok = await agent.post('/ops/auth/login/verify').send({ challengeToken: o.body.challengeToken, response: assertion });
     expect(ok.status, JSON.stringify(ok.body)).toBe(200);
-    expect(ok.body.staff).toMatchObject({ email: admin.email, role: 'admin' });
+    expect(ok.body.staff).toMatchObject({ email: admin.email, roles: ['owner', 'finance', 'support', 'engineer'] });
     const cookie = (ok.headers['set-cookie'] as unknown as string[]).find((c) => c.startsWith('fm_ops='))!;
     expect(cookie).toMatch(/HttpOnly/i);
     expect(cookie).toMatch(/SameSite=Strict/i);
@@ -109,7 +111,7 @@ describe('ล็อกอินด้วย Security key (WebAuthn)', () => {
     expect((await tmp.agent.get('/ops/metrics')).status).toBe(401); // ตรวจกับฐานข้อมูลทุกครั้ง
   });
 
-  it('บทบาท: support / finance ทำได้เฉพาะหมวดของตน · admin ทำได้ทุกอย่าง', async () => {
+  it('บทบาท: support / finance ทำได้เฉพาะหมวดของตน · Owner ทีมเล็ก (มีทุกบทบาท) ทำได้ทุกอย่าง แต่ระงับลูกค้าที่จ่ายเงินต้องอนุมัติ', async () => {
     const c = await customer(t, 'roles');
     const body = { reason: 'ทดสอบสิทธิ์ของบทบาท' };
     expect((await support.agent.post(`/ops/workspaces/${c.id}/suspend`).send(body)).status).toBe(403);
@@ -118,7 +120,11 @@ describe('ล็อกอินด้วย Security key (WebAuthn)', () => {
     expect((await finance.agent.get('/ops/support-sessions')).status).toBe(403);
     expect((await support.agent.get('/ops/feature-flags')).status).toBe(403);
     expect((await finance.agent.post(`/ops/workspaces/${c.id}/change-plan`).send({ plan: 'team_m', reason: 'ตกลงในสัญญา' })).status).toBe(200);
-    expect((await admin.agent.post(`/ops/workspaces/${c.id}/suspend`).send(body)).status).toBe(200);
+    // change-plan ทำให้เป็นลูกค้าที่จ่ายเงิน → ระงับต้องอนุมัติ · มี Owner คนเดียวจึงอนุมัติตัวเองได้
+    const sus = await admin.agent.post(`/ops/workspaces/${c.id}/suspend`).send(body);
+    expect(sus.status, JSON.stringify(sus.body)).toBe(202);
+    expect(sus.body.pendingApproval).toMatchObject({ kind: 'workspace.suspend', status: 'pending', canSelfApprove: true });
+    await t.owner.query(`UPDATE approval_requests SET status = 'cancelled' WHERE id = $1`, [sus.body.pendingApproval.id]);
     expect((await admin.agent.get('/ops/payments')).status).toBe(200);
     expect((await support.agent.get('/ops/workspaces')).status).toBe(200);
   });
@@ -189,7 +195,11 @@ describe('เข้าช่วยเหลือบัญชีลูกค้�
     expect(w.body.error.code).toBe('support_mode_not_allowed');
 
     await t.owner.query(`UPDATE support_access_grants SET max_mode = 'write' WHERE workspace_id = $1`, [c.id]);
+    // มี Owner คนเดียว → โหมดแก้ไขยังไม่เปิด (คำตัดสิน 9 พ.ย. 2569 ทางเลือก ข)
+    expect((await support.agent.post(url).send({ ...base, mode: 'write', secondApproverId: admin.id })).body.error.code).toBe('write_mode_disabled');
+    owner2 = await staff(t, 'owner2@friday.example.com', 'Olive Owner', ['owner']);
     expect((await support.agent.post(url).send({ ...base, mode: 'write' })).body.error.code).toBe('second_approver_required');
+    expect((await support.agent.post(url).send({ ...base, mode: 'write', secondApproverId: finance.id })).body.error.code).toBe('second_approver_invalid'); // ต้องเป็น Owner
     expect((await support.agent.post(url).send({ ...base, mode: 'write', secondApproverId: support.id })).body.error.code).toBe('second_approver_must_differ');
     expect((await support.agent.post(url).send({ ...base, mode: 'write', secondApproverId: randomUUID() })).body.error.code).toBe('second_approver_invalid');
     expect((await finance.agent.post(url).send(base)).status).toBe(403); // บทบาท finance
@@ -262,8 +272,19 @@ describe('แพ็กเกจและสถานะ Workspace', () => {
     expect((await finance.agent.post(`/ops/workspaces/${c.id}:change-plan`).send({ plan: 'platinum', reason: 'ไม่มีแพ็กเกจนี้' })).status).toBe(400);
     expect((await support.agent.post(`/ops/workspaces/${c.id}:extend-trial`).send({ days: 3, reason: 'หลังเปลี่ยนเป็น active' })).body.error.code).toBe('not_trialing');
 
-    const sus = await admin.agent.post(`/ops/workspaces/${c.id}:suspend`).send({ reason: 'ผิดข้อตกลงการใช้งาน' });
-    expect(sus.body).toEqual({ id: c.id, status: 'suspended' });
+    // ลูกค้าจ่ายเงินแล้ว (enterprise active) → ต้องอนุมัติ · มี Owner 2 คนแล้วจึงอนุมัติตัวเองไม่ได้ ให้ owner2 อนุมัติ
+    const req = await admin.agent.post(`/ops/workspaces/${c.id}:suspend`).send({ reason: 'ผิดข้อตกลงการใช้งาน' });
+    expect(req.status, JSON.stringify(req.body)).toBe(202);
+    expect(req.body.pendingApproval.canSelfApprove).toBe(false);
+    const approvalId = req.body.pendingApproval.id;
+    await reauth(admin);
+    expect((await admin.agent.post(`/ops/approvals/${approvalId}:approve`).send({})).body.error.code).toBe('self_approval_not_allowed');
+    expect((await owner2.agent.post(`/ops/approvals/${approvalId}:approve`).send({})).body.error.code).toBe('reauth_required');
+    await reauth(owner2);
+    const sus = await owner2.agent.post(`/ops/approvals/${approvalId}:approve`).send({ note: 'ตรวจหลักฐานแล้ว' });
+    expect(sus.status, JSON.stringify(sus.body)).toBe(200);
+    expect(sus.body.result).toEqual({ id: c.id, status: 'suspended' });
+    expect((await t.owner.query(`SELECT approved_by, self_approved, staff_id FROM staff_audit_logs WHERE action = 'ops.workspace_suspended' AND workspace_id = $1`, [c.id])).rows[0]).toEqual({ approved_by: owner2.id, self_approved: false, staff_id: admin.id });
     expect((await admin.agent.post(`/ops/workspaces/${c.id}:suspend`).send({ reason: 'ซ้ำอีกรอบ' })).body.error.code).toBe('no_change');
     expect((await admin.agent.get(`/ops/workspaces?status=suspended`)).body.items.map((x: { slug: string }) => x.slug)).toContain('plan-ops');
     expect((await admin.agent.post(`/ops/workspaces/${c.id}:resume`).send({ reason: 'แก้ปัญหาแล้ว' })).body.status).toBe('active');

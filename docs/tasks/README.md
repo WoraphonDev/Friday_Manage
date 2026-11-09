@@ -169,7 +169,7 @@
 | [O14](O14-ops-web-privacy-legal.md) | ops-web: PDPA, เอกสารกฎหมาย | O-3 | O10, O05 | `apps/ops-web/app/(console)/{privacy,legal}` |
 | [O15](O15-ops-web-overview-business.md) | ops-web: ภาพรวม, ธุรกิจและกำไร | O-3 | O10, O06 | `apps/ops-web/app/(console)/{page.tsx,business}` |
 
-ไฟล์กลางของ ops: `apps/ops-api/src/app.module.ts` และ `ops.controller.ts` แก้ได้เฉพาะ O01 (งานอื่นลงทะเบียน module ผ่านคำขอนอก lane หรือ O01 เตรียม module ว่างไว้ให้) · `apps/ops-web/src/components/**`, `app/layout.tsx`, `app/(console)/layout.tsx` แก้ได้เฉพาะ O10 · `apps/ops-api/test/helpers.ts` ไม่มีใครแก้
+ไฟล์กลางของ ops: `apps/ops-api/src/app.module.ts` และ `ops.controller.ts` แก้ได้เฉพาะ O01 (งานอื่นลงทะเบียน module ผ่านคำขอนอก lane หรือ O01 เตรียม module ว่างไว้ให้) · `apps/ops-web/src/components/**`, `app/layout.tsx`, `app/(console)/layout.tsx` แก้ได้เฉพาะ O10 · `apps/ops-api/test/helpers.ts` แก้ได้เฉพาะ O01 (เพิ่ม `staff(…, roles[])` และ `reauth()` ไว้ให้งานอื่นใช้)
 
 ## ตั้ง environment ของ Codex
 

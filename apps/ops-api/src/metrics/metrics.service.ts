@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type Db } from '@friday/db';
 import { sql } from 'drizzle-orm';
-import { OPS_DB } from './db.js';
+import { OPS_DB } from '../db.js';
 
 type Row = Record<string, string | number | null>;
 /** node-postgres คืน `{ rows }` · ตัวขับอื่นคืนอาร์เรย์ตรง ๆ */

@@ -68,7 +68,7 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
     group: "support",
     items: [
       { key: "support", href: "/support", built: true, roles: ["owner", "support"], badge: ["ticketsUnassigned"] },
-      { key: "sessions", href: "/support", built: true, roles: ["owner", "support"] },
+      { key: "sessions", href: "/support#sessions", built: true, roles: ["owner", "support"] },
       { key: "supportSettings", roles: ["owner", "support"] },
       { key: "help", roles: ["owner", "support"] },
       { key: "bugs", roles: ["owner", "support", "engineer"] },
@@ -77,8 +77,8 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
   {
     group: "system",
     items: [
-      { key: "system", href: "/system", built: false, roles: ["owner", "engineer"] },
-      { key: "ops", href: "/operations", built: false, roles: ["owner", "engineer", "support"], badge: ["incidentsOpen"] },
+      { key: "system", href: "/system", built: true, roles: ["owner", "engineer"] },
+      { key: "ops", href: "/incidents", built: true, roles: ["owner", "engineer", "support"], badge: ["incidentsOpen"] },
       { key: "deliveries", roles: ["owner", "engineer", "support"] },
       { key: "flags", href: "/flags", built: true, roles: ["owner", "engineer"] },
       { key: "ratelimit", roles: ["owner", "engineer"] },

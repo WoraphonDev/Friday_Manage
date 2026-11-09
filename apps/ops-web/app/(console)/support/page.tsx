@@ -1,5 +1,11 @@
-import { Support } from "@/features/support/Support";
+import { Suspense } from "react";
+import { LoadingState } from "@/components/ui";
+import { SupportPage } from "./SupportPage";
 
 export default function Page() {
-  return <Support />;
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <SupportPage />
+    </Suspense>
+  );
 }

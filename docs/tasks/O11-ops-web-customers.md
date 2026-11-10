@@ -22,7 +22,7 @@
 - [x] ครบทุกสถานะตาม M1: กำลังโหลด, ว่าง, Error พร้อม requestId, ไม่มีสิทธิ์ · ซ่อนปุ่มตามบทบาท
 - [x] ใช้ชิ้นส่วนมาตรฐานจาก O10 (ชิป ปุ่มสลับ แท็บ ช่องกรอก Modal Drawer Toast) · สีจาก token เท่านั้น
 - [x] component test ด้วย MSW ครอบคลุมทุกข้อใน "ทำอะไร" · `pnpm --filter @friday/ops-web typecheck test build` ผ่าน
-- [ ] build และ deploy Docker ในเครื่องตาม CLAUDE.md แล้วตรวจ flow ที่ทำผ่าน container
+- [x] build และ deploy Docker ในเครื่องตาม CLAUDE.md แล้วตรวจ flow ที่ทำผ่าน container
 
 ## ไม่อยู่ในงานนี้
 
@@ -67,6 +67,8 @@
 - `src/components/styles/ops.css`: ตัวเลขไม่ตัดบรรทัด
 - `src/i18n/messages.ts`: เพิ่ม namespace `customers`
 - ลบ `src/features/workspaces/**`
+
+**Deploy Docker 2026-11-10** (หลัง PR #119 เพิ่ม `infra/docker/compose.ops.yml`) · จาก `main` `830cc03` · ops-web http://localhost:4000 (image `6b2243532f40`) · ops-api http://localhost:4001 (image `1485dc5f9b81`) ใช้ QA DB เดิม · ทั้งสอง container healthy · หน้า `/workspaces`, `/users` ตอบ 200 · `/ops-api/workspaces`, `users` ตอบ 200 พร้อมข้อมูลจาก QA DB
 
 **ต่อเติม 2026-11-10 (ปิดช่องว่าง C1 / C6)**
 - **C1 ระยะเวลา**: เลือก 30 นาที / 1 ชม. (ค่าเริ่มต้น) / 2 ชม. · ไม่เกินวันหมดสิทธิ์ที่ลูกค้าให้ · `support_sessions.expires_at` (migration 0021) · หมดเวลาแล้วจบเองที่เวลาหมด พร้อม Audit `support.session_expired` (ปิดตอนมีคนเปิดรายการ / เริ่มใหม่ ไม่ต้องพึ่งงานเบื้องหลัง) · ลูกค้าเห็นเวลาสิ้นสุดใน Admin Console › การเข้าช่วยเหลือ

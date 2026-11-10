@@ -37,6 +37,9 @@ describe("Workspace ถูกระงับ", () => {
     expect(screen.getByText("ผิดข้อตกลงการใช้งาน")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "ดูการชำระเงิน" })).toHaveAttribute("href", "/work/sample/billing");
     expect(screen.queryByText("เนื้อหาหน้า")).not.toBeInTheDocument();
+    // sidebar ไม่ขึ้น "ยังไม่มีโปรเจกต์" ให้เข้าใจผิด
+    expect(screen.queryByText("ยังไม่มีโปรเจกต์")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "แผนพัฒนาผลิตภัณฑ์" })).not.toBeInTheDocument();
   });
 
   it("ปิดทั้งหมด: สมาชิกได้ 403 workspace_suspended → ให้ติดต่อ Owner", async () => {

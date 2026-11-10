@@ -83,11 +83,14 @@ function Navigation({
   projects,
   unread,
   close,
+  locked = false,
 }: {
   workspace: Workspace;
   projects: Project[];
   unread: number;
   close?: () => void;
+  /** ระงับแบบปิดทั้งหมด (C6): ไม่มีรายชื่อโปรเจกต์ให้แสดง จึงซ่อนทั้งส่วน (ไม่ขึ้น "ยังไม่มีโปรเจกต์" ให้เข้าใจผิด) */
+  locked?: boolean;
 }) {
   const t = useTranslations("common.nav");
   const pathname = usePathname();
@@ -122,8 +125,8 @@ function Navigation({
         {t("inbox")}
         {unread > 0 && <Badge tone="red">{unread}</Badge>}
       </Link>
-      <div className="nav-section">{t("projects")}</div>
-      {projects.length ? (
+      {!locked && <div className="nav-section">{t("projects")}</div>}
+      {locked ? null : projects.length ? (
         projects.map((project) => (
           <Link
             className="nav-link"
@@ -147,7 +150,7 @@ function Navigation({
       ) : (
         <span className="muted menu-label">{t("noProjects")}</span>
       )}
-      {workspace.role !== "guest" && (
+      {workspace.role !== "guest" && !locked && (
         <Link
           className="nav-link"
           href={`${base}/new-project`}
@@ -604,8 +607,9 @@ export function WorkspaceShell({
               workspace={workspace}
               projects={projects.data?.items ?? []}
               unread={unread}
+              locked={suspension?.mode === "full"}
             />
-            {projects.isPending && <LoadingState />}
+            {projects.isPending && suspension?.mode !== "full" && <LoadingState />}
             {projects.error && suspension?.mode !== "full" && (
               <ErrorState
                 error={projects.error}
@@ -695,6 +699,7 @@ export function WorkspaceShell({
             projects={projects.data?.items ?? []}
             unread={unread}
             close={() => setMenuOpen(false)}
+            locked={suspension?.mode === "full"}
           />
           <div className="menu-divider" />
           <div className="menu-label">{t("nav.yourWorkspaces")}</div>

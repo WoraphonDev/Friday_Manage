@@ -10,12 +10,17 @@ import { cn } from "@/lib/utils";
 import { baht, fitPlan, type PlanCode, type PublicPlan, type PublicPlans } from "@/features/plan-limits";
 import styles from "./public.module.css";
 
-type Cyc = "monthly" | "yearly";
+export type Cyc = "monthly" | "yearly";
+/** ปุ่มของแต่ละแพ็กเกจ · ไม่มี href = แสดงเป็นป้ายเฉย ๆ (เช่น แพ็กเกจปัจจุบัน) */
+export type PlanCta = { label: string; href?: string };
 // ช่องทางติดต่อฝ่ายขายตั้งตอน deploy · ไม่ตั้ง = ไปหน้าสมัครพร้อมแพ็กเกจ Enterprise ให้ทีมติดต่อกลับ
 const SALES_URL = process.env.NEXT_PUBLIC_SALES_URL ?? "/signup?plan=enterprise";
 
-/** R1 · ราคาเหมาตามขนาดทีม (ใช้ทั้งใน Landing และ /pricing) · ราคาและขีดจำกัดจาก `GET public/plans` */
-export function PricingSection({ heading = "h2" }: { heading?: "h1" | "h2" }) {
+/**
+ * R1 · ราคาเหมาตามขนาดทีม (ใช้ทั้งใน Landing, /pricing และ /work/:ws/billing/plans) · ราคาและขีดจำกัดจาก `GET public/plans`
+ * ในระบบส่ง `ctaFor` ให้ปุ่มไปหน้าชำระเงินของ Workspace แทนหน้าสมัคร (ไม่หลุดออกจากระบบ)
+ */
+export function PricingSection({ heading = "h2", ctaFor }: { heading?: "h1" | "h2"; ctaFor?: (p: PublicPlan, cycle: Cyc) => PlanCta }) {
   const t = useTranslations("saas-pages.pricing");
   const [cycle, setCycle] = useState<Cyc>("monthly");
   const [team, setTeam] = useState(12);
@@ -23,7 +28,7 @@ export function PricingSection({ heading = "h2" }: { heading?: "h1" | "h2" }) {
   const H = heading;
 
   return (
-    <section id="pricing" className={styles.pricing} aria-labelledby="pricing-title">
+    <section id="pricing" className={cn(styles.pricing, ctaFor && styles.embedded)} aria-labelledby="pricing-title">
       <div className={cn(styles.wrap, styles.stackLg)}>
         <div className={styles.pricingHead}>
           <H id="pricing-title" style={{ fontSize: 28 }}>
@@ -44,14 +49,14 @@ export function PricingSection({ heading = "h2" }: { heading?: "h1" | "h2" }) {
         ) : plans.error ? (
           <ErrorState error={plans.error} retry={() => plans.refetch()} />
         ) : (
-          <Plans data={plans.data} cycle={cycle} team={team} setTeam={setTeam} />
+          <Plans data={plans.data} cycle={cycle} team={team} setTeam={setTeam} ctaFor={ctaFor} />
         )}
       </div>
     </section>
   );
 }
 
-function Plans({ data, cycle, team, setTeam }: { data: PublicPlans; cycle: Cyc; team: number; setTeam: (n: number) => void }) {
+function Plans({ data, cycle, team, setTeam, ctaFor }: { data: PublicPlans; cycle: Cyc; team: number; setTeam: (n: number) => void; ctaFor?: (p: PublicPlan, cycle: Cyc) => PlanCta }) {
   const t = useTranslations("saas-pages.pricing");
   const items = data.items;
   const fit = fitPlan(items, team);
@@ -75,8 +80,8 @@ function Plans({ data, cycle, team, setTeam }: { data: PublicPlans; cycle: Cyc; 
     const satang = (yearly ? p.priceYearlySatang : p.priceMonthlySatang) ?? 0;
     return { price: `฿${baht(satang)}`, unit: yearly ? t("perYear") : t("perMonth"), sub: yearly ? t("billedYearly") : "" };
   };
-  const cta = (p: PublicPlan) =>
-    p.code === "free"
+  const cta = (p: PublicPlan): PlanCta =>
+    ctaFor ? ctaFor(p, cycle) : p.code === "free"
       ? { label: t("start"), href: "/signup" }
       : p.contactSales
         ? { label: t("contact"), href: SALES_URL }
@@ -119,9 +124,15 @@ function Plans({ data, cycle, team, setTeam }: { data: PublicPlans; cycle: Cyc; 
                 <span className={styles.price}>{pr.price}</span> <span className={cn(styles.muted, styles.small)}>{pr.unit}</span>
               </div>
               <span className={cn(styles.muted, styles.sub)}>{pr.sub}</span>
-              <Link className={cn(buttonVariants({ variant: hot ? "primary" : "secondary" }), styles.btn)} href={c.href}>
-                {c.label}
-              </Link>
+              {c.href ? (
+                <Link className={cn(buttonVariants({ variant: hot ? "primary" : "secondary" }), styles.btn)} href={c.href}>
+                  {c.label}
+                </Link>
+              ) : (
+                <span className={cn(buttonVariants({ variant: "secondary" }), styles.btn)} aria-disabled="true">
+                  {c.label}
+                </span>
+              )}
               <ul>
                 {bullets(p).map((b) => (
                   <li key={b}>{b}</li>

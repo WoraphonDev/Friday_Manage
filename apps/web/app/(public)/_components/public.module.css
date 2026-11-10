@@ -53,6 +53,9 @@
 .feat span { font-size:14px; }
 
 .pricing { padding:48px 0; background:var(--surface-2); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+/* ในระบบ (billing/plans): ไม่ต้องมีแถบพื้นหลังแบบหน้าเว็บ · ระยะขอบใช้ของหน้าในระบบ */
+.embedded { padding:0; background:none; border:0; }
+.embedded .wrap { max-width:none; padding:0; }
 .pricingHead { text-align:center; display:flex; flex-direction:column; gap:8px; align-items:center; }
 .seg { display:inline-flex; border:1px solid var(--input); border-radius:999px; padding:3px; background:var(--card); }
 .seg button { min-height:34px; padding:0 14px; border:0; border-radius:999px; background:transparent; font-size:14px; color:var(--foreground-soft); }

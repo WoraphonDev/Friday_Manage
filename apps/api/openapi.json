@@ -45,6 +45,9 @@
       "name": "DueRequests"
     },
     {
+      "name": "EmailFeedback"
+    },
+    {
       "name": "Files"
     },
     {
@@ -772,6 +775,38 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/v1/hooks/email-feedback": {
+      "post": {
+        "operationId": "EmailFeedback_hook",
+        "summary": "POST hooks/email-feedback",
+        "tags": [
+          "EmailFeedback"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
               }
             }
           }
@@ -5422,7 +5457,8 @@
                 "queued",
                 "sent",
                 "failed",
-                "skipped_quiet_hours"
+                "skipped_quiet_hours",
+                "suppressed"
               ]
             }
           },

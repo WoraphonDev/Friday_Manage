@@ -1618,3 +1618,95 @@ textarea.input {
 .push-end {
   margin-left: auto;
 }
+
+/* ---------------------------------------------------------------- ประวัติการส่งแจ้งเตือน (O23) */
+.split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 16px;
+}
+.split-main {
+  flex: 2 1 560px;
+  min-width: 0;
+}
+.split-side {
+  flex: 1 1 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 16px;
+  border-left: 1px solid var(--border);
+}
+@media (max-width: 900px) {
+  .split-side {
+    padding-left: 0;
+    border-left: 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+}
+.tbl tbody tr.row-on td {
+  background: var(--primary-soft);
+}
+.tbl tbody tr[aria-selected] {
+  cursor: pointer;
+}
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.timeline-item {
+  display: grid;
+  grid-template-columns: auto 10px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+}
+.timeline-item::before {
+  content: "";
+  grid-column: 2;
+  grid-row: 1;
+  width: 10px;
+  height: 10px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.timeline-item > :first-child {
+  grid-column: 1;
+  grid-row: 1;
+}
+.timeline-item > :last-child {
+  grid-column: 3;
+  grid-row: 1;
+}
+.timeline-item.tone-ok::before {
+  background: var(--success-solid, var(--success-text));
+}
+.timeline-item.tone-bad::before {
+  background: var(--danger-solid);
+}
+.timeline-item.tone-warn::before {
+  background: var(--warning-solid);
+}
+.code-box {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+pre.code-box {
+  display: block;
+  max-height: 360px;
+  overflow: auto;
+}

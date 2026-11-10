@@ -2,6 +2,7 @@ import { Module, type OnModuleInit } from '@nestjs/common';
 import { ChannelsController, ProjectNotifyController } from './channels.controller.js';
 import { ChannelsService, DnsChecker } from './channels.service.js';
 import { ChannelDispatcher } from './dispatcher.js';
+import { EmailFeedbackController, EmailFeedbackService } from './email-feedback.js';
 import { ProjectNotifyService } from './project-notify.service.js';
 import { ChannelRegistry, EmailSender, WebhookSender } from './senders.js';
 
@@ -10,8 +11,8 @@ import { ChannelRegistry, EmailSender, WebhookSender } from './senders.js';
  * เส้นทาง: notifications ใหม่ → ChannelDispatcher → notification_deliveries → คิว (retry, ช่วงงดส่ง, Safe mode)
  */
 @Module({
-  controllers: [ChannelsController, ProjectNotifyController],
-  providers: [ChannelRegistry, EmailSender, WebhookSender, ChannelDispatcher, ChannelsService, ProjectNotifyService, DnsChecker],
+  controllers: [ChannelsController, ProjectNotifyController, EmailFeedbackController],
+  providers: [ChannelRegistry, EmailSender, WebhookSender, ChannelDispatcher, EmailFeedbackService, ChannelsService, ProjectNotifyService, DnsChecker],
   exports: [ChannelRegistry, ChannelDispatcher],
 })
 export class ChannelsModule implements OnModuleInit {

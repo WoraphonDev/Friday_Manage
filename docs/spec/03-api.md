@@ -34,6 +34,7 @@
 | เว็บ | Session cookie (`HttpOnly`, `Secure`, `SameSite=Lax`) + CSRF token ใน header สำหรับคำขอที่แก้ข้อมูล |
 | ระบบภายนอก | `Authorization: Bearer <api_token>` (N1 › API tokens) · สิทธิ์ตาม `scopes` ของ token |
 | LINE ปุ่มอนุมัติ | Postback ของ LINE ไปที่ `/hooks/line` · ตรวจลายเซ็นของ LINE แล้วหาผู้ใช้จาก `line_binding` |
+| Bounce / complaint ของอีเมล | ผู้ให้บริการ (SES ผ่าน SNS) เรียก `POST /hooks/email-feedback?token=…` (`EMAIL_FEEDBACK_TOKEN`) · bounce ถาวร / รายงานสแปม / bounce ชั่วคราว 5 วัน → `email_suppressions` แล้วแจ้งเตือนทางอีเมลถึงคนนั้นเป็น `suppressed` (O23) |
 | Webhook ขาเข้า | ตรวจลายเซ็นของผู้ให้บริการแต่ละราย |
 
 ### รูปแบบข้อมูล

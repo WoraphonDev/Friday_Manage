@@ -58,7 +58,7 @@ export const PatchWebhookBody = z.object({
   status: z.enum(['active', 'paused']).optional(),
 });
 export const DeliveriesQuery = z.object({
-  status: z.enum(['queued', 'sent', 'failed', 'skipped_quiet_hours']).optional(),
+  status: z.enum(['queued', 'sent', 'failed', 'skipped_quiet_hours', 'suppressed']).optional(),
   channel: z.enum(['email', 'line', 'line_group', 'webhook']).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   before: z.string().datetime().optional(),

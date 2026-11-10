@@ -20,6 +20,8 @@ function noHttpCache(req: Request, res: Response, next: NextFunction) {
 export async function createApp() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ['error', 'warn'], rawBody: true });
   app.setGlobalPrefix('api/v1');
+  // SNS (bounce / complaint ของอีเมล · O23) ส่ง JSON มาเป็น text/plain · rawBody เก็บให้ด้วยเพราะเปิด rawBody ไว้
+  app.useBodyParser('text', { type: 'text/plain', limit: '256kb' });
   app.use(cookieParser());
   app.use(noHttpCache);
   app.set('trust proxy', 1);

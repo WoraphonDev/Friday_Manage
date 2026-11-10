@@ -236,8 +236,10 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `data_breach` | เหตุละเมิดข้อมูลส่วนบุคคล · แจ้ง สคส. ภายใน 72 ชม. | number, discovered_at, owner_id, description, data_types[], affected_count, workspace_ids[], risk, containment, assessment, pdpc_notified_at, subjects_notified_at, closed_at | Ops 10, A4 |
 | `entitlement_version` | สิทธิ์และขีดจำกัดตามแพ็กเกจแบบมีเวอร์ชัน (O21) · แก้ไม่ได้ กู้ = สร้างเวอร์ชันใหม่ | version, matrix (แพ็กเกจ × คีย์ใน `plan-entitlements.ts`), effective_at, reason, restored_from, created_by, approved_by, approval_request_id | Ops Entitlements, P2, P3 |
 | `entitlement_override` | ปรับสิทธิ์เฉพาะราย ใช้แทนค่าของแพ็กเกจ | workspace_id, key (seats · storage_gb · api_rpm · automation_runs · sso), value, expires_at (null ได้เฉพาะมี contract_ref), contract_ref, reason, created_by, approved_by, warned_at, revoked_at, revoked_by | Ops Entitlements |
+| `email_suppression` | อีเมลที่ระบบไม่ส่งให้ (bounce ถาวร / รายงานสแปม / bounce ชั่วคราวซ้ำ / ทีม Friday เพิ่มเอง) · ระดับระบบ (O23) | email, reason, detail, workspace_id (ที่มา · แสดงผล), source, removed_at, removed_by, remove_reason | Ops Deliveries, Y7 |
+| `email_feedback_event` | เหตุการณ์ bounce / complaint จากผู้ให้บริการอีเมล · เก็บ 90 วัน | email, kind (bounce_permanent · bounce_transient · complaint), detail, raw | Ops Deliveries |
 
-`staff_users` (Friday Ops เฟส 1 · [06-ops-roles](06-ops-roles.md)): `roles` (owner · finance · support · engineer · auditor, อย่างน้อย 1), `department`, `limits`, `status`, `expires_at` · `role` เดิมลบแล้วใน migration 0019 (O01) · `payments` เพิ่ม `verified_by`, `exception_reason`, `matched_invoice_id` · `support_sessions` เพิ่ม `ticket_id`
+`staff_users` (Friday Ops เฟส 1 · [06-ops-roles](06-ops-roles.md)): `roles` (owner · finance · support · engineer · auditor, อย่างน้อย 1), `department`, `limits`, `status`, `expires_at` · `role` เดิมลบแล้วใน migration 0019 (O01) · `payments` เพิ่ม `verified_by`, `exception_reason`, `matched_invoice_id` · `support_sessions` เพิ่ม `ticket_id` · `notification_deliveries` เพิ่ม `target_label`, `content`, `response`, `log`, `resend_requested_at` และสถานะ `suppressed` (O23 · เก็บ 90 วัน)
 
 ## O. ข้อมูลธุรกิจ ([05-business-metrics](05-business-metrics.md))
 

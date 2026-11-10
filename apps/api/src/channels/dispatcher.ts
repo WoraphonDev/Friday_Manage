@@ -10,7 +10,7 @@ import { SYSTEM_DB } from '../db/db.module.js';
 import { reasonIn } from '../notifications/rules.js';
 import { buildMessage, isCritical, isUrgent, toLocale, type Msg } from './message.js';
 import { nextSendTime, type QuietRule } from './quiet.js';
-import { ChannelRegistry, type ExternalChannel } from './senders.js';
+import { ChannelRegistry, DeliveryError, type ExternalChannel, type SendResult } from './senders.js';
 
 const s = schema;
 
@@ -19,7 +19,21 @@ export const CHANNEL_JOBS = {
   deliver: 'channels.deliver',
   flushQuiet: 'channels.flush-quiet',
   scan: 'channels.scan',
+  purge: 'channels.purge',
 } as const;
+
+/** เก็บประวัติการส่ง (รวมเนื้อหาที่ส่ง) และเหตุการณ์ bounce 90 วัน (O23) */
+export const DELIVERY_RETENTION_DAYS = 90;
+
+/** 1 เหตุการณ์ในลำดับการส่ง (notification_deliveries.log) */
+export interface DeliveryLogEntry {
+  at: string;
+  kind: 'attempt_ok' | 'attempt_failed' | 'quiet' | 'suppressed' | 'cancelled' | 'paused' | 'resend' | 'bounced' | 'complained';
+  attempt?: number;
+  status?: number | null;
+  message?: string;
+  final?: boolean;
+}
 
 /**
  * เหตุการณ์ที่ส่ง Email ให้ตั้งแต่ต้นถ้าผู้ใช้ยังไม่เคยตั้ง pref (Canvas I › คอลัมน์ Email)
@@ -84,8 +98,10 @@ export class ChannelDispatcher implements OnModuleInit {
     this.jobs.define<{ deliveryId: string }>(CHANNEL_JOBS.deliver, (d, ctx) => this.deliver(d.deliveryId, { attempt: ctx.attempt }));
     this.jobs.define(CHANNEL_JOBS.flushQuiet, () => this.flushQuiet());
     this.jobs.define(CHANNEL_JOBS.scan, () => this.scan());
+    this.jobs.define(CHANNEL_JOBS.purge, () => this.purge());
     await this.jobs.every(CHANNEL_JOBS.flushQuiet, '*/10 * * * *');
     await this.jobs.every(CHANNEL_JOBS.scan, '* * * * *');
+    await this.jobs.every(CHANNEL_JOBS.purge, '17 3 * * *');
     this.hookNotifier();
   }
 
@@ -142,6 +158,59 @@ export class ChannelDispatcher implements OnModuleInit {
       )
       .limit(500);
     if (rows.length) await this.dispatch(rows.map((r) => r.id));
+    await this.resendRequested();
+  }
+
+  /** ทีม Friday ขอส่งซ้ำ (ops-api ตั้ง resend_requested_at) · จองแถวก่อนแล้วส่งเข้าคิว */
+  async resendRequested() {
+    const rows = await this.db
+      .update(s.notificationDeliveries)
+      .set({ resendRequestedAt: null })
+      .where(sql`${s.notificationDeliveries.resendRequestedAt} IS NOT NULL`)
+      .returning({ id: s.notificationDeliveries.id });
+    for (const r of rows) await this.jobs.enqueue(CHANNEL_JOBS.deliver, { deliveryId: r.id }, { jobId: `resend-${r.id}-${Date.now()}` });
+    return rows.length;
+  }
+
+  /** ลบประวัติการส่งและเหตุการณ์ bounce ที่เก่ากว่า 90 วัน */
+  async purge(now = new Date()) {
+    const cutoff = new Date(now.getTime() - DELIVERY_RETENTION_DAYS * 86_400_000);
+    const gone = await this.db.delete(s.notificationDeliveries).where(sql`${s.notificationDeliveries.createdAt} < ${cutoff}`).returning({ id: s.notificationDeliveries.id });
+    await this.db.delete(s.emailFeedbackEvents).where(sql`${s.emailFeedbackEvents.createdAt} < ${cutoff}`);
+    return { deleted: gone.length };
+  }
+
+  /** ต่อท้ายลำดับเหตุการณ์ของรายการส่ง พร้อมแก้คอลัมน์อื่นในคำสั่งเดียว */
+  private async record(id: string, entry: Omit<DeliveryLogEntry, 'at'> & { at?: Date }, set: Partial<typeof s.notificationDeliveries.$inferInsert> = {}) {
+    const e: DeliveryLogEntry = { ...entry, at: (entry.at ?? new Date()).toISOString() };
+    await this.db
+      .update(s.notificationDeliveries)
+      .set({ ...set, log: sql`${s.notificationDeliveries.log} || ${JSON.stringify([e])}::jsonb` })
+      .where(eq(s.notificationDeliveries.id, id));
+  }
+
+  /** ชื่อปลายทางที่แสดงในหลังบ้าน (เก็บครั้งแรกที่ส่ง) */
+  private async labelOf(channel: ExternalChannel, targetRef: string, recipientId: string) {
+    if (channel === 'email') return targetRef;
+    if (channel === 'webhook') {
+      const [h] = await this.db.select({ name: s.webhookEndpoints.name }).from(s.webhookEndpoints).where(eq(s.webhookEndpoints.id, targetRef));
+      return h?.name ?? 'Webhook';
+    }
+    if (channel === 'line_group') {
+      const [g] = await this.db.select({ name: s.lineGroups.name }).from(s.lineGroups).where(eq(s.lineGroups.id, targetRef));
+      return g ? `กลุ่ม LINE · ${g.name}` : 'กลุ่ม LINE';
+    }
+    const [u] = await this.db.select({ name: s.users.displayName }).from(s.users).where(eq(s.users.id, recipientId));
+    return `LINE ส่วนตัว · ${u?.name ?? ''}`.trim();
+  }
+
+  /** อีเมลอยู่ในรายชื่อไม่ส่ง (bounce ถาวร / รายงานสแปม) ไหม */
+  private async suppressed(email: string) {
+    const [r] = await this.db
+      .select({ reason: s.emailSuppressions.reason })
+      .from(s.emailSuppressions)
+      .where(and(sql`lower(${s.emailSuppressions.email}) = lower(${email})`, isNull(s.emailSuppressions.removedAt)));
+    return r?.reason ?? null;
   }
 
   /** ตัดสินว่าแจ้งเตือนแต่ละรายการต้องส่งทางไหน แล้วสร้างรายการส่ง + ส่งเข้าคิว */
@@ -269,10 +338,22 @@ export class ChannelDispatcher implements OnModuleInit {
     const [n] = await this.db.select().from(s.notifications).where(eq(s.notifications.id, d.notificationId));
     const sender = this.registry.get(d.channel as ExternalChannel);
     if (!n || !sender) return this.fail(d.id, 'ไม่พบแจ้งเตือนหรือช่องทางนี้ถูกปิด', true);
+    if (!d.targetLabel) await this.db.update(s.notificationDeliveries).set({ targetLabel: await this.labelOf(d.channel as ExternalChannel, d.targetRef, n.recipientId) }).where(eq(s.notificationDeliveries.id, d.id));
     if (!GROUP_CHANNELS.has(d.channel as ExternalChannel)) {
       // ยกเลิกถาวร (ไม่ throw = ไม่ retry) และบันทึกเหตุผลไว้ใน last_error
       const blocked = await this.personalBlocked(n, d.channel as ExternalChannel);
-      if (blocked) return this.fail(d.id, `ยกเลิกการส่ง: ${blocked}`, true);
+      if (blocked) {
+        await this.record(d.id, { at: now, kind: 'cancelled', message: blocked, final: true });
+        return this.fail(d.id, `ยกเลิกการส่ง: ${blocked}`, true);
+      }
+    }
+    if (d.channel === 'email') {
+      // รายชื่อไม่ส่งอีเมล (O23) · ไม่ใช่ความผิดพลาด จึงไม่ retry
+      const reason = await this.suppressed(d.targetRef);
+      if (reason) {
+        await this.record(d.id, { at: now, kind: 'suppressed', message: reason, final: true }, { status: 'suppressed', lastError: `อีเมลอยู่ในรายชื่อไม่ส่ง (${reason})` });
+        return;
+      }
     }
 
     const project = n.projectId ? await this.projectInfo(n.projectId) : null;
@@ -280,7 +361,7 @@ export class ChannelDispatcher implements OnModuleInit {
     if (rule) {
       const wait = nextSendTime(now, rule, await this.workingDay(n, project));
       if (wait) {
-        await this.db.update(s.notificationDeliveries).set({ status: 'skipped_quiet_hours' }).where(eq(s.notificationDeliveries.id, d.id));
+        if (d.status !== 'skipped_quiet_hours') await this.record(d.id, { at: now, kind: 'quiet', message: wait.toISOString() }, { status: 'skipped_quiet_hours' });
         return;
       }
     }
@@ -296,14 +377,24 @@ export class ChannelDispatcher implements OnModuleInit {
     );
     const attempts = d.attempts + 1;
     try {
-      await sender.send({ workspaceId: n.workspaceId, workspaceSlug: ws?.slug ?? '', recipientId: n.recipientId, targetRef: d.targetRef, msg, why: reasonIn(locale, n.reason ?? 'มีเหตุการณ์ที่เกี่ยวข้องกับคุณ') });
-      await this.db.update(s.notificationDeliveries).set({ status: 'sent', attempts, sentAt: now, lastError: null }).where(eq(s.notificationDeliveries.id, d.id));
+      const result = (await sender.send({ workspaceId: n.workspaceId, workspaceSlug: ws?.slug ?? '', recipientId: n.recipientId, targetRef: d.targetRef, msg, why: reasonIn(locale, n.reason ?? 'มีเหตุการณ์ที่เกี่ยวข้องกับคุณ') })) ?? {};
+      await this.record(
+        d.id,
+        { at: now, kind: 'attempt_ok', attempt: attempts, status: result.response?.status ?? null },
+        { status: 'sent', attempts, sentAt: now, lastError: null, ...(result.content ? { content: result.content } : {}), ...(result.response ? { response: result.response } : {}) },
+      );
       if (d.channel === 'webhook') await this.db.update(s.webhookEndpoints).set({ consecutiveFailures: 0 }).where(eq(s.webhookEndpoints.id, d.targetRef));
     } catch (err) {
       const message = ((err as Error).message ?? String(err)).slice(0, 500);
       const final = err instanceof UnrecoverableError || (opts.attempt ?? 1) >= JOB_ATTEMPTS;
+      const result: SendResult = err instanceof DeliveryError ? err.result : ((err as { result?: SendResult }).result ?? {});
+      await this.record(
+        d.id,
+        { at: now, kind: 'attempt_failed', attempt: attempts, status: result.response?.status ?? null, message, final },
+        { ...(result.content ? { content: result.content } : {}), ...(result.response ? { response: result.response } : {}) },
+      );
       await this.fail(d.id, message, final, attempts);
-      if (final && d.channel === 'webhook') await this.pauseWebhook(n.workspaceId, d.targetRef, message);
+      if (final && d.channel === 'webhook' && (await this.pauseWebhook(n.workspaceId, d.targetRef, message))) await this.record(d.id, { at: now, kind: 'paused' });
       throw err;
     }
   }
@@ -328,7 +419,7 @@ export class ChannelDispatcher implements OnModuleInit {
       .set({ status: 'paused', consecutiveFailures: sql`${s.webhookEndpoints.consecutiveFailures} + 1` })
       .where(and(eq(s.webhookEndpoints.workspaceId, workspaceId), eq(s.webhookEndpoints.id, webhookId), eq(s.webhookEndpoints.status, 'active')))
       .returning({ name: s.webhookEndpoints.name });
-    if (!hook) return;
+    if (!hook) return false;
     const admins = await this.db
       .select({ userId: s.workspaceMembers.userId })
       .from(s.workspaceMembers)
@@ -342,6 +433,7 @@ export class ChannelDispatcher implements OnModuleInit {
       reason: 'คุณเป็น Owner / Admin ของ Workspace · Webhook ส่งไม่สำเร็จติดต่อกันจึงถูกปิดชั่วคราว',
       dedupeKey: `webhook_paused:${webhookId}`,
     });
+    return true;
   }
 
   /** ส่งรายการที่พ้นช่วงงดส่งแล้ว (งานตามเวลาทุก 10 นาที) */

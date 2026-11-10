@@ -23,7 +23,7 @@
 - [x] หน้าตรงกับ Canvas ที่ 1440 px · ที่ 390 px ใช้งานได้ (อ่านได้ ตารางเลื่อนแนวนอน)
 - [x] ครบทุกสถานะตาม M1: กำลังโหลด, ว่าง, Error พร้อม requestId, ไม่มีสิทธิ์ · ซ่อนปุ่มตามบทบาท
 - [x] component test ด้วย MSW ครอบคลุมทุกข้อใน "ทำอะไร" · `pnpm --filter @friday/ops-web typecheck test build` ผ่าน
-- [ ] build และ deploy Docker ในเครื่องตาม CLAUDE.md แล้วตรวจ flow ที่ทำผ่าน container
+- [x] build และ deploy Docker ในเครื่องตาม CLAUDE.md แล้วตรวจ flow ที่ทำผ่าน container
 
 ## ไม่อยู่ในงานนี้
 
@@ -76,3 +76,4 @@
 - `vitest.config.ts`: รวม test ใน `app/`
 - test เดิมของ payments / auth ปรับตามพฤติกรรมใหม่
 
+**Deploy Docker 2026-11-10** (หลัง PR #119 เพิ่ม `infra/docker/compose.ops.yml`) · จาก `main` `830cc03` · ops-web http://localhost:4000 (image `6b2243532f40`) · ops-api http://localhost:4001 (image `1485dc5f9b81`) ใช้ QA DB เดิม · ทั้งสอง container healthy · หน้า `/login`, `/staff` ตอบ 200 · `/ops-api/auth/me`, `staff`, `approvals`, `audit` ตอบ 200 · ไม่มี cookie ถูกส่งไป `/login` (307)

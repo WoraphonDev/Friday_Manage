@@ -22,7 +22,7 @@
 - [x] ครบทุกสถานะตาม M1: กำลังโหลด, ว่าง, Error พร้อม requestId, ไม่มีสิทธิ์ · ซ่อนปุ่มตามบทบาท
 - [x] ใช้ชิ้นส่วนมาตรฐานจาก O10 (ชิป ปุ่มสลับ แท็บ ช่องกรอก Modal Drawer Toast) · สีจาก token เท่านั้น
 - [x] component test ด้วย MSW ครอบคลุมทุกข้อใน "ทำอะไร" · `pnpm --filter @friday/ops-web typecheck test build` ผ่าน
-- [ ] build และ deploy Docker ในเครื่องตาม CLAUDE.md แล้วตรวจ flow ที่ทำผ่าน container
+- [x] build และ deploy Docker ในเครื่องตาม CLAUDE.md แล้วตรวจ flow ที่ทำผ่าน container
 
 ## ไม่อยู่ในงานนี้
 
@@ -56,6 +56,8 @@
 - `src/components/styles/ops.css`: กราฟ (`.chart*`, `.hbars`), `.cohort`, `.grid-main`
 - `src/i18n/messages.ts`: namespace `ob` · `proxy.ts`: เพิ่ม `/business`
 - ลบ `src/features/metrics/**` (หน้าภาพรวมเดิมของ A32)
+
+**Deploy Docker 2026-11-10** (หลัง PR #119 เพิ่ม `infra/docker/compose.ops.yml`) · จาก `main` `830cc03` · ops-web http://localhost:4000 (image `6b2243532f40`) · ops-api http://localhost:4001 (image `1485dc5f9b81`) ใช้ QA DB เดิม · ทั้งสอง container healthy · หน้า `/`, `/business`, `/business/funnel`, `/business/adoption` ตอบ 200 · `/ops-api/overview`, `business`, `costs` ตอบ 200
 
 **ต่อเติม 2026-11-10 (ปิดช่องว่างที่บันทึกไว้)**
 - ops-api `GET ops/overview/usage` (ทุกบทบาท ไม่มีตัวเลขเงิน): การใช้งาน 30 วันรวมทุก Workspace ที่ยังไม่ถูกลบ · โปรเจกต์ที่มีความเคลื่อนไหว / งานสร้าง-ปิด / คอมเมนต์ + @mention / ไฟล์ + ขนาด / LINE + % ส่งถึง / Automation / เรียก API + token / นำเข้า Excel + ล้ม · การใช้ฟีเจอร์ของลูกค้าที่จ่าย

@@ -1767,7 +1767,16 @@ pre.code-box {
   padding: 4px 8px;
 }
 .input-narrow {
-  width: 64px;
+  width: 56px;
+}
+.grid-sla {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 16px;
+}
+.tbl td.cell-note {
+  white-space: normal;
+  min-width: 110px;
 }
 .day-name {
   width: 72px;
@@ -1850,8 +1859,24 @@ pre.code-box {
   gap: 2px;
   text-align: left;
 }
+@media (max-width: 1100px) {
+  .grid-sla {
+    grid-template-columns: 1fr;
+  }
+}
 @media (max-width: 760px) {
   .opt-grid {
     grid-template-columns: 1fr;
+  }
+  .setting-row:has(.input-time) {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .day-name {
+    width: 52px;
+  }
+  .input-time {
+    width: 88px;
+    padding: 4px 6px;
   }
 }

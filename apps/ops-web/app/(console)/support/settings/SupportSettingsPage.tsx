@@ -203,7 +203,7 @@ export function SupportSettingsPage() {
             )}
           </section>
 
-          <div className="grid-2">
+          <div className="grid-sla">
             <section className="card">
               <h2 className="card-title">{t("sla.title")}</h2>
               <div className="tbl-wrap">
@@ -230,7 +230,7 @@ export function SupportSettingsPage() {
                             />
                           </td>
                         ))}
-                        <td className="muted small cell-wrap">{t(`sla.channel.${p}`)}</td>
+                        <td className="muted small cell-note">{t(`sla.channel.${p}`)}</td>
                       </tr>
                     ))}
                   </tbody>

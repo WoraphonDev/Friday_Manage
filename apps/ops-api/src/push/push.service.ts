@@ -16,13 +16,14 @@ const b64url = (b: Buffer) => b.toString('base64url');
 
 /**
  * กุญแจ VAPID: production ตั้ง OPS_VAPID_PUBLIC_KEY / OPS_VAPID_PRIVATE_KEY (สร้างด้วย `npx web-push generate-vapid-keys`)
- * dev / test ไม่ตั้ง = สร้างจาก OPS_AUTH_SECRET ให้คงที่ (การสมัครเดิมใช้ได้ต่อหลัง restart) · production ไม่ตั้ง = ปิด Web Push
+ * dev / test (หรือ Docker ในเครื่องที่ตั้ง OPS_VAPID_DERIVE=on) ไม่ตั้ง = สร้างจาก OPS_AUTH_SECRET ให้คงที่ (การสมัครเดิมใช้ได้ต่อหลัง restart)
+ * production ไม่ตั้ง = ปิด Web Push
  */
 function vapidKeys(): { publicKey: string; privateKey: string } | null {
   const pub = process.env.OPS_VAPID_PUBLIC_KEY;
   const priv = process.env.OPS_VAPID_PRIVATE_KEY;
   if (pub && priv) return { publicKey: pub, privateKey: priv };
-  if (process.env.NODE_ENV === 'production') return null;
+  if (process.env.NODE_ENV === 'production' && process.env.OPS_VAPID_DERIVE !== 'on') return null;
   const ecdh = createECDH('prime256v1');
   ecdh.setPrivateKey(createHash('sha256').update(`${config.secret}:vapid`).digest());
   return { publicKey: b64url(ecdh.getPublicKey()), privateKey: b64url(ecdh.getPrivateKey()) };

@@ -26,6 +26,11 @@ services:
       OPS_JOBS: ${OPS_JOBS:-off}
       # อีเมลสำนักงานบัญชี (B8 · คั่นด้วยจุลภาค) · ว่าง = ดาวน์โหลดได้อย่างเดียว
       OPS_ACCOUNTING_EMAIL: ${OPS_ACCOUNTING_EMAIL:-}
+      # Web Push (O25): ตั้งกุญแจจริงด้วย OPS_VAPID_PUBLIC_KEY / OPS_VAPID_PRIVATE_KEY · ไม่ตั้ง = สร้างจาก OPS_AUTH_SECRET (เฉพาะในเครื่อง)
+      OPS_VAPID_PUBLIC_KEY: ${OPS_VAPID_PUBLIC_KEY:-}
+      OPS_VAPID_PRIVATE_KEY: ${OPS_VAPID_PRIVATE_KEY:-}
+      OPS_VAPID_SUBJECT: ${OPS_VAPID_SUBJECT:-mailto:ops@fridaymanage.com}
+      OPS_VAPID_DERIVE: ${OPS_VAPID_DERIVE:-on}
       VALKEY_URL: ${OPS_VALKEY_URL:-}
     volumes:
       - ../../apps/api/var/uploads:/data/uploads:ro

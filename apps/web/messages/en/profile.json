@@ -133,7 +133,76 @@
     "whoSelf": "The person who performs an action isn't notified",
     "reset": "Reset to defaults",
     "resetDone": "Notifications reset to defaults",
-    "saved": "Notification settings saved"
+    "saved": "Notification settings saved",
+    "events": {
+      "issue_assigned": {
+        "label": "Assigned to or removed from a task"
+      },
+      "issue_review_requested": {
+        "label": "Asked to review or test",
+        "hint": "Includes PRs that request my review"
+      },
+      "issue_mentioned": {
+        "label": "Someone @mentions me"
+      },
+      "issue_commented": {
+        "label": "New comments on tasks I'm assigned to or watching"
+      },
+      "issue_updated": {
+        "label": "Due date or priority of a related task changes"
+      },
+      "issue_status_changed": {
+        "label": "Status of a related task, or a sub-task under my task, changes"
+      },
+      "test_run_failed": {
+        "label": "A test fails on my task",
+        "hint": "Failed tests notify every channel you pick"
+      },
+      "bug_created": {
+        "label": "New bug involving me"
+      },
+      "bug_reopened": {
+        "label": "Bug reopened"
+      },
+      "due_request_created": {
+        "label": "Due date change requests waiting for my approval",
+        "hint": "For project PMs and admins"
+      },
+      "due_request_decided": {
+        "label": "Result of my due date change request"
+      },
+      "issue_due_soon": {
+        "label": "Task due soon",
+        "hint": "As set below"
+      },
+      "issue_overdue": {
+        "label": "Task overdue"
+      },
+      "member_joined": {
+        "label": "Added to a project or my role changes"
+      },
+      "project_health_changed": {
+        "label": "Project health changes (At risk / Off track)",
+        "hint": "For PMs"
+      },
+      "sprint_started": {
+        "label": "Sprint started"
+      },
+      "sprint_completed": {
+        "label": "Sprint completed"
+      },
+      "plan_changed": {
+        "label": "Plan changed after a baseline was set",
+        "hint": "For PMs"
+      },
+      "digest_daily": {
+        "label": "Daily digest",
+        "hint": "Today's tasks + overdue + awaiting review"
+      },
+      "report_weekly": {
+        "label": "Weekly summary report"
+      }
+    }
   },
   "line": {
     "title": "Link your LINE account to Friday Manage",

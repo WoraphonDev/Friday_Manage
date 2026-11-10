@@ -137,7 +137,11 @@
     "search": "ค้นหา",
     "filter": "ตัวกรอง",
     "rangeLabel": "ช่วงเวลา",
-    "mobileRange": { "focus": "วันนี้ + Overdue", "week": "สัปดาห์นี้", "all": "ทั้งหมด" },
+    "mobileRange": {
+      "focus": "วันนี้ + Overdue",
+      "week": "สัปดาห์นี้",
+      "all": "ทั้งหมด"
+    },
     "markUndone": "ยกเลิกการเสร็จ: {title}",
     "subtask": "Sub-task",
     "estimate": "{md} MD",
@@ -201,6 +205,15 @@
       "detail": "รายละเอียด",
       "send": "ส่งคำขอ",
       "requested": "ส่งคำขอเลื่อน Due ของ {key} แล้ว"
+    },
+    "dueGroups": {
+      "late": "เลยกำหนด",
+      "today": "วันนี้",
+      "this_week": "สัปดาห์นี้",
+      "next_week": "สัปดาห์หน้า",
+      "later": "ภายหลัง",
+      "none": "ไม่มีวันที่",
+      "done_today": "เสร็จวันนี้"
     }
   }
 }

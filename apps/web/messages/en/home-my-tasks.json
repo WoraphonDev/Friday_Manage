@@ -137,7 +137,11 @@
     "search": "Search",
     "filter": "Filter",
     "rangeLabel": "Time range",
-    "mobileRange": { "focus": "Today + overdue", "week": "This week", "all": "All" },
+    "mobileRange": {
+      "focus": "Today + overdue",
+      "week": "This week",
+      "all": "All"
+    },
     "markUndone": "Mark as not done: {title}",
     "subtask": "Sub-task",
     "estimate": "{md} MD",
@@ -201,6 +205,15 @@
       "detail": "Details",
       "send": "Send request",
       "requested": "Due change request for {key} sent"
+    },
+    "dueGroups": {
+      "late": "Overdue",
+      "today": "Today",
+      "this_week": "This week",
+      "next_week": "Next week",
+      "later": "Later",
+      "none": "No date",
+      "done_today": "Done today"
     }
   }
 }

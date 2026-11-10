@@ -66,6 +66,7 @@ export function SearchPage({ ws }: { ws: string }) {
   const [filters, setFilters] = useState<Filters>(() => parseFilters(searchParams));
   const [draft, setDraft] = useState(filters.q);
   const [saveOpen, setSaveOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [removing, setRemoving] = useState<SavedSearch | null>(null);
   const base = `/w/${encodeURIComponent(ws)}`;
@@ -128,6 +129,7 @@ export function SearchPage({ ws }: { ws: string }) {
   }
 
   const typeRows = TYPE_ORDER.filter((type) => !(guest && type === "person"));
+  const activeFilters = (filters.types.length < typeRows.length ? 1 : 0) + (filters.project ? 1 : 0) + (filters.mine ? 1 : 0) + (filters.open ? 1 : 0) + (filters.archived ? 1 : 0);
   return (
     <div className={styles.page}>
       <div className={styles.head}>
@@ -147,7 +149,11 @@ export function SearchPage({ ws }: { ws: string }) {
         <Button type="submit" variant="primary">{t("page.submit")}</Button>
       </form>
       <div className={styles.body}>
-        <aside className={`${styles.card} ${styles.aside}`} aria-label={t("page.filters")}>
+        {/* มือถือ: ตัวกรองพับไว้ให้เห็นผลค้นหาก่อน (จอกว้างแสดงเสมอ) */}
+        <button type="button" className={styles.filterToggle} aria-expanded={filtersOpen} aria-controls="search-filters" onClick={() => setFiltersOpen(!filtersOpen)}>
+          {t("page.filters")} {activeFilters > 0 && <span className={styles.filterCount}>{activeFilters}</span>}
+        </button>
+        <aside id="search-filters" className={`${styles.card} ${styles.aside} ${filtersOpen ? styles.asideOpen : ""}`} aria-label={t("page.filters")}>
           <b>{t("page.typeHeading")}</b>
           {typeRows.map((type) => (
             <label key={type} className={styles.fchip}>

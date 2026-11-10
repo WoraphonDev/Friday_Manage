@@ -153,3 +153,39 @@ describe('ตั้งค่าต้นทุน (B9) และค่ากา�
     expect(log).toBe(3);
   });
 });
+
+describe('ภาพรวม: การใช้งาน 30 วัน และกิจกรรมล่าสุด', () => {
+  it('การใช้งานรวมทุก Workspace · การใช้ฟีเจอร์คิดจากลูกค้าที่จ่าย · ทุกบทบาทเปิดได้', async () => {
+    await t.owner.query(`UPDATE daily_usages SET api_calls = 1200 WHERE workspace_id = $1`, [a.id]);
+    const r = await support.agent.get('/ops/overview/usage');
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body).toMatchObject({ days: 30, api: { calls: 1200 }, imports: { total: 0, failedPct: null }, line: { total: 0, sentPct: null }, payingWorkspaces: 4 });
+    // a ใช้ Gantt 1 ใน 4 รายที่จ่าย
+    expect(r.body.featureAdoption).toEqual([{ feature: 'gantt', workspaces: 1, pct: 25 }]);
+  });
+
+  it('กิจกรรมล่าสุด: สมัคร / เปลี่ยนแพ็กเกจพร้อมเหตุผลยกเลิก · ชำระเงินเฉพาะคนเห็นเงิน · การกระทำพนักงานเฉพาะ Owner / ผู้ตรวจ', async () => {
+    const inv = (await t.owner.query(`SELECT id FROM invoices WHERE number = 'FRI-BIZ-2'`)).rows[0].id;
+    await t.owner.query(`INSERT INTO payments (workspace_id, invoice_id, method, amount, status, verified_by, reviewed_at) VALUES ($1,$2,'transfer',5885000,'confirmed','staff', now())`, [d.id, inv]);
+    await t.owner.query(`INSERT INTO staff_audit_logs (staff_id, roles, action, reason) VALUES ($1, '{owner}', 'metrics.cost_rates_set', 'ปรับค่า LINE')`, [owner.id]);
+    const o = await owner.agent.get('/ops/overview/feed');
+    expect(o.status, JSON.stringify(o.body)).toBe(200);
+    const kinds = new Set(o.body.items.map((x: { kind: string }) => x.kind));
+    expect([...kinds]).toEqual(expect.arrayContaining(['payment', 'staff', 'cancel']));
+    const cancel = o.body.items.find((x: { kind: string }) => x.kind === 'cancel');
+    expect(cancel).toMatchObject({ workspace: { id: c.id }, data: { reason: 'too_expensive' } });
+    expect(o.body.items.find((x: { kind: string }) => x.kind === 'payment').data).toMatchObject({ invoice: 'FRI-BIZ-2', method: 'transfer' });
+    expect(o.body.items.find((x: { kind: string }) => x.kind === 'staff').data).toMatchObject({ action: 'metrics.cost_rates_set', staff: 'Olive Owner' });
+    // เรียงใหม่สุดก่อน · ไม่มียอดเงิน
+    const at = o.body.items.map((x: { at: string }) => x.at);
+    expect([...at].sort().reverse()).toEqual(at);
+    expect(JSON.stringify(o.body)).not.toContain('5885000');
+    const sp = await support.agent.get('/ops/overview/feed');
+    expect(sp.body.items.some((x: { kind: string }) => x.kind === 'payment' || x.kind === 'staff')).toBe(false);
+    const fin = await finance.agent.get('/ops/overview/feed');
+    expect(fin.body.items.some((x: { kind: string }) => x.kind === 'payment')).toBe(true);
+    expect(fin.body.items.some((x: { kind: string }) => x.kind === 'staff')).toBe(false);
+    const au = await auditor.agent.get('/ops/overview/feed');
+    expect(au.body.items.some((x: { kind: string }) => x.kind === 'staff')).toBe(true);
+  });
+});

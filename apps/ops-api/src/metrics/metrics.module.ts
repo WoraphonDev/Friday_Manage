@@ -25,6 +25,15 @@ export class MetricsController {
   overview(@Req() req: OpsRequest) {
     return this.business.overview(req.staff!);
   }
+  /** การใช้งานของลูกค้า 30 วัน (ไม่มีตัวเลขเงิน จึงเปิดให้ทุกบทบาท) */
+  @Get('overview/usage')
+  usage() {
+    return this.business.usage();
+  }
+  @Get('overview/feed')
+  feed(@Req() req: OpsRequest) {
+    return this.business.feed(req.staff!);
+  }
   @Roles('owner', 'finance', 'auditor')
   @Get('business')
   getBusiness(@Req() req: OpsRequest, @Query() q: unknown) {

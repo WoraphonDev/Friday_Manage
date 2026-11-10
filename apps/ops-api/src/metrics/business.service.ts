@@ -339,6 +339,85 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  // ---------------------------------------------------------------- ภาพรวม: การใช้งานของลูกค้า 30 วัน · กิจกรรมล่าสุด
+
+  /** รวมทุก Workspace ที่ยังไม่ถูกลบ · นับจากตารางของแอปลูกค้าโดยตรง (ไม่อ่านเนื้อหางาน) · การใช้ฟีเจอร์คิดเฉพาะลูกค้าที่จ่ายเงิน */
+  async usage() {
+    const since = sql`now() - interval '30 days'`;
+    const live = (alias: string) => sql.raw(`${alias}.workspace_id in (select id from workspaces where deleted_at is null)`);
+    const [u] = await this.rows<Record<string, number>>(sql`
+      select
+        (select count(distinct a.project_id)::int from activities a where a.created_at > ${since} and a.project_id is not null and ${live('a')}) as "activeProjects",
+        (select count(*)::int from projects p where p.deleted_at is null and ${live('p')}) as projects,
+        (select count(*)::int from issues i where i.created_at > ${since} and i.deleted_at is null and ${live('i')}) as "issuesCreated",
+        (select count(*)::int from issues i where i.completed_at > ${since} and i.deleted_at is null and ${live('i')}) as "issuesClosed",
+        (select count(*)::int from comments c where c.created_at > ${since} and c.deleted_at is null and ${live('c')}) as comments,
+        (select count(*)::int from comment_mentions m join comments c on c.id = m.comment_id where c.created_at > ${since} and ${live('c')}) as mentions,
+        (select count(*)::int from file_versions f where f.created_at > ${since} and ${live('f')}) as files,
+        (select coalesce(sum(f.size_bytes), 0)::float8 from file_versions f where f.created_at > ${since} and ${live('f')}) as "fileBytes",
+        (select count(*)::int from notification_deliveries d where d.channel = 'line' and d.created_at > ${since} and ${live('d')}) as "lineTotal",
+        (select count(*)::int from notification_deliveries d where d.channel = 'line' and d.status = 'sent' and d.created_at > ${since} and ${live('d')}) as "lineSent",
+        (select count(*)::int from automation_runs r where r.ran_at > ${since} and ${live('r')}) as "automationRuns",
+        (select count(distinct r.workspace_id)::int from automation_runs r where r.ran_at > ${since} and ${live('r')}) as "automationWorkspaces",
+        (select coalesce(sum(x.api_calls), 0)::float8 from daily_usages x where x.date > current_date - 30 and ${live('x')}) as "apiCalls",
+        (select count(*)::int from api_tokens t where t.revoked_at is null and ${live('t')}) as "apiTokens",
+        (select count(*)::int from import_jobs j where j.created_at > ${since} and ${live('j')}) as imports,
+        (select count(*)::int from import_jobs j where j.created_at > ${since} and j.status = 'failed' and ${live('j')}) as "importsFailed"`);
+    const payingIds = (await this.currentMrr()).filter((r) => r.mrr > 0).map((r) => r.workspaceId);
+    const features = payingIds.length
+      ? await this.rows<{ feature: string; workspaces: number }>(sql`
+          select props->>'feature' as feature, count(distinct workspace_id)::int as workspaces from product_events
+          where name = 'feature.used' and occurred_at > ${since} and workspace_id in (${sql.join(payingIds.map((id) => sql`${id}`), sql`, `)}) group by 1 order by 2 desc`)
+      : [];
+    const n = (k: string) => Number(u[k] ?? 0);
+    return {
+      days: 30,
+      projects: { active: n('activeProjects'), total: n('projects') },
+      issues: { created: n('issuesCreated'), closed: n('issuesClosed') },
+      comments: { total: n('comments'), mentions: n('mentions') },
+      files: { uploaded: n('files'), bytes: n('fileBytes') },
+      line: { total: n('lineTotal'), sentPct: pct(n('lineSent'), n('lineTotal')) },
+      automation: { runs: n('automationRuns'), workspaces: n('automationWorkspaces') },
+      api: { calls: n('apiCalls'), tokens: n('apiTokens') },
+      imports: { total: n('imports'), failed: n('importsFailed'), failedPct: pct(n('importsFailed'), n('imports')) },
+      payingWorkspaces: payingIds.length,
+      featureAdoption: features.map((f) => ({ ...f, pct: pct(f.workspaces, payingIds.length) })),
+    };
+  }
+
+  /**
+   * กิจกรรมล่าสุดจากหลายตาราง (ใหม่สุดก่อน) · ไม่มีจำนวนเงิน
+   * การชำระเงินเฉพาะคนที่เห็นเงิน · การกระทำของพนักงานเฉพาะ Owner / ผู้ตรวจ (สิทธิ์เดียวกับ Audit log) ไม่เกิน 3 รายการ ไม่ให้บังเหตุการณ์ของลูกค้า
+   */
+  async feed(staff: Staff, limit = 10) {
+    const money = has(staff, 'owner', 'finance', 'auditor');
+    const audit = has(staff, 'owner', 'auditor');
+    const parts: SQL[] = [
+      sql`select 'signup' as kind, w.created_at as at, w.id as "workspaceId", w.name as "workspaceName",
+            json_build_object('plan', p.code, 'trial', s.status = 'trialing', 'members', (select count(*)::int from workspace_members m where m.workspace_id = w.id and m.status = 'active' and m.role <> 'guest')) as data
+          from workspaces w left join subscriptions s on s.workspace_id = w.id left join plans p on p.id = s.plan_id
+          where w.deleted_at is null order by w.created_at desc limit ${limit}`,
+      sql`select c.kind, c.effective_at as at, w.id, w.name, json_build_object('from', c.plan_from, 'to', c.plan_to, 'seatsFrom', c.seats_from, 'seatsTo', c.seats_to, 'reason', (select r.reason from cancellation_responses r where r.workspace_id = c.workspace_id and r.outcome = 'canceled' and r.created_at between c.effective_at - interval '1 day' and c.effective_at + interval '1 day' order by r.created_at desc limit 1))
+          from subscription_changes c join workspaces w on w.id = c.workspace_id
+          where c.kind in ('new', 'upgrade', 'downgrade', 'cancel', 'reactivate', 'churn_payment') and c.effective_at <= now() order by c.effective_at desc limit ${limit}`,
+      sql`select 'ticket', k.created_at, w.id, w.name, json_build_object('number', k.number, 'subject', left(k.subject, 120), 'priority', k.priority, 'assignee', a.name)
+          from support_tickets k left join workspaces w on w.id = k.workspace_id left join staff_users a on a.id = k.assignee_id order by k.created_at desc limit ${limit}`,
+    ];
+    if (money)
+      parts.push(sql`select 'payment', coalesce(p.reviewed_at, p.updated_at), w.id, w.name, json_build_object('method', p.method, 'invoice', i.number, 'verifiedBy', p.verified_by)
+          from payments p join workspaces w on w.id = p.workspace_id left join invoices i on i.id = coalesce(p.matched_invoice_id, p.invoice_id)
+          where p.status = 'confirmed' order by coalesce(p.reviewed_at, p.updated_at) desc limit ${limit}`);
+    if (audit)
+      parts.push(sql`select 'staff', l.created_at, w.id, w.name, json_build_object('action', l.action, 'staff', st.name, 'reason', l.reason)
+          from staff_audit_logs l left join staff_users st on st.id = l.staff_id left join workspaces w on w.id = l.workspace_id order by l.created_at desc limit 3`);
+    const rows = await this.rows<{ kind: string; at: string | Date; workspaceId: string | null; workspaceName: string | null; data: Record<string, unknown> }>(
+      sql`select * from (${sql.join(parts.map((p) => sql`(${p})`), sql` union all `)}) x order by at desc limit ${limit}`,
+    );
+    return {
+      items: rows.map((r) => ({ kind: r.kind, at: new Date(r.at).toISOString(), workspace: r.workspaceId ? { id: r.workspaceId, name: r.workspaceName } : null, data: r.data })),
+    };
+  }
+
   // ---------------------------------------------------------------- ตั้งค่าต้นทุน (B9) · ค่าการตลาด (B10)
 
   async costs() {

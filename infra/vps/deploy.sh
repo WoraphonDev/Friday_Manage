@@ -49,7 +49,8 @@ chmod 700 backup.sh
 prev=$(grep '^TAG=' .env | cut -d= -f2)
 sed -i "s/^TAG=.*/TAG=$1/" .env
 docker compose up -d postgres valkey
-docker compose run --rm migrate
+# -T + </dev/null: ไม่งั้น run จะอ่าน stdin ซึ่งคือสคริปต์นี้เอง แล้วคำสั่งที่เหลือไม่ได้รัน
+docker compose run --rm -T migrate </dev/null
 docker compose up -d --remove-orphans
 for i in $(seq 1 40); do
   bad=$(docker compose ps --format '{{.Service}} {{.Health}}' | awk '$2!="" && $2!="healthy"' || true)

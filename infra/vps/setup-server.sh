@@ -14,6 +14,9 @@ if [ ! -s /root/.ssh/authorized_keys ]; then
 fi
 
 echo "== แพ็กเกจและอัปเดตความปลอดภัย"
+# image ของผู้ให้บริการบางเจ้าตั้ง mirror ต่างประเทศ (เช่น nl.archive) ซึ่งช้ามากจากไทย · เครื่องอยู่กรุงเทพ ใช้ th.archive
+APT_MIRROR="${APT_MIRROR:-th.archive.ubuntu.com}"
+sed -i -E "s#http://([a-z]{2}\.)?archive\.ubuntu\.com#http://$APT_MIRROR#g" /etc/apt/sources.list
 apt-get update -q
 apt-get upgrade -yq
 apt-get install -yq ca-certificates curl gnupg ufw fail2ban unattended-upgrades openssl

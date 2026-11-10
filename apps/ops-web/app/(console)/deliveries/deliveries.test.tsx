@@ -145,7 +145,7 @@ describe("ประวัติการส่งแจ้งเตือน (O2
     view();
     await userEvent.click(await screen.findByRole("button", { name: "เอาออกจากรายการ" }));
     const dlg = await screen.findByRole("dialog", { name: "ส่งอีเมลถึง qa@orbit.example.com อีกครั้ง?" });
-    expect(within(dlg).getByText("ถูกเพิ่มเพราะBounce ถาวร (กล่องไม่มีอยู่) 7 พ.ย. 2569")).toBeInTheDocument();
+    expect(within(dlg).getByText("ถูกเพิ่มเพราะ Bounce ถาวร (กล่องไม่มีอยู่) · 7 พ.ย. 2569")).toBeInTheDocument();
     const submit = within(dlg).getByRole("button", { name: "เอาออก" });
     expect(submit).toBeDisabled();
     await userEvent.type(within(dlg).getByLabelText("เหตุผล"), "ลูกค้ายืนยันใน Ticket #509");

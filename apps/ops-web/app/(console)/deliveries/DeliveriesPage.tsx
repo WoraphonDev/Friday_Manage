@@ -50,7 +50,7 @@ export function DeliveriesPage() {
   const eventText = useEventText();
   if (me && !read) return <NoAccess need={["owner", "support", "engineer"]} mine={rolesOf(me)} />;
   const filtered = !!q || channel !== "all" || status !== "all";
-  const pct = (n: number | null | undefined) => (n == null ? t("stats.none") : `${n}%`);
+  const pct = (n: number | null | undefined) => (!stats ? "…" : n == null ? t("stats.none") : `${n}%`);
   return (
     <>
       <PageHead title={t("title")} desc={t("desc")} />

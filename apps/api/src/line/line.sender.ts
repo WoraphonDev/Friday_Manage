@@ -3,7 +3,7 @@ import { type Db, schema } from '@friday/db';
 import { and, eq } from 'drizzle-orm';
 import { UnrecoverableError } from '../queue/jobs.js';
 import { openSecret } from '../channels/secrets.js';
-import type { ChannelSender, ExternalChannel, SendContext } from '../channels/senders.js';
+import { type ChannelSender, clip, type DeliveryContent, DeliveryError, type ExternalChannel, type SendContext, type SendResult } from '../channels/senders.js';
 import { labelsOf, type Msg } from '../channels/message.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { LineApi, type LineMessage } from './line-api.js';
@@ -79,14 +79,23 @@ abstract class LineSenderBase {
     return [{ type: 'text', text: text(ctx.msg) }];
   }
 
-  /** 4xx (ถูกบล็อก, token ผิด) ลองใหม่ไม่ช่วย · 429 / 5xx ลองใหม่ได้ */
-  protected async push(token: string, to: string, messages: LineMessage[]) {
+  /**
+   * 4xx (ถูกบล็อก, token ผิด) ลองใหม่ไม่ช่วย · 429 / 5xx ลองใหม่ได้
+   * คืนสิ่งที่ส่งและคำตอบให้ประวัติการส่ง (O23) · ไม่เก็บ token และ id ผู้รับของ LINE
+   */
+  protected async push(token: string, to: string, messages: LineMessage[], msg: Msg): Promise<SendResult> {
+    const content: DeliveryContent = {
+      view: { text: text(msg) },
+      request: { method: 'POST', url: 'https://api.line.me/v2/bot/message/push', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ to: '••••', messages }, null, 2) },
+    };
     try {
       await this.api.push(token, to, messages);
+      return { content, response: { status: 200, body: null } };
     } catch (err) {
       const status = (err as { status?: number }).status ?? 0;
-      if (status >= 400 && status < 500 && status !== 429) throw new UnrecoverableError((err as Error).message);
-      throw err;
+      const result = { content, response: { status: status || null, body: clip((err as Error).message) } };
+      if (status >= 400 && status < 500 && status !== 429) throw Object.assign(new UnrecoverableError((err as Error).message), { result });
+      throw new DeliveryError((err as Error).message, result);
     }
   }
 }
@@ -107,7 +116,7 @@ export class LinePersonalSender extends LineSenderBase implements ChannelSender 
   }
 
   async send(ctx: SendContext) {
-    await this.push(await this.token(ctx.workspaceId), ctx.targetRef, await this.messagesFor(ctx));
+    return this.push(await this.token(ctx.workspaceId), ctx.targetRef, await this.messagesFor(ctx), ctx.msg);
   }
 }
 
@@ -125,6 +134,6 @@ export class LineGroupSender extends LineSenderBase implements ChannelSender {
     const [g] = await this.db.select().from(s.lineGroups).where(and(eq(s.lineGroups.workspaceId, ctx.workspaceId), eq(s.lineGroups.id, ctx.targetRef)));
     if (!g) throw new UnrecoverableError('ไม่พบกลุ่ม LINE (OA อาจถูกนำออกจากกลุ่มแล้ว)');
     // คำขอเลื่อน Due ไม่ส่งเข้ากลุ่ม (ต้องอนุมัติรายคน) จึงส่งเป็นข้อความธรรมดาเสมอ
-    await this.push(await this.token(ctx.workspaceId), g.lineGroupId, [{ type: 'text', text: text(ctx.msg) }]);
+    return this.push(await this.token(ctx.workspaceId), g.lineGroupId, [{ type: 'text', text: text(ctx.msg) }], ctx.msg);
   }
 }

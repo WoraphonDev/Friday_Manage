@@ -169,6 +169,13 @@
       "when": 1794291149699,
       "tag": "0023_ops_entitlements",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794295194564,
+      "tag": "0024_ops_deliveries",
+      "breakpoints": true
     }
   ]
 }

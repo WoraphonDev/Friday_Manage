@@ -39,8 +39,52 @@ export interface ChannelSender {
   available(workspaceId: string): Promise<boolean>;
   /** ผู้รับเริ่มต้นของ personal: เปิดอยู่ถ้าผู้ใช้ไม่เคยตั้ง pref */
   targetFor?(recipientId: string): Promise<string | null>;
-  send(ctx: SendContext): Promise<void>;
+  /** คืนสิ่งที่ส่งและคำตอบจากปลายทาง (ประวัติการส่ง O23) · ไม่คืน = เก็บเฉพาะสถานะ */
+  send(ctx: SendContext): Promise<SendResult | void>;
 }
+
+/** สิ่งที่ส่งจริง · เก็บใน notification_deliveries.content (90 วัน) ให้ทีม Friday ตอบลูกค้าว่า "ทำไมไม่ได้รับ" */
+export interface DeliveryContent {
+  /** ที่ผู้รับเห็น */
+  view: { subject?: string; text: string };
+  /** คำขอ HTTP (Webhook / LINE) · URL ซ่อน token แล้ว */
+  request?: { method: string; url: string; headers: Record<string, string>; body: string };
+}
+export interface DeliveryResponse {
+  status: number | null;
+  body: string | null;
+}
+export interface SendResult {
+  content?: DeliveryContent;
+  response?: DeliveryResponse;
+}
+
+/** error ที่แนบสิ่งที่ส่งและคำตอบจากปลายทางไว้ (ส่งไม่สำเร็จก็ยังเก็บได้) */
+export class DeliveryError extends Error {
+  constructor(
+    message: string,
+    readonly result: SendResult,
+  ) {
+    super(message);
+  }
+}
+
+/** ซ่อน token ใน URL: เก็บ host และช่วง path ที่เป็นคำธรรมดา · ตัด query ทิ้ง */
+export function maskUrl(raw: string) {
+  try {
+    const u = new URL(raw);
+    const path = u.pathname
+      .split('/')
+      .map((seg) => (seg === '' || (/^[a-z][a-z-]*$/i.test(seg) && seg.length <= 20) ? seg : '••••'))
+      .join('/');
+    return `${u.protocol}//${u.host}${path}`;
+  } catch {
+    return '••••';
+  }
+}
+
+/** คำตอบย่อ ≤ 500 ตัวอักษร */
+export const clip = (body: string | null | undefined, n = 500) => (body == null ? null : body.length > n ? `${body.slice(0, n)}…` : body);
 
 @Injectable()
 export class ChannelRegistry {
@@ -103,11 +147,18 @@ export class EmailSender implements ChannelSender {
     return u?.email ?? null;
   }
 
-  async send(ctx: SendContext) {
+  async send(ctx: SendContext): Promise<SendResult> {
     const via = await this.resolve(ctx.workspaceId);
     if (!via) throw new UnrecoverableError('ยังไม่ได้ตั้งค่าการส่งอีเมล');
     const mail = renderEmail(ctx.msg, ctx.why, `${webUrl()}/work/${ctx.workspaceSlug}/profile`);
-    await this.mailer.send({ to: ctx.targetRef, ...mail, from: via.from, replyTo: via.replyTo }, via.smtp);
+    const content: DeliveryContent = { view: { subject: mail.subject, text: mail.text } };
+    try {
+      await this.mailer.send({ to: ctx.targetRef, ...mail, from: via.from, replyTo: via.replyTo }, via.smtp);
+    } catch (err) {
+      throw new DeliveryError((err as Error).message, { content, response: { status: null, body: clip((err as Error).message) } });
+    }
+    // SMTP ตอบรับแล้ว · ส่งถึงกล่องจริงไหมรู้จาก bounce / complaint ที่ผู้ให้บริการแจ้งภายหลัง
+    return { content, response: { status: 250, body: 'SMTP accepted' } };
   }
 }
 
@@ -152,10 +203,15 @@ export interface WebhookTarget {
   signingSecret: string | null;
 }
 
-/** ส่ง 1 ครั้ง · ไม่ตาม redirect (กัน redirect เข้าเครือข่ายภายใน) · timeout 10 วินาที */
-export async function postWebhook(target: WebhookTarget, msg: Msg, workspace: string): Promise<void> {
+/** ส่ง 1 ครั้ง · ไม่ตาม redirect (กัน redirect เข้าเครือข่ายภายใน) · timeout 10 วินาที · คืน / แนบสิ่งที่ส่งและคำตอบ (O23) */
+export async function postWebhook(target: WebhookTarget, msg: Msg, workspace: string): Promise<SendResult> {
   const url = await assertPublicUrl(target.url);
-  const body = JSON.stringify(renderWebhook(target.format, msg, workspace, { chatId: url.searchParams.get('chat_id') ?? undefined }));
+  const payload = renderWebhook(target.format, msg, workspace, { chatId: url.searchParams.get('chat_id') ?? undefined });
+  const body = JSON.stringify(payload);
+  const content: DeliveryContent = {
+    view: { text: [msg.head && msg.title ? `${msg.head}: ${msg.title}` : msg.title, msg.url].filter(Boolean).join('\n') },
+    request: { method: 'POST', url: maskUrl(target.url), headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload, null, 2) },
+  };
   const timestamp = String(Math.floor(Date.now() / 1000));
   const headers: Record<string, string> = {
     'content-type': 'application/json',
@@ -164,8 +220,15 @@ export async function postWebhook(target: WebhookTarget, msg: Msg, workspace: st
     'x-friday-timestamp': timestamp,
   };
   if (target.signingSecret) headers['x-friday-signature'] = sign(target.signingSecret, timestamp, body);
-  const res = await fetch(url, { method: 'POST', headers, body, redirect: 'manual', signal: AbortSignal.timeout(10_000) });
-  if (res.status >= 300) throw new Error(`Webhook ตอบ HTTP ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(url, { method: 'POST', headers, body, redirect: 'manual', signal: AbortSignal.timeout(10_000) });
+  } catch (err) {
+    throw new DeliveryError(`ต่อ Webhook ไม่ได้: ${(err as Error).message}`, { content, response: { status: null, body: clip((err as Error).message) } });
+  }
+  const response = { status: res.status, body: clip(await res.text().catch(() => null)) };
+  if (res.status >= 300) throw new DeliveryError(`Webhook ตอบ HTTP ${res.status}`, { content, response });
+  return { content, response };
 }
 
 @Injectable()
@@ -186,7 +249,7 @@ export class WebhookSender implements ChannelSender {
       .where(and(eq(s.webhookEndpoints.workspaceId, ctx.workspaceId), eq(s.webhookEndpoints.id, ctx.targetRef)));
     if (!hook) throw new UnrecoverableError('Webhook ถูกลบแล้ว');
     if (hook.status !== 'active') throw new UnrecoverableError('Webhook ถูกปิดชั่วคราว');
-    await postWebhook(
+    return postWebhook(
       {
         format: hook.format,
         url: openSecret(hook.urlEncrypted),

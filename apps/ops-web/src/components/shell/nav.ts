@@ -79,7 +79,7 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
     items: [
       { key: "system", href: "/system", built: true, roles: ["owner", "engineer"] },
       { key: "ops", href: "/incidents", built: true, roles: ["owner", "engineer", "support"], badge: ["incidentsOpen"] },
-      { key: "deliveries", roles: ["owner", "engineer", "support"] },
+      { key: "deliveries", href: "/deliveries", built: true, roles: ["owner", "engineer", "support"] },
       { key: "flags", href: "/flags", built: true, roles: ["owner", "engineer"] },
       { key: "ratelimit", roles: ["owner", "engineer"] },
       { key: "scripts", roles: ["owner", "engineer"] },

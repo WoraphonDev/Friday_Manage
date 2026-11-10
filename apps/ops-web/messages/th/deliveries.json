@@ -1,0 +1,150 @@
+{
+  "title": "ประวัติการส่งแจ้งเตือน",
+  "desc": "ทุกข้อความที่ส่งออกนอกแอป (Email, LINE, Webhook) · เก็บ 90 วัน · ใช้ตอบลูกค้าว่า \"ทำไมไม่ได้รับ\"",
+  "stats": {
+    "label": "สรุป 24 ชั่วโมง",
+    "total": "ส่งทั้งหมด 24 ชม.",
+    "totalNote": "Email {email} · LINE {line} · Webhook {webhook}",
+    "delivered": "ส่งถึง",
+    "failed": "ล้ม",
+    "failedNote": "Webhook {webhook} · Email {email} · LINE {line}",
+    "quiet": "รอส่งหลังช่วงงดส่ง",
+    "quietNote": "ส่งต่อเมื่อพ้นช่วงงดส่งของผู้รับ",
+    "bounce": "Bounce / รายงานสแปม",
+    "bounceNote": "ต่ำกว่าเกณฑ์ผู้ให้บริการ 2%",
+    "bounceHigh": "เกินเกณฑ์ผู้ให้บริการ 2% · ตรวจรายชื่อไม่ส่ง",
+    "none": "—"
+  },
+  "search": "ค้นหา",
+  "searchPlaceholder": "อีเมลผู้รับ, Workspace, Issue key, รหัสการส่ง",
+  "channels": "ช่องทาง",
+  "channel": {
+    "all": "ทั้งหมด",
+    "email": "Email",
+    "line": "LINE",
+    "line_group": "LINE",
+    "webhook": "Webhook"
+  },
+  "statusLabel": "สถานะ",
+  "statusFilter": {
+    "all": "ทั้งหมด",
+    "ok": "ส่งถึง",
+    "fail": "ล้ม",
+    "quiet": "ข้ามเพราะช่วงงดส่ง",
+    "blocked": "ถูกบล็อก (bounce / เลิกรับ)"
+  },
+  "status": {
+    "ok": "ส่งถึง",
+    "fail": "ล้ม",
+    "retry": "กำลังลองใหม่",
+    "quiet": "รอช่วงงดส่ง",
+    "blocked": "ถูกบล็อก",
+    "queued": "รอส่ง"
+  },
+  "col": {
+    "time": "เวลา",
+    "channel": "ช่องทาง",
+    "to": "ผู้รับ",
+    "event": "เหตุการณ์",
+    "status": "สถานะ",
+    "attempts": "ครั้งที่"
+  },
+  "empty": "ไม่มีการส่งตามตัวกรองนี้",
+  "emptyAll": "ยังไม่มีการส่งออกนอกแอปใน 90 วันที่ผ่านมา",
+  "more": "โหลดเพิ่ม",
+  "events": {
+    "issue_assigned": "มอบหมายงาน",
+    "issue_mentioned": "ถูก @mention",
+    "issue_review_requested": "ขอ Review",
+    "issue_overdue": "งานเลยกำหนด",
+    "issue_status_changed": "เปลี่ยนสถานะงาน",
+    "issue_created": "งานใหม่",
+    "bug_created": "Bug ใหม่",
+    "due_request_created": "คำขอเลื่อน Due",
+    "due_request_decided": "ผลคำขอเลื่อน Due",
+    "member_joined": "สมาชิกใหม่",
+    "project_health_changed": "สุขภาพโปรเจกต์เปลี่ยน",
+    "digest_daily": "สรุปรายวัน",
+    "report_weekly": "รายงานประจำสัปดาห์",
+    "sprint_started": "Sprint เริ่ม",
+    "sprint_completed": "Sprint จบ",
+    "channel_webhook_paused": "Webhook ถูกปิดชั่วคราว"
+  },
+  "detail": {
+    "label": "รายละเอียดการส่ง",
+    "pick": "เลือกรายการในตารางเพื่อดูรายละเอียด",
+    "heading": "{channel} {status} · {ws}",
+    "attempts": "{status} {attempts}/4",
+    "target": "ปลายทาง {to} · เหตุการณ์ {event}",
+    "response": "คำตอบจากปลายทาง",
+    "noResponse": "ยังไม่มีคำตอบ",
+    "resend": "ส่งซ้ำ",
+    "view": "ดูข้อความที่ส่ง",
+    "attach": "แนบใน Ticket",
+    "resent": "ขอส่งซ้ำแล้ว · ระบบส่งภายใน 1 นาที",
+    "resendPending": "รอระบบส่งซ้ำ (ภายใน 1 นาที)",
+    "paused": "Webhook นี้ถูกปิดชั่วคราวและแจ้ง Owner / Admin ของ Workspace แล้ว · ลูกค้าต้องตรวจปลายทางแล้วเปิดใหม่ที่หน้าตั้งค่า",
+    "gone404": "น่าจะถูกลบที่ปลายทางแล้ว",
+    "suppressed": "อีเมลนี้อยู่ในรายชื่อไม่ส่ง ({reason}) ตั้งแต่ {date} · เอาออกจากรายการก่อนส่งซ้ำ",
+    "log": {
+      "created": "สร้างรายการส่ง",
+      "attempt_ok": "ครั้งที่ {attempt} · ส่งถึง{status}",
+      "attempt_failed": "ครั้งที่ {attempt}{status} · {message}",
+      "retryNext": " · ลองใหม่",
+      "giveUp": " · หยุดลอง",
+      "quiet": "อยู่ในช่วงงดส่ง · ส่งเมื่อพ้นช่วง",
+      "suppressed": "ไม่ส่ง: อีเมลอยู่ในรายชื่อไม่ส่ง ({message})",
+      "cancelled": "ยกเลิก: {message}",
+      "paused": "ปิด Webhook ชั่วคราวและแจ้ง Owner / Admin ของ Workspace",
+      "resend": "ขอส่งซ้ำโดย {message}",
+      "bounced": "ผู้ให้บริการอีเมลแจ้งว่าตีกลับ · {message}",
+      "complained": "ผู้รับกดรายงานสแปม"
+    }
+  },
+  "y6": {
+    "title": "ข้อความที่ส่ง · {channel}",
+    "desc": "{to} · {time} · ครั้งที่ {attempts}",
+    "mode": "มุมมอง",
+    "view": "ที่ผู้รับเห็น",
+    "request": "Request",
+    "response": "Response",
+    "hidden": "URL และ token ถูกซ่อน · เนื้อหางานแสดงเฉพาะเมื่อลูกค้าเปิดสิทธิ์ให้ทีม Friday เข้าช่วยเหลือ",
+    "noGrant": "ลูกค้ายังไม่ได้เปิดสิทธิ์ให้ทีม Friday เข้าช่วยเหลือ จึงไม่แสดงเนื้อหางาน",
+    "noRole": "บทบาทของคุณไม่เห็นเนื้อหาที่ส่ง (เห็นเฉพาะ Owner / Support)",
+    "nothing": "ไม่มีข้อมูลส่วนนี้"
+  },
+  "attach": {
+    "title": "แนบการส่งนี้ใน Ticket",
+    "desc": "เพิ่มเป็นข้อความภายใน (ลูกค้าไม่เห็น) พร้อมคำตอบจากปลายทาง",
+    "ticket": "เลข Ticket",
+    "submit": "แนบ",
+    "done": "แนบใน Ticket #{number} แล้ว"
+  },
+  "suppressions": {
+    "title": "รายชื่อที่ไม่ส่งอีเมลให้ (Suppression list)",
+    "note": "ระบบเพิ่มเองเมื่อ bounce ถาวร / ผู้รับกดรายงานสแปม · เอาออกได้เมื่อลูกค้ายืนยันว่าแก้แล้ว",
+    "empty": "ไม่มีอีเมลในรายชื่อไม่ส่ง",
+    "col": {
+      "email": "อีเมล",
+      "reason": "เหตุผล",
+      "ws": "Workspace",
+      "since": "ตั้งแต่",
+      "actions": "การกระทำ"
+    },
+    "reason": {
+      "hard_bounce": "Bounce ถาวร (กล่องไม่มีอยู่)",
+      "complaint": "กดรายงานสแปม",
+      "soft_bounce_repeated": "กล่องเต็มติดต่อกัน 5 วัน",
+      "manual": "ทีม Friday เพิ่มเอง"
+    },
+    "remove": "เอาออกจากรายการ"
+  },
+  "y7": {
+    "title": "ส่งอีเมลถึง {email} อีกครั้ง?",
+    "added": "ถูกเพิ่มเพราะ {reason} · {date}",
+    "warn": "ถ้ายัง bounce อีก ผู้ให้บริการอีเมลอาจลดความน่าเชื่อถือของโดเมนเรา",
+    "reason": "เหตุผล",
+    "submit": "เอาออก",
+    "done": "เอา {email} ออกจากรายการแล้ว"
+  }
+}

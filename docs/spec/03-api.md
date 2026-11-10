@@ -233,8 +233,8 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | PATCH | `w/members/{userId}` | `ws.members.manage` | เปลี่ยน Role · Audit `perm.role_changed` · Owner คนสุดท้ายลดสิทธิ์ไม่ได้ |
 | POST | `w/members/{userId}:deactivate` · `:reactivate` | `ws.members.manage` | ปิดแล้วยกเลิก Session, LINE binding และแสดงขั้นโอนงาน (P3) |
 | GET / PATCH | `w/me/membership` | self | ตำแหน่ง, แผนก, Capacity, เวลาทำงาน |
-| GET / POST | `w/invitations` | `ws.members.manage` หรือ `project.invite` (เชิญเข้าโปรเจกต์ตัวเอง) | สร้างได้หลายอีเมลในครั้งเดียว · ตรวจ Seat → `402` · Event `member.invited` |
-| POST | `w/invitations/{id}:resend` · `:revoke` | ผู้ส่ง หรือ `ws.members.manage` | |
+| GET / POST | `w/invitations` | `ws.members.manage` หรือ `project.invite` (เชิญเข้าโปรเจกต์ตัวเอง) | สร้างได้หลายอีเมลในครั้งเดียว · ตรวจ Seat → `402` · Event `member.invited` · ตั้ง SMTP แล้วส่งอีเมลคำเชิญ (ภาษาตาม Workspace · Reply-To ผู้เชิญ) · ทุกรายการคืน `inviteUrl` และ `emailSent` (ส่งไม่ได้ = ผู้เชิญส่งลิงก์เอง) |
+| POST | `w/invitations/{id}:resend` · `:revoke` | ผู้ส่ง หรือ `ws.members.manage` | resend ออก token ใหม่และส่งอีเมลใหม่ · คืน `emailSent` |
 | GET | `invitations/{token}` | สาธารณะ | ข้อมูลเท่าที่จำเป็น: ชื่อ Workspace, ผู้เชิญ, Role, ข้อความ |
 | POST | `invitations/{token}:accept` · `:decline` | ล็อกอินด้วยอีเมลที่ถูกเชิญ | Event `member.joined` แจ้งผู้เชิญและ PM |
 | POST / DELETE | `w/invite-links` · `{id}` | `ws.members.manage` | |

@@ -7,7 +7,7 @@ import { Button, Dialog, Input, Select, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/lib/types";
-import { InviteLinks } from "@/features/project-invite/project-invite-dialog";
+import { InviteLinks, type InviteLink, toInviteLinks } from "@/features/project-invite/project-invite-dialog";
 import { copyText, isEmail, splitEmails } from "../../p/[key]/members/_components/shared";
 import type { InviteResult, ProjectRole } from "../../p/[key]/members/_components/types";
 import styles from "../../p/[key]/members/_components/members.module.css";
@@ -46,7 +46,7 @@ export function InviteDialog({
   const [message, setMessage] = useState("");
   const [expires, setExpires] = useState<1 | 7 | 30>(7);
   const [link, setLink] = useState<string | null>(null);
-  const [links, setLinks] = useState<{ email: string; url: string }[]>([]);
+  const [links, setLinks] = useState<InviteLink[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
@@ -88,7 +88,7 @@ export function InviteDialog({
         ...(message.trim() ? { message: message.trim() } : {}),
         expiresInDays: expires,
       });
-      const invited = r.items.flatMap((i) => (i.status === "invited" ? [{ email: i.email, url: i.inviteUrl }] : []));
+      const invited = toInviteLinks(r);
       const already = r.items.length - invited.length;
       setLinks(invited);
       setEmails([]);

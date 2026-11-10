@@ -13,17 +13,23 @@ import { localeNumberFormat } from "@/lib/format";
 
 const num = localeNumberFormat({ maximumFractionDigits: 1 });
 
-/** ลิงก์ที่ได้หลังเชิญ · ระบบยังไม่ส่งอีเมลเอง (A14) ผู้เชิญจึงต้องส่งต่อเอง */
-export function InviteLinks({ links }: { links: { email: string; url: string }[] }) {
+export interface InviteLink { email: string; url: string; emailed: boolean }
+
+export const toInviteLinks = (r: InviteResult): InviteLink[] =>
+  r.items.flatMap((i) => (i.status === "invited" ? [{ email: i.email, url: i.inviteUrl, emailed: !!i.emailSent }] : []));
+
+/** ลิงก์ที่ได้หลังเชิญ · ระบบส่งอีเมลให้เมื่อตั้ง SMTP แล้ว · ที่ส่งไม่ได้ ผู้เชิญคัดลอกลิงก์ไปส่งเอง */
+export function InviteLinks({ links }: { links: InviteLink[] }) {
   const t = useTranslations("members-workload.invites");
   const toast = useToast();
   if (!links.length) return null;
+  const allEmailed = links.every((l) => l.emailed);
   return (
     <div className={styles.links} role="status">
-      <strong>{t("linksTitle")}</strong>
+      <strong>{t(allEmailed ? "linksTitleEmailed" : "linksTitle")}</strong>
       {links.map((l) => (
         <div key={l.email}>
-          <span><b>{l.email}</b> <code>{l.url}</code></span>
+          <span><b>{l.email}</b> <span className={l.emailed ? styles.emailed : styles.notEmailed}>{t(l.emailed ? "emailed" : "notEmailed")}</span> <code>{l.url}</code></span>
           <Button size="small" onClick={async () => { await copyText(l.url); toast({ message: t("copied") }); }}>{t("copy")}</Button>
         </div>
       ))}
@@ -50,7 +56,7 @@ export function ProjectInviteDialog({ ws, projectKey, open, onOpenChange }: {
   const [capacity, setCapacity] = useState("40");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
-  const [links, setLinks] = useState<{ email: string; url: string }[]>([]);
+  const [links, setLinks] = useState<InviteLink[]>([]);
   const members = useQuery({ queryKey: ["project-members", ws, projectKey], queryFn: () => api.get<ProjectMembers>(`${base}/members`), enabled: open });
   // สมาชิก Workspace ที่มีอยู่แล้วเพิ่มเข้าโปรเจกต์ตรง ๆ ไม่ต้องส่งคำเชิญ
   const directory = useQuery({
@@ -88,14 +94,14 @@ export function ProjectInviteDialog({ ws, projectKey, open, onOpenChange }: {
       const result = fresh.length
         ? await api.post<InviteResult>(`${wsBase}/invitations`, { emails: fresh, projectKey, projectRole: role, workspaceRole: "member", capacityHoursWeek: hours })
         : { items: [] };
-      const invited = result.items.flatMap((i) => (i.status === "invited" ? [{ email: i.email, url: i.inviteUrl }] : []));
+      const invited = toInviteLinks(result);
       const already = result.items.length - invited.length;
       toast({
         message: [invited.length ? t("sent", { count: invited.length }) : "", added ? t("added", { count: added }) : "", already ? t("alreadyMember", { count: already }) : ""].filter(Boolean).join(" · "),
       });
       setEmails("");
-      // มีลิงก์ต้องส่งต่อเอง: ค้าง Modal ไว้ให้คัดลอก · ไม่มีก็ปิดเลย
-      if (invited.length) setLinks(invited);
+      // มีลิงก์ที่ยังไม่ได้ส่งอีเมล: ค้าง Modal ไว้ให้คัดลอกไปส่งเอง · ส่งอีเมลครบแล้วปิดเลย
+      if (invited.some((l) => !l.emailed)) setLinks(invited);
       else close(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

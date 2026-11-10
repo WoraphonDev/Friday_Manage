@@ -133,7 +133,76 @@
     "whoSelf": "คนที่ทำ action เองจะไม่ได้รับแจ้ง",
     "reset": "คืนค่าเริ่มต้น",
     "resetDone": "คืนค่าการแจ้งเตือนเป็นค่าเริ่มต้นแล้ว",
-    "saved": "บันทึกการตั้งค่าแจ้งเตือนแล้ว"
+    "saved": "บันทึกการตั้งค่าแจ้งเตือนแล้ว",
+    "events": {
+      "issue_assigned": {
+        "label": "ถูกมอบหมายงาน หรือถูกถอดออกจากงาน"
+      },
+      "issue_review_requested": {
+        "label": "ถูกขอให้ Review หรือเป็น Tester",
+        "hint": "รวมถึง PR ที่ระบุให้ฉัน Review"
+      },
+      "issue_mentioned": {
+        "label": "มีคน @mention ฉัน"
+      },
+      "issue_commented": {
+        "label": "คอมเมนต์ใหม่ในงานที่ฉันเป็น Assignee / Watcher"
+      },
+      "issue_updated": {
+        "label": "Due / Priority ของงานที่เกี่ยวข้องเปลี่ยน"
+      },
+      "issue_status_changed": {
+        "label": "สถานะของงานที่เกี่ยวข้อง หรือ Sub-task ใต้ Task ของฉันเปลี่ยน"
+      },
+      "test_run_failed": {
+        "label": "ผลทดสอบไม่ผ่านในงานของฉัน",
+        "hint": "ผลทดสอบไม่ผ่านจะแจ้งทุกช่องทางที่เลือก"
+      },
+      "bug_created": {
+        "label": "Bug ใหม่ที่ฉันเกี่ยวข้อง"
+      },
+      "bug_reopened": {
+        "label": "Bug ถูก Reopen"
+      },
+      "due_request_created": {
+        "label": "คำขอเลื่อน Due ที่รอฉันอนุมัติ",
+        "hint": "สำหรับ PM / Admin ของโปรเจกต์"
+      },
+      "due_request_decided": {
+        "label": "ผลการขอเลื่อน Due ของฉัน"
+      },
+      "issue_due_soon": {
+        "label": "งานใกล้ครบกำหนด",
+        "hint": "ตามที่ตั้งด้านล่าง"
+      },
+      "issue_overdue": {
+        "label": "งานเลยกำหนด"
+      },
+      "member_joined": {
+        "label": "ถูกเพิ่มเข้าโปรเจกต์ หรือเปลี่ยนสิทธิ์"
+      },
+      "project_health_changed": {
+        "label": "Health ของโปรเจกต์เปลี่ยน (At risk / Off track)",
+        "hint": "สำหรับ PM"
+      },
+      "sprint_started": {
+        "label": "Sprint เริ่ม"
+      },
+      "sprint_completed": {
+        "label": "Sprint จบ"
+      },
+      "plan_changed": {
+        "label": "แผนถูกแก้หลังตั้ง Baseline",
+        "hint": "สำหรับ PM"
+      },
+      "digest_daily": {
+        "label": "สรุปรายวัน (Daily digest)",
+        "hint": "งานวันนี้ + Overdue + รอ Review"
+      },
+      "report_weekly": {
+        "label": "รายงานสรุปรายสัปดาห์"
+      }
+    }
   },
   "line": {
     "title": "ผูกบัญชี LINE กับ Friday Manage",

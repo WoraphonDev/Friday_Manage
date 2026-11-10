@@ -23,6 +23,13 @@ const DROPPABLE = new Set(["today", "this_week", "next_week"]);
 const REASONS = ["scope_added", "waiting_input", "blocked_by_dependency", "estimate_wrong", "other"] as const;
 
 /** วันที่ปลายทางเมื่อวางงานที่หัวกลุ่ม · กลุ่มสัปดาห์ = วันทำการสุดท้าย (ศุกร์) ของช่วงนั้น */
+
+/** หัวกลุ่มตาม Due มาจาก API เป็นภาษาไทย · แปลตาม key ให้ตรงภาษาที่เลือก (W21) · กลุ่มโปรเจกต์ / สถานะใช้ชื่อจากข้อมูล */
+const DUE_GROUPS = new Set(["late", "today", "this_week", "next_week", "later", "none", "done_today"]);
+function groupLabel(t: (key: string) => string, g: { key: string; label: string }) {
+  return DUE_GROUPS.has(g.key) ? t(`dueGroups.${g.key}`) : g.label;
+}
+
 export function dropTarget(group: TaskGroup): string | null {
   if (!group.range || !DROPPABLE.has(group.key)) return null;
   if (group.key === "today") return group.range.from;
@@ -186,12 +193,12 @@ export function MyTasksPage({ ws }: { ws: string }) {
                   : t("rangeFrom", { from: formatDate(g.range.from, year) })
               : "";
             return (
-              <div key={id} role="group" aria-label={g.label}>
+              <div key={id} role="group" aria-label={groupLabel(t, g)}>
                 <button
                   type="button"
                   className={`${styles.gh} ${over === id ? styles.over : ""}`}
                   aria-expanded={!isClosed}
-                  aria-label={t(isClosed ? "expand" : "collapse", { name: g.label })}
+                  aria-label={t(isClosed ? "expand" : "collapse", { name: groupLabel(t, g) })}
                   data-drop={target ?? undefined}
                   onClick={() => setClosedGroups((c) => ({ ...c, [id]: !c[id] }))}
                   onDragOver={(e) => { if (target && dragKey.current) { e.preventDefault(); setOver(id); } }}
@@ -200,7 +207,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
                 >
                   <ChevronDown size={16} aria-hidden style={{ transform: isClosed ? "rotate(-90deg)" : undefined }} />
                   <span className={styles.dot} style={{ background: group === "due" ? GROUP_COLOR[g.key] : (g.items[0]?.project.color ?? FALLBACK_PROJECT_COLOR) }} />
-                  <span className={styles.ghName} style={{ color: g.key === "late" ? "var(--danger-text)" : undefined }}>{g.label}</span>
+                  <span className={styles.ghName} style={{ color: g.key === "late" ? "var(--danger-text)" : undefined }}>{groupLabel(t, g)}</span>
                   <Badge>{g.count}</Badge>
                   <span className={styles.ghSub}>{sub}</span>
                 </button>
@@ -288,8 +295,8 @@ function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
       </header>
       {groups.length === 0 && <EmptyState title={t("empty")} description={t("emptyHint")} />}
       {groups.map((g) => (
-        <div key={g.key} role="group" aria-label={g.label}>
-          <div className={styles.mGroup}><span style={{ background: GROUP_COLOR[g.key] ?? "var(--chart-neutral)" }} /><b style={{ color: g.key === "late" ? "var(--danger-text)" : undefined }}>{g.label}</b><span className="muted">{g.items.length}</span></div>
+        <div key={g.key} role="group" aria-label={groupLabel(t, g)}>
+          <div className={styles.mGroup}><span style={{ background: GROUP_COLOR[g.key] ?? "var(--chart-neutral)" }} /><b style={{ color: g.key === "late" ? "var(--danger-text)" : undefined }}>{groupLabel(t, g)}</b><span className="muted">{g.items.length}</span></div>
           {g.items.map((i) => {
             const done = i.status.category === "done";
             const due = dueText(i, year);

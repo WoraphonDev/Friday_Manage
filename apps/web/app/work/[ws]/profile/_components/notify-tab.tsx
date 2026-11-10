@@ -23,6 +23,10 @@ const cellKey = (eventType: string, channel: PrefChannel) => `${eventType}|${cha
 export function NotifyTab({ ws }: { ws: string }) {
   const t = useTranslations("profile.notify");
   const tc = useTranslations("common.app");
+  // ชื่อเหตุการณ์จาก API เป็นภาษาไทย · แปลตาม eventType (W21) · เหตุการณ์ใหม่ที่ยังไม่มีคำแปลใช้ข้อความจาก API
+  const evKey = (r: { eventType: string }) => `events.${r.eventType.replace(/\./g, "_")}`;
+  const evLabel = (r: { eventType: string; label: string }) => (t.has(`${evKey(r)}.label` as "title") ? t(`${evKey(r)}.label` as "title") : r.label);
+  const evHint = (r: { eventType: string; hint?: string | null }) => (t.has(`${evKey(r)}.hint` as "title") ? t(`${evKey(r)}.hint` as "title") : r.hint);
   const { me, projects } = useWorkspace();
   const cache = useQueryClient();
   const toast = useToast();
@@ -135,8 +139,8 @@ export function NotifyTab({ ws }: { ws: string }) {
                 {list.map((r) => (
                   <div className={styles.mx} role="row" key={r.eventType}>
                     <div role="rowheader" style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13 }}>{r.label}</div>
-                      {r.hint && <div className={cn(styles.muted, styles.small)}>{r.hint}</div>}
+                      <div style={{ fontSize: 13 }}>{evLabel(r)}</div>
+                      {r.hint && <div className={cn(styles.muted, styles.small)}>{evHint(r)}</div>}
                     </div>
                     {CHANNELS.map((c) => {
                       const locked = r.channels[c].locked;
@@ -148,7 +152,7 @@ export function NotifyTab({ ws }: { ws: string }) {
                             checked={locked || !!cells[cellKey(r.eventType, c)]}
                             disabled={locked}
                             title={locked ? t("locked") : undefined}
-                            aria-label={t("cellLabel", { event: r.label, channel: t(`channel.${c}`) })}
+                            aria-label={t("cellLabel", { event: evLabel(r), channel: t(`channel.${c}`) })}
                             onChange={(e) => setCells({ ...cells, [cellKey(r.eventType, c)]: e.target.checked })}
                           />
                         </span>

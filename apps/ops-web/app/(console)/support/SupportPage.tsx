@@ -8,11 +8,13 @@ import { useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
 import { hasAny } from "@/components/access";
 import { Chip, Drawer, Empty, ErrorBlock, Modal, Notice, PageHead, Seg, TableSkeleton } from "@/components/kit";
-import { Button, buttonClass, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
+import { Button, buttonClass, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import type { OpenSession } from "@/lib/types";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
+import { CannedPicker, MyPresence, SettingsLink, TeamNow } from "./settings/_parts/Live";
+import { CATEGORIES, type Dur } from "./settings/_parts/types";
 
 interface TicketRow {
   id: string;
@@ -40,6 +42,8 @@ interface TicketDetail {
   ticket: TicketRow & {
     cause: string | null;
     csat: number | null;
+    category: string | null;
+    requesterName: string | null;
     assignee: { id: string; name: string } | null;
     requesterEmail: string | null;
   };
@@ -62,7 +66,8 @@ interface TicketDetail {
     unhappy90d: number;
     accessUntil: string | null;
     accessGranted: boolean;
-    sla: { first: number };
+    accountManager: string | null;
+    sla: { first: Dur | null; resolve: Dur | null };
   } | null;
 }
 const key = ["ops", "tickets"] as const;
@@ -111,13 +116,18 @@ export function SupportPage() {
             : undefined
         }
         actions={
-          support && (
-            <Button variant="primary" onClick={() => setCreating(true)}>
-              <Plus size={16} /> {t("create")}
-            </Button>
-          )
+          <>
+            <MyPresence />
+            <SettingsLink />
+            {support && (
+              <Button variant="primary" onClick={() => setCreating(true)}>
+                <Plus size={16} /> {t("create")}
+              </Button>
+            )}
+          </>
         }
       />
+      <TeamNow />
       <div className="support-split">
         <section className="card" style={{ alignSelf: "start" }}>
           <Seg
@@ -201,6 +211,7 @@ export function SupportPage() {
 
 function TicketView({ id }: { id: string }) {
   const t = useTranslations("ss");
+  const tset = useTranslations("sset");
   const fmt = useFmt();
   const toast = useToast();
   const cache = useQueryClient();
@@ -240,6 +251,7 @@ function TicketView({ id }: { id: string }) {
       </section>
     );
   const { ticket: k, messages, customer } = q.data;
+  const categoryLabel = (c: string) => ((CATEGORIES as readonly string[]).includes(c) ? tset(`category.${c as (typeof CATEGORIES)[number]}`) : c);
   const closed = k.status === "closed";
   const mine = k.assignee?.id === me?.id;
   return (
@@ -254,6 +266,7 @@ function TicketView({ id }: { id: string }) {
           <span className="pill">{t(`support.status.${k.status}` as "support.status.open")}</span>
           <span className={k.priority === "urgent" || k.priority === "high" ? "pill bad" : "pill"}>{t(`support.priority.${k.priority}` as "support.priority.normal")}</span>
           <span className="pill">{t(`support.channel.${k.channel}` as "support.channel.email")}</span>
+          {k.category && <span className="pill">{categoryLabel(k.category)}</span>}
           {k.slaBreached ? (
             <span className="pill warn">{t("support.breached")}</span>
           ) : (
@@ -308,7 +321,13 @@ function TicketView({ id }: { id: string }) {
               onChange={(e) => setBody(e.target.value)}
             />
             <InlineError error={send.error} />
-            <div>
+            <div className="row">
+              {mode === "reply" && (
+                <CannedPicker
+                  vars={{ requester: k.requesterName ?? k.requesterEmail ?? "", workspace: customer?.name ?? "", ticket: k.number }}
+                  onInsert={(text) => setBody((b) => (b.trim() ? `${b.trimEnd()}\n\n${text}` : text))}
+                />
+              )}
               <Button type="submit" variant="primary" disabled={!body.trim() || send.isPending}>
                 {t("support.send")}
               </Button>
@@ -333,7 +352,11 @@ function TicketView({ id }: { id: string }) {
               </tr>
               <tr>
                 <td className="muted">{t("support.sla")}</td>
-                <td>{t("support.slaValue", { first: customer.sla.first })}</td>
+                <td>{customer.sla.first ? t("support.slaValue", { n: customer.sla.first.n, unit: customer.sla.first.unit }) : t("support.slaNone")}</td>
+              </tr>
+              <tr>
+                <td className="muted">{t("support.accountManager")}</td>
+                <td>{customer.accountManager ?? "—"}</td>
               </tr>
               <tr>
                 <td className="muted">{t("support.tickets90")}</td>
@@ -523,6 +546,7 @@ function SolveDialog({ id, number, onClose }: { id: string; number: number; onCl
 /** T1 · สร้าง Ticket สำหรับเรื่องที่มาทางโทรศัพท์ / LINE / อีเมล */
 function CreateTicket({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
   const t = useTranslations("ss.t1");
+  const tset = useTranslations("sset");
   const ts = useTranslations("ss.support");
   const tc = useTranslations("common.dialog");
   const toast = useToast();
@@ -531,7 +555,7 @@ function CreateTicket({ onClose, onCreated }: { onClose: () => void; onCreated: 
   const [ws, setWs] = useState<{ id: string; name: string } | null>(null);
   const [email, setEmail] = useState("");
   const [channel, setChannel] = useState<"phone" | "line" | "email">("phone");
-  const [priority, setPriority] = useState<"low" | "normal" | "high" | "urgent">("normal");
+  const [priority, setPriority] = useState<"rule" | "low" | "normal" | "high" | "urgent">("rule");
   const [category, setCategory] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -550,12 +574,12 @@ function CreateTicket({ onClose, onCreated }: { onClose: () => void; onCreated: 
         ...(ws ? { workspaceId: ws.id } : {}),
         requesterEmail: email.trim(),
         channel,
-        priority,
+        ...(priority !== "rule" ? { priority } : {}),
         subject: subject.trim(),
         body: body.trim(),
         assignToMe: assignMe,
         notify,
-        ...(category.trim() ? { category: category.trim() } : {}),
+        ...(category ? { category } : {}),
       }),
     onSuccess: (r) => (toast(t("done", { n: r.ticket.number })), invalidate(cache), onClose(), onCreated(r.ticket.id)),
   });
@@ -594,9 +618,16 @@ function CreateTicket({ onClose, onCreated }: { onClose: () => void; onCreated: 
         </div>
         <div className="field">
           <span className="field-label">{t("priority")}</span>
-          <Seg label={t("priority")} value={priority} onChange={setPriority} options={(["low", "normal", "high", "urgent"] as const).map((p) => ({ value: p, label: ts(`priority.${p}`) }))} />
+          <Seg label={t("priority")} value={priority} onChange={setPriority} options={(["rule", "low", "normal", "high", "urgent"] as const).map((p) => ({ value: p, label: p === "rule" ? t("byRule") : ts(`priority.${p}`) }))} />
         </div>
-        <Input label={t("category")} value={category} onChange={(e) => setCategory(e.target.value)} />
+        <Select label={t("category")} value={category} onChange={(e) => setCategory(e.target.value)}>
+          <option value="">{t("noCategory")}</option>
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {tset(`category.${c}`)}
+            </option>
+          ))}
+        </Select>
         <Input label={t("subject")} value={subject} onChange={(e) => setSubject(e.target.value)} />
         <Textarea label={t("body")} value={body} onChange={(e) => setBody(e.target.value)} />
         <label className="check">

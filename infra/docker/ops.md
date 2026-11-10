@@ -11,6 +11,7 @@ docker compose -f infra/docker/compose.ops.yml logs --tail 50 ops-api ops-web
 - ops-web เรียก ops-api ผ่าน `/ops-api/*` ใน Docker network (`http://ops-api:4001`) · cookie `fm_ops` และ Origin จึงเป็น `http://localhost:4000` ตรงกับ `OPS_WEB_ORIGIN`
 - Security key (WebAuthn) ใช้ RP ID `localhost` เหมือนตอน dev · กุญแจที่ลงทะเบียนไว้เดิมใช้ได้
 - งานเบื้องหลังปิดไว้ (`OPS_JOBS=off`) เพราะใช้ข้อมูลทดสอบ · ถ้าจะเปิดให้ตั้ง `OPS_JOBS=on` และ `OPS_VALKEY_URL`
+- ส่งไฟล์บัญชีให้สำนักงานบัญชี (B8): ตั้ง `OPS_ACCOUNTING_EMAIL` (คั่นด้วยจุลภาค) · ส่งเองได้จากหน้ารายได้ · งานอัตโนมัติส่งไฟล์ของเดือนก่อนตั้งแต่วันที่ `OPS_ACCOUNTING_SEND_DAY` (ค่าเริ่มต้น 5) เมื่อเปิด `OPS_JOBS`
 - เปลี่ยนฐานข้อมูล: `OPS_DATABASE_URL=postgres://...@host.docker.internal:54329/<db>` แล้วสั่ง up ใหม่
 - เปลี่ยนพอร์ต: `OPS_WEB_PORT` / `OPS_API_PORT` · ถ้าเปลี่ยนพอร์ตเว็บต้องตั้ง `OPS_WEB_ORIGIN` ให้ตรงด้วย
 - ห้ามล้าง volume หรือ reseed ฐานข้อมูลเพื่อ deploy

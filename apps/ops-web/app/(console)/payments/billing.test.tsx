@@ -216,10 +216,36 @@ describe("ใบแจ้งหนี้ ค้างชำระ ภาษี �
     await userEvent.click(within(await screen.findByRole("dialog", { name: "ปิดงวด 2026-10?" })).getByRole("button", { name: "ยืนยัน" }));
     await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
     await waitFor(() => expect(closed).toBe("2026-10"));
+    let sent: unknown = null;
+    server.use(
+      http.get(`${OPS}/revenue/export/delivery`, () => HttpResponse.json({ recipients: ["acc@office.example.com"], autoDay: 5, history: [{ at: "2026-11-05T02:00:00Z", month: "2026-10", detail: "x", staffName: null }] })),
+      http.post(`${OPS}/revenue/export/send`, async ({ request }) => ((sent = await request.json()), HttpResponse.json({ sent: 1, to: ["acc@office.example.com"] }))),
+    );
     await userEvent.click(screen.getByRole("button", { name: "ส่งออกรายงานให้บัญชี" }));
     const d = await screen.findByRole("dialog", { name: "ส่งออกให้สำนักงานบัญชี" });
-    await userEvent.click(within(d).getByLabelText("ใบลดหนี้ (CSV)"));
-    expect(within(d).getByRole("link", { name: "ดาวน์โหลด" }).getAttribute("href")).toMatch(/^\/ops-api\/revenue\/export\?month=\d{4}-\d{2}&type=credit_notes$/);
+    expect(await within(d).findByText("ส่งถึง acc@office.example.com")).toBeInTheDocument();
+    expect(within(d).getByText(/ส่งอัตโนมัติทุกวันที่ 5/)).toBeInTheDocument();
+    expect(within(d).getByText(/โดย ระบบอัตโนมัติ/)).toBeInTheDocument();
+    expect(within(d).getByRole("link", { name: "ดาวน์โหลดใบลดหนี้ (CSV)" }).getAttribute("href")).toMatch(/^\/ops-api\/revenue\/export\?month=\d{4}-\d{2}&type=credit_notes$/);
+    // ส่งเฉพาะรายการขายและใบลดหนี้
+    await userEvent.click(within(d).getByLabelText("50 ทวิ ที่ได้รับ (CSV)"));
+    await userEvent.click(within(d).getByRole("button", { name: "ส่งอีเมล" }));
+    await waitFor(() => expect(sent).toMatchObject({ types: ["sales", "credit_notes"] }));
+    expect(await screen.findByText("ส่งไฟล์ถึง acc@office.example.com แล้ว")).toBeInTheDocument();
+  });
+
+  it("ส่งออก (B8): ยังไม่ตั้งอีเมลสำนักงานบัญชี → ดาวน์โหลดได้อย่างเดียว · ผู้ตรวจไม่มีปุ่มส่ง", async () => {
+    asRole("auditor");
+    base();
+    server.use(
+      http.get(`${OPS}/revenue`, () => HttpResponse.json({ months: [] })),
+      http.get(`${OPS}/revenue/export/delivery`, () => HttpResponse.json({ recipients: [], autoDay: 5, history: [] })),
+    );
+    page("tab=revenue");
+    await userEvent.click(await screen.findByRole("button", { name: "ส่งออกรายงานให้บัญชี" }));
+    const d = await screen.findByRole("dialog", { name: "ส่งออกให้สำนักงานบัญชี" });
+    expect(await within(d).findByText(/ยังไม่ได้ตั้งอีเมลสำนักงานบัญชี/)).toBeInTheDocument();
+    expect(within(d).queryByRole("button", { name: "ส่งอีเมล" })).not.toBeInTheDocument();
   });
 });
 

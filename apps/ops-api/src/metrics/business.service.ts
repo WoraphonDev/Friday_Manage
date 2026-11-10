@@ -29,7 +29,10 @@ export const MarketingQuery = z.object({ month: Month.optional() });
 export const MarketingBody = z
   .object({ month: Month, items: z.array(z.object({ source: z.string().trim().toLowerCase().min(1).max(60), amountSatang: z.number().int().min(0), note: z.string().trim().max(200).optional() }).strict()).min(1).max(30) })
   .strict();
-export const BusinessQuery = z.object({ refresh: z.enum(['true', 'false']).optional() });
+export const BUSINESS_PERIODS = { '30d': 30, quarter: 90, '12m': 365 } as const;
+/** ช่วงเวลาของ Funnel / ช่องทาง / เหตุผลยกเลิก / churn (ปุ่มบนหัวหน้า Business) · ค่าเริ่มต้น 90 วันตาม O06 */
+export const BusinessQuery = z.object({ refresh: z.enum(['true', 'false']).optional(), period: z.enum(['30d', 'quarter', '12m']).default('quarter') });
+type Period = keyof typeof BUSINESS_PERIODS;
 
 const todayBkk = () => new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
 const monthStart = (m: string) => `${m}-01`;
@@ -47,7 +50,7 @@ const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 1000) / 10 :
 @Injectable()
 export class BusinessService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger('OpsBusiness');
-  private cache: { at: Date; value: Awaited<ReturnType<BusinessService['compute']>> } | null = null;
+  private readonly cache = new Map<Period, { at: Date; value: Awaited<ReturnType<BusinessService['compute']>> }>();
   private timer?: NodeJS.Timeout;
 
   constructor(@Inject(OPS_DB) private readonly db: Db) {}
@@ -57,7 +60,11 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
       // ตรวจทุกชั่วโมง · ถึง 02:00 (เวลาไทย) และ cache เก่ากว่า 20 ชม. → คำนวณใหม่
       this.timer = setInterval(() => {
         const hour = new Date(Date.now() + 7 * 3_600_000).getUTCHours();
-        if (hour === 2 && (!this.cache || Date.now() - this.cache.at.getTime() > 20 * 3_600_000)) void this.refresh().catch((e) => this.log.error(String(e)));
+        const c = this.cache.get('quarter');
+        if (hour === 2 && (!c || Date.now() - c.at.getTime() > 20 * 3_600_000)) {
+          this.cache.clear();
+          void this.refresh().catch((e) => this.log.error(String(e)));
+        }
       }, 3_600_000);
       this.timer.unref();
     }
@@ -164,18 +171,23 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
   async business(q: z.infer<typeof BusinessQuery>, staff: Staff) {
     if (q.refresh === 'true') {
       if (!has(staff, 'owner', 'finance')) throw new AppError(403, 'forbidden', 'คำนวณใหม่ได้เฉพาะ Owner และการเงิน');
-      return this.refresh();
+      return this.refresh(q.period);
     }
-    return this.cache ? { computedAt: this.cache.at, ...this.cache.value } : this.refresh();
+    const c = this.cache.get(q.period);
+    return c ? { computedAt: c.at, ...c.value } : this.refresh(q.period);
   }
 
-  async refresh() {
-    const value = await this.compute();
-    this.cache = { at: new Date(), value };
-    return { computedAt: this.cache.at, ...value };
+  async refresh(period: Period = 'quarter') {
+    const value = await this.compute(period);
+    const at = new Date();
+    this.cache.set(period, { at, value });
+    return { computedAt: at, ...value };
   }
 
-  private async compute() {
+  private async compute(period: Period = 'quarter') {
+    const days = BUSINESS_PERIODS[period];
+    const since = sql`now() - make_interval(days => ${days})`;
+    const months = Math.max(1, Math.round(days / 30));
     const today = todayBkk();
     const month = today.slice(0, 7);
     const current = await this.currentMrr();
@@ -196,10 +208,15 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
     const use = new Map(usage.map((u) => [u.workspaceId, u]));
     const totalActive = paying.reduce((n, p) => n + (use.get(p.workspaceId)?.active ?? 0), 0);
     const names = new Map((await this.rows<{ id: string; slug: string; name: string }>(sql`select id, slug, name from workspaces`)).map((w) => [w.id, w]));
+    // ต้นทุนแยกตามทรัพยากร (30 วัน · ลูกค้าที่จ่าย) ไว้แสดงการ์ดต้นทุนการให้บริการ
+    const breakdown = { line: 0, email: 0, storage: 0, paymentFees: 0, infra: 0 };
     const perCustomer = paying.map((p) => {
       const u = use.get(p.workspaceId);
-      const variable = (u?.line ?? 0) * unit('line_message') + (u?.emails ?? 0) * unit('email') + ((u?.storage ?? 0) / 1024 ** 3) * unit('storage_gb_month') + (p.mrr * fee(p.paymentMethod)) / 100;
+      const parts = { line: (u?.line ?? 0) * unit('line_message'), email: (u?.emails ?? 0) * unit('email'), storage: ((u?.storage ?? 0) / 1024 ** 3) * unit('storage_gb_month'), paymentFees: (p.mrr * fee(p.paymentMethod)) / 100 };
+      const variable = parts.line + parts.email + parts.storage + parts.paymentFees;
       const infraShare = totalActive > 0 ? (Number(infra.total) * (u?.active ?? 0)) / totalActive : 0;
+      for (const k of ['line', 'email', 'storage', 'paymentFees'] as const) breakdown[k] += parts[k];
+      breakdown.infra += infraShare;
       const cost = Math.round(variable + infraShare);
       return { workspace: names.get(p.workspaceId) ?? { id: p.workspaceId }, plan: p.plan, revenueSatang: p.mrr, costSatang: cost, grossSatang: p.mrr - cost, marginPct: pct(p.mrr - cost, p.mrr) };
     });
@@ -214,7 +231,7 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
 
     // ---- Funnel 90 วัน: สมัคร → ยืนยันอีเมล → โปรเจกต์แรก → สมาชิกคนที่ 2 → เริ่มใช้จริง (≥ 3 คน และ ≥ 10 งานใน 7 วัน) → จ่ายเงิน
     const [funnel] = await this.rows<Row>(sql`
-      with ws as (select id, created_at from workspaces where created_at > now() - interval '90 days' and deleted_at is null)
+      with ws as (select id, created_at from workspaces where created_at > ${since} and deleted_at is null)
       select count(*)::int as signups,
         count(*) filter (where exists (select 1 from workspace_members m join users u on u.id = m.user_id where m.workspace_id = ws.id and m.role = 'owner' and u.email_verified_at is not null))::int as "emailVerified",
         count(*) filter (where exists (select 1 from projects p where p.workspace_id = ws.id))::int as "firstProject",
@@ -226,7 +243,7 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
     const [trial] = await this.rows<{ ended: number; converted: number }>(sql`
       select count(*)::int as ended,
         count(*) filter (where exists (select 1 from subscription_changes c where c.workspace_id = s.workspace_id and c.kind = 'new' and c.effective_at <= s.trial_ends_at + interval '14 days'))::int as converted
-      from subscriptions s where s.trial_ends_at between now() - interval '90 days' and now()`);
+      from subscriptions s where s.trial_ends_at between ${since} and now()`);
 
     // ---- Cohort ตามเดือนที่เริ่มจ่าย · % ที่ยังจ่ายเมื่อสิ้นเดือนที่ n
     const changes = await this.rows<{ workspaceId: string; kind: string; mrr: number; at: string }>(sql`
@@ -250,27 +267,33 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
     const channels = await this.rows<{ source: string; newPaying: number }>(sql`
       select coalesce(a.source, 'direct') as source, count(*)::int as "newPaying"
       from subscription_changes c left join workspace_acquisitions a on a.workspace_id = c.workspace_id
-      where c.kind = 'new' and c.effective_at > now() - interval '90 days' group by 1`);
+      where c.kind = 'new' and c.effective_at > ${since} group by 1`);
+    // สมัครใหม่ตามช่องทางในช่วงเดียวกัน → อัตราแปลงเป็นลูกค้าที่จ่าย
+    const signups = await this.rows<{ source: string; n: number }>(sql`
+      select coalesce(a.source, 'direct') as source, count(*)::int as n
+      from workspaces w left join workspace_acquisitions a on a.workspace_id = w.id
+      where w.created_at > ${since} and w.deleted_at is null group by 1`);
     const spend = await this.rows<{ source: string; amount: number }>(sql`
-      select source, sum(amount_satang)::float8 as amount from marketing_costs where month > (date_trunc('month', now()) - interval '3 months')::date group by source`);
+      select source, sum(amount_satang)::float8 as amount from marketing_costs where month > (date_trunc('month', now()) - make_interval(months => ${months}))::date group by source`);
     const churnRows = await this.rows<{ lost: number; base: number }>(sql`
       select coalesce(sum(mrr_before_satang) filter (where kind in ('cancel', 'churn_payment')), 0)::float8 as lost, 1 as base
-      from subscription_changes where effective_at > now() - interval '90 days'`);
-    const monthlyRevenueChurn = mrr > 0 ? Number(churnRows[0].lost) / 3 / mrr : 0;
+      from subscription_changes where effective_at > ${since}`);
+    const monthlyRevenueChurn = mrr > 0 ? Number(churnRows[0].lost) / months / mrr : 0;
     const arpa = paying.length ? mrr / paying.length : 0;
     const marginRatio = (marginPct ?? 0) / 100;
     const ltv = monthlyRevenueChurn > 0 ? Math.round((arpa * marginRatio) / monthlyRevenueChurn) : null;
-    const sources = [...new Set([...channels.map((c) => c.source), ...spend.map((x) => x.source)])];
+    const sources = [...new Set([...channels.map((c) => c.source), ...spend.map((x) => x.source), ...signups.map((x) => x.source)])];
     const channelRows = sources.map((source) => {
       const n = channels.find((c) => c.source === source)?.newPaying ?? 0;
       const cost = spend.find((x) => x.source === source)?.amount ?? 0;
       const cac = n > 0 ? Math.round(cost / n) : null;
-      return { source, newPaying: n, spendSatang: cost, cacSatang: cac, paybackMonths: cac != null && arpa * marginRatio > 0 ? Math.round((cac / (arpa * marginRatio)) * 10) / 10 : null };
+      const su = signups.find((x) => x.source === source)?.n ?? 0;
+      return { source, signups: su, conversionPct: pct(n, su), newPaying: n, spendSatang: cost, cacSatang: cac, paybackMonths: cac != null && arpa * marginRatio > 0 ? Math.round((cac / (arpa * marginRatio)) * 10) / 10 : null };
     });
 
     // ---- เหตุผลที่ยกเลิก การใช้ฟีเจอร์ พร้อมอัปเกรด
     const reasons = await this.rows(sql`
-      select reason, count(*)::int as n, count(*) filter (where outcome = 'kept')::int as kept from cancellation_responses where created_at > now() - interval '90 days' group by reason order by n desc`);
+      select reason, count(*)::int as n, count(*) filter (where outcome = 'kept')::int as kept from cancellation_responses where created_at > ${since} group by reason order by n desc`);
     const payingIds = paying.map((p) => p.workspaceId);
     const features = payingIds.length
       ? await this.rows<{ feature: string; workspaces: number }>(sql`
@@ -312,6 +335,10 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
     const net3 = await this.rows<{ m: string; delta: number }>(sql`
       select to_char(effective_at at time zone 'Asia/Bangkok', 'YYYY-MM') as m, sum(mrr_after_satang - mrr_before_satang)::float8 as delta
       from subscription_changes where effective_at > (date_trunc('month', now()) - interval '3 months') and effective_at < date_trunc('month', now()) group by 1`);
+    // เงินสดรับเดือนนี้ (ใบที่ชำระในเดือนตามเวลาไทย · ยอดรับจริงหลังหัก ณ ที่จ่าย)
+    const [cash] = await this.rows<{ amount: number; n: number }>(sql`
+      select coalesce(sum(amount_due), 0)::float8 as amount, count(*)::int as n from invoices
+      where status = 'paid' and to_char(paid_at at time zone 'Asia/Bangkok', 'YYYY-MM') = ${month}`);
     const avgNet = net3.length ? net3.reduce((n, r) => n + Number(r.delta), 0) / 3 : 0;
     const forecast = [1, 2, 3].map((n) => ({ month: addMonths(month, n), mrrSatang: Math.max(0, Math.round(mrr + avgNet * n)) }));
 
@@ -319,12 +346,17 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
       mrrSatang: mrr,
       payingWorkspaces: paying.length,
       arpaSatang: Math.round(arpa),
-      margin: { marginPct, revenueSatang: mrr, costSatang: totalCost, infraMonth: infra.month, infraSatang: Number(infra.total), byPlan: plans },
+      period,
+      margin: {
+        marginPct, revenueSatang: mrr, costSatang: totalCost, infraMonth: infra.month, infraSatang: Number(infra.total), byPlan: plans,
+        breakdown: { lineSatang: Math.round(breakdown.line), emailSatang: Math.round(breakdown.email), storageSatang: Math.round(breakdown.storage), paymentFeesSatang: Math.round(breakdown.paymentFees), infraSatang: Math.round(breakdown.infra) },
+      },
+      cashThisMonth: { month, receivedSatang: Number(cash.amount), invoices: Number(cash.n) },
       customers: {
         top: [...perCustomer].sort((a, b) => b.grossSatang - a.grossSatang).slice(0, 10),
         unprofitable: perCustomer.filter((c) => c.costSatang > c.revenueSatang).sort((a, b) => a.grossSatang - b.grossSatang),
       },
-      funnel: { windowDays: 90, ...funnel },
+      funnel: { windowDays: days, ...funnel },
       trialConversion: { ended: trial.ended, converted: trial.converted, pct: pct(trial.converted, trial.ended) },
       cohorts,
       channels: channelRows,
@@ -451,7 +483,7 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
       }
       await staffAudit(tx, staff, 'metrics.cost_rates_set', `${input.rates.map((r) => `${r.resource}=${r.pct ?? r.unitCostSatang}${r.pct !== undefined ? '%' : ''} ตั้งแต่ ${r.effectiveFrom}`).join(' · ')} · ${input.reason}`);
     });
-    this.cache = null;
+    this.cache.clear();
     return this.costs();
   }
 
@@ -462,7 +494,7 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
       }
       await staffAudit(tx, staff, 'metrics.infra_costs_set', `${input.month} · ${input.items.map((i) => `${i.category} ${i.amountSatang / 100} บาท`).join(' · ')}`);
     });
-    this.cache = null;
+    this.cache.clear();
     return this.costs();
   }
 
@@ -482,7 +514,7 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
       }
       await staffAudit(tx, staff, 'metrics.marketing_costs_set', `${input.month} · ${input.items.map((i) => `${i.source} ${i.amountSatang / 100} บาท`).join(' · ')}`);
     });
-    this.cache = null;
+    this.cache.clear();
     return this.marketing({ month: input.month });
   }
 }

@@ -1,5 +1,8 @@
+export type Period = "30d" | "quarter" | "12m";
 export interface Business {
   computedAt: string;
+  period?: Period;
+  cashThisMonth?: { month: string; receivedSatang: number; invoices: number };
   mrrSatang: number;
   payingWorkspaces: number;
   arpaSatang: number;
@@ -10,6 +13,7 @@ export interface Business {
     infraMonth: string | null;
     infraSatang: number;
     byPlan: { plan: string; customers: number; revenueSatang: number; costSatang: number; marginPct: number | null }[];
+    breakdown?: { lineSatang: number; emailSatang: number; storageSatang: number; paymentFeesSatang: number; infraSatang: number };
   };
   customers: {
     top: CustomerProfit[];
@@ -18,7 +22,7 @@ export interface Business {
   funnel: { windowDays: number; signups: number; emailVerified: number; firstProject: number; secondMember: number; activated: number; paid: number };
   trialConversion: { ended: number; converted: number; pct: number | null };
   cohorts: { month: string; customers: number; retention: (number | null)[] }[];
-  channels: { source: string; newPaying: number; spendSatang: number; cacSatang: number | null; paybackMonths: number | null }[];
+  channels: { source: string; signups?: number; conversionPct?: number | null; newPaying: number; spendSatang: number; cacSatang: number | null; paybackMonths: number | null }[];
   ltvSatang: number | null;
   monthlyRevenueChurnPct: number;
   cancellationReasons: { reason: string; n: number; kept: number }[];

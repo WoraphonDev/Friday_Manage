@@ -1,19 +1,19 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Settings2 } from "lucide-react";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, RefreshCw, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 import { hasAny } from "@/components/access";
-import { ErrorBlock, NoAccess, Notice, PageHead } from "@/components/kit";
+import { ErrorBlock, NoAccess, Notice, PageHead, Seg } from "@/components/kit";
 import { Button, errorToast, LoadingState, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
 import { cohortShade, ColumnChart, HBars } from "./_parts/charts";
 import { CostSettings, MarketingCosts } from "./_parts/Settings";
-import type { Business, Costs } from "./_parts/types";
+import type { Business, Costs, Period } from "./_parts/types";
 
 const monthText = (f: ReturnType<typeof useFormatter>, m: string, year = false) => f.dateTime(new Date(`${m}-15T00:00:00Z`), year ? { month: "short", year: "numeric" } : { month: "short" });
 const head = { padding: "14px 16px", margin: 0, borderBottom: "1px solid var(--border)", flexWrap: "wrap" as const };
@@ -27,12 +27,13 @@ export function BusinessPage() {
   const edit = hasAny(me, "owner", "finance");
   const toast = useToast();
   const cache = useQueryClient();
-  const q = useQuery({ queryKey: ["ops", "business"], queryFn: () => api.get<Business>("/business"), enabled: !!me && read });
+  const [period, setPeriod] = useState<Period>("quarter");
+  const q = useQuery({ queryKey: ["ops", "business", period], queryFn: () => api.get<Business>(`/business?period=${period}`), enabled: !!me && read, placeholderData: keepPreviousData });
   const overview = useQuery({ queryKey: ["ops", "overview"], queryFn: () => api.get<{ money: { nrrPct: number | null } | null }>("/overview"), enabled: !!me && read, staleTime: 60_000 });
   const [modal, setModal] = useState<"costs" | "marketing" | null>(null);
   const refresh = useMutation({
-    mutationFn: () => api.get<Business>("/business?refresh=true"),
-    onSuccess: (d) => (cache.setQueryData(["ops", "business"], d), toast(t("refreshed"))),
+    mutationFn: () => api.get<Business>(`/business?refresh=true&period=${period}`),
+    onSuccess: (d) => (cache.setQueryData(["ops", "business", period], d), toast(t("refreshed"))),
     onError: (e) => toast(errorToast(e)),
   });
   if (me && !read) return <NoAccess need={["owner", "finance", "auditor"]} />;
@@ -47,14 +48,18 @@ export function BusinessPage() {
           </>
         }
         actions={
-          edit && (
-            <>
-              <Button onClick={() => setModal("marketing")}>{t("marketing")}</Button>
+          <>
+            <Seg label={t("period")} value={period} onChange={setPeriod} options={PERIODS.map((p) => ({ value: p, label: t(`periods.${p}`) }))} />
+            <Button disabled={!q.data} onClick={() => q.data && downloadCsv(q.data, t)}>
+              <Download size={16} /> {t("export")}
+            </Button>
+            {edit && <Button onClick={() => setModal("marketing")}>{t("marketing")}</Button>}
+            {edit && (
               <Button variant="ghost" disabled={refresh.isPending} onClick={() => refresh.mutate()}>
                 <RefreshCw size={16} /> {t("refresh")}
               </Button>
-            </>
-          )
+            )}
+          </>
         }
       />
       {q.isPending ? (
@@ -107,9 +112,9 @@ function Kpis({ b, nrr }: { b: Business; nrr: number | null }) {
       tone: b.margin.marginPct != null && b.margin.marginPct < 70 ? "warn" : undefined,
     },
     { k: "nrr", value: nrr == null ? "—" : `${nrr}%`, note: t("nrrNote") },
-    { k: "cac", value: fmt.money(cac), note: t("cacNote") },
+    { k: "cac", value: fmt.money(cac), note: t("cacNote", { days: b.funnel.windowDays }) },
     { k: "payback", value: payback == null ? "—" : t("paybackValue", { n: payback }), note: t("paybackNote"), tone: payback != null ? (payback < 12 ? "ok" : "warn") : undefined },
-    { k: "trial", value: b.trialConversion.pct == null ? "—" : `${b.trialConversion.pct}%`, note: t("trialNote", { converted: b.trialConversion.converted, ended: b.trialConversion.ended }) },
+    { k: "trial", value: b.trialConversion.pct == null ? "—" : `${b.trialConversion.pct}%`, note: t("trialNote", { converted: b.trialConversion.converted, ended: b.trialConversion.ended, days: b.funnel.windowDays }) },
   ] as const;
   return (
     <section className="stats" aria-label="KPI">
@@ -221,10 +226,17 @@ function CostCard({ b, edit, onSettings }: { b: Business; edit: boolean; onSetti
       <span className="muted small">{t("costsSub", { amount: fmt.money(b.margin.costSatang), pct })}</span>
       <HBars
         label={t("costs")}
-        rows={[
-          { key: "infra", label: t("infra"), sub: b.margin.infraMonth ? t("infraBasis", { month: monthText(f, b.margin.infraMonth, true) }) : t("infraNone"), value: infra, display: fmt.money(infra), tone: "primary" },
-          { key: "variable", label: t("variable"), sub: t("variableBasis"), value: variable, display: fmt.money(variable), tone: "soft" },
-        ]}
+        rows={
+          b.margin.breakdown
+            ? [
+                { key: "infra", label: t("infra"), sub: b.margin.infraMonth ? t("infraBasis", { month: monthText(f, b.margin.infraMonth, true) }) : t("infraNone"), value: b.margin.breakdown.infraSatang, display: fmt.money(b.margin.breakdown.infraSatang), tone: "primary" as const },
+                ...(["line", "email", "storage", "paymentFees"] as const).map((k) => ({ key: k, label: t(`costParts.${k}`), value: b.margin.breakdown![`${k}Satang`], display: fmt.money(b.margin.breakdown![`${k}Satang`]), tone: "soft" as const })),
+              ]
+            : [
+                { key: "infra", label: t("infra"), sub: b.margin.infraMonth ? t("infraBasis", { month: monthText(f, b.margin.infraMonth, true) }) : t("infraNone"), value: infra, display: fmt.money(infra), tone: "primary" as const },
+                { key: "variable", label: t("variable"), sub: t("variableBasis"), value: variable, display: fmt.money(variable), tone: "soft" as const },
+              ]
+        }
       />
       <h3 className="card-title small">{t("rates")}</h3>
       {costs.data && (
@@ -386,7 +398,7 @@ export function Channels({ b }: { b: Business }) {
     <section className="card" style={{ padding: 0, overflow: "hidden" }}>
       <div className="card-head" style={head}>
         <h2 className="card-title">{t("channels")}</h2>
-        <span className="card-sub">{t("channelsSub")}</span>
+        <span className="card-sub">{t("channelsSub", { period: t(`periods.${b.period ?? "quarter"}`) })}</span>
       </div>
       {!b.channels.length ? (
         <p className="muted small" style={{ padding: 16 }}>
@@ -398,6 +410,8 @@ export function Channels({ b }: { b: Business }) {
             <thead>
               <tr>
                 <th>{t("chCol.source")}</th>
+                <th className="num">{t("chCol.signups")}</th>
+                <th className="num">{t("chCol.conversion")}</th>
                 <th className="num">{t("chCol.paid")}</th>
                 <th className="num">{t("chCol.spend")}</th>
                 <th className="num">{t("chCol.cac")}</th>
@@ -413,6 +427,8 @@ export function Channels({ b }: { b: Business }) {
                   return (
                     <tr key={c.source}>
                       <td>{label(c.source)}</td>
+                      <td className="num">{c.signups ?? "—"}</td>
+                      <td className="num">{c.conversionPct == null ? "—" : `${c.conversionPct}%`}</td>
                       <td className="num">{c.newPaying}</td>
                       <td className="num">{fmt.money(c.spendSatang)}</td>
                       <td className="num">{c.cacSatang == null ? "—" : fmt.money(c.cacSatang)}</td>
@@ -439,7 +455,7 @@ export function Reasons({ b }: { b: Business }) {
     <section className="card">
       <div className="card-head">
         <h2 className="card-title">{t("reasons")}</h2>
-        <span className="card-sub">{t("reasonsSub", { n: total })}</span>
+        <span className="card-sub">{t("reasonsSub", { n: total, days: b.funnel.windowDays })}</span>
       </div>
       {!total ? (
         <p className="muted small">{t("reasonsEmpty")}</p>
@@ -546,6 +562,13 @@ function Cash({ b }: { b: Business }) {
       <span className="muted small">
         {t("aging", { amount: fmt.money(overdue) })} · {t("agingRows.notDue")} {fmt.money(a.notDue)}
       </span>
+      {b.cashThisMonth && (
+        <div className="field">
+          <span className="field-label">{t("cashReceived", { month: monthText(f, b.cashThisMonth.month) })}</span>
+          <b>{fmt.money(b.cashThisMonth.receivedSatang)}</b>
+          <span className="muted small">{t("cashInvoices", { n: b.cashThisMonth.invoices })}</span>
+        </div>
+      )}
       <div className="field">
         <span className="field-label">{t("deferred")}</span>
         <b>{fmt.money(b.deferredRevenueSatang)}</b>
@@ -573,7 +596,7 @@ export function BusinessSubPage({ title, desc, children }: { title: string; desc
   const f = useFormatter();
   const me = useMe().data;
   const read = hasAny(me, "owner", "finance", "auditor");
-  const q = useQuery({ queryKey: ["ops", "business"], queryFn: () => api.get<Business>("/business"), enabled: !!me && read });
+  const q = useQuery({ queryKey: ["ops", "business", "quarter"], queryFn: () => api.get<Business>("/business?period=quarter"), enabled: !!me && read });
   if (me && !read) return <NoAccess need={["owner", "finance", "auditor"]} />;
   return (
     <>
@@ -594,4 +617,33 @@ export function BusinessSubPage({ title, desc, children }: { title: string; desc
       {q.isPending ? <LoadingState /> : q.error ? <ErrorBlock error={q.error} retry={() => void q.refetch()} /> : children(q.data)}
     </>
   );
+}
+
+const PERIODS: Period[] = ["30d", "quarter", "12m"];
+
+/** ส่งออกตัวเลขหลักของหน้าเป็น CSV (UTF-8 + BOM เปิดด้วย Excel ได้) · ทำในเบราว์เซอร์จากข้อมูลที่แสดงอยู่ */
+function downloadCsv(b: Business, t: ReturnType<typeof useTranslations<"ob.biz">>) {
+  const baht = (n: number | null | undefined) => (n == null ? "" : (n / 100).toFixed(2));
+  const rows: (string | number | null)[][] = [
+    [t("csv.section"), t("csv.item"), t("csv.value")],
+    [t("csv.summary"), "MRR", baht(b.mrrSatang)],
+    [t("csv.summary"), t("kpi.margin"), b.margin.marginPct ?? ""],
+    [t("csv.summary"), t("csv.cost"), baht(b.margin.costSatang)],
+    ...(b.cashThisMonth ? [[t("csv.summary"), t("cashReceived", { month: b.cashThisMonth.month }), baht(b.cashThisMonth.receivedSatang)]] : []),
+    ...b.margin.byPlan.map((p) => [t("csv.byPlan"), p.plan, `${baht(p.revenueSatang)} / ${baht(p.costSatang)} / ${p.marginPct ?? ""}%`]),
+    ...Object.entries(b.funnel).map(([k, v]) => [t("csv.funnel"), k, v]),
+    ...b.channels.map((c) => [t("csv.channels"), c.source, `${c.signups ?? ""} / ${c.newPaying} / ${baht(c.spendSatang)} / ${baht(c.cacSatang)}`]),
+    ...b.cancellationReasons.map((r) => [t("csv.reasons"), r.reason, r.n]),
+  ];
+  const esc = (v: unknown) => {
+    const x = v == null ? "" : String(v);
+    return /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x;
+  };
+  const csv = "\ufeff" + rows.map((r) => r.map(esc).join(",")).join("\r\n") + "\r\n";
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `friday-business-${b.period ?? "quarter"}-${b.computedAt.slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }

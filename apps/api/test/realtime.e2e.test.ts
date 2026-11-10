@@ -414,4 +414,22 @@ describe('ตรวจซ้ำสิทธิ์และ Session', () => {
     await new Promise((r) => setTimeout(r, 200));
     expect(w.closed?.code).toBe(4401);
   });
+
+  it('Workspace ถูกระงับแบบปิดทั้งหมด (C6) → recheck ถอดช่องโปรเจกต์ · subscribe ใหม่ไม่ได้ · อ่านอย่างเดียวยังได้', async () => {
+    const lead = await connect(team.leadId);
+    const ch = `project:${projectId}`;
+    await lead.request({ op: 'subscribe', channel: ch });
+    try {
+      await t.owner.query(`UPDATE workspaces SET status = 'suspended', suspension_mode = 'read_only' WHERE id = $1`, [wsId]);
+      await rt.recheck();
+      await lead.expectNone((m) => m.op === 'unsubscribed');
+      await t.owner.query(`UPDATE workspaces SET suspension_mode = 'full' WHERE id = $1`, [wsId]);
+      await rt.recheck();
+      expect(await lead.waitFor((m) => m.op === 'unsubscribed' && m.reason === 'forbidden')).toMatchObject({ channel: ch });
+      expect(await lead.request({ op: 'subscribe', channel: ch })).toMatchObject({ op: 'error', code: 'forbidden' });
+    } finally {
+      await t.owner.query(`UPDATE workspaces SET status = 'active', suspension_mode = NULL WHERE id = $1`, [wsId]);
+    }
+    expect(await lead.request({ op: 'subscribe', channel: ch })).toMatchObject({ op: 'subscribed' });
+  });
 });

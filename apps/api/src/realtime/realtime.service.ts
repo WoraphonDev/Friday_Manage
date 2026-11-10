@@ -349,6 +349,9 @@ export class RealtimeService implements OnApplicationBootstrap, OnApplicationShu
     if (!target) return 'forbidden';
     const [m] = await this.db.select({ role: s.workspaceMembers.role }).from(s.workspaceMembers).where(and(eq(s.workspaceMembers.workspaceId, target.workspaceId), eq(s.workspaceMembers.userId, userId), eq(s.workspaceMembers.status, 'active')));
     if (!m) return 'forbidden';
+    // ระงับแบบปิดทั้งหมด (C6): ไม่มีใครดูโปรเจกต์ได้ จึงไม่ส่งสัญญาณของโปรเจกต์ / งาน · ช่องที่ subscribe อยู่ถูกถอดตอนตรวจซ้ำ (ทุก 5 นาที)
+    const [ws] = await this.db.select({ status: s.workspaces.status, mode: s.workspaces.suspensionMode }).from(s.workspaces).where(eq(s.workspaces.id, target.workspaceId));
+    if (ws?.status === 'suspended' && ws.mode === 'full') return 'forbidden';
     const auth = { userId, sessionId: 'ws' };
     const tenant = { workspaceId: target.workspaceId, slug: '', role: m.role };
     return this.tenantDb.run(auth, tenant, async (tx) => {

@@ -49,11 +49,16 @@ infra/vps/deploy.sh
 
 `backup.sh` รันทุกวัน 03:15 · `pg_dump -Fc` + tar ของไฟล์อัปโหลด · เก็บ 14 วันใน `/opt/friday/backups`
 
-**สำเนาอยู่บนดิสก์เดียวกับข้อมูล** ถ้าเครื่องเสียจะหายด้วย · ดึงออกเป็นระยะ:
+สำเนาบน VPS อยู่ดิสก์เดียวกับข้อมูล ถ้าเครื่องเสียจะหายด้วย จึงดึงลง Mac อีกชุด:
 
 ```sh
-rsync -av -e "ssh -i ~/.ssh/friday_vps" root@<ip>:/opt/friday/backups/ ~/friday-backups/
+infra/vps/pull-backups.sh            # ดึงครั้งเดียว → ~/FridayBackups/vps (เก็บ 60 วัน)
+infra/vps/install-backup-pull.sh     # ตั้ง launchd ให้ดึงทุกวัน 09:30 (หลับอยู่ = ดึงตอนตื่น)
 ```
+
+- log: `~/Library/Logs/friday-backup-pull.log` · backup ล่าสุดเก่าเกิน 48 ชั่วโมง = ขึ้นแจ้งเตือนใน Notification Center
+- เลิกใช้: `launchctl bootout gui/$(id -u)/com.fridaymanage.backup-pull`
+- ทดสอบกู้ (ทำแล้ว 2026-11-10): `pg_restore --no-owner --no-acl` ลงฐานชั่วคราวได้ 129 ตาราง 23 migration ครบ
 
 กู้ฐานข้อมูล: `docker compose exec -T postgres pg_restore -U friday_owner -d friday --clean --if-exists < backups/db-<เวลา>.dump`
 

@@ -25,6 +25,8 @@ export const subscriptions = pgTable('subscriptions', {
   discount: jsonb().notNull().default(sql`'{}'::jsonb`),
   /** ใบแจ้งหนี้ที่เปิดสิทธิ์ปัจจุบัน (ชำระแล้วหรือเปิดชั่วคราวระหว่างรอตรวจสลิป) · ใช้ตัดสินว่าใบไหนแทนใบไหน (N01/N02) */
   sourceInvoiceId: uuid(),
+  /** ลดแพ็กเกจที่ตั้งไว้ให้มีผลเมื่อจบรอบบิลปัจจุบัน (C4 · ลดแพ็กเกจมีผลรอบถัดไปเสมอ) · null = ไม่มี */
+  pendingPlanId: uuid().references(() => plans.id), pendingCycle: billingCycle(),
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [tenantKey('subscriptions', t), check('subscriptions_dates', sql`${t.currentPeriodEnd} >= ${t.currentPeriodStart}`)]);
 

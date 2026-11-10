@@ -194,7 +194,15 @@ interface Preview {
 }
 
 /** C4 · เปลี่ยนแพ็กเกจพร้อมตัวอย่างยอด */
-export function PlanDialog({ ws, onOpenChange, onDone }: { ws: Overview; onOpenChange: (o: boolean) => void; onDone: (plan: string) => void }) {
+/** ผลของ C4: มีผลทันที (+ ใบแจ้งหนี้ส่วนต่าง) · ตั้งไว้รอบถัดไป · ยกเลิกที่ตั้งไว้ */
+export interface PlanChangeResult {
+  plan: string;
+  effective: "now" | "next_cycle" | "cancelled";
+  effectiveAt?: string | null;
+  invoice: { id: string; number: string; amountDue: number } | null;
+  warnings: { code: string; message: string }[];
+}
+export function PlanDialog({ ws, onOpenChange, onDone }: { ws: Overview; onOpenChange: (o: boolean) => void; onDone: (r: PlanChangeResult) => void }) {
   const t = useTranslations("customers.c4");
   const fmt = useFmt();
   const cur = ws.subscription;
@@ -202,7 +210,7 @@ export function PlanDialog({ ws, onOpenChange, onDone }: { ws: Overview; onOpenC
   const [cycle, setCycle] = useState<"monthly" | "yearly">((cur?.cycle as "monthly" | "yearly") ?? "monthly");
   const [reason, setReason] = useState("");
   const preview = useQuery({ queryKey: ["ops", "plan-preview", ws.id, plan, cycle], queryFn: () => api.get<Preview>(`/workspaces/${ws.id}/change-plan/preview?plan=${plan}&cycle=${cycle}`) });
-  const change = useMutation({ mutationFn: () => api.post(`/workspaces/${ws.id}/change-plan`, { plan, cycle, reason: reason.trim() }), onSuccess: () => onDone(plan) });
+  const change = useMutation({ mutationFn: () => api.post<PlanChangeResult>(`/workspaces/${ws.id}/change-plan`, { plan, cycle, reason: reason.trim() }), onSuccess: (r) => onDone(r) });
   const p = preview.data;
   const ok = !!p && !p.blocked && reason.trim().length >= 3;
   return (
@@ -250,7 +258,8 @@ export function PlanDialog({ ws, onOpenChange, onDone }: { ws: Overview; onOpenC
                 </tbody>
               </table>
             )}
-            <p className="muted small">{t("noInvoice")}</p>
+            {cur?.pending && <Notice tone="warn" title={t("pendingNote", { plan: planLabel(cur.pending.plan), date: fmt.date(cur.pending.at) })} />}
+            <p className="muted small">{plan === cur?.plan && cycle === cur?.cycle && cur?.pending ? t("cancelNote") : p.effective === "now" ? (p.contract ? t("contractInvoice") : p.totalSatang > 0 ? t("invoiceNote") : t("noCharge")) : t("nextNote")}</p>
           </section>
         )}
         <Reason label={t("reason")} value={reason} onChange={setReason} />

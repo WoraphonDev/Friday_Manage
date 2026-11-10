@@ -129,6 +129,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
       this.timer = setInterval(() => {
         void this.runDunning().catch((e) => this.log.error(`เตือนค้างชำระล้ม: ${String(e)}`));
         void this.autoSendExport().catch((e) => this.log.error(`ส่งไฟล์ให้สำนักงานบัญชีล้ม: ${String(e)}`));
+        void this.applyScheduledPlans().catch((e) => this.log.error(`เปลี่ยนแพ็กเกจตามที่ตั้งไว้ล้ม: ${String(e)}`));
       }, 3_600_000);
       this.timer.unref();
     }
@@ -660,6 +661,32 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     const draft = !(await this.isClosed(q.month));
     const csv = '﻿' + [header, ...lines].map((l) => l.map(esc).join(',')).join('\r\n') + '\r\n';
     return { csv, filename: `friday-${q.type}-${q.month}${draft ? '-draft' : ''}.csv`, draft, rows: lines.length };
+  }
+
+  // ---------------------------------------------------------------- ลดแพ็กเกจที่ตั้งไว้ (C4)
+
+  /** จบรอบบิลแล้ว → เปลี่ยนเป็นแพ็กเกจที่ตั้งไว้ · บันทึก MRR movement และ Audit ของลูกค้า (ระบบทำ) · เรียกซ้ำได้ */
+  async applyScheduledPlans(now = new Date()) {
+    const due = await this.db
+      .select({ sub: s.subscriptions, from: s.plans.code })
+      .from(s.subscriptions)
+      .innerJoin(s.plans, eq(s.plans.id, s.subscriptions.planId))
+      .where(and(sql`${s.subscriptions.pendingPlanId} is not null`, sql`${s.subscriptions.currentPeriodEnd} <= ${now}`));
+    const done: { workspaceId: string; from: string; to: string }[] = [];
+    for (const { sub, from } of due) {
+      const [to] = await this.db.select().from(s.plans).where(eq(s.plans.id, sub.pendingPlanId!));
+      if (!to) continue;
+      const cycle = sub.pendingCycle ?? sub.cycle;
+      const price = (p: { priceMonthlySatang: number | null; priceYearlySatang: number | null }, c: string) => (c === 'yearly' ? Math.round((p.priceYearlySatang ?? 0) / 12) : (p.priceMonthlySatang ?? 0));
+      const [last] = await this.rows<{ mrr: number }>(sql`select mrr_after_satang::float8 as mrr from subscription_changes where workspace_id = ${sub.workspaceId} order by effective_at desc, created_at desc limit 1`);
+      await this.db.transaction(async (tx) => {
+        await tx.update(s.subscriptions).set({ planId: to.id, cycle, pendingPlanId: null, pendingCycle: null, updatedAt: new Date() }).where(eq(s.subscriptions.id, sub.id));
+        await tx.insert(s.subscriptionChanges).values({ workspaceId: sub.workspaceId, kind: 'downgrade', planFrom: from, planTo: to.code, mrrBeforeSatang: Math.max(0, Number(last?.mrr ?? 0)), mrrAfterSatang: price(to, cycle), actorKind: 'system', effectiveAt: now });
+        await tx.insert(s.auditLogs).values({ workspaceId: sub.workspaceId, actorKind: 'system', category: 'plan', action: 'billing.plan_downgraded', targetType: 'subscription', targetId: sub.id, summary: `ลดแพ็กเกจ ${from} → ${to.code} ตามที่ตั้งไว้ (จบรอบบิล)` });
+      });
+      done.push({ workspaceId: sub.workspaceId, from, to: to.code });
+    }
+    return done;
   }
 
   // ---------------------------------------------------------------- ส่งให้สำนักงานบัญชี (B8)

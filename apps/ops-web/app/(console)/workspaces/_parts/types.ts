@@ -45,7 +45,7 @@ export interface Overview {
   createdAt: string;
   dataRegion: string | null;
   legalName: string | null;
-  subscription: { plan: string | null; status: string; cycle: string; trialEndsAt: string | null; currentPeriodEnd: string | null; paymentMethod: string | null; discount: { percent?: number; months?: number | null; active?: boolean } | null; seatLimit: number | null } | null;
+  subscription: { plan: string | null; status: string; cycle: string; trialEndsAt: string | null; currentPeriodEnd: string | null; paymentMethod: string | null; discount: { percent?: number; months?: number | null; active?: boolean } | null; seatLimit: number | null; pending?: { plan: string | null; cycle: string; at: string | null } | null } | null;
   usage: { members: number; guests: number; projects: number; issues: number; storageBytes: number; active30: number; lastActiveAt: string | null };
   owners: { id: string; email: string | null; displayName: string; role: "owner" | "admin" }[];
   supportAccess: { until: string | null; maxMode: "read" | "write"; notifyAdmins: boolean; active: boolean } | null;

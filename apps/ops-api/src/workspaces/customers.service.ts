@@ -209,7 +209,11 @@ export class CustomersService {
       dataRegion: raw.dataRegion,
       legalName: profile?.companyName ?? null,
       subscription: sub
-        ? { plan: x.plan, status: sub.status, cycle: sub.cycle, trialEndsAt: sub.trialEndsAt, currentPeriodEnd: sub.currentPeriodEnd, paymentMethod: sub.paymentMethod, discount: money ? sub.discount : sub.discount ? { active: true } : null, seatLimit: x.seatLimit }
+        ? {
+            plan: x.plan, status: sub.status, cycle: sub.cycle, trialEndsAt: sub.trialEndsAt, currentPeriodEnd: sub.currentPeriodEnd, paymentMethod: sub.paymentMethod, discount: money ? sub.discount : sub.discount ? { active: true } : null, seatLimit: x.seatLimit,
+            /** ลดแพ็กเกจที่ตั้งไว้ (C4) มีผลเมื่อจบรอบ */
+            pending: sub.pendingPlanId ? { plan: (await this.db.select({ code: s.plans.code }).from(s.plans).where(eq(s.plans.id, sub.pendingPlanId)))[0]?.code ?? null, cycle: sub.pendingCycle ?? sub.cycle, at: sub.currentPeriodEnd } : null,
+          }
         : null,
       usage: { members: x.seats, guests: Number(raw.guests ?? 0), projects: counts.projectsAll, issues: counts.issues, storageBytes: x.storageBytes, active30: x.active30, lastActiveAt: x.lastActiveAt },
       owners: owners.map((o) => ({ ...o, email: seesEmail(staff) ? o.email : null })),

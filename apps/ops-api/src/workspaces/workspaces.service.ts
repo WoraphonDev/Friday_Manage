@@ -9,6 +9,7 @@ import { OPS_DB } from '../db.js';
 import { config } from '../config.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
+import { BillingService } from '../billing/billing.service.js';
 import { billingContacts, mailAll } from '../billing/ledger.js';
 import { mrrOf } from '../metrics/economics.js';
 
@@ -84,6 +85,7 @@ export class WorkspacesService implements OnModuleInit {
     @Inject(OPS_DB) private readonly db: Db,
     private readonly approvals: ApprovalsService,
     private readonly mail: Mailer,
+    private readonly billing: BillingService,
   ) {}
 
   /** อนุมัติแล้วทำรายการในนามผู้ขอ (06 › 4) */
@@ -233,8 +235,11 @@ export class WorkspacesService implements OnModuleInit {
   }
 
   /**
-   * เปลี่ยนแพ็กเกจโดยทีม Friday (เช่น ย้ายไป Enterprise ตามสัญญา หรือลูกค้าขอผ่าน Ticket) · มีผลทันที
-   * เฟส 1 ยังไม่ออกใบแจ้งหนี้ส่วนต่าง (ต้องใช้ขั้นตอนชำระเงินของ API ลูกค้า) · บันทึก subscription_changes ให้ MRR ตรง
+   * เปลี่ยนแพ็กเกจโดยทีม Friday (C4) ตามตัวอย่างยอดของ preview:
+   * - อัปเกรด / เปลี่ยนรอบบิล: มีผลทันที + ออกใบแจ้งหนี้ส่วนต่างตามวันที่เหลือ (ช่วงทดลอง = ใบเต็มรอบ) ส่งลิงก์ชำระถึงผู้ติดต่อ
+   * - ลดแพ็กเกจ: มีผลเมื่อจบรอบบิลปัจจุบันเสมอ (เก็บไว้ใน pending_* · งานรายชั่วโมงของ billing เปลี่ยนให้)
+   * - Enterprise ตามสัญญา (ไม่มีราคา): มีผลทันที ไม่ออกใบ (ใช้ "ออกใบแจ้งหนี้" ตามสัญญา)
+   * ออกใบไม่ได้ (ยังไม่มีข้อมูลออกใบกำกับ / งวดปิดแล้ว) ไม่ทำให้การเปลี่ยนล้ม · ตอบเป็น warnings ให้ทีมการเงินออกเอง
    */
   async changePlan(staff: Staff, id: string, input: z.infer<typeof ChangePlanBody>) {
     const { sub } = await this.sub(id);
@@ -242,21 +247,69 @@ export class WorkspacesService implements OnModuleInit {
     const plan = await this.planRow(input.plan);
     const prev = await this.planRowById(sub.planId);
     const cycle = input.cycle ?? sub.cycle;
-    if (plan.id === prev.id && cycle === sub.cycle && sub.status === 'active') throw new AppError(409, 'no_change', 'ใช้แพ็กเกจนี้อยู่แล้ว');
-    const seats = await this.seatsInUse(id);
-    if (plan.seatLimit != null && seats > plan.seatLimit) throw new AppError(409, 'seats_exceed_plan', `ใช้อยู่ ${seats} คน เกินที่นั่งของแพ็กเกจ ${input.plan} (${plan.seatLimit})`, { seats, seatLimit: plan.seatLimit });
+    if (plan.id === prev.id && cycle === sub.cycle && sub.status === 'active') {
+      if (!sub.pendingPlanId) throw new AppError(409, 'no_change', 'ใช้แพ็กเกจนี้อยู่แล้ว');
+      // เลือกแพ็กเกจเดิม = ยกเลิกการลดแพ็กเกจที่ตั้งไว้
+      await this.db.transaction(async (tx) => {
+        await tx.update(s.subscriptions).set({ pendingPlanId: null, pendingCycle: null, updatedAt: new Date() }).where(eq(s.subscriptions.id, sub.id));
+        await audit(tx, staff, id, 'plan', 'ops.plan_change_cancelled', `ยกเลิกการลดแพ็กเกจที่ตั้งไว้ · ${input.reason}`, { type: 'subscription', id: sub.id });
+      });
+      return { plan: input.plan, cycle, previous: prev.code, effective: 'cancelled' as const, invoice: null, warnings: [] };
+    }
+    const pv = await this.preview(id, { plan: input.plan, cycle: input.cycle });
+    if (pv.blocked) throw new AppError(409, pv.blocked.code, pv.blocked.message, { seats: pv.seatsInUse, seatLimit: plan.seatLimit });
+
+    if (pv.effective === 'next_cycle' && sub.status === 'active') {
+      await this.db.transaction(async (tx) => {
+        await tx.update(s.subscriptions).set({ pendingPlanId: plan.id, pendingCycle: cycle, updatedAt: new Date() }).where(eq(s.subscriptions.id, sub.id));
+        await audit(tx, staff, id, 'plan', 'ops.plan_change_scheduled', `ลดแพ็กเกจ ${prev.code} → ${input.plan} มีผล ${sub.currentPeriodEnd?.toISOString().slice(0, 10) ?? 'รอบถัดไป'} · ${input.reason}`, { type: 'subscription', id: sub.id });
+      });
+      return { plan: input.plan, cycle, previous: prev.code, effective: 'next_cycle' as const, effectiveAt: sub.currentPeriodEnd, invoice: null, warnings: [] };
+    }
+
     const before = mrrOf(sub, prev);
     const after = mrrOf({ status: 'active', cycle, discount: sub.discount }, plan);
     await this.db.transaction(async (tx) => {
-      // แพ็กเกจที่ทีมกำหนดเอง = เปิดใช้ทันที ไม่นับเป็นช่วงทดลอง
-      await tx.update(s.subscriptions).set({ planId: plan.id, cycle, status: 'active', trialEndsAt: null, updatedAt: new Date() }).where(eq(s.subscriptions.id, sub.id));
+      // แพ็กเกจที่ทีมกำหนดเอง = เปิดใช้ทันที ไม่นับเป็นช่วงทดลอง · ล้างการลดแพ็กเกจที่ตั้งไว้
+      await tx.update(s.subscriptions).set({ planId: plan.id, cycle, status: 'active', trialEndsAt: null, pendingPlanId: null, pendingCycle: null, updatedAt: new Date() }).where(eq(s.subscriptions.id, sub.id));
       await tx.insert(s.subscriptionChanges).values({
         workspaceId: id, kind: sub.status === 'trialing' ? 'new' : after > before ? 'upgrade' : after < before ? 'downgrade' : 'cycle_change',
         planFrom: prev.code, planTo: plan.code, mrrBeforeSatang: sub.status === 'trialing' ? 0 : before, mrrAfterSatang: after, actorKind: 'staff', actorId: staff.id, effectiveAt: new Date(),
       });
       await audit(tx, staff, id, 'plan', 'ops.plan_changed', `เปลี่ยนแพ็กเกจ ${prev.code} → ${input.plan}${cycle !== sub.cycle ? ` (${cycle === 'yearly' ? 'รายปี' : 'รายเดือน'})` : ''} · ${input.reason}`, { type: 'subscription', id: sub.id });
     });
-    return { plan: input.plan, cycle, previous: prev.code };
+
+    // ใบแจ้งหนี้ส่วนต่าง (หรือเต็มรอบสำหรับช่วงทดลอง)
+    const warnings: { code: string; message: string }[] = [];
+    let invoice: { id: string; number: string; amountDue: number } | null = null;
+    if (!pv.contract && pv.subtotalSatang > 0) {
+      const today = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
+      const trial = sub.status === 'trialing';
+      const periodEnd = (() => {
+        const d = new Date(`${today}T00:00:00Z`);
+        if (cycle === 'yearly') d.setUTCFullYear(d.getUTCFullYear() + 1);
+        else d.setUTCMonth(d.getUTCMonth() + 1);
+        return new Date(d.getTime() - DAY).toISOString().slice(0, 10);
+      })();
+      try {
+        const r = await this.billing.createInvoice(staff, {
+          workspaceId: id,
+          dueDays: 7,
+          discountPct: 0,
+          wht: false,
+          send: true,
+          items: [{ description: pv.lines.map((l) => `${l.label} ${(l.satang / 100).toFixed(2)}`).join(' · '), qty: 1, unitSatang: pv.subtotalSatang }],
+          // ช่วงทดลอง: ใบนี้เปิดรอบบิลแรกเมื่อชำระ · อัปเกรดกลางรอบ: ค่าส่วนต่าง ไม่เปลี่ยนรอบ
+          ...(trial ? { plan: { code: input.plan, cycle, periodStart: today, periodEnd } } : {}),
+          note: `ส่วนต่างจากการเปลี่ยนแพ็กเกจ ${prev.code} → ${input.plan}`,
+        });
+        invoice = { id: r.invoice.id, number: r.invoice.number, amountDue: r.invoice.amountDue };
+      } catch (e) {
+        const code = e instanceof AppError ? e.code : 'invoice_failed';
+        warnings.push({ code, message: `เปลี่ยนแพ็กเกจแล้ว แต่ออกใบแจ้งหนี้ส่วนต่างไม่ได้ (${e instanceof Error ? e.message : String(e)}) · ให้ทีมการเงินออกเอง` });
+      }
+    }
+    return { plan: input.plan, cycle, previous: prev.code, effective: 'now' as const, invoice, warnings };
   }
 
   /**

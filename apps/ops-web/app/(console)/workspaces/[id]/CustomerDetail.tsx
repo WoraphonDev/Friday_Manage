@@ -147,7 +147,17 @@ export function CustomerDetail({ id }: { id: string }) {
           submit={(body) => api.post(`/workspaces/${id}/discount`, body).then(after(t("c3.done", { pct: body.percent })))}
         />
       )}
-      {dialog === "plan" && <PlanDialog ws={ws} onOpenChange={close} onDone={(plan) => after(t("c4.done", { plan: planLabel(plan) }))(null)} />}
+      {dialog === "plan" && (
+        <PlanDialog
+          ws={ws}
+          onOpenChange={close}
+          onDone={(r) => {
+            const msg =
+              r.effective === "cancelled" ? t("c4.cancelled") : r.effective === "next_cycle" ? t("c4.scheduled", { plan: planLabel(r.plan), date: r.effectiveAt ? fmt.date(r.effectiveAt) : "—" }) : r.invoice ? t("c4.doneInvoice", { plan: planLabel(r.plan), number: r.invoice.number, amount: fmt.money(r.invoice.amountDue) }) : t("c4.done", { plan: planLabel(r.plan) });
+            after(r.warnings.length ? `${msg} · ${r.warnings.map((w) => w.message).join(" · ")}` : msg)(null);
+          }}
+        />
+      )}
       {dialog === "trial" && (
         <TrialDialog
           names={[ws.name]}

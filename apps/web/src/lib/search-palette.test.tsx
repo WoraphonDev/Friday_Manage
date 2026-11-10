@@ -41,8 +41,12 @@ beforeEach(() => {
     const q = url.searchParams.get("q") ?? "";
     const type = url.searchParams.get("type");
     let items = q.startsWith("@") ? hits.filter((h) => h.type === "person") : q.toUpperCase() === "#DE-39" || q.toUpperCase() === "DE-39" ? hits.filter((h) => h.type === "task") : q === "ไม่มีอะไร" ? [] : hits;
-    if (type) items = items.filter((h) => h.type === type);
-    return { q, total: items.length, counts: countsOf(items), items };
+    // ตัวกรองของ API (A22): หลายประเภท · ยังไม่เสร็จ · มอบหมายให้ฉัน (DE-41 เป็นงานเดียวที่มอบหมายให้ฉัน)
+    if (url.searchParams.get("status") === "open") items = items.filter((h) => !("status" in h) || h.status.category !== "done");
+    if (url.searchParams.get("assignee") === "me") items = items.filter((h) => "key" in h && h.type !== "project" && h.key === "DE-41");
+    const counts = countsOf(items);
+    if (type) items = items.filter((h) => type.split(",").includes(h.type));
+    return { q, total: items.length, counts: type ? countsOf(items) : counts, items };
   };
   server.use(
     http.get("*/api/v1/w/:ws/search", ({ request }) => {
@@ -64,7 +68,6 @@ beforeEach(() => {
       saved = saved.filter((s) => s.id !== params.id);
       return HttpResponse.json({ deleted: true });
     }),
-    http.get("*/api/v1/w/:ws/my-issues", () => HttpResponse.json({ groups: [{ key: "todo", items: [{ key: "DE-41" }] }] })),
   );
 });
 
@@ -216,20 +219,23 @@ describe("หน้าผลการค้นหา", () => {
     await waitFor(() => expect(searches.at(-1)?.searchParams.get("sort")).toBe("updated"));
   });
 
-  it("เลือกประเภทเดียวขอเฉพาะชนิดนั้น · ยังไม่เสร็จ ตัดงานที่ Done · มอบหมายให้ฉัน ใช้ my-issues", async () => {
+  it("เลือกบางประเภทขอเฉพาะชนิดเหล่านั้น · ยังไม่เสร็จ และมอบหมายให้ฉัน กรองที่ API", async () => {
     const user = userEvent.setup();
     mountPage(`q=${encodeURIComponent("สัญญาตัวอย่าง")}&type=task,sub`);
     const results = await screen.findByRole("region", { name: "ผลการค้นหา" });
     await within(results).findByRole("link", { name: /DE-40/ });
     const filters = screen.getByRole("complementary", { name: "ตัวกรอง" });
+    expect(searches.at(-1)?.searchParams.get("type")).toBe("task,sub");
     await user.click(within(filters).getByRole("checkbox", { name: "ยังไม่เสร็จ" }));
-    expect(within(results).queryByRole("link", { name: /DE-40/ })).not.toBeInTheDocument();
+    await waitFor(() => expect(searches.at(-1)?.searchParams.get("status")).toBe("open"));
+    await waitFor(() => expect(within(results).queryByRole("link", { name: /DE-40/ })).not.toBeInTheDocument());
     expect(within(results).getByRole("link", { name: /DE-39/ })).toBeInTheDocument();
     await user.click(within(filters).getByRole("checkbox", { name: /Sub-task/ }));
     await waitFor(() => expect(searches.at(-1)?.searchParams.get("type")).toBe("task"));
     await user.click(within(filters).getByRole("checkbox", { name: /Bug/ }));
     await user.click(within(filters).getByRole("checkbox", { name: "มอบหมายให้ฉัน" }));
-    // DE-41 เป็นงานเดียวที่มอบหมายให้ฉันใน my-issues
+    await waitFor(() => expect(searches.at(-1)?.searchParams.get("assignee")).toBe("me"));
+    expect(searches.at(-1)?.searchParams.get("type")).toBe("task,bug");
     expect(await within(results).findByRole("link", { name: /DE-41/ })).toBeInTheDocument();
     expect(within(results).queryByRole("link", { name: /DE-39/ })).not.toBeInTheDocument();
   });

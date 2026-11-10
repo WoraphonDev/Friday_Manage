@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { schema as s } from '@friday/db';
-import { and, asc, desc, eq, ilike, inArray, isNull, ne, or } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, ilike, inArray, isNull, ne, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { initials } from '../common/people.js';
 import { AppError } from '../common/errors.js';
@@ -13,7 +13,12 @@ export type SearchType = (typeof SEARCH_TYPES)[number];
 
 export const SearchQuery = z.object({
   q: z.string().trim().min(1, 'พิมพ์คำค้นอย่างน้อย 1 ตัวอักษร').max(200),
-  type: z.enum(SEARCH_TYPES).optional(),
+  /** ชนิดเดียวหรือหลายชนิดคั่นด้วยจุลภาค (`type=task,bug`) */
+  type: z.preprocess((v) => (typeof v === 'string' ? v.split(',').map((x) => x.trim()).filter(Boolean) : v), z.array(z.enum(SEARCH_TYPES)).min(1).max(SEARCH_TYPES.length)).optional(),
+  /** `me` = เฉพาะงานที่มอบหมายให้ฉัน (ชนิดอื่นไม่มีผู้รับผิดชอบจึงไม่แสดง) */
+  assignee: z.literal('me').optional(),
+  /** `open` = ตัดงานที่หมวดสถานะเป็น done (ชนิดอื่นไม่ถูกตัด) */
+  status: z.literal('open').optional(),
   project: z.string().trim().min(1).max(20).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   /** รวมโปรเจกต์ที่ Archive (ค่าเริ่มต้นไม่รวม) */
@@ -69,7 +74,8 @@ export class SearchService {
       const guestProjects = new Set(scoped.filter((p) => access.get(p.id)!.guestViewer).map((p) => p.id));
       const hits: Hit[] = [];
       const counts = Object.fromEntries(SEARCH_TYPES.map((t) => [t, 0])) as Record<SearchType, number>;
-      const want = (t: SearchType) => !q.type || q.type === t;
+      const issueKinds: SearchType[] = ['task', 'sub', 'bug'];
+      const want = (t: SearchType) => (!q.type || q.type.includes(t)) && (!q.assignee || issueKinds.includes(t));
       const pat = like(q.q);
       const lower = q.q.toLowerCase();
 
@@ -86,7 +92,15 @@ export class SearchService {
           .innerJoin(s.projects, eq(s.projects.id, s.issues.projectId))
           .innerJoin(s.issueTypes, eq(s.issueTypes.id, s.issues.issueTypeId))
           .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
-          .where(and(inArray(s.issues.projectId, ids), isNull(s.issues.deletedAt), keyCond ? or(keyCond, textMatch) : textMatch))
+          .where(
+            and(
+              inArray(s.issues.projectId, ids),
+              isNull(s.issues.deletedAt),
+              keyCond ? or(keyCond, textMatch) : textMatch,
+              q.status === 'open' ? ne(s.workflowStatuses.category, 'done') : undefined,
+              q.assignee === 'me' ? exists(tx.select({ x: s.issueAssignees.userId }).from(s.issueAssignees).where(and(eq(s.issueAssignees.issueId, s.issues.id), eq(s.issueAssignees.userId, auth.userId)))) : undefined,
+            ),
+          )
           .orderBy(desc(s.issues.updatedAt))
           .limit(500);
         for (const { i, type, status } of rows) {

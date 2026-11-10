@@ -116,6 +116,29 @@ describe('GET w/search', () => {
     expect(withArchived.body.items).toMatchObject([{ key: 'SA1', archived: true }]);
   });
 
+  it('ตัวกรอง: หลายประเภท (type=a,b) · มอบหมายให้ฉัน (assignee=me) · ยังไม่เสร็จ (status=open)', async () => {
+    // วงเงิน: desc (งาน) + secret (งาน) + คอมเมนต์ + ไฟล์
+    const multi = await search('q=วงเงิน&type=task,file');
+    expect(multi.status, JSON.stringify(multi.body)).toBe(200);
+    expect(new Set(multi.body.items.map((x: { type: string }) => x.type))).toEqual(new Set(['task', 'file']));
+    expect(multi.body.counts.comment).toBe(0);
+    expect((await search('q=วงเงิน&type=task,nope')).status).toBe(400);
+    // มอบหมาย secret ให้ dev → dev เห็นเฉพาะงานที่ตัวเองรับ · ไม่มีคอมเมนต์ / ไฟล์ / คน
+    await t.owner.query(`INSERT INTO issue_assignees (workspace_id, issue_id, user_id) VALUES ($1,$2,$3)`, [wsId, ids.secret.id, team.devId]);
+    const mine = await search('q=วงเงิน&assignee=me', team.dev);
+    expect(mine.body.items.map((x: { key: string }) => x.key)).toEqual([ids.secret.key]);
+    expect(mine.body.counts).toMatchObject({ task: 1, comment: 0, file: 0, person: 0 });
+    expect((await search('q=วงเงิน&assignee=me')).body.total).toBe(0);
+    // ปิด secret (หมวด done) → status=open ไม่ขึ้น แต่คอมเมนต์ / ไฟล์ยังอยู่
+    const done = (await t.owner.query(`SELECT id FROM workflow_statuses WHERE workspace_id = $1 AND category = 'done' LIMIT 1`, [wsId])).rows[0].id;
+    await t.owner.query(`UPDATE issues SET status_id = $2 WHERE id = $1`, [ids.secret.id, done]);
+    const open = await search('q=วงเงิน&status=open');
+    expect(open.body.items.map((x: { key?: string }) => x.key)).not.toContain(ids.secret.key);
+    expect(open.body.items.map((x: { key?: string }) => x.key)).toContain(ids.desc.key);
+    expect(open.body.counts.comment).toBe(1);
+    expect((await search('q=วงเงิน&status=open&assignee=me', team.dev)).body.total).toBe(0);
+  });
+
   it('งานที่ลบแล้วไม่ขึ้น', async () => {
     await t.owner.query('UPDATE issues SET deleted_at = now() WHERE id = $1', [ids.english.id]);
     expect((await search('q=Payment')).body.total).toBe(0);

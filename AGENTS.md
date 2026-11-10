@@ -18,7 +18,7 @@ Friday Manage: ระบบ Project Management สำหรับทีม Dev (
 - ตรวจ container healthy, logs, หน้าเว็บ/static assets และ flow ที่แก้ไขผ่าน URL ของ container · งานเกี่ยวกับ auth/API/realtime ให้ตรวจการเชื่อมต่อจริงด้วย
 - URL หลักคือ `http://localhost:3000` ให้ตรงกับ Origin ของ API · วิธีเปลี่ยนพอร์ตและ API origin อยู่ใน `infra/docker/web.md`
 - หลังบ้าน (apps/ops-web, apps/ops-api) ใช้ `infra/docker/compose.ops.yml`: ops-web `http://localhost:4000` · ops-api `http://localhost:4001` · แก้ฝั่ง ops ให้ deploy ชุดนี้ด้วย (ดู `infra/docker/ops.md`)
-- ปัจจุบัน Compose นี้รันเฉพาะเว็บแบบ production ส่วน API ยังรันบนเครื่อง ถ้าแก้ API ต้อง build และเปิด API รุ่นที่แก้ไขด้วยก่อนทดสอบ ห้ามอ้างว่าทั้งระบบอยู่ใน Docker
+- API ลูกค้าใช้ `infra/docker/compose.api.yml` (พอร์ต 3001 · ดู `infra/docker/api.md`) · ถ้าแก้ API ต้อง build และ deploy container ของ API ด้วยก่อนทดสอบ · ฐานข้อมูล PostgreSQL ยังรันด้วย `docker-compose.yml` ที่ราก
 - ใช้ฐานข้อมูลและข้อมูลทดสอบเดิม ห้ามล้าง volume หรือ reseed ทับข้อมูลเพื่อ deploy · ถ้า build/deploy/check ไม่ผ่าน ให้แก้ก่อนส่งงาน หรือระบุสิ่งที่ติดขัดตามจริง
 - ตอนส่งงานแจ้ง URL, branch/commit ที่ deploy และผลตรวจโดยย่อ ไม่ต้องขออนุญาตซ้ำสำหรับการ build/deploy Docker ในเครื่องตามขั้นตอนนี้
 

@@ -14,10 +14,11 @@ docker compose -f infra/docker/compose.web.yml up --build --force-recreate -d we
 docker compose -f infra/docker/compose.web.yml ps
 docker compose -f infra/docker/compose.web.yml logs --tail 50 web
 docker compose -f infra/docker/compose.web.yml images
+# แก้ API: docker compose -f infra/docker/compose.api.yml up --build --force-recreate -d
 ```
 
 4. รอ container healthy แล้วตรวจผ่าน `http://localhost:3000` ทั้งหน้าเว็บ/static assets และ flow ที่แก้จริง งานเกี่ยวกับ auth/API/realtime ต้องตรวจการเชื่อมต่อจริง Dev server เช่นพอร์ต 3918 ไม่ใช่หลักฐานว่า deploy Docker แล้ว
-5. API ปัจจุบันยังรันบนเครื่องที่พอร์ต 3001 ถ้าแก้ API ให้ build และเปิด API ของ checkout ที่แก้ด้วย โดยคงฐานข้อมูลทดสอบเดิม เว็บ Docker อย่างเดียวไม่อัปเดต API ให้
+5. API ลูกค้ารันใน Docker ที่พอร์ต 3001 (`infra/docker/compose.api.yml`) ถ้าแก้ API ให้ build และ deploy container นั้นจาก checkout ที่แก้ด้วย โดยคงฐานข้อมูลทดสอบเดิม เว็บ Docker อย่างเดียวไม่อัปเดต API ให้
 6. ถ้า checkout นี้ไม่มี Dockerfile/Compose ให้เอาไฟล์ตั้งค่า Docker ที่ผู้ใช้อนุมัติมาไว้ใน checkout นี้ก่อน ห้ามใช้ Compose จาก worktree เก่า เพราะ build context จะกลายเป็นโค้ดเก่า
 7. ห้ามล้างข้อมูลหรือ volume เพื่อ deploy ถ้าทำไม่ผ่านให้แก้หรือบอกสาเหตุตามจริง ห้ามรายงานว่า deploy แล้วเมื่อทำเพียงเปิด dev server
 8. ตอนส่งงานรายงาน URL, checkout/branch, commit และสถานะงานที่ยังไม่ commit, image ID, ผล health/smoke test และสถานะ API โดยย่อ การ build/deploy Docker ในเครื่องนี้ได้รับอนุญาตจากผู้ใช้แล้ว ไม่ต้องขอซ้ำ

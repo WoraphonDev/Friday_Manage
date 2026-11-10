@@ -343,6 +343,10 @@ describe('ผู้ให้บริการ', () => {
     expect(gatewayFromEnv({})).toBeInstanceOf(FakeGateway);
     expect(gatewayFromEnv({ STRIPE_SECRET_KEY: 'sk_test_x', STRIPE_WEBHOOK_SECRET: 'whsec_x' })).toBeInstanceOf(StripeGateway);
     expect(() => gatewayFromEnv({ NODE_ENV: 'production' })).toThrow(/STRIPE_SECRET_KEY/);
+    // staging: ตัวปลอมใน production ต้องขอตรง ๆ และมีลายเซ็น Webhook ของตัวเอง
+    expect(() => gatewayFromEnv({ NODE_ENV: 'production', PAYMENT_GATEWAY: 'fake' })).toThrow(/STRIPE_SECRET_KEY/);
+    expect(() => gatewayFromEnv({ NODE_ENV: 'production', PAYMENT_GATEWAY: 'fake', STRIPE_WEBHOOK_SECRET: 'short' })).toThrow(/STRIPE_SECRET_KEY/);
+    expect(gatewayFromEnv({ NODE_ENV: 'production', PAYMENT_GATEWAY: 'fake', STRIPE_WEBHOOK_SECRET: 'x'.repeat(32) })).toBeInstanceOf(FakeGateway);
     const raw = Buffer.from('{"a":1}');
     const header = (ts: number, secret = 's3cret') => `t=${ts},v1=${createHmac('sha256', secret).update(`${ts}.`).update(raw).digest('hex')}`;
     const now = 1_800_000_000_000;

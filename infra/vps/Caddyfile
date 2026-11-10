@@ -1,0 +1,32 @@
+# HTTPS อัตโนมัติ (Let's Encrypt) · APP_HOST / OPS_HOST มาจาก .env
+# ช่วงยังไม่มีโดเมน: app.<ip-ขีด>.sslip.io และ ops.<ip-ขีด>.sslip.io (ชี้กลับมาที่ IP นี้เอง)
+(common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	log {
+		output stdout
+		format console
+	}
+}
+
+{$APP_HOST} {
+	import common
+	# API (รวม WebSocket /api/v1/realtime และ Webhook) ส่งตรงไป API ไม่ผ่าน Next · เหมือน ALB ในแบบ AWS
+	handle /api/* {
+		reverse_proxy api:3001
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+{$OPS_HOST} {
+	import common
+	# ops-web proxy /ops-api → ops-api เอง (cookie fm_ops เป็น SameSite=Strict ต้องอยู่ origin เดียว)
+	reverse_proxy ops-web:4000
+}

@@ -231,7 +231,8 @@ describe('ค้างชำระและเตือนอัตโนมั�
     expect(mine.map((p) => p.step).sort()).toEqual(['d1', 'd14']);
     const ev = (await t.owner.query(`SELECT step, result FROM dunning_events WHERE invoice_id = $1 ORDER BY created_at, result`, [late])).rows;
     expect(ev).toEqual(expect.arrayContaining([{ step: 'suspended', result: 'd14' }, { step: 'reminder', result: 'd1:skipped' }, { step: 'final_notice', result: 'd7:skipped' }]));
-    expect((await t.owner.query(`SELECT status FROM workspaces WHERE id = $1`, [d.id])).rows[0].status).toBe('suspended');
+    // ค้างชำระ = อ่านอย่างเดียว และเปิดเองเมื่อชำระ
+    expect((await t.owner.query(`SELECT status, suspension_mode, suspension_auto_resume FROM workspaces WHERE id = $1`, [d.id])).rows[0]).toEqual({ status: 'suspended', suspension_mode: 'read_only', suspension_auto_resume: true });
     expect((await t.owner.query(`SELECT status FROM subscriptions WHERE workspace_id = $1`, [d.id])).rows[0].status).toBe('past_due');
     expect(mail.sent.slice(before).some((m) => m.subject.includes('ถูกระงับ'))).toBe(true);
     expect(await audit(d.id, 'billing.suspended_overdue')).toHaveLength(1);
@@ -259,6 +260,19 @@ describe('ค้างชำระและเตือนอัตโนมั�
     const ids = (await finance.agent.get('/ops/overdue')).body.items.map((i: { id: string }) => i.id);
     expect(ids).not.toContain(recent);
     expect(await audit(d.id, 'ops.due_date_extended')).toHaveLength(1);
+  });
+
+  it('ชำระใบที่ค้างครบ → เปิดใช้งานเอง (ระงับแบบเปิดเองเมื่อชำระ) · ยังเหลือใบเลยกำหนดไม่เปิด', async () => {
+    const ws = async () => (await t.owner.query(`SELECT status, suspension_mode FROM workspaces WHERE id = $1`, [d.id])).rows[0];
+    expect(await ws()).toEqual({ status: 'suspended', suspension_mode: 'read_only' });
+    const pay = async (inv: string) => (await t.owner.query(`SELECT id FROM payments WHERE invoice_id = $1`, [inv])).rows[0].id;
+    // ใบ 10 วัน (แนบสลิปรอตรวจ) ยังไม่ยืนยัน → ใบ late ชำระแล้วก็ยังไม่เปิด
+    const other = (await t.owner.query(`SELECT id FROM invoices WHERE workspace_id = $1 AND id NOT IN ($2, $3)`, [d.id, late, recent])).rows[0].id;
+    expect((await finance.agent.post(`/ops/payments/${await pay(late)}/confirm`).send({})).status).toBe(200);
+    expect((await ws()).status).toBe('suspended');
+    expect((await finance.agent.post(`/ops/payments/${await pay(other)}/confirm`).send({})).status).toBe(200);
+    expect(await ws()).toEqual({ status: 'active', suspension_mode: null });
+    expect(await audit(d.id, 'billing.resumed_paid')).toHaveLength(1);
   });
 });
 
@@ -338,5 +352,38 @@ describe('รายงานรายได้ ปิดงวด และส�
     expect((await fresh.agent.post('/ops/revenue/close').send({ month: last })).body.error.code).toBe('already_closed');
     expect((await finance.agent.get(`/ops/revenue/export?month=${last}&type=wht`)).headers['x-report-status']).toBe('closed');
     expect((await finance.agent.get('/ops/revenue?months=2')).body.months[0]).toMatchObject({ month: last, closed: true });
+  });
+
+  it('ส่งให้สำนักงานบัญชี (B8): CSV แนบ · ฉบับร่างบอกในหัวเรื่อง · อัตโนมัติเดือนก่อนตั้งแต่วันที่ 5 ไม่ส่งซ้ำ', async () => {
+    const month = today().slice(0, 7);
+    const prev = new Date(`${month}-01T00:00:00Z`);
+    prev.setUTCMonth(prev.getUTCMonth() - 1);
+    const last = prev.toISOString().slice(0, 7);
+    delete process.env.OPS_ACCOUNTING_EMAIL;
+    expect((await finance.agent.post('/ops/revenue/export/send').send({ month })).body.error.code).toBe('accounting_email_not_set');
+    process.env.OPS_ACCOUNTING_EMAIL = 'acc@office.example.com';
+    try {
+      const before = mail.sent.length;
+      const r = await finance.agent.post('/ops/revenue/export/send').send({ month, types: ['sales', 'credit_notes'] });
+      expect(r.status, JSON.stringify(r.body)).toBe(200);
+      expect(r.body).toMatchObject({ month, to: ['acc@office.example.com'], sent: 1, draft: true });
+      const m = mail.sent.at(-1)!;
+      expect(mail.sent.length).toBe(before + 1);
+      expect(m.subject).toContain('ฉบับร่าง');
+      expect(m.attachments?.map((a) => a.filename)).toEqual([`friday-sales-${month}-draft.csv`, `friday-credit_notes-${month}-draft.csv`]);
+      expect(m.attachments?.[0]!.content).toContain('บริษัท เงินเดโม จำกัด');
+      const d = await auditor.agent.get('/ops/revenue/export/delivery');
+      expect(d.body).toMatchObject({ recipients: ['acc@office.example.com'], autoDay: 5, history: [{ month, staffName: 'Fin Finance' }] });
+      expect((await auditor.agent.post('/ops/revenue/export/send').send({ month })).status).toBe(403);
+      // อัตโนมัติ: ก่อนวันที่ 5 ไม่ส่ง · ตั้งแต่วันที่ 5 ส่งเดือนก่อน (ปิดงวดแล้ว) ครั้งเดียว
+      const svc = t.app.get(BillingService);
+      expect(await svc.autoSendExport(`${month}-04`)).toBeNull();
+      const auto = await svc.autoSendExport(`${month}-05`);
+      expect(auto).toMatchObject({ month: last, draft: false });
+      expect(mail.sent.at(-1)!.attachments).toHaveLength(3);
+      expect(await svc.autoSendExport(`${month}-06`)).toBeNull();
+    } finally {
+      delete process.env.OPS_ACCOUNTING_EMAIL;
+    }
   });
 });

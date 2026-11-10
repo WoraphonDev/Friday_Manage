@@ -148,6 +148,13 @@
       "when": 1794243030348,
       "tag": "0020_ops_privacy",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794283221317,
+      "tag": "0021_ops_suspend_modes",
+      "breakpoints": true
     }
   ]
 }

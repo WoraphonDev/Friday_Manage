@@ -1,0 +1,10 @@
+.banner { display:flex; gap:12px; align-items:center; padding:10px 16px; font-size:13px; flex-wrap:wrap; background:var(--danger-soft); color:var(--danger-text); }
+.banner > span { flex:1 1 260px; }
+.banner :global(.button) { min-height:32px; }
+.screen { min-height:60vh; display:flex; align-items:center; justify-content:center; padding:24px 16px; }
+.card { max-width:520px; width:100%; padding:28px; display:flex; flex-direction:column; gap:12px; background:var(--card); border:1px solid var(--border); border-radius:14px; }
+.card h1 { font-size:20px; margin:0; }
+.icon { width:44px; height:44px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; background:var(--danger-soft); color:var(--danger-text); }
+.message { margin:0; padding:12px 14px; border-radius:10px; background:var(--subtle); color:var(--foreground); font-size:14px; white-space:pre-wrap; }
+.muted { color:var(--muted); font-size:13px; margin:0; }
+.actions { display:flex; gap:8px; flex-wrap:wrap; }

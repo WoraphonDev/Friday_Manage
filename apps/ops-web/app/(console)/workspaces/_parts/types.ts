@@ -40,6 +40,8 @@ export interface Overview {
   slug: string;
   name: string;
   status: WsRow["status"];
+  /** ถูกระงับ (C6) */
+  suspension?: { mode: "read_only" | "full" | null; message: string | null; autoResume: boolean } | null;
   createdAt: string;
   dataRegion: string | null;
   legalName: string | null;

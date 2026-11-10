@@ -13,6 +13,7 @@ import {
   InvoicesQuery,
   RefundBody,
   RevenueQuery,
+  SendExportBody,
   SendLinkBody,
   TaxQuery,
   VoidBody,
@@ -115,6 +116,17 @@ export class BillingController {
   @HttpCode(200)
   close(@Req() req: OpsRequest, @Body() body: unknown) {
     return this.billing.close(req.staff!, parse(CloseBody, body));
+  }
+  @Roles('finance', 'owner', 'auditor')
+  @Get('revenue/export/delivery')
+  delivery() {
+    return this.billing.exportDelivery();
+  }
+  @Roles('finance', 'owner')
+  @Post(['revenue/export/send', 'revenue/export\\:send'])
+  @HttpCode(200)
+  send(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.billing.sendExport(req.staff!, parse(SendExportBody, body ?? {}));
   }
   @Roles('finance', 'owner', 'auditor')
   @Get('revenue/export')

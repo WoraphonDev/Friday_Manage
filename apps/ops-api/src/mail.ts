@@ -5,6 +5,8 @@ export interface MailMessage {
   to: string;
   subject: string;
   text: string;
+  /** ไฟล์แนบ (เช่น CSV ให้สำนักงานบัญชี · B8) */
+  attachments?: { filename: string; content: string; contentType: string }[];
 }
 
 /** ส่งอีเมลแจ้งลูกค้า (SMTP_HOST ไม่ตั้ง = log อย่างเดียว) · test แทน `transportFactory` ได้ */

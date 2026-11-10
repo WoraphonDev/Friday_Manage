@@ -1,6 +1,6 @@
 # รันเว็บด้วย Docker ในเครื่อง
 
-รันจากราก repo โดยเปิด API ที่พอร์ต 3001 ไว้ก่อน และหยุด dev server ที่ใช้พอร์ต 3000:
+รันจากราก repo โดยเปิด API ที่พอร์ต 3001 ไว้ก่อน (`infra/docker/compose.api.yml` · ดู `api.md`) และหยุด dev server ที่ใช้พอร์ต 3000:
 
 ```sh
 docker compose -f infra/docker/compose.web.yml up --build -d
@@ -27,4 +27,4 @@ WEB_PORT=8081 WEB_API_ORIGIN=http://host.docker.internal:3001 \
 
 `WEB_API_ORIGIN` ต้องเข้าถึงได้จาก container และต้อง build image ใหม่เมื่อเปลี่ยนค่า เพราะ Next.js บันทึก rewrite ตอน build หากย้าย API เข้า Docker network เดียวกัน ให้ใช้ชื่อ service เช่น `http://api:3001` แทน `localhost`
 
-Image ใช้ Next.js standalone พร้อม static assets และไฟล์ภาษา รันด้วยผู้ใช้ `node` และเปิดพอร์ตเฉพาะเครื่องนี้ ขอบเขตนี้เป็นการรันเว็บใน Docker บนเครื่อง ยังไม่รวม API container หรือการขึ้น AWS
+Image ใช้ Next.js standalone พร้อม static assets และไฟล์ภาษา รันด้วยผู้ใช้ `node` และเปิดพอร์ตเฉพาะเครื่องนี้ ขอบเขตนี้เป็นการรันเว็บใน Docker บนเครื่อง API อยู่ใน `compose.api.yml` แยกต่างหาก · ยังไม่รวมการขึ้น AWS

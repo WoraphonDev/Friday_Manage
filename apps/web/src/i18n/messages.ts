@@ -8,6 +8,8 @@ import commonEn from "../../messages/en/common.json";
 import inboxBellEn from "../../messages/en/inbox-bell.json";
 import saasPagesEn from "../../messages/en/saas-pages.json";
 import searchPaletteEn from "../../messages/en/search-palette.json";
+import suspension from "../../messages/th/suspension.json";
+import suspensionEn from "../../messages/en/suspension.json";
 
 // เพิ่ม namespace ต่องานที่นี่ แยกข้อความของแต่ละหน้าออกจากไฟล์กลาง
 // inbox-bell, search-palette: กระดิ่งและ Command palette อยู่ใน shell ทุกหน้า
@@ -20,6 +22,8 @@ export const messages = {
   "saas-pages": saasPages,
   // locale-switch: ตัวสลับภาษา / ปี / ธีม อยู่ใน shell และหน้าสาธารณะทุกหน้า (W21)
   "locale-switch": localeSwitch,
+  // suspension: แถบ / หน้า Workspace ถูกระงับ (C6) อยู่ใน shell
+  suspension,
 };
 
 /** ข้อความ EN ของ namespace เดียวกัน (W21) · test ใช้ผ่าน renderWithProviders({ locale: "en" }) */
@@ -29,4 +33,5 @@ export const messagesEn = {
   "search-palette": searchPaletteEn,
   "saas-pages": saasPagesEn,
   "locale-switch": localeSwitchEn,
+  suspension: suspensionEn,
 };

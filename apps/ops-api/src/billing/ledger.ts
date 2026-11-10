@@ -1,4 +1,4 @@
-import { canGrant, type Db, schema, type Tx } from '@friday/db';
+import { canGrant, type Db, resumeIfPaid, schema, type Tx } from '@friday/db';
 import { and, count, eq, inArray, like, sql } from 'drizzle-orm';
 import { AppError } from '../errors.js';
 import type { Mailer } from '../mail.js';
@@ -72,6 +72,8 @@ export async function settleInvoice(tx: Tx, inv: Invoice) {
       ? { workspaceId: inv.workspaceId, invoiceId: inv.id, docType: 'tax_invoice_receipt', number: `TX-${inv.number.slice(4)}` }
       : { workspaceId: inv.workspaceId, invoiceId: inv.id, docType: 'receipt', number: `RC-${inv.number.slice(4)}`, status: 'issued', sentAt: new Date() })
     .onConflictDoNothing();
+  // ระงับเพราะค้างชำระ + เปิดเองเมื่อชำระ → เปิดถ้าไม่เหลือใบเลยกำหนด
+  await resumeIfPaid(tx, inv.workspaceId);
   return granted;
 }
 

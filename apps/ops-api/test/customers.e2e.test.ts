@@ -1,6 +1,7 @@
 // O02 · ลูกค้าและผู้ใช้ในหลังบ้าน · ข้อมูลสมมติเท่านั้น
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { BillingService } from '../src/billing/billing.service.js';
 import { Mailer } from '../src/mail.js';
 import { customer, type Customer, reauth, staff, type Staff, startOps, type TestOps } from './helpers.js';
 
@@ -158,6 +159,44 @@ describe('เปลี่ยนแพ็กเกจ', () => {
     expect(ch).toEqual({ kind: 'upgrade', plan_from: 'team_m', plan_to: 'team_l', b: 300_000, a: 550_000, actor_kind: 'staff' });
     expect((await finance.agent.post(`/ops/workspaces/${a.id}/change-plan`).send({ plan: 'team_l', reason: 'ซ้ำ' })).body.error.code).toBe('no_change');
     expect(await auditOf(a.id, 'ops.plan_changed')).toHaveLength(1);
+  });
+
+  it('อัปเกรดออกใบแจ้งหนี้ส่วนต่างตามวันที่เหลือ (ครบกำหนด 7 วัน) · ไม่มีข้อมูลออกใบกำกับ → เปลี่ยนแล้วแต่เตือน', async () => {
+    // a: team_l แล้ว (จากข้อก่อน) · เปลี่ยนเป็นรายปี = ใบรายปีหักเครดิตส่วนที่เหลือ
+    await t.owner.query(`INSERT INTO billing_profiles (workspace_id, company_name, tax_id, address, tax_email) VALUES ($1,'บริษัท ตัวอย่างอัปเกรด จำกัด','0105500000001','กรุงเทพฯ','acc@up.example.com') ON CONFLICT (workspace_id) DO NOTHING`, [a.id]);
+    const pv = (await finance.agent.get(`/ops/workspaces/${a.id}/change-plan/preview?plan=team_l&cycle=yearly`)).body;
+    const r = await finance.agent.post(`/ops/workspaces/${a.id}/change-plan`).send({ plan: 'team_l', cycle: 'yearly', reason: 'ลูกค้าขอเปลี่ยนเป็นรายปี' });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body).toMatchObject({ effective: 'now', warnings: [], invoice: { number: expect.any(String) } });
+    const inv = (await t.owner.query(`SELECT subtotal::int, status, due_date - current_date AS days FROM invoices WHERE id = $1`, [r.body.invoice.id])).rows[0];
+    expect(inv).toMatchObject({ subtotal: pv.subtotalSatang, status: 'open' });
+    expect(Number(inv.days)).toBeGreaterThanOrEqual(6);
+    // ไม่มีข้อมูลออกใบกำกับ: เปลี่ยนสำเร็จ แต่บอกให้การเงินออกเอง
+    const b2 = await customer(t, 'no-profile-up', { plan: 'team_s', status: 'active' });
+    const w = await finance.agent.post(`/ops/workspaces/${b2.id}/change-plan`).send({ plan: 'team_m', reason: 'ลูกค้าขออัปเกรด' });
+    expect(w.status, JSON.stringify(w.body)).toBe(200);
+    expect(w.body).toMatchObject({ effective: 'now', invoice: null, warnings: [{ code: 'billing_profile_required' }] });
+  });
+
+  it('ลดแพ็กเกจ: ตั้งไว้มีผลเมื่อจบรอบ · ยกเลิกได้ · ถึงเวลาแล้วเปลี่ยนให้พร้อม MRR และ Audit', async () => {
+    const c2 = await customer(t, 'down-later', { plan: 'team_m', status: 'active' });
+    const r = await finance.agent.post(`/ops/workspaces/${c2.id}/change-plan`).send({ plan: 'team_s', reason: 'ทีมเล็กลง' });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body).toMatchObject({ effective: 'next_cycle', invoice: null });
+    const pending = async () => (await t.owner.query(`SELECT p.code AS plan, q.code AS pending FROM subscriptions s JOIN plans p ON p.id = s.plan_id LEFT JOIN plans q ON q.id = s.pending_plan_id WHERE s.workspace_id = $1`, [c2.id])).rows[0];
+    expect(await pending()).toEqual({ plan: 'team_m', pending: 'team_s' });
+    // เลือกแพ็กเกจเดิม = ยกเลิกที่ตั้งไว้
+    expect((await finance.agent.post(`/ops/workspaces/${c2.id}/change-plan`).send({ plan: 'team_m', reason: 'ลูกค้าเปลี่ยนใจ' })).body.effective).toBe('cancelled');
+    expect(await pending()).toEqual({ plan: 'team_m', pending: null });
+    await finance.agent.post(`/ops/workspaces/${c2.id}/change-plan`).send({ plan: 'team_s', reason: 'ทีมเล็กลงจริง' });
+    const svc = t.app.get(BillingService);
+    expect((await svc.applyScheduledPlans()).filter((x) => x.workspaceId === c2.id)).toEqual([]);
+    await t.owner.query(`UPDATE subscriptions SET current_period_start = now() - interval '31 days', current_period_end = now() - interval '1 minute' WHERE workspace_id = $1`, [c2.id]);
+    expect((await svc.applyScheduledPlans()).filter((x) => x.workspaceId === c2.id)).toEqual([{ workspaceId: c2.id, from: 'team_m', to: 'team_s' }]);
+    expect(await pending()).toEqual({ plan: 'team_s', pending: null });
+    const [ch] = (await t.owner.query(`SELECT kind, plan_to, mrr_after_satang::int AS a, actor_kind FROM subscription_changes WHERE workspace_id = $1 ORDER BY created_at DESC LIMIT 1`, [c2.id])).rows;
+    expect(ch).toEqual({ kind: 'downgrade', plan_to: 'team_s', a: 150_000, actor_kind: 'system' });
+    expect(await auditOf(c2.id, 'billing.plan_downgraded')).toHaveLength(1);
   });
 });
 

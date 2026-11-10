@@ -192,6 +192,38 @@ describe("รายละเอียดลูกค้า", () => {
     expect(within(dlg).getByRole("button", { name: "เปลี่ยนแพ็กเกจ" })).toBeDisabled();
   });
 
+  it("เปลี่ยนแพ็กเกจ (C4): อัปเกรดออกใบแจ้งหนี้ส่วนต่าง · ลดแพ็กเกจตั้งไว้รอบถัดไป", async () => {
+    asRole("finance");
+    detail();
+    const pv = (effective: string, total: number) => ({ current: {}, next: {}, seatsInUse: 3, blocked: null, contract: false, effective, lines: total ? [{ label: "team_l 21 วันที่เหลือของรอบนี้", satang: total }] : [], subtotalSatang: total, vatSatang: 0, totalSatang: total });
+    server.use(
+      http.get(`${OPS}/workspaces/${WS}/change-plan/preview`, ({ request }) => HttpResponse.json(new URL(request.url).searchParams.get("plan") === "team_s" ? pv("next_cycle", 0) : pv("now", 175_000))),
+      http.post(`${OPS}/workspaces/${WS}/change-plan`, async ({ request }) => {
+        const b = (await request.json()) as { plan: string };
+        return HttpResponse.json(
+          b.plan === "team_s"
+            ? { plan: "team_s", effective: "next_cycle", effectiveAt: "2026-12-01T00:00:00+07:00", invoice: null, warnings: [] }
+            : { plan: "team_l", effective: "now", invoice: { id: "i1", number: "FRI-2611-0042", amountDue: 175_000 }, warnings: [] },
+        );
+      }),
+    );
+    shell(<CustomerDetail id={WS} />, `/workspaces/${WS}`);
+    await userEvent.click(await screen.findByRole("button", { name: "เปลี่ยนแพ็กเกจ" }));
+    let dlg = await screen.findByRole("dialog", { name: "เปลี่ยนแพ็กเกจ สยามเดโม" });
+    expect(await within(dlg).findByText(/ออกใบแจ้งหนี้ส่วนต่าง/)).toBeInTheDocument();
+    await userEvent.type(within(dlg).getByLabelText("เหตุผล"), "ลูกค้าขอทาง Ticket");
+    await userEvent.click(within(dlg).getByRole("button", { name: "เปลี่ยนแพ็กเกจ" }));
+    expect(await screen.findByText(/ออกใบแจ้งหนี้ FRI-2611-0042 ยอด ฿1,750/)).toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole("button", { name: "เปลี่ยนแพ็กเกจ" }));
+    dlg = await screen.findByRole("dialog", { name: "เปลี่ยนแพ็กเกจ สยามเดโม" });
+    await userEvent.click(within(dlg).getByRole("button", { name: "Team S" }));
+    expect(await within(dlg).findByText(/มีผลเมื่อจบรอบบิลปัจจุบันเสมอ/)).toBeInTheDocument();
+    await userEvent.type(within(dlg).getByLabelText("เหตุผล"), "ทีมเล็กลง");
+    await userEvent.click(within(dlg).getByRole("button", { name: "เปลี่ยนแพ็กเกจ" }));
+    expect(await screen.findByText(/ตั้งให้ลดเป็น Team S เมื่อจบรอบ/)).toBeInTheDocument();
+  });
+
   it("ระงับ (C6): ต้องพิมพ์ slug · ยกเลิกระงับผ่าน G5", async () => {
     let body: Record<string, unknown> = {};
     detail();

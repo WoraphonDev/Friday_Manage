@@ -1,6 +1,7 @@
 import { Body, Controller, Get, HttpCode, Module, Param, Post, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { type OpsRequest, Reauth, Roles } from '../auth/auth.guard.js';
+import { BillingModule } from '../billing/billing.module.js';
 import { parse } from '../errors.js';
 import { AuditQuery, CustomersService, ListQuery } from './customers.service.js';
 import { AccessRequestBody, ChangePlanBody, DiscountBody, ExtendTrialBody, type Gated, NoteBody, PreviewQuery, ResumeBody, SuspendBody, TransferOwnerBody, WorkspacesService } from './workspaces.service.js';
@@ -125,5 +126,5 @@ export class WorkspacesController {
   }
 }
 
-@Module({ controllers: [WorkspacesController], providers: [WorkspacesService, CustomersService], exports: [WorkspacesService] })
+@Module({ imports: [BillingModule], controllers: [WorkspacesController], providers: [WorkspacesService, CustomersService], exports: [WorkspacesService] })
 export class WorkspacesModule {}

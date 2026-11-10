@@ -7,6 +7,7 @@ import { AppError, notFound } from '../common/errors.js';
 import { loadPeople } from '../common/people.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
+import { PlanLimits } from '../core/plan-limits.js';
 import { requirePerm } from '../projects/permissions.js';
 import { ProjectsService } from '../projects/projects.service.js';
 import { type Facts, loadFacts, matches } from './engine.js';
@@ -25,6 +26,7 @@ export class AutomationService {
   constructor(
     private readonly db: TenantDb,
     private readonly projects: ProjectsService,
+    private readonly limits: PlanLimits,
   ) {}
 
   private async context(tx: Tx, auth: AuthInfo, tenant: TenantInfo, key: string) {
@@ -85,6 +87,8 @@ export class AutomationService {
   async create(auth: AuthInfo, tenant: TenantInfo, key: string, input: z.infer<typeof RuleBody>) {
     return this.db.run(auth, tenant, async (tx) => {
       const { project } = await this.context(tx, auth, tenant, key);
+      // ตรวจหลังสิทธิ์ในโปรเจกต์ ให้คนที่ไม่มีสิทธิ์ได้ 403 ก่อน 402
+      await this.limits.assertFeature(tenant.workspaceId, 'automation');
       const [count] = await tx.select({ n: sql<number>`count(*)::int` }).from(s.automationRules).where(eq(s.automationRules.projectId, project.id));
       if (count.n >= MAX_RULES) throw new AppError(422, 'automation_limit', `โปรเจกต์หนึ่งมีกฎได้ไม่เกิน ${MAX_RULES} กฎ`);
       await this.validate(tx, project.id, input.actions, input.conditions, input.trigger, input.triggerConfig);

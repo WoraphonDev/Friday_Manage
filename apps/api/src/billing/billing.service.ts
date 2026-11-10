@@ -74,6 +74,8 @@ export class BillingService {
       storage: { ...storage, usedGb: Math.round((storage.used / GB) * 100) / 100, limitGb: storage.limit === null ? null : Math.round(storage.limit / GB) },
       // ผู้ที่จ่ายเงินไม่ได้ (Member) เห็นปุ่ม "ขอให้ Admin อัปเกรด" แทน
       canManageBilling: tenant.role === 'owner' || tenant.role === 'admin',
+      // สิทธิ์ทุกคีย์ตามเวอร์ชันและ override (O21) ให้หน้าเว็บซ่อน / ล็อกฟีเจอร์ได้
+      entitlements: snap.entitlements,
     };
   }
 

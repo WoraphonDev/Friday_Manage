@@ -234,6 +234,8 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `status_subscriber` | ผู้ติดตามหน้าสถานะ | email, confirmed_at, unsubscribed_at | Ops 12 |
 | `privacy_request` | คำขอ PDPA ที่ส่งถึงทีม Friday (ผู้ควบคุมข้อมูลบัญชี) · ต่างจาก `data_subject_request` ที่ Workspace รับเอง | number, request_type (access · export · rectify · erase · object · restrict), requester_email, user_id, workspace_ids[], received_at, due_date (+30 วัน), identity, step 1–5, status, rejection_reason, handled_by, approval_request_id | Ops 10, A3, A5, A6 |
 | `data_breach` | เหตุละเมิดข้อมูลส่วนบุคคล · แจ้ง สคส. ภายใน 72 ชม. | number, discovered_at, owner_id, description, data_types[], affected_count, workspace_ids[], risk, containment, assessment, pdpc_notified_at, subjects_notified_at, closed_at | Ops 10, A4 |
+| `entitlement_version` | สิทธิ์และขีดจำกัดตามแพ็กเกจแบบมีเวอร์ชัน (O21) · แก้ไม่ได้ กู้ = สร้างเวอร์ชันใหม่ | version, matrix (แพ็กเกจ × คีย์ใน `plan-entitlements.ts`), effective_at, reason, restored_from, created_by, approved_by, approval_request_id | Ops Entitlements, P2, P3 |
+| `entitlement_override` | ปรับสิทธิ์เฉพาะราย ใช้แทนค่าของแพ็กเกจ | workspace_id, key (seats · storage_gb · api_rpm · automation_runs · sso), value, expires_at (null ได้เฉพาะมี contract_ref), contract_ref, reason, created_by, approved_by, warned_at, revoked_at, revoked_by | Ops Entitlements |
 
 `staff_users` (Friday Ops เฟส 1 · [06-ops-roles](06-ops-roles.md)): `roles` (owner · finance · support · engineer · auditor, อย่างน้อย 1), `department`, `limits`, `status`, `expires_at` · `role` เดิมลบแล้วใน migration 0019 (O01) · `payments` เพิ่ม `verified_by`, `exception_reason`, `matched_invoice_id` · `support_sessions` เพิ่ม `ticket_id`
 

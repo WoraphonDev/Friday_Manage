@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import type { Db } from '@friday/db';
 import { AppError } from '../common/errors.js';
 import { SYSTEM_DB } from '../db/db.module.js';
+import { PlanLimits } from '../core/plan-limits.js';
 import { assertTokenAllowed, findApiToken } from './api-tokens.js';
 import { type AppRequest, IS_PUBLIC } from '../common/request.js';
 import { CSRF_COOKIE, SESSION_COOKIE, SessionService } from './sessions.js';
@@ -20,6 +21,7 @@ export class AuthGuard implements CanActivate {
     private readonly sessions: SessionService,
     // อ่าน api_tokens ก่อนรู้ว่าเป็น Workspace ไหน จึงใช้ SYSTEM_DB (งาน A28)
     @Inject(SYSTEM_DB) private readonly db: Db,
+    private readonly limits: PlanLimits,
   ) {}
 
   async canActivate(ctx: ExecutionContext) {
@@ -34,7 +36,22 @@ export class AuthGuard implements CanActivate {
         if (isPublic) return true;
         throw new AppError(401, 'invalid_token', 'API token ไม่ถูกต้อง หมดสิทธิ์ หรือถูกยกเลิกแล้ว');
       }
-      if (!isPublic) await assertTokenAllowed(this.db, id, req.method, req.path);
+      if (!isPublic) {
+        await assertTokenAllowed(this.db, id, req.method, req.path);
+        // ฟีเจอร์ API token และ "API ต่อนาที" ตามแพ็กเกจ (O21) · ตอบ 402 / 429 พร้อม header ให้ระบบภายนอกถอยเอง
+        const res = ctx.switchToHttp().getResponse<{ setHeader(name: string, value: string): void }>();
+        try {
+          const rl = await this.limits.rateLimit(id.workspaceId);
+          if (rl.limit !== null) {
+            res.setHeader('X-RateLimit-Limit', String(rl.limit));
+            res.setHeader('X-RateLimit-Remaining', String(rl.remaining));
+          }
+        } catch (e) {
+          const retry = (e as AppError).details?.retryAfter;
+          if (retry) res.setHeader('Retry-After', String(retry));
+          throw e;
+        }
+      }
       req.auth = { userId: id.userId, sessionId: `token:${id.tokenId}` };
       return true;
     }

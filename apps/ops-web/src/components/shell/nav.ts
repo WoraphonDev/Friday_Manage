@@ -50,7 +50,7 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
     group: "marketing",
     items: [
       { key: "promotions", roles: ["owner", "finance"] },
-      { key: "entitlements", roles: ["owner", "finance", "engineer"] },
+      { key: "entitlements", href: "/entitlements", built: true, roles: ["owner", "finance", "engineer"] },
       { key: "announce", roles: ["owner"] },
       { key: "changelog", roles: ["owner"] },
       { key: "onboarding", roles: ["owner", "support"] },

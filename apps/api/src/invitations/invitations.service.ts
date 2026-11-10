@@ -55,6 +55,7 @@ export class InvitationsService {
         throw forbidden('ws.members.manage');
       }
       if (!isWsAdmin && input.workspaceRole === 'admin') throw forbidden('ws.members.manage');
+      if (input.workspaceRole === 'guest') await this.limits.assertFeature(tenant.workspaceId, 'guests');
 
       // ตรวจ Seat ล่วงหน้า (03-api 3.2): สมาชิกปัจจุบัน + คำเชิญใหม่ที่ไม่ใช่ Guest ต้องไม่เกินแพ็กเกจ
       const unique = [...new Set(input.emails.map((e) => e.toLowerCase()))];

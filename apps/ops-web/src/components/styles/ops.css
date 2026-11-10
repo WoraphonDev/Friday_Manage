@@ -1552,3 +1552,67 @@ textarea.input {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ---------------------------------------------------------------- สิทธิ์และขีดจำกัด (O21) */
+.tbl-group td {
+  background: var(--surface-2);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground-soft);
+  padding: 8px 14px;
+}
+.tbl tbody th.tbl-rowhead {
+  background: none;
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 400;
+  white-space: normal;
+  padding: 12px 14px;
+  min-width: 200px;
+}
+.tbl-matrix td {
+  min-width: 104px;
+}
+.cell-yes {
+  color: var(--success-text);
+  font-weight: 600;
+}
+.tbl td.cell-dirty {
+  background: var(--warning-soft);
+}
+.input-cell {
+  width: 96px;
+  min-height: 30px;
+  padding: 4px 8px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.meter .hbar-track {
+  width: 90px;
+  height: 6px;
+  border-radius: 999px;
+}
+.cell-strong {
+  font-weight: 600;
+  color: var(--primary-text);
+}
+.version-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.version-item[data-current="true"] {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.push-end {
+  margin-left: auto;
+}

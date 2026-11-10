@@ -6,6 +6,7 @@ import { AuthGuard } from './auth/auth.guard.js';
 import { AuthService } from './auth/auth.service.js';
 import { BillingModule } from './billing/billing.module.js';
 import { DbModule } from './db.js';
+import { EntitlementsModule } from './entitlements/entitlements.module.js';
 import { ErrorFilter } from './errors.js';
 import { FlagsModule } from './flags/flags.module.js';
 import { LegalModule } from './legal/legal.module.js';
@@ -27,7 +28,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
   imports: [
     DbModule, MailModule, ApprovalsModule, StaffModule, MetricsModule,
     WorkspacesModule, UsersModule, SupportModule, SystemModule,
-    PaymentsModule, BillingModule, PrivacyModule, LegalModule, FlagsModule,
+    PaymentsModule, BillingModule, PrivacyModule, LegalModule, FlagsModule, EntitlementsModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, { provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_FILTER, useClass: ErrorFilter }],

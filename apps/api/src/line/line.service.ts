@@ -9,6 +9,7 @@ import { last4, openSecret, sealSecret } from '../channels/secrets.js';
 import { AppError, forbidden } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
+import { PlanLimits } from '../core/plan-limits.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { DueRequestsService } from '../due-requests/due-requests.service.js';
 import { LineApi } from './line-api.js';
@@ -51,6 +52,7 @@ export class LineService {
     @Inject(SYSTEM_DB) private readonly system: Db,
     private readonly api: LineApi,
     private readonly due: DueRequestsService,
+    private readonly limits: PlanLimits,
   ) {}
 
   private admin(tenant: TenantInfo) {
@@ -77,6 +79,7 @@ export class LineService {
 
   async putConfig(auth: AuthInfo, tenant: TenantInfo, body: z.infer<typeof PutLineBody>) {
     this.admin(tenant);
+    await this.limits.assertFeature(tenant.workspaceId, 'channels');
     return this.db.run(auth, tenant, async (tx) => {
       const [old] = await tx.select().from(s.lineOaConfigs);
       if (!old && (!body.channelSecret || !body.accessToken)) {

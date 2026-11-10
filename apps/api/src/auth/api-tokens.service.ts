@@ -6,6 +6,7 @@ import { AppError, forbidden, notFound } from '../common/errors.js';
 import { loadPeople } from '../common/people.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
+import { PlanLimits } from '../core/plan-limits.js';
 import { hashApiToken, newApiToken, TOKEN_SCOPES } from './api-tokens.js';
 
 const s = schema;
@@ -18,7 +19,10 @@ export const PatchTokenBody = z.object({ name: z.string().trim().min(1).max(80),
 /** N1 › API tokens · จัดการโดย Owner / Admin (`ws.settings`) · เรียกด้วย API token เองไม่ได้ */
 @Injectable()
 export class ApiTokensService {
-  constructor(private readonly db: TenantDb) {}
+  constructor(
+    private readonly db: TenantDb,
+    private readonly limits: PlanLimits,
+  ) {}
 
   private admin(tenant: TenantInfo) {
     if (tenant.role !== 'owner' && tenant.role !== 'admin') throw forbidden('ws.settings');
@@ -40,6 +44,7 @@ export class ApiTokensService {
   /** token เต็มแสดงครั้งเดียวตอนสร้าง · ในฐานข้อมูลเก็บเฉพาะ SHA-256 */
   async create(auth: AuthInfo, tenant: TenantInfo, body: z.infer<typeof CreateTokenBody>) {
     this.admin(tenant);
+    await this.limits.assertFeature(tenant.workspaceId, 'api');
     const token = newApiToken();
     return this.db.run(auth, tenant, async (tx) => {
       const active = await tx.select({ id: s.apiTokens.id }).from(s.apiTokens).where(and(eq(s.apiTokens.workspaceId, tenant.workspaceId), isNull(s.apiTokens.revokedAt)));

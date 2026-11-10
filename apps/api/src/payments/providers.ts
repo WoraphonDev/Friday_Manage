@@ -209,7 +209,12 @@ export class HttpETax implements ETaxProvider {
 
 export function gatewayFromEnv(env: NodeJS.ProcessEnv = process.env): PaymentGateway {
   if (env.STRIPE_SECRET_KEY) return new StripeGateway(env.STRIPE_SECRET_KEY, env.STRIPE_WEBHOOK_SECRET ?? '');
-  if (env.NODE_ENV === 'production') throw new Error('ตั้ง STRIPE_SECRET_KEY และ STRIPE_WEBHOOK_SECRET ก่อนเปิด production');
+  if (env.NODE_ENV === 'production') {
+    // staging (VPS) รันแบบ production แต่ยังไม่มี Gateway จริง (A35b) · ต้องขอตัวปลอมตรง ๆ และตั้งลายเซ็น Webhook ของตัวเอง
+    // ไม่งั้นใครก็ส่ง Webhook ที่เซ็นด้วยค่า dev ใน repo มาปิดใบแจ้งหนี้ได้
+    if (env.PAYMENT_GATEWAY === 'fake' && (env.STRIPE_WEBHOOK_SECRET ?? '').length >= 32) return new FakeGateway();
+    throw new Error('ตั้ง STRIPE_SECRET_KEY และ STRIPE_WEBHOOK_SECRET ก่อนเปิด production (staging: PAYMENT_GATEWAY=fake + STRIPE_WEBHOOK_SECRET ≥ 32 ตัวอักษร)');
+  }
   return new FakeGateway();
 }
 export function etaxFromEnv(env: NodeJS.ProcessEnv = process.env): ETaxProvider {

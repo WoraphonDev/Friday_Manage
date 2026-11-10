@@ -1,0 +1,234 @@
+# Friday Manage บน VPS เครื่องเดียว (staging) · ทุก service อยู่ใน network เดียว เปิดออกนอกเครื่องเฉพาะ Caddy (80/443)
+# image build บน Mac (linux/amd64) แล้วส่งขึ้นเครื่องด้วย deploy.sh · เครื่องนี้ไม่ build เอง (RAM 2 GB ไม่พอ build Next.js)
+# ค่าเฉพาะเครื่องและ secret อยู่ใน .env ข้างไฟล์นี้ (สร้างจาก .env.example) · ดู README.md
+name: friday
+
+x-node: &node
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  caddy:
+    <<: *node
+    image: caddy:2.10-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      APP_HOST: ${APP_HOST}
+      OPS_HOST: ${OPS_HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    mem_limit: 96m
+
+  postgres:
+    <<: *node
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: friday_owner
+      POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD}
+      POSTGRES_DB: friday
+    # ปรับให้พอดี RAM 2 GB ทั้งเครื่อง · connection รวมของ api + worker + ops-api ไม่เกิน ~30
+    command:
+      - postgres
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - effective_cache_size=384MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - max_connections=50
+      - -c
+      - wal_buffers=4MB
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U friday_owner -d friday"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 384m
+    shm_size: 128m
+
+  valkey:
+    <<: *node
+    image: valkey/valkey:9.0-alpine
+    # คิวของ BullMQ ห้ามทิ้ง key เอง (noeviction) · เก็บลงดิสก์แบบ AOF
+    command: ["valkey-server", "--appendonly", "yes", "--maxmemory", "64mb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - valkeydata:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 96m
+
+  # volume ใหม่เป็นของ root · ให้ผู้ใช้ node (uid 1000) ของ api เขียนได้ก่อนเปิด api
+  uploads-perms:
+    image: friday-api:${TAG}
+    user: "0"
+    entrypoint: ["sh", "-c", "chown 1000:1000 /data/uploads"]
+    volumes:
+      - uploads:/data/uploads
+    restart: "no"
+
+  # รันครั้งเดียวต่อการ deploy (deploy.sh เรียก `run --rm migrate`) · สร้าง / หมุนรหัสผ่าน friday_api, friday_worker ด้วย
+  migrate:
+    image: friday-api:${TAG}
+    profiles: ["tools"]
+    command: ["node", "/app/packages/db/deploy-migrate.mjs"]
+    environment:
+      DATABASE_OWNER_URL: postgres://friday_owner:${DB_OWNER_PASSWORD}@postgres:5432/friday
+      DB_API_PASSWORD: ${DB_API_PASSWORD}
+      DB_WORKER_PASSWORD: ${DB_WORKER_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *node
+    image: friday-api:${TAG}
+    environment: &api-env
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=256
+      APP_VERSION: ${TAG}
+      DATABASE_APP_URL: postgres://friday_api:${DB_API_PASSWORD}@postgres:5432/friday
+      DATABASE_SYSTEM_URL: postgres://friday_worker:${DB_WORKER_PASSWORD}@postgres:5432/friday
+      VALKEY_URL: redis://valkey:6379
+      QUEUE_PREFIX: friday
+      AUTH_SECRET: ${AUTH_SECRET}
+      APP_URL: https://${APP_HOST}
+      WEB_URL: https://${APP_HOST}
+      API_PUBLIC_URL: https://${APP_HOST}
+      UPLOAD_DIR: /data/uploads
+      # ยังไม่มี Gateway จริง (A35b) · staging ใช้ตัวจำลองแบบตั้งใจ พร้อมลายเซ็น Webhook ของเครื่องนี้
+      PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-fake}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      ETAX_WEBHOOK_SECRET: ${ETAX_WEBHOOK_SECRET}
+      EMAIL_FEEDBACK_TOKEN: ${EMAIL_FEEDBACK_TOKEN}
+      VAT_REGISTERED: ${VAT_REGISTERED:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-staging}
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      uploads-perms:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    mem_limit: 384m
+
+  worker:
+    <<: *node
+    image: friday-api:${TAG}
+    command: ["node", "dist/worker.js"]
+    environment:
+      <<: *api-env
+      WORKER_CONCURRENCY: "2"
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      api:
+        condition: service_healthy
+    mem_limit: 320m
+
+  web:
+    <<: *node
+    image: friday-web:${TAG}
+    environment:
+      NODE_OPTIONS: --max-old-space-size=192
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    mem_limit: 256m
+
+  ops-api:
+    <<: *node
+    image: friday-ops-api:${TAG}
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=192
+      OPS_PORT: "4001"
+      # หลังบ้านต้องข้าม RLS · ช่วง staging ใช้ friday_worker ไปก่อน (production ควรแยก role friday_ops)
+      OPS_DATABASE_URL: postgres://friday_worker:${DB_WORKER_PASSWORD}@postgres:5432/friday
+      OPS_AUTH_SECRET: ${OPS_AUTH_SECRET}
+      OPS_WEB_ORIGIN: https://${OPS_HOST}
+      OPS_RP_ID: ${OPS_HOST}
+      APP_URL: https://${APP_HOST}
+      API_HEALTH_URL: http://api:3001/healthz
+      UPLOAD_DIR: /data/uploads
+      VALKEY_URL: redis://valkey:6379
+      OPS_JOBS: ${OPS_JOBS:-on}
+      OPS_ACCOUNTING_EMAIL: ${OPS_ACCOUNTING_EMAIL:-}
+      VAT_REGISTERED: ${VAT_REGISTERED:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      GIT_SHA: ${TAG}
+    volumes:
+      - uploads:/data/uploads:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4001/ops/auth/me').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    mem_limit: 256m
+
+  ops-web:
+    <<: *node
+    image: friday-ops-web:${TAG}
+    environment:
+      NODE_OPTIONS: --max-old-space-size=160
+    depends_on:
+      ops-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    mem_limit: 224m
+
+volumes:
+  pgdata:
+  valkeydata:
+  uploads:
+  caddy-data:
+  caddy-config:

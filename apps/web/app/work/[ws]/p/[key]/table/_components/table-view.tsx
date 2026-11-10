@@ -71,7 +71,7 @@ function span(rows: Row[]) {
   return { from: starts[0] ?? null, to: ends.at(-1) ?? null };
 }
 
-/** แถวที่แสดง: Module › (Task ที่ไม่มีกลุ่ม) › กลุ่ม › Task › Sub-task (Sub-task ตามแม่ทันที) + แถวเพิ่มงาน + สรุปท้าย Module
+/** แถวที่แสดง: Module › (Task ที่ไม่มีกลุ่ม) › กลุ่ม › Task › Sub-task (Sub-task ตามแม่ทันที) + แถวเพิ่มงาน (ระดับ Module เฉพาะเมื่อไม่มีกลุ่ม) + สรุปท้าย Module
  *  กลุ่มไม่บังคับ (ผู้ใช้ขอ 2026-11-08): Task ที่ไม่มีกลุ่มอยู่ใต้ Module โดยตรง ไม่มีหัวกลุ่ม */
 export function buildDisplay(data: TableData, collapsed: Set<string>, noModule: string, noPhase: string, includeEmpty = false): Display[] {
   const out: Display[] = [];
@@ -87,7 +87,8 @@ export function buildDisplay(data: TableData, collapsed: Set<string>, noModule: 
     if (collapsed.has(mid)) continue;
     const rowsOf = (phaseId: string | null) => inModule.filter((r) => (r.phaseId ?? null) === phaseId).flatMap((r) => [{ kind: "issue" as const, row: r, sub: !!r.parentKey }, ...(kids.get(r.key) ?? []).map((k) => ({ kind: "issue" as const, row: k, sub: true }))]);
     out.push(...rowsOf(null));
-    out.push({ kind: "add", id: `${mid}:add`, name: m.name ?? noModule, moduleId: m.id, phaseId: null });
+    // มีกลุ่มแล้วเพิ่ม Task จากแถวของกลุ่ม (เลือก "ไม่มีกลุ่ม" ในฟอร์มได้ งานจะขึ้นใต้ Module ตรงนี้) · ยังไม่มีกลุ่มจึงต้องมีแถวนี้ (ผู้ใช้ขอ 2026-11-11)
+    if (!named.length) out.push({ kind: "add", id: `${mid}:add`, name: m.name ?? noModule, moduleId: m.id, phaseId: null });
     for (const ph of named) {
       const pid = `${mid}:${ph.id}`;
       out.push({ kind: "phase", id: pid, moduleId: m.id, phaseId: ph.id, name: ph.name ?? noPhase, done: ph.doneCount, total: ph.taskCount, md: ph.estimateMd });

@@ -63,7 +63,8 @@ describe('Ticket', () => {
     id = r.body.ticket.id;
     expect(r.body.ticket).toMatchObject({ status: 'open', assigneeId: null, requesterEmail: 'owner@ticket-demo.example.com', requesterUserId: c.owner });
     // Team M ตอบภายใน 4 ชม. ทำการ
-    expect(new Date(r.body.ticket.firstResponseDueAt).toISOString()).toBe(addBusinessHours(new Date(r.body.ticket.createdAt), 4).toISOString());
+    // created_at มาจาก now() ของฐานข้อมูล ส่วนกำหนด SLA คิดจากเวลาใน Node จึงต่างกันได้ไม่กี่ ms
+    expect(Math.abs(new Date(r.body.ticket.firstResponseDueAt).getTime() - addBusinessHours(new Date(r.body.ticket.createdAt), 4).getTime())).toBeLessThan(1000);
     expect(r.body.notified).toBe(true);
     expect(mail.sent.slice(before)[0].subject).toContain(`#${r.body.ticket.number}`);
     const q = await support.agent.get('/ops/tickets?assignee=none');

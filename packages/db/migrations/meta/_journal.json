@@ -183,6 +183,13 @@
       "when": 1794302195711,
       "tag": "0025_ops_support_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794307135845,
+      "tag": "0026_ops_web_push",
+      "breakpoints": true
     }
   ]
 }

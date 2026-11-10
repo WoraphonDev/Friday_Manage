@@ -9,6 +9,7 @@ import type { Staff } from '../auth/auth.guard.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
+import { PushService } from '../push/push.service.js';
 import { JobQueue } from './job-queue.js';
 
 const s = schema;
@@ -80,6 +81,7 @@ export class SystemService implements OnModuleInit, OnModuleDestroy {
     private readonly mail: Mailer,
     private readonly approvals: ApprovalsService,
     private readonly jobs: JobQueue,
+    private readonly push: PushService,
   ) {}
 
   onModuleInit() {
@@ -180,6 +182,8 @@ export class SystemService implements OnModuleInit, OnModuleDestroy {
     });
     await staffAudit(this.db, staff, 'system.incident_opened', `${input.title} · ${input.impact}`, { type: 'incident', id: incident.id });
     const notified = input.notifySubscribers && !input.internal ? await this.notifySubscribers(`[Friday Manage] ${input.title}`, input.message) : 0;
+    // แจ้งทีมในมือถือ (O25) ยกเว้นคนเปิดเหตุเอง
+    await this.push.toRoles(['engineer', 'owner', 'support'], { title: `เหตุขัดข้อง · ${input.title}`, body: input.message.slice(0, 160), url: `/m/incidents?id=${incident.id}`, tag: `incident-${incident.id}` }, staff.id).catch(() => 0);
     return { incident, notified };
   }
 

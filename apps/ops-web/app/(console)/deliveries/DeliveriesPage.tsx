@@ -125,7 +125,7 @@ export function DeliveriesPage() {
               </>
             )}
           </div>
-          <DetailPanel id={current} />
+          {(items.length > 0 || picked) && <DetailPanel id={current} />}
         </div>
       </section>
       <Suppressions />

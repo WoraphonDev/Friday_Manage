@@ -413,3 +413,88 @@ describe('ไฟล์รูปแบบใหม่: Template, Sub-task แล�
     expect(bad.diff.changed).toEqual([]);
   });
 });
+
+describe('Custom field ในไฟล์ (โหมดอัปเดต)', () => {
+  const P = () => `${team.ws}/projects/IMP`;
+  const ids: Record<string, string> = {};
+  /** แก้ชีต Tasks ด้วยชื่อหัวคอลัมน์จริง (คอลัมน์ Custom field ต่อท้าย) */
+  const editBy = (buf: Buffer, fn: (cell: (row: number, header: string) => ExcelJS.Cell) => void) =>
+    edit(buf, (ws) => {
+      const heads = (ws.getRow(1).values as unknown[]).map((v) => String(v ?? ''));
+      fn((row, header) => {
+        const i = heads.indexOf(header);
+        expect(i, header).toBeGreaterThan(0);
+        return ws.getRow(row).getCell(i);
+      });
+    });
+
+  beforeAll(async () => {
+    const mk = async (body: object) => {
+      const r = await team.lead.post(`${P()}/custom-fields`, body);
+      expect(r.status, JSON.stringify(r.body)).toBe(201);
+      return r.body.id as string;
+    };
+    ids.tier = await mk({ name: 'ระดับลูกค้า', fieldType: 'select', options: { choices: [{ id: 'gold', label: 'Gold' }, { id: 'silver', label: 'Silver' }] } });
+    ids.tags = await mk({ name: 'ช่องทาง', fieldType: 'multi_select', options: { choices: [{ id: 'web', label: 'Web' }, { id: 'app', label: 'App' }] } });
+    ids.owner = await mk({ name: 'ผู้ติดต่อ', fieldType: 'user' });
+    ids.qty = await mk({ name: 'จำนวนเครื่อง', fieldType: 'number' });
+    ids.due = await mk({ name: 'วันนัด', fieldType: 'date' });
+    const i1 = (await team.lead.get(`${team.ws}/issues/IMP-1`)).body;
+    expect((await team.lead.patch(`${team.ws}/issues/IMP-1`, { customFields: { [ids.tier]: 'silver', [ids.qty]: 2 } }, i1.version)).status).toBe(200);
+  });
+
+  it('Export → Import เดิม = ไม่เปลี่ยน · คอลัมน์ Custom field จับคู่อัตโนมัติ', async () => {
+    const job = await updateJob('IMP', await exportOf('IMP'));
+    expect(job.diff.changed).toEqual([]);
+    const mapped = Object.fromEntries(job.columns.map((c: { header: string; field: string | null }) => [c.header, c.field]));
+    expect(mapped).toMatchObject({ ระดับลูกค้า: `cf:${ids.tier}`, ช่องทาง: `cf:${ids.tags}`, ผู้ติดต่อ: `cf:${ids.owner}`, จำนวนเครื่อง: `cf:${ids.qty}`, วันนัด: `cf:${ids.due}` });
+    expect(job.fields[`cf:${ids.tier}`]).toBe('ระดับลูกค้า (Custom field)');
+  });
+
+  it('แก้ค่าใน Excel → ผลตรวจรายฟิลด์ → เขียนค่า + Activity · ค่าผิดเตือนและไม่แตะ', async () => {
+    const file = await editBy(await exportOf('IMP'), (cell) => {
+      cell(2, 'ระดับลูกค้า').value = 'Gold';
+      cell(2, 'ช่องทาง').value = 'Web, App';
+      cell(2, 'ผู้ติดต่อ').value = 'Kaijeaw';
+      cell(2, 'จำนวนเครื่อง').value = '';
+      cell(2, 'วันนัด').value = new Date('2026-12-01T00:00:00Z');
+      cell(3, 'ระดับลูกค้า').value = 'Platinum'; // ไม่มีตัวเลือกนี้
+    });
+    const job = await updateJob('IMP', file);
+    const ch = job.diff.changed.find((c: { key: string }) => c.key === 'IMP-1');
+    expect(ch.fields).toEqual(
+      expect.arrayContaining([
+        { field: `cf:${ids.tier}`, label: 'ระดับลูกค้า', old: 'Silver', new: 'Gold' },
+        { field: `cf:${ids.tags}`, label: 'ช่องทาง', old: null, new: ['Web', 'App'] },
+        { field: `cf:${ids.owner}`, label: 'ผู้ติดต่อ', old: null, new: 'Kaijeaw' },
+        { field: `cf:${ids.qty}`, label: 'จำนวนเครื่อง', old: 2, new: null },
+        { field: `cf:${ids.due}`, label: 'วันนัด', old: null, new: '2026-12-01' },
+      ]),
+    );
+    expect(job.diff.changed.find((c: { key: string }) => c.key === 'IMP-2')).toBeUndefined();
+    expect(job.findings.find((f: { problem: string }) => f.problem.includes('Platinum'))).toMatchObject({ level: 'warn' });
+    await commit(job.id);
+    const after = (await team.lead.get(`${team.ws}/issues/IMP-1`)).body;
+    expect(after.customFields).toEqual({ [ids.tier]: 'gold', [ids.tags]: ['web', 'app'], [ids.owner]: team.devId, [ids.due]: '2026-12-01' });
+    // 5 ฟิลด์ที่เปลี่ยนจากไฟล์ (ไม่นับ 2 รายการที่ตั้งผ่าน API ตอนเตรียม)
+    const acts = (await t.owner.query(`SELECT field FROM activities WHERE issue_id = $1 AND field LIKE 'cf:%' AND actor_kind = 'import'`, [after.id])).rows;
+    expect(acts.length).toBe(5);
+    // นำเข้าไฟล์ที่ส่งออกตอนนี้อีกครั้ง = ไม่เปลี่ยน (ค่าคน / ตัวเลือกส่งออกเป็นชื่อแล้วอ่านกลับได้)
+    expect((await updateJob('IMP', await exportOf('IMP'))).diff.changed).toEqual([]);
+  });
+
+  it('งานใหม่ในไฟล์ได้ค่า Custom field ด้วย', async () => {
+    const file = await edit(await exportOf('IMP'), (ws) => {
+      const heads = (ws.getRow(1).values as unknown[]).map((v) => String(v ?? ''));
+      const src = ws.getRow(2).values as unknown[];
+      const row = heads.map((h, i) => (h === 'Key' ? null : h === 'Title' ? 'งานใหม่พร้อม Custom field' : h === 'ระดับลูกค้า' ? 'Silver' : h === 'จำนวนเครื่อง' ? 5 : (src[i] ?? null)));
+      ws.addRow(row.slice(1));
+    });
+    const job = await updateJob('IMP', file);
+    expect(job.diff.added).toHaveLength(1);
+    await commit(job.id);
+    const n = (await t.owner.query(`SELECT i.id FROM issues i JOIN projects p ON p.id = i.project_id WHERE p.key = 'IMP' AND i.title = 'งานใหม่พร้อม Custom field'`)).rows[0].id;
+    const vals = Object.fromEntries((await t.owner.query(`SELECT field_id, value FROM issue_custom_values WHERE issue_id = $1`, [n])).rows.map((r: { field_id: string; value: unknown }) => [r.field_id, r.value]));
+    expect(vals).toMatchObject({ [ids.tier]: 'silver', [ids.qty]: 5, [ids.owner]: team.devId });
+  });
+});

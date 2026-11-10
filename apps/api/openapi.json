@@ -8242,31 +8242,39 @@
                     "additionalProperties": {
                       "anyOf": [
                         {
-                          "type": "string",
-                          "enum": [
-                            "key",
-                            "parentKey",
-                            "no",
-                            "module",
-                            "group",
-                            "title",
-                            "status",
-                            "priority",
-                            "ba",
-                            "sa",
-                            "devs",
-                            "reviewer",
-                            "size",
-                            "estimateMd",
-                            "planStart",
-                            "planEnd",
-                            "actualStart",
-                            "actualEnd",
-                            "requirement",
-                            "screen",
-                            "labels",
-                            "description",
-                            "remark"
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "key",
+                                "parentKey",
+                                "no",
+                                "module",
+                                "group",
+                                "title",
+                                "status",
+                                "priority",
+                                "ba",
+                                "sa",
+                                "devs",
+                                "reviewer",
+                                "size",
+                                "estimateMd",
+                                "planStart",
+                                "planEnd",
+                                "actualStart",
+                                "actualEnd",
+                                "requirement",
+                                "screen",
+                                "labels",
+                                "description",
+                                "remark"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "^cf:[0-9a-f-]{36}$"
+                            }
                           ]
                         },
                         {

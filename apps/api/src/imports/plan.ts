@@ -35,18 +35,27 @@ export const FIELDS = {
   remark: { label: 'Remark (หมายเหตุ)', aliases: ['remark', 'หมายเหตุ', 'note'] },
 } as const;
 export type Field = keyof typeof FIELDS;
-export type ColumnMapping = Record<string, Field | null>;
+/** ปลายทางของคอลัมน์: ฟิลด์มาตรฐาน หรือ Custom field ของโปรเจกต์ (`cf:<id>` · เฉพาะโหมดอัปเดตแผน) */
+export type MappingTarget = Field | `cf:${string}`;
+export type ColumnMapping = Record<string, MappingTarget | null>;
+export const isCustomTarget = (t: MappingTarget | null | undefined): t is `cf:${string}` => !!t && t.startsWith('cf:');
 
 const key = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
 
-export function autoMap(headers: string[]): ColumnMapping {
-  const used = new Set<Field>();
+/**
+ * จับคู่หัวคอลัมน์อัตโนมัติ · ฟิลด์มาตรฐานก่อน แล้วจึง Custom field ที่ชื่อตรงกัน
+ * (ไฟล์ส่งออกเติม " (Custom)" ท้ายชื่อที่ซ้ำคอลัมน์มาตรฐาน จึงรับทั้งสองแบบ)
+ */
+export function autoMap(headers: string[], customFields: { id: string; name: string }[] = []): ColumnMapping {
+  const used = new Set<MappingTarget>();
   const out: ColumnMapping = {};
   for (const h of headers) {
     if (!h) continue;
     const f = (Object.keys(FIELDS) as Field[]).find((k) => !used.has(k) && (FIELDS[k].aliases as readonly string[]).includes(key(h)));
-    out[h] = f ?? null;
-    if (f) used.add(f);
+    const c = f ? undefined : customFields.find((x) => !used.has(`cf:${x.id}`) && [key(x.name), `${key(x.name)} (custom)`].includes(key(h)));
+    const target: MappingTarget | null = f ?? (c ? `cf:${c.id}` : null);
+    out[h] = target;
+    if (target) used.add(target);
   }
   return out;
 }
@@ -125,6 +134,8 @@ export interface PlanRow {
   actualEnd: string | null;
   description: string | null;
   remark: string | null;
+  /** ค่าดิบในคอลัมน์ Custom field (id ของฟิลด์ → เซลล์) · แปลงและตรวจตอนเทียบกับระบบ (update.ts) */
+  custom: Record<string, Cell>;
 }
 
 export type Level = 'err' | 'warn';
@@ -154,6 +165,8 @@ export interface PlanCheck {
   keyed: boolean;
   /** ฟิลด์ที่มีคอลัมน์ในไฟล์ · โหมดอัปเดตเทียบเฉพาะฟิลด์เหล่านี้ (ไฟล์ไม่มีคอลัมน์ = ไม่แตะค่าเดิม) */
   mapped: Set<Field>;
+  /** id ของ Custom field ที่มีคอลัมน์ในไฟล์ */
+  customMapped: string[];
   summary: {
     rows: number;
     modules: number;
@@ -190,9 +203,11 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
   const known = new Map((opts.statuses ?? []).map((n) => [n.toLowerCase(), n]));
   const resolveStatus = (raw: unknown) => known.get(String(raw ?? '').trim().toLowerCase()) ?? STATUS[String(raw ?? '').trim().toLowerCase()];
   const idx = {} as Record<Field, number>;
+  const cfIdx: [string, number][] = [];
   wb.table.headers.forEach((h, i) => {
     const f = mapping[h];
-    if (f) idx[f] = i;
+    if (isCustomTarget(f)) cfIdx.push([f.slice(3), i]);
+    else if (f) idx[f] = i;
   });
   const mapped = new Set(Object.keys(idx) as Field[]);
   // ไฟล์รูปแบบเดิมมีคอลัมน์ No. เป็นตัวจับคู่ · รูปแบบใหม่ใช้ Key
@@ -303,6 +318,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
       actualEnd: dates.actualEnd ?? null,
       description: text(get(cells, 'description')),
       remark: text(get(cells, 'remark')),
+      custom: Object.fromEntries(cfIdx.map(([id, i]) => [id, cells[i] ?? null])),
     };
 
     // ต้องแก้ (ข้ามตอนนำเข้า)
@@ -410,6 +426,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     people: all,
     keyed,
     mapped,
+    customMapped: cfIdx.map(([id]) => id),
     summary: {
       rows: rows.length,
       modules: modules.size,

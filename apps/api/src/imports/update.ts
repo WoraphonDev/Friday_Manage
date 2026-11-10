@@ -2,6 +2,8 @@ import { schema, type Tx } from '@friday/db';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import type { DomainEvent } from '../core/events.js';
+import { type CustomFieldDef, displayValue, readCustomValues, writeCustomValues } from '../issues/custom-values.js';
+import { parseCustomCell } from './custom.js';
 import { insertRows } from './insert.js';
 import { type Field, personKey, type PlanCheck, type PlanRow } from './plan.js';
 
@@ -57,7 +59,8 @@ const ACTIVITY_FIELD: Partial<Record<DiffField, string>> = { group: 'phaseId', d
 const PLAN_FIELDS = new Set<DiffField>(['planStart', 'planEnd', 'estimateMd', 'devs']);
 
 export interface FieldChange {
-  field: DiffField;
+  /** ฟิลด์มาตรฐาน หรือ `cf:<id>` (Custom field) */
+  field: DiffField | `cf:${string}`;
   label: string;
   old: unknown;
   new: unknown;
@@ -147,8 +150,13 @@ const names = (list: string[]) => [...new Set(list.map(personKey))].sort();
 export interface UpdatePlan {
   diff: UpdateDiff;
   /** รายการที่ต้องเขียนจริง */
-  edits: { issue: Issue; row: PlanRow; fields: FieldChange[] }[];
+  edits: { issue: Issue; row: PlanRow; fields: FieldChange[]; custom: Record<string, unknown> }[];
   adds: PlanRow[];
+  /** ค่า Custom field ที่ตรวจแล้วของงานใหม่ (คนเป็นชื่อ แปลงตอนเขียน) */
+  addCustom: Map<PlanRow, Record<string, unknown>>;
+  customDefs: CustomFieldDef[];
+  /** ค่า Custom field ปัจจุบันของงานในระบบ */
+  currentCustom: Map<string, Record<string, unknown>>;
   /** ไฟล์รูปแบบเดิม: งานที่สร้างในระบบ (ยังไม่มี No.) แต่จับคู่ด้วย ID ได้ → บันทึก No. ให้ ครั้งต่อไปจับคู่ด้วย No. */
   assignNos: { issueId: string; no: number }[];
   keyed: boolean;
@@ -157,7 +165,7 @@ export interface UpdatePlan {
   existing: Existing;
 }
 
-export async function computeUpdate(tx: Tx, project: { id: string; key: string }, check: PlanCheck, matchById: boolean): Promise<UpdatePlan> {
+export async function computeUpdate(tx: Tx, project: { id: string; key: string }, check: PlanCheck, matchById: boolean, customDefs: CustomFieldDef[] = []): Promise<UpdatePlan> {
   const ex = await loadExisting(tx, project.id);
   const live = ex.rows.filter((r) => !r.deletedAt);
   const tasks = live.filter((r) => r.issueTypeId === ex.taskTypeId);
@@ -172,6 +180,27 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
   const diff: UpdateDiff = { added: [], changed: [], missing: [], unchanged: 0 };
   const edits: UpdatePlan['edits'] = [];
   const adds: PlanRow[] = [];
+  const addCustom: UpdatePlan['addCustom'] = new Map();
+  // Custom field: ค่าปัจจุบัน + ชื่อคนของฟิลด์ชนิดคน (เทียบด้วยชื่อ เหมือน Developer)
+  const defs = customDefs.filter((d) => check.customMapped.includes(d.id));
+  const currentCustom = defs.length ? await readCustomValues(tx, live.map((r) => r.id)) : new Map<string, Record<string, unknown>>();
+  const cfUserIds = [...new Set([...currentCustom.values()].flatMap((v) => defs.filter((d) => d.fieldType === 'user').map((d) => v[d.id]).filter((x): x is string => typeof x === 'string')))].filter((id) => !ex.userName.has(id));
+  if (cfUserIds.length) (await tx.select({ id: s.users.id, name: s.users.displayName }).from(s.users).where(inArray(s.users.id, cfUserIds))).forEach((u) => ex.userName.set(u.id, u.name));
+  /** ค่าในไฟล์ของแถวนี้ที่ใช้ได้ · ค่าผิดรูปแบบ = เตือนและไม่แตะฟิลด์นั้น */
+  const customOf = (row: PlanRow, level: 'task' | 'subtask') => {
+    const out: Record<string, unknown> = {};
+    for (const d of defs) {
+      const p = parseCustomCell(d, row.custom[d.id] ?? null);
+      if (!p.ok) {
+        check.findings.push({ level: 'warn', no: check.keyed ? null : row.no, rowNo: row.rowNo, module: row.module, title: row.title, problem: `${d.name}: ${p.problem}`, fix: 'ไม่แก้ฟิลด์นี้ · แก้ใน Excel แล้วนำเข้าใหม่' });
+        continue;
+      }
+      if ((level === 'task' ? d.taskMode : d.subtaskMode) === 'hidden') continue; // ฟิลด์ที่ซ่อนในระดับนี้ไม่แตะ
+      out[d.id] = p.value;
+    }
+    return out;
+  };
+  const cfShown = (d: CustomFieldDef, v: unknown) => (d.fieldType === 'user' ? (typeof v === 'string' ? (ex.userName.get(v) ?? v) : null) : displayValue(d, v));
   const has = (f: DiffField) => check.mapped.has(COLUMN[f]);
   const userName = (id: string | null) => (id ? (ex.userName.get(id) ?? '') : null);
   const samePerson = (a: string | null, b: string | null) => names(a ? [a] : []).join() === names(b ? [b] : []).join();
@@ -189,6 +218,7 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     }
     if (!issue) {
       adds.push(row);
+      if (defs.length) addCustom.set(row, customOf(row, row.parentNumber === null ? 'task' : 'subtask'));
       diff.added.push({ no: row.no, number: row.number, title: row.title, module: row.module });
       continue;
     }
@@ -222,11 +252,23 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     if (names(oldLabels).join('|') !== names(row.labels).join('|')) add('labels', oldLabels, row.labels);
     if (!eq0(issue.description || null, row.description || null)) add('description', issue.description || null, row.description);
     if (!eq0(issue.remark || null, row.remark || null)) add('remark', issue.remark || null, row.remark);
+    const custom: Record<string, unknown> = {};
+    if (defs.length) {
+      const cur = currentCustom.get(issue.id) ?? {};
+      for (const [id, v] of Object.entries(customOf(row, (row.parentNumber ?? oldParent?.number ?? null) === null ? 'task' : 'subtask'))) {
+        const d = defs.find((x) => x.id === id)!;
+        const old = cur[id] ?? null;
+        const same = d.fieldType === 'user' ? personKey(String(cfShown(d, old) ?? '')) === personKey(String(v ?? '')) : JSON.stringify(old) === JSON.stringify(v);
+        if (same) continue;
+        custom[id] = v;
+        fields.push({ field: `cf:${id}`, label: d.name, old: cfShown(d, old), new: d.fieldType === 'user' ? v : displayValue(d, v) });
+      }
+    }
     if (!fields.length) {
       diff.unchanged++;
       continue;
     }
-    edits.push({ issue, row, fields });
+    edits.push({ issue, row, fields, custom });
     diff.changed.push({ no: row.no, key: `${project.key}-${issue.number}`, title: issue.title, fields });
   }
 
@@ -243,7 +285,7 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     }
   }
   diff.missing.sort((a, b) => a.no - b.no);
-  return { diff, edits, adds, assignNos, keyed: check.keyed, groupMapped: check.mapped.has('group'), existing: ex };
+  return { diff, edits, adds, addCustom, customDefs: defs, currentCustom, assignNos, keyed: check.keyed, groupMapped: check.mapped.has('group'), existing: ex };
 }
 
 export interface ApplyInput {
@@ -254,6 +296,8 @@ export interface ApplyInput {
   plan: UpdatePlan;
   /** ชื่อคน (personKey) → userId ที่จับคู่แล้ว */
   userOf: (name: string | null) => string | null;
+  /** ชื่อ / อีเมลของสมาชิก → userId · ใช้กับ Custom field ชนิดคน (ชื่อเหล่านี้ไม่อยู่ในขั้นจับคู่คน) */
+  memberOf?: (name: string) => string | null;
   /** no ของงานที่หายจากไฟล์ที่ผู้ใช้เลือกลบ */
   deleteNos: Set<number>;
   reason: string;
@@ -278,6 +322,22 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
     made.forEach((m) => moduleId.set(m.name, m.id));
   }
   const statusIdOf = (name: string) => ex.statusId.get(name) ?? ex.statusId.get('To do')!;
+  // ชื่อคนของ Custom field ชนิดคน → userId (ตามการจับคู่คน · ชื่อเดิมของค่าในระบบใช้ id เดิม) · ไม่พบ = ไม่แตะฟิลด์นั้น
+  const cfValues = (values: Record<string, unknown>, current: Record<string, unknown>) => {
+    const out: Record<string, unknown> = {};
+    for (const [id, v] of Object.entries(values)) {
+      const d = plan.customDefs.find((x) => x.id === id);
+      if (!d) continue;
+      if (d.fieldType !== 'user' || v === null) {
+        out[id] = v;
+        continue;
+      }
+      const old = typeof current[id] === 'string' ? (current[id] as string) : null;
+      const uid = userOf(String(v)) ?? input.memberOf?.(String(v)) ?? (old && personKey(ex.userName.get(old) ?? '') === personKey(String(v)) ? old : null);
+      if (uid) out[id] = uid;
+    }
+    return out;
+  };
 
   if (plan.assignNos.length) {
     await tx.update(s.issues).set({ excelRowNo: null }).where(and(eq(s.issues.projectId, project.id), sql`${s.issues.deletedAt} is not null`, inArray(s.issues.excelRowNo, plan.assignNos.map((a) => a.no))));
@@ -308,6 +368,10 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
       plan.adds,
     );
     events.push(...made.events);
+    for (const [r, values] of plan.addCustom) {
+      const id = made.idOf.get(r);
+      if (id && Object.values(values).some((v) => v !== null)) await writeCustomValues(tx, tenant.workspaceId, id, cfValues(Object.fromEntries(Object.entries(values).filter(([, v]) => v !== null)), {}));
+    }
     for (const r of plan.adds) if (r.parentNumber === null && r.number !== null) parents.set(r.number, { id: made.idOf.get(r)!, phaseId: made.phaseIdOf.get(r) ?? null });
   }
 
@@ -330,8 +394,9 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
   };
 
   let planChangeCount = 0;
-  for (const { issue, row, fields } of plan.edits) {
+  for (const { issue, row, fields, custom } of plan.edits) {
     const has = (f: DiffField) => fields.some((x) => x.field === f);
+    const cfChanged = Object.keys(custom).length > 0;
     // ชื่อ → userId ของคนที่อยู่ในงานนี้อยู่แล้ว (เช่น สมาชิกที่ปิดบัญชีไปแล้ว ยังคงอยู่)
     const keepPerson = (name: string | null, old: string | null) => (name ? (userOf(name) ?? (old && personKey(ex.userName.get(old) ?? '') === personKey(name) ? old : null)) : null);
     const oldDevIds = ex.assignees.get(issue.id) ?? [];
@@ -361,7 +426,9 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
     if (has('remark')) set.remark = row.remark;
     const idsChanged = has('devs') && [...oldDevIds].sort().join() !== [...newDevIds].sort().join();
     if (idsChanged || has('labels') || has('parent')) set.version = issue.version + 1;
+    if (cfChanged && set.version === undefined) set.version = issue.version + 1;
     if (Object.keys(set).length) await tx.update(s.issues).set(set).where(eq(s.issues.id, issue.id));
+    if (cfChanged) await writeCustomValues(tx, tenant.workspaceId, issue.id, cfValues(custom, plan.currentCustom.get(issue.id) ?? {}), plan.currentCustom.get(issue.id) ?? {});
     if (idsChanged) {
       await tx.delete(s.issueAssignees).where(eq(s.issueAssignees.issueId, issue.id));
       if (newDevIds.length) await tx.insert(s.issueAssignees).values(newDevIds.map((userId, i) => ({ ...w, issueId: issue.id, userId, sort: i })));
@@ -374,15 +441,15 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
     // ย้าย Module / กลุ่มของ Task แล้ว Sub-task ย้ายตาม
     if ((has('module') || has('group')) && !issue.parentId && set.phaseId !== undefined) await tx.update(s.issues).set({ moduleId: mid, phaseId: set.phaseId }).where(eq(s.issues.parentId, issue.id));
 
-    await tx.insert(s.activities).values(fields.map((f) => ({ ...base, issueId: issue.id, actorId: auth.userId, actorKind: 'import' as const, verb: 'updated', field: ACTIVITY_FIELD[f.field] ?? f.field, oldValue: f.old, newValue: f.new })));
-    const planFields = fields.filter((f) => PLAN_FIELDS.has(f.field) && (f.field !== 'devs' || idsChanged));
+    await tx.insert(s.activities).values(fields.map((f) => ({ ...base, issueId: issue.id, actorId: auth.userId, actorKind: 'import' as const, verb: 'updated', field: ACTIVITY_FIELD[f.field as DiffField] ?? f.field, oldValue: f.old, newValue: f.new })));
+    const planFields = fields.filter((f) => PLAN_FIELDS.has(f.field as DiffField) && (f.field !== 'devs' || idsChanged));
     if (baseline && planFields.length) {
       await tx.insert(s.planChanges).values(
         planFields.map((f) => ({
           ...base,
           issueId: issue.id,
           baselineId: baseline.id,
-          field: ACTIVITY_FIELD[f.field] ?? f.field,
+          field: ACTIVITY_FIELD[f.field as DiffField] ?? f.field,
           oldValue: f.field === 'devs' ? oldDevIds : f.old,
           newValue: f.field === 'devs' ? newDevIds : f.new,
           reason: input.reason,
@@ -391,7 +458,7 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
         })),
       );
       planChangeCount += planFields.length;
-      events.push(ev('plan.changed', issue.id, { issueKey: `${project.key}-${issue.number}`, fields: planFields.map((f) => ACTIVITY_FIELD[f.field] ?? f.field), reason: input.reason, source: 'import' }));
+      events.push(ev('plan.changed', issue.id, { issueKey: `${project.key}-${issue.number}`, fields: planFields.map((f) => ACTIVITY_FIELD[f.field as DiffField] ?? f.field), reason: input.reason, source: 'import' }));
     }
   }
 

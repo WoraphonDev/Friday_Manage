@@ -7,49 +7,16 @@ import { has, type Staff } from '../auth/auth.guard.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
+import { BusinessClock } from './clock.js';
+import { SLA_WARN_PCT, SupportSettingsService } from './settings.service.js';
 
 const s = schema;
 const DAY = 86_400_000;
 type Row = Record<string, unknown>;
 type Ticket = typeof s.supportTickets.$inferSelect;
 
-/** SLA ตามแพ็กเกจ (ชั่วโมงทำการ จ.–ศ. 09:00–18:00 เวลาไทย) · ตอบครั้งแรก / แก้เสร็จ */
-export const SLA_HOURS: Record<string, { first: number; resolve: number }> = {
-  free: { first: 24, resolve: 72 },
-  team_s: { first: 8, resolve: 40 },
-  team_m: { first: 4, resolve: 24 },
-  team_l: { first: 2, resolve: 16 },
-  enterprise: { first: 1, resolve: 8 },
-};
-/** ลูกค้าตอบหลังปิดเรื่องภายใน 7 วัน = เปิดใหม่ · เกินนั้นปิดถาวร (closed) */
-export const REOPEN_DAYS = 7;
-
-/** บวกชั่วโมงทำการ (จ.–ศ. 09:00–18:00 Asia/Bangkok) · ยังไม่นับวันหยุดนักขัตฤกษ์ */
-export function addBusinessHours(start: Date, hours: number) {
-  const OFF = 7 * 3_600_000;
-  let t = start.getTime();
-  let left = Math.round(hours * 60);
-  for (let guard = 0; guard < 400; guard++) {
-    const local = new Date(t + OFF);
-    const dow = local.getUTCDay();
-    const mins = local.getUTCHours() * 60 + local.getUTCMinutes();
-    const startOfDay = t - (mins * 60_000 + local.getUTCSeconds() * 1000 + local.getUTCMilliseconds());
-    const nextOpen = startOfDay + DAY + 9 * 3_600_000;
-    if (dow === 0 || dow === 6 || mins >= 18 * 60) {
-      t = nextOpen;
-      continue;
-    }
-    if (mins < 9 * 60) {
-      t = startOfDay + 9 * 3_600_000;
-      continue;
-    }
-    const avail = 18 * 60 - mins;
-    if (left <= avail) return new Date(t + left * 60_000);
-    left -= avail;
-    t = nextOpen;
-  }
-  return new Date(t);
-}
+/** บวกชั่วโมงทำการตามค่าเริ่มต้น (จ.–ศ. 09:00–18:00 เวลาไทย ไม่นับวันหยุด) · SLA จริงใช้เวลาทำการที่ตั้งใน O22 */
+export const addBusinessHours = (start: Date, hours: number) => new BusinessClock().addHours(start, hours);
 
 const Priority = z.enum(['low', 'normal', 'high', 'urgent']);
 export const TicketsQuery = z.object({
@@ -65,11 +32,13 @@ export const CreateTicketBody = z
     workspaceId: z.uuid().optional(),
     requesterEmail: z.email().trim().toLowerCase(),
     channel: z.enum(['email', 'phone', 'line', 'in_app']).default('phone'),
+    /** รหัสใน TICKET_CATEGORIES · ข้อความอื่นรับได้ (Ticket เก่า) แต่จะไม่ตรงกฎแยกตามประเภท */
     category: z.string().trim().max(40).optional(),
-    priority: Priority.default('normal'),
+    /** ไม่ระบุ = ตามกฎการแจกงาน (O22) */
+    priority: Priority.optional(),
     subject: z.string().trim().min(3).max(200),
     body: z.string().trim().min(1).max(10_000),
-    /** รับเองเลย · ไม่ระบุ = เข้าคิวกลาง (การแจกงานอัตโนมัติเป็นเฟส 2) */
+    /** รับเองเลย · ไม่ระบุ = แจกตามกฎ (O22) หรือเข้าคิวกลาง */
     assignToMe: z.boolean().default(false),
     notify: z.boolean().default(true),
   })
@@ -104,7 +73,7 @@ export const SolveBody = z
 export const CsatBody = z.object({ score: z.number().int().min(1).max(5) }).strict();
 
 /**
- * Ticket ของ Support (O04) · เฟส 1 ใช้คิวกลาง: ยังไม่มีคนรับ = อยู่ในคิว ใครก็ "รับเรื่องนี้" ได้
+ * Ticket ของ Support (O04) · แจกตามกฎและวิธีแจกที่ตั้งไว้ (O22) · ยังไม่มีคนรับ = อยู่ในคิวกลาง ใครก็ "รับเรื่องนี้" ได้
  * ข้อความถึงลูกค้าส่งทางอีเมล · บันทึกภายในลูกค้าไม่เห็น · การกระทำที่ผูก Workspace ลง audit_logs ของ Workspace นั้นด้วย
  */
 @Injectable()
@@ -115,12 +84,17 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(OPS_DB) private readonly db: Db,
     private readonly mail: Mailer,
+    private readonly settings: SupportSettingsService,
   ) {}
 
   onModuleInit() {
-    // ปิดถาวรเรื่องที่แก้แล้วเกิน 7 วัน (ทำซ้ำได้) · test เรียกเอง
+    // ปิดถาวรเรื่องที่แก้แล้วเกินกำหนด + เตือน SLA ทุก 5 นาที (ทำซ้ำได้) · test เรียกเอง
     if (!process.env.VITEST && process.env.OPS_JOBS !== 'off') {
-      this.timer = setInterval(() => void this.closeStale().catch((e) => this.log.error(String(e))), 3_600_000);
+      let n = 0;
+      this.timer = setInterval(() => {
+        void this.slaTick().catch((e) => this.log.error(String(e)));
+        if (n++ % 12 === 0) void this.closeStale().catch((e) => this.log.error(String(e)));
+      }, 300_000);
       this.timer.unref();
     }
   }
@@ -185,7 +159,8 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
         (k.status in ('open', 'pending_dev') and ((k.first_responded_at is null and k.first_response_due_at < now()) or k.resolution_due_at < now())) as "slaBreached"
       from support_tickets k left join staff_users st on st.id = k.assignee_id left join workspaces w on w.id = k.workspace_id
       where ${sql.join(parts, sql` and `)}
-      order by (k.priority = 'urgent') desc, (k.priority = 'high') desc, coalesce(k.first_response_due_at, k.created_at)
+      order by (k.status in ('open', 'pending_dev') and ((k.first_responded_at is null and k.first_response_due_at < now()) or k.resolution_due_at < now())) desc,
+        (k.priority = 'urgent') desc, (k.priority = 'high') desc, coalesce(k.first_response_due_at, k.created_at)
       limit ${q.limit}`);
     return { items, summary: await this.summary() };
   }
@@ -202,16 +177,19 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     if (t.workspaceId) {
       const [c] = await this.rows(sql`
         select w.id, w.slug, w.name, p.code as plan, p.seat_limit as "seatLimit",
+          (select st.name from support_account_managers am join staff_users st on st.id = am.staff_id where am.workspace_id = w.id) as "accountManager",
           (select count(*)::int from workspace_members m where m.workspace_id = w.id and m.status = 'active' and m.role <> 'guest') as seats,
           (select count(*)::int from support_tickets x where x.workspace_id = w.id and x.created_at > now() - interval '90 days') as "tickets90d",
           (select count(*)::int from support_tickets x where x.workspace_id = w.id and x.created_at > now() - interval '90 days' and x.csat <= 2) as "unhappy90d",
           (select g.until from support_access_grants g where g.workspace_id = w.id and (g.until is null or g.until > now())) as "accessUntil",
           exists(select 1 from support_access_grants g where g.workspace_id = w.id and (g.until is null or g.until > now())) as "accessGranted"
         from workspaces w left join subscriptions sub on sub.workspace_id = w.id left join plans p on p.id = sub.plan_id where w.id = ${t.workspaceId}`);
-      customer = c ? { ...c, sla: SLA_HOURS[(c.plan as string) ?? 'free'] ?? SLA_HOURS.free } : null;
+      const cfg = await this.settings.config();
+      customer = c ? { ...c, sla: cfg.sla[((c.plan as string) ?? 'free') as keyof typeof cfg.sla] ?? cfg.sla.free } : null;
     }
     const [assignee] = t.assigneeId ? await this.db.select({ id: s.staffUsers.id, name: s.staffUsers.name }).from(s.staffUsers).where(eq(s.staffUsers.id, t.assigneeId)) : [];
-    return { ticket: { ...t, assignee: assignee ?? null }, messages, customer };
+    const [requester] = t.requesterUserId ? await this.db.select({ name: s.users.displayName }).from(s.users).where(eq(s.users.id, t.requesterUserId)) : [];
+    return { ticket: { ...t, assignee: assignee ?? null, requesterName: requester?.name ?? null }, messages, customer };
   }
 
   /** สร้าง Ticket (T1) สำหรับเรื่องที่มาทางโทรศัพท์ / LINE / อีเมล · SLA ตามแพ็กเกจของ Workspace */
@@ -223,22 +201,25 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
       plan = ws.plan ?? 'free';
     }
     const [user] = await this.db.select({ id: s.users.id }).from(s.users).where(sql`lower(${s.users.email}) = ${input.requesterEmail}`);
-    const sla = SLA_HOURS[plan] ?? SLA_HOURS.free;
+    const route = await this.settings.route({ plan, category: input.category ?? null, workspaceId: input.workspaceId ?? null, priority: input.priority });
+    const assigneeId = input.assignToMe ? staff.id : route.assigneeId;
     const now = new Date();
+    const due = await this.settings.due(plan, route.priority, now);
     const t = await this.db.transaction(async (tx) => {
       const [row] = await tx
         .insert(s.supportTickets)
         .values({
           workspaceId: input.workspaceId ?? null, requesterUserId: user?.id ?? null, requesterEmail: input.requesterEmail, channel: input.channel, category: input.category ?? null,
-          priority: input.priority, subject: input.subject, assigneeId: input.assignToMe ? staff.id : null,
-          firstResponseDueAt: addBusinessHours(now, input.priority === 'urgent' ? Math.min(1, sla.first) : sla.first), resolutionDueAt: addBusinessHours(now, sla.resolve),
+          priority: route.priority, subject: input.subject, assigneeId, ruleId: route.ruleId,
+          firstResponseDueAt: due.first, resolutionDueAt: due.resolve,
         })
         .returning();
       await tx.insert(s.supportTicketMessages).values({ ticketId: row.id, authorKind: 'customer', authorUserId: user?.id ?? null, body: input.body });
       return row;
     });
-    await this.trace(t, staff, 'support.ticket_created', `เปิด Ticket ทาง${input.channel} · ${input.subject}`);
-    const notified = input.notify ? await this.email(t.requesterEmail, `[#${t.number}] ได้รับเรื่องแล้ว: ${t.subject}`, `ทีม Friday ได้รับเรื่องของคุณแล้ว เลขที่ #${t.number}\nเราจะตอบกลับภายใน ${sla.first} ชั่วโมงทำการ`) : false;
+    await this.trace(t, staff, 'support.ticket_created', `เปิด Ticket ทาง${input.channel} · ${input.subject}${assigneeId && !input.assignToMe ? ' · แจกอัตโนมัติตามกฎ' : ''}`);
+    const when = !due.sla.first ? '' : due.open ? `\nเราจะตอบกลับภายใน ${due.sla.first.n} ${due.sla.first.unit === 'h' ? 'ชั่วโมง' : 'วัน'}ทำการ` : '\nตอนนี้อยู่นอกเวลาทำการ ทีมจะตอบในวันทำการถัดไป';
+    const notified = input.notify ? await this.email(t.requesterEmail, `[#${t.number}] ได้รับเรื่องแล้ว: ${t.subject}`, `ทีม Friday ได้รับเรื่องของคุณแล้ว เลขที่ #${t.number}${when}`) : false;
     return { ticket: t, notified };
   }
 
@@ -302,9 +283,10 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     return { message: m, sent };
   }
 
-  /** ลูกค้าตอบ: รอลูกค้า → เปิด · แก้แล้วไม่เกิน 7 วัน → เปิดใหม่ · ปิดถาวรแล้ว → 409 ให้เปิดเรื่องใหม่ */
+  /** ลูกค้าตอบ: รอลูกค้า → เปิด · แก้แล้วไม่เกิน N วัน (ตั้งค่า O22) → เปิดใหม่ที่คนเดิม · ปิดถาวรแล้ว → 409 ให้เปิดเรื่องใหม่ */
   async customerReplied(t: Ticket, body: string, staff?: Staff) {
-    if (t.status === 'closed' || (t.status === 'solved' && t.solvedAt && Date.now() - t.solvedAt.getTime() > REOPEN_DAYS * DAY)) throw new AppError(409, 'ticket_closed', 'Ticket นี้ปิดถาวรแล้ว เปิด Ticket ใหม่แทน');
+    const { reopenDays } = await this.settings.config();
+    if (t.status === 'closed' || (t.status === 'solved' && t.solvedAt && Date.now() - t.solvedAt.getTime() > reopenDays * DAY)) throw new AppError(409, 'ticket_closed', 'Ticket นี้ปิดถาวรแล้ว เปิด Ticket ใหม่แทน');
     const reopened = t.status === 'solved';
     await this.db.transaction(async (tx) => {
       await tx.insert(s.supportTicketMessages).values({ ticketId: t.id, authorKind: 'customer', authorUserId: t.requesterUserId, body });
@@ -332,7 +314,7 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     return { id: t.id, status: 'pending_dev' as const, sent };
   }
 
-  /** ปิดเรื่อง (T5) พร้อมสาเหตุจริง · ลูกค้าตอบภายใน 7 วันเปิดใหม่ได้ · ขอคะแนนความพึงพอใจทางอีเมล */
+  /** ปิดเรื่อง (T5) พร้อมสาเหตุจริง · ลูกค้าตอบภายใน N วันเปิดใหม่ได้ · ขอคะแนนความพึงพอใจทางอีเมล */
   async solve(staff: Staff, id: string, input: z.infer<typeof SolveBody>) {
     const t = await this.find(id);
     this.open(t);
@@ -342,10 +324,11 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
       await tx.insert(s.supportTicketMessages).values({ ticketId: t.id, authorKind: 'staff', authorStaffId: staff.id, internal: true, body: `ปิดเรื่อง · ${input.outcome} · สาเหตุ: ${input.cause}` });
     });
     await this.trace(t, staff, 'support.ticket_solved', `ปิดเรื่อง · ${input.cause}`);
+    const { reopenDays } = await this.settings.config();
     const sent = await this.email(
       this.requester(t),
       `[#${t.number}] แก้ไขเรียบร้อย: ${t.subject}`,
-      `${input.outcome}\n\nถ้ายังมีปัญหา ตอบกลับอีเมลนี้ภายใน ${REOPEN_DAYS} วัน เรื่องจะเปิดใหม่ให้อัตโนมัติ${input.sendCsat ? '\nช่วยให้คะแนนความพึงพอใจ 1–5 โดยตอบกลับอีเมลนี้เป็นตัวเลข' : ''}`,
+      `${input.outcome}\n\nถ้ายังมีปัญหา ตอบกลับอีเมลนี้ภายใน ${reopenDays} วัน เรื่องจะเปิดใหม่ให้อัตโนมัติ${input.sendCsat ? '\nช่วยให้คะแนนความพึงพอใจ 1–5 โดยตอบกลับอีเมลนี้เป็นตัวเลข' : ''}`,
     );
     return { id: t.id, status: 'solved' as const, sent };
   }
@@ -359,14 +342,54 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     return { id: t.id, csat: input.score };
   }
 
-  /** แก้แล้วเกิน 7 วันโดยลูกค้าไม่ตอบ → ปิดถาวร */
+  /** แก้แล้วเกิน N วันโดยลูกค้าไม่ตอบ → ปิดถาวร */
   async closeStale() {
+    const { reopenDays } = await this.settings.config();
     const r = await this.db
       .update(s.supportTickets)
       .set({ status: 'closed', closedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(s.supportTickets.status, 'solved'), sql`${s.supportTickets.solvedAt} < now() - make_interval(days => ${REOPEN_DAYS})`))
+      .where(and(eq(s.supportTickets.status, 'solved'), sql`${s.supportTickets.solvedAt} < now() - make_interval(days => ${reopenDays})`))
       .returning({ id: s.supportTickets.id });
     return { closed: r.length };
+  }
+
+  /**
+   * เตือน SLA: เหลือเวลา 25% → อีเมลผู้รับผิดชอบ (ยังไม่มีคนรับ = หัวหน้าทีม) · เกิน → อีเมลหัวหน้าทีม (รายการขึ้นบนสุดของคิวเอง)
+   * นับกำหนดตอบครั้งแรกก่อน ตอบแล้วนับกำหนดปิดเรื่อง · บันทึกใน sla_alerts กันส่งซ้ำ
+   */
+  async slaTick(now = new Date()) {
+    const rows = await this.rows<{ id: string; number: number; subject: string; createdAt: Date; firstRespondedAt: Date | null; firstResponseDueAt: Date | null; resolutionDueAt: Date | null; slaAlerts: Record<string, string>; assigneeEmail: string | null; assigneeName: string | null; status: string }>(sql`
+      select k.id, k.number, k.subject, k.created_at as "createdAt", k.first_responded_at as "firstRespondedAt", k.first_response_due_at as "firstResponseDueAt", k.resolution_due_at as "resolutionDueAt",
+        k.sla_alerts as "slaAlerts", st.email as "assigneeEmail", st.name as "assigneeName", k.status
+      from support_tickets k left join staff_users st on st.id = k.assignee_id
+      where k.status in ('open', 'pending_dev') and (
+        (k.first_responded_at is null and k.first_response_due_at is not null and not (k.sla_alerts ? 'firstBreach'))
+        or (k.first_responded_at is not null and k.resolution_due_at is not null and not (k.sla_alerts ? 'resolveBreach')))
+      limit 500`);
+    let warned = 0;
+    let breached = 0;
+    for (const k of rows) {
+      const stage = k.firstRespondedAt ? 'resolve' : 'first';
+      const due = new Date((stage === 'first' ? k.firstResponseDueAt : k.resolutionDueAt)!);
+      const start = new Date(stage === 'first' ? k.createdAt : k.firstRespondedAt!);
+      const label = stage === 'first' ? 'ตอบครั้งแรก' : 'ปิดเรื่อง';
+      const alerts = { ...k.slaAlerts };
+      if (now >= due && !alerts[`${stage}Breach`]) {
+        alerts[`${stage}Breach`] = now.toISOString();
+        alerts[`${stage}Warn`] ??= now.toISOString();
+        await this.settings.notifyLeads(`[#${k.number}] เกิน SLA ${label}`, `#${k.number} ${k.subject}\nเกินกำหนด${label}แล้ว · ผู้รับผิดชอบ: ${k.assigneeName ?? 'ยังไม่มีคนรับ'}\nเรื่องนี้ย้ายขึ้นบนสุดของคิว`);
+        breached++;
+      } else if (now < due && !alerts[`${stage}Warn`] && due.getTime() - now.getTime() <= ((due.getTime() - start.getTime()) * SLA_WARN_PCT) / 100) {
+        alerts[`${stage}Warn`] = now.toISOString();
+        const subject = `[#${k.number}] ใกล้เกิน SLA ${label}`;
+        const text = `#${k.number} ${k.subject}\nเหลือเวลา${label}ไม่ถึง ${SLA_WARN_PCT}% · กำหนด ${due.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
+        if (k.assigneeEmail) await this.email(k.assigneeEmail, subject, text);
+        else await this.settings.notifyLeads(subject, `${text}\nยังไม่มีคนรับเรื่องนี้`);
+        warned++;
+      } else continue;
+      await this.db.update(s.supportTickets).set({ slaAlerts: alerts }).where(eq(s.supportTickets.id, k.id));
+    }
+    return { warned, breached };
   }
 
   /** ผลงานรายคน 30 วัน: ปิดเรื่อง · ตอบครั้งแรก / ปิดเรื่องเฉลี่ย · ทันใน SLA · ความพึงพอใจ */

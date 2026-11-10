@@ -1,6 +1,7 @@
-import { Body, Controller, Get, HttpCode, Module, Param, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Module, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
 import { type OpsRequest, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
+import { AccountsBody, CannedBody, PresenceBody, ReorderBody, RuleBody, RulePatch, SaveSettingsBody, SupportSettingsService } from './settings.service.js';
 import { StartSessionBody, SupportService } from './support.service.js';
 import { AssignBody, CreateTicketBody, CsatBody, EscalateBody, MessageBody, SolveBody, TicketsQuery, TicketsService } from './tickets.service.js';
 
@@ -98,5 +99,100 @@ export class TicketsController {
   }
 }
 
-@Module({ controllers: [SupportController, TicketsController], providers: [SupportService, TicketsService], exports: [TicketsService] })
+/**
+ * ตั้งค่าการแจกงาน Support (O22 · SupportSettings · T4 · T6) · ดูได้ Owner / Support · แก้ได้เฉพาะ Owner
+ * สถานะของตัวเองและการใช้ข้อความสำเร็จรูปเป็นของ Support
+ */
+@Controller('ops/support')
+export class SupportSettingsController {
+  constructor(private readonly settings: SupportSettingsService) {}
+
+  @Roles('support', 'owner')
+  @Get('settings')
+  view(@Req() req: OpsRequest) {
+    return this.settings.view(req.staff!);
+  }
+  @Roles('owner')
+  @Put('settings')
+  save(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.settings.save(req.staff!, parse(SaveSettingsBody, body));
+  }
+  @Roles('owner')
+  @Post('rules/preview')
+  @HttpCode(200)
+  preview(@Body() body: unknown) {
+    return this.settings.preview(parse(RuleBody, body));
+  }
+  @Roles('owner')
+  @Post('rules')
+  createRule(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.settings.createRule(req.staff!, parse(RuleBody, body));
+  }
+  @Roles('owner')
+  @Post('rules/reorder')
+  @HttpCode(200)
+  reorder(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.settings.reorder(req.staff!, parse(ReorderBody, body));
+  }
+  @Roles('owner')
+  @Patch('rules/:id')
+  patchRule(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.settings.patchRule(req.staff!, id, parse(RulePatch, body));
+  }
+  @Roles('owner')
+  @Delete('rules/:id')
+  deleteRule(@Req() req: OpsRequest, @Param('id') id: string) {
+    return this.settings.deleteRule(req.staff!, id);
+  }
+  @Roles('owner')
+  @Put('agents/:staffId/accounts')
+  accounts(@Req() req: OpsRequest, @Param('staffId') staffId: string, @Body() body: unknown) {
+    return this.settings.setAccounts(req.staff!, staffId, parse(AccountsBody, body));
+  }
+  @Roles('support', 'owner')
+  @Get('team')
+  team() {
+    return this.settings.team();
+  }
+  @Roles('support')
+  @Put('presence')
+  presence(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.settings.setPresence(req.staff!, parse(PresenceBody, body));
+  }
+  @Roles('support', 'owner')
+  @Get('canned-replies')
+  canned(@Query('archived') archived?: string) {
+    return this.settings.canned(archived === 'true');
+  }
+  @Roles('owner')
+  @Post('canned-replies')
+  createCanned(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.settings.createCanned(req.staff!, parse(CannedBody, body));
+  }
+  @Roles('owner')
+  @Patch('canned-replies/:id')
+  updateCanned(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.settings.updateCanned(req.staff!, id, parse(CannedBody, body));
+  }
+  @Roles('owner')
+  @Post('canned-replies/:id/archive')
+  @HttpCode(200)
+  archive(@Req() req: OpsRequest, @Param('id') id: string) {
+    return this.settings.archiveCanned(req.staff!, id, true);
+  }
+  @Roles('owner')
+  @Post('canned-replies/:id/restore')
+  @HttpCode(200)
+  restore(@Req() req: OpsRequest, @Param('id') id: string) {
+    return this.settings.archiveCanned(req.staff!, id, false);
+  }
+  @Roles('support')
+  @Post('canned-replies/:id/use')
+  @HttpCode(200)
+  use(@Param('id') id: string) {
+    return this.settings.useCanned(id);
+  }
+}
+
+@Module({ controllers: [SupportController, TicketsController, SupportSettingsController], providers: [SupportService, TicketsService, SupportSettingsService], exports: [TicketsService, SupportSettingsService] })
 export class SupportModule {}

@@ -87,6 +87,10 @@ export const supportTickets = pgTable('support_tickets', {
   firstResponseDueAt: tstz(), resolutionDueAt: tstz(), firstRespondedAt: tstz(), solvedAt: tstz(), closedAt: tstz(),
   /** สาเหตุจริงตอนปิด · ใช้ทำรายงานเรื่องที่ถูกถามบ่อย */
   cause: text(), csat: smallint(),
+  /** กฎการแจกงานที่ตรง (O22) · null = ไม่มีกฎตรงหรือสร้างก่อนมีกฎ */
+  ruleId: uuid().references((): AnyPgColumn => supportRules.id, { onDelete: 'set null' }),
+  /** แจ้งเตือน SLA ที่ส่งแล้ว { firstWarn, firstBreach, resolveWarn, resolveBreach }: ISO time · กันส่งซ้ำ */
+  slaAlerts: jsonb().notNull().default(sql`'{}'::jsonb`),
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [index('support_tickets_queue_idx').on(t.status, t.assigneeId, t.createdAt), index('support_tickets_workspace_idx').on(t.workspaceId),
   unique('support_tickets_workspace_id_key').on(t.workspaceId, t.id),
@@ -95,6 +99,59 @@ export const supportTickets = pgTable('support_tickets', {
   check('support_tickets_priority_valid', oneOf(t.priority, ['low', 'normal', 'high', 'urgent'])),
   check('support_tickets_requester', sql`${t.requesterUserId} IS NOT NULL OR ${t.requesterEmail} IS NOT NULL`),
   check('support_tickets_csat', sql`${t.csat} IS NULL OR ${t.csat} BETWEEN 1 AND 5`)]);
+
+/** หมวด Ticket (O22) · ใช้ในกฎแยกตามประเภท · Ticket เก่าที่พิมพ์หมวดเองยังเก็บเป็นข้อความเดิม */
+export const TICKET_CATEGORIES = ['how_to', 'feature_request', 'bug', 'import', 'notification', 'api', 'billing', 'tax_invoice', 'payment', 'outage', 'account', 'other'] as const;
+/** กลุ่มงาน Support · lead = หัวหน้าทีม (ได้แจ้งเตือนเมื่อเกิน SLA) · acct/all เป็นปลายทางของกฎ ไม่ใช่กลุ่มที่สมาชิกอยู่ */
+export const SUPPORT_GROUPS = ['l1', 'l2', 'fin', 'lead'] as const;
+export const SUPPORT_RULE_TARGETS = ['l1', 'l2', 'fin', 'acct', 'all'] as const;
+export const SUPPORT_PRESENCE = ['online', 'busy', 'offline', 'leave'] as const;
+
+/**
+ * ตั้งค่าการแจกงาน Support (O22) · มีแถวเดียว (id = 1) · `config` ตรวจรูปด้วย zod ใน ops-api (support/settings.service.ts)
+ * round_robin_last = คนล่าสุดที่ได้งานแบบวนตามลำดับ
+ */
+export const supportSettings = pgTable('support_settings', {
+  id: smallint().primaryKey().default(1), config: jsonb().notNull().default(sql`'{}'::jsonb`),
+  roundRobinLast: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+  updatedBy: uuid().references(() => staffUsers.id), updatedAt: updatedAt(),
+}, (t) => [check('support_settings_singleton', sql`${t.id} = 1`)]);
+
+/** กฎแยกตามประเภท (T6) · ตรวจตาม position จากน้อยไปมาก ตรงข้อแรกแล้วหยุด · เงื่อนไขว่าง = ทุกค่า */
+export const supportRules = pgTable('support_rules', {
+  id: pk(), position: integer().notNull(), name: text(),
+  plans: text().array().notNull().default(sql`'{}'`), categories: text().array().notNull().default(sql`'{}'`),
+  target: text().notNull(), priority: text().notNull().default('normal'), enabled: boolean().notNull().default(true),
+  createdBy: uuid().references(() => staffUsers.id), createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [index('support_rules_position_idx').on(t.position),
+  check('support_rules_target_valid', oneOf(t.target, SUPPORT_RULE_TARGETS)),
+  check('support_rules_priority_valid', oneOf(t.priority, ['low', 'normal', 'high', 'urgent']))]);
+
+/** ข้อมูลการรับงานของพนักงาน Support · ไม่มีแถว = ออนไลน์ ไม่อยู่กลุ่มใด เพดานตามค่าเริ่มต้น */
+export const supportAgents = pgTable('support_agents', {
+  staffId: uuid().primaryKey().references(() => staffUsers.id, { onDelete: 'cascade' }),
+  groups: text().array().notNull().default(sql`'{}'`),
+  /** null = ใช้เพดานค่าเริ่มต้นใน support_settings */
+  cap: smallint(),
+  presence: text().notNull().default('online'), presenceNote: text(), presenceAt: tstz(),
+  updatedAt: updatedAt(),
+}, (t) => [check('support_agents_groups_valid', sql`${t.groups} <@ ARRAY[${sql.raw(SUPPORT_GROUPS.map((g) => `'${g}'`).join(', '))}]::text[]`),
+  check('support_agents_presence_valid', oneOf(t.presence, SUPPORT_PRESENCE)),
+  check('support_agents_cap', sql`${t.cap} IS NULL OR ${t.cap} BETWEEN 1 AND 99`)]);
+
+/** ผู้ดูแลประจำบัญชี (Enterprise) · 1 Workspace มีผู้ดูแล 1 คน · กฎที่ส่งไป "acct" แจกให้คนนี้ */
+export const supportAccountManagers = pgTable('support_account_managers', {
+  workspaceId: uuid().primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),
+  staffId: uuid().notNull().references(() => staffUsers.id, { onDelete: 'cascade' }),
+  createdAt: createdAt(),
+}, (t) => [index('support_account_managers_staff_idx').on(t.staffId)]);
+
+/** ข้อความสำเร็จรูป (T4) · ตัวแปร {ชื่อผู้แจ้ง} {ชื่อ Workspace} {เลข Ticket} แทนค่าตอนใส่ในช่องตอบ · เลิกใช้แล้วเก็บไว้ (archived_at) */
+export const supportCannedReplies = pgTable('support_canned_replies', {
+  id: pk(), title: text().notNull(), body: text().notNull(), tag: text(), uses: integer().notNull().default(0),
+  createdBy: uuid().references(() => staffUsers.id), updatedBy: uuid().references(() => staffUsers.id),
+  archivedAt: tstz(), createdAt: createdAt(), updatedAt: updatedAt(),
+});
 
 export const supportTicketMessages = pgTable('support_ticket_messages', {
   id: pk(), ticketId: uuid().notNull().references(() => supportTickets.id, { onDelete: 'cascade' }),

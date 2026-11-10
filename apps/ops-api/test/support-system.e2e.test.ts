@@ -32,6 +32,8 @@ beforeAll(async () => {
   finance = await staff(t, 'finance@friday.example.com', 'Fin Finance', 'finance');
   engineer = await staff(t, 'eng@friday.example.com', 'Eve Engineer', ['engineer']);
   c = await customer(t, 'ticket-demo', { plan: 'team_m', status: 'active' });
+  // ไฟล์นี้ทดสอบคิวกลางของเฟส 1 · การแจกงานอัตโนมัติ (O22) อยู่ใน support-settings.e2e.test.ts
+  await t.owner.query(`INSERT INTO support_settings (id, config) VALUES (1, '{"mode":"manual"}')`);
 });
 afterAll(async () => {
   if (VALKEY) {
@@ -96,7 +98,7 @@ describe('Ticket', () => {
     let d = (await support.agent.get(`/ops/tickets/${id}`)).body;
     expect(d.ticket).toMatchObject({ status: 'pending_customer', firstRespondedAt: expect.any(String), assignee: { id: support2.id } });
     expect(d.messages.map((m: { authorKind: string; internal: boolean }) => [m.authorKind, m.internal])).toEqual([['customer', false], ['staff', true], ['staff', false], ['staff', true]]);
-    expect(d.customer).toMatchObject({ slug: 'ticket-demo', plan: 'team_m', tickets90d: 1, accessGranted: false, sla: { first: 4 } });
+    expect(d.customer).toMatchObject({ slug: 'ticket-demo', plan: 'team_m', tickets90d: 1, accessGranted: false, sla: { first: { n: 4, unit: 'h' }, resolve: { n: 3, unit: 'd' } } });
     await support2.agent.post(`/ops/tickets/${id}/messages`).send({ body: 'ลูกค้าโทรกลับมาบอกว่าลบช่องใน Discord ไปแล้ว', fromCustomer: true });
     d = (await support.agent.get(`/ops/tickets/${id}`)).body;
     expect(d.ticket.status).toBe('open');

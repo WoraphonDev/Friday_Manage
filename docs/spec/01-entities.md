@@ -226,8 +226,13 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `staff_elevation` | สิทธิ์ฉุกเฉิน: Owner เปิดบทบาทให้ตัวเองชั่วคราว ≤ 1 ชม. | staff_id, role, reason, started_at, ends_at, ended_at, ended_by | Ops 8 |
 | `approval_request` | คำขออนุมัติเมื่อเกินวงเงิน | kind, workspace_id (null = ระดับระบบ), target_type, target_id, payload, amount_satang, requested_by, reason, status, decided_by, self_approved, expires_at | Ops G7, G8, G12 |
 | `staff_audit_log` | การกระทำของทีม Friday ที่ไม่ผูก Workspace · append-only (แม้ role ของ ops) | staff_id, roles, action, target_type, target_id, workspace_id, reason, approved_by, self_approved, ip | Ops 8 |
-| `support_ticket` | Ticket · เฟส 1 คิวกลาง | number, workspace_id, requester_user_id / requester_email, channel, category, priority, subject, status, assignee_id, SLA due, cause, csat | Ops 6 |
+| `support_ticket` | Ticket · แจกงานตามกฎ (O22) หรือคิวกลาง | number, workspace_id, requester_user_id / requester_email, channel, category (รหัสใน `TICKET_CATEGORIES`), priority, subject, status, assignee_id, SLA due, cause, csat, rule_id, sla_alerts | Ops 6 |
 | `support_ticket_message` | ข้อความใน Ticket · internal = ลูกค้าไม่เห็น | ticket_id, author_kind, author_user_id / author_staff_id, body, internal, attachments | Ops 6 |
+| `support_setting` | ตั้งค่าการแจกงาน Support มีแถวเดียว (O22) | config (วิธีแจก · เพดาน · ตอบกลับภายใน N วัน · คนออฟไลน์/ลา · SLA ตามแพ็กเกจ · เวลาทำการ · วันหยุดราชการ), round_robin_last, updated_by | Ops SupportSettings |
+| `support_rule` | กฎแยกตามประเภท ตรงข้อแรกแล้วหยุด (T6) | position, plans, categories, target (l1 · l2 · fin · acct · all), priority, enabled | Ops SupportSettings, T6 |
+| `support_agent` | กลุ่ม เพดานงาน และสถานะของพนักงาน Support | staff_id, groups (l1 · l2 · fin · lead), cap, presence (online · busy · offline · leave), presence_note | Ops 6, Ops SupportSettings |
+| `support_account_manager` | ผู้ดูแลประจำบัญชี (Enterprise) | workspace_id, staff_id | Ops SupportSettings |
+| `support_canned_reply` | ข้อความสำเร็จรูปพร้อมตัวแปร (T4) | title, body, tag, uses, archived_at | Ops 6 (T4), Ops SupportSettings |
 | `incident` | เหตุขัดข้องในหน้าสถานะ · internal = ยังไม่เผยแพร่ | title, impact, status, services[], owner_id, started_at, resolved_at | Ops 12 |
 | `incident_update` | อัปเดตของเหตุขัดข้อง | incident_id, status, message, notify_subscribers, show_banner, created_by | Ops 12 |
 | `maintenance_window` | ปิดปรับปรุง · API ฝั่งลูกค้าอ่านเพื่อเปลี่ยนเป็นอ่านอย่างเดียว | scope, message, starts_at, ends_at, notify_plan, status, approval_request_id | Ops 12 |

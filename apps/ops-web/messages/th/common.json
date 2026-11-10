@@ -134,7 +134,8 @@
     "breakGlass": "เปิดสิทธิ์ฉุกเฉิน",
     "signOut": "ออกจากระบบ",
     "signOutDesc": "ออกจากทุกแท็บของ Friday Ops",
-    "addKey": "เพิ่ม Security key"
+    "addKey": "เพิ่ม Security key",
+    "mobile": "Friday Ops บนมือถือ · แจ้งเตือน"
   },
   "banner": {
     "session": "กำลังดูบัญชีลูกค้า",

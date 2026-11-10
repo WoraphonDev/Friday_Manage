@@ -6,4 +6,4 @@ export function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = { matcher: ["/", "/workspaces/:path*", "/users/:path*", "/payments/:path*", "/refunds/:path*", "/support/:path*", "/system/:path*", "/incidents/:path*", "/privacy/:path*", "/legal/:path*", "/business/:path*", "/staff/:path*", "/soon/:path*", "/flags/:path*"] };
+export const config = { matcher: ["/", "/workspaces/:path*", "/users/:path*", "/payments/:path*", "/refunds/:path*", "/support/:path*", "/system/:path*", "/incidents/:path*", "/privacy/:path*", "/legal/:path*", "/business/:path*", "/staff/:path*", "/soon/:path*", "/flags/:path*", "/entitlements/:path*", "/deliveries/:path*", "/m/:path*"] };

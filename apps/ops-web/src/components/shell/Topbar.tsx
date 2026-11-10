@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Bell, ChevronRight, CircleHelp, KeyRound, LogOut, Menu, Search, ShieldAlert, UserRound } from "lucide-react";
+import { Bell, ChevronRight, CircleHelp, KeyRound, LogOut, Menu, Search, ShieldAlert, Smartphone, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -251,6 +251,9 @@ export function Topbar({
               <button type="button" className="menu-item" onClick={() => (close(), onAddKey())}>
                 <KeyRound size={16} /> {t("account.keys")}
               </button>
+              <Link className="menu-item" href="/m" onClick={close}>
+                <Smartphone size={16} /> {t("account.mobile")}
+              </Link>
               {hasAny(staff, "owner", "auditor") && (
                 <Link className="menu-item" href={`/staff?tab=audit&staff=${staff.id}`} onClick={close}>
                   <UserRound size={16} /> {t("account.myLog")}

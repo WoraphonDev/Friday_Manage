@@ -233,6 +233,8 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `support_agent` | กลุ่ม เพดานงาน และสถานะของพนักงาน Support | staff_id, groups (l1 · l2 · fin · lead), cap, presence (online · busy · offline · leave), presence_note | Ops 6, Ops SupportSettings |
 | `support_account_manager` | ผู้ดูแลประจำบัญชี (Enterprise) | workspace_id, staff_id | Ops SupportSettings |
 | `support_canned_reply` | ข้อความสำเร็จรูปพร้อมตัวแปร (T4) | title, body, tag, uses, archived_at | Ops 6 (T4), Ops SupportSettings |
+| `staff_push_subscription` | Web Push ของพนักงาน 1 แถวต่อเครื่อง (O25) · ปลายทางตอบ 404/410 ลบทิ้ง | staff_id, endpoint, p256dh, auth, user_agent, last_sent_at | Ops M6 |
+| `staff_push_notice` | กันส่งแจ้งเตือนเรื่องเดิมซ้ำ | key (ประเภท:รหัสรายการ), sent_at | Ops M6 |
 | `incident` | เหตุขัดข้องในหน้าสถานะ · internal = ยังไม่เผยแพร่ | title, impact, status, services[], owner_id, started_at, resolved_at | Ops 12 |
 | `incident_update` | อัปเดตของเหตุขัดข้อง | incident_id, status, message, notify_subscribers, show_banner, created_by | Ops 12 |
 | `maintenance_window` | ปิดปรับปรุง · API ฝั่งลูกค้าอ่านเพื่อเปลี่ยนเป็นอ่านอย่างเดียว | scope, message, starts_at, ends_at, notify_plan, status, approval_request_id | Ops 12 |

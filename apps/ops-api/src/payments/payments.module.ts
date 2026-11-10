@@ -83,5 +83,5 @@ export class PaymentsController {
   }
 }
 
-@Module({ controllers: [PaymentsController], providers: [OpsPaymentsService] })
+@Module({ controllers: [PaymentsController], providers: [OpsPaymentsService], exports: [OpsPaymentsService] })
 export class PaymentsModule {}

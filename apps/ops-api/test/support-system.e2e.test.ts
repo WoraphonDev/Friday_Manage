@@ -228,7 +228,8 @@ describe('ปิดปรับปรุง', () => {
     const before = mail.sent.length;
     const ok = await owner.agent.post(`/ops/approvals/${r.body.pendingApproval.id}/approve`).send({});
     expect(ok.body.result.maintenance.status).toBe('scheduled');
-    expect(mail.sent.length - before).toBe(1); // ผู้ติดตามหน้าสถานะ
+    // ผู้ติดตามหน้าสถานะ 1 ฉบับ + แจ้งผู้ขอว่าอนุมัติแล้ว (O25)
+    expect(mail.sent.slice(before).map((x) => x.to).sort()).toEqual([engineer.email, 'watcher@example.com'].sort());
     const svc = t.app.get(SystemService);
     expect(await svc.tickMaintenance(new Date(start.getTime() + 60_000))).toEqual({ started: 1, ended: 0 });
     expect(await svc.tickMaintenance(new Date(start.getTime() + 2 * 3_600_000))).toEqual({ started: 0, ended: 1 });

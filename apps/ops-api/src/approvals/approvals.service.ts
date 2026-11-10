@@ -8,6 +8,7 @@ import { limitsOf, type StaffRole } from '../auth/roles.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
+import { PushService } from '../push/push.service.js';
 
 const s = schema;
 const HOUR = 3_600_000;
@@ -53,6 +54,7 @@ export class ApprovalsService {
   constructor(
     @Inject(OPS_DB) private readonly db: Db,
     private readonly mail: Mailer,
+    private readonly push: PushService,
   ) {}
 
   register(kind: string, fn: Executor) {
@@ -99,7 +101,23 @@ export class ApprovalsService {
         /* บันทึกใน mail log แล้ว */
       }
     }
+    // แจ้งในมือถือ (O25) · เปิดหน้าอนุมัติบนมือถือตรงรายการนี้
+    const others = (await this.activeOwners()).filter((o) => o.id !== staff.id).map((o) => o.id);
+    await this.push.toStaff(others, { title: 'รออนุมัติ', body: `${staff.name} · ${input.rule}`.slice(0, 160), url: `/m/approvals?id=${row.id}`, tag: `approval-${row.id}` }).catch(() => 0);
     return this.dto(row, await this.canSelfApprove(staff, row));
+  }
+
+  /** แจ้งผู้ขอว่าตัดสินแล้ว (อีเมล + มือถือ) · ส่งไม่ได้ไม่ทำให้การตัดสินล้ม */
+  private async tellRequester(row: typeof s.approvalRequests.$inferSelect, approver: Staff, approved: boolean, note?: string) {
+    if (row.requestedBy === approver.id) return;
+    const [req] = await this.db.select({ email: s.staffUsers.email }).from(s.staffUsers).where(eq(s.staffUsers.id, row.requestedBy));
+    const verdict = approved ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ';
+    try {
+      if (req) await this.mail.send({ to: req.email, subject: `[Friday Ops] ${verdict}: ${row.kind}`, text: `${approver.name} ${verdict} คำขอ ${row.kind}${note ? `\nหมายเหตุ: ${note}` : ''}` });
+    } catch {
+      /* บันทึกใน mail log แล้ว */
+    }
+    await this.push.toStaff([row.requestedBy], { title: verdict, body: `${approver.name} · ${row.kind}`, url: '/', tag: `approval-${row.id}` }).catch(() => 0);
   }
 
   async list(staff: Staff, q: z.infer<typeof ApprovalsQuery>) {
@@ -139,6 +157,7 @@ export class ApprovalsService {
       throw e;
     }
     await staffAudit(this.db, staff, self ? 'approval.self_approved' : 'approval.approved', `${row.kind}${note ? ` · ${note}` : ''}`, { type: 'approval_request', id }, row.workspaceId ?? undefined, { approvedBy: staff.id, selfApproved: self });
+    await this.tellRequester(row, staff, true, note);
     return { approval: this.dto(claimed, false), result };
   }
 
@@ -148,6 +167,7 @@ export class ApprovalsService {
     const [r] = await this.db.update(s.approvalRequests).set({ status: 'rejected', decidedBy: staff.id, decidedAt: new Date(), decisionNote: note ?? null }).where(and(eq(s.approvalRequests.id, id), eq(s.approvalRequests.status, 'pending'))).returning();
     if (!r) throw new AppError(409, 'approval_not_pending', 'คำขอนี้ถูกตัดสินไปแล้ว');
     await staffAudit(this.db, staff, 'approval.rejected', `${row.kind}${note ? ` · ${note}` : ''}`, { type: 'approval_request', id }, row.workspaceId ?? undefined);
+    await this.tellRequester(row, staff, false, note);
     return { approval: this.dto(r, false) };
   }
 

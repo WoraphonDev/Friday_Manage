@@ -299,3 +299,18 @@ export const entitlementOverrides = pgTable('entitlement_overrides', {
 }, (t) => [index('entitlement_overrides_workspace_idx').on(t.workspaceId, t.key),
   uniqueIndex('entitlement_overrides_active_key').on(t.workspaceId, t.key).where(sql`${t.revokedAt} IS NULL`),
   check('entitlement_overrides_expiry', sql`${t.expiresAt} IS NOT NULL OR ${t.contractRef} IS NOT NULL`)]);
+
+/**
+ * Web Push ของพนักงาน (O25 · Friday Ops บนมือถือ) · 1 เครื่อง/เบราว์เซอร์ = 1 แถว · ปลายทางตอบ 404/410 = ลบแถวทิ้ง
+ * `p256dh` / `auth` เป็นกุญแจสาธารณะของเบราว์เซอร์ ใช้เข้ารหัสข้อความ (ไม่ใช่ความลับฝั่งเรา)
+ */
+export const staffPushSubscriptions = pgTable('staff_push_subscriptions', {
+  id: pk(), staffId: uuid().notNull().references(() => staffUsers.id, { onDelete: 'cascade' }),
+  endpoint: text().notNull(), p256dh: text().notNull(), auth: text().notNull(), userAgent: text(),
+  lastSentAt: tstz(), createdAt: createdAt(),
+}, (t) => [uniqueIndex('staff_push_subscriptions_endpoint_key').on(t.endpoint), index('staff_push_subscriptions_staff_idx').on(t.staffId)]);
+
+/** กันส่งแจ้งเตือนเรื่องเดิมซ้ำ (เช่น คิวชำระใกล้ครบ SLA) · key = ประเภท:รหัสรายการ */
+export const staffPushNotices = pgTable('staff_push_notices', {
+  key: text().primaryKey(), sentAt: createdAt(),
+});

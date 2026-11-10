@@ -9,7 +9,7 @@ const owner = new pg.Client({ connectionString: process.env.DATABASE_OWNER_URL ?
 const spec = readFileSync(new URL('../../../docs/spec/01-entities.md', import.meta.url), 'utf8');
 const entities = [...spec.matchAll(/^\| `(\w+)` \|/gm)].map((m) => m[1]);
 const plural = (name: string) => /[^aeiou]y$/.test(name) ? `${name.slice(0, -1)}ies` : /(?:s|x|ch|sh)$/.test(name) ? `${name}es` : `${name}s`;
-const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_flag_overrides', 'announcements', 'entitlement_versions', 'entitlement_overrides', 'email_suppressions', 'email_feedback_events', 'support_settings', 'support_rules', 'support_agents', 'support_account_managers', 'support_canned_replies'];
+const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_flag_overrides', 'announcements', 'entitlement_versions', 'entitlement_overrides', 'email_suppressions', 'email_feedback_events', 'support_settings', 'support_rules', 'support_agents', 'support_account_managers', 'support_canned_replies', 'staff_push_subscriptions', 'staff_push_notices'];
 
 beforeAll(() => owner.connect());
 afterAll(() => owner.end());

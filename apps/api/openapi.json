@@ -26606,16 +26606,39 @@
             "in": "query",
             "required": false,
             "schema": {
+              "minItems": 1,
+              "maxItems": 7,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "task",
+                  "sub",
+                  "bug",
+                  "project",
+                  "comment",
+                  "file",
+                  "person"
+                ]
+              }
+            }
+          },
+          {
+            "name": "assignee",
+            "in": "query",
+            "required": false,
+            "schema": {
               "type": "string",
-              "enum": [
-                "task",
-                "sub",
-                "bug",
-                "project",
-                "comment",
-                "file",
-                "person"
-              ]
+              "const": "me"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "const": "open"
             }
           },
           {

@@ -86,20 +86,18 @@ export function SearchPage({ ws }: { ws: string }) {
   }
   const patch = (p: Partial<Filters>) => apply({ ...filters, ...p });
 
-  // ค้นทุกชนิดครั้งเดียวเพื่อได้ counts ของทุกประเภท · เลือกประเภทเดียว = ขอเฉพาะชนิดนั้นเพื่อให้ได้ครบ limit
+  // ค้นทุกชนิดครั้งเดียวเพื่อได้ counts ของทุกประเภท · เลือกบางประเภท = ขอเฉพาะชนิดเหล่านั้นเพื่อให้ได้ครบ limit
+  // มอบหมายให้ฉัน / ยังไม่เสร็จ กรองที่ API (counts ตรงกับตัวกรอง และไม่ตกหล่นเมื่อผลเกิน limit)
   const common: Record<string, string> = { q: filters.q, limit: String(LIMIT), sort: filters.sort };
   if (filters.project) common.project = filters.project;
   if (filters.archived) common.archived = "true";
+  if (filters.mine) common.assignee = "me";
+  if (filters.open) common.status = "open";
   const fetchSearch = (params: Record<string, string>) => api.get<SearchResult>(`${base}/search?${new URLSearchParams(params)}`);
   const all = useQuery({ queryKey: searchKey(ws, common), queryFn: () => fetchSearch(common), enabled: !!filters.q });
-  const single = filters.types.length === 1 ? { ...common, type: filters.types[0]! } : null;
+  const subset = filters.types.length > 0 && filters.types.length < TYPE_ORDER.length;
+  const single = subset ? { ...common, type: filters.types.join(",") } : null;
   const typed = useQuery({ queryKey: searchKey(ws, single ?? {}), queryFn: () => fetchSearch(single!), enabled: !!filters.q && !!single });
-  // "มอบหมายให้ฉัน": search ยังไม่ส่งผู้รับผิดชอบ จึงใช้รายการงานของฉันจาก my-issues (A10) มาตัดแทน
-  const mine = useQuery({
-    queryKey: ["workspace", ws, "my-issues", "assigned", "keys"],
-    queryFn: async () => new Set((await api.get<{ groups: { items: { key: string }[] }[] }>(`${base}/my-issues?tab=assigned&group=status`)).groups.flatMap((g) => g.items.map((i) => i.key))),
-    enabled: !!filters.q && filters.mine,
-  });
   const saved = useQuery({ queryKey: savedSearchesKey(ws), queryFn: () => api.get<{ items: SavedSearch[] }>(`${base}/saved-searches`) });
 
   const save = useMutation({
@@ -115,20 +113,14 @@ export function SearchPage({ ws }: { ws: string }) {
   const source = single ? typed : all;
   const results = useMemo(() => {
     const items = source.data?.items ?? [];
-    return items.filter((h) => {
-      if (!filters.types.includes(h.type)) return false;
-      if (filters.mine && !(isIssue(h) && mine.data?.has(h.key))) return false;
-      if (filters.open && isIssue(h) && h.status.category === "done") return false;
-      return true;
-    });
-  }, [source.data, filters.types, filters.mine, filters.open, mine.data]);
+    return items.filter((h) => filters.types.includes(h.type));
+  }, [source.data, filters.types]);
   const counts = all.data?.counts;
-  const clientFiltered = filters.mine || filters.open;
-  const total = clientFiltered ? results.length : filters.types.reduce((n, type) => n + (counts?.[type] ?? 0), 0);
+  const total = filters.types.reduce((n, type) => n + (counts?.[type] ?? 0), 0);
   const capped = (source.data?.items.length ?? 0) >= LIMIT;
 
-  const error = all.error ?? typed.error ?? mine.error;
-  const pending = !!filters.q && (all.isPending || (!!single && typed.isPending) || (filters.mine && mine.isPending));
+  const error = all.error ?? typed.error;
+  const pending = !!filters.q && (all.isPending || (!!single && typed.isPending));
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -199,7 +191,7 @@ export function SearchPage({ ws }: { ws: string }) {
           ) : pending ? (
             <LoadingState />
           ) : error ? (
-            error instanceof ApiError && error.status === 403 ? <Forbidden /> : <ErrorState error={error} retry={() => { void all.refetch(); if (single) void typed.refetch(); if (filters.mine) void mine.refetch(); }} />
+            error instanceof ApiError && error.status === 403 ? <Forbidden /> : <ErrorState error={error} retry={() => { void all.refetch(); if (single) void typed.refetch(); }} />
           ) : !results.length ? (
             <div className={styles.empty}><b>{t("page.noResults")}</b><p>{t("page.noResultsHint")}</p></div>
           ) : (

@@ -20,7 +20,7 @@ import { applyUpdate, computeUpdate, parentTasks, statusNames, type UpdateDiff, 
 import { buildPlanXlsx, buildTemplateXlsx } from './export.js';
 import type { CustomFieldDef } from '../issues/custom-values.js';
 import { insertRows } from './insert.js';
-import { autoMap, type CheckOptions, checkPlan, type ColumnMapping, FIELDS, type Field, personKey, type PlanCheck } from './plan.js';
+import { autoMap, type CheckOptions, checkPlan, type ColumnMapping, FIELDS, type Field, type MappingTarget, personKey, type PlanCheck } from './plan.js';
 
 const s = schema;
 const isoDate = z.iso.date();
@@ -38,7 +38,8 @@ const ProjectDraft = z.object({
 });
 
 export const PatchImportBody = z.object({
-  columnMapping: z.record(z.string(), z.enum(Object.keys(FIELDS) as [Field, ...Field[]]).nullable()).optional(),
+  // ฟิลด์มาตรฐาน หรือ Custom field ของโปรเจกต์ (`cf:<id>` · โหมดอัปเดตแผน)
+  columnMapping: z.record(z.string(), z.union([z.enum(Object.keys(FIELDS) as [Field, ...Field[]]), z.string().regex(/^cf:[0-9a-f-]{36}$/) as z.ZodType<`cf:${string}`>]).nullable()).optional(),
   personMapping: z.record(z.string(), PersonTarget).optional(),
   project: ProjectDraft.optional(),
   /** ตั้งแผนนี้เป็น Baseline v1 (ค่าเริ่มต้นเปิด) */
@@ -59,7 +60,9 @@ interface JobState {
   findings: PlanCheck['findings'];
   /** decided = ผู้ใช้เลือกแล้ว (สมาชิก / อีเมล / ไม่ระบุ) · false = ยังไม่พบและยังไม่ได้เลือก */
   people: { name: string; roles: string[]; rows: number; decided: boolean; target: z.infer<typeof PersonTarget> }[];
-  columns: { header: string; field: Field | null; sample: unknown }[];
+  columns: { header: string; field: MappingTarget | null; sample: unknown }[];
+  /** โหมดอัปเดต: Custom field ของโปรเจกต์ที่จับคู่คอลัมน์ได้ */
+  customFields?: { target: `cf:${string}`; label: string }[];
   /** โหมดอัปเดตเท่านั้น */
   diff?: UpdateDiff;
   missingChoice?: Record<string, 'keep' | 'delete'>;
@@ -95,10 +98,10 @@ export class ImportsService {
     await writeFile(path, file.buffer);
 
     return this.db.run(auth, tenant, async (tx) => {
-      const columnMapping = autoMap(wb.table.headers);
       const members = await this.members(tx);
       if (mode === 'update') {
         const project = await this.updateProject(tx, auth, tenant, targetKey!);
+        const columnMapping = autoMap(wb.table.headers, await this.customDefs(tx, project));
         const ev = await this.evaluateUpdate(tx, tenant, project, wb, columnMapping, {}, members, {}, true);
         const [job] = await tx
           .insert(s.importJobs)
@@ -106,6 +109,7 @@ export class ImportsService {
           .returning();
         return view(job, ev.state);
       }
+      const columnMapping = autoMap(wb.table.headers);
       const draft = suggestProject(file.originalname);
       const { state, personMapping } = await this.evaluate(tx, tenant, wb, columnMapping, {}, members, { project: draft, setBaseline: true }, true);
       const [job] = await tx
@@ -302,6 +306,11 @@ export class ImportsService {
     return project;
   }
 
+  /** Custom field ของโปรเจกต์ (จับคู่คอลัมน์ในโหมดอัปเดต) */
+  private async customDefs(tx: Tx, project: typeof s.projects.$inferSelect) {
+    return (await this.projects.fieldsOf(tx, project)).customFields as CustomFieldDef[];
+  }
+
   private async evaluateUpdate(
     tx: Tx,
     tenant: TenantInfo,
@@ -323,8 +332,9 @@ export class ImportsService {
       projectKey: project.key,
       parents: await parentTasks(tx, project.id),
     });
-    const plan: UpdatePlan = await computeUpdate(tx, project, base.check, Object.values(columnMapping).includes('key'));
-    const state: JobState = { ...base.state, diff: plan.diff, ...keep };
+    const defs = await this.customDefs(tx, project);
+    const plan: UpdatePlan = await computeUpdate(tx, project, base.check, Object.values(columnMapping).includes('key'), defs);
+    const state: JobState = { ...base.state, diff: plan.diff, ...keep, customFields: defs.map((d) => ({ target: `cf:${d.id}` as const, label: d.name })) };
     // computeUpdate อาจพบแถวที่ต้องแก้เพิ่ม (เช่น Task ที่มี Sub-task ถูกย้ายไปเป็น Sub-task)
     state.summary = { ...state.summary, ready: plan.diff.changed.length + plan.diff.added.length, skipped: base.check.skip.size };
     return { ...base, state, plan };
@@ -343,7 +353,8 @@ export class ImportsService {
     const choice = (no: number) => prev.missingChoice?.[String(no)] ?? prev.missingAll ?? 'keep';
     const deleteNos = new Set(ev.plan.diff.missing.filter((m) => choice(m.no) === 'delete').map((m) => m.no));
     const reason = prev.planChangeReason ?? `อัปเดตแผนจากไฟล์ ${job.fileName}`;
-    const done = await applyUpdate(tx, { auth, tenant, project, fileName: job.fileName, plan: ev.plan, userOf, deleteNos, reason });
+    const members = await this.members(tx);
+    const done = await applyUpdate(tx, { auth, tenant, project, fileName: job.fileName, plan: ev.plan, userOf, memberOf: (n) => members.get(personKey(n)) ?? null, deleteNos, reason });
 
     const skipped = ev.check.skip.size;
     await tx.update(s.importJobs).set({ status: 'completed', rowImported: done.added + done.changed, rowSkipped: skipped, completedAt: new Date() }).where(eq(s.importJobs.id, job.id));
@@ -461,7 +472,7 @@ function view(job: Job, state: JobState) {
     mode: job.mode,
     fileName: job.fileName,
     projectId: job.projectId,
-    fields: Object.fromEntries(Object.entries(FIELDS).map(([k, v]) => [k, v.label])),
+    fields: { ...Object.fromEntries(Object.entries(FIELDS).map(([k, v]) => [k, v.label])), ...Object.fromEntries((state.customFields ?? []).map((c) => [c.target, `${c.label} (Custom field)`])) },
     ...state,
     findings: state.findings.slice(0, 1000),
     ...(state.diff ? { diff: { ...state.diff, added: state.diff.added.slice(0, 1000), changed: state.diff.changed.slice(0, 1000), missing: state.diff.missing.slice(0, 1000) } } : {}),

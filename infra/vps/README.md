@@ -42,7 +42,7 @@ infra/vps/deploy.sh
 - **ยังไม่มีโดเมน**: ใช้ `app.<ip-ขีด>.sslip.io` / `ops.<ip-ขีด>.sslip.io` (DNS สาธารณะที่ชี้ชื่อกลับมาที่ IP ในชื่อ) · ได้ใบรับรองจริง จึงทดสอบ cookie แบบ Secure, Web Push และ Webhook ได้ · ไม่ควรให้ลูกค้าจริงใช้
 - **เปลี่ยนเป็นโดเมนจริง**: ชี้ DNS A ของ `app` และ `ops` มาที่ IP · แก้ `APP_HOST` / `OPS_HOST` ใน `.env` · `docker compose up -d` (ไม่ต้อง build ใหม่ เพราะ web เรียก API ผ่านชื่อ service ภายใน) · Security key ของพนักงาน Ops ผูกกับชื่อ host ต้องลงทะเบียนใหม่
 - **ชำระเงิน**: ยังไม่มี Gateway จริง (A35b) · `PAYMENT_GATEWAY=fake` ใช้ได้เฉพาะเมื่อ `STRIPE_WEBHOOK_SECRET` ยาว ≥ 32 ตัวอักษร (กันการปิดใบแจ้งหนี้ด้วยลายเซ็น dev ใน repo)
-- **อีเมล**: ไม่ตั้ง `SMTP_*` = ไม่ส่ง (เขียน log) · ลิงก์ยืนยันอีเมล / รีเซ็ตรหัสผ่าน / เชิญสมาชิกจะไม่ถึงผู้ใช้
+- **อีเมล**: ไม่ตั้ง `SMTP_*` = ไม่ส่ง (เขียน log) · ช่วงยังไม่มีโดเมนใช้ Gmail + App Password (~500 ฉบับ/วัน): ส่ง `set-smtp.sh` ขึ้นเครื่องแล้ว `ssh -t -i ~/.ssh/friday_vps root@<ip> /opt/friday/set-smtp.sh` (ถามรหัสในเครื่อง ไม่ผ่านแชต) แล้ว `docker compose up -d api worker ops-api` · มีโดเมนแล้วค่อยย้ายไปผู้ให้บริการที่ยืนยันโดเมน (SPF/DKIM)
 - **Owner คนแรกของ Ops**: `docker compose exec ops-api node dist/enroll.js <email> <ชื่อ> owner` แล้วเปิดลิงก์ลงทะเบียน Security key
 
 ## Backup

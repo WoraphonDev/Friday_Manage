@@ -39,13 +39,13 @@ docker save "friday-api:$TAG" "friday-web:$TAG" "friday-ops-api:$TAG" "friday-op
 
 echo "== ไฟล์ตั้งค่า"
 "${SSH[@]}" "test -f $APP_DIR/.env" || { echo "ยังไม่มี $APP_DIR/.env · รัน setup-server.sh ก่อน" >&2; exit 1; }
-scp -i "$VPS_KEY" -o IdentitiesOnly=yes -q infra/vps/compose.yml infra/vps/Caddyfile infra/vps/backup.sh "$VPS_HOST:$APP_DIR/"
+scp -i "$VPS_KEY" -o IdentitiesOnly=yes -q infra/vps/compose.yml infra/vps/Caddyfile infra/vps/backup.sh infra/vps/set-smtp.sh "$VPS_HOST:$APP_DIR/"
 
 echo "== migrate แล้วเปิด service"
 "${SSH[@]}" bash -s -- "$TAG" <<'REMOTE'
 set -euo pipefail
 cd /opt/friday
-chmod 700 backup.sh
+chmod 700 backup.sh set-smtp.sh
 prev=$(grep '^TAG=' .env | cut -d= -f2)
 sed -i "s/^TAG=.*/TAG=$1/" .env
 docker compose up -d postgres valkey

@@ -27,6 +27,9 @@
       "name": "Automation"
     },
     {
+      "name": "Avatars"
+    },
+    {
       "name": "Billing"
     },
     {
@@ -106,6 +109,9 @@
     },
     {
       "name": "Members"
+    },
+    {
+      "name": "MyAvatar"
     },
     {
       "name": "MyMembership"
@@ -756,6 +762,47 @@
                 }
               }
             }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/v1/avatars/{userId}/{version}": {
+      "get": {
+        "operationId": "Avatars_show",
+        "summary": "GET avatars/{userId}/{version}",
+        "tags": [
+          "Avatars"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
           }
         },
         "security": []
@@ -1422,6 +1469,86 @@
                     "maxLength": 64
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/avatar": {
+      "put": {
+        "operationId": "MyAvatar_upload",
+        "summary": "PUT me/avatar",
+        "tags": [
+          "MyAvatar"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "MyAvatar_remove",
+        "summary": "DELETE me/avatar",
+        "tags": [
+          "MyAvatar"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
               }
             }
           }

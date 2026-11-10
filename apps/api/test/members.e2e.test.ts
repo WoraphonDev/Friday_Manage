@@ -2,6 +2,7 @@
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { EventBus, type DomainEvent } from '../src/core/events.js';
+import { Mailer } from '../src/core/mail.js';
 import { addMember, client, type Client, seedTeam, signup, startApp, type TestApp } from './helpers.js';
 
 let t: TestApp;
@@ -222,6 +223,60 @@ describe('คำเชิญ · ส่งซ้ำ, Seat, Event', () => {
     expect((await joiner.post(`/invitations/${token}/accept`)).status).toBe(200);
     expect(events.filter((e) => e.type === 'member.joined')).toMatchObject([{ projectId: team.project.id, data: { via: 'invitation' } }]);
     expect((await team.lead.post(`${team.ws}/invitations/${first.invitationId}/resend`)).body.error.code).toBe('invitation_not_pending');
+  });
+
+  it('ส่งอีเมลคำเชิญเมื่อตั้ง SMTP · ตอบกลับหาผู้เชิญ · ภาษาตาม Workspace · ส่งไม่ได้คำเชิญยังอยู่ · ส่งซ้ำส่งอีเมลใหม่', async () => {
+    const mailer = t.app.get(Mailer);
+    const original = mailer.transportFactory;
+    const prevHost = process.env.SMTP_HOST;
+    const prev = (await t.owner.query('SELECT name, default_locale FROM workspaces WHERE id = $1', [wsId])).rows[0];
+    const mails: Array<{ to: string; subject: string; text: string; html: string; replyTo?: string }> = [];
+    let failFor: string | null = null;
+    try {
+      // ยังไม่ตั้ง SMTP = ไม่ส่ง แต่ได้ลิงก์ไปส่งเอง
+      delete process.env.SMTP_HOST;
+      const off = await team.lead.post(`${team.ws}/invitations`, { emails: ['nomail@invite.example.com'] });
+      expect(off.body.items[0]).toMatchObject({ status: 'invited', emailSent: false });
+
+      process.env.SMTP_HOST = 'smtp.test.example.com';
+      mailer.transportFactory = () => ({
+        sendMail: async (m: Record<string, unknown>) => {
+          if (m.to === failFor) throw new Error('smtp down');
+          mails.push(m as (typeof mails)[number]);
+        },
+      });
+      await t.owner.query(`UPDATE workspaces SET name = 'ทีมสมมติ', default_locale = 'th' WHERE id = $1`, [wsId]);
+      failFor = 'bounce@invite.example.com';
+      const r = await team.lead.post(`${team.ws}/invitations`, { emails: ['mail@invite.example.com', 'bounce@invite.example.com'], projectKey: team.key, message: 'มาช่วยกันนะ' });
+      expect(r.status, JSON.stringify(r.body)).toBe(201);
+      const byEmail = Object.fromEntries(r.body.items.map((i: { email: string }) => [i.email, i]));
+      expect(byEmail['mail@invite.example.com']).toMatchObject({ status: 'invited', emailSent: true });
+      expect(byEmail['bounce@invite.example.com']).toMatchObject({ status: 'invited', emailSent: false });
+      expect((await t.owner.query(`SELECT 1 FROM invitations WHERE email = 'bounce@invite.example.com' AND status = 'pending'`)).rowCount).toBe(1);
+      expect(mails).toHaveLength(1);
+      const [m] = mails;
+      expect(m).toMatchObject({ to: 'mail@invite.example.com', replyTo: `lead@${team.slug}.example.com` });
+      expect(m.subject).toBe('Mick เชิญคุณเข้าร่วม ทีมสมมติ บน Friday Manage');
+      expect(m.text).toContain(byEmail['mail@invite.example.com'].inviteUrl);
+      expect(m.text).toContain('มาช่วยกันนะ');
+      expect(m.text).toContain(`โปรเจกต์: ${team.project.name}`);
+      expect(m.html).toContain(`href="${byEmail['mail@invite.example.com'].inviteUrl}"`);
+
+      // ส่งซ้ำ = อีเมลใหม่ที่มีลิงก์ใหม่ · Workspace ภาษาอังกฤษได้อีเมลอังกฤษ · ข้อความกันการแทรก HTML
+      await t.owner.query(`UPDATE workspaces SET name = '<b>Acme</b>', default_locale = 'en' WHERE id = $1`, [wsId]);
+      const re = await team.lead.post(`${team.ws}/invitations/${byEmail['mail@invite.example.com'].invitationId}/resend`);
+      expect(re.body).toMatchObject({ emailSent: true });
+      expect(mails).toHaveLength(2);
+      expect(mails[1].subject).toBe('Mick invited you to <b>Acme</b> on Friday Manage');
+      expect(mails[1].text).toContain(re.body.inviteUrl);
+      expect(mails[1].html).toContain('&lt;b&gt;Acme&lt;/b&gt;');
+      expect(mails[1].html).not.toContain('<b>Acme</b>');
+    } finally {
+      mailer.transportFactory = original;
+      if (prevHost === undefined) delete process.env.SMTP_HOST;
+      else process.env.SMTP_HOST = prevHost;
+      await t.owner.query('UPDATE workspaces SET name = $2, default_locale = $3 WHERE id = $1', [wsId, prev.name, prev.default_locale]);
+    }
   });
 
   it('PM ได้แจ้ง member.joined ครั้งเดียว (ผู้เชิญเป็น Owner หรือ Admin ของโปรเจกต์ ซึ่งนับเป็น PM) · ไม่ได้ซ้ำในฐานะผู้เชิญ', async () => {

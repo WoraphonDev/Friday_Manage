@@ -5,6 +5,8 @@
 .links { display:flex; flex-direction:column; gap:6px; padding:10px 12px; border-radius:8px; background:var(--surface-2); font-size:11px; }
 .links code { overflow-wrap:anywhere; }
 .links > div { display:flex; gap:8px; align-items:center; justify-content:space-between; }
+.emailed { color:var(--success-text); font-weight:600; white-space:nowrap; }
+.notEmailed { color:var(--warning-text); font-weight:600; white-space:nowrap; }
 @media (max-width:760px) {
   .row { grid-template-columns:minmax(0,1fr); }
 }

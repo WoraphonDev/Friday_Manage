@@ -6,7 +6,7 @@ import { Badge, Button, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { InviteLinks } from "@/features/project-invite/project-invite-dialog";
+import { InviteLinks, type InviteLink } from "@/features/project-invite/project-invite-dialog";
 import type { Invitation } from "./types";
 import styles from "./members.module.css";
 
@@ -34,13 +34,13 @@ export function InvitePanel({
   const tr = useTranslations("members-workload.roles");
   const toast = useToast();
   const wsBase = `/w/${encodeURIComponent(ws)}`;
-  const [links, setLinks] = useState<{ email: string; url: string }[]>([]);
+  const [links, setLinks] = useState<InviteLink[]>([]);
   const pendingHere = invitations.filter((i) => i.projectId === projectId);
 
   async function act(inv: Invitation, action: "resend" | "revoke") {
     try {
-      const r = await api.post<{ inviteUrl?: string }>(`${wsBase}/invitations/${inv.id}/${action}`);
-      if (r.inviteUrl) setLinks([{ email: inv.email, url: r.inviteUrl }]);
+      const r = await api.post<{ inviteUrl?: string; emailSent?: boolean }>(`${wsBase}/invitations/${inv.id}/${action}`);
+      if (r.inviteUrl) setLinks([{ email: inv.email, url: r.inviteUrl, emailed: !!r.emailSent }]);
       toast({ message: t(action === "resend" ? "resent" : "revoked", { email: inv.email }) });
     } catch (e) {
       toast({ message: e instanceof Error ? e.message : String(e) });

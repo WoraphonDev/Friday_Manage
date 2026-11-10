@@ -104,10 +104,11 @@ export function WorkspaceMembers({ ws }: { ws: string }) {
   }
   async function inviteAction(inv: Invitation, action: "resend" | "revoke") {
     try {
-      const r = await api.post<{ inviteUrl?: string }>(`${base}/invitations/${inv.id}/${action}`);
-      // ระบบยังไม่ส่งอีเมลเอง จึงคัดลอกลิงก์ใหม่ให้ส่งต่อ
-      if (r.inviteUrl) await copyText(r.inviteUrl).catch(() => undefined);
-      toast({ message: action === "resend" ? `${ti("resent", { email: inv.email })} · ${ti("copied")}` : ti("revoked", { email: inv.email }) });
+      const r = await api.post<{ inviteUrl?: string; emailSent?: boolean }>(`${base}/invitations/${inv.id}/${action}`);
+      // ส่งอีเมลไม่ได้ (ยังไม่ตั้ง SMTP / ส่งไม่ผ่าน) จึงคัดลอกลิงก์ใหม่ให้ส่งต่อเอง
+      const copy = action === "resend" && !r.emailSent && r.inviteUrl;
+      if (copy) await copyText(r.inviteUrl!).catch(() => undefined);
+      toast({ message: action === "resend" ? (copy ? `${ti("resent", { email: inv.email })} · ${ti("copied")}` : ti("resentEmailed", { email: inv.email })) : ti("revoked", { email: inv.email }) });
     } catch (e) {
       fail(e);
     }

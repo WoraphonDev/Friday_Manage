@@ -86,7 +86,7 @@ export interface Invitation {
 }
 export interface InviteResult {
   items: (
-    | { email: string; status: "invited"; invitationId: string; inviteUrl: string; expiresAt: string }
+    | { email: string; status: "invited"; invitationId: string; inviteUrl: string; expiresAt: string; emailSent?: boolean }
     | { email: string; status: "already_member" }
   )[];
 }

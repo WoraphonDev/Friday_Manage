@@ -1,9 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { type Db, schema } from '@friday/db';
+import { type Db, schema, type Tx } from '@friday/db';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { hashToken, newToken } from '../auth/sessions.js';
 import { EventBus } from '../core/events.js';
+import { Mailer } from '../core/mail.js';
 import { PlanLimits } from '../core/plan-limits.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { AppError, forbidden, notFound } from '../common/errors.js';
@@ -11,6 +12,7 @@ import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { requirePerm } from '../projects/permissions.js';
 import { ProjectsService } from '../projects/projects.service.js';
+import { type InvitationMail, renderInvitationEmail } from './invitation-mail.js';
 
 const s = schema;
 
@@ -36,12 +38,36 @@ export class InvitationsService {
     private readonly projects: ProjectsService,
     private readonly limits: PlanLimits,
     private readonly events: EventBus,
+    private readonly mailer: Mailer,
   ) {}
+
+  /** ข้อมูลที่ใช้ในอีเมลคำเชิญ · อ่านใน transaction เดียวกับที่สร้างคำเชิญ (RLS ของ Workspace นี้) */
+  private async mailContext(tx: Tx, auth: AuthInfo, tenant: TenantInfo, projectId: string | null) {
+    const [ws] = await tx.select({ name: s.workspaces.name, locale: s.workspaces.defaultLocale }).from(s.workspaces).where(eq(s.workspaces.id, tenant.workspaceId));
+    const [me] = await tx.select({ name: s.users.displayName, email: s.users.email }).from(s.users).where(eq(s.users.id, auth.userId));
+    const [project] = projectId ? await tx.select({ name: s.projects.name }).from(s.projects).where(eq(s.projects.id, projectId)) : [];
+    return { workspaceName: ws?.name ?? '', locale: ws?.locale === 'en' ? ('en' as const) : ('th' as const), inviterName: me?.name ?? '', inviterEmail: me?.email ?? null, projectName: project?.name ?? null };
+  }
+
+  /**
+   * ส่งอีเมลคำเชิญหลัง commit · ส่งไม่ได้ไม่ทำให้คำเชิญล้ม (ผู้เชิญยังคัดลอกลิงก์ส่งเองได้) จึงคืนแค่ว่าส่งแล้วหรือไม่
+   * ตอบกลับไปหาผู้เชิญ (Reply-To) เพราะผู้รับมักถามกลับคนที่เชิญ ไม่ใช่ระบบ
+   */
+  private async sendInvite(m: InvitationMail, replyTo: string | null): Promise<boolean> {
+    if (!this.mailer.enabled) return false;
+    try {
+      await this.mailer.send({ to: m.to, ...renderInvitationEmail(m), replyTo: replyTo ?? undefined });
+      return true;
+    } catch (err) {
+      this.log.warn(`ส่งอีเมลคำเชิญถึง ${m.to} ไม่สำเร็จ: ${(err as Error).message}`);
+      return false;
+    }
+  }
 
   /**
    * H / 7 · เชิญหลายอีเมลในครั้งเดียว
    * Owner / Admin เชิญได้ทุกแบบ · คนที่มีสิทธิ์ project.invite เชิญเข้าโปรเจกต์ตัวเองได้ แต่ตั้งเป็น Admin ของ Workspace ไม่ได้
-   * ส่งอีเมลปิดไว้ช่วงแรก (docs/tech-stack.md) จึงคืน inviteUrl ให้ผู้เชิญส่งต่อเอง
+   * ส่งอีเมลคำเชิญเมื่อตั้ง SMTP แล้ว · คืน inviteUrl เสมอ ให้ผู้เชิญส่งต่อเองได้ถ้าอีเมลไม่ถึง (`emailSent`)
    */
   async create(auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof CreateInvitationsBody>, baseUrl: string) {
     const isWsAdmin = tenant.role === 'owner' || tenant.role === 'admin';
@@ -70,7 +96,7 @@ export class InvitationsService {
         const fresh = unique.length - existing.length;
         if (fresh > 0) await this.limits.assert(tx, tenant.workspaceId, 'seats', fresh);
       }
-      const invited: Array<{ email: string; id: string }> = [];
+      const invited: Array<{ email: string; id: string; inviteUrl: string; expiresAt: Date }> = [];
       const results = [];
       for (const raw of unique) {
         const [member] = await tx
@@ -114,12 +140,24 @@ export class InvitationsService {
           targetId: inv.id,
           summary: `${raw} · ${input.workspaceRole}${project ? ` · ${project.key} ${input.projectRole}` : ''}`,
         });
-        this.log.log(`invitation ${inv.id} for ${raw} (email sending disabled)`);
-        invited.push({ email: raw, id: inv.id });
-        results.push({ email: raw, status: 'invited' as const, invitationId: inv.id, inviteUrl: `${baseUrl}/join/${token}`, expiresAt: values.expiresAt });
+        const inviteUrl = `${baseUrl}/join/${token}`;
+        invited.push({ email: raw, id: inv.id, inviteUrl, expiresAt: values.expiresAt });
+        results.push({ email: raw, status: 'invited' as const, invitationId: inv.id, inviteUrl, expiresAt: values.expiresAt, emailSent: false });
       }
-      return { items: results, invited, projectId: project?.id };
+      const ctx = invited.length ? await this.mailContext(tx, auth, tenant, project?.id ?? null) : null;
+      return { items: results, invited, projectId: project?.id, ctx };
     }).then(async (r) => {
+      // ส่งทีละ 5 ฉบับ ไม่ให้เปิด SMTP พร้อมกันหลายสิบเส้น (เชิญได้ครั้งละ 50 อีเมล)
+      const sent = new Set<string>();
+      for (let i = 0; r.ctx && i < r.invited.length; i += 5) {
+        await Promise.all(
+          r.invited.slice(i, i + 5).map(async (inv) => {
+            const ok = await this.sendInvite({ ...r.ctx!, to: inv.email, inviteUrl: inv.inviteUrl, expiresAt: inv.expiresAt, message: input.message ?? null }, r.ctx!.inviterEmail);
+            if (ok) sent.add(inv.id);
+          }),
+        );
+      }
+      for (const item of r.items) if (item.status === 'invited') item.emailSent = sent.has(item.invitationId);
       // Event member.invited หลัง commit · ส่งต่อให้ PM ของโปรเจกต์ (A23 fan-out)
       for (const i of r.invited) {
         await this.events.publish({ type: 'member.invited', workspaceId: tenant.workspaceId, projectId: r.projectId, actorId: auth.userId, data: { email: i.email, invitationId: i.id, role: input.workspaceRole }, at: new Date() });
@@ -163,8 +201,9 @@ export class InvitationsService {
       const expiresAt = new Date(Date.now() + days * 86_400_000);
       await tx.update(s.invitations).set({ tokenHash: hashToken(token), expiresAt, createdAt: new Date() }).where(eq(s.invitations.id, id));
       await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'perm', action: 'member.invite_resent', targetType: 'invitation', targetId: id, summary: inv.email });
-      return { id, email: inv.email, inviteUrl: `${baseUrl}/join/${token}`, expiresAt };
-    });
+      const ctx = await this.mailContext(tx, auth, tenant, inv.projectId);
+      return { id, email: inv.email, inviteUrl: `${baseUrl}/join/${token}`, expiresAt, ctx, message: inv.message };
+    }).then(async ({ ctx, message, ...r }) => ({ ...r, emailSent: await this.sendInvite({ ...ctx, to: r.email, inviteUrl: r.inviteUrl, expiresAt: r.expiresAt, message }, ctx.inviterEmail) }));
   }
 
   async revoke(auth: AuthInfo, tenant: TenantInfo, id: string) {

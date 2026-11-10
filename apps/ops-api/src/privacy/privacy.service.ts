@@ -276,6 +276,7 @@ export class PrivacyService implements OnModuleInit {
       await tx.delete(s.userSessions).where(eq(s.userSessions.userId, userId));
       await tx.delete(s.userIdentities).where(eq(s.userIdentities.userId, userId));
       await tx.delete(s.mfaFactors).where(eq(s.mfaFactors.userId, userId));
+      await tx.delete(s.userAvatars).where(eq(s.userAvatars.userId, userId));
       await tx.delete(s.authTokens).where(eq(s.authTokens.userId, userId));
       await tx.delete(s.lineBindings).where(eq(s.lineBindings.userId, userId));
       await tx.delete(s.signupAttributions).where(eq(s.signupAttributions.userId, userId));

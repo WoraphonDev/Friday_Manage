@@ -138,6 +138,7 @@ export class DataRequestsService {
     await this.sys.delete(s.userSessions).where(eq(s.userSessions.userId, userId));
     await this.sys.delete(s.userIdentities).where(eq(s.userIdentities.userId, userId));
     await this.sys.delete(s.mfaFactors).where(eq(s.mfaFactors.userId, userId));
+    await this.sys.delete(s.userAvatars).where(eq(s.userAvatars.userId, userId));
     await this.sys.delete(s.authTokens).where(eq(s.authTokens.userId, userId));
     await this.analytics.forgetUser(userId);
     return true;

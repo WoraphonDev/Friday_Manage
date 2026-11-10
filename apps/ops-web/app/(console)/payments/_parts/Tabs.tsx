@@ -824,35 +824,67 @@ export function RevenueTab() {
   );
 }
 
-/** B8 · ส่งออกให้สำนักงานบัญชี (ไฟล์ CSV จาก ops-api) */
+/** B8 · ส่งออกให้สำนักงานบัญชี: ดาวน์โหลดทีละไฟล์ หรือส่งอีเมลพร้อมไฟล์แนบ · ส่งอัตโนมัติทุกเดือน (ops-api) */
+type ExportType = "sales" | "credit_notes" | "wht";
+interface Delivery {
+  recipients: string[];
+  autoDay: number;
+  history: { at: string; month: string; detail: string; staffName: string | null }[];
+}
 export function AccountantExport({ onClose }: { onClose: () => void }) {
   const t = useTranslations("money.b8");
   const tc = useTranslations("common.dialog");
+  const me = useMe().data;
+  const toast = useToast();
+  const fmt = useFmt();
   const [month, setMonth] = useState(lastMonth());
-  const [type, setType] = useState<"sales" | "credit_notes" | "wht">("sales");
+  const [types, setTypes] = useState<ExportType[]>(["sales", "credit_notes", "wht"]);
   const revenue = useQuery({ queryKey: ["ops", "revenue"], queryFn: () => api.get<{ months: RevenueRow[] }>("/revenue?months=6") });
+  const delivery = useQuery({ queryKey: ["ops", "revenue", "delivery"], queryFn: () => api.get<Delivery>("/revenue/export/delivery") });
   const closed = revenue.data?.months.find((m) => m.month === month)?.closed;
+  const canSend = !!me && hasAny(me, "owner", "finance");
+  const to = delivery.data?.recipients ?? [];
+  const send = useMutation({
+    mutationFn: () => api.post<{ sent: number; to: string[] }>("/revenue/export/send", { month, types }),
+    onSuccess: (r) => (toast(t("sent", { to: r.to.join(", ") })), onClose()),
+  });
+  const last = delivery.data?.history[0];
   return (
-    <Modal open onOpenChange={(o) => !o && onClose()} title={t("title")} description={t("desc")}>
-      <div className="dialog-body">
+    <Modal open onOpenChange={(o) => !o && onClose()} title={t("title")} description={delivery.data ? t("descAuto", { day: delivery.data.autoDay }) : t("desc")}>
+      <form className="dialog-body" onSubmit={(e) => (e.preventDefault(), types.length && to.length && send.mutate())}>
         <Input label={t("month")} type="month" value={month} onChange={(e) => setMonth(e.target.value || lastMonth())} />
+        <span className={closed ? "pill ok" : "pill warn"}>{closed ? t("closedLabel") : t("draft")}</span>
         <fieldset className="stack" style={{ border: 0, padding: 0, margin: 0 }}>
           <legend className="field-label">{t("type")}</legend>
           {(["sales", "credit_notes", "wht"] as const).map((v) => (
-            <label key={v} className="check">
-              <input type="radio" name="b8" checked={type === v} onChange={() => setType(v)} />
-              <span>{t(`types.${v}`)}</span>
-            </label>
+            <div key={v} className="row" style={{ justifyContent: "space-between" }}>
+              <label className="check">
+                <input type="checkbox" checked={types.includes(v)} onChange={() => setTypes(types.includes(v) ? types.filter((x) => x !== v) : [...types, v])} />
+                <span>{t(`types.${v}`)}</span>
+              </label>
+              <a className="link-button small" href={`${OPS_BASE}/revenue/export?month=${month}&type=${v}`} download aria-label={t("downloadOne", { file: t(`types.${v}`) })}>
+                {t("download")}
+              </a>
+            </div>
           ))}
         </fieldset>
-        <span className={closed ? "pill ok" : "pill warn"}>{closed ? t("closedLabel") : t("draft")}</span>
+        <p className="muted small">{t("notYet")}</p>
+        {delivery.isPending ? null : to.length ? (
+          <p className="small">{t("to", { to: to.join(", ") })}</p>
+        ) : (
+          <Notice tone="warn" title={t("noRecipient")} />
+        )}
+        {last && <p className="muted small">{t("lastSent", { month: last.month, at: fmt.dateTime(last.at), who: last.staffName ?? t("auto") })}</p>}
+        <InlineError error={send.error ?? delivery.error} />
         <div className="dialog-actions">
           <Button onClick={onClose}>{tc("cancel")}</Button>
-          <a className={buttonClass("primary")} href={`${OPS_BASE}/revenue/export?month=${month}&type=${type}`} download onClick={onClose}>
-            {t("download")}
-          </a>
+          {canSend && (
+            <Button type="submit" variant="primary" disabled={!types.length || !to.length || send.isPending}>
+              {send.isPending ? tc("saving") : t("send")}
+            </Button>
+          )}
         </div>
-      </div>
+      </form>
     </Modal>
   );
 }

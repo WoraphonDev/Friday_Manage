@@ -353,4 +353,37 @@ describe('รายงานรายได้ ปิดงวด และส�
     expect((await finance.agent.get(`/ops/revenue/export?month=${last}&type=wht`)).headers['x-report-status']).toBe('closed');
     expect((await finance.agent.get('/ops/revenue?months=2')).body.months[0]).toMatchObject({ month: last, closed: true });
   });
+
+  it('ส่งให้สำนักงานบัญชี (B8): CSV แนบ · ฉบับร่างบอกในหัวเรื่อง · อัตโนมัติเดือนก่อนตั้งแต่วันที่ 5 ไม่ส่งซ้ำ', async () => {
+    const month = today().slice(0, 7);
+    const prev = new Date(`${month}-01T00:00:00Z`);
+    prev.setUTCMonth(prev.getUTCMonth() - 1);
+    const last = prev.toISOString().slice(0, 7);
+    delete process.env.OPS_ACCOUNTING_EMAIL;
+    expect((await finance.agent.post('/ops/revenue/export/send').send({ month })).body.error.code).toBe('accounting_email_not_set');
+    process.env.OPS_ACCOUNTING_EMAIL = 'acc@office.example.com';
+    try {
+      const before = mail.sent.length;
+      const r = await finance.agent.post('/ops/revenue/export/send').send({ month, types: ['sales', 'credit_notes'] });
+      expect(r.status, JSON.stringify(r.body)).toBe(200);
+      expect(r.body).toMatchObject({ month, to: ['acc@office.example.com'], sent: 1, draft: true });
+      const m = mail.sent.at(-1)!;
+      expect(mail.sent.length).toBe(before + 1);
+      expect(m.subject).toContain('ฉบับร่าง');
+      expect(m.attachments?.map((a) => a.filename)).toEqual([`friday-sales-${month}-draft.csv`, `friday-credit_notes-${month}-draft.csv`]);
+      expect(m.attachments?.[0]!.content).toContain('บริษัท เงินเดโม จำกัด');
+      const d = await auditor.agent.get('/ops/revenue/export/delivery');
+      expect(d.body).toMatchObject({ recipients: ['acc@office.example.com'], autoDay: 5, history: [{ month, staffName: 'Fin Finance' }] });
+      expect((await auditor.agent.post('/ops/revenue/export/send').send({ month })).status).toBe(403);
+      // อัตโนมัติ: ก่อนวันที่ 5 ไม่ส่ง · ตั้งแต่วันที่ 5 ส่งเดือนก่อน (ปิดงวดแล้ว) ครั้งเดียว
+      const svc = t.app.get(BillingService);
+      expect(await svc.autoSendExport(`${month}-04`)).toBeNull();
+      const auto = await svc.autoSendExport(`${month}-05`);
+      expect(auto).toMatchObject({ month: last, draft: false });
+      expect(mail.sent.at(-1)!.attachments).toHaveLength(3);
+      expect(await svc.autoSendExport(`${month}-06`)).toBeNull();
+    } finally {
+      delete process.env.OPS_ACCOUNTING_EMAIL;
+    }
+  });
 });

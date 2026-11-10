@@ -19,4 +19,12 @@ export const config = {
   sessionHours: 8,
   /** หน้าลูกค้าสำหรับลิงก์ในอีเมลแจ้งเข้าช่วยเหลือ */
   appUrl: process.env.APP_URL ?? 'http://localhost:3000',
+  /** อีเมลสำนักงานบัญชี (คั่นด้วยจุลภาค) · รับไฟล์ส่งออกรายเดือน (B8) · ไม่ตั้ง = ส่งไม่ได้ ดาวน์โหลดได้อย่างเดียว */
+  get accountingEmails() {
+    return (process.env.OPS_ACCOUNTING_EMAIL ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+  },
+  /** วันที่ของเดือนที่ส่งไฟล์ของเดือนก่อนให้สำนักงานบัญชีอัตโนมัติ */
+  get accountingSendDay() {
+    return Number(process.env.OPS_ACCOUNTING_SEND_DAY ?? 5);
+  },
 };

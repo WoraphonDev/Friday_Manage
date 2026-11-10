@@ -24,6 +24,8 @@ services:
       UPLOAD_DIR: /data/uploads
       # งานเบื้องหลัง (ทวงหนี้ ส่งอีเมล ปิด Ticket ฯลฯ) ปิดไว้กับข้อมูลทดสอบ · เปิดด้วย OPS_JOBS=on
       OPS_JOBS: ${OPS_JOBS:-off}
+      # อีเมลสำนักงานบัญชี (B8 · คั่นด้วยจุลภาค) · ว่าง = ดาวน์โหลดได้อย่างเดียว
+      OPS_ACCOUNTING_EMAIL: ${OPS_ACCOUNTING_EMAIL:-}
       VALKEY_URL: ${OPS_VALKEY_URL:-}
     volumes:
       - ../../apps/api/var/uploads:/data/uploads:ro

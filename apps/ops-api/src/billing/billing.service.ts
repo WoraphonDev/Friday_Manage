@@ -73,7 +73,10 @@ export const CreditGrantBody = z.object({ workspaceId: z.uuid(), amountSatang: z
 export const TaxQuery = z.object({ month: Month.optional() });
 export const RevenueQuery = z.object({ months: z.coerce.number().int().min(1).max(24).default(6) });
 export const CloseBody = z.object({ month: Month }).strict();
-export const ExportQuery = z.object({ month: Month, type: z.enum(['sales', 'credit_notes', 'wht']).default('sales') });
+export const EXPORT_TYPES = ['sales', 'credit_notes', 'wht'] as const;
+export const ExportQuery = z.object({ month: Month, type: z.enum(EXPORT_TYPES).default('sales') });
+export const SendExportBody = z.object({ month: Month, types: z.array(z.enum(EXPORT_TYPES)).min(1).max(3).default([...EXPORT_TYPES]) }).strict();
+const EXPORT_LABEL: Record<(typeof EXPORT_TYPES)[number], string> = { sales: 'รายการขาย', credit_notes: 'ใบลดหนี้', wht: '50 ทวิ ที่ได้รับ' };
 
 /** ขั้นตอนเตือนอัตโนมัติหลังเลยกำหนด (วัน) · วันที่ 14 ระงับ */
 export const DUNNING_STEPS = [
@@ -123,7 +126,10 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     this.approvals.register('billing.credit', (p, ctx) => this.applyCredit(ctx.requester, p as CreditPayload, ctx));
     // เตือนค้างชำระทุกชั่วโมง (ทำซ้ำได้ ไม่ส่งซ้ำ) · test เรียก runDunning เอง · ปิดด้วย OPS_JOBS=off
     if (!process.env.VITEST && process.env.OPS_JOBS !== 'off') {
-      this.timer = setInterval(() => void this.runDunning().catch((e) => this.log.error(`เตือนค้างชำระล้ม: ${String(e)}`)), 3_600_000);
+      this.timer = setInterval(() => {
+        void this.runDunning().catch((e) => this.log.error(`เตือนค้างชำระล้ม: ${String(e)}`));
+        void this.autoSendExport().catch((e) => this.log.error(`ส่งไฟล์ให้สำนักงานบัญชีล้ม: ${String(e)}`));
+      }, 3_600_000);
       this.timer.unref();
     }
   }
@@ -654,6 +660,57 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     const draft = !(await this.isClosed(q.month));
     const csv = '﻿' + [header, ...lines].map((l) => l.map(esc).join(',')).join('\r\n') + '\r\n';
     return { csv, filename: `friday-${q.type}-${q.month}${draft ? '-draft' : ''}.csv`, draft, rows: lines.length };
+  }
+
+  // ---------------------------------------------------------------- ส่งให้สำนักงานบัญชี (B8)
+
+  /** ผู้รับ วันส่งอัตโนมัติ และประวัติการส่ง 12 ครั้งล่าสุด */
+  async exportDelivery() {
+    const history = await this.rows<{ at: string; reason: string; staffName: string | null }>(sql`
+      select l.created_at as at, l.reason, st.name as "staffName" from staff_audit_logs l left join staff_users st on st.id = l.staff_id
+      where l.action = 'billing.export_sent' order by l.created_at desc limit 12`);
+    return { recipients: config.accountingEmails, autoDay: config.accountingSendDay, history: history.map((h) => ({ at: h.at, month: h.reason.slice(0, 7), detail: h.reason, staffName: h.staffName })) };
+  }
+
+  /**
+   * ส่ง CSV ของงวดเป็นไฟล์แนบถึงสำนักงานบัญชี · งวดที่ยังไม่ปิดเป็นฉบับร่าง (หัวเรื่องและชื่อไฟล์บอก)
+   * staff = null คืองานอัตโนมัติ
+   */
+  async sendExport(staff: Staff | null, input: z.infer<typeof SendExportBody>) {
+    if (!config.accountingEmails.length) throw new AppError(409, 'accounting_email_not_set', 'ยังไม่ได้ตั้งอีเมลสำนักงานบัญชี (OPS_ACCOUNTING_EMAIL)');
+    const types = input.types ?? [...EXPORT_TYPES];
+    const files = await Promise.all(types.map((type) => this.export({ month: input.month, type })));
+    const draft = files.some((f) => f.draft);
+    const subject = `Friday Manage · ไฟล์บัญชีงวด ${input.month}${draft ? ' (ฉบับร่าง ยังไม่ปิดงวด)' : ''}`;
+    const text = [
+      `ไฟล์ประกอบการบันทึกบัญชีงวด ${input.month}${draft ? ' · ฉบับร่าง: งวดนี้ยังไม่ปิด ตัวเลขอาจเปลี่ยน' : ''}`,
+      ...types.map((t, i) => `- ${EXPORT_LABEL[t]}: ${files[i]!.rows} รายการ (${files[i]!.filename})`),
+      'จำนวนเงินเป็นบาท · ไฟล์ CSV (UTF-8) เปิดด้วย Excel ได้',
+    ].join('\n');
+    const attachments = files.map((f) => ({ filename: f.filename, content: f.csv, contentType: 'text/csv; charset=utf-8' }));
+    let sent = 0;
+    for (const to of config.accountingEmails) {
+      try {
+        await this.mail.send({ to, subject, text, attachments });
+        sent++;
+      } catch (e) {
+        this.log.error(`ส่งไฟล์บัญชีถึง ${to} ไม่สำเร็จ: ${String(e)}`);
+      }
+    }
+    if (!sent) throw new AppError(502, 'mail_failed', 'ส่งอีเมลไม่สำเร็จ ลองใหม่อีกครั้ง');
+    await staffAudit(this.db, staff, 'billing.export_sent', `${input.month} · ${types.map((t) => EXPORT_LABEL[t]).join(', ')}${draft ? ' · ฉบับร่าง' : ''} · ถึง ${config.accountingEmails.join(', ')}${staff ? '' : ' · อัตโนมัติ'}`);
+    return { month: input.month, to: config.accountingEmails, sent, draft, files: files.map((f, i) => ({ type: types[i], filename: f.filename, rows: f.rows })) };
+  }
+
+  /** ตั้งแต่วันที่ส่งอัตโนมัติของเดือน: ส่งไฟล์ของเดือนก่อน ถ้ายังไม่เคยส่ง (ส่งเองแล้วก็ไม่ส่งซ้ำ) */
+  async autoSendExport(today = todayBkk()) {
+    if (!config.accountingEmails.length || Number(today.slice(8, 10)) < config.accountingSendDay) return null;
+    const d = new Date(`${today.slice(0, 7)}-01T00:00:00Z`);
+    d.setUTCMonth(d.getUTCMonth() - 1);
+    const month = d.toISOString().slice(0, 7);
+    const [done] = await this.rows(sql`select 1 from staff_audit_logs where action = 'billing.export_sent' and reason like ${`${month} ·%`} limit 1`);
+    if (done) return null;
+    return this.sendExport(null, { month, types: [...EXPORT_TYPES] });
   }
 }
 

@@ -61,3 +61,11 @@
 - ลบ `src/features/payments/**`
 
 **Deploy Docker 2026-11-10** (หลัง PR #119 เพิ่ม `infra/docker/compose.ops.yml`) · จาก `main` `830cc03` · ops-web http://localhost:4000 (image `6b2243532f40`) · ops-api http://localhost:4001 (image `1485dc5f9b81`) ใช้ QA DB เดิม · ทั้งสอง container healthy · หน้า `/payments`, `/refunds` ตอบ 200 · `/ops-api/payments`, `payments/incoming`, `payments/exceptions`, `invoices`, `overdue`, `tax`, `revenue`, `refunds` ตอบ 200
+
+**ต่อเติม 2026-11-10 (B8 ส่งถึงสำนักงานบัญชี · ค้างจาก O03)**
+- ops-api `GET ops/revenue/export/delivery` (ผู้รับ, วันส่งอัตโนมัติ, ประวัติ 12 ครั้ง) · `POST ops/revenue/export/send { month, types }` (การเงิน / Owner) ส่ง CSV เป็นไฟล์แนบ · งวดที่ยังไม่ปิดบอก "ฉบับร่าง" ในหัวเรื่องและชื่อไฟล์ · Audit `billing.export_sent`
+- งานอัตโนมัติ (รอบเดียวกับเตือนค้างชำระ): ตั้งแต่วันที่ 5 ส่งไฟล์ของเดือนก่อน ถ้ายังไม่เคยส่ง (ส่งเองแล้วไม่ส่งซ้ำ)
+- ตั้งผู้รับด้วย env `OPS_ACCOUNTING_EMAIL` (คั่นด้วยจุลภาค) · `OPS_ACCOUNTING_SEND_DAY` (ค่าเริ่มต้น 5) · ไม่ตั้ง = ดาวน์โหลดได้อย่างเดียว
+- หน้า B8: เลือกได้หลายไฟล์ · ดาวน์โหลดทีละไฟล์ · ปุ่มส่งอีเมล (การเงิน / Owner) · แสดงผู้รับและการส่งล่าสุด
+- ยังไม่มี: ใบกำกับภาษี PDF + XML (รอ e-Tax) และค่าธรรมเนียม Gateway (รอ A35b)
+

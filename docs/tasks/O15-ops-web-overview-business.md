@@ -58,3 +58,11 @@
 - ลบ `src/features/metrics/**` (หน้าภาพรวมเดิมของ A32)
 
 **Deploy Docker 2026-11-10** (หลัง PR #119 เพิ่ม `infra/docker/compose.ops.yml`) · จาก `main` `830cc03` · ops-web http://localhost:4000 (image `6b2243532f40`) · ops-api http://localhost:4001 (image `1485dc5f9b81`) ใช้ QA DB เดิม · ทั้งสอง container healthy · หน้า `/`, `/business`, `/business/funnel`, `/business/adoption` ตอบ 200 · `/ops-api/overview`, `business`, `costs` ตอบ 200
+
+**ต่อเติม 2026-11-10 (ปิดช่องว่างที่บันทึกไว้)**
+- ops-api `GET ops/overview/usage` (ทุกบทบาท ไม่มีตัวเลขเงิน): การใช้งาน 30 วันรวมทุก Workspace ที่ยังไม่ถูกลบ · โปรเจกต์ที่มีความเคลื่อนไหว / งานสร้าง-ปิด / คอมเมนต์ + @mention / ไฟล์ + ขนาด / LINE + % ส่งถึง / Automation / เรียก API + token / นำเข้า Excel + ล้ม · การใช้ฟีเจอร์ของลูกค้าที่จ่าย
+- ops-api `GET ops/overview/feed`: กิจกรรมล่าสุด 10 รายการ (สมัคร, เปลี่ยนแพ็กเกจพร้อมเหตุผลยกเลิก, Ticket, ชำระเงินเฉพาะคนเห็นเงิน, การกระทำพนักงานเฉพาะ Owner / ผู้ตรวจ ไม่เกิน 3) · ไม่มีจำนวนเงิน
+- `GET ops/workspaces` ส่ง `healthParts`, `overdueInvoices`, `openTickets`, `seats30dAgo` · หน้าภาพรวมเลือก "สาเหตุหลัก" จากส่วนที่เสียคะแนนมากสุด (ค้างชำระ N ใบ / ใช้งาน x / y คน / Ticket ค้าง / ทีมลดลง)
+- หน้า `/` จัดตาม Canvas: การ์ดการใช้งานเต็มแถว แล้วตามด้วยสถานะระบบ + กิจกรรมล่าสุด · test ops-api metrics +2 · ops-web ภาพรวม +2
+- ยังไม่มี: ปุ่มช่วงเวลา / ส่งออก และ "วิเคราะห์ต่อ" (เฟส 2) ลิงก์ไปหน้าการใช้ฟีเจอร์แทน
+

@@ -107,6 +107,11 @@ export class CustomersService {
       storageBytes: n('storageBytes'),
       integrations,
       health: health.score,
+      /** องค์ประกอบคะแนน (0–100) และตัวเลขต้นเหตุ · ใช้เขียน "สาเหตุหลัก" ของลูกค้าเสี่ยงในหน้าภาพรวม */
+      healthParts: health.parts,
+      overdueInvoices: n('overdue'),
+      openTickets: n('openTickets'),
+      seats30dAgo: n('seats30dAgo'),
       /** Support / วิศวกรไม่เห็นยอดเงิน */
       mrr: seesMoney(staff) ? mrr : null,
       paymentState: n('overdue') > 0 ? 'overdue' : 'ok',

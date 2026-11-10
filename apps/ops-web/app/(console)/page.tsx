@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { ColumnChart, HBars } from "./business/_parts/charts";
 import { PLAN_LABEL, planLabel, useFmt } from "./workspaces/_parts/format";
+import { FeedCard, UsageCard } from "./_main/UsageFeed";
 
 interface Movement {
   count: number;
@@ -42,6 +43,18 @@ interface Row {
   health: number;
   mrr: number | null;
   paymentState: "ok" | "overdue";
+  healthParts?: { usage: number; payment: number; support: number; growth: number };
+  overdueInvoices?: number;
+  openTickets?: number;
+  seats30dAgo?: number;
+}
+/** น้ำหนักคะแนนสุขภาพ (ตรงกับ ops-api `healthScore`) · สาเหตุหลัก = ส่วนที่ทำให้เสียคะแนนมากที่สุด */
+const WEIGHT = { usage: 0.4, payment: 0.25, support: 0.2, growth: 0.15 } as const;
+function mainIssue(r: Row): keyof typeof WEIGHT | null {
+  if (!r.healthParts) return r.paymentState === "overdue" ? "payment" : r.seats > 0 && r.active30 / r.seats < 0.5 ? "usage" : null;
+  const parts = r.healthParts;
+  const [key, lost] = (Object.keys(WEIGHT) as (keyof typeof WEIGHT)[]).map((k) => [k, WEIGHT[k] * (100 - parts[k])] as const).sort((a, b) => b[1] - a[1])[0]!;
+  return lost > 0 ? key : null;
 }
 
 /** งานวันนี้ตามบทบาท (ตรงกับแผงแจ้งเตือน G2) */
@@ -81,8 +94,12 @@ export default function MainPage() {
         </div>
         <div className="stack">
           <Todo tasks={d.tasks} />
-          {me && hasAny(me, "owner", "engineer") && <SystemCard />}
         </div>
+      </div>
+      <UsageCard />
+      <div className={me && hasAny(me, "owner", "engineer") ? "grid-feed" : undefined}>
+        {me && hasAny(me, "owner", "engineer") && <SystemCard />}
+        <FeedCard />
       </div>
     </>
   );
@@ -236,7 +253,20 @@ function PlansAndRisk({ money }: { money: boolean }) {
   });
   const risky = useQuery({ queryKey: ["ops", "workspaces", "risky"], queryFn: () => api.get<{ items: Row[] }>("/workspaces?sort=health&limit=8&status=active"), staleTime: 300_000 });
   const low = (risky.data?.items ?? []).filter((r) => r.health < 50).slice(0, 5);
-  const reason = (r: Row) => (r.paymentState === "overdue" ? t("reason.overdue") : r.seats > 0 && r.active30 / r.seats < 0.5 ? t("reason.inactive", { active: r.active30, seats: r.seats }) : t("reason.other"));
+  const reason = (r: Row) => {
+    switch (mainIssue(r)) {
+      case "payment":
+        return r.overdueInvoices ? t("reason.overdueN", { n: r.overdueInvoices }) : t("reason.overdue");
+      case "usage":
+        return t("reason.inactive", { active: r.active30, seats: r.seats });
+      case "support":
+        return t("reason.tickets", { n: r.openTickets ?? 0 });
+      case "growth":
+        return r.seats30dAgo && r.seats30dAgo > r.seats ? t("reason.shrinking", { from: r.seats30dAgo, to: r.seats }) : t("reason.other");
+      default:
+        return t("reason.other");
+    }
+  };
   return (
     <div className="grid-2">
       <section className="card">

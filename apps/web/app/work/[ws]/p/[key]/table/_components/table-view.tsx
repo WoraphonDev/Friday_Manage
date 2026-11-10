@@ -7,11 +7,12 @@ import { PlanIoDialog, usePlanIoSections } from "@/features/plan-io/plan-io";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
-import { Check, ChevronDown, Plus, Search, SlidersHorizontal, X } from "lucide-react";
+import { Check, ChevronDown, LayoutList, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { AvatarStack, Avatar, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
+import { useIsMobile } from "@/lib/use-mobile";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
 import type { Options, Row, SavedView, TableData } from "./types";
@@ -173,6 +174,9 @@ const pillClass = (category: string, name: string) =>
 
 export function TableView({ ws, projectKey }: { ws: string; projectKey: string }) {
   const t = useTranslations("overview-table.table");
+  // มือถือ: รายการแบบการ์ดแทนตารางกว้าง + ตัวเลือกพับเก็บ (ผู้ใช้แจ้ง 2026-11-11 ว่าตารางเลื่อนขวาไม่เห็น / ตัวกรองรก) · desktop ไม่เปลี่ยน
+  const mobile = useIsMobile();
+  const [moreOpen, setMoreOpen] = useState(false);
   const search = useSearchParams();
   const { me } = useWorkspace();
   const year: YearFormat = me.yearFormat;
@@ -437,8 +441,9 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
     toast({ message: t("structure.saved") });
   }
   const groupIds = display.filter((d) => d.kind === "module" || d.kind === "phase").map((d) => d.id);
-  const tableMinW = NAME_MIN_W + cols.reduce((n, c) => n + colWidth(c) + 10, 0);
-  const colgroup = <colgroup><col />{cols.map((c) => <col key={c} style={{ width: colWidth(c) + 10 }} />)}</colgroup>;
+  const tableMinW = NAME_MIN_W + cols.reduce((n, c) => n + colWidth(c) + 10, 0) + (cols.length ? 9 : 0);
+  // คอลัมน์แรกถัดจากชื่อเว้นซ้ายเพิ่ม 9px (CSS nth-child(2)) จึงกว้างขึ้นเท่ากัน ไม่ให้เนื้อหาเบียด
+  const colgroup = <colgroup><col />{cols.map((c, i) => <col key={c} style={{ width: colWidth(c) + 10 + (i === 0 ? 9 : 0) }} />)}</colgroup>;
   const stuckModule = ctx.module !== null ? display[ctx.module] : undefined;
   const stuckPhase = ctx.phase !== null ? display[ctx.phase] : undefined;
   const ctxModule = stuckModule?.kind === "module" ? stuckModule : null;
@@ -469,8 +474,8 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
 
   return (
     <div className={styles.page}>
-      <div className={styles.bar} role="group" aria-label={t("views")}>
-        <span className={styles.muted} style={{ fontSize: 12, marginRight: 4 }}>{t("views")}</span>
+      <div className={mobile ? styles.mViews : styles.bar} role="group" aria-label={t("views")}>
+        {!mobile && <span className={styles.muted} style={{ fontSize: 12, marginRight: 4 }}>{t("views")}</span>}
         <button type="button" className={styles.chip} aria-pressed={!filtered} onClick={() => setFilters({})}>{t("allTasks")}</button>
         <button type="button" className={styles.chip} aria-pressed={activeView({ assignee: "me" })} onClick={() => setFilters({ assignee: "me" })}>{t("myView")}</button>
         <button type="button" className={styles.chip} aria-pressed={activeView({ overdue: "true" })} onClick={() => setFilters({ overdue: "true" })}>{t("overdue")}</button>
@@ -485,197 +490,271 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
         <button type="button" className={styles.addb} onClick={() => setSaving(true)}>{t("saveView")}</button>
       </div>
 
-      <div className={styles.toolbar}>
-        <div className={styles.bar} role="group" aria-label={t("filters")}>
-          <form className={styles.search} onSubmit={(e) => { e.preventDefault(); set("q", String(new FormData(e.currentTarget).get("q") ?? "")); }}>
-            <Search size={16} aria-hidden="true" />
-            <input type="search" name="q" aria-label={t("search")} placeholder={t("search")} defaultValue={filters.q ?? ""} />
-          </form>
-          <Popover.Root>
-            <Popover.Trigger asChild>
-              <button type="button" className={styles.tbtn}><SlidersHorizontal size={16} aria-hidden="true" />{t("filter")}{extra > 0 && <span className={`${styles.pill} ${styles.sProg}`}>{extra}</span>}</button>
-            </Popover.Trigger>
-            <Popover.Content className={`popover ${styles.pop}`} sideOffset={6} align="start">
-              <Select label={t("status")} size="small" value={filters.status ?? ""} onChange={(e) => set("status", e.target.value)}>
-                <option value="">{t("allStatus")}</option>
-                {(["todo", "in_progress", "done"] as const).map((c) => <option key={c} value={c}>{t(`statusCategory.${c}`)}</option>)}
-              </Select>
-              <Select label={t("priority")} size="small" value={filters.priority ?? ""} onChange={(e) => set("priority", e.target.value)}>
-                <option value="">{t("anyPriority")}</option>
-                {(["urgent", "high", "medium", "low"] as const).map((p) => <option key={p} value={p}>{p}</option>)}
-              </Select>
-              <Select label={t("level")} size="small" value={filters.level ?? ""} onChange={(e) => set("level", e.target.value)}>
-                <option value="">{t("allLevels")}</option><option value="task">{t("tasks")}</option><option value="subtask">{t("subtasks")}</option>
-              </Select>
-              {filtered && <Button size="small" variant="ghost" onClick={() => setFilters({})}>{t("clear")}</Button>}
-            </Popover.Content>
-          </Popover.Root>
-          <label className={styles.tbtn}>{t("groupBy")}
-            <select className={styles.tsel} aria-label={t("groupBy")} value={groupBy} onChange={(e) => { setGroupBy(e.target.value as GroupBy); setCollapsed(new Set()); }}>
-              {GROUPS.map((g) => <option key={g} value={g}>{t(`groups.${g}`)}</option>)}
-            </select>
-          </label>
-          {usedField("ba") && <select className={styles.tbtn} aria-label={t("ba")} value={filters.ba ?? ""} onChange={(e) => set("ba", e.target.value)}>
-            <option value="">{t("ba")}: {t("anyone")}</option>
-            {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
-          </select>}
-          <select className={styles.tbtn} aria-label={t("assignee")} value={filters.assignee ?? ""} onChange={(e) => set("assignee", e.target.value)}>
-            <option value="">{t("assignee")}: {t("anyone")}</option>
-            <option value="me">{t("me")}</option>
-            <option value="none">{t("none")}</option>
-            {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
-          </select>
-          {usedField("size") && <select className={styles.tbtn} aria-label={t("size")} value={filters.size ?? ""} onChange={(e) => set("size", e.target.value)}>
-            <option value="">{t("size")}: {t("allSizes")}</option>
-            {SIZES.map((z) => <option key={z} value={z}>{z}</option>)}
-          </select>}
-          <label className={styles.tbtn}>{t("sort")}:
-            <select className={styles.tsel} aria-label={t("sort")} value={sort} onChange={(e) => setSort(e.target.value as (typeof SORTS)[number])}>
-              {SORTS.map((o) => <option key={o} value={o}>{t(`sorts.${o}`)}</option>)}
-            </select>
-          </label>
-          <Popover.Root>
-            <Popover.Trigger asChild><button type="button" className={styles.tbtn}>{t("columns")}</button></Popover.Trigger>
-            <Popover.Content className={`popover ${styles.pop}`} sideOffset={6} align="start">
-              {available.map((c) => (
-                <label key={c} className={styles.colCheck}>
-                  <input type="checkbox" checked={cols.includes(c)} onChange={() => chooseCols(cols.includes(c) ? cols.filter((x) => x !== c) : [...cols, c])} />{colLabel(c)}
-                </label>
-              ))}
-              <p className={styles.popHint}>{t("columnsHint")}</p>
-              {userCols && <Button size="small" variant="ghost" onClick={() => chooseCols(null)}>{t("columnsReset")}</Button>}
-            </Popover.Content>
-          </Popover.Root>
-          <label className={styles.tbtn} style={{ cursor: "pointer" }}>
-            <input type="checkbox" className={styles.cb} checked={!filters.hideDone} onChange={() => set("hideDone", filters.hideDone ? "" : "1")} />{t("showCompleted")}
-          </label>
+      {mobile ? (
+        <div className={styles.mTools}>
+          <div className={styles.mToolRow}>
+            <form className={styles.search} onSubmit={(e) => { e.preventDefault(); set("q", String(new FormData(e.currentTarget).get("q") ?? "")); }}>
+              <Search size={16} aria-hidden="true" />
+              <input type="search" name="q" aria-label={t("search")} placeholder={t("search")} defaultValue={filters.q ?? ""} />
+            </form>
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button type="button" className={styles.tbtn} aria-label={t("filter")}><SlidersHorizontal size={16} aria-hidden="true" />{extra > 0 && <span className={`${styles.pill} ${styles.sProg}`}>{extra}</span>}</button>
+              </Popover.Trigger>
+              <Popover.Content className={`popover ${styles.pop}`} sideOffset={6} align="end">
+                <Select label={t("status")} size="small" value={filters.status ?? ""} onChange={(e) => set("status", e.target.value)}>
+                  <option value="">{t("allStatus")}</option>
+                  {(["todo", "in_progress", "done"] as const).map((c) => <option key={c} value={c}>{t(`statusCategory.${c}`)}</option>)}
+                </Select>
+                <Select label={t("priority")} size="small" value={filters.priority ?? ""} onChange={(e) => set("priority", e.target.value)}>
+                  <option value="">{t("anyPriority")}</option>
+                  {(["urgent", "high", "medium", "low"] as const).map((p) => <option key={p} value={p}>{p}</option>)}
+                </Select>
+                <Select label={t("level")} size="small" value={filters.level ?? ""} onChange={(e) => set("level", e.target.value)}>
+                  <option value="">{t("allLevels")}</option><option value="task">{t("tasks")}</option><option value="subtask">{t("subtasks")}</option>
+                </Select>
+                {filtered && <Button size="small" variant="ghost" onClick={() => setFilters({})}>{t("clear")}</Button>}
+              </Popover.Content>
+            </Popover.Root>
+            <button type="button" className={styles.tbtn} aria-label={t("moreOptions")} aria-expanded={moreOpen} onClick={() => setMoreOpen((o) => !o)}><LayoutList size={16} aria-hidden="true" /></button>
+            {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={taskHref()} scroll={false}>{t("addTask")}</Link>}
+          </div>
+          {moreOpen && (
+            <div className={styles.mMore} role="group" aria-label={t("moreOptions")}>
+              <label className={styles.tbtn}>{t("groupBy")}
+                <select className={styles.tsel} aria-label={t("groupBy")} value={groupBy} onChange={(e) => { setGroupBy(e.target.value as GroupBy); setCollapsed(new Set()); }}>
+                  {GROUPS.map((g) => <option key={g} value={g}>{t(`groups.${g}`)}</option>)}
+                </select>
+              </label>
+              {usedField("ba") && <select className={styles.tbtn} aria-label={t("ba")} value={filters.ba ?? ""} onChange={(e) => set("ba", e.target.value)}>
+                <option value="">{t("ba")}: {t("anyone")}</option>
+                {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
+              </select>}
+              <select className={styles.tbtn} aria-label={t("assignee")} value={filters.assignee ?? ""} onChange={(e) => set("assignee", e.target.value)}>
+                <option value="">{t("assignee")}: {t("anyone")}</option>
+                <option value="me">{t("me")}</option>
+                <option value="none">{t("none")}</option>
+                {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
+              </select>
+              {usedField("size") && <select className={styles.tbtn} aria-label={t("size")} value={filters.size ?? ""} onChange={(e) => set("size", e.target.value)}>
+                <option value="">{t("size")}: {t("allSizes")}</option>
+                {SIZES.map((z) => <option key={z} value={z}>{z}</option>)}
+              </select>}
+              <label className={styles.tbtn}>{t("sort")}:
+                <select className={styles.tsel} aria-label={t("sort")} value={sort} onChange={(e) => setSort(e.target.value as (typeof SORTS)[number])}>
+                  {SORTS.map((o) => <option key={o} value={o}>{t(`sorts.${o}`)}</option>)}
+                </select>
+              </label>
+              <label className={styles.tbtn} style={{ cursor: "pointer" }}>
+                <input type="checkbox" className={styles.cb} checked={!filters.hideDone} onChange={() => set("hideDone", filters.hideDone ? "" : "1")} />{t("showCompleted")}
+              </label>
+              <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set())}>{t("expandAll")}</button>
+              <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set(groupIds))}>{t("collapseAll")}</button>
+              {/* Import / Export เปิดเป็น Popup (ผู้ใช้ตัดสิน 2026-11-09) · สมาชิกทั่วไปเห็นเฉพาะ Export */}
+              {ioSections.length > 0 && <button type="button" className={styles.tbtn} onClick={() => openIo(ioSections[0])}>{t("importExport")}</button>}
+              {canSettings && <button type="button" className={styles.tbtn} onClick={() => setStructure({ kind: "createModule" })}>{t("addModule")}</button>}
+            </div>
+          )}
         </div>
-        <div className={styles.bar}>
-          <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set())}>{t("expandAll")}</button>
-          <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set(groupIds))}>{t("collapseAll")}</button>
-          {/* Import / Export เปิดเป็น Popup (ผู้ใช้ตัดสิน 2026-11-09) · สมาชิกทั่วไปเห็นเฉพาะ Export */}
-          {ioSections.length > 0 && <button type="button" className={styles.tbtn} onClick={() => openIo(ioSections[0])}>{t("importExport")}</button>}
-          {canSettings && <button type="button" className={styles.tbtn} onClick={() => setStructure({ kind: "createModule" })}>{t("addModule")}</button>}
-          {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={taskHref()} scroll={false}>{t("addTask")}</Link>}
+      ) : (
+        <div className={styles.toolbar}>
+          <div className={styles.bar} role="group" aria-label={t("filters")}>
+            <form className={styles.search} onSubmit={(e) => { e.preventDefault(); set("q", String(new FormData(e.currentTarget).get("q") ?? "")); }}>
+              <Search size={16} aria-hidden="true" />
+              <input type="search" name="q" aria-label={t("search")} placeholder={t("search")} defaultValue={filters.q ?? ""} />
+            </form>
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button type="button" className={styles.tbtn}><SlidersHorizontal size={16} aria-hidden="true" />{t("filter")}{extra > 0 && <span className={`${styles.pill} ${styles.sProg}`}>{extra}</span>}</button>
+              </Popover.Trigger>
+              <Popover.Content className={`popover ${styles.pop}`} sideOffset={6} align="start">
+                <Select label={t("status")} size="small" value={filters.status ?? ""} onChange={(e) => set("status", e.target.value)}>
+                  <option value="">{t("allStatus")}</option>
+                  {(["todo", "in_progress", "done"] as const).map((c) => <option key={c} value={c}>{t(`statusCategory.${c}`)}</option>)}
+                </Select>
+                <Select label={t("priority")} size="small" value={filters.priority ?? ""} onChange={(e) => set("priority", e.target.value)}>
+                  <option value="">{t("anyPriority")}</option>
+                  {(["urgent", "high", "medium", "low"] as const).map((p) => <option key={p} value={p}>{p}</option>)}
+                </Select>
+                <Select label={t("level")} size="small" value={filters.level ?? ""} onChange={(e) => set("level", e.target.value)}>
+                  <option value="">{t("allLevels")}</option><option value="task">{t("tasks")}</option><option value="subtask">{t("subtasks")}</option>
+                </Select>
+                {filtered && <Button size="small" variant="ghost" onClick={() => setFilters({})}>{t("clear")}</Button>}
+              </Popover.Content>
+            </Popover.Root>
+            <label className={styles.tbtn}>{t("groupBy")}
+              <select className={styles.tsel} aria-label={t("groupBy")} value={groupBy} onChange={(e) => { setGroupBy(e.target.value as GroupBy); setCollapsed(new Set()); }}>
+                {GROUPS.map((g) => <option key={g} value={g}>{t(`groups.${g}`)}</option>)}
+              </select>
+            </label>
+            {usedField("ba") && <select className={styles.tbtn} aria-label={t("ba")} value={filters.ba ?? ""} onChange={(e) => set("ba", e.target.value)}>
+              <option value="">{t("ba")}: {t("anyone")}</option>
+              {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
+            </select>}
+            <select className={styles.tbtn} aria-label={t("assignee")} value={filters.assignee ?? ""} onChange={(e) => set("assignee", e.target.value)}>
+              <option value="">{t("assignee")}: {t("anyone")}</option>
+              <option value="me">{t("me")}</option>
+              <option value="none">{t("none")}</option>
+              {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
+            </select>
+            {usedField("size") && <select className={styles.tbtn} aria-label={t("size")} value={filters.size ?? ""} onChange={(e) => set("size", e.target.value)}>
+              <option value="">{t("size")}: {t("allSizes")}</option>
+              {SIZES.map((z) => <option key={z} value={z}>{z}</option>)}
+            </select>}
+            <label className={styles.tbtn}>{t("sort")}:
+              <select className={styles.tsel} aria-label={t("sort")} value={sort} onChange={(e) => setSort(e.target.value as (typeof SORTS)[number])}>
+                {SORTS.map((o) => <option key={o} value={o}>{t(`sorts.${o}`)}</option>)}
+              </select>
+            </label>
+            <Popover.Root>
+              <Popover.Trigger asChild><button type="button" className={styles.tbtn}>{t("columns")}</button></Popover.Trigger>
+              <Popover.Content className={`popover ${styles.pop}`} sideOffset={6} align="start">
+                {available.map((c) => (
+                  <label key={c} className={styles.colCheck}>
+                    <input type="checkbox" checked={cols.includes(c)} onChange={() => chooseCols(cols.includes(c) ? cols.filter((x) => x !== c) : [...cols, c])} />{colLabel(c)}
+                  </label>
+                ))}
+                <p className={styles.popHint}>{t("columnsHint")}</p>
+                {userCols && <Button size="small" variant="ghost" onClick={() => chooseCols(null)}>{t("columnsReset")}</Button>}
+              </Popover.Content>
+            </Popover.Root>
+            <label className={styles.tbtn} style={{ cursor: "pointer" }}>
+              <input type="checkbox" className={styles.cb} checked={!filters.hideDone} onChange={() => set("hideDone", filters.hideDone ? "" : "1")} />{t("showCompleted")}
+            </label>
+          </div>
+          <div className={styles.bar}>
+            <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set())}>{t("expandAll")}</button>
+            <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set(groupIds))}>{t("collapseAll")}</button>
+            {/* Import / Export เปิดเป็น Popup (ผู้ใช้ตัดสิน 2026-11-09) · สมาชิกทั่วไปเห็นเฉพาะ Export */}
+            {ioSections.length > 0 && <button type="button" className={styles.tbtn} onClick={() => openIo(ioSections[0])}>{t("importExport")}</button>}
+            {canSettings && <button type="button" className={styles.tbtn} onClick={() => setStructure({ kind: "createModule" })}>{t("addModule")}</button>}
+            {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={taskHref()} scroll={false}>{t("addTask")}</Link>}
+          </div>
         </div>
-      </div>
+      )}
 
       {canEdit && selected.size > 0 && (
         <BulkBar count={selected.size} options={options.data} statuses={statuses} canDelete={canDelete} onApply={(set) => bulk(set)} onStatus={(id) => void bulkStatus(id)} onDelete={() => setDeleting(true)} onClear={() => setSelected(new Set())} />
       )}
 
-      <section className={styles.card} style={{ overflow: "clip" }}>
-        {!data.items.length && display.length > 0 && <EmptyState title={t("empty")} />}
-        {!display.length ? <EmptyState title={filtered ? t("emptyFiltered") : t("empty")} /> : (
-          <>
-          {/* หัวตารางแยกเป็นตารางของตัวเอง ติดใต้ top bar · ความกว้างคอลัมน์ใช้ colgroup ชุดเดียวกับตัวตาราง */}
-          <div className={styles.stickyHead} ref={headRef}>
-            <div className={styles.headScroll} ref={headScroll}>
-              <table className={styles.table} style={{ minWidth: tableMinW }}>
+      {mobile ? (
+        <MobileList display={display} collapsed={collapsed} onToggle={toggle} ws={ws} projectKey={projectKey} year={year} canCreate={canCreate} taskHref={taskHref}
+          empty={!display.length ? (filtered ? t("emptyFiltered") : t("empty")) : null}
+          summary={`${t("summary", { tasks: s.taskCount, subs: s.subtaskCount, done: s.doneCount, md: s.estimateMd, pct: s.progressPct })} · ${t("rows", { shown: issueRows.length, total: data.items.length })}`} />
+      ) : (
+        <section className={styles.card} style={{ overflow: "clip" }}>
+          {!data.items.length && display.length > 0 && <EmptyState title={t("empty")} />}
+          {!display.length ? <EmptyState title={filtered ? t("emptyFiltered") : t("empty")} /> : (
+            <>
+            {/* หัวตารางแยกเป็นตารางของตัวเอง ติดใต้ top bar · ความกว้างคอลัมน์ใช้ colgroup ชุดเดียวกับตัวตาราง */}
+            <div className={styles.stickyHead} ref={headRef}>
+              <div className={styles.headScroll} ref={headScroll}>
+                <table className={styles.table} style={{ minWidth: tableMinW }}>
+                  {colgroup}
+                  <thead>
+                    <tr>
+                      <th>
+                        <div className={styles.nameHead}>
+                          {canEdit ? <input type="checkbox" className={styles.cb} aria-label={t("selectAll")} checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(issueRows.map((d) => d.row.key)) : new Set())} /> : <span style={{ width: 16 }} />}
+                          {t("cols.name")}
+                        </div>
+                      </th>
+                      {cols.map((c) => <th key={c}>{colLabel(c)}</th>)}
+                    </tr>
+                  </thead>
+                </table>
+              </div>
+              {(ctxModule || ctxPhase) && <div className={styles.ctx} data-testid="table-stuck"><div ref={ctxRef}>
+                {ctxModule && <div className={styles.ctxModule}>
+                  <button type="button" className={styles.chv} aria-expanded aria-label={t("collapse", { name: ctxModule.name })} onClick={() => collapseStuck(ctxModule.id)}><ChevronDown size={16} /></button>
+                  {ctxModule.color !== null && <span className={styles.swatch} style={{ background: ctxModule.color }} />}
+                  <span className={styles.mname}>{ctxModule.name}</span>
+                  {moduleInfo(ctxModule)}
+                </div>}
+                {ctxPhase && <div className={styles.ctxPhase} ref={ctxPhaseRef}>
+                  <button type="button" className={styles.chv} aria-expanded aria-label={t("collapse", { name: ctxPhase.name })} onClick={() => collapseStuck(ctxPhase.id)}><ChevronDown size={16} /></button>
+                  <span className={styles.plabel}>{t("phaseLabel")}</span>
+                  <b>{ctxPhase.name}</b>
+                  {phaseInfo(ctxPhase)}
+                </div>}
+              </div></div>}
+            </div>
+            <div className={styles.tableWrap} ref={scroller} data-testid="table-scroll">
+              <table className={styles.table} aria-rowcount={display.length + 1} style={{ minWidth: tableMinW }}>
                 {colgroup}
-                <thead>
-                  <tr>
-                    <th>
-                      <div className={styles.nameHead}>
-                        {canEdit ? <input type="checkbox" className={styles.cb} aria-label={t("selectAll")} checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(issueRows.map((d) => d.row.key)) : new Set())} /> : <span style={{ width: 16 }} />}
-                        {t("cols.name")}
-                      </div>
-                    </th>
-                    {cols.map((c) => <th key={c}>{colLabel(c)}</th>)}
-                  </tr>
-                </thead>
+                <tbody>
+                  {virtual && start > 0 && <tr aria-hidden="true"><td colSpan={span} style={{ height: start * ROW_H, padding: 0 }} /></tr>}
+                  {shown.map((d, n) => d.kind === "module" ? (
+                    <tr key={d.id} data-i={start + n} data-module-id={d.moduleId ?? undefined} className={styles.moduleRow}>
+                      <td colSpan={span}>
+                        <div className={styles.mrow}>
+                          <button type="button" className={styles.chv} aria-expanded={!collapsed.has(d.id)} aria-label={t(collapsed.has(d.id) ? "expand" : "collapse", { name: d.name })} onClick={() => toggle(d.id)}>
+                            <ChevronDown size={16} style={{ transform: collapsed.has(d.id) ? "rotate(-90deg)" : undefined }} />
+                          </button>
+                          {d.color !== null && <span className={styles.swatch} style={{ background: d.color }} />}
+                          <span className={styles.mname} onDoubleClick={canSettings && d.moduleId ? () => setStructure({ kind: "renameModule", id: d.moduleId!, name: d.name }) : undefined}>{d.name}</span>
+                          {groupBy === "module" && (canSettings || canCreate) && d.moduleId && <Popover.Root>
+                            <Popover.Trigger asChild><button type="button" className={styles.chv} aria-label={t("structure.moduleMenu", { name: d.name })}>⋯</button></Popover.Trigger>
+                            <Popover.Portal><Popover.Content className="popover" align="start" sideOffset={4}>
+                              {canSettings && <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "renameModule", id: d.moduleId!, name: d.name })}>{t("structure.renameModule")}</button></Popover.Close>}
+                              <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "createPhase", moduleId: d.moduleId!, moduleName: d.name })}>{t("structure.createPhase")}</button></Popover.Close>
+                            </Popover.Content></Popover.Portal>
+                          </Popover.Root>}
+                          {moduleInfo(d)}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : d.kind === "phase" ? (
+                    <tr key={d.id} data-i={start + n} data-phase-id={d.phaseId ?? undefined} className={styles.phaseRow}>
+                      <td colSpan={span}>
+                        <div className={styles.prow}>
+                          <button type="button" className={styles.chv} aria-expanded={!collapsed.has(d.id)} aria-label={t(collapsed.has(d.id) ? "expand" : "collapse", { name: d.name })} onClick={() => toggle(d.id)}>
+                            <ChevronDown size={16} style={{ transform: collapsed.has(d.id) ? "rotate(-90deg)" : undefined }} />
+                          </button>
+                          <span className={styles.plabel}>{t("phaseLabel")}</span>
+                          <b>{d.name}</b>
+                          {canSettings && d.moduleId && d.phaseId && <Popover.Root>
+                            <Popover.Trigger asChild><button type="button" className={styles.chv} aria-label={t("structure.phaseMenu", { name: d.name })}>⋯</button></Popover.Trigger>
+                            <Popover.Portal><Popover.Content className="popover" align="start" sideOffset={4}>
+                              <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "renamePhase", id: d.phaseId!, moduleId: d.moduleId!, name: d.name })}>{t("structure.renamePhase")}</button></Popover.Close>
+                              <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "deletePhase", id: d.phaseId!, moduleId: d.moduleId!, name: d.name })}>{t("structure.deletePhase")}</button></Popover.Close>
+                            </Popover.Content></Popover.Portal>
+                          </Popover.Root>}
+                          {phaseInfo(d)}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : d.kind === "add" ? (
+                    canCreate ? <tr key={d.id} data-i={start + n} className={styles.addRow}><td colSpan={span}><Link className={styles.addb} href={taskHref(d.moduleId, d.phaseId)} scroll={false}>{t("addTaskIn", { name: d.name })}</Link></td></tr> : null
+                  ) : d.kind === "subAdd" ? (
+                    <tr key={d.id} data-i={start + n} className={styles.subAddRow}><td colSpan={span}>
+                      <SubtaskAdd base={base} parentKey={d.parentKey} onClose={() => setSubFor(null)}
+                        onCreated={async (key) => { toast({ message: t("cell.subtaskCreated", { key }) }); await reload(); }}
+                        onFullForm={() => { setSubFor(null); router.replace(`${page}/table?${new URLSearchParams({ issue: d.parentKey, new: "1", parent: d.parentKey })}`, { scroll: false }); }} />
+                    </td></tr>
+                  ) : d.kind === "foot" ? (
+                    <tr key={d.id} data-i={start + n} className={styles.footRow}><td colSpan={span}><div className={styles.footInner}><span>{t("footTasks", { count: d.count })}</span><span>{t("footMd", { md: d.md })}</span></div></td></tr>
+                  ) : (
+                    <IssueRow key={d.row.key} index={start + n} row={d.row} sub={d.sub} cols={cols} profile={profile} customFields={customFields} ws={ws} projectKey={projectKey} year={year} canEdit={canEdit} statuses={statuses} people={options.data?.members ?? []}
+                      onAddSub={canCreate && !d.sub ? () => setSubFor(d.row.key) : undefined}
+                      selected={selected.has(d.row.key)} onSelect={(on) => setSelected((c) => { const n = new Set(c); if (on) n.add(d.row.key); else n.delete(d.row.key); return n; })}
+                      onPatch={(body) => patch(d.row, body)} />
+                  ))}
+                  {virtual && end < display.length && <tr aria-hidden="true"><td colSpan={span} style={{ height: (display.length - end) * ROW_H, padding: 0 }} /></tr>}
+                </tbody>
               </table>
             </div>
-            {(ctxModule || ctxPhase) && <div className={styles.ctx} data-testid="table-stuck"><div ref={ctxRef}>
-              {ctxModule && <div className={styles.ctxModule}>
-                <button type="button" className={styles.chv} aria-expanded aria-label={t("collapse", { name: ctxModule.name })} onClick={() => collapseStuck(ctxModule.id)}><ChevronDown size={16} /></button>
-                {ctxModule.color !== null && <span className={styles.swatch} style={{ background: ctxModule.color }} />}
-                <span className={styles.mname}>{ctxModule.name}</span>
-                {moduleInfo(ctxModule)}
-              </div>}
-              {ctxPhase && <div className={styles.ctxPhase} ref={ctxPhaseRef}>
-                <button type="button" className={styles.chv} aria-expanded aria-label={t("collapse", { name: ctxPhase.name })} onClick={() => collapseStuck(ctxPhase.id)}><ChevronDown size={16} /></button>
-                <span className={styles.plabel}>{t("phaseLabel")}</span>
-                <b>{ctxPhase.name}</b>
-                {phaseInfo(ctxPhase)}
-              </div>}
-            </div></div>}
+            <div className={styles.hbar} ref={hbar} aria-hidden="true"><div ref={hbarInner} /></div>
+            </>
+          )}
+          {groupBy === "module" && canSettings && (
+            <div style={{ padding: "10px 14px" }}><button type="button" className={styles.newModule} style={{ background: "none", border: 0, cursor: "pointer" }} onClick={() => setStructure({ kind: "createModule" })}>{t("newModule")}</button></div>
+          )}
+          <div className={styles.foot}>
+            {t("summary", { tasks: s.taskCount, subs: s.subtaskCount, done: s.doneCount, md: s.estimateMd, pct: s.progressPct })} · {t("rows", { shown: issueRows.length, total: data.items.length })}{virtual ? ` · ${t("virtualHint")}` : ""}
           </div>
-          <div className={styles.tableWrap} ref={scroller} data-testid="table-scroll">
-            <table className={styles.table} aria-rowcount={display.length + 1} style={{ minWidth: tableMinW }}>
-              {colgroup}
-              <tbody>
-                {virtual && start > 0 && <tr aria-hidden="true"><td colSpan={span} style={{ height: start * ROW_H, padding: 0 }} /></tr>}
-                {shown.map((d, n) => d.kind === "module" ? (
-                  <tr key={d.id} data-i={start + n} data-module-id={d.moduleId ?? undefined} className={styles.moduleRow}>
-                    <td colSpan={span}>
-                      <div className={styles.mrow}>
-                        <button type="button" className={styles.chv} aria-expanded={!collapsed.has(d.id)} aria-label={t(collapsed.has(d.id) ? "expand" : "collapse", { name: d.name })} onClick={() => toggle(d.id)}>
-                          <ChevronDown size={16} style={{ transform: collapsed.has(d.id) ? "rotate(-90deg)" : undefined }} />
-                        </button>
-                        {d.color !== null && <span className={styles.swatch} style={{ background: d.color }} />}
-                        <span className={styles.mname} onDoubleClick={canSettings && d.moduleId ? () => setStructure({ kind: "renameModule", id: d.moduleId!, name: d.name }) : undefined}>{d.name}</span>
-                        {groupBy === "module" && (canSettings || canCreate) && d.moduleId && <Popover.Root>
-                          <Popover.Trigger asChild><button type="button" className={styles.chv} aria-label={t("structure.moduleMenu", { name: d.name })}>⋯</button></Popover.Trigger>
-                          <Popover.Portal><Popover.Content className="popover" align="start" sideOffset={4}>
-                            {canSettings && <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "renameModule", id: d.moduleId!, name: d.name })}>{t("structure.renameModule")}</button></Popover.Close>}
-                            <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "createPhase", moduleId: d.moduleId!, moduleName: d.name })}>{t("structure.createPhase")}</button></Popover.Close>
-                          </Popover.Content></Popover.Portal>
-                        </Popover.Root>}
-                        {moduleInfo(d)}
-                      </div>
-                    </td>
-                  </tr>
-                ) : d.kind === "phase" ? (
-                  <tr key={d.id} data-i={start + n} data-phase-id={d.phaseId ?? undefined} className={styles.phaseRow}>
-                    <td colSpan={span}>
-                      <div className={styles.prow}>
-                        <button type="button" className={styles.chv} aria-expanded={!collapsed.has(d.id)} aria-label={t(collapsed.has(d.id) ? "expand" : "collapse", { name: d.name })} onClick={() => toggle(d.id)}>
-                          <ChevronDown size={16} style={{ transform: collapsed.has(d.id) ? "rotate(-90deg)" : undefined }} />
-                        </button>
-                        <span className={styles.plabel}>{t("phaseLabel")}</span>
-                        <b>{d.name}</b>
-                        {canSettings && d.moduleId && d.phaseId && <Popover.Root>
-                          <Popover.Trigger asChild><button type="button" className={styles.chv} aria-label={t("structure.phaseMenu", { name: d.name })}>⋯</button></Popover.Trigger>
-                          <Popover.Portal><Popover.Content className="popover" align="start" sideOffset={4}>
-                            <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "renamePhase", id: d.phaseId!, moduleId: d.moduleId!, name: d.name })}>{t("structure.renamePhase")}</button></Popover.Close>
-                            <Popover.Close asChild><button type="button" className="menu-item" onClick={() => setStructure({ kind: "deletePhase", id: d.phaseId!, moduleId: d.moduleId!, name: d.name })}>{t("structure.deletePhase")}</button></Popover.Close>
-                          </Popover.Content></Popover.Portal>
-                        </Popover.Root>}
-                        {phaseInfo(d)}
-                      </div>
-                    </td>
-                  </tr>
-                ) : d.kind === "add" ? (
-                  canCreate ? <tr key={d.id} data-i={start + n} className={styles.addRow}><td colSpan={span}><Link className={styles.addb} href={taskHref(d.moduleId, d.phaseId)} scroll={false}>{t("addTaskIn", { name: d.name })}</Link></td></tr> : null
-                ) : d.kind === "subAdd" ? (
-                  <tr key={d.id} data-i={start + n} className={styles.subAddRow}><td colSpan={span}>
-                    <SubtaskAdd base={base} parentKey={d.parentKey} onClose={() => setSubFor(null)}
-                      onCreated={async (key) => { toast({ message: t("cell.subtaskCreated", { key }) }); await reload(); }}
-                      onFullForm={() => { setSubFor(null); router.replace(`${page}/table?${new URLSearchParams({ issue: d.parentKey, new: "1", parent: d.parentKey })}`, { scroll: false }); }} />
-                  </td></tr>
-                ) : d.kind === "foot" ? (
-                  <tr key={d.id} data-i={start + n} className={styles.footRow}><td colSpan={span}><div className={styles.footInner}><span>{t("footTasks", { count: d.count })}</span><span>{t("footMd", { md: d.md })}</span></div></td></tr>
-                ) : (
-                  <IssueRow key={d.row.key} index={start + n} row={d.row} sub={d.sub} cols={cols} profile={profile} customFields={customFields} ws={ws} projectKey={projectKey} year={year} canEdit={canEdit} statuses={statuses} people={options.data?.members ?? []}
-                    onAddSub={canCreate && !d.sub ? () => setSubFor(d.row.key) : undefined}
-                    selected={selected.has(d.row.key)} onSelect={(on) => setSelected((c) => { const n = new Set(c); if (on) n.add(d.row.key); else n.delete(d.row.key); return n; })}
-                    onPatch={(body) => patch(d.row, body)} />
-                ))}
-                {virtual && end < display.length && <tr aria-hidden="true"><td colSpan={span} style={{ height: (display.length - end) * ROW_H, padding: 0 }} /></tr>}
-              </tbody>
-            </table>
-          </div>
-          <div className={styles.hbar} ref={hbar} aria-hidden="true"><div ref={hbarInner} /></div>
-          </>
-        )}
-        {groupBy === "module" && canSettings && (
-          <div style={{ padding: "10px 14px" }}><button type="button" className={styles.newModule} style={{ background: "none", border: 0, cursor: "pointer" }} onClick={() => setStructure({ kind: "createModule" })}>{t("newModule")}</button></div>
-        )}
-        <div className={styles.foot}>
-          {t("summary", { tasks: s.taskCount, subs: s.subtaskCount, done: s.doneCount, md: s.estimateMd, pct: s.progressPct })} · {t("rows", { shown: issueRows.length, total: data.items.length })}{virtual ? ` · ${t("virtualHint")}` : ""}
-        </div>
-      </section>
+        </section>
+      )}
 
       <PlanIoDialog ws={ws} projectKey={projectKey} />
       {structure && <StructureDialog base={base} action={structure} onClose={() => setStructure(null)} onSaved={structureSaved} />}
@@ -694,6 +773,69 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
       }} />}
       {reasonFor && <ReasonDialog onClose={() => setReasonFor(null)} onSubmit={async (r) => { const job = reasonFor; setReasonFor(null); await job.run(r); }} />}
     </div>
+  );
+}
+
+/**
+ * List บนมือถือ (≤ 760 px): การ์ดเรียงลงล่าง ไม่มีคอลัมน์ให้เลื่อนขวา · Module / กลุ่มย่อ-ขยายได้ · แตะงานเปิดรายละเอียด
+ * แก้ค่าในช่อง / เลือกหลายงานใช้บนจอใหญ่ (เหมือน Gantt / Settings ที่เปิดบนจอใหญ่เท่านั้น)
+ */
+function MobileList({ display, collapsed, onToggle, ws, projectKey, year, canCreate, taskHref, empty, summary }: {
+  display: Display[]; collapsed: Set<string>; onToggle: (id: string) => void; ws: string; projectKey: string; year: YearFormat; canCreate: boolean;
+  taskHref: (moduleId?: string | null, phaseId?: string | null) => string; empty: string | null; summary: string;
+}) {
+  const t = useTranslations("overview-table.table");
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+  if (empty) return <section className={styles.card}><EmptyState title={empty} /></section>;
+  const href = (key: string) => `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/table?issue=${encodeURIComponent(key)}`;
+  const chevron = (id: string) => <ChevronDown size={18} aria-hidden="true" style={{ transform: collapsed.has(id) ? "rotate(-90deg)" : undefined }} />;
+  return (
+    <section className={styles.mList} aria-label={t("listLabel")}>
+      {display.map((d) => {
+        if (d.kind === "module")
+          return (
+            <button key={d.id} type="button" className={styles.mModule} aria-expanded={!collapsed.has(d.id)} onClick={() => onToggle(d.id)}>
+              {chevron(d.id)}
+              {d.color !== null && <span className={styles.swatch} style={{ background: d.color }} />}
+              <span className={styles.mModuleText}>
+                <b>{d.name}</b>
+                <span className={styles.muted}>{d.phases ? t("moduleTasks", { count: d.count, phases: d.phases }) : t("groupTasks", { count: d.count })}{d.from && d.to ? ` · ${formatDate(d.from, year)} – ${formatDate(d.to, year)}` : ""}</span>
+              </span>
+              <span className={styles.mPct}><span><span style={{ width: `${d.pct}%`, background: d.color ?? "var(--primary)" }} /></span>{d.pct}%</span>
+            </button>
+          );
+        if (d.kind === "phase")
+          return (
+            <button key={d.id} type="button" className={styles.mPhase} aria-expanded={!collapsed.has(d.id)} onClick={() => onToggle(d.id)}>
+              {chevron(d.id)}
+              <span className={styles.plabel}>{t("phaseLabel")}</span>
+              <b>{d.name}</b>
+              <span className={`${styles.pill} ${styles.sTodo}`}>{d.done}/{d.total}</span>
+            </button>
+          );
+        if (d.kind === "add")
+          return canCreate ? <Link key={d.id} className={styles.mAdd} href={taskHref(d.moduleId, d.phaseId)} scroll={false}>{t("addTaskIn", { name: d.name })}</Link> : null;
+        if (d.kind !== "issue") return null;
+        const r = d.row;
+        const done = r.status.category === "done";
+        const late = !done && !!r.planEnd && r.planEnd < today;
+        return (
+          <Link key={r.key} href={href(r.key)} scroll={false} className={`${styles.mItem} ${d.sub ? styles.mSub : ""}`}>
+            <span className={styles.mItemTop}>
+              <span className={styles.mKey}>{r.key}</span>
+              <span className={`${styles.pill} ${pillClass(r.status.category, r.status.name)}`}>{r.status.name}</span>
+            </span>
+            <span className={`${styles.mTitle} ${done ? styles.mDone : ""}`}>{r.title}</span>
+            <span className={styles.mMeta}>
+              {r.assignees?.length ? <AvatarStack people={r.assignees} max={3} /> : <span className={styles.muted}>{t("unassigned")}</span>}
+              {r.planEnd && <span className={late ? styles.dueLate : styles.muted}>{t("dueShort", { date: formatDate(r.planEnd, year) })}</span>}
+              {r.progressPct !== null && r.progressPct > 0 && <span className={styles.muted}>{r.progressPct}%</span>}
+            </span>
+          </Link>
+        );
+      })}
+      <div className={styles.foot}>{summary}</div>
+    </section>
   );
 }
 

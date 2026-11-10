@@ -4,6 +4,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { renderWithProviders } from "@/test/render";
+import { asMobile } from "@/test/mobile";
 import { server } from "@/test/server";
 import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
@@ -383,6 +384,26 @@ describe("Table (2)", () => {
     expect(moduleA.map((x) => (x.kind === "issue" ? x.row.key : `${x.kind}:${"phaseId" in x && x.phaseId ? x.phaseId : ""}`))).toEqual(["module:", "DE-2", "phase:p-1", "DE-1", "add:p-1", "foot:"]);
     // Module ที่ยังไม่มีกลุ่มยังมีแถวเพิ่มงานของ Module (ไม่งั้นไม่มีทางเพิ่ม Task)
     expect(d.slice(moduleA.length).map((x) => x.kind)).toContain("add");
+  });
+  it("มือถือ: รายการแบบการ์ด (ไม่มีตารางเลื่อนขวา) · ตัวเลือกพับเก็บ · แตะงานเปิดรายละเอียด · ย่อ Module ได้", async () => {
+    const restore = asMobile();
+    try {
+      const user = userEvent.setup();
+      mount(<TableView ws="sample" projectKey="DE" />);
+      const list = await screen.findByRole("region", { name: "รายการงาน" });
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+      expect(within(list).getByRole("link", { name: /DE-1/ })).toHaveAttribute("href", "/work/sample/p/DE/table?issue=DE-1");
+      // ตัวกรองรองซ่อนอยู่จนกดปุ่มตัวเลือก
+      expect(screen.queryByLabelText("Group by")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "ตัวเลือกการแสดงผล" }));
+      expect(screen.getByRole("group", { name: "ตัวเลือกการแสดงผล" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Columns" })).not.toBeInTheDocument();
+      // ย่อ Module A แล้วงานใน Module หาย
+      await user.click(within(list).getByRole("button", { name: /Module A/ }));
+      expect(within(list).queryByRole("link", { name: /DE-1/ })).not.toBeInTheDocument();
+    } finally {
+      restore();
+    }
   });
   it("buildDisplay จัด Sub-task ต่อท้ายแม่, มีแถวเพิ่มงาน + สรุปท้าย Module และซ่อน Module ที่ย่อ", () => {
     const d = buildDisplay(table(), new Set(["m-b"]), "-", "-");

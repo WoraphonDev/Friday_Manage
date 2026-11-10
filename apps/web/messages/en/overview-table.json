@@ -151,6 +151,10 @@
     "allTasks": "All tasks",
     "myView": "My tasks",
     "filter": "Filter",
+    "moreOptions": "Display options",
+    "listLabel": "Task list",
+    "unassigned": "Unassigned",
+    "dueShort": "Due {date}",
     "groupBy": "Group by",
     "groups": {
       "module": "Module",

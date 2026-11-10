@@ -113,6 +113,8 @@
 .mTodayTitle { flex:1; min-width:0; font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .mProjects { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; }
 .mProject { flex:0 0 240px; display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; color:var(--foreground); text-decoration:none; }
+/* มีโปรเจกต์เดียว: เต็มความกว้าง ไม่เหลือที่ว่างครึ่งจอ (หลายโปรเจกต์ยังเลื่อนแนวนอนตาม Canvas M2) */
+.mProject:only-child { flex:1 1 auto; }
 .mProject b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.mProject small { display:block; font-size:11px; }
 .mProjIcon { width:30px; height:30px; border-radius:8px; color:var(--on-primary); font-size:11px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; flex:none; }
 .mTasks { display:flex; flex-direction:column; min-height:100%; position:relative; }

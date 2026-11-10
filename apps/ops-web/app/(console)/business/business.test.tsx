@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/render";
 import { overview } from "@/test/fixtures";
 import { asRole, OPS, server } from "@/test/server";
@@ -94,6 +94,48 @@ describe("ธุรกิจและกำไร", () => {
     expect(await screen.findByText("3.65%")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ตั้งค่าต้นทุน" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "กรอกค่าการตลาดเดือนนี้" })).not.toBeInTheDocument();
+  });
+
+  it("ช่วงเวลา · ต้นทุนแยกตามทรัพยากร · อัตราแปลงของช่องทาง · เงินสดรับเดือนนี้ · ส่งออก CSV", async () => {
+    asRole("finance");
+    const periods: (string | null)[] = [];
+    const full = {
+      ...biz,
+      period: "quarter",
+      margin: { ...biz.margin, breakdown: { lineSatang: 404_000, emailSatang: 500, storageSatang: 0, paymentFeesSatang: 1_650, infraSatang: 100_000 } },
+      channels: [{ ...biz.channels[0], signups: 40, conversionPct: 10 }, biz.channels[1]],
+      cashThisMonth: { month: "2026-11", receivedSatang: 5_885_000, invoices: 2 },
+    };
+    page();
+    server.use(
+      http.get(`${OPS}/business`, ({ request }) => {
+        const p = new URL(request.url).searchParams.get("period");
+        periods.push(p);
+        return HttpResponse.json({ ...full, period: p ?? "quarter", funnel: { ...full.funnel, windowDays: p === "30d" ? 30 : 90 } });
+      }),
+    );
+    const cost = await screen.findByRole("list", { name: "ต้นทุนการให้บริการเดือนนี้" });
+    expect(within(cost).getByText("ข้อความ LINE")).toBeInTheDocument();
+    expect(within(cost).getByText("฿4,040")).toBeInTheDocument();
+    expect(screen.getByText("แปลงเป็นลูกค้า")).toBeInTheDocument();
+    expect(screen.getByText("10%")).toBeInTheDocument();
+    expect(screen.getByText("฿58,850")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "30 วัน" }));
+    await waitFor(() => expect(periods.at(-1)).toBe("30d"));
+    expect(await screen.findByText(/ที่หมดใน 30 วัน/)).toBeInTheDocument();
+    const create = vi.fn(() => "blob:x");
+    const revoke = vi.fn();
+    Object.assign(URL, { createObjectURL: create, revokeObjectURL: revoke });
+    await userEvent.click(screen.getByRole("button", { name: "ส่งออก CSV" }));
+    expect(create).toHaveBeenCalledTimes(1);
+    const blob = (create.mock.calls[0] as unknown as [Blob])[0];
+    // jsdom ไม่มี Blob.text() · อ่านผ่าน FileReader
+    const text = await new Promise<string>((ok) => {
+      const r = new FileReader();
+      r.onload = () => ok(String(r.result));
+      r.readAsText(blob);
+    });
+    expect(text).toContain("รับเงินสด");
   });
 
   it("B10 กรอกค่าการตลาด", async () => {

@@ -110,6 +110,21 @@ describe('ธุรกิจและกำไร (Business)', () => {
     expect(r.deferredRevenueSatang).toBeGreaterThan(5_000_000);
     expect(r.forecast).toHaveLength(3);
     expect(r.ltvSatang).toBeGreaterThan(0);
+    // biz-a / biz-b มาจาก facebook / google (สร้างวันนี้) · google ได้ลูกค้าที่จ่าย 1 ราย = แปลง 100%
+    expect(r.channels.find((x: { source: string }) => x.source === 'google')).toMatchObject({ signups: 1, conversionPct: 100 });
+    expect(r.channels.find((x: { source: string }) => x.source === 'direct')).toMatchObject({ signups: 3 });
+    // ต้นทุนแยกตามทรัพยากร: LINE 4 สตางค์ × (1,000 + 100,000) · อีเมล 500 × 1 · ค่าเซิร์ฟเวอร์ 100,000
+    expect(r.margin.breakdown).toMatchObject({ lineSatang: 404_000, emailSatang: 500, infraSatang: 100_000 });
+    // เงินสดรับเดือนนี้ = ใบที่ชำระในเดือนนี้ (FRI-BIZ-2 ชำระ 28 วันก่อน · นับเมื่ออยู่เดือนเดียวกัน)
+    expect(r.cashThisMonth).toMatchObject({ month: expect.stringMatching(/^\d{4}-\d{2}$/), receivedSatang: expect.any(Number) });
+  });
+
+  it('ช่วงเวลา: 30 วัน / ไตรมาส / 12 เดือน · cache แยกกัน · ค่าผิด → 400', async () => {
+    const m = (await auditor.agent.get('/ops/business?period=30d')).body;
+    expect(m).toMatchObject({ period: '30d', funnel: { windowDays: 30 } });
+    expect((await auditor.agent.get('/ops/business?period=12m')).body.funnel.windowDays).toBe(365);
+    expect((await auditor.agent.get('/ops/business')).body.period).toBe('quarter');
+    expect((await auditor.agent.get('/ops/business?period=week')).status).toBe(400);
   });
 
   it('cache: เรียกซ้ำได้ผลเดิม · คำนวณใหม่ได้เฉพาะ Owner / การเงิน · Support เปิดไม่ได้', async () => {

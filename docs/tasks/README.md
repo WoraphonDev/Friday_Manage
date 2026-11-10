@@ -171,6 +171,23 @@
 
 ไฟล์กลางของ ops: `apps/ops-api/src/app.module.ts` และ `ops.controller.ts` แก้ได้เฉพาะ O01 (งานอื่นลงทะเบียน module ผ่านคำขอนอก lane หรือ O01 เตรียม module ว่างไว้ให้) · `apps/ops-web/src/components/**`, `app/layout.tsx`, `app/(console)/layout.tsx` แก้ได้เฉพาะ O10 · `apps/ops-api/test/helpers.ts` แก้ได้เฉพาะ O01 (เพิ่ม `staff(…, roles[])` และ `reauth()` ไว้ให้งานอื่นใช้)
 
+## Friday Ops เฟส 2 (วางแผน 10 พ.ย. 2569 · ยังไม่เริ่ม)
+
+ที่มา: บอร์ดที่ติดป้าย **[เฟส 2]** ใน `design/canvas/ops/canvas.json` (Promotions, Entitlements, SupportSettings, Deliveries, Mobile) และ Modal เฟส 2 (C8, P1–P4, T4, T6, Y6, Y7) · Canvas กำหนดให้เริ่มหลังมีลูกค้าจ่ายเงิน จึง **รอผู้ใช้สั่งเริ่ม**
+
+| งาน | ชื่อ | Wave | รอ merge | Lane หลัก |
+|---|---|---|---|---|
+| [O20](O20-ops-promotions.md) | แพ็กเกจและโปรโมชัน: แก้แพ็กเกจแบบมีเวอร์ชัน และคูปอง | O-4 | A35b (คูปองต้องหักที่ Gateway) · O21 | `apps/ops-api/src/promotions` · `app/(console)/promotions` |
+| [O21](O21-ops-entitlements.md) | สิทธิ์ตามแพ็กเกจและขีดจำกัด แบบมีเวอร์ชัน + ปรับเฉพาะราย | O-4 | — | `apps/ops-api/src/entitlements` · `apps/api/src/core/plan-limits.ts` |
+| [O22](O22-ops-support-settings.md) | ตั้งค่าการแจกงาน Support · ข้อความสำเร็จรูป | O-4 | — | `apps/ops-api/src/support` · `app/(console)/support/settings` |
+| [O23](O23-ops-deliveries.md) | ประวัติการส่งแจ้งเตือน และรายชื่อไม่ส่งอีเมล | O-4 | — | `apps/ops-api/src/deliveries` · `apps/api/src/channels` |
+| [O24](O24-ops-announcements.md) | ส่งประกาศถึงลูกค้าที่เลือก | O-4 | O23 | `apps/ops-api/src/announcements` · `apps/web/src/features/announcements` |
+| [O25](O25-ops-mobile.md) | Friday Ops บนมือถือ: อนุมัติ · เหตุขัดข้อง · คิวชำระ | O-4 | — | `apps/ops-web` (มือถือ) · Web Push ใน ops-api |
+
+ยังไม่มีหน้าจอใน Canvas (ต้องออกแบบก่อนแตกงาน): Changelog และ NPS · Onboarding checklist · ศูนย์ช่วยเหลือ · ส่งบั๊กจาก Ticket ให้ทีมพัฒนา (ผูกงานใน Friday Manage) · กู้คืนข้อมูลที่ลูกค้าลบผิด (เฟส 1 ใน ComingSoon แต่ยังไม่มีหน้าจอ)
+
+ทำไปแล้วระหว่างเฟส 1: ธุรกิจและกำไร · Funnel และ Retention · การใช้ฟีเจอร์ · ส่งออกให้บัญชี (รวมส่งอัตโนมัติ)
+
 ## ตั้ง environment ของ Codex
 
 ตั้งไว้แล้วที่ chatgpt.com/codex › Environment `Friday_Manage` · Codex ไม่มี root, ไม่มี Docker และ home ของผู้ใช้ไม่มีอยู่จริง

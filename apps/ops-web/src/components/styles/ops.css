@@ -781,6 +781,8 @@ textarea.input {
 
 /* ---------------------------------------------------------------- ตาราง */
 .tbl-wrap {
+  /* ให้ข้อความ .sr-only (position: absolute) ในหัวตารางอยู่ในกรอบที่เลื่อนได้ ไม่ดันหน้าจอมือถือให้กว้างเกิน */
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);

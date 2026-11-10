@@ -48,6 +48,11 @@ cd /opt/friday
 chmod 700 backup.sh set-smtp.sh
 prev=$(grep '^TAG=' .env | cut -d= -f2)
 sed -i "s/^TAG=.*/TAG=$1/" .env
+# กุญแจ VAPID ของ Web Push สร้างครั้งเดียวบนเครื่อง (กุญแจลับไม่ออกจากเครื่อง · เติม 0 ข้างหน้าให้ครบ 32 byte ตามที่ web-push ต้องการ) · เปลี่ยนกุญแจ = การสมัครรับแจ้งเตือนเดิมใช้ไม่ได้
+if ! grep -q '^OPS_VAPID_PRIVATE_KEY=.\+' .env; then
+  docker run --rm --entrypoint node "friday-ops-api:$1" -e "const e=require('crypto').createECDH('prime256v1');e.generateKeys();console.log('OPS_VAPID_PUBLIC_KEY='+e.getPublicKey().toString('base64url'));const k=e.getPrivateKey();console.log('OPS_VAPID_PRIVATE_KEY='+Buffer.concat([Buffer.alloc(32-k.length),k]).toString('base64url'))" >>.env
+  echo "สร้างกุญแจ VAPID แล้ว"
+fi
 docker compose up -d postgres valkey
 # -T + </dev/null: ไม่งั้น run จะอ่าน stdin ซึ่งคือสคริปต์นี้เอง แล้วคำสั่งที่เหลือไม่ได้รัน
 docker compose run --rm -T migrate </dev/null

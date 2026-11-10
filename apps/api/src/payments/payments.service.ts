@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { AnalyticsService, classifyChange } from '../analytics/analytics.service.js';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { canGrant, type Db, schema, type Tx } from '@friday/db';
+import { canGrant, type Db, resumeIfPaid, schema, type Tx } from '@friday/db';
 import { and, count, eq, inArray, like, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { today } from '../common/dates.js';
@@ -284,6 +284,8 @@ export class PaymentsService implements OnModuleInit {
           : { workspaceId: invoice.workspaceId, invoiceId: invoice.id, docType: 'receipt', number: `RC-${invoice.number.slice(4)}`, status: 'issued', sentAt: new Date() })
         .onConflictDoNothing()
         .returning();
+      // ระงับเพราะค้างชำระ + เปิดเองเมื่อชำระ (C6) → เปิดถ้าไม่เหลือใบเลยกำหนด
+      await resumeIfPaid(tx, invoice.workspaceId);
       await tx.insert(s.auditLogs).values({ workspaceId: invoice.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.payment_confirmed', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · ${payment.method} · ${payment.amount / 100} บาท · ${granted ? `เปิดแพ็กเกจ ${meta.plan}` : 'ไม่เปลี่ยนแพ็กเกจ (มีใบที่ใหม่กว่าเปิดสิทธิ์อยู่)'}` });
       return doc;
     });

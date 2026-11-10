@@ -90,7 +90,7 @@ describe('Migration T00', () => {
         await migrate(db, { migrationsFolder: folder });
         // คอลัมน์ที่ migration ถัดไปเพิ่ม (มีค่าเริ่มต้น) ไม่นับเป็นข้อมูลเดิมที่เปลี่ยน · notifications.in_app (0011) ต้องเป็น true
         // issues.sa_id (0013) และ issues.remark (0014) เป็น null สำหรับงานเดิม · projects.field_profile (0015) = {} คือชุดฟิลด์มาตรฐาน
-        const added: Record<string, Record<string, unknown>> = { notifications: { in_app: true }, issues: { sa_id: null, remark: null }, projects: { field_profile: {} } };
+        const added: Record<string, Record<string, unknown>> = { notifications: { in_app: true }, issues: { sa_id: null, remark: null }, projects: { field_profile: {} }, workspaces: { suspension_mode: null, suspension_message: null, suspension_auto_resume: false } };
         for (const [i, table] of tables.entries()) expect((await client.query(`SELECT * FROM ${table} ORDER BY id`)).rows, table).toEqual(before[i].map((r: Record<string, unknown>) => ({ ...r, ...added[table] })));
         await expectPlanSeed(client);
         // ตรวจด้วยข้อมูลเดิมจริงว่า FK ของตารางใหม่ผูกกับ notification ที่มีอยู่แล้วได้

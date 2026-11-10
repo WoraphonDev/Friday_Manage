@@ -60,6 +60,8 @@ export class MembersService {
       defaultLocale: w.defaultLocale,
       allowDomainJoin: w.allowDomainJoin,
       status: w.status,
+      /** ถูกระงับ (C6): หน้าเว็บแสดงแถบอ่านอย่างเดียว หรือหน้าติดต่อทีม */
+      suspension: tenant.suspension ?? null,
       role: tenant.role,
       createdAt: w.createdAt,
     };

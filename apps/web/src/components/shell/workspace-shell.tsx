@@ -61,6 +61,7 @@ import { CommandPalette } from "@/features/command-palette/CommandPalette";
 import { LocaleSwitch, LocaleSync } from "@/features/locale-switch";
 import { ThemeSwitch } from "@/features/theme-switch";
 import { WorkspaceBanners } from "@/features/plan-limits";
+import { isBlocked, SuspendedScreen, SuspensionBanner, useSuspension } from "@/features/suspension";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 
 interface ShellContext {
@@ -265,11 +266,14 @@ export function WorkspaceShell({
     enabled: !!me.data,
   });
   const workspace = workspaces.data?.items.find((item) => item.slug === ws);
+  // ถูกระงับ (C6): อ่านอย่างเดียว = แถบเตือน · ปิดทั้งหมด = แทนเนื้อหาด้วยหน้าติดต่อทีม
+  const { suspension } = useSuspension(ws, !!workspace);
+  const blocked = isBlocked(suspension, workspace?.role, pathname);
   const projects = useQuery({
     queryKey: queryKeys.projects(ws),
     queryFn: () =>
       api.get<List<Project>>(`/w/${encodeURIComponent(ws)}/projects`),
-    enabled: !!workspace,
+    enabled: !!workspace && suspension?.mode !== "full",
   });
   const summary = useQuery({
     queryKey: queryKeys.notifications,
@@ -323,8 +327,8 @@ export function WorkspaceShell({
       />
     );
   if (!workspace) return <NotFound />;
-  if (workspace.status === "suspended" || workspace.status === "pending_delete")
-    return <Forbidden />;
+  // ระงับ (suspended) ไม่ปิดทั้งหน้าที่นี่: โหมดอ่านอย่างเดียว / ปิดทั้งหมดจัดการด้วย SuspensionBanner / SuspendedScreen ด้านล่าง
+  if (workspace.status === "pending_delete") return <Forbidden />;
   if (!me.data) return <LoadingState />;
   const base = `/work/${encodeURIComponent(ws)}`;
   async function logout() {
@@ -602,7 +606,7 @@ export function WorkspaceShell({
               unread={unread}
             />
             {projects.isPending && <LoadingState />}
-            {projects.error && (
+            {projects.error && suspension?.mode !== "full" && (
               <ErrorState
                 error={projects.error}
                 retry={() => void projects.refetch()}
@@ -610,9 +614,16 @@ export function WorkspaceShell({
             )}
           </aside>
           <main className="workspace-main" id="main-content">
-            <WorkspaceBanners ws={ws} role={workspace.role} />
-            {hasBackButton(pathname) && <BackButton fallback={base} label={t("nav.back")} />}
-            {children}
+            <SuspensionBanner ws={ws} suspension={suspension} role={workspace.role} />
+            {blocked && suspension ? (
+              <SuspendedScreen ws={ws} suspension={suspension} role={workspace.role} />
+            ) : (
+              <>
+                {suspension?.mode !== "full" && <WorkspaceBanners ws={ws} role={workspace.role} />}
+                {hasBackButton(pathname) && <BackButton fallback={base} label={t("nav.back")} />}
+                {children}
+              </>
+            )}
           </main>
         </div>
         <nav className="mobile-bottom-nav" aria-label={t("nav.mainMenu")}>

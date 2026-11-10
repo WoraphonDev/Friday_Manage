@@ -9,6 +9,7 @@ import { OPS_DB } from '../db.js';
 import { config } from '../config.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
+import { billingContacts, mailAll } from '../billing/ledger.js';
 import { mrrOf } from '../metrics/economics.js';
 
 const s = schema;
@@ -52,8 +53,15 @@ export const SuspendBody = z
     reason: z.string().trim().min(3).max(300),
     /** ระงับตามนโยบายค้างชำระ (การเงินทำได้ ไม่ต้องอนุมัติ) */
     policy: z.literal('overdue').optional(),
+    /** read_only = ดูและส่งออกได้ แก้ไม่ได้ (ใช้กับค้างชำระ) · full = ปิดทั้งหมด ยกเว้น Owner เห็นหน้าติดต่อทีม (ใช้กับการใช้ผิด) */
+    mode: z.enum(['read_only', 'full']).default('read_only'),
+    /** ข้อความถึงลูกค้า · แสดงในแอปและส่งอีเมลถึง Owner และผู้รับใบแจ้งหนี้ */
+    message: z.string().trim().min(3).max(500).optional(),
+    /** เปิดใช้งานเองเมื่อชำระใบแจ้งหนี้ที่ค้างครบ (ค่าเริ่มต้น: เปิดเมื่อระงับตามนโยบายค้างชำระ) */
+    autoResume: z.boolean().optional(),
   })
   .strict();
+type Suspension = { mode: 'read_only' | 'full'; message: string | null; autoResume: boolean };
 export const ResumeBody = z.object({ reason: z.string().trim().min(3).max(300) }).strict();
 
 interface TransferPayload {
@@ -83,7 +91,10 @@ export class WorkspacesService implements OnModuleInit {
     this.approvals.register('workspace.discount', (p, ctx) => this.applyDiscount(ctx.requester, p.workspaceId as string, p.input as z.infer<typeof DiscountBody>, ctx));
     this.approvals.register('workspace.extend_trial', (p, ctx) => this.applyExtendTrial(ctx.requester, p.workspaceId as string, p.input as z.infer<typeof ExtendTrialBody>, ctx));
     this.approvals.register('workspace.transfer_owner', (p, ctx) => this.applyTransfer(ctx.requester, p as TransferPayload, ctx));
-    this.approvals.register('workspace.suspend', (p, ctx) => this.setStatus(ctx.requester, p.workspaceId as string, 'suspended', (p.input as { reason: string }).reason, ctx));
+    this.approvals.register('workspace.suspend', (p, ctx) => {
+      const input = p.input as z.infer<typeof SuspendBody>;
+      return this.setStatus(ctx.requester, p.workspaceId as string, 'suspended', input.reason, ctx, suspensionOf(input));
+    });
   }
 
   private byId(id: string) {
@@ -359,7 +370,7 @@ export class WorkspacesService implements OnModuleInit {
     if (ws.status === 'pending_delete') throw new AppError(409, 'workspace_deleted', 'Workspace นี้ถูกลบแล้ว');
     if (input.policy === 'overdue') {
       if (sub?.status !== 'past_due') throw new AppError(422, 'not_overdue', 'ระงับตามนโยบายค้างชำระได้เฉพาะ Workspace ที่ค้างชำระ', { status: sub?.status ?? null });
-      return this.setStatus(staff, id, 'suspended', `${input.reason} (ค้างชำระตามนโยบาย)`);
+      return this.setStatus(staff, id, 'suspended', `${input.reason} (ค้างชำระตามนโยบาย)`, undefined, suspensionOf(input));
     }
     if (!has(staff, 'owner')) throw new AppError(403, 'forbidden', 'ระงับนอกนโยบายค้างชำระได้เฉพาะ Owner');
     if (ws.status === 'suspended') throw new AppError(409, 'no_change', 'Workspace ถูกระงับอยู่แล้ว');
@@ -368,19 +379,33 @@ export class WorkspacesService implements OnModuleInit {
       exceeds: sub?.status === 'active', rule: 'ระงับ Workspace ที่จ่ายเงินต้องอนุมัติทุกครั้ง',
     });
     if (pending) return { pendingApproval: pending };
-    return this.setStatus(staff, id, 'suspended', input.reason);
+    return this.setStatus(staff, id, 'suspended', input.reason, undefined, suspensionOf(input));
   }
   async resume(staff: Staff, id: string, input: z.infer<typeof ResumeBody>) {
     return this.setStatus(staff, id, 'active', input.reason);
   }
-  private async setStatus(staff: Staff, id: string, status: 'suspended' | 'active', reason: string, ctx?: ApprovalContext) {
-    const { ws } = await this.sub(id);
+  private async setStatus(staff: Staff, id: string, target: 'suspended' | 'active', reason: string, ctx?: ApprovalContext, suspension?: Suspension) {
+    const { ws, sub } = await this.sub(id);
     if (ws.status === 'pending_delete') throw new AppError(409, 'workspace_deleted', 'Workspace นี้ถูกลบแล้ว');
-    if (ws.status === status) throw new AppError(409, 'no_change', status === 'suspended' ? 'Workspace ถูกระงับอยู่แล้ว' : 'Workspace ไม่ได้ถูกระงับ');
+    if (target === 'suspended' ? ws.status === 'suspended' : ws.status !== 'suspended') throw new AppError(409, 'no_change', target === 'suspended' ? 'Workspace ถูกระงับอยู่แล้ว' : 'Workspace ไม่ได้ถูกระงับ');
+    // ยกเลิกระงับ: กลับไปสถานะตามแพ็กเกจ (ยังทดลองใช้ = trial) ไม่ใช่ active เสมอ
+    const status = target === 'suspended' ? 'suspended' : sub?.status === 'trialing' ? 'trial' : 'active';
+    const sus = status === 'suspended' ? (suspension ?? { mode: 'read_only' as const, message: null, autoResume: false }) : null;
     await this.db.transaction(async (tx) => {
-      await tx.update(s.workspaces).set({ status, updatedAt: new Date() }).where(eq(s.workspaces.id, id));
-      await audit(tx, staff, id, 'secu', status === 'suspended' ? 'ops.workspace_suspended' : 'ops.workspace_resumed', `${status === 'suspended' ? 'ระงับ' : 'เปิดใช้งานอีกครั้ง'} Workspace · ${reason}`, { type: 'workspace', id }, approvalOf(ctx));
+      await tx
+        .update(s.workspaces)
+        .set({ status, suspensionMode: sus?.mode ?? null, suspensionMessage: sus?.message ?? null, suspensionAutoResume: sus?.autoResume ?? false, updatedAt: new Date() })
+        .where(eq(s.workspaces.id, id));
+      const what = sus ? `ระงับ Workspace (${sus.mode === 'full' ? 'ปิดทั้งหมด' : 'อ่านอย่างเดียว'}${sus.autoResume ? ' · เปิดเองเมื่อชำระ' : ''})` : 'เปิดใช้งาน Workspace อีกครั้ง';
+      await audit(tx, staff, id, 'secu', sus ? 'ops.workspace_suspended' : 'ops.workspace_resumed', `${what} · ${reason}`, { type: 'workspace', id }, approvalOf(ctx));
     });
-    return { id, status };
+    // แจ้ง Owner และผู้รับใบแจ้งหนี้ (ล้มไม่ทำให้การระงับล้ม)
+    if (sus?.message) await mailAll(this.mail, await billingContacts(this.db, id), `Workspace ${ws.name} ถูกระงับ`, `${sus.message}\nข้อมูลทั้งหมดยังอยู่ครบ หากมีข้อสงสัยตอบกลับอีเมลนี้ได้`).catch(() => 0);
+    return { id, status, suspension: sus };
   }
+}
+
+/** ค่าการระงับจากคำขอ · ระงับตามนโยบายค้างชำระเปิดเองเมื่อชำระเป็นค่าเริ่มต้น */
+function suspensionOf(input: z.infer<typeof SuspendBody>): Suspension {
+  return { mode: input.mode ?? 'read_only', message: input.message ?? null, autoResume: input.autoResume ?? input.policy === 'overdue' };
 }

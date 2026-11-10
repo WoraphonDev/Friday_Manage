@@ -134,8 +134,11 @@ describe("รายละเอียดลูกค้า", () => {
     expect(within(dlg).getByText("ยังไม่เปิด")).toBeInTheDocument();
     await userEvent.selectOptions(await within(dlg).findByLabelText("Ticket"), "tk-1");
     await userEvent.type(within(dlg).getByLabelText("เหตุผล (ลูกค้าเห็นใน Audit log)"), "ตรวจไฟล์นำเข้าที่ลูกค้าแจ้ง");
+    // ระยะเวลา: ค่าเริ่มต้น 1 ชม. · เลือก 30 นาที
+    expect(within(dlg).getByRole("button", { name: "1 ชั่วโมง" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(within(dlg).getByRole("button", { name: "30 นาที" }));
     await userEvent.click(within(dlg).getByRole("button", { name: "เข้าบัญชี" }));
-    await waitFor(() => expect(body).toEqual({ ticketId: "tk-1", reason: "ตรวจไฟล์นำเข้าที่ลูกค้าแจ้ง", mode: "read" }));
+    await waitFor(() => expect(body).toEqual({ ticketId: "tk-1", reason: "ตรวจไฟล์นำเข้าที่ลูกค้าแจ้ง", mode: "read", durationMinutes: 30 }));
     expect(await screen.findByText("เข้าบัญชีแล้ว · แจ้งลูกค้า 2 อีเมล")).toBeInTheDocument();
   });
 
@@ -197,11 +200,17 @@ describe("รายละเอียดลูกค้า", () => {
     await userEvent.click(await screen.findByRole("button", { name: "ระงับ" }));
     const dlg = await screen.findByRole("dialog", { name: "ระงับ สยามเดโม?" });
     await userEvent.type(within(dlg).getByLabelText("สาเหตุ"), "ผิดข้อตกลงการใช้งาน");
+    // แบบปิดทั้งหมด + แก้ข้อความถึงลูกค้า + เปิดเองเมื่อชำระ
+    await userEvent.click(within(dlg).getByRole("radio", { name: /ปิดทั้งหมด/ }));
+    const msg = within(dlg).getByLabelText("ข้อความถึงลูกค้า");
+    await userEvent.clear(msg);
+    await userEvent.type(msg, "ผิดข้อตกลง ติดต่อทีม Friday");
+    await userEvent.click(within(dlg).getByRole("checkbox", { name: "ยกเลิกระงับเองเมื่อชำระเงินเข้า" }));
     const go = within(dlg).getByRole("button", { name: "ระงับ" });
     expect(go).toBeDisabled();
     await userEvent.type(within(dlg).getByLabelText("พิมพ์ siam-demo เพื่อยืนยัน"), "siam-demo");
     await userEvent.click(go);
-    await waitFor(() => expect(body).toEqual({ reason: "ผิดข้อตกลงการใช้งาน" }));
+    await waitFor(() => expect(body).toEqual({ reason: "ผิดข้อตกลงการใช้งาน", mode: "full", message: "ผิดข้อตกลง ติดต่อทีม Friday", autoResume: true }));
   });
 
   it("โอนความเป็นเจ้าของ (C7): หลักฐานครบ · แตะกุญแจ · ส่งให้คนที่สองอนุมัติ", async () => {

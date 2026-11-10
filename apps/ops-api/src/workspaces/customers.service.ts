@@ -198,6 +198,8 @@ export class CustomersService {
       slug: x.slug,
       name: x.name,
       status: x.status,
+      /** ถูกระงับ (C6): แบบ ข้อความถึงลูกค้า และเปิดเองเมื่อชำระ */
+      suspension: x.status === 'suspended' ? ((await this.db.select({ mode: s.workspaces.suspensionMode, message: s.workspaces.suspensionMessage, autoResume: s.workspaces.suspensionAutoResume }).from(s.workspaces).where(eq(s.workspaces.id, id)))[0] ?? null) : null,
       createdAt: x.createdAt,
       dataRegion: raw.dataRegion,
       legalName: profile?.companyName ?? null,
@@ -207,7 +209,8 @@ export class CustomersService {
       usage: { members: x.seats, guests: Number(raw.guests ?? 0), projects: counts.projectsAll, issues: counts.issues, storageBytes: x.storageBytes, active30: x.active30, lastActiveAt: x.lastActiveAt },
       owners: owners.map((o) => ({ ...o, email: seesEmail(staff) ? o.email : null })),
       supportAccess: grant ? { until: grant.until, maxMode: grant.maxMode, notifyAdmins: grant.notifyAdmins, active: !grant.until || grant.until.getTime() > Date.now() } : null,
-      supportSessions: sessions,
+      // หมดเวลาแล้วนับว่าจบ (ปิดจริงใน SupportService.closeExpired)
+      supportSessions: sessions.map((x) => ({ ...x, endedAt: x.endedAt ?? (x.expiresAt && x.expiresAt.getTime() <= Date.now() ? x.expiresAt : null) })),
       invoices: invoices.map((i) => (money ? i : { ...i, total: null, amountDue: null })),
       health: x._health,
       integrations: x.integrations,
@@ -363,7 +366,7 @@ export class CustomersService {
       from support_tickets k left join staff_users st on st.id = k.assignee_id where k.workspace_id = ${id} order by k.created_at desc limit 50`);
     const rated = tickets.filter((k) => k.csat != null);
     const sessions = await this.rows<Row>(sql`
-      select x.id, x.ticket_no as "ticketNo", x.mode, x.reason, x.started_at as "startedAt", x.ended_at as "endedAt", st.name as "staffName"
+      select x.id, x.ticket_no as "ticketNo", x.mode, x.reason, x.started_at as "startedAt", coalesce(x.ended_at, case when x.expires_at <= now() then x.expires_at end) as "endedAt", x.expires_at as "expiresAt", st.name as "staffName"
       from support_sessions x join staff_users st on st.id = x.staff_id where x.workspace_id = ${id} order by x.started_at desc limit 20`);
     return { tickets, csatAverage: rated.length ? Math.round((rated.reduce((n, k) => n + Number(k.csat), 0) / rated.length) * 10) / 10 : null, sessions };
   }

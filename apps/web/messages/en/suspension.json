@@ -1,0 +1,12 @@
+{
+  "readOnlyTitle": "Workspace suspended · read-only",
+  "readOnlyDefault": "You can view and export data, but changes are blocked until the workspace is reactivated",
+  "pay": "Go to billing",
+  "fullTitle": "This workspace is suspended",
+  "fullOwner": "Contact the Friday team to resolve this, or reply to the suspension email we sent you",
+  "fullMember": "Contact the workspace owner for details",
+  "dataSafe": "All of your data is still intact",
+  "contact": "Contact the Friday team",
+  "billing": "View billing",
+  "mailSubject": "Question about suspension of workspace {ws}"
+}

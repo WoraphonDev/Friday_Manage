@@ -618,7 +618,7 @@ export function BillingPanel({ id }: { id: string }) {
 interface SupportData {
   tickets: { id: string; number: number; subject: string; status: string; createdAt: string; csat: number | null; assignee: string | null }[];
   csatAverage: number | null;
-  sessions: { id: string; ticketNo: string; mode: string; reason: string; startedAt: string; endedAt: string | null; staffName: string }[];
+  sessions: { id: string; ticketNo: string; mode: string; reason: string; startedAt: string; endedAt: string | null; expiresAt?: string | null; staffName: string }[];
 }
 export function SupportPanel({ id }: { id: string }) {
   const t = useTranslations("customers.support");
@@ -650,10 +650,11 @@ export function SupportPanel({ id }: { id: string }) {
           </Card>
           <Card title={t("sessions")}>
             {d.sessions.length ? (
-              <Table head={[t("time"), t("staff"), "Ticket", t("mode"), t("reason")]}>
+              <Table head={[t("time"), t("sessionEnd"), t("staff"), "Ticket", t("mode"), t("reason")]}>
                 {d.sessions.map((s) => (
                   <tr key={s.id}>
                     <td>{fmt.dateTime(s.startedAt)}</td>
+                    <td>{s.endedAt ? fmt.dateTime(s.endedAt) : <span className="pill warn">{s.expiresAt ? t("sessionUntil", { time: fmt.dateTime(s.expiresAt) }) : t("sessionOpen")}</span>}</td>
                     <td>{s.staffName}</td>
                     <td>{s.ticketNo}</td>
                     <td>{s.mode}</td>

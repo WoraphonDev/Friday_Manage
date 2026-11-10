@@ -36,7 +36,7 @@ export class SupportAccessService {
     });
     // support_sessions เป็นข้อมูลหลังบ้านของ Friday (เขียนโดยทีมเท่านั้น) · ลูกค้าอ่านได้เฉพาะของ Workspace ตัวเอง จึงอ่านด้วย SYSTEM_DB โดยกรอง workspace_id
     const sessions = await this.sys
-      .select({ id: s.supportSessions.id, ticketNo: s.supportSessions.ticketNo, reason: s.supportSessions.reason, mode: s.supportSessions.mode, startedAt: s.supportSessions.startedAt, endedAt: s.supportSessions.endedAt, staff: s.staffUsers.name })
+      .select({ id: s.supportSessions.id, ticketNo: s.supportSessions.ticketNo, reason: s.supportSessions.reason, mode: s.supportSessions.mode, startedAt: s.supportSessions.startedAt, endedAt: s.supportSessions.endedAt, expiresAt: s.supportSessions.expiresAt, staff: s.staffUsers.name })
       .from(s.supportSessions)
       .innerJoin(s.staffUsers, eq(s.staffUsers.id, s.supportSessions.staffId))
       .where(eq(s.supportSessions.workspaceId, tenant.workspaceId))
@@ -50,7 +50,11 @@ export class SupportAccessService {
       maxMode: grant?.g.maxMode ?? 'read',
       notifyAdmins: grant?.g.notifyAdmins ?? true,
       grantedBy: grant?.by ?? null,
-      sessions: sessions.map((x) => ({ id: x.id, ticketNo: x.ticketNo, reason: x.reason, mode: x.mode, startedAt: x.startedAt, endedAt: x.endedAt, durationMinutes: x.endedAt ? Math.round((x.endedAt.getTime() - x.startedAt.getTime()) / 60_000) : null, staffName: x.staff })),
+      sessions: sessions.map((x) => {
+        // หมดเวลาแล้วนับว่าจบที่เวลาหมด (หลังบ้านปิดให้เมื่อมีคนเปิดรายการ)
+        const endedAt = x.endedAt ?? (x.expiresAt && x.expiresAt.getTime() <= Date.now() ? x.expiresAt : null);
+        return { id: x.id, ticketNo: x.ticketNo, reason: x.reason, mode: x.mode, startedAt: x.startedAt, endedAt, expiresAt: x.expiresAt, durationMinutes: endedAt ? Math.round((endedAt.getTime() - x.startedAt.getTime()) / 60_000) : null, staffName: x.staff };
+      }),
     };
   }
 

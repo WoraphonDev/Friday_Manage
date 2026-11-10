@@ -387,7 +387,11 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
         // เลยกำหนด = ค้างชำระ (ฝั่งลูกค้าเห็นแถบเตือน)
         await tx.update(s.subscriptions).set({ status: 'past_due', updatedAt: new Date() }).where(and(eq(s.subscriptions.workspaceId, ws.id), eq(s.subscriptions.status, 'active')));
         if (latest.step === 'suspended' && ws.status !== 'suspended' && ws.status !== 'pending_delete') {
-          await tx.update(s.workspaces).set({ status: 'suspended', updatedAt: new Date() }).where(eq(s.workspaces.id, ws.id));
+          // ค้างชำระ = อ่านอย่างเดียว (ยังส่งออกและชำระได้) และเปิดเองเมื่อชำระครบ
+          await tx
+            .update(s.workspaces)
+            .set({ status: 'suspended', suspensionMode: 'read_only', suspensionMessage: `บัญชีถูกระงับเพราะค้างชำระ ${r.number} กรุณาชำระเพื่อใช้งานต่อ ข้อมูลทั้งหมดยังอยู่ครบ`, suspensionAutoResume: true, updatedAt: new Date() })
+            .where(eq(s.workspaces.id, ws.id));
           await tx.insert(s.auditLogs).values({ workspaceId: ws.id, actorKind: 'system', category: 'secu', action: 'billing.suspended_overdue', targetType: 'invoice', targetId: r.id as string, summary: `ระงับเพราะค้างชำระ ${r.number} เกิน 14 วัน` });
         }
       });

@@ -49,6 +49,12 @@ export const workspaces = pgTable(
     defaultLocale: text().notNull().default('th'),
     allowDomainJoin: boolean().notNull().default(false),
     status: workspaceStatus().notNull().default('trial'),
+    /** ตอน status = suspended: read_only = ดูและส่งออกได้ แก้ไม่ได้ · full = เข้าไม่ได้ ยกเว้น Owner เห็นหน้าติดต่อทีม (C6) */
+    suspensionMode: text(),
+    /** ข้อความถึงลูกค้าที่แสดงในแอปตอนถูกระงับ */
+    suspensionMessage: text(),
+    /** เปิดใช้งานเองเมื่อชำระใบแจ้งหนี้ที่ค้างครบ */
+    suspensionAutoResume: boolean().notNull().default(false),
     deletedAt: deletedAt(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -56,6 +62,7 @@ export const workspaces = pgTable(
   (t) => [
     uniqueIndex('workspaces_slug_key').on(sql`lower(${t.slug})`),
     check('workspaces_slug_format', sql`${t.slug} ~ '^[a-z0-9][a-z0-9-]{1,62}$'`),
+    check('workspaces_suspension_mode_valid', sql`${t.suspensionMode} IS NULL OR ${t.suspensionMode} IN ('read_only', 'full')`),
   ],
 );
 

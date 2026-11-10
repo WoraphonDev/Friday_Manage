@@ -10,6 +10,8 @@ export interface TenantInfo {
   workspaceId: string;
   slug: string;
   role: WorkspaceRole;
+  /** Workspace ถูกระงับ (C6) · null = ใช้งานปกติ */
+  suspension?: { mode: 'read_only' | 'full'; message: string | null } | null;
 }
 export type AppRequest = Request & { id?: string; auth?: AuthInfo; tenant?: TenantInfo };
 

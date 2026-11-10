@@ -10,6 +10,7 @@ import { today } from '../common/dates.js';
 import { AppError, forbidden, notFound } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
+import { PlanLimits } from '../core/plan-limits.js';
 import { type DomainEvent, EventBus } from '../core/events.js';
 import { InvitationsService } from '../invitations/invitations.service.js';
 import { WorkCalendar } from '../projects/calendar.js';
@@ -79,6 +80,7 @@ export class ImportsService {
     private readonly projects: ProjectsService,
     private readonly invitations: InvitationsService,
     private readonly events: EventBus,
+    private readonly limits: PlanLimits,
   ) {}
 
   /** L3 ขั้นที่ 1 · อัปโหลดแล้วจับคู่คอลัมน์และคนให้อัตโนมัติ */
@@ -88,6 +90,7 @@ export class ImportsService {
     if (!/\.xlsx$/i.test(file.originalname)) throw new AppError(400, 'invalid_file', 'รองรับเฉพาะไฟล์ .xlsx');
     if (mode !== 'create' && mode !== 'update') throw new AppError(400, 'mode_not_supported', 'mode ต้องเป็น create (โปรเจกต์ใหม่) หรือ update (อัปเดตแผนของโปรเจกต์เดิม)');
     if (mode === 'update' && !targetKey) throw new AppError(400, 'project_required', 'ระบุ projectKey ของโปรเจกต์ที่จะอัปเดต');
+    if (mode === 'update') await this.limits.assertFeature(tenant.workspaceId, 'import_update');
     const wb = await this.parse(file.buffer);
     // อัปเดตแผนต้องมี project.baseline · ตรวจก่อนเก็บไฟล์ลงดิสก์
     if (mode === 'update') await this.db.run(auth, tenant, async (tx) => void (await this.updateProject(tx, auth, tenant, targetKey!)));

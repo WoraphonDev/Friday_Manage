@@ -162,6 +162,13 @@
       "when": 1794288300041,
       "tag": "0022_scheduled_plan_change",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794291149699,
+      "tag": "0023_ops_entitlements",
+      "breakpoints": true
     }
   ]
 }

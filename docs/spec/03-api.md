@@ -78,9 +78,9 @@ GET .../issues?status=in_progress&assignee=me&module=<id>&sprint=current&limit=5
 | 403 | ไม่มีสิทธิ์ · `details.requestAccess: true` เมื่อขอสิทธิ์ได้ (M1 › 403) |
 | 404 | ไม่พบ · ถ้างานอยู่ในถังขยะตอบ `410 gone` พร้อม `deletedBy`, `deletedAt`, `restorableUntil` (M1 › 404) |
 | 409 | ชนกับการแก้ของคนอื่น หรือขัดกติกา เช่น Key ซ้ำ |
-| 402 | เกินสิทธิ์ของแพ็กเกจ · `details` บอกขีดจำกัด, ค่าปัจจุบัน และทางออก (Q2) |
+| 402 | เกินสิทธิ์ของแพ็กเกจ · `details` บอกขีดจำกัด, ค่าปัจจุบัน และทางออก (Q2) · `plan_limit_reached` = เกินจำนวน · `plan_feature_unavailable` = แพ็กเกจไม่มีฟีเจอร์นี้ (`details.feature`) · ค่าทั้งหมดมาจากเวอร์ชันสิทธิ์ + ปรับเฉพาะราย ที่ทีม Friday ตั้ง (O21) |
 | 422 | ขัดกฎ Workflow เช่น ย้ายไป Done ทั้งที่ Sub-task ยังไม่ครบ |
-| 429 | เรียกถี่เกิน หรือใส่รหัสผ่านผิดเกินกำหนด |
+| 429 | เรียกถี่เกิน หรือใส่รหัสผ่านผิดเกินกำหนด · คำขอผ่าน API token เกิน "API ต่อนาที" ของแพ็กเกจตอบ `rate_limited` พร้อม `Retry-After` (ทุกคำตอบของ token มี `X-RateLimit-Limit` / `X-RateLimit-Remaining`) |
 
 `requestId` แสดงในหน้า Error ให้ผู้ใช้คัดลอกส่งทีมช่วยเหลือ (M1 › ERROR)
 

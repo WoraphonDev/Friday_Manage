@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { AppError, forbidden, notFound } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
+import { PlanLimits } from '../core/plan-limits.js';
 import { webUrl } from '../auth/auth.config.js';
 import { Mailer } from '../core/mail.js';
 import { SYSTEM_DB } from '../db/db.module.js';
@@ -84,6 +85,7 @@ export class ChannelsService {
     private readonly dns: DnsChecker,
     private readonly mailer: Mailer,
     private readonly email: EmailSender,
+    private readonly limits: PlanLimits,
   ) {}
 
   private admin(tenant: TenantInfo) {
@@ -217,6 +219,7 @@ export class ChannelsService {
 
   async createWebhook(auth: AuthInfo, tenant: TenantInfo, body: z.infer<typeof CreateWebhookBody>) {
     this.admin(tenant);
+    await this.limits.assertFeature(tenant.workspaceId, 'channels');
     await this.checkUrl(body.url);
     const secret = body.signingSecret ?? (body.generateSecret ? randomBytes(24).toString('base64url') : null);
     return this.db.run(auth, tenant, async (tx) => {

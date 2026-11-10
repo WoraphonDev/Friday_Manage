@@ -8,6 +8,7 @@ import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { CommentsService } from '../comments/comments.service.js';
 import { type DomainEvent, EventBus } from '../core/events.js';
+import { PlanLimits } from '../core/plan-limits.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { IssuesService } from '../issues/issues.service.js';
 import { Notifier } from '../notifications/notifier.js';
@@ -156,6 +157,7 @@ export class AutomationEngine implements OnModuleInit {
     private readonly comments: CommentsService,
     private readonly notifier: Notifier,
     private readonly jobs: Jobs,
+    private readonly limits: PlanLimits,
   ) {}
 
   async onModuleInit() {
@@ -330,6 +332,12 @@ export class AutomationEngine implements OnModuleInit {
     const facts = opts.facts ?? (await this.db.run(actor.auth, actor.tenant, (tx) => loadFacts(tx, [issueId])))[0];
     // งานไม่อยู่แล้ว / ผู้สร้างกฎมองไม่เห็น / เงื่อนไขไม่ตรง → ไม่ถือว่ากฎทำงาน (ไม่บันทึกประวัติ)
     if (!facts || !matches(rule.conditions as Condition[], facts)) return;
+    // ฟีเจอร์และจำนวนครั้งต่อเดือนตามแพ็กเกจ (O21) · ไม่มีผู้ใช้รอคำตอบ จึงบันทึกว่าข้ามแทนการตอบ 402
+    const quota = await this.limits.automationAllowed(rule.workspaceId);
+    if (!quota.ok) {
+      await this.record(rule, [issueId], 'skipped', { ...base, reason: quota.limit === 0 ? 'plan_feature_unavailable' : 'plan_quota_reached', limit: quota.limit, used: quota.used }, chain.depth);
+      return;
+    }
 
     const started = new Date();
     const touched = new Set<string>([facts.id]);

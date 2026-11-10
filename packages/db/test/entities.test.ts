@@ -9,7 +9,7 @@ const owner = new pg.Client({ connectionString: process.env.DATABASE_OWNER_URL ?
 const spec = readFileSync(new URL('../../../docs/spec/01-entities.md', import.meta.url), 'utf8');
 const entities = [...spec.matchAll(/^\| `(\w+)` \|/gm)].map((m) => m[1]);
 const plural = (name: string) => /[^aeiou]y$/.test(name) ? `${name.slice(0, -1)}ies` : /(?:s|x|ch|sh)$/.test(name) ? `${name}es` : `${name}s`;
-const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_flag_overrides', 'announcements'];
+const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_flag_overrides', 'announcements', 'entitlement_versions', 'entitlement_overrides'];
 
 beforeAll(() => owner.connect());
 afterAll(() => owner.end());
@@ -38,7 +38,7 @@ describe('Entity ทุกหมวดตามสเปก', () => {
       WHERE c.contype = 'f' AND ns.nspname = 'public'
         AND src.relname = ANY($1::text[])
         AND NOT (sw.attnum = ANY(c.conkey) AND tw.attnum = ANY(c.confkey))`,
-    [entities.filter((e) => /^(line_|calendar_feed|sso_|verified_|project_template|git_|project_repository|pull_request|issue_git|notification_delivery|user_notification|email_sender|webhook|project_notification|report_schedule|automation|saved_|api_token|data_subject|workspace_export|plan$|subscription|billing_profile|invoice|payment|tax_document|wht_|legal_|staff_|support_|feature_|announcement)/.test(e)).map(plural)]);
+    [entities.filter((e) => /^(line_|calendar_feed|sso_|verified_|project_template|git_|project_repository|pull_request|issue_git|notification_delivery|user_notification|email_sender|webhook|project_notification|report_schedule|automation|saved_|api_token|data_subject|workspace_export|plan$|subscription|billing_profile|invoice|payment|tax_document|wht_|legal_|staff_|support_|feature_|announcement|entitlement_)/.test(e)).map(plural)]);
     expect(rows).toEqual([]);
   });
 

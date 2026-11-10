@@ -211,3 +211,34 @@ export const dataBreaches = pgTable('data_breaches', {
   check('data_breaches_risk_valid', oneOf(t.risk, ['low', 'medium', 'high'])),
   check('data_breaches_affected', sql`${t.affectedCount} IS NULL OR ${t.affectedCount} >= 0`)]);
 
+
+/**
+ * สิทธิ์และขีดจำกัดตามแพ็กเกจแบบมีเวอร์ชัน (Friday Ops เฟส 2 · O21) · แก้แล้วบันทึกเป็นเวอร์ชันใหม่เสมอ ไม่แก้แถวเดิม
+ * `matrix` = { [plan code]: { [key]: number | boolean | null } } · null = ไม่จำกัด · คีย์อยู่ใน plan-entitlements.ts
+ * เวอร์ชันที่ใช้ = เลขสูงสุดที่ effective_at ผ่านแล้ว · ลูกค้าที่ถูกลดสิทธิ์ใช้ค่าเดิมจนจบรอบบิล (P2)
+ */
+export const entitlementVersions = pgTable('entitlement_versions', {
+  id: pk(), version: integer().notNull().unique(), matrix: jsonb().notNull(),
+  effectiveAt: tstz().notNull(), reason: text().notNull(),
+  /** เวอร์ชันเดิมที่กู้กลับมา (P3) */
+  restoredFrom: integer(),
+  createdBy: uuid().references(() => staffUsers.id), approvedBy: uuid().references(() => staffUsers.id),
+  approvalRequestId: uuid().references(() => approvalRequests.id),
+  createdAt: createdAt(),
+}, (t) => [check('entitlement_versions_version_positive', sql`${t.version} > 0`)]);
+
+/**
+ * ปรับเฉพาะราย (override) ใช้แทนค่าของแพ็กเกจ · ต้องมีเหตุผล และวันหมดอายุ ยกเว้นตามสัญญา Enterprise (contract_ref)
+ * `value` = number | boolean | null (ไม่จำกัด) · ยกเลิกแล้วเก็บไว้ดูย้อนหลัง (revoked_at)
+ */
+export const entitlementOverrides = pgTable('entitlement_overrides', {
+  id: pk(), workspaceId: workspaceId(), key: text().notNull(), value: jsonb(),
+  expiresAt: tstz(), contractRef: text(), reason: text().notNull(),
+  createdBy: uuid().notNull().references(() => staffUsers.id), approvedBy: uuid().references(() => staffUsers.id),
+  /** แจ้งเจ้าของรายการล่วงหน้า 7 วันแล้ว */
+  warnedAt: tstz(),
+  revokedAt: tstz(), revokedBy: uuid().references(() => staffUsers.id), revokeReason: text(),
+  createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [index('entitlement_overrides_workspace_idx').on(t.workspaceId, t.key),
+  uniqueIndex('entitlement_overrides_active_key').on(t.workspaceId, t.key).where(sql`${t.revokedAt} IS NULL`),
+  check('entitlement_overrides_expiry', sql`${t.expiresAt} IS NOT NULL OR ${t.contractRef} IS NOT NULL`)]);

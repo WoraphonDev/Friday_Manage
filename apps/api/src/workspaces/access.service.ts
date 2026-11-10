@@ -44,6 +44,7 @@ export class AccessService {
   // ---------------------------------------------------------------------------
   async createLink(auth: AuthInfo, tenant: TenantInfo, body: z.infer<typeof CreateLinkBody>) {
     if (!isAdmin(tenant)) throw forbidden('ws.members.manage');
+    if (body.role === 'guest') await this.limits.assertFeature(tenant.workspaceId, 'guests');
     const token = `${LINK_PREFIX}${newToken()}`;
     const expiresAt = new Date(Date.now() + body.expiresInDays * 86_400_000);
     return this.db.run(auth, tenant, async (tx) => {

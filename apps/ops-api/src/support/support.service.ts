@@ -20,6 +20,8 @@ export const StartSessionBody = z
     mode: z.enum(['read', 'write']).default('read'),
     /** โหมดแก้ไข: ผู้อนุมัติคนที่ 2 (พนักงานอีกคน) */
     secondApproverId: z.uuid().optional(),
+    /** ระยะเวลา (C1): 30 นาที / 1 ชม. / 2 ชม. · ไม่เกินวันหมดสิทธิ์ที่ลูกค้าให้ */
+    durationMinutes: z.union([z.literal(30), z.literal(60), z.literal(120)]).default(60),
   })
   .strict()
   .refine((b) => b.ticketNo || b.ticketId, { message: 'ระบุ Ticket ที่ผูกกับการเข้าบัญชี', path: ['ticketId'] });
@@ -58,15 +60,18 @@ export class SupportService {
       if (t.status === 'solved' || t.status === 'closed') throw new AppError(422, 'ticket_not_open', 'Ticket นี้ปิดแล้ว');
       ticketNo = `#${t.number}`;
     }
+    await this.closeExpired();
     const [open] = await this.db.select({ id: s.supportSessions.id }).from(s.supportSessions).where(and(eq(s.supportSessions.workspaceId, workspaceId), eq(s.supportSessions.staffId, staff.id), isNull(s.supportSessions.endedAt)));
     if (open) throw new AppError(409, 'session_already_open', 'คุณมี session ที่ยังเปิดอยู่กับ Workspace นี้', { sessionId: open.id });
 
+    const duration = input.durationMinutes ?? 60;
+    const expiresAt = new Date(Math.min(Date.now() + duration * 60_000, grant.until?.getTime() ?? Infinity));
     const session = await this.db.transaction(async (tx) => {
       const [row] = await tx
         .insert(s.supportSessions)
-        .values({ workspaceId, staffId: staff.id, ticketNo, ticketId: input.ticketId ?? null, reason: input.reason, mode: input.mode, secondApproverId: input.mode === 'write' ? input.secondApproverId : null })
+        .values({ workspaceId, staffId: staff.id, ticketNo, ticketId: input.ticketId ?? null, reason: input.reason, mode: input.mode, secondApproverId: input.mode === 'write' ? input.secondApproverId : null, expiresAt })
         .returning();
-      await audit(tx, staff, workspaceId, 'secu', 'support.session_started', `เริ่มเข้าช่วยเหลือ · Ticket ${ticketNo} · ${input.mode === 'write' ? 'แก้ไขได้' : 'อ่านอย่างเดียว'} · ${input.reason}`, { type: 'support_session', id: row.id });
+      await audit(tx, staff, workspaceId, 'secu', 'support.session_started', `เริ่มเข้าช่วยเหลือ · Ticket ${ticketNo} · ${input.mode === 'write' ? 'แก้ไขได้' : 'อ่านอย่างเดียว'} · ${duration} นาที · ${input.reason}`, { type: 'support_session', id: row.id });
       return row;
     });
 
@@ -83,7 +88,7 @@ export class SupportService {
           await this.mail.send({
             to: a.email,
             subject: `ทีม Friday เข้าช่วยเหลือ Workspace ${ws.name} (Ticket ${ticketNo})`,
-            text: `ทีม Friday (${staff.name}) เริ่มเข้าช่วยเหลือ Workspace ${ws.name}\nTicket: ${ticketNo}\nเหตุผล: ${input.reason}\nโหมด: ${input.mode === 'write' ? 'แก้ไขได้ (อนุมัติโดยพนักงาน 2 คน)' : 'อ่านอย่างเดียว'}\n\nดูประวัติได้ที่ ${config.appUrl}/work/${ws.slug}/admin · ปิดสิทธิ์ได้ทุกเมื่อที่ Admin Console › การเข้าช่วยเหลือจากทีม Friday`,
+            text: `ทีม Friday (${staff.name}) เริ่มเข้าช่วยเหลือ Workspace ${ws.name}\nTicket: ${ticketNo}\nเหตุผล: ${input.reason}\nสิ้นสุดอัตโนมัติ: ${expiresAt.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' })}\nโหมด: ${input.mode === 'write' ? 'แก้ไขได้ (อนุมัติโดยพนักงาน 2 คน)' : 'อ่านอย่างเดียว'}\n\nดูประวัติได้ที่ ${config.appUrl}/work/${ws.slug}/admin · ปิดสิทธิ์ได้ทุกเมื่อที่ Admin Console › การเข้าช่วยเหลือจากทีม Friday`,
           });
           notified++;
         } catch {
@@ -98,7 +103,8 @@ export class SupportService {
     if (!z.uuid().safeParse(id).success) throw new AppError(404, 'not_found', 'ไม่พบ session');
     const [row] = await this.db.select().from(s.supportSessions).where(eq(s.supportSessions.id, id));
     if (!row) throw new AppError(404, 'not_found', 'ไม่พบ session');
-    if (row.endedAt) throw new AppError(409, 'session_ended', 'session นี้จบไปแล้ว');
+    await this.closeExpired();
+    if (row.endedAt || (row.expiresAt && row.expiresAt.getTime() <= Date.now())) throw new AppError(409, 'session_ended', 'session นี้จบไปแล้ว');
     if (row.staffId !== staff.id && !has(staff, 'owner')) throw new AppError(403, 'forbidden', 'จบ session ของคนอื่นได้เฉพาะ Owner');
     const [ended] = await this.db.transaction(async (tx) => {
       const r = await tx.update(s.supportSessions).set({ endedAt: new Date() }).where(eq(s.supportSessions.id, id)).returning();
@@ -108,7 +114,24 @@ export class SupportService {
     return { session: this.dto(ended) };
   }
 
+  /**
+   * session ที่เลยเวลาหมด → จบที่เวลาหมด (ไม่มีงานเบื้องหลังที่ต้องเปิด จึงปิดตอนมีคนอ่านหรือเริ่มใหม่)
+   * บันทึกใน audit ของลูกค้าว่าจบเพราะหมดเวลา
+   */
+  async closeExpired() {
+    await this.db.transaction(async (tx) => {
+      const rows = await tx
+        .update(s.supportSessions)
+        .set({ endedAt: sql`${s.supportSessions.expiresAt}` })
+        .where(and(isNull(s.supportSessions.endedAt), sql`${s.supportSessions.expiresAt} <= now()`))
+        .returning();
+      for (const r of rows)
+        await tx.insert(s.auditLogs).values({ workspaceId: r.workspaceId, actorKind: 'system', category: 'secu', action: 'support.session_expired', targetType: 'support_session', targetId: r.id, summary: `การเข้าช่วยเหลือหมดเวลา · Ticket ${r.ticketNo}` });
+    });
+  }
+
   async open() {
+    await this.closeExpired();
     const rows = await this.db
       .select({ s: s.supportSessions, workspace: s.workspaces.name, slug: s.workspaces.slug, staff: s.staffUsers.name })
       .from(s.supportSessions)
@@ -120,6 +143,6 @@ export class SupportService {
   }
 
   private dto(r: typeof s.supportSessions.$inferSelect) {
-    return { id: r.id, workspaceId: r.workspaceId, staffId: r.staffId, ticketNo: r.ticketNo, ticketId: r.ticketId, reason: r.reason, mode: r.mode, secondApproverId: r.secondApproverId, startedAt: r.startedAt, endedAt: r.endedAt };
+    return { id: r.id, workspaceId: r.workspaceId, staffId: r.staffId, ticketNo: r.ticketNo, ticketId: r.ticketId, reason: r.reason, mode: r.mode, secondApproverId: r.secondApproverId, startedAt: r.startedAt, endedAt: r.endedAt, expiresAt: r.expiresAt };
   }
 }

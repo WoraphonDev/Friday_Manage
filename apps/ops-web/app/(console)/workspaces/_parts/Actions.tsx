@@ -39,8 +39,9 @@ export function EnterDialog({ ws, onOpenChange, onDone, onRequest }: { ws: Overv
   const [ticketId, setTicketId] = useState("");
   const [ticketNo, setTicketNo] = useState("");
   const [reason, setReason] = useState("");
+  const [minutes, setMinutes] = useState<"30" | "60" | "120">("60");
   const enter = useMutation({
-    mutationFn: () => api.post<{ notified: number }>(`/workspaces/${ws.id}/support-sessions`, { ...(ticketId ? { ticketId } : { ticketNo: ticketNo.trim() }), reason: reason.trim(), mode: "read" }),
+    mutationFn: () => api.post<{ notified: number }>(`/workspaces/${ws.id}/support-sessions`, { ...(ticketId ? { ticketId } : { ticketNo: ticketNo.trim() }), reason: reason.trim(), mode: "read", durationMinutes: Number(minutes) }),
     onSuccess: (r) => onDone(r.notified),
   });
   const grant = ws.supportAccess;
@@ -75,6 +76,11 @@ export function EnterDialog({ ws, onOpenChange, onDone, onRequest }: { ws: Overv
             </span>
           </label>
         </fieldset>
+        <div className="field">
+          <span className="field-label">{t("duration")}</span>
+          <Seg label={t("duration")} value={minutes} onChange={setMinutes} options={[{ value: "30", label: t("m30") }, { value: "60", label: t("m60") }, { value: "120", label: t("m120") }]} />
+          <span className="muted small">{t("durationHint")}</span>
+        </div>
         <Reason label={t("reason")} value={reason} onChange={setReason} min={10} />
         {grant?.notifyAdmins && <p className="muted small">{t("notify")}</p>}
         <p className="muted small">{t("rules")}</p>
@@ -255,24 +261,61 @@ export function PlanDialog({ ws, onOpenChange, onDone }: { ws: Overview; onOpenC
 }
 
 /** C6 · ระงับ: พิมพ์ slug ยืนยัน · การเงินระงับได้เองเฉพาะค้างชำระตามนโยบาย */
-export function SuspendDialog({ ws, canPolicy, onOpenChange, submit }: { ws: Overview; canPolicy: boolean; onOpenChange: (o: boolean) => void; submit: (body: { reason: string; policy?: "overdue" }) => Promise<unknown> }) {
+export interface SuspendBody {
+  reason: string;
+  policy?: "overdue";
+  mode: "read_only" | "full";
+  message: string;
+  autoResume: boolean;
+}
+export function SuspendDialog({ ws, canPolicy, onOpenChange, submit }: { ws: Overview; canPolicy: boolean; onOpenChange: (o: boolean) => void; submit: (body: SuspendBody) => Promise<unknown> }) {
   const t = useTranslations("customers.c6");
   const tc = useTranslations("common.dialog");
   const [reason, setReason] = useState("");
   const [policy, setPolicy] = useState(canPolicy && ws.subscription?.status === "past_due");
+  // ค้างชำระ = อ่านอย่างเดียว + เปิดเองเมื่อชำระ · อื่น ๆ เลือกเอง (Canvas C6)
+  const [mode, setMode] = useState<SuspendBody["mode"]>("read_only");
+  const [message, setMessage] = useState(() => t(policy ? "messageOverdue" : "messageDefault"));
+  const [autoResume, setAutoResume] = useState(policy);
   const [typed, setTyped] = useState("");
-  const m = useMutation({ mutationFn: () => submit({ reason: reason.trim(), ...(policy ? { policy: "overdue" as const } : {}) }), onSuccess: () => onOpenChange(false) });
-  const ok = reason.trim().length >= 3 && typed.trim() === ws.slug;
+  const m = useMutation({
+    mutationFn: () => submit({ reason: reason.trim(), ...(policy ? { policy: "overdue" as const } : {}), mode: policy ? "read_only" : mode, message: message.trim(), autoResume: policy || autoResume }),
+    onSuccess: () => onOpenChange(false),
+  });
+  const ok = reason.trim().length >= 3 && message.trim().length >= 3 && typed.trim() === ws.slug;
   return (
     <Modal open onOpenChange={onOpenChange} title={t("title", { name: ws.name })} description={t("desc", { n: ws.usage.members + ws.usage.guests })}>
       <form className="dialog-body" onSubmit={(e) => (e.preventDefault(), ok && m.mutate())}>
         {canPolicy && (
           <label className="check">
-            <input type="checkbox" checked={policy} onChange={(e) => setPolicy(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={policy}
+              onChange={(e) => {
+                setPolicy(e.target.checked);
+                if (e.target.checked) (setMode("read_only"), setAutoResume(true), setMessage(t("messageOverdue")));
+              }}
+            />
             <span>{t("overdue")}</span>
           </label>
         )}
+        <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
+          <legend className="field-label">{t("mode")}</legend>
+          {(["read_only", "full"] as const).map((v) => (
+            <label key={v} className="check">
+              <input type="radio" name="c6-mode" value={v} checked={(policy ? "read_only" : mode) === v} disabled={policy && v === "full"} onChange={() => setMode(v)} />
+              <span>
+                <b>{t(`modes.${v}`)}</b> <span className="muted">· {t(`modes.${v}Desc`)}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
         <Reason label={t("reason")} value={reason} onChange={setReason} />
+        <Textarea label={t("message")} value={message} onChange={(e) => setMessage(e.target.value)} hint={t("messageHint")} />
+        <label className="check">
+          <input type="checkbox" checked={policy || autoResume} disabled={policy} onChange={(e) => setAutoResume(e.target.checked)} />
+          <span>{t("autoResume")}</span>
+        </label>
         <Input label={tc("typeToConfirm", { word: ws.slug })} className="mono" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
         {ws.subscription?.status === "active" && !policy && <p className="muted small">{t("paidNote")}</p>}
         <Actions busy={m.isPending} disabled={!ok} danger label={t("submit")} error={m.error} onCancel={() => onOpenChange(false)} />

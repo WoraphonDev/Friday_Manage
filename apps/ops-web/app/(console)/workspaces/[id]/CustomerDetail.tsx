@@ -70,7 +70,7 @@ export function CustomerDetail({ id }: { id: string }) {
               <h1 className="page-title">{ws.name}</h1>
               <span className="pill inf">{planLabel(sub?.plan)}</span>
               <span className={ws.status === "suspended" ? "pill bad" : sub?.status === "past_due" ? "pill warn" : "pill ok"}>
-                {ws.status === "suspended" ? t("wsStatus.suspended") : t(`subStatus.${(sub?.status as "active") ?? "none"}`)}
+                {ws.status === "suspended" ? (ws.suspension?.mode ? `${t("wsStatus.suspended")} · ${t(`c6.modes.${ws.suspension.mode}`)}` : t("wsStatus.suspended")) : t(`subStatus.${(sub?.status as "active") ?? "none"}`)}
                 {sub?.cycle ? ` · ${t(`cycle.${sub.cycle as "monthly"}`)}` : ""}
               </span>
               <span className={`pill ${healthTone(ws.health.score)}`}>{t("detail.health", { score: ws.health.score })}</span>

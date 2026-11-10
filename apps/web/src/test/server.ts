@@ -13,6 +13,8 @@ export const handlers = [
   http.get("*/api/v1/me/notifications/summary", () =>
     HttpResponse.json(summary),
   ),
+  // ข้อมูล Workspace (shell อ่านสถานะระงับ C6)
+  http.get("*/api/v1/w/:ws", () => HttpResponse.json({ suspension: null })),
   http.get("*/api/v1/w/:ws/projects", () =>
     HttpResponse.json({ items: projects }),
   ),

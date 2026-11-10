@@ -112,11 +112,14 @@ export const supportSessions = pgTable('support_sessions', {
   /** เลข Ticket แบบข้อความเดิม · Ticket ในระบบใหม่ผูกผ่าน ticket_id */
   ticketNo: text().notNull(), ticketId: uuid(), reason: text().notNull(), mode: supportMode().notNull().default('read'),
   secondApproverId: uuid().references(() => staffUsers.id), startedAt: tstz().notNull().defaultNow(), endedAt: tstz(),
+  /** เวลาหมด (30 นาที – 2 ชม. ตาม C1) · null = ข้อมูลก่อนมีเวลาหมด */
+  expiresAt: tstz(),
   createdAt: createdAt(),
 }, (t) => [index('support_sessions_workspace_idx').on(t.workspaceId, t.startedAt),
   foreignKey({ name: 'support_sessions_ticket_fk', columns: [t.workspaceId, t.ticketId], foreignColumns: [supportTickets.workspaceId, supportTickets.id] }),
   check('support_sessions_write_approval', sql`${t.mode} <> 'write' OR (${t.secondApproverId} IS NOT NULL AND ${t.secondApproverId} <> ${t.staffId})`),
-  check('support_sessions_dates', sql`${t.endedAt} >= ${t.startedAt}`)]);
+  check('support_sessions_dates', sql`${t.endedAt} >= ${t.startedAt}`),
+  check('support_sessions_expiry', sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > ${t.startedAt}`)]);
 
 export const featureFlags = pgTable('feature_flags', {
   id: pk(), key: text().notNull().unique(), description: text(), defaultOn: boolean().notNull().default(false),

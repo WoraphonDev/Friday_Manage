@@ -231,7 +231,8 @@ describe('ค้างชำระและเตือนอัตโนมั�
     expect(mine.map((p) => p.step).sort()).toEqual(['d1', 'd14']);
     const ev = (await t.owner.query(`SELECT step, result FROM dunning_events WHERE invoice_id = $1 ORDER BY created_at, result`, [late])).rows;
     expect(ev).toEqual(expect.arrayContaining([{ step: 'suspended', result: 'd14' }, { step: 'reminder', result: 'd1:skipped' }, { step: 'final_notice', result: 'd7:skipped' }]));
-    expect((await t.owner.query(`SELECT status FROM workspaces WHERE id = $1`, [d.id])).rows[0].status).toBe('suspended');
+    // ค้างชำระ = อ่านอย่างเดียว และเปิดเองเมื่อชำระ
+    expect((await t.owner.query(`SELECT status, suspension_mode, suspension_auto_resume FROM workspaces WHERE id = $1`, [d.id])).rows[0]).toEqual({ status: 'suspended', suspension_mode: 'read_only', suspension_auto_resume: true });
     expect((await t.owner.query(`SELECT status FROM subscriptions WHERE workspace_id = $1`, [d.id])).rows[0].status).toBe('past_due');
     expect(mail.sent.slice(before).some((m) => m.subject.includes('ถูกระงับ'))).toBe(true);
     expect(await audit(d.id, 'billing.suspended_overdue')).toHaveLength(1);
@@ -259,6 +260,19 @@ describe('ค้างชำระและเตือนอัตโนมั�
     const ids = (await finance.agent.get('/ops/overdue')).body.items.map((i: { id: string }) => i.id);
     expect(ids).not.toContain(recent);
     expect(await audit(d.id, 'ops.due_date_extended')).toHaveLength(1);
+  });
+
+  it('ชำระใบที่ค้างครบ → เปิดใช้งานเอง (ระงับแบบเปิดเองเมื่อชำระ) · ยังเหลือใบเลยกำหนดไม่เปิด', async () => {
+    const ws = async () => (await t.owner.query(`SELECT status, suspension_mode FROM workspaces WHERE id = $1`, [d.id])).rows[0];
+    expect(await ws()).toEqual({ status: 'suspended', suspension_mode: 'read_only' });
+    const pay = async (inv: string) => (await t.owner.query(`SELECT id FROM payments WHERE invoice_id = $1`, [inv])).rows[0].id;
+    // ใบ 10 วัน (แนบสลิปรอตรวจ) ยังไม่ยืนยัน → ใบ late ชำระแล้วก็ยังไม่เปิด
+    const other = (await t.owner.query(`SELECT id FROM invoices WHERE workspace_id = $1 AND id NOT IN ($2, $3)`, [d.id, late, recent])).rows[0].id;
+    expect((await finance.agent.post(`/ops/payments/${await pay(late)}/confirm`).send({})).status).toBe(200);
+    expect((await ws()).status).toBe('suspended');
+    expect((await finance.agent.post(`/ops/payments/${await pay(other)}/confirm`).send({})).status).toBe(200);
+    expect(await ws()).toEqual({ status: 'active', suspension_mode: null });
+    expect(await audit(d.id, 'billing.resumed_paid')).toHaveLength(1);
   });
 });
 

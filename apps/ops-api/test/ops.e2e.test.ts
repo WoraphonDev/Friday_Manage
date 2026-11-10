@@ -247,6 +247,28 @@ describe('เข้าช่วยเหลือบัญชีลูกค้�
     expect(await audit(c.id, 'support.session_started')).toHaveLength(2);
     expect((await admin.agent.post(`/ops/support-sessions/${r.body.session.id}:end`).send({})).status).toBe(200);
   });
+
+  it('ระยะเวลา (C1): ค่าเริ่มต้น 1 ชม. · เลือก 30 นาที / 2 ชม. · ไม่เกินวันหมดสิทธิ์ · หมดเวลาแล้วจบเองพร้อม Audit', async () => {
+    expect((await support.agent.post(`/ops/workspaces/${c.id}/support-sessions`).send({ ...base, durationMinutes: 45 })).status).toBe(400);
+    const r = await support.agent.post(`/ops/workspaces/${c.id}/support-sessions`).send({ ...base, durationMinutes: 30 });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    const mins = (x: { startedAt: string; expiresAt: string }) => Math.round((new Date(x.expiresAt).getTime() - new Date(x.startedAt).getTime()) / 60_000);
+    expect(mins(r.body.session)).toBe(30);
+    // ย้อนเวลาให้หมด → รายการที่เปิดอยู่ว่าง · จบที่เวลาหมด · เปิดใหม่ได้
+    await t.owner.query(`UPDATE support_sessions SET started_at = now() - interval '2 hours', expires_at = now() - interval '1 minute' WHERE id = $1`, [r.body.session.id]);
+    expect((await support.agent.get('/ops/support-sessions')).body.items).toEqual([]);
+    expect((await t.owner.query(`SELECT ended_at = expires_at AS same FROM support_sessions WHERE id = $1`, [r.body.session.id])).rows[0].same).toBe(true);
+    expect(await audit(c.id, 'support.session_expired')).toHaveLength(1);
+    expect((await support.agent.post(`/ops/support-sessions/${r.body.session.id}:end`).send({})).body.error.code).toBe('session_ended');
+    // สิทธิ์ลูกค้าเหลือ 20 นาที → 2 ชม. ถูกตัดเหลือ 20 นาที
+    await t.owner.query(`UPDATE support_access_grants SET until = now() + interval '20 minutes' WHERE workspace_id = $1`, [c.id]);
+    const capped = await support.agent.post(`/ops/workspaces/${c.id}/support-sessions`).send({ ...base, durationMinutes: 120 });
+    expect(capped.status, JSON.stringify(capped.body)).toBe(201);
+    expect(mins(capped.body.session)).toBeLessThanOrEqual(20);
+    await support.agent.post(`/ops/support-sessions/${capped.body.session.id}:end`).send({});
+    const plain = await support.agent.post(`/ops/workspaces/${c.id}/support-sessions`).send(base);
+    expect(mins(plain.body.session)).toBeLessThanOrEqual(20);
+  });
 });
 
 describe('แพ็กเกจและสถานะ Workspace', () => {
@@ -273,7 +295,8 @@ describe('แพ็กเกจและสถานะ Workspace', () => {
     expect((await support.agent.post(`/ops/workspaces/${c.id}:extend-trial`).send({ days: 3, reason: 'หลังเปลี่ยนเป็น active' })).body.error.code).toBe('not_trialing');
 
     // ลูกค้าจ่ายเงินแล้ว (enterprise active) → ต้องอนุมัติ · มี Owner 2 คนแล้วจึงอนุมัติตัวเองไม่ได้ ให้ owner2 อนุมัติ
-    const req = await admin.agent.post(`/ops/workspaces/${c.id}:suspend`).send({ reason: 'ผิดข้อตกลงการใช้งาน' });
+    expect((await admin.agent.post(`/ops/workspaces/${c.id}:suspend`).send({ reason: 'ผิดข้อตกลงการใช้งาน', mode: 'partial' })).status).toBe(400);
+    const req = await admin.agent.post(`/ops/workspaces/${c.id}:suspend`).send({ reason: 'ผิดข้อตกลงการใช้งาน', mode: 'full', message: 'บัญชีถูกระงับเพราะผิดข้อตกลง กรุณาติดต่อทีม Friday' });
     expect(req.status, JSON.stringify(req.body)).toBe(202);
     expect(req.body.pendingApproval.canSelfApprove).toBe(false);
     const approvalId = req.body.pendingApproval.id;
@@ -283,11 +306,14 @@ describe('แพ็กเกจและสถานะ Workspace', () => {
     await reauth(owner2);
     const sus = await owner2.agent.post(`/ops/approvals/${approvalId}:approve`).send({ note: 'ตรวจหลักฐานแล้ว' });
     expect(sus.status, JSON.stringify(sus.body)).toBe(200);
-    expect(sus.body.result).toEqual({ id: c.id, status: 'suspended' });
+    expect(sus.body.result).toEqual({ id: c.id, status: 'suspended', suspension: { mode: 'full', message: 'บัญชีถูกระงับเพราะผิดข้อตกลง กรุณาติดต่อทีม Friday', autoResume: false } });
+    const sql = `SELECT suspension_mode AS mode, suspension_message AS message, suspension_auto_resume AS "autoResume" FROM workspaces WHERE id = $1`;
+    expect((await t.owner.query(sql, [c.id])).rows[0]).toMatchObject({ mode: 'full', autoResume: false });
     expect((await t.owner.query(`SELECT approved_by, self_approved, staff_id FROM staff_audit_logs WHERE action = 'ops.workspace_suspended' AND workspace_id = $1`, [c.id])).rows[0]).toEqual({ approved_by: owner2.id, self_approved: false, staff_id: admin.id });
     expect((await admin.agent.post(`/ops/workspaces/${c.id}:suspend`).send({ reason: 'ซ้ำอีกรอบ' })).body.error.code).toBe('no_change');
     expect((await admin.agent.get(`/ops/workspaces?status=suspended`)).body.items.map((x: { slug: string }) => x.slug)).toContain('plan-ops');
     expect((await admin.agent.post(`/ops/workspaces/${c.id}:resume`).send({ reason: 'แก้ปัญหาแล้ว' })).body.status).toBe('active');
+    expect((await t.owner.query(sql, [c.id])).rows[0]).toEqual({ mode: null, message: null, autoResume: false });
     for (const a of ['ops.discount_set', 'ops.plan_changed', 'ops.workspace_suspended', 'ops.workspace_resumed']) expect((await audit(c.id, a)).length, a).toBe(1);
     await t.owner.query(`UPDATE workspaces SET status = 'pending_delete', deleted_at = now() WHERE id = $1`, [c.id]);
     expect((await admin.agent.post(`/ops/workspaces/${c.id}:suspend`).send({ reason: 'ลบไปแล้ว' })).body.error.code).toBe('workspace_deleted');
@@ -463,5 +489,18 @@ describe('Feature flag และประกาศ', () => {
     expect((await admin.agent.delete(`/ops/announcements/${a.body.id}`)).status).toBe(200);
     expect((await admin.agent.delete(`/ops/announcements/${a.body.id}`)).status).toBe(404);
     expect((await support.agent.post('/ops/announcements').send({ message: 'x' })).status).toBe(403);
+  });
+});
+
+describe('ระงับช่วงทดลองใช้ (C6)', () => {
+  it('Owner ระงับได้เลย (ไม่ต้องอนุมัติ) · ยกเลิกระงับแล้วกลับเป็น trial ไม่ใช่ active', async () => {
+    const c = await customer(t, 'trial-suspend', { status: 'trialing' });
+    await t.owner.query(`UPDATE workspaces SET status = 'trial' WHERE id = $1`, [c.id]);
+    const sus = await admin.agent.post(`/ops/workspaces/${c.id}/suspend`).send({ reason: 'สมัครซ้ำเพื่อใช้ฟรี', mode: 'full' });
+    expect(sus.status, JSON.stringify(sus.body)).toBe(200);
+    expect(sus.body).toMatchObject({ status: 'suspended', suspension: { mode: 'full', message: null, autoResume: false } });
+    const res = await admin.agent.post(`/ops/workspaces/${c.id}/resume`).send({ reason: 'ตรวจแล้วไม่ใช่การใช้ผิด' });
+    expect(res.body).toMatchObject({ status: 'trial', suspension: null });
+    expect((await admin.agent.post(`/ops/workspaces/${c.id}/resume`).send({ reason: 'ซ้ำ' })).body.error.code).toBe('no_change');
   });
 });

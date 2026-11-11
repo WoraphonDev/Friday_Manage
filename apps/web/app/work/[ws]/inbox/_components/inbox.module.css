@@ -5,22 +5,28 @@
 .ftab { display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 12px; border:0; border-bottom:2px solid transparent; background:transparent; font:inherit; font-size:var(--text-label); font-weight:500; color:var(--muted); cursor:pointer; white-space:nowrap; }
 .ftab[aria-pressed="true"] { color:var(--primary-text); border-bottom-color:var(--primary); font-weight:600; }
 .count { display:inline-flex; padding:1px 8px; border-radius:999px; font-size:11px; background:var(--status-todo-bg); color:var(--status-todo-fg); }
-.layout { display:flex; flex-wrap:wrap; gap:20px; padding:20px 24px; align-items:flex-start; }
+/* รายการ 1/3 เป็นการ์ดทีละใบ · รายละเอียด 2/3 ค้างกับที่ (ผู้ใช้ขอ 2026-11-11 · เบี่ยงจาก Canvas Inbox ที่แบ่งครึ่ง) */
+.layout { display:grid; grid-template-columns:minmax(320px, 1fr) minmax(0, 2fr); gap:20px; padding:20px 24px; align-items:start; }
 .card { background:var(--card); border:1px solid var(--border); border-radius:12px; min-width:0; }
-.list { flex:1 1 480px; overflow:hidden; }
-.detail { flex:1 1 380px; }
-.gl { padding:8px 16px; font-size:11px; font-weight:600; color:var(--muted); background:var(--surface-2); border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:.05em; }
-.nt { display:flex; gap:12px; width:100%; padding:12px 16px; border:0; border-bottom:1px solid var(--border); background:var(--card); font:inherit; font-size:var(--text-label); text-align:left; cursor:pointer; color:var(--foreground); align-items:flex-start; }
-.nt:hover { background:var(--surface-2); }
+.list { display:flex; flex-direction:column; gap:10px; min-width:0; }
+.detail { position:sticky; top:16px; max-height:calc(100vh - 32px); overflow:auto; }
+.group { display:flex; flex-direction:column; gap:10px; }
+.gl { padding:4px 4px 0; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+.nt { display:flex; gap:12px; width:100%; padding:14px 16px; border:1px solid var(--border); border-radius:12px; background:var(--card); font:inherit; font-size:var(--text-label); text-align:left; cursor:pointer; color:var(--foreground); align-items:flex-start; transition:border-color .15s, box-shadow .15s; }
+.nt:hover { border-color:var(--border-strong); box-shadow:var(--shadow-card); }
 .unread { background:var(--hover); }
-.sel { box-shadow:inset 3px 0 0 var(--primary); background:var(--primary-soft); }
+.sel, .sel:hover { border-color:var(--primary); box-shadow:0 0 0 1px var(--primary); background:var(--primary-soft); }
 .ntBody { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
 .ntTitle { font-weight:600; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .quote { color:var(--muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .meta { display:flex; gap:8px; align-items:center; font-size:11px; color:var(--muted); flex-wrap:wrap; }
 .dot { width:10px; height:10px; border-radius:50%; flex:none; background:var(--primary); margin-top:6px; }
-.dHead { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
-.dBody { padding:16px 20px; display:flex; flex-direction:column; gap:14px; }
+.hero { padding:20px 24px; background:var(--primary-soft); border-bottom:1px solid var(--border); border-radius:12px 12px 0 0; display:flex; flex-direction:column; gap:16px; }
+.dHead { display:flex; align-items:flex-start; gap:14px; }
+.heroText { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+.heroTitle { font-size:17px; line-height:1.4; }
+.heroIssue { font-size:14px; font-weight:600; color:var(--foreground-soft); overflow-wrap:anywhere; }
+.dBody { padding:20px 24px; display:flex; flex-direction:column; gap:16px; max-width:760px; }
 .issueCard { display:block; border:1px solid var(--border); border-radius:10px; padding:12px 14px; text-decoration:none; color:var(--foreground); }
 .issueCard b { display:block; font-size:15px; }
 .quoteBox { background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 14px; overflow-wrap:anywhere; }
@@ -31,9 +37,11 @@
 .rejectBtn { color:var(--danger-text); }
 .foot { border-top:1px solid var(--border); padding-top:12px; font-size:12px; }
 .empty { padding:40px; text-align:center; color:var(--muted); }
+.list > .empty { background:var(--card); border:1px solid var(--border); border-radius:12px; }
 .back { display:none; }
 .more { padding:12px; text-align:center; }
 .sub, .settings, .markAll { min-width:0; }
+@media (min-width:761px) and (max-width:1100px) { .layout { grid-template-columns:minmax(300px, 2fr) minmax(0, 3fr); } }
 @media (max-width:760px) {
   /* M3: หัว Inbox + "อ่านทั้งหมด" เป็นลิงก์ · ชิป ทั้งหมด / มอบหมาย / Mentions */
   .head { padding:16px 16px 0; }
@@ -46,8 +54,11 @@
   .ftab[aria-pressed="true"] { background:var(--contrast-bg); border-color:var(--contrast-bg); color:var(--contrast-ink); }
   .ftab .count { display:none; }
   .ftab[data-filter="unread"], .ftab[data-filter="activity"], .ftab[data-filter="due"] { display:none; }
-  .layout { padding:12px 0 0; gap:0; }
-  .list, .detail { border-radius:0; border-left:0; border-right:0; flex-basis:100%; }
+  .layout { display:block; padding:12px 0 0; }
+  .list { padding:0 12px; gap:8px; }
+  .detail { position:static; max-height:none; border-radius:0; border-left:0; border-right:0; }
+  .hero { border-radius:0; padding:16px; }
+  .dBody { padding:16px; }
   .showDetail .list { display:none; }
   .layout:not(.showDetail) .detail { display:none; }
   .back { display:inline-flex; }

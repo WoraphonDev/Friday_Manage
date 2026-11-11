@@ -19,7 +19,7 @@
 /* แยก Dev / QA: แถวบน = แถบหัวช่วงคร่อมคอลัมน์ · แถวล่าง = คอลัมน์ (อยู่ในตัวเลื่อนเดียวกันจึงตรงกันเสมอ) */
 .phased { display:grid; grid-auto-columns:288px; grid-template-rows:auto 1fr; column-gap:14px; row-gap:6px; }
 /* เส้นบาง 3px + ป้ายเล็กเหนือเส้น (ผู้ใช้ขอให้เล็กลง 2026-11-11) */
-.band { grid-row:1; padding:0 2px 2px; border-bottom:3px solid var(--band-line); font-size:10px; line-height:12px; font-weight:700; color:var(--band-fg); }
+.band { grid-row:1; padding:0 2px 2px; border-bottom:3px solid var(--band-line); font-size:10px; line-height:12px; font-weight:700; color:var(--foreground-soft); }
 .band_dev { --band-line:var(--status-progress-dot); --band-bg:var(--status-progress-bg); --band-fg:var(--status-progress-fg); }
 .band_qa { --band-line:var(--status-review-dot); --band-bg:var(--status-review-bg); --band-fg:var(--status-review-fg); }
 .band_done { --band-line:var(--status-done-dot); --band-bg:var(--status-done-bg); --band-fg:var(--status-done-fg); }

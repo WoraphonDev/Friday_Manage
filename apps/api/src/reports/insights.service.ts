@@ -204,6 +204,12 @@ export class InsightsService {
       else if (mdPerDay <= 0) reason = 'no_velocity';
       else forecastEnd = cal.nthWorkingDay(cal.onOrAfter(now), Math.max(1, Math.ceil(remainingMd / mdPerDay)));
       const slipDays = forecastEnd && targetDate ? daysBetween(targetDate, forecastEnd) : null;
+      // แยก Dev / QA: Dev = Man-Day ที่ส่งให้ QA แล้ว (หมวด review / done) · QA = Man-Day ที่ Done (เท่ากับ progressPct)
+      const pctOf = (list: Item[]) => {
+        const md = list.reduce((n, w) => n + w.estimateMd, 0);
+        return total > 0 ? Math.round((md / total) * 100) : work.length ? Math.round((list.length / work.length) * 100) : 0;
+      };
+      const split = project.progressSplit ? { devPct: pctOf(work.filter((w) => w.category === 'review' || w.category === 'done')), qaPct: pctOf(done) } : null;
       const status = finished ? 'done' : forecastEnd === null || slipDays === null ? 'no_forecast' : slipDays <= 0 ? 'on_track' : slipDays <= 7 ? 'at_risk' : 'off_track';
       return {
         id,
@@ -213,7 +219,8 @@ export class InsightsService {
         totalMd: round1(total),
         doneMd: round1(doneMd),
         remainingMd,
-        progressPct: total > 0 ? Math.round((doneMd / total) * 100) : work.length ? Math.round((done.length / work.length) * 100) : 0,
+        progressPct: pctOf(done),
+        split,
         overdue: work.filter((w) => isOpen(w) && w.planEnd && w.planEnd < now).length,
         planStart: starts.length ? starts.reduce((m, e) => (e < m ? e : m)) : null,
         plannedEnd,

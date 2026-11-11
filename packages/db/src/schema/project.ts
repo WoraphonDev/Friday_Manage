@@ -75,6 +75,11 @@ export const projects = pgTable(
     status: projectStatus().notNull().default('planning'),
     estimateUnit: estimateUnit().notNull().default('man_day'),
     progressMethod: progressMethod().notNull().default('weighted'),
+    /**
+     * แยกความคืบหน้าเป็น Dev / QA (Template Development + QA · ผู้ใช้ขอ 2026-11-11)
+     * Dev = งานหมวด review / done นับ 100% · QA = งานหมวด done นับ 100% · สูตรรวมเหมือน progressMethod
+     */
+    progressSplit: boolean().notNull().default(false),
     /** null = ไม่ใช้ Sprint */
     sprintLengthWeeks: smallint(),
     holidayCalendarId: uuid().references(() => holidayCalendars.id),

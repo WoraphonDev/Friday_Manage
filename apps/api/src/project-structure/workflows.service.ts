@@ -11,6 +11,7 @@ import { ProjectsService } from '../projects/projects.service.js';
 import { assertFullOrder, audit, color, type Context, issueEvent, loadContext, name, nextSort, nonEmpty, ReorderBody } from './context.js';
 import { RuleConfig, ruleCatalog, ruleType, WORKFLOW_RULES, type WorkflowKind } from './rules.js';
 import { STATUS_CATEGORIES } from '../common/status-category.js';
+import { DEV_QA_FLOW } from '../projects/field-profile.js';
 
 const category = z.enum(STATUS_CATEGORIES);
 const wipLimit = z.number().int().min(1).max(999).nullable();
@@ -47,6 +48,13 @@ export const PatchIssueTypeBody = z.object({
   color: color.nullish(),
 }).strict().refine((v) => Object.keys(v).length > 0, nonEmpty);
 export { ReorderBody };
+
+const devQaKey = z.enum(DEV_QA_FLOW.map((x) => x.key) as [string, ...string[]]);
+/** เปลี่ยน Workflow มาตรฐานเป็นชุด Development + QA · mapping = สถานะเดิมทุกตัว → key ของสถานะใหม่ */
+export const ApplyDevQaBody = z.object({
+  mapping: z.record(z.uuid(), devQaKey),
+  progressSplit: z.boolean().default(true),
+}).strict();
 
 type Status = typeof s.workflowStatuses.$inferSelect;
 type Rule = typeof s.workflowRules.$inferSelect;
@@ -164,6 +172,65 @@ export class WorkflowsService {
       await tx.delete(s.workflowStatuses).where(eq(s.workflowStatuses.id, id));
       await audit(tx, auth, tenant, project, 'project.status_deleted', `ลบสถานะ ${status.name}${live ? ` ย้ายงาน ${live} งานไป ${target.name}` : ''}`);
       return { id, movedIssues: live, moveTo: live || moved.length ? target.id : null, removedRules: removedRules.map((r) => r.id) };
+    });
+  }
+
+  /**
+   * เปลี่ยน Workflow มาตรฐานของโปรเจกต์ที่เริ่มงานแล้วเป็นชุด Development + QA ในธุรกรรมเดียว (ผู้ใช้ขอ 2026-11-11)
+   * - สถานะเดิมตัวแรกที่จับคู่กับสถานะใหม่ถูกเปลี่ยนชื่อ / หมวดแทนการลบ id จึงคงเดิม ประวัติงานและลิงก์ไม่หาย
+   * - สถานะเดิมตัวอื่นที่จับคู่ซ้ำ: ย้ายงานไปตัวแรกแล้วลบ (แบบเดียวกับ deleteStatus) · สถานะใหม่ที่ไม่มีคู่สร้างเพิ่ม
+   */
+  async applyDevQa(auth: AuthInfo, tenant: TenantInfo, key: string, workflowId: string, input: z.infer<typeof ApplyDevQaBody>) {
+    return this.write(auth, tenant, key, async (tx, { project }, events) => {
+      await this.workflow(tx, project.id, workflowId);
+      if ((await this.kind(tx, project.id, workflowId)) !== 'standard') throw new AppError(422, 'workflow_not_standard', 'เปลี่ยนเป็นชุด Development + QA ได้เฉพาะ Workflow มาตรฐาน');
+      const current = await this.statuses(tx, workflowId);
+      const missing = current.filter((x) => !input.mapping[x.id]).map((x) => x.id);
+      const unknown = Object.keys(input.mapping).filter((id) => !current.some((x) => x.id === id));
+      if (missing.length || unknown.length) {
+        throw new AppError(422, 'mapping_incomplete', 'ต้องเลือกสถานะใหม่ให้สถานะเดิมทุกตัวใน Workflow นี้', { missing, unknown });
+      }
+
+      // ชื่อชั่วคราวก่อน เพื่อไม่ให้ชื่อใหม่ชนกับชื่อเดิมของสถานะอื่นระหว่างเปลี่ยน
+      for (const st of current) await tx.update(s.workflowStatuses).set({ name: `~${st.id}` }).where(eq(s.workflowStatuses.id, st.id));
+
+      let moved = 0;
+      const created: string[] = [];
+      for (const [sort, spec] of DEV_QA_FLOW.entries()) {
+        const mapped = current.filter((x) => input.mapping[x.id] === spec.key);
+        if (!mapped.length) {
+          await tx.insert(s.workflowStatuses).values({ workspaceId: tenant.workspaceId, projectId: project.id, workflowId, name: spec.name, category: spec.category, sort });
+          created.push(spec.name);
+          continue;
+        }
+        const [keep, ...merge] = mapped;
+        const [target] = await tx.update(s.workflowStatuses).set({ name: spec.name, category: spec.category, sort }).where(eq(s.workflowStatuses.id, keep.id)).returning();
+        for (const old of merge) {
+          // ย้ายงาน (ไม่แก้ Actual Start / End เพราะเป็นการจัดโครงสร้าง ไม่ใช่งานเดินหน้า)
+          const issues = await tx.update(s.issues).set({ statusId: target.id }).where(eq(s.issues.statusId, old.id)).returning();
+          for (const issue of issues) {
+            if (issue.deletedAt) continue;
+            moved++;
+            await tx.insert(s.activities).values({ workspaceId: tenant.workspaceId, projectId: project.id, issueId: issue.id, actorId: auth.userId, verb: 'updated', field: 'statusId', oldValue: old.id, newValue: target.id });
+            const ev = issueEvent(tenant, project, auth.userId, issue);
+            events.push(ev('issue.updated', { fields: ['statusId'] }));
+            events.push(ev('issue.status_changed', { from: { id: old.id, name: old.name, category: old.category }, to: { id: target.id, name: target.name, category: target.category }, parentId: issue.parentId }));
+          }
+          // คอลัมน์บอร์ดของ Bug และกฎย้ายสถานะจาก Git ที่ชี้สถานะเดิม → ชี้สถานะที่รวมเข้าไป
+          await tx.update(s.workflowStatuses).set({ boardColumnId: target.id }).where(eq(s.workflowStatuses.boardColumnId, old.id));
+          await tx.update(s.projectRepositories).set({ onFirstCommitStatusId: target.id }).where(eq(s.projectRepositories.onFirstCommitStatusId, old.id));
+          await tx.update(s.projectRepositories).set({ onPrOpenStatusId: target.id }).where(eq(s.projectRepositories.onPrOpenStatusId, old.id));
+          await tx.update(s.projectRepositories).set({ onMergeStatusId: target.id }).where(eq(s.projectRepositories.onMergeStatusId, old.id));
+          await tx.delete(s.workflowRules).where(and(
+            eq(s.workflowRules.workflowId, workflowId),
+            or(sql`${s.workflowRules.config}->>'fromStatusId' = ${old.id}`, sql`${s.workflowRules.config}->>'toStatusId' = ${old.id}`),
+          ));
+          await tx.delete(s.workflowStatuses).where(eq(s.workflowStatuses.id, old.id));
+        }
+      }
+      if (project.progressSplit !== input.progressSplit) await tx.update(s.projects).set({ progressSplit: input.progressSplit }).where(eq(s.projects.id, project.id));
+      await audit(tx, auth, tenant, project, 'project.workflow_changed', `เปลี่ยน Workflow เป็นชุด Development + QA${moved ? ` ย้ายงาน ${moved} งาน` : ''}${created.length ? ` เพิ่มสถานะ ${created.join(', ')}` : ''}`);
+      return { items: await this.statusDtos(tx, workflowId), movedIssues: moved, created, progressSplit: input.progressSplit };
     });
   }
 

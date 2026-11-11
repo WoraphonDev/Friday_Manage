@@ -32,6 +32,8 @@ export interface ProjectDetail {
   sprintLengthWeeks: 1 | 2 | 3 | null;
   estimateUnit: "man_day" | "hour";
   progressMethod: "count" | "weighted";
+  /** แยกความคืบหน้า Dev / QA (Template Development + QA) */
+  progressSplit: boolean;
   sizeMdMap: Record<Size, number> | null;
   holidayCalendarId: string | null;
   workStart: string | null;

@@ -129,7 +129,27 @@
       "removeHasIssues": "This status has {count, plural, one {{count} task} other {{count} tasks}} · Choose a status to move them to",
       "moveTo": "Move tasks to",
       "removeEmpty": "No tasks in this status. It can be deleted right away",
-      "removeConfirm": "Delete status"
+      "removeConfirm": "Delete status",
+      "devQa": {
+        "split": "Split Dev / QA progress",
+        "on": "On",
+        "off": "Off",
+        "splitHint": "Dev = tasks handed to QA (Review / QA or Done category) · QA = tasks Done · uses the existing progress formula",
+        "apply": "Switch to the Development + QA workflow",
+        "applyTitle": "Switch to the Development + QA workflow",
+        "applyDescription": "Choose where tasks in each current status go · current statuses are renamed instead of deleted, so task history stays intact",
+        "oldStatus": "Current status",
+        "newStatus": "Move to",
+        "newStatusOf": "New status for {name}",
+        "created": "New statuses: {names}",
+        "none": "none",
+        "merged": "{names} merge into {target} (moves {count} tasks)",
+        "keepHistory": "The Bug workflow is unchanged · you can still edit statuses one by one afterwards",
+        "splitOnApply": "Turn on Dev / QA progress",
+        "confirm": "Switch workflow",
+        "confirmMove": "Switch workflow and move {count} tasks",
+        "applied": "Switched to the Development + QA workflow"
+      }
     },
     "types": {
       "title": "Task types",
@@ -347,6 +367,11 @@
         "name": "Development",
         "description": "Software delivery plan split into Module → Group → Task → Sub-task",
         "makes": "2-week Sprints · 4 statuses · BA / SA / Dev / QA · Size → Man-Day · Plan / Actual"
+      },
+      "development_qa": {
+        "name": "Development + QA",
+        "description": "Like Development, with separate Dev and QA stages and two progress bars",
+        "makes": "2-week sprints · 7 statuses (To do → In progress → Ready for QA → Testing → Done · Rework · Rejected) · Dev / QA progress"
       },
       "scrum": {
         "name": "Scrum",

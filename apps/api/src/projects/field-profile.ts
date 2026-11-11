@@ -157,7 +157,23 @@ export type TemplateCategory = (typeof TEMPLATE_CATEGORIES)[number];
 const STANDARD_FLOW = ['To do', 'In progress', 'Review', 'Done'];
 const ALL_OPTIONAL = Object.fromEntries(PROFILE_FIELD_KEYS.map((k) => [k, { task: 'optional', subtask: 'optional' }])) as Record<ProfileField, FieldRule>;
 
-export const BUILTIN_TEMPLATE_IDS = ['development', 'scrum', 'kanban', 'waterfall', 'blank'] as const;
+/**
+ * Workflow ของ Template Development + QA (ผู้ใช้ขอ 2026-11-11) · ชื่อชุดนี้ใช้เฉพาะ Template นี้ Template อื่นคงชื่อเดิม
+ * ช่วง Dev = todo / in_progress · ช่วง QA = review · Rework = QA ตีกลับ (คนย้ายเอง) · Rejected = ยกเลิกถาวร
+ * key ใช้จับคู่ตอนเปลี่ยน Workflow ของโปรเจกต์เดิมเป็นชุดนี้ (WorkflowsService.applyDevQa)
+ */
+export const DEV_QA_FLOW = [
+  { key: 'todo', name: 'To do', category: 'todo' },
+  { key: 'in_progress', name: 'In progress', category: 'in_progress' },
+  { key: 'rework', name: 'Rework', category: 'in_progress' },
+  { key: 'ready_for_qa', name: 'Ready for QA', category: 'review' },
+  { key: 'testing', name: 'Testing', category: 'review' },
+  { key: 'done', name: 'Done', category: 'done' },
+  { key: 'rejected', name: 'Rejected', category: 'cancelled' },
+] as const;
+export type DevQaKey = (typeof DEV_QA_FLOW)[number]['key'];
+
+export const BUILTIN_TEMPLATE_IDS = ['development', 'development_qa', 'scrum', 'kanban', 'waterfall', 'blank'] as const;
 export type BuiltinTemplateId = (typeof BUILTIN_TEMPLATE_IDS)[number];
 
 /**
@@ -170,6 +186,14 @@ export const BUILTIN_TEMPLATES: { id: BuiltinTemplateId; category: TemplateCateg
     id: 'development', category: 'software', name: 'Development',
     description: 'แผนพัฒนาระบบ แบ่งงานเป็น Module → กลุ่ม → Task → Sub-task',
     config: { category: 'software', workflow: STANDARD_FLOW, sprintLengthWeeks: 2, estimateUnit: 'man_day', progressMethod: 'weighted', fields: ALL_OPTIONAL, columns: DEFAULT_COLUMNS },
+  },
+  {
+    id: 'development_qa', category: 'software', name: 'Development + QA',
+    description: 'เหมือน Development แต่แยกช่วง Dev กับ QA และแสดงความคืบหน้า 2 แถบ',
+    config: {
+      category: 'software', workflow: DEV_QA_FLOW.map(({ name, category }) => ({ name, category })), progressSplit: true,
+      sprintLengthWeeks: 2, estimateUnit: 'man_day', progressMethod: 'weighted', fields: ALL_OPTIONAL, columns: DEFAULT_COLUMNS,
+    },
   },
   {
     id: 'scrum', category: 'software', name: 'Scrum', description: 'ทำงานเป็นรอบ Sprint ดึงงานจาก Backlog เข้ารอบ',

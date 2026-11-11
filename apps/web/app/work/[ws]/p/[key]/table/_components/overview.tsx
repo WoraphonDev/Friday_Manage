@@ -114,27 +114,47 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
 
       {/* Canvas Main: สรุปโครงการอยู่ในการ์ดเดียว (วงความคืบหน้า, เวลา/งาน, Go-live, Milestone, Health) */}
       <section className={`${styles.card} ${styles.summary} ${styles.desktopOnly}`} aria-label={t("progressTitle")}>
-        <div className={styles.donutBox}>
-          <svg width="92" height="92" viewBox="0 0 92 92" role="img" aria-label={t("progressLabel", { pct: p.pct })}>
-            <circle cx="46" cy="46" r="38" fill="none" stroke="var(--subtle)" strokeWidth="10" />
-            <circle cx="46" cy="46" r="38" fill="none" stroke="var(--chart-primary)" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(ring * Math.min(100, p.pct)) / 100} ${ring}`} transform="rotate(-90 46 46)" />
-            <text x="46" y="52" textAnchor="middle" fontSize="20" fontWeight="700" fill="var(--foreground)">{p.pct}%</text>
-          </svg>
-          <div>
-            <div className={styles.muted} style={{ fontSize: 12 }}>{t("progressTitle")}</div>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>{t("tasksDone", { done: p.tasks.done, total: p.tasks.total })}</div>
-            <div className={`${styles.muted} ${styles.small}`}>{t("mdDone", { done: p.md.done, total: p.md.total, pct: p.md.pct })}</div>
+        {p.split ? (
+          <div className={styles.donutBox}>
+            <Ring pct={p.split.dev.pct} label={t("split.dev")} color="var(--status-progress-dot)" />
+            <Ring pct={p.split.qa.pct} label={t("split.qa")} color="var(--chart-primary)" />
           </div>
-        </div>
+        ) : (
+          <div className={styles.donutBox}>
+            <svg width="92" height="92" viewBox="0 0 92 92" role="img" aria-label={t("progressLabel", { pct: p.pct })}>
+              <circle cx="46" cy="46" r="38" fill="none" stroke="var(--subtle)" strokeWidth="10" />
+              <circle cx="46" cy="46" r="38" fill="none" stroke="var(--chart-primary)" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(ring * Math.min(100, p.pct)) / 100} ${ring}`} transform="rotate(-90 46 46)" />
+              <text x="46" y="52" textAnchor="middle" fontSize="20" fontWeight="700" fill="var(--foreground)">{p.pct}%</text>
+            </svg>
+            <div>
+              <div className={styles.muted} style={{ fontSize: 12 }}>{t("progressTitle")}</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{t("tasksDone", { done: p.tasks.done, total: p.tasks.total })}</div>
+              <div className={`${styles.muted} ${styles.small}`}>{t("mdDone", { done: p.md.done, total: p.md.total, pct: p.md.pct })}</div>
+            </div>
+          </div>
+        )}
         <div className={styles.bars}>
           <div>
             <div className={styles.line}><span>{t("timeTitle")}</span><b>{t("timeValue", { pct: p.time.pct, elapsed: p.time.elapsedWorkingDays, total: p.time.totalWorkingDays })}</b></div>
             <div className={styles.progress} style={{ marginTop: 4 }}><div style={{ width: `${p.time.pct}%`, background: "var(--chart-neutral)" }} /></div>
           </div>
-          <div>
-            <div className={styles.line}><span>{t("doneTitle")}</span><b>{p.pct}%</b></div>
-            <div className={styles.progress} style={{ marginTop: 4 }}><div style={{ width: `${p.pct}%` }} /></div>
-          </div>
+          {p.split ? (
+            <>
+              <div>
+                <div className={styles.line}><span>{t("split.devTitle")}</span><b>{t("split.value", { pct: p.split.dev.pct, done: p.split.dev.done, total: p.split.dev.total })}</b></div>
+                <div className={styles.progress} style={{ marginTop: 4 }}><div style={{ width: `${p.split.dev.pct}%`, background: "var(--status-progress-dot)" }} /></div>
+              </div>
+              <div>
+                <div className={styles.line}><span>{t("split.qaTitle")}</span><b>{t("split.value", { pct: p.split.qa.pct, done: p.split.qa.done, total: p.split.qa.total })}</b></div>
+                <div className={styles.progress} style={{ marginTop: 4 }}><div style={{ width: `${p.split.qa.pct}%` }} /></div>
+              </div>
+            </>
+          ) : (
+            <div>
+              <div className={styles.line}><span>{t("doneTitle")}</span><b>{p.pct}%</b></div>
+              <div className={styles.progress} style={{ marginTop: 4 }}><div style={{ width: `${p.pct}%` }} /></div>
+            </div>
+          )}
         </div>
         <div className={styles.facts}>
           <div>
@@ -226,8 +246,13 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
             <div className={styles.list} style={{ gap: 16 }}>
               {d.modules.map((m) => (
                 <div key={m.id ?? "none"}>
-                  <div className={styles.line}><span className={styles.modName}><span className={styles.dot} style={{ background: m.color ?? "var(--primary)", borderRadius: 3 }} />{m.name}</span><span><b>{m.pct}%</b> <span className="muted">· {m.done}/{m.total}</span></span></div>
-                  <div className={styles.progress} style={{ marginTop: 6 }}><div style={{ width: `${m.pct}%`, background: m.color ?? "var(--primary)" }} /></div>
+                  <div className={styles.line}><span className={styles.modName}><span className={styles.dot} style={{ background: m.color ?? "var(--primary)", borderRadius: 3 }} />{m.name}</span>{m.split ? <span className="muted">{t("split.tasks", { total: m.split.qa.total })}</span> : <span><b>{m.pct}%</b> <span className="muted">· {m.done}/{m.total}</span></span>}</div>
+                  {m.split ? (
+                    <>
+                      <SplitBar label={t("split.dev")} pct={m.split.dev.pct} color="var(--status-progress-dot)" />
+                      <SplitBar label={t("split.qa")} pct={m.split.qa.pct} color={m.color ?? "var(--primary)"} />
+                    </>
+                  ) : <div className={styles.progress} style={{ marginTop: 6 }}><div style={{ width: `${m.pct}%`, background: m.color ?? "var(--primary)" }} /></div>}
                   {(m.overdue > 0 || m.notStarted) && <div className={m.overdue > 0 ? styles.late : `${styles.muted} ${styles.small}`} style={{ marginTop: 4 }}>{m.overdue > 0 ? t("moduleLate", { count: m.overdue }) : t("notStarted")}</div>}
                 </div>
               ))}
@@ -295,6 +320,33 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
   );
 }
 
+/** วงความคืบหน้าของแต่ละช่วง (Dev / QA) · ขนาดเดียวกับวงเดิม */
+function Ring({ pct, label, color }: { pct: number; label: string; color: string }) {
+  const t = useTranslations("overview-table.overview");
+  const ring = 2 * Math.PI * 38;
+  return (
+    <div className={styles.ringBox}>
+      <svg width="92" height="92" viewBox="0 0 92 92" role="img" aria-label={t("split.ringLabel", { name: label, pct })}>
+        <circle cx="46" cy="46" r="38" fill="none" stroke="var(--subtle)" strokeWidth="10" />
+        <circle cx="46" cy="46" r="38" fill="none" stroke={color} strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(ring * Math.min(100, pct)) / 100} ${ring}`} transform="rotate(-90 46 46)" />
+        <text x="46" y="52" textAnchor="middle" fontSize="20" fontWeight="700" fill="var(--foreground)">{pct}%</text>
+      </svg>
+      <span className={styles.ringLabel}>{label}</span>
+    </div>
+  );
+}
+
+/** แถบเล็กมีป้ายกำกับ (Module / มือถือ) */
+function SplitBar({ label, pct, color }: { label: string; pct: number; color: string }) {
+  return (
+    <div className={styles.splitRow} role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+      <span>{label}</span>
+      <div className={styles.progress}><div style={{ width: `${pct}%`, background: color }} /></div>
+      <b>{pct}%</b>
+    </div>
+  );
+}
+
 /** M6 · มือถือ: สรุปกะทัดรัด, Milestone ถัดไป และความเสี่ยง (ซ่อนบนจอใหญ่) */
 function MobileSummary({ d, time, year }: { d: Overview; time: string; year: YearFormat }) {
   const t = useTranslations("overview-table.overview");
@@ -312,8 +364,18 @@ function MobileSummary({ d, time, year }: { d: Overview; time: string; year: Yea
     <div className={styles.mobileOnly}>
       <section className={`${styles.card} ${styles.mcard}`} aria-label={t("progressTitle")}>
         <div className={styles.line}><span className={`${styles.mpill} ${tone}`}>{t(`health.levels.${h.level}`)}</span><span className={`${styles.muted} ${styles.small}`}>{t("mobile.updatedBy", { time })}</span></div>
-        <div className={styles.mbig}><b>{p.pct}%</b><span className={styles.muted}>{t("mobile.line", { done: p.tasks.done, total: p.tasks.total, time: p.time.pct })}</span></div>
-        <div className={styles.mtrack}><div style={{ width: `${p.pct}%` }} /><span style={{ left: `${p.time.pct}%` }} aria-hidden="true" /></div>
+        {p.split ? (
+          <>
+            <div className={styles.mbig}><b>{t("split.mobileBig", { dev: p.split.dev.pct, qa: p.split.qa.pct })}</b><span className={styles.muted}>{t("mobile.line", { done: p.tasks.done, total: p.tasks.total, time: p.time.pct })}</span></div>
+            <SplitBar label={t("split.dev")} pct={p.split.dev.pct} color="var(--status-progress-dot)" />
+            <SplitBar label={t("split.qa")} pct={p.split.qa.pct} color="var(--chart-primary)" />
+          </>
+        ) : (
+          <>
+            <div className={styles.mbig}><b>{p.pct}%</b><span className={styles.muted}>{t("mobile.line", { done: p.tasks.done, total: p.tasks.total, time: p.time.pct })}</span></div>
+            <div className={styles.mtrack}><div style={{ width: `${p.pct}%` }} /><span style={{ left: `${p.time.pct}%` }} aria-hidden="true" /></div>
+          </>
+        )}
         <div className={styles.mtiles}>
           <div className={styles.mlate}><b>{d.kpis.overdue}</b>Overdue</div>
           {d.counts && <div><b>{d.counts.openBugs}</b>{t("mobile.openBugs")}</div>}

@@ -12,7 +12,7 @@ import { formatDate, formatDateRange, today } from "@/lib/format";
 import { positionOptions, toPositionCode } from "@/lib/positions";
 import { queryKeys } from "@/lib/query";
 import {
-  BUILTIN_TEMPLATES, firstMonday, KEY_PATTERN, lines, spanDays, sprintCount, suggestKey, TEMPLATE_PRESETS, validDate,
+  BUILTIN_TEMPLATES, firstMonday, insertAt, KEY_PATTERN, workflowBody, lines, spanDays, sprintCount, suggestKey, TEMPLATE_PRESETS, validDate,
   type BuiltinTemplate, type WorkflowStep,
 } from "./plan";
 import styles from "./wizard.module.css";
@@ -127,7 +127,7 @@ export function buildBody(d: Draft) {
       ? { members: d.members.map((m) => ({ userId: m.userId, role: m.role, ...(m.position ? { position: m.position } : {}), capacityHoursWeek: m.capacityHoursWeek })) }
       : {}),
     ...(builtin || d.workflowTouched
-      ? { workflow: d.workflow.map((s) => (s.wipLimit ? { name: s.name, wipLimit: s.wipLimit } : s.name)) }
+      ? { workflow: workflowBody(d.workflow) }
       : {}),
     estimateUnit: d.estimateUnit,
     progressMethod: d.progressMethod,
@@ -668,8 +668,9 @@ function WorkflowEditor({ steps, onChange }: { steps: WorkflowStep[]; onChange: 
   const add = () => {
     const v = value.trim();
     if (!v || steps.some((s) => s.name.toLowerCase() === v.toLowerCase())) return;
-    // สถานะใหม่แทรกก่อนสถานะสุดท้าย (Done) เพราะ API เดาหมวดจากตำแหน่ง: แรก = To do, สุดท้าย = Done
-    onChange([...steps.slice(0, -1), { name: v }, ...steps.slice(-1)]);
+    // สถานะใหม่แทรกก่อนสถานะปิดงาน (Done / Rejected) เพราะ API เดาหมวดจากตำแหน่ง: แรก = To do, สุดท้าย = Done
+    const at = insertAt(steps);
+    onChange([...steps.slice(0, at), { name: v }, ...steps.slice(at)]);
     setValue("");
   };
   return (

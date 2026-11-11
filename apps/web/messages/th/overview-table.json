@@ -13,6 +13,16 @@
     "timeTitle": "เวลาที่ผ่านไป",
     "timeValue": "{pct}% · {elapsed} / {total} วันทำการ",
     "doneTitle": "งานที่เสร็จ",
+    "split": {
+      "dev": "Dev",
+      "qa": "QA",
+      "devTitle": "Dev ส่งต่อ QA แล้ว",
+      "qaTitle": "QA ผ่านแล้ว",
+      "value": "{pct}% · {done}/{total} งาน",
+      "tasks": "{total} งาน",
+      "ringLabel": "ความคืบหน้า {name} {pct} เปอร์เซ็นต์",
+      "mobileBig": "Dev {dev}% · QA {qa}%"
+    },
     "remainTitle": "เหลือก่อน Go-live",
     "remainValue": "{days} วันทำการ",
     "lastPlanEnd": "งานสุดท้าย {date}",

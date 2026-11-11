@@ -70,6 +70,10 @@
 .progress { display:inline-flex; align-items:center; gap:6px; width:100%; min-width:0; font-size:11px; }
 .progressBar { flex:1; height:8px; background:var(--subtle); border-radius:99px; overflow:hidden; }
 .progressBar span { display:block; height:100%; background:var(--success-solid); }
+/* แยก Dev / QA: Dev ใช้สีหมวด In progress · QA ใช้สีเดิม (เสร็จ) */
+.progressSplit { display:flex; flex-direction:column; gap:3px; width:100%; min-width:0; }
+.splitLabel { width:22px; flex:none; color:var(--muted); font-weight:600; }
+.devBar span { background:var(--status-progress-dot); }
 .track { position:relative; height:16px; min-width:0; overflow:hidden; background-image:linear-gradient(to right, var(--hover) 1px, transparent 1px); }
 .trackBar { position:absolute; top:3px; height:10px; border-radius:5px; background:var(--chart-primary); }
 .todayLine { position:absolute; top:0; bottom:0; width:2px; background:var(--danger-solid); }

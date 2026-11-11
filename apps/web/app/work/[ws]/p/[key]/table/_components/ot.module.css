@@ -10,6 +10,12 @@
 .updated { font-size:12px; }
 .summary { padding:18px 20px; display:flex; flex-wrap:wrap; gap:28px; align-items:center; }
 .donutBox { display:flex; align-items:center; gap:16px; }
+/* แยกความคืบหน้า Dev / QA */
+.ringBox { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.ringLabel { font-size:12px; font-weight:600; color:var(--foreground-soft); }
+.splitRow { display:grid; grid-template-columns:28px minmax(0,1fr) 40px; gap:8px; align-items:center; font-size:12px; margin-top:6px; }
+.splitRow > span { color:var(--muted); font-weight:600; }
+.splitRow > b { text-align:right; }
 .bars { flex:1 1 260px; min-width:0; display:flex; flex-direction:column; gap:10px; }
 .bars .line b { font-weight:600; }
 .facts { display:flex; gap:28px; flex-wrap:wrap; }

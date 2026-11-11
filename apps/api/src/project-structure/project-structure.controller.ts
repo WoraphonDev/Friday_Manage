@@ -10,7 +10,7 @@ import {
   ModulesService, PatchMilestoneBody, PatchModuleBody, PatchPhaseBody,
 } from './modules.service.js';
 import {
-  CreateRuleBody, CreateStatusBody, DeleteStatusBody, PatchIssueTypeBody, PatchRuleBody, PatchStatusBody, WorkflowsService,
+  ApplyDevQaBody, CreateRuleBody, CreateStatusBody, DeleteStatusBody, PatchIssueTypeBody, PatchRuleBody, PatchStatusBody, WorkflowsService,
 } from './workflows.service.js';
 
 /** DELETE ที่ต้องส่ง moveTo รับได้ทั้ง query (?moveTo=) และ body */
@@ -146,6 +146,12 @@ export class ProjectStructureController {
   @HttpCode(200)
   reorderStatuses(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Param('id') id: string, @Body() body: unknown) {
     return this.workflows.reorderStatuses(auth, tenant, key, parse(Id, id), parse(ReorderBody, body));
+  }
+
+  @Post('workflows/:id/apply-dev-qa')
+  @HttpCode(200)
+  applyDevQa(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Param('id') id: string, @Body() body: unknown) {
+    return this.workflows.applyDevQa(auth, tenant, key, parse(Id, id), parse(ApplyDevQaBody, body));
   }
 
   @Patch('workflows/:id/statuses/:statusId')

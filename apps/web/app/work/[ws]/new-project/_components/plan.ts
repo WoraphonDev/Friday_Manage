@@ -1,21 +1,48 @@
 /** คำนวณของ Wizard ที่ไม่ต้องเรียก API (ทดสอบแยกได้) */
 
 /** Template ในตัว (ตรงกับ BUILTIN_TEMPLATES ของ API) · Development = ชุดฟิลด์ของแผน Development Plan (ผู้ใช้ตัดสิน 2026-11-09) */
-export type BuiltinTemplate = "development" | "scrum" | "kanban" | "waterfall" | "blank";
-export const BUILTIN_TEMPLATES: BuiltinTemplate[] = ["development", "scrum", "kanban", "waterfall", "blank"];
+export type BuiltinTemplate = "development" | "development_qa" | "scrum" | "kanban" | "waterfall" | "blank";
+export const BUILTIN_TEMPLATES: BuiltinTemplate[] = ["development", "development_qa", "scrum", "kanban", "waterfall", "blank"];
 export interface WorkflowStep {
   name: string;
   wipLimit?: number;
+  /** หมวดของสถานะ · ไม่ระบุ = API เดาจากตำแหน่ง (แรก = To do, สุดท้าย = Done) */
+  category?: "todo" | "in_progress" | "review" | "blocked" | "done" | "cancelled";
 }
 /** Template ในตัว: กำหนดค่าที่ส่งใน POST w/projects (ค่าใน body ชนะ Template ของ Workspace เสมอ) */
 export const TEMPLATE_PRESETS: Record<BuiltinTemplate, { workflow: WorkflowStep[]; sprint: boolean; modules?: string[]; progressMethod?: "count" | "weighted" }> = {
   development: { workflow: [{ name: "To do" }, { name: "In progress" }, { name: "Review" }, { name: "Done" }], sprint: true, progressMethod: "weighted" },
+  // Development + QA (ผู้ใช้ขอ 2026-11-11): แยกช่วง Dev / QA · ชื่อชุดนี้ใช้เฉพาะ Template นี้
+  development_qa: {
+    workflow: [
+      { name: "To do", category: "todo" },
+      { name: "In progress", category: "in_progress" },
+      { name: "Rework", category: "in_progress" },
+      { name: "Ready for QA", category: "review" },
+      { name: "Testing", category: "review" },
+      { name: "Done", category: "done" },
+      { name: "Rejected", category: "cancelled" },
+    ],
+    sprint: true,
+    progressMethod: "weighted",
+  },
   scrum: { workflow: [{ name: "To do" }, { name: "In progress" }, { name: "Review" }, { name: "Done" }], sprint: true },
   kanban: { workflow: [{ name: "To do" }, { name: "In progress", wipLimit: 5 }, { name: "Review", wipLimit: 3 }, { name: "Done" }], sprint: false },
   // Waterfall: เฟสเป็น Module เรียงตามลำดับ เพราะ API ยังไม่มีเฟสระดับโปรเจกต์
   waterfall: { workflow: [{ name: "To do" }, { name: "In progress" }, { name: "Review" }, { name: "Done" }], sprint: false, modules: ["Requirement", "Design", "Development", "Testing", "Deploy"] },
   blank: { workflow: [{ name: "To do" }, { name: "Done" }], sprint: false },
 };
+
+/** ตำแหน่งที่แทรกสถานะใหม่: ก่อนสถานะปิดงานตัวแรก (Done / Rejected) · ไม่มีหมวด = ก่อนตัวสุดท้าย */
+export function insertAt(steps: WorkflowStep[]) {
+  const i = steps.findIndex((s) => s.category === "done" || s.category === "cancelled");
+  return i >= 0 ? i : Math.max(0, steps.length - 1);
+}
+
+/** สถานะใน body ของ POST w/projects: ชื่ออย่างเดียว หรือ object เมื่อมี WIP / หมวด */
+export function workflowBody(steps: WorkflowStep[]) {
+  return steps.map((s) => (s.wipLimit || s.category ? { name: s.name, ...(s.category ? { category: s.category } : {}), ...(s.wipLimit ? { wipLimit: s.wipLimit } : {}) } : s.name));
+}
 
 export const KEY_PATTERN = /^[A-Z][A-Z0-9]{1,9}$/;
 /** Key จากชื่อ: อักษรแรกของคำภาษาอังกฤษ (Development Plan → DP) · ชื่อภาษาไทยล้วนให้ผู้ใช้ตั้งเอง */

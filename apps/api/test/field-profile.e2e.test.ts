@@ -39,7 +39,7 @@ describe('Template catalog', () => {
     expect(r.status).toBe(200);
     expect(r.body.categories).toContain('software');
     const ids = r.body.items.map((x: { id: string }) => x.id);
-    expect(ids.slice(0, 5)).toEqual(['development', 'scrum', 'kanban', 'waterfall', 'blank']);
+    expect(ids.slice(0, 6)).toEqual(['development', 'development_qa', 'scrum', 'kanban', 'waterfall', 'blank']);
     const dev = r.body.items.find((x: { id: string }) => x.id === 'development');
     expect(dev).toMatchObject({ source: 'builtin', category: 'software', config: { sprintLengthWeeks: 2, columns: expect.arrayContaining(['ba', 'sa', 'remark']) } });
     expect(r.body.items.find((x: { name: string }) => x.name === 'Support Desk')).toMatchObject({ source: 'workspace', category: 'service', invalid: false });

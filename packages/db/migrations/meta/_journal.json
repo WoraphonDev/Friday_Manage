@@ -204,6 +204,13 @@
       "when": 1794374730373,
       "tag": "0028_status_categories_color",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794393475551,
+      "tag": "0029_project_progress_split",
+      "breakpoints": true
     }
   ]
 }

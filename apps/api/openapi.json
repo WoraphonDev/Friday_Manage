@@ -13914,6 +13914,9 @@
                           "weighted"
                         ]
                       },
+                      "progressSplit": {
+                        "type": "boolean"
+                      },
                       "sizeMdMap": {
                         "type": "object",
                         "properties": {
@@ -14015,6 +14018,7 @@
                     "type": "string",
                     "enum": [
                       "development",
+                      "development_qa",
                       "scrum",
                       "kanban",
                       "waterfall",
@@ -14364,6 +14368,9 @@
                           "count",
                           "weighted"
                         ]
+                      },
+                      "progressSplit": {
+                        "type": "boolean"
                       },
                       "sizeMdMap": {
                         "type": "object",
@@ -14748,6 +14755,7 @@
                     "type": "string",
                     "enum": [
                       "development",
+                      "development_qa",
                       "scrum",
                       "kanban",
                       "waterfall",
@@ -15146,6 +15154,9 @@
                       "count",
                       "weighted"
                     ]
+                  },
+                  "progressSplit": {
+                    "type": "boolean"
                   },
                   "sizeMdMap": {
                     "anyOf": [
@@ -25358,6 +25369,106 @@
           },
           "404": {
             "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/projects/{key}/workflows/{id}/apply-dev-qa": {
+      "post": {
+        "operationId": "ProjectStructure_applyDevQa",
+        "summary": "POST w/{ws}/projects/{key}/workflows/{id}/apply-dev-qa",
+        "tags": [
+          "ProjectStructure"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mapping": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": [
+                        "todo",
+                        "in_progress",
+                        "rework",
+                        "ready_for_qa",
+                        "testing",
+                        "done",
+                        "rejected"
+                      ]
+                    }
+                  },
+                  "progressSplit": {
+                    "default": true,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "mapping"
+                ],
+                "additionalProperties": false
+              }
+            }
           }
         }
       }

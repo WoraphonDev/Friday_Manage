@@ -8,12 +8,36 @@ import { Check } from "lucide-react";
 import { Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { SectionHead, projectEndpoint } from "./shared";
-import { errorText, isForbidden, move, patchPlain, type Category, type Status, type Workflow } from "./types";
+import { errorText, isForbidden, move, patchPlain, type Category, type ProjectDetail, type Status, type Workflow } from "./types";
 import { STATUS_CATEGORIES, STATUS_SWATCHES, statusColorStyle, statusDotColor, statusTone } from "@/lib/status";
 import { queryKeys } from "@/lib/query";
 import styles from "./settings.module.css";
 
 const CATEGORIES: readonly Category[] = STATUS_CATEGORIES;
+
+/** ชุดสถานะ Development + QA (ตรงกับ DEV_QA_FLOW ของ API) · ชื่อชุดนี้ใช้เฉพาะ Template นี้ */
+export const DEV_QA_FLOW = [
+  { key: "todo", name: "To do", category: "todo" },
+  { key: "in_progress", name: "In progress", category: "in_progress" },
+  { key: "rework", name: "Rework", category: "in_progress" },
+  { key: "ready_for_qa", name: "Ready for QA", category: "review" },
+  { key: "testing", name: "Testing", category: "review" },
+  { key: "done", name: "Done", category: "done" },
+  { key: "rejected", name: "Rejected", category: "cancelled" },
+] as const satisfies readonly { key: string; name: string; category: Category }[];
+export type DevQaKey = (typeof DEV_QA_FLOW)[number]["key"];
+
+/** คู่ที่เสนอให้สถานะเดิม: ชื่อที่ตรงกันก่อน แล้วจึงดูตามหมวด (Blocked ไม่มีในชุดนี้ จึงไป In progress) */
+export function suggestDevQa(s: Pick<Status, "name" | "category">): DevQaKey {
+  const name = s.name.trim().toLowerCase();
+  const byName = DEV_QA_FLOW.find((x) => x.name.toLowerCase() === name);
+  if (byName) return byName.key;
+  if (/rework|fix|แก้/.test(name)) return "rework";
+  if (/test|ทดสอบ/.test(name)) return "testing";
+  if (/reject|cancel|ยกเลิก/.test(name)) return "rejected";
+  const byCategory: Record<Category, DevQaKey> = { todo: "todo", in_progress: "in_progress", blocked: "in_progress", review: "ready_for_qa", done: "done", cancelled: "rejected" };
+  return byCategory[s.category];
+}
 
 /** ข้อความ "แสดงบน Kanban ในคอลัมน์" ของ Workflow Bug: จัดกลุ่มสถานะ Bug ตามคอลัมน์ของ Workflow มาตรฐาน */
 export function bugColumns(bug: Workflow, standard: Workflow | undefined) {
@@ -64,7 +88,7 @@ function ColorPicker({ label, value, fallback, onChange }: { label: string; valu
   );
 }
 
-export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: string }) {
+export function WorkflowSection({ ws, projectKey, project }: { ws: string; projectKey: string; project?: ProjectDetail }) {
   const t = useTranslations("project-settings-new.settings.workflow");
   const cache = useQueryClient();
   const toast = useToast();
@@ -78,6 +102,8 @@ export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: st
   const [newColor, setNewColor] = useState<string | null>(null);
   const [removing, setRemoving] = useState<Status | null>(null);
   const [moveTo, setMoveTo] = useState("");
+  const [devQa, setDevQa] = useState<Record<string, DevQaKey> | null>(null);
+  const [devQaSplit, setDevQaSplit] = useState(true);
 
   if (isForbidden(workflows.error)) return <Forbidden />;
   if (workflows.error) return <ErrorState error={workflows.error} retry={() => void workflows.refetch()} />;
@@ -118,6 +144,24 @@ export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: st
     await run(() => api.delete(`${wfBase}/statuses/${removing.id}`, { body }), t("removed", { name: removing.name }));
     setRemoving(null);
   }
+  async function toggleSplit(on: boolean) {
+    if (!project) return;
+    await run(() => api.patch(base, { progressSplit: on }, project.version), t("saved"));
+    await cache.invalidateQueries({ queryKey: ["overview", ws, projectKey] });
+  }
+  function openDevQa() {
+    setDevQa(Object.fromEntries(wf.statuses.map((s) => [s.id, suggestDevQa(s)])));
+    setDevQaSplit(true);
+  }
+  async function applyDevQa() {
+    if (!devQa) return;
+    await run(() => api.post(`${wfBase}/apply-dev-qa`, { mapping: devQa, progressSplit: devQaSplit }), t("devQa.applied"));
+    await cache.invalidateQueries({ queryKey: ["overview", ws, projectKey] });
+    setDevQa(null);
+  }
+  const devQaCreated = devQa ? DEV_QA_FLOW.filter((x) => !Object.values(devQa).includes(x.key)) : [];
+  const devQaMerged = devQa ? DEV_QA_FLOW.map((x) => wf.statuses.filter((s) => devQa[s.id] === x.key)).filter((list) => list.length > 1) : [];
+  const devQaMoved = devQaMerged.reduce((n, list) => n + list.slice(1).reduce((m, s) => m + s.issueCount, 0), 0);
   const label = (w: Workflow) => w.issueTypes.map((x) => x.name).join(" / ") || w.name;
   const standard = items.find((w) => w.kind === "standard");
 
@@ -133,6 +177,18 @@ export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: st
         )}
       </SectionHead>
       <div className={styles.sb}>
+        {wf.kind === "standard" && project && (
+          <div className={styles.switchRow}>
+            <button type="button" role="switch" className={styles.switch} aria-checked={project.progressSplit} aria-label={t("devQa.split")} onClick={() => void toggleSplit(!project.progressSplit)}>
+              <span />
+            </button>
+            <div className={styles.devQaText}>
+              <b>{t("devQa.split")}</b> <span className={styles.pill}>{project.progressSplit ? t("devQa.on") : t("devQa.off")}</span>
+              <div className={styles.muted}>{t("devQa.splitHint")}</div>
+            </div>
+            <Button size="small" onClick={openDevQa}>{t("devQa.apply")}</Button>
+          </div>
+        )}
         <div className={styles.flow} aria-label={t("flowLabel")}>
           {wf.statuses.map((s, i) => (
             <span key={s.id} className={styles.flow}>
@@ -245,6 +301,41 @@ export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: st
             <Button type="submit" variant="primary" disabled={!newName.trim()}>{t("addConfirm")}</Button>
           </div>
         </form>
+      </Dialog>
+
+      <Dialog open={!!devQa} onOpenChange={(o) => !o && setDevQa(null)} size="medium" title={t("devQa.applyTitle")} description={t("devQa.applyDescription")}>
+        {devQa && (
+          <div className={styles.dialogForm}>
+            <div className={styles.devQaMap} role="table" aria-label={t("devQa.applyTitle")}>
+              <div className={styles.devQaHead} role="row">
+                <span role="columnheader">{t("devQa.oldStatus")}</span>
+                <span role="columnheader">{t("used")}</span>
+                <span role="columnheader">{t("devQa.newStatus")}</span>
+              </div>
+              {wf.statuses.map((s) => (
+                <div key={s.id} className={styles.devQaRow} role="row">
+                  <span role="cell"><StatusChip s={s} /></span>
+                  <span role="cell" className={styles.muted}>{t("issues", { count: s.issueCount })}</span>
+                  <span role="cell">
+                    <select className={styles.in} aria-label={t("devQa.newStatusOf", { name: s.name })} value={devQa[s.id]} onChange={(e) => setDevQa({ ...devQa, [s.id]: e.target.value as DevQaKey })}>
+                      {DEV_QA_FLOW.map((x) => <option key={x.key} value={x.key}>{x.name}</option>)}
+                    </select>
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className={styles.note}>
+              <span>{t("devQa.created", { names: devQaCreated.map((x) => x.name).join(", ") || t("devQa.none") })}</span>
+              {devQaMerged.map((list) => <span key={list[0].id}>{t("devQa.merged", { names: list.map((x) => x.name).join(", "), target: DEV_QA_FLOW.find((x) => x.key === devQa[list[0].id])!.name, count: list.slice(1).reduce((m, x) => m + x.issueCount, 0) })}</span>)}
+              <span className={styles.muted}>{t("devQa.keepHistory")}</span>
+            </div>
+            <label className={styles.devQaCheck}><input type="checkbox" checked={devQaSplit} onChange={(e) => setDevQaSplit(e.target.checked)} /> {t("devQa.splitOnApply")}</label>
+            <div className="dialog-actions">
+              <Button onClick={() => setDevQa(null)}>{t("cancel")}</Button>
+              <Button variant="primary" onClick={() => void applyDevQa()}>{devQaMoved ? t("devQa.confirmMove", { count: devQaMoved }) : t("devQa.confirm")}</Button>
+            </div>
+          </div>
+        )}
       </Dialog>
 
       <Dialog open={!!removing} onOpenChange={(o) => !o && setRemoving(null)} title={t("removeTitle", { name: removing?.name ?? "" })}>

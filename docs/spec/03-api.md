@@ -335,6 +335,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | CRUD + `:reorder` | `p/modules` · `p/modules/{id}/phases` | ลบ Module ที่มีงานต้องระบุ `moveTo` · เลือกกลุ่มงานปลายทางด้วย `moveToPhase` ได้ |
 | CRUD | `p/milestones` · `p/milestones/{id}/issues` | |
 | CRUD + `:reorder` | `p/workflows/{id}/statuses` | ลบสถานะที่มีงานต้องระบุ `moveTo` |
+| POST | `p/workflows/{id}/apply-dev-qa` | เปลี่ยน Workflow มาตรฐานเป็นชุด Development + QA · body `{ mapping: { [statusId]: key }, progressSplit }` ต้องจับคู่สถานะเดิมครบทุกตัว (`mapping_incomplete`) · ใช้กับ Workflow ของ Bug ไม่ได้ (`workflow_not_standard`) · สถานะเดิมตัวแรกของแต่ละคู่ถูกเปลี่ยนชื่อ (id คงเดิม) ตัวที่จับคู่ซ้ำถูกรวมและย้ายงาน |
 | CRUD | `p/workflows/{id}/rules` | |
 | GET / PATCH | `p/issue-types/{id}` | เปิดปิด, ฟิลด์บังคับ |
 | CRUD | `p/custom-fields` · `p/labels` | ฟิลด์มาตรฐานไม่อยู่ในรายการนี้ |

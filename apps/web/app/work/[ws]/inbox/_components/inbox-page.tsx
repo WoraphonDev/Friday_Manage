@@ -118,10 +118,10 @@ export function InboxPage({ ws }: { ws: string }) {
         </div>
       </header>
       <div className={`${styles.layout} ${current ? styles.showDetail : ""}`}>
-        <section className={`${styles.card} ${styles.list}`} aria-label={t("listLabel")}>
+        <section className={styles.list} aria-label={t("listLabel")}>
           {!items.length && <div className={styles.empty}>{t("empty")}</div>}
           {groups.map(({ g, list }) => (
-            <div key={g}>
+            <div key={g} className={styles.group}>
               <div className={styles.gl}>{t(`groups.${g}`)}</div>
               {list.map((n) => (
                 <button key={n.id} type="button" className={`${styles.nt} ${!n.readAt ? styles.unread : ""} ${n.id === selected ? styles.sel : ""}`} aria-current={n.id === selected ? "true" : undefined} onClick={() => setSelected(n.id)}>
@@ -154,13 +154,40 @@ function Detail({ ws, n, busy, onBack, run }: { ws: string; n: InboxNotification
   const key = n.issue?.key ?? (n.payload.issueKey as string | undefined);
   const req = n.dueRequest;
   const year = me.yearFormat;
+  // ปุ่มทำงานหลักอยู่ในส่วนหัว (ผู้ใช้ขอ 2026-11-11: แบบหน้ารายละเอียดของเว็บหางาน) · เนื้อหาอยู่ด้านล่าง
+  const actions = req ? (
+    req.status === "pending" && req.canDecide ? (
+      <div className={styles.actions}>
+        <Button className={styles.approve} disabled={busy} onClick={() => run(`/w/${encodeURIComponent(ws)}/due-requests/${req.id}/approve`, t("approvedToast"))}>{t("approve")}</Button>
+        <Button className={styles.rejectBtn} disabled={busy} onClick={() => run(`/w/${encodeURIComponent(ws)}/due-requests/${req.id}/reject`, t("rejectedToast"))}>{t("reject")}</Button>
+        {key && <Link className="button button-secondary" href={issueHref(ws, key)}>{t("openIssue")}</Link>}
+      </div>
+    ) : (
+      <div className={styles.actions}>
+        <Badge tone={req.status === "approved" ? "green" : req.status === "rejected" ? "red" : "neutral"}>{t(`decision.${req.status}`, { name: req.decidedBy?.displayName ?? "-" })}</Badge>
+      </div>
+    )
+  ) : (
+    <div className={styles.actions}>
+      {key && <Link className="button button-primary" href={issueHref(ws, key)}>{t("openIssue")}</Link>}
+      <Button disabled={busy} onClick={() => run(`/me/notifications/${n.id}/done`, t("acknowledged"))}>{t("acknowledge")}</Button>
+      <Button disabled={busy} onClick={() => run(`/me/notifications/${n.id}/snooze`, t("snoozed"), { preset: "tomorrow" })}>{t("remindTomorrow")}</Button>
+    </div>
+  );
   return (
     <>
-      <div className={styles.dHead}>
-        <Button className={styles.back} size="icon" variant="ghost" aria-label={t("back")} onClick={onBack}><ArrowLeft size={18} aria-hidden /></Button>
-        <Avatar size="large" person={{ id: n.actor?.id ?? n.id, displayName: labels.actor(n) }} />
-        <div style={{ flex: 1, minWidth: 0 }}><div><b>{labels.actor(n)}</b> {labels.verb(n)}</div><div className="muted" style={{ fontSize: 11 }}>{n.project?.name ?? ""} · {formatDate(n.createdAt, year)} {timeOf(n.createdAt)}</div></div>
-        <Badge tone={TONE[n.category] ?? "neutral"}>{labels.type(n)}</Badge>
+      <div className={styles.hero}>
+        <div className={styles.dHead}>
+          <Button className={styles.back} size="icon" variant="ghost" aria-label={t("back")} onClick={onBack}><ArrowLeft size={18} aria-hidden /></Button>
+          <Avatar size="large" person={{ id: n.actor?.id ?? n.id, displayName: labels.actor(n), avatarUrl: n.actor?.avatarUrl ?? null }} />
+          <div className={styles.heroText}>
+            <div className={styles.heroTitle}><b>{labels.actor(n)}</b> {labels.verb(n)}</div>
+            {key && <div className={styles.heroIssue}>{key} {n.issue?.title ?? (n.payload.title as string | undefined) ?? ""}</div>}
+            <div className="muted" style={{ fontSize: 12 }}>{n.project?.name ?? ""} · {formatDate(n.createdAt, year)} {timeOf(n.createdAt)}</div>
+          </div>
+          <Badge tone={TONE[n.category] ?? "neutral"}>{labels.type(n)}</Badge>
+        </div>
+        {actions}
       </div>
       <div className={styles.dBody}>
         {n.issue && !n.issue.deleted ? (
@@ -178,24 +205,8 @@ function Detail({ ws, n, busy, onBack, run }: { ws: string; n: InboxNotification
         {req && (
           <>
             <div className={styles.diff}><span className="muted">{t("dueDiff")}</span><span className="muted" style={{ textDecoration: "line-through" }}>{formatDate(req.currentDue, year)}</span><span aria-hidden="true">→</span><b>{formatDate(req.requestedDue, year)}</b></div>
-            <div className="muted" style={{ fontSize: 12 }}>{t("reasonLabel", { reason: req.reasonLabel })}{req.detail ? ` · ${req.detail}` : ""}</div>
-            {req.status === "pending" && req.canDecide ? (
-              <div className={styles.actions}>
-                <Button className={styles.approve} disabled={busy} onClick={() => run(`/w/${encodeURIComponent(ws)}/due-requests/${req.id}/approve`, t("approvedToast"))}>{t("approve")}</Button>
-                <Button className={styles.rejectBtn} disabled={busy} onClick={() => run(`/w/${encodeURIComponent(ws)}/due-requests/${req.id}/reject`, t("rejectedToast"))}>{t("reject")}</Button>
-                {key && <Link className="button button-secondary" href={issueHref(ws, key)}>{t("openIssue")}</Link>}
-              </div>
-            ) : (
-              <Badge tone={req.status === "approved" ? "green" : req.status === "rejected" ? "red" : "neutral"}>{t(`decision.${req.status}`, { name: req.decidedBy?.displayName ?? "-" })}</Badge>
-            )}
+            <div className="muted" style={{ fontSize: 13 }}>{t("reasonLabel", { reason: req.reasonLabel })}{req.detail ? ` · ${req.detail}` : ""}</div>
           </>
-        )}
-        {!req && (
-          <div className={styles.actions}>
-            {key && <Link className="button button-primary" href={issueHref(ws, key)}>{t("openIssue")}</Link>}
-            <Button disabled={busy} onClick={() => run(`/me/notifications/${n.id}/done`, t("acknowledged"))}>{t("acknowledge")}</Button>
-            <Button disabled={busy} onClick={() => run(`/me/notifications/${n.id}/snooze`, t("snoozed"), { preset: "tomorrow" })}>{t("remindTomorrow")}</Button>
-          </div>
         )}
         <div className={styles.foot}><span className="muted">{t("why")}</span> <b>{n.reason}</b></div>
       </div>

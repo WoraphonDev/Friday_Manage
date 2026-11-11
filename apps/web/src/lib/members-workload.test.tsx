@@ -213,8 +213,6 @@ describe("Members ของโปรเจกต์", () => {
     await user.click(screen.getByRole("button", { name: "ตัวเลือกของ ผู้พัฒนาหนึ่ง" }));
     const again = screen.getByRole("dialog", { name: "จัดการ ผู้พัฒนาหนึ่ง" });
     expect(within(again).getByText("งานค้าง 3 งาน · 6 MD")).toBeInTheDocument();
-    // ค่าเริ่มต้นคงงานไว้กับคนเดิม
-    expect(within(again).getByLabelText("โอนงานให้")).toHaveDisplayValue("คงงานไว้กับ ผู้พัฒนาหนึ่ง");
     await user.selectOptions(within(again).getByLabelText("โอนงานให้"), U2);
     await user.click(within(again).getByRole("button", { name: "นำออกจากโปรเจกต์" }));
     await waitFor(() => expect(calls[1]).toMatchObject({ method: "DELETE", path: `/w/sample/projects/DE/members/${U1}`, body: { reassignTo: U2 } }));

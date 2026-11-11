@@ -121,12 +121,10 @@
     "removeHint": "งานที่ยังไม่เสร็จจะถูกโอนให้คนที่เลือก · งานที่เสร็จแล้วยังแสดงชื่อเดิม",
     "openWork": "งานค้าง {count} งาน · {md} MD",
     "reassignTo": "โอนงานให้",
-    "keepWork": "คงงานไว้กับ {name}",
     "unassigned": "ไม่ระบุผู้รับผิดชอบ",
     "remove": "นำออกจากโปรเจกต์",
     "removed": "นำ {name} ออกจากโปรเจกต์แล้ว",
-    "removedWithWork": "นำ {name} ออกจากโปรเจกต์แล้ว · โอน {count} งาน",
-    "removedKeptWork": "นำ {name} ออกจากโปรเจกต์แล้ว · คงงานไว้ {count} งาน"
+    "removedWithWork": "นำ {name} ออกจากโปรเจกต์แล้ว · โอน {count} งาน"
   },
   "invites": {
     "title": "Invite members",

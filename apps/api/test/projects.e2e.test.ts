@@ -258,23 +258,6 @@ describe('สมาชิกโปรเจกต์ (p/members)', () => {
     expect((await team.dev.get(p('RM'))).status).toBe(404);
   });
 
-  it('ลบโดยคงงานไว้กับคนเดิม · ไม่แตะ Assignee และ version · ส่งพร้อม reassignTo ไม่ได้', async () => {
-    await mkProject(team.lead, 'KP');
-    await team.lead.post(p('KP', '/members'), { userId: team.devId });
-    await team.lead.post(p('KP', '/members'), { userId: qaId });
-    const i = await mkIssue(team.lead, 'KP', { assigneeIds: [team.devId], size: 'S', planStart: '2026-11-09' });
-    expect((await team.lead.delete(p('KP', `/members/${team.devId}`), { keepAssignments: true, reassignTo: qaId })).status).toBe(400);
-    seen.length = 0;
-    const r = await team.lead.delete(p('KP', `/members/${team.devId}`), { keepAssignments: true });
-    expect(r.status).toBe(200);
-    expect(r.body).toMatchObject({ removed: true, reassigned: 0, kept: 1 });
-    const after = (await team.lead.get(`${team.ws}/issues/${i.key}`)).body;
-    expect(after.assigneeIds).toEqual([team.devId]);
-    expect(after.version).toBe(i.version);
-    expect(seen.filter((e) => e.type === 'issue.assigned')).toEqual([]);
-    expect((await team.dev.get(p('KP'))).status).toBe(404);
-  });
-
   it('ลบโดยไม่ระบุผู้รับผิดชอบ · ออกจากโปรเจกต์เอง · Owner ถูกนำออกไม่ได้', async () => {
     const i = await mkIssue(team.lead, 'RM', { assigneeIds: [qaId], size: 'XS', planStart: '2026-11-09' });
     expect((await team.lead.delete(p('RM', `/members/${team.leadId}`))).body.error.code).toBe('owner_cannot_be_removed');

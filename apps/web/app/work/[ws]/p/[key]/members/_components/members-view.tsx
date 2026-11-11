@@ -11,7 +11,7 @@ import { queryKeys } from "@/lib/query";
 import type { Permissions, Project } from "@/lib/types";
 import { ProjectInviteDialog } from "@/features/project-invite/project-invite-dialog";
 import { InvitePanel } from "./invite-panel";
-import { MemberTable, type RemoveChoice } from "./member-table";
+import { MemberTable } from "./member-table";
 import { workloadRange } from "./shared";
 import type { Invitation, ProjectMember, ProjectMembers, ProjectRole, Workload } from "./types";
 import { WorkloadPanel, workloadKey, workloadParams } from "./workload-panel";
@@ -85,12 +85,9 @@ export function MembersView({ ws, projectKey }: { ws: string; projectKey: string
     toast({ message: t("members.saved", { name: m.displayName }) });
     await refresh();
   }
-  async function onRemove(m: ProjectMember, choice: RemoveChoice) {
-    const r = await api.delete<{ reassigned: number; kept?: number }>(`${base}/members/${m.userId}`, { body: choice });
-    const message = r.reassigned ? t("members.removedWithWork", { name: m.displayName, count: r.reassigned })
-      : r.kept ? t("members.removedKeptWork", { name: m.displayName, count: r.kept })
-      : t("members.removed", { name: m.displayName });
-    toast({ message });
+  async function onRemove(m: ProjectMember, reassignTo: string | null) {
+    const r = await api.delete<{ reassigned: number }>(`${base}/members/${m.userId}`, { body: { reassignTo } });
+    toast({ message: r.reassigned ? t("members.removedWithWork", { name: m.displayName, count: r.reassigned }) : t("members.removed", { name: m.displayName }) });
     await refresh();
   }
 

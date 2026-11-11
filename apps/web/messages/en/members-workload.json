@@ -121,12 +121,10 @@
     "removeHint": "Unfinished tasks are transferred to the person you choose · Done tasks keep the original name",
     "openWork": "{count, plural, one {{count} open task} other {{count} open tasks}} · {md} MD",
     "reassignTo": "Transfer tasks to",
-    "keepWork": "Keep work with {name}",
     "unassigned": "Unassigned",
     "remove": "Remove from project",
     "removed": "Removed {name} from the project",
-    "removedWithWork": "Removed {name} from the project · Transferred {count, plural, one {{count} task} other {{count} tasks}}",
-    "removedKeptWork": "Removed {name} from the project · Kept {count, plural, one {{count} task} other {{count} tasks}}"
+    "removedWithWork": "Removed {name} from the project · Transferred {count, plural, one {{count} task} other {{count} tasks}}"
   },
   "invites": {
     "title": "Invite members",

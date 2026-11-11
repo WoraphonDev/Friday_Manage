@@ -9,9 +9,6 @@ import { formatDate, type YearFormat, localeNumberFormat } from "@/lib/format";
 import { positionOptions, toPositionCode } from "@/lib/positions";
 import { cn } from "@/lib/utils";
 import type { ProjectMember, ProjectRole } from "./types";
-
-export type RemoveChoice = { reassignTo: string | null } | { keepAssignments: true };
-const KEEP = "__keep";
 import styles from "./members.module.css";
 
 const num = localeNumberFormat({ maximumFractionDigits: 1 });
@@ -33,7 +30,7 @@ export function MemberTable({
   thisWeek: Map<string, { value: number; capacity: number | null }>;
   onRole: (member: ProjectMember, role: ProjectRole) => Promise<void>;
   onEdit: (member: ProjectMember, body: { position: string | null; capacityHoursWeek: number | null; pmDeputy?: boolean }) => Promise<void>;
-  onRemove: (member: ProjectMember, choice: RemoveChoice) => Promise<void>;
+  onRemove: (member: ProjectMember, reassignTo: string | null) => Promise<void>;
 }) {
   const t = useTranslations("members-workload.members");
   const tr = useTranslations("members-workload.roles");
@@ -147,7 +144,7 @@ function MemberDialog({
   others: ProjectMember[];
   onClose: () => void;
   onSave: (body: { position: string | null; capacityHoursWeek: number | null; pmDeputy?: boolean }) => Promise<void>;
-  onRemove: (choice: RemoveChoice) => Promise<void>;
+  onRemove: (reassignTo: string | null) => Promise<void>;
 }) {
   const t = useTranslations("members-workload.members");
   const tc = useTranslations("common.app");
@@ -156,8 +153,7 @@ function MemberDialog({
   const [deputy, setDeputy] = useState(!!member.pmDeputy);
   // Owner / Admin เป็น PM อยู่แล้ว · Guest ทำแทน PM ไม่ได้
   const canDeputy = !member.isOwner && member.role !== "admin" && !member.isGuest;
-  // ค่าเริ่มต้นคงงานไว้กับคนเดิม (ไม่แตะงาน) · เลือกโอนหรือปล่อยว่างได้
-  const [to, setTo] = useState(KEEP);
+  const [to, setTo] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   async function run(action: () => Promise<void>) {
@@ -206,14 +202,13 @@ function MemberDialog({
             <>
               <span>{t("openWork", { count: member.openIssues, md: num.format(member.openMd) })}</span>
               <Select label={t("reassignTo")} value={to} onChange={(e) => setTo(e.target.value)}>
-                <option value={KEEP}>{t("keepWork", { name: member.displayName })}</option>
                 <option value="">{t("unassigned")}</option>
                 {others.filter((m) => m.role !== "viewer").map((m) => <option key={m.userId} value={m.userId}>{m.displayName}</option>)}
               </Select>
             </>
           )}
           <div className={styles.actions}>
-            <Button variant="danger" disabled={pending} onClick={() => void run(() => onRemove(to === KEEP ? { keepAssignments: true } : { reassignTo: to || null }))}>{t("remove")}</Button>
+            <Button variant="danger" disabled={pending} onClick={() => void run(() => onRemove(to || null))}>{t("remove")}</Button>
           </div>
         </div>
       )}

@@ -141,6 +141,14 @@ describe("Files (8)", () => {
     expect(within(panel).getAllByRole("link", { name: "Download" })[0]).toHaveAttribute("href", `/api/v1/w/sample/projects/DE/files/${F1}/download`);
     expect(within(panel).getAllByRole("link", { name: "Download" })[1]).toHaveAttribute("href", `/api/v1/w/sample/projects/DE/files/${F1}/download?version=1`);
 
+    // ดูตัวอย่างแบบป๊อปอัป (รูปย่อหรือปุ่มดูตัวอย่าง) · PDF แสดงในหน้า
+    await user.click(within(panel).getByRole("button", { name: "ดูตัวอย่าง ข้อกำหนดระบบ.pdf" }));
+    const viewer = await screen.findByRole("dialog", { name: /ข้อกำหนดระบบ\.pdf/ });
+    expect(viewer.querySelector("iframe")).toHaveAttribute("src", `/api/v1/w/sample/projects/DE/files/${F1}/download?inline=1`);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /ข้อกำหนดระบบ\.pdf/ })).not.toBeInTheDocument());
+    expect(within(panel).getByRole("button", { name: "ดูตัวอย่าง" })).toBeInTheDocument();
+
     await user.click(screen.getByRole("button", { name: "ตารางทดสอบ.xlsx" }));
     expect(await within(panel).findByRole("heading", { name: "ตารางทดสอบ.xlsx" })).toBeInTheDocument();
 

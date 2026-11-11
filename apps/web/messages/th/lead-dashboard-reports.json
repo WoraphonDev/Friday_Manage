@@ -88,6 +88,8 @@
     "noDates": "ยังไม่มีวันในแผน",
     "overdue": "Overdue {count}",
     "progressOf": "ความคืบหน้า {name}",
+    "devOf": "Dev ส่งต่อ QA แล้ว {name}",
+    "qaOf": "QA ผ่านแล้ว {name}",
     "note": "คาดว่าจะจบ = Man-Day ที่เหลือ ÷ อัตราเสร็จจริงใน {days} วันล่าสุด เทียบกับ Milestone ถัดไปของ Module (ไม่มีใช้วันจบตามแผน) · เส้นแดง = วันนี้",
     "done": "เสร็จแล้ว"
   },

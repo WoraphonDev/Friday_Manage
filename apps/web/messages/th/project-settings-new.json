@@ -129,7 +129,36 @@
       "removeHasIssues": "สถานะนี้มีงาน {count} งาน · เลือกสถานะที่จะย้ายงานไป",
       "moveTo": "ย้ายงานไปที่",
       "removeEmpty": "ไม่มีงานในสถานะนี้ ลบได้ทันที",
-      "removeConfirm": "ลบสถานะ"
+      "removeConfirm": "ลบสถานะ",
+      "devQa": {
+        "split": "แยกความคืบหน้า Dev / QA",
+        "on": "เปิด",
+        "off": "ปิด",
+        "splitHint": "Dev = งานที่ส่งให้ QA แล้ว (หมวด Review / QA หรือ Done) · QA = งานที่ Done · ใช้สูตรความคืบหน้าเดิม",
+        "applyLink": "ใช้ชุดสถานะ Development + QA",
+        "applyTitle": "เปลี่ยนเป็น Workflow แบบ Development + QA",
+        "applyDescription": "เลือกว่างานในสถานะเดิมจะไปอยู่สถานะใหม่ไหน · สถานะเดิมถูกเปลี่ยนชื่อแทนการลบ ประวัติงานจึงยังอยู่ครบ",
+        "oldStatus": "สถานะเดิม",
+        "newStatus": "ย้ายไปที่",
+        "newStatusOf": "สถานะใหม่ของ {name}",
+        "created": "สถานะที่สร้างเพิ่ม: {names}",
+        "none": "ไม่มี",
+        "merged": "{names} รวมเป็น {target} (ย้ายงาน {count} งาน)",
+        "keepHistory": "Workflow ของ Bug ไม่เปลี่ยน · แก้ชื่อหรือสถานะทีละตัวต่อได้ภายหลัง",
+        "splitOnApply": "เปิดแยกความคืบหน้า Dev / QA",
+        "confirm": "เปลี่ยน Workflow",
+        "confirmMove": "เปลี่ยน Workflow และย้ายงาน {count} งาน",
+        "applied": "เปลี่ยนเป็น Workflow แบบ Development + QA แล้ว"
+      },
+      "phase": {
+        "title": "ช่วง",
+        "dev": "Dev",
+        "qa": "QA",
+        "done": "เสร็จ",
+        "none": "ไม่นับ",
+        "of": "ช่วงของ {name}: {phase}",
+        "hint": "ช่วงคิดจากหมวด: To do / In progress / Blocked = Dev · Review / QA = QA · Done = เสร็จ · Cancelled = ไม่นับในความคืบหน้า · เปลี่ยนหมวดเพื่อย้ายช่วง"
+      }
     },
     "types": {
       "title": "ประเภทงาน",
@@ -347,6 +376,11 @@
         "name": "Development",
         "description": "แผนพัฒนาระบบ แบ่งงานเป็น Module → กลุ่ม → Task → Sub-task",
         "makes": "Sprint 2 สัปดาห์ · 4 สถานะ · BA / SA / Dev / QA · Size → Man-Day · Plan / Actual"
+      },
+      "development_qa": {
+        "name": "Development + QA",
+        "description": "เหมือน Development แต่แยกช่วง Dev กับ QA และแสดงความคืบหน้า 2 แถบ",
+        "makes": "Sprint 2 สัปดาห์ · 7 สถานะ (To do → In progress → Ready for QA → Testing → Done · Rework · Rejected) · ความคืบหน้า Dev / QA"
       },
       "scrum": {
         "name": "Scrum",

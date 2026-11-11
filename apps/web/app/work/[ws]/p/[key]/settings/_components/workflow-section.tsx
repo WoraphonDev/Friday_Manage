@@ -8,12 +8,41 @@ import { Check } from "lucide-react";
 import { Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { SectionHead, projectEndpoint } from "./shared";
-import { errorText, isForbidden, move, patchPlain, type Category, type Status, type Workflow } from "./types";
-import { STATUS_CATEGORIES, STATUS_SWATCHES, statusColorStyle, statusDotColor, statusTone } from "@/lib/status";
+import { errorText, isForbidden, move, patchPlain, type Category, type ProjectDetail, type Status, type Workflow } from "./types";
+import { phaseRuns, STATUS_CATEGORIES, STATUS_SWATCHES, statusColorStyle, statusDotColor, statusPhase, statusTone } from "@/lib/status";
 import { queryKeys } from "@/lib/query";
 import styles from "./settings.module.css";
 
 const CATEGORIES: readonly Category[] = STATUS_CATEGORIES;
+
+/** ชุดสถานะ Development + QA (ตรงกับ DEV_QA_FLOW ของ API) · ชื่อชุดนี้ใช้เฉพาะ Template นี้ */
+export const DEV_QA_FLOW = [
+  { key: "todo", name: "To do", category: "todo" },
+  { key: "in_progress", name: "In progress", category: "in_progress" },
+  { key: "rework", name: "Rework", category: "in_progress" },
+  { key: "ready_for_qa", name: "Ready for QA", category: "review" },
+  { key: "testing", name: "Testing", category: "review" },
+  { key: "done", name: "Done", category: "done" },
+  { key: "rejected", name: "Rejected", category: "cancelled" },
+] as const satisfies readonly { key: string; name: string; category: Category }[];
+export type DevQaKey = (typeof DEV_QA_FLOW)[number]["key"];
+
+/** Workflow มีสถานะครบชุด Development + QA แล้ว (ชื่อ + หมวดตรงทั้ง 7 ตัว ไม่สนลำดับ · มีสถานะเพิ่มเองได้) → ไม่ต้องเสนอให้เปลี่ยนอีก */
+export function matchesDevQa(statuses: Pick<Status, "name" | "category">[]) {
+  return DEV_QA_FLOW.every((x) => statuses.some((s) => s.name.trim().toLowerCase() === x.name.toLowerCase() && s.category === x.category));
+}
+
+/** คู่ที่เสนอให้สถานะเดิม: ชื่อที่ตรงกันก่อน แล้วจึงดูตามหมวด (Blocked ไม่มีในชุดนี้ จึงไป In progress) */
+export function suggestDevQa(s: Pick<Status, "name" | "category">): DevQaKey {
+  const name = s.name.trim().toLowerCase();
+  const byName = DEV_QA_FLOW.find((x) => x.name.toLowerCase() === name);
+  if (byName) return byName.key;
+  if (/rework|fix|แก้/.test(name)) return "rework";
+  if (/test|ทดสอบ/.test(name)) return "testing";
+  if (/reject|cancel|ยกเลิก/.test(name)) return "rejected";
+  const byCategory: Record<Category, DevQaKey> = { todo: "todo", in_progress: "in_progress", blocked: "in_progress", review: "ready_for_qa", done: "done", cancelled: "rejected" };
+  return byCategory[s.category];
+}
 
 /** ข้อความ "แสดงบน Kanban ในคอลัมน์" ของ Workflow Bug: จัดกลุ่มสถานะ Bug ตามคอลัมน์ของ Workflow มาตรฐาน */
 export function bugColumns(bug: Workflow, standard: Workflow | undefined) {
@@ -64,7 +93,7 @@ function ColorPicker({ label, value, fallback, onChange }: { label: string; valu
   );
 }
 
-export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: string }) {
+export function WorkflowSection({ ws, projectKey, project }: { ws: string; projectKey: string; project?: ProjectDetail }) {
   const t = useTranslations("project-settings-new.settings.workflow");
   const cache = useQueryClient();
   const toast = useToast();
@@ -78,6 +107,8 @@ export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: st
   const [newColor, setNewColor] = useState<string | null>(null);
   const [removing, setRemoving] = useState<Status | null>(null);
   const [moveTo, setMoveTo] = useState("");
+  const [devQa, setDevQa] = useState<Record<string, DevQaKey> | null>(null);
+  const [devQaSplit, setDevQaSplit] = useState(true);
 
   if (isForbidden(workflows.error)) return <Forbidden />;
   if (workflows.error) return <ErrorState error={workflows.error} retry={() => void workflows.refetch()} />;
@@ -118,6 +149,27 @@ export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: st
     await run(() => api.delete(`${wfBase}/statuses/${removing.id}`, { body }), t("removed", { name: removing.name }));
     setRemoving(null);
   }
+  async function toggleSplit(on: boolean) {
+    if (!project) return;
+    await run(() => api.patch(base, { progressSplit: on }, project.version), t("saved"));
+    await cache.invalidateQueries({ queryKey: ["overview", ws, projectKey] });
+  }
+  function openDevQa() {
+    setDevQa(Object.fromEntries(wf.statuses.map((s) => [s.id, suggestDevQa(s)])));
+    setDevQaSplit(true);
+  }
+  async function applyDevQa() {
+    if (!devQa) return;
+    await run(() => api.post(`${wfBase}/apply-dev-qa`, { mapping: devQa, progressSplit: devQaSplit }), t("devQa.applied"));
+    await cache.invalidateQueries({ queryKey: ["overview", ws, projectKey] });
+    setDevQa(null);
+  }
+  const devQaCreated = devQa ? DEV_QA_FLOW.filter((x) => !Object.values(devQa).includes(x.key)) : [];
+  const devQaMerged = devQa ? DEV_QA_FLOW.map((x) => wf.statuses.filter((s) => devQa[s.id] === x.key)).filter((list) => list.length > 1) : [];
+  const devQaMoved = devQaMerged.reduce((n, list) => n + list.slice(1).reduce((m, s) => m + s.issueCount, 0), 0);
+  // แยก Dev / QA: บอกช่วงของแต่ละสถานะ (คิดจากหมวด) เฉพาะ Workflow มาตรฐาน
+  const phased = wf.kind === "standard" && !!project?.progressSplit;
+  const PhasePill = ({ category }: { category: string }) => <span className={`${styles.phasePill} ${styles[`phase_${statusPhase(category)}`]}`}>{t(`phase.${statusPhase(category)}`)}</span>;
   const label = (w: Workflow) => w.issueTypes.map((x) => x.name).join(" / ") || w.name;
   const standard = items.find((w) => w.kind === "standard");
 
@@ -133,26 +185,55 @@ export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: st
         )}
       </SectionHead>
       <div className={styles.sb}>
-        <div className={styles.flow} aria-label={t("flowLabel")}>
-          {wf.statuses.map((s, i) => (
-            <span key={s.id} className={styles.flow}>
-              {i > 0 && <span className={styles.muted} aria-hidden="true">→</span>}
-              <StatusChip s={s} />
-            </span>
-          ))}
-        </div>
+        {wf.kind === "standard" && project && (
+          <div className={styles.switchRow}>
+            <button type="button" role="switch" className={styles.switch} aria-checked={project.progressSplit} aria-label={t("devQa.split")} onClick={() => void toggleSplit(!project.progressSplit)}>
+              <span />
+            </button>
+            <div className={styles.devQaText}>
+              <b>{t("devQa.split")}</b> <span className={styles.pill}>{project.progressSplit ? t("devQa.on") : t("devQa.off")}</span>
+              <div className={styles.muted}>{t("devQa.splitHint")}</div>
+            </div>
+          </div>
+        )}
+        {phased ? (
+          <div className={styles.flow} aria-label={t("flowLabel")}>
+            {phaseRuns(wf.statuses).map((run, r) => (
+              <span key={`${run.phase}:${run.start}`} className={`${styles.flowGroup} ${styles[`phase_${run.phase}`]}`}>
+                {r > 0 && <span className={styles.muted} aria-hidden="true">→</span>}
+                <span className={styles.flowPhase}>{t(`phase.${run.phase}`)}</span>
+                {run.items.map((s, i) => (
+                  <span key={s.id} className={styles.flow}>
+                    {i > 0 && <span className={styles.muted} aria-hidden="true">→</span>}
+                    <StatusChip s={s} />
+                  </span>
+                ))}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.flow} aria-label={t("flowLabel")}>
+            {wf.statuses.map((s, i) => (
+              <span key={s.id} className={styles.flow}>
+                {i > 0 && <span className={styles.muted} aria-hidden="true">→</span>}
+                <StatusChip s={s} />
+              </span>
+            ))}
+          </div>
+        )}
         <div className={styles.list}>
-          <div className={styles.rowHead} aria-hidden="true">
+          <div className={`${styles.rowHead} ${phased ? styles.phasedRow : ""}`} aria-hidden="true">
             <span />
             <span>{t("color")}</span>
             <span>{t("statusName")}</span>
             <span className={styles.hs}>{t("category")}</span>
+            {phased && <span className={styles.hs}>{t("phase.title")}</span>}
             <span className={styles.hs}>{t("wip")}</span>
             <span className={styles.hs}>{t("used")}</span>
             <span />
           </div>
           {wf.statuses.map((s, i) => (
-            <div key={`${s.id}:${s.name}:${s.wipLimit}`} className={`${styles.row} ${styles.statusRow}`} data-testid={`status-${s.name}`}>
+            <div key={`${s.id}:${s.name}:${s.wipLimit}`} className={`${styles.row} ${styles.statusRow} ${phased ? styles.phasedRow : ""}`} data-testid={`status-${s.name}`}>
               <span className={styles.order}>
                 {/* Canvas: ที่จับ + สีสถานะ · ปุ่มเลื่อนขึ้น/ลงแสดงเมื่อชี้หรือโฟกัส (ใช้แทนการลากด้วยแป้นพิมพ์) */}
                 <span className={styles.grip} aria-hidden="true">⋮⋮</span>
@@ -170,6 +251,7 @@ export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: st
               <select className={`${styles.in} ${styles.hs}`} value={s.category} aria-label={t("categoryOf", { name: s.name })} onChange={(e) => void patchStatus(s, { category: e.target.value })}>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{t(`categories.${c}`)}</option>)}
               </select>
+              {phased && <span className={styles.hs} aria-label={t("phase.of", { name: s.name, phase: t(`phase.${statusPhase(s.category)}`) })}><PhasePill category={s.category} /></span>}
               <input
                 className={`${styles.in} ${styles.hs}`}
                 type="number"
@@ -189,6 +271,10 @@ export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: st
           ))}
           <div>
             <Button onClick={() => setAdding(true)}>{t("add")}</Button>
+            {/* ทางลัดสำหรับโปรเจกต์เก่า · ซ่อนเมื่อมีชุด Development + QA ครบแล้ว */}
+            {wf.kind === "standard" && project && !matchesDevQa(wf.statuses) && (
+              <button type="button" className={styles.linkBtn} onClick={openDevQa}>{t("devQa.applyLink")}</button>
+            )}
           </div>
           <div className={styles.note}>
             <b>{t("categoryGuide")}</b>
@@ -196,10 +282,12 @@ export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: st
               {CATEGORIES.map((c) => (
                 <div key={c}>
                   <span className={`badge status-pill-${c}`}>{t(`categories.${c}`)}</span>
+                  {phased && <PhasePill category={c} />}
                   <span className={styles.muted}>{t(`categoryHints.${c}`)}</span>
                 </div>
               ))}
             </div>
+            {phased && <span className={styles.muted}>{t("phase.hint")}</span>}
           </div>
           {wf.kind === "bug" && (
             <div className={styles.note}>
@@ -245,6 +333,41 @@ export function WorkflowSection({ ws, projectKey }: { ws: string; projectKey: st
             <Button type="submit" variant="primary" disabled={!newName.trim()}>{t("addConfirm")}</Button>
           </div>
         </form>
+      </Dialog>
+
+      <Dialog open={!!devQa} onOpenChange={(o) => !o && setDevQa(null)} size="medium" title={t("devQa.applyTitle")} description={t("devQa.applyDescription")}>
+        {devQa && (
+          <div className={styles.dialogForm}>
+            <div className={styles.devQaMap} role="table" aria-label={t("devQa.applyTitle")}>
+              <div className={styles.devQaHead} role="row">
+                <span role="columnheader">{t("devQa.oldStatus")}</span>
+                <span role="columnheader">{t("used")}</span>
+                <span role="columnheader">{t("devQa.newStatus")}</span>
+              </div>
+              {wf.statuses.map((s) => (
+                <div key={s.id} className={styles.devQaRow} role="row">
+                  <span role="cell"><StatusChip s={s} /></span>
+                  <span role="cell" className={styles.muted}>{t("issues", { count: s.issueCount })}</span>
+                  <span role="cell">
+                    <select className={styles.in} aria-label={t("devQa.newStatusOf", { name: s.name })} value={devQa[s.id]} onChange={(e) => setDevQa({ ...devQa, [s.id]: e.target.value as DevQaKey })}>
+                      {DEV_QA_FLOW.map((x) => <option key={x.key} value={x.key}>{x.name}</option>)}
+                    </select>
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className={styles.note}>
+              <span>{t("devQa.created", { names: devQaCreated.map((x) => x.name).join(", ") || t("devQa.none") })}</span>
+              {devQaMerged.map((list) => <span key={list[0].id}>{t("devQa.merged", { names: list.map((x) => x.name).join(", "), target: DEV_QA_FLOW.find((x) => x.key === devQa[list[0].id])!.name, count: list.slice(1).reduce((m, x) => m + x.issueCount, 0) })}</span>)}
+              <span className={styles.muted}>{t("devQa.keepHistory")}</span>
+            </div>
+            <label className={styles.devQaCheck}><input type="checkbox" checked={devQaSplit} onChange={(e) => setDevQaSplit(e.target.checked)} /> {t("devQa.splitOnApply")}</label>
+            <div className="dialog-actions">
+              <Button onClick={() => setDevQa(null)}>{t("cancel")}</Button>
+              <Button variant="primary" onClick={() => void applyDevQa()}>{devQaMoved ? t("devQa.confirmMove", { count: devQaMoved }) : t("devQa.confirm")}</Button>
+            </div>
+          </div>
+        )}
       </Dialog>
 
       <Dialog open={!!removing} onOpenChange={(o) => !o && setRemoving(null)} title={t("removeTitle", { name: removing?.name ?? "" })}>

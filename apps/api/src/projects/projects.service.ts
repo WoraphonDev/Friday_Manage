@@ -83,6 +83,8 @@ export const TemplateConfig = z.object({
   sprintLengthWeeks: sprintLength.optional(),
   estimateUnit: z.enum(['man_day', 'hour']).optional(),
   progressMethod: z.enum(['count', 'weighted']).optional(),
+  /** แยกความคืบหน้า Dev / QA (Template Development + QA) */
+  progressSplit: z.boolean().optional(),
   sizeMdMap: SizeMdMap.optional(),
   timeLogEnabled: z.boolean().optional(),
   /** ชุดฟิลด์ของ Task / Sub-task (ดู field-profile.ts) */
@@ -148,6 +150,7 @@ export const PatchProjectBody = z
     sprintLengthWeeks: sprintLength,
     estimateUnit: z.enum(['man_day', 'hour']),
     progressMethod: z.enum(['count', 'weighted']),
+    progressSplit: z.boolean(),
     /** null = กลับไปใช้ค่าของ Workspace */
     sizeMdMap: SizeMdMap.nullable(),
     holidayCalendarId: z.uuid().nullable(),
@@ -341,6 +344,7 @@ export class ProjectsService {
         sprintLengthWeeks,
         estimateUnit: input.estimateUnit ?? cfg.estimateUnit ?? 'man_day',
         progressMethod: input.progressMethod ?? cfg.progressMethod ?? 'weighted',
+        progressSplit: cfg.progressSplit ?? false,
         holidayCalendarId: input.holidayCalendarId,
         sizeMdMap: cfg.sizeMdMap,
         timeLogEnabled: cfg.timeLogEnabled ?? false,
@@ -790,6 +794,7 @@ export class ProjectsService {
       sprintLengthWeeks: p.sprintLengthWeeks,
       estimateUnit: p.estimateUnit,
       progressMethod: p.progressMethod,
+      progressSplit: p.progressSplit,
       sizeMdMap: p.sizeMdMap as z.infer<typeof SizeMdMap> | null,
       holidayCalendarId: p.holidayCalendarId,
       workStart: p.workStart?.slice(0, 5) ?? null,

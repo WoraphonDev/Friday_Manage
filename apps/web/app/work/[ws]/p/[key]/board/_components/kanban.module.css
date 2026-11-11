@@ -16,6 +16,15 @@
 .chip > span:last-child { opacity:.75; }
 .dot { width:9px; height:9px; border-radius:50%; flex:none; display:inline-block; }
 .columns { display:flex; gap:14px; overflow-x:auto; padding-bottom:8px; align-items:stretch; }
+/* แยก Dev / QA: แถวบน = แถบหัวช่วงคร่อมคอลัมน์ · แถวล่าง = คอลัมน์ (อยู่ในตัวเลื่อนเดียวกันจึงตรงกันเสมอ) */
+.phased { display:grid; grid-auto-columns:288px; grid-template-rows:auto 1fr; column-gap:14px; row-gap:6px; }
+/* เส้นบาง 3px + ป้ายเล็กเหนือเส้น (ผู้ใช้ขอให้เล็กลง 2026-11-11) */
+.band { grid-row:1; padding:0 2px 2px; border-bottom:3px solid var(--band-line); font-size:10px; line-height:12px; font-weight:700; color:var(--foreground-soft); }
+.band_dev { --band-line:var(--status-progress-dot); --band-bg:var(--status-progress-bg); --band-fg:var(--status-progress-fg); }
+.band_qa { --band-line:var(--status-review-dot); --band-bg:var(--status-review-bg); --band-fg:var(--status-review-fg); }
+.band_done { --band-line:var(--status-done-dot); --band-bg:var(--status-done-bg); --band-fg:var(--status-done-fg); }
+.band_none { --band-line:var(--status-cancelled-dot); --band-bg:var(--status-cancelled-bg); --band-fg:var(--status-cancelled-fg); }
+.chipPhase { display:none; background:var(--band-bg); color:var(--band-fg); border-radius:999px; padding:0 6px; font-size:10px; font-weight:700; line-height:16px; }
 .column { flex:0 0 288px; background:var(--subtle); border-radius:12px; min-height:420px; display:flex; flex-direction:column; }
 .columnHeader { display:flex; align-items:center; gap:8px; padding:12px 12px 8px; }
 .columnHeader h3 { font-size:13px; margin:0; font-weight:600; }
@@ -60,7 +69,7 @@
   /* มือถือ: ช่องค้นหาแสดงเสมอ ตัวกรองอื่นเปิดจากปุ่มตัวกรอง */
   .search { flex:1 1 100%; max-width:none; min-height:40px; }.viewFilters { margin-left:0; }
   .mobileFilterToggle { display:inline-flex; min-height:36px; font-size:13px; margin-left:auto; }.advancedFilters { display:none; }.filtersOpen .advancedFilters { display:flex; }.mobileColumns { display:flex; gap:8px; overflow-x:auto; padding:2px 0; }.mobileColumns > button { flex:none; min-height:40px; }
-  .columns { display:block; overflow:visible; padding:0; }.column { display:none; min-height:0; background:transparent; }.column[data-mobile-active=true] { display:flex; }.columnHeader { display:none; }.cardList { padding:0; gap:10px; }.card { border-radius:12px; box-shadow:none; }
+  .columns { display:block; overflow:visible; padding:0; }.band { display:none; }.chipPhase { display:inline-block; }.column { display:none; min-height:0; background:transparent; }.column[data-mobile-active=true] { display:flex; }.columnHeader { display:none; }.cardList { padding:0; gap:10px; }.card { border-radius:12px; box-shadow:none; }
   .cardTitle { order:-1; font-size:15px; }.cardMeta .avatars { order:-1; margin-left:0; }.priority,.parent { display:none; }.card:hover .moveActions,.card:focus-within .moveActions,.moveActions { display:none; }.mobileColumns { align-items:center; }.mobileFilterToggle { flex:none; margin-left:auto; position:sticky; right:0; background:var(--card); }.cardTags { font-size:13px; }.phase { display:none; }.dragHint,.reorder,.boardHint { display:none; }.moveActions button { min-height:36px; padding:0 8px; }.mobileMove { display:inline-flex; margin-left:auto; }.mobileHint { display:block; text-align:center; }.mobileWip { display:block; padding:8px 12px; margin:0 0 8px; color:var(--danger-text); background:var(--danger-soft); border-radius:10px; font-size:13px; }
   .laneTitle { margin-top:8px; }.addCard { margin:4px 0; }.emptyColumn { padding:24px 4px; }
 }

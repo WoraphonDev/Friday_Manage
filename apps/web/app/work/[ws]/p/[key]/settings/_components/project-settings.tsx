@@ -61,7 +61,7 @@ export function ProjectSettings({ ws, projectKey, section }: { ws: string; proje
       {nav}
       <section className={`${styles.card} ${styles.panel}`} aria-labelledby="settings-heading">
         {current === "general" && <GeneralSection key={p.version} ws={ws} projectKey={projectKey} project={p} members={members.data?.items ?? []} />}
-        {current === "workflow" && <WorkflowSection ws={ws} projectKey={projectKey} />}
+        {current === "workflow" && <WorkflowSection ws={ws} projectKey={projectKey} project={p} />}
         {current === "types" && <TypesSection ws={ws} projectKey={projectKey} />}
         {current === "modules" && <ModulesSection ws={ws} projectKey={projectKey} members={members.data?.items ?? []} />}
         {current === "perms" && <PermsSection ws={ws} projectKey={projectKey} />}

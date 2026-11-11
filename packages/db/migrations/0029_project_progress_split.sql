@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "progress_split" boolean DEFAULT false NOT NULL;

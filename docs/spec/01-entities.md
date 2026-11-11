@@ -70,7 +70,7 @@ Workspace เลือกปฏิทินหลัก + เพิ่มวั�
 
 | Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
 |---|---|---|---|
-| `project` | โปรเจกต์ | workspace_id, key (DP), name, client_name, description, color, icon, template_id, start_date, golive_date, timezone, visibility (private · workspace), owner_user_id, status (planning · active · archived), estimate_unit (man_day · hour), progress_method (count · weighted), sprint_length_weeks (null = ไม่ใช้ Sprint), holiday_calendar_id, work_start/end (override), size_md_map (override), time_log_enabled (ค่าเริ่มต้น false), issue_seq (เลขงานล่าสุด), budget_satang, hourly_rate_satang, archived_at, deleted_at, version | A, L2, 1 |
+| `project` | โปรเจกต์ | workspace_id, key (DP), name, client_name, description, color, icon, template_id, start_date, golive_date, timezone, visibility (private · workspace), owner_user_id, status (planning · active · archived), estimate_unit (man_day · hour), progress_method (count · weighted), progress_split (แยกความคืบหน้า Dev / QA · migration 0029), sprint_length_weeks (null = ไม่ใช้ Sprint), holiday_calendar_id, work_start/end (override), size_md_map (override), time_log_enabled (ค่าเริ่มต้น false), issue_seq (เลขงานล่าสุด), budget_satang, hourly_rate_satang, archived_at, deleted_at, version | A, L2, 1 |
 | `project_key_alias` | Key เดิมหลังเปลี่ยน Key · ใช้ redirect ลิงก์เก่า | project_id, old_key | L2 |
 | `project_scope_item` | In-scope, Out-of-scope, Deliverables, Acceptance criteria, สมมติฐาน | project_id, kind, text, sort | A, 1 |
 | `project_holiday` | วันหยุดเฉพาะโปรเจกต์ | project_id, date, name | A, L2 |

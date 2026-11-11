@@ -10,15 +10,15 @@ import { permissions, workspaces } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import json from "../../messages/th/project-settings-new.json";
 import { ProjectSettings, generalChanges } from "../../app/work/[ws]/p/[key]/settings/_components/project-settings";
-import { bugColumns } from "../../app/work/[ws]/p/[key]/settings/_components/workflow-section";
+import { bugColumns, matchesDevQa, suggestDevQa } from "../../app/work/[ws]/p/[key]/settings/_components/workflow-section";
 import type { ProjectDetail, Workflow } from "../../app/work/[ws]/p/[key]/settings/_components/types";
 import { NewProjectWizard } from "../../app/work/[ws]/new-project/_components/new-project-wizard";
-import { spanDays, sprintCount, suggestKey } from "../../app/work/[ws]/new-project/_components/plan";
+import { insertAt, spanDays, sprintCount, suggestKey, TEMPLATE_PRESETS, workflowBody } from "../../app/work/[ws]/new-project/_components/plan";
 
 const project = (over: Partial<ProjectDetail> = {}): ProjectDetail => ({
   id: "p1", key: "DE", name: "แผนพัฒนาผลิตภัณฑ์", clientName: null, description: null, color: "#334155",
   startDate: "2026-11-05", goliveDate: "2027-04-21", timezone: "Asia/Bangkok", visibility: "private", status: "active",
-  archivedAt: null, ownerUserId: "sample-lead", sprintLengthWeeks: 2, estimateUnit: "man_day", progressMethod: "weighted",
+  archivedAt: null, ownerUserId: "sample-lead", sprintLengthWeeks: 2, estimateUnit: "man_day", progressMethod: "weighted", progressSplit: false,
   sizeMdMap: null, holidayCalendarId: null, workStart: null, workEnd: null, timeLogEnabled: false, version: 3, myRole: "admin", ...over,
 });
 const st = (id: string, workflowId: string, name: string, category: "todo" | "in_progress" | "done", sort: number, issueCount = 0, boardColumnId: string | null = null) =>
@@ -491,8 +491,8 @@ describe("สร้างโปรเจกต์ (Wizard 5 ขั้น)", () =
     const user = userEvent.setup();
     wizard();
     const software = await screen.findByRole("group", { name: "Template · Software development" });
-    expect(within(software).getAllByRole("button").map((b) => b.querySelector("b")?.textContent)).toEqual(["Development", "Scrum", "Kanban", "Waterfall", "Blank"]);
-    expect(within(software).getByRole("button", { name: /^Development/ })).toHaveAttribute("aria-pressed", "true");
+    expect(within(software).getAllByRole("button").map((b) => b.querySelector("b")?.textContent)).toEqual(["Development", "Development + QA", "Scrum", "Kanban", "Waterfall", "Blank"]);
+    expect(within(software).getAllByRole("button").find((b) => b.querySelector("b")?.textContent === "Development")).toHaveAttribute("aria-pressed", "true");
     const ops = await screen.findByRole("group", { name: "Template · Operations" });
     expect(screen.queryByRole("group", { name: "Template · Service management" })).not.toBeInTheDocument();
     expect(screen.queryByText("Template เสีย")).not.toBeInTheDocument();
@@ -531,5 +531,58 @@ describe("สร้างโปรเจกต์ (Wizard 5 ขั้น)", () =
     expect(sprintCount("2026-11-04", "2026-12-21", 2)).toBe(4);
     expect(sprintCount("2026-11-04", "2026-12-20", 2)).toBe(3);
     expect(sprintCount("2026-11-04", "2026-12-20", null)).toBe(0);
+  });
+});
+
+describe("Template Development + QA", () => {
+  it("ส่งหมวดของสถานะให้ API · Template อื่นยังส่งชื่ออย่างเดียวเหมือนเดิม", () => {
+    expect(workflowBody(TEMPLATE_PRESETS.development_qa.workflow)).toEqual([
+      { name: "To do", category: "todo" },
+      { name: "In progress", category: "in_progress" },
+      { name: "Rework", category: "in_progress" },
+      { name: "Ready for QA", category: "review" },
+      { name: "Testing", category: "review" },
+      { name: "Done", category: "done" },
+      { name: "Rejected", category: "cancelled" },
+    ]);
+    expect(workflowBody(TEMPLATE_PRESETS.development.workflow)).toEqual(["To do", "In progress", "Review", "Done"]);
+    expect(workflowBody(TEMPLATE_PRESETS.kanban.workflow)).toEqual(["To do", { name: "In progress", wipLimit: 5 }, { name: "Review", wipLimit: 3 }, "Done"]);
+  });
+
+  it("สถานะที่เพิ่มเองแทรกก่อนสถานะปิดงาน (Done / Rejected)", () => {
+    expect(insertAt(TEMPLATE_PRESETS.development_qa.workflow)).toBe(5);
+    expect(insertAt(TEMPLATE_PRESETS.development.workflow)).toBe(3);
+  });
+
+  it("เสนอคู่สถานะใหม่ตามชื่อก่อน แล้วจึงตามหมวด", () => {
+    expect(suggestDevQa({ name: "To do", category: "todo" })).toBe("todo");
+    expect(suggestDevQa({ name: "Review", category: "review" })).toBe("ready_for_qa");
+    expect(suggestDevQa({ name: "Review", category: "in_progress" })).toBe("in_progress");
+    expect(suggestDevQa({ name: "QA Testing", category: "review" })).toBe("testing");
+    expect(suggestDevQa({ name: "On hold", category: "blocked" })).toBe("in_progress");
+    expect(suggestDevQa({ name: "Done", category: "done" })).toBe("done");
+    expect(suggestDevQa({ name: "Cancelled", category: "cancelled" })).toBe("rejected");
+  });
+});
+
+describe("ช่วงของสถานะ (แยก Dev / QA)", () => {
+  it("คิดจากหมวด และรวมสถานะติดกันเป็นท่อน (เรียงสลับช่วงได้)", async () => {
+    const { statusPhase, phaseRuns } = await import("@/lib/status");
+    expect(["todo", "in_progress", "blocked", "review", "done", "cancelled"].map(statusPhase)).toEqual(["dev", "dev", "dev", "qa", "done", "none"]);
+    const runs = phaseRuns([{ category: "todo" }, { category: "in_progress" }, { category: "review" }, { category: "in_progress" }, { category: "done" }]);
+    expect(runs.map((r) => [r.phase, r.start, r.items.length])).toEqual([["dev", 0, 2], ["qa", 2, 1], ["dev", 3, 1], ["done", 4, 1]]);
+  });
+});
+
+describe("ทางลัดเปลี่ยนเป็นชุด Development + QA", () => {
+  const devQa = [
+    { name: "To do", category: "todo" }, { name: "In progress", category: "in_progress" }, { name: "Rework", category: "in_progress" },
+    { name: "Ready for QA", category: "review" }, { name: "Testing", category: "review" }, { name: "Done", category: "done" }, { name: "Rejected", category: "cancelled" },
+  ] as const;
+  it("ซ่อนเมื่อมีครบทั้ง 7 สถานะ (ไม่สนลำดับ เพิ่มสถานะเองได้) · แสดงเมื่อยังไม่ครบหรือหมวดไม่ตรง", () => {
+    expect(matchesDevQa([...devQa].reverse())).toBe(true);
+    expect(matchesDevQa([...devQa, { name: "Code review", category: "review" }])).toBe(true);
+    expect(matchesDevQa([{ name: "To do", category: "todo" }, { name: "In progress", category: "in_progress" }, { name: "Review", category: "review" }, { name: "Done", category: "done" }])).toBe(false);
+    expect(matchesDevQa(devQa.map((x) => (x.name === "Testing" ? { ...x, category: "in_progress" as const } : x)))).toBe(false);
   });
 });

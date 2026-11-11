@@ -68,6 +68,25 @@ describe("Kanban", () => {
     expect(screen.getAllByRole("link", { name: "+ เพิ่มการ์ด" })).toHaveLength(4);
   });
 
+  it("แยก Dev / QA: แถบหัวช่วงคร่อมคอลัมน์ตามหมวด · ปิดอยู่ไม่มีแถบ", async () => {
+    // Review หมวด review = ช่วง QA · To do / In progress = ช่วง Dev
+    data.columns[2].category = "review";
+    mount();
+    await screen.findByRole("article", { name: "การ์ด DE-1" });
+    expect(screen.queryByText("ช่วง Dev")).not.toBeInTheDocument();
+    expect(column("Review")).toBeInTheDocument();
+  });
+
+  it("แยก Dev / QA เปิดอยู่: แถบหัว ช่วง Dev / ช่วง QA / เสร็จ ตามลำดับคอลัมน์", async () => {
+    data.project.progressSplit = true;
+    data.columns[2].category = "review";
+    const { container } = mount();
+    await screen.findByRole("article", { name: "การ์ด DE-1" });
+    const bands = [...container.querySelectorAll("[data-flip-root] > div")].map((b) => [b.textContent, (b as HTMLElement).style.gridColumn]);
+    expect(bands).toEqual([["ช่วง Dev", "1 / span 2"], ["ช่วง QA", "3 / span 1"], ["เสร็จ", "4 / span 1"]]);
+    expect(screen.getByRole("region", { name: "คอลัมน์ Review (ช่วง QA)" })).toBeInTheDocument();
+  });
+
   it("ย้ายด้วย keyboard แล้วเลิกทำคืนสถานะ Bug จริง ใช้ CSRF และ If-Match รุ่นใหม่", async () => {
     const user = userEvent.setup(); mount();
     const button = await screen.findByRole("button", { name: "ย้าย DE-5 ไปคอลัมน์ขวา" });

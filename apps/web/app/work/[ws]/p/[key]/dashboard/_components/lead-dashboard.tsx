@@ -210,9 +210,20 @@ function ModuleTable({ modules, sort, setSort, today, yearFormat, velocityDays }
           <span role="cell">{m.taskCount}</span>
           <span role="cell"><b>{round1(m.totalMd)}</b></span>
           <span role="cell" className={styles.hideSmall}>
-            <span className={styles.progress} role="meter" aria-label={t("modules.progressOf", { name: m.name })} aria-valuemin={0} aria-valuemax={100} aria-valuenow={m.progressPct}>
-              <span className={styles.progressBar}><span style={{ width: `${m.progressPct}%` }} /></span>{m.progressPct}%
-            </span>
+            {m.split ? (
+              <span className={styles.progressSplit}>
+                <span className={styles.progress} role="meter" aria-label={t("modules.devOf", { name: m.name })} aria-valuemin={0} aria-valuemax={100} aria-valuenow={m.split.devPct}>
+                  <span className={styles.splitLabel}>Dev</span><span className={`${styles.progressBar} ${styles.devBar}`}><span style={{ width: `${m.split.devPct}%` }} /></span>{m.split.devPct}%
+                </span>
+                <span className={styles.progress} role="meter" aria-label={t("modules.qaOf", { name: m.name })} aria-valuemin={0} aria-valuemax={100} aria-valuenow={m.split.qaPct}>
+                  <span className={styles.splitLabel}>QA</span><span className={styles.progressBar}><span style={{ width: `${m.split.qaPct}%` }} /></span>{m.split.qaPct}%
+                </span>
+              </span>
+            ) : (
+              <span className={styles.progress} role="meter" aria-label={t("modules.progressOf", { name: m.name })} aria-valuemin={0} aria-valuemax={100} aria-valuenow={m.progressPct}>
+                <span className={styles.progressBar}><span style={{ width: `${m.progressPct}%` }} /></span>{m.progressPct}%
+              </span>
+            )}
           </span>
           <span role="cell" className={styles.hideSmall}><Forecast module={m} yearFormat={yearFormat} /></span>
           <span role="cell" className={`${styles.hideSmall} ${styles.hideMedium} ${styles.track}`} title={range} style={{ backgroundSize: `${100 / Math.max(1, months.length)}% 100%` }}>

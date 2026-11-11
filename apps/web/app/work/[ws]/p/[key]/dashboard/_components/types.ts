@@ -31,6 +31,8 @@ export interface ModuleStat {
   doneMd: number;
   remainingMd: number;
   progressPct: number;
+  /** แยก Dev / QA (Man-Day ที่ส่งให้ QA แล้ว / ที่ Done) · null = แถบเดียว */
+  split?: { devPct: number; qaPct: number } | null;
   overdue: number;
   planStart: string | null;
   plannedEnd: string | null;

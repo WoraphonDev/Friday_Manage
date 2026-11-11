@@ -21,6 +21,13 @@
   "reset": "ล้างตัวกรอง",
   "columns": "คอลัมน์",
   "column": "คอลัมน์ {name}",
+  "columnInPhase": "คอลัมน์ {name} ({phase})",
+  "phase": {
+    "dev": "ช่วง Dev",
+    "qa": "ช่วง QA",
+    "done": "เสร็จ",
+    "none": "ไม่นับ"
+  },
   "card": "การ์ด {key}",
   "wip": "WIP {current}/{limit}",
   "overWip": "คอลัมน์นี้เกิน WIP limit ({current}/{limit})",

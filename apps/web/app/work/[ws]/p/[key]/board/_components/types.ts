@@ -29,7 +29,7 @@ export interface BoardColumn {
   cards: BoardCard[];
 }
 export interface BoardData {
-  project: { key: string; name: string };
+  project: { key: string; name: string; progressSplit?: boolean };
   board: "standard" | "bug";
   today: string;
   columns: BoardColumn[];

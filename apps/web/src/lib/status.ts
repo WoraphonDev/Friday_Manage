@@ -22,6 +22,29 @@ export function statusTone(category: string | null | undefined, name?: string | 
   return category === "in_progress" ? "in_progress" : "todo";
 }
 
+/**
+ * ช่วงของสถานะเมื่อแยกความคืบหน้า Dev / QA (Template Development + QA) · คิดจากหมวด ไม่มีช่องให้ตั้งแยก
+ * Dev = To do / In progress / Blocked · QA = Review / QA · เสร็จ = Done · ไม่นับ = Cancelled (ตรงกับสูตรฝั่ง API)
+ */
+export type StatusPhase = "dev" | "qa" | "done" | "none";
+export function statusPhase(category: string | null | undefined): StatusPhase {
+  if (category === "review") return "qa";
+  if (category === "done") return "done";
+  if (category === "cancelled") return "none";
+  return "dev";
+}
+/** รวมสถานะที่อยู่ติดกันในช่วงเดียวกันเป็นท่อน (แถบหัวบน Kanban / ลำดับสถานะ) · เรียงสลับช่วงได้ ท่อนจะแตกตามลำดับจริง */
+export function phaseRuns<T extends { category: string }>(items: T[]) {
+  const runs: { phase: StatusPhase; start: number; items: T[] }[] = [];
+  items.forEach((item, i) => {
+    const phase = statusPhase(item.category);
+    const last = runs.at(-1);
+    if (last && last.phase === phase) last.items.push(item);
+    else runs.push({ phase, start: i, items: [item] });
+  });
+  return runs;
+}
+
 const TONE_DOT: Record<StatusTone, string> = {
   todo: "var(--status-todo-dot)",
   in_progress: "var(--status-progress-dot)",

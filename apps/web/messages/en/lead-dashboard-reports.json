@@ -88,6 +88,8 @@
     "noDates": "No plan dates yet",
     "overdue": "Overdue {count}",
     "progressOf": "Progress of {name}",
+    "devOf": "Dev handed to QA for {name}",
+    "qaOf": "QA passed for {name}",
     "note": "Forecast end = remaining Man-Days ÷ actual completion rate over the last {days} days, compared with the Module's next Milestone (or the planned end date if none) · Red line = today",
     "done": "Done"
   },

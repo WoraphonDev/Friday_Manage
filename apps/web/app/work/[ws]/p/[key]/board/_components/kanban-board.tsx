@@ -14,7 +14,7 @@ import type { Permissions } from "@/lib/types";
 import { moveLocal, positionIntent, type BoardCard, type BoardColumn, type BoardData, type MoveBody, type MoveIntent, type MoveResult, type Swimlane } from "./types";
 import styles from "./kanban.module.css";
 import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
-import { isClosedCategory, statusDotColor, useStatusColors } from "@/lib/status";
+import { isClosedCategory, phaseRuns, statusDotColor, statusPhase, useStatusColors } from "@/lib/status";
 
 type Notice = { message: string; undo?: () => Promise<void> };
 
@@ -216,6 +216,8 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   if (!data || !permissions.data) return <LoadingState />;
 
   const cards = data.columns.flatMap((column) => column.cards);
+  // แถบหัว "ช่วง Dev / ช่วง QA" เฉพาะบอร์ดงานของโปรเจกต์ที่แยกความคืบหน้า (ช่วงคิดจากหมวด เหมือนหน้า Workflow)
+  const phased = !isBug && !!data.project.progressSplit;
   // เรียงตามชื่อ ชิป Module จึงไม่สลับที่เมื่อการ์ดย้ายคอลัมน์
   const modules = Array.from(new Map(cards.filter((card) => card.module).map((card) => [card.module!.id, card.module!])).values()).sort((a, b) => a.name.localeCompare(b.name, "th"));
   // ค้นหาจากชื่อหรือรหัสงานฝั่งหน้าเว็บ บอร์ดโหลดการ์ดทั้งหมดมาแล้ว จึงไม่ต้องยิง API ทุกครั้งที่พิมพ์
@@ -304,16 +306,17 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
       </div>
     </div>
     <div className={styles.mobileColumns} role="group" aria-label={t("columns")}>
-      {data.columns.map((column) => <Button key={column.id} className={`${styles.chip} ${column.id === activeColumn ? styles.selected : ""}`} aria-pressed={column.id === activeColumn} onClick={() => setMobileColumn(column.id)}><span className={styles.dot} style={{ background: statusDotColor(column.category, column.name, statusColors.get(column.id)) }} />{column.name} <span>{column.cards.filter((card) => filtered.includes(card)).length}</span></Button>)}
+      {data.columns.map((column) => <Button key={column.id} className={`${styles.chip} ${column.id === activeColumn ? styles.selected : ""}`} aria-pressed={column.id === activeColumn} onClick={() => setMobileColumn(column.id)}><span className={styles.dot} style={{ background: statusDotColor(column.category, column.name, statusColors.get(column.id)) }} />{phased && <span className={`${styles.chipPhase} ${styles[`band_${statusPhase(column.category)}`]}`}>{t(`phase.${statusPhase(column.category)}`)}</span>}{column.name} <span>{column.cards.filter((card) => filtered.includes(card)).length}</span></Button>)}
       <Button className={styles.mobileFilterToggle} aria-expanded={filtersOpen} aria-label={t("filters")} onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal size={16} aria-hidden="true" /></Button>
     </div>
     {!filtered.length && <EmptyState title={t(hasFilters ? "filteredEmpty" : "emptyTitle")} description={hasFilters ? undefined : t("emptyDescription")} action={hasFilters ? <Button onClick={resetFilters}>{t("reset")}</Button> : canCreate ? <Link className="button button-primary" href={href()}>{t("new")}</Link> : undefined} />}
     {groups.filter((group) => swimlane === "none" || filtered.some((card) => inGroup(card, group.id))).map((group) => <section key={group.id} className={styles.lane} aria-label={group.name || undefined}>
       {group.name && <h2 className={styles.laneTitle}>{group.name}<span>{filtered.filter((card) => inGroup(card, group.id)).length}</span></h2>}
-      <div className={styles.columns} data-flip-root>
+      <div className={`${styles.columns} ${phased ? styles.phased : ""}`} data-flip-root>
+        {phased && phaseRuns(data.columns).map((run) => <div key={`${run.phase}:${run.start}`} className={`${styles.band} ${styles[`band_${run.phase}`]}`} style={{ gridColumn: `${run.start + 1} / span ${run.items.length}` }}>{t(`phase.${run.phase}`)}</div>)}
         {data.columns.map((column, columnIndex) => { const laneCards = column.cards.filter((card) => filtered.includes(card) && inGroup(card, group.id)); const slot = !!dragging && dropTarget?.lane === group.id && dropTarget.column === column.id; const items = laneCards.map((card) => renderCard(card, column, columnIndex, laneCards, group.id));
           if (slot) { const at = dropTarget.before ? laneCards.findIndex((card) => card.key === dropTarget.before) : -1; items.splice(at < 0 ? items.length : at, 0, <div key="slot" className={styles.slot} style={{ height: slotHeight }} data-flip={`${group.id}:${dragging}`} aria-hidden="true" />); }
-          return <section key={column.id} aria-label={t("column", { name: column.name })} data-mobile-active={column.id === activeColumn} className={`${styles.column} ${column.wip.exceeded ? styles.exceeded : ""} ${slot ? styles.dropColumn : ""}`}
+          return <section key={column.id} aria-label={phased ? t("columnInPhase", { name: column.name, phase: t(`phase.${statusPhase(column.category)}`) }) : t("column", { name: column.name })} data-mobile-active={column.id === activeColumn} className={`${styles.column} ${column.wip.exceeded ? styles.exceeded : ""} ${slot ? styles.dropColumn : ""}`} style={phased ? { gridColumn: columnIndex + 1, gridRow: 2 } : undefined}
           onDragOver={(event) => dragOver(event, group.id, column.id)} onDrop={(event) => drop(event, column.id)}>
           <header className={styles.columnHeader}><span className={styles.dot} style={{ background: statusDotColor(column.category, column.name, statusColors.get(column.id)) }} /><h3>{column.name}</h3><span className={styles.count}>{column.cards.filter((card) => filtered.includes(card) && inGroup(card, group.id)).length}</span>{column.wip.limit !== null && <span className={`${styles.wip} ${column.wip.exceeded ? styles.wipOver : ""}`}>{t("wip", { current: column.wip.current, limit: column.wip.limit })}</span>}{canCreate && <Link className={styles.colAdd} href={href(undefined, column.id, swimlane === "module" ? group.id : undefined)} aria-label={t("addCardTo", { name: column.name })}><Plus size={16} aria-hidden="true" /></Link>}</header>
           {column.wip.exceeded && <p className={styles.mobileWip} role="status">{t("overWip", { current: column.wip.current, limit: column.wip.limit! })}</p>}

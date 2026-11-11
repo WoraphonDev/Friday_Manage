@@ -13,6 +13,16 @@
     "timeTitle": "Time elapsed",
     "timeValue": "{pct}% · {elapsed} / {total} working days",
     "doneTitle": "Tasks done",
+    "split": {
+      "dev": "Dev",
+      "qa": "QA",
+      "devTitle": "Dev handed to QA",
+      "qaTitle": "QA passed",
+      "value": "{pct}% · {done}/{total} tasks",
+      "tasks": "{total} tasks",
+      "ringLabel": "{name} progress {pct} percent",
+      "mobileBig": "Dev {dev}% · QA {qa}%"
+    },
     "remainTitle": "Left before Go-live",
     "remainValue": "{days, plural, one {{days} working day} other {{days} working days}}",
     "lastPlanEnd": "Last task {date}",

@@ -26,6 +26,8 @@ export interface Overview {
   today: string;
   progress: {
     pct: number;
+    /** แยก Dev / QA (project.progressSplit) · null = แถบเดียวแบบเดิม */
+    split?: ProgressSplit | null;
     tasks: { done: number; total: number };
     md: { done: number; total: number; pct: number };
     time: { elapsedWorkingDays: number; totalWorkingDays: number; pct: number };
@@ -47,7 +49,7 @@ export interface Overview {
   lists: { overdue: OverviewItem[]; dueToday: OverviewItem[]; laterThisWeek: OverviewItem[]; doneLast7Days: OverviewItem[] };
   doneDaily: { date: string; count: number; workingDay: boolean }[];
   burnup: { unit: "md" | "count"; total: number; points: { weekStart: string; weekEnd: string; planned: number; done: number | null }[] };
-  modules: { id: string | null; name: string; color: string | null; pct: number; done: number; total: number; overdue: number; notStarted: boolean }[];
+  modules: { id: string | null; name: string; color: string | null; pct: number; split?: ProgressSplit | null; done: number; total: number; overdue: number; notStarted: boolean }[];
   statusBreakdown: { columns: { id: string; name: string; category: Cat; count: number; pct: number }[] };
   milestones: { id: string; name: string; date: string; daysLeft: number; linkedIssues: number; donePct: number; basis: "linked" | "module" | "project" }[];
   workloadThisWeek: { from: string; to: string; people: { person: Person; md: number; capacityMd: number; utilizationPct: number | null; over: boolean }[] } | null;
@@ -83,4 +85,10 @@ export interface Options {
   issueTypes: { name: string; statuses?: { id: string; name: string; category: Cat }[] }[];
   modules: { id: string; name: string }[];
   members: Person[];
+}
+
+/** ความคืบหน้าแยกช่วง: Dev = ส่งให้ QA แล้ว · QA = Done (สูตรรวมเหมือนความคืบหน้าเดิม) */
+export interface ProgressSplit {
+  dev: { pct: number; done: number; total: number };
+  qa: { pct: number; done: number; total: number };
 }

@@ -21,6 +21,13 @@
   "reset": "Clear filters",
   "columns": "Columns",
   "column": "Column {name}",
+  "columnInPhase": "Column {name} ({phase})",
+  "phase": {
+    "dev": "Dev stage",
+    "qa": "QA stage",
+    "done": "Done",
+    "none": "Not counted"
+  },
   "card": "Card {key}",
   "wip": "WIP {current}/{limit}",
   "overWip": "This column is over its WIP limit ({current}/{limit})",

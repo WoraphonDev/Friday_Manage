@@ -140,18 +140,32 @@ export class OverviewService {
         const kids = childrenOf.get(i.id);
         return kids ? kids.reduce((n, k) => n + mdOf(k), 0) : (i.estimateMd ?? 0);
       };
-      const progressOf = (i: Issue, byMd = weighted): number => {
-        if (isDone(i)) return 100;
+      // เกณฑ์ "เสร็จ" ของความคืบหน้า: ปกติ = Done (ที่เหลือใช้ % ที่กรอก)
+      // แยก Dev / QA (project.progress_split): Dev = ส่งให้ QA แล้ว (หมวด review / done) · QA = Done เท่านั้น (ยังไม่ผ่าน = 0)
+      type Basis = { full: (i: Issue) => boolean; partial: (i: Issue) => number };
+      const NORMAL: Basis = { full: isDone, partial: (i) => i.progressPct ?? 0 };
+      const sentToQa = (i: Issue) => ['review', 'done'].includes(statusOf.get(i.statusId)!.category);
+      const DEV: Basis = { full: sentToQa, partial: (i) => i.progressPct ?? 0 };
+      const QA: Basis = { full: isDone, partial: () => 0 };
+      const progressOf = (i: Issue, byMd = weighted, b: Basis = NORMAL): number => {
+        if (b.full(i)) return 100;
         const kids = childrenOf.get(i.id);
-        if (kids?.length) return rollup(kids.map((k) => ({ w: byMd ? mdOf(k) : 1, pct: progressOf(k, byMd) })));
-        return i.progressPct ?? 0;
+        if (kids?.length) return rollup(kids.map((k) => ({ w: byMd ? mdOf(k) : 1, pct: progressOf(k, byMd, b) })));
+        return b.partial(i);
       };
       /** ความคืบหน้ารวมของชุดงาน: ใช้เฉพาะงานบนสุดในชุด (ลูกคิดผ่านแม่แล้ว) */
-      const progressOfSet = (set: Issue[], byMd = weighted) => {
+      const progressOfSet = (set: Issue[], byMd = weighted, b: Basis = NORMAL) => {
         const ids = new Set(set.map((i) => i.id));
         const roots = set.filter((i) => !i.parentId || !ids.has(i.parentId));
-        return rollup(roots.map((i) => ({ w: byMd ? mdOf(i) : 1, pct: progressOf(i, byMd) })));
+        return rollup(roots.map((i) => ({ w: byMd ? mdOf(i) : 1, pct: progressOf(i, byMd, b) })));
       };
+      /** Dev / QA ของชุดงาน · null = โปรเจกต์ไม่ได้เปิดแยกความคืบหน้า */
+      const splitOf = (set: Issue[], byMd = weighted) => project.progressSplit
+        ? {
+          dev: { pct: progressOfSet(set, byMd, DEV), done: set.filter(sentToQa).length, total: set.length },
+          qa: { pct: progressOfSet(set, byMd, QA), done: set.filter(isDone).length, total: set.length },
+        }
+        : null;
 
       const completedOn = (i: Issue) => (i.completedAt ? localDate(i.completedAt) : null);
       const overdue = (i: Issue) => !isDone(i) && !!i.planEnd && i.planEnd < now;
@@ -168,6 +182,7 @@ export class OverviewService {
       const progress = {
         method: project.progressMethod,
         pct: progressOfSet(plan),
+        split: splitOf(plan),
         tasks: { done: plan.filter(isDone).length, total: plan.length },
         md: { done: round2(mdDone), total: round2(mdTotal), pct: pct(mdDone, mdTotal) },
         time: { elapsedWorkingDays: elapsedDays, totalWorkingDays: totalDays, pct: pct(elapsedDays, totalDays) },
@@ -272,6 +287,7 @@ export class OverviewService {
         return {
           ...m,
           pct: progressOfSet(mine),
+          split: splitOf(mine),
           done,
           total: mine.length,
           overdue: mine.filter(overdue).length,
@@ -292,7 +308,7 @@ export class OverviewService {
         const basis = linked.length ? 'linked' : m.moduleId ? 'module' : 'project';
         const set = linked.length ? linked : m.moduleId ? moduleIssues : plan;
         // % ของ Milestone ถ่วงด้วย Man-Day เสมอ ไม่ขึ้นกับ progress_method (ผู้ใช้ตัดสิน 9 พ.ย. 2026)
-        return { id: m.id, name: m.name, date: m.date, moduleId: m.moduleId, daysLeft: daysBetween(now, m.date), linkedIssues: linked.length, donePct: progressOfSet(set, true), basis };
+        return { id: m.id, name: m.name, date: m.date, moduleId: m.moduleId, daysLeft: daysBetween(now, m.date), linkedIssues: linked.length, donePct: progressOfSet(set, true), split: splitOf(set, true), basis };
       });
 
       // --- Workload สัปดาห์นี้ (Guest ไม่เห็น) ---

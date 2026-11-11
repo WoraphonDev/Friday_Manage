@@ -27,7 +27,7 @@ const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T
 const dateOf = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: config.timezone }).format(d);
 const startOfDay = (date: string) => new Date(`${date}T00:00:00+07:00`);
 const isReviewName = (name: string) => name.trim().toLowerCase() === 'review';
-const STATUS_ORDER = { todo: 0, in_progress: 1, done: 2 } as const;
+const STATUS_ORDER: Record<string, number> = { todo: 0, in_progress: 1, blocked: 2, review: 3, done: 4, cancelled: 5 };
 
 /** ครบกำหนดเมื่อไหร่ เทียบวันนี้ (วันทำการไม่เกี่ยว ใช้วันปฏิทินตาม Canvas "เลย 7 วัน") */
 export function dueState(planEnd: string | null, now: string) {
@@ -66,7 +66,7 @@ export class HomeService {
       const byAssignee = new Map<string, number>();
       for (const i of team.filter(late)) for (const u of sc.assignees.get(i.id) ?? ['_none']) byAssignee.set(u, (byAssignee.get(u) ?? 0) + 1);
 
-      const reviews = open.filter((i) => i.reviewerId === auth.userId && isReviewName(sc.statuses.get(i.statusId)!.name));
+      const reviews = open.filter((i) => i.reviewerId === auth.userId && (sc.statuses.get(i.statusId)!.category === 'review' || isReviewName(sc.statuses.get(i.statusId)!.name)));
       const mentions = await this.mentions(tx, auth, tenant);
       const people = await loadPeople(tx, guest ? [] : [...byAssignee.keys()].filter((u) => u !== '_none'));
 
@@ -157,7 +157,8 @@ export class HomeService {
     const guest = (id: string) => sc.access.get(id)!.guestViewer;
     return Promise.all(
       mine.map(async (p) => {
-        const list = all.filter((i) => i.projectId === p.id && (!guest(p.id) || (i.sharedWithGuests && sc.typeNames.get(i.issueTypeId) !== 'Bug')));
+        // งานที่ยกเลิกไม่นับในความคืบหน้าและ Health
+        const list = all.filter((i) => i.projectId === p.id && sc.statuses.get(i.statusId)?.category !== 'cancelled' && (!guest(p.id) || (i.sharedWithGuests && sc.typeNames.get(i.issueTypeId) !== 'Bug')));
         const done = (i: Issue) => sc.statuses.get(i.statusId)?.category === 'done';
         const tasks = list.filter((i) => !i.parentId);
         const weighted = p.progressMethod === 'weighted';

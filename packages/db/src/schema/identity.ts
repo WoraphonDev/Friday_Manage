@@ -1,6 +1,6 @@
 // A. บัญชีผู้ใช้และการล็อกอิน (ระดับระบบ ไม่มี workspace_id)
 import { sql } from 'drizzle-orm';
-import { index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { customType, index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, pk, tstz, updatedAt } from './_common.ts';
 import { authTokenPurpose, identityProvider } from './enums.ts';
 
@@ -31,6 +31,20 @@ export const users = pgTable(
   },
   (t) => [uniqueIndex('users_email_key').on(sql`lower(${t.email})`)],
 );
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
+
+/**
+ * รูปโปรไฟล์ที่อัปโหลดเอง (ย่อเป็นสี่เหลี่ยมเล็กที่หน้าเว็บก่อนส่ง) · เก็บในฐานข้อมูลเพราะเล็ก ได้ backup ไปด้วย และไม่ขึ้นกับที่เก็บไฟล์
+ * users.avatar_url ชี้มาที่ `/api/v1/avatars/{user_id}/{version}` · version เปลี่ยนทุกครั้งที่อัปโหลด จึง cache ได้ยาว
+ */
+export const userAvatars = pgTable('user_avatars', {
+  userId: uuid().primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  mime: text().notNull(),
+  data: bytea().notNull(),
+  version: text().notNull(),
+  updatedAt: updatedAt(),
+});
 
 /** 1 คนผูกได้หลายวิธีล็อกอิน (รองรับ SAML ภายหลัง) */
 export const userIdentities = pgTable(

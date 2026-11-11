@@ -1,4 +1,5 @@
 import { api, ApiError, supportId } from "@/lib/api";
+import type { StatusCategory } from "@/lib/status";
 
 /** แท็บของ L2 ตามลำดับใน Canvas · notify / integ ยังไม่มี API (03-api › 3.5 p/notification-rules, p/repositories) */
 // import / export / plan-changes = Import / Export ของโปรเจกต์ (ผู้ใช้ตัดสิน 2026-11-09) เนื้อหาเดียวกับ Popup ในแท็บ Table
@@ -8,7 +9,7 @@ export const BASELINE_SECTIONS: readonly string[] = ["import", "plan-changes"];
 export type Section = (typeof SECTIONS)[number];
 export const isSection = (v: string | undefined): v is Section => !!v && (SECTIONS as readonly string[]).includes(v);
 
-export type Category = "todo" | "in_progress" | "done";
+export type Category = StatusCategory;
 export type Size = "XS" | "S" | "M" | "L" | "XL";
 export const SIZES: Size[] = ["XS", "S", "M", "L", "XL"];
 /** ค่าเริ่มต้นขององค์กร (docs/decisions.md) ใช้แสดงเมื่อโปรเจกต์ยังใช้ค่าของ Workspace (sizeMdMap = null) */
@@ -57,6 +58,8 @@ export interface Status {
   workflowId: string;
   name: string;
   category: Category;
+  /** สีที่ผู้ใช้เลือก (#RRGGBB) · null = สีตามหมวด */
+  color?: string | null;
   boardColumnId: string | null;
   wipLimit: number | null;
   sort: number;

@@ -498,3 +498,97 @@ describe('Custom field ในไฟล์ (โหมดอัปเดต)', () 
     expect(vals).toMatchObject({ [ids.tier]: 'silver', [ids.qty]: 5, [ids.owner]: team.devId });
   });
 });
+
+describe('นำเข้ารอบที่ 2: แทนที่ หรือ เพิ่มเติมแผน', () => {
+  const issuesOf = async (key: string) =>
+    (await t.owner.query(`SELECT i.number, i.title, i.excel_row_no, i.version FROM issues i JOIN projects p ON p.id = i.project_id WHERE p.key = $1 AND i.deleted_at IS NULL ORDER BY i.number`, [key])).rows;
+
+  it('append: ทุกแถวเป็นงานใหม่ต่อท้าย · งานเดิมไม่ถูกแตะ · No. ซ้ำกับแผนเดิมได้', async () => {
+    const up = await team.lead.upload(`${team.ws}/import-jobs`, await sourceWorkbook(), 'Apx.xlsx', { mode: 'create' });
+    await team.lead.patch(`${team.ws}/import-jobs/${up.body.id}`, { project: { key: 'APX', name: 'Append Plan' } });
+    await commit(up.body.id);
+    const before = await issuesOf('APX');
+    expect(before.map((r: { number: number }) => r.number)).toEqual([1, 2, 3, 4]);
+
+    // ไฟล์ชุดเดิม (No. 1–4 ซ้ำ) · แทนที่ = จับคู่กับงานเดิมได้ครบ ไม่มีงานใหม่และไม่มีงานหาย
+    const replace = await updateJob('APX', await sourceWorkbook());
+    expect(replace.diff).toMatchObject({ added: [], missing: [] });
+    expect(replace.diff.changed.map((c: { key: string }) => c.key)).toEqual(expect.arrayContaining(['APX-1']));
+
+    const r = await team.lead.upload(`${team.ws}/import-jobs`, await sourceWorkbook(), 'APX-more.xlsx', { mode: 'update', projectKey: 'APX', updateKind: 'append' });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(r.body.updateKind).toBe('append');
+    expect(r.body.diff.added.map((a: { title: string; number: number | null }) => [a.title, a.number])).toEqual([['Login', null], ['Approve', null], ['Report', null], ['Backlog item', null]]);
+    expect(r.body.diff).toMatchObject({ changed: [], missing: [], unchanged: 0 });
+    const done = await commit(r.body.id);
+    expect(done).toMatchObject({ mode: 'update', added: 4, changed: 0, deleted: 0 });
+
+    const after = await issuesOf('APX');
+    expect(after.slice(0, 4)).toEqual(before);
+    // งานใหม่ออกเลขต่อจากเดิม และไม่เก็บ No. (ซ้ำกับแผนเดิม)
+    expect(after.slice(4).map((x: { number: number; title: string; excel_row_no: number | null }) => [x.number, x.title, x.excel_row_no])).toEqual([
+      [5, 'Login', null],
+      [6, 'Approve', null],
+      [7, 'Report', null],
+      [8, 'Backlog item', null],
+    ]);
+    const audit = (await t.owner.query(`SELECT summary FROM audit_logs WHERE action = 'import.completed' ORDER BY created_at DESC LIMIT 1`)).rows[0].summary;
+    expect(audit).toContain('เพิ่มเติมแผน APX · เพิ่ม 4');
+  });
+
+  it('เปลี่ยนโหมดในขั้นถัดไปได้ (PATCH updateKind) · ค่าที่ไม่รองรับ = 400', async () => {
+    const job = await updateJob('APX', await sourceWorkbook());
+    expect(job.diff.added).toEqual([]);
+    const switched = await team.lead.patch(`${team.ws}/import-jobs/${job.id}`, { updateKind: 'append' });
+    expect(switched.status).toBe(200);
+    expect(switched.body.diff.added).toHaveLength(4);
+    expect(switched.body.diff.missing).toEqual([]);
+    const bad = await team.lead.upload(`${team.ws}/import-jobs`, await sourceWorkbook(), 'x.xlsx', { mode: 'update', projectKey: 'APX', updateKind: 'merge' });
+    expect(bad.status).toBe(400);
+    expect(bad.body.error.code).toBe('update_kind_not_supported');
+  });
+});
+
+describe('อัปเดตเฉพาะงานที่ยังไม่เริ่ม (unstarted)', () => {
+  const rowsOf = async (key: string) =>
+    (await t.owner.query(`SELECT i.number, i.title, i.estimate_md::float AS md FROM issues i JOIN projects p ON p.id = i.project_id WHERE p.key = $1 AND i.deleted_at IS NULL ORDER BY i.number`, [key])).rows;
+  // ไฟล์รอบสอง: แก้ Man-Day งาน No.1 (ยังไม่เริ่ม) และ No.2 (เริ่มแล้ว) · เพิ่มงานใหม่ No.5 · ไม่มี No.4 ในไฟล์
+  async function secondFile() {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Table');
+    ws.addRow(HEADERS);
+    ws.addRow([1, 1, 'Credit Line', 'S1', 'Login', 'SCR-001', 'FR-001', 'Mick', 'Not Start', 'Kaijeaw', null, 4, d('2026-11-09'), d('2026-11-12'), null, null, null]);
+    ws.addRow([2, 2, 'Drawdown', 'S1', 'Approve', null, null, 'Mick', 'In Progress', 'Kaijeaw', null, 6, d('2026-11-12'), d('2026-11-13'), d('2026-11-12'), null, 'ด่วน']);
+    ws.addRow([3, 3, 'Drawdown', 'S2', 'Report', null, 'FR-002', 'Mick', 'Not Start', 'Kaijeaw', null, 5, d('2026-11-16'), d('2026-11-20'), null, null, null]);
+    ws.addRow([5, 5, 'Drawdown', 'S2', 'Export', null, null, 'Mick', 'Not Start', 'Kaijeaw', null, 2, d('2026-11-23'), d('2026-11-24'), null, null, null]);
+    return Buffer.from(await wb.xlsx.writeBuffer());
+  }
+
+  it('แก้เฉพาะงาน To do ที่ยังไม่มี Actual Start · งานที่เริ่มแล้วแสดงใน locked · ไม่ลบงานที่ไม่อยู่ในไฟล์ · งานใหม่ต้องยืนยันก่อน', async () => {
+    const up = await team.lead.upload(`${team.ws}/import-jobs`, await sourceWorkbook(), 'Uns.xlsx', { mode: 'create' });
+    await team.lead.patch(`${team.ws}/import-jobs/${up.body.id}`, { project: { key: 'UNS', name: 'Unstarted Plan' } });
+    await commit(up.body.id);
+
+    const r = await team.lead.upload(`${team.ws}/import-jobs`, await secondFile(), 'UNS-round2.xlsx', { mode: 'update', projectKey: 'UNS', updateKind: 'unstarted' });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(r.body.updateKind).toBe('unstarted');
+    // UNS-3 เปลี่ยน Size (ไฟล์เว้นว่าง) · งานที่เริ่มแล้ว (UNS-2) ไม่อยู่ในรายการแก้
+    expect(r.body.diff.changed.map((c: { key: string }) => c.key)).toEqual(['UNS-1', 'UNS-3']);
+    expect(r.body.diff.locked).toEqual([expect.objectContaining({ key: 'UNS-2', title: 'Approve', fields: expect.arrayContaining(['Man-Day']) })]);
+    expect(r.body.diff.added.map((a: { title: string }) => a.title)).toEqual(['Export']);
+    expect(r.body.diff.missing).toEqual([]);
+    // งานใหม่ยังไม่นับจนกว่าจะยืนยัน
+    expect(r.body.summary.ready).toBe(2);
+
+    const done = await commit(r.body.id);
+    expect(done).toMatchObject({ added: 0, changed: 2, deleted: 0 });
+    expect((await rowsOf('UNS')).map((x: { number: number; md: number }) => [x.number, x.md])).toEqual([[1, 4], [2, 2], [3, 5], [4, null]]);
+
+    // รอบถัดไป: ยืนยันให้เพิ่มงานใหม่
+    const again = await team.lead.upload(`${team.ws}/import-jobs`, await secondFile(), 'UNS-round3.xlsx', { mode: 'update', projectKey: 'UNS', updateKind: 'unstarted' });
+    const confirmed = await team.lead.patch(`${team.ws}/import-jobs/${again.body.id}`, { addNew: true });
+    expect(confirmed.body).toMatchObject({ addNew: true, summary: { ready: 1 } });
+    expect(await commit(again.body.id)).toMatchObject({ added: 1, changed: 0 });
+    expect((await rowsOf('UNS')).map((x: { title: string }) => x.title)).toEqual(['Login', 'Approve', 'Report', 'Backlog item', 'Export']);
+  });
+});

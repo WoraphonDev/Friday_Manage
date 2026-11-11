@@ -122,7 +122,8 @@ export class CalendarService {
           priority: i.priority,
           planStart: i.planStart,
           planEnd: i.planEnd,
-          due: status.category === 'done' ? 'done' : i.planEnd && i.planEnd < now ? 'overdue' : i.planEnd === now ? 'today' : 'upcoming',
+          // ปิดงานแล้ว (เสร็จ / ยกเลิก) ไม่มีสถานะเลยกำหนด
+          due: status.category === 'done' || status.category === 'cancelled' ? 'done' : i.planEnd && i.planEnd < now ? 'overdue' : i.planEnd === now ? 'today' : 'upcoming',
           parentKey: i.parentId && numberOf.has(i.parentId) ? `${project.key}-${numberOf.get(i.parentId)}` : null,
           assignees: (byIssue.get(i.id) ?? []).map((u) => people.get(u)).filter((p) => !!p),
           version: i.version,
@@ -232,7 +233,7 @@ export class CalendarService {
       const out: IcsEvent[] = [];
       for (const r of rows) {
         // งานที่เสร็จแล้วไม่ต้องเตือน · Guest เห็นเฉพาะงานที่แชร์และไม่ใช่ Bug
-        if (r.done === 'done') continue;
+        if (r.done === 'done' || r.done === 'cancelled') continue;
         if (guest && (!r.i.sharedWithGuests || r.type === 'Bug')) continue;
         const k = `${r.key}-${r.i.number}`;
         const end = r.i.planEnd ?? r.i.planStart!;

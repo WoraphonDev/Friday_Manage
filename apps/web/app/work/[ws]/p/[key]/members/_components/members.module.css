@@ -4,7 +4,8 @@
 .subnav a[aria-current="true"] { color:var(--primary-text); border-bottom-color:var(--primary); font-weight:600; }
 .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; }
 .group { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-.search { width:240px; max-width:100%; }
+/* ต้องชนะ .input (width:100%) ใน globals.css ที่โหลดทีหลัง ไม่งั้นช่องค้นหายืดเต็มกลุ่มแล้วดันปุ่ม Role ลงบรรทัดใหม่ */
+.group > .search { width:240px; max-width:100%; flex:0 1 240px; }
 .rolesPop { width:min(420px, calc(100vw - 24px)); }
 .rolesPop .roles { padding:8px 6px; }
 .rolesPop .roles .badgeCol { flex-basis:72px; }

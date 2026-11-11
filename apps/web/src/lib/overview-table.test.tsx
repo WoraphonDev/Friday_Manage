@@ -4,6 +4,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { renderWithProviders } from "@/test/render";
+import { asMobile } from "@/test/mobile";
 import { server } from "@/test/server";
 import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
@@ -155,7 +156,7 @@ describe("Table (2)", () => {
     await user.click(screen.getByRole("checkbox", { name: "Show completed" }));
     await user.click(screen.getByRole("button", { name: /Filter/ }));
     await user.selectOptions(screen.getByLabelText("Status"), "");
-    await waitFor(() => expect(urls.at(-1)?.searchParams.get("status")).toBe("todo,in_progress"));
+    await waitFor(() => expect(urls.at(-1)?.searchParams.get("status")).toBe("open"));
   });
 
   it("คอลัมน์ตามชุดฟิลด์ของโปรเจกต์: ลำดับ, ฟิลด์ที่ซ่อน, Custom field · ซ่อนเฉพาะระดับ Sub-task · เลือกคอลัมน์เองจำในเครื่อง", async () => {
@@ -375,6 +376,35 @@ describe("Table (2)", () => {
     expect(await screen.findByText(/req_w05_001/)).toBeInTheDocument();
   });
 
+  it("Module ที่มีกลุ่มแล้วไม่มีแถวเพิ่มงานระดับ Module · Task ที่ไม่มีกลุ่มยังแสดงใต้ Module", () => {
+    const data = table([row("DE-1", { phaseId: "p-1" }), row("DE-2"), row("DE-3", { moduleId: "m-b" })]);
+    data.modules[0].phases.push({ ...data.modules[0].phases[0], id: "p-1", name: "Sprint 1" });
+    const d = buildDisplay(data, new Set(), "-", "-");
+    const moduleA = d.slice(0, d.findIndex((x) => x.kind === "foot") + 1);
+    expect(moduleA.map((x) => (x.kind === "issue" ? x.row.key : `${x.kind}:${"phaseId" in x && x.phaseId ? x.phaseId : ""}`))).toEqual(["module:", "DE-2", "phase:p-1", "DE-1", "add:p-1", "foot:"]);
+    // Module ที่ยังไม่มีกลุ่มยังมีแถวเพิ่มงานของ Module (ไม่งั้นไม่มีทางเพิ่ม Task)
+    expect(d.slice(moduleA.length).map((x) => x.kind)).toContain("add");
+  });
+  it("มือถือ: รายการแบบการ์ด (ไม่มีตารางเลื่อนขวา) · ตัวเลือกพับเก็บ · แตะงานเปิดรายละเอียด · ย่อ Module ได้", async () => {
+    const restore = asMobile();
+    try {
+      const user = userEvent.setup();
+      mount(<TableView ws="sample" projectKey="DE" />);
+      const list = await screen.findByRole("region", { name: "รายการงาน" });
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+      expect(within(list).getByRole("link", { name: /DE-1/ })).toHaveAttribute("href", "/work/sample/p/DE/table?issue=DE-1");
+      // ตัวกรองรองซ่อนอยู่จนกดปุ่มตัวเลือก
+      expect(screen.queryByLabelText("Group by")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "ตัวเลือกการแสดงผล" }));
+      expect(screen.getByRole("group", { name: "ตัวเลือกการแสดงผล" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Columns" })).not.toBeInTheDocument();
+      // ย่อ Module A แล้วงานใน Module หาย
+      await user.click(within(list).getByRole("button", { name: /Module A/ }));
+      expect(within(list).queryByRole("link", { name: /DE-1/ })).not.toBeInTheDocument();
+    } finally {
+      restore();
+    }
+  });
   it("buildDisplay จัด Sub-task ต่อท้ายแม่, มีแถวเพิ่มงาน + สรุปท้าย Module และซ่อน Module ที่ย่อ", () => {
     const d = buildDisplay(table(), new Set(["m-b"]), "-", "-");
     expect(d.map((x) => (x.kind === "issue" ? x.row.key : `${x.kind}:${x.kind === "module" ? x.name : ""}`))).toEqual(["module:Module A", "DE-1", "DE-2", "add:", "foot:", "module:Module B"]);
@@ -413,13 +443,14 @@ describe("จัดโครงงานใน Table", () => {
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(screen.getByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มใหม่" })).toHaveAttribute("href", "/work/sample/p/DE/table?new=1&type=task&moduleId=m-a&phaseId=ph-new");
-    // Task ที่ไม่มีกลุ่มอยู่ใต้ Module ก่อนหัวกลุ่ม
-    const add = screen.getByRole("link", { name: "+ เพิ่ม Task ใน Module A" });
-    expect(add.getAttribute("href")).not.toContain("phaseId=");
+    // มีกลุ่มแล้ว: เพิ่ม Task จากแถวของกลุ่ม ไม่มีแถวเพิ่มของ Module (ผู้ใช้ขอ 2026-11-11)
+    expect(screen.queryByRole("link", { name: "+ เพิ่ม Task ใน Module A" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "จัดการกลุ่ม กลุ่มใหม่" }));
     await user.click(screen.getByRole("button", { name: "ลบกลุ่ม" }));
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "ลบกลุ่ม" }));
     await waitFor(() => expect(screen.queryByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มใหม่" })).not.toBeInTheDocument());
+    // ไม่เหลือกลุ่ม = กลับมาเพิ่มระดับ Module (ไม่ระบุกลุ่ม)
+    expect((await screen.findByRole("link", { name: "+ เพิ่ม Task ใน Module A" })).getAttribute("href")).not.toContain("phaseId=");
   });
   it("เมื่อบันทึกไม่ผ่านคงข้อมูลและ requestId ให้แก้", async () => {
     const user = userEvent.setup(); server.use(http.post("*/api/v1/w/:ws/projects/:key/modules", () => errorBody(500)));

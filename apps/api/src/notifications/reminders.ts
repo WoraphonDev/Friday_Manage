@@ -8,6 +8,7 @@ import { Audience, type IssueCtx, type ProjectCtx } from './audience.js';
 import { Notifier } from './notifier.js';
 import { EMAIL_DEFAULT_ON } from '../channels/dispatcher.js';
 import { IN_APP_CHANNEL, REASONS } from './rules.js';
+import { openStatus } from '../common/status-category.js';
 
 const s = schema;
 type DueReminder = '1d_and_today' | '3d' | 'today_only';
@@ -291,7 +292,7 @@ export class Reminders {
           isNull(s.projects.deletedAt),
           isNull(s.projects.archivedAt),
           isNull(s.workspaces.deletedAt),
-          ne(s.workflowStatuses.category, 'done'),
+          openStatus(),
           isNotNull(s.issues.planEnd),
           lte(s.issues.planEnd, until),
         ),

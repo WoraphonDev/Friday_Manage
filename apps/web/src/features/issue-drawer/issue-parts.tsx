@@ -10,6 +10,7 @@ import { Failure } from './shared';
 import { issuePath, issueQuery, type ChecklistItem, type Dependencies, type Scope } from './types';
 import { IssuePicker, useProjectIssues } from './task-v2';
 import styles from './issue-drawer.module.css';
+import { statusTone } from '@/lib/status';
 
 export function Checklist({ scope, issueKey }: { scope: Scope; issueKey: string }) {
   const t = useTranslations('issue-drawer');
@@ -122,7 +123,7 @@ export function DependencyPanel({ scope, issueKey }: { scope: Scope; issueKey: s
       <span className={styles.k}>{t(side)}</span>
       <div className={styles.chips}>
         {query.data[side].length === 0 && <span className="muted">{t('noDependencies')}</span>}
-        {query.data[side].map((item) => <span className={`${styles.depChip} ${item.status.category === 'done' ? styles.sDone : item.status.category === 'in_progress' ? styles.sProg : styles.sTodo}`} key={item.key}>
+        {query.data[side].map((item) => <span className={`${styles.depChip} ${({ todo: styles.sTodo, in_progress: styles.sProg, review: styles.sRev, blocked: styles.sBlk, done: styles.sDone, cancelled: styles.sCan } as const)[statusTone(item.status.category, item.status.name)]}`} key={item.key}>
           <button className={styles.depLink} onClick={() => scope.navigate(item.key)} title={`${item.status.name} · ${item.type} · ${t('lagValue', { days: item.lagDays })}`}>{item.key} {item.title}{item.planEnd && ` · ${formatDate(item.planEnd, scope.yearFormat)}`}</button>
           {canEdit && <button className={styles.chipX} disabled={pending} aria-label={t('removeDependency', { key: item.key })} onClick={() => void change(() => api.delete<Dependencies>(endpoint, { body: { [side === 'blockedBy' ? 'predecessorKey' : 'successorKey']: item.key } }))}><Trash2 size={12} /></button>}
         </span>)}

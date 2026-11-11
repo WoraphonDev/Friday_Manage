@@ -21,6 +21,7 @@ import { CustomFieldRows, visibleCustomFields } from './custom-fields';
 import { levelOf, requires, shows, type ProfileField } from '@/lib/field-profile';
 import styles from './issue-drawer.module.css';
 import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
+import { statusColorStyle, statusTone, useStatusColors, type StatusTone } from '@/lib/status';
 
 /** API ขอเหตุผลการแก้แผน: ไม่ใช่ error ที่ต้องแสดง แต่เปิดกล่องให้กรอกเหตุผลแล้วบันทึกซ้ำ */
 class NeedsPlanReason extends Error {}
@@ -122,7 +123,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   // K2: Bug ที่แก้แล้ว (สถานะหลังสถานะทำงานแรก เช่น Fixed) รอทดสอบซ้ำ · ผ่าน = สถานะถัดไปใน Workflow, ไม่ผ่าน = กลับสถานะทำงานแรก
   const statusIndex = statuses.findIndex((status) => status.id === issue.status.id);
   const firstWork = statuses.find((status) => status.category === 'in_progress');
-  const awaitingRetest = issue.type === 'Bug' && issue.status.category === 'in_progress' && !!firstWork && firstWork.id !== issue.status.id;
+  const awaitingRetest = issue.type === 'Bug' && (issue.status.category === 'in_progress' || issue.status.category === 'review') && !!firstWork && firstWork.id !== issue.status.id;
   const passStatus = statusIndex >= 0 ? statuses[statusIndex + 1] : undefined;
   const reworkStatus = firstWork && firstWork.id !== issue.status.id ? firstWork : undefined;
   const isDone = issue.status.category === 'done';
@@ -132,7 +133,9 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const subDone = subtasks.filter((child) => child.status.category === 'done').length;
   const canCreate = scope.access.permissions.includes('issue.create') && !guest;
   const devs = scope.people.filter((person) => issue.assigneeIds?.includes(person.id));
-  const pillTone = (category: string, name: string) => category === 'done' ? styles.sDone : /review/i.test(name) ? styles.sRev : category === 'in_progress' ? styles.sProg : styles.sTodo;
+  const tones: Record<StatusTone, string> = { todo: styles.sTodo, in_progress: styles.sProg, review: styles.sRev, blocked: styles.sBlk, done: styles.sDone, cancelled: styles.sCan };
+  const pillTone = (category: string, name: string) => tones[statusTone(category, name)];
+  const statusColors = useStatusColors(scope.ws, scope.projectKey);
   const prioColor = { urgent: 'var(--danger-text)', high: 'var(--warning-text)', medium: 'var(--primary-text)', low: 'var(--muted)' }[issue.priority];
   const href = typeof window === 'undefined' ? '' : window.location.href;
   // ชุดฟิลด์ของโปรเจกต์ (Template): ซ่อนฟิลด์ที่ปิดในระดับนี้ · * = ฟิลด์บังคับ (Bug ใช้ฟิลด์บังคับของประเภทงาน)
@@ -175,7 +178,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
     <div className={styles.headBlock}>
       <div className={styles.title}><InlineText label={t('fields.title')} value={issue.title} enabled={canEdit} busy={disabled} onSave={(title) => patch({ title })} /></div>
       <div className={styles.statusRow}>
-        <select className={`${styles.statusPill} ${pillTone(issue.status.category, issue.status.name)}`} aria-label={t('fields.statusId')} value={issue.status.id} disabled={!canEdit || disabled} onChange={(event) => void move(event.target.value)}>
+        <select className={`${styles.statusPill} ${pillTone(issue.status.category, issue.status.name)}`} style={statusColorStyle(statusColors.get(issue.status.id))} aria-label={t('fields.statusId')} value={issue.status.id} disabled={!canEdit || disabled} onChange={(event) => void move(event.target.value)}>
           {(statuses.length ? statuses : [issue.status]).map((status) => <option key={status.id} value={status.id}>{status.name}</option>)}
         </select>
         {canEdit && !isDone && doneStatus && issue.type !== 'Bug' && <Button size="small" className={styles.okButton} disabled={disabled} onClick={() => void move(doneStatus.id)}><Check size={15} />{t(mobile ? 'mobileComplete' : 'markComplete')}</Button>}

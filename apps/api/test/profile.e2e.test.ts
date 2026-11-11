@@ -1,4 +1,5 @@
 // A20 · Profile, การตั้งค่าแจ้งเตือนของฉัน และวันลา · ข้อมูลสมมติเท่านั้น
+import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { EventBus, type DomainEvent } from '../src/core/events.js';
 import { addMember, client, type Client, seedTeam, signup, startApp, type TestApp } from './helpers.js';
@@ -237,5 +238,54 @@ describe('w/leaves', () => {
     expect(notes).toHaveLength(1);
     expect(notes[0].recipient_id).toBe(team.leadId);
     expect(notes[0].payload).toMatchObject({ actorName: 'Kaijeaw', startDate: '2027-05-05', issueCount: 1, issueKeys: [issue.body.key] });
+  });
+});
+
+describe('รูปโปรไฟล์ (อัปโหลดจากเครื่อง)', () => {
+  // PNG 1×1 จริง · ไฟล์ที่หัวไม่ใช่รูปต้องถูกปฏิเสธแม้ Content-Type บอกว่าเป็นรูป
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg==', 'base64');
+  // ส่งไฟล์รูปเป็น body ตรง ๆ · ขอ CSRF ใหม่ (token เดิมของ client จะใช้ไม่ได้แล้ว จึงลบผ่านตัวช่วยนี้ด้วย)
+  const csrf = async (c: Client) => (await c.agent.get('/api/v1/auth/csrf')).body.csrfToken as string;
+  const put = async (c: Client, body: Buffer, type = 'image/png') => {
+    const token = await csrf(c);
+    return c.agent.put('/api/v1/me/avatar').set('x-csrf-token', token).set('Content-Type', type).send(body);
+  };
+  const del = async (c: Client) => {
+    const token = await csrf(c);
+    return c.agent.delete('/api/v1/me/avatar').set('x-csrf-token', token);
+  };
+  const anon = () => request(t.app.getHttpServer());
+
+  it('อัปโหลดแล้ว avatarUrl ชี้ไปรูปที่เปิดได้ (cache ถาวร) · อัปโหลดใหม่ได้ URL ใหม่ รูปเก่าหาย · ลบแล้วไม่มีรูป', async () => {
+    const r = await put(team.dev, png);
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body.avatarUrl).toMatch(new RegExp(`^/api/v1/avatars/${team.devId}/[\\w-]+$`));
+    expect((await team.dev.get('/me')).body.avatarUrl).toBe(r.body.avatarUrl);
+    const img = await anon().get(r.body.avatarUrl).buffer(true);
+    expect(img.status).toBe(200);
+    expect(img.headers['content-type']).toBe('image/png');
+    expect(img.headers['cache-control']).toContain('immutable');
+    expect(img.headers['x-content-type-options']).toBe('nosniff');
+    expect(Buffer.compare(img.body as Buffer, png)).toBe(0);
+
+    const again = await put(team.dev, png);
+    expect(again.body.avatarUrl).not.toBe(r.body.avatarUrl);
+    expect((await anon().get(r.body.avatarUrl)).status).toBe(404);
+    expect((await anon().get(again.body.avatarUrl)).status).toBe(200);
+
+    expect((await del(team.dev)).body).toEqual({ avatarUrl: null });
+    expect((await team.dev.get('/me')).body.avatarUrl).toBeNull();
+    expect((await anon().get(again.body.avatarUrl)).status).toBe(404);
+  });
+
+  it('ไม่ใช่รูป → 415 · ใหญ่เกิน 512 KB → 413 · ไม่ล็อกอิน → 401 · URL มั่ว → 404', async () => {
+    expect((await put(team.dev, Buffer.from('<svg onload="alert(1)"></svg>'), 'image/png')).status).toBe(415);
+    expect((await put(team.dev, Buffer.concat([png, Buffer.alloc(600 * 1024)]))).status).toBe(413);
+    const stranger = request.agent(t.app.getHttpServer());
+    const token = (await stranger.get('/api/v1/auth/csrf')).body.csrfToken as string;
+    expect((await stranger.put('/api/v1/me/avatar').set('x-csrf-token', token).set('Content-Type', 'image/png').send(png)).status).toBe(401);
+    expect((await anon().get(`/api/v1/avatars/${team.devId}/nope`)).status).toBe(404);
+    expect((await anon().get('/api/v1/avatars/not-a-uuid/abcdefgh')).status).toBe(404);
+    expect((await team.dev.get('/me')).body.avatarUrl).toBeNull();
   });
 });

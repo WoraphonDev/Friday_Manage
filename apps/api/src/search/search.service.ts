@@ -7,6 +7,7 @@ import { AppError } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { projectAccess } from '../projects/permissions.js';
+import { openStatus } from '../common/status-category.js';
 
 export const SEARCH_TYPES = ['task', 'sub', 'bug', 'project', 'comment', 'file', 'person'] as const;
 export type SearchType = (typeof SEARCH_TYPES)[number];
@@ -97,7 +98,7 @@ export class SearchService {
               inArray(s.issues.projectId, ids),
               isNull(s.issues.deletedAt),
               keyCond ? or(keyCond, textMatch) : textMatch,
-              q.status === 'open' ? ne(s.workflowStatuses.category, 'done') : undefined,
+              q.status === 'open' ? openStatus() : undefined,
               q.assignee === 'me' ? exists(tx.select({ x: s.issueAssignees.userId }).from(s.issueAssignees).where(and(eq(s.issueAssignees.issueId, s.issues.id), eq(s.issueAssignees.userId, auth.userId)))) : undefined,
             ),
           )

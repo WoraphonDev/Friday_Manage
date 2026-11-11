@@ -42,8 +42,14 @@
   },
   "avatar": {
     "title": "Change profile photo",
-    "description": "Enter an image link (https) your team can open",
-    "url": "Image link",
+    "description": "Pick a photo from your device. It will be cropped square and resized for you",
+    "choose": "Choose a photo",
+    "chooseAnother": "Choose another photo",
+    "hint": "PNG, JPEG, WebP or GIF · up to 15 MB",
+    "preview": "Profile photo preview",
+    "notImage": "This file is not an image",
+    "tooLarge": "The image is larger than {mb} MB",
+    "unreadable": "Couldn't open this image. Save it as PNG or JPEG and try again",
     "remove": "Remove photo",
     "saved": "Profile photo changed",
     "removed": "Profile photo removed"

@@ -712,13 +712,17 @@ export function WorkspaceShell({
             {t("nav.createWorkspace")}
           </Link>
           <div className="menu-divider" />
-          <LocaleSwitch
-            signedIn
-            showYearFormat
-            onChange={() => setMenuOpen(false)}
-          />
-          <ThemeSwitch showLabels />
-          {signOut}
+          {/* มือถือ: ภาษา / ปี / ธีม แถวละชุดเต็มความกว้าง ปุ่มสูงพอแตะ · ออกจากระบบแยกเป็นแถวล่างสุด */}
+          <div className="drawer-prefs">
+            <LocaleSwitch
+              className="drawer-pref"
+              signedIn
+              showYearFormat
+              onChange={() => setMenuOpen(false)}
+            />
+            <ThemeSwitch className="drawer-pref" showLabels />
+            <div className="drawer-signout">{signOut}</div>
+          </div>
         </Drawer>
         <CommandPalette
           workspace={ws}

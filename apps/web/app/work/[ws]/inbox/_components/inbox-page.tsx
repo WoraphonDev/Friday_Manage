@@ -13,6 +13,7 @@ import { formatDate, today, localeDateFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import { inboxKey, type Filter, type InboxNotification, type InboxPage as Page } from "./types";
 import styles from "./inbox.module.css";
+import { statusTone } from "@/lib/status";
 
 const FILTERS: Filter[] = ["all", "unread", "assign", "mention", "activity", "due"];
 const TONE: Record<string, "blue" | "purple" | "teal" | "amber" | "red" | "neutral"> = { assign: "blue", mention: "purple", activity: "teal", due: "amber" };
@@ -167,7 +168,7 @@ function Detail({ ws, n, busy, onBack, run }: { ws: string; n: InboxNotification
             <span className="muted" style={{ fontSize: 11 }}>{n.issue.key} · {n.issue.type}{n.issue.moduleName ? ` · ${n.issue.moduleName}` : ""}</span>
             <b>{n.issue.title}</b>
             <span className={styles.meta} style={{ marginTop: 8 }}>
-              <Badge tone={n.issue.status.category === "done" ? "green" : n.issue.status.category === "in_progress" ? "blue" : "neutral"}>{n.issue.status.name}</Badge>
+              <span className={`badge status-pill-${statusTone(n.issue.status.category, n.issue.status.name)}`}>{n.issue.status.name}</span>
               <span>{n.issue.planEnd ? t("due", { date: formatDate(n.issue.planEnd, year) }) : t("noDue")}</span>
               {!!n.issue.assignees.length && <span>· {t("assignee", { names: n.issue.assignees.map((a) => a.displayName).join(", ") })}</span>}
             </span>

@@ -14,6 +14,7 @@ import type { Permissions } from "@/lib/types";
 import { moveLocal, positionIntent, type BoardCard, type BoardColumn, type BoardData, type MoveBody, type MoveIntent, type MoveResult, type Swimlane } from "./types";
 import styles from "./kanban.module.css";
 import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
+import { isClosedCategory, statusDotColor, useStatusColors } from "@/lib/status";
 
 type Notice = { message: string; undo?: () => Promise<void> };
 
@@ -56,6 +57,7 @@ export function KanbanBoard(props: BoardProps) {
 }
 
 function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
+  const statusColors = useStatusColors(ws, projectKey);
   const t = useTranslations("kanban");
   const search = useSearchParams();
   const pathname = usePathname();
@@ -224,7 +226,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   function inGroup(card: BoardCard, id: string) {
     return swimlane === "none" || (swimlane === "module" ? (card.module?.id ?? "none") === id : swimlane === "priority" ? card.priority === id : id === "none" ? !card.assignees.length : card.assignees.some((person) => person.id === id));
   }
-  const dueText = (card: BoardCard) => card.status.category === "done" ? t("completed")
+  const dueText = (card: BoardCard) => card.status.category === "done" ? t("completed") : card.status.category === "cancelled" ? t("cancelled")
     : card.due?.state === "overdue" ? t("dueOverdue", { days: card.due.days })
       : card.due?.state === "today" ? t("dueToday")
         : card.due?.state === "soon" ? t("dueSoon", { days: card.due.days })
@@ -234,7 +236,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
     const visibleIndex = laneCards.findIndex((item) => item.key === card.key);
     const TypeIcon = card.type.name === "Bug" ? Bug : card.type.name === "Spike" ? Zap : CheckSquare;
     return <article key={card.key} aria-label={t("card", { key: card.key })} data-card={card.key} data-flip={`${lane}:${card.key}`}
-      className={`${styles.card} ${card.status.category === "done" ? styles.completed : ""} ${dragging === card.key ? styles.lifted : ""} ${landed === card.key && !dragging ? styles.landed : ""}`}
+      className={`${styles.card} ${isClosedCategory(card.status.category) ? styles.completed : ""} ${dragging === card.key ? styles.lifted : ""} ${landed === card.key && !dragging ? styles.landed : ""}`}
       draggable={canEdit && !moving}
       onDragStart={(event) => {
         if (!canEdit || moving) { event.preventDefault(); return; }
@@ -295,7 +297,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
       </div>
     </div>
     <div className={styles.mobileColumns} role="group" aria-label={t("columns")}>
-      {data.columns.map((column) => <Button key={column.id} className={`${styles.chip} ${column.id === activeColumn ? styles.selected : ""}`} aria-pressed={column.id === activeColumn} onClick={() => setMobileColumn(column.id)}><span className={`${styles.dot} ${styles[/review/i.test(column.name) ? "review" : column.category]}`} />{column.name} <span>{column.cards.filter((card) => filtered.includes(card)).length}</span></Button>)}
+      {data.columns.map((column) => <Button key={column.id} className={`${styles.chip} ${column.id === activeColumn ? styles.selected : ""}`} aria-pressed={column.id === activeColumn} onClick={() => setMobileColumn(column.id)}><span className={styles.dot} style={{ background: statusDotColor(column.category, column.name, statusColors.get(column.id)) }} />{column.name} <span>{column.cards.filter((card) => filtered.includes(card)).length}</span></Button>)}
       <Button className={styles.mobileFilterToggle} aria-expanded={filtersOpen} aria-label={t("filters")} onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal size={16} aria-hidden="true" /></Button>
     </div>
     {!filtered.length && <EmptyState title={t(hasFilters ? "filteredEmpty" : "emptyTitle")} description={hasFilters ? undefined : t("emptyDescription")} action={hasFilters ? <Button onClick={() => { setModuleId(""); setMine(false); setOverdue(false); setLevel("all"); }}>{t("reset")}</Button> : canCreate ? <Link className="button button-primary" href={href()}>{t("new")}</Link> : undefined} />}
@@ -306,12 +308,12 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
           if (slot) { const at = dropTarget.before ? laneCards.findIndex((card) => card.key === dropTarget.before) : -1; items.splice(at < 0 ? items.length : at, 0, <div key="slot" className={styles.slot} style={{ height: slotHeight }} data-flip={`${group.id}:${dragging}`} aria-hidden="true" />); }
           return <section key={column.id} aria-label={t("column", { name: column.name })} data-mobile-active={column.id === activeColumn} className={`${styles.column} ${column.wip.exceeded ? styles.exceeded : ""} ${slot ? styles.dropColumn : ""}`}
           onDragOver={(event) => dragOver(event, group.id, column.id)} onDrop={(event) => drop(event, column.id)}>
-          <header className={styles.columnHeader}><span className={`${styles.dot} ${styles[/review/i.test(column.name) ? "review" : column.category]}`} /><h3>{column.name}</h3><span className={styles.count}>{column.cards.filter((card) => filtered.includes(card) && inGroup(card, group.id)).length}</span>{column.wip.limit !== null && <span className={`${styles.wip} ${column.wip.exceeded ? styles.wipOver : ""}`}>{t("wip", { current: column.wip.current, limit: column.wip.limit })}</span>}{canCreate && <Link className={styles.colAdd} href={href(undefined, column.id, swimlane === "module" ? group.id : undefined)} aria-label={t("addCardTo", { name: column.name })}><Plus size={16} aria-hidden="true" /></Link>}</header>
+          <header className={styles.columnHeader}><span className={styles.dot} style={{ background: statusDotColor(column.category, column.name, statusColors.get(column.id)) }} /><h3>{column.name}</h3><span className={styles.count}>{column.cards.filter((card) => filtered.includes(card) && inGroup(card, group.id)).length}</span>{column.wip.limit !== null && <span className={`${styles.wip} ${column.wip.exceeded ? styles.wipOver : ""}`}>{t("wip", { current: column.wip.current, limit: column.wip.limit })}</span>}{canCreate && <Link className={styles.colAdd} href={href(undefined, column.id, swimlane === "module" ? group.id : undefined)} aria-label={t("addCardTo", { name: column.name })}><Plus size={16} aria-hidden="true" /></Link>}</header>
           {column.wip.exceeded && <p className={styles.mobileWip} role="status">{t("overWip", { current: column.wip.current, limit: column.wip.limit! })}</p>}
           <div className={styles.cardList}>{items}
             {!laneCards.length && !slot && <p className={styles.emptyColumn}>{t("emptyColumn")}</p>}
           </div>
-          {column.category === "done" && (older || data.hiddenDone > 0) && <Button className={styles.older} variant="ghost" onClick={() => setOlder(!older)}>{older ? t("hideOlder") : t("showOlder", { count: data.hiddenDone })}</Button>}
+          {isClosedCategory(column.category) && (older || data.hiddenDone > 0) && <Button className={styles.older} variant="ghost" onClick={() => setOlder(!older)}>{older ? t("hideOlder") : t("showOlder", { count: data.hiddenDone })}</Button>}
           {canCreate && <Link className={styles.addCard} href={href(undefined, column.id, swimlane === "module" ? group.id : undefined)}>{t("addCard")}</Link>}
         </section>; })}
       </div>

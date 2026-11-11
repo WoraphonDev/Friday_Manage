@@ -316,6 +316,8 @@ export const workflowStatuses = pgTable(
     workflowId: uuid().notNull(),
     name: text().notNull(),
     category: statusCategory().notNull(),
+    /** สีที่ผู้ใช้เลือก (#RRGGBB) · null = ใช้สีตามหมวด */
+    color: text(),
     /**
      * คอลัมน์บน Kanban: ชี้ไปสถานะของ Workflow มาตรฐาน (null = สถานะนี้เป็นคอลัมน์เอง)
      * เช่น Bug: Fixed, Verified → Review · ตั้งที่ Project Settings › Workflow › Bug

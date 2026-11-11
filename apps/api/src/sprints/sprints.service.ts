@@ -87,7 +87,8 @@ export class SprintsService {
       const rows = await loadIssues(tx, project.id);
       const sprintRows = rows.filter((issue) => issue.sprintId === id);
       await saveSnapshot(tx, current, sprintRows, today());
-      const parentIds = sprintRows.filter((issue) => !issue.parentId && issue.category !== 'done').map((issue) => issue.id);
+      // งานที่ยังไม่ปิด (ไม่ใช่เสร็จหรือยกเลิก) ย้ายไป Sprint ถัดไป
+      const parentIds = sprintRows.filter((issue) => !issue.parentId && issue.category !== 'done' && issue.category !== 'cancelled').map((issue) => issue.id);
       const moving = parentIds.length ? await tx.select().from(s.issues).where(and(eq(s.issues.projectId, project.id), or(inArray(s.issues.id, parentIds), inArray(s.issues.parentId, parentIds)))).orderBy(asc(s.issues.id)).for('update') : [];
       if (moving.length) {
         await tx.update(s.issues).set({ sprintId: destination }).where(inArray(s.issues.id, moving.map((issue) => issue.id)));

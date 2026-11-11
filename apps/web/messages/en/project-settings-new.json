@@ -88,6 +88,12 @@
       "category": "Category",
       "wip": "WIP limit",
       "used": "In use",
+      "color": "Color",
+      "colorOf": "Color of status {name}",
+      "colorAuto": "Use the category color",
+      "colorCustom": "Pick a color",
+      "categoryGuide": "The category tells the system how this status counts",
+      "preview": "Preview",
       "moveUp": "Move {name} up",
       "moveDown": "Move {name} down",
       "statusNameOf": "Name of status {name}",
@@ -95,7 +101,18 @@
       "categories": {
         "todo": "To do",
         "in_progress": "In progress",
-        "done": "Done"
+        "review": "Review / QA",
+        "blocked": "Blocked / On hold",
+        "done": "Done",
+        "cancelled": "Cancelled / Rejected"
+      },
+      "categoryHints": {
+        "todo": "Not started · counts as open work",
+        "in_progress": "Working on it · sets Actual Start automatically",
+        "review": "Waiting for review / testing · still open work",
+        "blocked": "Stuck / on hold · still open work and can be overdue",
+        "done": "Finished · sets Actual End and counts towards progress",
+        "cancelled": "Cancelled / rejected · closed, never overdue and left out of progress"
       },
       "wipOf": "WIP limit of {name}",
       "issues": "{count, plural, one {{count} task} other {{count} tasks}}",

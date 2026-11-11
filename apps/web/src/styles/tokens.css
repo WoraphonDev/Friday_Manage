@@ -87,6 +87,10 @@
   --status-review-fg: #2a1452;
   --status-done-bg: #54ca94;
   --status-done-fg: #0f3d29;
+  --status-blocked-bg: #ffb27a;
+  --status-blocked-fg: #5c2600;
+  --status-cancelled-bg: #eceef1;
+  --status-cancelled-fg: #6b7179;
   --status-overdue-bg: #ff7896;
   --status-overdue-fg: #5c0a22;
   /* จุด/แถบสถานะบนพื้นการ์ด ต้องเห็นได้ 3:1 จึงเข้มกว่าพื้นป้ายในโหมดสว่าง */
@@ -94,6 +98,8 @@
   --status-progress-dot: #e8a917;
   --status-review-dot: #9466e0;
   --status-done-dot: #2fb27a;
+  --status-blocked-dot: #e8762a;
+  --status-cancelled-dot: #a9aeb5;
   --status-overdue-dot: #e8496b;
 
   /* กราฟและแถบโหลดงาน */
@@ -199,6 +205,13 @@
   --status-review-dot: #a67cea;
   --status-done-dot: #54ca94;
   --status-overdue-dot: #ff7896;
+  /* Blocked คงสีส้มเดิม · Cancelled เป็นเทาจางบนพื้นเข้ม */
+  --status-blocked-bg: #ffb27a;
+  --status-blocked-fg: #5c2600;
+  --status-blocked-dot: #ffb27a;
+  --status-cancelled-bg: #2c2f33;
+  --status-cancelled-fg: #9aa0a6;
+  --status-cancelled-dot: #6b7179;
 
   --chart-primary: #8b6ff0;
   --chart-primary-soft: #4f4690;

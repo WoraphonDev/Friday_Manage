@@ -9,7 +9,11 @@ export const visibility = pgEnum('visibility', ['private', 'workspace']);
 export const estimateUnit = pgEnum('estimate_unit', ['man_day', 'hour']);
 export const progressMethod = pgEnum('progress_method', ['count', 'weighted']);
 export const sprintStatus = pgEnum('sprint_status', ['planning', 'active', 'completed']);
-export const statusCategory = pgEnum('status_category', ['todo', 'in_progress', 'done']);
+/**
+ * หมวดของสถานะ (ผู้ใช้ขอเพิ่ม 2026-11-11) · review = รอตรวจ / QA · blocked = ติดอยู่ / พักไว้ (ยังเป็นงานค้าง)
+ * cancelled = ยกเลิก / ไม่ผ่าน: ปิดงานแล้วแต่ไม่นับว่าเสร็จ และไม่อยู่ในตัวหารของ % ความคืบหน้า
+ */
+export const statusCategory = pgEnum('status_category', ['todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled']);
 export const priority = pgEnum('priority', ['urgent', 'high', 'medium', 'low']);
 export const size = pgEnum('size', ['XS', 'S', 'M', 'L', 'XL']);
 export const severity = pgEnum('severity', ['critical', 'major', 'minor']);

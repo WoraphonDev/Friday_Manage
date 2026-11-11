@@ -1,5 +1,6 @@
 // รูปแบบคำตอบของ A09 (apps/api/src/reports) และ A08 (workload) ที่หน้า O1 / O2 ใช้
 import type { Person } from "@/lib/types";
+import type { StatusCategory } from "@/lib/status";
 
 export type Severity = "high" | "medium" | "low";
 export type RiskKind = "overdue" | "due_soon_low_progress" | "capacity_over" | "blocked" | "pending_due_requests";
@@ -113,7 +114,7 @@ export interface TraceIssue {
   key: string;
   title: string;
   type: string;
-  status: { name: string; category: "todo" | "in_progress" | "done" };
+  status: { name: string; category: StatusCategory };
   latestTest: { result: string; runNo: number; environment: string | null; passed: number | null; total: number | null; at: string } | null;
 }
 export interface TraceabilityResponse {

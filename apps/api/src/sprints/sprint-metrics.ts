@@ -30,7 +30,8 @@ export function leafIssues(rows: SprintIssue[]) {
 }
 
 export function totals(rows: SprintIssue[]) {
-  const leaves = leafIssues(rows);
+  // งานที่ยกเลิกไม่นับในขอบเขตของ Sprint
+  const leaves = leafIssues(rows).filter((row) => row.category !== 'cancelled');
   return {
     totalMd: round(leaves.reduce((sum, row) => sum + (row.estimateMd ?? 0), 0)),
     remainingMd: round(leaves.reduce((sum, row) => sum + (row.category !== 'done' ? row.estimateMd ?? 0 : 0), 0)),

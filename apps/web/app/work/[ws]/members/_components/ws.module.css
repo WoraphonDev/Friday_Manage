@@ -37,3 +37,16 @@
 .projRow select { min-height:32px; border:1px solid var(--input); border-radius:8px; padding:0 8px; font:inherit; font-size:12px; background:var(--card); min-width:120px; }
 .foot { border-top:1px solid var(--border); margin:4px -20px 0; padding:14px 20px 0; }
 @media (max-width:760px) { .opts { grid-template-columns:1fr; } }
+
+/* มือถือ: แถวสมาชิกเป็นการ์ด (เดิมเป็นตารางกว้าง 1000px ต้องเลื่อนขวา · ผู้ใช้แจ้ง 2026-11-11)
+   แถวบน = คน + ปุ่ม ⋯ · แถวล่าง = Role · โปรเจกต์ · สถานะ · ไม่แสดงหัวคอลัมน์ ตำแหน่ง และเวลาใช้งานล่าสุด (ดูได้ในเมนู ⋯ / จอใหญ่) */
+@media (max-width:760px) {
+  .mr { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; min-width:0; padding:12px 14px; }
+  .mr.h { display:none; }
+  .mr > :first-child { flex:1 1 calc(100% - 52px); min-width:0; overflow-wrap:anywhere; }
+  .mr > :last-child { order:1; margin-left:auto; }
+  .mr > :nth-child(n+2):not(:last-child) { order:2; }
+  .mr > :nth-child(2):not(:last-child), .mr > :nth-child(5):not(:last-child) { display:none; }
+  .mr > .inline { order:4; flex-basis:100%; justify-content:flex-start; }
+  .mr select { min-height:36px; }
+}

@@ -80,3 +80,15 @@
 .previewHint { position:absolute; right:10px; bottom:8px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; background:var(--card); color:var(--foreground-soft); opacity:0; transition:opacity .15s; }
 .bigButton:hover .previewHint, .bigButton:focus-visible .previewHint { opacity:1; }
 @media (hover:none) { .previewHint { opacity:1; } }
+
+
+/* มือถือ: หมวด / โฟลเดอร์เป็นแถบชิปเลื่อนแนวนอนแถวเดียว (เดิมเป็นเมนูยาวเต็มจอก่อนถึงรายการไฟล์ · ผู้ใช้แจ้ง 2026-11-11) */
+@media (max-width:760px) {
+  .side { flex-direction:row; align-items:center; gap:6px; overflow-x:auto; scrollbar-width:none; padding:8px; flex-basis:100%; }
+  .side::-webkit-scrollbar { display:none; }
+  .side .fsec, .side .hint, .side .line { display:none; }
+  .side .fo { flex:none; width:auto; min-height:36px; padding:0 12px !important; border:1px solid var(--input); border-radius:999px; white-space:nowrap; margin:0 !important; }
+  .side .fo.on { border-color:var(--primary-soft); }
+  .side .c { margin-left:4px; }
+  .sideFoot { display:contents; }
+}

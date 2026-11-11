@@ -30,6 +30,8 @@ export interface UpdateDiff {
   changed: { no: number; key: string; title: string; fields: FieldChange[] }[];
   missing: { no: number; key: string; title: string; status: string }[];
   unchanged: number;
+  /** โหมด unstarted: งานที่ค่าต่างแต่เริ่มทำแล้ว จึงไม่แก้ */
+  locked?: { no: number; key: string; title: string; status: string; fields: string[] }[];
 }
 export interface ImportSummary {
   rows: number;
@@ -63,6 +65,10 @@ export interface ImportJob {
   missingChoice?: Record<string, "keep" | "delete">;
   missingAll?: "keep" | "delete";
   planChangeReason?: string;
+  /** โหมดอัปเดต: replace = จับคู่และแก้งานเดิม · append = ทุกแถวเป็นงานใหม่ */
+  updateKind?: UpdateKind;
+  /** โหมด unstarted: ผู้ใช้ยืนยันให้เพิ่มงานใหม่ในไฟล์แล้ว */
+  addNew?: boolean;
 }
 export interface CommitResult {
   mode: "create" | "update";
@@ -90,3 +96,5 @@ export interface Member {
 
 /** key ของคนใน personMapping ต้องตรงกับ `personKey` ของ API: ไม่สนตัวพิมพ์และ ’ กับ ' */
 export const personKey = (name: string) => name.trim().toLowerCase().replace(/[’‘`]/g, "'");
+
+export type UpdateKind = "replace" | "append" | "unstarted";

@@ -151,14 +151,15 @@ describe('GET p/reports/weekly', () => {
     expect(['on_track', 'at_risk', 'off_track']).toContain(r.body.status);
     expect(r.body.totals).toEqual({ doneCount: 3, taskCount: 7, usedMd: 12, totalMd: 48, overdue: 1 });
     expect(r.body.thisWeek.done).toMatchObject({ count: 1, md: 5, keys: [ids.A1.key] });
-    expect(r.body.thisWeek).toMatchObject({ inProgress: 2, inReview: 1, overdue: { count: 1, byAssignee: [{ displayName: 'Kaijeaw', count: 1 }] }, newBugs: [{ key: ids.BUG.key, title: 'งาน BUG' }], fixedBugs: [] });
+    // งานใน Review (หมวด review ของโปรเจกต์ใหม่) ไม่นับซ้ำเป็น In progress
+    expect(r.body.thisWeek).toMatchObject({ inProgress: 1, inReview: 1, overdue: { count: 1, byAssignee: [{ displayName: 'Kaijeaw', count: 1 }] }, newBugs: [{ key: ids.BUG.key, title: 'งาน BUG' }], fixedBugs: [] });
     expect(r.body.nextWeek).toMatchObject({ start: '2026-12-07', end: '2026-12-13', starting: { count: 2, md: 14, byModule: expect.arrayContaining([{ name: 'Alpha', count: 1 }, { name: 'Beta', count: 1 }]) }, sprintEvents: [] });
     expect(r.body.nextWeek.holidays.map((h: { date: string }) => h.date)).toEqual(['2026-12-07', '2026-12-10']);
     expect(r.body.risks.map((k: { kind: string }) => k.kind)).toEqual(['due_soon_low_progress', 'capacity_over', 'overdue', 'blocked', 'pending_due_requests']);
     expect(r.body.needsHelp.unassigned).toEqual({ count: 1, keys: [ids.B3.key] });
     expect(r.body.text).toContain('รายงานประจำสัปดาห์ · Report Project');
     expect(r.body.text).toContain('เสร็จ 3/7 งาน');
-    expect(r.body.text).toContain('เสร็จแล้ว 1 งาน (5 MD) · กำลังทำ 2 งาน · รอ Review 1 งาน');
+    expect(r.body.text).toContain('เสร็จแล้ว 1 งาน (5 MD) · กำลังทำ 1 งาน · รอ Review 1 งาน');
     expect(r.body.text).toContain('Kaijeaw 1');
     expect(r.body.text).toContain(`Bug ใหม่ 1 (${ids.BUG.key}`);
   });

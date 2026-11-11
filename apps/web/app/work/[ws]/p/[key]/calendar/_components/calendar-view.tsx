@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type DragEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -10,11 +10,13 @@ import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat, intlLocale } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
+import { useIsMobile } from "@/lib/use-mobile";
 import type { Permissions, Person } from "@/lib/types";
 import { SubscribeDialog } from "./subscribe-dialog";
 import styles from "./cal.module.css";
+import type { StatusCategory } from "@/lib/status";
 
-type Cat = "todo" | "in_progress" | "done";
+type Cat = StatusCategory;
 type Due = "done" | "overdue" | "today" | "upcoming";
 export interface CalIssue {
   key: string; type: string; title: string; status: { name: string; category: Cat }; priority: string;
@@ -74,6 +76,12 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
   const toast = useToast();
   const base = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
   const [view, setView] = useState<View>("month");
+  // มือถือ: ตารางเดือน 7 ช่องแคบจนชื่องานเหลือ "DE…" อ่านไม่ออก จึงเปิดเป็น Agenda ก่อน (ผู้ใช้แจ้ง 2026-11-11) · เลือกเดือนเองได้
+  const mobile = useIsMobile();
+  const picked = useRef(false);
+  useEffect(() => {
+    if (mobile && !picked.current) setView("agenda");
+  }, [mobile]);
   // null = ยังไม่เลื่อน ใช้เดือน / วันนี้ตามที่ API ตอบ (เวลาไทย)
   const [anchor, setAnchor] = useState<string | null>(null);
   const [show, setShow] = useState<Show>({ tasks: true, milestones: true, sprints: true, holidays: true, leaves: true, done: false });
@@ -174,7 +182,7 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
       return <span key={it.id} className={`${styles.ev} ${styles.leave}`} title={text}><span className={styles.t}>{text}</span></span>;
     }
     const i = it.issue;
-    const cls = i.due === "overdue" ? styles.late : i.due === "today" ? styles.dueToday : i.due === "done" ? styles.done : i.status.category === "in_progress" ? styles.prog : styles.todo;
+    const cls = i.due === "overdue" ? styles.late : i.due === "today" ? styles.dueToday : i.due === "done" ? styles.done : i.status.category === "todo" ? styles.todo : styles.prog;
     const state = t(`state.${i.due}`);
     const label = `${t("task", { key: i.key, title: i.title, date: formatDate(i.planEnd, year) })}${state ? ` · ${state}` : ""}`;
     const onKey = (e: KeyboardEvent) => {
@@ -215,7 +223,7 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
       <div className={styles.bar} style={{ justifyContent: "flex-start" }}>
         <div className={styles.seg} role="group" aria-label={t("view.label")}>
           {(["month", "week", "day", "agenda"] as const).map((v) => (
-            <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>{t(`view.${v}`)}</button>
+            <button key={v} type="button" aria-pressed={view === v} onClick={() => { picked.current = true; setView(v); }}>{t(`view.${v}`)}</button>
           ))}
         </div>
         <Button aria-expanded={filtersOpen} onClick={() => setFiltersOpen((x) => !x)}>{t("filter")}</Button>

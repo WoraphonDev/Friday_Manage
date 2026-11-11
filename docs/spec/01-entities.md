@@ -30,6 +30,7 @@
 | Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
 |---|---|---|---|
 | `user` | บัญชีผู้ใช้ 1 คน | email (unique), email_verified_at, display_name, first_name, last_name, phone, avatar_url, about, locale (th/en), year_format (BE/CE), timezone, password_hash (null ถ้าใช้แค่ Google), password_changed_at, failed_login_count, locked_until, disabled_at | J1–J3, I |
+| `user_avatar` | รูปโปรไฟล์ที่อัปโหลดเอง (แทนลิงก์รูปจากที่อื่น) · ย่อเป็นสี่เหลี่ยมที่หน้าเว็บก่อนส่ง · `user.avatar_url` ชี้มาที่ `/api/v1/avatars/{user_id}/{version}` | user_id (PK), mime, data (bytea ≤ 512 KB), version, updated_at | I |
 | `user_identity` | วิธีล็อกอินที่ผูกกับบัญชี · 1 คนผูกได้หลายวิธี (ตามที่ตกลงไว้ว่าทำ SAML ทีหลัง) | user_id, provider (password · google · microsoft · saml · oidc), provider_subject, sso_connection_id (null ถ้าไม่ใช่ SSO) | J1, I |
 | `mfa_factor` | 2FA แบบ Authenticator | user_id, type (totp), secret_enc, backup_codes_hash[], enabled_at | J1, I |
 | `user_session` | อุปกรณ์ที่ล็อกอินอยู่ · ออกจากระบบรายเครื่องได้ | user_id, token_hash, device_name, user_agent, ip, location, remember_until (30 วัน), mfa_trusted_until, last_seen_at, revoked_at | I, M1 |
@@ -88,7 +89,7 @@ Workspace เลือกปฏิทินหลัก + เพิ่มวั�
 |---|---|---|---|
 | `issue_type` | Story / Task / Bug / Spike · เปิดปิดได้ | project_id, name, color, icon, workflow_id, required_fields[], enabled, sort | L2, K1 |
 | `workflow` | ชุดสถานะ · Bug มี Workflow ของตัวเอง (Open → Closed) | project_id, name | L2 |
-| `workflow_status` | สถานะ 1 ตัว | workflow_id, name, category (todo · in_progress · done), board_column_id (คอลัมน์บน Kanban: ชี้ไปสถานะของ Workflow มาตรฐาน · null = เป็นคอลัมน์เอง), wip_limit, sort | L2, 3 |
+| `workflow_status` | สถานะ 1 ตัว | workflow_id, name, category (todo · in_progress · review · blocked · done · cancelled), color (#RRGGBB ที่ผู้ใช้เลือก · null = สีตามหมวด), board_column_id (คอลัมน์บน Kanban: ชี้ไปสถานะของ Workflow มาตรฐาน · null = เป็นคอลัมน์เอง), wip_limit, sort | L2, 3 |
 | `workflow_rule` | กฎการย้ายสถานะ เช่น "ห้ามย้ายไป Done ถ้า Sub-task ยังไม่ครบ" | workflow_id, rule_type, config (jsonb), enabled | A, L2 |
 | `custom_field` | ฟิลด์ที่ทีมเพิ่มเอง (Customer request, Release version, Effort ทีมลูกค้า) | project_id, name, field_type (text · number · select · multi_select · user · date), options (jsonb), sort | L2 |
 | `issue_custom_value` | ค่าของฟิลด์ข้างบน | issue_id, field_id, value (jsonb) | C |
@@ -289,5 +290,5 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 6. **Project Key ไม่ซ้ำใน Workspace:** `UNIQUE (workspace_id, key)` และต้องไม่ชนกับ `project_key_alias`
 7. **เปลี่ยน Due:** Member ต้องสร้าง `due_change_request` ถ้าสิทธิ์ `issue.change_due_directly` ปิดอยู่ · อนุมัติแล้วเขียน `plan_change` อัตโนมัติ
 8. **แก้แผนหลังมี Baseline** (Plan Start, Plan End, Man-Day, Dev) ต้องมี `reason` และเขียน `plan_change`
-9. **Actual Start / End** ตั้งอัตโนมัติเมื่อสถานะเข้าหมวด in_progress ครั้งแรก / เข้าหมวด done · ถ้า Reopen ให้ล้าง Actual End
+9. **Actual Start / End** ตั้งอัตโนมัติเมื่อสถานะออกจากหมวด todo ครั้งแรก (ยกเว้น cancelled) / เข้าหมวด done · cancelled ปิดงาน (completed_at) แต่ไม่ตั้ง Actual End · ถ้า Reopen ให้ล้าง Actual End
 10. **audit_log** ห้าม UPDATE / DELETE (สิทธิ์ฐานข้อมูลให้แค่ INSERT, SELECT) ลบได้เฉพาะ job ล้างข้อมูลตามระยะเก็บรักษาของแพ็กเกจ

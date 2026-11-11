@@ -88,6 +88,12 @@
       "category": "หมวด",
       "wip": "WIP limit",
       "used": "ใช้อยู่",
+      "color": "สี",
+      "colorOf": "สีของสถานะ {name}",
+      "colorAuto": "ใช้สีตามหมวด",
+      "colorCustom": "เลือกสีเอง",
+      "categoryGuide": "หมวดบอกระบบว่าสถานะนี้นับอย่างไร",
+      "preview": "ตัวอย่าง",
       "moveUp": "เลื่อน {name} ขึ้น",
       "moveDown": "เลื่อน {name} ลง",
       "statusNameOf": "ชื่อสถานะ {name}",
@@ -95,7 +101,18 @@
       "categories": {
         "todo": "To do",
         "in_progress": "In progress",
-        "done": "Done"
+        "review": "Review / QA",
+        "blocked": "Blocked / On hold",
+        "done": "Done",
+        "cancelled": "Cancelled / Rejected"
+      },
+      "categoryHints": {
+        "todo": "ยังไม่เริ่ม · เป็นงานค้าง",
+        "in_progress": "กำลังทำ · ตั้ง Actual Start ให้อัตโนมัติ",
+        "review": "รอตรวจ / ทดสอบ · ยังเป็นงานค้าง",
+        "blocked": "ติดปัญหา / พักไว้ · ยังเป็นงานค้างและเลยกำหนดได้",
+        "done": "เสร็จ · ตั้ง Actual End และนับในความคืบหน้า",
+        "cancelled": "ยกเลิก / ไม่ผ่าน · ปิดงาน ไม่เลยกำหนด และไม่นับในความคืบหน้า"
       },
       "wipOf": "WIP limit ของ {name}",
       "issues": "{count} งาน",

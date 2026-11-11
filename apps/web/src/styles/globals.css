@@ -456,6 +456,15 @@ svg {
   background: var(--status-done-bg);
   color: var(--status-done-fg);
 }
+.status-pill-blocked {
+  background: var(--status-blocked-bg);
+  color: var(--status-blocked-fg);
+}
+.status-pill-cancelled {
+  background: var(--status-cancelled-bg);
+  color: var(--status-cancelled-fg);
+  text-decoration: line-through;
+}
 .status-pill-overdue {
   background: var(--status-overdue-bg);
   color: var(--status-overdue-fg);
@@ -757,6 +766,10 @@ td {
   padding: 12px 14px;
   box-shadow: var(--shadow-menu);
   gap: 10px;
+}
+/* รูปผู้ใช้เป็น span ตัวแรก จึงโดน `.toast > span:first-child { flex:1 }` ยืดเป็นวงรี · ล็อกขนาดไว้ */
+.toast.toast-rich > .avatar {
+  flex: none;
 }
 .toast-rich .toast-body {
   flex: 1;
@@ -2154,3 +2167,12 @@ button.menu-item:disabled { cursor:default; opacity:.5; }
     margin: 10px 16px 0;
   }
 }
+
+/* เมนูมือถือ (Drawer): ตั้งค่าภาษา / ปี / ธีม เรียงแถวละชุด เต็มความกว้าง · ใช้เฉพาะใน Drawer จึงไม่กระทบเมนูบัญชีบน desktop */
+.drawer-prefs { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 8px; }
+.drawer-prefs .drawer-pref { display: flex; flex-direction: column; align-items: stretch; gap: 10px; width: 100%; }
+.drawer-prefs .drawer-pref > div { display: flex; width: 100%; }
+.drawer-prefs .drawer-pref[role="group"] { flex-direction: row; }
+.drawer-prefs .drawer-pref button { flex: 1; min-height: 44px; }
+.drawer-signout { display: flex; padding-top: 4px; border-top: 1px solid var(--border); }
+.drawer-signout > button { flex: 1; min-height: 44px; justify-content: flex-start; color: var(--danger-text); }

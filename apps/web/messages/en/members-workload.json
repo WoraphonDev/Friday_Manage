@@ -110,6 +110,7 @@
     "roleChanged": "Changed {name}'s Role to {role}",
     "editTitle": "Manage {name}",
     "position": "Position in project",
+    "positionNone": "Not set",
     "capacityHours": "Capacity (hrs/week)",
     "pmDeputy": "Acts for the PM",
     "pmDeputyHint": "Gets PM notifications (overdue summary, due date requests, plan changes) and can approve due date requests without being an Admin",

@@ -10,11 +10,13 @@ import type { ProjectRow } from '../projects/projects.service.js';
 import { ProjectsService } from '../projects/projects.service.js';
 import { assertFullOrder, audit, color, type Context, issueEvent, loadContext, name, nextSort, nonEmpty, ReorderBody } from './context.js';
 import { RuleConfig, ruleCatalog, ruleType, WORKFLOW_RULES, type WorkflowKind } from './rules.js';
+import { STATUS_CATEGORIES } from '../common/status-category.js';
 
-const category = z.enum(['todo', 'in_progress', 'done']);
+const category = z.enum(STATUS_CATEGORIES);
 const wipLimit = z.number().int().min(1).max(999).nullable();
 
-export const CreateStatusBody = z.object({ name, category, boardColumnId: z.uuid().nullish(), wipLimit: wipLimit.optional() }).strict();
+/** color = สีที่ผู้ใช้เลือก (#RRGGBB) · null = ใช้สีตามหมวด */
+export const CreateStatusBody = z.object({ name, category, color: color.nullable().optional(), boardColumnId: z.uuid().nullish(), wipLimit: wipLimit.optional() }).strict();
 export const PatchStatusBody = CreateStatusBody.partial().refine((v) => Object.keys(v).length > 0, nonEmpty);
 /** moveTo = สถานะปลายทางใน Workflow เดียวกัน (บังคับเมื่อมีงาน) */
 export const DeleteStatusBody = z.object({ moveTo: z.uuid().optional() }).strict();
@@ -102,7 +104,7 @@ export class WorkflowsService {
       if (input.boardColumnId) await this.checkBoardColumn(tx, project.id, workflowId, input.boardColumnId);
       const [row] = await tx.insert(s.workflowStatuses).values({
         workspaceId: tenant.workspaceId, projectId: project.id, workflowId,
-        name: input.name, category: input.category, boardColumnId: input.boardColumnId ?? null, wipLimit: input.wipLimit ?? null, sort: nextSort(current),
+        name: input.name, category: input.category, color: input.color ?? null, boardColumnId: input.boardColumnId ?? null, wipLimit: input.wipLimit ?? null, sort: nextSort(current),
       }).returning();
       await audit(tx, auth, tenant, project, 'project.status_created', `เพิ่มสถานะ ${row.name}`);
       return { ...statusDto(row), issueCount: 0 };
@@ -350,7 +352,7 @@ export class WorkflowsService {
 }
 
 function statusDto(st: Status) {
-  return { id: st.id, workflowId: st.workflowId, name: st.name, category: st.category, boardColumnId: st.boardColumnId, wipLimit: st.wipLimit, sort: st.sort };
+  return { id: st.id, workflowId: st.workflowId, name: st.name, category: st.category, color: st.color, boardColumnId: st.boardColumnId, wipLimit: st.wipLimit, sort: st.sort };
 }
 
 function ruleDto(r: Rule) {

@@ -6,6 +6,7 @@ import * as Popover from "@radix-ui/react-popover";
 import { MoreHorizontal } from "lucide-react";
 import { Avatar, Badge, Button, Dialog, EmptyState, Input, Select } from "@/components/ui";
 import { formatDate, type YearFormat, localeNumberFormat } from "@/lib/format";
+import { positionOptions, toPositionCode } from "@/lib/positions";
 import { cn } from "@/lib/utils";
 import type { ProjectMember, ProjectRole } from "./types";
 import styles from "./members.module.css";
@@ -147,7 +148,7 @@ function MemberDialog({
 }) {
   const t = useTranslations("members-workload.members");
   const tc = useTranslations("common.app");
-  const [position, setPosition] = useState(member.position ?? "");
+  const [position, setPosition] = useState(toPositionCode(member.position));
   const [capacity, setCapacity] = useState(member.capacityHoursWeek === null ? "" : String(member.capacityHoursWeek));
   const [deputy, setDeputy] = useState(!!member.pmDeputy);
   // Owner / Admin เป็น PM อยู่แล้ว · Guest ทำแทน PM ไม่ได้
@@ -175,7 +176,10 @@ function MemberDialog({
           void run(() => onSave({ position: position.trim() || null, capacityHoursWeek: capacity === "" ? null : Number(capacity), ...(canDeputy ? { pmDeputy: deputy } : {}) }));
         }}
       >
-        <Input label={t("position")} value={position} maxLength={60} onChange={(e) => setPosition(e.target.value)} />
+        <Select label={t("position")} value={position} onChange={(e) => setPosition(e.target.value)}>
+          <option value="">{t("positionNone")}</option>
+          {positionOptions(position).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </Select>
         <Input label={t("capacityHours")} type="number" min={0} max={168} value={capacity} hint={t("capacityHint")} onChange={(e) => setCapacity(e.target.value)} />
         {canDeputy && (
           <label className={styles.check}>

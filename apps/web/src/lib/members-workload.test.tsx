@@ -200,10 +200,15 @@ describe("Members ของโปรเจกต์", () => {
     mount(<MembersView ws="sample" projectKey="DE" />);
     await user.click(await screen.findByRole("button", { name: "ตัวเลือกของ ผู้พัฒนาหนึ่ง" }));
     const dialog = screen.getByRole("dialog", { name: "จัดการ ผู้พัฒนาหนึ่ง" });
+    // ตำแหน่งเป็นรายการเลือก "ตัวย่อ - ชื่อเต็ม" · ค่าเดิมที่พิมพ์เป็นชื่อเต็มจับคู่เป็นตัวย่อ
+    const position = within(dialog).getByLabelText("ตำแหน่งในโปรเจกต์");
+    expect(position.tagName).toBe("SELECT");
+    expect(position).toHaveValue("DEV");
+    expect(within(position).getByRole("option", { name: "SA - System Analyst" })).toBeInTheDocument();
     await user.clear(within(dialog).getByLabelText("Capacity (ชม./สัปดาห์)"));
     await user.type(within(dialog).getByLabelText("Capacity (ชม./สัปดาห์)"), "24");
     await user.click(within(dialog).getByRole("button", { name: "บันทึก" }));
-    await waitFor(() => expect(calls[0]).toMatchObject({ method: "PATCH", body: { position: "Developer", capacityHoursWeek: 24 } }));
+    await waitFor(() => expect(calls[0]).toMatchObject({ method: "PATCH", body: { position: "DEV", capacityHoursWeek: 24 } }));
 
     await user.click(screen.getByRole("button", { name: "ตัวเลือกของ ผู้พัฒนาหนึ่ง" }));
     const again = screen.getByRole("dialog", { name: "จัดการ ผู้พัฒนาหนึ่ง" });

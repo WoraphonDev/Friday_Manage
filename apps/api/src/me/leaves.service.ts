@@ -9,6 +9,7 @@ import { TenantDb } from '../common/tenant.js';
 import { EventBus } from '../core/events.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { Notifier } from '../notifications/notifier.js';
+import { openStatus } from '../common/status-category.js';
 
 const s = schema;
 const isoDate = z.iso.date();
@@ -104,7 +105,7 @@ export class LeavesService {
           eq(s.issueAssignees.userId, leave.userId),
           isNull(s.issues.deletedAt),
           isNull(s.projects.deletedAt),
-          ne(s.workflowStatuses.category, 'done'),
+          openStatus(),
           lte(s.issues.planStart, leave.endDate),
           gte(s.issues.planEnd, leave.startDate),
         ),

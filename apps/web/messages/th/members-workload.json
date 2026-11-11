@@ -110,6 +110,7 @@
     "roleChanged": "เปลี่ยน Role ของ {name} เป็น {role} แล้ว",
     "editTitle": "จัดการ {name}",
     "position": "ตำแหน่งในโปรเจกต์",
+    "positionNone": "ไม่ระบุ",
     "capacityHours": "Capacity (ชม./สัปดาห์)",
     "pmDeputy": "ทำแทน PM",
     "pmDeputyHint": "ได้รับแจ้งเตือนแบบ PM (สรุปงานเลยกำหนด, คำขอเลื่อน Due, การแก้แผน) และอนุมัติคำขอเลื่อน Due ได้ โดยไม่ต้องเป็น Admin",

@@ -188,6 +188,18 @@ describe("Project Settings (L2)", () => {
     await user.type(name, "Code review");
     fireEvent.blur(name);
     await waitFor(() => expect(calls[0]).toMatchObject({ method: "PATCH", path: "/w/sample/projects/DE/workflows/wf-std/statuses/s-rev", body: { name: "Code review" }, ifMatch: null }));
+    // หมวดครบ 6 แบบ (2026-11-11) · เลือกสีเองและกลับไปใช้สีตามหมวด
+    const category = screen.getByLabelText("หมวดของสถานะ Review");
+    expect(within(category).getAllByRole("option").map((o) => o.textContent)).toEqual(["To do", "In progress", "Review / QA", "Blocked / On hold", "Done", "Cancelled / Rejected"]);
+    await user.selectOptions(category, "review");
+    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "PATCH", path: "/w/sample/projects/DE/workflows/wf-std/statuses/s-rev", body: { category: "review" } }));
+    await user.click(screen.getByRole("button", { name: "สีของสถานะ Review" }));
+    await user.click(await screen.findByRole("button", { name: "#e8762a" }));
+    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "PATCH", path: "/w/sample/projects/DE/workflows/wf-std/statuses/s-rev", body: { color: "#e8762a" } }));
+    await user.click(screen.getByRole("button", { name: "สีของสถานะ Review" }));
+    await user.click(await screen.findByRole("button", { name: "ใช้สีตามหมวด" }));
+    await waitFor(() => expect(calls.at(-1)).toMatchObject({ body: { color: null } }));
+    expect(screen.getByText("ยกเลิก / ไม่ผ่าน · ปิดงาน ไม่เลยกำหนด และไม่นับในความคืบหน้า")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "เลื่อน Done ขึ้น" }));
     await waitFor(() => expect(calls.at(-1)).toMatchObject({ path: "/w/sample/projects/DE/workflows/wf-std/statuses/reorder", body: { ids: ["s-todo", "s-prog", "s-done", "s-rev"] } }));
     await user.click(screen.getByRole("button", { name: "ลบสถานะ To do" }));
@@ -446,7 +458,7 @@ describe("สร้างโปรเจกต์ (Wizard 5 ขั้น)", () =
       visibility: "workspace", extraHolidays: [{ date: "2026-11-13", name: "วันหยุดบริษัท" }], sprintLengthWeeks: null,
       modules: ["Module A", "Module B"], milestones: [{ name: "Go-live", date: "2026-11-15" }],
       scope: { in: ["ระบบสั่งงาน"], deliverables: ["ระบบเว็บ", "คู่มือ"] },
-      members: [{ userId: "u-dev", role: "viewer", position: "Backend Dev", capacityHoursWeek: 32 }],
+      members: [{ userId: "u-dev", role: "viewer", position: "BE", capacityHoursWeek: 32 }],
       workflow: ["To do", { name: "In progress", wipLimit: 5 }, { name: "Review", wipLimit: 3 }, "QA", "Done"],
       estimateUnit: "man_day", progressMethod: "weighted", builtinTemplate: "kanban",
     });

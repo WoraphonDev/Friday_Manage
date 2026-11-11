@@ -104,7 +104,7 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
           <h1>{t("title")}</h1>
           <div className={styles.muted}>{t("subtitle")}</div>
         </div>
-        <Link className={buttonVariants()} href="/pricing">
+        <Link className={buttonVariants()} href={`/work/${encodeURIComponent(ws)}/billing/plans`}>
           {t("compare")}
         </Link>
       </div>

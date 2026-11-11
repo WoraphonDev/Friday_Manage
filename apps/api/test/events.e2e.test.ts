@@ -34,7 +34,7 @@ describe('EventBus', () => {
     seen.length = 0;
     const review = project.statuses.find((x: { name: string; boardColumnId: string | null }) => x.name === 'Review' && !x.boardColumnId).id;
     await lead.post(`${ws}/issues/DP-1/move`, { statusId: review });
-    expect(seen.find((e) => e.type === 'issue.status_changed')?.data).toMatchObject({ from: { name: 'To do' }, to: { name: 'Review', category: 'in_progress' } });
+    expect(seen.find((e) => e.type === 'issue.status_changed')?.data).toMatchObject({ from: { name: 'To do' }, to: { name: 'Review', category: 'review' } });
 
     seen.length = 0;
     const bad = await lead.patch(`${ws}/issues/DP-1`, { title: 'x' }, 1);

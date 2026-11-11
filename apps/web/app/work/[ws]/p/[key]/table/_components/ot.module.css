@@ -1,7 +1,7 @@
 .page { padding:20px 24px; display:flex; flex-direction:column; gap:20px; min-width:0; }
 .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-.seg { display:inline-flex; border:1px solid var(--input); border-radius:8px; overflow:hidden; background:var(--card); }
-.seg button { min-height:30px; padding:0 12px; border:0; background:transparent; font:inherit; font-size:12px; color:var(--foreground-soft); cursor:pointer; }
+.seg { display:inline-flex; box-sizing:border-box; height:var(--control-h); border:1px solid var(--input); border-radius:8px; overflow:hidden; background:var(--card); }
+.seg button { min-height:calc(var(--control-h) - 2px); padding:0 12px; border:0; background:transparent; font:inherit; font-size:12px; color:var(--foreground-soft); cursor:pointer; }
 .seg button[aria-pressed="true"] { background:var(--primary-soft); color:var(--primary-text); font-weight:600; }
 .card { background:var(--card); border:1px solid var(--border); border-radius:12px; min-width:0; }
 .chead { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--border); }
@@ -107,6 +107,7 @@
 .addb:hover { background:var(--primary-soft); }
 .pill { display:inline-flex; align-items:center; gap:6px; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:500; white-space:nowrap; border:0; }
 .sTodo { background:var(--status-todo-bg); color:var(--status-todo-fg); } .sProg { background:var(--status-progress-bg); color:var(--status-progress-fg); } .sRev { background:var(--status-review-bg); color:var(--status-review-fg); } .sDone { background:var(--status-done-bg); color:var(--status-done-fg); }
+.sBlk { background:var(--status-blocked-bg); color:var(--status-blocked-fg); } .sCan { background:var(--status-cancelled-bg); color:var(--status-cancelled-fg); text-decoration:line-through; }
 /* select ที่ดูเหมือน pill: กดแล้วเปิดตัวเลือก (แก้ในแถวได้แต่ไม่โชว์ช่อง select ค้าง) */
 .pillSelect { appearance:none; -webkit-appearance:none; font-family:inherit; cursor:pointer; max-width:110px; padding:2px 10px; border:0; min-height:0; }
 /* เปิดเป็น popover เดียวกับ Select กลาง (ดู globals.css) โดยตัว pill ไม่เปลี่ยน */
@@ -115,6 +116,8 @@
 .table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; min-width:1100px; table-layout:fixed; }
 .table th { position:sticky; background:var(--surface-2); text-align:left; font-weight:600; font-size:11px; color:var(--muted); height:32px; padding:0 5px; border-bottom:1px solid var(--border); z-index:1; white-space:nowrap; }
 .table th:first-child, .table td:first-child { padding-left:14px; }
+/* เว้นระยะคอลัมน์แรกถัดจากเส้นแบ่งของคอลัมน์ชื่อที่ค้างอยู่ (ผู้ใช้ขอ 2026-11-11) */
+.table th:nth-child(2), .itemRow td:nth-child(2) { padding-left:14px; }
 .table td { padding:0 5px; border-bottom:1px solid var(--border); height:38px; font-size:var(--text-label); vertical-align:middle; }
 .nameHead { display:flex; align-items:center; gap:8px; padding-left:30px; }
 .itemRow:hover td { background:var(--surface-2); }
@@ -134,7 +137,7 @@
 .addRow td { height:40px; padding-left:76px; }
 .footRow td { height:34px; padding-right:16px; color:var(--muted); font-size:11px; text-align:right; }
 .footRow td span + span { margin-left:18px; }
-.name { display:flex; gap:8px; align-items:center; min-width:0; }
+.name { display:flex; gap:8px; align-items:center; min-width:0; position:relative; }
 .key { color:var(--muted); font-size:11px; white-space:nowrap; flex:none; }
 .nm { color:inherit; text-decoration:none; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 .nm:hover { color:var(--primary-text); }
@@ -160,11 +163,14 @@
 .mdForm label { display:flex; flex-direction:column; gap:4px; font-size:11px; font-weight:600; flex:1; }
 .mdForm input { min-height:30px; border:1px solid var(--input); border-radius:8px; padding:0 8px; font:inherit; font-size:12px; width:100%; }
 .popHint { margin:0; font-size:11px; color:var(--muted); }
-/* + Sub-task โผล่เมื่อชี้แถว Task · จอสัมผัสแสดงตลอด */
-.subAddBtn { display:inline-flex; align-items:center; gap:2px; flex:none; margin-left:auto; border:0; background:transparent; color:var(--primary-text); font:inherit; font-size:11px; font-weight:500; padding:2px 8px; min-height:26px; border-radius:6px; cursor:pointer; opacity:0; }
-.itemRow:hover .subAddBtn,.subAddBtn:focus-visible { opacity:1; }
-.subAddBtn:hover { background:var(--primary-soft); }
-@media (hover:none) { .subAddBtn { opacity:1; } }
+/* + Sub-task โผล่เมื่อชี้แถว Task · ลอยทับท้ายช่องเพื่อไม่กินที่ของชื่องานตอนซ่อน (พื้นทึบสีเดียวกับแถวจึงบังชื่อที่อยู่ใต้)
+   จอสัมผัสแสดงตลอดจึงวางต่อท้ายชื่อตามปกติ */
+.subAddBtn { display:inline-flex; align-items:center; gap:2px; flex:none; position:absolute; right:0; top:50%; transform:translateY(-50%); border:0; background:var(--card); color:var(--primary-text); font:inherit; font-size:11px; font-weight:500; padding:2px 8px; min-height:26px; border-radius:6px; cursor:pointer; opacity:0; pointer-events:none; }
+.itemRow:hover .subAddBtn,.subAddBtn:focus-visible { opacity:1; pointer-events:auto; }
+.itemRow:hover .subAddBtn { background:var(--surface-2); }
+.sel .subAddBtn { background:var(--primary-soft); }
+.subAddBtn:hover,.itemRow:hover .subAddBtn:hover { background:var(--primary-soft); }
+@media (hover:none) { .subAddBtn { position:static; transform:none; margin-left:auto; opacity:1; pointer-events:auto; } }
 .subAddRow td { height:44px; background:var(--surface-2); }
 /* ไอคอนตรงกับแถว Sub-task: ระยะเยื้อง 54 + checkbox 16 + ช่องว่าง 8 */
 .subAdd { display:flex; align-items:center; gap:8px; padding-left:78px; }
@@ -245,3 +251,39 @@
 .choiceList .grow { flex: 1; }
 .grow { flex: 1; min-width: 0; }
 .cfText { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- มือถือ (≤ 760 px · TableView ใช้ useIsMobile เลือกส่วนนี้ · desktop ไม่ใช้คลาสเหล่านี้) ---------- */
+/* Views เลื่อนแนวนอนแถวเดียว ไม่ขึ้นหลายบรรทัด */
+.mViews { display:flex; gap:8px; align-items:center; overflow-x:auto; scrollbar-width:none; margin:0 -12px; padding:0 12px; scroll-padding-inline:12px; }
+.mViews::-webkit-scrollbar { display:none; }
+.mViews > * { flex:none; }
+.mTools { display:flex; flex-direction:column; gap:10px; }
+.mToolRow { display:flex; gap:8px; align-items:center; }
+.mToolRow .search { min-width:0; flex:1; min-height:40px; }
+.mToolRow .tbtn { min-height:40px; padding:0 11px; }
+.mMore { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--card); }
+.mMore > * { width:100%; min-width:0; justify-content:space-between; min-height:40px; }
+.mMore select.tbtn { padding-right:8px; }
+.mMore .ghost { border:1px solid var(--input); }
+.mMore .tsel { max-width:60%; text-align:right; }
+.mList { display:flex; flex-direction:column; gap:6px; }
+.mModule, .mPhase { display:flex; align-items:center; gap:10px; width:100%; text-align:left; font:inherit; color:var(--foreground); cursor:pointer; }
+.mModule { padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--surface-2); margin-top:8px; }
+.mModule:first-child { margin-top:0; }
+.mModuleText { display:flex; flex-direction:column; min-width:0; flex:1; gap:2px; }
+.mModuleText b { font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mModuleText span { font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mPct { display:flex; flex-direction:column; align-items:flex-end; gap:4px; font-size:12px; font-weight:700; flex:none; }
+.mPct > span { width:56px; height:5px; background:var(--subtle); border-radius:99px; overflow:hidden; display:block; }
+.mPct > span > span { display:block; height:100%; }
+.mPhase { padding:8px 4px 2px; border:0; background:transparent; }
+.mPhase b { font-size:14px; min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mItem { display:flex; flex-direction:column; gap:4px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--card); color:var(--foreground); text-decoration:none; }
+.mItem:active { background:var(--hover); }
+.mSub { margin-left:16px; }
+.mItemTop { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.mKey { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.mTitle { font-size:14px; font-weight:600; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.mDone { text-decoration:line-through; color:var(--muted); }
+.mMeta { display:flex; align-items:center; gap:12px; font-size:12px; min-height:24px; flex-wrap:wrap; }
+.mAdd { align-self:flex-start; color:var(--primary-text); font-size:13px; font-weight:500; text-decoration:none; padding:6px 4px; }

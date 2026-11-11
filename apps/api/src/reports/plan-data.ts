@@ -2,6 +2,7 @@
 import { schema as s, type Tx } from '@friday/db';
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { WorkCalendar } from '../projects/calendar.js';
+import type { StatusCategory } from '../common/status-category.js';
 
 export type IssueRow = typeof s.issues.$inferSelect;
 
@@ -15,7 +16,7 @@ export interface Item {
   estimateMd: number;
   planStart: string | null;
   planEnd: string | null;
-  category: 'todo' | 'in_progress' | 'done';
+  category: StatusCategory;
   statusName: string;
   progressPct: number;
   assigneeIds: string[];
@@ -71,7 +72,8 @@ export async function loadPlan(tx: Tx, project: Project): Promise<PlanData> {
   // Task ที่มี Sub-task เป็นตัวสรุป (Estimate = ผลรวม Sub-task) · Bug ใต้ Task ไม่ทำให้ Task หยุดเป็นระดับล่างสุด
   const bugIds = new Set(items.filter((i) => i.isBug).map((i) => i.id));
   const parents = new Set(rows.filter((r) => r.i.parentId && !bugIds.has(r.i.id)).map((r) => r.i.parentId!));
-  const work = items.filter((i) => !i.isBug && !parents.has(i.id));
+  // งานที่ยกเลิกไม่อยู่ในแผน (ไม่นับใน Man-Day ความคืบหน้า และพยากรณ์)
+  const work = items.filter((i) => !i.isBug && !parents.has(i.id) && i.category !== 'cancelled');
   const modules = await tx.select({ id: s.modules.id, name: s.modules.name }).from(s.modules).where(eq(s.modules.projectId, project.id)).orderBy(asc(s.modules.sort), asc(s.modules.name));
   const milestones = await tx.select({ name: s.milestones.name, date: s.milestones.date, moduleId: s.milestones.moduleId }).from(s.milestones).where(eq(s.milestones.projectId, project.id)).orderBy(asc(s.milestones.date));
   const deps = ids.length ? await tx.select({ pred: s.issueDependencies.predecessorId, succ: s.issueDependencies.successorId }).from(s.issueDependencies).where(inArray(s.issueDependencies.predecessorId, ids)) : [];
@@ -80,4 +82,4 @@ export async function loadPlan(tx: Tx, project: Project): Promise<PlanData> {
 
 export const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 export const round1 = (n: number) => Math.round(n * 10) / 10;
-export const isOpen = (i: Item) => i.category !== 'done';
+export const isOpen = (i: Item) => i.category !== 'done' && i.category !== 'cancelled';

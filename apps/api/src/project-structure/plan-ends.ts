@@ -5,6 +5,7 @@ import type { DomainEvent } from '../core/events.js';
 import { addDays, planEndFor, WorkCalendar } from '../projects/calendar.js';
 import type { ProjectRow } from '../projects/projects.service.js';
 import { issueEvent } from './context.js';
+import { openStatus } from '../common/status-category.js';
 
 export const HOLIDAY_CHANGE_REASON = 'วันหยุดเปลี่ยน';
 
@@ -46,7 +47,7 @@ export async function recalculatePlanEnds(tx: Tx, project: ProjectRow, opts: Rec
     .where(and(
       eq(s.issues.projectId, project.id),
       isNull(s.issues.deletedAt),
-      ne(s.workflowStatuses.category, 'done'),
+      openStatus(),
       isNotNull(s.issues.planStart),
       isNotNull(s.issues.planEnd),
     ))

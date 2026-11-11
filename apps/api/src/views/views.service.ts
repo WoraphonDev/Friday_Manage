@@ -106,9 +106,11 @@ export class ViewsService {
       const subtaskStats = new Map<string, { total: number; done: number }>();
       for (const i of d.issues) {
         if (!i.parentId) continue;
+        const cat = d.statuses.get(i.statusId)!.category;
+        if (cat === 'cancelled') continue; // Sub-task ที่ยกเลิกไม่นับ
         const st = subtaskStats.get(i.parentId) ?? { total: 0, done: 0 };
         st.total++;
-        if (d.statuses.get(i.statusId)!.category === 'done') st.done++;
+        if (cat === 'done') st.done++;
         subtaskStats.set(i.parentId, st);
       }
       const comments = await tx
@@ -150,7 +152,7 @@ export class ViewsService {
       for (const i of d.issues) {
         const st = d.statuses.get(i.statusId)!;
         if (q.type === 'bug' && i.issueTypeId !== bugType!.id) continue;
-        if (st.category === 'done' && i.completedAt && i.completedAt.getTime() < hideBefore && !q.showOlderDone) {
+        if ((st.category === 'done' || st.category === 'cancelled') && i.completedAt && i.completedAt.getTime() < hideBefore && !q.showOlderDone) {
           hiddenDone++;
           continue;
         }
@@ -213,6 +215,7 @@ export class ViewsService {
       const now = today();
       const weighted = project.progressMethod === 'weighted';
       const isDone = (i: Issue) => d.statuses.get(i.statusId)!.category === 'done';
+      const isClosedIssue = (i: Issue) => isDone(i) || d.statuses.get(i.statusId)!.category === 'cancelled';
       const scheduled = (i: Issue) => !!i.planStart && !!i.planEnd;
 
       const subsOf = new Map<string, Issue[]>();
@@ -222,11 +225,11 @@ export class ViewsService {
       const people = guest ? new Map<string, Person>() : await loadPeople(tx, [...d.assignees.values()].flat());
       const progressOf = (i: Issue): number => {
         if (isDone(i)) return 100;
-        const subs = subsOf.get(i.id);
+        const subs = subsOf.get(i.id)?.filter((x) => d.statuses.get(x.statusId)!.category !== 'cancelled');
         if (subs?.length) return rollup(subs.map((x) => ({ md: x.estimateMd, pct: progressOf(x) })), weighted);
         return i.progressPct ?? 0;
       };
-      const lateOf = (i: Issue) => (!isDone(i) && i.planEnd && i.planEnd < now ? daysBetween(i.planEnd, now) : 0);
+      const lateOf = (i: Issue) => (!isClosedIssue(i) && i.planEnd && i.planEnd < now ? daysBetween(i.planEnd, now) : 0);
       const row = (i: Issue): TimelineRow => {
         const st = d.statuses.get(i.statusId)!;
         const subs = (subsOf.get(i.id) ?? []).filter(scheduled).sort(byDate);
@@ -337,7 +340,7 @@ function rollup(items: { md: number | null; pct: number }[], weighted: boolean) 
 
 /** สถานะ Due บนการ์ด: เลยกำหนด / วันนี้ / ภายใน 3 วัน */
 function dueState(planEnd: string | null, st: Status, now: string) {
-  if (!planEnd || st.category === 'done') return null;
+  if (!planEnd || st.category === 'done' || st.category === 'cancelled') return null;
   const days = daysBetween(now, planEnd);
   if (days < 0) return { state: 'overdue' as const, days: -days };
   if (days === 0) return { state: 'today' as const, days: 0 };

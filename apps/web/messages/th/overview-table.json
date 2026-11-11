@@ -132,7 +132,10 @@
     "statusCategory": {
       "todo": "To do",
       "in_progress": "In progress",
-      "done": "Done"
+      "review": "Review / QA",
+      "blocked": "Blocked / On hold",
+      "done": "Done",
+      "cancelled": "Cancelled / Rejected"
     },
     "assignee": "Dev",
     "anyone": "ทุกคน",
@@ -151,6 +154,10 @@
     "allTasks": "All tasks",
     "myView": "งานของฉัน",
     "filter": "Filter",
+    "moreOptions": "ตัวเลือกการแสดงผล",
+    "listLabel": "รายการงาน",
+    "unassigned": "ยังไม่มีผู้รับผิดชอบ",
+    "dueShort": "ครบ {date}",
     "groupBy": "Group by",
     "groups": {
       "module": "Module",

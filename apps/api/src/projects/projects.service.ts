@@ -16,6 +16,7 @@ import {
   BUILTIN_TEMPLATE_IDS, BUILTIN_TEMPLATES, builtinTemplate, ColumnsSpec, FIELD_MODES, FieldProfileBody, FieldsSpec, mergeProfile,
   resolveProfile, storeProfile, TEMPLATE_CATEGORIES, templateColumns, type StoredProfile,
 } from './field-profile.js';
+import { STATUS_CATEGORIES, type StatusCategory } from '../common/status-category.js';
 
 const s = schema;
 
@@ -38,7 +39,7 @@ const StatusSpec = z.union([
   z.string().trim().min(1).max(60).transform((name) => ({ name, category: undefined, wipLimit: undefined })),
   z.object({
     name: z.string().trim().min(1).max(60),
-    category: z.enum(['todo', 'in_progress', 'done']).optional(),
+    category: z.enum(STATUS_CATEGORIES).optional(),
     wipLimit: z.number().int().positive().max(999).nullish(),
   }),
 ]);
@@ -170,11 +171,10 @@ export const RolePermissionBody = z.object({
   allowed: z.boolean(),
 });
 
-type StatusCategory = 'todo' | 'in_progress' | 'done';
 const STANDARD: { name: string; category: StatusCategory; wipLimit?: number | null }[] = [
   { name: 'To do', category: 'todo' },
   { name: 'In progress', category: 'in_progress' },
-  { name: 'Review', category: 'in_progress' },
+  { name: 'Review', category: 'review' },
   { name: 'Done', category: 'done' },
 ];
 // Bug: Open → In progress → Fixed → Verified → Closed · ผูกกับคอลัมน์ของบอร์ด (docs/spec/README.md คำตัดสินข้อ 5)
@@ -444,7 +444,7 @@ export class ProjectsService {
       // ธุรกรรมเดียวใช้ connection เดียว จึงรันทีละคำสั่ง
       const modules = await tx.select({ id: s.modules.id, name: s.modules.name, color: s.modules.color, sort: s.modules.sort }).from(s.modules).where(eq(s.modules.projectId, project.id)).orderBy(asc(s.modules.sort));
       const statuses = await tx
-          .select({ id: s.workflowStatuses.id, workflowId: s.workflowStatuses.workflowId, name: s.workflowStatuses.name, category: s.workflowStatuses.category, boardColumnId: s.workflowStatuses.boardColumnId, wipLimit: s.workflowStatuses.wipLimit, sort: s.workflowStatuses.sort })
+          .select({ id: s.workflowStatuses.id, workflowId: s.workflowStatuses.workflowId, name: s.workflowStatuses.name, category: s.workflowStatuses.category, color: s.workflowStatuses.color, boardColumnId: s.workflowStatuses.boardColumnId, wipLimit: s.workflowStatuses.wipLimit, sort: s.workflowStatuses.sort })
           .from(s.workflowStatuses)
           .where(eq(s.workflowStatuses.projectId, project.id))
           .orderBy(asc(s.workflowStatuses.sort));
@@ -833,7 +833,8 @@ function normalizeWorkflow(spec: z.infer<typeof WorkflowSpec> | undefined) {
   if (!spec) return null;
   const out = spec.map((st, i) => ({
     name: st.name,
-    category: (st.category ?? (i === 0 ? 'todo' : i === spec.length - 1 ? 'done' : 'in_progress')) as StatusCategory,
+    // ส่งชื่ออย่างเดียว: แรก = todo · สุดท้าย = done · ชื่อ Review = review · ที่เหลือ = in_progress
+    category: (st.category ?? (i === 0 ? 'todo' : i === spec.length - 1 ? 'done' : st.name.trim().toLowerCase() === 'review' ? 'review' : 'in_progress')) as StatusCategory,
     wipLimit: st.wipLimit ?? null,
   }));
   if (!out.some((x) => x.category === 'todo') || !out.some((x) => x.category === 'done')) {
@@ -847,7 +848,9 @@ function boardColumn(std: { id: string; category: string }[], column: (typeof BU
   const [which, ...rest] = column.split('_');
   const cat = rest.join('_');
   const list = std.filter((x) => x.category === cat);
-  const hit = which === 'first' ? list[0] : list[list.length - 1];
+  // Fixed / Verified (รอตรวจ) ไปคอลัมน์ Review ถ้ามี (หมวด review ตั้งแต่ 2026-11-11) แล้วจึงเป็น In progress สุดท้าย
+  const review = column === 'last_in_progress' ? std.filter((x) => x.category === 'review') : [];
+  const hit = review.length ? review[0] : which === 'first' ? list[0] : list[list.length - 1];
   // Workflow ที่ไม่มีหมวด In progress: Fixed / Verified ไปอยู่คอลัมน์ Done
   return hit?.id ?? std.find((x) => x.category === 'done')!.id;
 }

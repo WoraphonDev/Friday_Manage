@@ -151,6 +151,10 @@
     "allTasks": "All tasks",
     "myView": "งานของฉัน",
     "filter": "Filter",
+    "moreOptions": "ตัวเลือกการแสดงผล",
+    "listLabel": "รายการงาน",
+    "unassigned": "ยังไม่มีผู้รับผิดชอบ",
+    "dueShort": "ครบ {date}",
     "groupBy": "Group by",
     "groups": {
       "module": "Module",

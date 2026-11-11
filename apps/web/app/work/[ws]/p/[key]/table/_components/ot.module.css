@@ -115,6 +115,8 @@
 .table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; min-width:1100px; table-layout:fixed; }
 .table th { position:sticky; background:var(--surface-2); text-align:left; font-weight:600; font-size:11px; color:var(--muted); height:32px; padding:0 5px; border-bottom:1px solid var(--border); z-index:1; white-space:nowrap; }
 .table th:first-child, .table td:first-child { padding-left:14px; }
+/* เว้นระยะคอลัมน์แรกถัดจากเส้นแบ่งของคอลัมน์ชื่อที่ค้างอยู่ (ผู้ใช้ขอ 2026-11-11) */
+.table th:nth-child(2), .itemRow td:nth-child(2) { padding-left:14px; }
 .table td { padding:0 5px; border-bottom:1px solid var(--border); height:38px; font-size:var(--text-label); vertical-align:middle; }
 .nameHead { display:flex; align-items:center; gap:8px; padding-left:30px; }
 .itemRow:hover td { background:var(--surface-2); }
@@ -245,3 +247,39 @@
 .choiceList .grow { flex: 1; }
 .grow { flex: 1; min-width: 0; }
 .cfText { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- มือถือ (≤ 760 px · TableView ใช้ useIsMobile เลือกส่วนนี้ · desktop ไม่ใช้คลาสเหล่านี้) ---------- */
+/* Views เลื่อนแนวนอนแถวเดียว ไม่ขึ้นหลายบรรทัด */
+.mViews { display:flex; gap:8px; align-items:center; overflow-x:auto; scrollbar-width:none; margin:0 -12px; padding:0 12px; scroll-padding-inline:12px; }
+.mViews::-webkit-scrollbar { display:none; }
+.mViews > * { flex:none; }
+.mTools { display:flex; flex-direction:column; gap:10px; }
+.mToolRow { display:flex; gap:8px; align-items:center; }
+.mToolRow .search { min-width:0; flex:1; min-height:40px; }
+.mToolRow .tbtn { min-height:40px; padding:0 11px; }
+.mMore { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--card); }
+.mMore > * { width:100%; min-width:0; justify-content:space-between; min-height:40px; }
+.mMore select.tbtn { padding-right:8px; }
+.mMore .ghost { border:1px solid var(--input); }
+.mMore .tsel { max-width:60%; text-align:right; }
+.mList { display:flex; flex-direction:column; gap:6px; }
+.mModule, .mPhase { display:flex; align-items:center; gap:10px; width:100%; text-align:left; font:inherit; color:var(--foreground); cursor:pointer; }
+.mModule { padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--surface-2); margin-top:8px; }
+.mModule:first-child { margin-top:0; }
+.mModuleText { display:flex; flex-direction:column; min-width:0; flex:1; gap:2px; }
+.mModuleText b { font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mModuleText span { font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mPct { display:flex; flex-direction:column; align-items:flex-end; gap:4px; font-size:12px; font-weight:700; flex:none; }
+.mPct > span { width:56px; height:5px; background:var(--subtle); border-radius:99px; overflow:hidden; display:block; }
+.mPct > span > span { display:block; height:100%; }
+.mPhase { padding:8px 4px 2px; border:0; background:transparent; }
+.mPhase b { font-size:14px; min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mItem { display:flex; flex-direction:column; gap:4px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--card); color:var(--foreground); text-decoration:none; }
+.mItem:active { background:var(--hover); }
+.mSub { margin-left:16px; }
+.mItemTop { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.mKey { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.mTitle { font-size:14px; font-weight:600; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.mDone { text-decoration:line-through; color:var(--muted); }
+.mMeta { display:flex; align-items:center; gap:12px; font-size:12px; min-height:24px; flex-wrap:wrap; }
+.mAdd { align-self:flex-start; color:var(--primary-text); font-size:13px; font-weight:500; text-decoration:none; padding:6px 4px; }

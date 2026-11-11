@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ArrowDown, ArrowUp, SlidersHorizontal, Bug, CheckSquare, ChevronLeft, ChevronRight, Flag, ListChecks, MessageCircle, Plus, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, Search, SlidersHorizontal, Bug, CheckSquare, ChevronLeft, ChevronRight, Flag, ListChecks, MessageCircle, Plus, Zap } from "lucide-react";
 import { AvatarStack, Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, LoadingState, Select, useDismissToasts, useToast } from "@/components/ui";
 import { api, ApiError, isConfirmCancelled, supportId } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
@@ -69,6 +69,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   const [moduleId, setModuleId] = useState("");
   const [mine, setMine] = useState(false);
   const [overdue, setOverdue] = useState(false);
+  const [query, setQuery] = useState("");
   const [older, setOlder] = useState(false);
   const [swimlane, setSwimlane] = useState<Swimlane>("none");
   const [mobileColumn, setMobileColumn] = useState<string | null>(null);
@@ -117,7 +118,8 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   const canCreate = permissions.data?.permissions.includes("issue.create") ?? false;
   const data = board.data;
   const activeColumn = data?.columns.some((column) => column.id === mobileColumn) ? mobileColumn : data?.columns[0]?.id;
-  const hasFilters = moduleId || mine || overdue || level !== "all";
+  const hasFilters = moduleId || mine || overdue || level !== "all" || query.trim();
+  const resetFilters = () => { setModuleId(""); setMine(false); setOverdue(false); setLevel("all"); setQuery(""); };
   const href = (key?: string, statusId?: string, targetModuleId?: string | null) => {
     const next = new URLSearchParams(search);
     next.delete("issue"); next.delete("new");
@@ -216,7 +218,9 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   const cards = data.columns.flatMap((column) => column.cards);
   // เรียงตามชื่อ ชิป Module จึงไม่สลับที่เมื่อการ์ดย้ายคอลัมน์
   const modules = Array.from(new Map(cards.filter((card) => card.module).map((card) => [card.module!.id, card.module!])).values()).sort((a, b) => a.name.localeCompare(b.name, "th"));
-  const filtered = cards.filter((card) => !moduleId || card.module?.id === moduleId);
+  // ค้นหาจากชื่อหรือรหัสงานฝั่งหน้าเว็บ บอร์ดโหลดการ์ดทั้งหมดมาแล้ว จึงไม่ต้องยิง API ทุกครั้งที่พิมพ์
+  const needle = query.trim().toLocaleLowerCase("th");
+  const filtered = cards.filter((card) => (!moduleId || card.module?.id === moduleId) && (!needle || card.title.toLocaleLowerCase("th").includes(needle) || card.key.toLocaleLowerCase("th").includes(needle)));
   const priorityOrder = ["urgent", "high", "medium", "low"] as const;
   const groups: { id: string; name: string }[] = swimlane === "module"
     ? [...modules.map((m) => ({ id: m.id, name: m.name })), ...(filtered.some((card) => !card.module) ? [{ id: "none", name: t("noModule") }] : [])]
@@ -278,29 +282,32 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   }
 
   return <section ref={boardRef} className={styles.board} aria-label={t("title")} aria-busy={moving}>
-    {/* Canvas Kanban: แถวแรก = ชิป Module + งานของฉัน / Overdue · แถวสอง = แสดง, Swimlane, Reset */}
-    <div className={`${styles.moduleFilters} ${filtersOpen ? styles.expanded : ""}`} role="group" aria-label={t("modules")}>
-      <Button className={`${styles.chip} ${!moduleId ? styles.selected : ""}`} aria-pressed={!moduleId} onClick={() => setModuleId("")}>{t("allModules")} <span>{cards.length}</span></Button>
-      {modules.map((module) => <Button key={module.id} className={`${styles.chip} ${moduleId === module.id ? styles.selected : ""}`} aria-pressed={moduleId === module.id} onClick={() => setModuleId(module.id)}><span className={styles.dot} style={{ background: module.color ?? DEFAULT_ITEM_COLOR }} />{module.name} <span>{cards.filter((card) => card.module?.id === module.id).length}</span></Button>)}
-      <span className={styles.sep} aria-hidden="true" />
-      <Button className={`${styles.chip} ${styles.secondaryFilter} ${mine ? styles.selected : ""}`} aria-pressed={mine} onClick={() => setMine(!mine)}>{t("mine")}</Button>
-      <Button className={`${styles.chip} ${styles.secondaryFilter} ${overdue ? styles.selected : ""}`} aria-pressed={overdue} onClick={() => setOverdue(!overdue)}>{t("overdue")}</Button>
-    </div>
+    {/* แถวเดียว: ซ้าย = ค้นหา + ตัวกรองงาน · ขวา = มุมมองบอร์ด · Module เป็น dropdown แทนชิป เพราะโปรเจกต์มี Module มากจนล้นหลายบรรทัด (ผู้ใช้ขอ 2026-11-11) */}
     <div className={`${styles.toolbar} ${filtersOpen ? styles.filtersOpen : ""}`}>
-      <div className={styles.filters}>
-        <Select size="small" aria-label={t("boardType")} value={isBug ? "bug" : "standard"} onChange={(event) => switchBoard(event.target.value)} disabled={moving}><option value="standard">{t("standard")}</option><option value="bug">{t("bug")}</option></Select>
-      </div>
+      <label className={styles.search}>
+        <Search size={16} aria-hidden="true" />
+        <input type="search" aria-label={t("search")} placeholder={t("searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setQuery(""); }} />
+      </label>
       <div className={`${styles.filters} ${styles.advancedFilters}`}>
+        <Select size="small" prefix={t("module")} aria-label={t("modules")} className={moduleId ? styles.active : undefined} value={moduleId} onChange={(event) => setModuleId(event.target.value)}>
+          <option value="">{t("allModules")} ({cards.length})</option>
+          {modules.map((module) => <option key={module.id} value={module.id}>{module.name} ({cards.filter((card) => card.module?.id === module.id).length})</option>)}
+        </Select>
+        <Button className={`${styles.chip} ${mine ? styles.selected : ""}`} aria-pressed={mine} onClick={() => setMine(!mine)}>{t("mine")}</Button>
+        <Button className={`${styles.chip} ${overdue ? styles.selected : ""}`} aria-pressed={overdue} onClick={() => setOverdue(!overdue)}>{t("overdue")}</Button>
+        {hasFilters && <Button variant="ghost" className={styles.reset} onClick={resetFilters}>{t("reset")}</Button>}
+      </div>
+      <div className={`${styles.filters} ${styles.advancedFilters} ${styles.viewFilters}`}>
+        <Select size="small" aria-label={t("boardType")} value={isBug ? "bug" : "standard"} onChange={(event) => switchBoard(event.target.value)} disabled={moving}><option value="standard">{t("standard")}</option><option value="bug">{t("bug")}</option></Select>
         <Select size="small" prefix={t("level")} aria-label={t("level")} value={level} onChange={(event) => setLevel(event.target.value)}><option value="all">{t("allLevels")}</option><option value="task">{t("tasks")}</option><option value="subtask">{t("subtasks")}</option></Select>
         <Select size="small" prefix={t("swimlane")} aria-label={t("swimlane")} value={swimlane} onChange={(event) => setSwimlane(event.target.value as Swimlane)}><option value="none">{t("none")}</option><option value="module">{t("module")}</option><option value="assignee">{t("assignee")}</option><option value="priority">{t("priority")}</option></Select>
-        {hasFilters && <Button variant="ghost" onClick={() => { setModuleId(""); setMine(false); setOverdue(false); setLevel("all"); }}>{t("reset")}</Button>}
       </div>
     </div>
     <div className={styles.mobileColumns} role="group" aria-label={t("columns")}>
       {data.columns.map((column) => <Button key={column.id} className={`${styles.chip} ${column.id === activeColumn ? styles.selected : ""}`} aria-pressed={column.id === activeColumn} onClick={() => setMobileColumn(column.id)}><span className={styles.dot} style={{ background: statusDotColor(column.category, column.name, statusColors.get(column.id)) }} />{column.name} <span>{column.cards.filter((card) => filtered.includes(card)).length}</span></Button>)}
       <Button className={styles.mobileFilterToggle} aria-expanded={filtersOpen} aria-label={t("filters")} onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal size={16} aria-hidden="true" /></Button>
     </div>
-    {!filtered.length && <EmptyState title={t(hasFilters ? "filteredEmpty" : "emptyTitle")} description={hasFilters ? undefined : t("emptyDescription")} action={hasFilters ? <Button onClick={() => { setModuleId(""); setMine(false); setOverdue(false); setLevel("all"); }}>{t("reset")}</Button> : canCreate ? <Link className="button button-primary" href={href()}>{t("new")}</Link> : undefined} />}
+    {!filtered.length && <EmptyState title={t(hasFilters ? "filteredEmpty" : "emptyTitle")} description={hasFilters ? undefined : t("emptyDescription")} action={hasFilters ? <Button onClick={resetFilters}>{t("reset")}</Button> : canCreate ? <Link className="button button-primary" href={href()}>{t("new")}</Link> : undefined} />}
     {groups.filter((group) => swimlane === "none" || filtered.some((card) => inGroup(card, group.id))).map((group) => <section key={group.id} className={styles.lane} aria-label={group.name || undefined}>
       {group.name && <h2 className={styles.laneTitle}>{group.name}<span>{filtered.filter((card) => inGroup(card, group.id)).length}</span></h2>}
       <div className={styles.columns} data-flip-root>

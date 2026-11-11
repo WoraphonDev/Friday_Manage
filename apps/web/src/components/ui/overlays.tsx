@@ -126,7 +126,7 @@ export function Drawer({
   depth?: 1 | 2;
   parentLabel?: string;
   onBack?: () => void;
-  /** ขนาด/ตำแหน่งตาม Canvas: detail = C/D (860 px ใต้หัวโปรเจกต์), wide = K2 (920 px เต็มสูง), create = B (640 px ใต้หัวโปรเจกต์) */
+  /** ขนาดตาม Canvas: detail = C/D, wide = K2 (920 px), create = B (640 px) · ทุกแบบสูงเต็มจอ */
   variant?: "detail" | "wide" | "create";
   /** เนื้อหามีแถบหัวของตัวเอง (ใช้ DrawerClose) · ชื่อ Drawer ยังอยู่สำหรับโปรแกรมอ่านหน้าจอ */
   bare?: boolean;
@@ -139,12 +139,8 @@ export function Drawer({
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay
-          className={cn(
-            "overlay",
-            (variant === "detail" || variant === "create") && "overlay-below",
-          )}
-        />
+        {/* เงาคลุมเต็มจอทุกแบบ (ผู้ใช้ขอ 2026-11-11) เดิมเริ่มใต้หัวโปรเจกต์ทำให้แท็บดูต่อกับ Drawer */}
+        <RadixDialog.Overlay className="overlay" />
         {resizable && (
           <div
             className="drawer-resize"

@@ -656,19 +656,15 @@ td {
   max-height: 100dvh;
   border-left: 1px solid var(--border);
 }
-/* ขนาด Drawer ตาม Canvas: C/D 860 px และ B 640 px เริ่มใต้หัวโปรเจกต์ (--drawer-top ตั้งจาก ProjectShell), K2 920 px เต็มสูง */
-.drawer-detail,
-.drawer-create {
-  top: var(--drawer-top, 0px);
-  max-height: calc(100dvh - var(--drawer-top, 0px));
-}
+/* ขนาด Drawer ตาม Canvas: C/D, B 640 px, K2 920 px · ทุกแบบสูงเต็มจอพร้อมเงาคลุมทั้งหน้า
+   (เดิม C/D และ B เริ่มใต้หัวโปรเจกต์ ผู้ใช้เห็นว่าแท็บดูต่อกับ Drawer จึงเปลี่ยน 2026-11-11) */
 /* กว้างกว่า Canvas (860) ให้แผงคุณสมบัติแสดงข้อมูลครบ · ผู้ใช้ลากขอบซ้ายขยาย / หดได้ (--drawer-detail-w) */
 .drawer-detail {
   width: min(var(--drawer-detail-w, 1000px), calc(100vw - 48px));
 }
 .drawer-resize {
   position: fixed;
-  top: var(--drawer-top, 0px);
+  top: 0;
   bottom: 0;
   right: calc(min(var(--drawer-detail-w, 1000px), calc(100vw - 48px)) - 5px);
   width: 10px;
@@ -715,9 +711,6 @@ td {
 }
 .picker-compact:hover {
   border-color: var(--border);
-}
-.overlay-below {
-  top: var(--drawer-top, 0px);
 }
 .drawer-bare {
   padding: 0;
@@ -1914,12 +1907,6 @@ kbd {
   }
   .mobile-bottom-nav .badge {
     margin: 0;
-  }
-  .drawer-detail,
-  .drawer-create,
-  .overlay-below {
-    top: 0;
-    max-height: 100dvh;
   }
   .drawer,
   .drawer-nested {

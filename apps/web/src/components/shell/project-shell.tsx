@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -153,29 +153,7 @@ export function ProjectShell({
       ),
     enabled: canSeeTeam,
   });
-  const headerRef = useRef<HTMLElement>(null);
   const [inviting, setInviting] = useState(false);
-  // Drawer รายละเอียด/สร้างงานเริ่มใต้หัวโปรเจกต์ตาม Canvas C / B · เก็บตำแหน่งเป็น CSS variable
-  useEffect(() => {
-    const root = document.documentElement;
-    const update = () => {
-      const bottom = headerRef.current?.getBoundingClientRect().bottom ?? 0;
-      // top bar ติดอยู่กับที่: เลื่อนหัวโปรเจกต์พ้นจอแล้ว Drawer ต้องเริ่มใต้ top bar ไม่ใช่ทับ
-      const bar = document.querySelector(".topbar")?.getBoundingClientRect().bottom ?? 0;
-      root.style.setProperty("--drawer-top", `${Math.max(0, Math.round(bar), Math.round(bottom))}px`);
-    };
-    update();
-    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
-    if (headerRef.current) observer?.observe(headerRef.current);
-    window.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-      root.style.removeProperty("--drawer-top");
-    };
-  });
   const error = project.error ?? permissions.error;
   async function joinAsAdmin() {
     try {
@@ -273,7 +251,6 @@ export function ProjectShell({
       {(
         <header
           className="project-header"
-          ref={headerRef}
         >
           <div className="project-header-row">
             <div className="project-heading">

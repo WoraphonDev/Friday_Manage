@@ -41,8 +41,9 @@ const COL_W: Record<string, number> = { dev: 84, ba: 40, sa: 40, reviewer: 56, s
 const colWidth = (c: Col) => COL_W[c] ?? 140;
 const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
 type ProjectFields = { fieldProfile?: FieldProfile; customFields?: CustomFieldDef[] };
-/** ชื่องานกว้างอย่างน้อยเท่านี้ · ตารางกว้างกว่าจอเมื่อไรเลื่อนแนวนอนในกล่อง */
-const NAME_MIN_W = 340;
+/** ชื่องานกว้างอย่างน้อยเท่านี้ · ตารางกว้างกว่าจอเมื่อไรเลื่อนแนวนอนในกล่อง
+ *  (340 เดิมแคบไปเมื่อเปิดหลายคอลัมน์ ชื่องานถูกตัดเร็ว ผู้ใช้ขอให้กว้างขึ้น) */
+const NAME_MIN_W = 520;
 
 type Display =
   | { kind: "module"; id: string; name: string; color: string | null; count: number; phases: number; md: number; pct: number; moduleId: string | null; from: string | null; to: string | null }

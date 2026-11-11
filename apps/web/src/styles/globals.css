@@ -758,6 +758,10 @@ td {
   box-shadow: var(--shadow-menu);
   gap: 10px;
 }
+/* รูปผู้ใช้เป็น span ตัวแรก จึงโดน `.toast > span:first-child { flex:1 }` ยืดเป็นวงรี · ล็อกขนาดไว้ */
+.toast.toast-rich > .avatar {
+  flex: none;
+}
 .toast-rich .toast-body {
   flex: 1;
   min-width: 0;

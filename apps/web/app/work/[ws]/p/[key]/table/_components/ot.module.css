@@ -134,7 +134,7 @@
 .addRow td { height:40px; padding-left:76px; }
 .footRow td { height:34px; padding-right:16px; color:var(--muted); font-size:11px; text-align:right; }
 .footRow td span + span { margin-left:18px; }
-.name { display:flex; gap:8px; align-items:center; min-width:0; }
+.name { display:flex; gap:8px; align-items:center; min-width:0; position:relative; }
 .key { color:var(--muted); font-size:11px; white-space:nowrap; flex:none; }
 .nm { color:inherit; text-decoration:none; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 .nm:hover { color:var(--primary-text); }
@@ -160,11 +160,14 @@
 .mdForm label { display:flex; flex-direction:column; gap:4px; font-size:11px; font-weight:600; flex:1; }
 .mdForm input { min-height:30px; border:1px solid var(--input); border-radius:8px; padding:0 8px; font:inherit; font-size:12px; width:100%; }
 .popHint { margin:0; font-size:11px; color:var(--muted); }
-/* + Sub-task โผล่เมื่อชี้แถว Task · จอสัมผัสแสดงตลอด */
-.subAddBtn { display:inline-flex; align-items:center; gap:2px; flex:none; margin-left:auto; border:0; background:transparent; color:var(--primary-text); font:inherit; font-size:11px; font-weight:500; padding:2px 8px; min-height:26px; border-radius:6px; cursor:pointer; opacity:0; }
-.itemRow:hover .subAddBtn,.subAddBtn:focus-visible { opacity:1; }
-.subAddBtn:hover { background:var(--primary-soft); }
-@media (hover:none) { .subAddBtn { opacity:1; } }
+/* + Sub-task โผล่เมื่อชี้แถว Task · ลอยทับท้ายช่องเพื่อไม่กินที่ของชื่องานตอนซ่อน (พื้นทึบสีเดียวกับแถวจึงบังชื่อที่อยู่ใต้)
+   จอสัมผัสแสดงตลอดจึงวางต่อท้ายชื่อตามปกติ */
+.subAddBtn { display:inline-flex; align-items:center; gap:2px; flex:none; position:absolute; right:0; top:50%; transform:translateY(-50%); border:0; background:var(--card); color:var(--primary-text); font:inherit; font-size:11px; font-weight:500; padding:2px 8px; min-height:26px; border-radius:6px; cursor:pointer; opacity:0; pointer-events:none; }
+.itemRow:hover .subAddBtn,.subAddBtn:focus-visible { opacity:1; pointer-events:auto; }
+.itemRow:hover .subAddBtn { background:var(--surface-2); }
+.sel .subAddBtn { background:var(--primary-soft); }
+.subAddBtn:hover,.itemRow:hover .subAddBtn:hover { background:var(--primary-soft); }
+@media (hover:none) { .subAddBtn { position:static; transform:none; margin-left:auto; opacity:1; pointer-events:auto; } }
 .subAddRow td { height:44px; background:var(--surface-2); }
 /* ไอคอนตรงกับแถว Sub-task: ระยะเยื้อง 54 + checkbox 16 + ช่องว่าง 8 */
 .subAdd { display:flex; align-items:center; gap:8px; padding-left:78px; }

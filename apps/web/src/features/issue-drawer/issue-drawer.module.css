@@ -99,6 +99,10 @@
 .prio select { color:inherit; font-weight:600; }
 .who { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
 .sizeRow,.progRow { display:flex; align-items:center; gap:6px; flex-wrap:nowrap; white-space:nowrap; }.sizeRow select { font-weight:700; }.progRow .subBar { flex:1 1 60px; max-width:none; }.progRow .inlineField { width:64px; }
+/* ช่องบรรทัดเดียวตอนแก้: ปุ่มบันทึก/ยกเลิกต่อท้ายช่องในแถวเดียว ไม่ตกลงบรรทัดล่าง · ชิดล่างเพื่อให้ตรงกับช่องเมื่อมีป้ายกำกับด้านบน */
+.inlineRow { display:flex; align-items:flex-end; gap:6px; }.inlineRow :global(.field) { flex:1 1 64px; min-width:0; }.inlineField.inlineRow .actions { margin-top:0; gap:6px; flex:none; min-height:30px; }
+/* Man-Day / Progress: ช่องตัวเลขแคบ · Size ที่ไม่พอวางข้างกันให้ฟอร์มขึ้นบรรทัดใหม่ทั้งชุด · ซ่อนแถบ Progress ระหว่างแก้เพราะตัวเลขอยู่ในช่องแล้ว */
+.sizeRow form.inlineField,.progRow form.inlineField { width:auto; flex:none; }.sizeRow form.inlineField :global(.field),.progRow form.inlineField :global(.field) { flex:none; width:64px; }.sizeRow:has(form) { flex-wrap:wrap; row-gap:6px; }.progRow:has(form) .subBar { display:none; }
 .planBox { display:grid; grid-template-columns:56px 1fr 1fr; gap:4px 8px; border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin:6px 0; font-size:12px; align-items:center; white-space:nowrap; }
 .dueCell { grid-column:2 / -1; }
 .dueCell .dueLink:global(.button) { padding:0 6px; margin-left:-6px; }

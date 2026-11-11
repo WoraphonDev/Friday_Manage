@@ -141,12 +141,12 @@ describe("Kanban", () => {
 
   it("Module filter และ Swimlane Module/Assignee/Priority จัดกลุ่มฝั่งหน้าเว็บ", async () => {
     const user = userEvent.setup(); mount(); await screen.findByRole("article", { name: "การ์ด DE-1" });
-    await user.click(within(screen.getByRole("group", { name: "ตัวกรอง Module" })).getByRole("button", { name: /ระบบรายงานตัวอย่าง/ }));
+    await user.selectOptions(screen.getByLabelText("ตัวกรอง Module"), screen.getByRole("option", { name: /ระบบรายงานตัวอย่าง/ }));
     expect(screen.getAllByRole("article")).toHaveLength(1);
     expect(article("DE-2")).toBeInTheDocument();
     expect(within(screen.getByRole("group", { name: "คอลัมน์" })).getByRole("button", { name: "To do 1" })).toBeInTheDocument();
     expect(requests).toHaveLength(1);
-    await user.click(within(screen.getByRole("group", { name: "ตัวกรอง Module" })).getByRole("button", { name: /ทั้งหมด/ }));
+    await user.selectOptions(screen.getByLabelText("ตัวกรอง Module"), "");
     await user.selectOptions(screen.getByLabelText("Swimlane"), "module");
     expect(screen.getByRole("heading", { name: /ไม่ระบุ Module/ })).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("Swimlane"), "assignee");
@@ -154,6 +154,21 @@ describe("Kanban", () => {
     expect(screen.getByRole("heading", { name: /ยังไม่ระบุผู้รับผิดชอบ/ })).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("Swimlane"), "priority");
     expect(screen.getByRole("heading", { name: /Medium/ })).toBeInTheDocument();
+    expect(screen.getAllByRole("article")).toHaveLength(5);
+    expect(requests).toHaveLength(1);
+  });
+
+  it("ค้นหางานจากชื่อหรือรหัสฝั่งหน้าเว็บ และล้างได้", async () => {
+    const user = userEvent.setup(); mount(); await screen.findByRole("article", { name: "การ์ด DE-1" });
+    const box = screen.getByRole("searchbox", { name: "ค้นหางาน" });
+    await user.type(box, "de-2");
+    expect(screen.getAllByRole("article").map((item) => item.getAttribute("aria-label"))).toEqual(["การ์ด DE-2"]);
+    await user.clear(box); await user.type(box, "งานตัวอย่าง DE-3");
+    expect(screen.getAllByRole("article").map((item) => item.getAttribute("aria-label"))).toEqual(["การ์ด DE-3"]);
+    await user.clear(box); await user.type(box, "ไม่มีงานนี้");
+    expect(screen.getByText("ไม่พบงานตามตัวกรองนี้")).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "ล้างตัวกรอง" })[0]);
+    expect(box).toHaveValue("");
     expect(screen.getAllByRole("article")).toHaveLength(5);
     expect(requests).toHaveLength(1);
   });
@@ -255,7 +270,7 @@ describe("Kanban", () => {
     const user = userEvent.setup();
     data.columns[0].cards[2].module = data.columns[0].cards[0].module;
     mount(); await screen.findByRole("article", { name: "การ์ด DE-1" });
-    await user.click(within(screen.getByRole("group", { name: "ตัวกรอง Module" })).getByRole("button", { name: /ระบบบัญชีตัวอย่าง/ }));
+    await user.selectOptions(screen.getByLabelText("ตัวกรอง Module"), screen.getByRole("option", { name: /ระบบบัญชีตัวอย่าง/ }));
     expect(screen.queryByRole("article", { name: "การ์ด DE-2" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "เลื่อน DE-1 ลง" }));
     await waitFor(() => expect(moves[0].body).toEqual({ statusId: "todo", afterKey: "DE-3" }));
@@ -288,7 +303,7 @@ describe("Kanban", () => {
   it("เปลี่ยนโปรเจกต์แล้วล้างตัวกรองและ Undo ของโปรเจกต์เก่า", async () => {
     const user = userEvent.setup(); const view = mount();
     await screen.findByRole("article", { name: "การ์ด DE-2" });
-    await user.click(within(screen.getByRole("group", { name: "ตัวกรอง Module" })).getByRole("button", { name: /ระบบรายงานตัวอย่าง/ }));
+    await user.selectOptions(screen.getByLabelText("ตัวกรอง Module"), screen.getByRole("option", { name: /ระบบรายงานตัวอย่าง/ }));
     await user.click(screen.getByRole("button", { name: "ย้าย DE-2 ไปคอลัมน์ขวา" }));
     await screen.findByText("ย้าย DE-2 ไป In progress แล้ว");
     expect(screen.getByRole("button", { name: "เลิกทำ" })).toBeInTheDocument();

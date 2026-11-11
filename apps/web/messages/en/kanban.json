@@ -84,5 +84,7 @@
     "Spike": "Spike",
     "subtask": "Sub-task"
   },
-  "filters": "Filters"
+  "filters": "Filters",
+  "search": "Search tasks",
+  "searchPlaceholder": "Search by title or key"
 }

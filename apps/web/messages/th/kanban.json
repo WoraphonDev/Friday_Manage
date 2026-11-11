@@ -84,5 +84,7 @@
     "Spike": "Spike",
     "subtask": "Sub-task"
   },
-  "filters": "ตัวกรอง"
+  "filters": "ตัวกรอง",
+  "search": "ค้นหางาน",
+  "searchPlaceholder": "ค้นหาชื่องานหรือรหัสงาน"
 }

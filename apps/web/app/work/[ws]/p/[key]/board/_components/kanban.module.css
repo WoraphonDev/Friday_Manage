@@ -17,8 +17,8 @@
 .dot { width:9px; height:9px; border-radius:50%; flex:none; display:inline-block; }
 .columns { display:flex; gap:14px; overflow-x:auto; padding-bottom:8px; align-items:stretch; }
 /* แยก Dev / QA: แถวบน = แถบหัวช่วงคร่อมคอลัมน์ · แถวล่าง = คอลัมน์ (อยู่ในตัวเลื่อนเดียวกันจึงตรงกันเสมอ) */
-.phased { display:grid; grid-auto-columns:288px; grid-template-rows:auto 1fr; column-gap:14px; row-gap:8px; }
-.band { grid-row:1; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; }
+.phased { display:grid; grid-auto-columns:288px; grid-template-rows:auto 1fr; column-gap:14px; row-gap:6px; }
+.band { grid-row:1; border-radius:6px; padding:1px 10px; font-size:11px; line-height:18px; font-weight:700; }
 .band_dev { background:var(--status-progress-bg); color:var(--status-progress-fg); }
 .band_qa { background:var(--status-review-bg); color:var(--status-review-fg); }
 .band_done { background:var(--status-done-bg); color:var(--status-done-fg); }

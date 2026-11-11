@@ -14,6 +14,7 @@ import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
 import type { Attachment, FileDetail, FileItem, FileList, Folder, FolderList, UploadTarget } from "./types";
 import { putFile, uploadUrl } from "@/lib/upload";
+import { FilePreview, useFilePreview } from "@/components/file-preview";
 import styles from "./files.module.css";
 
 /** ขีดจำกัดเดียวกับ API (413 file_too_large) · ตรวจก่อนเพื่อไม่ต้องขอ URL เปล่า ๆ */
@@ -170,6 +171,10 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
   }, [list.data, allFiles.data, place, q]);
   const inTrash = place === "trash";
   const current = items.find((f) => f.id === selectedId) ?? items[0];
+  // ดูตัวอย่างแบบป๊อปอัป (ตัวเดียวกับไฟล์แนบใน Task) · เลื่อนดูไฟล์อัปโหลดอื่นในรายการเดียวกันได้ · ลิงก์ภายนอกเปิดในแท็บใหม่แทน
+  const preview = useFilePreview();
+  const uploads = items.filter((f) => f.kind === "upload");
+  const openPreview = (f: FileItem) => preview.open(uploads, Math.max(0, uploads.findIndex((u) => u.id === f.id)));
   const detail = useQuery({ queryKey: ["files", ws, projectKey, "detail", current?.id], queryFn: () => api.get<FileDetail>(`${base}/files/${current!.id}`), enabled: !!current && !inTrash });
   const folderId = place !== "root" && place !== "trash" && !VIRTUAL(place) ? place : null;
   const folderName = tree.find((f) => f.id === folderId)?.name;
@@ -419,6 +424,7 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
             <DetailPanel
               file={current} detail={detail.data} detailError={detail.error} base={base} pageHref={pageHref} year={year}
               canUpload={canUpload} canDelete={canDelete}
+              onPreview={() => openPreview(current)}
               onNewVersion={() => versionInput.current?.click()}
               onCopy={() => void copyLink(current)}
               onRename={() => setDialog("rename")}
@@ -428,6 +434,7 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
               onDetach={(a) => void detach(current, a)}
             />
           )}
+          {preview.props && <FilePreview {...preview.props} base={`/api/v1${base}`} />}
           <input ref={versionInput} type="file" hidden aria-label={t("versionInput")} onChange={(e) => { const f = e.target.files?.[0]; if (f && current) void upload(f, current); e.target.value = ""; }} />
         </div>
       </div>
@@ -500,9 +507,9 @@ function Ext({ f }: { f: FileItem }) {
   return <span className={`${styles.ext} ${styles[`x-${e.tone}`]}`} aria-hidden="true">{e.label}</span>;
 }
 
-function DetailPanel({ file, detail, detailError, base, pageHref, year, canUpload, canDelete, onNewVersion, onCopy, onRename, onMove, onDelete, onAttach, onDetach }: {
+function DetailPanel({ file, detail, detailError, base, pageHref, year, canUpload, canDelete, onPreview, onNewVersion, onCopy, onRename, onMove, onDelete, onAttach, onDetach }: {
   file: FileItem; detail?: FileDetail; detailError: unknown; base: string; pageHref: string; year: "BE" | "CE"; canUpload: boolean; canDelete: boolean;
-  onNewVersion: () => void; onCopy: () => void; onRename: () => void; onMove: () => void; onDelete: () => void; onAttach: () => void; onDetach: (a: Attachment) => void;
+  onPreview: () => void; onNewVersion: () => void; onCopy: () => void; onRename: () => void; onMove: () => void; onDelete: () => void; onAttach: () => void; onDetach: (a: Attachment) => void;
 }) {
   const t = useTranslations("files");
   const e = extOf(file);
@@ -511,14 +518,23 @@ function DetailPanel({ file, detail, detailError, base, pageHref, year, canUploa
   return (
     <section className={`${styles.card} ${styles.detail}`} aria-label={t("detail")}>
       <div className={styles.preview}>
-        <div className={`${styles.big} ${styles[`x-${e.tone}`]}`}>
-          {kindOf(file) === "image" ? <img src={download} alt={file.name} className={styles.img} /> : <span style={{ fontSize: 26, fontWeight: 700 }}>{e.label}</span>}
-          <span style={{ fontSize: 12, fontWeight: 600 }}>{t(`kinds.${kindOf(file)}`, { provider: t(`providers.${file.linkProvider ?? "other"}`) })}</span>
-        </div>
+        {(() => {
+          const inner = <>
+            {kindOf(file) === "image" ? <img src={download} alt={file.name} className={styles.img} /> : <span style={{ fontSize: 26, fontWeight: 700 }}>{e.label}</span>}
+            <span style={{ fontSize: 12, fontWeight: 600 }}>{t(`kinds.${kindOf(file)}`, { provider: t(`providers.${file.linkProvider ?? "other"}`) })}</span>
+          </>;
+          // ไฟล์อัปโหลดกดดูตัวอย่างได้ · ลิงก์ภายนอกไม่มีไฟล์ให้แสดง
+          return file.kind === "upload"
+            ? <button type="button" className={`${styles.big} ${styles.bigButton} ${styles[`x-${e.tone}`]}`} aria-label={t("previewName", { name: file.name })} onClick={onPreview}>{inner}<span className={styles.previewHint}>{t("previewHint")}</span></button>
+            : <div className={`${styles.big} ${styles[`x-${e.tone}`]}`}>{inner}</div>;
+        })()}
         <div className={styles.row} style={{ marginTop: 12 }}>
           {file.kind === "link" && file.linkUrl
             ? <a className="button button-primary" href={file.linkUrl} target="_blank" rel="noopener noreferrer">{t("openLink")}</a>
-            : <a className="button button-primary" href={download}>{t("download")}</a>}
+            : <>
+              <Button variant="primary" onClick={onPreview}>{t("preview")}</Button>
+              <a className="button" href={download}>{t("download")}</a>
+            </>}
           {canUpload && file.kind === "upload" && <Button onClick={onNewVersion}>{t("newVersion")}</Button>}
           <Button onClick={onCopy}>{t("copyLink")}</Button>
         </div>

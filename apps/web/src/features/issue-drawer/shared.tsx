@@ -34,7 +34,7 @@ export function InlineText({ label, value, enabled, multiline = false, type = 't
   useEffect(() => { if (editing && draft === value) setEditing(false); }, [value]);
   async function save() { if (await onSave(draft)) setEditing(false); }
   if (!editing) return <div className={styles.inlineField}>{!displayValue && <span className={styles.label}>{label}</span>}<button className={displayValue ? `${styles.editValue} ${styles.editAction}` : styles.editValue} disabled={!enabled || busy} onClick={() => { setDraft(value); setEditing(true); }}>{displayValue ?? (value || t('notSet'))}</button></div>;
-  return <form className={styles.inlineField} onSubmit={(event) => { event.preventDefault(); void save(); }}>
+  return <form className={multiline ? styles.inlineField : `${styles.inlineField} ${styles.inlineRow}`} onSubmit={(event) => { event.preventDefault(); void save(); }}>
     {multiline ? <label className="field">{label}<textarea className="input" autoFocus value={draft} maxLength={50000} onChange={(event) => setDraft(event.target.value)} disabled={busy} /></label> : <Input label={label} autoFocus type={type} min={min} max={max} step={step} value={draft} onChange={(event) => setDraft(event.target.value)} disabled={busy} />}
     <div className={styles.actions}><Button size="small" type="submit" variant="primary" disabled={busy}>{t('save')}</Button><Button size="small" disabled={busy} onClick={() => setEditing(false)}>{t('cancel')}</Button></div>
   </form>;

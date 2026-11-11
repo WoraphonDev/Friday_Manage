@@ -149,6 +149,15 @@
         "confirm": "Switch workflow",
         "confirmMove": "Switch workflow and move {count} tasks",
         "applied": "Switched to the Development + QA workflow"
+      },
+      "phase": {
+        "title": "Stage",
+        "dev": "Dev",
+        "qa": "QA",
+        "done": "Done",
+        "none": "Not counted",
+        "of": "Stage of {name}: {phase}",
+        "hint": "The stage follows the category: To do / In progress / Blocked = Dev · Review / QA = QA · Done = done · Cancelled = not counted in progress · change the category to move a status to another stage"
       }
     },
     "types": {

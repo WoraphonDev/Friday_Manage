@@ -98,4 +98,13 @@
 .catGuide { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:8px 16px; margin-top:6px; }
 .catGuide > div { display:flex; align-items:center; gap:8px; min-width:0; }
 .catGuide .badge { flex:none; }
-@media (max-width:760px) { .statusRow { grid-template-columns:52px 32px minmax(0,1fr) 36px; } }
+.statusRow.phasedRow, .rowHead.phasedRow { grid-template-columns:60px 36px minmax(0,1fr) 190px 84px 100px 72px 36px; }
+@media (max-width:760px) { .statusRow, .statusRow.phasedRow { grid-template-columns:52px 32px minmax(0,1fr) 36px; } }
+/* ช่วงของสถานะเมื่อแยก Dev / QA (คิดจากหมวด) */
+.phasePill { display:inline-flex; align-items:center; min-height:22px; padding:0 8px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap; background:var(--phase-bg); color:var(--phase-fg); }
+.phase_dev { --phase-bg:var(--status-progress-bg); --phase-fg:var(--status-progress-fg); }
+.phase_qa { --phase-bg:var(--status-review-bg); --phase-fg:var(--status-review-fg); }
+.phase_done { --phase-bg:var(--status-done-bg); --phase-fg:var(--status-done-fg); }
+.phase_none { --phase-bg:var(--status-cancelled-bg); --phase-fg:var(--status-cancelled-fg); }
+.flowGroup { display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.flowPhase { font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; background:var(--phase-bg); color:var(--phase-fg); }

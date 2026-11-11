@@ -564,3 +564,12 @@ describe("Template Development + QA", () => {
     expect(suggestDevQa({ name: "Cancelled", category: "cancelled" })).toBe("rejected");
   });
 });
+
+describe("ช่วงของสถานะ (แยก Dev / QA)", () => {
+  it("คิดจากหมวด และรวมสถานะติดกันเป็นท่อน (เรียงสลับช่วงได้)", async () => {
+    const { statusPhase, phaseRuns } = await import("@/lib/status");
+    expect(["todo", "in_progress", "blocked", "review", "done", "cancelled"].map(statusPhase)).toEqual(["dev", "dev", "dev", "qa", "done", "none"]);
+    const runs = phaseRuns([{ category: "todo" }, { category: "in_progress" }, { category: "review" }, { category: "in_progress" }, { category: "done" }]);
+    expect(runs.map((r) => [r.phase, r.start, r.items.length])).toEqual([["dev", 0, 2], ["qa", 2, 1], ["dev", 3, 1], ["done", 4, 1]]);
+  });
+});

@@ -149,6 +149,15 @@
         "confirm": "เปลี่ยน Workflow",
         "confirmMove": "เปลี่ยน Workflow และย้ายงาน {count} งาน",
         "applied": "เปลี่ยนเป็น Workflow แบบ Development + QA แล้ว"
+      },
+      "phase": {
+        "title": "ช่วง",
+        "dev": "Dev",
+        "qa": "QA",
+        "done": "เสร็จ",
+        "none": "ไม่นับ",
+        "of": "ช่วงของ {name}: {phase}",
+        "hint": "ช่วงคิดจากหมวด: To do / In progress / Blocked = Dev · Review / QA = QA · Done = เสร็จ · Cancelled = ไม่นับในความคืบหน้า · เปลี่ยนหมวดเพื่อย้ายช่วง"
       }
     },
     "types": {

@@ -71,6 +71,8 @@ describe('Template Development + QA', () => {
     // ความคืบหน้าเดิมยังอยู่ (Health ฯลฯ ใช้ต่อ)
     expect(ov.progress.tasks).toEqual({ done: 1, total: 4 });
 
+    // บอร์ดบอก progressSplit ให้หน้าเว็บวาดแถบหัว ช่วง Dev / ช่วง QA
+    expect((await lead.get(`${ws}/projects/DQA/board`)).body.project.progressSplit).toBe(true);
     const ins = (await lead.get(`${ws}/projects/DQA/insights/modules`)).body;
     expect(ins.modules[0].split).toEqual({ devPct: 75, qaPct: 25 });
 

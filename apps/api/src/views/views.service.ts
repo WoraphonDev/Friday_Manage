@@ -171,7 +171,7 @@ export class ViewsService {
 
       const people = await loadPeople(tx, cards.flatMap((c) => c.assigneeIds));
       return {
-        project: { key: project.key, name: project.name },
+        project: { key: project.key, name: project.name, progressSplit: project.progressSplit },
         board: q.type === 'bug' ? 'bug' : 'standard',
         today: now,
         columns: columns.map((col) => {

@@ -9,7 +9,7 @@ import { Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState,
 import { api } from "@/lib/api";
 import { SectionHead, projectEndpoint } from "./shared";
 import { errorText, isForbidden, move, patchPlain, type Category, type ProjectDetail, type Status, type Workflow } from "./types";
-import { STATUS_CATEGORIES, STATUS_SWATCHES, statusColorStyle, statusDotColor, statusTone } from "@/lib/status";
+import { phaseRuns, STATUS_CATEGORIES, STATUS_SWATCHES, statusColorStyle, statusDotColor, statusPhase, statusTone } from "@/lib/status";
 import { queryKeys } from "@/lib/query";
 import styles from "./settings.module.css";
 
@@ -162,6 +162,9 @@ export function WorkflowSection({ ws, projectKey, project }: { ws: string; proje
   const devQaCreated = devQa ? DEV_QA_FLOW.filter((x) => !Object.values(devQa).includes(x.key)) : [];
   const devQaMerged = devQa ? DEV_QA_FLOW.map((x) => wf.statuses.filter((s) => devQa[s.id] === x.key)).filter((list) => list.length > 1) : [];
   const devQaMoved = devQaMerged.reduce((n, list) => n + list.slice(1).reduce((m, s) => m + s.issueCount, 0), 0);
+  // แยก Dev / QA: บอกช่วงของแต่ละสถานะ (คิดจากหมวด) เฉพาะ Workflow มาตรฐาน
+  const phased = wf.kind === "standard" && !!project?.progressSplit;
+  const PhasePill = ({ category }: { category: string }) => <span className={`${styles.phasePill} ${styles[`phase_${statusPhase(category)}`]}`}>{t(`phase.${statusPhase(category)}`)}</span>;
   const label = (w: Workflow) => w.issueTypes.map((x) => x.name).join(" / ") || w.name;
   const standard = items.find((w) => w.kind === "standard");
 
@@ -189,26 +192,44 @@ export function WorkflowSection({ ws, projectKey, project }: { ws: string; proje
             <Button size="small" onClick={openDevQa}>{t("devQa.apply")}</Button>
           </div>
         )}
-        <div className={styles.flow} aria-label={t("flowLabel")}>
-          {wf.statuses.map((s, i) => (
-            <span key={s.id} className={styles.flow}>
-              {i > 0 && <span className={styles.muted} aria-hidden="true">→</span>}
-              <StatusChip s={s} />
-            </span>
-          ))}
-        </div>
+        {phased ? (
+          <div className={styles.flow} aria-label={t("flowLabel")}>
+            {phaseRuns(wf.statuses).map((run, r) => (
+              <span key={`${run.phase}:${run.start}`} className={`${styles.flowGroup} ${styles[`phase_${run.phase}`]}`}>
+                {r > 0 && <span className={styles.muted} aria-hidden="true">→</span>}
+                <span className={styles.flowPhase}>{t(`phase.${run.phase}`)}</span>
+                {run.items.map((s, i) => (
+                  <span key={s.id} className={styles.flow}>
+                    {i > 0 && <span className={styles.muted} aria-hidden="true">→</span>}
+                    <StatusChip s={s} />
+                  </span>
+                ))}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.flow} aria-label={t("flowLabel")}>
+            {wf.statuses.map((s, i) => (
+              <span key={s.id} className={styles.flow}>
+                {i > 0 && <span className={styles.muted} aria-hidden="true">→</span>}
+                <StatusChip s={s} />
+              </span>
+            ))}
+          </div>
+        )}
         <div className={styles.list}>
-          <div className={styles.rowHead} aria-hidden="true">
+          <div className={`${styles.rowHead} ${phased ? styles.phasedRow : ""}`} aria-hidden="true">
             <span />
             <span>{t("color")}</span>
             <span>{t("statusName")}</span>
             <span className={styles.hs}>{t("category")}</span>
+            {phased && <span className={styles.hs}>{t("phase.title")}</span>}
             <span className={styles.hs}>{t("wip")}</span>
             <span className={styles.hs}>{t("used")}</span>
             <span />
           </div>
           {wf.statuses.map((s, i) => (
-            <div key={`${s.id}:${s.name}:${s.wipLimit}`} className={`${styles.row} ${styles.statusRow}`} data-testid={`status-${s.name}`}>
+            <div key={`${s.id}:${s.name}:${s.wipLimit}`} className={`${styles.row} ${styles.statusRow} ${phased ? styles.phasedRow : ""}`} data-testid={`status-${s.name}`}>
               <span className={styles.order}>
                 {/* Canvas: ที่จับ + สีสถานะ · ปุ่มเลื่อนขึ้น/ลงแสดงเมื่อชี้หรือโฟกัส (ใช้แทนการลากด้วยแป้นพิมพ์) */}
                 <span className={styles.grip} aria-hidden="true">⋮⋮</span>
@@ -226,6 +247,7 @@ export function WorkflowSection({ ws, projectKey, project }: { ws: string; proje
               <select className={`${styles.in} ${styles.hs}`} value={s.category} aria-label={t("categoryOf", { name: s.name })} onChange={(e) => void patchStatus(s, { category: e.target.value })}>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{t(`categories.${c}`)}</option>)}
               </select>
+              {phased && <span className={styles.hs} aria-label={t("phase.of", { name: s.name, phase: t(`phase.${statusPhase(s.category)}`) })}><PhasePill category={s.category} /></span>}
               <input
                 className={`${styles.in} ${styles.hs}`}
                 type="number"
@@ -252,10 +274,12 @@ export function WorkflowSection({ ws, projectKey, project }: { ws: string; proje
               {CATEGORIES.map((c) => (
                 <div key={c}>
                   <span className={`badge status-pill-${c}`}>{t(`categories.${c}`)}</span>
+                  {phased && <PhasePill category={c} />}
                   <span className={styles.muted}>{t(`categoryHints.${c}`)}</span>
                 </div>
               ))}
             </div>
+            {phased && <span className={styles.muted}>{t("phase.hint")}</span>}
           </div>
           {wf.kind === "bug" && (
             <div className={styles.note}>

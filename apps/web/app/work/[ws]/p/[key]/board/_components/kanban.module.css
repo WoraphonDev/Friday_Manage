@@ -18,12 +18,13 @@
 .columns { display:flex; gap:14px; overflow-x:auto; padding-bottom:8px; align-items:stretch; }
 /* แยก Dev / QA: แถวบน = แถบหัวช่วงคร่อมคอลัมน์ · แถวล่าง = คอลัมน์ (อยู่ในตัวเลื่อนเดียวกันจึงตรงกันเสมอ) */
 .phased { display:grid; grid-auto-columns:288px; grid-template-rows:auto 1fr; column-gap:14px; row-gap:6px; }
-.band { grid-row:1; border-radius:6px; padding:1px 10px; font-size:11px; line-height:18px; font-weight:700; }
-.band_dev { background:var(--status-progress-bg); color:var(--status-progress-fg); }
-.band_qa { background:var(--status-review-bg); color:var(--status-review-fg); }
-.band_done { background:var(--status-done-bg); color:var(--status-done-fg); }
-.band_none { background:var(--status-cancelled-bg); color:var(--status-cancelled-fg); }
-.chipPhase { display:none; border-radius:999px; padding:0 6px; font-size:10px; font-weight:700; line-height:16px; }
+/* เส้นบาง 3px + ป้ายเล็กเหนือเส้น (ผู้ใช้ขอให้เล็กลง 2026-11-11) */
+.band { grid-row:1; padding:0 2px 2px; border-bottom:3px solid var(--band-line); font-size:10px; line-height:12px; font-weight:700; color:var(--band-fg); }
+.band_dev { --band-line:var(--status-progress-dot); --band-bg:var(--status-progress-bg); --band-fg:var(--status-progress-fg); }
+.band_qa { --band-line:var(--status-review-dot); --band-bg:var(--status-review-bg); --band-fg:var(--status-review-fg); }
+.band_done { --band-line:var(--status-done-dot); --band-bg:var(--status-done-bg); --band-fg:var(--status-done-fg); }
+.band_none { --band-line:var(--status-cancelled-dot); --band-bg:var(--status-cancelled-bg); --band-fg:var(--status-cancelled-fg); }
+.chipPhase { display:none; background:var(--band-bg); color:var(--band-fg); border-radius:999px; padding:0 6px; font-size:10px; font-weight:700; line-height:16px; }
 .column { flex:0 0 288px; background:var(--subtle); border-radius:12px; min-height:420px; display:flex; flex-direction:column; }
 .columnHeader { display:flex; align-items:center; gap:8px; padding:12px 12px 8px; }
 .columnHeader h3 { font-size:13px; margin:0; font-weight:600; }

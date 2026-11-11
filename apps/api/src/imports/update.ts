@@ -160,12 +160,14 @@ export interface UpdatePlan {
   /** ไฟล์รูปแบบเดิม: งานที่สร้างในระบบ (ยังไม่มี No.) แต่จับคู่ด้วย ID ได้ → บันทึก No. ให้ ครั้งต่อไปจับคู่ด้วย No. */
   assignNos: { issueId: string; no: number }[];
   keyed: boolean;
+  /** โหมดเพิ่มเติมแผน: ทุกแถวเป็นงานใหม่ ไม่จับคู่และไม่แตะงานเดิม */
+  append: boolean;
   /** ไฟล์มีคอลัมน์ Group · ไม่มี = ไม่แตะกลุ่มเดิม (ยกเว้นย้าย Module) */
   groupMapped: boolean;
   existing: Existing;
 }
 
-export async function computeUpdate(tx: Tx, project: { id: string; key: string }, check: PlanCheck, matchById: boolean, customDefs: CustomFieldDef[] = []): Promise<UpdatePlan> {
+export async function computeUpdate(tx: Tx, project: { id: string; key: string }, check: PlanCheck, matchById: boolean, customDefs: CustomFieldDef[] = [], append = false): Promise<UpdatePlan> {
   const ex = await loadExisting(tx, project.id);
   const live = ex.rows.filter((r) => !r.deletedAt);
   const tasks = live.filter((r) => r.issueTypeId === ex.taskTypeId);
@@ -207,8 +209,9 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
 
   for (const row of check.rows) {
     if (check.skip.has(row.no)) continue;
-    let issue = check.keyed ? (row.number !== null ? byNumber.get(row.number) : undefined) : byNo.get(row.no);
-    if (!issue && !check.keyed && matchById && row.number !== null) {
+    // เพิ่มเติมแผน: ไม่จับคู่กับงานเดิม ทุกแถวเป็นงานใหม่
+    let issue = append ? undefined : check.keyed ? (row.number !== null ? byNumber.get(row.number) : undefined) : byNo.get(row.no);
+    if (!append && !issue && !check.keyed && matchById && row.number !== null) {
       issue = byNumber.get(row.number);
       if (issue) {
         byNumber.delete(row.number);
@@ -219,7 +222,8 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     if (!issue) {
       adds.push(row);
       if (defs.length) addCustom.set(row, customOf(row, row.parentNumber === null ? 'task' : 'subtask'));
-      diff.added.push({ no: row.no, number: row.number, title: row.title, module: row.module });
+      // เพิ่มเติมแผนออกเลขงานใหม่ทั้งหมด เลขในไฟล์จึงไม่ใช่เลขที่จะได้
+      diff.added.push({ no: row.no, number: append ? null : row.number, title: row.title, module: row.module });
       continue;
     }
     const oldParent = issue.parentId ? byId.get(issue.parentId) : undefined;
@@ -272,8 +276,10 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     diff.changed.push({ no: row.no, key: `${project.key}-${issue.number}`, title: issue.title, fields });
   }
 
-  // งานที่อยู่ในระบบแต่ไม่อยู่ในไฟล์ (ทุกแถวในไฟล์ รวมแถวที่ต้องแก้ ถือว่ายังอยู่)
-  if (check.keyed) {
+  // งานที่อยู่ในระบบแต่ไม่อยู่ในไฟล์ (ทุกแถวในไฟล์ รวมแถวที่ต้องแก้ ถือว่ายังอยู่) · เพิ่มเติมแผนไม่แตะงานเดิมจึงไม่มีรายการนี้
+  if (append) {
+    // ไม่มีงานหายจากไฟล์
+  } else if (check.keyed) {
     for (const issue of tasks) {
       if (fileNumbers.has(issue.number)) continue;
       diff.missing.push({ no: issue.number, key: `${project.key}-${issue.number}`, title: issue.title, status: ex.statusName.get(issue.statusId) ?? '' });
@@ -285,7 +291,7 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     }
   }
   diff.missing.sort((a, b) => a.no - b.no);
-  return { diff, edits, adds, addCustom, customDefs: defs, currentCustom, assignNos, keyed: check.keyed, groupMapped: check.mapped.has('group'), existing: ex };
+  return { diff, edits, adds, addCustom, customDefs: defs, currentCustom, assignNos, keyed: check.keyed, append, groupMapped: check.mapped.has('group'), existing: ex };
 }
 
 export interface ApplyInput {
@@ -357,7 +363,9 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
         actorId: auth.userId,
         taskTypeId: ex.taskTypeId,
         fileName: input.fileName,
-        keepRowNo: !plan.keyed,
+        // เพิ่มเติมแผน: No. ในไฟล์ซ้ำกับแผนเดิมได้ จึงไม่เก็บ (excel_row_no ห้ามซ้ำ) และออกเลขงานใหม่ทั้งหมด
+        keepRowNo: !plan.keyed && !plan.append,
+        freshNumbers: plan.append,
         moduleId,
         statusIdOf,
         userOf,

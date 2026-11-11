@@ -8239,7 +8239,7 @@
     "/api/v1/w/{ws}/import-jobs": {
       "post": {
         "operationId": "Imports_upload",
-        "summary": "multipart/form-data: file (.xlsx) + mode (create | update) + projectKey (เมื่อ mode = update)",
+        "summary": "multipart/form-data: file (.xlsx) + mode (create | update) + projectKey และ updateKind (replace | append · ค่าเริ่มต้น replace) เมื่อ mode = update",
         "tags": [
           "Imports"
         ],
@@ -8544,6 +8544,13 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 500
+                  },
+                  "updateKind": {
+                    "type": "string",
+                    "enum": [
+                      "replace",
+                      "append"
+                    ]
                   }
                 }
               }

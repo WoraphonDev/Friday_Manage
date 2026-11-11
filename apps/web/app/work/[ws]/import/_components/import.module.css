@@ -51,8 +51,6 @@
 .ic { width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; color:var(--on-primary); }
 .mono { font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:11px; }
 .note { padding:12px 16px; font-size:12px; }
-.diff { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:6px; font-size:12px; }
-.diff h3 { margin:0; font-size:13px; }
 .diffRow { display:grid; grid-template-columns:80px minmax(0,1fr) minmax(0,1.2fr); gap:10px; align-items:center; }
 .missRow { display:grid; grid-template-columns:80px minmax(0,1fr) 220px; gap:10px; align-items:center; }
 .old { color:var(--muted); text-decoration:line-through; }
@@ -104,3 +102,31 @@
 .sheetList { margin:8px 0 0; padding:0; list-style:none; display:grid; gap:6px; }
 .sheetList li { display:grid; grid-template-columns:120px minmax(0,1fr); gap:12px; font-size:12px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; }
 .exportActions { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+/* วิธีนำเข้าเข้าโปรเจกต์เดิม: แทนที่ / เพิ่มเติม (การ์ดแบบเดียวกับตัวเลือก Template ในหน้าสร้างโปรเจกต์) */
+.kinds { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:10px; }
+.kind { display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding:12px 14px; border:1px solid var(--input); border-radius:10px; background:var(--card); font:inherit; font-size:var(--text-label); text-align:left; cursor:pointer; color:var(--foreground); }
+.kind[aria-pressed="true"] { border-color:var(--primary); box-shadow:0 0 0 1px var(--primary); background:var(--hover); }
+.kind:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
+/* ผลเทียบกับแผน: แท็บ + ค้นหา + รายการเลื่อนในการ์ด (แผนจริงหลายร้อยแถว) */
+.diffTools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 16px; border-bottom:1px solid var(--border); }
+.diffTabs { display:inline-flex; box-sizing:border-box; height:var(--control-h); border:1px solid var(--input); border-radius:8px; overflow:hidden; background:var(--card); }
+.diffTabs button { display:inline-flex; align-items:center; gap:6px; padding:0 12px; border:0; background:transparent; font:inherit; font-size:12px; color:var(--foreground-soft); cursor:pointer; }
+.diffTabs button + button { border-left:1px solid var(--input); }
+.diffTabs button[aria-selected="true"] { background:var(--primary-soft); color:var(--primary-text); font-weight:600; }
+.diffCount { font-size:11px; padding:0 6px; border-radius:99px; background:var(--subtle); color:var(--foreground-soft); }
+.diffTabs button[aria-selected="true"] .diffCount { background:var(--card); color:var(--primary-text); }
+.diffSearch { flex:1 1 220px; max-width:320px; }
+.diffTools .diffSearch { width:auto; }
+.diffPanel { max-height:min(440px, 55vh); overflow-y:auto; padding:10px 16px 14px; display:flex; flex-direction:column; gap:6px; font-size:12px; }
+.diffPanel > p { margin:0 0 2px; }
+.diffGroup { display:flex; flex-direction:column; gap:4px; }
+.diffGroup + .diffGroup { border-top:1px solid var(--border); padding-top:6px; }
+.diffGroupHead { display:flex; align-items:center; gap:8px; width:100%; min-height:30px; padding:0 6px; margin-left:-6px; border:0; border-radius:6px; background:transparent; font:inherit; font-size:12px; color:var(--foreground); text-align:left; cursor:pointer; }
+.diffGroupHead:hover { background:var(--hover); }
+.diffChevron { flex:none; transition:transform .15s; color:var(--muted); }
+.diffGroupHead[aria-expanded="true"] .diffChevron { transform:rotate(90deg); }
+.diffGroup .diffRow { grid-template-columns:80px minmax(0,1fr); padding-left:22px; }
+.changeRow { display:grid; grid-template-columns:80px minmax(0,1fr) minmax(0,1.4fr); gap:10px; align-items:start; padding:4px 0; border-bottom:1px solid var(--border); }
+.changeFields { display:flex; flex-wrap:wrap; gap:4px 12px; }
+.changeField { white-space:nowrap; }
+@media (max-width:760px) { .changeRow { grid-template-columns:70px minmax(0,1fr); } .changeFields { grid-column:1 / -1; } }

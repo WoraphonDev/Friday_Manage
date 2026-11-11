@@ -75,7 +75,7 @@ const members = [
   { userId: "sample-guest", displayName: "แขกตัวอย่าง", email: "guest@example.com", role: "guest", status: "active" },
 ];
 
-let uploads: { mode: string; projectKey: string | null; name: string }[];
+let uploads: { mode: string; projectKey: string | null; updateKind: string | null; name: string }[];
 let patches: Record<string, unknown>[];
 let commits: number;
 let current: ImportJob;
@@ -85,7 +85,7 @@ function importHandlers(initial: () => ImportJob) {
     http.post("*/api/v1/w/:ws/import-jobs", async ({ request }) => {
       const form = await request.formData();
       const file = form.get("file") as File;
-      uploads.push({ mode: String(form.get("mode")), projectKey: form.get("projectKey") as string | null, name: file.name });
+      uploads.push({ mode: String(form.get("mode")), projectKey: form.get("projectKey") as string | null, updateKind: form.get("updateKind") as string | null, name: file.name });
       current = initial();
       return HttpResponse.json(current, { status: 201 });
     }),
@@ -247,6 +247,20 @@ describe("Import Excel (L3)", () => {
     expect(router.replace).toHaveBeenLastCalledWith("/work/sample/p/DE/table", { scroll: false });
   });
 
+  it("นำเข้ารอบที่ 2 เลือกเพิ่มเติมแผน: ส่ง updateKind=append · เปลี่ยนตัวเลือก = อัปโหลดใหม่", async () => {
+    importHandlers(updateJob);
+    const user = userEvent.setup();
+    mountProjectImport();
+    const kinds = await screen.findByRole("group", { name: "วิธีนำเข้าแผน" });
+    expect(within(kinds).getByRole("button", { name: /แทนที่แผนเดิม/ })).toHaveAttribute("aria-pressed", "true");
+    await user.click(within(kinds).getByRole("button", { name: /เพิ่มเติมเข้าแผนเดิม/ }));
+    expect(within(kinds).getByRole("button", { name: /เพิ่มเติมเข้าแผนเดิม/ })).toHaveAttribute("aria-pressed", "true");
+    await user.upload(screen.getByLabelText("ไฟล์ Excel (.xlsx)"), xlsx());
+    await user.click(screen.getByRole("button", { name: "ถัดไป: จับคู่คอลัมน์ →" }));
+    await screen.findByText("จับคู่แล้ว 2 / 3");
+    expect(uploads).toMatchObject([{ mode: "update", projectKey: "DE", updateKind: "append" }]);
+  });
+
   it("อัปเดตแผนของโปรเจกต์: ส่ง projectKey, diff, งานที่หายจากไฟล์, เหตุผลบันทึกก่อน commit", async () => {
     importHandlers(updateJob);
     const user = userEvent.setup();
@@ -256,14 +270,25 @@ describe("Import Excel (L3)", () => {
     await user.upload(screen.getByLabelText("ไฟล์ Excel (.xlsx)"), xlsx());
     await user.click(screen.getByRole("button", { name: "ถัดไป: จับคู่คอลัมน์ →" }));
     await screen.findByText("จับคู่แล้ว 2 / 3");
-    expect(uploads).toMatchObject([{ mode: "update", projectKey: "DE" }]);
+    expect(uploads).toMatchObject([{ mode: "update", projectKey: "DE", updateKind: "replace" }]);
     await user.click(screen.getByRole("button", { name: "ถัดไป: ตรวจสอบข้อมูล →" }));
 
     const diff = screen.getByRole("region", { name: "เทียบกับแผนปัจจุบัน" });
     expect(within(diff).getByText("เปลี่ยน 1 · เพิ่ม 1 · หายจากไฟล์ 1 · ไม่เปลี่ยน 1")).toBeInTheDocument();
+    // แยกเป็นแท็บ · เปิดแท็บที่ต้องตัดสินใจ (หายจากไฟล์) ก่อน
+    const tabs = within(diff).getAllByRole("tab");
+    expect(tabs.map((x) => x.textContent)).toEqual(["หายจากไฟล์ 1", "ค่าเปลี่ยน 1", "งานใหม่ 1"]);
+    expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+    await user.click(within(diff).getByRole("tab", { name: /ค่าเปลี่ยน/ }));
     expect(within(diff).getByText("3")).toHaveClass(/old/);
     expect(within(diff).getByText("5")).toHaveClass(/new/);
+    await user.click(within(diff).getByRole("tab", { name: /งานใหม่/ }));
+    expect(within(diff).getByRole("button", { expanded: true })).toBeInTheDocument();
+    await user.type(within(diff).getByRole("searchbox", { name: "ค้นหา Key, ชื่องาน หรือ Module" }), "ไม่มีชื่อนี้");
+    expect(within(diff).getByText("ไม่พบรายการที่ค้นหา")).toBeInTheDocument();
+    await user.clear(within(diff).getByRole("searchbox"));
     expect(screen.getByText("ไม่พบประเด็น ทุกแถวพร้อมนำเข้า")).toBeInTheDocument();
+    await user.click(within(diff).getByRole("tab", { name: /หายจากไฟล์/ }));
     await user.selectOptions(within(diff).getByRole("combobox", { name: "จัดการ DE-4" }), "delete");
     await waitFor(() => expect(patches).toContainEqual({ missing: { "4": "delete" } }));
     await user.click(screen.getByRole("button", { name: "ถัดไป: ยืนยัน →" }));

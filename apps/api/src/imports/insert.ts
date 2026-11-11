@@ -27,6 +27,8 @@ export interface InsertContext {
   parents: Map<number, { id: string; phaseId: string | null }>;
   /** ข้อมูลเพิ่มใน details ของแต่ละแถว (เช่น ชื่อคนที่ยังไม่จับคู่) */
   details?: (row: PlanRow) => Record<string, unknown>;
+  /** ออกเลขงานใหม่ต่อจากเลขล่าสุดทุกแถว ไม่ใช้ Key / No. ในไฟล์ (โหมดเพิ่มเติมแผน: เลขในไฟล์เป็นของแผนอีกชุด) */
+  freshNumbers?: boolean;
 }
 
 /**
@@ -41,7 +43,7 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
   // เลขงานในไฟล์ → เลขที่ได้จริง (Sub-task ใช้หาแม่ที่ถูกออกเลขใหม่)
   const assigned = new Map<PlanRow, number>();
   for (const r of rows) {
-    if (r.number !== null && !taken.has(r.number)) {
+    if (!ctx.freshNumbers && r.number !== null && !taken.has(r.number)) {
       assigned.set(r, r.number);
       taken.add(r.number);
     }

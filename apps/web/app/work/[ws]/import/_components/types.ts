@@ -63,6 +63,8 @@ export interface ImportJob {
   missingChoice?: Record<string, "keep" | "delete">;
   missingAll?: "keep" | "delete";
   planChangeReason?: string;
+  /** โหมดอัปเดต: replace = จับคู่และแก้งานเดิม · append = ทุกแถวเป็นงานใหม่ */
+  updateKind?: UpdateKind;
 }
 export interface CommitResult {
   mode: "create" | "update";
@@ -90,3 +92,5 @@ export interface Member {
 
 /** key ของคนใน personMapping ต้องตรงกับ `personKey` ของ API: ไม่สนตัวพิมพ์และ ’ กับ ' */
 export const personKey = (name: string) => name.trim().toLowerCase().replace(/[’‘`]/g, "'");
+
+export type UpdateKind = "replace" | "append";

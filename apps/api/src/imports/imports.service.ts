@@ -51,10 +51,15 @@ export const PatchImportBody = z.object({
   missingAll: z.enum(['keep', 'delete']).optional(),
   /** โหมดอัปเดต: เหตุผลที่บันทึกใน plan_changes */
   planChangeReason: z.string().trim().min(1).max(500).optional(),
-  /** โหมดอัปเดต: replace = จับคู่และแก้งานเดิม · append = ทุกแถวเป็นงานใหม่ ไม่แตะงานเดิม */
-  updateKind: z.enum(['replace', 'append']).optional(),
+  /**
+   * โหมดอัปเดต: replace = จับคู่และแก้งานเดิม · append = ทุกแถวเป็นงานใหม่ ไม่แตะงานเดิม
+   * unstarted = แก้เฉพาะงานที่ยังไม่เริ่ม (To do และไม่มี Actual Start) ไม่ลบงาน และเพิ่มงานใหม่เมื่อ addNew = true
+   */
+  updateKind: z.enum(['replace', 'append', 'unstarted']).optional(),
+  /** โหมด unstarted: ยืนยันให้เพิ่มงานใหม่ที่มีในไฟล์ (ค่าเริ่มต้นไม่เพิ่ม) */
+  addNew: z.boolean().optional(),
 });
-export type UpdateKind = 'replace' | 'append';
+export type UpdateKind = 'replace' | 'append' | 'unstarted';
 
 interface JobState {
   project: z.infer<typeof ProjectDraft>;
@@ -74,6 +79,8 @@ interface JobState {
   planChangeReason?: string;
   /** โหมดอัปเดต: ไม่มี = replace (job ที่สร้างก่อนมีตัวเลือกนี้) */
   updateKind?: UpdateKind;
+  /** โหมด unstarted: ผู้ใช้ยืนยันให้เพิ่มงานใหม่แล้ว */
+  addNew?: boolean;
 }
 
 type Job = typeof s.importJobs.$inferSelect;
@@ -95,7 +102,7 @@ export class ImportsService {
     if (!/\.xlsx$/i.test(file.originalname)) throw new AppError(400, 'invalid_file', 'รองรับเฉพาะไฟล์ .xlsx');
     if (mode !== 'create' && mode !== 'update') throw new AppError(400, 'mode_not_supported', 'mode ต้องเป็น create (โปรเจกต์ใหม่) หรือ update (อัปเดตแผนของโปรเจกต์เดิม)');
     if (mode === 'update' && !targetKey) throw new AppError(400, 'project_required', 'ระบุ projectKey ของโปรเจกต์ที่จะอัปเดต');
-    if (updateKind !== 'replace' && updateKind !== 'append') throw new AppError(400, 'update_kind_not_supported', 'updateKind ต้องเป็น replace (แทนที่แผนเดิม) หรือ append (เพิ่มเติมแผน)');
+    if (!['replace', 'append', 'unstarted'].includes(updateKind)) throw new AppError(400, 'update_kind_not_supported', 'updateKind ต้องเป็น replace (แทนที่แผนเดิม), append (เพิ่มเติมแผน) หรือ unstarted (อัปเดตเฉพาะงานที่ยังไม่เริ่ม)');
     if (mode === 'update') await this.limits.assertFeature(tenant.workspaceId, 'import_update');
     const wb = await this.parse(file.buffer);
     // อัปเดตแผนต้องมี project.baseline · ตรวจก่อนเก็บไฟล์ลงดิสก์
@@ -159,7 +166,7 @@ export class ImportsService {
       const settings = { project: { ...prev.project, ...(input.project ?? {}) }, setBaseline: input.setBaseline ?? prev.setBaseline };
       if (job.mode === 'update') {
         const project = await this.updateProject(tx, auth, tenant, job);
-        const keep = { missingChoice: { ...(prev.missingChoice ?? {}), ...(input.missing ?? {}) }, missingAll: input.missingAll ?? prev.missingAll, planChangeReason: input.planChangeReason ?? prev.planChangeReason, updateKind: input.updateKind ?? prev.updateKind };
+        const keep = { missingChoice: { ...(prev.missingChoice ?? {}), ...(input.missing ?? {}) }, missingAll: input.missingAll ?? prev.missingAll, planChangeReason: input.planChangeReason ?? prev.planChangeReason, updateKind: input.updateKind ?? prev.updateKind, addNew: input.addNew ?? prev.addNew };
         const ev = await this.evaluateUpdate(tx, tenant, project, wb, columnMapping, personMapping, await this.members(tx), keep, false);
         const [done] = await tx.update(s.importJobs).set({ columnMapping, personMapping, validation: ev.state, rowTotal: ev.state.summary.rows }).where(eq(s.importJobs.id, job.id)).returning();
         return view(done, ev.state);
@@ -328,7 +335,7 @@ export class ImportsService {
     columnMapping: ColumnMapping,
     personMapping: PersonMapping,
     members: Map<string, string>,
-    keep: Pick<JobState, 'missingChoice' | 'missingAll' | 'planChangeReason' | 'updateKind'>,
+    keep: Pick<JobState, 'missingChoice' | 'missingAll' | 'planChangeReason' | 'updateKind' | 'addNew'>,
     autoMatch: boolean,
   ) {
     const append = keep.updateKind === 'append';
@@ -344,10 +351,12 @@ export class ImportsService {
       parents: await parentTasks(tx, project.id),
     });
     const defs = await this.customDefs(tx, project);
-    const plan: UpdatePlan = await computeUpdate(tx, project, base.check, Object.values(columnMapping).includes('key'), defs, append);
+    const plan: UpdatePlan = await computeUpdate(tx, project, base.check, Object.values(columnMapping).includes('key'), defs, keep.updateKind ?? 'replace');
+    // อัปเดตเฉพาะงานที่ยังไม่เริ่ม: งานใหม่ในไฟล์แสดงให้เห็นแต่เพิ่มเมื่อผู้ใช้ยืนยันเท่านั้น
+    if (plan.unstartedOnly && !keep.addNew) plan.adds = [];
     const state: JobState = { ...base.state, diff: plan.diff, ...keep, customFields: defs.map((d) => ({ target: `cf:${d.id}` as const, label: d.name })) };
     // computeUpdate อาจพบแถวที่ต้องแก้เพิ่ม (เช่น Task ที่มี Sub-task ถูกย้ายไปเป็น Sub-task)
-    state.summary = { ...state.summary, ready: plan.diff.changed.length + plan.diff.added.length, skipped: base.check.skip.size };
+    state.summary = { ...state.summary, ready: plan.diff.changed.length + plan.adds.length, skipped: base.check.skip.size };
     return { ...base, state, plan };
   }
 
@@ -377,7 +386,7 @@ export class ImportsService {
       action: 'import.completed',
       targetType: 'project',
       targetId: project.id,
-      summary: `${job.fileName} → ${prev.updateKind === 'append' ? 'เพิ่มเติมแผน' : 'อัปเดต'} ${project.key} · เพิ่ม ${done.added} · เปลี่ยน ${done.changed} · ลบ ${done.deleted} · ข้าม ${skipped}`,
+      summary: `${job.fileName} → ${prev.updateKind === 'append' ? 'เพิ่มเติมแผน' : prev.updateKind === 'unstarted' ? 'อัปเดตงานที่ยังไม่เริ่ม' : 'อัปเดต'} ${project.key} · เพิ่ม ${done.added} · เปลี่ยน ${done.changed} · ลบ ${done.deleted} · ข้าม ${skipped}`,
     });
     const emails = Object.values(personMapping).flatMap((t) => (t && 'email' in t ? [t.email] : []));
     const { events, ...counts } = done;

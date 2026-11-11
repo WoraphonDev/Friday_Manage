@@ -149,7 +149,7 @@ export function ImportWizard({ ws, projectKey, changesHref }: { ws: string; proj
         <section className={`${styles.card} ${styles.pad}`}>
           {mode === "update" && (
             <div className={styles.kinds} role="group" aria-label={t("kindLabel")}>
-              {(["replace", "append"] as const).map((k) => (
+              {(["replace", "unstarted", "append"] as const).map((k) => (
                 <button key={k} type="button" className={styles.kind} aria-pressed={kind === k} onClick={() => setKind(k)}>
                   <b>{t(`kind__${k}`)}</b>
                   <span className="muted">{t(`kind__${k}Hint`)}</span>
@@ -358,7 +358,7 @@ function FindingRow({ f }: { f: Finding }) {
   );
 }
 
-type DiffTab = "missing" | "changed" | "added";
+type DiffTab = "missing" | "changed" | "added" | "locked";
 
 /**
  * ผลเทียบกับแผนปัจจุบัน · แผนจริงมีหลายร้อยแถว จึงแยกเป็นแท็บ (งานที่หายจากไฟล์ซึ่งต้องตัดสินใจก่อน) มีช่องค้นหา
@@ -368,10 +368,13 @@ function DiffCard({ job, year, busy, onMissing }: { job: ImportJob; year: YearFo
   const t = useTranslations("import-plan-changes.import");
   const d = job.diff!;
   const choice = (no: number) => job.missingChoice?.[String(no)] ?? job.missingAll ?? "keep";
-  const counts: Record<DiffTab, number> = { missing: d.missing.length, changed: d.changed.length, added: d.added.length };
-  const tabs = (["missing", "changed", "added"] as const).filter((k) => counts[k] > 0);
+  const counts: Record<DiffTab, number> = { missing: d.missing.length, changed: d.changed.length, added: d.added.length, locked: d.locked?.length ?? 0 };
+  const tabs = (["missing", "changed", "added", "locked"] as const).filter((k) => counts[k] > 0);
+  // อัปเดตเฉพาะงานที่ยังไม่เริ่ม: มีงานใหม่ที่ยังไม่ยืนยัน → เปิดแท็บงานใหม่ก่อนให้ตัดสินใจ
+  const unstarted = job.updateKind === "unstarted";
+  const askNew = unstarted && counts.added > 0;
   const [picked, setPicked] = useState<DiffTab | null>(null);
-  const tab = picked && counts[picked] > 0 ? picked : tabs[0];
+  const tab = picked && counts[picked] > 0 ? picked : askNew && !job.addNew ? "added" : tabs[0];
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const hit = (...parts: (string | null | undefined)[]) => !q || parts.some((p) => p?.toLowerCase().includes(q));
@@ -386,8 +389,9 @@ function DiffCard({ job, year, busy, onMissing }: { job: ImportJob; year: YearFo
   const changed = d.changed.filter((c) => hit(c.key, c.title, ...c.fields.map((f) => f.label)));
   const missing = d.missing.filter((m) => hit(m.key, m.title, m.status));
   const added = d.added.filter((a) => hit(a.title, a.module, a.number !== null ? `#${a.number}` : null));
+  const locked = (d.locked ?? []).filter((l) => hit(l.key, l.title, l.status));
   const modules = [...new Set(added.map((a) => a.module))];
-  const shown = tab === "changed" ? changed.length : tab === "missing" ? missing.length : added.length;
+  const shown = tab === "changed" ? changed.length : tab === "missing" ? missing.length : tab === "locked" ? locked.length : added.length;
 
   return (
     <section className={styles.card} aria-label={t("diffTitle")}>
@@ -411,7 +415,15 @@ function DiffCard({ job, year, busy, onMissing }: { job: ImportJob; year: YearFo
             )}
           </div>
           <div id="diff-panel" role="tabpanel" aria-labelledby={`diff-tab-${tab}`} className={styles.diffPanel}>
-            <p className={`muted ${styles.small}`}>{t(`diffHint__${tab}`)}</p>
+            <p className={`muted ${styles.small}`}>{t(tab === "added" && unstarted ? "diffHint__addedAsk" : `diffHint__${tab}`)}</p>
+            {tab === "added" && askNew && <AddNewCheck job={job} busy={busy} onPatch={onMissing} />}
+            {tab === "locked" && locked.map((l) => (
+              <div key={l.key} className={styles.changeRow}>
+                <span className={styles.mono}>{l.key}</span>
+                <span className={styles.ellipsis} title={l.title}>{l.title} <span className="muted">· {l.status}</span></span>
+                <span className="muted">{t("lockedFields", { fields: l.fields.join(", ") })}</span>
+              </div>
+            ))}
             {shown === 0 && <p className="muted">{t("diffNoMatch")}</p>}
             {tab === "changed" && changed.map((c) => (
               <div key={c.key} className={styles.changeRow}>
@@ -454,6 +466,17 @@ function DiffCard({ job, year, busy, onMissing }: { job: ImportJob; year: YearFo
         </>
       )}
     </section>
+  );
+}
+
+/** ยืนยันเพิ่มงานใหม่ในโหมดอัปเดตเฉพาะงานที่ยังไม่เริ่ม (ค่าเริ่มต้นไม่เพิ่ม · ผู้ใช้ขอให้ถามก่อน 2026-11-11) */
+function AddNewCheck({ job, busy, onPatch }: { job: ImportJob; busy: boolean; onPatch: (body: Record<string, unknown>) => void }) {
+  const t = useTranslations("import-plan-changes.import");
+  return (
+    <label className={`${styles.check} ${styles.addNew}`}>
+      <input type="checkbox" checked={!!job.addNew} disabled={busy} onChange={(e) => onPatch({ addNew: e.target.checked })} />
+      <span><b>{t("addNew", { count: job.diff?.added.length ?? 0 })}</b><span className={`muted ${styles.small} ${styles.block}`}>{t("addNewHint")}</span></span>
+    </label>
   );
 }
 
@@ -512,7 +535,9 @@ function Confirm({ ws, job, busy, onPatch, onBack, onCommit }: {
             </ul>
           ) : (
             <ul className={styles.list}>
-              <li>{t("sumChanged", { changed: d?.changed.length ?? 0, added: d?.added.length ?? 0, skipped: s.skipped })}</li>
+              <li>{t("sumChanged", { changed: d?.changed.length ?? 0, added: job.updateKind === "unstarted" && !job.addNew ? 0 : (d?.added.length ?? 0), skipped: s.skipped })}</li>
+              {!!d?.locked?.length && <li>{t("sumLocked", { count: d.locked.length })}</li>}
+              {job.updateKind === "unstarted" && !!d?.added.length && !job.addNew && <li className={styles.warnText}>{t("sumNotAdded", { count: d.added.length })}</li>}
               {!!d?.missing.length && <li>{t("sumMissing", { missing: d.missing.length, deleted, kept: d.missing.length - deleted })}</li>}
               <li>{t("sumPlanChange")}</li>
             </ul>
@@ -528,6 +553,7 @@ function Confirm({ ws, job, busy, onPatch, onBack, onCommit }: {
           </div>
         </div>
       </div>
+      {job.updateKind === "unstarted" && !!d?.added.length && <AddNewCheck job={job} busy={busy !== null} onPatch={onPatch} />}
       {create && (
         <label className={styles.check}>
           <input type="checkbox" checked={job.setBaseline} disabled={busy !== null} onChange={(e) => onPatch({ setBaseline: e.target.checked })} />

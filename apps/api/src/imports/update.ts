@@ -71,6 +71,8 @@ export interface UpdateDiff {
   /** อยู่ในระบบแต่ไม่อยู่ในไฟล์ · ไม่ลบเอง ให้ผู้ใช้เลือก · no = No. (ไฟล์รูปแบบเดิม) หรือเลขงาน (รูปแบบใหม่) */
   missing: { no: number; key: string; title: string; status: string }[];
   unchanged: number;
+  /** โหมดอัปเดตเฉพาะงานที่ยังไม่เริ่ม: งานที่ค่าในไฟล์ต่างแต่เริ่มทำแล้ว จึงไม่แก้ */
+  locked?: { no: number; key: string; title: string; status: string; fields: string[] }[];
 }
 
 type Issue = typeof s.issues.$inferSelect;
@@ -86,6 +88,8 @@ interface Existing {
   labels: Map<string, string[]>;
   labelName: Map<string, string>;
   userName: Map<string, string>;
+  /** หมวดของทุกสถานะที่งานใช้อยู่ (ตัดสินว่างานเริ่มแล้วหรือยัง) */
+  statusCategory: Map<string, string>;
   taskTypeId: string;
 }
 
@@ -95,9 +99,9 @@ async function loadExisting(tx: Tx, projectId: string): Promise<Existing> {
   const mods = await tx.select({ id: s.modules.id, name: s.modules.name }).from(s.modules).where(eq(s.modules.projectId, projectId));
   const phases = await tx.select({ id: s.phases.id, moduleId: s.phases.moduleId, name: s.phases.name }).from(s.phases).where(eq(s.phases.projectId, projectId));
   const [taskType] = await tx.select().from(s.issueTypes).where(and(eq(s.issueTypes.projectId, projectId), eq(s.issueTypes.name, 'Task')));
-  const sts = await tx.select({ id: s.workflowStatuses.id, name: s.workflowStatuses.name }).from(s.workflowStatuses).where(eq(s.workflowStatuses.workflowId, taskType.workflowId));
+  const sts = await tx.select({ id: s.workflowStatuses.id, name: s.workflowStatuses.name, category: s.workflowStatuses.category }).from(s.workflowStatuses).where(eq(s.workflowStatuses.workflowId, taskType.workflowId));
   const usedStatus = [...new Set(rows.map((r) => r.statusId))];
-  const allStatus = usedStatus.length ? await tx.select({ id: s.workflowStatuses.id, name: s.workflowStatuses.name }).from(s.workflowStatuses).where(inArray(s.workflowStatuses.id, usedStatus)) : [];
+  const allStatus = usedStatus.length ? await tx.select({ id: s.workflowStatuses.id, name: s.workflowStatuses.name, category: s.workflowStatuses.category }).from(s.workflowStatuses).where(inArray(s.workflowStatuses.id, usedStatus)) : [];
   const liveIds = rows.filter((r) => !r.deletedAt).map((r) => r.id);
   const asg = liveIds.length
     ? await tx.select({ issueId: s.issueAssignees.issueId, userId: s.issueAssignees.userId, sort: s.issueAssignees.sort }).from(s.issueAssignees).where(inArray(s.issueAssignees.issueId, liveIds)).orderBy(s.issueAssignees.sort)
@@ -118,6 +122,7 @@ async function loadExisting(tx: Tx, projectId: string): Promise<Existing> {
     phases,
     statusName: new Map([...sts, ...allStatus].map((x) => [x.id, x.name])),
     statusId: new Map(sts.map((x) => [x.name, x.id])),
+    statusCategory: new Map([...sts, ...allStatus].map((x) => [x.id, x.category as string])),
     assignees: group(asg.map((a) => ({ issueId: a.issueId, v: a.userId }))),
     labels: group(lbl.map((a) => ({ issueId: a.issueId, v: a.labelId }))),
     labelName: new Map(lblNames.map((l) => [l.id, l.name])),
@@ -162,12 +167,18 @@ export interface UpdatePlan {
   keyed: boolean;
   /** โหมดเพิ่มเติมแผน: ทุกแถวเป็นงานใหม่ ไม่จับคู่และไม่แตะงานเดิม */
   append: boolean;
+  /** โหมดอัปเดตเฉพาะงานที่ยังไม่เริ่ม: แก้เฉพาะงาน To do ที่ยังไม่มี Actual Start · ไม่ลบงาน · งานใหม่เพิ่มเมื่อผู้ใช้ยืนยัน */
+  unstartedOnly: boolean;
   /** ไฟล์มีคอลัมน์ Group · ไม่มี = ไม่แตะกลุ่มเดิม (ยกเว้นย้าย Module) */
   groupMapped: boolean;
   existing: Existing;
 }
 
-export async function computeUpdate(tx: Tx, project: { id: string; key: string }, check: PlanCheck, matchById: boolean, customDefs: CustomFieldDef[] = [], append = false): Promise<UpdatePlan> {
+export type UpdateMode = 'replace' | 'append' | 'unstarted';
+
+export async function computeUpdate(tx: Tx, project: { id: string; key: string }, check: PlanCheck, matchById: boolean, customDefs: CustomFieldDef[] = [], mode: UpdateMode = 'replace'): Promise<UpdatePlan> {
+  const append = mode === 'append';
+  const unstartedOnly = mode === 'unstarted';
   const ex = await loadExisting(tx, project.id);
   const live = ex.rows.filter((r) => !r.deletedAt);
   const tasks = live.filter((r) => r.issueTypeId === ex.taskTypeId);
@@ -179,7 +190,9 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
   const assignNos: UpdatePlan['assignNos'] = [];
   const fileNos = new Set([...check.rows.map((r) => r.no), ...check.skip]);
   const fileNumbers = new Set(check.rows.map((r) => r.number).filter((n): n is number => n !== null));
-  const diff: UpdateDiff = { added: [], changed: [], missing: [], unchanged: 0 };
+  const diff: UpdateDiff = { added: [], changed: [], missing: [], unchanged: 0, ...(unstartedOnly ? { locked: [] } : {}) };
+  // ยังไม่เริ่ม = สถานะหมวด To do และยังไม่มี Actual Start (เลยกำหนดแล้วก็ยังแก้ได้)
+  const started = (i: Issue) => ex.statusCategory.get(i.statusId) !== 'todo' || i.actualStart !== null;
   const edits: UpdatePlan['edits'] = [];
   const adds: PlanRow[] = [];
   const addCustom: UpdatePlan['addCustom'] = new Map();
@@ -272,13 +285,17 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
       diff.unchanged++;
       continue;
     }
+    if (unstartedOnly && started(issue)) {
+      diff.locked!.push({ no: row.no, key: `${project.key}-${issue.number}`, title: issue.title, status: ex.statusName.get(issue.statusId) ?? '', fields: fields.map((f) => f.label) });
+      continue;
+    }
     edits.push({ issue, row, fields, custom });
     diff.changed.push({ no: row.no, key: `${project.key}-${issue.number}`, title: issue.title, fields });
   }
 
   // งานที่อยู่ในระบบแต่ไม่อยู่ในไฟล์ (ทุกแถวในไฟล์ รวมแถวที่ต้องแก้ ถือว่ายังอยู่) · เพิ่มเติมแผนไม่แตะงานเดิมจึงไม่มีรายการนี้
-  if (append) {
-    // ไม่มีงานหายจากไฟล์
+  if (append || unstartedOnly) {
+    // ไม่แตะงานที่ไม่อยู่ในไฟล์ (เพิ่มเติม / อัปเดตเฉพาะงานที่ยังไม่เริ่ม)
   } else if (check.keyed) {
     for (const issue of tasks) {
       if (fileNumbers.has(issue.number)) continue;
@@ -291,7 +308,7 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     }
   }
   diff.missing.sort((a, b) => a.no - b.no);
-  return { diff, edits, adds, addCustom, customDefs: defs, currentCustom, assignNos, keyed: check.keyed, append, groupMapped: check.mapped.has('group'), existing: ex };
+  return { diff, edits, adds, addCustom, customDefs: defs, currentCustom, assignNos, keyed: check.keyed, append, unstartedOnly, groupMapped: check.mapped.has('group'), existing: ex };
 }
 
 export interface ApplyInput {

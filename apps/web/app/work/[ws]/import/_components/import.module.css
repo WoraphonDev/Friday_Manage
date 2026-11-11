@@ -130,3 +130,5 @@
 .changeFields { display:flex; flex-wrap:wrap; gap:4px 12px; }
 .changeField { white-space:nowrap; }
 @media (max-width:760px) { .changeRow { grid-template-columns:70px minmax(0,1fr); } .changeFields { grid-column:1 / -1; } }
+/* ยืนยันเพิ่มงานใหม่ (โหมดอัปเดตเฉพาะงานที่ยังไม่เริ่ม) */
+.addNew { padding:10px 12px; border:1px solid var(--warning-border); border-radius:10px; background:var(--warning-soft); }

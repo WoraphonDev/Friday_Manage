@@ -103,6 +103,7 @@ function importHandlers(initial: () => ImportJob) {
         ...(body.missing ? { missingChoice: { ...current.missingChoice, ...(body.missing as Record<string, "keep" | "delete">) } } : {}),
         ...(body.missingAll ? { missingAll: body.missingAll as "keep" } : {}),
         ...(body.planChangeReason ? { planChangeReason: String(body.planChangeReason) } : {}),
+        ...(typeof body.addNew === "boolean" ? { addNew: body.addNew } : {}),
       };
       return HttpResponse.json(current);
     }),
@@ -259,6 +260,36 @@ describe("Import Excel (L3)", () => {
     await user.click(screen.getByRole("button", { name: "ถัดไป: จับคู่คอลัมน์ →" }));
     await screen.findByText("จับคู่แล้ว 2 / 3");
     expect(uploads).toMatchObject([{ mode: "update", projectKey: "DE", updateKind: "append" }]);
+  });
+
+  it("อัปเดตเฉพาะงานที่ยังไม่เริ่ม: ส่ง updateKind=unstarted · แสดงงานที่เริ่มแล้ว · งานใหม่ต้องติ๊กยืนยันก่อน", async () => {
+    const base = updateJob();
+    importHandlers(() => ({ ...base, updateKind: "unstarted", diff: { ...base.diff!, missing: [], locked: [{ no: 7, key: "DE-7", title: "งานที่เริ่มแล้ว", status: "In progress", fields: ["Man-Day"] }] } }));
+    const user = userEvent.setup();
+    mountProjectImport();
+    const kinds = await screen.findByRole("group", { name: "วิธีนำเข้าแผน" });
+    await user.click(within(kinds).getByRole("button", { name: /อัปเดตเฉพาะงานที่ยังไม่เริ่ม/ }));
+    await user.upload(screen.getByLabelText("ไฟล์ Excel (.xlsx)"), xlsx());
+    await user.click(screen.getByRole("button", { name: "ถัดไป: จับคู่คอลัมน์ →" }));
+    await screen.findByText("จับคู่แล้ว 2 / 3");
+    expect(uploads).toMatchObject([{ mode: "update", projectKey: "DE", updateKind: "unstarted" }]);
+    await user.click(screen.getByRole("button", { name: "ถัดไป: ตรวจสอบข้อมูล →" }));
+
+    const diff = screen.getByRole("region", { name: "เทียบกับแผนปัจจุบัน" });
+    // มีงานใหม่ที่ยังไม่ยืนยัน → เปิดแท็บงานใหม่ก่อน
+    expect(within(diff).getByRole("tab", { name: /งานใหม่/ })).toHaveAttribute("aria-selected", "true");
+    const confirmNew = within(diff).getByRole("checkbox", { name: /ยืนยันเพิ่มงานใหม่ 1 งานเข้าแผน/ });
+    expect(confirmNew).not.toBeChecked();
+    await user.click(within(diff).getByRole("tab", { name: /เริ่มแล้ว \(ไม่แก้\)/ }));
+    expect(within(diff).getByText("DE-7")).toBeInTheDocument();
+    expect(within(diff).getByText("ในไฟล์ต่างที่: Man-Day")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "ถัดไป: ยืนยัน →" }));
+    expect(screen.getByText("มีงานใหม่ในไฟล์ 1 งาน ยังไม่ได้ยืนยัน จะไม่ถูกเพิ่ม")).toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: /ยืนยันเพิ่มงานใหม่ 1 งานเข้าแผน/ }));
+    await waitFor(() => expect(patches).toContainEqual({ addNew: true }));
+    expect(await screen.findByRole("checkbox", { name: /ยืนยันเพิ่มงานใหม่/ })).toBeChecked();
+    expect(screen.queryByText(/ยังไม่ได้ยืนยัน จะไม่ถูกเพิ่ม/)).not.toBeInTheDocument();
   });
 
   it("อัปเดตแผนของโปรเจกต์: ส่ง projectKey, diff, งานที่หายจากไฟล์, เหตุผลบันทึกก่อน commit", async () => {

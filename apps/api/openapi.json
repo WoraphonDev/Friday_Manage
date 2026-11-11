@@ -8422,8 +8422,12 @@
                     "type": "string",
                     "enum": [
                       "replace",
-                      "append"
+                      "append",
+                      "unstarted"
                     ]
+                  },
+                  "addNew": {
+                    "type": "boolean"
                   }
                 }
               }

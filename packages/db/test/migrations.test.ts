@@ -59,7 +59,7 @@ describe('Migration T00', () => {
     await withDatabase(async (client) => {
       const db = drizzle(client);
       await migrate(db, { migrationsFolder: folder });
-      expect(Number((await client.query(`SELECT count(*) AS n FROM pg_tables WHERE schemaname = 'public'`)).rows[0].n)).toBe(140);
+      expect(Number((await client.query(`SELECT count(*) AS n FROM pg_tables WHERE schemaname = 'public'`)).rows[0].n)).toBe(141);
       await expectPlanSeed(client);
       const before = (await client.query('SELECT * FROM plans ORDER BY code')).rows;
       await migrate(db, { migrationsFolder: folder });

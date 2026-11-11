@@ -383,6 +383,39 @@ describe("แพ็กเกจ & Billing", () => {
     mountBilling({ section: "nope" });
     expect(await screen.findByText("ไม่พบหน้านี้")).toBeInTheDocument();
   });
+
+  it("ดูเปรียบเทียบแพ็กเกจอยู่ในระบบ (มี Sidebar) · ปุ่มไปหน้าชำระเงินของ Workspace ไม่ใช่หน้าสมัคร", async () => {
+    const user = userEvent.setup();
+    const o = mountBilling();
+    expect(await screen.findByRole("link", { name: "ดูเปรียบเทียบแพ็กเกจ" })).toHaveAttribute("href", "/work/sample/billing/plans");
+    o.unmount();
+
+    navigation.pathname = "/work/sample/billing/plans";
+    mountBilling({ section: "plans" });
+    const card = async (name: string) => within(await screen.findByRole("article", { name }));
+    // ทดลอง Team S อยู่ = ยังชำระเงินแพ็กเกจปัจจุบันได้
+    expect((await card("Team S")).getByRole("link", { name: "ชำระเงินแพ็กเกจนี้" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_s&cycle=monthly");
+    expect((await card("Team M")).getByRole("link", { name: "เลือกแพ็กเกจนี้" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_m&cycle=monthly");
+    expect((await card("Free")).getByRole("link", { name: "เปลี่ยนเป็น Free" })).toHaveAttribute("href", "/work/sample/billing");
+    expect(screen.queryByRole("link", { name: /ทดลอง 14 วัน/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /รายปี/ }));
+    expect((await card("Team M")).getByRole("link", { name: "เลือกแพ็กเกจนี้" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_m&cycle=yearly");
+    // อยู่ในกรอบของระบบ: มี Sidebar และปุ่มย้อนกลับ
+    expect(screen.getAllByRole("navigation").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /ย้อนกลับ/ })).toBeInTheDocument();
+  });
+
+  it("ใช้แพ็กเกจอยู่แล้ว (จ่ายรายเดือน) = แพ็กเกจปัจจุบัน ไม่มีปุ่ม · เปลี่ยนเป็นรายปียังชำระได้", async () => {
+    const user = userEvent.setup();
+    server.use(http.get("*/api/v1/w/:ws/billing", () => HttpResponse.json(overview("active"))));
+    navigation.pathname = "/work/sample/billing/plans";
+    mountBilling({ section: "plans" });
+    const teamS = within(await screen.findByRole("article", { name: "Team S" }));
+    expect(teamS.getByText("แพ็กเกจปัจจุบัน")).toHaveAttribute("aria-disabled", "true");
+    expect(teamS.queryByRole("link")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /รายปี/ }));
+    expect(within(screen.getByRole("article", { name: "Team S" })).getByRole("link", { name: "ชำระเงินแพ็กเกจนี้" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_s&cycle=yearly");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -429,7 +462,7 @@ describe("เกินแพ็กเกจ (Q2)", () => {
     const { unmount } = renderWithProviders(<FeatureLock ws="sample" feature="Gantt" canManage><p>เนื้อหา Gantt ตัวอย่าง</p></FeatureLock>, { messages });
     expect(screen.getByRole("heading", { name: "Gantt ใช้ได้ในแพ็กเกจ Team" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "อัปเกรดเป็น Team" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_s");
-    expect(screen.getByRole("link", { name: "ดูแพ็กเกจ" })).toHaveAttribute("href", "/pricing");
+    expect(screen.getByRole("link", { name: "ดูแพ็กเกจ" })).toHaveAttribute("href", "/work/sample/billing/plans");
     expect(screen.getByText("เนื้อหา Gantt ตัวอย่าง").parentElement).toHaveAttribute("aria-hidden", "true");
     unmount();
     renderWithProviders(<FeatureLock ws="sample" feature="Gantt" canManage={false} />, { messages });

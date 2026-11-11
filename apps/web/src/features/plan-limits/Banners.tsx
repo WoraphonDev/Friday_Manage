@@ -179,7 +179,7 @@ export function FeatureLock({
             ) : (
               <RequestUpgradeButton />
             )}
-            <Link className={buttonVariants()} href="/pricing">
+            <Link className={buttonVariants()} href={`/work/${encodeURIComponent(ws)}/billing/plans`}>
               {t("plans")}
             </Link>
           </div>

@@ -11,11 +11,15 @@ import { today } from "@/lib/format";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import json from "../../messages/th/profile.json";
 import { ProfilePage } from "../../app/work/[ws]/profile/_components/profile-page";
+import { squareAvatar } from "../../app/work/[ws]/profile/_components/avatar-image";
 import { profileChanges } from "../../app/work/[ws]/profile/_components/personal-tab";
 import { hoursChanges } from "../../app/work/[ws]/profile/_components/hours-tab";
 import { deviceLabel } from "../../app/work/[ws]/profile/_components/security-tab";
 import type { Membership, NotifySettings, PrefRow } from "../../app/work/[ws]/profile/_components/types";
 
+// jsdom ไม่มี canvas / createImageBitmap · ทดสอบการย่อรูปแยก (ทำในเบราว์เซอร์จริง)
+vi.mock("../../app/work/[ws]/profile/_components/avatar-image", async (orig) => ({ ...(await orig<object>()), squareAvatar: vi.fn() }));
+const squareAvatarMock = vi.mocked(squareAvatar);
 const me = { ...baseMe, emailVerified: true, firstName: "สมมติ", lastName: "ทดสอบ", phone: null, about: null, avatarUrl: null };
 const membership = (over: Partial<Membership> = {}): Membership => ({
   role: "owner", jobTitle: "Project Manager", department: "Delivery", capacityHoursWeek: 40, workStart: "09:00", workEnd: "18:00", workDays: [1, 2, 3, 4, 5],
@@ -129,14 +133,43 @@ describe("Profile (I)", () => {
     expect(screen.getByRole("tab", { name: "การแจ้งเตือน" })).toHaveAttribute("aria-selected", "true");
   });
 
-  it("เปลี่ยนรูป: PATCH me.avatarUrl", async () => {
-    const user = userEvent.setup();
+  it("เปลี่ยนรูป: เลือกไฟล์จากเครื่อง → ย่อเป็นสี่เหลี่ยม → PUT /me/avatar · ไม่ใช่รูปบอกข้อผิดพลาด · ลบรูป", async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    const small = new Blob(["webp-bytes"], { type: "image/webp" });
+    squareAvatarMock.mockResolvedValue(small);
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:avatar-preview");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const uploads: { type: string | null; size: number }[] = [];
+    let deleted = 0;
+    server.use(
+      http.put("*/api/v1/me/avatar", async ({ request }) => {
+        uploads.push({ type: request.headers.get("content-type"), size: (await request.arrayBuffer()).byteLength });
+        return HttpResponse.json({ avatarUrl: "/api/v1/avatars/u-sample/v2" });
+      }),
+      http.delete("*/api/v1/me/avatar", () => { deleted++; return HttpResponse.json({ avatarUrl: null }); }),
+    );
     mount();
     await user.click(await screen.findByRole("button", { name: "เปลี่ยนรูป" }));
-    const dialog = await screen.findByRole("dialog", { name: "เปลี่ยนรูปโปรไฟล์" });
-    await user.type(within(dialog).getByLabelText("ลิงก์รูปภาพ"), "https://example.com/a.png");
+    let dialog = await screen.findByRole("dialog", { name: "เปลี่ยนรูปโปรไฟล์" });
+    expect(within(dialog).queryByLabelText("ลิงก์รูปภาพ")).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "บันทึก" })).toBeDisabled();
+    await user.upload(within(dialog).getByLabelText("เลือกรูปจากเครื่อง"), new File(["not an image"], "note.txt", { type: "text/plain" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("ไฟล์นี้ไม่ใช่รูปภาพ");
+    const photo = new File([new Uint8Array(2048)], "me.jpg", { type: "image/jpeg" });
+    await user.upload(within(dialog).getByLabelText("เลือกรูปจากเครื่อง"), photo);
+    expect(squareAvatarMock).toHaveBeenCalledWith(photo);
+    expect(await within(dialog).findByRole("img", { name: "ตัวอย่างรูปโปรไฟล์" })).toHaveAttribute("src", "blob:avatar-preview");
+    // หลังบันทึก หน้าเว็บโหลด me ใหม่ ซึ่งมีรูปแล้ว
+    server.use(http.get("*/api/v1/me", () => HttpResponse.json({ ...me, avatarUrl: "/api/v1/avatars/u-sample/v2" })));
     await user.click(within(dialog).getByRole("button", { name: "บันทึก" }));
-    await waitFor(() => expect(calls[0]).toEqual({ method: "PATCH", path: "/me", body: { avatarUrl: "https://example.com/a.png" } }));
+    await waitFor(() => expect(uploads).toEqual([{ type: "image/webp", size: small.size }]));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    // มีรูปแล้วลบได้
+    await user.click(screen.getByRole("button", { name: "เปลี่ยนรูป" }));
+    dialog = await screen.findByRole("dialog", { name: "เปลี่ยนรูปโปรไฟล์" });
+    await user.click(await within(dialog).findByRole("button", { name: "ลบรูป" }));
+    await waitFor(() => expect(deleted).toBe(1));
   });
 
   it("ตารางแจ้งเตือน: In-app ที่ล็อกปิดไม่ได้ · บันทึกส่งทั้งเมทริกซ์ + ค่าตั้ง · คืนค่าเริ่มต้น", async () => {

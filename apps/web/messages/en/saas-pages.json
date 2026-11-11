@@ -65,6 +65,7 @@
     "start": "Start free",
     "contact": "Contact sales",
     "trial": "{days}-day trial",
+    "inApp": { "choose": "Choose this plan", "current": "Current plan", "toFree": "Switch to Free", "payCurrent": "Pay for this plan" },
     "vat": "Prices exclude 7% VAT · Pay by credit card, PromptPay or bank transfer · An electronic tax invoice is issued every time · 3% withholding tax can be deducted",
     "bullets": {
       "projects": "{n, plural, one {{n} project} other {{n} projects}}",

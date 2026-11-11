@@ -114,7 +114,10 @@ export class ApiClient {
       headers.set("x-csrf-token", await this.csrf());
     if (etag !== undefined) headers.set("If-Match", ifMatch(etag));
     const form = typeof FormData !== "undefined" && body instanceof FormData;
-    if (body !== undefined && !form)
+    // ไฟล์ส่งเป็น body ตรง ๆ (เช่นรูปโปรไฟล์) · Content-Type ตามชนิดของไฟล์
+    const blob = typeof Blob !== "undefined" && body instanceof Blob;
+    if (blob) headers.set("Content-Type", (body as Blob).type || "application/octet-stream");
+    else if (body !== undefined && !form)
       headers.set("Content-Type", "application/json");
     let response: Response;
     try {
@@ -126,7 +129,7 @@ export class ApiClient {
         headers,
         credentials: "include",
         body:
-          body === undefined ? undefined : form ? body : JSON.stringify(body),
+          body === undefined ? undefined : form || blob ? (body as BodyInit) : JSON.stringify(body),
       });
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") throw error;
@@ -150,7 +153,7 @@ export class ApiClient {
       if (response.status === 402) emit(API_PLAN_LIMIT, error);
       // เช่น Sub-task วันที่เกินช่วง Task แม่ หรือ Acceptance criteria ยังไม่ครบ: ทุกหน้าใช้กล่องยืนยันเดียวกัน
       const field = error.details.confirmField;
-      const plain = typeof body === "object" && body !== null && !form && !Array.isArray(body);
+      const plain = typeof body === "object" && body !== null && !form && !blob && !Array.isArray(body);
       if (confirmer && error.details.confirmable === true && typeof field === "string" && plain && !(body as Record<string, unknown>)[field]) {
         const ok = await confirmer({ code: error.code, message: error.message, details: error.details });
         if (ok) return this.requestWithMeta<T>(path, { ...options, body: { ...(body as Record<string, unknown>), [field]: true } });

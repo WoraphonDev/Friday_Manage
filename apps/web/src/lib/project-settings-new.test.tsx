@@ -458,7 +458,7 @@ describe("สร้างโปรเจกต์ (Wizard 5 ขั้น)", () =
       visibility: "workspace", extraHolidays: [{ date: "2026-11-13", name: "วันหยุดบริษัท" }], sprintLengthWeeks: null,
       modules: ["Module A", "Module B"], milestones: [{ name: "Go-live", date: "2026-11-15" }],
       scope: { in: ["ระบบสั่งงาน"], deliverables: ["ระบบเว็บ", "คู่มือ"] },
-      members: [{ userId: "u-dev", role: "viewer", position: "Backend Dev", capacityHoursWeek: 32 }],
+      members: [{ userId: "u-dev", role: "viewer", position: "BE", capacityHoursWeek: 32 }],
       workflow: ["To do", { name: "In progress", wipLimit: 5 }, { name: "Review", wipLimit: 3 }, "QA", "Done"],
       estimateUnit: "man_day", progressMethod: "weighted", builtinTemplate: "kanban",
     });

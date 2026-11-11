@@ -102,7 +102,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
           <div className={styles.seg} role="group" aria-label={t("scope.label")}>
             {(["all", "mine"] as const).map((s) => <button key={s} type="button" aria-pressed={scope === s} onClick={() => setScope(s)}>{t(`scope.${s}`)}</button>)}
           </div>
-          <Select aria-label={t("moduleFilter")} size="small" value={moduleId} onChange={(e) => setModuleId(e.target.value)}>
+          <Select aria-label={t("moduleFilter")} value={moduleId} onChange={(e) => setModuleId(e.target.value)}>
             <option value="">{t("allModules")}</option>
             {d.modules.filter((m) => m.id).map((m) => <option key={m.id} value={m.id!}>{m.name}</option>)}
           </Select>

@@ -9,6 +9,7 @@ import { Avatar, Badge, Button, Forbidden, Input, Select, useToast } from "@/com
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError, supportId } from "@/lib/api";
 import { formatDate, formatDateRange, today } from "@/lib/format";
+import { positionOptions, toPositionCode } from "@/lib/positions";
 import { queryKeys } from "@/lib/query";
 import {
   BUILTIN_TEMPLATES, firstMonday, KEY_PATTERN, lines, spanDays, sprintCount, suggestKey, TEMPLATE_PRESETS, validDate,
@@ -18,7 +19,6 @@ import styles from "./wizard.module.css";
 
 const COLORS = ["#5B3FC4", "#0F766E", "#1D4ED8", "#7C3AED", "#B45309", "#BE185D", "#334155"] as const;
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
-const POSITIONS = ["Project Manager", "Lead / PM", "BA", "UX/UI Designer", "Frontend Dev", "Backend Dev", "Developer", "QA Engineer"];
 const INTEGRATIONS = ["github", "gitlab", "line", "slack"] as const;
 const PRIORITIES = [["urgent", "red"], ["high", "amber"], ["medium", "blue"], ["low", "neutral"]] as const;
 
@@ -712,7 +712,7 @@ function TeamPicker({ me, directory, loading, error, members, onChange }: {
       const q = token.toLowerCase();
       const hit = candidates.find((m) => m.email.toLowerCase() === q || m.displayName.toLowerCase() === q) ?? candidates.find((m) => m.displayName.toLowerCase().includes(q) || m.email.toLowerCase().includes(q));
       if (hit && !found.some((f) => f.userId === hit.userId)) {
-        found.push({ userId: hit.userId, displayName: hit.displayName, email: hit.email, guest: hit.role === "guest", role: "member", position: hit.jobTitle ?? "", capacityHoursWeek: hit.capacityHoursWeek ?? 40 });
+        found.push({ userId: hit.userId, displayName: hit.displayName, email: hit.email, guest: hit.role === "guest", role: "member", position: toPositionCode(hit.jobTitle), capacityHoursWeek: hit.capacityHoursWeek ?? 40 });
       } else if (!hit) missing.push(token);
     }
     if (found.length) onChange([...members, ...found]);
@@ -757,7 +757,7 @@ function TeamPicker({ me, directory, loading, error, members, onChange }: {
           <div className={styles.inline}><Avatar person={{ id: m.userId, displayName: m.displayName }} /><div><div>{m.displayName}</div><div className={styles.muted}>{m.email}</div></div></div>
           <select className={styles.in} value={m.position} aria-label={t("positionOf", { name: m.displayName })} onChange={(e) => update(m.userId, { position: e.target.value })}>
             <option value="">—</option>
-            {[...new Set([...(m.position ? [m.position] : []), ...POSITIONS])].map((p) => <option key={p} value={p}>{p}</option>)}
+            {positionOptions(m.position).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
           <select className={styles.in} value={m.role} aria-label={t("roleOf", { name: m.displayName })} onChange={(e) => update(m.userId, { role: e.target.value as TeamMember["role"] })}>
             {/* Guest เป็น Admin ของโปรเจกต์ไม่ได้ (A04) */}

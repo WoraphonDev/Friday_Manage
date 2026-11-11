@@ -135,7 +135,7 @@
         "on": "On",
         "off": "Off",
         "splitHint": "Dev = tasks handed to QA (Review / QA or Done category) · QA = tasks Done · uses the existing progress formula",
-        "apply": "Switch to the Development + QA workflow",
+        "applyLink": "Use the Development + QA statuses",
         "applyTitle": "Switch to the Development + QA workflow",
         "applyDescription": "Choose where tasks in each current status go · current statuses are renamed instead of deleted, so task history stays intact",
         "oldStatus": "Current status",

@@ -27,6 +27,11 @@ export const DEV_QA_FLOW = [
 ] as const satisfies readonly { key: string; name: string; category: Category }[];
 export type DevQaKey = (typeof DEV_QA_FLOW)[number]["key"];
 
+/** Workflow มีสถานะครบชุด Development + QA แล้ว (ชื่อ + หมวดตรงทั้ง 7 ตัว ไม่สนลำดับ · มีสถานะเพิ่มเองได้) → ไม่ต้องเสนอให้เปลี่ยนอีก */
+export function matchesDevQa(statuses: Pick<Status, "name" | "category">[]) {
+  return DEV_QA_FLOW.every((x) => statuses.some((s) => s.name.trim().toLowerCase() === x.name.toLowerCase() && s.category === x.category));
+}
+
 /** คู่ที่เสนอให้สถานะเดิม: ชื่อที่ตรงกันก่อน แล้วจึงดูตามหมวด (Blocked ไม่มีในชุดนี้ จึงไป In progress) */
 export function suggestDevQa(s: Pick<Status, "name" | "category">): DevQaKey {
   const name = s.name.trim().toLowerCase();
@@ -189,7 +194,6 @@ export function WorkflowSection({ ws, projectKey, project }: { ws: string; proje
               <b>{t("devQa.split")}</b> <span className={styles.pill}>{project.progressSplit ? t("devQa.on") : t("devQa.off")}</span>
               <div className={styles.muted}>{t("devQa.splitHint")}</div>
             </div>
-            <Button size="small" onClick={openDevQa}>{t("devQa.apply")}</Button>
           </div>
         )}
         {phased ? (
@@ -267,6 +271,10 @@ export function WorkflowSection({ ws, projectKey, project }: { ws: string; proje
           ))}
           <div>
             <Button onClick={() => setAdding(true)}>{t("add")}</Button>
+            {/* ทางลัดสำหรับโปรเจกต์เก่า · ซ่อนเมื่อมีชุด Development + QA ครบแล้ว */}
+            {wf.kind === "standard" && project && !matchesDevQa(wf.statuses) && (
+              <button type="button" className={styles.linkBtn} onClick={openDevQa}>{t("devQa.applyLink")}</button>
+            )}
           </div>
           <div className={styles.note}>
             <b>{t("categoryGuide")}</b>

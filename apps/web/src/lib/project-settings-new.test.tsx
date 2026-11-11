@@ -10,7 +10,7 @@ import { permissions, workspaces } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import json from "../../messages/th/project-settings-new.json";
 import { ProjectSettings, generalChanges } from "../../app/work/[ws]/p/[key]/settings/_components/project-settings";
-import { bugColumns, suggestDevQa } from "../../app/work/[ws]/p/[key]/settings/_components/workflow-section";
+import { bugColumns, matchesDevQa, suggestDevQa } from "../../app/work/[ws]/p/[key]/settings/_components/workflow-section";
 import type { ProjectDetail, Workflow } from "../../app/work/[ws]/p/[key]/settings/_components/types";
 import { NewProjectWizard } from "../../app/work/[ws]/new-project/_components/new-project-wizard";
 import { insertAt, spanDays, sprintCount, suggestKey, TEMPLATE_PRESETS, workflowBody } from "../../app/work/[ws]/new-project/_components/plan";
@@ -571,5 +571,18 @@ describe("ช่วงของสถานะ (แยก Dev / QA)", () => {
     expect(["todo", "in_progress", "blocked", "review", "done", "cancelled"].map(statusPhase)).toEqual(["dev", "dev", "dev", "qa", "done", "none"]);
     const runs = phaseRuns([{ category: "todo" }, { category: "in_progress" }, { category: "review" }, { category: "in_progress" }, { category: "done" }]);
     expect(runs.map((r) => [r.phase, r.start, r.items.length])).toEqual([["dev", 0, 2], ["qa", 2, 1], ["dev", 3, 1], ["done", 4, 1]]);
+  });
+});
+
+describe("ทางลัดเปลี่ยนเป็นชุด Development + QA", () => {
+  const devQa = [
+    { name: "To do", category: "todo" }, { name: "In progress", category: "in_progress" }, { name: "Rework", category: "in_progress" },
+    { name: "Ready for QA", category: "review" }, { name: "Testing", category: "review" }, { name: "Done", category: "done" }, { name: "Rejected", category: "cancelled" },
+  ] as const;
+  it("ซ่อนเมื่อมีครบทั้ง 7 สถานะ (ไม่สนลำดับ เพิ่มสถานะเองได้) · แสดงเมื่อยังไม่ครบหรือหมวดไม่ตรง", () => {
+    expect(matchesDevQa([...devQa].reverse())).toBe(true);
+    expect(matchesDevQa([...devQa, { name: "Code review", category: "review" }])).toBe(true);
+    expect(matchesDevQa([{ name: "To do", category: "todo" }, { name: "In progress", category: "in_progress" }, { name: "Review", category: "review" }, { name: "Done", category: "done" }])).toBe(false);
+    expect(matchesDevQa(devQa.map((x) => (x.name === "Testing" ? { ...x, category: "in_progress" as const } : x)))).toBe(false);
   });
 });

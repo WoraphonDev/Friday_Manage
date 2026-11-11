@@ -7,11 +7,12 @@
 //     actual: งานที่เสร็จกระจายตาม Actual Start–End (ไม่มีใช้ Plan Start และวันที่เสร็จ) · งานที่ยังไม่เสร็จ
 //     ส่วนที่คืบหน้าแล้วอยู่ก่อนวันนี้ ส่วนที่เหลือกระจายจากวันนี้ถึง Plan End (เลยกำหนดแล้วตกที่วันนี้)
 import { schema as s, type Tx } from '@friday/db';
-import { and, eq, inArray, isNull, lte, gte, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lte, gte, ne, sql } from 'drizzle-orm';
 import { today } from '../common/dates.js';
 import { loadPeople, type Person } from '../common/people.js';
 import { config } from '../config.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
+import { closedStatus } from '../common/status-category.js';
 
 export const HOURS_PER_MD = 8;
 const localDate = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: config.timezone }).format(d);
@@ -302,7 +303,8 @@ export async function loadWorkItems(tx: Tx, projects: { id: string; key: string 
     .from(s.issues)
     .innerJoin(s.issueTypes, eq(s.issueTypes.id, s.issues.issueTypeId))
     .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
-    .where(and(inArray(s.issues.projectId, [...keyOf.keys()]), isNull(s.issues.deletedAt)));
+    // งานที่ยกเลิกไม่เป็นภาระงาน
+    .where(and(inArray(s.issues.projectId, [...keyOf.keys()]), isNull(s.issues.deletedAt), ne(s.workflowStatuses.category, 'cancelled')));
   // Bug ใต้ Task ไม่ได้แบ่ง Man-Day ของ Task จึงไม่ทำให้ Task หยุดเป็นงานระดับล่างสุด
   const parents = new Set(rows.filter((r) => r.parentId && !r.bug).map((r) => r.parentId!));
   const leaves = rows.filter((r) => !parents.has(r.id));
@@ -449,7 +451,7 @@ async function countUnscheduled(tx: Tx, projectId: string, items: WorkItem[]) {
     .select({ id: s.issues.id })
     .from(s.issues)
     .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
-    .where(and(eq(s.issues.projectId, projectId), eq(s.workflowStatuses.category, 'done'), inArray(s.issues.id, open.map((i) => i.id))));
+    .where(and(eq(s.issues.projectId, projectId), closedStatus(), inArray(s.issues.id, open.map((i) => i.id))));
   const doneIds = new Set(done.map((d) => d.id));
   const left = open.filter((i) => !doneIds.has(i.id));
   return {

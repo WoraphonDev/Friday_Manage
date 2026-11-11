@@ -456,6 +456,15 @@ svg {
   background: var(--status-done-bg);
   color: var(--status-done-fg);
 }
+.status-pill-blocked {
+  background: var(--status-blocked-bg);
+  color: var(--status-blocked-fg);
+}
+.status-pill-cancelled {
+  background: var(--status-cancelled-bg);
+  color: var(--status-cancelled-fg);
+  text-decoration: line-through;
+}
 .status-pill-overdue {
   background: var(--status-overdue-bg);
   color: var(--status-overdue-fg);

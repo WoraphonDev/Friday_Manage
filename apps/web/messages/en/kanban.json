@@ -53,6 +53,7 @@
   "noDue": "No due date",
   "dueDate": "Due {date}",
   "completed": "Done",
+  "cancelled": "Cancelled",
   "confirmTitle": "Sub-tasks not done",
   "confirmDescription": "{key} still has {count, plural, one {{count} unfinished Sub-task} other {{count} unfinished Sub-tasks}}. Move it to {column} anyway?",
   "confirm": "Move anyway",

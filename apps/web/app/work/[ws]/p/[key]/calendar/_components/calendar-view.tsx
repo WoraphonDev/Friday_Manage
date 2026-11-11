@@ -14,8 +14,9 @@ import { useIsMobile } from "@/lib/use-mobile";
 import type { Permissions, Person } from "@/lib/types";
 import { SubscribeDialog } from "./subscribe-dialog";
 import styles from "./cal.module.css";
+import type { StatusCategory } from "@/lib/status";
 
-type Cat = "todo" | "in_progress" | "done";
+type Cat = StatusCategory;
 type Due = "done" | "overdue" | "today" | "upcoming";
 export interface CalIssue {
   key: string; type: string; title: string; status: { name: string; category: Cat }; priority: string;
@@ -181,7 +182,7 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
       return <span key={it.id} className={`${styles.ev} ${styles.leave}`} title={text}><span className={styles.t}>{text}</span></span>;
     }
     const i = it.issue;
-    const cls = i.due === "overdue" ? styles.late : i.due === "today" ? styles.dueToday : i.due === "done" ? styles.done : i.status.category === "in_progress" ? styles.prog : styles.todo;
+    const cls = i.due === "overdue" ? styles.late : i.due === "today" ? styles.dueToday : i.due === "done" ? styles.done : i.status.category === "todo" ? styles.todo : styles.prog;
     const state = t(`state.${i.due}`);
     const label = `${t("task", { key: i.key, title: i.title, date: formatDate(i.planEnd, year) })}${state ? ` · ${state}` : ""}`;
     const onKey = (e: KeyboardEvent) => {

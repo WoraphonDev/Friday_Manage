@@ -126,8 +126,8 @@ export class NotificationFanout implements OnModuleInit {
         const changed = new Send('issue.status_changed', { from: d.from, to: d.to }).add(await watchers(), REASONS.watcher);
         // Sub-task เปลี่ยนสถานะ → ผู้รับผิดชอบงานแม่
         if (issue?.parentId) changed.add((await this.audience.assignees([issue.parentId])).get(issue.parentId) ?? [], REASONS.parentAssignee);
-        const to = d.to as { name?: unknown } | undefined;
-        if (!issue?.reviewerId || !isReviewStatus(to?.name)) return [changed];
+        const to = d.to as { name?: unknown; category?: unknown } | undefined;
+        if (!issue?.reviewerId || !(to?.category === 'review' || isReviewStatus(to?.name))) return [changed];
         // ย้ายเข้า Review → Reviewer ได้ issue.review_requested แทนการแจ้งเปลี่ยนสถานะ
         const review = new Send('issue.review_requested', { from: d.from, to: d.to }).add([issue.reviewerId], REASONS.reviewer);
         return [review, changed.drop([issue.reviewerId])];

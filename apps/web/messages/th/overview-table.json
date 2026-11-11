@@ -132,7 +132,10 @@
     "statusCategory": {
       "todo": "To do",
       "in_progress": "In progress",
-      "done": "Done"
+      "review": "Review / QA",
+      "blocked": "Blocked / On hold",
+      "done": "Done",
+      "cancelled": "Cancelled / Rejected"
     },
     "assignee": "Dev",
     "anyone": "ทุกคน",

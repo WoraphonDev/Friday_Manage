@@ -190,7 +190,7 @@ export function StatusPill({
   status,
   label,
 }: {
-  status: "todo" | "in_progress" | "review" | "done" | "overdue";
+  status: "todo" | "in_progress" | "review" | "blocked" | "done" | "cancelled" | "overdue";
   label?: string;
 }) {
   const t = useTranslations("common.status");

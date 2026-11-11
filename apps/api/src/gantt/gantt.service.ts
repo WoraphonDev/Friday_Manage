@@ -70,7 +70,8 @@ export class GanttService {
   private async loadPlan(tx: Tx, project: { id: string; key: string; workspaceId: string; holidayCalendarId: string | null }): Promise<PlanData> {
     const issues = await tx.select().from(s.issues).where(and(eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt))).orderBy(asc(s.issues.number));
     const statuses = await tx.select({ id: s.workflowStatuses.id, category: s.workflowStatuses.category }).from(s.workflowStatuses).where(eq(s.workflowStatuses.projectId, project.id));
-    const done = new Set(statuses.filter((x) => x.category === 'done').map((x) => x.id));
+    // ปิดงานแล้ว (เสร็จ / ยกเลิก): ไม่จัดตาราง ไม่เลื่อนตาม Dependency
+    const done = new Set(statuses.filter((x) => x.category === 'done' || x.category === 'cancelled').map((x) => x.id));
     const ids = new Set(issues.map((i) => i.id));
     const deps = issues.length
       ? await tx.select().from(s.issueDependencies).where(inArray(s.issueDependencies.predecessorId, issues.map((i) => i.id)))

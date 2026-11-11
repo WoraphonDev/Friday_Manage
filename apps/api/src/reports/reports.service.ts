@@ -48,7 +48,7 @@ export class ReportsService {
 
       const doneInWeek = work.filter((i) => i.category === 'done' && inWeek(i.completedAt, week.start, week.end));
       const inProgress = work.filter((i) => i.category === 'in_progress');
-      const inReview = work.filter((i) => isOpen(i) && i.statusName.trim().toLowerCase() === 'review');
+      const inReview = work.filter((i) => isOpen(i) && (i.category === 'review' || i.statusName.trim().toLowerCase() === 'review'));
       const late = work.filter((i) => isOpen(i) && i.planEnd && i.planEnd < asOf);
       const perPerson = new Map<string, number>();
       for (const i of late) for (const u of i.assigneeIds) perPerson.set(u, (perPerson.get(u) ?? 0) + 1);

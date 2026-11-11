@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { StatusPill } from "@/components/ui";
+import { statusTone } from "@/lib/status";
 
 // รูปแบบผลค้นหาของ GET w/:ws/search (A22)
 export const SEARCH_TYPES = ["task", "sub", "bug", "project", "comment", "file", "person"] as const;
@@ -82,10 +83,9 @@ export function TypeIcon({ type, size = 26, label }: { type: SearchType | "comma
   );
 }
 
-/** หมวดสถานะของ Workflow → สีของ StatusPill · ชื่อ "Review" ใช้สีเหลืองตาม Canvas */
+/** หมวดสถานะของ Workflow → สีของ StatusPill (ชุดเดียวกับ Table / Kanban) */
 export function HitStatus({ status }: { status: { name: string; category: string } }) {
-  const tone = status.name.trim().toLowerCase() === "review" ? "review" : status.category === "done" ? "done" : status.category === "in_progress" ? "in_progress" : "todo";
-  return <StatusPill status={tone} label={status.name} />;
+  return <StatusPill status={statusTone(status.category, status.name)} label={status.name} />;
 }
 
 export function useDebounced<T>(value: T, ms: number) {

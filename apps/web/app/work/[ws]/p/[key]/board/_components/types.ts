@@ -1,10 +1,11 @@
 import type { Person } from "@/lib/types";
+import type { StatusCategory } from "@/lib/status";
 
 export interface BoardCard {
   key: string;
   type: { name: string; color: string };
   title: string;
-  status: { id: string; name: string; category: "todo" | "in_progress" | "done" };
+  status: { id: string; name: string; category: StatusCategory };
   module: { id: string; name: string; color: string | null } | null;
   phase: { id: string; name: string } | null;
   parentKey: string | null;

@@ -134,7 +134,7 @@ export class AdminService {
       const [issues] = await tx
         .select({
           total: sql<number>`count(*)::int`,
-          open: sql<number>`count(*) filter (where ${s.workflowStatuses.category} <> 'done')::int`,
+          open: sql<number>`count(*) filter (where ${s.workflowStatuses.category} not in ('done', 'cancelled'))::int`,
         })
         .from(s.issues)
         .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))

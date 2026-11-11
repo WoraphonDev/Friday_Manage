@@ -1,4 +1,5 @@
 import type { Person } from "@/lib/types";
+import type { StatusCategory } from "@/lib/status";
 
 export type Filter = "all" | "unread" | "assign" | "mention" | "activity" | "due";
 export interface InboxNotification {
@@ -17,7 +18,7 @@ export interface InboxNotification {
     key: string;
     title: string;
     type: string;
-    status: { name: string; category: "todo" | "in_progress" | "done" };
+    status: { name: string; category: StatusCategory };
     moduleName: string | null;
     planEnd: string | null;
     deleted: boolean;

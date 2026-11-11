@@ -47,7 +47,7 @@
 .bugIcon { width:18px; height:18px; border-radius:4px; background:var(--danger-solid); flex:none; }
 .modPill,.pill,.typeBadge { display:inline-flex; align-items:center; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:500; white-space:nowrap; }
 .typeBadge { background:var(--contrast-bg); color:var(--contrast-ink); font-weight:600; }
-.sTodo { background:var(--status-todo-bg); color:var(--status-todo-fg); }.sProg { background:var(--status-progress-bg); color:var(--status-progress-fg); }.sRev { background:var(--status-review-bg); color:var(--status-review-fg); }.sDone { background:var(--status-done-bg); color:var(--status-done-fg); }
+.sTodo { background:var(--status-todo-bg); color:var(--status-todo-fg); }.sProg { background:var(--status-progress-bg); color:var(--status-progress-fg); }.sRev { background:var(--status-review-bg); color:var(--status-review-fg); }.sDone { background:var(--status-done-bg); color:var(--status-done-fg); }.sBlk { background:var(--status-blocked-bg); color:var(--status-blocked-fg); }.sCan { background:var(--status-cancelled-bg); color:var(--status-cancelled-fg); }
 .headBlock { padding:18px 24px 6px; display:flex; flex-direction:column; gap:10px; }
 .statusRow { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .statusPill { appearance:none; -webkit-appearance:none; min-height:32px; padding:0 14px; border-radius:8px; border:1px solid transparent; font:inherit; font-size:var(--text-label); font-weight:600; cursor:pointer; }

@@ -156,7 +156,7 @@ describe("Table (2)", () => {
     await user.click(screen.getByRole("checkbox", { name: "Show completed" }));
     await user.click(screen.getByRole("button", { name: /Filter/ }));
     await user.selectOptions(screen.getByLabelText("Status"), "");
-    await waitFor(() => expect(urls.at(-1)?.searchParams.get("status")).toBe("todo,in_progress"));
+    await waitFor(() => expect(urls.at(-1)?.searchParams.get("status")).toBe("open"));
   });
 
   it("คอลัมน์ตามชุดฟิลด์ของโปรเจกต์: ลำดับ, ฟิลด์ที่ซ่อน, Custom field · ซ่อนเฉพาะระดับ Sub-task · เลือกคอลัมน์เองจำในเครื่อง", async () => {

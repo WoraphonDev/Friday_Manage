@@ -12,6 +12,7 @@ import { Notifier } from '../notifications/notifier.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
 import { type ProjectAccess, projectAccess, requirePerm, usersWithPerm } from '../projects/permissions.js';
 import type { ProjectRow } from '../projects/projects.service.js';
+import { openStatus } from '../common/status-category.js';
 
 const s = schema;
 const isoDate = z.iso.date();
@@ -374,7 +375,7 @@ export class DueRequestsService {
               inArray(s.issueAssignees.userId, assigneeIds),
               eq(s.issues.projectId, project.id),
               isNull(s.issues.deletedAt),
-              ne(s.workflowStatuses.category, 'done'),
+              openStatus(),
               notInArray(s.issues.id, family),
               lte(s.issues.planStart, requestedDue),
               gte(s.issues.planEnd, windowStart),

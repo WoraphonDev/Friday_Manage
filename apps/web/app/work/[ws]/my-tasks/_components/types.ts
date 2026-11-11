@@ -1,4 +1,5 @@
 import type { Person } from "@/lib/types";
+import type { StatusCategory } from "@/lib/status";
 
 export type Health = "on_track" | "at_risk" | "off_track" | "unknown";
 export type DueState = "overdue" | "today" | "later" | "none" | "done";
@@ -7,7 +8,7 @@ export interface IssueRef {
   key: string;
   title: string;
   project: { key: string; name: string };
-  status: { name: string; category: "todo" | "in_progress" | "done" };
+  status: { name: string; category: StatusCategory };
   planEnd: string | null;
 }
 export interface ApprovalItem {
@@ -69,7 +70,7 @@ export interface TaskItem {
   title: string;
   type: string | null;
   project: { key: string; name: string; color: string | null };
-  status: { id: string; name: string; category: "todo" | "in_progress" | "done" };
+  status: { id: string; name: string; category: StatusCategory };
   priority: "urgent" | "high" | "medium" | "low";
   planStart: string | null;
   planEnd: string | null;
@@ -96,5 +97,5 @@ export interface MyIssues {
   groups: TaskGroup[];
 }
 export interface FormOptions {
-  issueTypes: { name: string; statuses: { id: string; name: string; category: "todo" | "in_progress" | "done" }[] }[];
+  issueTypes: { name: string; statuses: { id: string; name: string; category: StatusCategory }[] }[];
 }

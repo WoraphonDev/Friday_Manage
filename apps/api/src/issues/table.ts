@@ -7,6 +7,7 @@ import { loadPeople } from '../common/people.js';
 import type { AuthInfo } from '../common/request.js';
 import type { ProjectAccess } from '../projects/permissions.js';
 import type { ProjectRow } from '../projects/projects.service.js';
+import { countsForProgress, openStatus, STATUS_CATEGORIES, type StatusCategory } from '../common/status-category.js';
 
 type Issue = typeof s.issues.$inferSelect;
 const uuid = z.uuid();
@@ -58,7 +59,9 @@ export async function listIssues<T extends { id: string; key: string; number: nu
   if (q.status) {
     const values = q.status.split(',');
     const conditions = values.map((value) => {
-      if (['todo', 'in_progress', 'done'].includes(value)) return eq(s.workflowStatuses.category, value as 'todo' | 'in_progress' | 'done');
+      if ((STATUS_CATEGORIES as readonly string[]).includes(value)) return eq(s.workflowStatuses.category, value as StatusCategory);
+      // open = งานค้างทุกหมวด (ซ่อนงานที่เสร็จ / ยกเลิก)
+      if (value === 'open') return openStatus();
       if (uuid.safeParse(value).success) return eq(s.issues.statusId, value);
       throw new AppError(400, 'invalid_filter', 'ตัวกรองสถานะไม่ถูกต้อง');
     });
@@ -72,7 +75,7 @@ export async function listIssues<T extends { id: string; key: string; number: nu
       : sql`exists (select 1 from ${s.issueAssignees} a where a.issue_id = ${s.issues.id} and a.user_id = ${who})`);
   }
   if (q.ba) where.push(q.ba === 'none' ? isNull(s.issues.baId) : eq(s.issues.baId, q.ba === 'me' ? auth.userId : q.ba));
-  const overdue = and(sql`${s.issues.planEnd} < ${today()}`, ne(s.workflowStatuses.category, 'done'))!;
+  const overdue = and(sql`${s.issues.planEnd} < ${today()}`, openStatus())!;
   if (q.overdue !== undefined) where.push(q.overdue ? overdue : sql`not coalesce((${overdue}), false)`);
   if (q.q) {
     // ข้อความค้นหาเป็น literal ไม่เปลี่ยน % / _ เป็น wildcard ของ SQL
@@ -134,8 +137,10 @@ export async function listIssues<T extends { id: string; key: string; number: nu
   const phases = await tx.select({ id: s.phases.id, moduleId: s.phases.moduleId, name: s.phases.name }).from(s.phases).where(eq(s.phases.projectId, project.id)).orderBy(asc(s.phases.sort));
   const progress = progressCalculator(progressRows!, project.progressMethod === 'weighted');
   const aggregate = (members: typeof totals) => {
-    const roots = members.filter((r) => !r.issue.parentId);
-    return { taskCount: roots.length, subtaskCount: members.length - roots.length, doneCount: roots.filter((r) => r.category === 'done').length,
+    // งานที่ยกเลิกไม่นับในจำนวนและความคืบหน้า
+    const counted = members.filter((r) => countsForProgress(r.category));
+    const roots = counted.filter((r) => !r.issue.parentId);
+    return { taskCount: roots.length, subtaskCount: counted.length - roots.length, doneCount: roots.filter((r) => r.category === 'done').length,
       estimateMd: roots.reduce((sum, r) => sum + (r.issue.estimateMd ?? 0), 0), progressPct: rollup(roots.map((r) => ({ md: r.issue.estimateMd, pct: progress(r.issue) })), project.progressMethod === 'weighted') };
   };
   const grouped = [...modules, { id: null, name: null, color: null }].map((module) => ({ ...module,
@@ -159,7 +164,7 @@ function progressCalculator(rows: { issue: Issue; category: string }[], weighted
   for (const { issue } of rows) if (issue.parentId) children.set(issue.parentId, [...children.get(issue.parentId) ?? [], issue]);
   const progress = (issue: Issue): number => {
     if (categories.get(issue.id) === 'done') return 100;
-    const subs = children.get(issue.id);
+    const subs = children.get(issue.id)?.filter((sub) => countsForProgress(categories.get(sub.id)));
     return subs?.length ? rollup(subs.map((sub) => ({ md: sub.estimateMd, pct: progress(sub) })), weighted) : issue.progressPct ?? 0;
   };
   return progress;

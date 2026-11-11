@@ -5,12 +5,12 @@ import { Badge } from "@/components/ui";
 import { formatDate, type YearFormat } from "@/lib/format";
 import type { TaskItem } from "./types";
 import styles from "./hmt.module.css";
+import { statusTone, type StatusCategory } from "@/lib/status";
 
 export const taskHref = (ws: string, projectKey: string, issueKey: string) =>
   `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/board?issue=${encodeURIComponent(issueKey)}`;
 export const projectHref = (ws: string, projectKey: string) => `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}`;
 
-export const STATUS_TONE = { todo: "neutral", in_progress: "blue", done: "green" } as const;
 
 /** "เลย N วัน" / "วันนี้" / วันที่ (ข้อความอยู่ใน namespace ของงานนี้) */
 export function useDueText() {
@@ -25,9 +25,9 @@ export function useDueText() {
   };
 }
 
-export function StatusBadge({ category, name }: { category: "todo" | "in_progress" | "done"; name: string }) {
-  const review = /review/i.test(name);
-  return <Badge tone={review ? "amber" : STATUS_TONE[category]}>{name}</Badge>;
+/** ป้ายสถานะสีตามหมวด (ชุดเดียวกับ Table / Kanban) */
+export function StatusBadge({ category, name }: { category: StatusCategory; name: string }) {
+  return <span className={`badge status-pill-${statusTone(category, name)}`}>{name}</span>;
 }
 
 export const bkkHour = (now = new Date()) => Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: "Asia/Bangkok" }).format(now)) % 24;

@@ -13732,7 +13732,10 @@
                                   "enum": [
                                     "todo",
                                     "in_progress",
-                                    "done"
+                                    "review",
+                                    "blocked",
+                                    "done",
+                                    "cancelled"
                                   ]
                                 },
                                 "wipLimit": {
@@ -14180,7 +14183,10 @@
                                   "enum": [
                                     "todo",
                                     "in_progress",
-                                    "done"
+                                    "review",
+                                    "blocked",
+                                    "done",
+                                    "cancelled"
                                   ]
                                 },
                                 "wipLimit": {
@@ -14874,7 +14880,10 @@
                               "enum": [
                                 "todo",
                                 "in_progress",
-                                "done"
+                                "review",
+                                "blocked",
+                                "done",
+                                "cancelled"
                               ]
                             },
                             "wipLimit": {
@@ -25815,7 +25824,21 @@
                     "enum": [
                       "todo",
                       "in_progress",
-                      "done"
+                      "review",
+                      "blocked",
+                      "done",
+                      "cancelled"
+                    ]
+                  },
+                  "color": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^#[0-9A-Fa-f]{6}$"
+                      },
+                      {
+                        "type": "null"
+                      }
                     ]
                   },
                   "boardColumnId": {
@@ -26022,7 +26045,21 @@
                     "enum": [
                       "todo",
                       "in_progress",
-                      "done"
+                      "review",
+                      "blocked",
+                      "done",
+                      "cancelled"
+                    ]
+                  },
+                  "color": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^#[0-9A-Fa-f]{6}$"
+                      },
+                      {
+                        "type": "null"
+                      }
                     ]
                   },
                   "boardColumnId": {

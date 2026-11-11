@@ -2,6 +2,7 @@ import { schema as s, type Tx } from '@friday/db';
 import { and, eq, isNull, ne, sql } from 'drizzle-orm';
 import { AppError } from '../common/errors.js';
 import type { AuthInfo } from '../common/request.js';
+import { openStatus } from '../common/status-category.js';
 
 type Issue = typeof s.issues.$inferSelect;
 type Status = typeof s.workflowStatuses.$inferSelect;
@@ -29,15 +30,15 @@ export async function enforceWorkflowRules(tx: Tx, auth: AuthInfo, issue: Issue,
         if (next.category !== 'done' || current.category === 'done') break;
         const [open] = await tx.select({ n: sql<number>`count(*)::int` }).from(s.issues)
           .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
-          .where(and(eq(s.issues.parentId, issue.id), isNull(s.issues.deletedAt), ne(s.workflowStatuses.category, 'done')));
+          .where(and(eq(s.issues.parentId, issue.id), isNull(s.issues.deletedAt), openStatus()));
         if (open.n && !confirm) fail('subtasks_incomplete', `ยังมี Sub-task ที่ไม่เสร็จ ${open.n} งาน`, { open: open.n, confirmable: true });
         break;
       }
       case 'reviewer_required':
-        if ((config.toStatusId || next.name.toLowerCase() === 'review') && !proposed.reviewerId) fail('reviewer_required', 'ต้องระบุ Reviewer ก่อนย้ายไป Review');
+        if ((config.toStatusId || next.category === 'review' || next.name.toLowerCase() === 'review') && !proposed.reviewerId) fail('reviewer_required', 'ต้องระบุ Reviewer ก่อนย้ายไป Review');
         break;
       case 'reviewer_only_done':
-        if (next.category === 'done' && (config.fromStatusId || current.name.toLowerCase() === 'review') && proposed.reviewerId !== auth.userId) fail('reviewer_only_done', 'เฉพาะ Reviewer เท่านั้นที่ย้ายจาก Review ไป Done ได้');
+        if (next.category === 'done' && (config.fromStatusId || current.category === 'review' || current.name.toLowerCase() === 'review') && proposed.reviewerId !== auth.userId) fail('reviewer_only_done', 'เฉพาะ Reviewer เท่านั้นที่ย้ายจาก Review ไป Done ได้');
         break;
       case 'fix_reference_required': {
         if (!config.toStatusId && next.name.toLowerCase() !== 'fixed') break;

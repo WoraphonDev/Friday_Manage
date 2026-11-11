@@ -12,16 +12,15 @@ import { PlanActions, PlanFacts, PlanModules, PlanRisks, PlanWorkload, usePlan }
 import type { Overview, OverviewItem } from "./types";
 import styles from "./ot.module.css";
 import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
+import { isClosedCategory, statusDotColor, useStatusColors } from "@/lib/status";
 
 type ListKey = keyof Overview["lists"];
 const LIST_KEYS: ListKey[] = ["overdue", "dueToday", "laterThisWeek", "doneLast7Days"];
-const CAT_COLOR = { todo: "var(--status-todo-dot)", in_progress: "var(--status-progress-dot)", done: "var(--status-done-dot)" } as const;
-// Review อยู่กลุ่ม in_progress แต่มีสีของตัวเอง (แยกด้วยชื่อแบบเดียวกับป้ายสถานะใน Table)
-const columnColor = (c: { name: string; category: keyof typeof CAT_COLOR }) => (/review/i.test(c.name) ? "var(--status-review-dot)" : CAT_COLOR[c.category]);
 const KPI_DOT: Record<ListKey, string> = { overdue: "var(--danger)", dueToday: "var(--warning-solid)", laterThisWeek: "var(--chart-primary)", doneLast7Days: "var(--success-solid)" };
 
 export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: string }) {
   const t = useTranslations("overview-table.overview");
+  const statusColors = useStatusColors(ws, projectKey);
   const locale = useLocale();
   const { me } = useWorkspace();
   const toast = useToast();
@@ -237,9 +236,9 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
           <section className={`${styles.card} ${styles.desktopOnly}`}>
             <div className={styles.chead}><h2>{t("statusTitle")}</h2><span className="muted" style={{ fontSize: 12 }}>{t("statusTotal", { count: statusTotal })}</span></div>
             <div style={{ padding: "16px 18px" }}>
-              <div className={styles.stack} role="img" aria-label={d.statusBreakdown.columns.map((c) => `${c.name} ${c.count}`).join(", ")}>{d.statusBreakdown.columns.map((c) => <div key={c.id} style={{ width: `${c.pct}%`, background: columnColor(c) }} />)}</div>
+              <div className={styles.stack} role="img" aria-label={d.statusBreakdown.columns.map((c) => `${c.name} ${c.count}`).join(", ")}>{d.statusBreakdown.columns.map((c) => <div key={c.id} style={{ width: `${c.pct}%`, background: statusDotColor(c.category, c.name, statusColors.get(c.id)) }} />)}</div>
               <div className={styles.legend}>
-                {d.statusBreakdown.columns.map((c) => <div key={c.id}><span className={styles.dot} style={{ background: columnColor(c), borderRadius: 3 }} /><span style={{ flex: 1 }}>{c.name}</span><b>{c.count}</b></div>)}
+                {d.statusBreakdown.columns.map((c) => <div key={c.id}><span className={styles.dot} style={{ background: statusDotColor(c.category, c.name, statusColors.get(c.id)), borderRadius: 3 }} /><span style={{ flex: 1 }}>{c.name}</span><b>{c.count}</b></div>)}
               </div>
             </div>
           </section>
@@ -344,7 +343,7 @@ function MobileSummary({ d, time, year }: { d: Overview; time: string; year: Yea
 function ListRow({ i, list, href, year, busy, onToggle }: { i: OverviewItem; list: ListKey; href: (key: string) => string; year: YearFormat; busy: boolean; onToggle: (done: boolean) => void }) {
   const t = useTranslations("overview-table.overview");
   const open = i.canOpen !== false;
-  const done = i.status.category === "done" || !!i.completedOn;
+  const done = isClosedCategory(i.status.category) || !!i.completedOn;
   const color = i.module?.color ?? DEFAULT_ITEM_COLOR;
   const date = i.completedOn
     ? { text: t("doneOn", { date: formatDate(i.completedOn, year) }), cls: styles.dtDone }

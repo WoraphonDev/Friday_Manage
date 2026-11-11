@@ -330,7 +330,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | Method | Path | หมายเหตุ |
 |---|---|---|
 | GET | `p/settings` | รวมทุกแท็บ |
-| GET / POST / PATCH / DELETE | `p/members` · `p/members/{userId}` | เพิ่มคน: `project.invite` · ลบคนที่มีงานค้างต้องส่ง `reassignTo` (P3) |
+| GET / POST / PATCH / DELETE | `p/members` · `p/members/{userId}` | เพิ่มคน: `project.invite` · ลบคนที่มีงานค้างต้องส่ง `reassignTo` (คนรับงานต่อ · `null` = ไม่ระบุ) หรือ `keepAssignments: true` (คงชื่อเดิมในงาน) (P3) |
 | GET / PUT | `p/role-permissions` | ตาราง 10 รายการในหน้า L2 · Admin เปิดทุกอย่างเสมอ |
 | CRUD + `:reorder` | `p/modules` · `p/modules/{id}/phases` | ลบ Module ที่มีงานต้องระบุ `moveTo` · เลือกกลุ่มงานปลายทางด้วย `moveToPhase` ได้ |
 | CRUD | `p/milestones` · `p/milestones/{id}/issues` | |

@@ -110,6 +110,7 @@
     "roleChanged": "Changed {name}'s Role to {role}",
     "editTitle": "Manage {name}",
     "position": "Position in project",
+    "positionNone": "Not set",
     "capacityHours": "Capacity (hrs/week)",
     "pmDeputy": "Acts for the PM",
     "pmDeputyHint": "Gets PM notifications (overdue summary, due date requests, plan changes) and can approve due date requests without being an Admin",
@@ -120,10 +121,12 @@
     "removeHint": "Unfinished tasks are transferred to the person you choose · Done tasks keep the original name",
     "openWork": "{count, plural, one {{count} open task} other {{count} open tasks}} · {md} MD",
     "reassignTo": "Transfer tasks to",
+    "keepWork": "Keep work with {name}",
     "unassigned": "Unassigned",
     "remove": "Remove from project",
     "removed": "Removed {name} from the project",
-    "removedWithWork": "Removed {name} from the project · Transferred {count, plural, one {{count} task} other {{count} tasks}}"
+    "removedWithWork": "Removed {name} from the project · Transferred {count, plural, one {{count} task} other {{count} tasks}}",
+    "removedKeptWork": "Removed {name} from the project · Kept {count, plural, one {{count} task} other {{count} tasks}}"
   },
   "invites": {
     "title": "Invite members",

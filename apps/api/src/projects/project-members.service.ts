@@ -28,8 +28,11 @@ export const UpdateMemberBody = z
   .partial()
   .refine((v) => Object.keys(v).length > 0, 'ต้องระบุค่าที่จะแก้');
 
-/** P3 · ลบคนที่มีงานค้าง: reassignTo = คนรับงานต่อ · null = ไม่ระบุผู้รับผิดชอบ · ไม่ส่ง = ถามก่อน (409) */
-export const RemoveMemberBody = z.object({ reassignTo: z.uuid().nullable().optional() }).default({});
+/** P3 · ลบคนที่มีงานค้าง: reassignTo = คนรับงานต่อ · null = ไม่ระบุผู้รับผิดชอบ · keepAssignments = คงชื่อไว้ในงานเดิม · ไม่ส่ง = ถามก่อน (409) */
+export const RemoveMemberBody = z
+  .object({ reassignTo: z.uuid().nullable().optional(), keepAssignments: z.boolean().optional() })
+  .refine((b) => !(b.keepAssignments && b.reassignTo), { message: 'เลือกอย่างใดอย่างหนึ่ง: โอนงานหรือคงงานไว้', path: ['reassignTo'] })
+  .default({});
 
 /** 1 MD = 8 ชั่วโมง (Members › Capacity "40 ชม. · 5 MD/สัปดาห์") */
 const HOURS_PER_MD = 8;
@@ -113,7 +116,7 @@ export class ProjectMembersService {
   }
 
   /**
-   * นำออกจากโปรเจกต์ (P3) · งานที่ยังไม่เสร็จโอนให้ reassignTo หรือปล่อยว่าง · งานที่เสร็จแล้วยังแสดงชื่อเดิม
+   * นำออกจากโปรเจกต์ (P3) · งานที่ยังไม่เสร็จโอนให้ reassignTo, ปล่อยว่าง หรือคงชื่อเดิมไว้ (keepAssignments) · งานที่เสร็จแล้วยังแสดงชื่อเดิม
    * ออกจากโปรเจกต์เองได้โดยไม่ต้องมีสิทธิ์ตั้งค่า
    */
   async remove(auth: AuthInfo, tenant: TenantInfo, key: string, userId: string, input: z.infer<typeof RemoveMemberBody>) {
@@ -127,8 +130,9 @@ export class ProjectMembersService {
       const name = person?.name ?? 'สมาชิก';
 
       const work = (await openWork(tx, project.id, [userId])).get(userId);
-      if (work && work.open > 0 && input.reassignTo === undefined) {
-        throw new AppError(409, 'member_has_open_issues', `${name} ยังมีงานค้างในโปรเจกต์นี้ ${work.open} งาน · เลือกคนรับงานต่อหรือไม่ระบุผู้รับผิดชอบ`, {
+      const keep = input.keepAssignments === true;
+      if (work && work.open > 0 && input.reassignTo === undefined && !keep) {
+        throw new AppError(409, 'member_has_open_issues', `${name} ยังมีงานค้างในโปรเจกต์นี้ ${work.open} งาน · เลือกคนรับงานต่อ ไม่ระบุผู้รับผิดชอบ หรือคงงานไว้`, {
           openIssues: work.open,
           openSubtasks: work.subtasks,
           openMd: work.md,
@@ -142,10 +146,12 @@ export class ProjectMembersService {
         });
       }
 
-      const reassigned = work?.open ? await this.reassign(tx, auth, tenant, project, userId, reassignTo, name, events) : 0;
+      // คงงานไว้: ชื่อยังอยู่ในงานเดิม (เช่นคนนอกทีมที่ทำต่อจนจบ) จึงไม่แตะ Assignee และไม่นับเป็นการแก้แผน
+      const reassigned = work?.open && !keep ? await this.reassign(tx, auth, tenant, project, userId, reassignTo, name, events) : 0;
       await tx.delete(s.projectMembers).where(and(eq(s.projectMembers.projectId, project.id), eq(s.projectMembers.userId, userId)));
-      await this.audit(tx, auth, tenant, project, 'project.member_removed', `${project.key} · ${name}${reassigned ? ` · โอน ${reassigned} งาน` : ''}`);
-      return { userId, removed: true, reassigned, reassignTo };
+      const note = reassigned ? ` · โอน ${reassigned} งาน` : keep && work?.open ? ` · คงงานไว้ ${work.open} งาน` : '';
+      await this.audit(tx, auth, tenant, project, 'project.member_removed', `${project.key} · ${name}${note}`);
+      return { userId, removed: true, reassigned, reassignTo, kept: keep ? (work?.open ?? 0) : 0 };
     });
     await this.events.publish(events);
     return result;

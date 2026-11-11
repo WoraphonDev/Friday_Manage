@@ -60,8 +60,8 @@ export function PlanActions({ plan }: { plan: Plan }) {
   const t = useTranslations("lead-dashboard-reports");
   if (!plan.allowed) return null;
   return <>
-    <Link className="button button-secondary button-small" href={`${projectBase(plan.ws, plan.projectKey)}/reports`}>{t("createWeekly")}</Link>
-    <Link className="button button-secondary button-small" href={`/work/${encodeURIComponent(plan.ws)}/p/${encodeURIComponent(plan.projectKey)}/table?io=import`}>{t("importExport")}</Link>
+    <Link className="button button-secondary" href={`${projectBase(plan.ws, plan.projectKey)}/reports`}>{t("createWeekly")}</Link>
+    <Link className="button button-secondary" href={`/work/${encodeURIComponent(plan.ws)}/p/${encodeURIComponent(plan.projectKey)}/table?io=import`}>{t("importExport")}</Link>
   </>;
 }
 

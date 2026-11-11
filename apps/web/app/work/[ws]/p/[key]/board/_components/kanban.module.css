@@ -6,7 +6,6 @@
 .selected,.selected:hover { background:var(--contrast-bg); color:var(--contrast-ink); border-color:var(--contrast-bg); }
 .chip > span:last-child { opacity:.75; }
 .dot { width:9px; height:9px; border-radius:50%; flex:none; display:inline-block; }
-.todo { background:var(--status-todo-dot); }.in_progress { background:var(--status-progress-dot); }.review { background:var(--status-review-dot); }.done { background:var(--status-done-dot); }
 .columns { display:flex; gap:14px; overflow-x:auto; padding-bottom:8px; align-items:stretch; }
 .column { flex:0 0 288px; background:var(--subtle); border-radius:12px; min-height:420px; display:flex; flex-direction:column; }
 .columnHeader { display:flex; align-items:center; gap:8px; padding:12px 12px 8px; }

@@ -285,7 +285,17 @@ describe('Workflow และสถานะ', () => {
     expect(qa.status).toBe(201);
     expect(qa.body).toMatchObject({ name: 'QA', category: 'in_progress', wipLimit: 3, boardColumnId: null, sort: 4, issueCount: 0 });
     expect((await team.lead.post(p(`/workflows/${wf}/statuses`), { name: 'qa', category: 'todo' })).body.error.code).toBe('status_name_taken');
-    expect((await team.lead.post(p(`/workflows/${wf}/statuses`), { name: 'X', category: 'blocked' })).status).toBe(400);
+    expect((await team.lead.post(p(`/workflows/${wf}/statuses`), { name: 'X', category: 'bogus' })).status).toBe(400);
+    // หมวดใหม่ (2026-11-11) และสีที่ผู้ใช้เลือก · สีผิดรูปแบบ = 400 · null = กลับไปใช้สีตามหมวด
+    const held = await team.lead.post(p(`/workflows/${wf}/statuses`), { name: 'On hold', category: 'blocked', color: '#E8762A' });
+    expect(held.status, JSON.stringify(held.body)).toBe(201);
+    expect(held.body).toMatchObject({ name: 'On hold', category: 'blocked', color: '#E8762A' });
+    const cancelled = await team.lead.post(p(`/workflows/${wf}/statuses`), { name: 'Cancelled', category: 'cancelled' });
+    expect(cancelled.body).toMatchObject({ category: 'cancelled', color: null });
+    await team.lead.delete(p(`/workflows/${wf}/statuses/${cancelled.body.id}`));
+    expect((await team.lead.patch(p(`/workflows/${wf}/statuses/${held.body.id}`), { color: 'orange' })).status).toBe(400);
+    expect((await team.lead.patch(p(`/workflows/${wf}/statuses/${held.body.id}`), { color: null, category: 'review' })).body).toMatchObject({ color: null, category: 'review' });
+    await team.lead.delete(p(`/workflows/${wf}/statuses/${held.body.id}`));
     expect((await team.lead.patch(p(`/workflows/${wf}/statuses/${qa.body.id}`), { wipLimit: 0 })).status).toBe(400);
     expect((await team.lead.patch(p(`/workflows/${wf}/statuses/${qa.body.id}`), { wipLimit: null, name: 'QA Test' })).body).toMatchObject({ wipLimit: null, name: 'QA Test' });
 

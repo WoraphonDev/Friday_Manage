@@ -1,7 +1,8 @@
 import type { Person, Permissions } from '@/lib/types';
 import type { CustomFieldDef, FieldProfile } from '@/lib/field-profile';
+import type { StatusCategory } from '@/lib/status';
 export type IssueType = 'Task' | 'Story' | 'Bug' | 'Spike';
-export interface Status { id: string; name: string; category: 'todo' | 'in_progress' | 'done'; workflowId?: string }
+export interface Status { id: string; name: string; category: StatusCategory; workflowId?: string }
 export interface Named { id: string; name: string; color?: string | null }
 export interface Issue {
   id: string; key: string; projectKey: string; type: IssueType; parentKey: string | null;

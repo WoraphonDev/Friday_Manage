@@ -13,8 +13,9 @@ import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
 import styles from "./tl.module.css";
 import { MilestoneDialog } from "./milestone-dialog";
+import { statusDotColor, type StatusCategory } from "@/lib/status";
 
-type Cat = "todo" | "in_progress" | "done";
+type Cat = StatusCategory;
 export interface TLRow {
   key: string; type: string; title: string; status: { name: string; category: Cat };
   start: string; end: string; progressPct: number; lateDays: number;
@@ -38,9 +39,8 @@ export type Zoom = "day" | "week" | "month";
 export const PX_PER_DAY: Record<Zoom, number> = { day: 21, week: 8, month: 3 };
 const DAY = 86_400_000;
 const LABEL_W = 290;
-const STATUS_COLOR: Record<Cat, string> = { todo: "var(--status-todo-dot)", in_progress: "var(--status-progress-dot)", done: "var(--status-done-dot)" };
-// Review อยู่กลุ่ม in_progress แต่มีสีของตัวเอง (แยกด้วยชื่อแบบเดียวกับป้ายสถานะใน Table)
-const statusColor = (s: { name: string; category: Cat }) => (/review/i.test(s.name) ? "var(--status-review-dot)" : STATUS_COLOR[s.category]);
+// สีตามหมวด (Review ที่ยังอยู่หมวด In progress แยกด้วยชื่อ) · ชุดเดียวกับป้ายสถานะใน Table
+const statusColor = (s: { name: string; category: Cat }) => statusDotColor(s.category, s.name);
 // สีข้อมูลต้องเป็น hex เพราะนำไปต่อค่าความโปร่งใส (`${color}33`)
 const PALETTE = ["#5b3fc4", "#0f766e", "#b45309", "#1d4ed8", "#be185d", "#0369a1", "#4d7c0f", "#c2410c"];
 
@@ -338,7 +338,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                   <div key={`${r.key}${ln.sub ? ":s" : ""}`} className={styles.row}>
                     <div className={`${styles.lab} ${ln.sub ? styles.sub : styles.task}`}>
                       {ln.hasKids && <button type="button" className={styles.toggle} aria-expanded={!closed.has(`t:${r.key}`)} aria-label={t(closed.has(`t:${r.key}`) ? "expand" : "collapse", { name: r.key })} onClick={() => toggle(`t:${r.key}`)}><ChevronDown size={14} style={{ transform: closed.has(`t:${r.key}`) ? "rotate(-90deg)" : undefined }} /></button>}
-                      {!ln.hasKids && <span className={styles.dotStatus} style={{ borderColor: statusColor(r.status), background: r.status.category === "done" ? STATUS_COLOR.done : "transparent" }} aria-hidden="true" />}
+                      {!ln.hasKids && <span className={styles.dotStatus} style={{ borderColor: statusColor(r.status), background: r.status.category === "done" || r.status.category === "cancelled" ? statusColor(r.status) : "transparent" }} aria-hidden="true" />}
                       <span className="muted" style={{ fontSize: 11, flex: "none", whiteSpace: "nowrap" }}>{r.key}</span>
                       {open ? <Link className={styles.labText} href={issueHref(r.key)} style={{ color: "var(--foreground)" }}>{r.title}</Link> : <span className={styles.labText}>{r.title}</span>}
                       {!guest && !!r.assignees?.length && <span className={styles.who}><AvatarStack people={r.assignees} max={1} /></span>}

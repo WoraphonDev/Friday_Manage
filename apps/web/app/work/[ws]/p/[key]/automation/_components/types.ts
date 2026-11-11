@@ -12,7 +12,7 @@ export type Op = (typeof OPS)[number];
 export const NUMERIC_FIELDS: ConditionField[] = ["estimateMd", "daysToDue"];
 export const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
 export const SEVERITIES = ["critical", "major", "minor"] as const;
-export const STATUS_CATEGORIES = ["todo", "in_progress", "done"] as const;
+export { STATUS_CATEGORIES } from "@/lib/status";
 export const ACTION_TYPES = ["set_status", "assign", "set_priority", "add_label", "add_watcher", "create_subtask", "comment", "notify"] as const;
 export type ActionType = (typeof ACTION_TYPES)[number];
 

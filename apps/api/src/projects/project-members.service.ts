@@ -10,6 +10,7 @@ import { TenantDb } from '../common/tenant.js';
 import { type DomainEvent, EventBus } from '../core/events.js';
 import { requirePerm } from './permissions.js';
 import { checkNewMembers, type ProjectRow, ProjectsService } from './projects.service.js';
+import { openStatus } from '../common/status-category.js';
 
 const s = schema;
 const projectRole = z.enum(['admin', 'member', 'viewer']);
@@ -158,7 +159,7 @@ export class ProjectMembersService {
       .from(s.issueAssignees)
       .innerJoin(s.issues, eq(s.issues.id, s.issueAssignees.issueId))
       .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
-      .where(and(eq(s.issueAssignees.userId, userId), eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt), ne(s.workflowStatuses.category, 'done')))
+      .where(and(eq(s.issueAssignees.userId, userId), eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt), openStatus()))
       .for('update', { of: s.issues });
     if (!issues.length) return 0;
     const ids = issues.map((i) => i.id);
@@ -286,7 +287,7 @@ interface OpenWork {
 
 /** งานค้างของแต่ละคนในโปรเจกต์ (Assignee, ยังไม่อยู่หมวด done, ไม่อยู่ในถังขยะ) */
 async function openWork(tx: Tx, projectId: string, userIds?: string[]) {
-  const where = [eq(s.issues.projectId, projectId), isNull(s.issues.deletedAt), ne(s.workflowStatuses.category, 'done')];
+  const where = [eq(s.issues.projectId, projectId), isNull(s.issues.deletedAt), openStatus()];
   if (userIds) where.push(inArray(s.issueAssignees.userId, userIds));
   const rows = await tx
     .select({

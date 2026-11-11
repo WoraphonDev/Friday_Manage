@@ -1,6 +1,7 @@
 import type { Person } from "@/lib/types";
+import type { StatusCategory } from "@/lib/status";
 
-type Cat = "todo" | "in_progress" | "done";
+type Cat = StatusCategory;
 export interface OverviewItem {
   key: string;
   type: string;

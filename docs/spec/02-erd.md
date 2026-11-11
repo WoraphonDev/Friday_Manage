@@ -152,7 +152,8 @@ erDiagram
         uuid id PK
         uuid workflow_id FK
         text name
-        text category "todo in_progress done"
+        text category "todo in_progress review blocked done cancelled"
+        text color "#RRGGBB หรือ null"
         uuid board_column_id FK "คอลัมน์บน Kanban"
         int wip_limit
     }

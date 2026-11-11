@@ -15,6 +15,7 @@ import type { FormOptions, GroupBy, MyIssues, Tab, TaskGroup, TaskItem } from ".
 import { StatusBadge, taskHref, useDueText } from "./shared";
 import styles from "./hmt.module.css";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
+import { isClosedCategory } from "@/lib/status";
 
 const TABS: Tab[] = ["assigned", "reviewer", "watching", "created"];
 const GROUPS: GroupBy[] = ["due", "project", "status"];
@@ -52,7 +53,7 @@ export function weekLoad(items: TaskItem[], weekStart: string) {
   };
   return Array.from({ length: 5 }, (_, i) => day(i)).map((d) =>
     items.reduce((sum, i) => {
-      if (i.status.category === "done" || !i.estimateMd || !i.planStart || !i.planEnd || d < i.planStart || d > i.planEnd) return sum;
+      if (isClosedCategory(i.status.category) || !i.estimateMd || !i.planStart || !i.planEnd || d < i.planStart || d > i.planEnd) return sum;
       return sum + i.estimateMd / Math.max(1, working(i.planStart, i.planEnd)) / Math.max(1, i.assignees.length);
     }, 0),
   );
@@ -125,12 +126,12 @@ export function MyTasksPage({ ws }: { ws: string }) {
   const data = list.data;
   if (mobile) return <MobileTasks data={data} ws={ws} name={me.displayName} year={year} tab={tab} setTab={(k) => { setTab(k); setProject(""); }} busy={busy} onToggle={(item, done) => void setDone(item, done)} />;
   const everything = data.groups.flatMap((g) => g.items);
-  const open = everything.filter((i) => i.status.category !== "done");
+  const open = everything.filter((i) => !isClosedCategory(i.status.category));
   const estSum = open.reduce((n, i) => n + (i.estimateMd ?? 0) / Math.max(1, i.assignees.length), 0);
   const count = (k: string) => data.groups.find((g) => g.key === k)?.count ?? 0;
   const byProject = (all.data?.groups ?? [])
     .map((g) => {
-      const items = g.items.filter((i) => i.status.category !== "done");
+      const items = g.items.filter((i) => !isClosedCategory(i.status.category));
       return { key: g.key, name: g.label, color: g.items[0]?.project.color ?? FALLBACK_PROJECT_COLOR, n: items.length, md: items.reduce((n, i) => n + (i.estimateMd ?? 0), 0) };
     })
     .filter((p) => p.n);
@@ -273,7 +274,7 @@ function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
   const dueText = useDueText();
   const [range, setRange] = useState<keyof typeof MOBILE_FILTERS>("focus");
   const [showTabs, setShowTabs] = useState(false);
-  const count = (keys: readonly string[]) => data.groups.filter((g) => keys.includes(g.key)).reduce((n, g) => n + g.items.filter((i) => i.status.category !== "done").length, 0);
+  const count = (keys: readonly string[]) => data.groups.filter((g) => keys.includes(g.key)).reduce((n, g) => n + g.items.filter((i) => !isClosedCategory(i.status.category)).length, 0);
   const groups = data.groups.filter((g) => (MOBILE_FILTERS[range] as readonly string[]).includes(g.key) && g.items.length);
   const first = projects[0];
   return (
@@ -298,7 +299,7 @@ function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
         <div key={g.key} role="group" aria-label={groupLabel(t, g)}>
           <div className={styles.mGroup}><span style={{ background: GROUP_COLOR[g.key] ?? "var(--chart-neutral)" }} /><b style={{ color: g.key === "late" ? "var(--danger-text)" : undefined }}>{groupLabel(t, g)}</b><span className="muted">{g.items.length}</span></div>
           {g.items.map((i) => {
-            const done = i.status.category === "done";
+            const done = isClosedCategory(i.status.category);
             const due = dueText(i, year);
             return (
               <div key={i.key} className={styles.mItem}>
@@ -323,7 +324,7 @@ function TaskRow({ item, ws, year, busy, onToggle, onMove, onDragStart }: { item
   const t = useTranslations("home-my-tasks.tasks");
   const tp = useTranslations("common.priority");
   const dueText = useDueText();
-  const done = item.status.category === "done";
+  const done = isClosedCategory(item.status.category);
   const due = dueText(item, year);
   const start = useRef<number | null>(null);
   // มือถือ: ปัดซ้าย = เลื่อน Due · ปัดขวา = ปิดงาน (ปุ่มที่แถวทำแบบเดียวกันสำหรับคีย์บอร์ด / screen reader)

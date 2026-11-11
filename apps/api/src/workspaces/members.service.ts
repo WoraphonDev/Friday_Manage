@@ -9,6 +9,7 @@ import { parse } from '../common/validate.js';
 import { TenantDb } from '../common/tenant.js';
 import { PlanLimits } from '../core/plan-limits.js';
 import { SYSTEM_DB } from '../db/db.module.js';
+import { openStatus } from '../common/status-category.js';
 
 const s = schema;
 type Role = 'owner' | 'admin' | 'member' | 'guest';
@@ -134,7 +135,7 @@ export class MembersService {
         .innerJoin(s.issues, eq(s.issues.id, s.issueAssignees.issueId))
         .innerJoin(s.projects, eq(s.projects.id, s.issues.projectId))
         .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
-        .where(and(eq(s.issueAssignees.userId, userId), isNull(s.issues.deletedAt), isNull(s.projects.deletedAt), ne(s.workflowStatuses.category, 'done')))
+        .where(and(eq(s.issueAssignees.userId, userId), isNull(s.issues.deletedAt), isNull(s.projects.deletedAt), openStatus()))
         .orderBy(asc(s.issues.planEnd), asc(s.issues.number))
         .limit(200);
       const owned = await tx.select({ key: s.projects.key, name: s.projects.name }).from(s.projects).where(and(eq(s.projects.ownerUserId, userId), isNull(s.projects.deletedAt)));
@@ -143,7 +144,7 @@ export class MembersService {
         .from(s.issueAssignees)
         .innerJoin(s.issues, eq(s.issues.id, s.issueAssignees.issueId))
         .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
-        .where(and(eq(s.issueAssignees.userId, userId), isNull(s.issues.deletedAt), ne(s.workflowStatuses.category, 'done')));
+        .where(and(eq(s.issueAssignees.userId, userId), isNull(s.issues.deletedAt), openStatus()));
       return {
         member: { userId, displayName: t.displayName, role: t.role },
         assignedIssues: { total: n, items: issues.map(({ category: _c, ...i }) => i) },

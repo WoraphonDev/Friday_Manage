@@ -17,6 +17,7 @@ import { listIssues, TableListQuery } from './table.js';
 import { enforceWorkflowRules, workflowRuleEnabled } from './rules.js';
 import { checkCustomValues, checkProfile, type CustomFieldDef, type CustomValues, CustomValuesBody, displayValue, readCustomValues, writeCustomValues } from './custom-values.js';
 import type { Level, ProfileValues } from '../projects/field-profile.js';
+import { openStatus } from '../common/status-category.js';
 
 const s = schema;
 const ISSUE_KEY_PATTERN = /^([A-Za-z][A-Za-z0-9]{1,9})-(\d{1,9})$/;
@@ -726,7 +727,7 @@ export class IssuesService {
             .select({ n: sql<number>`count(*)::int` })
             .from(s.issues)
             .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
-            .where(and(eq(s.issues.parentId, issue.id), isNull(s.issues.deletedAt), ne(s.workflowStatuses.category, 'done')));
+            .where(and(eq(s.issues.parentId, issue.id), isNull(s.issues.deletedAt), openStatus()));
           if (open.n > 0 && !input.confirm) {
             throw new AppError(422, 'subtasks_incomplete', `ยังมี Sub-task ที่ไม่เสร็จ ${open.n} งาน`, { open: open.n, confirmable: true });
           }
@@ -1246,11 +1247,15 @@ function eventFor(auth: AuthInfo, tenant: TenantInfo, project: ProjectRow, issue
 function statusChange(issue: Issue, next: Status): Partial<typeof s.issues.$inferInsert> {
   const set: Partial<typeof s.issues.$inferInsert> = { statusId: next.id };
   const day = today();
-  if (next.category !== 'todo' && !issue.actualStart) set.actualStart = day;
+  // ยกเลิกไม่ถือว่าเริ่มทำ · ปิดงาน (completedAt) แต่ไม่มีวันเสร็จจริง
+  if (next.category !== 'todo' && next.category !== 'cancelled' && !issue.actualStart) set.actualStart = day;
   if (next.category === 'done') {
     set.actualEnd = day;
     set.completedAt = new Date();
-  } else if (issue.actualEnd) {
+  } else if (next.category === 'cancelled') {
+    set.actualEnd = null;
+    set.completedAt = new Date();
+  } else if (issue.actualEnd || issue.completedAt) {
     set.actualEnd = null;
     set.completedAt = null;
   }

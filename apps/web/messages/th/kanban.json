@@ -53,6 +53,7 @@
   "noDue": "ยังไม่ระบุวันครบกำหนด",
   "dueDate": "ครบกำหนด {date}",
   "completed": "เสร็จแล้ว",
+  "cancelled": "ยกเลิกแล้ว",
   "confirmTitle": "Sub-task ยังไม่เสร็จ",
   "confirmDescription": "{key} ยังมี Sub-task ที่ไม่เสร็จ {count} งาน ต้องการย้ายไป {column} หรือไม่",
   "confirm": "ยืนยันย้าย",

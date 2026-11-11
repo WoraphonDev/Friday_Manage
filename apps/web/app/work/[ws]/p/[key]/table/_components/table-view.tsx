@@ -20,6 +20,7 @@ import styles from "./ot.module.css";
 import { StructureDialog, type StructureAction } from "./structure-dialog";
 import { CustomCell, DateCell, PeopleCell, RemarkCell, SizeCell, SubtaskAdd } from "./cell-editors";
 import { availableColumns, columnShowsAt, customText, DEFAULT_PROFILE, type CustomFieldDef, type FieldProfile, type Level } from "@/lib/field-profile";
+import { isClosedCategory, STATUS_CATEGORIES, statusColorStyle, type StatusTone, statusTone, useStatusColors } from "@/lib/status";
 
 // ต้องตรงกับความสูงแถว .table td ใน ot.module.css (ใช้คำนวณ virtual scroll)
 const ROW_H = 38;
@@ -169,11 +170,12 @@ function pushOffsets(box: HTMLElement, display: Display[], line: number, stackH:
   return { all, phase };
 }
 
-const pillClass = (category: string, name: string) =>
-  category === "done" ? styles.sDone : /review/i.test(name) ? styles.sRev : category === "in_progress" ? styles.sProg : styles.sTodo;
+const PILL: Record<StatusTone, string> = { todo: styles.sTodo, in_progress: styles.sProg, review: styles.sRev, blocked: styles.sBlk, done: styles.sDone, cancelled: styles.sCan };
+const pillClass = (category: string, name: string) => PILL[statusTone(category, name)];
 
 export function TableView({ ws, projectKey }: { ws: string; projectKey: string }) {
   const t = useTranslations("overview-table.table");
+  const statusColors = useStatusColors(ws, projectKey);
   // มือถือ: รายการแบบการ์ดแทนตารางกว้าง + ตัวเลือกพับเก็บ (ผู้ใช้แจ้ง 2026-11-11 ว่าตารางเลื่อนขวาไม่เห็น / ตัวกรองรก) · desktop ไม่เปลี่ยน
   const mobile = useIsMobile();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -249,7 +251,8 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const params = new URLSearchParams({ view: "table", limit: String(PAGE), sort });
   if (filters.q) params.set("q", filters.q);
   if (filters.status) params.set("status", filters.status);
-  else if (filters.hideDone) params.set("status", "todo,in_progress");
+  // ซ่อนงานที่ปิดแล้ว (เสร็จ / ยกเลิก) · open = งานค้างทุกหมวด
+  else if (filters.hideDone) params.set("status", "open");
   if (filters.assignee) params.set("assignee", filters.assignee);
   if (filters.ba) params.set("ba", filters.ba);
   if (filters.priority) params.set("priority", filters.priority);
@@ -504,7 +507,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
               <Popover.Content className={`popover ${styles.pop}`} sideOffset={6} align="end">
                 <Select label={t("status")} size="small" value={filters.status ?? ""} onChange={(e) => set("status", e.target.value)}>
                   <option value="">{t("allStatus")}</option>
-                  {(["todo", "in_progress", "done"] as const).map((c) => <option key={c} value={c}>{t(`statusCategory.${c}`)}</option>)}
+                  {STATUS_CATEGORIES.map((c) => <option key={c} value={c}>{t(`statusCategory.${c}`)}</option>)}
                 </Select>
                 <Select label={t("priority")} size="small" value={filters.priority ?? ""} onChange={(e) => set("priority", e.target.value)}>
                   <option value="">{t("anyPriority")}</option>
@@ -570,7 +573,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
               <Popover.Content className={`popover ${styles.pop}`} sideOffset={6} align="start">
                 <Select label={t("status")} size="small" value={filters.status ?? ""} onChange={(e) => set("status", e.target.value)}>
                   <option value="">{t("allStatus")}</option>
-                  {(["todo", "in_progress", "done"] as const).map((c) => <option key={c} value={c}>{t(`statusCategory.${c}`)}</option>)}
+                  {STATUS_CATEGORIES.map((c) => <option key={c} value={c}>{t(`statusCategory.${c}`)}</option>)}
                 </Select>
                 <Select label={t("priority")} size="small" value={filters.priority ?? ""} onChange={(e) => set("priority", e.target.value)}>
                   <option value="">{t("anyPriority")}</option>
@@ -735,7 +738,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                   ) : d.kind === "foot" ? (
                     <tr key={d.id} data-i={start + n} className={styles.footRow}><td colSpan={span}><div className={styles.footInner}><span>{t("footTasks", { count: d.count })}</span><span>{t("footMd", { md: d.md })}</span></div></td></tr>
                   ) : (
-                    <IssueRow key={d.row.key} index={start + n} row={d.row} sub={d.sub} cols={cols} profile={profile} customFields={customFields} ws={ws} projectKey={projectKey} year={year} canEdit={canEdit} statuses={statuses} people={options.data?.members ?? []}
+                    <IssueRow key={d.row.key} index={start + n} row={d.row} statusColor={statusColors.get(d.row.status.id)} sub={d.sub} cols={cols} profile={profile} customFields={customFields} ws={ws} projectKey={projectKey} year={year} canEdit={canEdit} statuses={statuses} people={options.data?.members ?? []}
                       onAddSub={canCreate && !d.sub ? () => setSubFor(d.row.key) : undefined}
                       selected={selected.has(d.row.key)} onSelect={(on) => setSelected((c) => { const n = new Set(c); if (on) n.add(d.row.key); else n.delete(d.row.key); return n; })}
                       onPatch={(body) => patch(d.row, body)} />
@@ -785,6 +788,7 @@ function MobileList({ display, collapsed, onToggle, ws, projectKey, year, canCre
   taskHref: (moduleId?: string | null, phaseId?: string | null) => string; empty: string | null; summary: string;
 }) {
   const t = useTranslations("overview-table.table");
+  const statusColors = useStatusColors(ws, projectKey);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
   if (empty) return <section className={styles.card}><EmptyState title={empty} /></section>;
   const href = (key: string) => `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/table?issue=${encodeURIComponent(key)}`;
@@ -817,13 +821,13 @@ function MobileList({ display, collapsed, onToggle, ws, projectKey, year, canCre
           return canCreate ? <Link key={d.id} className={styles.mAdd} href={taskHref(d.moduleId, d.phaseId)} scroll={false}>{t("addTaskIn", { name: d.name })}</Link> : null;
         if (d.kind !== "issue") return null;
         const r = d.row;
-        const done = r.status.category === "done";
+        const done = isClosedCategory(r.status.category);
         const late = !done && !!r.planEnd && r.planEnd < today;
         return (
           <Link key={r.key} href={href(r.key)} scroll={false} className={`${styles.mItem} ${d.sub ? styles.mSub : ""}`}>
             <span className={styles.mItemTop}>
               <span className={styles.mKey}>{r.key}</span>
-              <span className={`${styles.pill} ${pillClass(r.status.category, r.status.name)}`}>{r.status.name}</span>
+              <span className={`${styles.pill} ${pillClass(r.status.category, r.status.name)}`} style={statusColorStyle(statusColors.get(r.status.id))}>{r.status.name}</span>
             </span>
             <span className={`${styles.mTitle} ${done ? styles.mDone : ""}`}>{r.title}</span>
             <span className={styles.mMeta}>
@@ -839,15 +843,15 @@ function MobileList({ display, collapsed, onToggle, ws, projectKey, year, canCre
   );
 }
 
-function IssueRow({ index, row, sub, cols, profile, customFields, ws, projectKey, year, canEdit, statuses, people, selected, onSelect, onPatch, onAddSub }: {
-  index: number; row: Row; sub: boolean; cols: Col[]; profile: FieldProfile; customFields: CustomFieldDef[]; ws: string; projectKey: string; year: YearFormat; canEdit: boolean;
+function IssueRow({ index, row, statusColor, sub, cols, profile, customFields, ws, projectKey, year, canEdit, statuses, people, selected, onSelect, onPatch, onAddSub }: {
+  index: number; row: Row; statusColor?: string; sub: boolean; cols: Col[]; profile: FieldProfile; customFields: CustomFieldDef[]; ws: string; projectKey: string; year: YearFormat; canEdit: boolean;
   statuses: { id: string; name: string; category?: string }[]; people: Person[]; selected: boolean; onSelect: (on: boolean) => void;
   onPatch: (body: Record<string, unknown>) => void; onAddSub?: () => void;
 }) {
   const t = useTranslations("overview-table.table");
   const href = `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/table?issue=${encodeURIComponent(row.key)}`;
   const statusOptions = statuses.some((s) => s.id === row.status.id) ? statuses : [{ id: row.status.id, name: row.status.name }, ...statuses];
-  const done = row.status.category === "done";
+  const done = isClosedCategory(row.status.category);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
   const dueCls = !done && row.planEnd ? (row.planEnd < today ? styles.dueLate : row.planEnd === today ? styles.dueToday : "") : "";
   const actualLate = !!(row.actualEnd && row.planEnd && row.actualEnd > row.planEnd);
@@ -876,10 +880,10 @@ function IssueRow({ index, row, sub, cols, profile, customFields, ws, projectKey
     ) : <span className={`${styles.pill} ${styles.sTodo}`}>{row.priority}</span>,
     labels: labelText ? <span className={styles.refs} title={labelText}>{labelText}</span> : empty,
     status: canEdit && statuses.length ? (
-      <select className={`${styles.pill} ${styles.pillSelect} ${pillClass(row.status.category, row.status.name)}`} aria-label={edit(t("cols.status"))} value={row.status.id} onChange={(e) => onPatch({ statusId: e.target.value })}>
+      <select className={`${styles.pill} ${styles.pillSelect} ${pillClass(row.status.category, row.status.name)}`} style={statusColorStyle(statusColor)} aria-label={edit(t("cols.status"))} value={row.status.id} onChange={(e) => onPatch({ statusId: e.target.value })}>
         {statusOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
       </select>
-    ) : <span className={`${styles.pill} ${pillClass(row.status.category, row.status.name)}`}>{row.status.name}</span>,
+    ) : <span className={`${styles.pill} ${pillClass(row.status.category, row.status.name)}`} style={statusColorStyle(statusColor)}>{row.status.name}</span>,
     size: canEdit ? <SizeCell label={edit(t("cols.size"))} size={row.size} md={row.estimateMd} onChange={onPatch}>{sizeView}</SizeCell> : sizeView,
     start: canEdit ? <DateCell label={edit(t("cols.start"))} value={row.planStart} onChange={(v) => onPatch({ planStart: v })}>{row.planStart ? formatDate(row.planStart, year) : "—"}</DateCell> : formatDate(row.planStart, year),
     end: canEdit ? <DateCell label={edit(t("cols.end"))} value={row.planEnd} className={dueCls} onChange={(v) => onPatch({ planEnd: v })}>{row.planEnd ? formatDate(row.planEnd, year) : "—"}</DateCell>

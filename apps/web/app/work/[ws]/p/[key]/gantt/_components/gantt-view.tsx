@@ -12,8 +12,9 @@ import { formatDate, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
 import styles from "./gantt.module.css";
+import type { StatusCategory } from "@/lib/status";
 
-type Cat = "todo" | "in_progress" | "done";
+type Cat = StatusCategory;
 export interface GRow {
   key: string; type: string; title: string; status: { name: string; category: Cat };
   start: string; end: string; estimateMd?: number | null; progressPct: number; lateDays: number;

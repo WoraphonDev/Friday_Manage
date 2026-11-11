@@ -16,6 +16,7 @@ import { BurndownChart } from "./burndown-chart";
 import { listOf, placement, remainingWorkingDays, round, type BacklogData, type BacklogIssue, type CompleteResult, type Container, type MemberItem, type ModuleItem, type MoveBody, type MoveIntent, type MoveResult, type Sprint } from "./types";
 import styles from "./backlog.module.css";
 import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
+import { isClosedCategory } from "@/lib/status";
 
 type Notice = { message: string; undo?: () => Promise<void> };
 type TypeFilter = "all" | "Task" | "Bug";
@@ -157,7 +158,7 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
     const assignees = issue.assigneeIds.map((id) => people.get(id)).filter((person): person is Person => !!person);
     const primary: Container | undefined = container === null ? nextSprint?.id : null;
     return <div key={issue.key} role="listitem" aria-label={t("row", { key: issue.key })} data-key={issue.key}
-      className={`${styles.item} ${dragging === issue.key ? styles.dragging : ""} ${dropTarget?.before === issue.key ? styles.dropBefore : ""} ${issue.status.category === "done" ? styles.done : ""}`}
+      className={`${styles.item} ${dragging === issue.key ? styles.dragging : ""} ${dropTarget?.before === issue.key ? styles.dropBefore : ""} ${isClosedCategory(issue.status.category) ? styles.done : ""}`}
       draggable={canMove && !moving}
       onDragStart={(event) => { if (!canMove || moving) { event.preventDefault(); return; } dragKey.current = issue.key; setDragging(issue.key); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", issue.key); }}
       onDragEnd={clearDrag}
@@ -238,7 +239,7 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
           <dl className={styles.stats}>
             <div><dt>{t("statIssues")}</dt><dd>{active.stats.doneCount} / {active.stats.issueCount}</dd></div>
             <div><dt>{t("statMd")}</dt><dd>{active.stats.doneMd} / {active.stats.totalMd}</dd></div>
-            <div><dt>{t("statBugs")}</dt><dd>{active.issues.flatMap((issue) => [issue, ...(issue.subtasks ?? [])]).filter((issue) => issue.type === "Bug" && issue.status.category !== "done").length}</dd></div>
+            <div><dt>{t("statBugs")}</dt><dd>{active.issues.flatMap((issue) => [issue, ...(issue.subtasks ?? [])]).filter((issue) => issue.type === "Bug" && !isClosedCategory(issue.status.category)).length}</dd></div>
           </dl>
         </div>
         {active.burndown && <BurndownChart burndown={active.burndown} yearFormat={yearFormat} />}
@@ -427,7 +428,7 @@ function CompleteSprintDialog({ endpoint, sprint, planning, onClose, onCompleted
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
   // API ย้ายเฉพาะงานแม่ที่ยังไม่ Done (ลูกตามแม่) · งานแม่ที่ Done อยู่ Sprint เดิม
-  const unfinished = sprint.issues.filter((issue) => issue.status.category !== "done");
+  const unfinished = sprint.issues.filter((issue) => !isClosedCategory(issue.status.category));
   const shown = unfinished.slice(0, 10).map((issue) => issue.key);
   async function complete() {
     setPending(true); setError(null);

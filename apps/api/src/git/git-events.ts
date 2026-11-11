@@ -8,7 +8,8 @@ import { Notifier } from '../notifications/notifier.js';
 
 const s = schema;
 const KEY_RE = /(?<![A-Za-z0-9])([A-Za-z][A-Za-z0-9]{1,9})-(\d{1,9})(?![A-Za-z0-9])/g;
-const RANK = { todo: 0, in_progress: 1, done: 2 } as const;
+/** ลำดับการเดินหน้าของงานจาก Git · blocked / cancelled = null (คนตัดสินใจไว้แล้ว Git ไม่ย้ายออก และไม่ย้ายเข้า) */
+const RANK: Record<string, number | null> = { todo: 0, in_progress: 1, review: 2, done: 3, blocked: null, cancelled: null };
 
 /** Issue key ที่พบในข้อความ (ไม่สนตัวพิมพ์ · ตัดซ้ำ) เช่น "feature/dp-39-login" → DP-39 */
 export function issueKeysIn(text: string | null | undefined): Array<{ key: string; n: number }> {
@@ -230,14 +231,16 @@ export class GitEventsService {
   // ---------------------------------------------------------------------------
   // ย้ายสถานะตามกฎของโปรเจกต์
   // ---------------------------------------------------------------------------
-  /** ย้ายไปข้างหน้าเท่านั้น (todo → in_progress → done) · งานที่อยู่ไกลกว่าหรือสถานะเดียวกันอยู่แล้วไม่ถูกแตะ */
+  /** ย้ายไปข้างหน้าเท่านั้น (todo → in_progress → review → done) · งานที่อยู่ไกลกว่า สถานะเดียวกัน หรือติดอยู่ / ยกเลิกไม่ถูกแตะ */
   private async moveStatus(issue: typeof s.issues.$inferSelect, targetId: string | null, repoName: string) {
     if (!targetId || targetId === issue.statusId) return;
     const sts = await this.db.select().from(s.workflowStatuses).where(inArray(s.workflowStatuses.id, [targetId, issue.statusId]));
     const target = sts.find((x) => x.id === targetId);
     const current = sts.find((x) => x.id === issue.statusId);
     if (!target || !current || target.workflowId !== current.workflowId) return;
-    if (RANK[target.category] < RANK[current.category]) return;
+    const from = RANK[current.category] ?? null;
+    const to = RANK[target.category] ?? null;
+    if (from === null || to === null || to < from) return;
     const day = today();
     const set: Partial<typeof s.issues.$inferInsert> = { statusId: target.id };
     if (target.category !== 'todo' && !issue.actualStart) set.actualStart = day;

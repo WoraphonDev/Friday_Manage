@@ -14,6 +14,7 @@ import { IssuesService } from '../issues/issues.service.js';
 import { Notifier } from '../notifications/notifier.js';
 import { Jobs } from '../queue/jobs.js';
 import type { Action, Condition, Trigger } from './rules.js';
+import { isClosed, openStatus, type StatusCategory } from '../common/status-category.js';
 
 const s = schema;
 /** กฎที่ถูกเรียกจากการกระทำของกฎอื่นได้สูงสุด 3 ชั้น (หน้า P2, 01-entities › automation_run.depth) */
@@ -45,7 +46,7 @@ export interface Facts {
   parentId: string | null;
   type: string;
   status: string;
-  statusCategory: 'todo' | 'in_progress' | 'done';
+  statusCategory: StatusCategory;
   priority: string;
   severity: string | null;
   estimateMd: number | null;
@@ -183,7 +184,7 @@ export class AutomationEngine implements OnModuleInit {
         if (!e.issueId) break;
         await this.fire('status_changed', e.projectId, [e.issueId], { from: data.from?.name, to: data.to?.name });
         // งานแม่: ลูกทุกตัวเสร็จแล้ว
-        if (data.to?.category === 'done' && data.parentId && (await this.allSubtasksDone(data.parentId))) await this.fire('subtasks_done', e.projectId, [data.parentId]);
+        if (isClosed(data.to?.category) && data.parentId && (await this.allSubtasksDone(data.parentId))) await this.fire('subtasks_done', e.projectId, [data.parentId]);
         break;
       case 'sprint.started':
       case 'sprint.completed':
@@ -204,7 +205,7 @@ export class AutomationEngine implements OnModuleInit {
 
   private async allSubtasksDone(parentId: string) {
     const [r] = await this.sys
-      .select({ open: sql<number>`count(*) filter (where ${s.workflowStatuses.category} <> 'done')::int`, total: sql<number>`count(*)::int` })
+      .select({ open: sql<number>`count(*) filter (where ${s.workflowStatuses.category} not in ('done', 'cancelled'))::int`, total: sql<number>`count(*)::int` })
       .from(s.issues)
       .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
       .where(and(eq(s.issues.parentId, parentId), isNull(s.issues.deletedAt)));
@@ -254,7 +255,7 @@ export class AutomationEngine implements OnModuleInit {
         .select({ id: s.issues.id })
         .from(s.issues)
         .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
-        .where(and(eq(s.issues.projectId, rule.projectId), isNull(s.issues.deletedAt), ne(s.workflowStatuses.category, 'done')))
+        .where(and(eq(s.issues.projectId, rule.projectId), isNull(s.issues.deletedAt), openStatus()))
         .orderBy(asc(s.issues.number))).map((r) => r.id);
       ran += await this.runBatch(rule, ids, { slot });
     }
@@ -270,7 +271,7 @@ export class AutomationEngine implements OnModuleInit {
         .select({ id: s.issues.id, planEnd: s.issues.planEnd })
         .from(s.issues)
         .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
-        .where(and(eq(s.issues.projectId, rule.projectId), isNull(s.issues.deletedAt), ne(s.workflowStatuses.category, 'done'), lt(s.issues.planEnd, today())))
+        .where(and(eq(s.issues.projectId, rule.projectId), isNull(s.issues.deletedAt), openStatus(), lt(s.issues.planEnd, today())))
         .orderBy(asc(s.issues.number));
       if (!issues.length) continue;
       const seen = new Set((await this.sys.select({ d: sql<string>`${s.automationRuns.detail}->>'dedupe'` }).from(s.automationRuns).where(and(eq(s.automationRuns.ruleId, rule.id), sql`${s.automationRuns.detail} ? 'dedupe'`))).map((r) => r.d));

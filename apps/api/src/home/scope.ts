@@ -45,7 +45,8 @@ export async function loadScope(tx: Tx, auth: AuthInfo, tenant: TenantInfo, opts
   const statuses = new Map(statusRows.map((x) => [x.id, x]));
   const types = ids.length ? await tx.select({ id: s.issueTypes.id, name: s.issueTypes.name }).from(s.issueTypes).where(inArray(s.issueTypes.projectId, ids)) : [];
   const typeNames = new Map(types.map((x) => [x.id, x.name]));
-  const doneIds = new Set(statusRows.filter((x) => x.category === 'done').map((x) => x.id));
+  // ปิดงานแล้ว (เสร็จหรือยกเลิก) · ไม่เป็นงานค้างของใคร
+  const doneIds = new Set(statusRows.filter((x) => x.category === 'done' || x.category === 'cancelled').map((x) => x.id));
 
   const rows = ids.length ? await tx.select().from(s.issues).where(and(inArray(s.issues.projectId, ids), isNull(s.issues.deletedAt))).orderBy(asc(s.issues.projectId), asc(s.issues.number)) : [];
   const since = opts.doneSince?.getTime() ?? Infinity;

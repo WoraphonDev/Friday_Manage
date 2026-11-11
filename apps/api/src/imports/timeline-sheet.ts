@@ -9,7 +9,7 @@ export type TimelineRow =
       title: string;
       sub: boolean;
       status: string;
-      category: 'todo' | 'in_progress' | 'done' | string;
+      category: string;
       progress: number;
       start: string | null;
       end: string | null;
@@ -40,7 +40,10 @@ const fill = (argb: string): ExcelJS.Fill => ({ type: 'pattern', pattern: 'solid
 const COLOR = {
   todo: 'FFBFDBFE',
   in_progress: 'FF3B82F6',
+  review: 'FFA78BFA',
+  blocked: 'FFF59E0B',
   done: 'FF22C55E',
+  cancelled: 'FFD1D5DB',
   late: 'FFF87171',
   module: 'FF475569',
   weekend: 'FFF3F4F6',
@@ -114,7 +117,7 @@ export function addTimelineSheet(wb: ExcelJS.Workbook, input: TimelineInput) {
     if (r.kind === 'module') row.font = { bold: true };
     if (r.kind === 'task' && r.sub) row.getCell(2).alignment = { indent: 2 };
     row.getCell(6).numFmt = '0%';
-    const late = r.kind === 'task' && r.category !== 'done' && !!r.end && r.end < input.today;
+    const late = r.kind === 'task' && r.category !== 'done' && r.category !== 'cancelled' && !!r.end && r.end < input.today;
     const color = r.kind === 'module' ? COLOR.module : late ? COLOR.late : (COLOR[r.category as keyof typeof COLOR] ?? COLOR.todo);
     slots.forEach((slot, i) => {
       const cell = row.getCell(col(i));
@@ -130,7 +133,7 @@ export function addTimelineSheet(wb: ExcelJS.Workbook, input: TimelineInput) {
   slots.forEach((_, i) => (ws.getColumn(col(i)).width = scale === 'day' ? 3.2 : 5.5));
 
   const legendRow = ws.rowCount + 2;
-  const legend: [string, string][] = [['To do', COLOR.todo], ['In progress', COLOR.in_progress], ['Done', COLOR.done], ['เลยกำหนด', COLOR.late], ['วันนี้', COLOR.today]];
+  const legend: [string, string][] = [['To do', COLOR.todo], ['In progress', COLOR.in_progress], ['Review / QA', COLOR.review], ['Blocked / On hold', COLOR.blocked], ['Done', COLOR.done], ['Cancelled', COLOR.cancelled], ['เลยกำหนด', COLOR.late], ['วันนี้', COLOR.today]];
   legend.forEach(([name, argb], i) => {
     const cell = ws.getCell(legendRow + i, 2);
     cell.value = name;

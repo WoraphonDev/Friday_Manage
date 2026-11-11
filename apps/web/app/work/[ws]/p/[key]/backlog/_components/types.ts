@@ -1,4 +1,5 @@
 import type { Person } from "@/lib/types";
+import type { StatusCategory } from "@/lib/status";
 
 /** งานในหน้า Backlog ตาม issueDto ของ A06 (ส่ง assigneeIds เท่านั้น ชื่อคนมาจากสมาชิกโปรเจกต์) */
 export interface BacklogIssue {
@@ -16,7 +17,7 @@ export interface BacklogIssue {
   planStart: string | null;
   planEnd: string | null;
   progressPct: number;
-  status: { id: string; name: string; category: "todo" | "in_progress" | "done" };
+  status: { id: string; name: string; category: StatusCategory };
   assigneeIds: string[];
   version: number;
   subtasks?: BacklogIssue[];

@@ -12,6 +12,7 @@ import { requirePerm } from '../projects/permissions.js';
 import { ProjectsService } from '../projects/projects.service.js';
 import { type Facts, loadFacts, matches } from './engine.js';
 import { type Action, type Condition, describeAction, DryRunBody, PatchRuleBody, RuleBody, RunsQuery, sentence, TEMPLATES, type Trigger, TriggerConfigs } from './rules.js';
+import { openStatus } from '../common/status-category.js';
 
 const s = schema;
 /** จำนวนกฎต่อโปรเจกต์ (กันกฎงอกไม่รู้จบ) */
@@ -151,7 +152,7 @@ export class AutomationService {
         ids = [row.id];
       } else {
         // ขอบเขตงานที่ trigger นี้จะแตะ · งานที่เสร็จแล้วไม่นับ ยกเว้น trigger ที่เกิดตอนงานเสร็จ
-        const open = and(eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt), rule.trigger === 'status_changed' || rule.trigger === 'issue_created' || rule.trigger === 'test_attached' ? undefined : ne(s.workflowStatuses.category, 'done'), rule.trigger === 'overdue' ? lt(s.issues.planEnd, today()) : undefined, rule.trigger === 'sprint_started' || rule.trigger === 'sprint_completed' ? sql`${s.issues.sprintId} is not null` : undefined);
+        const open = and(eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt), rule.trigger === 'status_changed' || rule.trigger === 'issue_created' || rule.trigger === 'test_attached' ? undefined : openStatus(), rule.trigger === 'overdue' ? lt(s.issues.planEnd, today()) : undefined, rule.trigger === 'sprint_started' || rule.trigger === 'sprint_completed' ? sql`${s.issues.sprintId} is not null` : undefined);
         ids = (await tx.select({ id: s.issues.id }).from(s.issues).innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId)).where(open).orderBy(desc(s.issues.number)).limit(500)).map((r) => r.id);
       }
       let facts = await loadFacts(tx, ids);

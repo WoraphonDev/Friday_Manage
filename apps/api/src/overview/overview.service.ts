@@ -119,7 +119,9 @@ export class OverviewService {
       const assignees = await this.assigneesOf(tx, allIssues.map((i) => i.id));
 
       // ตัวกรองบนหัวหน้า · Guest ที่เป็น Viewer ไม่เห็น Bug (ไม่นับใน Overview)
-      let issues = guest ? allIssues.filter((i) => !isBug(i)) : allIssues;
+      // งานที่ยกเลิกไม่อยู่ในแผน: ไม่นับในความคืบหน้า KPI งานเลยกำหนด และ Health
+      const cancelled = (i: Issue) => statusOf.get(i.statusId)!.category === 'cancelled';
+      let issues = (guest ? allIssues.filter((i) => !isBug(i)) : allIssues).filter((i) => !cancelled(i));
       if (q.moduleId) issues = issues.filter((i) => i.moduleId === q.moduleId);
       if (q.scope === 'mine') issues = issues.filter((i) => (assignees.get(i.id) ?? []).includes(auth.userId));
       const inSet = new Set(issues.map((i) => i.id));
@@ -129,7 +131,7 @@ export class OverviewService {
       const plan = issues.filter((i) => !isBug(i));
       const planIds = new Set(plan.map((i) => i.id));
       const childrenOf = new Map<string, Issue[]>();
-      for (const i of allIssues) if (i.parentId && !isBug(i)) childrenOf.set(i.parentId, [...(childrenOf.get(i.parentId) ?? []), i]);
+      for (const i of allIssues) if (i.parentId && !isBug(i) && !cancelled(i)) childrenOf.set(i.parentId, [...(childrenOf.get(i.parentId) ?? []), i]);
       const isLeaf = (i: Issue) => !childrenOf.has(i.id);
       const leaves = plan.filter(isLeaf);
       const weighted = project.progressMethod === 'weighted';
@@ -510,7 +512,7 @@ export class OverviewService {
             isNull(s.issues.deletedAt),
             isNull(s.issues.parentId),
             isNull(s.issues.baId),
-            sql`${s.workflowStatuses.category} <> 'done'`,
+            sql`${s.workflowStatuses.category} not in ('done', 'cancelled')`,
             sql`${s.issueTypes.name} <> 'Bug'`,
             q.moduleId ? eq(s.issues.moduleId, q.moduleId) : undefined,
           ),

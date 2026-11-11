@@ -341,12 +341,13 @@ export class ModulesService {
     };
     const pctOf = (i: Row): number => {
       if (i.category === 'done') return 100;
-      const c = childrenOf.get(i.id);
+      const c = childrenOf.get(i.id)?.filter((k) => k.category !== 'cancelled');
       return c?.length ? weightedPct(c.map((k) => ({ md: mdOf(k), pct: pctOf(k) }))) : (i.progressPct ?? 0);
     };
     const mods = await tx.select({ id: s.modules.id, name: s.modules.name, color: s.modules.color }).from(s.modules).where(eq(s.modules.projectId, ctx.project.id));
     return rows.map((m) => {
-      const mine = linked.filter((l) => l.milestoneId === m.id && !(ctx.access.guestViewer && l.type === 'Bug'));
+      // งานที่ยกเลิกไม่นับใน Milestone
+      const mine = linked.filter((l) => l.milestoneId === m.id && l.category !== 'cancelled' && !(ctx.access.guestViewer && l.type === 'Bug'));
       const done = mine.filter((l) => l.category === 'done').length;
       // ผูกทั้ง Task และ Sub-task ของมัน: นับที่ Task (ลูกคิดผ่านแม่แล้ว) ไม่ให้ MD ซ้ำ
       const ids = new Set(mine.map((l) => l.id));

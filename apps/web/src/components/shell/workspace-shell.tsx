@@ -63,6 +63,7 @@ import { ThemeSwitch } from "@/features/theme-switch";
 import { WorkspaceBanners } from "@/features/plan-limits";
 import { AnnouncementBanners } from "@/features/announcements";
 import { EngagementPrompts, WhatsNewButton, WhatsNewMenuItem } from "@/features/whats-new";
+import { OnboardingAccountItem, OnboardingNavButton } from "@/features/onboarding-checklist";
 import { isBlocked, SuspendedScreen, SuspensionBanner, useSuspension } from "@/features/suspension";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 
@@ -162,9 +163,12 @@ function Navigation({
           {t("newProject")}
         </Link>
       )}
+      {/* W25 · V2: ปุ่มเริ่มต้นใช้งานท้าย Sidebar เหนือ Admin Console (สมาชิกไม่มีส่วนท้าย จึงครอบตัวเอง) */}
+      {workspace.role === "member" && !locked && <OnboardingNavButton ws={workspace.slug} role={workspace.role} standalone onNavigate={close} />}
       {["owner", "admin"].includes(workspace.role) && (
         // Canvas วาง Admin Console ไว้ล่างสุดของ Sidebar คั่นด้วยเส้น
         <div className="nav-footer">
+          {!locked && <OnboardingNavButton ws={workspace.slug} role={workspace.role} onNavigate={close} />}
           <Link className="nav-link" href={`${base}/admin`} onClick={close}>
             <Settings size={18} />
             {t("admin")}
@@ -502,6 +506,8 @@ export function WorkspaceShell({
                   <Link className="menu-item menu-icon-item" href={href}><Icon size={16} aria-hidden="true" />{label}</Link>
                 </Popover.Close>
               ))}
+              {/* W25 · V4: เปิดการ์ดเริ่มต้นใช้งานกลับเมื่อซ่อนไว้ */}
+              <OnboardingAccountItem ws={ws} role={workspace.role} onSelect={() => setAccountOpen(false)} />
             </nav>
             {workspaceLinks.length > 0 && (
               <nav aria-label={workspace.name}>

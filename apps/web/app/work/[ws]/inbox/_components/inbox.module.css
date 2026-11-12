@@ -10,8 +10,10 @@
 .card { background:var(--card); border:1px solid var(--border); border-radius:12px; min-width:0; }
 .list { display:flex; flex-direction:column; gap:10px; min-width:0; }
 .detail { position:sticky; top:16px; max-height:calc(100vh - 32px); overflow:auto; }
+.grouped .detail { margin-top:30px; }
 .group { display:flex; flex-direction:column; gap:10px; }
-.gl { padding:4px 4px 0; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+/* หัวกลุ่มวันสูงคงที่ เพื่อให้กล่องรายละเอียดเลื่อนลงไปตรงกับการ์ดแรกได้ (ผู้ใช้ขอขอบบนเท่ากัน 2026-11-12) */
+.gl { box-sizing:border-box; height:20px; line-height:16px; padding:4px 4px 0; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
 .nt { display:flex; gap:12px; width:100%; padding:14px 16px; border:1px solid var(--border); border-radius:12px; background:var(--card); font:inherit; font-size:var(--text-label); text-align:left; cursor:pointer; color:var(--foreground); align-items:flex-start; transition:border-color .15s, box-shadow .15s; }
 .nt:hover { border-color:var(--border-strong); box-shadow:var(--shadow-card); }
 .unread { background:var(--hover); }
@@ -56,6 +58,7 @@
   .ftab[data-filter="unread"], .ftab[data-filter="activity"], .ftab[data-filter="due"] { display:none; }
   .layout { display:block; padding:12px 0 0; }
   .list { padding:0 12px; gap:8px; }
+  .grouped .detail { margin-top:0; }
   .detail { position:static; max-height:none; border-radius:0; border-left:0; border-right:0; }
   .hero { border-radius:0; padding:16px; }
   .dBody { padding:16px; }

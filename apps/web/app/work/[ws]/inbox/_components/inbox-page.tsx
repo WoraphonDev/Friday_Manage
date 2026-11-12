@@ -119,7 +119,7 @@ export function InboxPage({ ws }: { ws: string }) {
           ))}
         </div>
       </header>
-      <div className={`${styles.layout} ${current ? styles.showDetail : ""}`}>
+      <div className={`${styles.layout} ${current ? styles.showDetail : ""} ${groups.length ? styles.grouped : ""}`}>
         <section className={styles.list} aria-label={t("listLabel")}>
           {!items.length && <div className={styles.empty}>{t("empty")}</div>}
           {groups.map(({ g, list }) => (

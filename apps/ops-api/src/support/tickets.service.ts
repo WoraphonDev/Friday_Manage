@@ -60,6 +60,8 @@ export const EscalateBody = z
     affected: z.string().trim().max(200).optional(),
     requestId: z.string().trim().max(80).optional(),
     notifyCustomer: z.boolean().default(true),
+    /** งานในโปรเจกต์ FM ที่สร้าง / ผูกแล้ว (O36 · dev-bridge เรียก) · ใส่ในบันทึกภายใน */
+    devIssueKey: z.string().trim().regex(/^[A-Z][A-Z0-9]{1,9}-\d{1,9}$/).optional(),
   })
   .strict();
 export const SolveBody = z
@@ -305,11 +307,11 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
       await tx.update(s.supportTickets).set({ status: 'pending_dev', assigneeId: t.assigneeId ?? staff.id, updatedAt: new Date() }).where(eq(s.supportTickets.id, t.id));
       await tx.insert(s.supportTicketMessages).values({
         ticketId: t.id, authorKind: 'staff', authorStaffId: staff.id, internal: true,
-        body: [`ส่งต่อทีมพัฒนา · ความรุนแรง ${input.severity}`, input.affected ? `ลูกค้าที่กระทบ: ${input.affected}` : '', input.requestId ? `requestId: ${input.requestId}` : '', `ขั้นตอนทำซ้ำ:\n${input.steps}`].filter(Boolean).join('\n'),
+        body: [`ส่งต่อทีมพัฒนา · ความรุนแรง ${input.severity}${input.devIssueKey ? ` · งาน ${input.devIssueKey}` : ''}`, input.affected ? `ลูกค้าที่กระทบ: ${input.affected}` : '', input.requestId ? `requestId: ${input.requestId}` : '', `ขั้นตอนทำซ้ำ:\n${input.steps}`].filter(Boolean).join('\n'),
       });
       if (input.notifyCustomer) await tx.insert(s.supportTicketMessages).values({ ticketId: t.id, authorKind: 'system', body: 'ส่งเรื่องให้ทีมพัฒนาตรวจแล้ว จะแจ้งความคืบหน้าในเรื่องนี้' });
     });
-    await this.trace(t, staff, 'support.ticket_escalated', `ส่งต่อทีมพัฒนา ${input.severity}`);
+    await this.trace(t, staff, 'support.ticket_escalated', `ส่งต่อทีมพัฒนา ${input.severity}${input.devIssueKey ? ` · ${input.devIssueKey}` : ''}`);
     const sent = input.notifyCustomer ? await this.email(this.requester(t), `[#${t.number}] ส่งต่อทีมพัฒนาแล้ว`, 'เราส่งเรื่องของคุณให้ทีมพัฒนาตรวจแล้ว และจะแจ้งความคืบหน้าในเรื่องนี้') : false;
     return { id: t.id, status: 'pending_dev' as const, sent };
   }

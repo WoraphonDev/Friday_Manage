@@ -496,9 +496,9 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 |---|---|---|---|
 | GET | `public/plans` | สาธารณะ | |
 | GET | `w/billing` | `ws.billing` | |
-| GET | `w/billing/quote?plan&cycle&wht` | `ws.billing` | subtotal, VAT 7%, หัก ณ ที่จ่าย 3%, ยอดชำระ · ใช้แสดงสรุปในหน้า R2 |
+| GET | `w/billing/quote?plan&cycle&wht&coupon` | `ws.billing` | subtotal (หลังหักส่วนลด), VAT 7%, หัก ณ ที่จ่าย 3%, ยอดชำระ · ใช้แสดงสรุปในหน้า R2 · O20: `listPrice`, `discount`, `discounts[]` (โค้ด, ยอด, รอบที่เหลือ, ได้ต่อจากรอบก่อน), `coupon`, `freeMonths`, `grandfathered` · โค้ดใช้ไม่ได้ → 422 `coupon_*` · แพ็กเกจปิดรับสมัครใหม่ → 422 `plan_not_open` |
 | GET / PUT | `w/billing/profile` | `ws.billing` | ข้อมูลใบกำกับภาษี |
-| POST | `w/billing/checkout` | `ws.billing` | ต้องมี `Idempotency-Key` · บัตร: ได้ Stripe client secret · PromptPay: ได้ QR (หมดอายุ 15 นาที) · โอน: ได้ใบแจ้งหนี้ · หัก ณ ที่จ่ายเลือกได้เฉพาะ PromptPay / โอน |
+| POST | `w/billing/checkout` | `ws.billing` | ต้องมี `Idempotency-Key` · บัตร: ได้ Stripe client secret · PromptPay: ได้ QR (หมดอายุ 15 นาที) · โอน: ได้ใบแจ้งหนี้ · หัก ณ ที่จ่ายเลือกได้เฉพาะ PromptPay / โอน · `coupon` (O20) หักส่วนลดก่อน VAT ในใบแจ้งหนี้ ผู้ให้บริการตัดยอดสุทธิ · ยอด 0 (ใช้ฟรี N เดือน / ลด 100%) → ใบชำระแล้วทันที `payment: null, free: true` |
 | POST | `w/billing/invoices/{id}/slip` | `ws.billing` | แนบสลิป · สถานะ `pending_review` แต่ใช้แพ็กเกจใหม่ได้ทันที |
 | POST | `w/billing/invoices/{id}/wht-certificate` | `ws.billing` | 50 ทวิ ภายใน 30 วัน |
 | GET | `w/billing/invoices` · `{id}.pdf` · `w/billing/tax-documents/{id}.pdf` | `ws.billing` | |
@@ -528,6 +528,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET / POST | `ops/payments?status=pending_review` · `{id}:confirm` · `:reject` | ตรวจสลิปและ 50 ทวิ |
 | CRUD | `ops/feature-flags` | |
 | GET / POST | `ops/announcements` · `{id}` · `audience` · `test` · `{id}/cancel` | ประกาศถึง Owner / Admin ของ Workspace ที่เลือก · อีเมล / แบนเนอร์ / ทั้งสอง · ตั้งเวลาได้ · เฉพาะ Owner ของทีม (O24) |
+| GET / POST / PATCH | `ops/promotions` · `price-history` · `plans/{code}` · `coupons` · `coupons/{id}` · `{id}/activate` · `{id}/disable` · `{id}/redemptions` | แพ็กเกจและโปรโมชัน (O20) · Owner / การเงิน · แก้แพ็กเกจเป็นเวอร์ชันใหม่ (เปลี่ยนราคาต้องอนุมัติ · ลูกค้าเดิมคงราคาเดิม หรือย้ายรอบถัดไปพร้อมประกาศล่วงหน้า 30 วัน) · คูปองร่าง / เปิด / ปิด · แก้ราคาและเปิดคูปองต้องแตะ key · เกินวงเงินส่วนลดต้องอนุมัติ |
 
 ### 3.13 Endpoint ที่โค้ดมีเพิ่ม (รวมจากบันทึกผล · D99 · 8 พ.ย. 2569)
 

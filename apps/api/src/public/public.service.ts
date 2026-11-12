@@ -58,7 +58,8 @@ export class PublicService {
         const price = { monthly: row?.priceMonthlySatang ?? null, yearly: row?.priceYearlySatang ?? null };
         return {
           code,
-          name: spec.name,
+          // ชื่อที่แสดงตั้งได้ในหลังบ้าน (O20 · P1)
+          name: row?.displayName ?? spec.name,
           seatLimit: row?.seatLimit ?? spec.seats,
           // Guest (ลูกค้า) ไม่นับเป็นที่นั่ง
           guestsFree: true,
@@ -68,6 +69,9 @@ export class PublicService {
           priceMonthlySatang: code === 'free' ? 0 : code === 'enterprise' ? null : priceFor(spec, 'monthly', price),
           priceYearlySatang: code === 'free' ? 0 : code === 'enterprise' ? null : priceFor(spec, 'yearly', price),
           contactSales: code === 'enterprise',
+          // O20: ซ่อนจากหน้าราคา / ปิดรับสมัครใหม่ (ลูกค้าเดิมยังจ่ายต่อได้)
+          listed: row?.listed ?? true,
+          openForSignup: row?.openForSignup ?? true,
           features: featuresOf(code),
         };
       }),

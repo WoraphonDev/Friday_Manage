@@ -118,6 +118,23 @@
     "processing": "Processing…",
     "requestId": "Reference {id}"
   },
+  "coupon": {
+    "label": "Discount code",
+    "placeholder": "Enter a discount code",
+    "apply": "Apply",
+    "applied": "Code {code} applied",
+    "remove": "Remove code {code}",
+    "line": "Discount {code}",
+    "lineGeneric": "Discount",
+    "cyclesLeft": "{n} cycles left",
+    "forever": "forever",
+    "afterDiscount": "Price after discount",
+    "grandfathered": "Your existing price (current customer)",
+    "startFree": "Start {n} free months",
+    "confirmFree": "Confirm (nothing to pay)",
+    "freeNote": "{n} free months with your discount code, no payment method needed · regular price after that",
+    "zeroNote": "Nothing to pay on this invoice after the discount, no payment method needed"
+  },
   "errors": {
     "required": "Fill in this field",
     "taxId": "The tax ID must be 13 digits",
@@ -143,7 +160,9 @@
     "downloadReceipt": "Download receipt",
     "invoice": "Download invoice",
     "back": "Back to workspace",
-    "billing": "View plan & billing"
+    "billing": "View plan & billing",
+    "freeVia": "Plan activated with a discount code, nothing to pay",
+    "freeUntil": "Free until {date}, then the regular price"
   },
   "cancel": {
     "title": "Cancel plan?",

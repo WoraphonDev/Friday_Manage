@@ -153,7 +153,11 @@ export class InvoicesService {
         address: profile?.address ?? '-',
         email: profile?.taxEmail ?? '',
       },
-      lines: [{ description: `Friday Manage ${planName} · ${cycle} · ${i.periodStart} ถึง ${i.periodEnd}`, amount: i.subtotal }],
+      // มีคูปอง (O20): แสดงราคาแพ็กเกจเต็มแล้วหักส่วนลดเป็นอีกบรรทัด · ยอดก่อนภาษี = หลังหักส่วนลด
+      lines: [
+        { description: `Friday Manage ${planName} · ${cycle} · ${i.periodStart} ถึง ${i.periodEnd}`, amount: i.subtotal + i.discount },
+        ...(i.discount > 0 ? [{ description: `ส่วนลด${meta?.coupon ? ` (โค้ด ${meta.coupon})` : ''} / Discount`, amount: -i.discount }] : []),
+      ],
       subtotal: i.subtotal,
       vat: i.vat,
       total: i.total,

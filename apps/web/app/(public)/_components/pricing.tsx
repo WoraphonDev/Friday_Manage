@@ -58,7 +58,8 @@ export function PricingSection({ heading = "h2", ctaFor }: { heading?: "h1" | "h
 
 function Plans({ data, cycle, team, setTeam, ctaFor }: { data: PublicPlans; cycle: Cyc; team: number; setTeam: (n: number) => void; ctaFor?: (p: PublicPlan, cycle: Cyc) => PlanCta }) {
   const t = useTranslations("saas-pages.pricing");
-  const items = data.items;
+  // แพ็กเกจที่ทีม Friday ซ่อนจากหน้าราคา (O20) ไม่แสดง
+  const items = data.items.filter((p) => p.listed !== false);
   const fit = fitPlan(items, team);
   const paid = (p: PublicPlan) => !p.contactSales && p.code !== "free";
   const prevLimit = (i: number) => items[i - 1]?.seatLimit ?? 0;

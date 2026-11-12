@@ -4951,6 +4951,10 @@
                   "poNumber": {
                     "type": "string",
                     "maxLength": 50
+                  },
+                  "coupon": {
+                    "type": "string",
+                    "maxLength": 32
                   }
                 },
                 "required": [
@@ -5380,6 +5384,15 @@
                 "true",
                 "false"
               ]
+            }
+          },
+          {
+            "name": "coupon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 32
             }
           }
         ],

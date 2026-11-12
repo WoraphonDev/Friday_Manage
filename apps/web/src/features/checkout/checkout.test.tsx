@@ -298,6 +298,136 @@ describe("ชำระเงิน (W22)", () => {
   });
 });
 
+// O20 · โค้ดส่วนลด (โค้ดสมมติทั้งหมด) · API คิดส่วนลดก่อน VAT แล้วคืนรายการส่วนลดในใบเสนอราคา
+describe("โค้ดส่วนลดในหน้าชำระเงิน (O20)", () => {
+  let carried = false;
+  const couponError = (code: string, message: string) => HttpResponse.json({ error: { code, message, requestId: "req_o20_coupon" } }, { status: 422 });
+  function quoteWithCoupon(url: URL) {
+    const base = quoteFor(url);
+    const code = url.searchParams.get("coupon");
+    const list = base.subtotal;
+    const discounts: { code: string; kind: string; value: number; amount: number; cyclesLeft: number | null; carried: boolean }[] = [];
+    let freeMonths: number | null = null;
+    if (carried) discounts.push({ code: "LAUNCH20", kind: "percent", value: 20, amount: Math.round(list * 0.2), cyclesLeft: 3, carried: true });
+    if (code === "SAVE20") discounts.push({ code: "SAVE20", kind: "percent", value: 20, amount: Math.round(list * 0.2), cyclesLeft: 2, carried: false });
+    if (code === "EDUFREE") {
+      freeMonths = 3;
+      discounts.push({ code: "EDUFREE", kind: "free_months", value: 3, amount: list, cyclesLeft: 0, carried: false });
+    }
+    const discount = Math.min(list, discounts.reduce((n, d) => n + d.amount, 0));
+    const subtotal = list - discount;
+    const vat = vatRegistered ? Math.round(subtotal * 0.07) : 0;
+    const whtAmount = base.wht ? Math.round(subtotal * 0.03) : 0;
+    return { ...base, listPrice: list, discount, discounts, coupon: code && discounts.some((d) => d.code === code) ? code : null, freeMonths, grandfathered: false, subtotal, vat, total: subtotal + vat, whtAmount, amountDue: subtotal + vat - whtAmount };
+  }
+  beforeEach(() => {
+    carried = false;
+    server.use(
+      http.get("*/api/v1/w/:ws/billing/quote", ({ request }) => {
+        const url = new URL(request.url);
+        const code = url.searchParams.get("coupon");
+        if (code === "OLD2569") return couponError("coupon_expired", "โค้ดนี้หมดอายุแล้ว");
+        if (code === "SAVE20" && url.searchParams.get("plan") !== "team_m") return couponError("coupon_plan_mismatch", "โค้ดนี้ใช้ได้กับแพ็กเกจ Team M เท่านั้น");
+        return HttpResponse.json(quoteWithCoupon(url));
+      }),
+    );
+  });
+
+  it("ใช้โค้ดได้: แสดงราคาแพ็กเกจ ส่วนลด ราคาก่อน VAT · ป้ายใช้โค้ดแล้ว · ส่งโค้ดไปกับ checkout", async () => {
+    const user = userEvent.setup();
+    mount({ plan: "team_m" });
+    const s = await screen.findByRole("complementary", { name: "สรุปยอด" });
+    expect(await within(s).findByText("฿3,000")).toBeInTheDocument();
+    // ไม่มีส่วนลด: บรรทัดราคาเดียวแบบเดิม
+    expect(within(s).queryByText("ราคาแพ็กเกจ")).not.toBeInTheDocument();
+    await user.type(within(s).getByLabelText("โค้ดส่วนลด"), " save20 ");
+    await user.click(within(s).getByRole("button", { name: "ใช้โค้ด" }));
+    expect(await within(s).findByText("ใช้โค้ด SAVE20 แล้ว")).toBeInTheDocument();
+    expect(within(s).getByText("ราคาแพ็กเกจ")).toBeInTheDocument();
+    expect(within(s).getByText("ส่วนลด SAVE20 · เหลือ 2 รอบ")).toBeInTheDocument();
+    expect(within(s).getByText("−฿600")).toBeInTheDocument();
+    expect(within(s).getByText("฿2,400")).toBeInTheDocument();
+    expect(within(s).getAllByText("฿2,568").length).toBeGreaterThan(0);
+    await user.click(within(s).getByRole("button", { name: "สร้าง QR" }));
+    await waitFor(() => expect(calls.find((c) => c.path.endsWith("/checkout"))).toBeTruthy());
+    expect(calls.find((c) => c.path.endsWith("/checkout"))!.body).toMatchObject({ plan: "team_m", method: "promptpay", coupon: "SAVE20" });
+  });
+
+  it("โค้ดใช้ไม่ได้: บอกเหตุผลใต้ช่องโค้ด ยอดเดิมยังแสดง · เปลี่ยนแพ็กเกจที่โค้ดใช้ไม่ได้ก็เอาโค้ดออกให้", async () => {
+    const user = userEvent.setup();
+    mount({ plan: "team_m" });
+    const s = await screen.findByRole("complementary", { name: "สรุปยอด" });
+    await within(s).findByText("฿3,000");
+    await user.type(within(s).getByLabelText("โค้ดส่วนลด"), "OLD2569");
+    await user.click(within(s).getByRole("button", { name: "ใช้โค้ด" }));
+    expect(await within(s).findByRole("alert")).toHaveTextContent("โค้ดนี้หมดอายุแล้ว");
+    expect(await within(s).findByText("฿3,000")).toBeInTheDocument();
+    expect(within(s).getByRole("button", { name: "สร้าง QR" })).toBeEnabled();
+    expect(within(s).queryByText(/ใช้โค้ด OLD2569 แล้ว/)).not.toBeInTheDocument();
+    // ใช้โค้ดที่ได้ แล้วเปลี่ยนเป็นแพ็กเกจที่โค้ดใช้ไม่ได้
+    await user.clear(within(s).getByLabelText("โค้ดส่วนลด"));
+    await user.type(within(s).getByLabelText("โค้ดส่วนลด"), "SAVE20");
+    await user.click(within(s).getByRole("button", { name: "ใช้โค้ด" }));
+    expect(await within(s).findByText("ใช้โค้ด SAVE20 แล้ว")).toBeInTheDocument();
+    await user.selectOptions(within(s).getByLabelText("แพ็กเกจ"), "team_s");
+    expect(await within(s).findByRole("alert")).toHaveTextContent("โค้ดนี้ใช้ได้กับแพ็กเกจ Team M เท่านั้น");
+    expect(await within(s).findByText("฿1,500")).toBeInTheDocument();
+    await user.click(within(s).getByRole("button", { name: "สร้าง QR" }));
+    await waitFor(() => expect(calls.find((c) => c.path.endsWith("/checkout"))).toBeTruthy());
+    expect(calls.find((c) => c.path.endsWith("/checkout"))!.body).not.toHaveProperty("coupon");
+  });
+
+  it("เอาโค้ดออกได้ · ส่วนลดที่ได้ต่อจากรอบก่อนแสดงเองโดยไม่ต้องใส่โค้ด", async () => {
+    carried = true;
+    const user = userEvent.setup();
+    mount({ plan: "team_m" });
+    const s = await screen.findByRole("complementary", { name: "สรุปยอด" });
+    expect(await within(s).findByText("ส่วนลด LAUNCH20 · เหลือ 3 รอบ")).toBeInTheDocument();
+    expect(within(s).queryByText(/ใช้โค้ด .* แล้ว/)).not.toBeInTheDocument();
+    await user.type(within(s).getByLabelText("โค้ดส่วนลด"), "SAVE20");
+    await user.click(within(s).getByRole("button", { name: "ใช้โค้ด" }));
+    expect(await within(s).findByText("ใช้โค้ด SAVE20 แล้ว")).toBeInTheDocument();
+    expect(within(s).getByText("ส่วนลด SAVE20 · เหลือ 2 รอบ")).toBeInTheDocument();
+    await user.click(within(s).getByRole("button", { name: "เอาโค้ด SAVE20 ออก" }));
+    await waitFor(() => expect(within(s).queryByText(/ส่วนลด SAVE20/)).not.toBeInTheDocument());
+    expect(within(s).getByText("ส่วนลด LAUNCH20 · เหลือ 3 รอบ")).toBeInTheDocument();
+    expect(within(s).getByLabelText("โค้ดส่วนลด")).toHaveValue("");
+  });
+
+  it("ใช้ฟรี N เดือน: ไม่ต้องเลือกวิธีชำระ · กดเริ่มใช้ฟรีแล้วไปหน้าชำระแล้วทันที (payment = null)", async () => {
+    server.use(
+      http.post("*/api/v1/w/:ws/billing/checkout", async ({ request }) => {
+        await record(request);
+        const { method: _m, paymentStatus: _p, hasSlip: _h, pdfUrl: _u, taxDocument: _t, whtCertificate: _w, whtDueBy: _d, ...inv } = invoice({ status: "paid", paidAt: "2026-11-06T03:00:00Z", periodEnd: "2027-02-05", subtotal: 0, discount: 300_000, vat: 0, total: 0, amountDue: 0 });
+        void [_m, _p, _h, _u, _t, _w, _d];
+        return HttpResponse.json({ invoice: inv, payment: null, free: true, replayed: false } satisfies CheckoutResult);
+      }),
+    );
+    const user = userEvent.setup();
+    mount({ plan: "team_m" });
+    const s = await screen.findByRole("complementary", { name: "สรุปยอด" });
+    await within(s).findByText("฿3,000");
+    await user.type(within(s).getByLabelText("โค้ดส่วนลด"), "edufree");
+    await user.click(within(s).getByRole("button", { name: "ใช้โค้ด" }));
+    expect(await within(s).findByText("ใช้โค้ด EDUFREE แล้ว")).toBeInTheDocument();
+    expect(screen.getByText("ใช้ฟรี 3 เดือนด้วยโค้ดส่วนลด ไม่ต้องเลือกวิธีชำระ · ครบแล้วจ่ายราคาปกติ")).toBeInTheDocument();
+    expect(within(s).getAllByText("฿0").length).toBeGreaterThan(0);
+    await user.click(within(s).getByRole("button", { name: "เริ่มใช้ฟรี 3 เดือน" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "ชำระเงินเรียบร้อย" })).toBeInTheDocument();
+    expect(screen.getByText("เปิดใช้แพ็กเกจด้วยโค้ดส่วนลด ไม่มียอดชำระ")).toBeInTheDocument();
+    expect(screen.getByText(/^ใช้ฟรีถึง .+ แล้วจ่ายราคาปกติ$/)).toBeInTheDocument();
+    expect(screen.queryByText(/ส่งไปที่ account@example.com/)).not.toBeInTheDocument();
+    expect(calls.find((c) => c.path.endsWith("/checkout"))!.body).toMatchObject({ coupon: "EDUFREE" });
+  });
+
+  it("ข้อความภาษาอังกฤษของโค้ดส่วนลดครบทุกคีย์", async () => {
+    const en = (await import("../../../messages/en/checkout.json")).default as unknown as Record<string, Record<string, unknown>>;
+    expect(Object.keys(en.coupon!).sort()).toEqual(Object.keys(checkoutMessages.coupon).sort());
+    expect(en.done).toHaveProperty("freeVia");
+    expect(en.done).toHaveProperty("freeUntil");
+  });
+});
+
 describe("แบบสอบถามตอนยกเลิก (W22)", () => {
   const open = (isOwner = true) => {
     const onCancelled = vi.fn();

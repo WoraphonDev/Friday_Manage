@@ -1,4 +1,4 @@
-import { canGrant, type Db, resumeIfPaid, schema, type Tx } from '@friday/db';
+import { canGrant, commitCouponUses, type Db, resumeIfPaid, schema, type Tx } from '@friday/db';
 import { and, count, eq, inArray, like, sql } from 'drizzle-orm';
 import { AppError } from '../errors.js';
 import type { Mailer } from '../mail.js';
@@ -16,6 +16,8 @@ export interface CheckoutMeta {
   manual?: boolean;
   items?: { description: string; qty: number; unitSatang: number }[];
   note?: string;
+  /** เวอร์ชันราคาที่ใบนี้ใช้ (O20 · ใบจาก checkout ของลูกค้า) · ไม่มี = ใบที่ทีมออกเอง / ก่อนมีเวอร์ชัน */
+  priceVersionId?: string | null;
 }
 
 /** บริษัทจด VAT หรือยัง · ตั้งให้ตรงกับ API ลูกค้า (A35a) */
@@ -53,7 +55,7 @@ export async function activate(tx: Tx, inv: Invoice, meta: CheckoutMeta): Promis
   if (!plan) throw new AppError(409, 'plan_not_found', `ไม่พบแพ็กเกจ ${meta.plan}`);
   await tx
     .update(s.subscriptions)
-    .set({ planId: plan.id, cycle: meta.cycle ?? 'monthly', status: 'active', trialEndsAt: null, currentPeriodStart: new Date(`${inv.periodStart}T00:00:00+07:00`), currentPeriodEnd: new Date(`${addDays(inv.periodEnd, 1)}T00:00:00+07:00`), paymentMethod: meta.method ?? 'transfer', sourceInvoiceId: inv.id, updatedAt: new Date() })
+    .set({ planId: plan.id, cycle: meta.cycle ?? 'monthly', status: 'active', trialEndsAt: null, currentPeriodStart: new Date(`${inv.periodStart}T00:00:00+07:00`), currentPeriodEnd: new Date(`${addDays(inv.periodEnd, 1)}T00:00:00+07:00`), paymentMethod: meta.method ?? 'transfer', sourceInvoiceId: inv.id, ...(meta.priceVersionId !== undefined ? { priceVersionId: meta.priceVersionId } : {}), updatedAt: new Date() })
     .where(eq(s.subscriptions.id, inv.subscriptionId));
   return true;
 }
@@ -66,6 +68,8 @@ export async function settleInvoice(tx: Tx, inv: Invoice) {
   await tx.update(s.invoices).set({ status: 'paid', paidAt: new Date(), updatedAt: new Date() }).where(eq(s.invoices.id, inv.id));
   const meta = await metaOf(tx, inv.id);
   const granted = meta ? await activate(tx, inv, meta) : false;
+  // ส่วนลดคูปองในใบนี้นับเป็นรอบที่ใช้ไป (O20 · ทางเดียวกับที่ API ลูกค้ารับเงินผ่าน Gateway)
+  await commitCouponUses(tx, inv.id);
   await tx
     .insert(s.taxDocuments)
     .values(vatRegistered()

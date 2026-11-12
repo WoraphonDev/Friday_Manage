@@ -236,7 +236,9 @@
     "system_maintenance": "ปิดปรับปรุง",
     "support_write_session": "เข้าบัญชีโหมดแก้ไข",
     "entitlements_version": "บันทึกสิทธิ์เป็นเวอร์ชันใหม่",
-    "entitlements_override": "ปรับสิทธิ์เฉพาะราย"
+    "entitlements_override": "ปรับสิทธิ์เฉพาะราย",
+    "promotions_plan_price": "เปลี่ยนราคาแพ็กเกจ",
+    "promotions_coupon_activate": "เปิดใช้คูปอง"
   },
   "export": {
     "title": "ส่งออกข้อมูล",

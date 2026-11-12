@@ -84,6 +84,15 @@
 .done ul { margin:0; padding-left:20px; line-height:1.9; }
 .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 
+/* O20 · โค้ดส่วนลดใต้ยอดชำระ (Canvas Checkout › สรุปยอด) */
+.coupon { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+.couponRow { display:flex; gap:8px; }
+.couponRow :global(.input) { flex:1; min-width:0; text-transform:uppercase; }
+.couponRow :global(.input)::placeholder { text-transform:none; }
+.pillTeal { background:var(--accent-teal-soft); color:var(--accent-teal-text); align-self:flex-start; gap:4px; padding-right:4px; }
+.pillX { border:0; background:transparent; color:inherit; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; padding:0; }
+.pillX:hover { background:var(--hover); }
+
 @media (max-width: 640px) {
   .page { padding:16px 16px 40px; }
   .aside { position:static; }

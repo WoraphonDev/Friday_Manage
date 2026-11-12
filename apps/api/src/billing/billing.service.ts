@@ -9,6 +9,7 @@ import { TenantDb } from '../common/tenant.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { PlanLimits } from '../core/plan-limits.js';
 import { GB, PLAN_CATALOG, computeQuote, priceFor, type Cycle, type PlanCode } from './catalog.js';
+import { choosePrice, CouponCode, resolveDiscount } from '../payments/coupons.js';
 
 const s = schema;
 
@@ -19,6 +20,8 @@ export const QuoteQuery = z.object({
     .enum(['true', 'false', '1', '0'])
     .default('false')
     .transform((v) => v === 'true' || v === '1'),
+  /** โค้ดส่วนลด (O20) · ไม่ส่ง = ใช้เฉพาะส่วนลดที่ได้ต่อจากรอบก่อน */
+  coupon: CouponCode.optional(),
 });
 
 export const ProfileBody = z
@@ -118,26 +121,40 @@ export class BillingService {
     };
   }
 
-  /** R2 · สรุปยอด: VAT 7% คิดจากยอดก่อนภาษี · หัก ณ ที่จ่าย 3% คิดจากยอดก่อน VAT · ราคารายปี = 10 เดือน */
-  async quote(tenant: TenantInfo, q: z.infer<typeof QuoteQuery>) {
+  /** R2 · สรุปยอด: VAT 7% คิดจากยอดก่อนภาษีหลังหักส่วนลด · หัก ณ ที่จ่าย 3% คิดจากยอดก่อน VAT · ราคารายปี = 10 เดือน */
+  async quote(auth: AuthInfo, tenant: TenantInfo, q: z.infer<typeof QuoteQuery>) {
+    const { internal, ...dto } = await this.price(auth, tenant, q);
+    void internal;
+    return dto;
+  }
+
+  /**
+   * ราคาของ checkout (ใช้ทั้ง quote และสร้างใบแจ้งหนี้) · `tx` = ธุรกรรมของ checkout เพื่อตรวจคูปองในธุรกรรมเดียวกับที่บันทึก
+   * ราคา: เวอร์ชันราคา + grandfathering (O20) · ส่วนลด: คูปองที่ได้ต่อ + โค้ดที่ใส่ใหม่
+   */
+  async price(auth: AuthInfo, tenant: TenantInfo, q: z.infer<typeof QuoteQuery>, tx?: Tx) {
     this.requireBilling(tenant);
     const spec = PLAN_CATALOG[q.plan as PlanCode];
     const sub = await this.limits.ensureSubscription(tenant.workspaceId);
-    // ราคาที่ทีม Friday ตั้งใน plans ชนะค่าตั้งต้น
-    const override = await this.priceOverride(q.plan);
-    const subtotal = priceFor(spec, q.cycle as Cycle, override);
-    if (subtotal === null) throw new AppError(422, 'plan_not_purchasable', 'แพ็กเกจนี้ยังไม่เปิดขายออนไลน์ · ติดต่อฝ่ายขาย', { plan: q.plan });
+    const choice = await choosePrice(this.system, tenant.workspaceId, q.plan, (o) => priceFor(spec, q.cycle as Cycle, o));
+    const listPrice = priceFor(spec, q.cycle as Cycle, choice.override);
+    if (listPrice === null) throw new AppError(422, 'plan_not_purchasable', 'แพ็กเกจนี้ยังไม่เปิดขายออนไลน์ · ติดต่อฝ่ายขาย', { plan: q.plan });
+    const input = { workspaceId: tenant.workspaceId, plan: q.plan, listPrice, code: q.coupon ?? null };
+    const d = tx ? await resolveDiscount(this.system, tx, input) : await this.db.run(auth, tenant, (t) => resolveDiscount(this.system, t, input));
     // ยังไม่จด VAT: ไม่คิด VAT และเอกสารเป็นใบเสร็จ (หน้าชำระเงินซ่อนบรรทัด VAT ตาม documentType)
-    return { ...computeQuote(spec, q.cycle as Cycle, q.wht, subtotal, config.vatRegistered), currentPlan: sub.planCode, vatRegistered: config.vatRegistered, documentType: config.vatRegistered ? 'tax_invoice_receipt' : 'receipt' };
-  }
-
-  /** แคตตาล็อกแพ็กเกจเป็นข้อมูลระดับระบบ ไม่มี Workspace → อ่านด้วย SYSTEM_DB */
-  private async priceOverride(code: string) {
-    const [row] = await this.system
-      .select({ monthly: s.plans.priceMonthlySatang, yearly: s.plans.priceYearlySatang })
-      .from(s.plans)
-      .where(eq(s.plans.code, code));
-    return row;
+    return {
+      ...computeQuote(spec, q.cycle as Cycle, q.wht, listPrice - d.discount, config.vatRegistered),
+      currentPlan: sub.planCode,
+      vatRegistered: config.vatRegistered,
+      documentType: config.vatRegistered ? 'tax_invoice_receipt' : 'receipt',
+      listPrice,
+      discount: d.discount,
+      discounts: d.discounts,
+      coupon: d.coupon,
+      freeMonths: d.freeMonths,
+      grandfathered: choice.grandfathered,
+      internal: { priceVersionId: choice.versionId, apply: d.apply },
+    };
   }
 
   async getProfile(auth: AuthInfo, tenant: TenantInfo) {

@@ -129,6 +129,9 @@
       "name": "OAuth"
     },
     {
+      "name": "Onboarding"
+    },
+    {
       "name": "OpenApi"
     },
     {
@@ -14132,6 +14135,316 @@
           },
           "404": {
             "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/onboarding": {
+      "get": {
+        "operationId": "Onboarding_get",
+        "summary": "ขั้น สถานะ ตัวเลขประกอบ ขั้นถัดไป และลิงก์ปุ่ม · ขั้นที่เพิ่งเสร็จถูกบันทึกตอนเรียก",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/onboarding:complete-seen": {
+      "post": {
+        "operationId": "Onboarding_completeSeen",
+        "summary": "เห็นการ์ด \"ครบแล้ว\" (V4) แล้ว · แสดงครั้งเดียว",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/onboarding:hide": {
+      "post": {
+        "operationId": "Onboarding_hide",
+        "summary": "ซ่อนการ์ดบน Home (ต่อคน) · ปุ่มท้าย Sidebar ยังอยู่",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/onboarding:never": {
+      "post": {
+        "operationId": "Onboarding_never",
+        "summary": "ไม่ต้องแสดงอีก: ซ่อนทั้งการ์ดและปุ่มท้าย Sidebar · เปิดกลับได้จากเมนูบัญชี",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/onboarding:show": {
+      "post": {
+        "operationId": "Onboarding_show",
+        "summary": "แสดงบน Home อีกครั้ง (ยกเลิกทั้งซ่อนและไม่ต้องแสดงอีก)",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/onboarding:task-opened": {
+      "post": {
+        "operationId": "Onboarding_taskOpened",
+        "summary": "กดปุ่ม \"เปิดงาน\" ในรายการของสมาชิก (V3) · ต้องเป็นงานที่ได้รับมอบหมาย",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "issueKey": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9]{1,9}-\\d+$"
+                  }
+                },
+                "required": [
+                  "issueKey"
+                ],
+                "additionalProperties": false
+              }
+            }
           }
         }
       }

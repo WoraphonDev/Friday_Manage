@@ -29,6 +29,7 @@ import { IssuesModule } from './issues/issues.module.js';
 import { LineModule } from './line/line.module.js';
 import { MeModule } from './me/me.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
+import { OnboardingModule } from './onboarding/onboarding.module.js';
 import { OverviewModule } from './overview/overview.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
 import { OpenApiModule } from './openapi/openapi.module.js';
@@ -75,6 +76,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     LineModule,
     MeModule,
     NotificationsModule,
+    OnboardingModule,
     OverviewModule,
     PaymentsModule,
     PrivacyModule,

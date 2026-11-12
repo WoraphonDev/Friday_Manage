@@ -481,6 +481,9 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET · POST | `me/whats-new?workspace` · `me/whats-new:seen` · `me/whats-new/{id}:click` | ทุกบทบาทยกเว้น Guest | มีอะไรใหม่ 90 วัน กรองตามแพ็กเกจ / Feature flag / บทบาท · `unseen` = จุดบนแถบบน · เปิดแผงนับยอดเห็นครั้งเดียวต่อคนต่อรายการ · Workspace ที่ถูกระงับได้ `hidden: true` (A42) |
 | GET · POST | `me/spotlight?workspace` · `me/spotlight/{id}:dismiss` | ทุกบทบาทยกเว้น Guest | Spotlight ที่ยังไม่เห็นไม่เกิน 1 รายการ · ไม่แสดงวันแรกที่สมัคร (A42) |
 | GET · POST | `me/nps-prompt?workspace&mobile&sessionSeconds` · `me/nps` · `me/nps:dismiss` | ตาม `nps_settings` (เริ่มต้น Owner / Admin) | ตัดสินว่าจะถาม (ใช้ครบ N วัน, ซ้ำทุก N วัน, สุ่ม % แบบคงที่ต่อคนต่อรอบ, ไม่ถามช่วงทดลอง / มี Ticket / วันที่เห็น Spotlight / มือถือใช้ไม่ถึง 2 นาที · ≤ 1 ครั้งต่อวัน) · ตอบหรือปิดได้เฉพาะเมื่อถูกถาม (409 `nps_not_prompted`) (A42) |
+| GET | `w/onboarding` | สมาชิก (ไม่ใช่ Guest) | Onboarding checklist (A43 · V1–V4) · Owner / Admin ได้ 6 ขั้นของ Workspace · Member ได้ 3 ขั้นส่วนตัว · คืนขั้น สถานะ ตัวเลขประกอบ ขั้นถัดไป ลิงก์ปุ่ม และสถานะซ่อน · `eligible: false` = Workspace / สมาชิกก่อนเปิดฟีเจอร์ที่ใช้จริงแล้ว · ขั้นตรวจจากข้อมูลจริงและบันทึกครั้งแรกไม่ย้อนกลับ (ขั้นแก้ในโค้ด `apps/api/src/onboarding/steps.ts`) |
+| POST | `w/onboarding:hide` · `:show` · `:never` · `:complete-seen` | สมาชิก (ไม่ใช่ Guest) | ต่อคน · `:show` ล้างทั้งซ่อนและไม่ต้องแสดงอีก · `:complete-seen` = เห็นการ์ดครบแล้ว (V4 แสดงครั้งเดียว) |
+| POST | `w/onboarding:task-opened` | สมาชิก (ไม่ใช่ Guest) | ปุ่ม "เปิดงาน" ในรายการของสมาชิก (V3) · `{ issueKey }` ต้องเป็นงานที่ได้รับมอบหมาย ไม่งั้น 404 |
 | GET | `w/notification-templates/{event}:preview` | Admin | N2 |
 | GET | `w/search` | สมาชิก | ค้นชื่อ, รายละเอียด, คอมเมนต์, ข้อความในไฟล์ · กรองตามสิทธิ์ก่อนตอบ · `#DP-39` และ `@ชื่อ` |
 | CRUD | `w/saved-searches` | self | |
@@ -601,5 +604,6 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | `member.invited` · `member.joined` | | ผู้เชิญ, PM |
 | `import.completed` | นำเข้าเสร็จ | ผู้นำเข้า |
 | `report.weekly` | ตามรอบที่ตั้ง | ตาม `report_schedule` |
+| `onboarding.step_done` · `onboarding.completed` | ขั้นใน Onboarding checklist เสร็จครั้งแรก · ครบทุกขั้น (A43 · data.scope = workspace / member) | — (บันทึก `product_events` ในธุรกรรมเดียวกัน) |
 
 ผู้ที่ทำ action เองไม่ได้รับแจ้ง · ทุกข้อความที่ส่งออกนอกแอปเขียน `notification_delivery` · Safe mode ส่งแค่หัวข้อ + ลิงก์

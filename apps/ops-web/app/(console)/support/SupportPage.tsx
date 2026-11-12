@@ -511,6 +511,10 @@ function SolveDialog({ id, number, onClose }: { id: string; number: number; onCl
   const [outcome, setOutcome] = useState("");
   const [cause, setCause] = useState("");
   const [csat, setCsat] = useState(true);
+  // O35 · X8: ติ๊กแล้วเปิดหน้าศูนย์ช่วยเหลือพร้อม Modal สร้างบทความจากเรื่องนี้หลังปิดเรื่องสำเร็จ
+  const th = useTranslations("help.solve");
+  const router = useRouter();
+  const [kb, setKb] = useState(false);
   const m = useMutation({
     mutationFn: () =>
       api.post(`/tickets/${id}/solve`, {
@@ -518,7 +522,7 @@ function SolveDialog({ id, number, onClose }: { id: string; number: number; onCl
         cause: cause.trim(),
         sendCsat: csat,
       }),
-    onSuccess: () => (toast(t("done")), invalidate(cache), onClose()),
+    onSuccess: () => (toast(t("done")), invalidate(cache), onClose(), kb && router.push(`/help?fromTicket=${id}`)),
   });
   const ok = outcome.trim().length >= 3 && cause.trim().length >= 3;
   return (
@@ -529,6 +533,10 @@ function SolveDialog({ id, number, onClose }: { id: string; number: number; onCl
         <label className="check">
           <input type="checkbox" checked={csat} onChange={(e) => setCsat(e.target.checked)} />
           <span>{t("csat")}</span>
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={kb} onChange={(e) => setKb(e.target.checked)} />
+          <span>{th("kb")}</span>
         </label>
         <p className="muted small">{t("reopen")}</p>
         <InlineError error={m.error} />

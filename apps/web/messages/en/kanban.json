@@ -60,6 +60,8 @@
   "dueSoon": "{days, plural, one {in {days} day} other {in {days} days}}",
   "noDue": "No due date",
   "dueDate": "Due {date}",
+  "qaDueDate": "QA due {date}",
+  "qaDuePrefix": "QA · {text}",
   "completed": "Done",
   "cancelled": "Cancelled",
   "confirmTitle": "Sub-tasks not done",

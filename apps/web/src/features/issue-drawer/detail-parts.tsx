@@ -29,7 +29,8 @@ export function SubtaskRow({ scope, child, canEdit, onChanged, pillTone }: {
   const done = child.status.category === 'done';
   const who = scope.people.find((person) => child.assigneeIds?.includes(person.id));
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
-  const late = !done && !!child.planEnd && child.planEnd < today;
+  const due = child.dueDate !== undefined ? child.dueDate : child.planEnd;
+  const late = !done && !!due && due < today;
   // ติ๊กเสร็จ = ย้ายไปสถานะกลุ่ม done ตัวแรกของ Workflow (ยกเลิก = กลุ่ม todo ตัวแรก)
   async function toggle(next: boolean) {
     const type = scope.project?.issueTypes?.find((item) => item.name === child.type);

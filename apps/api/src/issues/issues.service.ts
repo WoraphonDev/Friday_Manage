@@ -8,6 +8,7 @@ import { today } from '../common/dates.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { planEndFor, WorkCalendar } from '../projects/calendar.js';
+import { dueOf, loadDueRule, qaDueOf } from '../projects/due-stage.js';
 import { canMoveIssue, type ProjectAccess, requireMovable, requirePerm, usersWithPerm } from '../projects/permissions.js';
 import { loadPeople } from '../common/people.js';
 import { type DomainEvent, EventBus, type EventType } from '../core/events.js';
@@ -56,6 +57,8 @@ export const CreateIssueBody = z.object({
   estimateMd: manDay.optional(),
   planStart: isoDate.optional(),
   planEnd: isoDate.optional(),
+  /** วันที่ QA ต้องทดสอบเสร็จ (โปรเจกต์แยก Dev / QA) · ไม่ส่ง = Plan End + qa_buffer_days วันทำการ */
+  qaEnd: isoDate.optional(),
   severity: z.enum(['critical', 'major', 'minor']).optional(),
   environment: z.enum(['local', 'sit', 'uat', 'production']).optional(),
   details: z.record(z.string(), z.unknown()).default({}),
@@ -93,6 +96,8 @@ export const PatchIssueBody = z
     estimateMd: manDay.nullable(),
     planStart: isoDate.nullable(),
     planEnd: isoDate.nullable(),
+    /** QA Due (โปรเจกต์แยก Dev / QA) · null = กลับไปใช้ Plan End + qa_buffer_days วันทำการ */
+    qaEnd: isoDate.nullable(),
     /** ตั้งอัตโนมัติเมื่อเริ่มทำ แต่แก้เองได้ (เริ่มก่อนกดสถานะ) · Actual End ตั้งจากสถานะ Done เท่านั้น */
     actualStart: isoDate.nullable(),
     progressPct: z.number().int().min(0).max(100).nullable(),
@@ -227,6 +232,7 @@ export class IssuesService {
       let planEnd = input.planEnd;
       if (!planEnd && planStart && estimateMd) planEnd = planEndFor(cal, planStart, estimateMd);
       if (planStart && planEnd && planEnd < planStart) throw new AppError(400, 'invalid_dates', 'Plan End ต้องไม่ก่อน Plan Start');
+      if (input.qaEnd && planEnd && input.qaEnd < planEnd) throw new AppError(400, 'invalid_qa_end', 'QA Due ต้องไม่ก่อนวันที่ Dev ส่งงาน (Plan End)');
       const number = await this.nextNumber(tx, project.id);
       if (parent) warnings.push(...await this.fitParent(tx, auth, tenant, project, access, parent, planStart, planEnd, `${project.key}-${number}`, input.extendParent ?? false, events));
       const rank = await this.rankAtEnd(tx, project.id);
@@ -256,6 +262,7 @@ export class IssuesService {
           estimateMd,
           planStart,
           planEnd,
+          qaEnd: input.qaEnd,
           severity: input.severity,
           environment: input.environment,
           details: input.details,
@@ -641,6 +648,11 @@ export class IssuesService {
       const before = { planStart: issue.planStart, planEnd: issue.planEnd, estimateMd: issue.estimateMd };
       const after = { planStart, planEnd, estimateMd };
       Object.assign(set, after);
+      // ตรวจเฉพาะตอนแก้ QA Due เอง · เลื่อน Plan End ทีหลังไม่ติด (QA Due ที่ใช้จริงไม่ก่อน Plan End อยู่แล้ว)
+      if (input.qaEnd !== undefined) {
+        if (input.qaEnd && planEnd && input.qaEnd < planEnd) throw new AppError(400, 'invalid_qa_end', 'QA Due ต้องไม่ก่อนวันที่ Dev ส่งงาน (Plan End)');
+        set.qaEnd = input.qaEnd;
+      }
       const planChanged = PLAN_FIELDS.filter((f) => before[f] !== after[f]);
       const assigneesChanged = input.assigneeIds !== undefined && !sameSet(oldAssignees, input.assigneeIds);
 
@@ -1156,6 +1168,8 @@ export class IssuesService {
       : await tx.select({ issueId: s.issueAssignees.issueId, userId: s.issueAssignees.userId }).from(s.issueAssignees).where(inArray(s.issueAssignees.issueId, ids)).orderBy(asc(s.issueAssignees.sort));
     const refs = await this.readRefs(tx, ids);
     const custom = access.guestViewer ? new Map<string, CustomValues>() : await readCustomValues(tx, ids);
+    // โปรเจกต์แยก Dev / QA: ส่ง QA Due ที่คิดแล้ว และวันที่ใช้ตัดสินเลยกำหนด (projects/due-stage.ts)
+    const dueRule = await loadDueRule(tx, project);
 
     return issues.map((i, index) => {
       const m = byId.get(i.id)!;
@@ -1179,6 +1193,8 @@ export class IssuesService {
         progressPct: i.progressPct,
         planStart: i.planStart,
         planEnd: i.planEnd,
+        qaEnd: i.qaEnd,
+        ...(dueRule.split ? { qaDue: qaDueOf(dueRule, i), dueDate: dueOf(dueRule, i, m.statusCategory).date, dueStage: dueOf(dueRule, i, m.statusCategory).stage } : {}),
         actualStart: i.actualStart,
         actualEnd: i.actualEnd,
         reopenCount: i.reopenCount,
@@ -1293,7 +1309,7 @@ export function outsideParent(parent: Issue, start?: string | null, end?: string
 /** ข้อมูลอ้างอิงที่อยู่ตารางเชื่อม แก้ผ่าน PATCH แบบแทนทั้งชุด */
 const REF_FIELDS = ['requirements', 'screens', 'labelIds'] as const;
 
-const DIFF_FIELDS = ['title', 'description', 'remark', 'statusId', 'priority', 'moduleId', 'phaseId', 'sprintId', 'baId', 'saId', 'reviewerId', 'testerId', 'size', 'estimateMd', 'planStart', 'planEnd', 'actualStart', 'progressPct', 'severity', 'environment', 'sharedWithGuests'] as const;
+const DIFF_FIELDS = ['title', 'description', 'remark', 'statusId', 'priority', 'moduleId', 'phaseId', 'sprintId', 'baId', 'saId', 'reviewerId', 'testerId', 'size', 'estimateMd', 'planStart', 'planEnd', 'qaEnd', 'actualStart', 'progressPct', 'severity', 'environment', 'sharedWithGuests'] as const;
 
 function diff(a: Issue, b: Issue) {
   return DIFF_FIELDS.filter((f) => a[f] !== b[f]).map((f) => ({ field: f as string, oldValue: a[f] as unknown, newValue: b[f] as unknown }));

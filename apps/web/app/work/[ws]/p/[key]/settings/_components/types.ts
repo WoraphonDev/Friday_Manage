@@ -34,6 +34,8 @@ export interface ProjectDetail {
   progressMethod: "count" | "weighted";
   /** แยกความคืบหน้า Dev / QA (Template Development + QA) */
   progressSplit: boolean;
+  /** QA Due ที่ไม่ได้กรอก = วันจบของ Dev + จำนวนวันทำการนี้ */
+  qaBufferDays: number;
   sizeMdMap: Record<Size, number> | null;
   holidayCalendarId: string | null;
   workStart: string | null;

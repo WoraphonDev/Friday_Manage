@@ -151,6 +151,8 @@ export const PatchProjectBody = z
     estimateUnit: z.enum(['man_day', 'hour']),
     progressMethod: z.enum(['count', 'weighted']),
     progressSplit: z.boolean(),
+    /** QA Due ที่ไม่ได้กรอก = Plan End + จำนวนวันทำการนี้ (ใช้เมื่อแยก Dev / QA) */
+    qaBufferDays: z.number().int().min(0).max(30),
     /** null = กลับไปใช้ค่าของ Workspace */
     sizeMdMap: SizeMdMap.nullable(),
     holidayCalendarId: z.uuid().nullable(),
@@ -799,6 +801,7 @@ export class ProjectsService {
       estimateUnit: p.estimateUnit,
       progressMethod: p.progressMethod,
       progressSplit: p.progressSplit,
+      qaBufferDays: p.qaBufferDays,
       sizeMdMap: p.sizeMdMap as z.infer<typeof SizeMdMap> | null,
       holidayCalendarId: p.holidayCalendarId,
       workStart: p.workStart?.slice(0, 5) ?? null,

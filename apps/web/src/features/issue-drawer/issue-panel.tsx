@@ -271,6 +271,14 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
             <span className="muted">{t('end')}</span>
             <span>{canEdit ? <DatePicker compact label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (disabled) return; if (value && issue.planEnd && value > issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly')) setDue(value); else void patch({ planEnd: value || null }); }} /> : formatDate(issue.planEnd, scope.yearFormat)}</span>
             {show('actual') && <span>{issue.actualEnd ? formatDate(issue.actualEnd, scope.yearFormat) : '—'}</span>}
+            {/* โปรเจกต์แยก Dev / QA: Plan End = วันที่ Dev ส่ง QA · QA Due = วันที่ QA ต้องทดสอบเสร็จ (ไม่กรอก = อัตโนมัติ) */}
+            {issue.qaDue !== undefined && <>
+              <span className="muted">{t('qaDue')}</span>
+              <span className={styles.qaDueCell}>
+                {canEdit ? <DatePicker compact label={t('qaDue')} value={issue.qaEnd ?? undefined} min={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (!disabled) void patch({ qaEnd: value || null }); }} /> : formatDate(issue.qaEnd ?? issue.qaDue, scope.yearFormat)}
+                {!issue.qaEnd && issue.qaDue && <small className="muted" title={t('qaDueAutoHint')}>{t('qaDueAuto', { date: formatDate(issue.qaDue, scope.yearFormat) })}</small>}
+              </span>
+            </>}
             {canEdit && issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly') && !pending && <><span /><span className={styles.dueCell}><Button size="small" variant="ghost" className={styles.dueLink} disabled={disabled} onClick={() => setDue('')}>{t('requestDue')}</Button></span></>}
           </div>
           {show('progress') && <PropRow keep k="Progress"><div className={styles.progRow}><span className={styles.subBar} style={{ maxWidth: 'none' }}><span style={{ width: `${issue.progressPct ?? 0}%` }} /></span>{/* Task ที่มี Sub-task: API คำนวณให้และไม่รับค่าที่กรอก จึงแสดงอย่างเดียว */}{issue.progressFromSubtasks || subtasks.length ? <span title={t('subtaskProgressNote')}>{issue.progressPct ?? 0}% <span className={styles.meta}>{t('progressAuto')}</span></span> : <InlineText label={t('fields.progressPct')} type="number" min={0} max={100} value={issue.progressPct?.toString() ?? ''} enabled={canEdit} busy={disabled} onSave={(value) => patch({ progressPct: value ? Number(value) : null })} />}</div></PropRow>}</>}

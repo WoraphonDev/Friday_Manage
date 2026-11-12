@@ -9,6 +9,7 @@ import { loadPeople, type Person } from '../common/people.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
+import { dueOf, loadDueRule, qaDueOf } from '../projects/due-stage.js';
 import { requirePerm } from '../projects/permissions.js';
 import { ProjectsService, type ProjectRow } from '../projects/projects.service.js';
 import { HEALTH_THRESHOLDS, projectHealth } from './health.js';
@@ -168,7 +169,11 @@ export class OverviewService {
         : null;
 
       const completedOn = (i: Issue) => (i.completedAt ? localDate(i.completedAt) : null);
-      const overdue = (i: Issue) => !isDone(i) && !!i.planEnd && i.planEnd < now;
+      // แยก Dev / QA: งานที่รอ QA ตัดสินด้วย QA Due (projects/due-stage.ts) · โปรเจกต์อื่น = Plan End เหมือนเดิม
+      const dueRule = await loadDueRule(tx, project, cal);
+      const dueOfIssue = (i: Issue) => dueOf(dueRule, i, statusOf.get(i.statusId)!.category);
+      const dueDate = (i: Issue) => dueOfIssue(i).date;
+      const overdue = (i: Issue) => { const d = dueDate(i); return !isDone(i) && !!d && d < now; };
       const week = weekOf(now);
       const weekAgo = addDays(now, -7);
 
@@ -218,12 +223,13 @@ export class OverviewService {
 
       // --- KPI + รายการตาม KPI ---
       const doneIn = (from: string, to: string) => issues.filter((i) => isDone(i) && completedOn(i) !== null && completedOn(i)! >= from && completedOn(i)! <= to);
-      const dueToday = issues.filter((i) => !isDone(i) && i.planEnd === now);
-      const laterThisWeek = issues.filter((i) => !isDone(i) && !!i.planEnd && i.planEnd > now && i.planEnd <= week.end);
+      const dueToday = issues.filter((i) => !isDone(i) && dueDate(i) === now);
+      const laterThisWeek = issues.filter((i) => { const d = dueDate(i); return !isDone(i) && !!d && d > now && d <= week.end; });
       const doneLast7 = doneIn(addDays(now, -6), now);
       const donePrev7 = doneIn(addDays(now, -13), addDays(now, -7));
       // Overdue เมื่อสัปดาห์ก่อน: ครบกำหนดก่อนวันนั้นและยังไม่เสร็จ ณ วันนั้น
-      const overdueWeekAgo = issues.filter((i) => i.planEnd && i.planEnd < weekAgo && (!isDone(i) || (completedOn(i) ?? '') > weekAgo)).length;
+      // แยก Dev / QA ใช้ขั้นของงานวันนี้แทนขั้นเมื่อสัปดาห์ก่อน (ไม่ได้เก็บประวัติขั้นไว้)
+      const overdueWeekAgo = issues.filter((i) => { const d = dueDate(i); return d && d < weekAgo && (!isDone(i) || (completedOn(i) ?? '') > weekAgo); }).length;
       const kpis = {
         total: issues.length,
         done: issues.filter(isDone).length,
@@ -253,12 +259,13 @@ export class OverviewService {
           phase: phase ? { id: phase.id, name: phase.name } : null,
           parentKey: i.parentId ? (keyOf.get(i.parentId) ?? null) : null,
           planEnd: i.planEnd,
-          lateDays: overdue(i) ? daysBetween(i.planEnd!, now) : 0,
+          ...(dueRule.split ? { qaDue: qaDueOf(dueRule, i), dueStage: dueOfIssue(i).stage } : {}),
+          lateDays: overdue(i) ? daysBetween(dueDate(i)!, now) : 0,
           completedOn: completedOn(i),
           ...(guest ? { canOpen: i.sharedWithGuests } : { assignees: (assignees.get(i.id) ?? []).map((id) => people.get(id)).filter((p): p is Person => !!p) }),
         };
       };
-      const byDue = (a: Issue, b: Issue) => (a.planEnd! < b.planEnd! ? -1 : a.planEnd! > b.planEnd! ? 1 : a.number - b.number);
+      const byDue = (a: Issue, b: Issue) => (dueDate(a)! < dueDate(b)! ? -1 : dueDate(a)! > dueDate(b)! ? 1 : a.number - b.number);
       const lists = {
         overdue: [...overdueIssues].sort(byDue).slice(0, LIST_LIMIT).map(item),
         dueToday: [...dueToday].sort(byDue).slice(0, LIST_LIMIT).map(item),

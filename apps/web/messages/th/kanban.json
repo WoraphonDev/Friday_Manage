@@ -60,6 +60,8 @@
   "dueSoon": "อีก {days} วัน",
   "noDue": "ยังไม่ระบุวันครบกำหนด",
   "dueDate": "ครบกำหนด {date}",
+  "qaDueDate": "QA ต้องทดสอบเสร็จ {date}",
+  "qaDuePrefix": "QA · {text}",
   "completed": "เสร็จแล้ว",
   "cancelled": "ยกเลิกแล้ว",
   "confirmTitle": "Sub-task ยังไม่เสร็จ",

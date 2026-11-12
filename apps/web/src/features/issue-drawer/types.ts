@@ -18,6 +18,8 @@ export interface Issue {
   assigneeIds?: string[]; baId?: string | null; saId?: string | null; reviewerId?: string | null; testerId?: string | null; reporterId?: string;
   size: string | null; estimateMd: number | null; progressPct: number | null;
   planStart: string | null; planEnd: string | null; actualStart: string | null; actualEnd: string | null;
+  /** โปรเจกต์แยก Dev / QA: QA Due ที่กรอก (null = อัตโนมัติ) · qaDue / dueDate / dueStage ส่งมาเฉพาะโปรเจกต์ที่แยก */
+  qaEnd?: string | null; qaDue?: string | null; dueDate?: string | null; dueStage?: 'dev' | 'qa' | null;
   severity: string | null; environment: string | null; details: Record<string, unknown>; reopenCount: number;
   sharedWithGuests: boolean; version: number; createdAt: string; updatedAt: string;
   requirements?: string[]; screens?: string[]; labels?: Named[];

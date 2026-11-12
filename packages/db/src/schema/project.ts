@@ -80,6 +80,8 @@ export const projects = pgTable(
      * Dev = งานหมวด review / done นับ 100% · QA = งานหมวด done นับ 100% · สูตรรวมเหมือน progressMethod
      */
     progressSplit: boolean().notNull().default(false),
+    /** QA Due ของงานที่ไม่ได้กรอก = Plan End + จำนวนวันทำการนี้ · ใช้เมื่อ progressSplit เปิด (ผู้ใช้ขอ 2026-11-13) */
+    qaBufferDays: smallint().notNull().default(2),
     /** null = ไม่ใช้ Sprint */
     sprintLengthWeeks: smallint(),
     holidayCalendarId: uuid().references(() => holidayCalendars.id),
@@ -112,6 +114,7 @@ export const projects = pgTable(
     index('projects_trash_idx').on(t.workspaceId, t.deletedAt).where(sql`${t.deletedAt} IS NOT NULL`),
     check('projects_key_format', sql`${t.key} ~ '^[A-Z][A-Z0-9]{1,9}$'`),
     check('projects_dates', sql`${t.goliveDate} >= ${t.startDate}`),
+    check('projects_qa_buffer_days', sql`${t.qaBufferDays} between 0 and 30`),
   ],
 );
 

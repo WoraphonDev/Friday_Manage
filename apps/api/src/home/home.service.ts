@@ -55,31 +55,34 @@ export class HomeService {
       const sc = await loadScope(tx, auth, tenant);
       const open = sc.issues.filter((i) => !sc.isDone(i));
       // สถิติ "ทีม" นับเฉพาะโปรเจกต์ที่ฉันเป็นสมาชิก · "ของฉัน" นับทุกโปรเจกต์ที่เข้าถึงได้
-      const team = open.filter((i) => sc.mine.has(i.projectId) && i.planEnd);
+      const team = open.filter((i) => sc.mine.has(i.projectId) && sc.due(i).date);
       // "ของฉัน" นับทุกบทบาทในงาน (Dev, BA, SA, QA / Reviewer) ให้ตรงกับแท็บ "มอบหมายให้ฉัน"
       const myOpen = open.filter((i) => sc.rolesOf(i, auth.userId).length > 0);
       const weekLast = lastWorkday(week.end);
       const count = (list: Issue[], pred: (i: Issue) => boolean) => list.filter(pred).length;
-      const late = (i: Issue) => i.planEnd! < now;
-      const dueToday = (i: Issue) => i.planEnd === now;
-      const thisWeek = (i: Issue) => i.planEnd! >= now && i.planEnd! <= week.end;
+      // วันครบกำหนดตามขั้นของงาน: งานที่ส่ง QA แล้วในโปรเจกต์แยก Dev / QA ใช้ QA Due
+      const dueDate = (i: Issue) => sc.due(i).date;
+      const late = (i: Issue) => dueDate(i)! < now;
+      const dueToday = (i: Issue) => dueDate(i) === now;
+      const thisWeek = (i: Issue) => dueDate(i)! >= now && dueDate(i)! <= week.end;
 
+      // งานเลยกำหนดขั้น QA นับให้ QA / Reviewer ไม่ใช่ Dev
       const byAssignee = new Map<string, number>();
-      for (const i of team.filter(late)) for (const u of sc.assignees.get(i.id) ?? ['_none']) byAssignee.set(u, (byAssignee.get(u) ?? 0) + 1);
+      for (const i of team.filter(late)) for (const u of sc.lateOwners(i).length ? sc.lateOwners(i) : ['_none']) byAssignee.set(u, (byAssignee.get(u) ?? 0) + 1);
 
       const reviews = open.filter((i) => i.reviewerId === auth.userId && (sc.statuses.get(i.statusId)!.category === 'review' || isReviewName(sc.statuses.get(i.statusId)!.name)));
       const mentions = await this.mentions(tx, auth, tenant);
       const people = await loadPeople(tx, guest ? [] : [...byAssignee.keys()].filter((u) => u !== '_none'));
 
       const summary = {
-        dueToday: { team: count(team, dueToday), mine: count(myOpen, (i) => !!i.planEnd && dueToday(i)), keys: team.filter(dueToday).slice(0, 5).map(sc.keyOf) },
+        dueToday: { team: count(team, dueToday), mine: count(myOpen, (i) => !!dueDate(i) && dueToday(i)), keys: team.filter(dueToday).slice(0, 5).map(sc.keyOf) },
         overdue: {
           team: count(team, late),
-          mine: count(myOpen, (i) => !!i.planEnd && late(i)),
+          mine: count(myOpen, (i) => !!dueDate(i) && late(i)),
           // Guest ไม่เห็นชื่อคนในองค์กร
           byAssignee: guest ? [] : [...byAssignee].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([u, n]) => ({ person: people.get(u) ?? null, count: n })),
         },
-        dueThisWeek: { team: count(team, thisWeek), mine: count(myOpen, (i) => !!i.planEnd && thisWeek(i)), until: weekLast },
+        dueThisWeek: { team: count(team, thisWeek), mine: count(myOpen, (i) => !!dueDate(i) && thisWeek(i)), until: weekLast },
         inProgress: { mine: count(myOpen, (i) => sc.statuses.get(i.statusId)!.category === 'in_progress') },
         waitingReview: reviews.length,
         unreadMentions: mentions,
@@ -176,7 +179,7 @@ export class HomeService {
           goliveDate: p.goliveDate,
           daysToGolive: p.goliveDate ? daysBetween(now, p.goliveDate) : null,
           progressPct: total ? Math.round((finished / total) * 100) : 0,
-          overdue: open.filter((i) => i.planEnd && i.planEnd < now).length,
+          overdue: open.filter((i) => { const d = sc.due(i).date; return d && d < now; }).length,
           myTasks: open.filter((i) => sc.rolesOf(i, auth.userId).length > 0).length,
           health: { level: health.level, gapPct: health.gapPct },
         };
@@ -280,7 +283,9 @@ export class HomeService {
           priority: i.priority,
           planStart: i.planStart,
           planEnd: i.planEnd,
-          due: sc.isDone(i) ? { state: 'done' as const, days: null } : dueState(i.planEnd, now),
+          // ฟิลด์ของการแยก Dev / QA ส่งเฉพาะโปรเจกต์ที่แยก · โปรเจกต์อื่นได้รูปแบบเดิม
+          ...(sc.due(i).stage ? { qaDue: sc.qaDue(i) } : {}),
+          due: sc.isDone(i) ? { state: 'done' as const, days: null } : { ...dueState(sc.due(i).date, now), ...(sc.due(i).stage ? { stage: sc.due(i).stage } : {}) },
           estimateMd: i.estimateMd,
           parentKey: i.parentId ? (parentKey.get(i.parentId) ?? null) : null,
           subtasks: subCounts.get(i.id) ?? null,
@@ -289,7 +294,7 @@ export class HomeService {
           version: i.version,
         };
       };
-      const byDue = (a: Issue, b: Issue) => (a.planEnd ?? '9999').localeCompare(b.planEnd ?? '9999') || a.number - b.number;
+      const byDue = (a: Issue, b: Issue) => (sc.due(a).date ?? '9999').localeCompare(sc.due(b).date ?? '9999') || a.number - b.number;
 
       let groups: Array<{ key: string; label: string; range?: { from: string; to: string }; items: Issue[] }>;
       if (q.group === 'due') {
@@ -298,11 +303,12 @@ export class HomeService {
         const doneToday = (i: Issue) => sc.isDone(i) && !!i.completedAt && dateOf(i.completedAt) === now;
         const bucket = (i: Issue) => {
           if (sc.isDone(i)) return doneToday(i) ? 'done_today' : null;
-          if (!i.planEnd) return 'none';
-          if (i.planEnd < now) return 'late';
-          if (i.planEnd === now) return 'today';
-          if (i.planEnd <= wk.end) return 'this_week';
-          if (i.planEnd <= next.end) return 'next_week';
+          const d = sc.due(i).date;
+          if (!d) return 'none';
+          if (d < now) return 'late';
+          if (d === now) return 'today';
+          if (d <= wk.end) return 'this_week';
+          if (d <= next.end) return 'next_week';
           return 'later';
         };
         const defs = [

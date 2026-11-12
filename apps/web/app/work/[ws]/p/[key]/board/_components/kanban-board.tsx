@@ -234,11 +234,17 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   function inGroup(card: BoardCard, id: string) {
     return swimlane === "none" || (swimlane === "module" ? (card.module?.id ?? "none") === id : swimlane === "priority" ? card.priority === id : id === "none" ? !card.assignees.length : card.assignees.some((person) => person.id === id));
   }
-  const dueText = (card: BoardCard) => card.status.category === "done" ? t("completed") : card.status.category === "cancelled" ? t("cancelled")
-    : card.due?.state === "overdue" ? t("dueOverdue", { days: card.due.days })
+  // งานรอ QA ในโปรเจกต์แยก Dev / QA นับจาก QA Due และขึ้นต้นด้วย "QA"
+  const dueText = (card: BoardCard) => {
+    if (card.status.category === "done") return t("completed");
+    if (card.status.category === "cancelled") return t("cancelled");
+    const qa = card.due?.stage === "qa" || (card.qaDue !== undefined && card.status.category === "review");
+    const text = card.due?.state === "overdue" ? t("dueOverdue", { days: card.due.days })
       : card.due?.state === "today" ? t("dueToday")
         : card.due?.state === "soon" ? t("dueSoon", { days: card.due.days })
-          : card.planEnd ? formatDate(card.planEnd, yearFormat) : t("noDue");
+          : (qa ? card.qaDue : card.planEnd) ? formatDate((qa ? card.qaDue : card.planEnd)!, yearFormat) : t("noDue");
+    return qa ? t("qaDuePrefix", { text }) : text;
+  };
 
   function renderCard(card: BoardCard, column: BoardColumn, columnIndex: number, laneCards: BoardCard[], lane: string) {
     const visibleIndex = laneCards.findIndex((item) => item.key === card.key);
@@ -270,7 +276,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
       {card.parentKey && <Link className={styles.parent} href={href(card.parentKey)}>↳ {card.parentKey}</Link>}
       <Link className={styles.cardTitle} href={href(card.key)} draggable={false}>{card.title}</Link>
       <div className={styles.cardMeta}>
-        <span className={`${styles.due} ${card.due?.state === "overdue" ? styles.late : card.due?.state === "today" ? styles.today : ""}`} title={card.planEnd ? t("dueDate", { date: formatDate(card.planEnd, yearFormat, true) }) : undefined}>{dueText(card)}</span>
+        <span className={`${styles.due} ${card.due?.state === "overdue" ? styles.late : card.due?.state === "today" ? styles.today : ""}`} title={card.qaDue && card.status.category === "review" ? t("qaDueDate", { date: formatDate(card.qaDue, yearFormat, true) }) : card.planEnd ? t("dueDate", { date: formatDate(card.planEnd, yearFormat, true) }) : undefined}>{dueText(card)}</span>
         {card.subtasks && <span className={styles.meta} title={t("subtaskProgress", card.subtasks)}><ListChecks size={14} aria-hidden="true" />{card.subtasks.done}/{card.subtasks.total}</span>}
         {card.comments > 0 && <span className={styles.meta} title={t("comments", { count: card.comments })}><MessageCircle size={14} aria-hidden="true" />{card.comments}</span>}
         <span className={styles.avatars}><AvatarStack people={card.assignees} /></span>

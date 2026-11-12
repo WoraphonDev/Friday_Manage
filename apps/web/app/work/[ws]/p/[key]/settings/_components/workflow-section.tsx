@@ -154,6 +154,12 @@ export function WorkflowSection({ ws, projectKey, project }: { ws: string; proje
     await run(() => api.patch(base, { progressSplit: on }, project.version), t("saved"));
     await cache.invalidateQueries({ queryKey: ["overview", ws, projectKey] });
   }
+  async function saveQaBuffer(raw: string) {
+    const days = Number(raw);
+    if (!project || raw === "" || !Number.isInteger(days) || days < 0 || days > 30 || days === project.qaBufferDays) return;
+    await run(() => api.patch(base, { qaBufferDays: days }, project.version), t("saved"));
+    await cache.invalidateQueries({ queryKey: ["overview", ws, projectKey] });
+  }
   function openDevQa() {
     setDevQa(Object.fromEntries(wf.statuses.map((s) => [s.id, suggestDevQa(s)])));
     setDevQaSplit(true);
@@ -193,6 +199,15 @@ export function WorkflowSection({ ws, projectKey, project }: { ws: string; proje
             <div className={styles.devQaText}>
               <b>{t("devQa.split")}</b> <span className={styles.pill}>{project.progressSplit ? t("devQa.on") : t("devQa.off")}</span>
               <div className={styles.muted}>{t("devQa.splitHint")}</div>
+              {/* แยก Dev / QA: งานที่ส่ง QA แล้วตัดสินเลยกำหนดด้วย QA Due (ผู้ใช้ขอ 2026-11-13) */}
+              {project.progressSplit && (
+                <label className={styles.qaBuffer}>
+                  <span>{t("devQa.qaBuffer")}</span>
+                  <input key={project.qaBufferDays} className="input" type="number" min={0} max={30} step={1} defaultValue={project.qaBufferDays} aria-describedby="qa-buffer-hint" onBlur={(e) => void saveQaBuffer(e.currentTarget.value)} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+                  <span>{t("devQa.qaBufferUnit")}</span>
+                  <small id="qa-buffer-hint" className={styles.muted}>{t("devQa.qaBufferHint")}</small>
+                </label>
+              )}
             </div>
           </div>
         )}

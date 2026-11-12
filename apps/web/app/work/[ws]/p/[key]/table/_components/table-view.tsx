@@ -823,7 +823,8 @@ function MobileList({ display, collapsed, onToggle, ws, projectKey, year, canCre
         if (d.kind !== "issue") return null;
         const r = d.row;
         const done = isClosedCategory(r.status.category);
-        const late = !done && !!r.planEnd && r.planEnd < today;
+        const due = r.dueDate !== undefined ? r.dueDate : r.planEnd;
+        const late = !done && !!due && due < today;
         return (
           <Link key={r.key} href={href(r.key)} scroll={false} className={`${styles.mItem} ${d.sub ? styles.mSub : ""}`}>
             <span className={styles.mItemTop}>
@@ -854,7 +855,9 @@ function IssueRow({ index, row, statusColor, sub, cols, profile, customFields, w
   const statusOptions = statuses.some((s) => s.id === row.status.id) ? statuses : [{ id: row.status.id, name: row.status.name }, ...statuses];
   const done = isClosedCategory(row.status.category);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
-  const dueCls = !done && row.planEnd ? (row.planEnd < today ? styles.dueLate : row.planEnd === today ? styles.dueToday : "") : "";
+  // โปรเจกต์แยก Dev / QA: งานที่ส่ง QA แล้วตัดสินเลยกำหนดด้วย QA Due ไม่ใช่วันจบของ Dev
+  const due = row.dueDate !== undefined ? row.dueDate : row.planEnd;
+  const dueCls = !done && due ? (due < today ? styles.dueLate : due === today ? styles.dueToday : "") : "";
   const actualLate = !!(row.actualEnd && row.planEnd && row.actualEnd > row.planEnd);
   // นับเป็นวันปฏิทินจากวันที่ในแผน (YYYY-MM-DD) เพื่อบอกว่าเสร็จช้ากว่าแผนเท่าไร
   const lateBy = actualLate ? Math.round((Date.parse(row.actualEnd!) - Date.parse(row.planEnd!)) / 86400000) : 0;

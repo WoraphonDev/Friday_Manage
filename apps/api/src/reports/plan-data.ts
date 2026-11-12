@@ -2,6 +2,7 @@
 import { schema as s, type Tx } from '@friday/db';
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { WorkCalendar } from '../projects/calendar.js';
+import { dueOf, loadDueRule } from '../projects/due-stage.js';
 import type { StatusCategory } from '../common/status-category.js';
 
 export type IssueRow = typeof s.issues.$inferSelect;
@@ -16,6 +17,10 @@ export interface Item {
   estimateMd: number;
   planStart: string | null;
   planEnd: string | null;
+  /** วันที่ใช้ตัดสินเลยกำหนด: Plan End · โปรเจกต์แยก Dev / QA และงานรอ QA = QA Due (projects/due-stage.ts) */
+  dueDate: string | null;
+  /** คนที่รับผิดชอบเมื่องานเลยกำหนด: ขั้น QA = QA / Reviewer · ที่เหลือ = Assignee */
+  lateOwners: string[];
   category: StatusCategory;
   statusName: string;
   progressPct: number;
@@ -35,7 +40,7 @@ export interface PlanData {
   cal: WorkCalendar;
 }
 
-type Project = { id: string; key: string; workspaceId: string; holidayCalendarId: string | null };
+type Project = { id: string; key: string; workspaceId: string; holidayCalendarId: string | null; progressSplit: boolean; qaBufferDays: number };
 
 export async function loadPlan(tx: Tx, project: Project): Promise<PlanData> {
   const rows = await tx
@@ -51,7 +56,11 @@ export async function loadPlan(tx: Tx, project: Project): Promise<PlanData> {
     : [];
   const by = new Map<string, string[]>();
   for (const a of assignees) by.set(a.issueId, [...(by.get(a.issueId) ?? []), a.userId]);
-  const items: Item[] = rows.map(({ i, category, statusName, type }) => ({
+  const cal = await WorkCalendar.load(tx, project);
+  const dueRule = await loadDueRule(tx, project, cal);
+  const items: Item[] = rows.map(({ i, category, statusName, type }) => {
+    const due = dueOf(dueRule, i, category);
+    return {
     id: i.id,
     key: `${project.key}-${i.number}`,
     title: i.title,
@@ -61,6 +70,8 @@ export async function loadPlan(tx: Tx, project: Project): Promise<PlanData> {
     estimateMd: i.estimateMd ?? 0,
     planStart: i.planStart,
     planEnd: i.planEnd,
+    dueDate: due.date,
+    lateOwners: due.stage === 'qa' && i.reviewerId ? [i.reviewerId] : (by.get(i.id) ?? []),
     category: category as Item['category'],
     statusName,
     progressPct: category === 'done' ? 100 : (i.progressPct ?? 0),
@@ -68,7 +79,8 @@ export async function loadPlan(tx: Tx, project: Project): Promise<PlanData> {
     reviewerId: i.reviewerId,
     completedAt: i.completedAt,
     createdAt: i.createdAt,
-  }));
+    };
+  });
   // Task ที่มี Sub-task เป็นตัวสรุป (Estimate = ผลรวม Sub-task) · Bug ใต้ Task ไม่ทำให้ Task หยุดเป็นระดับล่างสุด
   const bugIds = new Set(items.filter((i) => i.isBug).map((i) => i.id));
   const parents = new Set(rows.filter((r) => r.i.parentId && !bugIds.has(r.i.id)).map((r) => r.i.parentId!));
@@ -77,7 +89,7 @@ export async function loadPlan(tx: Tx, project: Project): Promise<PlanData> {
   const modules = await tx.select({ id: s.modules.id, name: s.modules.name }).from(s.modules).where(eq(s.modules.projectId, project.id)).orderBy(asc(s.modules.sort), asc(s.modules.name));
   const milestones = await tx.select({ name: s.milestones.name, date: s.milestones.date, moduleId: s.milestones.moduleId }).from(s.milestones).where(eq(s.milestones.projectId, project.id)).orderBy(asc(s.milestones.date));
   const deps = ids.length ? await tx.select({ pred: s.issueDependencies.predecessorId, succ: s.issueDependencies.successorId }).from(s.issueDependencies).where(inArray(s.issueDependencies.predecessorId, ids)) : [];
-  return { items, work, modules, milestones, deps, cal: await WorkCalendar.load(tx, project) };
+  return { items, work, modules, milestones, deps, cal };
 }
 
 export const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);

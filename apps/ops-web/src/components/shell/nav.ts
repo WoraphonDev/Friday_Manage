@@ -73,7 +73,7 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
       { key: "supportSettings", href: "/support/settings", built: true, roles: ["owner", "support"] },
       // ทุกบทบาทเปิดดูได้ (อ่านอย่างเดียว) · เขียน / เผยแพร่เฉพาะ Owner และ Support (O35)
       { key: "help", href: "/help", built: true, roles: ALL },
-      { key: "bugs", roles: ["owner", "support", "engineer"] },
+      { key: "bugs", href: "/bugs", built: true, roles: ["owner", "support", "engineer"] },
     ],
   },
   {

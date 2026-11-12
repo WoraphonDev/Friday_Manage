@@ -132,7 +132,7 @@ export function InboxPage({ ws }: { ws: string }) {
                     <span style={{ fontSize: 13 }}><b>{labels.actor(n)}</b> {labels.verb(n)}</span>
                     <span className={styles.ntTitle}>{n.eventType === DAILY_EVENT ? dailyTitle(n.payload) : `${n.issue?.key ?? (n.payload.issueKey as string | undefined) ?? ""} ${n.issue?.title ?? (n.payload.title as string | undefined) ?? ""}`}</span>
                     {typeof n.payload.message === "string" && <span className={styles.quote}>“{n.payload.message}”</span>}
-                    <span className={styles.meta}>{n.project?.name ?? n.project?.key ?? ""} · {formatDate(n.createdAt, me.yearFormat)} {timeOf(n.createdAt)}<Badge tone={TONE[n.category] ?? "neutral"}>{labels.type(n)}</Badge></span>
+                    <span className={styles.meta}>{[n.project?.name ?? n.project?.key, `${formatDate(n.createdAt, me.yearFormat)} ${timeOf(n.createdAt)}`].filter(Boolean).join(" · ")}<Badge tone={TONE[n.category] ?? "neutral"}>{labels.type(n)}</Badge></span>
                   </span>
                   {!n.readAt && <span className={styles.dot} role="img" aria-label={t("unread")} />}
                 </button>

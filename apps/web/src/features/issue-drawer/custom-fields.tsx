@@ -22,7 +22,7 @@ export function CustomFieldRows({ fields, level, values, people, editable, busy,
     const value = values[f.id] ?? null;
     const label = `${f.name}${customModeOf(f, level) === 'required' ? ' *' : ''}`;
     const text = customText(f, value, people, (iso) => formatDate(iso, yearFormat));
-    if (!editable) return <PropRow key={f.id} k={label}><span>{text || <span className="muted">—</span>}</span></PropRow>;
+    if (!editable) return <PropRow key={f.id} k={label}><span className={styles.multiline}>{text || <span className="muted">—</span>}</span></PropRow>;
     const choices = f.options?.choices ?? [];
     let control;
     switch (f.fieldType) {

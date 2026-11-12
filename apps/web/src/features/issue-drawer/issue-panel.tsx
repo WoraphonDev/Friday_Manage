@@ -34,6 +34,8 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const endpoint = issuePath(scope.ws, issue.key);
   const key = issueQuery(scope.ws, issue.key);
   const canEdit = !scope.access.guestViewer && scope.access.permissions.includes('issue.edit') && scope.project?.status !== 'archived';
+  // เปลี่ยนสถานะได้เฉพาะงานของตัวเอง (ผู้รับผิดชอบ / Reviewer / Tester) · Admin ได้ทุกงาน · API ตรวจซ้ำ
+  const canMove = canEdit && issue.canMove !== false;
   const canDelete = !scope.access.guestViewer && scope.access.permissions.includes('issue.delete');
   const guest = scope.access.guestViewer;
   const [busy, setBusy] = useState(false);
@@ -178,10 +180,10 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
     <div className={styles.headBlock}>
       <div className={styles.title}><InlineText label={t('fields.title')} value={issue.title} enabled={canEdit} busy={disabled} onSave={(title) => patch({ title })} /></div>
       <div className={styles.statusRow}>
-        <select className={`${styles.statusPill} ${pillTone(issue.status.category, issue.status.name)}`} style={statusColorStyle(statusColors.get(issue.status.id))} aria-label={t('fields.statusId')} value={issue.status.id} disabled={!canEdit || disabled} onChange={(event) => void move(event.target.value)}>
+        <select className={`${styles.statusPill} ${pillTone(issue.status.category, issue.status.name)}`} style={statusColorStyle(statusColors.get(issue.status.id))} aria-label={t('fields.statusId')} value={issue.status.id} disabled={!canMove || disabled} title={canEdit && !canMove ? t('viewOnlyStatus') : undefined} onChange={(event) => void move(event.target.value)}>
           {(statuses.length ? statuses : [issue.status]).map((status) => <option key={status.id} value={status.id}>{status.name}</option>)}
         </select>
-        {canEdit && !isDone && doneStatus && issue.type !== 'Bug' && <Button size="small" className={styles.okButton} disabled={disabled} onClick={() => void move(doneStatus.id)}><Check size={15} />{t(mobile ? 'mobileComplete' : 'markComplete')}</Button>}
+        {canMove && !isDone && doneStatus && issue.type !== 'Bug' && <Button size="small" className={styles.okButton} disabled={disabled} onClick={() => void move(doneStatus.id)}><Check size={15} />{t(mobile ? 'mobileComplete' : 'markComplete')}</Button>}
         {issue.type === 'Bug' && issue.status.category === 'done' && canEdit && <Button size="small" onClick={() => setReopenOpen(true)} disabled={disabled}><RotateCcw size={14} />{t('reopen')}</Button>}
         <span className={styles.meta}>{t('metaLine', { name: reporter?.displayName ?? t('system'), created: formatDate(issue.createdAt, scope.yearFormat), updated: formatDate(issue.updatedAt, scope.yearFormat, true) })}</span>
       </div>
@@ -211,7 +213,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
         {issue.remark ? <p className={styles.remark}>{issue.remark}</p> : !canEdit && <p className="muted">{t('noRemark')}</p>}
         {canEdit && <InlineText label={t(issue.remark ? 'editRemark' : 'addRemark')} displayValue={t(issue.remark ? 'editRemark' : 'addRemark')} value={issue.remark ?? ''} enabled busy={disabled} multiline onSave={(remark) => patch({ remark: remark.trim() ? remark : null })} />}
       </div>}
-      {awaitingRetest && canEdit && passStatus && <div className={styles.verify} role="group" aria-label={t('verifyGroup')}>
+      {awaitingRetest && canMove && passStatus && <div className={styles.verify} role="group" aria-label={t('verifyGroup')}>
         <div><strong>{t('verifyTitle', { status: issue.status.name })}</strong><p>{t('verifyDescription', { name: scope.people.find((person) => person.id === (issue.reviewerId ?? issue.testerId))?.displayName ?? t('qaReviewer') })}</p></div>
         <Button size="small" className={styles.okButton} disabled={disabled} onClick={() => void move(passStatus.id)}>{t('verified', { status: passStatus.name })}</Button>
         {reworkStatus && <Button size="small" className={styles.failButton} disabled={disabled} onClick={() => void move(reworkStatus.id)}>{t('notPassed')}</Button>}
@@ -224,7 +226,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       {!issue.parentKey && !isBug && <div className={styles.blk}>
         <h3>{t('subtasks')} <span className="muted" style={{ fontWeight: 500 }}>{subDone}/{subtasks.length}</span><span className={styles.subBar}><span style={{ width: `${subtasks.length ? Math.round((subDone / subtasks.length) * 100) : 0}%` }} /></span><span className={styles.meta}>{t('subtaskProgressNote')}</span></h3>
         {subtasks.length === 0 && <p className="muted">{t('noSubtasks')}</p>}
-        {subtasks.map((child) => <SubtaskRow key={child.key} scope={scope} child={child} canEdit={canEdit} onChanged={refresh} pillTone={pillTone} />)}
+        {subtasks.map((child) => <SubtaskRow key={child.key} scope={scope} child={child} canEdit={canEdit && child.canMove !== false} onChanged={refresh} pillTone={pillTone} />)}
         {canCreate && <QuickSubtask scope={scope} parent={issue} onCreated={refresh} onFullForm={() => scope.createSubtask(issue)} />}
       </div>}
       {!guest && <div className={styles.blk}><h3>{t('dependencies')}</h3><DependencyPanel scope={scope} issueKey={issue.key} /></div>}

@@ -98,5 +98,6 @@
   "completedClean": "Completed {name}",
   "intro": "The backlog holds work that is not in a sprint yet · drag items up into a sprint or use the ↑ button on a row, then press Start sprint when ready",
   "expandSprint": "Show work in {name}",
-  "collapseSprint": "Collapse {name}"
+  "collapseSprint": "Collapse {name}",
+  "viewOnly": "Someone else's task: view only · you can move only tasks assigned to you"
 }

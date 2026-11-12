@@ -440,5 +440,6 @@
   "groupCreateFailed": "Could not create the group",
   "previewFile": "Preview {name}",
   "groupCustom": "More fields",
-  "requiredMissing": "Fill in the required fields: {fields}"
+  "requiredMissing": "Fill in the required fields: {fields}",
+  "viewOnlyStatus": "Someone else's task: view only · you can change status only on tasks assigned to you"
 }

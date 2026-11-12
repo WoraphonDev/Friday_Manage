@@ -64,6 +64,7 @@
     "todayLabel": "Today",
     "doneMarked": "Closed {key}",
     "undoneMarked": "Reopened {key}",
+    "viewOnly": "Someone else's task: view only · you can change status only on tasks assigned to you",
     "noDoneStatus": "This issue type has no Done status",
     "conflict": "Someone else changed this task. Try again.",
     "progressLabel": "Project progress {pct} percent",

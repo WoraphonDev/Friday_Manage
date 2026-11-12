@@ -13,6 +13,8 @@ export interface Issue {
   moduleId: string | null; phaseId: string | null; sprintId: string | null;
   /** ชื่อกลุ่ม (เฉพาะ GET issue) */
   group?: { id: string; name: string } | null;
+  /** ย้าย / เปลี่ยนสถานะได้ไหม · false = งานของคนอื่น ดูได้อย่างเดียว (04-permissions ข้อ 3.3) */
+  canMove?: boolean;
   assigneeIds?: string[]; baId?: string | null; saId?: string | null; reviewerId?: string | null; testerId?: string | null; reporterId?: string;
   size: string | null; estimateMd: number | null; progressPct: number | null;
   planStart: string | null; planEnd: string | null; actualStart: string | null; actualEnd: string | null;

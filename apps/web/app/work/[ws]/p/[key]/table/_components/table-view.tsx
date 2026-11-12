@@ -880,7 +880,7 @@ function IssueRow({ index, row, statusColor, sub, cols, profile, customFields, w
       </select>
     ) : <span className={`${styles.pill} ${styles.sTodo}`}>{row.priority}</span>,
     labels: labelText ? <span className={styles.refs} title={labelText}>{labelText}</span> : empty,
-    status: canEdit && statuses.length ? (
+    status: canEdit && row.canMove !== false && statuses.length ? (
       <select className={`${styles.pill} ${styles.pillSelect} ${pillClass(row.status.category, row.status.name)}`} style={statusColorStyle(statusColor)} aria-label={edit(t("cols.status"))} value={row.status.id} onChange={(e) => onPatch({ statusId: e.target.value })}>
         {statusOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
       </select>

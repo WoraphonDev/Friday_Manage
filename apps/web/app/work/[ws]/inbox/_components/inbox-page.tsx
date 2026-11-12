@@ -43,6 +43,12 @@ export function InboxPage({ ws }: { ws: string }) {
   const [filter, setFilter] = useState<Filter>("all");
   const urlN = search.get("n");
   const [selected, setSelected] = useState<string | null>(urlN);
+  /**
+   * รายการที่เพิ่งเปิดอ่านในแท็บนี้ · แท็บ "ยังไม่อ่าน" โหลดใหม่หลังทำเครื่องหมายอ่านแล้วจะไม่มีรายการนั้น
+   * รายละเอียดด้านขวาจึงหายทันที (ผู้ใช้แจ้ง 2026-11-12) → แสดงต่อเป็น "อ่านแล้ว" จนกว่าจะเปลี่ยนแท็บหรือจัดการรายการนั้น
+   */
+  const [kept, setKept] = useState<InboxNotification[]>([]);
+  const changeFilter = (next: Filter) => { setFilter(next); setSelected(null); setKept([]); };
   // ?n= เปลี่ยนโดยไม่ remount (คลิกกระดิ่งขณะอยู่ใน Inbox, Back/Forward) → เลือกตาม URL ใหม่
   const [seenN, setSeenN] = useState(urlN);
   /** รายการที่ URL ขอแต่ยังไม่อยู่ในหน้าที่โหลด · โหลดหน้าถัดไปจนเจอหรือหมด */
@@ -52,7 +58,7 @@ export function InboxPage({ ws }: { ws: string }) {
     setSelected(urlN);
     setTarget(urlN);
     // ตัวกรองที่เลือกอยู่อาจซ่อนรายการเป้าหมาย
-    if (urlN) setFilter("all");
+    if (urlN) { setFilter("all"); setKept([]); }
   }
   const labels = useLabels();
   const dailyTitle = useDailyTitle();
@@ -74,7 +80,9 @@ export function InboxPage({ ws }: { ws: string }) {
     },
     onError: (e) => toast({ message: e instanceof Error ? e.message : String(e) }),
   });
-  const items = query.data?.pages.flatMap((p) => p.items) ?? [];
+  const loaded = query.data?.pages.flatMap((p) => p.items) ?? [];
+  const missing = kept.filter((k) => !loaded.some((n) => n.id === k.id));
+  const items = missing.length ? [...loaded, ...missing].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : loaded;
   const counts = query.data?.pages[0]?.counts;
   const current = items.find((n) => n.id === selected) ?? null;
 
@@ -87,7 +95,11 @@ export function InboxPage({ ws }: { ws: string }) {
 
   // เปิดรายการแล้วถือว่าอ่าน
   useEffect(() => {
-    if (current && !current.readAt) act.mutate({ path: `/me/notifications/${current.id}/read` });
+    if (current && !current.readAt) {
+      const read = { ...current, readAt: new Date().toISOString() };
+      setKept((list) => [...list.filter((n) => n.id !== read.id), read]);
+      act.mutate({ path: `/me/notifications/${current.id}/read` });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id]);
 
@@ -113,7 +125,7 @@ export function InboxPage({ ws }: { ws: string }) {
         </div>
         <div className={styles.tabs} role="group" aria-label={t("filterLabel")}>
           {FILTERS.map((f) => (
-            <button key={f} type="button" className={styles.ftab} data-filter={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); }}>
+            <button key={f} type="button" className={styles.ftab} data-filter={f} aria-pressed={filter === f} onClick={() => changeFilter(f)}>
               {t(`filters.${f}`)}<span className={styles.count}>{counts?.[f] ?? 0}</span>
             </button>
           ))}
@@ -142,7 +154,11 @@ export function InboxPage({ ws }: { ws: string }) {
           {query.hasNextPage && <div className={styles.more}><Button onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>{t("loadMore")}</Button></div>}
         </section>
         <aside className={`${styles.card} ${styles.detail}`} aria-label={t("detailLabel")}>
-          {!current ? <div className={styles.empty}>{t("selectHint")}</div> : <Detail ws={ws} n={current} busy={act.isPending} onBack={() => setSelected(null)} run={(path, message, body) => act.mutate({ path, message, body })} />}
+          {!current ? <div className={styles.empty}>{t("selectHint")}</div> : <Detail ws={ws} n={current} busy={act.isPending} onBack={() => setSelected(null)} run={(path, message, body) => {
+            // รับทราบ / เตือนพรุ่งนี้ / ตัดสินคำขอ = จัดการแล้ว ให้หลุดจากแท็บตามผลจริงของ API
+            setKept((list) => list.filter((n) => n.id !== current.id));
+            act.mutate({ path, message, body });
+          }} />}
         </aside>
       </div>
     </>
@@ -212,7 +228,7 @@ function Detail({ ws, n, busy, onBack, run }: { ws: string; n: InboxNotification
         {req && (
           <>
             <div className={styles.diff}><span className="muted">{t("dueDiff")}</span><span className="muted" style={{ textDecoration: "line-through" }}>{formatDate(req.currentDue, year)}</span><span aria-hidden="true">→</span><b>{formatDate(req.requestedDue, year)}</b></div>
-            <div className="muted" style={{ fontSize: 13 }}>{t("reasonLabel", { reason: req.reasonLabel })}{req.detail ? ` · ${req.detail}` : ""}</div>
+            <div className={`muted ${styles.reason}`}>{t("reasonLabel", { reason: req.reasonLabel })}{req.detail ? ` · ${req.detail}` : ""}</div>
           </>
         )}
         <div className={styles.foot}><span className="muted">{t("why")}</span> <b>{n.reason}</b></div>

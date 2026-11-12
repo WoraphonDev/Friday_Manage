@@ -47,6 +47,8 @@ export interface ProjectRef {
 const ARCHIVED_KEEP = new Set(['project.view', 'project.workload.view', 'project.reports.view', 'project.archive']);
 
 export interface ProjectAccess {
+  /** ผู้ใช้ที่คำนวณสิทธิ์นี้ · ใช้ตรวจกติกาความเป็นเจ้าของ เช่น ย้ายการ์ดได้เฉพาะงานของตัวเอง */
+  userId: string;
   role: ProjectRole | null;
   isOwner: boolean;
   /** Guest ที่เป็น Viewer: เห็นแค่ Overview, Timeline และงานที่แชร์ · ไม่เห็นชื่อคน */
@@ -100,7 +102,7 @@ export async function projectAccess(tx: Tx, auth: AuthInfo, tenant: TenantInfo, 
   }
   const archived = !!archivedAt;
   if (archived) [...perms].forEach((p) => !ARCHIVED_KEEP.has(p) && perms.delete(p));
-  return { role, isOwner, guestViewer, perms, archived };
+  return { userId: auth.userId, role, isOwner, guestViewer, perms, archived };
 }
 
 /**
@@ -139,4 +141,27 @@ export function requirePerm(access: ProjectAccess, permission: string) {
     throw new AppError(403, 'project_archived', 'โปรเจกต์นี้ถูก Archive แล้ว ดูได้อย่างเดียว · Restore ก่อนจึงจะแก้ไขได้', { permission });
   }
   throw forbidden(permission);
+}
+
+export interface IssueOwners {
+  assigneeIds: readonly string[];
+  reviewerId?: string | null;
+  testerId?: string | null;
+}
+
+/**
+ * ย้ายการ์ด / เปลี่ยนสถานะ (04-permissions ข้อ 3.3 · ผู้ใช้ตัดสิน 2026-11-12)
+ * Admin ของโปรเจกต์ย้ายได้ทุกงาน · คนอื่นย้ายได้เฉพาะงานที่ตัวเองเป็นผู้รับผิดชอบ, Reviewer หรือ Tester (กด "ผ่าน" ตอนรอตรวจ)
+ * หรืองานที่ยังไม่มีผู้รับผิดชอบ · งานของคนอื่นจึงดูได้อย่างเดียว ไม่ให้ Dev คนหนึ่งลากงานของอีกคนไปเปลี่ยนสถานะแทน
+ */
+export function canMoveIssue(access: ProjectAccess, issue: IssueOwners) {
+  if (!access.perms.has('issue.edit')) return false;
+  if (access.role === 'admin' || !issue.assigneeIds.length) return true;
+  return issue.assigneeIds.includes(access.userId) || issue.reviewerId === access.userId || issue.testerId === access.userId;
+}
+
+export function requireMovable(access: ProjectAccess, issue: IssueOwners) {
+  if (!canMoveIssue(access, issue)) {
+    throw new AppError(403, 'not_issue_assignee', 'ย้ายหรือเปลี่ยนสถานะได้เฉพาะงานที่คุณรับผิดชอบ · งานของคนอื่นดูได้อย่างเดียว');
+  }
 }

@@ -672,3 +672,58 @@ describe('หน้า Task v2 (ผู้ใช้ตัดสิน 2026-11-08)
   });
 });
 
+
+describe('ย้ายการ์ด: งานของคนอื่นดูได้อย่างเดียว (04-permissions ข้อ 3.3)', () => {
+  let other: Client, otherId: string;
+  beforeAll(async () => {
+    other = await client(t.app);
+    otherId = await signup(other, 'dev2@issues-synthetic.example.com', 'ผู้พัฒนาสองสมมติ');
+    await addMember(t.owner, team.slug, otherId, 'member', { key: 'DP', role: 'member' });
+  });
+
+  it('Member ย้าย / เปลี่ยนสถานะงานของ Dev อีกคนไม่ได้ · เจ้าของงานและ Admin ย้ายได้ · ยังแก้ฟิลด์อื่นได้ตามสิทธิ์ issue.edit', async () => {
+    const issue = await create({ assigneeIds: [team.devId] });
+    const denied = await other.post(`${url(issue.key)}/move`, { statusId: status('In progress') });
+    expect(denied.status).toBe(403);
+    expect(denied.body.error.code).toBe('not_issue_assignee');
+    const patchDenied = await other.patch(url(issue.key), { statusId: status('In progress') }, issue.version);
+    expect(patchDenied.body.error.code).toBe('not_issue_assignee');
+    // ใส่ชื่อตัวเองพร้อมเปลี่ยนสถานะในคำขอเดียวก็ไม่ผ่าน
+    expect((await other.patch(url(issue.key), { statusId: status('In progress'), assigneeIds: [otherId] }, issue.version)).body.error.code).toBe('not_issue_assignee');
+    expect((await other.post(`${url(issue.key)}/move`, { afterKey: issue.key })).status).toBe(403);
+    const unchanged = (await team.lead.get(url(issue.key))).body;
+    expect(unchanged.status.id).toBe(issue.status.id);
+    expect(unchanged.version).toBe(issue.version);
+
+    const viewOnly = (await other.get(url(issue.key))).body;
+    expect(viewOnly.canMove).toBe(false);
+    const board = (await other.get(`${projectUrl()}/board`)).body;
+    const card = board.columns.flatMap((c: { cards: { key: string; canMove: boolean }[] }) => c.cards).find((c: { key: string }) => c.key === issue.key);
+    expect(card.canMove).toBe(false);
+    const titled = await other.patch(url(issue.key), { title: 'แก้ชื่อสมมติ' }, issue.version);
+    expect(titled.status, JSON.stringify(titled.body)).toBe(200);
+
+    expect((await team.dev.get(url(issue.key))).body.canMove).toBe(true);
+    const own = await team.dev.post(`${url(issue.key)}/move`, { statusId: status('In progress') });
+    expect(own.status, JSON.stringify(own.body)).toBe(200);
+    const admin = await team.lead.post(`${url(issue.key)}/move`, { statusId: status('To do') });
+    expect(admin.status, JSON.stringify(admin.body)).toBe(200);
+    expect(admin.body.canMove).toBe(true);
+  });
+
+  it('งานที่ยังไม่มีผู้รับผิดชอบย้ายได้ · Reviewer / Tester ของงานย้ายได้ · Backlog ส่ง canMove ต่องาน', async () => {
+    const open = await create();
+    expect((await other.post(`${url(open.key)}/move`, { statusId: status('In progress') })).status).toBe(200);
+    const reviewing = await create({ assigneeIds: [team.devId], reviewerId: otherId });
+    const byReviewer = await other.post(`${url(reviewing.key)}/move`, { statusId: status('In progress') });
+    expect(byReviewer.status, JSON.stringify(byReviewer.body)).toBe(200);
+    const testing = await create({ assigneeIds: [team.devId], testerId: otherId });
+    expect((await other.post(`${url(testing.key)}/move`, { statusId: status('In progress') })).status).toBe(200);
+
+    const foreign = await create({ assigneeIds: [team.devId] });
+    const backlog = (await other.get(`${projectUrl()}/backlog`)).body;
+    const all = [...backlog.backlog.issues, ...backlog.sprints.flatMap((sp: { issues: unknown[] }) => sp.issues)] as { key: string; canMove: boolean }[];
+    expect(all.find((i) => i.key === foreign.key)?.canMove).toBe(false);
+    expect(all.find((i) => i.key === open.key)?.canMove).toBe(true);
+  });
+});

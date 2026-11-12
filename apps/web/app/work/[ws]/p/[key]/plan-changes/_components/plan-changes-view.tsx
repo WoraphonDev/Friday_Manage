@@ -207,7 +207,7 @@ export function PlanChangesView({ ws, projectKey, embedded = false }: { ws: stri
             </span>
             <span>{c.fieldLabel}</span>
             <span><span className={styles.old}>{value(c.field, c.oldValue)}</span> → <span className={styles.new}>{value(c.field, c.newValue)}</span></span>
-            <span className={styles.hs} style={{ fontSize: 12 }}>{c.reason ?? <span className="muted">{t("noReason")}</span>}{c.impact && <span className={`muted ${styles.sub}`}>{c.impact}</span>}</span>
+            <span className={`${styles.hs} ${styles.reason}`}>{c.reason ?? <span className="muted">{t("noReason")}</span>}{c.impact && <span className={`muted ${styles.sub}`}>{c.impact}</span>}</span>
             <span className={`${styles.hs} muted`} style={{ fontSize: 11 }}>{c.changedBy?.displayName ?? t("system")}<br />{when(c.changedAt, year)}</span>
           </div>
         ))}

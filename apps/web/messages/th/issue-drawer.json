@@ -440,5 +440,6 @@
   "groupCreateFailed": "สร้างกลุ่มไม่สำเร็จ",
   "previewFile": "ดูตัวอย่าง {name}",
   "groupCustom": "ฟิลด์เพิ่มเติม",
-  "requiredMissing": "กรอกฟิลด์บังคับให้ครบ: {fields}"
+  "requiredMissing": "กรอกฟิลด์บังคับให้ครบ: {fields}",
+  "viewOnlyStatus": "งานของคนอื่น ดูได้อย่างเดียว · เปลี่ยนสถานะได้เฉพาะงานที่คุณรับผิดชอบ"
 }

@@ -31,3 +31,5 @@
 
 /* ฝังใน Popup / Settings: ไม่มีระยะขอบของหน้า */
 .body { display:flex; flex-direction:column; gap:16px; min-width:0; }
+/* เหตุผล (รวมรายละเอียดคำขอเลื่อน Due) พิมพ์ได้หลายบรรทัด */
+.reason { font-size:12px; white-space:pre-wrap; overflow-wrap:anywhere; }

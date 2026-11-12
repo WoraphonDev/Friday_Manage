@@ -11,9 +11,10 @@ import ops from "../../messages/th/ops.json";
 import overviewBusiness from "../../messages/th/overview-business.json";
 import privacyLegal from "../../messages/th/privacy-legal.json";
 import promotions from "../../messages/th/promotions.json";
+import restore from "../../messages/th/restore.json";
 import staff from "../../messages/th/staff.json";
 import supportSettings from "../../messages/th/support-settings.json";
 import supportSystem from "../../messages/th/support-system.json";
 
-// namespace: `cl` (Changelog และ NPS · O33) · `promo` (แพ็กเกจและโปรโมชัน · O20) · `ann` (ประกาศถึงลูกค้า · O24) · `onb` (Onboarding checklist · O34) · `ops` (หน้าเดิมของ A32 ที่ O11–O15 จะย้าย) · `common` (โครงหน้า สถานะ Modal กลาง · O10) · `staff` (หน้าพนักงาน · O10)
-export const messages = { ops, common, staff, customers, money, ss: supportSystem, pl: privacyLegal, ob: overviewBusiness, ent: entitlements, dlv: deliveries, sset: supportSettings, mob: mobile, ann: announcements, promo: promotions, cl: changelog, onb: onboarding };
+// namespace: `cl` (Changelog และ NPS · O33) · `promo` (แพ็กเกจและโปรโมชัน · O20) · `ann` (ประกาศถึงลูกค้า · O24) · `onb` (Onboarding checklist · O34) · `ops` (หน้าเดิมของ A32 ที่ O11–O15 จะย้าย) · `common` (โครงหน้า สถานะ Modal กลาง · O10) · `staff` (หน้าพนักงาน · O10) · `rst` (กู้คืนข้อมูลลูกค้า · O31)
+export const messages = { ops, common, staff, customers, money, ss: supportSystem, pl: privacyLegal, ob: overviewBusiness, ent: entitlements, dlv: deliveries, sset: supportSettings, mob: mobile, ann: announcements, promo: promotions, cl: changelog, onb: onboarding, rst: restore };

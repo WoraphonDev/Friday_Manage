@@ -275,7 +275,7 @@ describe('Issue parts and comments',()=>{
   });
   it('auto-watches through comments, inserts stable mentions, edits and deletes comment',async()=>{
     const user=userEvent.setup();mount();await loaded();await screen.findByText('สร้างงาน');
-    await user.type(screen.getByLabelText('เขียนคอมเมนต์'),'สวัสดี @');await user.click(within(screen.getByRole('group',{name:'เลือกสมาชิกที่ต้องการ mention'})).getByRole('button',{name:dev.displayName}));
+    await user.type(screen.getByLabelText('เขียนคอมเมนต์'),'สวัสดี @');await user.click(within(screen.getByRole('listbox',{name:'เลือกสมาชิกที่ต้องการ mention'})).getByRole('option',{name:dev.displayName}));
     // ช่องพิมพ์แสดงแค่ชื่อ ไม่มีรหัส · ส่ง API เป็นรูปแบบคงที่
     expect(screen.getByLabelText('เขียนคอมเมนต์')).toHaveValue(`สวัสดี @${dev.displayName} `);
     await user.click(screen.getByRole('button',{name:'ส่ง'}));
@@ -283,6 +283,17 @@ describe('Issue parts and comments',()=>{
     expect(screen.getByText(`@${dev.displayName}`)).toBeInTheDocument();
     await user.click(screen.getByRole('button',{name:'แก้คอมเมนต์'}));expect(screen.getByLabelText('คอมเมนต์')).toHaveValue(`สวัสดี @${dev.displayName} `);await user.clear(screen.getByLabelText('คอมเมนต์'));await user.type(screen.getByLabelText('คอมเมนต์'),'แก้ไขข้อความ');await user.click(within(screen.getByRole('dialog',{name:'แก้คอมเมนต์'})).getByRole('button',{name:'บันทึก'}));await screen.findByText('แก้ไขข้อความ');
     await user.click(screen.getByRole('button',{name:'ลบคอมเมนต์'}));await user.click(within(screen.getByRole('dialog',{name:'ลบคอมเมนต์'})).getByRole('button',{name:'ลบคอมเมนต์'}));await screen.findByText('คอมเมนต์นี้ถูกลบแล้ว');
+  });
+  it('พิมพ์ @ แล้วเลือกคนด้วยลูกศร + Enter · Esc ปิดกล่อง',async()=>{
+    const user=userEvent.setup();mount();await loaded();await screen.findByText('สร้างงาน');
+    const box=screen.getByLabelText('เขียนคอมเมนต์');await user.type(box,'รอ @');
+    const list=screen.getByRole('listbox',{name:'เลือกสมาชิกที่ต้องการ mention'});
+    expect(within(list).getAllByRole('option')[0]).toHaveAttribute('aria-selected','true');
+    await user.keyboard('{Escape}');expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    await user.type(box,' @');await user.keyboard('{ArrowDown}');
+    const second=within(screen.getByRole('listbox')).getAllByRole('option')[1];expect(second).toHaveAttribute('aria-selected','true');
+    const name=second.getAttribute('aria-label')!;await user.keyboard('{Enter}');
+    expect(box).toHaveValue(`รอ @ @${name} `);expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
   it('กดไฟล์แนบในคอมเมนต์ → ป๊อปอัปดูตัวอย่าง (รูปแสดงเลย · ไฟล์ที่ดูไม่ได้มีปุ่มดาวน์โหลด) เลื่อนไฟล์ถัดไปได้',async()=>{
     const user=userEvent.setup();

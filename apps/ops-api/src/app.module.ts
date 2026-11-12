@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { AnnouncementsModule } from './announcements/announcements.module.js';
 import { ApprovalsModule } from './approvals/approvals.module.js';
 import { AuthController } from './auth/auth.controller.js';
 import { AuthGuard } from './auth/auth.guard.js';
@@ -31,7 +32,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
   imports: [
     DbModule, MailModule, PushModule, ApprovalsModule, StaffModule, MetricsModule,
     WorkspacesModule, UsersModule, SupportModule, SystemModule,
-    PaymentsModule, BillingModule, PrivacyModule, LegalModule, FlagsModule, EntitlementsModule, DeliveriesModule, MobileModule,
+    PaymentsModule, BillingModule, PrivacyModule, LegalModule, FlagsModule, EntitlementsModule, DeliveriesModule, MobileModule, AnnouncementsModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, { provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_FILTER, useClass: ErrorFilter }],

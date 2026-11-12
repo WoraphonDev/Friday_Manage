@@ -18,6 +18,9 @@
       "name": "Analytics"
     },
     {
+      "name": "Announcements"
+    },
+    {
       "name": "ApiTokens"
     },
     {
@@ -4199,6 +4202,104 @@
           },
           "404": {
             "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/announcements": {
+      "get": {
+        "operationId": "Announcements_list",
+        "summary": "แบนเนอร์ที่ยังไม่ได้ปิด ล่าสุดก่อน · สมาชิกอื่นได้รายการว่าง (ประกาศส่งถึง Owner / Admin เท่านั้น)",
+        "tags": [
+          "Announcements"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/announcements/{id}/dismiss": {
+      "post": {
+        "operationId": "Announcements_dismiss",
+        "summary": "ปิดแบนเนอร์ของตัวเอง (คนอื่นใน Workspace ยังเห็น) · ปิดซ้ำได้ผลเดิม",
+        "tags": [
+          "Announcements"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
           }
         }
       }

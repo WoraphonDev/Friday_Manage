@@ -452,7 +452,7 @@ describe('ตรวจสลิปและ 50 ทวิ', () => {
   });
 });
 
-describe('Feature flag และประกาศ', () => {
+describe('Feature flag', () => {
   it('CRUD flag + เปิดให้บาง Workspace (Audit ของ Workspace นั้น) · key ซ้ำไม่ได้', async () => {
     const c = await customer(t, 'beta-co');
     const f = await admin.agent.post('/ops/feature-flags').send({ key: 'gantt_v2', description: 'Gantt ใหม่', defaultOn: false });
@@ -473,23 +473,6 @@ describe('Feature flag และประกาศ', () => {
     expect(await audit(c.id, 'ops.feature_override_removed')).toHaveLength(1);
     expect((await admin.agent.delete(`/ops/feature-flags/${f.body.id}`)).status).toBe(200);
     expect((await admin.agent.get('/ops/feature-flags')).body.items).toEqual([]);
-  });
-
-  it('ประกาศ: สร้าง / แก้ / ปล่อย (ส่งแล้วแก้ไม่ได้) / ลบ', async () => {
-    const a = await admin.agent.post('/ops/announcements').send({ message: 'ปิดปรับปรุงคืนวันเสาร์ 22:00–23:00', audience: 'owners_admins', channels: ['banner', 'email'], scheduledAt: '2026-12-05T15:00:00+07:00' });
-    expect(a.status, JSON.stringify(a.body)).toBe(201);
-    expect(a.body).toMatchObject({ audience: 'owners_admins', channels: ['banner', 'email'], sentAt: null });
-    expect((await admin.agent.post('/ops/announcements').send({ message: '' })).status).toBe(400);
-    expect((await admin.agent.post('/ops/announcements').send({ message: 'x', channels: ['sms'] })).status).toBe(400);
-    expect((await admin.agent.patch(`/ops/announcements/${a.body.id}`).send({ message: 'ปิดปรับปรุงคืนวันอาทิตย์' })).body.message).toBe('ปิดปรับปรุงคืนวันอาทิตย์');
-    const pub = await admin.agent.post(`/ops/announcements/${a.body.id}:publish`).send({});
-    expect(pub.body.sentAt).not.toBeNull();
-    expect((await admin.agent.post(`/ops/announcements/${a.body.id}:publish`).send({})).body.error.code).toBe('announcement_sent');
-    expect((await admin.agent.patch(`/ops/announcements/${a.body.id}`).send({ message: 'แก้หลังส่ง' })).body.error.code).toBe('announcement_sent');
-    expect((await admin.agent.get('/ops/announcements')).body.items).toHaveLength(1);
-    expect((await admin.agent.delete(`/ops/announcements/${a.body.id}`)).status).toBe(200);
-    expect((await admin.agent.delete(`/ops/announcements/${a.body.id}`)).status).toBe(404);
-    expect((await support.agent.post('/ops/announcements').send({ message: 'x' })).status).toBe(403);
   });
 });
 

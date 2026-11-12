@@ -1,6 +1,6 @@
 // N. หลังบ้าน Friday · ยกเว้น support_access_grants ที่ลูกค้าเปิด/ปิดสิทธิ์เองผ่าน A31
 import { sql } from 'drizzle-orm';
-import { type AnyPgColumn, bigint, boolean, check, date, foreignKey, index, integer, jsonb, pgTable, smallint, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { type AnyPgColumn, bigint, boolean, check, date, foreignKey, index, integer, jsonb, pgTable, primaryKey, smallint, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, pk, tstz, updatedAt } from './_common.ts';
 import { users } from './identity.ts';
 import { workspaceId } from './project.ts';
@@ -188,11 +188,41 @@ export const featureFlagOverrides = pgTable('feature_flag_overrides', {
   workspaceId: workspaceId(), enabled: boolean().notNull(), createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [uniqueIndex('feature_flag_overrides_key').on(t.flagId, t.workspaceId)]);
 
+/**
+ * ประกาศถึงลูกค้า (O24 · C8) · ส่งถึง Owner / Admin ของ Workspace ที่เลือกใน announcement_targets
+ * sent_at = เวลาที่ส่งจริง (ตอนนี้ หรือถึง scheduled_at) · cancelled_at = ยกเลิกก่อนส่ง หรือหยุดแสดงแบนเนอร์หลังส่ง
+ */
 export const announcements = pgTable('announcements', {
   id: pk(), message: text().notNull(), audience: announcementAudience().notNull().default('all'),
   channels: text().array().notNull().default(sql`'{banner}'`), scheduledAt: tstz(), sentAt: tstz(),
+  /** หัวข้อ (หัวเรื่องอีเมล / หัวแบนเนอร์) · ประกาศเดิมก่อน O24 ไม่มี */
+  title: text(),
+  createdBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+  cancelledAt: tstz(), cancelledBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
   createdAt: createdAt(), updatedAt: updatedAt(),
-});
+}, (t) => [index('announcements_due_idx').on(t.scheduledAt).where(sql`${t.sentAt} IS NULL AND ${t.cancelledAt} IS NULL`)]);
+
+/**
+ * Workspace ที่ได้รับประกาศ · ตอนส่ง ops-api ใส่ข้อความที่แทนตัวแปรของ Workspace นั้นแล้ว (banner_*) ให้ API ลูกค้าอ่านผ่าน RLS
+ * จึงไม่ต้องเปิดตาราง announcements (ของทีม Friday) ให้ลูกค้า · banner_from ว่าง = ยังไม่ส่ง หรือไม่มีช่องทางแบนเนอร์
+ */
+export const announcementTargets = pgTable('announcement_targets', {
+  announcementId: uuid().notNull().references(() => announcements.id, { onDelete: 'cascade' }),
+  workspaceId: workspaceId(),
+  /** จำนวน Owner / Admin ตอนส่ง */
+  recipients: integer(),
+  bannerTitle: text(), bannerMessage: text(), bannerFrom: tstz(), bannerUntil: tstz(),
+  createdAt: createdAt(),
+}, (t) => [primaryKey({ columns: [t.announcementId, t.workspaceId] }),
+  index('announcement_targets_workspace_idx').on(t.workspaceId, t.bannerFrom)]);
+
+/** ผู้ใช้ปิดแบนเนอร์ประกาศแล้ว (ต่อคน ต่อ Workspace) */
+export const announcementDismissals = pgTable('announcement_dismissals', {
+  announcementId: uuid().notNull(), workspaceId: workspaceId(),
+  userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
+  dismissedAt: tstz().notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.announcementId, t.workspaceId, t.userId] }),
+  foreignKey({ name: 'announcement_dismissals_target_fk', columns: [t.announcementId, t.workspaceId], foreignColumns: [announcementTargets.announcementId, announcementTargets.workspaceId] }).onDelete('cascade')]);
 
 export const INCIDENT_STATUSES = ['investigating', 'identified', 'monitoring', 'resolved'] as const;
 

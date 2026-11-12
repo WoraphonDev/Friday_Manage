@@ -52,6 +52,8 @@ export const EMAIL_DEFAULT_ON = new Set([
   'channel.webhook_paused',
   // ผู้รับรายงานถูกเลือกไว้ที่ report-schedule อยู่แล้ว
   'report.weekly',
+  // ประกาศจากทีม Friday ถึง Owner / Admin (O24) · ทีม Friday เลือกช่องทางอีเมลไว้แล้ว
+  'ops.announcement',
 ]);
 
 /** ช่วงงดส่งเริ่มต้นของผู้ใช้ที่ยังไม่เคยตั้ง (Profile: ไม่รบกวน 20:00–08:00 และวันหยุด) */

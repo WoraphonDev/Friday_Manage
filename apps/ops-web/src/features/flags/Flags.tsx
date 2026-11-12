@@ -8,7 +8,6 @@ import { api } from "@/lib/api";
 import { keys } from "@/lib/query";
 import type { Flag, WorkspaceRow } from "@/lib/types";
 import { PageHeader } from "../shell/Shell";
-import { Announcements } from "./Announcements";
 
 export function FlagsPage() {
   const t = useTranslations("ops");
@@ -16,7 +15,6 @@ export function FlagsPage() {
     <>
       <PageHeader title={t("titles.flags")} desc={t("titles.flagsDesc")} />
       <Flags />
-      <Announcements />
     </>
   );
 }

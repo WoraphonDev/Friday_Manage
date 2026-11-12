@@ -68,7 +68,8 @@
     "report_weekly": "รายงานประจำสัปดาห์",
     "sprint_started": "Sprint เริ่ม",
     "sprint_completed": "Sprint จบ",
-    "channel_webhook_paused": "Webhook ถูกปิดชั่วคราว"
+    "channel_webhook_paused": "Webhook ถูกปิดชั่วคราว",
+    "ops_announcement": "ประกาศจากทีม Friday"
   },
   "detail": {
     "label": "รายละเอียดการส่ง",

@@ -37,7 +37,8 @@ export function TestRuns({ scope, issue, kind = 'qa', embedded = false }: { scop
   const [result, setResult] = useState<TestRun['result']>('passed');
   const [environment, setEnvironment] = useState('sit');
   // ผู้ตรวจ: ค่าเริ่มต้น = QA / Reviewer ของงาน ถ้าไม่มี = คนที่บันทึก
-  const defaultTester = issue.reviewerId ?? scope.meId;
+  // QA หลายคน: ฉันเป็นหนึ่งใน QA ก็บันทึกในชื่อฉัน · ไม่ใช่ใช้ QA คนแรก
+  const defaultTester = (scope.meId && issue.reviewerIds?.includes(scope.meId) ? scope.meId : issue.reviewerId) ?? scope.meId;
   const [tester, setTester] = useState(defaultTester);
   const [passed, setPassed] = useState(''); const [total, setTotal] = useState('');
   const [coverage, setCoverage] = useState('');

@@ -79,7 +79,7 @@ export function MembersView({ ws, projectKey }: { ws: string; projectKey: string
     }
     await refresh();
   }
-  async function onEdit(m: ProjectMember, body: { position: string | null; capacityHoursWeek: number | null; pmDeputy?: boolean }) {
+  async function onEdit(m: ProjectMember, body: { positions: string[]; capacityHoursWeek: number | null; pmDeputy?: boolean }) {
     // สมาชิกโปรเจกต์ไม่มี version จึงไม่ส่ง If-Match
     await api.request(`${base}/members/${m.userId}`, { method: "PATCH", body });
     toast({ message: t("members.saved", { name: m.displayName }) });

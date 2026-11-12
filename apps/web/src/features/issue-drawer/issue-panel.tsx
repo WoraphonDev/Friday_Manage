@@ -7,6 +7,7 @@ import { Check, ChevronLeft, ChevronRight, Link2, MoreHorizontal, RotateCcw, Tra
 import { Avatar, AvatarStack, Badge, Button, Combobox, DatePicker, Dialog, DrawerClose, Input, Select, useToast, LoadingState, ErrorState } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/format';
+import { peopleForRole, type PickRole } from '@/lib/positions';
 import { useIsMobile } from '@/lib/use-mobile';
 import { TestRuns } from './test-runs';
 import { ActivityPanel } from './activity';
@@ -114,7 +115,10 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const fieldSelect = (field: string, value: string | null | undefined, values: { id: string; name: string }[], change?: (value: string) => void, allowNone = true) => <Select label={t(`fields.${field}`)} value={value ?? ''} disabled={!canEdit || disabled} onChange={(event) => change ? change(event.target.value) : void patch({ [field]: event.target.value || null })}>
     {(allowNone || !value) && <option value="" disabled={!allowNone}>{t('notSet')}</option>}{values.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
   </Select>;
-  const people = scope.people.map((person) => ({ id: person.id, name: person.displayName }));
+  // รายชื่อในช่อง BA / SA / Dev / QA กรองตามตำแหน่งของสมาชิก (lib/positions) · คนที่เลือกไว้แล้วยังอยู่เสมอ
+  const pick = (role: PickRole, selected: (string | null | undefined)[]) => peopleForRole(role, scope.people, selected).map((person) => ({ id: person.id, name: person.displayName }));
+  const reviewerIds = issue.reviewerIds ?? (issue.reviewerId ? [issue.reviewerId] : []);
+  const qas = reviewerIds.map((id) => scope.people.find((person) => person.id === id)).filter((person): person is NonNullable<typeof person> => !!person);
   const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
   const pending = issue.pendingDueRequest;
   const mod = scope.project?.modules.find((item) => item.id === issue.moduleId);
@@ -214,7 +218,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
         {canEdit && <InlineText label={t(issue.remark ? 'editRemark' : 'addRemark')} displayValue={t(issue.remark ? 'editRemark' : 'addRemark')} value={issue.remark ?? ''} enabled busy={disabled} multiline onSave={(remark) => patch({ remark: remark.trim() ? remark : null })} />}
       </div>}
       {awaitingRetest && canMove && passStatus && <div className={styles.verify} role="group" aria-label={t('verifyGroup')}>
-        <div><strong>{t('verifyTitle', { status: issue.status.name })}</strong><p>{t('verifyDescription', { name: scope.people.find((person) => person.id === (issue.reviewerId ?? issue.testerId))?.displayName ?? t('qaReviewer') })}</p></div>
+        <div><strong>{t('verifyTitle', { status: issue.status.name })}</strong><p>{t('verifyDescription', { name: qas.map((person) => person.displayName).join(', ') || scope.people.find((person) => person.id === issue.testerId)?.displayName || t('qaReviewer') })}</p></div>
         <Button size="small" className={styles.okButton} disabled={disabled} onClick={() => void move(passStatus.id)}>{t('verified', { status: passStatus.name })}</Button>
         {reworkStatus && <Button size="small" className={styles.failButton} disabled={disabled} onClick={() => void move(reworkStatus.id)}>{t('notPassed')}</Button>}
       </div>}
@@ -239,8 +243,10 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
 
     <aside className={styles.sidebar} aria-label={t('properties')}>
       {mobile && !allProps ? <div className={styles.props}>
-        <PropRow keep k={t('fields.assigneeIds')}>{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void patch({ assigneeIds: ids }); }} /> : <AvatarStack people={devs} />}</PropRow>
+        <PropRow keep k={t('fields.assigneeIds')}>{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={peopleForRole('dev', scope.people, issue.assigneeIds ?? [])} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void patch({ assigneeIds: ids }); }} /> : <AvatarStack people={devs} />}</PropRow>
         <PropRow keep k="Due">{canEdit ? <DatePicker compact label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (disabled) return; if (value && issue.planEnd && value > issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly')) setDue(value); else void patch({ planEnd: value || null }); }} /> : formatDate(issue.planEnd, scope.yearFormat)}</PropRow>
+        {/* มือถือ: QA Due ของโปรเจกต์แยก Dev / QA อยู่ในแถวหลักด้วย */}
+        {issue.qaDue !== undefined && <PropRow keep k={t('qaDue')}>{canEdit ? <DatePicker compact label={t('qaDue')} value={issue.qaEnd ?? undefined} min={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (!disabled) void patch({ qaEnd: value || null }); }} /> : formatDate(issue.qaEnd ?? issue.qaDue, scope.yearFormat)}{!issue.qaEnd && issue.qaDue && <small className="muted"> {t('qaDueAuto', { date: formatDate(issue.qaDue, scope.yearFormat) })}</small>}</PropRow>}
         {show('priority') && <PropRow keep k={t('fields.priority')}>{fieldSelect('priority', issue.priority, ['urgent', 'high', 'medium', 'low'].map((id) => ({ id, name: t(`priority.${id}`) })), undefined, false)}</PropRow>}
         {show('progress') && <PropRow keep k="Progress"><span>{issue.progressPct == null ? t('notSet') : `${issue.progressPct}%`}</span></PropRow>}
         <button type="button" className={styles.propsToggle} aria-expanded={false} onClick={() => setAllProps(true)}>{t('moreProperties')}</button>
@@ -251,10 +257,10 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
         {/* C2 / D2: ผู้รับผิดชอบ / แผนงาน / กลุ่มงาน · QA กับ Reviewer รวมเป็นช่องเดียว (ผู้ใช้ตัดสิน 2026-11-08) */}
         {!guest && <section className={styles.pgroup} aria-label={t('groupPeople')}>
           <h4 className={styles.pgTitle}>{t('groupPeople')}</h4>
-          {show('ba') && <PropRow k={star('ba', 'Business Analyst')}>{fieldSelect('baId', issue.baId, people)}</PropRow>}
-          {show('sa') && <PropRow k={star('sa', 'System Analyst')}>{fieldSelect('saId', issue.saId, people)}</PropRow>}
-          <PropRow keep k="Developer">{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={scope.people} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void patch({ assigneeIds: ids }); }} /> : <span className={styles.who}><AvatarStack people={devs} /></span>}</PropRow>
-          {show('reviewer') && <PropRow k={star('reviewer', t('qaReviewer'))}>{fieldSelect('reviewerId', issue.reviewerId, people)}</PropRow>}
+          {show('ba') && <PropRow k={star('ba', 'Business Analyst')}>{fieldSelect('baId', issue.baId, pick('ba', [issue.baId]))}</PropRow>}
+          {show('sa') && <PropRow k={star('sa', 'System Analyst')}>{fieldSelect('saId', issue.saId, pick('sa', [issue.saId]))}</PropRow>}
+          <PropRow keep k="Developer">{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={peopleForRole('dev', scope.people, issue.assigneeIds ?? [])} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void patch({ assigneeIds: ids }); }} /> : <span className={styles.who}><AvatarStack people={devs} /></span>}</PropRow>
+          {show('reviewer') && <PropRow k={star('reviewer', t('qaReviewer'))}>{canEdit ? <Combobox label={t('qaReviewer')} multiple options={peopleForRole('qa', scope.people, reviewerIds)} value={reviewerIds} onValueChange={(ids) => { if (!disabled) void patch({ reviewerIds: ids }); }} /> : <span className={styles.who}>{qas.length ? <AvatarStack people={qas} /> : <span className="muted">—</span>}</span>}</PropRow>}
           {isBug && <PropRow k={t('reporter')}><span className={styles.who}>{reporter ? <><Avatar size="small" person={reporter} />{reporter.displayName}</> : <span className="muted">—</span>}</span></PropRow>}
           <PropRow k={t('watchers')}><span className={styles.who}>{watchers.data?.items.length ? <AvatarStack max={5} people={watchers.data.items.flatMap((entry, i) => entry.person ? [{ ...entry.person, id: entry.person.id ?? `w${i}` }] : [])} /> : <span className="muted">—</span>}</span></PropRow>
         </section>}

@@ -35,10 +35,10 @@ export async function enforceWorkflowRules(tx: Tx, auth: AuthInfo, issue: Issue,
         break;
       }
       case 'reviewer_required':
-        if ((config.toStatusId || next.category === 'review' || next.name.toLowerCase() === 'review') && !proposed.reviewerId) fail('reviewer_required', 'ต้องระบุ Reviewer ก่อนย้ายไป Review');
+        if ((config.toStatusId || next.category === 'review' || next.name.toLowerCase() === 'review') && !proposed.reviewerId && !proposed.reviewerIds?.length) fail('reviewer_required', 'ต้องระบุ Reviewer ก่อนย้ายไป Review');
         break;
       case 'reviewer_only_done':
-        if (next.category === 'done' && (config.fromStatusId || current.category === 'review' || current.name.toLowerCase() === 'review') && proposed.reviewerId !== auth.userId) fail('reviewer_only_done', 'เฉพาะ Reviewer เท่านั้นที่ย้ายจาก Review ไป Done ได้');
+        if (next.category === 'done' && (config.fromStatusId || current.category === 'review' || current.name.toLowerCase() === 'review') && !reviewerList(proposed).includes(auth.userId)) fail('reviewer_only_done', 'เฉพาะ Reviewer เท่านั้นที่ย้ายจาก Review ไป Done ได้');
         break;
       case 'fix_reference_required': {
         if (!config.toStatusId && next.name.toLowerCase() !== 'fixed') break;
@@ -66,3 +66,7 @@ export async function workflowRuleEnabled(tx: Tx, workflowId: string, ruleType: 
     .where(and(eq(s.workflowRules.workflowId, workflowId), eq(s.workflowRules.ruleType, ruleType)));
   return rules.length ? rules.some((r) => r.enabled) : fallback;
 }
+
+/** QA / Reviewer ทุกคนของงาน (เลือกได้หลายคน · ข้อมูลเก่ามีแค่ reviewerId) */
+export const reviewerList = (i: { reviewerId?: string | null; reviewerIds?: readonly string[] | null }) =>
+  i.reviewerIds?.length ? [...i.reviewerIds] : i.reviewerId ? [i.reviewerId] : [];

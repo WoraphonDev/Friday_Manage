@@ -4,6 +4,7 @@ import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { WorkCalendar } from '../projects/calendar.js';
 import { dueOf, loadDueRule } from '../projects/due-stage.js';
 import type { StatusCategory } from '../common/status-category.js';
+import { reviewerList } from '../issues/rules.js';
 
 export type IssueRow = typeof s.issues.$inferSelect;
 
@@ -71,7 +72,7 @@ export async function loadPlan(tx: Tx, project: Project): Promise<PlanData> {
     planStart: i.planStart,
     planEnd: i.planEnd,
     dueDate: due.date,
-    lateOwners: due.stage === 'qa' && i.reviewerId ? [i.reviewerId] : (by.get(i.id) ?? []),
+    lateOwners: due.stage === 'qa' && reviewerList(i).length ? reviewerList(i) : (by.get(i.id) ?? []),
     category: category as Item['category'],
     statusName,
     progressPct: category === 'done' ? 100 : (i.progressPct ?? 0),

@@ -18,6 +18,8 @@ type Cat = StatusCategory;
 export interface GRow {
   key: string; type: string; title: string; status: { name: string; category: Cat };
   start: string; end: string; estimateMd?: number | null; progressPct: number; lateDays: number;
+  /** โปรเจกต์แยก Dev / QA: วันที่ QA ต้องทดสอบเสร็จ · วาดเป็นช่วง QA ต่อท้ายแถบ */
+  qaDue?: string | null;
   assignees?: Person[]; canOpen?: boolean; subtasks: GRow[];
   critical?: boolean; slackDays?: number | null;
   baseline?: { start: string | null; end: string | null } | null; slipDays?: number | null;
@@ -326,14 +328,18 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
                   const fill = <span style={{ width: `${r.progressPct}%`, background: crit ? "var(--danger)" : "var(--chart-primary)" }} />;
                   const barStyle = { ...pos, top: y + 8, background: crit ? "var(--danger-border)" : "var(--chart-primary-soft)" };
                   const bl = d.baseline && r.baseline?.start && r.baseline.end ? r.baseline : null;
+                  // ช่วง QA: วันถัดจากวันจบของ Dev ถึง QA Due (โปรเจกต์แยก Dev / QA)
+                  const qa = r.qaDue && r.qaDue > r.end ? span(addDays(r.end, 1), r.qaDue) : null;
+                  const whoLeft = qa ? qa.left + qa.width : pos.left + pos.width;
                   return (
                     <span key={r.key}>
+                      {qa && <span className={styles.qa} data-testid={`qa-${r.key}`} title={t("qaBar", { date: formatDate(r.qaDue!, year) })} style={{ ...qa, top: y + 8 }} />}
                       {bl && <span className={styles.base} data-testid={`baseline-${r.key}`} title={t("baselineBar", { start: formatDate(bl.start, year), end: formatDate(bl.end, year) })} style={{ ...span(bl.start!, bl.end!), top: y + 29 }} />}
                       {r.canOpen !== false
                         ? <Link href={issueHref(r.key)} className={`${styles.gb} ${r.lateDays ? styles.late : ""}`} style={barStyle} aria-label={label} title={label} data-testid={`bar-${r.key}`} data-critical={crit || undefined}>{fill}</Link>
                         : <span className={`${styles.gb} ${r.lateDays ? styles.late : ""}`} style={barStyle} role="img" aria-label={label} title={label} data-testid={`bar-${r.key}`} data-critical={crit || undefined}>{fill}</span>}
                       {scale !== "month" && (r.assignees?.[0] || slip > 0) && (
-                        <span className={styles.who} style={{ left: pos.left + pos.width + 6, top: y + 8 }}>
+                        <span className={styles.who} style={{ left: whoLeft + 6, top: y + 8 }}>
                           {r.assignees?.[0]?.displayName}
                           {slip > 0 && <span className={styles.slip}>{t("slipShort", { days: slip })}</span>}
                         </span>
@@ -361,6 +367,7 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
         <span><span className={styles.sw} style={{ background: "var(--danger-border)" }}><i style={{ background: "var(--danger)" }} /></span>{t("legend.critical")}</span>
         <span><span className={styles.sw} style={{ height: 6, borderRadius: 0, background: "var(--chart-strong)" }} />{t("legend.summary")}</span>
         <span><span className={styles.sw} style={{ height: 5, background: "var(--chart-neutral)" }} />{t("legend.baseline")}</span>
+        {all.some((r) => r.qaDue && r.qaDue > r.end) && <span><span className={`${styles.sw} ${styles.qa}`} style={{ position: "static" }} />{t("legend.qa")}</span>}
         {d.criticalPath.keys.length > 0 && <span>{t("criticalSummary", { count: d.criticalPath.keys.length, start: formatDate(d.criticalPath.startDate, year), end: formatDate(d.criticalPath.endDate, year) })}</span>}
         {d.unscheduled.length > 0 && <span>{t("unscheduled", { count: d.unscheduled.length })}</span>}
       </div>

@@ -9,6 +9,7 @@ import { Audience, type IssueCtx, type ProjectCtx } from './audience.js';
 import { Notifier } from './notifier.js';
 import { DAILY_EVENT, REASONS } from './rules.js';
 import { openStatus } from '../common/status-category.js';
+import { reviewerList } from '../issues/rules.js';
 
 const s = schema;
 export type DueReminder = '1d_and_today' | '3d' | 'today_only';
@@ -86,13 +87,13 @@ export class Reminders {
   async daily(date = today()) {
     const due = await this.openIssues(and(isNotNull(s.issues.planEnd), lte(s.issues.planEnd, addDays(date, LOOKAHEAD_DAYS)))!);
     // งานที่รอ Review ไม่ขึ้นกับ Due จึงอ่านแยก
-    const review = await this.openIssues(and(isNotNull(s.issues.reviewerId), sql`lower(trim(${s.workflowStatuses.name})) = 'review'`)!);
+    const review = await this.openIssues(and(sql`cardinality(${s.issues.reviewerIds}) > 0`, sql`lower(trim(${s.workflowStatuses.name})) = 'review'`)!);
     const all = [...new Map([...due, ...review].map((o) => [o.issue.id, o])).values()];
     const devAssignees = await this.audience.assignees(all.map((o) => o.issue.id));
     // งานที่ส่ง QA แล้ว (โปรเจกต์แยก Dev / QA) เป็นความรับผิดชอบของ QA / Reviewer ไม่ใช่ Dev
-    const assignees = new Map(all.map((o) => [o.issue.id, o.qaStage && o.issue.reviewerId ? [o.issue.reviewerId] : (devAssignees.get(o.issue.id) ?? [])]));
+    const assignees = new Map(all.map((o) => [o.issue.id, o.qaStage && o.issue.reviewerIds.length ? o.issue.reviewerIds : (devAssignees.get(o.issue.id) ?? [])]));
     const calendars = await this.calendars(all.map((o) => o.project));
-    const queried = new Set([...assignees.values()].flat().concat(all.flatMap((o) => (o.issue.reviewerId ? [o.issue.reviewerId] : []))));
+    const queried = new Set([...assignees.values()].flat().concat(all.flatMap((o) => o.issue.reviewerIds)));
     const settings = await this.settings([...queried]);
     const boxes = new Map<string, Box>();
     const box = (workspaceId: string, userId: string) => {
@@ -117,8 +118,8 @@ export class Reminders {
     }
     // รอฉัน Review
     for (const o of review) {
-      if (!o.issue.reviewerId || !isReview(o.statusName)) continue;
-      if ((await this.audience.visible([o.issue.reviewerId], o.project, o.issue)).size) box(o.project.workspaceId, o.issue.reviewerId).review.push(item(o));
+      if (!o.issue.reviewerIds.length || !isReview(o.statusName)) continue;
+      for (const u of await this.audience.visible(o.issue.reviewerIds, o.project, o.issue)) box(o.project.workspaceId, u).review.push(item(o));
     }
     // PM: งานเลยกำหนดของทีมในแต่ละโปรเจกต์
     const lateByProject = new Map<string, OpenIssue[]>();
@@ -197,6 +198,7 @@ export class Reminders {
         category: s.workflowStatuses.category,
         parentId: s.issues.parentId,
         reviewerId: s.issues.reviewerId,
+        reviewerIds: s.issues.reviewerIds,
         baId: s.issues.baId,
         sharedWithGuests: s.issues.sharedWithGuests,
         type: s.issueTypes.name,
@@ -228,6 +230,7 @@ export class Reminders {
         title: r.title,
         parentId: r.parentId,
         reviewerId: r.reviewerId,
+        reviewerIds: reviewerList(r),
         baId: r.baId,
         sharedWithGuests: r.sharedWithGuests,
         isBug: r.type === 'Bug',

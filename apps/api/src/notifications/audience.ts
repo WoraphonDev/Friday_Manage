@@ -1,6 +1,7 @@
 import { type Db, schema } from '@friday/db';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { IN_APP_CHANNEL } from './rules.js';
+import { reviewerList } from '../issues/rules.js';
 
 const s = schema;
 
@@ -19,6 +20,8 @@ export interface IssueCtx {
   title: string;
   parentId: string | null;
   reviewerId: string | null;
+  /** QA / Reviewer ทั้งหมด (คนแรก = reviewerId) */
+  reviewerIds: string[];
   baId: string | null;
   sharedWithGuests: boolean;
   isBug: boolean;
@@ -57,6 +60,7 @@ export class Audience {
         title: s.issues.title,
         parentId: s.issues.parentId,
         reviewerId: s.issues.reviewerId,
+        reviewerIds: s.issues.reviewerIds,
         baId: s.issues.baId,
         sharedWithGuests: s.issues.sharedWithGuests,
         deletedAt: s.issues.deletedAt,
@@ -72,6 +76,7 @@ export class Audience {
       title: i.title,
       parentId: i.parentId,
       reviewerId: i.reviewerId,
+      reviewerIds: reviewerList(i),
       baId: i.baId,
       sharedWithGuests: i.sharedWithGuests,
       isBug: i.type === 'Bug',

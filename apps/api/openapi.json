@@ -9296,6 +9296,7 @@
                                 "estimateMd",
                                 "planStart",
                                 "planEnd",
+                                "qaEnd",
                                 "actualStart",
                                 "actualEnd",
                                 "requirement",
@@ -10585,6 +10586,15 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "reviewerIds": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
                   },
                   "testerId": {
                     "anyOf": [
@@ -16057,6 +16067,15 @@
                           "type": "string",
                           "maxLength": 60
                         },
+                        "positions": {
+                          "maxItems": 10,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 60
+                          }
+                        },
                         "capacityHoursWeek": {
                           "type": "integer",
                           "minimum": 0,
@@ -21410,6 +21429,15 @@
                     "format": "uuid",
                     "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                   },
+                  "reviewerIds": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
                   "testerId": {
                     "type": "string",
                     "format": "uuid",
@@ -22161,6 +22189,15 @@
                     "type": "string",
                     "maxLength": 60
                   },
+                  "positions": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 60
+                    }
+                  },
                   "capacityHoursWeek": {
                     "type": "integer",
                     "minimum": 0,
@@ -22259,6 +22296,15 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "positions": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 60
+                    }
                   },
                   "capacityHoursWeek": {
                     "anyOf": [

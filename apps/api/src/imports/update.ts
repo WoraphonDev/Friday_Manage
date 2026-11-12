@@ -6,6 +6,7 @@ import { type CustomFieldDef, displayValue, readCustomValues, writeCustomValues 
 import { parseCustomCell } from './custom.js';
 import { insertRows } from './insert.js';
 import { type Field, personKey, type PlanCheck, type PlanRow } from './plan.js';
+import { reviewerList } from '../issues/rules.js';
 
 const s = schema;
 
@@ -21,6 +22,7 @@ const LABELS = {
   estimateMd: 'Man-Day',
   planStart: 'Plan Start',
   planEnd: 'Plan End',
+  qaEnd: 'QA Due',
   actualStart: 'Actual Start',
   actualEnd: 'Actual End',
   ba: 'Business Analyst',
@@ -44,6 +46,7 @@ const COLUMN: Record<DiffField, Field> = {
   estimateMd: 'estimateMd',
   planStart: 'planStart',
   planEnd: 'planEnd',
+  qaEnd: 'qaEnd',
   actualStart: 'actualStart',
   actualEnd: 'actualEnd',
   ba: 'ba',
@@ -55,7 +58,7 @@ const COLUMN: Record<DiffField, Field> = {
   remark: 'remark',
 };
 /** ชื่อฟิลด์ใน activities / plan_changes */
-const ACTIVITY_FIELD: Partial<Record<DiffField, string>> = { group: 'phaseId', devs: 'assigneeIds', ba: 'baId', sa: 'saId', reviewer: 'reviewerId', parent: 'parentKey', labels: 'labelIds' };
+const ACTIVITY_FIELD: Partial<Record<DiffField, string>> = { group: 'phaseId', devs: 'assigneeIds', ba: 'baId', sa: 'saId', reviewer: 'reviewerIds', parent: 'parentKey', labels: 'labelIds' };
 const PLAN_FIELDS = new Set<DiffField>(['planStart', 'planEnd', 'estimateMd', 'devs']);
 
 export interface FieldChange {
@@ -261,11 +264,12 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     if (row.priority && issue.priority !== row.priority) add('priority', issue.priority, row.priority);
     if (!eq0(issue.size, row.size)) add('size', issue.size, row.size);
     if (!eq0(issue.estimateMd === null ? null : Number(issue.estimateMd), row.estimateMd)) add('estimateMd', issue.estimateMd === null ? null : Number(issue.estimateMd), row.estimateMd);
-    for (const f of ['planStart', 'planEnd', 'actualStart', 'actualEnd'] as const) if (!eq0(issue[f], row[f])) add(f, issue[f], row[f]);
+    for (const f of ['planStart', 'planEnd', 'qaEnd', 'actualStart', 'actualEnd'] as const) if (!eq0(issue[f], row[f])) add(f, issue[f], row[f]);
     if (!samePerson(userName(issue.baId), row.ba)) add('ba', userName(issue.baId), row.ba);
     if (!samePerson(userName(issue.saId), row.sa)) add('sa', userName(issue.saId), row.sa);
     if (names(oldDevs).join('|') !== names(row.devs).join('|')) add('devs', oldDevs, row.devs);
-    if (!samePerson(userName(issue.reviewerId), row.reviewer)) add('reviewer', userName(issue.reviewerId), row.reviewer);
+    const oldReviewers = reviewerList(issue).map((u) => ex.userName.get(u) ?? '');
+    if (names(oldReviewers).join('|') !== names(row.reviewers).join('|')) add('reviewer', oldReviewers, row.reviewers);
     if (names(oldLabels).join('|') !== names(row.labels).join('|')) add('labels', oldLabels, row.labels);
     if (!eq0(issue.description || null, row.description || null)) add('description', issue.description || null, row.description);
     if (!eq0(issue.remark || null, row.remark || null)) add('remark', issue.remark || null, row.remark);
@@ -443,10 +447,13 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
     if (has('priority')) set.priority = row.priority!;
     if (has('size')) set.size = row.size;
     if (has('estimateMd')) set.estimateMd = row.estimateMd;
-    for (const f of ['planStart', 'planEnd', 'actualStart', 'actualEnd'] as const) if (has(f)) set[f] = row[f];
+    for (const f of ['planStart', 'planEnd', 'qaEnd', 'actualStart', 'actualEnd'] as const) if (has(f)) set[f] = row[f];
     if (has('ba')) set.baId = keepPerson(row.ba, issue.baId);
     if (has('sa')) set.saId = keepPerson(row.sa, issue.saId);
-    if (has('reviewer')) set.reviewerId = keepPerson(row.reviewer, issue.reviewerId);
+    if (has('reviewer')) {
+      const reviewerIds = [...new Set(row.reviewers.map((q) => userOf(q) ?? keep(q, reviewerList(issue))).filter((u): u is string => !!u))];
+      Object.assign(set, { reviewerId: reviewerIds[0] ?? null, reviewerIds });
+    }
     if (has('description')) set.description = row.description;
     if (has('remark')) set.remark = row.remark;
     const idsChanged = has('devs') && [...oldDevIds].sort().join() !== [...newDevIds].sort().join();

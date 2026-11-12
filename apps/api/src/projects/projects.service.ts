@@ -17,6 +17,7 @@ import {
   resolveProfile, storeProfile, TEMPLATE_CATEGORIES, templateColumns, type StoredProfile,
 } from './field-profile.js';
 import { STATUS_CATEGORIES, type StatusCategory } from '../common/status-category.js';
+import { PositionList, positionsFrom } from './positions.js';
 
 const s = schema;
 
@@ -100,6 +101,7 @@ const InitialMember = z.object({
   userId: z.uuid(),
   role: projectRole.default('member'),
   position: z.string().trim().max(60).optional(),
+  positions: PositionList.optional(),
   capacityHoursWeek: z.number().int().min(0).max(168).optional(),
 });
 
@@ -360,7 +362,7 @@ export class ProjectsService {
     const base = { workspaceId: tenant.workspaceId, projectId: project.id };
     await tx.insert(s.projectMembers).values({ ...base, userId: auth.userId, role: 'admin' });
     if (members.length) {
-      await tx.insert(s.projectMembers).values(members.map((m) => ({ ...base, userId: m.userId, role: m.role, position: m.position, capacityHoursWeek: m.capacityHoursWeek })));
+      await tx.insert(s.projectMembers).values(members.map((m) => ({ ...base, userId: m.userId, role: m.role, ...positionsFrom(m), capacityHoursWeek: m.capacityHoursWeek })));
     }
 
     // Workflow มาตรฐาน + Workflow ของ Bug

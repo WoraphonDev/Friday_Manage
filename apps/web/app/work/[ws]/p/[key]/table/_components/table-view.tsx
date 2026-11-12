@@ -15,6 +15,7 @@ import { formatDate, type YearFormat } from "@/lib/format";
 import { useIsMobile } from "@/lib/use-mobile";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
+import { peopleForRole } from "@/lib/positions";
 import type { Options, Row, SavedView, TableData } from "./types";
 import styles from "./ot.module.css";
 import { StructureDialog, type StructureAction } from "./structure-dialog";
@@ -37,10 +38,10 @@ const SORTS = ["rank", "number", "planEnd", "priority"] as const;
 // คอลัมน์มาจากชุดฟิลด์ของโปรเจกต์ (Template · ผู้ใช้ตัดสิน 2026-11-09) · แต่ละคนซ่อน / เปิดเพิ่มได้จากเมนู Columns (จำในเครื่อง)
 type Col = string;
 /** ความกว้างคอลัมน์ตาม Canvas Table (.gr grid-template-columns) · คอลัมน์ใหม่ / Custom field ใช้ค่ากลาง */
-const COL_W: Record<string, number> = { dev: 84, ba: 40, sa: 40, reviewer: 56, status: 112, priority: 84, size: 78, start: 74, end: 82, actualStart: 84, actualEnd: 110, refs: 124, labels: 124, progress: 96, remark: 220 };
+const COL_W: Record<string, number> = { dev: 84, ba: 40, sa: 40, reviewer: 56, status: 112, qaDue: 96, priority: 84, size: 78, start: 74, end: 82, actualStart: 84, actualEnd: 110, refs: 124, labels: 124, progress: 96, remark: 220 };
 const colWidth = (c: Col) => COL_W[c] ?? 140;
 const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
-type ProjectFields = { fieldProfile?: FieldProfile; customFields?: CustomFieldDef[] };
+type ProjectFields = { fieldProfile?: FieldProfile; customFields?: CustomFieldDef[]; progressSplit?: boolean };
 /** ชื่องานกว้างอย่างน้อยเท่านี้ · ตารางกว้างกว่าจอเมื่อไรเลื่อนแนวนอนในกล่อง
  *  (340 เดิมแคบไปเมื่อเปิดหลายคอลัมน์ ชื่องานถูกตัดเร็ว ผู้ใช้ขอให้กว้างขึ้น) */
 const NAME_MIN_W = 520;
@@ -242,8 +243,11 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const project = useQuery({ queryKey: queryKeys.project(ws, projectKey), queryFn: () => api.get<ProjectFields>(base), enabled: !!perms.data && !perms.data.guestViewer });
   const profile = project.data?.fieldProfile ?? DEFAULT_PROFILE;
   const customFields = project.data?.customFields ?? [];
-  const available = availableColumns(profile, customFields);
-  const chosen = userCols ?? profile.columns;
+  // QA Due มีเฉพาะโปรเจกต์แยก Dev / QA และเปิดให้เห็นต่อจาก Plan End เมื่อยังไม่ได้เลือกคอลัมน์เอง
+  const split = !!project.data?.progressSplit;
+  const available = availableColumns(profile, customFields).filter((c) => c !== "qaDue" || split);
+  const profileCols = split && !profile.columns.includes("qaDue") ? profile.columns.flatMap((c) => (c === "end" ? [c, "qaDue"] : [c])) : profile.columns;
+  const chosen = userCols ?? profileCols;
   const cols = available.filter((c) => chosen.includes(c));
   // ตัวกรองของฟิลด์ที่ซ่อนทั้ง Task และ Sub-task ไม่มีประโยชน์ จึงไม่แสดง
   const usedField = (f: "ba" | "size") => profile.fields[f]?.task !== "hidden" || profile.fields[f]?.subtask !== "hidden";
@@ -847,7 +851,7 @@ function MobileList({ display, collapsed, onToggle, ws, projectKey, year, canCre
 
 function IssueRow({ index, row, statusColor, sub, cols, profile, customFields, ws, projectKey, year, canEdit, statuses, people, selected, onSelect, onPatch, onAddSub }: {
   index: number; row: Row; statusColor?: string; sub: boolean; cols: Col[]; profile: FieldProfile; customFields: CustomFieldDef[]; ws: string; projectKey: string; year: YearFormat; canEdit: boolean;
-  statuses: { id: string; name: string; category?: string }[]; people: Person[]; selected: boolean; onSelect: (on: boolean) => void;
+  statuses: { id: string; name: string; category?: string }[]; people: (Person & { positions?: string[] })[]; selected: boolean; onSelect: (on: boolean) => void;
   onPatch: (body: Record<string, unknown>) => void; onAddSub?: () => void;
 }) {
   const t = useTranslations("overview-table.table");
@@ -869,14 +873,21 @@ function IssueRow({ index, row, statusColor, sub, cols, profile, customFields, w
   const sizeView = <span style={{ whiteSpace: "nowrap" }}>{row.size ? <span className={`${styles.pill} ${styles.sTodo}`} style={{ fontWeight: 700 }}>{row.size}</span> : empty}{row.estimateMd !== null ? ` ${row.estimateMd}` : ""}</span>;
   const refs = [...(row.requirements ?? []), ...(row.screens ?? [])].join(" · ");
   const remarkView = row.remark ? <span className={styles.remarkText} title={row.remark}>{row.remark}</span> : empty;
-  const reviewerView = row.reviewer ? <span className={styles.avs}><Avatar size="small" person={row.reviewer} /></span> : empty;
+  const reviewerList = row.reviewers ?? (row.reviewer ? [row.reviewer] : []);
+  const reviewerView = reviewerList.length ? <span className={styles.avs}><AvatarStack people={reviewerList} max={3} /></span> : empty;
+  // QA Due: ค่าที่กรอก หรือค่าอัตโนมัติ (ตัวเอียง) · แดงเมื่องานรอ QA และเลยวันนั้นแล้ว
+  const qaDate = row.qaEnd ?? row.qaDue ?? null;
+  const qaCls = !done && row.dueStage === "qa" && qaDate ? (qaDate < today ? styles.dueLate : qaDate === today ? styles.dueToday : "") : "";
+  const qaView = qaDate ? <span className={qaCls} style={row.qaEnd ? undefined : { fontStyle: "italic" }} title={row.qaEnd ? undefined : t("qaDueAuto")}>{formatDate(qaDate, year)}</span> : empty;
   const labelText = (row.labels ?? []).map((l) => l.name).join(", ");
   const level: Level = sub ? "subtask" : "task";
   const cell: Record<string, React.ReactNode> = {
-    dev: canEdit ? <PeopleCell multiple label={edit(t("cols.dev"))} people={people} value={row.assignees?.map((p) => p.id) ?? []} onChange={(ids) => onPatch({ assigneeIds: ids })}>{devView}</PeopleCell> : devView,
-    ba: canEdit ? <PeopleCell label={edit(t("cols.ba"))} people={people} value={row.ba ? [row.ba.id] : []} onChange={(ids) => onPatch({ baId: ids[0] ?? null })}>{baView}</PeopleCell> : baView,
-    sa: canEdit ? <PeopleCell label={edit(t("cols.sa"))} people={people} value={row.sa ? [row.sa.id] : []} onChange={(ids) => onPatch({ saId: ids[0] ?? null })}>{saView}</PeopleCell> : saView,
-    reviewer: canEdit ? <PeopleCell label={edit(t("cols.reviewer"))} people={people} value={row.reviewer ? [row.reviewer.id] : []} onChange={(ids) => onPatch({ reviewerId: ids[0] ?? null })}>{reviewerView}</PeopleCell> : reviewerView,
+    // รายชื่อกรองตามตำแหน่งของสมาชิก (lib/positions) · คนที่เลือกไว้แล้วยังอยู่ในรายการ
+    dev: canEdit ? <PeopleCell multiple label={edit(t("cols.dev"))} people={peopleForRole("dev", people, row.assignees?.map((p) => p.id))} value={row.assignees?.map((p) => p.id) ?? []} onChange={(ids) => onPatch({ assigneeIds: ids })}>{devView}</PeopleCell> : devView,
+    ba: canEdit ? <PeopleCell label={edit(t("cols.ba"))} people={peopleForRole("ba", people, [row.ba?.id])} value={row.ba ? [row.ba.id] : []} onChange={(ids) => onPatch({ baId: ids[0] ?? null })}>{baView}</PeopleCell> : baView,
+    sa: canEdit ? <PeopleCell label={edit(t("cols.sa"))} people={peopleForRole("sa", people, [row.sa?.id])} value={row.sa ? [row.sa.id] : []} onChange={(ids) => onPatch({ saId: ids[0] ?? null })}>{saView}</PeopleCell> : saView,
+    reviewer: canEdit ? <PeopleCell multiple label={edit(t("cols.reviewer"))} people={peopleForRole("qa", people, reviewerList.map((p) => p.id))} value={reviewerList.map((p) => p.id)} onChange={(ids) => onPatch({ reviewerIds: ids })}>{reviewerView}</PeopleCell> : reviewerView,
+    qaDue: canEdit ? <DateCell label={edit(t("cols.qaDue"))} value={row.qaEnd ?? null} className={qaCls} onChange={(v) => onPatch({ qaEnd: v || null })}>{qaView}</DateCell> : qaView,
     priority: canEdit ? (
       <select className={`${styles.pill} ${styles.pillSelect} ${styles.sTodo}`} aria-label={edit(t("cols.priority"))} value={row.priority} onChange={(e) => onPatch({ priority: e.target.value })}>
         {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}

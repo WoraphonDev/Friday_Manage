@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Info, Plus, Trash2, X } from 'lucide-react';
 import { Button, Combobox, DatePicker, Dialog, DrawerClose, Input, Select, useToast } from '@/components/ui';
 import { api } from '@/lib/api';
+import { peopleForRole, type PickRole } from '@/lib/positions';
 import { formatDate } from '@/lib/format';
 import { Failure } from './shared';
 import { CodeChips, LabelChips } from './refs';
@@ -19,7 +20,7 @@ import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 type ChildDraft = { id: string; title: string; size: string; assigneeId: string; planEnd: string };
 type Draft = {
   type: IssueType; subtask: boolean; parentKey: string; title: string; description: string; remark: string; moduleId: string; phaseId: string; statusId: string; priority: string;
-  assigneeIds: string[]; baId: string; saId: string; reviewerId: string; size: string; estimateMd: string; planStart: string; planEnd: string;
+  assigneeIds: string[]; baId: string; saId: string; reviewerIds: string[]; size: string; estimateMd: string; planStart: string; planEnd: string;
   severity: string; environment: string; details: Record<string, string>; acceptance: string[]; checklist: string[]; blockedBy: string[]; children: ChildDraft[];
   shared: boolean; requirements: string[]; screens: string[]; labelIds: string[]; watcherIds: string[];
   /** ค่า Custom field ของโปรเจกต์ { [fieldId]: ค่า } */
@@ -27,11 +28,11 @@ type Draft = {
 };
 const supported: IssueType[] = ['Task', 'Story', 'Bug', 'Spike'];
 const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL'];
-const LIST_FIELDS = ['assigneeIds', 'requirements', 'screens', 'labelIds', 'watcherIds', 'acceptance', 'checklist', 'blockedBy'] as const;
+const LIST_FIELDS = ['assigneeIds', 'reviewerIds', 'requirements', 'screens', 'labelIds', 'watcherIds', 'acceptance', 'checklist', 'blockedBy'] as const;
 function removeDraft(key: string) { try { localStorage.removeItem(key); } catch { /* storage access must not block server writes */ } }
 const defaultDraft = (type: IssueType, parent?: Issue | null): Draft => ({
   type, subtask: !!parent, parentKey: parent?.key ?? '', title: '', description: '', remark: '', moduleId: parent?.moduleId ?? '', phaseId: parent?.phaseId ?? '', statusId: '', priority: 'medium',
-  assigneeIds: [], baId: '', saId: '', reviewerId: '', size: 'M', estimateMd: '', planStart: '', planEnd: '', severity: 'major', environment: 'sit', details: {},
+  assigneeIds: [], baId: '', saId: '', reviewerIds: [], size: 'M', estimateMd: '', planStart: '', planEnd: '', severity: 'major', environment: 'sit', details: {},
   acceptance: [], checklist: [], blockedBy: [], children: [], shared: false, requirements: [], screens: [], labelIds: [], watcherIds: [], custom: {},
 });
 function readDraft(key: string, fallback: Draft): Draft | null {
@@ -115,7 +116,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
     if (!created.current && required.has('acceptance_criteria') && !draft.acceptance.length) { setError(new Error(t('acceptanceRequired'))); return; }
     // ฟิลด์บังคับที่เบราว์เซอร์ตรวจเองไม่ได้ (Chips / คน / หลายตัวเลือก) ตรวจก่อนส่ง
     if (!created.current && draft.type !== 'Bug') {
-      const filled: Record<ProfileField, boolean> = { ba: !!draft.baId, sa: !!draft.saId, reviewer: !!draft.reviewerId, size: !!draft.size, requirements: draft.requirements.length > 0, screens: draft.screens.length > 0, labels: draft.labelIds.length > 0, remark: !!draft.remark.trim(), priority: true, actual: true, progress: true };
+      const filled: Record<ProfileField, boolean> = { ba: !!draft.baId, sa: !!draft.saId, reviewer: draft.reviewerIds.length > 0, size: !!draft.size, requirements: draft.requirements.length > 0, screens: draft.screens.length > 0, labels: draft.labelIds.length > 0, remark: !!draft.remark.trim(), priority: true, actual: true, progress: true };
       const sent = customPayload(customFields, level, draft.custom);
       const missing = [
         ...(Object.keys(filled) as ProfileField[]).filter((f) => must(f) && !filled[f]).map((f) => API_FIELD_LABELS[f]),
@@ -135,7 +136,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
           type: draft.type, title: draft.title.trim(), description: draft.description, remark: show('remark') && draft.remark.trim() ? draft.remark : undefined, ...(show('priority') ? { priority: draft.priority } : {}),
           // Sprint ไม่อยู่ในหน้า Task แล้ว (ผู้ใช้ตัดสิน 2026-11-08) งานใหม่เข้า Backlog แล้วจัดเข้า Sprint ที่หน้า Backlog
           ...(draft.subtask ? { parentKey: draft.parentKey.trim() } : { moduleId: draft.moduleId || undefined, phaseId: draft.phaseId || undefined }),
-          statusId: draft.statusId || undefined, assigneeIds: draft.assigneeIds, baId: show('ba') ? draft.baId || undefined : undefined, saId: show('sa') ? draft.saId || undefined : undefined, reviewerId: show('reviewer') ? draft.reviewerId || undefined : undefined,
+          statusId: draft.statusId || undefined, assigneeIds: draft.assigneeIds, baId: show('ba') ? draft.baId || undefined : undefined, saId: show('sa') ? draft.saId || undefined : undefined, reviewerIds: show('reviewer') && draft.reviewerIds.length ? draft.reviewerIds : undefined,
           size: sizeOn ? draft.size || undefined : undefined, estimateMd: estimateMd || undefined, planStart: draft.planStart || undefined, planEnd: draft.planEnd || undefined,
           ...((draft.type === 'Bug' || required.has('severity') || required.has('environment')) ? { severity: draft.severity, environment: draft.environment } : {}), details, sharedWithGuests: draft.shared,
           requirements: show('requirements') ? draft.requirements : [], screens: show('screens') ? draft.screens : [],
@@ -173,8 +174,9 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
   const moduleId = parentRow ? parentRow.moduleId : draft.moduleId;
   const mod = options.modules.find((module) => module.id === moduleId);
   const modColor = mod?.color ?? DEFAULT_ITEM_COLOR;
-  const people = options.members.map((person) => ({ id: person.id, name: person.displayName }));
-  const personSelect = (name: 'baId' | 'saId' | 'reviewerId', label: string, isRequired = false) => <Select label={label} required={isRequired} value={draft[name]} onChange={(event) => set(name, event.target.value)}><option value="">{t('notSet')}</option>{people.map((person) => <option value={person.id} key={person.id}>{person.name}</option>)}</Select>;
+  // รายชื่อกรองตามตำแหน่งของสมาชิก (lib/positions) · ยังไม่มีใครตั้งตำแหน่งนั้น = แสดงทุกคน
+  const forRole = (role: PickRole, selected: string[]) => peopleForRole(role, options.members, selected);
+  const personSelect = (name: 'baId' | 'saId', role: PickRole, label: string, isRequired = false) => <Select label={label} required={isRequired} value={draft[name]} onChange={(event) => set(name, event.target.value)}><option value="">{t('notSet')}</option>{forRole(role, [draft[name]]).map((person) => <option value={person.id} key={person.id}>{person.displayName}</option>)}</Select>;
   const sizeOptions = Object.entries(options.sizeMdMap).sort(([a], [b]) => SIZE_ORDER.indexOf(a) - SIZE_ORDER.indexOf(b));
   const mdValue = draft.type === 'Spike' ? (draft.details.timebox_hours ? Number(draft.details.timebox_hours) / 8 : '') : draft.estimateMd || (options.sizeMdMap[draft.size] ?? '').toString();
   const bugSection = <div className={styles.typeSection}>
@@ -243,7 +245,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
               {draft.children.map((child, index) => <div className={styles.childRow} key={child.id}>
                 <Input label={t('childTitle', { number: index + 1 })} required maxLength={300} value={child.title} onChange={(event) => updateChild(child.id, { title: event.target.value })} />
                 {show('size', 'subtask') && <Select label={t('fields.size')} value={child.size} onChange={(event) => updateChild(child.id, { size: event.target.value })}>{sizeOptions.map(([size, md]) => <option value={size} key={size}>{size} · {t('md', { value: md })}</option>)}</Select>}
-                <Select label="Developer" value={child.assigneeId} onChange={(event) => updateChild(child.id, { assigneeId: event.target.value })}><option value="">{t('notSet')}</option>{people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</Select>
+                <Select label="Developer" value={child.assigneeId} onChange={(event) => updateChild(child.id, { assigneeId: event.target.value })}><option value="">{t('notSet')}</option>{forRole('dev', [child.assigneeId]).map((person) => <option key={person.id} value={person.id}>{person.displayName}</option>)}</Select>
                 <DatePicker compact label={t('fields.planEnd')} value={child.planEnd || undefined} yearFormat={scope.yearFormat} onValueChange={(value) => updateChild(child.id, { planEnd: value })} />
                 <Button size="icon" variant="ghost" aria-label={t('removeChild', { number: index + 1 })} onClick={() => set('children', draft.children.filter((row) => row.id !== child.id))}><Trash2 size={14} /></Button>
               </div>)}
@@ -259,10 +261,10 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
           <aside className={styles.sidebar} aria-label={t('properties')}><div className={`${styles.props} ${styles.propsAll}`}>
             <section className={styles.pgroup} aria-label={t('groupPeople')}>
               <h4 className={styles.pgTitle}>{t('groupPeople')}</h4>
-              {show('ba') && <PropRow k={star('ba', 'Business Analyst')}>{personSelect('baId', 'Business Analyst', must('ba'))}</PropRow>}
-              {show('sa') && <PropRow k={star('sa', 'System Analyst')}>{personSelect('saId', 'System Analyst', must('sa'))}</PropRow>}
-              <PropRow k="Developer"><Combobox label={t('fields.assigneeIds')} multiple options={options.members} value={draft.assigneeIds} onValueChange={(ids) => { if (!lock.current && !created.current) set('assigneeIds', ids); }} /></PropRow>
-              {show('reviewer') && <PropRow k={star('reviewer', t('qaReviewer'))}>{personSelect('reviewerId', t('qaReviewer'), must('reviewer'))}</PropRow>}
+              {show('ba') && <PropRow k={star('ba', 'Business Analyst')}>{personSelect('baId', 'ba', 'Business Analyst', must('ba'))}</PropRow>}
+              {show('sa') && <PropRow k={star('sa', 'System Analyst')}>{personSelect('saId', 'sa', 'System Analyst', must('sa'))}</PropRow>}
+              <PropRow k="Developer"><Combobox label={t('fields.assigneeIds')} multiple options={forRole('dev', draft.assigneeIds)} value={draft.assigneeIds} onValueChange={(ids) => { if (!lock.current && !created.current) set('assigneeIds', ids); }} /></PropRow>
+              {show('reviewer') && <PropRow k={star('reviewer', t('qaReviewer'))}><Combobox label={t('qaReviewer')} multiple options={forRole('qa', draft.reviewerIds)} value={draft.reviewerIds} onValueChange={(ids) => { if (!lock.current && !created.current) set('reviewerIds', ids); }} /></PropRow>}
               <PropRow k={t('watchers')}><Combobox label={t('refs.watchers')} multiple options={options.members.filter((person) => person.id !== scope.meId)} value={draft.watcherIds} onValueChange={(ids) => { if (!lock.current && !created.current) set('watcherIds', ids); }} /></PropRow>
             </section>
             <section className={styles.pgroup} aria-label={t('groupPlan')}>

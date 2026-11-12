@@ -35,6 +35,8 @@ export interface Permissions {
 export interface Person {
   id: string;
   displayName: string;
+  /** ตำแหน่งในโปรเจกต์ (มีเมื่ออ่านจากรายชื่อสมาชิกโปรเจกต์) · ใช้กรองช่องเลือก BA / SA / Dev / QA */
+  positions?: string[];
   initials?: string;
   avatarUrl?: string | null;
   color?: string;

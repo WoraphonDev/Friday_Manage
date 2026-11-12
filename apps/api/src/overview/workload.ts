@@ -401,6 +401,7 @@ export async function projectWorkload(tx: Tx, project: ProjectLike, opts: Projec
           wsCapacity: s.workspaceMembers.capacityHoursWeek,
           projectCapacity: s.projectMembers.capacityHoursWeek,
           position: s.projectMembers.position,
+          positions: s.projectMembers.positions,
           role: s.projectMembers.role,
           jobTitle: s.workspaceMembers.jobTitle,
         })
@@ -418,7 +419,8 @@ export async function projectWorkload(tx: Tx, project: ProjectLike, opts: Projec
         )
     : [];
   const position = opts.position?.toLowerCase();
-  const people = members.filter((m) => !position || (m.position ?? m.jobTitle ?? '').toLowerCase() === position);
+  // คนหนึ่งมีได้หลายตำแหน่ง: ตรงตำแหน่งใดตำแหน่งหนึ่งก็นับ · ไม่มีตำแหน่งในโปรเจกต์ใช้ชื่อตำแหน่งใน Workspace
+  const people = members.filter((m) => !position || (m.positions?.length ? m.positions.map((x) => x.toLowerCase()) : [(m.position ?? m.jobTitle ?? '').toLowerCase()]).includes(position));
   const leaves = await loadLeaves(tx, people.map((p) => p.userId), opts.from, opts.to);
   const run = (basis: WorkloadBasis) =>
     computeWorkload({

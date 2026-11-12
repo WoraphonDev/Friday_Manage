@@ -146,6 +146,8 @@ export function requirePerm(access: ProjectAccess, permission: string) {
 export interface IssueOwners {
   assigneeIds: readonly string[];
   reviewerId?: string | null;
+  /** QA / Reviewer หลายคน · ทุกคนย้ายงานได้ */
+  reviewerIds?: readonly string[] | null;
   testerId?: string | null;
 }
 
@@ -157,7 +159,7 @@ export interface IssueOwners {
 export function canMoveIssue(access: ProjectAccess, issue: IssueOwners) {
   if (!access.perms.has('issue.edit')) return false;
   if (access.role === 'admin' || !issue.assigneeIds.length) return true;
-  return issue.assigneeIds.includes(access.userId) || issue.reviewerId === access.userId || issue.testerId === access.userId;
+  return issue.assigneeIds.includes(access.userId) || issue.reviewerId === access.userId || !!issue.reviewerIds?.includes(access.userId) || issue.testerId === access.userId;
 }
 
 export function requireMovable(access: ProjectAccess, issue: IssueOwners) {

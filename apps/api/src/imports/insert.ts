@@ -115,13 +115,14 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
             priority: r.priority ?? 'medium',
             baId: ctx.userOf(r.ba),
             saId: ctx.userOf(r.sa),
-            reviewerId: ctx.userOf(r.reviewer),
+            ...reviewersOf(r.reviewers.map(ctx.userOf)),
             reporterId: ctx.actorId,
             createdBy: ctx.actorId,
             size: r.size,
             estimateMd: r.estimateMd,
             planStart: r.planStart,
             planEnd: r.planEnd,
+            qaEnd: r.qaEnd,
             actualStart: r.actualStart,
             actualEnd: r.actualEnd,
             details: { ...(r.requirementText ? { requirementText: r.requirementText } : {}), ...(ctx.details?.(r) ?? {}) },
@@ -160,4 +161,10 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
 
 async function codes(tx: Tx, table: typeof s.requirements | typeof s.screens, projectId: string) {
   return new Map((await tx.select({ id: table.id, code: table.code }).from(table).where(eq(table.projectId, projectId))).map((x) => [x.code, x.id]));
+}
+
+/** QA หลายคน → reviewerIds (ไม่ซ้ำ) + คนแรกเป็น reviewerId */
+function reviewersOf(ids: (string | null)[]) {
+  const reviewerIds = [...new Set(ids.filter((u): u is string => !!u))];
+  return { reviewerId: reviewerIds[0] ?? null, reviewerIds };
 }

@@ -6,7 +6,8 @@ import * as Popover from "@radix-ui/react-popover";
 import { MoreHorizontal } from "lucide-react";
 import { Avatar, Badge, Button, Dialog, EmptyState, Input, Select } from "@/components/ui";
 import { formatDate, type YearFormat, localeNumberFormat } from "@/lib/format";
-import { positionOptions, toPositionCode } from "@/lib/positions";
+import { positionCodes } from "@/lib/positions";
+import { PositionPicker } from "@/features/positions/position-picker";
 import { cn } from "@/lib/utils";
 import type { ProjectMember, ProjectRole } from "./types";
 import styles from "./members.module.css";
@@ -29,7 +30,7 @@ export function MemberTable({
   /** Man-Day สัปดาห์นี้ต่อคน (จาก Workload) · ไม่มีข้อมูล = แสดง — */
   thisWeek: Map<string, { value: number; capacity: number | null }>;
   onRole: (member: ProjectMember, role: ProjectRole) => Promise<void>;
-  onEdit: (member: ProjectMember, body: { position: string | null; capacityHoursWeek: number | null; pmDeputy?: boolean }) => Promise<void>;
+  onEdit: (member: ProjectMember, body: { positions: string[]; capacityHoursWeek: number | null; pmDeputy?: boolean }) => Promise<void>;
   onRemove: (member: ProjectMember, reassignTo: string | null) => Promise<void>;
 }) {
   const t = useTranslations("members-workload.members");
@@ -85,7 +86,7 @@ export function MemberTable({
                   {m.email && <div className={cn(styles.muted, styles.small)}>{m.email}</div>}
                 </div>
               </div>
-              <div>{m.position ?? "—"}</div>
+              <div>{positionCodes(m).join(" · ") || "—"}</div>
               <div>
                 {canManage && !m.isOwner ? (
                   <select aria-label={t("roleOf", { name: m.displayName })} value={m.role} onChange={(e) => void onRole(m, e.target.value as ProjectRole)}>
@@ -143,12 +144,12 @@ function MemberDialog({
   member: ProjectMember;
   others: ProjectMember[];
   onClose: () => void;
-  onSave: (body: { position: string | null; capacityHoursWeek: number | null; pmDeputy?: boolean }) => Promise<void>;
+  onSave: (body: { positions: string[]; capacityHoursWeek: number | null; pmDeputy?: boolean }) => Promise<void>;
   onRemove: (reassignTo: string | null) => Promise<void>;
 }) {
   const t = useTranslations("members-workload.members");
   const tc = useTranslations("common.app");
-  const [position, setPosition] = useState(toPositionCode(member.position));
+  const [positions, setPositions] = useState(positionCodes(member));
   const [capacity, setCapacity] = useState(member.capacityHoursWeek === null ? "" : String(member.capacityHoursWeek));
   const [deputy, setDeputy] = useState(!!member.pmDeputy);
   // Owner / Admin เป็น PM อยู่แล้ว · Guest ทำแทน PM ไม่ได้
@@ -173,13 +174,11 @@ function MemberDialog({
         className={styles.dialogBody}
         onSubmit={(e) => {
           e.preventDefault();
-          void run(() => onSave({ position: position.trim() || null, capacityHoursWeek: capacity === "" ? null : Number(capacity), ...(canDeputy ? { pmDeputy: deputy } : {}) }));
+          void run(() => onSave({ positions, capacityHoursWeek: capacity === "" ? null : Number(capacity), ...(canDeputy ? { pmDeputy: deputy } : {}) }));
         }}
       >
-        <Select label={t("position")} value={position} onChange={(e) => setPosition(e.target.value)}>
-          <option value="">{t("positionNone")}</option>
-          {positionOptions(position).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </Select>
+        <PositionPicker label={t("positions")} value={positions} onChange={setPositions} />
+        <span className={cn(styles.muted, styles.small)}>{t("positionsHint")}</span>
         <Input label={t("capacityHours")} type="number" min={0} max={168} value={capacity} hint={t("capacityHint")} onChange={(e) => setCapacity(e.target.value)} />
         {canDeputy && (
           <label className={styles.check}>

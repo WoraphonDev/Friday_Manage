@@ -96,7 +96,10 @@ export const issues = pgTable(
     baId: uuid().references(() => users.id),
     /** System Analyst ของงาน (ผู้ใช้เพิ่ม 2026-11-08) */
     saId: uuid().references(() => users.id),
+    /** QA / Reviewer คนแรกของ reviewerIds (เก็บไว้ให้โค้ดและ FK เดิมใช้ต่อ) */
     reviewerId: uuid().references(() => users.id),
+    /** QA / Reviewer ทั้งหมดตามลำดับ (ผู้ใช้ขอ 2026-11-13: เลือกได้หลายคนเหมือน Dev) · ตัวแรก = reviewerId */
+    reviewerIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     testerId: uuid().references(() => users.id),
     reporterId: uuid().references(() => users.id),
     createdBy: uuid().references(() => users.id),

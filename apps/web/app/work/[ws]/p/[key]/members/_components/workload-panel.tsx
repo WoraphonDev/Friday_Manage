@@ -74,7 +74,8 @@ export function WorkloadPanel({
   });
   // ตำแหน่งที่มีในทีม · จำค่าจากผลที่ยังไม่กรอง เพื่อไม่ให้ตัวเลือกหายเมื่อกรองแล้ว
   const [positions, setPositions] = useState<string[]>([]);
-  const found = workload.data?.people.map((p) => p.position).filter((x): x is string => !!x) ?? [];
+  // คนหนึ่งมีได้หลายตำแหน่ง (API ส่งมาเป็น "SA, DEV") · ตัวเลือกเป็นทีละตำแหน่ง
+  const found = workload.data?.people.flatMap((p) => (p.position ?? "").split(",").map((x) => x.trim()).filter(Boolean)) ?? [];
   if (!position && found.some((p) => !positions.includes(p))) setPositions([...new Set([...positions, ...found])].sort());
 
   const pick = (g: Group) => {

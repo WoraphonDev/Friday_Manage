@@ -58,6 +58,8 @@ export interface ProjectMember {
   isGuest: boolean;
   active: boolean;
   position: string | null;
+  /** ตำแหน่งทั้งหมด (มีได้หลายตำแหน่ง) */
+  positions?: string[];
   capacityHoursWeek: number | null;
   capacityMdWeek: number | null;
   /** ทำงานแทน PM: รับแจ้งเตือนแบบ PM และอนุมัติคำขอเลื่อน Due */

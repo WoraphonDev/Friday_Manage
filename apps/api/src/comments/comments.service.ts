@@ -20,7 +20,7 @@ type Loaded = Awaited<ReturnType<IssuesService['loadIssue']>>;
 type Cursor = { id: string; time: string; issueId: string; feed: 'comments' | 'activity' | 'log' | 'log-desc' };
 const CursorBody = z.object({ id: z.uuid(), time: z.string().regex(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d(?:\.\d{1,6})?[+-]\d\d(?::\d\d)?$/), issueId: z.uuid(), feed: z.enum(['comments', 'activity', 'log', 'log-desc']) });
 const hiddenPerson = { displayName: 'ทีมพัฒนา', initials: '', avatarUrl: null };
-const personFields = new Set(['assigneeIds', 'baId', 'reviewerId', 'testerId', 'createdBy', 'deletedBy', 'ownerUserId']);
+const personFields = new Set(['assigneeIds', 'baId', 'reviewerId', 'reviewerIds', 'testerId', 'createdBy', 'deletedBy', 'ownerUserId']);
 
 @Injectable()
 export class CommentsService {

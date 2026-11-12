@@ -39,6 +39,8 @@ export const STANDARD_COLUMNS = {
   size: ['size'],
   start: null,
   end: null,
+  /** QA Due · หน้าเว็บแสดงเฉพาะโปรเจกต์แยก Dev / QA */
+  qaDue: null,
   actualStart: ['actual'],
   actualEnd: ['actual'],
   refs: ['requirements', 'screens'],

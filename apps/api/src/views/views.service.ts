@@ -256,6 +256,7 @@ export class ViewsService {
           estimateMd: i.estimateMd,
           progressPct: progressOf(i),
           lateDays: Math.max(lateOf(i), ...subs.map(lateOf)),
+          ...(dueRule.split ? { qaDue: qaDueOf(dueRule, i) } : {}),
           ...(guest
             ? { canOpen: i.sharedWithGuests }
             : { assignees: (d.assignees.get(i.id) ?? []).map((id) => people.get(id)).filter((p): p is Person => !!p) }),
@@ -335,6 +336,8 @@ interface TimelineRow {
   estimateMd: number | null;
   progressPct: number;
   lateDays: number;
+  /** โปรเจกต์แยก Dev / QA: วันที่ QA ต้องทดสอบเสร็จ (Gantt วาดช่วง QA ต่อจาก end) */
+  qaDue?: string | null;
   assignees?: Person[];
   canOpen?: boolean;
   subtasks: TimelineRow[];

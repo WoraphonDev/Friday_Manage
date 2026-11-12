@@ -74,7 +74,7 @@ Workspace เลือกปฏิทินหลัก + เพิ่มวั�
 | `project_key_alias` | Key เดิมหลังเปลี่ยน Key · ใช้ redirect ลิงก์เก่า | project_id, old_key | L2 |
 | `project_scope_item` | In-scope, Out-of-scope, Deliverables, Acceptance criteria, สมมติฐาน | project_id, kind, text, sort | A, 1 |
 | `project_holiday` | วันหยุดเฉพาะโปรเจกต์ | project_id, date, name | A, L2 |
-| `project_member` | สมาชิกในโปรเจกต์ | project_id, user_id, role (admin · member · viewer), position (PM · UX/UI · Frontend · Backend · QA · BA), capacity_hours_week (เฉพาะชั่วโมงที่ให้โปรเจกต์นี้), pm_deputy (ทำแทน PM: รับแจ้งเตือนแบบ PM และอนุมัติคำขอเลื่อน Due · 9 พ.ย. 2569), joined_at | A, 7 |
+| `project_member` | สมาชิกในโปรเจกต์ | project_id, user_id, role (admin · member · viewer), positions (หลายตำแหน่ง: PM · BA · SA · UX · FE · BE · DEV · QA · DEVOPS · migration 0035), position (ข้อความรวมของ positions), capacity_hours_week (เฉพาะชั่วโมงที่ให้โปรเจกต์นี้), pm_deputy (ทำแทน PM: รับแจ้งเตือนแบบ PM และอนุมัติคำขอเลื่อน Due · 9 พ.ย. 2569), joined_at | A, 7 |
 | `project_role_permission` | ตารางสิทธิ์ที่ปรับได้รายโปรเจกต์ (เก็บเฉพาะค่าที่ต่างจากค่าเริ่มต้น) | project_id, role (member · viewer), permission (เช่น `issue.change_due_directly`), allowed | L2 |
 | `module` | Module ในโปรเจกต์ | project_id, name, color, owner_user_id (Dev หลัก), sort | A, L2, 2 |
 | `phase` | **กลุ่ม (Group) ใน Module ไม่บังคับ** · Module → กลุ่ม → Task → Sub-task · Sub-task อยู่กลุ่มเดียวกับ Task แม่ (ย้าย Task แล้ว Sub-task ตาม) · ในหน้าจอเรียกว่า "กลุ่ม" (ผู้ใช้ขอ 8 พ.ย. 2569) |
@@ -125,7 +125,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | ตัวตน | workspace_id, project_id, number (DP-**39** · นำเข้าจาก Excel ใช้คอลัมน์ **ID** ตามเลขงานใน Prototype), issue_type_id, parent_id (null = ระดับ Task), excel_row_no (คอลัมน์ **No.** ใช้จับคู่แถวตอน Import อัปเดต) |
 | ตำแหน่งในแผน | module_id, phase_id, sprint_id, rank (ลำดับใน Backlog / Kanban แบบ LexoRank) |
 | เนื้อหา | title, description (markdown), status_id, priority (urgent · high · medium · low) |
-| คน | ba_id, reviewer_id, tester_id, reporter_id, created_by · Dev อยู่ใน `issue_assignee` |
+| คน | ba_id, reviewer_ids (QA / Reviewer หลายคน · migration 0035), reviewer_id (= คนแรกของ reviewer_ids), tester_id, reporter_id, created_by · Dev อยู่ใน `issue_assignee` |
 | ประเมิน | size (XS–XL, null = ยังไม่ประเมิน), estimate_md (ของทั้งทีม), progress_pct (กรอกเองได้เฉพาะงานที่ไม่มีลูก) |
 | วันที่ | plan_start, plan_end (= Due · โปรเจกต์แยก Dev / QA = วันที่ Dev ต้องส่ง QA), qa_end (QA Due ของโปรเจกต์แยก Dev / QA · null = plan_end + qa_buffer_days วันทำการ · migration 0034), actual_start, actual_end (บันทึกอัตโนมัติเมื่อสถานะเปลี่ยน), completed_at |
 | Bug | severity (critical · major · minor), environment, reopen_count, found_in_test_run_id |

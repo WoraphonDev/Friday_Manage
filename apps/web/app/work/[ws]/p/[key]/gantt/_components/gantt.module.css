@@ -60,3 +60,5 @@ a.nm:hover { text-decoration:underline; }
   .lg { grid-template-columns:36px minmax(0,1fr); padding:0 8px; }
   .opt { display:none; }
 }
+/* ช่วง QA ต่อท้ายแถบ Dev (โปรเจกต์แยก Dev / QA) */
+.qa { position:absolute; height:20px; border-radius:0 5px 5px 0; border:1px dashed var(--warning-border); background:repeating-linear-gradient(135deg, var(--warning-soft) 0 4px, transparent 4px 8px); pointer-events:auto; }

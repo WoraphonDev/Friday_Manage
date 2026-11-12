@@ -13,6 +13,7 @@ import { projectHealth, type HealthItem } from '../overview/health.js';
 import { weekOf, workspaceWorkload } from '../overview/workload.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
 import { loadScope, type Issue, type Scope } from './scope.js';
+import { reviewerList } from '../issues/rules.js';
 
 const uuid = z.uuid();
 
@@ -70,7 +71,7 @@ export class HomeService {
       const byAssignee = new Map<string, number>();
       for (const i of team.filter(late)) for (const u of sc.lateOwners(i).length ? sc.lateOwners(i) : ['_none']) byAssignee.set(u, (byAssignee.get(u) ?? 0) + 1);
 
-      const reviews = open.filter((i) => i.reviewerId === auth.userId && (sc.statuses.get(i.statusId)!.category === 'review' || isReviewName(sc.statuses.get(i.statusId)!.name)));
+      const reviews = open.filter((i) => reviewerList(i).includes(auth.userId) && (sc.statuses.get(i.statusId)!.category === 'review' || isReviewName(sc.statuses.get(i.statusId)!.name)));
       const mentions = await this.mentions(tx, auth, tenant);
       const people = await loadPeople(tx, guest ? [] : [...byAssignee.keys()].filter((u) => u !== '_none'));
 
@@ -252,7 +253,7 @@ export class HomeService {
       );
       const me = (i: Issue, tab: z.infer<typeof MyIssuesQuery>['tab']) =>
         // มอบหมายให้ฉัน = ทุกบทบาท ไม่ใช่แค่ผู้รับผิดชอบ (BA ที่ถูกตั้งเป็น QA ต้องเห็นงานด้วย)
-        tab === 'assigned' ? sc.rolesOf(i, auth.userId).length > 0 : tab === 'reviewer' ? i.reviewerId === auth.userId : tab === 'watching' ? watched.has(i.id) : i.createdBy === auth.userId;
+        tab === 'assigned' ? sc.rolesOf(i, auth.userId).length > 0 : tab === 'reviewer' ? reviewerList(i).includes(auth.userId) : tab === 'watching' ? watched.has(i.id) : i.createdBy === auth.userId;
       const open = (i: Issue) => !sc.isDone(i);
       // จำนวนบนแต่ละแท็บนับเฉพาะงานที่ยังไม่เสร็จ
       const counts = Object.fromEntries((['assigned', 'reviewer', 'watching', 'created'] as const).map((t) => [t, sc.issues.filter((i) => open(i) && me(i, t)).length]));

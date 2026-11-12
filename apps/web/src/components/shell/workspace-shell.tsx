@@ -62,6 +62,7 @@ import { LocaleSwitch, LocaleSync } from "@/features/locale-switch";
 import { ThemeSwitch } from "@/features/theme-switch";
 import { WorkspaceBanners } from "@/features/plan-limits";
 import { AnnouncementBanners } from "@/features/announcements";
+import { EngagementPrompts, WhatsNewButton, WhatsNewMenuItem } from "@/features/whats-new";
 import { isBlocked, SuspendedScreen, SuspensionBanner, useSuspension } from "@/features/suspension";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 
@@ -594,6 +595,7 @@ export function WorkspaceShell({
                 {t("nav.new")}
               </Link>
             )}
+            <WhatsNewButton ws={ws} role={workspace.role} />
             <Bell workspace={ws} unread={summary.data?.total ?? 0} />
             {accountMenu}
           </header>
@@ -703,6 +705,7 @@ export function WorkspaceShell({
             close={() => setMenuOpen(false)}
             locked={suspension?.mode === "full"}
           />
+          <WhatsNewMenuItem ws={ws} role={workspace.role} onOpen={() => setMenuOpen(false)} />
           <div className="menu-divider" />
           <div className="menu-label">{t("nav.yourWorkspaces")}</div>
           {workspaceList(() => setMenuOpen(false))}
@@ -731,6 +734,7 @@ export function WorkspaceShell({
           open={commandOpen}
           onOpenChange={setCommandOpen}
         />
+        <EngagementPrompts ws={ws} role={workspace.role} />
       </YearFormatContext.Provider>
     </Context.Provider>
   );

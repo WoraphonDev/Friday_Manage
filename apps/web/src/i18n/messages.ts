@@ -12,6 +12,8 @@ import suspension from "../../messages/th/suspension.json";
 import suspensionEn from "../../messages/en/suspension.json";
 import announcements from "../../messages/th/announcements.json";
 import announcementsEn from "../../messages/en/announcements.json";
+import whatsNew from "../../messages/th/whats-new.json";
+import whatsNewEn from "../../messages/en/whats-new.json";
 
 // เพิ่ม namespace ต่องานที่นี่ แยกข้อความของแต่ละหน้าออกจากไฟล์กลาง
 // inbox-bell, search-palette: กระดิ่งและ Command palette อยู่ใน shell ทุกหน้า
@@ -28,6 +30,8 @@ export const messages = {
   suspension,
   // announcements: แบนเนอร์ประกาศจากทีม Friday (O24) อยู่ใน shell
   announcements,
+  // whats-new: ปุ่มมีอะไรใหม่ / Spotlight / NPS (W24) อยู่ใน shell
+  "whats-new": whatsNew,
 };
 
 /** ข้อความ EN ของ namespace เดียวกัน (W21) · test ใช้ผ่าน renderWithProviders({ locale: "en" }) */
@@ -39,4 +43,5 @@ export const messagesEn = {
   "locale-switch": localeSwitchEn,
   suspension: suspensionEn,
   announcements: announcementsEn,
+  "whats-new": whatsNewEn,
 };

@@ -19,6 +19,14 @@ export const handlers = [
   http.get("*/api/v1/w/:ws/announcements", () =>
     HttpResponse.json({ items: [] }),
   ),
+  // มีอะไรใหม่ / Spotlight / NPS (W24) · shell เรียกทุกหน้า · ค่าเริ่มต้น = ไม่มีอะไรแสดง
+  http.get("*/api/v1/me/whats-new", () =>
+    HttpResponse.json({ items: [], unseen: 0, seenAt: null, hidden: false }),
+  ),
+  http.get("*/api/v1/me/spotlight", () => HttpResponse.json({ item: null })),
+  http.get("*/api/v1/me/nps-prompt", () =>
+    HttpResponse.json({ ask: false, reason: "not_sampled" }),
+  ),
   http.get("*/api/v1/w/:ws/projects", () =>
     HttpResponse.json({ items: projects }),
   ),

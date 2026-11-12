@@ -22,8 +22,8 @@
 ## เสร็จเมื่อ
 
 - [ ] หน้าตรงกับข้อเสนอที่อนุมัติแล้วที่ 1440 px และ 390 px · โหมดสว่าง / มืด
-- [ ] ครบสถานะ: ว่าง · โหลดไม่สำเร็จ (ไม่บังงาน) · Guest ไม่เห็นปุ่ม
-- [ ] component test ด้วย MSW ครอบคลุมทุกข้อใน "ทำอะไร" · `pnpm --filter @friday/web typecheck test build` ผ่าน
+- [x] ครบสถานะ: ว่าง · โหลดไม่สำเร็จ (ไม่บังงาน) · Guest ไม่เห็นปุ่ม
+- [x] component test ด้วย MSW ครอบคลุมทุกข้อใน "ทำอะไร" · `pnpm --filter @friday/web typecheck test build` ผ่าน
 - [ ] build และ deploy Docker เว็บ + API ในเครื่องตาม CLAUDE.md แล้วตรวจผ่าน http://localhost:3000 (เผยแพร่รายการจาก O33 หรือ seed ข้อมูลสมมติ)
 
 ## ยังต้องตัดสินใจ
@@ -35,4 +35,22 @@
 
 ## บันทึกผล
 
-<!-- ผู้ทำงานเขียนตอนส่งงาน -->
+**12 พ.ย. 2569 · branch `task/changelog-nps-A42-O33-W24`**
+
+**ทำแล้ว** (`src/features/whats-new/**` · `src/features/nps/**` · ข้อความ namespace `whats-new` ใน `messages/th/whats-new.json` และคู่ `messages/en/whats-new.json` ที่ test W21 บังคับ)
+- `WhatsNewButton` ปุ่มของขวัญบนแถบบนก่อนกระดิ่ง (เว้นที่ให้ปุ่ม "?" ของ W26 วางระหว่างกลาง) · จุดเหลือง (`--warning-solid`) เมื่อ `unseen > 0` ไม่ใช้ตัวเลข · Popover 400 px: หัว "มีอะไรใหม่" + "ใหม่ N" + "อ่านทั้งหมดแล้ว" · การ์ดรายการ (ประเภท วันที่ รูป / วิดีโอ `<img>` จาก URL ที่ API ให้ หัวข้อ สรุป ปุ่ม "ลองใช้" ไป `/work/{ws}{path}` + นับคลิก) · รายการที่เห็นแล้วจาง · ท้ายแผง "รายการเก่ากว่า 90 วันไม่แสดง"
+- เปิดแผง = เห็นแล้ว: จำรายการตอนเปิดไว้แสดง "ใหม่" ระหว่างเปิด แล้วเรียก `POST me/whats-new/seen` (เฉพาะเมื่อมีรายการใหม่) จุดหายทันที
+- มือถือ: `WhatsNewMenuItem` ในเมนู ☰ (มีจุดเหลือง) เปิด `WhatsNewFullScreen` หน้าเต็มจอพร้อมปุ่มกลับ · หน้าเต็มจอวางนอกเมนู (ใน `EngagementPrompts`) เพราะเมนูปิดตัวเองเมื่อกด
+- `EngagementPrompts` จัดคิว Spotlight → NPS ทีละอย่าง: รอ 3 วินาทีหลังโหลด · ไม่แสดงขณะพิมพ์ (focus อยู่ในช่องกรอก) / มี Dialog หรือ Popover เปิด / เปิด Drawer งาน (`?issue=`) แล้วลองใหม่ทุก 2 วินาที · มี Spotlight = ไม่ถาม NPS ใน session นั้น · เรียก `me/nps-prompt` เมื่อพร้อมแสดงจริงเท่านั้น
+- `Spotlight` (U2) Modal 560 px: รูป / ภาพแทน · บรรทัด "- " ในรายละเอียดเป็นขั้นพร้อมไอคอน · "แสดงครั้งเดียว · ดูอีกได้ในแผง" · ไว้ทีหลัง / X / Esc / ปุ่มหลัก = `POST me/spotlight/{id}/dismiss` ครั้งเดียว · ปุ่มหลักพาไปหน้าที่ตั้งไว้และนับคลิก (ไม่มีปุ่ม = "รับทราบ")
+- `NpsPrompt` (U3) การ์ดมุมขวาล่าง 380 px ไม่มีพื้นหลังมืด: ขั้น 1 คะแนน 0–10 → ขั้น 2 "ขอบคุณครับ {คำถามต่อตามกลุ่ม}" + ชิปหัวข้อ + ความเห็น + ส่ง → ขั้น 3 ขอบคุณ (ปุ่มติดต่อ Support เป็น mailto `NEXT_PUBLIC_SUPPORT_EMAIL` ถ้าตั้งไว้) · ปิดขั้น 1 = ปิดโดยไม่ตอบ · ปิดขั้น 2 = ส่งคะแนนอย่างเดียว · มือถือเป็น Bottom sheet มีพื้นหลังมืด ปุ่ม 6 คอลัมน์ "ไม่ตอบตอนนี้"
+- มือถือส่ง `mobile=true&sessionSeconds=` ให้ API ตัดสิน "ใช้งานไม่ถึง 2 นาที" (ปรับ A42 ใน commit เดียวกับ A42 · API ตอบ `short_mobile` โดยไม่บันทึกว่าถาม แล้วเว็บถามใหม่เมื่อครบเวลา) · เวลาเริ่มใช้เก็บใน sessionStorage ของแท็บ
+- ภาษาอังกฤษ: ใช้ `*En` ถ้ามี ไม่มีใช้ฉบับไทย (คำตัดสิน) · สีจาก token ทั้งสองโหมดใน CSS module ของ feature
+- สถานะ: ว่าง "ยังไม่มีอะไรใหม่ในช่วงนี้" · โหลดไม่สำเร็จ ปุ่มยังอยู่ (ไม่มีจุด) แผงบอกสั้น ๆ + ลองใหม่ ไม่บังงาน · Guest ไม่เห็นปุ่มและไม่เรียก API · Workspace ที่ถูกระงับ API ตอบ `hidden` → ไม่มีปุ่ม
+- ลิงก์ fridaymanage.com/changelog ในแผงซ่อนไว้ก่อน (คำตัดสิน: หน้าสาธารณะเป็นงานต่อจาก W19)
+
+**คำขอนอก lane** (แก้ให้เล็กที่สุด)
+- `src/components/shell/workspace-shell.tsx`: import 1 บรรทัด + mount 3 บรรทัด (`WhatsNewButton` ก่อน `Bell` · `WhatsNewMenuItem` ใต้ Navigation ในเมนูมือถือ · `EngagementPrompts` ข้าง CommandPalette) · ตอนส่งงาน W23 ยังไม่ merge จึงยังไม่มีช่องให้ใช้ ถ้า W23 merge ก่อนให้ย้ายไปช่องนั้น
+- `src/i18n/messages.ts` ลงทะเบียน namespace `whats-new` (shell ใช้ทุกหน้า) · `src/test/server.ts` เพิ่ม handler เริ่มต้นของ `me/whats-new`, `me/spotlight`, `me/nps-prompt` (test เดิมที่ render shell ไม่ล้ม)
+
+**ตรวจแล้ว:** `src/features/whats-new/whats-new.test.tsx` 12 ข้อ · `src/features/nps/nps.test.tsx` 8 ข้อ (MSW) · `@friday/web` 580 ผ่าน · `pnpm typecheck` / `pnpm --filter @friday/web build` ผ่าน · ยังไม่ได้ตรวจด้วยตาที่ 1440 / 390 ในเบราว์เซอร์ และยังไม่ได้ build / deploy Docker (ผู้ประสานงานทำต่อ)

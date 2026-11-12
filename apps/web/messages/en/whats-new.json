@@ -1,0 +1,41 @@
+{
+  "button": "What's new",
+  "buttonUnseen": "What's new (unseen updates)",
+  "title": "What's new",
+  "newCount": "{count} new",
+  "markAll": "Mark all as read",
+  "older": "Updates older than 90 days are hidden",
+  "empty": "Nothing new lately",
+  "error": "Couldn't load updates",
+  "retry": "Try again",
+  "back": "Back",
+  "kind": { "new": "New", "improved": "Improved", "fixed": "Fixed" },
+  "spotlight": {
+    "close": "Close",
+    "later": "Later",
+    "note": "Shown once · find it again under \"What's new\"",
+    "ok": "Got it"
+  },
+  "nps": {
+    "region": "Satisfaction survey",
+    "close": "Close survey",
+    "scoreLabel": "{score} points",
+    "low": "Not at all likely",
+    "high": "Extremely likely",
+    "lowMobile": "0 = Not at all likely",
+    "highMobile": "10 = Extremely likely",
+    "notNow": "Not now",
+    "thanksPrefix": "Thank you. {question}",
+    "topics": "Topics",
+    "comment": "Comment (optional)",
+    "anonymous": "No name needed · our team sees the score with the workspace name",
+    "send": "Send",
+    "failed": "Couldn't send your answer. Please try again",
+    "thanks": "Thanks for your feedback",
+    "thanksBody": "We read every comment. Want us to get back to you about this?",
+    "contact": "Contact Support",
+    "contactSubject": "Feedback from the NPS survey",
+    "done": "Close",
+    "topic": { "speed": "Speed", "usability": "Hard to use", "missing_feature": "Missing feature", "price": "Price", "mobile": "Mobile" }
+  }
+}

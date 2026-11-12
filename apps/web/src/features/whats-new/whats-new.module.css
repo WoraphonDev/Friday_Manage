@@ -1,0 +1,50 @@
+/* มีอะไรใหม่ (U1) และ Spotlight (U2) · สีจาก token เท่านั้น (สว่าง / มืด) */
+.trigger { position:relative; }
+/* จุดเหลืองไม่ใช้ตัวเลข เพื่อไม่แข่งกับกระดิ่ง */
+.dot { position:absolute; top:6px; right:6px; width:9px; height:9px; border-radius:50%; background:var(--warning-solid); border:2px solid var(--topbar); }
+
+.pop { width:min(400px, calc(100vw - 16px)); max-height:min(640px, calc(100dvh - 80px)); display:flex; flex-direction:column; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-menu); overflow:hidden; z-index:50; }
+.head { display:flex; align-items:center; gap:8px; padding:14px 16px; border-bottom:1px solid var(--border); }
+.title { font-size:15px; font-weight:700; margin:0; }
+.newPill { display:inline-flex; align-items:center; height:20px; padding:0 8px; border-radius:999px; font-size:11px; font-weight:600; background:var(--accent-purple-soft); color:var(--accent-purple-text); }
+.link { margin-left:auto; border:0; padding:0; background:none; font:inherit; font-size:12px; color:var(--primary-text); cursor:pointer; }
+.link:hover { text-decoration:underline; }
+.list { flex:1 1 auto; overflow-y:auto; }
+.state { display:flex; flex-direction:column; align-items:center; gap:10px; padding:28px 16px; text-align:center; color:var(--muted); font-size:13px; }
+.item { display:flex; flex-direction:column; gap:6px; padding:14px 16px; border-bottom:1px solid var(--border); }
+.read { opacity:.6; }
+.meta { display:flex; gap:6px; align-items:center; }
+.kind { display:inline-flex; align-self:flex-start; align-items:center; height:20px; padding:0 8px; border-radius:999px; font-size:11px; font-weight:600; }
+.kindNew { background:var(--success-soft); color:var(--success-text); }
+.kindImproved { background:var(--accent-purple-soft); color:var(--accent-purple-text); }
+.kindFixed { background:var(--surface-2); color:var(--muted); }
+.date { font-size:12px; color:var(--muted); }
+.media { display:block; width:100%; height:120px; object-fit:cover; border-radius:10px; background:linear-gradient(135deg, var(--primary-soft), var(--accent-teal-soft)); }
+.itemTitle { font-size:14px; color:var(--foreground); }
+.summary { font-size:13px; color:var(--muted); line-height:1.55; margin:0; overflow-wrap:anywhere; }
+.foot { padding:10px 16px; font-size:12px; color:var(--muted); text-align:right; }
+
+/* มือถือ: รายการในเมนู ☰ และหน้าเต็มจอ */
+.menuItem { width:100%; border:0; background:none; font:inherit; text-align:left; cursor:pointer; }
+.menuDot { width:8px; height:8px; margin-left:auto; border-radius:50%; background:var(--warning-solid); }
+.full { position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; background:var(--card); color:var(--foreground); }
+.fullHead { display:flex; align-items:center; gap:10px; min-height:52px; padding:0 14px; border-bottom:1px solid var(--border); }
+
+/* Spotlight: Modal 560 px */
+.spot { position:fixed; z-index:51; top:50%; left:50%; transform:translate(-50%, -50%); width:min(560px, calc(100vw - 32px)); max-height:calc(100dvh - 32px); display:flex; flex-direction:column; overflow:hidden; background:var(--card); border-radius:16px; box-shadow:var(--shadow-menu); }
+.spotMedia { position:relative; flex:none; height:220px; display:flex; align-items:center; justify-content:center; color:var(--primary-text); background:linear-gradient(135deg, var(--primary-soft), var(--accent-teal-soft)); }
+.spotMedia img, .spotMedia video { width:100%; height:100%; object-fit:cover; }
+.spotClose { position:absolute; top:10px; right:10px; width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border:0; border-radius:50%; background:var(--card); color:var(--foreground); cursor:pointer; box-shadow:var(--shadow-card); }
+.spotBody { display:flex; flex-direction:column; gap:10px; padding:18px 20px; overflow-y:auto; }
+.spotTitle { margin:0; font-size:20px; font-weight:700; color:var(--foreground); }
+.steps { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; font-size:14px; }
+.steps li { display:flex; gap:8px; align-items:flex-start; }
+.steps svg { flex:none; margin-top:2px; color:var(--success-text); }
+.spotFoot { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:12px 20px 16px; border-top:1px solid var(--border); }
+.spotNote { margin-right:auto; font-size:12px; color:var(--muted); }
+
+@media (max-width: 760px) {
+  .spotMedia { height:160px; }
+  .spotNote { flex-basis:100%; }
+  .spotFoot > button { flex:1; }
+}

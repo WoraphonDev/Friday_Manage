@@ -188,29 +188,29 @@
 
 ทำไปแล้วระหว่างเฟส 1: ธุรกิจและกำไร · Funnel และ Retention · การใช้ฟีเจอร์ · ส่งออกให้บัญชี (รวมส่งอัตโนมัติ)
 
-## ข้อเสนอหน้าจอรอบ 3 (ร่าง 12 พ.ย. 2569 · **รอผู้ใช้อนุมัติหน้าจอ**)
+## หน้าจอรอบ 3 (ผู้ใช้อนุมัติหน้าจอและคำแนะนำทุกข้อ 12 พ.ย. 2569 · สั่งเริ่มทำแล้ว)
 
-หน้าจอ: [`design/proposals/phase3/`](../../design/proposals/phase3/index.html) (ไฟล์ HTML เปิดได้เลย ไม่ต้องใช้ support.js) · รหัสใหม่: บอร์ด Ops 17–21 · U = Changelog และ NPS · V = Onboarding · X = ศูนย์ช่วยเหลือ · T7–T14 ต่อจาก T3 · Z = กู้คืนข้อมูล · **ห้ามเริ่มงานในตารางนี้จนกว่าผู้ใช้อนุมัติไฟล์หน้าจอของงานนั้น** · เมื่ออนุมัติแล้วคัดลอกเข้า Canvas และเปลี่ยนรายการใน ComingSoon เป็น "ออกแบบแล้ว"
+หน้าจอ: [`design/proposals/phase3/`](../../design/proposals/phase3/index.html) (ไฟล์ HTML เปิดได้เลย ไม่ต้องใช้ support.js) · รหัสใหม่: บอร์ด Ops 17–21 · U = Changelog และ NPS · V = Onboarding · X = ศูนย์ช่วยเหลือ · T7–T14 ต่อจาก T3 · Z = กู้คืนข้อมูล · ไฟล์ใน `design/proposals/phase3` คือหน้าจอที่ยึด (ยังไม่ได้คัดลอกเข้า Canvas ของ claude.ai)
 
-ลำดับ: กู้คืนข้อมูลเป็นเฟส 1 (O30 → A41 → W23, O31) · ที่เหลือเป็นเฟส 2 เริ่มเมื่อผู้ใช้สั่ง (O32 → API / Ops → เว็บ) · ไฟล์กลาง `apps/web/src/components/shell/workspace-shell.tsx` ต่อคิว W23 → W24 → W25 / W26 (W23 เพิ่มช่องให้งานถัดไป) · `packages/db/**` ต่อคิว O30 → O32
+ลำดับ: กู้คืนข้อมูลเป็นเฟส 1 (O30 → A41 → W23, O31) · ที่เหลือเป็นเฟส 2 (ผู้ใช้สั่งเริ่มแล้ว) (O32 → API / Ops → เว็บ) · ไฟล์กลาง `apps/web/src/components/shell/workspace-shell.tsx` ต่อคิว W23 → W24 → W25 / W26 (W23 เพิ่มช่องให้งานถัดไป) · `packages/db/**` ต่อคิว O30 → O32
 
 | งาน | ชื่อ | Wave | รอ merge | Lane หลัก |
 |---|---|---|---|---|
-| [O30](O30-restore-db.md) | ตารางของการกู้คืนข้อมูล | O-3 (เฟส 1) · รออนุมัติหน้าจอ | — | `packages/db/**` |
-| [A41](A41-trash-restore.md) | API: ถังขยะ กู้คืนโปรเจกต์ และลบถาวรตามกำหนด | O-3 (เฟส 1) · รออนุมัติหน้าจอ | O30 | `apps/api/src/trash/**` |
-| [W23](W23-trash-web.md) | เว็บ: ถังขยะ กู้คืนโปรเจกต์ Workspace ที่ลบไว้ | O-3 (เฟส 1) · รออนุมัติหน้าจอ | A41 | `apps/web/src/features/trash/**` |
-| [O31](O31-ops-restore.md) | Ops: กู้คืนข้อมูลลูกค้า | O-3 (เฟส 1) · รออนุมัติหน้าจอ | O30, A41 | `apps/ops-api/src/restore` · `app/(console)/restore` |
-| [O32](O32-phase2-engagement-db.md) | ตารางของ Changelog, NPS, Onboarding, ศูนย์ช่วยเหลือ, ผูก Ticket | O-4 · รออนุมัติหน้าจอ | O30 | `packages/db/**` |
-| [A42](A42-changelog-nps-api.md) | API: มีอะไรใหม่ และ NPS | O-4 · รออนุมัติหน้าจอ | O32 | `apps/api/src/changelog/**` |
-| [W24](W24-whats-new-nps.md) | เว็บ: มีอะไรใหม่ Spotlight NPS | O-4 · รออนุมัติหน้าจอ | A42, W23 | `apps/web/src/features/{whats-new,nps}/**` |
-| [O33](O33-ops-changelog-nps.md) | Ops: Changelog และ NPS | O-4 · รออนุมัติหน้าจอ | O32 | `apps/ops-api/src/changelog` · `app/(console)/changelog` |
-| [A43](A43-onboarding-checklist-api.md) | API: Onboarding checklist | O-4 · รออนุมัติหน้าจอ | O32, A34 | `apps/api/src/onboarding/**` |
-| [W25](W25-onboarding-checklist-web.md) | เว็บ: การ์ดเริ่มต้นใช้งาน | O-4 · รออนุมัติหน้าจอ | A43, W24 | `apps/web/src/features/onboarding-checklist/**` |
-| [O34](O34-ops-onboarding.md) | Ops: Onboarding checklist และลูกค้าที่ติด | O-4 · รออนุมัติหน้าจอ | O32, A43 | `apps/ops-api/src/onboarding` · `app/(console)/onboarding` |
-| [A44](A44-help-center-api.md) | API: ศูนย์ช่วยเหลือ และ Ticket จากในแอป | O-4 · รออนุมัติหน้าจอ | O32 | `apps/api/src/help/**` |
-| [W26](W26-help-center-web.md) | เว็บ: ศูนย์ช่วยเหลือ ติดต่อ Support Ticket ของฉัน | O-4 · รออนุมัติหน้าจอ | A44, W24 | `app/work/[ws]/help` · `app/(public)/help` · `features/help-panel` |
-| [O35](O35-ops-help-center.md) | Ops: จัดการบทความ | O-4 · รออนุมัติหน้าจอ | O32 | `apps/ops-api/src/help` · `app/(console)/help` |
-| [O36](O36-ops-bug-to-dev.md) | Ops: ส่งบั๊กจาก Ticket ให้ทีมพัฒนา | O-4 · รออนุมัติหน้าจอ | O32, A44 | `apps/ops-api/src/dev-bridge` · `app/(console)/bugs` |
+| [O30](O30-restore-db.md) | ตารางของการกู้คืนข้อมูล | O-3 (เฟส 1) | — | `packages/db/**` |
+| [A41](A41-trash-restore.md) | API: ถังขยะ กู้คืนโปรเจกต์ และลบถาวรตามกำหนด | O-3 (เฟส 1) | O30 | `apps/api/src/trash/**` |
+| [W23](W23-trash-web.md) | เว็บ: ถังขยะ กู้คืนโปรเจกต์ Workspace ที่ลบไว้ | O-3 (เฟส 1) | A41 | `apps/web/src/features/trash/**` |
+| [O31](O31-ops-restore.md) | Ops: กู้คืนข้อมูลลูกค้า | O-3 (เฟส 1) | O30, A41 | `apps/ops-api/src/restore` · `app/(console)/restore` |
+| [O32](O32-phase2-engagement-db.md) | ตารางของ Changelog, NPS, Onboarding, ศูนย์ช่วยเหลือ, ผูก Ticket | O-4 | O30 | `packages/db/**` |
+| [A42](A42-changelog-nps-api.md) | API: มีอะไรใหม่ และ NPS | O-4 | O32 | `apps/api/src/changelog/**` |
+| [W24](W24-whats-new-nps.md) | เว็บ: มีอะไรใหม่ Spotlight NPS | O-4 | A42, W23 | `apps/web/src/features/{whats-new,nps}/**` |
+| [O33](O33-ops-changelog-nps.md) | Ops: Changelog และ NPS | O-4 | O32 | `apps/ops-api/src/changelog` · `app/(console)/changelog` |
+| [A43](A43-onboarding-checklist-api.md) | API: Onboarding checklist | O-4 | O32, A34 | `apps/api/src/onboarding/**` |
+| [W25](W25-onboarding-checklist-web.md) | เว็บ: การ์ดเริ่มต้นใช้งาน | O-4 | A43, W24 | `apps/web/src/features/onboarding-checklist/**` |
+| [O34](O34-ops-onboarding.md) | Ops: Onboarding checklist และลูกค้าที่ติด | O-4 | O32, A43 | `apps/ops-api/src/onboarding` · `app/(console)/onboarding` |
+| [A44](A44-help-center-api.md) | API: ศูนย์ช่วยเหลือ และ Ticket จากในแอป | O-4 | O32 | `apps/api/src/help/**` |
+| [W26](W26-help-center-web.md) | เว็บ: ศูนย์ช่วยเหลือ ติดต่อ Support Ticket ของฉัน | O-4 | A44, W24 | `app/work/[ws]/help` · `app/(public)/help` · `features/help-panel` |
+| [O35](O35-ops-help-center.md) | Ops: จัดการบทความ | O-4 | O32 | `apps/ops-api/src/help` · `app/(console)/help` |
+| [O36](O36-ops-bug-to-dev.md) | Ops: ส่งบั๊กจาก Ticket ให้ทีมพัฒนา | O-4 | O32, A44 | `apps/ops-api/src/dev-bridge` · `app/(console)/bugs` |
 
 ## ตั้ง environment ของ Codex
 

@@ -2,13 +2,13 @@
 
 | | |
 |---|---|
-| Wave | O-3 (เฟส 1) · **รอผู้ใช้อนุมัติหน้าจอใน `design/proposals/phase3`** |
+| Wave | O-3 (เฟส 1) · อนุมัติหน้าจอแล้ว 12 พ.ย. 2569 |
 | รอ merge | O30 |
 | Lane (แก้ได้เฉพาะ) | `apps/api/src/trash/**` (module ใหม่) · `apps/api/test/trash.e2e.test.ts` · `apps/api/src/issues/issues.service.ts` (เฉพาะ `restoreDeadline` ให้ใช้ trash_days) · `apps/api/src/privacy/lifecycle.service.ts` (ใช้ `purge_after` + อีเมลเตือน) |
 | หน้าจอ | `design/proposals/phase3/05-restore-data.html` › Z1–Z5 |
 | สเปก | [03-api](../spec/03-api.md) › 3.8 (`p/trash` · `{type}/{id}:restore`) · [04-permissions](../spec/04-permissions.md) (`project.trash`) |
 
-อ่าน [README](README.md) ก่อนเริ่ม · หน้าจอเป็น**ข้อเสนอ** เริ่มได้เมื่อผู้ใช้อนุมัติไฟล์ 05 แล้ว
+อ่าน [README](README.md) ก่อนเริ่ม · หน้าจอใน `design/proposals/phase3` ผู้ใช้อนุมัติแล้ว (12 พ.ย. 2569) ยึดตามไฟล์นั้น
 
 ## ทำอะไร
 
@@ -30,6 +30,8 @@
 - [ ] build และ deploy Docker API (`compose.api.yml`) ด้วยฐานข้อมูลเดิม แล้วเรียก endpoint จริงผ่าน :3001
 
 ## ยังต้องตัดสินใจ
+
+**ผู้ใช้ตัดสินแล้ว (12 พ.ย. 2569): ใช้ตามคำแนะนำทุกข้อ** · ข้อความ "แนะนำ" ด้านล่างคือคำตัดสิน
 
 - **ระยะถังขยะของงาน** ให้ตามค่า "ถังขยะ 30 / 90 วัน" ของ Admin เหมือนไฟล์และโปรเจกต์ (ตอนนี้งานเขียน 30 วันตายตัว) · **แนะนำ:** ใช่ ใช้ค่าเดียวกันทุกชนิด
 - **ลบถาวรจากถังขยะ** ให้ Owner ทำเองได้ (Z3) หรือไม่ · **แนะนำ:** ได้ เฉพาะ Owner + พิมพ์ยืนยัน เพราะลูกค้าต้องลบข้อมูลส่วนบุคคลที่ใส่ผิดและคืนพื้นที่ได้ (หน้า PlanLimits บอกลูกค้าไว้แล้ว)

@@ -2,13 +2,13 @@
 
 | | |
 |---|---|
-| Wave | O-3 (เฟส 1) · **รอผู้ใช้อนุมัติหน้าจอใน `design/proposals/phase3`** |
+| Wave | O-3 (เฟส 1) · อนุมัติหน้าจอแล้ว 12 พ.ย. 2569 |
 | รอ merge | A41 |
 | Lane (แก้ได้เฉพาะ) | `apps/web/src/features/trash/**` · `apps/web/messages/th/trash.json` · `apps/web/app/work/[ws]/admin/_components/admin-console.tsx` (เพิ่มเมนูถังขยะเท่านั้น) · `apps/web/app/work/[ws]/p/[key]/settings/_components/project-settings.tsx` (เพิ่มแท็บถังขยะเท่านั้น) |
 | หน้าจอ | `design/proposals/phase3/05-restore-data.html` › Z1 ถังขยะ · Z2 กู้คืนโปรเจกต์ · Z3 ลบถาวร · Z4 ถังขยะของโปรเจกต์ · Z5 Workspace ที่ลบไว้ |
 | สเปก | [03-api](../spec/03-api.md) › 3.8 · [04-permissions](../spec/04-permissions.md) |
 
-อ่าน [README](README.md) ก่อนเริ่ม · หน้าจอเป็น**ข้อเสนอ** เริ่มได้เมื่อผู้ใช้อนุมัติไฟล์ 05 แล้ว
+อ่าน [README](README.md) ก่อนเริ่ม · หน้าจอใน `design/proposals/phase3` ผู้ใช้อนุมัติแล้ว (12 พ.ย. 2569) ยึดตามไฟล์นั้น
 
 ## ทำอะไร
 
@@ -27,6 +27,8 @@
 - [ ] build และ deploy Docker เว็บ (และ API ของ A41) ในเครื่องตาม CLAUDE.md แล้วลบ / กู้คืนจริงผ่าน http://localhost:3000
 
 ## ยังต้องตัดสินใจ
+
+**ผู้ใช้ตัดสินแล้ว (12 พ.ย. 2569): ใช้ตามคำแนะนำทุกข้อ** · ข้อความ "แนะนำ" ด้านล่างคือคำตัดสิน
 
 - **ทำก่อนเปิดตัวหรือไม่** · **แนะนำ:** ทำก่อนเปิดตัว (เฟส 1 ตาม ComingSoon) เพราะตอนนี้ข้อความหลังลบโปรเจกต์บอกลูกค้าว่า "กู้คืนได้ภายใน N วัน" แต่ไม่มีทางกู้
 - **ที่วางถังขยะ** ทั้ง Admin Console (ระดับ Workspace) และ Project Settings (ระดับโปรเจกต์) · **แนะนำ:** ทั้งสองที่ เพราะโปรเจกต์ที่ลบเปิดไม่ได้แล้ว และ Project Admin ไม่ได้เป็น Admin ของ Workspace เสมอ

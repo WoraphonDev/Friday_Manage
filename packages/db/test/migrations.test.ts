@@ -59,7 +59,7 @@ describe('Migration T00', () => {
     await withDatabase(async (client) => {
       const db = drizzle(client);
       await migrate(db, { migrationsFolder: folder });
-      expect(Number((await client.query(`SELECT count(*) AS n FROM pg_tables WHERE schemaname = 'public'`)).rows[0].n)).toBe(147);
+      expect(Number((await client.query(`SELECT count(*) AS n FROM pg_tables WHERE schemaname = 'public'`)).rows[0].n)).toBe(166);
       await expectPlanSeed(client);
       const before = (await client.query('SELECT * FROM plans ORDER BY code')).rows;
       await migrate(db, { migrationsFolder: folder });
@@ -90,13 +90,60 @@ describe('Migration T00', () => {
         await migrate(db, { migrationsFolder: folder });
         // คอลัมน์ที่ migration ถัดไปเพิ่ม (มีค่าเริ่มต้น) ไม่นับเป็นข้อมูลเดิมที่เปลี่ยน · notifications.in_app (0011) ต้องเป็น true
         // issues.sa_id (0013) และ issues.remark (0014) เป็น null สำหรับงานเดิม · projects.field_profile (0015) = {} คือชุดฟิลด์มาตรฐาน
-        const added: Record<string, Record<string, unknown>> = { notifications: { in_app: true }, issues: { sa_id: null, remark: null }, projects: { field_profile: {}, progress_split: false }, workspaces: { suspension_mode: null, suspension_message: null, suspension_auto_resume: false } };
+        // deleted_by / purge_after (0032) เป็น null สำหรับแถวที่ไม่ได้อยู่ในถังขยะ
+        const added: Record<string, Record<string, unknown>> = { notifications: { in_app: true }, issues: { sa_id: null, remark: null, deleted_by: null }, projects: { field_profile: {}, progress_split: false, deleted_by: null }, workspaces: { suspension_mode: null, suspension_message: null, suspension_auto_resume: false, deleted_by: null, purge_after: null, purge_reminded_at: null } };
         for (const [i, table] of tables.entries()) expect((await client.query(`SELECT * FROM ${table} ORDER BY id`)).rows, table).toEqual(before[i].map((r: Record<string, unknown>) => ({ ...r, ...added[table] })));
         await expectPlanSeed(client);
         // ตรวจด้วยข้อมูลเดิมจริงว่า FK ของตารางใหม่ผูกกับ notification ที่มีอยู่แล้วได้
         await client.query(`INSERT INTO notification_deliveries (workspace_id, notification_id, channel, target_ref)
           SELECT workspace_id, id, 'email', 'migration@example.com' FROM notifications`);
         expect((await client.query('SELECT count(*)::int AS n FROM notification_deliveries')).rows[0].n).toBe(1);
+      });
+    } finally {
+      rmSync(oldFolder, { recursive: true, force: true });
+    }
+  });
+
+  it('อัปเกรด 0031 → 0032 ตั้งวันลบถาวรและผู้ลบของแถวในถังขยะเดิม โดย updated_at / version ไม่เปลี่ยน', async () => {
+    const oldFolder = migrationsThrough(31);
+    try {
+      await withDatabase(async (client) => {
+        const db = drizzle(client);
+        await migrate(db, { migrationsFolder: oldFolder });
+        const user = (await client.query(`INSERT INTO users (email, display_name) VALUES ('trash@example.com', 'ทดสอบ') RETURNING id`)).rows[0].id;
+        const gone = (await client.query(`INSERT INTO workspaces (slug, name, status, deleted_at) VALUES ('trash-gone', 'ลบแล้ว', 'pending_delete', '2026-11-03T03:00:00Z') RETURNING id`)).rows[0].id;
+        await client.query(`INSERT INTO audit_logs (workspace_id, actor_id, actor_kind, category, action, target_type, target_id) VALUES ($1, $2, 'user', 'secu', 'workspace.deleted', 'workspace', $1)`, [gone, user]);
+        const ws = (await client.query(`INSERT INTO workspaces (slug, name) VALUES ('trash-live', 'ใช้งาน') RETURNING id`)).rows[0].id;
+        const project = (await client.query(`INSERT INTO projects (workspace_id, key, name, start_date, golive_date, owner_user_id, deleted_at)
+          VALUES ($1, 'TR', 'ถังขยะ', '2026-11-05', '2027-04-21', $2, '2026-11-10T09:00:00Z') RETURNING id`, [ws, user])).rows[0].id;
+        await client.query(`INSERT INTO audit_logs (workspace_id, actor_id, actor_kind, category, action, target_type, target_id) VALUES ($1, $2, 'user', 'data', 'project.deleted', 'project', $3)`, [ws, user, project]);
+        const workflow = (await client.query(`INSERT INTO workflows (workspace_id, project_id, name) VALUES ($1, $2, 'ทดสอบ') RETURNING id`, [ws, project])).rows[0].id;
+        const status = (await client.query(`INSERT INTO workflow_statuses (workspace_id, project_id, workflow_id, name, category) VALUES ($1, $2, $3, 'To do', 'todo') RETURNING id`, [ws, project, workflow])).rows[0].id;
+        const type = (await client.query(`INSERT INTO issue_types (workspace_id, project_id, workflow_id, name) VALUES ($1, $2, $3, 'Task') RETURNING id`, [ws, project, workflow])).rows[0].id;
+        const issue = (await client.query(`INSERT INTO issues (workspace_id, project_id, number, issue_type_id, status_id, title, deleted_at)
+          VALUES ($1, $2, 1, $3, $4, 'งานที่ลบ', '2026-11-11T09:02:00Z') RETURNING id`, [ws, project, type, status])).rows[0].id;
+        await client.query(`INSERT INTO activities (workspace_id, project_id, issue_id, actor_id, verb, field) VALUES ($1, $2, $3, $4, 'deleted', 'deletedAt')`, [ws, project, issue, user]);
+        const file = (await client.query(`INSERT INTO files (workspace_id, project_id, name, uploaded_by, deleted_at) VALUES ($1, $2, 'แบบร่าง.pdf', $3, now()) RETURNING id`, [ws, project, user])).rows[0].id;
+        await client.query(`INSERT INTO audit_logs (workspace_id, actor_id, actor_kind, category, action, target_type, target_id) VALUES ($1, $2, 'user', 'data', 'file.deleted', 'file', $3)`, [ws, user, file]);
+        const before = {
+          workspaces: (await client.query('SELECT id, updated_at FROM workspaces ORDER BY id')).rows,
+          projects: (await client.query('SELECT id, updated_at, version FROM projects')).rows,
+          issues: (await client.query('SELECT id, updated_at, version FROM issues')).rows,
+        };
+        await migrate(db, { migrationsFolder: folder });
+        expect((await client.query('SELECT slug, deleted_by, purge_after FROM workspaces ORDER BY slug')).rows).toEqual([
+          { slug: 'trash-gone', deleted_by: user, purge_after: new Date('2026-12-03T03:00:00Z') },
+          { slug: 'trash-live', deleted_by: null, purge_after: null },
+        ]);
+        expect((await client.query('SELECT deleted_by FROM projects')).rows).toEqual([{ deleted_by: user }]);
+        expect((await client.query('SELECT deleted_by FROM issues')).rows).toEqual([{ deleted_by: user }]);
+        expect((await client.query('SELECT deleted_by FROM files')).rows).toEqual([{ deleted_by: user }]);
+        expect((await client.query('SELECT id, updated_at FROM workspaces ORDER BY id')).rows).toEqual(before.workspaces);
+        expect((await client.query('SELECT id, updated_at, version FROM projects')).rows).toEqual(before.projects);
+        expect((await client.query('SELECT id, updated_at, version FROM issues')).rows).toEqual(before.issues);
+        // trigger touch กลับมาทำงานหลังย้ายข้อมูล
+        await client.query(`UPDATE issues SET title = 'แก้หลังอัปเกรด'`);
+        expect((await client.query('SELECT version FROM issues')).rows).toEqual([{ version: before.issues[0].version + 1 }]);
       });
     } finally {
       rmSync(oldFolder, { recursive: true, force: true });

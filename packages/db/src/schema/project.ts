@@ -99,13 +99,17 @@ export const projects = pgTable(
     hourlyRateSatang: bigint({ mode: 'number' }),
     archivedAt: tstz(),
     deletedAt: deletedAt(),
+    /** ผู้ลบ (O30 · ถังขยะ A41) · trigger ตั้งจาก app.user_id · กู้คืนแล้วล้างเป็น null */
+    deletedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
     version: integer().notNull().default(1),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     unique('projects_workspace_id_key').on(t.workspaceId, t.id),
-    uniqueIndex('projects_workspace_key_key').on(t.workspaceId, t.key),
+    // Key ของโปรเจกต์ในถังขยะว่างให้โปรเจกต์ใหม่ใช้ได้ (Z2: กู้คืนแล้ว Key ซ้ำต้องเลือก Key ใหม่)
+    uniqueIndex('projects_workspace_key_key').on(t.workspaceId, t.key).where(sql`${t.deletedAt} IS NULL`),
+    index('projects_trash_idx').on(t.workspaceId, t.deletedAt).where(sql`${t.deletedAt} IS NOT NULL`),
     check('projects_key_format', sql`${t.key} ~ '^[A-Z][A-Z0-9]{1,9}$'`),
     check('projects_dates', sql`${t.goliveDate} >= ${t.startDate}`),
   ],

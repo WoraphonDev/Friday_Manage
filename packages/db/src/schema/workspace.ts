@@ -56,6 +56,15 @@ export const workspaces = pgTable(
     /** เปิดใช้งานเองเมื่อชำระใบแจ้งหนี้ที่ค้างครบ */
     suspensionAutoResume: boolean().notNull().default(false),
     deletedAt: deletedAt(),
+    /** ผู้ลบ (O30) · trigger app.workspace_soft_delete ตั้งจาก app.user_id ถ้า API ไม่ได้ใส่ · กู้คืนแล้วล้างเป็น null */
+    deletedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
+    /**
+     * วันลบถาวร (O30 · Z5, Z7) · ตอนลบ trigger ตั้งเป็น deleted_at + 30 วัน · ทีม Friday ยืดได้ (O31)
+     * ยืดไปแล้วกี่วัน = purge_after − (deleted_at + 30 วัน) จึงไม่ต้องเก็บแยก
+     */
+    purgeAfter: tstz(),
+    /** อีเมลเตือน Owner ครั้งล่าสุด (7 วัน / 1 วันก่อนลบถาวร · A41) · ยืดเวลาแล้วรอบเตือนเลื่อนตาม purge_after เอง */
+    purgeRemindedAt: tstz(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -63,6 +72,9 @@ export const workspaces = pgTable(
     uniqueIndex('workspaces_slug_key').on(sql`lower(${t.slug})`),
     check('workspaces_slug_format', sql`${t.slug} ~ '^[a-z0-9][a-z0-9-]{1,62}$'`),
     check('workspaces_suspension_mode_valid', sql`${t.suspensionMode} IS NULL OR ${t.suspensionMode} IN ('read_only', 'full')`),
+    // งานลบถาวรทุกคืนอ่านเฉพาะ Workspace ที่ลบแล้ว
+    index('workspaces_purge_idx').on(t.purgeAfter).where(sql`${t.deletedAt} IS NOT NULL`),
+    check('workspaces_purge_after_deleted', sql`${t.purgeAfter} IS NULL OR ${t.deletedAt} IS NOT NULL`),
   ],
 );
 

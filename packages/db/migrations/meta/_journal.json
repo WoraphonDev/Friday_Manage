@@ -225,6 +225,20 @@
       "when": 1794465288994,
       "tag": "0031_ops_promotions",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794469676708,
+      "tag": "0032_restore_trash",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794469893341,
+      "tag": "0033_engagement_help",
+      "breakpoints": true
     }
   ]
 }

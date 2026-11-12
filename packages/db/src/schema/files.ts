@@ -1,4 +1,5 @@
 // H. ไฟล์
+import { sql } from 'drizzle-orm';
 import { type AnyPgColumn, bigint, foreignKey, index, integer, pgTable, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, deletedAt, pk } from './_common.ts';
 import { attachmentTarget, fileKind } from './enums.ts';
@@ -44,6 +45,8 @@ export const files = pgTable(
       .notNull()
       .references(() => users.id),
     deletedAt: deletedAt(),
+    /** ผู้ลบ (O30 · ถังขยะ A41) · trigger ตั้งจาก app.user_id · กู้คืนแล้วล้างเป็น null */
+    deletedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
     createdAt: createdAt(),
   },
   (t) => [
@@ -56,6 +59,7 @@ export const files = pgTable(
     }),
     index('files_project_idx').on(t.projectId, t.folderId),
     index('files_name_trgm_idx').using('gin', t.name.op('gin_trgm_ops')),
+    index('files_trash_idx').on(t.workspaceId, t.deletedAt).where(sql`${t.deletedAt} IS NOT NULL`),
   ],
 );
 

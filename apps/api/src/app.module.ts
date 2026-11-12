@@ -21,6 +21,7 @@ import { DueRequestsModule } from './due-requests/due-requests.module.js';
 import { FilesModule } from './files/files.module.js';
 import { GanttModule } from './gantt/gantt.module.js';
 import { GitModule } from './git/git.module.js';
+import { HelpModule } from './help/help.module.js';
 import { HomeModule } from './home/home.module.js';
 import { ImportsModule } from './imports/imports.module.js';
 import { InvitationsModule } from './invitations/invitations.module.js';
@@ -69,6 +70,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     FilesModule,
     GanttModule,
     GitModule,
+    HelpModule,
     HomeModule,
     ImportsModule,
     InvitationsModule,

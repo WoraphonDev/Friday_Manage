@@ -9,9 +9,10 @@ import type { PublicPerson } from './types';
 import styles from './issue-drawer.module.css';
 import { intlLocale } from '@/lib/format';
 import { forDisplay } from './mentions';
+import { remarkSoftBreaks } from '@/lib/soft-breaks';
 
 export function BodyText({ children }: { children: string }) {
-  return <div className={styles.markdown}><Markdown remarkPlugins={[remarkGfm]} skipHtml components={{
+  return <div className={styles.markdown}><Markdown remarkPlugins={[remarkGfm, remarkSoftBreaks]} skipHtml components={{
     a: ({ href, children }) => /^[\da-f-]{36}$/i.test(href ?? '') ? <span className={styles.mention}>{children}</span> : <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>,
     img: ({ src, alt }) => <img src={src} alt={alt ?? ''} referrerPolicy="no-referrer" loading="lazy" />,
   }}>{forDisplay(children)}</Markdown></div>;

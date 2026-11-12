@@ -119,10 +119,10 @@ export class SprintsService {
         const assigned = rows.filter((issue) => issue.sprintId === sprint.id);
         const cal = await WorkCalendar.load(tx, project, sprint.startDate);
         if (sprint.status === 'active' && !access.archived) await saveSnapshot(tx, sprint, assigned, date);
-        result.push({ ...sprint, issues: assigned.filter((issue) => !issue.parentId).map((issue) => ({ ...issueDto(issue, project.key), subtasks: assigned.filter((child) => child.parentId === issue.id).map((child) => issueDto(child, project.key)) })), stats: totals(assigned), capacity: await capacity(tx, project, sprint, assigned, cal), burndown: sprint.status === 'active' ? await burndown(tx, sprint, assigned, cal, date) : null });
+        result.push({ ...sprint, issues: assigned.filter((issue) => !issue.parentId).map((issue) => ({ ...issueDto(issue, project.key, access), subtasks: assigned.filter((child) => child.parentId === issue.id).map((child) => issueDto(child, project.key, access)) })), stats: totals(assigned), capacity: await capacity(tx, project, sprint, assigned, cal), burndown: sprint.status === 'active' ? await burndown(tx, sprint, assigned, cal, date) : null });
       }
       const unsprinted = rows.filter((issue) => !issue.sprintId);
-      return { projectKey: project.key, asOf: date, permissions: { canManageSprints: access.perms.has('sprint.manage'), canMoveIssues: access.perms.has('issue.edit') }, sprints: result, backlog: { issues: unsprinted.filter((issue) => !issue.parentId).map((issue) => ({ ...issueDto(issue, project.key), subtasks: unsprinted.filter((child) => child.parentId === issue.id).map((child) => issueDto(child, project.key)) })), stats: totals(unsprinted) } };
+      return { projectKey: project.key, asOf: date, permissions: { canManageSprints: access.perms.has('sprint.manage'), canMoveIssues: access.perms.has('issue.edit') }, sprints: result, backlog: { issues: unsprinted.filter((issue) => !issue.parentId).map((issue) => ({ ...issueDto(issue, project.key, access), subtasks: unsprinted.filter((child) => child.parentId === issue.id).map((child) => issueDto(child, project.key, access)) })), stats: totals(unsprinted) } };
     });
   }
 

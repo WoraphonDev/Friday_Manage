@@ -41,7 +41,7 @@ export function renderInvitationEmail(m: InvitationMail) {
 <div style="border-top:4px solid #15803D;padding:16px 0">
 <h2 style="margin:0 0 8px">${esc(L.head(m))}</h2>
 ${m.projectName ? `<div style="color:#5F6873">${esc(L.project(m.projectName))}</div>` : ''}
-${m.message ? `<blockquote style="margin:12px 0;padding-left:12px;border-left:3px solid #D0D5DB">${esc(m.message)}</blockquote>` : ''}
+${m.message ? `<blockquote style="margin:12px 0;padding-left:12px;border-left:3px solid #D0D5DB">${esc(m.message).replace(/\r?\n/g, '<br>')}</blockquote>` : ''}
 <p style="margin:20px 0"><a href="${esc(m.inviteUrl)}" style="background:#1D4ED8;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">${esc(L.button)}</a></p>
 <p style="color:#5F6873;font-size:13px">${esc(L.expires(when))}</p>
 <p style="color:#5F6873;font-size:12px">${esc(L.ignore)}<br><a href="${esc(m.inviteUrl)}">${esc(m.inviteUrl)}</a></p>

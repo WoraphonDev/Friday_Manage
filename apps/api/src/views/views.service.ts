@@ -8,6 +8,7 @@ import { loadPeople, type Person } from '../common/people.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { addDays } from '../projects/calendar.js';
+import { canMoveIssue } from '../projects/permissions.js';
 import { ProjectsService } from '../projects/projects.service.js';
 
 const s = schema;
@@ -139,6 +140,8 @@ export class ViewsService {
           planEnd: i.planEnd,
           due: dueState(i.planEnd, st, now),
           assigneeIds: d.assignees.get(i.id) ?? [],
+          // งานของคนอื่นลากไม่ได้ ดูได้อย่างเดียว (04-permissions ข้อ 3.3)
+          canMove: canMoveIssue(access, { ...i, assigneeIds: d.assignees.get(i.id) ?? [] }),
           subtasks: subtaskStats.get(i.id) ?? null,
           comments: commentCount.get(i.id) ?? 0,
           rank: i.rank,

@@ -19,6 +19,8 @@ export interface BacklogIssue {
   progressPct: number;
   status: { id: string; name: string; category: StatusCategory };
   assigneeIds: string[];
+  /** false = งานของคนอื่น ดูได้อย่างเดียว */
+  canMove?: boolean;
   version: number;
   subtasks?: BacklogIssue[];
 }

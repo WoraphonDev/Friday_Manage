@@ -31,7 +31,9 @@
 .dBody { padding:20px 24px; display:flex; flex-direction:column; gap:16px; max-width:760px; }
 .issueCard { display:block; border:1px solid var(--border); border-radius:10px; padding:12px 14px; text-decoration:none; color:var(--foreground); }
 .issueCard b { display:block; font-size:15px; }
-.quoteBox { background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 14px; overflow-wrap:anywhere; }
+.quoteBox { background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 14px; overflow-wrap:anywhere; white-space:pre-wrap; }
+/* เหตุผลขอเลื่อน Due พิมพ์ได้หลายบรรทัด · ขึ้นบรรทัดตามที่ผู้ขอพิมพ์ */
+.reason { font-size:13px; white-space:pre-wrap; overflow-wrap:anywhere; }
 .diff { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .actions { display:flex; gap:8px; flex-wrap:wrap; }
 .approve { background:var(--success-solid); border-color:var(--success-solid); color:var(--on-primary); }

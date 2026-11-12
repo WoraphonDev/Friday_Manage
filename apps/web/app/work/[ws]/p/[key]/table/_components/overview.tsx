@@ -77,7 +77,8 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
     if (busy) return;
     setBusy(i.key);
     try {
-      const issue = await api.get<{ type: string; version: number }>(`/w/${encodeURIComponent(ws)}/issues/${encodeURIComponent(i.key)}`);
+      const issue = await api.get<{ type: string; version: number; canMove?: boolean }>(`/w/${encodeURIComponent(ws)}/issues/${encodeURIComponent(i.key)}`);
+      if (issue.canMove === false) return toast({ message: t("viewOnly") });
       const opts = await cache.fetchQuery({ queryKey: ["form-options", ws, projectKey], queryFn: () => api.get<{ issueTypes: { name: string; statuses: { id: string; category: string }[] }[] }>(`${base}/form-options`), staleTime: 60_000 });
       const type = opts.issueTypes.find((x) => x.name === issue.type) ?? opts.issueTypes[0];
       const target = type?.statuses.find((s) => s.category === (done ? "done" : "todo"));
@@ -226,7 +227,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
               <Link className="button button-small" href={`${page}/settings`}>{t("edit")}</Link>
             </div>
             <div className={styles.info}>
-              {d.project.description && <div style={{ gridColumn: "1/-1" }}><div className={styles.label}>{t("goal")}</div><div>{d.project.description}</div></div>}
+              {d.project.description && <div style={{ gridColumn: "1/-1" }}><div className={styles.label}>{t("goal")}</div><div className={styles.goal}>{d.project.description}</div></div>}
               {!!d.project.scope.inScope.length && <div><div className={styles.label}>{t("inScope")}</div><ul>{d.project.scope.inScope.map((x) => <li key={x}>{x}</li>)}</ul></div>}
               {!!d.project.scope.outScope.length && <div><div className={styles.label}>{t("outScope")}</div><ul>{d.project.scope.outScope.map((x) => <li key={x}>{x}</li>)}</ul></div>}
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

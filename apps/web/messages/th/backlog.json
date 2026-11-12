@@ -98,5 +98,6 @@
   "completedClean": "ปิด {name} แล้ว",
   "intro": "Backlog คืองานที่ยังไม่อยู่ใน Sprint · วางแผนโดยลากงานขึ้นไปวางใน Sprint หรือกดปุ่ม ↑ ที่แถวงาน แล้วกด Start sprint เมื่อพร้อมเริ่มทำ",
   "expandSprint": "แสดงงานใน {name}",
-  "collapseSprint": "พับ {name}"
+  "collapseSprint": "พับ {name}",
+  "viewOnly": "งานของคนอื่น ดูได้อย่างเดียว · ย้ายได้เฉพาะงานที่คุณรับผิดชอบ"
 }

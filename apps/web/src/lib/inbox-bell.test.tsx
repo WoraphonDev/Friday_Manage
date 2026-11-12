@@ -73,6 +73,31 @@ describe("Inbox (G / M3)", () => {
     expect(await screen.findByText("จะเตือนอีกครั้งพรุ่งนี้")).toBeInTheDocument();
   });
 
+  it("แท็บยังไม่อ่าน: เปิดรายการแล้วรายละเอียดยังอยู่หลังโหลดใหม่ (รายการแสดงเป็นอ่านแล้ว) จนกว่าจะเปลี่ยนแท็บ", async () => {
+    const user = userEvent.setup();
+    // API จริง: อ่านแล้วหลุดจากตัวกรอง unread
+    let listsAtRead = Infinity;
+    server.use(http.post("*/api/v1/me/notifications/:id/read", ({ params }) => { calls.push(`read:${params.id}`); listsAtRead = lists.length; page = page.map((n) => n.id === params.id ? { ...n, readAt: now } : n); return HttpResponse.json({ ok: true }); }));
+    mount();
+    await user.click(within(await screen.findByRole("group", { name: "ตัวกรอง" })).getByRole("button", { name: /^ยังไม่อ่าน/ }));
+    await waitFor(() => expect(lists.at(-1)?.searchParams.get("filter")).toBe("unread"));
+    await user.click(await screen.findByRole("button", { name: /ผู้พัฒนาหนึ่ง มอบหมายงานให้คุณ/ }));
+    await waitFor(() => expect(calls).toContain("read:n1"));
+    // รอให้รายการ unread โหลดใหม่หลังอ่าน (ผลไม่มี n1 แล้ว)
+    await waitFor(() => expect(lists.length).toBeGreaterThan(listsAtRead));
+    const detail = screen.getByRole("complementary", { name: "รายละเอียดการแจ้งเตือน" });
+    expect(within(detail).getByText("คุณเป็นผู้รับผิดชอบ")).toBeInTheDocument();
+    const item = screen.getByRole("button", { name: /ผู้พัฒนาหนึ่ง มอบหมายงานให้คุณ/ });
+    expect(item).toHaveAttribute("aria-current", "true");
+    expect(within(item).queryByRole("img", { name: "ยังไม่อ่าน" })).not.toBeInTheDocument();
+    // แถบตัวกรอง render ใหม่ระหว่างโหลดแท็บ จึงหาใหม่ทุกครั้ง
+    const tab = async (name: RegExp) => user.click(within(await screen.findByRole("group", { name: "ตัวกรอง" })).getByRole("button", { name }));
+    await tab(/^Mentions/);
+    await waitFor(() => expect(lists.at(-1)?.searchParams.get("filter")).toBe("mention"));
+    await tab(/^ยังไม่อ่าน/);
+    await waitFor(() => expect(screen.queryByRole("button", { name: /ผู้พัฒนาหนึ่ง มอบหมายงานให้คุณ/ })).not.toBeInTheDocument());
+  });
+
   it("คำขอเลื่อน Due: เห็นวันเดิม → วันใหม่ และอนุมัติ / ปฏิเสธได้เมื่อ canDecide", async () => {
     const user = userEvent.setup();
     mount();

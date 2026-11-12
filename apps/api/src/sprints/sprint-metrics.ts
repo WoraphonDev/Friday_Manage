@@ -4,6 +4,7 @@ import { loadPeople } from '../common/people.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
 import type { ProjectRow } from '../projects/projects.service.js';
 import { computeWorkload } from '../overview/workload.js';
+import { canMoveIssue, type ProjectAccess } from '../projects/permissions.js';
 
 export type SprintRow = typeof s.sprints.$inferSelect;
 export type SprintIssue = typeof s.issues.$inferSelect & { category: string; type: string; statusName: string; assigneeIds: string[] };
@@ -92,6 +93,6 @@ export async function burndown(tx: Tx, sprint: SprintRow, rows: SprintIssue[], c
   return { sprintId: sprint.id, asOf: date, baselineMd: baseline, ideal, actual };
 }
 
-export function issueDto(issue: SprintIssue, projectKey: string) {
-  return { id: issue.id, key: `${projectKey}-${issue.number}`, title: issue.title, type: issue.type, parentId: issue.parentId, rank: issue.rank, sprintId: issue.sprintId, moduleId: issue.moduleId, size: issue.size, estimateMd: issue.estimateMd, priority: issue.priority, planStart: issue.planStart, planEnd: issue.planEnd, progressPct: issue.progressPct, status: { id: issue.statusId, name: issue.statusName, category: issue.category }, assigneeIds: issue.assigneeIds, version: issue.version };
+export function issueDto(issue: SprintIssue, projectKey: string, access: ProjectAccess) {
+  return { id: issue.id, key: `${projectKey}-${issue.number}`, title: issue.title, type: issue.type, parentId: issue.parentId, rank: issue.rank, sprintId: issue.sprintId, moduleId: issue.moduleId, size: issue.size, estimateMd: issue.estimateMd, priority: issue.priority, planStart: issue.planStart, planEnd: issue.planEnd, progressPct: issue.progressPct, status: { id: issue.statusId, name: issue.statusName, category: issue.category }, assigneeIds: issue.assigneeIds, canMove: canMoveIssue(access, issue), version: issue.version };
 }

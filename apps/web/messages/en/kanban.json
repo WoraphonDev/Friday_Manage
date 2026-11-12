@@ -47,6 +47,7 @@
   "moveTo": "Move to…",
   "moveCard": "Move task {key}",
   "currentColumn": "Current column",
+  "viewOnly": "Someone else's task: view only · you can move only tasks assigned to you",
   "dragHint": "or drag the card",
   "dropHere": "Drop here → {name}",
   "boardHint": "Drag cards across columns to change status, or within a column to reorder · Use the ‹ › or ↑ ↓ buttons instead of dragging · A column header turns red when it's over the WIP limit",

@@ -8,7 +8,7 @@ import { today } from '../common/dates.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { planEndFor, WorkCalendar } from '../projects/calendar.js';
-import { type ProjectAccess, requirePerm, usersWithPerm } from '../projects/permissions.js';
+import { canMoveIssue, type ProjectAccess, requireMovable, requirePerm, usersWithPerm } from '../projects/permissions.js';
 import { loadPeople } from '../common/people.js';
 import { type DomainEvent, EventBus, type EventType } from '../core/events.js';
 import { isLegacyRank, PLAIN_RANK, rankAfter, rankBetween, spreadRanks } from './rank.js';
@@ -589,6 +589,8 @@ export class IssuesService {
 
       // สถานะ: ต้องอยู่ใน Workflow ของประเภทงาน · Actual Start / End ตั้งอัตโนมัติ
       if (input.statusId !== undefined && input.statusId !== issue.statusId) {
+        // ผู้รับผิดชอบเดิมเป็นคนตัดสิน (ถ้าแก้ผู้รับผิดชอบพร้อมกัน ใช้ชุดก่อนแก้ ไม่ให้ใส่ชื่อตัวเองแล้วย้ายงานคนอื่น)
+        requireMovable(access, { ...issue, assigneeIds: await this.assigneeIds(tx, issue.id) });
         const next = await this.checkStatus(tx, type.workflowId, input.statusId);
         await enforceWorkflowRules(tx, auth, issue, type.workflowId, next, { ...issue, ...set }, false);
         const [current] = await tx.select().from(s.workflowStatuses).where(eq(s.workflowStatuses.id, issue.statusId));
@@ -727,6 +729,7 @@ export class IssuesService {
       if (input.sprintId !== undefined) await this.lockSprintChangeProject(tx, auth, tenant, issueKey);
       const { project, access, issue } = await this.loadIssue(tx, auth, tenant, issueKey);
       requirePerm(access, 'issue.edit');
+      requireMovable(access, { ...issue, assigneeIds: await this.assigneeIds(tx, issue.id) });
       if (ifMatch !== undefined && parseIfMatch(ifMatch) !== issue.version) throw await this.conflict(tx, project, issue, access);
 
       const warnings: Warning[] = [];
@@ -1196,6 +1199,8 @@ export class IssuesService {
         // หมายเหตุเป็นบันทึกภายในทีม ไม่ส่งให้ Guest
         remark: i.remark,
         assigneeIds: people.filter((p) => p.issueId === i.id).map((p) => p.userId),
+        // หน้างานปิดตัวเลือกสถานะเมื่อเป็นงานของคนอื่น (กติกาเดียวกับ move / PATCH statusId)
+        canMove: canMoveIssue(access, { ...i, assigneeIds: people.filter((p) => p.issueId === i.id).map((p) => p.userId) }),
         baId: i.baId,
         saId: i.saId,
         reviewerId: i.reviewerId,

@@ -225,6 +225,19 @@ describe("Kanban", () => {
     expect(moves).toHaveLength(0);
   });
 
+  it("การ์ดของคนอื่น (canMove = false) ดูได้อย่างเดียว: ลากไม่ได้และไม่มีปุ่มย้าย · การ์ดของตัวเองยังย้ายได้", async () => {
+    data.columns[0].cards[0].canMove = false;
+    mount(); await screen.findByRole("article", { name: "การ์ด DE-1" });
+    expect(article("DE-1")).toHaveAttribute("draggable", "false");
+    expect(article("DE-1")).toHaveAttribute("title", kanban.viewOnly);
+    expect(within(article("DE-1")).queryByRole("button", { name: /ย้าย DE-1/ })).not.toBeInTheDocument();
+    fireEvent.dragStart(article("DE-1"));
+    fireEvent.drop(column("In progress"));
+    expect(moves).toHaveLength(0);
+    expect(article("DE-2")).toHaveAttribute("draggable", "true");
+    expect(within(article("DE-2")).getAllByRole("button").length).toBeGreaterThan(0);
+  });
+
   it("403 และ Guest Viewer แสดงสถานะไม่มีสิทธิ์", async () => {
     server.use(http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () => HttpResponse.json({ role: "viewer", guestViewer: true, permissions: ["project.view"] })));
     mount(); await screen.findByText("คุณยังไม่มีสิทธิ์เข้าถึง");

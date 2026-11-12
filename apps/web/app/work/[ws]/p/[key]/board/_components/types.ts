@@ -15,6 +15,8 @@ export interface BoardCard {
   planEnd: string | null;
   due: { state: "overdue" | "today" | "soon"; days: number } | null;
   assignees: Person[];
+  /** ย้ายการ์ดนี้ได้ไหม · false = งานของคนอื่น ดูได้อย่างเดียว (ไม่ส่งมา = ใช้สิทธิ์ issue.edit อย่างเดียว) */
+  canMove?: boolean;
   subtasks: { total: number; done: number } | null;
   comments: number;
   rank: string;

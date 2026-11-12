@@ -86,6 +86,8 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
 
   const perms = permissions.data?.permissions ?? [];
   const canMove = perms.includes("issue.edit");
+  // งานของคนอื่นดูได้อย่างเดียว · API ตัดสินต่องาน (canMove) และตรวจซ้ำตอนย้าย
+  const movable = (issue: BacklogIssue) => canMove && issue.canMove !== false;
   const canManage = perms.includes("sprint.manage");
   const canCreate = perms.includes("issue.create");
   const data = backlog.data;
@@ -103,7 +105,7 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
     return api.request<MoveResult>(`/w/${encodeURIComponent(ws)}/issues/${encodeURIComponent(key)}/move`, { method: "POST", body, etag: version });
   }
   async function performMove(intent: MoveIntent, undoAction = false) {
-    if (!canMove || moveLock.current) return;
+    if (!movable(intent.issue) || moveLock.current) return;
     moveLock.current = true; setMoving(true); setMoveError(null); setNotice(null); setPicker(null);
     try {
       const result = await send(intent.issue.key, intent.body, intent.issue.version);
@@ -159,8 +161,9 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
     const primary: Container | undefined = container === null ? nextSprint?.id : null;
     return <div key={issue.key} role="listitem" aria-label={t("row", { key: issue.key })} data-key={issue.key}
       className={`${styles.item} ${dragging === issue.key ? styles.dragging : ""} ${dropTarget?.before === issue.key ? styles.dropBefore : ""} ${isClosedCategory(issue.status.category) ? styles.done : ""}`}
-      draggable={canMove && !moving}
-      onDragStart={(event) => { if (!canMove || moving) { event.preventDefault(); return; } dragKey.current = issue.key; setDragging(issue.key); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", issue.key); }}
+      draggable={movable(issue) && !moving}
+      title={canMove && !movable(issue) ? t("viewOnly") : undefined}
+      onDragStart={(event) => { if (!movable(issue) || moving) { event.preventDefault(); return; } dragKey.current = issue.key; setDragging(issue.key); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", issue.key); }}
       onDragEnd={clearDrag}
       onDragOver={(event) => dragOver(event, container, issue.key)}
       onDrop={(event) => drop(event, container, issue.key)}>
@@ -175,10 +178,10 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
       <span className={`${styles.md} ${issue.estimateMd === null ? styles.noEstimate : ""}`} title={issue.estimateMd === null ? t("unestimated") : t("manDay")}>{issue.estimateMd ?? "?"}</span>
       <span className={styles.hideSmall}>{assignees.length > 0 && <AvatarStack people={assignees} max={1} />}</span>
       <span className={styles.actions}>
-        {canMove && primary !== undefined && <Button size="small" className={`${styles.moveButton} ${styles.hideSmall}`} disabled={moving} onClick={() => move(issue.key, primary)}>
+        {movable(issue) && primary !== undefined && <Button size="small" className={`${styles.moveButton} ${styles.hideSmall}`} disabled={moving} onClick={() => move(issue.key, primary)}>
           {primary === null ? t("toBacklog") : t("toSprint", { name: containerName(primary) })}
         </Button>}
-        {canMove && <Button size="small" variant="ghost" aria-haspopup="dialog" aria-label={t("moveOptions", { key: issue.key })} disabled={moving} onClick={() => setPicker(issue)}><MoreHorizontal size={16} aria-hidden="true" /></Button>}
+        {movable(issue) && <Button size="small" variant="ghost" aria-haspopup="dialog" aria-label={t("moveOptions", { key: issue.key })} disabled={moving} onClick={() => setPicker(issue)}><MoreHorizontal size={16} aria-hidden="true" /></Button>}
       </span>
     </div>;
   }

@@ -66,6 +66,8 @@ export interface Row {
   size: string | null; estimateMd: number | null; progressPct: number | null;
   planStart: string | null; planEnd: string | null; actualStart: string | null; actualEnd: string | null;
   version: number;
+  /** false = งานของคนอื่น เปลี่ยนสถานะไม่ได้ (04-permissions ข้อ 3.3) */
+  canMove?: boolean;
   assignees?: Person[]; ba?: Person | null; sa?: Person | null; reviewer?: Person | null;
   requirements?: string[]; screens?: string[]; labels?: { id: string; name: string; color: string | null }[];
   /** ค่า Custom field { [fieldId]: ค่า } (ชุดฟิลด์ของโปรเจกต์) */

@@ -116,6 +116,8 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   });
   const canEdit = permissions.data?.permissions.includes("issue.edit") ?? false;
   const canCreate = permissions.data?.permissions.includes("issue.create") ?? false;
+  // งานของคนอื่นดูได้อย่างเดียว · API ตัดสินต่อการ์ด (canMove) และตรวจซ้ำตอนย้าย
+  const movable = (card: BoardCard) => canEdit && card.canMove !== false;
   const data = board.data;
   const activeColumn = data?.columns.some((column) => column.id === mobileColumn) ? mobileColumn : data?.columns[0]?.id;
   const hasFilters = moduleId || mine || overdue || level !== "all" || query.trim();
@@ -146,7 +148,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
     await performMove({ card: { ...intent.card, version }, body: intent.undo, targetName: intent.card.status.name, undo: intent.body }, false, true);
   }
   async function performMove(intent: MoveIntent, confirm = false, undoAction = false) {
-    if (!canEdit || moveLock.current) return;
+    if (!movable(intent.card) || moveLock.current) return;
     moveLock.current = true; setMoving(true); setMoveError(null); setNotice(null); setPicker(null);
     // ย้ายบนจอทันทีไม่ต้องรอ API (ทำก่อน await แรก จึงทันก่อนช่องว่างที่ลากหายไป) · ล้มเหลวคืนตำแหน่งเดิม
     const snapshot = cache.getQueryData<BoardData>(boardQueryKey);
@@ -243,9 +245,10 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
     const TypeIcon = card.type.name === "Bug" ? Bug : card.type.name === "Spike" ? Zap : CheckSquare;
     return <article key={card.key} aria-label={t("card", { key: card.key })} data-card={card.key} data-flip={`${lane}:${card.key}`}
       className={`${styles.card} ${isClosedCategory(card.status.category) ? styles.completed : ""} ${dragging === card.key ? styles.lifted : ""} ${landed === card.key && !dragging ? styles.landed : ""}`}
-      draggable={canEdit && !moving}
+      draggable={movable(card) && !moving}
+      title={canEdit && !movable(card) ? t("viewOnly") : undefined}
       onDragStart={(event) => {
-        if (!canEdit || moving) { event.preventDefault(); return; }
+        if (!movable(card) || moving) { event.preventDefault(); return; }
         dragKey.current = card.key; event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.key);
         const height = event.currentTarget.getBoundingClientRect().height;
         // ซ่อนการ์ดเดิมหลัง browser ถ่ายภาพการ์ดที่ลากแล้ว (ซ่อนใน dragstart เลยจะยกเลิกการลาก) · ช่องว่างขึ้นแทนที่เดิมพอดี
@@ -271,9 +274,9 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
         {card.subtasks && <span className={styles.meta} title={t("subtaskProgress", card.subtasks)}><ListChecks size={14} aria-hidden="true" />{card.subtasks.done}/{card.subtasks.total}</span>}
         {card.comments > 0 && <span className={styles.meta} title={t("comments", { count: card.comments })}><MessageCircle size={14} aria-hidden="true" />{card.comments}</span>}
         <span className={styles.avatars}><AvatarStack people={card.assignees} /></span>
-        {canEdit && <Button size="small" className={styles.mobileMove} aria-haspopup="dialog" onClick={() => setPicker(card)} disabled={moving}>{t("moveTo")}</Button>}
+        {movable(card) && <Button size="small" className={styles.mobileMove} aria-haspopup="dialog" onClick={() => setPicker(card)} disabled={moving}>{t("moveTo")}</Button>}
       </div>
-      {canEdit && <div className={styles.moveActions}>
+      {movable(card) && <div className={styles.moveActions}>
         <Button size="small" aria-label={t("left", { key: card.key })} disabled={moving || columnIndex === 0} onClick={() => move(card.key, data!.columns[columnIndex - 1].id)}><ChevronLeft size={16} aria-hidden="true" /></Button>
         <Button size="small" aria-label={t("right", { key: card.key })} disabled={moving || columnIndex === data!.columns.length - 1} onClick={() => move(card.key, data!.columns[columnIndex + 1].id)}><ChevronRight size={16} aria-hidden="true" /></Button>
         <Button size="small" className={styles.reorder} aria-label={t("up", { key: card.key })} disabled={moving || visibleIndex === 0} onClick={() => move(card.key, column.id, laneCards[visibleIndex - 1].key)}><ArrowUp size={14} aria-hidden="true" /></Button>

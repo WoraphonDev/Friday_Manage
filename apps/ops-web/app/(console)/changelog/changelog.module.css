@@ -19,7 +19,7 @@
 .rowOn td { background:var(--primary-soft); }
 .rowTitle { display:block; padding:0; border:0; background:none; font:inherit; color:var(--foreground); text-align:left; cursor:pointer; }
 .rowTitle:hover b { color:var(--primary-text); text-decoration:underline; }
-.comment { max-width:420px; white-space:normal; overflow-wrap:anywhere; }
+.comment { max-width:420px; white-space:pre-wrap; overflow-wrap:anywhere; }
 .pillButton { padding:0; border:0; background:none; cursor:pointer; }
 
 .kv { display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin:0; font-size:13px; }

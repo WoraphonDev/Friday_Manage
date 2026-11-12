@@ -179,7 +179,7 @@ export class CommentsService {
   private commentEvents(auth: AuthInfo, tenant: TenantInfo, loaded: Loaded, comment: Comment, ids: string[], created: boolean): DomainEvent[] {
     const base = { workspaceId: tenant.workspaceId, projectId: loaded.project.id, issueId: loaded.issue.id, actorId: auth.userId, at: comment.editedAt ?? comment.createdAt };
     const data = { issueKey: `${loaded.project.key}-${loaded.issue.number}`, title: loaded.issue.title, commentId: comment.id };
-    return [...(created ? [{ ...base, type: 'issue.commented' as const, data: { ...data, excerpt: [...comment.body].slice(0, 140).join('') } }] : []), ...(ids.length ? [{ ...base, type: 'issue.mentioned' as const, data: { ...data, userIds: ids } }] : [])];
+    return [...(created ? [{ ...base, type: 'issue.commented' as const, data: { ...data, excerpt: [...plainMentions(comment.body)].slice(0, 140).join('') } }] : []), ...(ids.length ? [{ ...base, type: 'issue.mentioned' as const, data: { ...data, userIds: ids } }] : [])];
   }
 
   private person(id: string | null, people: Map<string, Person>, auth: AuthInfo, access: ProjectAccess) {
@@ -229,6 +229,9 @@ export class CommentsService {
 }
 
 /** ชื่อเต็มหลายคำเลือกตามชื่อสมาชิกจริง · รูปแบบ @[ชื่อ](UUID) ช่วยแยกสมาชิกชื่อซ้ำ */
+/** ข้อความย่อในอีเมล / LINE: แสดง mention เป็น @ชื่อ ไม่ใช่รูปแบบที่เก็บ @[ชื่อ](id) */
+export const plainMentions = (body: string) => body.replace(/@\[([^\]\n]+)\]\([0-9a-f-]{36}\)/gi, '@$1');
+
 function resolveMentions(body: string, members: { id: string; name: string }[]) {
   const ids = new Set<string>();
   const starts = /(?<![\p{L}\p{M}\p{N}_.+\-])@/gu;

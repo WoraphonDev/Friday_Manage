@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Button, Input, LoadingState, ErrorState, Dialog } from '@/components/ui';
 import { api } from '@/lib/api';
 import { BodyText, Failure, PersonView, when } from './shared';
+import { type MentionPicks, toDisplay, toStored } from './mentions';
 import { filesPageHref, issuePath, issueQuery, previewBase, projectPath, type Activity, type Comment, type Feed, type Scope } from './types';
 import { FilePreview, useFilePreview } from '@/components/file-preview';
 import type { UploadedFile } from '@/lib/upload';
@@ -33,6 +34,9 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
   const [body, setBody] = useState('');
+  // ชื่อที่เลือกจากรายการ mention → userId · แปลงเป็นรูปแบบที่ API ต้องการตอนส่ง
+  const [picks, setPicks] = useState<MentionPicks>(new Map());
+  const [editPicks, setEditPicks] = useState<MentionPicks>(new Map());
   // ไฟล์ / รูปที่แนบกับคอมเมนต์ (ผู้ใช้ขอ 2026-11-08): อัปโหลดก่อน แล้วผูกกับคอมเมนต์หลังส่ง
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [editing, setEditing] = useState<Comment | null>(null);
@@ -45,7 +49,7 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
   const preview = useFilePreview();
   const commentable = scope.access.permissions.includes('issue.comment');
   const tail = /@([^@\n]*)$/.exec(body);
-  const suggestions = tail && !tail[1].includes('](') ? scope.people.filter((person) => person.displayName.toLocaleLowerCase().includes(tail[1].toLocaleLowerCase())).slice(0, 8) : [];
+  const suggestions = tail && ![...picks.keys()].some((name) => tail[1].startsWith(`${name} `)) ? scope.people.filter((person) => person.displayName.toLocaleLowerCase().includes(tail[1].toLocaleLowerCase())).slice(0, 8) : [];
   async function change(action: () => Promise<unknown>, success?: () => void) {
     if (lock.current) return;
     lock.current = true; setPending(true); setError(null);
@@ -114,21 +118,21 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
         {/* กดไฟล์แนบ = ป๊อปอัปดูตัวอย่าง (ผู้ใช้ขอ 2026-11-08) */}
         {!item.deletedAt && !!item.files?.length && <div className={styles.fileChips}>{item.files.map((file, index) => <button type="button" key={file.id} className={`${styles.chipSoft} ${styles.chipButton}`} aria-label={t('previewFile', { name: file.name })} onClick={() => preview.open(item.files!, index)}>{file.name}</button>)}</div>}
         {item.editedAt && !item.deletedAt && <small className="muted">{t('edited')}</small>}
-        <div className={styles.actions}>{item.canEdit && <Button size="small" variant="ghost" disabled={pending} onClick={() => { setEditing(item); setEditBody(item.body ?? ''); }}>{t('editComment')}</Button>}{item.canDelete && <Button size="small" variant="ghost" disabled={pending} onClick={() => setDeleting(item)}>{t('deleteComment')}</Button>}</div>
+        <div className={styles.actions}>{item.canEdit && <Button size="small" variant="ghost" disabled={pending} onClick={() => { const shown = toDisplay(item.body ?? ''); setEditing(item); setEditBody(shown.text); setEditPicks(shown.picks); }}>{t('editComment')}</Button>}{item.canDelete && <Button size="small" variant="ghost" disabled={pending} onClick={() => setDeleting(item)}>{t('deleteComment')}</Button>}</div>
       </div>}
     </li>)}</ol>
     {feed.hasNextPage && <Button disabled={feed.isFetchingNextPage} onClick={() => void feed.fetchNextPage()}>{t('loadMore')}</Button>}
     </>}
-    {showComposer && commentable && <form className={`${styles.composer}${compact ? ` ${styles.compactComposer}` : ''}`} onSubmit={(event) => { event.preventDefault(); void change(async () => { const created = await api.post<Comment>(`${endpoint}/comments`, { body }); for (const file of files) await api.post(`${projectPath(scope.ws, scope.projectKey)}/files/${file.id}/attachments`, { targetType: 'comment', target: created.id }); }, () => { setBody(''); setFiles([]); }); }}>
+    {showComposer && commentable && <form className={`${styles.composer}${compact ? ` ${styles.compactComposer}` : ''}`} onSubmit={(event) => { event.preventDefault(); void change(async () => { const created = await api.post<Comment>(`${endpoint}/comments`, { body: toStored(body, picks) }); for (const file of files) await api.post(`${projectPath(scope.ws, scope.projectKey)}/files/${file.id}/attachments`, { targetType: 'comment', target: created.id }); }, () => { setBody(''); setPicks(new Map()); setFiles([]); }); }}>
       <label className="field"><span className={compact ? "sr-only" : undefined}>{t('writeComment')}</span><textarea ref={textarea} rows={compact ? 1 : undefined} placeholder={compact ? t('commentPlaceholder') : undefined} className="input" required maxLength={20000} value={body} onChange={(event) => setBody(event.target.value)} disabled={pending} /></label>
-      {suggestions.length > 0 && <div className={styles.mentionOptions} role="group" aria-label={t('mentionMembers')}>{suggestions.map((person) => <Button size="small" key={person.id} onClick={() => { setBody(body.slice(0, body.lastIndexOf('@')) + `@[${person.displayName}](${person.id}) `); textarea.current?.focus(); }}>{person.displayName}</Button>)}</div>}
+      {suggestions.length > 0 && <div className={styles.mentionOptions} role="group" aria-label={t('mentionMembers')}>{suggestions.map((person) => <Button size="small" key={person.id} onClick={() => { setBody(body.slice(0, body.lastIndexOf('@')) + `@${person.displayName} `); setPicks((current) => new Map(current).set(person.displayName, person.id)); textarea.current?.focus(); }}>{person.displayName}</Button>)}</div>}
       {files.length > 0 && <div className={styles.fileChips}>{files.map((file) => <span key={file.id} className={styles.chipSoft}>{file.name}<button type="button" className={styles.chipX} aria-label={t('removeItem', { text: file.name })} onClick={() => setFiles(files.filter((item) => item.id !== file.id))}><X size={12} aria-hidden="true" /></button></span>)}</div>}
       <div className={styles.composerFooter}>{!compact && <AttachButton scope={scope} label={t('attachToComment')} disabled={pending} onUploaded={(added) => setFiles((current) => [...current, ...added])} />}<span className="muted">{t('markdownHint')}</span><Button type="submit" variant="primary" disabled={pending || !body.trim()}>{t('send')}</Button></div>
     </form>}
     {!!error && <Failure error={error} />}
     {preview.props && <FilePreview {...preview.props} base={previewBase(scope)} filesHref={filesPageHref(scope)} />}
     <Dialog open={!!editing} title={t('editComment')} onOpenChange={(open) => { if (!open && !pending) setEditing(null); }}>
-      <form className={styles.stack} onSubmit={(event) => { event.preventDefault(); if (editing) void change(() => api.request(`${endpoint}/comments/${editing.id}`, { method: 'PATCH', body: { body: editBody } }), () => setEditing(null)); }}>
+      <form className={styles.stack} onSubmit={(event) => { event.preventDefault(); if (editing) void change(() => api.request(`${endpoint}/comments/${editing.id}`, { method: 'PATCH', body: { body: toStored(editBody, editPicks) } }), () => setEditing(null)); }}>
         <label className="field">{t('comment')}<textarea className="input" required maxLength={20000} value={editBody} onChange={(event) => setEditBody(event.target.value)} /></label><Button type="submit" variant="primary" disabled={pending || !editBody.trim()}>{t('save')}</Button>{!!error && <Failure error={error} />}
       </form>
     </Dialog>

@@ -67,6 +67,10 @@ describe('Comments / mentions / watchers', () => {
     // ไม่เปลี่ยน source เดิมของผู้สร้าง และสมาชิกที่เพิ่งถูก mention ถูก Watch ด้วย auto_mention
     const other = await issue();
     await team.lead.post(`${path(other.key)}/comments`, { body: '@Kaijeaw' });
+    // ข้อความย่อในอีเมล / LINE แสดง mention แบบคงที่เป็น @ชื่อ ไม่มีรหัส
+    seen.length = 0;
+    await team.lead.post(`${path(other.key)}/comments`, { body: `ถึง @[Kaijeaw](${team.devId}) ตรวจด้วย` });
+    expect(seen[0].data).toMatchObject({ excerpt: 'ถึง @Kaijeaw ตรวจด้วย' });
     expect((await t.owner.query('select source from issue_watchers where issue_id=$1 and user_id=$2', [other.id, team.devId])).rows[0].source).toBe('auto_mention');
   });
 

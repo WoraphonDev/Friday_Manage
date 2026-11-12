@@ -13,7 +13,7 @@ import { parse } from '../common/validate.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { SYSTEM_DB } from '../db/db.module.js';
-import { type BillDoc, renderBill } from './pdf.js';
+import { type BillDoc, renderBill, thaiDate } from './pdf.js';
 import { type CheckoutMeta, invoiceDto, PaymentsService } from './payments.service.js';
 
 const s = schema;
@@ -51,7 +51,10 @@ const seller = () => ({
   name: process.env.SELLER_NAME ?? 'บริษัท ฟรายเดย์ จำกัด (ตัวอย่าง)',
   taxId: process.env.SELLER_TAX_ID ?? '0105500000000',
   address: process.env.SELLER_ADDRESS ?? '99 ถนนตัวอย่าง แขวงตัวอย่าง เขตตัวอย่าง กรุงเทพมหานคร 10000',
+  branch: process.env.SELLER_BRANCH ?? 'สำนักงานใหญ่',
 });
+/** ยังไม่ได้ตั้งข้อมูลผู้ขายจริง → บอกในเอกสารว่าเป็นตัวอย่าง */
+const sellerIsSample = () => !process.env.SELLER_NAME;
 
 /** ใบแจ้งหนี้, สลิป, 50 ทวิ, PDF และการยกเลิกแพ็กเกจ */
 @Injectable()
@@ -149,13 +152,13 @@ export class InvoicesService {
       buyer: {
         companyName: profile?.companyName ?? '-',
         taxId: profile?.taxId ?? '-',
-        branch: profile ? (profile.branchType === 'head' ? '(สำนักงานใหญ่)' : `(สาขา ${profile.branchNo})`) : '',
+        branch: profile ? (profile.branchType === 'head' ? 'สำนักงานใหญ่' : `สาขาที่ ${profile.branchNo}`) : '',
         address: profile?.address ?? '-',
         email: profile?.taxEmail ?? '',
       },
       // มีคูปอง (O20): แสดงราคาแพ็กเกจเต็มแล้วหักส่วนลดเป็นอีกบรรทัด · ยอดก่อนภาษี = หลังหักส่วนลด
       lines: [
-        { description: `Friday Manage ${planName} · ${cycle} · ${i.periodStart} ถึง ${i.periodEnd}`, amount: i.subtotal + i.discount },
+        { description: `ค่าบริการ Friday Manage แพ็กเกจ ${planName} (${cycle})\nรอบวันที่ ${thaiDate(i.periodStart, true)} – ${thaiDate(i.periodEnd, true)}`, amount: i.subtotal + i.discount },
         ...(i.discount > 0 ? [{ description: `ส่วนลด${meta?.coupon ? ` (โค้ด ${meta.coupon})` : ''} / Discount`, amount: -i.discount }] : []),
       ],
       subtotal: i.subtotal,
@@ -163,12 +166,16 @@ export class InvoicesService {
       total: i.total,
       whtAmount: i.whtAmount,
       amountDue: i.amountDue,
-      status: i.status === 'paid' ? 'ชำระแล้ว / Paid' : i.status === 'pending_review' ? 'รอตรวจสลิป / Pending review' : i.status === 'void' ? 'ยกเลิก / Void' : 'รอชำระ / Open',
+      status: i.status === 'paid' ? 'ชำระแล้ว / Paid' : i.status === 'pending_review' ? 'รอตรวจสลิป / Pending review' : i.status === 'void' ? 'ยกเลิก / Void' : 'รอชำระเงิน / Unpaid',
+      dueDate: !tax && i.status === 'open' ? i.dueDate : null,
+      notes: [
+        ...(i.poNumber ? [`เลขที่ใบสั่งซื้อ (PO): ${i.poNumber}`] : []),
+        ...(p ? [`ช่องทางชำระเงิน: ${p.method === 'card' ? 'บัตรเครดิต / เดบิต' : p.method === 'promptpay' ? 'PromptPay' : 'โอนเงินเข้าบัญชีธนาคาร'}`] : []),
+        ...(i.whtAmount > 0 ? ['ผู้ซื้อหักภาษี ณ ที่จ่าย 3% กรุณาส่งหนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ) ภายใน 30 วัน'] : []),
+      ],
       footer: [
-        ...(i.poNumber ? [`เลขที่ PO: ${i.poNumber}`] : []),
-        ...(p ? [`ช่องทางชำระ: ${p.method === 'card' ? 'บัตรเครดิต/เดบิต' : p.method === 'promptpay' ? 'PromptPay' : 'โอนเงิน'}`] : []),
-        ...(i.whtAmount > 0 ? ['ผู้ซื้อหักภาษี ณ ที่จ่าย 3% · ส่งหนังสือรับรองการหักภาษี (50 ทวิ) ภายใน 30 วัน'] : []),
-        'เอกสารนี้สร้างโดยระบบ Friday Manage · ข้อมูลผู้ขายเป็นตัวอย่างเมื่อยังไม่ได้ตั้งค่า',
+        'เอกสารนี้ออกโดยระบบคอมพิวเตอร์ ไม่ต้องมีลายมือชื่อ · This document is computer-generated and requires no signature.',
+        ...(sellerIsSample() ? ['ข้อมูลผู้ขายเป็นตัวอย่าง (ยังไม่ได้ตั้งค่า SELLER_NAME)'] : []),
       ],
     };
   }

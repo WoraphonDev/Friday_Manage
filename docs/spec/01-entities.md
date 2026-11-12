@@ -201,10 +201,10 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 
 | Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
 |---|---|---|---|
-| `plan` | แพ็กเกจ (ระดับระบบ) | code (free · team_s · team_m · team_l · enterprise), seat_limit, storage_gb_per_member, features (jsonb), price_monthly_satang, price_yearly_satang | R1, Q2 |
-| `subscription` | แพ็กเกจของ Workspace | workspace_id, plan_id, cycle (monthly · yearly), status (trialing · active · past_due · canceled), trial_ends_at, current_period_start, current_period_end, payment_method (card · promptpay · transfer), stripe_customer_id, stripe_subscription_id, discount | N1, R2 |
+| `plan` | แพ็กเกจ (ระดับระบบ) | code (free · team_s · team_m · team_l · enterprise), seat_limit, storage_gb_per_member, features (jsonb), price_monthly_satang, price_yearly_satang, display_name, listed, open_for_signup (ตามเวอร์ชันราคาล่าสุด · O20) | R1, Q2 |
+| `subscription` | แพ็กเกจของ Workspace | workspace_id, plan_id, cycle (monthly · yearly), status (trialing · active · past_due · canceled), trial_ends_at, current_period_start, current_period_end, payment_method (card · promptpay · transfer), stripe_customer_id, stripe_subscription_id, discount, price_version_id (เวอร์ชันราคาที่จ่ายล่าสุด · O20) | N1, R2 |
 | `billing_profile` | ข้อมูลออกใบกำกับภาษี (1:1) | workspace_id, company_name, tax_id, branch_type (head · branch), branch_no, address, tax_email, wht_enabled | N1, R2 |
-| `invoice` | ใบแจ้งหนี้ | workspace_id, subscription_id, number, period_start, period_end, subtotal, vat, total, wht_amount, amount_due (สตางค์ทั้งหมด), po_number, status (open · pending_review · paid · void), due_date, paid_at | N1, R2, Q3 |
+| `invoice` | ใบแจ้งหนี้ | workspace_id, subscription_id, number, period_start, period_end, subtotal (หลังหักส่วนลด), discount, vat, total, wht_amount, amount_due (สตางค์ทั้งหมด), po_number, status (open · pending_review · paid · void), due_date, paid_at | N1, R2, Q3 |
 | `payment` | การชำระ | invoice_id, method, amount, provider_ref, slip_file_key, status (pending_review · confirmed · rejected), reviewed_by, reviewed_at | R2, Q3 |
 | `tax_document` | e-Tax Invoice & e-Receipt | invoice_id, doc_type, number, provider_ref, status, sent_at | Q3 |
 | `wht_certificate` | หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) | invoice_id, file_key, uploaded_by, status, reviewed_by | R2, Q3 |
@@ -246,6 +246,10 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `data_breach` | เหตุละเมิดข้อมูลส่วนบุคคล · แจ้ง สคส. ภายใน 72 ชม. | number, discovered_at, owner_id, description, data_types[], affected_count, workspace_ids[], risk, containment, assessment, pdpc_notified_at, subjects_notified_at, closed_at | Ops 10, A4 |
 | `entitlement_version` | สิทธิ์และขีดจำกัดตามแพ็กเกจแบบมีเวอร์ชัน (O21) · แก้ไม่ได้ กู้ = สร้างเวอร์ชันใหม่ | version, matrix (แพ็กเกจ × คีย์ใน `plan-entitlements.ts`), effective_at, reason, restored_from, created_by, approved_by, approval_request_id | Ops Entitlements, P2, P3 |
 | `entitlement_override` | ปรับสิทธิ์เฉพาะราย ใช้แทนค่าของแพ็กเกจ | workspace_id, key (seats · storage_gb · api_rpm · automation_runs · sso), value, expires_at (null ได้เฉพาะมี contract_ref), contract_ref, reason, created_by, approved_by, warned_at, revoked_at, revoked_by | Ops Entitlements |
+| `plan_price_version` | ราคาและการแสดงผลของแพ็กเกจแบบมีเวอร์ชัน (O20 · P1) · แก้ไม่ได้ · ลูกค้าเดิมคงราคาเดิมจนกว่าจะย้าย | plan_code, version, display_name, monthly_satang, yearly_satang, listed, open_for_signup, existing_policy (grandfather · next_cycle), existing_from, effective_at, reason, created_by, approved_by, approval_request_id | Ops Promotions, P1 |
+| `coupon` | คูปอง / โค้ดส่วนลด (O20 · P4) | code, description, kind (percent · amount · free_months), value, duration (once · repeating · forever), duration_cycles, plan_codes, max_redemptions, expires_on, new_customers_only, stackable, status (draft · active · disabled), created_by, activated_at, activated_by, disabled_at, disabled_by, disable_reason | Ops Promotions, P4, R2 |
+| `coupon_redemption` | Workspace ที่ใช้คูปอง (1 คูปองต่อ Workspace) · Owner / Admin ของลูกค้าอ่าน / เพิ่มผ่าน RLS | workspace_id, coupon_id, status (pending · active · ended), cycles_total, created_by, activated_at, ended_at | R2 |
+| `coupon_use` | ส่วนลดของคูปองในใบแจ้งหนี้แต่ละใบ · paid = นับเป็นรอบที่ใช้ไป | workspace_id, redemption_id, coupon_id, invoice_id, amount, status (pending · paid), paid_at | R2 |
 | `email_suppression` | อีเมลที่ระบบไม่ส่งให้ (bounce ถาวร / รายงานสแปม / bounce ชั่วคราวซ้ำ / ทีม Friday เพิ่มเอง) · ระดับระบบ (O23) | email, reason, detail, workspace_id (ที่มา · แสดงผล), source, removed_at, removed_by, remove_reason | Ops Deliveries, Y7 |
 | `email_feedback_event` | เหตุการณ์ bounce / complaint จากผู้ให้บริการอีเมล · เก็บ 90 วัน | email, kind (bounce_permanent · bounce_transient · complaint), detail, raw | Ops Deliveries |
 

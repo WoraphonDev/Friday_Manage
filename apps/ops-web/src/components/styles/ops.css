@@ -2138,3 +2138,86 @@ pre.code-box {
   background: var(--surface-2);
   border-radius: 10px;
 }
+
+/* ---------------------------------------------------------------- แพ็กเกจและโปรโมชัน (O20) */
+.promo-plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.promo-plan {
+  padding: 16px;
+  gap: 10px;
+}
+.promo-plan-price {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.promo-plan ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--foreground-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.promo-plan-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--subtle);
+  font-size: 12px;
+}
+.promo-kv {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 8px 14px;
+  margin: 0;
+  font-size: 13px;
+}
+.promo-kv dt {
+  color: var(--muted);
+}
+.promo-kv dd {
+  margin: 0;
+}
+.promo-checks,
+.promo-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.promo-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.promo-fieldset:disabled .opt {
+  opacity: 0.6;
+  cursor: default;
+}
+.promo-preview {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--primary-soft);
+  font-size: 13px;
+}
+.push-start {
+  margin-right: auto;
+}
+@media (max-width: 640px) {
+  .promo-kv {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.text-danger {
+  color: var(--danger-text);
+}

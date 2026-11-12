@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { AnalyticsService, classifyChange } from '../analytics/analytics.service.js';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { canGrant, type Db, resumeIfPaid, schema, type Tx } from '@friday/db';
+import { canGrant, commitCouponUses, type Db, resumeIfPaid, schema, type Tx } from '@friday/db';
 import { and, count, eq, inArray, like, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { today } from '../common/dates.js';
@@ -14,6 +14,7 @@ import { PlanLimits } from '../core/plan-limits.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { config } from '../config.js';
 import { Jobs } from '../queue/jobs.js';
+import { CouponCode, recordDiscount } from './coupons.js';
 import { ETAX_PROVIDER, type ETaxProvider, PAYMENT_GATEWAY, type PaymentGateway, verifyETaxSignature } from './providers.js';
 
 const s = schema;
@@ -27,6 +28,8 @@ export const CheckoutBody = z
     /** หัก ณ ที่จ่าย 3% · PromptPay / โอนเท่านั้น */
     wht: z.boolean().default(false),
     poNumber: z.string().trim().max(50).optional(),
+    /** โค้ดส่วนลด (O20) */
+    coupon: CouponCode.optional(),
   })
   .strict();
 const IdempotencyKey = z.string().regex(/^[A-Za-z0-9_.:-]{8,128}$/, 'Idempotency-Key ต้องยาว 8–128 ตัวอักษร (ตัวอักษร ตัวเลข _ . : -)');
@@ -40,6 +43,10 @@ export interface CheckoutMeta {
   /** แฮชของ (Workspace + Idempotency-Key) / ของ payload ที่ขอ */
   key: string;
   payload: string;
+  /** เวอร์ชันราคาที่ใช้คิดใบนี้ (O20) · เปิดแพ็กเกจแล้วลูกค้าผูกกับราคานี้ (grandfathering) · ไม่มี = ใบก่อนมีเวอร์ชัน */
+  priceVersionId?: string | null;
+  /** โค้ดส่วนลดที่ใส่ตอน checkout */
+  coupon?: string | null;
 }
 
 const sha = (v: string) => createHash('sha256').update(v).digest('hex');
@@ -58,7 +65,7 @@ export const bankInfo = () => ({
 type Invoice = typeof s.invoices.$inferSelect;
 type Payment = typeof s.payments.$inferSelect;
 
-export const invoiceDto = (i: Invoice) => ({ id: i.id, number: i.number, periodStart: i.periodStart, periodEnd: i.periodEnd, subtotal: i.subtotal, vat: i.vat, total: i.total, whtAmount: i.whtAmount, amountDue: i.amountDue, poNumber: i.poNumber, status: i.status, dueDate: i.dueDate, paidAt: i.paidAt, createdAt: i.createdAt });
+export const invoiceDto = (i: Invoice) => ({ id: i.id, number: i.number, periodStart: i.periodStart, periodEnd: i.periodEnd, subtotal: i.subtotal, discount: i.discount, vat: i.vat, total: i.total, whtAmount: i.whtAmount, amountDue: i.amountDue, poNumber: i.poNumber, status: i.status, dueDate: i.dueDate, paidAt: i.paidAt, createdAt: i.createdAt });
 
 /** ชำระเงิน (R2): checkout, ยืนยันผลจาก Stripe, ออกเอกสารภาษี */
 @Injectable()
@@ -162,9 +169,9 @@ export class PaymentsService implements OnModuleInit {
     if (!parsedKey.success) throw new AppError(400, 'idempotency_key_required', 'ต้องส่งหัว Idempotency-Key (8–128 ตัวอักษร) เพื่อกันตัดเงินซ้ำ');
     if (input.wht && input.method === 'card') throw new AppError(422, 'wht_not_allowed_for_card', 'หัก ณ ที่จ่ายเลือกได้เฉพาะ PromptPay หรือโอนเงิน');
     const key = sha(`${tenant.workspaceId}:${parsedKey.data}`);
-    const payload = sha(JSON.stringify([input.plan, input.cycle, input.method, input.wht, input.poNumber ?? null]));
+    const payload = sha(JSON.stringify([input.plan, input.cycle, input.method, input.wht, input.poNumber ?? null, ...(input.coupon ? [input.coupon] : [])]));
 
-    return this.db.run(auth, tenant, async (tx) => {
+    const out = await this.db.run(auth, tenant, async (tx) => {
       // คำขอซ้ำที่มาพร้อมกันต้องต่อคิว ไม่ให้สร้างสองใบ
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'checkout:' + tenant.workspaceId}, 0))`);
       const [seen] = await tx
@@ -174,14 +181,14 @@ export class PaymentsService implements OnModuleInit {
       if (seen) {
         const meta = JSON.parse(seen.summary!) as CheckoutMeta;
         if (meta.payload !== payload) throw new AppError(422, 'idempotency_key_reuse', 'Idempotency-Key นี้ถูกใช้กับคำขอที่ต่างกัน');
-        return { ...(await this.respond(tx, seen.targetId!, key)), replayed: true };
+        return { invoiceId: seen.targetId!, replayed: true };
       }
 
       const [profile] = await tx.select().from(s.billingProfiles);
       if (!profile) throw new AppError(422, 'billing_profile_required', 'กรอกข้อมูลออกใบกำกับภาษีก่อน (PUT billing/profile)');
-      const quote = await this.billing.quote(tenant, { plan: input.plan, cycle: input.cycle, wht: input.wht });
-      const sub = await this.limits.ensureSubscription(tenant.workspaceId);
-      void sub;
+      // คูปองที่จำกัดจำนวนสิทธิ์: หลาย Workspace ใช้โค้ดเดียวกันพร้อมกันต้องต่อคิว ไม่ให้เกินสิทธิ์ (O20)
+      if (input.coupon) await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'coupon:' + input.coupon}, 0))`);
+      const { internal, ...quote } = await this.billing.price(auth, tenant, { plan: input.plan, cycle: input.cycle, wht: input.wht, coupon: input.coupon }, tx);
       const [subRow] = await tx.select({ id: s.subscriptions.id }).from(s.subscriptions);
 
       // เลขใบแจ้งหนี้ออกต่อเนื่องทั้งระบบ (ใบกำกับภาษีต้องเรียงเลข) จึงล็อกระดับระบบ แล้วนับด้วย SYSTEM_DB ซึ่งเห็นทุก Workspace
@@ -190,6 +197,10 @@ export class PaymentsService implements OnModuleInit {
       const prefix = `FRI-${start.slice(2, 4)}${start.slice(5, 7)}-`;
       const [seq] = await this.sys.select({ n: count() }).from(s.invoices).where(like(s.invoices.number, `${prefix}%`));
       const number = `${prefix}${String(seq.n + 1).padStart(4, '0')}`;
+      // คูปองใช้ฟรี N เดือน: ใบนี้ครอบคลุม N เดือน แล้วรอบถัดไปจ่ายราคาปกติตามรอบที่เลือก
+      const months = quote.freeMonths ?? (input.cycle === 'yearly' ? 12 : 1);
+      // ไม่มียอดชำระ (ฟรี / ส่วนลด 100%): ไม่ส่งไปผู้ให้บริการรับชำระ ปิดใบทันทีหลัง commit
+      const free = quote.amountDue === 0;
 
       const [invoice] = await tx
         .insert(s.invoices)
@@ -198,28 +209,57 @@ export class PaymentsService implements OnModuleInit {
           subscriptionId: subRow.id,
           number,
           periodStart: start,
-          periodEnd: addDays(addMonths(start, input.cycle === 'yearly' ? 12 : 1), -1),
+          periodEnd: addDays(addMonths(start, months), -1),
           subtotal: quote.subtotal,
+          discount: quote.discount,
           vat: quote.vat,
           total: quote.total,
           whtAmount: quote.whtAmount,
           amountDue: quote.amountDue,
           poNumber: input.poNumber ?? null,
-          dueDate: input.method === 'transfer' ? addDays(start, 7) : start,
+          dueDate: input.method === 'transfer' && !free ? addDays(start, 7) : start,
         })
         .returning();
+      await recordDiscount(tx, { workspaceId: tenant.workspaceId, userId: auth.userId, invoiceId: invoice.id, apply: internal.apply });
 
-      const gwReq = { amount: invoice.amountDue, invoiceId: invoice.id, invoiceNumber: invoice.number, email: profile.taxEmail, idempotencyKey: key };
-      const gw = input.method === 'card' ? await this.gateway.createCard(gwReq) : input.method === 'promptpay' ? await this.gateway.createPromptPay(gwReq) : null;
-      await tx.insert(s.payments).values({ workspaceId: tenant.workspaceId, invoiceId: invoice.id, method: input.method, amount: invoice.amountDue, providerRef: gw?.providerRef ?? null });
+      if (!free) {
+        const gwReq = { amount: invoice.amountDue, invoiceId: invoice.id, invoiceNumber: invoice.number, email: profile.taxEmail, idempotencyKey: key };
+        const gw = input.method === 'card' ? await this.gateway.createCard(gwReq) : input.method === 'promptpay' ? await this.gateway.createPromptPay(gwReq) : null;
+        await tx.insert(s.payments).values({ workspaceId: tenant.workspaceId, invoiceId: invoice.id, method: input.method, amount: invoice.amountDue, providerRef: gw?.providerRef ?? null });
+      }
 
-      const meta: CheckoutMeta = { plan: input.plan, cycle: input.cycle, method: input.method, wht: input.wht, key, payload };
+      const meta: CheckoutMeta = { plan: input.plan, cycle: input.cycle, method: input.method, wht: input.wht, key, payload, priceVersionId: internal.priceVersionId, coupon: quote.coupon };
       const log = { workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user' as const, category: 'plan' as const, targetType: 'invoice', targetId: invoice.id };
+      const off = quote.discount ? ` · ส่วนลด ${quote.discounts.map((d) => d.code).join(', ')} ${quote.discount / 100} บาท` : '';
       await tx.insert(s.auditLogs).values([
         { ...log, action: 'billing.checkout', summary: JSON.stringify(meta) },
-        { ...log, action: 'billing.invoice_created', summary: `${invoice.number} · ${quote.planName} ${input.cycle === 'yearly' ? 'รายปี' : 'รายเดือน'} · ${input.method} · ${invoice.amountDue / 100} บาท` },
+        { ...log, action: 'billing.invoice_created', summary: `${invoice.number} · ${quote.planName} ${input.cycle === 'yearly' ? 'รายปี' : 'รายเดือน'} · ${input.method} · ${invoice.amountDue / 100} บาท${off}` },
       ]);
-      return { ...(await this.respond(tx, invoice.id, key)), replayed: false };
+      return { invoiceId: invoice.id, replayed: false };
+    });
+    // ใบที่ไม่มียอดชำระปิดเองทันที · ส่งซ้ำแล้วใบยังเปิดอยู่ (ปิดครั้งก่อนไม่สำเร็จ) ก็ปิดให้
+    await this.settleFree(out.invoiceId);
+    return this.db.run(auth, tenant, async (tx) => ({ ...(await this.respond(tx, out.invoiceId, key)), replayed: out.replayed }));
+  }
+
+  /**
+   * ใบแจ้งหนี้ยอด 0 (คูปองใช้ฟรี N เดือน / ส่วนลด 100%): ชำระแล้วโดยไม่ผ่านผู้ให้บริการ → เปิดแพ็กเกจ + นับรอบคูปอง
+   * ไม่ออกใบกำกับภาษี / ใบเสร็จ เพราะไม่มีการรับเงิน · เขียนด้วย SYSTEM_DB (invoices / subscriptions แก้ผ่านแอปไม่ได้) · เรียกซ้ำได้
+   */
+  private async settleFree(invoiceId: string) {
+    await this.sys.transaction(async (tx) => {
+      const [invoice] = await tx.select().from(s.invoices).where(eq(s.invoices.id, invoiceId)).for('update');
+      if (!invoice || invoice.status !== 'open' || invoice.amountDue !== 0) return;
+      const [hasPayment] = await tx.select({ id: s.payments.id }).from(s.payments).where(eq(s.payments.invoiceId, invoiceId)).limit(1);
+      if (hasPayment) return;
+      const meta = await this.meta(invoice.id);
+      await tx.update(s.invoices).set({ status: 'paid', paidAt: new Date(), updatedAt: new Date() }).where(eq(s.invoices.id, invoice.id));
+      const [prev] = await tx.select({ status: s.subscriptions.status, cycle: s.subscriptions.cycle, plan: s.plans.code }).from(s.subscriptions).leftJoin(s.plans, eq(s.plans.id, s.subscriptions.planId)).where(eq(s.subscriptions.id, invoice.subscriptionId));
+      const granted = await this.activate(tx, invoice, meta);
+      await commitCouponUses(tx, invoice.id);
+      const kind = granted ? classifyChange({ plan: prev?.plan ?? null, status: prev?.status ?? null, cycle: prev?.cycle ?? null }, { plan: meta.plan, cycle: meta.cycle }) : null;
+      if (kind) await this.analytics.subscriptionChanged(tx, { workspaceId: invoice.workspaceId, kind, planFrom: prev?.plan ?? null, planTo: meta.plan, mrrAfterSatang: 0, actorKind: 'system', actorId: null });
+      await tx.insert(s.auditLogs).values({ workspaceId: invoice.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.payment_confirmed', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · ไม่มียอดชำระ (คูปอง ${meta.coupon ?? '-'}) · ${granted ? `เปิดแพ็กเกจ ${meta.plan}` : 'ไม่เปลี่ยนแพ็กเกจ (มีใบที่ใหม่กว่าเปิดสิทธิ์อยู่)'}` });
     });
   }
 
@@ -227,6 +267,8 @@ export class PaymentsService implements OnModuleInit {
   private async respond(tx: Tx, invoiceId: string, key: string) {
     const [invoice] = await tx.select().from(s.invoices).where(eq(s.invoices.id, invoiceId));
     const [payment] = await tx.select().from(s.payments).where(eq(s.payments.invoiceId, invoiceId));
+    // ไม่มียอดชำระ (คูปอง): ไม่มีรายการชำระและไม่ต้องไปผู้ให้บริการ
+    if (!payment) return { invoice: invoiceDto(invoice), payment: null, free: true as const };
     const [profile] = await tx.select({ email: s.billingProfiles.taxEmail }).from(s.billingProfiles);
     const base = { invoice: invoiceDto(invoice), payment: { id: payment.id, method: payment.method, status: payment.status, amount: payment.amount } };
     const req = { amount: invoice.amountDue, invoiceId: invoice.id, invoiceNumber: invoice.number, email: profile?.email ?? null, idempotencyKey: key };
@@ -259,7 +301,7 @@ export class PaymentsService implements OnModuleInit {
     if (!plan) throw new AppError(409, 'plan_not_found', `ไม่พบแพ็กเกจ ${meta.plan}`);
     await tx
       .update(s.subscriptions)
-      .set({ planId: plan.id, cycle: meta.cycle, status: 'active', trialEndsAt: null, currentPeriodStart: new Date(`${invoice.periodStart}T00:00:00+07:00`), currentPeriodEnd: new Date(`${addDays(invoice.periodEnd, 1)}T00:00:00+07:00`), paymentMethod: meta.method, sourceInvoiceId: invoice.id, updatedAt: new Date() })
+      .set({ planId: plan.id, cycle: meta.cycle, status: 'active', trialEndsAt: null, currentPeriodStart: new Date(`${invoice.periodStart}T00:00:00+07:00`), currentPeriodEnd: new Date(`${addDays(invoice.periodEnd, 1)}T00:00:00+07:00`), paymentMethod: meta.method, sourceInvoiceId: invoice.id, ...(meta.priceVersionId !== undefined ? { priceVersionId: meta.priceVersionId } : {}), updatedAt: new Date() })
       .where(eq(s.subscriptions.id, invoice.subscriptionId));
     return true;
   }
@@ -273,6 +315,8 @@ export class PaymentsService implements OnModuleInit {
       await tx.update(s.invoices).set({ status: 'paid', paidAt: new Date(), updatedAt: new Date() }).where(eq(s.invoices.id, invoice.id));
       const [prev] = await tx.select({ status: s.subscriptions.status, cycle: s.subscriptions.cycle, plan: s.plans.code }).from(s.subscriptions).leftJoin(s.plans, eq(s.plans.id, s.subscriptions.planId)).where(eq(s.subscriptions.id, invoice.subscriptionId));
       const granted = await this.activate(tx, invoice, meta);
+      // ส่วนลดคูปองในใบนี้นับเป็นรอบที่ใช้ไป (O20)
+      await commitCouponUses(tx, invoice.id);
       // A34: MRR movement · MRR = ยอดก่อน VAT หลังส่วนลด (รายปีหาร 12)
       const kind = granted ? classifyChange({ plan: prev?.plan ?? null, status: prev?.status ?? null, cycle: prev?.cycle ?? null }, { plan: meta.plan, cycle: meta.cycle }) : null;
       if (kind) await this.analytics.subscriptionChanged(tx, { workspaceId: invoice.workspaceId, kind, planFrom: prev?.plan ?? null, planTo: meta.plan, mrrAfterSatang: meta.cycle === 'yearly' ? invoice.subtotal / 12 : invoice.subtotal, actorKind: 'system', actorId: null });

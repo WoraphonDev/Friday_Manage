@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Lock } from "lucide-react";
+import { Check, Copy, Lock, X } from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -11,13 +11,18 @@ import { ApiError, api, supportId } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PAID_PLANS, baht, fitPlan, isPaidPlan, type Cycle, type PaidPlan, type PublicPlans, type Usage } from "@/features/plan-limits";
-import type { BillingProfile, CheckoutResult, Invoice, Method, Quote } from "../../../app/work/[ws]/billing/_components/types";
+import type { BillingProfile, CheckoutResult, Invoice, Method, Quote, QuoteDiscount } from "../../../app/work/[ws]/billing/_components/types";
 import { useQrDataUrl } from "./qr";
 import { loadStripe, type StripeCardElement, type StripeLike } from "./stripe";
 import styles from "./checkout.module.css";
 
 type Entity = "corp" | "person";
-type Phase = { kind: "form" } | { kind: "pending"; result: CheckoutResult } | { kind: "done"; invoice: Invoice | (CheckoutResult["invoice"] & Partial<Invoice>); method: Method };
+/** ผลที่ต้องชำระต่อ (มีรายการชำระ) · ไม่มียอดชำระ (คูปองใช้ฟรี) ไปหน้าชำระแล้วทันที */
+type PayResult = CheckoutResult & { payment: NonNullable<CheckoutResult["payment"]> };
+type Phase =
+  | { kind: "form" }
+  | { kind: "pending"; result: PayResult }
+  | { kind: "done"; invoice: Invoice | (CheckoutResult["invoice"] & Partial<Invoice>); method: Method; free?: boolean };
 interface Form {
   companyName: string;
   taxId: string;
@@ -38,11 +43,11 @@ const METHODS: Method[] = ["promptpay", "card", "transfer"];
 /** Idempotency-Key ใหม่ต่อการกดชำระหนึ่งครั้ง · ใช้ซ้ำเมื่อ retry หลังเครือข่ายล้มหรือ 5xx (A33) */
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `k-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 const todayIso = () => new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
-/** ช่วงที่ใช้ได้ถ้าจ่ายวันนี้ (ก่อนออกใบแจ้งหนี้จริง) */
-const periodFrom = (cycle: Cycle) => {
+/** ช่วงที่ใช้ได้ถ้าจ่ายวันนี้ (ก่อนออกใบแจ้งหนี้จริง) · คูปองใช้ฟรี N เดือน = ใบนี้ครอบคลุม N เดือน */
+const periodFrom = (cycle: Cycle, freeMonths?: number | null) => {
   const start = todayIso();
   const d = new Date(`${start}T00:00:00Z`);
-  d.setUTCMonth(d.getUTCMonth() + (cycle === "yearly" ? 12 : 1));
+  d.setUTCMonth(d.getUTCMonth() + (freeMonths ? freeMonths : cycle === "yearly" ? 12 : 1));
   d.setUTCDate(d.getUTCDate() - 1);
   return { start, end: d.toISOString().slice(0, 10) };
 };
@@ -77,6 +82,10 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
   const [slip, setSlip] = useState<File | null>(null);
   const [slipAmount, setSlipAmount] = useState("");
   const [now, setNow] = useState(() => Date.now());
+  // โค้ดส่วนลด (O20): coupon = โค้ดที่ส่งไปคิดยอด · couponInput = ที่พิมพ์อยู่ · couponError = ข้อความจาก API เมื่อใช้ไม่ได้
+  const [coupon, setCoupon] = useState<string | null>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [couponError, setCouponError] = useState<string | null>(null);
   const key = useRef<string | null>(null);
   const stripe = useRef<{ stripe: StripeLike; card: StripeCardElement } | null>(null);
   const prefilled = useRef(false);
@@ -106,11 +115,22 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
   const locked = phase.kind === "pending";
 
   const quote = useQuery({
-    queryKey: ["billing-quote", ws, selected, cycle, whtOn],
-    queryFn: () => api.get<QuoteVat>(`${base}/billing/quote?plan=${selected}&cycle=${cycle}&wht=${whtOn}`),
+    queryKey: ["billing-quote", ws, selected, cycle, whtOn, coupon],
+    queryFn: () => api.get<QuoteVat>(`${base}/billing/quote?plan=${selected}&cycle=${cycle}&wht=${whtOn}${coupon ? `&coupon=${encodeURIComponent(coupon)}` : ""}`),
     enabled: canBill && phase.kind === "form",
     placeholderData: keepPreviousData,
   });
+  // โค้ดใช้ไม่ได้ (หมดอายุ / ไม่ตรงแพ็กเกจ ฯลฯ): บอกเหตุผลใต้ช่องโค้ด แล้วคิดยอดใหม่แบบไม่มีโค้ด แทนการแสดง error ทั้งกล่อง
+  const couponFailed = quote.error instanceof ApiError && quote.error.code.startsWith("coupon_");
+  useEffect(() => {
+    if (!couponFailed || !coupon) return;
+    setCouponError((quote.error as ApiError).message);
+    setCoupon(null);
+    key.current = null;
+  }, [couponFailed, coupon, quote.error]);
+  // จำส่วนลดของใบเสนอราคาล่าสุดไว้แสดงชื่อโค้ดระหว่างรอชำระ (ใบแจ้งหนี้มีแค่ยอดส่วนลดรวม)
+  const lastDiscounts = useRef<QuoteDiscount[]>([]);
+  if (quote.data && !quote.isPlaceholderData) lastDiscounts.current = quote.data.discounts ?? [];
   const vatRegistered = quote.data?.vatRegistered !== false;
   const lastVat = useRef(vatRegistered);
   if (quote.data) lastVat.current = vatRegistered;
@@ -143,6 +163,19 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
       </div>
     );
   const firstError = [plans, profile].find((q) => q.error)?.error;
+  const applyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    key.current = null;
+    setCouponError(null);
+    setCoupon(code);
+  };
+  const removeCoupon = () => {
+    key.current = null;
+    setCoupon(null);
+    setCouponInput("");
+    setCouponError(null);
+  };
   if (firstError)
     return (
       <div className={styles.page}>
@@ -191,7 +224,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
     return Object.keys(e).length === 0;
   }
 
-  async function confirmCard(result: CheckoutResult) {
+  async function confirmCard(result: PayResult) {
     const s = stripe.current;
     // ไม่ได้ตั้งกุญแจผู้ให้บริการ (โหมดพัฒนา) → รอสถานะจาก API อย่างเดียว
     if (!s || !result.card) return;
@@ -220,12 +253,18 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
       const result = await api.request<CheckoutResult>(`${base}/billing/checkout`, {
         method: "POST",
         headers: { "Idempotency-Key": key.current },
-        body: { plan: selected, cycle, method: current, wht: whtOn, ...(form.poNumber.trim() ? { poNumber: form.poNumber.trim() } : {}) },
+        body: { plan: selected, cycle, method: current, wht: whtOn, ...(form.poNumber.trim() ? { poNumber: form.poNumber.trim() } : {}), ...(coupon ? { coupon } : {}) },
       });
       // ได้ผลแล้ว: กดชำระครั้งต่อไปคือการชำระใหม่
       key.current = null;
-      setPhase({ kind: "pending", result });
-      if (current === "card") await confirmCard(result);
+      // ไม่มียอดชำระ (ใช้ฟรี N เดือน / ส่วนลดเต็มจำนวน): ใบแจ้งหนี้ชำระแล้วทันที ไม่ต้องเลือกวิธีชำระ
+      if (result.free || !result.payment) {
+        setPhase({ kind: "done", invoice: result.invoice, method: current, free: true });
+        void cache.invalidateQueries({ queryKey: ["usage", ws] });
+        return;
+      }
+      setPhase({ kind: "pending", result: result as PayResult });
+      if (current === "card") await confirmCard(result as PayResult);
     } catch (e) {
       // 4xx = คำขอนี้จบแล้ว (เช่นข้อมูลผิด) → ครั้งหน้าใช้ key ใหม่ · เครือข่ายล้ม / 5xx = ลองซ้ำด้วย key เดิม
       if (e instanceof ApiError && e.status >= 400 && e.status < 500) key.current = null;
@@ -239,7 +278,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
     }
   }
 
-  async function sendSlip(result: CheckoutResult) {
+  async function sendSlip(result: PayResult) {
     if (!slip) return;
     if (slip.size > SLIP_MAX) {
       setProblem(t("transfer.tooLarge"));
@@ -284,17 +323,29 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
   const planName = selectedSpec?.name ?? selected;
   if (phase.kind === "done") return <Done ws={ws} phase={phase} planName={planName} seats={seats} email={form.taxEmail.trim()} vatRegistered={lastVat.current} whtOn={whtOn} />;
 
-  const amounts = pending ? pending.invoice : quote.data;
+  // ระหว่างคิดยอดใหม่หลังโค้ดใช้ไม่ได้ ไม่ใช้ข้อมูลของคำขอที่ล้ม
+  const q = pending || couponFailed ? null : (quote.data ?? null);
+  const amounts = pending ? pending.invoice : (q ?? undefined);
+  const freeMonths = q?.freeMonths ?? null;
+  // ไม่มียอดชำระ: ไม่ต้องสร้าง QR / ตัดบัตร / ขอเลขบัญชี
+  const freeQuote = !!q && (q.amountDue === 0 || !!freeMonths);
+  const discountTotal = pending ? (pending.invoice.discount ?? 0) : (q?.discount ?? 0);
+  const discountLines: QuoteDiscount[] = pending ? lastDiscounts.current : (q?.discounts ?? []);
+  const listPrice = pending ? pending.invoice.subtotal + discountTotal : (q?.listPrice ?? (q ? q.subtotal + discountTotal : 0));
   const pay = amounts ? `฿${baht(amounts.amountDue)}` : "–";
   const expiresIn = pending?.promptpay ? Math.max(0, Date.parse(pending.promptpay.expiresAt) - now) : 0;
   const expired = !!pending?.promptpay && expiresIn <= 0;
   const payMethod = pending?.payment.method ?? current;
   const payLabel = !pending
-    ? { promptpay: t("qr.create"), card: t("card.pay", { amount: pay }), transfer: t("transfer.request") }[current]
+    ? freeQuote
+      ? freeMonths
+        ? t("coupon.startFree", { n: freeMonths })
+        : t("coupon.confirmFree")
+      : { promptpay: t("qr.create"), card: t("card.pay", { amount: pay }), transfer: t("transfer.request") }[current]
     : { promptpay: t("qr.check"), card: t("card.pay", { amount: pay }), transfer: t("transfer.send") }[pending.payment.method];
   const problemText = problem instanceof Error ? problem.message : typeof problem === "string" ? problem : null;
   const receipt = !vatRegistered;
-  const period = pending ? { start: pending.invoice.periodStart, end: pending.invoice.periodEnd } : periodFrom(cycle);
+  const period = pending ? { start: pending.invoice.periodStart, end: pending.invoice.periodEnd } : periodFrom(cycle, freeMonths);
 
   return (
     <div className={styles.page}>
@@ -383,14 +434,16 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
               })}
             </div>
 
-            {payMethod === "promptpay" &&
+            {freeQuote && <div className={cn(styles.panel, styles.muted, styles.small)}>{freeMonths ? t("coupon.freeNote", { n: freeMonths }) : t("coupon.zeroNote")}</div>}
+
+            {!freeQuote && payMethod === "promptpay" &&
               (pending?.promptpay ? (
                 <PromptPayPanel number={pending.invoice.number} payload={pending.promptpay.qrPayload} amount={pay} expiresIn={expiresIn} />
               ) : (
                 <div className={cn(styles.panel, styles.muted, styles.small)}>{t("qr.before")}</div>
               ))}
 
-            {payMethod === "card" && (
+            {!freeQuote && payMethod === "card" && (
               <div className={styles.panel}>
                 <CardField onReady={onCardReady} />
                 <span className={styles.small}>{t("card.auto")}</span>
@@ -398,7 +451,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
               </div>
             )}
 
-            {payMethod === "transfer" &&
+            {!freeQuote && payMethod === "transfer" &&
               (pending?.transfer ? (
                 <TransferPanel base={base} result={pending} slip={slip} setSlip={setSlip} slipAmount={slipAmount} setSlipAmount={setSlipAmount} />
               ) : (
@@ -437,15 +490,40 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
           )}
           {selectedSpec && selectedSpec.seatLimit !== null && seats > selectedSpec.seatLimit && <div className={cn(styles.warn, styles.small)}>{t("summary.teamOver", { n: seats, plan: planName, limit: selectedSpec.seatLimit })}</div>}
           {!amounts ? (
-            quote.error ? (
+            quote.error && !couponFailed ? (
               <ErrorState error={quote.error} retry={() => quote.refetch()} />
             ) : (
               <LoadingState />
             )
           ) : (
             <>
+              {q?.grandfathered && <div className={cn(styles.muted, styles.small)}>{t("coupon.grandfathered")}</div>}
+              {discountTotal > 0 && (
+                <>
+                  <div className={styles.sr}>
+                    <span>{t("summary.price")}</span>
+                    <span>฿{baht(listPrice)}</span>
+                  </div>
+                  {discountLines.length > 0 ? (
+                    discountLines.map((d) => (
+                      <div key={d.code} className={cn(styles.sr, styles.minus)}>
+                        <span>
+                          {t("coupon.line", { code: d.code })}
+                          {d.kind !== "free_months" && (d.cyclesLeft === null ? ` · ${t("coupon.forever")}` : d.cyclesLeft > 0 ? ` · ${t("coupon.cyclesLeft", { n: d.cyclesLeft })}` : "")}
+                        </span>
+                        <span>−฿{baht(d.amount)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className={cn(styles.sr, styles.minus)}>
+                      <span>{t("coupon.lineGeneric")}</span>
+                      <span>−฿{baht(discountTotal)}</span>
+                    </div>
+                  )}
+                </>
+              )}
               <div className={styles.sr}>
-                <span>{receipt ? t("summary.price") : t("summary.priceNote")}</span>
+                <span>{receipt ? (discountTotal > 0 ? t("coupon.afterDiscount") : t("summary.price")) : t("summary.priceNote")}</span>
                 <span>฿{baht(amounts.subtotal)}</span>
               </div>
               {!receipt && (
@@ -471,6 +549,48 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
                 <span>{pay}</span>
               </div>
             </>
+          )}
+          {!locked && (
+            <div className={styles.coupon}>
+              {coupon && q?.coupon ? (
+                <span className={cn(styles.pill, styles.pillTeal)}>
+                  {t("coupon.applied", { code: q.coupon })}
+                  <button type="button" className={styles.pillX} aria-label={t("coupon.remove", { code: q.coupon })} onClick={removeCoupon}>
+                    <X size={12} aria-hidden="true" />
+                  </button>
+                </span>
+              ) : (
+                <form
+                  className={styles.couponRow}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    applyCoupon();
+                  }}
+                >
+                  <input
+                    className={cn("input", styles.mono)}
+                    aria-label={t("coupon.label")}
+                    placeholder={t("coupon.placeholder")}
+                    maxLength={32}
+                    value={couponInput}
+                    aria-invalid={couponError ? true : undefined}
+                    aria-describedby={couponError ? "coupon-error" : undefined}
+                    onChange={(e) => {
+                      setCouponInput(e.target.value);
+                      setCouponError(null);
+                    }}
+                  />
+                  <Button type="submit" disabled={!couponInput.trim() || (!!coupon && quote.isFetching)}>
+                    {t("coupon.apply")}
+                  </Button>
+                </form>
+              )}
+              {couponError && (
+                <span id="coupon-error" role="alert" className={cn(styles.warn, styles.small)}>
+                  {couponError}
+                </span>
+              )}
+            </div>
           )}
           {problemText && (
             <div role="alert" className={styles.problem}>
@@ -684,10 +804,11 @@ function Done({ ws, phase, planName, seats, email, vatRegistered, whtOn }: { ws:
       <section className={cn(styles.card, styles.done)} aria-labelledby="done-title">
         <span className={cn(styles.pill, review ? styles.pillWait : styles.pillOk)}>{review ? ts("review") : ts("paid")}</span>
         <h1 id="done-title">{review ? t("review") : t("paid")}</h1>
-        <div className={styles.muted}>{review ? t("reviewVia") : t(`via.${phase.method}`, { time: paidAt })}</div>
+        <div className={styles.muted}>{review ? t("reviewVia") : phase.free ? t("freeVia") : t(`via.${phase.method}`, { time: paidAt })}</div>
         <ul>
           <li>{t("plan", { plan: planName, seats, date: formatDate(inv.periodEnd, "BE", true) })}</li>
-          {email && <li>{review ? (vatRegistered ? t("taxDocLater", { email }) : t("receiptLater", { email })) : vatRegistered ? t("taxDoc", { email }) : t("receipt", { email })}</li>}
+          {phase.free ? <li>{t("freeUntil", { date: formatDate(inv.periodEnd, "BE", true) })}</li> : null}
+          {email && !phase.free && <li>{review ? (vatRegistered ? t("taxDocLater", { email }) : t("receiptLater", { email })) : vatRegistered ? t("taxDoc", { email }) : t("receipt", { email })}</li>}
           {whtOn && <li>{t("wht")}</li>}
         </ul>
         <div className={styles.row}>

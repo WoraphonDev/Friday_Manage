@@ -37,6 +37,10 @@ export interface PublicPlan {
   priceYearlySatang: number | null;
   contactSales: boolean;
   features: string[];
+  /** O20 · false = ซ่อนจากหน้าราคา */
+  listed?: boolean;
+  /** O20 · false = ปิดรับสมัครใหม่ */
+  openForSignup?: boolean;
 }
 export interface PublicPlans {
   currency: "THB";

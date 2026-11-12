@@ -13,6 +13,8 @@ export const plans = pgTable('plans', {
   id: pk(), code: text().notNull().unique(), seatLimit: integer(), storageGbPerMember: integer(),
   features: jsonb().notNull().default(sql`'{}'::jsonb`),
   priceMonthlySatang: bigint({ mode: 'number' }), priceYearlySatang: bigint({ mode: 'number' }),
+  /** ชื่อที่แสดง / หน้าราคา / เปิดให้สมัครใหม่ ตามเวอร์ชันราคาล่าสุด (O20 · P1) · null = ชื่อตั้งต้นในโค้ด */
+  displayName: text(), listed: boolean().notNull().default(true), openForSignup: boolean().notNull().default(true),
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [check('plans_limits_positive', sql`(${t.seatLimit} IS NULL OR ${t.seatLimit} > 0) AND (${t.storageGbPerMember} IS NULL OR ${t.storageGbPerMember} > 0)`),
   check('plans_prices_nonnegative', sql`(${t.priceMonthlySatang} IS NULL OR ${t.priceMonthlySatang} >= 0) AND (${t.priceYearlySatang} IS NULL OR ${t.priceYearlySatang} >= 0)`)]);
@@ -27,6 +29,8 @@ export const subscriptions = pgTable('subscriptions', {
   sourceInvoiceId: uuid(),
   /** ลดแพ็กเกจที่ตั้งไว้ให้มีผลเมื่อจบรอบบิลปัจจุบัน (C4 · ลดแพ็กเกจมีผลรอบถัดไปเสมอ) · null = ไม่มี */
   pendingPlanId: uuid().references(() => plans.id), pendingCycle: billingCycle(),
+  /** เวอร์ชันราคาที่ลูกค้าจ่ายล่าสุด (plan_price_versions · O20 grandfathering) · null = ก่อนมีเวอร์ชัน */
+  priceVersionId: uuid(),
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [tenantKey('subscriptions', t), check('subscriptions_dates', sql`${t.currentPeriodEnd} >= ${t.currentPeriodStart}`)]);
 
@@ -41,11 +45,14 @@ export const invoices = pgTable('invoices', {
   periodStart: date().notNull(), periodEnd: date().notNull(),
   subtotal: bigint({ mode: 'number' }).notNull(), vat: bigint({ mode: 'number' }).notNull(), total: bigint({ mode: 'number' }).notNull(),
   whtAmount: bigint({ mode: 'number' }).notNull().default(0), amountDue: bigint({ mode: 'number' }).notNull(),
+  /** ส่วนลดคูปองที่หักจากราคาแพ็กเกจแล้ว (O20) · subtotal = ราคาหลังหักส่วนลด ก่อน VAT */
+  discount: bigint({ mode: 'number' }).notNull().default(0),
   poNumber: text(), status: invoiceStatus().notNull().default('open'), dueDate: date().notNull(), paidAt: tstz(),
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [tenantKey('invoices', t), tenantFk('invoices_subscription_fk', t.workspaceId, t.subscriptionId, subscriptions),
   index('invoices_workspace_status_idx').on(t.workspaceId, t.status), check('invoices_dates', sql`${t.periodEnd} >= ${t.periodStart}`),
-  check('invoices_amounts_nonnegative', sql`${t.subtotal} >= 0 AND ${t.vat} >= 0 AND ${t.total} >= 0 AND ${t.whtAmount} >= 0 AND ${t.amountDue} >= 0`)]);
+  check('invoices_amounts_nonnegative', sql`${t.subtotal} >= 0 AND ${t.vat} >= 0 AND ${t.total} >= 0 AND ${t.whtAmount} >= 0 AND ${t.amountDue} >= 0`),
+  check('invoices_discount_nonnegative', sql`${t.discount} >= 0`)]);
 
 export const payments = pgTable('payments', {
   id: pk(), workspaceId: workspaceId(), invoiceId: uuid().notNull(), method: paymentMethod().notNull(),

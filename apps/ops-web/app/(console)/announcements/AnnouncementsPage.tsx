@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { hasAny, rolesOf } from "@/components/access";
-import { Empty, ErrorBlock, Modal, NoAccess, PageHead, TableSkeleton } from "@/components/kit";
+import { Empty, ErrorBlock, Modal, NoAccess, Notice, PageHead, TableSkeleton } from "@/components/kit";
 import { Button, buttonClass, InlineError, Pill, Textarea, type Tone, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -17,16 +17,16 @@ const TONE: Record<AnnouncementItem["status"], Tone> = { scheduled: "inf", sent:
 
 /**
  * ประกาศถึงลูกค้า (เมนู "ประกาศถึงลูกค้า" · O24) · ประวัติประกาศที่ส่งและตั้งเวลาไว้ ยกเลิก / หยุดแบนเนอร์ได้
- * Canvas ให้เป็นแท็บใน Promotions ที่ยังไม่มีหน้า (O20) จึงเป็นหน้าแยกไปก่อน · ส่งใหม่เริ่มจาก Workspaces (C8)
+ * Canvas วางเป็นแท็บ "ประกาศถึงลูกค้า" ในหน้าแพ็กเกจและโปรโมชัน (O20 ใช้ `embedded`) · หน้าแยกยังเปิดจากเมนูได้ · ส่งใหม่เริ่มจาก Workspaces (C8)
  */
-export function AnnouncementsPage() {
+export function AnnouncementsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const t = useTranslations("ann.page");
   const fmt = useFmt();
   const me = useMe().data;
   const owner = hasAny(me, "owner");
   const [cancelling, setCancelling] = useState<AnnouncementItem | null>(null);
   const q = useQuery({ queryKey: ANN_KEY, queryFn: () => api.get<{ items: AnnouncementItem[]; bannerDays: number }>("/announcements"), enabled: !!me && owner });
-  if (me && !owner) return <NoAccess need={["owner"]} mine={rolesOf(me)} />;
+  if (me && !owner) return embedded ? <Notice tone="info" title={t("ownerOnly")} /> : <NoAccess need={["owner"]} mine={rolesOf(me)} />;
   const items = q.data?.items ?? [];
   const toWorkspaces = (
     <Link className={buttonClass("primary")} href="/workspaces">
@@ -35,7 +35,14 @@ export function AnnouncementsPage() {
   );
   return (
     <>
-      <PageHead title={t("title")} desc={t("desc")} actions={toWorkspaces} />
+      {embedded ? (
+        <div className="row">
+          <span className="muted small">{t("desc")}</span>
+          <span className="push-end">{toWorkspaces}</span>
+        </div>
+      ) : (
+        <PageHead title={t("title")} desc={t("desc")} actions={toWorkspaces} />
+      )}
       <section className="card">
         {q.isPending ? (
           <TableSkeleton rows={4} cols={6} />

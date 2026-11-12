@@ -20,8 +20,8 @@ export class BillingController {
   }
 
   @Get('billing/quote')
-  quote(@Tenant() tenant: TenantInfo, @Query() query: unknown) {
-    return this.billing.quote(tenant, parse(QuoteQuery, query));
+  quote(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Query() query: unknown) {
+    return this.billing.quote(auth, tenant, parse(QuoteQuery, query));
   }
 
   @Get('billing/profile')

@@ -43,6 +43,7 @@ import { RealtimeModule } from './realtime/realtime.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { SearchModule } from './search/search.module.js';
 import { SprintsModule } from './sprints/sprints.module.js';
+import { TrashModule } from './trash/trash.module.js';
 import { ViewsModule } from './views/views.module.js';
 import { WorkspacesModule } from './workspaces/workspaces.module.js';
 
@@ -90,6 +91,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     ReportsModule,
     SearchModule,
     SprintsModule,
+    TrashModule,
     ViewsModule,
     WorkspacesModule,
   ],

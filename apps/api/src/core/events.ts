@@ -32,7 +32,10 @@ export type EventType =
   | 'ci.failed'
   // A43 · Onboarding checklist (ไม่มี projectId จึงไม่เข้า Inbox / Realtime)
   | 'onboarding.step_done'
-  | 'onboarding.completed';
+  | 'onboarding.completed'
+  // A41 · ถังขยะ
+  | 'project.restored_from_trash'
+  | 'trash.purged';
 
 export interface DomainEvent {
   type: EventType;

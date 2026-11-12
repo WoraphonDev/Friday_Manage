@@ -24,6 +24,7 @@ const safe = (name: string) => name.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').s
 /**
  * Export ทั้ง Workspace เป็น zip (JSON + CSV + ไฟล์แนบ) · เรียกภายใต้ RLS ของผู้ขอ (Owner / Admin เห็นทุกโปรเจกต์)
  * ไม่รวมความลับ: รหัสผ่าน, token, secret ของช่องทาง/Webhook, API token
+ * ทุกตารางระดับ Workspace กรอง workspace_id เองด้วย เพื่อให้ใช้กับ Workspace ที่ลบแล้วผ่าน SYSTEM_DB ได้ (A41 · RLS ซ่อน Workspace ที่ลบ)
  */
 export async function buildWorkspaceZip(tx: Tx, workspaceId: string, opts: { storage?: LocalStorage } = {}) {
   const storage = opts.storage ?? new LocalStorage();
@@ -36,10 +37,11 @@ export async function buildWorkspaceZip(tx: Tx, workspaceId: string, opts: { sto
     .select({ userId: s.users.id, email: s.users.email, displayName: s.users.displayName, role: s.workspaceMembers.role, status: s.workspaceMembers.status, jobTitle: s.workspaceMembers.jobTitle, department: s.workspaceMembers.department, capacityHoursWeek: s.workspaceMembers.capacityHoursWeek, joinedAt: s.workspaceMembers.joinedAt })
     .from(s.workspaceMembers)
     .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
+    .where(eq(s.workspaceMembers.workspaceId, workspaceId))
     .orderBy(asc(s.users.displayName));
-  const teams = await tx.select().from(s.teams);
-  const teamMembers = await tx.select({ teamId: s.teamMembers.teamId, userId: s.teamMembers.userId }).from(s.teamMembers);
-  const templates = await tx.select().from(s.projectTemplates);
+  const teams = await tx.select().from(s.teams).where(eq(s.teams.workspaceId, workspaceId));
+  const teamMembers = await tx.select({ teamId: s.teamMembers.teamId, userId: s.teamMembers.userId }).from(s.teamMembers).where(eq(s.teamMembers.workspaceId, workspaceId));
+  const templates = await tx.select().from(s.projectTemplates).where(eq(s.projectTemplates.workspaceId, workspaceId));
   const calendars = await tx.select().from(s.holidayCalendars).where(eq(s.holidayCalendars.workspaceId, workspaceId));
   const holidays = calendars.length ? await tx.select().from(s.holidays).where(inArray(s.holidays.calendarId, calendars.map((c) => c.id))) : [];
   out['workspace.json'] = json({
@@ -55,12 +57,13 @@ export async function buildWorkspaceZip(tx: Tx, workspaceId: string, opts: { sto
   out['members.csv'] = csv([['อีเมล', 'ชื่อ', 'บทบาท', 'สถานะ', 'ตำแหน่ง', 'แผนก'], ...members.map((m) => [m.email, m.displayName, m.role, m.status, m.jobTitle, m.department])]);
 
   const people = new Map(members.map((m) => [m.userId, m.displayName]));
-  const projects = await tx.select().from(s.projects).orderBy(asc(s.projects.key));
+  const projects = await tx.select().from(s.projects).where(eq(s.projects.workspaceId, workspaceId)).orderBy(asc(s.projects.key));
   let total = 0;
   const filesManifest: Record<string, unknown>[] = [];
 
   for (const p of projects) {
-    const dir = `projects/${safe(p.key)}`;
+    // โปรเจกต์ในถังขยะใช้ Key ซ้ำกับโปรเจกต์ที่ยังใช้งานได้ (O30) จึงแยกโฟลเดอร์
+    const dir = p.deletedAt ? `projects/${safe(p.key)}-deleted-${p.id.slice(0, 8)}` : `projects/${safe(p.key)}`;
     const [modules, phases, sprints, milestones, labels, pMembers, statuses, baselines, planChanges] = await Promise.all([
       tx.select().from(s.modules).where(eq(s.modules.projectId, p.id)),
       tx.select().from(s.phases).where(eq(s.phases.projectId, p.id)),

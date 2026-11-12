@@ -45,6 +45,9 @@
       "name": "Comments"
     },
     {
+      "name": "DeletedWorkspace"
+    },
+    {
       "name": "Docs"
     },
     {
@@ -162,6 +165,9 @@
       "name": "ProjectStructure"
     },
     {
+      "name": "ProjectTrash"
+    },
+    {
       "name": "Projects"
     },
     {
@@ -181,6 +187,9 @@
     },
     {
       "name": "Storage"
+    },
+    {
+      "name": "Trash"
     },
     {
       "name": "Views"
@@ -26180,6 +26189,117 @@
         }
       }
     },
+    "/api/v1/w/{ws}/projects/{key}/trash": {
+      "get": {
+        "operationId": "ProjectTrash_list",
+        "summary": "งานและไฟล์ในถังขยะของโปรเจกต์ · กู้คืนผ่าน `w/trash/issue:restore` และ `w/trash/file:restore`",
+        "tags": [
+          "ProjectTrash"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "issue",
+              "type": "string",
+              "enum": [
+                "project",
+                "issue",
+                "file"
+              ]
+            }
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9]{1,9}$"
+            }
+          },
+          {
+            "name": "deletedBy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/api/v1/w/{ws}/projects/{key}/workflows": {
       "get": {
         "operationId": "ProjectStructure_listWorkflows",
@@ -28831,6 +28951,770 @@
         }
       }
     },
+    "/api/v1/w/{ws}/trash": {
+      "get": {
+        "operationId": "Trash_list",
+        "summary": "ถังขยะทั้ง Workspace (Owner / Admin) · type=project|issue|file · จัด \"ชุด\" งานที่คนเดียวกันลบภายใน 2 นาที",
+        "tags": [
+          "Trash"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "issue",
+              "type": "string",
+              "enum": [
+                "project",
+                "issue",
+                "file"
+              ]
+            }
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9]{1,9}$"
+            }
+          },
+          {
+            "name": "deletedBy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/trash/{type}:purge": {
+      "post": {
+        "operationId": "Trash_purgeMany",
+        "summary": "ลบถาวรหลายรายการ (Owner · พิมพ์ \"ลบถาวร\")",
+        "tags": [
+          "Trash"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "confirm": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ids",
+                  "confirm"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/trash/{type}/{id}": {
+      "delete": {
+        "operationId": "Trash_purge",
+        "summary": "ลบถาวรทันที (Owner · พิมพ์ \"ลบถาวร\") · คืนพื้นที่ไฟล์",
+        "tags": [
+          "Trash"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "confirm": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "confirm"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/trash/{type}/purge": {
+      "post": {
+        "operationId": "Trash_purgeMany_2",
+        "summary": "ลบถาวรหลายรายการ (Owner · พิมพ์ \"ลบถาวร\")",
+        "tags": [
+          "Trash"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "confirm": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ids",
+                  "confirm"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/trash/file:restore": {
+      "post": {
+        "operationId": "Trash_restoreFiles",
+        "summary": "กู้คืนไฟล์หลายไฟล์ · โฟลเดอร์เดิมหายแล้วกลับไปที่ราก",
+        "tags": [
+          "Trash"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  }
+                },
+                "required": [
+                  "ids"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/trash/file/restore": {
+      "post": {
+        "operationId": "Trash_restoreFiles_2",
+        "summary": "กู้คืนไฟล์หลายไฟล์ · โฟลเดอร์เดิมหายแล้วกลับไปที่ราก",
+        "tags": [
+          "Trash"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  }
+                },
+                "required": [
+                  "ids"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/trash/issue:restore": {
+      "post": {
+        "operationId": "Trash_restoreIssues",
+        "summary": "กู้คืนงานหลายงาน (ชุด) · Sub-task ที่ลบพร้อมแม่กลับมาด้วย",
+        "tags": [
+          "Trash"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  }
+                },
+                "required": [
+                  "ids"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/trash/issue/restore": {
+      "post": {
+        "operationId": "Trash_restoreIssues_2",
+        "summary": "กู้คืนงานหลายงาน (ชุด) · Sub-task ที่ลบพร้อมแม่กลับมาด้วย",
+        "tags": [
+          "Trash"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  }
+                },
+                "required": [
+                  "ids"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/trash/project/{id}:restore": {
+      "post": {
+        "operationId": "Trash_restoreProject",
+        "summary": "กู้คืนโปรเจกต์ (Project Owner / Workspace Owner / Admin) · Key ซ้ำตอบ 409 project_key_taken · เกินแพ็กเกจตอบ 402",
+        "tags": [
+          "Trash"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "newKey": {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9]{1,9}$"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/w/{ws}/trash/project/{id}/restore": {
+      "post": {
+        "operationId": "Trash_restoreProject_2",
+        "summary": "กู้คืนโปรเจกต์ (Project Owner / Workspace Owner / Admin) · Key ซ้ำตอบ 409 project_key_taken · เกินแพ็กเกจตอบ 402",
+        "tags": [
+          "Trash"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "newKey": {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9]{1,9}$"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/w/{ws}/usage": {
       "get": {
         "operationId": "Billing_usage",
@@ -29087,6 +29971,178 @@
                 "additionalProperties": true
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{slug}/deleted": {
+      "get": {
+        "operationId": "DeletedWorkspace_info",
+        "summary": "ข้อมูลหน้า Z5 สำหรับสมาชิกทุกคน · Owner ได้ can.restore / can.export",
+        "tags": [
+          "DeletedWorkspace"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{slug}/deleted/exports": {
+      "post": {
+        "operationId": "DeletedWorkspace_requestExport",
+        "summary": "ส่งออกข้อมูลก่อนลบถาวร (Owner)",
+        "tags": [
+          "DeletedWorkspace"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "DeletedWorkspace_listExports",
+        "summary": "GET workspaces/{slug}/deleted/exports",
+        "tags": [
+          "DeletedWorkspace"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{slug}/deleted/exports/{id}/download": {
+      "get": {
+        "operationId": "DeletedWorkspace_download",
+        "summary": "GET workspaces/{slug}/deleted/exports/{id}/download",
+        "tags": [
+          "DeletedWorkspace"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type Db, schema } from '@friday/db';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { UnrecoverableError } from '../queue/jobs.js';
 import { openSecret } from '../channels/secrets.js';
 import { type ChannelSender, clip, type DeliveryContent, DeliveryError, type ExternalChannel, type SendContext, type SendResult } from '../channels/senders.js';
@@ -75,7 +75,7 @@ abstract class LineSenderBase {
           .from(s.dueChangeRequests)
           .innerJoin(s.issues, eq(s.issues.id, s.dueChangeRequests.issueId))
           .innerJoin(s.projects, eq(s.projects.id, s.issues.projectId))
-          .where(and(eq(s.dueChangeRequests.workspaceId, ctx.workspaceId), eq(s.projects.key, m[1]!.toUpperCase()), eq(s.issues.number, Number(m[2])), eq(s.dueChangeRequests.status, 'pending')));
+          .where(and(eq(s.dueChangeRequests.workspaceId, ctx.workspaceId), eq(s.projects.key, m[1]!.toUpperCase()), isNull(s.projects.deletedAt), eq(s.issues.number, Number(m[2])), eq(s.dueChangeRequests.status, 'pending')));
         if (r) return [approvalFlex(ctx.msg, r.id)];
       }
     }

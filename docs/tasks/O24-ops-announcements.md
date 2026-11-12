@@ -72,7 +72,7 @@ API ลูกค้า
 ยังไม่ทำ / ข้อจำกัด
 - P2 ของ Entitlements "ส่งประกาศถึงลูกค้าที่ถูกกระทบ (C8)" ยังเป็นหมายเหตุ (lane ของ O21) · ต่อได้ด้วยการเปิด `AnnounceDrawer` พร้อมรหัส Workspace ที่กระทบ
 - ส่งถึง "ลูกค้าทุกราย" ต้องเลือกทีละหน้า (ยังไม่มีเลือกทั้งหมดตามตัวกรอง) · ประกาศแบบทุกลูกค้าของ A32 เดิมไม่มีแล้ว
-- Workspace ที่ถูกระงับแบบอ่านอย่างเดียวปิดแบนเนอร์ไม่ได้ (TenantGuard บล็อกคำขอเขียน · `common/tenant.ts` เป็นไฟล์กลาง) · คำขอนอก lane: เพิ่ม `announcements/` ใน `SUSPENDED_ALLOWED`
+- ~~Workspace ที่ถูกระงับปิดแบนเนอร์ไม่ได้~~ แก้แล้ว: เพิ่ม `announcements` ใน `SUSPENDED_ALLOWED` ของ `common/tenant.ts` (test ใน `suspension.e2e.test.ts`)
 - ยังไม่ deploy Docker (ผู้สั่งงาน deploy หลัง merge)
 
 Test: `apps/ops-api/test/announcements.e2e.test.ts` 13 ข้อ · `apps/api/test/announcements.e2e.test.ts` 7 ข้อ · `apps/ops-web` C8 6 ข้อ + หน้าประกาศ 6 ข้อ (MSW) · `apps/web` แบนเนอร์ 5 ข้อ (MSW)

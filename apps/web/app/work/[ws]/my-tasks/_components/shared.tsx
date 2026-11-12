@@ -15,13 +15,16 @@ export const projectHref = (ws: string, projectKey: string) => `/work/${encodeUR
 /** "เลย N วัน" / "วันนี้" / วันที่ (ข้อความอยู่ใน namespace ของงานนี้) */
 export function useDueText() {
   const t = useTranslations("home-my-tasks.tasks");
-  return (item: Pick<TaskItem, "due" | "planEnd">, year: YearFormat) => {
+  return (item: Pick<TaskItem, "due" | "planEnd" | "qaDue">, year: YearFormat) => {
     const { state, days } = item.due;
-    if (state === "overdue") return { text: t("dueLabels.overdue", { days: days ?? 0 }), cls: styles.late };
-    if (state === "today") return { text: t("dueLabels.today"), cls: styles.today };
+    // งานรอ QA ในโปรเจกต์แยก Dev / QA นับจาก QA Due · ขึ้นต้นด้วย "QA" ให้รู้ว่าเป็นความรับผิดชอบของ QA
+    const qa = (x: { text: string; cls: string }) => (item.due.stage === "qa" ? { ...x, text: t("dueLabels.qa", { text: x.text }) } : x);
+    if (state === "overdue") return qa({ text: t("dueLabels.overdue", { days: days ?? 0 }), cls: styles.late });
+    if (state === "today") return qa({ text: t("dueLabels.today"), cls: styles.today });
     if (state === "done") return { text: t("dueLabels.done"), cls: styles.done };
-    if (state === "none" || !item.planEnd) return { text: t("dueLabels.none"), cls: styles.muted };
-    return { text: formatDate(item.planEnd, year), cls: "" };
+    const date = item.due.stage === "qa" ? item.qaDue : item.planEnd;
+    if (state === "none" || !date) return { text: t("dueLabels.none"), cls: styles.muted };
+    return qa({ text: formatDate(date, year), cls: "" });
   };
 }
 

@@ -109,8 +109,13 @@ export const issues = pgTable(
     progressPct: smallint(),
 
     planStart: date(),
-    /** = Due */
+    /** = Due · โปรเจกต์ที่แยก Dev / QA (progress_split) = วันที่ Dev ต้องส่งให้ QA */
     planEnd: date(),
+    /**
+     * วันที่ QA ต้องทดสอบเสร็จ ใช้เฉพาะโปรเจกต์ที่แยก Dev / QA (ผู้ใช้ขอ 2026-11-13)
+     * null = Plan End + projects.qa_buffer_days วันทำการ · โปรเจกต์อื่นไม่ใช้ค่านี้
+     */
+    qaEnd: date(),
     actualStart: date(),
     actualEnd: date(),
     completedAt: tstz(),

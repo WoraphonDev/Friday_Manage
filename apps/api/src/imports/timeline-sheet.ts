@@ -13,6 +13,8 @@ export type TimelineRow =
       progress: number;
       start: string | null;
       end: string | null;
+      /** วันที่ใช้ตัดสินเลยกำหนด ถ้าต่างจาก end (โปรเจกต์แยก Dev / QA งานรอ QA = QA Due) */
+      due?: string | null;
     };
 
 export interface TimelineInput {
@@ -117,7 +119,8 @@ export function addTimelineSheet(wb: ExcelJS.Workbook, input: TimelineInput) {
     if (r.kind === 'module') row.font = { bold: true };
     if (r.kind === 'task' && r.sub) row.getCell(2).alignment = { indent: 2 };
     row.getCell(6).numFmt = '0%';
-    const late = r.kind === 'task' && r.category !== 'done' && r.category !== 'cancelled' && !!r.end && r.end < input.today;
+    const due = r.kind === 'task' ? (r.due !== undefined ? r.due : r.end) : null;
+    const late = r.kind === 'task' && r.category !== 'done' && r.category !== 'cancelled' && !!due && due < input.today;
     const color = r.kind === 'module' ? COLOR.module : late ? COLOR.late : (COLOR[r.category as keyof typeof COLOR] ?? COLOR.todo);
     slots.forEach((slot, i) => {
       const cell = row.getCell(col(i));

@@ -150,7 +150,8 @@
       "overdue": "{days, plural, one {{days} day late} other {{days} days late}}",
       "today": "Today",
       "none": "No due date",
-      "done": "Done"
+      "done": "Done",
+      "qa": "QA · {text}"
     },
     "dueIn": "{days, plural, one {in {days} day} other {in {days} days}}",
     "summaryTitle": "My summary",

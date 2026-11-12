@@ -2,6 +2,7 @@
 import { schema as s, type Tx } from '@friday/db';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
+import { dueOf, loadDueRule, PLAIN_DUE, qaDueOf, type DueRule, type DueStage } from '../projects/due-stage.js';
 import { projectAccess, type ProjectAccess } from '../projects/permissions.js';
 
 export type Issue = typeof s.issues.$inferSelect;
@@ -23,6 +24,12 @@ export interface Scope {
   rolesOf: (i: Issue, userId: string) => IssueRole[];
   isDone: (i: Issue) => boolean;
   isBug: (i: Issue) => boolean;
+  /** วันครบกำหนดที่ใช้ตัดสินเลยกำหนด · โปรเจกต์แยก Dev / QA ใช้ QA Due เมื่องานรอ QA (projects/due-stage.ts) */
+  due: (i: Issue) => { date: string | null; stage: DueStage | null };
+  /** QA Due ของโปรเจกต์ที่แยก Dev / QA · โปรเจกต์อื่น = null */
+  qaDue: (i: Issue) => string | null;
+  /** ผู้รับผิดชอบงานที่เลยกำหนด: ขั้น QA = QA / Reviewer · ที่เหลือ = Assignee */
+  lateOwners: (i: Issue) => string[];
   /** Guest ที่เป็น Viewer ของโปรเจกต์ใดโปรเจกต์หนึ่ง */
   anyGuest: boolean;
 }
@@ -64,6 +71,10 @@ export async function loadScope(tx: Tx, auth: AuthInfo, tenant: TenantInfo, opts
   for (const a of assigneeRows) assignees.set(a.issueId, [...(assignees.get(a.issueId) ?? []), a.userId]);
 
   const projectKey = new Map(projects.map((p) => [p.id, p.key]));
+  const rules = new Map<string, DueRule>();
+  for (const p of accessible) rules.set(p.id, await loadDueRule(tx, p));
+  const rule = (i: Issue) => rules.get(i.projectId) ?? PLAIN_DUE;
+  const due = (i: Issue) => dueOf(rule(i), i, statuses.get(i.statusId)?.category ?? 'todo');
   return {
     projects: accessible,
     access,
@@ -83,6 +94,9 @@ export async function loadScope(tx: Tx, auth: AuthInfo, tenant: TenantInfo, opts
     },
     isDone: (i) => doneIds.has(i.statusId),
     isBug: (i) => typeNames.get(i.issueTypeId) === 'Bug',
+    due,
+    qaDue: (i) => qaDueOf(rule(i), i),
+    lateOwners: (i) => (due(i).stage === 'qa' && i.reviewerId ? [i.reviewerId] : (assignees.get(i.id) ?? [])),
     anyGuest: accessible.some((p) => access.get(p.id)!.guestViewer),
   };
 }

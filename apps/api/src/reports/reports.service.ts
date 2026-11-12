@@ -43,15 +43,15 @@ export class ReportsService {
       const plan = await loadPlan(tx, project);
       const asOf = week.end < now ? week.end : now;
       const work = plan.work;
-      const names = await loadPeople(tx, plan.items.flatMap((i) => i.assigneeIds));
+      const names = await loadPeople(tx, plan.items.flatMap((i) => [...i.assigneeIds, ...i.lateOwners]));
       const nameOf = (id: string) => names.get(id)?.displayName ?? '—';
 
       const doneInWeek = work.filter((i) => i.category === 'done' && inWeek(i.completedAt, week.start, week.end));
       const inProgress = work.filter((i) => i.category === 'in_progress');
       const inReview = work.filter((i) => isOpen(i) && (i.category === 'review' || i.statusName.trim().toLowerCase() === 'review'));
-      const late = work.filter((i) => isOpen(i) && i.planEnd && i.planEnd < asOf);
+      const late = work.filter((i) => isOpen(i) && i.dueDate && i.dueDate < asOf);
       const perPerson = new Map<string, number>();
-      for (const i of late) for (const u of i.assigneeIds) perPerson.set(u, (perPerson.get(u) ?? 0) + 1);
+      for (const i of late) for (const u of i.lateOwners) perPerson.set(u, (perPerson.get(u) ?? 0) + 1);
       const bugs = plan.items.filter((i) => i.isBug && i.createdAt >= startOf(week.start) && i.createdAt < startOf(addDays(week.end, 1)));
       const fixedBugs = plan.items.filter((i) => i.isBug && i.category === 'done' && inWeek(i.completedAt, week.start, week.end));
       const starting = work.filter((i) => i.planStart && i.planStart >= next.start && i.planStart <= next.end);

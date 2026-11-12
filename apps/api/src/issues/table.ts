@@ -5,6 +5,7 @@ import { today } from '../common/dates.js';
 import { AppError } from '../common/errors.js';
 import { loadPeople } from '../common/people.js';
 import type { AuthInfo } from '../common/request.js';
+import { lateSql, loadDueRule } from '../projects/due-stage.js';
 import type { ProjectAccess } from '../projects/permissions.js';
 import type { ProjectRow } from '../projects/projects.service.js';
 import { countsForProgress, openStatus, STATUS_CATEGORIES, type StatusCategory } from '../common/status-category.js';
@@ -75,7 +76,9 @@ export async function listIssues<T extends { id: string; key: string; number: nu
       : sql`exists (select 1 from ${s.issueAssignees} a where a.issue_id = ${s.issues.id} and a.user_id = ${who})`);
   }
   if (q.ba) where.push(q.ba === 'none' ? isNull(s.issues.baId) : eq(s.issues.baId, q.ba === 'me' ? auth.userId : q.ba));
-  const overdue = and(sql`${s.issues.planEnd} < ${today()}`, openStatus())!;
+  // โปรเจกต์แยก Dev / QA: งานที่รอ QA เลยกำหนดตาม QA Due (projects/due-stage.ts)
+  const dueRule = await loadDueRule(tx, project);
+  const overdue = and(lateSql(dueRule, today()), openStatus())!;
   if (q.overdue !== undefined) where.push(q.overdue ? overdue : sql`not coalesce((${overdue}), false)`);
   if (q.q) {
     // ข้อความค้นหาเป็น literal ไม่เปลี่ยน % / _ เป็น wildcard ของ SQL
@@ -125,7 +128,7 @@ export async function listIssues<T extends { id: string; key: string; number: nu
   }
   if (q.fields) {
     const requested = new Set(q.fields.split(',').filter(Boolean));
-    const allowed = new Set(['id', 'key', 'number', 'projectKey', 'type', 'parentKey', 'title', 'description', 'remark', 'status', 'priority', 'moduleId', 'phaseId', 'sprintId', 'size', 'estimateMd', 'progressPct', 'planStart', 'planEnd', 'actualStart', 'actualEnd', 'reopenCount', 'severity', 'environment', 'details', 'sharedWithGuests', 'version', 'createdAt', 'updatedAt', 'assigneeIds', 'baId', 'saId', 'reviewerId', 'testerId', 'reporterId', 'canMove', 'assignees', 'ba', 'sa', 'reviewer', 'labels', 'requirements', 'screens', 'customFields']);
+    const allowed = new Set(['id', 'key', 'number', 'projectKey', 'type', 'parentKey', 'title', 'description', 'remark', 'status', 'priority', 'moduleId', 'phaseId', 'sprintId', 'size', 'estimateMd', 'progressPct', 'planStart', 'planEnd', 'qaEnd', 'qaDue', 'dueDate', 'dueStage', 'actualStart', 'actualEnd', 'reopenCount', 'severity', 'environment', 'details', 'sharedWithGuests', 'version', 'createdAt', 'updatedAt', 'assigneeIds', 'baId', 'saId', 'reviewerId', 'testerId', 'reporterId', 'canMove', 'assignees', 'ba', 'sa', 'reviewer', 'labels', 'requirements', 'screens', 'customFields']);
     if ([...requested].some((key) => !allowed.has(key))) throw new AppError(400, 'invalid_fields', 'ชื่อฟิลด์ที่ขอไม่ถูกต้อง');
     requested.add('key');
     items = items.map((item) => Object.fromEntries(Object.entries(item).filter(([key]) => requested.has(key))));

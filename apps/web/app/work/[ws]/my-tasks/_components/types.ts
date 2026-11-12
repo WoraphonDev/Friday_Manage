@@ -74,7 +74,9 @@ export interface TaskItem {
   priority: "urgent" | "high" | "medium" | "low";
   planStart: string | null;
   planEnd: string | null;
-  due: { state: DueState; days: number | null };
+  /** stage มาเฉพาะโปรเจกต์แยก Dev / QA · qa = งานรอ QA ตัดสินด้วย QA Due */
+  due: { state: DueState; days: number | null; stage?: "dev" | "qa" | null };
+  qaDue?: string | null;
   estimateMd: number | null;
   parentKey: string | null;
   subtasks: { total: number; done: number } | null;

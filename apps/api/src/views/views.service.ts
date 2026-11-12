@@ -8,6 +8,7 @@ import { loadPeople, type Person } from '../common/people.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { addDays } from '../projects/calendar.js';
+import { dueOf, loadDueRule, qaDueOf, type DueRule } from '../projects/due-stage.js';
 import { canMoveIssue } from '../projects/permissions.js';
 import { ProjectsService } from '../projects/projects.service.js';
 
@@ -102,6 +103,7 @@ export class ViewsService {
       };
 
       const now = today();
+      const dueRule = await loadDueRule(tx, project);
       const hideBefore = Date.now() - HIDE_DONE_AFTER_DAYS * 86_400_000;
       const me = q.assignee === 'me' ? auth.userId : q.assignee;
       const subtaskStats = new Map<string, { total: number; done: number }>();
@@ -138,7 +140,8 @@ export class ViewsService {
           priority: i.priority,
           planStart: i.planStart,
           planEnd: i.planEnd,
-          due: dueState(i.planEnd, st, now),
+          ...(dueRule.split ? { qaDue: qaDueOf(dueRule, i) } : {}),
+          due: dueState(dueRule, i, st, now),
           assigneeIds: d.assignees.get(i.id) ?? [],
           // งานของคนอื่นลากไม่ได้ ดูได้อย่างเดียว (04-permissions ข้อ 3.3)
           canMove: canMoveIssue(access, { ...i, assigneeIds: d.assignees.get(i.id) ?? [] }),
@@ -232,7 +235,12 @@ export class ViewsService {
         if (subs?.length) return rollup(subs.map((x) => ({ md: x.estimateMd, pct: progressOf(x) })), weighted);
         return i.progressPct ?? 0;
       };
-      const lateOf = (i: Issue) => (!isClosedIssue(i) && i.planEnd && i.planEnd < now ? daysBetween(i.planEnd, now) : 0);
+      // โปรเจกต์แยก Dev / QA: งานที่รอ QA เลยกำหนดเมื่อเลย QA Due (projects/due-stage.ts)
+      const dueRule = await loadDueRule(tx, project);
+      const lateOf = (i: Issue) => {
+        const due = dueOf(dueRule, i, d.statuses.get(i.statusId)!.category).date;
+        return !isClosedIssue(i) && due && due < now ? daysBetween(due, now) : 0;
+      };
       const row = (i: Issue): TimelineRow => {
         const st = d.statuses.get(i.statusId)!;
         const subs = (subsOf.get(i.id) ?? []).filter(scheduled).sort(byDate);
@@ -341,13 +349,18 @@ function rollup(items: { md: number | null; pct: number }[], weighted: boolean) 
   return Math.round(items.reduce((a, x, i) => a + x.pct * w[i], 0) / total);
 }
 
-/** สถานะ Due บนการ์ด: เลยกำหนด / วันนี้ / ภายใน 3 วัน */
-function dueState(planEnd: string | null, st: Status, now: string) {
-  if (!planEnd || st.category === 'done' || st.category === 'cancelled') return null;
-  const days = daysBetween(now, planEnd);
-  if (days < 0) return { state: 'overdue' as const, days: -days };
-  if (days === 0) return { state: 'today' as const, days: 0 };
-  if (planEnd <= addDays(now, 3)) return { state: 'soon' as const, days };
+/**
+ * สถานะ Due บนการ์ด: เลยกำหนด / วันนี้ / ภายใน 3 วัน
+ * โปรเจกต์แยก Dev / QA: งานที่รอ QA ใช้ QA Due และบอกขั้น (stage) ให้หน้าเว็บเขียนว่า "QA เลยกำหนด"
+ */
+function dueState(rule: DueRule, i: Issue, st: Status, now: string) {
+  const { date, stage } = dueOf(rule, i, st.category);
+  if (!date || st.category === 'done' || st.category === 'cancelled') return null;
+  const extra = stage ? { stage } : {};
+  const days = daysBetween(now, date);
+  if (days < 0) return { state: 'overdue' as const, days: -days, ...extra };
+  if (days === 0) return { state: 'today' as const, days: 0, ...extra };
+  if (date <= addDays(now, 3)) return { state: 'soon' as const, days, ...extra };
   return null;
 }
 

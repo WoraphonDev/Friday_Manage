@@ -15,6 +15,7 @@ import { Notifier } from '../notifications/notifier.js';
 import { Jobs } from '../queue/jobs.js';
 import type { Action, Condition, Trigger } from './rules.js';
 import { isClosed, openStatus, type StatusCategory } from '../common/status-category.js';
+import { dueOf, lateSql, loadDueRules, PLAIN_DUE } from '../projects/due-stage.js';
 
 const s = schema;
 /** กฎที่ถูกเรียกจากการกระทำของกฎอื่นได้สูงสุด 3 ชั้น (หน้า P2, 01-entities › automation_run.depth) */
@@ -267,12 +268,14 @@ export class AutomationEngine implements OnModuleInit {
     const rules = await this.sys.select().from(s.automationRules).where(and(eq(s.automationRules.trigger, 'overdue'), eq(s.automationRules.enabled, true)));
     let ran = 0;
     for (const rule of rules) {
-      const issues = await this.sys
-        .select({ id: s.issues.id, planEnd: s.issues.planEnd })
+      // โปรเจกต์แยก Dev / QA: งานที่รอ QA เลยกำหนดตาม QA Due (projects/due-stage.ts) · dedupe ตามวันนั้นแทน Plan End
+      const due = (await this.sys.transaction((tx) => loadDueRules(tx, [rule.projectId]))).get(rule.projectId) ?? PLAIN_DUE;
+      const issues = (await this.sys
+        .select({ id: s.issues.id, planEnd: s.issues.planEnd, qaEnd: s.issues.qaEnd, category: s.workflowStatuses.category })
         .from(s.issues)
         .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
-        .where(and(eq(s.issues.projectId, rule.projectId), isNull(s.issues.deletedAt), openStatus(), lt(s.issues.planEnd, today())))
-        .orderBy(asc(s.issues.number));
+        .where(and(eq(s.issues.projectId, rule.projectId), isNull(s.issues.deletedAt), openStatus(), lateSql(due, today())))
+        .orderBy(asc(s.issues.number))).map((i) => ({ id: i.id, planEnd: dueOf(due, i, i.category).date }));
       if (!issues.length) continue;
       const seen = new Set((await this.sys.select({ d: sql<string>`${s.automationRuns.detail}->>'dedupe'` }).from(s.automationRuns).where(and(eq(s.automationRuns.ruleId, rule.id), sql`${s.automationRuns.detail} ? 'dedupe'`))).map((r) => r.d));
       // ตัดงานที่เคยทำ และตรวจเงื่อนไขก่อนใช้โควตา SCAN_LIMIT (N03): เดิมตัด 200 งานแรกก่อน

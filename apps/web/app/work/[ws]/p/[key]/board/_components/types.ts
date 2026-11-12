@@ -13,7 +13,9 @@ export interface BoardCard {
   priority: "urgent" | "high" | "medium" | "low";
   planStart: string | null;
   planEnd: string | null;
-  due: { state: "overdue" | "today" | "soon"; days: number } | null;
+  /** stage มาเฉพาะโปรเจกต์แยก Dev / QA · qa = งานรอ QA ตัดสินด้วย QA Due */
+  due: { state: "overdue" | "today" | "soon"; days: number; stage?: "dev" | "qa" } | null;
+  qaDue?: string | null;
   assignees: Person[];
   /** ย้ายการ์ดนี้ได้ไหม · false = งานของคนอื่น ดูได้อย่างเดียว (ไม่ส่งมา = ใช้สิทธิ์ issue.edit อย่างเดียว) */
   canMove?: boolean;

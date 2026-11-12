@@ -3,6 +3,7 @@ import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
 import { today } from '../common/dates.js';
 import { addTimelineSheet, type TimelineInput, type TimelineRow } from './timeline-sheet.js';
+import { dueOf, loadDueRule } from '../projects/due-stage.js';
 import type { ProfileField, ResolvedProfile } from '../projects/field-profile.js';
 import { type CustomFieldDef, displayValue, readCustomValues } from '../issues/custom-values.js';
 
@@ -70,7 +71,7 @@ interface SheetData {
 /** แผนงานของโปรเจกต์เป็น .xlsx: Task + Sub-task (ไม่รวม Bug) เรียง Task แล้วตามด้วย Sub-task ของมัน */
 export async function buildPlanXlsx(
   tx: Tx,
-  project: { id: string; key: string; name: string; startDate: string; goliveDate: string; workspaceId: string; holidayCalendarId: string | null },
+  project: { id: string; key: string; name: string; startDate: string; goliveDate: string; workspaceId: string; holidayCalendarId: string | null; progressSplit?: boolean; qaBufferDays?: number },
   options: { scale?: 'day' | 'week'; today?: string; profile?: ResolvedProfile; customFields?: CustomFieldDef[] } = {},
 ): Promise<Buffer> {
   const shown = (h: Header) => {
@@ -171,9 +172,11 @@ export async function buildPlanXlsx(
   ];
   // Timeline: เรียงตาม Module แล้ว Task (ลำดับเดียวกับชีต Tasks) และ Sub-task ใต้แม่
   const category = new Map(sts.map((x) => [x.id, x.category]));
+  // โปรเจกต์แยก Dev / QA: งานที่รอ QA ระบายสีเลยกำหนดตาม QA Due
+  const dueRule = await loadDueRule(tx, { ...project, progressSplit: project.progressSplit ?? false, qaBufferDays: project.qaBufferDays ?? 0 });
   const taskRow = (i: (typeof issues)[number]): TimelineRow => {
     const cat = category.get(i.statusId) ?? 'todo';
-    return { kind: 'task', key: `${project.key}-${i.number}`, title: i.title, sub: !!i.parentId, status: statusName.get(i.statusId) ?? '', category: cat, progress: i.progressPct ?? (cat === 'done' ? 100 : 0), start: i.planStart, end: i.planEnd };
+    return { kind: 'task', key: `${project.key}-${i.number}`, title: i.title, sub: !!i.parentId, status: statusName.get(i.statusId) ?? '', category: cat, progress: i.progressPct ?? (cat === 'done' ? 100 : 0), start: i.planStart, end: i.planEnd, due: dueOf(dueRule, i, cat).date };
   };
   const timelineRows: TimelineRow[] = [];
   for (const m of [...mods.map((x) => ({ id: x.id as string | null, name: x.name })), { id: null, name: 'ไม่ระบุ Module' }]) {

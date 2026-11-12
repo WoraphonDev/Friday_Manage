@@ -150,7 +150,8 @@
       "overdue": "เลย {days} วัน",
       "today": "วันนี้",
       "none": "ไม่มีกำหนด",
-      "done": "เสร็จแล้ว"
+      "done": "เสร็จแล้ว",
+      "qa": "QA · {text}"
     },
     "dueIn": "อีก {days} วัน",
     "summaryTitle": "สรุปของฉัน",

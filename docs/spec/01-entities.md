@@ -70,7 +70,7 @@ Workspace เลือกปฏิทินหลัก + เพิ่มวั�
 
 | Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
 |---|---|---|---|
-| `project` | โปรเจกต์ | workspace_id, key (DP), name, client_name, description, color, icon, template_id, start_date, golive_date, timezone, visibility (private · workspace), owner_user_id, status (planning · active · archived), estimate_unit (man_day · hour), progress_method (count · weighted), progress_split (แยกความคืบหน้า Dev / QA · migration 0029), sprint_length_weeks (null = ไม่ใช้ Sprint), holiday_calendar_id, work_start/end (override), size_md_map (override), time_log_enabled (ค่าเริ่มต้น false), issue_seq (เลขงานล่าสุด), budget_satang, hourly_rate_satang, archived_at, deleted_at, deleted_by, version | A, L2, 1, Z1, Z2 |
+| `project` | โปรเจกต์ | workspace_id, key (DP), name, client_name, description, color, icon, template_id, start_date, golive_date, timezone, visibility (private · workspace), owner_user_id, status (planning · active · archived), estimate_unit (man_day · hour), progress_method (count · weighted), progress_split (แยกความคืบหน้า Dev / QA · migration 0029), qa_buffer_days (วันทำการที่เผื่อให้ QA หลังวันจบของ Dev · 0–30 ค่าเริ่มต้น 2 · migration 0034), sprint_length_weeks (null = ไม่ใช้ Sprint), holiday_calendar_id, work_start/end (override), size_md_map (override), time_log_enabled (ค่าเริ่มต้น false), issue_seq (เลขงานล่าสุด), budget_satang, hourly_rate_satang, archived_at, deleted_at, deleted_by, version | A, L2, 1, Z1, Z2 |
 | `project_key_alias` | Key เดิมหลังเปลี่ยน Key · ใช้ redirect ลิงก์เก่า | project_id, old_key | L2 |
 | `project_scope_item` | In-scope, Out-of-scope, Deliverables, Acceptance criteria, สมมติฐาน | project_id, kind, text, sort | A, 1 |
 | `project_holiday` | วันหยุดเฉพาะโปรเจกต์ | project_id, date, name | A, L2 |
@@ -127,7 +127,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | เนื้อหา | title, description (markdown), status_id, priority (urgent · high · medium · low) |
 | คน | ba_id, reviewer_id, tester_id, reporter_id, created_by · Dev อยู่ใน `issue_assignee` |
 | ประเมิน | size (XS–XL, null = ยังไม่ประเมิน), estimate_md (ของทั้งทีม), progress_pct (กรอกเองได้เฉพาะงานที่ไม่มีลูก) |
-| วันที่ | plan_start, plan_end (= Due), actual_start, actual_end (บันทึกอัตโนมัติเมื่อสถานะเปลี่ยน), completed_at |
+| วันที่ | plan_start, plan_end (= Due · โปรเจกต์แยก Dev / QA = วันที่ Dev ต้องส่ง QA), qa_end (QA Due ของโปรเจกต์แยก Dev / QA · null = plan_end + qa_buffer_days วันทำการ · migration 0034), actual_start, actual_end (บันทึกอัตโนมัติเมื่อสถานะเปลี่ยน), completed_at |
 | Bug | severity (critical · major · minor), environment, reopen_count, found_in_test_run_id |
 | ตามประเภท | details (jsonb): Bug = browser, found_in_commit, steps, expected, actual · Story = as_a, i_want, so_that · Spike = question, deliverables[], timebox_hours |
 | อื่น ๆ | shared_with_guests (Guest เห็นงานนี้), deleted_at, deleted_by, version |

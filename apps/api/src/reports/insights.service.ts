@@ -63,15 +63,16 @@ export class InsightsService {
   async computeRisks(tx: Tx, project: ProjectRow, plan: PlanData, now: string): Promise<RiskItem[]> {
     const out: RiskItem[] = [];
     const open = plan.items.filter((i) => isOpen(i) && !i.isBug);
-    const names = await loadPeople(tx, open.flatMap((i) => i.assigneeIds));
+    const names = await loadPeople(tx, open.flatMap((i) => [...i.assigneeIds, ...i.lateOwners]));
     const nameOf = (id: string) => names.get(id)?.displayName ?? '—';
 
     // 1) เลยกำหนด
-    const late = open.filter((i) => i.planEnd && i.planEnd < now).sort((a, b) => a.planEnd!.localeCompare(b.planEnd!));
+    // เลยกำหนดตามขั้นของงาน: โปรเจกต์แยก Dev / QA นับงานที่รอ QA ให้ QA / Reviewer
+    const late = open.filter((i) => i.dueDate && i.dueDate < now).sort((a, b) => a.dueDate!.localeCompare(b.dueDate!));
     if (late.length) {
       const per = new Map<string, number>();
-      for (const i of late) for (const u of i.assigneeIds.length ? i.assigneeIds : ['_none']) per.set(u, (per.get(u) ?? 0) + 1);
-      const oldest = daysBetween(late[0]!.planEnd!, now);
+      for (const i of late) for (const u of i.lateOwners.length ? i.lateOwners : ['_none']) per.set(u, (per.get(u) ?? 0) + 1);
+      const oldest = daysBetween(late[0]!.dueDate!, now);
       const top = [...per].sort((a, b) => b[1] - a[1]);
       out.push({
         kind: 'overdue',
@@ -221,7 +222,7 @@ export class InsightsService {
         remainingMd,
         progressPct: pctOf(done),
         split,
-        overdue: work.filter((w) => isOpen(w) && w.planEnd && w.planEnd < now).length,
+        overdue: work.filter((w) => isOpen(w) && w.dueDate && w.dueDate < now).length,
         planStart: starts.length ? starts.reduce((m, e) => (e < m ? e : m)) : null,
         plannedEnd,
         milestone: upcoming ? { name: upcoming.name, date: upcoming.date } : null,

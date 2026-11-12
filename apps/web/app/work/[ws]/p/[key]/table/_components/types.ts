@@ -65,6 +65,8 @@ export interface Row {
   moduleId: string | null; phaseId: string | null;
   size: string | null; estimateMd: number | null; progressPct: number | null;
   planStart: string | null; planEnd: string | null; actualStart: string | null; actualEnd: string | null;
+  /** โปรเจกต์แยก Dev / QA: วันที่ใช้ตัดสินเลยกำหนด (งานรอ QA = QA Due) · โปรเจกต์อื่นไม่มีค่า ใช้ planEnd */
+  dueDate?: string | null; dueStage?: "dev" | "qa" | null; qaDue?: string | null; qaEnd?: string | null;
   version: number;
   /** false = งานของคนอื่น เปลี่ยนสถานะไม่ได้ (04-permissions ข้อ 3.3) */
   canMove?: boolean;

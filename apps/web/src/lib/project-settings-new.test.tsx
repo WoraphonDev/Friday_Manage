@@ -18,7 +18,7 @@ import { insertAt, spanDays, sprintCount, suggestKey, TEMPLATE_PRESETS, workflow
 const project = (over: Partial<ProjectDetail> = {}): ProjectDetail => ({
   id: "p1", key: "DE", name: "แผนพัฒนาผลิตภัณฑ์", clientName: null, description: null, color: "#334155",
   startDate: "2026-11-05", goliveDate: "2027-04-21", timezone: "Asia/Bangkok", visibility: "private", status: "active",
-  archivedAt: null, ownerUserId: "sample-lead", sprintLengthWeeks: 2, estimateUnit: "man_day", progressMethod: "weighted", progressSplit: false,
+  archivedAt: null, ownerUserId: "sample-lead", sprintLengthWeeks: 2, estimateUnit: "man_day", progressMethod: "weighted", progressSplit: false, qaBufferDays: 2,
   sizeMdMap: null, holidayCalendarId: null, workStart: null, workEnd: null, timeLogEnabled: false, version: 3, myRole: "admin", ...over,
 });
 const st = (id: string, workflowId: string, name: string, category: "todo" | "in_progress" | "done", sort: number, issueCount = 0, boardColumnId: string | null = null) =>

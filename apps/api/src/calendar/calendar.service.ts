@@ -15,6 +15,7 @@ import { addDays } from '../projects/calendar.js';
 import { requirePerm } from '../projects/permissions.js';
 import { ProjectsService } from '../projects/projects.service.js';
 import { buildIcs, type IcsEvent } from './ical.js';
+import { dueOf, loadDueRule, qaDueOf } from '../projects/due-stage.js';
 
 const s = schema;
 
@@ -108,6 +109,13 @@ export class CalendarService {
         .where(and(inArray(s.leaves.userId, memberIds), lte(s.leaves.startDate, range.to), gte(s.leaves.endDate, range.from)))
         .orderBy(asc(s.leaves.startDate));
       const people = await loadPeople(tx, [...assignees.map((a) => a.userId), ...leaveRows.map((l) => l.userId)]);
+      // โปรเจกต์แยก Dev / QA: งานที่รอ QA เลยกำหนดตาม QA Due (projects/due-stage.ts)
+      const dueRule = await loadDueRule(tx, project);
+      const dueState = (i: typeof s.issues.$inferSelect, category: string) => {
+        if (category === 'done' || category === 'cancelled') return 'done' as const;
+        const d = dueOf(dueRule, i, category).date;
+        return d && d < now ? ('overdue' as const) : d === now ? ('today' as const) : ('upcoming' as const);
+      };
 
       return {
         project: { key: project.key, name: project.name },
@@ -123,7 +131,8 @@ export class CalendarService {
           planStart: i.planStart,
           planEnd: i.planEnd,
           // ปิดงานแล้ว (เสร็จ / ยกเลิก) ไม่มีสถานะเลยกำหนด
-          due: status.category === 'done' || status.category === 'cancelled' ? 'done' : i.planEnd && i.planEnd < now ? 'overdue' : i.planEnd === now ? 'today' : 'upcoming',
+          due: dueState(i, status.category),
+          ...(dueRule.split ? { qaDue: qaDueOf(dueRule, i) } : {}),
           parentKey: i.parentId && numberOf.has(i.parentId) ? `${project.key}-${numberOf.get(i.parentId)}` : null,
           assignees: (byIssue.get(i.id) ?? []).map((u) => people.get(u)).filter((p) => !!p),
           version: i.version,

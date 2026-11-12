@@ -4,6 +4,7 @@ import { and, eq, inArray, isNotNull, isNull, lte, type SQL, sql } from 'drizzle
 import { today } from '../common/dates.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
+import { dueOf, loadDueRules, PLAIN_DUE } from '../projects/due-stage.js';
 import { Audience, type IssueCtx, type ProjectCtx } from './audience.js';
 import { Notifier } from './notifier.js';
 import { DAILY_EVENT, REASONS } from './rules.js';
@@ -33,7 +34,10 @@ export function dueSoonInSummary(setting: DueReminder, planEnd: string, date: st
 interface OpenIssue {
   issue: IssueCtx;
   project: ProjectCtx & { holidayCalendarId: string | null };
+  /** วันที่ใช้ตัดสินเลยกำหนด: Plan End · โปรเจกต์แยก Dev / QA และงานรอ QA = QA Due (projects/due-stage.ts) */
   planEnd: string | null;
+  /** ขั้น QA: แจ้ง QA / Reviewer แทน Assignee */
+  qaStage: boolean;
   statusName: string;
 }
 
@@ -84,7 +88,9 @@ export class Reminders {
     // งานที่รอ Review ไม่ขึ้นกับ Due จึงอ่านแยก
     const review = await this.openIssues(and(isNotNull(s.issues.reviewerId), sql`lower(trim(${s.workflowStatuses.name})) = 'review'`)!);
     const all = [...new Map([...due, ...review].map((o) => [o.issue.id, o])).values()];
-    const assignees = await this.audience.assignees(all.map((o) => o.issue.id));
+    const devAssignees = await this.audience.assignees(all.map((o) => o.issue.id));
+    // งานที่ส่ง QA แล้ว (โปรเจกต์แยก Dev / QA) เป็นความรับผิดชอบของ QA / Reviewer ไม่ใช่ Dev
+    const assignees = new Map(all.map((o) => [o.issue.id, o.qaStage && o.issue.reviewerId ? [o.issue.reviewerId] : (devAssignees.get(o.issue.id) ?? [])]));
     const calendars = await this.calendars(all.map((o) => o.project));
     const queried = new Set([...assignees.values()].flat().concat(all.flatMap((o) => (o.issue.reviewerId ? [o.issue.reviewerId] : []))));
     const settings = await this.settings([...queried]);
@@ -187,6 +193,8 @@ export class Reminders {
         number: s.issues.number,
         title: s.issues.title,
         planEnd: s.issues.planEnd,
+        qaEnd: s.issues.qaEnd,
+        category: s.workflowStatuses.category,
         parentId: s.issues.parentId,
         reviewerId: s.issues.reviewerId,
         baId: s.issues.baId,
@@ -207,8 +215,12 @@ export class Reminders {
       .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
       .innerJoin(s.issueTypes, eq(s.issueTypes.id, s.issues.issueTypeId))
       .where(and(isNull(s.issues.deletedAt), isNull(s.projects.deletedAt), isNull(s.projects.archivedAt), isNull(s.workspaces.deletedAt), openStatus(), where));
-    return rows.map((r) => ({
-      planEnd: r.planEnd,
+    const rules = rows.length ? await this.db.transaction((tx) => loadDueRules(tx, rows.map((r) => r.projectId))) : new Map();
+    return rows.map((r) => {
+      const due = dueOf(rules.get(r.projectId) ?? PLAIN_DUE, r, r.category);
+      return {
+      planEnd: due.date,
+      qaStage: due.stage === 'qa',
       statusName: r.statusName,
       issue: {
         id: r.id,
@@ -231,7 +243,8 @@ export class Reminders {
         holidayCalendarId: r.holidayCalendarId,
         deleted: false,
       },
-    }));
+    };
+    });
   }
 
   private async settings(userIds: string[]) {

@@ -289,12 +289,17 @@ interface OpenWork {
 async function openWork(tx: Tx, projectId: string, userIds?: string[]) {
   const where = [eq(s.issues.projectId, projectId), isNull(s.issues.deletedAt), openStatus()];
   if (userIds) where.push(inArray(s.issueAssignees.userId, userIds));
+  // โปรเจกต์แยก Dev / QA: งานที่ส่ง QA แล้วไม่นับเป็น Overdue ของ Dev (ผู้ใช้ขอ 2026-11-13)
+  const [p] = await tx.select({ progressSplit: s.projects.progressSplit }).from(s.projects).where(eq(s.projects.id, projectId));
+  const late = p?.progressSplit
+    ? sql`${s.workflowStatuses.category} <> 'review' and ${s.issues.planEnd} < ${today()}`
+    : sql`${s.issues.planEnd} < ${today()}`;
   const rows = await tx
     .select({
       userId: s.issueAssignees.userId,
       open: sql<number>`count(*)::int`,
       subtasks: sql<number>`(count(*) filter (where ${s.issues.parentId} is not null))::int`,
-      overdue: sql<number>`(count(*) filter (where ${s.issues.planEnd} < ${today()}))::int`,
+      overdue: sql<number>`(count(*) filter (where ${late}))::int`,
       md: sql<string>`coalesce(sum(${s.issues.estimateMd} / (select count(*) from ${s.issueAssignees} x where x.issue_id = ${s.issues.id})), 0)`,
     })
     .from(s.issueAssignees)

@@ -362,7 +362,7 @@ describe('โอนความเป็นเจ้าของ', () => {
 });
 
 describe('ลบโปรเจกต์ (soft delete 30 วัน)', () => {
-  it('delete-impact บอกจำนวน · ต้องพิมพ์ Key ให้ตรง · ลบแล้วได้ 410 และ Key ยังถูกจอง', async () => {
+  it('delete-impact บอกจำนวน · ต้องพิมพ์ Key ให้ตรง · ลบแล้วได้ 410 และ Key ว่างให้โปรเจกต์ใหม่', async () => {
     await mkProject(team.lead, 'DEL');
     await team.lead.post(p('DEL', '/members'), { userId: team.devId });
     await mkIssue(team.lead, 'DEL', {});
@@ -387,7 +387,8 @@ describe('ลบโปรเจกต์ (soft delete 30 วัน)', () => {
     expect(gone.body.error).toMatchObject({ code: 'project_deleted', details: { restorableUntil: r.body.restorableUntil } });
     expect((await team.dev.get(`${team.ws}/issues/DEL-1`)).status).toBe(410);
     expect((await team.lead.get(`${team.ws}/projects`)).body.items.map((x: { key: string }) => x.key)).not.toContain('DEL');
-    expect((await team.lead.get(`${team.ws}/projects/key-available?key=DEL`)).body.available).toBe(false);
+    // Key ของโปรเจกต์ในถังขยะใช้ซ้ำได้ (O30 · A41) · กู้คืนแล้วชนจึงเลือก Key ใหม่ (Z2)
+    expect((await team.lead.get(`${team.ws}/projects/key-available?key=DEL`)).body.available).toBe(true);
     const audit = await t.owner.query(`SELECT summary FROM audit_logs WHERE action = 'project.deleted'`);
     expect(audit.rows[0].summary).toBe('DEL · โปรเจกต์ DEL');
   });

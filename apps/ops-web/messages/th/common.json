@@ -238,7 +238,9 @@
     "entitlements_version": "บันทึกสิทธิ์เป็นเวอร์ชันใหม่",
     "entitlements_override": "ปรับสิทธิ์เฉพาะราย",
     "promotions_plan_price": "เปลี่ยนราคาแพ็กเกจ",
-    "promotions_coupon_activate": "เปิดใช้คูปอง"
+    "promotions_coupon_activate": "เปิดใช้คูปอง",
+    "restore_extend_purge": "ยืดเวลาก่อนลบถาวรเกิน 30 วัน",
+    "restore_workspace": "กู้คืน Workspace แทนลูกค้า"
   },
   "export": {
     "title": "ส่งออกข้อมูล",

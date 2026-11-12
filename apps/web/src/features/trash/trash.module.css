@@ -1,0 +1,97 @@
+/* W23 · ถังขยะ (Z1–Z4) และหน้า Workspace ที่ลบไว้ (Z5) · สีจาก token เท่านั้น */
+.wrap { display:flex; flex-direction:column; gap:14px; min-width:0; }
+.head h1, .head h2 { margin:0; font-size:22px; }
+.head h2 { font-size:16px; }
+.muted { color:var(--muted); font-size:12px; }
+.head .muted { font-size:13px; margin-top:4px; }
+.head a { color:var(--primary-text); }
+
+.toolbar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+.seg { display:inline-flex; gap:2px; padding:3px; border-radius:10px; background:var(--subtle); border:1px solid var(--border); }
+.seg button { border:0; background:transparent; font:inherit; font-size:13px; color:var(--foreground-soft); padding:6px 12px; border-radius:8px; cursor:pointer; min-height:32px; white-space:nowrap; }
+.seg button[aria-selected="true"] { background:var(--card); color:var(--foreground); font-weight:600; box-shadow:var(--shadow-card); }
+.search { flex:1 1 240px; display:flex; align-items:center; gap:8px; min-height:38px; padding:0 12px; border:1px solid var(--input); border-radius:var(--radius-control); background:var(--card); color:var(--muted); max-width:320px; }
+.search input { border:0; outline:0; background:transparent; font:inherit; font-size:13px; color:var(--foreground); width:100%; min-width:0; }
+.filter { flex:0 1 200px; min-width:150px; }
+.filter :global(.field) { gap:0; }
+
+.selbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 14px; border-radius:10px; background:var(--inverse-bg); color:var(--inverse-ink); font-size:13px; }
+.selbar .sub { color:var(--inverse-muted); }
+.selbar .grow { flex:1 1 auto; }
+.selbar :global(.button-secondary) { background:transparent; color:var(--inverse-ink); border-color:var(--inverse-border); }
+
+.table { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.thead, .row { display:grid; grid-template-columns:44px minmax(0,2.2fr) minmax(0,1.3fr) minmax(0,1.1fr) 120px 96px 88px; gap:10px; align-items:center; padding:0 16px; }
+.thead { min-height:38px; font-size:12px; color:var(--muted); background:var(--surface-2); border-bottom:1px solid var(--border); }
+.row { min-height:56px; padding-top:8px; padding-bottom:8px; border-bottom:1px solid var(--border); font-size:13px; }
+.row:last-child { border-bottom:0; }
+.row[data-selected="true"] { background:var(--primary-soft); }
+.noProject .thead, .noProject .row { grid-template-columns:44px minmax(0,2.6fr) minmax(0,1.1fr) 120px 96px 88px; }
+.name { min-width:0; display:flex; flex-direction:column; gap:2px; }
+.name b { font-weight:500; overflow:hidden; text-overflow:ellipsis; }
+.key { font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:12px; margin-right:6px; color:var(--foreground-soft); }
+.small { font-size:12px; color:var(--muted); }
+.cell { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.check { width:18px; height:18px; accent-color:var(--primary); cursor:pointer; }
+.days { display:inline-flex; align-items:center; padding:1px 8px; border-radius:999px; font-size:12px; white-space:nowrap; }
+.urgent { background:var(--danger-soft); color:var(--danger-text); font-weight:600; }
+.tag { display:inline-flex; align-items:center; padding:0 6px; border-radius:6px; font-size:11px; background:var(--warning-soft); color:var(--warning-text); margin-left:6px; }
+.newTag { font-size:11px; font-weight:600; color:var(--primary-text); }
+
+.batch { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 14px; border-radius:10px; border:1px solid var(--primary-border); background:var(--primary-soft); font-size:13px; }
+.linkBtn { border:0; background:none; padding:0; font:inherit; color:var(--primary-text); cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+.more { display:flex; justify-content:center; }
+
+/* Z4 มือถือ: การ์ดแทนตาราง */
+.cards { display:none; flex-direction:column; gap:10px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; }
+.cardTop { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.cardFoot { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+
+@media (max-width:760px) {
+  .table { display:none; }
+  .cards { display:flex; }
+  .search { max-width:none; }
+  .filter { flex:1 1 140px; }
+  .seg { width:100%; }
+  .seg button { flex:1; }
+}
+
+/* Dialog Z2 / Z3 */
+.form { display:flex; flex-direction:column; gap:14px; }
+.facts { display:flex; flex-direction:column; border:1px solid var(--border); border-radius:10px; }
+.fact { display:grid; grid-template-columns:110px minmax(0,1fr); gap:12px; padding:10px 12px; border-bottom:1px solid var(--border); font-size:13px; }
+.fact:last-child { border-bottom:0; }
+.fact > span:first-child { color:var(--muted); }
+.warnBox { display:flex; flex-direction:column; gap:4px; padding:12px 14px; border-radius:10px; background:var(--warning-soft); border:1px solid var(--warning-border); color:var(--warning-text); font-size:13px; }
+.dangerBox { padding:12px 14px; border-radius:10px; background:var(--danger-soft); border:1px solid var(--danger-border); color:var(--danger-text); font-size:13px; }
+.mono { font-family:"IBM Plex Mono", ui-monospace, monospace; text-transform:uppercase; }
+.foot { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+.foot .actions { display:flex; gap:8px; margin-left:auto; }
+
+/* Z5 */
+.dwPage { min-height:100vh; display:flex; flex-direction:column; background:var(--background); }
+.dwBody { flex:1; display:flex; justify-content:center; padding:56px 16px 40px; }
+.dw { width:100%; max-width:560px; display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center; }
+.dwIcon { width:56px; height:56px; border-radius:14px; display:inline-flex; align-items:center; justify-content:center; background:var(--warning-soft); color:var(--warning-text); }
+.dw h1 { margin:6px 0 0; font-size:24px; }
+.dw p { margin:0; color:var(--foreground-soft); font-size:14px; }
+.dwFacts { width:100%; text-align:left; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:4px 18px; }
+.dwFact { display:flex; justify-content:space-between; gap:16px; padding:12px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.dwFact:last-child { border-bottom:0; }
+.dwFact > span:first-child { color:var(--muted); flex:none; }
+.dwFact > span:last-child { text-align:right; }
+.dwActions { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.dwNote { color:var(--muted); font-size:12px; }
+.dwNote a { color:var(--primary-text); }
+.dwMember { width:100%; text-align:left; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
+.dwMember p { text-align:left; }
+@media (max-width:560px) {
+  .dwBody { padding-top:32px; }
+  .dwActions { flex-direction:column-reverse; width:100%; }
+  .dwActions > * { width:100%; justify-content:center; }
+}
+
+/* ตัวสลับ Workspace (Q1) */
+.wsDays { margin-left:auto; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:600; background:var(--warning-soft); color:var(--warning-text); white-space:nowrap; }
+.wsDeleted { opacity:.8; }

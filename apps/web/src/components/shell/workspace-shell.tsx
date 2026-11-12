@@ -6,6 +6,7 @@ import {
   useEffect,
   Suspense,
   useState,
+  type ComponentType,
   type ReactNode,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -66,6 +67,37 @@ import { EngagementPrompts, WhatsNewButton, WhatsNewMenuItem } from "@/features/
 import { OnboardingAccountItem, OnboardingNavButton } from "@/features/onboarding-checklist";
 import { isBlocked, SuspendedScreen, SuspensionBanner, useSuspension } from "@/features/suspension";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
+import { DeletedWorkspaceScreen, DeletedWorkspacesSection, useDeletedWorkspace } from "@/features/trash";
+// ช่องต่อเติม (SHELL_SLOTS ด้านล่าง): import ของ W24–W26 วางแทนบรรทัดที่จองไว้ของตัวเองเท่านั้น
+// (W24 / W25 merge ก่อนมีช่องนี้ จึงวาง WhatsNewButton / EngagementPrompts และ OnboardingNavButton / OnboardingAccountItem ตรงใน JSX
+//  · ของ W25 อยู่ใน Sidebar และเมนูบัญชี ซึ่งไม่มีช่องให้ จึงไม่ย้ายเข้า SHELL_SLOTS)
+// W26 import
+
+/**
+ * ช่องต่อเติมของ shell (W23 เปิดไว้ให้ W24–W26 · ไฟล์นี้เป็นไฟล์กลางของ W00)
+ * งานที่ต้องวางของใน shell เพิ่ม 1 รายการใน SHELL_SLOTS ตรงบรรทัดที่จองไว้ของตัวเอง แทนการแก้ JSX ของ shell
+ * - topbar: ปุ่มบนแถบบน (desktop) ก่อนกระดิ่ง เช่น "มีอะไรใหม่" (W24) · "ช่วยเหลือ" (W26)
+ * - banner: แถบ / การ์ดบนสุดของเนื้อหา ต่อจากแบนเนอร์แพ็กเกจและประกาศ
+ * - overlay: ของลอย (Spotlight / NPS ของ W24 · แผงช่วยเหลือของ W26) render ท้าย shell ทุกหน้า
+ * ทุกช่องเป็น component (ใช้ hook ได้) ได้ ShellSlotProps · ไม่แสดงตอน Workspace ถูกระงับแบบปิดทั้งหมด (C6)
+ * ช่อง topbar อยู่ในแถบบนของ desktop และหน้า Admin ไม่มีช่องนี้ · มือถือใช้ overlay หรือ banner
+ */
+export interface ShellSlotProps {
+  ws: string;
+  workspace: Workspace;
+  me: Me;
+  pathname: string;
+  openSearch: () => void;
+}
+export interface ShellSlot {
+  key: string;
+  topbar?: ComponentType<ShellSlotProps>;
+  banner?: ComponentType<ShellSlotProps>;
+  overlay?: ComponentType<ShellSlotProps>;
+}
+export const SHELL_SLOTS: ShellSlot[] = [
+  // W26 · ศูนย์ช่วยเหลือ (แทนบรรทัดนี้)
+];
 
 interface ShellContext {
   me: Me;
@@ -275,6 +307,8 @@ export function WorkspaceShell({
     enabled: !!me.data,
   });
   const workspace = workspaces.data?.items.find((item) => item.slug === ws);
+  // ไม่อยู่ในรายการ → อาจเป็น Workspace ที่ลบไว้ (ระยะผ่อนผัน · Z5) · 404 = ไม่พบจริง
+  const deleted = useDeletedWorkspace(ws, !!workspaces.data && !workspace);
   // ถูกระงับ (C6): อ่านอย่างเดียว = แถบเตือน · ปิดทั้งหมด = แทนเนื้อหาด้วยหน้าติดต่อทีม
   const { suspension } = useSuspension(ws, !!workspace);
   const blocked = isBlocked(suspension, workspace?.role, pathname);
@@ -335,7 +369,27 @@ export function WorkspaceShell({
         }}
       />
     );
-  if (!workspace) return <NotFound />;
+  if (!workspace) {
+    if (deleted.isPending) return <LoadingState />;
+    if (!deleted.data) return <NotFound />;
+    const other = workspaces.data?.items[0];
+    const otherHref = other ? `/work/${encodeURIComponent(other.slug)}` : "/onboarding";
+    // Z5 แทนทุกหน้าของ Workspace ที่ลบ: แถบบนมีแค่โลโก้และบัญชี (ไม่มีเมนูของ Workspace ที่เข้าไม่ได้)
+    return (
+      <YearFormatContext.Provider value={me.data?.yearFormat ?? "BE"}>
+        <header className="topbar">
+          <Link className="topbar-brand" href={otherHref}>
+            <FridayLogo size="sm" tone="dark" tagline={false} />
+          </Link>
+          <span className="topbar-spacer" />
+          {me.data && <Avatar person={me.data} />}
+        </header>
+        <main id="main-content">
+          <DeletedWorkspaceScreen ws={ws} info={deleted.data} otherHref={otherHref} />
+        </main>
+      </YearFormatContext.Provider>
+    );
+  }
   // ระงับ (suspended) ไม่ปิดทั้งหน้าที่นี่: โหมดอ่านอย่างเดียว / ปิดทั้งหมดจัดการด้วย SuspensionBanner / SuspendedScreen ด้านล่าง
   if (workspace.status === "pending_delete") return <Forbidden />;
   if (!me.data) return <LoadingState />;
@@ -346,6 +400,7 @@ export function WorkspaceShell({
     router.replace("/login");
   }
   const chrome = shellChrome(pathname);
+  const slotProps: ShellSlotProps = { ws, workspace, me: me.data, pathname, openSearch: () => setCommandOpen(true) };
   // O1/O2: หน้า Lead / Reports ไม่มีช่องค้นหาและ + New บนแถบบน
   const searchTrigger = (
     <button
@@ -455,6 +510,7 @@ export function WorkspaceShell({
             ))}
             {!matching.length && <p className="menu-empty">{t("nav.noWorkspaceMatch")}</p>}
           </nav>
+          <DeletedWorkspacesSection onNavigate={closeSwitch} itemClassName="workspace-item" logoClassName="workspace-logo" labelClassName="menu-label" />
           <div className="menu-divider" />
           <Link className="menu-item menu-icon-item" href="/onboarding" onClick={closeSwitch}>
             <Plus size={16} aria-hidden="true" />
@@ -602,6 +658,7 @@ export function WorkspaceShell({
               </Link>
             )}
             <WhatsNewButton ws={ws} role={workspace.role} />
+            {suspension?.mode !== "full" && SHELL_SLOTS.map(({ key, topbar: Slot }) => Slot && <Slot key={key} {...slotProps} />)}
             <Bell workspace={ws} unread={summary.data?.total ?? 0} />
             {accountMenu}
           </header>
@@ -634,6 +691,7 @@ export function WorkspaceShell({
               <>
                 {suspension?.mode !== "full" && <WorkspaceBanners ws={ws} role={workspace.role} />}
                 {suspension?.mode !== "full" && <AnnouncementBanners ws={ws} role={workspace.role} />}
+                {suspension?.mode !== "full" && SHELL_SLOTS.map(({ key, banner: Slot }) => Slot && <Slot key={key} {...slotProps} />)}
                 {hasBackButton(pathname) && <BackButton fallback={base} label={t("nav.back")} />}
                 {children}
               </>
@@ -715,6 +773,7 @@ export function WorkspaceShell({
           <div className="menu-divider" />
           <div className="menu-label">{t("nav.yourWorkspaces")}</div>
           {workspaceList(() => setMenuOpen(false))}
+          <DeletedWorkspacesSection onNavigate={() => setMenuOpen(false)} itemClassName="workspace-item" logoClassName="workspace-logo" labelClassName="menu-label" />
           <Link
             className="workspace-item"
             href="/onboarding"
@@ -741,6 +800,7 @@ export function WorkspaceShell({
           onOpenChange={setCommandOpen}
         />
         <EngagementPrompts ws={ws} role={workspace.role} />
+        {suspension?.mode !== "full" && SHELL_SLOTS.map(({ key, overlay: Slot }) => Slot && <Slot key={key} {...slotProps} />)}
       </YearFormatContext.Provider>
     </Context.Provider>
   );

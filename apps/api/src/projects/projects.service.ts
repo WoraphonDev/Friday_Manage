@@ -215,7 +215,8 @@ export class ProjectsService {
    */
   async load(tx: Tx, auth: AuthInfo, tenant: TenantInfo, key: string, opts: { allowNonMember?: boolean } = {}) {
     const wanted = key.toUpperCase();
-    const [project] = await tx.select().from(s.projects).where(eq(s.projects.key, wanted));
+    // Key ไม่ซ้ำเฉพาะโปรเจกต์ที่ยังไม่ลบ (O30) · โปรเจกต์ใหม่ใช้ Key ของโปรเจกต์ในถังขยะได้ จึงเลือกแถวที่ยังใช้งานก่อน
+    const [project] = await tx.select().from(s.projects).where(eq(s.projects.key, wanted)).orderBy(sql`${s.projects.deletedAt} desc nulls first`).limit(1);
     if (!project) {
       // alias ผ่าน RLS เหมือนโปรเจกต์ จึงตอบ 301 เฉพาะคนที่เข้าโปรเจกต์ได้ · คนอื่นได้ 404 เหมือน Key ที่ไม่มีอยู่
       const [moved] = await tx
@@ -280,12 +281,15 @@ export class ProjectsService {
     return { key, available: await this.keyFree(tenant.workspaceId, key) };
   }
 
-  /** Key ต้องไม่ซ้ำทั้งโปรเจกต์ที่มองไม่เห็น (RLS) และ Key เก่า · จึงถามผ่าน friday_system เฉพาะเรื่องนี้ */
-  private async keyFree(workspaceId: string, key: string, exceptProjectId?: string) {
+  /**
+   * Key ต้องไม่ซ้ำทั้งโปรเจกต์ที่มองไม่เห็น (RLS) และ Key เก่า · จึงถามผ่าน friday_system เฉพาะเรื่องนี้
+   * โปรเจกต์ในถังขยะไม่กัน Key (O30) · กู้คืนแล้วชนจึงต้องเลือก Key ใหม่ (A41 · Z2)
+   */
+  async keyFree(workspaceId: string, key: string, exceptProjectId?: string) {
     const [taken] = await this.system
       .select({ id: s.projects.id })
       .from(s.projects)
-      .where(and(eq(s.projects.workspaceId, workspaceId), eq(s.projects.key, key)));
+      .where(and(eq(s.projects.workspaceId, workspaceId), eq(s.projects.key, key), isNull(s.projects.deletedAt)));
     const [alias] = await this.system
       .select({ projectId: s.projectKeyAliases.projectId })
       .from(s.projectKeyAliases)

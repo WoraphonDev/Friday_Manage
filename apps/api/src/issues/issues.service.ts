@@ -441,18 +441,23 @@ export class IssuesService {
         verb: 'deleted', field: 'deletedAt', newValue: { deletedAt: deletedAt.toISOString(), cascadeRootId: issue.id } })));
       await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'data', action: 'issue.deleted', targetType: 'issue', targetId: issue.id, summary: options.subtasks === 'keep' ? `ลบ ${project.key}-${issue.number} และแยก Sub-task ${children.length} งานเป็น Task เดี่ยว` : `ลบ ${project.key}-${issue.number} พร้อม Sub-task ${children.length} งาน` });
       for (const row of rows) events.push(eventFor(auth, tenant, project, row)('issue.deleted', { cascadeRootId: issue.id }));
-      return { key: issueKey.toUpperCase(), deletedAt, restorableUntil: restoreDeadline(deletedAt), subtasks: options.subtasks === 'keep' ? 0 : children.length, keptSubtasks: options.subtasks === 'keep' ? children.length : 0 };
+      return { key: issueKey.toUpperCase(), deletedAt, restorableUntil: restoreDeadline(deletedAt, await trashDays(tx)), subtasks: options.subtasks === 'keep' ? 0 : children.length, keptSubtasks: options.subtasks === 'keep' ? children.length : 0 };
     });
     await this.events.publish(events);
     return result;
   }
 
-  async restore(auth: AuthInfo, tenant: TenantInfo, issueKey: string) {
+  /**
+   * กู้คืนงานพร้อม Sub-task ที่ลบไปพร้อมกัน · `workspaceAdmin` = เรียกจากถังขยะของ Workspace (A41)
+   * ให้ Owner / Admin ของ Workspace กู้ได้แม้ไม่ได้มีสิทธิ์ issue.delete ในโปรเจกต์ (RLS ยังกรองงานที่มองไม่เห็นตามเดิม)
+   */
+  async restore(auth: AuthInfo, tenant: TenantInfo, issueKey: string, opts: { workspaceAdmin?: boolean } = {}) {
     const events: DomainEvent[] = [];
     const result = await this.db.run(auth, tenant, async (tx) => {
-      const { project, access, issue } = await this.lifecycleIssue(tx, auth, tenant, issueKey);
+      const { project, access, issue } = await this.lifecycleIssue(tx, auth, tenant, issueKey, opts);
       if (!issue.deletedAt) return this.dto(tx, project, issue, access);
-      if (restoreDeadline(issue.deletedAt).getTime() <= Date.now()) throw new AppError(410, 'restore_expired', 'เกินกำหนดกู้คืน 30 วันแล้ว', await this.deletedDetails(tx, issue, access));
+      const days = await trashDays(tx);
+      if (restoreDeadline(issue.deletedAt, days).getTime() <= Date.now()) throw new AppError(410, 'restore_expired', `เกินกำหนดกู้คืน ${days} วันแล้ว`, await this.deletedDetails(tx, issue, access));
       if (issue.parentId) {
         const [parent] = await tx.select().from(s.issues).where(eq(s.issues.id, issue.parentId));
         if (parent.deletedAt) throw new AppError(409, 'parent_deleted', 'ต้องกู้คืนงานแม่ก่อน');
@@ -500,11 +505,12 @@ export class IssuesService {
     return result;
   }
 
-  private async lifecycleIssue(tx: Tx, auth: AuthInfo, tenant: TenantInfo, issueKey: string) {
+  private async lifecycleIssue(tx: Tx, auth: AuthInfo, tenant: TenantInfo, issueKey: string, opts: { workspaceAdmin?: boolean } = {}) {
     const m = ISSUE_KEY.exec(issueKey);
     if (!m) throw notFound('งาน');
-    const { project, access } = await this.projects.load(tx, auth, tenant, m[1]);
-    requirePerm(access, 'issue.delete');
+    const wsAdmin = !!opts.workspaceAdmin && (tenant.role === 'owner' || tenant.role === 'admin');
+    const { project, access } = await this.projects.load(tx, auth, tenant, m[1], { allowNonMember: wsAdmin });
+    if (!wsAdmin) requirePerm(access, 'issue.delete');
     const [issue] = await tx.select().from(s.issues).where(and(eq(s.issues.projectId, project.id), eq(s.issues.number, Number(m[2])))).for('update');
     if (!issue) throw notFound('งาน');
     return { project, access, issue };
@@ -515,7 +521,7 @@ export class IssuesService {
       .where(and(eq(s.activities.issueId, issue.id), eq(s.activities.verb, 'deleted'))).orderBy(sql`${s.activities.createdAt} desc`, sql`${s.activities.id} desc`).limit(1);
     const people = access.guestViewer ? new Map() : await loadPeople(tx, [deletion?.actorId]);
     return { deletedBy: access.guestViewer ? { displayName: 'ทีมพัฒนา' } : people.get(deletion?.actorId) ?? null,
-      deletedAt: issue.deletedAt, restorableUntil: restoreDeadline(issue.deletedAt!) };
+      deletedAt: issue.deletedAt, restorableUntil: restoreDeadline(issue.deletedAt!, await trashDays(tx)) };
   }
 
   // ---------------------------------------------------------------------------
@@ -1292,6 +1298,13 @@ function sameSet(a: string[], b: string[]) {
   return a.length === b.length && a.every((x) => b.includes(x));
 }
 
-function restoreDeadline(deletedAt: Date) {
-  return new Date(deletedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+/** กู้คืนได้ตามค่าถังขยะของ Workspace (30 / 90 วัน · A41) เหมือนไฟล์และโปรเจกต์ */
+function restoreDeadline(deletedAt: Date, days: number) {
+  return new Date(deletedAt.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+/** trash_days ของ Workspace ปัจจุบัน (RLS กรองให้เหลือแถวเดียว) */
+async function trashDays(tx: Tx) {
+  const [ws] = await tx.select({ days: s.workspaceSettings.trashDays }).from(s.workspaceSettings);
+  return ws?.days ?? 30;
 }

@@ -324,7 +324,8 @@ describe('ลบ / กู้คืน Workspace', () => {
     expect((await svc.purge()).purged).toBe(0);
     expect((await t.owner.query(`SELECT count(*)::int AS n FROM workspaces WHERE id = $1`, [id])).rows[0].n).toBe(1);
 
-    await t.owner.query(`UPDATE workspaces SET deleted_at = now() - interval '31 days' WHERE id = $1`, [id]);
+    // วันลบถาวรอยู่ที่ purge_after (O30 · A41) · trigger ไม่ทับค่าเมื่อแก้ deleted_at ของแถวที่ลบอยู่แล้ว
+    await t.owner.query(`UPDATE workspaces SET deleted_at = now() - interval '31 days', purge_after = now() - interval '1 day' WHERE id = $1`, [id]);
     const late = await owner.post(`/workspaces/${slug}/restore`);
     expect(late.status).toBe(410);
     expect(late.body.error.code).toBe('restore_expired');

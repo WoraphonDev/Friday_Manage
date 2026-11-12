@@ -152,7 +152,7 @@ API ตอบทันทีแล้วส่งงานเข้าคิว�
 | หน้า | เปิดหน้า | การกระทำ |
 |---|---|---|
 | E · Home | **`GET w/{ws}/home`** (สรุปวันนี้, รออนุมัติ / Review, โปรเจกต์ของฉัน, เปิดล่าสุด, 30 วันข้างหน้า, Workload) | ติ๊กปิดงาน `PATCH issues/{key}` |
-| F · My Tasks | **`GET w/{ws}/my-issues?tab=assigned\|reviewer\|watching\|created&group=`** | ลากไปกลุ่ม "สัปดาห์หน้า" = `PATCH issues/{key}` (Due) หรือสร้างคำขอเลื่อน Due ตามสิทธิ์ |
+| F · My Tasks | **`GET w/{ws}/my-issues?tab=assigned\|reviewer\|watching\|created&group=`** · `assigned` = ทุกบทบาทของฉันในงาน (ผู้รับผิดชอบ, BA, SA, QA / Reviewer) แต่ละงานมี `myRoles` · ตัวกรอง `assignee=` ยังหมายถึงผู้รับผิดชอบ · ตัวเลข "ของฉัน" ใน Home นับแบบเดียวกัน (ผู้ใช้ตัดสิน 2026-11-12) | ลากไปกลุ่ม "สัปดาห์หน้า" = `PATCH issues/{key}` (Due) หรือสร้างคำขอเลื่อน Due ตามสิทธิ์ |
 | G · Inbox | **`GET me/notifications?workspace=&filter=`** | `POST notifications/{id}:read` · `:done` · `:snooze` · อนุมัติ / ปฏิเสธ `POST due-requests/{id}:approve` · `:reject` · Unwatch · ปิดประเภทนี้ `PUT me/notification-prefs` |
 | K4 · กระดิ่ง | `GET me/notifications/summary` (ยังไม่อ่านแยก Workspace) + WebSocket `user:{id}` | — |
 | P1 · ค้นหา | **`GET w/{ws}/search?q=&type=&project=`** · Command palette ใช้ `?q=&limit=8` | `POST saved-searches` |

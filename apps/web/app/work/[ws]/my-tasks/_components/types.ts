@@ -79,8 +79,11 @@ export interface TaskItem {
   parentKey: string | null;
   subtasks: { total: number; done: number } | null;
   assignees: Person[];
+  /** บทบาทของฉันในงาน · ว่าง = ไม่ได้เกี่ยวข้อง (เช่นแท็บ Watching) */
+  myRoles?: MyRole[];
   version: number;
 }
+export type MyRole = "dev" | "ba" | "sa" | "qa";
 export interface TaskGroup {
   key: string;
   label: string;

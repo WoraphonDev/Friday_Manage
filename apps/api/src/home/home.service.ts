@@ -56,7 +56,8 @@ export class HomeService {
       const open = sc.issues.filter((i) => !sc.isDone(i));
       // สถิติ "ทีม" นับเฉพาะโปรเจกต์ที่ฉันเป็นสมาชิก · "ของฉัน" นับทุกโปรเจกต์ที่เข้าถึงได้
       const team = open.filter((i) => sc.mine.has(i.projectId) && i.planEnd);
-      const myOpen = open.filter((i) => (sc.assignees.get(i.id) ?? []).includes(auth.userId));
+      // "ของฉัน" นับทุกบทบาทในงาน (Dev, BA, SA, QA / Reviewer) ให้ตรงกับแท็บ "มอบหมายให้ฉัน"
+      const myOpen = open.filter((i) => sc.rolesOf(i, auth.userId).length > 0);
       const weekLast = lastWorkday(week.end);
       const count = (list: Issue[], pred: (i: Issue) => boolean) => list.filter(pred).length;
       const late = (i: Issue) => i.planEnd! < now;
@@ -176,7 +177,7 @@ export class HomeService {
           daysToGolive: p.goliveDate ? daysBetween(now, p.goliveDate) : null,
           progressPct: total ? Math.round((finished / total) * 100) : 0,
           overdue: open.filter((i) => i.planEnd && i.planEnd < now).length,
-          myTasks: open.filter((i) => (sc.assignees.get(i.id) ?? []).includes(auth.userId)).length,
+          myTasks: open.filter((i) => sc.rolesOf(i, auth.userId).length > 0).length,
           health: { level: health.level, gapPct: health.gapPct },
         };
       }),
@@ -247,7 +248,8 @@ export class HomeService {
         (await tx.select({ issueId: s.issueWatchers.issueId }).from(s.issueWatchers).where(and(eq(s.issueWatchers.userId, auth.userId), eq(s.issueWatchers.workspaceId, tenant.workspaceId)))).map((w) => w.issueId),
       );
       const me = (i: Issue, tab: z.infer<typeof MyIssuesQuery>['tab']) =>
-        tab === 'assigned' ? (sc.assignees.get(i.id) ?? []).includes(auth.userId) : tab === 'reviewer' ? i.reviewerId === auth.userId : tab === 'watching' ? watched.has(i.id) : i.createdBy === auth.userId;
+        // มอบหมายให้ฉัน = ทุกบทบาท ไม่ใช่แค่ผู้รับผิดชอบ (BA ที่ถูกตั้งเป็น QA ต้องเห็นงานด้วย)
+        tab === 'assigned' ? sc.rolesOf(i, auth.userId).length > 0 : tab === 'reviewer' ? i.reviewerId === auth.userId : tab === 'watching' ? watched.has(i.id) : i.createdBy === auth.userId;
       const open = (i: Issue) => !sc.isDone(i);
       // จำนวนบนแต่ละแท็บนับเฉพาะงานที่ยังไม่เสร็จ
       const counts = Object.fromEntries((['assigned', 'reviewer', 'watching', 'created'] as const).map((t) => [t, sc.issues.filter((i) => open(i) && me(i, t)).length]));
@@ -283,6 +285,7 @@ export class HomeService {
           parentKey: i.parentId ? (parentKey.get(i.parentId) ?? null) : null,
           subtasks: subCounts.get(i.id) ?? null,
           assignees: (sc.assignees.get(i.id) ?? []).map((u) => people.get(u)).filter((x): x is Person => !!x),
+          myRoles: sc.rolesOf(i, auth.userId),
           version: i.version,
         };
       };

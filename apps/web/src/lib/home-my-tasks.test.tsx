@@ -52,7 +52,8 @@ function tasks(): MyIssues {
     groups: [
       { key: "late", label: "เลยกำหนด", count: 1, items: [task("DE-23")] },
       { key: "today", label: "วันนี้", range: { from: "2026-12-02", to: "2026-12-02" }, count: 1, items: [task("DE-35", { planEnd: "2026-12-02", due: { state: "today", days: 0 }, priority: "urgent" })] },
-      { key: "this_week", label: "สัปดาห์นี้", range: { from: "2026-12-03", to: "2026-12-06" }, count: 0, items: [] },
+      // ฉันเป็น BA และ QA ไม่ใช่ Dev: อยู่ในแท็บนี้ แต่ Man-Day ไม่นับเป็นของฉัน
+      { key: "this_week", label: "สัปดาห์นี้", range: { from: "2026-12-03", to: "2026-12-06" }, count: 1, items: [task("DE-50", { planEnd: "2026-12-04", due: { state: "later", days: 2 }, estimateMd: 5, myRoles: ["ba", "qa"] })] },
       { key: "next_week", label: "สัปดาห์หน้า", range: { from: "2026-12-07", to: "2026-12-13" }, count: 1, items: [task("DE-40", { planStart: "2026-12-08", planEnd: "2026-12-09", due: { state: "later", days: 7 }, priority: "low", parentKey: "DE-39" })] },
       { key: "later", label: "ภายหลัง", range: { from: "2026-12-14", to: "" }, count: 0, items: [] },
       { key: "none", label: "ไม่มีวันที่", count: 0, items: [] },
@@ -170,6 +171,13 @@ describe("My Tasks (F / M2)", () => {
     expect(screen.getByRole("link", { name: "งานตัวอย่าง DE-23" })).toHaveAttribute("href", "/work/sample/p/DE/board?issue=DE-23");
     expect(within(screen.getByTestId("task-DE-23")).getByText("เลย 2 วัน")).toBeInTheDocument();
     expect(within(screen.getByTestId("task-DE-40")).getByText("Sub-task")).toBeInTheDocument();
+    // ป้ายบทบาทของฉัน: BA / QA · งานที่เป็น Dev ไม่มีป้าย
+    expect(within(screen.getByTestId("task-DE-50")).getByTitle("ฉันเป็น QA / Reviewer ของงานนี้")).toHaveTextContent("QA");
+    expect(within(screen.getByTestId("task-DE-50")).getByText("BA")).toBeInTheDocument();
+    expect(within(screen.getByTestId("task-DE-23")).queryByText("QA")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /ฉันเป็น QA \/ Reviewer 1/ })).toBeInTheDocument();
+    // Man-Day รวมไม่นับ 5 MD ของ DE-50 (2 + 2 + 2)
+    expect(screen.getByText(/Man-Day รวม 6.0 MD/)).toBeInTheDocument();
     const summary = screen.getByRole("region", { name: "สรุปของฉัน" });
     expect(within(summary).getByText("Overdue").nextSibling).toHaveTextContent("1");
     // ชิปโปรเจกต์จากข้อมูลทั้งแท็บ
@@ -238,5 +246,8 @@ describe("My Tasks (F / M2)", () => {
     expect(weekStartOf("2026-12-02")).toBe("2026-11-30");
     // 4 MD ใน 2 วันทำงาน 2 คน = 1 MD/วัน/คน
     expect(weekLoad([task("X-1", { planStart: "2026-12-01", planEnd: "2026-12-02", estimateMd: 4, assignees: [person("a", "ก"), person("b", "ข")] })], "2026-11-30")).toEqual([0, 1, 1, 0, 0]);
+    // งานที่ฉันเป็นแค่ QA ไม่นับเป็นภาระ · เป็นทั้ง Dev และ QA นับ
+    expect(weekLoad([task("X-2", { planStart: "2026-12-01", planEnd: "2026-12-01", estimateMd: 1, myRoles: ["qa"] })], "2026-11-30")).toEqual([0, 0, 0, 0, 0]);
+    expect(weekLoad([task("X-3", { planStart: "2026-12-01", planEnd: "2026-12-01", estimateMd: 1, myRoles: ["dev", "qa"] })], "2026-11-30")).toEqual([0, 1, 0, 0, 0]);
   });
 });

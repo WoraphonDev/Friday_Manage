@@ -478,6 +478,9 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | POST | `me/notifications/{id}:read` · `:unread` · `:done` · `:snooze` · `me/notifications:read-all` | self | |
 | GET / PUT | `me/notification-prefs` · `me/notification-settings` | self | ต่อ Workspace |
 | GET · POST | `w/announcements` · `w/announcements/{id}/dismiss` | Owner / Admin | แบนเนอร์ประกาศจากทีม Friday ที่ยังไม่ปิด · ปิดได้ต่อคน (O24) |
+| GET · POST | `me/whats-new?workspace` · `me/whats-new:seen` · `me/whats-new/{id}:click` | ทุกบทบาทยกเว้น Guest | มีอะไรใหม่ 90 วัน กรองตามแพ็กเกจ / Feature flag / บทบาท · `unseen` = จุดบนแถบบน · เปิดแผงนับยอดเห็นครั้งเดียวต่อคนต่อรายการ · Workspace ที่ถูกระงับได้ `hidden: true` (A42) |
+| GET · POST | `me/spotlight?workspace` · `me/spotlight/{id}:dismiss` | ทุกบทบาทยกเว้น Guest | Spotlight ที่ยังไม่เห็นไม่เกิน 1 รายการ · ไม่แสดงวันแรกที่สมัคร (A42) |
+| GET · POST | `me/nps-prompt?workspace&mobile&sessionSeconds` · `me/nps` · `me/nps:dismiss` | ตาม `nps_settings` (เริ่มต้น Owner / Admin) | ตัดสินว่าจะถาม (ใช้ครบ N วัน, ซ้ำทุก N วัน, สุ่ม % แบบคงที่ต่อคนต่อรอบ, ไม่ถามช่วงทดลอง / มี Ticket / วันที่เห็น Spotlight / มือถือใช้ไม่ถึง 2 นาที · ≤ 1 ครั้งต่อวัน) · ตอบหรือปิดได้เฉพาะเมื่อถูกถาม (409 `nps_not_prompted`) (A42) |
 | GET | `w/notification-templates/{event}:preview` | Admin | N2 |
 | GET | `w/search` | สมาชิก | ค้นชื่อ, รายละเอียด, คอมเมนต์, ข้อความในไฟล์ · กรองตามสิทธิ์ก่อนตอบ · `#DP-39` และ `@ชื่อ` |
 | CRUD | `w/saved-searches` | self | |
@@ -529,6 +532,8 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | CRUD | `ops/feature-flags` | |
 | GET / POST | `ops/announcements` · `{id}` · `audience` · `test` · `{id}/cancel` | ประกาศถึง Owner / Admin ของ Workspace ที่เลือก · อีเมล / แบนเนอร์ / ทั้งสอง · ตั้งเวลาได้ · เฉพาะ Owner ของทีม (O24) |
 | GET / POST / PATCH | `ops/promotions` · `price-history` · `plans/{code}` · `coupons` · `coupons/{id}` · `{id}/activate` · `{id}/disable` · `{id}/redemptions` | แพ็กเกจและโปรโมชัน (O20) · Owner / การเงิน · แก้แพ็กเกจเป็นเวอร์ชันใหม่ (เปลี่ยนราคาต้องอนุมัติ · ลูกค้าเดิมคงราคาเดิม หรือย้ายรอบถัดไปพร้อมประกาศล่วงหน้า 30 วัน) · คูปองร่าง / เปิด / ปิด · แก้ราคาและเปิดคูปองต้องแตะ key · เกินวงเงินส่วนลดต้องอนุมัติ |
+| GET / POST / PUT | `ops/changelog` · `{id}` · `{id}:hide` | Changelog (O33) · ทุกบทบาทอ่าน (ตาราง + KPI + ยอดเห็น / คลิก) · Owner เขียน / เผยแพร่ทันที / ตั้งเวลา / ซ่อนพร้อมเหตุผล · Spotlight ทีละรายการ (เผยแพร่รายการใหม่ปลดรายการเดิม) · Audit ของทีมทุกครั้ง |
+| GET / PATCH / POST / PUT | `ops/nps/summary?range` · `responses` · `responses/{id}` · `responses/{id}/ticket` · `settings` | NPS (O33) · ตัวเลขรวม: Owner / Support / การเงิน / ผู้ตรวจ · ความเห็นพร้อมชื่อ Workspace, หัวข้อ, บันทึกภายใน, ติดตามแล้ว, เปิด Ticket ติดตาม: Owner / Support · ตั้งค่า (U5) แก้ได้เฉพาะ Owner · งานเบื้องหลังลบคำตอบที่เก่ากว่า 25 เดือน |
 
 ### 3.13 Endpoint ที่โค้ดมีเพิ่ม (รวมจากบันทึกผล · D99 · 8 พ.ย. 2569)
 

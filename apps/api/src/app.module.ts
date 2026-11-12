@@ -14,6 +14,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { AutomationModule } from './automation/automation.module.js';
 import { BillingModule } from './billing/billing.module.js';
 import { CalendarModule } from './calendar/calendar.module.js';
+import { ChangelogModule } from './changelog/changelog.module.js';
 import { ChannelsModule } from './channels/channels.module.js';
 import { CommentsModule } from './comments/comments.module.js';
 import { DueRequestsModule } from './due-requests/due-requests.module.js';
@@ -59,6 +60,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     AutomationModule,
     BillingModule,
     CalendarModule,
+    ChangelogModule,
     ChannelsModule,
     CommentsModule,
     DueRequestsModule,

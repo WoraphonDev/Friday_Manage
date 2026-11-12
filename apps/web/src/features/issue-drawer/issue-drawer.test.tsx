@@ -537,7 +537,8 @@ describe('Task v2 (ผู้ใช้ตัดสิน 2026-11-08)', () => {
     for (const name of ['ผู้รับผิดชอบ', 'แผนงาน', 'หมวดหมู่']) expect(within(props).getByRole('region', { name })).toBeInTheDocument();
     expect(within(props).getByRole('combobox', { name: 'กลุ่ม' })).toBeInTheDocument();
     expect(within(props).getByRole('combobox', { name: 'System Analyst' })).toBeInTheDocument();
-    expect(within(props).getByRole('combobox', { name: 'QA / Reviewer' })).toBeInTheDocument();
+    // QA เลือกได้หลายคนเหมือน Dev (ผู้ใช้ขอ 2026-11-13)
+    expect(within(props).getByRole('button', { name: 'QA / Reviewer' })).toBeInTheDocument();
     expect(within(props).queryByText('Sprint')).not.toBeInTheDocument();
     expect(within(props).queryByText('Tester')).not.toBeInTheDocument();
   });

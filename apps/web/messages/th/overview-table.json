@@ -135,6 +135,7 @@
     "hidden": "สมาชิก"
   },
   "table": {
+    "qaDueAuto": "อัตโนมัติ: วันจบของ Dev + วันเผื่อ QA",
     "title": "Table",
     "search": "ค้นหางาน, รหัส DP-…, FR หรือ SCR",
     "filters": "ตัวกรอง",
@@ -224,6 +225,7 @@
       "size": "Size · MD",
       "start": "Plan Start",
       "end": "Plan End",
+      "qaDue": "QA Due",
       "actualStart": "Actual Start",
       "actualEnd": "Actual End",
       "refs": "FR / Screen",

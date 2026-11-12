@@ -52,6 +52,8 @@ export const CreateIssueBody = z.object({
   /** System Analyst (ผู้ใช้เพิ่ม 2026-11-08) */
   saId: uuid.optional(),
   reviewerId: uuid.optional(),
+  /** QA / Reviewer หลายคน (แทน reviewerId) · ตัวแรกเก็บเป็น reviewerId ด้วย */
+  reviewerIds: z.array(uuid).max(20).refine((ids) => new Set(ids).size === ids.length, 'รายชื่อ QA ซ้ำ').optional(),
   testerId: uuid.optional(),
   size: z.enum(SIZES).optional(),
   estimateMd: manDay.optional(),
@@ -89,6 +91,8 @@ export const PatchIssueBody = z
     baId: uuid.nullable(),
     saId: uuid.nullable(),
     reviewerId: uuid.nullable(),
+    /** แทนที่ทั้งชุด · ตัวแรกเก็บเป็น reviewerId ด้วย */
+    reviewerIds: z.array(uuid).max(20).refine((ids) => new Set(ids).size === ids.length, 'รายชื่อ QA ซ้ำ'),
     testerId: uuid.nullable(),
     /** ย้าย Sub-task ไปอยู่ใต้ Task อื่นใน Module เดียวกัน */
     parentKey: z.string().regex(ISSUE_KEY_PATTERN),
@@ -212,7 +216,8 @@ export class IssuesService {
       const custom = checkCustomValues(defs as CustomFieldDef[], level, input.customFields, { strict, creating: true });
       await this.checkPeople(tx, customPeople(defs as CustomFieldDef[], custom));
       await this.checkInProject(tx, project.id, { moduleId, phaseId, sprintId });
-      await this.checkPeople(tx, [...input.assigneeIds, input.baId, input.saId, input.reviewerId, input.testerId, ...input.watcherIds]);
+      const reviewers = reviewersFrom(input) ?? { reviewerId: null, reviewerIds: [] };
+      await this.checkPeople(tx, [...input.assigneeIds, input.baId, input.saId, ...reviewers.reviewerIds, input.testerId, ...input.watcherIds]);
       await this.checkLabels(tx, project.id, input.labelIds);
 
       const statusId = input.statusId ?? (await this.firstStatus(tx, type.workflowId));
@@ -254,7 +259,7 @@ export class IssuesService {
           priority: input.priority,
           baId: input.baId,
           saId: input.saId,
-          reviewerId: input.reviewerId,
+          ...reviewers,
           testerId: input.testerId,
           reporterId: auth.userId,
           createdBy: auth.userId,
@@ -351,7 +356,7 @@ export class IssuesService {
       const modules = await tx.select().from(s.modules).where(eq(s.modules.projectId, project.id)).orderBy(asc(s.modules.sort), asc(s.modules.id));
       const phases = await tx.select().from(s.phases).where(eq(s.phases.projectId, project.id)).orderBy(asc(s.phases.sort), asc(s.phases.id));
       const sprints = await tx.select().from(s.sprints).where(eq(s.sprints.projectId, project.id)).orderBy(asc(s.sprints.number));
-      const members = await tx.select({ userId: s.projectMembers.userId, role: s.projectMembers.role }).from(s.projectMembers)
+      const members = await tx.select({ userId: s.projectMembers.userId, role: s.projectMembers.role, positions: s.projectMembers.positions }).from(s.projectMembers)
         .innerJoin(s.workspaceMembers, and(eq(s.workspaceMembers.workspaceId, s.projectMembers.workspaceId), eq(s.workspaceMembers.userId, s.projectMembers.userId), eq(s.workspaceMembers.status, 'active')))
         .where(eq(s.projectMembers.projectId, project.id));
       const people = await loadPeople(tx, [...members.map((m) => m.userId), project.ownerUserId]);
@@ -363,7 +368,8 @@ export class IssuesService {
       const screens = await tx.select({ code: s.screens.code, name: s.screens.name }).from(s.screens).where(eq(s.screens.projectId, project.id)).orderBy(asc(s.screens.code));
       const { fieldProfile, customFields } = await this.projects.fieldsOf(tx, project);
       return { modules: modules.map((m) => ({ ...m, phases: phases.filter((p) => p.moduleId === m.id) })), phases, sprints, requirements, screens, fieldProfile, customFields,
-        members: [...people.values()].map((p) => ({ ...p, role: members.find((m) => m.userId === p.id)?.role ?? 'admin' })),
+        // positions ให้ฟอร์มกรองช่อง BA / SA / Dev / QA ตามตำแหน่ง
+        members: [...people.values()].map((p) => ({ ...p, role: members.find((m) => m.userId === p.id)?.role ?? 'admin', positions: members.find((m) => m.userId === p.id)?.positions ?? [] })),
         sizeMdMap: (project.sizeMdMap as Record<string, number> | null) ?? await this.workspaceSizeMap(tx, project.workspaceId), labels,
         issueTypes: issueTypes.map((type) => ({ ...type, statuses: statuses.filter((st) => st.workflowId === type.workflowId) })) };
     });
@@ -546,8 +552,10 @@ export class IssuesService {
       const warnings: Warning[] = [];
       const [type] = await tx.select().from(s.issueTypes).where(eq(s.issueTypes.id, issue.issueTypeId));
       const set: Partial<typeof s.issues.$inferInsert> = {};
-      const copy = ['title', 'description', 'remark', 'priority', 'baId', 'saId', 'reviewerId', 'testerId', 'severity', 'environment', 'details', 'sharedWithGuests', 'size'] as const;
+      const copy = ['title', 'description', 'remark', 'priority', 'baId', 'saId', 'testerId', 'severity', 'environment', 'details', 'sharedWithGuests', 'size'] as const;
       for (const k of copy) if (input[k] !== undefined) (set as Record<string, unknown>)[k] = input[k];
+      const reviewers = reviewersFrom(input);
+      if (reviewers) Object.assign(set, reviewers);
       if (set.remark === '') set.remark = null;
 
       // Sub-task สืบทอด Module / กลุ่มงาน / Sprint จากงานแม่
@@ -558,7 +566,7 @@ export class IssuesService {
       if (input.phaseId !== undefined) set.phaseId = input.phaseId;
       if (input.sprintId !== undefined && input.sprintId !== issue.sprintId) set.sprintId = input.sprintId;
       await this.checkInProject(tx, project.id, { moduleId: set.moduleId, phaseId: set.phaseId, sprintId: set.sprintId });
-      await this.checkPeople(tx, [...(input.assigneeIds ?? []), input.baId, input.saId, input.reviewerId, input.testerId]);
+      await this.checkPeople(tx, [...(input.assigneeIds ?? []), input.baId, input.saId, ...(reviewers?.reviewerIds ?? []), input.testerId]);
 
       // ย้าย Sub-task ไปใต้ Task อื่น: เฉพาะ Task ใน Module เดียวกัน (ผู้ใช้ตัดสิน 2026-11-08) · สืบทอดกลุ่มงาน / Sprint จากแม่ใหม่
       let newParent: Issue | null = null;
@@ -1220,6 +1228,7 @@ export class IssuesService {
         baId: i.baId,
         saId: i.saId,
         reviewerId: i.reviewerId,
+        reviewerIds: i.reviewerIds,
         testerId: i.testerId,
         reporterId: i.reporterId,
         customFields: custom.get(i.id) ?? {},
@@ -1231,7 +1240,7 @@ export class IssuesService {
 /** ค่าของฟิลด์ในชุดฟิลด์จากคำขอสร้างงาน · Priority มีค่าเริ่มต้นเสมอจึงไม่นับเป็นการเขียนฟิลด์ที่ซ่อน */
 function profileValues(input: CreateIssueInput): ProfileValues {
   return {
-    ba: input.baId, sa: input.saId, reviewer: input.reviewerId, size: input.size,
+    ba: input.baId, sa: input.saId, reviewer: reviewersFrom(input)?.reviewerId ?? undefined, size: input.size,
     requirements: input.requirements, screens: input.screens, labels: input.labelIds, remark: input.remark,
   };
 }
@@ -1244,7 +1253,8 @@ function changedProfileValues(issue: Issue, refs: { requirements: string[]; scre
   };
   scalar('ba', input.baId, issue.baId);
   scalar('sa', input.saId, issue.saId);
-  scalar('reviewer', input.reviewerId, issue.reviewerId);
+  const reviewers = reviewersFrom(input);
+  if (reviewers && !sameList(reviewers.reviewerIds, issue.reviewerIds)) out.reviewer = reviewers.reviewerId;
   scalar('priority', input.priority, issue.priority);
   scalar('size', input.size, issue.size);
   scalar('actual', input.actualStart, issue.actualStart);
@@ -1309,14 +1319,31 @@ export function outsideParent(parent: Issue, start?: string | null, end?: string
 /** ข้อมูลอ้างอิงที่อยู่ตารางเชื่อม แก้ผ่าน PATCH แบบแทนทั้งชุด */
 const REF_FIELDS = ['requirements', 'screens', 'labelIds'] as const;
 
-const DIFF_FIELDS = ['title', 'description', 'remark', 'statusId', 'priority', 'moduleId', 'phaseId', 'sprintId', 'baId', 'saId', 'reviewerId', 'testerId', 'size', 'estimateMd', 'planStart', 'planEnd', 'qaEnd', 'actualStart', 'progressPct', 'severity', 'environment', 'sharedWithGuests'] as const;
+const DIFF_FIELDS = ['title', 'description', 'remark', 'statusId', 'priority', 'moduleId', 'phaseId', 'sprintId', 'baId', 'saId', 'testerId', 'size', 'estimateMd', 'planStart', 'planEnd', 'qaEnd', 'actualStart', 'progressPct', 'severity', 'environment', 'sharedWithGuests'] as const;
 
 function diff(a: Issue, b: Issue) {
-  return DIFF_FIELDS.filter((f) => a[f] !== b[f]).map((f) => ({ field: f as string, oldValue: a[f] as unknown, newValue: b[f] as unknown }));
+  const out = DIFF_FIELDS.filter((f) => a[f] !== b[f]).map((f) => ({ field: f as string, oldValue: a[f] as unknown, newValue: b[f] as unknown }));
+  // QA หลายคนเก็บเป็นรายการ · reviewerId (คนแรก) เปลี่ยนตามจึงไม่บันทึกซ้ำ
+  if (!sameList(a.reviewerIds, b.reviewerIds)) out.push({ field: 'reviewerIds', oldValue: a.reviewerIds, newValue: b.reviewerIds });
+  return out;
 }
 
 function sameSet(a: string[], b: string[]) {
   return a.length === b.length && a.every((x) => b.includes(x));
+}
+
+function sameList(a: readonly string[], b: readonly string[]) {
+  return a.length === b.length && a.every((x, i) => b[i] === x);
+}
+
+/**
+ * QA / Reviewer จากคำขอ: reviewerIds (หลายคน) หรือ reviewerId (แบบเดิม) · undefined = ไม่แก้
+ * เก็บทั้งรายการและคนแรกเป็น reviewer_id ให้กฎและการแจ้งเตือนเดิมใช้ต่อได้
+ */
+export function reviewersFrom(input: { reviewerIds?: string[]; reviewerId?: string | null }): { reviewerId: string | null; reviewerIds: string[] } | undefined {
+  if (input.reviewerIds !== undefined) return { reviewerId: input.reviewerIds[0] ?? null, reviewerIds: input.reviewerIds };
+  if (input.reviewerId !== undefined) return { reviewerId: input.reviewerId, reviewerIds: input.reviewerId ? [input.reviewerId] : [] };
+  return undefined;
 }
 
 /** กู้คืนได้ตามค่าถังขยะของ Workspace (30 / 90 วัน · A41) เหมือนไฟล์และโปรเจกต์ */

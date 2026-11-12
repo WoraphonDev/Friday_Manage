@@ -70,7 +70,7 @@ function resolveRange(q: { from?: string; to?: string }) {
 
 /** ชื่อคนที่ Guest เห็น (04-permissions ข้อ 4) */
 const hiddenPerson = { displayName: 'ทีมพัฒนา', initials: '', avatarUrl: null };
-const personFields = new Set(['assigneeIds', 'baId', 'reviewerId', 'testerId', 'createdBy', 'deletedBy', 'ownerUserId']);
+const personFields = new Set(['assigneeIds', 'baId', 'reviewerId', 'reviewerIds', 'testerId', 'createdBy', 'deletedBy', 'ownerUserId']);
 const LIST_LIMIT = 10;
 const ACTIVITY_LIMIT = 10;
 /** กันโปรเจกต์ที่วันที่ในแผนยาวผิดปกติ (เช่น พิมพ์ปีผิด) ไม่ให้คำตอบใหญ่เกิน · 5 ปี */

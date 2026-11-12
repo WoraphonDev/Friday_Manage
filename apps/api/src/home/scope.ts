@@ -4,6 +4,7 @@ import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { dueOf, loadDueRule, PLAIN_DUE, qaDueOf, type DueRule, type DueStage } from '../projects/due-stage.js';
 import { projectAccess, type ProjectAccess } from '../projects/permissions.js';
+import { reviewerList } from '../issues/rules.js';
 
 export type Issue = typeof s.issues.$inferSelect;
 export type Project = typeof s.projects.$inferSelect;
@@ -89,14 +90,14 @@ export async function loadScope(tx: Tx, auth: AuthInfo, tenant: TenantInfo, opts
       if ((assignees.get(i.id) ?? []).includes(userId)) roles.push('dev');
       if (i.baId === userId) roles.push('ba');
       if (i.saId === userId) roles.push('sa');
-      if (i.reviewerId === userId) roles.push('qa');
+      if (reviewerList(i).includes(userId)) roles.push('qa');
       return roles;
     },
     isDone: (i) => doneIds.has(i.statusId),
     isBug: (i) => typeNames.get(i.issueTypeId) === 'Bug',
     due,
     qaDue: (i) => qaDueOf(rule(i), i),
-    lateOwners: (i) => (due(i).stage === 'qa' && i.reviewerId ? [i.reviewerId] : (assignees.get(i.id) ?? [])),
+    lateOwners: (i) => (due(i).stage === 'qa' && reviewerList(i).length ? reviewerList(i) : (assignees.get(i.id) ?? [])),
     anyGuest: accessible.some((p) => access.get(p.id)!.guestViewer),
   };
 }

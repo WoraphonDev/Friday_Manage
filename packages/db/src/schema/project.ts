@@ -164,7 +164,10 @@ export const projectMembers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     role: projectRole().notNull().default('member'),
+    /** ตำแหน่งทั้งหมดต่อกันด้วย ", " (เก็บไว้ให้ที่แสดงผลเดิมใช้ต่อ) · ค่าที่ใช้จริงคือ positions */
     position: text(),
+    /** ตำแหน่งในโปรเจกต์ (ตัวย่อ PM · BA · SA · UX · FE · BE · DEV · QA) · มีได้หลายตำแหน่ง (ผู้ใช้ขอ 2026-11-13) */
+    positions: text().array().notNull().default(sql`'{}'::text[]`),
     /** ชั่วโมงที่แบ่งให้โปรเจกต์นี้ · แสดงเป็น MD (8 ชม. = 1 MD) */
     capacityHoursWeek: smallint(),
     /** ทำงานแทน PM: รับแจ้งเตือนแบบ PM และอนุมัติคำขอเลื่อน Due ได้ โดยไม่ต้องเป็น Admin */

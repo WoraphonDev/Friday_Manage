@@ -124,14 +124,14 @@ export class NotificationFanout implements OnModuleInit {
         // Sub-task เปลี่ยนสถานะ → ผู้รับผิดชอบงานแม่
         if (issue?.parentId) changed.add((await this.audience.assignees([issue.parentId])).get(issue.parentId) ?? [], REASONS.parentAssignee);
         const to = d.to as { name?: unknown; category?: unknown } | undefined;
-        if (!issue?.reviewerId || !(to?.category === 'review' || isReviewStatus(to?.name))) return [changed];
-        // ย้ายเข้า Review → Reviewer ได้ issue.review_requested แทนการแจ้งเปลี่ยนสถานะ
-        const review = new Send('issue.review_requested', { from: d.from, to: d.to }).add([issue.reviewerId], REASONS.reviewer);
-        return [review, changed.drop([issue.reviewerId])];
+        if (!issue?.reviewerIds.length || !(to?.category === 'review' || isReviewStatus(to?.name))) return [changed];
+        // ย้ายเข้า Review → QA / Reviewer ทุกคนได้ issue.review_requested แทนการแจ้งเปลี่ยนสถานะ
+        const review = new Send('issue.review_requested', { from: d.from, to: d.to }).add(issue.reviewerIds, REASONS.reviewer);
+        return [review, changed.drop(issue.reviewerIds)];
       }
 
       case 'issue.review_requested':
-        return [new Send('issue.review_requested').add(ids(d.userIds).length ? ids(d.userIds) : [issue?.reviewerId], REASONS.reviewer)];
+        return [new Send('issue.review_requested').add(ids(d.userIds).length ? ids(d.userIds) : (issue?.reviewerIds ?? []), REASONS.reviewer)];
 
       case 'issue.updated': {
         const fields = ids(d.fields).filter((f) => WATCHED_FIELDS.has(f));

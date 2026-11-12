@@ -6,6 +6,7 @@ import { addTimelineSheet, type TimelineInput, type TimelineRow } from './timeli
 import { dueOf, loadDueRule } from '../projects/due-stage.js';
 import type { ProfileField, ResolvedProfile } from '../projects/field-profile.js';
 import { type CustomFieldDef, displayValue, readCustomValues } from '../issues/custom-values.js';
+import { reviewerList } from '../issues/rules.js';
 
 const s = schema;
 
@@ -29,6 +30,7 @@ export const EXPORT_HEADERS = [
   'Man-Day',
   'Plan Start',
   'Plan End',
+  'QA Due',
   'Actual Start',
   'Actual End',
   'Requirement',
@@ -38,7 +40,7 @@ export const EXPORT_HEADERS = [
   'Remark',
 ] as const;
 type Header = (typeof EXPORT_HEADERS)[number];
-const WIDTH = [10, 11, 22, 18, 44, 13, 10, 18, 18, 24, 18, 7, 9, 12, 12, 12, 12, 18, 16, 16, 40, 32];
+const WIDTH = [10, 11, 22, 18, 44, 13, 10, 18, 18, 24, 24, 7, 9, 12, 12, 12, 12, 12, 18, 16, 16, 40, 32];
 const WIDTH_OF = Object.fromEntries(EXPORT_HEADERS.map((h, i) => [h, WIDTH[i]])) as Record<Header, number>;
 /** คอลัมน์ที่ขึ้นกับชุดฟิลด์ของโปรเจกต์ · ฟิลด์ที่ซ่อนทั้ง Task และ Sub-task ไม่ส่งออก (นำเข้ากลับแล้วไม่แตะค่าเดิม) */
 const HEADER_FIELD: Partial<Record<Header, ProfileField>> = {
@@ -75,6 +77,8 @@ export async function buildPlanXlsx(
   options: { scale?: 'day' | 'week'; today?: string; profile?: ResolvedProfile; customFields?: CustomFieldDef[] } = {},
 ): Promise<Buffer> {
   const shown = (h: Header) => {
+    // QA Due มีเฉพาะโปรเจกต์แยก Dev / QA · โปรเจกต์อื่นได้ไฟล์แบบเดิม
+    if (h === 'QA Due') return !!project.progressSplit;
     const f = HEADER_FIELD[h];
     const rule = f ? options.profile?.fields[f] : undefined;
     return !rule || rule.task !== 'hidden' || rule.subtask !== 'hidden';
@@ -147,11 +151,12 @@ export async function buildPlanXlsx(
       person(i.baId),
       person(i.saId),
       join(devsOf.get(i.id)),
-      person(i.reviewerId),
+      join(reviewerList(i).map((u) => person(u)).filter((x): x is string => !!x)),
       i.size,
       i.estimateMd === null ? null : Number(i.estimateMd),
       asDate(i.planStart),
       asDate(i.planEnd),
+      asDate(i.qaEnd),
       asDate(i.actualStart),
       asDate(i.actualEnd),
       join([...(reqsOf.get(i.id) ?? []), ...(details.requirementText ? [details.requirementText] : [])]),
@@ -214,7 +219,8 @@ const KEY_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { a
 const SUB_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
 
 async function render(d: SheetData): Promise<Buffer> {
-  const headers = d.headers ?? [...EXPORT_HEADERS];
+  // Template เปล่าใช้ได้กับทุกโปรเจกต์ จึงไม่มีคอลัมน์ QA Due (เพิ่มเองได้ ระบบจับคู่จากชื่อหัวคอลัมน์)
+  const headers = d.headers ?? EXPORT_HEADERS.filter((h) => h !== 'QA Due');
   // คอลัมน์ที่ไม่ได้ส่งออกได้เลข 0 · ใช้กับการจัดรูปแบบที่ข้ามคอลัมน์ที่ไม่มี
   const COL = Object.fromEntries(EXPORT_HEADERS.map((h) => [h, headers.indexOf(h) + 1])) as Record<Header, number>;
   const wb = new ExcelJS.Workbook();
@@ -231,7 +237,7 @@ async function render(d: SheetData): Promise<Buffer> {
       row.getCell(COL['Parent Key']).fill = SUB_FILL;
     }
   });
-  for (const c of [COL['Plan Start'], COL['Plan End'], COL['Actual Start'], COL['Actual End']]) if (c) ws.getColumn(c).numFmt = 'yyyy-mm-dd';
+  for (const c of [COL['Plan Start'], COL['Plan End'], COL['QA Due'], COL['Actual Start'], COL['Actual End']]) if (c) ws.getColumn(c).numFmt = 'yyyy-mm-dd';
   ws.columns.forEach((c, n) => (c.width = WIDTH_OF[headers[n] as Header] ?? 18));
   if (d.timeline) addTimelineSheet(wb, d.timeline);
 
@@ -302,10 +308,11 @@ const GUIDE: [string, string, string][] = [
   ['Business Analyst', 'ชื่อที่แสดงของสมาชิก 1 คน', '—'],
   ['System Analyst', 'ชื่อที่แสดงของสมาชิก 1 คน', '—'],
   ['Developer', 'ชื่อสมาชิก หลายคนคั่นด้วย ,', '—'],
-  ['QA / Reviewer', 'ผู้ตรวจงาน 1 คน', '—'],
+  ['QA / Reviewer', 'ชื่อสมาชิก หลายคนคั่นด้วย ,', '—'],
   ['Size', 'XS / S / M / L / XL · ว่างแต่มี Man-Day = คำนวณให้ (งานใหม่)', '—'],
   ['Man-Day', 'จำนวนวันทำงานรวมทั้งทีม (ตัวเลขมากกว่า 0)', '—'],
   ['Plan Start / Plan End', 'วันที่ YYYY-MM-DD · ไม่มีทั้งคู่ = Backlog · Plan End ว่าง = คำนวณจาก Man-Day ตามวันทำงาน', '—'],
+  ['QA Due', 'โปรเจกต์ที่แยก Dev / QA: วันที่ QA ต้องทดสอบเสร็จ YYYY-MM-DD · ว่าง = Plan End + วันเผื่อ QA', '—'],
   ['Actual Start / Actual End', 'วันที่เริ่ม / เสร็จจริง YYYY-MM-DD', '—'],
   ['Requirement', 'รหัส FR-xxx / NFR-xxx หลายค่าคั่นด้วย ,', '—'],
   ['Screen', 'รหัส SCR-xxx หลายค่าคั่นด้วย ,', '—'],

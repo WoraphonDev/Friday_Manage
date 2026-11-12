@@ -9,6 +9,8 @@ export const POSITIONS = [
   { code: "BE", name: "Backend Developer" },
   { code: "DEV", name: "Developer" },
   { code: "QA", name: "QA Engineer" },
+  // CI/CD และ infra (ผู้ใช้ขอ 2026-11-13)
+  { code: "DEVOPS", name: "DevOps Engineer" },
 ] as const;
 
 // ค่าที่เคยพิมพ์เองหรือมาจากหน้าสร้างโปรเจกต์รุ่นก่อน → ตัวย่อ
@@ -18,6 +20,7 @@ const ALIASES: Record<string, string> = {
   "frontend dev": "FE",
   backend: "BE",
   "backend dev": "BE",
+  "dev ops": "DEVOPS",
 };
 
 export const positionLabel = (code: string) => {
@@ -38,4 +41,25 @@ export function toPositionCode(value: string | null | undefined): string {
 export function positionOptions(current: string): { value: string; label: string }[] {
   const known = POSITIONS.map((p) => ({ value: p.code, label: positionLabel(p.code) }));
   return current && !known.some((o) => o.value === current) ? [{ value: current, label: current }, ...known] : known;
+}
+
+/** ตำแหน่งที่ทำงานในช่องคนของงานได้ · Dev รวม Frontend / Backend / DevOps (คนลงมือทำงาน CI/CD, infra) */
+export type PickRole = "ba" | "sa" | "dev" | "qa";
+export const ROLE_POSITIONS: Record<PickRole, string[]> = { ba: ["BA"], sa: ["SA"], dev: ["DEV", "FE", "BE", "DEVOPS"], qa: ["QA"] };
+
+/** ตัวย่อทั้งหมดของสมาชิก (positions ใหม่ หรือ position เดิมข้อความเดียว) */
+export function positionCodes(p: { positions?: string[] | null; position?: string | null }): string[] {
+  const raw = p.positions?.length ? p.positions : (p.position ?? "").split(",");
+  return [...new Set(raw.map(toPositionCode).filter(Boolean))];
+}
+
+/**
+ * รายชื่อในช่องเลือกคนของงานกรองตามตำแหน่ง (ผู้ใช้ขอ 2026-11-13) · คนที่เลือกไว้แล้วยังอยู่ในรายการเสมอ
+ * ยังไม่มีสมาชิกคนไหนตั้งตำแหน่งนี้ = แสดงทุกคน (โปรเจกต์ที่ยังไม่ได้ตั้งตำแหน่งใช้ได้เหมือนเดิม)
+ */
+export function peopleForRole<T extends { id: string; positions?: string[] | null; position?: string | null }>(role: PickRole, people: T[], selected: readonly (string | null | undefined)[] = []): T[] {
+  const codes = ROLE_POSITIONS[role];
+  const match = people.filter((p) => positionCodes(p).some((c) => codes.includes(c)));
+  if (!match.length) return people;
+  return people.filter((p) => match.includes(p) || selected.includes(p.id));
 }

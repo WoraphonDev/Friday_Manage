@@ -20,11 +20,13 @@ export const FIELDS = {
   ba: { label: 'Business Analyst', aliases: ['business analyst', 'ba'] },
   sa: { label: 'System Analyst', aliases: ['system analyst', 'sa'] },
   devs: { label: 'Developer (หลายคน คั่นด้วย ,)', aliases: ['developer', 'developers', 'dev', 'assignee'] },
-  reviewer: { label: 'QA / Reviewer', aliases: ['qa / reviewer', 'reviewer', 'qa', 'tester'] },
+  reviewer: { label: 'QA / Reviewer (หลายคน คั่นด้วย ,)', aliases: ['qa / reviewer', 'reviewer', 'reviewers', 'qa', 'tester'] },
   size: { label: 'Size', aliases: ['size'] },
   estimateMd: { label: 'Man-Day (รวมทั้งทีม)', aliases: ['man-day', 'manday', 'md'] },
   planStart: { label: 'Plan Start', aliases: ['plan start'] },
   planEnd: { label: 'Plan End', aliases: ['plan end'] },
+  /** QA Due ของโปรเจกต์แยก Dev / QA (ว่าง = Plan End + วันเผื่อ QA) */
+  qaEnd: { label: 'QA Due', aliases: ['qa due', 'qa end', 'qa due date'] },
   actualStart: { label: 'Actual Start', aliases: ['actual start'] },
   actualEnd: { label: 'Actual End', aliases: ['actual end'] },
   requirement: { label: 'Requirement (FR / NFR)', aliases: ['requirement', 'requirements', 'fr / nfr', 'fr'] },
@@ -121,7 +123,8 @@ export interface PlanRow {
   requirementText: string | null;
   ba: string | null;
   sa: string | null;
-  reviewer: string | null;
+  /** QA / Reviewer หลายคน (ผู้ใช้ขอ 2026-11-13) */
+  reviewers: string[];
   status: string;
   priority: Priority | null;
   devs: string[];
@@ -130,6 +133,7 @@ export interface PlanRow {
   estimateMd: number | null;
   planStart: string | null;
   planEnd: string | null;
+  qaEnd: string | null;
   actualStart: string | null;
   actualEnd: string | null;
   description: string | null;
@@ -281,8 +285,8 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     const parent = parseKey(get(cells, 'parentKey'));
 
     const dates = Object.fromEntries(
-      (['planStart', 'planEnd', 'actualStart', 'actualEnd'] as const).map((f) => [f, toIsoDate(get(cells, f))]),
-    ) as Record<'planStart' | 'planEnd' | 'actualStart' | 'actualEnd', string | null | undefined>;
+      (['planStart', 'planEnd', 'qaEnd', 'actualStart', 'actualEnd'] as const).map((f) => [f, toIsoDate(get(cells, f))]),
+    ) as Record<'planStart' | 'planEnd' | 'qaEnd' | 'actualStart' | 'actualEnd', string | null | undefined>;
     const mdRaw = get(cells, 'estimateMd');
     const md = mdRaw === null ? null : Number(mdRaw);
     const sizeRaw = get(cells, 'size');
@@ -305,7 +309,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
       requirementText: reqs.filter((x) => !/^N?FR-/i.test(x)).join(', ') || null,
       ba: person(get(cells, 'ba')),
       sa: person(get(cells, 'sa')),
-      reviewer: person(get(cells, 'reviewer')),
+      reviewers: [...new Set(list(get(cells, 'reviewer')).filter((x) => x !== '-' && x !== '—'))],
       status: resolveStatus(statusRaw) ?? 'To do',
       priority: priorityRaw ? (PRIORITY[priorityRaw.toLowerCase()] ?? null) : null,
       devs: list(get(cells, 'devs')),
@@ -314,6 +318,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
       estimateMd: md !== null && Number.isFinite(md) && md > 0 ? md : null,
       planStart: dates.planStart ?? null,
       planEnd: dates.planEnd ?? null,
+      qaEnd: dates.qaEnd ?? null,
       actualStart: dates.actualStart ?? null,
       actualEnd: dates.actualEnd ?? null,
       description: text(get(cells, 'description')),
@@ -328,7 +333,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     if (parent === undefined) blocking.push([`Parent Key "${get(cells, 'parentKey')}" รูปแบบไม่ถูกต้อง`, 'ใช้รูปแบบ DP-12']);
     else if (parent && number !== null && parent.number === number) blocking.push(['Parent Key ชี้มาที่ตัวเอง', 'แก้ไขใน Excel']);
     if (!row.module && !parent) blocking.push(['ไม่มี Module', 'แก้ไขใน Excel']);
-    for (const f of ['planStart', 'planEnd', 'actualStart', 'actualEnd'] as const) {
+    for (const f of ['planStart', 'planEnd', 'qaEnd', 'actualStart', 'actualEnd'] as const) {
       if (dates[f] === undefined) blocking.push([`${FIELDS[f].label} รูปแบบวันที่ไม่ถูกต้อง`, 'แก้ไขใน Excel']);
     }
     if (mdRaw !== null && row.estimateMd === null) blocking.push(['Man-Day ไม่ใช่ตัวเลขที่มากกว่า 0', 'แก้ไขใน Excel']);
@@ -403,7 +408,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     r.devs.forEach((d) => addPerson(d, 'dev'));
     if (r.ba) addPerson(r.ba, 'ba');
     if (r.sa) addPerson(r.sa, 'sa');
-    if (r.reviewer) addPerson(r.reviewer, 'qa');
+    r.reviewers.forEach((q) => addPerson(q, 'qa'));
   }
 
   // คนที่ยังไม่อยู่ในรายชื่อสมาชิก (เตือนครั้งเดียวต่อคน)

@@ -45,6 +45,7 @@
   "summaryBar": "{name}: {start} – {end} · {pct}%",
   "milestone": "Milestone {name} · {date}",
   "late": "เลยกำหนด {days} วัน",
+  "qaBar": "QA ต้องทดสอบเสร็จ {date}",
   "alertLate": "{count} งานเลยกำหนด",
   "alertSlip": "{count} งานช้ากว่า Baseline v{version}",
   "alertIgnored": "ข้าม Dependency {count} รายการที่ผูกกับงานแม่ (วันของงานแม่ตามงานย่อย)",
@@ -55,7 +56,8 @@
     "task": "Task (แถบเข้ม = % เสร็จ)",
     "critical": "Critical path",
     "summary": "Summary (Module / Task แม่)",
-    "baseline": "แผน (Baseline) · แถบหลัก = จริง / คาดการณ์"
+    "baseline": "แผน (Baseline) · แถบหลัก = จริง / คาดการณ์",
+    "qa": "ช่วง QA (หลังวันจบของ Dev ถึง QA Due)"
   },
   "empty": "ยังไม่มีงานที่ลงแผน",
   "emptyHint": "กำหนด Plan Start / Plan End ให้งานเพื่อแสดงบน Gantt",

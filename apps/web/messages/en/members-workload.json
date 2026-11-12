@@ -111,6 +111,8 @@
     "editTitle": "Manage {name}",
     "position": "Position in project",
     "positionNone": "Not set",
+    "positions": "Positions (choose any)",
+    "positionsHint": "Task pickers for BA / SA / Dev / QA list only people with that position · Dev includes FE, BE and DevOps",
     "capacityHours": "Capacity (hrs/week)",
     "pmDeputy": "Acts for the PM",
     "pmDeputyHint": "Gets PM notifications (overdue summary, due date requests, plan changes) and can approve due date requests without being an Admin",

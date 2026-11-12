@@ -45,6 +45,7 @@
   "summaryBar": "{name}: {start} – {end} · {pct}%",
   "milestone": "Milestone {name} · {date}",
   "late": "{days, plural, one {{days} day overdue} other {{days} days overdue}}",
+  "qaBar": "QA due {date}",
   "alertLate": "{count, plural, one {{count} task overdue} other {{count} tasks overdue}}",
   "alertSlip": "{count, plural, one {{count} task behind} other {{count} tasks behind}} Baseline v{version}",
   "alertIgnored": "Skipped {count, plural, one {{count} Dependency} other {{count} Dependencies}} linked to parent tasks (parent dates follow their sub-tasks)",
@@ -55,7 +56,8 @@
     "task": "Task (dark fill = % done)",
     "critical": "Critical path",
     "summary": "Summary (Module / parent task)",
-    "baseline": "Plan (Baseline) · main bar = actual / forecast"
+    "baseline": "Plan (Baseline) · main bar = actual / forecast",
+    "qa": "QA window (after Dev end until QA due)"
   },
   "empty": "No scheduled tasks yet",
   "emptyHint": "Set Plan Start / Plan End on tasks to show them on the Gantt",

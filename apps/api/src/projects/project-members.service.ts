@@ -11,6 +11,7 @@ import { type DomainEvent, EventBus } from '../core/events.js';
 import { requirePerm } from './permissions.js';
 import { checkNewMembers, type ProjectRow, ProjectsService } from './projects.service.js';
 import { openStatus } from '../common/status-category.js';
+import { PositionList, positionsFrom } from './positions.js';
 
 const s = schema;
 const projectRole = z.enum(['admin', 'member', 'viewer']);
@@ -21,11 +22,13 @@ export const AddMemberBody = z.object({
   userId: z.uuid(),
   role: projectRole.default('member'),
   position: position.optional(),
+  /** หลายตำแหน่ง (แทน position) */
+  positions: PositionList.optional(),
   capacityHoursWeek: capacity.optional(),
 });
 
 export const UpdateMemberBody = z
-  .object({ role: projectRole, position: position.nullable(), capacityHoursWeek: capacity.nullable(), pmDeputy: z.boolean() })
+  .object({ role: projectRole, position: position.nullable(), positions: PositionList, capacityHoursWeek: capacity.nullable(), pmDeputy: z.boolean() })
   .partial()
   .refine((v) => Object.keys(v).length > 0, 'ต้องระบุค่าที่จะแก้');
 
@@ -73,7 +76,7 @@ export class ProjectMembersService {
       await checkNewMembers(tx, [input]);
       const [row] = await tx
         .insert(s.projectMembers)
-        .values({ workspaceId: tenant.workspaceId, projectId: project.id, userId: input.userId, role: input.role, position: input.position, capacityHoursWeek: input.capacityHoursWeek })
+        .values({ workspaceId: tenant.workspaceId, projectId: project.id, userId: input.userId, role: input.role, ...positionsFrom(input), capacityHoursWeek: input.capacityHoursWeek })
         .onConflictDoNothing()
         .returning();
       if (!row) throw new AppError(409, 'already_project_member', 'คนนี้เป็นสมาชิกโปรเจกต์อยู่แล้ว');
@@ -100,7 +103,7 @@ export class ProjectMembersService {
       if (input.pmDeputy && current.workspaceRole === 'guest') throw new AppError(409, 'guest_cannot_be_pm_deputy', 'Guest ทำแทน PM ไม่ได้');
       await tx
         .update(s.projectMembers)
-        .set({ role: input.role, position: input.position, capacityHoursWeek: input.capacityHoursWeek, pmDeputy: input.pmDeputy })
+        .set({ role: input.role, ...positionsFrom(input), capacityHoursWeek: input.capacityHoursWeek, pmDeputy: input.pmDeputy })
         .where(and(eq(s.projectMembers.projectId, project.id), eq(s.projectMembers.userId, userId)));
       const member = await this.one(tx, project, userId, tenant);
       if (input.role && input.role !== current.role) {
@@ -214,6 +217,7 @@ export class ProjectMembersService {
         userId: s.projectMembers.userId,
         role: s.projectMembers.role,
         position: s.projectMembers.position,
+        positions: s.projectMembers.positions,
         capacityHoursWeek: s.projectMembers.capacityHoursWeek,
         pmDeputy: s.projectMembers.pmDeputy,
         joinedAt: s.projectMembers.joinedAt,
@@ -261,6 +265,7 @@ export class ProjectMembersService {
       isGuest: r.workspaceRole === 'guest',
       active: r.workspaceStatus === 'active',
       position: r.position,
+      positions: r.positions,
       capacityHoursWeek: r.capacityHoursWeek,
       capacityMdWeek: r.capacityHoursWeek === null ? null : Math.round((r.capacityHoursWeek / HOURS_PER_MD) * 100) / 100,
       pmDeputy: r.pmDeputy,

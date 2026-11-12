@@ -71,6 +71,8 @@ export interface Row {
   /** false = งานของคนอื่น เปลี่ยนสถานะไม่ได้ (04-permissions ข้อ 3.3) */
   canMove?: boolean;
   assignees?: Person[]; ba?: Person | null; sa?: Person | null; reviewer?: Person | null;
+  /** QA / Reviewer หลายคน (คนแรก = reviewer) */
+  reviewers?: Person[];
   requirements?: string[]; screens?: string[]; labels?: { id: string; name: string; color: string | null }[];
   /** ค่า Custom field { [fieldId]: ค่า } (ชุดฟิลด์ของโปรเจกต์) */
   customFields?: Record<string, unknown>;
@@ -88,7 +90,8 @@ export interface SavedView { id: string; name: string; filters: Record<string, s
 export interface Options {
   issueTypes: { name: string; statuses?: { id: string; name: string; category: Cat }[] }[];
   modules: { id: string; name: string }[];
-  members: Person[];
+  /** positions = ตำแหน่งในโปรเจกต์ ใช้กรองช่อง BA / SA / Dev / QA */
+  members: (Person & { positions?: string[] })[];
 }
 
 /** ความคืบหน้าแยกช่วง: Dev = ส่งให้ QA แล้ว · QA = Done (สูตรรวมเหมือนความคืบหน้าเดิม) */

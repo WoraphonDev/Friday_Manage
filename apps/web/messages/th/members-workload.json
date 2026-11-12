@@ -111,6 +111,8 @@
     "editTitle": "จัดการ {name}",
     "position": "ตำแหน่งในโปรเจกต์",
     "positionNone": "ไม่ระบุ",
+    "positions": "ตำแหน่ง (เลือกได้หลายตำแหน่ง)",
+    "positionsHint": "ช่องเลือก BA / SA / Dev / QA ในงานจะแสดงเฉพาะคนที่มีตำแหน่งนั้น · Dev รวม FE, BE และ DevOps",
     "capacityHours": "Capacity (ชม./สัปดาห์)",
     "pmDeputy": "ทำแทน PM",
     "pmDeputyHint": "ได้รับแจ้งเตือนแบบ PM (สรุปงานเลยกำหนด, คำขอเลื่อน Due, การแก้แผน) และอนุมัติคำขอเลื่อน Due ได้ โดยไม่ต้องเป็น Admin",

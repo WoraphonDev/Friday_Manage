@@ -135,6 +135,7 @@
     "hidden": "Member"
   },
   "table": {
+    "qaDueAuto": "Auto: Dev end date + QA buffer",
     "title": "Table",
     "search": "Search tasks, DP-… keys, FR or SCR",
     "filters": "Filters",
@@ -224,6 +225,7 @@
       "size": "Size · MD",
       "start": "Plan Start",
       "end": "Plan End",
+      "qaDue": "QA Due",
       "actualStart": "Actual Start",
       "actualEnd": "Actual End",
       "refs": "FR / Screen",

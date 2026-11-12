@@ -15,7 +15,9 @@ export interface Issue {
   group?: { id: string; name: string } | null;
   /** ย้าย / เปลี่ยนสถานะได้ไหม · false = งานของคนอื่น ดูได้อย่างเดียว (04-permissions ข้อ 3.3) */
   canMove?: boolean;
-  assigneeIds?: string[]; baId?: string | null; saId?: string | null; reviewerId?: string | null; testerId?: string | null; reporterId?: string;
+  assigneeIds?: string[]; baId?: string | null; saId?: string | null; reviewerId?: string | null;
+  /** QA / Reviewer หลายคน (คนแรก = reviewerId) */
+  reviewerIds?: string[]; testerId?: string | null; reporterId?: string;
   size: string | null; estimateMd: number | null; progressPct: number | null;
   planStart: string | null; planEnd: string | null; actualStart: string | null; actualEnd: string | null;
   /** โปรเจกต์แยก Dev / QA: QA Due ที่กรอก (null = อัตโนมัติ) · qaDue / dueDate / dueStage ส่งมาเฉพาะโปรเจกต์ที่แยก */

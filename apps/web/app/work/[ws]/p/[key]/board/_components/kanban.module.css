@@ -46,8 +46,11 @@
 .meta { display:inline-flex; align-items:center; gap:3px; font-size:11px; color:var(--muted); }.avatars { margin-left:auto; }
 .moveActions { gap:4px; }.moveActions button { min-height:26px; padding:0 5px; }.dragHint { margin-left:auto; font-size:10px; color:var(--muted); }
 .reorder { opacity:0; }.card:hover .reorder,.card:focus-within .reorder { opacity:1; }
-/* ปุ่มย้ายการ์ดแสดงเมื่อชี้หรือโฟกัส (Canvas ไม่โชว์ค้าง) */
-.moveActions { display:none; }.card:hover .moveActions,.card:focus-within .moveActions { display:flex; }
+/* ปุ่มย้ายการ์ดแสดงเมื่อชี้หรือโฟกัส (Canvas ไม่โชว์ค้าง) · ค่อย ๆ ขยายและหุบแทนการโผล่ทันที (ผู้ใช้ขอ 2026-11-13)
+   ตอนหุบ: สูง 0 + margin-top ลบเท่า gap ของการ์ดและ padding การ์ดจึงสูงเท่าเดิม · padding 4px เผื่อกรอบโฟกัสของปุ่มไม่ถูกตัด
+   visibility ซ่อนปุ่มจาก Tab ตอนหุบเหมือน display:none เดิม (โฟกัสลิงก์ชื่องานก่อนแล้วแถบจะเปิด) */
+.moveActions { max-height:0; opacity:0; visibility:hidden; overflow:hidden; padding:4px; margin:-12px -4px -4px; }
+.card:hover .moveActions,.card:focus-within .moveActions { max-height:48px; opacity:1; visibility:visible; margin-top:-4px; }
 .module { display:inline-flex; align-items:center; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:500; }
 .colAdd { margin-left:auto; width:26px; height:26px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; color:var(--foreground-soft); }.colAdd:hover { background:var(--subtle); }
 .wipOver { background:var(--danger-soft); color:var(--danger-text); }
@@ -73,4 +76,10 @@
   .cardTitle { order:-1; font-size:15px; }.cardMeta .avatars { order:-1; margin-left:0; }.priority,.parent { display:none; }.card:hover .moveActions,.card:focus-within .moveActions,.moveActions { display:none; }.mobileColumns { align-items:center; }.mobileFilterToggle { flex:none; margin-left:auto; position:sticky; right:0; background:var(--card); }.cardTags { font-size:13px; }.phase { display:none; }.dragHint,.reorder,.boardHint { display:none; }.moveActions button { min-height:36px; padding:0 8px; }.mobileMove { display:inline-flex; margin-left:auto; }.mobileHint { display:block; text-align:center; }.mobileWip { display:block; padding:8px 12px; margin:0 0 8px; color:var(--danger-text); background:var(--danger-soft); border-radius:10px; font-size:13px; }
   .laneTitle { margin-top:8px; }.addCard { margin:4px 0; }.emptyColumn { padding:24px 4px; }
 }
-@media (prefers-reduced-motion:no-preference) { .card { transition:border-color .15s,box-shadow .15s; } .column { transition:background-color .15s; } }
+@media (prefers-reduced-motion:no-preference) {
+  .card { transition:border-color .15s,box-shadow .15s; } .column { transition:background-color .15s; }
+  /* หุบ: จางออกก่อนแล้วค่อยหุบ · visibility เปลี่ยนตอนจบ ปุ่มจึงไม่หายกลางทาง */
+  .moveActions { transition:max-height .22s ease .04s, margin-top .22s ease .04s, opacity .14s ease, visibility 0s linear .26s; }
+  /* เปิด: ขยายก่อนแล้วปุ่มค่อยจางเข้า */
+  .card:hover .moveActions,.card:focus-within .moveActions { transition:max-height .22s ease, margin-top .22s ease, opacity .18s ease .06s, visibility 0s; }
+}

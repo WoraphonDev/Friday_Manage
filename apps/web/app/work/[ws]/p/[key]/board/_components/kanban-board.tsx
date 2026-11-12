@@ -25,31 +25,62 @@ type DropTarget = { lane: string; column: string; before?: string };
 /**
  * FLIP: หลังทุก render การ์ด ([data-flip]) ที่ตำแหน่งเปลี่ยนจะเลื่อนจากที่เดิมไปที่ใหม่แทนการกระโดด
  * ตำแหน่งวัดเทียบกับแถวคอลัมน์ ([data-flip-root]) รวมระยะเลื่อนแนวนอน การเลื่อนหน้าจอจึงไม่ทำให้การ์ดขยับเอง
+ *
+ * แอนิเมชันใหม่เริ่มจากจุดที่การ์ดอยู่บนจอจริงตอนนั้น (ตำแหน่งเดิม + ระยะที่แอนิเมชันก่อนหน้ายังเลื่อนค้างอยู่)
+ * เพราะย้ายไม่สำเร็จจะคืนการ์ดระหว่างที่การ์ดยังเลื่อนเข้าคอลัมน์ใหม่ และการ์ดที่ข้ามคอลัมน์เป็น element ใหม่
+ * ถ้าเริ่มจากตำแหน่งในหน้าอย่างเดียว การ์ดจะกระโดดไปปลายทางก่อนแล้วค่อยเลื่อนกลับ
  */
-function useFlip(root: RefObject<HTMLElement | null>) {
-  const last = useRef(new Map<string, { x: number; y: number }>());
+function useFlip(root: RefObject<HTMLElement | null>, returning: RefObject<number>) {
+  const last = useRef(new Map<string, Flip>());
   useLayoutEffect(() => {
     const board = root.current;
     if (!board) return;
+    const back = returning.current > performance.now();
+    let usedBack = false;
     const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const next = new Map<string, { x: number; y: number }>();
+    const next = new Map<string, Flip>();
     board.querySelectorAll<HTMLElement>("[data-flip]").forEach((node) => {
       const scope = node.closest<HTMLElement>("[data-flip-root]");
       if (!scope || !node.offsetParent) return; // การ์ดที่ซ่อนระหว่างลาก
+      const id = node.dataset.flip!;
+      const prev = last.current.get(id);
+      const offset = remaining(prev);
+      // element เดิมยังมี transform ของแอนิเมชันที่เล่นอยู่ ต้องหักออกจึงได้ตำแหน่งในหน้าจริง
+      const inherited = prev?.node === node ? offset : { x: 0, y: 0 };
       const box = node.getBoundingClientRect();
       const base = scope.getBoundingClientRect();
-      const pos = { x: box.left - base.left + scope.scrollLeft, y: box.top - base.top };
-      const id = node.dataset.flip!;
-      next.set(id, pos);
-      const prev = last.current.get(id);
-      if (reduce || !prev || typeof node.animate !== "function") return;
-      const dx = prev.x - pos.x;
-      const dy = prev.y - pos.y;
-      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
-      node.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }], { duration: 220, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" });
+      const pos = { x: box.left - base.left + scope.scrollLeft - inherited.x, y: box.top - base.top - inherited.y };
+      if (reduce || !prev || typeof node.animate !== "function") { next.set(id, { ...pos, node }); return; }
+      // ตำแหน่งไม่เปลี่ยนและเป็น element เดิม: ปล่อยแอนิเมชันเดิมเล่นต่อจนจบ
+      if (prev.node === node && Math.abs(prev.x - pos.x) < 1 && Math.abs(prev.y - pos.y) < 1) { next.set(id, { ...prev, ...pos }); return; }
+      prev.animation?.cancel();
+      const from = { x: prev.x + offset.x - pos.x, y: prev.y + offset.y - pos.y };
+      if (Math.abs(from.x) < 1 && Math.abs(from.y) < 1) { next.set(id, { ...pos, node }); return; }
+      // ย้ายไม่สำเร็จ: เลื่อนกลับช้ากว่าปกติให้ตามทันว่าการ์ดกลับไปที่ไหน (ผู้ใช้ขอ 2026-11-13)
+      // การ์ดอื่นที่เลื่อนหลบใช้จังหวะเดียวกัน ช่องว่างจึงเปิดพร้อมการ์ดที่กลับมา ไม่เด้งหลบไปรอก่อน
+      if (back) usedBack = true;
+      const animation = node.animate([{ transform: `translate(${from.x}px, ${from.y}px)` }, { transform: "translate(0, 0)" }], back
+        ? { duration: RETURN_MS, easing: "cubic-bezier(0.33, 0, 0.2, 1)" }
+        : { duration: 220, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" });
+      next.set(id, { ...pos, node, from, animation });
     });
     last.current = next;
+    // ล้างหลังวนครบทุกการ์ด ทุกการ์ดในรอบที่คืนการ์ดจึงใช้จังหวะช้าเหมือนกัน
+    if (usedBack) returning.current = 0;
   });
+}
+
+/** ระยะเวลาเลื่อนการ์ดกลับที่เดิมเมื่อย้ายไม่สำเร็จ (ย้ายปกติ 220ms) */
+const RETURN_MS = 550;
+
+/** ตำแหน่งในหน้า + แอนิเมชัน FLIP ล่าสุดของการ์ด (from = ระยะเริ่มของแอนิเมชันนั้น) */
+type Flip = { x: number; y: number; node: HTMLElement; from?: { x: number; y: number }; animation?: Animation };
+
+/** ระยะที่แอนิเมชันยังเลื่อนการ์ดค้างอยู่ตอนนี้ · progress หลัง easing แล้ว และอ่านได้แม้ element ถูกถอดออกไปแล้ว */
+function remaining(flip?: Flip) {
+  const progress = flip?.animation?.effect?.getComputedTiming().progress;
+  if (!flip?.from || progress === null || progress === undefined) return { x: 0, y: 0 };
+  return { x: flip.from.x * (1 - progress), y: flip.from.y * (1 - progress) };
 }
 
 export function KanbanBoard(props: BoardProps) {
@@ -83,7 +114,9 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   const landedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const dropped = useRef(false);
   const boardRef = useRef<HTMLElement>(null);
-  useFlip(boardRef);
+  // เวลาที่ยังถือว่ากำลังคืนการ์ดที่ย้ายไม่สำเร็จ (performance.now) · หมดเวลาแล้วไม่ค้างไปใช้กับการย้ายครั้งหลัง ถ้าไม่มีการ์ดขยับจริง
+  const returning = useRef(0);
+  useFlip(boardRef, returning);
   const [picker, setPicker] = useState<BoardCard | null>(null);
   const [confirmation, setConfirmation] = useState<{ intent: MoveIntent; count: number; undoAction: boolean } | null>(null);
   // แจ้งผลการย้ายเป็น toast มุมขวาบน: ซ้อนกันได้ อันใหม่อยู่บน หายเอง (ผู้ใช้ขอ 2026-11-08)
@@ -167,7 +200,10 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
       setNotice({ message: [message, ...result.warnings.map((w) => w.message)].join(" · "), undo: undoAction ? undefined : () => undoMove(intent, result.version) });
       await cache.invalidateQueries({ queryKey: boardKey });
     } catch (error) {
-      if (snapshot && local) cache.setQueryData(boardQueryKey, snapshot);
+      if (snapshot && local) {
+        returning.current = performance.now() + 1000;
+        cache.setQueryData(boardQueryKey, snapshot);
+      }
       // กดยกเลิกในกล่องยืนยันกลาง (เช่น Acceptance criteria ยังไม่ครบ): คืนการ์ดเงียบ ๆ ไม่แสดงข้อผิดพลาด
       if (isConfirmCancelled(error)) return;
       if (error instanceof ApiError && error.code === "subtasks_incomplete" && error.details.confirmable === true) {

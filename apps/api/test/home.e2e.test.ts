@@ -70,10 +70,11 @@ describe('GET w/my-issues', () => {
     return c.get(`${team.ws}/my-issues${qs}`);
   };
 
+  // มอบหมายให้ฉัน นับทุกบทบาท: R-รอ Review (lead เป็น QA / Reviewer) อยู่ในแท็บนี้ด้วย
   it('tab=assigned & group=due: แบ่งเลยกำหนด / วันนี้ / สัปดาห์นี้ / สัปดาห์หน้า / ภายหลัง / ไม่มีวันที่ / เสร็จวันนี้', async () => {
     const r = await get('?tab=assigned&group=due');
     expect(r.status, JSON.stringify(r.body)).toBe(200);
-    expect(r.body.groups.map((g: { key: string; count: number }) => [g.key, g.count])).toEqual([['late', 1], ['today', 1], ['this_week', 1], ['next_week', 1], ['later', 1], ['none', 1], ['done_today', 1]]);
+    expect(r.body.groups.map((g: { key: string; count: number }) => [g.key, g.count])).toEqual([['late', 1], ['today', 1], ['this_week', 2], ['next_week', 1], ['later', 1], ['none', 1], ['done_today', 1]]);
     expect(titles(r, 'late')).toEqual(['L-เลยกำหนด']);
     expect(titles(r, 'done_today')).toEqual(['D-เสร็จวันนี้']);
     expect(JSON.stringify(r.body)).not.toContain('เสร็จเมื่อวาน');
@@ -81,9 +82,12 @@ describe('GET w/my-issues', () => {
     expect(g('this_week').range).toEqual({ from: '2026-12-03', to: '2026-12-06' });
     expect(g('next_week').range).toEqual({ from: '2026-12-07', to: '2026-12-13' });
     expect(g('later').range).toEqual({ from: '2026-12-14', to: '' });
-    expect(r.body).toMatchObject({ today: '2026-12-02', tab: 'assigned', group: 'due', total: 6 });
-    expect(r.body.counts).toEqual({ assigned: 6, reviewer: 1, watching: 1, created: 7 });
+    expect(r.body).toMatchObject({ today: '2026-12-02', tab: 'assigned', group: 'due', total: 7 });
+    expect(r.body.counts).toEqual({ assigned: 7, reviewer: 1, watching: 1, created: 7 });
+    expect(titles(r, 'this_week')).toEqual(['R-รอ Review', 'W-สัปดาห์นี้']);
+    expect(g('this_week').items.map((i: { myRoles: string[] }) => i.myRoles)).toEqual([['qa'], ['dev']]);
     const late = g('late').items[0];
+    expect(late.myRoles).toEqual(['dev']);
     expect(late).toMatchObject({ key: expect.stringMatching(/^DP-\d+$/), project: { key: 'DP' }, status: { category: 'todo' }, planEnd: '2026-11-27', due: { state: 'overdue', days: 5 } });
     expect(g('today').items[0].due).toEqual({ state: 'today', days: 0 });
     expect(g('done_today').items[0].due.state).toBe('done');
@@ -107,13 +111,14 @@ describe('GET w/my-issues', () => {
 
   it('group=status เรียงตามหมวดและลำดับของ Workflow · group=project · กรอง assignee/โปรเจกต์', async () => {
     const byStatus = await get('?tab=assigned&group=status');
-    expect(byStatus.body.groups.map((g: { key: string }) => g.key)).toEqual(['To do', 'In progress', 'Done']);
+    expect(byStatus.body.groups.map((g: { key: string }) => g.key)).toEqual(['To do', 'In progress', 'Review', 'Done']);
+    expect(titles(byStatus, 'Review')).toEqual(['R-รอ Review']);
     expect(titles(byStatus, 'In progress')).toEqual(['W-สัปดาห์นี้']);
     expect(titles(byStatus, 'Done')).toEqual(['D-เสร็จวันนี้']);
     expect(titles(byStatus, 'To do')).toEqual(['L-เลยกำหนด', 'T-วันนี้', 'N-สัปดาห์หน้า', 'X-ภายหลัง', 'Z-ไม่มีวัน']);
 
     const byProject = await get('?tab=assigned&group=project');
-    expect(byProject.body.groups.map((g: { key: string; count: number }) => [g.key, g.count])).toEqual([['DP', 7]]);
+    expect(byProject.body.groups.map((g: { key: string; count: number }) => [g.key, g.count])).toEqual([['DP', 8]]);
     expect((await get('?tab=assigned&projectKey=nope')).status).toBe(404);
     expect((await get(`?tab=created&assignee=${team.devId}`)).body.groups.flatMap((g: { items: unknown[] }) => g.items)).toHaveLength(1); // lead สร้างและมอบให้ dev: R-รอ Review
   });
@@ -144,6 +149,28 @@ describe('GET w/my-issues', () => {
     const lead = await get('?tab=assigned&group=project');
     expect(lead.body.groups.map((g: { key: string }) => g.key)).toEqual(['DP', 'HM2']);
     expect((await get('?tab=assigned&projectKey=hm2')).body.total).toBe(1);
+  });
+
+  it('BA / SA ที่ไม่ได้เป็นผู้รับผิดชอบเห็นงานในแท็บมอบหมายให้ฉัน พร้อมบทบาทของตัวเอง', async () => {
+    await seed();
+    const ba = await issue('B-dev เป็น BA', { end: '2026-12-08', assignee: [team.leadId] });
+    const qa = await issue('Q-dev เป็น BA และ QA', { end: '2026-12-09', assignee: [team.leadId], reviewer: team.devId });
+    const sa = await issue('S-dev เป็น SA เสร็จแล้ว', { end: '2026-12-01', assignee: [team.leadId], status: 'Done', completedAt: '2026-11-20T03:00:00Z' });
+    await t.owner.query('UPDATE issues SET ba_id = $2 WHERE id = ANY($1)', [[ba.id, qa.id], team.devId]);
+    await t.owner.query('UPDATE issues SET sa_id = $2 WHERE id = $1', [sa.id, team.devId]);
+    const r = await get('?tab=assigned&group=due', team.dev);
+    const items = r.body.groups.flatMap((g: { items: Array<{ title: string; myRoles: string[] }> }) => g.items);
+    const roles = Object.fromEntries(items.map((i: { title: string; myRoles: string[] }) => [i.title, i.myRoles]));
+    expect(roles['B-dev เป็น BA']).toEqual(['ba']);
+    expect(roles['Q-dev เป็น BA และ QA']).toEqual(['ba', 'qa']);
+    // งานที่เสร็จนานแล้วไม่โผล่ ไม่ว่าจะเป็นบทบาทใด
+    expect(roles).not.toHaveProperty('S-dev เป็น SA เสร็จแล้ว');
+    expect(r.body.counts.assigned).toBe(6);
+    expect(r.body.counts.reviewer).toBe(1);
+    // ตัวกรอง assignee ยังหมายถึงผู้รับผิดชอบ (Dev) เท่านั้น
+    const byDev = await get(`?tab=assigned&assignee=${team.devId}`, team.dev);
+    expect(byDev.body.groups.flatMap((g: { items: Array<{ title: string }> }) => g.items.map((i) => i.title))).not.toContain('B-dev เป็น BA');
+    await t.owner.query('DELETE FROM issues WHERE id = ANY($1)', [[ba.id, qa.id, sa.id]]);
   });
 
   it('Guest เห็นเฉพาะงานที่แชร์ให้ ไม่เห็น Bug และไม่เห็นชื่อคน', async () => {
@@ -212,7 +239,8 @@ describe('GET w/home', () => {
     expect(s.dueToday.keys).toHaveLength(2);
     expect(s.overdue).toMatchObject({ team: 2, mine: 1 });
     expect(s.overdue.byAssignee).toEqual(expect.arrayContaining([{ person: expect.objectContaining({ displayName: 'Mick' }), count: 1 }, { person: expect.objectContaining({ displayName: 'Kaijeaw' }), count: 1 }]));
-    expect(s.dueThisWeek).toMatchObject({ team: 5, mine: 2, until: '2026-12-04' });
+    // ของฉันนับงานที่เป็น QA / Reviewer ด้วย (H-R รอ Review)
+    expect(s.dueThisWeek).toMatchObject({ team: 5, mine: 3, until: '2026-12-04' });
     expect(s.inProgress).toEqual({ mine: 1 });
     expect(s.waitingReview).toBe(1);
     expect(s.unreadMentions).toEqual({ count: 1, latestFrom: 'Kaijeaw' });
@@ -233,7 +261,7 @@ describe('GET w/home', () => {
   it('โปรเจกต์ของฉันพร้อมความคืบหน้า Overdue งานของฉัน Go-live และ Health', async () => {
     const r = await home();
     expect(r.body.projects).toHaveLength(1);
-    expect(r.body.projects[0]).toMatchObject({ key: 'DP', name: 'Development Plan', goliveDate: '2026-12-25', daysToGolive: 23, overdue: 2, myTasks: 3, health: { level: expect.stringMatching(/on_track|at_risk|off_track/) } });
+    expect(r.body.projects[0]).toMatchObject({ key: 'DP', name: 'Development Plan', goliveDate: '2026-12-25', daysToGolive: 23, overdue: 2, myTasks: 4, health: { level: expect.stringMatching(/on_track|at_risk|off_track/) } });
     expect(r.body.projects[0].progressPct).toBeGreaterThanOrEqual(0);
     expect(r.body.projects[0].progressPct).toBeLessThanOrEqual(100);
   });

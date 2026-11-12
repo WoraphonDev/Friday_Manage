@@ -117,7 +117,7 @@
     "estSum": "Man-Day รวม {md} MD",
     "tabs": {
       "assigned": "มอบหมายให้ฉัน",
-      "reviewer": "ฉันเป็น Reviewer",
+      "reviewer": "ฉันเป็น QA / Reviewer",
       "watching": "Watching",
       "created": "ฉันสร้าง"
     },
@@ -214,6 +214,14 @@
       "later": "ภายหลัง",
       "none": "ไม่มีวันที่",
       "done_today": "เสร็จวันนี้"
+    },
+    "roles": {
+      "ba": "BA",
+      "sa": "SA",
+      "qa": "QA",
+      "baLong": "ฉันเป็น Business Analyst ของงานนี้",
+      "saLong": "ฉันเป็น System Analyst ของงานนี้",
+      "qaLong": "ฉันเป็น QA / Reviewer ของงานนี้"
     }
   }
 }

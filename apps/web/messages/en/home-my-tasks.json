@@ -117,7 +117,7 @@
     "estSum": "Total {md} MD",
     "tabs": {
       "assigned": "Assigned to me",
-      "reviewer": "I'm Reviewer",
+      "reviewer": "I'm QA / Reviewer",
       "watching": "Watching",
       "created": "Created by me"
     },
@@ -214,6 +214,14 @@
       "later": "Later",
       "none": "No date",
       "done_today": "Done today"
+    },
+    "roles": {
+      "ba": "BA",
+      "sa": "SA",
+      "qa": "QA",
+      "baLong": "I'm the Business Analyst on this task",
+      "saLong": "I'm the System Analyst on this task",
+      "qaLong": "I'm the QA / Reviewer on this task"
     }
   }
 }

@@ -7,6 +7,7 @@ import { projectAccess, type ProjectAccess } from '../projects/permissions.js';
 export type Issue = typeof s.issues.$inferSelect;
 export type Project = typeof s.projects.$inferSelect;
 export type Status = typeof s.workflowStatuses.$inferSelect;
+export type IssueRole = 'dev' | 'ba' | 'sa' | 'qa';
 
 export interface Scope {
   projects: Project[];
@@ -18,6 +19,8 @@ export interface Scope {
   typeNames: Map<string, string>;
   assignees: Map<string, string[]>;
   keyOf: (i: Issue) => string;
+  /** บทบาทของผู้ใช้ในงาน: Dev (ผู้รับผิดชอบ), BA, SA, QA / Reviewer · ว่าง = ไม่เกี่ยวข้อง */
+  rolesOf: (i: Issue, userId: string) => IssueRole[];
   isDone: (i: Issue) => boolean;
   isBug: (i: Issue) => boolean;
   /** Guest ที่เป็น Viewer ของโปรเจกต์ใดโปรเจกต์หนึ่ง */
@@ -70,6 +73,14 @@ export async function loadScope(tx: Tx, auth: AuthInfo, tenant: TenantInfo, opts
     typeNames,
     assignees,
     keyOf: (i) => `${projectKey.get(i.projectId)}-${i.number}`,
+    rolesOf: (i, userId) => {
+      const roles: IssueRole[] = [];
+      if ((assignees.get(i.id) ?? []).includes(userId)) roles.push('dev');
+      if (i.baId === userId) roles.push('ba');
+      if (i.saId === userId) roles.push('sa');
+      if (i.reviewerId === userId) roles.push('qa');
+      return roles;
+    },
     isDone: (i) => doneIds.has(i.statusId),
     isBug: (i) => typeNames.get(i.issueTypeId) === 'Bug',
     anyGuest: accessible.some((p) => access.get(p.id)!.guestViewer),

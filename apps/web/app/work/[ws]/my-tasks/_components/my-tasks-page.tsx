@@ -40,6 +40,11 @@ export function dropTarget(group: TaskGroup): string | null {
   return d.toISOString().slice(0, 10);
 }
 
+/** Man-Day ของงานเป็นของ Dev · งานที่ฉันเป็นแค่ BA / SA / QA จึงไม่นับเป็นภาระของฉัน */
+export function countsMyMd(item: TaskItem) {
+  return !item.myRoles?.length || item.myRoles.includes("dev");
+}
+
 /** Man-Day ต่อวัน (จ.–ศ.) ของสัปดาห์นี้: Man-Day ÷ วันทำงานในช่วงงาน ÷ จำนวนผู้รับผิดชอบ (ไม่หักวันหยุดบริษัท) */
 export function weekLoad(items: TaskItem[], weekStart: string) {
   const day = (i: number) => new Date(Date.parse(`${weekStart}T12:00:00Z`) + i * 86_400_000).toISOString().slice(0, 10);
@@ -53,7 +58,7 @@ export function weekLoad(items: TaskItem[], weekStart: string) {
   };
   return Array.from({ length: 5 }, (_, i) => day(i)).map((d) =>
     items.reduce((sum, i) => {
-      if (isClosedCategory(i.status.category) || !i.estimateMd || !i.planStart || !i.planEnd || d < i.planStart || d > i.planEnd) return sum;
+      if (isClosedCategory(i.status.category) || !countsMyMd(i) || !i.estimateMd || !i.planStart || !i.planEnd || d < i.planStart || d > i.planEnd) return sum;
       return sum + i.estimateMd / Math.max(1, working(i.planStart, i.planEnd)) / Math.max(1, i.assignees.length);
     }, 0),
   );
@@ -127,7 +132,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
   if (mobile) return <MobileTasks data={data} ws={ws} name={me.displayName} year={year} tab={tab} setTab={(k) => { setTab(k); setProject(""); }} busy={busy} onToggle={(item, done) => void setDone(item, done)} />;
   const everything = data.groups.flatMap((g) => g.items);
   const open = everything.filter((i) => !isClosedCategory(i.status.category));
-  const estSum = open.reduce((n, i) => n + (i.estimateMd ?? 0) / Math.max(1, i.assignees.length), 0);
+  const estSum = open.filter(countsMyMd).reduce((n, i) => n + (i.estimateMd ?? 0) / Math.max(1, i.assignees.length), 0);
   const count = (k: string) => data.groups.find((g) => g.key === k)?.count ?? 0;
   const byProject = (all.data?.groups ?? [])
     .map((g) => {
@@ -306,7 +311,7 @@ function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
                 <input type="checkbox" checked={done} disabled={busy === i.key} aria-label={t(done ? "markUndone" : "markDone", { title: i.title })} onChange={(e) => onToggle(i, e.target.checked)} />
                 <Link href={taskHref(ws, i.project.key, i.key)} className={styles.mItemMain}>
                   <span className={styles.mItemTitle} style={done ? { textDecoration: "line-through", color: "var(--muted)" } : undefined}>{i.title}</span>
-                  <span className={styles.mItemMeta}><span className={styles.mType} aria-hidden="true" />{i.key} · <span className={styles.mProjDot} style={{ background: i.project.color ?? FALLBACK_PROJECT_COLOR }} />{i.project.name}</span>
+                  <span className={styles.mItemMeta}><span className={styles.mType} aria-hidden="true" />{i.key} · <span className={styles.mProjDot} style={{ background: i.project.color ?? FALLBACK_PROJECT_COLOR }} />{i.project.name}<RoleBadges item={i} /></span>
                 </Link>
                 <span className={`${styles.mDue} ${due.cls}`}>{due.text}</span>
               </div>
@@ -318,6 +323,14 @@ function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
       {first && <Link className={styles.fab} href={`/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(first.key)}?new=1`} aria-label={t("newTask")}><Plus size={26} aria-hidden="true" /></Link>}
     </div>
   );
+}
+
+/** ป้ายบทบาทของฉันในงาน (BA / SA / QA) · Dev เป็นค่าปกติจึงไม่แสดง */
+function RoleBadges({ item }: { item: TaskItem }) {
+  const t = useTranslations("home-my-tasks.tasks.roles");
+  const roles = (item.myRoles ?? []).filter((r) => r !== "dev");
+  if (!roles.length) return null;
+  return <>{roles.map((r) => <span key={r} title={t(`${r}Long`)}><Badge tone="purple">{t(r)}</Badge></span>)}</>;
 }
 
 function TaskRow({ item, ws, year, busy, onToggle, onMove, onDragStart }: { item: TaskItem; ws: string; year: YearFormat; busy: boolean; onToggle: (done: boolean) => void; onMove: () => void; onDragStart: () => void }) {
@@ -345,6 +358,7 @@ function TaskRow({ item, ws, year, busy, onToggle, onMove, onDragStart }: { item
           <span style={{ width: 8, height: 8, borderRadius: 2, background: item.project.color ?? FALLBACK_PROJECT_COLOR }} />
           <span>{item.key}</span><span>·</span><span>{item.project.name}</span>
           {item.parentKey && <Badge>{t("subtask")}</Badge>}
+          <RoleBadges item={item} />
         </div>
       </div>
       <span className="hideMobile"><StatusBadge category={item.status.category} name={item.status.name} /></span>

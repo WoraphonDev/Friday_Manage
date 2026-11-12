@@ -7,6 +7,9 @@ import { CreateIssueBody, IssuesService } from '../issues/issues.service.js';
 import { addDays } from './calendar.js';
 import { ProjectsService, type SampleProjectBody } from './projects.service.js';
 
+/** ชื่อโปรเจกต์ตัวอย่าง · Onboarding checklist (A43) ใช้แยกโปรเจกต์ตัวอย่างออกจากการนับ */
+export const SAMPLE_PROJECT_NAME = 'ร้านกาแฟออนไลน์ (ตัวอย่าง)';
+
 /** ข้อมูลสมมติทั้งหมด (ร้านกาแฟออนไลน์) · ห้ามใช้ข้อมูลจริงของที่ทำงาน */
 const MODULES = ['หน้าร้าน', 'ตะกร้าและชำระเงิน', 'หลังบ้านร้าน'];
 const ISSUES: { module: number; title: string; size: 'XS' | 'S' | 'M' | 'L'; startIn: number; parent?: number; type?: 'Bug'; done?: boolean }[] = [
@@ -38,7 +41,7 @@ export class SampleProjectService {
     const startDate = today();
     const goliveDate = addDays(startDate, 90);
     const project = await this.projects.create(auth, tenant, {
-      name: 'ร้านกาแฟออนไลน์ (ตัวอย่าง)',
+      name: SAMPLE_PROJECT_NAME,
       key,
       clientName: 'ลูกค้าสมมติ',
       description: 'โปรเจกต์ตัวอย่างสำหรับทดลองใช้งาน · ข้อมูลทั้งหมดเป็นข้อมูลสมมติ ลบทิ้งได้เมื่อไม่ใช้แล้ว',

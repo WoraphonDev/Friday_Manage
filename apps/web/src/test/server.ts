@@ -27,6 +27,10 @@ export const handlers = [
   http.get("*/api/v1/me/nps-prompt", () =>
     HttpResponse.json({ ask: false, reason: "not_sampled" }),
   ),
+  // Onboarding checklist (W25) · ปุ่มท้าย Sidebar เรียกจาก shell · ค่าเริ่มต้น = ไม่แสดง (Workspace เก่า)
+  http.get("*/api/v1/w/:ws/onboarding", () =>
+    HttpResponse.json({ scope: "workspace", version: 1, eligible: false }),
+  ),
   http.get("*/api/v1/w/:ws/projects", () =>
     HttpResponse.json({ items: projects }),
   ),

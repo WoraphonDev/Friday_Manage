@@ -14,6 +14,8 @@ import announcements from "../../messages/th/announcements.json";
 import announcementsEn from "../../messages/en/announcements.json";
 import whatsNew from "../../messages/th/whats-new.json";
 import whatsNewEn from "../../messages/en/whats-new.json";
+import onboardingChecklist from "../../messages/th/onboarding-checklist.json";
+import onboardingChecklistEn from "../../messages/en/onboarding-checklist.json";
 
 // เพิ่ม namespace ต่องานที่นี่ แยกข้อความของแต่ละหน้าออกจากไฟล์กลาง
 // inbox-bell, search-palette: กระดิ่งและ Command palette อยู่ใน shell ทุกหน้า
@@ -32,6 +34,8 @@ export const messages = {
   announcements,
   // whats-new: ปุ่มมีอะไรใหม่ / Spotlight / NPS (W24) อยู่ใน shell
   "whats-new": whatsNew,
+  // onboarding-checklist: ปุ่มเริ่มต้นใช้งานท้าย Sidebar และเมนูบัญชี (W25) อยู่ใน shell
+  "onboarding-checklist": onboardingChecklist,
 };
 
 /** ข้อความ EN ของ namespace เดียวกัน (W21) · test ใช้ผ่าน renderWithProviders({ locale: "en" }) */
@@ -44,4 +48,5 @@ export const messagesEn = {
   suspension: suspensionEn,
   announcements: announcementsEn,
   "whats-new": whatsNewEn,
+  "onboarding-checklist": onboardingChecklistEn,
 };

@@ -14,6 +14,7 @@ import { bkkHour, projectHref, taskHref } from "./shared";
 import { useIsMobile } from "@/lib/use-mobile";
 import styles from "./hmt.module.css";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
+import { OnboardingHomeCard } from "@/features/onboarding-checklist/home-card";
 
 const HEALTH_TONE = { on_track: "green", at_risk: "amber", off_track: "red", unknown: "neutral" } as const;
 const HEALTH_ORDER: Record<Health, number> = { off_track: 0, at_risk: 1, on_track: 2, unknown: 3 };
@@ -61,6 +62,8 @@ export function HomePage({ ws }: { ws: string }) {
         </div>
       </header>
       <div className={styles.body}>
+        {/* W25 · V1: การ์ดเริ่มต้นใช้งานบนสุดของ Home (Guest ไม่เห็น) */}
+        <OnboardingHomeCard ws={ws} role={workspace.role} />
         <Kpis data={d} ws={ws} year={year} />
         <div className={styles.cols}>
           <div className={styles.colMain}>
@@ -138,7 +141,7 @@ function useDecide(ws: string) {
 function MobileHome({ data, ws, greeting, year }: { data: HomeData; ws: string; greeting: string; year: YearFormat }) {
   const t = useTranslations("home-my-tasks.home");
   const tk = useTranslations("home-my-tasks.home.kpi");
-  const { openSearch } = useWorkspace();
+  const { openSearch, workspace } = useWorkspace();
   const { decide, error } = useDecide(ws);
   const s = data.summary;
   const my = `/work/${encodeURIComponent(ws)}/my-tasks`;
@@ -153,6 +156,7 @@ function MobileHome({ data, ws, greeting, year }: { data: HomeData; ws: string; 
         <button type="button" className={styles.mIcon} aria-label={t("search")} onClick={() => openSearch?.()}><Search size={22} aria-hidden="true" /></button>
       </header>
       <div className={styles.mBody}>
+        <OnboardingHomeCard ws={ws} role={workspace.role} />
         <div className={styles.mKpis}>
           <Link className={styles.mKpi} href={my}><span>{tk("overdue")}</span><b style={{ color: "var(--danger-text)" }}>{s.overdue.team}</b></Link>
           <Link className={styles.mKpi} href={my}><span>{t("mobileToday")}</span><b style={{ color: "var(--warning-text)" }}>{s.dueToday.mine}</b></Link>

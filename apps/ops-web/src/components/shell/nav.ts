@@ -53,7 +53,8 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
       { key: "entitlements", href: "/entitlements", built: true, roles: ["owner", "finance", "engineer"] },
       { key: "announce", href: "/announcements", built: true, roles: ["owner"] },
       { key: "changelog", href: "/changelog", built: true, roles: ALL },
-      { key: "onboarding", roles: ["owner", "support"] },
+      // O34: การเงินและผู้ตรวจอ่านอย่างเดียว · วิศวกรไม่เห็น
+      { key: "onboarding", href: "/onboarding", built: true, roles: ["owner", "support", "finance", "auditor"] },
     ],
   },
   {

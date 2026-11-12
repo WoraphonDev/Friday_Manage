@@ -481,6 +481,9 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET · POST | `me/whats-new?workspace` · `me/whats-new:seen` · `me/whats-new/{id}:click` | ทุกบทบาทยกเว้น Guest | มีอะไรใหม่ 90 วัน กรองตามแพ็กเกจ / Feature flag / บทบาท · `unseen` = จุดบนแถบบน · เปิดแผงนับยอดเห็นครั้งเดียวต่อคนต่อรายการ · Workspace ที่ถูกระงับได้ `hidden: true` (A42) |
 | GET · POST | `me/spotlight?workspace` · `me/spotlight/{id}:dismiss` | ทุกบทบาทยกเว้น Guest | Spotlight ที่ยังไม่เห็นไม่เกิน 1 รายการ · ไม่แสดงวันแรกที่สมัคร (A42) |
 | GET · POST | `me/nps-prompt?workspace&mobile&sessionSeconds` · `me/nps` · `me/nps:dismiss` | ตาม `nps_settings` (เริ่มต้น Owner / Admin) | ตัดสินว่าจะถาม (ใช้ครบ N วัน, ซ้ำทุก N วัน, สุ่ม % แบบคงที่ต่อคนต่อรอบ, ไม่ถามช่วงทดลอง / มี Ticket / วันที่เห็น Spotlight / มือถือใช้ไม่ถึง 2 นาที · ≤ 1 ครั้งต่อวัน) · ตอบหรือปิดได้เฉพาะเมื่อถูกถาม (409 `nps_not_prompted`) (A42) |
+| GET | `w/onboarding` | สมาชิก (ไม่ใช่ Guest) | Onboarding checklist (A43 · V1–V4) · Owner / Admin ได้ 6 ขั้นของ Workspace · Member ได้ 3 ขั้นส่วนตัว · คืนขั้น สถานะ ตัวเลขประกอบ ขั้นถัดไป ลิงก์ปุ่ม และสถานะซ่อน · `eligible: false` = Workspace / สมาชิกก่อนเปิดฟีเจอร์ที่ใช้จริงแล้ว · ขั้นตรวจจากข้อมูลจริงและบันทึกครั้งแรกไม่ย้อนกลับ (ขั้นแก้ในโค้ด `apps/api/src/onboarding/steps.ts`) |
+| POST | `w/onboarding:hide` · `:show` · `:never` · `:complete-seen` | สมาชิก (ไม่ใช่ Guest) | ต่อคน · `:show` ล้างทั้งซ่อนและไม่ต้องแสดงอีก · `:complete-seen` = เห็นการ์ดครบแล้ว (V4 แสดงครั้งเดียว) |
+| POST | `w/onboarding:task-opened` | สมาชิก (ไม่ใช่ Guest) | ปุ่ม "เปิดงาน" ในรายการของสมาชิก (V3) · `{ issueKey }` ต้องเป็นงานที่ได้รับมอบหมาย ไม่งั้น 404 |
 | GET | `w/notification-templates/{event}:preview` | Admin | N2 |
 | GET | `w/search` | สมาชิก | ค้นชื่อ, รายละเอียด, คอมเมนต์, ข้อความในไฟล์ · กรองตามสิทธิ์ก่อนตอบ · `#DP-39` และ `@ชื่อ` |
 | CRUD | `w/saved-searches` | self | |
@@ -534,6 +537,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET / POST / PATCH | `ops/promotions` · `price-history` · `plans/{code}` · `coupons` · `coupons/{id}` · `{id}/activate` · `{id}/disable` · `{id}/redemptions` | แพ็กเกจและโปรโมชัน (O20) · Owner / การเงิน · แก้แพ็กเกจเป็นเวอร์ชันใหม่ (เปลี่ยนราคาต้องอนุมัติ · ลูกค้าเดิมคงราคาเดิม หรือย้ายรอบถัดไปพร้อมประกาศล่วงหน้า 30 วัน) · คูปองร่าง / เปิด / ปิด · แก้ราคาและเปิดคูปองต้องแตะ key · เกินวงเงินส่วนลดต้องอนุมัติ |
 | GET / POST / PUT | `ops/changelog` · `{id}` · `{id}:hide` | Changelog (O33) · ทุกบทบาทอ่าน (ตาราง + KPI + ยอดเห็น / คลิก) · Owner เขียน / เผยแพร่ทันที / ตั้งเวลา / ซ่อนพร้อมเหตุผล · Spotlight ทีละรายการ (เผยแพร่รายการใหม่ปลดรายการเดิม) · Audit ของทีมทุกครั้ง |
 | GET / PATCH / POST / PUT | `ops/nps/summary?range` · `responses` · `responses/{id}` · `responses/{id}/ticket` · `settings` | NPS (O33) · ตัวเลขรวม: Owner / Support / การเงิน / ผู้ตรวจ · ความเห็นพร้อมชื่อ Workspace, หัวข้อ, บันทึกภายใน, ติดตามแล้ว, เปิด Ticket ติดตาม: Owner / Support · ตั้งค่า (U5) แก้ได้เฉพาะ Owner · งานเบื้องหลังลบคำตอบที่เก่ากว่า 25 เดือน |
+| GET / PUT / POST | `ops/onboarding?days=7\|30\|90` · `ops/onboarding/workspaces/{id}` · `{id}/followup` · `{id}/email` | Onboarding checklist และลูกค้าที่ติด (O34) · อ่าน: Owner / Support / การเงิน / ผู้ตรวจ · ติดตามและส่งอีเมล: Owner / Support · วิศวกรไม่เห็น · อีเมลช่วยเหลือถึง Owner 1 ครั้งต่อ 7 วัน ไม่ส่งถึงรายชื่อไม่ส่ง ลง Audit ของลูกค้าและทีม |
 
 ### 3.13 Endpoint ที่โค้ดมีเพิ่ม (รวมจากบันทึกผล · D99 · 8 พ.ย. 2569)
 
@@ -601,5 +605,6 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | `member.invited` · `member.joined` | | ผู้เชิญ, PM |
 | `import.completed` | นำเข้าเสร็จ | ผู้นำเข้า |
 | `report.weekly` | ตามรอบที่ตั้ง | ตาม `report_schedule` |
+| `onboarding.step_done` · `onboarding.completed` | ขั้นใน Onboarding checklist เสร็จครั้งแรก · ครบทุกขั้น (A43 · data.scope = workspace / member) | — (บันทึก `product_events` ในธุรกรรมเดียวกัน) |
 
 ผู้ที่ทำ action เองไม่ได้รับแจ้ง · ทุกข้อความที่ส่งออกนอกแอปเขียน `notification_delivery` · Safe mode ส่งแค่หัวข้อ + ลิงก์

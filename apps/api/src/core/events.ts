@@ -29,7 +29,10 @@ export type EventType =
   | 'import.completed'
   | 'report.weekly'
   | 'leave.created'
-  | 'ci.failed';
+  | 'ci.failed'
+  // A43 · Onboarding checklist (ไม่มี projectId จึงไม่เข้า Inbox / Realtime)
+  | 'onboarding.step_done'
+  | 'onboarding.completed';
 
 export interface DomainEvent {
   type: EventType;

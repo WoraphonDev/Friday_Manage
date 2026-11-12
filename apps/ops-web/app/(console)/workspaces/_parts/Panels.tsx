@@ -1,5 +1,6 @@
 "use client";
 
+import { OnboardingCard } from "../../onboarding/OnboardingCard";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -85,6 +86,8 @@ export function OverviewPanel({ ws }: { ws: Overview }) {
           </div>
         ))}
       </Card>
+      {/* O34 · V7: ใต้การ์ดคะแนนสุขภาพ · แสดงเฉพาะ Workspace ที่ยังไม่ครบ */}
+      <OnboardingCard workspaceId={ws.id} />
       <Card title={t("overview.billingTitle")}>
         <table className="tbl">
           <tbody>

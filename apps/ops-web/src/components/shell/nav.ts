@@ -71,8 +71,9 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
       { key: "support", href: "/support", built: true, roles: ["owner", "support"], badge: ["ticketsUnassigned"] },
       { key: "sessions", href: "/support/sessions", built: true, roles: ["owner", "support"] },
       { key: "supportSettings", href: "/support/settings", built: true, roles: ["owner", "support"] },
-      { key: "help", roles: ["owner", "support"] },
-      { key: "bugs", roles: ["owner", "support", "engineer"] },
+      // ทุกบทบาทเปิดดูได้ (อ่านอย่างเดียว) · เขียน / เผยแพร่เฉพาะ Owner และ Support (O35)
+      { key: "help", href: "/help", built: true, roles: ALL },
+      { key: "bugs", href: "/bugs", built: true, roles: ["owner", "support", "engineer"] },
     ],
   },
   {

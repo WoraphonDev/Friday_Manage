@@ -30,7 +30,8 @@ export class TenantGuard implements CanActivate {
  * ให้ลูกค้าแก้ปัญหาที่ทำให้ถูกระงับและเอาข้อมูลของตัวเองออกได้เสมอ
  */
 // announcements: ประกาศจากทีม Friday ต้องอ่านและปิดได้แม้ถูกระงับ (มักเป็นเรื่องที่ลูกค้าต้องรู้)
-const SUSPENDED_ALLOWED = /^(billing(\/|$)|usage$|exports(\/|$)|data-requests(\/|$)|support-access$|cancellation-feedback$|events$|announcements(\/|$))/;
+// support: Ticket เป็นช่องทางเดียวที่ลูกค้าที่ถูกระงับติดต่อทีม Friday ได้ (A44)
+const SUSPENDED_ALLOWED = /^(billing(\/|$)|usage$|exports(\/|$)|data-requests(\/|$)|support-access$|support(\/|$)|cancellation-feedback$|events$|announcements(\/|$))/;
 const READ = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 /**

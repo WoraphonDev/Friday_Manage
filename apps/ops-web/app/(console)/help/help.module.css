@@ -1,0 +1,335 @@
+/* ศูนย์ช่วยเหลือ (O35 · บอร์ด 19 / 19b) · สีจาก token ใน styles/tokens.css เท่านั้น */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+.filters .search {
+  margin-left: auto;
+  min-width: 200px;
+}
+
+.colArticle {
+  width: 34%;
+  min-width: 240px;
+}
+.colCategory {
+  width: 120px;
+}
+.articleLink {
+  font-weight: 600;
+  color: var(--foreground);
+  text-decoration: none;
+}
+.articleLink:hover,
+.articleLink:focus-visible {
+  color: var(--primary-text);
+  text-decoration: underline;
+}
+.slug {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.missList {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.missList li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.missList li > div {
+  flex: 1;
+  min-width: 0;
+}
+.missList b {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- ตัวแก้บทความ (19b) */
+
+.editorHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+}
+.editorHead .crumbs {
+  font-size: 13px;
+  color: var(--muted);
+}
+.editorHead .crumbs a {
+  color: inherit;
+}
+.editorHead h1 {
+  margin: 2px 0 0;
+  font-size: 22px;
+}
+.editorActions {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.saved {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+@media (max-width: 640px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.bodyBox {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--card);
+}
+.bodyBox:focus-within {
+  border-color: var(--focus);
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.toolbar button {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.toolbar button:hover {
+  background: var(--hover);
+  color: var(--foreground);
+}
+.bodyText {
+  display: block;
+  width: 100%;
+  min-height: 360px;
+  border: 0;
+  outline: none;
+  resize: vertical;
+  padding: 12px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  background: transparent;
+  color: var(--foreground);
+}
+.preview {
+  padding: 4px 12px 12px;
+  min-height: 360px;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.radioCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+.radioCard input {
+  margin-top: 3px;
+  accent-color: var(--primary);
+}
+.radioCard b {
+  display: block;
+  font-weight: 600;
+}
+.radioOn {
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+}
+.routes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.versions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.versions li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.versions li > span {
+  flex: 1;
+}
+
+/* ---------------------------------------------------------------- จัดการหมวด (X9) */
+
+.catList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+.catList li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+}
+.catList li:first-child {
+  border-top: 0;
+}
+.catList li[data-dragging="true"] {
+  background: var(--primary-soft);
+}
+.catList .grip {
+  color: var(--faint);
+  cursor: grab;
+}
+.catList .name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+.catList .count {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- Markdown */
+
+.md {
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.md h2 {
+  font-size: 17px;
+  margin: 18px 0 6px;
+}
+.md h3 {
+  font-size: 15px;
+  margin: 14px 0 4px;
+}
+.md p {
+  margin: 8px 0;
+}
+.md ul,
+.md ol {
+  margin: 8px 0;
+  padding-left: 22px;
+}
+.md code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 13px;
+  background: var(--subtle);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.md a {
+  color: var(--primary-text);
+}
+.mdImg {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+  margin: 8px 0;
+}
+.appLink {
+  color: var(--primary-text);
+  font-weight: 600;
+}
+.callout {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+}
+.callout > :first-child {
+  margin-top: 0;
+}
+.callout > :last-child {
+  margin-bottom: 0;
+}
+.callout_info {
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
+}
+.callout_tip {
+  background: var(--success-soft);
+  border-color: var(--success-border);
+}
+.callout_warning {
+  background: var(--warning-soft);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}

@@ -13,6 +13,8 @@ import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import type { OpenSession } from "@/lib/types";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
+import { DevCard } from "../bugs/_components/DevCard";
+import { EscalateDialog } from "../bugs/_components/EscalateDialog";
 import { CannedPicker, MyPresence, SettingsLink, TeamNow } from "./settings/_parts/Live";
 import { CATEGORIES, type Dur } from "./settings/_parts/types";
 
@@ -76,11 +78,12 @@ const invalidate = (cache: ReturnType<typeof useQueryClient>) => void cache.inva
 /** หน้า 6 · Support (Support.dc.html): คิว Ticket · รายละเอียดและข้อความ · ผลงานรายคน · การเข้าช่วยเหลือ */
 export function SupportPage() {
   const t = useTranslations("ss.support");
+  const tb = useTranslations("bugs.support");
   const params = useSearchParams();
   const router = useRouter();
   const me = useMe().data;
   const [queue, setQueue] = useState<"mine" | "none" | "all">("all");
-  const [status, setStatus] = useState<"active" | "solved" | "closed">("active");
+  const [status, setStatus] = useState<"active" | "pending_dev" | "solved" | "closed">("active");
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
   const search = useDeferredValue(q.trim());
@@ -140,9 +143,10 @@ export function SupportPage() {
             }))}
           />
           <div className="row">
-            {(["active", "solved", "closed"] as const).map((v) => (
+            {(["active", "pending_dev", "solved", "closed"] as const).map((v) => (
               <Chip key={v} pressed={status === v} onClick={() => setStatus(v)}>
-                {t(`statusFilter.${v}`)}
+                {/* O36 · แท็บ "รอทีมพัฒนา" (Ticket สถานะ pending_dev) */}
+                {v === "pending_dev" ? tb("pendingDev") : t(`statusFilter.${v}`)}
               </Chip>
             ))}
           </div>
@@ -335,7 +339,8 @@ function TicketView({ id }: { id: string }) {
           </form>
         )}
       </section>
-      <aside className="card" aria-label={t("support.customer")}>
+      <div className="stack" style={{ alignSelf: "start" }}>
+        <aside className="card" aria-label={t("support.customer")}>
         <h3 className="card-title">{customer?.name ?? t("support.customer")}</h3>
         {customer ? (
           <table className="tbl">
@@ -387,9 +392,13 @@ function TicketView({ id }: { id: string }) {
             {t("support.openCustomer")}
           </Link>
         )}
-      </aside>
+        </aside>
+        {/* O36 · T8 งานของทีมพัฒนาที่ผูกกับ Ticket นี้ */}
+        <DevCard ticketId={id} number={k.number} />
+      </div>
       {modal === "assign" && <AssignDialog id={id} onClose={() => setModal(null)} />}
-      {modal === "escalate" && <EscalateDialog id={id} number={k.number} onClose={() => setModal(null)} />}
+      {/* O36 · T3 ปรับ: สร้าง / ผูกงานใน FM (ยังไม่ตั้งค่า = ส่งต่อแบบเดิม) */}
+      {modal === "escalate" && <EscalateDialog ticket={{ id, number: k.number, subject: k.subject }} onClose={() => setModal(null)} />}
       {modal === "solve" && <SolveDialog id={id} number={k.number} onClose={() => setModal(null)} />}
     </div>
   );
@@ -452,56 +461,6 @@ function AssignDialog({ id, onClose }: { id: string; onClose: () => void }) {
   );
 }
 
-/** T3 · ส่งต่อระดับ 2 (ทีมพัฒนา) */
-function EscalateDialog({ id, number, onClose }: { id: string; number: number; onClose: () => void }) {
-  const t = useTranslations("ss.t3");
-  const tc = useTranslations("common.dialog");
-  const toast = useToast();
-  const cache = useQueryClient();
-  const [severity, setSeverity] = useState<"S1" | "S2" | "S3" | "S4">("S2");
-  const [affected, setAffected] = useState("");
-  const [steps, setSteps] = useState("");
-  const [requestId, setRequestId] = useState("");
-  const m = useMutation({
-    mutationFn: () =>
-      api.post(`/tickets/${id}/escalate`, {
-        severity,
-        steps: steps.trim(),
-        ...(affected.trim() ? { affected: affected.trim() } : {}),
-        ...(requestId.trim() ? { requestId: requestId.trim() } : {}),
-      }),
-    onSuccess: () => (toast(t("done")), invalidate(cache), onClose()),
-  });
-  return (
-    <Modal open onOpenChange={(o) => !o && onClose()} title={t("title", { n: number })} description={t("desc")}>
-      <form className="dialog-body" onSubmit={(e) => (e.preventDefault(), steps.trim().length >= 10 && m.mutate())}>
-        <div className="field">
-          <label htmlFor="t3-sev">{t("severity")}</label>
-          <select id="t3-sev" className="input" value={severity} onChange={(e) => setSeverity(e.target.value as typeof severity)}>
-            {(["S1", "S2", "S3", "S4"] as const).map((s) => (
-              <option key={s} value={s}>
-                {t(`sev.${s}`)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <Input label={t("affected")} value={affected} onChange={(e) => setAffected(e.target.value)} />
-        <Textarea label={t("steps")} value={steps} onChange={(e) => setSteps(e.target.value)} hint={tc("reasonRequired", { min: 10 })} />
-        <Input label={t("requestId")} className="mono" value={requestId} onChange={(e) => setRequestId(e.target.value)} />
-        <p className="muted small">{t("notify")}</p>
-        <Notice tone="warn">{t("pii")}</Notice>
-        <InlineError error={m.error} />
-        <div className="dialog-actions">
-          <Button onClick={onClose}>{tc("cancel")}</Button>
-          <Button type="submit" variant="primary" disabled={steps.trim().length < 10 || m.isPending}>
-            {t("submit")}
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
 /** T5 · ปิดเรื่องพร้อมสาเหตุจริง */
 function SolveDialog({ id, number, onClose }: { id: string; number: number; onClose: () => void }) {
   const t = useTranslations("ss.t5");
@@ -511,6 +470,10 @@ function SolveDialog({ id, number, onClose }: { id: string; number: number; onCl
   const [outcome, setOutcome] = useState("");
   const [cause, setCause] = useState("");
   const [csat, setCsat] = useState(true);
+  // O35 · X8: ติ๊กแล้วเปิดหน้าศูนย์ช่วยเหลือพร้อม Modal สร้างบทความจากเรื่องนี้หลังปิดเรื่องสำเร็จ
+  const th = useTranslations("help.solve");
+  const router = useRouter();
+  const [kb, setKb] = useState(false);
   const m = useMutation({
     mutationFn: () =>
       api.post(`/tickets/${id}/solve`, {
@@ -518,7 +481,7 @@ function SolveDialog({ id, number, onClose }: { id: string; number: number; onCl
         cause: cause.trim(),
         sendCsat: csat,
       }),
-    onSuccess: () => (toast(t("done")), invalidate(cache), onClose()),
+    onSuccess: () => (toast(t("done")), invalidate(cache), onClose(), kb && router.push(`/help?fromTicket=${id}`)),
   });
   const ok = outcome.trim().length >= 3 && cause.trim().length >= 3;
   return (
@@ -529,6 +492,10 @@ function SolveDialog({ id, number, onClose }: { id: string; number: number; onCl
         <label className="check">
           <input type="checkbox" checked={csat} onChange={(e) => setCsat(e.target.checked)} />
           <span>{t("csat")}</span>
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={kb} onChange={(e) => setKb(e.target.checked)} />
+          <span>{th("kb")}</span>
         </label>
         <p className="muted small">{t("reopen")}</p>
         <InlineError error={m.error} />

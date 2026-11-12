@@ -30,7 +30,7 @@ describe('ระงับแบบอ่านอย่างเดียว', (
     expect(blocked.body.error).toMatchObject({ code: 'workspace_suspended', details: { mode: 'read_only' } });
     expect((await team.lead.patch(team.ws, { name: 'เปลี่ยนชื่อ' })).body.error.code).toBe('workspace_suspended');
     // ทางที่ยังใช้ได้: ไม่ติด workspace_suspended (อาจติดเงื่อนไขอื่นของ endpoint เอง)
-    for (const r of [await team.lead.post(`${team.ws}/exports`), await team.lead.put(`${team.ws}/billing/profile`, {}), await team.lead.post(`${team.ws}/events`, { events: [] }), await team.lead.post(`${team.ws}/announcements/00000000-0000-4000-8000-000000000001/dismiss`)]) {
+    for (const r of [await team.lead.post(`${team.ws}/exports`), await team.lead.put(`${team.ws}/billing/profile`, {}), await team.lead.post(`${team.ws}/events`, { events: [] }), await team.lead.post(`${team.ws}/announcements/00000000-0000-4000-8000-000000000001/dismiss`), await team.lead.get(`${team.ws}/support/tickets`), await team.lead.post(`${team.ws}/support/tickets`, {})]) {
       expect(r.body?.error?.code, JSON.stringify(r.body)).not.toBe('workspace_suspended');
     }
   });
@@ -48,6 +48,8 @@ describe('ระงับแบบปิดทั้งหมด', () => {
     expect(lead.body.suspension).toEqual({ mode: 'full', message: 'ผิดข้อตกลงการใช้งาน กรุณาติดต่อทีม Friday' });
     expect((await team.lead.get(`${team.ws}/projects/${team.key}`)).body.error.code).toBe('workspace_suspended');
     expect((await team.lead.get(`${team.ws}/billing`)).body?.error?.code).not.toBe('workspace_suspended');
+    // Owner ที่ถูกระงับทั้งหมดยังเปิด / อ่าน Ticket ถึงทีม Friday ได้ (A44)
+    expect((await team.lead.get(`${team.ws}/support/tickets`)).body?.error?.code).not.toBe('workspace_suspended');
     expect((await team.lead.get(`${team.ws}/usage`)).body?.error?.code).not.toBe('workspace_suspended');
     expect((await team.lead.get(`${team.ws}/exports`)).status).toBe(200);
   });

@@ -35,7 +35,10 @@ export type EventType =
   | 'onboarding.completed'
   // A41 · ถังขยะ
   | 'project.restored_from_trash'
-  | 'trash.purged';
+  | 'trash.purged'
+  // A44 · ศูนย์ช่วยเหลือ / Ticket ในแอป (ไม่มี projectId)
+  | 'support.ticket_created'
+  | 'support.replied';
 
 export interface DomainEvent {
   type: EventType;

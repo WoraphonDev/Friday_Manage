@@ -8,10 +8,12 @@ import { AuthService } from './auth/auth.service.js';
 import { BillingModule } from './billing/billing.module.js';
 import { ChangelogModule } from './changelog/changelog.module.js';
 import { DbModule } from './db.js';
+import { DevBridgeModule } from './dev-bridge/dev-bridge.module.js';
 import { DeliveriesModule } from './deliveries/deliveries.module.js';
 import { EntitlementsModule } from './entitlements/entitlements.module.js';
 import { ErrorFilter } from './errors.js';
 import { FlagsModule } from './flags/flags.module.js';
+import { HelpModule } from './help/help.module.js';
 import { LegalModule } from './legal/legal.module.js';
 import { MailModule } from './mail.module.js';
 import { MetricsModule } from './metrics/metrics.module.js';
@@ -37,6 +39,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     DbModule, MailModule, PushModule, ApprovalsModule, StaffModule, MetricsModule,
     WorkspacesModule, UsersModule, SupportModule, SystemModule,
     PaymentsModule, BillingModule, PrivacyModule, LegalModule, FlagsModule, EntitlementsModule, DeliveriesModule, MobileModule, AnnouncementsModule, PromotionsModule, ChangelogModule, OnboardingModule, RestoreModule,
+    HelpModule, DevBridgeModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, { provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_FILTER, useClass: ErrorFilter }],

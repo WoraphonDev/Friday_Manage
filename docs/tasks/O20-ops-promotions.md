@@ -22,7 +22,7 @@
 - [x] หน้าตรงกับ Canvas ที่ 1440 px · ที่ 390 px ใช้งานได้
 - [x] ครบทุกสถานะตาม M1 · ซ่อนปุ่มตามบทบาท · Audit ทุกการแก้
 - [x] e2e test ของ API (ข้อมูลสมมติ) + component test ด้วย MSW · typecheck / test / build ผ่าน
-- [ ] build และ deploy Docker ในเครื่องตาม CLAUDE.md แล้วตรวจ flow ผ่าน container
+- [x] build และ deploy Docker ในเครื่องตาม CLAUDE.md แล้วตรวจ flow ผ่าน container
 
 ## ยังต้องตัดสินใจ
 
@@ -89,3 +89,5 @@ API ลูกค้า (W22)
 - ส่วนลดของคูปองแบบจำนวนเงินเป็นยอดต่อรอบบิล (รายปีก็หักยอดเดียวกันต่อใบ)
 
 Test: `packages/db` 138 ผ่าน (นับตาราง 147) · `apps/api/test/coupons.e2e.test.ts` 6 ข้อ + ทั้งแพ็กเกจ 685 ผ่าน · `apps/ops-api/test/promotions.e2e.test.ts` 7 ข้อ + ทั้งแพ็กเกจ 162 ผ่าน · `apps/ops-web` หน้าโปรโมชัน 11 ข้อ (MSW) ทั้งแพ็กเกจ 154 ผ่าน · `apps/web` หน้าชำระเงิน 5 ข้อใหม่ (MSW) ทั้งแพ็กเกจ 552 ผ่าน
+
+**ตรวจผ่าน Docker (12 พ.ย. 2569 · main b2cf2e0):** migration 0031 กับฐานข้อมูล QA · quote ผ่าน :3000 ราคา team_s ฿1,500 · โค้ดผิด → `coupon_not_found` · คูปองร่าง → `coupon_inactive` · คูปอง 20% ครั้งเดียว → ส่วนลด ฿300, VAT คิดจาก ฿1,200 = ฿84 · ใช้กับแพ็กเกจอื่น → `coupon_plan_mismatch` · ปิดคูปองผ่าน ops-api ได้ · ops-web `/promotions` และหน้า checkout ตอบ 200 · การเปิดคูปองจริงต้องแตะ key จึงตั้งสถานะในฐานข้อมูล QA เพื่อทดสอบ แล้วปิดคูปองทดสอบแล้ว

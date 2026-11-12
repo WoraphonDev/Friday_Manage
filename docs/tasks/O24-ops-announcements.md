@@ -21,7 +21,7 @@
 - [x] หน้าตรงกับ Canvas ที่ 1440 px · ที่ 390 px ใช้งานได้
 - [x] ครบทุกสถานะตาม M1 · ซ่อนปุ่มตามบทบาท · Audit ทุกการแก้
 - [x] e2e test ของ API (ข้อมูลสมมติ) + component test ด้วย MSW · typecheck / test / build ผ่าน
-- [ ] build และ deploy Docker ในเครื่องตาม CLAUDE.md แล้วตรวจ flow ผ่าน container
+- [x] build และ deploy Docker ในเครื่องตาม CLAUDE.md แล้วตรวจ flow ผ่าน container
 
 ## ยังต้องตัดสินใจ
 
@@ -76,3 +76,5 @@ API ลูกค้า
 - ยังไม่ deploy Docker (ผู้สั่งงาน deploy หลัง merge)
 
 Test: `apps/ops-api/test/announcements.e2e.test.ts` 13 ข้อ · `apps/api/test/announcements.e2e.test.ts` 7 ข้อ · `apps/ops-web` C8 6 ข้อ + หน้าประกาศ 6 ข้อ (MSW) · `apps/web` แบนเนอร์ 5 ข้อ (MSW)
+
+**ตรวจผ่าน Docker (12 พ.ย. 2569 · main c66d6da):** ops-api ส่งประกาศแบบแบนเนอร์ถึง Workspace ทดสอบ → API ลูกค้าผ่าน :3000 เห็นประกาศ → ปิดแล้วไม่แสดงอีก · Audit ลงทั้ง `audit_logs` และ `staff_audit_logs` · ops-web `/announcements` และ `/workspaces` ตอบ 200 · หยุดประกาศทดสอบแล้ว

@@ -275,9 +275,13 @@ describe('Issue parts and comments',()=>{
   });
   it('auto-watches through comments, inserts stable mentions, edits and deletes comment',async()=>{
     const user=userEvent.setup();mount();await loaded();await screen.findByText('สร้างงาน');
-    await user.type(screen.getByLabelText('เขียนคอมเมนต์'),'สวัสดี @');await user.click(within(screen.getByRole('group',{name:'เลือกสมาชิกที่ต้องการ mention'})).getByRole('button',{name:dev.displayName}));await user.click(screen.getByRole('button',{name:'ส่ง'}));
+    await user.type(screen.getByLabelText('เขียนคอมเมนต์'),'สวัสดี @');await user.click(within(screen.getByRole('group',{name:'เลือกสมาชิกที่ต้องการ mention'})).getByRole('button',{name:dev.displayName}));
+    // ช่องพิมพ์แสดงแค่ชื่อ ไม่มีรหัส · ส่ง API เป็นรูปแบบคงที่
+    expect(screen.getByLabelText('เขียนคอมเมนต์')).toHaveValue(`สวัสดี @${dev.displayName} `);
+    await user.click(screen.getByRole('button',{name:'ส่ง'}));
     await screen.findByRole('button',{name:'แก้คอมเมนต์'});expect(mutations('/comments')[0].body).toEqual({body:`สวัสดี @[${dev.displayName}](${dev.id}) `});expect(f.state.watching).toBe(true);
-    await user.click(screen.getByRole('button',{name:'แก้คอมเมนต์'}));await user.clear(screen.getByLabelText('คอมเมนต์'));await user.type(screen.getByLabelText('คอมเมนต์'),'แก้ไขข้อความ');await user.click(within(screen.getByRole('dialog',{name:'แก้คอมเมนต์'})).getByRole('button',{name:'บันทึก'}));await screen.findByText('แก้ไขข้อความ');
+    expect(screen.getByText(`@${dev.displayName}`)).toBeInTheDocument();
+    await user.click(screen.getByRole('button',{name:'แก้คอมเมนต์'}));expect(screen.getByLabelText('คอมเมนต์')).toHaveValue(`สวัสดี @${dev.displayName} `);await user.clear(screen.getByLabelText('คอมเมนต์'));await user.type(screen.getByLabelText('คอมเมนต์'),'แก้ไขข้อความ');await user.click(within(screen.getByRole('dialog',{name:'แก้คอมเมนต์'})).getByRole('button',{name:'บันทึก'}));await screen.findByText('แก้ไขข้อความ');
     await user.click(screen.getByRole('button',{name:'ลบคอมเมนต์'}));await user.click(within(screen.getByRole('dialog',{name:'ลบคอมเมนต์'})).getByRole('button',{name:'ลบคอมเมนต์'}));await screen.findByText('คอมเมนต์นี้ถูกลบแล้ว');
   });
   it('กดไฟล์แนบในคอมเมนต์ → ป๊อปอัปดูตัวอย่าง (รูปแสดงเลย · ไฟล์ที่ดูไม่ได้มีปุ่มดาวน์โหลด) เลื่อนไฟล์ถัดไปได้',async()=>{

@@ -109,7 +109,8 @@ describe("Admin Console (N1) · ภาพรวมและโปรเจกต
   it("เมนูครบตาม Canvas + ป้ายจำนวนเรื่องที่ต้องทำ · KPI · เรื่องที่ต้องดำเนินการพาไปแท็บที่แก้ได้", async () => {
     admin();
     const nav = await screen.findByRole("navigation", { name: "เมนู Admin Console" });
-    expect(within(nav).getAllByRole("link")).toHaveLength(12);
+    // 12 เมนูของ W18 + ถังขยะ (W23)
+    expect(within(nav).getAllByRole("link")).toHaveLength(13);
     expect(within(nav).getByRole("link", { name: /แดชบอร์ด/ })).toHaveAttribute("aria-current", "page");
     expect(within(nav).getByRole("link", { name: /สมาชิก & คำเชิญ/ })).toHaveAttribute("href", "/work/sample/members");
     expect(await within(nav).findByLabelText("ต้องดำเนินการ 2 เรื่อง")).toBeInTheDocument();

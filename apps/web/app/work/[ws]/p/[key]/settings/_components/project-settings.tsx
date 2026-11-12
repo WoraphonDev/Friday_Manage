@@ -20,6 +20,7 @@ import {
 import { membersKey, projectEndpoint, SectionHead } from "./shared";
 import { PlanIoContent } from "@/features/plan-io/plan-io";
 import styles from "./settings.module.css";
+import { TrashBrowser } from "@/features/trash";
 
 
 export function ProjectSettings({ ws, projectKey, section }: { ws: string; projectKey: string; section?: string }) {
@@ -32,12 +33,24 @@ export function ProjectSettings({ ws, projectKey, section }: { ws: string; proje
   const canEdit = !!perms.data?.permissions.includes("project.settings");
   const members = useQuery({ queryKey: membersKey(ws, projectKey), queryFn: () => api.get<{ items: Member[] }>(`${base}/members`), enabled: canEdit });
 
-  const current: Section | null = section === undefined ? "general" : isSection(section) ? section : null;
+  // ถังขยะของโปรเจกต์ (Z4 · W23) ไม่อยู่ใน SECTIONS ของ W13 · ใช้สิทธิ์ project.trash แทน project.settings
+  const current: Section | "trash" | null = section === undefined ? "general" : section === "trash" ? "trash" : isSection(section) ? section : null;
   if (!current) return <NotFound />;
   const error = perms.error ?? project.error;
   if (isForbidden(error)) return <Forbidden />;
   if (error) return <ErrorState error={error} retry={() => { void perms.refetch(); void project.refetch(); }} />;
   if (!perms.data || !project.data) return <LoadingState />;
+  if (current === "trash") {
+    if (!perms.data.permissions.includes("project.trash") || perms.data.guestViewer) return <Forbidden />;
+    return (
+      <div className={styles.body}>
+        <SettingsNav ws={ws} projectKey={projectKey} current="trash" canAutomation={perms.data.permissions.includes("project.automation")} canBaseline={perms.data.permissions.includes("project.baseline")} />
+        <div className={styles.frameMain}>
+          <ProjectTrash ws={ws} projectKey={projectKey} name={project.data.name} />
+        </div>
+      </div>
+    );
+  }
   // Guest และคนที่ไม่มี project.settings ไม่เห็น Settings (04-permissions ข้อ 4)
   if (!canEdit || perms.data.guestViewer) return <Forbidden />;
 
@@ -73,9 +86,13 @@ export function ProjectSettings({ ws, projectKey, section }: { ws: string; proje
 }
 
 /** เมนูซ้ายของ Settings · ใช้ร่วมกับหน้า Automation ให้เมนูไม่หายเมื่อเลือก Automation */
-export function SettingsNav({ ws, projectKey, current, canAutomation, canBaseline = true }: { ws: string; projectKey: string; current: Section | "automation"; canAutomation: boolean; canBaseline?: boolean }) {
+export function SettingsNav({ ws, projectKey, current, canAutomation, canBaseline = true }: { ws: string; projectKey: string; current: Section | "automation" | "trash"; canAutomation: boolean; canBaseline?: boolean }) {
   const t = useTranslations("project-settings-new.settings");
+  const tt = useTranslations("trash");
   const href = `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}`;
+  // แท็บถังขยะ (W23) แสดงตาม my-permissions (cache เดียวกับหน้า) · หน้า Automation ก็เห็นเมนูเดียวกัน
+  const perms = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${projectEndpoint(ws, projectKey)}/my-permissions`) });
+  const canTrash = !!perms.data?.permissions.includes("project.trash") && !perms.data.guestViewer;
   return (
     <nav className={`${styles.card} ${styles.nav}`} aria-label={t("navLabel")}>
       {SECTIONS.filter((s) => canBaseline || !BASELINE_SECTIONS.includes(s)).map((s) => (
@@ -88,12 +105,31 @@ export function SettingsNav({ ws, projectKey, current, canAutomation, canBaselin
           {t("nav.automation")} <span className={styles.tag}>Team</span>
         </Link>
       )}
+      {canTrash && (
+        <Link href={`${href}/settings/trash`} className={styles.snav} aria-current={current === "trash" ? "page" : undefined}>
+          {tt("nav")}
+        </Link>
+      )}
     </nav>
   );
 }
 
+/** Z4 · ถังขยะของโปรเจกต์ (สิทธิ์ project.trash) · ตารางเดียวกับ Z1 ที่กรองโปรเจกต์ไว้ · มือถือเป็นการ์ด */
+function ProjectTrash({ ws, projectKey, name }: { ws: string; projectKey: string; name: string }) {
+  const tt = useTranslations("trash");
+  return (
+    <TrashBrowser
+      ws={ws}
+      projectKey={projectKey}
+      heading={(list) => (
+        <SectionHead title={tt("projectTitle")} description={tt("projectDesc", { name, days: list?.trashDays ?? 30 })} />
+      )}
+    />
+  );
+}
+
 /** โครง Settings (เมนูซ้าย + เนื้อหา) สำหรับหน้าที่อยู่นอก route settings เช่น Automation */
-export function SettingsFrame({ ws, projectKey, current, canAutomation, children }: { ws: string; projectKey: string; current: Section | "automation"; canAutomation: boolean; children: React.ReactNode }) {
+export function SettingsFrame({ ws, projectKey, current, canAutomation, children }: { ws: string; projectKey: string; current: Section | "automation" | "trash"; canAutomation: boolean; children: React.ReactNode }) {
   return (
     <div className={styles.body}>
       <SettingsNav ws={ws} projectKey={projectKey} current={current} canAutomation={canAutomation} />

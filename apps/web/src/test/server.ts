@@ -31,6 +31,11 @@ export const handlers = [
   http.get("*/api/v1/w/:ws/onboarding", () =>
     HttpResponse.json({ scope: "workspace", version: 1, eligible: false }),
   ),
+  // ตัวสลับ Workspace (ส่วน "ลบไว้") และหน้า Workspace ที่ลบไว้ (Z5 · W23): ค่าเริ่มต้นไม่มี
+  http.get("*/api/v1/workspaces/deleted", () => HttpResponse.json({ items: [] })),
+  http.get("*/api/v1/workspaces/:slug/deleted", () =>
+    HttpResponse.json({ error: { code: "not_found", message: "ไม่พบ Workspace ที่ถูกลบ" } }, { status: 404 }),
+  ),
   http.get("*/api/v1/w/:ws/projects", () =>
     HttpResponse.json({ items: projects }),
   ),

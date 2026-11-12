@@ -62,6 +62,10 @@ function fmApi(req: import('node:http').IncomingMessage, res: import('node:http'
       return send(200, { items: [...fake.issues.values()].filter((i) => i.title.toLowerCase().includes(q)) });
     }
     if (req.method === 'POST' && p === '/w/friday-dev/projects/FM/issues') {
+      // เหมือน API จริง: ประเภท Bug เริ่มต้นบังคับ severity · environment · steps (projects.service DEFAULT_TYPES)
+      if (body.type === 'Bug' && (!body.severity || !body.environment || !body.details?.steps)) {
+        return send(400, { error: { code: 'missing_required_fields', message: 'กรอกฟิลด์บังคับของประเภทงานนี้ไม่ครบ' } });
+      }
       fake.created.push(body);
       const issue: FakeIssue = { key: `FM-${fake.next++}`, title: body.title, description: body.description, status: fake.statuses[0], priority: body.priority, planEnd: null, sprintId: null, assigneeIds: [] };
       fake.issues.set(issue.key, issue);
@@ -156,7 +160,7 @@ describe('ส่งต่อทีมพัฒนา (T3) · ผูกงาน�
     linkId = r.body.link.id;
     expect(r.body.link).toMatchObject({ issueKey: 'FM-482', severity: 'S2', statusName: 'To do', unnotified: 1 });
     const created = fake.created[0] as { type: string; priority: string; labelIds: string[]; description: string };
-    expect(created).toMatchObject({ type: 'Bug', priority: 'high', labelIds: ['lb1'] });
+    expect(created).toMatchObject({ type: 'Bug', priority: 'high', labelIds: ['lb1'], severity: 'major', environment: 'production', details: { steps: expect.any(String) } });
     expect(created.description).toContain(`Ticket #${k1.number} (ws_${a.id.replace(/-/g, '').slice(-4)})`);
     expect(created.description).toContain('req_44a1f0');
     expect(created.description).not.toContain('orbit-demo');

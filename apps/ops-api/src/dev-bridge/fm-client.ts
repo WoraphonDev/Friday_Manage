@@ -125,7 +125,7 @@ export class FmClient {
     const created = await this.call<{ id: string } | { label: { id: string } }>('POST', `${this.project}/labels`, { name });
     return 'label' in created ? created.label.id : created.id;
   }
-  createBug(input: { title: string; description: string; priority: string; labelIds: string[] }) {
+  createBug(input: { title: string; description: string; priority: string; labelIds: string[]; severity: 'critical' | 'major' | 'minor'; environment: 'production'; details: { steps: string } }) {
     return this.call<FmIssue>('POST', `${this.project}/issues`, { type: 'Bug', ...input });
   }
   comment(issueKey: string, body: string) {

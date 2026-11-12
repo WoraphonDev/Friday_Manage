@@ -46,6 +46,7 @@
   "markComplete": "Mark complete",
   "metaLine": "สร้างโดย {name} · {created} · แก้ไขล่าสุด {updated}",
   "subtaskProgressNote": "Progress ของ Task คำนวณจาก Sub-task",
+  "progressAuto": "คำนวณจาก Sub-task",
   "dev": "Dev",
   "plan": "แผน",
   "actual": "จริง",

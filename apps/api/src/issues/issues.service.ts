@@ -13,7 +13,7 @@ import { loadPeople } from '../common/people.js';
 import { type DomainEvent, EventBus, type EventType } from '../core/events.js';
 import { isLegacyRank, PLAIN_RANK, rankAfter, rankBetween, spreadRanks } from './rank.js';
 import { type ProjectRow, ProjectsService } from '../projects/projects.service.js';
-import { listIssues, TableListQuery } from './table.js';
+import { issueProgress, listIssues, TableListQuery } from './table.js';
 import { enforceWorkflowRules, workflowRuleEnabled } from './rules.js';
 import { checkCustomValues, checkProfile, type CustomFieldDef, type CustomValues, CustomValuesBody, displayValue, readCustomValues, writeCustomValues } from './custom-values.js';
 import type { Level, ProfileValues } from '../projects/field-profile.js';
@@ -306,8 +306,19 @@ export class IssuesService {
             .where(and(eq(s.dueChangeRequests.issueId, issue.id), eq(s.dueChangeRequests.status, 'pending')));
       // ชื่อกลุ่ม (Module → กลุ่ม → Task) ให้คนที่ไม่มีสิทธิ์โหลด form-options เห็นด้วย
       const [group] = issue.phaseId ? await tx.select({ id: s.phases.id, name: s.phases.name }).from(s.phases).where(eq(s.phases.id, issue.phaseId)) : [];
+      const base = await this.dto(tx, project, issue, access);
+      // Task ที่มี Sub-task: Progress คำนวณจาก Sub-task ทุกตัว (กรอกเองไม่ได้) ให้ตรงกับตาราง
+      let progressPct = base.progressPct;
+      if (subtasks.length) {
+        const statusIds = [...new Set(subtasks.map((x) => x.statusId))];
+        const categories = new Map((await tx.select({ id: s.workflowStatuses.id, category: s.workflowStatuses.category }).from(s.workflowStatuses).where(inArray(s.workflowStatuses.id, statusIds))).map((x) => [x.id, x.category]));
+        const subs = subtasks.map((x) => ({ category: categories.get(x.statusId), md: x.estimateMd, pct: issueProgress(categories.get(x.statusId), x.progressPct, [], false) }));
+        progressPct = issueProgress(base.status.category, issue.progressPct, subs, project.progressMethod === 'weighted');
+      }
       return {
-        ...(await this.dto(tx, project, issue, access)),
+        ...base,
+        progressPct,
+        progressFromSubtasks: subtasks.length > 0,
         group: group ?? null,
         subtasks: await this.dtos(tx, project, visibleSubs, access),
         pendingDueRequest: pending

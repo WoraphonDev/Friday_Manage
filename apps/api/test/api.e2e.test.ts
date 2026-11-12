@@ -260,6 +260,11 @@ describe('แก้ไขงาน และกติกาการเปลี
     expect(mod.body.error.code).toBe('inherited_field');
     const prog = await mick.patch('/w/friday-dev/issues/DP-1', { progressPct: 50 }, 4);
     expect(prog.body.error.code).toBe('progress_from_subtasks');
+    // หน้ารายละเอียดส่งค่าที่คำนวณแล้ว (DP-1 เสร็จแล้วจึงเป็น 100) และบอกว่ากรอกเองไม่ได้
+    const parent = await mick.get('/w/friday-dev/issues/DP-1');
+    expect(parent.body).toMatchObject({ progressFromSubtasks: true, progressPct: 100 });
+    const leaf = await mick.get('/w/friday-dev/issues/DP-3');
+    expect(leaf.body.progressFromSubtasks).toBe(false);
   });
 
   it('หลังตั้ง Baseline การแก้แผนบันทึกในการแก้ไขแผน · เหตุผลไม่บังคับ', async () => {

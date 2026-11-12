@@ -18,3 +18,5 @@ export * from './ops.ts';
 export * from './money.ts';
 export * from './metrics.ts';
 export * from './promotions.ts';
+export * from './help.ts';
+export * from './engagement.ts';

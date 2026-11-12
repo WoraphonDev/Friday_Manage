@@ -13,7 +13,7 @@
 | Primary key | `id uuid` (UUID v7 เรียงตามเวลาได้) · ไม่ใช้เลขรันเป็น PK |
 | Multi-tenant | ทุกตารางของลูกค้ามี `workspace_id` และเปิด **Row-Level Security** ของ PostgreSQL ตาม `app.workspace_id` ที่ API ตั้งต่อคำขอ |
 | เวลา | `created_at`, `updated_at` เป็น `timestamptz` · วันที่ในแผน (Plan Start / End, Due, วันหยุด) เป็น `date` ไม่มี timezone |
-| ลบ | ตารางที่มีถังขยะ 30 วันใช้ `deleted_at` (soft delete) · ตารางอื่นลบจริง |
+| ลบ | ตารางที่มีถังขยะ (ระยะตาม `workspace_setting.trash_days` 30 / 90 วัน) ใช้ `deleted_at` + `deleted_by` (soft delete · trigger `app.track_soft_delete` ตั้งผู้ลบจาก `app.user_id` และล้างเมื่อกู้คืน · O30) · ตารางอื่นลบจริง |
 | แก้พร้อมกัน | ตารางที่แก้จากหลายคนพร้อมกัน (issue, project) มี `version int` ใช้ตรวจชนกัน (หน้า M1 › REALTIME) |
 | เงิน | เก็บเป็นสตางค์ `bigint` ไม่ใช้ float |
 | Man-Day | `numeric(6,2)` รองรับ 0.25 MD |
@@ -43,7 +43,7 @@
 
 | Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
 |---|---|---|---|
-| `workspace` | องค์กร 1 แห่ง = 1 tenant | slug (friday.app/**slug**, unique), name, logo_url, data_region, default_locale, allow_domain_join, status (trial · active · suspended · pending_delete), deleted_at | J5, Q1, N1 |
+| `workspace` | องค์กร 1 แห่ง = 1 tenant | slug (friday.app/**slug**, unique), name, logo_url, data_region, default_locale, allow_domain_join, status (trial · active · suspended · pending_delete), deleted_at, deleted_by, purge_after (ลบถาวร · ตั้งเป็น deleted_at + 30 วันตอนลบ ทีม Friday ยืดได้ · O30), purge_reminded_at (อีเมลเตือนล่าสุด) | J5, Q1, N1, Z5, Ops 21 |
 | `workspace_setting` | ค่าตั้งของ Workspace (1:1) | work_start (09:30), work_end (18:30), work_days, holiday_calendar_id (ปฏิทินหลัก), size_md_map (`{XS:1,S:3,M:5,L:8,XL:12}`), allow_project_override, safe_mode, trash_days (30/90), archive_retention_years, require_consent_on_first_login | N1 |
 | `security_policy` | นโยบายความปลอดภัย (1:1) | password_min_length, password_require_special, password_rotation_days, lockout_attempts, lockout_minutes, session_idle_hours, mfa_enforcement (none · admin · all), allowed_email_domains[], ip_allowlist[] | N1 |
 | `workspace_member` | การเป็นสมาชิกของ 1 คนใน 1 Workspace | workspace_id, user_id, role (owner · admin · member · guest), status (active · deactivated), job_title, department, capacity_hours_week (เวลาทั้งหมดของคน), work_start, work_end, work_days, last_active_at, joined_at · **Guest ไม่นับ Seat** | H, I |
@@ -70,7 +70,7 @@ Workspace เลือกปฏิทินหลัก + เพิ่มวั�
 
 | Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
 |---|---|---|---|
-| `project` | โปรเจกต์ | workspace_id, key (DP), name, client_name, description, color, icon, template_id, start_date, golive_date, timezone, visibility (private · workspace), owner_user_id, status (planning · active · archived), estimate_unit (man_day · hour), progress_method (count · weighted), progress_split (แยกความคืบหน้า Dev / QA · migration 0029), sprint_length_weeks (null = ไม่ใช้ Sprint), holiday_calendar_id, work_start/end (override), size_md_map (override), time_log_enabled (ค่าเริ่มต้น false), issue_seq (เลขงานล่าสุด), budget_satang, hourly_rate_satang, archived_at, deleted_at, version | A, L2, 1 |
+| `project` | โปรเจกต์ | workspace_id, key (DP), name, client_name, description, color, icon, template_id, start_date, golive_date, timezone, visibility (private · workspace), owner_user_id, status (planning · active · archived), estimate_unit (man_day · hour), progress_method (count · weighted), progress_split (แยกความคืบหน้า Dev / QA · migration 0029), sprint_length_weeks (null = ไม่ใช้ Sprint), holiday_calendar_id, work_start/end (override), size_md_map (override), time_log_enabled (ค่าเริ่มต้น false), issue_seq (เลขงานล่าสุด), budget_satang, hourly_rate_satang, archived_at, deleted_at, deleted_by, version | A, L2, 1, Z1, Z2 |
 | `project_key_alias` | Key เดิมหลังเปลี่ยน Key · ใช้ redirect ลิงก์เก่า | project_id, old_key | L2 |
 | `project_scope_item` | In-scope, Out-of-scope, Deliverables, Acceptance criteria, สมมติฐาน | project_id, kind, text, sort | A, 1 |
 | `project_holiday` | วันหยุดเฉพาะโปรเจกต์ | project_id, date, name | A, L2 |
@@ -130,7 +130,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | วันที่ | plan_start, plan_end (= Due), actual_start, actual_end (บันทึกอัตโนมัติเมื่อสถานะเปลี่ยน), completed_at |
 | Bug | severity (critical · major · minor), environment, reopen_count, found_in_test_run_id |
 | ตามประเภท | details (jsonb): Bug = browser, found_in_commit, steps, expected, actual · Story = as_a, i_want, so_that · Spike = question, deliverables[], timebox_hours |
-| อื่น ๆ | shared_with_guests (Guest เห็นงานนี้), deleted_at, version |
+| อื่น ๆ | shared_with_guests (Guest เห็นงานนี้), deleted_at, deleted_by, version |
 
 ## G. แผนและการแก้ไขแผน
 
@@ -146,7 +146,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
 |---|---|---|---|
 | `folder` | โฟลเดอร์ในหน้า Files | project_id, parent_id, name | 8 |
-| `file` | ไฟล์หรือลิงก์ | workspace_id, project_id, folder_id, kind (upload · link), name, mime, size_bytes, link_url, link_provider (figma · gdrive · notion), current_version_id, uploaded_by, deleted_at | 8, C, D |
+| `file` | ไฟล์หรือลิงก์ | workspace_id, project_id, folder_id, kind (upload · link), name, mime, size_bytes, link_url, link_provider (figma · gdrive · notion), current_version_id, uploaded_by, deleted_at, deleted_by | 8, C, D, Z1 |
 | `file_version` | Version history | file_id, version_no, storage_key (S3), size_bytes, note, uploaded_by | 8 |
 | `file_attachment` | ไฟล์ผูกกับอะไร · 1 ไฟล์ผูกได้หลายที่ (เตือนก่อนลบไฟล์ที่เป็นหลักฐาน) | file_id, target_type (issue · test_run · comment · project · requirement), target_id, created_by | 8, C, D, P3 |
 
@@ -269,6 +269,33 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `infra_cost` | ค่าใช้จ่ายส่วนกลางรายเดือน | month, category, amount_satang | Ops 16 |
 | `marketing_cost` | ค่าการตลาดรายเดือนตามช่องทาง | month, source, amount_satang, note | Ops 16 (B10) |
 
+## P. มีอะไรใหม่ NPS Onboarding และศูนย์ช่วยเหลือ (เฟส 2 · O32)
+
+หน้าจอ `design/proposals/phase3/` 01–04 · ตารางระดับระบบเป็นของทีม Friday (`ops_only` หรือลูกค้าอ่านได้เฉพาะที่เผยแพร่) · ตารางที่มี `workspace_id` / `user_id` ของลูกค้าเปิด RLS ตามปกติ · ยอดนับที่ลูกค้าเพิ่มได้ (เห็น / คลิก / อ่าน / คำค้นที่ไม่พบ) ทำผ่านฟังก์ชัน `app.count_changelog_views()`, `app.count_changelog_click()`, `app.record_help_view()`, `app.record_help_search()` เท่านั้น
+
+| Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
+|---|---|---|---|
+| `changelog_entry` | รายการ Changelog · ลูกค้าเห็นเมื่อ published หรือ scheduled ที่ถึงเวลาแล้ว · Spotlight ได้ทีละ 1 รายการ | kind (new · improved · fixed), title, summary (≤ 140), body (markdown), title_en / summary_en / body_en, media_url, media_kind (image · video), cta_label, cta_path, audience (all · plans · flag · admins), audience_plans, audience_flag, spotlight, show_public, status (draft · scheduled · published · hidden), display_date, published_at, hidden_at, hidden_by, hide_reason, dev_issue_link_id | Ops 17, U1, U2, U4, U7 |
+| `changelog_stat` | ยอดเห็น / คลิกต่อรายการ ไม่เก็บว่าใครอ่าน | entry_id, views, clicks | Ops 17 |
+| `user_ui_state` | สถานะ UI ของผู้ใช้ที่ไม่ผูก Workspace (1:1) | user_id, whats_new_seen_at, spotlight_seen_ids, spotlight_seen_at, nps_prompted_at, nps_responded_at | U1, U2, U3 |
+| `nps_setting` | ตั้งค่าแบบสำรวจ NPS มีแถวเดียว | enabled, audience (admins · members), first_after_days (30), repeat_days (90), sample_pct (50), exclude_trial_days (14), exclude_ticket_days (7), exclude_spotlight_day, exclude_short_mobile, question, question_en, follow_ups, follow_ups_en, topics | U5 |
+| `nps_response` | คำตอบ NPS · score null = ปิดโดยไม่ตอบ · ลูกค้าเห็นเฉพาะของตัวเอง · ลบบัญชีแล้ว user_id เป็น null · เก็บ 25 เดือน | workspace_id, user_id, role, plan, score (0–10), comment, topics, tags (ทีม Friday), follow_up_status (open · done), followed_up_by, followed_up_at, ticket_id, note (ภายใน) | U3, U6, Ops 17 |
+| `onboarding_progress` | ขั้นที่เสร็จแล้ว (บันทึกครั้งแรก ไม่ย้อนกลับ) · user_id null = ขั้นของ Workspace · มีค่า = ขั้นส่วนตัว | workspace_id, user_id, version, step (รหัสขั้นในโค้ด API), done_at, meta (ตัวเลขเท่านั้น) | V1–V4, Ops 18 |
+| `onboarding_dismissal` | การ์ดเริ่มต้นใช้งานต่อคน | workspace_id, user_id, hidden_at, never, completion_seen_at | V1, V2, V4 |
+| `onboarding_followup` | ทีม Friday ติดตาม Workspace ที่ติด (1 แถวต่อ Workspace) | workspace_id, assignee_id, status (open · emailed · no_reply · replied · done), note, last_emailed_at, emails_sent | V5, V7, Ops 18 |
+| `help_category` | หมวดศูนย์ช่วยเหลือ · ลบได้เมื่อไม่มีบทความ | slug, name, name_en, position | X1, X9 |
+| `help_article` | บทความ (markdown) · ลูกค้าอ่านเฉพาะ published และเฉพาะคอลัมน์ที่ grant (ไม่รวม draft) · signed_in ต้องเข้าสู่ระบบ | slug, category_id, title, summary, body, title_en / summary_en / body_en, status (draft · published · archived), visibility (public · signed_in), app_routes, keywords, review_at, owner_id, source_ticket_id, pii_checked_at, pii_checked_by, draft (ร่างของบทความที่เผยแพร่แล้ว), version, published_at, search_text (generated · pg_trgm) | X1–X4, Ops 19, 19b, X8 |
+| `help_article_version` | ทุกการเผยแพร่เก็บเวอร์ชัน · ย้อนกลับได้ | article_id, version, title, summary, body, *_en, visibility, app_routes, keywords, published_by | Ops 19b |
+| `help_feedback` | โหวตช่วยได้ / ไม่ช่วย ไม่เก็บผู้ใช้ · ลูกค้าเพิ่มได้อย่างเดียว | article_id, helpful, comment | X3, Ops 19 |
+| `help_article_view` | ยอดอ่านต่อบทความต่อวัน (เวลาไทย) | article_id, day, views | X1, Ops 19 |
+| `help_search_stat` | ยอดค้นหาต่อวัน | day, searches, misses | Ops 19 |
+| `help_search_miss` | คำค้นที่ไม่พบ (ตัดอีเมล / เบอร์โทรแล้ว · ไม่เก็บผู้ค้น) · เก็บ 25 เดือน | day, query, searches, tickets, article_id | X2, Ops 19 |
+| `help_article_ticket` | Ticket ที่อ้างถึงบทความ | article_id, ticket_id, source (customer · staff · created_from), created_by | X3, X8, Ops 19 |
+| `dev_issue_link` | งานในโปรเจกต์ FM ของทีมพัฒนาที่ผูกกับ Ticket (ข้อมูลล่าสุดจาก Webhook) | issue_key, issue_id, title, severity (S1–S4), status_name, status_category, resolution (fixed · wont_fix · duplicate), duplicate_of_key, assignee_name, sprint_name, due_date, done_at, released_at, release_version, synced_at | Ops 20, T3, T7–T10 |
+| `dev_issue_ticket` | Ticket ↔ งานของทีมพัฒนา (1 Ticket ต่อ 1 งาน) | ticket_id, link_id, linked_by, linked_at, notified_at, notified_by, outcome (fixed · workaround · returned) | T8, T9, T10, T12 |
+| `dev_bridge_setting` | การเชื่อมต่อกับ Friday Manage ของทีมพัฒนา มีแถวเดียว | api_base_url, workspace_slug, project_key, token_enc, token_hint, token_expires_at, webhook_secret_enc, mapping, last_webhook_at, last_test_at, last_test_ok | T11 |
+
+
 ---
 
 ## ค่าที่คำนวณ ไม่เก็บในตาราง
@@ -293,7 +320,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 3. **วันที่ของ Sub-task ต้องอยู่ในช่วงของ Task แม่**: เตือน ไม่บล็อก (หน้า B, M1)
 4. **Plan Start ตรงวันหยุด** ให้เลื่อนไปวันทำงานถัดไป · Plan End = วันทำการที่ (Man-Day) นับ Plan Start เป็นวันแรก ตรงกับสูตร `WORKDAY(Plan Start-1, Man-Day, Holidays)` ในไฟล์แผน · **จำนวน Dev ไม่ทำให้วันจบเปลี่ยน** (Man-Day ของทีมแบ่งเท่ากันต่อคนเฉพาะตอนคิด Workload)
 5. **เลขงานไม่ซ้ำในโปรเจกต์:** `UNIQUE (project_id, number)` · ออกเลขด้วย `UPDATE project SET issue_seq = issue_seq + 1 … RETURNING` ในธุรกรรมเดียวกับการสร้างงาน · ไม่นำเลขของงานที่ลบมาใช้ใหม่
-6. **Project Key ไม่ซ้ำใน Workspace:** `UNIQUE (workspace_id, key)` และต้องไม่ชนกับ `project_key_alias`
+6. **Project Key ไม่ซ้ำใน Workspace:** `UNIQUE (workspace_id, key) WHERE deleted_at IS NULL` (Key ของโปรเจกต์ในถังขยะว่างให้ใช้ได้ · กู้คืนแล้วชนต้องเลือก Key ใหม่ Z2 · O30) และต้องไม่ชนกับ `project_key_alias`
 7. **เปลี่ยน Due:** Member ต้องสร้าง `due_change_request` ถ้าสิทธิ์ `issue.change_due_directly` ปิดอยู่ · อนุมัติแล้วเขียน `plan_change` อัตโนมัติ
 8. **แก้แผนหลังมี Baseline** (Plan Start, Plan End, Man-Day, Dev) ต้องมี `reason` และเขียน `plan_change`
 9. **Actual Start / End** ตั้งอัตโนมัติเมื่อสถานะออกจากหมวด todo ครั้งแรก (ยกเว้น cancelled) / เข้าหมวด done · cancelled ปิดงาน (completed_at) แต่ไม่ตั้ง Actual End · ถ้า Reopen ให้ล้าง Actual End

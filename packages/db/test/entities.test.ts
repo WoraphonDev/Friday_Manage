@@ -8,8 +8,12 @@ import * as schema from '../src/schema/index.ts';
 const owner = new pg.Client({ connectionString: process.env.DATABASE_OWNER_URL ?? 'postgres://friday_owner:friday_owner_dev@localhost:54329/friday' });
 const spec = readFileSync(new URL('../../../docs/spec/01-entities.md', import.meta.url), 'utf8');
 const entities = [...spec.matchAll(/^\| `(\w+)` \|/gm)].map((m) => m[1]);
-const plural = (name: string) => /[^aeiou]y$/.test(name) ? `${name.slice(0, -1)}ies` : /(?:s|x|ch|sh)$/.test(name) ? `${name}es` : `${name}s`;
-const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_flag_overrides', 'announcements', 'entitlement_versions', 'entitlement_overrides', 'email_suppressions', 'email_feedback_events', 'support_settings', 'support_rules', 'support_agents', 'support_account_managers', 'support_canned_replies', 'staff_push_subscriptions', 'staff_push_notices', 'plan_price_versions', 'coupons'];
+// คำนามนับไม่ได้ใช้ชื่อเดิม (progress, feedback)
+const uncountable = new Set(['onboarding_progress', 'help_feedback']);
+const plural = (name: string) => uncountable.has(name) ? name : /[^aeiou]y$/.test(name) ? `${name.slice(0, -1)}ies` : /(?:s|x|ch|sh)$/.test(name) ? `${name}es` : `${name}s`;
+const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_flag_overrides', 'announcements', 'entitlement_versions', 'entitlement_overrides', 'email_suppressions', 'email_feedback_events', 'support_settings', 'support_rules', 'support_agents', 'support_account_managers', 'support_canned_replies', 'staff_push_subscriptions', 'staff_push_notices', 'plan_price_versions', 'coupons',
+  'changelog_stats', 'onboarding_followups', 'help_article_versions', 'help_search_stats', 'help_search_misses', 'help_article_tickets',
+  'dev_issue_links', 'dev_issue_tickets', 'dev_bridge_settings'];
 
 beforeAll(() => owner.connect());
 afterAll(() => owner.end());
@@ -38,7 +42,7 @@ describe('Entity ทุกหมวดตามสเปก', () => {
       WHERE c.contype = 'f' AND ns.nspname = 'public'
         AND src.relname = ANY($1::text[])
         AND NOT (sw.attnum = ANY(c.conkey) AND tw.attnum = ANY(c.confkey))`,
-    [entities.filter((e) => /^(line_|calendar_feed|sso_|verified_|project_template|git_|project_repository|pull_request|issue_git|notification_delivery|user_notification|email_sender|webhook|project_notification|report_schedule|automation|saved_|api_token|data_subject|workspace_export|plan$|subscription|billing_profile|invoice|payment|tax_document|wht_|legal_|staff_|support_|feature_|announcement|entitlement_)/.test(e)).map(plural)]);
+    [entities.filter((e) => /^(line_|calendar_feed|sso_|verified_|project_template|git_|project_repository|pull_request|issue_git|notification_delivery|user_notification|email_sender|webhook|project_notification|report_schedule|automation|saved_|api_token|data_subject|workspace_export|plan$|subscription|billing_profile|invoice|payment|tax_document|wht_|legal_|staff_|support_|feature_|announcement|entitlement_|nps_|onboarding_)/.test(e)).map(plural)]);
     expect(rows).toEqual([]);
   });
 
@@ -59,7 +63,7 @@ describe('Entity ทุกหมวดตามสเปก', () => {
 
   it('GIN trigram index ครบและใช้ได้จริง', async () => {
     const { rows } = await owner.query(`SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = 'public' AND indexname LIKE '%_trgm_idx'`);
-    expect(rows.map((r) => r.indexname).sort()).toEqual(['comments_body_trgm_idx', 'files_name_trgm_idx', 'issues_description_trgm_idx', 'issues_title_trgm_idx']);
+    expect(rows.map((r) => r.indexname).sort()).toEqual(['comments_body_trgm_idx', 'files_name_trgm_idx', 'help_articles_search_trgm_idx', 'issues_description_trgm_idx', 'issues_title_trgm_idx']);
     for (const row of rows) expect(row.indexdef).toContain('USING gin');
     expect((await owner.query(`SELECT similarity('Friday', 'Friday') AS score`)).rows[0].score).toBe(1);
   });

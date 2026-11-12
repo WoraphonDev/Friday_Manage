@@ -124,6 +124,8 @@ export const issues = pgTable(
 
     sharedWithGuests: boolean().notNull().default(false),
     deletedAt: deletedAt(),
+    /** ผู้ลบ (O30 · ถังขยะ A41 จัดชุดงานที่คนเดียวกันลบใน 2 นาที) · trigger ตั้งจาก app.user_id · กู้คืนแล้วล้างเป็น null */
+    deletedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
     version: integer().notNull().default(1),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -145,6 +147,7 @@ export const issues = pgTable(
       foreignColumns: [t.workspaceId, t.id],
     }).onDelete('cascade'),
     index('issues_project_idx').on(t.projectId).where(sql`${t.deletedAt} is null`),
+    index('issues_trash_idx').on(t.workspaceId, t.deletedAt).where(sql`${t.deletedAt} IS NOT NULL`),
     index('issues_title_trgm_idx').using('gin', t.title.op('gin_trgm_ops')),
     index('issues_description_trgm_idx').using('gin', t.description.op('gin_trgm_ops')),
     index('issues_parent_idx').on(t.parentId),

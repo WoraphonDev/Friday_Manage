@@ -2,13 +2,13 @@
 
 | | |
 |---|---|
-| Wave | O-4 · **รอผู้ใช้อนุมัติหน้าจอใน `design/proposals/phase3`** |
+| Wave | O-4 · อนุมัติหน้าจอแล้ว 12 พ.ย. 2569 |
 | รอ merge | O32 · A44 (ลูกค้าเห็นสถานะใน Ticket ของฉัน) |
 | Lane (แก้ได้เฉพาะ) | `apps/ops-api/src/dev-bridge/**` · `apps/ops-api/test/dev-bridge.e2e.test.ts` · `apps/ops-web/app/(console)/bugs/**` · `apps/ops-api/src/support/tickets.service.ts` (เฉพาะ `escalate`) · `apps/ops-web/app/(console)/support/SupportPage.tsx` (T3, T8 และแท็บ "รอทีมพัฒนา") |
 | หน้าจอ | `design/proposals/phase3/04-bug-to-dev.html` › บอร์ด 20 · T3 (ปรับ) · T7–T11 · T13 อีเมล · T14 งานใน FM |
 | สเปก | [06-ops-roles](../spec/06-ops-roles.md) · [03-api](../spec/03-api.md) (API token, Webhook) |
 
-อ่าน [README](README.md) ก่อนเริ่ม · หน้าจอเป็น**ข้อเสนอ** เริ่มได้เมื่อผู้ใช้อนุมัติไฟล์ 04 แล้ว
+อ่าน [README](README.md) ก่อนเริ่ม · หน้าจอใน `design/proposals/phase3` ผู้ใช้อนุมัติแล้ว (12 พ.ย. 2569) ยึดตามไฟล์นั้น
 
 ## ทำอะไร
 
@@ -31,6 +31,8 @@
 - [ ] build และ deploy Docker API + เว็บ + ops ในเครื่องตาม CLAUDE.md · ส่ง Ticket จาก :4000 → เห็นงานใน Workspace ทดสอบของ :3000 → เปลี่ยนสถานะเป็น Released → แจ้งลูกค้าแล้วเห็นใน Ticket ของฉัน
 
 ## ยังต้องตัดสินใจ
+
+**ผู้ใช้ตัดสินแล้ว (12 พ.ย. 2569): ใช้ตามคำแนะนำทุกข้อ** · ข้อความ "แนะนำ" ด้านล่างคือคำตัดสิน
 
 - **เก็บบั๊กใน Friday Manage ของเราเอง (โปรเจกต์ FM)** แทน GitHub Issues หรือระบบอื่น · **แนะนำ:** ใช้ Friday Manage เอง (ใช้ API token และ Webhook ที่มีอยู่ ไม่ต้องต่อระบบนอก และเป็นการใช้ของตัวเองทุกวัน) · ถ้าทีมใช้ GitHub อยู่แล้ว ให้ผูกผ่าน Git integration (A27) ของโปรเจกต์ FM
 - **"ขึ้น production" ดูจากอะไร** · **แนะนำ:** เพิ่มสถานะ "Released" (หมวด Done) ใน workflow ของโปรเจกต์ FM และให้ทีมพัฒนาย้ายงานเมื่อ deploy · ไม่ต้องต่อระบบ deploy

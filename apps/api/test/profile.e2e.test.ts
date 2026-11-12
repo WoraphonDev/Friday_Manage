@@ -72,7 +72,7 @@ describe('me/notification-prefs', () => {
   const q = () => `/me/notification-prefs?workspace=${team.slug}`;
   const cell = (body: { rows: Array<{ eventType: string; channels: Record<string, { enabled: boolean; locked: boolean; custom: boolean }> }> }, event: string, channel: string) => body.rows.find((r) => r.eventType === event)!.channels[channel]!;
 
-  it('ค่าเริ่มต้นตาม Canvas I: In-app เปิด (ล็อกบางแถว) · Email เปิดเฉพาะเรื่องสำคัญ · LINE ตามตาราง · digest ปิด In-app', async () => {
+  it('ค่าเริ่มต้นตาม Canvas I: In-app เปิด (ล็อกบางแถว) · Email เปิดเฉพาะเรื่องสำคัญ · LINE ตามตาราง · สรุปประจำวันแทนแถวใกล้ครบกำหนด / เลยกำหนด', async () => {
     const r = await team.dev.get(q());
     expect(r.status, JSON.stringify(r.body)).toBe(200);
     expect(r.body.channels).toEqual(['in_app', 'email', 'line']);
@@ -82,10 +82,13 @@ describe('me/notification-prefs', () => {
     expect(cell(r.body, 'issue.commented', 'in_app')).toMatchObject({ enabled: true, locked: false });
     expect(cell(r.body, 'issue.commented', 'email').enabled).toBe(false);
     expect(cell(r.body, 'issue.commented', 'line').enabled).toBe(false);
-    expect(cell(r.body, 'digest.daily', 'in_app').enabled).toBe(false);
+    expect(cell(r.body, 'digest.daily', 'in_app')).toEqual({ enabled: true, locked: true, custom: false });
     expect(cell(r.body, 'digest.daily', 'email').enabled).toBe(true);
+    expect(cell(r.body, 'digest.daily', 'line').enabled).toBe(true);
     expect(cell(r.body, 'issue.mentioned', 'in_app').locked).toBe(true);
-    expect(cell(r.body, 'issue.overdue', 'in_app').locked).toBe(true);
+    // รวมเข้าสรุปงานประจำวันแล้ว (12 พ.ย. 2026)
+    expect(r.body.rows.map((row: { eventType: string }) => row.eventType)).not.toContain('issue.due_soon');
+    expect(r.body.rows.map((row: { eventType: string }) => row.eventType)).not.toContain('issue.overdue');
     expect(r.body.rows.every((row: { label: string }) => row.label.length > 0)).toBe(true);
   });
 
@@ -129,11 +132,17 @@ describe('me/notification-settings', () => {
 
   it('ค่าเริ่มต้นตรงกับที่ตัวส่งใช้จริง (งดส่ง 20:00–08:00 + วันหยุด) · บันทึกบางส่วนได้', async () => {
     expect((await team.dev.get(q())).body).toEqual({ workspace: team.slug, dueReminder: '1d_and_today', digest: 'workdays', quietStart: '20:00', quietEnd: '08:00', quietOnHolidays: true, autoWatch: true, custom: false });
-    const r = await team.dev.put('/me/notification-settings', { workspace: team.slug, dueReminder: '3d', digest: 'off', autoWatch: false });
+    const r = await team.dev.put('/me/notification-settings', { workspace: team.slug, dueReminder: '3d', digest: 'daily', autoWatch: false });
     expect(r.status, JSON.stringify(r.body)).toBe(200);
-    expect(r.body).toMatchObject({ dueReminder: '3d', digest: 'off', autoWatch: false, quietStart: '20:00', quietEnd: '08:00', custom: true });
+    expect(r.body).toMatchObject({ dueReminder: '3d', digest: 'daily', autoWatch: false, quietStart: '20:00', quietEnd: '08:00', custom: true });
     const stored = (await t.owner.query('SELECT due_reminder, digest, quiet_start::text, auto_watch FROM user_notification_settings WHERE user_id = $1', [team.devId])).rows;
-    expect(stored).toEqual([{ due_reminder: '3d', digest: 'off', quiet_start: '20:00:00', auto_watch: false }]);
+    expect(stored).toEqual([{ due_reminder: '3d', digest: 'daily', quiet_start: '20:00:00', auto_watch: false }]);
+  });
+
+  it('สรุปประจำวันปิดไม่ได้แล้ว: ไม่รับ off · ค่า off เดิมแสดงเป็นวันทำการ', async () => {
+    expect((await team.dev.put('/me/notification-settings', { workspace: team.slug, digest: 'off' })).status).toBe(400);
+    await t.owner.query(`UPDATE user_notification_settings SET digest = 'off' WHERE user_id = $1`, [team.devId]);
+    expect((await team.dev.get(q())).body.digest).toBe('workdays');
   });
 
   it('ช่วงงดส่ง: เปลี่ยนเวลา / ปิด (null ทั้งคู่) / ต้องคู่กัน', async () => {

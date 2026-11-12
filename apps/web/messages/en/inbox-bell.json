@@ -68,7 +68,8 @@
       "member__joined": "New member",
       "member__invited": "Invitation",
       "automation__notified": "Automation",
-      "other": "Notification"
+      "other": "Notification",
+      "digest__daily": "Daily summary"
     },
     "verbs": {
       "issue__assigned": "assigned you to",
@@ -81,9 +82,11 @@
       "issue__overdue": "task overdue",
       "due_request__created": "requested a due date change for",
       "due_request__decided": "responded to the Due change request for",
-      "other": "has activity on"
+      "other": "has activity on",
+      "digest__daily": "Your daily summary"
     },
-    "loading": "Loading Inbox"
+    "loading": "Loading Inbox",
+    "openMyTasks": "Open my tasks"
   },
   "bell": {
     "title": "Notifications",
@@ -102,5 +105,24 @@
     "toastOpenIssue": "Open issue",
     "toastLater": "Later",
     "toastOpen": "Open Inbox"
+  },
+  "daily": {
+    "count": {
+      "dueToday": "{count} due today",
+      "overdue": "{count} overdue",
+      "dueSoon": "{count} due soon",
+      "review": "{count} to review",
+      "team": "{count} team overdue"
+    },
+    "section": {
+      "dueToday": "Due today",
+      "overdue": "Overdue",
+      "dueSoon": "Due soon",
+      "review": "Waiting for your review",
+      "team": "Team overdue · {project}"
+    },
+    "late": "{days, plural, one {# day} other {# days}} late",
+    "due": "due {date}",
+    "more": "and {count} more · see all in My tasks"
   }
 }

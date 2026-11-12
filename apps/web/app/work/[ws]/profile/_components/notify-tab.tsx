@@ -175,7 +175,6 @@ export function NotifyTab({ ws }: { ws: string }) {
         <Select label={t("digest")} value={draft.digest} onChange={(e) => setDraft({ ...draft, digest: e.target.value as SettingsDraft["digest"] })}>
           <option value="workdays">{t("digestOption.workdays")}</option>
           <option value="daily">{t("digestOption.daily")}</option>
-          <option value="off">{t("digestOption.off")}</option>
         </Select>
         <div className={styles.switchRow}>
           <Switch

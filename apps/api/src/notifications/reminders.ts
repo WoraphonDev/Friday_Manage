@@ -1,58 +1,72 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type Db, schema } from '@friday/db';
-import { and, eq, inArray, isNotNull, isNull, lte, ne } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, lte, type SQL, sql } from 'drizzle-orm';
 import { today } from '../common/dates.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
 import { Audience, type IssueCtx, type ProjectCtx } from './audience.js';
 import { Notifier } from './notifier.js';
-import { EMAIL_DEFAULT_ON } from '../channels/dispatcher.js';
-import { IN_APP_CHANNEL, REASONS } from './rules.js';
+import { DAILY_EVENT, REASONS } from './rules.js';
 import { openStatus } from '../common/status-category.js';
 
 const s = schema;
-type DueReminder = '1d_and_today' | '3d' | 'today_only';
+export type DueReminder = '1d_and_today' | '3d' | 'today_only';
 type Digest = 'workdays' | 'daily' | 'off';
 /** Workspace ไม่มีโปรเจกต์ให้ WorkCalendar อ่านวันหยุดเฉพาะโปรเจกต์ · ใช้ id ว่างแทน */
 const NO_PROJECT = '00000000-0000-0000-0000-000000000000';
-const MAX_SUMMARY_ITEMS = 20;
+/** รายการสูงสุดต่อหัวข้อ · ที่เหลือบอกเป็นจำนวน (…Count) */
+export const MAX_SUMMARY_ITEMS = 20;
+/** มองหางานใกล้ครบกำหนดล่วงหน้าไม่เกินนี้ (3 วันทำการ + วันหยุดยาว) */
+const LOOKAHEAD_DAYS = 21;
 
 const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 
-function workingDayBefore(cal: WorkCalendar, date: string, n: number) {
-  let d = date;
-  for (let found = 0, guard = 0; found < n && guard < 400; guard++) {
-    d = addDays(d, -1);
-    if (cal.isWorkingDay(d)) found++;
-  }
-  return d;
-}
-
-/** วันทำการแรกหลัง date = วันแรกที่งานนับว่าเลยกำหนด */
-function firstWorkingDayAfter(cal: WorkCalendar, date: string) {
-  let d = addDays(date, 1);
-  for (let guard = 0; !cal.isWorkingDay(d) && guard < 400; guard++) d = addDays(d, 1);
-  return d;
-}
-
-/** ควรเตือน "ใกล้ครบกำหนด" วันนี้ไหม (I · Profile › แจ้งเตือนก่อนครบกำหนด) · นับวันทำการตามปฏิทินโปรเจกต์ */
-export function dueSoonToday(setting: DueReminder, planEnd: string, date: string, cal: WorkCalendar) {
-  if (planEnd === date) return setting !== '3d';
-  if (setting === '1d_and_today') return workingDayBefore(cal, planEnd, 1) === date;
-  if (setting === '3d') return workingDayBefore(cal, planEnd, 3) === date;
-  return false;
+/**
+ * งานนี้อยู่ในหัวข้อ "ใกล้ครบกำหนด" ของสรุปวันนี้ไหม (Profile › แจ้งเตือนก่อนครบกำหนด) · นับวันทำการตามปฏิทินโปรเจกต์
+ * `1d_and_today` = ครบกำหนดภายในวันทำการถัดไป · `3d` = ภายใน 3 วันทำการ · `today_only` = ไม่มีหัวข้อนี้ (เห็นเฉพาะวันครบกำหนด)
+ */
+export function dueSoonInSummary(setting: DueReminder, planEnd: string, date: string, cal: WorkCalendar) {
+  if (planEnd <= date || setting === 'today_only') return false;
+  return cal.workingDaysIn(addDays(date, 1), planEnd) <= (setting === '3d' ? 3 : 1);
 }
 
 interface OpenIssue {
   issue: IssueCtx;
   project: ProjectCtx & { holidayCalendarId: string | null };
-  planEnd: string;
+  planEnd: string | null;
   statusName: string;
 }
 
+export interface SummaryItem {
+  issueKey: string;
+  title: string;
+  planEnd: string | null;
+  projectKey: string;
+  daysLate?: number;
+  daysLeft?: number;
+  assignees?: (string | null)[];
+}
+
+/** สรุปของคนหนึ่งคนใน Workspace หนึ่ง */
+interface Box {
+  workspaceId: string;
+  userId: string;
+  dueSoon: SummaryItem[];
+  dueToday: SummaryItem[];
+  overdue: SummaryItem[];
+  review: SummaryItem[];
+  /** งานเลยกำหนดของทีมในโปรเจกต์ที่ดูแล (PM) · ไม่รวมงานที่อยู่ในหัวข้อ "เลยกำหนด" ของตัวเองแล้ว */
+  team: Map<string, { projectKey: string; projectName: string; issues: SummaryItem[] }>;
+}
+
+const byDue = (a: SummaryItem, b: SummaryItem) => (a.planEnd ?? '9999').localeCompare(b.planEnd ?? '9999') || a.issueKey.localeCompare(b.issueKey);
+const isReview = (name: string) => name.trim().toLowerCase() === 'review';
+
 /**
- * งานตามเวลาของแจ้งเตือน (A16 เรียกตาม SCHEDULES ใน rules.ts) · ทุกงานรันซ้ำได้: ใช้ dedupeKey ของ Notifier
+ * สรุปงานประจำวัน 08:30 (A16 เรียกตาม SCHEDULES ใน rules.ts) · แทนการเตือนทีละงาน 08:00, digest และสรุป PM 09:30 เดิม
+ * ผู้ใช้ตัดสิน 12 พ.ย. 2026: รวมเป็นแจ้งเตือนเดียวต่อคนต่อวัน เพื่อประหยัดโควตาอีเมล · Inbox ได้รายการเดียวเหมือนกัน
  * ใช้ friday_system เพราะรันนอกคำขอของผู้ใช้และครอบคลุมทุก Workspace · ตรวจสิทธิ์ผู้รับด้วย Audience.visible
+ * รันซ้ำได้: dedupeKey `digest:{date}` ต่อคนต่อ Workspace
  */
 @Injectable()
 export class Reminders {
@@ -65,202 +79,108 @@ export class Reminders {
     this.audience = new Audience(db);
   }
 
-  /**
-   * 08:00 · ใกล้ครบกำหนดตาม due_reminder ของแต่ละคน และแจ้งงานเลยกำหนด
-   * เลยกำหนดวันทำการแรก: แจ้ง Assignee ทีละงาน · วันทำการถัดไป: สรุปงานที่ยังเลยกำหนดรวมเป็นรายการเดียวต่อคนทุกวันทำการ
-   * จนกว่างานจะเสร็จหรือเลื่อน Due (ผู้ใช้ตัดสิน 9 พ.ย. 2026)
-   */
-  async dueReminders(date = today()) {
-    const open = await this.openIssues(addDays(date, 21));
-    const assignees = await this.audience.assignees(open.map((o) => o.issue.id));
-    const users = [...new Set([...assignees.values()].flat())];
-    const settings = await this.settings(users);
-    const calendars = await this.calendars(open.map((o) => o.project));
-    /** workspaceId:userId → งานที่เลยกำหนดมาเกินวันทำการแรกแล้ว */
-    const repeat = new Map<string, OpenIssue[]>();
-    let sent = 0;
-    for (const o of open) {
+  async daily(date = today()) {
+    const due = await this.openIssues(and(isNotNull(s.issues.planEnd), lte(s.issues.planEnd, addDays(date, LOOKAHEAD_DAYS)))!);
+    // งานที่รอ Review ไม่ขึ้นกับ Due จึงอ่านแยก
+    const review = await this.openIssues(and(isNotNull(s.issues.reviewerId), sql`lower(trim(${s.workflowStatuses.name})) = 'review'`)!);
+    const all = [...new Map([...due, ...review].map((o) => [o.issue.id, o])).values()];
+    const assignees = await this.audience.assignees(all.map((o) => o.issue.id));
+    const calendars = await this.calendars(all.map((o) => o.project));
+    const queried = new Set([...assignees.values()].flat().concat(all.flatMap((o) => (o.issue.reviewerId ? [o.issue.reviewerId] : []))));
+    const settings = await this.settings([...queried]);
+    const boxes = new Map<string, Box>();
+    const box = (workspaceId: string, userId: string) => {
+      const k = `${workspaceId}:${userId}`;
+      if (!boxes.has(k)) boxes.set(k, { workspaceId, userId, dueSoon: [], dueToday: [], overdue: [], review: [], team: new Map() });
+      return boxes.get(k)!;
+    };
+    const item = (o: OpenIssue, extra: Partial<SummaryItem> = {}): SummaryItem => ({ issueKey: o.issue.key, title: o.issue.title, planEnd: o.planEnd, projectKey: o.project.key, ...extra });
+
+    // งานของฉัน: ใกล้ครบกำหนด / วันนี้ / เลยกำหนด
+    for (const o of due) {
       const people = assignees.get(o.issue.id) ?? [];
-      if (!people.length) continue;
-      const cal = calendars.get(o.project.id)!;
-      if (o.planEnd < date) {
-        // dedupeKey ผูกกับ planEnd: แจ้งทีละงานครั้งเดียวต่อ Due · ถ้างานเพิ่งเลยกำหนดวันนี้ จบที่รายการนี้
-        sent += await this.send(o, people, 'issue.overdue', REASONS.overdue, `overdue:${o.issue.id}:${o.planEnd}`, { planEnd: o.planEnd, daysLate: daysBetween(o.planEnd, date) });
-        if (cal.isWorkingDay(date) && firstWorkingDayAfter(cal, o.planEnd) < date) {
-          for (const u of people) repeat.set(`${o.project.workspaceId}:${u}`, [...(repeat.get(`${o.project.workspaceId}:${u}`) ?? []), o]);
-        }
-        continue;
+      if (!people.length || !o.planEnd) continue;
+      const visible = await this.audience.visible(people, o.project, o.issue);
+      for (const u of visible) {
+        const b = box(o.project.workspaceId, u);
+        if (o.planEnd < date) b.overdue.push(item(o, { daysLate: daysBetween(o.planEnd, date) }));
+        else if (o.planEnd === date) b.dueToday.push(item(o));
+        else if (dueSoonInSummary(settings.get(`${o.project.workspaceId}:${u}`)?.dueReminder ?? '1d_and_today', o.planEnd, date, calendars.get(o.project.id)!))
+          b.dueSoon.push(item(o, { daysLeft: daysBetween(date, o.planEnd) }));
       }
-      const due = people.filter((u) => dueSoonToday(settings.get(`${o.project.workspaceId}:${u}`)?.dueReminder ?? '1d_and_today', o.planEnd, date, cal));
-      sent += await this.send(o, due, 'issue.due_soon', REASONS.dueSoon, `due_soon:${o.issue.id}:${o.planEnd}:${date}`, { planEnd: o.planEnd, daysLeft: daysBetween(date, o.planEnd) });
     }
-    for (const [k, list] of repeat) sent += await this.overdueRepeat(k.split(':')[0], k.split(':')[1], list, date);
-    return { date, sent };
-  }
-
-  /** สรุปงานเลยกำหนดของคนหนึ่งคนใน Workspace หนึ่ง (เฉพาะงานที่ยังเห็นได้) · In-app ของ issue.overdue ปิดไม่ได้ */
-  private async overdueRepeat(workspaceId: string, userId: string, list: OpenIssue[], date: string) {
-    const mine: OpenIssue[] = [];
-    for (const o of list) if ((await this.audience.visible([userId], o.project, o.issue)).size) mine.push(o);
-    if (!mine.length) return 0;
-    mine.sort((a, b) => a.planEnd.localeCompare(b.planEnd) || a.issue.key.localeCompare(b.issue.key));
-    const projects = [...new Set(mine.map((o) => o.project.id))];
-    const single = projects.length === 1 ? mine[0].project : null;
-    await this.notifier.notify({
-      workspaceId,
-      recipientIds: [userId],
-      eventType: 'issue.overdue',
-      actorId: null,
-      projectId: single?.id,
-      payload: {
-        ...(single ? { projectKey: single.key, projectName: single.name } : {}),
-        summary: true,
-        mine: true,
-        date,
-        count: mine.length,
-        title: `งานของคุณที่ยังเลยกำหนด ${mine.length} งาน`,
-        issues: mine.slice(0, MAX_SUMMARY_ITEMS).map((o) => ({ issueKey: o.issue.key, title: o.issue.title, planEnd: o.planEnd, daysLate: daysBetween(o.planEnd, date), projectKey: o.project.key })),
-      },
-      reason: REASONS.overdueRepeat,
-      dedupeKey: `overdue_mine:${date}`,
-    });
-    return 1;
-  }
-
-  /** 09:30 วันทำการ · สรุปงานเลยกำหนดของแต่ละโปรเจกต์ให้ PM (Owner + Admin + ผู้ทำแทน PM) คนละ 1 รายการ */
-  async overdueSummary(date = today()) {
-    const open = (await this.openIssues(addDays(date, -1))).filter((o) => o.planEnd < date);
-    const byProject = new Map<string, OpenIssue[]>();
-    for (const o of open) byProject.set(o.project.id, [...(byProject.get(o.project.id) ?? []), o]);
-    const calendars = await this.calendars([...byProject.values()].map((list) => list[0].project));
-    const assignees = await this.audience.assignees(open.map((o) => o.issue.id));
-    const names = await this.audience.names([...new Set([...assignees.values()].flat())]);
-    let sent = 0;
-    for (const list of byProject.values()) {
+    // รอฉัน Review
+    for (const o of review) {
+      if (!o.issue.reviewerId || !isReview(o.statusName)) continue;
+      if ((await this.audience.visible([o.issue.reviewerId], o.project, o.issue)).size) box(o.project.workspaceId, o.issue.reviewerId).review.push(item(o));
+    }
+    // PM: งานเลยกำหนดของทีมในแต่ละโปรเจกต์
+    const lateByProject = new Map<string, OpenIssue[]>();
+    for (const o of due) if (o.planEnd && o.planEnd < date) lateByProject.set(o.project.id, [...(lateByProject.get(o.project.id) ?? []), o]);
+    const names = await this.audience.names([...new Set([...lateByProject.values()].flat().flatMap((o) => assignees.get(o.issue.id) ?? []))]);
+    for (const list of lateByProject.values()) {
       const project = list[0].project;
-      if (!calendars.get(project.id)!.isWorkingDay(date)) continue;
-      const visible = await this.audience.visible([...(await this.audience.pmRecipients(project)).keys()], project);
-      if (!visible.size) continue;
-      list.sort((a, b) => a.planEnd.localeCompare(b.planEnd) || a.issue.key.localeCompare(b.issue.key));
-      await this.notifier.notify({
-        workspaceId: project.workspaceId,
-        recipientIds: [...visible],
-        eventType: 'issue.overdue',
-        actorId: null,
-        projectId: project.id,
-        payload: {
-          projectKey: project.key,
-          projectName: project.name,
-          summary: true,
-          date,
-          count: list.length,
-          issues: list.slice(0, MAX_SUMMARY_ITEMS).map((o) => ({
-            issueKey: o.issue.key,
-            title: o.issue.title,
-            planEnd: o.planEnd,
-            daysLate: daysBetween(o.planEnd, date),
-            assignees: (assignees.get(o.issue.id) ?? []).map((id) => names.get(id) ?? null),
-          })),
-        },
-        reason: REASONS.overdueSummary,
-        dedupeKey: `overdue_summary:${project.id}:${date}`,
-      });
-      sent++;
+      const pms = await this.audience.visible([...(await this.audience.pmRecipients(project)).keys()], project);
+      for (const u of pms) {
+        const b = box(project.workspaceId, u);
+        const mine = new Set(b.overdue.map((i) => i.issueKey));
+        const issues = list
+          .filter((o) => !mine.has(o.issue.key))
+          .map((o) => item(o, { daysLate: daysBetween(o.planEnd!, date), assignees: (assignees.get(o.issue.id) ?? []).map((id) => names.get(id) ?? null) }));
+        if (issues.length) b.team.set(project.id, { projectKey: project.key, projectName: project.name, issues });
+      }
     }
-    return { date, sent };
-  }
 
-  /**
-   * 08:30 · Daily digest (งานวันนี้ + เลยกำหนด + รอ Review) ตาม digest ใน Profile
-   * ผู้รับ = ใครก็ตามที่เปิดช่องทางใดช่องทางหนึ่งของ digest (K01): In-app ปิดเป็นค่าเริ่มต้น (Canvas I) จึงเข้า Inbox เฉพาะคนที่เปิดเอง
-   * ส่วน Email เปิดเป็นค่าเริ่มต้น (EMAIL_DEFAULT_ON) · คนที่ไม่ได้เปิด In-app ได้แถว in_app = false ให้ท่อส่งออกนอกแอปใช้
-   */
-  async digest(date = today()) {
-    const optedIn = await this.digestRecipients();
-    if (!optedIn.length) return { date, sent: 0 };
-    const settings = await this.settings(optedIn.map((o) => o.userId));
-    const open = await this.openIssues(date);
-    const assignees = await this.audience.assignees(open.map((o) => o.issue.id));
+    // PM ที่ไม่มีงานของตัวเองยังไม่ได้อ่านค่า (ใช้ความถี่ของสรุป)
+    const missing = [...new Set([...boxes.values()].map((b) => b.userId))].filter((u) => !queried.has(u));
+    for (const [k, v] of await this.settings(missing)) settings.set(k, v);
     const workspaceCalendars = new Map<string, WorkCalendar>();
     let sent = 0;
-    for (const { workspaceId, userId, inApp } of optedIn) {
-      const mode: Digest = settings.get(`${workspaceId}:${userId}`)?.digest ?? 'workdays';
-      if (mode === 'off') continue;
-      if (mode === 'workdays') {
-        if (!workspaceCalendars.has(workspaceId))
-          workspaceCalendars.set(workspaceId, await this.db.transaction((tx) => WorkCalendar.load(tx, { id: NO_PROJECT, workspaceId, holidayCalendarId: null }, addDays(date, -1))));
-        if (!workspaceCalendars.get(workspaceId)!.isWorkingDay(date)) continue;
+    for (const b of boxes.values()) {
+      const mode: Digest = settings.get(`${b.workspaceId}:${b.userId}`)?.digest ?? 'workdays';
+      // 'off' เป็นค่าเดิมก่อนรวมสรุป: งานเลยกำหนดเคยแจ้งเสมอ จึงถือเป็นวันทำการ
+      if (mode !== 'daily') {
+        if (!workspaceCalendars.has(b.workspaceId))
+          workspaceCalendars.set(b.workspaceId, await this.db.transaction((tx) => WorkCalendar.load(tx, { id: NO_PROJECT, workspaceId: b.workspaceId, holidayCalendarId: null }, addDays(date, -1))));
+        if (!workspaceCalendars.get(b.workspaceId)!.isWorkingDay(date)) continue;
       }
-      const mine = open.filter((o) => o.project.workspaceId === workspaceId);
-      const visible = new Set<string>();
-      for (const o of mine) if ((await this.audience.visible([userId], o.project, o.issue)).size) visible.add(o.issue.id);
-      const item = (o: OpenIssue) => ({ issueKey: o.issue.key, title: o.issue.title, planEnd: o.planEnd, projectKey: o.project.key });
-      const assigned = mine.filter((o) => visible.has(o.issue.id) && (assignees.get(o.issue.id) ?? []).includes(userId));
-      const dueToday = assigned.filter((o) => o.planEnd === date).map(item);
-      const overdue = assigned.filter((o) => o.planEnd < date).map(item);
-      const review = mine.filter((o) => visible.has(o.issue.id) && o.issue.reviewerId === userId && o.statusName.trim().toLowerCase() === 'review').map(item);
-      if (!dueToday.length && !overdue.length && !review.length) continue;
+      [b.dueSoon, b.dueToday, b.overdue, b.review].forEach((l) => l.sort(byDue));
+      const team = [...b.team.values()].sort((x, y) => x.projectKey.localeCompare(y.projectKey));
+      team.forEach((p) => p.issues.sort(byDue));
+      const teamCount = team.reduce((n, p) => n + p.issues.length, 0);
+      const count = b.dueSoon.length + b.dueToday.length + b.overdue.length + b.review.length + teamCount;
+      if (!count) continue;
+      const cap = (l: SummaryItem[]) => l.slice(0, MAX_SUMMARY_ITEMS);
       await this.notifier.notify({
-        workspaceId,
-        recipientIds: [userId],
-        eventType: 'digest.daily',
+        workspaceId: b.workspaceId,
+        recipientIds: [b.userId],
+        eventType: DAILY_EVENT,
         actorId: null,
-        payload: { date, dueToday, overdue: overdue.slice(0, MAX_SUMMARY_ITEMS), overdueCount: overdue.length, review },
-        reason: REASONS.digest,
+        payload: {
+          date,
+          title: summaryTitle({ dueToday: b.dueToday.length, overdue: b.overdue.length, dueSoon: b.dueSoon.length, review: b.review.length, team: teamCount }),
+          count,
+          dueSoon: cap(b.dueSoon),
+          dueSoonCount: b.dueSoon.length,
+          dueToday: cap(b.dueToday),
+          dueTodayCount: b.dueToday.length,
+          overdue: cap(b.overdue),
+          overdueCount: b.overdue.length,
+          review: cap(b.review),
+          reviewCount: b.review.length,
+          team: team.map((p) => ({ projectKey: p.projectKey, projectName: p.projectName, count: p.issues.length, issues: cap(p.issues) })),
+          teamCount,
+        },
+        reason: REASONS.daily,
         dedupeKey: `digest:${date}`,
-        inAppOff: inApp ? [] : [userId],
       });
       sent++;
     }
     return { date, sent };
   }
 
-  private async send(o: OpenIssue, userIds: string[], eventType: string, reason: string, dedupeKey: string, extra: Record<string, unknown>) {
-    if (!userIds.length) return 0;
-    const visible = await this.audience.visible(userIds, o.project, o.issue);
-    const muted = eventType === 'issue.overdue' ? new Set<string>() : await this.audience.inAppDisabled(o.project.workspaceId, [...visible], eventType);
-    // ปิด In-app แล้วยังส่ง Email / LINE ได้ (in_app = false) · ดู NotifyInput.inAppOff
-    const recipients = [...visible];
-    if (!recipients.length) return 0;
-    await this.notifier.notify({
-      workspaceId: o.project.workspaceId,
-      recipientIds: recipients,
-      eventType,
-      actorId: null,
-      projectId: o.project.id,
-      issueId: o.issue.id,
-      payload: { projectKey: o.project.key, projectName: o.project.name, issueKey: o.issue.key, issueTitle: o.issue.title, ...extra },
-      reason,
-      dedupeKey,
-      inAppOff: muted,
-    });
-    return recipients.filter((id) => !muted.has(id)).length;
-  }
-
-  /** สมาชิก active (บัญชีไม่ถูกปิด) ที่เปิด digest อย่างน้อยหนึ่งช่องทาง · inApp = เปิด In-app เอง (ค่าเริ่มต้นปิด) */
-  private async digestRecipients() {
-    const p = s.userNotificationPrefs;
-    const members = await this.db
-      .select({ workspaceId: s.workspaceMembers.workspaceId, userId: s.workspaceMembers.userId })
-      .from(s.workspaceMembers)
-      .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
-      .innerJoin(s.workspaces, eq(s.workspaces.id, s.workspaceMembers.workspaceId))
-      .where(and(eq(s.workspaceMembers.status, 'active'), isNull(s.users.disabledAt), isNull(s.workspaces.deletedAt)));
-    const prefs = await this.db.select({ workspaceId: p.workspaceId, userId: p.userId, channel: p.channel, enabled: p.enabled }).from(p).where(eq(p.eventType, 'digest.daily'));
-    const pref = new Map(prefs.map((r) => [`${r.workspaceId}:${r.userId}:${r.channel}`, r.enabled]));
-    const out: Array<{ workspaceId: string; userId: string; inApp: boolean }> = [];
-    for (const m of members) {
-      const k = `${m.workspaceId}:${m.userId}`;
-      const inApp = pref.get(`${k}:${IN_APP_CHANNEL}`) === true;
-      const email = pref.get(`${k}:email`) ?? EMAIL_DEFAULT_ON.has('digest.daily');
-      const external = email || [...pref.entries()].some(([key, on]) => on && key.startsWith(`${k}:`) && !key.endsWith(`:${IN_APP_CHANNEL}`));
-      if (inApp || external) out.push({ ...m, inApp });
-    }
-    return out;
-  }
-
-  /** งานที่ยังไม่เสร็จและมี Plan End ไม่เกิน until · ไม่รวมโปรเจกต์ที่เก็บถาวรหรือถูกลบ */
-  private async openIssues(until: string): Promise<OpenIssue[]> {
+  /** งานที่ยังไม่เสร็จตามเงื่อนไข · ไม่รวมโปรเจกต์ที่เก็บถาวรหรือถูกลบ */
+  private async openIssues(where: SQL): Promise<OpenIssue[]> {
     const rows = await this.db
       .select({
         id: s.issues.id,
@@ -286,19 +206,9 @@ export class Reminders {
       .innerJoin(s.workspaces, eq(s.workspaces.id, s.issues.workspaceId))
       .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
       .innerJoin(s.issueTypes, eq(s.issueTypes.id, s.issues.issueTypeId))
-      .where(
-        and(
-          isNull(s.issues.deletedAt),
-          isNull(s.projects.deletedAt),
-          isNull(s.projects.archivedAt),
-          isNull(s.workspaces.deletedAt),
-          openStatus(),
-          isNotNull(s.issues.planEnd),
-          lte(s.issues.planEnd, until),
-        ),
-      );
+      .where(and(isNull(s.issues.deletedAt), isNull(s.projects.deletedAt), isNull(s.projects.archivedAt), isNull(s.workspaces.deletedAt), openStatus(), where));
     return rows.map((r) => ({
-      planEnd: r.planEnd!,
+      planEnd: r.planEnd,
       statusName: r.statusName,
       issue: {
         id: r.id,
@@ -345,4 +255,17 @@ export class Reminders {
     });
     return out;
   }
+}
+
+/** หัวเรื่องภาษาไทยที่เก็บใน payload (Inbox / กระดิ่งใช้เมื่อไม่มีคำแปล) · Email / LINE สร้างใหม่ตามภาษาผู้รับใน channels/message.ts */
+export function summaryTitle(c: { dueToday: number; overdue: number; dueSoon: number; review: number; team: number }) {
+  return [
+    c.dueToday && `ครบกำหนดวันนี้ ${c.dueToday}`,
+    c.overdue && `เลยกำหนด ${c.overdue}`,
+    c.dueSoon && `ใกล้ครบกำหนด ${c.dueSoon}`,
+    c.review && `รอ Review ${c.review}`,
+    c.team && `ทีมเลยกำหนด ${c.team}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }

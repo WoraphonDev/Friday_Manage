@@ -29,7 +29,7 @@ const cell = (enabled: boolean, locked = false) => ({ enabled, locked, custom: f
 const rows: PrefRow[] = [
   { eventType: "issue.assigned", group: "assigned", label: "ถูกมอบหมายงาน หรือถูกถอดออกจากงาน", hint: null, channels: { in_app: cell(true, true), email: cell(true), line: cell(true) } },
   { eventType: "issue.commented", group: "activity", label: "คอมเมนต์ใหม่ในงานที่ฉันเป็น Assignee / Watcher", hint: null, channels: { in_app: cell(true), email: cell(false), line: cell(false) } },
-  { eventType: "digest.daily", group: "schedule", label: "สรุปรายวัน (Daily digest)", hint: "งานวันนี้ + Overdue + รอ Review", channels: { in_app: cell(false), email: cell(true), line: cell(true) } },
+  { eventType: "digest.daily", group: "schedule", label: "สรุปงานประจำวัน 08:30", hint: "ใกล้ครบกำหนด · ครบกำหนดวันนี้ · เลยกำหนด · รอ Review · งานเลยกำหนดของทีม (PM) รวมเป็นฉบับเดียวต่อวัน", channels: { in_app: cell(true, true), email: cell(true), line: cell(true) } },
 ];
 const settings = (over: Partial<NotifySettings> = {}): NotifySettings => ({ workspace: "sample", dueReminder: "1d_and_today", digest: "workdays", quietStart: "20:00", quietEnd: "08:00", quietOnHolidays: true, autoWatch: true, custom: false, ...over });
 const leaves = [
@@ -179,21 +179,24 @@ describe("Profile (I)", () => {
     expect(locked).toBeChecked();
     expect(locked).toBeDisabled();
     expect(screen.getByText("งานที่มอบหมายให้ฉัน")).toBeInTheDocument();
-    expect(screen.getByText("งานวันนี้ + Overdue + รอ Review")).toBeInTheDocument();
+    expect(screen.getByText("ใกล้ครบกำหนด · ครบกำหนดวันนี้ · เลยกำหนด · รอ Review · งานเลยกำหนดของทีม (PM) รวมเป็นฉบับเดียวต่อวัน")).toBeInTheDocument();
+    // สรุปประจำวันปิดไม่ได้แล้ว (ปิดเฉพาะ Email / LINE)
+    expect(screen.getByRole("checkbox", { name: "สรุปงานประจำวัน 08:30 ผ่าน In-app" })).toBeDisabled();
+    expect(screen.queryByRole("option", { name: "ปิด" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("checkbox", { name: "คอมเมนต์ใหม่ในงานที่ฉันเป็น Assignee / Watcher ผ่าน Email" }));
-    await user.selectOptions(screen.getByLabelText("Daily digest"), "off");
-    await user.selectOptions(screen.getByLabelText("แจ้งเตือนก่อนครบกำหนด"), "3d");
+    await user.selectOptions(screen.getByLabelText("ส่งสรุปงานประจำวัน"), "daily");
+    await user.selectOptions(screen.getByLabelText("งานใกล้ครบกำหนดในสรุป"), "3d");
     await user.click(screen.getByRole("switch", { name: "โหมดไม่รบกวน" }));
     await user.click(screen.getByRole("switch", { name: "Auto-watch" }));
     await user.click(screen.getByRole("button", { name: "บันทึก" }));
     await waitFor(() => expect(calls).toHaveLength(2));
     const prefs = calls.find((c) => c.path === "/me/notification-prefs")!;
     expect(prefs.method).toBe("PUT");
-    expect((prefs.body as { prefs: unknown[] }).prefs).toHaveLength(8);
+    expect((prefs.body as { prefs: unknown[] }).prefs).toHaveLength(7);
     expect(prefs.body).toMatchObject({ workspace: "sample" });
     expect((prefs.body as { prefs: unknown[] }).prefs).toContainEqual({ eventType: "issue.commented", channel: "email", enabled: true });
     expect((prefs.body as { prefs: { eventType: string; channel: string }[] }).prefs.some((p) => p.eventType === "issue.assigned" && p.channel === "in_app")).toBe(false);
-    expect(calls.find((c) => c.path === "/me/notification-settings")!.body).toEqual({ workspace: "sample", dueReminder: "3d", digest: "off", quietStart: null, quietEnd: null, quietOnHolidays: false, autoWatch: false });
+    expect(calls.find((c) => c.path === "/me/notification-settings")!.body).toEqual({ workspace: "sample", dueReminder: "3d", digest: "daily", quietStart: null, quietEnd: null, quietOnHolidays: false, autoWatch: false });
     expect(await screen.findByText("บันทึกการตั้งค่าแจ้งเตือนแล้ว")).toBeInTheDocument();
 
     calls = [];

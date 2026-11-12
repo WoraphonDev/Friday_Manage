@@ -7,8 +7,8 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const hexToInt = (hex: string) => parseInt(hex.replace('#', ''), 16);
 
 const FOOTER = {
-  th: { because: (why: string) => `คุณได้รับอีเมลนี้เพราะ${why}`, settings: 'ตั้งค่าการแจ้งเตือน', open: 'เปิดในแอป' },
-  en: { because: (why: string) => `You received this email because: ${why}`, settings: 'Notification settings', open: 'Open in app' },
+  th: { because: (why: string) => `คุณได้รับอีเมลนี้เพราะ${why}`, settings: 'ตั้งค่าการแจ้งเตือน', open: 'เปิดในแอป', more: (n: number) => `และอีก ${n} งาน` },
+  en: { because: (why: string) => `You received this email because: ${why}`, settings: 'Notification settings', open: 'Open in app', more: (n: number) => `and ${n} more` },
 } as const;
 
 export function renderEmail(m: Msg, why: string, settingsUrl: string) {
@@ -19,6 +19,7 @@ export function renderEmail(m: Msg, why: string, settingsUrl: string) {
     m.project,
     ...m.rows.map(([k, v]) => `${k}: ${v}`),
     m.note ? `“${m.note}”` : '',
+    ...(m.lists ?? []).flatMap((l) => ['', l.label, ...l.items.map((i) => `- ${i.text}\n  ${i.url}`), ...(l.more ? [`  ${F.more(l.more)}`] : [])]),
     '',
     `${m.buttons[0]?.label ?? F.open}: ${m.url}`,
     '',
@@ -32,6 +33,12 @@ export function renderEmail(m: Msg, why: string, settingsUrl: string) {
 <div style="color:#5F6873">${esc(m.project)}</div>
 ${m.rows.map(([k, v]) => `<div><b>${esc(k)}</b> ${esc(v)}</div>`).join('')}
 ${m.note ? `<blockquote>${esc(m.note)}</blockquote>` : ''}
+${(m.lists ?? [])
+  .map(
+    (l) =>
+      `<h3 style="margin:16px 0 4px;font-size:14px">${esc(l.label)}</h3><ul style="margin:0;padding-left:20px">${l.items.map((i) => `<li><a href="${esc(i.url)}">${esc(i.text)}</a></li>`).join('')}${l.more ? `<li style="color:#5F6873">${esc(F.more(l.more))}</li>` : ''}</ul>`,
+  )
+  .join('')}
 <p><a href="${esc(m.url)}" style="background:#1D4ED8;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">${esc(m.buttons[0]?.label ?? F.open)}</a></p>
 <p style="color:#5F6873;font-size:12px">${esc(F.because(why))} · <a href="${esc(settingsUrl)}">${esc(F.settings)}</a></p>
 </div></div>`;

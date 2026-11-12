@@ -107,6 +107,14 @@ export class Jobs implements OnModuleDestroy {
     await this.getQueue().upsertJobScheduler(name, { pattern: cron, tz: config.timezone }, { name, data });
   }
 
+  /** ลบงานตามเวลาที่เลิกใช้แล้วออกจาก Valkey (ตารางเวลาค้างอยู่แม้ลบโค้ดออก) · โหมด inline ไม่มีอะไรให้ลบ */
+  async retire(...names: string[]) {
+    for (const name of names) {
+      if (this.schedules.has(name)) throw new Error(`งาน ${name} ยังตั้งเวลาไว้ ลบไม่ได้`);
+      if (this.cfg.mode === 'bullmq') await this.getQueue().removeJobScheduler(name);
+    }
+  }
+
   /** เริ่มรับงานจาก Valkey · เรียกจาก src/worker.ts เท่านั้น */
   async startWorker(concurrency = 5) {
     if (this.cfg.mode !== 'bullmq') throw new Error('Worker ต้องใช้ QUEUE_MODE=bullmq และ VALKEY_URL');

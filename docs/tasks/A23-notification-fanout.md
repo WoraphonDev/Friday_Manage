@@ -64,3 +64,18 @@
 
 - ผู้รับแบบ PM (`Audience.pmRecipients`) = Project Owner + Admin + สมาชิกที่ `pm_deputy` (migration 0016) · เหตุผลแยกตามบทบาท · ใช้กับ `plan.changed`, `project.health_changed`, `member.*`, `issue.overdue` และสรุป 09:30 · ผู้ทำแทน PM ได้ `due_request.approve` จึงได้รับและอนุมัติคำขอเลื่อน Due
 - งานเลยกำหนด: วันทำการแรกแจ้งทีละงานเหมือนเดิม · วันทำการถัดไปสรุปเป็นรายการเดียวต่อคน (`payload.summary`, `mine`, dedupe `overdue_mine:{date}`) จนงานเสร็จหรือเลื่อน Due
+
+### คำตัดสินของผู้ใช้ (12 พ.ย. 2569): รวมเป็นสรุปงานประจำวันฉบับเดียว
+
+ผู้ใช้ขอให้ส่งอีเมลเตือนงานวันละ 1 ฉบับเพื่อประหยัดโควตาอีเมล และไม่ให้สรุปซ้ำกับการเตือน Due · แทนที่งาน 08:00 / 08:30 / 09:30 ด้านบน
+
+- งานตามเวลาเหลือ `notifications.digest` 08:30 (`Reminders.daily`) · `notifications.due-reminders` และ `notifications.overdue-summary` ถูกลบออกจาก Valkey ตอนเปิดแอปด้วย `Jobs.retire` (`RETIRED_JOBS`)
+- 1 แจ้งเตือน `digest.daily` ต่อคนต่อ Workspace ต่อวัน (dedupe `digest:{date}`) · ไม่มีงานให้สรุป = ไม่ส่ง · Inbox, Email และ LINE ใช้รายการเดียวกัน
+  - `dueSoon`: Assignee ตาม `due_reminder` (`1d_and_today` = ครบภายในวันทำการถัดไป · `3d` = ภายใน 3 วันทำการ · `today_only` = ไม่มีหัวข้อนี้) นับวันทำการตามปฏิทินโปรเจกต์
+  - `dueToday` · `overdue` (มี `daysLate`) ของ Assignee · `review` = งานสถานะ Review ที่เป็น Reviewer (ไม่ขึ้นกับ Due)
+  - `team`: PM (`pmRecipients`) ได้งานเลยกำหนดของทีมแยกตามโปรเจกต์ พร้อมชื่อ Assignee · ไม่ซ้ำกับหัวข้อ `overdue` ของตัวเอง
+  - แต่ละหัวข้อเก็บสูงสุด 20 งาน และมี `…Count` เป็นจำนวนจริง
+- ความถี่ตาม `digest`: `workdays` (ค่าเริ่มต้น · ตามปฏิทิน Workspace) หรือ `daily` · ปิดไม่ได้แล้ว: API ไม่รับ `off` และแสดงค่าเดิม `off` เป็น `workdays` (เดิมงานเลยกำหนดแจ้งเสมอ) · In-app ของ `digest.daily` ล็อก · ปิดเฉพาะ Email / LINE ได้ใน Profile
+- Profile: แถว "งานใกล้ครบกำหนด" และ "งานเลยกำหนด" รวมเป็นแถว "สรุปงานประจำวัน 08:30" · ตัวเลือก "ปิด" ของสรุปถูกเอาออก · ต่างจาก Canvas I ตามคำตัดสินนี้
+- Email / LINE: `Msg.lists` แสดงรายการแยกหัวข้อพร้อมลิงก์งาน · โหมดปลอดภัย (ค่าเริ่มต้นของ Workspace) เหลือหัวเรื่องเป็นจำนวนงาน + ลิงก์ไปหน้างานของฉัน
+- `issue.due_soon` / `issue.overdue` ยังรับผ่าน EventBus ได้ตามตาราง แต่ระบบไม่สร้างจากงานตามเวลาแล้ว

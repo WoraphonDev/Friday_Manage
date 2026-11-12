@@ -40,7 +40,8 @@ export interface Prefs {
 export interface NotifySettings {
   workspace: string;
   dueReminder: "1d_and_today" | "3d" | "today_only";
-  digest: "workdays" | "daily" | "off";
+  /** สรุปงานประจำวัน · ปิดไม่ได้ (ปิดเฉพาะ Email / LINE ในตาราง) */
+  digest: "workdays" | "daily";
   quietStart: string | null;
   quietEnd: string | null;
   quietOnHolidays: boolean;

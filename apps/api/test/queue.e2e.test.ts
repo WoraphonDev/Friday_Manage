@@ -94,6 +94,9 @@ describe('โหมด inline (ค่าเริ่มต้นตอน test)'
     expect(calls).toBe(0);
     await expect(jobs.every('test.nightly', 'ทุกวัน')).rejects.toThrow('cron ของงาน test.nightly ไม่ถูกต้อง');
     await expect(jobs.every('test.unknown', '0 9 * * 1')).rejects.toThrow('ยังไม่ได้ define');
+    // ลบงานที่ยังตั้งเวลาอยู่ไม่ได้ · งานเก่าที่ไม่มีแล้วลบได้เสมอ
+    await expect(jobs.retire('test.nightly')).rejects.toThrow('ยังตั้งเวลาไว้');
+    await jobs.retire('test.gone');
   });
 });
 
@@ -192,5 +195,16 @@ describe.runIf(Boolean(valkeyUrl))('โหมด BullMQ กับ Valkey จร�
     const schedulers = await inspect.getJobSchedulers();
     expect(schedulers).toHaveLength(1);
     expect(schedulers[0]).toMatchObject({ key: 'test.nightly', pattern: '55 23 * * *', tz: 'Asia/Bangkok' });
+  });
+
+  it('retire ลบ scheduler ของงานที่เลิกใช้ (เช่นหลังรวมแจ้งเตือนเป็นสรุปประจำวัน)', async () => {
+    const old = new Jobs(cfg);
+    old.define('test.retired', () => undefined);
+    await old.every('test.retired', '0 8 * * *');
+    expect((await inspect.getJobSchedulers()).map((x) => x.key)).toContain('test.retired');
+    // เวอร์ชันใหม่ไม่มีงานนี้แล้ว
+    await producer.retire('test.retired');
+    expect((await inspect.getJobSchedulers()).map((x) => x.key)).not.toContain('test.retired');
+    await old.onModuleDestroy();
   });
 });

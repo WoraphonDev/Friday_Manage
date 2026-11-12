@@ -1,8 +1,8 @@
 // A23 · กระจายแจ้งเตือนจาก Event และแจ้งเตือนตามเวลา · ข้อมูลสมมติเท่านั้น
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { type DomainEvent, EventBus } from '../src/core/events.js';
-import { dueSoonToday } from '../src/notifications/reminders.js';
-import { JOBS } from '../src/notifications/rules.js';
+import { dueSoonInSummary } from '../src/notifications/reminders.js';
+import { JOBS, REASONS } from '../src/notifications/rules.js';
 import { WorkCalendar } from '../src/projects/calendar.js';
 import { Jobs } from '../src/queue/jobs.js';
 import { addMember, client, type Client, seedTeam, signup, startApp, type TestApp } from './helpers.js';
@@ -307,42 +307,45 @@ describe('สิทธิ์และการตั้งค่าของผ�
   });
 });
 
-describe('แจ้งเตือนตามเวลา (A16)', () => {
+describe('สรุปงานประจำวัน 08:30 (A16)', () => {
   // 2026-12-09 (พ.) · วันหยุดใน seedTeam: 7 และ 10 ธ.ค.
   const D = '2026-12-09';
-  const run = async (job: string, date: string) => t.app.get(Jobs).enqueue(job, { date });
+  const run = async (date: string) => t.app.get(Jobs).enqueue(JOBS.digest, { date });
   async function planned(title: string, planEnd: string, assigneeIds: string[], extra: Record<string, unknown> = {}) {
     const issue = await createIssue({ title, assigneeIds, ...extra });
     await t.owner.query('UPDATE issues SET plan_end = $1 WHERE id = $2', [planEnd, issue.id]);
     return issue;
   }
+  const daily = (rows: Row[], who: string) => rows.filter((r) => r.event_type === 'digest.daily' && r.recipient === who);
+  const keys = (list: unknown) => ((list ?? []) as { issueKey: string }[]).map((i) => i.issueKey);
+  const setting = (userId: string, values: Record<string, string>) =>
+    t.owner.query(
+      `INSERT INTO user_notification_settings (workspace_id, user_id, due_reminder, digest) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (workspace_id, user_id) DO UPDATE SET due_reminder = EXCLUDED.due_reminder, digest = EXCLUDED.digest`,
+      [workspaceId, userId, values.dueReminder ?? '1d_and_today', values.digest ?? 'workdays'],
+    );
 
-  it('ลงทะเบียนงานตามเวลา 08:00 / 09:30 / 08:30 (เวลาไทย)', () => {
-    const scheduled = t.app.get(Jobs).scheduled;
-    expect(scheduled.get(JOBS.dueReminders)).toBe('0 8 * * *');
-    expect(scheduled.get(JOBS.overdueSummary)).toBe('30 9 * * *');
-    expect(scheduled.get(JOBS.digest)).toBe('30 8 * * *');
+  it('ลงทะเบียนงานเดียว 08:30 (เวลาไทย) · งาน 08:00 และ 09:30 เดิมเลิกใช้', () => {
+    const scheduled = [...t.app.get(Jobs).scheduled].filter(([name]) => name.startsWith('notifications.'));
+    expect(scheduled).toEqual([[JOBS.digest, '30 8 * * *']]);
   });
 
-  it('due_reminder นับวันทำการ: 1 วันก่อน + วันครบกำหนด · 3 วันก่อน · เฉพาะวันครบกำหนด', () => {
+  it('หัวข้อใกล้ครบกำหนดนับวันทำการ: ภายใน 1 วันทำการ · ภายใน 3 วันทำการ · เฉพาะวันครบกำหนด', () => {
     const cal = new WorkCalendar(new Set([1, 2, 3, 4, 5]), new Set(['2026-12-07', '2026-12-10']));
-    // ครบกำหนด ศ. 11 ธ.ค. · วันทำการก่อนหน้าคือ พ. 9 (10 เป็นวันหยุด)
-    expect(dueSoonToday('1d_and_today', '2026-12-11', '2026-12-09', cal)).toBe(true);
-    expect(dueSoonToday('1d_and_today', '2026-12-11', '2026-12-10', cal)).toBe(false);
-    expect(dueSoonToday('1d_and_today', '2026-12-11', '2026-12-11', cal)).toBe(true);
-    // 3 วันทำการก่อน 11 ธ.ค. = 4 ธ.ค. (ข้าม 7 และ 10)
-    expect(dueSoonToday('3d', '2026-12-11', '2026-12-04', cal)).toBe(true);
-    expect(dueSoonToday('3d', '2026-12-11', '2026-12-11', cal)).toBe(false);
-    expect(dueSoonToday('today_only', '2026-12-11', '2026-12-09', cal)).toBe(false);
-    expect(dueSoonToday('today_only', '2026-12-11', '2026-12-11', cal)).toBe(true);
+    // 9 ธ.ค. (พ.) · วันทำการถัดไปคือ ศ. 11 (10 เป็นวันหยุด)
+    expect(dueSoonInSummary('1d_and_today', '2026-12-11', D, cal)).toBe(true);
+    expect(dueSoonInSummary('1d_and_today', '2026-12-14', D, cal)).toBe(false);
+    // 11, 14, 15 = 3 วันทำการ
+    expect(dueSoonInSummary('3d', '2026-12-15', D, cal)).toBe(true);
+    expect(dueSoonInSummary('3d', '2026-12-16', D, cal)).toBe(false);
+    expect(dueSoonInSummary('today_only', '2026-12-11', D, cal)).toBe(false);
+    // ครบกำหนดวันนี้อยู่อีกหัวข้อ
+    expect(dueSoonInSummary('1d_and_today', D, D, cal)).toBe(false);
   });
 
-  it('08:00 เตือนตามค่าของแต่ละคน · งานเลยกำหนดแจ้ง Assignee ครั้งเดียว · รันซ้ำไม่ซ้ำ', async () => {
-    await t.owner.query(`INSERT INTO user_notification_settings (workspace_id, user_id, due_reminder) VALUES ($1, $2, 'today_only'), ($1, $3, '3d')`, [
-      workspaceId,
-      people.reviewer.id,
-      people.ba.id,
-    ]);
+  it('รวมเป็นรายการเดียวต่อคน: ใกล้ครบกำหนดตามค่าของแต่ละคน + วันนี้ + เลยกำหนด · งานเสร็จไม่รวม · รันซ้ำไม่ซ้ำ', async () => {
+    await setting(people.reviewer.id, { dueReminder: 'today_only' });
+    await setting(people.ba.id, { dueReminder: '3d' });
     const tomorrow = await planned('ส่งพรุ่งนี้ (วันทำการถัดไป)', '2026-12-11', [team.devId, people.reviewer.id]);
     const today = await planned('ส่งวันนี้', D, [people.reviewer.id]);
     const soon = await planned('อีก 3 วันทำการ', '2026-12-15', [people.ba.id]);
@@ -351,96 +354,72 @@ describe('แจ้งเตือนตามเวลา (A16)', () => {
     await move(done.key, status('Done'));
 
     const m = await mark();
-    await run(JOBS.dueReminders, D);
-    const mine = new Set([tomorrow.key, today.key, soon.key, late.key, done.key]);
-    const rows = (await since(m)).filter((r) => (r.event_type === 'issue.due_soon' || r.event_type === 'issue.overdue') && mine.has(r.issue_key!));
-    expect(rows.map((r) => `${r.event_type}:${r.issue_key}→${r.recipient}`).sort()).toEqual(
-      [
-        `issue.due_soon:${tomorrow.key}→dev`,
-        `issue.due_soon:${today.key}→reviewer`,
-        `issue.due_soon:${soon.key}→ba`,
-        `issue.overdue:${late.key}→dev`,
-      ].sort(),
-    );
-    expect(rows.find((r) => r.issue_key === late.key)).toMatchObject({ reason: 'งานของคุณเลยกำหนดแล้ว', actor: null, payload: expect.objectContaining({ daysLate: 5 }) });
+    await run(D);
+    await run(D);
+    const rows = await since(m);
+    // ไม่มีแจ้งเตือนทีละงานอีกแล้ว
+    expect(rows.filter((r) => r.event_type === 'issue.due_soon' || r.event_type === 'issue.overdue')).toEqual([]);
+    const [dev] = daily(rows, 'dev');
+    expect(daily(rows, 'dev')).toHaveLength(1);
+    expect(dev).toMatchObject({ reason: REASONS.daily, actor: null });
+    expect(keys(dev.payload.dueSoon)).toContain(tomorrow.key);
+    expect(keys(dev.payload.overdue)).toContain(late.key);
+    expect((dev.payload.overdue as { issueKey: string; daysLate: number }[]).find((i) => i.issueKey === late.key)?.daysLate).toBe(5);
+    expect(dev.payload).toMatchObject({ date: D, overdueCount: expect.any(Number), count: expect.any(Number) });
 
-    const again = await mark();
-    await run(JOBS.dueReminders, D);
-    await run(JOBS.dueReminders, '2026-12-11');
-    // 11 ธ.ค.: ครบกำหนดของ tomorrow (dev 1d_and_today, reviewer today_only) และงาน 9 ธ.ค. เพิ่งเลยกำหนด
-    expect((await since(again)).filter((r) => mine.has(r.issue_key!)).map((r) => `${r.event_type}:${r.issue_key}→${r.recipient}`).sort()).toEqual(
-      [`issue.due_soon:${tomorrow.key}→dev`, `issue.due_soon:${tomorrow.key}→reviewer`, `issue.overdue:${today.key}→reviewer`].sort(),
-    );
+    const [reviewer] = daily(rows, 'reviewer');
+    expect(keys(reviewer.payload.dueToday)).toContain(today.key);
+    expect(keys(reviewer.payload.dueSoon)).not.toContain(tomorrow.key);
+    expect(keys(reviewer.payload.overdue)).not.toContain(done.key);
+    expect(keys(daily(rows, 'ba')[0].payload.dueSoon)).toContain(soon.key);
   });
 
-  it('งานเลยกำหนดเกินวันทำการแรก สรุปให้ Assignee รายการเดียวทุกวันทำการ · วันหยุดไม่ส่ง · รันซ้ำไม่ซ้ำ', async () => {
-    // ใช้วันที่ที่ test อื่นยังไม่รัน เพราะสรุปกันซ้ำวันละครั้งต่อคน
-    const qa = await planned('เลยกำหนดหลายวัน (สรุปรายวัน)', '2026-12-03', [people.ba.id]);
-    const repeatOf = (rows: Row[]) => rows.filter((r) => r.event_type === 'issue.overdue' && r.recipient === 'ba' && r.payload.mine === true);
-    const keys = (row: Row) => (row.payload.issues as { issueKey: string }[]).map((i) => i.issueKey);
+  it('PM ได้งานเลยกำหนดของทีมในสรุปเดียวกัน (ไม่ซ้ำกับงานของตัวเอง) · วันหยุดไม่ส่ง · ตั้ง "ทุกวัน" ส่งวันหยุดด้วย', async () => {
+    const mine = await planned('PM เลยกำหนดเอง', '2026-12-02', [team.leadId]);
+    const theirs = await planned('ทีมเลยกำหนด', '2026-12-02', [team.devId]);
 
-    // Due 3 ธ.ค. → วันทำการแรกที่เลยกำหนดคือ 4 ธ.ค.: แจ้งทีละงานเท่านั้น
     let m = await mark();
-    await run(JOBS.dueReminders, '2026-12-04');
-    const first = await since(m);
-    expect(first.filter((r) => r.issue_key === qa.key).map((r) => r.recipient)).toEqual(['ba']);
-    expect(repeatOf(first)).toEqual([]);
+    await run('2026-12-10');
+    expect((await since(m)).filter((r) => r.event_type === 'digest.daily')).toEqual([]);
 
-    // 8 ธ.ค. (7 ธ.ค. เป็นวันหยุด) สรุปรายการเดียว · รันซ้ำไม่ซ้ำ
     m = await mark();
-    await run(JOBS.dueReminders, '2026-12-08');
-    await run(JOBS.dueReminders, '2026-12-08');
-    const rows = repeatOf(await since(m));
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ reason: 'งานของคุณยังเลยกำหนด · แจ้งทุกวันทำการจนกว่างานจะเสร็จหรือเลื่อน Due', actor: null });
-    expect(rows[0].payload).toMatchObject({ summary: true, date: '2026-12-08', count: keys(rows[0]).length });
-    expect(keys(rows[0])).toContain(qa.key);
+    await run('2026-12-08');
+    const lead = daily(await since(m), 'lead');
+    expect(lead).toHaveLength(1);
+    expect(keys(lead[0].payload.overdue)).toContain(mine.key);
+    const team_ = lead[0].payload.team as { projectKey: string; count: number; issues: { issueKey: string; assignees: string[] }[] }[];
+    const dp = team_.find((p) => p.projectKey === 'DP')!;
+    expect(keys(dp.issues)).toContain(theirs.key);
+    expect(keys(dp.issues)).not.toContain(mine.key);
+    expect(dp.issues.find((i) => i.issueKey === theirs.key)!.assignees).toHaveLength(1);
+    expect(dp.count).toBe(dp.issues.length);
 
-    // 10 ธ.ค. เป็นวันหยุดในชุดทดสอบ: ไม่ส่ง · 14 ธ.ค. ส่งอีกครั้ง
+    // ส. 12 ธ.ค.: dev ตั้ง "ทุกวัน" จึงได้ · lead ใช้ค่าเริ่มต้น (วันทำการ) จึงไม่ได้
+    await setting(team.devId, { digest: 'daily' });
     m = await mark();
-    await run(JOBS.dueReminders, '2026-12-10');
-    expect(repeatOf(await since(m))).toEqual([]);
-    m = await mark();
-    await run(JOBS.dueReminders, '2026-12-14');
-    expect(keys(repeatOf(await since(m))[0])).toContain(qa.key);
-
+    await run('2026-12-12');
+    const sat = await since(m);
+    expect(daily(sat, 'dev')).toHaveLength(1);
+    expect(daily(sat, 'lead')).toEqual([]);
     // เสร็จแล้วไม่อยู่ในสรุปอีก
-    await move(qa.key, status('Done'));
+    await move(theirs.key, status('Done'));
     m = await mark();
-    await run(JOBS.dueReminders, '2026-12-16');
-    expect(repeatOf(await since(m)).flatMap(keys)).not.toContain(qa.key);
+    await run('2026-12-14');
+    const after = daily(await since(m), 'lead')[0];
+    expect(((after?.payload.team ?? []) as { issues: unknown }[]).flatMap((p) => keys(p.issues))).not.toContain(theirs.key);
   });
 
-  it('09:30 วันทำการ สรุปงานเลยกำหนดให้ PM โปรเจกต์ละ 1 รายการ · วันหยุดไม่ส่ง', async () => {
-    let m = await mark();
-    await run(JOBS.overdueSummary, '2026-12-10');
-    await run(JOBS.overdueSummary, '2026-12-12');
-    expect(await since(m)).toEqual([]);
-
-    m = await mark();
-    await run(JOBS.overdueSummary, D);
-    await run(JOBS.overdueSummary, D);
-    const rows = await since(m);
-    expect(pairs(rows)).toEqual(['issue.overdue→lead']);
-    expect(rows[0].payload).toMatchObject({ summary: true, date: D, projectKey: 'DP' });
-    const items = rows[0].payload.issues as { issueKey: string; daysLate: number; assignees: string[] }[];
-    expect(rows[0].payload.count).toBe(items.length);
-    expect(items[0]).toMatchObject({ daysLate: expect.any(Number), assignees: expect.any(Array) });
-    expect(items.every((i) => i.daysLate > 0)).toBe(true);
-  });
-
-  it('08:30 Daily digest ส่งเข้า Inbox เฉพาะคนที่เปิด In-app ไว้', async (ctx) => {
-    if (!inAppEnum) ctx.skip();
-    await t.owner.query(`INSERT INTO user_notification_prefs (workspace_id, user_id, event_type, channel, enabled) VALUES ($1, $2, 'digest.daily', 'in_app', true)`, [workspaceId, team.devId]);
+  it('งานที่รอ Review อยู่ในสรุปของ Reviewer แม้ยังไม่ใกล้ครบกำหนด', async () => {
+    const issue = await planned('รอตรวจ (ยังไม่ใกล้ Due)', '2027-01-29', [team.devId], { reviewerId: people.reviewer.id });
+    await move(issue.key, status('Review'), team.dev);
     const m = await mark();
-    await run(JOBS.digest, D);
-    const rows = await since(m);
-    expect(pairs(rows)).toEqual(['digest.daily→dev']);
+    await run('2026-12-15');
+    expect(keys(daily(await since(m), 'reviewer')[0].payload.review)).toContain(issue.key);
   });
 
-  it('Daily digest ปิด In-app เป็นค่าเริ่มต้นตาม Canvas I', async () => {
+  it('ไม่มีงานให้สรุป → ไม่ส่ง', async () => {
     const m = await mark();
-    await run(JOBS.digest, D);
-    expect((await since(m)).filter((r) => r.event_type === 'digest.daily' && r.recipient !== 'dev')).toEqual([]);
+    await run('2026-12-16');
+    expect(daily(await since(m), 'outsider')).toEqual([]);
   });
 });

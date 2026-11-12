@@ -14,6 +14,7 @@ import { queryKeys } from "@/lib/query";
 import { inboxKey, type Filter, type InboxNotification, type InboxPage as Page } from "./types";
 import styles from "./inbox.module.css";
 import { statusTone } from "@/lib/status";
+import { DAILY_EVENT, DailySummary, useDailyTitle } from "@/features/daily-summary/daily-summary";
 
 const FILTERS: Filter[] = ["all", "unread", "assign", "mention", "activity", "due"];
 const TONE: Record<string, "blue" | "purple" | "teal" | "amber" | "red" | "neutral"> = { assign: "blue", mention: "purple", activity: "teal", due: "amber" };
@@ -54,6 +55,7 @@ export function InboxPage({ ws }: { ws: string }) {
     if (urlN) setFilter("all");
   }
   const labels = useLabels();
+  const dailyTitle = useDailyTitle();
   const query = useInfiniteQuery({
     queryKey: [...inboxKey(ws), filter],
     initialPageParam: "",
@@ -128,9 +130,9 @@ export function InboxPage({ ws }: { ws: string }) {
                   <Avatar person={{ id: n.actor?.id ?? n.id, displayName: labels.actor(n), avatarUrl: n.actor?.avatarUrl ?? null }} />
                   <span className={styles.ntBody}>
                     <span style={{ fontSize: 13 }}><b>{labels.actor(n)}</b> {labels.verb(n)}</span>
-                    <span className={styles.ntTitle}>{n.issue?.key ?? (n.payload.issueKey as string | undefined) ?? ""} {n.issue?.title ?? (n.payload.title as string | undefined) ?? ""}</span>
+                    <span className={styles.ntTitle}>{n.eventType === DAILY_EVENT ? dailyTitle(n.payload) : `${n.issue?.key ?? (n.payload.issueKey as string | undefined) ?? ""} ${n.issue?.title ?? (n.payload.title as string | undefined) ?? ""}`}</span>
                     {typeof n.payload.message === "string" && <span className={styles.quote}>“{n.payload.message}”</span>}
-                    <span className={styles.meta}>{n.project?.name ?? n.project?.key ?? ""} · {formatDate(n.createdAt, me.yearFormat)} {timeOf(n.createdAt)}<Badge tone={TONE[n.category] ?? "neutral"}>{labels.type(n)}</Badge></span>
+                    <span className={styles.meta}>{[n.project?.name ?? n.project?.key, `${formatDate(n.createdAt, me.yearFormat)} ${timeOf(n.createdAt)}`].filter(Boolean).join(" · ")}<Badge tone={TONE[n.category] ?? "neutral"}>{labels.type(n)}</Badge></span>
                   </span>
                   {!n.readAt && <span className={styles.dot} role="img" aria-label={t("unread")} />}
                 </button>
@@ -151,6 +153,8 @@ function Detail({ ws, n, busy, onBack, run }: { ws: string; n: InboxNotification
   const t = useTranslations("inbox-bell.inbox");
   const { me } = useWorkspace();
   const labels = useLabels();
+  const dailyTitle = useDailyTitle();
+  const daily = n.eventType === DAILY_EVENT;
   const key = n.issue?.key ?? (n.payload.issueKey as string | undefined);
   const req = n.dueRequest;
   const year = me.yearFormat;
@@ -170,6 +174,7 @@ function Detail({ ws, n, busy, onBack, run }: { ws: string; n: InboxNotification
   ) : (
     <div className={styles.actions}>
       {key && <Link className="button button-primary" href={issueHref(ws, key)}>{t("openIssue")}</Link>}
+      {daily && <Link className="button button-primary" href={`/work/${encodeURIComponent(ws)}/my-tasks`}>{t("openMyTasks")}</Link>}
       <Button disabled={busy} onClick={() => run(`/me/notifications/${n.id}/done`, t("acknowledged"))}>{t("acknowledge")}</Button>
       <Button disabled={busy} onClick={() => run(`/me/notifications/${n.id}/snooze`, t("snoozed"), { preset: "tomorrow" })}>{t("remindTomorrow")}</Button>
     </div>
@@ -183,7 +188,8 @@ function Detail({ ws, n, busy, onBack, run }: { ws: string; n: InboxNotification
           <div className={styles.heroText}>
             <div className={styles.heroTitle}><b>{labels.actor(n)}</b> {labels.verb(n)}</div>
             {key && <div className={styles.heroIssue}>{key} {n.issue?.title ?? (n.payload.title as string | undefined) ?? ""}</div>}
-            <div className="muted" style={{ fontSize: 12 }}>{n.project?.name ?? ""} · {formatDate(n.createdAt, year)} {timeOf(n.createdAt)}</div>
+            {daily && <div className={styles.heroIssue}>{dailyTitle(n.payload)}</div>}
+            <div className="muted" style={{ fontSize: 12 }}>{[n.project?.name, `${formatDate(n.createdAt, year)} ${timeOf(n.createdAt)}`].filter(Boolean).join(" · ")}</div>
           </div>
           <Badge tone={TONE[n.category] ?? "neutral"}>{labels.type(n)}</Badge>
         </div>
@@ -202,6 +208,7 @@ function Detail({ ws, n, busy, onBack, run }: { ws: string; n: InboxNotification
           </Link>
         ) : key ? <div className="muted">{t("issueGone")}</div> : null}
         {typeof n.payload.message === "string" && <div className={styles.quoteBox}>“{n.payload.message}”</div>}
+        {daily && <DailySummary ws={ws} payload={n.payload} />}
         {req && (
           <>
             <div className={styles.diff}><span className="muted">{t("dueDiff")}</span><span className="muted" style={{ textDecoration: "line-through" }}>{formatDate(req.currentDue, year)}</span><span aria-hidden="true">→</span><b>{formatDate(req.requestedDue, year)}</b></div>

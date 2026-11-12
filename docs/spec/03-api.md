@@ -583,7 +583,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | `issue.review_requested` | ย้ายเข้าสถานะ Review | Reviewer |
 | `issue.updated` | แก้ฟิลด์อื่น | Watcher |
 | `issue.commented` · `issue.mentioned` | คอมเมนต์ / ถูก @mention | Watcher · คนที่ถูก mention |
-| `issue.due_soon` · `issue.overdue` | Job ตามเวลา | Assignee (ตามค่าใน Profile) · Overdue ส่ง PM ด้วย |
+| `digest.daily` (สรุปงานประจำวัน) | Job 08:30 | 1 รายการต่อคนต่อวัน: Assignee (ใกล้ครบกำหนดตามค่าใน Profile · ครบวันนี้ · เลยกำหนด) · Reviewer (รอ Review) · PM (งานเลยกำหนดของทีม) · แทน `issue.due_soon` / `issue.overdue` ทีละงาน (ผู้ใช้ตัดสิน 12 พ.ย. 2569) |
 | `due_request.created` · `due_request.decided` | ขอเลื่อน / อนุมัติหรือปฏิเสธ | ผู้อนุมัติ · ผู้ขอ |
 | `bug.created` · `bug.reopened` | | Assignee, BA · Critical ส่งทันทีแม้อยู่ในช่วงงดส่ง |
 | `test_run.failed` | ผลทดสอบไม่ผ่าน | Assignee |

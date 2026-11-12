@@ -2692,8 +2692,7 @@
                     "type": "string",
                     "enum": [
                       "workdays",
-                      "daily",
-                      "off"
+                      "daily"
                     ]
                   },
                   "quietStart": {

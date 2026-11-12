@@ -539,39 +539,60 @@ describe('In-app กับ Email แยกกัน (BUG-13)', () => {
   });
 });
 
-describe('Daily digest ทาง Email โดยไม่เปิด In-app (K01)', () => {
-  async function overdueTask() {
-    const task = await team.lead.post(`${team.ws}/projects/${team.key}/issues`, { title: 'งานเลยกำหนดของ Dev', moduleId: team.project.modules[0].id, assigneeIds: [team.devId] });
-    expect(task.status, JSON.stringify(task.body)).toBe(201);
-    await t.owner.query(`UPDATE issues SET plan_end = '2026-11-02' WHERE id = $1`, [task.body.id]);
-    return task.body as { id: string };
+describe('สรุปงานประจำวัน: อีเมลเดียวต่อคนต่อวัน', () => {
+  async function task(title: string, planEnd: string) {
+    const r = await team.lead.post(`${team.ws}/projects/${team.key}/issues`, { title, moduleId: team.project.modules[0].id, assigneeIds: [team.devId] });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    await t.owner.query(`UPDATE issues SET plan_end = $1 WHERE id = $2`, [planEnd, r.body.id]);
+    return r.body as { id: string; key: string };
   }
-  const digestRows = async () => (await t.owner.query(`SELECT in_app FROM notifications WHERE event_type = 'digest.daily' AND recipient_id = $1`, [team.devId])).rows;
-  const pref = (channel: string, enabled: boolean) =>
-    t.owner.query(`INSERT INTO user_notification_prefs (workspace_id, user_id, event_type, channel, enabled) VALUES ($1,$2,'digest.daily',$3,$4)`, [wsId, team.devId, channel, enabled]);
+  const devMails = () => mails.filter((m) => m.to === `dev@${team.slug}.example.com`);
+  const dailyRows = async () => (await t.owner.query(`SELECT in_app FROM notifications WHERE event_type = 'digest.daily' AND recipient_id = $1`, [team.devId])).rows;
 
-  it('Email เปิด / In-app ปิด → ได้ Email และแถว in_app = false ที่ไม่เข้า Inbox', async () => {
-    const task = await overdueTask();
-    await pref('email', true);
-    await pref('in_app', false);
+  it('ใกล้ครบกำหนด + วันนี้ + เลยกำหนด รวมเป็นอีเมลเดียว · รันซ้ำไม่ส่งซ้ำ', async () => {
+    // 6 พ.ย. 2026 (ศ.) · วันทำการถัดไปคือ 9 พ.ย. (จ.)
+    const late = await task('งานเลยกำหนดของ Dev', '2026-11-02');
+    const today = await task('งานครบวันนี้ของ Dev', '2026-11-06');
+    const soon = await task('งานครบวันจันทร์ของ Dev', '2026-11-09');
+    const later = await task('งานอีกหลายวันของ Dev', '2026-11-20');
+    await t.owner.query('UPDATE workspace_settings SET safe_mode = false WHERE workspace_id = $1', [wsId]);
     mails = [];
-    await t.app.get(Reminders).digest('2026-11-06');
-    expect(await digestRows()).toEqual([{ in_app: false }]);
-    expect(mails.filter((m) => m.to === `dev@${team.slug}.example.com`)).toHaveLength(1);
-    const inbox = (await team.dev.get('/me/notifications?filter=all')).body.items as Array<{ eventType: string }>;
-    expect(inbox.some((i) => i.eventType === 'digest.daily')).toBe(false);
-    await t.owner.query('DELETE FROM issues WHERE id = $1', [task.id]);
+    await t.app.get(Reminders).daily('2026-11-06');
+    await t.app.get(Reminders).daily('2026-11-06');
+    expect(devMails()).toHaveLength(1);
+    const m = devMails()[0];
+    expect(m.subject).toBe('[Friday] สรุปงานประจำวัน: ครบกำหนดวันนี้ 1 · เลยกำหนด 1 · ใกล้ครบกำหนด 1');
+    for (const k of [late.key, today.key, soon.key]) expect(m.text).toContain(`/p/${team.key}/table?issue=${k}`);
+    expect(m.text).not.toContain(later.key);
+    expect(m.text).toContain('เลย 4 วัน');
+    expect(m.html).toContain('<h3');
+    expect(m.text).toContain(`/work/${team.slug}/my-tasks`);
+    // PM ได้งานเลยกำหนดของทีมในอีเมลของตัวเองฉบับเดียว
+    const lead = mails.filter((x) => x.to !== `dev@${team.slug}.example.com` && x.text.includes(late.key));
+    expect(lead).toHaveLength(1);
+    expect(lead[0].text).toContain('งานเลยกำหนดของทีม');
+    expect(await dailyRows()).toEqual([{ in_app: true }]);
+
+    // โหมดปลอดภัย (ค่าเริ่มต้นของ Workspace): เหลือจำนวนงาน + ลิงก์ ไม่มีชื่องาน
+    await t.owner.query('UPDATE workspace_settings SET safe_mode = true WHERE workspace_id = $1', [wsId]);
+    await t.owner.query(`DELETE FROM notifications WHERE event_type = 'digest.daily'`);
+    mails = [];
+    await t.app.get(Reminders).daily('2026-11-06');
+    expect(devMails()[0].subject).toBe(m.subject);
+    expect(devMails()[0].text).not.toContain('งานเลยกำหนดของ Dev');
+    expect(devMails()[0].text).toContain(`/work/${team.slug}/my-tasks`);
+    for (const x of [late, today, soon, later]) await t.owner.query('DELETE FROM issues WHERE id = $1', [x.id]);
   });
 
-  it('ปิดทุกช่องทาง → ไม่สร้างแถว · เปิด In-app → เข้า Inbox', async () => {
-    const task = await overdueTask();
-    await pref('email', false);
-    await t.app.get(Reminders).digest('2026-11-06');
-    expect(await digestRows()).toEqual([]);
-    await pref('in_app', true);
-    await t.app.get(Reminders).digest('2026-11-06');
-    expect(await digestRows()).toEqual([{ in_app: true }]);
-    await t.owner.query('DELETE FROM issues WHERE id = $1', [task.id]);
+  it('ปิด Email ของสรุปประจำวัน → ไม่ส่งอีเมล แต่ยังเข้า Inbox (In-app ล็อก)', async () => {
+    const late = await task('งานเลยกำหนด (ปิด Email)', '2026-11-02');
+    await t.owner.query(`INSERT INTO user_notification_prefs (workspace_id, user_id, event_type, channel, enabled) VALUES ($1,$2,'digest.daily','email',false)`, [wsId, team.devId]);
+    mails = [];
+    await t.app.get(Reminders).daily('2026-11-05');
+    expect(devMails()).toEqual([]);
+    const inbox = (await team.dev.get('/me/notifications?filter=due')).body.items as Array<{ eventType: string; payload: { overdue: { issueKey: string }[] } }>;
+    expect(inbox.find((i) => i.eventType === 'digest.daily')?.payload.overdue.map((i) => i.issueKey)).toContain(late.key);
+    await t.owner.query('DELETE FROM issues WHERE id = $1', [late.id]);
   });
 });
 

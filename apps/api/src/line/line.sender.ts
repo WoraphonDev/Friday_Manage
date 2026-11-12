@@ -12,7 +12,10 @@ import { postbackData } from './line.service.js';
 const s = schema;
 
 const text = (m: Msg) =>
-  [m.head, m.title, m.project, ...m.rows.map(([k, v]) => `${k}: ${v}`), m.note ? `“${m.note}”` : '', m.url].filter(Boolean).join('\n');
+  [m.head, m.title, m.project, ...m.rows.map(([k, v]) => `${k}: ${v}`), m.note ? `“${m.note}”` : '', ...listLines(m), m.url].filter(Boolean).join('\n');
+
+/** สรุปงานประจำวัน: แสดงชื่องานโดยไม่ใส่ลิงก์รายงาน (ข้อความ LINE ยาวเกิน) · ปุ่ม/ลิงก์ท้ายข้อความพาไปหน้างานของฉัน */
+const listLines = (m: Msg) => (m.lists ?? []).flatMap((l) => [`\n${l.label}`, ...l.items.map((i) => `• ${i.text}`), ...(l.more ? [`… +${l.more}`] : [])]);
 
 const FLEX = {
   th: { more: 'รายละเอียดดูได้ในแอปหลังเข้าสู่ระบบ', approve: 'อนุมัติ', reject: 'ปฏิเสธ' },

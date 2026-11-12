@@ -10,7 +10,7 @@ export interface PrefRow {
   group: 'assigned' | 'activity' | 'schedule' | 'project';
   label: string;
   hint?: string;
-  /** ค่าเริ่มต้นของ LINE ตาม Canvas I (In-app ปิดเฉพาะ digest · Email ดู EMAIL_DEFAULT_ON) */
+  /** ค่าเริ่มต้นของ LINE ตาม Canvas I (Email ดู EMAIL_DEFAULT_ON) */
   line: boolean;
 }
 
@@ -26,14 +26,13 @@ export const PREF_ROWS: PrefRow[] = [
   { eventType: 'bug.reopened', group: 'activity', label: 'Bug ถูก Reopen', line: false },
   { eventType: 'due_request.created', group: 'activity', label: 'คำขอเลื่อน Due ที่รอฉันอนุมัติ', hint: 'สำหรับ PM / Admin ของโปรเจกต์', line: true },
   { eventType: 'due_request.decided', group: 'activity', label: 'ผลการขอเลื่อน Due ของฉัน', line: false },
-  { eventType: 'issue.due_soon', group: 'schedule', label: 'งานใกล้ครบกำหนด', hint: 'ตามที่ตั้งด้านล่าง', line: true },
-  { eventType: 'issue.overdue', group: 'schedule', label: 'งานเลยกำหนด', line: true },
   { eventType: 'member.joined', group: 'project', label: 'ถูกเพิ่มเข้าโปรเจกต์ หรือเปลี่ยนสิทธิ์', line: false },
   { eventType: 'project.health_changed', group: 'project', label: 'Health ของโปรเจกต์เปลี่ยน (At risk / Off track)', hint: 'สำหรับ PM', line: true },
   { eventType: 'sprint.started', group: 'project', label: 'Sprint เริ่ม', line: false },
   { eventType: 'sprint.completed', group: 'project', label: 'Sprint จบ', line: false },
   { eventType: 'plan.changed', group: 'project', label: 'แผนถูกแก้หลังตั้ง Baseline', hint: 'สำหรับ PM', line: false },
-  { eventType: 'digest.daily', group: 'schedule', label: 'สรุปรายวัน (Daily digest)', hint: 'งานวันนี้ + Overdue + รอ Review', line: true },
+  // รวมงานใกล้ครบกำหนด / เลยกำหนด / สรุป PM ไว้ในแถวเดียว (ผู้ใช้ตัดสิน 12 พ.ย. 2026 · ประหยัดโควตาอีเมล)
+  { eventType: 'digest.daily', group: 'schedule', label: 'สรุปงานประจำวัน 08:30', hint: 'ใกล้ครบกำหนด · ครบกำหนดวันนี้ · เลยกำหนด · รอ Review · งานเลยกำหนดของทีม (PM) รวมเป็นฉบับเดียวต่อวัน', line: true },
   { eventType: 'report.weekly', group: 'schedule', label: 'รายงานสรุปรายสัปดาห์', line: false },
 ];
 
@@ -41,7 +40,7 @@ export const PREF_EVENTS = new Set(PREF_ROWS.map((r) => r.eventType));
 
 /** ค่าเริ่มต้นของแต่ละช่อง เมื่อผู้ใช้ยังไม่เคยตั้ง */
 export function defaultOn(row: PrefRow, channel: PrefChannel): boolean {
-  if (channel === 'in_app') return row.eventType !== 'digest.daily';
+  if (channel === 'in_app') return true;
   if (channel === 'email') return EMAIL_DEFAULT_ON.has(row.eventType);
   return row.line;
 }

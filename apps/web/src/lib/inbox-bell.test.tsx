@@ -109,6 +109,47 @@ describe("Inbox (G / M3)", () => {
     expect(await screen.findByText(/งานหน้าสอง/)).toBeInTheDocument();
   });
 
+  it("สรุปงานประจำวัน: รายการเดียวต่อวัน · แยกหัวข้อพร้อมลิงก์ไปงาน · งานเลยกำหนดของทีม", async () => {
+    const user = userEvent.setup();
+    const item = (issueKey: string, title: string, extra: object = {}) => ({ issueKey, title, planEnd: "2026-12-09", projectKey: "DE", ...extra });
+    page = [
+      note("n-daily", {
+        eventType: "digest.daily",
+        category: "due",
+        actor: null,
+        project: null,
+        issue: null,
+        payload: {
+          date: "2026-12-09",
+          title: "ข้อความไทยเดิม",
+          dueToday: [item("DE-5", "งานครบวันนี้")],
+          dueTodayCount: 1,
+          overdue: [item("DE-6", "งานเลยกำหนด", { daysLate: 3 })],
+          overdueCount: 25,
+          dueSoon: [],
+          dueSoonCount: 0,
+          review: [item("DE-7", "งานรอตรวจ")],
+          reviewCount: 1,
+          team: [{ projectKey: "DE", projectName: "แผนพัฒนาผลิตภัณฑ์", count: 1, issues: [item("DE-8", "งานของทีม", { daysLate: 2, assignees: ["ผู้พัฒนาสอง"] })] }],
+          teamCount: 1,
+        },
+        reason: "สรุปงานประจำวันของคุณ",
+      }),
+    ];
+    mount();
+    const row = await screen.findByRole("button", { name: /สรุปงานประจำวันของคุณ/ });
+    expect(row).toHaveTextContent("ครบกำหนดวันนี้ 1 · เลยกำหนด 25 · รอ Review 1 · ทีมเลยกำหนด 1");
+    await user.click(row);
+    const detail = screen.getByRole("complementary", { name: "รายละเอียดการแจ้งเตือน" });
+    expect(within(within(detail).getByRole("region", { name: "ครบกำหนดวันนี้" })).getByRole("link", { name: /งานครบวันนี้/ })).toHaveAttribute("href", "/work/sample/p/DE/board?issue=DE-5");
+    const late = within(detail).getByRole("region", { name: "เลยกำหนด" });
+    expect(late).toHaveTextContent("เลย 3 วัน");
+    expect(late).toHaveTextContent("และอีก 24 งาน");
+    expect(within(detail).getByRole("region", { name: "งานเลยกำหนดของทีม · แผนพัฒนาผลิตภัณฑ์" })).toHaveTextContent("ผู้พัฒนาสอง");
+    expect(within(detail).queryByRole("region", { name: "ใกล้ครบกำหนด" })).not.toBeInTheDocument();
+    expect(within(detail).getByRole("link", { name: "เปิดงานของฉัน" })).toHaveAttribute("href", "/work/sample/my-tasks");
+  });
+
   it("ว่าง · Error มี requestId · 403", async () => {
     page = [];
     const a = mount();

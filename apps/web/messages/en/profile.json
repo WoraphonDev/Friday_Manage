@@ -118,17 +118,16 @@
     },
     "cellLabel": "{event} via {channel}",
     "locked": "In-app can't be turned off for this event",
-    "dueReminder": "Reminder before due date",
+    "dueReminder": "Due-soon tasks in the summary",
     "due": {
-      "1d_and_today": "1 day before, and the morning of the due date",
-      "3d": "3 days before",
-      "today_only": "Due date only"
+      "1d_and_today": "Due by the next working day",
+      "3d": "Due within 3 working days",
+      "today_only": "Only tasks due today"
     },
-    "digest": "Daily digest",
+    "digest": "Send the daily summary",
     "digestOption": {
       "workdays": "Every working day at 08:30",
-      "daily": "Every day at 08:30",
-      "off": "Off"
+      "daily": "Every day at 08:30"
     },
     "quietLabel": "Do not disturb",
     "quietTitle": "Do not disturb {start}–{end} and on holidays",
@@ -177,13 +176,6 @@
       "due_request_decided": {
         "label": "Result of my due date change request"
       },
-      "issue_due_soon": {
-        "label": "Task due soon",
-        "hint": "As set below"
-      },
-      "issue_overdue": {
-        "label": "Task overdue"
-      },
       "member_joined": {
         "label": "Added to a project or my role changes"
       },
@@ -202,8 +194,8 @@
         "hint": "For PMs"
       },
       "digest_daily": {
-        "label": "Daily digest",
-        "hint": "Today's tasks + overdue + awaiting review"
+        "label": "Daily summary at 08:30",
+        "hint": "Due soon · due today · overdue · to review · team overdue (PM), combined into one message a day"
       },
       "report_weekly": {
         "label": "Weekly summary report"

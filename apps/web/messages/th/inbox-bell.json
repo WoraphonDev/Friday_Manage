@@ -68,7 +68,8 @@
       "member__joined": "สมาชิกใหม่",
       "member__invited": "คำเชิญ",
       "automation__notified": "Automation",
-      "other": "แจ้งเตือน"
+      "other": "แจ้งเตือน",
+      "digest__daily": "สรุปประจำวัน"
     },
     "verbs": {
       "issue__assigned": "มอบหมายงานให้คุณ",
@@ -81,9 +82,11 @@
       "issue__overdue": "งานเลยกำหนด",
       "due_request__created": "ขอเลื่อนวันครบกำหนด",
       "due_request__decided": "ตอบคำขอเลื่อน Due",
-      "other": "มีความเคลื่อนไหว"
+      "other": "มีความเคลื่อนไหว",
+      "digest__daily": "สรุปงานประจำวันของคุณ"
     },
-    "loading": "กำลังโหลด Inbox"
+    "loading": "กำลังโหลด Inbox",
+    "openMyTasks": "เปิดงานของฉัน"
   },
   "bell": {
     "title": "การแจ้งเตือน",
@@ -102,5 +105,24 @@
     "toastOpenIssue": "เปิดงาน",
     "toastLater": "ดูภายหลัง",
     "toastOpen": "เปิด Inbox"
+  },
+  "daily": {
+    "count": {
+      "dueToday": "ครบกำหนดวันนี้ {count}",
+      "overdue": "เลยกำหนด {count}",
+      "dueSoon": "ใกล้ครบกำหนด {count}",
+      "review": "รอ Review {count}",
+      "team": "ทีมเลยกำหนด {count}"
+    },
+    "section": {
+      "dueToday": "ครบกำหนดวันนี้",
+      "overdue": "เลยกำหนด",
+      "dueSoon": "ใกล้ครบกำหนด",
+      "review": "รอคุณ Review",
+      "team": "งานเลยกำหนดของทีม · {project}"
+    },
+    "late": "เลย {days} วัน",
+    "due": "ครบ {date}",
+    "more": "และอีก {count} งาน · ดูทั้งหมดในงานของฉัน"
   }
 }

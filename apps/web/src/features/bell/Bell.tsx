@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { List, Me, NotificationSummary, Workspace } from "@/lib/types";
 import styles from "./bell.module.css";
+import { DAILY_EVENT, useDailyTitle } from "@/features/daily-summary/daily-title";
 
 type Tab = "all" | "unread" | "mention";
 interface BellItem {
@@ -72,6 +73,9 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
   const [tab, setTab] = useState<Tab>("all");
   const me = useQuery({ queryKey: queryKeys.me, queryFn: () => api.get<Me>("/me") });
   const ti = useTranslations("inbox-bell.inbox");
+  const dailyTitle = useDailyTitle();
+  // สรุปประจำวันเก็บหัวเรื่องเป็นภาษาไทย · สร้างใหม่ตามภาษาผู้ใช้
+  const title = (n: BellItem) => (n.eventType === DAILY_EVENT ? dailyTitle(n.payload) : titleOf(n));
   const refresh = () =>
     Promise.all([cache.invalidateQueries({ queryKey: queryKeys.notifications }), cache.invalidateQueries({ queryKey: ["bell"] }), cache.invalidateQueries({ queryKey: ["inbox"] })]);
   const live = useNotificationSocket(
@@ -96,7 +100,7 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
       const inbox = `/work/${encodeURIComponent(slug)}/inbox?n=${latest.id}`;
       toast({
         actor: { id: latest.actor?.id ?? latest.id, displayName: who },
-        message: [verb, key, titleOf(latest)].filter(Boolean).join(" "),
+        message: [verb, key, title(latest)].filter(Boolean).join(" "),
         meta: tb("toastMeta", { count }),
         duration: 8000,
         actions: latest.eventType === "due_request.created"
@@ -167,7 +171,7 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
             {list.data && !list.data.items.length && <div className={styles.empty}>{tb("empty")}</div>}
             {list.data?.items.map((n) => {
               const who = n.actor?.displayName ?? (n.payload.actorName as string | undefined) ?? "Friday";
-              const target = [n.payload.issueKey, titleOf(n)].filter(Boolean).join(" ");
+              const target = [n.payload.issueKey, title(n)].filter(Boolean).join(" ");
               return (
                 <Link key={n.id} className={`${styles.item} ${!n.readAt ? styles.unread : ""}`} href={itemHref(n)} onClick={() => setOpen(false)}>
                   <Avatar size="small" person={{ id: n.actor?.id ?? n.id, displayName: who }} />

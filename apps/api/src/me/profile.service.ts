@@ -56,7 +56,8 @@ export const PutPrefsBody = z.object({
 export const PutSettingsBody = z
   .object({
     dueReminder: z.enum(['1d_and_today', '3d', 'today_only']),
-    digest: z.enum(['workdays', 'daily', 'off']),
+    /** ความถี่ของสรุปงานประจำวัน · ปิดไม่ได้แล้วเพราะเป็นช่องทางเดียวที่เตือนงานเลยกำหนด (ปิดเฉพาะ Email / LINE ได้ในตาราง) */
+    digest: z.enum(['workdays', 'daily']),
     /** ช่วงงดส่ง Email / LINE · ส่งทั้งคู่เป็น null = ไม่งด */
     quietStart: Time.nullable(),
     quietEnd: Time.nullable(),
@@ -176,7 +177,8 @@ export class ProfileService {
 
   private settingsDto(r: typeof s.userNotificationSettings.$inferSelect | undefined) {
     if (!r) return { ...SETTINGS_DEFAULT, custom: false };
-    return { dueReminder: r.dueReminder, digest: r.digest, quietStart: hhmm(r.quietStart), quietEnd: hhmm(r.quietEnd), quietOnHolidays: r.quietOnHolidays, autoWatch: r.autoWatch, custom: true };
+    // 'off' เป็นค่าก่อนรวมสรุป (12 พ.ย. 2026) · ตัวส่งถือเป็นวันทำการ จึงแสดงตามนั้น
+    return { dueReminder: r.dueReminder, digest: r.digest === 'off' ? ('workdays' as const) : r.digest, quietStart: hhmm(r.quietStart), quietEnd: hhmm(r.quietEnd), quietOnHolidays: r.quietOnHolidays, autoWatch: r.autoWatch, custom: true };
   }
 
   async getSettings(auth: AuthInfo, workspaceSlug: string) {

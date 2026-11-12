@@ -6,7 +6,7 @@ import { Jobs } from '../queue/jobs.js';
 import { Audience, type IssueCtx, type ProjectCtx } from './audience.js';
 import { Notifier } from './notifier.js';
 import { Reminders } from './reminders.js';
-import { IN_APP_LOCKED, isReviewStatus, JOBS, NO_INBOX, REASONS, SCHEDULES, SENT_AT_SOURCE, WATCHED_FIELDS } from './rules.js';
+import { IN_APP_LOCKED, isReviewStatus, JOBS, NO_INBOX, REASONS, RETIRED_JOBS, SCHEDULES, SENT_AT_SOURCE, WATCHED_FIELDS } from './rules.js';
 
 /** Event ที่ผ่านคิว (JSON) · at เป็น string */
 type QueuedEvent = Omit<DomainEvent, 'at'> & { at: string | Date };
@@ -57,12 +57,9 @@ export class NotificationFanout implements OnModuleInit {
       if (SENT_AT_SOURCE.has(event.type) || NO_INBOX.has(event.type)) return;
       await this.jobs.enqueue(JOBS.fanout, event);
     });
-    this.jobs.define<{ date?: string }>(JOBS.dueReminders, (data) => this.reminders.dueReminders(data?.date));
-    this.jobs.define<{ date?: string }>(JOBS.overdueSummary, (data) => this.reminders.overdueSummary(data?.date));
-    this.jobs.define<{ date?: string }>(JOBS.digest, (data) => this.reminders.digest(data?.date));
-    await this.jobs.every(JOBS.dueReminders, SCHEDULES.dueReminders);
-    await this.jobs.every(JOBS.overdueSummary, SCHEDULES.overdueSummary);
+    this.jobs.define<{ date?: string }>(JOBS.digest, (data) => this.reminders.daily(data?.date));
     await this.jobs.every(JOBS.digest, SCHEDULES.digest);
+    await this.jobs.retire(...RETIRED_JOBS);
   }
 
   /** สร้างรายการ Inbox ของ 1 Event (เรียกจากคิว) */

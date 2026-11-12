@@ -18,6 +18,14 @@ export interface Msg {
   url: string;
   /** โหมดปลอดภัย: ส่งเฉพาะหัวข้อ + ลิงก์ */
   safe: boolean;
+  /** รายการงานแยกหัวข้อ (สรุปงานประจำวัน) · more = จำนวนที่ไม่ได้แสดง */
+  lists?: MsgList[];
+}
+
+export interface MsgList {
+  label: string;
+  items: Array<{ text: string; url: string }>;
+  more: number;
 }
 
 export interface MsgSource {
@@ -63,7 +71,7 @@ const HEADS: Record<string, { head: (p: Record<string, unknown>, who: string) =>
   'member.joined': { head: () => 'สมาชิกใหม่เข้าร่วมโปรเจกต์', color: '#15803D' },
   'member.invited': { head: () => 'มีการเชิญสมาชิกใหม่', color: '#15803D' },
   'import.completed': { head: () => 'นำเข้าไฟล์เสร็จแล้ว', color: '#15803D' },
-  'digest.daily': { head: () => 'สรุปงานวันนี้', color: '#0F766E' },
+  'digest.daily': { head: () => 'สรุปงานประจำวัน', color: '#0F766E' },
   'report.weekly': { head: () => 'รายงานสรุปรายสัปดาห์', color: '#0F766E' },
   'channel.webhook_paused': { head: () => 'Webhook ถูกปิดชั่วคราว', color: '#B91C1C' },
 };
@@ -90,7 +98,7 @@ const HEADS_EN: Record<string, (p: Record<string, unknown>, who: string) => stri
   'member.joined': () => 'New member joined the project',
   'member.invited': () => 'New member invited',
   'import.completed': () => 'Import finished',
-  'digest.daily': () => 'Your day at a glance',
+  'digest.daily': () => 'Your daily summary',
   'report.weekly': () => 'Weekly summary report',
   'channel.webhook_paused': () => 'Webhook paused',
 };
@@ -126,8 +134,111 @@ function details(p: Record<string, unknown>, locale: Locale = 'th'): Array<[stri
   return rows;
 }
 
+const DAILY = {
+  th: {
+    dueToday: 'ครบกำหนดวันนี้',
+    overdue: 'เลยกำหนด',
+    dueSoon: 'ใกล้ครบกำหนด',
+    review: 'รอคุณ Review',
+    team: (p: string) => `งานเลยกำหนดของทีม · ${p}`,
+    late: (n: number) => `เลย ${n} วัน`,
+    left: (n: number) => `อีก ${n} วัน`,
+    due: (d: string) => `ครบ ${d}`,
+    more: (n: number) => `และอีก ${n} งาน`,
+    open: 'เปิดงานของฉัน',
+  },
+  en: {
+    dueToday: 'Due today',
+    overdue: 'Overdue',
+    dueSoon: 'Due soon',
+    review: 'Waiting for your review',
+    team: (p: string) => `Team overdue · ${p}`,
+    late: (n: number) => `${n} day${n === 1 ? '' : 's'} late`,
+    left: (n: number) => `in ${n} day${n === 1 ? '' : 's'}`,
+    due: (d: string) => `due ${d}`,
+    more: (n: number) => `and ${n} more`,
+    open: 'Open my tasks',
+  },
+} as const;
+export const dailyLabels = (locale: Locale) => DAILY[locale];
+
+interface DailyItem {
+  issueKey?: unknown;
+  title?: unknown;
+  planEnd?: unknown;
+  projectKey?: unknown;
+  daysLate?: unknown;
+  daysLeft?: unknown;
+  assignees?: unknown;
+}
+const arr = (v: unknown) => (Array.isArray(v) ? (v as DailyItem[]) : []);
+const num = (v: unknown, fallback: number) => (typeof v === 'number' ? v : fallback);
+
+/** สรุปงานประจำวัน: หัวข้อละรายการ ลิงก์ไปที่งาน · หัวเรื่องเป็นจำนวนตามภาษาผู้รับ */
+function dailyMessage(p: Record<string, unknown>, ctx: Ctx, locale: Locale): Msg {
+  const D = DAILY[locale];
+  const base = `${ctx.webUrl}/work/${ctx.workspaceSlug}`;
+  const line = (i: DailyItem, extra: string | undefined) => {
+    const key = str(i.issueKey) ?? '';
+    const project = str(i.projectKey) ?? key.split('-')[0];
+    const who = Array.isArray(i.assignees) ? i.assignees.filter((x): x is string => typeof x === 'string').join(', ') : '';
+    return {
+      text: [[key, str(i.title)].filter(Boolean).join(' '), extra, who].filter(Boolean).join(' · '),
+      url: key && project ? `${base}/p/${project}/table?issue=${encodeURIComponent(key)}` : base,
+    };
+  };
+  const list = (label: string, items: DailyItem[], total: number, extra: (i: DailyItem) => string | undefined): MsgList[] =>
+    items.length ? [{ label, items: items.map((i) => line(i, extra(i))), more: Math.max(0, total - items.length) }] : [];
+  const late = (i: DailyItem) => (typeof i.daysLate === 'number' ? D.late(i.daysLate) : undefined);
+  const dueToday = arr(p.dueToday);
+  const overdue = arr(p.overdue);
+  const dueSoon = arr(p.dueSoon);
+  const review = arr(p.review);
+  const team = Array.isArray(p.team) ? (p.team as Array<{ projectKey?: unknown; projectName?: unknown; count?: unknown; issues?: unknown }>) : [];
+  const counts = {
+    dueToday: num(p.dueTodayCount, dueToday.length),
+    overdue: num(p.overdueCount, overdue.length),
+    dueSoon: num(p.dueSoonCount, dueSoon.length),
+    review: num(p.reviewCount, review.length),
+    team: num(p.teamCount, team.reduce((n, t) => n + num(t.count, arr(t.issues).length), 0)),
+  };
+  const title = [
+    counts.dueToday && `${D.dueToday} ${counts.dueToday}`,
+    counts.overdue && `${D.overdue} ${counts.overdue}`,
+    counts.dueSoon && `${D.dueSoon} ${counts.dueSoon}`,
+    counts.review && `${D.review} ${counts.review}`,
+    counts.team && `${locale === 'en' ? 'Team overdue' : 'ทีมเลยกำหนด'} ${counts.team}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const url = `${base}/my-tasks`;
+  const lists = [
+    ...list(D.dueToday, dueToday, counts.dueToday, () => undefined),
+    ...list(D.overdue, overdue, counts.overdue, late),
+    ...list(D.dueSoon, dueSoon, counts.dueSoon, (i) => (typeof i.daysLeft === 'number' ? D.left(i.daysLeft) : str(i.planEnd) && D.due(str(i.planEnd)!))),
+    ...list(D.review, review, counts.review, () => undefined),
+    ...team.flatMap((t) => list(D.team(str(t.projectName) ?? str(t.projectKey) ?? ''), arr(t.issues), num(t.count, arr(t.issues).length), late)),
+  ];
+  return {
+    event: 'digest.daily',
+    locale,
+    head: locale === 'en' ? HEADS_EN['digest.daily'](p, '') : HEADS['digest.daily'].head(p, ''),
+    title: title || (str(p.date) ?? ''),
+    project: '',
+    rows: [],
+    note: '',
+    buttons: [{ label: D.open, url }],
+    color: HEADS['digest.daily'].color,
+    url,
+    safe: ctx.safe,
+    // โหมดปลอดภัยส่งเฉพาะหัวข้อ (จำนวน) + ลิงก์ ไม่ส่งชื่องาน
+    lists: ctx.safe ? [] : lists,
+  };
+}
+
 export function buildMessage(src: MsgSource, ctx: Ctx): Msg {
   const p = src.payload ?? {};
+  if (src.eventType === 'digest.daily') return dailyMessage(p, ctx, ctx.locale ?? 'th');
   const locale = ctx.locale ?? 'th';
   const L = LABELS[locale];
   const spec = HEADS[src.eventType];

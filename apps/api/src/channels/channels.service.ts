@@ -74,7 +74,22 @@ const SAMPLES: Record<string, { payload: Record<string, unknown>; why: string }>
   'issue.assigned': { payload: { actorName: 'Mick', issueKey: 'DP-40', issueTitle: 'คำนวณมูลค่าหลักประกันตามสัดส่วน', projectKey: 'DP', projectName: 'Development Plan', priority: 'Medium', planEnd: '2026-12-11' }, why: 'คุณเป็น Assignee' },
   'due_request.created': { payload: { actorName: 'Kaijeaw', issueKey: 'DP-30', issueTitle: 'Curtailment Information', projectKey: 'DP', projectName: 'Development Plan', planEnd: '2026-12-04', reason: 'รอ BA ยืนยันแบบฟอร์ม' }, why: 'คุณมีสิทธิ์อนุมัติคำขอเลื่อน Due' },
   'bug.created': { payload: { actorName: 'Donut', issueKey: 'DP-525', issueTitle: 'Workflow ส่งกลับแก้ไข: สถานะไม่กลับเป็น Draft', projectKey: 'DP', projectName: 'Development Plan', severity: 'Major' }, why: 'คุณเป็น Watcher' },
-  'digest.daily': { payload: { projectKey: 'DP', projectName: 'Development Plan', title: 'สรุปงานวันนี้', dueToday: 2, overdue: 7, inReview: 4 }, why: 'คุณเปิด Daily digest ไว้' },
+  'digest.daily': {
+    payload: {
+      date: '2026-12-09',
+      dueToday: [{ issueKey: 'DP-40', title: 'คำนวณมูลค่าหลักประกันตามสัดส่วน', planEnd: '2026-12-09', projectKey: 'DP' }],
+      dueTodayCount: 1,
+      overdue: [{ issueKey: 'DP-30', title: 'Curtailment Information', planEnd: '2026-12-04', projectKey: 'DP', daysLate: 5 }],
+      overdueCount: 1,
+      dueSoon: [{ issueKey: 'DP-41', title: 'หน้าจอสรุปวงเงิน', planEnd: '2026-12-11', projectKey: 'DP', daysLeft: 2 }],
+      dueSoonCount: 1,
+      review: [{ issueKey: 'DP-35', title: 'ตรวจเงื่อนไขอนุมัติวงเงิน', planEnd: '2026-12-15', projectKey: 'DP' }],
+      reviewCount: 1,
+      team: [],
+      teamCount: 0,
+    },
+    why: 'สรุปงานประจำวันของคุณ (ใกล้ครบกำหนด · วันนี้ · เลยกำหนด · รอ Review) · ตั้งค่าได้ที่ Profile › การแจ้งเตือน',
+  },
 };
 
 @Injectable()

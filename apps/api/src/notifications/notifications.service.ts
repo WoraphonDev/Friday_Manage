@@ -19,7 +19,7 @@ const n = s.notifications;
 const CATEGORY_EVENTS = {
   assign: ['issue.assigned', 'issue.review_requested', 'member.invited', 'member.joined', 'project.admin_joined'],
   mention: ['issue.mentioned'],
-  due: ['issue.due_soon', 'issue.overdue'],
+  due: ['issue.due_soon', 'issue.overdue', 'digest.daily'],
 } as const;
 const GROUPED = Object.values(CATEGORY_EVENTS).flat();
 type Category = keyof typeof CATEGORY_EVENTS | 'activity';

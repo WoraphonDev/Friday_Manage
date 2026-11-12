@@ -18,7 +18,12 @@ export const IN_APP_LOCKED = new Set([
   'due_request.decided',
   'issue.overdue',
   'member.joined',
+  // สรุปงานประจำวันแทนการเตือนใกล้ครบกำหนด / เลยกำหนด ซึ่งเดิมล็อก In-app ไว้
+  'digest.daily',
 ]);
+
+/** สรุปงานประจำวัน 08:30 (Reminders.daily) · ใช้ชื่อเหตุการณ์เดิมของ Daily digest เพื่อให้ค่าใน Profile ที่ผู้ใช้ตั้งไว้ยังใช้ได้ */
+export const DAILY_EVENT = 'digest.daily';
 
 /** ส่งอยู่แล้วที่ต้นทาง (due-requests, projects, invitations) · ฟังแล้วต้องไม่ส่งซ้ำ */
 export const SENT_AT_SOURCE = new Set(['due_request.created', 'due_request.decided', 'project.admin_joined']);
@@ -51,25 +56,22 @@ export const REASONS = {
   importer: 'คุณเป็นผู้นำเข้าไฟล์นี้',
   dueSoon: 'งานของคุณใกล้ครบกำหนด · ตั้งเวลาเตือนได้ที่ Profile › การแจ้งเตือน',
   overdue: 'งานของคุณเลยกำหนดแล้ว',
-  overdueRepeat: 'งานของคุณยังเลยกำหนด · แจ้งทุกวันทำการจนกว่างานจะเสร็จหรือเลื่อน Due',
-  overdueSummary: 'สรุปงานเลยกำหนดของโปรเจกต์ที่คุณดูแล (วันทำการ 09:30)',
-  digest: 'สรุปรายวันที่คุณเปิดไว้ใน Profile',
+  daily: 'สรุปงานประจำวันของคุณ (ใกล้ครบกำหนด · วันนี้ · เลยกำหนด · รอ Review) · ตั้งค่าได้ที่ Profile › การแจ้งเตือน',
 } as const;
 
 /** ชื่องานตามเวลา (A16 · QUEUE) */
 export const JOBS = {
   fanout: 'notifications.fanout',
-  dueReminders: 'notifications.due-reminders',
-  overdueSummary: 'notifications.overdue-summary',
   digest: 'notifications.digest',
 } as const;
 
 /** เวลาไทย (Jobs.every ใช้ Asia/Bangkok) */
 export const SCHEDULES = {
-  dueReminders: '0 8 * * *',
-  overdueSummary: '30 9 * * *',
   digest: '30 8 * * *',
 } as const;
+
+/** งานตามเวลาที่รวมเข้าสรุปประจำวันแล้ว (12 พ.ย. 2026) · ลบออกจาก Valkey ตอนเปิดแอป ไม่ให้ Worker ได้งานที่ไม่รู้จัก */
+export const RETIRED_JOBS = ['notifications.due-reminders', 'notifications.overdue-summary'] as const;
 
 /**
  * "ทำไมฉันได้รับแจ้ง" ภาษาอังกฤษสำหรับ Email / LINE ของผู้ใช้ที่เลือกภาษาอังกฤษ (W21)
@@ -93,9 +95,7 @@ const REASONS_EN: Record<string, string> = {
   [REASONS.importer]: 'you imported this file',
   [REASONS.dueSoon]: 'your task is due soon · change the reminder in Profile › Notifications',
   [REASONS.overdue]: 'your task is overdue',
-  [REASONS.overdueRepeat]: 'your task is still overdue · sent every working day until it is done or the due date moves',
-  [REASONS.overdueSummary]: 'overdue summary for a project you look after (working days 09:30)',
-  [REASONS.digest]: 'you turned on the daily summary in Profile',
+  [REASONS.daily]: 'your daily summary (due soon · today · overdue · to review) · change it in Profile › Notifications',
   'คุณเป็นผู้อนุมัติ (Project Owner)': 'you approve due date requests (Project Owner)',
   'คุณเป็นผู้อนุมัติคำขอเลื่อน Due ของโปรเจกต์นี้': 'you approve due date requests in this project',
   'คุณเป็นผู้ขอเลื่อน Due': 'you asked to move the due date',

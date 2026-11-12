@@ -32,6 +32,7 @@ export const Mapping = z
   })
   .strict();
 type MappingT = z.infer<typeof Mapping>;
+const BUG_SEVERITY = { S1: 'critical', S2: 'major', S3: 'minor', S4: 'minor' } as const;
 const DEFAULT_MAPPING: MappingT = { severityPriority: { S1: 'urgent', S2: 'high', S3: 'medium', S4: 'low' }, releasedStatus: 'Released', label: 'from-support', issueType: 'Bug' };
 
 export const SettingsBody = z
@@ -318,7 +319,12 @@ export class DevBridgeService implements OnModuleInit, OnModuleDestroy {
         '',
         `เปิด Ticket ใน Friday Ops (เฉพาะพนักงาน): ${ticketUrl}`,
       ].join('\n');
-      issue = await fm.createBug({ title: input.title!, description, priority: input.priority ?? mapping.severityPriority[input.severity], labelIds: [await fm.labelId(mapping.label)] });
+      // ประเภท Bug เริ่มต้นของทุกโปรเจกต์บังคับ severity · environment · steps (FM ตอบ 400 ถ้าขาด)
+      // เรื่องจาก Support เกิดกับลูกค้าจริงเสมอ = production · S1 → critical · S2 → major · S3/S4 → minor
+      issue = await fm.createBug({
+        title: input.title!, description, priority: input.priority ?? mapping.severityPriority[input.severity], labelIds: [await fm.labelId(mapping.label)],
+        severity: BUG_SEVERITY[input.severity], environment: 'production', details: { steps: input.steps },
+      });
     } else {
       issue = await fm.getIssue(input.issueKey!);
       await fm.comment(issue.key, `Ticket #${t.number} (${code}) ผูกเพิ่มจาก Support · ความรุนแรง ${input.severity}${input.requestId ? ` · requestId ${input.requestId}` : ''}`);

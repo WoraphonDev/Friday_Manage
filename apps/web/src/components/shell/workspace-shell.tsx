@@ -65,13 +65,14 @@ import { WorkspaceBanners } from "@/features/plan-limits";
 import { AnnouncementBanners } from "@/features/announcements";
 import { EngagementPrompts, WhatsNewButton, WhatsNewMenuItem } from "@/features/whats-new";
 import { OnboardingAccountItem, OnboardingNavButton } from "@/features/onboarding-checklist";
+import { HelpButton, HelpMenuLink } from "@/features/help-panel";
 import { isBlocked, SuspendedScreen, SuspensionBanner, useSuspension } from "@/features/suspension";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 import { DeletedWorkspaceScreen, DeletedWorkspacesSection, useDeletedWorkspace } from "@/features/trash";
 // ช่องต่อเติม (SHELL_SLOTS ด้านล่าง): import ของ W24–W26 วางแทนบรรทัดที่จองไว้ของตัวเองเท่านั้น
 // (W24 / W25 merge ก่อนมีช่องนี้ จึงวาง WhatsNewButton / EngagementPrompts และ OnboardingNavButton / OnboardingAccountItem ตรงใน JSX
 //  · ของ W25 อยู่ใน Sidebar และเมนูบัญชี ซึ่งไม่มีช่องให้ จึงไม่ย้ายเข้า SHELL_SLOTS)
-// W26 import
+// W26 ทำเสร็จพร้อมกับ W23 จึงวาง HelpButton ตรงใน JSX ข้าง WhatsNewButton เช่นกัน · SHELL_SLOTS ว่างไว้ให้งานถัดไป
 
 /**
  * ช่องต่อเติมของ shell (W23 เปิดไว้ให้ W24–W26 · ไฟล์นี้เป็นไฟล์กลางของ W00)
@@ -95,9 +96,7 @@ export interface ShellSlot {
   banner?: ComponentType<ShellSlotProps>;
   overlay?: ComponentType<ShellSlotProps>;
 }
-export const SHELL_SLOTS: ShellSlot[] = [
-  // W26 · ศูนย์ช่วยเหลือ (แทนบรรทัดนี้)
-];
+export const SHELL_SLOTS: ShellSlot[] = [];
 
 interface ShellContext {
   me: Me;
@@ -659,6 +658,8 @@ export function WorkspaceShell({
             )}
             <WhatsNewButton ws={ws} role={workspace.role} />
             {suspension?.mode !== "full" && SHELL_SLOTS.map(({ key, topbar: Slot }) => Slot && <Slot key={key} {...slotProps} />)}
+            {/* W26 · ปุ่ม "?" + คีย์ลัด ? เปิดแผงช่วยเหลือ (X4) */}
+            <HelpButton workspace={{ slug: workspace.slug, name: workspace.name, role: workspace.role }} projects={projects.data?.items ?? []} />
             <Bell workspace={ws} unread={summary.data?.total ?? 0} />
             {accountMenu}
           </header>
@@ -770,6 +771,8 @@ export function WorkspaceShell({
             locked={suspension?.mode === "full"}
           />
           <WhatsNewMenuItem ws={ws} role={workspace.role} onOpen={() => setMenuOpen(false)} />
+          {/* W26 · มือถือ: ช่วยเหลือเปิดหน้าศูนย์ช่วยเหลือเต็มจอ */}
+          <HelpMenuLink ws={ws} onNavigate={() => setMenuOpen(false)} />
           <div className="menu-divider" />
           <div className="menu-label">{t("nav.yourWorkspaces")}</div>
           {workspaceList(() => setMenuOpen(false))}

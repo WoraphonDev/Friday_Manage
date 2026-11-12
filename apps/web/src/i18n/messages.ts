@@ -18,6 +18,8 @@ import onboardingChecklist from "../../messages/th/onboarding-checklist.json";
 import onboardingChecklistEn from "../../messages/en/onboarding-checklist.json";
 import trash from "../../messages/th/trash.json";
 import trashEn from "../../messages/en/trash.json";
+import help from "../../messages/th/help.json";
+import helpEn from "../../messages/en/help.json";
 
 // เพิ่ม namespace ต่องานที่นี่ แยกข้อความของแต่ละหน้าออกจากไฟล์กลาง
 // inbox-bell, search-palette: กระดิ่งและ Command palette อยู่ใน shell ทุกหน้า
@@ -40,6 +42,8 @@ export const messages = {
   "onboarding-checklist": onboardingChecklist,
   // trash: หน้า Workspace ที่ลบไว้ (Z5) และส่วน "ลบไว้" ในตัวสลับ Workspace อยู่ใน shell (W23)
   trash,
+  // help: ปุ่มและแผงช่วยเหลือ (X4) อยู่บนแถบบนของ shell (W26)
+  help,
 };
 
 /** ข้อความ EN ของ namespace เดียวกัน (W21) · test ใช้ผ่าน renderWithProviders({ locale: "en" }) */
@@ -54,4 +58,5 @@ export const messagesEn = {
   "whats-new": whatsNewEn,
   "onboarding-checklist": onboardingChecklistEn,
   trash: trashEn,
+  help: helpEn,
 };

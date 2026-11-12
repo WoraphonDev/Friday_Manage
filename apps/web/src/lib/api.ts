@@ -55,6 +55,9 @@ export function setConfirmHandler(handler: typeof confirmer) {
 export const isConfirmCancelled = (error: unknown) =>
   error instanceof ApiError && error.code === "confirm_cancelled";
 
+/** รหัสคำขอล่าสุดจาก header X-Request-Id · ฟอร์มติดต่อ Support (W26) แนบให้ทีมตรวจได้เร็ว */
+export let lastRequestId: string | null = null;
+
 function emit(name: string, detail: unknown) {
   if (typeof window !== "undefined")
     window.dispatchEvent(new CustomEvent(name, { detail }));
@@ -135,6 +138,7 @@ export class ApiClient {
       if (error instanceof Error && error.name === "AbortError") throw error;
       throw new ApiError(0, "network_error", appText().networkError);
     }
+    lastRequestId = response.headers?.get?.("x-request-id") ?? lastRequestId;
     const data =
       response.status === 204
         ? undefined

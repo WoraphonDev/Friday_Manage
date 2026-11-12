@@ -371,13 +371,25 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
         )}
         {d.unscheduled.length > 0 && (
           <div className={styles.unsched} aria-label={t("unscheduled")}>
-            <b>{t("unscheduled")}</b> <span className="muted" style={{ fontSize: 12 }}>{t("unscheduledCount", { count: d.unscheduled.length })}</span>
-            {canEdit && <span className="muted" style={{ fontSize: 11 }}>{t("unscheduledHint")}</span>}
-            {d.unscheduled.map((u) => (
-              <span key={u.key} className={styles.chip} draggable={canEdit} data-testid={`unscheduled-${u.key}`} onDragStart={(e) => { dragged.current = u.key; e.dataTransfer?.setData("text/plain", u.key); }}>
-                <span className="muted">{u.key}</span>{u.title}
-              </span>
-            ))}
+            {/* Canvas: หัวข้อ + คำแนะนำอยู่แถวบน แยกจากรายการ เพื่อไม่ให้ไหลปนกับ chip */}
+            <div className={styles.unschedHead}>
+              <h2 className={styles.unschedTitle}>{t("unscheduled")} <span className="muted">{t("unscheduledCount", { count: d.unscheduled.length })}</span></h2>
+              {canEdit && <span className="muted" style={{ fontSize: 12 }}>{t("unscheduledHint")}</span>}
+            </div>
+            <div className={styles.unschedList}>
+              {d.unscheduled.map((u) => (
+                <span key={u.key} className={`${styles.chip} ${canEdit ? "" : styles.chipStatic}`} title={`${u.key} ${u.title}`} draggable={canEdit} data-testid={`unscheduled-${u.key}`} onDragStart={(e) => { dragged.current = u.key; e.dataTransfer?.setData("text/plain", u.key); }}>
+                  {canEdit && (
+                    <svg className={styles.grip} width="8" height="14" viewBox="0 0 8 14" fill="currentColor" aria-hidden="true">
+                      <circle cx="2" cy="2" r="1.3" /><circle cx="6" cy="2" r="1.3" /><circle cx="2" cy="7" r="1.3" /><circle cx="6" cy="7" r="1.3" /><circle cx="2" cy="12" r="1.3" /><circle cx="6" cy="12" r="1.3" />
+                    </svg>
+                  )}
+                  <span className={styles.dot} style={{ background: "var(--chart-primary)", opacity: u.parentKey ? 0.6 : 1 }} aria-hidden="true" />
+                  <span className={styles.chipKey}>{u.key}</span>
+                  <span className={styles.chipTitle}>{u.title}</span>
+                </span>
+              ))}
+            </div>
           </div>
         )}
         <div className={styles.foot}>

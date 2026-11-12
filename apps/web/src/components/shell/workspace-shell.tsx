@@ -64,6 +64,7 @@ import { WorkspaceBanners } from "@/features/plan-limits";
 import { AnnouncementBanners } from "@/features/announcements";
 import { EngagementPrompts, WhatsNewButton, WhatsNewMenuItem } from "@/features/whats-new";
 import { OnboardingAccountItem, OnboardingNavButton } from "@/features/onboarding-checklist";
+import { HelpButton, HelpMenuLink } from "@/features/help-panel";
 import { isBlocked, SuspendedScreen, SuspensionBanner, useSuspension } from "@/features/suspension";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 
@@ -602,6 +603,8 @@ export function WorkspaceShell({
               </Link>
             )}
             <WhatsNewButton ws={ws} role={workspace.role} />
+            {/* W26 · ปุ่ม "?" + คีย์ลัด ? เปิดแผงช่วยเหลือ (X4) */}
+            <HelpButton workspace={{ slug: workspace.slug, name: workspace.name, role: workspace.role }} projects={projects.data?.items ?? []} />
             <Bell workspace={ws} unread={summary.data?.total ?? 0} />
             {accountMenu}
           </header>
@@ -712,6 +715,8 @@ export function WorkspaceShell({
             locked={suspension?.mode === "full"}
           />
           <WhatsNewMenuItem ws={ws} role={workspace.role} onOpen={() => setMenuOpen(false)} />
+          {/* W26 · มือถือ: ช่วยเหลือเปิดหน้าศูนย์ช่วยเหลือเต็มจอ */}
+          <HelpMenuLink ws={ws} onNavigate={() => setMenuOpen(false)} />
           <div className="menu-divider" />
           <div className="menu-label">{t("nav.yourWorkspaces")}</div>
           {workspaceList(() => setMenuOpen(false))}

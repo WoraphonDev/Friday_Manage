@@ -33,6 +33,8 @@ export function SiteHeader() {
           <a href="/#features">{t("features")}</a>
           <Link href="/pricing">{t("pricing")}</Link>
           <a href="/#faq">{t("faq")}</a>
+          {/* W26 · ศูนย์ช่วยเหลือสาธารณะ (SEO) */}
+          <Link href="/help">{t("help")}</Link>
         </nav>
         <span className={styles.spacer} />
         {/* รวมภาษา + ธีมเป็นกลุ่มเดียว แต่งเป็นแถบโปร่งให้เบากว่าปุ่มหลักของหัวหน้า */}

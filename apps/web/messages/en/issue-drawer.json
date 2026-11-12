@@ -46,6 +46,7 @@
   "markComplete": "Mark complete",
   "metaLine": "Created by {name} · {created} · Last edited {updated}",
   "subtaskProgressNote": "Task progress is calculated from sub-tasks",
+  "progressAuto": "from sub-tasks",
   "dev": "Dev",
   "plan": "Plan",
   "actual": "Actual",

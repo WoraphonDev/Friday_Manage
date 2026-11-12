@@ -36,6 +36,12 @@ describe('Issue drawer details', () => {
     expect(screen.queryByRole('tab',{name:'Git'})).not.toBeInTheDocument();
   });
 
+  it('Task ที่มี Sub-task แสดง Progress ที่คำนวณแล้วอย่างเดียว · Sub-task ยังกรอกเองได้', async () => {
+    mount(); await loaded();
+    expect(screen.getByText('คำนวณจาก Sub-task')).toBeInTheDocument();
+    expect(screen.queryByText('ความคืบหน้า (%)')).not.toBeInTheDocument();
+  });
+
   it('saves individual fields with current If-Match on successive edits', async () => {
     const user=userEvent.setup();mount();await user.click(await loaded());
     const title=screen.getByRole('textbox',{name:'ชื่อเรื่อง'});await user.clear(title);await user.type(title,'ชื่อใหม่');

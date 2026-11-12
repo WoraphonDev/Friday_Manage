@@ -162,12 +162,17 @@ function progressCalculator(rows: { issue: Issue; category: string }[], weighted
   const children = new Map<string, Issue[]>();
   const categories = new Map(rows.map((r) => [r.issue.id, r.category]));
   for (const { issue } of rows) if (issue.parentId) children.set(issue.parentId, [...children.get(issue.parentId) ?? [], issue]);
-  const progress = (issue: Issue): number => {
-    if (categories.get(issue.id) === 'done') return 100;
-    const subs = children.get(issue.id)?.filter((sub) => countsForProgress(categories.get(sub.id)));
-    return subs?.length ? rollup(subs.map((sub) => ({ md: sub.estimateMd, pct: progress(sub) })), weighted) : issue.progressPct ?? 0;
-  };
+  const progress = (issue: Issue): number => issueProgress(categories.get(issue.id), issue.progressPct,
+    (children.get(issue.id) ?? []).map((sub) => ({ category: categories.get(sub.id), md: sub.estimateMd, pct: progress(sub) })), weighted);
   return progress;
+}
+
+/** Progress ของงานหนึ่งตัว: เสร็จแล้ว = 100 · มี Sub-task (ไม่นับที่ยกเลิก) = เฉลี่ยจาก Sub-task · ไม่มี = ค่าที่กรอกเอง
+ *  ใช้ทั้งตารางและหน้ารายละเอียดงาน เพื่อให้ตัวเลขตรงกันทุกที่ */
+export function issueProgress(category: string | undefined, ownPct: number | null, subs: { category: string | undefined; md: number | null; pct: number }[], weighted: boolean) {
+  if (category === 'done') return 100;
+  const counted = subs.filter((sub) => countsForProgress(sub.category));
+  return counted.length ? rollup(counted, weighted) : ownPct ?? 0;
 }
 
 function rollup(rows: { md: number | null; pct: number }[], weighted: boolean) {

@@ -21,7 +21,7 @@ export interface Issue {
   requirements?: string[]; screens?: string[]; labels?: Named[];
   /** ค่า Custom field { [fieldId]: ค่า } · Guest ไม่ได้รับ */
   customFields?: Record<string, unknown>;
-  subtasks?: Issue[]; pendingDueRequest?: { id: string; requesterId: string; requestedDue: string; currentDue: string; createdAt: string } | null;
+  subtasks?: Issue[]; progressFromSubtasks?: boolean; pendingDueRequest?: { id: string; requesterId: string; requestedDue: string; currentDue: string; createdAt: string } | null;
   warnings?: { code: string; message: string }[];
 }
 export interface IssueTypeOption extends Named { workflowId: string; requiredFields: string[]; statuses?: Status[] }

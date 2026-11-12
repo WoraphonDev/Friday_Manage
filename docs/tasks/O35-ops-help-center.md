@@ -24,8 +24,8 @@
 ## เสร็จเมื่อ
 
 - [ ] หน้าตรงกับข้อเสนอที่อนุมัติแล้วที่ 1440 px · ที่ 390 px ใช้งานได้
-- [ ] ครบทุกสถานะตาม M1 · ซ่อนปุ่มตามบทบาท · Audit ทุกการแก้
-- [ ] e2e test ของ ops-api (ข้อมูลสมมติ) + component test ด้วย MSW · typecheck / test / build ผ่าน
+- [x] ครบทุกสถานะตาม M1 · ซ่อนปุ่มตามบทบาท · Audit ทุกการแก้
+- [x] e2e test ของ ops-api (ข้อมูลสมมติ) + component test ด้วย MSW · typecheck / test / build ผ่าน
 - [ ] build และ deploy Docker ชุด ops และเว็บในเครื่องตาม CLAUDE.md แล้วเผยแพร่บทความจาก :4000 และค้นเจอใน :3000
 
 ## ยังต้องตัดสินใจ
@@ -37,4 +37,37 @@
 
 ## บันทึกผล
 
-<!-- ผู้ทำงานเขียนตอนส่งงาน -->
+ส่งงาน 12 พ.ย. 2569 · ops-api `src/help` (module ใหม่) · ops-web `app/(console)/help` · ไม่มี migration ใหม่
+
+**Endpoint (ops-api `ops/help/…`)** · อ่านได้ทุกบทบาท · เขียนเฉพาะ Owner / Support (`@Roles('owner', 'support')`)
+
+| Method | Path | หมายเหตุ |
+|---|---|---|
+| GET | `overview` | KPI 4 ใบ · จำนวนในแท็บ · คำค้นที่ไม่พบบ่อย 4 อันดับ · `canEdit` |
+| GET | `articles?status&lowHelpful&review&category&q` | อ่าน 30 วัน · โหวต · ช่วยได้ % · Ticket ที่อ้างถึง · `needsReview` + `reviewReason` |
+| GET | `misses?days=30` | รวมต่อคำค้น · บทความที่เขียนตอบแล้ว |
+| GET / POST / PATCH / DELETE | `articles` · `articles/{id}` | สร้างเป็นร่างเสมอ · PATCH = บันทึกอัตโนมัติ |
+| POST | `articles/{id}:publish` · `:archive` · `:discard-draft` · `articles/{id}/versions/{v}/restore` | |
+| GET / PUT | `categories` | PUT บันทึกทั้งชุดตามลำดับ · หมวดที่หายจากรายการ = ลบ (มีบทความ → 409 `category_has_articles`) |
+| GET / POST | `from-ticket/{ticketId}` | X8 (Owner / Support) |
+
+**คำตัดสินและสิ่งที่ต่างจากข้อความงาน**
+- ร่างของบทความที่เผยแพร่แล้วเก็บใน `help_articles.draft` (ลูกค้าไม่เห็นเพราะไม่ได้ grant) · บทความที่ยังเป็นร่างแก้คอลัมน์หลักตรง · `reviewAt` / `ownerId` เป็นข้อมูลภายในแก้ตรงเสมอ
+- เผยแพร่ต้องส่ง `piiChecked: true` (ตอบ 422 `pii_check_required`) แล้วคัดร่างเข้าคอลัมน์หลัก เพิ่ม `version` และเก็บ `help_article_versions` · ย้อนกลับ = เผยแพร่เนื้อหาเวอร์ชันเดิมเป็นเวอร์ชันใหม่
+- slug: หัวข้อภาษาอังกฤษแปลงเป็น slug · หัวข้อภาษาไทยล้วนได้ `article-xxxxxx` ให้แก้เองในตัวแก้ · ซ้ำตอบ 409 `slug_taken`
+- Audit (`staff_audit_logs`): สร้าง · เผยแพร่ · ย้อนกลับ · เก็บเข้าคลัง · ทิ้งร่าง · ลบ · จัดหมวด · สร้างจาก Ticket ทุกครั้ง · บันทึกอัตโนมัติลง `help.article_edited` ไม่เกิน 1 รายการต่อคนต่อบทความทุก 15 นาที (กันประวัติท่วม)
+- "ค้นแล้วไม่เปิด Ticket ภายใน 24 ชม." ประมาณจาก `100 − Ticket ในแอป 30 วัน / ค้นหา 30 วัน` เพราะไม่เก็บว่าใครค้น (คำตัดสิน A44 / O32) จึงจับคู่รายคนไม่ได้
+- ช่วยได้ % ต่อบทความนับทุกโหวต · KPI ช่วยได้นับ 30 วัน
+- ลบคำค้นที่ไม่พบเกิน 25 เดือน: `HelpService.purgeMisses()` วันละครั้งในโปรเซส (ปิดด้วย `OPS_JOBS=off`) ตามที่ O32 ฝากไว้
+- **ไม่มีอัปโหลดรูป**: ยังไม่มีที่เก็บไฟล์สาธารณะแยกจากไฟล์ลูกค้า (ops-api อ่านที่เก็บไฟล์ลูกค้าได้อย่างเดียว) · ปุ่ม "รูป" ใส่ `![…](https://)` และเตือนให้ใช้ URL สาธารณะที่ไม่มีข้อมูลลูกค้า · ต้องทำเมื่อมี bucket สาธารณะ (I01)
+- Markdown + กล่องเตือน 3 แบบ (`:::info|tip|warning … :::`) + ลิงก์ไปหน้าในแอป (`[ข้อความ](app:/admin/trash)`) · เว็บลูกค้า (W26) แปลงเป็นหน้าใน Workspace ปัจจุบัน
+- "เขียนบทความ" เปิด Modal เล็กถามหัวข้อและหมวดก่อนสร้างร่าง · เขียนจากคำค้นที่ไม่พบใช้หมวดแรก (ไม่มีหมวด = เปิด X9)
+- เดาหมวดตอนสร้างจาก Ticket จากหมวด Ticket (O22) → slug หมวดที่ seed ไว้
+
+**คำขอนอก lane**
+- `apps/ops-api/src/app.module.ts` ลงทะเบียน `HelpModule` (O01)
+- `apps/ops-web/src/components/shell/nav.ts` เมนู "ศูนย์ช่วยเหลือ" → `/help` ทุกบทบาท (O10) · `src/i18n/messages.ts` เพิ่ม namespace `help`
+- `app/(console)/support/SupportPage.tsx` (O13): ช่อง "สร้างบทความในศูนย์ช่วยเหลือจากเรื่องนี้" ใน Modal ปิดเรื่อง (T5) → ไป `/help?fromTicket=<id>` ซึ่งเปิด X8
+- ยังไม่ได้นับ "ต้องทบทวน" ใน "สิ่งที่ต้องจัดการวันนี้" ของหน้าภาพรวม (อยู่ใน `metrics` ของ O06 / หน้า O15)
+
+**ตรวจแล้ว:** `apps/ops-api/test/help.e2e.test.ts` 10 ข้อ (สิทธิ์ตามบทบาท · ร่างไม่หลุดถึง friday_app · grant รายคอลัมน์ · PII check · เวอร์ชัน / ย้อนกลับ / เก็บเข้าคลัง / ลบ · ต้องทบทวน · KPI · คำค้นที่ไม่พบ → บทความ · ลบเกิน 25 เดือน · X8 · X9) · `pnpm --filter @friday/ops-api test` 172 ผ่าน · ops-web `help.test.tsx` 18 ข้อ (MSW) · `@friday/ops-web` test 172 ผ่าน · typecheck / build ผ่าน · ยังไม่ได้ build / deploy Docker

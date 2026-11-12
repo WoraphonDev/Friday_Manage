@@ -190,7 +190,7 @@
 
 ## หน้าจอรอบ 3 (ผู้ใช้อนุมัติหน้าจอและคำแนะนำทุกข้อ 12 พ.ย. 2569 · สั่งเริ่มทำแล้ว)
 
-หน้าจอ: [`design/proposals/phase3/`](../../design/proposals/phase3/index.html) (ไฟล์ HTML เปิดได้เลย ไม่ต้องใช้ support.js) · รหัสใหม่: บอร์ด Ops 17–21 · U = Changelog และ NPS · V = Onboarding · X = ศูนย์ช่วยเหลือ · T7–T14 ต่อจาก T3 · Z = กู้คืนข้อมูล · ไฟล์ใน `design/proposals/phase3` คือหน้าจอที่ยึด (ยังไม่ได้คัดลอกเข้า Canvas ของ claude.ai)
+หน้าจอ: [`design/proposals/phase3/`](../../design/proposals/phase3/index.html) (ไฟล์ HTML เปิดได้เลย ไม่ต้องใช้ support.js) · รหัสใหม่: บอร์ด Ops 17–21 · U = Changelog และ NPS · V = Onboarding · X = ศูนย์ช่วยเหลือ · T7–T14 ต่อจาก T3 · Z = กู้คืนข้อมูล · ไฟล์ใน `design/proposals/phase3` คือหน้าจอที่ยึด · คัดลอกเข้า Canvas แล้ว (13 พ.ย. 2569) เป็นแถว "รอบ 3" ทั้งใน [Canvas Friday Ops](https://claude.ai/artifact/Q8tsmLfQqS1aUJ2rNrkw9r) รุ่นที่ 44 และ [Canvas Friday Manage](https://claude.ai/artifact/7S2UHYDoxaNawnV4BGmPCa) รุ่นที่ 90 (`Phase3-*.dc.html` · หน้าที่ยาวเกิน 8000 px ให้เปิดเต็มจอแล้วเลื่อน) · ถ้าสองที่ไม่ตรงกัน ยึดไฟล์ใน repo
 
 ลำดับ: กู้คืนข้อมูลเป็นเฟส 1 (O30 → A41 → W23, O31) · ที่เหลือเป็นเฟส 2 (ผู้ใช้สั่งเริ่มแล้ว) (O32 → API / Ops → เว็บ) · ไฟล์กลาง `apps/web/src/components/shell/workspace-shell.tsx` ต่อคิว W23 → W24 → W25 / W26 (W23 เพิ่มช่องให้งานถัดไป) · `packages/db/**` ต่อคิว O30 → O32
 

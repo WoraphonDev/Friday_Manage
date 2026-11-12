@@ -12,6 +12,7 @@ import { Button, buttonClass, Input, useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { DiscountDialog, TrialDialog } from "./_parts/Actions";
+import { AnnounceDrawer } from "./_parts/Announce";
 import { healthTone, planLabel, useFmt } from "./_parts/format";
 import type { WsList, WsRow } from "./_parts/types";
 
@@ -42,7 +43,7 @@ export function WorkspacesList() {
   const [feature, setFeature] = useState("");
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
-  const [bulk, setBulk] = useState<"trial" | "coupon" | null>(null);
+  const [bulk, setBulk] = useState<"trial" | "coupon" | "announce" | null>(null);
   const [exporting, setExporting] = useState(false);
   const search = useDeferredValue(q.trim());
   const filter = new URLSearchParams({ limit: String(PAGE), offset: String(offset), sort, ...(search ? { q: search } : {}), ...(plan ? { plan } : {}), ...(status ? { status } : {}), ...(feature ? { feature } : {}) });
@@ -125,6 +126,8 @@ export function WorkspacesList() {
             <b>{t("list.selected", { count: selected.length })}</b>
             <span className="muted small">{t("list.bulkNote")}</span>
             <span className="spacer" />
+            {/* ประกาศถึงลูกค้า: เฉพาะ Owner ของทีม (ops-api ตรวจซ้ำ) · ส่งถึงทุกแถวที่เลือก รวมหน้าอื่น */}
+            {hasAny(me, "owner") && <Button onClick={() => setBulk("announce")}>{t("list.bulkAnnounce")}</Button>}
             {hasAny(me, "support") && <Button onClick={() => setBulk("trial")}>{t("list.bulkTrial")}</Button>}
             {hasAny(me, "finance") && <Button onClick={() => setBulk("coupon")}>{t("list.bulkCoupon")}</Button>}
           </div>
@@ -214,6 +217,14 @@ export function WorkspacesList() {
           </>
         )}
       </section>
+      {bulk === "announce" && (
+        <AnnounceDrawer
+          workspaceIds={selected}
+          sampleName={rows.find((r) => r.id === selected[0])?.name}
+          onClose={() => setBulk(null)}
+          onDone={() => (setBulk(null), setSelected([]))}
+        />
+      )}
       {bulk === "trial" && (
         <TrialDialog
           names={picked.map((p) => p.name)}

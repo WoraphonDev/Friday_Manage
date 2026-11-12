@@ -1,0 +1,8 @@
+{
+  "region": "Announcements from the Friday team",
+  "label": "From the Friday team",
+  "dismiss": "Dismiss announcement {title}",
+  "more": "Read more",
+  "less": "Show less",
+  "dismissFailed": "Couldn't dismiss the announcement. Please try again"
+}

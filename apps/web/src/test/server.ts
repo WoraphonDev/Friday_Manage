@@ -15,6 +15,10 @@ export const handlers = [
   ),
   // ข้อมูล Workspace (shell อ่านสถานะระงับ C6)
   http.get("*/api/v1/w/:ws", () => HttpResponse.json({ suspension: null })),
+  // แบนเนอร์ประกาศจากทีม Friday (O24) · Owner / Admin เรียกจาก shell
+  http.get("*/api/v1/w/:ws/announcements", () =>
+    HttpResponse.json({ items: [] }),
+  ),
   http.get("*/api/v1/w/:ws/projects", () =>
     HttpResponse.json({ items: projects }),
   ),

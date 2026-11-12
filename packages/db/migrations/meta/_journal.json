@@ -211,6 +211,13 @@
       "when": 1794393475551,
       "tag": "0029_project_progress_split",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794463249652,
+      "tag": "0030_ops_announcements",
+      "breakpoints": true
     }
   ]
 }

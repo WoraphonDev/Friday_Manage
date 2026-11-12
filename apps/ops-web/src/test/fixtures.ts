@@ -1,5 +1,5 @@
 // ข้อมูลสมมติทั้งหมด (repo เป็น Public) · โดเมน example เท่านั้น
-import type { Announcement, Flag, Metrics, OpenSession, PaymentRow, Staff, WorkspaceDetail, WorkspaceRow } from "@/lib/types";
+import type { Flag, Metrics, OpenSession, PaymentRow, Staff, WorkspaceDetail, WorkspaceRow } from "@/lib/types";
 
 const future = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString();
 const past = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
@@ -97,8 +97,3 @@ export const flags: Flag[] = [
   { id: "50000000-0000-4000-8000-000000000002", key: "line_approve_button", description: "ปุ่มอนุมัติใน LINE", defaultOn: true, createdAt: past(1000), updatedAt: past(1000), overrides: [] },
 ];
 
-export const annId = "60000000-0000-4000-8000-000000000001";
-export const announcements: Announcement[] = [
-  { id: annId, message: "ปิดปรับปรุงระบบตัวอย่าง", audience: "all", channels: ["banner", "email"], scheduledAt: null, sentAt: null, createdAt: past(30) },
-  { id: "60000000-0000-4000-8000-000000000002", message: "ประกาศที่ส่งแล้ว", audience: "owners_admins", channels: ["email"], scheduledAt: null, sentAt: past(600), createdAt: past(700) },
-];

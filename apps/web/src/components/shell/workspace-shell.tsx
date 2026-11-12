@@ -61,6 +61,7 @@ import { CommandPalette } from "@/features/command-palette/CommandPalette";
 import { LocaleSwitch, LocaleSync } from "@/features/locale-switch";
 import { ThemeSwitch } from "@/features/theme-switch";
 import { WorkspaceBanners } from "@/features/plan-limits";
+import { AnnouncementBanners } from "@/features/announcements";
 import { isBlocked, SuspendedScreen, SuspensionBanner, useSuspension } from "@/features/suspension";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 
@@ -624,6 +625,7 @@ export function WorkspaceShell({
             ) : (
               <>
                 {suspension?.mode !== "full" && <WorkspaceBanners ws={ws} role={workspace.role} />}
+                {suspension?.mode !== "full" && <AnnouncementBanners ws={ws} role={workspace.role} />}
                 {hasBackButton(pathname) && <BackButton fallback={base} label={t("nav.back")} />}
                 {children}
               </>

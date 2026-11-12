@@ -223,7 +223,9 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `support_session` | การเข้าบัญชีลูกค้าแต่ละครั้ง | workspace_id, staff_id, ticket_no, reason, mode, second_approver_id (โหมดแก้ไข), started_at, ended_at | Q3, N1 |
 | `feature_flag` | | key, description, default_on | Q3 |
 | `feature_flag_override` | เปิดให้บางลูกค้า | flag_id, workspace_id, enabled | Q3 |
-| `announcement` | ประกาศถึงลูกค้า | message, audience (all · owners_admins), channels (banner · email), scheduled_at, sent_at | Q3 |
+| `announcement` | ประกาศถึงลูกค้า · ส่งถึง Owner / Admin ของ Workspace ที่เลือก (O24) | title, message, audience (all · owners_admins), channels (banner · email), scheduled_at, sent_at, created_by, cancelled_at, cancelled_by | Q3, Ops C8 |
+| `announcement_target` | Workspace ที่ได้รับประกาศ · ข้อความแบนเนอร์ที่แทนตัวแปรแล้วตอนส่ง (ลูกค้า Owner / Admin อ่านผ่าน RLS) | announcement_id, workspace_id, recipients, banner_title, banner_message, banner_from, banner_until | Ops C8 |
+| `announcement_dismissal` | ผู้ใช้ปิดแบนเนอร์ประกาศ (ต่อคน ต่อ Workspace) | announcement_id, workspace_id, user_id, dismissed_at | Ops C8 |
 | `staff_elevation` | สิทธิ์ฉุกเฉิน: Owner เปิดบทบาทให้ตัวเองชั่วคราว ≤ 1 ชม. | staff_id, role, reason, started_at, ends_at, ended_at, ended_by | Ops 8 |
 | `approval_request` | คำขออนุมัติเมื่อเกินวงเงิน | kind, workspace_id (null = ระดับระบบ), target_type, target_id, payload, amount_satang, requested_by, reason, status, decided_by, self_approved, expires_at | Ops G7, G8, G12 |
 | `staff_audit_log` | การกระทำของทีม Friday ที่ไม่ผูก Workspace · append-only (แม้ role ของ ops) | staff_id, roles, action, target_type, target_id, workspace_id, reason, approved_by, self_approved, ip | Ops 8 |

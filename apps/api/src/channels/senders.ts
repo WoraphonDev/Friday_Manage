@@ -107,6 +107,9 @@ export class ChannelRegistry {
 // Email
 // ---------------------------------------------------------------------------
 
+/** ช่องทางส่งอีเมล · ว่าง = ระบบ (MAIL_FROM) */
+type Via = { smtp?: SmtpConfig; from?: string; replyTo?: string };
+
 /** อีเมลที่ Workspace ตั้งไว้ (ถ้ามี) หรือของระบบ */
 @Injectable()
 export class EmailSender implements ChannelSender {
@@ -119,7 +122,7 @@ export class EmailSender implements ChannelSender {
   ) {}
 
   /** ค่า SMTP ของ Workspace ใช้เมื่อยืนยันโดเมนแล้ว · ไม่งั้นส่งผ่านระบบ แสดงชื่อของ Workspace และตอบกลับไปที่อีเมลที่ตั้งไว้ */
-  async resolve(workspaceId: string): Promise<{ smtp?: SmtpConfig; from?: string; replyTo?: string } | null> {
+  async resolve(workspaceId: string): Promise<Via | null> {
     const [cfg] = await this.db.select().from(s.emailSenderConfigs).where(eq(s.emailSenderConfigs.workspaceId, workspaceId));
     if (cfg?.verifiedAt && cfg.smtpHost) {
       return {
@@ -148,7 +151,8 @@ export class EmailSender implements ChannelSender {
   }
 
   async send(ctx: SendContext): Promise<SendResult> {
-    const via = await this.resolve(ctx.workspaceId);
+    // ข้อความจากทีม Friday ส่งในนามระบบ · ไม่ใช้ชื่อผู้ส่ง / SMTP ของ Workspace ให้ลูกค้าเข้าใจผิดว่าทีมตัวเองส่ง
+    const via: Via | null = ctx.msg.system ? (this.mailer.enabled ? {} : null) : await this.resolve(ctx.workspaceId);
     if (!via) throw new UnrecoverableError('ยังไม่ได้ตั้งค่าการส่งอีเมล');
     const mail = renderEmail(ctx.msg, ctx.why, `${webUrl()}/work/${ctx.workspaceSlug}/profile`);
     const content: DeliveryContent = { view: { subject: mail.subject, text: mail.text } };

@@ -29,7 +29,8 @@ export class TenantGuard implements CanActivate {
  * ทางที่ยังใช้ได้ตอนถูกระงับ (ต่อจาก /w/:ws/): ชำระเงิน / ใบแจ้งหนี้ / ยกเลิกแพ็กเกจ, ส่งออกข้อมูลและคำขอตาม PDPA, สิทธิ์เข้าช่วยเหลือของทีม Friday
  * ให้ลูกค้าแก้ปัญหาที่ทำให้ถูกระงับและเอาข้อมูลของตัวเองออกได้เสมอ
  */
-const SUSPENDED_ALLOWED = /^(billing(\/|$)|usage$|exports(\/|$)|data-requests(\/|$)|support-access$|cancellation-feedback$|events$)/;
+// announcements: ประกาศจากทีม Friday ต้องอ่านและปิดได้แม้ถูกระงับ (มักเป็นเรื่องที่ลูกค้าต้องรู้)
+const SUSPENDED_ALLOWED = /^(billing(\/|$)|usage$|exports(\/|$)|data-requests(\/|$)|support-access$|cancellation-feedback$|events$|announcements(\/|$))/;
 const READ = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 /**

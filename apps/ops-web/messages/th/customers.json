@@ -43,6 +43,7 @@
     "empty": "ยังไม่มีลูกค้า",
     "emptyFiltered": "ไม่มี Workspace ที่ตรงกับตัวกรอง",
     "selected": "เลือก {count} Workspace",
+    "bulkAnnounce": "ส่งประกาศ",
     "bulkTrial": "ขยายทดลองใช้",
     "bulkCoupon": "ให้คูปอง",
     "bulkNote": "ทุกการกระทำต้องกรอกเหตุผล",

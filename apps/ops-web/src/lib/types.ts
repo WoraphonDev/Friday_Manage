@@ -122,12 +122,3 @@ export interface Flag {
   overrides: { workspaceId: string; slug: string; name: string; enabled: boolean }[];
 }
 
-export interface Announcement {
-  id: string;
-  message: string;
-  audience: "all" | "owners_admins";
-  channels: ("banner" | "email")[];
-  scheduledAt: string | null;
-  sentAt: string | null;
-  createdAt: string;
-}

@@ -21,7 +21,6 @@ export const keys = {
   sessions: ["ops", "support-sessions"] as const,
   payments: (status: string) => ["ops", "payments", status] as const,
   flags: ["ops", "feature-flags"] as const,
-  announcements: ["ops", "announcements"] as const,
 };
 
 /** พนักงานที่ล็อกอินอยู่ (ops/auth/me) · ใช้ซ่อนปุ่มตามบทบาท */

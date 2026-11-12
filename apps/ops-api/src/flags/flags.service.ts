@@ -11,22 +11,12 @@ const s = schema;
 export const FlagBody = z.object({ key: z.string().trim().regex(/^[a-z][a-z0-9_.-]{1,62}$/, 'key ใช้ตัวพิมพ์เล็ก ตัวเลข _ . -'), description: z.string().trim().max(300).nullish(), defaultOn: z.boolean().default(false) }).strict();
 export const PatchFlagBody = FlagBody.partial().strict();
 export const OverrideBody = z.object({ enabled: z.boolean() }).strict();
-export const AnnouncementBody = z
-  .object({
-    message: z.string().trim().min(1).max(1000),
-    audience: z.enum(['all', 'owners_admins']).default('all'),
-    channels: z.array(z.enum(['banner', 'email'])).min(1).default(['banner']),
-    scheduledAt: z.iso.datetime({ offset: true }).nullish(),
-  })
-  .strict();
-export const PatchAnnouncementBody = AnnouncementBody.partial().strict();
-
 const uuid = (id: string, what: string) => {
   if (!z.uuid().safeParse(id).success) throw new AppError(404, 'not_found', `ไม่พบ${what}`);
   return id;
 };
 
-/** Feature flag (เปิดให้บางลูกค้า) และประกาศถึงลูกค้า · ไม่ผูก Workspace จึงไม่มี audit_logs ของลูกค้า (เฉพาะ override ต่อ Workspace) */
+/** Feature flag (เปิดให้บางลูกค้า) · ไม่ผูก Workspace จึงไม่มี audit_logs ของลูกค้า (เฉพาะ override ต่อ Workspace) · ประกาศย้ายไป announcements/ (O24) */
 @Injectable()
 export class FlagsService {
   constructor(@Inject(OPS_DB) private readonly db: Db) {}
@@ -78,38 +68,5 @@ export class FlagsService {
 
   private flag(f: typeof s.featureFlags.$inferSelect) {
     return { id: f.id, key: f.key, description: f.description, defaultOn: f.defaultOn, createdAt: f.createdAt, updatedAt: f.updatedAt };
-  }
-
-  // ---------------------------------------------------------------------------
-
-  async listAnnouncements() {
-    return { items: (await this.db.select().from(s.announcements).orderBy(asc(s.announcements.createdAt))).map((a) => this.ann(a)) };
-  }
-  async createAnnouncement(input: z.infer<typeof AnnouncementBody>) {
-    const [row] = await this.db.insert(s.announcements).values({ message: input.message, audience: input.audience, channels: input.channels, scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null }).returning();
-    return this.ann(row);
-  }
-  async patchAnnouncement(id: string, input: z.infer<typeof PatchAnnouncementBody>) {
-    const [cur] = await this.db.select().from(s.announcements).where(eq(s.announcements.id, uuid(id, 'ประกาศ')));
-    if (!cur) throw new AppError(404, 'not_found', 'ไม่พบประกาศ');
-    if (cur.sentAt) throw new AppError(409, 'announcement_sent', 'ประกาศนี้ส่งไปแล้ว แก้ไม่ได้');
-    const [row] = await this.db.update(s.announcements).set({ ...(input.message !== undefined ? { message: input.message } : {}), ...(input.audience ? { audience: input.audience } : {}), ...(input.channels ? { channels: input.channels } : {}), ...(input.scheduledAt !== undefined ? { scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null } : {}), updatedAt: new Date() }).where(eq(s.announcements.id, id)).returning();
-    return this.ann(row);
-  }
-  async deleteAnnouncement(id: string) {
-    const gone = await this.db.delete(s.announcements).where(eq(s.announcements.id, uuid(id, 'ประกาศ'))).returning({ id: s.announcements.id });
-    if (!gone.length) throw new AppError(404, 'not_found', 'ไม่พบประกาศ');
-    return { id, deleted: true };
-  }
-  /** ปล่อยประกาศทันที (banner ให้ API ลูกค้าอ่านจาก announcements ที่ sent_at ไม่ว่าง) */
-  async publishAnnouncement(id: string) {
-    const [cur] = await this.db.select().from(s.announcements).where(eq(s.announcements.id, uuid(id, 'ประกาศ')));
-    if (!cur) throw new AppError(404, 'not_found', 'ไม่พบประกาศ');
-    if (cur.sentAt) throw new AppError(409, 'announcement_sent', 'ประกาศนี้ส่งไปแล้ว');
-    const [row] = await this.db.update(s.announcements).set({ sentAt: new Date(), updatedAt: new Date() }).where(eq(s.announcements.id, id)).returning();
-    return this.ann(row);
-  }
-  private ann(a: typeof s.announcements.$inferSelect) {
-    return { id: a.id, message: a.message, audience: a.audience, channels: a.channels, scheduledAt: a.scheduledAt, sentAt: a.sentAt, createdAt: a.createdAt };
   }
 }

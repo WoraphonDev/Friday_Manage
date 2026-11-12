@@ -17,6 +17,7 @@ export function renderEmail(m: Msg, why: string, settingsUrl: string) {
   const text = [
     `${m.head}: ${m.title}`,
     m.project,
+    ...(m.body ? ['', m.body, ''] : []),
     ...m.rows.map(([k, v]) => `${k}: ${v}`),
     m.note ? `“${m.note}”` : '',
     ...(m.lists ?? []).flatMap((l) => ['', l.label, ...l.items.map((i) => `- ${i.text}\n  ${i.url}`), ...(l.more ? [`  ${F.more(l.more)}`] : [])]),
@@ -31,6 +32,7 @@ export function renderEmail(m: Msg, why: string, settingsUrl: string) {
 <div style="border-top:4px solid ${esc(m.color)};padding:16px 0">
 <h2 style="margin:0 0 4px">${esc(m.head)}: ${esc(m.title)}</h2>
 <div style="color:#5F6873">${esc(m.project)}</div>
+${m.body ? `<p style="white-space:pre-wrap;line-height:1.6">${esc(m.body)}</p>` : ''}
 ${m.rows.map(([k, v]) => `<div><b>${esc(k)}</b> ${esc(v)}</div>`).join('')}
 ${m.note ? `<blockquote>${esc(m.note)}</blockquote>` : ''}
 ${(m.lists ?? [])

@@ -477,6 +477,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET | `me/notifications/summary` | self | |
 | POST | `me/notifications/{id}:read` · `:unread` · `:done` · `:snooze` · `me/notifications:read-all` | self | |
 | GET / PUT | `me/notification-prefs` · `me/notification-settings` | self | ต่อ Workspace |
+| GET · POST | `w/announcements` · `w/announcements/{id}/dismiss` | Owner / Admin | แบนเนอร์ประกาศจากทีม Friday ที่ยังไม่ปิด · ปิดได้ต่อคน (O24) |
 | GET | `w/notification-templates/{event}:preview` | Admin | N2 |
 | GET | `w/search` | สมาชิก | ค้นชื่อ, รายละเอียด, คอมเมนต์, ข้อความในไฟล์ · กรองตามสิทธิ์ก่อนตอบ · `#DP-39` และ `@ชื่อ` |
 | CRUD | `w/saved-searches` | self | |
@@ -525,7 +526,8 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | POST | `ops/support-sessions/{id}:end` | |
 | POST | `ops/workspaces/{id}:extend-trial` · `:discount` · `:change-plan` · `:suspend` | |
 | GET / POST | `ops/payments?status=pending_review` · `{id}:confirm` · `:reject` | ตรวจสลิปและ 50 ทวิ |
-| CRUD | `ops/feature-flags` · `ops/announcements` | |
+| CRUD | `ops/feature-flags` | |
+| GET / POST | `ops/announcements` · `{id}` · `audience` · `test` · `{id}/cancel` | ประกาศถึง Owner / Admin ของ Workspace ที่เลือก · อีเมล / แบนเนอร์ / ทั้งสอง · ตั้งเวลาได้ · เฉพาะ Owner ของทีม (O24) |
 
 ### 3.13 Endpoint ที่โค้ดมีเพิ่ม (รวมจากบันทึกผล · D99 · 8 พ.ย. 2569)
 

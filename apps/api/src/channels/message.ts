@@ -20,6 +20,10 @@ export interface Msg {
   safe: boolean;
   /** รายการงานแยกหัวข้อ (สรุปงานประจำวัน) · more = จำนวนที่ไม่ได้แสดง */
   lists?: MsgList[];
+  /** เนื้อความหลายบรรทัด (ประกาศจากทีม Friday) */
+  body?: string;
+  /** ข้อความจากทีม Friday: ส่งผ่านอีเมลของระบบเสมอ ไม่ใช้ผู้ส่ง / SMTP ที่ Workspace ตั้ง */
+  system?: boolean;
 }
 
 export interface MsgList {
@@ -74,6 +78,7 @@ const HEADS: Record<string, { head: (p: Record<string, unknown>, who: string) =>
   'digest.daily': { head: () => 'สรุปงานประจำวัน', color: '#0F766E' },
   'report.weekly': { head: () => 'รายงานสรุปรายสัปดาห์', color: '#0F766E' },
   'channel.webhook_paused': { head: () => 'Webhook ถูกปิดชั่วคราว', color: '#B91C1C' },
+  'ops.announcement': { head: () => 'ประกาศจากทีม Friday', color: '#5B3FC4' },
 };
 
 /** หัวข้อภาษาอังกฤษ (W21) · เหตุการณ์ที่ไม่มีในนี้ใช้ชื่อเหตุการณ์ */
@@ -101,6 +106,7 @@ const HEADS_EN: Record<string, (p: Record<string, unknown>, who: string) => stri
   'digest.daily': () => 'Your daily summary',
   'report.weekly': () => 'Weekly summary report',
   'channel.webhook_paused': () => 'Webhook paused',
+  'ops.announcement': () => 'Announcement from the Friday team',
 };
 
 const LABELS = {
@@ -236,9 +242,33 @@ function dailyMessage(p: Record<string, unknown>, ctx: Ctx, locale: Locale): Msg
   };
 }
 
+/**
+ * ประกาศจากทีม Friday (O24) · ข้อความแทนชื่อ Workspace มาแล้วจาก ops-api
+ * ไม่ใช่ข้อมูลงานของลูกค้า จึงส่งเนื้อความเต็มแม้เปิดโหมดปลอดภัย
+ */
+function announcementMessage(p: Record<string, unknown>, ctx: Ctx, locale: Locale): Msg {
+  const url = `${ctx.webUrl}/work/${ctx.workspaceSlug}`;
+  return {
+    event: 'ops.announcement',
+    locale,
+    head: locale === 'en' ? HEADS_EN['ops.announcement'](p, '') : HEADS['ops.announcement'].head(p, ''),
+    title: str(p.title) ?? '',
+    project: '',
+    rows: [],
+    note: '',
+    body: str(p.text) ?? '',
+    buttons: [{ label: LABELS[locale].openApp, url }],
+    color: HEADS['ops.announcement'].color,
+    url,
+    safe: false,
+    system: true,
+  };
+}
+
 export function buildMessage(src: MsgSource, ctx: Ctx): Msg {
   const p = src.payload ?? {};
   if (src.eventType === 'digest.daily') return dailyMessage(p, ctx, ctx.locale ?? 'th');
+  if (src.eventType === 'ops.announcement') return announcementMessage(p, ctx, ctx.locale ?? 'th');
   const locale = ctx.locale ?? 'th';
   const L = LABELS[locale];
   const spec = HEADS[src.eventType];

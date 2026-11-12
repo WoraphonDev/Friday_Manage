@@ -283,32 +283,5 @@
     "saved": "บันทึก flag แล้ว",
     "deleted": "ลบ flag แล้ว",
     "overrideSaved": "บันทึกการกำหนดแล้ว · ลูกค้าเห็นใน Audit Log"
-  },
-  "ann": {
-    "title": "ประกาศถึงลูกค้า",
-    "message": "ข้อความ",
-    "audience": "ส่งถึง",
-    "all": "ทุก Workspace",
-    "owners_admins": "เฉพาะ Owner และ Admin",
-    "channels": "ช่องทาง",
-    "banner": "แบนเนอร์ในแอป",
-    "email": "Email",
-    "bannerEmail": "แบนเนอร์ในแอป + Email",
-    "scheduledAt": "เวลาส่ง (เว้นว่าง = ร่าง)",
-    "schedule": "ตั้งเวลาส่ง",
-    "draft": "บันทึกร่าง",
-    "empty": "ยังไม่มีประกาศ",
-    "sent": "ส่งแล้ว {date}",
-    "scheduled": "ตั้งเวลา {date}",
-    "isDraft": "ร่าง",
-    "publish": "ส่งทันที",
-    "edit": "แก้ไข",
-    "editTitle": "แก้ไขประกาศ",
-    "delete": "ลบ",
-    "created": "บันทึกประกาศแล้ว",
-    "saved": "แก้ไขประกาศแล้ว",
-    "published": "ส่งประกาศแล้ว",
-    "deleted": "ลบประกาศแล้ว",
-    "messageRequired": "กรอกข้อความประกาศ"
   }
 }

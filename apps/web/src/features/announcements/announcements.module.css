@@ -1,0 +1,14 @@
+/* แบนเนอร์ประกาศจากทีม Friday · สีจาก token เท่านั้น (สว่าง / มืด) · แถวเดียวกับแบนเนอร์แพ็กเกจ (plan-limits) */
+.stack { display:flex; flex-direction:column; }
+.banner { display:flex; gap:12px; align-items:flex-start; padding:10px 16px; font-size:13px; background:var(--primary-soft); color:var(--primary-text); border-bottom:1px solid var(--border); }
+.icon { flex:none; width:28px; height:28px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; background:var(--card); color:var(--primary-text); }
+.body { flex:1 1 auto; min-width:0; display:flex; flex-wrap:wrap; align-items:baseline; column-gap:8px; row-gap:2px; }
+.label { font-size:11px; font-weight:600; text-transform:none; color:var(--primary-text); opacity:.85; }
+.title { color:var(--foreground); }
+.message { flex:1 1 100%; margin:0; color:var(--foreground-soft); white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.55; }
+.more { border:0; padding:0; background:none; font:inherit; font-size:12px; color:var(--primary-text); text-decoration:underline; cursor:pointer; }
+.close { flex:none; margin:-4px -8px -4px 0; color:var(--primary-text); }
+@media (max-width: 640px) {
+  .banner { padding:10px 12px; gap:10px; }
+  .icon { display:none; }
+}

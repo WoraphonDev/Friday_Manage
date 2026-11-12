@@ -23,6 +23,8 @@ services:
       UPLOAD_DIR: /data/uploads
       # ไม่ตั้ง VALKEY_URL = คิวทำงานใน process เดียวกับ API (เหมือนตอนรันบนเครื่อง)
       VALKEY_URL: ${API_VALKEY_URL:-}
+      # O36: Webhook ของโปรเจกต์ FM ส่งเข้า ops-api ในเครื่อง (host.docker.internal:4001) ซึ่งเป็นที่อยู่ภายใน · ปิดด้วย API_WEBHOOK_ALLOW_PRIVATE=0
+      WEBHOOK_ALLOW_PRIVATE: ${API_WEBHOOK_ALLOW_PRIVATE:-1}
     volumes:
       # ไฟล์ที่ลูกค้าอัปโหลดเดิม (ops-api อ่านที่เดียวกันแบบอ่านอย่างเดียว)
       - ../../apps/api/var/uploads:/data/uploads

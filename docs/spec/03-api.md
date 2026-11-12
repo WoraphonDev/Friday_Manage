@@ -478,6 +478,9 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | POST | `me/notifications/{id}:read` · `:unread` · `:done` · `:snooze` · `me/notifications:read-all` | self | |
 | GET / PUT | `me/notification-prefs` · `me/notification-settings` | self | ต่อ Workspace |
 | GET · POST | `w/announcements` · `w/announcements/{id}/dismiss` | Owner / Admin | แบนเนอร์ประกาศจากทีม Friday ที่ยังไม่ปิด · ปิดได้ต่อคน (O24) |
+| GET · POST | `me/whats-new?workspace` · `me/whats-new:seen` · `me/whats-new/{id}:click` | ทุกบทบาทยกเว้น Guest | มีอะไรใหม่ 90 วัน กรองตามแพ็กเกจ / Feature flag / บทบาท · `unseen` = จุดบนแถบบน · เปิดแผงนับยอดเห็นครั้งเดียวต่อคนต่อรายการ · Workspace ที่ถูกระงับได้ `hidden: true` (A42) |
+| GET · POST | `me/spotlight?workspace` · `me/spotlight/{id}:dismiss` | ทุกบทบาทยกเว้น Guest | Spotlight ที่ยังไม่เห็นไม่เกิน 1 รายการ · ไม่แสดงวันแรกที่สมัคร (A42) |
+| GET · POST | `me/nps-prompt?workspace&mobile&sessionSeconds` · `me/nps` · `me/nps:dismiss` | ตาม `nps_settings` (เริ่มต้น Owner / Admin) | ตัดสินว่าจะถาม (ใช้ครบ N วัน, ซ้ำทุก N วัน, สุ่ม % แบบคงที่ต่อคนต่อรอบ, ไม่ถามช่วงทดลอง / มี Ticket / วันที่เห็น Spotlight / มือถือใช้ไม่ถึง 2 นาที · ≤ 1 ครั้งต่อวัน) · ตอบหรือปิดได้เฉพาะเมื่อถูกถาม (409 `nps_not_prompted`) (A42) |
 | GET | `w/notification-templates/{event}:preview` | Admin | N2 |
 | GET | `w/search` | สมาชิก | ค้นชื่อ, รายละเอียด, คอมเมนต์, ข้อความในไฟล์ · กรองตามสิทธิ์ก่อนตอบ · `#DP-39` และ `@ชื่อ` |
 | CRUD | `w/saved-searches` | self | |

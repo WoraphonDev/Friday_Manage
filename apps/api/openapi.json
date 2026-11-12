@@ -123,6 +123,9 @@
       "name": "Notifications"
     },
     {
+      "name": "Nps"
+    },
+    {
       "name": "OAuth"
     },
     {
@@ -178,6 +181,9 @@
     },
     {
       "name": "Views"
+    },
+    {
+      "name": "WhatsNew"
     },
     {
       "name": "WorkspaceAdmin"
@@ -3181,6 +3187,192 @@
         }
       }
     },
+    "/api/v1/me/nps": {
+      "post": {
+        "operationId": "Nps_answer",
+        "summary": "ส่งคะแนน 0–10 พร้อมความเห็น / หัวข้อ (ไม่บังคับ)",
+        "tags": [
+          "Nps"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "workspace": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "score": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "comment": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "topics": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40
+                    }
+                  }
+                },
+                "required": [
+                  "workspace",
+                  "score"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/nps-prompt": {
+      "get": {
+        "operationId": "Nps_prompt",
+        "summary": "ถามตอนนี้ไหม (ถาม = บันทึกว่าแสดงแล้ววันนี้)",
+        "tags": [
+          "Nps"
+        ],
+        "parameters": [
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "mobile",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "sessionSeconds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 86400
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/me/nps/dismiss": {
+      "post": {
+        "operationId": "Nps_dismiss",
+        "summary": "ปิดโดยไม่ตอบ (ไม่ถามจนถึงรอบถัดไป)",
+        "tags": [
+          "Nps"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "workspace": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "workspace"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me/password:change": {
       "post": {
         "operationId": "MeSecurity_changePassword",
@@ -3357,6 +3549,241 @@
                 "type": "string",
                 "format": "uuid",
                 "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/spotlight": {
+      "get": {
+        "operationId": "WhatsNew_spotlight",
+        "summary": "Spotlight ที่ยังไม่เห็น (ไม่เกิน 1 รายการ)",
+        "tags": [
+          "WhatsNew"
+        ],
+        "parameters": [
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/me/spotlight/{id}/dismiss": {
+      "post": {
+        "operationId": "WhatsNew_dismissSpotlight",
+        "summary": "ปิด Spotlight แล้วไม่แสดงอีก",
+        "tags": [
+          "WhatsNew"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/whats-new": {
+      "get": {
+        "operationId": "WhatsNew_list",
+        "summary": "รายการ 90 วันล่าสุดที่ผู้ใช้เห็นได้ + จำนวนที่ยังไม่เห็น (จุดเหลืองบนแถบบน)",
+        "tags": [
+          "WhatsNew"
+        ],
+        "parameters": [
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/me/whats-new/{id}/click": {
+      "post": {
+        "operationId": "WhatsNew_click",
+        "summary": "กดปุ่ม \"ลองใช้\" ของรายการ (นับคลิก ไม่เก็บว่าใครกด)",
+        "tags": [
+          "WhatsNew"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/whats-new/seen": {
+      "post": {
+        "operationId": "WhatsNew_seen",
+        "summary": "เปิดแผงแล้ว: บันทึกเวลาที่เห็นและเพิ่มยอดเห็นของรายการใหม่",
+        "tags": [
+          "WhatsNew"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "workspace": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "workspace"
+                ],
+                "additionalProperties": false
               }
             }
           }

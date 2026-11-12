@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ข้อเสนอหน้าจอรอบ 3</title>
+<meta name="description" content="ดัชนีข้อเสนอหน้าจอ 5 ฟีเจอร์ของ Friday Manage และ Friday Ops ที่ยังไม่มีใน Canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#e4e7ec;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;color:#24272c;-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5}
+a{color:#5b3fc4;text-decoration:none}a:hover{color:#4a33a8;text-decoration:underline}
+p{margin:0}
+.muted{color:#5f656d}.num{font-variant-numeric:tabular-nums}.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.small{font-size:12px}
+.pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.p-green{background:#e3f6ec;color:#17633f}.p-amber{background:#fff6d9;color:#7a4700}.p-red{background:#fdecf0;color:#a01d3c}.p-purple{background:#efe9fd;color:#5b3fc4}.p-gray{background:#eef0f2;color:#3a3f45}.p-teal{background:#ddf5ee;color:#0f6b5a}.p-dark{background:#24272c;color:#fff}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:9px;border:1px solid #d6dae0;background:#fff;color:#24272c;font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(16,24,40,.05);text-decoration:none}
+.btn:hover{background:#f1f3f5;color:#24272c;text-decoration:none}
+.btn-primary{background:#5b3fc4;border-color:#5b3fc4;color:#fff;box-shadow:0 1px 2px rgba(91,63,196,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+.btn-primary:hover{background:#4a33a8;color:#fff}
+.btn-danger{background:#c8264a;border-color:#c8264a;color:#fff}
+.btn-ok{background:#1e7a4f;border-color:#1e7a4f;color:#fff}
+.btn-ghost{border-color:transparent;box-shadow:none;background:transparent;color:#5f656d}
+.btn-sm{min-height:30px;padding:0 10px;font-size:12px}
+.btn[disabled]{opacity:.5}
+.card{background:#fff;border:1px solid #e6e8ec;border-radius:14px;padding:18px 20px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03);min-width:0}
+.card.flush{padding:0;overflow:hidden}
+.ch{padding:14px 16px;border-bottom:1px solid #e6e8ec;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.h2{margin:0;font-size:15px;font-weight:650;letter-spacing:-.005em;color:#24272c}
+.pt{margin:0;font-size:24px;font-weight:700;letter-spacing:-.015em}
+.row{display:flex;flex-wrap:wrap;gap:16px;align-items:stretch}
+.col{display:flex;flex-direction:column;gap:12px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e6e8ec;flex-wrap:wrap}
+.tab{border:0;background:transparent;font:inherit;padding:10px 12px;font-size:13px;color:#5f656d;border-bottom:2px solid transparent;margin-bottom:-1px;display:inline-flex;align-items:center;gap:6px}
+.tab.on{color:#5b3fc4;border-bottom-color:#5b3fc4;font-weight:600}
+.tab .c{font-size:11px;background:#eef0f2;color:#3a3f45;border-radius:999px;padding:1px 7px;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid #d6dae0;background:#fff;color:#3a3f45;font-size:12px;font-weight:500}
+.chip.on{background:#efe9fd;border-color:#c9bbf5;color:#5b3fc4;font-weight:600}
+.seg{display:inline-flex;padding:3px;background:#eef0f2;border-radius:10px;gap:2px;flex-wrap:wrap;align-self:flex-start}
+.seg span{font-size:13px;padding:5px 12px;border-radius:8px;color:#5f656d}
+.seg span.on{background:#fff;color:#24272c;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{text-align:left;font-weight:600;color:#6b717a;font-size:12px;padding:10px 12px;border-bottom:1px solid #eceef1;background:#fafbfc;white-space:nowrap}
+.t td{padding:11px 12px;border-bottom:1px solid #eef0f2;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+.t tr.sel td{background:#f6f2ff}
+.t .r{text-align:right}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #eef0f2;font-size:13px}
+.kv:last-child{border-bottom:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.kpi{padding:14px 16px}
+.kpi .l{font-size:12px;color:#5f656d}
+.kpi .v{font-size:24px;font-weight:700;margin-top:4px;letter-spacing:-.01em}
+.kpi .d{font-size:12px;color:#5f656d;margin-top:2px}
+.bar{height:8px;border-radius:999px;background:#eef0f2;overflow:hidden;display:flex}
+.bar span{display:block;height:100%}
+.sw{width:40px;height:22px;border-radius:999px;background:#cdd2d7;position:relative;display:inline-block;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.sw.on{background:#5b3fc4}.sw.on::after{left:21px}
+.av{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none;background:#efe9fd;color:#5b3fc4}
+.msg{padding:12px 14px;border-radius:12px;font-size:13px;line-height:1.6;max-width:560px}
+.tk{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-bottom:1px solid #eef0f2;background:#fff}
+.tk.on{background:#f6f2ff}
+.banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;font-size:13px}
+.b-warn{background:#fff8e6;border:1px solid #f5e1a8;color:#5c3a00}.b-info{background:#f6f2ff;border:1px solid #e4dbfb;color:#3f2a93}.b-ok{background:#effaf4;border:1px solid #c6ead6;color:#14532f}.b-danger{background:#fdf1f4;border:1px solid #f6c9d4;color:#7d1530}
+/* Modal / Drawer / Popover ตามบอร์ด M0–M5 */
+.stage{border-radius:16px;padding:28px 24px;background:#cfd3db;background-image:linear-gradient(180deg,rgba(36,39,44,.20),rgba(36,39,44,.34))}
+.stage.light{background:#eceef2;background-image:none}
+.stage.right{display:flex;justify-content:flex-end;padding:0;overflow:hidden}
+.m{background:#fff;border-radius:16px;box-shadow:0 24px 48px rgba(16,24,40,.22),0 2px 6px rgba(16,24,40,.08);margin:0 auto;max-width:100%;overflow:hidden;display:flex;flex-direction:column}
+.drawer{border-radius:16px 0 0 16px;margin:0;min-height:560px}
+.mh{display:flex;align-items:flex-start;gap:12px;padding:20px 22px 0}
+.mh h3{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em}
+.mh p{margin:4px 0 0;font-size:13px;color:#5f656d}
+.ic{width:36px;height:36px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center}
+.ic-danger{background:#fdecf0;color:#c8264a}.ic-warn{background:#fff6d9;color:#b86e00}.ic-info{background:#efe9fd;color:#5b3fc4}.ic-ok{background:#e3f6ec;color:#1e7a4f}
+.x{margin-left:auto;width:32px;height:32px;border-radius:8px;border:0;background:transparent;color:#5f656d;display:flex;align-items:center;justify-content:center;flex:none}
+.mb{padding:16px 22px;display:flex;flex-direction:column;gap:14px}
+.mf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:14px 22px;border-top:1px solid #eceef1;background:#fafbfc}
+.mf .note{font-size:12px;color:#5f656d;flex:1 1 200px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.full{grid-column:1/-1}
+.f{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:#3a3f45;min-width:0}
+.f .req{color:#c8264a}
+.in{min-height:38px;border:1px solid #868c94;border-radius:9px;padding:8px 12px;font-size:13px;font-weight:400;color:#24272c;background:#fff;display:flex;align-items:center;gap:8px;line-height:1.5}
+.in.ph{color:#8a9099}
+.in.sel::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid #5f656d;border-bottom:2px solid #5f656d;transform:rotate(45deg) translateY(-3px);flex:none}
+.in.ta{min-height:76px;align-items:flex-start}
+.in.big{min-height:180px;align-items:flex-start;flex-direction:column;gap:10px}
+.in.focus{border-color:#6b4fd8;box-shadow:0 0 0 3px #efe9fd}
+.hint{font-size:12px;font-weight:400;color:#5f656d}
+.rc{display:grid;gap:8px}
+.rco{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:start;padding:12px 14px;border:1px solid #e0e3e7;border-radius:12px;font-size:13px}
+.rco.on{border-color:#5b3fc4;background:#faf8ff;box-shadow:0 0 0 3px #efe9fd}
+.rd{width:18px;height:18px;border-radius:50%;border:2px solid #b7bcc3;margin-top:1px;display:flex;align-items:center;justify-content:center}
+.on>.rd{border-color:#5b3fc4}.on>.rd::after{content:"";width:8px;height:8px;border-radius:50%;background:#5b3fc4}
+.ck{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.5}
+.cb{width:18px;height:18px;border-radius:5px;border:2px solid #b7bcc3;flex:none;margin-top:1px;display:flex;align-items:center;justify-content:center}
+.cb.on{background:#5b3fc4;border-color:#5b3fc4}
+.cb.on::after{content:"";width:5px;height:9px;border-right:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(45deg) translate(-1px,-1px)}
+.info{padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.55}
+.t-info{background:#f6f2ff;border:1px solid #e4dbfb}.t-warn{background:#fff8e6;border:1px solid #f5e1a8;color:#5c3a00}.t-danger{background:#fdf1f4;border:1px solid #f6c9d4;color:#7d1530}.t-ok{background:#effaf4;border:1px solid #c6ead6;color:#14532f}.t-gray{background:#f6f7f9;border:1px solid #eceef1}
+.kvg{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 14px;font-size:13px}
+.kvg .k{color:#5f656d}
+.tw{border:1px solid #eceef1;border-radius:10px;overflow:hidden}
+.li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid #eef0f2;font-size:13px}
+.li:last-child{border-bottom:0}
+.li.on{background:#f6f2ff}
+.lis{border:1px solid #eceef1;border-radius:10px;overflow:hidden;background:#fff}
+.h{font-size:12px;font-weight:700;color:#5f656d;letter-spacing:.02em;margin-bottom:-6px}
+.pv{border:1px solid #e6e8ec;border-radius:12px;overflow:hidden;background:#fff}
+.pvh{padding:8px 12px;background:#fafbfc;border-bottom:1px solid #eceef1;font-size:12px;color:#5f656d}
+.pvb{padding:12px 14px;font-size:13px;line-height:1.6}
+.steps{display:flex;flex-direction:column}
+.st{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;font-size:13px;padding:6px 0}
+.dot{width:14px;height:14px;border-radius:50%;margin-top:3px}
+.d-done{background:#1e7a4f}.d-now{background:#fff;border:3px solid #5b3fc4}.d-next{background:#fff;border:2px solid #c3c8cf}.d-bad{background:#c8264a}
+.pop{background:#fff;border-radius:14px;box-shadow:0 16px 40px rgba(16,24,40,.18),0 2px 6px rgba(16,24,40,.08);border:1px solid #e6e8ec;overflow:hidden}
+.trig{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:#3a3f45}
+
+/* ===== กรอบเอกสารข้อเสนอ ===== */
+.doc{width:1520px;margin:0 auto;padding:40px 40px 96px}
+.dh{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.dh h1{margin:0;font-size:28px;font-weight:700;letter-spacing:-.015em}
+.dh .lead{font-size:14px;color:#3a3f45;max-width:1080px}
+.crumbs{font-size:13px;color:#5f656d;display:flex;gap:8px;align-items:center}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.toc a{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:999px;background:#fff;border:1px solid #d6dae0;font-size:12px;color:#3a3f45}
+.toc a b{font-family:'IBM Plex Mono',monospace;font-size:11px}
+.sec{margin-top:56px}
+.cap{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.cap b.ti{font-size:16px}
+.id{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px;background:#24272c;color:#fff}
+.src{font-size:12px;color:#5f656d;width:100%}
+.frames{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.frame{width:1440px;border-radius:14px;overflow:hidden;border:1px solid #cfd4d9;box-shadow:0 2px 10px rgba(16,24,40,.10);background:#f4f5f8;position:relative;flex:none}
+.notes{margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+.note{background:#fff;border:1px dashed #b7bcc3;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.65;color:#3a3f45}
+.note b{color:#24272c}
+.note ul{margin:6px 0 0;padding-left:18px}
+.gal{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px;align-items:start}
+.gal>.item{min-width:0}
+.gal>.item.wide{grid-column:1/-1}
+.ins{font-size:11px;font-weight:700;color:#5b3fc4;background:#efe9fd;border-radius:6px;padding:1px 6px}
+
+/* ===== Friday Ops shell ===== */
+.ops{display:flex;align-items:stretch;background:#f4f5f8;min-height:980px}
+.os{width:232px;flex:none;background:#141619;color:#eceef0;padding:18px 12px;display:flex;flex-direction:column;gap:14px}
+.os .lg{display:flex;align-items:center;gap:10px;padding:2px 8px}
+.os .lgm{width:34px;height:34px;border-radius:10px;background:#5b3fc4;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:#fff}
+.os .env{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:#1d2024;border:1px solid #262a30;font-size:12px;color:#c4c9cf}
+.glabel{font-size:11px;font-weight:600;letter-spacing:.04em;color:#7a8088;padding:0 10px 4px}
+.nav{display:flex;align-items:center;gap:10px;min-height:32px;padding:0 10px;border-radius:9px;color:#c4c9cf;font-size:13px;text-decoration:none}
+.nav:hover{text-decoration:none;color:#fff}
+.nav-on{background:#2f2753;color:#fff;font-weight:600;box-shadow:inset 0 0 0 1px #3f3470}
+.nav-soon{color:#8a9199;min-height:28px;font-size:12.5px}
+.nav .ni{flex:none;color:#8a9199}.nav-soon .ni{opacity:.55}.nav-on .ni{color:#c9b8ff}
+.nb{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#c8264a;color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.ns{margin-left:auto;height:18px;padding:0 6px;border-radius:999px;background:#23262c;color:#9aa1a9;font-size:10px;display:inline-flex;align-items:center;white-space:nowrap}
+.nnew{margin-left:auto;height:18px;padding:0 6px;border-radius:999px;background:#3a3068;color:#e4dcff;font-size:10px;display:inline-flex;align-items:center;white-space:nowrap}
+.om{flex:1;min-width:0;display:flex;flex-direction:column}
+.otop{min-height:60px;padding:10px 28px;display:flex;align-items:center;gap:12px 16px;background:rgba(255,255,255,.92);border-bottom:1px solid #e6e8ec}
+.otop .bc{display:flex;align-items:center;gap:8px;font-size:13px}
+.otop .bc a{color:#5f656d}
+.otop .srch{flex:1 1 280px;max-width:520px;margin-left:auto;display:flex;align-items:center;gap:8px;min-height:38px;padding:0 10px 0 12px;border:1px solid #e3e6e9;border-radius:10px;background:#f6f7f9;color:#8a9099;font-size:13px}
+.otop kbd{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#5f656d;background:#fff;border:1px solid #e3e6e9;border-radius:6px;padding:1px 6px;margin-left:auto}
+.tbi{position:relative;width:38px;height:38px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:#3a3f45}
+.tbd{position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#c8264a;color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;border:2px solid #fff}
+.ob{padding:24px 28px 40px;display:flex;flex-direction:column;gap:16px}
+.phead{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px}
+.phead>div:first-child{flex:1 1 320px}
+
+/* ===== แอปลูกค้า (สีจาก apps/web/src/styles/tokens.css) ===== */
+.cw{background:#f5f6f7;font-size:13px;color:#24272c;position:relative}
+.cw .card{border-color:#e3e6e9;border-radius:12px;box-shadow:0 1px 2px rgba(20,16,40,.06)}
+.cw .btn{min-height:32px;border-radius:8px;box-shadow:none;border-color:#cfd4d9}
+.cw .btn-primary{border-color:#5b3fc4}
+.ct{height:46px;background:#1c1f23;color:#eceef0;display:flex;align-items:center;gap:14px;padding-right:16px}
+.ct .brand{width:216px;display:flex;align-items:center;justify-content:center;gap:6px;margin-right:-4px}
+.wm{font-weight:700;font-size:17px;letter-spacing:-.02em;color:#fff}
+.ct .srch{flex:1 1 260px;max-width:520px;display:flex;align-items:center;gap:8px;min-height:30px;padding:0 10px;border-radius:8px;background:#2b2f35;border:1px solid #4b5057;color:#b4b9bf;font-size:12px}
+.ct .srch kbd{margin-left:auto;font-size:11px;border:1px solid #4b5057;border-radius:4px;padding:0 5px}
+.ct .sp{flex:1}
+.ib{position:relative;width:32px;height:32px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:#eceef0}
+.ib.on{background:#363a40;box-shadow:inset 0 0 0 1px #4b5057}
+.ib .d{position:absolute;top:3px;right:3px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:#c8264a;color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;border:2px solid #1c1f23}
+.ib .dd{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#ffd66d;border:2px solid #1c1f23}
+.cav{width:28px;height:28px;border-radius:50%;background:#efe9fd;color:#5b3fc4;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;border:1px solid #4b5057}
+.cbd{display:flex;align-items:stretch}
+.cs{width:216px;flex:none;background:#fff;border-right:1px solid #e3e6e9;padding:12px 10px;display:flex;flex-direction:column;gap:2px}
+.wsw{display:flex;align-items:center;gap:8px;min-height:38px;padding:0 10px 0 6px;border:1px solid #e3e6e9;border-radius:8px;font-weight:600;font-size:13px}
+.wsl{width:24px;height:24px;border-radius:6px;background:#5b3fc4;color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.cn{display:flex;align-items:center;gap:9px;min-height:34px;padding:0 9px;border-radius:8px;color:#3a3f45;font-size:12px}
+.cn.on{background:#efe9fd;color:#5b3fc4;font-weight:600}
+.cn .cnb{margin-left:auto;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#fdecf0;color:#a01d3c;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.csec{color:#5f656d;font-size:11px;letter-spacing:.06em;font-weight:600;text-transform:uppercase;padding:14px 9px 6px}
+.pdot{width:10px;height:10px;border-radius:50%;flex:none}
+.cfoot{margin-top:auto;border-top:1px solid #e3e6e9;padding-top:10px;display:flex;flex-direction:column;gap:2px}
+.cmain{flex:1;min-width:0;padding:24px;display:flex;flex-direction:column;gap:16px}
+.ctitle{margin:0;font-size:20px;font-weight:700}
+.dim{position:absolute;inset:0;background:rgba(18,14,38,.45)}
+.abs{position:absolute}
+.ghost{opacity:.55}
+.adminnav{width:232px;flex:none;background:#fff;border-right:1px solid #e3e6e9;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.adminnav .g{font-size:11px;font-weight:600;color:#5f656d;letter-spacing:.04em;padding:12px 9px 4px}
+/* มือถือ 390 */
+.phone{width:406px;border:8px solid #141619;border-radius:36px;overflow:hidden;background:#f5f6f7;flex:none;position:relative;font-size:13px}
+.mt{height:52px;background:#1c1f23;color:#fff;display:flex;align-items:center;gap:10px;padding:0 12px;font-weight:600}
+.mt .sp{flex:1}
+.mbd{padding:14px 14px 18px;display:flex;flex-direction:column;gap:12px;min-height:720px;position:relative}
+.mnav{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid #e3e6e9;height:62px;align-items:center;font-size:11px;color:#5f656d;text-align:center}
+.mnav span{display:flex;flex-direction:column;align-items:center;gap:2px}
+.mnav .on{color:#5b3fc4;font-weight:600}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -12px 32px rgba(16,24,40,.2);padding:8px 16px 20px}
+.grab{width:40px;height:4px;border-radius:999px;background:#cfd4d9;margin:4px auto 10px}
+</style>
+</head>
+<body>
+<div class="doc"><div class="dh"><h1>ข้อเสนอหน้าจอ รอบที่ 3 · 5 ฟีเจอร์ที่ยังไม่มีใน Canvas</h1><p class="lead">ฟีเจอร์ที่ <code>docs/tasks/README.md</code> บอกว่า "ยังไม่มีหน้าจอใน Canvas (ต้องออกแบบก่อนแตกงาน)" · แต่ละไฟล์มีทุกหน้า Modal และสถานะที่ต้องใช้ ที่ 1440 px และ 390 px สำหรับหน้าที่ลูกค้าเห็น · ใช้ชิ้นส่วนเดียวกับ Canvas Friday Ops (สี ตัวอักษร การ์ด ตาราง Modal) และสีของแอปลูกค้าจาก <code>apps/web/src/styles/tokens.css</code> เพื่อวางลง Canvas ได้ภายหลัง · <b>รอผู้ใช้อนุมัติ</b> ก่อนเริ่มงานใด ๆ · ไฟล์งานร่างอยู่ใน <code>docs/tasks/</code> (O30–O36, A41–A44, W23–W26) · ข้อมูลทั้งหมดเป็นข้อมูลสมมติ</p></div><section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px;margin-top:20px"><a href="01-changelog-nps.html" class="card" style="display:flex;flex-direction:column;gap:10px;color:#24272c;text-decoration:none"><div style="display:flex;align-items:center;gap:8px"><span class="id">01</span><b style="font-size:16px;flex:1">Changelog และ NPS</b><span class="pill" style="background:#efe9fd;color:#5b3fc4;font-size:11px;font-weight:700">เฟส 2</span></div><span class="muted">แผง "มีอะไรใหม่" บนแถบบน · Spotlight ของใหญ่ · แบบสำรวจ NPS ในแอป · หน้า Ops เขียนประกาศและดูคะแนน · คำถามตอนยกเลิกใช้ของ W22 ที่มีอยู่</span><div class="kv"><span class="muted">รหัสหน้าจอ</span><span class="mono small">U1–U7 · บอร์ด 17</span></div><div class="kv"><span class="muted">งาน</span><span>O32 · A42 · W24 · O33</span></div><span class="small" style="color:#5b3fc4">เปิดหน้าจอ ›</span></a><a href="02-onboarding-checklist.html" class="card" style="display:flex;flex-direction:column;gap:10px;color:#24272c;text-decoration:none"><div style="display:flex;align-items:center;gap:8px"><span class="id">02</span><b style="font-size:16px;flex:1">Onboarding checklist</b><span class="pill" style="background:#efe9fd;color:#5b3fc4;font-size:11px;font-weight:700">เฟส 2</span></div><span class="muted">การ์ด 6 ขั้นบน Home ที่ติ๊กเองจากข้อมูลจริง · ปุ่มความคืบหน้าท้าย Sidebar · หน้า Ops ดูขั้นที่ลูกค้าติดและส่งอีเมลช่วย</span><div class="kv"><span class="muted">รหัสหน้าจอ</span><span class="mono small">V1–V7 · บอร์ด 18</span></div><div class="kv"><span class="muted">งาน</span><span>O32 · A43 · W25 · O34</span></div><span class="small" style="color:#5b3fc4">เปิดหน้าจอ ›</span></a><a href="03-help-center.html" class="card" style="display:flex;flex-direction:column;gap:10px;color:#24272c;text-decoration:none"><div style="display:flex;align-items:center;gap:8px"><span class="id">03</span><b style="font-size:16px;flex:1">ศูนย์ช่วยเหลือ</b><span class="pill" style="background:#efe9fd;color:#5b3fc4;font-size:11px;font-weight:700">เฟส 2</span></div><span class="muted">ศูนย์ช่วยเหลือในแอปและหน้าสาธารณะ · แผงช่วยเหลือตามหน้า · ฟอร์มติดต่อ Support ที่แนะนำบทความ · Ticket ของฉัน · ตัวแก้บทความ</span><div class="kv"><span class="muted">รหัสหน้าจอ</span><span class="mono small">X1–X9 · บอร์ด 19, 19b</span></div><div class="kv"><span class="muted">งาน</span><span>O32 · A44 · W26 · O35</span></div><span class="small" style="color:#5b3fc4">เปิดหน้าจอ ›</span></a><a href="04-bug-to-dev.html" class="card" style="display:flex;flex-direction:column;gap:10px;color:#24272c;text-decoration:none"><div style="display:flex;align-items:center;gap:8px"><span class="id">04</span><b style="font-size:16px;flex:1">ส่งบั๊กจาก Ticket ให้ทีมพัฒนา</b><span class="pill" style="background:#efe9fd;color:#5b3fc4;font-size:11px;font-weight:700">เฟส 2</span></div><span class="muted">สร้าง / ผูกงานในโปรเจกต์ FM ของทีมพัฒนาจาก Ticket · เห็นสถานะงานใน Ticket · แจ้งลูกค้าทุกรายเมื่อขึ้น production</span><div class="kv"><span class="muted">รหัสหน้าจอ</span><span class="mono small">T3 (ปรับ) · T7–T14 · บอร์ด 20</span></div><div class="kv"><span class="muted">งาน</span><span>O32 · O36 (+ X6 ของ W26)</span></div><span class="small" style="color:#5b3fc4">เปิดหน้าจอ ›</span></a><a href="05-restore-data.html" class="card" style="display:flex;flex-direction:column;gap:10px;color:#24272c;text-decoration:none"><div style="display:flex;align-items:center;gap:8px"><span class="id">05</span><b style="font-size:16px;flex:1">กู้คืนข้อมูลที่ลูกค้าลบผิด</b><span class="pill" style="background:#e3f6ec;color:#17633f;font-size:11px;font-weight:700">เฟส 1</span></div><span class="muted">ถังขยะใน Admin Console และ Project Settings · กู้คืนโปรเจกต์ (ตอนนี้ทำไม่ได้) · หน้า Workspace ที่ลบไว้ · Ops กู้แทนและยืดเวลาก่อนลบถาวร</span><div class="kv"><span class="muted">รหัสหน้าจอ</span><span class="mono small">Z1–Z9 · บอร์ด 21</span></div><div class="kv"><span class="muted">งาน</span><span>O30 · A41 · W23 · O31</span></div><span class="small" style="color:#5b3fc4">เปิดหน้าจอ ›</span></a></section><section class="sec"><h2 style="margin:0 0 12px;font-size:18px">รหัสหน้าจอใหม่</h2><div class="card flush"><div style="overflow-x:auto"><table class="t"><thead><tr><th scope="col">รหัส</th><th scope="col">ใช้กับ</th><th scope="col">เหตุผล</th></tr></thead><tbody><tr><td><span class="mono">17–21</span></td><td>หน้าใหม่ของ Friday Ops</td><td>ต่อจากบอร์ด 1–16 ใน canvas.json ของ Ops</td></tr><tr><td><span class="mono">U</span></td><td>Changelog และ NPS</td><td>ตัวอักษรที่ยังไม่ใช้ทั้งใน Canvas ลูกค้า (A–R, M1–M7) และ Ops (A B C G P S T Y, M0–M6)</td></tr><tr><td><span class="mono">V</span></td><td>Onboarding checklist</td><td>เหมือนข้างบน</td></tr><tr><td><span class="mono">X</span></td><td>ศูนย์ช่วยเหลือ</td><td>เหมือนข้างบน</td></tr><tr><td><span class="mono">T7–T14</span></td><td>ส่งบั๊กให้ทีมพัฒนา</td><td>ต่อจาก T3 "ส่งต่อระดับ 2" ที่มีอยู่ใน M4 เพราะเป็นปุ่มในหน้า Ticket เดียวกัน · ไม่ตั้งตัวอักษรใหม่</td></tr><tr><td><span class="mono">Z</span></td><td>กู้คืนข้อมูล</td><td>ตัวอักษรที่ยังว่าง · เลี่ยง W เพราะชนกับรหัสงาน W00–W26</td></tr></tbody></table></div></div></section><section class="sec"><h2 style="margin:0 0 12px;font-size:18px">ส่วนที่แก้ของเดิมใน Canvas</h2><div class="card flush"><div style="overflow-x:auto"><table class="t"><thead><tr><th scope="col">ของเดิม</th><th scope="col">เปลี่ยนอะไร</th><th scope="col">ไฟล์</th></tr></thead><tbody><tr><td>Sidebar ของ Ops</td><td>5 เมนู "เร็ว ๆ นี้" กลายเป็นลิงก์จริง: Changelog และ NPS · Onboarding checklist · ศูนย์ช่วยเหลือ · ส่งบั๊กให้ทีมพัฒนา · กู้คืนข้อมูลลูกค้า</td><td>ทุกไฟล์ (ป้าย "ข้อเสนอ")</td></tr><tr><td>ComingSoon</td><td>ทั้ง 5 รายการเปลี่ยนเป็น "ออกแบบแล้ว" เมื่อผู้ใช้อนุมัติ</td><td>—</td></tr><tr><td>T3 ส่งต่อระดับ 2</td><td>เพิ่มสร้าง / ผูกงานใน FM และเตือนงานซ้ำ</td><td>04</td></tr><tr><td>6 · Support</td><td>แท็บ "รอทีมพัฒนา" + การ์ดงานของทีมพัฒนา (T8)</td><td>04</td></tr><tr><td>T5 ปิด Ticket</td><td>ช่อง "สร้างบทความ…" ที่มีอยู่เปิด X8</td><td>03</td></tr><tr><td>3 · รายละเอียดลูกค้า</td><td>การ์ด Onboarding (V7) ในแท็บภาพรวม</td><td>02</td></tr><tr><td>แถบบนแอปลูกค้า</td><td>เพิ่มปุ่ม "มีอะไรใหม่" (U1) และ "?" (X4) ระหว่าง + New กับกระดิ่ง</td><td>01 · 03</td></tr><tr><td>Sidebar แอปลูกค้า</td><td>ปุ่ม "เริ่มต้นใช้งาน 3/6" เหนือ Admin Console (V2)</td><td>02</td></tr><tr><td>Home (E / M5)</td><td>การ์ดเริ่มต้นใช้งานบนสุด (V1)</td><td>02</td></tr><tr><td>Admin Console (N1)</td><td>เมนู "ถังขยะ" ในกลุ่มความปลอดภัย (Z1)</td><td>05</td></tr><tr><td>Project Settings (L2)</td><td>แท็บ "ถังขยะ" (Z4)</td><td>05</td></tr></tbody></table></div></div></section><section class="sec"><h2 style="margin:0 0 12px;font-size:18px">วิธีอ่าน</h2><div class="notes"><div class="note"><b>ป้ายเฟส</b> ใช้สีเดียวกับแถบบนของ Ops: เฟส 1 เขียว · เฟส 2 ม่วง · กู้คืนข้อมูลเป็นเฟส 1 ตาม ComingSoon ที่เหลือเฟส 2</div><div class="note"><b>ป้ายฝั่ง</b> "ลูกค้า" = apps/web · "Friday Ops" = apps/ops-web · กรอบแอปลูกค้าวาดตาม Shell ปัจจุบัน (แถบบนสีเข้ม 46 px, Sidebar 216 px)</div><div class="note"><b>กล่องเส้นประ</b> ใต้หน้าจอคือกติกาและเหตุผลที่หน้าจอบอกไม่ได้ · คำถามที่ต้องให้ผู้ใช้ตัดสินอยู่ในหัวข้อ "ยังต้องตัดสินใจ" ของไฟล์งาน</div></div></section></div>
+</body>
+</html>

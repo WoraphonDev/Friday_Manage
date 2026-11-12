@@ -537,6 +537,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET / POST / PATCH | `ops/promotions` · `price-history` · `plans/{code}` · `coupons` · `coupons/{id}` · `{id}/activate` · `{id}/disable` · `{id}/redemptions` | แพ็กเกจและโปรโมชัน (O20) · Owner / การเงิน · แก้แพ็กเกจเป็นเวอร์ชันใหม่ (เปลี่ยนราคาต้องอนุมัติ · ลูกค้าเดิมคงราคาเดิม หรือย้ายรอบถัดไปพร้อมประกาศล่วงหน้า 30 วัน) · คูปองร่าง / เปิด / ปิด · แก้ราคาและเปิดคูปองต้องแตะ key · เกินวงเงินส่วนลดต้องอนุมัติ |
 | GET / POST / PUT | `ops/changelog` · `{id}` · `{id}:hide` | Changelog (O33) · ทุกบทบาทอ่าน (ตาราง + KPI + ยอดเห็น / คลิก) · Owner เขียน / เผยแพร่ทันที / ตั้งเวลา / ซ่อนพร้อมเหตุผล · Spotlight ทีละรายการ (เผยแพร่รายการใหม่ปลดรายการเดิม) · Audit ของทีมทุกครั้ง |
 | GET / PATCH / POST / PUT | `ops/nps/summary?range` · `responses` · `responses/{id}` · `responses/{id}/ticket` · `settings` | NPS (O33) · ตัวเลขรวม: Owner / Support / การเงิน / ผู้ตรวจ · ความเห็นพร้อมชื่อ Workspace, หัวข้อ, บันทึกภายใน, ติดตามแล้ว, เปิด Ticket ติดตาม: Owner / Support · ตั้งค่า (U5) แก้ได้เฉพาะ Owner · งานเบื้องหลังลบคำตอบที่เก่ากว่า 25 เดือน |
+| GET / PUT / POST | `ops/onboarding?days=7\|30\|90` · `ops/onboarding/workspaces/{id}` · `{id}/followup` · `{id}/email` | Onboarding checklist และลูกค้าที่ติด (O34) · อ่าน: Owner / Support / การเงิน / ผู้ตรวจ · ติดตามและส่งอีเมล: Owner / Support · วิศวกรไม่เห็น · อีเมลช่วยเหลือถึง Owner 1 ครั้งต่อ 7 วัน ไม่ส่งถึงรายชื่อไม่ส่ง ลง Audit ของลูกค้าและทีม |
 
 ### 3.13 Endpoint ที่โค้ดมีเพิ่ม (รวมจากบันทึกผล · D99 · 8 พ.ย. 2569)
 

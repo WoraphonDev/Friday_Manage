@@ -18,5 +18,7 @@ export const handlers = [
   http.get(`${OPS}/support-sessions`, () => HttpResponse.json({ items: [] })),
   http.get(`${OPS}/overview`, () => HttpResponse.json(overview)),
   http.get(`${OPS}/approvals`, () => HttpResponse.json({ items: [], singleApprover: true })),
+  // การ์ด Onboarding ในรายละเอียดลูกค้า (O34 · V7) · ค่าเริ่มต้น = ครบแล้ว (ไม่แสดงการ์ด)
+  http.get(`${OPS}/onboarding/workspaces/:id`, () => HttpResponse.json({ complete: true, steps: [], done: 6, total: 6 })),
 ];
 export const server = setupServer(...handlers);

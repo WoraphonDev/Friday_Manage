@@ -1,0 +1,59 @@
+/* Onboarding checklist (O34 · บอร์ด 18 · V5 · V7) · สีจาก token เท่านั้น */
+.split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; }
+
+.funnel { list-style: none; margin: 0; padding: 6px 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+.funnel li { display: grid; grid-template-columns: minmax(150px, 190px) minmax(80px, 1fr) 48px 44px 52px; align-items: center; gap: 12px; font-size: 13px; }
+.fLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.track { display: block; height: 18px; border-radius: 4px; background: var(--subtle); overflow: hidden; }
+.fill, .fillBad { display: block; height: 100%; border-radius: 4px; background: var(--primary); }
+.fillBad { background: var(--danger-solid); }
+.fPct { text-align: right; }
+.fDrop, .fDropBad { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.fDropBad { color: var(--danger-text); font-weight: 600; }
+.fDays { color: var(--muted); text-align: right; }
+
+.insights { padding: 4px 18px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+.insights p { margin: 0; padding: 10px 12px; border-radius: var(--radius-control); line-height: 1.55; }
+.insightWarn { background: var(--warning-soft); border: 1px solid var(--warning-border); color: var(--warning-text); }
+.insightInfo { background: var(--primary-soft); border: 1px solid var(--primary-border); color: var(--primary-text); }
+
+.tableHead { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.statusButton { border: 0; padding: 0; background: none; cursor: pointer; }
+.statusButton:disabled { cursor: default; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.notes p { margin: 0; padding: 10px 12px; border: 1px dashed var(--border-strong); border-radius: var(--radius-card); font-size: 12px; color: var(--muted); }
+
+/* V5 */
+.drawerBody { display: flex; flex-direction: column; gap: 14px; padding: 4px 0 8px; }
+.label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.progress { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.progress li { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 8px; }
+.dotDone, .dotStuck, .dotTodo { flex: none; width: 12px; height: 12px; border-radius: 999px; transform: translateY(1px); }
+.dotDone { background: var(--success-solid); }
+.dotStuck { border: 3px solid var(--primary); }
+.dotTodo { border: 2px solid var(--border-strong); }
+.twoCol { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.preview { border: 1px solid var(--border); border-radius: var(--radius-card); overflow: hidden; font-size: 13px; }
+.previewHead { padding: 8px 12px; background: var(--surface-2); color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border); }
+.previewBody { padding: 10px 12px; }
+.previewBody p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rule { margin: 0; padding: 10px 12px; border-radius: var(--radius-control); background: var(--surface-2); font-size: 12px; color: var(--muted); }
+.drawerFoot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--border); }
+.drawerFoot > span { flex: 1 1 160px; }
+
+/* V7 */
+.cardBody { padding: 4px 18px 16px; display: flex; flex-direction: column; gap: 8px; }
+.segments { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-bottom: 4px; }
+.segDone, .segStuck, .segTodo { height: 6px; border-radius: 3px; background: var(--subtle); }
+.segDone { background: var(--success-solid); }
+.segStuck { background: var(--warning-solid); }
+
+@media (max-width: 900px) {
+  .split { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .funnel li { grid-template-columns: 1fr 48px 44px; }
+  .funnel li .track { grid-column: 1 / -1; grid-row: 2; }
+  .fDays { display: none; }
+  .twoCol { grid-template-columns: 1fr; }
+}

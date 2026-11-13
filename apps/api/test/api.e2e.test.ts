@@ -763,6 +763,9 @@ describe('Kanban (3) และ Timeline (4)', () => {
     expect(dp1).toMatchObject({ progressPct: 100, status: { category: 'done' } });
     expect(dp1.subtasks.map((x: { key: string }) => x.key)).toEqual(['DP-3', 'DP-4']);
     expect(dp1.assignees.map((p: { displayName: string }) => p.displayName)).toEqual(['Mick', 'Kaijeaw']);
+    // BA / SA ใช้กรองใน Timeline · ไม่ได้ระบุ = null
+    expect(dp1).toHaveProperty('ba');
+    expect(dp1).toHaveProperty('sa');
     expect(r.body.unscheduled.map((x: { key: string }) => x.key)).toEqual(['DP-7']);
     expect(r.body.milestones).toEqual([expect.objectContaining({ name: 'Credit Line Go-live', date: '2027-01-26' })]);
     expect(r.body.sprints.length).toBeGreaterThan(5);
@@ -778,6 +781,7 @@ describe('Kanban (3) และ Timeline (4)', () => {
     expect(r.status).toBe(200);
     const tasks = r.body.modules[0].groups[0].tasks;
     expect(tasks[0].assignees).toBeUndefined();
+    expect(tasks[0].ba).toBeUndefined();
     expect(tasks.find((t: { key: string }) => t.key === 'DP-1').canOpen).toBe(true);
     expect(tasks.find((t: { key: string }) => t.key === 'DP-2').canOpen).toBe(false);
     expect(r.body.unscheduled).toEqual([]);

@@ -79,5 +79,18 @@
     "create": "Add",
     "created": "Milestone added",
     "failed": "Could not add milestone. Please try again."
+  },
+  "filters": {
+    "label": "Filters",
+    "search": "Search key or task name",
+    "module": "Module",
+    "ba": "BA",
+    "sa": "SA",
+    "dev": "Dev",
+    "all": "All",
+    "anyone": "Anyone",
+    "clear": "Clear filters",
+    "noMatch": "No tasks match the filters",
+    "noMatchHint": "Try another search or clear the filters"
   }
 }

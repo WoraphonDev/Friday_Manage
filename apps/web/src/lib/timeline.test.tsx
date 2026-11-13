@@ -180,6 +180,52 @@ describe("Timeline (4)", () => {
     expect(screen.queryByRole("option", { name: /Assignee/ })).not.toBeInTheDocument();
   });
 
+  it("ตัวกรอง: ค้นหา · Module · BA · SA · Dev · ล้างตัวกรอง (ผู้ใช้ขอ 2026-11-14)", async () => {
+    const ba = person("u-ba", "นักวิเคราะห์ธุรกิจ");
+    const sa = person("u-sa", "นักวิเคราะห์ระบบ");
+    const dev2 = person("u2", "ผู้พัฒนาสอง");
+    const tasks = d.modules[0]!.groups[0]!.tasks;
+    tasks[0] = { ...tasks[0]!, ba, subtasks: [row("DE-2", "2026-12-01", "2026-12-02", { sa, assignees: [dev2] })] };
+    d.modules.push({ id: "m-b", name: "Module B", color: null, start: "2026-12-07", end: "2026-12-10", progressPct: 0, lateDays: 0, taskCount: 1, groups: [{ phase: null, name: "ไม่ระบุกลุ่มงาน", start: "2026-12-07", end: "2026-12-10", progressPct: 0, lateDays: 0, taskCount: 1, tasks: [row("DE-5", "2026-12-07", "2026-12-10", { title: "รายงานสรุป", assignees: [dev2] })] }] });
+    const user = userEvent.setup();
+    mount();
+    await screen.findByTestId("bar-DE-5");
+    const filters = screen.getByRole("group", { name: "ตัวกรอง" });
+
+    await user.type(within(filters).getByRole("searchbox", { name: "ค้นหา Key หรือชื่องาน" }), "รายงาน");
+    expect(screen.getByTestId("bar-DE-5")).toBeInTheDocument();
+    expect(screen.queryByTestId("bar-DE-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("unscheduled-DE-9")).not.toBeInTheDocument();
+    await user.click(within(filters).getByRole("button", { name: "ล้างตัวกรอง" }));
+    expect(screen.getByTestId("bar-DE-1")).toBeInTheDocument();
+
+    await user.selectOptions(within(filters).getByRole("combobox", { name: "Module" }), "m-b");
+    expect(screen.queryByTestId("bar-DE-1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("bar-DE-5")).toBeInTheDocument();
+    await user.selectOptions(within(filters).getByRole("combobox", { name: "Module" }), "");
+
+    await user.selectOptions(within(filters).getByRole("combobox", { name: "BA" }), "u-ba");
+    expect(screen.getByTestId("bar-DE-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("bar-DE-3")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bar-DE-5")).not.toBeInTheDocument();
+    await user.selectOptions(within(filters).getByRole("combobox", { name: "BA" }), "");
+
+    // SA ของ Sub-task: แสดง Task แม่พร้อม Sub-task ที่ตรงเท่านั้น
+    await user.selectOptions(within(filters).getByRole("combobox", { name: "SA" }), "u-sa");
+    expect(screen.getByTestId("bar-DE-1")).toBeInTheDocument();
+    expect(screen.getByTestId("bar-DE-2")).toBeInTheDocument();
+    expect(screen.queryByTestId("bar-DE-3")).not.toBeInTheDocument();
+    await user.selectOptions(within(filters).getByRole("combobox", { name: "SA" }), "");
+
+    await user.selectOptions(within(filters).getByRole("combobox", { name: "Dev" }), "u2");
+    expect(screen.getByTestId("bar-DE-2")).toBeInTheDocument();
+    expect(screen.getByTestId("bar-DE-5")).toBeInTheDocument();
+    expect(screen.queryByTestId("bar-DE-3")).not.toBeInTheDocument();
+
+    await user.type(within(filters).getByRole("searchbox"), "ไม่มีงานนี้");
+    expect(screen.getByText("ไม่พบงานที่ตรงกับตัวกรอง")).toBeInTheDocument();
+  });
+
   it("ว่าง · Error มี requestId · 403", async () => {
     d = { ...data(), modules: [], unscheduled: [] };
     const a = mount();

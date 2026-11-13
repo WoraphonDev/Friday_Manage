@@ -1,7 +1,7 @@
 {
   "brand": {
     "name": "Friday Work Management",
-    "loginTitle": "จัดการงานพัฒนาระบบ ตั้งแต่ Module จนถึง Commit",
+    "loginTitle": "จัดการงานพัฒนาระบบ ตั้งแต่ <hl>Module</hl> จนถึง <hl>Commit</hl>",
     "loginPoints": {
       "views": "Table, Kanban, Timeline, Gantt ในข้อมูลชุดเดียวกัน",
       "git": "ผูก Commit, PR และผลทดสอบเข้ากับทุก Task / Sub-task",
@@ -16,7 +16,29 @@
     "noCard": "ไม่ต้องใช้บัตรเครดิต",
     "copyright": "© 2026 Friday Work Management",
     "privacy": "นโยบายความเป็นส่วนตัว",
-    "terms": "ข้อกำหนดการใช้งาน"
+    "terms": "ข้อกำหนดการใช้งาน",
+    "feed": {
+      "commit": {
+        "who": "ป",
+        "text": "ผูก Commit 4e1c09a กับ FM-142",
+        "when": "เมื่อสักครู่"
+      },
+      "move": {
+        "who": "ก",
+        "text": "ย้าย FM-138 ไป รอตรวจ",
+        "when": "2 นาทีที่แล้ว"
+      },
+      "tests": {
+        "who": "ส",
+        "text": "ผลทดสอบ FM-131 ผ่าน 24/24",
+        "when": "5 นาทีที่แล้ว"
+      },
+      "due": {
+        "who": "ป",
+        "text": "ขอเลื่อนกำหนดส่ง FM-127",
+        "when": "12 นาทีที่แล้ว"
+      }
+    }
   },
   "common": {
     "email": "อีเมล",

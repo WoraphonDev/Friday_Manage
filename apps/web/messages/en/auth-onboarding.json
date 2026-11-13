@@ -1,7 +1,7 @@
 {
   "brand": {
     "name": "Friday Work Management",
-    "loginTitle": "Manage software development from Module to Commit",
+    "loginTitle": "Manage software development from <hl>Module</hl> to <hl>Commit</hl>",
     "loginPoints": {
       "views": "Table, Kanban, Timeline and Gantt on the same data",
       "git": "Link Commits, PRs and test results to every Task / Sub-task",
@@ -16,7 +16,29 @@
     "noCard": "No credit card required",
     "copyright": "© 2026 Friday Work Management",
     "privacy": "Privacy Policy",
-    "terms": "Terms of Service"
+    "terms": "Terms of Service",
+    "feed": {
+      "commit": {
+        "who": "P",
+        "text": "Linked commit 4e1c09a to FM-142",
+        "when": "Just now"
+      },
+      "move": {
+        "who": "K",
+        "text": "Moved FM-138 to In review",
+        "when": "2 min ago"
+      },
+      "tests": {
+        "who": "S",
+        "text": "FM-131 tests passed 24/24",
+        "when": "5 min ago"
+      },
+      "due": {
+        "who": "P",
+        "text": "Requested a new due date for FM-127",
+        "when": "12 min ago"
+      }
+    }
   },
   "common": {
     "email": "Email",

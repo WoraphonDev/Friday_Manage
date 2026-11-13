@@ -391,7 +391,7 @@ export class ImportsService {
       action: 'import.completed',
       targetType: 'project',
       targetId: project.id,
-      summary: `${job.fileName} → ${KIND_LABEL[prev.updateKind ?? 'sync']} ${project.key} · เพิ่ม ${done.added} · เปลี่ยน ${done.changed} · ลบ ${done.deleted} · ข้าม ${skipped}`,
+      summary: `${job.fileName} → ${KIND_LABEL[prev.updateKind ?? 'sync']} ${project.key} · เพิ่ม ${done.added} · เปลี่ยน ${done.changed} · ลบ ${done.deleted}${done.removedGroups || done.removedModules ? ` (กลุ่มงาน ${done.removedGroups} · Module ${done.removedModules})` : ''} · ข้าม ${skipped}`,
     });
     const emails = Object.values(personMapping).flatMap((t) => (t && 'email' in t ? [t.email] : []));
     const { events, ...counts } = done;

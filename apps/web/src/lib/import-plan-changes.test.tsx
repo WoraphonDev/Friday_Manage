@@ -294,7 +294,7 @@ describe("Import Excel (L3)", () => {
 
   it("แทนที่แผนเดิม: งานเดิมทุกงานอยู่ในรายการลบ ไม่มีให้เลือกเก็บ · ไม่ถามเหตุผลการแก้แผน", async () => {
     const base = updateJob();
-    importHandlers(() => ({ ...base, updateKind: "replace", diff: { changed: [], added: [{ no: 3, number: null, title: "งานใหม่สมมติ", module: "โมดูลหนึ่ง" }], missing: [{ no: 4, key: "DE-4", title: "งานเดิมสมมติ", status: "In progress" }], unchanged: 0 } }));
+    importHandlers(() => ({ ...base, updateKind: "replace", diff: { changed: [], added: [{ no: 3, number: null, title: "งานใหม่สมมติ", module: "โมดูลหนึ่ง" }], missing: [{ no: 4, key: "DE-4", title: "งานเดิมสมมติ", status: "In progress" }], unchanged: 0, removedModules: [], removedGroups: ["โมดูลหนึ่ง › Sprint 3", "โมดูลหนึ่ง › Sprint 4"] } }));
     const user = userEvent.setup();
     mountProjectImport();
     const kinds = await screen.findByRole("group", { name: "วิธีนำเข้าแผน" });
@@ -314,6 +314,7 @@ describe("Import Excel (L3)", () => {
     await user.click(screen.getByRole("button", { name: "ถัดไป: ยืนยัน →" }));
     expect(screen.getByText("สร้างงานใหม่ 1 งานตามไฟล์ (ข้าม 0 แถวที่ยังต้องแก้)")).toBeInTheDocument();
     expect(screen.getByText(/ลบงานเดิมทั้งหมด 1 งาน พร้อม Sub-task ลงถังขยะ/)).toBeInTheDocument();
+    expect(screen.getByText("ลบกลุ่มงานเดิมที่ไม่มีในไฟล์ 2 กลุ่ม · Module 0")).toBeInTheDocument();
     expect(screen.queryByLabelText("เหตุผลของการแก้แผน")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "แทนที่แผนด้วย 2 งาน" })).toBeInTheDocument();
   });

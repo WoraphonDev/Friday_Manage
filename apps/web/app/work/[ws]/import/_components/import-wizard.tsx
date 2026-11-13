@@ -544,6 +544,9 @@ function Confirm({ ws, job, busy, onPatch, onBack, onCommit }: {
             <ul className={styles.list}>
               <li>{t("sumReplace", { added: d?.added.length ?? 0, skipped: s.skipped })}</li>
               {!!d?.missing.length && <li className={styles.warnText}>{t("sumRemoved", { count: d.missing.length })}</li>}
+              {!!(d?.removedGroups?.length || d?.removedModules?.length) && (
+                <li className={styles.warnText} title={[...(d.removedModules ?? []), ...(d.removedGroups ?? [])].join("\n")}>{t("sumRemovedStructure", { groups: d.removedGroups?.length ?? 0, modules: d.removedModules?.length ?? 0 })}</li>
+              )}
             </ul>
           ) : (
             <ul className={styles.list}>

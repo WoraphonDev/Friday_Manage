@@ -32,6 +32,9 @@ export interface UpdateDiff {
   unchanged: number;
   /** โหมด unstarted: งานที่ค่าต่างแต่เริ่มทำแล้ว จึงไม่แก้ */
   locked?: { no: number; key: string; title: string; status: string; fields: string[] }[];
+  /** โหมด replace: Module / กลุ่มงานเดิม ("Module › กลุ่ม") ที่ไม่มีในไฟล์และจะถูกลบ */
+  removedModules?: string[];
+  removedGroups?: string[];
 }
 export interface ImportSummary {
   rows: number;

@@ -594,6 +594,41 @@ describe('นำเข้ารอบที่ 2: แทนที่ หรื�
     expect((await tree()).map((x: { title: string; parent: number | null }) => [x.title, x.parent])).toEqual([['Approve', null], ['Report', null], ['Backlog item', null]]);
   });
 
+  it('replace: Module / กลุ่มงานเดิมที่ไม่มีในไฟล์ถูกลบด้วย · งานในถังขยะและ Milestone ถูกถอดออก', async () => {
+    // ไฟล์รูปแบบใหม่ที่มีคอลัมน์ Group: 2 Module × 2 กลุ่ม
+    const tasks = async (rows: [string, string, string][]) => {
+      const book = new ExcelJS.Workbook();
+      const sheet = book.addWorksheet('Tasks');
+      sheet.addRow(TASK_HEADERS);
+      for (const [module, group, title] of rows) sheet.addRow(TASK_HEADERS.map((h) => ({ Module: module, Group: group, Title: title, Status: 'To do', 'Man-Day': 1 })[h] ?? null));
+      return Buffer.from(await book.xlsx.writeBuffer());
+    };
+    const up = await team.lead.upload(`${team.ws}/import-jobs`, await tasks([['Credit Line', 'S1', 'Login'], ['Credit Line', 'S2', 'Limit'], ['Drawdown', 'S1', 'Approve'], ['Drawdown', 'S2', 'Report']]), 'Rpg.xlsx', { mode: 'create' });
+    await team.lead.patch(`${team.ws}/import-jobs/${up.body.id}`, { project: { key: 'RPG', name: 'Replace Groups' } });
+    await commit(up.body.id);
+    const structure = async () =>
+      (await t.owner.query(`SELECT m.name, coalesce(string_agg(ph.name, ',' ORDER BY ph.name), '') AS groups FROM modules m JOIN projects p ON p.id = m.project_id LEFT JOIN phases ph ON ph.module_id = m.id WHERE p.key = 'RPG' GROUP BY m.name ORDER BY m.name`)).rows;
+    expect(await structure()).toEqual([{ name: 'Credit Line', groups: 'S1,S2' }, { name: 'Drawdown', groups: 'S1,S2' }]);
+    const [proj] = (await t.owner.query(`SELECT id, workspace_id FROM projects WHERE key = 'RPG'`)).rows;
+    await t.owner.query(`INSERT INTO milestones (workspace_id, project_id, module_id, name, date) SELECT $1, $2, id, 'Go-live สมมติ', '2026-12-01' FROM modules WHERE project_id = $2 AND name = 'Credit Line'`, [proj.workspace_id, proj.id]);
+
+    const r = await team.lead.upload(`${team.ws}/import-jobs`, await tasks([['Drawdown', 'S9', 'Disburse']]), 'RPG-v2.xlsx', { mode: 'update', projectKey: 'RPG', updateKind: 'replace' });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(r.body.diff.removedModules).toEqual(['Credit Line']);
+    expect([...r.body.diff.removedGroups].sort()).toEqual(['Credit Line › S1', 'Credit Line › S2', 'Drawdown › S1', 'Drawdown › S2']);
+    expect(await commit(r.body.id)).toMatchObject({ added: 1, removedModules: 1, removedGroups: 4 });
+
+    expect(await structure()).toEqual([{ name: 'Drawdown', groups: 'S9' }]);
+    expect((await t.owner.query(`SELECT module_id FROM milestones WHERE project_id = $1`, [proj.id])).rows).toEqual([{ module_id: null }]);
+    const trashed = (await t.owner.query(`SELECT count(*)::int AS n, count(module_id)::int AS with_module, count(phase_id)::int AS with_group FROM issues WHERE project_id = $1 AND deleted_at IS NOT NULL`, [proj.id])).rows[0];
+    // งานในถังขยะยังอยู่ครบ แต่ไม่อ้าง Module / กลุ่มที่ลบแล้ว (Module Drawdown ยังอยู่จึงคงไว้)
+    expect(trashed.n).toBeGreaterThan(0);
+    expect(trashed.with_group).toBe(0);
+    expect((await t.owner.query(`SELECT count(*)::int AS n FROM issues i JOIN modules m ON m.id = i.module_id WHERE i.project_id = $1 AND m.name = 'Credit Line'`, [proj.id])).rows[0].n).toBe(0);
+    const audit = (await t.owner.query(`SELECT summary FROM audit_logs WHERE action = 'import.completed' ORDER BY created_at DESC LIMIT 1`)).rows[0].summary;
+    expect(audit).toContain('(กลุ่มงาน 4 · Module 1)');
+  });
+
   it('เปลี่ยนโหมดในขั้นถัดไปได้ (PATCH updateKind) · ค่าที่ไม่รองรับ = 400', async () => {
     const job = await updateJob('APX', await sourceWorkbook());
     expect(job.diff.added).toEqual([]);

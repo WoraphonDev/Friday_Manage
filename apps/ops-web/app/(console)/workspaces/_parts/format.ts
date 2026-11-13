@@ -7,7 +7,7 @@ export function useFmt() {
     money: (satang: number | null | undefined) => (satang == null ? "—" : f.number(satang / 100, { style: "currency", currency: "THB", maximumFractionDigits: 0 })),
     date: (iso: string | null | undefined) => (iso ? f.dateTime(new Date(iso), { dateStyle: "medium" }) : "—"),
     dateTime: (iso: string | null | undefined) => (iso ? f.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" }) : "—"),
-    ago: (iso: string | null | undefined) => (iso ? f.relativeTime(new Date(iso)) : "—"),
+    ago: (iso: string | null | undefined) => (iso ? f.relativeTime(new Date(iso), new Date()) : "—"),
     bytes: (n: number) => (n >= 1024 ** 3 ? `${f.number(n / 1024 ** 3, { maximumFractionDigits: 1 })} GB` : `${f.number(n / 1024 ** 2, { maximumFractionDigits: 0 })} MB`),
     num: (n: number) => f.number(n),
   };

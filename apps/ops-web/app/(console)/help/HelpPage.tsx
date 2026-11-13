@@ -231,7 +231,7 @@ export function HelpPage() {
               )
             ) : (
               <div className="tbl-wrap">
-                <table className="tbl">
+                <table className={`tbl ${styles.articleTable}`}>
                   <thead>
                     <tr>
                       <th scope="col" className={styles.colArticle}>{t("col.article")}</th>

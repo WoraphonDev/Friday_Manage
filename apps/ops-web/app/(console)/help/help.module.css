@@ -26,10 +26,15 @@
 
 .colArticle {
   width: 34%;
-  min-width: 240px;
+  min-width: 220px;
 }
 .colCategory {
   width: 120px;
+  min-width: 96px;
+}
+/* หัวคอลัมน์ตัวเลขขึ้นบรรทัดใหม่ได้ ไม่ให้คอลัมน์ผู้ดูแลล้นออกนอกกรอบที่ 1440 px */
+.articleTable th {
+  white-space: normal;
 }
 .articleLink {
   font-weight: 600;

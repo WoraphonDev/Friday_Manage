@@ -98,7 +98,7 @@ export function ApprovalsMobile() {
             <dd>
               <span className="m-amount">{amount(cur.summary)}</span>
               <span className="muted small m-block">
-                {t("by", { name: cur.requesterName, ago: f.relativeTime(new Date(cur.createdAt)) })} · {t("expires", { ago: f.relativeTime(new Date(cur.expiresAt)) })}
+                {t("by", { name: cur.requesterName, ago: f.relativeTime(new Date(cur.createdAt), new Date()) })} · {t("expires", { ago: f.relativeTime(new Date(cur.expiresAt), new Date()) })}
               </span>
             </dd>
             <dt>{t("reason")}</dt>
@@ -175,7 +175,7 @@ export function ApprovalsMobile() {
                       <b>{x.workspace?.name ?? t("noCustomer")}</b>
                     </span>
                     <span className="m-amount">{amount(x.summary)}</span>
-                    <span className="muted small">{t("by", { name: x.requesterName, ago: f.relativeTime(new Date(x.createdAt)) })}</span>
+                    <span className="muted small">{t("by", { name: x.requesterName, ago: f.relativeTime(new Date(x.createdAt), new Date()) })}</span>
                     {x.rule && <span className="small m-rule">{x.rule}</span>}
                   </button>
                 </li>

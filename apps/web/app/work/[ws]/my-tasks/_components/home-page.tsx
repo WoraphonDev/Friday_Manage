@@ -342,7 +342,9 @@ function InboxCard({ ws, items, loading }: { ws: string; items?: InboxItem[]; lo
   const t = useTranslations("home-my-tasks.home");
   const fresh = items?.filter((i) => !i.readAt).length ?? 0;
   // คีย์ข้อความใช้ "__" แทน "." ของชื่อ Event (next-intl ใช้ "." แยกระดับ)
-  const label = (type: string) => (type in EVENT_KEYS ? t(`events.${type.replace(/\./g, "__")}` as never) : t("events.other"));
+  // ไม่มีงานปลายทาง (เช่น สมาชิกตอบรับคำเชิญ) ใช้ประโยคที่ไม่ลงท้ายด้วย "ใน"
+  const label = (type: string, hasTarget: boolean) =>
+    type in EVENT_KEYS ? t(`events.${type.replace(/\./g, "__")}` as never) : hasTarget ? t("events.other") : t("events.otherNoTarget");
   return (
     <section className={styles.card} id="inbox">
       <div className={styles.chead}>
@@ -358,7 +360,7 @@ function InboxCard({ ws, items, loading }: { ws: string; items?: InboxItem[]; lo
           <Link className={styles.li} key={n.id} href={inboxHref(ws)}>
             <Avatar size="small" person={{ id: n.actor?.id ?? n.id, displayName: name }} />
             <div style={{ flex: 1, minWidth: 0, fontSize: 12 }}>
-              <div><b>{name}</b> {label(n.eventType)} <span style={{ fontWeight: 600 }}>{target}</span></div>
+              <div><b>{name}</b> {label(n.eventType, !!target)}{target && <> <span style={{ fontWeight: 600 }}>{target}</span></>}</div>
               {typeof n.payload.message === "string" && <div className={`muted ${styles.small}`} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>“{n.payload.message}”</div>}
               <div className={`muted ${styles.small}`}>{formatDate(n.createdAt)}</div>
             </div>
@@ -369,7 +371,7 @@ function InboxCard({ ws, items, loading }: { ws: string; items?: InboxItem[]; lo
     </section>
   );
 }
-const EVENT_KEYS: Record<string, true> = { "issue.assigned": true, "issue.commented": true, "issue.mentioned": true, "issue.status_changed": true, "issue.review_requested": true, "issue.due_soon": true, "issue.overdue": true, "due_request.created": true, "due_request.decided": true };
+const EVENT_KEYS: Record<string, true> = { "issue.assigned": true, "issue.commented": true, "issue.mentioned": true, "issue.status_changed": true, "issue.review_requested": true, "issue.due_soon": true, "issue.overdue": true, "due_request.created": true, "due_request.decided": true, "member.joined": true };
 
 function Upcoming({ data, year }: { data: HomeData; year: YearFormat }) {
   const t = useTranslations("home-my-tasks.home");

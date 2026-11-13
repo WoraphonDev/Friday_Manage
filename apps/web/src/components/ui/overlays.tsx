@@ -126,8 +126,8 @@ export function Drawer({
   depth?: 1 | 2;
   parentLabel?: string;
   onBack?: () => void;
-  /** ขนาดตาม Canvas: detail = C/D, wide = K2 (920 px), create = B (640 px) · ทุกแบบสูงเต็มจอ */
-  variant?: "detail" | "wide" | "create";
+  /** ขนาดตาม Canvas: detail = C/D, wide = K2 (920 px), create = B (640 px), panel = แผงช่วยเหลือ X4 (400 px) · ทุกแบบสูงเต็มจอ */
+  variant?: "detail" | "wide" | "create" | "panel";
   /** เนื้อหามีแถบหัวของตัวเอง (ใช้ DrawerClose) · ชื่อ Drawer ยังอยู่สำหรับโปรแกรมอ่านหน้าจอ */
   bare?: boolean;
 }) {

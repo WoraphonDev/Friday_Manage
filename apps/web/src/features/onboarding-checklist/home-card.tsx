@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as RadixDialog from "@radix-ui/react-dialog";
 import { useTranslations } from "next-intl";
-import { X } from "lucide-react";
+import { BookOpen, FolderOpen, X } from "lucide-react";
 import { Button, buttonVariants, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
@@ -16,7 +16,6 @@ import { type Checklist, showsCard, useOnboarding, useOnboardingAction } from ".
 import styles from "./onboarding-checklist.module.css";
 
 type Role = "owner" | "admin" | "member" | "guest";
-const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "";
 
 // แยกจาก index.tsx เพราะใช้ useWorkspace ของ shell (shell import index.tsx · ไม่ให้ import วนกัน)
 // ---------------------------------------------------------------------------
@@ -115,15 +114,17 @@ function WhyTeam({ ws }: { ws: string }) {
     <aside className={styles.why} aria-label={t("why.title")}>
       <b>{t("why.title")}</b>
       <p>{t("why.body")}</p>
+      {/* ศูนย์ช่วยเหลือ (W26) มาทีหลังงานนี้: คู่มือเปิดหมวดเริ่มต้นใช้งาน · ถาม Support ใช้ฟอร์มในแอปแทน mailto */}
+      <Link className={styles.linkButton} href={href(ws, "help?category=getting-started")}>
+        <BookOpen size={14} aria-hidden="true" /> {t("why.guide")}
+      </Link>
       <button type="button" className={styles.linkButton} onClick={() => void openSample()} disabled={busy}>
-        {t("why.sample")}
+        <FolderOpen size={14} aria-hidden="true" /> {t("why.sample")}
       </button>
-      {SUPPORT_EMAIL && (
-        <p className={styles.small}>
-          {t("why.stuck")}{" "}
-          <a href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(t("why.mailSubject", { ws }))}`}>{t("why.askSupport")}</a>
-        </p>
-      )}
+      <p className={styles.small}>
+        {t("why.stuck")}{" "}
+        <Link href={href(ws, `help/contact?${new URLSearchParams({ subject: t("why.mailSubject", { ws }) })}`)}>{t("why.askSupport")}</Link>
+      </p>
     </aside>
   );
 }

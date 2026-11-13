@@ -110,8 +110,11 @@ describe("การ์ดบน Home (V1) · Owner / Admin", () => {
     expect(within(rows[5]).getByRole("link", { name: "ตั้งค่าแจ้งเตือน" })).toHaveAttribute("href", "/work/sample/profile?tab=notify");
     const why = within(c).getByRole("complementary", { name: "ทำไมต้องชวนทีม" });
     expect(within(why).getByRole("button", { name: "ดูโปรเจกต์ตัวอย่าง" })).toBeInTheDocument();
-    // คู่มือ (ศูนย์ช่วยเหลือ W26) ยังไม่มีจึงซ่อน
-    expect(within(why).queryByText(/คู่มือ/)).toBeNull();
+    // คู่มือเปิดหมวดเริ่มต้นของศูนย์ช่วยเหลือ (W26) · ถาม Support ไปฟอร์มในแอปพร้อมหัวข้อ
+    expect(within(why).getByRole("link", { name: "คู่มือเริ่มต้นใช้งาน" })).toHaveAttribute("href", "/work/sample/help?category=getting-started");
+    const ask = new URL(within(why).getByRole("link", { name: "ถามทีม Support" }).getAttribute("href")!, "http://x");
+    expect(ask.pathname).toBe("/work/sample/help/contact");
+    expect(ask.searchParams.get("subject")).toBe("ขอความช่วยเหลือการเริ่มใช้งาน (sample)");
   });
 
   it("ดูโปรเจกต์ตัวอย่าง: ยังไม่มีก็สร้างให้แล้วเปิด", async () => {

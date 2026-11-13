@@ -122,14 +122,14 @@ function Panel({ ws, items, query, onNavigate, onMarkAll, header }: { ws: string
   );
 }
 
-/** ปุ่มของขวัญบนแถบบน (ซ้ายของ "?" และกระดิ่ง) · Popover 400 px (U1) */
-export function WhatsNewButton({ ws, role }: { ws: string; role: Role }) {
+/** Popover 400 px ของแผง "มีอะไรใหม่" (U1) · ใช้ทั้งปุ่มบนแถบบนและการ์ดในศูนย์ช่วยเหลือ (X1) */
+function WhatsNewPopover({ ws, role, trigger }: { ws: string; role: Role; trigger: (state: { unseen: number; label: string }) => ReactNode }) {
   const t = useTranslations("whats-new");
   const p = usePanel(ws, role);
   const [open, setOpen] = useState(false);
   // โหลดไม่สำเร็จยังแสดงปุ่ม (ไม่มีจุด) ให้เปิดแผงแล้วกดลองใหม่ได้ · ไม่บังงาน
   if (role === "guest" || p.q.data?.hidden || (!p.q.data && !p.q.isError)) return null;
-  const unseen = (p.q.data?.unseen ?? 0) > 0;
+  const unseen = p.q.data?.unseen ?? 0;
   return (
     <Popover.Root
       open={open}
@@ -139,18 +139,47 @@ export function WhatsNewButton({ ws, role }: { ws: string; role: Role }) {
         else p.close();
       }}
     >
-      <Popover.Trigger asChild>
-        <button type="button" className={cn("button button-ghost button-icon", styles.trigger)} aria-label={unseen ? t("buttonUnseen") : t("button")}>
-          <Gift size={20} />
-          {unseen && <span className={styles.dot} data-testid="whats-new-dot" aria-hidden="true" />}
-        </button>
-      </Popover.Trigger>
+      <Popover.Trigger asChild>{trigger({ unseen, label: unseen > 0 ? t("buttonUnseen") : t("button") })}</Popover.Trigger>
       <Popover.Portal>
         <Popover.Content className={styles.pop} align="end" sideOffset={8} role="dialog" aria-label={t("title")}>
           <Panel ws={ws} items={p.items} query={p.q} onNavigate={() => setOpen(false)} onMarkAll={p.markAll} />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
+  );
+}
+
+/** ปุ่มของขวัญบนแถบบน (ซ้ายของ "?" และกระดิ่ง) · Popover 400 px (U1) */
+export function WhatsNewButton({ ws, role }: { ws: string; role: Role }) {
+  return (
+    <WhatsNewPopover
+      ws={ws}
+      role={role}
+      trigger={({ unseen, label }) => (
+        <button type="button" className={cn("button button-ghost button-icon", styles.trigger)} aria-label={label}>
+          <Gift size={20} />
+          {unseen > 0 && <span className={styles.dot} data-testid="whats-new-dot" aria-hidden="true" />}
+        </button>
+      )}
+    />
+  );
+}
+
+/** การ์ด "มีอะไรใหม่ · ใหม่ n" ในคอลัมน์ขวาของศูนย์ช่วยเหลือ (X1) เปิดแผงเดียวกับปุ่มบนแถบบน */
+export function WhatsNewCard({ ws, role, className }: { ws: string; role: Role; className?: string }) {
+  const t = useTranslations("whats-new");
+  return (
+    <WhatsNewPopover
+      ws={ws}
+      role={role}
+      trigger={({ unseen, label }) => (
+        <button type="button" className={cn(styles.card, className)} aria-label={label}>
+          <Gift size={16} aria-hidden="true" />
+          <span>{t("title")}</span>
+          {unseen > 0 && <small className={cn(styles.newPill, styles.cardPill)}>{t("newCount", { count: unseen })}</small>}
+        </button>
+      )}
+    />
   );
 }
 

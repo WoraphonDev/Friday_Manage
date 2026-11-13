@@ -73,7 +73,7 @@ beforeEach(() => {
   dueRequests = [];
   server.use(
     http.get("*/api/v1/w/:ws/home", () => HttpResponse.json(homeData())),
-    http.get("*/api/v1/me/notifications", () => HttpResponse.json({ items: [{ id: "n1", eventType: "issue.mentioned", actor: { id: "u3", displayName: "ผู้ทดสอบ" }, payload: { issueKey: "DE-525", title: "บั๊กตัวอย่าง", message: "ช่วยดูหน่อยครับ" }, readAt: null, createdAt: "2026-12-02T02:00:00Z" }] })),
+    http.get("*/api/v1/me/notifications", () => HttpResponse.json({ items: [{ id: "n1", eventType: "issue.mentioned", actor: { id: "u3", displayName: "ผู้ทดสอบ" }, payload: { issueKey: "DE-525", title: "บั๊กตัวอย่าง", message: "ช่วยดูหน่อยครับ" }, readAt: null, createdAt: "2026-12-02T02:00:00Z" }, { id: "n2", eventType: "member.joined", actor: { id: "u4", displayName: "สมาชิกใหม่ตัวอย่าง" }, payload: { email: "new@example.com" }, readAt: "2026-12-02T03:00:00Z", createdAt: "2026-12-02T01:00:00Z" }, { id: "n3", eventType: "sprint.started", actor: null, payload: {}, readAt: "2026-12-02T03:00:00Z", createdAt: "2026-12-01T01:00:00Z" }] })),
     http.post("*/api/v1/w/:ws/due-requests/:id/:action", ({ params }) => { decisions.push(`${params.action}:${params.id}`); return HttpResponse.json({ ok: true }); }),
     http.get("*/api/v1/w/:ws/my-issues", ({ request }) => {
       const url = new URL(request.url);
@@ -105,6 +105,10 @@ describe("Home (E / M5)", () => {
     expect(within(project).getByText("22%")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /DE-39 ฟอร์มตัวอย่าง/ })).toBeInTheDocument();
     expect(await screen.findByText("บั๊กตัวอย่าง", { exact: false })).toBeInTheDocument();
+    // เหตุการณ์ที่ไม่มีงานปลายทางต้องเป็นประโยคครบ ไม่ค้างที่ "ใน"
+    const inbox = document.getElementById("inbox")!;
+    expect(within(inbox).getByText("สมาชิกใหม่ตัวอย่าง").parentElement).toHaveTextContent(/^สมาชิกใหม่ตัวอย่าง เข้าร่วม Workspace แล้ว$/);
+    expect(within(inbox).getByText("ระบบ").parentElement).toHaveTextContent(/^ระบบ มีความเคลื่อนไหว$/);
     expect(screen.getByText(/วันหยุด · วันหยุดตัวอย่าง/)).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Man-Day ต่อคน.*ผู้พัฒนาหนึ่ง 8/ })).toBeInTheDocument();
   });

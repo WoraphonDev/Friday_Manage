@@ -25,10 +25,10 @@
 
 ## เสร็จเมื่อ
 
-- [ ] หน้าตรงกับข้อเสนอที่อนุมัติแล้วที่ 1440 px · ที่ 390 px ใช้งานได้
+- [x] หน้าตรงกับข้อเสนอที่อนุมัติแล้วที่ 1440 px · ที่ 390 px ใช้งานได้
 - [x] ครบทุกสถานะตาม M1 · ซ่อนปุ่มตามบทบาท · Audit ทุกการส่ง / ผูก / แจ้งลูกค้า
 - [x] e2e test ของ ops-api ด้วย Friday Manage API จำลอง (ข้อมูลสมมติ) + component test ด้วย MSW · typecheck / test / build ผ่าน
-- [ ] build และ deploy Docker API + เว็บ + ops ในเครื่องตาม CLAUDE.md · ส่ง Ticket จาก :4000 → เห็นงานใน Workspace ทดสอบของ :3000 → เปลี่ยนสถานะเป็น Released → แจ้งลูกค้าแล้วเห็นใน Ticket ของฉัน
+- [x] build และ deploy Docker API + เว็บ + ops ในเครื่องตาม CLAUDE.md · ส่ง Ticket จาก :4000 → เห็นงานใน Workspace ทดสอบของ :3000 → เปลี่ยนสถานะเป็น Released → แจ้งลูกค้าแล้วเห็นใน Ticket ของฉัน
 
 ## ยังต้องตัดสินใจ
 
@@ -80,3 +80,8 @@
 - วิศวกรเห็นหน้า 20 และการ์ด T8 แต่ไม่มีปุ่มแจ้งลูกค้า / ส่งต่อ · Support เห็น T11 แบบอ่านอย่างเดียว · การเงินไม่มีเมนู
 - คำขอนอก lane: `src/components/shell/nav.ts` (เมนู "ส่งบั๊กให้ทีมพัฒนา" → `/bugs` สำหรับ Owner / Support / วิศวกร) · `src/i18n/messages.ts` (namespace `bugs`) · `SupportPage.tsx` ใช้ T3 ตัวใหม่แทนของเดิม
 - ตรวจ: `bugs.test.tsx` 13 ข้อ (MSW) · `@friday/ops-web` test 185 ผ่าน · typecheck / build ผ่าน · ดูหน้า 20 และการ์ด T8 ในเบราว์เซอร์ที่ 1440 px แล้ว · ยังไม่ได้ build / deploy Docker
+
+**ตรวจบน Docker ในเครื่อง (13 พ.ย. 2569)** · web :3000 · API :3001 · ops :4000/:4001 build จาก main `b2d1059` + งานแก้ใน PR นี้ · ฐานข้อมูล `friday_canvas_qa` เดิม (ไม่ล้าง)
+- Ticket #6 (บั๊กสมมติ) → ส่งทีมพัฒนาจาก :4000 → สร้าง FM-2 → ย้ายเป็น Released → Webhook ถึง ops ภายในไม่กี่วินาที → แถบ "ขึ้น production แล้ว ยังไม่แจ้ง" → แจ้งลูกค้า (T9) → ลูกค้าเห็นสถานะ "แก้แล้ว" และขั้นความคืบหน้าใน Ticket ของฉัน
+- token ที่บันทึกใน T11 (…Og1q) ถูก API ในเครื่องปฏิเสธ (`invalid_token` · ไม่ตรงกับ token ใดในฐานข้อมูลนี้) จึงทดสอบด้วยบัญชีบอทสมมติ `ops-bot-qa-1113@example.com` (Admin + สมาชิกโปรเจกต์ FM) และ token ชั่วคราว แล้วคืนค่า token เดิมและยกเลิก token ทดสอบ · ถ้าจะใช้ในเครื่องต่อต้องใส่ token ใหม่ใน T11
+- 1440 px ตรงกับบอร์ด 20 · แก้ console error `ENVIRONMENT_FALLBACK` ของ `relativeTime` (ส่งเวลาปัจจุบันทุกจุดใน ops-web) · 390 px ใช้งานได้

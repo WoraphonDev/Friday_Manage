@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { WhatsNewCard } from "@/features/whats-new/WhatsNew";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -184,6 +185,8 @@ export function HelpHome({ base, workspace, initial, publicOnly = false }: { bas
                 <span className={styles.statusDot} aria-hidden="true" />
                 <span>{t("home.statusOk")}</span>
               </section>
+              {/* U1 · Guest ไม่เห็นและไม่เรียก API (ตาม W24) */}
+              {workspace && <WhatsNewCard ws={workspace.slug} role={workspace.role} className={`${styles.card} ${styles.statusRow}`} />}
             </aside>
           </div>
         </>

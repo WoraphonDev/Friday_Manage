@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { CircleCheck, X } from "lucide-react";
@@ -23,7 +24,6 @@ export interface NpsAsk {
 type Group = "detractor" | "passive" | "promoter";
 const groupOf = (n: number): Group => (n <= 6 ? "detractor" : n <= 8 ? "passive" : "promoter");
 const SCORES = Array.from({ length: 11 }, (_, i) => i);
-const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "";
 
 /**
  * U3 · แบบสำรวจ NPS 3 ขั้น (คะแนน → คำถามต่อตามกลุ่มคะแนน → ขอบคุณ)
@@ -166,11 +166,14 @@ export function NpsPrompt({ ws, prompt, onClose }: { ws: string; prompt: NpsAsk;
           </div>
         </div>
         <div className={styles.actions}>
-          {SUPPORT_EMAIL && (
-            <a className={buttonVariants({ size: "small" })} href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(t("contactSubject"))}`}>
-              {t("contact")}
-            </a>
-          )}
+          {/* ฟอร์มติดต่อ Support ในแอป (W26) แทน mailto · ปุ่มแสดงเสมอตามหน้าจอ U3 ขั้น 3 */}
+          <Link
+            className={buttonVariants({ size: "small" })}
+            href={`/work/${encodeURIComponent(ws)}/help/contact?${new URLSearchParams({ subject: t("contactSubject") })}`}
+            onClick={onClose}
+          >
+            {t("contact")}
+          </Link>
           <Button variant="ghost" size="small" onClick={onClose}>
             {t("done")}
           </Button>

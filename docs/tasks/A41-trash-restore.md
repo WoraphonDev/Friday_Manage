@@ -27,7 +27,7 @@
 
 - [x] ทุก endpoint มี e2e test ด้วยข้อมูลสมมติ: สิทธิ์ (Owner / Admin / Project Admin / สมาชิก / Guest) · Key ซ้ำ · 402 · ชุด · ลบถาวร · งานลบถาวรตามวัน · อีเมลเตือน
 - [x] ทุก query ของลูกค้าผ่าน `TenantDb.run` · error เป็น `AppError` ภาษาไทย · `pnpm typecheck` / `pnpm --filter @friday/api test` ผ่าน
-- [ ] build และ deploy Docker API (`compose.api.yml`) ด้วยฐานข้อมูลเดิม แล้วเรียก endpoint จริงผ่าน :3001
+- [x] build และ deploy Docker API (`compose.api.yml`) ด้วยฐานข้อมูลเดิม แล้วเรียก endpoint จริงผ่าน :3001
 
 ## ยังต้องตัดสินใจ
 
@@ -72,3 +72,8 @@
 - Export ระหว่างรอลบ: RLS ซ่อน Workspace ที่ลบ จึงสร้าง zip ด้วย SYSTEM_DB หลังทำให้ `buildWorkspaceZip` กรอง workspace_id ทุกตาราง · ใช้ตาราง / ที่เก็บไฟล์เดียวกับ A31 (`privacy.cleanup-exports` ลบไฟล์หมดอายุให้)
 
 **ตรวจแล้ว:** `apps/api/test/trash.e2e.test.ts` 17 ข้อ · `pnpm --filter @friday/api test` · `pnpm typecheck` ผ่าน (ฐาน `friday_s_restore`) · ยังไม่ได้ build / deploy Docker (ผู้ประสานงานทำต่อ)
+
+**ตรวจบน Docker ในเครื่อง (13 พ.ย. 2569)** · web :3000 · API :3001 · ops :4000/:4001 build จาก main `b2d1059` + งานแก้ใน PR นี้ · ฐานข้อมูล `friday_canvas_qa` เดิม (ไม่ล้าง)
+- ลบ TRQA-1–3 ห่างกันไม่ถึง 2 นาที → รวมเป็นชุดเดียว · ลบงานแม่ที่มี Sub-task → นับ `subtasks: 1` และ Sub-task ไม่แสดงแยก · `issue:restore` คืนงานแม่พร้อม Sub-task
+- ลบโปรเจกต์ TRQB แล้วสร้างโปรเจกต์ใหม่ Key เดิม → `project:restore` ตอบ 409 `project_key_taken` พร้อม `takenBy` และ `suggestedKey: TRQB2` · ส่ง `newKey` ที่ซ้ำได้ `project_key_taken` เช่นกัน (ไม่ใช่ `key_taken` ตามที่เขียนไว้ข้างบน · หน้าเว็บรองรับทั้งสองรหัส)
+- ลบถาวรพิมพ์คำยืนยันผิด → `confirm_required` · `workspaces/:slug/deleted` ของ Workspace ที่ยังไม่ลบตอบ 404

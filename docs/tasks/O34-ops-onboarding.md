@@ -24,7 +24,7 @@
 - [x] หน้าตรงกับข้อเสนอที่อนุมัติแล้วที่ 1440 px · ที่ 390 px ใช้งานได้
 - [x] ครบทุกสถานะตาม M1 · ซ่อนปุ่มตามบทบาท · Audit ทุกอีเมลที่ส่ง
 - [x] e2e test ของ ops-api (ข้อมูลสมมติ) + component test ด้วย MSW · typecheck / test / build ผ่าน
-- [ ] build และ deploy Docker ชุด ops ในเครื่องตาม CLAUDE.md แล้วตรวจผ่าน http://localhost:4000
+- [x] build และ deploy Docker ชุด ops ในเครื่องตาม CLAUDE.md แล้วตรวจผ่าน http://localhost:4000
 
 ## ยังต้องตัดสินใจ
 
@@ -56,3 +56,6 @@
 **ไฟล์นอก lane (ตามคำขอในงาน):** `apps/ops-api/src/app.module.ts` (ลงทะเบียน module) · `apps/ops-web/src/components/shell/nav.ts` (เปิดเมนู) · `apps/ops-web/src/i18n/messages.ts` (namespace `onb`) · `apps/ops-web/app/(console)/workspaces/_parts/Panels.tsx` (การ์ด V7 หนึ่งบรรทัด) · `apps/ops-web/src/test/server.ts` (handler เริ่มต้นของการ์ด V7)
 
 **ตรวจแล้ว:** `apps/ops-api/test/onboarding.e2e.test.ts` 9 ข้อ (สิทธิ์ทุกบทบาท · KPI / funnel / ข้อสังเกต · ช่วงวัน · ลูกค้าที่ติด / หยุดใช้ / ไม่มีอีเมลลูกค้าในหน้ารวม · รายละเอียดและสัญญาณ · บันทึกอย่างเดียวไม่ลง Audit ลูกค้า · ส่งอีเมล + คิว + Audit + นับข้อความสำเร็จรูป + 7 วัน · รายชื่อไม่ส่ง · ครบแล้ว) · `onboarding.test.tsx` (MSW) 9 ข้อ · `@friday/ops-api` 171 ผ่าน · `@friday/ops-web` 163 ผ่าน · typecheck / build ผ่านทั้งสอง · ยังไม่ได้ build / deploy Docker ชุด ops (ผู้ประสานงานทำต่อ)
+
+**ตรวจบน Docker ในเครื่อง (13 พ.ย. 2569)** · web :3000 · API :3001 · ops :4000/:4001 build จาก main `b2d1059` + งานแก้ใน PR นี้ · ฐานข้อมูล `friday_canvas_qa` เดิม (ไม่ล้าง)
+- หน้า `/onboarding` ของ :4000 โหลด KPI · ผ่านแต่ละขั้น · ข้อสังเกต · ลูกค้าที่ติด (20 Workspace ในฐานข้อมูลทดสอบ) ได้ ไม่มี error

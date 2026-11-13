@@ -112,7 +112,13 @@ Probe ใช้บัญชีสมมติจริง เชื่อม `ws
 
 ผลหลังแก้: repro [popup-acceptance.test.tsx.txt](ui-interaction-audit-2026-11-06/popup-acceptance.test.tsx.txt) **ผ่าน 14/14** ไม่มี Unhandled Rejection · `@friday/web` ผ่าน 417/417 · `realtime.e2e` 19/19, `api.e2e` + `notification-fanout.e2e` + `events.e2e` 73/73 · typecheck ของ web/api ผ่าน
 
-ยังไม่ได้ตรวจ: probe [realtime-probe.mjs.txt](ui-interaction-audit-2026-11-06/realtime-probe.mjs.txt) ผ่าน Next proxy จริง และการกดผ่าน browser จริงหลังแก้ (ใช้ e2e WebSocket จริงกับ API แทน)
+~~ยังไม่ได้ตรวจ: probe [realtime-probe.mjs.txt](ui-interaction-audit-2026-11-06/realtime-probe.mjs.txt) ผ่าน Next proxy จริง และการกดผ่าน browser จริงหลังแก้ (ใช้ e2e WebSocket จริงกับ API แทน)~~
+
+**ตรวจแล้ว 13 พ.ย. 2569** บน Docker ในเครื่อง (เว็บ :3000 → API :3001 · ฐานข้อมูล `friday_canvas_qa`):
+
+- Probe ผ่าน Next proxy: [realtime-probe-proxy.mjs.txt](ui-interaction-audit-2026-11-06/realtime-probe-proxy.mjs.txt) (ดัดแปลงจากชุดเดิม · HTTP และ WebSocket ไปที่ `localhost:3000` ทั้งหมด · 2 session ของผู้ใช้คนเดียวกัน) → [realtime-probe-proxy.json](ui-interaction-audit-2026-11-06/realtime-probe-proxy.json): สัญญาณ `notification` ถึงทั้ง 2 session · อ่านทั้งหมดใน session A แล้ว session B ได้ `{ type: "unread", unread.total: 0 }` (UI-06) · summary เป็น 0
+- กดใน Chromium จริง (2 context login แยกกัน): บอทมอบหมายงาน 2 งาน → กระดิ่งทั้งสอง session เป็น "2 รายการยังไม่อ่าน" ทันที และมี Toast ของงานนั้น · รายการในกระดิ่งแสดงชื่องาน (UI-02) · รายการของ Workspace อื่นลิงก์ไป `/work/{Workspace นั้น}/inbox?n=…` (UI-03) · "อ่านทั้งหมด" ใน A → กระดิ่งของ B เป็น 0 โดยไม่โหลดหน้าใหม่ (UI-06) · ใน Inbox กดรายการจากกระดิ่ง / Back / Forward แล้วรายการที่เลือกเปลี่ยนตาม `?n=` ทุกครั้ง (UI-05)
+- UI-01 / UI-04 (โหลดแจ้งเตือนหรืออ่านทั้งหมดล้มเหลว) ต้องทำให้ API ล้มจึงไม่ได้กดในเบราว์เซอร์ · ยังยืนยันด้วย regression test ของรอบแก้
 
 ## ผลทดสอบที่ผ่าน (รอบตรวจ ก่อนแก้)
 

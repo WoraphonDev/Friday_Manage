@@ -245,12 +245,17 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const customFields = project.data?.customFields ?? [];
   // QA Due มีเฉพาะโปรเจกต์แยก Dev / QA และเปิดให้เห็นต่อจาก Plan End เมื่อยังไม่ได้เลือกคอลัมน์เอง
   const split = !!project.data?.progressSplit;
-  const available = availableColumns(profile, customFields).filter((c) => c !== "qaDue" || split);
   const profileCols = split && !profile.columns.includes("qaDue") ? profile.columns.flatMap((c) => (c === "end" ? [c, "qaDue"] : [c])) : profile.columns;
+  // เรียงตาม profileCols (มี QA Due ต่อจาก Plan End แล้ว) ไม่อย่างนั้น QA Due ที่ไม่อยู่ในชุดฟิลด์จะไปต่อท้ายสุด
+  const available = availableColumns({ ...profile, columns: profileCols }, customFields).filter((c) => c !== "qaDue" || split);
   const chosen = userCols ?? profileCols;
   const cols = available.filter((c) => chosen.includes(c));
   // ตัวกรองของฟิลด์ที่ซ่อนทั้ง Task และ Sub-task ไม่มีประโยชน์ จึงไม่แสดง
   const usedField = (f: "ba" | "size") => profile.fields[f]?.task !== "hidden" || profile.fields[f]?.subtask !== "hidden";
+  // ตัวกรอง BA / Dev ใช้รายชื่อตามตำแหน่งเหมือนช่องเลือกคนในแถว · คนที่กรองอยู่ยังอยู่ในรายการ
+  const members = options.data?.members ?? [];
+  const baPeople = peopleForRole("ba", members, [filters.ba]);
+  const devPeople = peopleForRole("dev", members, [filters.assignee]);
   const colLabel = (c: Col) => c.startsWith("cf:") ? (customFields.find((f) => `cf:${f.id}` === c)?.name ?? c) : t(`cols.${c}`);
 
   const params = new URLSearchParams({ view: "table", limit: String(PAGE), sort });
@@ -536,13 +541,13 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
               </label>
               {usedField("ba") && <select className={styles.tbtn} aria-label={t("ba")} value={filters.ba ?? ""} onChange={(e) => set("ba", e.target.value)}>
                 <option value="">{t("ba")}: {t("anyone")}</option>
-                {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
+                {baPeople.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
               </select>}
               <select className={styles.tbtn} aria-label={t("assignee")} value={filters.assignee ?? ""} onChange={(e) => set("assignee", e.target.value)}>
                 <option value="">{t("assignee")}: {t("anyone")}</option>
                 <option value="me">{t("me")}</option>
                 <option value="none">{t("none")}</option>
-                {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
+                {devPeople.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
               </select>
               {usedField("size") && <select className={styles.tbtn} aria-label={t("size")} value={filters.size ?? ""} onChange={(e) => set("size", e.target.value)}>
                 <option value="">{t("size")}: {t("allSizes")}</option>
@@ -597,13 +602,13 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
             </label>
             {usedField("ba") && <select className={styles.tbtn} aria-label={t("ba")} value={filters.ba ?? ""} onChange={(e) => set("ba", e.target.value)}>
               <option value="">{t("ba")}: {t("anyone")}</option>
-              {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
+              {baPeople.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
             </select>}
             <select className={styles.tbtn} aria-label={t("assignee")} value={filters.assignee ?? ""} onChange={(e) => set("assignee", e.target.value)}>
               <option value="">{t("assignee")}: {t("anyone")}</option>
               <option value="me">{t("me")}</option>
               <option value="none">{t("none")}</option>
-              {options.data?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
+              {devPeople.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
             </select>
             {usedField("size") && <select className={styles.tbtn} aria-label={t("size")} value={filters.size ?? ""} onChange={(e) => set("size", e.target.value)}>
               <option value="">{t("size")}: {t("allSizes")}</option>
@@ -963,7 +968,7 @@ function BulkBar({ count, options, statuses, canDelete, onApply, onStatus, onDel
         <Button size="small" disabled={!status} onClick={() => onStatus(status)}>{t("apply")}</Button>
       </>)}
       {action(t("bulkAssignee"), <>
-        <select aria-label={t("bulkAssignee")} value={assignee} onChange={(e) => setAssignee(e.target.value)}><option value="">{t("bulkAssignee")}</option>{options?.members.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}</select>
+        <select aria-label={t("bulkAssignee")} value={assignee} onChange={(e) => setAssignee(e.target.value)}><option value="">{t("bulkAssignee")}</option>{peopleForRole("dev", options?.members ?? []).map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}</select>
         <Button size="small" disabled={!assignee} onClick={() => onApply({ assigneeIds: [assignee] })}>{t("apply")}</Button>
       </>)}
       {action(t("bulkDue"), <>

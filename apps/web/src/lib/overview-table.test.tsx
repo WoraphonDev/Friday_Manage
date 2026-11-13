@@ -204,6 +204,50 @@ describe("Table (2)", () => {
     window.localStorage.clear();
   });
 
+  it("ตัวกรอง BA / Dev แสดงเฉพาะสมาชิกที่มีตำแหน่งนั้น (Dev รวม FE / BE / DevOps)", async () => {
+    server.use(http.get("*/api/v1/w/:ws/projects/:key/form-options", () => HttpResponse.json({
+      issueTypes: [{ name: "Task", statuses: [{ id: "st-todo", name: "To do", category: "todo" }] }],
+      modules: [{ id: "m-a", name: "Module A" }],
+      members: [
+        { ...person("u1", "นักวิเคราะห์หนึ่ง"), positions: ["BA"] },
+        { ...person("u2", "หน้าบ้านสอง"), positions: ["FE"] },
+        { ...person("u3", "ทดสอบสาม"), positions: ["QA"] },
+        { ...person("u4", "ดูแลระบบสี่"), positions: ["DEVOPS", "BA"] },
+      ],
+    })));
+    tableData = table([row("DE-1")]);
+    mount(<TableView ws="sample" projectKey="DE" />);
+    await screen.findByTestId("row-DE-1");
+    const names = (label: string) => within(screen.getAllByLabelText(label)[0] as HTMLSelectElement).getAllByRole("option").map((o) => o.textContent);
+    await waitFor(() => expect(names("BA")).toContain("นักวิเคราะห์หนึ่ง"));
+    expect(names("BA")).toEqual(["BA: ทุกคน", "นักวิเคราะห์หนึ่ง", "ดูแลระบบสี่"]);
+    expect(names("Dev").slice(3)).toEqual(["หน้าบ้านสอง", "ดูแลระบบสี่"]);
+  });
+
+  it("โปรเจกต์แยก Dev / QA: QA Due อยู่ต่อจาก Plan End ทั้งในตารางและเมนู Columns (ไม่ไปต่อท้ายสุด)", async () => {
+    const user = userEvent.setup();
+    window.localStorage.clear();
+    const opt = { task: "optional", subtask: "optional" };
+    server.use(http.get("*/api/v1/w/:ws/projects/:key", () => HttpResponse.json({
+      key: "DE",
+      progressSplit: true,
+      fieldProfile: {
+        fields: { ba: opt, sa: opt, reviewer: opt, priority: opt, size: opt, actual: opt, progress: opt, requirements: opt, screens: opt, labels: opt, remark: opt },
+        columns: ["dev", "status", "end", "remark"],
+        template: null,
+      },
+      customFields: [],
+    })));
+    tableData = table([row("DE-1")]);
+    mount(<TableView ws="sample" projectKey="DE" />);
+    await screen.findByTestId("row-DE-1");
+    await waitFor(() => expect(screen.getByRole("columnheader", { name: "QA Due" })).toBeInTheDocument());
+    expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Name", "Dev", "Status", "Plan End", "QA Due", "หมายเหตุ"]);
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    const picks = screen.getAllByRole("checkbox").map((c) => c.getAttribute("aria-label") ?? c.closest("label")?.textContent?.trim());
+    expect(picks.indexOf("QA Due")).toBe(picks.indexOf("Plan End") + 1);
+  });
+
   it("แก้ในแถว: Status ส่ง If-Match · แก้แผนหลัง Baseline ถามเหตุผลแล้วส่งซ้ำ", async () => {
     const user = userEvent.setup();
     mount(<TableView ws="sample" projectKey="DE" />);

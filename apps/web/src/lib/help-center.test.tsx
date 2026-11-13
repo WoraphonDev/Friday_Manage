@@ -143,7 +143,8 @@ describe("ตัวช่วย", () => {
 });
 
 describe("X1 / X2 · ศูนย์ช่วยเหลือ", () => {
-  it("หมวด · ยอดนิยม · SLA ตามแพ็กเกจ · ติดต่อ Support · Ticket ของฉัน · สถานะระบบ", async () => {
+  it("หมวด · ยอดนิยม · SLA ตามแพ็กเกจ · ติดต่อ Support · Ticket ของฉัน · สถานะระบบ · มีอะไรใหม่", async () => {
+    server.use(http.get("*/api/v1/me/whats-new", () => HttpResponse.json({ items: [], unseen: 2, seenAt: null, hidden: false })));
     renderWithProviders(<HelpHome base="/work/sample/help" workspace={owner} />);
     expect(await screen.findByRole("link", { name: /เริ่มต้นใช้งาน\s*9 บทความ/ })).toHaveAttribute("href", "/work/sample/help?category=getting-started");
     expect(await screen.findByRole("link", { name: /ผูก LINE เพื่อรับแจ้งเตือน/ })).toHaveAttribute("href", "/work/sample/help/line-approve");
@@ -151,6 +152,9 @@ describe("X1 / X2 · ศูนย์ช่วยเหลือ", () => {
     expect(screen.getByRole("button", { name: h.home.contact })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ticket ของฉัน · เปิดอยู่ 2" })).toHaveAttribute("href", "/work/sample/help/tickets");
     expect(screen.getByText(h.home.statusOk)).toBeInTheDocument();
+    // การ์ด "มีอะไรใหม่ · ใหม่ n" (X1) เปิดแผงเดียวกับปุ่มของขวัญ (W24)
+    const whatsNew = await screen.findByRole("button", { name: "มีอะไรใหม่ (มีรายการที่ยังไม่เห็น)" });
+    expect(whatsNew).toHaveTextContent("ใหม่ 2");
     expect(articleCalls.some((u) => u.searchParams.get("sort") === "popular" && u.searchParams.get("limit") === "5")).toBe(true);
   });
 
@@ -200,6 +204,7 @@ describe("X1 / X2 · ศูนย์ช่วยเหลือ", () => {
     renderWithProviders(<HelpHome base="/work/sample/help" workspace={guest} />);
     expect(await screen.findByText(h.home.guestHint)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: h.home.contact })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^มีอะไรใหม่/ })).not.toBeInTheDocument();
     expect(ticketScopes).toEqual([]);
   });
 
@@ -373,6 +378,9 @@ describe("X4 · แผงช่วยเหลือใน shell", () => {
     expect(articleCalls.find((u) => u.searchParams.get("route"))?.searchParams.get("route")).toBe("gantt");
     expect(within(panel).getByRole("link", { name: h.panel.openFull })).toHaveAttribute("href", "/work/sample/help");
     expect(within(panel).getByRole("link", { name: h.panel.allHelp })).toHaveAttribute("href", "/work/sample/help");
+    // ทางลัดแรก "มีอะไรใหม่" (X4) · แผงกว้าง 400 px
+    expect(within(panel).getByRole("button", { name: /^มีอะไรใหม่/ })).toBeInTheDocument();
+    expect(panel).toHaveClass("drawer-panel");
     await userEvent.setup().click(within(panel).getByRole("button", { name: new RegExp(h.panel.keys) }));
     expect(within(panel).getByText(h.panel.keyList.palette)).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: h.home.contact })).toBeInTheDocument();

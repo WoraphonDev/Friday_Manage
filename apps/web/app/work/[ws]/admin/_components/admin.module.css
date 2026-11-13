@@ -87,6 +87,8 @@ textarea.in { padding:8px 10px; min-height:64px; }
   .body { padding:12px; gap:12px; }
   .nav { flex:1 1 100%; flex-direction:row; overflow-x:auto; }
   .navSec { display:none; }
+  /* เมนูเป็นแถวเลื่อนแนวนอน หัวเมนูจะถูกบีบจนชื่อแตกบรรทัด · ชื่อ Workspace มีบนแถบบนอยู่แล้ว */
+  .navHead { display:none; }
   .snav { width:auto; white-space:nowrap; }
   .proj { grid-template-columns:52px minmax(0,1fr) auto; }
   .proj .hs { display:none; }

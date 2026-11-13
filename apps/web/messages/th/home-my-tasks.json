@@ -89,7 +89,9 @@
       "issue__overdue": "เลยกำหนด",
       "due_request__created": "ขอเลื่อน Due",
       "due_request__decided": "ตอบคำขอเลื่อน Due",
-      "other": "มีความเคลื่อนไหวใน"
+      "member__joined": "เข้าร่วม Workspace แล้ว",
+      "other": "มีความเคลื่อนไหวใน",
+      "otherNoTarget": "มีความเคลื่อนไหว"
     },
     "upcoming": "30 วันข้างหน้า",
     "upcomingSub": "Sprint, วันหยุด, กลุ่มงานที่ครบ",

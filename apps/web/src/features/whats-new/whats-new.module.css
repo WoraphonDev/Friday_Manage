@@ -3,7 +3,8 @@
 /* จุดเหลืองไม่ใช้ตัวเลข เพื่อไม่แข่งกับกระดิ่ง */
 .dot { position:absolute; top:6px; right:6px; width:9px; height:9px; border-radius:50%; background:var(--warning-solid); border:2px solid var(--topbar); }
 
-.pop { width:min(400px, calc(100vw - 16px)); max-height:min(640px, calc(100dvh - 80px)); display:flex; flex-direction:column; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-menu); overflow:hidden; z-index:50; }
+.pop { width:min(400px, calc(100vw - 16px)); max-height:min(640px, calc(100dvh - 80px)); display:flex; flex-direction:column; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-menu); overflow:hidden; z-index:55; }
+/* เปิดจากแผงช่วยเหลือ (Drawer z 51–53) ได้ด้วย จึงต้องอยู่เหนือ Drawer */
 .head { display:flex; align-items:center; gap:8px; padding:14px 16px; border-bottom:1px solid var(--border); }
 .title { font-size:15px; font-weight:700; margin:0; }
 .newPill { display:inline-flex; align-items:center; height:20px; padding:0 8px; border-radius:999px; font-size:11px; font-weight:600; background:var(--accent-purple-soft); color:var(--accent-purple-text); }
@@ -48,3 +49,8 @@
   .spotNote { flex-basis:100%; }
   .spotFoot > button { flex:1; }
 }
+
+/* การ์ดในศูนย์ช่วยเหลือ (X1) · พื้นและกรอบมาจาก className ของหน้า */
+.card { width:100%; display:flex; align-items:center; gap:10px; font:inherit; color:inherit; text-align:left; cursor:pointer; }
+.card:hover { border-color:var(--primary); }
+.cardPill { margin-left:auto; }

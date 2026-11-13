@@ -28,7 +28,7 @@ Ticket ของลูกค้า (ตารางเป็น `ops_only` จ�
 
 - [x] e2e test ด้วยข้อมูลสมมติ: ค้นภาษาไทย · บทความเฉพาะผู้เข้าสู่ระบบ · ร่างไม่หลุด · Ticket ไม่หลุดข้าม Workspace · ข้อความภายในไม่หลุดถึงลูกค้า · Guest
 - [x] `pnpm typecheck` / `pnpm --filter @friday/api test` ผ่าน
-- [ ] build และ deploy Docker API (`compose.api.yml`) และ ops (ให้เห็น Ticket ใหม่ในหน้า Support) ด้วยฐานข้อมูลเดิม
+- [x] build และ deploy Docker API (`compose.api.yml`) และ ops (ให้เห็น Ticket ใหม่ในหน้า Support) ด้วยฐานข้อมูลเดิม
 
 ## ยังต้องตัดสินใจ
 
@@ -73,3 +73,6 @@ Ticket ของลูกค้า (ตารางเป็น `ops_only` จ�
 - หน้า Ticket ของ ops (T5) ยังไม่แสดงไฟล์แนบ / บริบทหน้าจาก `attachments` ของข้อความลูกค้า
 
 **ตรวจแล้ว:** `apps/api/test/help.e2e.test.ts` 16 ข้อ (ค้นภาษาไทย · เฉพาะผู้เข้าสู่ระบบ · ร่างไม่หลุด · rate limit · Ticket ไม่หลุดข้าม Workspace / ข้ามคน · ข้อความภายในไม่หลุด · Guest · ไฟล์แนบ · เปิดใหม่ / ปิด · กระดิ่ง support.replied) บนฐาน `friday_s_help` · `pnpm --filter @friday/api test` 702 ผ่าน (3 ข้อของ automation / สรุปประจำวันล้มเฉพาะตอนรันทั้งชุดตามเวลา รันไฟล์เดี่ยวผ่าน · ไม่เกี่ยวกับงานนี้) · `openapi.json` สร้างใหม่ · ยังไม่ได้ build / deploy Docker
+
+**ตรวจบน Docker ในเครื่อง (13 พ.ย. 2569)** · web :3000 · API :3001 · ops :4000/:4001 build จาก main `b2d1059` + งานแก้ใน PR นี้ · ฐานข้อมูล `friday_canvas_qa` เดิม (ไม่ล้าง)
+- ลูกค้าส่ง Ticket #5 จากฟอร์มในแอป → เห็นในหน้า Support ของ :4000 · Ops ตอบ → ลูกค้าเห็น "ทีม Friday" และสถานะ "รอคุณตอบ" · ค้นบทความภาษาไทยผ่าน `help/articles?q=` เจอบทความที่เพิ่งเผยแพร่

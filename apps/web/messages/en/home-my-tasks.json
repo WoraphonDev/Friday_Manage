@@ -89,7 +89,9 @@
       "issue__overdue": "overdue",
       "due_request__created": "requested a Due change for",
       "due_request__decided": "responded to the Due change request for",
-      "other": "has activity on"
+      "member__joined": "joined the workspace",
+      "other": "has activity on",
+      "otherNoTarget": "had activity"
     },
     "upcoming": "Next 30 days",
     "upcomingSub": "Sprints, holidays, task groups ending",

@@ -22,7 +22,7 @@
 
 - [x] migration ใหม่ + snapshot ของ drizzle · `pnpm db:migrate` บนฐานที่มีข้อมูลทดสอบเดิมผ่าน (ไม่ล้างข้อมูล)
 - [x] test ของ `packages/db` ครอบคลุมค่าย้ายข้อมูลและดัชนี · `pnpm typecheck` / `pnpm test` ผ่าน
-- [ ] build และ deploy Docker API ในเครื่องตาม CLAUDE.md (ใช้ฐานข้อมูลเดิม) แล้วตรวจว่า API เดิมยังทำงาน
+- [x] build และ deploy Docker API ในเครื่องตาม CLAUDE.md (ใช้ฐานข้อมูลเดิม) แล้วตรวจว่า API เดิมยังทำงาน
 
 ## ยังต้องตัดสินใจ
 
@@ -53,3 +53,6 @@
 **RLS:** ไม่เพิ่มสิทธิ์ให้ `friday_app` · แถวในถังขยะยังผ่าน policy เดิม (test ยืนยันว่าสมาชิกที่ไม่อยู่ในโปรเจกต์และคนนอก Workspace ไม่เห็น) · Workspace ที่ลบแล้วยังมองไม่เห็นจาก friday_app (`app.ws_role` กรอง `deleted_at`) งานกู้คืน / ลบถาวรของ Workspace จึงยังใช้ SYSTEM_DB ตามเดิม
 
 **ตรวจแล้ว:** test ใหม่ใน `packages/db/test/phase3.test.ts` (O30 5 ข้อ) และ `migrations.test.ts` (อัปเกรด 0031 → 0032 ที่มีแถวในถังขยะ) · `pnpm --filter @friday/db test` 163 ผ่าน · `pnpm typecheck` ผ่าน · `@friday/api` 685 ผ่าน (7 ข้าม) · `@friday/ops-api` 162 ผ่าน (1 ข้าม) บนฐาน `friday_p3db` · ยังไม่ได้ build / deploy Docker (ผู้ประสานงานทำต่อ)
+
+**ตรวจบน Docker ในเครื่อง (13 พ.ย. 2569)** · web :3000 · API :3001 · ops :4000/:4001 build จาก main `b2d1059` + งานแก้ใน PR นี้ · ฐานข้อมูล `friday_canvas_qa` เดิม (ไม่ล้าง)
+- API container build ใหม่จาก checkout นี้ ใช้ฐานข้อมูลเดิม · flow เดิม (Login, Home, Inbox, สร้าง / ลบ / กู้งาน, Support, Changelog, Onboarding, Realtime) ทำงานครบ

@@ -43,7 +43,7 @@ export function Search({ canAct }: { canAct: boolean }) {
             </option>
           ))}
         </Select>
-        <div className="field">
+        <div className="field" style={{ justifySelf: "start" }}>
           <Button type="submit" variant="primary" disabled={!ws || !ticketId}>
             <SearchIcon size={16} /> {t("search.submit")}
           </Button>
@@ -135,7 +135,8 @@ function Results({ workspaceId, ticketId, canAct }: { workspaceId: string; ticke
           <Empty ok title={t("list.empty")} description={t("list.emptyHint")} />
         ) : (
           <div className="tbl-wrap">
-            <table className="tbl">
+            {/* จอแคบให้เลื่อนตารางแนวนอนแทนการบีบคอลัมน์จนชื่อแตกทีละคำ */}
+            <table className="tbl" style={{ minWidth: 720 }}>
               <thead>
                 <tr>
                   <th scope="col">{t("list.col.type")}</th>
@@ -156,7 +157,7 @@ function Results({ workspaceId, ticketId, canAct }: { workspaceId: string; ticke
                       <ItemLabel item={i} />
                     </td>
                     <td className="small">{role(i.deletedBy)}</td>
-                    <td className="small num">{fmt.dateTime(i.deletedAt)}</td>
+                    <td className="small">{fmt.dateTime(i.deletedAt)}</td>
                     <td>{i.daysLeft <= 3 ? <Pill tone="bad">{fmt.date(i.purgeAt)}</Pill> : <span className="small">{fmt.date(i.purgeAt)}</span>}</td>
                     <td>
                       {canAct && (

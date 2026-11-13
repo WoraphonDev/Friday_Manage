@@ -11,6 +11,7 @@ import { useContactSupport, type ContactWorkspace } from "./contact";
 import { isTyping } from "./home";
 import { SearchBox, SearchResults, useDebounced } from "./search";
 import { helpApi, helpKeys, isRoute, routeLabelKey, routeOf } from "./shared";
+import { WhatsNewCard } from "@/features/whats-new/WhatsNew";
 import styles from "./help.module.css";
 
 /** ชื่อหน้าที่เปิดอยู่ เช่น "แผนพัฒนาผลิตภัณฑ์ › Gantt" (แนบในฟอร์มติดต่อ Support) */
@@ -73,6 +74,7 @@ function Panel({ workspace, projects, onClose }: { workspace: ContactWorkspace; 
           <section className={styles.panelSection}>
             <b>{t("shortcuts")}</b>
             <div className={styles.panelList}>
+              <WhatsNewCard ws={workspace.slug} role={workspace.role} />
               <Link href={base} onClick={onClose}>
                 <BookOpen size={16} aria-hidden="true" />
                 <span>{t("allHelp")}</span>
@@ -151,7 +153,7 @@ export function HelpButton({ workspace, projects }: { workspace: ContactWorkspac
       <Button variant="ghost" size="icon" className={styles.helpButton} aria-label={t("open")} title={t("open")} aria-expanded={open} onClick={() => setOpen(true)}>
         <CircleHelp size={20} />
       </Button>
-      <Drawer open={open} onOpenChange={setOpen} title={t("title")} bare>
+      <Drawer open={open} onOpenChange={setOpen} title={t("title")} variant="panel" bare>
         {open && <Panel workspace={workspace} projects={projects} onClose={() => setOpen(false)} />}
       </Drawer>
     </>

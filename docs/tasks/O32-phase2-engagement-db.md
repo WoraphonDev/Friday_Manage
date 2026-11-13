@@ -25,7 +25,7 @@
 
 - [x] migration + snapshot · RLS และ grant ครบ · `pnpm db:migrate` บนฐานข้อมูลทดสอบเดิมผ่าน
 - [x] test ของ `packages/db` ตรวจ RLS (ลูกค้าอ่านบทความร่างไม่ได้ · อ่าน NPS ของ Workspace อื่นไม่ได้) · typecheck / test ผ่าน
-- [ ] build และ deploy Docker API และ ops ในเครื่องตาม CLAUDE.md แล้วตรวจว่าของเดิมยังทำงาน
+- [x] build และ deploy Docker API และ ops ในเครื่องตาม CLAUDE.md แล้วตรวจว่าของเดิมยังทำงาน
 
 ## ยังต้องตัดสินใจ
 
@@ -78,3 +78,6 @@
 - `dev_issue_tickets.outcome` (T9 / T10) และ `notified_at` · `dev_bridge_settings.token_hint`, `last_test_*`, `last_webhook_at`
 
 **ตรวจแล้ว:** `packages/db/test/phase3.test.ts` (O32 19 ข้อ: ลูกค้าอ่านบทความร่าง / draft ไม่ได้ · บทความเฉพาะผู้เข้าสู่ระบบ · อ่าน NPS ของ Workspace อื่นและของคนอื่นไม่ได้ · ยอดนับผ่านฟังก์ชัน · Onboarding · ผูก Ticket) · entities test ตรวจว่าตาราง ops_only ไม่มีสิทธิ์ของ friday_app · `pnpm --filter @friday/db test` 163 ผ่าน · `pnpm typecheck` ผ่าน · `@friday/api` 685 ผ่าน · `@friday/ops-api` 162 ผ่าน บนฐาน `friday_p3db` · ยังไม่ได้ build / deploy Docker (ผู้ประสานงานทำต่อ)
+
+**ตรวจบน Docker ในเครื่อง (13 พ.ย. 2569)** · web :3000 · API :3001 · ops :4000/:4001 build จาก main `b2d1059` + งานแก้ใน PR นี้ · ฐานข้อมูล `friday_canvas_qa` เดิม (ไม่ล้าง)
+- API และ ops build ใหม่ ใช้ฐานข้อมูลเดิม · Changelog / NPS / Onboarding / ศูนย์ช่วยเหลือ / Support / ส่งบั๊กให้ทีมพัฒนา ทำงานต่อกันได้ครบ

@@ -21,10 +21,10 @@
 
 ## เสร็จเมื่อ
 
-- [ ] หน้าตรงกับข้อเสนอที่อนุมัติแล้วที่ 1440 px และ 390 px · โหมดสว่าง / มืด
+- [x] หน้าตรงกับข้อเสนอที่อนุมัติแล้วที่ 1440 px และ 390 px · โหมดสว่าง / มืด
 - [x] ครบสถานะ: ว่าง · โหลดไม่สำเร็จ (ไม่บังงาน) · Guest ไม่เห็นปุ่ม
 - [x] component test ด้วย MSW ครอบคลุมทุกข้อใน "ทำอะไร" · `pnpm --filter @friday/web typecheck test build` ผ่าน
-- [ ] build และ deploy Docker เว็บ + API ในเครื่องตาม CLAUDE.md แล้วตรวจผ่าน http://localhost:3000 (เผยแพร่รายการจาก O33 หรือ seed ข้อมูลสมมติ)
+- [x] build และ deploy Docker เว็บ + API ในเครื่องตาม CLAUDE.md แล้วตรวจผ่าน http://localhost:3000 (เผยแพร่รายการจาก O33 หรือ seed ข้อมูลสมมติ)
 
 ## ยังต้องตัดสินใจ
 
@@ -54,3 +54,8 @@
 - `src/i18n/messages.ts` ลงทะเบียน namespace `whats-new` (shell ใช้ทุกหน้า) · `src/test/server.ts` เพิ่ม handler เริ่มต้นของ `me/whats-new`, `me/spotlight`, `me/nps-prompt` (test เดิมที่ render shell ไม่ล้ม)
 
 **ตรวจแล้ว:** `src/features/whats-new/whats-new.test.tsx` 12 ข้อ · `src/features/nps/nps.test.tsx` 8 ข้อ (MSW) · `@friday/web` 580 ผ่าน · `pnpm typecheck` / `pnpm --filter @friday/web build` ผ่าน · ยังไม่ได้ตรวจด้วยตาที่ 1440 / 390 ในเบราว์เซอร์ และยังไม่ได้ build / deploy Docker (ผู้ประสานงานทำต่อ)
+
+**ตรวจบน Docker ในเครื่อง (13 พ.ย. 2569)** · web :3000 · API :3001 · ops :4000/:4001 build จาก main `b2d1059` + งานแก้ใน PR นี้ · ฐานข้อมูล `friday_canvas_qa` เดิม (ไม่ล้าง)
+- U1 / U2 / U3 ที่ 1440 px โหมดสว่างและมืด และ 390 px ตรงกับข้อเสนอ · Spotlight แสดงหลังโหลด 3 วินาที · เปิดแผงแล้วจุดหาย · NPS ครบ 3 ขั้น (มือถือเป็น Bottom sheet)
+- ขั้น 3 ของ NPS ไม่มีปุ่ม "ติดต่อทีม Support" เพราะผูกกับ `NEXT_PUBLIC_SUPPORT_EMAIL` ที่ image ไม่ได้ตั้ง → เปลี่ยนเป็นลิงก์ฟอร์มติดต่อในแอป (W26) พร้อมหัวข้อ "ความเห็นจากแบบสำรวจ NPS" แสดงเสมอตามหน้าจอ
+- Popover "มีอะไรใหม่" ยกขึ้นเหนือ Drawer (z-index 55) เพราะเปิดจากแผงช่วยเหลือได้แล้ว

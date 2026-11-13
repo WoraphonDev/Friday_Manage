@@ -22,7 +22,7 @@
 
 - [x] e2e test ด้วยข้อมูลสมมติ: กรองกลุ่มผู้เห็น · flag · Guest · เกณฑ์ถาม NPS ทุกข้อ · ปิดโดยไม่ตอบ · Spotlight ทีละรายการ
 - [x] `pnpm typecheck` / `pnpm --filter @friday/api test` ผ่าน
-- [ ] build และ deploy Docker API (`compose.api.yml`) ด้วยฐานข้อมูลเดิม แล้วเรียก endpoint จริงผ่าน :3001
+- [x] build และ deploy Docker API (`compose.api.yml`) ด้วยฐานข้อมูลเดิม แล้วเรียก endpoint จริงผ่าน :3001
 
 ## ยังต้องตัดสินใจ
 
@@ -55,3 +55,7 @@
 - ไม่ทำแบบสอบถามตอนยกเลิก (มีใน W22 / `cancellation-feedback`)
 
 **ตรวจแล้ว:** `apps/api/test/changelog.e2e.test.ts` 16 ข้อ (กรองกลุ่มผู้เห็น · flag / override · Guest / ระงับ · ยอดเห็น / คลิก · Spotlight ทีละรายการ / วันแรก · เกณฑ์ NPS ทุกข้อรวมมือถือใช้งานสั้น · ตอบ / ปิด / ตอบซ้ำ · RLS) · `@friday/api` 700 ผ่าน (7 ข้าม) บนฐาน `friday_s_changelog` · typecheck / build ผ่าน · ยังไม่ได้ build / deploy Docker (ผู้ประสานงานทำต่อ)
+
+**ตรวจบน Docker ในเครื่อง (13 พ.ย. 2569)** · web :3000 · API :3001 · ops :4000/:4001 build จาก main `b2d1059` + งานแก้ใน PR นี้ · ฐานข้อมูล `friday_canvas_qa` เดิม (ไม่ล้าง)
+- เผยแพร่รายการจาก :4000 (Spotlight) → `me/whats-new` `unseen: 1` และ `me/spotlight` คืนรายการ · ปิด Spotlight แล้วไม่แสดงซ้ำ
+- NPS: `me/nps-prompt` ตอบ `too_new` / `asked_today` / `short_mobile` ตามเกณฑ์ · เปิดเกณฑ์ชั่วคราวใน U5 แล้วตอบ 8 คะแนน + หัวข้อ + ความเห็นจากหน้าเว็บ → เห็นใน `ops/nps/responses` (คืนค่าตั้ง NPS เดิมแล้ว)

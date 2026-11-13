@@ -48,6 +48,7 @@
   "why": {
     "title": "Why invite your team",
     "body": "Friday Manage pays off when several people own the work: due-date requests · workload · notifications to the right people",
+    "guide": "Getting started guide",
     "sample": "View sample project",
     "sampleFailed": "Couldn't create the sample project. Please try again.",
     "stuck": "Stuck somewhere?",

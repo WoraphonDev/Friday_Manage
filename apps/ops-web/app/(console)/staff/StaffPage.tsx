@@ -61,7 +61,7 @@ function StaffTab() {
   }, [list.data]);
   const lastUsed = (s: StaffMember) => {
     const ts = s.keys.map((k) => k.lastUsedAt).filter(Boolean) as string[];
-    return ts.length ? format.relativeTime(new Date(ts.sort().pop()!)) : t("never");
+    return ts.length ? format.relativeTime(new Date(ts.sort().pop()!), new Date()) : t("never");
   };
   const managed = manage ? (list.data?.items.find((s) => s.id === manage.id) ?? manage) : null;
 

@@ -61,6 +61,10 @@ describe("แบบสำรวจ NPS (U3)", () => {
     await waitFor(() => expect(calls).toEqual([{ path: "nps", body: { workspace: "sample", score: 3, comment: "Gantt ช้ามากเมื่อโปรเจกต์มีงานเกิน 500 งาน", topics: ["speed"] } }]));
     expect(await within(card).findByText("ขอบคุณสำหรับความเห็น")).toBeInTheDocument();
     expect(within(card).getByText("ทีมอ่านทุกความเห็น ถ้าอยากให้ติดต่อกลับเรื่องนี้")).toBeInTheDocument();
+    // ปุ่มติดต่อไปฟอร์ม Support ในแอปพร้อมหัวข้อ (ไม่พึ่งอีเมลที่ตั้งตอน build)
+    const contact = within(card).getByRole("link", { name: "ติดต่อทีม Support" });
+    expect(new URL(contact.getAttribute("href")!, "http://x").pathname).toBe("/work/sample/help/contact");
+    expect(new URL(contact.getAttribute("href")!, "http://x").searchParams.get("subject")).toBe("ความเห็นจากแบบสำรวจ NPS");
     await userEvent.click(within(card).getByRole("button", { name: "ปิด" }));
     expect(onClose).toHaveBeenCalled();
     expect(calls).toHaveLength(1);

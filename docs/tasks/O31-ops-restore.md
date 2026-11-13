@@ -22,10 +22,10 @@
 
 ## เสร็จเมื่อ
 
-- [ ] หน้าตรงกับข้อเสนอที่อนุมัติแล้วที่ 1440 px · ที่ 390 px ใช้งานได้
+- [x] หน้าตรงกับข้อเสนอที่อนุมัติแล้วที่ 1440 px · ที่ 390 px ใช้งานได้
 - [x] ครบทุกสถานะตาม M1 · ซ่อนปุ่มตามบทบาท · Audit ทุกการกระทำ
 - [x] e2e test ของ ops-api (ข้อมูลสมมติ) + component test ด้วย MSW · typecheck / test / build ผ่าน
-- [ ] build และ deploy Docker ชุด ops (`compose.ops.yml`) ในเครื่องตาม CLAUDE.md แล้วกู้คืนจริงผ่าน http://localhost:4000 และเห็นผลในเว็บลูกค้า :3000
+- [x] build และ deploy Docker ชุด ops (`compose.ops.yml`) ในเครื่องตาม CLAUDE.md แล้วกู้คืนจริงผ่าน http://localhost:4000 และเห็นผลในเว็บลูกค้า :3000
 
 ## ยังต้องตัดสินใจ
 
@@ -69,3 +69,7 @@
 **คำขอนอก lane (ทำแล้ว):** ลงทะเบียน `RestoreModule` ใน `apps/ops-api/src/app.module.ts` · เมนู `restore` ใน `apps/ops-web/src/components/shell/nav.ts` เป็นลิงก์ `/restore` (Owner / Support / วิศวกร / ผู้ตรวจ) · namespace `rst` ใน `apps/ops-web/src/i18n/messages.ts` + `messages/th/restore.json` · ชื่อคำขออนุมัติ 2 ชนิดใน `messages/th/common.json › kinds` · ให้ D99 เพิ่มเรื่อง "ยืดเวลาก่อนลบถาวร ≤ 30 วัน" ในตารางวงเงินของ 06-ops-roles
 
 **ตรวจแล้ว:** `apps/ops-api/test/restore.e2e.test.ts` 10 ข้อ · `app/(console)/restore/restore.test.tsx` 8 ข้อ · ops-web 23 ไฟล์ 162 ข้อ · typecheck / build ของ ops-api และ ops-web ผ่าน · ยังไม่ได้เทียบภาพในเบราว์เซอร์ (หน้า Ops ต้องล็อกอินด้วย Security key) และยังไม่ได้ build / deploy Docker ชุด ops
+
+**ตรวจบน Docker ในเครื่อง (13 พ.ย. 2569)** · web :3000 · API :3001 · ops :4000/:4001 build จาก main `b2d1059` + งานแก้ใน PR นี้ · ฐานข้อมูล `friday_canvas_qa` เดิม (ไม่ล้าง)
+- ค้นข้อมูลที่ลบด้วย Workspace + Ticket #5 (Owner แจ้ง) → กู้ TRQA-1 ผ่าน Z6 → งานกลับมาในเว็บลูกค้า และ Ticket #5 ได้ข้อความ "กู้คืนงาน TRQA-1 ให้แล้ว" อัตโนมัติ
+- 1440 px ตรงกับบอร์ด 21 · แก้ 2 จุดให้ตรง: คอลัมน์ "ลบเมื่อ" ชิดซ้ายตามหัวคอลัมน์ และปุ่มค้นหาไม่ยืดเต็มช่อง · 390 px ตารางผลค้นหากว้างอย่างน้อย 720 px ให้เลื่อนแนวนอนแทนการบีบจนชื่อแตกทีละคำ

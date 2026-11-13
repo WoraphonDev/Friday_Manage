@@ -702,6 +702,9 @@ td {
 .drawer-wide {
   width: min(920px, 100vw);
 }
+.drawer-panel {
+  width: min(400px, 100vw);
+}
 .picker-compact {
   min-height: 28px;
   padding: 2px 4px;

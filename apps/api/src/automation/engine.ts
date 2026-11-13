@@ -343,7 +343,9 @@ export class AutomationEngine implements OnModuleInit {
       return;
     }
 
-    const started = new Date();
+    // เวลาเริ่มใช้นาฬิกาของฐานข้อมูล (ตัวเดียวกับ activities.created_at) · นาฬิกา API ที่เดินเร็วกว่าเล็กน้อย
+    // ทำให้กิจกรรมที่กฎเพิ่งทำหลุดเงื่อนไข และยังลงชื่อผู้สร้างกฎแทน Automation
+    const started = new Date((await this.sys.execute<{ now: string }>(sql`select now() as now`)).rows[0]!.now);
     const touched = new Set<string>([facts.id]);
     const steps: Record<string, unknown>[] = [];
     let result: RunResult = 'success';

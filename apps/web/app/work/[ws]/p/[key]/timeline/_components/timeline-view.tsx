@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEven
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronDown, ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Plus, Search } from "lucide-react";
 import { AvatarStack, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
@@ -31,6 +31,8 @@ export interface TimelineData {
   milestones: { id: string; name: string; date: string; moduleId: string | null }[];
   modules: (Summary & { id: string | null; name: string; color: string | null; groups: (Summary & { phase: { id: string } | null; name: string; tasks: TLRow[] })[] })[];
   unscheduled: { key: string; type: string; title: string; moduleId: string | null; parentKey: string | null; assignees?: Person[]; ba?: Person | null; sa?: Person | null }[];
+  /** วันทำงานประจำสัปดาห์ (ISO 1 = จ. … 7 = อา.) + วันหยุดของโปรเจกต์ · ไม่มีถือว่า จ.–ศ. */
+  calendar?: { workDays: number[]; holidays: string[] };
 }
 
 export type Zoom = "day" | "week" | "month";
@@ -38,8 +40,42 @@ export type Zoom = "day" | "week" | "month";
 // เท่ากับสเกลของ Gantt เพื่อให้สองหน้าดูเหมือนกัน
 export const PX_PER_DAY: Record<Zoom, number> = { day: 21, week: 8, month: 3 };
 const DAY = 86_400_000;
-const LABEL_W = 290;
+// ช่องชื่องานปรับกว้างได้ (ลากขอบ / ปุ่มขยาย) เพื่ออ่านชื่อ Task ยาว ๆ ได้เต็ม · จำค่าไว้ในเบราว์เซอร์นี้
+export const LABEL_W = 290;
+export const LABEL_MIN = 200;
+export const LABEL_MAX = 720;
+const LABEL_WIDE = 520;
+const LABEL_KEY = "friday.timeline.labelWidth";
+const clampLabel = (w: number) => Math.round(Math.min(LABEL_MAX, Math.max(LABEL_MIN, w)));
 // สีตามหมวด (Review ที่ยังอยู่หมวด In progress แยกด้วยชื่อ) · ชุดเดียวกับป้ายสถานะใน Table
+// แถบงานช่วงวันหยุดเหลือเส้นบางปลายมนตรงกลาง (บอกว่าช่วงนั้นไม่นับเป็นวันทำงาน)
+// ช่วงวันทำงานเป็นก้อนมุมโค้ง เส้นสอดเข้าใต้มุมโค้งจึงต่อกันนุ่ม ๆ ไม่เป็นขั้น · ความสูงแถบ 18 px
+const BAR_H = 18;
+const LINE_H = 4;
+const BAR_R = 5;
+/** mask ของแถบ (SVG): วันทำงานเต็มความสูง · วันหยุดเหลือเส้นบางสีจาง · ไม่มีวันหยุดในช่วง = undefined */
+export function offDayMask(start: string, end: string, px: number, isOff: (iso: string) => boolean) {
+  const days = toDay(end, start) + 1;
+  const segs: { off: boolean; from: number; to: number }[] = [];
+  for (let i = 0; i < days; i++) {
+    const off = isOff(addDays(start, i));
+    const last = segs[segs.length - 1];
+    if (last && last.off === off) last.to = (i + 1) * px;
+    else segs.push({ off, from: i * px, to: (i + 1) * px });
+  }
+  const offDays = segs.filter((g) => g.off).reduce((n, g) => n + (g.to - g.from) / px, 0);
+  if (!offDays) return { offDays: 0, mask: undefined };
+  const w = Math.max(px, days * px);
+  // วาดเส้นก่อน แล้วก้อนวันทำงานทับ: ส่วนที่เส้นโผล่ใต้มุมโค้งคือรอยต่อ
+  const lines = segs.filter((g) => g.off).map((g) => {
+    const x0 = Math.max(0, g.from - BAR_R);
+    const x1 = Math.min(w, g.to + BAR_R);
+    return `<rect x='${x0}' y='${(BAR_H - LINE_H) / 2}' width='${x1 - x0}' height='${LINE_H}' rx='${LINE_H / 2}' fill-opacity='.6'/>`;
+  });
+  const blocks = segs.filter((g) => !g.off).map((g) => `<rect x='${g.from}' width='${g.to - g.from}' height='${BAR_H}' rx='${Math.min(BAR_R, (g.to - g.from) / 2)}'/>`);
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${BAR_H}'>${lines.join("")}${blocks.join("")}</svg>`;
+  return { offDays, mask: `url("data:image/svg+xml,${encodeURIComponent(svg)}")` };
+}
 const statusColor = (s: { name: string; category: Cat }) => statusDotColor(s.category, s.name);
 // สีข้อมูลต้องเป็น hex เพราะนำไปต่อค่าความโปร่งใส (`${color}33`)
 const PALETTE = ["#5b3fc4", "#0f766e", "#b45309", "#1d4ed8", "#be185d", "#0369a1", "#4d7c0f", "#c2410c"];
@@ -106,6 +142,45 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   // ความกว้างที่มองเห็น: แกนเวลายาวอย่างน้อยเต็มจอ ไม่เหลือพื้นที่ว่างด้านขวา
   const [viewW, setViewW] = useState(0);
   const dragged = useRef<string | null>(null);
+  const [labelW, setLabelW] = useState(LABEL_W);
+  const [resizing, setResizing] = useState(false);
+  const labelLoaded = useRef(false);
+  // อ่านค่าหลัง mount เพื่อไม่ให้ HTML จาก SSR ต่างจากฝั่ง client
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem(LABEL_KEY));
+      if (saved) setLabelW(clampLabel(saved));
+    } catch { /* เบราว์เซอร์ปิด storage ใช้ค่าเริ่มต้น */ }
+    labelLoaded.current = true;
+  }, []);
+  useEffect(() => {
+    if (!labelLoaded.current || resizing) return;
+    try { localStorage.setItem(LABEL_KEY, String(labelW)); } catch { /* ไม่จำค่าได้ก็ใช้งานต่อได้ */ }
+  }, [labelW, resizing]);
+  const startResize = (e: ReactMouseEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const x0 = e.clientX;
+    const w0 = labelW;
+    setResizing(true);
+    const move = (ev: MouseEvent) => setLabelW(clampLabel(w0 + ev.clientX - x0));
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      setResizing(false);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+  const resizeKey = (e: KeyboardEvent) => {
+    const step = e.shiftKey ? 80 : 20;
+    const next = e.key === "ArrowLeft" ? labelW - step : e.key === "ArrowRight" ? labelW + step : e.key === "Home" ? LABEL_MIN : e.key === "End" ? LABEL_MAX : null;
+    if (next === null) return;
+    e.preventDefault();
+    setLabelW(clampLabel(next));
+  };
+  const wide = labelW > LABEL_W;
   const dragRef = useRef<Drag | null>(null);
   dragRef.current = drag;
 
@@ -124,9 +199,9 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
     const from = `${q.data.range.from.slice(0, 7)}-01`;
     const t = new Date(`${q.data.range.to.slice(0, 7)}-01T00:00:00Z`);
     t.setUTCMonth(t.getUTCMonth() + 1);
-    const days = Math.max(28, toDay(t.toISOString().slice(0, 10), from), Math.ceil((viewW - LABEL_W) / PX_PER_DAY[zoom]));
+    const days = Math.max(28, toDay(t.toISOString().slice(0, 10), from), Math.ceil((viewW - labelW) / PX_PER_DAY[zoom]));
     return { from, days };
-  }, [q.data, viewW, zoom]);
+  }, [q.data, viewW, zoom, labelW]);
   const hasData = !!q.data;
   useEffect(() => {
     const el = scrollRef.current;
@@ -217,7 +292,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const x = (iso: string) => toDay(iso, ax.from) * px;
   const toggle = (id: string) => setClosed((c) => { const n = new Set(c); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const scrollToToday = () => scrollRef.current?.scrollTo?.({ left: Math.max(0, x(d.today) - 200), behavior: "smooth" });
-  const scrollBy = (dir: number) => scrollRef.current?.scrollBy?.({ left: dir * (scrollRef.current.clientWidth - LABEL_W) * 0.8, behavior: "smooth" });
+  const scrollBy = (dir: number) => scrollRef.current?.scrollBy?.({ left: dir * (scrollRef.current.clientWidth - labelW) * 0.8, behavior: "smooth" });
 
   // หัวแกนแบบเดียวกับ Gantt: แถวบน = ช่วงสัปดาห์ (Day / Week) หรือเดือน (Month) · แถวล่าง = ทุกวันพร้อมตัวย่อวัน (Day)
   const short = (iso: string) => formatDate(iso, year).split(" ").slice(0, 2).join(" ");
@@ -244,7 +319,11 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
     const next = msSorted[i + 1];
     return next ? Math.max(24, x(next.date) - x(msSorted[i]!.date) - 8) : undefined;
   };
-  const weekends = zoom === "month" ? [] : Array.from({ length: ax.days }, (_, i) => i).filter((i) => [0, 6].includes(weekday(addDays(ax.from, i))));
+  // วันหยุด = ไม่ใช่วันทำงานของ Workspace หรืออยู่ในปฏิทินวันหยุด (ตรงกับ WorkCalendar ฝั่ง API)
+  const workDays = new Set(d.calendar?.workDays ?? [1, 2, 3, 4, 5]);
+  const holidays = new Set(d.calendar?.holidays ?? []);
+  const isOff = (iso: string) => !workDays.has(weekday(iso) || 7) || holidays.has(iso);
+  const weekends = zoom === "month" ? [] : Array.from({ length: ax.days }, (_, i) => i).filter((i) => isOff(addDays(ax.from, i)));
   const issueHref = (key: string) => `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?issue=${encodeURIComponent(key)}`;
   const newHref = `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?new=1&type=task`;
   const tasksOf = (moduleLineId: string) => modules.find((m) => `m:${m.id ?? "none"}` === moduleLineId)?.groups.reduce((n, g) => n + g.tasks.length, 0) ?? 0;
@@ -334,15 +413,35 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
       <section className={styles.card}>
         {empty ? <EmptyState title={t("empty")} description={t("emptyHint")} /> : filtering && !modules.length ? <EmptyState title={t("filters.noMatch")} description={t("filters.noMatchHint")} action={<Button size="small" onClick={() => setFilters(NO_FILTERS)}>{t("filters.clear")}</Button>} /> : (
           <div className={styles.scroll} ref={scrollRef} data-testid="timeline-scroll">
-            <div className={styles.grid} style={{ width: LABEL_W + width }}>
+            <div className={`${styles.grid} ${resizing ? styles.resizing : ""}`} style={{ width: labelW + width, ["--lab-w" as string]: `${labelW}px` }} data-resized={labelW !== LABEL_W || undefined} data-testid="timeline-grid">
               <div className={`${styles.row} ${styles.headRow}`}>
-                <div className={styles.lab}>{t("rowsLabel")}</div>
+                <div className={styles.lab}>
+                  <span className={styles.labText}>{t("rowsLabel")}</span>
+                  <button type="button" className={styles.widen} aria-label={t(wide ? "narrowLabels" : "widenLabels")} title={t(wide ? "narrowLabels" : "widenLabels")} onClick={() => setLabelW(wide ? LABEL_W : LABEL_WIDE)}>
+                    {wide ? <ChevronsLeft size={14} aria-hidden="true" /> : <ChevronsRight size={14} aria-hidden="true" />}
+                  </button>
+                  <span
+                    role="separator"
+                    tabIndex={0}
+                    aria-orientation="vertical"
+                    aria-label={t("resizeLabels")}
+                    aria-valuemin={LABEL_MIN}
+                    aria-valuemax={LABEL_MAX}
+                    aria-valuenow={labelW}
+                    title={t("resizeLabelsHint")}
+                    className={styles.resizer}
+                    data-testid="label-resizer"
+                    onMouseDown={startResize}
+                    onKeyDown={resizeKey}
+                    onDoubleClick={() => setLabelW(LABEL_W)}
+                  />
+                </div>
                 <div className={styles.lane} style={{ width }} data-testid="axis">
                   <div className={styles.axisUnits}>{units.map((u) => <span key={u.left} className={styles.unit} style={{ left: u.left, width: u.width }} title={u.title}>{u.label}</span>)}</div>
                   {zoom === "day" && (
                     <div className={styles.axisDays}>
                       {dayCells.map((day, i) => (
-                        <span key={day} className={`${styles.dy} ${[0, 6].includes(weekday(day)) ? styles.we : ""} ${day === d.today ? styles.now : ""}`} style={{ left: i * px, width: px }}>
+                        <span key={day} className={`${styles.dy} ${isOff(day) ? styles.we : ""} ${day === d.today ? styles.now : ""}`} style={{ left: i * px, width: px }}>
                           {weekdayName.format(new Date(`${day}T00:00:00Z`))}<b>{Number(day.slice(8))}</b>
                         </span>
                       ))}
@@ -389,6 +488,8 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                 const start = live ? (live.mode === "end" ? r.start : addDays(r.start, live.delta)) : r.start;
                 const end = live ? (live.mode === "start" ? r.end : addDays(r.end, live.delta)) : r.end;
                 const open = r.canOpen !== false;
+                // Month (3 px/วัน) ไม่ทำเส้นบาง: จะกลายเป็นรอยขาดทุกสัปดาห์จนอ่านแถบยาก
+                const thin = zoom === "month" ? { offDays: 0, mask: undefined } : offDayMask(start, end, px, isOff);
                 const names = guest ? "" : (r.assignees ?? []).map((a) => a.displayName).join(", ");
                 const onKey = (e: KeyboardEvent) => {
                   if (!canEdit || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
@@ -418,13 +519,14 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                         tabIndex={0}
                         data-testid={`bar-${r.key}`}
                         className={`${styles.b} ${canEdit ? styles.editable : ""} ${live ? styles.dragging : ""} ${r.lateDays ? styles.late : ""}`}
-                        style={{ left: x(start), width: Math.max(px, (toDay(end, start) + 1) * px), background: ln.color, opacity: ln.sub ? 0.8 : 1 }}
+                        style={{ left: x(start), width: Math.max(px, (toDay(end, start) + 1) * px), opacity: ln.sub ? 0.8 : 1 }}
+                        data-off-days={thin.offDays || undefined}
                         aria-label={`${t("bar", { key: r.key, title: r.title, start: formatDate(start, year), end: formatDate(end, year) })}${r.lateDays ? ` · ${t("late", { days: r.lateDays })}` : ""}${names ? ` · ${names}` : ""}`}
                         title={canEdit ? t("barHint") : undefined}
                         onMouseDown={startDrag("move")}
                         onKeyDown={onKey}
                       >
-                        <span className={styles.prog} style={{ width: `${r.progressPct}%` }} />
+                        <span className={styles.body} style={{ background: ln.color, maskImage: thin.mask, WebkitMaskImage: thin.mask }}><span className={styles.prog} style={{ width: `${r.progressPct}%` }} /></span>
                         {canEdit && <span className={`${styles.handle} ${styles.start}`} aria-label={t("resizeStart", { key: r.key })} data-testid={`start-${r.key}`} onMouseDown={startDrag("start")} />}
                         {canEdit && <span className={`${styles.handle} ${styles.end}`} aria-label={t("resizeEnd", { key: r.key })} data-testid={`end-${r.key}`} onMouseDown={startDrag("end")} />}
                       </span>

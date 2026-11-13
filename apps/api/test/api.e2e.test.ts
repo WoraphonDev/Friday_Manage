@@ -770,6 +770,9 @@ describe('Kanban (3) และ Timeline (4)', () => {
     expect(r.body.milestones).toEqual([expect.objectContaining({ name: 'Credit Line Go-live', date: '2027-01-26' })]);
     expect(r.body.sprints.length).toBeGreaterThan(5);
     expect(r.body.range).toEqual({ from: '2026-11-25', to: '2027-04-21' });
+    // ปฏิทินวันทำการให้หน้าเว็บทำแถบบางลงช่วงวันหยุด
+    expect(r.body.calendar.workDays).toEqual([1, 2, 3, 4, 5]);
+    expect(r.body.calendar.holidays).toEqual(expect.arrayContaining(['2026-12-07', '2026-12-10']));
 
     const late = await mick.get(`${ws}/projects/DP/timeline?from=2026-12-16`);
     const keys = late.body.modules.flatMap((m: { groups: { tasks: { key: string }[] }[] }) => m.groups.flatMap((g) => g.tasks.map((t) => t.key)));

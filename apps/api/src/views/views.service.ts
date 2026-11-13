@@ -7,7 +7,7 @@ import { AppError } from '../common/errors.js';
 import { loadPeople, type Person } from '../common/people.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
-import { addDays } from '../projects/calendar.js';
+import { addDays, WorkCalendar } from '../projects/calendar.js';
 import { dueOf, loadDueRule, qaDueOf, type DueRule } from '../projects/due-stage.js';
 import { canMoveIssue } from '../projects/permissions.js';
 import { ProjectsService } from '../projects/projects.service.js';
@@ -309,11 +309,16 @@ export class ViewsService {
           ...(guest ? {} : peopleOf(i)),
         }));
       const all = summarize(tasks);
+      const range = { from: q.from ?? all.start ?? project.startDate, to: q.to ?? maxDate(all.end, project.goliveDate) };
+      // หน้าเว็บทำแถบให้บางลงช่วงวันหยุด (ไม่นับเป็นวันทำงาน) · แกนเริ่มต้นเดือนและยาวเกินช่วงได้ตามจอ จึงเผื่อท้ายไว้
+      const axisFrom = `${range.from.slice(0, 7)}-01`;
+      const cal = await WorkCalendar.load(tx, project, axisFrom);
 
       return {
         project: { key: project.key, name: project.name, startDate: project.startDate, goliveDate: project.goliveDate, progressMethod: project.progressMethod },
         today: now,
-        range: { from: q.from ?? all.start ?? project.startDate, to: q.to ?? maxDate(all.end, project.goliveDate) },
+        range,
+        calendar: { workDays: cal.workDayList, holidays: cal.holidaysIn(axisFrom, addDays(range.to, 400)) },
         lastEnd: all.end,
         sprints: sprints.map((sp) => ({ id: sp.id, number: sp.number, name: sp.name, startDate: sp.startDate, endDate: sp.endDate, status: sp.status })),
         milestones: milestones

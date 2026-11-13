@@ -10,7 +10,8 @@ import {
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { ApiError, supportId } from "@/lib/api";
-import { Button, Skeleton } from "./primitives";
+import { FridayLoader } from "@/components/brand/friday-logo";
+import { Button } from "./primitives";
 
 function State({
   icon,
@@ -121,14 +122,15 @@ export function NotFound() {
     />
   );
 }
+/**
+ * ทุกหน้า/ส่วนที่รอข้อมูลใช้ตัวนี้ · ไทล์ logo อยู่กลางพื้นที่ ไม่มีข้อความ (ผู้ใช้ไม่เอา) แต่ยังมี aria-label ให้โปรแกรมอ่านหน้าจอ
+ * โผล่หลังรอ 0.2 วิ เพื่อไม่ให้กระพริบเมื่อโหลดเร็ว
+ */
 export function LoadingState() {
   const t = useTranslations("common.app");
   return (
-    <div className="loading-state" aria-label={t("loading")} aria-busy="true">
-      <Skeleton className="skeleton-heading" />
-      <Skeleton />
-      <Skeleton />
-      <Skeleton />
+    <div className="loading-state" role="status" aria-label={t("loading")} aria-busy="true">
+      <FridayLoader />
     </div>
   );
 }

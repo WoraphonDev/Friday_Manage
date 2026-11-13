@@ -213,7 +213,8 @@ describe("สถานะ", () => {
     const done = ownerData({ doneCount: 6, next: null, completed: true, steps: ownerData().steps.map((s) => ({ ...s, done: true, doneAt: ago(0) })) });
     const state = serve(done);
     mount();
-    const green = await screen.findByRole("status");
+    // หาจากข้อความ เพราะระหว่างโหลด ตัวโหลดก็เป็น role="status" เหมือนกัน
+    const green = (await screen.findByText(/ทีมพร้อมแล้ว/)).closest<HTMLElement>('[role="status"]')!;
     expect(green).toHaveTextContent("ทีมพร้อมแล้ว ครบทั้ง 6 ขั้น");
     expect(within(green).getByRole("link", { name: "เปิด Gantt" })).toHaveAttribute("href", "/work/sample/p/DE/gantt");
     await waitFor(() => expect(state.posts.map((p) => p.path)).toEqual(["onboarding:complete-seen"]));

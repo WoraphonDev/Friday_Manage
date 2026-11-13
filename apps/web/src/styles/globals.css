@@ -931,10 +931,25 @@ td {
   height: 26px;
   width: 35%;
 }
+/* ตัวโหลดอยู่กลางพื้นที่เนื้อหาเกือบเต็มจอ · ใน Dialog ย่อให้เล็กลงเพื่อไม่ให้ Dialog สูงเกินเนื้อหาจริง */
 .loading-state {
+  min-height: min(60vh, 520px);
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  animation: fade-in 0.25s ease-out 0.2s both;
+}
+.dialog .loading-state {
+  min-height: 160px;
   padding: 24px;
-  display: grid;
-  gap: 18px;
+  gap: 10px;
+}
+.dialog .loading-state svg {
+  width: 40px;
+  height: 40px;
 }
 .state {
   min-height: 260px;

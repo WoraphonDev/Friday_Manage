@@ -89,7 +89,7 @@ export const npsSettings = pgTable('nps_settings', {
   firstAfterDays: smallint().notNull().default(30), repeatDays: smallint().notNull().default(90), samplePct: smallint().notNull().default(50),
   excludeTrialDays: smallint().default(14), excludeTicketDays: smallint().default(7),
   excludeSpotlightDay: boolean().notNull().default(true), excludeShortMobile: boolean().notNull().default(true),
-  question: text().notNull().default('คุณจะแนะนำ Friday Manage ให้เพื่อนหรือเพื่อนร่วมงานไหม'), questionEn: text(),
+  question: text().notNull().default('คุณจะแนะนำ Friday Work Management ให้เพื่อนหรือเพื่อนร่วมงานไหม'), questionEn: text(),
   followUps: jsonb().notNull().default(sql`'{"detractor":"อะไรที่เราควรปรับให้ดีขึ้นที่สุด","passive":"อะไรที่จะทำให้ให้ 10 คะแนน","promoter":"ชอบอะไรที่สุด"}'::jsonb`),
   followUpsEn: jsonb(),
   topics: text().array().notNull().default(sql`'{speed,usability,missing_feature,price,mobile}'`),

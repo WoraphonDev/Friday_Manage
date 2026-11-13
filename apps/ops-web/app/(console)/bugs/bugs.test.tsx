@@ -74,7 +74,7 @@ function bridge(extra: { settings?: Settings } = {}) {
       rec("POST", `resolve/${params.id}`, body);
       return HttpResponse.json(body.action === "link_fixed" ? { moved: 1, linkId: "x", issueKey: "FM-466" } : body.action === "return" ? { returned: 1 } : { notified: 1, emailed: 1 });
     }),
-    http.post(`${OPS}/dev-bridge/settings/test`, () => (rec("POST", "test", null), HttpResponse.json({ ok: false, checks: [{ key: "token", ok: true, message: "บัญชีบอท: support-bot" }, { key: "project", ok: true, message: "FM · Friday Manage" }, { key: "released", ok: false, message: 'ยังไม่มีสถานะ "Released" ใน workflow' }] }))),
+    http.post(`${OPS}/dev-bridge/settings/test`, () => (rec("POST", "test", null), HttpResponse.json({ ok: false, checks: [{ key: "token", ok: true, message: "บัญชีบอท: support-bot" }, { key: "project", ok: true, message: "FM · Friday Work Management" }, { key: "released", ok: false, message: 'ยังไม่มีสถานะ "Released" ใน workflow' }] }))),
   );
   return calls;
 }
@@ -178,7 +178,7 @@ describe("หน้า 20 · ส่งบั๊กให้ทีมพัฒน
     vi.mocked(startAuthentication).mockResolvedValue({ id: "cred" } as never);
     page();
     await userEvent.click(await screen.findByRole("button", { name: "ตั้งค่าการเชื่อมต่อ" }));
-    const dlg = await screen.findByRole("dialog", { name: "ตั้งค่าการเชื่อมต่อกับ Friday Manage" });
+    const dlg = await screen.findByRole("dialog", { name: "ตั้งค่าการเชื่อมต่อกับ Friday Work Management" });
     await userEvent.click(within(dlg).getByRole("button", { name: "ทดสอบการเชื่อมต่อ" }));
     expect(await within(dlg).findByText("ทดสอบแล้ว: มีข้อที่ไม่ผ่าน")).toBeInTheDocument();
     expect(within(dlg).getByText(/ยังไม่มีสถานะ "Released"/)).toBeInTheDocument();
@@ -210,7 +210,7 @@ describe("หน้า 20 · ส่งบั๊กให้ทีมพัฒน
     bridge({ settings: { ...settings, canEdit: false } });
     page();
     await userEvent.click(await screen.findByRole("button", { name: "ตั้งค่าการเชื่อมต่อ" }));
-    const dlg = await screen.findByRole("dialog", { name: "ตั้งค่าการเชื่อมต่อกับ Friday Manage" });
+    const dlg = await screen.findByRole("dialog", { name: "ตั้งค่าการเชื่อมต่อกับ Friday Work Management" });
     expect(within(dlg).getByText("ดูได้อย่างเดียว · Owner และวิศวกรแก้การเชื่อมต่อได้")).toBeInTheDocument();
     expect(within(dlg).queryByRole("button", { name: "บันทึก" })).not.toBeInTheDocument();
   });
@@ -339,7 +339,7 @@ describe("Support · ส่งต่อทีมพัฒนา (T3 · T7 · T8)
     expect(within(card).getByText("รอแจ้ง")).toBeInTheDocument();
     expect(within(card).getByText("แจ้งแล้ว")).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "แจ้งลูกค้าว่าแก้แล้ว (T9)" })).toBeInTheDocument();
-    expect(within(card).getByRole("link", { name: "เปิดใน Friday Manage ↗" })).toHaveAttribute("href", linkDetail.url);
+    expect(within(card).getByRole("link", { name: "เปิดใน Friday Work Management ↗" })).toHaveAttribute("href", linkDetail.url);
 
     await userEvent.click(within(card).getByRole("button", { name: "เปลี่ยนงาน" }));
     const pick = await screen.findByRole("dialog", { name: "เปลี่ยนงานที่ผูก" });

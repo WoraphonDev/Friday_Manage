@@ -256,7 +256,7 @@ describe('2FA (J1 ขั้นที่ 2 และ Profile)', () => {
     expect(s.status).toBe(200);
     secret = s.body.secret;
     expect(s.body.otpauthUrl).toContain(`secret=${secret}`);
-    expect(s.body.otpauthUrl).toContain('Friday%20Manage');
+    expect(s.body.otpauthUrl).toContain('Friday%20Work%20Management');
     const row = (await t.owner.query('SELECT secret_enc FROM mfa_factors WHERE user_id = $1', [leadId])).rows[0];
     expect(row.secret_enc).not.toContain(secret);
 

@@ -161,7 +161,7 @@ export class LineService {
     if (!config) throw new AppError(409, 'line_not_configured', 'Workspace นี้ยังไม่ได้ตั้งค่า LINE OA');
     if (!binding) throw new AppError(409, 'line_not_linked', 'ยังไม่ได้ผูกบัญชี LINE');
     try {
-      await this.api.push(openSecret(config.accessTokenEncrypted), binding.lineUserId, [{ type: 'text', text: 'ทดสอบการแจ้งเตือนจาก Friday Manage ✅' }]);
+      await this.api.push(openSecret(config.accessTokenEncrypted), binding.lineUserId, [{ type: 'text', text: 'ทดสอบการแจ้งเตือนจาก Friday Work Management ✅' }]);
     } catch (err) {
       throw new AppError(502, 'line_push_failed', 'ส่งข้อความไป LINE ไม่สำเร็จ', { reason: (err as Error).message.slice(0, 200) });
     }
@@ -217,7 +217,7 @@ export class LineService {
       return;
     }
     if (ev.type === 'follow') {
-      await this.reply(token, ev, 'ยินดีต้อนรับสู่ Friday Manage 👋\nไปที่ Profile › การแจ้งเตือน เพื่อรับรหัส 6 หลัก แล้วพิมพ์ส่งในแชตนี้เพื่อผูกบัญชี');
+      await this.reply(token, ev, 'ยินดีต้อนรับสู่ Friday Work Management 👋\nไปที่ Profile › การแจ้งเตือน เพื่อรับรหัส 6 หลัก แล้วพิมพ์ส่งในแชตนี้เพื่อผูกบัญชี');
       return;
     }
     if (ev.type === 'message' && ev.message?.type === 'text' && src.type === 'user' && src.userId) {
@@ -242,7 +242,7 @@ export class LineService {
     }
     const [mine] = await this.system.select().from(s.lineBindings).where(eq(s.lineBindings.userId, row.userId));
     const [taken] = await this.system.select().from(s.lineBindings).where(eq(s.lineBindings.lineUserId, lineUserId));
-    if (mine || taken) return this.reply(token, ev, mine ? 'บัญชี Friday Manage นี้ผูก LINE ไว้แล้ว · ยกเลิกการผูกที่ Profile ก่อนจึงจะผูกใหม่ได้' : 'บัญชี LINE นี้ผูกกับผู้ใช้อื่นอยู่แล้ว');
+    if (mine || taken) return this.reply(token, ev, mine ? 'บัญชี Friday Work Management นี้ผูก LINE ไว้แล้ว · ยกเลิกการผูกที่ Profile ก่อนจึงจะผูกใหม่ได้' : 'บัญชี LINE นี้ผูกกับผู้ใช้อื่นอยู่แล้ว');
     const name = (await this.api.profile(token, lineUserId).catch(() => null))?.displayName ?? null;
     await this.system.transaction(async (tx) => {
       await tx.insert(s.lineBindings).values({ userId: row.userId, lineUserId, lineDisplayName: name });
@@ -265,7 +265,7 @@ export class LineService {
     const [binding] = await this.system.select().from(s.lineBindings).where(eq(s.lineBindings.lineUserId, lineUserId));
     if (!binding) {
       await audit(null, 'ปฏิเสธ: บัญชี LINE ยังไม่ได้ผูก');
-      return this.reply(token, ev, 'บัญชี LINE นี้ยังไม่ได้ผูกกับ Friday Manage จึงอนุมัติไม่ได้');
+      return this.reply(token, ev, 'บัญชี LINE นี้ยังไม่ได้ผูกกับ Friday Work Management จึงอนุมัติไม่ได้');
     }
     const [m] = await this.system
       .select({ slug: s.workspaces.slug, role: s.workspaceMembers.role })

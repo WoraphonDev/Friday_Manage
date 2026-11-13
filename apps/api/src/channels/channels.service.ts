@@ -188,7 +188,7 @@ export class ChannelsService {
     const via = await this.email.resolve(tenant.workspaceId);
     if (!via) throw new AppError(409, 'email_not_configured', 'ยังไม่ได้ตั้งค่าการส่งอีเมล');
     try {
-      await this.mailer.send({ to, subject: '[Friday] อีเมลทดสอบ', text: 'นี่คืออีเมลทดสอบจาก Friday Manage · ถ้าคุณอ่านข้อความนี้ได้ แสดงว่าการตั้งค่าอีเมลใช้งานได้', from: via.from, replyTo: via.replyTo }, via.smtp);
+      await this.mailer.send({ to, subject: '[Friday] อีเมลทดสอบ', text: 'นี่คืออีเมลทดสอบจาก Friday Work Management · ถ้าคุณอ่านข้อความนี้ได้ แสดงว่าการตั้งค่าอีเมลใช้งานได้', from: via.from, replyTo: via.replyTo }, via.smtp);
     } catch (err) {
       throw new AppError(502, 'email_send_failed', 'ส่งอีเมลทดสอบไม่สำเร็จ', { reason: (err as Error).message.slice(0, 300) });
     }

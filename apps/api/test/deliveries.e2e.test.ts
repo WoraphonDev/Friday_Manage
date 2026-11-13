@@ -10,7 +10,7 @@ import { Notifier } from '../src/notifications/notifier.js';
 import { seedTeam, startApp, type TestApp } from './helpers.js';
 
 process.env.SMTP_HOST = 'smtp.test.example.com';
-process.env.MAIL_FROM = 'Friday Manage <notify@friday.test>';
+process.env.MAIL_FROM = 'Friday Work Management <notify@friday.test>';
 process.env.WEBHOOK_ALLOW_PRIVATE = '1';
 
 let t: TestApp;
@@ -85,7 +85,7 @@ describe('ประวัติการส่ง', () => {
     const [d] = await deliveries(`WHERE channel = 'webhook'`);
     expect(d).toMatchObject({ status: 'failed', attempts: 4, target_label: 'Discord dev-alerts', response: { status: 404, body: '{"message": "Unknown Webhook", "code": 10015}' } });
     expect(d.content.request.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/api\/webhooks\/••••\/••••$/);
-    expect(d.content.request.body).toContain('Friday Manage');
+    expect(d.content.request.body).toContain('Friday Work Management');
     expect(d.log.map((e: { kind: string; final?: boolean }) => `${e.kind}${e.final ? '!' : ''}`)).toEqual(['attempt_failed', 'attempt_failed', 'attempt_failed', 'attempt_failed!', 'paused']);
   });
 

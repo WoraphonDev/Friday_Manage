@@ -256,7 +256,7 @@ describe('คำเชิญ · ส่งซ้ำ, Seat, Event', () => {
       expect(mails).toHaveLength(1);
       const [m] = mails;
       expect(m).toMatchObject({ to: 'mail@invite.example.com', replyTo: `lead@${team.slug}.example.com` });
-      expect(m.subject).toBe('Mick เชิญคุณเข้าร่วม ทีมสมมติ บน Friday Manage');
+      expect(m.subject).toBe('Mick เชิญคุณเข้าร่วม ทีมสมมติ บน Friday Work Management');
       expect(m.text).toContain(byEmail['mail@invite.example.com'].inviteUrl);
       expect(m.text).toContain('มาช่วยกันนะ');
       expect(m.text).toContain(`โปรเจกต์: ${team.project.name}`);
@@ -267,7 +267,7 @@ describe('คำเชิญ · ส่งซ้ำ, Seat, Event', () => {
       const re = await team.lead.post(`${team.ws}/invitations/${byEmail['mail@invite.example.com'].invitationId}/resend`);
       expect(re.body).toMatchObject({ emailSent: true });
       expect(mails).toHaveLength(2);
-      expect(mails[1].subject).toBe('Mick invited you to <b>Acme</b> on Friday Manage');
+      expect(mails[1].subject).toBe('Mick invited you to <b>Acme</b> on Friday Work Management');
       expect(mails[1].text).toContain(re.body.inviteUrl);
       expect(mails[1].html).toContain('&lt;b&gt;Acme&lt;/b&gt;');
       expect(mails[1].html).not.toContain('<b>Acme</b>');

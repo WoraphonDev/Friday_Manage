@@ -65,7 +65,7 @@ export function renderWebhook(format: WebhookFormat, m: Msg, workspace: string, 
   switch (format) {
     case 'discord':
       return {
-        username: 'Friday Manage',
+        username: 'Friday Work Management',
         embeds: [
           {
             title: m.head,

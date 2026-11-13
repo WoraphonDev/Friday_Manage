@@ -1,7 +1,7 @@
 {
   "title": "Help center",
   "home": {
-    "subtitle": "Friday Manage guides, searchable in Thai and English",
+    "subtitle": "Friday Work Management guides, searchable in Thai and English",
     "searchLabel": "Search the help center",
     "searchPlaceholder": "Search how-tos, e.g. Excel import, due date request, invite members",
     "frequent": "Popular searches:",
@@ -209,8 +209,8 @@
     "closed": "Closed"
   },
   "public": {
-    "title": "Friday Manage help center",
-    "description": "Friday Manage guides: Gantt planning, Kanban, Excel import, LINE notifications and member management",
+    "title": "Friday Work Management help center",
+    "description": "Friday Work Management guides: Gantt planning, Kanban, Excel import, LINE notifications and member management",
     "login": "Sign in to contact support",
     "contactHint": "Signed-in customers can contact support from inside the app"
   }

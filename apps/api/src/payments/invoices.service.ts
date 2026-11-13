@@ -141,7 +141,7 @@ export class InvoicesService {
   }
 
   private doc(i: typeof s.invoices.$inferSelect, profile: typeof s.billingProfiles.$inferSelect | undefined, meta: CheckoutMeta | null, p: typeof s.payments.$inferSelect | undefined, tax: boolean, number: string): BillDoc {
-    const planName = meta ? (PLAN_NAMES[meta.plan] ?? meta.plan) : 'Friday Manage';
+    const planName = meta ? (PLAN_NAMES[meta.plan] ?? meta.plan) : 'Friday Work Management';
     const cycle = meta?.cycle === 'yearly' ? 'รายปี' : 'รายเดือน';
     return {
       title: tax ? 'ใบเสร็จรับเงิน / ใบกำกับภาษี' : 'ใบแจ้งหนี้',
@@ -158,7 +158,7 @@ export class InvoicesService {
       },
       // มีคูปอง (O20): แสดงราคาแพ็กเกจเต็มแล้วหักส่วนลดเป็นอีกบรรทัด · ยอดก่อนภาษี = หลังหักส่วนลด
       lines: [
-        { description: `ค่าบริการ Friday Manage แพ็กเกจ ${planName} (${cycle})\nรอบวันที่ ${thaiDate(i.periodStart, true)} – ${thaiDate(i.periodEnd, true)}`, amount: i.subtotal + i.discount },
+        { description: `ค่าบริการ Friday Work Management แพ็กเกจ ${planName} (${cycle})\nรอบวันที่ ${thaiDate(i.periodStart, true)} – ${thaiDate(i.periodEnd, true)}`, amount: i.subtotal + i.discount },
         ...(i.discount > 0 ? [{ description: `ส่วนลด${meta?.coupon ? ` (โค้ด ${meta.coupon})` : ''} / Discount`, amount: -i.discount }] : []),
       ],
       subtotal: i.subtotal,

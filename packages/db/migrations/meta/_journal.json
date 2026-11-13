@@ -253,6 +253,13 @@
       "when": 1794510501821,
       "tag": "0035_multi_qa_positions",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794600955148,
+      "tag": "0036_brand_name",
+      "breakpoints": true
     }
   ]
 }

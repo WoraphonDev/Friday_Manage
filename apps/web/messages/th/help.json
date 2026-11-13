@@ -1,7 +1,7 @@
 {
   "title": "ศูนย์ช่วยเหลือ",
   "home": {
-    "subtitle": "คู่มือการใช้ Friday Manage ค้นได้ทั้งภาษาไทยและอังกฤษ",
+    "subtitle": "คู่มือการใช้ Friday Work Management ค้นได้ทั้งภาษาไทยและอังกฤษ",
     "searchLabel": "ค้นหาในศูนย์ช่วยเหลือ",
     "searchPlaceholder": "ค้นหาวิธีใช้ เช่น นำเข้า Excel, ขอเลื่อน Due, เชิญสมาชิก",
     "frequent": "ค้นบ่อย:",
@@ -209,8 +209,8 @@
     "closed": "ปิดแล้ว"
   },
   "public": {
-    "title": "ศูนย์ช่วยเหลือ Friday Manage",
-    "description": "คู่มือการใช้ Friday Manage: วางแผนงาน Gantt, Kanban, นำเข้า Excel, แจ้งเตือน LINE และการจัดการสมาชิก",
+    "title": "ศูนย์ช่วยเหลือ Friday Work Management",
+    "description": "คู่มือการใช้ Friday Work Management: วางแผนงาน Gantt, Kanban, นำเข้า Excel, แจ้งเตือน LINE และการจัดการสมาชิก",
     "login": "เข้าสู่ระบบเพื่อติดต่อทีม Support",
     "contactHint": "ลูกค้าที่เข้าสู่ระบบแล้วส่งเรื่องถึงทีม Support ได้จากในแอป"
   }

@@ -203,7 +203,7 @@
     }
   },
   "line": {
-    "title": "ผูกบัญชี LINE กับ Friday Manage",
+    "title": "ผูกบัญชี LINE กับ Friday Work Management",
     "oneAccount": "ใช้ครั้งเดียว · ผูกได้ 1 บัญชีต่อผู้ใช้",
     "step1": "เพิ่มเพื่อน LINE OA",
     "step1Hint": "ค้นหา LINE OA ของ Workspace ในแอป LINE (ขอ LINE ID จาก Admin)",

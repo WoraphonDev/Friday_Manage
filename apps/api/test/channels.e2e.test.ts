@@ -14,7 +14,7 @@ import { Reminders } from '../src/notifications/reminders.js';
 import { addMember, client, type Client, seedTeam, signup, startApp, type TestApp } from './helpers.js';
 
 process.env.SMTP_HOST = 'smtp.test.example.com';
-process.env.MAIL_FROM = 'Friday Manage <notify@friday.test>';
+process.env.MAIL_FROM = 'Friday Work Management <notify@friday.test>';
 // Webhook ปลายทางเป็น 127.0.0.1 ในเครื่อง (ปกติถูกกัน SSRF)
 process.env.WEBHOOK_ALLOW_PRIVATE = '1';
 
@@ -110,7 +110,7 @@ describe('ท่อส่ง Email ตาม pref', () => {
   it('เหตุการณ์ที่เปิด Email เป็นค่าเริ่มต้น → ส่งให้ผู้รับพร้อมบันทึก delivery', async () => {
     await notify('issue.assigned', [team.devId]);
     expect(mails).toHaveLength(1);
-    expect(mails[0]).toMatchObject({ to: `dev@${team.slug}.example.com`, from: 'Friday Manage <notify@friday.test>' });
+    expect(mails[0]).toMatchObject({ to: `dev@${team.slug}.example.com`, from: 'Friday Work Management <notify@friday.test>' });
     expect(mails[0].subject).toBe('[Friday] Mick มอบหมายงานให้คุณ: DP-1 งานทดสอบ');
     expect(mails[0].text).toContain(`/work/${team.slug}/p/DP/table?issue=DP-1`);
     expect(mails[0].text).toContain('คุณเป็น Assignee ของงานนี้');

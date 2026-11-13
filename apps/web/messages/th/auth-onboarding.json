@@ -1,6 +1,6 @@
 {
   "brand": {
-    "name": "Friday Manage",
+    "name": "Friday Work Management",
     "loginTitle": "จัดการงานพัฒนาระบบ ตั้งแต่ Module จนถึง Commit",
     "loginPoints": {
       "views": "Table, Kanban, Timeline, Gantt ในข้อมูลชุดเดียวกัน",
@@ -14,7 +14,7 @@
       "project": "สร้างโปรเจกต์แรก หรือใช้โปรเจกต์ตัวอย่าง"
     },
     "noCard": "ไม่ต้องใช้บัตรเครดิต",
-    "copyright": "© 2026 Friday Manage",
+    "copyright": "© 2026 Friday Work Management",
     "privacy": "นโยบายความเป็นส่วนตัว",
     "terms": "ข้อกำหนดการใช้งาน"
   },
@@ -270,7 +270,7 @@
       }
     },
     "inviteTitle": "เชิญทีมของคุณ",
-    "inviteSubtitle": "ทำงานคนเดียวก็ได้ แต่ Friday Manage ทำงานได้ดีที่สุดเมื่อมีทีม",
+    "inviteSubtitle": "ทำงานคนเดียวก็ได้ แต่ Friday Work Management ทำงานได้ดีที่สุดเมื่อมีทีม",
     "memberEmail": "อีเมลสมาชิกคนที่ {n}",
     "memberRole": "Role ของสมาชิกคนที่ {n}",
     "emailPlaceholder": "name@example.com",

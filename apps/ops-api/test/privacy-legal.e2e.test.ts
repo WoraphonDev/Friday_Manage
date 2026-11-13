@@ -185,7 +185,7 @@ describe('เหตุละเมิดข้อมูล (A4) · 72 ชม.', 
 
 describe('เอกสารกฎหมาย (A7)', () => {
   let v2 = '';
-  const body = 'ข้อกำหนดการใช้งาน Friday Manage (ตัวอย่าง) '.repeat(5);
+  const body = 'ข้อกำหนดการใช้งาน Friday Work Management (ตัวอย่าง) '.repeat(5);
 
   it('สร้างเวอร์ชัน: Owner เท่านั้น แตะ key ซ้ำ · เปลี่ยนสาระสำคัญต้องแจ้งล่วงหน้า 30 วัน · เวอร์ชันต้องใหม่กว่า', async () => {
     const fresh = await staff(t, 'owner-legal@friday.example.com', 'Lee Legal', ['owner']);

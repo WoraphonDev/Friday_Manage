@@ -11,8 +11,8 @@ import { type NpsAsk, NpsPrompt } from "./NpsPrompt";
 
 const prompt: NpsAsk = {
   ask: true,
-  question: "คุณจะแนะนำ Friday Manage ให้เพื่อนหรือเพื่อนร่วมงานไหม",
-  questionEn: "How likely are you to recommend Friday Manage to a friend or colleague?",
+  question: "คุณจะแนะนำ Friday Work Management ให้เพื่อนหรือเพื่อนร่วมงานไหม",
+  questionEn: "How likely are you to recommend Friday Work Management to a friend or colleague?",
   followUps: { detractor: "อะไรที่เราควรปรับให้ดีขึ้นที่สุด", passive: "อะไรที่จะทำให้ให้ 10 คะแนน", promoter: "ชอบอะไรที่สุด" },
   followUpsEn: null,
   topics: ["speed", "usability", "missing_feature", "price", "mobile"],

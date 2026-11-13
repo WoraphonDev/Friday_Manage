@@ -132,7 +132,7 @@ export class StripeGateway implements PaymentGateway {
     const body = new URLSearchParams({
       amount: String(r.amount),
       currency: 'thb',
-      description: `Friday Manage ${r.invoiceNumber}`,
+      description: `Friday Work Management ${r.invoiceNumber}`,
       'metadata[invoice_id]': r.invoiceId,
       'metadata[invoice_number]': r.invoiceNumber,
       ...(r.email ? { receipt_email: r.email } : {}),

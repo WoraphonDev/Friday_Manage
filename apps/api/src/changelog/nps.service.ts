@@ -26,7 +26,7 @@ export const NPS_DEFAULTS: NpsSettings = {
   excludeTicketDays: 7,
   excludeSpotlightDay: true,
   excludeShortMobile: true,
-  question: 'คุณจะแนะนำ Friday Manage ให้เพื่อนหรือเพื่อนร่วมงานไหม',
+  question: 'คุณจะแนะนำ Friday Work Management ให้เพื่อนหรือเพื่อนร่วมงานไหม',
   questionEn: null,
   followUps: { detractor: 'อะไรที่เราควรปรับให้ดีขึ้นที่สุด', passive: 'อะไรที่จะทำให้ให้ 10 คะแนน', promoter: 'ชอบอะไรที่สุด' },
   followUpsEn: null,

@@ -138,8 +138,8 @@ export class MeSecurityController {
       return rows.length;
     });
     await this.security.audit(auth.userId, 'secu.password_changed', `${user.passwordHash ? 'เปลี่ยน' : 'ตั้ง'}รหัสผ่าน${input.logoutOthers ? ` · ออกจากระบบอุปกรณ์อื่น ${loggedOut} เครื่อง` : ''}`, req);
-    await this.account.mail(user.email, 'รหัสผ่านของคุณถูกเปลี่ยน · Friday Manage', [
-      'รหัสผ่านของบัญชี Friday Manage ถูกเปลี่ยนเรียบร้อย',
+    await this.account.mail(user.email, 'รหัสผ่านของคุณถูกเปลี่ยน · Friday Work Management', [
+      'รหัสผ่านของบัญชี Friday Work Management ถูกเปลี่ยนเรียบร้อย',
       'ถ้าไม่ได้ทำเอง ให้ติดต่อ Admin ของ Workspace ทันที',
     ]);
     return { ok: true, loggedOutSessions: loggedOut };
@@ -160,7 +160,7 @@ export class MeSecurityController {
     if (wait > 0) throw new AppError(429, 'resend_too_soon', `ส่งใหม่ได้ใน ${wait} วินาที`, { retryAfter: wait });
 
     const { token, code } = await this.tokens.issue(auth.userId, 'change_email', authTimes.changeEmailMinutes, newEmail);
-    await this.account.mail(newEmail, `รหัสยืนยันอีเมลใหม่ ${code} · Friday Manage`, [
+    await this.account.mail(newEmail, `รหัสยืนยันอีเมลใหม่ ${code} · Friday Work Management`, [
       `รหัสยืนยันอีเมลใหม่ของคุณคือ ${code}`,
       `หรือกดลิงก์นี้: ${this.account.link('/signup', token!)}`,
       'ถ้าไม่ได้ขอเปลี่ยนอีเมล ไม่ต้องทำอะไร',

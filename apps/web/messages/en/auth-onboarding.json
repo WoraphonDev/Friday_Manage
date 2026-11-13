@@ -1,6 +1,6 @@
 {
   "brand": {
-    "name": "Friday Manage",
+    "name": "Friday Work Management",
     "loginTitle": "Manage software development from Module to Commit",
     "loginPoints": {
       "views": "Table, Kanban, Timeline and Gantt on the same data",
@@ -14,7 +14,7 @@
       "project": "Create your first project or use a sample project"
     },
     "noCard": "No credit card required",
-    "copyright": "© 2026 Friday Manage",
+    "copyright": "© 2026 Friday Work Management",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service"
   },
@@ -270,7 +270,7 @@
       }
     },
     "inviteTitle": "Invite your team",
-    "inviteSubtitle": "You can work alone, but Friday Manage works best with a team",
+    "inviteSubtitle": "You can work alone, but Friday Work Management works best with a team",
     "memberEmail": "Email of member {n}",
     "memberRole": "Role of member {n}",
     "emailPlaceholder": "name@example.com",

@@ -38,7 +38,7 @@ export function FridayLogo({
   size = "md",
   tone = "light",
   tagline = true,
-  label = "Friday Manage",
+  label = "Friday Work Management",
   className,
 }: {
   size?: "sm" | "md" | "lg";

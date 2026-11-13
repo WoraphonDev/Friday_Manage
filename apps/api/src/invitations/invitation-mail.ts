@@ -15,7 +15,7 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 const T = {
   th: {
-    subject: (m: InvitationMail) => `${m.inviterName} เชิญคุณเข้าร่วม ${m.workspaceName} บน Friday Manage`,
+    subject: (m: InvitationMail) => `${m.inviterName} เชิญคุณเข้าร่วม ${m.workspaceName} บน Friday Work Management`,
     head: (m: InvitationMail) => `${m.inviterName} เชิญคุณเข้าร่วม Workspace “${m.workspaceName}”`,
     project: (name: string) => `โปรเจกต์: ${name}`,
     button: 'รับคำเชิญ',
@@ -23,7 +23,7 @@ const T = {
     ignore: 'ถ้าไม่รู้จักผู้เชิญ ไม่ต้องทำอะไร คำเชิญจะหมดอายุเอง',
   },
   en: {
-    subject: (m: InvitationMail) => `${m.inviterName} invited you to ${m.workspaceName} on Friday Manage`,
+    subject: (m: InvitationMail) => `${m.inviterName} invited you to ${m.workspaceName} on Friday Work Management`,
     head: (m: InvitationMail) => `${m.inviterName} invited you to join the “${m.workspaceName}” workspace`,
     project: (name: string) => `Project: ${name}`,
     button: 'Accept invitation',

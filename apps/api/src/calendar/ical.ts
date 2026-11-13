@@ -44,7 +44,7 @@ export function buildIcs(calName: string, events: IcsEvent[], now = new Date()):
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Friday Manage//Calendar//TH',
+    'PRODID:-//Friday Work Management//Calendar//TH',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${icsText(calName)}`,

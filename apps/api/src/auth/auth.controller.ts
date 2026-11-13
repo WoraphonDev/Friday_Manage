@@ -203,7 +203,7 @@ export class AuthController {
     if (user && !user.disabledAt && (await this.tokens.resendWait(user.id, 'reset_password')) === 0) {
       // J3 ใช้ลิงก์อย่างเดียว ไม่มีรหัส 6 หลัก
       const { token } = await this.tokens.issue(user.id, 'reset_password', authTimes.resetPasswordMinutes, undefined, false);
-      await this.account.mail(user.email, 'ตั้งรหัสผ่านใหม่ · Friday Manage', [
+      await this.account.mail(user.email, 'ตั้งรหัสผ่านใหม่ · Friday Work Management', [
         'กดลิงก์นี้เพื่อตั้งรหัสผ่านใหม่ (ใช้ได้ 30 นาที)',
         this.account.link('/forgot-password', token),
         'ถ้าไม่ได้ขอเอง ไม่ต้องทำอะไร รหัสผ่านเดิมยังใช้ได้',
@@ -247,8 +247,8 @@ export class AuthController {
     await this.account.ensurePasswordIdentity(this.db, user.id);
     const loggedOut = input.logoutAll ? await this.sessions.revokeAll(user.id) : 0;
     await this.security.audit(user.id, 'secu.password_reset', `ตั้งรหัสผ่านใหม่จากลิงก์ลืมรหัสผ่าน${input.logoutAll ? ` · ออกจากระบบ ${loggedOut} อุปกรณ์` : ''}`, req);
-    await this.account.mail(user.email, 'รหัสผ่านของคุณถูกเปลี่ยน · Friday Manage', [
-      'รหัสผ่านของบัญชี Friday Manage ถูกเปลี่ยนเรียบร้อย',
+    await this.account.mail(user.email, 'รหัสผ่านของคุณถูกเปลี่ยน · Friday Work Management', [
+      'รหัสผ่านของบัญชี Friday Work Management ถูกเปลี่ยนเรียบร้อย',
       'ถ้าไม่ได้ทำเอง ให้ติดต่อ Admin ของ Workspace ทันที',
     ]);
     return { ok: true, email: user.email, loggedOutSessions: loggedOut };
@@ -256,7 +256,7 @@ export class AuthController {
 
   private async sendVerifyEmail(userId: string, email: string, res: Response) {
     const { token, code } = await this.tokens.issue(userId, 'verify_email', authTimes.verifyEmailMinutes);
-    await this.account.mail(email, `รหัสยืนยันอีเมล ${code} · Friday Manage`, [
+    await this.account.mail(email, `รหัสยืนยันอีเมล ${code} · Friday Work Management`, [
       `รหัสยืนยันอีเมลของคุณคือ ${code}`,
       `หรือกดลิงก์นี้: ${this.account.link('/signup', token)}`,
     ]);

@@ -101,9 +101,31 @@
   color: #b4b8cc;
 }
 
+/* ตัวโหลด: ประกอบตัว (รอ 0.2 วิ ให้ตรงกับจังหวะที่ตัวโหลดโผล่) แล้ววนเด้งด้วย tile-pop ชุดเดียวกับ logo */
+.loader {
+  width: 56px;
+  height: 56px;
+  overflow: visible;
+  flex: none;
+}
+.loaderTile {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation:
+    loader-assemble 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) var(--enter-delay) backwards,
+    tile-pop 3.2s ease-in-out calc(var(--enter-delay) + 0.7s + var(--pop-delay)) infinite;
+}
+@keyframes loader-assemble {
+  from {
+    opacity: 0;
+    transform: translate(var(--from)) rotate(var(--spin)) scale(0.4);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tile,
-  .dot {
+  .dot,
+  .loaderTile {
     animation: none;
   }
 }

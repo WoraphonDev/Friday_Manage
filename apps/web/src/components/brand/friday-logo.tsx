@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import styles from "./friday-logo.module.css";
 
@@ -61,5 +62,45 @@ export function FridayLogo({
       </span>
       <span className="sr-only">{label}</span>
     </span>
+  );
+}
+
+/*
+ * ตัวโหลดของ Friday: ไทล์ 4 ชิ้นบินจากมุมเข้ามาประกอบเป็น logo แล้วเด้งทีละชิ้นแบบเดียวกับ logo
+ * (เขียว → เหลือง → ม่วง → ชมพู) · ตรงกับหน้าเข้าสู่ระบบสำเร็จที่ผู้ใช้เลือกจาก mockup
+ */
+const LOADER_TILES = [
+  { ...TILES[0], from: "-14px, -14px", spin: "-90deg", pop: 0 },
+  { ...TILES[1], from: "14px, -14px", spin: "90deg", pop: 0.2 },
+  { ...TILES[2], from: "-14px, 14px", spin: "90deg", pop: 0.6 },
+  { ...TILES[3], from: "14px, 14px", spin: "-90deg", pop: 0.4 },
+];
+
+export function FridayLoader({ className }: { className?: string }) {
+  return (
+    <svg className={cn(styles.loader, className)} viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <g transform="rotate(-9 18 18)">
+        {LOADER_TILES.map((tile, index) => (
+          <rect
+            key={tile.fill}
+            className={styles.loaderTile}
+            style={
+              {
+                "--from": tile.from,
+                "--spin": tile.spin,
+                "--enter-delay": `${0.2 + index * 0.08}s`,
+                "--pop-delay": `${tile.pop}s`,
+              } as CSSProperties
+            }
+            x={tile.x}
+            y={tile.y}
+            width="13"
+            height="13"
+            rx="4.5"
+            fill={tile.fill}
+          />
+        ))}
+      </g>
+    </svg>
   );
 }

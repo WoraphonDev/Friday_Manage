@@ -249,6 +249,8 @@
     "deleteTitle": "Delete selected tasks",
     "deleteDescription": "Tasks move to the Trash and can be restored within 30 days",
     "deleted": "Deleted {count, plural, one {{count} task} other {{count} tasks}}",
+    "deleting": "Deleting {count, plural, one {{count} task} other {{count} tasks}}…",
+    "deleteFailed": "Deleted {done} · couldn't delete {count, plural, one {{count} task} other {{count} tasks}}: {reason}",
     "unselect": "Clear selection",
     "reason": "Reason for plan change (required after a Baseline is set)",
     "edit": "Edit {field} of {key}",

@@ -249,6 +249,8 @@
     "deleteTitle": "ลบงานที่เลือก",
     "deleteDescription": "งานจะย้ายไปถังขยะและกู้คืนได้ภายใน 30 วัน",
     "deleted": "ลบ {count} งานแล้ว",
+    "deleting": "กำลังลบ {count} งาน…",
+    "deleteFailed": "ลบแล้ว {done} งาน · ลบไม่สำเร็จ {count} งาน: {reason}",
     "unselect": "ยกเลิกการเลือก",
     "reason": "เหตุผลที่แก้แผน (ต้องใส่หลังตั้ง Baseline)",
     "edit": "แก้ {field} ของ {key}",

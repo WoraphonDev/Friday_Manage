@@ -355,6 +355,27 @@ describe("Table (2)", () => {
     await waitFor(() => expect(bulks.at(-1)).toEqual({ keys: ["DE-1", "DE-2", "DE-3"], delete: true, confirmText: "ลบ 3 งาน" }));
   });
 
+  it("ลบหลายงานไม่สำเร็จ: กล่องยืนยันแสดง error แทนการเงียบ · ลบได้บางงานแจ้งจำนวนและเลือกงานที่ค้างไว้", async () => {
+    const user = userEvent.setup();
+    let fail = true;
+    server.use(http.post("*/api/v1/w/:ws/projects/:key/issues/bulk", async ({ request }) => {
+      const b = (await request.json()) as { keys: string[] };
+      if (fail) return HttpResponse.json({ error: { code: "invalid_input", message: "ข้อมูลไม่ครบหรือรูปแบบไม่ถูกต้อง" }, requestId: "req_bulk1" }, { status: 400 });
+      return HttpResponse.json({ results: b.keys.map((key) => (key === "DE-3" ? { key, ok: false, error: { code: "forbidden", message: "ไม่มีสิทธิ์ลบงานนี้" } } : { key, ok: true })) });
+    }));
+    mount(<TableView ws="sample" projectKey="DE" />);
+    await user.click(await screen.findByLabelText("เลือกทั้งหมดที่แสดง"));
+    await user.click(within(screen.getByRole("region", { name: "3 รายการที่เลือก" })).getByRole("button", { name: "Delete" }));
+    const dialog = await screen.findByRole("dialog", { name: "ลบงานที่เลือก" });
+    await user.type(within(dialog).getByRole("textbox"), "ลบ 3 งาน");
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("ข้อมูลไม่ครบหรือรูปแบบไม่ถูกต้อง");
+    fail = false;
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    expect(await screen.findByText("ลบแล้ว 2 งาน · ลบไม่สำเร็จ 1 งาน: ไม่มีสิทธิ์ลบงานนี้")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "1 รายการที่เลือก" })).toBeInTheDocument();
+  });
+
   it("ไม่มีสิทธิ์แก้ = ไม่มีช่องเลือกและช่องแก้ · Guest = 403", async () => {
     server.use(http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () => HttpResponse.json({ ...permissions, role: "viewer", permissions: ["project.view"] })));
     const a = mount(<TableView ws="sample" projectKey="DE" />);

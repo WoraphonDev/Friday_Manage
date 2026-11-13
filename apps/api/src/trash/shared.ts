@@ -27,9 +27,11 @@ export const daysLeftOf = (purgeAt: Date, now = Date.now()) => Math.max(0, Math.
 /** "3 ธ.ค. 2569" ตามเวลาไทย · ใช้ในอีเมลและข้อความ Audit */
 export const thaiDate = (d: Date) => new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' }).format(d);
 
-export const IdsBody = z.object({ ids: z.array(z.uuid()).min(1).max(500) }).strict();
+/** กู้คืน / ลบถาวรทั้งชุดที่ลบพร้อมกันจาก Table ได้ (Table ลบได้ครั้งละ 2,000 งาน) */
+const TRASH_BATCH_MAX = 2000;
+export const IdsBody = z.object({ ids: z.array(z.uuid()).min(1).max(TRASH_BATCH_MAX) }).strict();
 export const PurgeBody = z.object({ confirm: z.string().trim() }).strict();
-export const PurgeManyBody = z.object({ ids: z.array(z.uuid()).min(1).max(500), confirm: z.string().trim() }).strict();
+export const PurgeManyBody = z.object({ ids: z.array(z.uuid()).min(1).max(TRASH_BATCH_MAX), confirm: z.string().trim() }).strict();
 
 /**
  * ลบไฟล์ในที่เก็บหลังลบแถวถาวรแล้ว · ไม่มีเมธอดลบใน StorageDriver (files เป็นของ A11) จึงทำที่นี่ตามตัวที่ใช้อยู่

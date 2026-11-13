@@ -159,7 +159,8 @@ describe('เปลี่ยน Key และ 301 project_moved', () => {
 
 describe('สมาชิกโปรเจกต์ (p/members)', () => {
   it('รายชื่อเรียง Owner ก่อน พร้อมงานค้าง / เลยกำหนด และ capacity เป็น MD · Guest Viewer ไม่เห็น', async () => {
-    await mkIssue(team.lead, 'DP', { assigneeIds: [team.devId], size: 'M', planStart: '2026-11-09' });
+    // งานที่ยังไม่ถึงกำหนดต้องอยู่ไกลจากวันนี้ (เดิม 2026-11-09 กลายเป็นเลยกำหนดตั้งแต่ 2026-11-14)
+    await mkIssue(team.lead, 'DP', { assigneeIds: [team.devId], size: 'M', planStart: '2030-11-04' });
     await mkIssue(team.lead, 'DP', { assigneeIds: [team.devId, team.leadId], estimateMd: 4, planStart: '2026-01-05', planEnd: '2026-01-06' });
     await t.owner.query(`UPDATE project_members SET capacity_hours_week = 40, position = 'Backend' WHERE user_id = $1`, [team.devId]);
 

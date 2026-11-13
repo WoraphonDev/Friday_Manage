@@ -778,10 +778,14 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
         await cache.invalidateQueries({ queryKey: ["saved-views", ws, projectKey] });
       }} />}
       {deleting && <DeleteDialog count={selected.size} onClose={() => setDeleting(false)} onConfirm={async (confirmText) => {
-        await api.post(`${base}/issues/bulk`, { keys: [...selected], delete: true, confirmText });
-        toast({ message: t("deleted", { count: selected.size }) });
+        // error ทั้งคำขอ (เช่น สิทธิ์) โยนกลับให้กล่องยืนยันแสดง · งานที่ติดกติกาทีละงานเลือกค้างไว้ให้ลองใหม่
+        const r = await api.post<{ results: { key: string; ok: boolean; error?: { message: string } }[] }>(`${base}/issues/bulk`, { keys: [...selected], delete: true, confirmText });
+        const failed = r.results.filter((x) => !x.ok);
+        const done = r.results.length - failed.length;
+        if (failed.length) toast({ tone: "error", duration: 6000, message: t("deleteFailed", { done, count: failed.length, reason: failed[0]!.error?.message ?? "" }) });
+        else toast({ message: t("deleted", { count: done }) });
         setDeleting(false);
-        setSelected(new Set());
+        setSelected(new Set(failed.map((x) => x.key)));
         await reload();
       }} />}
       {reasonFor && <ReasonDialog onClose={() => setReasonFor(null)} onSubmit={async (r) => { const job = reasonFor; setReasonFor(null); await job.run(r); }} />}
@@ -1004,11 +1008,26 @@ function DeleteDialog({ count, onClose, onConfirm }: { count: number; onClose: (
   const t = useTranslations("overview-table.table");
   const phrase = `ลบ ${count} งาน`;
   const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // ลบหลายร้อยงานใช้เวลาหลายวินาที · ล็อกปุ่มระหว่างรอ และแสดง error ในกล่อง (เดิมเงียบ ผู้ใช้เห็นว่ากดแล้วไม่เกิดอะไร)
+  async function submit() {
+    if (text !== phrase || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onConfirm(text);
+    } catch (e) {
+      setError(e instanceof ApiError && e.requestId ? `${e.message} · ${e.requestId}` : e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  }
   return (
-    <Dialog open title={t("deleteTitle")} description={t("deleteDescription")} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <form onSubmit={(e) => { e.preventDefault(); if (text === phrase) void onConfirm(text); }} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <Input label={t("deleteConfirm", { text: phrase })} value={text} onChange={(e) => setText(e.target.value)} />
-        <Button type="submit" variant="danger" disabled={text !== phrase}>{t("delete")}</Button>
+    <Dialog open title={t("deleteTitle")} description={t("deleteDescription")} onOpenChange={(o) => { if (!o && !busy) onClose(); }}>
+      <form onSubmit={(e) => { e.preventDefault(); void submit(); }} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <Input label={t("deleteConfirm", { text: phrase })} value={text} disabled={busy} onChange={(e) => setText(e.target.value)} />
+        {error && <div className="field-error" role="alert">{error}</div>}
+        <Button type="submit" variant="danger" disabled={text !== phrase || busy}>{busy ? t("deleting", { count }) : t("delete")}</Button>
       </form>
     </Dialog>
   );

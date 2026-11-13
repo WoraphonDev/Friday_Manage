@@ -110,6 +110,22 @@ describe("Z1 · ถังขยะของ Workspace", () => {
     expect(await screen.findByText("กู้คืนแล้ว 3 รายการ")).toBeInTheDocument();
   });
 
+  it("ชุดใหญ่กว่าหน้าที่โหลด: เลือกทั้งชุดได้ครบรวมงานที่ยังไม่โหลด แล้วกู้คืนในคำขอเดียว", async () => {
+    const big = { ...batch, ids: [...batch.ids, "i-42", "i-43"], keys: [...batch.keys, "DP-42", "DP-43"], count: 5, subtasks: 9 };
+    server.use(
+      http.get(`${W}/trash`, async ({ request }) => { await record(request); return HttpResponse.json(list("issue", { batches: [big] })); }),
+      http.post(`${W}/trash/:op`, async ({ request }) => { await record(request); return HttpResponse.json({ restored: big.ids.map((id) => ({ id })), failed: [] }); }),
+    );
+    const user = userEvent.setup();
+    z1();
+    expect(await screen.findByText(/ลบ 5 งานจาก ระบบชำระเงินสมมติ พร้อมกันเมื่อ/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "เลือกทั้งชุด" }));
+    const bar = screen.getByRole("region", { name: "เลือก 5 งาน" });
+    expect(within(bar).getByText("รวม Sub-task 9")).toBeInTheDocument();
+    await user.click(within(bar).getByRole("button", { name: "กู้คืน 5 งาน" }));
+    await waitFor(() => expect(calls.find((c) => c.method === "POST")).toMatchObject({ path: "/w/sample/trash/issue:restore", body: { ids: big.ids } }));
+  });
+
   it("ค้นหา / กรองโปรเจกต์ / กรองผู้ลบ ส่งเป็น query · ไม่พบรายการแสดงปุ่มล้างตัวกรอง", async () => {
     const user = userEvent.setup();
     z1();

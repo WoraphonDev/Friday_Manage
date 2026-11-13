@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { fetchTrash, restoreItems, trashKeys, type TrashFilters, type TrashScope } from "./api";
 import { PurgeDialog, RestoreProjectDialog } from "./dialogs";
 import { deleterText, formatBytes, formatDateTime } from "./format";
-import { URGENT_DAYS, type TrashItem, type TrashList, type TrashProject, type TrashType } from "./types";
+import { URGENT_DAYS, type TrashIssue, type TrashItem, type TrashList, type TrashProject, type TrashType } from "./types";
 import styles from "./trash.module.css";
 
 const EMPTY: TrashFilters = { type: "issue", q: "", project: "", deletedBy: "" };
@@ -51,8 +51,21 @@ export function TrashBrowser({ ws, projectKey, heading }: TrashScope & { heading
   });
   const first = query.data?.pages[0];
   const items = useMemo(() => query.data?.pages.flatMap((p) => p.items) ?? [], [query.data]);
-  const batches = useMemo(() => query.data?.pages.flatMap((p) => p.batches) ?? [], [query.data]);
-  const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  // ชุดใหญ่ข้ามหลายหน้า API ส่งชุดเดียวกันมากับทุกหน้า · เก็บครั้งเดียวต่อ id
+  const batches = useMemo(() => [...new Map((query.data?.pages.flatMap((p) => p.batches) ?? []).map((b) => [b.id, b])).values()], [query.data]);
+  // ชุดที่ใหญ่กว่าหน้าที่โหลด (เช่น ลบ 536 งานจาก Table): งานที่ยังไม่โหลดใช้ key จากชุด ให้เลือก / กู้คืน / ลบถาวรได้ทั้งชุดในครั้งเดียว
+  const byId = useMemo(() => {
+    const map = new Map<string, TrashItem>(items.map((i) => [i.id, i]));
+    for (const b of batches) {
+      const seen = items.find((i): i is TrashIssue => i.type === "issue" && i.batchId === b.id);
+      if (!seen) continue;
+      b.ids.forEach((id, n) => {
+        const key = b.keys[n] ?? "";
+        if (!map.has(id)) map.set(id, { ...seen, id, key, title: "", subtasks: 0, project: b.projects.find((p) => key.startsWith(`${p.key}-`)) ?? seen.project });
+      });
+    }
+    return map;
+  }, [items, batches]);
   const chosen = [...selected].map((id) => byId.get(id)).filter((x): x is TrashItem => !!x);
 
   if (query.error instanceof ApiError && query.error.status === 403) return <Forbidden />;
@@ -88,7 +101,10 @@ export function TrashBrowser({ ws, projectKey, heading }: TrashScope & { heading
   const filtered = !!(filters.q || filters.project || filters.deletedBy);
   const canPurge = !!first?.can.purge;
   const type = filters.type;
-  const subtasks = chosen.reduce((n, i) => n + (i.type === "issue" ? i.subtasks : 0), 0);
+  // Sub-task ของชุดที่เลือกครบใช้ยอดของชุด (งานที่ยังไม่โหลดไม่รู้จำนวนรายงาน)
+  const fullBatches = batches.filter((b) => b.ids.every((id) => selected.has(id)));
+  const inFull = new Set(fullBatches.flatMap((b) => b.ids));
+  const subtasks = fullBatches.reduce((n, b) => n + b.subtasks, 0) + chosen.reduce((n, i) => n + (i.type === "issue" && !inFull.has(i.id) ? i.subtasks : 0), 0);
 
   const daysPill = (i: TrashItem) => (
     <span className={cn(styles.days, i.daysLeft <= URGENT_DAYS && styles.urgent)}>{i.daysLeft > 0 ? t("days", { n: i.daysLeft }) : t("dueToday")}</span>

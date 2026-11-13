@@ -120,7 +120,7 @@ export class TrashService {
       const purgeAt = purgeAtOf(r.deletedAt, days);
       return { type: q.type, ...r, deletedBy: r.deletedBy ? (people.get(r.deletedBy) ?? null) : null, purgeAt, daysLeft: daysLeftOf(purgeAt) };
     });
-    const batches = q.type === 'issue' ? batchesOf(items as unknown as BatchInput[]) : [];
+    const batches = q.type === 'issue' ? await this.issueBatches(tx, cutoff, items as unknown as BatchInput[], people, scope.projectId) : [];
     const batchOf = new Map(batches.flatMap((b) => b.ids.map((id) => [id, b.id] as const)));
     return {
       type: q.type,
@@ -144,6 +144,48 @@ export class TrashService {
       projectId ? eq(s.issues.projectId, projectId) : undefined,
       sql`not exists (select 1 from ${s.issues} p where p.id = ${s.issues.parentId} and p.deleted_at is not null)`,
     );
+  }
+
+  /**
+   * ชุดคิดจากงานทั้งหมดในถังขยะของคนลบเดียวกันรอบช่วงเวลาของหน้านี้ ไม่ใช่แค่แถวในหน้า (หน้าละ 100)
+   * ลบหลายร้อยงานพร้อมกันจาก Table ต้องเห็นเป็นชุดเดียวที่นับครบและกู้คืนได้ในครั้งเดียว (ผู้ใช้ลบ 536 งาน 2026-11-14)
+   */
+  private async issueBatches(tx: Tx, cutoff: Date, page: BatchInput[], people: Map<string, Deleter>, projectId?: string) {
+    const mine = page.filter((i) => i.deletedBy);
+    if (!mine.length) return [];
+    const times = mine.map((i) => i.deletedAt.getTime());
+    // เผื่อสองช่วงชุด: งานแรกของชุดอาจอยู่ก่อนงานเก่าสุดในหน้า
+    const from = new Date(Math.min(...times) - 2 * BATCH_WINDOW_MS);
+    const to = new Date(Math.max(...times) + 2 * BATCH_WINDOW_MS);
+    const rows = await tx
+      .select({
+        id: s.issues.id,
+        number: s.issues.number,
+        deletedAt: s.issues.deletedAt,
+        deletedBy: s.issues.deletedBy,
+        projectId: s.projects.id,
+        projectKey: s.projects.key,
+        projectName: s.projects.name,
+        subtasks: sql<number>`(select count(*)::int from ${s.issues} c where c.parent_id = ${s.issues.id} and c.deleted_at = ${s.issues.deletedAt})`,
+      })
+      .from(s.issues)
+      .innerJoin(s.projects, eq(s.projects.id, s.issues.projectId))
+      .where(and(
+        this.issueScope(cutoff, projectId),
+        inArray(s.issues.deletedBy, [...new Set(mine.map((i) => i.deletedBy!.id))]),
+        sql`${s.issues.deletedAt} between ${from.toISOString()}::timestamptz and ${to.toISOString()}::timestamptz`,
+      ))
+      .limit(BATCH_SCAN_MAX);
+    const all: BatchInput[] = rows.map((r) => ({
+      id: r.id,
+      key: `${r.projectKey}-${r.number}`,
+      deletedAt: r.deletedAt!,
+      deletedBy: r.deletedBy ? (people.get(r.deletedBy) ?? null) : null,
+      subtasks: r.subtasks,
+      project: { id: r.projectId, key: r.projectKey, name: r.projectName },
+    }));
+    const onPage = new Set(page.map((i) => i.id));
+    return batchesOf(all).filter((b) => b.ids.some((id) => onPage.has(id)));
   }
 
   private fileScope(cutoff: Date, projectId?: string) {
@@ -501,6 +543,9 @@ function escapeLike(v: string) {
   return v.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
 
+/** งานที่ดึงมาจัดชุดต่อหน้า · มากกว่าที่ Table ลบได้ครั้งละ (2,000) เผื่อลบหลายรอบติดกัน */
+const BATCH_SCAN_MAX = 5000;
+
 interface BatchInput {
   id: string;
   key: string;
@@ -512,7 +557,7 @@ interface BatchInput {
 
 /**
  * "ชุด" = งานที่คนเดียวกันลบภายใน 2 นาทีนับจากงานแรกของชุด และมีอย่างน้อย 2 งาน (เลือกหลายแถวแล้วลบผิด · Z1)
- * คิดจากงานในหน้าที่ส่งกลับ (ค่าเริ่มต้น 100 แถว)
+ * คิดจากงานรอบช่วงเวลาของหน้าที่ส่งกลับ (issueBatches) ไม่ใช่เฉพาะแถวในหน้า
  */
 export function batchesOf(items: BatchInput[]) {
   const sorted = [...items].filter((i) => i.deletedBy).sort((a, b) => a.deletedBy!.id.localeCompare(b.deletedBy!.id) || a.deletedAt.getTime() - b.deletedAt.getTime());

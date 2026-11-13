@@ -73,7 +73,10 @@ export interface FieldChange {
 export interface UpdateDiff {
   added: { no: number; number: number | null; title: string; module: string }[];
   changed: { no: number; key: string; title: string; fields: FieldChange[] }[];
-  /** อยู่ในระบบแต่ไม่อยู่ในไฟล์ · ไม่ลบเอง ให้ผู้ใช้เลือก · no = No. (ไฟล์รูปแบบเดิม) หรือเลขงาน (รูปแบบใหม่) */
+  /**
+   * อยู่ในระบบแต่ไม่อยู่ในไฟล์ · sync: ไม่ลบเอง ให้ผู้ใช้เลือก · no = No. (ไฟล์รูปแบบเดิม) หรือเลขงาน (รูปแบบใหม่)
+   * replace: Task เดิมทุกงานที่จะถูกลบ (no = เลขงาน)
+   */
   missing: { no: number; key: string; title: string; status: string }[];
   unchanged: number;
   /** โหมดอัปเดตเฉพาะงานที่ยังไม่เริ่ม: งานที่ค่าในไฟล์ต่างแต่เริ่มทำแล้ว จึงไม่แก้ */
@@ -172,6 +175,8 @@ export interface UpdatePlan {
   keyed: boolean;
   /** โหมดเพิ่มเติมแผน: ทุกแถวเป็นงานใหม่ ไม่จับคู่และไม่แตะงานเดิม */
   append: boolean;
+  /** โหมดแทนที่แผนเดิม: ลบ Task เดิมทั้งหมด (พร้อม Sub-task) ลงถังขยะ แล้วสร้างทุกแถวในไฟล์ใหม่ด้วยเลขงานใหม่ */
+  wipe: boolean;
   /** โหมดอัปเดตเฉพาะงานที่ยังไม่เริ่ม: แก้เฉพาะงาน To do ที่ยังไม่มี Actual Start · ไม่ลบงาน · งานใหม่เพิ่มเมื่อผู้ใช้ยืนยัน */
   unstartedOnly: boolean;
   /** ไฟล์มีคอลัมน์ Group · ไม่มี = ไม่แตะกลุ่มเดิม (ยกเว้นย้าย Module) */
@@ -179,7 +184,11 @@ export interface UpdatePlan {
   existing: Existing;
 }
 
-export type UpdateMode = 'replace' | 'append' | 'unstarted';
+/**
+ * replace = ลบแผนเดิมทั้งหมดแล้วสร้างใหม่จากไฟล์ (ผู้ใช้ตัดสิน 2026-11-14) · sync = จับคู่ด้วย Key / No. แล้วแก้งานเดิม (API เท่านั้น)
+ * append = ทุกแถวเป็นงานใหม่ต่อท้าย · unstarted = แก้เฉพาะงานที่ยังไม่เริ่ม
+ */
+export type UpdateMode = 'replace' | 'sync' | 'append' | 'unstarted';
 
 type ChecklistItem = Pick<typeof s.checklistItems.$inferSelect, 'id' | 'issueId' | 'kind' | 'text' | 'done' | 'sort'>;
 export interface ChecklistSync {
@@ -212,8 +221,11 @@ export function syncChecklist(current: ChecklistItem[], file: ChecklistEntry[]):
   return { add, remove: left.filter((c) => !c.done).map((c) => c.id), keptDone: left.filter((c) => c.done).length, nextSort };
 }
 
-export async function computeUpdate(tx: Tx, project: { id: string; key: string }, check: PlanCheck, matchById: boolean, customDefs: CustomFieldDef[] = [], mode: UpdateMode = 'replace'): Promise<UpdatePlan> {
+export async function computeUpdate(tx: Tx, project: { id: string; key: string }, check: PlanCheck, matchById: boolean, customDefs: CustomFieldDef[] = [], mode: UpdateMode = 'sync'): Promise<UpdatePlan> {
   const append = mode === 'append';
+  const wipe = mode === 'replace';
+  // ทุกแถวเป็นงานใหม่ ไม่จับคู่กับงานเดิม
+  const fresh = append || wipe;
   const unstartedOnly = mode === 'unstarted';
   const ex = await loadExisting(tx, project.id);
   const live = ex.rows.filter((r) => !r.deletedAt);
@@ -255,7 +267,7 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
   const has = (f: DiffField) => check.mapped.has(COLUMN[f]);
   // Checklist ปัจจุบัน (เฉพาะไฟล์ที่มีคอลัมน์ Checklist · ไม่มี = ไม่แตะของเดิม)
   const checklistOf = new Map<string, ChecklistItem[]>();
-  if (has('checklist') && !append && live.length) {
+  if (has('checklist') && !fresh && live.length) {
     const items = await tx
       .select({ id: s.checklistItems.id, issueId: s.checklistItems.issueId, kind: s.checklistItems.kind, text: s.checklistItems.text, done: s.checklistItems.done, sort: s.checklistItems.sort })
       .from(s.checklistItems)
@@ -268,9 +280,9 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
 
   for (const row of check.rows) {
     if (check.skip.has(row.no)) continue;
-    // เพิ่มเติมแผน: ไม่จับคู่กับงานเดิม ทุกแถวเป็นงานใหม่
-    let issue = append ? undefined : check.keyed ? (row.number !== null ? byNumber.get(row.number) : undefined) : byNo.get(row.no);
-    if (!append && !issue && !check.keyed && matchById && row.number !== null) {
+    // เพิ่มเติม / แทนที่แผน: ไม่จับคู่กับงานเดิม ทุกแถวเป็นงานใหม่
+    let issue = fresh ? undefined : check.keyed ? (row.number !== null ? byNumber.get(row.number) : undefined) : byNo.get(row.no);
+    if (!fresh && !issue && !check.keyed && matchById && row.number !== null) {
       issue = byNumber.get(row.number);
       if (issue) {
         byNumber.delete(row.number);
@@ -281,8 +293,8 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     if (!issue) {
       adds.push(row);
       if (defs.length) addCustom.set(row, customOf(row, row.parentNumber === null ? 'task' : 'subtask'));
-      // เพิ่มเติมแผนออกเลขงานใหม่ทั้งหมด เลขในไฟล์จึงไม่ใช่เลขที่จะได้
-      diff.added.push({ no: row.no, number: append ? null : row.number, title: row.title, module: row.module });
+      // เพิ่มเติม / แทนที่แผนออกเลขงานใหม่ทั้งหมด เลขในไฟล์จึงไม่ใช่เลขที่จะได้
+      diff.added.push({ no: row.no, number: fresh ? null : row.number, title: row.title, module: row.module });
       continue;
     }
     const oldParent = issue.parentId ? byId.get(issue.parentId) : undefined;
@@ -352,7 +364,10 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
   }
 
   // งานที่อยู่ในระบบแต่ไม่อยู่ในไฟล์ (ทุกแถวในไฟล์ รวมแถวที่ต้องแก้ ถือว่ายังอยู่) · เพิ่มเติมแผนไม่แตะงานเดิมจึงไม่มีรายการนี้
-  if (append || unstartedOnly) {
+  if (wipe) {
+    // แทนที่แผน: Task ระดับบนทุกงานถูกลบ (Sub-task ตามแม่) · งานชนิดอื่นที่สร้างในระบบ (เช่น Bug) คงไว้
+    for (const issue of live.filter((r) => !r.parentId && r.issueTypeId === ex.taskTypeId)) diff.missing.push({ no: issue.number, key: `${project.key}-${issue.number}`, title: issue.title, status: ex.statusName.get(issue.statusId) ?? '' });
+  } else if (append || unstartedOnly) {
     // ไม่แตะงานที่ไม่อยู่ในไฟล์ (เพิ่มเติม / อัปเดตเฉพาะงานที่ยังไม่เริ่ม)
   } else if (check.keyed) {
     for (const issue of tasks) {
@@ -366,7 +381,7 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     }
   }
   diff.missing.sort((a, b) => a.no - b.no);
-  return { diff, edits, adds, addCustom, customDefs: defs, currentCustom, assignNos, keyed: check.keyed, append, unstartedOnly, groupMapped: check.mapped.has('group'), existing: ex };
+  return { diff, edits, adds, addCustom, customDefs: defs, currentCustom, assignNos, keyed: check.keyed, append, wipe, unstartedOnly, groupMapped: check.mapped.has('group'), existing: ex };
 }
 
 export interface ApplyInput {
@@ -425,9 +440,26 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
     for (const a of plan.assignNos) await tx.update(s.issues).set({ excelRowNo: a.no }).where(eq(s.issues.id, a.issueId));
   }
 
-  // งานใหม่ในไฟล์ก่อน: งานเดิมที่ย้ายไปอยู่ใต้ Task ใหม่ต้องรู้ id ของแม่
   const live = ex.rows.filter((r) => !r.deletedAt);
-  const parents = new Map(live.filter((r) => !r.parentId && r.issueTypeId === ex.taskTypeId).map((r) => [r.number, { id: r.id, phaseId: r.phaseId }]));
+  // งานที่หายจากไฟล์: ลบ (ย้ายถังขยะ 30 วัน) เฉพาะที่ผู้ใช้เลือกเอง (แทนที่แผน = ทุกงาน) · ลบ Task แล้ว Sub-task ไปด้วย
+  const toDelete = plan.diff.missing.filter((m) => input.deleteNos.has(m.no));
+  const removeMissing = async () => {
+    if (!toDelete.length) return;
+    const picked = new Set(toDelete.map((m) => m.no));
+    const roots = live.filter((r) => (plan.keyed || plan.wipe ? r.issueTypeId === ex.taskTypeId && picked.has(r.number) : r.excelRowNo !== null && !r.parentId && picked.has(r.excelRowNo)));
+    const children = await tx.select().from(s.issues).where(and(inArray(s.issues.parentId, roots.map((r) => r.id)), isNull(s.issues.deletedAt)));
+    const rootIds = new Set(roots.map((r) => r.id));
+    const rows = [...new Map([...roots, ...children].map((r) => [r.id, r])).values()];
+    const deletedAt = new Date();
+    await tx.update(s.issues).set({ deletedAt, version: sql`${s.issues.version} + 1` }).where(inArray(s.issues.id, rows.map((r) => r.id)));
+    await tx.insert(s.activities).values(rows.map((r) => ({ ...base, issueId: r.id, actorId: auth.userId, actorKind: 'import' as const, verb: 'deleted', field: 'deletedAt', newValue: { deletedAt: deletedAt.toISOString(), cascadeRootId: rootIds.has(r.id) ? r.id : r.parentId } })));
+    rows.forEach((r) => events.push(ev('issue.deleted', r.id, { issueKey: `${project.key}-${r.number}`, source: 'import' })));
+  };
+  // แทนที่แผน: ลบแผนเดิมก่อน No. ในไฟล์จึงใช้ซ้ำได้ (insertRows ปล่อย No. ของงานที่ลบแล้ว)
+  if (plan.wipe) await removeMissing();
+
+  // งานใหม่ในไฟล์ก่อน: งานเดิมที่ย้ายไปอยู่ใต้ Task ใหม่ต้องรู้ id ของแม่ · แทนที่แผน: แม่ต้องอยู่ในไฟล์ (งานเดิมถูกลบแล้ว)
+  const parents = new Map(plan.wipe ? [] : live.filter((r) => !r.parentId && r.issueTypeId === ex.taskTypeId).map((r) => [r.number, { id: r.id, phaseId: r.phaseId }]));
   if (plan.adds.length) {
     const made = await insertRows(
       tx,
@@ -438,9 +470,9 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
         actorId: auth.userId,
         taskTypeId: ex.taskTypeId,
         fileName: input.fileName,
-        // เพิ่มเติมแผน: No. ในไฟล์ซ้ำกับแผนเดิมได้ จึงไม่เก็บ (excel_row_no ห้ามซ้ำ) และออกเลขงานใหม่ทั้งหมด
+        // เพิ่มเติมแผน: No. ในไฟล์ซ้ำกับแผนเดิมได้ จึงไม่เก็บ (excel_row_no ห้ามซ้ำ) · เพิ่มเติม / แทนที่แผนออกเลขงานใหม่ทั้งหมด
         keepRowNo: !plan.keyed && !plan.append,
-        freshNumbers: plan.append,
+        freshNumbers: plan.append || plan.wipe,
         moduleId,
         statusIdOf,
         userOf,
@@ -553,19 +585,7 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
     }
   }
 
-  // งานที่หายจากไฟล์: ลบ (ย้ายถังขยะ 30 วัน) เฉพาะที่ผู้ใช้เลือกเอง · ลบ Task แล้ว Sub-task ไปด้วย
-  const toDelete = plan.diff.missing.filter((m) => input.deleteNos.has(m.no));
-  if (toDelete.length) {
-    const picked = new Set(toDelete.map((m) => m.no));
-    const roots = live.filter((r) => (plan.keyed ? r.issueTypeId === ex.taskTypeId && picked.has(r.number) : r.excelRowNo !== null && !r.parentId && picked.has(r.excelRowNo)));
-    const children = await tx.select().from(s.issues).where(and(inArray(s.issues.parentId, roots.map((r) => r.id)), isNull(s.issues.deletedAt)));
-    const rootIds = new Set(roots.map((r) => r.id));
-    const rows = [...new Map([...roots, ...children].map((r) => [r.id, r])).values()];
-    const deletedAt = new Date();
-    await tx.update(s.issues).set({ deletedAt, version: sql`${s.issues.version} + 1` }).where(inArray(s.issues.id, rows.map((r) => r.id)));
-    await tx.insert(s.activities).values(rows.map((r) => ({ ...base, issueId: r.id, actorId: auth.userId, actorKind: 'import' as const, verb: 'deleted', field: 'deletedAt', newValue: { deletedAt: deletedAt.toISOString(), cascadeRootId: rootIds.has(r.id) ? r.id : r.parentId } })));
-    rows.forEach((r) => events.push(ev('issue.deleted', r.id, { issueKey: `${project.key}-${r.number}`, source: 'import' })));
-  }
+  if (!plan.wipe) await removeMissing();
 
   return {
     added: plan.adds.length,

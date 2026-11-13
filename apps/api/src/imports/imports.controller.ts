@@ -14,11 +14,11 @@ import { webUrl } from '../auth/auth.config.js';
 export class ImportsController {
   constructor(private readonly imports: ImportsService) {}
 
-  /** multipart/form-data: file (.xlsx) + mode (create | update) + projectKey และ updateKind (replace | append · ค่าเริ่มต้น replace) เมื่อ mode = update */
+  /** multipart/form-data: file (.xlsx) + mode (create | update) + projectKey และ updateKind (replace | sync | append | unstarted · ค่าเริ่มต้น sync) เมื่อ mode = update */
   @Post()
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: config.maxImportBytes, files: 1 } }))
   upload(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @UploadedFile() file: Express.Multer.File | undefined, @Body('mode') mode = 'create', @Body('projectKey') projectKey?: string, @Body('updateKind') updateKind?: string) {
-    return this.imports.upload(auth, tenant, file, mode, projectKey, updateKind || 'replace');
+    return this.imports.upload(auth, tenant, file, mode, projectKey, updateKind || 'sync');
   }
 
   @Get(':id')

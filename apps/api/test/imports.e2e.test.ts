@@ -510,7 +510,7 @@ describe('นำเข้ารอบที่ 2: แทนที่ หรื�
     const before = await issuesOf('APX');
     expect(before.map((r: { number: number }) => r.number)).toEqual([1, 2, 3, 4]);
 
-    // ไฟล์ชุดเดิม (No. 1–4 ซ้ำ) · แทนที่ = จับคู่กับงานเดิมได้ครบ ไม่มีงานใหม่และไม่มีงานหาย
+    // ไฟล์ชุดเดิม (No. 1–4 ซ้ำ) · sync (ค่าเริ่มต้นของ API) = จับคู่กับงานเดิมได้ครบ ไม่มีงานใหม่และไม่มีงานหาย
     const replace = await updateJob('APX', await sourceWorkbook());
     expect(replace.diff).toMatchObject({ added: [], missing: [] });
     expect(replace.diff.changed.map((c: { key: string }) => c.key)).toEqual(expect.arrayContaining(['APX-1']));
@@ -534,6 +534,64 @@ describe('นำเข้ารอบที่ 2: แทนที่ หรื�
     ]);
     const audit = (await t.owner.query(`SELECT summary FROM audit_logs WHERE action = 'import.completed' ORDER BY created_at DESC LIMIT 1`)).rows[0].summary;
     expect(audit).toContain('เพิ่มเติมแผน APX · เพิ่ม 4');
+  });
+
+  it('replace: ลบ Task เดิมทั้งหมด (พร้อม Sub-task) ลงถังขยะ แล้วสร้างทุกแถวใหม่ด้วยเลขงานใหม่ · Sub-task ต้องมีแม่ในไฟล์', async () => {
+    const up = await team.lead.upload(`${team.ws}/import-jobs`, await sourceWorkbook(), 'Rpl.xlsx', { mode: 'create' });
+    await team.lead.patch(`${team.ws}/import-jobs/${up.body.id}`, { project: { key: 'RPL', name: 'Replace Plan' } });
+    await commit(up.body.id);
+
+    // ไฟล์รูปแบบเดิม (No. 1–4 ซ้ำกับแผนเดิม) · ไม่จับคู่ ทุกแถวเป็นงานใหม่ และงานเดิมทุกงานอยู่ในรายการลบ
+    const r = await team.lead.upload(`${team.ws}/import-jobs`, await sourceWorkbook(), 'RPL-v2.xlsx', { mode: 'update', projectKey: 'RPL', updateKind: 'replace' });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(r.body.updateKind).toBe('replace');
+    expect(r.body.diff.added.map((a: { number: number | null }) => a.number)).toEqual([null, null, null, null]);
+    expect(r.body.diff).toMatchObject({ changed: [], unchanged: 0 });
+    expect(r.body.diff.missing.map((m: { key: string }) => m.key)).toEqual(['RPL-1', 'RPL-2', 'RPL-3', 'RPL-4']);
+    expect(r.body.summary.ready).toBe(4);
+    // เลือกเก็บไว้ไม่มีผลในโหมดนี้
+    await team.lead.patch(`${team.ws}/import-jobs/${r.body.id}`, { missingAll: 'keep' });
+    expect(await commit(r.body.id)).toMatchObject({ mode: 'update', added: 4, changed: 0, deleted: 4, kept: 0, planChanges: 0 });
+
+    // งานใหม่ได้เลขต่อจากเดิม และใช้ No. ในไฟล์ได้ (งานเดิมในถังขยะปล่อย No. ให้)
+    expect((await issuesOf('RPL')).map((x: { number: number; title: string; excel_row_no: number | null }) => [x.number, x.title, x.excel_row_no])).toEqual([
+      [5, 'Login', 1],
+      [6, 'Approve', 2],
+      [7, 'Report', 3],
+      [8, 'Backlog item', 4],
+    ]);
+    const trashed = (await t.owner.query(`SELECT i.number FROM issues i JOIN projects p ON p.id = i.project_id WHERE p.key = 'RPL' AND i.deleted_at IS NOT NULL ORDER BY i.number`)).rows;
+    expect(trashed.map((x: { number: number }) => x.number)).toEqual([1, 2, 3, 4]);
+    const audit = (await t.owner.query(`SELECT summary FROM audit_logs WHERE action = 'import.completed' ORDER BY created_at DESC LIMIT 1`)).rows[0].summary;
+    expect(audit).toContain('แทนที่แผน RPL · เพิ่ม 4 · เปลี่ยน 0 · ลบ 4');
+
+    // ไฟล์รูปแบบใหม่: Sub-task อ้าง Task แม่ในไฟล์ด้วย Key เดิม → อยู่ใต้ Task แม่ตัวใหม่ · Sub-task เดิมถูกลบตามแม่
+    const withSub = await edit(await exportOf('RPL'), (ws) => {
+      const sub = TASK_HEADERS.map(() => null as string | null);
+      sub[col('Parent Key') - 1] = 'RPL-5';
+      sub[col('Title') - 1] = 'Login API';
+      ws.addRow(sub);
+    });
+    const first = await team.lead.upload(`${team.ws}/import-jobs`, withSub, 'RPL-v3.xlsx', { mode: 'update', projectKey: 'RPL', updateKind: 'replace' });
+    expect(await commit(first.body.id)).toMatchObject({ added: 5, deleted: 4 });
+    const tree = async () =>
+      (await t.owner.query(`SELECT i.number, i.title, par.number AS parent FROM issues i JOIN projects p ON p.id = i.project_id LEFT JOIN issues par ON par.id = i.parent_id WHERE p.key = 'RPL' AND i.deleted_at IS NULL ORDER BY i.number`)).rows;
+    expect((await tree()).map((x: { number: number; title: string; parent: number | null }) => [x.number, x.title, x.parent])).toEqual([
+      [9, 'Login', null],
+      [10, 'Approve', null],
+      [11, 'Report', null],
+      [12, 'Backlog item', null],
+      [13, 'Login API', 9],
+    ]);
+
+    // Parent Key ที่ไม่อยู่ในไฟล์ = ต้องแก้ (งานเดิมจะถูกลบทั้งหมด จึงอ้างงานในระบบไม่ได้)
+    const orphan = await edit(await exportOf('RPL'), (ws) => ws.spliceRows(2, 1));
+    const bad = await team.lead.upload(`${team.ws}/import-jobs`, orphan, 'RPL-v4.xlsx', { mode: 'update', projectKey: 'RPL', updateKind: 'replace' });
+    expect(bad.body.findings).toEqual(expect.arrayContaining([expect.objectContaining({ level: 'err', title: 'Login API', problem: 'ไม่พบ Task แม่ 9' })]));
+    expect(bad.body.diff.missing).toHaveLength(4);
+    // Sub-task ที่ต้องแก้ไม่ถูกสร้าง ส่วน Sub-task เดิม (RPL-13) ถูกลบตามแม่
+    expect(await commit(bad.body.id)).toMatchObject({ added: 3, deleted: 4 });
+    expect((await tree()).map((x: { title: string; parent: number | null }) => [x.title, x.parent])).toEqual([['Approve', null], ['Report', null], ['Backlog item', null]]);
   });
 
   it('เปลี่ยนโหมดในขั้นถัดไปได้ (PATCH updateKind) · ค่าที่ไม่รองรับ = 400', async () => {

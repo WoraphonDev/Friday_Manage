@@ -45,21 +45,22 @@ export const PatchImportBody = z.object({
   project: ProjectDraft.optional(),
   /** ตั้งแผนนี้เป็น Baseline v1 (ค่าเริ่มต้นเปิด) */
   setBaseline: z.boolean().optional(),
-  /** โหมดอัปเดต: งานที่หายไปจากไฟล์ (key = No.) · ค่าเริ่มต้น keep */
+  /** โหมดอัปเดต sync: งานที่หายไปจากไฟล์ (key = No.) · ค่าเริ่มต้น keep · โหมด replace ลบทุกงานเสมอ */
   missing: z.record(z.string().regex(/^\d+$/), z.enum(['keep', 'delete'])).optional(),
   /** โหมดอัปเดต: ใช้กับงานที่หายไปทุกงาน (ค่าใน `missing` รายงานชนะ) */
   missingAll: z.enum(['keep', 'delete']).optional(),
   /** โหมดอัปเดต: เหตุผลที่บันทึกใน plan_changes */
   planChangeReason: z.string().trim().min(1).max(500).optional(),
   /**
-   * โหมดอัปเดต: replace = จับคู่และแก้งานเดิม · append = ทุกแถวเป็นงานใหม่ ไม่แตะงานเดิม
-   * unstarted = แก้เฉพาะงานที่ยังไม่เริ่ม (To do และไม่มี Actual Start) ไม่ลบงาน และเพิ่มงานใหม่เมื่อ addNew = true
+   * โหมดอัปเดต: replace = ลบแผนเดิมทั้งหมดลงถังขยะแล้วสร้างใหม่จากไฟล์ (เลขงานใหม่) · sync = จับคู่และแก้งานเดิม
+   * append = ทุกแถวเป็นงานใหม่ ไม่แตะงานเดิม · unstarted = แก้เฉพาะงานที่ยังไม่เริ่ม (To do และไม่มี Actual Start) ไม่ลบงาน และเพิ่มงานใหม่เมื่อ addNew = true
    */
-  updateKind: z.enum(['replace', 'append', 'unstarted']).optional(),
+  updateKind: z.enum(['replace', 'sync', 'append', 'unstarted']).optional(),
   /** โหมด unstarted: ยืนยันให้เพิ่มงานใหม่ที่มีในไฟล์ (ค่าเริ่มต้นไม่เพิ่ม) */
   addNew: z.boolean().optional(),
 });
-export type UpdateKind = 'replace' | 'append' | 'unstarted';
+export type UpdateKind = 'replace' | 'sync' | 'append' | 'unstarted';
+const UPDATE_KINDS: readonly string[] = ['replace', 'sync', 'append', 'unstarted'] satisfies UpdateKind[];
 
 interface JobState {
   project: z.infer<typeof ProjectDraft>;
@@ -77,13 +78,14 @@ interface JobState {
   missingChoice?: Record<string, 'keep' | 'delete'>;
   missingAll?: 'keep' | 'delete';
   planChangeReason?: string;
-  /** โหมดอัปเดต: ไม่มี = replace (job ที่สร้างก่อนมีตัวเลือกนี้) */
+  /** โหมดอัปเดต: ไม่มี = sync (job ที่สร้างก่อนมีตัวเลือกนี้ จับคู่และแก้งานเดิม) */
   updateKind?: UpdateKind;
   /** โหมด unstarted: ผู้ใช้ยืนยันให้เพิ่มงานใหม่แล้ว */
   addNew?: boolean;
 }
 
 type Job = typeof s.importJobs.$inferSelect;
+const KIND_LABEL: Record<UpdateKind, string> = { replace: 'แทนที่แผน', sync: 'อัปเดต', append: 'เพิ่มเติมแผน', unstarted: 'อัปเดตงานที่ยังไม่เริ่ม' };
 
 @Injectable()
 export class ImportsService {
@@ -96,13 +98,13 @@ export class ImportsService {
   ) {}
 
   /** L3 ขั้นที่ 1 · อัปโหลดแล้วจับคู่คอลัมน์และคนให้อัตโนมัติ */
-  async upload(auth: AuthInfo, tenant: TenantInfo, file: { buffer: Buffer; originalname: string } | undefined, mode: string, targetKey?: string, updateKind: string = 'replace') {
+  async upload(auth: AuthInfo, tenant: TenantInfo, file: { buffer: Buffer; originalname: string } | undefined, mode: string, targetKey?: string, updateKind: string = 'sync') {
     if (tenant.role === 'guest') throw forbidden('ws.project.create');
     if (!file) throw new AppError(400, 'file_required', 'แนบไฟล์ .xlsx');
     if (!/\.xlsx$/i.test(file.originalname)) throw new AppError(400, 'invalid_file', 'รองรับเฉพาะไฟล์ .xlsx');
     if (mode !== 'create' && mode !== 'update') throw new AppError(400, 'mode_not_supported', 'mode ต้องเป็น create (โปรเจกต์ใหม่) หรือ update (อัปเดตแผนของโปรเจกต์เดิม)');
     if (mode === 'update' && !targetKey) throw new AppError(400, 'project_required', 'ระบุ projectKey ของโปรเจกต์ที่จะอัปเดต');
-    if (!['replace', 'append', 'unstarted'].includes(updateKind)) throw new AppError(400, 'update_kind_not_supported', 'updateKind ต้องเป็น replace (แทนที่แผนเดิม), append (เพิ่มเติมแผน) หรือ unstarted (อัปเดตเฉพาะงานที่ยังไม่เริ่ม)');
+    if (!UPDATE_KINDS.includes(updateKind)) throw new AppError(400, 'update_kind_not_supported', 'updateKind ต้องเป็น replace (แทนที่แผนเดิม), sync (จับคู่และแก้งานเดิม), append (เพิ่มเติมแผน) หรือ unstarted (อัปเดตเฉพาะงานที่ยังไม่เริ่ม)');
     if (mode === 'update') await this.limits.assertFeature(tenant.workspaceId, 'import_update');
     const wb = await this.parse(file.buffer);
     // อัปเดตแผนต้องมี project.baseline · ตรวจก่อนเก็บไฟล์ลงดิสก์
@@ -338,7 +340,8 @@ export class ImportsService {
     keep: Pick<JobState, 'missingChoice' | 'missingAll' | 'planChangeReason' | 'updateKind' | 'addNew'>,
     autoMatch: boolean,
   ) {
-    const append = keep.updateKind === 'append';
+    // เพิ่มเติม / แทนที่แผน: ทุกแถวเป็นงานใหม่
+    const fresh = keep.updateKind === 'append' || keep.updateKind === 'replace';
     const cal = await WorkCalendar.load(tx, project);
     const base = await this.evaluate(tx, tenant, wb, columnMapping, personMapping, members, { project: { key: project.key, name: project.name }, setBaseline: false }, autoMatch, {
       cal,
@@ -346,12 +349,13 @@ export class ImportsService {
       baOptional: true,
       noDerivedSize: true,
       statuses: await statusNames(tx, project.id),
-      // เพิ่มเติมแผน: Key ของโปรเจกต์อื่นในไฟล์ไม่ใช่ข้อผิดพลาด (ทุกแถวเป็นงานใหม่อยู่แล้ว)
-      projectKey: append ? undefined : project.key,
-      parents: await parentTasks(tx, project.id),
+      // เพิ่มเติม / แทนที่แผน: Key ของโปรเจกต์อื่นในไฟล์ไม่ใช่ข้อผิดพลาด (ทุกแถวเป็นงานใหม่อยู่แล้ว)
+      projectKey: fresh ? undefined : project.key,
+      // แทนที่แผน: งานเดิมถูกลบทั้งหมด Sub-task จึงต้องมี Task แม่ในไฟล์
+      parents: keep.updateKind === 'replace' ? undefined : await parentTasks(tx, project.id),
     });
     const defs = await this.customDefs(tx, project);
-    const plan: UpdatePlan = await computeUpdate(tx, project, base.check, Object.values(columnMapping).includes('key'), defs, keep.updateKind ?? 'replace');
+    const plan: UpdatePlan = await computeUpdate(tx, project, base.check, Object.values(columnMapping).includes('key'), defs, keep.updateKind ?? 'sync');
     // อัปเดตเฉพาะงานที่ยังไม่เริ่ม: งานใหม่ในไฟล์แสดงให้เห็นแต่เพิ่มเมื่อผู้ใช้ยืนยันเท่านั้น
     if (plan.unstartedOnly && !keep.addNew) plan.adds = [];
     const state: JobState = { ...base.state, diff: plan.diff, ...keep, customFields: defs.map((d) => ({ target: `cf:${d.id}` as const, label: d.name })) };
@@ -371,7 +375,8 @@ export class ImportsService {
       return t && 'userId' in t ? t.userId : null;
     };
     const choice = (no: number) => prev.missingChoice?.[String(no)] ?? prev.missingAll ?? 'keep';
-    const deleteNos = new Set(ev.plan.diff.missing.filter((m) => choice(m.no) === 'delete').map((m) => m.no));
+    // แทนที่แผน: ลบแผนเดิมทุกงาน ไม่มีให้เลือกเก็บ
+    const deleteNos = new Set(ev.plan.diff.missing.filter((m) => ev.plan.wipe || choice(m.no) === 'delete').map((m) => m.no));
     const reason = prev.planChangeReason ?? `อัปเดตแผนจากไฟล์ ${job.fileName}`;
     const members = await this.members(tx);
     const done = await applyUpdate(tx, { auth, tenant, project, fileName: job.fileName, plan: ev.plan, userOf, memberOf: (n) => members.get(personKey(n)) ?? null, deleteNos, reason });
@@ -386,7 +391,7 @@ export class ImportsService {
       action: 'import.completed',
       targetType: 'project',
       targetId: project.id,
-      summary: `${job.fileName} → ${prev.updateKind === 'append' ? 'เพิ่มเติมแผน' : prev.updateKind === 'unstarted' ? 'อัปเดตงานที่ยังไม่เริ่ม' : 'อัปเดต'} ${project.key} · เพิ่ม ${done.added} · เปลี่ยน ${done.changed} · ลบ ${done.deleted} · ข้าม ${skipped}`,
+      summary: `${job.fileName} → ${KIND_LABEL[prev.updateKind ?? 'sync']} ${project.key} · เพิ่ม ${done.added} · เปลี่ยน ${done.changed} · ลบ ${done.deleted} · ข้าม ${skipped}`,
     });
     const emails = Object.values(personMapping).flatMap((t) => (t && 'email' in t ? [t.email] : []));
     const { events, ...counts } = done;

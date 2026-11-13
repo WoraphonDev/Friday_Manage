@@ -100,4 +100,5 @@ export interface Member {
 /** key ของคนใน personMapping ต้องตรงกับ `personKey` ของ API: ไม่สนตัวพิมพ์และ ’ กับ ' */
 export const personKey = (name: string) => name.trim().toLowerCase().replace(/[’‘`]/g, "'");
 
-export type UpdateKind = "replace" | "append" | "unstarted";
+/** replace = ลบแผนเดิมแล้วสร้างใหม่ · sync = จับคู่และแก้งานเดิม (API เท่านั้น ไม่มีในหน้าเลือก) */
+export type UpdateKind = "replace" | "sync" | "append" | "unstarted";

@@ -136,6 +136,7 @@
     "expand": "ขยายกลุ่ม {name}",
     "collapse": "ย่อกลุ่ม {name}",
     "markDone": "ทำเครื่องหมายว่าเสร็จ: {title}",
+    "cannotMove": "เปลี่ยนสถานะได้เฉพาะ Dev / QA ของงานนี้",
     "search": "ค้นหา",
     "filter": "ตัวกรอง",
     "rangeLabel": "ช่วงเวลา",

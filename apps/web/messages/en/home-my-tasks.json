@@ -136,6 +136,7 @@
     "expand": "Expand group {name}",
     "collapse": "Collapse group {name}",
     "markDone": "Mark as done: {title}",
+    "cannotMove": "Only this task's Dev or QA can change its status",
     "search": "Search",
     "filter": "Filter",
     "rangeLabel": "Time range",

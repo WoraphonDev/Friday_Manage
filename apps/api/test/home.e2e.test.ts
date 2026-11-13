@@ -163,6 +163,10 @@ describe('GET w/my-issues', () => {
     const roles = Object.fromEntries(items.map((i: { title: string; myRoles: string[] }) => [i.title, i.myRoles]));
     expect(roles['B-dev เป็น BA']).toEqual(['ba']);
     expect(roles['Q-dev เป็น BA และ QA']).toEqual(['ba', 'qa']);
+    // BA อย่างเดียวเปลี่ยนสถานะไม่ได้ (ตรงกับ requireMovable) · เป็น QA ด้วย = ได้
+    const canMove = Object.fromEntries(items.map((i: { title: string; canMove: boolean }) => [i.title, i.canMove]));
+    expect(canMove['B-dev เป็น BA']).toBe(false);
+    expect(canMove['Q-dev เป็น BA และ QA']).toBe(true);
     // งานที่เสร็จนานแล้วไม่โผล่ ไม่ว่าจะเป็นบทบาทใด
     expect(roles).not.toHaveProperty('S-dev เป็น SA เสร็จแล้ว');
     expect(r.body.counts.assigned).toBe(6);

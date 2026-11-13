@@ -14,6 +14,7 @@ import { weekOf, workspaceWorkload } from '../overview/workload.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
 import { loadScope, type Issue, type Scope } from './scope.js';
 import { reviewerList } from '../issues/rules.js';
+import { canMoveIssue } from '../projects/permissions.js';
 
 const uuid = z.uuid();
 
@@ -292,6 +293,8 @@ export class HomeService {
           subtasks: subCounts.get(i.id) ?? null,
           assignees: (sc.assignees.get(i.id) ?? []).map((u) => people.get(u)).filter((x): x is Person => !!x),
           myRoles: sc.rolesOf(i, auth.userId),
+          // แท็บ "มอบหมายให้ฉัน" รวม BA / SA ที่เปลี่ยนสถานะไม่ได้ · หน้าเว็บซ่อนช่องติ๊กเสร็จตามค่านี้
+          canMove: canMoveIssue(sc.access.get(i.projectId)!, { ...i, assigneeIds: sc.assignees.get(i.id) ?? [] }),
           version: i.version,
         };
       };

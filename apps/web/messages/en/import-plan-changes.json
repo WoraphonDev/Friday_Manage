@@ -142,6 +142,7 @@
     "commitCreate": "Import {count, plural, one {{count} task} other {{count} tasks}}",
     "commitUpdate": "Update {count, plural, one {{count} task} other {{count} tasks}}",
     "commitReplace": "Replace the plan with {count, plural, one {{count} task} other {{count} tasks}}",
+    "replaceEmpty": "This file has no importable tasks, so it can't replace the plan. Check the task name column mapping.",
     "committing": "Importing…",
     "undecided": "{count, plural, one {{count} person not matched} other {{count} people not matched}} · If not chosen, tasks are imported without a person",
     "doneTitle": "Import complete",

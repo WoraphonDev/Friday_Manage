@@ -379,6 +379,8 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     const fileGroups = new Set(adds.filter((r) => r.parentNumber === null && r.phase).map((r) => groupKey(r.module, r.phase!)));
     const keptModules = new Set(kept.map((r) => r.moduleId));
     const keptPhases = new Set(kept.map((r) => r.phaseId));
+    // ตรงกับ applyUpdate: Module ที่เป็นเจ้าของกลุ่มที่งานที่คงไว้ใช้ ไม่ถูกลบ
+    for (const p of ex.phases) if (keptPhases.has(p.id)) keptModules.add(p.moduleId);
     diff.removedModules = [...ex.moduleName].filter(([id, name]) => !fileModules.has(name) && !keptModules.has(id)).map(([, name]) => name);
     diff.removedGroups = ex.phases
       .filter((p) => !keptPhases.has(p.id) && !fileGroups.has(groupKey(ex.moduleName.get(p.moduleId), p.name)))
@@ -613,6 +615,9 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
     const usedPhases = new Set(used.map((u) => u.phaseId));
     const allPhases = await tx.select({ id: s.phases.id, moduleId: s.phases.moduleId }).from(s.phases).where(eq(s.phases.projectId, project.id));
     const allModules = await tx.select({ id: s.modules.id }).from(s.modules).where(eq(s.modules.projectId, project.id));
+    // Module ที่เป็นเจ้าของกลุ่มที่ยังมีงานใช้อยู่ต้องเก็บไว้: ลบ Module แล้วกลุ่มถูกลบตาม (cascade) ขณะงานยังอ้างกลุ่ม → FK ล้ม
+    // เกิดได้เมื่อ Bug ถูกย้าย Module (แก้หลายงานใน Table) แต่ยังอยู่ในกลุ่มของ Module เดิม
+    for (const p of allPhases) if (usedPhases.has(p.id)) usedModules.add(p.moduleId);
     const dropModules = allModules.map((m) => m.id).filter((id) => !usedModules.has(id));
     const dropPhases = allPhases.filter((p) => !usedPhases.has(p.id)).map((p) => p.id);
     if (dropPhases.length) {

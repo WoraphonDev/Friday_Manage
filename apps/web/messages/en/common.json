@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Friday Manage",
+    "name": "Friday Work Management",
     "description": "Plan and track your team's work",
     "loading": "Loading…",
     "close": "Close",
@@ -163,7 +163,7 @@
     "loginDescription": "Sign in to open your workspace"
   },
   "public": {
-    "home": "Friday Manage",
+    "home": "Friday Work Management",
     "pricing": "Pricing",
     "legal": "Terms and policies"
   },

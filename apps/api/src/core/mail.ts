@@ -67,7 +67,7 @@ export class Mailer {
       return;
     }
     await this.transportFactory(cfg).sendMail({
-      from: m.from ?? process.env.MAIL_FROM ?? 'Friday Manage <no-reply@localhost>',
+      from: m.from ?? process.env.MAIL_FROM ?? 'Friday Work Management <no-reply@localhost>',
       to: m.to,
       subject: m.subject,
       text: m.text,

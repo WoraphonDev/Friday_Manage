@@ -39,7 +39,7 @@ const leaves = [
 ];
 const sessions = [
   { id: "s-1", deviceName: null, userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 Chrome/130.0 Safari/537.36", ip: null, location: "กรุงเทพฯ", createdAt: "2026-11-01T00:00:00Z", lastSeenAt: new Date().toISOString(), current: true },
-  { id: "s-2", deviceName: "Friday Manage app · iPhone", userAgent: null, ip: null, location: null, createdAt: "2026-10-01T00:00:00Z", lastSeenAt: "2026-11-05T00:00:00Z", current: false },
+  { id: "s-2", deviceName: "Friday Work Management app · iPhone", userAgent: null, ip: null, location: null, createdAt: "2026-10-01T00:00:00Z", lastSeenAt: "2026-11-05T00:00:00Z", current: false },
 ];
 
 type Call = { method: string; path: string; body: unknown };
@@ -98,7 +98,7 @@ beforeEach(() => {
     http.post(/\/api\/v1\/me\/password:change$/, ok({ ok: true, loggedOutSessions: 1 })),
     http.post(/\/api\/v1\/me\/email:change$/, ok({ pendingEmail: "new@example.com", retryAfter: 60 }, 202)),
     http.post(/\/api\/v1\/me\/email:confirm$/, ok({ emailVerified: true })),
-    http.post(/\/api\/v1\/me\/mfa:setup$/, ok({ secret: "JBSWY3DPEHPK3PXP", otpauthUrl: "otpauth://totp/Friday%20Manage:lead%40example.com?secret=JBSWY3DPEHPK3PXP" })),
+    http.post(/\/api\/v1\/me\/mfa:setup$/, ok({ secret: "JBSWY3DPEHPK3PXP", otpauthUrl: "otpauth://totp/Friday%20Work%20Management:lead%40example.com?secret=JBSWY3DPEHPK3PXP" })),
     http.post(/\/api\/v1\/me\/mfa:enable$/, async ({ request }) => {
       await record(request);
       mfa = { ...mfa, enabled: true, backupCodesLeft: 2 };
@@ -211,7 +211,7 @@ describe("Profile (I)", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     mount("notify");
     await user.click(await screen.findByRole("button", { name: "จัดการ" }));
-    const panel = screen.getByRole("region", { name: "ผูกบัญชี LINE กับ Friday Manage" });
+    const panel = screen.getByRole("region", { name: "ผูกบัญชี LINE กับ Friday Work Management" });
     expect(screen.getByRole("button", { name: "จัดการ" })).toHaveAttribute("aria-expanded", "true");
     await user.click(within(panel).getByRole("button", { name: "ขอรหัส" }));
     expect(await within(panel).findByText("482 913")).toBeInTheDocument();
@@ -320,7 +320,7 @@ describe("Profile (I)", () => {
     expect(within(devices).getByText(/Chrome · macOS · กรุงเทพฯ/)).toBeInTheDocument();
     expect(within(devices).getByText("เครื่องนี้")).toBeInTheDocument();
     expect(within(devices).getByText("ตอนนี้")).toBeInTheDocument();
-    await user.click(within(devices).getByRole("button", { name: "ออกจากระบบ Friday Manage app · iPhone" }));
+    await user.click(within(devices).getByRole("button", { name: "ออกจากระบบ Friday Work Management app · iPhone" }));
     let dialog = await screen.findByRole("dialog", { name: "ออกจากระบบอุปกรณ์นี้?" });
     await user.click(within(dialog).getByRole("button", { name: "ออกจากระบบ" }));
     await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "DELETE", path: "/me/sessions/s-2" }));

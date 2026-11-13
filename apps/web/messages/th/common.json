@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Friday Manage",
+    "name": "Friday Work Management",
     "description": "วางแผนและติดตามงานของทีม",
     "loading": "กำลังโหลด…",
     "close": "ปิด",
@@ -163,7 +163,7 @@
     "loginDescription": "เข้าสู่ระบบเพื่อเปิดพื้นที่ทำงานของคุณ"
   },
   "public": {
-    "home": "Friday Manage",
+    "home": "Friday Work Management",
     "pricing": "แพ็กเกจ",
     "legal": "ข้อกำหนดและนโยบาย"
   },

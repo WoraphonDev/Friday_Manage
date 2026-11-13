@@ -221,12 +221,12 @@ describe('NPS', () => {
     expect(g.status, JSON.stringify(g.body)).toBe(200);
     expect(g.body).toMatchObject({ canEdit: false, settings: { enabled: true, audience: 'admins', firstAfterDays: 30, repeatDays: 90, samplePct: 50, excludeTrialDays: 14, excludeTicketDays: 7, topics: ['speed', 'usability', 'missing_feature', 'price', 'mobile'] }, eligible: { admins: 3, members: 3 } });
     expect((await engineer.agent.get('/ops/nps/settings')).status).toBe(403);
-    const next = { ...g.body.settings, audience: 'members', samplePct: 30, excludeShortMobile: false, question: 'คุณจะแนะนำ Friday Manage ให้คนอื่นไหม', followUpsEn: null };
+    const next = { ...g.body.settings, audience: 'members', samplePct: 30, excludeShortMobile: false, question: 'คุณจะแนะนำ Friday Work Management ให้คนอื่นไหม', followUpsEn: null };
     delete next.updatedAt;
     expect((await finance.agent.put('/ops/nps/settings').send(next)).status).toBe(403);
     const put = await owner.agent.put('/ops/nps/settings').send(next);
     expect(put.status, JSON.stringify(put.body)).toBe(200);
-    expect(put.body).toMatchObject({ canEdit: true, settings: { audience: 'members', samplePct: 30, excludeShortMobile: false, question: 'คุณจะแนะนำ Friday Manage ให้คนอื่นไหม' } });
+    expect(put.body).toMatchObject({ canEdit: true, settings: { audience: 'members', samplePct: 30, excludeShortMobile: false, question: 'คุณจะแนะนำ Friday Work Management ให้คนอื่นไหม' } });
     expect(await audit('ops.nps_settings')).toEqual(['เปิดแบบสำรวจ NPS · ถาม ทุกคนยกเว้น Guest หลังใช้ 30 วัน ซ้ำทุก 90 วัน สุ่ม 30%']);
     expect((await owner.agent.put('/ops/nps/settings').send({ ...next, samplePct: 101 })).status).toBe(400);
   });

@@ -74,7 +74,7 @@ function listPage(search = "") {
     http.post(`${OPS}/help/articles`, async ({ request }) => (rec("POST", "/help/articles", await request.json()), HttpResponse.json({ article: { ...article, id: "new-1", status: "draft" } }, { status: 201 }))),
     http.put(`${OPS}/help/categories`, async ({ request }) => (rec("PUT", "/help/categories", await request.json()), HttpResponse.json({ items: categories }))),
     http.get(`${OPS}/help/from-ticket/:id`, () =>
-      HttpResponse.json({ ticket: { id: "t-509", number: 509, subject: "LINE OA ไม่แจ้งเตือนในกลุ่ม", cause: "ปลายทางถูกลบที่ LINE", status: "solved" }, draft: { title: "LINE ไม่แจ้งเตือนในกลุ่ม: ตรวจ 4 จุด", body: "1. ตรวจว่ายังเชิญ Friday Manage เป็นสมาชิกกลุ่ม", categoryId: C2 } }),
+      HttpResponse.json({ ticket: { id: "t-509", number: 509, subject: "LINE OA ไม่แจ้งเตือนในกลุ่ม", cause: "ปลายทางถูกลบที่ LINE", status: "solved" }, draft: { title: "LINE ไม่แจ้งเตือนในกลุ่ม: ตรวจ 4 จุด", body: "1. ตรวจว่ายังเชิญ Friday Work Management เป็นสมาชิกกลุ่ม", categoryId: C2 } }),
     ),
     http.post(`${OPS}/help/from-ticket/:id`, async ({ request, params }) => (rec("POST", `/help/from-ticket/${params.id}`, await request.json()), HttpResponse.json({ article: { ...article, id: "from-509", status: "draft" } }, { status: 201 }))),
   );
@@ -189,7 +189,7 @@ describe("ศูนย์ช่วยเหลือ · รายการบท
     await userEvent.click(link);
     await userEvent.click(within(dlg).getByRole("button", { name: "สร้างร่างและเปิดตัวแก้" }));
     await waitFor(() =>
-      expect(calls.find((c) => c.path === "/help/from-ticket/t-509")?.body).toEqual({ title: "LINE ไม่แจ้งเตือนในกลุ่ม: ตรวจ 4 จุด", categoryId: C2, body: "1. ตรวจว่ายังเชิญ Friday Manage เป็นสมาชิกกลุ่ม", link: false }),
+      expect(calls.find((c) => c.path === "/help/from-ticket/t-509")?.body).toEqual({ title: "LINE ไม่แจ้งเตือนในกลุ่ม: ตรวจ 4 จุด", categoryId: C2, body: "1. ตรวจว่ายังเชิญ Friday Work Management เป็นสมาชิกกลุ่ม", link: false }),
     );
     expect(router.push).toHaveBeenCalledWith("/help/from-509");
   });

@@ -123,7 +123,7 @@
     "waiting": "Content pending",
     "outline": {
       "terms": {
-        "intro": "The agreement between the service provider and customers using Friday Manage",
+        "intro": "The agreement between the service provider and customers using Friday Work Management",
         "sections": [["Definitions", "Workspace, Owner, Admin, members, Guest, customer data"], ["Accounts and security", "Responsibility for passwords, 2FA and SSO"], ["Plans and payment", "Flat pricing by team size, VAT, withholding tax, grace period when over the plan or overdue"], ["Cancellation and refunds", "Use continues until the end of the period"], ["Prohibited use", "No unlawful use, no penetration testing without permission"], ["Data ownership", "Data belongs to the customer and can be exported anytime"], ["Service levels", "SLA for Enterprise, maintenance windows"], ["Limitation of liability", ""], ["Governing law", "Thai law"]]
       },
       "privacy": {

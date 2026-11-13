@@ -308,7 +308,7 @@ function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
             const due = dueText(i, year);
             return (
               <div key={i.key} className={styles.mItem}>
-                <input type="checkbox" checked={done} disabled={busy === i.key} aria-label={t(done ? "markUndone" : "markDone", { title: i.title })} onChange={(e) => onToggle(i, e.target.checked)} />
+                <input type="checkbox" checked={done} disabled={busy === i.key || i.canMove === false} title={i.canMove === false ? t("cannotMove") : undefined} aria-label={t(done ? "markUndone" : "markDone", { title: i.title })} onChange={(e) => onToggle(i, e.target.checked)} />
                 <Link href={taskHref(ws, i.project.key, i.key)} className={styles.mItemMain}>
                   <span className={styles.mItemTitle} style={done ? { textDecoration: "line-through", color: "var(--muted)" } : undefined}>{i.title}</span>
                   <span className={styles.mItemMeta}><span className={styles.mType} aria-hidden="true" />{i.key} · <span className={styles.mProjDot} style={{ background: i.project.color ?? FALLBACK_PROJECT_COLOR }} />{i.project.name}<RoleBadges item={i} /></span>
@@ -338,6 +338,8 @@ function TaskRow({ item, ws, year, busy, onToggle, onMove, onDragStart }: { item
   const tp = useTranslations("common.priority");
   const dueText = useDueText();
   const done = isClosedCategory(item.status.category);
+  // BA / SA อย่างเดียวเปลี่ยนสถานะไม่ได้ (API ตอบ 403) จึงปิดช่องติ๊กและการปัดเพื่อปิดงาน
+  const locked = item.canMove === false;
   const due = dueText(item, year);
   const start = useRef<number | null>(null);
   // มือถือ: ปัดซ้าย = เลื่อน Due · ปัดขวา = ปิดงาน (ปุ่มที่แถวทำแบบเดียวกันสำหรับคีย์บอร์ด / screen reader)
@@ -347,11 +349,11 @@ function TaskRow({ item, ws, year, busy, onToggle, onMove, onDragStart }: { item
     const dx = e.changedTouches[0].clientX - start.current;
     start.current = null;
     if (dx < -80 && !done) onMove();
-    else if (dx > 80 && !done) onToggle(true);
+    else if (dx > 80 && !done && !locked) onToggle(true);
   };
   return (
     <div className={styles.tr} draggable={!done} onDragStart={onDragStart} onTouchStart={touchStart} onTouchEnd={touchEnd} data-testid={`task-${item.key}`}>
-      <input type="checkbox" checked={done} disabled={busy} aria-label={t(done ? "markUndone" : "markDone", { title: item.title })} onChange={(e) => onToggle(e.target.checked)} style={{ width: 18, height: 18, margin: 0 }} />
+      <input type="checkbox" checked={done} disabled={busy || locked} title={locked ? t("cannotMove") : undefined} aria-label={t(done ? "markUndone" : "markDone", { title: item.title })} onChange={(e) => onToggle(e.target.checked)} style={{ width: 18, height: 18, margin: 0 }} />
       <div style={{ minWidth: 0 }}>
         <Link className={`${styles.rowTitle} ${done ? styles.strike : ""}`} href={taskHref(ws, item.project.key, item.key)}>{item.title}</Link>
         <div className={styles.rowMeta}>

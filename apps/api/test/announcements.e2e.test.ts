@@ -6,7 +6,7 @@ import { Mailer } from '../src/core/mail.js';
 import { addMember, client, type Client, seedTeam, signup, startApp, type TestApp } from './helpers.js';
 
 process.env.SMTP_HOST = 'smtp.test.example.com';
-process.env.MAIL_FROM = 'Friday Manage <notify@friday.test>';
+process.env.MAIL_FROM = 'Friday Work Management <notify@friday.test>';
 
 let t: TestApp;
 let team: Awaited<ReturnType<typeof seedTeam>>;
@@ -132,7 +132,7 @@ describe('อีเมลประกาศ (ผ่านท่อส่งข�
     expect(d.content.view.subject).toBe('[Friday] ประกาศจากทีม Friday: ปรับราคารายปีของ Friday');
     expect(d.content.view.text).toContain('ลูกค้ารายปีใช้ราคาเดิมจนครบสัญญา');
     expect(mails).toHaveLength(1);
-    expect(mails[0]).toMatchObject({ to: 'lead@lotus-demo.example.com', from: 'Friday Manage <notify@friday.test>' });
+    expect(mails[0]).toMatchObject({ to: 'lead@lotus-demo.example.com', from: 'Friday Work Management <notify@friday.test>' });
     expect(mails[0].replyTo).toBeUndefined();
     expect(String(mails[0].html)).toContain('เรียนทีม Friday');
     const inbox = await team.lead.get(`/me/notifications?workspace=${team.slug}`);

@@ -209,9 +209,9 @@ export async function buildOpenApi(app: INestApplication, opts: BuildOptions = {
   return {
     openapi: '3.1.0',
     info: {
-      title: opts.title ?? 'Friday Manage API',
+      title: opts.title ?? 'Friday Work Management API',
       version: opts.version ?? '1.0.0',
-      description: 'API ของ Friday Manage (สร้างอัตโนมัติจาก route ของ NestJS และ zod schema ที่ handler ใช้ตรวจข้อมูลขาเข้า) · รูปแบบ error และข้อตกลงอื่น ๆ ดู docs/spec/03-api.md\n\nข้อควรรู้: schema ของ **ผลลัพธ์** ยังไม่ระบุ (ตอบเป็น JSON) และ route ที่ตรวจข้อมูลในชั้น service แทน controller จะแสดง request body แบบ object ทั่วไป',
+      description: 'API ของ Friday Work Management (สร้างอัตโนมัติจาก route ของ NestJS และ zod schema ที่ handler ใช้ตรวจข้อมูลขาเข้า) · รูปแบบ error และข้อตกลงอื่น ๆ ดู docs/spec/03-api.md\n\nข้อควรรู้: schema ของ **ผลลัพธ์** ยังไม่ระบุ (ตอบเป็น JSON) และ route ที่ตรวจข้อมูลในชั้น service แทน controller จะแสดง request body แบบ object ทั่วไป',
     },
     servers: [{ url: '/' }],
     tags: [...tags].sort().map((name) => ({ name })),

@@ -260,6 +260,6 @@ export class CalendarService {
       return out;
     });
     const scope = feed.f.projectId ? events[0]?.category : null;
-    return buildIcs(`Friday Manage · ${feed.wsName}${scope ? ` · ${scope}` : ''}`, events);
+    return buildIcs(`Friday Work Management · ${feed.wsName}${scope ? ` · ${scope}` : ''}`, events);
   }
 }

@@ -8,7 +8,7 @@ import { SupportRepliesJob } from '../src/help/replies.js';
 import { addMember, client, type Client, seedTeam, signup, startApp, type TestApp } from './helpers.js';
 
 process.env.SMTP_HOST = 'smtp.test.example.com';
-process.env.MAIL_FROM = 'Friday Manage <notify@friday.test>';
+process.env.MAIL_FROM = 'Friday Work Management <notify@friday.test>';
 
 let t: TestApp;
 let team: Awaited<ReturnType<typeof seedTeam>>;
@@ -45,7 +45,7 @@ beforeAll(async () => {
   }
   await article('line-approve', { title: 'ผูก LINE เพื่อรับแจ้งเตือนและอนุมัติคำขอเลื่อน Due', body: '## ขั้นตอน\nหัวหน้าทีมกด **อนุมัติ** / ปฏิเสธ จากข้อความใน LINE ได้ทันที', routes: ['profile'] });
   await article('due-request', { title: 'ขอเลื่อน Due และใครเป็นผู้อนุมัติ', body: 'คำขอส่งถึง Project Owner หรือผู้ที่ได้รับสิทธิ์อนุมัติ', category: 'getting-started', routes: ['gantt'] });
-  await article('import-excel-update', { title: 'นำเข้าแผนงานจาก Excel แบบอัปเดต', body: '## ก่อนเริ่ม\nใช้ไฟล์ที่ส่งออกจาก Friday Manage\n## ขั้นตอน\nอัปโหลดไฟล์แล้วตรวจหน้าพรีวิว', category: 'import-export', keywords: 'xlsx, spreadsheet', routes: ['import', 'gantt'] });
+  await article('import-excel-update', { title: 'นำเข้าแผนงานจาก Excel แบบอัปเดต', body: '## ก่อนเริ่ม\nใช้ไฟล์ที่ส่งออกจาก Friday Work Management\n## ขั้นตอน\nอัปโหลดไฟล์แล้วตรวจหน้าพรีวิว', category: 'import-export', keywords: 'xlsx, spreadsheet', routes: ['import', 'gantt'] });
   await article('internal-sso', { title: 'ตั้งค่า SSO สำหรับองค์กร', body: 'ขั้นตอนที่มีข้อมูลภายใน', visibility: 'signed_in', category: 'getting-started' });
   await article('draft-restore', { title: 'กู้คืนงานที่ลบผิด', body: 'ร่าง', status: 'draft', category: 'getting-started' });
 });

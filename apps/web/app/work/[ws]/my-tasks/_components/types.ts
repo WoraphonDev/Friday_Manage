@@ -83,6 +83,8 @@ export interface TaskItem {
   assignees: Person[];
   /** บทบาทของฉันในงาน · ว่าง = ไม่ได้เกี่ยวข้อง (เช่นแท็บ Watching) */
   myRoles?: MyRole[];
+  /** เปลี่ยนสถานะได้ไหม (BA / SA อย่างเดียวไม่ได้) · ไม่มีค่า = ได้ */
+  canMove?: boolean;
   version: number;
 }
 export type MyRole = "dev" | "ba" | "sa" | "qa";

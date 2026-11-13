@@ -198,6 +198,17 @@ describe("My Tasks (F / M2)", () => {
     expect(await screen.findByText("ปิดงาน DE-35 แล้ว")).toBeInTheDocument();
   });
 
+  it("BA / SA ที่เปลี่ยนสถานะไม่ได้ (canMove: false) = ช่องติ๊กปิดพร้อมคำอธิบาย", async () => {
+    const data = tasks();
+    data.groups[2]!.items[0] = { ...data.groups[2]!.items[0]!, canMove: false };
+    server.use(http.get("*/api/v1/w/:ws/my-issues", () => HttpResponse.json(data)));
+    mount(<MyTasksPage ws="sample" />);
+    const box = await screen.findByRole("checkbox", { name: "ทำเครื่องหมายว่าเสร็จ: งานตัวอย่าง DE-50" });
+    expect(box).toBeDisabled();
+    expect(box).toHaveAttribute("title", "เปลี่ยนสถานะได้เฉพาะ Dev / QA ของงานนี้");
+    expect(screen.getByRole("checkbox", { name: "ทำเครื่องหมายว่าเสร็จ: งานตัวอย่าง DE-35" })).toBeEnabled();
+  });
+
   it("ลากงานไปวางที่หัวกลุ่ม \"สัปดาห์หน้า\" = เปลี่ยน Due เป็นวันศุกร์ของสัปดาห์นั้น", async () => {
     const user = userEvent.setup();
     mount(<MyTasksPage ws="sample" />);

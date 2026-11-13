@@ -518,6 +518,8 @@ function Confirm({ ws, job, busy, onPatch, onBack, onCommit }: {
   const deleted = d ? d.missing.filter((m) => (job.missingChoice?.[String(m.no)] ?? job.missingAll ?? "keep") === "delete").length : 0;
   const total = create ? s.ready + s.backlog : s.ready;
   const undecided = job.people.filter((p) => !p.decided).length;
+  // แทนที่แผนด้วยไฟล์ที่ไม่มีงานใช้ได้เลย = ลบแผนเดิมทั้งหมด (เช่น ลืมจับคู่คอลัมน์ชื่องาน) จึงไม่ให้กด
+  const emptyReplace = wipe && !d?.added.length;
   const b = (chunks: ReactNode) => <b>{chunks}</b>;
   return (
     <section className={`${styles.card} ${styles.pad}`}>
@@ -578,7 +580,8 @@ function Confirm({ ws, job, busy, onPatch, onBack, onCommit }: {
       <div className={styles.right}>
         {busy === "commit" && <span className="muted" role="status">{t("committing")}</span>}
         <Button onClick={onBack}>{t("back")}</Button>
-        <Button variant="primary" disabled={busy !== null || (create && (!name.trim() || !key.trim()))} onClick={() => onCommit(pending())}>
+        {emptyReplace && <span className={`muted ${styles.small}`} role="note">{t("replaceEmpty")}</span>}
+        <Button variant="primary" disabled={busy !== null || emptyReplace || (create && (!name.trim() || !key.trim()))} onClick={() => onCommit(pending())}>
           {create ? t("commitCreate", { count: total }) : t(wipe ? "commitReplace" : "commitUpdate", { count: total })}
         </Button>
       </div>

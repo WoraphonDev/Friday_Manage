@@ -18,4 +18,4 @@ const ctx = await NestFactory.createApplicationContext(AppModule, { logger: new 
 ctx.enableShutdownHooks();
 const jobs = ctx.get(Jobs);
 await jobs.startWorker(Number(process.env.WORKER_CONCURRENCY ?? 5));
-console.log(`Friday Manage worker · งานตามเวลา ${jobs.scheduled.size} รายการ`);
+console.log(`Friday Work Management worker · งานตามเวลา ${jobs.scheduled.size} รายการ`);

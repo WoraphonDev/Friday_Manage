@@ -24,7 +24,7 @@ export function decrypt(enc: string | null) {
   }
 }
 
-/** ลายเซ็น Webhook ของ Friday Manage (A25): `sha256=` HMAC-SHA256 ของ `${timestamp}.${body}` */
+/** ลายเซ็น Webhook ของ Friday Work Management (A25): `sha256=` HMAC-SHA256 ของ `${timestamp}.${body}` */
 export function verifySignature(secret: string, timestamp: string | undefined, signature: string | undefined, body: string, now = Date.now()) {
   if (!timestamp || !signature) return false;
   if (!/^\d+$/.test(timestamp) || Math.abs(now / 1000 - Number(timestamp)) > 300) return false;
@@ -55,7 +55,7 @@ export interface FmTarget {
 type Fetcher = typeof fetch;
 
 /**
- * เรียก API ของ Friday Manage (Workspace ของทีมพัฒนา) ด้วย API token (A28) เหมือนระบบภายนอก
+ * เรียก API ของ Friday Work Management (Workspace ของทีมพัฒนา) ด้วย API token (A28) เหมือนระบบภายนอก
  * ปลายทางเป็น URL ภายในเครือข่าย Docker / VPS (เช่น http://api:3001) · timeout 10 วินาที
  */
 export class FmClient {
@@ -81,7 +81,7 @@ export class FmClient {
         signal: AbortSignal.timeout(10_000),
       });
     } catch (e) {
-      throw new AppError(502, 'fm_unreachable', `ต่อ Friday Manage ของทีมพัฒนาไม่ได้: ${(e as Error).message}`);
+      throw new AppError(502, 'fm_unreachable', `ต่อ Friday Work Management ของทีมพัฒนาไม่ได้: ${(e as Error).message}`);
     }
     const text = await res.text();
     let data: unknown = null;
@@ -92,9 +92,9 @@ export class FmClient {
     }
     if (!res.ok) {
       const err = (data as { error?: { code?: string; message?: string } } | null)?.error;
-      if (res.status === 401 || res.status === 403) throw new AppError(502, 'fm_token_rejected', `Friday Manage ปฏิเสธ API token (${err?.message ?? res.status}) · ตรวจการตั้งค่าการเชื่อมต่อ`);
-      if (res.status === 404) throw new AppError(404, 'fm_not_found', err?.message ?? 'ไม่พบงานใน Friday Manage');
-      throw new AppError(502, 'fm_error', `Friday Manage ตอบ ${res.status}: ${err?.message ?? 'ผิดพลาด'}`);
+      if (res.status === 401 || res.status === 403) throw new AppError(502, 'fm_token_rejected', `Friday Work Management ปฏิเสธ API token (${err?.message ?? res.status}) · ตรวจการตั้งค่าการเชื่อมต่อ`);
+      if (res.status === 404) throw new AppError(404, 'fm_not_found', err?.message ?? 'ไม่พบงานใน Friday Work Management');
+      throw new AppError(502, 'fm_error', `Friday Work Management ตอบ ${res.status}: ${err?.message ?? 'ผิดพลาด'}`);
     }
     return data as T;
   }

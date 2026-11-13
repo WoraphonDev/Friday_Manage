@@ -11,4 +11,4 @@ app.useLogger(new SentryLogger('Friday', { logLevels: ['error', 'warn'] }));
 });
 process.once('SIGTERM', () => void flushSentry());
 await app.listen(config.port);
-console.log(`Friday Manage API · http://localhost:${config.port}/api/v1`);
+console.log(`Friday Work Management API · http://localhost:${config.port}/api/v1`);

@@ -220,7 +220,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     });
     let sent = 0;
     if (input.send) {
-      sent = await mailAll(this.mail, await billingContacts(this.db, ws.id), `ใบแจ้งหนี้ ${inv.number} · Friday Manage`, [
+      sent = await mailAll(this.mail, await billingContacts(this.db, ws.id), `ใบแจ้งหนี้ ${inv.number} · Friday Work Management`, [
         `ใบแจ้งหนี้ ${inv.number} ยอดชำระ ${baht(amountDue)} ครบกำหนด ${inv.dueDate}`,
         ...(input.poNumber ? [`อ้างอิง PO ${input.poNumber}`] : []),
         ...(input.note ? [input.note] : []),
@@ -286,7 +286,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     // ส่งได้เฉพาะผู้ติดต่อเรื่องเงินของลูกค้า (กันพิมพ์อีเมลผิดแล้วข้อมูลรั่ว)
     if (input.to && !contacts.includes(input.to)) throw new AppError(422, 'recipient_not_contact', 'ส่งได้เฉพาะ Owner / Admin หรืออีเมลรับใบกำกับภาษีของลูกค้า', { contacts });
     const link = this.payLink(ws.slug, inv.id);
-    const sent = await mailAll(this.mail, input.to ? [input.to] : contacts, `ลิงก์ชำระใบแจ้งหนี้ ${inv.number} · Friday Manage`, `ยอดชำระ ${baht(inv.amountDue)} ครบกำหนด ${inv.dueDate}\nชำระได้ที่ ${link}`);
+    const sent = await mailAll(this.mail, input.to ? [input.to] : contacts, `ลิงก์ชำระใบแจ้งหนี้ ${inv.number} · Friday Work Management`, `ยอดชำระ ${baht(inv.amountDue)} ครบกำหนด ${inv.dueDate}\nชำระได้ที่ ${link}`);
     await this.db.transaction(async (tx) => {
       await tx.insert(s.dunningEvents).values({ workspaceId: ws.id, invoiceId: inv.id, step: 'reminder', channel: 'email', result: 'payment_link', byStaff: staff.id });
       await audit(tx, staff, ws.id, 'plan', 'ops.payment_link_sent', `ส่งลิงก์ชำระ ${inv.number} ถึง ${sent} อีเมล`, { type: 'invoice', id: inv.id });
@@ -548,7 +548,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
       return note;
     });
     const [bal] = await this.rows<{ b: number }>(sql`select coalesce(sum(amount_satang), 0)::float8 as b from workspace_credits where workspace_id = ${p.workspaceId}`);
-    await mailAll(this.mail, await billingContacts(this.db, p.workspaceId), `คุณได้รับเครดิต ${baht(p.amountSatang)} · Friday Manage`, `เหตุผล: ${p.reason}\nเครดิตคงเหลือ ${baht(Number(bal.b))} ใช้หักรอบถัดไปอัตโนมัติ`);
+    await mailAll(this.mail, await billingContacts(this.db, p.workspaceId), `คุณได้รับเครดิต ${baht(p.amountSatang)} · Friday Work Management`, `เหตุผล: ${p.reason}\nเครดิตคงเหลือ ${baht(Number(bal.b))} ใช้หักรอบถัดไปอัตโนมัติ`);
     return { creditSatang: p.amountSatang, balanceSatang: Number(bal.b), creditNote: result ? { id: result.id, number: result.number } : null };
   }
 
@@ -708,7 +708,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     const types = input.types ?? [...EXPORT_TYPES];
     const files = await Promise.all(types.map((type) => this.export({ month: input.month, type })));
     const draft = files.some((f) => f.draft);
-    const subject = `Friday Manage · ไฟล์บัญชีงวด ${input.month}${draft ? ' (ฉบับร่าง ยังไม่ปิดงวด)' : ''}`;
+    const subject = `Friday Work Management · ไฟล์บัญชีงวด ${input.month}${draft ? ' (ฉบับร่าง ยังไม่ปิดงวด)' : ''}`;
     const text = [
       `ไฟล์ประกอบการบันทึกบัญชีงวด ${input.month}${draft ? ' · ฉบับร่าง: งวดนี้ยังไม่ปิด ตัวเลขอาจเปลี่ยน' : ''}`,
       ...types.map((t, i) => `- ${EXPORT_LABEL[t]}: ${files[i]!.rows} รายการ (${files[i]!.filename})`),

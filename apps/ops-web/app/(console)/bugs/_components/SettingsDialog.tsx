@@ -20,7 +20,7 @@ interface TestResult {
   }[];
 }
 
-/** T11 · ตั้งค่าการเชื่อมต่อกับ Friday Manage ของทีมพัฒนา · Owner / วิศวกร · เปลี่ยน token / secret ต้องแตะ Security key (G4) */
+/** T11 · ตั้งค่าการเชื่อมต่อกับ Friday Work Management ของทีมพัฒนา · Owner / วิศวกร · เปลี่ยน token / secret ต้องแตะ Security key (G4) */
 export function SettingsDialog({ settings, onClose }: { settings: Settings; onClose: () => void }) {
   const t = useTranslations("bugs.t11");
   const tp = useTranslations("bugs.priority");

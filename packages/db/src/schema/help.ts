@@ -110,7 +110,7 @@ export const DEV_SEVERITIES = ['S1', 'S2', 'S3', 'S4'] as const;
 export const DEV_RESOLUTIONS = ['fixed', 'wont_fix', 'duplicate'] as const;
 
 /**
- * งานในโปรเจกต์ FM ของทีมพัฒนา (Friday Manage ของเราเอง · O36) ที่ผูกกับ Ticket · ข้อมูลล่าสุดจาก Webhook issue.updated / ดึงสำรองทุก 15 นาที
+ * งานในโปรเจกต์ FM ของทีมพัฒนา (Friday Work Management ของเราเอง · O36) ที่ผูกกับ Ticket · ข้อมูลล่าสุดจาก Webhook issue.updated / ดึงสำรองทุก 15 นาที
  * `issue_id` ไม่ใส่ FK เพราะ ops-api คุยกับงานนั้นผ่าน API token เหมือนระบบภายนอก (คนละ Workspace และอาจคนละฐานในอนาคต)
  * released_at = ย้ายเข้าสถานะ Released (หมวด Done) · พร้อมแจ้งลูกค้า (T9) เมื่อ released_at มีค่าและยังมี Ticket ที่ notified_at ว่าง
  */
@@ -144,7 +144,7 @@ export const devIssueTickets = pgTable('dev_issue_tickets', {
   check('dev_issue_tickets_notified', sql`${t.outcome} IS NULL OR ${t.outcome} = 'returned' OR ${t.notifiedAt} IS NOT NULL`)]);
 
 /**
- * การเชื่อมต่อกับ Friday Manage ของทีมพัฒนา (T11) · มีแถวเดียว (id = 1)
+ * การเชื่อมต่อกับ Friday Work Management ของทีมพัฒนา (T11) · มีแถวเดียว (id = 1)
  * token / webhook secret เข้ารหัสก่อนเก็บ (`*_enc`) · `api_base_url` เป็น URL ภายในเครือข่าย Docker / VPS เช่น http://api:3001
  * `mapping` = { severityPriority: { S1: 'urgent', … }, releasedStatus: 'Released', label: 'from-support', issueType: 'Bug' }
  */

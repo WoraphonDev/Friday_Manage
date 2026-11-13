@@ -110,7 +110,7 @@ export function verifyTotp(secretB32: string, code: string, now = Date.now()): n
 }
 
 export const otpauthUrl = (secretB32: string, email: string) =>
-  `otpauth://totp/${encodeURIComponent(`Friday Manage:${email}`)}?secret=${secretB32}&issuer=${encodeURIComponent('Friday Manage')}&algorithm=SHA1&digits=6&period=${TOTP_STEP}`;
+  `otpauth://totp/${encodeURIComponent(`Friday Work Management:${email}`)}?secret=${secretB32}&issuer=${encodeURIComponent('Friday Work Management')}&algorithm=SHA1&digits=6&period=${TOTP_STEP}`;
 
 // ---------------------------------------------------------------------------
 // รหัสที่ผู้ใช้พิมพ์เอง

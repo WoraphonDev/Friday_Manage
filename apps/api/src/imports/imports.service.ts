@@ -369,6 +369,8 @@ export class ImportsService {
     // กันอัปเดตแผนพร้อมกันสองคำขอ (เลขงาน / No. ซ้ำ)
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'import:' + project.id}, 0))`);
     const ev = await this.evaluateUpdate(tx, tenant, project, wb, job.columnMapping as ColumnMapping, personMapping, await this.members(tx), prev, false);
+    // แทนที่แผนลบงานเดิมทั้งหมดแล้วสร้างจากไฟล์ · ไฟล์ที่ไม่เหลืองานใช้ได้ (ไม่มีแถว / ไม่ได้จับคู่ชื่องาน) จะเหลือแผนว่าง
+    if (ev.plan.wipe && !ev.plan.adds.length) throw new AppError(422, 'import_replace_empty', 'ไฟล์นี้ไม่มีงานที่นำเข้าได้ จึงแทนที่แผนไม่ได้ (จะลบแผนเดิมทั้งหมด) · ตรวจการจับคู่คอลัมน์ชื่องานแล้วลองใหม่', { skipped: ev.check.skip.size });
     const userOf = (name: string | null) => {
       if (!name) return null;
       const t = personMapping[personKey(name)];

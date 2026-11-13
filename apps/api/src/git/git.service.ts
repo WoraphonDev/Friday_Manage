@@ -139,7 +139,7 @@ export class GitService {
     }
   }
 
-  /** ถอนการเชื่อมต่อฝั่ง Friday Manage (การถอน App ออกจากองค์กรทำที่หน้า GitHub) */
+  /** ถอนการเชื่อมต่อฝั่ง Friday Work Management (การถอน App ออกจากองค์กรทำที่หน้า GitHub) */
   async disconnect(auth: AuthInfo, tenant: TenantInfo, id: string) {
     if (!isAdmin(tenant)) throw forbidden('ws.settings');
     if (!Id.safeParse(id).success) throw notFound('การติดตั้ง');

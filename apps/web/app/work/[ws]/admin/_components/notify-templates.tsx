@@ -92,7 +92,7 @@ export function NotifyTemplates({ ws }: { ws: string }) {
             <div className={styles.lbl}>{t("email")} <span className={styles.tag}>{t(`mail_${picked.key}`)}</span></div>
             <div className={styles.mail} aria-label={t("emailAria")} role="figure">
               <div className={styles.mh}>
-                <div><span className={styles.muted}>{t("from")}</span> Friday Manage</div>
+                <div><span className={styles.muted}>{t("from")}</span> Friday Work Management</div>
                 <div><span className={styles.muted}>{t("to")}</span> {me.email}</div>
                 <div className={styles.subject}>{subject}</div>
               </div>

@@ -120,7 +120,7 @@ export class WorkspaceLifecycleService implements OnModuleInit {
           await this.mailer.send({
             to: o.email,
             subject: `${ws.name} จะถูกลบถาวรใน ${daysLeft} วัน`,
-            text: `สวัสดี ${o.name}\n\nข้อมูลทั้งหมดของ Workspace ${ws.name} จะถูกลบวันที่ ${thaiDate(purge)} และกู้คืนไม่ได้\nถ้าลบผิด กู้คืนได้ที่ลิงก์ด้านล่าง หรือส่งออกข้อมูลก่อนลบได้จากหน้าเดียวกัน\n\n${link}\n\nFriday Manage`,
+            text: `สวัสดี ${o.name}\n\nข้อมูลทั้งหมดของ Workspace ${ws.name} จะถูกลบวันที่ ${thaiDate(purge)} และกู้คืนไม่ได้\nถ้าลบผิด กู้คืนได้ที่ลิงก์ด้านล่าง หรือส่งออกข้อมูลก่อนลบได้จากหน้าเดียวกัน\n\n${link}\n\nFriday Work Management`,
           });
         } catch (err) {
           this.log.error(`ส่งอีเมลเตือนลบถาวร ${ws.slug} ไม่สำเร็จ: ${(err as Error).message}`);

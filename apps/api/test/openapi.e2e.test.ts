@@ -45,7 +45,7 @@ describe('OpenAPI 3.1', () => {
 
   it('โครงเอกสารถูกต้อง: เวอร์ชัน, operationId ไม่ซ้ำ, path param ครบ, ทุก operation มี summary และ responses', () => {
     expect(doc.openapi).toBe('3.1.0');
-    expect(doc.info.title).toBe('Friday Manage API');
+    expect(doc.info.title).toBe('Friday Work Management API');
     const ids = ops().map((o) => o.op.operationId);
     expect(new Set(ids).size).toBe(ids.length);
     for (const { path, method, op } of ops()) {

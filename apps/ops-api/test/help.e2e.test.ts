@@ -162,13 +162,13 @@ describe('หมวด (X9) และสร้างบทความจาก 
   it('X8: เติมหัวข้อจากสาเหตุ เนื้อหาจากผลลัพธ์ + คำตอบสุดท้าย · สร้างเป็นร่างผูก Ticket · การเงินเปิด Ticket ไม่ได้', async () => {
     const ws = await customer(t, 'lotus-demo');
     const k = (await t.owner.query(`INSERT INTO support_tickets (workspace_id, requester_email, subject, status, category, cause, solved_at) VALUES ($1, 'ops@lotus-demo.example.com', 'LINE OA ไม่แจ้งเตือนในกลุ่ม', 'solved', 'notification', 'ปลายทางถูกลบที่ LINE', now()) RETURNING id, number`, [ws.id])).rows[0];
-    await t.owner.query(`INSERT INTO support_ticket_messages (ticket_id, author_kind, author_staff_id, body) VALUES ($1, 'staff', $2, '1. ตรวจว่ายังเชิญ Friday Manage เป็นสมาชิกกลุ่ม')`, [k.id, support.id]);
+    await t.owner.query(`INSERT INTO support_ticket_messages (ticket_id, author_kind, author_staff_id, body) VALUES ($1, 'staff', $2, '1. ตรวจว่ายังเชิญ Friday Work Management เป็นสมาชิกกลุ่ม')`, [k.id, support.id]);
     await t.owner.query(`INSERT INTO support_ticket_messages (ticket_id, author_kind, author_staff_id, body, internal) VALUES ($1, 'staff', $2, 'ปิดเรื่อง · เชิญบอทเข้ากลุ่มใหม่แล้วใช้ได้ · สาเหตุ: ปลายทางถูกลบที่ LINE', true)`, [k.id, support.id]);
     await t.owner.query(`INSERT INTO help_categories (slug, name, position) VALUES ('billing', 'แพ็กเกจและการชำระเงิน', 9)`);
     const pre = await support.agent.get(`/ops/help/from-ticket/${k.id}`);
     expect(pre.status).toBe(200);
     expect(pre.body.ticket).toMatchObject({ number: k.number, cause: 'ปลายทางถูกลบที่ LINE' });
-    expect(pre.body.draft).toEqual({ title: 'ปลายทางถูกลบที่ LINE', body: 'เชิญบอทเข้ากลุ่มใหม่แล้วใช้ได้\n\n1. ตรวจว่ายังเชิญ Friday Manage เป็นสมาชิกกลุ่ม', categoryId: cat.notifications });
+    expect(pre.body.draft).toEqual({ title: 'ปลายทางถูกลบที่ LINE', body: 'เชิญบอทเข้ากลุ่มใหม่แล้วใช้ได้\n\n1. ตรวจว่ายังเชิญ Friday Work Management เป็นสมาชิกกลุ่ม', categoryId: cat.notifications });
     expect((await finance.agent.get(`/ops/help/from-ticket/${k.id}`)).status).toBe(403);
     const r = await support.agent.post(`/ops/help/from-ticket/${k.id}`).send({ title: 'LINE ไม่แจ้งเตือนในกลุ่ม: ตรวจ 4 จุด', categoryId: cat.notifications, body: pre.body.draft.body, link: true });
     expect(r.status, JSON.stringify(r.body)).toBe(201);

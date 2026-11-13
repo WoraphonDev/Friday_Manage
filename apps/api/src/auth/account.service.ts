@@ -60,7 +60,7 @@ export class AccountService {
     if (taken) throw new AppError(409, 'email_taken', 'อีเมลนี้มีบัญชีแล้ว');
     await this.db.update(users).set({ email: newEmail, emailVerifiedAt: new Date() }).where(eq(users.id, row.userId));
     await this.security.audit(row.userId, 'secu.email_changed', `เปลี่ยนอีเมลจาก ${old.email} เป็น ${newEmail}`, req);
-    await this.mail(old.email, 'อีเมลของบัญชี Friday Manage ถูกเปลี่ยน', [
+    await this.mail(old.email, 'อีเมลของบัญชี Friday Work Management ถูกเปลี่ยน', [
       `อีเมลสำหรับเข้าสู่ระบบถูกเปลี่ยนเป็น ${newEmail} แล้ว`,
       'ถ้าไม่ได้ทำเอง ให้ติดต่อ Admin ของ Workspace ทันที',
     ]);

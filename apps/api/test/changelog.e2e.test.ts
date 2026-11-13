@@ -220,7 +220,7 @@ describe('แบบสำรวจ NPS (U3)', () => {
     expect(r.status, JSON.stringify(r.body)).toBe(200);
     expect(r.body).toMatchObject({
       ask: true,
-      question: 'คุณจะแนะนำ Friday Manage ให้เพื่อนหรือเพื่อนร่วมงานไหม',
+      question: 'คุณจะแนะนำ Friday Work Management ให้เพื่อนหรือเพื่อนร่วมงานไหม',
       followUps: { detractor: 'อะไรที่เราควรปรับให้ดีขึ้นที่สุด', passive: 'อะไรที่จะทำให้ให้ 10 คะแนน', promoter: 'ชอบอะไรที่สุด' },
       topics: ['speed', 'usability', 'missing_feature', 'price', 'mobile'],
       excludeShortMobile: true,

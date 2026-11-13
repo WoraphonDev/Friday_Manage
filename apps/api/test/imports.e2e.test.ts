@@ -629,6 +629,44 @@ describe('นำเข้ารอบที่ 2: แทนที่ หรื�
     expect(audit).toContain('(กลุ่มงาน 4 · Module 1)');
   });
 
+  it('replace: ไฟล์ไม่มีงานที่ใช้ได้ = 422 ไม่ลบแผนเดิม · Bug ที่ย้าย Module แต่ยังอยู่ในกลุ่มของ Module เดิมไม่ทำให้ล้ม', async () => {
+    const book = async (rows: [string, string, string][]) => {
+      const wb = new ExcelJS.Workbook();
+      const sheet = wb.addWorksheet('Tasks');
+      sheet.addRow(TASK_HEADERS);
+      for (const [module, group, title] of rows) sheet.addRow(TASK_HEADERS.map((h) => ({ Module: module, Group: group, Title: title, Status: 'To do', 'Man-Day': 1 })[h] ?? null));
+      return Buffer.from(await wb.xlsx.writeBuffer());
+    };
+    const up = await team.lead.upload(`${team.ws}/import-jobs`, await book([['Alpha', 'G1', 'งานหนึ่ง'], ['Beta', 'G2', 'งานสอง']]), 'Rpe.xlsx', { mode: 'create' });
+    await team.lead.patch(`${team.ws}/import-jobs/${up.body.id}`, { project: { key: 'RPE', name: 'Replace Edge' } });
+    await commit(up.body.id);
+    const live = async () => (await t.owner.query(`SELECT count(*)::int AS n FROM issues i JOIN projects p ON p.id = i.project_id WHERE p.key = 'RPE' AND i.deleted_at IS NULL`)).rows[0].n;
+    expect(await live()).toBe(2);
+
+    // ไฟล์มีแต่หัวตาราง: ปุ่มในหน้าเว็บปิด และ API ปฏิเสธ · แผนเดิมยังอยู่ครบ
+    const empty = await team.lead.upload(`${team.ws}/import-jobs`, await book([]), 'RPE-empty.xlsx', { mode: 'update', projectKey: 'RPE', updateKind: 'replace' });
+    expect(empty.status, JSON.stringify(empty.body)).toBe(201);
+    const refused = await team.lead.post(`${team.ws}/import-jobs/${empty.body.id}/commit`);
+    expect(refused.status).toBe(422);
+    expect(refused.body.error.code).toBe('import_replace_empty');
+    expect(await live()).toBe(2);
+
+    // Bug อยู่ในกลุ่ม G1 (ของ Alpha) แต่ถูกย้ายไป Module Beta (แก้หลายงานใน Table ไม่ล้างกลุ่ม)
+    const ids = (await t.owner.query(`SELECT m.id AS alpha, (SELECT id FROM modules WHERE project_id = p.id AND name = 'Beta') AS beta, ph.id AS g1 FROM projects p JOIN modules m ON m.project_id = p.id AND m.name = 'Alpha' JOIN phases ph ON ph.module_id = m.id WHERE p.key = 'RPE'`)).rows[0];
+    const bug = await team.lead.post(`${team.ws}/projects/RPE/issues`, { type: 'Bug', title: 'Bug ค้างกลุ่มเดิม', moduleId: ids.alpha, phaseId: ids.g1, severity: 'major', environment: 'sit', details: { steps: 'สมมติ' } });
+    expect(bug.status, JSON.stringify(bug.body)).toBe(201);
+    await t.owner.query(`UPDATE issues SET module_id = $1 WHERE id = $2`, [ids.beta, bug.body.id]);
+
+    const r = await team.lead.upload(`${team.ws}/import-jobs`, await book([['Beta', 'G9', 'งานใหม่']]), 'RPE-v2.xlsx', { mode: 'update', projectKey: 'RPE', updateKind: 'replace' });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    // Alpha เป็นเจ้าของกลุ่มที่ Bug ใช้อยู่ จึงไม่อยู่ในรายการที่จะลบ
+    expect(r.body.diff.removedModules).toEqual([]);
+    await commit(r.body.id);
+    const kept = (await t.owner.query(`SELECT i.phase_id, m.name AS module FROM issues i JOIN modules m ON m.id = i.module_id WHERE i.id = $1`, [bug.body.id])).rows[0];
+    expect(kept).toEqual({ phase_id: ids.g1, module: 'Beta' });
+    expect((await t.owner.query(`SELECT count(*)::int AS n FROM modules WHERE id = $1`, [ids.alpha])).rows[0].n).toBe(1);
+  });
+
   it('เปลี่ยนโหมดในขั้นถัดไปได้ (PATCH updateKind) · ค่าที่ไม่รองรับ = 400', async () => {
     const job = await updateJob('APX', await sourceWorkbook());
     expect(job.diff.added).toEqual([]);

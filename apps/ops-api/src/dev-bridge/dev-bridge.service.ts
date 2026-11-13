@@ -91,7 +91,7 @@ const fill = (tpl: string, v: Record<string, string>) => tpl.replace(/\{([^}]+)\
 const DEFAULT_MESSAGE = 'สวัสดีครับ คุณ{ชื่อผู้แจ้ง}\nปัญหาที่แจ้งใน #{เลข Ticket} "{หัวข้อ}" แก้แล้วและใช้งานได้ตั้งแต่วันนี้\nถ้ายังพบปัญหา ตอบกลับข้อความนี้ได้เลย เราจะเปิดเรื่องต่อให้ทันที';
 
 /**
- * O36 · ส่งบั๊กจาก Ticket ให้ทีมพัฒนาเป็นงานในโปรเจกต์ FM ของ Friday Manage เอง (บอร์ด 20 · T3 · T7–T11)
+ * O36 · ส่งบั๊กจาก Ticket ให้ทีมพัฒนาเป็นงานในโปรเจกต์ FM ของ Friday Work Management เอง (บอร์ด 20 · T3 · T7–T11)
  * คุยกับ API ลูกค้าผ่าน API token (A28) เหมือนระบบภายนอก · รับสถานะกลับผ่าน Webhook (A25) ที่ตรวจลายเซ็น + ดึงสำรองทุก 15 นาที
  * ทีมพัฒนาเห็นเลข Ticket และรหัส Workspace เท่านั้น ไม่เห็นอีเมล / ชื่อลูกค้า
  */
@@ -137,7 +137,7 @@ export class DevBridgeService implements OnModuleInit, OnModuleDestroy {
   async client() {
     const r = await this.settingsRow();
     const token = decrypt(r?.tokenEnc ?? null);
-    if (!r?.apiBaseUrl || !r.workspaceSlug || !r.projectKey || !token) throw new AppError(409, 'bridge_not_configured', 'ยังไม่ได้ตั้งค่าการเชื่อมต่อกับ Friday Manage ของทีมพัฒนา');
+    if (!r?.apiBaseUrl || !r.workspaceSlug || !r.projectKey || !token) throw new AppError(409, 'bridge_not_configured', 'ยังไม่ได้ตั้งค่าการเชื่อมต่อกับ Friday Work Management ของทีมพัฒนา');
     return { fm: new FmClient({ apiBaseUrl: r.apiBaseUrl, workspaceSlug: r.workspaceSlug, projectKey: r.projectKey, token }), settings: r, mapping: this.mapping(r) };
   }
 

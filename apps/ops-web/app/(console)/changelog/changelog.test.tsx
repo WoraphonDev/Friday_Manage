@@ -43,7 +43,7 @@ const responses = [response({}), response({ id: "r-2", score: 10, comment: "ข�
 const detail: NpsDetail = { ...responses[0], context: { previous: { score: 7, at: "2026-08-02T03:00:00.000Z" }, health: 52, members: 6, tickets90: { count: 1, latest: { number: 488, subject: "Gantt โหลดช้า", status: "closed" } } } };
 const settings: NpsSettings = {
   enabled: true, audience: "admins", firstAfterDays: 30, repeatDays: 90, samplePct: 50, excludeTrialDays: 14, excludeTicketDays: 7, excludeSpotlightDay: true, excludeShortMobile: false,
-  question: "คุณจะแนะนำ Friday Manage ให้เพื่อนหรือเพื่อนร่วมงานไหม", questionEn: null,
+  question: "คุณจะแนะนำ Friday Work Management ให้เพื่อนหรือเพื่อนร่วมงานไหม", questionEn: null,
   followUps: { detractor: "อะไรที่เราควรปรับให้ดีขึ้นที่สุด", passive: "อะไรที่จะทำให้ให้ 10 คะแนน", promoter: "ชอบอะไรที่สุด" }, followUpsEn: null,
   topics: ["speed", "usability", "missing_feature", "price", "mobile"], updatedAt: "2026-11-12T00:00:00.000Z",
 };

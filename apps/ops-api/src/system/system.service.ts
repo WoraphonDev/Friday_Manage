@@ -181,7 +181,7 @@ export class SystemService implements OnModuleInit, OnModuleDestroy {
       return row;
     });
     await staffAudit(this.db, staff, 'system.incident_opened', `${input.title} · ${input.impact}`, { type: 'incident', id: incident.id });
-    const notified = input.notifySubscribers && !input.internal ? await this.notifySubscribers(`[Friday Manage] ${input.title}`, input.message) : 0;
+    const notified = input.notifySubscribers && !input.internal ? await this.notifySubscribers(`[Friday Work Management] ${input.title}`, input.message) : 0;
     // แจ้งทีมในมือถือ (O25) ยกเว้นคนเปิดเหตุเอง
     await this.push.toRoles(['engineer', 'owner', 'support'], { title: `เหตุขัดข้อง · ${input.title}`, body: input.message.slice(0, 160), url: `/m/incidents?id=${incident.id}`, tag: `incident-${incident.id}` }, staff.id).catch(() => 0);
     return { incident, notified };
@@ -198,7 +198,7 @@ export class SystemService implements OnModuleInit, OnModuleDestroy {
       await tx.insert(s.incidentUpdates).values({ incidentId: id, status: input.status, message: input.message, notifySubscribers: input.notifySubscribers && !i.internal, showBanner: input.showBanner && !i.internal, createdBy: staff.id });
     });
     await staffAudit(this.db, staff, 'system.incident_updated', `${i.title} → ${input.status}`, { type: 'incident', id });
-    const notified = input.notifySubscribers && !i.internal ? await this.notifySubscribers(`[Friday Manage] ${input.status === 'resolved' ? 'แก้ไขแล้ว: ' : ''}${i.title}`, input.message) : 0;
+    const notified = input.notifySubscribers && !i.internal ? await this.notifySubscribers(`[Friday Work Management] ${input.status === 'resolved' ? 'แก้ไขแล้ว: ' : ''}${i.title}`, input.message) : 0;
     return { id, status: input.status, notified };
   }
 
@@ -207,7 +207,7 @@ export class SystemService implements OnModuleInit, OnModuleDestroy {
     let n = 0;
     for (const sub of subs) {
       try {
-        await this.mail.send({ to: sub.email, subject, text: `${text}\n\nติดตามสถานะได้ที่หน้าสถานะ Friday Manage · เลิกรับอีเมลได้จากลิงก์ในหน้าสถานะ` });
+        await this.mail.send({ to: sub.email, subject, text: `${text}\n\nติดตามสถานะได้ที่หน้าสถานะ Friday Work Management · เลิกรับอีเมลได้จากลิงก์ในหน้าสถานะ` });
         n++;
       } catch {
         /* Mailer บันทึก log แล้ว */
@@ -254,7 +254,7 @@ export class SystemService implements OnModuleInit, OnModuleDestroy {
     if (existing && existing.confirmedAt && !existing.unsubscribedAt) return { ok: true };
     if (existing) await this.db.update(s.statusSubscribers).set({ confirmTokenHash: hash, unsubscribedAt: null, confirmedAt: null }).where(eq(s.statusSubscribers.id, existing.id));
     else await this.db.insert(s.statusSubscribers).values({ email: input.email, confirmTokenHash: hash });
-    await this.mail.send({ to: input.email, subject: 'ยืนยันการติดตามสถานะ Friday Manage', text: `ยืนยันด้วยรหัสนี้ในหน้าสถานะ: ${token}` }).catch(() => undefined);
+    await this.mail.send({ to: input.email, subject: 'ยืนยันการติดตามสถานะ Friday Work Management', text: `ยืนยันด้วยรหัสนี้ในหน้าสถานะ: ${token}` }).catch(() => undefined);
     return { ok: true };
   }
   async confirmSubscription(input: z.infer<typeof TokenBody>) {
@@ -301,7 +301,7 @@ export class SystemService implements OnModuleInit, OnModuleDestroy {
       .values({ scope: p.scope, message: p.message, startsAt: startNow ? now : start, endsAt: new Date(p.endsAt), notifyPlan: p.notifyPlan, status: startNow ? 'active' : 'scheduled', createdBy: staff.id, approvalRequestId: ctx.requestId })
       .returning();
     await staffAudit(this.db, staff, startNow ? 'system.maintenance_started' : 'system.maintenance_scheduled', `${p.scope} · ${row.startsAt.toISOString()} – ${row.endsAt.toISOString()} · ${p.message}`, { type: 'maintenance_window', id: row.id }, undefined, { approvedBy: ctx.approver.id, selfApproved: ctx.selfApproved });
-    if (p.notifyPlan !== 'none') await this.notifySubscribers(`[Friday Manage] ${startNow ? 'กำลังปิดปรับปรุง' : 'แจ้งปิดปรับปรุง'}`, `${p.message}\nช่วงเวลา ${row.startsAt.toISOString()} – ${row.endsAt.toISOString()}`);
+    if (p.notifyPlan !== 'none') await this.notifySubscribers(`[Friday Work Management] ${startNow ? 'กำลังปิดปรับปรุง' : 'แจ้งปิดปรับปรุง'}`, `${p.message}\nช่วงเวลา ${row.startsAt.toISOString()} – ${row.endsAt.toISOString()}`);
     return { maintenance: row };
   }
 

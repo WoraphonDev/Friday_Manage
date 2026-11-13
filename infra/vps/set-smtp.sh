@@ -16,7 +16,7 @@ grep -vE '^(SMTP_HOST|SMTP_PORT|SMTP_USER|SMTP_PASS|SMTP_SECURE|MAIL_FROM)=' .en
   echo "SMTP_PORT=587"
   echo "SMTP_USER=$u"
   echo "SMTP_PASS=$p"
-  echo "MAIL_FROM=Friday Manage <$u>"
+  echo "MAIL_FROM=Friday Work Management <$u>"
 } >>"$tmp"
 chmod 600 "$tmp"
 mv "$tmp" .env

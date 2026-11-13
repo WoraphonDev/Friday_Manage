@@ -1,4 +1,4 @@
-// O36 · ส่งบั๊กจาก Ticket ให้ทีมพัฒนา (โปรเจกต์ FM ของ Friday Manage เอง) · ใช้ Friday Manage API จำลองบน HTTP ในเครื่อง · ข้อมูลสมมติเท่านั้น
+// O36 · ส่งบั๊กจาก Ticket ให้ทีมพัฒนา (โปรเจกต์ FM ของ Friday Work Management เอง) · ใช้ Friday Work Management API จำลองบน HTTP ในเครื่อง · ข้อมูลสมมติเท่านั้น
 import { createHmac } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -20,7 +20,7 @@ let base: string;
 const SECRET = 'whsec_sample_0123456789abcdef';
 const TOKEN = 'fmt_sample_token_for_tests_only_000';
 
-// ── Friday Manage จำลอง (เฉพาะ endpoint ที่ ops-api ใช้) ─────────────
+// ── Friday Work Management จำลอง (เฉพาะ endpoint ที่ ops-api ใช้) ─────────────
 interface FakeIssue { key: string; title: string; description: string; status: { id: string; name: string; category: string }; priority: string; planEnd: string | null; sprintId: string | null; assigneeIds: string[] }
 const fake = {
   issues: new Map<string, FakeIssue>(),
@@ -47,7 +47,7 @@ function fmApi(req: import('node:http').IncomingMessage, res: import('node:http'
     const p = url.pathname.replace('/api/v1', '');
     const body = raw ? JSON.parse(raw) : {};
     if (req.method === 'GET' && p === '/me') return send(200, { id: 'bot', displayName: 'support-bot' });
-    if (req.method === 'GET' && p === '/w/friday-dev/projects/FM') return send(200, { id: 'p1', key: 'FM', name: 'Friday Manage' });
+    if (req.method === 'GET' && p === '/w/friday-dev/projects/FM') return send(200, { id: 'p1', key: 'FM', name: 'Friday Work Management' });
     if (req.method === 'GET' && p === '/w/friday-dev/projects/FM/workflows') return send(200, { items: [{ kind: 'bug', statuses: fake.statuses }] });
     if (req.method === 'GET' && p === '/w/friday-dev/projects/FM/labels') return send(200, { items: fake.labels });
     if (req.method === 'POST' && p === '/w/friday-dev/projects/FM/labels') {
@@ -195,7 +195,7 @@ describe('ส่งต่อทีมพัฒนา (T3) · ผูกงาน�
     setStatus('FM-482', 'In progress');
     expect((await webhook({ event: 'issue.status_changed', url: 'x?issue=FM-482' }, 'wrong-secret-0000000000')).status).toBe(401);
     expect((await webhook({ event: 'issue.status_changed', url: 'x?issue=FM-482' }, SECRET, Math.floor(Date.now() / 1000) - 3600)).status).toBe(401);
-    const r = await webhook({ event: 'issue.status_changed', workspace: 'friday-dev', project: 'Friday Manage', title: 'FM-482 นำเข้าโหมดอัปเดต', url: 'http://app/work/friday-dev/p/FM?issue=FM-482' });
+    const r = await webhook({ event: 'issue.status_changed', workspace: 'friday-dev', project: 'Friday Work Management', title: 'FM-482 นำเข้าโหมดอัปเดต', url: 'http://app/work/friday-dev/p/FM?issue=FM-482' });
     expect(r.status, JSON.stringify(r.body)).toBe(200);
     expect(r.body).toEqual({ ok: true, synced: 1 });
     const card = (await support.agent.get(`/ops/dev-bridge/tickets/${k1.id}`)).body.link;

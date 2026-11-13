@@ -23,6 +23,6 @@ export class Mailer {
       this.log.log(`[mail disabled] to=${m.to} subject=${m.subject}`);
       return;
     }
-    await this.transportFactory().sendMail({ from: process.env.MAIL_FROM ?? 'Friday Manage <no-reply@localhost>', ...m });
+    await this.transportFactory().sendMail({ from: process.env.MAIL_FROM ?? 'Friday Work Management <no-reply@localhost>', ...m });
   }
 }

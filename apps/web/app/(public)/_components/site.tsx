@@ -59,7 +59,7 @@ export function SiteFooter() {
     <footer className={styles.footer}>
       <div className={cn(styles.wrap, styles.footerRow)}>
         <div>
-          <b>Friday Manage</b>
+          <b>Friday Work Management</b>
           {SELLER && <div>{SELLER_TAX_ID ? t("seller", { name: SELLER, taxId: SELLER_TAX_ID }) : SELLER}</div>}
         </div>
         <nav aria-label={t("legalNav")}>

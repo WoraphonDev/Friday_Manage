@@ -152,7 +152,7 @@ export class UsersService {
       await tx.update(s.users).set({ lockedUntil: null, failedLoginCount: 0, updatedAt: new Date() }).where(eq(s.users.id, id));
       await this.trace(tx, staff, id, 'ops.user_unlocked', `ปลดล็อกบัญชี ${u.email} · Ticket ${input.ticketNo} · ${input.reason}`);
     });
-    await this.notify(u.email, 'บัญชี Friday Manage ของคุณถูกปลดล็อกแล้ว', [`ทีม Friday ปลดล็อกบัญชีตามคำขอใน Ticket ${input.ticketNo} · เข้าสู่ระบบได้ตามปกติ`]);
+    await this.notify(u.email, 'บัญชี Friday Work Management ของคุณถูกปลดล็อกแล้ว', [`ทีม Friday ปลดล็อกบัญชีตามคำขอใน Ticket ${input.ticketNo} · เข้าสู่ระบบได้ตามปกติ`]);
     return { id, status: 'unlocked' as const };
   }
 
@@ -164,7 +164,7 @@ export class UsersService {
       await this.trace(tx, staff, id, 'ops.verification_resent', `ส่งอีเมลยืนยันอีกครั้งถึง ${u.email} · Ticket ${input.ticketNo} · ${input.reason}`);
       return l;
     });
-    const sent = await this.notify(u.email, 'ยืนยันอีเมลของคุณ · Friday Manage', [`กดลิงก์นี้เพื่อยืนยันอีเมล: ${link}`, `ลิงก์ใช้ได้ ${LINK_MINUTES.verify_email / 60} ชั่วโมง`]);
+    const sent = await this.notify(u.email, 'ยืนยันอีเมลของคุณ · Friday Work Management', [`กดลิงก์นี้เพื่อยืนยันอีเมล: ${link}`, `ลิงก์ใช้ได้ ${LINK_MINUTES.verify_email / 60} ชั่วโมง`]);
     return { id, sent };
   }
 
@@ -180,7 +180,7 @@ export class UsersService {
       await tx.update(s.userSessions).set({ mfaTrustedUntil: null }).where(eq(s.userSessions.userId, id));
       await this.trace(tx, staff, id, 'ops.mfa_reset', `รีเซ็ต 2FA ของ ${u.email} · ยืนยันตัวตน: ${proofs} · Ticket ${input.ticketNo} · ${input.reason}`);
     });
-    await this.notify(u.email, '2FA ของบัญชี Friday Manage ถูกรีเซ็ต', [`ทีม Friday รีเซ็ต 2FA ตามคำขอใน Ticket ${input.ticketNo}`, 'ตั้ง 2FA ใหม่ตอนเข้าสู่ระบบครั้งถัดไป']);
+    await this.notify(u.email, '2FA ของบัญชี Friday Work Management ถูกรีเซ็ต', [`ทีม Friday รีเซ็ต 2FA ตามคำขอใน Ticket ${input.ticketNo}`, 'ตั้ง 2FA ใหม่ตอนเข้าสู่ระบบครั้งถัดไป']);
     return { id, mfaEnabled: false };
   }
 
@@ -200,8 +200,8 @@ export class UsersService {
       await this.trace(tx, staff, id, 'ops.email_change_requested', `ขอเปลี่ยนอีเมล ${u.email} → ${input.newEmail} (รอยืนยันจากอีเมลใหม่) · ยืนยันตัวตน: ${proofs} · Ticket ${input.ticketNo} · ${input.reason}`);
       return l;
     });
-    await this.notify(input.newEmail, 'ยืนยันอีเมลใหม่ของบัญชี Friday Manage', [`กดลิงก์นี้เพื่อยืนยันอีเมลใหม่: ${link}`, `ลิงก์ใช้ได้ ${LINK_MINUTES.change_email} นาที`]);
-    await this.notify(u.email, 'มีคำขอเปลี่ยนอีเมลของบัญชี Friday Manage', [`ทีม Friday ส่งลิงก์ยืนยันไปที่ ${input.newEmail} ตาม Ticket ${input.ticketNo}`, 'อีเมลจะเปลี่ยนเมื่อเจ้าของอีเมลใหม่กดยืนยัน']);
+    await this.notify(input.newEmail, 'ยืนยันอีเมลใหม่ของบัญชี Friday Work Management', [`กดลิงก์นี้เพื่อยืนยันอีเมลใหม่: ${link}`, `ลิงก์ใช้ได้ ${LINK_MINUTES.change_email} นาที`]);
+    await this.notify(u.email, 'มีคำขอเปลี่ยนอีเมลของบัญชี Friday Work Management', [`ทีม Friday ส่งลิงก์ยืนยันไปที่ ${input.newEmail} ตาม Ticket ${input.ticketNo}`, 'อีเมลจะเปลี่ยนเมื่อเจ้าของอีเมลใหม่กดยืนยัน']);
     return { id, pendingEmail: input.newEmail };
   }
 
@@ -212,7 +212,7 @@ export class UsersService {
       await this.trace(tx, staff, id, 'ops.sessions_revoked', `ออกจากระบบทุกอุปกรณ์ของ ${u.email} (${r.length} เครื่อง) · Ticket ${input.ticketNo} · ${input.reason}`);
       return r.length;
     });
-    await this.notify(u.email, 'บัญชี Friday Manage ออกจากระบบทุกอุปกรณ์แล้ว', [`ทีม Friday ออกจากระบบทุกอุปกรณ์ตาม Ticket ${input.ticketNo} · เข้าสู่ระบบใหม่ได้ตามปกติ`]);
+    await this.notify(u.email, 'บัญชี Friday Work Management ออกจากระบบทุกอุปกรณ์แล้ว', [`ทีม Friday ออกจากระบบทุกอุปกรณ์ตาม Ticket ${input.ticketNo} · เข้าสู่ระบบใหม่ได้ตามปกติ`]);
     return { id, revoked };
   }
 
@@ -236,7 +236,7 @@ export class UsersService {
       await tx.update(s.userSessions).set({ revokedAt: new Date() }).where(and(eq(s.userSessions.userId, id), isNull(s.userSessions.revokedAt)));
       await tx.update(s.workspaceMembers).set({ status: 'deactivated' }).where(and(eq(s.workspaceMembers.userId, id), eq(s.workspaceMembers.status, 'active')));
     });
-    await this.notify(u.email, 'บัญชี Friday Manage ของคุณถูกปิดแล้ว', [`ทีม Friday ปิดบัญชีตามคำขอใน Ticket ${input.ticketNo}`]);
+    await this.notify(u.email, 'บัญชี Friday Work Management ของคุณถูกปิดแล้ว', [`ทีม Friday ปิดบัญชีตามคำขอใน Ticket ${input.ticketNo}`]);
     return { id, status: 'disabled' as const };
   }
 }

@@ -81,12 +81,12 @@ export const Input = forwardRef<
   );
 });
 
-type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "size"> &
+type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "size" | "prefix"> &
   FieldProps & {
     /** small = 36px สำหรับแถบตัวกรอง (เท่าปุ่มใน Canvas) · default = 40px สำหรับฟอร์ม */
     size?: "default" | "small";
-    /** คำนำหน้าในกล่องแบบ Canvas Kanban เช่น "แสดง Task + Sub-task" · ค่าที่เลือกเป็นตัวหนาสีหลัก */
-    prefix?: string;
+    /** คำนำหน้าในกล่องแบบ Canvas Kanban เช่น "แสดง Task + Sub-task" หรือรูปโปรไฟล์คนที่เลือก · ค่าที่เลือกเป็นตัวหนาสีหลัก */
+    prefix?: ReactNode;
   };
 
 /**

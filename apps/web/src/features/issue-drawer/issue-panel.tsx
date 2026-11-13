@@ -119,6 +119,13 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const pick = (role: PickRole, selected: (string | null | undefined)[]) => peopleForRole(role, scope.people, selected).map((person) => ({ id: person.id, name: person.displayName }));
   const reviewerIds = issue.reviewerIds ?? (issue.reviewerId ? [issue.reviewerId] : []);
   const qas = reviewerIds.map((id) => scope.people.find((person) => person.id === id)).filter((person): person is NonNullable<typeof person> => !!person);
+  // BA / SA แสดงรูปโปรไฟล์คนที่เลือกหน้าชื่อเหมือนช่อง Developer · ยังเป็น Select เดิมจึงเลือก "ยังไม่ระบุ" เพื่อล้างค่าได้
+  const personSelect = (field: 'baId' | 'saId', value: string | null | undefined, values: { id: string; name: string }[]) => {
+    const person = value ? scope.people.find((item) => item.id === value) : undefined;
+    return <Select label={t(`fields.${field}`)} className={person ? styles.personSelect : undefined} prefix={person ? <Avatar size="small" person={person} /> : undefined} value={value ?? ''} disabled={!canEdit || disabled} onChange={(event) => void patch({ [field]: event.target.value || null })}>
+      <option value="">{t('notSet')}</option>{values.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+    </Select>;
+  };
   const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
   const pending = issue.pendingDueRequest;
   const mod = scope.project?.modules.find((item) => item.id === issue.moduleId);
@@ -257,8 +264,8 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
         {/* C2 / D2: ผู้รับผิดชอบ / แผนงาน / กลุ่มงาน · QA กับ Reviewer รวมเป็นช่องเดียว (ผู้ใช้ตัดสิน 2026-11-08) */}
         {!guest && <section className={styles.pgroup} aria-label={t('groupPeople')}>
           <h4 className={styles.pgTitle}>{t('groupPeople')}</h4>
-          {show('ba') && <PropRow k={star('ba', 'Business Analyst')}>{fieldSelect('baId', issue.baId, pick('ba', [issue.baId]))}</PropRow>}
-          {show('sa') && <PropRow k={star('sa', 'System Analyst')}>{fieldSelect('saId', issue.saId, pick('sa', [issue.saId]))}</PropRow>}
+          {show('ba') && <PropRow k={star('ba', 'Business Analyst')}>{personSelect('baId', issue.baId, pick('ba', [issue.baId]))}</PropRow>}
+          {show('sa') && <PropRow k={star('sa', 'System Analyst')}>{personSelect('saId', issue.saId, pick('sa', [issue.saId]))}</PropRow>}
           <PropRow keep k="Developer">{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={peopleForRole('dev', scope.people, issue.assigneeIds ?? [])} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void patch({ assigneeIds: ids }); }} /> : <span className={styles.who}><AvatarStack people={devs} /></span>}</PropRow>
           {show('reviewer') && <PropRow k={star('reviewer', t('qaReviewer'))}>{canEdit ? <Combobox label={t('qaReviewer')} multiple options={peopleForRole('qa', scope.people, reviewerIds)} value={reviewerIds} onValueChange={(ids) => { if (!disabled) void patch({ reviewerIds: ids }); }} /> : <span className={styles.who}>{qas.length ? <AvatarStack people={qas} /> : <span className="muted">—</span>}</span>}</PropRow>}
           {isBug && <PropRow k={t('reporter')}><span className={styles.who}>{reporter ? <><Avatar size="small" person={reporter} />{reporter.displayName}</> : <span className="muted">—</span>}</span></PropRow>}

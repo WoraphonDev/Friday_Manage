@@ -64,8 +64,8 @@
 .check { display:flex; gap:10px; align-items:flex-start; background:var(--hover); border:1px solid var(--primary-border); border-radius:10px; padding:12px; cursor:pointer; }
 .check input { width:18px; height:18px; margin-top:2px; }
 .fields { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; }
-.done { padding:24px; display:flex; flex-direction:column; gap:12px; align-items:flex-start; }
-.done h2 { margin:0; font-size:18px; color:var(--success-text); }
+.doneCard { padding:24px; display:flex; flex-direction:column; gap:12px; align-items:flex-start; }
+.doneCard h2 { margin:0; font-size:18px; color:var(--success-text); }
 .warnText { color:var(--warning-text); font-size:12px; }
 
 @media (max-width:900px) {

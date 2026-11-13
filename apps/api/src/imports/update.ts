@@ -81,6 +81,9 @@ export interface UpdateDiff {
   unchanged: number;
   /** โหมดอัปเดตเฉพาะงานที่ยังไม่เริ่ม: งานที่ค่าในไฟล์ต่างแต่เริ่มทำแล้ว จึงไม่แก้ */
   locked?: { no: number; key: string; title: string; status: string; fields: string[] }[];
+  /** แทนที่แผน: Module / กลุ่มงานเดิมที่ไม่มีในไฟล์และไม่เหลืองาน จึงถูกลบด้วย (กลุ่มเป็น "Module › กลุ่ม") */
+  removedModules?: string[];
+  removedGroups?: string[];
 }
 
 type Issue = typeof s.issues.$inferSelect;
@@ -366,7 +369,20 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
   // งานที่อยู่ในระบบแต่ไม่อยู่ในไฟล์ (ทุกแถวในไฟล์ รวมแถวที่ต้องแก้ ถือว่ายังอยู่) · เพิ่มเติมแผนไม่แตะงานเดิมจึงไม่มีรายการนี้
   if (wipe) {
     // แทนที่แผน: Task ระดับบนทุกงานถูกลบ (Sub-task ตามแม่) · งานชนิดอื่นที่สร้างในระบบ (เช่น Bug) คงไว้
-    for (const issue of live.filter((r) => !r.parentId && r.issueTypeId === ex.taskTypeId)) diff.missing.push({ no: issue.number, key: `${project.key}-${issue.number}`, title: issue.title, status: ex.statusName.get(issue.statusId) ?? '' });
+    const roots = live.filter((r) => !r.parentId && r.issueTypeId === ex.taskTypeId);
+    for (const issue of roots) diff.missing.push({ no: issue.number, key: `${project.key}-${issue.number}`, title: issue.title, status: ex.statusName.get(issue.statusId) ?? '' });
+    // Module / กลุ่มเดิมที่จะไม่เหลืองาน: ไม่มีในไฟล์ และงานที่คงไว้ (เช่น Bug) ไม่ได้ใช้ · applyUpdate ลบตามสถานะจริงหลังเขียน
+    const rootIds = new Set(roots.map((r) => r.id));
+    const kept = live.filter((r) => (r.parentId ? !rootIds.has(r.parentId) : r.issueTypeId !== ex.taskTypeId));
+    const fileModules = new Set(adds.map((r) => r.module).filter(Boolean));
+    const groupKey = (module: string | undefined, name: string) => `${module ?? ''}\u0000${name.toLowerCase()}`;
+    const fileGroups = new Set(adds.filter((r) => r.parentNumber === null && r.phase).map((r) => groupKey(r.module, r.phase!)));
+    const keptModules = new Set(kept.map((r) => r.moduleId));
+    const keptPhases = new Set(kept.map((r) => r.phaseId));
+    diff.removedModules = [...ex.moduleName].filter(([id, name]) => !fileModules.has(name) && !keptModules.has(id)).map(([, name]) => name);
+    diff.removedGroups = ex.phases
+      .filter((p) => !keptPhases.has(p.id) && !fileGroups.has(groupKey(ex.moduleName.get(p.moduleId), p.name)))
+      .map((p) => `${ex.moduleName.get(p.moduleId) ?? ''} › ${p.name}`);
   } else if (append || unstartedOnly) {
     // ไม่แตะงานที่ไม่อยู่ในไฟล์ (เพิ่มเติม / อัปเดตเฉพาะงานที่ยังไม่เริ่ม)
   } else if (check.keyed) {
@@ -587,6 +603,31 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
 
   if (!plan.wipe) await removeMissing();
 
+  // แทนที่แผน: ลบ Module / กลุ่มงานเดิมที่ไม่เหลืองานแล้ว (ผู้ใช้ตัดสิน 2026-11-14 · แผนใหม่ต้องไม่มีกลุ่มเปล่าของแผนเก่าค้าง)
+  // งานในถังขยะที่ยังอ้างถึงถูกถอดออก (กู้คืนแล้วไม่มี Module / กลุ่ม แบบเดียวกับการลบ Module ในหน้าตั้งค่า)
+  let removedModules = 0;
+  let removedGroups = 0;
+  if (plan.wipe) {
+    const used = await tx.select({ moduleId: s.issues.moduleId, phaseId: s.issues.phaseId }).from(s.issues).where(and(eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt)));
+    const usedModules = new Set(used.map((u) => u.moduleId));
+    const usedPhases = new Set(used.map((u) => u.phaseId));
+    const allPhases = await tx.select({ id: s.phases.id, moduleId: s.phases.moduleId }).from(s.phases).where(eq(s.phases.projectId, project.id));
+    const allModules = await tx.select({ id: s.modules.id }).from(s.modules).where(eq(s.modules.projectId, project.id));
+    const dropModules = allModules.map((m) => m.id).filter((id) => !usedModules.has(id));
+    const dropPhases = allPhases.filter((p) => !usedPhases.has(p.id)).map((p) => p.id);
+    if (dropPhases.length) {
+      await tx.update(s.issues).set({ phaseId: null }).where(and(eq(s.issues.projectId, project.id), inArray(s.issues.phaseId, dropPhases)));
+      await tx.delete(s.phases).where(inArray(s.phases.id, dropPhases));
+    }
+    if (dropModules.length) {
+      await tx.update(s.issues).set({ moduleId: null }).where(and(eq(s.issues.projectId, project.id), inArray(s.issues.moduleId, dropModules)));
+      await tx.update(s.milestones).set({ moduleId: null }).where(inArray(s.milestones.moduleId, dropModules));
+      await tx.delete(s.modules).where(inArray(s.modules.id, dropModules));
+    }
+    removedModules = dropModules.length;
+    removedGroups = dropPhases.length;
+  }
+
   return {
     added: plan.adds.length,
     changed: plan.edits.length,
@@ -594,6 +635,8 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
     deleted: toDelete.length,
     kept: plan.diff.missing.length - toDelete.length,
     planChanges: planChangeCount,
+    removedModules,
+    removedGroups,
     events,
   };
 }

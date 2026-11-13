@@ -621,7 +621,7 @@ function Done({ ws, result, onAgain, changesHref }: { ws: string; result: Commit
     return out;
   }, [result, t]);
   return (
-    <section className={`${styles.card} ${styles.done}`} role="status">
+    <section className={`${styles.card} ${styles.doneCard}`} role="status">
       <h2>{t("doneTitle")}</h2>
       {lines.map((l) => <div key={l}>{l}</div>)}
       <div className={styles.actions}>

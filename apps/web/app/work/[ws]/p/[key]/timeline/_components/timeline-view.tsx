@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEven
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronDown, ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Plus, Search } from "lucide-react";
 import { AvatarStack, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
@@ -38,7 +38,13 @@ export type Zoom = "day" | "week" | "month";
 // เท่ากับสเกลของ Gantt เพื่อให้สองหน้าดูเหมือนกัน
 export const PX_PER_DAY: Record<Zoom, number> = { day: 21, week: 8, month: 3 };
 const DAY = 86_400_000;
-const LABEL_W = 290;
+// ช่องชื่องานปรับกว้างได้ (ลากขอบ / ปุ่มขยาย) เพื่ออ่านชื่อ Task ยาว ๆ ได้เต็ม · จำค่าไว้ในเบราว์เซอร์นี้
+export const LABEL_W = 290;
+export const LABEL_MIN = 200;
+export const LABEL_MAX = 720;
+const LABEL_WIDE = 520;
+const LABEL_KEY = "friday.timeline.labelWidth";
+const clampLabel = (w: number) => Math.round(Math.min(LABEL_MAX, Math.max(LABEL_MIN, w)));
 // สีตามหมวด (Review ที่ยังอยู่หมวด In progress แยกด้วยชื่อ) · ชุดเดียวกับป้ายสถานะใน Table
 const statusColor = (s: { name: string; category: Cat }) => statusDotColor(s.category, s.name);
 // สีข้อมูลต้องเป็น hex เพราะนำไปต่อค่าความโปร่งใส (`${color}33`)
@@ -106,6 +112,45 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   // ความกว้างที่มองเห็น: แกนเวลายาวอย่างน้อยเต็มจอ ไม่เหลือพื้นที่ว่างด้านขวา
   const [viewW, setViewW] = useState(0);
   const dragged = useRef<string | null>(null);
+  const [labelW, setLabelW] = useState(LABEL_W);
+  const [resizing, setResizing] = useState(false);
+  const labelLoaded = useRef(false);
+  // อ่านค่าหลัง mount เพื่อไม่ให้ HTML จาก SSR ต่างจากฝั่ง client
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem(LABEL_KEY));
+      if (saved) setLabelW(clampLabel(saved));
+    } catch { /* เบราว์เซอร์ปิด storage ใช้ค่าเริ่มต้น */ }
+    labelLoaded.current = true;
+  }, []);
+  useEffect(() => {
+    if (!labelLoaded.current || resizing) return;
+    try { localStorage.setItem(LABEL_KEY, String(labelW)); } catch { /* ไม่จำค่าได้ก็ใช้งานต่อได้ */ }
+  }, [labelW, resizing]);
+  const startResize = (e: ReactMouseEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const x0 = e.clientX;
+    const w0 = labelW;
+    setResizing(true);
+    const move = (ev: MouseEvent) => setLabelW(clampLabel(w0 + ev.clientX - x0));
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      setResizing(false);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+  const resizeKey = (e: KeyboardEvent) => {
+    const step = e.shiftKey ? 80 : 20;
+    const next = e.key === "ArrowLeft" ? labelW - step : e.key === "ArrowRight" ? labelW + step : e.key === "Home" ? LABEL_MIN : e.key === "End" ? LABEL_MAX : null;
+    if (next === null) return;
+    e.preventDefault();
+    setLabelW(clampLabel(next));
+  };
+  const wide = labelW > LABEL_W;
   const dragRef = useRef<Drag | null>(null);
   dragRef.current = drag;
 
@@ -124,9 +169,9 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
     const from = `${q.data.range.from.slice(0, 7)}-01`;
     const t = new Date(`${q.data.range.to.slice(0, 7)}-01T00:00:00Z`);
     t.setUTCMonth(t.getUTCMonth() + 1);
-    const days = Math.max(28, toDay(t.toISOString().slice(0, 10), from), Math.ceil((viewW - LABEL_W) / PX_PER_DAY[zoom]));
+    const days = Math.max(28, toDay(t.toISOString().slice(0, 10), from), Math.ceil((viewW - labelW) / PX_PER_DAY[zoom]));
     return { from, days };
-  }, [q.data, viewW, zoom]);
+  }, [q.data, viewW, zoom, labelW]);
   const hasData = !!q.data;
   useEffect(() => {
     const el = scrollRef.current;
@@ -217,7 +262,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const x = (iso: string) => toDay(iso, ax.from) * px;
   const toggle = (id: string) => setClosed((c) => { const n = new Set(c); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const scrollToToday = () => scrollRef.current?.scrollTo?.({ left: Math.max(0, x(d.today) - 200), behavior: "smooth" });
-  const scrollBy = (dir: number) => scrollRef.current?.scrollBy?.({ left: dir * (scrollRef.current.clientWidth - LABEL_W) * 0.8, behavior: "smooth" });
+  const scrollBy = (dir: number) => scrollRef.current?.scrollBy?.({ left: dir * (scrollRef.current.clientWidth - labelW) * 0.8, behavior: "smooth" });
 
   // หัวแกนแบบเดียวกับ Gantt: แถวบน = ช่วงสัปดาห์ (Day / Week) หรือเดือน (Month) · แถวล่าง = ทุกวันพร้อมตัวย่อวัน (Day)
   const short = (iso: string) => formatDate(iso, year).split(" ").slice(0, 2).join(" ");
@@ -334,9 +379,29 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
       <section className={styles.card}>
         {empty ? <EmptyState title={t("empty")} description={t("emptyHint")} /> : filtering && !modules.length ? <EmptyState title={t("filters.noMatch")} description={t("filters.noMatchHint")} action={<Button size="small" onClick={() => setFilters(NO_FILTERS)}>{t("filters.clear")}</Button>} /> : (
           <div className={styles.scroll} ref={scrollRef} data-testid="timeline-scroll">
-            <div className={styles.grid} style={{ width: LABEL_W + width }}>
+            <div className={`${styles.grid} ${resizing ? styles.resizing : ""}`} style={{ width: labelW + width, ["--lab-w" as string]: `${labelW}px` }} data-resized={labelW !== LABEL_W || undefined} data-testid="timeline-grid">
               <div className={`${styles.row} ${styles.headRow}`}>
-                <div className={styles.lab}>{t("rowsLabel")}</div>
+                <div className={styles.lab}>
+                  <span className={styles.labText}>{t("rowsLabel")}</span>
+                  <button type="button" className={styles.widen} aria-label={t(wide ? "narrowLabels" : "widenLabels")} title={t(wide ? "narrowLabels" : "widenLabels")} onClick={() => setLabelW(wide ? LABEL_W : LABEL_WIDE)}>
+                    {wide ? <ChevronsLeft size={14} aria-hidden="true" /> : <ChevronsRight size={14} aria-hidden="true" />}
+                  </button>
+                  <span
+                    role="separator"
+                    tabIndex={0}
+                    aria-orientation="vertical"
+                    aria-label={t("resizeLabels")}
+                    aria-valuemin={LABEL_MIN}
+                    aria-valuemax={LABEL_MAX}
+                    aria-valuenow={labelW}
+                    title={t("resizeLabelsHint")}
+                    className={styles.resizer}
+                    data-testid="label-resizer"
+                    onMouseDown={startResize}
+                    onKeyDown={resizeKey}
+                    onDoubleClick={() => setLabelW(LABEL_W)}
+                  />
+                </div>
                 <div className={styles.lane} style={{ width }} data-testid="axis">
                   <div className={styles.axisUnits}>{units.map((u) => <span key={u.left} className={styles.unit} style={{ left: u.left, width: u.width }} title={u.title}>{u.label}</span>)}</div>
                   {zoom === "day" && (

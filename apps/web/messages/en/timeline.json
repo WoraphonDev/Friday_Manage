@@ -25,6 +25,10 @@
     "assignee": "Assignee"
   },
   "rowsLabel": "Module › Task › Sub-task",
+  "widenLabels": "Widen task names",
+  "narrowLabels": "Narrow task names",
+  "resizeLabels": "Resize task name column",
+  "resizeLabelsHint": "Drag to resize · double-click to reset",
   "milestones": "Milestones",
   "todayLine": "Today ({date})",
   "lastEnd": "Last task {date}",

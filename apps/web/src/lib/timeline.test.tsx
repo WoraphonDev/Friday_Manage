@@ -9,7 +9,7 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import tl from "../../messages/th/timeline.json";
-import { PX_PER_DAY, TimelineView, addDays, toDay, type TLRow, type TimelineData } from "../../app/work/[ws]/p/[key]/timeline/_components/timeline-view";
+import { LABEL_MAX, LABEL_MIN, LABEL_W, PX_PER_DAY, TimelineView, addDays, toDay, type TLRow, type TimelineData } from "../../app/work/[ws]/p/[key]/timeline/_components/timeline-view";
 
 const person = (id: string, displayName: string) => ({ id, displayName });
 const row = (key: string, start: string, end: string, over: Partial<TLRow> = {}): TLRow => ({ key, type: "Task", title: `งาน ${key}`, status: { name: "In progress", category: "in_progress" }, start, end, progressPct: 40, lateDays: 0, assignees: [person("u1", "ผู้พัฒนาหนึ่ง")], subtasks: [], ...over });
@@ -111,6 +111,36 @@ describe("Timeline (4)", () => {
     fireEvent.mouseMove(window, { clientX: 200 - PX_PER_DAY.day });
     fireEvent.mouseUp(window);
     await waitFor(() => expect(patches[2]?.body).toEqual({ planStart: "2026-11-29" }));
+  });
+
+  it("ช่องชื่องาน: ลากขอบ / ปุ่มขยาย / แป้นพิมพ์ ปรับความกว้าง และจำค่าไว้", async () => {
+    const user = userEvent.setup();
+    const view = mount();
+    const grid = await screen.findByTestId("timeline-grid");
+    const sep = screen.getByRole("separator", { name: "ปรับความกว้างช่องชื่องาน" });
+    expect(grid.style.getPropertyValue("--lab-w")).toBe(`${LABEL_W}px`);
+    fireEvent.mouseDown(sep, { button: 0, clientX: 300 });
+    fireEvent.mouseMove(window, { clientX: 420 });
+    fireEvent.mouseUp(window);
+    expect(grid.style.getPropertyValue("--lab-w")).toBe(`${LABEL_W + 120}px`);
+    // ลากเกินขอบเขตถูกจำกัดไว้
+    fireEvent.mouseDown(sep, { button: 0, clientX: 300 });
+    fireEvent.mouseMove(window, { clientX: 3000 });
+    fireEvent.mouseUp(window);
+    expect(sep).toHaveAttribute("aria-valuenow", String(LABEL_MAX));
+    await user.click(screen.getByRole("button", { name: "ย่อช่องชื่องาน" }));
+    expect(sep).toHaveAttribute("aria-valuenow", String(LABEL_W));
+    await user.click(screen.getByRole("button", { name: "ขยายช่องชื่องาน" }));
+    expect(Number(sep.getAttribute("aria-valuenow"))).toBeGreaterThan(LABEL_W);
+    sep.focus();
+    await user.keyboard("{Home}");
+    expect(sep).toHaveAttribute("aria-valuenow", String(LABEL_MIN));
+    await user.keyboard("{ArrowRight}");
+    expect(sep).toHaveAttribute("aria-valuenow", String(LABEL_MIN + 20));
+    expect(localStorage.getItem("friday.timeline.labelWidth")).toBe(String(LABEL_MIN + 20));
+    view.unmount();
+    mount();
+    expect(await screen.findByRole("separator")).toHaveAttribute("aria-valuenow", String(LABEL_MIN + 20));
   });
 
   it("แป้นพิมพ์: ← → เลื่อน 1 วัน · Shift + → ขยายวันจบ", async () => {

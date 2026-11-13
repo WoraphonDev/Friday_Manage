@@ -25,6 +25,10 @@
     "assignee": "Assignee"
   },
   "rowsLabel": "Module › Task › Sub-task",
+  "widenLabels": "ขยายช่องชื่องาน",
+  "narrowLabels": "ย่อช่องชื่องาน",
+  "resizeLabels": "ปรับความกว้างช่องชื่องาน",
+  "resizeLabelsHint": "ลากเพื่อปรับความกว้าง · ดับเบิลคลิกเพื่อคืนค่าเดิม",
   "milestones": "Milestones",
   "todayLine": "วันนี้ ({date})",
   "lastEnd": "งานสุดท้าย {date}",

@@ -1,5 +1,8 @@
 .page { padding:16px 24px; display:flex; flex-direction:column; gap:12px; min-width:0; }
 .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.search { display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:0 10px; border:1px solid var(--input); border-radius:8px; background:var(--card); color:var(--muted); }
+.search:focus-within { border-color:var(--focus); }
+.search input { width:220px; max-width:100%; border:0; outline:0; background:transparent; font:inherit; font-size:12px; color:var(--foreground); }
 .seg { display:inline-flex; border:1px solid var(--input); border-radius:8px; overflow:hidden; background:var(--card); }
 .seg button { min-height:30px; padding:0 12px; border:0; background:transparent; font:inherit; font-size:12px; color:var(--foreground-soft); cursor:pointer; }
 .seg button[aria-pressed="true"] { background:var(--primary-soft); color:var(--primary-text); font-weight:600; }

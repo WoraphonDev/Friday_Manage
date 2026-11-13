@@ -228,7 +228,10 @@ export class ViewsService {
       for (const i of issues) if (i.parentId) subsOf.set(i.parentId, [...(subsOf.get(i.parentId) ?? []), i]);
       const byDate = (a: Issue, b: Issue) => (a.planStart! < b.planStart! ? -1 : a.planStart! > b.planStart! ? 1 : a.number - b.number);
 
-      const people = guest ? new Map<string, Person>() : await loadPeople(tx, [...d.assignees.values()].flat());
+      // BA / SA ใช้กรองใน Timeline ด้วย (ผู้ใช้ขอ 2026-11-14) · Guest ไม่เห็นชื่อคน
+      const people = guest ? new Map<string, Person>() : await loadPeople(tx, [...[...d.assignees.values()].flat(), ...issues.flatMap((i) => [i.baId, i.saId])]);
+      const personOf = (id: string | null) => (id ? (people.get(id) ?? null) : null);
+      const peopleOf = (i: Issue) => ({ assignees: (d.assignees.get(i.id) ?? []).map((id) => people.get(id)).filter((p): p is Person => !!p), ba: personOf(i.baId), sa: personOf(i.saId) });
       const progressOf = (i: Issue): number => {
         if (isDone(i)) return 100;
         const subs = subsOf.get(i.id)?.filter((x) => d.statuses.get(x.statusId)!.category !== 'cancelled');
@@ -257,9 +260,7 @@ export class ViewsService {
           progressPct: progressOf(i),
           lateDays: Math.max(lateOf(i), ...subs.map(lateOf)),
           ...(dueRule.split ? { qaDue: qaDueOf(dueRule, i) } : {}),
-          ...(guest
-            ? { canOpen: i.sharedWithGuests }
-            : { assignees: (d.assignees.get(i.id) ?? []).map((id) => people.get(id)).filter((p): p is Person => !!p) }),
+          ...(guest ? { canOpen: i.sharedWithGuests } : peopleOf(i)),
           subtasks: subs.map(row),
         };
       };
@@ -305,6 +306,7 @@ export class ViewsService {
           parentKey: i.parentId ? `${project.key}-${d.numberOf.get(i.parentId)}` : null,
           planStart: i.planStart,
           planEnd: i.planEnd,
+          ...(guest ? {} : peopleOf(i)),
         }));
       const all = summarize(tasks);
 
@@ -339,6 +341,8 @@ interface TimelineRow {
   /** โปรเจกต์แยก Dev / QA: วันที่ QA ต้องทดสอบเสร็จ (Gantt วาดช่วง QA ต่อจาก end) */
   qaDue?: string | null;
   assignees?: Person[];
+  ba?: Person | null;
+  sa?: Person | null;
   canOpen?: boolean;
   subtasks: TimelineRow[];
 }

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEven
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronDown, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 import { AvatarStack, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
@@ -19,7 +19,7 @@ type Cat = StatusCategory;
 export interface TLRow {
   key: string; type: string; title: string; status: { name: string; category: Cat };
   start: string; end: string; progressPct: number; lateDays: number;
-  assignees?: Person[]; canOpen?: boolean; subtasks: TLRow[];
+  assignees?: Person[]; ba?: Person | null; sa?: Person | null; canOpen?: boolean; subtasks: TLRow[];
 }
 interface Summary { start: string | null; end: string | null; progressPct: number; lateDays: number; taskCount: number }
 export interface TimelineData {
@@ -30,7 +30,7 @@ export interface TimelineData {
   sprints: { id: string; number: number; name: string; startDate: string; endDate: string; status: string }[];
   milestones: { id: string; name: string; date: string; moduleId: string | null }[];
   modules: (Summary & { id: string | null; name: string; color: string | null; groups: (Summary & { phase: { id: string } | null; name: string; tasks: TLRow[] })[] })[];
-  unscheduled: { key: string; type: string; title: string; moduleId: string | null; parentKey: string | null }[];
+  unscheduled: { key: string; type: string; title: string; moduleId: string | null; parentKey: string | null; assignees?: Person[]; ba?: Person | null; sa?: Person | null }[];
 }
 
 export type Zoom = "day" | "week" | "month";
@@ -55,10 +55,31 @@ export const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T0
 
 type Line =
   | { kind: "module"; id: string; name: string; color: string; s: Summary; count: number }
-  | { kind: "group"; id: string; name: string; color: string; s: Summary }
+  | { kind: "group"; id: string; name: string; color: string; s: Summary; count: number }
   | { kind: "task"; row: TLRow; color: string; sub: boolean; hasKids: boolean };
 
 type Drag = { key: string; mode: "move" | "start" | "end"; x0: number; start: string; end: string; delta: number };
+/** ตัวกรอง (ผู้ใช้ขอ 2026-11-14) · ค่าว่าง = ไม่กรอง · module = id ของ Module ("none" = ไม่ระบุ Module) · คนเป็น userId */
+export interface TLFilters { q: string; module: string; ba: string; sa: string; dev: string }
+const NO_FILTERS: TLFilters = { q: "", module: "", ba: "", sa: "", dev: "" };
+type Who = { assignees?: Person[]; ba?: Person | null; sa?: Person | null };
+const hasPerson = (f: TLFilters, r: Who) => (!f.ba || r.ba?.id === f.ba) && (!f.sa || r.sa?.id === f.sa) && (!f.dev || !!r.assignees?.some((p) => p.id === f.dev));
+const hasText = (q: string, r: { key: string; title: string }) => !q || r.key.toLowerCase().includes(q) || r.title.toLowerCase().includes(q);
+
+/**
+ * กรองงานใน Module ตามข้อความ / คน · Task แสดงเมื่อตัวเองหรือ Sub-task ตรง · Sub-task แสดงเฉพาะที่ตรง
+ * (ค้นด้วยข้อความแล้วชื่อ Task ตรง = แสดง Sub-task ทั้งหมดของ Task นั้น)
+ */
+export function filterTasks(rows: TLRow[], f: TLFilters): TLRow[] {
+  const q = f.q.trim().toLowerCase();
+  const out: TLRow[] = [];
+  for (const r of rows) {
+    const selfText = hasText(q, r);
+    const subs = r.subtasks.filter((x) => hasPerson(f, x) && (selfText || hasText(q, x)));
+    if ((selfText && hasPerson(f, r)) || subs.length) out.push({ ...r, subtasks: subs });
+  }
+  return out;
+}
 type Pending = { key: string; body: { planStart?: string; planEnd?: string }; reason?: string };
 
 export function TimelineView({ ws, projectKey }: { ws: string; projectKey: string }) {
@@ -73,6 +94,9 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const [zoom, setZoom] = useState<Zoom>("day");
   const [colorBy, setColorBy] = useState<"module" | "status" | "assignee">("module");
   const [level, setLevel] = useState<"module" | "task" | "subtask">("subtask");
+  const [filters, setFilters] = useState<TLFilters>(NO_FILTERS);
+  const filtering = Object.values(filters).some((v) => v.trim());
+  const setFilter = (k: keyof TLFilters, v: string) => setFilters((f) => ({ ...f, [k]: v }));
   const [closed, setClosed] = useState<Set<string>>(new Set());
   const [drag, setDrag] = useState<Drag | null>(null);
   const [dropRow, setDropRow] = useState<string | null>(null);
@@ -112,6 +136,16 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
     return () => ro.disconnect();
   }, [hasData]);
 
+  // Module / กลุ่ม / งาน หลังกรอง · Module และกลุ่มที่ไม่เหลืองานถูกซ่อนตอนกรอง
+  const modules = useMemo(() => {
+    if (!q.data) return [];
+    if (!filtering) return q.data.modules;
+    return q.data.modules
+      .filter((m) => !filters.module || (m.id ?? "none") === filters.module)
+      .map((m) => ({ ...m, groups: m.groups.map((g) => ({ ...g, tasks: filterTasks(g.tasks, filters) })).filter((g) => g.tasks.length) }))
+      .filter((m) => m.groups.length);
+  }, [q.data, filters, filtering]);
+
   const lines = useMemo<Line[]>(() => {
     if (!q.data) return [];
     const out: Line[] = [];
@@ -120,9 +154,10 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
       if (!id) return "var(--chart-neutral)";
       return PALETTE[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % PALETTE.length];
     };
-    q.data.modules.forEach((m, mi) => {
+    modules.forEach((m) => {
       const mid = `m:${m.id ?? "none"}`;
-      const mcolor = m.color ?? PALETTE[mi % PALETTE.length];
+      // สีคงที่ตามลำดับ Module ทั้งหมด (กรองแล้วสีไม่เปลี่ยน)
+      const mcolor = m.color ?? PALETTE[Math.max(0, q.data!.modules.findIndex((x) => x.id === m.id)) % PALETTE.length];
       out.push({ kind: "module", id: mid, name: m.name, color: mcolor, s: m, count: m.taskCount });
       if (closed.has(mid)) return;
       // Module › (Task ที่ไม่มีกลุ่ม) › กลุ่ม › Task › Sub-task · กลุ่มไม่บังคับ (ผู้ใช้ขอ 2026-11-08)
@@ -134,12 +169,12 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
       for (const g of m.groups.filter((x) => !x.phase)) tasks(g.tasks);
       m.groups.filter((x) => x.phase).forEach((g) => {
         const gid = `${mid}:g:${g.phase!.id}`;
-        out.push({ kind: "group", id: gid, name: g.name, color: mcolor, s: g });
+        out.push({ kind: "group", id: gid, name: g.name, color: mcolor, s: g, count: filtering ? g.tasks.length : g.taskCount });
         if (!closed.has(gid)) tasks(g.tasks);
       });
     });
     return out;
-  }, [q.data, closed, colorBy]);
+  }, [q.data, modules, filtering, closed, colorBy]);
 
   // ลาก bar: ใช้ mousemove/mouseup ของ window เพื่อให้ลากออกนอก bar ได้
   useEffect(() => {
@@ -212,7 +247,22 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const weekends = zoom === "month" ? [] : Array.from({ length: ax.days }, (_, i) => i).filter((i) => [0, 6].includes(weekday(addDays(ax.from, i))));
   const issueHref = (key: string) => `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?issue=${encodeURIComponent(key)}`;
   const newHref = `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?new=1&type=task`;
-  const tasksOf = (moduleLineId: string) => d.modules.find((m) => `m:${m.id ?? "none"}` === moduleLineId)?.groups.reduce((n, g) => n + g.tasks.length, 0) ?? 0;
+  const tasksOf = (moduleLineId: string) => modules.find((m) => `m:${m.id ?? "none"}` === moduleLineId)?.groups.reduce((n, g) => n + g.tasks.length, 0) ?? 0;
+  // ตัวเลือกคนจากงานในโปรเจกต์ (เฉพาะคนที่มีงานจริง) · Guest ไม่เห็นชื่อคนจึงไม่มีตัวกรองคน
+  const everyone = (pick: (r: Who) => (Person | null | undefined)[]) => {
+    const map = new Map<string, Person>();
+    const walk = (r: TLRow) => { pick(r).forEach((p) => p && map.set(p.id, p)); r.subtasks.forEach(walk); };
+    d.modules.forEach((m) => m.groups.forEach((g) => g.tasks.forEach(walk)));
+    d.unscheduled.forEach((u) => pick(u).forEach((p) => p && map.set(p.id, p)));
+    return [...map.values()].sort((a, b) => a.displayName.localeCompare(b.displayName, "th"));
+  };
+  const baList = guest ? [] : everyone((r) => [r.ba]);
+  const saList = guest ? [] : everyone((r) => [r.sa]);
+  const devList = guest ? [] : everyone((r) => r.assignees ?? []);
+  const fq = filters.q.trim().toLowerCase();
+  const unscheduled = filtering
+    ? d.unscheduled.filter((u) => (!filters.module || (u.moduleId ?? "none") === filters.module) && hasPerson(filters, u) && hasText(fq, u))
+    : d.unscheduled;
   // ระดับที่แสดง: Module = ย่อทุก Module · Task = เปิด Module ย่อ Sub-task · Sub-task = เปิดทั้งหมด
   const showLevel = (lv: "module" | "task" | "subtask") => {
     setLevel(lv);
@@ -220,6 +270,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
     if (lv === "module") return setClosed(new Set(d.modules.map((m) => `m:${m.id ?? "none"}`)));
     setClosed(new Set(d.modules.flatMap((m) => m.groups.flatMap((g) => g.tasks.filter((r) => r.subtasks.length).map((r) => `t:${r.key}`)))));
   };
+  const moduleOptions = d.modules.filter((m) => m.groups.length);
   const empty = !d.modules.some((m) => m.groups.length);
 
   const laneBg = (
@@ -262,9 +313,26 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
         </Select>
         {canSettings && <Button size="small" onClick={() => setMilestoneOpen(true)}>{t("addMilestone")}</Button>}
       </div>
+      <div className={styles.bar} role="group" aria-label={t("filters.label")}>
+        <label className={styles.search}>
+          <Search size={14} aria-hidden="true" />
+          <input type="search" aria-label={t("filters.search")} placeholder={t("filters.search")} value={filters.q} onChange={(e) => setFilter("q", e.target.value)} />
+        </label>
+        <Select aria-label={t("filters.module")} size="small" prefix={t("filters.module")} value={filters.module} onChange={(e) => setFilter("module", e.target.value)}>
+          <option value="">{t("filters.all")}</option>
+          {moduleOptions.map((m) => <option key={m.id ?? "none"} value={m.id ?? "none"}>{m.name}</option>)}
+        </Select>
+        {!guest && ([["ba", baList], ["sa", saList], ["dev", devList]] as const).map(([k, list]) => (
+          <Select key={k} aria-label={t(`filters.${k}`)} size="small" prefix={t(`filters.${k}`)} value={filters[k]} onChange={(e) => setFilter(k, e.target.value)}>
+            <option value="">{t("filters.anyone")}</option>
+            {list.map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}
+          </Select>
+        ))}
+        {filtering && <Button size="small" variant="ghost" onClick={() => setFilters(NO_FILTERS)}>{t("filters.clear")}</Button>}
+      </div>
 
       <section className={styles.card}>
-        {empty ? <EmptyState title={t("empty")} description={t("emptyHint")} /> : (
+        {empty ? <EmptyState title={t("empty")} description={t("emptyHint")} /> : filtering && !modules.length ? <EmptyState title={t("filters.noMatch")} description={t("filters.noMatchHint")} action={<Button size="small" onClick={() => setFilters(NO_FILTERS)}>{t("filters.clear")}</Button>} /> : (
           <div className={styles.scroll} ref={scrollRef} data-testid="timeline-scroll">
             <div className={styles.grid} style={{ width: LABEL_W + width }}>
               <div className={`${styles.row} ${styles.headRow}`}>
@@ -302,7 +370,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                         <button type="button" className={styles.toggle} aria-expanded={!closed.has(ln.id)} aria-label={t(closed.has(ln.id) ? "expand" : "collapse", { name: ln.name })} onClick={() => toggle(ln.id)}><ChevronDown size={14} style={{ transform: closed.has(ln.id) ? "rotate(-90deg)" : undefined }} /></button>
                         <span style={{ width: ln.kind === "module" ? 12 : 16, height: ln.kind === "module" ? 12 : 16, borderRadius: ln.kind === "module" ? 3 : 4, background: ln.kind === "module" ? ln.color : `${ln.color}26`, border: ln.kind === "module" ? 0 : `1px solid ${ln.color}66`, flex: "none" }} aria-hidden="true" />
                         <span className={styles.labText}>{ln.name}</span>
-                        <span className={styles.cnt}>{ln.kind === "module" ? t("tasks", { count: tasksOf(ln.id) }) : ln.s.taskCount}</span>
+                        <span className={styles.cnt}>{ln.kind === "module" ? t("tasks", { count: tasksOf(ln.id) }) : ln.count}</span>
                         {canCreate && <Link className={styles.add} href={newHref} aria-label={t("addIn", { name: ln.name })}><Plus size={14} aria-hidden="true" /></Link>}
                       </div>
                       <div className={`${styles.lane} ${dropRow === ln.id ? styles.drop : ""}`} style={{ width }} onDragOver={(e) => { if (canEdit && dragged.current) { e.preventDefault(); setDropRow(ln.id); } }} onDragLeave={() => setDropRow(null)} onDrop={(e) => onDropRow(e, ln.id)} data-testid={`lane-${ln.id}`}>
@@ -369,15 +437,15 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
             </div>
           </div>
         )}
-        {d.unscheduled.length > 0 && (
+        {unscheduled.length > 0 && (
           <div className={styles.unsched} aria-label={t("unscheduled")}>
             {/* Canvas: หัวข้อ + คำแนะนำอยู่แถวบน แยกจากรายการ เพื่อไม่ให้ไหลปนกับ chip */}
             <div className={styles.unschedHead}>
-              <h2 className={styles.unschedTitle}>{t("unscheduled")} <span className="muted">{t("unscheduledCount", { count: d.unscheduled.length })}</span></h2>
+              <h2 className={styles.unschedTitle}>{t("unscheduled")} <span className="muted">{t("unscheduledCount", { count: unscheduled.length })}</span></h2>
               {canEdit && <span className="muted" style={{ fontSize: 12 }}>{t("unscheduledHint")}</span>}
             </div>
             <div className={styles.unschedList}>
-              {d.unscheduled.map((u) => (
+              {unscheduled.map((u) => (
                 <span key={u.key} className={`${styles.chip} ${canEdit ? "" : styles.chipStatic}`} title={`${u.key} ${u.title}`} draggable={canEdit} data-testid={`unscheduled-${u.key}`} onDragStart={(e) => { dragged.current = u.key; e.dataTransfer?.setData("text/plain", u.key); }}>
                   {canEdit && (
                     <svg className={styles.grip} width="8" height="14" viewBox="0 0 8 14" fill="currentColor" aria-hidden="true">

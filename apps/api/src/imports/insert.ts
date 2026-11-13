@@ -142,6 +142,12 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
   for (const c of chunks(reqLinks, 500)) await tx.insert(s.issueRequirements).values(c);
   for (const c of chunks(scrLinks, 500)) await tx.insert(s.issueScreens).values(c);
   for (const c of chunks(labelLinks, 500)) await tx.insert(s.issueLabels).values(c);
+  // ลำดับตามไฟล์ แยกนับต่อชนิด (หน้า Checklist / Acceptance เรียงด้วย sort ของชนิดนั้น)
+  const checklist = rows.flatMap((r) => {
+    const sort = { checklist: 0, acceptance: 0 };
+    return r.checklist.map((c) => ({ ...ws, issueId: idOf.get(r)!, kind: c.kind, text: c.text, sort: sort[c.kind]++ }));
+  });
+  for (const c of chunks(checklist, 500)) await tx.insert(s.checklistItems).values(c);
   for (const c of chunks(rows, 500)) {
     await tx.insert(s.activities).values(c.map((r) => ({ ...base, issueId: idOf.get(r)!, actorId: ctx.actorId, actorKind: 'import' as const, verb: 'imported', newValue: { fileName: ctx.fileName, ...(ctx.keepRowNo ? { no: r.no } : { row: r.rowNo }) } })));
   }
@@ -156,7 +162,7 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
   }));
   await tx.update(s.projects).set({ issueSeq: seq }).where(eq(s.projects.id, ctx.projectId));
   const phaseIdOf = new Map(rows.map((r) => [r, r.parentNumber === null ? phaseOf(r) : (parentOf(r)?.phaseId ?? null)]));
-  return { idOf, numberOf: assigned, phaseIdOf, assignees, events, seq };
+  return { idOf, numberOf: assigned, phaseIdOf, assignees, events, seq, checklist: checklist.length };
 }
 
 async function codes(tx: Tx, table: typeof s.requirements | typeof s.screens, projectId: string) {

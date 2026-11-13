@@ -5,7 +5,7 @@ import type { DomainEvent } from '../core/events.js';
 import { type CustomFieldDef, displayValue, readCustomValues, writeCustomValues } from '../issues/custom-values.js';
 import { parseCustomCell } from './custom.js';
 import { insertRows } from './insert.js';
-import { type Field, personKey, type PlanCheck, type PlanRow } from './plan.js';
+import { type ChecklistEntry, checklistMatchKey, type Field, personKey, type PlanCheck, type PlanRow } from './plan.js';
 import { reviewerList } from '../issues/rules.js';
 
 const s = schema;
@@ -32,6 +32,7 @@ const LABELS = {
   labels: 'Label',
   description: 'Description',
   remark: 'Remark',
+  checklist: 'Checklist',
 } as const;
 type DiffField = keyof typeof LABELS;
 /** ฟิลด์ใน diff → คอลัมน์ในไฟล์ที่ต้องมีจึงจะเทียบ */
@@ -56,6 +57,7 @@ const COLUMN: Record<DiffField, Field> = {
   labels: 'labels',
   description: 'description',
   remark: 'remark',
+  checklist: 'checklist',
 };
 /** ชื่อฟิลด์ใน activities / plan_changes */
 const ACTIVITY_FIELD: Partial<Record<DiffField, string>> = { group: 'phaseId', devs: 'assigneeIds', ba: 'baId', sa: 'saId', reviewer: 'reviewerIds', parent: 'parentKey', labels: 'labelIds' };
@@ -158,7 +160,7 @@ const names = (list: string[]) => [...new Set(list.map(personKey))].sort();
 export interface UpdatePlan {
   diff: UpdateDiff;
   /** รายการที่ต้องเขียนจริง */
-  edits: { issue: Issue; row: PlanRow; fields: FieldChange[]; custom: Record<string, unknown> }[];
+  edits: { issue: Issue; row: PlanRow; fields: FieldChange[]; custom: Record<string, unknown>; checklist?: ChecklistSync }[];
   adds: PlanRow[];
   /** ค่า Custom field ที่ตรวจแล้วของงานใหม่ (คนเป็นชื่อ แปลงตอนเขียน) */
   addCustom: Map<PlanRow, Record<string, unknown>>;
@@ -178,6 +180,37 @@ export interface UpdatePlan {
 }
 
 export type UpdateMode = 'replace' | 'append' | 'unstarted';
+
+type ChecklistItem = Pick<typeof s.checklistItems.$inferSelect, 'id' | 'issueId' | 'kind' | 'text' | 'done' | 'sort'>;
+export interface ChecklistSync {
+  add: ChecklistEntry[];
+  /** id ของข้อที่ยังไม่ติ๊กและไม่อยู่ในไฟล์ */
+  remove: string[];
+  /** sort ถัดไปของแต่ละชนิด (ข้อใหม่ต่อท้าย) */
+  nextSort: Record<ChecklistEntry['kind'], number>;
+}
+
+/**
+ * Sync Checklist ตามข้อความ (ผู้ใช้ตัดสิน 2026-11-13): ข้อที่ข้อความและชนิดตรงกันคงไว้พร้อมสถานะติ๊ก · ข้อใหม่เพิ่มต่อท้าย
+ * ข้อที่ไม่อยู่ในไฟล์ลบเฉพาะที่ยังไม่ติ๊ก (ข้อที่ติ๊กแล้วเป็นงานที่ทำไปแล้ว จึงเก็บไว้)
+ */
+export function syncChecklist(current: ChecklistItem[], file: ChecklistEntry[]): ChecklistSync & { keptDone: number } {
+  const pool = new Map<string, ChecklistItem[]>();
+  for (const c of current) {
+    const k = checklistMatchKey(c.kind, c.text);
+    pool.set(k, [...(pool.get(k) ?? []), c]);
+  }
+  const add: ChecklistEntry[] = [];
+  for (const f of file) {
+    const same = pool.get(checklistMatchKey(f.kind, f.text));
+    if (same?.length) same.shift();
+    else add.push(f);
+  }
+  const left = [...pool.values()].flat();
+  const nextSort = { checklist: 0, acceptance: 0 };
+  for (const c of current) nextSort[c.kind] = Math.max(nextSort[c.kind], c.sort + 1);
+  return { add, remove: left.filter((c) => !c.done).map((c) => c.id), keptDone: left.filter((c) => c.done).length, nextSort };
+}
 
 export async function computeUpdate(tx: Tx, project: { id: string; key: string }, check: PlanCheck, matchById: boolean, customDefs: CustomFieldDef[] = [], mode: UpdateMode = 'replace'): Promise<UpdatePlan> {
   const append = mode === 'append';
@@ -220,6 +253,16 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
   };
   const cfShown = (d: CustomFieldDef, v: unknown) => (d.fieldType === 'user' ? (typeof v === 'string' ? (ex.userName.get(v) ?? v) : null) : displayValue(d, v));
   const has = (f: DiffField) => check.mapped.has(COLUMN[f]);
+  // Checklist ปัจจุบัน (เฉพาะไฟล์ที่มีคอลัมน์ Checklist · ไม่มี = ไม่แตะของเดิม)
+  const checklistOf = new Map<string, ChecklistItem[]>();
+  if (has('checklist') && !append && live.length) {
+    const items = await tx
+      .select({ id: s.checklistItems.id, issueId: s.checklistItems.issueId, kind: s.checklistItems.kind, text: s.checklistItems.text, done: s.checklistItems.done, sort: s.checklistItems.sort })
+      .from(s.checklistItems)
+      .where(inArray(s.checklistItems.issueId, live.map((r) => r.id)))
+      .orderBy(s.checklistItems.sort);
+    for (const c of items) checklistOf.set(c.issueId, [...(checklistOf.get(c.issueId) ?? []), c]);
+  }
   const userName = (id: string | null) => (id ? (ex.userName.get(id) ?? '') : null);
   const samePerson = (a: string | null, b: string | null) => names(a ? [a] : []).join() === names(b ? [b] : []).join();
 
@@ -273,6 +316,17 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     if (names(oldLabels).join('|') !== names(row.labels).join('|')) add('labels', oldLabels, row.labels);
     if (!eq0(issue.description || null, row.description || null)) add('description', issue.description || null, row.description);
     if (!eq0(issue.remark || null, row.remark || null)) add('remark', issue.remark || null, row.remark);
+    let checklist: ChecklistSync | undefined;
+    if (has('checklist')) {
+      const cur = checklistOf.get(issue.id) ?? [];
+      const sync = syncChecklist(cur, row.checklist);
+      if (sync.add.length || sync.remove.length) {
+        checklist = sync;
+        const parts = [sync.add.length ? `เพิ่ม ${sync.add.length}` : '', sync.remove.length ? `ลบ ${sync.remove.length}` : ''].filter(Boolean).join(' · ');
+        add('checklist', `${cur.length} ข้อ`, `${cur.length + sync.add.length - sync.remove.length} ข้อ (${parts})`);
+      }
+      if (sync.keptDone) check.findings.push({ level: 'warn', no: check.keyed ? null : row.no, rowNo: row.rowNo, module: row.module, title: row.title, problem: `Checklist ที่ติ๊กแล้ว ${sync.keptDone} ข้อไม่อยู่ในไฟล์`, fix: 'เก็บไว้ ไม่ลบ' });
+    }
     const custom: Record<string, unknown> = {};
     if (defs.length) {
       const cur = currentCustom.get(issue.id) ?? {};
@@ -293,7 +347,7 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
       diff.locked!.push({ no: row.no, key: `${project.key}-${issue.number}`, title: issue.title, status: ex.statusName.get(issue.statusId) ?? '', fields: fields.map((f) => f.label) });
       continue;
     }
-    edits.push({ issue, row, fields, custom });
+    edits.push({ issue, row, fields, custom, checklist });
     diff.changed.push({ no: row.no, key: `${project.key}-${issue.number}`, title: issue.title, fields });
   }
 
@@ -423,7 +477,7 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
   };
 
   let planChangeCount = 0;
-  for (const { issue, row, fields, custom } of plan.edits) {
+  for (const { issue, row, fields, custom, checklist } of plan.edits) {
     const has = (f: DiffField) => fields.some((x) => x.field === f);
     const cfChanged = Object.keys(custom).length > 0;
     // ชื่อ → userId ของคนที่อยู่ในงานนี้อยู่แล้ว (เช่น สมาชิกที่ปิดบัญชีไปแล้ว ยังคงอยู่)
@@ -469,6 +523,11 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
       await tx.delete(s.issueLabels).where(eq(s.issueLabels.issueId, issue.id));
       const ids = [...new Set(await Promise.all(row.labels.map(labelIdOf)))];
       if (ids.length) await tx.insert(s.issueLabels).values(ids.map((id) => ({ ...w, issueId: issue.id, labelId: id })));
+    }
+    if (checklist) {
+      if (checklist.remove.length) await tx.delete(s.checklistItems).where(and(eq(s.checklistItems.issueId, issue.id), inArray(s.checklistItems.id, checklist.remove)));
+      const sort = { ...checklist.nextSort };
+      if (checklist.add.length) await tx.insert(s.checklistItems).values(checklist.add.map((c) => ({ ...w, issueId: issue.id, kind: c.kind, text: c.text, sort: sort[c.kind]++ })));
     }
     // ย้าย Module / กลุ่มของ Task แล้ว Sub-task ย้ายตาม
     if ((has('module') || has('group')) && !issue.parentId && set.phaseId !== undefined) await tx.update(s.issues).set({ moduleId: mid, phaseId: set.phaseId }).where(eq(s.issues.parentId, issue.id));

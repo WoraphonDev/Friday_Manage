@@ -15,6 +15,8 @@ export const FIELDS = {
   /** กลุ่มของ Task ใต้ Module (ไม่บังคับ) · Sub-task ใช้กลุ่มของ Task แม่ */
   group: { label: 'Group (กลุ่ม · ไม่บังคับ)', aliases: ['group', 'กลุ่ม'] },
   title: { label: 'ชื่องาน', aliases: ['title', 'ชื่องาน', 'module task', 'task', 'งาน'] },
+  /** 1 แถวต่อ 1 ข้อ · แถวต่อท้ายที่ Title เดียวกัน = ข้อถัดไปของงานเดิม (ผู้ใช้ตัดสิน 2026-11-13) */
+  checklist: { label: 'Checklist (1 แถวต่อ 1 ข้อ)', aliases: ['checklist', 'check list', 'เช็กลิสต์', 'checklist (brd recheck)'] },
   status: { label: 'Status', aliases: ['status', 'สถานะ'] },
   priority: { label: 'Priority', aliases: ['priority', 'ความสำคัญ'] },
   ba: { label: 'Business Analyst', aliases: ['business analyst', 'ba'] },
@@ -103,6 +105,37 @@ export function parseKey(v: Cell): { prefix: string | null; number: number } | n
 
 export type Role = 'dev' | 'ba' | 'sa' | 'qa';
 
+export interface ChecklistEntry {
+  kind: 'checklist' | 'acceptance';
+  text: string;
+}
+/** ความยาวสูงสุดต่อข้อ ตรงกับ API Checklist (issue-parts) */
+export const CHECKLIST_MAX = 5000;
+
+/**
+ * ข้อ Checklist จากเซลล์: ตัดช่องว่างหน้า/ท้ายของแต่ละบรรทัด (ไฟล์ BRD ย่อหน้าบรรทัดต่อด้วยช่องว่าง)
+ * ขึ้นต้นด้วย [Acceptance] = Acceptance criteria · คงคำขึ้นต้น [..] ไว้ในข้อความให้กรอง/อ่านง่าย
+ */
+export function checklistEntry(v: Cell): ChecklistEntry | null {
+  if (v === null) return null;
+  const text = String(v)
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .join('\n');
+  if (!text) return null;
+  return { kind: ACCEPTANCE_PREFIX.test(text) ? 'acceptance' : 'checklist', text };
+}
+
+const ACCEPTANCE_PREFIX = /^\[\s*acceptance\s*\]\s*/i;
+/** ข้อความในไฟล์ของข้อ Acceptance: ข้อที่เพิ่มในหน้างานไม่มีคำขึ้นต้น จึงเติมให้ ไม่อย่างนั้นนำเข้ากลับแล้วกลายเป็น Checklist */
+export const acceptanceText = (text: string) => (ACCEPTANCE_PREFIX.test(text) ? text : `[Acceptance] ${text}`);
+/** ตัวเทียบข้อ Checklist ตอนอัปเดต: ชนิด + ข้อความ (Acceptance ไม่สนคำขึ้นต้น [Acceptance]) */
+export const checklistMatchKey = (kind: ChecklistEntry['kind'], text: string) => {
+  const t = checklistEntry(text)?.text ?? text;
+  return `${kind}\u0000${kind === 'acceptance' ? t.replace(ACCEPTANCE_PREFIX, '') : t}`;
+};
+
 export interface PlanRow {
   rowNo: number;
   /**
@@ -138,6 +171,8 @@ export interface PlanRow {
   actualEnd: string | null;
   description: string | null;
   remark: string | null;
+  /** ข้อ Checklist / Acceptance ตามลำดับในไฟล์ (แถวของงาน + แถวต่อท้ายที่ Title เดียวกัน) */
+  checklist: ChecklistEntry[];
   /** ค่าดิบในคอลัมน์ Custom field (id ของฟิลด์ → เซลล์) · แปลงและตรวจตอนเทียบกับระบบ (update.ts) */
   custom: Record<string, Cell>;
 }
@@ -184,6 +219,8 @@ export interface PlanCheck {
     ready: number;
     backlog: number;
     skipped: number;
+    /** จำนวนข้อ Checklist + Acceptance ของงานที่นำเข้าได้ */
+    checklist: number;
   };
 }
 
@@ -237,10 +274,36 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     people.set(k, p);
   };
   const findingOf = (r: PlanRow) => ({ no: keyed ? null : r.no, rowNo: r.rowNo, module: r.module || null, title: r.title || null });
+  // แถวของงานล่าสุด · แถวต่อท้ายที่ Title เดียวกันเป็นข้อ Checklist ของงานนี้ (row = null: แถวงานผิดจนอ่านไม่ได้)
+  let head: { rowNo: number; title: string; module: string | null; cells: Cell[]; row: PlanRow | null } | null = null;
+  const raw = (cells: Cell[], f: Field) => text(get(cells, f));
+  // คอลัมน์ที่แถวต่อท้ายใส่ซ้ำได้ (ระบุงาน) · คอลัมน์อื่นใช้ค่าของแถวงาน
+  const IDENTITY: Field[] = ['key', 'parentKey', 'no', 'module', 'title', 'checklist'];
 
   for (const { rowNo, cells } of wb.table.rows) {
     const module = text(get(cells, 'module'));
     const title = text(get(cells, 'title'));
+    // แถวต่อท้าย: Title เดียวกับแถวก่อนหน้า Module / Key / No. / Parent Key ว่างหรือเหมือนกัน (ผู้ใช้ตัดสิน 2026-11-13)
+    const sameOrEmpty = (f: Field) => raw(cells, f) === null || raw(cells, f) === raw(head!.cells, f);
+    if (head && idx.checklist !== undefined && title && title === head.title && (!module || module === head.module) && (['key', 'no', 'parentKey'] as const).every(sameOrEmpty)) {
+      const base = { rowNo, no: keyed ? null : (head.row?.no ?? null), module: head.module, title };
+      const item = checklistEntry(get(cells, 'checklist'));
+      if (!item) {
+        findings.push({ level: 'warn', ...base, problem: `แถวต่อท้ายของงานแถว ${head.rowNo} ไม่มี Checklist`, fix: 'ข้ามแถวนี้' });
+        continue;
+      }
+      const ignored = (Object.keys(idx) as Field[]).filter((f) => !IDENTITY.includes(f) && raw(cells, f) !== null && raw(cells, f) !== raw(head!.cells, f));
+      if (ignored.length) findings.push({ level: 'warn', ...base, problem: `แถวนี้เป็น Checklist ของงานแถว ${head.rowNo} · ไม่ใช้ค่า ${ignored.map((f) => FIELDS[f].label).join(', ')}`, fix: 'ใส่ค่าของงานในแถวแรกของงาน' });
+      if (head.row) {
+        if (item.text.length > CHECKLIST_MAX) {
+          findings.push({ level: 'err', ...base, problem: `Checklist ยาวเกิน ${CHECKLIST_MAX.toLocaleString('en-US')} ตัวอักษร`, fix: 'แบ่งเป็นหลายข้อใน Excel' });
+          skip.add(head.row.no);
+        }
+        head.row.checklist.push(item);
+      }
+      continue;
+    }
+    head = { rowNo, title: title ?? '', module, cells, row: null };
     const rawNo = get(cells, 'no');
     const legacyNo = typeof rawNo === 'number' ? rawNo : Number(rawNo);
     const no = keyed ? rowNo : legacyNo;
@@ -323,12 +386,17 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
       actualEnd: dates.actualEnd ?? null,
       description: text(get(cells, 'description')),
       remark: text(get(cells, 'remark')),
+      checklist: [],
       custom: Object.fromEntries(cfIdx.map(([id, i]) => [id, cells[i] ?? null])),
     };
+    head.row = row;
+    const first = checklistEntry(get(cells, 'checklist'));
+    if (first) row.checklist.push(first);
 
     // ต้องแก้ (ข้ามตอนนำเข้า)
     const blocking: [string, string][] = [];
     if (!row.title) blocking.push(['ไม่มีชื่องาน', 'แก้ไขใน Excel']);
+    if (first && first.text.length > CHECKLIST_MAX) blocking.push([`Checklist ยาวเกิน ${CHECKLIST_MAX.toLocaleString('en-US')} ตัวอักษร`, 'แบ่งเป็นหลายข้อใน Excel']);
     // Sub-task ใช้ Module ของ Task แม่ (ตรวจหลังอ่านครบทุกแถว)
     if (parent === undefined) blocking.push([`Parent Key "${get(cells, 'parentKey')}" รูปแบบไม่ถูกต้อง`, 'ใช้รูปแบบ DP-12']);
     else if (parent && number !== null && parent.number === number) blocking.push(['Parent Key ชี้มาที่ตัวเอง', 'แก้ไขใน Excel']);
@@ -446,6 +514,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
       ready: ok.length - backlog,
       backlog,
       skipped: skip.size,
+      checklist: ok.reduce((n, r) => n + r.checklist.length, 0),
     },
   };
 }

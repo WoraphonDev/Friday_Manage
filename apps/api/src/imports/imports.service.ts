@@ -285,10 +285,10 @@ export class ImportsService {
         action: 'import.completed',
         targetType: 'project',
         targetId: project.id,
-        summary: `${job.fileName} → ${project.key} · ${rows.length} งาน · ข้าม ${check.skip.size}`,
+        summary: `${job.fileName} → ${project.key} · ${rows.length} งาน${made.checklist ? ` · Checklist ${made.checklist} ข้อ` : ''} · ข้าม ${check.skip.size}`,
       });
       const emails = Object.values(personMapping).flatMap((t) => (t && 'email' in t ? [t.email] : []));
-      return { mode: 'create' as const, project: { key: project.key, name: project.name }, imported: rows.length, scheduled: rows.length - backlog, backlog, skipped: check.skip.size, baseline: prev.setBaseline, emails, events: [] as DomainEvent[], projectId: project.id, fileName: job.fileName };
+      return { mode: 'create' as const, project: { key: project.key, name: project.name }, imported: rows.length, scheduled: rows.length - backlog, backlog, checklist: made.checklist, skipped: check.skip.size, baseline: prev.setBaseline, emails, events: [] as DomainEvent[], projectId: project.id, fileName: job.fileName };
     });
 
     // คนที่เลือก "เชิญด้วยอีเมล" ได้คำเชิญเข้าโปรเจกต์ที่เพิ่งสร้าง
@@ -483,7 +483,7 @@ export class ImportsService {
   }
 }
 
-const counts = (r: Record<string, unknown>) => Object.fromEntries(['imported', 'scheduled', 'backlog', 'added', 'changed', 'unchanged', 'deleted', 'kept', 'planChanges', 'skipped'].filter((k) => k in r).map((k) => [k, r[k]]));
+const counts = (r: Record<string, unknown>) => Object.fromEntries(['imported', 'scheduled', 'backlog', 'checklist', 'added', 'changed', 'unchanged', 'deleted', 'kept', 'planChanges', 'skipped'].filter((k) => k in r).map((k) => [k, r[k]]));
 
 function view(job: Job, state: JobState) {
   return {

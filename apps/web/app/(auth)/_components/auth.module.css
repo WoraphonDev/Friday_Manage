@@ -1,18 +1,72 @@
 /* หน้า J1–J5 ตาม Canvas v1.0.3 · ใช้ token ของ UI kit และขนาดช่อง/ปุ่มที่ใหญ่กว่าหน้าในแอปตาม Canvas */
 
-/* ---------- แบบแบ่งครึ่ง (J1 Login, J2 Signup) ---------- */
-.split { display: flex; flex-wrap: wrap; min-height: 100vh; background: var(--card); }
+/* ---------- พื้นเดียวทั้งจอ (J1 Login, J2 Signup) ----------
+ * ผู้ใช้เลือกแบบ B จาก mockup (2026-11-14): ไม่แบ่งพื้นซ้ายขวา ไทล์ logo ลอยด้านซ้าย ฟอร์มเป็นการ์ดลอยด้านขวา
+ * พื้นเป็นสีเข้มทั้งสองโหมด (เหมือนแผงแบรนด์เดิม) ส่วนการ์ดตามโหมดสว่าง/มืด */
+.split {
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative; isolation: isolate; overflow: hidden;
+  display: flex; flex-wrap: wrap; min-height: 100vh;
+  background:
+    radial-gradient(900px circle at 88% 8%, color-mix(in srgb, var(--status-review-bg) 16%, transparent), transparent 60%),
+    radial-gradient(700px circle at 4% 98%, color-mix(in srgb, var(--status-done-bg) 8%, transparent), transparent 60%),
+    var(--topbar);
+}
+/* แสงม่วงจาง ๆ ตามเมาส์ (usePointerParallax เขียน --gx/--gy) */
+.split::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(420px circle at var(--gx, 30%) var(--gy, 40%), color-mix(in srgb, var(--status-review-bg) 14%, transparent), transparent 60%);
+}
+.backdrop { position: absolute; inset: 0 auto 0 0; width: 62%; z-index: -1; pointer-events: none; }
+.backdrop i {
+  position: absolute; left: var(--x); top: var(--y); width: var(--s); aspect-ratio: 1; border-radius: 30%;
+  background: var(--c); opacity: var(--o); filter: blur(var(--b));
+  translate: calc(var(--mx, 0) * var(--z) * 28px) calc(var(--my, 0) * var(--z) * 28px);
+  transition: translate 0.6s var(--ease-out);
+  animation: tile-in 0.9s var(--ease-spring) var(--in) backwards, drift var(--t) ease-in-out var(--d) infinite alternate;
+}
+@keyframes tile-in { from { opacity: 0; scale: 0.4; } }
+@keyframes drift {
+  from { transform: rotate(var(--r)) translateY(0); }
+  to { transform: rotate(calc(var(--r) + 8deg)) translateY(-18px); }
+}
+
 .brand {
-  flex: 1 1 420px; background: var(--topbar); color: var(--inverse-ink); padding: 48px;
+  flex: 1 1 420px; min-width: 0; color: var(--inverse-ink); padding: 48px;
   display: flex; flex-direction: column; justify-content: space-between; gap: 40px;
 }
 .logo { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
 .logo:hover { color: inherit; }
-.brandBody { max-width: 460px; }
-.brandTitle { font-size: 34px; line-height: 1.25; margin: 0 0 16px; color: var(--on-primary); }
-.brandList { margin: 0; padding-left: 20px; list-style: disc; display: flex; flex-direction: column; gap: 8px; color: var(--inverse-muted); }
+.brandBody { max-width: 460px; display: flex; flex-direction: column; gap: 20px; }
+.brandTitle {
+  font-size: 34px; line-height: 1.38; margin: 0; color: var(--on-primary); text-wrap: balance; isolation: isolate;
+  animation: title-in 0.7s var(--ease-out) 0.3s backwards;
+}
+@keyframes title-in { from { opacity: 0; transform: translateY(18px); filter: blur(6px); } }
+/* เส้นใต้ Module / Commit วาดจากซ้ายหลังหัวข้อขึ้นมา · ระยะบรรทัด 1.38 กันเส้นชนวรรณยุกต์บรรทัดล่าง */
+.hl { position: relative; white-space: nowrap; }
+.hl::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0.02em; height: 0.1em; border-radius: 99px; z-index: -1;
+  background: linear-gradient(90deg, var(--status-review-bg), var(--status-overdue-bg));
+  transform-origin: left; animation: draw 0.7s var(--ease-out) 1.05s backwards;
+}
+.hl + .hl::after, .hl:last-child::after { animation-delay: 1.3s; }
+@keyframes draw { from { transform: scaleX(0); } }
+.brandList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; color: var(--inverse-muted); }
+.brandList li { display: flex; gap: 10px; align-items: flex-start; animation: point-in 0.42s var(--ease-out) backwards; }
+.brandList li::before { content: ""; width: 12px; height: 12px; border-radius: 4px; flex: none; margin-top: 6px; transform: rotate(-9deg); background: var(--status-progress-bg); }
+.brandList li:nth-child(1) { animation-delay: 0.8s; }
+.brandList li:nth-child(2) { animation-delay: 0.88s; }
+.brandList li:nth-child(2)::before { background: var(--status-review-bg); }
+.brandList li:nth-child(3) { animation-delay: 0.96s; }
+.brandList li:nth-child(3)::before { background: var(--status-done-bg); }
+@keyframes point-in { from { opacity: 0; transform: translateX(-10px); } }
 .brandSteps { display: flex; flex-direction: column; gap: 12px; color: var(--inverse-muted); }
-.brandStep { display: flex; gap: 12px; align-items: center; }
+.brandStep { display: flex; gap: 12px; align-items: center; animation: point-in 0.42s var(--ease-out) backwards; }
+.brandStep:nth-child(1) { animation-delay: 0.8s; }
+.brandStep:nth-child(2) { animation-delay: 0.88s; }
+.brandStep:nth-child(3) { animation-delay: 0.96s; }
 .brandStepNo {
   width: 28px; height: 28px; border-radius: 50%; background: var(--inverse-bg-2); color: var(--on-primary); flex: none;
   display: inline-flex; align-items: center; justify-content: center; font-weight: 700;
@@ -20,8 +74,44 @@
 .brandStepNo[data-on="true"] { background: var(--primary); }
 .brandFoot { font-size: 12px; color: var(--inverse-muted); }
 .brandFoot a { color: var(--inverse-link); }
-.formSide { flex: 1 1 480px; display: flex; align-items: center; justify-content: center; padding: 48px 24px; }
-.box { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px; }
+
+/* กิจกรรมล่าสุด (ภาพประกอบ) · อันใหม่เลื่อนขึ้น อันเก่าจางออก */
+.feed { position: relative; height: 62px; max-width: 380px; animation: point-in 0.5s var(--ease-out) 1.05s backwards; }
+.feedItem {
+  position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  background: color-mix(in srgb, var(--inverse-bg) 82%, transparent); backdrop-filter: blur(8px);
+  border: 1px solid var(--inverse-border); border-radius: 12px; font-size: 13px; color: var(--inverse-ink);
+  animation: feed-in 0.48s var(--ease-out) backwards;
+}
+.feedItem[data-leaving] { animation: feed-out 0.32s ease-in forwards; }
+@keyframes feed-in { from { opacity: 0; transform: translateY(18px) scale(0.97); } }
+@keyframes feed-out { to { opacity: 0; transform: translateY(-14px) scale(0.97); } }
+.feedAvatar {
+  width: 28px; height: 28px; border-radius: 50%; flex: none; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; background: var(--c); color: var(--ink);
+}
+.feedText { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.feedText span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.feedText small { font-size: 11px; color: var(--inverse-muted); }
+
+/* การ์ดฟอร์มลอยขึ้นมา แล้วเนื้อหาข้างในเลื่อนขึ้นทีละแถว */
+.formSide { position: relative; z-index: 1; flex: 1 1 480px; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 48px 24px; }
+.box {
+  width: 100%; max-width: 468px; display: flex; flex-direction: column; gap: 16px;
+  background: var(--card); color: var(--foreground); border: 1px solid var(--border); border-radius: 18px; padding: 32px;
+  box-shadow: var(--shadow-menu);
+  animation: card-in 0.64s var(--ease-out) 0.15s backwards;
+}
+@keyframes card-in { from { opacity: 0; transform: translateY(20px) scale(0.98); } }
+.box > *, .box > .form > * { animation: rise 0.48s var(--ease-out) backwards; animation-delay: calc(0.26s + var(--i, 0) * 45ms); }
+.box > :nth-child(2), .box > .form > :nth-child(1) { --i: 1; }
+.box > :nth-child(3), .box > .form > :nth-child(2) { --i: 2; }
+.box > :nth-child(4), .box > .form > :nth-child(3) { --i: 3; }
+.box > :nth-child(5), .box > .form > :nth-child(4) { --i: 4; }
+.box > :nth-child(6), .box > .form > :nth-child(5) { --i: 5; }
+.box > :nth-child(7), .box > .form > :nth-child(6) { --i: 6; }
+.box > :nth-child(n + 8), .box > .form > :nth-child(n + 7) { --i: 7; }
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } }
 
 /* ---------- แบบการ์ดกลางจอ (J3, J4) ---------- */
 .cardPage {
@@ -60,7 +150,10 @@
 
 /* ---------- ฟอร์ม (ช่อง 44 px และปุ่ม 46 px ตาม Canvas) ---------- */
 .form { display: flex; flex-direction: column; gap: 16px; }
-.input { min-height: 44px; border-radius: 10px; padding: 0 12px; }
+.input { min-height: 44px; border-radius: 10px; padding: 0 12px; transition: border-color 0.2s, box-shadow 0.25s; }
+.input:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 4px var(--primary-soft); }
+.input[aria-invalid="true"] { box-shadow: 0 0 0 4px var(--danger-soft); }
+:global(.field):focus-within > label, .field:focus-within .labelRow label { color: var(--primary-text); transition: color 0.2s; }
 .input:read-only { background: var(--subtle); color: var(--foreground-soft); }
 .labelRow { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 600; }
 .labelRow a { font-weight: 500; }
@@ -70,11 +163,48 @@
 .passwordWrap .input { padding-right: 72px; }
 .reveal {
   position: absolute; right: 6px; top: 6px; height: 32px; padding: 0 8px; border: 0; background: transparent;
-  color: var(--primary-text); font-weight: 600; cursor: pointer; border-radius: 6px;
+  color: var(--primary-text); font-weight: 600; cursor: pointer; border-radius: 6px; display: grid; align-items: center;
 }
+.reveal:hover { background: var(--primary-soft); }
+/* คำว่า แสดง ↔ ซ่อน เลื่อนสลับกันแนวตั้ง */
+.reveal span { grid-area: 1 / 1; transition: opacity 0.2s, transform 0.25s var(--ease-out); }
+.reveal span:last-child, .reveal[aria-pressed="true"] span:first-child { opacity: 0; transform: translateY(8px); }
+.reveal[aria-pressed="true"] span:first-child { transform: translateY(-8px); }
+.reveal[aria-pressed="true"] span:last-child { opacity: 1; transform: none; }
 .check { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
 .check input { width: 18px; height: 18px; margin: 2px 0 0; flex: none; accent-color: var(--primary); }
+.check input:checked { animation: check-pop 0.32s var(--ease-spring, ease-out); }
+@keyframes check-pop { 40% { transform: scale(0.82); } }
 .button { min-height: 46px; width: 100%; border-radius: 10px; font-weight: 600; gap: 10px; }
+
+/* ปุ่มส่งฟอร์ม: แสงวิ่งผ่านตอน hover · ระหว่างรอเป็นไทล์ 4 สีกระโดด · สำเร็จเป็นสีเขียว */
+.submit { position: relative; overflow: hidden; display: grid; place-items: center; transition: background 0.25s, transform 0.15s, box-shadow 0.25s; }
+.submit > span { grid-area: 1 / 1; display: inline-flex; align-items: center; gap: 5px; transition: opacity 0.2s, transform 0.3s var(--ease-out); }
+.submit::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; transform: translateX(-120%);
+  background: linear-gradient(110deg, transparent 30%, color-mix(in srgb, var(--on-primary) 22%, transparent) 50%, transparent 70%);
+}
+.submit:hover:not(:disabled)::after { transform: translateX(120%); transition: transform 0.8s var(--ease-out); }
+.submit:hover:not(:disabled) { box-shadow: 0 8px 22px -8px var(--primary); }
+.submit:active:not(:disabled) { transform: scale(0.985); }
+.submitBusy, .submitDone { opacity: 0; transform: translateY(10px); }
+.submit[data-state="busy"], .submit[data-state="done"] { opacity: 1; cursor: progress; }
+.submit[data-state="busy"] .submitLabel, .submit[data-state="done"] .submitLabel { opacity: 0; transform: translateY(-10px); }
+.submit[data-state="busy"] .submitBusy, .submit[data-state="done"] .submitDone { opacity: 1; transform: none; }
+.submit[data-state="done"] { background: var(--success-solid); border-color: var(--success-solid); }
+.submitBusy i { width: 9px; height: 9px; border-radius: 3px; background: var(--status-done-bg); animation: hop 0.9s var(--ease-out) infinite; }
+.submitBusy i:nth-child(2) { background: var(--status-progress-bg); animation-delay: 0.1s; }
+.submitBusy i:nth-child(3) { background: var(--status-review-bg); animation-delay: 0.2s; }
+.submitBusy i:nth-child(4) { background: var(--status-overdue-bg); animation-delay: 0.3s; }
+@keyframes hop { 0%, 60%, 100% { transform: none; } 30% { transform: translateY(-7px) rotate(-12deg); } }
+.submitDone path { stroke-dasharray: 22; stroke-dashoffset: 22; }
+.submit[data-state="done"] .submitDone path { stroke-dashoffset: 0; transition: stroke-dashoffset 0.35s var(--ease-out) 0.1s; }
+
+/* ปุ่ม Google / Microsoft ยกขึ้นเล็กน้อยตอน hover */
+.oauth { transition: transform 0.2s var(--ease-out), border-color 0.2s, background 0.2s, box-shadow 0.2s; }
+.oauth:hover { transform: translateY(-2px); box-shadow: var(--shadow-menu); }
+.oauthIcon { display: inline-flex; transition: transform 0.3s var(--ease-spring); }
+.oauth:hover .oauthIcon { transform: rotate(-10deg) scale(1.1); }
 .buttonAuto { width: auto; }
 .linkButton { border: 0; background: transparent; padding: 0; color: var(--primary-text); cursor: pointer; font: inherit; text-align: left; }
 .linkButton:hover { color: var(--primary-text); }
@@ -90,7 +220,9 @@
 .alert {
   display: flex; gap: 10px; align-items: flex-start; border-radius: 10px; padding: 10px 12px; font-size: 13px;
   background: var(--danger-soft); border: 1px solid var(--danger-border); color: var(--danger-text);
+  animation: alert-in 0.3s ease-out;
 }
+@keyframes alert-in { from { opacity: 0; transform: translateY(-6px); } }
 .alert svg { flex: none; margin-top: 2px; }
 .alertBody { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .alertInfo { background: var(--primary-soft); border-color: var(--primary-border); color: var(--primary-text); }
@@ -106,6 +238,8 @@
   text-align: center; font: inherit; font-size: 22px; font-weight: 700; background: var(--card); color: var(--foreground);
 }
 .otp input:focus { outline: 2px solid var(--primary); border-color: var(--primary); }
+.otp input[data-filled] { border-color: var(--primary); animation: otp-pop 0.3s var(--ease-spring, ease-out); }
+@keyframes otp-pop { from { transform: scale(1.14); } }
 .otp[aria-invalid="true"] input { border-color: var(--danger); }
 
 /* ---------- ความแข็งแรงของรหัสผ่าน ---------- */
@@ -201,7 +335,10 @@
 
 @media (max-width: 760px) {
   .brand { padding: 28px 20px; gap: 28px; }
-  .formSide { padding: 28px 16px; }
+  .brandTitle { font-size: 28px; }
+  .backdrop { width: 100%; }
+  .formSide { padding: 8px 16px 28px; }
+  .box { padding: 24px 20px; }
   .cardPage { padding: 28px 16px; gap: 20px; }
   .card { padding: 24px 20px; }
   .cardWide { padding: 0; }

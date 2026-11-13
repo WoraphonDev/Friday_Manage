@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input, useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
@@ -17,7 +17,9 @@ import {
   PasswordField,
   SplitLayout,
   safeReturnTo,
+  shake,
   styles,
+  SubmitButton,
 } from "../../_components/shared";
 import { appLocale } from "@/lib/format";
 
@@ -51,6 +53,8 @@ export function LoginForm() {
   const [backup, setBackup] = useState(false);
   const [trust, setTrust] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const form = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<unknown>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [missing, setMissing] = useState<{ email?: boolean; password?: boolean }>({});
@@ -69,7 +73,15 @@ export function LoginForm() {
     window.history.replaceState(null, "", window.location.pathname + window.location.search);
   }, []);
 
+  // กรอกผิดหรือรหัสผิดให้ฟอร์มสั่น · error เป็น object ใหม่ทุกครั้ง จึงสั่นซ้ำได้ทุกครั้งที่ผิด
+  useEffect(() => {
+    if (error) shake(form.current);
+  }, [error]);
+
   async function finish() {
+    // ปุ่มเป็นสีเขียวระหว่างรอเปลี่ยนหน้า แทนการกลับไปเป็นปุ่มปกติ
+    setBusy(false);
+    setDone(true);
     router.replace(await destinationAfterLogin(returnTo));
   }
 
@@ -77,7 +89,7 @@ export function LoginForm() {
     event.preventDefault();
     const empty = { email: !email.trim(), password: !password };
     setMissing(empty);
-    if (empty.email || empty.password) return;
+    if (empty.email || empty.password) return shake(form.current);
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -170,7 +182,7 @@ export function LoginForm() {
               : t("login.mfaSubtitle", { email: mfa.email })
           }
         />
-        <form className={styles.form} onSubmit={submitMfa} noValidate>
+        <form ref={form} className={styles.form} onSubmit={submitMfa} noValidate>
           {!!error && <FormAlert error={error} message={loginError()} />}
           {backup ? (
             <Input
@@ -188,9 +200,9 @@ export function LoginForm() {
             <input type="checkbox" checked={trust} onChange={(event) => setTrust(event.target.checked)} />
             {t("login.trustDevice")}
           </label>
-          <Button type="submit" variant="primary" className={styles.button} disabled={busy || !complete}>
-            {busy ? t("common.working") : t("login.mfaSubmit")}
-          </Button>
+          <SubmitButton busy={busy} done={done} disabled={!complete}>
+            {t("login.mfaSubmit")}
+          </SubmitButton>
         </form>
         <div className={cn(styles.muted, styles.small, styles.center)}>
           {backup ? null : <>{t("login.noApp")} </>}
@@ -213,7 +225,7 @@ export function LoginForm() {
   return (
     <SplitLayout variant="login">
       <Heading title={t("login.title")} subtitle={t("login.subtitle")} />
-      <form className={styles.form} onSubmit={submitPassword} noValidate>
+      <form ref={form} className={styles.form} onSubmit={submitPassword} noValidate>
         {notice && <FormAlert tone="info" message={notice} />}
         {oauthMessage && !error && <FormAlert message={t(`login.oauthErrors.${oauthMessage}`)} />}
         {!!error && <FormAlert error={error} message={loginError()} />}
@@ -242,9 +254,9 @@ export function LoginForm() {
           <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
           {t("login.remember")}
         </label>
-        <Button type="submit" variant="primary" className={styles.button} disabled={busy}>
-          {busy ? t("common.working") : t("login.submit")}
-        </Button>
+        <SubmitButton busy={busy} done={done}>
+          {t("login.submit")}
+        </SubmitButton>
       </form>
       <div className={styles.or}>{t("common.or")}</div>
       <OAuthLink provider="google" label={t("login.google")} next={returnTo ?? undefined} remember={remember} />

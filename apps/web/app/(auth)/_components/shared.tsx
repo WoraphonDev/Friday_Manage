@@ -7,13 +7,15 @@ import {
   useRef,
   useState,
   type ClipboardEvent,
+  type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { useTranslations } from "next-intl";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
 import { FridayLogo } from "@/components/brand/friday-logo";
-import { buttonVariants } from "@/components/ui";
+import { Button, buttonVariants } from "@/components/ui";
 import { ApiError, supportId } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import styles from "./auth.module.css";
@@ -37,7 +39,131 @@ export function Logo({
   );
 }
 
-/** J1 / J2 · แผงสีเข้มด้านซ้าย (มือถือขึ้นเป็นแถบบน) */
+/** ผู้ใช้ตั้ง "ลดการเคลื่อนไหว" ไว้หรือไม่ · jsdom ไม่มี matchMedia จึงถือว่าไม่ได้ตั้ง */
+export function prefersReducedMotion() {
+  return typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** สั่นซ้ายขวาสั้น ๆ เมื่อกรอกผิด · ไม่มี Web Animations (jsdom) หรือลดการเคลื่อนไหวก็ข้าม */
+export function shake(element: HTMLElement | null) {
+  if (!element?.animate || prefersReducedMotion()) return;
+  element.animate(
+    [0, -8, 7, -5, 3, 0].map((x) => ({ transform: `translateX(${x}px)` })),
+    { duration: 380, easing: "ease-out" },
+  );
+}
+
+/* ไทล์สีของ logo ลอยอยู่ด้านซ้ายของพื้นหลัง (ผู้ใช้เลือกแบบ B จาก mockup 2026-11-14)
+ * z = ระยะที่ขยับตามเมาส์ · t = วินาทีต่อรอบลอย · b = เบลอให้ดูอยู่ไกล */
+const BACKDROP = [
+  { x: 70, y: 6, s: 120, c: "review", r: -14, z: 0.9, t: 10, d: 0 },
+  { x: 84, y: 34, s: 72, c: "progress", r: 12, z: 0.6, t: 8, d: -3 },
+  { x: 62, y: 62, s: 96, c: "done", r: -6, z: 1, t: 11, d: -5, o: 0.85 },
+  { x: 88, y: 78, s: 56, c: "overdue", r: 20, z: 0.5, t: 7, d: -2 },
+  { x: 52, y: 20, s: 26, c: "overdue", r: 8, z: 0.3, t: 9, d: -6, b: 1.5, o: 0.6 },
+  { x: 76, y: 52, s: 22, c: "review", r: -20, z: 0.25, t: 8, d: -1, b: 1.5, o: 0.55 },
+  { x: 46, y: 86, s: 34, c: "progress", r: -10, z: 0.35, t: 10, d: -4, b: 2, o: 0.5 },
+  { x: 94, y: 14, s: 18, c: "done", r: 14, z: 0.2, t: 7, d: -7, b: 2, o: 0.5 },
+];
+
+function Backdrop() {
+  return (
+    <div className={styles.backdrop} aria-hidden="true">
+      {BACKDROP.map((tile, index) => (
+        <i
+          key={index}
+          style={
+            {
+              "--x": `${tile.x}%`,
+              "--y": `${tile.y}%`,
+              "--s": `${tile.s}px`,
+              "--c": `var(--status-${tile.c}-bg)`,
+              "--r": `${tile.r}deg`,
+              "--z": tile.z,
+              "--t": `${tile.t}s`,
+              "--d": `${tile.d}s`,
+              "--b": `${tile.b ?? 0}px`,
+              "--o": tile.o ?? 0.9,
+              "--in": `${0.2 + index * 0.07}s`,
+            } as CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
+/** แสงม่วงและไทล์ลอยขยับตามเมาส์ · เขียนค่าเป็นตัวแปร CSS ทีละเฟรม ไม่ทำให้ React render ใหม่ */
+function usePointerParallax(ref: RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || prefersReducedMotion()) return;
+    let frame = 0;
+    const move = (event: PointerEvent) => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const rect = element.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width;
+        const y = (event.clientY - rect.top) / rect.height;
+        element.style.setProperty("--gx", `${(x * 100).toFixed(1)}%`);
+        element.style.setProperty("--gy", `${(y * 100).toFixed(1)}%`);
+        element.style.setProperty("--mx", ((x - 0.5) * 2).toFixed(3));
+        element.style.setProperty("--my", ((y - 0.5) * 2).toFixed(3));
+      });
+    };
+    const leave = () => {
+      element.style.setProperty("--mx", "0");
+      element.style.setProperty("--my", "0");
+    };
+    element.addEventListener("pointermove", move);
+    element.addEventListener("pointerleave", leave);
+    return () => {
+      cancelAnimationFrame(frame);
+      element.removeEventListener("pointermove", move);
+      element.removeEventListener("pointerleave", leave);
+    };
+  }, [ref]);
+}
+
+const FEED = [
+  { key: "commit", tone: "review" },
+  { key: "move", tone: "progress" },
+  { key: "tests", tone: "done" },
+  { key: "due", tone: "overdue" },
+] as const;
+
+/** กล่องกิจกรรมตัวอย่างในแผงซ้ายของ Login · เปลี่ยนทุก 3 วินาที (เป็นภาพประกอบ จึงซ่อนจากโปรแกรมอ่านหน้าจอ) */
+function BrandFeed() {
+  const t = useTranslations(NS);
+  const [{ current, previous }, setFeed] = useState({ current: 0, previous: -1 });
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    const timer = setInterval(() => setFeed(({ current: now }) => ({ current: (now + 1) % FEED.length, previous: now })), 3000);
+    return () => clearInterval(timer);
+  }, []);
+  const item = (index: number, leaving: boolean) => {
+    const { key, tone } = FEED[index];
+    return (
+      <div key={`${index}-${leaving}`} className={styles.feedItem} data-leaving={leaving || undefined}>
+        <span className={styles.feedAvatar} style={{ "--c": `var(--status-${tone}-bg)`, "--ink": `var(--status-${tone}-fg)` } as CSSProperties}>
+          {t(`brand.feed.${key}.who`)}
+        </span>
+        <span className={styles.feedText}>
+          <span>{t(`brand.feed.${key}.text`)}</span>
+          <small>{t(`brand.feed.${key}.when`)}</small>
+        </span>
+      </div>
+    );
+  };
+  return (
+    <div className={styles.feed} aria-hidden="true">
+      {previous >= 0 && item(previous, true)}
+      {item(current, false)}
+    </div>
+  );
+}
+
+/** J1 / J2 · พื้นเข้มผืนเดียวทั้งจอ แผงแบรนด์ด้านซ้าย ฟอร์มเป็นการ์ดลอยด้านขวา (มือถือเรียงบนลงล่าง) */
 export function SplitLayout({
   variant,
   children,
@@ -46,20 +172,28 @@ export function SplitLayout({
   children: ReactNode;
 }) {
   const t = useTranslations(NS);
+  const root = useRef<HTMLDivElement>(null);
+  usePointerParallax(root);
   return (
-    <div className={styles.split}>
+    <div className={styles.split} ref={root}>
+      <Backdrop />
       <section className={styles.brand} aria-label={t("brand.name")}>
         <Logo tone="dark" size="lg" />
         <div className={styles.brandBody}>
           <h2 className={styles.brandTitle}>
-            {variant === "login" ? t("brand.loginTitle") : t("brand.signupTitle")}
+            {variant === "login"
+              ? t.rich("brand.loginTitle", { hl: (chunks) => <span className={styles.hl}>{chunks}</span> })
+              : t("brand.signupTitle")}
           </h2>
           {variant === "login" ? (
-            <ul className={styles.brandList}>
-              <li>{t("brand.loginPoints.views")}</li>
-              <li>{t("brand.loginPoints.git")}</li>
-              <li>{t("brand.loginPoints.workload")}</li>
-            </ul>
+            <>
+              <ul className={styles.brandList}>
+                <li>{t("brand.loginPoints.views")}</li>
+                <li>{t("brand.loginPoints.git")}</li>
+                <li>{t("brand.loginPoints.workload")}</li>
+              </ul>
+              <BrandFeed />
+            </>
           ) : (
             <ol className={styles.brandSteps} style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {(["account", "workspace", "project"] as const).map((key, index) => (
@@ -88,6 +222,46 @@ export function SplitLayout({
         <div className={styles.box}>{children}</div>
       </section>
     </div>
+  );
+}
+
+/** ปุ่มส่งฟอร์มเข้าสู่ระบบ · ระหว่างรอเป็นไทล์ 4 สีกระโดด · สำเร็จเป็นสีเขียวพร้อมเครื่องหมายถูกระหว่างเปลี่ยนหน้า */
+export function SubmitButton({
+  busy,
+  done,
+  disabled,
+  children,
+}: {
+  busy: boolean;
+  done?: boolean;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  const t = useTranslations(NS);
+  const state = done ? "done" : busy ? "busy" : "idle";
+  return (
+    <Button
+      type="submit"
+      variant="primary"
+      className={cn(styles.button, styles.submit)}
+      data-state={state}
+      aria-busy={busy || undefined}
+      disabled={busy || done || disabled}
+    >
+      <span className={styles.submitLabel}>{children}</span>
+      <span className={styles.submitBusy} aria-hidden="true">
+        <i />
+        <i />
+        <i />
+        <i />
+      </span>
+      <span className={styles.submitDone} aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M4.5 10.5 8.5 14l7-8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+      {busy && <span className="sr-only">{t("common.working")}</span>}
+    </Button>
   );
 }
 
@@ -231,6 +405,7 @@ export function OtpInput({
           autoComplete={index === 0 ? "one-time-code" : "off"}
           maxLength={index === 0 ? 6 : 1}
           value={digit}
+          data-filled={digit ? true : undefined}
           aria-label={t("common.otpDigit", { n: index + 1 })}
           onChange={(event) => type(index, event.target.value)}
           onKeyDown={(event) => key(index, event)}
@@ -300,7 +475,9 @@ export function PasswordField({
           aria-pressed={show}
           onClick={() => setShow(!show)}
         >
-          {show ? t("common.hide") : t("common.show")}
+          {/* ซ้อนสองคำแล้วเลื่อนสลับกัน ชื่อปุ่มสำหรับโปรแกรมอ่านหน้าจอมาจาก aria-label */}
+          <span aria-hidden="true">{t("common.show")}</span>
+          <span aria-hidden="true">{t("common.hide")}</span>
         </button>
       </span>
       {(error || hint) && (
@@ -419,8 +596,8 @@ export function OAuthLink({
   remember?: boolean;
 }) {
   return (
-    <a className={cn(buttonVariants(), styles.button)} href={oauthHref(provider, next, remember)}>
-      {provider === "google" ? <GoogleIcon /> : <MicrosoftIcon />}
+    <a className={cn(buttonVariants(), styles.button, styles.oauth)} href={oauthHref(provider, next, remember)}>
+      <span className={styles.oauthIcon}>{provider === "google" ? <GoogleIcon /> : <MicrosoftIcon />}</span>
       {label}
     </a>
   );

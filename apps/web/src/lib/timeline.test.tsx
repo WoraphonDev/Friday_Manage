@@ -9,7 +9,7 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import tl from "../../messages/th/timeline.json";
-import { LABEL_MAX, LABEL_MIN, LABEL_W, PX_PER_DAY, TimelineView, addDays, toDay, type TLRow, type TimelineData } from "../../app/work/[ws]/p/[key]/timeline/_components/timeline-view";
+import { LABEL_MAX, LABEL_MIN, LABEL_W, PX_PER_DAY, TimelineView, offDayMask, addDays, toDay, type TLRow, type TimelineData } from "../../app/work/[ws]/p/[key]/timeline/_components/timeline-view";
 
 const person = (id: string, displayName: string) => ({ id, displayName });
 const row = (key: string, start: string, end: string, over: Partial<TLRow> = {}): TLRow => ({ key, type: "Task", title: `งาน ${key}`, status: { name: "In progress", category: "in_progress" }, start, end, progressPct: 40, lateDays: 0, assignees: [person("u1", "ผู้พัฒนาหนึ่ง")], subtasks: [], ...over });
@@ -189,11 +189,11 @@ describe("Timeline (4)", () => {
     const user = userEvent.setup();
     mount();
     await screen.findByTestId("bar-DE-3");
-    expect(bar("DE-3").style.background).toBe("rgb(29, 78, 216)");
+    expect((bar("DE-3").firstElementChild as HTMLElement).style.background).toBe("rgb(29, 78, 216)");
     await user.selectOptions(screen.getByLabelText("สีตาม"), "status");
-    expect(bar("DE-3").style.background).toBe("var(--status-todo-dot)");
+    expect((bar("DE-3").firstElementChild as HTMLElement).style.background).toBe("var(--status-todo-dot)");
     await user.selectOptions(screen.getByLabelText("สีตาม"), "assignee");
-    expect(bar("DE-3").style.background).toBe("var(--chart-neutral)"); // ไม่มีผู้รับผิดชอบ = เทา
+    expect((bar("DE-3").firstElementChild as HTMLElement).style.background).toBe("var(--chart-neutral)"); // ไม่มีผู้รับผิดชอบ = เทา
   });
 
   it("Guest: ไม่มีชื่อคน ไม่มีสีตาม Assignee ลากไม่ได้ และเปิดได้เฉพาะงานที่แชร์", async () => {
@@ -254,6 +254,21 @@ describe("Timeline (4)", () => {
 
     await user.type(within(filters).getByRole("searchbox"), "ไม่มีงานนี้");
     expect(screen.getByText("ไม่พบงานที่ตรงกับตัวกรอง")).toBeInTheDocument();
+  });
+
+  it("แถบที่ผ่านวันหยุดเหลือเส้นบาง: เสาร์-อาทิตย์ตามวันทำงานของ Workspace + วันหยุดจากปฏิทิน", async () => {
+    d = { ...data(), calendar: { workDays: [1, 2, 3, 4, 5], holidays: ["2026-12-10"] } };
+    mount();
+    await screen.findByTestId("bar-DE-1");
+    // DE-1 30 พ.ย.–4 ธ.ค. เป็นวันทำงานทั้งหมด · DE-3 7–18 ธ.ค. ผ่านวันหยุด 10 ธ.ค. และเสาร์-อาทิตย์ 12–13 ธ.ค.
+    expect(bar("DE-1")).not.toHaveAttribute("data-off-days");
+    expect(bar("DE-3")).toHaveAttribute("data-off-days", "3");
+    const off = (iso: string) => ["2026-12-10", "2026-12-12", "2026-12-13"].includes(iso);
+    const m = offDayMask("2026-12-07", "2026-12-18", 10, off);
+    expect(m.offDays).toBe(3);
+    expect(m.mask).toContain("transparent 30px 40px");
+    expect(m.mask).toContain("transparent 50px 70px");
+    expect(offDayMask("2026-11-30", "2026-12-04", 10, off)).toEqual({ offDays: 0, mask: undefined });
   });
 
   it("ว่าง · Error มี requestId · 403", async () => {

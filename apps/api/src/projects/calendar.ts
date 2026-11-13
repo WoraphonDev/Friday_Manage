@@ -42,6 +42,16 @@ export class WorkCalendar {
     return d;
   }
 
+  /** วันทำงานประจำสัปดาห์ของ Workspace (ISO: 1 = จ. … 7 = อา.) */
+  get workDayList() {
+    return [...this.workDays].sort((a, b) => a - b);
+  }
+
+  /** วันหยุด (ปฏิทินหลัก + วันหยุดเฉพาะโปรเจกต์) ในช่วง from–to เรียงตามวัน */
+  holidaysIn(from: string, to: string) {
+    return [...this.off].filter((d) => d >= from && d <= to).sort();
+  }
+
   /** จำนวนวันทำงานต่อสัปดาห์ของ Workspace */
   get daysPerWeek() {
     return this.workDays.size || 5;

@@ -31,6 +31,8 @@ export interface TimelineData {
   milestones: { id: string; name: string; date: string; moduleId: string | null }[];
   modules: (Summary & { id: string | null; name: string; color: string | null; groups: (Summary & { phase: { id: string } | null; name: string; tasks: TLRow[] })[] })[];
   unscheduled: { key: string; type: string; title: string; moduleId: string | null; parentKey: string | null; assignees?: Person[]; ba?: Person | null; sa?: Person | null }[];
+  /** วันทำงานประจำสัปดาห์ (ISO 1 = จ. … 7 = อา.) + วันหยุดของโปรเจกต์ · ไม่มีถือว่า จ.–ศ. */
+  calendar?: { workDays: number[]; holidays: string[] };
 }
 
 export type Zoom = "day" | "week" | "month";
@@ -46,6 +48,24 @@ const LABEL_WIDE = 520;
 const LABEL_KEY = "friday.timeline.labelWidth";
 const clampLabel = (w: number) => Math.round(Math.min(LABEL_MAX, Math.max(LABEL_MIN, w)));
 // สีตามหมวด (Review ที่ยังอยู่หมวด In progress แยกด้วยชื่อ) · ชุดเดียวกับป้ายสถานะใน Table
+// แถบงานช่วงวันหยุดเหลือเส้นบางตรงกลาง (บอกว่าช่วงนั้นไม่นับเป็นวันทำงาน) · ความสูงแถบ 18 px
+const THIN_TOP = 6;
+const THIN_BOTTOM = 12;
+/** mask ของแถบ: วันทำงานเต็มความสูง · วันหยุดเหลือเส้นบาง · ไม่มีวันหยุดในช่วง = undefined */
+export function offDayMask(start: string, end: string, px: number, isOff: (iso: string) => boolean) {
+  const days = toDay(end, start) + 1;
+  const segs: { off: boolean; from: number; to: number }[] = [];
+  for (let i = 0; i < days; i++) {
+    const off = isOff(addDays(start, i));
+    const last = segs[segs.length - 1];
+    if (last && last.off === off) last.to = (i + 1) * px;
+    else segs.push({ off, from: i * px, to: (i + 1) * px });
+  }
+  const offDays = segs.filter((g) => g.off).reduce((n, g) => n + (g.to - g.from) / px, 0);
+  if (!offDays) return { offDays: 0, mask: undefined };
+  const stops = segs.map((g) => `${g.off ? "transparent" : "#000"} ${g.from}px ${g.to}px`).join(", ");
+  return { offDays, mask: `linear-gradient(to bottom, transparent ${THIN_TOP}px, #000 ${THIN_TOP}px, #000 ${THIN_BOTTOM}px, transparent ${THIN_BOTTOM}px), linear-gradient(to right, ${stops})` };
+}
 const statusColor = (s: { name: string; category: Cat }) => statusDotColor(s.category, s.name);
 // สีข้อมูลต้องเป็น hex เพราะนำไปต่อค่าความโปร่งใส (`${color}33`)
 const PALETTE = ["#5b3fc4", "#0f766e", "#b45309", "#1d4ed8", "#be185d", "#0369a1", "#4d7c0f", "#c2410c"];
@@ -289,7 +309,11 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
     const next = msSorted[i + 1];
     return next ? Math.max(24, x(next.date) - x(msSorted[i]!.date) - 8) : undefined;
   };
-  const weekends = zoom === "month" ? [] : Array.from({ length: ax.days }, (_, i) => i).filter((i) => [0, 6].includes(weekday(addDays(ax.from, i))));
+  // วันหยุด = ไม่ใช่วันทำงานของ Workspace หรืออยู่ในปฏิทินวันหยุด (ตรงกับ WorkCalendar ฝั่ง API)
+  const workDays = new Set(d.calendar?.workDays ?? [1, 2, 3, 4, 5]);
+  const holidays = new Set(d.calendar?.holidays ?? []);
+  const isOff = (iso: string) => !workDays.has(weekday(iso) || 7) || holidays.has(iso);
+  const weekends = zoom === "month" ? [] : Array.from({ length: ax.days }, (_, i) => i).filter((i) => isOff(addDays(ax.from, i)));
   const issueHref = (key: string) => `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?issue=${encodeURIComponent(key)}`;
   const newHref = `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/timeline?new=1&type=task`;
   const tasksOf = (moduleLineId: string) => modules.find((m) => `m:${m.id ?? "none"}` === moduleLineId)?.groups.reduce((n, g) => n + g.tasks.length, 0) ?? 0;
@@ -407,7 +431,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                   {zoom === "day" && (
                     <div className={styles.axisDays}>
                       {dayCells.map((day, i) => (
-                        <span key={day} className={`${styles.dy} ${[0, 6].includes(weekday(day)) ? styles.we : ""} ${day === d.today ? styles.now : ""}`} style={{ left: i * px, width: px }}>
+                        <span key={day} className={`${styles.dy} ${isOff(day) ? styles.we : ""} ${day === d.today ? styles.now : ""}`} style={{ left: i * px, width: px }}>
                           {weekdayName.format(new Date(`${day}T00:00:00Z`))}<b>{Number(day.slice(8))}</b>
                         </span>
                       ))}
@@ -454,6 +478,8 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                 const start = live ? (live.mode === "end" ? r.start : addDays(r.start, live.delta)) : r.start;
                 const end = live ? (live.mode === "start" ? r.end : addDays(r.end, live.delta)) : r.end;
                 const open = r.canOpen !== false;
+                // Month (3 px/วัน) ไม่ทำเส้นบาง: จะกลายเป็นรอยขาดทุกสัปดาห์จนอ่านแถบยาก
+                const thin = zoom === "month" ? { offDays: 0, mask: undefined } : offDayMask(start, end, px, isOff);
                 const names = guest ? "" : (r.assignees ?? []).map((a) => a.displayName).join(", ");
                 const onKey = (e: KeyboardEvent) => {
                   if (!canEdit || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
@@ -483,13 +509,14 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                         tabIndex={0}
                         data-testid={`bar-${r.key}`}
                         className={`${styles.b} ${canEdit ? styles.editable : ""} ${live ? styles.dragging : ""} ${r.lateDays ? styles.late : ""}`}
-                        style={{ left: x(start), width: Math.max(px, (toDay(end, start) + 1) * px), background: ln.color, opacity: ln.sub ? 0.8 : 1 }}
+                        style={{ left: x(start), width: Math.max(px, (toDay(end, start) + 1) * px), opacity: ln.sub ? 0.8 : 1 }}
+                        data-off-days={thin.offDays || undefined}
                         aria-label={`${t("bar", { key: r.key, title: r.title, start: formatDate(start, year), end: formatDate(end, year) })}${r.lateDays ? ` · ${t("late", { days: r.lateDays })}` : ""}${names ? ` · ${names}` : ""}`}
                         title={canEdit ? t("barHint") : undefined}
                         onMouseDown={startDrag("move")}
                         onKeyDown={onKey}
                       >
-                        <span className={styles.prog} style={{ width: `${r.progressPct}%` }} />
+                        <span className={styles.body} style={{ background: ln.color, maskImage: thin.mask, WebkitMaskImage: thin.mask }}><span className={styles.prog} style={{ width: `${r.progressPct}%` }} /></span>
                         {canEdit && <span className={`${styles.handle} ${styles.start}`} aria-label={t("resizeStart", { key: r.key })} data-testid={`start-${r.key}`} onMouseDown={startDrag("start")} />}
                         {canEdit && <span className={`${styles.handle} ${styles.end}`} aria-label={t("resizeEnd", { key: r.key })} data-testid={`end-${r.key}`} onMouseDown={startDrag("end")} />}
                       </span>

@@ -69,8 +69,10 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const statuses = scope.project?.statuses?.filter((status) => status.workflowId === type?.workflowId) ?? [];
   const index = siblings.findIndex((item) => item.key === issue.key);
   async function refresh() {
-    // Table ไม่พึ่ง realtime อย่างเดียว (เช่น ย้ายกลุ่มแล้วแถวต้องย้ายตามทันที)
-    await Promise.all([cache.invalidateQueries({ queryKey: key }), cache.invalidateQueries({ queryKey: ['kanban', scope.ws, scope.projectKey] }), cache.invalidateQueries({ queryKey: ['issue-drawer-list', scope.ws, scope.projectKey] }), cache.invalidateQueries({ queryKey: ['table', scope.ws, scope.projectKey] })]);
+    // ทุกมุมมองของโปรเจกต์ไม่พึ่ง realtime อย่างเดียว (เช่น ย้ายกลุ่มแล้วแถวต้องย้ายตามทันที
+    // แก้ Man-Day / วันที่ใน drawer แล้วแถบใน Timeline / Gantt ต้องขยับตามโดยไม่ต้องรีเฟรชหน้า)
+    const views = ['kanban', 'issue-drawer-list', 'table', 'overview', 'timeline', 'gantt', 'calendar', 'backlog'];
+    await Promise.all([cache.invalidateQueries({ queryKey: key }), ...views.map((view) => cache.invalidateQueries({ queryKey: [view, scope.ws, scope.projectKey] }))]);
     if (issue.parentKey) await cache.invalidateQueries({ queryKey: issueQuery(scope.ws, issue.parentKey) });
   }
   async function action(fn: () => Promise<unknown>, success?: (result: unknown) => void): Promise<boolean> {

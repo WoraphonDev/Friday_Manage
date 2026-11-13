@@ -41,6 +41,8 @@
 .weekend { position:absolute; top:0; bottom:0; background:var(--surface-2); }
 .todayLine { position:absolute; top:0; bottom:0; border-left:2px solid var(--danger); z-index:0; pointer-events:none; }
 .b { position:absolute; z-index:1; top:9px; height:18px; border-radius:5px; display:flex; align-items:center; font-size:11px; color:var(--on-primary); overflow:hidden; white-space:nowrap; padding:0 6px; cursor:default; }
+/* สีแถบอยู่ในชั้นนี้เพื่อใช้ mask ทำช่วงวันหยุดให้บาง โดยไม่ตัดขอบเลยกำหนดและที่จับปรับวัน */
+.body { position:absolute; inset:0; border-radius:inherit; mask-repeat:no-repeat; -webkit-mask-repeat:no-repeat; }
 .editable { cursor:grab; }
 .dragging { cursor:grabbing; opacity:.85; box-shadow:0 4px 12px rgb(15 23 42 / .25); }
 .b:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }

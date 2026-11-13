@@ -266,8 +266,11 @@ describe("Timeline (4)", () => {
     const off = (iso: string) => ["2026-12-10", "2026-12-12", "2026-12-13"].includes(iso);
     const m = offDayMask("2026-12-07", "2026-12-18", 10, off);
     expect(m.offDays).toBe(3);
-    expect(m.mask).toContain("transparent 30px 40px");
-    expect(m.mask).toContain("transparent 50px 70px");
+    // เส้นบางสอดใต้มุมโค้งของก้อนวันทำงานทั้งสองข้าง · ก้อนวันทำงาน 3 ก้อน
+    const svg = decodeURIComponent(m.mask!);
+    expect(svg).toContain("<rect x='25' y='7' width='20' height='4'");
+    expect(svg).toContain("<rect x='45' y='7' width='30' height='4'");
+    expect(svg.match(/height='18'/g)).toHaveLength(4); // svg + 3 ก้อน
     expect(offDayMask("2026-11-30", "2026-12-04", 10, off)).toEqual({ offDays: 0, mask: undefined });
   });
 

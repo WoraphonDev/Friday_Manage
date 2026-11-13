@@ -48,10 +48,12 @@ const LABEL_WIDE = 520;
 const LABEL_KEY = "friday.timeline.labelWidth";
 const clampLabel = (w: number) => Math.round(Math.min(LABEL_MAX, Math.max(LABEL_MIN, w)));
 // สีตามหมวด (Review ที่ยังอยู่หมวด In progress แยกด้วยชื่อ) · ชุดเดียวกับป้ายสถานะใน Table
-// แถบงานช่วงวันหยุดเหลือเส้นบางตรงกลาง (บอกว่าช่วงนั้นไม่นับเป็นวันทำงาน) · ความสูงแถบ 18 px
-const THIN_TOP = 6;
-const THIN_BOTTOM = 12;
-/** mask ของแถบ: วันทำงานเต็มความสูง · วันหยุดเหลือเส้นบาง · ไม่มีวันหยุดในช่วง = undefined */
+// แถบงานช่วงวันหยุดเหลือเส้นบางปลายมนตรงกลาง (บอกว่าช่วงนั้นไม่นับเป็นวันทำงาน)
+// ช่วงวันทำงานเป็นก้อนมุมโค้ง เส้นสอดเข้าใต้มุมโค้งจึงต่อกันนุ่ม ๆ ไม่เป็นขั้น · ความสูงแถบ 18 px
+const BAR_H = 18;
+const LINE_H = 4;
+const BAR_R = 5;
+/** mask ของแถบ (SVG): วันทำงานเต็มความสูง · วันหยุดเหลือเส้นบางสีจาง · ไม่มีวันหยุดในช่วง = undefined */
 export function offDayMask(start: string, end: string, px: number, isOff: (iso: string) => boolean) {
   const days = toDay(end, start) + 1;
   const segs: { off: boolean; from: number; to: number }[] = [];
@@ -63,8 +65,16 @@ export function offDayMask(start: string, end: string, px: number, isOff: (iso: 
   }
   const offDays = segs.filter((g) => g.off).reduce((n, g) => n + (g.to - g.from) / px, 0);
   if (!offDays) return { offDays: 0, mask: undefined };
-  const stops = segs.map((g) => `${g.off ? "transparent" : "#000"} ${g.from}px ${g.to}px`).join(", ");
-  return { offDays, mask: `linear-gradient(to bottom, transparent ${THIN_TOP}px, #000 ${THIN_TOP}px, #000 ${THIN_BOTTOM}px, transparent ${THIN_BOTTOM}px), linear-gradient(to right, ${stops})` };
+  const w = Math.max(px, days * px);
+  // วาดเส้นก่อน แล้วก้อนวันทำงานทับ: ส่วนที่เส้นโผล่ใต้มุมโค้งคือรอยต่อ
+  const lines = segs.filter((g) => g.off).map((g) => {
+    const x0 = Math.max(0, g.from - BAR_R);
+    const x1 = Math.min(w, g.to + BAR_R);
+    return `<rect x='${x0}' y='${(BAR_H - LINE_H) / 2}' width='${x1 - x0}' height='${LINE_H}' rx='${LINE_H / 2}' fill-opacity='.6'/>`;
+  });
+  const blocks = segs.filter((g) => !g.off).map((g) => `<rect x='${g.from}' width='${g.to - g.from}' height='${BAR_H}' rx='${Math.min(BAR_R, (g.to - g.from) / 2)}'/>`);
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${BAR_H}'>${lines.join("")}${blocks.join("")}</svg>`;
+  return { offDays, mask: `url("data:image/svg+xml,${encodeURIComponent(svg)}")` };
 }
 const statusColor = (s: { name: string; category: Cat }) => statusDotColor(s.category, s.name);
 // สีข้อมูลต้องเป็น hex เพราะนำไปต่อค่าความโปร่งใส (`${color}33`)

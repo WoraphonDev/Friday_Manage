@@ -128,6 +128,12 @@ describe('งานในถังขยะ · ชุด · กู้คืน',
     expect(r.body.batches[0].ids.sort()).toEqual([parent.id, a.id, b.id].sort());
     expect(row.batchId).toBe(r.body.batches[0].id);
     expect(r.body.items.find((i: { key: string }) => i.key === d.key).batchId).toBeNull();
+    // ชุดนับจากงานทั้งหมดในถังขยะ ไม่ใช่แค่แถวในหน้า: หน้าละ 2 แถว (c ของ PM + งานล่าสุดของชุด) ยังเห็นชุดครบ 3 งาน
+    const small = await team.lead.get(trash('?type=issue&limit=2'));
+    expect(small.body.items.map((i: { key: string }) => i.key)).toEqual([c.key, b.key]);
+    expect(small.body.batches).toHaveLength(1);
+    expect(small.body.batches[0]).toMatchObject({ id: r.body.batches[0].id, count: 3 });
+    expect(small.body.batches[0].ids.sort()).toEqual([parent.id, a.id, b.id].sort());
     expect(r.body.deleters.map((p: { id: string }) => p.id).sort()).toEqual([team.leadId, projAdminId].sort());
     expect(r.body.projects).toEqual([expect.objectContaining({ key: 'DP' })]);
   });

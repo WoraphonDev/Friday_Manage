@@ -21624,7 +21624,7 @@
                     "properties": {
                       "keys": {
                         "minItems": 1,
-                        "maxItems": 500,
+                        "maxItems": 2000,
                         "type": "array",
                         "items": {
                           "type": "string",
@@ -21651,7 +21651,7 @@
                     "properties": {
                       "keys": {
                         "minItems": 1,
-                        "maxItems": 500,
+                        "maxItems": 2000,
                         "type": "array",
                         "items": {
                           "type": "string",
@@ -30175,7 +30175,7 @@
                 "properties": {
                   "ids": {
                     "minItems": 1,
-                    "maxItems": 500,
+                    "maxItems": 2000,
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -30336,7 +30336,7 @@
                 "properties": {
                   "ids": {
                     "minItems": 1,
-                    "maxItems": 500,
+                    "maxItems": 2000,
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -30410,7 +30410,7 @@
                 "properties": {
                   "ids": {
                     "minItems": 1,
-                    "maxItems": 500,
+                    "maxItems": 2000,
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -30480,7 +30480,7 @@
                 "properties": {
                   "ids": {
                     "minItems": 1,
-                    "maxItems": 500,
+                    "maxItems": 2000,
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -30550,7 +30550,7 @@
                 "properties": {
                   "ids": {
                     "minItems": 1,
-                    "maxItems": 500,
+                    "maxItems": 2000,
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -30620,7 +30620,7 @@
                 "properties": {
                   "ids": {
                     "minItems": 1,
-                    "maxItems": 500,
+                    "maxItems": 2000,
                     "type": "array",
                     "items": {
                       "type": "string",

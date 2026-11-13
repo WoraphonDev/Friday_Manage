@@ -443,6 +443,14 @@ describe('Bulk ใช้กติกา PATCH ต่อรายงาน', () =
     expect((await viewer.post(`${projectUrl()}/issues/bulk`, { keys: [parent.key], set: { sprintId } })).status).toBe(403);
     expect((await team.dev.post(`${projectUrl()}/issues/bulk`, { keys: [parent.key], delete: true, confirmText: 'ลบ 1 งาน' })).status).toBe(403);
     expect((await team.lead.post(`${projectUrl()}/issues/bulk`, { keys: [parent.key], delete: true, confirmText: 'ใช่' })).body.error.code).toBe('confirmation_required');
+    // เลือกทั้งตารางได้เกิน 500 งาน (ผู้ใช้ลบ 536 งานไม่ผ่านเมื่อ 2026-11-14) · เพดานเท่ากับที่ Table โหลด 2,000
+    const prefix = parent.key.split('-')[0];
+    const many = Array.from({ length: 536 }, (_, i) => `${prefix}-${900001 + i}`);
+    const big = await team.lead.post(`${projectUrl()}/issues/bulk`, { keys: many, delete: true, confirmText: 'ลบ 536 งาน' });
+    expect(big.status).toBe(200);
+    expect(big.body.results).toHaveLength(536);
+    const tooMany = Array.from({ length: 2001 }, (_, i) => `${prefix}-${900001 + i}`);
+    expect((await team.lead.post(`${projectUrl()}/issues/bulk`, { keys: tooMany, delete: true, confirmText: 'ลบ 2001 งาน' })).status).toBe(400);
     const removed = await team.lead.post(`${projectUrl()}/issues/bulk`, { keys: [parent.key, child.key], delete: true, confirmText: 'ลบ 2 งาน' });
     expect(removed.body.results).toEqual([{ key: parent.key, ok: true }, { key: child.key, ok: true }]);
     expect((await team.lead.get(url(child.key))).status).toBe(410);

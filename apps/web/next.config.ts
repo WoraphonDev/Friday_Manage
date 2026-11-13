@@ -9,6 +9,9 @@ const config: NextConfig = {
   async redirects() {
     return [{ source: "/w/:path*", destination: "/work/:path*", permanent: false }];
   },
+  // proxy /api ของ Next ตัดที่ 30 วินาทีโดยค่าเริ่มต้น · กู้คืน / ลบงานทั้งชุด 2,000 งานใช้ราว 50 วินาที
+  // (VPS ส่ง /api ตรงไป API ผ่าน Caddy ไม่โดนข้อนี้ แต่ Docker ในเครื่องผ่าน proxy นี้)
+  experimental: { proxyTimeout: 120_000 },
   async rewrites() {
     return [
       {

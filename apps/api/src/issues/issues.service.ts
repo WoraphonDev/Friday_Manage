@@ -131,9 +131,11 @@ export const AssigneesBody = z.object({
   planChangeReason: z.string().trim().min(1).max(1000).optional(),
 });
 
+/** เท่ากับจำนวนงานสูงสุดที่ Table โหลด (4 หน้า × 500) ให้เลือกทั้งตารางแล้วลบ / แก้ได้ในครั้งเดียว · ลบ 500 งานใช้ราว 3 วินาที */
+export const BULK_MAX = 2000;
 export const BulkIssueBody = z.discriminatedUnion('delete', [
-  z.object({ keys: z.array(z.string().regex(ISSUE_KEY_PATTERN)).min(1).max(500), delete: z.literal(true), confirmText: z.string() }).strict(),
-  z.object({ keys: z.array(z.string().regex(ISSUE_KEY_PATTERN)).min(1).max(500), delete: z.literal(false).optional(), set: PatchIssueBody.pick({ planEnd: true, moduleId: true, sprintId: true, assigneeIds: true, planChangeReason: true }).refine((v) => Object.keys(v).length > 0, 'ต้องระบุค่าที่จะแก้') }).strict(),
+  z.object({ keys: z.array(z.string().regex(ISSUE_KEY_PATTERN)).min(1).max(BULK_MAX), delete: z.literal(true), confirmText: z.string() }).strict(),
+  z.object({ keys: z.array(z.string().regex(ISSUE_KEY_PATTERN)).min(1).max(BULK_MAX), delete: z.literal(false).optional(), set: PatchIssueBody.pick({ planEnd: true, moduleId: true, sprintId: true, assigneeIds: true, planChangeReason: true }).refine((v) => Object.keys(v).length > 0, 'ต้องระบุค่าที่จะแก้') }).strict(),
 ]);
 
 /** DELETE i/:key · P3 เลือกลบ Sub-task ด้วย (ค่าเริ่มต้น) หรือเก็บไว้เป็น Task เดี่ยว */

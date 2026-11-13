@@ -266,6 +266,6 @@ describe('Export ตามชุดฟิลด์', () => {
   it('โปรเจกต์ที่ไม่ได้ซ่อนอะไร ส่งออกคอลัมน์มาตรฐานครบเหมือนเดิม', async () => {
     const r = await download(team.lead, `${P()}/export.xlsx`);
     const { headers } = await sheetHeaders(r.body);
-    expect(headers.slice(0, 22)).toEqual(['Key', 'Parent Key', 'Module', 'Group', 'Title', 'Status', 'Priority', 'Business Analyst', 'System Analyst', 'Developer', 'QA / Reviewer', 'Size', 'Man-Day', 'Plan Start', 'Plan End', 'Actual Start', 'Actual End', 'Requirement', 'Screen', 'Label', 'Description', 'Remark']);
+    expect(headers.slice(0, 23)).toEqual(['Key', 'Parent Key', 'Module', 'Group', 'Title', 'Checklist', 'Status', 'Priority', 'Business Analyst', 'System Analyst', 'Developer', 'QA / Reviewer', 'Size', 'Man-Day', 'Plan Start', 'Plan End', 'Actual Start', 'Actual End', 'Requirement', 'Screen', 'Label', 'Description', 'Remark']);
   });
 });

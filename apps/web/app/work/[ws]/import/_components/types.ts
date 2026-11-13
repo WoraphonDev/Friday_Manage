@@ -45,6 +45,8 @@ export interface ImportSummary {
   ready: number;
   backlog: number;
   skipped: number;
+  /** จำนวนข้อ Checklist + Acceptance (คอลัมน์ Checklist · แถวต่อท้ายที่ Title เดียวกัน) */
+  checklist?: number;
 }
 export interface ImportJob {
   id: string;
@@ -76,6 +78,7 @@ export interface CommitResult {
   imported?: number;
   scheduled?: number;
   backlog?: number;
+  checklist?: number;
   baseline?: boolean;
   added?: number;
   changed?: number;

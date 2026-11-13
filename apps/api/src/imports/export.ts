@@ -7,12 +7,14 @@ import { dueOf, loadDueRule } from '../projects/due-stage.js';
 import type { ProfileField, ResolvedProfile } from '../projects/field-profile.js';
 import { type CustomFieldDef, displayValue, readCustomValues } from '../issues/custom-values.js';
 import { reviewerList } from '../issues/rules.js';
+import { acceptanceText } from './plan.js';
 
 const s = schema;
 
 /**
  * คอลัมน์ของชีต Tasks (รูปแบบใหม่) · หัวคอลัมน์ต้องตรง alias ใน plan.ts (autoMap) เพื่อให้นำเข้ากลับได้
  * Key ว่าง = งานใหม่ · Parent Key = Sub-task ของ Task นั้น · ไม่มีคอลัมน์ No. (จับคู่ด้วย Key)
+ * Checklist 1 แถวต่อ 1 ข้อ: ข้อแรกอยู่ในแถวของงาน ข้อถัดไปเป็นแถวต่อท้ายที่มีเฉพาะ Key / Parent Key / Module / Group / Title
  */
 export const EXPORT_HEADERS = [
   'Key',
@@ -20,6 +22,7 @@ export const EXPORT_HEADERS = [
   'Module',
   'Group',
   'Title',
+  'Checklist',
   'Status',
   'Priority',
   'Business Analyst',
@@ -40,7 +43,7 @@ export const EXPORT_HEADERS = [
   'Remark',
 ] as const;
 type Header = (typeof EXPORT_HEADERS)[number];
-const WIDTH = [10, 11, 22, 18, 44, 13, 10, 18, 18, 24, 24, 7, 9, 12, 12, 12, 12, 12, 18, 16, 16, 40, 32];
+const WIDTH = [10, 11, 22, 18, 44, 48, 13, 10, 18, 18, 24, 24, 7, 9, 12, 12, 12, 12, 12, 18, 16, 16, 40, 32];
 const WIDTH_OF = Object.fromEntries(EXPORT_HEADERS.map((h, i) => [h, WIDTH[i]])) as Record<Header, number>;
 /** คอลัมน์ที่ขึ้นกับชุดฟิลด์ของโปรเจกต์ · ฟิลด์ที่ซ่อนทั้ง Task และ Sub-task ไม่ส่งออก (นำเข้ากลับแล้วไม่แตะค่าเดิม) */
 const HEADER_FIELD: Partial<Record<Header, ProfileField>> = {
@@ -52,7 +55,9 @@ const PRIORITY_LABEL = { urgent: 'Urgent', high: 'High', medium: 'Medium', low: 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL'];
 const DEFAULT_STATUSES = ['To do', 'In progress', 'Review', 'Done'];
 const VALUES = 'ค่าที่ใช้ได้';
-const MAX_ROWS = 2000;
+const MAX_ROWS = 5000;
+/** คอลัมน์ที่แถวต่อท้ายของ Checklist ใส่ซ้ำ (plan.ts ใช้ระบุว่าเป็นงานเดิม) */
+const CHECKLIST_IDENTITY = new Set<Header>(['Key', 'Parent Key', 'Module', 'Group', 'Title']);
 
 const asDate = (d: string | null) => (d ? new Date(`${d}T00:00:00Z`) : null);
 
@@ -62,6 +67,8 @@ interface SheetData {
   rows: (string | number | Date | null)[][];
   /** แถวที่เป็น Sub-task (index ใน rows) แสดงย่อหน้าชื่องาน */
   subRows: Set<number>;
+  /** แถวต่อท้ายของ Checklist (index ใน rows) แสดงชื่องานสีจาง */
+  checklistRows?: Set<number>;
   statuses: string[];
   modules: string[];
   people: string[];
@@ -96,7 +103,7 @@ export async function buildPlanXlsx(
     .orderBy(asc(s.issues.number));
   const ids = issues.map((i) => i.id);
   const some = <T>(q: () => Promise<T[]>) => (ids.length ? q() : Promise.resolve([] as T[]));
-  const [mods, phs, sts, users, asg, reqs, scrs, lbls] = await Promise.all([
+  const [mods, phs, sts, users, asg, reqs, scrs, lbls, checks] = await Promise.all([
     tx.select({ id: s.modules.id, name: s.modules.name }).from(s.modules).where(eq(s.modules.projectId, project.id)).orderBy(asc(s.modules.sort)),
     tx.select({ id: s.phases.id, name: s.phases.name }).from(s.phases).where(eq(s.phases.projectId, project.id)),
     tx.select({ id: s.workflowStatuses.id, name: s.workflowStatuses.name, category: s.workflowStatuses.category }).from(s.workflowStatuses).where(eq(s.workflowStatuses.workflowId, taskType.workflowId)).orderBy(asc(s.workflowStatuses.sort)),
@@ -105,6 +112,8 @@ export async function buildPlanXlsx(
     some(() => tx.select({ issueId: s.issueRequirements.issueId, code: s.requirements.code }).from(s.issueRequirements).innerJoin(s.requirements, eq(s.requirements.id, s.issueRequirements.requirementId)).where(inArray(s.issueRequirements.issueId, ids))),
     some(() => tx.select({ issueId: s.issueScreens.issueId, code: s.screens.code }).from(s.issueScreens).innerJoin(s.screens, eq(s.screens.id, s.issueScreens.screenId)).where(inArray(s.issueScreens.issueId, ids))),
     some(() => tx.select({ issueId: s.issueLabels.issueId, name: s.labels.name }).from(s.issueLabels).innerJoin(s.labels, eq(s.labels.id, s.issueLabels.labelId)).where(inArray(s.issueLabels.issueId, ids))),
+    // Checklist ก่อน Acceptance แล้วตามลำดับในงาน · นำเข้ากลับได้ลำดับเดิม
+    some(() => tx.select({ issueId: s.checklistItems.issueId, kind: s.checklistItems.kind, text: s.checklistItems.text }).from(s.checklistItems).where(inArray(s.checklistItems.issueId, ids)).orderBy(asc(s.checklistItems.kind), asc(s.checklistItems.sort), asc(s.checklistItems.id))),
   ]);
   const moduleName = new Map(mods.map((x) => [x.id, x.name]));
   const groupName = new Map(phs.map((x) => [x.id, x.name]));
@@ -115,7 +124,7 @@ export async function buildPlanXlsx(
     for (const r of list) out.set(r.issueId, [...(out.get(r.issueId) ?? []), pick(r)]);
     return out;
   };
-  const [devsOf, reqsOf, scrsOf, lblsOf] = [group(asg, (r) => userName.get(r.userId) ?? ''), group(reqs, (r) => r.code), group(scrs, (r) => r.code), group(lbls, (r) => r.name)];
+  const [devsOf, reqsOf, scrsOf, lblsOf, checksOf] = [group(asg, (r) => userName.get(r.userId) ?? ''), group(reqs, (r) => r.code), group(scrs, (r) => r.code), group(lbls, (r) => r.name), group(checks, (r) => (r.kind === 'acceptance' ? acceptanceText(r.text) : r.text))];
   const byId = new Map(issues.map((i) => [i.id, i]));
   const join = (list: string[] | undefined) => (list?.length ? list.join(', ') : null);
   const person = (id: string | null) => (id ? (userName.get(id) ?? null) : null);
@@ -136,9 +145,11 @@ export async function buildPlanXlsx(
   };
   const rows: SheetData['rows'] = [];
   const subRows = new Set<number>();
+  const checklistRows = new Set<number>();
   for (const i of ordered) {
     const parent = i.parentId ? byId.get(i.parentId) : undefined;
     const details = (i.details ?? {}) as { requirementText?: string };
+    const [firstCheck, ...moreChecks] = checksOf.get(i.id) ?? [];
     if (parent) subRows.add(rows.length);
     const full: (string | number | Date | null)[] = [
       `${project.key}-${i.number}`,
@@ -146,6 +157,7 @@ export async function buildPlanXlsx(
       i.moduleId ? (moduleName.get(i.moduleId) ?? null) : null,
       i.phaseId ? (groupName.get(i.phaseId) ?? null) : null,
       i.title,
+      firstCheck ?? null,
       statusName.get(i.statusId) ?? null,
       PRIORITY_LABEL[i.priority],
       person(i.baId),
@@ -167,6 +179,11 @@ export async function buildPlanXlsx(
     ];
     const values = customOf.get(i.id) ?? {};
     rows.push([...EXPORT_HEADERS.flatMap((h, n) => (shown(h) ? [full[n]] : [])), ...customs.map((f) => cell(f, values[f.id] ?? null))]);
+    for (const text of moreChecks) {
+      if (parent) subRows.add(rows.length);
+      checklistRows.add(rows.length);
+      rows.push([...EXPORT_HEADERS.flatMap((h, n) => (shown(h) ? [h === 'Checklist' ? text : CHECKLIST_IDENTITY.has(h) ? full[n] : null] : [])), ...customs.map(() => null)]);
+    }
   }
 
   const [ws0] = await tx.select({ cal: s.workspaceSettings.holidayCalendarId }).from(s.workspaceSettings).where(eq(s.workspaceSettings.workspaceId, project.workspaceId));
@@ -192,7 +209,7 @@ export async function buildPlanXlsx(
     timelineRows.push({ kind: 'module', name: m.name, start: startsM[0] ?? null, end: endsM.at(-1) ?? null }, ...inModule.map(taskRow));
   }
   return render({
-    headers: [...standard, ...customHeaders], rows, subRows, statuses: sts.map((x) => x.name), modules: mods.map((m) => m.name), people: await memberNames(tx), holidays,
+    headers: [...standard, ...customHeaders], rows, subRows, checklistRows, statuses: sts.map((x) => x.name), modules: mods.map((m) => m.name), people: await memberNames(tx), holidays,
     timeline: { projectName: project.name, today: options.today ?? today(), from: project.startDate, to: project.goliveDate, scale: options.scale ?? 'day', holidays: new Set(holidays.map((h) => h.date)), rows: timelineRows },
   });
 }
@@ -236,7 +253,9 @@ async function render(d: SheetData): Promise<Buffer> {
       row.getCell(COL.Title).alignment = { indent: 2 };
       row.getCell(COL['Parent Key']).fill = SUB_FILL;
     }
+    if (d.checklistRows?.has(i)) row.getCell(COL.Title).font = { color: { argb: 'FF9CA3AF' } };
   });
+  if (COL.Checklist) ws.getColumn(COL.Checklist).alignment = { wrapText: true, vertical: 'top' };
   for (const c of [COL['Plan Start'], COL['Plan End'], COL['QA Due'], COL['Actual Start'], COL['Actual End']]) if (c) ws.getColumn(c).numFmt = 'yyyy-mm-dd';
   ws.columns.forEach((c, n) => (c.width = WIDTH_OF[headers[n] as Header] ?? 18));
   if (d.timeline) addTimelineSheet(wb, d.timeline);
@@ -303,6 +322,7 @@ const GUIDE: [string, string, string][] = [
   ['Module', 'ชื่อ Module · ยังไม่มีในโปรเจกต์ = สร้างให้ · Sub-task ใช้ Module ของ Task แม่เสมอ', 'Task'],
   ['Group', 'กลุ่มของ Task ใต้ Module (ไม่บังคับ) · ยังไม่มี = สร้างให้ · ว่าง = ไม่มีกลุ่ม · Sub-task อยู่กลุ่มเดียวกับ Task แม่เสมอ', '—'],
   ['Title', 'ชื่องาน', 'ใช่'],
+  ['Checklist', '1 แถวต่อ 1 ข้อ: ข้อแรกใส่ในแถวของงาน ข้อถัดไปเพิ่มแถวใต้งานโดยใส่ Title (และ Key ถ้ามี) เดียวกัน ช่องอื่นเว้นว่าง · ขึ้นต้นด้วย [Acceptance] = Acceptance criteria · อัปเดตแผน: ข้อใหม่เพิ่มให้ ข้อที่ลบออกจากไฟล์ลบเฉพาะที่ยังไม่ติ๊ก', '—'],
   ['Status', 'สถานะตาม Workflow ของโปรเจกต์ (ดูชีตค่าที่ใช้ได้) · ว่าง = To do', '—'],
   ['Priority', 'Urgent / High / Medium / Low · ว่าง = Medium (งานใหม่) หรือคงค่าเดิม', '—'],
   ['Business Analyst', 'ชื่อที่แสดงของสมาชิก 1 คน', '—'],

@@ -27,7 +27,7 @@ async function sourceWorkbook() {
 }
 
 // ไฟล์ส่งออกรูปแบบใหม่ (ชีต Tasks) · อ้างคอลัมน์ด้วยชื่อผ่าน col() เพื่อไม่ผูกกับลำดับ
-const TASK_HEADERS = ['Key', 'Parent Key', 'Module', 'Group', 'Title', 'Status', 'Priority', 'Business Analyst', 'System Analyst', 'Developer', 'QA / Reviewer', 'Size', 'Man-Day', 'Plan Start', 'Plan End', 'Actual Start', 'Actual End', 'Requirement', 'Screen', 'Label', 'Description', 'Remark'];
+const TASK_HEADERS = ['Key', 'Parent Key', 'Module', 'Group', 'Title', 'Checklist', 'Status', 'Priority', 'Business Analyst', 'System Analyst', 'Developer', 'QA / Reviewer', 'Size', 'Man-Day', 'Plan Start', 'Plan End', 'Actual Start', 'Actual End', 'Requirement', 'Screen', 'Label', 'Description', 'Remark'];
 const col = (name: string) => TASK_HEADERS.indexOf(name) + 1;
 async function edit(buf: Buffer, fn: (ws: ExcelJS.Worksheet) => void) {
   const wb = new ExcelJS.Workbook();
@@ -92,7 +92,7 @@ describe('สร้างโปรเจกต์จากไฟล์แล้�
     expect(header).toEqual(TASK_HEADERS);
     expect(table.rowCount).toBe(5);
     const row = table.getRow(3).values as unknown[];
-    expect(Array.from({ length: 14 }, (_, i) => row[i + 1] ?? null)).toEqual(['IMP-2', null, 'Drawdown', null, 'Approve', 'In progress', 'Medium', 'Mick', null, 'Kaijeaw', null, 'S', 2, d('2026-11-12')]);
+    expect(Array.from({ length: 15 }, (_, i) => row[i + 1] ?? null)).toEqual(['IMP-2', null, 'Drawdown', null, 'Approve', null, 'In progress', 'Medium', 'Mick', null, 'Kaijeaw', null, 'S', 2, d('2026-11-12')]);
     expect(wb.worksheets.map((w) => w.name)).toEqual(['Tasks', 'Timeline', 'ค่าที่ใช้ได้', 'คำแนะนำ', 'Holidays']);
     // Timeline: หัวคอลัมน์ข้อมูล + ช่องวัน · แถว Module แล้วงานในนั้น · ช่องในช่วง Plan ถูกระบายสี
     const tl = wb.getWorksheet('Timeline')!;
@@ -193,7 +193,7 @@ describe('อัปเดตแผนจากไฟล์', () => {
 
   it('งานใหม่ในไฟล์ถูกเพิ่ม · งานที่หายไปไม่ถูกลบเอง ให้เลือก keep / delete', async () => {
     const file = await edit(await exportOf('IMP'), (ws) => {
-      ws.addRow(['IMP-9', null, 'Drawdown', null, 'งานใหม่จากไฟล์', 'Not Start', null, 'Mick', null, 'Kaijeaw', null, null, 2, d('2026-11-24'), d('2026-11-25'), null, null, 'FR-009', 'SCR-009', null, null]);
+      ws.addRow(['IMP-9', null, 'Drawdown', null, 'งานใหม่จากไฟล์', null, 'Not Start', null, 'Mick', null, 'Kaijeaw', null, null, 2, d('2026-11-24'), d('2026-11-25'), null, null, 'FR-009', 'SCR-009', null, null]);
       ws.spliceRows(5, 1); // ลบแถว IMP-4 (Backlog item) ออกจากไฟล์
     });
     const job = await updateJob('IMP', file);
@@ -590,5 +590,125 @@ describe('อัปเดตเฉพาะงานที่ยังไม่�
     expect(confirmed.body).toMatchObject({ addNew: true, summary: { ready: 1 } });
     expect(await commit(again.body.id)).toMatchObject({ added: 1, changed: 0 });
     expect((await rowsOf('UNS')).map((x: { title: string }) => x.title)).toEqual(['Login', 'Approve', 'Report', 'Backlog item', 'Export']);
+  });
+});
+
+describe('Checklist ในไฟล์ (1 แถวต่อ 1 ข้อ · แถวต่อท้ายที่ Title เดียวกัน)', () => {
+  const row = (v: Partial<Record<(typeof TASK_HEADERS)[number], string | number | Date | null>>) => TASK_HEADERS.map((h) => v[h as keyof typeof v] ?? null);
+  const itemsOf = async (key: string, number: number) =>
+    (
+      await t.owner.query(
+        `SELECT c.kind, c.text, c.done, c.sort FROM checklist_items c JOIN issues i ON i.id = c.issue_id JOIN projects p ON p.id = i.project_id
+          WHERE p.key = $1 AND i.number = $2 ORDER BY c.kind, c.sort`,
+        [key, number],
+      )
+    ).rows;
+
+  it('สร้างโปรเจกต์: รวมแถวต่อท้ายเป็น Checklist ของงาน · [Acceptance] เข้า Acceptance · ค่าในแถวต่อท้ายไม่ถูกใช้และเตือน', async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Tasks');
+    ws.addRow(TASK_HEADERS);
+    ws.addRow(row({ Module: 'Campaign', Group: 'Sprint 1', Title: 'หน้ารายการแคมเปญ', Checklist: '[Workflow] ไม่ระบุเงื่อนไข\n      แสดงทั้งหมด', Status: 'To do', Developer: 'Kaijeaw', 'Man-Day': 2, 'Plan Start': d('2026-11-09'), Description: 'ตารางและช่องค้นหา' }));
+    ws.addRow(row({ Module: 'Campaign', Group: 'Sprint 1', Title: 'หน้ารายการแคมเปญ', Checklist: '[Validate] วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม' }));
+    ws.addRow(row({ Module: 'Campaign', Title: 'หน้ารายการแคมเปญ', Checklist: '[Acceptance] ค้นหาแล้วได้ผลตามเงื่อนไข', Status: 'Done' }));
+    ws.addRow(row({ Module: 'Campaign', Group: 'Sprint 1', Title: 'หน้ารายการแคมเปญ' }));
+    ws.addRow(row({ Module: 'Campaign', Group: 'Sprint 1', Title: 'หน้ารายละเอียดแคมเปญ', 'Man-Day': 1, 'Plan Start': d('2026-11-11') }));
+    ws.addRow(row({ Module: 'Campaign', Group: 'Sprint 1', Title: 'หน้ารายละเอียดแคมเปญ', Checklist: '[Function] ปุ่มบันทึก' }));
+    ws.addRow(row({ Module: 'Credit Line', Title: 'งานที่ไม่มี Checklist', 'Man-Day': 1, 'Plan Start': d('2026-11-12') }));
+    const up = await team.lead.upload(`${team.ws}/import-jobs`, Buffer.from(await wb.xlsx.writeBuffer()), 'Checklist.xlsx', { mode: 'create' });
+    expect(up.status, JSON.stringify(up.body)).toBe(201);
+    expect(up.body.columns.find((c: { header: string }) => c.header === 'Checklist').field).toBe('checklist');
+    expect(up.body.summary).toMatchObject({ rows: 3, skipped: 0, checklist: 4 });
+    const problems = up.body.findings.map((f: { level: string; rowNo: number; problem: string }) => `${f.level}:${f.rowNo}:${f.problem}`);
+    expect(problems).toEqual(expect.arrayContaining(['warn:4:แถวนี้เป็น Checklist ของงานแถว 2 · ไม่ใช้ค่า Status', 'warn:5:แถวต่อท้ายของงานแถว 2 ไม่มี Checklist']));
+    expect(up.body.findings.filter((f: { level: string }) => f.level === 'err')).toEqual([]);
+    expect((await team.lead.patch(`${team.ws}/import-jobs/${up.body.id}`, { project: { key: 'CHK', name: 'Checklist Plan' } })).status).toBe(200);
+    expect(await commit(up.body.id)).toMatchObject({ imported: 3, checklist: 4 });
+
+    expect(await itemsOf('CHK', 1)).toEqual([
+      { kind: 'checklist', text: '[Workflow] ไม่ระบุเงื่อนไข\nแสดงทั้งหมด', done: false, sort: 0 },
+      { kind: 'checklist', text: '[Validate] วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม', done: false, sort: 1 },
+      { kind: 'acceptance', text: '[Acceptance] ค้นหาแล้วได้ผลตามเงื่อนไข', done: false, sort: 0 },
+    ]);
+    expect(await itemsOf('CHK', 2)).toEqual([{ kind: 'checklist', text: '[Function] ปุ่มบันทึก', done: false, sort: 0 }]);
+    expect(await itemsOf('CHK', 3)).toEqual([]);
+    // Status ของแถวต่อท้าย (Done) ไม่ถูกใช้
+    expect((await team.lead.get(`${team.ws}/issues/CHK-1`)).body.status.name).toBe('To do');
+    // Checklist อ่านผ่าน API ของงานได้ตามปกติ
+    expect((await team.lead.get(`${team.ws}/issues/CHK-1/checklist?kind=acceptance`)).body.items.map((i: { text: string }) => i.text)).toEqual(['[Acceptance] ค้นหาแล้วได้ผลตามเงื่อนไข']);
+  });
+
+  it('Export: ข้อแรกในแถวงาน ข้อถัดไปเป็นแถวต่อท้าย · Import อัปเดตด้วยไฟล์เดิม = ไม่มีอะไรเปลี่ยน', async () => {
+    const file = await exportOf('CHK');
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(file as unknown as ArrayBuffer);
+    const ws = wb.getWorksheet('Tasks')!;
+    const cells = (n: number, ...h: string[]) => h.map((x) => ws.getRow(n).getCell(col(x)).value ?? null);
+    expect(ws.rowCount).toBe(6); // หัว + CHK-1 (3 ข้อ) + CHK-2 + CHK-3
+    expect(cells(2, 'Key', 'Title', 'Checklist', 'Status')).toEqual(['CHK-1', 'หน้ารายการแคมเปญ', '[Workflow] ไม่ระบุเงื่อนไข\nแสดงทั้งหมด', 'To do']);
+    expect(cells(3, 'Key', 'Group', 'Title', 'Checklist', 'Status', 'Man-Day')).toEqual(['CHK-1', 'Sprint 1', 'หน้ารายการแคมเปญ', '[Validate] วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม', null, null]);
+    expect(cells(4, 'Key', 'Checklist')).toEqual(['CHK-1', '[Acceptance] ค้นหาแล้วได้ผลตามเงื่อนไข']);
+
+    const job = await updateJob('CHK', file);
+    expect(job.diff).toEqual({ added: [], changed: [], missing: [], unchanged: 3 });
+    expect(job.summary).toMatchObject({ rows: 3, checklist: 4 });
+    expect(await commit(job.id)).toMatchObject({ changed: 0, unchanged: 3 });
+    expect(await itemsOf('CHK', 1)).toHaveLength(3);
+  });
+
+  it('อัปเดต: Sync ตามข้อความ · ข้อใหม่เพิ่ม · ข้อที่หายลบเฉพาะที่ยังไม่ติ๊ก · ติ๊กแล้วคงไว้พร้อมสถานะ', async () => {
+    // ติ๊กข้อ [Validate] และ [Acceptance] ในระบบก่อน
+    await t.owner.query(`UPDATE checklist_items c SET done = true FROM issues i JOIN projects p ON p.id = i.project_id WHERE c.issue_id = i.id AND p.key = 'CHK' AND i.number = 1 AND c.text LIKE ANY (ARRAY['[Validate]%', '[Acceptance]%'])`);
+    // ไฟล์ใหม่: ลบ [Workflow] (ยังไม่ติ๊ก) และ [Validate] (ติ๊กแล้ว) · เพิ่ม [Message] · CHK-3 ได้ Checklist ข้อแรก
+    const file = await edit(await exportOf('CHK'), (ws) => {
+      ws.getRow(2).getCell(col('Checklist')).value = '[Message] แสดงข้อความเมื่อไม่พบข้อมูล';
+      ws.spliceRows(3, 1);
+      const last = ws.rowCount;
+      ws.getRow(last).getCell(col('Checklist')).value = '[Required] ต้องระบุวงเงิน';
+    });
+    const job = await updateJob('CHK', file);
+    const changes = Object.fromEntries(job.diff.changed.map((c: { key: string; fields: { field: string; old: unknown; new: unknown }[] }) => [c.key, c.fields]));
+    expect(changes['CHK-1']).toEqual([{ field: 'checklist', label: 'Checklist', old: '3 ข้อ', new: '3 ข้อ (เพิ่ม 1 · ลบ 1)' }]);
+    expect(changes['CHK-3']).toEqual([{ field: 'checklist', label: 'Checklist', old: '0 ข้อ', new: '1 ข้อ (เพิ่ม 1)' }]);
+    expect(job.diff.unchanged).toBe(1);
+    expect(job.findings.map((f: { level: string; problem: string }) => `${f.level}:${f.problem}`)).toContain('warn:Checklist ที่ติ๊กแล้ว 1 ข้อไม่อยู่ในไฟล์');
+    expect(await commit(job.id)).toMatchObject({ changed: 2 });
+
+    expect(await itemsOf('CHK', 1)).toEqual([
+      { kind: 'checklist', text: '[Validate] วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม', done: true, sort: 1 },
+      { kind: 'checklist', text: '[Message] แสดงข้อความเมื่อไม่พบข้อมูล', done: false, sort: 2 },
+      { kind: 'acceptance', text: '[Acceptance] ค้นหาแล้วได้ผลตามเงื่อนไข', done: true, sort: 0 },
+    ]);
+    expect(await itemsOf('CHK', 3)).toEqual([{ kind: 'checklist', text: '[Required] ต้องระบุวงเงิน', done: false, sort: 0 }]);
+    const act = (await t.owner.query(`SELECT a.field, a.old_value, a.new_value FROM activities a JOIN issues i ON i.id = a.issue_id JOIN projects p ON p.id = i.project_id WHERE p.key = 'CHK' AND i.number = 1 AND a.field = 'checklist'`)).rows;
+    expect(act).toEqual([{ field: 'checklist', old_value: '3 ข้อ', new_value: '3 ข้อ (เพิ่ม 1 · ลบ 1)' }]);
+    // ไฟล์ที่ไม่มีคอลัมน์ Checklist = ไม่แตะของเดิม
+    const noCol = await edit(await exportOf('CHK'), (ws) => ws.spliceColumns(col('Checklist'), 1));
+    const keep = await updateJob('CHK', noCol);
+    expect(keep.diff.changed).toEqual([]);
+  });
+
+  it('Acceptance ที่เพิ่มในหน้างาน (ไม่มีคำขึ้นต้น) · Export แล้ว Import กลับ = ไม่เปลี่ยน', async () => {
+    const r = await team.lead.post(`${team.ws}/issues/CHK-2/checklist`, { kind: 'acceptance', text: 'บันทึกแล้วกลับหน้ารายการ' });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    const file = await exportOf('CHK');
+    const job = await updateJob('CHK', file);
+    expect(job.diff.changed).toEqual([]);
+    await commit(job.id);
+    expect(await itemsOf('CHK', 2)).toEqual([
+      { kind: 'checklist', text: '[Function] ปุ่มบันทึก', done: false, sort: 0 },
+      { kind: 'acceptance', text: 'บันทึกแล้วกลับหน้ารายการ', done: false, sort: 0 },
+    ]);
+  });
+
+  it('ข้อที่ยาวเกิน 5,000 ตัวอักษร = แถวงานต้องแก้', async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Tasks');
+    ws.addRow(TASK_HEADERS);
+    ws.addRow(row({ Module: 'Core', Title: 'งานยาว', Checklist: 'ข้อแรก' }));
+    ws.addRow(row({ Module: 'Core', Title: 'งานยาว', Checklist: 'ก'.repeat(5001) }));
+    const up = await team.lead.upload(`${team.ws}/import-jobs`, Buffer.from(await wb.xlsx.writeBuffer()), 'Long.xlsx', { mode: 'create' });
+    expect(up.body.summary).toMatchObject({ rows: 1, skipped: 1 });
+    expect(up.body.findings).toEqual(expect.arrayContaining([expect.objectContaining({ level: 'err', rowNo: 3, problem: 'Checklist ยาวเกิน 5,000 ตัวอักษร' })]));
   });
 });

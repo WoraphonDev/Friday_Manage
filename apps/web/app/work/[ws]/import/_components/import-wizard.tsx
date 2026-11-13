@@ -220,7 +220,7 @@ function FilePicker({ file, job, error, onPick }: { file: File | null; job: Impo
         {file ? (
           <>
             <b>{file.name}</b>
-            <div className={`muted ${styles.small}`}>{job ? `${fmtSize(file.size)} · ${t("jobMeta", { sheet: job.sheet, rows: job.summary.rows })}` : t("fileMeta", { size: fmtSize(file.size) })}</div>
+            <div className={`muted ${styles.small}`}>{job ? `${fmtSize(file.size)} · ${(job.summary.checklist ? t("jobMetaChecklist", { sheet: job.sheet, rows: job.summary.rows, checklist: job.summary.checklist }) : t("jobMeta", { sheet: job.sheet, rows: job.summary.rows }))}` : t("fileMeta", { size: fmtSize(file.size) })}</div>
           </>
         ) : (
           <>
@@ -615,6 +615,7 @@ function Done({ ws, result, onAgain, changesHref }: { ws: string; result: Commit
         ? t("doneCreate", { name: result.project.name, imported: result.imported ?? 0, scheduled: result.scheduled ?? 0, backlog: result.backlog ?? 0, skipped: result.skipped })
         : t("doneUpdate", { name: result.project.name, changed: result.changed ?? 0, added: result.added ?? 0, deleted: result.deleted ?? 0, planChanges: result.planChanges ?? 0 }),
     ];
+    if (result.checklist) out.push(t("doneChecklist", { count: result.checklist }));
     if (result.baseline) out.push(t("doneBaseline"));
     if (result.invitations.length) out.push(t("doneInvites", { count: result.invitations.length }));
     return out;

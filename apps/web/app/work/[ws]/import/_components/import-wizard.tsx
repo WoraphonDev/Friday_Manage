@@ -372,6 +372,8 @@ function DiffCard({ job, year, busy, onMissing }: { job: ImportJob; year: YearFo
   const tabs = (["missing", "changed", "added", "locked"] as const).filter((k) => counts[k] > 0);
   // อัปเดตเฉพาะงานที่ยังไม่เริ่ม: มีงานใหม่ที่ยังไม่ยืนยัน → เปิดแท็บงานใหม่ก่อนให้ตัดสินใจ
   const unstarted = job.updateKind === "unstarted";
+  // แทนที่แผนเดิม: งานเดิมทุกงานถูกลบ ไม่มีให้เลือกเก็บ
+  const wipe = job.updateKind === "replace";
   const askNew = unstarted && counts.added > 0;
   const [picked, setPicked] = useState<DiffTab | null>(null);
   const tab = picked && counts[picked] > 0 ? picked : askNew && !job.addNew ? "added" : tabs[0];
@@ -395,19 +397,19 @@ function DiffCard({ job, year, busy, onMissing }: { job: ImportJob; year: YearFo
 
   return (
     <section className={styles.card} aria-label={t("diffTitle")}>
-      <div className={styles.bar}><b>{t("diffTitle")}</b><span className="muted">{t("diffSummary", { changed: d.changed.length, added: d.added.length, missing: d.missing.length, unchanged: d.unchanged })}</span></div>
+      <div className={styles.bar}><b>{t("diffTitle")}</b><span className="muted">{wipe ? t("diffSummary__replace", { added: d.added.length, missing: d.missing.length }) : t("diffSummary", { changed: d.changed.length, added: d.added.length, missing: d.missing.length, unchanged: d.unchanged })}</span></div>
       {tab && (
         <>
           <div className={styles.diffTools}>
             <div className={styles.diffTabs} role="tablist" aria-label={t("diffTitle")}>
               {tabs.map((k) => (
                 <button key={k} type="button" role="tab" id={`diff-tab-${k}`} aria-controls="diff-panel" aria-selected={tab === k} onClick={() => setPicked(k)}>
-                  {t(`diffTab__${k}`)} <span className={styles.diffCount}>{num(counts[k])}</span>
+                  {t(wipe && k === "missing" ? "diffTab__removed" : `diffTab__${k}`)} <span className={styles.diffCount}>{num(counts[k])}</span>
                 </button>
               ))}
             </div>
             <input className={cn("input", styles.diffSearch)} type="search" placeholder={t("diffSearch")} aria-label={t("diffSearch")} value={query} onChange={(e) => setQuery(e.target.value)} />
-            {tab === "missing" && (
+            {tab === "missing" && !wipe && (
               <Select size="small" aria-label={t("missingAll")} value={job.missingAll ?? "keep"} disabled={busy} onChange={(e) => onMissing({ missingAll: e.target.value })}>
                 <option value="keep">{t("missingAll")}: {t("missing__keep")}</option>
                 <option value="delete">{t("missingAll")}: {t("missing__delete")}</option>
@@ -415,7 +417,7 @@ function DiffCard({ job, year, busy, onMissing }: { job: ImportJob; year: YearFo
             )}
           </div>
           <div id="diff-panel" role="tabpanel" aria-labelledby={`diff-tab-${tab}`} className={styles.diffPanel}>
-            <p className={`muted ${styles.small}`}>{t(tab === "added" && unstarted ? "diffHint__addedAsk" : `diffHint__${tab}`)}</p>
+            <p className={`muted ${styles.small}`}>{t(tab === "added" && unstarted ? "diffHint__addedAsk" : wipe && tab === "missing" ? "diffHint__removed" : `diffHint__${tab}`)}</p>
             {tab === "added" && askNew && <AddNewCheck job={job} busy={busy} onPatch={onMissing} />}
             {tab === "locked" && locked.map((l) => (
               <div key={l.key} className={styles.changeRow}>
@@ -440,10 +442,14 @@ function DiffCard({ job, year, busy, onMissing }: { job: ImportJob; year: YearFo
               <div key={m.no} className={styles.missRow}>
                 <span className={styles.mono}>{m.key}</span>
                 <span className={styles.ellipsis} title={m.title}>{m.title} <span className="muted">· {m.status}</span></span>
-                <Select size="small" aria-label={t("missingFor", { key: m.key })} value={choice(m.no)} disabled={busy} onChange={(e) => onMissing({ missing: { [String(m.no)]: e.target.value } })}>
-                  <option value="keep">{t("missing__keep")}</option>
-                  <option value="delete">{t("missing__delete")}</option>
-                </Select>
+                {wipe ? (
+                  <span className={styles.warnText}>{t("missing__delete")}</span>
+                ) : (
+                  <Select size="small" aria-label={t("missingFor", { key: m.key })} value={choice(m.no)} disabled={busy} onChange={(e) => onMissing({ missing: { [String(m.no)]: e.target.value } })}>
+                    <option value="keep">{t("missing__keep")}</option>
+                    <option value="delete">{t("missing__delete")}</option>
+                  </Select>
+                )}
               </div>
             ))}
             {tab === "added" && modules.map((m) => {
@@ -508,6 +514,7 @@ function Confirm({ ws, job, busy, onPatch, onBack, onCommit }: {
   }
 
   const d = job.diff;
+  const wipe = job.updateKind === "replace";
   const deleted = d ? d.missing.filter((m) => (job.missingChoice?.[String(m.no)] ?? job.missingAll ?? "keep") === "delete").length : 0;
   const total = create ? s.ready + s.backlog : s.ready;
   const undecided = job.people.filter((p) => !p.decided).length;
@@ -519,7 +526,7 @@ function Confirm({ ws, job, busy, onPatch, onBack, onCommit }: {
           <Input label={t("projectName")} value={name} maxLength={120} onChange={(e) => setName(e.target.value)} required />
           <Input label={t("projectKey")} hint={t("projectKeyHint")} value={key} maxLength={10} onChange={(e) => setKey(e.target.value.toUpperCase())} required />
         </div>
-      ) : (
+      ) : wipe ? null : (
         <Input label={t("reason")} hint={t("reasonHint", { file: job.fileName })} value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
       )}
       <div className={styles.two}>
@@ -532,6 +539,11 @@ function Confirm({ ws, job, busy, onPatch, onBack, onCommit }: {
               <li>{t("sumSprint")}</li>
               <li>{t("sumRows", { ready: s.ready, backlog: s.backlog, skipped: s.skipped })}</li>
               <li>{t("sumDates")}</li>
+            </ul>
+          ) : wipe ? (
+            <ul className={styles.list}>
+              <li>{t("sumReplace", { added: d?.added.length ?? 0, skipped: s.skipped })}</li>
+              {!!d?.missing.length && <li className={styles.warnText}>{t("sumRemoved", { count: d.missing.length })}</li>}
             </ul>
           ) : (
             <ul className={styles.list}>
@@ -564,7 +576,7 @@ function Confirm({ ws, job, busy, onPatch, onBack, onCommit }: {
         {busy === "commit" && <span className="muted" role="status">{t("committing")}</span>}
         <Button onClick={onBack}>{t("back")}</Button>
         <Button variant="primary" disabled={busy !== null || (create && (!name.trim() || !key.trim()))} onClick={() => onCommit(pending())}>
-          {create ? t("commitCreate", { count: total }) : t("commitUpdate", { count: total })}
+          {create ? t("commitCreate", { count: total }) : t(wipe ? "commitReplace" : "commitUpdate", { count: total })}
         </Button>
       </div>
     </section>

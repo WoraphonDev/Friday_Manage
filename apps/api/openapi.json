@@ -9110,7 +9110,7 @@
     "/api/v1/w/{ws}/import-jobs": {
       "post": {
         "operationId": "Imports_upload",
-        "summary": "multipart/form-data: file (.xlsx) + mode (create | update) + projectKey และ updateKind (replace | append · ค่าเริ่มต้น replace) เมื่อ mode = update",
+        "summary": "multipart/form-data: file (.xlsx) + mode (create | update) + projectKey และ updateKind (replace | sync | append | unstarted · ค่าเริ่มต้น sync) เมื่อ mode = update",
         "tags": [
           "Imports"
         ],
@@ -9422,6 +9422,7 @@
                     "type": "string",
                     "enum": [
                       "replace",
+                      "sync",
                       "append",
                       "unstarted"
                     ]

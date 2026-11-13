@@ -292,8 +292,34 @@ describe("Import Excel (L3)", () => {
     expect(screen.queryByText(/ยังไม่ได้ยืนยัน จะไม่ถูกเพิ่ม/)).not.toBeInTheDocument();
   });
 
-  it("อัปเดตแผนของโปรเจกต์: ส่ง projectKey, diff, งานที่หายจากไฟล์, เหตุผลบันทึกก่อน commit", async () => {
-    importHandlers(updateJob);
+  it("แทนที่แผนเดิม: งานเดิมทุกงานอยู่ในรายการลบ ไม่มีให้เลือกเก็บ · ไม่ถามเหตุผลการแก้แผน", async () => {
+    const base = updateJob();
+    importHandlers(() => ({ ...base, updateKind: "replace", diff: { changed: [], added: [{ no: 3, number: null, title: "งานใหม่สมมติ", module: "โมดูลหนึ่ง" }], missing: [{ no: 4, key: "DE-4", title: "งานเดิมสมมติ", status: "In progress" }], unchanged: 0 } }));
+    const user = userEvent.setup();
+    mountProjectImport();
+    const kinds = await screen.findByRole("group", { name: "วิธีนำเข้าแผน" });
+    expect(within(kinds).getByRole("button", { name: /แทนที่แผนเดิม/ })).toHaveTextContent("ลบงานเดิมทั้งหมดลงถังขยะ");
+    await user.upload(screen.getByLabelText("ไฟล์ Excel (.xlsx)"), xlsx());
+    await user.click(screen.getByRole("button", { name: "ถัดไป: จับคู่คอลัมน์ →" }));
+    await screen.findByText("จับคู่แล้ว 2 / 3");
+    expect(uploads).toMatchObject([{ mode: "update", projectKey: "DE", updateKind: "replace" }]);
+    await user.click(screen.getByRole("button", { name: "ถัดไป: ตรวจสอบข้อมูล →" }));
+
+    const diff = screen.getByRole("region", { name: "เทียบกับแผนปัจจุบัน" });
+    expect(within(diff).getByText("ลบงานเดิม 1 · สร้างใหม่ 1")).toBeInTheDocument();
+    expect(within(diff).getAllByRole("tab").map((x) => x.textContent)).toEqual(["งานเดิมที่จะถูกลบ 1", "งานใหม่ 1"]);
+    expect(within(diff).getByText("DE-4")).toBeInTheDocument();
+    expect(within(diff).queryByRole("combobox")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "ถัดไป: ยืนยัน →" }));
+    expect(screen.getByText("สร้างงานใหม่ 1 งานตามไฟล์ (ข้าม 0 แถวที่ยังต้องแก้)")).toBeInTheDocument();
+    expect(screen.getByText(/ลบงานเดิมทั้งหมด 1 งาน พร้อม Sub-task ลงถังขยะ/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("เหตุผลของการแก้แผน")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "แทนที่แผนด้วย 2 งาน" })).toBeInTheDocument();
+  });
+
+  it("อัปเดตแผนของโปรเจกต์ (sync ผ่าน API): ส่ง projectKey, diff, งานที่หายจากไฟล์, เหตุผลบันทึกก่อน commit", async () => {
+    importHandlers(() => ({ ...updateJob(), updateKind: "sync" }));
     const user = userEvent.setup();
     mountProjectImport();
     expect(await screen.findByRole("button", { name: "อัปเดตแผนจาก Excel" })).toHaveAttribute("aria-current", "page");

@@ -11,7 +11,8 @@ import { FieldProfileEditor, TemplateSource, type EditorValue } from "@/features
 import { projectEndpoint, SectionHead } from "./shared";
 import { errorText, isForbidden, move, patchPlain, type CustomField, type IssueType, type IssueTypes, type Label, type Member, type Module } from "./types";
 import styles from "./settings.module.css";
-import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
+import { DEFAULT_ITEM_COLOR, nextModuleColor, readableColor, tint } from "@/lib/colors";
+import { ModuleColorPicker } from "./module-color";
 
 const FIELD_TYPES: CustomField["fieldType"][] = ["text", "number", "select", "multi_select", "user", "date"];
 const MODES: FieldMode[] = ["optional", "required", "hidden"];
@@ -279,7 +280,8 @@ export function ModulesSection({ ws, projectKey, members }: { ws: string; projec
   const people = members.filter((m) => m.active);
 
   async function add() {
-    if (await run(() => api.post(`${base}/modules`, { name: name.trim() }), t("added"))) {
+    // Module ใหม่ได้สีถัดไปในชุดที่ยังไม่มีใครใช้ (เปลี่ยนเองได้ทีหลัง)
+    if (await run(() => api.post(`${base}/modules`, { name: name.trim(), color: nextModuleColor(items.map((m) => m.color)) }), t("added"))) {
       setAdding(false);
       setName("");
     }
@@ -302,12 +304,12 @@ export function ModulesSection({ ws, projectKey, members }: { ws: string; projec
                 <button type="button" className={styles.icon} disabled={i === 0} aria-label={t("moveUp", { name: m.name })} onClick={() => void run(() => api.post(`${base}/modules/reorder`, { ids: move(items, i, -1).map((x) => x.id) }))}>↑</button>
                 <button type="button" className={styles.icon} disabled={i === items.length - 1} aria-label={t("moveDown", { name: m.name })} onClick={() => void run(() => api.post(`${base}/modules/reorder`, { ids: move(items, i, 1).map((x) => x.id) }))}>↓</button>
               </span>
+              <ModuleColorPicker name={m.name} value={m.color} onChange={(color) => void run(() => patchPlain(`${base}/modules/${m.id}`, { color }), t("saved"))} />
               <input
                 className={styles.in}
                 defaultValue={m.name}
                 maxLength={120}
                 aria-label={t("nameOf", { name: m.name })}
-                style={m.color ? { borderLeft: `4px solid ${m.color}` } : undefined}
                 onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== m.name) void run(() => patchPlain(`${base}/modules/${m.id}`, { name: v }), t("saved")); }}
               />
               <select className={`${styles.in} ${styles.hs}`} value={m.owner?.id ?? ""} aria-label={t("ownerOf", { name: m.name })} onChange={(e) => void run(() => patchPlain(`${base}/modules/${m.id}`, { ownerUserId: e.target.value || null }), t("saved"))}>

@@ -136,6 +136,28 @@ describe("Home (E / M5)", () => {
     } finally { restore(); }
   });
 
+  it("30 วันข้างหน้า: วันเดียวกันรวมกลุ่ม แสดง 6 รายการแรกแล้วกดดูที่เหลือ", async () => {
+    const user = userEvent.setup();
+    const d = homeData();
+    d.upcoming = [
+      { date: "2026-12-04", type: "phase_end", title: "กลุ่มงานตัวอย่าง 1", project: "โปรเจกต์สมมติ" },
+      { date: "2026-12-04", type: "phase_end", title: "กลุ่มงานตัวอย่าง 2", project: "โปรเจกต์สมมติ" },
+      { date: "2026-12-04", type: "sprint_end", title: "Sprint ตัวอย่าง", project: "โปรเจกต์สมมติ" },
+      ...Array.from({ length: 5 }, (_, i) => ({ date: `2026-12-1${i}`, type: "milestone" as const, title: `Milestone ตัวอย่าง ${i + 1}`, project: "โปรเจกต์สมมติ" })),
+    ];
+    server.use(http.get("*/api/v1/w/:ws/home", () => HttpResponse.json(d)));
+    mount(<HomePage ws="sample" />);
+    expect(await screen.findByText("กลุ่มงานครบ · กลุ่มงานตัวอย่าง 1")).toBeInTheDocument();
+    // 3 รายการวันที่ 4 ใช้ป้าย "อีก 2 วัน" ป้ายเดียว
+    expect(screen.getAllByText("อีก 2 วัน")).toHaveLength(1);
+    expect(screen.getByText("Milestone · Milestone ตัวอย่าง 3")).toBeInTheDocument();
+    expect(screen.queryByText("Milestone · Milestone ตัวอย่าง 4")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ดูอีก 2 รายการ" }));
+    expect(screen.getByText("Milestone · Milestone ตัวอย่าง 5")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "แสดงน้อยลง" }));
+    expect(screen.queryByText("Milestone · Milestone ตัวอย่าง 5")).not.toBeInTheDocument();
+  });
+
   it("ไม่มีสิทธิ์ตัดสินคำขอ = ไม่มีปุ่ม · ไม่มีอะไรรอ = สถานะว่าง", async () => {
     const d = homeData();
     d.waiting.approvals[0].canDecide = false;
@@ -207,6 +229,20 @@ describe("My Tasks (F / M2)", () => {
     expect(box).toBeDisabled();
     expect(box).toHaveAttribute("title", "เปลี่ยนสถานะได้เฉพาะ Dev / QA ของงานนี้");
     expect(screen.getByRole("checkbox", { name: "ทำเครื่องหมายว่าเสร็จ: งานตัวอย่าง DE-35" })).toBeEnabled();
+  });
+
+  it("กลุ่มที่มีงานเกิน 30 งาน แสดง 30 งานแรกแล้วกดดูที่เหลือ", async () => {
+    const user = userEvent.setup();
+    const many = tasks();
+    many.groups[0] = { ...many.groups[0], count: 33, items: Array.from({ length: 33 }, (_, i) => task(`DE-${100 + i}`)) };
+    server.use(http.get("*/api/v1/w/:ws/my-issues", () => HttpResponse.json(many)));
+    mount(<MyTasksPage ws="sample" />);
+    expect(await screen.findByTestId("task-DE-129")).toBeInTheDocument();
+    expect(screen.queryByTestId("task-DE-130")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ดูอีก 3 งาน" }));
+    expect(screen.getByTestId("task-DE-132")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "แสดงน้อยลง" }));
+    expect(screen.queryByTestId("task-DE-132")).not.toBeInTheDocument();
   });
 
   it("ลากงานไปวางที่หัวกลุ่ม \"สัปดาห์หน้า\" = เปลี่ยน Due เป็นวันศุกร์ของสัปดาห์นั้น", async () => {

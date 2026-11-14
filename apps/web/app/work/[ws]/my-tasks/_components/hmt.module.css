@@ -44,9 +44,22 @@
 .li:hover { background:var(--surface-2); }
 .liTitle { font-weight:600; font-size:12px; overflow-wrap:anywhere; }
 .small { font-size:11px; }
-.upRow { display:flex; gap:12px; padding:8px 18px; align-items:center; }
-.upDate { width:46px; text-align:center; flex:none; }
-.upDate b { display:block; font-size:16px; line-height:1.1; }
+.upList { padding:4px 0; }
+/* วันเดียวกันรวมเป็นกลุ่ม: วันที่ซ้าย · รายการกลาง · อีก N วัน ขวา */
+.upDay { display:flex; gap:12px; padding:8px 18px; align-items:flex-start; }
+.upDay + .upDay { border-top:1px solid var(--border); }
+.upDate { width:34px; text-align:center; flex:none; }
+.upDate b { display:block; font-size:15px; line-height:1.2; }
+.upDate span { color:var(--muted); font-size:11px; }
+.upEvents { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+.upEvent { display:flex; gap:8px; align-items:flex-start; }
+.upEvent svg { flex:none; margin-top:4px; }
+.upText { min-width:0; }
+.upTitle { font-size:12px; font-weight:600; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.upProject { font-size:11px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.upDay > :last-child { flex:none; margin-top:2px; }
+.upMore { display:block; width:100%; padding:10px 18px; border:0; border-top:1px solid var(--border); background:transparent; color:var(--primary-text); font:inherit; font-size:12px; font-weight:600; text-align:left; cursor:pointer; border-radius:0 0 12px 12px; }
+.upMore:hover { background:var(--hover); }
 .chart { display:flex; align-items:flex-end; gap:12px; height:100px; border-bottom:1px solid var(--input); position:relative; margin:14px 18px 0; }
 .chartCol { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:2px; }
 .chartCol i { display:block; width:100%; max-width:36px; border-radius:4px 4px 0 0; }
@@ -64,6 +77,30 @@
 .gh { display:flex; align-items:center; gap:10px; min-height:46px; padding:0 14px; background:var(--surface-2); border:0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); width:100%; font:inherit; font-size:var(--text-label); text-align:left; color:var(--foreground); cursor:pointer; }
 .gh:hover { background:var(--hover); }
 .gh.over { outline:2px dashed var(--primary); outline-offset:-2px; background:var(--primary-soft); }
+/* My Tasks: รายการงานกับแผงสรุปวางคู่กัน แผงสรุปลงไปอยู่ล่างเมื่อจอแคบ */
+.tasksBody { flex-direction:row; flex-wrap:wrap; align-items:flex-start; }
+.taskList { flex:999 1 620px; overflow:hidden; }
+.groupMore { display:block; width:100%; padding:10px 18px; border:0; border-bottom:1px solid var(--border); background:transparent; font:inherit; font-size:12px; font-weight:600; color:var(--primary-text); text-align:left; cursor:pointer; }
+.groupMore:hover { background:var(--hover); }
+.listHint { padding:12px 18px; }
+.taskSide { flex:1 1 300px; min-width:0; display:flex; flex-direction:column; gap:16px; }
+/* จอกว้าง: ทั้งหน้าสูงเท่าจอใต้แถบบนและติดอยู่กับที่ · เลื่อนเฉพาะรายการงาน หัวกลุ่มติดด้านบนให้รู้ว่าอยู่กลุ่มไหนและลากงานไปวางได้ (ผู้ใช้ขอ 2026-11-14) */
+@media (min-width:1000px) {
+  /* พื้นที่หลักสูงพอดีจอและไม่เลื่อน รวมแถบประกาศด้านบน (ทดลองใช้, ระงับบัญชี) ทั้งหน้าจึงอยู่นิ่งจริง */
+  :global(.workspace-main):has(> .tasksPage) { height:calc(100dvh - var(--topbar-h)); display:flex; flex-direction:column; overflow:hidden; }
+  :global(.workspace-main):has(> .tasksPage) > :not(.tasksPage) { flex:none; }
+  .tasksPage { flex:1; min-height:0; display:flex; flex-direction:column; }
+  .tasksPage > .head { flex:none; }
+  .tasksBody { flex:1; min-height:0; flex-wrap:nowrap; }
+  .taskList { max-height:100%; overflow-y:auto; overscroll-behavior:contain; }
+  .taskList .gh { position:sticky; top:0; z-index:1; }
+  /* แผงสรุปอยู่นิ่ง ไม่มีแถบเลื่อน (ผู้ใช้ขอ 2026-11-14) · บีบระยะให้พอดีจอสูง ~850px ขึ้นไป */
+  .taskSide { max-height:100%; overflow:hidden; gap:12px; }
+  .taskSide .chead { padding:10px 16px; }
+  .taskSide .twoCol > div { padding:8px 14px; }
+  .taskSide .twoCol b { font-size:20px; }
+  .taskSide .mod { padding:10px 16px; gap:10px; }
+}
 .ghName { font-weight:700; }
 .ghSub { margin-left:auto; font-size:11px; color:var(--muted); }
 .tr { display:grid; grid-template-columns:24px minmax(0,1fr) 112px 78px 140px 44px 32px; column-gap:12px; align-items:center; min-height:58px; padding:6px 14px; border-bottom:1px solid var(--border); background:var(--card); }

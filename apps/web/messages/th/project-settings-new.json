@@ -254,7 +254,17 @@
       "moveToPhase": "กลุ่มงานปลายทาง",
       "noPhase": "ไม่ระบุกลุ่มงาน",
       "removeEmpty": "ไม่มีงานใน Module นี้ ลบได้ทันที",
-      "removeConfirm": "ลบ Module"
+      "removeConfirm": "ลบ Module",
+      "colorOf": "สีของ {name}",
+      "colorPreset": "สีสำเร็จรูป",
+      "colorCustom": "กำหนดเอง",
+      "colorWheel": "เลือกสีเอง",
+      "colorHex": "รหัสสี",
+      "colorNearLate": "สีนี้ใกล้สีแดงของงานที่เลยกำหนด แถบจะแยกกันยาก แนะนำสีอื่นในชุดด้านบน",
+      "previewTitle": "ตัวอย่างบน Timeline",
+      "previewNormal": "งานปกติ",
+      "previewLate": "เลยกำหนด",
+      "colorDone": "เสร็จ"
     },
     "perms": {
       "title": "สิทธิ์ของแต่ละ Role",

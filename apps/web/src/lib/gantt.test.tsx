@@ -147,6 +147,29 @@ describe("Gantt (5)", () => {
     expect(bar("DE-1")).not.toHaveAttribute("data-critical");
   });
 
+  it("เลยกำหนด: แดงจากหัวแถบถึงเส้นวันนี้ เฉพาะงานที่ยังไม่เสร็จ", async () => {
+    // DE-1 (30 พ.ย.–4 ธ.ค.) คร่อมวันนี้ 2 ธ.ค. · DE-3 เลยกำหนดแต่เริ่ม 7 ธ.ค. หลังวันนี้ = ไม่มีแดง
+    const withDe1 = (over: Partial<GRow>) => {
+      const d = data(null);
+      const tasks = d.modules[0]!.groups[0]!.tasks;
+      tasks[0] = { ...tasks[0]!, ...over };
+      server.use(http.get("*/api/v1/w/:ws/projects/:key/gantt", () => HttpResponse.json(d)));
+    };
+    withDe1({ lateDays: 1 });
+    const first = mount();
+    await screen.findByTestId("bar-DE-1");
+    const red = parseFloat(screen.getByTestId("late-DE-1").style.width);
+    expect(red).toBeGreaterThan(0);
+    expect(red).toBeLessThan(parseFloat(bar("DE-1").style.width));
+    expect(screen.queryByTestId("late-DE-3")).not.toBeInTheDocument();
+    first.unmount();
+    // ปิดงานแล้วไม่แดง แม้ยังมีวันที่เลย
+    withDe1({ lateDays: 1, status: { name: "Done", category: "done" } });
+    mount();
+    await screen.findByTestId("bar-DE-1");
+    expect(screen.queryByTestId("late-DE-1")).not.toBeInTheDocument();
+  });
+
   it("แผน vs จริง: เลือก Baseline ล่าสุดให้ · เปลี่ยน version · แสดงแถบ Baseline และ slip · ปิดได้", async () => {
     const user = userEvent.setup();
     mount();

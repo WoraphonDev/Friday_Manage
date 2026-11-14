@@ -12,7 +12,7 @@ import { formatDate, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
 import styles from "./gantt.module.css";
-import type { StatusCategory } from "@/lib/status";
+import { isClosedCategory, type StatusCategory } from "@/lib/status";
 
 type Cat = StatusCategory;
 export interface GRow {
@@ -325,19 +325,26 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
                     slip > 0 && t("slipLate", { days: slip }),
                     slip < 0 && t("slipEarly", { days: -slip }),
                   ].filter(Boolean).join(" · ");
-                  const fill = <span style={{ width: `${r.progressPct}%`, background: crit ? "var(--danger)" : "var(--chart-primary)" }} />;
-                  const barStyle = { ...pos, top: y + 8, background: crit ? "var(--danger-border)" : "var(--chart-primary-soft)" };
+                  // เลยกำหนดและยังไม่เสร็จ: แดงจากหัวแถบถึงเส้นวันนี้ (กลางช่องวันนี้) แทนกรอบแดง · ชุดเดียวกับ Timeline
+                  const red = r.lateDays > 0 && !isClosedCategory(r.status.category) ? Math.max(0, Math.min(pos.width, x(d.today) + px / 2 - pos.left)) : 0;
+                  const fill = (
+                    <>
+                      <span style={{ width: `${r.progressPct}%`, background: crit ? "var(--danger)" : "var(--chart-primary)" }} />
+                      {red > 0 && <i className={styles.lateFill} data-testid={`late-${r.key}`} style={{ width: red }} />}
+                    </>
+                  );
+                  const barStyle = { ...pos, top: y + 12, background: crit ? "var(--danger-border)" : "var(--chart-primary-soft)" };
                   const bl = d.baseline && r.baseline?.start && r.baseline.end ? r.baseline : null;
                   // ช่วง QA: วันถัดจากวันจบของ Dev ถึง QA Due (โปรเจกต์แยก Dev / QA)
                   const qa = r.qaDue && r.qaDue > r.end ? span(addDays(r.end, 1), r.qaDue) : null;
                   const whoLeft = qa ? qa.left + qa.width : pos.left + pos.width;
                   return (
                     <span key={r.key}>
-                      {qa && <span className={styles.qa} data-testid={`qa-${r.key}`} title={t("qaBar", { date: formatDate(r.qaDue!, year) })} style={{ ...qa, top: y + 8 }} />}
+                      {qa && <span className={styles.qa} data-testid={`qa-${r.key}`} title={t("qaBar", { date: formatDate(r.qaDue!, year) })} style={{ ...qa, top: y + 12 }} />}
                       {bl && <span className={styles.base} data-testid={`baseline-${r.key}`} title={t("baselineBar", { start: formatDate(bl.start, year), end: formatDate(bl.end, year) })} style={{ ...span(bl.start!, bl.end!), top: y + 29 }} />}
                       {r.canOpen !== false
-                        ? <Link href={issueHref(r.key)} className={`${styles.gb} ${r.lateDays ? styles.late : ""}`} style={barStyle} aria-label={label} title={label} data-testid={`bar-${r.key}`} data-critical={crit || undefined}>{fill}</Link>
-                        : <span className={`${styles.gb} ${r.lateDays ? styles.late : ""}`} style={barStyle} role="img" aria-label={label} title={label} data-testid={`bar-${r.key}`} data-critical={crit || undefined}>{fill}</span>}
+                        ? <Link href={issueHref(r.key)} className={styles.gb} style={barStyle} aria-label={label} title={label} data-testid={`bar-${r.key}`} data-critical={crit || undefined}>{fill}</Link>
+                        : <span className={styles.gb} style={barStyle} role="img" aria-label={label} title={label} data-testid={`bar-${r.key}`} data-critical={crit || undefined}>{fill}</span>}
                       {scale !== "month" && (r.assignees?.[0] || slip > 0) && (
                         <span className={styles.who} style={{ left: whoLeft + 6, top: y + 8 }}>
                           {r.assignees?.[0]?.displayName}

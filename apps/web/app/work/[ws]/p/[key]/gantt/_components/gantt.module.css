@@ -30,10 +30,11 @@ a.nm:hover { text-decoration:underline; }
 .plot { position:relative; background-image:repeating-linear-gradient(to bottom, transparent 0 35px, var(--subtle) 35px 36px); }
 .weekend { position:absolute; top:0; bottom:0; background:rgb(148 163 184 / .12); }
 .todayLine { position:absolute; top:0; bottom:0; width:2px; background:var(--danger-solid); z-index:2; pointer-events:none; }
-.gb { position:absolute; height:20px; border-radius:5px; overflow:hidden; display:block; }
+.gb { position:absolute; height:12px; border-radius:4px; overflow:hidden; display:block; }
 .gb:hover, .gb:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
 .gb span { display:block; height:100%; }
-.late { box-shadow:0 0 0 2px var(--danger); }
+/* ส่วนเลยกำหนด: แดงจากหัวแถบถึงเส้นวันนี้ (แถบสูง 12 px ทั้ง Gantt และ Timeline · ผู้ใช้เลือก 2026-11-14) */
+.lateFill { position:absolute; left:0; top:0; bottom:0; background:var(--danger); pointer-events:none; }
 .who { position:absolute; font-size:11px; white-space:nowrap; color:var(--muted); }
 .slip { color:var(--danger-text); font-weight:600; margin-left:6px; }
 .base { position:absolute; height:5px; border-radius:3px; background:var(--chart-neutral); }
@@ -61,4 +62,4 @@ a.nm:hover { text-decoration:underline; }
   .opt { display:none; }
 }
 /* ช่วง QA ต่อท้ายแถบ Dev (โปรเจกต์แยก Dev / QA) */
-.qa { position:absolute; height:20px; border-radius:0 5px 5px 0; border:1px dashed var(--warning-border); background:repeating-linear-gradient(135deg, var(--warning-soft) 0 4px, transparent 4px 8px); pointer-events:auto; }
+.qa { position:absolute; height:12px; border-radius:0 4px 4px 0; border:1px dashed var(--warning-border); background:repeating-linear-gradient(135deg, var(--warning-soft) 0 4px, transparent 4px 8px); pointer-events:auto; }

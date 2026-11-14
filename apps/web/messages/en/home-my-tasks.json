@@ -103,6 +103,8 @@
       "phase_end": "Task group ends",
       "holiday": "Holiday"
     },
+    "upcomingMore": "Show {count} more",
+    "upcomingLess": "Show less",
     "inDays": "{days, plural, one {in {days} day} other {in {days} days}}",
     "workloadTitle": "Team Workload this week",
     "workloadTotal": "{md} / {capacity} MD",
@@ -132,6 +134,8 @@
     },
     "range": "{from} – {to}",
     "rangeFrom": "From {from}",
+    "groupMore": "Show {count} more tasks",
+    "groupLess": "Show less",
     "groupEmpty": "No tasks in this group",
     "expand": "Expand group {name}",
     "collapse": "Collapse group {name}",
@@ -165,6 +169,7 @@
       "done": "Done today"
     },
     "byProject": "By project",
+    "byProjectMore": "and {count} more projects",
     "byProjectLine": "{count, plural, one {{count} task} other {{count} tasks}} · {md} MD",
     "weekTitle": "This week",
     "weekTotal": "{md} MD",

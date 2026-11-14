@@ -22,3 +22,34 @@ export function readableColor(color: string): string {
 export function tint(color: string, percent: number): string {
   return `color-mix(in srgb, ${color} ${percent}%, transparent)`;
 }
+
+/**
+ * ชุดสี Module 12 สี (ผู้ใช้เลือกจาก mockup 2026-11-14) · ไม่มีโทนแดง/ชมพูเข้ม จึงไม่กลืนกับส่วนแดงของงานที่เลยกำหนดบน Timeline / Gantt
+ * ทุกสีเข้มพอให้ตัวอักษรขาวบนแถบอ่านออก
+ */
+export const MODULE_COLORS = [
+  "#2563eb", "#4f46e5", "#7c3aed", "#9333ea", "#0891b2", "#0d9488",
+  "#059669", "#65a30d", "#ca8a04", "#d97706", "#475569", "#78716c",
+] as const;
+
+/** สีถัดไปในชุดที่ยังไม่มี Module ใช้ · ใช้ครบแล้ววนใหม่ */
+export function nextModuleColor(used: readonly (string | null | undefined)[]): string {
+  const taken = new Set(used.filter(Boolean).map((c) => c!.toLowerCase()));
+  return MODULE_COLORS.find((c) => !taken.has(c)) ?? MODULE_COLORS[used.length % MODULE_COLORS.length]!;
+}
+
+/** สีใกล้สีแดงของงานเลยกำหนด: โทนแดง/ชมพูเข้ม (hue 325–20°) และสดพอ · ใช้เตือนตอนเลือกสี Module */
+export function isNearLateRed(hex: string): boolean {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return false;
+  const n = parseInt(m[1]!, 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => v / 255) as [number, number, number];
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  if (!d) return false;
+  const l = (max + min) / 2;
+  const s = d / (1 - Math.abs(2 * l - 1));
+  const h = ((max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60 + 360) % 360;
+  return (h >= 325 || h <= 20) && s > 0.35;
+}

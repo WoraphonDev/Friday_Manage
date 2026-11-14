@@ -13,7 +13,7 @@ import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
 import styles from "./tl.module.css";
 import { MilestoneDialog } from "./milestone-dialog";
-import { statusDotColor, type StatusCategory } from "@/lib/status";
+import { statusDotColor, type StatusCategory, isClosedCategory } from "@/lib/status";
 
 type Cat = StatusCategory;
 export interface TLRow {
@@ -49,10 +49,10 @@ const LABEL_KEY = "friday.timeline.labelWidth";
 const clampLabel = (w: number) => Math.round(Math.min(LABEL_MAX, Math.max(LABEL_MIN, w)));
 // สีตามหมวด (Review ที่ยังอยู่หมวด In progress แยกด้วยชื่อ) · ชุดเดียวกับป้ายสถานะใน Table
 // แถบงานช่วงวันหยุดเหลือเส้นบางปลายมนตรงกลาง (บอกว่าช่วงนั้นไม่นับเป็นวันทำงาน)
-// ช่วงวันทำงานเป็นก้อนมุมโค้ง เส้นสอดเข้าใต้มุมโค้งจึงต่อกันนุ่ม ๆ ไม่เป็นขั้น · ความสูงแถบ 18 px
-const BAR_H = 18;
-const LINE_H = 4;
-const BAR_R = 5;
+// ช่วงวันทำงานเป็นก้อนมุมโค้ง เส้นสอดเข้าใต้มุมโค้งจึงต่อกันนุ่ม ๆ ไม่เป็นขั้น · ความสูงแถบ 12 px (ผู้ใช้เลือก 2026-11-14)
+const BAR_H = 12;
+const LINE_H = 2;
+const BAR_R = 4;
 /** mask ของแถบ (SVG): วันทำงานเต็มความสูง · วันหยุดเหลือเส้นบางสีจาง · ไม่มีวันหยุดในช่วง = undefined */
 export function offDayMask(start: string, end: string, px: number, isOff: (iso: string) => boolean) {
   const days = toDay(end, start) + 1;
@@ -75,6 +75,13 @@ export function offDayMask(start: string, end: string, px: number, isOff: (iso: 
   const blocks = segs.filter((g) => !g.off).map((g) => `<rect x='${g.from}' width='${g.to - g.from}' height='${BAR_H}' rx='${Math.min(BAR_R, (g.to - g.from) / 2)}'/>`);
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${BAR_H}'>${lines.join("")}${blocks.join("")}</svg>`;
   return { offDays, mask: `url("data:image/svg+xml,${encodeURIComponent(svg)}")` };
+}
+/**
+ * งานเลยกำหนดที่ยังไม่เสร็จ: แดงตั้งแต่หัวแถบถึงเส้นวันนี้ หลังเส้นคงสีเดิม · แถบอยู่ก่อนวันนี้ทั้งหมด = แดงทั้งแถบ
+ * (ผู้ใช้เลือกจาก mockup 2026-11-14 แทนกรอบแดง) · ใช้กับ Gantt ด้วย
+ */
+export function lateFillWidth(start: string, today: string, px: number, barWidth: number) {
+  return Math.max(0, Math.min(barWidth, toDay(today, start) * px));
 }
 const statusColor = (s: { name: string; category: Cat }) => statusDotColor(s.category, s.name);
 // สีข้อมูลต้องเป็น hex เพราะนำไปต่อค่าความโปร่งใส (`${color}33`)
@@ -491,6 +498,8 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                 // Month (3 px/วัน) ไม่ทำเส้นบาง: จะกลายเป็นรอยขาดทุกสัปดาห์จนอ่านแถบยาก
                 const thin = zoom === "month" ? { offDays: 0, mask: undefined } : offDayMask(start, end, px, isOff);
                 const names = guest ? "" : (r.assignees ?? []).map((a) => a.displayName).join(", ");
+                // เลยกำหนดและยังไม่เสร็จ: แดงจากหัวแถบถึงเส้นวันนี้
+                const red = r.lateDays > 0 && !isClosedCategory(r.status.category) ? lateFillWidth(start, d.today, px, Math.max(px, (toDay(end, start) + 1) * px)) : 0;
                 const onKey = (e: KeyboardEvent) => {
                   if (!canEdit || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
                   e.preventDefault();
@@ -518,7 +527,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                         role="button"
                         tabIndex={0}
                         data-testid={`bar-${r.key}`}
-                        className={`${styles.b} ${canEdit ? styles.editable : ""} ${live ? styles.dragging : ""} ${r.lateDays ? styles.late : ""}`}
+                        className={`${styles.b} ${canEdit ? styles.editable : ""} ${live ? styles.dragging : ""} `}
                         style={{ left: x(start), width: Math.max(px, (toDay(end, start) + 1) * px), opacity: ln.sub ? 0.8 : 1 }}
                         data-off-days={thin.offDays || undefined}
                         aria-label={`${t("bar", { key: r.key, title: r.title, start: formatDate(start, year), end: formatDate(end, year) })}${r.lateDays ? ` · ${t("late", { days: r.lateDays })}` : ""}${names ? ` · ${names}` : ""}`}
@@ -526,7 +535,10 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                         onMouseDown={startDrag("move")}
                         onKeyDown={onKey}
                       >
-                        <span className={styles.body} style={{ background: ln.color, maskImage: thin.mask, WebkitMaskImage: thin.mask }}><span className={styles.prog} style={{ width: `${r.progressPct}%` }} /></span>
+                        <span className={styles.body} style={{ background: ln.color, maskImage: thin.mask, WebkitMaskImage: thin.mask }}>
+                          <span className={styles.prog} style={{ width: `${r.progressPct}%` }} />
+                          {red > 0 && <span className={styles.lateFill} data-testid={`late-${r.key}`} style={{ width: red }} />}
+                        </span>
                         {canEdit && <span className={`${styles.handle} ${styles.start}`} aria-label={t("resizeStart", { key: r.key })} data-testid={`start-${r.key}`} onMouseDown={startDrag("start")} />}
                         {canEdit && <span className={`${styles.handle} ${styles.end}`} aria-label={t("resizeEnd", { key: r.key })} data-testid={`end-${r.key}`} onMouseDown={startDrag("end")} />}
                       </span>

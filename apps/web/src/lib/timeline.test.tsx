@@ -9,7 +9,7 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import tl from "../../messages/th/timeline.json";
-import { LABEL_MAX, LABEL_MIN, LABEL_W, PX_PER_DAY, TimelineView, offDayMask, addDays, toDay, type TLRow, type TimelineData } from "../../app/work/[ws]/p/[key]/timeline/_components/timeline-view";
+import { LABEL_MAX, LABEL_MIN, LABEL_W, PX_PER_DAY, TimelineView, offDayMask, lateFillWidth, addDays, toDay, type TLRow, type TimelineData } from "../../app/work/[ws]/p/[key]/timeline/_components/timeline-view";
 
 const person = (id: string, displayName: string) => ({ id, displayName });
 const row = (key: string, start: string, end: string, over: Partial<TLRow> = {}): TLRow => ({ key, type: "Task", title: `งาน ${key}`, status: { name: "In progress", category: "in_progress" }, start, end, progressPct: 40, lateDays: 0, assignees: [person("u1", "ผู้พัฒนาหนึ่ง")], subtasks: [], ...over });
@@ -263,15 +263,22 @@ describe("Timeline (4)", () => {
     // DE-1 30 พ.ย.–4 ธ.ค. เป็นวันทำงานทั้งหมด · DE-3 7–18 ธ.ค. ผ่านวันหยุด 10 ธ.ค. และเสาร์-อาทิตย์ 12–13 ธ.ค.
     expect(bar("DE-1")).not.toHaveAttribute("data-off-days");
     expect(bar("DE-3")).toHaveAttribute("data-off-days", "3");
+    // ส่วนแดงอยู่ก่อนเส้นวันนี้ (2 ธ.ค.) เท่านั้น: DE-3 เลยกำหนดแต่แถบเริ่ม 7 ธ.ค. หลังวันนี้ = ไม่มีแดง · DE-1 ไม่เลย = ไม่มีแดง
+    expect(screen.queryByTestId("late-DE-3")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("late-DE-1")).not.toBeInTheDocument();
     const off = (iso: string) => ["2026-12-10", "2026-12-12", "2026-12-13"].includes(iso);
     const m = offDayMask("2026-12-07", "2026-12-18", 10, off);
     expect(m.offDays).toBe(3);
     // เส้นบางสอดใต้มุมโค้งของก้อนวันทำงานทั้งสองข้าง · ก้อนวันทำงาน 3 ก้อน
     const svg = decodeURIComponent(m.mask!);
-    expect(svg).toContain("<rect x='25' y='7' width='20' height='4'");
-    expect(svg).toContain("<rect x='45' y='7' width='30' height='4'");
-    expect(svg.match(/height='18'/g)).toHaveLength(4); // svg + 3 ก้อน
+    expect(svg).toContain("<rect x='26' y='5' width='18' height='2'");
+    expect(svg).toContain("<rect x='46' y='5' width='28' height='2'");
+    expect(svg.match(/height='12'/g)).toHaveLength(4); // svg + 3 ก้อน (แถบสูง 12 px)
     expect(offDayMask("2026-11-30", "2026-12-04", 10, off)).toEqual({ offDays: 0, mask: undefined });
+    // ส่วนแดง = หัวแถบถึงวันนี้: คร่อมวันนี้ = แดงถึงเส้น · แถบจบก่อนวันนี้ = แดงทั้งแถบ · เริ่มหลังวันนี้ = ไม่มีแดง
+    expect(lateFillWidth("2026-12-07", "2026-12-10", 10, 120)).toBe(30);
+    expect(lateFillWidth("2026-12-07", "2026-12-30", 10, 120)).toBe(120);
+    expect(lateFillWidth("2026-12-07", "2026-12-02", 10, 120)).toBe(0);
   });
 
   it("ว่าง · Error มี requestId · 403", async () => {

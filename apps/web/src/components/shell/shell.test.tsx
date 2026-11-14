@@ -10,6 +10,7 @@ import { WorkspaceShell, hasBackButton, shellChrome } from "./workspace-shell";
 import { ProjectShell } from "./project-shell";
 import { Providers } from "../providers";
 import { api } from "@/lib/api";
+import { asMobile } from "@/test/mobile";
 import mw from "../../../messages/th/members-workload.json";
 
 function ProjectExample() {
@@ -129,6 +130,27 @@ describe("Workspace / Project shell", () => {
     await user.type(dialog.getByRole("textbox", { name: "ค้นหา" }), "DE-1");
     await user.click(dialog.getByRole("button", { name: "ค้นหา" }));
     expect(router.push).toHaveBeenCalledWith("/work/sample/search?q=DE-1");
+  });
+
+  it("มือถือ (W32 ตามต้นแบบ): หัวโปรเจกต์ใหญ่ + ปุ่ม มุมมอง ▾ เปิดทุกมุมมองที่มีสิทธิ์ รวม Timeline และ Settings", async () => {
+    const restore = asMobile();
+    try {
+      navigation.pathname = "/work/sample/p/DE/board";
+      navigation.search = "";
+      const user = userEvent.setup();
+      renderWithProviders(<ProjectExample />);
+      const head = (await screen.findByRole("heading", { level: 1, name: "Kanban" })).closest("header") as HTMLElement;
+      expect(within(head).getByRole("link", { name: "ย้อนกลับ" })).toHaveAttribute("href", "/work/sample/projects");
+      await user.click(within(head).getByRole("button", { name: /Kanban/ }));
+      const sheet = await screen.findByRole("dialog");
+      for (const name of ["Overview", "Kanban", "Timeline", "Calendar", "Files", "Settings"]) expect(within(sheet).getByRole("button", { name: new RegExp(name) })).toBeInTheDocument();
+      await user.click(within(sheet).getByRole("button", { name: /Timeline/ }));
+      expect(router.push).toHaveBeenCalledWith("/work/sample/p/DE/timeline");
+      // แท็บแถวเดิมของ desktop ไม่ render บนมือถือ
+      expect(screen.queryByLabelText("มุมมองโปรเจกต์")).not.toBeInTheDocument();
+    } finally {
+      restore();
+    }
   });
 
   it("Admin เห็นแท็บหลัก 8 แท็บ และ Drawer เปิดตาม query โดยรักษา filter อื่นตอนปิด", async () => {
@@ -402,8 +424,9 @@ describe("Workspace / Project shell", () => {
     const bottom = within(screen.getByRole("navigation", { name: "เมนูหลัก", hidden: true }));
     expect(
       bottom.getAllByRole("link", { hidden: true }).map((l) => l.textContent),
-    ).toEqual(["หน้าหลัก", "งานของฉัน", "กล่องข้อความ3", expect.stringMatching(/ฉัน$/)]);
-    expect(bottom.getByRole("button", { name: /โปรเจกต์/, hidden: true })).toBeInTheDocument();
+    ).toEqual(["หน้าหลัก", "งานของฉัน", "โปรเจกต์", "กล่องข้อความ3", expect.stringMatching(/ฉัน$/)]);
+    // W30 · แท็บโปรเจกต์ไปหน้ารายการโปรเจกต์ (ต้นแบบ u.projects)
+    expect(bottom.getByRole("link", { name: /โปรเจกต์/, hidden: true })).toHaveAttribute("href", "/work/sample/projects");
     expect(bottom.getByRole("link", { name: /กล่องข้อความ/, hidden: true })).toHaveAttribute("aria-current", "page");
     // Sidebar desktop ยังใช้ป้ายเดิม
     expect(within(sidebar).getByRole("link", { name: "My Tasks" })).toBeInTheDocument();

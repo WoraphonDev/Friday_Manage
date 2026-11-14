@@ -334,3 +334,39 @@ a.chipSoft:hover { background:var(--subtle); color:var(--foreground); }
 /* ค่า Custom field แบบหลายตัวเลือก (ชุดฟิลด์ของโปรเจกต์) */
 .cfChoices { display:flex; flex-wrap:wrap; gap:4px 12px; }
 .planBox.noActual { grid-template-columns:56px 1fr; }
+
+/* ===== W31 · รายละเอียด / สร้างงานบนมือถือตามต้นแบบ (iss.detail · iss.create ฐาน C) =====
+ * พื้นเทา · แถบหัวขาวติดบน · หัวข้อ 20 ตัวหนา · สถานะเป็นแคปซูล · ปุ่ม "เสร็จ" เป็นปุ่มหลักเต็มกว้าง 44
+ * คุณสมบัติและแต่ละส่วนเป็นการ์ดขาวมุม 16 ห่างขอบ 12 · ช่องกรอก / ปุ่มสูงแตะง่าย · desktop ไม่เปลี่ยน */
+@media (max-width: 760px) {
+  .panel { background: var(--background); min-height: 100%; }
+  .dhead { background: var(--card); padding: 6px 6px 6px 16px; min-height: 52px; align-items: center; }
+  .dhead :global(.button-icon) { width: 44px; height: 44px; }
+  .crumb { font-size: 13px; }
+  .headBlock { background: var(--card); padding: 14px 16px 14px; gap: 10px; border-bottom: 1px solid var(--border); }
+  .title .editValue { font-size: 20px; line-height: 1.35; }
+  .statusRow { gap: 8px; }
+  .statusRow .statusPill { flex: 0 1 auto; min-height: 30px; border-radius: 999px; padding: 0 14px; font-size: 13px; }
+  .okButton { order: 3; flex: 1 1 100%; min-height: 44px; border-radius: 12px; font-size: 15px; justify-content: center; }
+  .statusRow .meta { order: 2; font-size: 12px; }
+  .layout { padding: 12px 12px 24px; gap: 12px; }
+  .sidebar { padding-top: 0; }
+  .props { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 4px 14px; box-shadow: var(--shadow-card); }
+  .pr { min-height: 48px; font-size: 14px; }
+  .pr:last-child { border-bottom: 0; }
+  .main > .blk, .main > div > .blk {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-top: 12px; box-shadow: var(--shadow-card);
+  }
+  .blk h3 { font-size: 15px; font-weight: 600; }
+  .tabs { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 4px; gap: 4px; margin-top: 12px; }
+  .tabs button { flex: 1; min-height: 40px; border: 0; border-radius: 10px; font-size: 13px; }
+  .tabs button[aria-selected=true] { background: var(--primary-soft); color: var(--primary-text); border-bottom-color: transparent; }
+  .sidebar :global(.input), .sidebar :global(.picker-trigger) { min-height: 40px; font-size: 14px; }
+  .createForm { background: var(--background); }
+  .createForm > .createFooter { background: var(--card); box-shadow: 0 -1px 0 var(--border); }
+  .createForm > .createFooter :global(.button-primary) { flex: 1; min-height: 48px; border-radius: 12px; font-size: 15px; }
+}
+@media (max-width: 760px) {
+  .sidebar > .historyBox, .sidebar > .propsToggle + * { margin-top: 12px; }
+  .historyBox { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px; box-shadow: var(--shadow-card); }
+}

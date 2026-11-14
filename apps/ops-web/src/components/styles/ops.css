@@ -2221,3 +2221,15 @@ pre.code-box {
 .text-danger {
   color: var(--danger-text);
 }
+
+/* ---------------------------------------------------------------- W35 · Friday Ops มือถือตามต้นแบบ (ops.m ฐาน B)
+ * หัวข้อ 26 ตัวหนา · การ์ดมุม 16 มีเงา · ตัวเลข 2 คอลัมน์ · ปุ่มย้อนกลับเป็นไอคอนไม่มีกรอบ · แถบล่างแบบแคปซูล
+ * ใช้เฉพาะ class m-* ของหน้า /m (หน้ามือถือของ Ops) จึงไม่กระทบหน้าคอนโซลบนจอใหญ่ */
+.m-title { font-size: 26px; font-weight: 700; line-height: 1.35; }
+.m-back { border: 0; background: transparent; border-radius: 12px; }
+.m-back:hover { background: var(--hover); }
+.m-card { border-radius: 16px; box-shadow: var(--shadow-card); }
+.m-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.m-stat { border-radius: 16px; box-shadow: var(--shadow-card); }
+.m-btn { min-height: 44px; border-radius: 12px; }
+.m-tab[aria-current="page"] svg, .m-tab[aria-selected="true"] svg { background: var(--primary-soft); border-radius: 14px; padding: 2px 14px; box-sizing: content-box; }

@@ -4,6 +4,9 @@ import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Tabs } from "@/components/ui";
+import { MobileHeader } from "@/components/shell/mobile-header";
+import { useWorkspace } from "@/components/shell/workspace-shell";
+import { useIsMobile } from "@/lib/use-mobile";
 import { cn } from "@/lib/utils";
 import { HoursTab } from "./hours-tab";
 import { NotifyTab } from "./notify-tab";
@@ -18,6 +21,8 @@ export type ProfileTab = (typeof PROFILE_TABS)[number];
 /** หน้า I · Profile ของฉัน: การ์ดสรุป + 4 แท็บ (แท็บอยู่ใน ?tab= เพื่อให้ลิงก์จาก Inbox / OAuth กลับมาที่แท็บเดิมได้) */
 export function ProfilePage({ ws }: { ws: string }) {
   const t = useTranslations("profile");
+  const mobile = useIsMobile();
+  const { me } = useWorkspace();
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -36,7 +41,7 @@ export function ProfilePage({ ws }: { ws: string }) {
     hours: <HoursTab ws={ws} />,
     sec: <SecurityTab ws={ws} />,
   };
-  return (
+  const body = (
     <div className={styles.page}>
       <SummaryCard ws={ws} />
       <section className={cn("card", styles.main)} aria-label={t("title")}>
@@ -44,4 +49,13 @@ export function ProfilePage({ ws }: { ws: string }) {
       </section>
     </div>
   );
+  // W30 · มือถือ (แท็บ "ฉัน" ของเมนูล่าง · ต้นแบบ ws.profile): หัวใหญ่แบบ B · หมวดเป็นชิป · การ์ดสรุปกะทัดรัด (profile.module.css)
+  if (mobile)
+    return (
+      <div className={cn("m-page", styles.mobile)}>
+        <MobileHeader title={t("mobileTitle")} subtitle={me.displayName} />
+        {body}
+      </div>
+    );
+  return body;
 }

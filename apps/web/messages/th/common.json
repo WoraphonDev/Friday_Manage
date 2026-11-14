@@ -109,7 +109,9 @@
     "workHours": "เวลาทำงาน / วันลา",
     "securitySettings": "ความปลอดภัย",
     "membersInvite": "สมาชิก & เชิญ",
-    "importPlan": "นำเข้าแผน"
+    "importPlan": "นำเข้าแผน",
+    "mobileView": "มุมมอง · {name}",
+    "mobileViews": "มุมมองของ {name}"
   },
   "roles": {
     "owner": "Owner",

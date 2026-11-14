@@ -365,5 +365,6 @@
     "regenerateTitle": "ออก Backup code ชุดใหม่",
     "regenerateIntro": "ชุดเดิมจะใช้ไม่ได้ทันที · ใส่รหัสจากแอปหรือ Backup code เพื่อยืนยัน",
     "regenerateConfirm": "ออกชุดใหม่"
-  }
+  },
+  "mobileTitle": "โปรไฟล์"
 }

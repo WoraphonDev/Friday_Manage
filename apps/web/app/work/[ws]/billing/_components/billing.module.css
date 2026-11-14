@@ -89,3 +89,11 @@
 .checkoutHead { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .checkoutHead h1 { margin:0; font-size:22px; }
 .secure { display:inline-flex; align-items:center; gap:6px; font-size:var(--text-label); color:var(--muted); }
+
+/* W33 · มือถือตามต้นแบบ (ฐาน B): ขอบหน้า 12 · การ์ดมุม 16 มีเงา · desktop ไม่เปลี่ยน */
+@media (max-width: 760px) {
+  .page { padding: 8px 12px 24px; gap: 12px; }
+  .card { border-radius: 16px; box-shadow: var(--shadow-card); }
+  .section { padding: 14px; }
+  .panel { border-radius: 14px; }
+}

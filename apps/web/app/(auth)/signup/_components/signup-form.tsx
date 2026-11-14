@@ -8,6 +8,7 @@ import { Mail } from "lucide-react";
 import { Button, Input, LoadingState } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/lib/use-mobile";
 import { destinationAfterLogin } from "../../_components/navigation";
 import {
   CardLayout,
@@ -47,6 +48,8 @@ export function SignupForm() {
 
 function SignupFlow() {
   const t = useTranslations(NS);
+  // มือถือ (W28 ตามต้นแบบ): ฟอร์มอีเมลก่อน แล้วจึง "หรือ" + Google และลิงก์เข้าสู่ระบบท้ายการ์ด
+  const mobile = useIsMobile();
   const router = useRouter();
   const params = useSearchParams();
   const returnTo = safeReturnTo(params.get("returnTo"));
@@ -246,16 +249,24 @@ function SignupFlow() {
       <Heading
         title={t("signup.title")}
         subtitle={
-          <>
-            {t("signup.hasAccount")}{" "}
-            <Link href={loginHref} style={{ fontWeight: 600 }}>
-              {t("signup.login")}
-            </Link>
-          </>
+          mobile ? (
+            t("brand.noCard")
+          ) : (
+            <>
+              {t("signup.hasAccount")}{" "}
+              <Link href={loginHref} style={{ fontWeight: 600 }}>
+                {t("signup.login")}
+              </Link>
+            </>
+          )
         }
       />
-      <OAuthLink provider="google" label={t("signup.google")} next={returnTo ?? "/onboarding"} />
-      <div className={styles.or}>{t("signup.orEmail")}</div>
+      {!mobile && (
+        <>
+          <OAuthLink provider="google" label={t("signup.google")} next={returnTo ?? "/onboarding"} />
+          <div className={styles.or}>{t("signup.orEmail")}</div>
+        </>
+      )}
       <form className={styles.form} onSubmit={submit} noValidate>
         {!!error && !emailTaken && <FormAlert error={error} />}
         <Input
@@ -327,6 +338,18 @@ function SignupFlow() {
           {busy ? t("common.working") : t("signup.submit")}
         </Button>
       </form>
+      {mobile && (
+        <>
+          <div className={styles.or}>{t("common.or")}</div>
+          <OAuthLink provider="google" label={t("signup.google")} next={returnTo ?? "/onboarding"} />
+          <div className={cn(styles.muted, styles.center)}>
+            {t("signup.hasAccount")}{" "}
+            <Link href={loginHref} style={{ fontWeight: 600 }}>
+              {t("signup.login")}
+            </Link>
+          </div>
+        </>
+      )}
     </SplitLayout>
   );
 }

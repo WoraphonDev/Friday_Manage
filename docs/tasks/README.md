@@ -219,6 +219,7 @@
 | งาน | ชื่อ | Wave | รอ merge | Lane หลัก |
 |---|---|---|---|---|
 | [W27](W27-mobile-foundation.md) | เว็บมือถือ: ฐานร่วม (token · เมนูล่าง · bottom sheet · ActionSheet · เส้นแบ่ง 760) | มือถือ-1 | — | `src/styles/{tokens,globals}.css` (ท้ายไฟล์ใน media มือถือ) · `components/ui/overlays.tsx` |
+| [W28](W28-mobile-auth.md) | เว็บมือถือ: เข้าสู่ระบบ สมัคร ลืมรหัสผ่าน รับคำเชิญ Onboarding | มือถือ-2 | W27 | `apps/web/app/(auth)/**` |
 
 ## ตั้ง environment ของ Codex
 

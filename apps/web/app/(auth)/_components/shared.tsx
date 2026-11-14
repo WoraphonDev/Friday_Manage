@@ -14,9 +14,10 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
-import { FridayLoader, FridayLogo } from "@/components/brand/friday-logo";
+import { FridayLoader, FridayLogo, FridayMark } from "@/components/brand/friday-logo";
 import { Button, buttonVariants } from "@/components/ui";
 import { ApiError, supportId } from "@/lib/api";
+import { useIsMobile } from "@/lib/use-mobile";
 import { cn } from "@/lib/utils";
 import styles from "./auth.module.css";
 
@@ -36,6 +37,15 @@ export function Logo({
     <Link href={href} className={styles.logo}>
       <FridayLogo tone={tone} size={size} label={t("brand.name")} />
     </Link>
+  );
+}
+
+/** มือถือ (W28 ตามต้นแบบ): ไทล์โลโก้ใหญ่กลางจอเหนือการ์ด · ซ่อนบน desktop ด้วย CSS และซ่อนจากโปรแกรมอ่านหน้าจอ (ชื่อระบบอยู่ใน Logo แล้ว) */
+function MobileMark() {
+  return (
+    <div className={styles.mobileMark} aria-hidden="true">
+      <FridayMark />
+    </div>
   );
 }
 
@@ -213,6 +223,7 @@ export function SplitLayout({
 }) {
   const t = useTranslations(NS);
   const root = useRef<HTMLDivElement>(null);
+  const mobile = useIsMobile();
   usePointerParallax(root);
   return (
     <div className={styles.split} ref={root}>
@@ -259,7 +270,15 @@ export function SplitLayout({
         </div>
       </section>
       <section className={styles.formSide}>
+        <MobileMark />
         <div className={styles.box}>{children}</div>
+        {/* มือถือซ่อนแผงแบรนด์ จึงย้ายลิขสิทธิ์และลิงก์นโยบายมาไว้ใต้การ์ด */}
+        {mobile && variant === "login" && (
+          <p className={styles.mobileFoot}>
+            {t("brand.copyright")} · <Link href="/legal/privacy">{t("brand.privacy")}</Link> ·{" "}
+            <Link href="/legal/terms">{t("brand.terms")}</Link>
+          </p>
+        )}
       </section>
     </div>
   );
@@ -318,6 +337,7 @@ export function CardLayout({
   return (
     <main className={styles.cardPage}>
       <Logo />
+      <MobileMark />
       <div className={cn(styles.card, wide && styles.cardWide)}>{children}</div>
       {footer}
     </main>

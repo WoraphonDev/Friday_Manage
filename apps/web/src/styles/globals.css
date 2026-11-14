@@ -2378,3 +2378,14 @@ a.m-card:hover { border-color: var(--border-strong); }
 .m-view-switch > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .m-view-switch > svg { flex: none; color: var(--muted); }
 .m-project-head { padding-bottom: 4px; }
+
+/* ===== W31 · Drawer แบบ bare (รายละเอียด / สร้างงาน) บนมือถือเต็มจอไม่มีขอบขาว (หัวและเนื้อหาจัดระยะเอง) ===== */
+@media (max-width: 760px) {
+  .drawer.drawer-bare { padding: 0; }
+}
+
+/* ===== W33 · Admin Console บนมือถือตามต้นแบบ (adm.*): ไม่มีแถบบนสีเข้ม (ย้อนกลับด้วยปุ่ม ← และเมนูล่าง) · เว้นที่ให้เมนูล่าง ===== */
+@media (max-width: 760px) {
+  .topbar:has(> .admin-pill) { display: none; }
+  .workspace-body.chrome-admin .workspace-main { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+}

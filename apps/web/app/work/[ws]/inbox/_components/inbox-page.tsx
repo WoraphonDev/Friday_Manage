@@ -111,7 +111,8 @@ export function InboxPage({ ws }: { ws: string }) {
   const groups = (["today", "yesterday", "earlier"] as const).map((g) => ({ g, list: items.filter((n) => { const d = bkkDate(n.createdAt); return g === "today" ? d === now : g === "yesterday" ? d === yesterday : d < yesterday; }) })).filter((x) => x.list.length);
 
   return (
-    <>
+    // หน้า Inbox สูงพอดีจอ: หัว แท็บ และรายละเอียดอยู่กับที่ เลื่อนเฉพาะรายการแจ้งเตือน
+    <div className={styles.page}>
       <header className={styles.head}>
         <div className={styles.headRow}>
           <div>
@@ -161,7 +162,7 @@ export function InboxPage({ ws }: { ws: string }) {
           }} />}
         </aside>
       </div>
-    </>
+    </div>
   );
 }
 

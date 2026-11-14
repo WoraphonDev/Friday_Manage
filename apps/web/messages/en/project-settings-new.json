@@ -254,7 +254,17 @@
       "moveToPhase": "Target task group",
       "noPhase": "No task group",
       "removeEmpty": "No tasks in this Module. It can be deleted right away",
-      "removeConfirm": "Delete Module"
+      "removeConfirm": "Delete Module",
+      "colorOf": "Color of {name}",
+      "colorPreset": "Preset colors",
+      "colorCustom": "Custom",
+      "colorWheel": "Pick a color",
+      "colorHex": "Color code",
+      "colorNearLate": "This color is close to the red used for overdue work, so bars will be hard to tell apart. Try a color from the set above",
+      "previewTitle": "Timeline preview",
+      "previewNormal": "On track",
+      "previewLate": "Overdue",
+      "colorDone": "Done"
     },
     "perms": {
       "title": "Permissions by Role",

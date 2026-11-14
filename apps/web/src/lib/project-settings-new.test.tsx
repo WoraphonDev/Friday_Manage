@@ -296,7 +296,31 @@ describe("Project Settings (L2)", () => {
     const add = await screen.findByRole("dialog", { name: "เพิ่ม Module" });
     await user.type(within(add).getByLabelText("ชื่อ Module"), "รายงาน");
     await user.click(within(add).getByRole("button", { name: "เพิ่ม" }));
-    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "POST", path: "/w/sample/projects/DE/modules", body: { name: "รายงาน" } }));
+    // Module ใหม่ได้สีแรกในชุดที่ยังไม่มีใครใช้ (Module A ใช้ #1d4ed8 ซึ่งไม่อยู่ในชุด)
+    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "POST", path: "/w/sample/projects/DE/modules", body: { name: "รายงาน", color: "#2563eb" } }));
+  });
+
+  it("Modules: เลือกสีจากชุด · ใส่รหัสสีเอง · เตือนเมื่อใกล้สีแดงของงานเลยกำหนด · บันทึกตอนกดเสร็จ", async () => {
+    const user = userEvent.setup();
+    settings("modules");
+    await user.click(await screen.findByRole("button", { name: "สีของ Module B" }));
+    let pop = await screen.findByRole("dialog", { name: "สีของ Module B" });
+    await user.click(within(pop).getByRole("button", { name: "#0d9488" }));
+    expect(within(pop).getByRole("button", { name: "#0d9488" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(pop).queryByRole("status")).not.toBeInTheDocument();
+    const before = calls.length;
+    await user.click(within(pop).getByRole("button", { name: "เสร็จ" }));
+    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "PATCH", path: "/w/sample/projects/DE/modules/m-b", body: { color: "#0d9488" } }));
+    expect(calls.length).toBe(before + 1);
+    // รหัสสีแดงอมชมพู: ขึ้นเตือนทันที แต่ยังบันทึกได้
+    await user.click(screen.getByRole("button", { name: "สีของ Module A" }));
+    pop = await screen.findByRole("dialog", { name: "สีของ Module A" });
+    const hex = within(pop).getByLabelText("รหัสสี");
+    await user.clear(hex);
+    await user.type(hex, "#a8325a");
+    expect(within(pop).getByRole("status")).toHaveTextContent("ใกล้สีแดงของงานที่เลยกำหนด");
+    await user.click(within(pop).getByRole("button", { name: "เสร็จ" }));
+    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "PATCH", path: "/w/sample/projects/DE/modules/m-a", body: { color: "#a8325a" } }));
   });
 
   it("สิทธิ์ของ Role: ตาราง 10 แถว · Admin เปิดเสมอ · เปลี่ยนแล้ว PUT · ล้มเหลวคืนค่าเดิม", async () => {

@@ -83,6 +83,8 @@ export function MyTasksPage({ ws }: { ws: string }) {
   const group: GroupBy = mobile ? "due" : groupChoice;
   const [project, setProject] = useState("");
   const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({ "due:later": true, "due:none": true });
+  // กลุ่มที่กด "ดูอีก" แล้ว แสดงครบทุกงาน
+  const [fullGroups, setFullGroups] = useState<Record<string, boolean>>({});
   const [dueFor, setDueFor] = useState<{ item: TaskItem; date: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const dragKey = useRef<string | null>(null);
@@ -146,7 +148,8 @@ export function MyTasksPage({ ws }: { ws: string }) {
   const dayNames = t.raw("days") as string[];
 
   return (
-    <>
+    // จอกว้าง: หัวและแผงสรุปอยู่กับที่ เลื่อนเฉพาะรายการงาน (เหมือน Inbox)
+    <div className={styles.tasksPage}>
       <header className={styles.head}>
         <div className={styles.headRow}>
           <div>
@@ -184,8 +187,8 @@ export function MyTasksPage({ ws }: { ws: string }) {
           </div>
         </div>
       </header>
-      <div className={styles.body} style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" }}>
-        <section className={styles.card} style={{ flex: "999 1 620px", overflow: "hidden" }} aria-label={t("title")}>
+      <div className={`${styles.body} ${styles.tasksBody}`}>
+        <section className={`${styles.card} ${styles.taskList}`} aria-label={t("title")}>
           {everything.length === 0 && <EmptyState title={project ? t("emptyFiltered") : t("empty")} description={t("emptyHint")} />}
           {everything.length > 0 && data.groups.map((g) => {
             const id = `${group}:${g.key}`;
@@ -217,15 +220,22 @@ export function MyTasksPage({ ws }: { ws: string }) {
                   <Badge>{g.count}</Badge>
                   <span className={styles.ghSub}>{sub}</span>
                 </button>
-                {!isClosed && g.items.map((i) => (
+                {!isClosed && (fullGroups[id] ? g.items : g.items.slice(0, GROUP_LIMIT)).map((i) => (
                   <TaskRow key={i.key} item={i} ws={ws} year={year} busy={busy === i.key} onToggle={(done) => setDone(i, done)} onMove={() => setDueFor({ item: i, date: i.planEnd ?? data.today })} onDragStart={() => { dragKey.current = i.key; }} />
                 ))}
+                {!isClosed && g.items.length > GROUP_LIMIT && (
+                  <button type="button" className={styles.groupMore} aria-expanded={!!fullGroups[id]} onClick={() => setFullGroups((f) => ({ ...f, [id]: !f[id] }))}>
+                    {fullGroups[id] ? t("groupLess") : t("groupMore", { count: g.items.length - GROUP_LIMIT })}
+                  </button>
+                )}
                 {!isClosed && g.items.length === 0 && <div className={styles.empty}>{t("groupEmpty")}</div>}
               </div>
             );
           })}
+          {/* คำแนะนำการลาก/ติ๊กอยู่ท้ายรายการ แผงขวาจึงพอดีจอโดยไม่ต้องเลื่อน */}
+          {everything.length > 0 && <div className={`muted ${styles.small} ${styles.listHint}`}>{t("hint")}</div>}
         </section>
-        <aside style={{ flex: "1 1 300px", minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
+        <aside className={styles.taskSide}>
           <section className={styles.card} aria-label={t("summaryTitle")}>
             <div className={styles.chead}><h2>{t("summaryTitle")}</h2></div>
             <div className={styles.twoCol}>
@@ -239,7 +249,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
             <section className={styles.card}>
               <div className={styles.chead}><h2>{t("byProject")}</h2></div>
               <div className={styles.mod}>
-                {byProject.map((p) => (
+                {[...byProject].sort((a, b) => b.n - a.n).slice(0, SIDE_PROJECTS).map((p) => (
                   <div key={p.key}>
                     <div className={styles.modLine}>
                       <span style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 600 }}><span className={styles.dot} style={{ background: p.color }} />{p.name}</span>
@@ -248,6 +258,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
                     <div className={styles.bar} style={{ height: 6 }}><div style={{ width: `${Math.round((p.n / maxProject) * 100)}%`, background: p.color }} /></div>
                   </div>
                 ))}
+                {byProject.length > SIDE_PROJECTS && <div className={`muted ${styles.small}`}>{t("byProjectMore", { count: byProject.length - SIDE_PROJECTS })}</div>}
               </div>
             </section>
           )}
@@ -259,13 +270,17 @@ export function MyTasksPage({ ws }: { ws: string }) {
             </div>
             <div className={styles.chartLabels} style={{ gap: 10, paddingBottom: 14 }}>{dayNames.map((d) => <span key={d}>{d}</span>)}</div>
           </section>
-          <div className={`muted ${styles.small}`} style={{ padding: "0 4px" }}>{t("hint")}</div>
         </aside>
       </div>
       {dueFor && <DueDialog ws={ws} item={dueFor.item} initial={dueFor.date} onClose={() => setDueFor(null)} onDone={async () => { setDueFor(null); await refresh(); }} />}
-    </>
+    </div>
   );
 }
+
+/** กลุ่มใหญ่ (เช่น ภายหลัง หลายร้อยงาน) แสดงก่อน 30 งาน ที่เหลือกดดูเพิ่ม · หน้าไม่ยาวเกินและไม่ต้องวาดทุกแถว */
+const GROUP_LIMIT = 30;
+/** แผงขวาแสดง 3 โปรเจกต์ที่มีงานมากสุด แผงจึงพอดีจอและไม่ต้องเลื่อน */
+const SIDE_PROJECTS = 3;
 
 const MOBILE_FILTERS = { focus: ["late", "today"], week: ["late", "today", "this_week"], all: ["late", "today", "this_week", "next_week", "later", "none"] } as const;
 

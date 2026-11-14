@@ -103,6 +103,8 @@
       "phase_end": "กลุ่มงานครบ",
       "holiday": "วันหยุด"
     },
+    "upcomingMore": "ดูอีก {count} รายการ",
+    "upcomingLess": "แสดงน้อยลง",
     "inDays": "อีก {days} วัน",
     "workloadTitle": "Workload ทีมสัปดาห์นี้",
     "workloadTotal": "{md} / {capacity} MD",
@@ -132,6 +134,8 @@
     },
     "range": "{from} – {to}",
     "rangeFrom": "ตั้งแต่ {from}",
+    "groupMore": "ดูอีก {count} งาน",
+    "groupLess": "แสดงน้อยลง",
     "groupEmpty": "ไม่มีงานในกลุ่มนี้",
     "expand": "ขยายกลุ่ม {name}",
     "collapse": "ย่อกลุ่ม {name}",
@@ -165,6 +169,7 @@
       "done": "เสร็จวันนี้"
     },
     "byProject": "แยกตามโปรเจกต์",
+    "byProjectMore": "และอีก {count} โปรเจกต์",
     "byProjectLine": "{count} งาน · {md} MD",
     "weekTitle": "สัปดาห์นี้",
     "weekTotal": "{md} MD",

@@ -373,27 +373,55 @@ function InboxCard({ ws, items, loading }: { ws: string; items?: InboxItem[]; lo
 }
 const EVENT_KEYS: Record<string, true> = { "issue.assigned": true, "issue.commented": true, "issue.mentioned": true, "issue.status_changed": true, "issue.review_requested": true, "issue.due_soon": true, "issue.overdue": true, "due_request.created": true, "due_request.decided": true, "member.joined": true };
 
+/** แสดงก่อน 6 รายการ ที่เหลือกดดูเพิ่ม · การ์ดอยู่คอลัมน์ข้าง ถ้าแสดงครบ 30 วันจะยาวกว่าคอลัมน์หลักมาก */
+const UPCOMING_LIMIT = 6;
+
 function Upcoming({ data, year }: { data: HomeData; year: YearFormat }) {
   const t = useTranslations("home-my-tasks.home");
-  const parts = (iso: string) => ({ d: String(Number(iso.slice(8, 10))), m: formatDate(iso, year).split(" ")[1] ?? "" });
+  const [all, setAll] = useState(false);
+  const shown = all ? data.upcoming : data.upcoming.slice(0, UPCOMING_LIMIT);
+  const hidden = data.upcoming.length - shown.length;
+  // วันเดียวกันรวมเป็นกลุ่มเดียว แสดงวันที่และ "อีก N วัน" ครั้งเดียว
+  const days: { date: string; events: HomeData["upcoming"] }[] = [];
+  for (const e of shown) {
+    const last = days[days.length - 1];
+    if (last?.date === e.date) last.events.push(e);
+    else days.push({ date: e.date, events: [e] });
+  }
   return (
     <section className={styles.card}>
       <div className={styles.chead}><h2>{t("upcoming")} <span className="muted" style={{ fontWeight: 500 }}>· {t("upcomingSub")}</span></h2></div>
       {!data.upcoming.length && <div className={styles.empty}>{t("upcomingEmpty")}</div>}
-      <div style={{ padding: "8px 0" }}>
-        {data.upcoming.map((e, i) => {
-          const days = Math.round((Date.parse(e.date) - Date.parse(data.today)) / 86_400_000);
-          const p = parts(e.date);
-          return (
-            <div className={styles.upRow} key={`${e.date}-${e.type}-${i}`}>
-              <div className={styles.upDate}><b>{p.d}</b><span className="muted" style={{ fontSize: 11 }}>{p.m}</span></div>
-              <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill={e.type === "holiday" ? "var(--chart-neutral)" : "var(--chart-primary)"} /></svg>
-              <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600, fontSize: 12 }}>{t(`upcomingTypes.${e.type}`)} · {e.title}</div>{e.project && <div className={`muted ${styles.small}`}>{e.project}</div>}</div>
-              <Badge>{t("inDays", { days })}</Badge>
+      <div className={styles.upList}>
+        {days.map(({ date, events }) => (
+          <div className={styles.upDay} key={date}>
+            <div className={styles.upDate}>
+              <b>{Number(date.slice(8, 10))}</b>
+              <span>{formatDate(date, year).split(" ")[1] ?? ""}</span>
             </div>
-          );
-        })}
+            <div className={styles.upEvents}>
+              {events.map((e, i) => {
+                const label = `${t(`upcomingTypes.${e.type}`)} · ${e.title}`;
+                return (
+                  <div className={styles.upEvent} key={`${e.type}-${i}`}>
+                    <svg width="10" height="10" viewBox="0 0 14 14" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="9" transform="rotate(45 7 7)" fill={e.type === "holiday" ? "var(--chart-neutral)" : "var(--chart-primary)"} /></svg>
+                    <div className={styles.upText}>
+                      <div className={styles.upTitle} title={label}>{label}</div>
+                      {e.project && <div className={styles.upProject}>{e.project}</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <Badge>{t("inDays", { days: Math.round((Date.parse(date) - Date.parse(data.today)) / 86_400_000) })}</Badge>
+          </div>
+        ))}
       </div>
+      {data.upcoming.length > UPCOMING_LIMIT && (
+        <button type="button" className={styles.upMore} aria-expanded={all} onClick={() => setAll((v) => !v)}>
+          {all ? t("upcomingLess") : t("upcomingMore", { count: hidden })}
+        </button>
+      )}
     </section>
   );
 }

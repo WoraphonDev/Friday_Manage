@@ -10,6 +10,7 @@ import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import hmt from "../../messages/th/home-my-tasks.json";
 import { HomePage } from "../../app/work/[ws]/my-tasks/_components/home-page";
 import { MyTasksPage, dropTarget, weekLoad, weekStartOf } from "../../app/work/[ws]/my-tasks/_components/my-tasks-page";
+import { ProjectsPage } from "../../app/work/[ws]/projects/_components/projects-page";
 import type { HomeData, MyIssues, TaskItem } from "../../app/work/[ws]/my-tasks/_components/types";
 
 const person = (id: string, displayName: string) => ({ id, displayName, initials: displayName.slice(0, 2) });
@@ -188,6 +189,24 @@ describe("Home (E / M5)", () => {
     server.use(http.get("*/api/v1/w/:ws/home", () => errorBody(403, "forbidden")));
     mount(<HomePage ws="sample" />);
     expect(await screen.findByRole("heading", { name: /ไม่มีสิทธิ์/ })).toBeInTheDocument();
+  });
+});
+
+describe("รายการโปรเจกต์มือถือ (W30 · ต้นแบบ u.projects)", () => {
+  it("การ์ดโปรเจกต์พร้อมความคืบหน้าและป้ายสุขภาพ · ตัวกรอง ทั้งหมด / มีงานของฉัน / เสี่ยง · ปุ่มสร้างโปรเจกต์", async () => {
+    const user = userEvent.setup();
+    mount(<ProjectsPage ws="sample" />);
+    // Sidebar ของ shell ใน test มีลิงก์ชื่อเดียวกัน จึงเลือกการ์ดของหน้า
+    const cardOf = async () => (await screen.findAllByRole("link", { name: /แผนพัฒนาผลิตภัณฑ์/ })).find((a) => a.classList.contains("m-card")) as HTMLElement;
+    const card = await cardOf();
+    expect(card).toHaveAttribute("href", "/work/sample/p/DE");
+    expect(card).toHaveTextContent("ความคืบหน้า 22%");
+    expect(card).toHaveTextContent("ล่าช้า");
+    const filters = screen.getByRole("group", { name: "ตัวกรองโปรเจกต์" });
+    await user.click(within(filters).getByRole("button", { name: /เสี่ยง/ }));
+    expect(within(filters).getByRole("button", { name: /เสี่ยง/ })).toHaveAttribute("aria-pressed", "true");
+    expect(await cardOf()).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "สร้างโปรเจกต์" })).toHaveAttribute("href", "/work/sample/new-project");
   });
 });
 

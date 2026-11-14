@@ -221,6 +221,7 @@
 | [W27](W27-mobile-foundation.md) | เว็บมือถือ: ฐานร่วม (token · เมนูล่าง · bottom sheet · ActionSheet · เส้นแบ่ง 760) | มือถือ-1 | — | `src/styles/{tokens,globals}.css` (ท้ายไฟล์ใน media มือถือ) · `components/ui/overlays.tsx` |
 | [W28](W28-mobile-auth.md) | เว็บมือถือ: เข้าสู่ระบบ สมัคร ลืมรหัสผ่าน รับคำเชิญ Onboarding | มือถือ-2 | W27 | `apps/web/app/(auth)/**` |
 | [W29](W29-mobile-workspace.md) | เว็บมือถือ: หน้าหลัก งานของฉัน กล่องข้อความ | มือถือ-3 | W28 | `my-tasks/_components` (ส่วนมือถือ) · `inbox-page.tsx` · `shell/mobile-header.tsx` |
+| [W30](W30-mobile-all.md) | เว็บมือถือ: หน้าที่เหลือทั้งหมด (Workspace · งาน · โปรเจกต์ · Admin · Billing · Help · สาธารณะ · Ops) | มือถือ-4 | W29 | CSS module ทุกหน้า (ใน media มือถือ) · `project-shell.tsx` · `projects/**` · `ops.css` |
 
 ## ตั้ง environment ของ Codex
 

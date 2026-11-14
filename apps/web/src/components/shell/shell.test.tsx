@@ -10,6 +10,7 @@ import { WorkspaceShell, hasBackButton, shellChrome } from "./workspace-shell";
 import { ProjectShell } from "./project-shell";
 import { Providers } from "../providers";
 import { api } from "@/lib/api";
+import { asMobile } from "@/test/mobile";
 import mw from "../../../messages/th/members-workload.json";
 
 function ProjectExample() {
@@ -129,6 +130,27 @@ describe("Workspace / Project shell", () => {
     await user.type(dialog.getByRole("textbox", { name: "ค้นหา" }), "DE-1");
     await user.click(dialog.getByRole("button", { name: "ค้นหา" }));
     expect(router.push).toHaveBeenCalledWith("/work/sample/search?q=DE-1");
+  });
+
+  it("มือถือ (W32 ตามต้นแบบ): หัวโปรเจกต์ใหญ่ + ปุ่ม มุมมอง ▾ เปิดทุกมุมมองที่มีสิทธิ์ รวม Timeline และ Settings", async () => {
+    const restore = asMobile();
+    try {
+      navigation.pathname = "/work/sample/p/DE/board";
+      navigation.search = "";
+      const user = userEvent.setup();
+      renderWithProviders(<ProjectExample />);
+      const head = (await screen.findByRole("heading", { level: 1, name: "Kanban" })).closest("header") as HTMLElement;
+      expect(within(head).getByRole("link", { name: "ย้อนกลับ" })).toHaveAttribute("href", "/work/sample/projects");
+      await user.click(within(head).getByRole("button", { name: /Kanban/ }));
+      const sheet = await screen.findByRole("dialog");
+      for (const name of ["Overview", "Kanban", "Timeline", "Calendar", "Files", "Settings"]) expect(within(sheet).getByRole("button", { name: new RegExp(name) })).toBeInTheDocument();
+      await user.click(within(sheet).getByRole("button", { name: /Timeline/ }));
+      expect(router.push).toHaveBeenCalledWith("/work/sample/p/DE/timeline");
+      // แท็บแถวเดิมของ desktop ไม่ render บนมือถือ
+      expect(screen.queryByLabelText("มุมมองโปรเจกต์")).not.toBeInTheDocument();
+    } finally {
+      restore();
+    }
   });
 
   it("Admin เห็นแท็บหลัก 8 แท็บ และ Drawer เปิดตาม query โดยรักษา filter อื่นตอนปิด", async () => {

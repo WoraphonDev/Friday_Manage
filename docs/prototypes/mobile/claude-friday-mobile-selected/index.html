@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Friday Manage · Mobile (ดีไซน์ที่เลือก · Unified) — ต้นแบบ ไม่ใช่ production</title>
+<!-- engine/token/data ใช้ร่วมจากแกลเลอรีเดิม (อ่านอย่างเดียว ไม่แก้) -->
+<link rel="stylesheet" href="../claude-friday-mobile-complete/engine/tokens.css">
+<link rel="stylesheet" href="../claude-friday-mobile-complete/engine/fm.css">
+<link rel="stylesheet" href="unified.css">
+</head>
+<body>
+<div class="U">
+  <aside aria-label="โฟลว์และตัวนำทางดีไซน์">
+    <header class="gh"><h1><span class="logo"><i></i><i></i><i></i><i></i></span>Friday Mobile · Unified</h1><div class="cov" id="cov">กำลังโหลด…</div></header>
+    <div class="tabsel" role="group" aria-label="แผง"><button data-pane="flows" aria-pressed="true">โฟลว์หลัก</button><button data-pane="nav" aria-pressed="false">ทุกหน้า (Design navigator)</button></div>
+    <div class="pane" id="flows"></div>
+    <div class="pane" id="nav" hidden>
+      <div class="ctl">
+        <input id="q" type="search" placeholder="ค้นหา ID / ชื่อไทย / ไฟล์ต้นทาง" aria-label="ค้นหา">
+        <select id="fMod" aria-label="กรองโมดูล"><option value="">ทุกโมดูล</option></select>
+        <select id="fBase" aria-label="กรองฐาน"><option value="">ทุกฐาน</option><option value="B">ฐาน B</option><option value="A">ฐาน A</option><option value="C">ฐาน C</option><option value="N">เพิ่มใหม่</option></select>
+      </div>
+      <nav id="lst" aria-label="ทุกหน้าและ popup"></nav>
+    </div>
+  </aside>
+  <main class="stage">
+    <div class="tb" role="toolbar" aria-label="ตัวควบคุมพรีวิว">
+      <button class="btn sm" id="home">หน้าหลัก</button>
+      <span class="grpb" id="wBtns" aria-label="ความกว้าง"><button data-w="320">320</button><button data-w="375">375</button><button data-w="390">390</button><button data-w="430">430</button></span>
+      <span class="sp"></span>
+      <label><input type="checkbox" id="dark"> มืด</label>
+      <label><input type="checkbox" id="kb"> คีย์บอร์ด</label>
+      <label><input type="checkbox" id="land"> แนวนอน</label>
+      <button class="btn sm" id="restart">รีเซ็ตโฟลว์</button>
+    </div>
+    <div class="sts" id="sts" aria-label="สถานะ"></div>
+    <div class="canvas"><div style="display:flex;flex-direction:column;align-items:center"><div class="crumb" id="crumb"></div><div class="ph" id="ph" role="region" aria-label="พรีวิวมือถือ"></div></div></div>
+    <div id="canvas" hidden></div>
+  </main>
+  <section class="info" id="info" aria-label="ข้อมูลหน้า"></section>
+</div>
+<script src="../claude-friday-mobile-complete/engine/fm.js"></script>
+<script src="../claude-friday-mobile-complete/data/b1-public-auth.js"></script>
+<script src="../claude-friday-mobile-complete/data/b2-workspace.js"></script>
+<script src="../claude-friday-mobile-complete/data/b3-project.js"></script>
+<script src="../claude-friday-mobile-complete/data/b4-issue-admin-billing-help.js"></script>
+<script src="../claude-friday-mobile-complete/data/b5-ops.js"></script>
+<script src="unified-data.js"></script>
+<script src="unified.js"></script>
+</body>
+</html>

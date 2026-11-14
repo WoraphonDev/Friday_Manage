@@ -1,5 +1,7 @@
 {
   "site": {
+    "menu": "Menu",
+    "language": "Language",
     "help": "Help center",
     "nav": "Site menu",
     "features": "Features",

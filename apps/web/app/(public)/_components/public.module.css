@@ -27,16 +27,16 @@
 .shine:active { transform:scale(.975); }
 /* ตัวสลับภาษา/ธีมบนหัวหน้าสาธารณะ: แถบมนสีอ่อน ตัวที่เลือกเป็นการ์ดลอย (ไม่ใช้พื้นทึบ เพื่อไม่แย่งสายตาจากปุ่มทดลองใช้) */
 .prefs { display:flex; align-items:center; gap:8px; }
-.prefs [role="group"] { align-self:center; gap:2px; padding:3px; border:1px solid var(--border); border-radius:999px; background:var(--subtle); }
-.prefs [role="group"] button { min-height:30px; min-width:30px; padding:0 12px; border:0; border-radius:999px; background:transparent; color:var(--muted); font-weight:500; transition:background .15s, color .15s; }
-.prefs [role="group"] button:has(svg) { padding:0 8px; }
-.prefs [role="group"] button + button { border-left:0; }
-.prefs [role="group"] button:hover { color:var(--foreground); }
-.prefs [role="group"] button[aria-pressed="true"] { background:var(--card); color:var(--foreground); font-weight:600; box-shadow:var(--shadow-card), 0 0 0 1px var(--border); }
-.prefs [role="group"] button:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
+:is(.prefs, .menuRow) [role="group"] { align-self:center; gap:2px; padding:3px; border:1px solid var(--border); border-radius:999px; background:var(--subtle); }
+:is(.prefs, .menuRow) [role="group"] button { min-height:30px; min-width:30px; padding:0 12px; border:0; border-radius:999px; background:transparent; color:var(--muted); font-weight:500; transition:background .15s, color .15s; }
+:is(.prefs, .menuRow) [role="group"] button:has(svg) { padding:0 8px; }
+:is(.prefs, .menuRow) [role="group"] button + button { border-left:0; }
+:is(.prefs, .menuRow) [role="group"] button:hover { color:var(--foreground); }
+:is(.prefs, .menuRow) [role="group"] button[aria-pressed="true"] { background:var(--card); color:var(--foreground); font-weight:600; box-shadow:var(--shadow-card), 0 0 0 1px var(--border); }
+:is(.prefs, .menuRow) [role="group"] button:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
 /* โหมดมืด: พื้นการ์ดใกล้สีแถบเกินไป จึงกดแถบให้ลึกลงและยกตัวที่เลือกให้สว่างขึ้น */
-:global([data-theme="dark"]) .prefs [role="group"] { background:var(--background); }
-:global([data-theme="dark"]) .prefs [role="group"] button[aria-pressed="true"] { background:var(--hover); box-shadow:var(--shadow-card), 0 0 0 1px var(--border-strong); }
+:global([data-theme="dark"]) :is(.prefs, .menuRow) [role="group"] { background:var(--background); }
+:global([data-theme="dark"]) :is(.prefs, .menuRow) [role="group"] button[aria-pressed="true"] { background:var(--hover); box-shadow:var(--shadow-card), 0 0 0 1px var(--border-strong); }
 
 .hero { background:linear-gradient(180deg,var(--primary-soft) 0%,var(--card) 100%); padding:72px 0 56px; }
 .heroRow { display:flex; gap:48px; flex-wrap:wrap; align-items:center; }
@@ -163,6 +163,31 @@
 .cookie { position:fixed; left:16px; right:16px; bottom:16px; max-width:760px; margin:0 auto; background:var(--card); border:1px solid var(--input); border-radius:14px; box-shadow:0 16px 40px rgb(15 23 42 / 0.18); padding:16px 18px; display:flex; flex-direction:column; gap:10px; z-index:20; font-size:15px; }
 .cookie label { display:flex; gap:8px; font-size:14px; align-items:center; }
 .cookie input { width:16px; height:16px; }
+/* เมนูมือถือ (แบบ A) · ปุ่มสามขีดหมุนเป็นกากบาทตอนเปิด แผงเลื่อนลงจากใต้หัวเว็บ */
+.menuButton { display:none; place-items:center; flex:none; width:40px; height:40px; border-radius:10px; border:1px solid var(--border); background:var(--card); color:var(--foreground); cursor:pointer; }
+.menuButton:hover { background:var(--hover); }
+.menuButton:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+.menuButton span, .menuButton span::before, .menuButton span::after { display:block; width:16px; height:2px; border-radius:2px; background:currentColor; position:relative; transition:transform .25s cubic-bezier(.2,.8,.2,1), background .2s; }
+.menuButton span::before, .menuButton span::after { content:""; position:absolute; left:0; }
+.menuButton span::before { top:-5px; }
+.menuButton span::after { top:5px; }
+.header[data-menu] .menuButton span { background:transparent; }
+.header[data-menu] .menuButton span::before { transform:translateY(5px) rotate(45deg); }
+.header[data-menu] .menuButton span::after { transform:translateY(-5px) rotate(-45deg); }
+.menuScrim { position:absolute; top:100%; left:0; right:0; height:100vh; background:var(--overlay); animation:menu-fade .25s ease-out; }
+.menu { position:absolute; top:100%; left:0; right:0; display:flex; flex-direction:column; gap:4px; padding:8px 16px 16px; background:var(--card); border-bottom:1px solid var(--border); box-shadow:var(--shadow-menu); max-height:calc(100vh - 60px); overflow-y:auto; animation:menu-in .28s cubic-bezier(.2,.8,.2,1); }
+@keyframes menu-in { from { opacity:0; transform:translateY(-12px); } }
+@keyframes menu-fade { from { opacity:0; } }
+.menuNav { display:flex; flex-direction:column; }
+.menuNav a { padding:12px 4px; color:var(--foreground); font-size:15px; font-weight:500; border-bottom:1px solid var(--border); }
+.menuRow { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 4px; }
+.menuRow > span { color:var(--muted); font-size:13px; }
+.menuRow [role="group"] span { margin-left:4px; }
+.menuCta { width:100%; margin-top:8px; }
+@media (min-width: 641px) {
+  .menu, .menuScrim { display:none; }
+}
+
 
 @media (max-width: 1060px) {
   .features { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -171,7 +196,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .header, .nav a::after, .shine, .shine::after, .footerCol a::after, .linkButton::after, .segInd, .seg button, .plan, .fitTag, .price, .plus, .cmpBox summary::after, .cmpBox::details-content, .faq::details-content { transition:none; animation:none; }
+  .header, .nav a::after, .menuButton span, .menuButton span::before, .menuButton span::after, .menu, .menuScrim, .shine, .shine::after, .footerCol a::after, .linkButton::after, .segInd, .seg button, .plan, .fitTag, .price, .plus, .cmpBox summary::after, .cmpBox::details-content, .faq::details-content { transition:none; animation:none; }
 }
 
 @media (max-width: 640px) {
@@ -183,7 +208,11 @@
   .footerMark { width:88px; height:88px; top:-18px; bottom:auto; right:-14px; opacity:.35; }
   .footerGrid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:28px 16px; padding:36px 0 28px; }
   .nav { display:none; }
-  .headerRow { gap:12px; }
+  .headerRow { gap:12px; flex-wrap:nowrap; min-height:60px; }
+  /* แบบ A: ภาษา ธีม และปุ่มทดลองใช้ย้ายเข้าเมนู · Hero มีปุ่มทดลองใช้อยู่แล้ว */
+  .headerRow > .prefs, .headerRow > .headerCta { display:none; }
+  .login { padding:8px 4px; white-space:nowrap; }
+  .menuButton { display:grid; }
   .wrap, .legalHeaderRow, .legalBody { padding-left:16px; padding-right:16px; }
   .toc { position:static; flex-basis:100%; }
   .sp { grid-template-columns:1fr; gap:2px; }

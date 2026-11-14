@@ -199,6 +199,25 @@ describe("Landing + ราคา (R1)", () => {
     expect(screen.getByText("อนุมัติแล้ว · แจ้งกลุ่มทีม Dev แล้ว")).toBeInTheDocument();
   });
 
+  it("เมนูมือถือ (แบบ A): เปิดแล้วมีลิงก์หน้า ภาษา ธีม และปุ่มทดลองใช้ · Esc ปิดและคืนโฟกัส", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Landing />, { messages });
+    const button = screen.getByRole("button", { name: "เมนู" });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(document.getElementById("site-menu")).toBeNull();
+    await user.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    const menu = document.getElementById("site-menu")!;
+    expect(within(menu).getByRole("link", { name: "ราคา" })).toHaveAttribute("href", "/pricing");
+    expect(within(menu).getByRole("link", { name: "ศูนย์ช่วยเหลือ" })).toHaveAttribute("href", "/help");
+    expect(within(menu).getByRole("group", { name: "ธีม" })).toBeInTheDocument();
+    expect(within(menu).getByText("ภาษา")).toBeInTheDocument();
+    expect(within(menu).getByRole("link", { name: "ทดลองใช้ฟรี 14 วัน" })).toHaveAttribute("href", "/signup");
+    await user.keyboard("{Escape}");
+    expect(document.getElementById("site-menu")).toBeNull();
+    expect(button).toHaveFocus();
+  });
+
   it("หัวข้อภาษาอังกฤษติดจุดไว้กับคำที่ขีดเส้นใต้", () => {
     renderWithProviders(<Landing />, { locale: "en" });
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Plan in Man-Days. See overload before delivery slips");

@@ -123,12 +123,16 @@ describe("Home (E / M5)", () => {
     await waitFor(() => expect(decisions).toEqual(["approve:req-1", "reject:req-1"]));
   });
 
-  it("มือถือ (M5): หัวขาวพร้อมค้นหา, KPI 3 ช่อง และอนุมัติคำขอจากการ์ด", async () => {
+  it("มือถือ (W29 ตามต้นแบบ): หัวข้อใหญ่ + ค้นหา, KPI 4 ช่อง และอนุมัติคำขอจากการ์ด", async () => {
     const restore = asMobile();
     try {
       const user = userEvent.setup();
       mount(<HomePage ws="sample" />);
-      expect(await screen.findByRole("button", { name: "ค้นหา" })).toBeInTheDocument();
+      expect(await screen.findByRole("heading", { level: 1, name: "หน้าหลัก" })).toBeInTheDocument();
+      // shell ใน test มีปุ่มค้นหาของแถบบน desktop ด้วย (ซ่อนด้วย CSS บนมือถือ) จึงตรวจในหัวหน้ามือถือ
+      const head = screen.getByRole("heading", { level: 1, name: "หน้าหลัก" }).closest("header") as HTMLElement;
+      expect(within(head).getByRole("button", { name: "ค้นหางาน โปรเจกต์ ไฟล์" })).toBeInTheDocument();
+      for (const label of ["งานวันนี้", "เลยกำหนด", "ครบกำหนดสัปดาห์นี้", "รออนุมัติ"]) expect(screen.getByRole("link", { name: new RegExp(`^${label}`) })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "รอคุณอนุมัติ" })).toBeInTheDocument();
       expect(screen.queryByTestId("summary-line")).not.toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: "อนุมัติ DE-30" }));
@@ -188,6 +192,19 @@ describe("Home (E / M5)", () => {
 });
 
 describe("My Tasks (F / M2)", () => {
+  it("มือถือ (W29 ตามต้นแบบ): หัวข้อใหญ่ · ชิปช่วงเวลามีตัวเลข · กลุ่มในกล่องขอบมน · ติ๊กปิดงานได้ · ปุ่มสร้างงานลอย", async () => {
+    const restore = asMobile();
+    try {
+      mount(<MyTasksPage ws="sample" />);
+      expect(await screen.findByRole("heading", { level: 1, name: "งานของฉัน" })).toBeInTheDocument();
+      const range = screen.getByRole("group", { name: /ช่วงเวลา|range/i });
+      expect(within(range).getAllByRole("button")[0]).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getAllByRole("checkbox").length).toBeGreaterThan(0);
+    } finally {
+      restore();
+    }
+  });
+
   it("แท็บพร้อมจำนวน · จัดกลุ่มตาม Due · กลุ่ม \"ภายหลัง\" และ \"ไม่มีวันที่\" ย่อไว้ · สรุปของฉัน", async () => {
     mount(<MyTasksPage ws="sample" />);
     expect(await screen.findByRole("button", { name: /มอบหมายให้ฉัน 3/ })).toHaveAttribute("aria-pressed", "true");

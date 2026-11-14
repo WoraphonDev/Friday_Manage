@@ -4,6 +4,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { renderWithProviders } from "@/test/render";
+import { asMobile } from "@/test/mobile";
 import { server } from "@/test/server";
 import { navigation } from "@/test/router";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
@@ -187,6 +188,34 @@ describe("Inbox (G / M3)", () => {
     server.use(http.get("*/api/v1/me/notifications", () => errorBody(403)));
     mount();
     expect(await screen.findByRole("heading", { name: /ไม่มีสิทธิ์/ })).toBeInTheDocument();
+  });
+});
+
+describe("Inbox มือถือ (W29 ตามต้นแบบ)", () => {
+  it("หัวข้อใหญ่ · ชิป ยังไม่อ่าน / ทั้งหมด / ถึงฉัน / มอบหมาย มีตัวเลข · เมนู ⋮ อ่านทั้งหมด · แตะแถวเปิดรายละเอียดและย้อนกลับ", async () => {
+    const restore = asMobile();
+    try {
+      const user = userEvent.setup();
+      mount();
+      expect(await screen.findByRole("heading", { level: 1, name: "กล่องข้อความ" })).toBeInTheDocument();
+      expect(screen.getByText("2 รายการยังไม่อ่าน")).toBeInTheDocument();
+      const chips = screen.getByRole("group", { name: "ตัวกรอง" });
+      expect(within(chips).getAllByRole("button").map((b) => b.textContent)).toEqual(["ยังไม่อ่าน 2", "ทั้งหมด 3", "Mentions 1", "มอบหมาย / Review 1"]);
+      expect(screen.getAllByRole("img", { name: "ยังไม่อ่าน" })).toHaveLength(2);
+
+      await user.click(screen.getByRole("button", { name: "ตัวเลือกกล่องข้อความ" }));
+      const sheet = screen.getByRole("dialog", { name: "กล่องข้อความ" });
+      await user.click(within(sheet).getByRole("button", { name: "Mark all as read" }));
+      await waitFor(() => expect(calls).toContain('read-all:{"workspace":"sample"}'));
+
+      await user.click(screen.getByRole("button", { name: /ผู้พัฒนาหนึ่ง มอบหมายงานให้คุณ/ }));
+      const detail = screen.getByRole("complementary", { name: "รายละเอียดการแจ้งเตือน" });
+      expect(within(detail).getByText("คุณเป็นผู้รับผิดชอบ")).toBeInTheDocument();
+      await user.click(within(detail).getByRole("button", { name: "กลับไปรายการ" }));
+      expect(await screen.findByRole("heading", { level: 1, name: "กล่องข้อความ" })).toBeInTheDocument();
+    } finally {
+      restore();
+    }
   });
 });
 

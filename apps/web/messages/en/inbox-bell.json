@@ -86,7 +86,10 @@
       "digest__daily": "Your daily summary"
     },
     "loading": "Loading Inbox",
-    "openMyTasks": "Open my tasks"
+    "openMyTasks": "Open my tasks",
+    "mobileTitle": "Inbox",
+    "mobileSubtitle": "{count} unread",
+    "moreActions": "Inbox options"
   },
   "bell": {
     "title": "Notifications",

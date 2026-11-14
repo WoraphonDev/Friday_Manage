@@ -112,7 +112,22 @@
     "workloadAll": "ดู Workload ทั้งหมด",
     "workloadChart": "Man-Day ต่อคนในสัปดาห์นี้",
     "loading": "กำลังโหลด Home",
-    "guestNote": "บทบาท Guest เห็นเฉพาะงานที่แชร์ให้"
+    "guestNote": "บทบาท Guest เห็นเฉพาะงานที่แชร์ให้",
+    "mobileTitle": "หน้าหลัก",
+    "mobileSummary": "วันนี้มี {today} งาน · {overdue} งานเลยกำหนด · {approvals} คำขอรออนุมัติ",
+    "mobileKpi": {
+      "today": "งานวันนี้",
+      "overdue": "เลยกำหนด",
+      "week": "ครบกำหนดสัปดาห์นี้",
+      "approvals": "รออนุมัติ"
+    },
+    "mobileNewTask": "สร้างงาน",
+    "mobileReviews": "รอคุณรีวิว",
+    "mobileProgress": "ความคืบหน้า {pct}%",
+    "mobileHealth": {
+      "at_risk": "เสี่ยง",
+      "off_track": "ล่าช้า"
+    }
   },
   "tasks": {
     "title": "My Tasks",
@@ -231,6 +246,8 @@
       "baLong": "ฉันเป็น Business Analyst ของงานนี้",
       "saLong": "ฉันเป็น System Analyst ของงานนี้",
       "qaLong": "ฉันเป็น QA / Reviewer ของงานนี้"
-    }
+    },
+    "mobileSubtitle": "{count} งานที่เปิดอยู่",
+    "mobileTitle": "งานของฉัน"
   }
 }

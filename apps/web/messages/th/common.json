@@ -258,5 +258,10 @@
     "close": "ปิด",
     "previous": "ไฟล์ก่อนหน้า",
     "next": "ไฟล์ถัดไป"
+  },
+  "mobile": {
+    "workspaceMenu": "เมนู Workspace {name}",
+    "notifications": "การแจ้งเตือน",
+    "more": "ตัวเลือกเพิ่มเติม"
   }
 }

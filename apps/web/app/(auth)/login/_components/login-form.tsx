@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { flushSync } from "react-dom";
+import { KeyRound, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button, Input, useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/lib/use-mobile";
 import { destinationAfterLogin } from "../../_components/navigation";
 import {
   FormAlert,
@@ -47,6 +49,8 @@ const OAUTH_ERRORS = [
 
 export function LoginForm() {
   const t = useTranslations(NS);
+  // มือถือ (W28 ตามต้นแบบ): ลิงก์ลืมรหัสผ่านย้ายไปแถวล่างคู่กับสมัคร · ไม่แสดงปุ่ม SSO ที่ยังปิดอยู่
+  const mobile = useIsMobile();
   const router = useRouter();
   const params = useSearchParams();
   const toast = useToast();
@@ -203,6 +207,11 @@ export function LoginForm() {
         >
           {t("common.back")}
         </button>
+        {mobile && (
+          <div className={cn(styles.icon, styles.iconBlue)} aria-hidden="true">
+            {backup ? <KeyRound size={28} /> : <ShieldCheck size={28} />}
+          </div>
+        )}
         <Heading
           title={backup ? t("login.backupTitle") : t("login.mfaTitle")}
           subtitle={
@@ -275,7 +284,7 @@ export function LoginForm() {
           value={password}
           onChange={setPassword}
           autoComplete="current-password"
-          labelExtra={<Link href="/forgot-password">{t("login.forgot")}</Link>}
+          labelExtra={mobile ? undefined : <Link href="/forgot-password">{t("login.forgot")}</Link>}
           error={missing.password ? t("signup.required") : undefined}
           invalid={error instanceof ApiError && error.code === "invalid_credentials"}
         />
@@ -290,18 +299,25 @@ export function LoginForm() {
       <div className={styles.or}>{t("common.or")}</div>
       <OAuthLink provider="google" label={t("login.google")} next={returnTo ?? undefined} remember={remember} />
       <OAuthLink provider="microsoft" label={t("login.microsoft")} next={returnTo ?? undefined} remember={remember} />
-      {/* SSO / SAML ยังไม่วางเป็นงาน (docs/tasks/README.md) จึงแสดงตาม Canvas แต่ปิดไว้ */}
-      <Button className={styles.button} disabled aria-describedby="sso-soon">
-        {t("login.sso")}
-      </Button>
-      <span id="sso-soon" className={cn(styles.muted, styles.tiny, styles.center)} style={{ marginTop: -10 }}>
-        {t("common.comingSoon")}
-      </span>
-      <div className={cn(styles.muted, styles.center)}>
-        {t("login.noAccount")}{" "}
-        <Link href={returnTo ? `/signup?returnTo=${encodeURIComponent(returnTo)}` : "/signup"} style={{ fontWeight: 600 }}>
-          {t("login.signup")}
-        </Link>
+      {/* SSO / SAML ยังไม่วางเป็นงาน (docs/tasks/README.md) จึงแสดงตาม Canvas แต่ปิดไว้ · มือถือไม่แสดงตามต้นแบบ */}
+      {!mobile && (
+        <>
+          <Button className={styles.button} disabled aria-describedby="sso-soon">
+            {t("login.sso")}
+          </Button>
+          <span id="sso-soon" className={cn(styles.muted, styles.tiny, styles.center)} style={{ marginTop: -10 }}>
+            {t("common.comingSoon")}
+          </span>
+        </>
+      )}
+      <div className={cn(styles.muted, styles.center, mobile && styles.mobileLinks)}>
+        {mobile && <Link href="/forgot-password">{t("login.forgot")}</Link>}
+        <span>
+          {t("login.noAccount")}{" "}
+          <Link href={returnTo ? `/signup?returnTo=${encodeURIComponent(returnTo)}` : "/signup"} style={{ fontWeight: 600 }}>
+            {t("login.signup")}
+          </Link>
+        </span>
       </div>
     </SplitLayout>
   );

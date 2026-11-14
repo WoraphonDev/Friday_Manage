@@ -6,6 +6,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it } from "vitest";
 import messages from "../../messages/th/auth-onboarding.json";
 import { renderWithProviders } from "@/test/render";
+import { asMobile } from "@/test/mobile";
 import { navigation, router } from "@/test/router";
 import { server } from "@/test/server";
 import { LoginForm } from "../../app/(auth)/login/_components/login-form";
@@ -322,6 +323,66 @@ describe("J2 · สมัครและยืนยันอีเมล", () =
     render(<SignupForm />);
     expect(await screen.findByRole("heading", { name: "ลิงก์ยืนยันอีเมลไม่ถูกต้องหรือหมดอายุแล้ว" })).toBeInTheDocument();
     expect(screen.getByRole("alert")).not.toHaveTextContent("req_link9"); // 4xx ผู้ใช้แก้เองได้ ไม่แสดงรหัสอ้างอิง (ผู้ใช้ขอ 2026-11-09)
+  });
+});
+
+describe("W28 · มือถือตามต้นแบบ", () => {
+  it("Login: ลิงก์ลืมรหัสผ่านอยู่แถวล่างคู่กับสมัคร · ไม่มีปุ่ม SSO · ลิขสิทธิ์และนโยบายใต้การ์ด", async () => {
+    const restore = asMobile();
+    try {
+      render(<LoginForm />);
+      const forgot = screen.getByRole("link", { name: "ลืมรหัสผ่าน?" });
+      expect(forgot).toHaveAttribute("href", "/forgot-password");
+      // ไม่อยู่ในแถวป้ายรหัสผ่านแล้ว แต่อยู่แถวเดียวกับลิงก์สมัคร
+      expect(forgot.parentElement).toContainElement(screen.getByRole("link", { name: "สมัครใช้งาน" }));
+      expect(screen.queryByRole("button", { name: "SSO ขององค์กร (SAML)" })).not.toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "เข้าสู่ระบบด้วย Google" })).toBeInTheDocument();
+      // แผงแบรนด์ (ซ่อนด้วย CSS บนมือถือ) มีข้อความเดียวกัน จึงตรวจย่อหน้าใต้การ์ด
+      const foot = screen.getAllByText("© 2026 Friday Work Management", { exact: false }).find((el) => el.tagName === "P");
+      expect(foot).toBeDefined();
+      expect(within(foot as HTMLElement).getByRole("link", { name: "นโยบายความเป็นส่วนตัว" })).toHaveAttribute("href", "/legal/privacy");
+    } finally {
+      restore();
+    }
+  });
+
+  it("Login desktop คงเดิม: ลิงก์ลืมรหัสผ่านข้างป้ายรหัสผ่าน และมีปุ่ม SSO ที่ปิดไว้", () => {
+    render(<LoginForm />);
+    expect(screen.getAllByRole("link", { name: "ลืมรหัสผ่าน?" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "SSO ขององค์กร (SAML)" })).toBeDisabled();
+  });
+
+  it("2FA มือถือมีไอคอนตกแต่ง (ซ่อนจากโปรแกรมอ่านหน้าจอ)", async () => {
+    const restore = asMobile();
+    try {
+      server.use(http.post("*/api/v1/auth/login", () => HttpResponse.json({ mfaRequired: true, mfaToken: "mfa-1", email: "lead@example.com" })));
+      const user = userEvent.setup();
+      const { container } = render(<LoginForm />);
+      await user.type(screen.getByLabelText("อีเมล"), "lead@example.com");
+      await user.type(screen.getByLabelText("รหัสผ่าน"), "Friday2026");
+      await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
+      await screen.findByLabelText("หลักที่ 1");
+      expect(container.querySelector('[aria-hidden="true"] svg')).not.toBeNull();
+    } finally {
+      restore();
+    }
+  });
+
+  it("สมัคร: ฟอร์มอีเมลก่อน แล้วจึง หรือ + Google และลิงก์เข้าสู่ระบบท้ายการ์ด", () => {
+    const restore = asMobile();
+    try {
+      render(<SignupForm />);
+      const submit = screen.getByRole("button", { name: "สร้างบัญชี" });
+      const google = screen.getByRole("link", { name: "สมัครด้วย Google" });
+      // Google อยู่หลังปุ่มสร้างบัญชีในลำดับเอกสาร
+      expect(submit.compareDocumentPosition(google) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      const heading = screen.getByRole("heading", { name: "สร้างบัญชี" }).parentElement as HTMLElement;
+      expect(heading).toHaveTextContent("ไม่ต้องใช้บัตรเครดิต");
+      expect(screen.getByRole("link", { name: "เข้าสู่ระบบ" })).toBeInTheDocument();
+      expect(screen.queryByText("หรือใช้อีเมล")).not.toBeInTheDocument();
+    } finally {
+      restore();
+    }
   });
 });
 

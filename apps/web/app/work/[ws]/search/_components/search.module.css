@@ -46,3 +46,20 @@
   .results { flex-basis:100%; }
   .res { padding:12px 14px; }
 }
+
+/* W30 · มือถือตามต้นแบบ (ws.search): หัวใหญ่ · ช่องค้นหาขอบมน 14 สูง 48 · ผลการค้นหาในกล่องขอบมน · ตัวกรองเป็นชิป */
+@media (max-width: 760px) {
+  .page { padding: 4px 12px 32px; gap: 12px; }
+  .head { padding: 0 4px; align-items: flex-start; }
+  .actions :global(.button) { min-height: 40px; }
+  .form { flex-wrap: nowrap; }
+  .form input { min-height: 48px; border-radius: 14px; padding: 0 14px; }
+  .form :global(.button) { min-height: 48px; border-radius: 14px; }
+  .filterToggle { min-height: 40px; border-radius: 22px; border-color: var(--border-strong); }
+  .card { border-radius: 14px; }
+  .aside { border-radius: 14px; }
+  .fchip { min-height: 44px; font-size: 14px; }
+  .res { padding: 10px 14px; min-height: 52px; align-items: center; }
+  .resTitle { font-size: 15px; font-weight: 500; }
+  .meta { font-size: 12px; }
+}

@@ -2336,3 +2336,35 @@ a.m-card:hover { border-color: var(--border-strong); }
 .m-fab:hover { background: var(--primary-hover); color: var(--on-primary); }
 .m-empty { margin: 0 12px; padding: 28px 16px; text-align: center; color: var(--muted); background: var(--card); border: 1px dashed var(--border-strong); border-radius: 14px; }
 .m-hint { color: var(--muted); font-size: 12px; text-align: center; padding: 16px; margin: 0; }
+
+/* ===== W30 · หัวหน้าย่อยและเมนู Workspace บนมือถือตามต้นแบบ =====
+   หน้าย่อย: ปุ่มย้อนกลับเหลือไอคอนในช่องแตะ 44 px · หัวข้อหน้า (h1) ใหญ่ 26 px ตัวหนาแบบ B · พื้นหน้าเป็นสีพื้นหลัง
+   เมนู Workspace (Drawer variant="menu") เป็นแผ่นล่างจอ · แท็บ / segmented ของ m-seg สำหรับหน้ารายการ */
+.m-seg { display: flex; gap: 4px; margin: 4px 12px 0; padding: 4px; border-radius: 14px; background: var(--subtle); }
+.m-seg > button {
+  flex: 1; min-height: 40px; border: 0; border-radius: 10px; background: transparent; color: var(--muted);
+  font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap;
+}
+.m-seg > button small { font-size: 0.85em; }
+.m-seg > button[aria-pressed="true"] { background: var(--card); color: var(--foreground); font-weight: 600; box-shadow: var(--shadow-card); }
+@media (max-width: 760px) {
+  .workspace-main { background: var(--background); }
+  .page-back {
+    width: 44px; height: 44px; margin: 4px 0 0 8px; padding: 0; justify-content: center;
+    border-radius: 12px; font-size: 0; gap: 0; color: var(--foreground);
+  }
+  .page-back svg { width: 22px; height: 22px; }
+  .workspace-main h1:not(.m-title) { font-size: 26px; font-weight: 700; line-height: 1.35; }
+  .workspace-main .project-title-row h1 { font-size: 18px; line-height: 1.3; }
+  .card { border-radius: 16px; box-shadow: var(--shadow-card); }
+
+  .drawer-menu {
+    inset: auto 0 0 0; width: 100%; max-height: 88dvh;
+    border-radius: var(--m-radius-sheet) var(--m-radius-sheet) 0 0; border-left: 0;
+    padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+    animation: sheet-up 0.2s ease-out;
+  }
+  .drawer-menu::before { content: ""; display: block; width: 40px; height: 5px; margin: 8px auto 4px; border-radius: 3px; background: var(--border-strong); }
+  .drawer-menu > .dialog-heading { position: sticky; top: 0; z-index: 2; background: var(--card); margin: 0 -16px; padding: 4px 16px 10px; }
+  .drawer-menu .nav-link, .drawer-menu .workspace-item { min-height: 48px; font-size: 15px; border-radius: 12px; }
+}

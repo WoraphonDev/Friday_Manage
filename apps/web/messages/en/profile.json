@@ -365,5 +365,6 @@
     "regenerateTitle": "Generate a new set of backup codes",
     "regenerateIntro": "The old set stops working immediately · Enter a code from the app or a backup code to confirm",
     "regenerateConfirm": "Generate new set"
-  }
+  },
+  "mobileTitle": "Profile"
 }

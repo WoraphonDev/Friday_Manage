@@ -402,8 +402,9 @@ describe("Workspace / Project shell", () => {
     const bottom = within(screen.getByRole("navigation", { name: "เมนูหลัก", hidden: true }));
     expect(
       bottom.getAllByRole("link", { hidden: true }).map((l) => l.textContent),
-    ).toEqual(["หน้าหลัก", "งานของฉัน", "กล่องข้อความ3", expect.stringMatching(/ฉัน$/)]);
-    expect(bottom.getByRole("button", { name: /โปรเจกต์/, hidden: true })).toBeInTheDocument();
+    ).toEqual(["หน้าหลัก", "งานของฉัน", "โปรเจกต์", "กล่องข้อความ3", expect.stringMatching(/ฉัน$/)]);
+    // W30 · แท็บโปรเจกต์ไปหน้ารายการโปรเจกต์ (ต้นแบบ u.projects)
+    expect(bottom.getByRole("link", { name: /โปรเจกต์/, hidden: true })).toHaveAttribute("href", "/work/sample/projects");
     expect(bottom.getByRole("link", { name: /กล่องข้อความ/, hidden: true })).toHaveAttribute("aria-current", "page");
     // Sidebar desktop ยังใช้ป้ายเดิม
     expect(within(sidebar).getByRole("link", { name: "My Tasks" })).toBeInTheDocument();

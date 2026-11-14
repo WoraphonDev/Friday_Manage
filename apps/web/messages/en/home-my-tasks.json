@@ -249,5 +249,20 @@
     },
     "mobileSubtitle": "{count} open tasks",
     "mobileTitle": "My tasks"
+  },
+  "projectsPage": {
+    "title": "Projects",
+    "subtitle": "{name} · {count} projects",
+    "filterLabel": "Project filter",
+    "filters": {
+      "all": "All",
+      "mine": "With my tasks",
+      "risk": "At risk"
+    },
+    "empty": "No projects here",
+    "overdue": "{count} overdue",
+    "golive": "{days} days to go-live",
+    "goliveDate": "Go-live {date}",
+    "create": "New project"
   }
 }

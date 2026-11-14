@@ -74,3 +74,10 @@
   .page { padding:0; }
   .doc { border:0; }
 }
+
+/* W30 · ชิปบนมือถือตามต้นแบบ: สูง 40 มุมมน 22 · เลือกแล้วเป็นม่วงอ่อน (desktop คงแบบเดิม) */
+@media (max-width: 760px) {
+  .chip { min-height: 40px; padding: 0 14px; border-radius: 22px; border-color: var(--border-strong); font-size: 14px; }
+  .chip[aria-pressed="true"], .chip[aria-pressed="true"]:hover { background: var(--primary-soft); border-color: var(--primary-border); color: var(--primary-text); font-weight: 600; }
+  .chip[aria-pressed="true"] span { color: inherit; }
+}

@@ -131,3 +131,9 @@
 .qaBuffer { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; margin-top:8px; font-size:13px; }
 .qaBuffer :global(.input) { width:72px; }
 .qaBuffer small { flex-basis:100%; }
+
+/* W30 · ตัวเลือกแบบแบ่งช่องบนมือถือ: ช่องที่เลือกเป็นม่วงอ่อนแทนพื้นดำ */
+@media (max-width: 760px) {
+  .seg button { min-height: 40px; border-radius: 20px; font-size: 14px; }
+  .seg button[aria-pressed="true"] { background: var(--primary-soft); border-color: var(--primary-border); color: var(--primary-text); }
+}

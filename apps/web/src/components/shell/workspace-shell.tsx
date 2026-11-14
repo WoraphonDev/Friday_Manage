@@ -722,15 +722,15 @@ export function WorkspaceShell({
               <span className="bottom-nav-label">{t(`nav.mobileTab.${key}`)}</span>
             </Link>
           ))}
-          <button
-            type="button"
+          {/* W30 · แท็บโปรเจกต์ไปหน้ารายการโปรเจกต์ (ต้นแบบ u.projects) · เมนู Workspace เปิดจากโลโก้บนหัวหน้ามือถือ */}
+          <Link
             className="nav-link"
-            aria-current={selectedKey ? "page" : undefined}
-            onClick={() => setMenuOpen(true)}
+            href={`${base}/projects`}
+            aria-current={selectedKey || pathname === `${base}/projects` ? "page" : undefined}
           >
             <span className="bottom-nav-icon"><FolderKanban size={22} /></span>
             <span className="bottom-nav-label">{t("nav.mobileTab.projects")}</span>
-          </button>
+          </Link>
           <Link
             className="nav-link"
             href={`${base}/inbox`}
@@ -755,6 +755,7 @@ export function WorkspaceShell({
           open={menuOpen}
           onOpenChange={setMenuOpen}
           title={workspace.name}
+          variant="menu"
         >
           {/* มือถือไม่มี top bar: ค้นหา, สลับ Workspace, ภาษา และออกจากระบบอยู่ในเมนูนี้ */}
           <button

@@ -114,3 +114,14 @@
   flex-direction: column;
   gap: 2px;
 }
+
+/* W30 · มือถือตามต้นแบบ (ws.members / proj.members ฐาน A ในกรอบ B): ตัวเลข 2 คอลัมน์การ์ดมุม 16 · รายชื่อในกล่องขอบมน 14 · ช่องค้นหาเต็มกว้าง */
+@media (max-width: 760px) {
+  .page { padding: 4px 12px 24px; gap: 12px; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .kp { border-radius: 16px; padding: 14px; box-shadow: var(--shadow-card); font-size: 12px; }
+  .kp .v { font-size: 26px; }
+  .card { border-radius: 14px; overflow: hidden; }
+  .group > .search { width: 100%; flex: 1 1 100%; min-height: 44px; border-radius: 12px; }
+  .bar { gap: 10px; }
+}

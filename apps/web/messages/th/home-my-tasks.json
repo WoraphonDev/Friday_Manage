@@ -249,5 +249,20 @@
     },
     "mobileSubtitle": "{count} งานที่เปิดอยู่",
     "mobileTitle": "งานของฉัน"
+  },
+  "projectsPage": {
+    "title": "โปรเจกต์",
+    "subtitle": "{name} · {count} โปรเจกต์",
+    "filterLabel": "ตัวกรองโปรเจกต์",
+    "filters": {
+      "all": "ทั้งหมด",
+      "mine": "มีงานของฉัน",
+      "risk": "เสี่ยง"
+    },
+    "empty": "ไม่มีโปรเจกต์ในกลุ่มนี้",
+    "overdue": "เลยกำหนด {count} งาน",
+    "golive": "เหลือ {days} วันถึง Go-live",
+    "goliveDate": "Go-live {date}",
+    "create": "สร้างโปรเจกต์"
   }
 }

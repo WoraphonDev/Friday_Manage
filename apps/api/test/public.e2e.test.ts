@@ -42,6 +42,11 @@ describe('GET public/plans', () => {
     expect(by.team_s.features).toContain('gantt');
     expect(by.free.features).not.toContain('gantt');
     expect(by.free.features).toContain('kanban');
+    // ขีดจำกัดอื่นมาจากสิทธิ์ที่ระบบบังคับใช้ (ค่าตั้งต้นเวอร์ชัน 1)
+    expect(by.team_s.entitlements).toMatchObject({ automation_runs: 5000, api_rpm: 60, history_days: 365, guests: true, sso: false });
+    expect(by.team_l.entitlements).toMatchObject({ automation_runs: 50000, history_days: 1095 });
+    expect(by.enterprise.entitlements).toMatchObject({ automation_runs: null, history_days: null, sso: true, sla: true });
+    expect(by.free.entitlements).toMatchObject({ automation: false, api: false, guests: true });
   });
 
   it('ราคาที่ทีม Friday ตั้งในตาราง plans ชนะค่าตั้งต้น', async () => {

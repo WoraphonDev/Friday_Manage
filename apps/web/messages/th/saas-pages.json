@@ -116,7 +116,7 @@
       "paidImport": "Import Excel + Automation",
       "paidLine": "LINE OA + Webhook",
       "paidFiles": "ไฟล์ {gb} GB ต่อคน",
-      "enterprise": ["ทุกอย่างในแพ็กเกจทีม", "SSO (Entra ID, Google, SAML)", "Audit log 7 ปี", "เลือก Data region + SLA"]
+      "enterprise": ["ทุกอย่างในแพ็กเกจทีม", "SSO (Entra ID, Google, SAML)", "Audit log เก็บตามสัญญา", "เลือก Data region + SLA"]
     },
     "compare": {
       "title": "เปรียบเทียบแพ็กเกจทั้งหมด",
@@ -125,8 +125,21 @@
       "unlimited": "ไม่จำกัด",
       "excel": "Import / Export Excel",
       "line": "LINE OA + Webhook",
-      "automation": { "free": "–", "team_s": "1,000 ครั้ง/เดือน", "team_m": "3,000 ครั้ง/เดือน", "team_l": "6,000 ครั้ง/เดือน", "enterprise": "ไม่จำกัด" },
-      "audit": { "free": "30 วัน", "team_s": "1 ปี", "team_m": "1 ปี", "team_l": "1 ปี", "enterprise": "7 ปี" }
+      "groups": { "team": "ทีมและพื้นที่", "plan": "มุมมองและวางแผน", "connect": "เชื่อมต่อและอัตโนมัติ", "security": "ความปลอดภัยและบริการ" },
+      "guests": "Guest (ลูกค้า, Dev outsource)",
+      "storage": "พื้นที่ไฟล์",
+      "storagePer": "{n} GB/คน",
+      "contract": "ตามสัญญา",
+      "reports": "รายงาน",
+      "git": "เชื่อม Git (Commit / PR)",
+      "perMonth": "{n} ครั้ง/เดือน",
+      "perMinute": "{n} ครั้ง/นาที",
+      "history": "Audit log และประวัติ",
+      "days": "{n} วัน",
+      "years": "{n} ปี",
+      "sla": "SLA + เลือก Data region",
+      "yes": "มี",
+      "no": "ไม่มี"
     }
   },
   "cookie": {

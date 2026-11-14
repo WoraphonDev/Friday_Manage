@@ -116,7 +116,7 @@
       "paidImport": "Import Excel + Automation",
       "paidLine": "LINE OA + Webhook",
       "paidFiles": "{gb} GB files per person",
-      "enterprise": ["Everything in Team plans", "SSO (Entra ID, Google, SAML)", "7-year Audit log", "Choice of Data region + SLA"]
+      "enterprise": ["Everything in Team plans", "SSO (Entra ID, Google, SAML)", "Audit log retention per contract", "Choice of Data region + SLA"]
     },
     "compare": {
       "title": "Compare all plans",
@@ -125,8 +125,21 @@
       "unlimited": "Unlimited",
       "excel": "Import / Export Excel",
       "line": "LINE OA + Webhook",
-      "automation": { "free": "–", "team_s": "1,000 runs/month", "team_m": "3,000 runs/month", "team_l": "6,000 runs/month", "enterprise": "Unlimited" },
-      "audit": { "free": "30 days", "team_s": "1 year", "team_m": "1 year", "team_l": "1 year", "enterprise": "7 years" }
+      "groups": { "team": "Team and storage", "plan": "Views and planning", "connect": "Integrations and automation", "security": "Security and service" },
+      "guests": "Guests (clients, outsourced devs)",
+      "storage": "File storage",
+      "storagePer": "{n} GB/person",
+      "contract": "Per contract",
+      "reports": "Reports",
+      "git": "Git integration (Commits / PRs)",
+      "perMonth": "{n} runs/month",
+      "perMinute": "{n} requests/minute",
+      "history": "Audit log and history",
+      "days": "{n, plural, one {# day} other {# days}}",
+      "years": "{n, plural, one {# year} other {# years}}",
+      "sla": "SLA + choice of Data region",
+      "yes": "Included",
+      "no": "Not included"
     }
   },
   "cookie": {

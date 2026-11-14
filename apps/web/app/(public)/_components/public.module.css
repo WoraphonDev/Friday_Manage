@@ -234,3 +234,10 @@
   .sp { grid-template-columns:1fr; gap:2px; }
   .spHead { display:none; }
 }
+
+/* W34 · มือถือตามต้นแบบ (pub.* ฐาน B): การ์ดมุม 16 มีเงา · ปุ่มมุม 12 · คงเนื้อหาหน้าการตลาดที่ผู้ใช้เลือกไว้ · desktop ไม่เปลี่ยน */
+@media (max-width: 760px) {
+  .team, .plan, .cmpBox { border-radius: 16px; box-shadow: var(--shadow-card); }
+  .btn { border-radius: 12px; }
+  .menuButton { width: 44px; height: 44px; border-radius: 12px; }
+}

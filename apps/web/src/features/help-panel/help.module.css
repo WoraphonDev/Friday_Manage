@@ -223,3 +223,10 @@
   .due { margin-left:0; width:100%; }
   .steps { flex-direction:column; gap:10px; }
 }
+
+/* W33 · มือถือตามต้นแบบ (ฐาน B): ขอบหน้า 12 · การ์ดมุม 16 มีเงา · desktop ไม่เปลี่ยน */
+@media (max-width: 760px) {
+  .page { padding: 8px 12px 24px; gap: 12px; }
+  .card { border-radius: 16px; box-shadow: var(--shadow-card); }
+  .chip { min-height: 40px; padding: 0 14px; font-size: 14px; }
+}

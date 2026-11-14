@@ -6,12 +6,13 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
-import { ChartGantt, Check, ChevronLeft, EyeOff, FileBarChart, LayoutDashboard, History, ListTodo, MoreHorizontal, Plus, X } from "lucide-react";
+import { CalendarDays, ChartGantt, Check, ChevronDown, ChevronLeft, Columns3, EyeOff, FileBarChart, Folder, GanttChartSquare, LayoutDashboard, LayoutGrid, History, ListTodo, MoreHorizontal, Plus, Search, Settings, Table2, Users, X } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { formatDateRange } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Project } from "@/lib/types";
 import {
+  ActionSheet,
   AvatarStack,
   Badge,
   ErrorState,
@@ -25,6 +26,7 @@ import { withoutDrawerParams } from "@/features/issue-drawer/url";
 import { ProjectInviteDialog } from "@/features/project-invite/project-invite-dialog";
 import { useWorkspace } from "./workspace-shell";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
+import { useIsMobile } from "@/lib/use-mobile";
 
 // ใช้ queryKey เดียวกับหน้า Overview และหน้า Members เพื่อไม่ยิง API ซ้ำเมื่อเปิดหน้านั้น
 type HealthLevel = "on_track" | "at_risk" | "off_track";
@@ -70,6 +72,11 @@ export const projectTabs = [
 ];
 /** ไอคอนของแท็บเสริมในเมนูเพิ่มมุมมอง */
 const VIEW_ICONS: Record<string, typeof Plus> = { reports: FileBarChart, backlog: ListTodo, gantt: ChartGantt, planChanges: History };
+/** มือถือ (W32): ไอคอนของทุกมุมมองในเมนู "มุมมอง ▾" ตามต้นแบบ proj.view-switch */
+const MOBILE_VIEW_ICONS: Record<string, typeof Plus> = {
+  overview: LayoutDashboard, reports: FileBarChart, backlog: ListTodo, table: Table2, board: Columns3, timeline: GanttChartSquare,
+  gantt: ChartGantt, calendar: CalendarDays, members: Users, files: Folder, settings: Settings,
+};
 
 export function allowedProjectTab(
   tab: (typeof projectTabs)[number],
@@ -154,6 +161,9 @@ export function ProjectShell({
     enabled: canSeeTeam,
   });
   const [inviting, setInviting] = useState(false);
+  const mobile = useIsMobile();
+  const [viewsOpen, setViewsOpen] = useState(false);
+  const { openSearch } = useWorkspace();
   const error = project.error ?? permissions.error;
   async function joinAsAdmin() {
     try {
@@ -246,9 +256,55 @@ export function ProjectShell({
     project.data.goliveDate,
     me.yearFormat,
   );
+  const tabName = (tab: (typeof projectTabs)[number]) => t(`nav.${tab.path === "/members" ? "projectMembers" : tab.label}`);
+  const currentTab = allowedTabs.find(isCurrentTab);
+  // W32 · มือถือตามต้นแบบ (proj.*): หัว B · ย้อนกลับไปรายการโปรเจกต์ · ค้นหา · สร้างงาน · หัวข้อ = มุมมองปัจจุบัน
+  // ปุ่ม "มุมมอง ▾" เปิดทุกมุมมองที่มีสิทธิ์ (รวม Timeline / Gantt / Settings ที่เดิมเปิดเฉพาะจอใหญ่)
+  const mobileHeader = (
+    <header className="m-head m-project-head">
+      <div className="m-head-row">
+        <Link className="m-icon" href={`/work/${encodeURIComponent(ws)}/projects`} aria-label={t("nav.back")}>
+          <ChevronLeft size={22} aria-hidden="true" />
+        </Link>
+        <span className="m-spacer" />
+        <button type="button" className="m-icon" aria-label={t("nav.search")} onClick={() => openSearch?.()}>
+          <Search size={20} aria-hidden="true" />
+        </button>
+        {canCreate && (
+          <Link className="m-icon" href={`${base}?new=1`} aria-label={t("nav.new")}>
+            <Plus size={22} aria-hidden="true" />
+          </Link>
+        )}
+      </div>
+      <h1 className="m-title">{currentTab && currentTab.path ? tabName(currentTab) : project.data.name}</h1>
+      <div className="m-subtitle">
+        {[project.data.name, projectKey, t(`status.${project.data.status}`), health.data ? t(`health.${health.data.health.level}`) : null].filter(Boolean).join(" · ")}
+      </div>
+      <button type="button" className="m-view-switch" aria-haspopup="dialog" onClick={() => setViewsOpen(true)}>
+        <LayoutGrid size={18} aria-hidden="true" />
+        <span>{t("nav.mobileView", { name: currentTab ? tabName(currentTab) : t("nav.overview") })}</span>
+        <ChevronDown size={18} aria-hidden="true" />
+      </button>
+      <ActionSheet
+        open={viewsOpen}
+        onOpenChange={setViewsOpen}
+        title={t("nav.mobileViews", { name: project.data.name })}
+        actions={allowedTabs.map((tab) => {
+          const Icon = MOBILE_VIEW_ICONS[tab.label] ?? LayoutDashboard;
+          return {
+            key: tab.label,
+            label: tabName(tab),
+            icon: <Icon size={20} aria-hidden="true" />,
+            hint: isCurrentTab(tab) ? "✓" : undefined,
+            onSelect: () => router.push(`${base}${tab.path}`),
+          };
+        })}
+      />
+    </header>
+  );
   return (
     <>
-      {(
+      {mobile ? mobileHeader : (
         <header
           className="project-header"
         >

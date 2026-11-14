@@ -95,3 +95,10 @@
 /* ตัวสลับ Workspace (Q1) */
 .wsDays { margin-left:auto; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:600; background:var(--warning-soft); color:var(--warning-text); white-space:nowrap; }
 .wsDeleted { opacity:.8; }
+
+/* W33 · มือถือตามต้นแบบ (ฐาน B): ขอบหน้า 12 · การ์ดมุม 16 มีเงา · desktop ไม่เปลี่ยน */
+@media (max-width: 760px) {
+  .card { border-radius: 16px; box-shadow: var(--shadow-card); }
+  .seg { display: flex; width: 100%; }
+  .seg button { flex: 1; min-height: 40px; font-size: 14px; border-radius: 9px; }
+}

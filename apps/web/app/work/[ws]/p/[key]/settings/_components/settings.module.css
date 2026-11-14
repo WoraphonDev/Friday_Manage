@@ -137,3 +137,11 @@
   .seg button { min-height: 40px; border-radius: 20px; font-size: 14px; }
   .seg button[aria-pressed="true"] { background: var(--primary-soft); border-color: var(--primary-border); color: var(--primary-text); }
 }
+
+/* W32 · มือถือตามต้นแบบ (proj.* ฐาน B): ขอบหน้า 12 · การ์ดมุม 16 มีเงา · ตัวเลือกแบบแบ่งช่องพื้นเทา · ชิปสูง 40 ม่วงอ่อนเมื่อเลือก · desktop ไม่เปลี่ยน */
+@media (max-width: 760px) {
+  .body { padding: 8px 12px 24px; gap: 12px; }
+  .card { border-radius: 16px; box-shadow: var(--shadow-card); }
+  .chip { min-height: 40px; padding: 0 14px; border-radius: 22px; font-size: 14px; }
+  .chip[aria-pressed="true"] { background: var(--primary-soft); border-color: var(--primary-border); color: var(--primary-text); }
+}

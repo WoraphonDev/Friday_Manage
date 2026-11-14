@@ -2368,3 +2368,13 @@ a.m-card:hover { border-color: var(--border-strong); }
   .drawer-menu > .dialog-heading { position: sticky; top: 0; z-index: 2; background: var(--card); margin: 0 -16px; padding: 4px 16px 10px; }
   .drawer-menu .nav-link, .drawer-menu .workspace-item { min-height: 48px; font-size: 15px; border-radius: 12px; }
 }
+
+/* ===== W32 · หัวโปรเจกต์มือถือ: ปุ่ม "มุมมอง ▾" แบบต้นแบบ (การ์ดขาวเต็มกว้าง ขอบมน 14) ===== */
+.m-view-switch {
+  display: flex; align-items: center; gap: 10px; width: calc(100% - 16px); min-height: 48px; margin: 12px 8px 4px; padding: 0 14px;
+  border: 1px solid var(--border); border-radius: 14px; background: var(--card); color: var(--foreground);
+  font: inherit; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; box-shadow: var(--shadow-card);
+}
+.m-view-switch > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m-view-switch > svg { flex: none; color: var(--muted); }
+.m-project-head { padding-bottom: 4px; }

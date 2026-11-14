@@ -109,7 +109,9 @@
     "workHours": "Working hours / leave",
     "securitySettings": "Security",
     "membersInvite": "Members & invites",
-    "importPlan": "Import plan"
+    "importPlan": "Import plan",
+    "mobileView": "View · {name}",
+    "mobileViews": "{name} views"
   },
   "roles": {
     "owner": "Owner",

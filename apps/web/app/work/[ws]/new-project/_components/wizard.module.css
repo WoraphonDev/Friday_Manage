@@ -80,3 +80,9 @@ textarea.in { resize:vertical; }
 .excelLink { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 16px; text-decoration:none; color:var(--foreground); }
 .excelLink:hover { border-color:var(--primary); }
 .excelLink > span:last-child { margin-left:auto; color:var(--primary-text); }
+
+/* W33 · มือถือตามต้นแบบ (ฐาน B): ขอบหน้า 12 · การ์ดมุม 16 มีเงา · desktop ไม่เปลี่ยน */
+@media (max-width: 760px) {
+  .body { padding: 8px 12px 24px; gap: 12px; }
+  .card { border-radius: 16px; box-shadow: var(--shadow-card); }
+}

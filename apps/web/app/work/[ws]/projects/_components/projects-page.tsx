@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Folder, Plus } from "lucide-react";
+import { LoadingState } from "@/components/ui";
 import { MobileHeader } from "@/components/shell/mobile-header";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
@@ -41,7 +42,9 @@ export function ProjectsPage({ ws }: { ws: string }) {
           </button>
         ))}
       </div>
-      {list.length === 0 ? (
+      {home.isPending && projects.length === 0 ? (
+        <LoadingState />
+      ) : list.length === 0 ? (
         <div className="m-empty" style={{ marginTop: 12 }}>{t("empty")}</div>
       ) : (
         <div className="m-cards" style={{ paddingTop: 12 }}>

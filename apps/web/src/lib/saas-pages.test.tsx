@@ -178,6 +178,32 @@ describe("Landing + ราคา (R1)", () => {
     expect(screen.getByRole("link", { name: "เข้าสู่ระบบ" })).toHaveAttribute("href", "/login");
   });
 
+  it("ภาพ Hero สลับ 4 มุมมองได้เอง และภาพเล็กของการ์ดฟีเจอร์ครบตั้งแต่โหลด (ไม่ต้องรอ animation)", async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProviders(<Landing />, { messages });
+    const preview = screen.getByRole("group", { name: "ภาพตัวอย่างหน้าจอ Kanban, Timeline, Gantt และ Workload" });
+    expect(within(preview).getByRole("button", { name: "Kanban" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(within(preview).getByRole("button", { name: "Workload" }));
+    expect(within(preview).getByRole("button", { name: "Workload" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(preview).getByRole("button", { name: "Kanban" })).toHaveAttribute("aria-pressed", "false");
+
+    // หัวข้อไม่มีแท็ก <hl> หลุดออกมา และคำที่ขีดเส้นใต้อยู่ในหัวข้อ
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(h1.textContent).toBe("วางแผนเป็น Man-Day เห็นงานล้นก่อนส่งงานช้า");
+    expect(container.textContent).not.toContain("<hl>");
+
+    // ขั้นสุดท้ายของแต่ละภาพ: Size M = 5 MD, แถวไฟล์ผิด, Sub-task 100%, อนุมัติเลื่อน Due แล้ว
+    expect(screen.getByText("ศ. 20 พ.ย.")).toBeInTheDocument();
+    expect(screen.getByText("31/11/2026")).toBeInTheDocument();
+    expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(screen.getByText("อนุมัติแล้ว · แจ้งกลุ่มทีม Dev แล้ว")).toBeInTheDocument();
+  });
+
+  it("หัวข้อภาษาอังกฤษติดจุดไว้กับคำที่ขีดเส้นใต้", () => {
+    renderWithProviders(<Landing />, { locale: "en" });
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Plan in Man-Days. See overload before delivery slips");
+  });
+
   it("หน้า /pricing: กำลังโหลด และ Error พร้อม requestId", async () => {
     let fail = true;
     server.use(http.get("*/api/v1/public/plans", () => (fail ? errorBody(500, "req_w19_plans") : HttpResponse.json(plansBody))));

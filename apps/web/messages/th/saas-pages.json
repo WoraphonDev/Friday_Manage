@@ -11,22 +11,50 @@
     "legalNav": "ข้อกฎหมาย",
     "terms": "ข้อกำหนดการใช้งาน",
     "privacy": "นโยบายความเป็นส่วนตัว",
-    "cookieSettings": "ตั้งค่าคุกกี้"
+    "cookieSettings": "ตั้งค่าคุกกี้",
+    "footerTagline": "ระบบจัดการงานสำหรับทีมพัฒนาซอฟต์แวร์ วางแผนเป็น Man-Day เห็น Workload ของทั้งทีมก่อนส่งงานช้า",
+    "productNav": "ผลิตภัณฑ์",
+    "helpNav": "ช่วยเหลือ",
+    "signup": "สมัครใช้งาน",
+    "ctaTitle": "เริ่มวางแผนงานทีมได้ใน 5 นาที",
+    "ctaLead": "ทดลองครบทุกฟีเจอร์ 14 วัน ไม่ต้องใช้บัตรเครดิต นำเข้าแผนจาก Excel เดิมได้ทันที",
+    "copyright": "© {year} Friday Work Management",
+    "trust": "เข้ารหัสข้อมูลทั้งตอนส่งและตอนจัดเก็บ · ปฏิบัติตาม PDPA"
   },
   "landing": {
     "badge": "สำหรับ Software house และทีม Dev",
-    "title": "วางแผนเป็น Man-Day เห็นงานล้นก่อนส่งงานช้า",
+    "title": "วางแผนเป็น <hl>Man-Day</hl> เห็น<hl>งานล้น</hl>ก่อนส่งงานช้า",
     "lead": "Kanban, Timeline, Gantt และ Workload ในที่เดียว นำเข้าแผนจาก Excel ได้ทันที แจ้งเตือนผ่าน LINE",
     "cta": "ทดลองใช้ฟรี 14 วัน",
     "seePrice": "ดูราคา",
     "note": "ไม่ต้องใช้บัตรเครดิต · เข้ารหัสข้อมูลทั้งตอนส่งและตอนจัดเก็บ",
-    "previewLabel": "ภาพตัวอย่างหน้าจอ Kanban",
-    "kanban": [
-      { "name": "To do", "cards": [ { "title": "Payment callback", "meta": "M · 5 MD", "color": "#B45309" }, { "title": "Export report", "meta": "S · 3 MD", "color": "#7C3AED" } ] },
-      { "name": "In progress", "cards": [ { "title": "Booking flow UI", "meta": "L · 8 MD", "color": "#0F766E" }, { "title": "Payment sandbox", "meta": "เลย 5 วัน", "color": "#DC2626" } ] },
-      { "name": "Review", "cards": [ { "title": "LINE reminder", "meta": "S · 3 MD", "color": "#0F766E" } ] },
-      { "name": "Done", "cards": [ { "title": "Login + 2FA", "meta": "M · 5 MD", "color": "#1D4ED8" }, { "title": "Select doctor", "meta": "S · 3 MD", "color": "#0F766E" } ] }
-    ],
+    "preview": {
+      "label": "ภาพตัวอย่างหน้าจอ Kanban, Timeline, Gantt และ Workload",
+      "views": ["Kanban", "Timeline", "Gantt", "Workload"],
+      "columns": ["To do", "In progress", "Review", "Done"],
+      "tasks": {
+        "pc": { "title": "Payment callback", "meta": "M · 5 MD" },
+        "er": { "title": "Export report", "meta": "S · 3 MD" },
+        "bf": { "title": "Booking flow UI", "meta": "L · 8 MD" },
+        "ps": { "title": "Payment sandbox", "meta": "เลย 5 วัน" },
+        "lr": { "title": "LINE reminder", "meta": "S · 3 MD" },
+        "lg": { "title": "Login + 2FA", "meta": "M · 5 MD" },
+        "sd": { "title": "Select doctor", "meta": "S · 3 MD" },
+        "rp": { "title": "Reset password", "meta": "S · 3 MD" },
+        "sa": { "title": "Schedule API", "meta": "M · 5 MD" },
+        "pn": { "title": "Push notification", "meta": "XS · 1 MD" },
+        "ar": { "title": "Admin role matrix", "meta": "L · 8 MD" }
+      },
+      "people": { "p": "ป", "k": "ก", "s": "ส" },
+      "month": "พ.ย.",
+      "task": "งาน",
+      "milestone": "Milestone · Sprint 14",
+      "week": "สัปดาห์ {n}",
+      "capacity": "/ 5 MD",
+      "over": "ล้น",
+      "workloadNote": "ทุกโปรเจกต์ · Man-Day ต่อสัปดาห์",
+      "workloadAlert": "ก้อง สัปดาห์ 47 เกิน 1.5 MD"
+    },
     "featuresTitle": "ทำมาสำหรับงานพัฒนาระบบ",
     "features": [
       { "name": "Man-Day + Size", "description": "ประเมินงานเป็น XS–XL แปลงเป็น Man-Day อัตโนมัติ นับเฉพาะวันทำงานและวันหยุดที่กำหนด" },
@@ -44,7 +72,15 @@
       { "q": "ข้อมูลเก็บที่ไหน", "a": "เข้ารหัสทั้งตอนส่งและตอนจัดเก็บ ปฏิบัติตาม PDPA · ดูรายชื่อผู้ให้บริการช่วงและประเทศที่ตั้งได้ที่หน้าข้อกฎหมาย" },
       { "q": "ทีม Friday เข้าดูข้อมูลของเราได้ไหม", "a": "เฉพาะเมื่อ Admin ของคุณเปิดสิทธิ์ให้ทีมช่วยเหลือ ทุกครั้งที่เข้าจะบันทึกใน Audit Log และแจ้ง Admin" },
       { "q": "ยกเลิกได้ไหม", "a": "ยกเลิกได้ตลอด ใช้ต่อได้จนจบรอบที่จ่ายไว้ และ Export ข้อมูลทั้งหมดเป็น Excel ได้" }
-    ]
+    ],
+    "demos": {
+      "size": { "start": "เริ่ม จ. 16 พ.ย. → เสร็จ", "skip": "ข้ามเสาร์-อาทิตย์", "ends": ["จ. 16 พ.ย.", "พ. 18 พ.ย.", "ศ. 20 พ.ย.", "พ. 25 พ.ย.", "อ. 1 ธ.ค."] },
+      "load": { "week": "สัปดาห์ 47 · ทุกโปรเจกต์", "full": "เต็ม 5 MD", "over": "ล้น", "note": "ก้อง งานเกิน <b>1.5 MD</b> ในสัปดาห์ 47" },
+      "import": { "note": "พร้อมนำเข้า <b>3 แถว</b> · แก้ 1 แถว: 31 พ.ย. ไม่มีจริง" },
+      "sub": { "items": ["API ยืนยัน OTP", "หน้ากรอกรหัส 6 หลัก", "ทดสอบ E2E"], "passed": "ผ่าน {n}" },
+      "bug": { "title": "กดปุ่มชำระเงินซ้ำได้", "passed": "ทดสอบผ่าน {n}" },
+      "line": { "ask": "ก้อง ขอเลื่อน Due FM-127 จาก 18 → 20 พ.ย.", "approve": "อนุมัติ", "reject": "ไม่อนุมัติ", "done": "อนุมัติแล้ว · แจ้งกลุ่มทีม Dev แล้ว" }
+    }
   },
   "pricing": {
     "title": "ราคาเหมาตามขนาดทีม",

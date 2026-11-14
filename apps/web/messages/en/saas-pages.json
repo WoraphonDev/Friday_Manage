@@ -11,22 +11,50 @@
     "legalNav": "Legal",
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",
-    "cookieSettings": "Cookie settings"
+    "cookieSettings": "Cookie settings",
+    "footerTagline": "Work management for software teams. Plan in Man-Days and see the whole team's workload before delivery slips",
+    "productNav": "Product",
+    "helpNav": "Support",
+    "signup": "Sign up",
+    "ctaTitle": "Start planning your team's work in 5 minutes",
+    "ctaLead": "Try every feature free for 14 days. No credit card required. Import your existing Excel plan right away",
+    "copyright": "© {year} Friday Work Management",
+    "trust": "Data encrypted in transit and at rest · PDPA compliant"
   },
   "landing": {
     "badge": "For software houses and Dev teams",
-    "title": "Plan in Man-Days. See overload before delivery slips",
+    "title": "Plan in <hl>Man-Days</hl>. See <hl>overload</hl> before delivery slips",
     "lead": "Kanban, Timeline, Gantt and Workload in one place. Import plans from Excel instantly. Notifications via LINE",
     "cta": "Try free for 14 days",
     "seePrice": "See pricing",
     "note": "No credit card required · Data encrypted in transit and at rest",
-    "previewLabel": "Kanban screen preview",
-    "kanban": [
-      { "name": "To do", "cards": [ { "title": "Payment callback", "meta": "M · 5 MD", "color": "#B45309" }, { "title": "Export report", "meta": "S · 3 MD", "color": "#7C3AED" } ] },
-      { "name": "In progress", "cards": [ { "title": "Booking flow UI", "meta": "L · 8 MD", "color": "#0F766E" }, { "title": "Payment sandbox", "meta": "5 days late", "color": "#DC2626" } ] },
-      { "name": "Review", "cards": [ { "title": "LINE reminder", "meta": "S · 3 MD", "color": "#0F766E" } ] },
-      { "name": "Done", "cards": [ { "title": "Login + 2FA", "meta": "M · 5 MD", "color": "#1D4ED8" }, { "title": "Select doctor", "meta": "S · 3 MD", "color": "#0F766E" } ] }
-    ],
+    "preview": {
+      "label": "Kanban, Timeline, Gantt and Workload screen preview",
+      "views": ["Kanban", "Timeline", "Gantt", "Workload"],
+      "columns": ["To do", "In progress", "Review", "Done"],
+      "tasks": {
+        "pc": { "title": "Payment callback", "meta": "M · 5 MD" },
+        "er": { "title": "Export report", "meta": "S · 3 MD" },
+        "bf": { "title": "Booking flow UI", "meta": "L · 8 MD" },
+        "ps": { "title": "Payment sandbox", "meta": "5 days late" },
+        "lr": { "title": "LINE reminder", "meta": "S · 3 MD" },
+        "lg": { "title": "Login + 2FA", "meta": "M · 5 MD" },
+        "sd": { "title": "Select doctor", "meta": "S · 3 MD" },
+        "rp": { "title": "Reset password", "meta": "S · 3 MD" },
+        "sa": { "title": "Schedule API", "meta": "M · 5 MD" },
+        "pn": { "title": "Push notification", "meta": "XS · 1 MD" },
+        "ar": { "title": "Admin role matrix", "meta": "L · 8 MD" }
+      },
+      "people": { "p": "P", "k": "K", "s": "S" },
+      "month": "Nov",
+      "task": "Task",
+      "milestone": "Milestone · Sprint 14",
+      "week": "Week {n}",
+      "capacity": "/ 5 MD",
+      "over": "Over",
+      "workloadNote": "All projects · Man-Days per week",
+      "workloadAlert": "Kong is 1.5 MD over in week 47"
+    },
     "featuresTitle": "Built for software development",
     "features": [
       { "name": "Man-Day + Size", "description": "Estimate tasks as XS–XL and convert them to Man-Days automatically, counting only working days and the holidays you set" },
@@ -44,7 +72,15 @@
       { "q": "Where is data stored?", "a": "Encrypted in transit and at rest, in compliance with the PDPA · See the list of subprocessors and their countries on the legal page" },
       { "q": "Can the Friday team access our data?", "a": "Only when your Admin grants access to the support team. Every access is recorded in the Audit Log and the Admin is notified" },
       { "q": "Can I cancel?", "a": "Cancel anytime. You can keep using it until the end of the paid period, and export all data to Excel" }
-    ]
+    ],
+    "demos": {
+      "size": { "start": "Start Mon 16 Nov → done", "skip": "skips weekends", "ends": ["Mon 16 Nov", "Wed 18 Nov", "Fri 20 Nov", "Wed 25 Nov", "Tue 1 Dec"] },
+      "load": { "week": "Week 47 · all projects", "full": "Capacity 5 MD", "over": "Over", "note": "Kong is <b>1.5 MD</b> over in week 47" },
+      "import": { "note": "<b>3 rows</b> ready · fix 1 row: 31 Nov does not exist" },
+      "sub": { "items": ["OTP verification API", "6-digit code screen", "E2E tests"], "passed": "{n} passed" },
+      "bug": { "title": "Payment button can be pressed twice", "passed": "Tests passed {n}" },
+      "line": { "ask": "Kong asks to move the FM-127 due date from 18 → 20 Nov", "approve": "Approve", "reject": "Decline", "done": "Approved · Dev team group notified" }
+    }
   },
   "pricing": {
     "title": "Flat pricing by team size",

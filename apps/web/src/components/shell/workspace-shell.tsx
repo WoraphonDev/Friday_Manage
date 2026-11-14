@@ -104,6 +104,10 @@ interface ShellContext {
   projects: Project[];
   /** เปิด Command palette (หัวหน้ามือถือ M2/M5 มีปุ่มค้นหาของตัวเอง) */
   openSearch?: () => void;
+  /** มือถือ (W29): เปิดเมนู Workspace (สลับ Workspace · ค้นหา · ภาษา · ออกจากระบบ) จากโลโก้บนหัวหน้า */
+  openMenu?: () => void;
+  /** จำนวนแจ้งเตือนที่ยังไม่อ่านของ Workspace นี้ (ป้ายบนกระดิ่งของหัวหน้ามือถือ) */
+  unread?: number;
 }
 const Context = createContext<ShellContext | null>(null);
 export function useWorkspace() {
@@ -605,6 +609,8 @@ export function WorkspaceShell({
         workspace,
         projects: projects.data?.items ?? [],
         openSearch: () => setCommandOpen(true),
+        openMenu: () => setMenuOpen(true),
+        unread,
       }}
     >
       <YearFormatContext.Provider value={me.data.yearFormat}>

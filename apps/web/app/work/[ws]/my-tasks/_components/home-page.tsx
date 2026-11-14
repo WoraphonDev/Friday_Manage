@@ -4,13 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Avatar, Badge, Button, EmptyState, ErrorState, Forbidden, LoadingState, Select, StatusPill, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, formatManDay, type YearFormat } from "@/lib/format";
 import type { HomeData, Health, InboxItem } from "./types";
-import { bkkHour, projectHref, taskHref } from "./shared";
+import { bkkHour, projectHref, StatusBadge, taskHref } from "./shared";
+import { MobileHeader } from "@/components/shell/mobile-header";
 import { useIsMobile } from "@/lib/use-mobile";
 import styles from "./hmt.module.css";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
@@ -137,40 +138,53 @@ function useDecide(ws: string) {
   return { decide, error };
 }
 
-/** M5 · มือถือ: หัวขาว + ค้นหา, KPI 3 ช่อง, รอคุณอนุมัติ, วันนี้ของฉัน, โปรเจกต์ */
+/** M5 → W29 · มือถือแบบ B ของต้นแบบ: หัวหน้าใหญ่ · การ์ดทักทาย · KPI 2×2 · คำขอรออนุมัติ · รอคุณรีวิว · โปรเจกต์ · ปุ่มสร้างงานลอย
+ *  ใช้ข้อมูลจริงจาก /home (ต้นแบบมีกราฟ "งานที่ปิดได้ 7 วัน" แต่ API ยังไม่มีข้อมูลนี้ จึงไม่แสดง) */
 function MobileHome({ data, ws, greeting, year }: { data: HomeData; ws: string; greeting: string; year: YearFormat }) {
   const t = useTranslations("home-my-tasks.home");
-  const tk = useTranslations("home-my-tasks.home.kpi");
-  const { openSearch, workspace } = useWorkspace();
+  const { workspace, projects } = useWorkspace();
   const { decide, error } = useDecide(ws);
   const s = data.summary;
   const my = `/work/${encodeURIComponent(ws)}/my-tasks`;
   const approvals = data.waiting.approvals;
+  const first = workspace.role !== "guest" ? projects[0] : undefined;
+  const kpis: [string, number, string?][] = [
+    [t("mobileKpi.today"), s.dueToday.mine, s.dueToday.mine ? "var(--warning-text)" : undefined],
+    [t("mobileKpi.overdue"), s.overdue.mine, s.overdue.mine ? "var(--danger-text)" : undefined],
+    [t("mobileKpi.week"), s.dueThisWeek.mine],
+    [t("mobileKpi.approvals"), s.pendingApprovals],
+  ];
   return (
-    <div>
-      <header className={styles.mHead}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="muted" style={{ fontSize: 12 }}>{formatDate(data.today, year, true)}</div>
-          <h1 className={styles.mTitle}>{greeting}</h1>
+    <div className="m-page">
+      <MobileHeader title={t("mobileTitle")} subtitle={workspace.name} />
+      <div className="m-cards">
+        <div className="m-card m-card-hl">
+          <h3>{greeting}</h3>
+          <div className="m-sm">
+            {t("mobileSummary", { today: s.dueToday.mine, overdue: s.overdue.mine, approvals: s.pendingApprovals })}
+            <span className="m-muted"> · {formatDate(data.today, year, true)}</span>
+          </div>
         </div>
-        <button type="button" className={styles.mIcon} aria-label={t("search")} onClick={() => openSearch?.()}><Search size={22} aria-hidden="true" /></button>
-      </header>
-      <div className={styles.mBody}>
         <OnboardingHomeCard ws={ws} role={workspace.role} />
-        <div className={styles.mKpis}>
-          <Link className={styles.mKpi} href={my}><span>{tk("overdue")}</span><b style={{ color: "var(--danger-text)" }}>{s.overdue.team}</b></Link>
-          <Link className={styles.mKpi} href={my}><span>{t("mobileToday")}</span><b style={{ color: "var(--warning-text)" }}>{s.dueToday.mine}</b></Link>
-          <Link className={styles.mKpi} href={my}><span>{tk("review")}</span><b>{s.waitingReview}</b></Link>
-        </div>
-        {approvals.length > 0 && (
-          <section aria-labelledby="m-approve">
-            <div className={styles.mSec}><h2 id="m-approve">{t("mobileApprovals")}</h2><span className={styles.mCount}>{approvals.length}</span></div>
-            {!!error && <ErrorState error={error} />}
+      </div>
+      <div className="m-kpis">
+        {kpis.map(([label, value, color]) => (
+          <Link key={label} className="m-card m-kpi" href={my}>
+            <span>{label}</span>
+            <b style={color ? { color } : undefined}>{value}</b>
+          </Link>
+        ))}
+      </div>
+      {approvals.length > 0 && (
+        <section aria-labelledby="m-approve">
+          <div className="m-sec"><h2 id="m-approve">{t("mobileApprovals")}</h2><span className="m-pill m-pill-warn">{approvals.length}</span></div>
+          {!!error && <ErrorState error={error} />}
+          <div className="m-cards">
             {approvals.map((r) => (
-              <div className={styles.mApprove} key={r.id}>
-                <div style={{ fontSize: 12 }}><b>{r.requester?.displayName ?? "-"}</b> {t("mobileAsksDue")}</div>
-                <Link className={styles.mApproveTitle} href={taskHref(ws, r.project.key, r.issue.key)}>{r.issue.key} {r.issue.title}</Link>
-                <div className={styles.mDueLine}><s>{formatDate(r.previousDue ?? r.issue.planEnd)}</s> → <b>{formatDate(r.requestedDue)}</b> <span className="muted">· {r.project.name}</span></div>
+              <div className="m-card" key={r.id}>
+                <div className="m-card-top"><span className="m-pill m-pill-warn">{t("mobileAsksDue")}</span><span className="m-key">{r.issue.key}</span></div>
+                <Link className={styles.mApproveTitle} href={taskHref(ws, r.project.key, r.issue.key)}><h3>{r.issue.title}</h3></Link>
+                <div className="m-sm m-muted">{r.requester?.displayName ?? "-"} · <s>{formatDate(r.previousDue ?? r.issue.planEnd)}</s> → <b style={{ color: "var(--foreground)" }}>{formatDate(r.requestedDue)}</b> · {r.project.name}</div>
                 {r.canDecide && (
                   <div className={styles.mDecide}>
                     <Button disabled={decide.isPending} aria-label={`${t("reject")} ${r.issue.key}`} onClick={() => decide.mutate({ id: r.id, action: "reject", key: r.issue.key })}>{t("reject")}</Button>
@@ -179,33 +193,52 @@ function MobileHome({ data, ws, greeting, year }: { data: HomeData; ws: string; 
                 )}
               </div>
             ))}
-          </section>
-        )}
-        <section aria-labelledby="m-today">
-          <div className={styles.mSec}><h2 id="m-today">{t("mobileMyToday")}</h2><Link href={my} style={{ fontSize: 12 }}>{t("seeAll")}</Link></div>
-          {data.waiting.reviews.length === 0 && <p className="muted" style={{ fontSize: 12, margin: "4px 0" }}>{t("waitingEmpty")}</p>}
+          </div>
+        </section>
+      )}
+      <section aria-labelledby="m-today">
+        <div className="m-sec"><h2 id="m-today">{t("mobileReviews")}</h2><Link href={my}>{t("seeAll")}</Link></div>
+        <div className="m-cards">
+          {data.waiting.reviews.length === 0 && <div className="m-empty">{t("waitingEmpty")}</div>}
           {data.waiting.reviews.map((r) => (
-            <Link key={r.key} className={styles.mToday} href={taskHref(ws, r.project.key, r.key)}>
-              <span className={styles.mBar} aria-hidden="true" />
-              <span className={styles.mTodayTitle}>{t("reviewRow", { key: r.key, title: r.title })}</span>
-              <DueText planEnd={r.planEnd} today={data.today} />
+            <Link key={r.key} className="m-card" href={taskHref(ws, r.project.key, r.key)}>
+              <div className="m-card-top"><StatusBadge category={r.status.category} name={r.status.name} /><span className="m-key">{r.key}</span></div>
+              <h3>{r.title}</h3>
+              <div className="m-sm m-muted">{r.project.name}</div>
+              <div className="m-card-bot">
+                {r.from && <><Avatar person={r.from} size="small" /><span>{r.from.displayName}</span></>}
+                <span className="m-spacer" />
+                <DueText planEnd={r.planEnd} today={data.today} />
+              </div>
             </Link>
           ))}
+        </div>
+      </section>
+      {data.projects.length > 0 && (
+        <section aria-labelledby="m-projects">
+          <div className="m-sec"><h2 id="m-projects">{t("mobileProjects")}</h2><span className="m-pill">{data.projects.length}</span></div>
+          <div className="m-cards">
+            {data.projects.map((p) => (
+              <Link key={p.key} className="m-card" href={projectHref(ws, p.key)}>
+                <div className="m-card-top" style={{ marginBottom: 0 }}>
+                  <span className="m-proj-icon" style={{ background: p.color ?? FALLBACK_PROJECT_COLOR }}>{p.key.slice(0, 2)}</span>
+                  <h3 style={{ margin: 0, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</h3>
+                  {(p.health.level === "at_risk" || p.health.level === "off_track") && (
+                    <span className={`m-pill ${p.health.level === "off_track" ? "m-pill-bad" : "m-pill-warn"}`}>{t(`mobileHealth.${p.health.level}`)}</span>
+                  )}
+                </div>
+                <div className="m-sm m-muted" style={{ marginTop: 6 }}>{t("mobileProgress", { pct: p.progressPct })} · {t("mobileMine", { count: p.myTasks })}</div>
+                <div className="m-progress" role="presentation"><i style={{ width: `${Math.max(0, Math.min(100, p.progressPct))}%` }} /></div>
+              </Link>
+            ))}
+          </div>
         </section>
-        {data.projects.length > 0 && (
-          <section aria-labelledby="m-projects">
-            <div className={styles.mSec}><h2 id="m-projects">{t("mobileProjects")}</h2><span className="muted" style={{ fontSize: 12 }}>{data.projects.length}</span></div>
-            <div className={styles.mProjects}>
-              {data.projects.map((p) => (
-                <Link key={p.key} className={styles.mProject} href={projectHref(ws, p.key)}>
-                  <span className={styles.mProjIcon} style={{ background: p.color ?? FALLBACK_PROJECT_COLOR }}>{p.key.slice(0, 2)}</span>
-                  <span style={{ minWidth: 0 }}><b>{p.name}</b><small className="muted">{p.progressPct}% · {t("mobileMine", { count: p.myTasks })}</small></span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-      </div>
+      )}
+      {first && (
+        <Link className="m-fab" href={`/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(first.key)}?new=1`}>
+          <Plus size={22} aria-hidden="true" />{t("mobileNewTask")}
+        </Link>
+      )}
     </div>
   );
 }

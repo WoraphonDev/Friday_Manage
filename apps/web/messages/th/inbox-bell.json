@@ -86,7 +86,10 @@
       "digest__daily": "สรุปงานประจำวันของคุณ"
     },
     "loading": "กำลังโหลด Inbox",
-    "openMyTasks": "เปิดงานของฉัน"
+    "openMyTasks": "เปิดงานของฉัน",
+    "mobileTitle": "กล่องข้อความ",
+    "mobileSubtitle": "{count} รายการยังไม่อ่าน",
+    "moreActions": "ตัวเลือกกล่องข้อความ"
   },
   "bell": {
     "title": "การแจ้งเตือน",

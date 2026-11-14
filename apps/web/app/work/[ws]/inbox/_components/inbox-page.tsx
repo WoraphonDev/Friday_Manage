@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { ArrowLeft } from "lucide-react";
-import { Avatar, Badge, Button, ErrorState, Forbidden, LoadingState, useToast } from "@/components/ui";
+import { ArrowLeft, CheckCheck, ChevronRight, MoreVertical, Settings } from "lucide-react";
+import { ActionSheet, Avatar, Badge, Button, ErrorState, Forbidden, LoadingState, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
+import { MobileHeader } from "@/components/shell/mobile-header";
+import { useIsMobile } from "@/lib/use-mobile";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, today, localeDateFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -17,6 +19,8 @@ import { statusTone } from "@/lib/status";
 import { DAILY_EVENT, DailySummary, useDailyTitle } from "@/features/daily-summary/daily-summary";
 
 const FILTERS: Filter[] = ["all", "unread", "assign", "mention", "activity", "due"];
+/** มือถือตามต้นแบบ: ยังไม่อ่าน · ทั้งหมด · ถึงฉัน · มอบหมาย (ตัวกรองอื่นอยู่บน desktop) */
+const MOBILE_FILTERS: Filter[] = ["unread", "all", "mention", "assign"];
 const TONE: Record<string, "blue" | "purple" | "teal" | "amber" | "red" | "neutral"> = { assign: "blue", mention: "purple", activity: "teal", due: "amber" };
 const issueHref = (ws: string, key: string) => `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(key.split("-")[0])}/board?issue=${encodeURIComponent(key)}`;
 const bkkDate = (iso: string) => today(new Date(iso));
@@ -40,6 +44,9 @@ export function InboxPage({ ws }: { ws: string }) {
   const search = useSearchParams();
   const cache = useQueryClient();
   const toast = useToast();
+  const mobile = useIsMobile();
+  const router = useRouter();
+  const [menu, setMenu] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const urlN = search.get("n");
   const [selected, setSelected] = useState<string | null>(urlN);
@@ -110,6 +117,74 @@ export function InboxPage({ ws }: { ws: string }) {
   const yesterday = new Date(Date.parse(`${now}T12:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
   const groups = (["today", "yesterday", "earlier"] as const).map((g) => ({ g, list: items.filter((n) => { const d = bkkDate(n.createdAt); return g === "today" ? d === now : g === "yesterday" ? d === yesterday : d < yesterday; }) })).filter((x) => x.list.length);
 
+  const run = (path: string, message?: string, body?: unknown) => {
+    // รับทราบ / เตือนพรุ่งนี้ / ตัดสินคำขอ = จัดการแล้ว ให้หลุดจากแท็บตามผลจริงของ API
+    if (current) setKept((list) => list.filter((n) => n.id !== current.id));
+    act.mutate({ path, message, body });
+  };
+
+  if (mobile) {
+    // W29 · มือถือแบบต้นแบบ (ฐาน A): หัวใหญ่ + ⋮ · ชิปมีตัวเลข · กลุ่มวันในกล่องขอบมน · แตะแถวเปิดรายละเอียดเต็มจอ (ส่วนรายละเอียดเดิม)
+    if (current)
+      return (
+        <div className={`${styles.layout} ${styles.showDetail}`}>
+          <aside className={`${styles.card} ${styles.detail}`} aria-label={t("detailLabel")}>
+            <Detail ws={ws} n={current} busy={act.isPending} onBack={() => setSelected(null)} run={run} />
+          </aside>
+        </div>
+      );
+    return (
+      <div className="m-page">
+        <MobileHeader
+          title={t("mobileTitle")}
+          subtitle={t("mobileSubtitle", { count: counts?.unread ?? 0 })}
+          bell={false}
+          actions={<button type="button" className="m-icon" aria-label={t("moreActions")} aria-haspopup="dialog" onClick={() => setMenu(true)}><MoreVertical size={20} aria-hidden="true" /></button>}
+        />
+        <div className="m-chips" role="group" aria-label={t("filterLabel")}>
+          {MOBILE_FILTERS.map((f) => (
+            <button key={f} type="button" className="m-chip" aria-pressed={filter === f} onClick={() => changeFilter(f)}>
+              {t(`filters.${f}`)} <small>{counts?.[f] ?? 0}</small>
+            </button>
+          ))}
+        </div>
+        {!items.length && <div className="m-empty" style={{ marginTop: 8 }}>{t("empty")}</div>}
+        {groups.map(({ g, list }) => (
+          <section key={g} aria-label={t(`groups.${g}`)}>
+            <div className="m-sec">{t(`groups.${g}`)}</div>
+            <div className="m-grp">
+              {list.map((n) => (
+                <button key={n.id} type="button" className={`m-row${!n.readAt ? " m-row-unread" : ""}`} onClick={() => setSelected(n.id)}>
+                  <span className={`m-dot${n.readAt ? " m-dot-off" : ""}`} role={n.readAt ? undefined : "img"} aria-label={n.readAt ? undefined : t("unread")} />
+                  <Avatar size="small" person={{ id: n.actor?.id ?? n.id, displayName: labels.actor(n), avatarUrl: n.actor?.avatarUrl ?? null }} />
+                  <span className="m-row-main">
+                    <b>{labels.actor(n)} {labels.verb(n)}</b>
+                    <small>{n.eventType === DAILY_EVENT ? dailyTitle(n.payload) : typeof n.payload.message === "string" ? `“${n.payload.message}”` : `${n.issue?.key ?? (n.payload.issueKey as string | undefined) ?? ""} ${n.issue?.title ?? (n.payload.title as string | undefined) ?? ""}`}</small>
+                  </span>
+                  <span className="m-row-meta">
+                    {n.category === "due" && <Badge tone="amber">{labels.type(n)}</Badge>}
+                    <span>{g === "today" ? timeOf(n.createdAt) : formatDate(n.createdAt, me.yearFormat)}</span>
+                  </span>
+                  <ChevronRight className="m-row-chev" size={16} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+          </section>
+        ))}
+        {query.hasNextPage && <div className={styles.more}><Button onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>{t("loadMore")}</Button></div>}
+        <ActionSheet
+          open={menu}
+          onOpenChange={setMenu}
+          title={t("mobileTitle")}
+          actions={[
+            { key: "read-all", label: t("markAll"), icon: <CheckCheck size={20} aria-hidden="true" />, disabled: act.isPending || !counts?.unread, onSelect: () => act.mutate({ path: "/me/notifications/read-all", body: { workspace: ws }, message: t("markedAll") }) },
+            { key: "settings", label: t("settings"), icon: <Settings size={20} aria-hidden="true" />, onSelect: () => router.push(`/work/${encodeURIComponent(ws)}/profile`) },
+          ]}
+        />
+      </div>
+    );
+  }
+
   return (
     // หน้า Inbox สูงพอดีจอ: หัว แท็บ และรายละเอียดอยู่กับที่ เลื่อนเฉพาะรายการแจ้งเตือน
     <div className={styles.page}>
@@ -155,11 +230,7 @@ export function InboxPage({ ws }: { ws: string }) {
           {query.hasNextPage && <div className={styles.more}><Button onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>{t("loadMore")}</Button></div>}
         </section>
         <aside className={`${styles.card} ${styles.detail}`} aria-label={t("detailLabel")}>
-          {!current ? <div className={styles.empty}>{t("selectHint")}</div> : <Detail ws={ws} n={current} busy={act.isPending} onBack={() => setSelected(null)} run={(path, message, body) => {
-            // รับทราบ / เตือนพรุ่งนี้ / ตัดสินคำขอ = จัดการแล้ว ให้หลุดจากแท็บตามผลจริงของ API
-            setKept((list) => list.filter((n) => n.id !== current.id));
-            act.mutate({ path, message, body });
-          }} />}
+          {!current ? <div className={styles.empty}>{t("selectHint")}</div> : <Detail ws={ws} n={current} busy={act.isPending} onBack={() => setSelected(null)} run={run} />}
         </aside>
       </div>
     </div>

@@ -112,7 +112,22 @@
     "workloadAll": "View full Workload",
     "workloadChart": "Man-Days per person this week",
     "loading": "Loading Home",
-    "guestNote": "The Guest role only sees tasks shared with them"
+    "guestNote": "The Guest role only sees tasks shared with them",
+    "mobileTitle": "Home",
+    "mobileSummary": "{today} due today · {overdue} overdue · {approvals} requests to approve",
+    "mobileKpi": {
+      "today": "Due today",
+      "overdue": "Overdue",
+      "week": "Due this week",
+      "approvals": "To approve"
+    },
+    "mobileNewTask": "New task",
+    "mobileReviews": "Waiting for your review",
+    "mobileProgress": "{pct}% complete",
+    "mobileHealth": {
+      "at_risk": "At risk",
+      "off_track": "Off track"
+    }
   },
   "tasks": {
     "title": "My Tasks",
@@ -231,6 +246,8 @@
       "baLong": "I'm the Business Analyst on this task",
       "saLong": "I'm the System Analyst on this task",
       "qaLong": "I'm the QA / Reviewer on this task"
-    }
+    },
+    "mobileSubtitle": "{count} open tasks",
+    "mobileTitle": "My tasks"
   }
 }

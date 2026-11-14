@@ -4,13 +4,14 @@ import { useRef, useState, type DragEvent, type TouchEvent } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Filter, Flag, Plus, Search } from "lucide-react";
+import { Filter, Flag, Plus } from "lucide-react";
 import { useIsMobile } from "@/lib/use-mobile";
-import { CalendarClock, ChevronDown } from "lucide-react";
+import { CalendarClock, ChevronDown, ChevronRight } from "lucide-react";
 import { Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
+import { MobileHeader } from "@/components/shell/mobile-header";
 import { api, ApiError } from "@/lib/api";
-import { formatDate, type YearFormat } from "@/lib/format";
+import { formatDate, formatManDay, type YearFormat } from "@/lib/format";
 import type { FormOptions, GroupBy, MyIssues, Tab, TaskGroup, TaskItem } from "./types";
 import { StatusBadge, taskHref, useDueText } from "./shared";
 import styles from "./hmt.module.css";
@@ -284,58 +285,68 @@ const SIDE_PROJECTS = 3;
 
 const MOBILE_FILTERS = { focus: ["late", "today"], week: ["late", "today", "this_week"], all: ["late", "today", "this_week", "next_week", "later", "none"] } as const;
 
-/** M2 · มือถือ: หัว My Tasks + ค้นหา/ตัวกรอง, ชิปช่วงเวลา, รายการกะทัดรัดตามกลุ่ม Due, ปุ่มสร้างลอย */
+/** M2 → W29 · มือถือแบบต้นแบบ (หัว B + รายการกะทัดรัดฐาน A): หัวข้อใหญ่ · ชิปช่วงเวลามีตัวเลข · กลุ่มตาม Due ในกล่องขอบมน · ปุ่มสร้างงานลอย
+ *  คงช่องติ๊กปิดงานไว้แทนรูปผู้รับผิดชอบในต้นแบบ (ทุกแถวเป็นงานของฉันอยู่แล้ว) */
 function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
   data: MyIssues; ws: string; name: string; year: YearFormat; tab: Tab; setTab: (tab: Tab) => void;
   busy: string | null; onToggle: (item: TaskItem, done: boolean) => void;
 }) {
   const t = useTranslations("home-my-tasks.tasks");
-  const { openSearch, projects } = useWorkspace();
+  const th = useTranslations("home-my-tasks.home");
+  const { projects, workspace } = useWorkspace();
   const dueText = useDueText();
   const [range, setRange] = useState<keyof typeof MOBILE_FILTERS>("focus");
   const [showTabs, setShowTabs] = useState(false);
   const count = (keys: readonly string[]) => data.groups.filter((g) => keys.includes(g.key)).reduce((n, g) => n + g.items.filter((i) => !isClosedCategory(i.status.category)).length, 0);
   const groups = data.groups.filter((g) => (MOBILE_FILTERS[range] as readonly string[]).includes(g.key) && g.items.length);
-  const first = projects[0];
+  const first = workspace.role !== "guest" ? projects[0] : undefined;
   return (
-    <div className={styles.mTasks}>
-      <header className={styles.mHeadCol}>
-        <div className={styles.mHeadRow}>
-          <h1 className={styles.mTitle} style={{ fontSize: 22, flex: 1 }}>{t("title")} <span className={styles.mOwner}>· {name}</span></h1>
-          <button type="button" className={styles.mIcon} aria-label={t("search")} onClick={() => openSearch?.()}><Search size={22} aria-hidden="true" /></button>
-          <button type="button" className={styles.mIcon} aria-label={t("filter")} aria-expanded={showTabs} onClick={() => setShowTabs((v) => !v)}><Filter size={22} aria-hidden="true" /></button>
+    <div className="m-page">
+      <MobileHeader
+        title={t("mobileTitle")}
+        subtitle={<>{t("mobileSubtitle", { count: count(MOBILE_FILTERS.all) })} · {name}</>}
+        actions={<button type="button" className="m-icon" aria-label={t("filter")} aria-expanded={showTabs} onClick={() => setShowTabs((v) => !v)}><Filter size={20} aria-hidden="true" /></button>}
+      />
+      {showTabs && (
+        <div className="m-chips" role="group" aria-label={t("title")}>
+          {TABS.map((k) => <button key={k} type="button" className="m-chip" aria-pressed={tab === k} onClick={() => setTab(k)}>{t(`tabs.${k}`)} <small>{data.counts[k]}</small></button>)}
         </div>
-        {showTabs && (
-          <div className={styles.mChips} role="group" aria-label={t("title")}>
-            {TABS.map((k) => <button key={k} type="button" className={styles.chip} aria-pressed={tab === k} onClick={() => setTab(k)}>{t(`tabs.${k}`)} {data.counts[k]}</button>)}
-          </div>
-        )}
-        <div className={styles.mChips} role="group" aria-label={t("rangeLabel")}>
-          {(Object.keys(MOBILE_FILTERS) as (keyof typeof MOBILE_FILTERS)[]).map((k) => <button key={k} type="button" className={styles.chip} aria-pressed={range === k} onClick={() => setRange(k)}>{t(`mobileRange.${k}`)} · {count(MOBILE_FILTERS[k])}</button>)}
-        </div>
-      </header>
-      {groups.length === 0 && <EmptyState title={t("empty")} description={t("emptyHint")} />}
+      )}
+      <div className="m-chips" role="group" aria-label={t("rangeLabel")}>
+        {(Object.keys(MOBILE_FILTERS) as (keyof typeof MOBILE_FILTERS)[]).map((k) => <button key={k} type="button" className="m-chip" aria-pressed={range === k} onClick={() => setRange(k)}>{t(`mobileRange.${k}`)} <small>{count(MOBILE_FILTERS[k])}</small></button>)}
+      </div>
+      {groups.length === 0 && <div style={{ padding: "8px 0" }}><EmptyState title={t("empty")} description={t("emptyHint")} /></div>}
       {groups.map((g) => (
-        <div key={g.key} role="group" aria-label={groupLabel(t, g)}>
-          <div className={styles.mGroup}><span style={{ background: GROUP_COLOR[g.key] ?? "var(--chart-neutral)" }} /><b style={{ color: g.key === "late" ? "var(--danger-text)" : undefined }}>{groupLabel(t, g)}</b><span className="muted">{g.items.length}</span></div>
-          {g.items.map((i) => {
-            const done = isClosedCategory(i.status.category);
-            const due = dueText(i, year);
-            return (
-              <div key={i.key} className={styles.mItem}>
-                <input type="checkbox" checked={done} disabled={busy === i.key || i.canMove === false} title={i.canMove === false ? t("cannotMove") : undefined} aria-label={t(done ? "markUndone" : "markDone", { title: i.title })} onChange={(e) => onToggle(i, e.target.checked)} />
-                <Link href={taskHref(ws, i.project.key, i.key)} className={styles.mItemMain}>
-                  <span className={styles.mItemTitle} style={done ? { textDecoration: "line-through", color: "var(--muted)" } : undefined}>{i.title}</span>
-                  <span className={styles.mItemMeta}><span className={styles.mType} aria-hidden="true" />{i.key} · <span className={styles.mProjDot} style={{ background: i.project.color ?? FALLBACK_PROJECT_COLOR }} />{i.project.name}<RoleBadges item={i} /></span>
-                </Link>
-                <span className={`${styles.mDue} ${due.cls}`}>{due.text}</span>
-              </div>
-            );
-          })}
-        </div>
+        <section key={g.key} role="group" aria-label={groupLabel(t, g)}>
+          <div className="m-sec">
+            <span style={{ color: g.key === "late" ? "var(--danger-text)" : undefined }}>{groupLabel(t, g)}</span>
+            <span className={`m-pill${g.key === "late" ? " m-pill-bad" : ""}`}>{g.items.length}</span>
+          </div>
+          <div className="m-grp">
+            {g.items.map((i) => {
+              const done = isClosedCategory(i.status.category);
+              const due = dueText(i, year);
+              return (
+                <div key={i.key} className="m-row">
+                  <input className="m-check" type="checkbox" checked={done} disabled={busy === i.key || i.canMove === false} title={i.canMove === false ? t("cannotMove") : undefined} aria-label={t(done ? "markUndone" : "markDone", { title: i.title })} onChange={(e) => onToggle(i, e.target.checked)} />
+                  <Link href={taskHref(ws, i.project.key, i.key)} className="m-row-main">
+                    <b style={done ? { textDecoration: "line-through", color: "var(--muted)" } : undefined}><span className="m-key">{i.key}</span> {i.title}</b>
+                    <small>{i.project.name}{i.estimateMd != null ? ` · ${formatManDay(i.estimateMd)}` : ""}<RoleBadges item={i} /></small>
+                  </Link>
+                  <span className={`m-row-meta ${due.cls}`}>{due.text}</span>
+                  <ChevronRight className="m-row-chev" size={16} aria-hidden="true" />
+                </div>
+              );
+            })}
+          </div>
+        </section>
       ))}
-      <p className={styles.mHint}>{t("mobileHint")}</p>
-      {first && <Link className={styles.fab} href={`/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(first.key)}?new=1`} aria-label={t("newTask")}><Plus size={26} aria-hidden="true" /></Link>}
+      <p className="m-hint">{t("mobileHint")}</p>
+      {first && (
+        <Link className="m-fab" href={`/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(first.key)}?new=1`}>
+          <Plus size={22} aria-hidden="true" />{th("mobileNewTask")}
+        </Link>
+      )}
     </div>
   );
 }

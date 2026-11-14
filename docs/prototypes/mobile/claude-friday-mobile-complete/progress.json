@@ -1,0 +1,19 @@
+{
+  "updated": "2026-11-14",
+  "inventoryEntries": 189,
+  "defined": 189,
+  "previews": 567,
+  "byType": {"screen": 109, "state": 5, "sheet": 38, "dialog": 20, "menu": 11, "panel": 6},
+  "batches": [
+    {"id": "b0-inventory", "status": "done", "files": ["inventory.json"]},
+    {"id": "b1-engine", "status": "done", "files": ["engine/tokens.css", "engine/fm.css", "engine/fm.js"]},
+    {"id": "b2-public-auth-system", "status": "done", "files": ["data/b1-public-auth.js"], "entries": 19},
+    {"id": "b3-workspace", "status": "done", "files": ["data/b2-workspace.js"], "entries": 33},
+    {"id": "b4-project", "status": "done", "files": ["data/b3-project.js"], "entries": 43},
+    {"id": "b5-issue-admin-billing-help", "status": "done", "files": ["data/b4-issue-admin-billing-help.js"], "entries": 45},
+    {"id": "b6-ops", "status": "done", "files": ["data/b5-ops.js"], "entries": 49},
+    {"id": "b7-gallery-handoff", "status": "done", "files": ["index.html", "gallery.js", "HANDOFF.md"]}
+  ],
+  "verification": "ID ใน data/*.js ตรงกับ inventory.json ครบ 189 (ตรวจด้วย grep) · ยังไม่ได้รันในเบราว์เซอร์",
+  "next": "host: เสิร์ฟผ่าน HTTP แล้วตรวจ console/DOM/screenshot · ดู HANDOFF.md ข้อ 11"
+}

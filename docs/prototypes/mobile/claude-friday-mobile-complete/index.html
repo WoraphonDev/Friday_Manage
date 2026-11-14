@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Friday Manage · Mobile design gallery (ต้นแบบ ไม่ใช่ production)</title>
+<link rel="stylesheet" href="engine/tokens.css">
+<link rel="stylesheet" href="engine/fm.css">
+<style>
+/* โครงหน้าแกลเลอรี (ไม่ใช่ส่วนของดีไซน์มือถือ) */
+.g{display:grid;grid-template-columns:300px 1fr 300px;height:100vh;overflow:hidden}
+.g aside,.g .info{background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+.g .info{border-right:0;border-left:1px solid var(--border);overflow:auto;padding:16px;font-size:13px}
+.g header.gh{padding:14px 14px 8px;border-bottom:1px solid var(--border)}
+.g header.gh h1{font-size:15px;margin:0 0 4px;display:flex;gap:8px;align-items:center}
+.g .cov{font-size:12px;color:var(--muted)}
+.g .ctl{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px 14px}
+.g .ctl input,.g .ctl select{min-height:36px;border:1px solid var(--border-strong);border-radius:8px;background:var(--card);padding:0 8px;font-size:13px}
+.g .ctl input{grid-column:1/-1}
+.g .lst{overflow:auto;flex:1;padding-bottom:20px}
+.g .lst h2{font-size:11px;letter-spacing:.04em;color:var(--muted);margin:12px 14px 4px;text-transform:uppercase;display:flex}
+.g .lst h2 span{margin-left:auto}
+.g .lst a{display:flex;gap:8px;align-items:center;padding:7px 14px;text-decoration:none;color:var(--foreground);font-size:13px;border-left:3px solid transparent}
+.g .lst a:hover{background:var(--hover)}
+.g .lst a[aria-current="true"]{background:var(--primary-soft);border-left-color:var(--primary);color:var(--primary-text)}
+.g .lst a small{margin-left:auto;color:var(--muted);font-size:11px}
+.g .lst a .miss{color:var(--danger-text)}
+.g main.stage{display:flex;flex-direction:column;min-width:0;min-height:0}
+.g .tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--card)}
+.g .tb .grpb{display:inline-flex;border:1px solid var(--border-strong);border-radius:9px;overflow:hidden}
+.g .tb .grpb button{min-height:34px;padding:0 10px;border:0;background:var(--card);cursor:pointer;font-size:13px;border-right:1px solid var(--border)}
+.g .tb .grpb button:last-child{border-right:0}
+.g .tb .grpb button[aria-pressed="true"]{background:var(--contrast-bg);color:var(--contrast-ink)}
+.g .tb label{font-size:13px;display:inline-flex;gap:4px;align-items:center;margin-left:6px}
+.g .tb .sp{flex:1}
+.g .sts{display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface-2);font-size:12px;align-items:center}
+.g .sts button{min-height:30px;border-radius:15px;border:1px solid var(--border-strong);background:var(--card);padding:0 10px;cursor:pointer;font-size:12px}
+.g .sts button[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.g .canvas{flex:1;overflow:auto;padding:24px;display:flex;gap:28px;justify-content:center;align-items:flex-start;background:var(--subtle)}
+.g .fw{display:flex;flex-direction:column;align-items:center;gap:8px}
+.g .fw .cap{font-size:12.5px;color:var(--muted);text-align:center;max-width:300px}
+.g .fw .cap b{color:var(--foreground);display:block;font-size:14px}
+.g .info h3{font-size:12px;color:var(--muted);margin:16px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+.g .info code{font-size:11.5px;background:var(--subtle);padding:2px 5px;border-radius:5px;word-break:break-all}
+.g .info ul{margin:0;padding-left:18px}
+.g .info li{margin:3px 0}
+.g .err-load{padding:40px;max-width:560px;margin:auto}
+@media (max-width:1100px){.g{grid-template-columns:260px 1fr}.g .info{display:none}}
+@media (max-width:760px){.g{grid-template-columns:1fr;grid-template-rows:auto 1fr;height:auto;overflow:visible}.g aside{max-height:40vh}.g .canvas{padding:12px}}
+</style>
+</head>
+<body>
+<div class="g" id="g">
+  <aside aria-label="รายการหน้าจอ">
+    <header class="gh"><h1><span class="logo"><i></i><i></i><i></i><i></i></span>Friday Mobile · Design</h1><div class="cov" id="cov">กำลังโหลด inventory…</div></header>
+    <div class="ctl">
+      <input id="q" type="search" placeholder="ค้นหา ID / ชื่อไทย / ไฟล์ต้นทาง" aria-label="ค้นหา">
+      <select id="fMod" aria-label="กรองโมดูล"><option value="">ทุกโมดูล</option></select>
+      <select id="fType" aria-label="กรองชนิด"><option value="">ทุกชนิด</option></select>
+      <select id="fState" aria-label="กรองสถานะ"><option value="">ทุกสถานะ</option></select>
+      <select id="fVar" aria-label="ทิศทางเริ่มต้น"><option value="A">ทิศทาง A</option><option value="B">ทิศทาง B</option><option value="C">ทิศทาง C</option></select>
+    </div>
+    <nav class="lst" id="lst" aria-label="หน้าจอและ popup"></nav>
+  </aside>
+  <main class="stage">
+    <div class="tb" role="toolbar" aria-label="ตัวควบคุมพรีวิว">
+      <span class="grpb" id="vBtns" aria-label="ทิศทาง"><button data-v="A">A กระชับ</button><button data-v="B">B การ์ด</button><button data-v="C">C บริบท</button></span>
+      <span class="grpb" id="mode"><button data-m="single">เดี่ยว</button><button data-m="compare">เทียบ A·B·C</button></span>
+      <span class="grpb" id="wBtns" aria-label="ความกว้าง"><button data-w="320">320</button><button data-w="375">375</button><button data-w="390">390</button><button data-w="430">430</button></span>
+      <span class="sp"></span>
+      <label><input type="checkbox" id="dark"> มืด</label>
+      <label><input type="checkbox" id="kb"> คีย์บอร์ด</label>
+      <label><input type="checkbox" id="land"> แนวนอน</label>
+      <button class="btn sm" id="restart" title="กลับไปหน้าเริ่มของรายการนี้">รีเซ็ตโฟลว์</button>
+    </div>
+    <div class="sts" id="sts" aria-label="สถานะ"></div>
+    <div class="canvas" id="canvas"></div>
+  </main>
+  <section class="info" id="info" aria-label="ข้อมูลรายการ"></section>
+</div>
+<script src="engine/fm.js"></script>
+<script src="data/b1-public-auth.js"></script>
+<script src="data/b2-workspace.js"></script>
+<script src="data/b3-project.js"></script>
+<script src="data/b4-issue-admin-billing-help.js"></script>
+<script src="data/b5-ops.js"></script>
+<script src="gallery.js"></script>
+</body>
+</html>

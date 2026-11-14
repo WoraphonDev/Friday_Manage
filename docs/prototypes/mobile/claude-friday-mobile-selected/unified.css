@@ -1,0 +1,92 @@
+/* Friday Mobile · Unified (ทิศทางที่เลือก) — สไตล์ที่ทับบน engine เดิม เฉพาะใต้ .app.uni เท่านั้น
+ * โครงร่วม: หัวหน้า/แถบล่าง/ปุ่ม/ระยะ/การ์ด/หัวข้อส่วน มาจาก B · เนื้อหาหนาแน่นจาก A · popup/ฟอร์ม/รายละเอียดจาก C
+ * ใช้ token เดิมจาก ../claude-friday-mobile-complete/engine/tokens.css เท่านั้น ไม่มีค่าสีใหม่ */
+
+/* 1) พื้นหลังและจังหวะระยะเดียวกันทุกหน้า */
+.app.uni .scr{background:var(--background)}
+.app.uni .sec{font-size:15px;font-weight:600;color:var(--foreground);letter-spacing:0;text-transform:none;padding:18px 16px 8px;display:flex;align-items:center;gap:6px}
+.app.uni .sec .lnk{margin-left:auto}
+
+/* 2) หัวหน้าเดียว: B (หัวข้อใหญ่) ทุกหน้าที่ไม่ใช่ C · หน้า C ใช้แถบบริบทของ C แต่โทนสว่างแบบ B */
+.app.uni .bar.c{background:var(--background);color:var(--foreground);border-bottom:1px solid var(--border);padding:0 6px 8px}
+.app.uni .bar.c .ib{color:var(--foreground)}
+.app.uni .bar.c .ib:hover{background:var(--hover)}
+.app.uni .bar.c h1{font-size:17px;font-weight:600}
+.app.uni .bar.c .ctx span{background:var(--subtle);color:var(--muted);border:1px solid var(--border)}
+.app.uni .bar.c .ctx b{color:var(--foreground)}
+.app.uni .bar.c .srch{background:var(--card);border-color:var(--border-strong);color:var(--muted)}
+.app.uni .bar.c .srch input{color:var(--foreground)}
+
+/* 3) แถบล่างเดียว: tab bar แบบ pill ของ B ทุกหน้า (ไม่มี dock เข้มของ C) */
+.app.uni .tabs{border-top:0;box-shadow:0 -1px 0 var(--border)}
+.app.uni:not(.noTabs) .scr{padding-bottom:0}
+.app.uni .fab{bottom:calc(76px + var(--sab));border-radius:18px}
+.app.uni.noTabs .fab{bottom:calc(16px + var(--sab))}
+
+/* 4) ความหนาแน่น A ในภาชนะแบบ B: แถวกระชับอยู่ในกลุ่มขอบมน */
+.app.uni.vA .grp{margin:0 12px;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--card)}
+.app.uni.vA .grp > .row:last-child{border-bottom:0}
+.app.uni.vA .row{min-height:52px;padding:8px 14px}
+.app.uni.vA .chips{padding:8px 12px!important}
+.app.uni.vA .srch{margin-left:12px;margin-right:12px}
+.app.uni.vA .kpis{margin:0 12px;border-radius:14px;overflow:hidden}
+
+/* 5) การ์ด B: ระยะห่างเดียวกัน */
+.app.uni .cards{padding-left:12px;padding-right:12px}
+
+/* 6) ปุ่มและ popup: ความสูง รัศมี และ footer เดียวกันทุก sheet/dialog */
+.app.uni .btn{border-radius:12px}
+.app.uni .dlg .sfoot .btn,.app.uni .as .btn{min-height:48px}
+.app.uni .sheet{border-radius:var(--m-radius-sheet) var(--m-radius-sheet) 0 0}
+
+/* 7) ป้าย "canvas-only" สำหรับหน้าที่ไม่มีสัญญา production */
+.app.uni .canvas-only{margin:8px 12px 0;padding:8px 12px;border-radius:12px;border:1px dashed var(--warning-border);background:var(--warning-soft);color:var(--warning-text);font-size:12.5px}
+
+/* ---------- เปลือกพรีวิว (ไม่ใช่ดีไซน์มือถือ) ---------- */
+.U{display:grid;grid-template-columns:320px 1fr 320px;height:100vh;overflow:hidden}
+.U aside,.U .info{background:var(--card);display:flex;flex-direction:column;min-height:0}
+.U aside{border-right:1px solid var(--border)}
+.U .info{border-left:1px solid var(--border);overflow:auto;padding:16px;font-size:13px}
+.U .gh{padding:14px 14px 10px;border-bottom:1px solid var(--border)}
+.U .gh h1{font-size:15px;margin:0 0 4px;display:flex;gap:8px;align-items:center}
+.U .gh .cov{font-size:12px;color:var(--muted)}
+.U .tabsel{display:flex;gap:4px;padding:8px 14px;border-bottom:1px solid var(--border)}
+.U .tabsel button{flex:1;min-height:34px;border-radius:9px;border:1px solid var(--border-strong);background:var(--card);cursor:pointer;font-size:13px}
+.U .tabsel button[aria-pressed="true"]{background:var(--contrast-bg);color:var(--contrast-ink)}
+.U .pane{overflow:auto;flex:1;padding-bottom:20px}
+.U .pane[hidden]{display:none}
+.U .ctl{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px 14px}
+.U .ctl input,.U .ctl select{min-height:36px;border:1px solid var(--border-strong);border-radius:8px;background:var(--card);padding:0 8px;font-size:13px}
+.U .ctl input{grid-column:1/-1}
+.U .pane h2{font-size:11px;letter-spacing:.04em;color:var(--muted);margin:12px 14px 4px;text-transform:uppercase;display:flex}
+.U .pane h2 span{margin-left:auto}
+.U .pane a{display:flex;gap:8px;align-items:center;padding:7px 14px;text-decoration:none;color:var(--foreground);font-size:13px;border-left:3px solid transparent}
+.U .pane a:hover{background:var(--hover)}
+.U .pane a[aria-current="true"]{background:var(--primary-soft);border-left-color:var(--primary);color:var(--primary-text)}
+.U .pane a small{margin-left:auto;color:var(--muted);font-size:11px;white-space:nowrap}
+.U .bx{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;font-size:11px;font-weight:700;flex:none;background:var(--subtle);color:var(--foreground);border:1px solid var(--border-strong)}
+.U .bx.A{background:var(--status-progress-bg,var(--subtle))}
+.U .bx.C{background:var(--primary-soft);color:var(--primary-text)}
+.U .bx.N{background:var(--warning-soft);color:var(--warning-text)}
+.U .flow{margin:8px 14px;padding:10px 12px;border:1px solid var(--border);border-radius:12px}
+.U .flow b{display:block;font-size:13.5px}
+.U .flow ol{margin:6px 0 8px;padding-left:18px;font-size:12px;color:var(--muted)}
+.U main.stage{display:flex;flex-direction:column;min-width:0;min-height:0}
+.U .tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--card)}
+.U .tb .grpb{display:inline-flex;border:1px solid var(--border-strong);border-radius:9px;overflow:hidden}
+.U .tb .grpb button{min-height:34px;padding:0 10px;border:0;background:var(--card);cursor:pointer;font-size:13px;border-right:1px solid var(--border)}
+.U .tb .grpb button:last-child{border-right:0}
+.U .tb .grpb button[aria-pressed="true"]{background:var(--contrast-bg);color:var(--contrast-ink)}
+.U .tb label{font-size:13px;display:inline-flex;gap:4px;align-items:center;margin-left:6px}
+.U .tb .sp{flex:1}
+.U .sts{display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface-2);font-size:12px;align-items:center}
+.U .sts button{min-height:30px;border-radius:15px;border:1px solid var(--border-strong);background:var(--card);padding:0 10px;cursor:pointer;font-size:12px}
+.U .sts button[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.U .canvas{flex:1;overflow:auto;padding:24px;display:flex;justify-content:center;align-items:flex-start;background:var(--subtle)}
+.U .crumb{font-size:12px;color:var(--muted);text-align:center;margin-bottom:8px;max-width:420px}
+.U .info h3{font-size:12px;color:var(--muted);margin:16px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+.U .info code{font-size:11.5px;background:var(--subtle);padding:2px 5px;border-radius:5px;word-break:break-all}
+.U .info ul{margin:0;padding-left:18px}
+.U .info li{margin:3px 0}
+@media (max-width:1100px){.U{grid-template-columns:280px 1fr}.U .info{display:none}}
+@media (max-width:760px){.U{grid-template-columns:1fr;grid-template-rows:auto 1fr;height:auto;overflow:visible}.U aside{max-height:42vh}.U .canvas{padding:12px}}

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "note": "แต่ละ ID ใช้ฐานตามชนิดหน้า (kind) ของ definition ใน ../claude-friday-mobile-complete/data/*.js · override ราย ID ชนะกฎชนิด · แผนผังราย ID ฉบับเต็มทั้ง 192 รายการถูกคำนวณตอนรันและอ่านได้ที่ window.FM_UNIFIED.choices (ไฟล์นี้ไม่ได้แจกแจงทุก ID ด้วยมือ)",
+  "sharedChrome": {
+    "header": "B (หัวข้อใหญ่ + คำอธิบาย) ทุกหน้า ยกเว้นหน้าฐาน C ที่ใช้แถบบริบทของ C แบบโทนสว่าง",
+    "bottomNav": "B tab bar แบบ pill ทุกหน้า (ไม่ใช้ dock เข้มของ C) · แท็บโปรเจกต์ → u.projects",
+    "subnav": "B (ปุ่ม 'มุมมอง ▾' ของโปรเจกต์ / หมวด ▾ ของตั้งค่า)",
+    "tokens": "token เดิมจาก engine/tokens.css เท่านั้น · ปุ่ม radius 12 · การ์ด radius 16 · ระยะขอบ 12–16px"
+  },
+  "byKind": {
+    "dash": { "base": "B", "why": "ภาพรวม/แดชบอร์ด อ่านง่าย" },
+    "settings": { "base": "B", "why": "ตั้งค่า/โปรไฟล์เป็นกลุ่มการ์ด" },
+    "article": { "base": "B", "why": "เนื้อหายาว" },
+    "market": { "base": "B", "why": "เลือกแผนเป็นการ์ด" },
+    "board": { "base": "B", "why": "คอลัมน์ scroll-snap + ย้ายด้วย sheet" },
+    "timeline": { "base": "B", "why": "การ์ดตามสัปดาห์" },
+    "cal": { "base": "B", "why": "agenda ตามวัน" },
+    "state": { "base": "B", "why": "หน้าสถานะระบบ" },
+    "auth": { "base": "B", "why": "ฟอร์มยืนยันตัวตนสงบ" },
+    "list": { "base": "A", "why": "รายการหนาแน่น: งานของฉัน กล่องข้อความ สมาชิก" },
+    "table": { "base": "A", "why": "ตารางจริง คอลัมน์แรกตรึง" },
+    "thread": { "base": "A", "why": "เธรดกระชับ" },
+    "detail": { "base": "C", "why": "รายละเอียด + การกระทำหลักติดล่าง" },
+    "form": { "base": "C", "why": "ฟอร์มเต็มหน้า การ์ดบริบท + ปุ่มใหญ่ล่าง" },
+    "sheet": { "base": "C", "why": "สร้าง/แก้ไข/คำขอ ทางลัด + ปุ่มหลักล่าง" },
+    "confirm": { "base": "C", "why": "action sheet ผลกระทบ + เลิกทำ" },
+    "menu": { "base": "B", "why": "action sheet ล่างจอ เอื้อมถึงง่าย (popover A ไกลนิ้ว, เต็มจอ C หนักเกิน)" },
+    "panel": { "base": "B", "why": "sheet ครึ่งจอ + แท็บ" }
+  },
+  "overrides": {
+    "u.projects": { "base": "B", "why": "kind list แต่เป็นหน้าภาพรวมโปรเจกต์ → การ์ด + progress" }
+  },
+  "keyScreens": {
+    "ws.home": "B", "u.projects": "B", "proj.overview": "B", "ws.profile": "B",
+    "ws.my-tasks": "A", "ws.inbox": "A", "ws.members": "A", "proj.members": "A (ถ้า kind=list)",
+    "iss.detail": "C", "iss.create": "C", "u.iss-edit": "C", "iss.due-request": "C", "iss.due-approve": "C", "iss.delete": "C", "ws.logout": "C",
+    "ws.switcher": "B", "ws.bell": "B", "iss.more": "B", "iss.status-menu": "B",
+    "ops.abuse": "A (canvas-only)"
+  },
+  "extras": ["u.projects", "u.iss-edit", "ops.abuse"]
+}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { flushSync } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Button, Input, useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
@@ -11,6 +12,9 @@ import { destinationAfterLogin } from "../../_components/navigation";
 import {
   FormAlert,
   Heading,
+  LOGIN_SUCCESS_MS,
+  LoginSuccess,
+  motionPause,
   NS,
   OAuthLink,
   OtpInput,
@@ -18,7 +22,9 @@ import {
   SplitLayout,
   safeReturnTo,
   shake,
+  slideOut,
   styles,
+  SUBMIT_DONE_MS,
   SubmitButton,
 } from "../../_components/shared";
 import { appLocale } from "@/lib/format";
@@ -54,6 +60,7 @@ export function LoginForm() {
   const [trust, setTrust] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [success, setSuccess] = useState(false);
   const form = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<unknown>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -79,10 +86,25 @@ export function LoginForm() {
   }, [error]);
 
   async function finish() {
-    // ปุ่มเป็นสีเขียวระหว่างรอเปลี่ยนหน้า แทนการกลับไปเป็นปุ่มปกติ
+    // ปุ่มเขียว → หน้าจอสำเร็จ → แถบเต็มแล้วจึงเปลี่ยนหน้า (ตาม mockup) ผู้ใช้เห็น animation ครบ
+    // ระหว่างนั้นหาปลายทางและโหลดหน้าล่วงหน้าไว้ พอแถบเต็มหน้าถัดไปจึงขึ้นได้ทันที
     setBusy(false);
     setDone(true);
-    router.replace(await destinationAfterLogin(returnTo));
+    const destination = destinationAfterLogin(returnTo);
+    destination.then((href) => router.prefetch(href)).catch(() => undefined);
+    try {
+      await motionPause(SUBMIT_DONE_MS);
+      const leaving = await slideOut(form.current?.parentElement ?? null);
+      flushSync(() => setSuccess(true));
+      leaving?.cancel();
+      const [href] = await Promise.all([destination, motionPause(LOGIN_SUCCESS_MS)]);
+      router.replace(href);
+    } catch (err) {
+      // หาปลายทางไม่ได้: กลับไปที่ฟอร์มเพื่อแสดงข้อผิดพลาด
+      setSuccess(false);
+      setDone(false);
+      throw err;
+    }
   }
 
   async function submitPassword(event: FormEvent) {
@@ -157,6 +179,13 @@ export function LoginForm() {
     if (error.code === "invalid_mfa_code") return t("login.mfaInvalid");
     return undefined;
   }
+
+  if (success)
+    return (
+      <SplitLayout variant="login">
+        <LoginSuccess />
+      </SplitLayout>
+    );
 
   if (mfa) {
     const complete = backup ? code.trim().length >= 6 : code.length === 6;

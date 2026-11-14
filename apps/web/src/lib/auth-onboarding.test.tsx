@@ -48,6 +48,8 @@ describe("J1 · เข้าสู่ระบบ", () => {
     await user.click(screen.getByRole("checkbox", { name: "จดจำฉันไว้ 30 วัน" }));
     await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/work/friday-dev"));
+    // หน้าจอสำเร็จแทนฟอร์มก่อนเปลี่ยนหน้า (ตาม mockup)
+    expect(screen.getByRole("heading", { name: "เข้าสู่ระบบแล้ว" })).toBeInTheDocument();
     expect(calls.find((c) => c.path === "/api/v1/auth/login")?.body).toEqual({ email: "lead@example.com", password: "Friday2026", remember: false });
   });
 

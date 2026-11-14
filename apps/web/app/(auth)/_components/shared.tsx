@@ -14,7 +14,7 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
-import { FridayLogo } from "@/components/brand/friday-logo";
+import { FridayLoader, FridayLogo } from "@/components/brand/friday-logo";
 import { Button, buttonVariants } from "@/components/ui";
 import { ApiError, supportId } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -50,6 +50,46 @@ export function shake(element: HTMLElement | null) {
   element.animate(
     [0, -8, 7, -5, 3, 0].map((x) => ({ transform: `translateX(${x}px)` })),
     { duration: 380, easing: "ease-out" },
+  );
+}
+
+/** Animation จะเล่นจริงไหม · jsdom ไม่มี Web Animations และผู้ใช้ที่ลดการเคลื่อนไหวไม่ต้องรอ */
+function animates() {
+  return typeof document !== "undefined" && !!document.body.animate && !prefersReducedMotion();
+}
+
+/** รอให้ animation เล่นจบก่อนทำขั้นต่อไป · ถ้าไม่มี animation ก็ไปต่อทันที */
+export function motionPause(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, animates() ? ms : 0));
+}
+
+/** เลื่อนเนื้อหาเดิมออกทางซ้ายก่อนเปลี่ยนขั้น · คืน animation ไว้ยกเลิกหลังวาดขั้นใหม่แล้ว */
+export async function slideOut(element: HTMLElement | null) {
+  if (!element || !animates()) return null;
+  const animation = element.animate(
+    [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateX(-28px)" }],
+    { duration: 220, easing: "ease-in", fill: "forwards" },
+  );
+  await animation.finished.catch(() => undefined);
+  return animation;
+}
+
+/** ปุ่มเขียวค้างให้เห็นเครื่องหมายถูกวาดจบ แล้วจึงเปลี่ยนเป็นหน้าจอสำเร็จ (ตาม mockup) */
+export const SUBMIT_DONE_MS = 650;
+/** แถบในหน้าจอสำเร็จเต็มเมื่อ 0.45 + 1.6 วินาที (ตรงกับ .successBar) แล้วจึงเปลี่ยนหน้า */
+export const LOGIN_SUCCESS_MS = 2050;
+
+/** หน้าจอหลังเข้าสู่ระบบสำเร็จ: logo ประกอบตัวแล้วเด้งวน + แถบสีไทล์วิ่งจนเต็ม */
+export function LoginSuccess() {
+  const t = useTranslations(NS);
+  return (
+    <div className={styles.success} role="status">
+      <FridayLoader className={styles.successMark} />
+      <Heading title={t("login.success.title")} subtitle={t("login.success.subtitle")} />
+      <div className={styles.successBar} aria-hidden="true">
+        <i />
+      </div>
+    </div>
   );
 }
 

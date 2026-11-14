@@ -81,6 +81,7 @@
     "tooWeak": "The password doesn't meet the requirements yet"
   },
   "login": {
+    "success": { "title": "You're signed in", "subtitle": "Opening your workspace…" },
     "title": "Sign in",
     "subtitle": "Welcome back",
     "forgot": "Forgot password?",

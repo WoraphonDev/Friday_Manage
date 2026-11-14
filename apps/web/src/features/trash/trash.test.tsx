@@ -383,8 +383,8 @@ describe("Z5 · Workspace ที่ลบไว้", () => {
     navigation.pathname = "/work/sample";
     server.use(http.get("*/api/v1/workspaces/deleted", () => HttpResponse.json({ items: [{ slug: "gone", name: "ทีมที่ลบสมมติ", deletedAt: info.deletedAt, restorableUntil: info.purgeAfter, daysLeft: 21 }] })));
     const user = userEvent.setup();
-    mount(<p>หน้าหลัก</p>);
-    await screen.findByText("หน้าหลัก");
+    mount(<p>เนื้อหาหน้าหลัก</p>);
+    await screen.findByText("เนื้อหาหน้าหลัก");
     await user.click(screen.getAllByRole("button", { name: /สลับ Workspace/ })[0]!);
     const section = await screen.findByRole("navigation", { name: "ลบไว้ · กู้คืนได้" });
     const link = within(section).getByRole("link", { name: /ทีมที่ลบสมมติ/ });

@@ -80,6 +80,13 @@
     "secure": "Encrypted connection",
     "mainMenu": "Main menu",
     "profileTab": "Profile",
+    "mobileTab": {
+      "home": "Home",
+      "myTasks": "My tasks",
+      "projects": "Projects",
+      "inbox": "Inbox",
+      "profile": "Me"
+    },
     "viewsHint": "Pick one to add it as a tab in this project",
     "tabShown": "Shown as a tab",
     "hideTab": "Hide the {name} tab",

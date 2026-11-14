@@ -713,7 +713,7 @@ export function WorkspaceShell({
               }
             >
               <span className="bottom-nav-icon"><Icon size={22} /></span>
-              <span className="bottom-nav-label">{t(`nav.${key}`)}</span>
+              <span className="bottom-nav-label">{t(`nav.mobileTab.${key}`)}</span>
             </Link>
           ))}
           <button
@@ -723,7 +723,7 @@ export function WorkspaceShell({
             onClick={() => setMenuOpen(true)}
           >
             <span className="bottom-nav-icon"><FolderKanban size={22} /></span>
-            <span className="bottom-nav-label">{t("nav.projects")}</span>
+            <span className="bottom-nav-label">{t("nav.mobileTab.projects")}</span>
           </button>
           <Link
             className="nav-link"
@@ -731,7 +731,7 @@ export function WorkspaceShell({
             aria-current={pathname === `${base}/inbox` ? "page" : undefined}
           >
             <span className="bottom-nav-icon"><Inbox size={22} /></span>
-            <span className="bottom-nav-label">{t("nav.inbox")}</span>
+            <span className="bottom-nav-label">{t("nav.mobileTab.inbox")}</span>
             {unread > 0 && <span className="bottom-nav-count">{unread}</span>}
           </Link>
           <Link
@@ -742,7 +742,7 @@ export function WorkspaceShell({
             }
           >
             <span className="bottom-nav-icon"><Avatar person={me.data} size="small" /></span>
-            <span className="bottom-nav-label">{t("nav.profileTab")}</span>
+            <span className="bottom-nav-label">{t("nav.mobileTab.profile")}</span>
           </Link>
         </nav>
         <Drawer

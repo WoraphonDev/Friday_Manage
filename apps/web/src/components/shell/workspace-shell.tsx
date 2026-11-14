@@ -712,8 +712,8 @@ export function WorkspaceShell({
                 pathname === `${base}${suffix}` ? "page" : undefined
               }
             >
-              <Icon size={22} />
-              {t(`nav.${key}`)}
+              <span className="bottom-nav-icon"><Icon size={22} /></span>
+              <span className="bottom-nav-label">{t(`nav.mobileTab.${key}`)}</span>
             </Link>
           ))}
           <button
@@ -722,16 +722,16 @@ export function WorkspaceShell({
             aria-current={selectedKey ? "page" : undefined}
             onClick={() => setMenuOpen(true)}
           >
-            <FolderKanban size={22} />
-            {t("nav.projects")}
+            <span className="bottom-nav-icon"><FolderKanban size={22} /></span>
+            <span className="bottom-nav-label">{t("nav.mobileTab.projects")}</span>
           </button>
           <Link
             className="nav-link"
             href={`${base}/inbox`}
             aria-current={pathname === `${base}/inbox` ? "page" : undefined}
           >
-            <Inbox size={22} />
-            {t("nav.inbox")}
+            <span className="bottom-nav-icon"><Inbox size={22} /></span>
+            <span className="bottom-nav-label">{t("nav.mobileTab.inbox")}</span>
             {unread > 0 && <span className="bottom-nav-count">{unread}</span>}
           </Link>
           <Link
@@ -741,8 +741,8 @@ export function WorkspaceShell({
               pathname.startsWith(`${base}/profile`) ? "page" : undefined
             }
           >
-            <Avatar person={me.data} size="small" />
-            {t("nav.profileTab")}
+            <span className="bottom-nav-icon"><Avatar person={me.data} size="small" /></span>
+            <span className="bottom-nav-label">{t("nav.mobileTab.profile")}</span>
           </Link>
         </nav>
         <Drawer

@@ -203,6 +203,55 @@ export function Drawer({
 /** ปุ่มปิดสำหรับ Drawer แบบ bare ที่วางแถบหัวเอง */
 export const DrawerClose = RadixDialog.Close;
 
+export interface ActionSheetAction {
+  key: string;
+  label: string;
+  icon?: ReactNode;
+  /** ข้อความเล็กท้ายแถว เช่น คีย์ลัดหรือค่าปัจจุบัน */
+  hint?: string;
+  destructive?: boolean;
+  disabled?: boolean;
+  onSelect: () => void;
+}
+/**
+ * เมนูคำสั่งแบบ action sheet (ฐาน B ของต้นแบบมือถือ) · มือถือเป็นแผ่นล่างจอ + ปุ่มยกเลิก ตาม CSS ของ .dialog
+ * ใช้แทน popover/dropdown เมื่อ useIsMobile() เป็นจริง · desktop ยังใช้เมนูเดิม (ถ้า render บน desktop จะเป็น Dialog ปกติ)
+ * เลือกแล้วสั่งปิดแผ่นพร้อมเรียกคำสั่งในจังหวะเดียวกัน คำสั่งที่เปิด Dialog ต่อ (เช่น ยืนยันลบ) จึงแทนที่แผ่นนี้ ไม่ซ้อนกัน
+ */
+export function ActionSheet({
+  actions,
+  cancelLabel,
+  ...props
+}: Omit<OverlayProps, "children"> & { actions: ActionSheetAction[]; cancelLabel?: string }) {
+  const t = useTranslations("common.app");
+  return (
+    <Dialog {...props}>
+      <div className="action-sheet-list" role="group" aria-label={props.title}>
+        {actions.map((action) => (
+          <button
+            key={action.key}
+            type="button"
+            className="action-sheet-item"
+            data-destructive={action.destructive ? "" : undefined}
+            disabled={action.disabled}
+            onClick={() => {
+              props.onOpenChange(false);
+              action.onSelect();
+            }}
+          >
+            {action.icon}
+            <span>{action.label}</span>
+            {action.hint && <span className="action-sheet-hint">{action.hint}</span>}
+          </button>
+        ))}
+      </div>
+      <Button className="action-sheet-cancel" onClick={() => props.onOpenChange(false)}>
+        {cancelLabel ?? t("cancel")}
+      </Button>
+    </Dialog>
+  );
+}
+
 export function ConfirmDialog({
   onConfirm,
   undo,

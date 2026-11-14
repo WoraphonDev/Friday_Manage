@@ -134,6 +134,11 @@
   --text-caption: 11px;
   --text-title: 20px;
   --font-sans: "IBM Plex Sans Thai", system-ui, sans-serif;
+  /* มือถือ ≤760px (W27 ตามต้นแบบ docs/prototypes/mobile) · ใช้ใน @media มือถือเท่านั้น desktop ไม่อ่านค่าเหล่านี้ */
+  --m-tap: 44px;
+  --m-text-body: 15px;
+  --m-text-input: 16px;
+  --m-radius-sheet: 16px;
 }
 
 :root[data-theme="dark"] {

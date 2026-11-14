@@ -388,7 +388,7 @@ describe("Workspace / Project shell", () => {
     for (const path of ["/work/sample", "/work/sample/inbox", "/work/sample/my-tasks", "/work/sample/p/DE/table"]) expect(hasBackButton(path)).toBe(false);
   });
 
-  it("Admin Console อยู่ล่างสุดของ Sidebar และเมนูล่างมือถือมี 5 รายการตาม M5", async () => {
+  it("Admin Console อยู่ล่างสุดของ Sidebar และเมนูล่างมือถือมี 5 รายการ ป้ายไทยเฉพาะมือถือ (W27)", async () => {
     navigation.pathname = "/work/sample/inbox";
     renderWithProviders(
       <WorkspaceShell ws="sample">
@@ -402,9 +402,11 @@ describe("Workspace / Project shell", () => {
     const bottom = within(screen.getByRole("navigation", { name: "เมนูหลัก", hidden: true }));
     expect(
       bottom.getAllByRole("link", { hidden: true }).map((l) => l.textContent),
-    ).toEqual(["Home", "My Tasks", "Inbox3", expect.stringMatching(/Profile$/)]);
-    expect(bottom.getByRole("button", { name: /Projects/, hidden: true })).toBeInTheDocument();
-    expect(bottom.getByRole("link", { name: /Inbox/, hidden: true })).toHaveAttribute("aria-current", "page");
+    ).toEqual(["หน้าหลัก", "งานของฉัน", "กล่องข้อความ3", expect.stringMatching(/ฉัน$/)]);
+    expect(bottom.getByRole("button", { name: /โปรเจกต์/, hidden: true })).toBeInTheDocument();
+    expect(bottom.getByRole("link", { name: /กล่องข้อความ/, hidden: true })).toHaveAttribute("aria-current", "page");
+    // Sidebar desktop ยังใช้ป้ายเดิม
+    expect(within(sidebar).getByRole("link", { name: "My Tasks" })).toBeInTheDocument();
   });
 
   it("Admin Console มี Sidebar เหมือนทุกหน้า · ลิงก์กลับ Workspace และปุ่มย้อนกลับ (ผู้ใช้ขอ 2026-11-09)", async () => {

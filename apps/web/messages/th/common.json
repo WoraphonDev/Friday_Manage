@@ -80,6 +80,13 @@
     "secure": "เชื่อมต่อแบบเข้ารหัส",
     "mainMenu": "เมนูหลัก",
     "profileTab": "Profile",
+    "mobileTab": {
+      "home": "หน้าหลัก",
+      "myTasks": "งานของฉัน",
+      "projects": "โปรเจกต์",
+      "inbox": "กล่องข้อความ",
+      "profile": "ฉัน"
+    },
     "viewsHint": "เลือกเพื่อเพิ่มเป็นแท็บของโปรเจกต์นี้",
     "tabShown": "แสดงเป็นแท็บแล้ว",
     "hideTab": "ซ่อนแท็บ {name}",

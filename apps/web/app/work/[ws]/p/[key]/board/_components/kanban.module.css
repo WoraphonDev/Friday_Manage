@@ -67,7 +67,7 @@
 .landed { animation:card-land .7s ease-out; }
 @keyframes card-land { from { border-color:var(--primary-border); box-shadow:0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent), 0 8px 18px rgb(16 24 40 / .12); } to { box-shadow:0 1px 2px rgb(16 24 40 / .05); } }
 .laneTitle { font-size:13px; margin:0 0 10px; display:flex; align-items:center; gap:8px; }.laneTitle span { font-size:11px; color:var(--muted); font-weight:400; }.dialogActions { display:flex; justify-content:flex-end; gap:8px; }.moveOptions { display:flex; flex-direction:column; gap:8px; }.moveOptions button { justify-content:space-between; min-height:48px; }
-@media (max-width:767px) {
+@media (max-width:760px) {
   .board { padding:12px 16px; gap:12px; }.toolbar { gap:8px; }.filters { gap:6px; }.filters :global(.select) { max-width:100%; }.filters .chip { min-height:36px; }
   /* มือถือ: ช่องค้นหาแสดงเสมอ ตัวกรองอื่นเปิดจากปุ่มตัวกรอง */
   .search { flex:1 1 100%; max-width:none; min-height:40px; }.viewFilters { margin-left:0; }

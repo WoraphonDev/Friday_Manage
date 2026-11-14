@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { FridayLogo, FridayMark } from "@/components/brand/friday-logo";
@@ -55,12 +55,42 @@ function useHeaderScroll() {
   return { stuck, section };
 }
 
-/** หัวของ Landing / ราคา (R1) */
+/** เมนูมือถือ: ปิดเมื่อกด Esc (คืนโฟกัสที่ปุ่ม) หรือจอกว้างพ้นขนาดมือถือ */
+function useMobileMenu() {
+  const [open, setOpen] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      button.current?.focus();
+    };
+    const wide = window.matchMedia?.("(min-width: 641px)");
+    const onWide = () => wide?.matches && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    wide?.addEventListener("change", onWide);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      wide?.removeEventListener("change", onWide);
+    };
+  }, [open]);
+  return { open, setOpen, button };
+}
+
+/**
+ * หัวของ Landing / ราคา (R1)
+ * มือถือ (แบบ A ที่ผู้ใช้เลือก 2026-11-14): บรรทัดเดียว logo · เข้าสู่ระบบ · ปุ่มเมนู
+ * เมนูรวมลิงก์หน้า ภาษา ธีม และปุ่มทดลองใช้ · วาดเฉพาะตอนเปิด ไม่ให้ลิงก์ซ้ำกับหัวเว็บจอกว้าง
+ */
 export function SiteHeader() {
   const t = useTranslations("saas-pages.site");
+  const tTheme = useTranslations("locale-switch.theme");
   const { stuck, section } = useHeaderScroll();
+  const menu = useMobileMenu();
+  const close = () => menu.setOpen(false);
   return (
-    <header className={styles.header} data-stuck={stuck || undefined}>
+    <header className={styles.header} data-stuck={stuck || undefined} data-menu={menu.open || undefined}>
       <div className={cn(styles.wrap, styles.headerRow)}>
         <Brand />
         <nav aria-label={t("nav")} className={styles.nav}>
@@ -88,7 +118,50 @@ export function SiteHeader() {
         <Link className={cn(buttonVariants({ variant: "primary" }), styles.btn, styles.headerCta, styles.shine)} href="/signup">
           {t("cta")}
         </Link>
+        <button
+          ref={menu.button}
+          type="button"
+          className={styles.menuButton}
+          aria-label={t("menu")}
+          aria-expanded={menu.open}
+          aria-controls="site-menu"
+          onClick={() => menu.setOpen(!menu.open)}
+        >
+          <span aria-hidden="true" />
+        </button>
       </div>
+      {menu.open && (
+        <>
+          <div className={styles.menuScrim} onClick={close} aria-hidden="true" />
+          <div id="site-menu" className={styles.menu}>
+            <nav aria-label={t("nav")} className={styles.menuNav}>
+              <a href="/#features" onClick={close}>
+                {t("features")}
+              </a>
+              <Link href="/pricing" onClick={close}>
+                {t("pricing")}
+              </Link>
+              <a href="/#faq" onClick={close}>
+                {t("faq")}
+              </a>
+              <Link href="/help" onClick={close}>
+                {t("help")}
+              </Link>
+            </nav>
+            <div className={styles.menuRow}>
+              <span>{t("language")}</span>
+              <LocaleSwitch />
+            </div>
+            <div className={styles.menuRow}>
+              <span>{tTheme("label")}</span>
+              <ThemeSwitch showLabels />
+            </div>
+            <Link className={cn(buttonVariants({ variant: "primary" }), styles.btn, styles.menuCta)} href="/signup" onClick={close}>
+              {t("cta")}
+            </Link>
+          </div>
+        </>
+      )}
     </header>
   );
 }

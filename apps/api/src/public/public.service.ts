@@ -1,12 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { type Db, schema } from '@friday/db';
+import { type Db, schema, versionAt } from '@friday/db';
 import { and, desc, eq, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { AppError, notFound } from '../common/errors.js';
 import type { AuthInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { PLAN_CATALOG, PLAN_ORDER, TRIAL_DAYS, YEARLY_MONTHS, priceFor } from '../billing/catalog.js';
-import { APP_DB } from '../db/db.module.js';
+import { APP_DB, SYSTEM_DB } from '../db/db.module.js';
 
 const s = schema;
 
@@ -38,6 +38,8 @@ const docDto = (d: Doc) => ({ id: d.id, type: d.docType, version: d.version, loc
 export class PublicService {
   constructor(
     @Inject(APP_DB) private readonly appDb: Db,
+    // อ่านตารางสิทธิ์ของแพ็กเกจ (ระดับระบบ ไม่มี Workspace) ซึ่ง friday_app ไม่มีสิทธิ์อ่าน · ใช้อ่านอย่างเดียว
+    @Inject(SYSTEM_DB) private readonly system: Db,
     private readonly db: TenantDb,
   ) {}
 
@@ -46,6 +48,8 @@ export class PublicService {
     // plans อ่านได้โดยไม่ต้องมี Workspace (policy public_read) จึงใช้การเชื่อมต่อของแอปตรง ๆ
     const rows = await this.appDb.select().from(s.plans);
     const byCode = new Map(rows.map((r) => [r.code, r]));
+    // สิทธิ์ชุดเดียวกับที่ API บังคับใช้ (O21) · หน้าราคาแสดงจากค่านี้ ไม่ให้ตัวเลขในตารางเปรียบเทียบคลาดจากระบบ
+    const { matrix } = await versionAt(this.system, new Date());
     return {
       currency: 'THB',
       vatRate: 0.07,
@@ -73,6 +77,7 @@ export class PublicService {
           listed: row?.listed ?? true,
           openForSignup: row?.openForSignup ?? true,
           features: featuresOf(code),
+          entitlements: matrix[code],
         };
       }),
     };

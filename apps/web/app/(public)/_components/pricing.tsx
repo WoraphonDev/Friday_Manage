@@ -104,21 +104,6 @@ function Plans({ data, cycle, team, setTeam, ctaFor }: { data: PublicPlans; cycl
         ? { label: t("contact"), href: SALES_URL }
         : { label: t("trial", { days: data.trialDays }), href: `/signup?plan=${p.code}&cycle=${cycle}` };
 
-  const yes = "✓";
-  const no = "–";
-  const has = (p: PublicPlan, f: string) => (p.features.includes(f) ? yes : no);
-  const byCode = (key: string) => (p: PublicPlan) => t(`compare.${key}.${p.code as PlanCode}`);
-  const rows: [string, (p: PublicPlan, i: number) => string][] = [
-    [t("compare.members"), (p, i) => (p.seatLimit === null ? `${prevLimit(i)}+` : String(p.seatLimit))],
-    [t("compare.projects"), (p) => (p.projectLimit === null ? t("compare.unlimited") : String(p.projectLimit))],
-    ["Gantt, Workload, Sprint", (p) => has(p, "gantt")],
-    [t("compare.excel"), (p) => has(p, "import_excel")],
-    ["Automation", byCode("automation")],
-    [t("compare.line"), (p) => has(p, "line_oa")],
-    ["SSO / SAML", (p) => (p.contactSales ? yes : no)],
-    ["Audit log", byCode("audit")],
-  ];
-
   return (
     <>
       <div className={styles.team}>
@@ -162,33 +147,137 @@ function Plans({ data, cycle, team, setTeam, ctaFor }: { data: PublicPlans; cycl
         })}
       </div>
       <div className={cn(styles.muted, styles.small, styles.center)}>{t("vat")}</div>
-      <details className={styles.cmpBox}>
-        <summary>{t("compare.title")}</summary>
-        <div className={styles.cmpScroll}>
-          <div className={styles.cmp} role="table" aria-label={t("compare.title")}>
-            <div role="row" style={{ display: "contents" }}>
-              <div role="columnheader" className={cn(styles.l, styles.h)} />
-              {items.map((p) => (
-                <div role="columnheader" key={p.code} className={styles.h}>
-                  {p.name}
-                </div>
-              ))}
-            </div>
-            {rows.map(([label, value]) => (
-              <div role="row" key={label} style={{ display: "contents" }}>
-                <div role="rowheader" className={styles.l}>
-                  {label}
-                </div>
-                {items.map((p, i) => (
-                  <div role="cell" key={p.code}>
-                    {value(p, i)}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </details>
+      <CompareTable items={items} fit={fit?.code} price={price} />
     </>
+  );
+}
+
+type Cell = boolean | string;
+type Row = { label: string; value: (p: PublicPlan, i: number) => Cell | undefined };
+
+/**
+ * ตารางเปรียบเทียบแพ็กเกจ (แบบ A ที่ผู้ใช้เลือก 2026-11-14): 4 หมวด · คอลัมน์ที่เหมาะกับทีมตามตัวเลื่อนเป็นกรอบม่วง
+ * ขีดจำกัดอ่านจาก `entitlements` ของ API (ชุดเดียวกับที่ระบบบังคับใช้) ไม่พิมพ์ตัวเลขไว้ในข้อความแปล ตัวเลขจึงไม่คลาดกัน
+ * API รุ่นเก่าที่ยังไม่ส่ง entitlements: แถวที่ไม่มีค่าเลยถูกซ่อน
+ */
+function CompareTable({ items, fit, price }: { items: PublicPlan[]; fit?: PlanCode; price: (p: PublicPlan) => { price: string; unit: string } }) {
+  const t = useTranslations("saas-pages.pricing");
+  const num = (n: number) => n.toLocaleString("en-US");
+  const has = (f: string) => (p: PublicPlan) => p.features.includes(f);
+  const flag = (key: string) => (p: PublicPlan) => {
+    const v = p.entitlements?.[key];
+    return typeof v === "boolean" ? v : undefined;
+  };
+  // null = ไม่จำกัด (ใช้กับจำนวน) หรือ ตามสัญญา (ใช้กับพื้นที่/ระยะเก็บ) ตามความหมายใน plan-entitlements.ts
+  const limit = (feature: string | null, key: string, fmt: (n: number) => string, unlimited: string) => (p: PublicPlan) => {
+    const v = p.entitlements?.[key];
+    if (v === undefined) return undefined;
+    if (feature && p.entitlements?.[feature] === false) return false;
+    return v === null ? unlimited : typeof v === "number" ? fmt(v) : undefined;
+  };
+  const period = (days: number) => (days % 365 === 0 ? t("compare.years", { n: days / 365 }) : t("compare.days", { n: days }));
+  const prevLimit = (i: number) => items[i - 1]?.seatLimit ?? 0;
+
+  const groups: [string, Row[]][] = [
+    [
+      t("compare.groups.team"),
+      [
+        { label: t("compare.members"), value: (p, i) => (p.seatLimit === null ? `${prevLimit(i)}+` : num(p.seatLimit)) },
+        { label: t("compare.guests"), value: (p) => (typeof p.entitlements?.guests === "boolean" ? p.entitlements.guests : p.guestsFree) },
+        { label: t("compare.projects"), value: (p) => (p.projectLimit === null ? t("compare.unlimited") : num(p.projectLimit)) },
+        { label: t("compare.storage"), value: (p) => (p.storageGbPerMember === null ? t("compare.contract") : t("compare.storagePer", { n: p.storageGbPerMember })) },
+      ],
+    ],
+    [
+      t("compare.groups.plan"),
+      [
+        { label: "Kanban, Table, Calendar", value: has("kanban") },
+        { label: "Gantt, Workload, Sprint", value: has("gantt") },
+        { label: t("compare.reports"), value: has("reports") },
+        { label: t("compare.excel"), value: has("import_excel") },
+      ],
+    ],
+    [
+      t("compare.groups.connect"),
+      [
+        { label: "Automation", value: limit("automation", "automation_runs", (n) => t("compare.perMonth", { n: num(n) }), t("compare.unlimited")) },
+        { label: t("compare.line"), value: has("line_oa") },
+        { label: t("compare.git"), value: has("git_integration") },
+        { label: "API", value: limit("api", "api_rpm", (n) => t("compare.perMinute", { n: num(n) }), t("compare.unlimited")) },
+      ],
+    ],
+    [
+      t("compare.groups.security"),
+      [
+        { label: "SSO / SAML", value: flag("sso") },
+        { label: t("compare.history"), value: limit(null, "history_days", period, t("compare.contract")) },
+        { label: t("compare.sla"), value: flag("sla") },
+      ],
+    ],
+  ];
+  const visible = groups
+    .map(([g, rows]) => [g, rows.filter((r) => items.some((p, i) => r.value(p, i) !== undefined))] as const)
+    .filter(([, rows]) => rows.length > 0);
+  const hot = (p: PublicPlan) => (p.code === fit ? styles.cmpHot : undefined);
+  const show = (v: Cell | undefined) =>
+    v === true ? (
+      <span className={styles.cmpYes} role="img" aria-label={t("compare.yes")}>
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="m3.5 8.5 3 3 6-7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+    ) : v === false || v === undefined ? (
+      <span className={styles.cmpNo} role="img" aria-label={t("compare.no")}>
+        –
+      </span>
+    ) : (
+      v
+    );
+
+  return (
+    <details className={styles.cmpBox}>
+      <summary>{t("compare.title")}</summary>
+      <div className={styles.cmpScroll}>
+        <table className={styles.cmp} aria-label={t("compare.title")}>
+          <thead>
+            <tr>
+              <td />
+              {items.map((p) => {
+                const pr = price(p);
+                return (
+                  <th key={p.code} scope="col" className={hot(p)}>
+                    {p.code === fit && <span className={styles.cmpTag}>{t("fitTag")}</span>}
+                    <span className={styles.cmpName}>{p.name}</span>
+                    <span className={styles.cmpPrice}>
+                      {pr.price} {pr.unit}
+                    </span>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          {visible.map(([group, rows]) => (
+            <tbody key={group}>
+              <tr className={styles.cmpGroup}>
+                <th scope="rowgroup">{group}</th>
+                {items.map((p) => (
+                  <td key={p.code} className={hot(p)} aria-hidden="true" />
+                ))}
+              </tr>
+              {rows.map((row) => (
+                <tr key={row.label}>
+                  <th scope="row">{row.label}</th>
+                  {items.map((p, i) => (
+                    <td key={p.code} className={hot(p)}>
+                      {show(row.value(p, i))}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          ))}
+        </table>
+      </div>
+    </details>
   );
 }

@@ -91,10 +91,26 @@
 .cmpBox::details-content, .faq::details-content { height:0; overflow:clip; transition:height .4s cubic-bezier(.2,.8,.2,1), content-visibility .4s allow-discrete; }
 .cmpBox[open]::details-content, .faq[open]::details-content { height:auto; }
 .cmpScroll { overflow-x:auto; padding:0 8px 12px; }
-.cmp { display:grid; grid-template-columns:minmax(200px,1.6fr) repeat(5,minmax(90px,1fr)); min-width:760px; font-size:14px; }
-.cmp > div { padding:10px 12px; border-bottom:1px solid var(--border); text-align:center; }
-.cmp > div.l { text-align:left; }
-.cmp > div.h { font-weight:700; background:var(--surface-2); }
+/* ตารางเปรียบเทียบ (แบบ A): เส้นบาง ป้ายชิดซ้าย 4 หมวด · คอลัมน์ที่เหมาะกับทีมเป็นกรอบม่วง · มือถือเลื่อนข้างโดยชื่อแถวค้างไว้ */
+.cmp { width:100%; min-width:760px; border-collapse:separate; border-spacing:0; font-size:14px; }
+/* ล้าง style ตารางทั่วไปใน globals.css (th ตัวเล็กพื้นเทา + เส้นใต้ทุกช่อง) */
+.cmp th, .cmp td { padding:12px 14px; text-align:center; font-size:inherit; color:var(--foreground); background:transparent; border-bottom:0; white-space:nowrap; }
+.cmp thead th { vertical-align:bottom; padding-top:14px; }
+.cmpName { display:block; font-weight:700; font-size:15px; }
+.cmpPrice { display:block; margin-top:2px; font-size:12px; font-weight:400; color:var(--muted); white-space:nowrap; }
+.cmpTag { display:inline-block; margin-bottom:6px; padding:2px 8px; border-radius:999px; background:var(--primary); color:var(--on-primary); font-size:11px; font-weight:600; white-space:nowrap; }
+.cmp tbody th { text-align:left; font-weight:500; color:var(--foreground-soft); position:sticky; left:0; z-index:1; background:var(--card); }
+.cmp tbody tr:not(.cmpGroup) > * { border-top:1px solid var(--border); }
+.cmp tbody tr:not(.cmpGroup):hover > * { background:var(--surface-2); }
+.cmp tbody td { font-variant-numeric:tabular-nums; }
+.cmpGroup th { padding:18px 14px 6px; font-size:11px; font-weight:600; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); }
+.cmpGroup td { padding:0; }
+.cmp .cmpHot, .cmp tbody tr:not(.cmpGroup):hover > .cmpHot { background:var(--primary-soft); box-shadow:inset 1px 0 var(--primary-border), inset -1px 0 var(--primary-border); }
+.cmp thead .cmpHot { border-radius:12px 12px 0 0; box-shadow:inset 1px 0 var(--primary-border), inset -1px 0 var(--primary-border), inset 0 1px var(--primary-border); }
+.cmp tbody:last-child tr:last-child .cmpHot { border-radius:0 0 12px 12px; box-shadow:inset 1px 0 var(--primary-border), inset -1px 0 var(--primary-border), inset 0 -1px var(--primary-border); }
+.cmpYes { display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--success-soft); color:var(--success-text); vertical-align:middle; }
+.cmpYes svg { width:13px; height:13px; }
+.cmpNo { color:var(--faint); }
 
 .faqWrap { max-width:820px; }
 .faqWrap h2 { margin-bottom:12px; }

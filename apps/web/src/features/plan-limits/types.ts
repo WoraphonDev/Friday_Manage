@@ -37,6 +37,8 @@ export interface PublicPlan {
   priceYearlySatang: number | null;
   contactSales: boolean;
   features: string[];
+  /** สิทธิ์ที่ระบบบังคับใช้ (O21 · คีย์ตาม plan-entitlements.ts) · null = ไม่จำกัด / ตามสัญญา · API รุ่นเก่าไม่ส่ง */
+  entitlements?: Record<string, number | boolean | null>;
   /** O20 · false = ซ่อนจากหน้าราคา */
   listed?: boolean;
   /** O20 · false = ปิดรับสมัครใหม่ */

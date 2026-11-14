@@ -21,8 +21,16 @@ import type { BillingProfile, CheckoutResult, Invoice } from "../../app/work/[ws
 
 const messages = { "saas-pages": sp, checkout: checkoutMessages };
 const TEAM = ["kanban", "table", "calendar", "notifications_in_app", "notifications_email", "gantt", "workload", "sprints", "reports", "import_excel", "automation", "line_oa", "webhooks", "git_integration"];
+// สิทธิ์ตามค่าตั้งต้นใน plan-entitlements.ts (ตัวเลขสมมติชุดเดียวกับระบบ)
+const ENT: Record<string, Record<string, number | boolean | null>> = {
+  free: { automation_runs: 100, api_rpm: 0, history_days: 30, automation: false, api: false, guests: true, sso: false, sla: false },
+  team_s: { automation_runs: 5000, api_rpm: 60, history_days: 365, automation: true, api: true, guests: true, sso: false, sla: false },
+  team_m: { automation_runs: 20000, api_rpm: 120, history_days: 365, automation: true, api: true, guests: true, sso: false, sla: false },
+  team_l: { automation_runs: 50000, api_rpm: 300, history_days: 1095, automation: true, api: true, guests: true, sso: false, sla: false },
+  enterprise: { automation_runs: null, api_rpm: 1000, history_days: null, automation: true, api: true, guests: true, sso: true, sla: true },
+};
 const plan = (code: string, name: string, seatLimit: number | null, monthly: number | null, over: object = {}) => ({
-  code, name, seatLimit, guestsFree: true, projectLimit: null, storageGbPerMember: 10, priceMonthlySatang: monthly, priceYearlySatang: monthly === null ? null : monthly * 10, contactSales: false, features: TEAM, ...over,
+  code, name, seatLimit, guestsFree: true, projectLimit: null, storageGbPerMember: 10, priceMonthlySatang: monthly, priceYearlySatang: monthly === null ? null : monthly * 10, contactSales: false, features: TEAM, entitlements: ENT[code], ...over,
 });
 const plansBody = {
   currency: "THB", vatRate: 0.07, vatIncluded: false, trialDays: 14, yearlyMonths: 10,
@@ -166,10 +174,22 @@ describe("Landing + ราคา (R1)", () => {
     expect(screen.getByText("ลด 2 เดือน")).toBeInTheDocument();
 
     const table = screen.getByRole("table", { name: "เปรียบเทียบแพ็กเกจทั้งหมด" });
-    const gantt = within(table).getByRole("rowheader", { name: "Gantt, Workload, Sprint" }).parentElement!;
-    expect(within(gantt).getAllByRole("cell").map((c) => c.textContent)).toEqual(["–", "✓", "✓", "✓", "✓"]);
-    const members = within(table).getByRole("rowheader", { name: "จำนวนคน (ไม่นับ Guest)" }).parentElement!;
-    expect(within(members).getAllByRole("cell").map((c) => c.textContent)).toEqual(["5", "10", "25", "50", "50+"]);
+    // ✓ / – เป็นไอคอนที่มีชื่อ "มี" / "ไม่มี" · ตัวเลขอ่านจาก entitlements ของ API ไม่ใช่ข้อความแปล
+    const row = (name: string) =>
+      within(within(table).getByRole("rowheader", { name }).parentElement!)
+        .getAllByRole("cell")
+        .map((c) => c.querySelector("[aria-label]")?.getAttribute("aria-label") ?? c.textContent);
+    expect(row("Gantt, Workload, Sprint")).toEqual(["ไม่มี", "มี", "มี", "มี", "มี"]);
+    expect(row("จำนวนคน (ไม่นับ Guest)")).toEqual(["5", "10", "25", "50", "50+"]);
+    expect(row("Guest (ลูกค้า, Dev outsource)")).toEqual(["มี", "มี", "มี", "มี", "มี"]);
+    expect(row("พื้นที่ไฟล์")).toEqual(["1 GB/คน", "10 GB/คน", "10 GB/คน", "10 GB/คน", "ตามสัญญา"]);
+    expect(row("Automation")).toEqual(["ไม่มี", "5,000 ครั้ง/เดือน", "20,000 ครั้ง/เดือน", "50,000 ครั้ง/เดือน", "ไม่จำกัด"]);
+    expect(row("API")).toEqual(["ไม่มี", "60 ครั้ง/นาที", "120 ครั้ง/นาที", "300 ครั้ง/นาที", "1,000 ครั้ง/นาที"]);
+    expect(row("Audit log และประวัติ")).toEqual(["30 วัน", "1 ปี", "1 ปี", "3 ปี", "ตามสัญญา"]);
+    expect(row("SLA + เลือก Data region")).toEqual(["ไม่มี", "ไม่มี", "ไม่มี", "ไม่มี", "มี"]);
+    expect(within(table).getByRole("rowheader", { name: "ความปลอดภัยและบริการ" })).toBeInTheDocument();
+    // คอลัมน์ที่เหมาะกับทีม (เลื่อนไว้ 55 คน → Enterprise) มีป้ายกำกับ
+    expect(within(within(table).getByRole("columnheader", { name: /Enterprise/ })).getByText("เหมาะกับทีมคุณ")).toBeInTheDocument();
 
     expect(screen.getByText("PromptPay ตัดเงินอัตโนมัติไหม")).toBeInTheDocument();
     const legal = screen.getByRole("navigation", { name: "ข้อกฎหมาย" });

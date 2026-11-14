@@ -212,6 +212,14 @@
 | [O35](O35-ops-help-center.md) | Ops: จัดการบทความ | O-4 | O32 | `apps/ops-api/src/help` · `app/(console)/help` |
 | [O36](O36-ops-bug-to-dev.md) | Ops: ส่งบั๊กจาก Ticket ให้ทีมพัฒนา | O-4 | O32, A44 | `apps/ops-api/src/dev-bridge` · `app/(console)/bugs` |
 
+## เว็บมือถือตามต้นแบบ (ผู้ใช้สั่งเริ่ม 15 พ.ย. 2569)
+
+ที่มา: `docs/prototypes/mobile/claude-friday-mobile-selected` แทน Canvas `Mobile*.dc.html` สำหรับจอ ≤760px · **ห้ามกระทบ desktop:** ทุกงานเทียบภาพ desktop 1280 / 1440 / 1920 (สว่าง + มืด) ก่อน/หลัง · ลำดับงานถัดไปตาม `claude-friday-mobile-complete/HANDOFF.md` ข้อ 9 (Auth → Workspace core → Issue drawer → Project views → …) สร้างไฟล์งานเมื่อเริ่มแต่ละงาน
+
+| งาน | ชื่อ | Wave | รอ merge | Lane หลัก |
+|---|---|---|---|---|
+| [W27](W27-mobile-foundation.md) | เว็บมือถือ: ฐานร่วม (token · เมนูล่าง · bottom sheet · ActionSheet · เส้นแบ่ง 760) | มือถือ-1 | — | `src/styles/{tokens,globals}.css` (ท้ายไฟล์ใน media มือถือ) · `components/ui/overlays.tsx` |
+
 ## ตั้ง environment ของ Codex
 
 ตั้งไว้แล้วที่ chatgpt.com/codex › Environment `Friday_Manage` · Codex ไม่มี root, ไม่มี Docker และ home ของผู้ใช้ไม่มีอยู่จริง

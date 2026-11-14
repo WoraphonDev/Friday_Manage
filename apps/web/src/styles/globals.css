@@ -2181,3 +2181,76 @@ button.menu-item:disabled { cursor:default; opacity:.5; }
 .drawer-prefs .drawer-pref button { flex: 1; min-height: 44px; }
 .drawer-signout { display: flex; padding-top: 4px; border-top: 1px solid var(--border); }
 .drawer-signout > button { flex: 1; min-height: 44px; justify-content: flex-start; color: var(--danger-text); }
+
+/* ===== W27 · Mobile foundation (≤760px ตามต้นแบบ docs/prototypes/mobile) =====
+   ทุกกฎอยู่ใน @media มือถือ · class ใหม่ที่อยู่นอก media (.bottom-nav-icon / -label / .action-sheet-*) ไม่มีที่ใช้บน desktop
+   จึงไม่เปลี่ยนหน้าตา desktop (ตรวจด้วยภาพก่อน/หลัง 1280/1440/1920 ทั้งสองโหมด) */
+.action-sheet-list { display: flex; flex-direction: column; gap: 4px; }
+.action-sheet-item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--foreground); font: inherit; text-align: left; }
+.action-sheet-item:hover, .action-sheet-item:focus-visible { background: var(--hover); }
+.action-sheet-item:disabled { opacity: 0.5; }
+.action-sheet-item[data-destructive] { color: var(--danger-text); }
+.action-sheet-item > svg { flex: none; color: var(--muted); }
+.action-sheet-item[data-destructive] > svg { color: inherit; }
+.action-sheet-hint { margin-left: auto; color: var(--muted); font-size: var(--text-caption); }
+.action-sheet-cancel { display: none; }
+
+@media (max-width: 760px) {
+  /* เมนูล่างแบบ B: ไอคอนอยู่ในแคปซูลเมื่อเป็นหน้าปัจจุบัน · 5 แท็บต้องพอดีจอ 320px (ป้ายตัดด้วย … แทนการล้น) */
+  .mobile-bottom-nav { box-shadow: 0 -1px 0 var(--border); border-top: 0; }
+  .mobile-bottom-nav .nav-link { min-width: 0; gap: 2px; padding: 6px 2px 4px; }
+  .mobile-bottom-nav .nav-link[aria-current="page"] { font-weight: 600; }
+  .bottom-nav-icon { display: flex; align-items: center; justify-content: center; width: 54px; max-width: 100%; height: 28px; border-radius: 14px; }
+  .mobile-bottom-nav .nav-link[aria-current="page"] .bottom-nav-icon { background: var(--primary-soft); }
+  .bottom-nav-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3; }
+  .mobile-bottom-nav .bottom-nav-count { top: 2px; }
+
+  /* กัน iOS ซูมเมื่อแตะช่องกรอก: ตัวอักษรในช่องอย่างน้อย 16px */
+  .input,
+  textarea,
+  select,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]) {
+    font-size: var(--m-text-input);
+  }
+
+  /* Dialog ทุกขนาดเป็น bottom sheet: ชิดล่าง มุมบนโค้ง มีที่จับ เอื้อมถึงด้วยนิ้วโป้ง */
+  .dialog,
+  .dialog-medium,
+  .dialog-wide {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    transform: none;
+    border-radius: var(--m-radius-sheet) var(--m-radius-sheet) 0 0;
+    padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+    animation: sheet-up 0.2s ease-out;
+  }
+  .dialog::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 5px;
+    margin: 8px auto 4px;
+    border-radius: 3px;
+    background: var(--border-strong);
+  }
+  .dialog > .dialog-heading { padding-top: 4px; }
+  .dialog-medium > .dialog-heading,
+  .dialog-wide > .dialog-heading { margin: 0 -16px; padding: 4px 16px 12px; }
+  .dialog-medium > .dialog-body,
+  .dialog-wide > .dialog-body { padding-top: 12px; }
+  /* ปุ่มหลักเต็มความกว้าง อยู่ล่างสุด (ปุ่มยกเลิกอยู่บน) แบบ C */
+  .dialog .dialog-actions { flex-direction: column-reverse; align-items: stretch; gap: 8px; }
+  .dialog .dialog-actions > .button { min-height: var(--m-tap); justify-content: center; }
+
+  /* Action sheet: รายการแถวสูง 48 + ปุ่มยกเลิกแยกล่าง */
+  .action-sheet-item { min-height: 48px; font-size: var(--m-text-body); }
+  .action-sheet-cancel { display: flex; justify-content: center; width: 100%; min-height: var(--m-tap); margin-top: 8px; }
+}
+@keyframes sheet-up {
+  from { transform: translateY(24px); opacity: 0.6; }
+  to { transform: none; opacity: 1; }
+}

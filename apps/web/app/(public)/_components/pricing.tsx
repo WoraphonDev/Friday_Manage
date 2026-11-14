@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -26,6 +26,21 @@ export function PricingSection({ heading = "h2", ctaFor }: { heading?: "h1" | "h
   const [team, setTeam] = useState(12);
   const plans = useQuery({ queryKey: ["public-plans"], queryFn: () => api.get<PublicPlans>("/public/plans"), staleTime: 300_000 });
   const H = heading;
+  // แถบเลื่อนใต้ปุ่มรอบชำระ: วัดจากปุ่มจริงเพราะความยาวคำต่างกันตามภาษา
+  const seg = useRef<HTMLDivElement>(null);
+  const segInd = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const place = () => {
+      const btn = seg.current?.querySelector<HTMLButtonElement>('button[aria-pressed="true"]');
+      if (!btn || !segInd.current) return;
+      segInd.current.style.width = `${btn.offsetWidth}px`;
+      segInd.current.style.transform = `translateX(${btn.offsetLeft}px)`;
+    };
+    place();
+    window.addEventListener("resize", place);
+    document.fonts?.ready.then(place).catch(() => {});
+    return () => window.removeEventListener("resize", place);
+  }, [cycle, plans.data]);
 
   return (
     <section id="pricing" className={cn(styles.pricing, ctaFor && styles.embedded)} aria-labelledby="pricing-title">
@@ -35,7 +50,8 @@ export function PricingSection({ heading = "h2", ctaFor }: { heading?: "h1" | "h
             {t("title")}
           </H>
           <div className={styles.muted}>{t("subtitle")}</div>
-          <div className={styles.seg} role="group" aria-label={t("cycle")}>
+          <div ref={seg} className={styles.seg} role="group" aria-label={t("cycle")}>
+            <span ref={segInd} className={styles.segInd} aria-hidden="true" />
             <button type="button" aria-pressed={cycle === "monthly"} onClick={() => setCycle("monthly")}>
               {t("monthly")}
             </button>
@@ -122,7 +138,9 @@ function Plans({ data, cycle, team, setTeam, ctaFor }: { data: PublicPlans; cycl
               <b>{p.name}</b>
               <span className={cn(styles.muted, styles.small)}>{p.seatLimit === null ? t("sizeOver", { n: prevLimit(i) }) : t("sizeUpTo", { n: p.seatLimit })}</span>
               <div>
-                <span className={styles.price}>{pr.price}</span> <span className={cn(styles.muted, styles.small)}>{pr.unit}</span>
+                <span key={pr.price} className={styles.price}>
+                  {pr.price}
+                </span> <span className={cn(styles.muted, styles.small)}>{pr.unit}</span>
               </div>
               <span className={cn(styles.muted, styles.sub)}>{pr.sub}</span>
               {c.href ? (

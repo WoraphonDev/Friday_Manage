@@ -160,7 +160,7 @@ export class ProjectNotifyService implements OnModuleInit {
       .select({ sched: s.reportSchedules, key: s.projects.key, name: s.projects.name, ownerUserId: s.projects.ownerUserId })
       .from(s.reportSchedules)
       .innerJoin(s.projects, eq(s.projects.id, s.reportSchedules.projectId))
-      .where(and(eq(s.reportSchedules.reportType, 'weekly'), eq(s.reportSchedules.weekday, isoWeekday(date)), isNull(s.projects.deletedAt), isNull(s.projects.archivedAt)));
+      .where(and(eq(s.reportSchedules.reportType, 'weekly'), eq(s.reportSchedules.weekday, isoWeekday(date)), isNull(s.projects.deletedAt), isNull(s.projects.archivedAt), isNull(s.projects.pausedAt)));
     let sent = 0;
     for (const r of rows) {
       const [h, m] = r.sched.time.split(':').map(Number);

@@ -14,6 +14,7 @@ import type { Permissions } from "@/lib/types";
 import { WorkflowSection } from "./workflow-section";
 import { ModulesSection, TypesSection } from "./structure-sections";
 import { PermsSection } from "./perms-section";
+import { PauseRow } from "./pause-section";
 import {
   BASELINE_SECTIONS, DEFAULT_SIZE_MD, errorText, isForbidden, isSection, SECTIONS, SIZES,
   type DeleteImpact, type HolidayCalendar, type Member, type ProjectDetail, type Section, type Size,
@@ -409,7 +410,9 @@ function DangerSection({ ws, projectKey, project, access, members }: { ws: strin
     <>
       <SectionHead title={t("title")} description={t("description")} />
       <div className={styles.sb}>
-        {canArchive && (
+        {/* พักกับ Archive ใช้พร้อมกันไม่ได้ (API ตอบ 409) จึงแสดงทีละแถว */}
+        {canArchive && !archived && <PauseRow ws={ws} projectKey={projectKey} project={project} members={members} refresh={refresh} />}
+        {canArchive && !project.pausedAt && (
           <div className={styles.dz}>
             <div>
               <b>{archived ? t("restoreTitle") : t("archiveTitle")}</b>

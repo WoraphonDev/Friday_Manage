@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { type Db, schema, type Tx } from '@friday/db';
-import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { PlanLimits } from '../core/plan-limits.js';
 import { SYSTEM_DB } from '../db/db.module.js';
@@ -167,6 +167,11 @@ export const PatchProjectBody = z
 
 export const ListProjectsQuery = z.object({ status: z.enum(['planning', 'active', 'archived']).optional() });
 export const TransferBody = z.object({ userId: z.uuid() });
+const pauseMessage = z.string().trim().max(500).optional();
+/** พักโปรเจกต์: viewerIds = สมาชิกที่ยังเห็นได้ (นอกจาก Owner / Admin) · notify = แจ้งคนที่จะมองไม่เห็น */
+export const PauseBody = z.object({ viewerIds: z.array(z.uuid()).max(1000).default([]), notify: z.boolean().default(true), message: pauseMessage });
+export const ResumeBody = z.object({ notify: z.boolean().default(true), message: pauseMessage });
+export const PauseViewersBody = z.object({ viewerIds: z.array(z.uuid()).max(1000) });
 export const DeleteProjectBody = z.object({ confirmKey: z.string().trim().min(1) });
 export const SampleProjectBody = z.object({ key: projectKey.optional() });
 
@@ -229,6 +234,7 @@ export class ProjectsService {
         .innerJoin(s.projects, eq(s.projects.id, s.projectKeyAliases.projectId))
         .where(and(eq(s.projectKeyAliases.oldKey, wanted), isNull(s.projects.deletedAt)));
       if (moved) throw new AppError(301, 'project_moved', `โปรเจกต์นี้เปลี่ยน Key เป็น ${moved.key} แล้ว`, { key: moved.key, oldKey: wanted });
+      await this.throwIfPausedForMe(auth, tenant, wanted);
       throw new AppError(404, 'project_not_found', 'ไม่พบโปรเจกต์');
     }
     if (project.deletedAt) {
@@ -263,6 +269,7 @@ export class ProjectsService {
           startDate: s.projects.startDate,
           goliveDate: s.projects.goliveDate,
           archivedAt: s.projects.archivedAt,
+          pausedAt: s.projects.pausedAt,
           ownerUserId: s.projects.ownerUserId,
           memberCount: sql<number>`(select count(*)::int from ${s.projectMembers} pm where pm.project_id = ${s.projects.id})`,
           myRole: s.projectMembers.role,
@@ -671,6 +678,7 @@ export class ProjectsService {
       const { project, access } = await this.load(tx, auth, tenant, key);
       requirePerm(access, 'project.archive');
       if (project.archivedAt) throw new AppError(409, 'already_archived', 'โปรเจกต์นี้ถูก Archive อยู่แล้ว');
+      if (project.pausedAt) throw new AppError(409, 'project_paused', 'โปรเจกต์นี้พักอยู่ · เปิดใช้งานต่อก่อนจึงจะ Archive ได้');
       const [updated] = await tx.update(s.projects).set({ status: 'archived', archivedAt: new Date() }).where(eq(s.projects.id, project.id)).returning();
       await this.audit(tx, auth, tenant, updated, 'data', 'project.archived', `${updated.key} · ${updated.name}`);
       return this.dto(updated, access.role, true);
@@ -688,6 +696,130 @@ export class ProjectsService {
       await this.audit(tx, auth, tenant, updated, 'data', 'project.restored', `${updated.key} · ${updated.name}`);
       return this.dto(updated, access.role, true);
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // L2 › Danger zone: พักโปรเจกต์ (ผู้ใช้ขอ 2026-11-15)
+  // ซ่อนผ่าน RLS (0037_project_pause) · ใช้สิทธิ์เดียวกับ Archive · ข้อมูลไม่ถูกแก้ เปิดใช้งานต่อแล้วกลับมาเหมือนเดิม
+  // ---------------------------------------------------------------------------
+  async pause(auth: AuthInfo, tenant: TenantInfo, key: string, input: z.infer<typeof PauseBody>) {
+    const { updated, role, hidden } = await this.db.run(auth, tenant, async (tx) => {
+      const { project, access } = await this.load(tx, auth, tenant, key);
+      requirePerm(access, 'project.archive');
+      if (project.pausedAt) throw new AppError(409, 'already_paused', 'โปรเจกต์นี้พักอยู่แล้ว');
+      if (project.archivedAt) throw new AppError(409, 'project_archived', 'โปรเจกต์ที่ Archive แล้วพักไม่ได้');
+      const viewers = new Set(input.viewerIds);
+      await this.setViewers(tx, project, viewers);
+      const hidden = await this.hiddenWhilePaused(tx, project, viewers);
+      const [updated] = await tx.update(s.projects).set({ pausedAt: new Date(), pausedBy: auth.userId }).where(eq(s.projects.id, project.id)).returning();
+      await this.audit(tx, auth, tenant, updated, 'data', 'project.paused', `${updated.key} · ${updated.name} · ซ่อนจากสมาชิก ${hidden.length} คน`);
+      return { updated, role: access.role, hidden };
+    });
+    // แจ้งเตือนนี้ไม่ผูก project_id เพื่อให้คนที่มองไม่เห็นโปรเจกต์ยังเห็นใน Inbox (RLS ซ่อนแจ้งเตือนของโปรเจกต์ที่พัก)
+    if (input.notify) await this.notifyPause(auth, tenant, updated, hidden, 'project.paused', input.message);
+    return this.dto(updated, role, true);
+  }
+
+  async resume(auth: AuthInfo, tenant: TenantInfo, key: string, input: z.infer<typeof ResumeBody>) {
+    const { updated, role, hidden } = await this.db.run(auth, tenant, async (tx) => {
+      const { project, access } = await this.load(tx, auth, tenant, key);
+      requirePerm(access, 'project.archive');
+      if (!project.pausedAt) throw new AppError(409, 'not_paused', 'โปรเจกต์นี้ไม่ได้พักอยู่');
+      const hidden = await this.hiddenWhilePaused(tx, project, await this.viewerIds(tx, project));
+      const [updated] = await tx.update(s.projects).set({ pausedAt: null, pausedBy: null }).where(eq(s.projects.id, project.id)).returning();
+      await this.setViewers(tx, project, new Set());
+      await this.audit(tx, auth, tenant, updated, 'data', 'project.resumed', `${updated.key} · ${updated.name}`);
+      return { updated, role: access.role, hidden };
+    });
+    if (input.notify) await this.notifyPause(auth, tenant, updated, hidden, 'project.resumed', input.message);
+    return this.dto(updated, role, true);
+  }
+
+  /** เปลี่ยนรายชื่อสมาชิกที่ยังเห็นได้ระหว่างพัก */
+  async setPauseViewers(auth: AuthInfo, tenant: TenantInfo, key: string, input: z.infer<typeof PauseViewersBody>) {
+    return this.db.run(auth, tenant, async (tx) => {
+      const { project, access } = await this.load(tx, auth, tenant, key);
+      requirePerm(access, 'project.archive');
+      if (!project.pausedAt) throw new AppError(409, 'not_paused', 'โปรเจกต์นี้ไม่ได้พักอยู่');
+      await this.setViewers(tx, project, new Set(input.viewerIds));
+      const viewerIds = [...(await this.viewerIds(tx, project))];
+      await this.audit(tx, auth, tenant, project, 'perm', 'project.pause_viewers', `${project.key} · ให้สมาชิก ${viewerIds.length} คนเห็นระหว่างพัก`);
+      return { viewerIds };
+    });
+  }
+
+  private async setViewers(tx: Tx, project: ProjectRow, viewers: Set<string>) {
+    await tx.update(s.projectMembers).set({ visibleWhilePaused: false }).where(and(eq(s.projectMembers.projectId, project.id), eq(s.projectMembers.visibleWhilePaused, true)));
+    if (viewers.size) {
+      await tx
+        .update(s.projectMembers)
+        .set({ visibleWhilePaused: true })
+        .where(and(eq(s.projectMembers.projectId, project.id), inArray(s.projectMembers.userId, [...viewers])));
+    }
+  }
+
+  private async viewerIds(tx: Tx, project: ProjectRow) {
+    const rows = await tx
+      .select({ userId: s.projectMembers.userId })
+      .from(s.projectMembers)
+      .where(and(eq(s.projectMembers.projectId, project.id), eq(s.projectMembers.visibleWhilePaused, true)));
+    return new Set(rows.map((r) => r.userId));
+  }
+
+  /**
+   * สมาชิกโปรเจกต์ที่จะมองไม่เห็นระหว่างพัก = ไม่ใช่ Project Owner / Admin, ไม่ใช่ Workspace Owner / Admin และไม่ได้ถูกเลือกให้เห็น
+   * ตรงกับเงื่อนไขใน app.accessible_project_ids() · ใช้เลือกผู้รับแจ้งเตือน
+   */
+  private async hiddenWhilePaused(tx: Tx, project: ProjectRow, viewers: Set<string>) {
+    const rows = await tx
+      .select({ userId: s.projectMembers.userId, role: s.projectMembers.role, wsRole: s.workspaceMembers.role })
+      .from(s.projectMembers)
+      .innerJoin(
+        s.workspaceMembers,
+        and(eq(s.workspaceMembers.workspaceId, s.projectMembers.workspaceId), eq(s.workspaceMembers.userId, s.projectMembers.userId), eq(s.workspaceMembers.status, 'active')),
+      )
+      .where(eq(s.projectMembers.projectId, project.id));
+    return rows
+      .filter((r) => r.userId !== project.ownerUserId && r.role !== 'admin' && r.wsRole !== 'owner' && r.wsRole !== 'admin' && !viewers.has(r.userId))
+      .map((r) => r.userId);
+  }
+
+  private async notifyPause(auth: AuthInfo, tenant: TenantInfo, project: ProjectRow, recipients: string[], eventType: 'project.paused' | 'project.resumed', message?: string) {
+    const to = recipients.filter((id) => id !== auth.userId);
+    if (!to.length) return;
+    const [actor] = await this.system.select({ name: s.users.displayName }).from(s.users).where(eq(s.users.id, auth.userId));
+    const payload = { projectKey: project.key, projectName: project.name, actorName: actor?.name ?? null, ...(message ? { message } : {}) };
+    // แจ้งเตือนสร้างโดยระบบ (แอปไม่มีสิทธิ์ INSERT notifications) เหมือน joinAsAdmin
+    await this.system.insert(s.notifications).values(
+      to.map((recipientId) => ({
+        workspaceId: tenant.workspaceId,
+        recipientId,
+        eventType,
+        actorId: auth.userId,
+        projectId: eventType === 'project.paused' ? null : project.id,
+        payload,
+        reason: 'คุณเป็นสมาชิกโปรเจกต์นี้',
+      })),
+    );
+  }
+
+  /**
+   * คนที่เคยเปิดโปรเจกต์นี้ได้แต่ตอนนี้มองไม่เห็นเพราะโปรเจกต์พักอยู่ → 403 project_paused แทน 404
+   * ให้หน้าจอบอกว่า "ถูกพักชั่วคราว" · RLS ซ่อนแถวโปรเจกต์แล้ว จึงอ่านผ่าน friday_system เฉพาะเรื่องนี้
+   */
+  private async throwIfPausedForMe(auth: AuthInfo, tenant: TenantInfo, key: string) {
+    const [p] = await this.system
+      .select({ id: s.projects.id, key: s.projects.key, name: s.projects.name, visibility: s.projects.visibility, pausedAt: s.projects.pausedAt, pausedBy: s.users.displayName })
+      .from(s.projects)
+      .leftJoin(s.users, eq(s.users.id, s.projects.pausedBy))
+      .where(and(eq(s.projects.workspaceId, tenant.workspaceId), eq(s.projects.key, key), isNull(s.projects.deletedAt), isNotNull(s.projects.pausedAt)));
+    if (!p) return;
+    const [member] = await this.system
+      .select({ userId: s.projectMembers.userId })
+      .from(s.projectMembers)
+      .where(and(eq(s.projectMembers.projectId, p.id), eq(s.projectMembers.userId, auth.userId)));
+    if (!member && !(p.visibility === 'workspace' && tenant.role !== 'guest')) return;
+    throw new AppError(403, 'project_paused', `โปรเจกต์ ${p.name} ถูกพักชั่วคราว`, { key: p.key, name: p.name, pausedAt: p.pausedAt, pausedBy: p.pausedBy ?? null });
   }
 
   /**
@@ -798,6 +930,7 @@ export class ProjectsService {
       visibility: p.visibility,
       status: p.status,
       archivedAt: p.archivedAt,
+      pausedAt: p.pausedAt,
       ownerUserId: p.ownerUserId,
       sprintLengthWeeks: p.sprintLengthWeeks,
       estimateUnit: p.estimateUnit,

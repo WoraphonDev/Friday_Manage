@@ -100,6 +100,12 @@ export const projects = pgTable(
     budgetSatang: bigint({ mode: 'number' }),
     hourlyRateSatang: bigint({ mode: 'number' }),
     archivedAt: tstz(),
+    /**
+     * พักโปรเจกต์ (ผู้ใช้ขอ 2026-11-15) · ระหว่างพักเห็นได้เฉพาะ Owner / Admin ของโปรเจกต์, Owner / Admin ของ Workspace
+     * และสมาชิกที่ visible_while_paused · บังคับใน app.accessible_project_ids() (0037_project_pause)
+     */
+    pausedAt: tstz(),
+    pausedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
     deletedAt: deletedAt(),
     /** ผู้ลบ (O30 · ถังขยะ A41) · trigger ตั้งจาก app.user_id · กู้คืนแล้วล้างเป็น null */
     deletedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
@@ -172,6 +178,8 @@ export const projectMembers = pgTable(
     capacityHoursWeek: smallint(),
     /** ทำงานแทน PM: รับแจ้งเตือนแบบ PM และอนุมัติคำขอเลื่อน Due ได้ โดยไม่ต้องเป็น Admin */
     pmDeputy: boolean().notNull().default(false),
+    /** ยังเห็นโปรเจกต์ระหว่างพัก (PM เลือก) · Owner และ Admin เห็นเสมอโดยไม่ต้องตั้ง */
+    visibleWhilePaused: boolean().notNull().default(false),
     joinedAt: createdAt(),
   },
   (t) => [

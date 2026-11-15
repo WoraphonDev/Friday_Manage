@@ -1364,6 +1364,45 @@ kbd {
 .nav-link .badge {
   margin-left: auto;
 }
+/* ป้าย "พัก" ท้ายชื่อโปรเจกต์ที่พักอยู่ (เห็นเฉพาะคนที่ยังเข้าถึงได้ · mockup แบบ A) */
+.nav-link .paused-pill {
+  margin-left: auto;
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--warning-soft);
+  color: var(--warning-text);
+  border: 1px solid var(--warning-border);
+}
+/* แถบบอกว่าโปรเจกต์พักอยู่ ใต้หัวโปรเจกต์ทุกหน้า */
+.paused-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 12px 24px 0;
+  padding: 8px 14px;
+  border: 1px solid var(--warning-border);
+  border-radius: 10px;
+  background: var(--warning-soft);
+  color: var(--warning-text);
+  font-size: 13px;
+}
+.paused-banner-text {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.paused-banner .button {
+  min-height: 28px;
+}
+@media (max-width: 760px) {
+  .paused-banner {
+    margin: 8px 16px 0;
+  }
+}
 /* ชื่อโปรเจกต์ยาวขึ้นบรรทัดใหม่ตาม Canvas แทนการตัด */
 .nav-link .project-name {
   min-width: 0;

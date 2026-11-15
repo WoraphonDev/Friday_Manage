@@ -70,6 +70,8 @@ export class TrashPurgeService implements OnModuleInit {
       if (issues.length) await tx.delete(s.issues).where(and(eq(s.issues.workspaceId, workspaceId), inArray(s.issues.id, issues.map((i) => i.id))));
       if (fileIds.length) await tx.delete(s.files).where(and(eq(s.files.workspaceId, workspaceId), inArray(s.files.id, fileIds)));
       if (projectIds.length) await tx.delete(s.projects).where(and(eq(s.projects.workspaceId, workspaceId), inArray(s.projects.id, projectIds)));
+      // แจ้งเตือนไม่มี FK ไปที่โปรเจกต์ · ลบตามไปด้วย ไม่ให้ชื่องานค้างใน Inbox หลังลบถาวร
+      if (projectIds.length) await tx.delete(s.notifications).where(and(eq(s.notifications.workspaceId, workspaceId), inArray(s.notifications.projectId, projectIds)));
       const counts = { issues: issues.length, projects: projects.length, files: fileIds.length };
       if (counts.issues + counts.projects + counts.files > 0) {
         await tx.insert(s.auditLogs).values({ workspaceId, actorId: null, actorKind: 'system', category: 'data', action: 'trash.purged', targetType: 'workspace', targetId: workspaceId,

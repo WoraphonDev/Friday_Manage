@@ -104,7 +104,7 @@ export class GitEventsService {
       .select({ link: s.projectRepositories, key: s.projects.key, name: s.projects.name, owner: s.projects.ownerUserId })
       .from(s.projectRepositories)
       .innerJoin(s.projects, eq(s.projects.id, s.projectRepositories.projectId))
-      .where(and(eq(s.projectRepositories.repositoryId, repoId), isNull(s.projects.deletedAt), isNull(s.projects.archivedAt)));
+      .where(and(eq(s.projectRepositories.repositoryId, repoId), isNull(s.projects.deletedAt), isNull(s.projects.archivedAt), isNull(s.projects.pausedAt)));
     return rows
       .filter((r) => !r.link.branchPattern || branch === null || globToRe(r.link.branchPattern).test(branch))
       .map((r) => ({ link: r.link, projectKey: r.key, projectName: r.name, ownerId: r.owner }));

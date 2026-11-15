@@ -220,6 +220,7 @@ export class ProjectMembersService {
         positions: s.projectMembers.positions,
         capacityHoursWeek: s.projectMembers.capacityHoursWeek,
         pmDeputy: s.projectMembers.pmDeputy,
+        visibleWhilePaused: s.projectMembers.visibleWhilePaused,
         joinedAt: s.projectMembers.joinedAt,
         displayName: s.users.displayName,
         email: s.users.email,
@@ -269,6 +270,10 @@ export class ProjectMembersService {
       capacityHoursWeek: r.capacityHoursWeek,
       capacityMdWeek: r.capacityHoursWeek === null ? null : Math.round((r.capacityHoursWeek / HOURS_PER_MD) * 100) / 100,
       pmDeputy: r.pmDeputy,
+      /** ยังเห็นโปรเจกต์ระหว่างพัก (PM เลือกไว้) · Owner / Admin เห็นเสมอ */
+      visibleWhilePaused: r.visibleWhilePaused,
+      /** เห็นโปรเจกต์ระหว่างพักเสมอ: Project Owner / Admin หรือ Workspace Owner / Admin (ตรงกับ app.accessible_project_ids) */
+      alwaysSeesWhilePaused: project.ownerUserId === r.userId || r.role === 'admin' || r.workspaceRole === 'owner' || r.workspaceRole === 'admin',
       openIssues: work?.open ?? 0,
       overdueIssues: work?.overdue ?? 0,
       openMd: work?.md ?? 0,

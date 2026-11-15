@@ -4,6 +4,7 @@ import {
   FileQuestion,
   FolderOpen,
   LockKeyhole,
+  PauseCircle,
   RefreshCw,
   TriangleAlert,
 } from "lucide-react";
@@ -109,6 +110,21 @@ export function Forbidden({
       ) : requestAccess ? (
         <Button onClick={requestAccess}>{t("requestAccess")}</Button>
       ) : null}
+    </State>
+  );
+}
+/** โปรเจกต์พักอยู่และผู้ใช้ไม่ได้อยู่ในรายชื่อที่เห็น (403 project_paused) */
+export function PausedState({ name, by, homeHref }: { name: string; by: string | null; homeHref: string }) {
+  const t = useTranslations("common.paused");
+  return (
+    <State
+      icon={<PauseCircle />}
+      title={t("title")}
+      description={by ? t("descriptionBy", { name, by }) : t("description", { name })}
+    >
+      <a className="button button-secondary" href={homeHref}>
+        {t("home")}
+      </a>
     </State>
   );
 }

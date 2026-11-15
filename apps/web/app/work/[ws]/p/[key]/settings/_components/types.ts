@@ -28,6 +28,7 @@ export interface ProjectDetail {
   visibility: "private" | "workspace";
   status: string;
   archivedAt: string | null;
+  pausedAt?: string | null;
   ownerUserId: string;
   sprintLengthWeeks: 1 | 2 | 3 | null;
   estimateUnit: "man_day" | "hour";
@@ -55,6 +56,11 @@ export interface Member {
   isOwner: boolean;
   isGuest: boolean;
   active: boolean;
+  /** ยังเห็นโปรเจกต์ระหว่างพัก (PM เลือก) */
+  visibleWhilePaused?: boolean;
+  /** เห็นระหว่างพักเสมอ (Owner / Admin ของโปรเจกต์หรือ Workspace) */
+  alwaysSeesWhilePaused?: boolean;
+  openIssues?: number;
 }
 
 export interface Status {

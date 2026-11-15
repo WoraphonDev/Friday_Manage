@@ -105,5 +105,9 @@
   },
   "detail": "Details",
   "send": "Send request",
-  "conflict": "This task was changed by someone else. Please try again"
+  "conflict": "This task was changed by someone else. Please try again",
+  "widenTask": "Widen task column",
+  "narrowTask": "Narrow task column",
+  "resizeTask": "Resize task column",
+  "resizeTaskHint": "Drag to resize · double-click to reset"
 }

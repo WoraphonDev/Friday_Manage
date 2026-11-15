@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Badge, ErrorState, Forbidden, LoadingState, NotFound } from "@/components/ui";
+import { Badge, ErrorState, Forbidden, LoadingState, MotionSwap, NotFound } from "@/components/ui";
+import { useSlidingIndicator } from "@/lib/motion";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -22,6 +23,7 @@ export function AdminConsole({ ws, section }: { ws: string; section?: string }) 
   const tt = useTranslations("trash");
   const { workspace, me } = useWorkspace();
   const isAdmin = workspace.role === "owner" || workspace.role === "admin";
+  const navRef = useSlidingIndicator<HTMLElement>(`.${styles.snav}`);
   // ภาพรวมใช้ทั้งป้ายเมนู (จำนวนเรื่องที่ต้องทำ) และแท็บแดชบอร์ด/โปรเจกต์/แพ็กเกจ
   const overview = useQuery({ queryKey: adminKey(ws, "overview"), queryFn: () => api.get<AdminOverview>(`${wsPath(ws)}/admin/overview`), enabled: isAdmin });
   // ถังขยะ (Z1 · W23) เป็นเมนูของ feature trash จึงไม่อยู่ใน SECTIONS ของ W18
@@ -30,13 +32,13 @@ export function AdminConsole({ ws, section }: { ws: string; section?: string }) 
   if (!current) return <NotFound />;
   // สมาชิกทั่วไปและ Guest ไม่เห็น Admin Console เลย (ไม่เรียก API)
   if (!isAdmin || isForbidden(overview.error)) return <div className={styles.body}><Forbidden /></div>;
-  if (current === "notify-templates") return <NotifyTemplates ws={ws} />;
+  if (current === "notify-templates") return <MotionSwap key={current}><NotifyTemplates ws={ws} /></MotionSwap>;
 
   const base = `${workPath(ws)}/admin`;
   const actions = overview.data?.actions.length ?? 0;
   return (
     <div className={styles.body}>
-      <nav className={styles.nav} aria-label={t("navLabel")}>
+      <nav ref={navRef} className={`${styles.nav} motion-pill`} aria-label={t("navLabel")}>
         {/* Canvas N1: หัวเมนูบอก Workspace และแพ็กเกจที่ใช้อยู่ */}
         <div className={styles.navHead}>
           <b>{workspace.name}</b>
@@ -68,7 +70,8 @@ export function AdminConsole({ ws, section }: { ws: string; section?: string }) 
         ))}
         <Link href={`${workPath(ws)}/members`} className={styles.snav}>{t("nav.members")}</Link>
       </nav>
-      <div className={styles.main}>
+      {/* สลับหัวข้อไม่เปลี่ยน route (admin/[[...section]]) จึงเคลื่อนเนื้อหาเองแบบเดียวกับการเปลี่ยนหน้า */}
+      <MotionSwap key={current} className={styles.main}>
         {current === "trash" ? (
           <TrashBrowser
             ws={ws}
@@ -106,7 +109,7 @@ export function AdminConsole({ ws, section }: { ws: string; section?: string }) 
         )}
         </>
         )}
-      </div>
+      </MotionSwap>
     </div>
   );
 }

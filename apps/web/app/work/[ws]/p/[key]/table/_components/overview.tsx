@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
@@ -31,6 +31,31 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
   const [list, setList] = useState<ListKey>("overdue");
   const [chart, setChart] = useState<"daily" | "burnup">("daily");
   const [busy, setBusy] = useState<string | null>(null);
+  /**
+   * การ์ดข้อมูลโปรเจกต์ไปอยู่คอลัมน์ที่สั้นกว่า เพื่อไม่ให้เหลือที่ว่างยาวก่อน Workload (ผู้ใช้ขอ 2026-11-15)
+   * โปรเจกต์ที่มี Module เยอะ คอลัมน์ซ้ายยาว การ์ดจึงไปขวา · Module น้อย คอลัมน์ขวายาวกว่า การ์ดจึงอยู่ซ้าย
+   * วัดโดยไม่นับการ์ดเอง ผลจึงไม่สลับไปมา · วัดใหม่เมื่อส่วนที่โหลดทีหลัง (Module, ความเสี่ยง) ทำให้ความสูงเปลี่ยน
+   */
+  const [infoSide, setInfoSide] = useState(true);
+  const balance = useCallback((cols: HTMLDivElement | null) => {
+    if (!cols || typeof ResizeObserver === "undefined") return;
+    const [main, side] = [cols.children[0] as HTMLElement, cols.children[1] as HTMLElement];
+    const decide = () => {
+      // มือถือซ่อนคอลัมน์ซ้ายทั้งคอลัมน์ (สูง 0) และการ์ดนี้ → ไม่ต้องย้าย
+      if (main.offsetHeight === 0) return;
+      const info = cols.querySelector<HTMLElement>("[data-project-info]");
+      const extra = info ? info.offsetHeight + 20 : 0;
+      const inSide = !!info && side.contains(info);
+      const mainH = main.offsetHeight - (inSide ? 0 : extra);
+      const sideH = side.offsetHeight - (inSide ? extra : 0);
+      setInfoSide(sideH <= mainH);
+    };
+    const observer = new ResizeObserver(decide);
+    observer.observe(main);
+    observer.observe(side);
+    decide();
+    return () => observer.disconnect();
+  }, []);
   const base = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
   const page = `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}`;
   const params = new URLSearchParams({ scope });
@@ -93,6 +118,24 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
     }
   }
 
+  const infoCard = (
+    <section className={`${styles.card} ${styles.desktopOnly}`} data-project-info="">
+      <div className={styles.chead}>
+        <h2>{t("info")}</h2>
+        <Link className="button button-small" href={`${page}/settings`}>{t("edit")}</Link>
+      </div>
+      <div className={styles.info}>
+        {d.project.description && <div style={{ gridColumn: "1/-1" }}><div className={styles.label}>{t("goal")}</div><div className={styles.goal}>{d.project.description}</div></div>}
+        {!!d.project.scope.inScope.length && <div><div className={styles.label}>{t("inScope")}</div><ul>{d.project.scope.inScope.map((x) => <li key={x}>{x}</li>)}</ul></div>}
+        {!!d.project.scope.outScope.length && <div><div className={styles.label}>{t("outScope")}</div><ul>{d.project.scope.outScope.map((x) => <li key={x}>{x}</li>)}</ul></div>}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {d.project.owner && <div><div className={styles.label}>{t("owner")}</div><div style={{ display: "flex", alignItems: "center", gap: 8 }}><Avatar size="small" person={d.project.owner} />{d.project.owner.displayName}</div></div>}
+          {d.project.clientName && <div><div className={styles.label}>{t("client")}</div><div>{d.project.clientName}</div></div>}
+          <div className={`${styles.muted} ${styles.small}`}>{t("members", { count: d.project.memberCount, modules: d.project.moduleCount })}</div>
+        </div>
+      </div>
+    </section>
+  );
   return (
     <div className={styles.page}>
       <div className={`${styles.bar} ${styles.desktopOnly}`} style={{ justifyContent: "space-between" }}>
@@ -191,7 +234,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
         ))}
       </div>
 
-      <div className={styles.cols}>
+      <div ref={balance} className={styles.cols}>
         <div className={`${styles.main} ${styles.desktopOnly}`}>
           <section className={styles.card}>
             <div className={styles.chead}>
@@ -220,24 +263,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
               </div>
             ) : <Burnup d={d} />}
           </section>
-
-          <section className={styles.card}>
-            <div className={styles.chead}>
-              <h2>{t("info")}</h2>
-              <Link className="button button-small" href={`${page}/settings`}>{t("edit")}</Link>
-            </div>
-            <div className={styles.info}>
-              {d.project.description && <div style={{ gridColumn: "1/-1" }}><div className={styles.label}>{t("goal")}</div><div className={styles.goal}>{d.project.description}</div></div>}
-              {!!d.project.scope.inScope.length && <div><div className={styles.label}>{t("inScope")}</div><ul>{d.project.scope.inScope.map((x) => <li key={x}>{x}</li>)}</ul></div>}
-              {!!d.project.scope.outScope.length && <div><div className={styles.label}>{t("outScope")}</div><ul>{d.project.scope.outScope.map((x) => <li key={x}>{x}</li>)}</ul></div>}
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {d.project.owner && <div><div className={styles.label}>{t("owner")}</div><div style={{ display: "flex", alignItems: "center", gap: 8 }}><Avatar size="small" person={d.project.owner} />{d.project.owner.displayName}</div></div>}
-                {d.project.clientName && <div><div className={styles.label}>{t("client")}</div><div>{d.project.clientName}</div></div>}
-                <div className={`${styles.muted} ${styles.small}`}>{t("members", { count: d.project.memberCount, modules: d.project.moduleCount })}</div>
-              </div>
-            </div>
-          </section>
-
+          {!infoSide && infoCard}
         </div>
 
         <aside className={styles.side}>
@@ -312,6 +338,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
               ))}
             </div>
           </section>
+          {infoSide && infoCard}
         </aside>
       </div>
       {/* Workload รายสัปดาห์กว้างหลายเดือน จึงใช้เต็มความกว้าง · จอใหญ่เท่านั้นเหมือนหน้า O1 เดิม */}

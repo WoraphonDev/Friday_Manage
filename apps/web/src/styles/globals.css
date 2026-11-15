@@ -2411,16 +2411,21 @@ a.m-card:hover { border-color: var(--border-strong); }
 /* 1 · เปลี่ยนหน้า: เนื้อหาจางเข้า (desktop เลื่อนขึ้นเล็กน้อยด้วย) · .page-enter มาจาก template.tsx
    fill = backwards: จบแล้วไม่เหลือ translate ค้าง (translate ทำให้ลูกที่เป็น position:fixed อิงกรอบนี้แทนจอ)
    มือถือจางอย่างเดียว เพราะมีปุ่มลอย (fixed) อยู่ในหน้า */
-.page-enter { animation: motion-fade var(--motion-dur) var(--motion-ease) backwards; }
+.page-enter,
+.motion-swap,
+.motion-in { animation: motion-fade var(--motion-dur) var(--motion-ease) backwards; }
 @media (min-width: 761px) {
-  .page-enter { animation-name: motion-rise; }
+  .page-enter,
+  .motion-swap,
+  .motion-in { animation-name: motion-rise; }
 }
 .tab-content[data-state="active"] { animation: motion-rise var(--motion-dur) var(--motion-ease) backwards; }
 .tab { transition: color var(--motion-dur-s); }
 
 /* เส้นใต้แท็บเลื่อนตามแท็บที่เลือก · ตำแหน่งจาก useSlidingIndicator (--ind-*) · "jump" = วางครั้งแรกไม่ต้องเลื่อน */
-.tabs[data-indicator] { position: relative; }
-.tabs[data-indicator]::after {
+.tabs[data-indicator],
+.motion-underline[data-indicator] { position: relative; }
+:is(.tabs, .motion-underline)[data-indicator]::after {
   content: "";
   position: absolute;
   left: 0;
@@ -2432,9 +2437,11 @@ a.m-card:hover { border-color: var(--border-strong); }
   background: var(--primary);
   pointer-events: none;
 }
-.tabs[data-indicator="on"]::after { transition: translate var(--motion-dur) var(--motion-ease), width var(--motion-dur) var(--motion-ease); }
+.motion-underline[data-indicator]::after { top: calc(var(--ind-y) + var(--ind-h) - 2px); bottom: auto; }
+:is(.tabs, .motion-underline)[data-indicator="on"]::after { transition: translate var(--motion-dur) var(--motion-ease), width var(--motion-dur) var(--motion-ease), top var(--motion-dur) var(--motion-ease); }
 .tabs[data-indicator] .tab[aria-current="page"],
-.tabs[data-indicator] .tab[data-state="active"] { border-bottom-color: transparent; }
+.tabs[data-indicator] .tab[data-state="active"],
+.motion-underline.motion-underline[data-indicator] :is([aria-current="page"], [data-state="active"], [aria-pressed="true"], [aria-selected="true"], [aria-checked="true"]) { border-bottom-color: transparent; }
 
 /* 2 · Drawer / Dialog / Popover เปิดและปิดแบบค่อย ๆ (Radix รอ animation ตอน data-state="closed" จบก่อนถอดออก) */
 .overlay { animation: motion-fade var(--motion-dur) ease; }
@@ -2459,16 +2466,16 @@ a.m-card:hover { border-color: var(--border-strong); }
 
 /* 3 · แถวและการ์ดโผล่ไล่กันตอนเปิดหน้า · [data-entering] อยู่บน .page-enter ช่วงแรกหลังเปลี่ยนหน้า
    แถวที่ขึ้นทีหลัง (สร้างงานใหม่ ลากการ์ด เลื่อนตาราง) จึงไม่ขยับซ้ำ · ไล่เฉพาะ 10 แถวแรก ที่เหลือขึ้นพร้อมแถวที่ 10 */
-[data-entering] :is(.motion-item, tbody tr, .m-row) { animation: motion-rise var(--motion-dur) var(--motion-ease) backwards; animation-delay: calc(var(--motion-i, 0) * var(--motion-stagger)); }
-:is(.motion-item, tbody tr, .m-row):nth-child(2) { --motion-i: 1; }
-:is(.motion-item, tbody tr, .m-row):nth-child(3) { --motion-i: 2; }
-:is(.motion-item, tbody tr, .m-row):nth-child(4) { --motion-i: 3; }
-:is(.motion-item, tbody tr, .m-row):nth-child(5) { --motion-i: 4; }
-:is(.motion-item, tbody tr, .m-row):nth-child(6) { --motion-i: 5; }
-:is(.motion-item, tbody tr, .m-row):nth-child(7) { --motion-i: 6; }
-:is(.motion-item, tbody tr, .m-row):nth-child(8) { --motion-i: 7; }
-:is(.motion-item, tbody tr, .m-row):nth-child(9) { --motion-i: 8; }
-:is(.motion-item, tbody tr, .m-row):nth-child(n + 10) { --motion-i: 9; }
+[data-entering] :is(.motion-item, .motion-list > *, tbody tr, [role="row"], .m-row) { animation: motion-rise var(--motion-dur) var(--motion-ease) backwards; animation-delay: calc(var(--motion-i, 0) * var(--motion-stagger)); }
+:is(.motion-item, .motion-list > *, tbody tr, [role="row"], .m-row):nth-child(2) { --motion-i: 1; }
+:is(.motion-item, .motion-list > *, tbody tr, [role="row"], .m-row):nth-child(3) { --motion-i: 2; }
+:is(.motion-item, .motion-list > *, tbody tr, [role="row"], .m-row):nth-child(4) { --motion-i: 3; }
+:is(.motion-item, .motion-list > *, tbody tr, [role="row"], .m-row):nth-child(5) { --motion-i: 4; }
+:is(.motion-item, .motion-list > *, tbody tr, [role="row"], .m-row):nth-child(6) { --motion-i: 5; }
+:is(.motion-item, .motion-list > *, tbody tr, [role="row"], .m-row):nth-child(7) { --motion-i: 6; }
+:is(.motion-item, .motion-list > *, tbody tr, [role="row"], .m-row):nth-child(8) { --motion-i: 7; }
+:is(.motion-item, .motion-list > *, tbody tr, [role="row"], .m-row):nth-child(9) { --motion-i: 8; }
+:is(.motion-item, .motion-list > *, tbody tr, [role="row"], .m-row):nth-child(n + 10) { --motion-i: 9; }
 
 /* การ์ดที่กดได้ยกขึ้นนิดหนึ่งพร้อมเงาเมื่อชี้ · ซ้ำ class เพื่อชนะ transition / :hover ของ CSS module ที่โหลดทีหลัง */
 .motion-lift.motion-lift { transition: translate var(--motion-dur) var(--motion-ease), box-shadow var(--motion-dur) ease, border-color var(--motion-dur-s); }
@@ -2484,9 +2491,34 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 .toast,
 .floating-notice { animation: notice-in var(--motion-dur) var(--motion-ease); }
 
-/* 5 · Sidebar: พื้นไฮไลต์เลื่อนตามเมนูที่เลือก (useSlidingIndicator) */
+/* 5 · พื้นไฮไลต์เลื่อนตามรายการที่เลือก (useSlidingIndicator): Sidebar (.nav-pill) และทุกกลุ่มที่เลือกได้ทีละอัน (.motion-pill)
+   เช่น เมนูหัวข้อใน Admin / Settings, ปุ่มสลับ List / Grid, สัปดาห์ / เดือน
+   สีพื้นตั้งที่กล่องด้วย --ind-bg / --ind-radius / --ind-shadow / --ind-border ให้ตรงกับสีรายการที่เลือกเดิมของกลุ่มนั้น
+   (ค่าเริ่มต้น = primary-soft แบบ Sidebar) · รายการที่เลือกถูกล้างพื้นออก แถบที่เลื่อนจึงเป็นพื้นแทน */
 .nav-link { transition: background-color var(--motion-dur-s), color var(--motion-dur-s); }
-.nav-pill[data-indicator] { position: relative; isolation: isolate; }
+.motion-pill > *,
+.motion-pill [aria-current],
+.motion-underline > * { transition: color var(--motion-dur-s), background-color var(--motion-dur-s); }
+.nav-pill[data-indicator],
+.motion-pill[data-indicator] { position: relative; isolation: isolate; }
+.motion-pill.motion-pill[data-indicator] :is([aria-current="page"], [data-state="active"], [aria-pressed="true"], [aria-selected="true"], [aria-checked="true"]) { background: transparent; box-shadow: none; border-color: transparent; }
+.motion-pill[data-indicator]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  width: var(--ind-w);
+  height: var(--ind-h);
+  translate: var(--ind-x) var(--ind-y);
+  box-sizing: border-box;
+  border: var(--ind-border, 0 solid transparent);
+  border-radius: var(--ind-radius, 8px);
+  background: var(--ind-bg, var(--primary-soft));
+  box-shadow: var(--ind-shadow, none);
+  pointer-events: none;
+}
+.motion-pill[data-indicator="on"]::before { transition: translate var(--motion-dur) var(--motion-ease), height var(--motion-dur) var(--motion-ease), width var(--motion-dur) var(--motion-ease); }
 .nav-pill[data-indicator]::before {
   content: "";
   position: absolute;
@@ -2505,7 +2537,9 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 
 /* 6 · แถบความคืบหน้าวิ่งจาก 0 ถึงค่าจริงเมื่อแสดงครั้งแรก (ตัวเลขนับขึ้นใช้ <CountUp>) */
 .motion-bar,
-.m-progress > i { transform-origin: left center; animation: motion-grow var(--motion-dur-long) var(--motion-ease) backwards; }
+.m-progress > i { transform-origin: left center; animation: motion-grow var(--motion-dur-long) var(--motion-ease) backwards; transition: width var(--motion-dur) var(--motion-ease); }
+/* แท่งแนวตั้ง (กราฟแท่ง) โตจากล่างขึ้นบน */
+.motion-bar-v { transform-origin: center bottom; animation: motion-grow-v var(--motion-dur-long) var(--motion-ease) backwards; transition: height var(--motion-dur) var(--motion-ease); }
 
 @keyframes motion-fade { from { opacity: 0; } }
 @keyframes motion-fade-out { to { opacity: 0; } }
@@ -2520,3 +2554,4 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 @keyframes motion-pop-out { to { opacity: 0; scale: 0.96; } }
 @keyframes motion-check { 40% { scale: 1.18; } }
 @keyframes motion-grow { from { transform: scaleX(0); } }
+@keyframes motion-grow-v { from { transform: scaleY(0); } }

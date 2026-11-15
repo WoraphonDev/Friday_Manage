@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type Db, schema } from '@friday/db';
-import { and, asc, eq, isNull, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { SessionService } from '../auth/sessions.js';
 import { AppError, forbidden, notFound } from '../common/errors.js';
@@ -10,6 +10,10 @@ import { TenantDb } from '../common/tenant.js';
 import { PlanLimits } from '../core/plan-limits.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { openStatus } from '../common/status-category.js';
+import { type DomainEvent, EventBus } from '../core/events.js';
+import { openWork, reassignOpenIssues } from '../projects/handover.js';
+import { projectAccess } from '../projects/permissions.js';
+import { PositionList, positionsFrom } from '../projects/positions.js';
 
 const s = schema;
 type Role = 'owner' | 'admin' | 'member' | 'guest';
@@ -30,9 +34,19 @@ export const PatchMemberBody = z
     role: z.enum(['owner', 'admin', 'member', 'guest']),
     jobTitle: z.string().trim().max(80).nullable(),
     department: z.string().trim().max(80).nullable(),
+    /** ตำแหน่งระดับ Workspace หลายค่า (ผู้ใช้ขอ 2026-11-16) · เก็บใน job_title เป็นตัวย่อคั่น ", " */
+    positions: PositionList,
+    /** ใช้ positions กับทุกโปรเจกต์ที่คนนี้เป็นสมาชิก (ไม่รวมที่ Archive / อยู่ในถังขยะ) */
+    applyToProjects: z.boolean(),
+    capacityHoursWeek: z.number().int().min(0).max(80),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, 'ต้องระบุค่าที่จะแก้');
+
+/** ปิดการใช้งานพร้อมส่งต่องานแยกตามโปรเจกต์ · to = null คือไม่ระบุผู้รับผิดชอบ · โปรเจกต์ที่ไม่ส่งมา = คงชื่อเดิม */
+export const DeactivateBody = z
+  .object({ transfers: z.array(z.object({ projectId: z.uuid(), to: z.uuid().nullable() })).max(200).default([]) })
+  .default({ transfers: [] });
 
 const isAdmin = (t: TenantInfo) => t.role === 'owner' || t.role === 'admin';
 
@@ -44,6 +58,7 @@ export class MembersService {
     @Inject(SYSTEM_DB) private readonly system: Db,
     private readonly limits: PlanLimits,
     private readonly sessions: SessionService,
+    private readonly events: EventBus,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -111,15 +126,37 @@ export class MembersService {
         // Guest ไม่นับ Seat · เปลี่ยนเป็น Member / Admin / Owner ต้องมี Seat ว่าง (เฉพาะคนที่ยัง active)
         if (t.role === 'guest' && t.status === 'active') await this.limits.assert(tx, tenant.workspaceId, 'seats');
       }
+      const pos = positionsFrom({ positions: body.positions });
+      const jobTitle = pos ? pos.position : body.jobTitle;
       const [row] = await tx
         .update(s.workspaceMembers)
-        .set({ ...(next ? { role: next } : {}), ...(body.jobTitle !== undefined ? { jobTitle: body.jobTitle } : {}), ...(body.department !== undefined ? { department: body.department } : {}) })
+        .set({
+          ...(next ? { role: next } : {}),
+          ...(jobTitle !== undefined ? { jobTitle } : {}),
+          ...(body.department !== undefined ? { department: body.department } : {}),
+          ...(body.capacityHoursWeek !== undefined ? { capacityHoursWeek: body.capacityHoursWeek } : {}),
+        })
         .where(eq(s.workspaceMembers.userId, userId))
         .returning();
+      let projectsUpdated = 0;
+      if (pos && body.applyToProjects) {
+        // Workspace Admin แก้ project_members ได้ทุกโปรเจกต์ (RLS 6.4) · โปรเจกต์ที่ Archive / ลบแล้วคงค่าเดิม
+        const live = tx.select({ id: s.projects.id }).from(s.projects).where(and(isNull(s.projects.deletedAt), isNull(s.projects.archivedAt)));
+        const updated = await tx
+          .update(s.projectMembers)
+          .set({ positions: pos.positions, position: pos.position })
+          .where(and(eq(s.projectMembers.userId, userId), inArray(s.projectMembers.projectId, live)))
+          .returning({ projectId: s.projectMembers.projectId });
+        projectsUpdated = updated.length;
+      }
+      if (pos || body.department !== undefined || body.capacityHoursWeek !== undefined) {
+        const parts = [pos ? `ตำแหน่ง ${pos.position ?? '—'}${projectsUpdated ? ` (ใช้กับ ${projectsUpdated} โปรเจกต์)` : ''}` : null, body.department !== undefined ? `แผนก ${body.department ?? '—'}` : null, body.capacityHoursWeek !== undefined ? `Capacity ${body.capacityHoursWeek} ชม.` : null].filter(Boolean);
+        await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'data', action: 'member.profile_updated', targetType: 'user', targetId: userId, summary: `${t.email}: ${parts.join(' · ')}` });
+      }
       if (next && next !== t.role) {
         await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'perm', action: 'perm.role_changed', targetType: 'user', targetId: userId, summary: `${t.email}: ${t.role} → ${next}` });
       }
-      return { userId, role: row.role, status: row.status, jobTitle: row.jobTitle, department: row.department };
+      return { userId, role: row.role, status: row.status, jobTitle: row.jobTitle, department: row.department, capacityHoursWeek: row.capacityHoursWeek, projectsUpdated };
     });
   }
 
@@ -137,7 +174,7 @@ export class MembersService {
         .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
         .where(and(eq(s.issueAssignees.userId, userId), isNull(s.issues.deletedAt), isNull(s.projects.deletedAt), openStatus()))
         .orderBy(asc(s.issues.planEnd), asc(s.issues.number))
-        .limit(200);
+        .limit(2000);
       const owned = await tx.select({ key: s.projects.key, name: s.projects.name }).from(s.projects).where(and(eq(s.projects.ownerUserId, userId), isNull(s.projects.deletedAt)));
       const [{ n }] = await tx
         .select({ n: sql<number>`count(*)::int` })
@@ -145,10 +182,46 @@ export class MembersService {
         .innerJoin(s.issues, eq(s.issues.id, s.issueAssignees.issueId))
         .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
         .where(and(eq(s.issueAssignees.userId, userId), isNull(s.issues.deletedAt), openStatus()));
+      // แยกตามโปรเจกต์ (ผู้ใช้เลือก 2026-11-16): จำนวน / MD / เลยกำหนด และคนที่รับงานต่อได้ = สมาชิก active ของโปรเจกต์นั้นที่ไม่ใช่ Viewer
+      const projectRows = await tx
+        .selectDistinct({ id: s.projects.id, key: s.projects.key, name: s.projects.name, color: s.projects.color, ownerUserId: s.projects.ownerUserId, visibility: s.projects.visibility, archivedAt: s.projects.archivedAt })
+        .from(s.issueAssignees)
+        .innerJoin(s.issues, eq(s.issues.id, s.issueAssignees.issueId))
+        .innerJoin(s.projects, eq(s.projects.id, s.issues.projectId))
+        .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
+        .where(and(eq(s.issueAssignees.userId, userId), isNull(s.issues.deletedAt), isNull(s.projects.deletedAt), openStatus()));
+      const projects = [];
+      for (const p of projectRows.sort((a, b) => a.name.localeCompare(b.name))) {
+        const work = (await openWork(tx, p.id, [userId])).get(userId);
+        if (!work?.open) continue;
+        const access = await projectAccess(tx, auth, tenant, p);
+        const candidates = await tx
+          .select({ userId: s.projectMembers.userId, displayName: s.users.displayName, positions: s.projectMembers.positions })
+          .from(s.projectMembers)
+          .innerJoin(s.users, eq(s.users.id, s.projectMembers.userId))
+          .innerJoin(s.workspaceMembers, and(eq(s.workspaceMembers.workspaceId, s.projectMembers.workspaceId), eq(s.workspaceMembers.userId, s.projectMembers.userId), eq(s.workspaceMembers.status, 'active')))
+          .where(and(eq(s.projectMembers.projectId, p.id), ne(s.projectMembers.userId, userId), ne(s.projectMembers.role, 'viewer')))
+          .orderBy(asc(s.users.displayName));
+        projects.push({
+          id: p.id,
+          key: p.key,
+          name: p.name,
+          color: p.color,
+          open: work.open,
+          md: work.md,
+          overdue: work.overdue,
+          /** โอนได้เมื่อแก้งานในโปรเจกต์นั้นได้ (โปรเจกต์ที่ Archive แล้วโอนไม่ได้) */
+          canTransfer: access.perms.has('issue.edit'),
+          items: issues.filter((i) => i.project === p.key).map(({ category: _c, project: _p, ...i }) => i),
+          candidates,
+        });
+      }
       return {
         member: { userId, displayName: t.displayName, role: t.role },
         assignedIssues: { total: n, items: issues.map(({ category: _c, ...i }) => i) },
         ownedProjects: owned,
+        overdue: projects.reduce((sum, p) => sum + p.overdue, 0),
+        projects,
       };
     });
   }
@@ -157,16 +230,29 @@ export class MembersService {
    * ปิดการใช้งานใน Workspace นี้ · Session และการผูก LINE เป็นของบัญชี (ใช้ข้าม Workspace)
    * จึงยกเลิกเฉพาะเมื่อคนนี้ไม่เหลือ Workspace อื่นที่ยัง active (สเปกเขียนยกเลิกทั้งหมดโดยไม่คิดกรณีหลาย Workspace)
    */
-  async deactivate(auth: AuthInfo, tenant: TenantInfo, userIdRaw: string) {
+  async deactivate(auth: AuthInfo, tenant: TenantInfo, userIdRaw: string, input: z.infer<typeof DeactivateBody> = { transfers: [] }) {
     if (!isAdmin(tenant)) throw forbidden('ws.members.manage');
     const userId = parse(UserId, userIdRaw);
     if (userId === auth.userId) throw new AppError(409, 'cannot_deactivate_self', 'ปิดการใช้งานตัวเองไม่ได้');
     const handover = await this.handover(auth, tenant, userId);
+    const events: DomainEvent[] = [];
+    const transferred: { projectKey: string; to: string | null; count: number }[] = [];
     await this.db.run(auth, tenant, async (tx) => {
       const t = await this.target(tx, userId);
       if (t.status === 'deactivated') throw new AppError(409, 'already_deactivated', 'สมาชิกนี้ถูกปิดการใช้งานอยู่แล้ว');
       if (tenant.role === 'admin' && t.role === 'owner') throw new AppError(403, 'forbidden', 'Admin ปิดการใช้งานของ Owner ไม่ได้', { permission: 'ws.owner' });
       if (t.role === 'owner' && (await this.activeOwners(tx, userId)) === 0) throw new AppError(409, 'last_owner', 'Workspace ต้องมี Owner อย่างน้อย 1 คน');
+      // ส่งต่องานในธุรกรรมเดียวกับการปิด · ผิดสักโปรเจกต์ = ไม่ปิดและไม่ย้ายอะไรเลย
+      for (const tr of input.transfers) {
+        const p = handover.projects.find((x) => x.id === tr.projectId);
+        if (!p) throw new AppError(400, 'transfer_project_invalid', 'โปรเจกต์นี้ไม่มีงานค้างของสมาชิกคนนี้ หรือคุณเข้าไม่ถึง', { fields: ['transfers'], projectId: tr.projectId });
+        if (!p.canTransfer) throw new AppError(403, 'forbidden', `คุณไม่มีสิทธิ์แก้งานในโปรเจกต์ ${p.name}`, { permission: 'issue.edit', projectId: p.id });
+        if (tr.to && !p.candidates.some((c) => c.userId === tr.to)) {
+          throw new AppError(400, 'reassign_target_invalid', `คนรับงานต้องเป็นสมาชิกของโปรเจกต์ ${p.name}`, { fields: ['transfers'], projectId: p.id });
+        }
+        const count = await reassignOpenIssues(tx, auth, tenant, p, userId, tr.to, `ปิดการใช้งาน ${t.displayName}`, events);
+        transferred.push({ projectKey: p.key, to: tr.to, count });
+      }
       await tx.update(s.workspaceMembers).set({ status: 'deactivated' }).where(eq(s.workspaceMembers.userId, userId));
       await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'perm', action: 'perm.member_deactivated', targetType: 'user', targetId: userId, summary: t.email });
     });
@@ -181,7 +267,8 @@ export class MembersService {
       await this.system.delete(s.lineBindings).where(eq(s.lineBindings.userId, userId));
       signedOut = true;
     }
-    return { userId, status: 'deactivated' as const, signedOut, handover };
+    await this.events.publish(events);
+    return { userId, status: 'deactivated' as const, signedOut, handover, transferred };
   }
 
   async reactivate(auth: AuthInfo, tenant: TenantInfo, userIdRaw: string) {

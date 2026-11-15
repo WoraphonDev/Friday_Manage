@@ -101,6 +101,7 @@ export interface WorkspaceMember {
   role: "owner" | "admin" | "member" | "guest";
   status: "active" | "deactivated";
   jobTitle: string | null;
+  department?: string | null;
   capacityHoursWeek: number;
   lastActiveAt: string | null;
 }

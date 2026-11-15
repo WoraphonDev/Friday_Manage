@@ -3,7 +3,7 @@ import { Auth, type AuthInfo, Public, Tenant, type TenantInfo } from '../common/
 import { TenantGuard } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
 import { AccessRequestsQuery, AccessService, CreateLinkBody, DecideBody } from './access.service.js';
-import { MembersService, PatchMemberBody, PatchWorkspaceBody } from './members.service.js';
+import { DeactivateBody, MembersService, PatchMemberBody, PatchWorkspaceBody } from './members.service.js';
 
 /** Workspace, สมาชิก, ลิงก์เชิญ และคำขอเข้าร่วม (หน้า H, 7, J4, M1) */
 @Controller('w/:ws')
@@ -36,8 +36,8 @@ export class WorkspaceAdminController {
 
   @Post(['members/:userId/deactivate', 'members/:userId\\:deactivate'])
   @HttpCode(200)
-  deactivate(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('userId') userId: string) {
-    return this.members.deactivate(auth, tenant, userId);
+  deactivate(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('userId') userId: string, @Body() body: unknown) {
+    return this.members.deactivate(auth, tenant, userId, parse(DeactivateBody, body ?? {}));
   }
 
   @Post(['members/:userId/reactivate', 'members/:userId\\:reactivate'])

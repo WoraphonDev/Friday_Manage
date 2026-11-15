@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
+import * as Popover from "@radix-ui/react-popover";
 import { MoreHorizontal } from "lucide-react";
 import { Avatar, Badge, Button, CountUp, ErrorState, EmptyState, Forbidden, LoadingState, Select, type Tone, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
@@ -15,7 +16,7 @@ import { copyText } from "../../p/[key]/members/_components/shared";
 import type { Invitation, ProjectMembers, WorkspaceMember } from "../../p/[key]/members/_components/types";
 import styles from "../../p/[key]/members/_components/members.module.css";
 import { InviteDialog } from "./invite-dialog";
-import { ManageDialog } from "./manage-dialog";
+import { DeactivateDialog, EditMemberDialog } from "./manage-dialog";
 import local from "./ws.module.css";
 
 type WsRole = WorkspaceMember["role"];
@@ -46,7 +47,8 @@ export function WorkspaceMembers({ ws }: { ws: string }) {
   const [roleFilter, setRoleFilter] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
   const [inviting, setInviting] = useState(false);
-  const [managing, setManaging] = useState<WorkspaceMember | null>(null);
+  // ⋯ เปิดเมนูเล็ก แล้วแยกหน้าต่าง "แก้ไขข้อมูล" / "ปิดการใช้งาน" (storyboard ที่ผู้ใช้เลือก 2026-11-16)
+  const [managing, setManaging] = useState<{ member: WorkspaceMember; mode: "edit" | "off" } | null>(null);
   // ชิปสถานะเลือกได้ทีละอัน พื้นเข้มเลื่อนตามชิปที่เลือก (มือถือม่วงอ่อน · ws.module.css)
   const tabsRef = useSlidingIndicator<HTMLDivElement>(`.${local.chip}`);
 
@@ -93,6 +95,11 @@ export function WorkspaceMembers({ ws }: { ws: string }) {
     await cache.invalidateQueries({ queryKey: ["invitations", ws] });
     await cache.invalidateQueries({ queryKey: ["usage", ws] });
   };
+  // แก้ตำแหน่ง / ส่งต่องานกระทบข้อมูลสมาชิกของโปรเจกต์ด้วย
+  const refreshAll = async () => {
+    await refresh();
+    await cache.invalidateQueries({ queryKey: ["project-members", ws] });
+  };
   const fail = (e: unknown) => toast({ message: e instanceof Error ? e.message : String(e) });
 
   async function changeRole(m: WorkspaceMember, role: WsRole) {
@@ -100,6 +107,15 @@ export function WorkspaceMembers({ ws }: { ws: string }) {
       // สมาชิก Workspace ไม่มี version จึงไม่ส่ง If-Match
       await api.request(`${base}/members/${m.userId}`, { method: "PATCH", body: { role } });
       toast({ message: t("roleChanged", { name: m.displayName, role: tr(role) }) });
+    } catch (e) {
+      fail(e);
+    }
+    await refresh();
+  }
+  async function reactivate(m: WorkspaceMember) {
+    try {
+      await api.post(`${base}/members/${m.userId}/reactivate`);
+      toast({ message: t("reactivated", { name: m.displayName }) });
     } catch (e) {
       fail(e);
     }
@@ -217,7 +233,30 @@ export function WorkspaceMembers({ ws }: { ws: string }) {
                 <div><Badge tone={STATUS_TONE[r.status]}>{t(STATUS_LABEL[r.status])}</Badge></div>
                 <div>
                   {isAdmin && m.userId !== me.id && (workspace.role === "owner" || m.role !== "owner") ? (
-                    <button type="button" className={styles.icon} aria-label={t("options", { name: m.displayName })} onClick={() => setManaging(m)}><MoreHorizontal size={16} /></button>
+                    <Popover.Root>
+                      <Popover.Trigger asChild>
+                        <button type="button" className={styles.icon} aria-label={t("options", { name: m.displayName })}><MoreHorizontal size={16} /></button>
+                      </Popover.Trigger>
+                      <Popover.Portal>
+                        <Popover.Content className={cn("popover", local.menu)} align="end" sideOffset={6} aria-label={t("options", { name: m.displayName })}>
+                          {m.status === "active" ? (
+                            <>
+                              <Popover.Close asChild>
+                                <button type="button" className="menu-item" onClick={() => setManaging({ member: m, mode: "edit" })}>{t("menuEdit")}</button>
+                              </Popover.Close>
+                              <div className="menu-divider" />
+                              <Popover.Close asChild>
+                                <button type="button" className={cn("menu-item", local.danger)} onClick={() => setManaging({ member: m, mode: "off" })}>{t("menuDeactivate")}</button>
+                              </Popover.Close>
+                            </>
+                          ) : (
+                            <Popover.Close asChild>
+                              <button type="button" className="menu-item" onClick={() => void reactivate(m)}>{t("reactivate")}</button>
+                            </Popover.Close>
+                          )}
+                        </Popover.Content>
+                      </Popover.Portal>
+                    </Popover.Root>
                   ) : null}
                 </div>
               </div>
@@ -233,15 +272,10 @@ export function WorkspaceMembers({ ws }: { ws: string }) {
       </section>
 
       {inviting && <InviteDialog ws={ws} projects={projects} canInviteAdmin={isAdmin} onClose={() => setInviting(false)} onDone={refresh} />}
-      {managing && (
-        <ManageDialog
-          ws={ws}
-          member={managing}
-          others={members.data.items.filter((m) => m.status === "active" && m.userId !== managing.userId && m.role !== "guest")}
-          onClose={() => setManaging(null)}
-          onDone={refresh}
-        />
+      {managing?.mode === "edit" && (
+        <EditMemberDialog ws={ws} member={managing.member} projects={projectsOf.get(managing.member.userId) ?? []} onClose={() => setManaging(null)} onDone={refreshAll} />
       )}
+      {managing?.mode === "off" && <DeactivateDialog ws={ws} member={managing.member} onClose={() => setManaging(null)} onDone={refreshAll} />}
     </div>
   );
 }

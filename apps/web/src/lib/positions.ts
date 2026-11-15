@@ -1,17 +1,24 @@
 // ตำแหน่งในโปรเจกต์ (project_members.position) · บันทึกเป็นตัวย่อ แสดงในรายการเลือกเป็น "ตัวย่อ - ชื่อเต็ม"
 // ชุดนี้รวมจากสเปก (PM · UX/UI · Frontend · Backend · QA · BA) และช่อง SA / Developer ใน docs/decisions.md
 export const POSITIONS = [
-  { code: "PM", name: "Project Manager" },
-  { code: "BA", name: "Business Analyst" },
-  { code: "SA", name: "System Analyst" },
-  { code: "UX", name: "UX/UI Designer" },
-  { code: "FE", name: "Frontend Developer" },
-  { code: "BE", name: "Backend Developer" },
-  { code: "DEV", name: "Developer" },
-  { code: "QA", name: "QA Engineer" },
+  { code: "PM", name: "Project Manager", group: "manage" },
+  { code: "BA", name: "Business Analyst", group: "analysis" },
+  { code: "SA", name: "System Analyst", group: "analysis" },
+  { code: "UX", name: "UX/UI Designer", group: "design" },
+  { code: "FE", name: "Frontend Developer", group: "dev" },
+  { code: "BE", name: "Backend Developer", group: "dev" },
+  { code: "DEV", name: "Developer", group: "dev" },
+  { code: "QA", name: "QA Engineer", group: "qa" },
   // CI/CD และ infra (ผู้ใช้ขอ 2026-11-13)
-  { code: "DEVOPS", name: "DevOps Engineer" },
+  { code: "DEVOPS", name: "DevOps Engineer", group: "ops" },
 ] as const;
+
+/** กลุ่มสายงานในช่องเลือกตำแหน่ง (เรียงตามลำดับที่แสดง) */
+export const POSITION_GROUPS = ["manage", "analysis", "design", "dev", "qa", "ops"] as const;
+export type PositionGroup = (typeof POSITION_GROUPS)[number];
+
+/** ตำแหน่งระดับ Workspace เก็บใน job_title เป็นตัวย่อคั่น ", " (หรือข้อความเดิมที่พิมพ์เอง) */
+export const jobTitleCodes = (jobTitle: string | null | undefined) => [...new Set((jobTitle ?? "").split(",").map(toPositionCode).filter(Boolean))];
 
 // ค่าที่เคยพิมพ์เองหรือมาจากหน้าสร้างโปรเจกต์รุ่นก่อน → ตัวย่อ
 const ALIASES: Record<string, string> = {

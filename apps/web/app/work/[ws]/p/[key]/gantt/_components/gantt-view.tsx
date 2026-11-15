@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { TriangleAlert } from "lucide-react";
+import { ChevronsLeft, ChevronsRight, TriangleAlert } from "lucide-react";
 import { Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
@@ -50,6 +50,13 @@ export type Scale = "day" | "week" | "month";
 export const SCALE_PX: Record<Scale, number> = { day: 21, week: 8, month: 3 };
 export const RH = 36;
 const DAY = 86_400_000;
+// ตารางด้านซ้ายปรับกว้างได้ (ลากขอบ / ปุ่มขยาย) แบบเดียวกับ Timeline · ส่วนที่เพิ่มไปลงช่อง Task · จำค่าไว้ในเบราว์เซอร์นี้
+export const LEFT_W = 540;
+export const LEFT_MIN = 440;
+export const LEFT_MAX = 1100;
+const LEFT_WIDE = 800;
+const LEFT_KEY = "friday.gantt.leftWidth";
+const clampLeft = (w: number) => Math.round(Math.min(LEFT_MAX, Math.max(LEFT_MIN, w)));
 const PALETTE = ["#5b3fc4", "#b45309", "#0f766e", "#1d4ed8", "#be185d", "#0369a1", "#4d7c0f", "#c2410c"];
 const WD = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
 
@@ -134,6 +141,45 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
   const [baselineOpen, setBaselineOpen] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [leftW, setLeftW] = useState(LEFT_W);
+  const [resizing, setResizing] = useState(false);
+  const leftLoaded = useRef(false);
+  // อ่านค่าหลัง mount เพื่อไม่ให้ HTML จาก SSR ต่างจากฝั่ง client
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem(LEFT_KEY));
+      if (saved) setLeftW(clampLeft(saved));
+    } catch { /* เบราว์เซอร์ปิด storage ใช้ค่าเริ่มต้น */ }
+    leftLoaded.current = true;
+  }, []);
+  useEffect(() => {
+    if (!leftLoaded.current || resizing) return;
+    try { localStorage.setItem(LEFT_KEY, String(leftW)); } catch { /* ไม่จำค่าได้ก็ใช้งานต่อได้ */ }
+  }, [leftW, resizing]);
+  const startResize = (e: ReactMouseEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const x0 = e.clientX;
+    const w0 = leftW;
+    setResizing(true);
+    const move = (ev: MouseEvent) => setLeftW(clampLeft(w0 + ev.clientX - x0));
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      setResizing(false);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+  const resizeKey = (e: KeyboardEvent) => {
+    const step = e.shiftKey ? 80 : 20;
+    const next = e.key === "ArrowLeft" ? leftW - step : e.key === "ArrowRight" ? leftW + step : e.key === "Home" ? LEFT_MIN : e.key === "End" ? LEFT_MAX : null;
+    if (next === null) return;
+    e.preventDefault();
+    setLeftW(clampLeft(next));
+  };
+  const wide = leftW > LEFT_W;
 
   const perms = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${base}/my-permissions`) });
   const q = useQuery({
@@ -241,10 +287,32 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
 
       {empty ? <section className={styles.card}><EmptyState title={t("empty")} description={t("emptyHint")} /></section> : (
         <section className={styles.card} ref={scrollRef} data-testid="gantt-scroll">
-          <div className={styles.inner} style={{ minWidth: 540 + width }}>
+          <div className={`${styles.inner} ${resizing ? styles.resizing : ""}`} style={{ minWidth: leftW + width, ["--left-w" as string]: `${leftW}px` }} data-resized={leftW !== LEFT_W || undefined} data-testid="gantt-inner">
             <div className={styles.left}>
               <div className={`${styles.lg} ${styles.head}`} role="row">
-                {(["wbs", "task", "owner", "md", "start", "end", "pct", "pred"] as const).map((c, i) => <div key={c} className={i > 1 ? styles.opt : undefined}>{t(`cols.${c}`)}</div>)}
+                {(["wbs", "task", "owner", "md", "start", "end", "pct", "pred"] as const).map((c, i) => c === "task" ? (
+                  <div key={c} className={styles.taskHead}>
+                    <span className={styles.nm}>{t(`cols.${c}`)}</span>
+                    <button type="button" className={styles.widen} aria-label={t(wide ? "narrowTask" : "widenTask")} title={t(wide ? "narrowTask" : "widenTask")} onClick={() => setLeftW(wide ? LEFT_W : LEFT_WIDE)} data-testid="task-widen">
+                      {wide ? <ChevronsLeft size={14} aria-hidden="true" /> : <ChevronsRight size={14} aria-hidden="true" />}
+                    </button>
+                  </div>
+                ) : <div key={c} className={i > 1 ? styles.opt : undefined}>{t(`cols.${c}`)}</div>)}
+                <span
+                  role="separator"
+                  tabIndex={0}
+                  aria-orientation="vertical"
+                  aria-label={t("resizeTask")}
+                  aria-valuemin={LEFT_MIN}
+                  aria-valuemax={LEFT_MAX}
+                  aria-valuenow={leftW}
+                  title={t("resizeTaskHint")}
+                  className={styles.resizer}
+                  data-testid="task-resizer"
+                  onMouseDown={startResize}
+                  onKeyDown={resizeKey}
+                  onDoubleClick={() => setLeftW(LEFT_W)}
+                />
               </div>
               {lines.map((ln) => {
                 if (ln.kind === "ms") return (

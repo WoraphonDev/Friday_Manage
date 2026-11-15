@@ -399,12 +399,24 @@ describe("แพ็กเกจ & Billing", () => {
     mountBilling();
     expect(await screen.findByRole("heading", { level: 2, name: "Team S · เหลือ 13 วัน" })).toBeInTheDocument();
     expect(screen.getByText("ทดลองใช้")).toBeInTheDocument();
-    expect(screen.getByText("9 / 25 คน")).toBeInTheDocument();
-    expect(screen.getByText("1.2 / 250 GB")).toBeInTheDocument();
+    // ตัวเลขการใช้งานแยกตัวที่ใช้กับเพดาน (เพดานตัวเล็ก) · ข้อความรวมยังอ่านได้ครบ
+    const text = (value: string) => (_: string, el: Element | null) => el?.textContent === value;
+    expect(screen.getByText(text("9 / 25 คน"))).toBeInTheDocument();
+    expect(screen.getByText("ว่างอีก 16 ที่")).toBeInTheDocument();
+    expect(screen.getByText(text("1.2 / 250 GB"))).toBeInTheDocument();
+    // ราคาต่อรอบจาก public/plans
+    expect(await screen.findByText(text("฿1,500 / เดือน · ยังไม่รวม VAT"))).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "ชำระเงิน" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_s");
     expect(screen.getByText("บริษัท ตัวอย่าง จำกัด")).toBeInTheDocument();
 
-    const rows = await screen.findAllByRole("listitem");
+    // สิ่งที่ต้องทำขึ้นบนสุด: ใบรอชำระ + ส่ง 50 ทวิ · วิธีชำระของใบล่าสุดติดป้าย "ใช้ล่าสุด"
+    const todos = await screen.findAllByRole("status");
+    expect(todos.some((el) => el.textContent?.includes("ใบแจ้งหนี้ FRI-2611-0001 รอชำระ ฿3,120"))).toBe(true);
+    expect(todos.some((el) => el.textContent?.includes("ส่ง 50 ทวิ ของ FRI-2611-0001"))).toBe(true);
+    const methods = screen.getByRole("region", { name: "วิธีชำระเงิน" });
+    expect(within(methods).getAllByRole("listitem").find((li) => li.textContent?.includes("ใช้ล่าสุด"))).toHaveTextContent("โอนเงิน");
+
+    const rows = await screen.findAllByRole("row");
     const open = rows.find((r) => r.textContent?.includes("FRI-2611-0001"))!;
     expect(within(open).getByText("รอชำระ")).toBeInTheDocument();
     expect(within(open).getByText("฿3,120")).toBeInTheDocument();

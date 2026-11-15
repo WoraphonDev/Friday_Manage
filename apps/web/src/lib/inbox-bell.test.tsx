@@ -74,6 +74,22 @@ describe("Inbox (G / M3)", () => {
     expect(await screen.findByText("จะเตือนอีกครั้งพรุ่งนี้")).toBeInTheDocument();
   });
 
+  it("รับทราบแล้วรายการหลุดจากข้อมูล → เปิดรายการถัดไปให้เอง (desktop)", async () => {
+    const user = userEvent.setup();
+    server.use(http.post("*/api/v1/me/notifications/:id/done", ({ params }) => {
+      calls.push(`done:${params.id}`);
+      page = page.filter((n) => n.id !== params.id);
+      return HttpResponse.json({ ok: true });
+    }));
+    mount();
+    await user.click(await screen.findByRole("button", { name: /ผู้พัฒนาหนึ่ง มอบหมายงานให้คุณ/ }));
+    const detail = screen.getByRole("complementary", { name: "รายละเอียดการแจ้งเตือน" });
+    await user.click(within(detail).getByRole("button", { name: "รับทราบ" }));
+    await waitFor(() => expect(calls).toContain("done:n1"));
+    // รายการถัดไปในลำดับที่เห็น (คำขอเลื่อน Due วันเดียวกัน) เปิดขึ้นมาแทน
+    expect(await within(detail).findByText("“ขอเพิ่มอีก 2 วันทำการ”")).toBeInTheDocument();
+  });
+
   it("แท็บยังไม่อ่าน: เปิดรายการแล้วรายละเอียดยังอยู่หลังโหลดใหม่ (รายการแสดงเป็นอ่านแล้ว) จนกว่าจะเปลี่ยนแท็บ", async () => {
     const user = userEvent.setup();
     // API จริง: อ่านแล้วหลุดจากตัวกรอง unread

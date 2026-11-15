@@ -61,28 +61,76 @@
 .ok { background:var(--success-soft); color:var(--success-text); }
 .wait { background:var(--warning-soft); color:var(--warning-text); }
 
-/* หน้า Billing */
-.planCard { padding:18px; display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
-.planCard > div:first-child { flex:1 1 280px; }
-.planCard h2 { margin:6px 0 2px; font-size:18px; }
-.meters { flex:1 1 260px; display:flex; flex-direction:column; gap:8px; font-size:12px; }
-.meterHead { display:flex; justify-content:space-between; }
-.bar { height:6px; border-radius:99px; background:var(--subtle); overflow:hidden; margin-top:4px; }
+/* หน้า Billing · แบบ A ที่ผู้ใช้เลือกจากตัวอย่าง 2026-11-15: สิ่งที่ต้องทำขึ้นก่อน → การ์ดแพ็กเกจ → ใบแจ้งหนี้ซ้าย + ข้อมูลภาษี/วิธีชำระขวา */
+.todo { display:flex; align-items:center; gap:12px; padding:12px 16px; border:1px solid var(--warning-border); background:var(--warning-soft); color:var(--warning-text); border-radius:12px; flex-wrap:wrap; }
+.todoInfo { border-color:var(--primary-border); background:var(--primary-soft); color:var(--primary-text); }
+.todo > svg { flex:none; }
+.todo p { margin:0; flex:1 1 280px; min-width:0; font-size:12px; }
+.todo p b { font-size:13px; }
+.todo :global(.button) { border-color:currentColor; color:inherit; background:transparent; }
+
+.plan { display:grid; grid-template-columns:minmax(0, 1.1fr) minmax(0, 1.4fr) auto; gap:24px; padding:20px 22px; align-items:center; }
+.planInfo { min-width:0; }
+.planName { display:flex; align-items:baseline; gap:4px 10px; flex-wrap:wrap; margin:6px 0 2px; }
+.planName h2 { margin:0; font-size:22px; line-height:1.25; }
+.price { font-size:12px; color:var(--muted); white-space:nowrap; }
+.price b { font-size:17px; color:var(--foreground); font-variant-numeric:tabular-nums; }
+.period { display:flex; gap:6px; align-items:flex-start; font-size:12px; color:var(--muted); margin-top:8px; }
+.period svg { flex:none; margin-top:2px; }
+.usage { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; }
+.meter { display:flex; flex-direction:column; gap:6px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); min-width:0; }
+.meterTop { display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.meterLabel { font-size:12px; color:var(--muted); }
+.meterValue { font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; }
+.meterValue small { font-size:12px; font-weight:500; color:var(--muted); }
+.meterNote { font-size:11px; color:var(--muted); }
+.usageNote { grid-column:1 / -1; font-size:11px; color:var(--muted); }
+.bar { height:6px; border-radius:99px; background:var(--subtle); overflow:hidden; }
 .bar > span { display:block; height:100%; background:var(--primary); }
 .bar > span.over { background:var(--danger); }
+.planActions { display:flex; flex-direction:column; gap:6px; align-items:stretch; }
+
 .ch { display:flex; justify-content:space-between; gap:12px; align-items:center; padding:14px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
 .ch h2 { font-size:15px; }
-.inv { display:flex; gap:12px; align-items:center; padding:10px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; font-size:12px; }
-.inv:last-child { border-bottom:0; }
-.inv .no { width:130px; }
-.inv .desc { flex:1 1 220px; min-width:0; }
-.profile { padding:14px 18px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; font-size:12px; }
+.split { display:grid; grid-template-columns:minmax(0, 1.75fr) minmax(280px, 1fr); gap:16px; align-items:start; }
+.side { display:flex; flex-direction:column; gap:16px; min-width:0; }
+.invTable { font-size:12px; }
+.invTable th { padding:8px 14px; }
+.invTable td { padding:11px 14px; vertical-align:middle; }
+.invTable tbody tr:last-child td { border-bottom:0; }
+.invTable tbody tr { transition:background-color var(--motion-dur-s); }
+.invTable tbody tr:hover { background:var(--hover); }
+.invTable .num { text-align:right; }
+.amount { font-weight:700; font-variant-numeric:tabular-nums; }
+.sub { display:block; font-size:11px; color:var(--muted); }
+.sub.warn { color:var(--danger-text); }
+.docs { display:inline-flex; gap:6px; justify-content:flex-end; }
+
+.tax { padding:14px 18px; display:flex; flex-direction:column; gap:12px; font-size:12px; }
+.tax dl { margin:0; display:grid; grid-template-columns:minmax(96px, auto) minmax(0, 1fr); gap:8px 12px; }
+.tax dt { color:var(--muted); }
+.tax dd { margin:0; overflow-wrap:anywhere; }
+.chips { display:flex; gap:6px; flex-wrap:wrap; }
+
+.methods { list-style:none; margin:0; padding:0; }
+.method { display:flex; gap:12px; align-items:flex-start; padding:12px 18px; border-top:1px solid var(--border); }
+.method:first-child { border-top:0; }
+.methodIcon { width:32px; height:32px; border-radius:8px; display:grid; place-items:center; background:var(--subtle); color:var(--foreground-soft); flex:none; }
+.methodText { flex:1; min-width:0; display:flex; flex-direction:column; }
+.methodText b { font-size:13px; }
+
+@media (max-width: 1100px) {
+  .plan { grid-template-columns:1fr; gap:16px; }
+  .planActions { flex-direction:row; flex-wrap:wrap; }
+  .split { grid-template-columns:1fr; }
+}
 .hiddenInput { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
 
 @media (max-width: 640px) {
   .page { padding:16px 16px 40px; }
   .aside { position:static; }
-  .inv .no { width:auto; }
+  .tax dl { grid-template-columns:1fr; gap:2px; }
+  .tax dd { margin-bottom:6px; }
 }
 
 /* หัวหน้าชำระเงิน: ชื่อหน้า + เชื่อมต่อแบบเข้ารหัส (ย้ายมาจากหัวขาวเดิม) */

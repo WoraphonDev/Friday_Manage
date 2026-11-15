@@ -256,7 +256,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
                       <span style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 600 }}><span className={styles.dot} style={{ background: p.color }} />{p.name}</span>
                       <span>{t("byProjectLine", { count: p.n, md: p.md.toFixed(1) })}</span>
                     </div>
-                    <div className={styles.bar} style={{ height: 6 }}><div style={{ width: `${Math.round((p.n / maxProject) * 100)}%`, background: p.color }} /></div>
+                    <div className={styles.bar} style={{ height: 6 }}><div className="motion-bar" style={{ width: `${Math.round((p.n / maxProject) * 100)}%`, background: p.color }} /></div>
                   </div>
                 ))}
                 {byProject.length > SIDE_PROJECTS && <div className={`muted ${styles.small}`}>{t("byProjectMore", { count: byProject.length - SIDE_PROJECTS })}</div>}
@@ -378,7 +378,7 @@ function TaskRow({ item, ws, year, busy, onToggle, onMove, onDragStart }: { item
     else if (dx > 80 && !done && !locked) onToggle(true);
   };
   return (
-    <div className={styles.tr} draggable={!done} onDragStart={onDragStart} onTouchStart={touchStart} onTouchEnd={touchEnd} data-testid={`task-${item.key}`}>
+    <div className={`${styles.tr} motion-item`} draggable={!done} onDragStart={onDragStart} onTouchStart={touchStart} onTouchEnd={touchEnd} data-testid={`task-${item.key}`}>
       <input type="checkbox" checked={done} disabled={busy || locked} title={locked ? t("cannotMove") : undefined} aria-label={t(done ? "markUndone" : "markDone", { title: item.title })} onChange={(e) => onToggle(e.target.checked)} style={{ width: 18, height: 18, margin: 0 }} />
       <div style={{ minWidth: 0 }}>
         <Link className={`${styles.rowTitle} ${done ? styles.strike : ""}`} href={taskHref(ws, item.project.key, item.key)}>{item.title}</Link>

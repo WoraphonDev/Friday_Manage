@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSlidingIndicator } from "@/lib/motion";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
@@ -130,6 +131,7 @@ export function ProjectShell({
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
+  const tabsRef = useSlidingIndicator<HTMLElement>(".tab");
   const cache = useQueryClient();
   const ws = workspace.slug;
   const endpoint = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
@@ -413,7 +415,7 @@ export function ProjectShell({
               )}
             </div>
           </div>
-          <nav className="tabs" aria-label={t("nav.projectViews")}>
+          <nav ref={tabsRef} className="tabs" aria-label={t("nav.projectViews")}>
             {visibleTabs.map((tab) => {
               const link = (
                 <Link

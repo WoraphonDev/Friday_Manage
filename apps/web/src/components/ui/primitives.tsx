@@ -16,6 +16,7 @@ import * as RadixTooltip from "@radix-ui/react-tooltip";
 import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSlidingIndicator } from "@/lib/motion";
 import type { Person } from "@/lib/types";
 
 export const buttonVariants = cva("button", {
@@ -306,9 +307,10 @@ export function Tabs({
   onValueChange: (value: string) => void;
   label: string;
 }) {
+  const listRef = useSlidingIndicator<HTMLDivElement>(".tab");
   return (
     <RadixTabs.Root value={value} onValueChange={onValueChange}>
-      <RadixTabs.List className="tabs" aria-label={label}>
+      <RadixTabs.List ref={listRef} className="tabs" aria-label={label}>
         {items.map((item) => (
           <RadixTabs.Trigger
             className="tab"

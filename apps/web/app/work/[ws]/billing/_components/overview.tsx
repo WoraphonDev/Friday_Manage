@@ -27,7 +27,7 @@ function Meter({ label, used, limit, value }: { label: string; used: number; lim
       </div>
       {limit !== null && (
         <div className={styles.bar}>
-          <span className={cn(used > limit && styles.over)} style={{ width: `${pct}%` }} />
+          <span className={cn("motion-bar", used > limit && styles.over)} style={{ width: `${pct}%` }} />
         </div>
       )}
     </div>

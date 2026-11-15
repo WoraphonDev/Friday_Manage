@@ -286,7 +286,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
     const visibleIndex = laneCards.findIndex((item) => item.key === card.key);
     const TypeIcon = card.type.name === "Bug" ? Bug : card.type.name === "Spike" ? Zap : CheckSquare;
     return <article key={card.key} aria-label={t("card", { key: card.key })} data-card={card.key} data-flip={`${lane}:${card.key}`}
-      className={`${styles.card} ${isClosedCategory(card.status.category) ? styles.completed : ""} ${dragging === card.key ? styles.lifted : ""} ${landed === card.key && !dragging ? styles.landed : ""}`}
+      className={`${styles.card} motion-item motion-lift ${isClosedCategory(card.status.category) ? styles.completed : ""} ${dragging === card.key ? styles.lifted : ""} ${landed === card.key && !dragging ? styles.landed : ""}`}
       draggable={movable(card) && !moving}
       title={canEdit && !movable(card) ? t("viewOnly") : undefined}
       onDragStart={(event) => {

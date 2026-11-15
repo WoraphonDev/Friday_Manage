@@ -214,7 +214,7 @@ export function InboxPage({ ws }: { ws: string }) {
             <div key={g} className={styles.group}>
               <div className={styles.gl}>{t(`groups.${g}`)}</div>
               {list.map((n) => (
-                <button key={n.id} type="button" className={`${styles.nt} ${!n.readAt ? styles.unread : ""} ${n.id === selected ? styles.sel : ""}`} aria-current={n.id === selected ? "true" : undefined} onClick={() => setSelected(n.id)}>
+                <button key={n.id} type="button" className={`${styles.nt} motion-item ${!n.readAt ? styles.unread : ""} ${n.id === selected ? styles.sel : ""}`} aria-current={n.id === selected ? "true" : undefined} onClick={() => setSelected(n.id)}>
                   <Avatar person={{ id: n.actor?.id ?? n.id, displayName: labels.actor(n), avatarUrl: n.actor?.avatarUrl ?? null }} />
                   <span className={styles.ntBody}>
                     <span style={{ fontSize: 13 }}><b>{labels.actor(n)}</b> {labels.verb(n)}</span>

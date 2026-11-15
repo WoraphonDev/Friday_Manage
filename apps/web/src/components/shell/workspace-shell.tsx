@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSlidingIndicator } from "@/lib/motion";
 import Link from "next/link";
 import * as Popover from "@radix-ui/react-popover";
 import {
@@ -133,8 +134,9 @@ function Navigation({
   const t = useTranslations("common.nav");
   const pathname = usePathname();
   const base = `/work/${encodeURIComponent(workspace.slug)}`;
+  const navRef = useSlidingIndicator<HTMLElement>(".nav-link");
   return (
-    <nav aria-label={t("workspaceNav")}>
+    <nav ref={navRef} className="nav-pill" aria-label={t("workspaceNav")}>
       <Link
         className="nav-link"
         href={base}

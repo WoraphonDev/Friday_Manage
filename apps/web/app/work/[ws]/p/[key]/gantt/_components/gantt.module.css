@@ -8,11 +8,21 @@
 .alert a { margin-left:auto; font-weight:600; }
 .card { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:auto; max-height:calc(100vh - 250px); }
 .inner { display:flex; position:relative; }
-.left { flex:0 0 540px; position:sticky; left:0; z-index:4; background:var(--card); border-right:1px solid var(--input); }
+.left { flex:0 0 var(--left-w, 540px); position:sticky; left:0; z-index:4; background:var(--card); border-right:1px solid var(--input); }
 .lg { display:grid; grid-template-columns:44px minmax(0,1fr) 50px 38px 52px 52px 38px 52px; column-gap:4px; align-items:center; height:36px; padding:0 10px; border-bottom:1px solid var(--border); font-size:12px; }
 .head { position:sticky; top:0; z-index:5; height:48px; font-size:11px; font-weight:600; color:var(--muted); background:var(--surface-2); border-bottom:1px solid var(--border); }
 .mod { background:var(--surface-2); font-weight:700; }
 .sum { font-weight:600; }
+/* ขอบขวาของตารางซ้าย: ลากเพื่อปรับกว้าง (ช่อง Task กว้างขึ้น) · เส้นสีขึ้นตอนชี้/โฟกัส/ลาก · เหมือน Timeline */
+.resizer { position:absolute; top:0; bottom:0; right:-5px; width:10px; cursor:col-resize; z-index:6; touch-action:none; }
+.resizer::after { content:""; position:absolute; top:8px; bottom:8px; left:4px; width:2px; border-radius:2px; background:var(--border); transition:background .12s; }
+.resizer:hover::after, .resizer:focus-visible::after, .resizing .resizer::after { background:var(--primary); top:0; bottom:0; }
+.resizer:focus-visible { outline:none; }
+.resizing { cursor:col-resize; user-select:none; }
+.taskHead { display:flex; align-items:center; gap:4px; min-width:0; }
+.widen { margin-left:auto; flex:none; width:22px; height:22px; border:0; border-radius:6px; background:transparent; color:var(--muted); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+.widen:hover { background:var(--subtle); color:var(--foreground); }
+.widen:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
 .nm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:inherit; text-decoration:none; }
 a.nm:hover { text-decoration:underline; }
 .wbs { font-size:11px; color:var(--muted); }
@@ -57,7 +67,7 @@ a.nm:hover { text-decoration:underline; }
 .warn { background:var(--warning-soft); border:1px solid var(--warning-border); border-radius:8px; padding:8px 12px; font-size:12px; color:var(--warning-text); }
 @media (max-width:760px) {
   .page { padding:12px 16px; }
-  .left { flex-basis:200px; }
+  .inner:not([data-resized]) .left { flex-basis:200px; }
   .lg { grid-template-columns:36px minmax(0,1fr); padding:0 8px; }
   .opt { display:none; }
 }

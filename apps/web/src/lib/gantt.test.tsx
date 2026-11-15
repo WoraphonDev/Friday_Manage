@@ -1,6 +1,6 @@
 // W08 · Gantt · ข้อมูลสมมติเท่านั้น
 import { beforeEach, describe, expect, it } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { renderWithProviders } from "@/test/render";
@@ -9,7 +9,7 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import gantt from "../../messages/th/gantt.json";
-import { GanttView, SCALE_PX, depPath, type GRow, type GanttData, type Preview } from "../../app/work/[ws]/p/[key]/gantt/_components/gantt-view";
+import { GanttView, LEFT_MAX, LEFT_MIN, LEFT_W, SCALE_PX, depPath, type GRow, type GanttData, type Preview } from "../../app/work/[ws]/p/[key]/gantt/_components/gantt-view";
 
 const person = (id: string, displayName: string) => ({ id, displayName });
 const row = (key: string, start: string, end: string, over: Partial<GRow> = {}): GRow => ({ key, type: "Task", title: `งาน ${key}`, status: { name: "In progress", category: "in_progress" }, start, end, estimateMd: 2, progressPct: 40, lateDays: 0, assignees: [person("u1", "ผู้พัฒนาหนึ่ง")], subtasks: [], critical: false, slackDays: 2, ...over });
@@ -221,6 +221,43 @@ describe("Gantt (5)", () => {
     await user.click(within(req).getByRole("button", { name: "ส่งคำขอ" }));
     await waitFor(() => expect(posts).toEqual([{ path: "due-requests", body: { requestedDue: "2026-12-04", reasonCode: "blocked_by_dependency" } }]));
     expect(await screen.findByText("ส่งคำขอแล้ว")).toBeInTheDocument();
+  });
+
+  it("ช่อง Task ปรับกว้างได้: ลากขอบ · ลูกศรคีย์บอร์ด · ปุ่มขยาย/ย่อ · ดับเบิลคลิกคืนค่า · จำค่าในเบราว์เซอร์", async () => {
+    localStorage.removeItem("friday.gantt.leftWidth");
+    const user = userEvent.setup();
+    mount();
+    const sep = await screen.findByRole("separator", { name: gantt.resizeTask });
+    const inner = screen.getByTestId("gantt-inner");
+    expect(sep).toHaveAttribute("aria-valuenow", String(LEFT_W));
+    expect(inner).not.toHaveAttribute("data-resized");
+
+    fireEvent.mouseDown(sep, { button: 0, clientX: 500 });
+    fireEvent.mouseMove(window, { clientX: 620 });
+    fireEvent.mouseUp(window);
+    expect(sep).toHaveAttribute("aria-valuenow", String(LEFT_W + 120));
+    expect(inner.style.getPropertyValue("--left-w")).toBe(`${LEFT_W + 120}px`);
+    expect(inner).toHaveAttribute("data-resized");
+    await waitFor(() => expect(localStorage.getItem("friday.gantt.leftWidth")).toBe(String(LEFT_W + 120)));
+
+    fireEvent.mouseDown(sep, { button: 0, clientX: 500 });
+    fireEvent.mouseMove(window, { clientX: -2000 });
+    fireEvent.mouseUp(window);
+    expect(sep).toHaveAttribute("aria-valuenow", String(LEFT_MIN));
+
+    sep.focus();
+    await user.keyboard("{End}");
+    expect(sep).toHaveAttribute("aria-valuenow", String(LEFT_MAX));
+    await user.keyboard("{ArrowLeft}");
+    expect(sep).toHaveAttribute("aria-valuenow", String(LEFT_MAX - 20));
+
+    await user.dblClick(sep);
+    expect(sep).toHaveAttribute("aria-valuenow", String(LEFT_W));
+    await user.click(screen.getByRole("button", { name: gantt.widenTask }));
+    expect(Number(sep.getAttribute("aria-valuenow"))).toBeGreaterThan(LEFT_W);
+    await user.click(screen.getByRole("button", { name: gantt.narrowTask }));
+    expect(sep).toHaveAttribute("aria-valuenow", String(LEFT_W));
+    localStorage.removeItem("friday.gantt.leftWidth");
   });
 
   it("Viewer: ไม่เห็น Auto-schedule และตั้ง Baseline", async () => {

@@ -256,6 +256,40 @@
     "linkMember": "This link grants Member access (links can't grant Admin)",
     "notice": "Invitees receive a join link · When they accept, the Admin and PM of the chosen project are notified in their Inbox",
     "send": "Send invitations ({count})",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "menuEdit": "Edit details",
+    "menuDeactivate": "Deactivate…",
+    "edit": {
+      "title": "Edit {name}",
+      "positions": "Positions",
+      "apply": "Also apply to their current projects",
+      "department": "Department",
+      "optional": "Optional",
+      "capacity": "Capacity (hrs/week)",
+      "capacityRange": "Enter 0–80 hours",
+      "saved": "Saved {name}'s details"
+    },
+    "off": {
+      "title": "Deactivate {name}",
+      "open": "Open tasks",
+      "projects": "Projects",
+      "overdue": "Overdue",
+      "handTo": "Hand work over to",
+      "handToProject": "Hand over work in {name} to",
+      "count": "{count, plural, one {# task} other {# tasks}} · {md} MD",
+      "showList": "Show tasks",
+      "hideList": "Hide tasks",
+      "keep": "Don't reassign (keep name)",
+      "unassign": "Leave unassigned",
+      "noPermission": "Only a project admin can hand over this work · the tasks keep the current name",
+      "hidden": "{count, plural, one {# more task is} other {# more tasks are}} in projects you haven't joined · they keep the current name",
+      "none": "No open tasks",
+      "owner": "{name} owns {projects} · remember to transfer ownership in the project's Settings",
+      "hint": "They lose access to this workspace right away · if they have no other workspace they are signed out everywhere and LINE is unlinked · you can reactivate them later",
+      "confirm": "Deactivate {name}",
+      "working": "Deactivating…",
+      "done": "Deactivated {name}",
+      "doneMoved": "Handed over {count, plural, one {# task} other {# tasks}} and deactivated {name}"
+    }
   }
 }

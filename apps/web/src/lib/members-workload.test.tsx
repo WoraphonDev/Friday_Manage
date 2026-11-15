@@ -84,8 +84,18 @@ beforeEach(() => {
     http.delete("*/api/v1/w/:ws/projects/:key/members/:userId", async ({ request }) => { await record(request); return HttpResponse.json({ removed: true, reassigned: 3 }); }),
     http.get("*/api/v1/w/:ws/members", () => HttpResponse.json({ items: directory })),
     http.patch("*/api/v1/w/:ws/members/:userId", async ({ request }) => { await record(request); return HttpResponse.json({ ok: true }); }),
-    http.get("*/api/v1/w/:ws/members/:userId/handover", () => HttpResponse.json({ member: { userId: U1, displayName: "ผู้พัฒนาหนึ่ง", role: "member" }, assignedIssues: { total: 2, items: [{ key: "DE-7", title: "หน้าจอวงเงินตัวอย่าง", project: "DE", planEnd: "2026-12-01" }, { key: "DE-8", title: "รายงานตัวอย่าง", project: "DE", planEnd: null }] }, ownedProjects: [] })),
-    http.post("*/api/v1/w/:ws/members/:userId/:action", async ({ request, params }) => { await record(request); return HttpResponse.json({ userId: params.userId, status: params.action === "deactivate" ? "deactivated" : "active" }); }),
+    http.get("*/api/v1/w/:ws/members/:userId/handover", () =>
+      HttpResponse.json({
+        member: { userId: U1, displayName: "ผู้พัฒนาหนึ่ง", role: "member" },
+        assignedIssues: { total: 3, items: [] },
+        ownedProjects: [{ key: "DE", name: "Development Plan" }],
+        overdue: 1,
+        projects: [
+          { id: "p-de", key: "DE", name: "Development Plan", color: "#5b3fc4", open: 2, md: 6, overdue: 1, canTransfer: true, items: [{ key: "DE-7", title: "หน้าจอวงเงินตัวอย่าง", planEnd: "2026-12-01" }, { key: "DE-8", title: "รายงานตัวอย่าง", planEnd: null }], candidates: [{ userId: U2, displayName: "ผู้พัฒนาสอง" }] },
+          { id: "p-hr", key: "HR", name: "HR Portal", color: null, open: 1, md: 2, overdue: 0, canTransfer: true, items: [{ key: "HR-3", title: "ฟอร์มลา" }], candidates: [] },
+        ],
+      })),
+    http.post("*/api/v1/w/:ws/members/:userId/:action", async ({ request, params }) => { await record(request); return HttpResponse.json({ userId: params.userId, status: params.action === "deactivate" ? "deactivated" : "active", transferred: params.action === "deactivate" ? [{ projectKey: "DE", to: U2, count: 2 }, { projectKey: "HR", to: null, count: 1 }] : undefined }); }),
     http.get("*/api/v1/w/:ws/invitations", () => HttpResponse.json({ items: invites })),
     http.post("*/api/v1/w/:ws/invitations", async ({ request }) => {
       await record(request);
@@ -202,10 +212,13 @@ describe("Members ของโปรเจกต์", () => {
     const dialog = screen.getByRole("dialog", { name: "จัดการ ผู้พัฒนาหนึ่ง" });
     // ตำแหน่งเลือกได้หลายตำแหน่ง "ตัวย่อ - ชื่อเต็ม" · ค่าเดิมที่พิมพ์เป็นชื่อเต็มจับคู่เป็นตัวย่อ · มี DevOps
     const position = within(dialog).getByRole("group", { name: "ตำแหน่ง (เลือกได้หลายตำแหน่ง)" });
-    expect(within(position).getByRole("button", { name: "DEV - Developer" })).toHaveAttribute("aria-pressed", "true");
-    expect(within(position).getByRole("button", { name: "SA - System Analyst" })).toHaveAttribute("aria-pressed", "false");
-    expect(within(position).getByRole("button", { name: "DEVOPS - DevOps Engineer" })).toBeInTheDocument();
-    await user.click(within(position).getByRole("button", { name: "SA - System Analyst" }));
+    expect(within(position).getByText("DEV - Developer")).toBeInTheDocument();
+    await user.click(within(position).getByRole("button", { name: "เพิ่มตำแหน่ง" }));
+    const list = screen.getByRole("group", { name: "ตำแหน่งทั้งหมด" });
+    expect(within(list).getByRole("button", { name: "DEV - Developer" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(list).getByRole("button", { name: "DEVOPS - DevOps Engineer" })).toBeInTheDocument();
+    await user.click(within(list).getByRole("button", { name: "SA - System Analyst" }));
+    await user.keyboard("{Escape}");
     await user.clear(within(dialog).getByLabelText("Capacity (ชม./สัปดาห์)"));
     await user.type(within(dialog).getByLabelText("Capacity (ชม./สัปดาห์)"), "24");
     await user.click(within(dialog).getByRole("button", { name: "บันทึก" }));
@@ -338,23 +351,44 @@ describe("สมาชิก Workspace (หน้า H)", () => {
     expect(await within(dialog).findByText("http://localhost:3000/join/tok-1")).toBeInTheDocument();
   });
 
-  it("ปิดการใช้งานพร้อมโอนงาน (P3) แล้วเปิดใช้งานอีกครั้ง", async () => {
+  it("⋯ เปิดเมนู: แก้ไขข้อมูล (ตำแหน่ง แผนก Capacity) ใช้กับโปรเจกต์ที่อยู่", async () => {
     const user = userEvent.setup();
     mount(<WorkspaceMembers ws="sample" />);
     await user.click(await screen.findByRole("button", { name: "ตัวเลือกของ ผู้พัฒนาหนึ่ง" }));
-    const dialog = screen.getByRole("dialog", { name: "ปิดการใช้งาน ผู้พัฒนาหนึ่ง" });
-    expect(await within(dialog).findByText("โอนงานที่ยังไม่เสร็จ (2 งาน)")).toBeInTheDocument();
-    await user.selectOptions(within(dialog).getByLabelText("โอนงานให้"), U2);
-    await user.click(within(dialog).getByRole("button", { name: "ปิดการใช้งาน" }));
-    await waitFor(() => expect(calls).toHaveLength(3));
-    expect(calls[0]).toMatchObject({ method: "PUT", path: "/w/sample/issues/DE-7/assignees", ifMatch: '"4"', body: { assigneeIds: [U2] } });
-    expect(calls[1]).toMatchObject({ path: "/w/sample/issues/DE-8/assignees" });
-    expect(calls[2]).toMatchObject({ method: "POST", path: `/w/sample/members/${U1}/deactivate` });
-    expect(await screen.findByText("ปิดการใช้งาน ผู้พัฒนาหนึ่ง แล้ว")).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "แก้ไขข้อมูล" }));
+    const dialog = await screen.findByRole("dialog", { name: "แก้ไขข้อมูล ผู้พัฒนาหนึ่ง" });
+    await user.click(within(dialog).getByRole("button", { name: "เพิ่มตำแหน่ง" }));
+    await user.type(screen.getByRole("searchbox", { name: "ค้นหาตำแหน่ง เช่น QA, Designer" }), "back");
+    await user.click(screen.getByRole("button", { name: "BE - Backend Developer" }));
+    await user.keyboard("{Escape}");
+    expect(within(dialog).getByText("BE - Backend Developer")).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText("แผนก"), "Development");
+    await user.clear(within(dialog).getByLabelText("Capacity (ชม./สัปดาห์)"));
+    await user.type(within(dialog).getByLabelText("Capacity (ชม./สัปดาห์)"), "32");
+    await user.click(within(dialog).getByRole("button", { name: "บันทึก" }));
+    await waitFor(() => expect(calls[0]).toMatchObject({ method: "PATCH", path: `/w/sample/members/${U1}`, body: { positions: expect.arrayContaining(["BE"]), applyToProjects: true, department: "Development", capacityHoursWeek: 32 } }));
+    expect(await screen.findByText("บันทึกข้อมูล ผู้พัฒนาหนึ่ง แล้ว")).toBeInTheDocument();
+  });
+
+  it("ปิดการใช้งาน: สรุปตัวเลข เลือกคนรับงานทีละโปรเจกต์ แล้วเปิดใช้งานอีกครั้ง", async () => {
+    const user = userEvent.setup();
+    mount(<WorkspaceMembers ws="sample" />);
+    await user.click(await screen.findByRole("button", { name: "ตัวเลือกของ ผู้พัฒนาหนึ่ง" }));
+    await user.click(await screen.findByRole("button", { name: "ปิดการใช้งาน…" }));
+    const dialog = await screen.findByRole("dialog", { name: "ปิดการใช้งาน ผู้พัฒนาหนึ่ง" });
+    expect(await within(dialog).findByText(/2 งาน · 6 MD/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/เป็นเจ้าของโปรเจกต์ Development Plan/)).toBeInTheDocument();
+    await user.click(within(dialog).getAllByRole("button", { name: "ดูรายการงาน" })[0]);
+    expect(within(dialog).getByText("หน้าจอวงเงินตัวอย่าง")).toBeInTheDocument();
+    await user.selectOptions(within(dialog).getByLabelText("ส่งต่องานใน Development Plan ให้"), U2);
+    await user.selectOptions(within(dialog).getByLabelText("ส่งต่องานใน HR Portal ให้"), "none");
+    await user.click(within(dialog).getByRole("button", { name: "ปิดการใช้งาน ผู้พัฒนาหนึ่ง" }));
+    await waitFor(() => expect(calls[0]).toMatchObject({ method: "POST", path: `/w/sample/members/${U1}/deactivate`, body: { transfers: [{ projectId: "p-de", to: U2 }, { projectId: "p-hr", to: null }] } }));
+    expect(await screen.findByText("ส่งต่อ 3 งาน และปิดการใช้งาน ผู้พัฒนาหนึ่ง แล้ว")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "ตัวเลือกของ ผู้ทดสอบสาม" }));
-    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เปิดใช้งานอีกครั้ง" }));
-    await waitFor(() => expect(calls[3]).toMatchObject({ path: `/w/sample/members/${U3}/reactivate` }));
+    await user.click(await screen.findByRole("button", { name: "เปิดใช้งานอีกครั้ง" }));
+    await waitFor(() => expect(calls[1]).toMatchObject({ path: `/w/sample/members/${U3}/reactivate` }));
   });
 
   it("Member เห็นรายชื่อแต่จัดการไม่ได้ · Guest = 403 · Error มี requestId", async () => {

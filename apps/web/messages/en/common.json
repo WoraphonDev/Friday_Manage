@@ -275,5 +275,21 @@
     "workspaceMenu": "{name} workspace menu",
     "notifications": "Notifications",
     "more": "More options"
+  },
+  "positions": {
+    "add": "Add position",
+    "search": "Search positions, e.g. QA, Designer",
+    "listLabel": "All positions",
+    "remove": "Remove {name}",
+    "none": "No position selected",
+    "noMatch": "No matching position",
+    "groups": {
+      "manage": "Management",
+      "analysis": "Analysis",
+      "design": "Design",
+      "dev": "Development",
+      "qa": "Testing",
+      "ops": "Operations"
+    }
   }
 }

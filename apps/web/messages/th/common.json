@@ -275,5 +275,21 @@
     "workspaceMenu": "เมนู Workspace {name}",
     "notifications": "การแจ้งเตือน",
     "more": "ตัวเลือกเพิ่มเติม"
+  },
+  "positions": {
+    "add": "เพิ่มตำแหน่ง",
+    "search": "ค้นหาตำแหน่ง เช่น QA, Designer",
+    "listLabel": "ตำแหน่งทั้งหมด",
+    "remove": "เอา {name} ออก",
+    "none": "ยังไม่ได้เลือกตำแหน่ง",
+    "noMatch": "ไม่พบตำแหน่งนี้",
+    "groups": {
+      "manage": "บริหาร",
+      "analysis": "วิเคราะห์",
+      "design": "ออกแบบ",
+      "dev": "พัฒนา",
+      "qa": "ทดสอบ",
+      "ops": "ปฏิบัติการ"
+    }
   }
 }

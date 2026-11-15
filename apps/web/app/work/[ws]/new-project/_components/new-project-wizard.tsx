@@ -10,7 +10,7 @@ import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError, supportId } from "@/lib/api";
 import { formatDate, formatDateRange, today } from "@/lib/format";
 import { useSlidingIndicator } from "@/lib/motion";
-import { positionOptions, toPositionCode } from "@/lib/positions";
+import { positionOptions, jobTitleCodes } from "@/lib/positions";
 import { queryKeys } from "@/lib/query";
 import {
   BUILTIN_TEMPLATES, firstMonday, insertAt, KEY_PATTERN, workflowBody, lines, spanDays, sprintCount, suggestKey, TEMPLATE_PRESETS, validDate,
@@ -722,7 +722,7 @@ function TeamPicker({ me, directory, loading, error, members, onChange }: {
       const q = token.toLowerCase();
       const hit = candidates.find((m) => m.email.toLowerCase() === q || m.displayName.toLowerCase() === q) ?? candidates.find((m) => m.displayName.toLowerCase().includes(q) || m.email.toLowerCase().includes(q));
       if (hit && !found.some((f) => f.userId === hit.userId)) {
-        found.push({ userId: hit.userId, displayName: hit.displayName, email: hit.email, guest: hit.role === "guest", role: "member", position: toPositionCode(hit.jobTitle), capacityHoursWeek: hit.capacityHoursWeek ?? 40 });
+        found.push({ userId: hit.userId, displayName: hit.displayName, email: hit.email, guest: hit.role === "guest", role: "member", position: jobTitleCodes(hit.jobTitle)[0] ?? "", capacityHoursWeek: hit.capacityHoursWeek ?? 40 });
       } else if (!hit) missing.push(token);
     }
     if (found.length) onChange([...members, ...found]);

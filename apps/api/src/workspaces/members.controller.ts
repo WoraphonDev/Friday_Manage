@@ -25,6 +25,7 @@ export class MembersController {
           role: s.workspaceMembers.role,
           status: s.workspaceMembers.status,
           jobTitle: s.workspaceMembers.jobTitle,
+          department: s.workspaceMembers.department,
           capacityHoursWeek: s.workspaceMembers.capacityHoursWeek,
           lastActiveAt: s.workspaceMembers.lastActiveAt,
         })

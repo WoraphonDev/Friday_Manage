@@ -463,9 +463,17 @@ describe("แพ็กเกจ & Billing", () => {
 
   it("ดูเปรียบเทียบแพ็กเกจอยู่ในระบบ (มี Sidebar) · ปุ่มไปหน้าชำระเงินของ Workspace ไม่ใช่หน้าสมัคร", async () => {
     const user = userEvent.setup();
+    // ปุ่มในหน้า Billing เปิดเป็นหน้าต่างซ้อน (ผู้ใช้ขอ 2026-11-15) · กดลิงก์ของแพ็กเกจแล้วหน้าต่างปิด
     const o = mountBilling();
-    expect(await screen.findByRole("link", { name: "ดูเปรียบเทียบแพ็กเกจ" })).toHaveAttribute("href", "/work/sample/billing/plans");
+    await user.click(await screen.findByRole("button", { name: "ดูเปรียบเทียบแพ็กเกจ" }));
+    const compare = await screen.findByRole("dialog", { name: "ดูเปรียบเทียบแพ็กเกจ" });
+    const inDialog = within(await within(compare).findByRole("article", { name: "Team M" }));
+    expect(inDialog.getByRole("link", { name: "เลือกแพ็กเกจนี้" })).toHaveAttribute("href", "/work/sample/billing/checkout?plan=team_m&cycle=monthly");
+    await user.click(within(await within(compare).findByRole("article", { name: "Free" })).getByRole("link", { name: "เปลี่ยนเป็น Free" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "ดูเปรียบเทียบแพ็กเกจ" })).not.toBeInTheDocument());
     o.unmount();
+
+    // ลิงก์ตรง /billing/plans ยังเปิดได้
 
     navigation.pathname = "/work/sample/billing/plans";
     mountBilling({ section: "plans" });

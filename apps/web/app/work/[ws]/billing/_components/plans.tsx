@@ -14,22 +14,12 @@ import styles from "./billing.module.css";
 const SALES_URL = process.env.NEXT_PUBLIC_SALES_URL ?? "/signup?plan=enterprise";
 
 /**
- * เปรียบเทียบแพ็กเกจในระบบ (/work/:ws/billing/plans) · เดิมปุ่มพาไป /pricing ของหน้าเว็บสาธารณะ ซึ่งไม่มี Sidebar
- * และปุ่มพาไปสมัครใหม่ (ผู้ใช้แจ้ง 2026-11-11) · ที่นี่ปุ่มไปหน้าชำระเงินของ Workspace นี้แทน
+ * ตารางเปรียบเทียบแพ็กเกจของ Workspace นี้ · ปุ่มของแต่ละแพ็กเกจไปหน้าชำระเงินของ Workspace (ไม่ใช่สมัครใหม่แบบหน้า /pricing)
+ * ใช้ทั้งใน Dialog ของหน้า Billing (ผู้ใช้ขอ 2026-11-15) และหน้า /billing/plans สำหรับลิงก์ตรง
  */
-export function BillingPlansPage({ ws }: { ws: string }) {
+export function PlansCompare({ ws, sub, heading = "h1" }: { ws: string; sub: BillingOverview["subscription"]; heading?: "h1" | "none" }) {
   const t = useTranslations("saas-pages.pricing");
-  const { workspace } = useWorkspace();
-  const canBill = workspace.role === "owner" || workspace.role === "admin";
   const base = `/work/${encodeURIComponent(ws)}/billing`;
-  const overview = useQuery({ queryKey: ["billing", ws], queryFn: () => api.get<BillingOverview>(`/w/${encodeURIComponent(ws)}/billing`), enabled: canBill });
-
-  if (!canBill) return <div className={styles.page}><Forbidden /></div>;
-  if (overview.error)
-    return <div className={styles.page}>{overview.error instanceof ApiError && overview.error.status === 403 ? <Forbidden /> : <ErrorState error={overview.error} retry={() => overview.refetch()} />}</div>;
-  if (overview.isPending) return <div className={styles.page}><LoadingState /></div>;
-
-  const sub = overview.data.subscription;
   const ctaFor = (p: PublicPlan, cycle: Cyc): PlanCta => {
     if (p.contactSales) return { label: t("contact"), href: SALES_URL };
     const isCurrent = p.code === sub.planCode;
@@ -39,10 +29,26 @@ export function BillingPlansPage({ ws }: { ws: string }) {
     if (p.code === "free") return { label: t("inApp.toFree"), href: base };
     return { label: t(isCurrent ? "inApp.payCurrent" : "inApp.choose"), href: `${base}/checkout?plan=${p.code}&cycle=${cycle}` };
   };
+  return <PricingSection heading={heading} ctaFor={ctaFor} />;
+}
+
+/**
+ * เปรียบเทียบแพ็กเกจในระบบ (/work/:ws/billing/plans) · เดิมปุ่มพาไป /pricing ของหน้าเว็บสาธารณะ ซึ่งไม่มี Sidebar
+ * และปุ่มพาไปสมัครใหม่ (ผู้ใช้แจ้ง 2026-11-11) · ปุ่มในหน้า Billing เปิดเป็น Dialog แทนแล้ว หน้านี้คงไว้ให้ลิงก์เดิมยังเปิดได้
+ */
+export function BillingPlansPage({ ws }: { ws: string }) {
+  const { workspace } = useWorkspace();
+  const canBill = workspace.role === "owner" || workspace.role === "admin";
+  const overview = useQuery({ queryKey: ["billing", ws], queryFn: () => api.get<BillingOverview>(`/w/${encodeURIComponent(ws)}/billing`), enabled: canBill });
+
+  if (!canBill) return <div className={styles.page}><Forbidden /></div>;
+  if (overview.error)
+    return <div className={styles.page}>{overview.error instanceof ApiError && overview.error.status === 403 ? <Forbidden /> : <ErrorState error={overview.error} retry={() => overview.refetch()} />}</div>;
+  if (overview.isPending) return <div className={styles.page}><LoadingState /></div>;
 
   return (
     <div className={styles.page}>
-      <PricingSection heading="h1" ctaFor={ctaFor} />
+      <PlansCompare ws={ws} sub={overview.data.subscription} />
     </div>
   );
 }

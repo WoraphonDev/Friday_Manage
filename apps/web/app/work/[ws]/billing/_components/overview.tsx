@@ -232,21 +232,23 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
         </div>
         {u && (
           <div className={styles.usage}>
-            <Meter
-              label={t("seats")}
-              used={u.seats.used}
-              limit={u.seats.limit}
-              value={u.seats.limit === null ? t("people", { n: u.seats.used }) : <>{u.seats.used} <small>/ {t("people", { n: u.seats.limit })}</small></>}
-              note={seatsLeft === null ? undefined : seatsLeft >= 0 ? t("seatsLeft", { n: seatsLeft }) : t("seatsOver", { n: -seatsLeft })}
-            />
-            <Meter
-              label={t("storage")}
-              used={u.storage.usedGb}
-              limit={u.storage.limitGb}
-              value={u.storage.limitGb === null ? `${u.storage.usedGb} GB` : <>{u.storage.usedGb} <small>/ {u.storage.limitGb} GB</small></>}
-              note={storagePct === null ? undefined : t("storageUsed", { pct: storagePct })}
-            />
-            {u.projects.limit !== null && <Meter label={t("projects")} used={u.projects.used} limit={u.projects.limit} value={<>{u.projects.used} <small>/ {u.projects.limit}</small></>} />}
+            <div className={styles.meters}>
+              <Meter
+                label={t("seats")}
+                used={u.seats.used}
+                limit={u.seats.limit}
+                value={u.seats.limit === null ? t("people", { n: u.seats.used }) : <>{u.seats.used} <small>/ {t("people", { n: u.seats.limit })}</small></>}
+                note={seatsLeft === null ? undefined : seatsLeft >= 0 ? t("seatsLeft", { n: seatsLeft }) : t("seatsOver", { n: -seatsLeft })}
+              />
+              <Meter
+                label={t("storage")}
+                used={u.storage.usedGb}
+                limit={u.storage.limitGb}
+                value={u.storage.limitGb === null ? `${u.storage.usedGb} GB` : <>{u.storage.usedGb} <small>/ {u.storage.limitGb} GB</small></>}
+                note={storagePct === null ? undefined : t("storageUsed", { pct: storagePct })}
+              />
+              {u.projects.limit !== null && <Meter label={t("projects")} used={u.projects.used} limit={u.projects.limit} value={<>{u.projects.used} <small>/ {u.projects.limit}</small></>} />}
+            </div>
             <div className={styles.usageNote}>{t("guestsNote")}</div>
           </div>
         )}

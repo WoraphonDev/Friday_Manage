@@ -2389,3 +2389,120 @@ a.m-card:hover { border-color: var(--border-strong); }
   .topbar:has(> .admin-pill) { display: none; }
   .workspace-body.chrome-admin .workspace-main { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
 }
+
+/* ===== การเคลื่อนไหวแบบนุ่มเรียบ (ผู้ใช้เลือกจากตัวอย่าง 2026-11-15) =====
+   ความเร็วทั้งหมดมาจาก --motion-* ใน tokens.css · ปิดหมดเมื่อเครื่องตั้ง "ลดการเคลื่อนไหว" (กฎ prefers-reduced-motion ด้านบนใช้ !important)
+   ใช้ translate / scale แยกจาก transform เพื่อไม่ชนกับ transform ที่จัดตำแหน่ง Dialog และ FLIP ของบอร์ด */
+
+/* 1 · เปลี่ยนหน้า: เนื้อหาจางเข้า (desktop เลื่อนขึ้นเล็กน้อยด้วย) · .page-enter มาจาก template.tsx
+   fill = backwards: จบแล้วไม่เหลือ translate ค้าง (translate ทำให้ลูกที่เป็น position:fixed อิงกรอบนี้แทนจอ)
+   มือถือจางอย่างเดียว เพราะมีปุ่มลอย (fixed) อยู่ในหน้า */
+.page-enter { animation: motion-fade var(--motion-dur) var(--motion-ease) backwards; }
+@media (min-width: 761px) {
+  .page-enter { animation-name: motion-rise; }
+}
+.tab-content[data-state="active"] { animation: motion-rise var(--motion-dur) var(--motion-ease) backwards; }
+.tab { transition: color var(--motion-dur-s); }
+
+/* เส้นใต้แท็บเลื่อนตามแท็บที่เลือก · ตำแหน่งจาก useSlidingIndicator (--ind-*) · "jump" = วางครั้งแรกไม่ต้องเลื่อน */
+.tabs[data-indicator] { position: relative; }
+.tabs[data-indicator]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: var(--ind-w);
+  height: 2px;
+  translate: var(--ind-x) 0;
+  border-radius: 2px;
+  background: var(--primary);
+  pointer-events: none;
+}
+.tabs[data-indicator="on"]::after { transition: translate var(--motion-dur) var(--motion-ease), width var(--motion-dur) var(--motion-ease); }
+.tabs[data-indicator] .tab[aria-current="page"],
+.tabs[data-indicator] .tab[data-state="active"] { border-bottom-color: transparent; }
+
+/* 2 · Drawer / Dialog / Popover เปิดและปิดแบบค่อย ๆ (Radix รอ animation ตอน data-state="closed" จบก่อนถอดออก) */
+.overlay { animation: motion-fade var(--motion-dur) ease; }
+.overlay[data-state="closed"] { animation: motion-fade-out var(--motion-dur) ease both; }
+.drawer:not(.drawer-menu)[data-state="open"] { animation: motion-drawer-in var(--motion-dur) var(--motion-ease); }
+.drawer:not(.drawer-menu)[data-state="closed"] { animation: motion-drawer-out var(--motion-dur) var(--motion-ease) both; }
+.drawer-resize { animation: motion-fade var(--motion-dur-s) ease var(--motion-dur) backwards; }
+@media (min-width: 761px) {
+  .dialog[data-state="open"] { animation: motion-dialog-in var(--motion-dur) var(--motion-ease); }
+  .dialog[data-state="closed"] { animation: motion-dialog-out var(--motion-dur-s) var(--motion-ease) both; }
+}
+@media (max-width: 760px) {
+  .dialog[data-state="open"],
+  .drawer-menu[data-state="open"] { animation: motion-sheet-in var(--motion-dur) var(--motion-ease); }
+  .dialog[data-state="closed"],
+  .drawer-menu[data-state="closed"] { animation: motion-sheet-out var(--motion-dur-s) var(--motion-ease) both; }
+}
+.popover { transform-origin: var(--radix-popover-content-transform-origin); }
+.popover[data-state="open"] { animation: motion-pop-in var(--motion-dur-s) var(--motion-ease); }
+.popover[data-state="closed"] { animation: motion-pop-out 200ms ease both; }
+.tooltip[data-state$="open"] { animation: motion-fade var(--motion-dur-s) ease; }
+
+/* 3 · แถวและการ์ดโผล่ไล่กันตอนเปิดหน้า · [data-entering] อยู่บน .page-enter ช่วงแรกหลังเปลี่ยนหน้า
+   แถวที่ขึ้นทีหลัง (สร้างงานใหม่ ลากการ์ด เลื่อนตาราง) จึงไม่ขยับซ้ำ · ไล่เฉพาะ 10 แถวแรก ที่เหลือขึ้นพร้อมแถวที่ 10 */
+[data-entering] :is(.motion-item, tbody tr, .m-row) { animation: motion-rise var(--motion-dur) var(--motion-ease) backwards; animation-delay: calc(var(--motion-i, 0) * var(--motion-stagger)); }
+:is(.motion-item, tbody tr, .m-row):nth-child(2) { --motion-i: 1; }
+:is(.motion-item, tbody tr, .m-row):nth-child(3) { --motion-i: 2; }
+:is(.motion-item, tbody tr, .m-row):nth-child(4) { --motion-i: 3; }
+:is(.motion-item, tbody tr, .m-row):nth-child(5) { --motion-i: 4; }
+:is(.motion-item, tbody tr, .m-row):nth-child(6) { --motion-i: 5; }
+:is(.motion-item, tbody tr, .m-row):nth-child(7) { --motion-i: 6; }
+:is(.motion-item, tbody tr, .m-row):nth-child(8) { --motion-i: 7; }
+:is(.motion-item, tbody tr, .m-row):nth-child(9) { --motion-i: 8; }
+:is(.motion-item, tbody tr, .m-row):nth-child(n + 10) { --motion-i: 9; }
+
+/* การ์ดที่กดได้ยกขึ้นนิดหนึ่งพร้อมเงาเมื่อชี้ · ซ้ำ class เพื่อชนะ transition / :hover ของ CSS module ที่โหลดทีหลัง */
+.motion-lift.motion-lift { transition: translate var(--motion-dur) var(--motion-ease), box-shadow var(--motion-dur) ease, border-color var(--motion-dur-s); }
+@media (hover: hover) {
+  .motion-lift.motion-lift:hover { translate: 0 -2px; box-shadow: var(--shadow-lift); border-color: var(--primary-border); }
+}
+
+/* 4 · ตอบสนองตอนกด: ปุ่มยุบตัว · ติ๊กแล้วเด้งเบา ๆ · ป้ายสถานะเปลี่ยนสีแบบค่อย ๆ · แจ้งเตือนเลื่อนเข้า */
+.button { transition: background-color var(--motion-dur-s), border-color var(--motion-dur-s), color var(--motion-dur-s), scale 120ms ease; }
+.button:active:not(:disabled) { scale: 0.97; }
+input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-pop) var(--motion-ease); }
+.badge { transition: background-color var(--motion-dur), color var(--motion-dur); }
+.toast,
+.floating-notice { animation: notice-in var(--motion-dur) var(--motion-ease); }
+
+/* 5 · Sidebar: พื้นไฮไลต์เลื่อนตามเมนูที่เลือก (useSlidingIndicator) */
+.nav-link { transition: background-color var(--motion-dur-s), color var(--motion-dur-s); }
+.nav-pill[data-indicator] { position: relative; isolation: isolate; }
+.nav-pill[data-indicator]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  width: var(--ind-w);
+  height: var(--ind-h);
+  translate: var(--ind-x) var(--ind-y);
+  border-radius: 8px;
+  background: var(--primary-soft);
+  pointer-events: none;
+}
+.nav-pill[data-indicator="on"]::before { transition: translate var(--motion-dur) var(--motion-ease), height var(--motion-dur) var(--motion-ease), width var(--motion-dur) var(--motion-ease); }
+.nav-pill[data-indicator] .nav-link[aria-current="page"] { background: transparent; }
+
+/* 6 · แถบความคืบหน้าวิ่งจาก 0 ถึงค่าจริงเมื่อแสดงครั้งแรก (ตัวเลขนับขึ้นใช้ <CountUp>) */
+.motion-bar,
+.m-progress > i { transform-origin: left center; animation: motion-grow var(--motion-dur-long) var(--motion-ease) backwards; }
+
+@keyframes motion-fade { from { opacity: 0; } }
+@keyframes motion-fade-out { to { opacity: 0; } }
+@keyframes motion-rise { from { opacity: 0; translate: 0 8px; } }
+@keyframes motion-drawer-in { from { translate: 100% 0; } }
+@keyframes motion-drawer-out { to { translate: 100% 0; } }
+@keyframes motion-dialog-in { from { opacity: 0; translate: 0 10px; scale: 0.98; } }
+@keyframes motion-dialog-out { to { opacity: 0; translate: 0 6px; scale: 0.98; } }
+@keyframes motion-sheet-in { from { translate: 0 100%; } }
+@keyframes motion-sheet-out { to { translate: 0 100%; } }
+@keyframes motion-pop-in { from { opacity: 0; scale: 0.96; } }
+@keyframes motion-pop-out { to { opacity: 0; scale: 0.96; } }
+@keyframes motion-check { 40% { scale: 1.18; } }
+@keyframes motion-grow { from { transform: scaleX(0); } }

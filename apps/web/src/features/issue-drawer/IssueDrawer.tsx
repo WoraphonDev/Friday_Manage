@@ -9,6 +9,7 @@ import { Button, Dialog, Drawer, ErrorState, Forbidden, LoadingState, NotFound }
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import { useIsMobile } from '@/lib/use-mobile';
+import { exitDelay } from '@/lib/motion';
 import { queryKeys } from '@/lib/query';
 import type { Permissions, Person } from '@/lib/types';
 import { IssuePanel } from './issue-panel';
@@ -47,6 +48,10 @@ function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
   const guard = useRef<(() => void) | null>(null);
   const registerClose = useCallback((handler: (() => void) | null) => { guard.current = handler; }, []);
   useEffect(() => setActiveKey(issueKey), [issueKey]);
+  // ปิด Drawer ชั้นแรก: ให้ Radix เล่น animation ปิดก่อน แล้วค่อยเปลี่ยน URL (ProjectShell ถอด Drawer ทันทีเมื่อไม่มี ?issue=)
+  const [leaving, setLeaving] = useState(false);
+  useEffect(() => setLeaving(false), [issueKey]);
+  const leave = () => { const ms = exitDelay(); if (!ms) return onClose(); setLeaving(true); setTimeout(onClose, ms); };
   const endpoint = projectPath(ws, projectKey);
   const permissions = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${endpoint}/my-permissions`) });
   const guest = permissions.data?.guestViewer ?? false;
@@ -120,7 +125,7 @@ function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
   const variant = creating && !newParentKey ? 'detail' : rootIssue?.type === 'Bug' ? 'wide' : 'detail';
   return <>
     {modalCreate ? <Dialog open size="wide" title={t('newIssueIn', { project: project.data?.name ?? projectKey })} onOpenChange={closeRoot}><div className={styles.root}>{content()}</div></Dialog> :
-    <Drawer open variant={variant} bare={showingPanel || createReady} title={creating && !newParentKey ? t('newIssue') : t('issueTitle', { key: rootIssue?.key ?? rootName.current ?? activeKey ?? '' })} onOpenChange={(open) => { if (!open) { if (creating && !newParentKey && guard.current) guard.current(); else onClose(); } }}>
+    <Drawer open={!leaving} variant={variant} bare={showingPanel || createReady} title={creating && !newParentKey ? t('newIssue') : t('issueTitle', { key: rootIssue?.key ?? rootName.current ?? activeKey ?? '' })} onOpenChange={(open) => { if (!open) { if (creating && !newParentKey && guard.current) guard.current(); else leave(); } }}>
       <div className={styles.root}>{content()}</div>
     </Drawer>}
     {nested && issue.data && <Drawer open depth={2} variant="detail" bare title={t('issueTitle', { key: issue.data.key })} parentLabel={mobile ? undefined : `${parent.data!.key} · ${parent.data!.title}`} onBack={() => navigate(parent.data!.key)} onOpenChange={(open) => { if (!open) navigate(parent.data!.key); }}><div className={styles.root}><IssuePanel key={issue.data.key} scope={scope} issue={issue.data} siblings={parent.data!.subtasks} onDeleted={(parentKey) => parentKey ? navigate(parentKey) : onClose()} /></div></Drawer>}

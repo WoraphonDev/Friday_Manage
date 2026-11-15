@@ -116,6 +116,8 @@
   --overlay: rgb(18 14 38 / 0.45);
   --shadow-card: 0 1px 2px rgb(20 16 40 / 0.06);
   --shadow-menu: 0 16px 40px rgb(20 16 40 / 0.18);
+  /* การ์ดที่ยกขึ้นตอนชี้ (.motion-lift) */
+  --shadow-lift: 0 8px 20px rgb(20 16 40 / 0.12);
 
   --radius-control: 8px;
   --radius-card: 12px;
@@ -134,6 +136,14 @@
   --text-caption: 11px;
   --text-title: 20px;
   --font-sans: "IBM Plex Sans Thai", system-ui, sans-serif;
+  /* การเคลื่อนไหวแบบ "นุ่มเรียบ" (ผู้ใช้เลือกจากตัวอย่าง 2026-11-15 และขอให้ช้าลงจาก 200ms สามรอบ) · ไม่มีเด้ง
+     dur = เปิด/ปิด/เลื่อน · dur-s = hover และเปลี่ยนสี · pop = ติ๊ก · long = ตัวเลขและแถบความคืบหน้า · stagger = ระยะห่างแถวที่โผล่ไล่กัน */
+  --motion-dur: 550ms;
+  --motion-dur-s: 350ms;
+  --motion-dur-pop: 600ms;
+  --motion-dur-long: 1500ms;
+  --motion-stagger: 85ms;
+  --motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   /* มือถือ ≤760px (W27 ตามต้นแบบ docs/prototypes/mobile) · ใช้ใน @media มือถือเท่านั้น desktop ไม่อ่านค่าเหล่านี้ */
   --m-tap: 44px;
   --m-text-body: 15px;
@@ -231,4 +241,5 @@
   --overlay: rgb(0 0 0 / 0.6);
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-menu: 0 16px 40px rgb(0 0 0 / 0.55);
+  --shadow-lift: 0 10px 24px rgb(0 0 0 / 0.5);
 }

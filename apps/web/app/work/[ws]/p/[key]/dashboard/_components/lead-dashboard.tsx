@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui";
+import { CountUp, EmptyState, ErrorState, LoadingState } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, formatDateRange, today as todayIso, type YearFormat, intlLocale } from "@/lib/format";
@@ -134,9 +134,9 @@ export function PlanModules({ plan }: { plan: Plan }) {
 }
 
 function Kpi({ label, value, note, danger }: { label: string; value: string | number; note: string; danger?: boolean }) {
-  return <div className={`${styles.kpi} ${danger ? styles.kpiDanger : ""}`} role="group" aria-label={label}>
+  return <div className={`${styles.kpi} ${danger ? styles.kpiDanger : ""} motion-item`} role="group" aria-label={label}>
     <span className={styles.kpiLabel}>{label}</span>
-    <b>{value}</b>
+    <b><CountUp value={value} /></b>
     <span className={styles.kpiNote}>{note}</span>
   </div>;
 }
@@ -213,15 +213,15 @@ function ModuleTable({ modules, sort, setSort, today, yearFormat, velocityDays }
             {m.split ? (
               <span className={styles.progressSplit}>
                 <span className={styles.progress} role="meter" aria-label={t("modules.devOf", { name: m.name })} aria-valuemin={0} aria-valuemax={100} aria-valuenow={m.split.devPct}>
-                  <span className={styles.splitLabel}>Dev</span><span className={`${styles.progressBar} ${styles.devBar}`}><span style={{ width: `${m.split.devPct}%` }} /></span>{m.split.devPct}%
+                  <span className={styles.splitLabel}>Dev</span><span className={`${styles.progressBar} ${styles.devBar}`}><span className="motion-bar" style={{ width: `${m.split.devPct}%` }} /></span>{m.split.devPct}%
                 </span>
                 <span className={styles.progress} role="meter" aria-label={t("modules.qaOf", { name: m.name })} aria-valuemin={0} aria-valuemax={100} aria-valuenow={m.split.qaPct}>
-                  <span className={styles.splitLabel}>QA</span><span className={styles.progressBar}><span style={{ width: `${m.split.qaPct}%` }} /></span>{m.split.qaPct}%
+                  <span className={styles.splitLabel}>QA</span><span className={styles.progressBar}><span className="motion-bar" style={{ width: `${m.split.qaPct}%` }} /></span>{m.split.qaPct}%
                 </span>
               </span>
             ) : (
               <span className={styles.progress} role="meter" aria-label={t("modules.progressOf", { name: m.name })} aria-valuemin={0} aria-valuemax={100} aria-valuenow={m.progressPct}>
-                <span className={styles.progressBar}><span style={{ width: `${m.progressPct}%` }} /></span>{m.progressPct}%
+                <span className={styles.progressBar}><span className="motion-bar" style={{ width: `${m.progressPct}%` }} /></span>{m.progressPct}%
               </span>
             )}
           </span>

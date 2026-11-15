@@ -23,7 +23,7 @@ const ACTION_TARGET: Record<string, { section: string; tone: string }> = {
 };
 
 function Meter({ value, max }: { value: number; max: number }) {
-  return <div className={styles.meter} aria-hidden="true"><span style={{ width: `${Math.min(100, max ? (value / max) * 100 : 0)}%` }} /></div>;
+  return <div className={styles.meter} aria-hidden="true"><span className="motion-bar" style={{ width: `${Math.min(100, max ? (value / max) * 100 : 0)}%` }} /></div>;
 }
 
 export function OverviewSection({ ws, data }: { ws: string; data: AdminOverview }) {

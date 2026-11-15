@@ -4,3 +4,4 @@ export * from "./pickers";
 export * from "./states";
 export * from "./toast";
 export * from "./floating-notice";
+export * from "./count-up";

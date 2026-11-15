@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
-import { Avatar, Badge, Button, EmptyState, ErrorState, Forbidden, LoadingState, Select, StatusPill, useToast } from "@/components/ui";
+import { Avatar, Badge, Button, CountUp, EmptyState, ErrorState, Forbidden, LoadingState, Select, StatusPill, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, formatManDay, type YearFormat } from "@/lib/format";
@@ -91,29 +91,29 @@ function Kpis({ data, ws, year }: { data: HomeData; ws: string; year: YearFormat
   const byAssignee = s.overdue.byAssignee.filter((x) => x.person).map((x) => `${x.person!.displayName} ${x.count}`).join(" · ");
   return (
     <div className={styles.kpis}>
-      <Link className={styles.kpi} href={my}>
+      <Link className={`${styles.kpi} motion-item motion-lift`} href={my}>
         <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "var(--warning-solid)" }} />{t("dueToday")}</span>
-        <span className={styles.kpiValue}>{s.dueToday.team}</span>
+        <span className={styles.kpiValue}><CountUp value={s.dueToday.team} /></span>
         <span className={styles.kpiNote}>{s.dueToday.keys.join(", ") || t("none")}</span>
       </Link>
-      <Link className={styles.kpi} href={my}>
+      <Link className={`${styles.kpi} motion-item motion-lift`} href={my}>
         <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "var(--danger)" }} />{t("overdue")}</span>
-        <span className={styles.kpiValue} style={{ color: "var(--danger-text)" }}>{s.overdue.team}</span>
+        <span className={styles.kpiValue} style={{ color: "var(--danger-text)" }}><CountUp value={s.overdue.team} /></span>
         <span className={styles.kpiNote}>{byAssignee || t("none")}</span>
       </Link>
-      <Link className={styles.kpi} href={`/work/${encodeURIComponent(ws)}/my-tasks`}>
+      <Link className={`${styles.kpi} motion-item motion-lift`} href={`/work/${encodeURIComponent(ws)}/my-tasks`}>
         <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "var(--chart-primary)" }} />{t("dueThisWeek")}</span>
-        <span className={styles.kpiValue}>{s.dueThisWeek.team}</span>
+        <span className={styles.kpiValue}><CountUp value={s.dueThisWeek.team} /></span>
         <span className={styles.kpiNote}>{t("untilDay", { date: formatDate(s.dueThisWeek.until, year) })}</span>
       </Link>
-      <a className={styles.kpi} href="#review">
+      <a className={`${styles.kpi} motion-item motion-lift`} href="#review">
         <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "var(--status-review-dot)" }} />{t("review")}</span>
-        <span className={styles.kpiValue}>{s.waitingReview}</span>
+        <span className={styles.kpiValue}><CountUp value={s.waitingReview} /></span>
         <span className={styles.kpiNote}>{t("andApprovals", { count: s.pendingApprovals })}</span>
       </a>
-      <a className={styles.kpi} href="#inbox">
+      <a className={`${styles.kpi} motion-item motion-lift`} href="#inbox">
         <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: "var(--accent-teal)" }} />{t("mentions")}</span>
-        <span className={styles.kpiValue}>{s.unreadMentions.count}</span>
+        <span className={styles.kpiValue}><CountUp value={s.unreadMentions.count} /></span>
         <span className={styles.kpiNote}>{s.unreadMentions.latestFrom ? t("mentionsFrom", { name: s.unreadMentions.latestFrom }) : t("none")}</span>
       </a>
     </div>
@@ -316,7 +316,7 @@ function Projects({ data, ws, year }: { data: HomeData; ws: string; year: YearFo
             const color = p.color ?? FALLBACK_PROJECT_COLOR;
             const go = p.daysToGolive === null ? t("noGolive") : p.daysToGolive >= 0 ? t("daysToGolive", { days: p.daysToGolive }) : t("golivePassed", { days: -p.daysToGolive });
             return (
-              <Link className={styles.pc} key={p.key} href={projectHref(ws, p.key)}>
+              <Link className={`${styles.pc} motion-item motion-lift`} key={p.key} href={projectHref(ws, p.key)}>
                 <div className={styles.pcTop}>
                   <span className={styles.pcIcon} style={{ background: color }}>{p.key.slice(0, 2)}</span>
                   <div style={{ flex: 1, minWidth: 0 }}><div className={styles.pcName}>{p.name}</div><div className="muted" style={{ fontSize: 11 }}>{t("projectRole", { key: p.key, count: p.myTasks })}</div></div>
@@ -324,7 +324,7 @@ function Projects({ data, ws, year }: { data: HomeData; ws: string; year: YearFo
                 </div>
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}><span className="muted">{t("progress")}</span><b>{p.progressPct}%</b></div>
-                  <div className={styles.bar}><div style={{ width: `${p.progressPct}%`, background: color }} /></div>
+                  <div className={styles.bar}><div className="motion-bar" style={{ width: `${p.progressPct}%`, background: color }} /></div>
                 </div>
                 <div className={styles.stats}>
                   <div><span className="muted">{t("overdueShort")}</span><b style={{ color: p.overdue ? "var(--danger-text)" : undefined }}>{p.overdue}</b></div>

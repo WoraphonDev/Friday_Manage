@@ -137,7 +137,7 @@ export function WorkspaceMembers({ ws }: { ws: string }) {
           <div className={styles.kp}>
             <span className={styles.muted}>{t("seats")}</span>
             <span className={styles.v}>{seats.limit === null ? seats.used : t("seatsValue", { used: seats.used, limit: seats.limit })}</span>
-            {seats.limit !== null && <span className={local.seat}><span style={{ width: `${Math.min(100, (seats.used / seats.limit) * 100)}%` }} /></span>}
+            {seats.limit !== null && <span className={local.seat}><span className="motion-bar" style={{ width: `${Math.min(100, (seats.used / seats.limit) * 100)}%` }} /></span>}
           </div>
         )}
       </div>

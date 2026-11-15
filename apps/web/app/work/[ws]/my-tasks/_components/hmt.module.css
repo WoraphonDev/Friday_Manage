@@ -87,8 +87,10 @@
 /* จอกว้าง: ทั้งหน้าสูงเท่าจอใต้แถบบนและติดอยู่กับที่ · เลื่อนเฉพาะรายการงาน หัวกลุ่มติดด้านบนให้รู้ว่าอยู่กลุ่มไหนและลากงานไปวางได้ (ผู้ใช้ขอ 2026-11-14) */
 @media (min-width:1000px) {
   /* พื้นที่หลักสูงพอดีจอและไม่เลื่อน รวมแถบประกาศด้านบน (ทดลองใช้, ระงับบัญชี) ทั้งหน้าจึงอยู่นิ่งจริง */
-  :global(.workspace-main):has(> .tasksPage) { height:calc(100dvh - var(--topbar-h)); display:flex; flex-direction:column; overflow:hidden; }
-  :global(.workspace-main):has(> .tasksPage) > :not(.tasksPage) { flex:none; }
+  /* .tasksPage อยู่ใน .page-enter (กรอบจางเข้าของ template.tsx) · กรอบนั้นต้องส่งความสูงต่อให้ .tasksPage ด้วย */
+  :global(.workspace-main):has(> :global(.page-enter) > .tasksPage) { height:calc(100dvh - var(--topbar-h)); display:flex; flex-direction:column; overflow:hidden; }
+  :global(.workspace-main):has(> :global(.page-enter) > .tasksPage) > :not(:global(.page-enter)) { flex:none; }
+  :global(.page-enter):has(> .tasksPage) { flex:1; min-height:0; display:flex; flex-direction:column; }
   .tasksPage { flex:1; min-height:0; display:flex; flex-direction:column; }
   .tasksPage > .head { flex:none; }
   .tasksBody { flex:1; min-height:0; flex-wrap:nowrap; }

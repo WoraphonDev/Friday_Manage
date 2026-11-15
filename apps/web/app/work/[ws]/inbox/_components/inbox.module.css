@@ -1,7 +1,9 @@
 /* ทั้งหน้าสูงเท่าจอใต้แถบบนและติดอยู่กับที่ (banner ด้านบนเลื่อนพ้นไปได้) · เลื่อนเฉพาะคอลัมน์รายการ (ผู้ใช้ขอ 2026-11-14) */
 /* พื้นที่หลักสูงพอดีจอและไม่เลื่อน รวมแถบประกาศด้านบน (ทดลองใช้, ระงับบัญชี) ทั้งหน้าจึงอยู่นิ่งจริง */
-:global(.workspace-main):has(> .page) { height:calc(100dvh - var(--topbar-h)); display:flex; flex-direction:column; overflow:hidden; }
-:global(.workspace-main):has(> .page) > :not(.page) { flex:none; }
+/* .page อยู่ใน .page-enter (กรอบจางเข้าของ template.tsx) · กรอบนั้นต้องส่งความสูงต่อให้ .page ด้วย */
+:global(.workspace-main):has(> :global(.page-enter) > .page) { height:calc(100dvh - var(--topbar-h)); display:flex; flex-direction:column; overflow:hidden; }
+:global(.workspace-main):has(> :global(.page-enter) > .page) > :not(:global(.page-enter)) { flex:none; }
+:global(.page-enter):has(> .page) { flex:1; min-height:0; display:flex; flex-direction:column; }
 .page { flex:1; min-height:0; display:flex; flex-direction:column; }
 .head { flex:none; background:var(--card); padding:20px 24px 0; border-bottom:1px solid var(--border); }
 .headRow { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; }
@@ -54,7 +56,7 @@
 @media (min-width:761px) and (max-width:1100px) { .layout { grid-template-columns:minmax(300px, 2fr) minmax(0, 3fr); } }
 @media (max-width:760px) {
   /* M3: หัว Inbox + "อ่านทั้งหมด" เป็นลิงก์ · ชิป ทั้งหมด / มอบหมาย / Mentions */
-  :global(.workspace-main):has(> .page) { height:auto; display:block; overflow:visible; }
+  :global(.workspace-main):has(> :global(.page-enter) > .page), :global(.page-enter):has(> .page) { height:auto; display:block; overflow:visible; }
   .page { display:block; }
   .head { padding:16px 16px 0; }
   .headRow { align-items:center; flex-wrap:nowrap; }

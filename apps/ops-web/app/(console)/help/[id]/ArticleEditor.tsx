@@ -9,6 +9,7 @@ import { hasAny } from "@/components/access";
 import { Chip, Drawer, Empty, ErrorBlock, Modal, Notice, TableSkeleton } from "@/components/kit";
 import { Button, errorToast, InlineError, Input, Pill, Select, Textarea, useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { useMe } from "@/lib/query";
 import { useFmt } from "../../workspaces/_parts/format";
 import { Markdown } from "../_components/markdown";
@@ -30,6 +31,8 @@ const hhmm = (iso: string) => new Intl.DateTimeFormat("th-TH", { hour: "2-digit"
 export function ArticleEditor({ id }: { id: string }) {
   const t = useTranslations("help.editor");
   const tr = useTranslations("help.routes");
+  // การ์ดตัวเลือกแบบเลือกได้อันเดียว: กรอบม่วงของอันที่เลือกเลื่อนไปหาอันใหม่ (.radio-pill ใน ops.css)
+  const radioPill = useSlidingIndicator<HTMLFieldSetElement>("label");
   const fmt = useFmt();
   const toast = useToast();
   const router = useRouter();
@@ -215,7 +218,7 @@ export function ArticleEditor({ id }: { id: string }) {
                 </div>
               )}
               {preview ? (
-                <div className={styles.preview} aria-label={t("preview")}>
+                <div className={`${styles.preview} motion-in`} aria-label={t("preview")}>
                   <Markdown source={form.body} />
                 </div>
               ) : (
@@ -242,10 +245,10 @@ export function ArticleEditor({ id }: { id: string }) {
               </option>
             ))}
           </Select>
-          <fieldset className="stack-tight" style={{ border: 0, padding: 0, margin: 0 }}>
+          <fieldset ref={radioPill} className="stack-tight motion-pill radio-pill" style={{ border: 0, padding: 0, margin: 0 }}>
             <legend className="field-label">{t("visibility")}</legend>
             {(["public", "signed_in"] as Visibility[]).map((v) => (
-              <label key={v} className={`${styles.radioCard} ${form.visibility === v ? styles.radioOn : ""}`}>
+              <label key={v} className={`${styles.radioCard} ${form.visibility === v ? styles.radioOn : ""}`} data-state={form.visibility === v ? "active" : undefined}>
                 <input type="radio" name="visibility" value={v} checked={form.visibility === v} disabled={!canEdit} onChange={() => set("visibility", v)} />
                 <span>
                   <b>{v === "public" ? t("public") : t("signedIn")}</b>

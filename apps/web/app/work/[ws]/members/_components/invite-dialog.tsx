@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { Button, Dialog, Input, Select, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/lib/types";
 import { InviteLinks, type InviteLink, toInviteLinks } from "@/features/project-invite/project-invite-dialog";
@@ -38,6 +39,8 @@ export function InviteDialog({
   const base = `/w/${encodeURIComponent(ws)}`;
   const [emails, setEmails] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
+  // Role เลือกได้ทีละอัน กรอบม่วงเลื่อนตามตัวที่เลือก (ws.module.css)
+  const rolesRef = useSlidingIndicator<HTMLDivElement>(`.${local.opt}`);
   const [role, setRole] = useState<InviteRole>("member");
   const [projectKey, setProjectKey] = useState("");
   const [projectRole, setProjectRole] = useState<ProjectRole>("member");
@@ -119,7 +122,7 @@ export function InviteDialog({
           <span className={local.lb}>{t("emails")} <span aria-hidden="true">*</span></span>
           <div className={local.emailBox}>
             {emails.map((e) => (
-              <span key={e} className={cn(local.ec, !isEmail(e) && local.bad)} title={!isEmail(e) ? t("invalidEmail") : undefined}>
+              <span key={e} className={cn(local.ec, !isEmail(e) && local.bad, "motion-in")} title={!isEmail(e) ? t("invalidEmail") : undefined}>
                 {e}
                 <button type="button" aria-label={t("removeEmail", { email: e })} onClick={() => setEmails(emails.filter((x) => x !== e))}><X size={12} /></button>
               </span>
@@ -131,7 +134,7 @@ export function InviteDialog({
 
         <div className={styles.dialogBody} style={{ gap: 6 }}>
           <span className={local.lb}>{t("wsRole")}</span>
-          <div className={local.opts} role="group" aria-label={t("wsRole")}>
+          <div ref={rolesRef} className={cn(local.opts, "motion-pill")} role="group" aria-label={t("wsRole")}>
             {(["admin", "member", "guest"] as const).filter((r) => r !== "admin" || canInviteAdmin).map((r) => (
               <button key={r} type="button" className={local.opt} aria-pressed={role === r} onClick={() => setRole(r)}>
                 <span>{tr(r)}</span>
@@ -171,7 +174,7 @@ export function InviteDialog({
 
         <div className={local.link}>
           <span className={local.lb}>{t("linkTitle")}</span>
-          {link ? <code>{link}</code> : <span className={cn(styles.muted, styles.small)} style={{ flex: "1 1 200px" }}>{t(role === "guest" ? "linkGuest" : "linkMember")}</span>}
+          {link ? <code className="motion-in">{link}</code> : <span className={cn(styles.muted, styles.small)} style={{ flex: "1 1 200px" }}>{t(role === "guest" ? "linkGuest" : "linkMember")}</span>}
           <select aria-label={t("linkExpiry")} value={expires} onChange={(e) => { setExpires(Number(e.target.value) as 1 | 7 | 30); setLink(null); }}>
             <option value={7}>{t("expires7")}</option>
             <option value={1}>{t("expires1")}</option>

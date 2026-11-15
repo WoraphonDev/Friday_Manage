@@ -69,7 +69,7 @@ function RequestLink() {
 
   if (sent)
     return (
-      <CardLayout footer={<Help />}>
+      <CardLayout footer={<Help />} swapKey="sent">
         <Dots step={2} />
         <span className={cn(styles.icon, styles.iconGreen)}>
           <Mail size={28} aria-hidden="true" />
@@ -115,7 +115,7 @@ function RequestLink() {
     );
 
   return (
-    <CardLayout footer={<Help />}>
+    <CardLayout footer={<Help />} swapKey="request">
       <Dots step={1} />
       <span className={cn(styles.icon, styles.iconBlue)}>
         <LockKeyhole size={28} aria-hidden="true" />
@@ -167,7 +167,7 @@ function ResetPassword({ token }: { token: string }) {
 
   if (info.isPending)
     return (
-      <CardLayout footer={<Help />}>
+      <CardLayout footer={<Help />} swapKey="loading">
         <LoadingState />
       </CardLayout>
     );
@@ -177,7 +177,7 @@ function ResetPassword({ token }: { token: string }) {
     (error instanceof ApiError && error.code === "invalid_token");
   if (info.isError || linkInvalid)
     return (
-      <CardLayout footer={<Help />}>
+      <CardLayout footer={<Help />} swapKey="invalid">
         <span className={cn(styles.icon, styles.iconRed)}>
           <Unlink size={28} aria-hidden="true" />
         </span>
@@ -194,7 +194,7 @@ function ResetPassword({ token }: { token: string }) {
 
   if (done)
     return (
-      <CardLayout footer={<Help />}>
+      <CardLayout footer={<Help />} swapKey="done">
         <span className={cn(styles.icon, styles.iconGreen)}>
           <Check size={28} strokeWidth={2.5} aria-hidden="true" />
         </span>
@@ -224,7 +224,7 @@ function ResetPassword({ token }: { token: string }) {
   }
 
   return (
-    <CardLayout footer={<Help />}>
+    <CardLayout footer={<Help />} swapKey="form">
       <Dots step={3} />
       <Heading title={t("forgot.resetTitle")} subtitle={t("forgot.resetSubtitle", { email: info.data.email })} />
       <form className={styles.form} onSubmit={save} noValidate>

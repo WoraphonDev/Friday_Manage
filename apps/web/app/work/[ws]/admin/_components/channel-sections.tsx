@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Button, ConfirmDialog, Dialog, ErrorState, Input, LoadingState, Select, useToast } from "@/components/ui";
+import { Button, ConfirmDialog, CountUp, Dialog, ErrorState, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -187,7 +187,7 @@ function EmailCard({ ws }: { ws: string }) {
             <div>
               <b className={styles.lb}>{t("dns")}</b>
               {(["spf", "dkim", "dmarc"] as const).map((k) => (
-                <div key={k} className={styles.row}>
+                <div key={k} className={`${styles.row} motion-item`}>
                   <span style={{ width: 70 }}><b>{k.toUpperCase()}</b></span>
                   <span className={`${styles.grow} ${styles.muted}`}>{t(`dns_${k}`)}</span>
                   <span className={`${styles.pill} ${c.dns[k] ? styles.ok : k === "dmarc" ? styles.neu : styles.bad}`}>{c.dns[k] ? t("pass") : t("missing")}</span>
@@ -265,7 +265,7 @@ function WebhooksCard({ ws }: { ws: string }) {
       ) : hooks.data.items.length === 0 ? (
         <span className={styles.muted}>{t("empty")}</span>
       ) : (
-        <div>
+        <div className="motion-list">
           {hooks.data.items.map((h) => {
             const failing = h.consecutiveFailures > 0;
             return (
@@ -343,7 +343,7 @@ export function IntegrationsSection({ ws }: { ws: string }) {
     <>
       <Card title={t("title")} label={t("title")}>
         <span className={styles.muted}>{t("hint")}</span>
-        <div className={styles.row}>
+        <div className={`${styles.row} motion-item`}>
           <span className={styles.grow}>
             <b>{t("github")}</b>
             <div className={styles.muted}>
@@ -352,15 +352,15 @@ export function IntegrationsSection({ ws }: { ws: string }) {
           </span>
           {git.data && (git.data.items.length ? <span className={`${styles.pill} ${styles.ok}`}>{t("connected")}</span> : git.data.configured ? <Button onClick={() => void install()}>{t("connect")}</Button> : <span className={`${styles.pill} ${styles.neu}`}>{t("notConfigured")}</span>)}
         </div>
-        <div className={styles.row}>
+        <div className={`${styles.row} motion-item`}>
           <span className={styles.grow}><b>{t("gitlab")}</b><div className={styles.muted}>{t("gitlabHint")}</div></span>
           <span className={`${styles.pill} ${styles.neu}`}>{t("later")}</span>
         </div>
-        <div className={styles.row}>
+        <div className={`${styles.row} motion-item`}>
           <span className={styles.grow}><b>{t("hr")}</b><div className={styles.muted}>{t("hrHint")}</div></span>
           <span className={`${styles.pill} ${styles.neu}`}>{t("later")}</span>
         </div>
-        <div className={styles.row}>
+        <div className={`${styles.row} motion-item`}>
           <span className={styles.grow}><b>{t("channels")}</b><div className={styles.muted}>{t("channelsHint")}</div></span>
           <Link className="button button-secondary button-small" href={`${workPath(ws)}/admin/notify`}>{t("open")}</Link>
         </div>
@@ -406,7 +406,7 @@ function ApiTokensCard({ ws }: { ws: string }) {
       ) : active.length === 0 ? (
         <span className={styles.muted}>{t("empty")}</span>
       ) : (
-        <div>
+        <div className="motion-list">
           {active.map((x) => (
             <div key={x.id} className={styles.row}>
               <span className={styles.grow}>
@@ -459,14 +459,14 @@ export function BillingSection({ ws, data }: { ws: string; data: AdminOverview }
   const trial = data.plan.status === "trialing";
   return (
     <Card title={t("title")} actions={<Link className="button button-primary" href={`${workPath(ws)}/billing`}>{t("open")}</Link>}>
-      <div className={styles.kpis}>
+      <div className={`${styles.kpis} motion-list`}>
         <div className={styles.kp}>
           <span className={styles.muted}>{t("plan")}</span>
           <b>{data.plan.name}</b>
           <span className={`${styles.pill} ${trial ? styles.warn : styles.ok}`}>{trial ? t("trial", { date: data.plan.trialEndsAt ? formatDate(data.plan.trialEndsAt, me.yearFormat, true) : "—" }) : t(`status_${data.plan.status === "active" ? "active" : "other"}`)}</span>
         </div>
-        <div className={styles.kp}><span className={styles.muted}>{t("seats")}</span><b>{data.users.seatLimit === null ? data.users.active : `${data.users.active} / ${data.users.seatLimit}`}</b><span className={styles.muted}>{t("guestsFree")}</span></div>
-        <div className={styles.kp}><span className={styles.muted}>{t("storage")}</span><b>{formatBytes(data.storage.usedBytes)}</b><span className={styles.muted}>{data.storage.limitBytes === null ? "" : `/ ${formatBytes(data.storage.limitBytes)}`}</span></div>
+        <div className={styles.kp}><span className={styles.muted}>{t("seats")}</span><b><CountUp value={data.users.seatLimit === null ? data.users.active : `${data.users.active} / ${data.users.seatLimit}`} /></b><span className={styles.muted}>{t("guestsFree")}</span></div>
+        <div className={styles.kp}><span className={styles.muted}>{t("storage")}</span><b><CountUp value={formatBytes(data.storage.usedBytes)} /></b><span className={styles.muted}>{data.storage.limitBytes === null ? "" : `/ ${formatBytes(data.storage.limitBytes)}`}</span></div>
       </div>
       <span className={styles.muted}>{t("hint")}</span>
     </Card>

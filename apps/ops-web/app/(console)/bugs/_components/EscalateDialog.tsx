@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Modal, Notice, TableSkeleton } from "@/components/kit";
 import { Button, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import styles from "../bugs.module.css";
 import { IssueSearch } from "./IssuePicker";
 import { BRIDGE_KEY, type FmIssue, PRIORITIES, type Priority, type Settings, SEVERITIES, type Severity } from "./types";
@@ -18,6 +19,8 @@ export function EscalateDialog({ ticket, onClose }: { ticket: { id: string; numb
   const t = useTranslations("bugs.t3");
   const ts = useTranslations("bugs");
   const tc = useTranslations("common.dialog");
+  // การ์ดตัวเลือกแบบเลือกได้อันเดียว: กรอบม่วงของอันที่เลือกเลื่อนไปหาอันใหม่ (.radio-pill ใน ops.css)
+  const radioPill = useSlidingIndicator<HTMLFieldSetElement>("label");
   const toast = useToast();
   const cache = useQueryClient();
   const settings = useQuery({
@@ -108,10 +111,10 @@ export function EscalateDialog({ ticket, onClose }: { ticket: { id: string; numb
             <Notice tone="info">{t("legacy")}</Notice>
           ) : (
             <>
-              <fieldset className={styles.radios}>
+              <fieldset ref={radioPill} className={`${styles.radios} motion-pill radio-pill`}>
                 <legend className="sr-only">{t("mode")}</legend>
                 {(["create", "link"] as const).map((v) => (
-                  <label key={v} className={`${styles.radioCard} ${mode === v ? styles.radioOn : ""}`}>
+                  <label key={v} className={`${styles.radioCard} ${mode === v ? styles.radioOn : ""}`} data-state={mode === v ? "active" : undefined}>
                     <input type="radio" name="t3-mode" checked={mode === v} onChange={() => setMode(v)} />
                     <span>
                       <b>{v === "create" ? t("create") : t("link")}</b>

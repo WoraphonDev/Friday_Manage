@@ -134,7 +134,7 @@ export function ContactForm({ workspace, prefill = {}, onDone, onCancel, showMet
   if (sent) {
     const s = sla(sent.first);
     return (
-      <div className={styles.sent} role="status">
+      <div className={`${styles.sent} motion-in`} role="status">
         <span className={styles.sentIcon} aria-hidden="true">
           <Check size={18} />
         </span>
@@ -166,7 +166,7 @@ export function ContactForm({ workspace, prefill = {}, onDone, onCancel, showMet
         autoFocus
       />
       {!!suggest.data?.items.length && (
-        <div className={styles.suggest} aria-live="polite">
+        <div className={`${styles.suggest} motion-in`} aria-live="polite">
           <b>{t("contact.suggestions")}</b>
           {suggest.data.items.map((a) => (
             <Link key={a.id} href={`${base}/help/${a.slug}`} onClick={onCancel}>

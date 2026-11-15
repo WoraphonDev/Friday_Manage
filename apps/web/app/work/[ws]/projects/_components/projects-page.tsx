@@ -5,15 +5,19 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Folder, Plus } from "lucide-react";
-import { LoadingState } from "@/components/ui";
+import { LoadingState, MotionSwap } from "@/components/ui";
 import { MobileHeader } from "@/components/shell/mobile-header";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 import { formatDate } from "@/lib/format";
+import { useSlidingIndicator } from "@/lib/motion";
 import type { HomeData } from "../../my-tasks/_components/types";
 
 type Filter = "all" | "mine" | "risk";
+
+/** สีพื้นที่เลื่อนของ .m-seg ตรงกับปุ่มที่เลือก (การ์ดขาว มุม 10 มีเงา) */
+const SEG_PILL = { "--ind-bg": "var(--card)", "--ind-radius": "10px", "--ind-shadow": "var(--shadow-card)" } as React.CSSProperties;
 
 /**
  * รายการโปรเจกต์ (ต้นแบบ u.projects · ฐาน B): หัวใหญ่ · ตัวเลือกแบบแบ่งช่อง · การ์ดโปรเจกต์พร้อมความคืบหน้า · ปุ่มสร้างโปรเจกต์ลอย
@@ -26,6 +30,8 @@ export function ProjectsPage({ ws }: { ws: string }) {
   const { workspace, projects } = useWorkspace();
   const home = useQuery({ queryKey: ["home", ws], queryFn: () => api.get<HomeData>(`/w/${encodeURIComponent(ws)}/home`) });
   const [filter, setFilter] = useState<Filter>("all");
+  // ตัวเลือกแบบแบ่งช่อง: พื้นขาวเลื่อนตามช่องที่เลือก (หน้าตาเดียวกับ .m-seg > button ที่เลือกใน globals.css)
+  const segRef = useSlidingIndicator<HTMLDivElement>("button");
   const stats = new Map((home.data?.projects ?? []).map((p) => [p.key, p]));
   const risky = (key: string) => ["at_risk", "off_track"].includes(stats.get(key)?.health.level ?? "");
   const mine = (key: string) => (stats.get(key)?.myTasks ?? 0) > 0;
@@ -35,24 +41,26 @@ export function ProjectsPage({ ws }: { ws: string }) {
   return (
     <div className="m-page">
       <MobileHeader title={t("title")} subtitle={t("subtitle", { name: workspace.name, count: projects.length })} />
-      <div className="m-seg" role="group" aria-label={t("filterLabel")}>
+      <div ref={segRef} className="m-seg motion-pill" style={SEG_PILL} role="group" aria-label={t("filterLabel")}>
         {(["all", "mine", "risk"] as const).map((f) => (
           <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
             {t(`filters.${f}`)} <small>{counts[f]}</small>
           </button>
         ))}
       </div>
+      {/* เปลี่ยนตัวกรอง = รายการชุดใหม่ เคลื่อนเข้าแบบเดียวกับเปลี่ยนหน้า (ตอนเปิดหน้าครั้งแรกหน้าจางเข้าให้แล้ว) */}
+      <MotionSwap key={filter}>
       {home.isPending && projects.length === 0 ? (
         <LoadingState />
       ) : list.length === 0 ? (
         <div className="m-empty" style={{ marginTop: 12 }}>{t("empty")}</div>
       ) : (
-        <div className="m-cards" style={{ paddingTop: 12 }}>
+        <div className="m-cards motion-list" style={{ paddingTop: 12 }}>
           {list.map((p) => {
             const s = stats.get(p.key);
             const level = s?.health.level;
             return (
-              <Link key={p.key} className="m-card" href={`${base}/p/${encodeURIComponent(p.key)}`}>
+              <Link key={p.key} className="m-card motion-lift" href={`${base}/p/${encodeURIComponent(p.key)}`}>
                 <div className="m-card-top">
                   <span className="m-proj-icon" style={{ background: p.color ?? FALLBACK_PROJECT_COLOR }}>{p.key.slice(0, 2)}</span>
                   {(level === "at_risk" || level === "off_track") && (
@@ -77,6 +85,7 @@ export function ProjectsPage({ ws }: { ws: string }) {
           })}
         </div>
       )}
+      </MotionSwap>
       {workspace.role !== "guest" && (
         <Link className="m-fab" href={`${base}/new-project`}>
           <Plus size={22} aria-hidden="true" />{t("create")}

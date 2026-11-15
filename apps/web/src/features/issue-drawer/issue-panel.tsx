@@ -9,6 +9,7 @@ import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import { peopleForRole, type PickRole } from '@/lib/positions';
 import { useIsMobile } from '@/lib/use-mobile';
+import { useSlidingIndicator } from '@/lib/motion';
 import { TestRuns } from './test-runs';
 import { ActivityPanel } from './activity';
 import { Checklist, DependencyPanel } from './issue-parts';
@@ -31,6 +32,11 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const t = useTranslations('issue-drawer');
   const mobile = useIsMobile() && !!issue.parentKey && !scope.access.guestViewer;
   const [mobileTab, setMobileTab] = useState<'details' | 'tests' | 'commits' | 'comments'>('details');
+  // แท็บมือถือ: พื้นที่เลือกเลื่อนตาม · กดเปลี่ยนแท็บแล้วเนื้อหาค่อยเข้า (แท็บแรกที่เปิดมาพร้อม Drawer ไม่ต้องเคลื่อนซ้ำ)
+  const tabsRef = useSlidingIndicator<HTMLDivElement>('button');
+  const [tabSwitched, setTabSwitched] = useState(false);
+  const pickTab = (tab: typeof mobileTab) => { setMobileTab(tab); setTabSwitched(true); };
+  const tabMotion = mobile && tabSwitched ? 'motion-in' : undefined;
   const cache = useQueryClient(); const toast = useToast();
   const endpoint = issuePath(scope.ws, issue.key);
   const key = issueQuery(scope.ws, issue.key);
@@ -207,13 +213,13 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
     </div>
 
     <div className={styles.layout}><div className={styles.main}>
-      {mobile && <div className={styles.tabs} role="tablist" aria-label={t('mobileTabs.label')}>
+      {mobile && <div ref={tabsRef} className={`${styles.tabs} motion-pill`} role="tablist" aria-label={t('mobileTabs.label')}>
         {(['details', 'tests', 'commits', 'comments'] as const).map((tab) => <button key={tab} type="button" role="tab" id={`${issue.key}-tab-${tab}`} aria-selected={mobileTab === tab} tabIndex={mobileTab === tab ? 0 : -1} onKeyDown={(event) => {
           if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-          event.preventDefault(); const tabs = ['details', 'tests', 'commits', 'comments'] as const; const index = tabs.indexOf(tab); const next = tabs[event.key === 'Home' ? 0 : event.key === 'End' ? 3 : (index + (event.key === 'ArrowRight' ? 1 : 3)) % 4]; setMobileTab(next); document.getElementById(`${issue.key}-tab-${next}`)?.focus();
-        }} aria-controls={`${issue.key}-panel-${tab}`} onClick={() => setMobileTab(tab)}>{t(`mobileTabs.${tab}`)}</button>)}
+          event.preventDefault(); const tabs = ['details', 'tests', 'commits', 'comments'] as const; const index = tabs.indexOf(tab); const next = tabs[event.key === 'Home' ? 0 : event.key === 'End' ? 3 : (index + (event.key === 'ArrowRight' ? 1 : 3)) % 4]; pickTab(next); document.getElementById(`${issue.key}-tab-${next}`)?.focus();
+        }} aria-controls={`${issue.key}-panel-${tab}`} onClick={() => pickTab(tab)}>{t(`mobileTabs.${tab}`)}</button>)}
       </div>}
-      <div hidden={mobile && mobileTab !== 'details'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-details`} aria-labelledby={mobile ? `${issue.key}-tab-details` : undefined}>
+      <div hidden={mobile && mobileTab !== 'details'} className={tabMotion} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-details`} aria-labelledby={mobile ? `${issue.key}-tab-details` : undefined}>
       {(!isBug || issue.description) && <div className={styles.blk}>
         <h3>{t('description')}</h3>
         {/* ยังไม่มีคำอธิบาย: บรรทัดเดียวพร้อมปุ่มเพิ่ม แทนข้อความว่าง + ปุ่มแยกบรรทัด */}
@@ -237,7 +243,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       </div>}
       {!guest && !isBug && <div className={styles.blk}><Checklist scope={scope} issueKey={issue.key} /></div>}
       {!issue.parentKey && !isBug && <div className={styles.blk}>
-        <h3>{t('subtasks')} <span className="muted" style={{ fontWeight: 500 }}>{subDone}/{subtasks.length}</span><span className={styles.subBar}><span style={{ width: `${subtasks.length ? Math.round((subDone / subtasks.length) * 100) : 0}%` }} /></span><span className={styles.meta}>{t('subtaskProgressNote')}</span></h3>
+        <h3>{t('subtasks')} <span className="muted" style={{ fontWeight: 500 }}>{subDone}/{subtasks.length}</span><span className={styles.subBar}><span className="motion-bar" style={{ width: `${subtasks.length ? Math.round((subDone / subtasks.length) * 100) : 0}%` }} /></span><span className={styles.meta}>{t('subtaskProgressNote')}</span></h3>
         {subtasks.length === 0 && <p className="muted">{t('noSubtasks')}</p>}
         {subtasks.map((child) => <SubtaskRow key={child.key} scope={scope} child={child} canEdit={canEdit && child.canMove !== false} onChanged={refresh} pillTone={pillTone} />)}
         {canCreate && <QuickSubtask scope={scope} parent={issue} onCreated={refresh} onFullForm={() => scope.createSubtask(issue)} />}
@@ -245,9 +251,9 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       {!guest && <div className={styles.blk}><h3>{t('dependencies')}</h3><DependencyPanel scope={scope} issueKey={issue.key} /></div>}
       {!guest && <Attachments scope={scope} issue={issue} />}
       </div>
-      {!guest && <div hidden={mobile && mobileTab !== 'tests'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-tests`} aria-labelledby={mobile ? `${issue.key}-tab-tests` : undefined}><TestRuns scope={scope} issue={issue} /></div>}
-      {!guest && <div hidden={mobile && mobileTab !== 'commits'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-commits`} aria-labelledby={mobile ? `${issue.key}-tab-commits` : undefined}><Development scope={scope} issue={issue} /></div>}
-      <div hidden={mobile && mobileTab !== 'comments'} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-comments`} aria-labelledby={mobile ? `${issue.key}-tab-comments` : undefined}><div className={styles.blk} style={{ borderBottom: 0 }}><h3>{t('commentsTitle')}</h3><ActivityPanel scope={scope} issueKey={issue.key} showComposer={!mobile} /></div></div>
+      {!guest && <div hidden={mobile && mobileTab !== 'tests'} className={tabMotion} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-tests`} aria-labelledby={mobile ? `${issue.key}-tab-tests` : undefined}><TestRuns scope={scope} issue={issue} /></div>}
+      {!guest && <div hidden={mobile && mobileTab !== 'commits'} className={tabMotion} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-commits`} aria-labelledby={mobile ? `${issue.key}-tab-commits` : undefined}><Development scope={scope} issue={issue} /></div>}
+      <div hidden={mobile && mobileTab !== 'comments'} className={tabMotion} role={mobile ? 'tabpanel' : undefined} id={`${issue.key}-panel-comments`} aria-labelledby={mobile ? `${issue.key}-tab-comments` : undefined}><div className={styles.blk} style={{ borderBottom: 0 }}><h3>{t('commentsTitle')}</h3><ActivityPanel scope={scope} issueKey={issue.key} showComposer={!mobile} /></div></div>
     </div>
 
     <aside className={styles.sidebar} aria-label={t('properties')}>
@@ -261,7 +267,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
         <button type="button" className={styles.propsToggle} aria-expanded={false} onClick={() => setAllProps(true)}>{t('moreProperties')}</button>
       </div> : <>
 
-      <div className={`${styles.props}${allProps ? ` ${styles.propsAll}` : ''}`} id={`${issue.key}-props`}>
+      <div className={`${styles.props}${allProps ? ` ${styles.propsAll} motion-in` : ''}`} id={`${issue.key}-props`}>
         {/* จัดเป็นกลุ่ม คน / แผนงาน / จัดกลุ่ม · สถานะอยู่ที่ปุ่มบนหัวแล้วจึงไม่ซ้ำในแผงนี้ (ผู้ใช้ขอ 2026-11-07) */}
         {/* C2 / D2: ผู้รับผิดชอบ / แผนงาน / กลุ่มงาน · QA กับ Reviewer รวมเป็นช่องเดียว (ผู้ใช้ตัดสิน 2026-11-08) */}
         {!guest && <section className={styles.pgroup} aria-label={t('groupPeople')}>
@@ -296,7 +302,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
             </>}
             {canEdit && issue.planEnd && !scope.access.permissions.includes('issue.change_due_directly') && !pending && <><span /><span className={styles.dueCell}><Button size="small" variant="ghost" className={styles.dueLink} disabled={disabled} onClick={() => setDue('')}>{t('requestDue')}</Button></span></>}
           </div>
-          {show('progress') && <PropRow keep k="Progress"><div className={styles.progRow}><span className={styles.subBar} style={{ maxWidth: 'none' }}><span style={{ width: `${issue.progressPct ?? 0}%` }} /></span>{/* Task ที่มี Sub-task: API คำนวณให้และไม่รับค่าที่กรอก จึงแสดงอย่างเดียว */}{issue.progressFromSubtasks || subtasks.length ? <span title={t('subtaskProgressNote')}>{issue.progressPct ?? 0}% <span className={styles.meta}>{t('progressAuto')}</span></span> : <InlineText label={t('fields.progressPct')} type="number" min={0} max={100} value={issue.progressPct?.toString() ?? ''} enabled={canEdit} busy={disabled} onSave={(value) => patch({ progressPct: value ? Number(value) : null })} />}</div></PropRow>}</>}
+          {show('progress') && <PropRow keep k="Progress"><div className={styles.progRow}><span className={styles.subBar} style={{ maxWidth: 'none' }}><span className="motion-bar" style={{ width: `${issue.progressPct ?? 0}%` }} /></span>{/* Task ที่มี Sub-task: API คำนวณให้และไม่รับค่าที่กรอก จึงแสดงอย่างเดียว */}{issue.progressFromSubtasks || subtasks.length ? <span title={t('subtaskProgressNote')}>{issue.progressPct ?? 0}% <span className={styles.meta}>{t('progressAuto')}</span></span> : <InlineText label={t('fields.progressPct')} type="number" min={0} max={100} value={issue.progressPct?.toString() ?? ''} enabled={canEdit} busy={disabled} onSave={(value) => patch({ progressPct: value ? Number(value) : null })} />}</div></PropRow>}</>}
         </section>
         <section className={styles.pgroup} aria-label={t('groupPlace')}>
           <h4 className={styles.pgTitle}>{t('groupPlace')}</h4>

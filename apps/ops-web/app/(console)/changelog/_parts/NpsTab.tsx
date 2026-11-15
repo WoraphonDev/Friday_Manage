@@ -8,6 +8,7 @@ import { ExportDialog } from "@/components/dialogs";
 import { Chip, Empty, ErrorBlock, Notice, TableSkeleton } from "@/components/kit";
 import { Button, Pill } from "@/components/ui";
 import { api } from "@/lib/api";
+import { CountUp } from "@/components/count-up";
 import { planLabel, useFmt } from "../../workspaces/_parts/format";
 import styles from "../changelog.module.css";
 import { FollowUpDrawer } from "./FollowUpDrawer";
@@ -44,10 +45,12 @@ export function NpsTab({ range, seesComments, exporting, onExportingChange }: { 
         <section className={clsx("card", styles.npsCard)} aria-label={t("label")}>
           <span className="muted small">{t("label")}</span>
           <div className={styles.npsBig}>
-            <span className={styles.npsScore}>{signed(data.score)}</span>
+            <span className={styles.npsScore}>
+              <CountUp value={signed(data.score)} />
+            </span>
             {data.delta !== null && <Pill tone={npsTone(data.delta)}>{t("delta", { delta: signed(data.delta) })}</Pill>}
           </div>
-          <div className={styles.bar} role="img" aria-label={`${t("promoters")} ${pct(data.promotersPct)} · ${t("passives")} ${pct(data.passivesPct)} · ${t("detractors")} ${pct(data.detractorsPct)}`}>
+          <div className={clsx(styles.bar, "motion-bar")} role="img" aria-label={`${t("promoters")} ${pct(data.promotersPct)} · ${t("passives")} ${pct(data.passivesPct)} · ${t("detractors")} ${pct(data.detractorsPct)}`}>
             <span className={styles.barPro} style={{ width: `${data.promotersPct}%` }} />
             <span className={styles.barPas} style={{ width: `${data.passivesPct}%` }} />
             <span className={styles.barDet} style={{ width: `${data.detractorsPct}%` }} />

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Avatar, Badge, Button, Dialog, useToast } from "@/components/ui";
+import { Avatar, Badge, Button, CountUp, Dialog, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/query";
@@ -91,15 +91,15 @@ export function SummaryCard({ ws }: { ws: string }) {
         <div className={cn(styles.muted, styles.small, styles.lb)} style={{ marginBottom: 6 }}>{t("projects")}</div>
         {joined.length === 0 && <div className={cn(styles.muted, styles.small)}>{t("noProjects")}</div>}
         {joined.map((p) => (
-          <div className={styles.kv} key={p.id}>
+          <div className={cn(styles.kv, "motion-item")} key={p.id}>
             <span className={styles.projectName}><span className={styles.projectDot} style={{ background: p.color ?? FALLBACK_PROJECT_COLOR }} />{p.name}</span>
             {p.myRole && <Badge tone="blue">{tr(p.myRole as "admin")}</Badge>}
           </div>
         ))}
         {stats.data && (
           <div className={styles.stats}>
-            <div className={styles.stat}><div className={cn(styles.muted, styles.small)}>{t("openTasks")}</div><div className={styles.statValue}>{stats.data.counts.assigned}</div></div>
-            <div className={styles.stat}><div className={cn(styles.muted, styles.small)}>{t("overdueTasks")}</div><div className={styles.statValue}>{stats.data.groups.find((g) => g.key === "late")?.count ?? 0}</div></div>
+            <div className={styles.stat}><div className={cn(styles.muted, styles.small)}>{t("openTasks")}</div><div className={styles.statValue}><CountUp value={stats.data.counts.assigned} /></div></div>
+            <div className={styles.stat}><div className={cn(styles.muted, styles.small)}>{t("overdueTasks")}</div><div className={styles.statValue}><CountUp value={stats.data.groups.find((g) => g.key === "late")?.count ?? 0} /></div></div>
           </div>
         )}
       </div>

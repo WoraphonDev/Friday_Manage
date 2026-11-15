@@ -84,7 +84,8 @@ export function WorkloadHeatmap({ ws, projectKey, today, yearFormat, issueHref }
         })}
       </div>
     </div>}
-    {selected?.cell && selected.bucket && <div className={styles.weekPanel} role="region" aria-label={t("heat.panel", { name: selected.person.person.displayName, range: formatDateRange(selected.bucket.start, selected.bucket.end, yearFormat) })}>
+    {/* key ตามช่องที่เลือก: เลือกช่องใหม่ แผงเคลื่อนเข้าใหม่ */}
+    {selected?.cell && selected.bucket && <div key={`${picked!.person}:${picked!.week}`} className={`${styles.weekPanel} motion-in`} role="region" aria-label={t("heat.panel", { name: selected.person.person.displayName, range: formatDateRange(selected.bucket.start, selected.bucket.end, yearFormat) })}>
       <div className={styles.weekPanelHead}>
         <b>{t("heat.panel", { name: selected.person.person.displayName, range: formatDateRange(selected.bucket.start, selected.bucket.end, yearFormat) })}</b>
         <span className={styles.muted}>{t("heat.panelTotal", { value: round1(selected.cell.value), capacity: round1(selected.cell.capacity ?? 0) })}</span>

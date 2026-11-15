@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
-import { Button, EmptyState, useToast } from "@/components/ui";
+import { Button, CountUp, EmptyState, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/query";
@@ -37,20 +37,20 @@ export function OverviewSection({ ws, data }: { ws: string; data: AdminOverview 
   const last = data.weeklyActiveUsers.at(-1)?.users ?? 0;
   return (
     <>
-      <div className={styles.kpis}>
+      <div className={`${styles.kpis} motion-list`}>
         <div className={styles.kp}>
           <span className={styles.muted}>{t("users")}</span>
-          <b>{data.users.active} {data.users.seatLimit === null ? <small>{t("noLimit")}</small> : <small>{t("seats", { n: data.users.seatLimit })}</small>}</b>
+          <b><CountUp value={data.users.active} /> {data.users.seatLimit === null ? <small>{t("noLimit")}</small> : <small>{t("seats", { n: data.users.seatLimit })}</small>}</b>
           {data.users.seatLimit !== null && <Meter value={data.users.active} max={data.users.seatLimit} />}
         </div>
-        <div className={styles.kp}><span className={styles.muted}>{t("projects")}</span><b>{data.projects.active}</b><span className={`${styles.muted} ${styles.small}`}>{t("archived", { n: data.projects.archived })}</span></div>
+        <div className={styles.kp}><span className={styles.muted}>{t("projects")}</span><b><CountUp value={data.projects.active} /></b><span className={`${styles.muted} ${styles.small}`}>{t("archived", { n: data.projects.archived })}</span></div>
         <div className={styles.kp}>
           <span className={styles.muted}>{t("storage")}</span>
-          <b>{formatBytes(data.storage.usedBytes)} <small>{data.storage.limitBytes === null ? t("noLimit") : `/ ${formatBytes(data.storage.limitBytes)}`}</small></b>
+          <b><CountUp value={formatBytes(data.storage.usedBytes)} /> <small>{data.storage.limitBytes === null ? t("noLimit") : `/ ${formatBytes(data.storage.limitBytes)}`}</small></b>
           {data.storage.limitBytes !== null && <Meter value={data.storage.usedBytes} max={data.storage.limitBytes} />}
         </div>
-        <div className={styles.kp}><span className={styles.muted}>{t("active7d")}</span><b>{t("people", { n: data.users.activeLast7Days })}</b><span className={`${styles.muted} ${styles.small}`}>{t("ofUsers", { pct })}</span></div>
-        <div className={styles.kp}><span className={styles.muted}>{t("issues")}</span><b>{num.number(data.issues.total)}</b><span className={`${styles.muted} ${styles.small}`}>{t("open", { n: num.number(data.issues.open) })}</span></div>
+        <div className={styles.kp}><span className={styles.muted}>{t("active7d")}</span><b><CountUp value={t("people", { n: data.users.activeLast7Days })} /></b><span className={`${styles.muted} ${styles.small}`}>{t("ofUsers", { pct })}</span></div>
+        <div className={styles.kp}><span className={styles.muted}>{t("issues")}</span><b><CountUp value={num.number(data.issues.total)} /></b><span className={`${styles.muted} ${styles.small}`}>{t("open", { n: num.number(data.issues.open) })}</span></div>
       </div>
       {/* Canvas: เรื่องที่ต้องทำกับกราฟผู้ใช้อยู่แถวเดียวกัน */}
       <div className={styles.split}>
@@ -59,7 +59,7 @@ export function OverviewSection({ ws, data }: { ws: string; data: AdminOverview 
           data.actions.map((a) => {
             const target = ACTION_TARGET[a.code] ?? { section: "overview", tone: "neu" };
             return (
-              <div key={a.code} className={styles.alert}>
+              <div key={a.code} className={`${styles.alert} motion-item`}>
                 <span className={`${styles.pill} ${styles[target.tone]}`}>{t(`action.${a.code}`)}</span>
                 <span className={styles.grow}>{a.message}</span>
                 <Link className="button button-secondary button-small" href={target.section === "members" ? `/work/${encodeURIComponent(ws)}/members` : `/work/${encodeURIComponent(ws)}/admin/${target.section}`}>{t("view")}</Link>
@@ -77,7 +77,7 @@ export function OverviewSection({ ws, data }: { ws: string; data: AdminOverview 
               {data.weeklyActiveUsers.map((w) => (
                 <div key={w.week}>
                   <b>{w.users}</b>
-                  <span style={{ height: `${(w.users / max) * 80}%` }} />
+                  <span className="motion-bar-v" style={{ height: `${(w.users / max) * 80}%` }} />
                   {formatDate(w.week, me.yearFormat)}
                 </div>
               ))}
@@ -117,7 +117,7 @@ export function ProjectsSection({ ws, data }: { ws: string; data: AdminOverview 
       {data.projectList.length === 0 ? (
         <EmptyState title={t("empty")} />
       ) : (
-        <div style={{ margin: "-16px -18px" }}>
+        <div className="motion-list" style={{ margin: "-16px -18px" }}>
           {data.projectList.map((p) => {
             // ไม่อยู่ในรายการโปรเจกต์ของฉัน (เช่น Archive แล้ว) = เปิดดูได้แต่ไม่มีปุ่มเข้าร่วม
             const isMember = joined.get(p.key) ?? true;

@@ -35,6 +35,8 @@ export function useSlidingIndicator<T extends HTMLElement>(itemSelector: string)
     if (!box || typeof ResizeObserver === "undefined") return;
     let frame = 0;
     let shown = false;
+    let lastActive: Element | null = null;
+    let movingTimer = 0;
     const activeSelector = ACTIVE_STATES.map((state) => `${itemSelector}${state}`).join(", ");
     const measure = () => {
       frame = 0;
@@ -47,10 +49,18 @@ export function useSlidingIndicator<T extends HTMLElement>(itemSelector: string)
       }
       const outer = box.getBoundingClientRect();
       const rect = active.getBoundingClientRect();
-      box.style.setProperty("--ind-x", `${rect.left - outer.left + box.scrollLeft}px`);
-      box.style.setProperty("--ind-y", `${rect.top - outer.top + box.scrollTop}px`);
+      // ::before / ::after วางจากขอบในของกรอบ (ถัดจาก border) จึงหักความหนา border ออก (clientLeft / clientTop)
+      box.style.setProperty("--ind-x", `${rect.left - outer.left - box.clientLeft + box.scrollLeft}px`);
+      box.style.setProperty("--ind-y", `${rect.top - outer.top - box.clientTop + box.scrollTop}px`);
       box.style.setProperty("--ind-w", `${rect.width}px`);
       box.style.setProperty("--ind-h", `${rect.height}px`);
+      // เลือกรายการใหม่: บอก CSS ว่ากำลังเลื่อน (data-moving) ให้พื้นทึบของรายการอื่นจางลงชั่วคราว แถบที่เลื่อนจะไม่ถูกบังระหว่างทาง
+      if (shown && lastActive && lastActive !== active && box.getAttribute("data-indicator") === "on") {
+        box.setAttribute("data-moving", "");
+        clearTimeout(movingTimer);
+        movingTimer = window.setTimeout(() => box.removeAttribute("data-moving"), motionMs("--motion-dur", box));
+      }
+      lastActive = active;
       if (shown) return;
       shown = true;
       box.setAttribute("data-indicator", "jump");
@@ -72,8 +82,15 @@ export function useSlidingIndicator<T extends HTMLElement>(itemSelector: string)
       schedule();
     });
     mutation.observe(box, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-current", "data-state", "aria-pressed", "aria-selected", "aria-checked"] });
+    // กล่องที่อยู่ใน Dialog / หน้าที่กำลังเลื่อนเข้า วัดครั้งแรกระหว่างกรอบยังย่อหรือเลื่อนอยู่ · ResizeObserver ไม่เห็น scale / translate จึงวัดใหม่เมื่อ animation ของกรอบที่ครอบอยู่จบ
+    const settled = (e: Event) => {
+      if (e.target instanceof Node && e.target !== box && e.target.contains(box)) schedule();
+    };
+    window.addEventListener("animationend", settled, true);
     measure();
     return () => {
+      window.removeEventListener("animationend", settled, true);
+      clearTimeout(movingTimer);
       cancelAnimationFrame(frame);
       resize.disconnect();
       mutation.disconnect();

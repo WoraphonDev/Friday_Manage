@@ -86,7 +86,7 @@ export function TypesSection({ ws, projectKey }: { ws: string; projectKey: strin
       <SectionHead title={t("title")} description={t("description")} />
       <div className={styles.sb}>
         {types.data.items.map((type) => (
-          <div key={type.id} className={styles.typeRow}>
+          <div key={type.id} className={`${styles.typeRow} motion-item`}>
             <span className={styles.ty} style={{ background: type.color ?? "var(--muted)" }} aria-hidden="true" />
             <div>
               <b>{type.name}</b> <span className={styles.muted}>· {t("workflowOf", { name: type.workflow.name })}</span>
@@ -299,7 +299,7 @@ export function ModulesSection({ ws, projectKey, members }: { ws: string; projec
         {!items.length && <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} />}
         <div className={styles.list}>
           {items.map((m, i) => (
-            <div key={`${m.id}:${m.name}:${m.owner?.id ?? ""}`} className={styles.modRow} data-testid={`module-${m.name}`}>
+            <div key={`${m.id}:${m.name}:${m.owner?.id ?? ""}`} className={`${styles.modRow} motion-item`} data-testid={`module-${m.name}`}>
               <span className={styles.order}>
                 <button type="button" className={styles.icon} disabled={i === 0} aria-label={t("moveUp", { name: m.name })} onClick={() => void run(() => api.post(`${base}/modules/reorder`, { ids: move(items, i, -1).map((x) => x.id) }))}>↑</button>
                 <button type="button" className={styles.icon} disabled={i === items.length - 1} aria-label={t("moveDown", { name: m.name })} onClick={() => void run(() => api.post(`${base}/modules/reorder`, { ids: move(items, i, 1).map((x) => x.id) }))}>↓</button>

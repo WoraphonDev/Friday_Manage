@@ -62,3 +62,10 @@
 @media (max-width: 760px) {
   .page { padding: 8px 12px 24px; gap: 12px; }
 }
+
+/* ชิปเหตุการณ์ (.motion-pill · useSlidingIndicator): พื้นที่เลื่อนหน้าตาเดียวกับชิปที่เลือก (มือถือเป็นม่วงอ่อน)
+   ชิปอยู่บนพื้นหน้า (ไม่ใช่พื้นการ์ด) ชิปที่ไม่ได้เลือกจึงคงพื้นขาวไว้ แถบเลื่อนผ่านด้านหลัง */
+.chips { --ind-bg:var(--contrast-bg); --ind-border:1px solid var(--contrast-bg); --ind-radius:999px; }
+@media (max-width: 760px) {
+  .chips { --ind-bg:var(--primary-soft); --ind-border:1px solid var(--primary-border); --ind-radius:22px; }
+}

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Modal } from "@/components/kit";
 import { Button, InlineError, Input, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import styles from "../bugs.module.css";
 import type { LinkStatus } from "./types";
 
@@ -15,6 +16,8 @@ type Action = "link_fixed" | "workaround" | "return";
 export function ResolveDialog({ link, onClose }: { link: LinkStatus & { id: string }; onClose: () => void }) {
   const t = useTranslations("bugs.t10");
   const tc = useTranslations("common.dialog");
+  // การ์ดตัวเลือกแบบเลือกได้อันเดียว: กรอบม่วงของอันที่เลือกเลื่อนไปหาอันใหม่ (.radio-pill ใน ops.css)
+  const radioPill = useSlidingIndicator<HTMLFieldSetElement>("label");
   const toast = useToast();
   const cache = useQueryClient();
   const [action, setAction] = useState<Action>(link.duplicateOfKey ? "link_fixed" : "workaround");
@@ -63,9 +66,9 @@ export function ResolveDialog({ link, onClose }: { link: LinkStatus & { id: stri
       description={t("desc", { status: link.statusName ?? "—" })}
     >
       <form className="dialog-body" onSubmit={(e) => (e.preventDefault(), ok && m.mutate())}>
-        <fieldset className={styles.radios}>
+        <fieldset ref={radioPill} className={`${styles.radios} motion-pill radio-pill`}>
           {options.map((o) => (
-            <label key={o.v} className={`${styles.radioCard} ${action === o.v ? styles.radioOn : ""}`}>
+            <label key={o.v} className={`${styles.radioCard} ${action === o.v ? styles.radioOn : ""}`} data-state={action === o.v ? "active" : undefined}>
               <input type="radio" name="t10" checked={action === o.v} onChange={() => setAction(o.v)} />
               <span>
                 <b>{o.label}</b>

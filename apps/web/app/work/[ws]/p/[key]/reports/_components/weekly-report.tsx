@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Button, ErrorState, Forbidden, LoadingState, Select, useToast } from "@/components/ui";
+import { Button, CountUp, ErrorState, Forbidden, LoadingState, MotionSwap, Select, useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, formatDateRange, today as todayIso, type YearFormat } from "@/lib/format";
 import { addDays, projectBase, projectEndpoint, STATUS_TONE, weekStart, type ReportSchedule, type WeeklyReport } from "../../dashboard/_components/types";
@@ -71,12 +71,13 @@ export function WeeklyReportView({ ws, projectKey, yearFormat, issueHref, canSen
     </div>
     {report.error ? <ErrorState error={report.error} retry={() => void report.refetch()} />
       : !data ? <LoadingState />
-        : editing ? <div className={styles.card}>
+        // เปลี่ยนรอบรายงาน หรือสลับแก้ไข ↔ เอกสาร: เคลื่อนเข้าใหม่ (ข้อความที่แก้อยู่ใน draft ของหน้านี้ ไม่หายตอนสลับ)
+        : editing ? <MotionSwap key={`${week}:edit`}><div className={styles.card}>
           <label className={styles.editLabel} htmlFor="weekly-text">{t("weekly.editLabel")}</label>
           <textarea id="weekly-text" className={styles.editor} value={text} onChange={(event) => setDraft(event.target.value)} rows={18} />
           <div className={styles.editFoot}><Button size="small" variant="ghost" onClick={() => setDraft(data.text)}>{t("weekly.resetText")}</Button></div>
-        </div>
-          : <Document report={data} yearFormat={yearFormat} issueHref={issueHref} schedule={sched} settingsHref={`${projectBase(ws, projectKey)}/settings/notify`} />}
+        </div></MotionSwap>
+          : <MotionSwap key={`${week}:doc`}><Document report={data} yearFormat={yearFormat} issueHref={issueHref} schedule={sched} settingsHref={`${projectBase(ws, projectKey)}/settings/notify`} /></MotionSwap>}
   </>;
 }
 
@@ -90,11 +91,11 @@ function Document({ report: r, yearFormat, issueHref, schedule, settingsHref }: 
       <div className={styles.muted}>{r.week.draft ? t("weekly.metaDraft", { date: formatDate(r.week.asOf, yearFormat) }) : t("weekly.metaFinal", { date: formatDate(r.week.end, yearFormat) })}</div>
       <h2>{t("weekly.heading", { project: r.project.name, range: formatDateRange(r.week.start, addDays(r.week.start, 4), yearFormat) })}</h2>
     </div>
-    <dl className={styles.stats}>
+    <dl className={`${styles.stats} motion-list`}>
       <div><dt>{t("weekly.status")}</dt><dd style={{ color: tone.fg }}>{t(`status.${r.status}`)}</dd></div>
-      <div><dt>{t("weekly.doneTotal")}</dt><dd>{t("weekly.doneTotalValue", { done: r.totals.doneCount, total: r.totals.taskCount })}</dd></div>
-      <div><dt>{t("weekly.mdUsed")}</dt><dd>{r.totals.usedMd} / {r.totals.totalMd}</dd></div>
-      <div><dt>{t("weekly.late")}</dt><dd style={{ color: r.totals.overdue ? "var(--danger-text)" : undefined }}>{r.totals.overdue}</dd></div>
+      <div><dt>{t("weekly.doneTotal")}</dt><dd><CountUp value={t("weekly.doneTotalValue", { done: r.totals.doneCount, total: r.totals.taskCount })} /></dd></div>
+      <div><dt>{t("weekly.mdUsed")}</dt><dd><CountUp value={`${r.totals.usedMd} / ${r.totals.totalMd}`} /></dd></div>
+      <div><dt>{t("weekly.late")}</dt><dd style={{ color: r.totals.overdue ? "var(--danger-text)" : undefined }}><CountUp value={r.totals.overdue} /></dd></div>
     </dl>
 
     <div>

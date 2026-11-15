@@ -117,3 +117,14 @@ textarea.in { padding:8px 10px; min-height:64px; }
   .card { border-radius: 16px; box-shadow: var(--shadow-card); }
   .kp { border-radius: 16px; box-shadow: var(--shadow-card); }
 }
+
+/* แถบเลือกที่เลื่อนได้ (.motion-pill · useSlidingIndicator) หน้าตาเดียวกับตัวที่เลือกเดิม
+   ระหว่างเลื่อนตัวที่ไม่ได้เลือกโปร่ง (อยู่บนพื้นการ์ดสีเดียวกัน) แถบจึงไม่หายไปหลังปุ่มขาว */
+.opts { --ind-bg:var(--hover); --ind-border:1px solid var(--primary); --ind-shadow:0 0 0 1px var(--primary); --ind-radius:10px; }
+.opts[data-indicator] .opt { background:transparent; }
+/* ชิปที่เลือกได้ทีละอัน (หมวด / ช่วงเวลาใน Audit) · ชิปเลือกหลายอัน (วันทำงาน) ไม่ใช้ */
+.chipOne { --ind-bg:var(--contrast-bg); --ind-border:1px solid var(--contrast-bg); --ind-radius:999px; }
+.chipOne[data-indicator] .chip { background:transparent; }
+@media (max-width: 760px) {
+  .chipOne { --ind-bg:var(--primary-soft); --ind-border:1px solid var(--primary-border); --ind-radius:22px; }
+}

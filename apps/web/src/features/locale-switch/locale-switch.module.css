@@ -14,3 +14,14 @@
   .seg button + button { border-left: 0; }
   .seg button[aria-pressed="true"] { background: var(--card); color: var(--foreground); box-shadow: var(--shadow-card); }
 }
+
+/* sliding: พื้นที่เลื่อน (.motion-pill) หน้าตาเดียวกับปุ่มที่เลือก · กล่องตัดมุมเอง (overflow:hidden) จึงไม่ต้องมีมุมโค้ง
+   ระหว่างเลื่อนปุ่มอื่นโปร่ง (กล่องมีพื้นขาวอยู่แล้ว)
+   global ล้างสีเส้นของปุ่มที่เลือก จึงคืนเส้นคั่นด้านซ้ายให้ (ซ้ำ class เพื่อชนะ) */
+.sliding { --ind-bg:var(--contrast-bg); --ind-radius:0; }
+.sliding[data-indicator] button:not(:hover) { background:transparent; }
+.seg.seg.sliding[data-indicator] button + button[aria-pressed="true"] { border-left-color:var(--input); }
+@media (max-width: 760px) {
+  .sliding { --ind-bg:var(--card); --ind-radius:9px; --ind-shadow:var(--shadow-card); }
+  .sliding::before { margin:0; }
+}

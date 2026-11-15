@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Button, ErrorState, Forbidden, LoadingState, Select } from "@/components/ui";
+import { Button, CountUp, ErrorState, Forbidden, LoadingState, Select } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import type { YearFormat } from "@/lib/format";
 import { projectEndpoint, type TraceabilityResponse, type TraceResult } from "../../dashboard/_components/types";
@@ -75,11 +75,11 @@ export function Traceability({ ws, projectKey, issueHref }: Props) {
         {RESULTS.map((value) => <option key={value} value={value}>{t(`trace.results.${value}`)}</option>)}
       </Select>
     </div>
-    <div className={styles.kpis}>
-      <div className={styles.card} role="group" aria-label={t("trace.kpiFr")}><span className={styles.kpiLabel}>{t("trace.kpiFr")}</span><b>{summary.requirements.total}</b></div>
-      <div className={styles.card} role="group" aria-label={t("trace.kpiScreens")}><span className={styles.kpiLabel}>{t("trace.kpiScreens")}</span><b>{summary.screens.total}</b></div>
-      <div className={styles.card} role="group" aria-label={t("trace.kpiNoFr")}><span className={styles.kpiLabel}>{t("trace.kpiNoFr")}</span><b style={{ color: summary.issuesWithoutRequirement.count ? "var(--warning-text)" : "var(--success-text)" }}>{summary.issuesWithoutRequirement.count}</b></div>
-      <div className={styles.card} role="group" aria-label={t("trace.kpiDone")}><span className={styles.kpiLabel}>{t("trace.kpiDone")}</span><b>{donePct}%</b></div>
+    <div className={`${styles.kpis} motion-list`}>
+      <div className={styles.card} role="group" aria-label={t("trace.kpiFr")}><span className={styles.kpiLabel}>{t("trace.kpiFr")}</span><b><CountUp value={summary.requirements.total} /></b></div>
+      <div className={styles.card} role="group" aria-label={t("trace.kpiScreens")}><span className={styles.kpiLabel}>{t("trace.kpiScreens")}</span><b><CountUp value={summary.screens.total} /></b></div>
+      <div className={styles.card} role="group" aria-label={t("trace.kpiNoFr")}><span className={styles.kpiLabel}>{t("trace.kpiNoFr")}</span><b style={{ color: summary.issuesWithoutRequirement.count ? "var(--warning-text)" : "var(--success-text)" }}><CountUp value={summary.issuesWithoutRequirement.count} /></b></div>
+      <div className={styles.card} role="group" aria-label={t("trace.kpiDone")}><span className={styles.kpiLabel}>{t("trace.kpiDone")}</span><b><CountUp value={`${donePct}%`} /></b></div>
     </div>
     <div className={`${styles.card} ${styles.tableScroll}`}>
       <table className={styles.table} style={{ minWidth: 760 }}>
@@ -95,7 +95,7 @@ export function Traceability({ ws, projectKey, issueHref }: Props) {
               <td>{r.issues.length ? <>{r.issues.length} · {keyLinks(keys)}</> : "0"}</td>
               <td className={styles.muted}>{screensOf(new Set(keys)).join(", ") || "—"}</td>
               <td><span className={styles.pill} style={{ background: tone.bg, color: tone.fg }}>{t(`trace.results.${r.result}`)}</span></td>
-              <td><div className={styles.cov}><div className={styles.covBar} role="meter" aria-label={t("trace.progressOf", { code: r.code })} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}><span style={{ width: `${pct}%` }} /></div><span className={styles.small}>{done} / {r.issues.length}</span></div></td>
+              <td><div className={styles.cov}><div className={styles.covBar} role="meter" aria-label={t("trace.progressOf", { code: r.code })} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}><span className="motion-bar" style={{ width: `${pct}%` }} /></div><span className={styles.small}>{done} / {r.issues.length}</span></div></td>
             </tr>;
           })}
           {!requirements.length && !noRequirements && <tr><td colSpan={5} className={styles.muted}>{t("trace.filteredEmpty")}</td></tr>}

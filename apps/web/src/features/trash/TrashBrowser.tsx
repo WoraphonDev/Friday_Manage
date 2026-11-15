@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Search } from "lucide-react";
-import { Button, EmptyState, ErrorState, Forbidden, LoadingState, Select, useToast } from "@/components/ui";
+import { Button, EmptyState, ErrorState, Forbidden, LoadingState, MotionSwap, Select, useToast } from "@/components/ui";
+import { useSlidingIndicator } from "@/lib/motion";
 import { ApiError } from "@/lib/api";
 import { queryKeys } from "@/lib/query";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,10 @@ export function TrashBrowser({ ws, projectKey, heading }: TrashScope & { heading
   const [restoring, setRestoring] = useState<TrashProject | null>(null);
   const [purging, setPurging] = useState<TrashItem[] | null>(null);
   const [busy, setBusy] = useState(false);
+  // แท็บชนิด (งาน / ไฟล์ / โปรเจกต์): พื้นขาวเลื่อนตามแท็บที่เลือก
+  const segRef = useSlidingIndicator<HTMLDivElement>("button");
+  // รายการเคลื่อนเข้าเมื่อกดเปลี่ยนแท็บเท่านั้น · ตอนเปิดครั้งแรกกรอบนอก (หน้า / หัวข้อ Admin) เคลื่อนให้แล้ว ไม่ซ้อนอีกชั้น
+  const [switched, setSwitched] = useState(false);
 
   // ค้นหาหลังหยุดพิมพ์ 250 ms
   useEffect(() => {
@@ -146,9 +151,9 @@ export function TrashBrowser({ ws, projectKey, heading }: TrashScope & { heading
     <div className={styles.wrap}>
       {heading?.(first)}
       <div className={styles.toolbar}>
-        <div className={styles.seg} role="tablist" aria-label={t("tabsLabel")}>
+        <div ref={segRef} className={cn(styles.seg, "motion-pill")} role="tablist" aria-label={t("tabsLabel")}>
           {types.map((k) => (
-            <button key={k} type="button" role="tab" aria-selected={type === k} onClick={() => setFilters({ ...EMPTY, type: k })}>
+            <button key={k} type="button" role="tab" aria-selected={type === k} onClick={() => { setFilters({ ...EMPTY, type: k }); setSwitched(true); }}>
               {t(`tab.${k}`)} {first?.counts[k] ?? ""}
             </button>
           ))}
@@ -182,7 +187,7 @@ export function TrashBrowser({ ws, projectKey, heading }: TrashScope & { heading
       </div>
 
       {chosen.length > 0 && (
-        <div className={styles.selbar} role="region" aria-label={type === "issue" ? t("selectedIssues", { n: chosen.length }) : t("selected", { n: chosen.length })}>
+        <div className={cn(styles.selbar, "motion-in")} role="region" aria-label={type === "issue" ? t("selectedIssues", { n: chosen.length }) : t("selected", { n: chosen.length })}>
           <b>{type === "issue" ? t("selectedIssues", { n: chosen.length }) : t("selected", { n: chosen.length })}</b>
           {subtasks > 0 && <span className={styles.sub}>{t("selectedSubtasks", { n: subtasks })}</span>}
           <span className={styles.grow} />
@@ -202,6 +207,8 @@ export function TrashBrowser({ ws, projectKey, heading }: TrashScope & { heading
         </div>
       )}
 
+      {/* เปลี่ยนแท็บชนิด = รายการชุดใหม่ เคลื่อนเข้าแบบเดียวกับเปลี่ยนหน้า · className เดิม (flex เว้น 14) ให้ระยะห่างเท่าเดิม */}
+      <TypeSwap swapKey={switched ? type : null}>
       {query.isPending ? (
         <LoadingState />
       ) : query.error ? (
@@ -254,7 +261,7 @@ export function TrashBrowser({ ws, projectKey, heading }: TrashScope & { heading
               </div>
             ))}
           </div>
-          <div className={styles.cards}>
+          <div className={cn(styles.cards, "motion-list")}>
             {items.map((i) => (
               <article key={i.id} className={styles.card}>
                 <div className={styles.cardTop}>
@@ -294,6 +301,7 @@ export function TrashBrowser({ ws, projectKey, heading }: TrashScope & { heading
           )}
         </>
       )}
+      </TypeSwap>
 
       {restoring && (
         <RestoreProjectDialog
@@ -324,6 +332,11 @@ export function TrashBrowser({ ws, projectKey, heading }: TrashScope & { heading
       )}
     </div>
   );
+}
+
+/** กรอบรายการ: หลังกดเปลี่ยนแท็บเป็น MotionSwap (ผูก key กับชนิด) · ก่อนนั้นเป็น div หน้าตาเดียวกัน */
+function TypeSwap({ swapKey, children }: { swapKey: TrashType | null; children: React.ReactNode }) {
+  return swapKey ? <MotionSwap key={swapKey} className={styles.wrap}>{children}</MotionSwap> : <div className={styles.wrap}>{children}</div>;
 }
 
 const nameOf = (i: TrashItem) => (i.type === "file" ? i.name : i.type === "issue" ? `${i.key} ${i.title}` : `${i.key} · ${i.name}`);

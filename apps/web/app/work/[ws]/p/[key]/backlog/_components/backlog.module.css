@@ -4,6 +4,8 @@
 .filters :global(.select) { max-width:240px; }
 .chip { border-radius:999px; min-height:32px; font-size:12px; padding:0 12px; white-space:nowrap; }
 .selected,.selected:hover { background:var(--contrast-bg); color:var(--contrast-ink); border-color:var(--contrast-bg); }
+/* พื้นที่เลื่อนตามปุ่มที่เลือก (motion-pill) หน้าตาเดียวกับ .selected */
+.typeGroup { --ind-bg:var(--contrast-bg); --ind-border:1px solid var(--contrast-bg); --ind-radius:999px; }
 .card { background:var(--card); border:1px solid var(--border); border-radius:12px; min-width:0; }
 .head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 16px; border-bottom:1px solid var(--border); }
 .head h2 { margin:0; font-size:15px; font-weight:700; }
@@ -34,7 +36,7 @@
 .capacity { display:flex; flex-direction:column; gap:6px; }
 .capacityHead { display:flex; justify-content:space-between; gap:8px; font-size:12px; }
 .capBar { height:10px; background:var(--subtle); border-radius:99px; overflow:hidden; }
-.capFill,.capGood,.capOver { height:100%; border-radius:99px; background:var(--primary); transition:width .2s; }
+.capFill,.capGood,.capOver { height:100%; border-radius:99px; background:var(--primary); }
 .capGood { background:var(--success-solid); }
 .capOver { background:var(--danger-solid); }
 .capNote { margin:0; font-size:11px; color:var(--muted); }
@@ -111,4 +113,5 @@
   .card { border-radius: 16px; box-shadow: var(--shadow-card); }
   .chip { min-height: 40px; padding: 0 14px; border-radius: 22px; font-size: 14px; }
   .chip[aria-pressed="true"] { background: var(--primary-soft); border-color: var(--primary-border); color: var(--primary-text); }
+  .typeGroup { --ind-bg: var(--primary-soft); --ind-border: 1px solid var(--primary-border); --ind-radius: 22px; }
 }

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { hasAny, rolesOf } from "@/components/access";
 import { Empty, ErrorBlock, NoAccess, Notice, PageHead, TableSkeleton, Tabs } from "@/components/kit";
+import { MotionSwap } from "@/components/shell/page-enter";
 import { Button, Pill } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -41,42 +42,45 @@ export function PromotionsPage() {
         onChange={setTab}
         tabs={(["plans", "campaigns", "announce", "history"] as const).map((v) => ({ value: v, label: t(`tabs.${v}`) }))}
       />
-      {tab === "plans" && (
-        <>
-          {data?.pendingPrices.length ? (
-            <Notice tone="warn" title={t("pendingTitle", { count: data.pendingPrices.length })}>
-              {data.pendingPrices.map((p) => (
-                <div key={p.id} className="small">
-                  {t("pendingItem", {
-                    plan: PLAN_NAME[p.plan] ?? p.plan,
-                    price: p.monthlySatang === null ? "—" : `${fmt.money(p.monthlySatang)} ${t("plans.perMonth")}`,
-                    name: p.requestedBy,
-                    time: fmt.dateTime(p.createdAt),
-                    reason: p.reason,
-                  })}
-                </div>
-              ))}
-            </Notice>
-          ) : null}
-          {q.isPending ? (
-            <TableSkeleton rows={3} cols={5} />
-          ) : q.error ? (
-            <ErrorBlock error={q.error} retry={() => void q.refetch()} />
-          ) : (
-            <>
-              <Plans plans={q.data.plans} canWrite={allowed} onEdit={setEditing} />
-              <Coupons data={q.data} canWrite={allowed} onCreate={() => setCouponDrawer({ kind: "create" })} onOpen={setCouponDrawer} />
-            </>
-          )}
-        </>
-      )}
-      {tab === "campaigns" && (
-        <section className="card">
-          <Empty title={t("campaigns.title")} description={t("campaigns.desc")} />
-        </section>
-      )}
-      {tab === "announce" && <AnnouncementsPage embedded />}
-      {tab === "history" && <PriceHistory />}
+      {/* เปลี่ยนแท็บในหน้าเดียวกัน: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}
+      <MotionSwap key={tab} className="motion-stack">
+        {tab === "plans" && (
+          <>
+            {data?.pendingPrices.length ? (
+              <Notice tone="warn" title={t("pendingTitle", { count: data.pendingPrices.length })}>
+                {data.pendingPrices.map((p) => (
+                  <div key={p.id} className="small">
+                    {t("pendingItem", {
+                      plan: PLAN_NAME[p.plan] ?? p.plan,
+                      price: p.monthlySatang === null ? "—" : `${fmt.money(p.monthlySatang)} ${t("plans.perMonth")}`,
+                      name: p.requestedBy,
+                      time: fmt.dateTime(p.createdAt),
+                      reason: p.reason,
+                    })}
+                  </div>
+                ))}
+              </Notice>
+            ) : null}
+            {q.isPending ? (
+              <TableSkeleton rows={3} cols={5} />
+            ) : q.error ? (
+              <ErrorBlock error={q.error} retry={() => void q.refetch()} />
+            ) : (
+              <>
+                <Plans plans={q.data.plans} canWrite={allowed} onEdit={setEditing} />
+                <Coupons data={q.data} canWrite={allowed} onCreate={() => setCouponDrawer({ kind: "create" })} onOpen={setCouponDrawer} />
+              </>
+            )}
+          </>
+        )}
+        {tab === "campaigns" && (
+          <section className="card">
+            <Empty title={t("campaigns.title")} description={t("campaigns.desc")} />
+          </section>
+        )}
+        {tab === "announce" && <AnnouncementsPage embedded />}
+        {tab === "history" && <PriceHistory />}
+      </MotionSwap>
       {editing && <PlanDrawer key={editing.code} plan={editing} onClose={() => setEditing(null)} />}
       {couponDrawer && (
         <CouponDrawer
@@ -95,7 +99,7 @@ function Plans({ plans, canWrite, onEdit }: { plans: PlanRow[]; canWrite: boolea
   const fmt = useFmt();
   return (
     <>
-      <section aria-label={t("label")} className="promo-plans">
+      <section aria-label={t("label")} className="promo-plans motion-list">
         {plans.map((p) => (
           <article key={p.code} className="card promo-plan" aria-label={p.name}>
             <div className="row">

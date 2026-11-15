@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
+import { Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, MotionSwap, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat, localeDateFormat } from "@/lib/format";
@@ -180,12 +180,14 @@ export function PlanChangesView({ ws, projectKey, embedded = false }: { ws: stri
         </div>
       </section>
 
+      {/* เปลี่ยน Baseline ที่เทียบ: วันจบ Module และรายการแก้ไขเคลื่อนเข้าใหม่ */}
+      <MotionSwap key={current.version} className={styles.swap}>
       <section className={styles.card} aria-label={t("modulesTitle")}>
         <div className={styles.cardHead}><b>{t("modulesTitle")}</b></div>
         {gantt.isPending ? <LoadingState /> : gantt.error ? <ErrorState error={gantt.error} retry={() => void gantt.refetch()} /> : mods.length === 0 ? (
           <div className="muted" style={{ padding: "12px 16px", fontSize: 12 }}>{t("noModules")}</div>
         ) : mods.map((m) => (
-          <div key={m.name} className={styles.mod} data-testid="module-end">
+          <div key={m.name} className={`${styles.mod} motion-item`} data-testid="module-end">
             <b>{m.name}</b>
             <span><span className="muted">{t("plan")}</span> {formatDate(m.plan, year)}</span>
             <span><span className="muted">{t("forecast")}</span> {formatDate(m.forecast, year)}</span>
@@ -199,7 +201,7 @@ export function PlanChangesView({ ws, projectKey, embedded = false }: { ws: stri
         {changes.isPending ? <LoadingState /> : changes.error ? <ErrorState error={changes.error} retry={() => void changes.refetch()} /> : items.length === 0 ? (
           <EmptyState title={t("emptyTitle")} description={t("emptyHint")} />
         ) : items.map((c) => (
-          <div key={c.id} className={styles.ch} data-testid="plan-change">
+          <div key={c.id} className={`${styles.ch} motion-item`} data-testid="plan-change">
             <span className={styles.mono}>{c.issueKey}</span>
             <span className={styles.task}>
               <Link href={issueHref(c.issueKey)} title={`${c.issueKey} ${c.title}`}>{c.title}</Link>
@@ -216,6 +218,7 @@ export function PlanChangesView({ ws, projectKey, embedded = false }: { ws: stri
         )}
         <div className={`muted ${styles.foot}`}>{t("footer")}</div>
       </section>
+      </MotionSwap>
       {baselineDialog}
     </>)
   );

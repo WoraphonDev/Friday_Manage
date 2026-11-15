@@ -6,11 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, Check, CheckCheck, ChevronRight, MoreVertical, Settings } from "lucide-react";
-import { ActionSheet, Avatar, Badge, Button, ErrorState, Forbidden, LoadingState, useToast } from "@/components/ui";
+import { ActionSheet, Avatar, Badge, Button, Dialog, ErrorState, Forbidden, LoadingState, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { MobileHeader } from "@/components/shell/mobile-header";
 import { useIsMobile } from "@/lib/use-mobile";
-import { exitDelay } from "@/lib/motion";
+import { exitDelay, useSlidingIndicator } from "@/lib/motion";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, today, localeDateFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -22,6 +22,8 @@ import { DAILY_EVENT, DailySummary, useDailyTitle } from "@/features/daily-summa
 const FILTERS: Filter[] = ["all", "unread", "assign", "mention", "activity", "due"];
 /** มือถือตามต้นแบบ: ยังไม่อ่าน · ทั้งหมด · ถึงฉัน · มอบหมาย (ตัวกรองอื่นอยู่บน desktop) */
 const MOBILE_FILTERS: Filter[] = ["unread", "all", "mention", "assign"];
+/** พื้นที่เลื่อนของ .m-chips ตรงกับ .m-chip ที่เลือกใน globals.css (ม่วงอ่อน ขอบม่วง มุม 22) */
+const CHIP_PILL = { "--ind-bg": "var(--primary-soft)", "--ind-border": "1px solid var(--primary-border)", "--ind-radius": "22px" } as CSSProperties;
 const TONE: Record<string, "blue" | "purple" | "teal" | "amber" | "red" | "neutral"> = { assign: "blue", mention: "purple", activity: "teal", due: "amber" };
 const issueHref = (ws: string, key: string) => `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(key.split("-")[0])}/board?issue=${encodeURIComponent(key)}`;
 const bkkDate = (iso: string) => today(new Date(iso));
@@ -49,6 +51,9 @@ export function InboxPage({ ws }: { ws: string }) {
   const router = useRouter();
   const [menu, setMenu] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
+  // แท็บกรอง: desktop เส้นใต้เลื่อนตามแท็บ · มือถือพื้นม่วงอ่อนเลื่อนตามชิป (หน้าตาเดียวกับ .m-chip ที่เลือก)
+  const tabsRef = useSlidingIndicator<HTMLDivElement>(`.${styles.ftab}`);
+  const chipsRef = useSlidingIndicator<HTMLDivElement>(".m-chip");
   const urlN = search.get("n");
   const [selected, setSelected] = useState<string | null>(urlN);
   /**
@@ -159,15 +164,8 @@ export function InboxPage({ ws }: { ws: string }) {
   };
 
   if (mobile) {
-    // W29 · มือถือแบบต้นแบบ (ฐาน A): หัวใหญ่ + ⋮ · ชิปมีตัวเลข · กลุ่มวันในกล่องขอบมน · แตะแถวเปิดรายละเอียดเต็มจอ (ส่วนรายละเอียดเดิม)
-    if (current)
-      return (
-        <div className={`${styles.layout} ${styles.showDetail}`}>
-          <aside className={`${styles.card} ${styles.detail}`} aria-label={t("detailLabel")}>
-            <Detail key={current.id} ws={ws} n={current} busy={act.isPending} acted={leaving?.n.id === current.id ? leaving.action : undefined} onBack={() => setSelected(null)} run={run} settle={settle} />
-          </aside>
-        </div>
-      );
+    // W29 · มือถือแบบต้นแบบ (ฐาน A): หัวใหญ่ + ⋮ · ชิปมีตัวเลข · กลุ่มวันในกล่องขอบมน
+    // แตะแถวเปิดรายละเอียดใน popup (Dialog เดิม) แทนการแทนที่ทั้งหน้า · รายการยังอยู่ ปิดแล้วตำแหน่งเลื่อนและตัวกรองคงเดิม
     return (
       <div className="m-page">
         <MobileHeader
@@ -176,7 +174,7 @@ export function InboxPage({ ws }: { ws: string }) {
           bell={false}
           actions={<button type="button" className="m-icon" aria-label={t("moreActions")} aria-haspopup="dialog" onClick={() => setMenu(true)}><MoreVertical size={20} aria-hidden="true" /></button>}
         />
-        <div className="m-chips" role="group" aria-label={t("filterLabel")}>
+        <div ref={chipsRef} className="m-chips motion-pill" style={CHIP_PILL} role="group" aria-label={t("filterLabel")}>
           {MOBILE_FILTERS.map((f) => (
             <button key={f} type="button" className="m-chip" aria-pressed={filter === f} onClick={() => changeFilter(f)}>
               {t(`filters.${f}`)} <small>{counts?.[f] ?? 0}</small>
@@ -207,6 +205,13 @@ export function InboxPage({ ws }: { ws: string }) {
           </section>
         ))}
         {query.hasNextPage && <div className={styles.more}><Button onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>{t("loadMore")}</Button></div>}
+        <Dialog open={!!current} onOpenChange={(open) => { if (!open) setSelected(null); }} title={t("detailLabel")} size="medium">
+          {current && (
+            <div className={styles.popup} data-testid="inbox-popup">
+              <Detail key={current.id} ws={ws} n={current} busy={act.isPending} acted={leaving?.n.id === current.id ? leaving.action : undefined} run={run} settle={settle} />
+            </div>
+          )}
+        </Dialog>
         <ActionSheet
           open={menu}
           onOpenChange={setMenu}
@@ -234,7 +239,7 @@ export function InboxPage({ ws }: { ws: string }) {
             <Link className={`button button-secondary ${styles.settings}`} href={`/work/${encodeURIComponent(ws)}/profile`}>{t("settings")}</Link>
           </div>
         </div>
-        <div className={styles.tabs} role="group" aria-label={t("filterLabel")}>
+        <div ref={tabsRef} className={`${styles.tabs} motion-underline`} role="group" aria-label={t("filterLabel")}>
           {FILTERS.map((f) => (
             <button key={f} type="button" className={styles.ftab} data-filter={f} aria-pressed={filter === f} onClick={() => changeFilter(f)}>
               {t(`filters.${f}`)}<span className={styles.count}>{counts?.[f] ?? 0}</span>
@@ -274,7 +279,9 @@ export function InboxPage({ ws }: { ws: string }) {
 }
 
 function Detail({ ws, n, busy, acted, onBack, run, settle }: {
-  ws: string; n: InboxNotification; busy: boolean; onBack: () => void;
+  ws: string; n: InboxNotification; busy: boolean;
+  /** ไม่ส่งมา = อยู่ใน popup มือถือ ซึ่งมีปุ่มปิดของ Dialog แล้ว */
+  onBack?: () => void;
   /** ปุ่มที่เพิ่งกด (รับทราบ / เตือนพรุ่งนี้) ระหว่างการ์ดยุบ · ขึ้น ✓ และกดซ้ำไม่ได้ */
   acted?: "done" | "snooze";
   run: (path: string, message?: string, body?: unknown) => void;
@@ -313,7 +320,7 @@ function Detail({ ws, n, busy, acted, onBack, run, settle }: {
     <>
       <div className={styles.hero}>
         <div className={styles.dHead}>
-          <Button className={styles.back} size="icon" variant="ghost" aria-label={t("back")} onClick={onBack}><ArrowLeft size={18} aria-hidden /></Button>
+          {onBack && <Button className={styles.back} size="icon" variant="ghost" aria-label={t("back")} onClick={onBack}><ArrowLeft size={18} aria-hidden /></Button>}
           <span className={styles.heroAvatar}><Avatar size="large" person={{ id: n.actor?.id ?? n.id, displayName: labels.actor(n), avatarUrl: n.actor?.avatarUrl ?? null }} /></span>
           <div className={styles.heroText}>
             <div className={styles.heroTitle}><b>{labels.actor(n)}</b> {labels.verb(n)}</div>

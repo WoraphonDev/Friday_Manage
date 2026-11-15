@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { AlertCircle, CalendarClock, Clock, CreditCard, Landmark, QrCode } from "lucide-react";
-import { Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, LoadingState, buttonVariants, useToast, type Tone } from "@/components/ui";
+import { Badge, Button, CountUp, Dialog, EmptyState, ErrorState, Forbidden, LoadingState, buttonVariants, useToast, type Tone } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { ApiError, api } from "@/lib/api";
 import { formatDate, today } from "@/lib/format";
@@ -175,7 +175,7 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
         <h2 id="bill-methods">{t("methodsTitle")}</h2>
         <span className={cn(styles.muted, styles.small)}>{t("methodsHint")}</span>
       </div>
-      <ul className={styles.methods}>
+      <ul className={cn(styles.methods, "motion-list")}>
         {(["card", "promptpay", "transfer"] as const).map((m) => {
           const Icon = METHOD_ICON[m];
           return (
@@ -220,7 +220,7 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
             <h2>{trialDays !== null ? t("planTrial", { plan: o.plan.name, days: trialDays }) : o.plan.name}</h2>
             {price !== null && (
               <span className={styles.price}>
-                <b>฿{baht(price)}</b> / {sub.cycle === "yearly" ? t("perYear") : t("perMonth")}
+                <b>฿<CountUp value={baht(price)} /></b> / {sub.cycle === "yearly" ? t("perYear") : t("perMonth")}
                 {plans.data && ` · ${plans.data.vatIncluded ? t("vatIncluded") : t("vatExcluded")}`}
               </span>
             )}
@@ -232,22 +232,22 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
         </div>
         {u && (
           <div className={styles.usage}>
-            <div className={styles.meters}>
+            <div className={cn(styles.meters, "motion-list")}>
               <Meter
                 label={t("seats")}
                 used={u.seats.used}
                 limit={u.seats.limit}
-                value={u.seats.limit === null ? t("people", { n: u.seats.used }) : <>{u.seats.used} <small>/ {t("people", { n: u.seats.limit })}</small></>}
+                value={u.seats.limit === null ? <CountUp value={t("people", { n: u.seats.used })} /> : <><CountUp value={u.seats.used} /> <small>/ {t("people", { n: u.seats.limit })}</small></>}
                 note={seatsLeft === null ? undefined : seatsLeft >= 0 ? t("seatsLeft", { n: seatsLeft }) : t("seatsOver", { n: -seatsLeft })}
               />
               <Meter
                 label={t("storage")}
                 used={u.storage.usedGb}
                 limit={u.storage.limitGb}
-                value={u.storage.limitGb === null ? `${u.storage.usedGb} GB` : <>{u.storage.usedGb} <small>/ {u.storage.limitGb} GB</small></>}
+                value={u.storage.limitGb === null ? <CountUp value={`${u.storage.usedGb} GB`} /> : <><CountUp value={u.storage.usedGb} /> <small>/ {u.storage.limitGb} GB</small></>}
                 note={storagePct === null ? undefined : t("storageUsed", { pct: storagePct })}
               />
-              {u.projects.limit !== null && <Meter label={t("projects")} used={u.projects.used} limit={u.projects.limit} value={<>{u.projects.used} <small>/ {u.projects.limit}</small></>} />}
+              {u.projects.limit !== null && <Meter label={t("projects")} used={u.projects.used} limit={u.projects.limit} value={<><CountUp value={u.projects.used} /> <small>/ {u.projects.limit}</small></>} />}
             </div>
             <div className={styles.usageNote}>{t("guestsNote")}</div>
           </div>

@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
-import { Avatar, AvatarStack, Badge, ErrorState, Forbidden, LoadingState, Select, useToast } from "@/components/ui";
+import { Avatar, AvatarStack, Badge, CountUp, ErrorState, Forbidden, LoadingState, MotionSwap, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
+import { useSlidingIndicator } from "@/lib/motion";
 import { PlanActions, PlanFacts, PlanModules, PlanRisks, PlanWorkload, usePlan } from "../../dashboard/_components/lead-dashboard";
 import type { Overview, OverviewItem } from "./types";
 import styles from "./ot.module.css";
@@ -31,6 +32,9 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
   const [list, setList] = useState<ListKey>("overdue");
   const [chart, setChart] = useState<"daily" | "burnup">("daily");
   const [busy, setBusy] = useState<string | null>(null);
+  // พื้นปุ่มที่เลือกในตัวเลือกแบบแบ่งช่อง (ทั้งหมด / ของฉัน · รายวัน / Burn-up) เลื่อนตามปุ่มที่กด
+  const scopeRef = useSlidingIndicator<HTMLDivElement>("button");
+  const chartRef = useSlidingIndicator<HTMLDivElement>("button");
   /**
    * การ์ดข้อมูลโปรเจกต์ไปอยู่คอลัมน์ที่สั้นกว่า เพื่อไม่ให้เหลือที่ว่างยาวก่อน Workload (ผู้ใช้ขอ 2026-11-15)
    * โปรเจกต์ที่มี Module เยอะ คอลัมน์ซ้ายยาว การ์ดจึงไปขวา · Module น้อย คอลัมน์ขวายาวกว่า การ์ดจึงอยู่ซ้าย
@@ -143,7 +147,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
           {t("updated", { time: `${String(updatedAt.getHours()).padStart(2, "0")}:${String(updatedAt.getMinutes()).padStart(2, "0")}`, date: formatDate(d.today, year) })}
         </div>
         <div className={styles.bar}>
-          <div className={styles.seg} role="group" aria-label={t("scope.label")}>
+          <div ref={scopeRef} className={`${styles.seg} motion-pill`} role="group" aria-label={t("scope.label")}>
             {(["all", "mine"] as const).map((s) => <button key={s} type="button" aria-pressed={scope === s} onClick={() => setScope(s)}>{t(`scope.${s}`)}</button>)}
           </div>
           <Select aria-label={t("moduleFilter")} value={moduleId} onChange={(e) => setModuleId(e.target.value)}>
@@ -172,7 +176,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
             </svg>
             <div>
               <div className={styles.muted} style={{ fontSize: 12 }}>{t("progressTitle")}</div>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>{t("tasksDone", { done: p.tasks.done, total: p.tasks.total })}</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}><CountUp value={t("tasksDone", { done: p.tasks.done, total: p.tasks.total })} /></div>
               <div className={`${styles.muted} ${styles.small}`}>{t("mdDone", { done: p.md.done, total: p.md.total, pct: p.md.pct })}</div>
             </div>
           </div>
@@ -180,30 +184,30 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
         <div className={styles.bars}>
           <div>
             <div className={styles.line}><span>{t("timeTitle")}</span><b>{t("timeValue", { pct: p.time.pct, elapsed: p.time.elapsedWorkingDays, total: p.time.totalWorkingDays })}</b></div>
-            <div className={styles.progress} style={{ marginTop: 4 }}><div style={{ width: `${p.time.pct}%`, background: "var(--chart-neutral)" }} /></div>
+            <div className={styles.progress} style={{ marginTop: 4 }}><div className="motion-bar" style={{ width: `${p.time.pct}%`, background: "var(--chart-neutral)" }} /></div>
           </div>
           {p.split ? (
             <>
               <div>
                 <div className={styles.line}><span>{t("split.devTitle")}</span><b>{t("split.value", { pct: p.split.dev.pct, done: p.split.dev.done, total: p.split.dev.total })}</b></div>
-                <div className={styles.progress} style={{ marginTop: 4 }}><div style={{ width: `${p.split.dev.pct}%`, background: "var(--status-progress-dot)" }} /></div>
+                <div className={styles.progress} style={{ marginTop: 4 }}><div className="motion-bar" style={{ width: `${p.split.dev.pct}%`, background: "var(--status-progress-dot)" }} /></div>
               </div>
               <div>
                 <div className={styles.line}><span>{t("split.qaTitle")}</span><b>{t("split.value", { pct: p.split.qa.pct, done: p.split.qa.done, total: p.split.qa.total })}</b></div>
-                <div className={styles.progress} style={{ marginTop: 4 }}><div style={{ width: `${p.split.qa.pct}%` }} /></div>
+                <div className={styles.progress} style={{ marginTop: 4 }}><div className="motion-bar" style={{ width: `${p.split.qa.pct}%` }} /></div>
               </div>
             </>
           ) : (
             <div>
               <div className={styles.line}><span>{t("doneTitle")}</span><b>{p.pct}%</b></div>
-              <div className={styles.progress} style={{ marginTop: 4 }}><div style={{ width: `${p.pct}%` }} /></div>
+              <div className={styles.progress} style={{ marginTop: 4 }}><div className="motion-bar" style={{ width: `${p.pct}%` }} /></div>
             </div>
           )}
         </div>
         <div className={styles.facts}>
           <div>
             <div className={styles.muted} style={{ fontSize: 12 }}>{t("remainTitle")}</div>
-            <div style={{ fontSize: 22, fontWeight: 700 }}>{t("remainValue", { days: p.remainingWorkingDays })}</div>
+            <div style={{ fontSize: 22, fontWeight: 700 }}><CountUp value={t("remainValue", { days: p.remainingWorkingDays })} /></div>
             <div className={`${styles.muted} ${styles.small}`}>{p.lastPlanEnd ? t("lastPlanEnd", { date: formatDate(p.lastPlanEnd, year) }) : t("noPlan")}</div>
           </div>
           <div>
@@ -226,9 +230,9 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
 
       <div className={`${styles.kpis} ${styles.desktopOnly}`} role="group" aria-label="KPI">
         {LIST_KEYS.map((k) => (
-          <button key={k} type="button" className={styles.kpi} aria-pressed={list === k} onClick={() => setList(k)}>
+          <button key={k} type="button" className={`${styles.kpi} motion-item`} aria-pressed={list === k} onClick={() => setList(k)}>
             <span className={styles.kpiLabel}><span className={styles.dot} style={{ background: KPI_DOT[k] }} />{t(`kpi.${k}`)}</span>
-            <span className={styles.kpiValue}><b>{kpiValue[k]}</b>{kpiDelta[k]}</span>
+            <span className={styles.kpiValue}><b><CountUp value={kpiValue[k]} /></b>{kpiDelta[k]}</span>
             <span className={`${styles.muted} ${styles.small}`}>{kpiSub[k]}</span>
           </button>
         ))}
@@ -241,9 +245,12 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
               <h2>{t(`kpi.${list}`)} <span className="muted" style={{ fontWeight: 500 }}>{t("listCount", { count: kpiValue[list] })}</span></h2>
               <Link href={tableHref} style={{ fontSize: 12, fontWeight: 500 }}>{t("openInTable")}</Link>
             </div>
-            {!items.length && <div className={styles.empty}>{t("listEmpty")}</div>}
-            {items.map((i) => <ListRow key={i.key} i={i} list={list} href={href} year={year} busy={busy === i.key} onToggle={(done) => void toggleDone(i, done)} />)}
-            {kpiValue[list] > 0 && <div className={styles.listFoot}><Link href={tableHref}>{t("seeAllList", { count: kpiValue[list] })}</Link></div>}
+            {/* กด KPI สลับรายการ: รายการใหม่เลื่อนเข้าแบบเดียวกับเปลี่ยนหน้า */}
+            <MotionSwap key={list}>
+              {!items.length && <div className={styles.empty}>{t("listEmpty")}</div>}
+              {items.map((i) => <ListRow key={i.key} i={i} list={list} href={href} year={year} busy={busy === i.key} onToggle={(done) => void toggleDone(i, done)} />)}
+              {kpiValue[list] > 0 && <div className={styles.listFoot}><Link href={tableHref}>{t("seeAllList", { count: kpiValue[list] })}</Link></div>}
+            </MotionSwap>
           </section>
 
           <PlanModules plan={plan} />
@@ -251,17 +258,19 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
           <section className={styles.card}>
             <div className={styles.chead}>
               <h2>{t("chartTitle")} <span className="muted" style={{ fontWeight: 500 }}>{t("chartSub")}</span></h2>
-              <div className={styles.seg}>{(["daily", "burnup"] as const).map((c) => <button key={c} type="button" aria-pressed={chart === c} onClick={() => setChart(c)}>{t(c)}</button>)}</div>
+              <div ref={chartRef} className={`${styles.seg} motion-pill`}>{(["daily", "burnup"] as const).map((c) => <button key={c} type="button" aria-pressed={chart === c} onClick={() => setChart(c)}>{t(c)}</button>)}</div>
             </div>
+            <MotionSwap key={chart}>
             {chart === "daily" ? (
               <div className={styles.chartBox}>
                 <div className={styles.chart} role="img" aria-label={t("dailyLabel", { values: d.doneDaily.map((x) => `${formatDate(x.date, year)} ${x.count}`).join(", ") })}>
-                  {d.doneDaily.map((x) => <div key={x.date}><span>{x.count}</span><i style={{ height: Math.max(3, Math.round((x.count / maxDaily) * 120)), background: x.workingDay ? (x.date === d.today ? "var(--chart-primary)" : "var(--chart-primary-soft)") : "var(--subtle)" }} /></div>)}
+                  {d.doneDaily.map((x) => <div key={x.date}><span>{x.count}</span><i className="motion-bar-v" style={{ height: Math.max(3, Math.round((x.count / maxDaily) * 120)), background: x.workingDay ? (x.date === d.today ? "var(--chart-primary)" : "var(--chart-primary-soft)") : "var(--subtle)" }} /></div>)}
                 </div>
                 <div className={styles.labels}>{d.doneDaily.map((x) => <span key={x.date}>{weekday.format(new Date(`${x.date}T00:00:00+07:00`))}</span>)}</div>
                 <div className={`${styles.muted} ${styles.small}`} style={{ marginTop: 10 }}>{t("chartNote", { total: total7, prev: d.kpis.doneLast7Days - d.kpis.doneDelta })}</div>
               </div>
             ) : <Burnup d={d} />}
+            </MotionSwap>
           </section>
           {!infoSide && infoCard}
         </div>
@@ -270,7 +279,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
           <div className={styles.desktopOnly}><PlanRisks plan={plan} /></div>
           {!canPlan && <section className={styles.card} aria-label={t("byModule")}>
             <div className={styles.chead}><h2>{t("byModule")}</h2></div>
-            <div className={styles.list} style={{ gap: 16 }}>
+            <div className={`${styles.list} motion-list`} style={{ gap: 16 }}>
               {d.modules.map((m) => (
                 <div key={m.id ?? "none"}>
                   <div className={styles.line}><span className={styles.modName}><span className={styles.dot} style={{ background: m.color ?? "var(--primary)", borderRadius: 3 }} />{m.name}</span>{m.split ? <span className="muted">{t("split.tasks", { total: m.split.qa.total })}</span> : <span><b>{m.pct}%</b> <span className="muted">· {m.done}/{m.total}</span></span>}</div>
@@ -279,7 +288,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
                       <SplitBar label={t("split.dev")} pct={m.split.dev.pct} color="var(--status-progress-dot)" />
                       <SplitBar label={t("split.qa")} pct={m.split.qa.pct} color={m.color ?? "var(--primary)"} />
                     </>
-                  ) : <div className={styles.progress} style={{ marginTop: 6 }}><div style={{ width: `${m.pct}%`, background: m.color ?? "var(--primary)" }} /></div>}
+                  ) : <div className={styles.progress} style={{ marginTop: 6 }}><div className="motion-bar" style={{ width: `${m.pct}%`, background: m.color ?? "var(--primary)" }} /></div>}
                   {(m.overdue > 0 || m.notStarted) && <div className={m.overdue > 0 ? styles.late : `${styles.muted} ${styles.small}`} style={{ marginTop: 4 }}>{m.overdue > 0 ? t("moduleLate", { count: m.overdue }) : t("notStarted")}</div>}
                 </div>
               ))}
@@ -288,7 +297,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
           <section className={`${styles.card} ${styles.desktopOnly}`}>
             <div className={styles.chead}><h2>{t("statusTitle")}</h2><span className="muted" style={{ fontSize: 12 }}>{t("statusTotal", { count: statusTotal })}</span></div>
             <div style={{ padding: "16px 18px" }}>
-              <div className={styles.stack} role="img" aria-label={d.statusBreakdown.columns.map((c) => `${c.name} ${c.count}`).join(", ")}>{d.statusBreakdown.columns.map((c) => <div key={c.id} style={{ width: `${c.pct}%`, background: statusDotColor(c.category, c.name, statusColors.get(c.id)) }} />)}</div>
+              <div className={`${styles.stack} motion-bar`} role="img" aria-label={d.statusBreakdown.columns.map((c) => `${c.name} ${c.count}`).join(", ")}>{d.statusBreakdown.columns.map((c) => <div key={c.id} style={{ width: `${c.pct}%`, background: statusDotColor(c.category, c.name, statusColors.get(c.id)) }} />)}</div>
               <div className={styles.legend}>
                 {d.statusBreakdown.columns.map((c) => <div key={c.id}><span className={styles.dot} style={{ background: statusDotColor(c.category, c.name, statusColors.get(c.id)), borderRadius: 3 }} /><span style={{ flex: 1 }}>{c.name}</span><b>{c.count}</b></div>)}
               </div>
@@ -299,7 +308,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
             <div style={{ padding: "6px 0" }}>
               {!d.milestones.length && <div className={styles.empty}>{t("noMilestone")}</div>}
               {d.milestones.map((m) => (
-                <div key={m.id} className={styles.mile}>
+                <div key={m.id} className={`${styles.mile} motion-item`}>
                   <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 7 7 13 1 7z" fill={m.daysLeft < 0 ? "var(--chart-neutral)" : "var(--chart-primary)"} /></svg>
                   <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600 }}>{m.name}</div><div className={`${styles.muted} ${styles.small}`}>{t("milestoneLine", { date: formatDate(m.date, year), pct: m.donePct })} ({t(`milestoneBasis.${m.basis}`)})</div></div>
                   <Badge>{m.daysLeft >= 0 ? t("daysLeft", { days: m.daysLeft }) : t("daysPast", { days: -m.daysLeft })}</Badge>
@@ -310,13 +319,13 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
           {d.workloadThisWeek && !canPlan && (
             <section className={styles.card}>
               <div className={styles.chead}><h2>{t("workload")} <span className="muted" style={{ fontWeight: 500 }}>· {formatDate(d.workloadThisWeek.from, year)} – {formatDate(d.workloadThisWeek.to, year)}</span></h2><Link href={`${page}/members`} style={{ fontSize: 12 }}>{t("seeAll")}</Link></div>
-              <div className={styles.list}>
+              <div className={`${styles.list} motion-list`}>
                 {d.workloadThisWeek.people.map((w) => (
                   <div key={w.person.id} style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <Avatar size="small" person={w.person} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className={styles.line}><span style={{ fontWeight: 500 }}>{w.person.displayName}</span><b className={w.over ? styles.bad : undefined}>{t("workloadLine", { md: w.md, cap: w.capacityMd, pct: w.utilizationPct ?? 0 })}</b></div>
-                      <div className={styles.progress} style={{ height: 6, marginTop: 4 }}><div style={{ width: `${Math.min(100, w.utilizationPct ?? 0)}%`, background: w.over ? "var(--warning-solid)" : "var(--chart-primary-soft)" }} /></div>
+                      <div className={styles.progress} style={{ height: 6, marginTop: 4 }}><div className="motion-bar" style={{ width: `${Math.min(100, w.utilizationPct ?? 0)}%`, background: w.over ? "var(--warning-solid)" : "var(--chart-primary-soft)" }} /></div>
                     </div>
                   </div>
                 ))}
@@ -328,7 +337,7 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
             <div style={{ padding: "6px 0" }}>
               {!d.activity.length && <div className={styles.empty}>{t("activityEmpty")}</div>}
               {d.activity.slice(0, 8).map((a) => (
-                <div key={a.id} className={styles.act}>
+                <div key={a.id} className={`${styles.act} motion-item`}>
                   <Avatar size="small" person={a.actor ?? { id: a.id, displayName: a.actorKind === "user" ? t("hidden") : t("system") }} />
                   <div style={{ fontSize: 12, minWidth: 0 }}>
                     <b>{a.actor?.displayName ?? t("system")}</b> {t.has(`verbs.${a.verb}` as never) ? t(`verbs.${a.verb}` as never) : t("verbs.other")} {a.field ? `${a.field} ` : ""}{a.issue && <Link href={href(a.issue.key)}>{a.issue.key} {a.issue.title}</Link>}
@@ -369,7 +378,7 @@ function SplitBar({ label, pct, color }: { label: string; pct: number; color: st
   return (
     <div className={styles.splitRow} role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
       <span>{label}</span>
-      <div className={styles.progress}><div style={{ width: `${pct}%`, background: color }} /></div>
+      <div className={styles.progress}><div className="motion-bar" style={{ width: `${pct}%`, background: color }} /></div>
       <b>{pct}%</b>
     </div>
   );
@@ -400,14 +409,14 @@ function MobileSummary({ d, time, year }: { d: Overview; time: string; year: Yea
           </>
         ) : (
           <>
-            <div className={styles.mbig}><b>{p.pct}%</b><span className={styles.muted}>{t("mobile.line", { done: p.tasks.done, total: p.tasks.total, time: p.time.pct })}</span></div>
-            <div className={styles.mtrack}><div style={{ width: `${p.pct}%` }} /><span style={{ left: `${p.time.pct}%` }} aria-hidden="true" /></div>
+            <div className={styles.mbig}><b><CountUp value={`${p.pct}%`} /></b><span className={styles.muted}>{t("mobile.line", { done: p.tasks.done, total: p.tasks.total, time: p.time.pct })}</span></div>
+            <div className={styles.mtrack}><div className="motion-bar" style={{ width: `${p.pct}%` }} /><span style={{ left: `${p.time.pct}%` }} aria-hidden="true" /></div>
           </>
         )}
         <div className={styles.mtiles}>
-          <div className={styles.mlate}><b>{d.kpis.overdue}</b>Overdue</div>
-          {d.counts && <div><b>{d.counts.openBugs}</b>{t("mobile.openBugs")}</div>}
-          {d.counts && <div><b>{d.counts.pendingDueRequests}</b>{t("mobile.pending")}</div>}
+          <div className={styles.mlate}><b><CountUp value={d.kpis.overdue} /></b>Overdue</div>
+          {d.counts && <div><b><CountUp value={d.counts.openBugs} /></b>{t("mobile.openBugs")}</div>}
+          {d.counts && <div><b><CountUp value={d.counts.pendingDueRequests} /></b>{t("mobile.pending")}</div>}
         </div>
       </section>
       {next && (
@@ -444,7 +453,7 @@ function ListRow({ i, list, href, year, busy, onToggle }: { i: OverviewItem; lis
         : { text: i.planEnd ? formatDate(i.planEnd, year) : "", cls: styles.dtWeek };
   const sub = [i.key, i.parentKey ? `↳ ${i.parentKey}` : null].filter(Boolean).join(" · ");
   return (
-    <div className={styles.row}>
+    <div className={`${styles.row} motion-item`}>
       {done
         ? <svg width="18" height="18" viewBox="0 0 24 24" role="img" aria-label={t("doneTitle")} style={{ flex: "none" }}><circle cx="12" cy="12" r="10" fill="var(--success-solid)" /><path d="m7.5 12.5 3 3 6-6.5" fill="none" stroke="var(--on-primary)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
         : <input type="checkbox" className={styles.check} disabled={busy || !open} aria-label={t("markDone", { title: i.title })} onChange={(e) => onToggle(e.target.checked)} />}

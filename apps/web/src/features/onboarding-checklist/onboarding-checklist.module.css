@@ -6,7 +6,7 @@
 .meter { display:flex; align-items:center; gap:12px; font-size:13px; }
 .meter b { white-space:nowrap; }
 .bar { display:block; width:160px; height:8px; border-radius:999px; background:var(--subtle); overflow:hidden; }
-.bar > span { display:block; height:100%; border-radius:inherit; background:var(--primary); transition:width .3s ease; }
+.bar > span { display:block; height:100%; border-radius:inherit; background:var(--primary); transition:width var(--motion-dur) var(--motion-ease); }
 .grid { display:grid; grid-template-columns:minmax(0, 1fr) 280px; gap:16px; align-items:start; }
 .gridSingle { grid-template-columns:minmax(0, 1fr); }
 
@@ -72,6 +72,11 @@
 .grow { flex:1 1 auto; justify-content:center; }
 .sheet { position:fixed; left:0; right:0; bottom:0; z-index:60; max-height:85vh; overflow-y:auto; background:var(--popover); border-radius:16px 16px 0 0; box-shadow:var(--shadow-menu); padding-bottom:env(safe-area-inset-bottom); }
 .sheet:focus { outline:none; }
+/* Bottom sheet เลื่อนขึ้น / ลงแบบเดียวกับ Dialog มือถือ (ความเร็วจาก --motion-* · ปิดเองเมื่อลดการเคลื่อนไหว) */
+.sheet[data-state="open"] { animation:sheetIn var(--motion-dur) var(--motion-ease); }
+.sheet[data-state="closed"] { animation:sheetOut var(--motion-dur-s) var(--motion-ease) both; }
+@keyframes sheetIn { from { translate:0 100%; } }
+@keyframes sheetOut { to { translate:0 100%; } }
 .grip { display:block; width:40px; height:4px; border-radius:999px; background:var(--border-strong); margin:8px auto 0; }
 .sheetClose { margin-left:auto; }
 .sheet .popHead .pill { margin-left:4px; }

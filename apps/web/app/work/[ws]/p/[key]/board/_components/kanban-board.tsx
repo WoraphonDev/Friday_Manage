@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, Search, SlidersHorizontal, Bug, CheckSquare, ChevronLeft, ChevronRight, Flag, ListChecks, MessageCircle, Plus, Zap } from "lucide-react";
 import { AvatarStack, Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, LoadingState, Select, useDismissToasts, useToast } from "@/components/ui";
 import { api, ApiError, isConfirmCancelled, supportId } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { formatDate, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions } from "@/lib/types";
@@ -114,6 +115,8 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
   const landedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const dropped = useRef(false);
   const boardRef = useRef<HTMLElement>(null);
+  // มือถือ: พื้นชิปคอลัมน์ที่เลือกเลื่อนตามชิปที่แตะ (จอใหญ่ซ่อนแถบนี้ hook จึงไม่วาด)
+  const columnsRef = useSlidingIndicator<HTMLDivElement>(`.${styles.chip}`);
   // เวลาที่ยังถือว่ากำลังคืนการ์ดที่ย้ายไม่สำเร็จ (performance.now) · หมดเวลาแล้วไม่ค้างไปใช้กับการย้ายครั้งหลัง ถ้าไม่มีการ์ดขยับจริง
   const returning = useRef(0);
   useFlip(boardRef, returning);
@@ -350,7 +353,7 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
         <Select size="small" prefix={t("swimlane")} aria-label={t("swimlane")} value={swimlane} onChange={(event) => setSwimlane(event.target.value as Swimlane)}><option value="none">{t("none")}</option><option value="module">{t("module")}</option><option value="assignee">{t("assignee")}</option><option value="priority">{t("priority")}</option></Select>
       </div>
     </div>
-    <div className={styles.mobileColumns} role="group" aria-label={t("columns")}>
+    <div ref={columnsRef} className={`${styles.mobileColumns} motion-pill`} role="group" aria-label={t("columns")}>
       {data.columns.map((column) => <Button key={column.id} className={`${styles.chip} ${column.id === activeColumn ? styles.selected : ""}`} aria-pressed={column.id === activeColumn} onClick={() => setMobileColumn(column.id)}><span className={styles.dot} style={{ background: statusDotColor(column.category, column.name, statusColors.get(column.id)) }} />{phased && <span className={`${styles.chipPhase} ${styles[`band_${statusPhase(column.category)}`]}`}>{t(`phase.${statusPhase(column.category)}`)}</span>}{column.name} <span>{column.cards.filter((card) => filtered.includes(card)).length}</span></Button>)}
       <Button className={styles.mobileFilterToggle} aria-expanded={filtersOpen} aria-label={t("filters")} onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal size={16} aria-hidden="true" /></Button>
     </div>

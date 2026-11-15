@@ -123,6 +123,8 @@
   border-radius: 16px; padding: 32px; display: flex; flex-direction: column; gap: 16px;
 }
 .cardWide { max-width: 520px; padding: 0; gap: 0; overflow: hidden; }
+/* กรอบ MotionSwap ใน CardLayout · เรียงลูกแบบเดียวกับการ์ด (ระยะห่างตามการ์ด รวมค่ามือถือ) หน้าตาจึงไม่เปลี่ยน */
+.cardSwap { display: flex; flex-direction: column; gap: inherit; }
 .cardSection { padding: 24px 28px; display: flex; flex-direction: column; gap: 14px; }
 .cardHead {
   padding: 28px 28px 20px; text-align: center; display: flex; flex-direction: column;
@@ -220,9 +222,12 @@
 .alert {
   display: flex; gap: 10px; align-items: flex-start; border-radius: 10px; padding: 10px 12px; font-size: 13px;
   background: var(--danger-soft); border: 1px solid var(--danger-border); color: var(--danger-text);
-  animation: alert-in 0.3s ease-out;
+  animation: alert-in var(--motion-dur) var(--motion-ease);
 }
 @keyframes alert-in { from { opacity: 0; transform: translateY(-6px); } }
+/* ข้อความผิดพลาดใต้ช่อง (ทั้งของ UI kit และของหน้านี้) ค่อย ๆ โผล่ตอนขึ้นแบบเดียวกับแจ้งเตือนด้านบน
+   ช่องที่มีคำแนะนำอยู่ก่อนสลับ class เป็น field-error · การเพิ่ม class ที่มี animation ทำให้เล่นใหม่ทุกครั้ง */
+.box :global(.field-error), .card :global(.field-error), .obCard :global(.field-error) { animation: alert-in var(--motion-dur) var(--motion-ease); }
 .alert svg { flex: none; margin-top: 2px; }
 .alertBody { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .alertInfo { background: var(--primary-soft); border-color: var(--primary-border); color: var(--primary-text); }
@@ -292,6 +297,10 @@
 .bar { display: flex; gap: 6px; width: 100%; max-width: 720px; }
 .bar span { flex: 1; height: 6px; border-radius: 3px; background: var(--input); }
 .bar span[data-on="true"] { background: var(--primary); }
+/* ช่องความคืบหน้าเติมสีแบบค่อย ๆ เมื่อไปขั้นถัดไป */
+.bar span { transition: background-color var(--motion-dur) var(--motion-ease); }
+/* กรอบเนื้อหาของแต่ละขั้น (MotionSwap) · เรียงลูกแบบเดียวกับ .obCard รวมระยะห่างบนมือถือ */
+.obStep { display: flex; flex-direction: column; gap: inherit; }
 .obCard {
   width: 100%; max-width: 720px; background: var(--card); border: 1px solid var(--border); border-radius: 16px;
   padding: 28px; display: flex; flex-direction: column; gap: 18px;
@@ -319,6 +328,8 @@
 }
 .opt:hover { border-color: var(--input); }
 .opt[aria-pressed="true"] { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); background: var(--hover); }
+/* การ์ดตัวเลือกใหญ่ไม่ใช้แถบเลื่อน (กรอบ + วงแหวนของตัวเอง) แค่เปลี่ยนสีแบบค่อย ๆ */
+.opt { transition: border-color var(--motion-dur-s), box-shadow var(--motion-dur-s), background-color var(--motion-dur-s); }
 .optionsStart .opt { min-height: 130px; }
 .optionsStart .opt b { font-size: 15px; }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -327,6 +338,8 @@
   font: inherit; cursor: pointer; color: var(--foreground-soft);
 }
 .chip[aria-pressed="true"] { background: var(--contrast-bg); border-color: var(--contrast-bg); color: var(--contrast-ink); }
+/* ขนาดทีม (เลือกได้อันเดียว): พื้นเลื่อนตามชิปที่เลือกด้วย .motion-pill · --ind-* ตรงกับชิปที่เลือกด้านบน (ค่ามือถืออยู่ใน media ท้ายไฟล์) */
+.chips { --ind-bg: var(--contrast-bg); --ind-border: 1px solid var(--contrast-bg); --ind-radius: 999px; }
 .inviteRow { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 10px; align-items: start; }
 .inviteRow :global(.select) { min-height: 44px; border-radius: 10px; }
 .actions { display: flex; gap: 10px; align-items: center; border-top: 1px solid var(--subtle); padding-top: 16px; flex-wrap: wrap; }
@@ -395,8 +408,8 @@
   .heading { align-items: center; text-align: center; gap: 4px; }
   .heading h1, .cardPage .heading h1 { font-size: 22px; }
   .heading > .muted { font-size: 13px; }
-  .card > .dots, .box > .dots { justify-content: center; }
-  .card > .icon, .box > .icon { align-self: center; }
+  .card > .dots, .cardSwap > .dots, .box > .dots { justify-content: center; }
+  .card > .icon, .cardSwap > .icon, .box > .icon { align-self: center; }
   .input { min-height: 48px; }
   .button { min-height: 44px; font-size: 15px; }
   .or { font-size: 12px; }
@@ -434,4 +447,5 @@
   .chip { min-height: 40px; padding: 0 14px; border-radius: 22px; border-color: var(--border-strong); font-size: 14px; }
   .chip[aria-pressed="true"], .chip[aria-pressed="true"]:hover { background: var(--primary-soft); border-color: var(--primary-border); color: var(--primary-text); font-weight: 600; }
   .chip[aria-pressed="true"] span { color: inherit; }
+  .chips { --ind-bg: var(--primary-soft); --ind-border: 1px solid var(--primary-border); --ind-radius: 22px; }
 }

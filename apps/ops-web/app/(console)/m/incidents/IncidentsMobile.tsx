@@ -7,6 +7,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { hasAny, rolesOf } from "@/components/access";
 import { ErrorBlock, NoAccess, Notice, Seg, Switch, TableSkeleton } from "@/components/kit";
+import { MotionSwap } from "@/components/shell/page-enter";
 import { Button, InlineError, Pill, Textarea } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -84,7 +85,8 @@ export function IncidentsMobile() {
           )}
         </section>
       ) : (
-        <>
+        // เปลี่ยนเหตุที่ดู (?id=) ในหน้าเดียวกัน: เนื้อหาเคลื่อนเข้าแบบเปลี่ยนหน้า
+        <MotionSwap key={cur.id} className="motion-stack">
           <section className="m-card" aria-label={cur.title}>
             <span className="row">
               <Pill tone={tone(cur.status)}>{ts(`state.${cur.status}`)}</Pill>
@@ -161,7 +163,7 @@ export function IncidentsMobile() {
               </Button>
             </div>
           )}
-        </>
+        </MotionSwap>
       )}
     </>
   );

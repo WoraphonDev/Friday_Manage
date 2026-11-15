@@ -13,6 +13,8 @@ import { useFmt } from "../workspaces/_parts/format";
 import { AttachDialog, MessageDialog } from "./_parts/Dialogs";
 import { Suppressions } from "./_parts/Suppressions";
 import { type Channel, type Detail, type Item, type ListResponse, STATUS_TONE, useEventText } from "./_parts/types";
+import { CountUp } from "@/components/count-up";
+import { MotionSwap } from "@/components/shell/page-enter";
 
 export const DLV_KEY = ["ops", "deliveries"] as const;
 const CHANNEL_TONE: Record<Channel, "inf" | "ok" | "neu"> = { email: "inf", line: "ok", line_group: "ok", webhook: "neu" };
@@ -137,7 +139,7 @@ function Stat({ label, value, note, tone }: { label: string; value: string; note
   return (
     <div className={tone ? `stat stat-${tone}` : "stat"}>
       <span className="muted small">{label}</span>
-      <b className="num">{value}</b>
+      <b className="num"><CountUp value={value} /></b>
       {note && <span className="muted small">{note}</span>}
     </div>
   );
@@ -197,7 +199,8 @@ function DetailPanel({ id }: { id: string | null }) {
         <ErrorBlock error={q.error} retry={() => void q.refetch()} />
       ) : (
         d && (
-          <>
+          // เลือกรายการอื่น: รายละเอียดเคลื่อนเข้าแบบเปลี่ยนหน้า (กรอบซ้ายของแผงอยู่กับที่)
+          <MotionSwap key={d.id} className="motion-stack">
             <div className="row">
               <h2 className="card-title">{t("heading", { channel: tr(`channel.${d.channel}`), status: tr(`status.${d.status}`), ws: d.workspace?.name ?? "" })}</h2>
               <Pill tone={STATUS_TONE[d.status]} className="push-end">
@@ -237,7 +240,7 @@ function DetailPanel({ id }: { id: string | null }) {
             </div>
             {viewing && <MessageDialog d={d} onClose={() => setViewing(false)} onAttach={hasAny(me, "owner", "support") ? () => (setViewing(false), setAttaching(true)) : undefined} />}
             {attaching && <AttachDialog id={d.id} onClose={() => setAttaching(false)} />}
-          </>
+          </MotionSwap>
         )
       )}
     </aside>

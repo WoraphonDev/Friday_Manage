@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
 import { hasAny } from "@/components/access";
-import { Chip, Empty, ErrorBlock, Modal, Notice, PageHead, Tabs, TableSkeleton } from "@/components/kit";
+import { Chip, ChipGroup, Empty, ErrorBlock, Modal, Notice, PageHead, Tabs, TableSkeleton } from "@/components/kit";
+import { MotionSwap } from "@/components/shell/page-enter";
 import { Button, errorToast, InlineError, Input, Pill, Select, type Tone, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -15,6 +16,7 @@ import { CategoriesDialog } from "./_components/CategoriesDialog";
 import { FromTicketDialog } from "./_components/FromTicketDialog";
 import { type Article, type ArticleRow, type Category, HELP_KEY, type Miss, type Overview } from "./_components/types";
 import styles from "./help.module.css";
+import { CountUp } from "@/components/count-up";
 
 type Tab = "articles" | "misses" | "review";
 type Filter = "all" | "published" | "draft" | "lowHelpful";
@@ -123,22 +125,22 @@ export function HelpPage() {
             <>
               <div className="stat">
                 <span className="muted small">{t("kpi.published")}</span>
-                <b>{fmt.num(k.published)}</b>
+                <b><CountUp value={fmt.num(k.published)} /></b>
                 <span className="muted small">{t("kpi.publishedNote", { review: k.review, drafts: k.drafts })}</span>
               </div>
               <div className="stat">
                 <span className="muted small">{t("kpi.searches")}</span>
-                <b>{fmt.num(k.searches30)}</b>
+                <b><CountUp value={fmt.num(k.searches30)} /></b>
                 <span className="muted small">{t("kpi.searchesNote", { misses: fmt.num(k.misses30), pct: pctText(k.missPct, na) })}</span>
               </div>
               <div className="stat">
                 <span className="muted small">{t("kpi.deflection")}</span>
-                <b>{pctText(k.deflectionPct, na)}</b>
+                <b><CountUp value={pctText(k.deflectionPct, na)} /></b>
                 <span className="muted small">{t("kpi.deflectionNote")}</span>
               </div>
               <div className={k.helpfulPct != null && k.helpfulPct < 70 ? "stat stat-warn" : "stat"}>
                 <span className="muted small">{t("kpi.helpful")}</span>
-                <b>{pctText(k.helpfulPct, na)}</b>
+                <b><CountUp value={pctText(k.helpfulPct, na)} /></b>
                 <span className="muted small">{t("kpi.helpfulNote", { votes: fmt.num(k.votes30) })}</span>
               </div>
             </>
@@ -160,146 +162,149 @@ export function HelpPage() {
         }))}
       />
 
-      {tab === "misses" ? (
-        <section className="card">
-          {misses.isPending ? (
-            <TableSkeleton rows={5} cols={5} />
-          ) : misses.error ? (
-            <ErrorBlock error={misses.error} retry={() => void misses.refetch()} />
-          ) : !misses.data.items.length ? (
-            <Empty ok title={t("missesEmpty")} description={t("missesEmptyDesc")} />
-          ) : (
-            <div className="tbl-wrap">
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th scope="col">{t("col.query")}</th>
-                    <th scope="col">{t("col.searches")}</th>
-                    <th scope="col">{t("col.ticketsAfter")}</th>
-                    <th scope="col">{t("col.lastDay")}</th>
-                    <th scope="col">{t("col.action")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {misses.data.items.map((m) => (
-                    <tr key={m.query}>
-                      <td className="cell-main">&quot;{m.query}&quot;</td>
-                      <td className="num">{fmt.num(m.searches)}</td>
-                      <td className="num">{fmt.num(m.tickets)}</td>
-                      <td>{fmt.date(m.lastDay ?? null)}</td>
-                      <td>{missRow(m)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <p className="muted small">{t("missNote")}</p>
-        </section>
-      ) : (
-        <div className={styles.layout}>
+      {/* เปลี่ยนแท็บในหน้าเดียวกัน: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}
+      <MotionSwap key={tab} className="motion-stack">
+        {tab === "misses" ? (
           <section className="card">
-            {tab === "articles" && (
-              <div className={styles.filters} role="group" aria-label={t("filter.label")}>
-                {(["all", "published", "draft", "lowHelpful"] as const).map((f) => (
-                  <Chip key={f} pressed={filter === f} onClick={() => setFilter(f)}>
-                    {t(`filter.${f}`)}
-                  </Chip>
-                ))}
-                <select className="input select-inline" aria-label={t("filter.category")} value={category} onChange={(e) => setCategory(e.target.value)}>
-                  <option value="">{t("filter.allCategories")}</option>
-                  {cats.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-                <input className={`input ${styles.search}`} type="search" aria-label={t("filter.search")} placeholder={t("filter.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
-              </div>
-            )}
-            {list.isPending ? (
-              <TableSkeleton rows={5} cols={8} />
-            ) : list.error ? (
-              <ErrorBlock error={list.error} retry={() => void list.refetch()} />
-            ) : !list.data.items.length ? (
-              tab === "review" ? (
-                <Empty ok title={t("emptyReview")} description={t("emptyReviewDesc")} />
-              ) : filter !== "all" || category || q ? (
-                <Empty title={t("emptyFiltered")} onClearFilters={() => (setFilter("all"), setCategory(""), setSearch(""))} />
-              ) : (
-                <Empty title={t("empty")} description={t("emptyDesc")} />
-              )
+            {misses.isPending ? (
+              <TableSkeleton rows={5} cols={5} />
+            ) : misses.error ? (
+              <ErrorBlock error={misses.error} retry={() => void misses.refetch()} />
+            ) : !misses.data.items.length ? (
+              <Empty ok title={t("missesEmpty")} description={t("missesEmptyDesc")} />
             ) : (
               <div className="tbl-wrap">
-                <table className={`tbl ${styles.articleTable}`}>
+                <table className="tbl">
                   <thead>
                     <tr>
-                      <th scope="col" className={styles.colArticle}>{t("col.article")}</th>
-                      <th scope="col" className={styles.colCategory}>{t("col.category")}</th>
-                      <th scope="col">{t("col.status")}</th>
-                      <th scope="col">{t("col.reads")}</th>
-                      <th scope="col">{t("col.helpful")}</th>
-                      <th scope="col">{t("col.tickets")}</th>
-                      <th scope="col">{t("col.updated")}</th>
-                      <th scope="col">{t("col.owner")}</th>
+                      <th scope="col">{t("col.query")}</th>
+                      <th scope="col">{t("col.searches")}</th>
+                      <th scope="col">{t("col.ticketsAfter")}</th>
+                      <th scope="col">{t("col.lastDay")}</th>
+                      <th scope="col">{t("col.action")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {list.data.items.map((a) => (
-                      <tr key={a.id} onClick={() => router.push(`/help/${a.id}`)} style={{ cursor: "pointer" }}>
-                        <td>
-                          <Link className={styles.articleLink} href={`/help/${a.id}`} onClick={(e) => e.stopPropagation()}>
-                            {a.title}
-                          </Link>
-                          <span className={styles.slug}>/help/{a.slug}</span>
-                        </td>
-                        <td>{a.category.name}</td>
-                        <td>
-                          {a.needsReview ? (
-                            <span title={a.reviewReason ? t(`reason.${a.reviewReason}`) : undefined}>
-                              <Pill tone="warn">{t("status.review")}</Pill>
-                            </span>
-                          ) : (
-                            <Pill tone={a.status === "published" ? "ok" : "neu"}>{t(`status.${a.status}`)}</Pill>
-                          )}
-                          {a.hasDraft && a.status === "published" && <span className="cell-sub" style={{ display: "block" }}>{t("status.hasDraft")}</span>}
-                        </td>
-                        <td className="num">{a.status === "draft" ? "—" : fmt.num(a.reads30)}</td>
-                        <td>{a.helpfulPct == null ? "—" : <Pill tone={helpfulTone(a.helpfulPct)}>{`${a.helpfulPct}%`}</Pill>}</td>
-                        <td className="num">{fmt.num(a.tickets)}</td>
-                        <td className="nowrap">{fmt.date(a.updatedAt)}</td>
-                        <td>{a.owner?.name ?? "—"}</td>
+                    {misses.data.items.map((m) => (
+                      <tr key={m.query}>
+                        <td className="cell-main">&quot;{m.query}&quot;</td>
+                        <td className="num">{fmt.num(m.searches)}</td>
+                        <td className="num">{fmt.num(m.tickets)}</td>
+                        <td>{fmt.date(m.lastDay ?? null)}</td>
+                        <td>{missRow(m)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
+            <p className="muted small">{t("missNote")}</p>
           </section>
+        ) : (
+          <div className={styles.layout}>
+            <section className="card">
+              {tab === "articles" && (
+                <ChipGroup className={styles.filters} role="group" aria-label={t("filter.label")}>
+                  {(["all", "published", "draft", "lowHelpful"] as const).map((f) => (
+                    <Chip key={f} pressed={filter === f} onClick={() => setFilter(f)}>
+                      {t(`filter.${f}`)}
+                    </Chip>
+                  ))}
+                  <select className="input select-inline" aria-label={t("filter.category")} value={category} onChange={(e) => setCategory(e.target.value)}>
+                    <option value="">{t("filter.allCategories")}</option>
+                    {cats.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input className={`input ${styles.search}`} type="search" aria-label={t("filter.search")} placeholder={t("filter.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
+                </ChipGroup>
+              )}
+              {list.isPending ? (
+                <TableSkeleton rows={5} cols={8} />
+              ) : list.error ? (
+                <ErrorBlock error={list.error} retry={() => void list.refetch()} />
+              ) : !list.data.items.length ? (
+                tab === "review" ? (
+                  <Empty ok title={t("emptyReview")} description={t("emptyReviewDesc")} />
+                ) : filter !== "all" || category || q ? (
+                  <Empty title={t("emptyFiltered")} onClearFilters={() => (setFilter("all"), setCategory(""), setSearch(""))} />
+                ) : (
+                  <Empty title={t("empty")} description={t("emptyDesc")} />
+                )
+              ) : (
+                <div className="tbl-wrap">
+                  <table className={`tbl ${styles.articleTable}`}>
+                    <thead>
+                      <tr>
+                        <th scope="col" className={styles.colArticle}>{t("col.article")}</th>
+                        <th scope="col" className={styles.colCategory}>{t("col.category")}</th>
+                        <th scope="col">{t("col.status")}</th>
+                        <th scope="col">{t("col.reads")}</th>
+                        <th scope="col">{t("col.helpful")}</th>
+                        <th scope="col">{t("col.tickets")}</th>
+                        <th scope="col">{t("col.updated")}</th>
+                        <th scope="col">{t("col.owner")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {list.data.items.map((a) => (
+                        <tr key={a.id} onClick={() => router.push(`/help/${a.id}`)} style={{ cursor: "pointer" }}>
+                          <td>
+                            <Link className={styles.articleLink} href={`/help/${a.id}`} onClick={(e) => e.stopPropagation()}>
+                              {a.title}
+                            </Link>
+                            <span className={styles.slug}>/help/{a.slug}</span>
+                          </td>
+                          <td>{a.category.name}</td>
+                          <td>
+                            {a.needsReview ? (
+                              <span title={a.reviewReason ? t(`reason.${a.reviewReason}`) : undefined}>
+                                <Pill tone="warn">{t("status.review")}</Pill>
+                              </span>
+                            ) : (
+                              <Pill tone={a.status === "published" ? "ok" : "neu"}>{t(`status.${a.status}`)}</Pill>
+                            )}
+                            {a.hasDraft && a.status === "published" && <span className="cell-sub" style={{ display: "block" }}>{t("status.hasDraft")}</span>}
+                          </td>
+                          <td className="num">{a.status === "draft" ? "—" : fmt.num(a.reads30)}</td>
+                          <td>{a.helpfulPct == null ? "—" : <Pill tone={helpfulTone(a.helpfulPct)}>{`${a.helpfulPct}%`}</Pill>}</td>
+                          <td className="num">{fmt.num(a.tickets)}</td>
+                          <td className="nowrap">{fmt.date(a.updatedAt)}</td>
+                          <td>{a.owner?.name ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
 
-          <aside className="card" aria-label={t("missesTitle")}>
-            <div className="card-head">
-              <h2 className="card-title">{t("missesTitle")}</h2>
-              <span className="muted small push-end">{t("missesDays")}</span>
-            </div>
-            {overview.data && !overview.data.topMisses.length ? (
-              <p className="muted small">{t("missesEmpty")}</p>
-            ) : (
-              <ul className={styles.missList}>
-                {(overview.data?.topMisses ?? []).map((m) => (
-                  <li key={m.query}>
-                    <div>
-                      <b>&quot;{m.query}&quot;</b>
-                      <span className="muted small">{t("missMeta", { searches: m.searches, tickets: m.tickets })}</span>
-                    </div>
-                    {missRow(m)}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </aside>
-        </div>
-      )}
+            <aside className="card" aria-label={t("missesTitle")}>
+              <div className="card-head">
+                <h2 className="card-title">{t("missesTitle")}</h2>
+                <span className="muted small push-end">{t("missesDays")}</span>
+              </div>
+              {overview.data && !overview.data.topMisses.length ? (
+                <p className="muted small">{t("missesEmpty")}</p>
+              ) : (
+                <ul className={`${styles.missList} motion-list`}>
+                  {(overview.data?.topMisses ?? []).map((m) => (
+                    <li key={m.query}>
+                      <div>
+                        <b>&quot;{m.query}&quot;</b>
+                        <span className="muted small">{t("missMeta", { searches: m.searches, tickets: m.tickets })}</span>
+                      </div>
+                      {missRow(m)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </aside>
+          </div>
+        )}
+      </MotionSwap>
 
       {modal === "categories" && categories.data && <CategoriesDialog categories={categories.data.items} onClose={() => setModal(null)} />}
       {modal === "create" && <CreateDialog categories={cats} onClose={() => setModal(null)} />}

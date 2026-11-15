@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Drawer, Modal, Notice, Seg } from "@/components/kit";
 import { Button, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { keys } from "@/lib/query";
 import type { Flag } from "@/lib/types";
 import { planLabel } from "../../workspaces/_parts/format";
@@ -32,6 +33,8 @@ const toLocal = (iso: string | null) => {
 export function EntryDrawer({ entry, entries, canWrite, onClose }: { entry: Entry | null; entries: Entry[]; canWrite: boolean; onClose: () => void }) {
   const t = useTranslations("cl.editor");
   const tk = useTranslations("cl.kind");
+  // การ์ดตัวเลือกแบบเลือกได้อันเดียว: กรอบม่วงของอันที่เลือกเลื่อนไปหาอันใหม่ (.opt-pill ใน ops.css)
+  const optPill = useSlidingIndicator<HTMLDivElement>(".opt");
   const toast = useToast();
   const cache = useQueryClient();
   const live = entry?.status === "published";
@@ -166,9 +169,9 @@ export function EntryDrawer({ entry, entries, canWrite, onClose }: { entry: Entr
           {customPath && <Input label={t("ctaPath")} value={f.ctaPath} placeholder="/profile?tab=notify" onChange={(e) => set("ctaPath", e.target.value)} hint={t("ctaPathHint")} error={fieldError("ctaPath")} />}
 
           <h3 className={styles.h}>{t("audience")}</h3>
-          <div className={styles.opts} role="radiogroup" aria-label={t("audience")}>
+          <div ref={optPill} className={`${styles.opts} motion-pill opt-pill`} role="radiogroup" aria-label={t("audience")}>
             {(["all", "plans", "flag", "admins"] as const).map((a) => (
-              <label key={a} className={f.audience === a ? "opt opt-on" : "opt"}>
+              <label key={a} className={f.audience === a ? "opt opt-on" : "opt"} data-state={f.audience === a ? "active" : undefined}>
                 <input type="radio" name="cl-audience" checked={f.audience === a} onChange={() => set("audience", a)} />
                 <span>
                   <b>{t(`aud.${a}`)}</b>

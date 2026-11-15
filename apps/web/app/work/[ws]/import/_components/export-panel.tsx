@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Download } from "lucide-react";
 import { LoadingState } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { queryKeys } from "@/lib/query";
 import type { Permissions } from "@/lib/types";
 import styles from "./import.module.css";
@@ -20,6 +21,8 @@ export function ExportPanel({ ws, projectKey: key }: { ws: string; projectKey: s
   const t = useTranslations("import-plan-changes.export");
   const w = `/w/${encodeURIComponent(ws)}`;
   const [scale, setScale] = useState<"day" | "week">("day");
+  // Day / Week เลือกได้ทีละอัน พื้นม่วงอ่อนเลื่อนตามตัวที่เลือก
+  const segRef = useSlidingIndicator<HTMLDivElement>("button");
   const perms = useQuery({
     queryKey: queryKeys.permissions(ws, key),
     queryFn: () => api.get<Permissions>(`${w}/projects/${encodeURIComponent(key)}/my-permissions`),
@@ -36,7 +39,7 @@ export function ExportPanel({ ws, projectKey: key }: { ws: string; projectKey: s
       {perms.isPending ? <LoadingState /> : (
         <div className="field">
           <span>{t("scale")}</span>
-          <div className={styles.seg} role="radiogroup" aria-label={t("scale")}>
+          <div ref={segRef} className={`${styles.seg} motion-pill`} role="radiogroup" aria-label={t("scale")}>
             {(["day", "week"] as const).map((s) => (
               <button key={s} type="button" role="radio" aria-checked={scale === s} onClick={() => setScale(s)}>{t(`scale__${s}`)}</button>
             ))}
@@ -45,7 +48,7 @@ export function ExportPanel({ ws, projectKey: key }: { ws: string; projectKey: s
       )}
       <div>
         <b className={styles.small}>{t("sheets")}</b>
-        <ul className={styles.sheetList}>
+        <ul className={`${styles.sheetList} motion-list`}>
           {SHEETS.map((s) => <li key={s}><b>{t(`sheet__${s}`)}</b><span className="muted">{t(`sheetHint__${s}`)}</span></li>)}
         </ul>
       </div>

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
-import { Badge, Button, ConfirmDialog, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
+import { Badge, Button, ConfirmDialog, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, MotionSwap, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -153,7 +153,7 @@ export function SearchPage({ ws }: { ws: string }) {
         <button type="button" className={styles.filterToggle} aria-expanded={filtersOpen} aria-controls="search-filters" onClick={() => setFiltersOpen(!filtersOpen)}>
           {t("page.filters")} {activeFilters > 0 && <span className={styles.filterCount}>{activeFilters}</span>}
         </button>
-        <aside id="search-filters" className={`${styles.card} ${styles.aside} ${filtersOpen ? styles.asideOpen : ""}`} aria-label={t("page.filters")}>
+        <aside id="search-filters" className={`${styles.card} ${styles.aside} ${filtersOpen ? `${styles.asideOpen} motion-in` : ""}`} aria-label={t("page.filters")}>
           <b>{t("page.typeHeading")}</b>
           {typeRows.map((type) => (
             <label key={type} className={styles.fchip}>
@@ -192,29 +192,32 @@ export function SearchPage({ ws }: { ws: string }) {
           </div>
         </aside>
         <section className={`${styles.card} ${styles.results}`} aria-label={t("page.results")}>
-          {!filters.q ? (
-            <EmptyState title={t("page.startTitle")} description={t("page.startHint")} />
-          ) : pending ? (
-            <LoadingState />
-          ) : error ? (
-            error instanceof ApiError && error.status === 403 ? <Forbidden /> : <ErrorState error={error} retry={() => { void all.refetch(); if (single) void typed.refetch(); }} />
-          ) : !results.length ? (
-            <div className={styles.empty}><b>{t("page.noResults")}</b><p>{t("page.noResultsHint")}</p></div>
-          ) : (
-            <>
-              {GROUPS.map((g) => {
-                const hits = results.filter((h) => (g.types as readonly string[]).includes(h.type));
-                if (!hits.length) return null;
-                return (
-                  // Canvas P1 แสดงรายการต่อกันไม่มีหัวกลุ่ม · คงกลุ่มไว้ให้โปรแกรมอ่านหน้าจอ
-                  <div key={g.id} role="group" aria-label={t(`groups.${g.id}`)}>
-                    {hits.map((h) => <Result key={`${h.type}:${hitId(h)}`} ws={ws} h={h} q={filters.q} year={me.yearFormat} />)}
-                  </div>
-                );
-              })}
-              {capped && <div className={styles.note}>{t("page.capped", { count: LIMIT })}</div>}
-            </>
-          )}
+          {/* เปลี่ยนคำค้นหรือตัวกรอง = ผลชุดใหม่ เคลื่อนเข้าแบบเดียวกับเปลี่ยนหน้า (เปิดหน้าครั้งแรกหน้าจางเข้าให้แล้ว) */}
+          <MotionSwap key={toQuery(filters)}>
+            {!filters.q ? (
+              <EmptyState title={t("page.startTitle")} description={t("page.startHint")} />
+            ) : pending ? (
+              <LoadingState />
+            ) : error ? (
+              error instanceof ApiError && error.status === 403 ? <Forbidden /> : <ErrorState error={error} retry={() => { void all.refetch(); if (single) void typed.refetch(); }} />
+            ) : !results.length ? (
+              <div className={styles.empty}><b>{t("page.noResults")}</b><p>{t("page.noResultsHint")}</p></div>
+            ) : (
+              <>
+                {GROUPS.map((g) => {
+                  const hits = results.filter((h) => (g.types as readonly string[]).includes(h.type));
+                  if (!hits.length) return null;
+                  return (
+                    // Canvas P1 แสดงรายการต่อกันไม่มีหัวกลุ่ม · คงกลุ่มไว้ให้โปรแกรมอ่านหน้าจอ
+                    <div key={g.id} role="group" aria-label={t(`groups.${g.id}`)}>
+                      {hits.map((h) => <Result key={`${h.type}:${hitId(h)}`} ws={ws} h={h} q={filters.q} year={me.yearFormat} />)}
+                    </div>
+                  );
+                })}
+                {capped && <div className={styles.note}>{t("page.capped", { count: LIMIT })}</div>}
+              </>
+            )}
+          </MotionSwap>
         </section>
       </div>
 
@@ -278,7 +281,7 @@ function Result({ ws, h, q, year }: { ws: string; h: SearchHit; q: string; year:
       snippet = h.snippet;
   }
   return (
-    <Link className={styles.res} href={href}>
+    <Link className={`${styles.res} motion-item`} href={href}>
       <TypeIcon type={h.type} size={30} />
       <div className={styles.resBody}>
         <div className={styles.resTitle}><Highlight text={title} q={q} /></div>

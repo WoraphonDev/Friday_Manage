@@ -8,8 +8,10 @@ import { hasAny, rolesOf } from "@/components/access";
 import { ErrorBlock, NoAccess, Notice, TableSkeleton } from "@/components/kit";
 import { Button, InlineError, Pill, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useExitGhost } from "@/lib/motion";
 import { useMe } from "@/lib/query";
 import { MobileHead } from "../_parts/MobileFrame";
+import { CountUp } from "@/components/count-up";
 
 type Reason = "amount_mismatch" | "wht_not_declared" | "duplicate_slip" | "payer_name_mismatch" | "unmatched" | "double_payment" | "wht_certificate" | "unreadable_slip";
 interface Item {
@@ -49,6 +51,7 @@ export function PaymentsMobile() {
   const cache = useQueryClient();
   const q = useQuery({ queryKey: KEY, queryFn: () => api.get<Queue>("/m/payments"), enabled: read, refetchInterval: 60_000 });
   const cur = q.data?.items.find((x) => x.id === params?.get("id")) ?? null;
+  const sheetGhost = useExitGhost<HTMLDivElement>();
   const show = (id: string | null) => router.replace(id ? `/m/payments?id=${id}` : "/m/payments");
   const money = (satang: number) => f.number(satang / 100, { style: "currency", currency: "THB", maximumFractionDigits: 0 });
   const dur = (min: number) => (Math.abs(min) >= 60 ? t("hours", { n: Math.round(Math.abs(min) / 60) }) : t("minutes", { n: Math.abs(min) }));
@@ -88,11 +91,11 @@ export function PaymentsMobile() {
           <div className="m-stats">
             <div className="m-stat">
               <span className="muted small">{t("autoToday")}</span>
-              <b className="num">{q.data.stats.autoPct == null ? "—" : `${q.data.stats.autoPct}%`}</b>
+              <b className="num"><CountUp value={q.data.stats.autoPct == null ? "—" : `${q.data.stats.autoPct}%`} /></b>
             </div>
             <div className={q.data.stats.nearSla ? "m-stat m-stat-bad" : "m-stat"}>
               <span className="muted small">{t("nearSla")}</span>
-              <b className="num">{q.data.stats.nearSla}</b>
+              <b className="num"><CountUp value={q.data.stats.nearSla} /></b>
             </div>
           </div>
           {!decide && <Notice tone="info" title={t("viewOnly")} />}
@@ -109,7 +112,7 @@ export function PaymentsMobile() {
                 const w = wait(x);
                 return (
                   <li key={x.id}>
-                    <button type="button" className="m-card m-card-btn" onClick={() => show(x.id)}>
+                    <button type="button" className="m-card m-card-btn motion-lift" onClick={() => show(x.id)}>
                       <span className="row">
                         <Pill tone={REASON_TONE[x.reason]}>{tr(x.reason)}</Pill>
                         {w.tone ? <Pill tone={w.tone}>{w.text}</Pill> : <span className="muted small">{w.text}</span>}
@@ -125,7 +128,7 @@ export function PaymentsMobile() {
         </>
       )}
       {cur && (
-        <div className="m-sheet-wrap" onClick={(e) => e.target === e.currentTarget && show(null)}>
+        <div ref={sheetGhost} className="m-sheet-wrap" data-state="open" onClick={(e) => e.target === e.currentTarget && show(null)}>
           <section className="m-sheet" role="dialog" aria-modal="true" aria-labelledby="m-pay-title">
             <span className="row">
               <Pill tone={REASON_TONE[cur.reason]}>{tr(cur.reason)}</Pill>

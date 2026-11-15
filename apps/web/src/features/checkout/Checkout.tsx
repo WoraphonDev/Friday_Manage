@@ -5,7 +5,8 @@ import { Check, Copy, Lock, X } from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, ErrorState, Forbidden, Input, LoadingState, Select, buttonVariants } from "@/components/ui";
+import { Button, CountUp, ErrorState, Forbidden, Input, LoadingState, MotionSwap, Select, buttonVariants } from "@/components/ui";
+import { useSlidingIndicator } from "@/lib/motion";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { ApiError, api, supportId } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -92,6 +93,9 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
   const onCardReady = useCallback((s: { stripe: StripeLike; card: StripeCardElement } | null) => {
     stripe.current = s;
   }, []);
+  // ตัวเลือกทีละอัน (นิติบุคคล / บุคคล · วิธีชำระ): พื้น / กรอบของตัวที่เลือกเลื่อนตาม
+  const entityRef = useSlidingIndicator<HTMLDivElement>("button");
+  const methodRef = useSlidingIndicator<HTMLDivElement>("button");
 
   // กรอกข้อมูลภาษีเดิมครั้งแรกที่โหลดได้ · ไม่มี profile = นิติบุคคล (กรณีที่พบบ่อยของ B2B)
   useEffect(() => {
@@ -370,7 +374,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
               <h2 id="co-tax">{receipt ? t("tax.titleReceipt") : t("tax.title")}</h2>
               {profile.data?.profile && <span className={cn(styles.muted, styles.small)}>{t("tax.reuse")}</span>}
             </div>
-            <div className={styles.seg} role="group" aria-label={t("tax.entity")}>
+            <div ref={entityRef} className={cn(styles.seg, "motion-pill")} role="group" aria-label={t("tax.entity")}>
               {(["corp", "person"] as const).map((e) => (
                 <button
                   key={e}
@@ -417,7 +421,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
               <h2 id="co-pay">{t("pay.title")}</h2>
               <span className={cn(styles.muted, styles.small)}>{t("pay.sub")}</span>
             </div>
-            <div className={styles.methods} role="radiogroup" aria-label={t("pay.title")}>
+            <div ref={methodRef} className={cn(styles.methods, "motion-pill")} role="radiogroup" aria-label={t("pay.title")}>
               {METHODS.map((m) => {
                 const blocked = m === "card" && whtOn;
                 const tag = { promptpay: [t("pay.promptpayTag"), styles.pillPrimary], card: [t("pay.cardTag"), ""], transfer: [t("pay.transferTag"), ""] }[m];
@@ -434,6 +438,8 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
               })}
             </div>
 
+            {/* เปลี่ยนวิธีชำระ = กล่องรายละเอียดชุดใหม่เคลื่อนเข้า (แสดงทีละกล่อง ห่อแล้วระยะห่างจึงเท่าเดิม) */}
+            <MotionSwap key={freeQuote ? "free" : payMethod}>
             {freeQuote && <div className={cn(styles.panel, styles.muted, styles.small)}>{freeMonths ? t("coupon.freeNote", { n: freeMonths }) : t("coupon.zeroNote")}</div>}
 
             {!freeQuote && payMethod === "promptpay" &&
@@ -457,6 +463,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
               ) : (
                 <div className={cn(styles.panel, styles.muted, styles.small)}>{t("transfer.before")}</div>
               ))}
+            </MotionSwap>
           </section>
         </div>
 
@@ -546,7 +553,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
               )}
               <div className={cn(styles.sr, styles.due)}>
                 <span>{t("summary.due")}</span>
-                <span>{pay}</span>
+                <span><CountUp value={pay} /></span>
               </div>
             </>
           )}
@@ -593,7 +600,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
             </div>
           )}
           {problemText && (
-            <div role="alert" className={styles.problem}>
+            <div role="alert" className={cn(styles.problem, "motion-in")}>
               {problemText}
               {problem instanceof ApiError && supportId(problem) && <div className={styles.mono}>{t("summary.requestId", { id: supportId(problem) ?? "" })}</div>}
             </div>
@@ -801,7 +808,7 @@ function Done({ ws, phase, planName, seats, email, vatRegistered, whtOn }: { ws:
   const doc = inv.taxDocument?.pdfUrl ?? null;
   return (
     <div className={styles.page}>
-      <section className={cn(styles.card, styles.done)} aria-labelledby="done-title">
+      <section className={cn(styles.card, styles.done, "motion-in")} aria-labelledby="done-title">
         <span className={cn(styles.pill, review ? styles.pillWait : styles.pillOk)}>{review ? ts("review") : ts("paid")}</span>
         <h1 id="done-title">{review ? t("review") : t("paid")}</h1>
         <div className={styles.muted}>{review ? t("reviewVia") : phase.free ? t("freeVia") : t(`via.${phase.method}`, { time: paidAt })}</div>

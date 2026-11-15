@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Plus, Search } from "lucide-react";
-import { AvatarStack, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
+import { AvatarStack, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, MotionSwap, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
+import { useSlidingIndicator } from "@/lib/motion";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
 import styles from "./tl.module.css";
@@ -146,6 +147,9 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   const [needReason, setNeedReason] = useState<Pending | null>(null);
   const [needRequest, setNeedRequest] = useState<Pending | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // พื้นปุ่มที่เลือก (Day / Week / Month · ระดับที่แสดง) เลื่อนตามปุ่มที่กด
+  const zoomRef = useSlidingIndicator<HTMLDivElement>("button");
+  const levelRef = useSlidingIndicator<HTMLDivElement>("button");
   // ความกว้างที่มองเห็น: แกนเวลายาวอย่างน้อยเต็มจอ ไม่เหลือพื้นที่ว่างด้านขวา
   const [viewW, setViewW] = useState(0);
   const dragged = useRef<string | null>(null);
@@ -382,7 +386,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
   return (
     <div className={styles.page}>
       <div className={styles.bar}>
-        <div className={styles.seg} role="group" aria-label={t("zoom.label")}>
+        <div ref={zoomRef} className={`${styles.seg} motion-pill`} role="group" aria-label={t("zoom.label")}>
           {(["day", "week", "month"] as const).map((z) => <button key={z} type="button" aria-pressed={zoom === z} onClick={() => setZoom(z)}>{t(`zoom.${z}`)}</button>)}
         </div>
         <Button size="icon" variant="ghost" aria-label={t("prev")} onClick={() => scrollBy(-1)}><ChevronLeft size={16} /></Button>
@@ -391,7 +395,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
         <span className="muted" style={{ fontSize: 12 }}>{formatDate(d.range.from, year)} – {formatDate(d.range.to, year)}</span>
       </div>
       <div className={styles.bar}>
-        <div className={styles.seg} role="group" aria-label={t("levelLabel")}>
+        <div ref={levelRef} className={`${styles.seg} motion-pill`} role="group" aria-label={t("levelLabel")}>
           {(["module", "task", "subtask"] as const).map((lv) => <button key={lv} type="button" aria-pressed={level === lv} onClick={() => showLevel(lv)}>{t(`levels.${lv}`)}</button>)}
         </div>
         <Select aria-label={t("colorBy")} size="small" prefix={t("colorBy")} value={colorBy} onChange={(e) => setColorBy(e.target.value as typeof colorBy)}>
@@ -420,6 +424,8 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
       <section className={styles.card}>
         {empty ? <EmptyState title={t("empty")} description={t("emptyHint")} /> : filtering && !modules.length ? <EmptyState title={t("filters.noMatch")} description={t("filters.noMatchHint")} action={<Button size="small" onClick={() => setFilters(NO_FILTERS)}>{t("filters.clear")}</Button>} /> : (
           <div className={styles.scroll} ref={scrollRef} data-testid="timeline-scroll">
+            {/* เปลี่ยนสเกลหรือระดับ: แผนภูมิชุดใหม่เลื่อนเข้าแบบเดียวกับเปลี่ยนหน้า · กล่องเลื่อน (scrollRef) อยู่นอก key ตำแหน่งเลื่อนจึงคงเดิม */}
+            <MotionSwap key={`${zoom}:${level}`}>
             <div className={`${styles.grid} ${resizing ? styles.resizing : ""}`} style={{ width: labelW + width, ["--lab-w" as string]: `${labelW}px` }} data-resized={labelW !== LABEL_W || undefined} data-testid="timeline-grid">
               <div className={`${styles.row} ${styles.headRow}`}>
                 <div className={styles.lab}>
@@ -471,7 +477,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                 if (ln.kind !== "task") {
                   const s = ln.s;
                   return (
-                    <div key={ln.id} className={styles.row}>
+                    <div key={ln.id} className={`${styles.row} motion-item`}>
                       <div className={`${styles.lab} ${ln.kind === "module" ? styles.mod : styles.grp}`}>
                         <button type="button" className={styles.toggle} aria-expanded={!closed.has(ln.id)} aria-label={t(closed.has(ln.id) ? "expand" : "collapse", { name: ln.name })} onClick={() => toggle(ln.id)}><ChevronDown size={14} style={{ transform: closed.has(ln.id) ? "rotate(-90deg)" : undefined }} /></button>
                         <span style={{ width: ln.kind === "module" ? 12 : 16, height: ln.kind === "module" ? 12 : 16, borderRadius: ln.kind === "module" ? 3 : 4, background: ln.kind === "module" ? ln.color : `${ln.color}26`, border: ln.kind === "module" ? 0 : `1px solid ${ln.color}66`, flex: "none" }} aria-hidden="true" />
@@ -482,7 +488,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                       <div className={`${styles.lane} ${dropRow === ln.id ? styles.drop : ""}`} style={{ width }} onDragOver={(e) => { if (canEdit && dragged.current) { e.preventDefault(); setDropRow(ln.id); } }} onDragLeave={() => setDropRow(null)} onDrop={(e) => onDropRow(e, ln.id)} data-testid={`lane-${ln.id}`}>
                         {laneBg}
                         {s.start && s.end && <>
-                          <span className={`${styles.b} ${styles.summary}`} style={{ left: x(s.start), width: Math.max(px, (toDay(s.end, s.start) + 1) * px), background: ln.kind === "module" ? "var(--subtle)" : `${ln.color}33` }}><span className={styles.fill} style={{ width: `${s.progressPct}%`, background: ln.color }} /></span>
+                          <span className={`${styles.b} ${styles.summary}`} style={{ left: x(s.start), width: Math.max(px, (toDay(s.end, s.start) + 1) * px), background: ln.kind === "module" ? "var(--subtle)" : `${ln.color}33` }}><span className={`${styles.fill} motion-bar`} style={{ width: `${s.progressPct}%`, background: ln.color }} /></span>
                           <span className={styles.barLabel} style={{ left: x(s.end) + px + 6 }}>{s.progressPct}% · {formatDate(s.start, year)} – {formatDate(s.end, year)}</span>
                         </>}
                       </div>
@@ -513,7 +519,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                   setDrag({ key: r.key, mode, x0: e.clientX, start: r.start, end: r.end, delta: 0 });
                 };
                 return (
-                  <div key={`${r.key}${ln.sub ? ":s" : ""}`} className={styles.row}>
+                  <div key={`${r.key}${ln.sub ? ":s" : ""}`} className={`${styles.row} motion-item`}>
                     <div className={`${styles.lab} ${ln.sub ? styles.sub : styles.task}`}>
                       {ln.hasKids && <button type="button" className={styles.toggle} aria-expanded={!closed.has(`t:${r.key}`)} aria-label={t(closed.has(`t:${r.key}`) ? "expand" : "collapse", { name: r.key })} onClick={() => toggle(`t:${r.key}`)}><ChevronDown size={14} style={{ transform: closed.has(`t:${r.key}`) ? "rotate(-90deg)" : undefined }} /></button>}
                       {!ln.hasKids && <span className={styles.dotStatus} style={{ borderColor: statusColor(r.status), background: r.status.category === "done" || r.status.category === "cancelled" ? statusColor(r.status) : "transparent" }} aria-hidden="true" />}
@@ -536,7 +542,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                         onKeyDown={onKey}
                       >
                         <span className={styles.body} style={{ background: ln.color, maskImage: thin.mask, WebkitMaskImage: thin.mask }}>
-                          <span className={styles.prog} style={{ width: `${r.progressPct}%` }} />
+                          <span className={`${styles.prog} motion-bar`} style={{ width: `${r.progressPct}%` }} />
                           {red > 0 && <span className={styles.lateFill} data-testid={`late-${r.key}`} style={{ width: red }} />}
                         </span>
                         {canEdit && <span className={`${styles.handle} ${styles.start}`} aria-label={t("resizeStart", { key: r.key })} data-testid={`start-${r.key}`} onMouseDown={startDrag("start")} />}
@@ -549,6 +555,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
                 );
               })}
             </div>
+            </MotionSwap>
           </div>
         )}
         {unscheduled.length > 0 && (
@@ -558,7 +565,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
               <h2 className={styles.unschedTitle}>{t("unscheduled")} <span className="muted">{t("unscheduledCount", { count: unscheduled.length })}</span></h2>
               {canEdit && <span className="muted" style={{ fontSize: 12 }}>{t("unscheduledHint")}</span>}
             </div>
-            <div className={styles.unschedList}>
+            <div className={`${styles.unschedList} motion-list`}>
               {unscheduled.map((u) => (
                 <span key={u.key} className={`${styles.chip} ${canEdit ? "" : styles.chipStatic}`} title={`${u.key} ${u.title}`} draggable={canEdit} data-testid={`unscheduled-${u.key}`} onDragStart={(e) => { dragged.current = u.key; e.dataTransfer?.setData("text/plain", u.key); }}>
                   {canEdit && (

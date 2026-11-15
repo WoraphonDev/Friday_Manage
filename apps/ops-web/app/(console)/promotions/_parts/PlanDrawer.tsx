@@ -9,6 +9,7 @@ import { useApprovalFlow, useReauth } from "@/components/dialogs";
 import { Drawer } from "@/components/kit";
 import { Button, InlineError, Input, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { useFmt } from "../../workspaces/_parts/format";
 import { bahtToSatang, type PlanRow, satangToBaht } from "./types";
 
@@ -20,6 +21,8 @@ type Policy = "grandfather" | "next_cycle";
  */
 export function PlanDrawer({ plan, onClose }: { plan: PlanRow; onClose: () => void }) {
   const t = useTranslations("promo.plan");
+  // การ์ดตัวเลือกแบบเลือกได้อันเดียว: กรอบม่วงของอันที่เลือกเลื่อนไปหาอันใหม่ (.opt-pill ใน ops.css)
+  const optPill = useSlidingIndicator<HTMLDivElement>(".opt");
   const tc = useTranslations("common.dialog");
   const fmt = useFmt();
   const toast = useToast();
@@ -120,9 +123,9 @@ export function PlanDrawer({ plan, onClose }: { plan: PlanRow; onClose: () => vo
         </div>
         <fieldset className="promo-fieldset" disabled={!priceChanged}>
           <legend className="field-label">{t("whenPrice")}</legend>
-          <div className="promo-options">
+          <div ref={optPill} className="promo-options motion-pill opt-pill">
             {(["grandfather", "next_cycle"] as const).map((p) => (
-              <label key={p} className={clsx("opt", priceChanged && policy === p && "opt-on")}>
+              <label key={p} className={clsx("opt", priceChanged && policy === p && "opt-on")} data-state={priceChanged && policy === p ? "active" : undefined}>
                 <input type="radio" name="policy" value={p} checked={policy === p} onChange={() => setPolicy(p)} />
                 <span>
                   <b>{p === "grandfather" ? t("grandfather") : t("nextCycle")}</b>

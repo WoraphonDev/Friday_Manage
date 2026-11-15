@@ -5,7 +5,7 @@ import { Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { hasAny, rolesOf } from "@/components/access";
-import { Chip, Empty, ErrorBlock, NoAccess, Notice, PageHead, TableSkeleton } from "@/components/kit";
+import { Chip, ChipGroup, Empty, ErrorBlock, NoAccess, Notice, PageHead, TableSkeleton } from "@/components/kit";
 import { Button, Pill } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -15,6 +15,7 @@ import { ResolveDialog } from "./_components/ResolveDialog";
 import { SettingsDialog } from "./_components/SettingsDialog";
 import { BRIDGE_KEY, type Filter, type LinkRow, type Overview, type Settings, severityTone, useStatusLabel } from "./_components/types";
 import styles from "./bugs.module.css";
+import { CountUp } from "@/components/count-up";
 
 const FILTERS: Filter[] = ["open", "to_notify", "not_fixed", "closed30"];
 
@@ -90,7 +91,7 @@ export function BugsPage() {
             <>
               <div className="stat">
                 <span className="muted small">{t("kpi.open")}</span>
-                <b>{fmt.num(o.kpi.openBugs)}</b>
+                <b><CountUp value={fmt.num(o.kpi.openBugs)} /></b>
                 <span className="muted small">
                   {t("kpi.openNote", {
                     s1: o.kpi.bySeverity.S1,
@@ -102,17 +103,17 @@ export function BugsPage() {
               </div>
               <div className="stat">
                 <span className="muted small">{t("kpi.waiting")}</span>
-                <b>{fmt.num(o.kpi.ticketsWaiting)}</b>
+                <b><CountUp value={fmt.num(o.kpi.ticketsWaiting)} /></b>
                 <span className="muted small">{t("kpi.waitingNote", { n: o.kpi.workspaces })}</span>
               </div>
               <div className={o.kpi.avgFixDaysS2 != null && o.kpi.avgFixDaysS2 > 3 ? "stat stat-warn" : "stat"}>
                 <span className="muted small">{t("kpi.fix")}</span>
-                <b>{o.kpi.avgFixDaysS2 == null ? na : t("kpi.fixValue", { n: o.kpi.avgFixDaysS2 })}</b>
+                <b><CountUp value={o.kpi.avgFixDaysS2 == null ? na : t("kpi.fixValue", { n: o.kpi.avgFixDaysS2 })} /></b>
                 <span className="muted small">{t("kpi.fixNote")}</span>
               </div>
               <div className={o.kpi.toNotify > 0 ? "stat stat-warn" : "stat"}>
                 <span className="muted small">{t("kpi.toNotify")}</span>
-                <b>{fmt.num(o.kpi.toNotify)}</b>
+                <b><CountUp value={fmt.num(o.kpi.toNotify)} /></b>
                 <span className="muted small">{t("kpi.toNotifyNote")}</span>
               </div>
             </>
@@ -122,7 +123,7 @@ export function BugsPage() {
 
       <div className={styles.layout}>
         <section className="card">
-          <div className={styles.filters} role="group" aria-label={t("filter.label")}>
+          <ChipGroup className={styles.filters} role="group" aria-label={t("filter.label")}>
             {FILTERS.map((f) => (
               <Chip key={f} pressed={filter === f} onClick={() => setFilter(f)}>
                 {t(`filter.${f}`)}
@@ -130,7 +131,7 @@ export function BugsPage() {
               </Chip>
             ))}
             <span className="muted small push-end">{t("sortNote")}</span>
-          </div>
+          </ChipGroup>
           {links.isPending ? (
             <TableSkeleton rows={5} cols={9} />
           ) : links.error ? (

@@ -1,5 +1,7 @@
 /* แบบสำรวจ NPS (U3) · การ์ดมุมขวาล่างไม่มีพื้นหลังมืด · มือถือเป็น Bottom sheet · สีจาก token เท่านั้น */
 .card { position:fixed; right:24px; bottom:24px; z-index:45; width:min(380px, calc(100vw - 32px)); display:flex; flex-direction:column; gap:12px; padding:16px; background:var(--card); color:var(--foreground); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-menu); }
+/* กรอบ MotionSwap ของแต่ละขั้น: เว้นเท่ากล่องเดิม (การ์ด 12 · Bottom sheet 10) */
+.stepBody { display:flex; flex-direction:column; gap:12px; min-width:0; }
 .headRow { display:flex; align-items:flex-start; gap:8px; }
 .question { flex:1; font-size:14px; font-weight:700; line-height:1.45; }
 .close { flex:none; display:inline-flex; padding:2px; border:0; background:none; color:var(--muted); cursor:pointer; border-radius:6px; }
@@ -25,4 +27,13 @@
 
 .dim { position:fixed; inset:0; z-index:44; background:var(--overlay); }
 .sheet { position:fixed; left:0; right:0; bottom:0; z-index:45; display:flex; flex-direction:column; gap:10px; padding:10px 16px calc(16px + env(safe-area-inset-bottom)); background:var(--card); color:var(--foreground); border-radius:16px 16px 0 0; box-shadow:var(--shadow-menu); }
+.sheet .stepBody { gap:10px; }
 .grab { width:40px; height:4px; margin:0 auto 6px; border-radius:999px; background:var(--border-strong); }
+
+/* การ์ด / Bottom sheet โผล่ขึ้นนุ่ม ๆ ตอนแสดง (ความเร็วจาก --motion-* · ปิดเองเมื่อลดการเคลื่อนไหว) */
+.card { animation:cardIn var(--motion-dur) var(--motion-ease) backwards; }
+.sheet { animation:sheetIn var(--motion-dur) var(--motion-ease) backwards; }
+.dim { animation:dimIn var(--motion-dur) ease backwards; }
+@keyframes cardIn { from { opacity:0; translate:0 12px; } }
+@keyframes sheetIn { from { translate:0 100%; } }
+@keyframes dimIn { from { opacity:0; } }

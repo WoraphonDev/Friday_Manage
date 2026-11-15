@@ -1,6 +1,6 @@
 .page { padding:20px 24px; display:flex; flex-direction:column; gap:20px; min-width:0; }
 .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-.seg { display:inline-flex; box-sizing:border-box; height:var(--control-h); border:1px solid var(--input); border-radius:8px; overflow:hidden; background:var(--card); }
+.seg { display:inline-flex; box-sizing:border-box; height:var(--control-h); border:1px solid var(--input); border-radius:8px; overflow:hidden; background:var(--card); --ind-bg:var(--primary-soft); --ind-radius:0; }
 .seg button { min-height:calc(var(--control-h) - 2px); padding:0 12px; border:0; background:transparent; font:inherit; font-size:12px; color:var(--foreground-soft); cursor:pointer; }
 .seg button[aria-pressed="true"] { background:var(--primary-soft); color:var(--primary-text); font-weight:600; }
 .card { background:var(--card); border:1px solid var(--border); border-radius:12px; min-width:0; }
@@ -202,6 +202,8 @@
 .foot { padding:10px 14px; font-size:11px; color:var(--muted); }
 .chip { display:inline-flex; align-items:center; min-height:32px; padding:0 12px; border-radius:999px; border:1px solid var(--input); background:var(--card); font:inherit; font-size:12px; color:var(--foreground-soft); cursor:pointer; }
 .chip[aria-pressed="true"] { background:var(--contrast-bg); border-color:var(--contrast-bg); color:var(--contrast-ink); }
+/* พื้นที่เลื่อนตามชิปมุมมองที่เลือก (motion-pill) หน้าตาเดียวกับชิปที่เลือก */
+.views { --ind-bg:var(--contrast-bg); --ind-border:1px solid var(--contrast-bg); --ind-radius:999px; }
 .toggle { border:0; background:transparent; cursor:pointer; padding:0; display:inline-flex; color:inherit; }
 /* M6 มือถือ */
 .mobileOnly { display:none; }
@@ -300,6 +302,7 @@
   .chip { min-height: 40px; padding: 0 14px; border-radius: 22px; border-color: var(--border-strong); font-size: 14px; }
   .chip[aria-pressed="true"], .chip[aria-pressed="true"]:hover { background: var(--primary-soft); border-color: var(--primary-border); color: var(--primary-text); font-weight: 600; }
   .chip[aria-pressed="true"] span { color: inherit; }
+  .views { --ind-bg: var(--primary-soft); --ind-border: 1px solid var(--primary-border); --ind-radius: 22px; }
 }
 
 /* W32 · มือถือตามต้นแบบ (proj.* ฐาน B): ขอบหน้า 12 · การ์ดมุม 16 มีเงา · ตัวเลือกแบบแบ่งช่องพื้นเทา · ชิปสูง 40 ม่วงอ่อนเมื่อเลือก · desktop ไม่เปลี่ยน */
@@ -311,4 +314,5 @@
   .seg button { min-height: 40px; border: 0; border-radius: 9px; background: transparent; font-size: 14px; }
   .seg button + button { border-left: 0; }
   .seg button[aria-pressed="true"] { background: var(--card); color: var(--foreground); box-shadow: var(--shadow-card); }
+  .seg { --ind-bg: var(--card); --ind-radius: 9px; --ind-shadow: var(--shadow-card); }
 }

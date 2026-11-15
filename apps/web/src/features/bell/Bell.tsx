@@ -6,7 +6,8 @@ import * as Popover from "@radix-ui/react-popover";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Bell as BellIcon } from "lucide-react";
-import { Avatar, ErrorState, useToast } from "@/components/ui";
+import { Avatar, ErrorState, MotionSwap, useToast } from "@/components/ui";
+import { useSlidingIndicator } from "@/lib/motion";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -71,6 +72,12 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
+  // เส้นใต้แท็บเลื่อนตามแท็บที่เลือก · รายการเคลื่อนเข้าเมื่อกดเปลี่ยนแท็บเท่านั้น (เปิดแผงครั้งแรกมีแอนิเมชันของ Popover อยู่แล้ว)
+  const tabsRef = useSlidingIndicator<HTMLDivElement>(`.${styles.tab}`);
+  const [switched, setSwitched] = useState(false);
+  useEffect(() => {
+    if (!open) setSwitched(false);
+  }, [open]);
   const me = useQuery({ queryKey: queryKeys.me, queryFn: () => api.get<Me>("/me") });
   const ti = useTranslations("inbox-bell.inbox");
   const dailyTitle = useDailyTitle();
@@ -162,10 +169,11 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
             <button type="button" className={styles.link} disabled={readAll.isPending} onClick={() => readAll.mutate()}>{tb("readAll")}</button>
             <Link href={`/work/${encodeURIComponent(workspace)}/profile`} style={{ fontSize: 12 }} onClick={() => setOpen(false)}>{tb("settings")}</Link>
           </div>
-          <div className={styles.tabs} role="tablist">
-            {(["all", "unread", "mention"] as const).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={styles.tab} onClick={() => setTab(k)}>{tb(`tabs.${k}`)}</button>)}
+          <div ref={tabsRef} className={`${styles.tabs} motion-underline`} role="tablist">
+            {(["all", "unread", "mention"] as const).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={styles.tab} onClick={() => { setTab(k); setSwitched(true); }}>{tb(`tabs.${k}`)}</button>)}
           </div>
           <div className={styles.list}>
+            <BellItems swapKey={switched ? tab : null}>
             {list.isPending && <div className={styles.empty}>…</div>}
             {list.isError && <ErrorState error={list.error} retry={() => void list.refetch()} />}
             {list.data && !list.data.items.length && <div className={styles.empty}>{tb("empty")}</div>}
@@ -173,17 +181,23 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
               const who = n.actor?.displayName ?? (n.payload.actorName as string | undefined) ?? "Friday";
               const target = [n.payload.issueKey, title(n)].filter(Boolean).join(" ");
               return (
-                <Link key={n.id} className={`${styles.item} ${!n.readAt ? styles.unread : ""}`} href={itemHref(n)} onClick={() => setOpen(false)}>
+                <Link key={n.id} className={`${styles.item} motion-item ${!n.readAt ? styles.unread : ""}`} href={itemHref(n)} onClick={() => setOpen(false)}>
                   <Avatar size="small" person={{ id: n.actor?.id ?? n.id, displayName: who }} />
                   <span className={styles.text}><span><b>{who}</b> {target}</span><span className={styles.meta}>{typeof n.payload.message === "string" ? `“${n.payload.message}” · ` : ""}{formatDate(n.createdAt)}</span></span>
                   {!n.readAt && <span className={styles.dot} />}
                 </Link>
               );
             })}
+            </BellItems>
           </div>
           <Link className={styles.all} href={inboxHref} onClick={() => setOpen(false)}>{tb("openInbox")}</Link>
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
   );
+}
+
+/** รายการในแผง: หลังกดเปลี่ยนแท็บครอบด้วย MotionSwap (ผูก key กับแท็บ) ให้เคลื่อนเข้าและไล่แถว · ก่อนนั้นแสดงตรง ๆ */
+function BellItems({ swapKey, children }: { swapKey: Tab | null; children: React.ReactNode }) {
+  return swapKey ? <MotionSwap key={swapKey}>{children}</MotionSwap> : <>{children}</>;
 }

@@ -7,6 +7,8 @@
 .linkButton { background:none; border:0; padding:0; color:var(--primary-text); cursor:pointer; font:inherit; }
 .linkButton:hover { text-decoration:underline; }
 .spacer { flex:1; }
+/* กรอบ MotionSwap ของหน้าแรก: เว้นระหว่างกล่องเท่า .page (มือถือ 12) */
+.swap { display:flex; flex-direction:column; gap:16px; min-width:0; }
 .rowEnd { display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
 
 /* X1 · หัวศูนย์ช่วยเหลือ */
@@ -166,6 +168,8 @@
 .segmented { display:inline-flex; background:var(--subtle); border-radius:10px; padding:3px; }
 .segmented button { border:0; background:transparent; padding:6px 12px; border-radius:8px; font:inherit; font-size:13px; color:var(--muted); cursor:pointer; }
 .segmented button[aria-pressed="true"] { background:var(--card); color:var(--foreground); font-weight:600; box-shadow:var(--shadow-card); }
+/* พื้นที่เลื่อน (.motion-pill) หน้าตาเดียวกับปุ่มที่เลือก */
+.segmented { --ind-bg:var(--card); --ind-shadow:var(--shadow-card); }
 .ticketLayout { display:grid; grid-template-columns:412px minmax(0, 1fr); gap:16px; align-items:start; }
 .ticketList { list-style:none; margin:0; padding:0; overflow:hidden; min-height:420px; }
 .ticketItem { display:flex; flex-direction:column; gap:4px; width:100%; text-align:left; padding:14px 16px; border:0; border-bottom:1px solid var(--border); background:var(--card); font:inherit; color:var(--foreground); cursor:pointer; }
@@ -227,6 +231,7 @@
 /* W33 · มือถือตามต้นแบบ (ฐาน B): ขอบหน้า 12 · การ์ดมุม 16 มีเงา · desktop ไม่เปลี่ยน */
 @media (max-width: 760px) {
   .page { padding: 8px 12px 24px; gap: 12px; }
+  .swap { gap: 12px; }
   .card { border-radius: 16px; box-shadow: var(--shadow-card); }
   .chip { min-height: 40px; padding: 0 14px; font-size: 14px; }
 }

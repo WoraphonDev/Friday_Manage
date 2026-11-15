@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { hasAny } from "@/components/access";
 import { PageHead, Tabs } from "@/components/kit";
+import { MotionSwap } from "@/components/shell/page-enter";
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -56,13 +57,16 @@ export function BillingPage() {
         onChange={(v) => router.replace(`/payments?tab=${v}`)}
         tabs={TABS.map((v) => ({ value: v, label: t(`tabs.${v}`, { n: v === "verify" ? (exc.data?.items.length ?? 0) : (over.data?.items.length ?? 0) }) }))}
       />
-      {tab === "verify" && <VerifyTab />}
-      {tab === "incoming" && <IncomingTab />}
-      {tab === "invoices" && <InvoicesTab creating={creating} onCreatingChange={setCreating} />}
-      {tab === "overdue" && <OverdueTab />}
-      {tab === "tax" && <TaxTab />}
-      {tab === "refunds" && <RefundsSummaryTab />}
-      {tab === "revenue" && <RevenueTab />}
+      {/* เปลี่ยนแท็บ (?tab=) ไม่เปลี่ยน route: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}
+      <MotionSwap key={tab} className="motion-stack">
+        {tab === "verify" && <VerifyTab />}
+        {tab === "incoming" && <IncomingTab />}
+        {tab === "invoices" && <InvoicesTab creating={creating} onCreatingChange={setCreating} />}
+        {tab === "overdue" && <OverdueTab />}
+        {tab === "tax" && <TaxTab />}
+        {tab === "refunds" && <RefundsSummaryTab />}
+        {tab === "revenue" && <RevenueTab />}
+      </MotionSwap>
       {exporting && <AccountantExport onClose={() => setExporting(false)} />}
     </>
   );

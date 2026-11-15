@@ -7,9 +7,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
 import { hasAny } from "@/components/access";
-import { Chip, Drawer, Empty, ErrorBlock, Modal, Notice, PageHead, Seg, TableSkeleton } from "@/components/kit";
+import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, PageHead, Seg, TableSkeleton } from "@/components/kit";
 import { Button, buttonClass, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
+import { MotionSwap } from "@/components/shell/page-enter";
 import { api } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { useMe } from "@/lib/query";
 import type { OpenSession } from "@/lib/types";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
@@ -78,6 +80,8 @@ const invalidate = (cache: ReturnType<typeof useQueryClient>) => void cache.inva
 /** หน้า 6 · Support (Support.dc.html): คิว Ticket · รายละเอียดและข้อความ · ผลงานรายคน · การเข้าช่วยเหลือ */
 export function SupportPage() {
   const t = useTranslations("ss.support");
+  // รายการที่เลือกได้อันเดียว: พื้นม่วงอ่อนของอันที่เลือกเลื่อนไปหาอันใหม่ (.menu-pill ใน ops.css)
+  const menuPill = useSlidingIndicator<HTMLUListElement>(".menu-item");
   const tb = useTranslations("bugs.support");
   const params = useSearchParams();
   const router = useRouter();
@@ -142,14 +146,14 @@ export function SupportPage() {
               label: t(`queues.${v}`),
             }))}
           />
-          <div className="row">
+          <ChipGroup className="row">
             {(["active", "pending_dev", "solved", "closed"] as const).map((v) => (
               <Chip key={v} pressed={status === v} onClick={() => setStatus(v)}>
                 {/* O36 · แท็บ "รอทีมพัฒนา" (Ticket สถานะ pending_dev) */}
                 {v === "pending_dev" ? tb("pendingDev") : t(`statusFilter.${v}`)}
               </Chip>
             ))}
-          </div>
+          </ChipGroup>
           <Input aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />
           {list.isPending ? (
             <TableSkeleton rows={5} cols={1} />
@@ -158,17 +162,17 @@ export function SupportPage() {
           ) : !list.data.items.length ? (
             <Empty ok={queue === "none"} title={queue === "none" ? t("emptyQueue") : t("empty")} />
           ) : (
-            <ul className="stack" style={{ listStyle: "none", margin: 0, padding: 0, gap: 6 }} aria-label={t("title")}>
+            <ul ref={menuPill} className="stack motion-list motion-pill menu-pill" style={{ listStyle: "none", margin: 0, padding: 0, gap: 6 }} aria-label={t("title")}>
               {list.data.items.map((k) => (
                 <li key={k.id}>
                   <button
                     type="button"
                     className="menu-item"
                     aria-current={selected === k.id ? "true" : undefined}
+                    data-state={selected === k.id ? "active" : undefined}
                     style={{
                       alignItems: "flex-start",
                       border: "1px solid var(--border)",
-                      background: selected === k.id ? "var(--primary-soft)" : undefined,
                     }}
                     onClick={() => select(k.id)}
                   >
@@ -198,7 +202,10 @@ export function SupportPage() {
         </section>
         <div>
           {selected ? (
-            <TicketView id={selected} />
+            // เลือก Ticket อื่น: รายละเอียดเคลื่อนเข้าแบบเปลี่ยนหน้า
+            <MotionSwap key={selected}>
+              <TicketView id={selected} />
+            </MotionSwap>
           ) : (
             <section className="card">
               <Empty title={t("pick")} />

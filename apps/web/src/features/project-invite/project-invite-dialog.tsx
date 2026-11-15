@@ -25,7 +25,7 @@ export function InviteLinks({ links }: { links: InviteLink[] }) {
   if (!links.length) return null;
   const allEmailed = links.every((l) => l.emailed);
   return (
-    <div className={styles.links} role="status">
+    <div className={`${styles.links} motion-in`} role="status">
       <strong>{t(allEmailed ? "linksTitleEmailed" : "linksTitle")}</strong>
       {links.map((l) => (
         <div key={l.email}>

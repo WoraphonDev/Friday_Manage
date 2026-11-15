@@ -3,7 +3,8 @@
 import type { ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useToast } from "@/components/ui";
+import { MotionSwap, useToast } from "@/components/ui";
+import { useSlidingIndicator } from "@/lib/motion";
 import { api } from "@/lib/api";
 import { adminKey, errorText, wsPath, type WorkspaceSettings } from "./types";
 import styles from "./admin.module.css";
@@ -30,10 +31,11 @@ export function Switch({ checked, label, onChange, disabled }: { checked: boolea
   );
 }
 
-/** ตัวเลือกแบบปุ่มกด (radio) ตาม .opt ใน Canvas */
+/** ตัวเลือกแบบปุ่มกด (radio) ตาม .opt ใน Canvas · กรอบม่วงของตัวที่เลือกเลื่อนไปตามตัวเลือก (.motion-pill · สีตั้งที่ .opts) */
 export function OptionGroup<T extends string | number | null>({ label, value, options, onChange, disabled }: { label: string; value: T; options: { value: T; title: string; description?: string }[]; onChange: (v: T) => void; disabled?: boolean }) {
+  const ref = useSlidingIndicator<HTMLDivElement>(`.${styles.opt}`);
   return (
-    <div className={styles.opts} role="radiogroup" aria-label={label}>
+    <div ref={ref} className={`${styles.opts} motion-pill`} role="radiogroup" aria-label={label}>
       {options.map((o) => (
         <button key={String(o.value)} type="button" role="radio" aria-checked={o.value === value} className={styles.opt} disabled={disabled} onClick={() => onChange(o.value)}>
           <span>
@@ -81,4 +83,12 @@ export function usePatchSettings(ws: string) {
       return false;
     }
   };
+}
+
+/**
+ * ผลลัพธ์ที่เปลี่ยนตามตัวกรอง: ครั้งแรกแสดงตรง ๆ (กรอบหัวข้อ Admin เคลื่อนให้แล้ว ไม่ซ้อนอีกชั้น)
+ * หลังผู้ใช้เปลี่ยนตัวกรอง (swapKey ไม่เป็น null) ครอบด้วย MotionSwap ให้ชุดใหม่เคลื่อนเข้าและแถวไล่กัน
+ */
+export function SwapAfter({ swapKey, children }: { swapKey: string | null; children: ReactNode }) {
+  return swapKey === null ? <>{children}</> : <MotionSwap key={swapKey}>{children}</MotionSwap>;
 }

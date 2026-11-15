@@ -5,12 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { hasAny } from "@/components/access";
 import { NoAccess, Notice, PageHead, Tabs } from "@/components/kit";
+import { MotionSwap } from "@/components/shell/page-enter";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { History } from "./_parts/History";
 import { Pending } from "./_parts/Pending";
 import { Search } from "./_parts/Search";
 import type { PendingWorkspace, Summary } from "./_parts/types";
+import { CountUp } from "@/components/count-up";
 
 type Tab = "search" | "pending" | "history";
 const TABS: Tab[] = ["search", "pending", "history"];
@@ -38,22 +40,22 @@ export function RestorePage() {
         <section className="stats" aria-label={t("title")}>
           <div className="stat">
             <span className="muted small">{t("stats.pending")}</span>
-            <b className="num">{s.pendingWorkspaces}</b>
+            <b className="num"><CountUp value={s.pendingWorkspaces} /></b>
             <span className="muted small">{t("stats.pendingSoon", { n: s.pendingSoon })}</span>
           </div>
           <div className="stat">
             <span className="muted small">{t("stats.restored")}</span>
-            <b className="num">{s.restored30d.total}</b>
+            <b className="num"><CountUp value={s.restored30d.total} /></b>
             <span className="muted small">{t("stats.restoredSub", s.restored30d)}</span>
           </div>
           <div className="stat">
             <span className="muted small">{t("stats.tonight")}</span>
-            <b className="num">{t("stats.tonightValue", s.purgeTonight)}</b>
+            <b className="num"><CountUp value={t("stats.tonightValue", s.purgeTonight)} /></b>
             <span className="muted small">{t("stats.tonightSub", { time: s.purgeTonight.runsAt })}</span>
           </div>
           <div className="stat">
             <span className="muted small">{t("stats.backup")}</span>
-            <b className="num">{t("stats.backupValue", { n: s.backupDays })}</b>
+            <b className="num"><CountUp value={t("stats.backupValue", { n: s.backupDays })} /></b>
             <span className="muted small">{t("stats.backupSub")}</span>
           </div>
         </section>
@@ -77,9 +79,12 @@ export function RestorePage() {
       />
       {me && !canAct && <Notice tone="info" title={t("readOnly")} />}
       {/* ตามบอร์ด 21: แท็บแรกแสดงการค้นและ Workspace ที่รอลบถาวรต่อกัน */}
-      {tab === "search" && <Search canAct={canAct} />}
-      {(tab === "search" || tab === "pending") && <Pending query={pending} canAct={canAct} />}
-      {tab === "history" && <History />}
+      {/* เปลี่ยนแท็บในหน้าเดียวกัน: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}
+      <MotionSwap key={tab} className="motion-stack">
+        {tab === "search" && <Search canAct={canAct} />}
+        {(tab === "search" || tab === "pending") && <Pending query={pending} canAct={canAct} />}
+        {tab === "history" && <History />}
+      </MotionSwap>
     </>
   );
 }

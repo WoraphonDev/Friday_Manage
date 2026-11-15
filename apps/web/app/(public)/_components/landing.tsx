@@ -3,6 +3,7 @@
 import { Fragment, useRef, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { PageEnter } from "@/components/shell/page-enter";
 import { buttonVariants } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { DEMO_ORDER, FeatureCard } from "./feature-demos";
@@ -190,14 +191,19 @@ export function Landing() {
   );
 }
 
-/** /pricing · ราคาอย่างเดียว พร้อมหัวและท้ายเว็บ */
+/**
+ * /pricing · ราคาอย่างเดียว พร้อมหัวและท้ายเว็บ
+ * เนื้อหาจางเข้าแบบเดียวกับหน้าในระบบ (PageEnter) แต่หัวเว็บคงที่ · หน้าแรกไม่ใช้เพราะ Hero มีลำดับการเคลื่อนไหวของตัวเองอยู่แล้ว
+ */
 export function PricingPage() {
   return (
     <div className={styles.page}>
       <SiteHeader />
-      <main>
-        <PricingSection heading="h1" />
-      </main>
+      <PageEnter>
+        <main>
+          <PricingSection heading="h1" />
+        </main>
+      </PageEnter>
       <SiteFooter />
     </div>
   );

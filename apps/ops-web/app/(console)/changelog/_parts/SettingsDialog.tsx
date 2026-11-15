@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ErrorBlock, Modal, Notice, Switch } from "@/components/kit";
 import { Button, InlineError, Input, LoadingState, Select, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import styles from "../changelog.module.css";
 import { NPS_KEY, type NpsSettings } from "./types";
 
@@ -17,6 +18,8 @@ const SAMPLE = [10, 25, 50, 75, 100];
 /** U5 · ตั้งค่าแบบสำรวจ NPS (Owner เท่านั้น · ถามในแอปเท่านั้น ไม่ส่งอีเมล) */
 export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const t = useTranslations("cl.settingsDialog");
+  // การ์ดตัวเลือกแบบเลือกได้อันเดียว: กรอบม่วงของอันที่เลือกเลื่อนไปหาอันใหม่ (.opt-pill ใน ops.css)
+  const optPill = useSlidingIndicator<HTMLDivElement>(".opt");
   const toast = useToast();
   const cache = useQueryClient();
   const q = useQuery({ queryKey: [...NPS_KEY, "settings"], queryFn: () => api.get<Payload>("/nps/settings") });
@@ -58,9 +61,9 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               <span>{t("enabled")}</span>
             </div>
             <h3 className={styles.h}>{t("who")}</h3>
-            <div className={styles.opts2} role="radiogroup" aria-label={t("who")}>
+            <div ref={optPill} className={`${styles.opts2} motion-pill opt-pill`} role="radiogroup" aria-label={t("who")}>
               {(["admins", "members"] as const).map((a) => (
-                <label key={a} className={v.audience === a ? "opt opt-on" : "opt"}>
+                <label key={a} className={v.audience === a ? "opt opt-on" : "opt"} data-state={v.audience === a ? "active" : undefined}>
                   <input type="radio" name="nps-audience" checked={v.audience === a} onChange={() => set("audience", a)} />
                   <span>
                     <b>{t(a)}</b>

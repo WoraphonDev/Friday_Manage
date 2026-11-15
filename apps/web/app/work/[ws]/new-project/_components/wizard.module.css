@@ -86,3 +86,17 @@ textarea.in { resize:vertical; }
   .body { padding: 8px 12px 24px; gap: 12px; }
   .card { border-radius: 16px; box-shadow: var(--shadow-card); }
 }
+
+/* การเคลื่อนไหว (.motion-pill · useSlidingIndicator): พื้น / กรอบที่เลื่อนหน้าตาเดียวกับตัวที่เลือกเดิมของแต่ละกลุ่ม
+   ระหว่างเลื่อนตัวที่ไม่ได้เลือกโปร่ง (อยู่บนพื้นการ์ดสีเดียวกัน) แถบจึงไม่หายไปหลังปุ่มขาว */
+/* แถบขั้นตอน (ขั้นที่เลือกใช้ data-state="active" ให้ตัววัดหาเจอ เพราะ aria-current="step" ไม่อยู่ในรูปแบบที่วัด) */
+.steps { --ind-bg:var(--primary-soft); --ind-radius:10px; }
+/* Template / การมองเห็น: กรอบม่วงพื้นอ่อน */
+.optPill { --ind-bg:var(--hover); --ind-border:1px solid var(--primary); --ind-shadow:0 0 0 1px var(--primary); --ind-radius:10px; }
+.optPill[data-indicator] .opt { background:transparent; }
+/* สี: วงเข้มรอบสีที่เลือกเลื่อนตาม · global ล้างสีเส้นของปุ่มที่เลือก จึงคืนขอบขาว 2px ให้ (สีพื้นจะลามเต็มขอบ) */
+.colorPill { --ind-bg:transparent; --ind-shadow:0 0 0 2px var(--foreground); --ind-radius:8px; }
+.colorPill.colorPill[data-indicator] .sw[aria-pressed="true"] { border-color:var(--card); }
+/* ความยาว Sprint: พื้นม่วงเข้ม */
+.tgPill { --ind-bg:var(--primary); --ind-border:1px solid var(--primary); --ind-radius:8px; }
+.tgPill[data-indicator] .tg { background:transparent; }

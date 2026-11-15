@@ -58,3 +58,13 @@
   .chip[aria-pressed="true"] span { color: inherit; }
 }
 
+
+/* การเคลื่อนไหว (.motion-pill · useSlidingIndicator): พื้น / กรอบที่เลื่อนหน้าตาเดียวกับตัวที่เลือกเดิม */
+/* ชิปสถานะ: พื้นเข้ม (มือถือม่วงอ่อน) · ชิปอยู่บนพื้นหน้า ชิปที่ไม่ได้เลือกจึงคงพื้นขาว แถบเลื่อนผ่านด้านหลัง */
+.chipOne { --ind-bg:var(--contrast-bg); --ind-border:1px solid var(--contrast-bg); --ind-radius:999px; }
+@media (max-width: 760px) {
+  .chipOne { --ind-bg:var(--primary-soft); --ind-border:1px solid var(--primary-border); --ind-radius:22px; }
+}
+/* Role ในหน้าต่างเชิญ: กรอบม่วงพื้นอ่อน · ระหว่างเลื่อนตัวอื่นโปร่ง (อยู่บนพื้นหน้าต่างสีเดียวกัน) */
+.opts { --ind-bg:var(--primary-soft); --ind-border:1px solid var(--primary); --ind-radius:8px; }
+.opts[data-indicator] .opt { background:transparent; }

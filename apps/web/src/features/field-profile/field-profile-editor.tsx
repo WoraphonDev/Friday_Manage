@@ -113,7 +113,7 @@ function Editor({ value, onChange, disabled = false }: { value: EditorValue; onC
         <b>{t("editor.order")}</b>
         <span className={styles.muted}>{t("editor.orderHint")}</span>
         {!value.columns.length && <span className={styles.muted}>{t("editor.noColumns")}</span>}
-        <ol className={styles.list} aria-label={t("editor.order")}>
+        <ol className={`${styles.list} motion-list`} aria-label={t("editor.order")}>
           {value.columns.map((c, i) => (
             <li key={c} className={styles.item}>
               <span className={styles.num}>{i + 1}.</span>

@@ -15,3 +15,9 @@
 .dot { width:8px; height:8px; border-radius:50%; background:var(--primary); margin-top:6px; flex:none; }
 .all { display:block; text-align:center; padding:12px; font-weight:600; font-size:12px; text-decoration:none; }
 .empty { padding:24px; text-align:center; color:var(--muted); font-size:12px; }
+/* เปิด / ปิดแผงแบบเดียวกับ .popover ของระบบ (ความเร็วจาก --motion-* · ปิดเองเมื่อลดการเคลื่อนไหว) */
+.pop { transform-origin:var(--radix-popover-content-transform-origin); }
+.pop[data-state="open"] { animation:popIn var(--motion-dur-s) var(--motion-ease); }
+.pop[data-state="closed"] { animation:popOut 200ms ease both; }
+@keyframes popIn { from { opacity:0; scale:0.96; } }
+@keyframes popOut { to { opacity:0; scale:0.96; } }

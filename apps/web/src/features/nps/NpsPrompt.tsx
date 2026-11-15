@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { CircleCheck, X } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui";
+import { Button, buttonVariants, MotionSwap } from "@/components/ui";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-mobile";
@@ -180,19 +180,21 @@ export function NpsPrompt({ ws, prompt, onClose }: { ws: string; prompt: NpsAsk;
         </div>
       </>
     );
+  // ขั้นถัดไป (ความเห็น → ขอบคุณ) เคลื่อนเข้าแทนกันแบบเดียวกับเปลี่ยนหน้า · ขั้นแรกขึ้นพร้อมการ์ดที่โผล่ขึ้นอยู่แล้ว
+  const stepBody = step === "score" ? <div className={styles.stepBody}>{body}</div> : <MotionSwap key={step} className={styles.stepBody}>{body}</MotionSwap>;
   if (mobile)
     return (
       <>
         <div className={styles.dim} aria-hidden="true" onClick={close} />
         <section className={styles.sheet} role="dialog" aria-modal="false" aria-label={t("region")}>
           <div className={styles.grab} aria-hidden="true" />
-          {body}
+          {stepBody}
         </section>
       </>
     );
   return (
     <section className={styles.card} role="dialog" aria-modal="false" aria-label={t("region")}>
-      {body}
+      {stepBody}
     </section>
   );
 }

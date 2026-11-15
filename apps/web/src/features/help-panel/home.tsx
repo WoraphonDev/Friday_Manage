@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Bell, BookOpen, ChevronRight, CreditCard, Download, Folder, LineChart, ListChecks, Terminal, User, type LucideIcon } from "lucide-react";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui";
+import { EmptyState, ErrorState, LoadingState, MotionSwap } from "@/components/ui";
 import { useContactSupport, useSlaText, type ContactWorkspace } from "./contact";
 import { SearchBox, SearchResults, useDebounced } from "./search";
 import { helpApi, helpKeys, type ArticleList, type HelpArticleSummary, type HelpCategory } from "./shared";
@@ -34,7 +34,7 @@ export const isTyping = (target: EventTarget | null) => {
 export function ArticleRow({ article, href, onClick }: { article: HelpArticleSummary; href: string; onClick?: () => void }) {
   const t = useTranslations("help.home");
   return (
-    <Link href={href} className={styles.articleRow} onClick={onClick}>
+    <Link href={href} className={`${styles.articleRow} motion-item`} onClick={onClick}>
       <span>
         <strong>{article.title}</strong>
         <small>{article.category ? t("articleMeta", { category: article.category.name, minutes: article.readMinutes }) : null}</small>
@@ -97,6 +97,8 @@ export function HelpHome({ base, workspace, initial, publicOnly = false }: { bas
         </div>
       </section>
 
+      {/* สลับ "ผลค้นหา ↔ หน้าแรก / หมวด" ในหน้าเดียวกัน (query string ไม่เปลี่ยน route) จึงเคลื่อนเนื้อหาเอง · .swap = flex เว้นเท่า .page */}
+      <MotionSwap key={q.trim() ? "search" : `category:${category ?? ""}`} className={styles.swap}>
       {q.trim() ? (
         <section className={styles.card}>
           <SearchResults query={q} articleHref={href} publicOnly={publicOnly} onAsk={canContact ? (v) => ask(v) : undefined} />
@@ -108,11 +110,11 @@ export function HelpHome({ base, workspace, initial, publicOnly = false }: { bas
           ) : categories.error ? (
             <ErrorState error={categories.error} retry={() => void categories.refetch()} />
           ) : (
-            <nav className={styles.categories} aria-label={t("home.categories")}>
+            <nav className={`${styles.categories} motion-list`} aria-label={t("home.categories")}>
               {categories.data.items.map((c) => {
                 const Icon = categoryIcon(c.slug);
                 return (
-                  <Link key={c.id} href={`${base}?category=${encodeURIComponent(c.slug)}`} className={styles.category} aria-current={c.slug === category ? "page" : undefined}>
+                  <Link key={c.id} href={`${base}?category=${encodeURIComponent(c.slug)}`} className={`${styles.category} motion-lift`} aria-current={c.slug === category ? "page" : undefined}>
                     <span className={styles.categoryIcon} aria-hidden="true">
                       <Icon size={18} />
                     </span>
@@ -191,6 +193,7 @@ export function HelpHome({ base, workspace, initial, publicOnly = false }: { bas
           </div>
         </>
       )}
+      </MotionSwap>
       {contact.element}
     </div>
   );

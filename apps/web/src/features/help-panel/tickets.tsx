@@ -6,7 +6,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, Download, ImagePlus, X } from "lucide-react";
-import { Badge, Button, EmptyState, ErrorState, Forbidden, LoadingState, NotFound, YearFormatContext, useToast, type Tone } from "@/components/ui";
+import { Badge, Button, EmptyState, ErrorState, Forbidden, LoadingState, MotionSwap, NotFound, YearFormatContext, useToast, type Tone } from "@/components/ui";
+import { useSlidingIndicator } from "@/lib/motion";
 import { ApiError } from "@/lib/api";
 import { formatDate, localeDateFormat } from "@/lib/format";
 import { useIsMobile } from "@/lib/use-mobile";
@@ -246,6 +247,8 @@ export function TicketsPage({ workspace }: { workspace: ContactWorkspace }) {
   const mobile = useIsMobile();
   const when = useWhen();
   const [scope, setScope] = useState<"mine" | "workspace">("mine");
+  // ปุ่มสลับ "ของฉัน / ทั้ง Workspace": พื้นขาวเลื่อนตามตัวที่เลือก
+  const segRef = useSlidingIndicator<HTMLDivElement>("button");
   const selectedParam = params.get("ticket");
   const list = useQuery({ queryKey: helpKeys.tickets(workspace.slug, scope), queryFn: () => helpApi.tickets(workspace.slug, scope) });
   const contact = useContactSupport(workspace);
@@ -267,7 +270,7 @@ export function TicketsPage({ workspace }: { workspace: ContactWorkspace }) {
         </div>
         <div className={styles.rowEnd}>
           {canViewWorkspace && (
-            <div className={styles.segmented} role="group" aria-label={t("scope")}>
+            <div ref={segRef} className={cn(styles.segmented, "motion-pill")} role="group" aria-label={t("scope")}>
               {(["mine", "workspace"] as const).map((s) => (
                 <button key={s} type="button" aria-pressed={scope === s} onClick={() => setScope(s)}>
                   {t(s)}
@@ -289,7 +292,7 @@ export function TicketsPage({ workspace }: { workspace: ContactWorkspace }) {
       ) : (
         <div className={styles.ticketLayout}>
           {showList && (
-            <ul className={cn(styles.card, styles.ticketList)} aria-label={t("listLabel")}>
+            <ul className={cn(styles.card, styles.ticketList, "motion-list")} aria-label={t("listLabel")}>
               {items.map((x) => (
                 <li key={x.id}>
                   <button type="button" className={styles.ticketItem} aria-current={x.id === selected ? "true" : undefined} onClick={() => select(x.id)}>
@@ -306,7 +309,10 @@ export function TicketsPage({ workspace }: { workspace: ContactWorkspace }) {
           )}
           {showDetail &&
             (selected ? (
-              <Detail key={selected} ws={workspace.slug} id={selected} onBack={mobile ? () => select(null) : undefined} />
+              // เลือก Ticket อื่น = รายละเอียดชุดใหม่เคลื่อนเข้า (Detail ผูก key กับ Ticket อยู่แล้ว ไม่มีอะไรค้างจาก Ticket เดิม)
+              <MotionSwap key={selected} style={{ minWidth: 0 }}>
+                <Detail ws={workspace.slug} id={selected} onBack={mobile ? () => select(null) : undefined} />
+              </MotionSwap>
             ) : (
               <section className={styles.card}>
                 <EmptyState title={t("select")} description="" />

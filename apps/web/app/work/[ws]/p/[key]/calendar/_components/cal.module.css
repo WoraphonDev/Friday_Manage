@@ -2,7 +2,7 @@
 .bar { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; }
 .group { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .title { margin:0 0 0 6px; font-size:16px; }
-.seg { display:inline-flex; border:1px solid var(--input); border-radius:8px; overflow:hidden; background:var(--card); }
+.seg { display:inline-flex; border:1px solid var(--input); border-radius:8px; overflow:hidden; background:var(--card); --ind-bg:var(--primary-soft); --ind-radius:0; }
 .seg button { min-height:30px; padding:0 12px; border:0; background:transparent; font:inherit; font-size:12px; color:var(--foreground-soft); cursor:pointer; }
 .seg button[aria-pressed="true"] { background:var(--primary-soft); color:var(--primary-text); font-weight:600; }
 .layout { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }
@@ -87,4 +87,5 @@
   .seg button { min-height: 40px; border: 0; border-radius: 9px; background: transparent; font-size: 14px; }
   .seg button + button { border-left: 0; }
   .seg button[aria-pressed="true"] { background: var(--card); color: var(--foreground); box-shadow: var(--shadow-card); }
+  .seg { --ind-bg: var(--card); --ind-radius: 9px; --ind-shadow: var(--shadow-card); }
 }

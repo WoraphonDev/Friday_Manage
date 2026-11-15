@@ -42,6 +42,9 @@ beforeEach(() => {
     http.post("*/api/v1/me/notifications/:id/:action", async ({ params, request }) => { calls.push(`${params.action}:${params.id}:${await request.text()}`); return HttpResponse.json({ ok: true }); }),
     http.post("*/api/v1/me/notifications/read-all", async ({ request }) => { calls.push(`read-all:${await request.text()}`); return HttpResponse.json({ updated: 2 }); }),
     http.post("*/api/v1/w/:ws/due-requests/:id/:action", ({ params }) => { calls.push(`${params.action}:${params.id}`); return HttpResponse.json({ ok: true }); }),
+    // แบนเนอร์ของ WorkspaceShell ขอข้อมูลเหล่านี้ทุกครั้งที่ mount · ไม่มีแบนเนอร์ (แบบ onboarding-checklist.test)
+    http.get("*/api/v1/w/:ws/usage", () => HttpResponse.json({ error: { code: "not_found", message: "ไม่พบ" } }, { status: 404 })),
+    http.get("*/api/v1/me/legal-acceptances", () => HttpResponse.json({ items: [] })),
   );
 });
 const mount = () => renderWithProviders(<WorkspaceShell ws="sample"><InboxPage ws="sample" /></WorkspaceShell>, { messages: { "inbox-bell": ib } });
@@ -225,13 +228,66 @@ describe("Inbox มือถือ (W29 ตามต้นแบบ)", () => {
       await waitFor(() => expect(calls).toContain('read-all:{"workspace":"sample"}'));
 
       await user.click(screen.getByRole("button", { name: /ผู้พัฒนาหนึ่ง มอบหมายงานให้คุณ/ }));
-      const detail = screen.getByRole("complementary", { name: "รายละเอียดการแจ้งเตือน" });
+      const detail = await screen.findByRole("dialog", { name: "รายละเอียดการแจ้งเตือน" });
       expect(within(detail).getByText("คุณเป็นผู้รับผิดชอบ")).toBeInTheDocument();
-      await user.click(within(detail).getByRole("button", { name: "กลับไปรายการ" }));
-      expect(await screen.findByRole("heading", { level: 1, name: "กล่องข้อความ" })).toBeInTheDocument();
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: "รายละเอียดการแจ้งเตือน" })).not.toBeInTheDocument());
+      expect(screen.getByRole("heading", { level: 1, name: "กล่องข้อความ" })).toBeInTheDocument();
     } finally {
       restore();
     }
+  });
+
+  it("แตะแถวเปิด popup (รายการยังอยู่ด้านหลัง ไม่เปลี่ยนหน้า) · อ่านแล้ว · ปิดด้วยปุ่มปิด ตัวกรองคงเดิม โฟกัสกลับแถว", async () => {
+    const restore = asMobile();
+    try {
+      const user = userEvent.setup();
+      const pathBefore = navigation.pathname;
+      // API จริง: อ่านแล้ว readAt ถูกบันทึก และหลุดจากตัวกรอง unread ในการโหลดครั้งถัดไป
+      let listsAtRead = Infinity;
+      server.use(http.post("*/api/v1/me/notifications/:id/read", ({ params }) => { calls.push(`read:${params.id}:{}`); listsAtRead = lists.length; page = page.map((n) => n.id === params.id ? { ...n, readAt: now } : n); return HttpResponse.json({ ok: true }); }));
+      mount();
+      const chip = (name: RegExp) => within(screen.getByRole("group", { name: "ตัวกรอง" })).getByRole("button", { name });
+      // แถวที่ยังไม่อ่านก็ขึ้นต้นด้วย "ยังไม่อ่าน" (จุด) จึงต้องหาเฉพาะในกลุ่มตัวกรอง
+      await screen.findByRole("group", { name: "ตัวกรอง" });
+      await user.click(chip(/^ยังไม่อ่าน/));
+      await waitFor(() => expect(chip(/^ยังไม่อ่าน/)).toHaveAttribute("aria-pressed", "true"));
+      const row = await screen.findByRole("button", { name: /ผู้พัฒนาหนึ่ง มอบหมายงานให้คุณ/ });
+      expect(within(row).getByRole("img", { name: "ยังไม่อ่าน" })).toBeInTheDocument();
+      await user.click(row);
+
+      const dialog = await screen.findByRole("dialog", { name: "รายละเอียดการแจ้งเตือน" });
+      expect(within(dialog).getByText("คุณเป็นผู้รับผิดชอบ")).toBeInTheDocument();
+      // popup ไม่มีปุ่ม "กลับไปรายการ" ซ้ำกับปุ่มปิดของ Dialog · หน้าไม่ถูกเปลี่ยน
+      expect(within(dialog).queryByRole("button", { name: "กลับไปรายการ" })).not.toBeInTheDocument();
+      expect(navigation.pathname).toBe(pathBefore);
+      await waitFor(() => expect(calls).toContain("read:n1:{}"));
+      // รอรายการโหลดใหม่หลังอ่าน · popup ยังเปิดอยู่ (รายการที่เพิ่งอ่านค้างไว้ในแท็บนี้)
+      await waitFor(() => expect(lists.length).toBeGreaterThan(listsAtRead));
+      expect(within(screen.getByRole("dialog", { name: "รายละเอียดการแจ้งเตือน" })).getByText("คุณเป็นผู้รับผิดชอบ")).toBeInTheDocument();
+
+      await user.click(within(screen.getByRole("dialog", { name: "รายละเอียดการแจ้งเตือน" })).getByRole("button", { name: "ปิด" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      expect(chip(/^ยังไม่อ่าน/)).toHaveAttribute("aria-pressed", "true");
+      const again = screen.getByRole("button", { name: /ผู้พัฒนาหนึ่ง มอบหมายงานให้คุณ/ });
+      // อ่านแล้วยังแสดงในแท็บยังไม่อ่าน (แบบเดิม) แต่ไม่มีจุด
+      expect(within(again).queryByRole("img", { name: "ยังไม่อ่าน" })).not.toBeInTheDocument();
+      expect(again).toHaveFocus();
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe("Inbox desktop ไม่เปลี่ยน (ไม่มี popup)", () => {
+  it("คลิกรายการบน desktop ยังเปิดแผงรายละเอียดด้านข้าง ไม่ใช่ Dialog · รายการยังอยู่", async () => {
+    const user = userEvent.setup();
+    mount();
+    await user.click(await screen.findByRole("button", { name: /ผู้พัฒนาหนึ่ง มอบหมายงานให้คุณ/ }));
+    expect(screen.getByRole("complementary", { name: "รายละเอียดการแจ้งเตือน" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "รายการแจ้งเตือน" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-popup")).not.toBeInTheDocument();
   });
 });
 

@@ -5,10 +5,11 @@ import Link from "next/link";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { ChevronsLeft, ChevronsRight, TriangleAlert } from "lucide-react";
-import { Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
+import { Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, MotionSwap, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
+import { useSlidingIndicator } from "@/lib/motion";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
 import styles from "./gantt.module.css";
@@ -141,6 +142,9 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
   const [baselineOpen, setBaselineOpen] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // พื้นปุ่มที่เลือก (สเกล Day / Week / Month · ระดับ 1 / 2 / 3) เลื่อนตามปุ่มที่กด
+  const scaleRef = useSlidingIndicator<HTMLDivElement>("button");
+  const levelRef = useSlidingIndicator<HTMLDivElement>("button");
   const [leftW, setLeftW] = useState(LEFT_W);
   const [resizing, setResizing] = useState(false);
   const leftLoaded = useRef(false);
@@ -252,10 +256,10 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
   return (
     <div className={styles.page}>
       <div className={styles.bar}>
-        <div className={styles.seg} role="group" aria-label={t("scale.label")}>
+        <div ref={scaleRef} className={`${styles.seg} motion-pill`} role="group" aria-label={t("scale.label")}>
           {(["day", "week", "month"] as const).map((s) => <button key={s} type="button" aria-pressed={scale === s} onClick={() => setScale(s)}>{t(`scale.${s}`)}</button>)}
         </div>
-        <div className={styles.seg} role="group" aria-label={t("level.label")}>
+        <div ref={levelRef} className={`${styles.seg} motion-pill`} role="group" aria-label={t("level.label")}>
           {([1, 2, 3] as const).map((n) => (
             <button key={n} type="button" aria-pressed={level === n} title={t("level.hint", { n, what: t(`level.what${n}`) })} onClick={() => setLevel(n)}>{t(`level.${["one", "two", "three"][n - 1]}`)}</button>
           ))}
@@ -287,7 +291,8 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
 
       {empty ? <section className={styles.card}><EmptyState title={t("empty")} description={t("emptyHint")} /></section> : (
         <section className={styles.card} ref={scrollRef} data-testid="gantt-scroll">
-          <div className={`${styles.inner} ${resizing ? styles.resizing : ""}`} style={{ minWidth: leftW + width, ["--left-w" as string]: `${leftW}px` }} data-resized={leftW !== LEFT_W || undefined} data-testid="gantt-inner">
+          {/* เปลี่ยนสเกลหรือระดับ: แผนภูมิชุดใหม่เลื่อนเข้าแบบเดียวกับเปลี่ยนหน้า · กล่องเลื่อน (scrollRef) อยู่นอก key ตำแหน่งเลื่อนจึงคงเดิม */}
+          <MotionSwap key={`${scale}:${level}`} className={`${styles.inner} ${resizing ? styles.resizing : ""}`} style={{ minWidth: leftW + width, ["--left-w" as string]: `${leftW}px` }} data-resized={leftW !== LEFT_W || undefined} data-testid="gantt-inner">
             <div className={styles.left}>
               <div className={`${styles.lg} ${styles.head}`} role="row">
                 {(["wbs", "task", "owner", "md", "start", "end", "pct", "pred"] as const).map((c, i) => c === "task" ? (
@@ -397,7 +402,7 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
                   const red = r.lateDays > 0 && !isClosedCategory(r.status.category) ? Math.max(0, Math.min(pos.width, x(d.today) + px / 2 - pos.left)) : 0;
                   const fill = (
                     <>
-                      <span style={{ width: `${r.progressPct}%`, background: crit ? "var(--danger)" : "var(--chart-primary)" }} />
+                      <span className="motion-bar" style={{ width: `${r.progressPct}%`, background: crit ? "var(--danger)" : "var(--chart-primary)" }} />
                       {red > 0 && <i className={styles.lateFill} data-testid={`late-${r.key}`} style={{ width: red }} />}
                     </>
                   );
@@ -433,7 +438,7 @@ export function GanttView({ ws, projectKey }: { ws: string; projectKey: string }
                 <span className={styles.todayLine} style={{ left: x(d.today) + px / 2 - 1 }} />
               </div>
             </div>
-          </div>
+          </MotionSwap>
         </section>
       )}
 

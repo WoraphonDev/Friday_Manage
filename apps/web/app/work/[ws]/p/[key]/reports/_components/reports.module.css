@@ -7,6 +7,8 @@
 .navOn, .navOn:hover { background:var(--primary-soft); color:var(--primary-text); font-weight:600; }
 .navNote { margin:6px 0 0; padding:10px 12px; border-top:1px solid var(--border); font-size:11px; color:var(--muted); }
 .main { flex:999 1 640px; min-width:0; display:flex; flex-direction:column; gap:12px; }
+/* กล่อง MotionSwap ที่สลับรายงาน · จัดลูกแบบเดียวกับ .main */
+.swap { min-width:0; display:flex; flex-direction:column; gap:12px; }
 .muted { color:var(--muted); font-size:12px; }
 .small { color:var(--muted); font-size:11px; }
 .spacer { flex:1; }
@@ -47,6 +49,8 @@
 .swatchPlan, .swatchDone { display:inline-block; width:12px; height:12px; border-radius:2px; background:var(--chart-primary-soft); }
 .swatchDone { background:var(--primary); margin-left:8px; }
 .chartSvg { width:100%; height:auto; max-height:240px; }
+/* แท่งกราฟโตจากฐานของแท่งเอง (ค่าเริ่มต้นของ SVG อิงกรอบทั้งภาพ) */
+.chartSvg rect { transform-box:fill-box; }
 
 .filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .chip { border-radius:999px; min-height:32px; font-size:12px; padding:0 12px; }

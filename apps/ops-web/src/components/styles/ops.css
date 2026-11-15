@@ -2233,3 +2233,192 @@ pre.code-box {
 .m-stat { border-radius: 16px; box-shadow: var(--shadow-card); }
 .m-btn { min-height: 44px; border-radius: 12px; }
 .m-tab[aria-current="page"] svg, .m-tab[aria-selected="true"] svg { background: var(--primary-soft); border-radius: 14px; padding: 2px 14px; box-sizing: content-box; }
+
+/* ===== การเคลื่อนไหวแบบนุ่มเรียบ ชุดเดียวกับแอปลูกค้า (apps/web/src/styles/globals.css ส่วนเดียวกัน · ผู้ใช้เลือก 2026-11-15) =====
+   ความเร็วทั้งหมดมาจาก --motion-* ใน tokens.css · ปิดหมดเมื่อเครื่องตั้ง "ลดการเคลื่อนไหว" (กฎท้ายส่วนนี้ใช้ !important)
+   ใช้ translate / scale แยกจาก transform เพื่อไม่ชนกับ transform ที่จัดตำแหน่ง Dialog / Palette / เมนูซ้ายบนจอเล็ก
+   หน้าตาตอนนิ่งต้องเหมือนเดิมทุกพิกเซล: animation ใช้ fill = backwards (จบแล้วไม่เหลือค่าค้าง) */
+
+/* 1 · เปลี่ยนหน้า: เนื้อหาจางเข้า (จอกว้างเลื่อนขึ้นเล็กน้อยด้วย) · .page-enter มาจาก app/(console)/template.tsx
+   หน้าในคอนโซลคืนหลายชิ้นเรียงกันโดยอาศัย flex + gap ของ .ops-main · กรอบนี้จึงต่อ flex คอลัมน์และ gap เดิม (inherit) และยืดเต็มความสูงเหมือนเดิม
+   จอเล็กจางอย่างเดียว (หน้า /m มีแถบล่างและปุ่มติดขอบ translate จะทำให้ลูกที่ fixed อิงกรอบนี้แทนจอ) */
+.ops-main > .page-enter {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+  flex: 1 0 auto;
+  min-width: 0;
+}
+.page-enter,
+.motion-swap,
+.motion-in { animation: motion-fade var(--motion-dur) var(--motion-ease) backwards; }
+@media (min-width: 761px) {
+  .page-enter,
+  .motion-swap,
+  .motion-in { animation-name: motion-rise; }
+}
+.tab { transition: color var(--motion-dur-s); }
+
+/* เส้นใต้แท็บเลื่อนตามแท็บที่เลือก · ตำแหน่งจาก useSlidingIndicator (--ind-*) · "jump" = วางครั้งแรกไม่ต้องเลื่อน
+   แท็บของ Ops มีเส้น 2px ทับเส้นขอบล่าง 1px ของแถบ (margin-bottom: -1px) จึงวางเส้นที่ขอบล่างของแท็บพอดี (ใช้ได้แม้แถบตัดขึ้นบรรทัดใหม่) */
+.tabs[data-indicator],
+.motion-underline[data-indicator] { position: relative; }
+:is(.tabs, .motion-underline)[data-indicator]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: calc(var(--ind-y) + var(--ind-h) - 2px);
+  width: var(--ind-w);
+  height: 2px;
+  translate: var(--ind-x) 0;
+  background: var(--primary);
+  pointer-events: none;
+}
+:is(.tabs, .motion-underline)[data-indicator="on"]::after { transition: translate var(--motion-dur) var(--motion-ease), width var(--motion-dur) var(--motion-ease), top var(--motion-dur) var(--motion-ease); }
+.tabs[data-indicator] .tab[aria-selected="true"],
+.motion-underline.motion-underline[data-indicator] :is([aria-current="page"], [data-state="active"], [aria-pressed="true"], [aria-selected="true"], [aria-checked="true"]) { border-bottom-color: transparent; }
+
+/* 2 · Modal / Drawer / Palette เปิดและปิดแบบค่อย ๆ (Radix รอ animation ตอน data-state="closed" จบก่อนถอดออก)
+   Popover ของ kit และแผ่นล่างของหน้า /m ไม่ใช่ Radix: component ตั้ง data-state="closed" แล้วรอ exitDelay() ก่อนถอดเอง */
+.overlay { animation: motion-fade var(--motion-dur) ease; }
+.overlay[data-state="closed"] { animation: motion-fade-out var(--motion-dur) ease both; }
+.drawer[data-state="open"] { animation: motion-drawer-in var(--motion-dur) var(--motion-ease); }
+.drawer[data-state="closed"] { animation: motion-drawer-out var(--motion-dur) var(--motion-ease) both; }
+.dialog[data-state="open"] { animation: motion-dialog-in var(--motion-dur) var(--motion-ease); }
+.dialog[data-state="closed"] { animation: motion-dialog-out var(--motion-dur-s) var(--motion-ease) both; }
+.popover { transform-origin: top right; }
+.popover[data-state="open"] { animation: motion-pop-in var(--motion-dur-s) var(--motion-ease); }
+.popover[data-state="closed"] { animation: motion-pop-out 200ms ease both; }
+.m-sheet-wrap[data-state="open"] { animation: motion-fade var(--motion-dur) ease; }
+.m-sheet-wrap[data-state="closed"] { animation: motion-fade-out var(--motion-dur) ease both; }
+.m-sheet-wrap[data-state="open"] .m-sheet { animation: motion-sheet-in var(--motion-dur) var(--motion-ease); }
+.m-sheet-wrap[data-state="closed"] .m-sheet { animation: motion-sheet-out var(--motion-dur-s) var(--motion-ease) both; }
+/* เมนูซ้ายบนจอเล็กเลื่อนเข้าด้วยความเร็วชุดเดียวกัน */
+@media (max-width: 960px) {
+  .ops-side { transition: transform var(--motion-dur) var(--motion-ease), box-shadow var(--motion-dur) ease; }
+}
+
+/* 3 · แถวและการ์ดโผล่ไล่กันตอนเปิดหน้า · [data-entering] อยู่บน .page-enter / .motion-swap ช่วงแรกหลังเปลี่ยนหน้า
+   แถวที่ขึ้นทีหลัง (บันทึกแล้วรายการเพิ่ม เลื่อนหน้าตาราง) จึงไม่ขยับซ้ำ · ไล่เฉพาะ 10 แถวแรก ที่เหลือขึ้นพร้อมแถวที่ 10
+   กลุ่มที่เป็นรายการเสมอของ Ops (ตัวเลขสรุป .stats · การใช้งาน · กิจกรรมล่าสุด · การ์ดหน้า /m) ไล่ให้เองโดยไม่ต้องใส่ .motion-list */
+[data-entering] :is(.motion-item, :is(.motion-list, .stats, .usage-tiles, .feed, .m-list, .m-stats) > *, tbody tr, [role="row"], .m-row) { animation: motion-rise var(--motion-dur) var(--motion-ease) backwards; animation-delay: calc(var(--motion-i, 0) * var(--motion-stagger)); }
+:is(.motion-item, :is(.motion-list, .stats, .usage-tiles, .feed, .m-list, .m-stats) > *, tbody tr, [role="row"], .m-row):nth-child(2) { --motion-i: 1; }
+:is(.motion-item, :is(.motion-list, .stats, .usage-tiles, .feed, .m-list, .m-stats) > *, tbody tr, [role="row"], .m-row):nth-child(3) { --motion-i: 2; }
+:is(.motion-item, :is(.motion-list, .stats, .usage-tiles, .feed, .m-list, .m-stats) > *, tbody tr, [role="row"], .m-row):nth-child(4) { --motion-i: 3; }
+:is(.motion-item, :is(.motion-list, .stats, .usage-tiles, .feed, .m-list, .m-stats) > *, tbody tr, [role="row"], .m-row):nth-child(5) { --motion-i: 4; }
+:is(.motion-item, :is(.motion-list, .stats, .usage-tiles, .feed, .m-list, .m-stats) > *, tbody tr, [role="row"], .m-row):nth-child(6) { --motion-i: 5; }
+:is(.motion-item, :is(.motion-list, .stats, .usage-tiles, .feed, .m-list, .m-stats) > *, tbody tr, [role="row"], .m-row):nth-child(7) { --motion-i: 6; }
+:is(.motion-item, :is(.motion-list, .stats, .usage-tiles, .feed, .m-list, .m-stats) > *, tbody tr, [role="row"], .m-row):nth-child(8) { --motion-i: 7; }
+:is(.motion-item, :is(.motion-list, .stats, .usage-tiles, .feed, .m-list, .m-stats) > *, tbody tr, [role="row"], .m-row):nth-child(9) { --motion-i: 8; }
+:is(.motion-item, :is(.motion-list, .stats, .usage-tiles, .feed, .m-list, .m-stats) > *, tbody tr, [role="row"], .m-row):nth-child(n + 10) { --motion-i: 9; }
+
+/* การ์ดที่กดได้ยกขึ้นนิดหนึ่งพร้อมเงาเมื่อชี้ · ซ้ำ class เพื่อชนะ transition / :hover ของ CSS module ที่โหลดทีหลัง */
+.motion-lift.motion-lift { transition: translate var(--motion-dur) var(--motion-ease), box-shadow var(--motion-dur) ease, border-color var(--motion-dur-s); }
+@media (hover: hover) {
+  .motion-lift.motion-lift:hover { translate: 0 -2px; box-shadow: var(--shadow-lift); border-color: var(--primary-border); }
+}
+
+/* 4 · ตอบสนองตอนกด: ปุ่มยุบตัว · ติ๊กแล้วเด้งเบา ๆ · ป้ายและสวิตช์เปลี่ยนสีแบบค่อย ๆ · Toast เลื่อนเข้า */
+.button { transition: background-color var(--motion-dur-s), border-color var(--motion-dur-s), color var(--motion-dur-s), scale 120ms ease; }
+.button:active:not(:disabled) { scale: 0.97; }
+input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-pop) var(--motion-ease); }
+.pill { transition: background-color var(--motion-dur), color var(--motion-dur); }
+.chip { transition: background-color var(--motion-dur-s), border-color var(--motion-dur-s), color var(--motion-dur-s); }
+.switch { transition: background-color var(--motion-dur-s); }
+.switch::after { transition: transform var(--motion-dur-s) var(--motion-ease); }
+.toast { animation: motion-rise var(--motion-dur) var(--motion-ease); }
+
+/* 5 · พื้นไฮไลต์เลื่อนตามรายการที่เลือก (useSlidingIndicator): เมนูซ้าย ปุ่มสลับ (.seg) แถบล่างของหน้า /m และกลุ่มที่เลือกได้ทีละอันอื่น ๆ (.motion-pill)
+   สีพื้นตั้งที่กล่องด้วย --ind-bg / --ind-radius / --ind-shadow / --ind-border ให้ตรงกับรายการที่เลือกเดิมของกลุ่มนั้น
+   (ค่าเริ่มต้น = primary-soft) · รายการที่เลือกถูกล้างพื้นออก แถบที่เลื่อนจึงเป็นพื้นแทน */
+.ops-nav { transition: background-color var(--motion-dur-s), color var(--motion-dur-s); }
+.motion-pill > *,
+.motion-pill [aria-current],
+.motion-underline > * { transition: color var(--motion-dur-s), background-color var(--motion-dur-s); }
+.motion-pill[data-indicator] { position: relative; isolation: isolate; }
+.motion-pill.motion-pill[data-indicator] :is([aria-current="page"], [data-state="active"], [aria-pressed="true"], [aria-selected="true"], [aria-checked="true"]) { background: transparent; box-shadow: none; border-color: transparent; }
+.motion-pill[data-indicator]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  width: var(--ind-w);
+  height: var(--ind-h);
+  translate: var(--ind-x) var(--ind-y);
+  box-sizing: border-box;
+  border: var(--ind-border, 0 solid transparent);
+  border-radius: var(--ind-radius, 8px);
+  background: var(--ind-bg, var(--primary-soft));
+  box-shadow: var(--ind-shadow, none);
+  pointer-events: none;
+}
+.motion-pill[data-indicator="on"]::before { transition: translate var(--motion-dur) var(--motion-ease), height var(--motion-dur) var(--motion-ease), width var(--motion-dur) var(--motion-ease); }
+/* ระหว่างแถบกำลังเลื่อน (data-moving จาก useSlidingIndicator) พื้นทึบของรายการที่ไม่ได้เลือกจางลงชั่วคราว ไม่บังแถบระหว่างทาง แล้วค่อยกลับมาเหมือนเดิม */
+.motion-pill :is(button, a, [role="tab"], [role="radio"], [role="option"]) { transition: color var(--motion-dur-s), background-color var(--motion-dur-s), border-color var(--motion-dur-s), box-shadow var(--motion-dur-s), scale 120ms ease; }
+.motion-pill[data-moving] :is(button, a, [role="tab"], [role="radio"], [role="option"]) { background-color: transparent; }
+/* เมนูซ้าย: พื้นม่วงเข้ม + ขอบใน 1px ตาม .ops-nav[aria-current] */
+.ops-side nav.motion-pill { --ind-bg: var(--side-on); --ind-radius: 9px; --ind-shadow: inset 0 0 0 1px var(--side-on-ring); }
+/* ปุ่มสลับ: พื้นการ์ด + เงาการ์ด ตาม .seg button[aria-pressed] */
+.seg.motion-pill { --ind-bg: var(--card); --ind-radius: 8px; --ind-shadow: var(--shadow-card); }
+
+/* 6 · แถบความคืบหน้าวิ่งจาก 0 ถึงค่าจริงเมื่อแสดงครั้งแรก (ตัวเลขนับขึ้นใช้ <CountUp>) · แท่งกราฟของ Ops (.hbar · .chart-bar) ใช้ชุดนี้เสมอ */
+.motion-bar,
+.hbar { transform-origin: left center; animation: motion-grow var(--motion-dur-long) var(--motion-ease) backwards; transition: width var(--motion-dur) var(--motion-ease); }
+/* แท่งแนวตั้ง (กราฟแท่ง) โตจากล่างขึ้นบน */
+.motion-bar-v,
+.chart-bar { transform-origin: center bottom; animation: motion-grow-v var(--motion-dur-long) var(--motion-ease) backwards; transition: height var(--motion-dur) var(--motion-ease); }
+
+@keyframes motion-fade { from { opacity: 0; } }
+@keyframes motion-fade-out { to { opacity: 0; } }
+@keyframes motion-rise { from { opacity: 0; translate: 0 8px; } }
+@keyframes motion-drawer-in { from { translate: 100% 0; } }
+@keyframes motion-drawer-out { to { translate: 100% 0; } }
+@keyframes motion-dialog-in { from { opacity: 0; translate: 0 10px; scale: 0.98; } }
+@keyframes motion-dialog-out { to { opacity: 0; translate: 0 6px; scale: 0.98; } }
+@keyframes motion-sheet-in { from { translate: 0 100%; } }
+@keyframes motion-sheet-out { to { translate: 0 100%; } }
+@keyframes motion-pop-in { from { opacity: 0; scale: 0.96; } }
+@keyframes motion-pop-out { to { opacity: 0; scale: 0.96; } }
+@keyframes motion-check { 40% { scale: 1.18; } }
+@keyframes motion-grow { from { transform: scaleX(0); } }
+@keyframes motion-grow-v { from { transform: scaleY(0); } }
+
+/* เครื่องตั้ง "ลดการเคลื่อนไหว": ปิดทุก animation / transition (รวมโลโก้ไทล์ แถบโหลด และพื้นไฮไลต์ที่เลื่อน) · JS เช็กเองผ่าน motionDisabled() */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ===== การเคลื่อนไหว · ส่วนเฉพาะของแต่ละหน้า (ต่อจากส่วนนุ่มเรียบด้านบน) ===== */
+/* แถบล่างของหน้า /m: ไฮไลต์อยู่หลังไอคอน (มุม 14 · พื้น primary-soft ตาม .m-tab[aria-current] svg) · คง sticky เดิมไว้ (sticky เป็นกรอบอ้างอิงของ ::before ได้อยู่แล้ว) */
+.m-tabs.motion-pill { --ind-bg: var(--primary-soft); --ind-radius: 14px; }
+.m-tabs.motion-pill[data-indicator] { position: sticky; }
+.m-tabs.motion-pill[data-indicator] .m-tab[aria-current="page"] svg { background: transparent; }
+/* MotionSwap ที่ห่อเนื้อหาหลายชิ้นซึ่งเดิมเรียงด้วย flex + gap ของกรอบแม่ (.ops-main · .m-app · .stack) ต่อ flex คอลัมน์และ gap เดิม (inherit)
+   ว่าง = ไม่กินที่ (เดิมไม่มีชิ้นนี้ จึงไม่มี gap เพิ่ม) */
+.motion-stack { display: flex; flex-direction: column; gap: inherit; min-width: 0; }
+.motion-stack:empty { display: none; }
+/* การ์ดตัวเลือก (.opt) ที่เลือกได้อันเดียว: กรอบ primary 1px + พื้น primary-soft มุม 10 ตาม .opt-on · อันที่เลือกใส่ data-state="active" ให้ useSlidingIndicator หาเจอ */
+.opt-pill { --ind-bg: var(--primary-soft); --ind-border: 1px solid var(--primary); --ind-radius: 10px; }
+.opt { transition: border-color var(--motion-dur-s), background-color var(--motion-dur-s); }
+/* การ์ดตัวเลือกในหน้าปัญหา / บทความ (radioCard ของ CSS module): กรอบ primary-border 1px + พื้น primary-soft มุมตามช่องกรอก */
+.radio-pill { --ind-bg: var(--primary-soft); --ind-border: 1px solid var(--primary-border); --ind-radius: var(--radius-control); }
+.radio-pill > label { transition: border-color var(--motion-dur-s), background-color var(--motion-dur-s); }
+/* รายการเลือก Ticket / เอกสารกฎหมาย (.menu-item มีกรอบ): พื้น primary-soft ของอันที่เลือก (เดิมเขียนใน style) ย้ายมาที่นี่ให้ล้างได้เมื่อพื้นที่เลื่อนทำงาน
+   ชนะ :hover เหมือนเดิม (อันที่เลือกชี้แล้วยังเป็นสีเดิม) · กรอบ --border ของรายการยังวาดทับพื้นที่เลื่อนเหมือนเดิม */
+.menu-pill { --ind-bg: var(--primary-soft); --ind-radius: 8px; }
+.menu-pill .menu-item[aria-current="true"] { background: var(--primary-soft); }
+/* กรอบที่ห่อเนื้อหาสลับ (MotionSwap) แต่ไม่มีอะไรข้างใน = ไม่กินช่องของ grid / flex เหมือนตอนที่ยังไม่มีกรอบนี้ */
+.motion-swap:empty,
+.motion-swap-static:empty { display: none; }
+/* กลุ่มชิปที่เลือกได้ทีละอัน (<ChipGroup>): พื้น primary-soft + กรอบ primary-border แคปซูล ตาม .chip[aria-pressed] · ตัวอักษรของชิปที่เลือกยังเป็นสีม่วงตัวหนาเหมือนเดิม */
+.chip-pill { --ind-bg: var(--primary-soft); --ind-border: 1px solid var(--primary-border); --ind-radius: 999px; }
+/* ชิปที่ไม่ได้เลือกมีพื้นการ์ดทึบ จะบังพื้นที่กำลังเลื่อนผ่าน · กลุ่มชิปทุกกลุ่มอยู่บนการ์ด (พื้น --card) จึงทำให้พื้นโปร่งได้โดยหน้าตาตอนนิ่งเท่าเดิม (ยังเห็นพื้นตอนชี้) */
+.chip-pill[data-indicator] .chip:not(:hover) { background: transparent; }
+/* ผลค้นหาทั้งระบบ: แถบไฮไลต์พื้น --hover มุม 8 ตาม .menu-item[aria-selected] */
+.palette-pill { --ind-bg: var(--hover); --ind-radius: 8px; }

@@ -97,7 +97,7 @@ export function NotifyTab({ ws }: { ws: string }) {
           <h2>{t("title")}</h2>
           <div className={styles.muted} style={{ fontSize: 12 }}>{t("description")}</div>
         </div>
-        <div className={styles.channels}>
+        <div className={cn(styles.channels, "motion-list")}>
           <div className={styles.chn}>
             <span className={styles.chnIcon} style={{ background: "#475569" }} aria-hidden="true">IN</span>
             <div className={styles.chnText}><div className={styles.chnTitle}>{t("inAppTitle")}</div><div className={cn(styles.muted, styles.small)}>{t("inAppHint")}</div></div>
@@ -265,7 +265,7 @@ function LinePanel({ ws, status }: { ws: string; status: LineStatus | undefined 
   const left = code ? Math.max(0, Math.ceil((new Date(code.expiresAt).getTime() - now) / 60000)) : 0;
   const expired = !!code && new Date(code.expiresAt).getTime() <= now;
   return (
-    <div className={styles.linePanel} role="region" aria-label={t("title")}>
+    <div className={cn(styles.linePanel, "motion-in")} role="region" aria-label={t("title")}>
       <div className={styles.linePanelHead}><b>{t("title")}</b><span className={cn(styles.muted, styles.small)}>{t("oneAccount")}</span></div>
       <div className={styles.steps}>
         <div className={styles.step}><Badge tone="green">1</Badge><b>{t("step1")}</b><span className={cn(styles.muted, styles.small)}>{t("step1Hint")}</span></div>

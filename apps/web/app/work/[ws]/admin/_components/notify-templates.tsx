@@ -7,7 +7,8 @@ import { useTranslations } from "next-intl";
 import { ErrorState, LoadingState } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
-import { Switch } from "./shared";
+import { SwapAfter, Switch } from "./shared";
+import { useSlidingIndicator } from "@/lib/motion";
 import { adminKey, workPath, wsPath, type Preview, type PreviewMessage } from "./types";
 import styles from "./notify.module.css";
 
@@ -26,6 +27,9 @@ export function NotifyTemplates({ ws }: { ws: string }) {
   const [picked, setPicked] = useState<(typeof PREVIEW_EVENTS)[number]>(PREVIEW_EVENTS[1]);
   // null = ใช้ค่าโหมดปลอดภัยของ Workspace · สวิตช์ในหน้านี้เปลี่ยนแค่ตัวอย่าง ไม่บันทึก
   const [safe, setSafe] = useState<boolean | null>(null);
+  // ชิปเหตุการณ์เลือกได้ทีละอัน พื้นเข้มเลื่อนตามชิปที่เลือก · ตัวอย่างชุดใหม่เคลื่อนเข้าเมื่อเปลี่ยนเหตุการณ์แล้วเท่านั้น (เปิดหน้าครั้งแรกกรอบนอกเคลื่อนให้แล้ว)
+  const chipsRef = useSlidingIndicator<HTMLDivElement>(`.${styles.chip}`);
+  const [switched, setSwitched] = useState(false);
   const url = (channel: string, extra: Record<string, string> = {}) => {
     const p = new URLSearchParams({ channel, ...extra });
     if (safe !== null) p.set("safe", String(safe));
@@ -57,13 +61,14 @@ export function NotifyTemplates({ ws }: { ws: string }) {
           </div>
         </div>
       </div>
-      <div className={styles.chips} role="group" aria-label={t("events")}>
+      <div ref={chipsRef} className={`${styles.chips} motion-pill`} role="group" aria-label={t("events")}>
         {PREVIEW_EVENTS.map((e) => (
-          <button key={e.event} type="button" className={styles.chip} aria-pressed={picked.event === e.event} onClick={() => setPicked(e)}>
+          <button key={e.event} type="button" className={styles.chip} aria-pressed={picked.event === e.event} onClick={() => { setPicked(e); setSwitched(true); }}>
             {t(`ev_${e.key}`)} <span className={styles.chipTo}>· {t(`to_${e.key}`)}</span>
           </button>
         ))}
       </div>
+      <SwapAfter swapKey={switched ? picked.event : null}>
       {error ? (
         <ErrorState error={error} retry={() => { void email.refetch(); void hook.refetch(); }} />
       ) : !m || !hook.data ? (
@@ -126,6 +131,7 @@ export function NotifyTemplates({ ws }: { ws: string }) {
           </div>
         </div>
       )}
+      </SwapAfter>
       <div className={styles.notes}>
         <div><b>{t("noteWhoTitle")}</b><div className={styles.muted}>{t("noteWho")}</div></div>
         <div><b>{t("noteButtonsTitle")}</b><div className={styles.muted}>{t("noteButtons")}</div></div>

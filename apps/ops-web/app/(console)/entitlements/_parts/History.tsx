@@ -29,7 +29,7 @@ export function HistoryDrawer({ open, onOpenChange, canRestore, keys }: { open: 
       ) : !q.data.items.length ? (
         <Empty title={t("empty")} />
       ) : (
-        <ol className="stack" aria-label={t("title")}>
+        <ol className="stack motion-list" aria-label={t("title")}>
           {q.data.items.map((v, i) => {
             const first = i === q.data.items.length - 1;
             return (

@@ -7,6 +7,7 @@ import { ErrorState, Forbidden, LoadingState, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { today } from "@/lib/format";
+import { useSlidingIndicator } from "@/lib/motion";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Project } from "@/lib/types";
 import { ProjectInviteDialog } from "@/features/project-invite/project-invite-dialog";
@@ -30,6 +31,8 @@ export function MembersView({ ws, projectKey }: { ws: string; projectKey: string
   const isWsAdmin = workspace.role === "owner" || workspace.role === "admin";
   const [section, setSection] = useState<(typeof SECTIONS)[number]>("workload");
   const [inviting, setInviting] = useState(false);
+  // เส้นใต้เลื่อนตามหัวข้อที่เลือก (ต้องเรียกก่อน return ระหว่างโหลด)
+  const subnavRef = useSlidingIndicator<HTMLElement>("a");
   useEffect(() => {
     const fromHash = () => {
       const h = window.location.hash.slice(1);
@@ -93,9 +96,10 @@ export function MembersView({ ws, projectKey }: { ws: string; projectKey: string
 
   return (
     <div className={styles.page}>
-      <nav className={styles.subnav} aria-label={t("sections.label")}>
+      <nav ref={subnavRef} className={`${styles.subnav} motion-underline`} aria-label={t("sections.label")}>
+        {/* aria-current="page" (ไม่ใช่ true) ให้ useSlidingIndicator หาหัวข้อที่เลือกเจอ */}
         {SECTIONS.filter((s) => s !== "workload" || canWorkload).map((s) => (
-          <a key={s} href={`#${s}`} aria-current={section === s} onClick={() => setSection(s)}>
+          <a key={s} href={`#${s}`} aria-current={section === s ? "page" : undefined} onClick={() => setSection(s)}>
             {s === "workload" ? t("sections.workload") : s === "members" ? t("sections.members", { count: list.length }) : t("sections.invites", { count: pendingCount })}
           </a>
         ))}

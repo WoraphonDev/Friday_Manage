@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
-import { Badge, Button, ErrorState, Forbidden, Input, LoadingState, Select } from "@/components/ui";
+import { Badge, Button, CountUp, ErrorState, Forbidden, Input, LoadingState, MotionSwap, Select } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
+import { useSlidingIndicator } from "@/lib/motion";
 import { queryKeys } from "@/lib/query";
 import { cn } from "@/lib/utils";
 import type { List, Permissions } from "@/lib/types";
@@ -38,7 +39,16 @@ export function ImportWizard({ ws, projectKey, changesHref }: { ws: string; proj
   const w = `/w/${encodeURIComponent(ws)}`;
   const initialProject = projectKey ?? "";
 
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStepState] = useState<Step>(1);
+  // เปลี่ยนขั้นแล้วอย่างน้อยครั้งหนึ่ง: เนื้อหาขั้นใหม่เคลื่อนเข้า (ขั้นแรกตอนเปิดไม่ต้อง เพราะหน้า / Popup เคลื่อนให้แล้ว)
+  const [moved, setMoved] = useState(false);
+  const setStep = (k: Step) => {
+    setStepState(k);
+    setMoved(true);
+  };
+  // แถบขั้นตอน / วิธีนำเข้าเลือกได้ทีละอัน พื้นเลื่อนตามตัวที่เลือก
+  const stepsRef = useSlidingIndicator<HTMLElement>(`.${styles.st}`);
+  const kindsRef = useSlidingIndicator<HTMLDivElement>(`.${styles.kind}`);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const mode: Mode = projectKey ? "update" : "create";
@@ -131,11 +141,11 @@ export function ImportWizard({ ws, projectKey, changesHref }: { ws: string; proj
   const stepNames = [t("step1"), t("step2"), t("step3"), t("step4")];
   return (
     <>
-      <nav className={`${styles.card} ${styles.steps}`} aria-label={t("steps")}>
+      <nav ref={stepsRef} className={`${styles.card} ${styles.steps} motion-pill`} aria-label={t("steps")}>
         {stepNames.map((n, i) => {
           const k = (i + 1) as Step;
           return (
-            <button key={k} type="button" className={styles.st} aria-current={k === step ? "step" : undefined} disabled={!reach(k)} onClick={() => setStep(k)}>
+            <button key={k} type="button" className={styles.st} aria-current={k === step ? "step" : undefined} data-state={k === step ? "active" : undefined} disabled={!reach(k)} onClick={() => setStep(k)}>
               <span className={`${styles.sn} ${k < step ? styles.done : k === step ? styles.on : ""}`}>{k < step ? "✓" : k}</span>
               {n}
             </button>
@@ -145,10 +155,11 @@ export function ImportWizard({ ws, projectKey, changesHref }: { ws: string; proj
 
       {!!error && <ErrorState error={error} />}
 
+      <StepBody swapKey={moved ? step : null}>
       {step === 1 && (
         <section className={`${styles.card} ${styles.pad}`}>
           {mode === "update" && (
-            <div className={styles.kinds} role="group" aria-label={t("kindLabel")}>
+            <div ref={kindsRef} className={`${styles.kinds} motion-pill`} role="group" aria-label={t("kindLabel")}>
               {(["replace", "unstarted", "append"] as const).map((k) => (
                 <button key={k} type="button" className={styles.kind} aria-pressed={kind === k} onClick={() => setKind(k)}>
                   <b>{t(`kind__${k}`)}</b>
@@ -194,6 +205,7 @@ export function ImportWizard({ ws, projectKey, changesHref }: { ws: string; proj
       )}
 
       {step === 4 && job && <Confirm ws={ws} job={job} busy={busy} onPatch={(b) => void patch(b)} onBack={() => setStep(3)} onCommit={(pending) => void commit(pending)} />}
+      </StepBody>
     </>
   );
 }
@@ -262,7 +274,7 @@ function Mapping({ job, busy, onChange, onNext, year }: { job: ImportJob; busy: 
       </div>
       <div className={`${styles.mp} ${styles.h}`}><span>{t("colExcel")}</span><span className={styles.arrow} /><span>{t("colField")}</span><span className={styles.sample}>{t("colSample")}</span></div>
       {cols.map((c) => (
-        <div key={c.header} className={styles.mp} data-testid={`map-${c.header}`}>
+        <div key={c.header} className={`${styles.mp} motion-item`} data-testid={`map-${c.header}`}>
           <b className={styles.ellipsis}>{c.header}</b>
           <span className={`muted ${styles.arrow}`} aria-hidden="true">→</span>
           <Select size="small" aria-label={t("fieldFor", { header: c.header })} value={c.field ?? ""} disabled={busy} onChange={(e) => onChange(c.header, e.target.value || null)}>
@@ -294,12 +306,14 @@ function Validate({ job, year, busy, onMissing, onReupload, onBack, onNext }: {
   const [filter, setFilter] = useState<Filter>("issue");
   const [limit, setLimit] = useState(PAGE);
   useEffect(() => setLimit(PAGE), [filter]);
+  // ชิปกรองผลตรวจเลือกได้ทีละอัน พื้นเข้มเลื่อนตามชิปที่เลือก
+  const chipsRef = useSlidingIndicator<HTMLDivElement>(`.${styles.chip}`);
   const count = { issue: job.findings.length, err: job.findings.filter((f) => f.level === "err").length, warn: job.findings.filter((f) => f.level === "warn").length };
   const rows = job.findings.filter((f) => filter === "issue" || f.level === filter);
   const ok = Math.max(0, s.rows - s.skipped);
   return (
     <>
-      <section className={`${styles.card} ${styles.kpis}`} aria-label={t("step3")}>
+      <section className={`${styles.card} ${styles.kpis} motion-list`} aria-label={t("step3")}>
         <Kpi label={t("kpiRows")} value={num(s.rows)} />
         <Kpi label={t("kpiModules")} value={num(s.modules)} />
         <Kpi label={t("kpiManDay")} value={num(s.manDay)} />
@@ -308,7 +322,7 @@ function Validate({ job, year, busy, onMissing, onReupload, onBack, onNext }: {
       </section>
       {job.mode === "update" && job.diff && <DiffCard job={job} year={year} busy={busy} onMissing={onMissing} />}
       <section className={styles.card}>
-        <div className={styles.chips} role="group" aria-label={t("filters")}>
+        <div ref={chipsRef} className={`${styles.chips} ${styles.chipOne} motion-pill`} role="group" aria-label={t("filters")}>
           {(["issue", "err", "warn"] as Filter[]).map((f) => (
             <button key={f} type="button" className={styles.chip} aria-pressed={filter === f} onClick={() => setFilter(f)}>
               <span className={styles.dot} style={{ background: CHIP[f] }} />
@@ -337,14 +351,15 @@ function Validate({ job, year, busy, onMissing, onReupload, onBack, onNext }: {
 }
 
 function Kpi({ label, value, range }: { label: string; value: string; range?: boolean }) {
-  return <div className={styles.kp}><span className="muted">{label}</span><b className={range ? styles.range : undefined}>{value}</b></div>;
+  // ตัวเลขนับขึ้น · ช่วงวันที่แสดงตรง ๆ (ตัวเลขแรกเป็นวันที่ นับขึ้นแล้วอ่านผิด)
+  return <div className={styles.kp}><span className="muted">{label}</span><b className={range ? styles.range : undefined}>{range ? value : <CountUp value={value} />}</b></div>;
 }
 
 function FindingRow({ f }: { f: Finding }) {
   const t = useTranslations("import-plan-changes.import");
   const lv = LEVEL[f.level];
   return (
-    <div className={styles.vr} data-testid="finding">
+    <div className={`${styles.vr} motion-item`} data-testid="finding">
       <span className={styles.ic} style={{ background: lv.color }} role="img" aria-label={t(`level__${f.level}`)}>{lv.sym}</span>
       <span className={styles.mono}>{f.no !== null ? `#${f.no}` : "—"}</span>
       <span className={`${styles.hs} ${styles.ellipsis}`}>{f.module ?? "—"}</span>
@@ -376,6 +391,7 @@ function DiffCard({ job, year, busy, onMissing }: { job: ImportJob; year: YearFo
   const wipe = job.updateKind === "replace";
   const askNew = unstarted && counts.added > 0;
   const [picked, setPicked] = useState<DiffTab | null>(null);
+  const tabsRef = useSlidingIndicator<HTMLDivElement>("button");
   const tab = picked && counts[picked] > 0 ? picked : askNew && !job.addNew ? "added" : tabs[0];
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
@@ -401,7 +417,7 @@ function DiffCard({ job, year, busy, onMissing }: { job: ImportJob; year: YearFo
       {tab && (
         <>
           <div className={styles.diffTools}>
-            <div className={styles.diffTabs} role="tablist" aria-label={t("diffTitle")}>
+            <div ref={tabsRef} className={`${styles.diffTabs} motion-pill`} role="tablist" aria-label={t("diffTitle")}>
               {tabs.map((k) => (
                 <button key={k} type="button" role="tab" id={`diff-tab-${k}`} aria-controls="diff-panel" aria-selected={tab === k} onClick={() => setPicked(k)}>
                   {t(wipe && k === "missing" ? "diffTab__removed" : `diffTab__${k}`)} <span className={styles.diffCount}>{num(counts[k])}</span>
@@ -416,7 +432,8 @@ function DiffCard({ job, year, busy, onMissing }: { job: ImportJob; year: YearFo
               </Select>
             )}
           </div>
-          <div id="diff-panel" role="tabpanel" aria-labelledby={`diff-tab-${tab}`} className={styles.diffPanel}>
+          {/* เปลี่ยนแท็บ (หลังผู้ใช้กดเลือก) = รายการชุดใหม่เคลื่อนเข้า · ครั้งแรกขึ้นพร้อมขั้นตอน ไม่ต้องเคลื่อนซ้อน */}
+          <div key={tab} id="diff-panel" role="tabpanel" aria-labelledby={`diff-tab-${tab}`} className={cn(styles.diffPanel, picked && "motion-in")}>
             <p className={`muted ${styles.small}`}>{t(tab === "added" && unstarted ? "diffHint__addedAsk" : wipe && tab === "missing" ? "diffHint__removed" : `diffHint__${tab}`)}</p>
             {tab === "added" && askNew && <AddNewCheck job={job} busy={busy} onPatch={onMissing} />}
             {tab === "locked" && locked.map((l) => (
@@ -639,7 +656,7 @@ function Done({ ws, result, onAgain, changesHref }: { ws: string; result: Commit
     return out;
   }, [result, t]);
   return (
-    <section className={`${styles.card} ${styles.doneCard}`} role="status">
+    <section className={`${styles.card} ${styles.doneCard} motion-in`} role="status">
       <h2>{t("doneTitle")}</h2>
       {lines.map((l) => <div key={l}>{l}</div>)}
       <div className={styles.actions}>
@@ -649,4 +666,9 @@ function Done({ ws, result, onAgain, changesHref }: { ws: string; result: Commit
       </div>
     </section>
   );
+}
+
+/** กรอบเนื้อหาของขั้นตอน (ระยะห่างเท่ากรอบนอก) · หลังเปลี่ยนขั้นเป็น MotionSwap ผูก key กับขั้น · ก่อนนั้นเป็น div หน้าตาเดียวกัน */
+function StepBody({ swapKey, children }: { swapKey: Step | null; children: ReactNode }) {
+  return swapKey === null ? <div className={styles.stepBody}>{children}</div> : <MotionSwap key={swapKey} className={styles.stepBody}>{children}</MotionSwap>;
 }

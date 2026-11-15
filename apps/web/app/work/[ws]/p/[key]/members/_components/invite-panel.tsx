@@ -61,7 +61,7 @@ export function InvitePanel({
           <span className={cn(styles.muted, styles.small)}>{t("pendingEmpty")}</span>
         ) : (
           pendingHere.map((inv) => (
-            <div className={styles.inv} key={inv.id} data-testid={`invite-${inv.id}`}>
+            <div className={cn(styles.inv, "motion-item")} key={inv.id} data-testid={`invite-${inv.id}`}>
               <span>{inv.email}</span>
               <Badge>{tr(inv.projectRole ?? inv.workspaceRole)}</Badge>
               <span className={cn(styles.muted, styles.small)}>{t("sentAt", { date: formatDate(inv.createdAt, year) })}</span>

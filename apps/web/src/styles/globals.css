@@ -611,8 +611,17 @@ td {
   max-height: calc(100dvh - 80px);
   padding: 0 20px;
 }
+.dialog-xl {
+  width: min(1200px, calc(100vw - 32px));
+  top: 40px;
+  transform: translateX(-50%);
+  max-height: calc(100dvh - 80px);
+  padding: 0 20px 24px;
+}
+.dialog-xl > .dialog-body { padding-top: 20px; }
 .dialog-medium > .dialog-heading,
-.dialog-wide > .dialog-heading {
+.dialog-wide > .dialog-heading,
+.dialog-xl > .dialog-heading {
   position: sticky;
   top: 0;
   z-index: 3;
@@ -622,12 +631,14 @@ td {
   border-bottom: 1px solid var(--border);
 }
 .dialog-medium > .dialog-heading h2,
-.dialog-wide > .dialog-heading h2 {
+.dialog-wide > .dialog-heading h2,
+.dialog-xl > .dialog-heading h2 {
   font-size: 16px;
   font-weight: 700;
 }
 .dialog-medium > .dialog-body,
-.dialog-wide > .dialog-body {
+.dialog-wide > .dialog-body,
+.dialog-xl > .dialog-body {
   margin-top: 0;
 }
 .dialog-heading {
@@ -2216,7 +2227,8 @@ button.menu-item:disabled { cursor:default; opacity:.5; }
   /* Dialog ทุกขนาดเป็น bottom sheet: ชิดล่าง มุมบนโค้ง มีที่จับ เอื้อมถึงด้วยนิ้วโป้ง */
   .dialog,
   .dialog-medium,
-  .dialog-wide {
+  .dialog-wide,
+  .dialog-xl {
     top: auto;
     bottom: 0;
     left: 0;
@@ -2239,9 +2251,11 @@ button.menu-item:disabled { cursor:default; opacity:.5; }
   }
   .dialog > .dialog-heading { padding-top: 4px; }
   .dialog-medium > .dialog-heading,
-  .dialog-wide > .dialog-heading { margin: 0 -16px; padding: 4px 16px 12px; }
+  .dialog-wide > .dialog-heading,
+  .dialog-xl > .dialog-heading { margin: 0 -16px; padding: 4px 16px 12px; }
   .dialog-medium > .dialog-body,
-  .dialog-wide > .dialog-body { padding-top: 12px; }
+  .dialog-wide > .dialog-body,
+  .dialog-xl > .dialog-body { padding-top: 12px; }
   /* ปุ่มหลักเต็มความกว้าง อยู่ล่างสุด (ปุ่มยกเลิกอยู่บน) แบบ C */
   .dialog .dialog-actions { flex-direction: column-reverse; align-items: stretch; gap: 8px; }
   .dialog .dialog-actions > .button { min-height: var(--m-tap); justify-content: center; }

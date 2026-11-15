@@ -20,12 +20,13 @@ const SALES_URL = process.env.NEXT_PUBLIC_SALES_URL ?? "/signup?plan=enterprise"
  * R1 · ราคาเหมาตามขนาดทีม (ใช้ทั้งใน Landing, /pricing และ /work/:ws/billing/plans) · ราคาและขีดจำกัดจาก `GET public/plans`
  * ในระบบส่ง `ctaFor` ให้ปุ่มไปหน้าชำระเงินของ Workspace แทนหน้าสมัคร (ไม่หลุดออกจากระบบ)
  */
-export function PricingSection({ heading = "h2", ctaFor }: { heading?: "h1" | "h2"; ctaFor?: (p: PublicPlan, cycle: Cyc) => PlanCta }) {
+/** heading = "none": ไม่มีหัวข้อของตัวเอง (อยู่ใน Dialog ที่มีชื่ออยู่แล้ว) */
+export function PricingSection({ heading = "h2", ctaFor }: { heading?: "h1" | "h2" | "none"; ctaFor?: (p: PublicPlan, cycle: Cyc) => PlanCta }) {
   const t = useTranslations("saas-pages.pricing");
   const [cycle, setCycle] = useState<Cyc>("monthly");
   const [team, setTeam] = useState(12);
   const plans = useQuery({ queryKey: ["public-plans"], queryFn: () => api.get<PublicPlans>("/public/plans"), staleTime: 300_000 });
-  const H = heading;
+  const H = heading === "none" ? null : heading;
   // แถบเลื่อนใต้ปุ่มรอบชำระ: วัดจากปุ่มจริงเพราะความยาวคำต่างกันตามภาษา
   const seg = useRef<HTMLDivElement>(null);
   const segInd = useRef<HTMLSpanElement>(null);
@@ -43,13 +44,17 @@ export function PricingSection({ heading = "h2", ctaFor }: { heading?: "h1" | "h
   }, [cycle, plans.data]);
 
   return (
-    <section id="pricing" className={cn(styles.pricing, ctaFor && styles.embedded)} aria-labelledby="pricing-title">
+    <section id="pricing" className={cn(styles.pricing, ctaFor && styles.embedded)} {...(H ? { "aria-labelledby": "pricing-title" } : { "aria-label": t("title") })}>
       <div className={cn(styles.wrap, styles.stackLg)}>
         <div className={styles.pricingHead}>
-          <H id="pricing-title" style={{ fontSize: 28 }}>
-            {t("title")}
-          </H>
-          <div className={styles.muted}>{t("subtitle")}</div>
+          {H && (
+            <>
+              <H id="pricing-title" style={{ fontSize: 28 }}>
+                {t("title")}
+              </H>
+              <div className={styles.muted}>{t("subtitle")}</div>
+            </>
+          )}
           <div ref={seg} className={styles.seg} role="group" aria-label={t("cycle")}>
             <span ref={segInd} className={styles.segInd} aria-hidden="true" />
             <button type="button" aria-pressed={cycle === "monthly"} onClick={() => setCycle("monthly")}>

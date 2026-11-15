@@ -37,8 +37,9 @@ export function Dialog({
   children,
   size,
 }: OverlayProps & {
-  /** wide = หน้าต่างสร้างงาน K1 (860 px ชิดบน 40 px) · medium = หน้าต่างฟอร์ม เช่น เชิญสมาชิก (680 px) */
-  size?: "wide" | "medium";
+  /** wide = หน้าต่างสร้างงาน K1 (860 px ชิดบน 40 px) · medium = หน้าต่างฟอร์ม เช่น เชิญสมาชิก (680 px)
+   *  xl = เนื้อหากว้างแบบหลายคอลัมน์ เช่น เปรียบเทียบแพ็กเกจ (1200 px ชิดบน 40 px) */
+  size?: "wide" | "medium" | "xl";
 }) {
   const t = useTranslations("common.app");
   const returnFocus = useReturnFocus(open);

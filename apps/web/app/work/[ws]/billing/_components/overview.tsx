@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { AlertCircle, CalendarClock, Clock, CreditCard, Landmark, QrCode } from "lucide-react";
-import { Badge, Button, EmptyState, ErrorState, Forbidden, LoadingState, buttonVariants, useToast, type Tone } from "@/components/ui";
+import { Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, LoadingState, buttonVariants, useToast, type Tone } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { ApiError, api } from "@/lib/api";
 import { formatDate, today } from "@/lib/format";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { baht, checkoutHref, isPaidPlan, type PublicPlans, type SubscriptionStatus, type Usage } from "@/features/plan-limits";
 import { CancelSurvey } from "@/features/checkout/CancelSurvey";
 import type { BillingOverview, Invoice, InvoiceStatus, Method } from "./types";
+import { PlansCompare } from "./plans";
 import styles from "./billing.module.css";
 
 const STATUS_TONE: Record<SubscriptionStatus, Tone> = { trialing: "amber", active: "green", past_due: "red", canceled: "neutral" };
@@ -57,6 +58,7 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
   const base = `/w/${encodeURIComponent(ws)}`;
   const canBill = workspace.role === "owner" || workspace.role === "admin";
   const [cancelling, setCancelling] = useState(false);
+  const [comparing, setComparing] = useState(false);
   const [upload, setUpload] = useState<{ invoice: Invoice; kind: "slip" | "wht-certificate" } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -198,9 +200,7 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
           <h1>{t("title")}</h1>
           <div className={styles.muted}>{t("subtitle")}</div>
         </div>
-        <Link className={buttonVariants()} href={`/work/${encodeURIComponent(ws)}/billing/plans`}>
-          {t("compare")}
-        </Link>
+        <Button onClick={() => setComparing(true)}>{t("compare")}</Button>
       </div>
 
       {todos.map((todo) => (
@@ -341,6 +341,13 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
           {methodsCard}
         </div>
       </div>
+
+      {/* เปรียบเทียบแพ็กเกจเป็นหน้าต่างซ้อน ไม่ออกจากหน้า Billing (ผู้ใช้ขอ 2026-11-15) · กดปุ่มของแพ็กเกจแล้วปิดหน้าต่างไปตามลิงก์ */}
+      <Dialog open={comparing} onOpenChange={setComparing} title={t("compare")} size="xl">
+        <div onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a[href]")) setComparing(false); }}>
+          <PlansCompare ws={ws} sub={sub} heading="none" />
+        </div>
+      </Dialog>
 
       <CancelSurvey
         open={cancelling}

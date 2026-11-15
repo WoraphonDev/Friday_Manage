@@ -21,17 +21,21 @@ export function exitDelay() {
 }
 
 /**
- * แถบไฮไลต์ที่เลื่อนตามรายการที่เลือก (sidebar, แถบแท็บ) · วัดตำแหน่งรายการที่มี aria-current="page" หรือ data-state="active"
+ * แถบไฮไลต์ที่เลื่อนตามรายการที่เลือก (sidebar, แถบแท็บ, เมนูหัวข้อ, ปุ่มสลับมุมมอง) · วัดตำแหน่งรายการที่เลือกตาม ACTIVE_STATES
+ * ใช้กับกลุ่มที่เลือกได้ทีละรายการเท่านั้น (ชิปกรองที่กดได้หลายอันใช้ไม่ได้ เพราะวัดเฉพาะรายการแรกที่เลือก)
  * แล้วเขียนเป็น --ind-x/y/w/h บนกล่อง + data-indicator ให้ CSS วาดด้วย ::before/::after
  * "jump" = วางครั้งแรก (ไม่เลื่อนมาจากมุมซ้ายบน) · "on" = เลื่อนแบบ transition · ไม่มีรายการที่เลือก = ถอด data-indicator กลับไปใช้สีเดิมของรายการ
  * คืน callback ref (React 19 รับ cleanup จาก ref ได้) เพราะกล่องอาจขึ้นทีหลัง เช่น แถบแท็บโปรเจกต์ที่รอข้อมูลโปรเจกต์ก่อน
  */
+/** รูปแบบ "รายการที่เลือกอยู่" ที่ระบบใช้: ลิงก์ (aria-current) · แท็บ Radix (data-state) · ปุ่มสลับ (aria-pressed) · แท็บ/ตัวเลือกเอง (aria-selected, aria-checked) */
+const ACTIVE_STATES = ['[aria-current="page"]', '[data-state="active"]', '[aria-pressed="true"]', '[aria-selected="true"]', '[aria-checked="true"]'];
+
 export function useSlidingIndicator<T extends HTMLElement>(itemSelector: string): RefCallback<T> {
   return useCallback((box: T | null) => {
     if (!box || typeof ResizeObserver === "undefined") return;
     let frame = 0;
     let shown = false;
-    const activeSelector = `${itemSelector}[aria-current="page"], ${itemSelector}[data-state="active"]`;
+    const activeSelector = ACTIVE_STATES.map((state) => `${itemSelector}${state}`).join(", ");
     const measure = () => {
       frame = 0;
       const active = box.querySelector<HTMLElement>(activeSelector);
@@ -67,7 +71,7 @@ export function useSlidingIndicator<T extends HTMLElement>(itemSelector: string)
       watchItems();
       schedule();
     });
-    mutation.observe(box, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-current", "data-state"] });
+    mutation.observe(box, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-current", "data-state", "aria-pressed", "aria-selected", "aria-checked"] });
     measure();
     return () => {
       cancelAnimationFrame(frame);

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Button, ConfirmDialog, ConflictState, Dialog, ErrorState, Forbidden, Input, LoadingState, NotFound, Select, useToast } from "@/components/ui";
+import { Button, ConfirmDialog, ConflictState, Dialog, ErrorState, Forbidden, Input, LoadingState, MotionSwap, NotFound, Select, useToast } from "@/components/ui";
+import { useSlidingIndicator } from "@/lib/motion";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { queryKeys } from "@/lib/query";
@@ -45,9 +46,9 @@ export function ProjectSettings({ ws, projectKey, section }: { ws: string; proje
     return (
       <div className={styles.body}>
         <SettingsNav ws={ws} projectKey={projectKey} current="trash" canAutomation={perms.data.permissions.includes("project.automation")} canBaseline={perms.data.permissions.includes("project.baseline")} />
-        <div className={styles.frameMain}>
+        <MotionSwap key={current} className={styles.frameMain}>
           <ProjectTrash ws={ws} projectKey={projectKey} name={project.data.name} />
-        </div>
+        </MotionSwap>
       </div>
     );
   }
@@ -63,16 +64,18 @@ export function ProjectSettings({ ws, projectKey, section }: { ws: string; proje
     return (
       <div className={styles.body}>
         {nav}
-        <div className={styles.frameMain}>
+        <MotionSwap key={current} className={styles.frameMain}>
           <PlanIoContent ws={ws} projectKey={projectKey} section={current === "plan-changes" ? "changes" : current} changesHref={`${href}/settings/plan-changes`} />
-        </div>
+        </MotionSwap>
       </div>
     );
   }
   return (
     <div className={styles.body}>
       {nav}
-      <section className={`${styles.card} ${styles.panel}`} aria-labelledby="settings-heading">
+      {/* สลับหัวข้อไม่เปลี่ยน route (settings/[[...section]]) จึงเคลื่อนเนื้อหาเองแบบเดียวกับการเปลี่ยนหน้า */}
+      <MotionSwap key={current} className={styles.panel}>
+      <section className={styles.card} aria-labelledby="settings-heading">
         {current === "general" && <GeneralSection key={p.version} ws={ws} projectKey={projectKey} project={p} members={members.data?.items ?? []} />}
         {current === "workflow" && <WorkflowSection ws={ws} projectKey={projectKey} project={p} />}
         {current === "types" && <TypesSection ws={ws} projectKey={projectKey} />}
@@ -81,6 +84,7 @@ export function ProjectSettings({ ws, projectKey, section }: { ws: string; proje
         {(current === "notify" || current === "integ") && <ClosedSection section={current} />}
         {current === "danger" && <DangerSection ws={ws} projectKey={projectKey} project={p} access={perms.data} members={members.data?.items ?? []} />}
       </section>
+      </MotionSwap>
     </div>
   );
 }
@@ -93,8 +97,9 @@ export function SettingsNav({ ws, projectKey, current, canAutomation, canBaselin
   // แท็บถังขยะ (W23) แสดงตาม my-permissions (cache เดียวกับหน้า) · หน้า Automation ก็เห็นเมนูเดียวกัน
   const perms = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${projectEndpoint(ws, projectKey)}/my-permissions`) });
   const canTrash = !!perms.data?.permissions.includes("project.trash") && !perms.data.guestViewer;
+  const navRef = useSlidingIndicator<HTMLElement>(`.${styles.snav}`);
   return (
-    <nav className={`${styles.card} ${styles.nav}`} aria-label={t("navLabel")}>
+    <nav ref={navRef} className={`${styles.card} ${styles.nav} motion-pill`} aria-label={t("navLabel")}>
       {SECTIONS.filter((s) => canBaseline || !BASELINE_SECTIONS.includes(s)).map((s) => (
         <Link key={s} href={`${href}/settings/${s}`} className={`${styles.snav} ${s === "danger" ? styles.danger : ""}`} aria-current={s === current ? "page" : undefined}>
           {t(`nav.${s}`)}

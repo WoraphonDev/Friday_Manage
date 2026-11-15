@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, CheckCheck, ChevronRight, MoreVertical, Settings } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, ChevronRight, MoreVertical, Settings } from "lucide-react";
 import { ActionSheet, Avatar, Badge, Button, ErrorState, Forbidden, LoadingState, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { MobileHeader } from "@/components/shell/mobile-header";
 import { useIsMobile } from "@/lib/use-mobile";
+import { exitDelay } from "@/lib/motion";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, today, localeDateFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -55,6 +56,12 @@ export function InboxPage({ ws }: { ws: string }) {
    * รายละเอียดด้านขวาจึงหายทันที (ผู้ใช้แจ้ง 2026-11-12) → แสดงต่อเป็น "อ่านแล้ว" จนกว่าจะเปลี่ยนแท็บหรือจัดการรายการนั้น
    */
   const [kept, setKept] = useState<InboxNotification[]>([]);
+  /**
+   * รับทราบ / เตือนพรุ่งนี้บน desktop: การ์ดยุบออกจากรายการก่อน (ค้างไว้จนจบ animation แม้ API ตัดออกไปแล้ว)
+   * แล้วเปิดรายการถัดไปเมื่อรายการเดิมหายจากข้อมูลจริง (advance) · ผู้ใช้เลือกจากตัวอย่าง 2026-11-15
+   */
+  const [leaving, setLeaving] = useState<{ n: InboxNotification; action: "done" | "snooze"; height: number } | null>(null);
+  const advance = useRef<{ from: string; next: string | null } | null>(null);
   const changeFilter = (next: Filter) => { setFilter(next); setSelected(null); setKept([]); };
   // ?n= เปลี่ยนโดยไม่ remount (คลิกกระดิ่งขณะอยู่ใน Inbox, Back/Forward) → เลือกตาม URL ใหม่
   const [seenN, setSeenN] = useState(urlN);
@@ -85,10 +92,15 @@ export function InboxPage({ ws }: { ws: string }) {
       if (v.message) toast({ message: v.message });
       await refresh();
     },
-    onError: (e) => toast({ message: e instanceof Error ? e.message : String(e) }),
+    onError: (e) => {
+      // ทำไม่สำเร็จ รายการยังอยู่ · ไม่ต้องเลื่อนไปรายการถัดไปทีหลัง
+      advance.current = null;
+      toast({ message: e instanceof Error ? e.message : String(e) });
+    },
   });
   const loaded = query.data?.pages.flatMap((p) => p.items) ?? [];
-  const missing = kept.filter((k) => !loaded.some((n) => n.id === k.id));
+  const ghost = leaving && !loaded.some((n) => n.id === leaving.n.id) && !kept.some((k) => k.id === leaving.n.id) ? [leaving.n] : [];
+  const missing = [...kept.filter((k) => !loaded.some((n) => n.id === k.id)), ...ghost];
   const items = missing.length ? [...loaded, ...missing].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : loaded;
   const counts = query.data?.pages[0]?.counts;
   const current = items.find((n) => n.id === selected) ?? null;
@@ -110,6 +122,14 @@ export function InboxPage({ ws }: { ws: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id]);
 
+  // รายการที่รับทราบหายจากข้อมูลแล้ว (และการ์ดยุบจบแล้ว) → เปิดรายการถัดไปที่ยังอยู่
+  useEffect(() => {
+    const step = advance.current;
+    if (!step || leaving || items.some((n) => n.id === step.from)) return;
+    advance.current = null;
+    if (selected === step.from) setSelected(step.next && items.some((n) => n.id === step.next) ? step.next : null);
+  });
+
   if (query.isPending) return <div className={styles.layout}><LoadingState /></div>;
   if (query.error) return <div className={styles.layout}>{query.error instanceof ApiError && query.error.status === 403 ? <Forbidden /> : <ErrorState error={query.error} retry={() => query.refetch()} />}</div>;
 
@@ -122,6 +142,21 @@ export function InboxPage({ ws }: { ws: string }) {
     if (current) setKept((list) => list.filter((n) => n.id !== current.id));
     act.mutate({ path, message, body });
   };
+  const settle = (action: "done" | "snooze", path: string, message: string, body?: unknown) => {
+    if (current && !mobile) {
+      const order = groups.flatMap((g) => g.list);
+      const at = order.findIndex((n) => n.id === current.id);
+      advance.current = { from: current.id, next: (order[at + 1] ?? order[at - 1])?.id ?? null };
+      const ms = exitDelay();
+      if (ms) {
+        const card = document.querySelector<HTMLElement>(`[data-nt="${current.id}"]`);
+        setLeaving({ n: current, action, height: card?.offsetHeight ?? 80 });
+        // การ์ดเริ่มยุบหลังปุ่มขึ้น ✓ (200ms ตาม .out ใน CSS)
+        setTimeout(() => setLeaving(null), ms + 200);
+      }
+    }
+    run(path, message, body);
+  };
 
   if (mobile) {
     // W29 · มือถือแบบต้นแบบ (ฐาน A): หัวใหญ่ + ⋮ · ชิปมีตัวเลข · กลุ่มวันในกล่องขอบมน · แตะแถวเปิดรายละเอียดเต็มจอ (ส่วนรายละเอียดเดิม)
@@ -129,7 +164,7 @@ export function InboxPage({ ws }: { ws: string }) {
       return (
         <div className={`${styles.layout} ${styles.showDetail}`}>
           <aside className={`${styles.card} ${styles.detail}`} aria-label={t("detailLabel")}>
-            <Detail ws={ws} n={current} busy={act.isPending} onBack={() => setSelected(null)} run={run} />
+            <Detail key={current.id} ws={ws} n={current} busy={act.isPending} acted={leaving?.n.id === current.id ? leaving.action : undefined} onBack={() => setSelected(null)} run={run} settle={settle} />
           </aside>
         </div>
       );
@@ -214,7 +249,7 @@ export function InboxPage({ ws }: { ws: string }) {
             <div key={g} className={styles.group}>
               <div className={styles.gl}>{t(`groups.${g}`)}</div>
               {list.map((n) => (
-                <button key={n.id} type="button" className={`${styles.nt} motion-item ${!n.readAt ? styles.unread : ""} ${n.id === selected ? styles.sel : ""}`} aria-current={n.id === selected ? "true" : undefined} onClick={() => setSelected(n.id)}>
+                <button key={n.id} type="button" data-nt={n.id} className={`${styles.nt} motion-item ${!n.readAt ? styles.unread : ""} ${n.id === selected ? styles.sel : ""} ${leaving?.n.id === n.id ? styles.out : ""}`} style={leaving?.n.id === n.id ? ({ "--h": `${leaving.height}px` } as CSSProperties) : undefined} aria-current={n.id === selected ? "true" : undefined} onClick={() => setSelected(n.id)}>
                   <Avatar person={{ id: n.actor?.id ?? n.id, displayName: labels.actor(n), avatarUrl: n.actor?.avatarUrl ?? null }} />
                   <span className={styles.ntBody}>
                     <span style={{ fontSize: 13 }}><b>{labels.actor(n)}</b> {labels.verb(n)}</span>
@@ -222,7 +257,8 @@ export function InboxPage({ ws }: { ws: string }) {
                     {typeof n.payload.message === "string" && <span className={styles.quote}>“{n.payload.message}”</span>}
                     <span className={styles.meta}>{[n.project?.name ?? n.project?.key, `${formatDate(n.createdAt, me.yearFormat)} ${timeOf(n.createdAt)}`].filter(Boolean).join(" · ")}<Badge tone={TONE[n.category] ?? "neutral"}>{labels.type(n)}</Badge></span>
                   </span>
-                  {!n.readAt && <span className={styles.dot} role="img" aria-label={t("unread")} />}
+                  {/* อ่านแล้วจุดหดหายแทนการถอดออกทันที (คงไว้ใน DOM แบบซ่อนจากโปรแกรมอ่านหน้าจอ) */}
+                  <span className={`${styles.dot} ${n.readAt ? styles.dotGone : ""}`} {...(n.readAt ? { "aria-hidden": true } : { role: "img", "aria-label": t("unread") })} />
                 </button>
               ))}
             </div>
@@ -230,14 +266,20 @@ export function InboxPage({ ws }: { ws: string }) {
           {query.hasNextPage && <div className={styles.more}><Button onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>{t("loadMore")}</Button></div>}
         </section>
         <aside className={`${styles.card} ${styles.detail}`} aria-label={t("detailLabel")}>
-          {!current ? <div className={styles.empty}>{t("selectHint")}</div> : <Detail ws={ws} n={current} busy={act.isPending} onBack={() => setSelected(null)} run={run} />}
+          {!current ? <div className={styles.empty}>{t("selectHint")}</div> : <Detail key={current.id} ws={ws} n={current} busy={act.isPending} acted={leaving?.n.id === current.id ? leaving.action : undefined} onBack={() => setSelected(null)} run={run} settle={settle} />}
         </aside>
       </div>
     </div>
   );
 }
 
-function Detail({ ws, n, busy, onBack, run }: { ws: string; n: InboxNotification; busy: boolean; onBack: () => void; run: (path: string, message?: string, body?: unknown) => void }) {
+function Detail({ ws, n, busy, acted, onBack, run, settle }: {
+  ws: string; n: InboxNotification; busy: boolean; onBack: () => void;
+  /** ปุ่มที่เพิ่งกด (รับทราบ / เตือนพรุ่งนี้) ระหว่างการ์ดยุบ · ขึ้น ✓ และกดซ้ำไม่ได้ */
+  acted?: "done" | "snooze";
+  run: (path: string, message?: string, body?: unknown) => void;
+  settle: (action: "done" | "snooze", path: string, message: string, body?: unknown) => void;
+}) {
   const t = useTranslations("inbox-bell.inbox");
   const { me } = useWorkspace();
   const labels = useLabels();
@@ -263,8 +305,8 @@ function Detail({ ws, n, busy, onBack, run }: { ws: string; n: InboxNotification
     <div className={styles.actions}>
       {key && <Link className="button button-primary" href={issueHref(ws, key)}>{t("openIssue")}</Link>}
       {daily && <Link className="button button-primary" href={`/work/${encodeURIComponent(ws)}/my-tasks`}>{t("openMyTasks")}</Link>}
-      <Button disabled={busy} onClick={() => run(`/me/notifications/${n.id}/done`, t("acknowledged"))}>{t("acknowledge")}</Button>
-      <Button disabled={busy} onClick={() => run(`/me/notifications/${n.id}/snooze`, t("snoozed"), { preset: "tomorrow" })}>{t("remindTomorrow")}</Button>
+      <Button className={acted === "done" ? styles.acted : undefined} disabled={busy || !!acted} onClick={() => settle("done", `/me/notifications/${n.id}/done`, t("acknowledged"))}>{acted === "done" && <Check className={styles.actedIcon} size={14} aria-hidden="true" />}{t("acknowledge")}</Button>
+      <Button className={acted === "snooze" ? styles.acted : undefined} disabled={busy || !!acted} onClick={() => settle("snooze", `/me/notifications/${n.id}/snooze`, t("snoozed"), { preset: "tomorrow" })}>{acted === "snooze" && <Check className={styles.actedIcon} size={14} aria-hidden="true" />}{t("remindTomorrow")}</Button>
     </div>
   );
   return (
@@ -272,7 +314,7 @@ function Detail({ ws, n, busy, onBack, run }: { ws: string; n: InboxNotification
       <div className={styles.hero}>
         <div className={styles.dHead}>
           <Button className={styles.back} size="icon" variant="ghost" aria-label={t("back")} onClick={onBack}><ArrowLeft size={18} aria-hidden /></Button>
-          <Avatar size="large" person={{ id: n.actor?.id ?? n.id, displayName: labels.actor(n), avatarUrl: n.actor?.avatarUrl ?? null }} />
+          <span className={styles.heroAvatar}><Avatar size="large" person={{ id: n.actor?.id ?? n.id, displayName: labels.actor(n), avatarUrl: n.actor?.avatarUrl ?? null }} /></span>
           <div className={styles.heroText}>
             <div className={styles.heroTitle}><b>{labels.actor(n)}</b> {labels.verb(n)}</div>
             {key && <div className={styles.heroIssue}>{key} {n.issue?.title ?? (n.payload.title as string | undefined) ?? ""}</div>}

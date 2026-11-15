@@ -352,6 +352,30 @@
     "slipAgain": "Attach new slip",
     "wht": "Upload 50 Tawi",
     "slipSent": "Attached the slip for {number} · You can use the new plan right away while it's being checked",
-    "whtSent": "Uploaded the 50 Tawi for {number}"
+    "whtSent": "Uploaded the 50 Tawi for {number}",
+    "edit": "Edit",
+    "lastUsed": "Last used",
+    "perMonth": "month",
+    "perYear": "year",
+    "vatIncluded": "VAT included",
+    "vatExcluded": "excl. VAT",
+    "seatsLeft": "{n, plural, one {# seat left} other {# seats left}}",
+    "seatsOver": "{n, plural, one {# person over} other {# people over}}",
+    "storageUsed": "{pct}% used",
+    "todo": {
+      "review": "Invoice {number}: slip under review",
+      "reviewHint": "We check it within 1 working day · Attach a new slip if the amount was wrong",
+      "open": "Invoice {number} awaiting payment of ฿{amount}",
+      "openHint": "Due {date}",
+      "wht": "Send the 50 Tawi for {number} by {date}",
+      "whtHint": "It confirms the withholding tax you deducted"
+    },
+    "col": {
+      "number": "Number",
+      "period": "Billing period",
+      "amount": "Amount",
+      "status": "Status",
+      "documents": "Documents"
+    }
   }
 }

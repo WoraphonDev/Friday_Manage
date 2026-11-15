@@ -352,6 +352,30 @@
     "slipAgain": "แนบสลิปใหม่",
     "wht": "อัปโหลด 50 ทวิ",
     "slipSent": "แนบสลิปของ {number} แล้ว · ใช้งานแพ็กเกจใหม่ได้ทันทีระหว่างรอตรวจ",
-    "whtSent": "อัปโหลด 50 ทวิ ของ {number} แล้ว"
+    "whtSent": "อัปโหลด 50 ทวิ ของ {number} แล้ว",
+    "edit": "แก้ไข",
+    "lastUsed": "ใช้ล่าสุด",
+    "perMonth": "เดือน",
+    "perYear": "ปี",
+    "vatIncluded": "รวม VAT",
+    "vatExcluded": "ยังไม่รวม VAT",
+    "seatsLeft": "ว่างอีก {n} ที่",
+    "seatsOver": "เกินอีก {n} คน",
+    "storageUsed": "ใช้ไป {pct}%",
+    "todo": {
+      "review": "ใบแจ้งหนี้ {number} รอตรวจสลิป",
+      "reviewHint": "ทีมงานตรวจภายใน 1 วันทำการ · แนบสลิปใหม่ได้ถ้าโอนผิดยอด",
+      "open": "ใบแจ้งหนี้ {number} รอชำระ ฿{amount}",
+      "openHint": "ครบกำหนด {date}",
+      "wht": "ส่ง 50 ทวิ ของ {number} ภายใน {date}",
+      "whtHint": "ใช้ยืนยันยอดภาษีที่หัก ณ ที่จ่ายไว้"
+    },
+    "col": {
+      "number": "เลขที่",
+      "period": "รอบบิล",
+      "amount": "ยอด",
+      "status": "สถานะ",
+      "documents": "เอกสาร"
+    }
   }
 }

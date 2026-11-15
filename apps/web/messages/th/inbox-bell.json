@@ -50,6 +50,8 @@
     "noDue": "ไม่มีกำหนด",
     "issueGone": "งานนี้ถูกลบหรือคุณไม่มีสิทธิ์เห็นแล้ว",
     "types": {
+      "project__paused": "พักโปรเจกต์",
+      "project__resumed": "เปิดโปรเจกต์ต่อ",
       "issue__assigned": "มอบหมายงาน",
       "issue__mentioned": "Mention",
       "issue__status_changed": "สถานะเปลี่ยน",
@@ -72,6 +74,8 @@
       "digest__daily": "สรุปประจำวัน"
     },
     "verbs": {
+      "project__paused": "พักโปรเจกต์ชั่วคราว",
+      "project__resumed": "เปิดใช้งานโปรเจกต์ต่อ",
       "issue__assigned": "มอบหมายงานให้คุณ",
       "issue__mentioned": "mention คุณใน",
       "issue__status_changed": "เปลี่ยนสถานะ",

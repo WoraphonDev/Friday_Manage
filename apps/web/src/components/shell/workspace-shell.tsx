@@ -132,6 +132,7 @@ function Navigation({
   locked?: boolean;
 }) {
   const t = useTranslations("common.nav");
+  const tp = useTranslations("common.paused");
   const pathname = usePathname();
   const base = `/work/${encodeURIComponent(workspace.slug)}`;
   const navRef = useSlidingIndicator<HTMLElement>(".nav-link");
@@ -185,6 +186,7 @@ function Navigation({
               style={{ background: project.color ?? FALLBACK_PROJECT_COLOR }}
             />
             <span className="project-name">{project.name}</span>
+            {project.pausedAt && <span className="paused-pill">{tp("pill")}</span>}
           </Link>
         ))
       ) : (

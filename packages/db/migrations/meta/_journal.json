@@ -260,6 +260,13 @@
       "when": 1794600955148,
       "tag": "0036_brand_name",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794762548498,
+      "tag": "0037_project_pause",
+      "breakpoints": true
     }
   ]
 }

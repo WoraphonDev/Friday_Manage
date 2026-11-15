@@ -1,4 +1,14 @@
 {
+  "paused": {
+    "pill": "Paused",
+    "banner": "This project has been paused since {date}",
+    "bannerHint": "Members can't see it, except the people you chose",
+    "manage": "Manage",
+    "title": "This project is paused",
+    "description": "You'll see the tasks in {name} again when it resumes.",
+    "descriptionBy": "You'll see the tasks in {name} again when it resumes. Questions? Contact {by}.",
+    "home": "Back to home"
+  },
   "app": {
     "name": "Friday Work Management",
     "description": "Plan and track your team's work",

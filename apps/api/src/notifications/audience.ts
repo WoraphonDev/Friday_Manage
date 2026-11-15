@@ -13,6 +13,8 @@ export interface ProjectCtx {
   ownerUserId: string;
   visibility: 'private' | 'workspace';
   deleted: boolean;
+  /** พักอยู่: แจ้งเฉพาะคนที่ยังเห็นโปรเจกต์ (เหมือน app.accessible_project_ids) */
+  pausedAt?: Date | null;
 }
 export interface IssueCtx {
   id: string;
@@ -46,6 +48,7 @@ export class Audience {
         ownerUserId: s.projects.ownerUserId,
         visibility: s.projects.visibility,
         deletedAt: s.projects.deletedAt,
+        pausedAt: s.projects.pausedAt,
       })
       .from(s.projects)
       .where(eq(s.projects.id, projectId));
@@ -157,16 +160,18 @@ export class Audience {
         ),
       );
     const pm = await this.db
-      .select({ userId: s.projectMembers.userId, role: s.projectMembers.role })
+      .select({ userId: s.projectMembers.userId, role: s.projectMembers.role, visibleWhilePaused: s.projectMembers.visibleWhilePaused })
       .from(s.projectMembers)
       .where(and(eq(s.projectMembers.projectId, project.id), inArray(s.projectMembers.userId, ids)));
     const projectRole = new Map(pm.map((r) => [r.userId, r.role]));
+    const pauseViewers = new Set(pm.filter((r) => r.role === 'admin' || r.visibleWhilePaused).map((r) => r.userId));
     const out = new Set<string>();
     for (const { userId, role } of ws) {
       const isOwner = userId === project.ownerUserId;
       const member = projectRole.get(userId);
       const canOpen = isOwner || !!member || (project.visibility === 'workspace' && role !== 'guest');
       if (!canOpen) continue;
+      if (project.pausedAt && !isOwner && role !== 'owner' && role !== 'admin' && !pauseViewers.has(userId)) continue;
       const guestViewer = role === 'guest' && !isOwner && (member ?? 'viewer') === 'viewer';
       if (guestViewer && issue && (!issue.sharedWithGuests || issue.isBug)) continue;
       out.add(userId);

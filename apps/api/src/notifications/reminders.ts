@@ -216,7 +216,7 @@ export class Reminders {
       .innerJoin(s.workspaces, eq(s.workspaces.id, s.issues.workspaceId))
       .innerJoin(s.workflowStatuses, eq(s.workflowStatuses.id, s.issues.statusId))
       .innerJoin(s.issueTypes, eq(s.issueTypes.id, s.issues.issueTypeId))
-      .where(and(isNull(s.issues.deletedAt), isNull(s.projects.deletedAt), isNull(s.projects.archivedAt), isNull(s.workspaces.deletedAt), openStatus(), where));
+      .where(and(isNull(s.issues.deletedAt), isNull(s.projects.deletedAt), isNull(s.projects.archivedAt), isNull(s.projects.pausedAt), isNull(s.workspaces.deletedAt), openStatus(), where));
     const rules = rows.length ? await this.db.transaction((tx) => loadDueRules(tx, rows.map((r) => r.projectId))) : new Map();
     return rows.map((r) => {
       const due = dueOf(rules.get(r.projectId) ?? PLAIN_DUE, r, r.category);

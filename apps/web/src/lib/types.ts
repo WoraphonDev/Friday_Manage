@@ -23,6 +23,8 @@ export interface Project {
   status: string;
   myRole: string | null;
   joined: boolean;
+  /** พักอยู่ (เห็นเฉพาะคนที่ยังเข้าถึงได้ระหว่างพัก) */
+  pausedAt?: string | null;
   startDate: string;
   goliveDate: string;
   version?: number;

@@ -7,9 +7,9 @@ import { useSlidingIndicator } from "@/lib/motion";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
-import { CalendarDays, ChartGantt, Check, ChevronDown, ChevronLeft, Columns3, EyeOff, FileBarChart, Folder, GanttChartSquare, LayoutDashboard, LayoutGrid, History, ListTodo, MoreHorizontal, Plus, Search, Settings, Table2, Users, X } from "lucide-react";
+import { CalendarDays, ChartGantt, Check, ChevronDown, ChevronLeft, Columns3, EyeOff, FileBarChart, Folder, GanttChartSquare, LayoutDashboard, LayoutGrid, History, ListTodo, MoreHorizontal, PauseCircle, Plus, Search, Settings, Table2, Users, X } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
-import { formatDateRange } from "@/lib/format";
+import { formatDate, formatDateRange } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Project } from "@/lib/types";
 import {
@@ -20,6 +20,7 @@ import {
   Forbidden,
   LoadingState,
   NotFound,
+  PausedState,
   useToast,
 } from "@/components/ui";
 import { IssueDrawer } from "@/features/issue-drawer/IssueDrawer";
@@ -180,6 +181,15 @@ export function ProjectShell({
       });
     }
   }
+  // โปรเจกต์พักอยู่และผู้ใช้ไม่ได้อยู่ในรายชื่อที่เห็น (API ตอบ 403 project_paused)
+  if (error instanceof ApiError && error.code === "project_paused")
+    return (
+      <PausedState
+        name={String(error.details.name ?? projectKey)}
+        by={typeof error.details.pausedBy === "string" ? error.details.pausedBy : null}
+        homeHref={`/work/${encodeURIComponent(ws)}`}
+      />
+    );
   if (error instanceof ApiError && error.status === 403)
     return (
       <Forbidden
@@ -527,6 +537,17 @@ export function ProjectShell({
           </nav>
           <p className="muted mobile-project-note">{t("nav.mobileOnly")}</p>
         </header>
+      )}
+      {project.data.pausedAt && (
+        <div className="paused-banner" role="status">
+          <PauseCircle size={16} aria-hidden="true" />
+          <span className="paused-banner-text">
+            <b>{t("paused.banner", { date: formatDate(project.data.pausedAt, me.yearFormat, true) })}</b> · {t("paused.bannerHint")}
+          </span>
+          {access.permissions.includes("project.archive") && (
+            <Link className="button button-secondary" href={`${base}/settings/danger`}>{t("paused.manage")}</Link>
+          )}
+        </div>
       )}
       {children}
       {(issueKey || newIssue) && (

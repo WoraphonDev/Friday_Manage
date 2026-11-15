@@ -28,6 +28,8 @@ interface BellItem {
 const POLL_MS = 60_000;
 /** API ส่งชื่องานเป็น issueTitle (event อื่นบางชนิดใช้ title) */
 const titleOf = (n: BellItem) => (typeof n.payload.issueTitle === "string" ? n.payload.issueTitle : typeof n.payload.title === "string" ? n.payload.title : null);
+/** แจ้งเตือนระดับโปรเจกต์ (เช่น พักโปรเจกต์) ไม่มีงาน จึงใช้ชื่อโปรเจกต์ */
+const projectOf = (n: BellItem) => (typeof n.payload.issueKey !== "string" && typeof n.payload.projectName === "string" ? n.payload.projectName : null);
 
 /**
  * เชื่อม Realtime (A17) เพื่อรู้ว่ามีแจ้งเตือนใหม่ · เชื่อมไม่ได้ = ให้ผู้เรียก poll แทน
@@ -107,7 +109,7 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
       const inbox = `/work/${encodeURIComponent(slug)}/inbox?n=${latest.id}`;
       toast({
         actor: { id: latest.actor?.id ?? latest.id, displayName: who },
-        message: [verb, key, title(latest)].filter(Boolean).join(" "),
+        message: [verb, key, title(latest) ?? projectOf(latest)].filter(Boolean).join(" "),
         meta: tb("toastMeta", { count }),
         duration: 8000,
         actions: latest.eventType === "due_request.created"
@@ -179,7 +181,7 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
             {list.data && !list.data.items.length && <div className={styles.empty}>{tb("empty")}</div>}
             {list.data?.items.map((n) => {
               const who = n.actor?.displayName ?? (n.payload.actorName as string | undefined) ?? "Friday";
-              const target = [n.payload.issueKey, title(n)].filter(Boolean).join(" ");
+              const target = [n.payload.issueKey, title(n) ?? projectOf(n)].filter(Boolean).join(" ");
               return (
                 <Link key={n.id} className={`${styles.item} motion-item ${!n.readAt ? styles.unread : ""}`} href={itemHref(n)} onClick={() => setOpen(false)}>
                   <Avatar size="small" person={{ id: n.actor?.id ?? n.id, displayName: who }} />

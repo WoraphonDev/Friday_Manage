@@ -523,6 +523,8 @@ export class TrashService {
         keys = (await this.system.select({ key: s.fileVersions.storageKey }).from(s.fileVersions).innerJoin(s.files, eq(s.files.id, s.fileVersions.fileId))
           .where(and(eq(s.files.workspaceId, tenant.workspaceId), inArray(s.files.projectId, unique)))).map((r) => r.key);
         await tx.delete(s.projects).where(and(inArray(s.projects.id, unique), isNotNull(s.projects.deletedAt)));
+        // แจ้งเตือนไม่มี FK ไปที่โปรเจกต์ และแอปลบแจ้งเตือนของคนอื่นไม่ได้ · ลบผ่าน SYSTEM_DB (กรอง Workspace + id)
+        await this.system.delete(s.notifications).where(and(eq(s.notifications.workspaceId, tenant.workspaceId), inArray(s.notifications.projectId, unique)));
       }
       const names = { issue: 'งาน', file: 'ไฟล์', project: 'โปรเจกต์' }[type];
       await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'data', action: 'trash.purged', targetType: type, targetId: found.length === 1 ? found[0]!.id : null,

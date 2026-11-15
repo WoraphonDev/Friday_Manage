@@ -10,8 +10,11 @@ import {
   FieldProfileBody,
   ListProjectsQuery,
   PatchProjectBody,
+  PauseBody,
+  PauseViewersBody,
   projectKey,
   ProjectsService,
+  ResumeBody,
   RolePermissionBody,
   SampleProjectBody,
   TransferBody,
@@ -95,6 +98,23 @@ export class ProjectsController {
   @HttpCode(200)
   restore(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string) {
     return this.projects.restore(auth, tenant, key);
+  }
+
+  @Post(':key/pause')
+  @HttpCode(200)
+  pause(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Body() body: unknown) {
+    return this.projects.pause(auth, tenant, key, parse(PauseBody, body ?? {}));
+  }
+
+  @Post(':key/resume')
+  @HttpCode(200)
+  resume(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Body() body: unknown) {
+    return this.projects.resume(auth, tenant, key, parse(ResumeBody, body ?? {}));
+  }
+
+  @Put(':key/pause/viewers')
+  setPauseViewers(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Body() body: unknown) {
+    return this.projects.setPauseViewers(auth, tenant, key, parse(PauseViewersBody, body));
   }
 
   @Post(':key/transfer')

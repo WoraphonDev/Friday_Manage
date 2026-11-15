@@ -50,6 +50,8 @@
     "noDue": "No due date",
     "issueGone": "This task was deleted or you no longer have access to it",
     "types": {
+      "project__paused": "Project paused",
+      "project__resumed": "Project resumed",
       "issue__assigned": "Assigned",
       "issue__mentioned": "Mention",
       "issue__status_changed": "Status changed",
@@ -72,6 +74,8 @@
       "digest__daily": "Daily summary"
     },
     "verbs": {
+      "project__paused": "paused the project",
+      "project__resumed": "resumed the project",
       "issue__assigned": "assigned you to",
       "issue__mentioned": "mentioned you in",
       "issue__status_changed": "changed the status of",

@@ -485,7 +485,8 @@ export async function workspaceWorkload(tx: Tx, workspaceId: string, opts: Works
   const projects = await tx
     .select({ id: s.projects.id, key: s.projects.key, name: s.projects.name, color: s.projects.color, workspaceId: s.projects.workspaceId, holidayCalendarId: s.projects.holidayCalendarId })
     .from(s.projects)
-    .where(and(isNull(s.projects.deletedAt), isNull(s.projects.archivedAt), sql`${s.projects.status} <> 'archived'`));
+    // โปรเจกต์ที่พักไม่นับในภาระงาน (ผู้ใช้ตัดสิน 2026-11-15)
+    .where(and(isNull(s.projects.deletedAt), isNull(s.projects.archivedAt), isNull(s.projects.pausedAt), sql`${s.projects.status} <> 'archived'`));
   const calendars = new Map<string, WorkCalendar>();
   for (const p of projects) calendars.set(p.id, await WorkCalendar.load(tx, p));
   const items = await loadWorkItems(tx, projects);
@@ -510,7 +511,7 @@ export async function workspaceWorkload(tx: Tx, workspaceId: string, opts: Works
         .select({ userId: s.projectMembers.userId, hours: sql<number>`coalesce(sum(${s.projectMembers.capacityHoursWeek}), 0)::int` })
         .from(s.projectMembers)
         .innerJoin(s.projects, eq(s.projects.id, s.projectMembers.projectId))
-        .where(and(inArray(s.projectMembers.userId, ids), isNull(s.projects.deletedAt), isNull(s.projects.archivedAt)))
+        .where(and(inArray(s.projectMembers.userId, ids), isNull(s.projects.deletedAt), isNull(s.projects.archivedAt), isNull(s.projects.pausedAt)))
         .groupBy(s.projectMembers.userId)
     : [];
   const capacityCalendar = await loadWorkspaceCalendar(tx, workspaceId);

@@ -2,6 +2,9 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { type Db, schema, type Tx } from '@friday/db';
 import { and, asc, eq, gte, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
+
+/** กฎของโปรเจกต์ที่พักอยู่ไม่ทำงาน (พักโปรเจกต์ 2026-11-15) */
+const notPaused = () => sql`not exists (select 1 from projects p where p.id = ${schema.automationRules.projectId} and p.paused_at is not null)`;
 import { today } from '../common/dates.js';
 import { AppError } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
@@ -201,7 +204,7 @@ export class AutomationEngine implements OnModuleInit {
 
   // อ่านกฎก่อนรู้ Workspace/ผู้ใช้ที่จะกระทำ จึงใช้ SYSTEM_DB (ข้าม RLS) · การกระทำจริงทำภายใต้ RLS ของผู้สร้างกฎ
   private async rulesFor(projectId: string, trigger: Trigger) {
-    return this.sys.select().from(s.automationRules).where(and(eq(s.automationRules.projectId, projectId), eq(s.automationRules.trigger, trigger), eq(s.automationRules.enabled, true))).orderBy(asc(s.automationRules.createdAt));
+    return this.sys.select().from(s.automationRules).where(and(eq(s.automationRules.projectId, projectId), eq(s.automationRules.trigger, trigger), eq(s.automationRules.enabled, true), notPaused())).orderBy(asc(s.automationRules.createdAt));
   }
 
   private async allSubtasksDone(parentId: string) {
@@ -241,7 +244,7 @@ export class AutomationEngine implements OnModuleInit {
     const date = bkk.toISOString().slice(0, 10);
     const minutes = bkk.getUTCHours() * 60 + bkk.getUTCMinutes();
     const weekday = bkk.getUTCDay() === 0 ? 7 : bkk.getUTCDay();
-    const rules = await this.sys.select().from(s.automationRules).where(and(eq(s.automationRules.trigger, 'schedule'), eq(s.automationRules.enabled, true)));
+    const rules = await this.sys.select().from(s.automationRules).where(and(eq(s.automationRules.trigger, 'schedule'), eq(s.automationRules.enabled, true), notPaused()));
     let ran = 0;
     for (const rule of rules) {
       const cfg = rule.triggerConfig as { frequency: 'daily' | 'weekly'; time: string; weekday?: number };
@@ -265,7 +268,7 @@ export class AutomationEngine implements OnModuleInit {
 
   /** งานเลย Due: ครั้งเดียวต่อกฎต่องานต่อวัน Due (เปลี่ยน Due แล้วเลยอีกครั้งถึงจะทำใหม่) */
   async scanOverdue() {
-    const rules = await this.sys.select().from(s.automationRules).where(and(eq(s.automationRules.trigger, 'overdue'), eq(s.automationRules.enabled, true)));
+    const rules = await this.sys.select().from(s.automationRules).where(and(eq(s.automationRules.trigger, 'overdue'), eq(s.automationRules.enabled, true), notPaused()));
     let ran = 0;
     for (const rule of rules) {
       // โปรเจกต์แยก Dev / QA: งานที่รอ QA เลยกำหนดตาม QA Due (projects/due-stage.ts) · dedupe ตามวันนั้นแทน Plan End

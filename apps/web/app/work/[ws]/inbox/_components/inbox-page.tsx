@@ -29,6 +29,12 @@ const issueHref = (ws: string, key: string) => `/work/${encodeURIComponent(ws)}/
 const bkkDate = (iso: string) => today(new Date(iso));
 const timeOf = (iso: string) => localeDateFormat({ hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }).format(new Date(iso));
 
+/** หัวข้อของรายการ: เลขงาน + ชื่องาน · แจ้งเตือนระดับโปรเจกต์ (เช่น พักโปรเจกต์) ไม่มีงาน จึงใช้ชื่อโปรเจกต์ */
+function itemTitle(n: InboxNotification) {
+  const issue = `${n.issue?.key ?? (n.payload.issueKey as string | undefined) ?? ""} ${n.issue?.title ?? (n.payload.title as string | undefined) ?? ""}`.trim();
+  return issue || (n.project?.name ?? n.project?.key ?? "");
+}
+
 export function useLabels() {
   const t = useTranslations("inbox-bell.inbox");
   // คีย์ข้อความใช้ "__" แทน "." ของชื่อ Event (next-intl ใช้ "." แยกระดับ)
@@ -192,7 +198,7 @@ export function InboxPage({ ws }: { ws: string }) {
                   <Avatar size="small" person={{ id: n.actor?.id ?? n.id, displayName: labels.actor(n), avatarUrl: n.actor?.avatarUrl ?? null }} />
                   <span className="m-row-main">
                     <b>{labels.actor(n)} {labels.verb(n)}</b>
-                    <small>{n.eventType === DAILY_EVENT ? dailyTitle(n.payload) : typeof n.payload.message === "string" ? `“${n.payload.message}”` : `${n.issue?.key ?? (n.payload.issueKey as string | undefined) ?? ""} ${n.issue?.title ?? (n.payload.title as string | undefined) ?? ""}`}</small>
+                    <small>{n.eventType === DAILY_EVENT ? dailyTitle(n.payload) : typeof n.payload.message === "string" ? `“${n.payload.message}”` : itemTitle(n)}</small>
                   </span>
                   <span className="m-row-meta">
                     {n.category === "due" && <Badge tone="amber">{labels.type(n)}</Badge>}
@@ -258,7 +264,7 @@ export function InboxPage({ ws }: { ws: string }) {
                   <Avatar person={{ id: n.actor?.id ?? n.id, displayName: labels.actor(n), avatarUrl: n.actor?.avatarUrl ?? null }} />
                   <span className={styles.ntBody}>
                     <span style={{ fontSize: 13 }}><b>{labels.actor(n)}</b> {labels.verb(n)}</span>
-                    <span className={styles.ntTitle}>{n.eventType === DAILY_EVENT ? dailyTitle(n.payload) : `${n.issue?.key ?? (n.payload.issueKey as string | undefined) ?? ""} ${n.issue?.title ?? (n.payload.title as string | undefined) ?? ""}`}</span>
+                    <span className={styles.ntTitle}>{n.eventType === DAILY_EVENT ? dailyTitle(n.payload) : itemTitle(n)}</span>
                     {typeof n.payload.message === "string" && <span className={styles.quote}>“{n.payload.message}”</span>}
                     <span className={styles.meta}>{[n.project?.name ?? n.project?.key, `${formatDate(n.createdAt, me.yearFormat)} ${timeOf(n.createdAt)}`].filter(Boolean).join(" · ")}<Badge tone={TONE[n.category] ?? "neutral"}>{labels.type(n)}</Badge></span>
                   </span>

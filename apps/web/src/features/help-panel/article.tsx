@@ -97,9 +97,9 @@ export function ArticleView({ slug, base, workspace, initial, publicOnly = false
               </div>
             )}
           </div>
-          {done && <p role="status" className="muted">{t("article.thanks")}</p>}
+          {done && <p role="status" className="muted motion-in">{t("article.thanks")}</p>}
           {!done && vote === "no" && (
-            <div className={styles.voteMore}>
+            <div className={`${styles.voteMore} motion-in`}>
               <div className="field">
                 <label htmlFor="help-feedback">{t("article.missing")}</label>
                 <textarea id="help-feedback" className="input" rows={3} maxLength={2000} value={comment} onChange={(e) => setComment(e.target.value)} />

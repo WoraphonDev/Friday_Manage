@@ -73,7 +73,7 @@ export function JoinInvite({ token }: { token: string }) {
 
   if (invite.isPending || me.isPending)
     return (
-      <CardLayout wide>
+      <CardLayout wide swapKey="loading">
         <div className={styles.cardSection}>
           <LoadingState />
         </div>
@@ -82,7 +82,7 @@ export function JoinInvite({ token }: { token: string }) {
   if (invite.isError) {
     const notFound = invite.error instanceof ApiError && invite.error.status === 404;
     return (
-      <CardLayout wide>
+      <CardLayout wide swapKey="error">
         <div className={styles.cardSection}>
           {notFound ? <NotFound /> : <ErrorState error={invite.error} retry={() => invite.refetch()} />}
           {notFound && (
@@ -94,7 +94,7 @@ export function JoinInvite({ token }: { token: string }) {
   }
   if (me.isError)
     return (
-      <CardLayout wide>
+      <CardLayout wide swapKey="error">
         <div className={styles.cardSection}>
           <ErrorState error={me.error} retry={() => me.refetch()} />
         </div>
@@ -346,7 +346,8 @@ export function JoinInvite({ token }: { token: string }) {
   }
 
   return (
-    <CardLayout wide footer={footer}>
+    // เนื้อหาเปลี่ยนแบบเลื่อนเข้าเมื่อผลลัพธ์เปลี่ยน (หมดอายุ / ปฏิเสธ) · ค่าที่กรอกเก็บไว้ด้านบนจึงไม่หาย
+    <CardLayout wide footer={footer} swapKey={expired ? "expired" : (outcome ?? "invite")}>
       {header}
       <div className={styles.cardSection}>{body}</div>
     </CardLayout>

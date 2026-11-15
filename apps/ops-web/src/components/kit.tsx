@@ -8,8 +8,9 @@ import * as RadixDialog from "@radix-ui/react-dialog";
 import { clsx } from "clsx";
 import { Check, Copy, LockKeyhole, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from "react";
 import { ApiError } from "@/lib/api";
+import { exitDelay, useExitGhost, useSlidingIndicator } from "@/lib/motion";
 import type { OpsRole } from "@/lib/types";
 import { Button } from "./ui";
 
@@ -23,9 +24,11 @@ export function Chip({ pressed, onClick, children, className }: { pressed?: bool
   );
 }
 
+/** ปุ่มสลับ: พื้นการ์ดของปุ่มที่เลือกเลื่อนไปหาปุ่มใหม่ (.seg.motion-pill) */
 export function Seg<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: { value: T; label: string }[]; label: string }) {
+  const indicator = useSlidingIndicator<HTMLDivElement>(".seg > button");
   return (
-    <div className="seg" role="group" aria-label={label}>
+    <div ref={indicator} className="seg motion-pill" role="group" aria-label={label}>
       {options.map((o) => (
         <button key={o.value} type="button" aria-pressed={o.value === value} onClick={() => onChange(o.value)}>
           {o.label}
@@ -35,9 +38,11 @@ export function Seg<T extends string>({ value, onChange, options, label }: { val
   );
 }
 
+/** แถบแท็บ: เส้นใต้แท็บที่เลือกเลื่อนไปหาแท็บใหม่ (.tabs[data-indicator]) */
 export function Tabs<T extends string>({ value, onChange, tabs, label }: { value: T; onChange: (v: T) => void; tabs: { value: T; label: ReactNode }[]; label: string }) {
+  const indicator = useSlidingIndicator<HTMLDivElement>(".tab");
   return (
-    <div className="tabs" role="tablist" aria-label={label}>
+    <div ref={indicator} className="tabs" role="tablist" aria-label={label}>
       {tabs.map((t) => (
         <button
           key={t.value}
@@ -55,6 +60,16 @@ export function Tabs<T extends string>({ value, onChange, tabs, label }: { value
           {t.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+/** กลุ่มชิปที่เลือกได้ทีละอัน: พื้นของชิปที่เลือกเลื่อนไปหาชิปใหม่ (.chip-pill ใน ops.css) · ห้ามใช้กับชิปที่กดได้หลายอัน (หาได้เฉพาะชิปแรกที่กดอยู่) */
+export function ChipGroup({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
+  const indicator = useSlidingIndicator<HTMLDivElement>(".chip");
+  return (
+    <div ref={indicator} className={clsx(className, "motion-pill chip-pill")} {...props}>
+      {children}
     </div>
   );
 }
@@ -108,13 +123,16 @@ export function RoleChips({ roles, elevated = [] }: { roles: OpsRole[]; elevated
 
 // ---------------------------------------------------------------- Drawer · Popover · แถบเตือน
 
+/** Drawer / Modal เลื่อนและจางเข้า-ออกตาม data-state (ops.css) · หน้าที่ปิดด้วยการเลิก render ได้ animation ปิดจาก useExitGhost */
 export function Drawer({ open, onOpenChange, title, description, wide, children }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; description?: ReactNode; wide?: boolean; children?: ReactNode }) {
   const t = useTranslations("common.dialog");
+  const overlayGhost = useExitGhost<HTMLDivElement>();
+  const contentGhost = useExitGhost<HTMLDivElement>();
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="overlay" />
-        <RadixDialog.Content className={clsx("drawer", wide && "drawer-wide")} {...(!description ? { "aria-describedby": undefined } : {})}>
+        <RadixDialog.Overlay ref={overlayGhost} className="overlay" />
+        <RadixDialog.Content ref={contentGhost} className={clsx("drawer", wide && "drawer-wide")} {...(!description ? { "aria-describedby": undefined } : {})}>
           <div className="dialog-heading">
             <RadixDialog.Title asChild>
               <h2>{title}</h2>
@@ -136,11 +154,13 @@ export function Drawer({ open, onOpenChange, title, description, wide, children 
 /** Modal กลางจอที่มี class เพิ่มได้ (dialog-wide, palette) */
 export function Modal({ open, onOpenChange, title, description, className, hideTitle, children }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; description?: ReactNode; className?: string; hideTitle?: boolean; children?: ReactNode }) {
   const t = useTranslations("common.dialog");
+  const overlayGhost = useExitGhost<HTMLDivElement>();
+  const contentGhost = useExitGhost<HTMLDivElement>();
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="overlay" />
-        <RadixDialog.Content className={clsx("dialog", className)} {...(!description ? { "aria-describedby": undefined } : {})}>
+        <RadixDialog.Overlay ref={overlayGhost} className="overlay" />
+        <RadixDialog.Content ref={contentGhost} className={clsx("dialog", className)} {...(!description ? { "aria-describedby": undefined } : {})}>
           {hideTitle ? (
             <RadixDialog.Title className="sr-only">{title}</RadixDialog.Title>
           ) : (
@@ -163,29 +183,49 @@ export function Modal({ open, onOpenChange, title, description, className, hideT
   );
 }
 
-/** Popover แบบเบา: ปิดเมื่อกด Esc หรือคลิกนอกกล่อง */
+/** Popover แบบเบา: ปิดเมื่อกด Esc หรือคลิกนอกกล่อง · ตอนปิดตั้ง data-state="closed" ให้จางออกก่อน แล้วค่อยถอดออก (exitDelay) */
 export function Popover({ trigger, children, label }: { trigger: (props: { open: boolean; toggle: () => void }) => ReactNode; children: (close: () => void) => ReactNode; label: string }) {
   const [open, setOpen] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const close = useCallback(() => {
+    const ms = exitDelay();
+    if (!ms) return setOpen(false);
+    setLeaving(true);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      setOpen(false);
+      setLeaving(false);
+    }, ms);
+  }, []);
+  // กดเปิดอีกครั้งระหว่างกำลังปิด = ยกเลิกการปิด
+  const toggle = () => {
+    if (open && !leaving) return close();
+    clearTimeout(timer.current);
+    setLeaving(false);
+    setOpen(true);
+  };
+  useEffect(() => () => clearTimeout(timer.current), []);
   useEffect(() => {
-    if (!open) return;
+    if (!open || leaving) return;
     const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) close();
     };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, leaving, close]);
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      {trigger({ open, toggle: () => setOpen((v) => !v) })}
+      {trigger({ open: open && !leaving, toggle })}
       {open && (
-        <div className="popover" role="dialog" aria-label={label}>
-          {children(() => setOpen(false))}
+        <div className="popover" role="dialog" aria-label={label} data-state={leaving ? "closed" : "open"} inert={leaving || undefined}>
+          {children(close)}
         </div>
       )}
     </div>

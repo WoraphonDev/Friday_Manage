@@ -11,10 +11,13 @@
 .on, .on:hover { background:var(--primary-soft); color:var(--primary-text); font-weight:600; }
 .note { margin:6px 0 0; padding:10px 12px; border-top:1px solid var(--border); font-size:11px; color:var(--muted); }
 .main { flex:1; min-width:0; display:flex; flex-direction:column; gap:16px; }
+/* .motion-pill ตั้ง position:relative ตอนมีแถบเลื่อน · คง sticky ของเมนูไว้ (sticky เป็นกรอบอ้างอิงของแถบได้เหมือนกัน) */
+.body > .nav[data-indicator] { position:sticky; }
 @media (max-width:760px) {
   .dialog { inset:0; border-radius:0; }
   .body { flex-direction:column; padding:12px; }
   .nav { position:static; width:100%; flex-direction:row; flex-wrap:wrap; }
+  .body > .nav[data-indicator] { position:relative; }
   .item { width:auto; }
   .note { display:none; }
 }

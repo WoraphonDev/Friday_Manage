@@ -62,7 +62,7 @@ export function SearchResults({ query, articleHref, onAsk, onNavigate, publicOnl
   return (
     <div className={styles.results}>
       {data.partial && <p className={styles.partial}>{t("partial")}</p>}
-      <ul aria-label={t("count", { count: data.total })}>
+      <ul className="motion-list" aria-label={t("count", { count: data.total })}>
         {data.items.map((a) => (
           <li key={a.id}>
             <Link href={articleHref(a.slug)} className={styles.result} onClick={onNavigate}>

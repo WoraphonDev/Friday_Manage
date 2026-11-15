@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Avatar, Badge, Button, Forbidden, Input, Select, useToast } from "@/components/ui";
+import { Avatar, Badge, Button, Forbidden, Input, MotionSwap, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError, supportId } from "@/lib/api";
 import { formatDate, formatDateRange, today } from "@/lib/format";
+import { useSlidingIndicator } from "@/lib/motion";
 import { positionOptions, toPositionCode } from "@/lib/positions";
 import { queryKeys } from "@/lib/query";
 import {
@@ -145,6 +146,13 @@ export function NewProjectWizard({ ws }: { ws: string }) {
   const [d, setDraft] = useState<Draft>(initialDraft);
   const [errors, setErrors] = useState<Errors>({});
   const [creating, setCreating] = useState(false);
+  // กลุ่มที่เลือกได้ทีละอัน: พื้น / กรอบของตัวที่เลือกเลื่อนตาม (สีตั้งที่ wizard.module.css)
+  // Template หลายหมวดเลือกได้อันเดียวรวมกัน จึงวัดที่กล่องนอกให้กรอบเลื่อนข้ามหมวดได้
+  const stepsRef = useSlidingIndicator<HTMLElement>(`.${styles.st}`);
+  const templateRef = useSlidingIndicator<HTMLDivElement>(`.${styles.opt}`);
+  const colorRef = useSlidingIndicator<HTMLDivElement>(`.${styles.sw}`);
+  const sprintRef = useSlidingIndicator<HTMLDivElement>(`.${styles.tg}`);
+  const visibilityRef = useSlidingIndicator<HTMLDivElement>(`.${styles.opt}`);
   const isAdmin = workspace.role === "owner" || workspace.role === "admin";
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((x) => ({ ...x, [k]: v }));
 
@@ -313,7 +321,7 @@ export function NewProjectWizard({ ws }: { ws: string }) {
             <textarea className={styles.in} rows={3} value={d.description} placeholder={t("descriptionPlaceholder")} onChange={(e) => set("description", e.target.value)} />
           </label>
         </div>
-        <div className={styles.fld}>
+        <div ref={templateRef} className={`${styles.fld} ${styles.optPill} motion-pill`}>
           <span className={styles.lb}>{t("template")} *</span>
           {categories.map((category) => (
             <div key={category} className={styles.fld}>
@@ -340,7 +348,7 @@ export function NewProjectWizard({ ws }: { ws: string }) {
         <div className={styles.inline}>
           <div className={styles.fld}>
             <span className={styles.lb}>{t("color")}</span>
-            <div className={styles.swatches}>
+            <div ref={colorRef} className={`${styles.swatches} ${styles.colorPill} motion-pill`}>
               {COLORS.map((c) => (
                 <button key={c} type="button" className={styles.sw} style={{ background: c }} aria-label={t("colorOf", { name: t(`colors.${c.slice(1)}`) })} aria-pressed={d.color === c} onClick={() => set("color", c)} />
               ))}
@@ -395,7 +403,7 @@ export function NewProjectWizard({ ws }: { ws: string }) {
         {isScrum && (
           <div className={styles.fld}>
             <span className={styles.lb}>{t("sprintLength")}</span>
-            <div className={styles.swatches}>
+            <div ref={sprintRef} className={`${styles.swatches} ${styles.tgPill} motion-pill`}>
               {([1, 2, 3] as const).map((w) => (
                 <button key={w} type="button" className={styles.tg} aria-pressed={d.sprintLengthWeeks === w} onClick={() => set("sprintLengthWeeks", w)}>{t("weeks", { n: w })}</button>
               ))}
@@ -457,7 +465,7 @@ export function NewProjectWizard({ ws }: { ws: string }) {
           </Select>
           <div className={styles.fld}>
             <span className={styles.lb}>{t("visibility")}</span>
-            <div className={styles.opts2} role="group" aria-label={t("visibility")}>
+            <div ref={visibilityRef} className={`${styles.opts2} ${styles.optPill} motion-pill`} role="group" aria-label={t("visibility")}>
               {(["private", "workspace"] as const).map((v) => (
                 <button key={v} type="button" className={styles.opt} aria-pressed={d.visibility === v} onClick={() => set("visibility", v)}>
                   <b>{t(`visibilityOptions.${v}.name`)}</b>
@@ -505,7 +513,7 @@ export function NewProjectWizard({ ws }: { ws: string }) {
         </div>
         <div className={styles.fld}>
           <span className={styles.lb}>{t("integrations")}</span>
-          <div className={styles.integ}>
+          <div className={`${styles.integ} motion-list`}>
             {INTEGRATIONS.map((g) => (
               <div key={g} className={styles.integItem}>
                 <span className={styles.ab}>{t(`integration.${g}.ab`)}</span>
@@ -544,9 +552,9 @@ export function NewProjectWizard({ ws }: { ws: string }) {
         <b>{t("fromExcel")}</b><span className={styles.muted}>{t("fromExcelHint")}</span><span aria-hidden="true">→</span>
       </Link>
       <div className={styles.body}>
-        <nav className={`${styles.card} ${styles.steps}`} aria-label={t("stepsLabel")}>
+        <nav ref={stepsRef} className={`${styles.card} ${styles.steps} motion-pill`} aria-label={t("stepsLabel")}>
           {steps.map((n) => (
-            <button key={n} type="button" className={styles.st} aria-current={n === step ? "step" : undefined} onClick={() => void go(n)}>
+            <button key={n} type="button" className={styles.st} aria-current={n === step ? "step" : undefined} data-state={n === step ? "active" : undefined} onClick={() => void go(n)}>
               <span className={`${styles.sn} ${n < step ? styles.done : n === step ? styles.on : ""}`}>{n < step ? "✓" : n}</span>
               <span className={styles.stText}>
                 <span>{t(`steps.${n}.title`)}</span>
@@ -563,7 +571,8 @@ export function NewProjectWizard({ ws }: { ws: string }) {
             <h2 id="wizard-step">{t(`steps.${step}.title`)}</h2>
             <div className={styles.muted}>{t(`steps.${step}.description`)}</div>
           </div>
-          <div className={styles.formBody}>{stepBody[step]}</div>
+          {/* เปลี่ยนขั้น = เนื้อหาขั้นใหม่เคลื่อนเข้า · ค่าที่กรอกอยู่ใน d ของหน้านี้ จึงไม่หายเมื่อสร้างกรอบใหม่ */}
+          <MotionSwap key={step} className={styles.formBody}>{stepBody[step]}</MotionSwap>
           <div className={styles.footer}>
             {step > 1 && <Button onClick={() => setStep(step - 1)}>{t("back")}</Button>}
             <span className={styles.spacer} />
@@ -754,7 +763,7 @@ function TeamPicker({ me, directory, loading, error, members, onChange }: {
         <span />
       </div>
       {members.map((m) => (
-        <div key={m.userId} className={styles.row} data-testid={`member-${m.userId}`}>
+        <div key={m.userId} className={`${styles.row} motion-in`} data-testid={`member-${m.userId}`}>
           <div className={styles.inline}><Avatar person={{ id: m.userId, displayName: m.displayName }} /><div><div>{m.displayName}</div><div className={styles.muted}>{m.email}</div></div></div>
           <select className={styles.in} value={m.position} aria-label={t("positionOf", { name: m.displayName })} onChange={(e) => update(m.userId, { position: e.target.value })}>
             <option value="">—</option>

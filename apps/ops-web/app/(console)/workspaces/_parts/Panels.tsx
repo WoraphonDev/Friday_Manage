@@ -243,7 +243,7 @@ export function UsagePanel({ id }: { id: string }) {
               {d.dailyActiveUsers.length ? (
                 <div role="img" aria-label={t("avg", { n: d.averageDailyActive })} style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 80 }}>
                   {d.dailyActiveUsers.map((x) => (
-                    <span key={x.date} title={`${x.date}: ${x.activeUsers}`} style={{ flex: 1, height: `${(x.activeUsers / peak) * 100}%`, minHeight: 2, background: "var(--chart-primary)", borderRadius: "3px 3px 0 0" }} />
+                    <span key={x.date} className="motion-bar-v" title={`${x.date}: ${x.activeUsers}`} style={{ flex: 1, height: `${(x.activeUsers / peak) * 100}%`, minHeight: 2, background: "var(--chart-primary)", borderRadius: "3px 3px 0 0" }} />
                   ))}
                 </div>
               ) : (

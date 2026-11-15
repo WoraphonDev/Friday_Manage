@@ -5,8 +5,9 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { FridayLogo } from "@/components/brand/friday-logo";
-import { Button, ErrorState, Input, LoadingState, Select, initials } from "@/components/ui";
+import { Button, ErrorState, Input, LoadingState, MotionSwap, Select, initials } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { FormAlert, Heading, NS, styles } from "../../_components/shared";
 
@@ -79,6 +80,8 @@ export function OnboardingWizard() {
   );
   // ขั้นที่ 4
   const [start, setStart] = useState<Start>("sample");
+  // ขนาดทีมเลือกได้อันเดียว: พื้นเลื่อนตามชิปที่เลือก · ต้องเรียกก่อน return ระหว่างโหลดตามกฎของ hook
+  const sizeChips = useSlidingIndicator<HTMLDivElement>("button");
 
   const debouncedSlug = useDebounced(slug);
   const slugValid = SLUG.test(debouncedSlug);
@@ -248,191 +251,196 @@ export function OnboardingWizard() {
           {t("onboarding.stepName", { step, name: t(`onboarding.steps.${STEP_KEYS[step - 1]}`) })}
         </div>
         <section className={styles.obCard}>
-          {step === 1 && (
-            <>
-              <Heading title={t("onboarding.workspaceTitle")} subtitle={t("onboarding.workspaceSubtitle")} />
-              <div className={styles.wsPreview}>
-                <span className={styles.wsMark} aria-hidden="true">
-                  {initials(name || workspace?.name || "W")}
-                </span>
-                {workspace && (
-                  <FormAlert tone="success" message={t("onboarding.workspaceCreated", { name: workspace.name })} />
-                )}
-              </div>
-              <Input
-                label={t("onboarding.workspaceName")}
-                className={styles.input}
-                placeholder={t("onboarding.workspaceNamePlaceholder")}
-                value={workspace?.name ?? name}
-                readOnly={!!workspace}
-                autoFocus
-                onChange={(event) => changeName(event.target.value)}
-              />
-              <div className={styles.field}>
-                <label className={styles.fieldLabel} htmlFor="workspace-slug">
-                  {t("onboarding.url")}
-                </label>
-                <span className={styles.prefix} data-invalid={slugTaken || slugState === "invalid"}>
-                  <span>{t("onboarding.urlPrefix")}</span>
-                  <input
-                    id="workspace-slug"
-                    aria-label={t("onboarding.slugLabel")}
-                    aria-describedby="workspace-slug-status"
-                    value={workspace?.slug ?? slug}
-                    readOnly={!!workspace}
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    onChange={(event) => {
-                      setSlugEdited(true);
-                      setSlug(event.target.value.toLowerCase().trim());
-                    }}
-                  />
-                </span>
-                <span id="workspace-slug-status" aria-live="polite" className={styles.tiny}>
-                  {workspace ? null : slugTaken ? (
-                    <span className={styles.bad}>{t("onboarding.slugTaken")}</span>
-                  ) : slugState === "invalid" ? (
-                    <span className={styles.bad}>{t("onboarding.slugInvalid")}</span>
-                  ) : slugState === "checking" ? (
-                    <span className={styles.muted}>{t("onboarding.slugChecking")}</span>
-                  ) : slugState === "ok" ? (
-                    <span className={styles.ok}>{t("onboarding.slugOk")}</span>
-                  ) : (
-                    <span className={styles.muted}>{t("onboarding.slugHint")}</span>
+          {/* เนื้อหาแต่ละขั้นเลื่อนเข้าเมื่อเปลี่ยนขั้น · ค่าที่กรอกเก็บไว้ที่ Wizard จึงไม่หายตอนสลับ · ปุ่มด้านล่างอยู่นอกกรอบจึงไม่ขยับ */}
+          <MotionSwap key={step} className={styles.obStep}>
+            {step === 1 && (
+              <>
+                <Heading title={t("onboarding.workspaceTitle")} subtitle={t("onboarding.workspaceSubtitle")} />
+                <div className={styles.wsPreview}>
+                  <span className={styles.wsMark} aria-hidden="true">
+                    {initials(name || workspace?.name || "W")}
+                  </span>
+                  {workspace && (
+                    <FormAlert tone="success" message={t("onboarding.workspaceCreated", { name: workspace.name })} />
                   )}
-                </span>
-              </div>
-            </>
-          )}
+                </div>
+                <Input
+                  label={t("onboarding.workspaceName")}
+                  className={styles.input}
+                  placeholder={t("onboarding.workspaceNamePlaceholder")}
+                  value={workspace?.name ?? name}
+                  readOnly={!!workspace}
+                  autoFocus
+                  onChange={(event) => changeName(event.target.value)}
+                />
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel} htmlFor="workspace-slug">
+                    {t("onboarding.url")}
+                  </label>
+                  <span className={styles.prefix} data-invalid={slugTaken || slugState === "invalid"}>
+                    <span>{t("onboarding.urlPrefix")}</span>
+                    <input
+                      id="workspace-slug"
+                      aria-label={t("onboarding.slugLabel")}
+                      aria-describedby="workspace-slug-status"
+                      value={workspace?.slug ?? slug}
+                      readOnly={!!workspace}
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      onChange={(event) => {
+                        setSlugEdited(true);
+                        setSlug(event.target.value.toLowerCase().trim());
+                      }}
+                    />
+                  </span>
+                  <span id="workspace-slug-status" aria-live="polite" className={styles.tiny}>
+                    {workspace ? null : slugTaken ? (
+                      <span className={styles.bad}>{t("onboarding.slugTaken")}</span>
+                    ) : slugState === "invalid" ? (
+                      <span className={styles.bad}>{t("onboarding.slugInvalid")}</span>
+                    ) : slugState === "checking" ? (
+                      <span className={styles.muted}>{t("onboarding.slugChecking")}</span>
+                    ) : slugState === "ok" ? (
+                      <span className={styles.ok}>{t("onboarding.slugOk")}</span>
+                    ) : (
+                      <span className={styles.muted}>{t("onboarding.slugHint")}</span>
+                    )}
+                  </span>
+                </div>
+              </>
+            )}
 
-          {step === 2 && (
-            <>
-              <Heading title={t("onboarding.teamTitle")} subtitle={t("onboarding.teamSubtitle")} />
-              <div className={styles.field} role="group" aria-labelledby="ob-role">
-                <span id="ob-role" className={styles.fieldLabel}>
-                  {t("onboarding.yourRole")}
-                </span>
-                <div className={styles.options}>
-                  {TEAM_ROLES.map((role) => (
-                    <button
-                      key={role}
-                      type="button"
-                      className={styles.opt}
-                      aria-pressed={teamRole === role}
-                      onClick={() => setTeamRole(role)}
-                    >
-                      <b>{t(`onboarding.roles.${role}.name`)}</b>
-                      <span className={cn(styles.muted, styles.tiny)}>{t(`onboarding.roles.${role}.description`)}</span>
-                    </button>
-                  ))}
+            {step === 2 && (
+              <>
+                <Heading title={t("onboarding.teamTitle")} subtitle={t("onboarding.teamSubtitle")} />
+                <div className={styles.field} role="group" aria-labelledby="ob-role">
+                  <span id="ob-role" className={styles.fieldLabel}>
+                    {t("onboarding.yourRole")}
+                  </span>
+                  <div className={styles.options}>
+                    {TEAM_ROLES.map((role) => (
+                      <button
+                        key={role}
+                        type="button"
+                        className={styles.opt}
+                        aria-pressed={teamRole === role}
+                        onClick={() => setTeamRole(role)}
+                      >
+                        <b>{t(`onboarding.roles.${role}.name`)}</b>
+                        <span className={cn(styles.muted, styles.tiny)}>{t(`onboarding.roles.${role}.description`)}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className={styles.field} role="group" aria-labelledby="ob-size">
-                <span id="ob-size" className={styles.fieldLabel}>
-                  {t("onboarding.teamSize")}
-                </span>
-                <div className={styles.chips}>
-                  {TEAM_SIZES.map((size) => (
-                    <button
-                      key={size}
-                      type="button"
-                      className={styles.chip}
-                      aria-pressed={teamSize === size}
-                      onClick={() => setTeamSize(size)}
-                    >
-                      {size}
-                    </button>
-                  ))}
+                <div className={styles.field} role="group" aria-labelledby="ob-size">
+                  <span id="ob-size" className={styles.fieldLabel}>
+                    {t("onboarding.teamSize")}
+                  </span>
+                  <div ref={sizeChips} className={cn(styles.chips, "motion-pill")}>
+                    {TEAM_SIZES.map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        className={styles.chip}
+                        aria-pressed={teamSize === size}
+                        onClick={() => setTeamSize(size)}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className={styles.field} role="group" aria-labelledby="ob-method">
-                <span id="ob-method" className={styles.fieldLabel}>
-                  {t("onboarding.method")}
-                </span>
-                <div className={cn(styles.options, styles.optionsWide)}>
-                  {METHODS.map((item) => (
+                <div className={styles.field} role="group" aria-labelledby="ob-method">
+                  <span id="ob-method" className={styles.fieldLabel}>
+                    {t("onboarding.method")}
+                  </span>
+                  <div className={cn(styles.options, styles.optionsWide)}>
+                    {METHODS.map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        className={styles.opt}
+                        aria-pressed={method === item}
+                        onClick={() => setMethod(item)}
+                      >
+                        <b>{t(`onboarding.methods.${item}.name`)}</b>
+                        <span className={cn(styles.muted, styles.tiny)}>{t(`onboarding.methods.${item}.description`)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {step === 3 && (
+              <>
+                <Heading title={t("onboarding.inviteTitle")} subtitle={t("onboarding.inviteSubtitle")} />
+                {badEmails.length > 0 && (
+                  <FormAlert message={t("onboarding.invalidEmails", { emails: badEmails.join(", ") })} />
+                )}
+                {invites.map((row, index) => (
+                  // แถวที่กด "เพิ่ม" ทีหลังค่อย ๆ โผล่ (3 แถวแรกขึ้นพร้อมขั้นอยู่แล้ว)
+                  <div key={index} className={cn(styles.inviteRow, index >= 3 && "motion-in")}>
+                    <Input
+                      aria-label={t("onboarding.memberEmail", { n: index + 1 })}
+                      className={styles.input}
+                      type="email"
+                      autoComplete="off"
+                      placeholder={t("onboarding.emailPlaceholder")}
+                      value={row.email}
+                      aria-invalid={row.email.trim() && !EMAIL.test(row.email.trim()) ? true : undefined}
+                      onChange={(event) =>
+                        setInvites(invites.map((item, i) => (i === index ? { ...item, email: event.target.value } : item)))
+                      }
+                    />
+                    <Select
+                      aria-label={t("onboarding.memberRole", { n: index + 1 })}
+                      value={row.role}
+                      onChange={(event) =>
+                        setInvites(
+                          invites.map((item, i) => (i === index ? { ...item, role: event.target.value as InviteRole } : item)),
+                        )
+                      }
+                    >
+                      <option value="member">{t("join.roles.member")}</option>
+                      <option value="admin">{t("join.roles.admin")}</option>
+                      <option value="guest">{t("join.roles.guest")}</option>
+                    </Select>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className={cn(styles.linkButton, styles.backLink)}
+                  style={{ fontWeight: 600 }}
+                  onClick={() => setInvites([...invites, { email: "", role: "member" }])}
+                >
+                  {t("onboarding.addMore")}
+                </button>
+              </>
+            )}
+
+            {step === 4 && (
+              <>
+                <Heading title={t("onboarding.projectTitle")} subtitle={t("onboarding.projectSubtitle")} />
+                {notice && <FormAlert tone="success" message={notice} />}
+                <div className={cn(styles.options, styles.optionsStart)}>
+                  {STARTS.map((item) => (
                     <button
                       key={item}
                       type="button"
                       className={styles.opt}
-                      aria-pressed={method === item}
-                      onClick={() => setMethod(item)}
+                      aria-pressed={start === item}
+                      onClick={() => setStart(item)}
                     >
-                      <b>{t(`onboarding.methods.${item}.name`)}</b>
-                      <span className={cn(styles.muted, styles.tiny)}>{t(`onboarding.methods.${item}.description`)}</span>
+                      <b>{t(`onboarding.starts.${item}.name`)}</b>
+                      <span className={cn(styles.muted, styles.small)}>{t(`onboarding.starts.${item}.description`)}</span>
                     </button>
                   ))}
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
 
-          {step === 3 && (
-            <>
-              <Heading title={t("onboarding.inviteTitle")} subtitle={t("onboarding.inviteSubtitle")} />
-              {badEmails.length > 0 && (
-                <FormAlert message={t("onboarding.invalidEmails", { emails: badEmails.join(", ") })} />
-              )}
-              {invites.map((row, index) => (
-                <div key={index} className={styles.inviteRow}>
-                  <Input
-                    aria-label={t("onboarding.memberEmail", { n: index + 1 })}
-                    className={styles.input}
-                    type="email"
-                    autoComplete="off"
-                    placeholder={t("onboarding.emailPlaceholder")}
-                    value={row.email}
-                    aria-invalid={row.email.trim() && !EMAIL.test(row.email.trim()) ? true : undefined}
-                    onChange={(event) =>
-                      setInvites(invites.map((item, i) => (i === index ? { ...item, email: event.target.value } : item)))
-                    }
-                  />
-                  <Select
-                    aria-label={t("onboarding.memberRole", { n: index + 1 })}
-                    value={row.role}
-                    onChange={(event) =>
-                      setInvites(
-                        invites.map((item, i) => (i === index ? { ...item, role: event.target.value as InviteRole } : item)),
-                      )
-                    }
-                  >
-                    <option value="member">{t("join.roles.member")}</option>
-                    <option value="admin">{t("join.roles.admin")}</option>
-                    <option value="guest">{t("join.roles.guest")}</option>
-                  </Select>
-                </div>
-              ))}
-              <button
-                type="button"
-                className={cn(styles.linkButton, styles.backLink)}
-                style={{ fontWeight: 600 }}
-                onClick={() => setInvites([...invites, { email: "", role: "member" }])}
-              >
-                {t("onboarding.addMore")}
-              </button>
-            </>
-          )}
-
-          {step === 4 && (
-            <>
-              <Heading title={t("onboarding.projectTitle")} subtitle={t("onboarding.projectSubtitle")} />
-              {notice && <FormAlert tone="success" message={notice} />}
-              <div className={cn(styles.options, styles.optionsStart)}>
-                {STARTS.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    className={styles.opt}
-                    aria-pressed={start === item}
-                    onClick={() => setStart(item)}
-                  >
-                    <b>{t(`onboarding.starts.${item}.name`)}</b>
-                    <span className={cn(styles.muted, styles.small)}>{t(`onboarding.starts.${item}.description`)}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+          </MotionSwap>
 
           {!!error && (
             <FormAlert error={error} message={slugTaken && step === 1 ? t("onboarding.slugTaken") : undefined} />

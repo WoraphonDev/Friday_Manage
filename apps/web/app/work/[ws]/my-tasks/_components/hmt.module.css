@@ -175,3 +175,6 @@
 .mHint { color:var(--muted); font-size:11px; text-align:center; padding:16px; margin:0; }
 .fab { position:fixed; right:20px; bottom:calc(76px + env(safe-area-inset-bottom)); width:56px; height:56px; border-radius:16px; background:var(--primary); color:var(--on-primary); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px color-mix(in srgb, var(--primary) 30%, transparent); z-index:21; }
 .fab:hover { color:var(--on-primary); background:var(--primary-hover); }
+
+/* จัดกลุ่มตาม (.motion-pill · useSlidingIndicator): กล่องตัดมุมเอง จึงไม่ต้องมีมุมโค้ง */
+.seg { --ind-bg:var(--primary-soft); --ind-radius:0; }

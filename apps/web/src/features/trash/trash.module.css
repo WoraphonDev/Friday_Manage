@@ -10,6 +10,8 @@
 .seg { display:inline-flex; gap:2px; padding:3px; border-radius:10px; background:var(--subtle); border:1px solid var(--border); }
 .seg button { border:0; background:transparent; font:inherit; font-size:13px; color:var(--foreground-soft); padding:6px 12px; border-radius:8px; cursor:pointer; min-height:32px; white-space:nowrap; }
 .seg button[aria-selected="true"] { background:var(--card); color:var(--foreground); font-weight:600; box-shadow:var(--shadow-card); }
+/* พื้นที่เลื่อน (.motion-pill) หน้าตาเดียวกับแท็บที่เลือก */
+.seg { --ind-bg:var(--card); --ind-shadow:var(--shadow-card); }
 .search { flex:1 1 240px; display:flex; align-items:center; gap:8px; min-height:38px; padding:0 12px; border:1px solid var(--input); border-radius:var(--radius-control); background:var(--card); color:var(--muted); max-width:320px; }
 .search input { border:0; outline:0; background:transparent; font:inherit; font-size:13px; color:var(--foreground); width:100%; min-width:0; }
 .filter { flex:0 1 200px; min-width:150px; }
@@ -101,4 +103,5 @@
   .card { border-radius: 16px; box-shadow: var(--shadow-card); }
   .seg { display: flex; width: 100%; }
   .seg button { flex: 1; min-height: 40px; font-size: 14px; border-radius: 9px; }
+  .seg { --ind-radius: 9px; }
 }

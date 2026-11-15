@@ -6,7 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Upload, X } from "lucide-react";
-import { Avatar, Badge, Button, ConfirmDialog, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
+import { Avatar, Badge, Button, ConfirmDialog, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, MotionSwap, Select, useToast } from "@/components/ui";
+import { useSlidingIndicator } from "@/lib/motion";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -116,6 +117,9 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
   const fileInput = useRef<HTMLInputElement>(null);
   const versionInput = useRef<HTMLInputElement>(null);
   const seq = useRef(0);
+  // พื้นไฮไลต์เลื่อนตามหมวด / โฟลเดอร์ที่เลือก และปุ่มสลับ List / Grid (ต้องเรียกก่อน return ระหว่างโหลด)
+  const sideRef = useSlidingIndicator<HTMLElement>(`.${styles.fo}`);
+  const segRef = useSlidingIndicator<HTMLDivElement>("button");
 
   useEffect(() => {
     const h = setTimeout(() => setQ(qInput.trim()), 300);
@@ -274,7 +278,7 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
   return (
     <div className={styles.page}>
       <div className={styles.body}>
-        <nav className={`${styles.card} ${styles.side}`} aria-label={t("foldersNav")}>
+        <nav ref={sideRef} className={`${styles.card} ${styles.side} motion-pill`} aria-label={t("foldersNav")}>
           {/* Canvas Files: All files, Recent, From tasks · ตามประเภท · Folders */}
           <FolderButton on={place === "all" && !q} onClick={() => go("all")} count={all.length}>{t("places.all")}</FolderButton>
           <FolderButton on={place === "recent" && !q} onClick={() => go("recent")} count={Math.min(20, all.length)}>{t("places.recent")}</FolderButton>
@@ -318,14 +322,14 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
           )}
 
           {jobs.map((j) => (
-            <div key={j.id} className={`${styles.card} ${styles.job}`} role="status" aria-label={t("uploadingName", { name: j.name })}>
+            <div key={j.id} className={`${styles.card} ${styles.job} motion-in`} role="status" aria-label={t("uploadingName", { name: j.name })}>
               <span className={`${styles.ext} ${styles[`x-${extOf({ name: j.name, kind: "upload", linkProvider: null }).tone}`]}`}>{extOf({ name: j.name, kind: "upload", linkProvider: null }).label}</span>
               <div style={{ flex: "1 1 220px", minWidth: 0 }}>
                 <div className={styles.line}>
                   <b className={styles.ellipsis}>{j.name}</b>
                   <span className={j.error ? styles.err : styles.muted}>{j.error ?? t("uploading", { pct: j.size ? Math.round((j.loaded / j.size) * 100) : 0, loaded: formatBytes(j.loaded), size: formatBytes(j.size) })}</span>
                 </div>
-                <div className={styles.bar}><div style={{ width: `${j.size ? Math.round((j.loaded / j.size) * 100) : 0}%` }} /></div>
+                <div className={styles.bar}><div className="motion-bar" style={{ width: `${j.size ? Math.round((j.loaded / j.size) * 100) : 0}%` }} /></div>
               </div>
               {j.error ? <Button size="small" onClick={() => setJobs((js) => js.filter((x) => x.id !== j.id))}>{t("dismiss")}</Button> : <Button size="small" disabled={!j.abort} onClick={() => j.abort?.()}>{t("cancel")}</Button>}
             </div>
@@ -359,7 +363,7 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
               <Select size="small" prefix={t("sort")} aria-label={t("sort")} value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
                 {(["newest", "oldest", "name", "size"] as const).map((s) => <option key={s} value={s}>{t(`sorts.${s}`)}</option>)}
               </Select>
-              <div className={styles.seg} role="group" aria-label={t("view")}>
+              <div ref={segRef} className={`${styles.seg} motion-pill`} role="group" aria-label={t("view")}>
                 <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")}>List</button>
                 <button type="button" aria-pressed={view === "grid"} onClick={() => setView("grid")}>Grid</button>
               </div>
@@ -367,6 +371,8 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
             </div>
           </div>
 
+          {/* เปลี่ยนหมวด / โฟลเดอร์ หรือสลับ List ↔ Grid: รายการเคลื่อนเข้าแบบเดียวกับการเปลี่ยนหน้า (แถบเครื่องมือด้านบนอยู่นิ่ง) */}
+          <MotionSwap key={`${place}:${view}`}>
           {!items.length ? (
             <section className={styles.card}>
               <EmptyState title={inTrash ? t("emptyTrash") : q || uploader ? t("emptyFiltered") : t("empty")} description={inTrash ? t("emptyTrashHint", { days: 30 }) : canUpload && !q ? t("emptyHint") : t("emptyFilteredHint")} />
@@ -404,7 +410,7 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
           ) : (
             <div className={styles.grid}>
               {items.map((f) => (
-                <button key={f.id} type="button" className={`${styles.gc} ${!inTrash && current?.id === f.id ? styles.gsel : ""}`} aria-pressed={!inTrash && current?.id === f.id} onClick={() => (inTrash ? undefined : setSelectedId(f.id))}>
+                <button key={f.id} type="button" className={`${styles.gc} ${!inTrash && current?.id === f.id ? styles.gsel : ""} motion-item motion-lift`} aria-pressed={!inTrash && current?.id === f.id} onClick={() => (inTrash ? undefined : setSelectedId(f.id))}>
                   <div className={`${styles.thumb} ${styles[`x-${extOf(f).tone}`]}`}>{extOf(f).label}</div>
                   <div className={styles.gbody}>
                     <span className={styles.ellipsis} style={{ fontWeight: 600, fontSize: 12 }}>{f.name}</span>
@@ -415,6 +421,7 @@ export function FilesPage({ ws, projectKey }: { ws: string; projectKey: string }
               ))}
             </div>
           )}
+          </MotionSwap>
 
           {inTrash && canTrash && items.length > 0 && view === "grid" && (
             <div className={styles.row}>{items.map((f) => <Button key={f.id} size="small" onClick={() => void restore(f)}>{t("restoreName", { name: f.name })}</Button>)}</div>
@@ -517,6 +524,8 @@ function DetailPanel({ file, detail, detailError, base, pageHref, year, canUploa
   const label = (a: Attachment) => (a.targetType === "issue" ? a.target : a.targetType === "project" ? t("targets.project") : a.targetType === "requirement" ? a.target : t(`targets.${a.targetType}`));
   return (
     <section className={`${styles.card} ${styles.detail}`} aria-label={t("detail")}>
+      {/* เลือกไฟล์อื่น: เนื้อหาเคลื่อนเข้าใหม่ · กรอบ section คงอยู่ (โปรแกรมอ่านหน้าจออ้างถึงช่องเดิมได้) */}
+      <MotionSwap key={file.id} className={styles.detailSwap}>
       <div className={styles.preview}>
         {(() => {
           const inner = <>
@@ -581,6 +590,7 @@ function DetailPanel({ file, detail, detailError, base, pageHref, year, canUploa
           </div>
         )}
       </div>
+      </MotionSwap>
     </section>
   );
 }

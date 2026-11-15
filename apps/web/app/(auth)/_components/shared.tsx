@@ -15,7 +15,7 @@ import {
 import { useTranslations } from "next-intl";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
 import { FridayLoader, FridayLogo, FridayMark } from "@/components/brand/friday-logo";
-import { Button, buttonVariants } from "@/components/ui";
+import { Button, MotionSwap, buttonVariants } from "@/components/ui";
 import { ApiError, supportId } from "@/lib/api";
 import { useIsMobile } from "@/lib/use-mobile";
 import { cn } from "@/lib/utils";
@@ -324,21 +324,30 @@ export function SubmitButton({
   );
 }
 
-/** J3 / J4 · การ์ดกลางจอบนพื้นเทา */
+/**
+ * J3 / J4 · การ์ดกลางจอบนพื้นเทา
+ * เนื้อหาในการ์ดจางเข้าตอนเปิดหน้า และทุกครั้งที่ swapKey เปลี่ยน (ขั้นของฟอร์ม / โหลดเสร็จ) · กรอบการ์ดคงที่
+ */
 export function CardLayout({
   children,
   wide,
   footer,
+  swapKey,
 }: {
   children: ReactNode;
   wide?: boolean;
   footer?: ReactNode;
+  swapKey?: string;
 }) {
   return (
     <main className={styles.cardPage}>
       <Logo />
       <MobileMark />
-      <div className={cn(styles.card, wide && styles.cardWide)}>{children}</div>
+      <div className={cn(styles.card, wide && styles.cardWide)}>
+        <MotionSwap key={swapKey} className={styles.cardSwap}>
+          {children}
+        </MotionSwap>
+      </div>
       {footer}
     </main>
   );

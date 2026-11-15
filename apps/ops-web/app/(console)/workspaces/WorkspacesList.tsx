@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { useDeferredValue, useEffect, useState } from "react";
 import { hasAny, initials, seesMoney } from "@/components/access";
 import { ExportDialog, useApprovalFlow } from "@/components/dialogs";
-import { Chip, Empty, ErrorBlock, PageHead, TableSkeleton } from "@/components/kit";
+import { Chip, ChipGroup, Empty, ErrorBlock, PageHead, TableSkeleton } from "@/components/kit";
 import { Button, buttonClass, Input, useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -98,13 +98,13 @@ export function WorkspacesList() {
           <div style={{ flex: "1 1 260px" }}>
             <Input aria-label={t("list.search")} placeholder={t("list.search")} value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
-          <div className="row" role="group" aria-label={t("list.plan")}>
+          <ChipGroup className="row" role="group" aria-label={t("list.plan")}>
             {PLANS.map((p) => (
               <Chip key={p || "all"} pressed={plan === p} onClick={() => setPlan(p)}>
                 {p ? planLabel(p) : t("list.all")}
               </Chip>
             ))}
-          </div>
+          </ChipGroup>
           <select className="input" style={{ width: "auto" }} aria-label={t("list.sort")} value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
             {SORTS.filter((s) => s !== "mrr" || money).map((s) => (
               <option key={s} value={s}>
@@ -113,16 +113,17 @@ export function WorkspacesList() {
             ))}
           </select>
         </div>
-        <div className="row" role="group" aria-label={t("list.feature")}>
+        <ChipGroup className="row" role="group" aria-label={t("list.feature")}>
           <span className="muted small">{t("list.feature")}</span>
           {FEATURES.map((f) => (
             <Chip key={f} pressed={feature === f} onClick={() => setFeature(feature === f ? "" : f)}>
               {t(`list.features.${f}`)}
             </Chip>
           ))}
-        </div>
+        </ChipGroup>
+        {/* แถบทำรายการหลายแถวขึ้นเมื่อเริ่มติ๊กเลือก: เลื่อนเข้าแบบนุ่ม */}
         {selected.length > 0 && (
-          <div className="notice notice-info" role="status">
+          <div className="notice notice-info motion-in" role="status">
             <b>{t("list.selected", { count: selected.length })}</b>
             <span className="muted small">{t("list.bulkNote")}</span>
             <span className="spacer" />

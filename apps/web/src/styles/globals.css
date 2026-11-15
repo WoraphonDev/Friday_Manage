@@ -2519,6 +2519,9 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
   pointer-events: none;
 }
 .motion-pill[data-indicator="on"]::before { transition: translate var(--motion-dur) var(--motion-ease), height var(--motion-dur) var(--motion-ease), width var(--motion-dur) var(--motion-ease); }
+/* ระหว่างแถบกำลังเลื่อน (data-moving จาก useSlidingIndicator) พื้นทึบของรายการที่ไม่ได้เลือกจางลงชั่วคราว ไม่บังแถบระหว่างทาง แล้วค่อยกลับมาเหมือนเดิม */
+.motion-pill :is(button, a, [role="tab"], [role="radio"], [role="option"]) { transition: color var(--motion-dur-s), background-color var(--motion-dur-s), border-color var(--motion-dur-s), box-shadow var(--motion-dur-s), scale 120ms ease; }
+.motion-pill[data-moving] :is(button, a, [role="tab"], [role="radio"], [role="option"]) { background-color: transparent; }
 .nav-pill[data-indicator]::before {
   content: "";
   position: absolute;

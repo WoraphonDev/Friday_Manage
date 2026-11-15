@@ -129,7 +129,7 @@ function Leaves({ ws }: { ws: string }) {
       ) : leaves.data.items.length === 0 ? (
         <span className={cn(styles.muted, styles.small)}>{t("empty")}</span>
       ) : (
-        <ul style={{ listStyle: "none", margin: 0, padding: 0 }} aria-label={t("title")}>
+        <ul className="motion-list" style={{ listStyle: "none", margin: 0, padding: 0 }} aria-label={t("title")}>
           {leaves.data.items.map((l) => (
             <li className={styles.kv} key={l.id}>
               <span>{label(l)}</span>
@@ -257,7 +257,7 @@ function CalendarFeeds({ ws }: { ws: string }) {
       ) : feeds.data.items.length === 0 ? (
         <span className={cn(styles.muted, styles.small)}>{t("empty")}</span>
       ) : (
-        <ul style={{ listStyle: "none", margin: 0, padding: 0 }} aria-label={t("title")}>
+        <ul className="motion-list" style={{ listStyle: "none", margin: 0, padding: 0 }} aria-label={t("title")}>
           {feeds.data.items.map((f) => (
             <li className={styles.kv} key={f.id}>
               <span>{nameOf(f.projectKey)} <span className={styles.muted}>· {t("createdAt", { date: formatDate(f.createdAt, year, true) })}</span></span>

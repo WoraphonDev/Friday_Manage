@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import { MoreHorizontal } from "lucide-react";
-import { Avatar, Badge, Button, ErrorState, EmptyState, Forbidden, LoadingState, Select, type Tone, useToast } from "@/components/ui";
+import { Avatar, Badge, Button, CountUp, ErrorState, EmptyState, Forbidden, LoadingState, Select, type Tone, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/format";
+import { useSlidingIndicator } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/lib/types";
 import { copyText } from "../../p/[key]/members/_components/shared";
@@ -46,6 +47,8 @@ export function WorkspaceMembers({ ws }: { ws: string }) {
   const [projectFilter, setProjectFilter] = useState("");
   const [inviting, setInviting] = useState(false);
   const [managing, setManaging] = useState<WorkspaceMember | null>(null);
+  // ชิปสถานะเลือกได้ทีละอัน พื้นเข้มเลื่อนตามชิปที่เลือก (มือถือม่วงอ่อน · ws.module.css)
+  const tabsRef = useSlidingIndicator<HTMLDivElement>(`.${local.chip}`);
 
   // Guest ไม่เห็นรายชื่อคนในองค์กร (04-permissions ข้อ 4) จึงไม่เรียก API เลย
   const members = useQuery({ queryKey: ["workspace-members", ws], queryFn: () => api.get<{ items: WorkspaceMember[] }>(`${base}/members`), enabled: !isGuest });
@@ -129,21 +132,21 @@ export function WorkspaceMembers({ ws }: { ws: string }) {
         {isAdmin && <Button variant="primary" onClick={() => setInviting(true)}>{t("invite")}</Button>}
       </header>
 
-      <div className={styles.kpis}>
-        <div className={styles.kp}><span className={styles.muted}>{t("active")}</span><span className={styles.v}>{count("active")}</span></div>
-        {isAdmin && <div className={styles.kp}><span className={styles.muted}>{t("pending")}</span><span className={styles.v}>{count("invited")}</span></div>}
-        <div className={styles.kp}><span className={styles.muted}>{t("deactivated")}</span><span className={cn(styles.v, styles.muted)}>{count("off")}</span></div>
+      <div className={cn(styles.kpis, "motion-list")}>
+        <div className={styles.kp}><span className={styles.muted}>{t("active")}</span><span className={styles.v}><CountUp value={count("active")} /></span></div>
+        {isAdmin && <div className={styles.kp}><span className={styles.muted}>{t("pending")}</span><span className={styles.v}><CountUp value={count("invited")} /></span></div>}
+        <div className={styles.kp}><span className={styles.muted}>{t("deactivated")}</span><span className={cn(styles.v, styles.muted)}><CountUp value={count("off")} /></span></div>
         {seats && (
           <div className={styles.kp}>
             <span className={styles.muted}>{t("seats")}</span>
-            <span className={styles.v}>{seats.limit === null ? seats.used : t("seatsValue", { used: seats.used, limit: seats.limit })}</span>
+            <span className={styles.v}><CountUp value={seats.limit === null ? seats.used : t("seatsValue", { used: seats.used, limit: seats.limit })} /></span>
             {seats.limit !== null && <span className={local.seat}><span className="motion-bar" style={{ width: `${Math.min(100, (seats.used / seats.limit) * 100)}%` }} /></span>}
           </div>
         )}
       </div>
 
       <div className={styles.bar}>
-        <div className={styles.group} role="group" aria-label={t("tabsLabel")}>
+        <div ref={tabsRef} className={cn(styles.group, local.chipOne, "motion-pill")} role="group" aria-label={t("tabsLabel")}>
           {TABS.filter((s) => s !== "invited" || isAdmin).map((s) => (
             <button key={s} type="button" className={local.chip} aria-pressed={tab === s} onClick={() => setTab(s)}>
               {t(TAB_LABEL[s])} <span>{count(s)}</span>
@@ -174,7 +177,7 @@ export function WorkspaceMembers({ ws }: { ws: string }) {
               const inv = r.invite;
               const p = projectById.get(inv.projectId ?? "");
               return (
-                <div className={local.mr} key={r.id} data-testid={`row-${r.id}`}>
+                <div className={cn(local.mr, "motion-item")} key={r.id} data-testid={`row-${r.id}`}>
                   <div className={styles.person}>
                     <Avatar person={{ id: inv.id, displayName: inv.email }} />
                     <div><div className={styles.name}>{inv.email}</div><div className={cn(styles.muted, styles.small)}>{t("invitedBy", { date: formatDate(inv.createdAt, me.yearFormat) })}</div></div>
@@ -194,7 +197,7 @@ export function WorkspaceMembers({ ws }: { ws: string }) {
             const m = r.member;
             const mine = projectsOf.get(m.userId) ?? [];
             return (
-              <div className={local.mr} key={r.id} data-testid={`row-${r.id}`}>
+              <div className={cn(local.mr, "motion-item")} key={r.id} data-testid={`row-${r.id}`}>
                 <div className={styles.person}>
                   <Avatar person={{ id: m.userId, displayName: m.displayName }} />
                   <div><div className={styles.name}>{m.displayName}</div><div className={cn(styles.muted, styles.small)}>{m.email}</div></div>

@@ -8,8 +8,10 @@ import { useState } from "react";
 import { hasAny, rolesOf } from "@/components/access";
 import { kindText, reauthenticate } from "@/components/dialogs";
 import { ErrorBlock, NoAccess, Notice, TableSkeleton } from "@/components/kit";
+import { MotionSwap } from "@/components/shell/page-enter";
 import { Button, InlineError, Pill } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { useExitGhost } from "@/lib/motion";
 import { useMe } from "@/lib/query";
 import { MobileHead } from "../_parts/MobileFrame";
 
@@ -49,6 +51,7 @@ export function ApprovalsMobile() {
   const q = useQuery({ queryKey: KEY, queryFn: () => api.get<{ items: Item[]; decidedToday: Decided[] }>("/m/approvals"), enabled: owner, refetchInterval: 60_000 });
   const [key, setKey] = useState(false);
   const [done, setDone] = useState<{ text: string } | null>(null);
+  const sheetGhost = useExitGhost<HTMLDivElement>();
   const sel = params?.get("id") ?? null;
   const cur = q.data?.items.find((x) => x.id === sel) ?? null;
   const open = (id: string | null) => (setDone(null), setKey(false), router.replace(id ? `/m/approvals?id=${id}` : "/m/approvals"));
@@ -72,25 +75,28 @@ export function ApprovalsMobile() {
   });
 
   if (me && !owner) return <NoAccess need={["owner"]} mine={rolesOf(me)} />;
+  // รายการ ↔ รายละเอียด ↔ ผล สลับในหน้าเดียวกัน (เปลี่ยนแค่ ?id=) จึงเคลื่อนเข้าแบบเดียวกับเปลี่ยนหน้า
   if (done)
     return (
-      <section className="m-done" aria-live="polite">
-        <span className="m-done-icon" aria-hidden="true">
-          ✓
-        </span>
-        <h1 className="m-title">{done.text}</h1>
-        <p className="muted">{t("doneNote")}</p>
-        <Button className="m-btn" onClick={() => open(null)}>
-          {t("back")}
-        </Button>
-      </section>
+      <MotionSwap key="done" className="motion-stack">
+        <section className="m-done" aria-live="polite">
+          <span className="m-done-icon" aria-hidden="true">
+            ✓
+          </span>
+          <h1 className="m-title">{done.text}</h1>
+          <p className="muted">{t("doneNote")}</p>
+          <Button className="m-btn" onClick={() => open(null)}>
+            {t("back")}
+          </Button>
+        </section>
+      </MotionSwap>
     );
   if (cur) {
     const self = cur.requestedBy === me?.id;
     const blocked = self && !cur.canSelfApprove;
     const ws = cur.workspace;
     return (
-      <>
+      <MotionSwap key={`item-${cur.id}`} className="motion-stack">
         <MobileHead title={`${kindText(tc, cur.kind)} ${ws?.name ?? ""}`.trim()} back={{ label: t("back"), onClick: () => open(null) }} />
         <section className="m-card">
           <dl className="m-dl">
@@ -128,7 +134,7 @@ export function ApprovalsMobile() {
           </div>
         )}
         {key && (
-          <div className="m-sheet-wrap">
+          <div ref={sheetGhost} className="m-sheet-wrap" data-state="open">
             <section className="m-sheet" role="dialog" aria-modal="true" aria-labelledby="m-key-title">
               <span className="m-key-icon" aria-hidden="true">
                 <KeyRound size={28} />
@@ -146,11 +152,11 @@ export function ApprovalsMobile() {
             </section>
           </div>
         )}
-      </>
+      </MotionSwap>
     );
   }
   return (
-    <>
+    <MotionSwap key="list" className="motion-stack">
       <MobileHead title={t("title")} sub={q.data ? t("count", { n: q.data.items.length }) : undefined} />
       {q.isPending ? (
         <TableSkeleton rows={3} cols={1} />
@@ -169,7 +175,7 @@ export function ApprovalsMobile() {
             <ul className="m-list" aria-label={t("title")}>
               {q.data.items.map((x) => (
                 <li key={x.id}>
-                  <button type="button" className="m-card m-card-btn" onClick={() => open(x.id)}>
+                  <button type="button" className="m-card m-card-btn motion-lift" onClick={() => open(x.id)}>
                     <span className="row">
                       <Pill tone={x.kind === "billing.refund" ? "bad" : "inf"}>{kindText(tc, x.kind)}</Pill>
                       <b>{x.workspace?.name ?? t("noCustomer")}</b>
@@ -199,6 +205,6 @@ export function ApprovalsMobile() {
           )}
         </>
       )}
-    </>
+    </MotionSwap>
   );
 }

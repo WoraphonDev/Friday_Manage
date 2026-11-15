@@ -3,6 +3,7 @@
 // ตัวเลือกธีม สว่าง / มืด / ตามระบบ · วางคู่กับตัวสลับภาษา (เมนูบัญชี, เมนูมือถือ, หน้าสาธารณะ)
 import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
+import { useSlidingIndicator } from "@/lib/motion";
 import { Monitor, Moon, Sun } from "lucide-react";
 import {
   DEFAULT_THEME,
@@ -27,21 +28,28 @@ export function ThemeSwitch({
   showLabels = false,
   onChange,
   className,
+  sliding = false,
   "aria-labelledby": labelledBy,
 }: {
   /** true = แสดงชื่อข้างไอคอน (พื้นที่กว้าง เช่น เมนูมือถือ) */
   showLabels?: boolean;
   onChange?: (pref: ThemePref) => void;
   className?: string;
+  /**
+   * true = พื้นตัวที่เลือกเลื่อนตาม (.motion-pill) · เปิดเฉพาะที่ใช้หน้าตาเดิมของ theme-switch.module.css
+   * (หัวหน้าสาธารณะเขียนสีตัวที่เลือกทับเอง พื้นที่เลื่อนจะไม่ตรง จึงไม่เปิดให้อัตโนมัติ)
+   */
+  sliding?: boolean;
   /** ใช้หัวข้อของฟอร์มเป็นชื่อกลุ่มแทนคำว่า "ธีม" */
   "aria-labelledby"?: string;
 }) {
   const t = useTranslations("locale-switch.theme");
   // server ไม่รู้ค่าในหน้าที่เปิดอยู่ จึงเริ่มจากค่าเริ่มต้นแล้วอ่านจาก <html> หลัง hydrate
   const pref = useSyncExternalStore(subscribe, readThemePref, () => DEFAULT_THEME);
+  const indicator = useSlidingIndicator<HTMLDivElement>("button");
 
   return (
-    <div className={[styles.seg, className].filter(Boolean).join(" ")} role="group" aria-label={labelledBy ? undefined : t("label")} aria-labelledby={labelledBy}>
+    <div ref={sliding ? indicator : undefined} className={[styles.seg, sliding && `${styles.sliding} motion-pill`, className].filter(Boolean).join(" ")} role="group" aria-label={labelledBy ? undefined : t("label")} aria-labelledby={labelledBy}>
       {THEME_PREFS.map((option) => {
         const Icon = ICONS[option];
         return (

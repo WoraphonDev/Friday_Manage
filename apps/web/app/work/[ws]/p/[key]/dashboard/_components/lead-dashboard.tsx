@@ -9,6 +9,7 @@ import { CountUp, EmptyState, ErrorState, LoadingState } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, formatDateRange, today as todayIso, type YearFormat, intlLocale } from "@/lib/format";
+import { useSlidingIndicator } from "@/lib/motion";
 import { queryKeys } from "@/lib/query";
 import type { Permissions } from "@/lib/types";
 import { WorkloadHeatmap } from "./workload-heatmap";
@@ -106,7 +107,7 @@ export function PlanRisks({ plan }: { plan: Plan }) {
     {risks.error ? <ErrorState error={risks.error} retry={() => void risks.refetch()} />
       : !risks.data ? <LoadingState />
       : !risks.data.items.length ? <p className={styles.cardNote}>{t("risks.empty")}</p>
-      : <ul className={styles.risks}>{risks.data.items.map((risk) => <RiskRow key={risk.kind} risk={risk} ws={plan.ws} base={projectBase(plan.ws, plan.projectKey)} issueHref={issueHref} />)}</ul>}
+      : <ul className={`${styles.risks} motion-list`}>{risks.data.items.map((risk) => <RiskRow key={risk.kind} risk={risk} ws={plan.ws} base={projectBase(plan.ws, plan.projectKey)} issueHref={issueHref} />)}</ul>}
   </section>;
 }
 
@@ -168,6 +169,8 @@ const monthFormat = (year: YearFormat) => new Intl.DateTimeFormat(intlLocale(yea
 
 function ModuleTable({ modules, sort, setSort, today, yearFormat, velocityDays }: { modules: ModuleStat[]; sort: Sort; setSort: (sort: Sort) => void; today: string; yearFormat: YearFormat; velocityDays: number }) {
   const t = useTranslations("lead-dashboard-reports");
+  // พื้นไฮไลต์เลื่อนตามปุ่มเรียงที่เลือก
+  const segRef = useSlidingIndicator<HTMLDivElement>("button");
   const rows = [...modules].sort(sort === "md"
     ? (a, b) => b.totalMd - a.totalMd
     : (a, b) => (a.planStart ?? "9999").localeCompare(b.planStart ?? "9999") || a.name.localeCompare(b.name));
@@ -187,7 +190,7 @@ function ModuleTable({ modules, sort, setSort, today, yearFormat, velocityDays }
   return <section className={`${styles.card} ${styles.modCard}`} aria-label={t("modules.title")}>
     <div className={styles.cardHead}>
       <h2>{t("modules.title")}</h2>
-      <div className={styles.seg} role="group" aria-label={t("modules.sort")}>
+      <div ref={segRef} className={`${styles.seg} motion-pill`} role="group" aria-label={t("modules.sort")}>
         <button type="button" aria-pressed={sort === "start"} onClick={() => setSort("start")}>{t("modules.byStart")}</button>
         <button type="button" aria-pressed={sort === "md"} onClick={() => setSort("md")}>{t("modules.byMd")}</button>
       </div>
@@ -227,7 +230,7 @@ function ModuleTable({ modules, sort, setSort, today, yearFormat, velocityDays }
           </span>
           <span role="cell" className={styles.hideSmall}><Forecast module={m} yearFormat={yearFormat} /></span>
           <span role="cell" className={`${styles.hideSmall} ${styles.hideMedium} ${styles.track}`} title={range} style={{ backgroundSize: `${100 / Math.max(1, months.length)}% 100%` }}>
-            {left !== null && right !== null && <span className={styles.trackBar} style={{ left: `${clampPct(left)}%`, width: `${Math.max(1, clampPct(right) - clampPct(left))}%` }} />}
+            {left !== null && right !== null && <span className={`${styles.trackBar} motion-bar`} style={{ left: `${clampPct(left)}%`, width: `${Math.max(1, clampPct(right) - clampPct(left))}%` }} />}
             {todayPct !== null && <span className={styles.todayLine} style={{ left: `${todayPct}%` }} aria-hidden="true" />}
           </span>
         </div>;

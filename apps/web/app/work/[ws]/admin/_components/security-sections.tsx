@@ -10,7 +10,8 @@ import { Button, Dialog, EmptyState, ErrorState, Input, LoadingState, Select, us
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, today, localeDateFormat } from "@/lib/format";
-import { Card, Closed, OptionGroup, patch, Switch, usePatchSettings, useSettings } from "./shared";
+import { Card, Closed, OptionGroup, patch, Switch, SwapAfter, usePatchSettings, useSettings } from "./shared";
+import { useSlidingIndicator } from "@/lib/motion";
 import {
   adminKey, errorText, formatBytes, workPath, wsPath,
   type AuditCategory, type AuditEntry, type DataRequest, type MfaEnforcement, type SecurityPolicy, type SupportAccess, type WorkspaceExport, type WorkspaceMember,
@@ -220,6 +221,10 @@ export function AuditSection({ ws }: { ws: string }) {
   const [range, setRange] = useState<"7d" | "30d" | "custom">("7d");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  // ชิปหมวด / ช่วงเวลาเลือกได้ทีละอัน พื้นเข้มเลื่อนตามชิปที่เลือก · ผลลัพธ์เคลื่อนเข้าเมื่อเปลี่ยนตัวกรองแล้วเท่านั้น
+  const catRef = useSlidingIndicator<HTMLDivElement>(`.${styles.chip}`);
+  const rangeRef = useSlidingIndicator<HTMLDivElement>(`.${styles.chip}`);
+  const [filtered, setFiltered] = useState(false);
   const members = useQuery({ queryKey: ["workspace-members", ws], queryFn: () => api.get<{ items: WorkspaceMember[] }>(`${wsPath(ws)}/members`) });
   const now = today();
   const params = new URLSearchParams();
@@ -249,16 +254,16 @@ export function AuditSection({ ws }: { ws: string }) {
       title={t("title")}
       actions={<a className="button button-secondary" href={`/api/v1${wsPath(ws)}/audit-log.csv?${params}`} download>{t("csv")}</a>}
     >
-      <div className={styles.chips} role="group" aria-label={t("category")}>
-        {CATEGORIES.map((c) => <button key={c} type="button" className={styles.chip} aria-pressed={category === c} onClick={() => setCategory(c)}>{t(`cat_${c}`)}</button>)}
+      <div ref={catRef} className={`${styles.chips} ${styles.chipOne} motion-pill`} role="group" aria-label={t("category")}>
+        {CATEGORIES.map((c) => <button key={c} type="button" className={styles.chip} aria-pressed={category === c} onClick={() => { setCategory(c); setFiltered(true); }}>{t(`cat_${c}`)}</button>)}
       </div>
       <div className={styles.chips}>
-        <Select aria-label={t("user")} value={user} onChange={(e) => setUser(e.target.value)}>
+        <Select aria-label={t("user")} value={user} onChange={(e) => { setUser(e.target.value); setFiltered(true); }}>
           <option value="">{t("everyone")}</option>
           {members.data?.items.map((m) => <option key={m.userId} value={m.userId}>{m.displayName}</option>)}
         </Select>
-        <div className={styles.chips} role="group" aria-label={t("range")}>
-          {(["7d", "30d", "custom"] as const).map((r) => <button key={r} type="button" className={styles.chip} aria-pressed={range === r} onClick={() => setRange(r)}>{t(`range_${r}`)}</button>)}
+        <div ref={rangeRef} className={`${styles.chips} ${styles.chipOne} motion-pill`} role="group" aria-label={t("range")}>
+          {(["7d", "30d", "custom"] as const).map((r) => <button key={r} type="button" className={styles.chip} aria-pressed={range === r} onClick={() => { setRange(r); setFiltered(true); }}>{t(`range_${r}`)}</button>)}
         </div>
         {range === "custom" && (
           <>
@@ -267,6 +272,7 @@ export function AuditSection({ ws }: { ws: string }) {
           </>
         )}
       </div>
+      <SwapAfter swapKey={filtered ? params.toString() : null}>
       {log.error ? (
         <ErrorState error={log.error} retry={() => void log.refetch()} />
       ) : !log.data ? (
@@ -289,6 +295,7 @@ export function AuditSection({ ws }: { ws: string }) {
           ))}
         </div>
       )}
+      </SwapAfter>
       {log.hasNextPage && <div><Button disabled={log.isFetchingNextPage} onClick={() => void log.fetchNextPage()}>{t("more")}</Button></div>}
       <span className={styles.muted}>{t("hint")}</span>
     </Card>
@@ -425,7 +432,7 @@ function DataRequestsCard({ ws }: { ws: string }) {
         <span className={styles.muted}>{t("noRequests")}</span>
       ) : (
         requests.data.items.map((r) => (
-          <div key={r.id} className={styles.row}>
+          <div key={r.id} className={`${styles.row} motion-item`}>
             <span className={`${styles.pill} ${styles[r.overdue ? "bad" : REQ_TONE[r.status]]}`}>{t(`req_${r.status}`)}</span>
             <span className={styles.grow}>
               <b>{t(r.requestType === "erase" ? "typeErase" : "typeExport")}</b> · {r.requesterEmail}

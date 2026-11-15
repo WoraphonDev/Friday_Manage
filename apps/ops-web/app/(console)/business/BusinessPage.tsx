@@ -14,6 +14,7 @@ import { planLabel, useFmt } from "../workspaces/_parts/format";
 import { cohortShade, ColumnChart, HBars } from "./_parts/charts";
 import { CostSettings, MarketingCosts } from "./_parts/Settings";
 import type { Business, Costs, Period } from "./_parts/types";
+import { CountUp } from "@/components/count-up";
 
 const monthText = (f: ReturnType<typeof useFormatter>, m: string, year = false) => f.dateTime(new Date(`${m}-15T00:00:00Z`), year ? { month: "short", year: "numeric" } : { month: "short" });
 const head = { padding: "14px 16px", margin: 0, borderBottom: "1px solid var(--border)", flexWrap: "wrap" as const };
@@ -121,7 +122,7 @@ function Kpis({ b, nrr }: { b: Business; nrr: number | null }) {
       {tiles.map((x) => (
         <div key={x.k} className={"tone" in x && x.tone ? `stat stat-${x.tone}` : "stat"}>
           <span className="muted small">{t(x.k)}</span>
-          <b>{x.value}</b>
+          <b><CountUp value={x.value} /></b>
           <span className="muted small">{x.note}</span>
         </div>
       ))}

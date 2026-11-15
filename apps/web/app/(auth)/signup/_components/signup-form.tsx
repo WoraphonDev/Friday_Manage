@@ -378,14 +378,14 @@ function VerifyLink({ token }: { token: string }) {
 
   if (state === "loading")
     return (
-      <CardLayout>
+      <CardLayout swapKey="loading">
         <Heading title={t("signup.linkVerifying")} />
         <LoadingState />
       </CardLayout>
     );
   if (state === "error")
     return (
-      <CardLayout>
+      <CardLayout swapKey="error">
         <Heading title={t("signup.linkInvalid")} subtitle={t("signup.linkInvalidDescription")} />
         <FormAlert error={error} />
         <Link href="/login" className={cn("button button-primary", styles.button)}>
@@ -394,7 +394,7 @@ function VerifyLink({ token }: { token: string }) {
       </CardLayout>
     );
   return (
-    <CardLayout>
+    <CardLayout swapKey="ok">
       <Heading title={t("signup.linkVerified")} subtitle={t("signup.linkVerifiedDescription")} />
       <Button
         variant="primary"

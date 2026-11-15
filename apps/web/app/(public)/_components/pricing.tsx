@@ -1,11 +1,12 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { ErrorState, LoadingState, buttonVariants } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { baht, fitPlan, type PlanCode, type PublicPlan, type PublicPlans } from "@/features/plan-limits";
 import styles from "./public.module.css";
@@ -27,21 +28,8 @@ export function PricingSection({ heading = "h2", ctaFor }: { heading?: "h1" | "h
   const [team, setTeam] = useState(12);
   const plans = useQuery({ queryKey: ["public-plans"], queryFn: () => api.get<PublicPlans>("/public/plans"), staleTime: 300_000 });
   const H = heading === "none" ? null : heading;
-  // แถบเลื่อนใต้ปุ่มรอบชำระ: วัดจากปุ่มจริงเพราะความยาวคำต่างกันตามภาษา
-  const seg = useRef<HTMLDivElement>(null);
-  const segInd = useRef<HTMLSpanElement>(null);
-  useLayoutEffect(() => {
-    const place = () => {
-      const btn = seg.current?.querySelector<HTMLButtonElement>('button[aria-pressed="true"]');
-      if (!btn || !segInd.current) return;
-      segInd.current.style.width = `${btn.offsetWidth}px`;
-      segInd.current.style.transform = `translateX(${btn.offsetLeft}px)`;
-    };
-    place();
-    window.addEventListener("resize", place);
-    document.fonts?.ready.then(place).catch(() => {});
-    return () => window.removeEventListener("resize", place);
-  }, [cycle, plans.data]);
+  // พื้นทึบเลื่อนตามปุ่มรอบชำระที่เลือก (motion-pill ชุดเดียวกับทั้งระบบ) · วัดจากปุ่มจริงเพราะความยาวคำต่างกันตามภาษา
+  const seg = useSlidingIndicator<HTMLDivElement>("button");
 
   return (
     <section id="pricing" className={cn(styles.pricing, ctaFor && styles.embedded)} {...(H ? { "aria-labelledby": "pricing-title" } : { "aria-label": t("title") })}>
@@ -55,8 +43,7 @@ export function PricingSection({ heading = "h2", ctaFor }: { heading?: "h1" | "h
               <div className={styles.muted}>{t("subtitle")}</div>
             </>
           )}
-          <div ref={seg} className={styles.seg} role="group" aria-label={t("cycle")}>
-            <span ref={segInd} className={styles.segInd} aria-hidden="true" />
+          <div ref={seg} className={cn(styles.seg, "motion-pill")} role="group" aria-label={t("cycle")}>
             <button type="button" aria-pressed={cycle === "monthly"} onClick={() => setCycle("monthly")}>
               {t("monthly")}
             </button>
@@ -117,7 +104,8 @@ function Plans({ data, cycle, team, setTeam, ctaFor }: { data: PublicPlans; cycl
         <b>{t("people", { n: team })}</b>
         {fit && <span className={styles.pill}>{t("fit", { plan: fit.name })}</span>}
       </div>
-      <div className={styles.plans}>
+      {/* การ์ดแพ็กเกจโผล่ไล่กันตอนเปิดหน้า (motion-list) */}
+      <div className={cn(styles.plans, "motion-list")}>
         {items.map((p, i) => {
           const hot = fit?.code === p.code;
           const pr = price(p);

@@ -7,6 +7,7 @@ import { Button, Combobox, DatePicker, Dialog, DrawerClose, Input, Select, useTo
 import { api } from '@/lib/api';
 import { peopleForRole, type PickRole } from '@/lib/positions';
 import { formatDate } from '@/lib/format';
+import { useSlidingIndicator } from '@/lib/motion';
 import { Failure } from './shared';
 import { CodeChips, LabelChips } from './refs';
 import { PropRow } from './detail-parts';
@@ -81,6 +82,8 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
   const [restored] = useState(() => parent ? null : readDraft(draftKey, freshDraft(initialType)));
   const [draft, setDraft] = useState<Draft>(() => restored ?? freshDraft(initialType));
   const [pending, setPending] = useState(false);
+  // ปุ่มสลับ "งานหลัก / Sub-task": พื้นสีหลักเลื่อนตามตัวที่เลือก
+  const toggleRef = useSlidingIndicator<HTMLDivElement>('button');
   const [error, setError] = useState<unknown>(null);
   const [continueCreating, setContinueCreating] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
@@ -203,7 +206,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
       </nav>
       <div className={styles.actions}>
         {!draft.subtask && availableTypes.length > 1 && <select className={styles.typeSelect} aria-label={t('issueType')} value={draft.type} onChange={(event) => switchType(event.target.value as IssueType)}>{availableTypes.map((option) => <option key={option.id} value={option.name}>{t(`types.${option.name}`)}</option>)}</select>}
-        {canSubtask && <div className={styles.toggle} role="group" aria-label={t('createAs')}><button type="button" aria-pressed={!draft.subtask} onClick={() => set('subtask', false)}>{t(`types.${draft.type}`)}</button><button type="button" aria-pressed={draft.subtask} onClick={() => { set('subtask', true); set('children', []); }}>{t('subtask')}</button></div>}
+        {canSubtask && <div ref={toggleRef} className={`${styles.toggle} motion-pill`} role="group" aria-label={t('createAs')}><button type="button" aria-pressed={!draft.subtask} onClick={() => set('subtask', false)}>{t(`types.${draft.type}`)}</button><button type="button" aria-pressed={draft.subtask} onClick={() => { set('subtask', true); set('children', []); }}>{t('subtask')}</button></div>}
         <DrawerClose asChild><Button size="icon" variant="ghost" aria-label={t('close')}><X size={18} /></Button></DrawerClose>
       </div>
     </div>}

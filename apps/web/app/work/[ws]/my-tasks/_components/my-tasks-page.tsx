@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Filter, Flag, Plus } from "lucide-react";
 import { useIsMobile } from "@/lib/use-mobile";
+import { useSlidingIndicator } from "@/lib/motion";
 import { CalendarClock, ChevronDown, ChevronRight } from "lucide-react";
 import { Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
@@ -90,6 +91,8 @@ export function MyTasksPage({ ws }: { ws: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const dragKey = useRef<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
+  // จัดกลุ่มตาม: พื้นม่วงอ่อนเลื่อนตามตัวที่เลือก (ชิปแท็บกับชิปโปรเจกต์อยู่กล่องเดียวกันและเลือกพร้อมกันได้ 2 อัน จึงไม่ใช้)
+  const segRef = useSlidingIndicator<HTMLDivElement>("button");
   const year: YearFormat = me.yearFormat;
   const base = `/w/${encodeURIComponent(ws)}`;
   const params = new URLSearchParams({ tab, group });
@@ -182,7 +185,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <span className="muted" style={{ fontSize: 12 }}>{t("groupBy")}</span>
-            <div className={styles.seg} role="group" aria-label={t("groupBy")}>
+            <div ref={segRef} className={`${styles.seg} motion-pill`} role="group" aria-label={t("groupBy")}>
               {GROUPS.map((g) => <button type="button" key={g} aria-pressed={group === g} onClick={() => setGroup(g)}>{t(`group.${g}`)}</button>)}
             </div>
           </div>
@@ -284,6 +287,8 @@ const GROUP_LIMIT = 30;
 const SIDE_PROJECTS = 3;
 
 const MOBILE_FILTERS = { focus: ["late", "today"], week: ["late", "today", "this_week"], all: ["late", "today", "this_week", "next_week", "later", "none"] } as const;
+/** พื้นที่เลื่อนของ .m-chips ตรงกับ .m-chip ที่เลือกใน globals.css (ม่วงอ่อน ขอบม่วง มุม 22) */
+const CHIP_PILL = { "--ind-bg": "var(--primary-soft)", "--ind-border": "1px solid var(--primary-border)", "--ind-radius": "22px" } as React.CSSProperties;
 
 /** M2 → W29 · มือถือแบบต้นแบบ (หัว B + รายการกะทัดรัดฐาน A): หัวข้อใหญ่ · ชิปช่วงเวลามีตัวเลข · กลุ่มตาม Due ในกล่องขอบมน · ปุ่มสร้างงานลอย
  *  คงช่องติ๊กปิดงานไว้แทนรูปผู้รับผิดชอบในต้นแบบ (ทุกแถวเป็นงานของฉันอยู่แล้ว) */
@@ -297,6 +302,9 @@ function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
   const dueText = useDueText();
   const [range, setRange] = useState<keyof typeof MOBILE_FILTERS>("focus");
   const [showTabs, setShowTabs] = useState(false);
+  // ชิปแท็บ / ช่วงเวลา: พื้นม่วงอ่อนเลื่อนตามชิปที่เลือก (หน้าตาเดียวกับ .m-chip ที่เลือก)
+  const tabsRef = useSlidingIndicator<HTMLDivElement>(".m-chip");
+  const rangeRef = useSlidingIndicator<HTMLDivElement>(".m-chip");
   const count = (keys: readonly string[]) => data.groups.filter((g) => keys.includes(g.key)).reduce((n, g) => n + g.items.filter((i) => !isClosedCategory(i.status.category)).length, 0);
   const groups = data.groups.filter((g) => (MOBILE_FILTERS[range] as readonly string[]).includes(g.key) && g.items.length);
   const first = workspace.role !== "guest" ? projects[0] : undefined;
@@ -308,11 +316,11 @@ function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
         actions={<button type="button" className="m-icon" aria-label={t("filter")} aria-expanded={showTabs} onClick={() => setShowTabs((v) => !v)}><Filter size={20} aria-hidden="true" /></button>}
       />
       {showTabs && (
-        <div className="m-chips" role="group" aria-label={t("title")}>
+        <div ref={tabsRef} className="m-chips motion-pill motion-in" style={CHIP_PILL} role="group" aria-label={t("title")}>
           {TABS.map((k) => <button key={k} type="button" className="m-chip" aria-pressed={tab === k} onClick={() => setTab(k)}>{t(`tabs.${k}`)} <small>{data.counts[k]}</small></button>)}
         </div>
       )}
-      <div className="m-chips" role="group" aria-label={t("rangeLabel")}>
+      <div ref={rangeRef} className="m-chips motion-pill" style={CHIP_PILL} role="group" aria-label={t("rangeLabel")}>
         {(Object.keys(MOBILE_FILTERS) as (keyof typeof MOBILE_FILTERS)[]).map((k) => <button key={k} type="button" className="m-chip" aria-pressed={range === k} onClick={() => setRange(k)}>{t(`mobileRange.${k}`)} <small>{count(MOBILE_FILTERS[k])}</small></button>)}
       </div>
       {groups.length === 0 && <div style={{ padding: "8px 0" }}><EmptyState title={t("empty")} description={t("emptyHint")} /></div>}

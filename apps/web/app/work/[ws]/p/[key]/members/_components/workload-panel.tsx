@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Avatar, Button, EmptyState, ErrorState, Forbidden, LoadingState, Select, useToast } from "@/components/ui";
+import { Avatar, Button, CountUp, EmptyState, ErrorState, Forbidden, LoadingState, MotionSwap, Select, useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { formatDateRange, today, type YearFormat, localeDateFormat, localeNumberFormat } from "@/lib/format";
+import { useSlidingIndicator } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { workloadRange } from "./shared";
 import type { Group, ProjectMember, Unit, Workload, WorkloadPerson, Basis } from "./types";
@@ -55,6 +56,9 @@ export function WorkloadPanel({
   const [selected, setSelected] = useState<{ userId: string; index: number } | null>(null);
   const now = today();
   const range = workloadRange(group, now, offset);
+  // พื้นไฮไลต์เลื่อนตามปุ่มที่เลือกของ วัน / สัปดาห์ / เดือน และ ตามแผน / จริง
+  const groupRef = useSlidingIndicator<HTMLDivElement>("button");
+  const basisRef = useSlidingIndicator<HTMLDivElement>("button");
 
   const params = workloadParams(range, group, unit);
   if (position) params.set("position", position);
@@ -107,7 +111,7 @@ export function WorkloadPanel({
   const toolbar = (
     <div className={styles.bar}>
       <div className={styles.group}>
-        <div className={styles.seg} role="group" aria-label={t("granularity")}>
+        <div ref={groupRef} className={cn(styles.seg, "motion-pill")} role="group" aria-label={t("granularity")}>
           {(["day", "week", "month"] as const).map((g) => (
             <button key={g} type="button" aria-pressed={group === g} onClick={() => pick(g)}>{t(g)}</button>
           ))}
@@ -119,7 +123,7 @@ export function WorkloadPanel({
         </span>
       </div>
       <div className={styles.group}>
-        <div className={styles.seg} role="group" aria-label={t("basisLabel")}>
+        <div ref={basisRef} className={cn(styles.seg, "motion-pill")} role="group" aria-label={t("basisLabel")}>
           {(["plan", "actual"] as const).map((b) => (
             <button key={b} type="button" aria-pressed={basis === b} title={t(`basisHint_${b}`)} onClick={() => { setBasis(b); setSelected(null); }}>{t(`basis_${b}`)}</button>
           ))}
@@ -162,32 +166,34 @@ export function WorkloadPanel({
   return (
     <>
       {toolbar}
-      <div className={styles.kpis}>
+      {/* เปลี่ยนช่วงเวลา / มุมมอง / ตัวกรอง: ตัวเลขและกราฟเคลื่อนเข้าใหม่ · จัดลูกแบบเดียวกับกล่อง #workload (flex แนวตั้ง ห่าง 16) */}
+      <MotionSwap key={params.toString()} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className={cn(styles.kpis, "motion-list")}>
         <div className={styles.kp}>
           <span className={styles.muted}>{t("capacityTitle")}</span>
-          <span className={styles.v}>{t("capacityValue", { value: fmt(tw.capacityMd) })}</span>
+          <span className={styles.v}><CountUp value={t("capacityValue", { value: fmt(tw.capacityMd) })} /></span>
           <span className={styles.muted}>{t("capacityHint", { people: tw.people, range: formatDateRange(tw.from, tw.to, year) })}</span>
         </div>
         <div className={styles.kp}>
           <span className={styles.muted}>{t("assignedTitle")}</span>
-          <span className={cn(styles.v, tw.assignedMd > tw.capacityMd && styles.up)}>{t("assignedValue", { value: fmt(tw.assignedMd) })}</span>
+          <span className={cn(styles.v, tw.assignedMd > tw.capacityMd && styles.up)}><CountUp value={t("assignedValue", { value: fmt(tw.assignedMd) })} /></span>
           <span className={styles.muted}>{tw.utilizationPct === null ? t("utilizationUnknown") : t("utilization", { pct: tw.utilizationPct })}</span>
         </div>
         <div className={styles.kp}>
           <span className={styles.muted}>{t("overloadedTitle")}</span>
-          <span className={cn(styles.v, tw.overloaded.length > 0 && styles.up)}>{t("overloadedValue", { count: tw.overloaded.length })}</span>
+          <span className={cn(styles.v, tw.overloaded.length > 0 && styles.up)}><CountUp value={t("overloadedValue", { count: tw.overloaded.length })} /></span>
           <span className={styles.muted}>
             {tw.overloaded.length ? tw.overloaded.map((o) => `${o.person.displayName} ${o.utilizationPct ?? "∞"}%`).join(" · ") : t("overloadedNone")}
           </span>
         </div>
         <div className={styles.kp}>
           <span className={styles.muted}>{t("withoutBaTitle")}</span>
-          <span className={styles.v}>{data.withoutBa}</span>
+          <span className={styles.v}><CountUp value={data.withoutBa} /></span>
           <Link href={`/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/table`}>{t("withoutBaLink")}</Link>
         </div>
         <div className={styles.kp}>
           <span className={styles.muted}>{t("unscheduledTitle")}</span>
-          <span className={styles.v}>{data.unscheduled.count}</span>
+          <span className={styles.v}><CountUp value={data.unscheduled.count} /></span>
           <span className={styles.muted}>{t("unscheduledHint", { noDates: data.unscheduled.noDates, noEstimate: data.unscheduled.noEstimate })}</span>
         </div>
       </div>
@@ -239,7 +245,7 @@ export function WorkloadPanel({
                           <span className={cn(styles.val, c.over && styles.overText)}>{c.value ? fmt(c.value) : ""}</span>
                           <button
                             type="button"
-                            className={cn(styles.wb, data.unit === "count" ? styles.low : tone(c.utilizationPct, c.over))}
+                            className={cn(styles.wb, data.unit === "count" ? styles.low : tone(c.utilizationPct, c.over), "motion-bar-v")}
                             style={{ height: `${Math.round((Math.min(c.value, personMax) / personMax) * 90)}px` }}
                             aria-pressed={on}
                             aria-label={c.capacity === null ? t("barLabelCount", { name: p.person.displayName, period, value: fmt(c.value) }) : t("barLabel", { name: p.person.displayName, period, value: fmt(c.value), capacity: fmt(c.capacity) })}
@@ -263,7 +269,7 @@ export function WorkloadPanel({
                   {data.team.map((c, i) => (
                     <div key={data.buckets[i].start} role="listitem">
                       <span className={styles.val}>{c.capacity === null ? fmt(c.value) : `${fmt(c.value)}/${fmt(c.capacity)}`}</span>
-                      <span className={styles.teamBar} style={{ height: `${Math.round((Math.min(c.value, teamMax) / teamMax) * 90)}px` }} />
+                      <span className={cn(styles.teamBar, "motion-bar-v")} style={{ height: `${Math.round((Math.min(c.value, teamMax) / teamMax) * 90)}px` }} />
                       {c.capacity !== null && <span className={styles.capLine} style={{ bottom: `${Math.round((c.capacity / teamMax) * 90)}px` }} />}
                     </div>
                   ))}
@@ -274,6 +280,8 @@ export function WorkloadPanel({
         </section>
 
         <aside className={cn(styles.card, styles.detail)} aria-label={t("detailLabel")}>
+          {/* เลือกแท่งอื่น: รายละเอียดเคลื่อนเข้าใหม่ */}
+          <MotionSwap key={selected ? `${selected.userId}:${selected.index}` : "none"}>
           {sel && selCell ? (
             <>
               <div className={styles.chead}>
@@ -319,9 +327,11 @@ export function WorkloadPanel({
           ) : (
             <p className={cn(styles.note, styles.muted)}>{t("detailPick")}</p>
           )}
+          </MotionSwap>
           <p className={cn(styles.note, styles.muted)}>{t("method")}</p>
         </aside>
       </div>
+      </MotionSwap>
     </>
   );
 }

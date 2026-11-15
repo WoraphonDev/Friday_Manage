@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Button, EmptyState, ErrorState, Forbidden, LoadingState, useToast } from "@/components/ui";
+import { Button, CountUp, EmptyState, ErrorState, Forbidden, LoadingState, MotionSwap, useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { queryKeys } from "@/lib/query";
 import type { Permissions } from "@/lib/types";
 import { SettingsFrame } from "../../settings/_components/project-settings";
@@ -33,6 +34,8 @@ export function AutomationPage({ ws, projectKey }: { ws: string; projectKey: str
   const [tab, setTab] = useState<Tab>("rules");
   const [selected, setSelected] = useState<string | null>(null);
   const [draft, setDraft] = useState<RuleShape | null>(null);
+  // เส้นใต้เลื่อนตามแท็บที่เลือก (ต้องเรียกก่อน return ระหว่างโหลด)
+  const tabsRef = useSlidingIndicator<HTMLDivElement>('[role="tab"]');
 
   // อยู่ในโครง Settings: เมนูซ้ายไม่หายเมื่อเลือก Automation
   const frame = (node: React.ReactNode) => <SettingsFrame ws={ws} projectKey={projectKey} current="automation" canAutomation={allowed}>{node}</SettingsFrame>;
@@ -69,14 +72,14 @@ export function AutomationPage({ ws, projectKey }: { ws: string; projectKey: str
         </div>
         <div className={styles.topRight}>
           <div className={styles.usage}>
-            <div className={styles.usageRow}><span className={styles.muted}>{t("usage")}</span><b>{t("usageCount", { n: usage.runsThisMonth, quota: usage.quota })}</b></div>
-            <div className={styles.meter} role="progressbar" aria-label={t("usage")} aria-valuenow={usage.runsThisMonth} aria-valuemin={0} aria-valuemax={usage.quota}><span style={{ width: `${pct}%` }} /></div>
+            <div className={styles.usageRow}><span className={styles.muted}>{t("usage")}</span><b><CountUp value={t("usageCount", { n: usage.runsThisMonth, quota: usage.quota })} /></b></div>
+            <div className={styles.meter} role="progressbar" aria-label={t("usage")} aria-valuenow={usage.runsThisMonth} aria-valuemin={0} aria-valuemax={usage.quota}><span className="motion-bar" style={{ width: `${pct}%` }} /></div>
           </div>
           <Button variant="primary" onClick={() => setTab("tpl")}>{t("create")}</Button>
         </div>
       </div>
 
-      <div role="tablist" aria-label={t("title")} className={styles.tabs}>
+      <div ref={tabsRef} role="tablist" aria-label={t("title")} className={`${styles.tabs} motion-underline`}>
         {(["rules", "tpl", "log"] as const).map((k) => (
           <button key={k} type="button" role="tab" className={styles.tab} aria-selected={tab === k} onClick={() => setTab(k)}>
             {k === "rules" ? t("tabRules", { n: list.length }) : t(k === "tpl" ? "tabTemplates" : "tabLog")}
@@ -84,6 +87,8 @@ export function AutomationPage({ ws, projectKey }: { ws: string; projectKey: str
         ))}
       </div>
 
+      {/* สลับแท็บ: เนื้อหาเคลื่อนเข้าแบบเดียวกับการเปลี่ยนหน้า */}
+      <MotionSwap key={tab}>
       {tab === "rules" && (
         <div className={styles.split}>
           <section className={`${styles.card} ${styles.list}`} aria-label={t("listLabel")}>
@@ -94,7 +99,7 @@ export function AutomationPage({ ws, projectKey }: { ws: string; projectKey: str
             )}
             {list.length === 0 && !draft && <EmptyState title={t("empty")} description={t("emptyHint")} action={<Button onClick={() => setTab("tpl")}>{t("browseTemplates")}</Button>} />}
             {list.map((r) => (
-              <div key={r.id} className={styles.ruleRow} style={{ opacity: r.enabled ? 1 : 0.6 }}>
+              <div key={r.id} className={`${styles.ruleRow} motion-item`} style={{ opacity: r.enabled ? 1 : 0.6 }}>
                 <button type="button" className={styles.rl} aria-current={current?.id === r.id ? "true" : undefined} onClick={() => { setDraft(null); setSelected(r.id); }}>
                   <span className={styles.grow}>
                     <b>{r.name}</b>
@@ -112,7 +117,10 @@ export function AutomationPage({ ws, projectKey }: { ws: string; projectKey: str
               </div>
             ))}
           </section>
+          {/* เลือกกฎอื่น / เริ่มจากเทมเพลต: ตัวแก้เคลื่อนเข้าใหม่ · key เดียวกับ RuleEditor ที่สร้างใหม่อยู่แล้ว จึงไม่เสียค่าที่แก้ค้าง
+              กล่องนี้รับ flex ของ .editor แทนตัวแก้ */}
           {(draft || current) && (
+            <MotionSwap key={draft ? `draft-${JSON.stringify(draft)}` : current!.id} className={styles.editor}>
             <RuleEditor
               key={draft ? `draft-${JSON.stringify(draft)}` : current!.id}
               base={base}
@@ -130,13 +138,14 @@ export function AutomationPage({ ws, projectKey }: { ws: string; projectKey: str
               }}
               onCancelDraft={draft ? () => setDraft(null) : undefined}
             />
+            </MotionSwap>
           )}
         </div>
       )}
 
       {tab === "tpl" && (
         templates.error ? <ErrorState error={templates.error} retry={() => void templates.refetch()} /> : !templates.data ? <LoadingState /> : (
-          <div className={styles.tpls}>
+          <div className={`${styles.tpls} motion-list`}>
             <div className={styles.tp}>
               <span className={`${styles.pill} ${styles.neu}`}>{t("blankCat")}</span>
               <b>{t("blank")}</b>
@@ -156,6 +165,7 @@ export function AutomationPage({ ws, projectKey }: { ws: string; projectKey: str
       )}
 
       {tab === "log" && <RunsLog base={base} ws={ws} projectKey={projectKey} />}
+      </MotionSwap>
     </div>
   );
 }

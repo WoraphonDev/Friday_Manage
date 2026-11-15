@@ -153,7 +153,7 @@ export function PersonalTab({ ws }: { ws: string }) {
         {/* ธีมเป็นค่าของอุปกรณ์ (cookie) จึงเปลี่ยนทันที ไม่รวมกับปุ่มบันทึกของฟอร์ม · มือถือเข้าถึงได้จากแท็บ Profile */}
         <div className="field">
           <span id="profile-theme" className={styles.fieldLabel}>{t("theme")}</span>
-          <ThemeSwitch showLabels aria-labelledby="profile-theme" />
+          <ThemeSwitch showLabels sliding aria-labelledby="profile-theme" />
           <span className="muted">{t("themeHint")}</span>
         </div>
         <div className={cn("field", styles.full)}>

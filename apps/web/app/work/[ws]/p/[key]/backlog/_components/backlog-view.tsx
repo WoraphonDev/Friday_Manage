@@ -6,7 +6,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Bookmark, Bug, CheckSquare, ChevronDown, MoreHorizontal, Zap } from "lucide-react";
-import { AvatarStack, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useDismissToasts, useToast } from "@/components/ui";
+import { AvatarStack, Button, CountUp, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useDismissToasts, useToast } from "@/components/ui";
+import { useSlidingIndicator } from "@/lib/motion";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError, supportId } from "@/lib/api";
 import { formatDateRange, today as todayIso, type YearFormat } from "@/lib/format";
@@ -76,6 +77,8 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
   const [starting, setStarting] = useState<Sprint | null>(null);
   const [completing, setCompleting] = useState<Sprint | null>(null);
   const [opened, setOpened] = useState<Record<string, boolean>>({});
+  // พื้นปุ่มที่เลือก (ทุกประเภท / Task / Bug) เลื่อนตามปุ่มที่กด
+  const typeRef = useSlidingIndicator<HTMLDivElement>(`.${styles.chip}`);
 
   const permissions = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${endpoint}/my-permissions`) });
   const allowed = !!permissions.data && !permissions.data.guestViewer;
@@ -160,7 +163,7 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
     const assignees = issue.assigneeIds.map((id) => people.get(id)).filter((person): person is Person => !!person);
     const primary: Container | undefined = container === null ? nextSprint?.id : null;
     return <div key={issue.key} role="listitem" aria-label={t("row", { key: issue.key })} data-key={issue.key}
-      className={`${styles.item} ${dragging === issue.key ? styles.dragging : ""} ${dropTarget?.before === issue.key ? styles.dropBefore : ""} ${isClosedCategory(issue.status.category) ? styles.done : ""}`}
+      className={`${styles.item} motion-item ${dragging === issue.key ? styles.dragging : ""} ${dropTarget?.before === issue.key ? styles.dropBefore : ""} ${isClosedCategory(issue.status.category) ? styles.done : ""}`}
       draggable={movable(issue) && !moving}
       title={canMove && !movable(issue) ? t("viewOnly") : undefined}
       onDragStart={(event) => { if (!movable(issue) || moving) { event.preventDefault(); return; } dragKey.current = issue.key; setDragging(issue.key); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", issue.key); }}
@@ -186,10 +189,11 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
     </div>;
   }
 
-  function renderList(container: Container, issues: BacklogIssue[], emptyText: string) {
+  /** reveal = รายการเพิ่งกางออกจากการกดของผู้ใช้ ให้ค่อย ๆ โผล่ (motion-in) · ที่กางอยู่แล้วตอนเปิดหน้าไม่ต้อง */
+  function renderList(container: Container, issues: BacklogIssue[], emptyText: string, reveal = false) {
     const rows = issues.filter(visible);
     return <div role="list" aria-label={t("list", { name: containerName(container) })}
-      className={`${styles.zone} ${dragging && dropTarget?.container === container ? styles.zoneOver : ""}`}
+      className={`${styles.zone}${reveal ? " motion-in" : ""} ${dragging && dropTarget?.container === container ? styles.zoneOver : ""}`}
       onDragOver={(event) => dragOver(event, container)} onDrop={(event) => drop(event, container)}>
       {rows.map((issue) => renderRow(issue, container))}
       {!rows.length && <p className={styles.zoneEmpty}>{issues.length ? t("filteredEmpty") : emptyText}</p>}
@@ -208,7 +212,7 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
   return <section className={styles.page} aria-label={t("title")} aria-busy={moving}>
     <div className={styles.toolbar}>
       <div className={styles.filters}>
-        <div role="group" aria-label={t("typeFilter")} className={styles.filters}>
+        <div ref={typeRef} role="group" aria-label={t("typeFilter")} className={`${styles.filters} ${styles.typeGroup} motion-pill`}>
           {(["all", "Task", "Bug"] as const).map((value) => <Button key={value} className={`${styles.chip} ${typeFilter === value ? styles.selected : ""}`} aria-pressed={typeFilter === value} onClick={() => setTypeFilter(value)}>{value === "all" ? t("allTypes") : value}</Button>)}
         </div>
         <Select size="small" aria-label={t("module")} value={moduleId} onChange={(event) => setModuleId(event.target.value)}>
@@ -240,27 +244,29 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
         <div className={styles.activeInfo}>
           <div><span className={styles.label}>{t("goal")}</span><p className={styles.goal}>{active.goal || t("noGoal")}</p></div>
           <dl className={styles.stats}>
-            <div><dt>{t("statIssues")}</dt><dd>{active.stats.doneCount} / {active.stats.issueCount}</dd></div>
-            <div><dt>{t("statMd")}</dt><dd>{active.stats.doneMd} / {active.stats.totalMd}</dd></div>
-            <div><dt>{t("statBugs")}</dt><dd>{active.issues.flatMap((issue) => [issue, ...(issue.subtasks ?? [])]).filter((issue) => issue.type === "Bug" && !isClosedCategory(issue.status.category)).length}</dd></div>
+            <div><dt>{t("statIssues")}</dt><dd><CountUp value={`${active.stats.doneCount} / ${active.stats.issueCount}`} /></dd></div>
+            <div><dt>{t("statMd")}</dt><dd><CountUp value={`${active.stats.doneMd} / ${active.stats.totalMd}`} /></dd></div>
+            <div><dt>{t("statBugs")}</dt><dd><CountUp value={active.issues.flatMap((issue) => [issue, ...(issue.subtasks ?? [])]).filter((issue) => issue.type === "Bug" && !isClosedCategory(issue.status.category)).length} /></dd></div>
           </dl>
         </div>
         {active.burndown && <BurndownChart burndown={active.burndown} yearFormat={yearFormat} />}
       </div>
       <div className={styles.toggleRow}><Button size="small" variant="ghost" aria-expanded={showActive} onClick={() => setShowActive(!showActive)}>{showActive ? t("hideIssues") : t("showIssues", { count: active.issues.length })}</Button></div>
-      {showActive && renderList(active.id, active.issues, t("sprintEmpty"))}
+      {showActive && renderList(active.id, active.issues, t("sprintEmpty"), true)}
     </section>}
 
     {/* กางเฉพาะ Sprint ถัดไปตาม Canvas L1 · Sprint หลังจากนั้นพับเป็นแถวเดียว Backlog จึงอยู่ใกล้ให้ลากได้ */}
     {(() => {
       const card = (sprint: Sprint, index: number) => {
         const open = opened[sprint.id] ?? index === 0;
-        return <PlanningSprint key={sprint.id} sprint={sprint} canManage={canManage} hasActive={!!active} isNext={index === 0} open={open} dates={sprintDates(sprint)}
+        // กางเองหลังเปิดหน้า (opened มีค่า) = ค่อย ๆ โผล่ · Sprint ถัดไปที่กางอยู่แล้วตอนเปิดหน้าไม่ต้อง
+        const reveal = opened[sprint.id] !== undefined;
+        return <PlanningSprint key={sprint.id} sprint={sprint} canManage={canManage} hasActive={!!active} isNext={index === 0} open={open} reveal={reveal} dates={sprintDates(sprint)}
           dropOver={dragging !== null && dropTarget?.container === sprint.id}
           onToggle={() => setOpened((old) => ({ ...old, [sprint.id]: !open }))}
           onDragOver={(event) => dragOver(event, sprint.id)} onDrop={(event) => drop(event, sprint.id)}
           onStart={() => setStarting(sprint)} saveGoal={async (goal) => { await api.request(`${endpoint}/sprints/${sprint.id}`, { method: "PATCH", body: { goal: goal || null } }); await cache.invalidateQueries({ queryKey: backlogKey }); }}>
-          {renderList(sprint.id, sprint.issues, t("sprintEmpty"))}
+          {renderList(sprint.id, sprint.issues, t("sprintEmpty"), reveal)}
         </PlanningSprint>;
       };
       // Sprint หลังจากนั้นเรียงต่อกันเป็นรายการเดียว (ไม่เว้นช่องทีละการ์ด)
@@ -305,8 +311,8 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
   </section>;
 }
 
-function PlanningSprint({ sprint, canManage, hasActive, isNext, open, dropOver, dates, onToggle, onDragOver, onDrop, onStart, saveGoal, children }: {
-  sprint: Sprint; canManage: boolean; hasActive: boolean; isNext: boolean; open: boolean; dropOver: boolean; dates: string;
+function PlanningSprint({ sprint, canManage, hasActive, isNext, open, reveal, dropOver, dates, onToggle, onDragOver, onDrop, onStart, saveGoal, children }: {
+  sprint: Sprint; canManage: boolean; hasActive: boolean; isNext: boolean; open: boolean; reveal: boolean; dropOver: boolean; dates: string;
   onToggle: () => void; onDragOver: (event: DragEvent) => void; onDrop: (event: DragEvent) => void;
   onStart: () => void; saveGoal: (goal: string) => Promise<void>; children: ReactNode;
 }) {
@@ -338,14 +344,14 @@ function PlanningSprint({ sprint, canManage, hasActive, isNext, open, dropOver, 
       {canManage && isNext && <Button className={styles.startBtn} disabled={hasActive} title={hasActive ? t("activeExists") : undefined} onClick={onStart}>{t("startSprint")}</Button>}
     </header>
     {open && <>
-    <div className={styles.planBody}>
+    <div className={`${styles.planBody}${reveal ? " motion-in" : ""}`}>
       {canManage
         ? <div className={styles.goalField}><Input label={t("goal")} value={goal} maxLength={10000} placeholder={t("goalPlaceholder")} onChange={(event) => setGoal(event.target.value)} onBlur={() => void commitGoal()} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} error={goalError || undefined} /></div>
         : <div><span className={styles.label}>{t("goal")}</span><p className={styles.goal}>{sprint.goal || t("noGoal")}</p></div>}
       <div className={styles.capacity}>
         <div className={styles.capacityHead}><span>{t("capacityTitle")}</span><strong className={capacity.overloaded ? styles.overText : undefined}>{t("capacityValue", { committed, capacity: capacity.capacityMd })}</strong></div>
         <div className={styles.capBar} role="meter" aria-label={t("capacityTitle")} aria-valuemin={0} aria-valuemax={capacity.capacityMd} aria-valuenow={committed} aria-valuetext={t("capacityValue", { committed, capacity: capacity.capacityMd })}>
-          <div className={capacity.overloaded ? styles.capOver : ratio >= 0.8 ? styles.capGood : styles.capFill} style={{ width: `${Math.min(100, Math.round(ratio * 100))}%` }} />
+          <div className={`${capacity.overloaded ? styles.capOver : ratio >= 0.8 ? styles.capGood : styles.capFill} motion-bar`} style={{ width: `${Math.min(100, Math.round(ratio * 100))}%` }} />
         </div>
         <p className={`${styles.capNote} ${capacity.overloaded ? styles.overText : ""}`}>
           {capacity.overloaded ? t("capacityOver", { over }) : t("capacityNote", { capacity: capacity.capacityMd, people: capacity.people.length, days: capacity.workingDays })}
@@ -354,7 +360,7 @@ function PlanningSprint({ sprint, canManage, hasActive, isNext, open, dropOver, 
         </p>
       </div>
     </div>
-    {!!capacity.people.length && <ul className={styles.people} aria-label={t("peopleCapacity")}>
+    {!!capacity.people.length && <ul className={`${styles.people}${reveal ? " motion-in" : ""}`} aria-label={t("peopleCapacity")}>
       {capacity.people.map((row, index) => <li key={row.person?.id ?? index} className={row.overloaded ? styles.overText : undefined} title={row.person?.displayName}>
         <span className={styles.initials}>{row.person?.initials ?? "?"}</span>
         <b>{row.committedMd}</b><span className={styles.muted}>/ {row.capacityMd} MD</span>

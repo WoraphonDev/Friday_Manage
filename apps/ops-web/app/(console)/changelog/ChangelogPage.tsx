@@ -9,6 +9,7 @@ import { type ReactNode, useState } from "react";
 import { hasAny } from "@/components/access";
 import { PageHead, Seg, Tabs } from "@/components/kit";
 import { Button } from "@/components/ui";
+import { MotionSwap } from "@/components/shell/page-enter";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { ChangelogTab } from "./_parts/ChangelogTab";
@@ -92,11 +93,14 @@ export function ChangelogPage() {
           </Link>
         )}
       </div>
-      {activeTab === "changelog" ? (
-        <ChangelogTab query={list} nps={seesNps ? (nps90.data ?? null) : undefined} canWrite={canWrite} onEdit={(entry) => setEditor({ kind: "edit", entry })} write={write || null} />
-      ) : (
-        <NpsTab range={range} seesComments={seesComments} exporting={exporting} onExportingChange={setExporting} />
-      )}
+      {/* เปลี่ยนแท็บในหน้าเดียวกัน: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}
+      <MotionSwap key={activeTab} className="motion-stack">
+        {activeTab === "changelog" ? (
+          <ChangelogTab query={list} nps={seesNps ? (nps90.data ?? null) : undefined} canWrite={canWrite} onEdit={(entry) => setEditor({ kind: "edit", entry })} write={write || null} />
+        ) : (
+          <NpsTab range={range} seesComments={seesComments} exporting={exporting} onExportingChange={setExporting} />
+        )}
+      </MotionSwap>
       {editor && <EntryDrawer key={editor.kind === "edit" ? editor.entry.id : "create"} entry={editor.kind === "edit" ? editor.entry : null} entries={list.data?.items ?? []} canWrite={canWrite} onClose={() => setEditor(null)} />}
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
     </>

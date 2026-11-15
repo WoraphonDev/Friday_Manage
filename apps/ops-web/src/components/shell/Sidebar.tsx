@@ -44,6 +44,7 @@ import {
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import type { Staff } from "@/lib/types";
 import { hasAny, initials, rolesOf } from "../access";
 import { currentItem, isSoon, linkOf, NAV, type NavKey, type TaskKey } from "./nav";
@@ -70,6 +71,8 @@ export function Sidebar({ staff, pathname, search, open, onNavigate }: { staff: 
   const overview = useOverview();
   const current = currentItem(pathname, search);
   const mine = rolesOf(staff);
+  // พื้นม่วงของเมนูที่เลือกเลื่อนไปหาเมนูใหม่ (ข้ามกลุ่มได้) · สีตาม .ops-nav[aria-current] ดู ops.css ส่วนการเคลื่อนไหว
+  const indicator = useSlidingIndicator<HTMLElement>(".ops-nav");
   return (
     <aside className="ops-side" aria-label={t("app.navLabel")} data-open={open}>
       <div className="ops-brand">
@@ -84,7 +87,7 @@ export function Sidebar({ staff, pathname, search, open, onNavigate }: { staff: 
         <span>{t("app.env")}</span>
         <span className="ops-env-region">{t("app.region")}</span>
       </div>
-      <nav aria-label={t("app.navLabel")} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <nav ref={indicator} className="motion-pill" aria-label={t("app.navLabel")} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {NAV.map((g) => {
           const items = g.items.filter((i) => hasAny(staff, ...i.roles));
           if (!items.length) return null;

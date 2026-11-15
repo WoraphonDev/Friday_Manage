@@ -13,6 +13,7 @@ import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
 import { useIsMobile } from "@/lib/use-mobile";
+import { useSlidingIndicator } from "@/lib/motion";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
 import { peopleForRole } from "@/lib/positions";
@@ -223,6 +224,8 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const [deleting, setDeleting] = useState(false);
   const [reasonFor, setReasonFor] = useState<{ run: (reason: string) => Promise<void> } | null>(null);
   const [subFor, setSubFor] = useState<string | null>(null);
+  // พื้นชิปมุมมองที่เลือก (ทั้งหมด / ของฉัน / Overdue / มุมมองที่บันทึก) เลื่อนตามชิปที่กด
+  const viewsRef = useSlidingIndicator<HTMLDivElement>(`.${styles.chip}`);
   const router = useRouter();
   const pathname = usePathname();
   const ioSections = usePlanIoSections(ws, projectKey);
@@ -461,9 +464,10 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
   const stuckPhase = ctx.phase !== null ? display[ctx.phase] : undefined;
   const ctxModule = stuckModule?.kind === "module" ? stuckModule : null;
   const ctxPhase = stuckPhase?.kind === "phase" ? stuckPhase : null;
-  const moduleInfo = (d: Extract<Display, { kind: "module" }>) => <>
+  /** grow = แถบ % วิ่งจาก 0 ตอนแสดง · ปิดในแถบที่ค้างบนหัวตาราง (โผล่ระหว่างเลื่อน) และตารางยาวที่ virtualize (แถวขึ้นใหม่ทุกครั้งที่เลื่อน) */
+  const moduleInfo = (d: Extract<Display, { kind: "module" }>, grow = !virtual) => <>
     <span className={styles.muted} style={{ fontSize: 12 }}>{groupBy === "module" && d.phases ? t("moduleTasks", { count: d.count, phases: d.phases }) : t("groupTasks", { count: d.count })}</span>
-    <span className={styles.mbar}><span><span style={{ width: `${d.pct}%`, background: d.color ?? "var(--primary)" }} /></span><b>{d.pct}%</b></span>
+    <span className={styles.mbar}><span><span className={grow ? "motion-bar" : undefined} style={{ width: `${d.pct}%`, background: d.color ?? "var(--primary)" }} /></span><b>{d.pct}%</b></span>
     <span className={styles.muted} style={{ fontSize: 12, marginLeft: 8 }}>{d.from && d.to ? `${formatDate(d.from, year)} – ${formatDate(d.to, year)}` : `${d.md} MD`}</span>
     {groupBy === "module" && canCreate && <Link className={styles.addb} style={{ marginLeft: "auto" }} href={taskHref(d.moduleId)} scroll={false}>{t("addTask")}</Link>}
   </>;
@@ -487,7 +491,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
 
   return (
     <div className={styles.page}>
-      <div className={mobile ? styles.mViews : styles.bar} role="group" aria-label={t("views")}>
+      <div ref={viewsRef} className={`${mobile ? styles.mViews : styles.bar} ${styles.views} motion-pill`} role="group" aria-label={t("views")}>
         {!mobile && <span className={styles.muted} style={{ fontSize: 12, marginRight: 4 }}>{t("views")}</span>}
         <button type="button" className={styles.chip} aria-pressed={!filtered} onClick={() => setFilters({})}>{t("allTasks")}</button>
         <button type="button" className={styles.chip} aria-pressed={activeView({ assignee: "me" })} onClick={() => setFilters({ assignee: "me" })}>{t("myView")}</button>
@@ -533,7 +537,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
             {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={taskHref()} scroll={false}>{t("addTask")}</Link>}
           </div>
           {moreOpen && (
-            <div className={styles.mMore} role="group" aria-label={t("moreOptions")}>
+            <div className={`${styles.mMore} motion-in`} role="group" aria-label={t("moreOptions")}>
               <label className={styles.tbtn}>{t("groupBy")}
                 <select className={styles.tsel} aria-label={t("groupBy")} value={groupBy} onChange={(e) => { setGroupBy(e.target.value as GroupBy); setCollapsed(new Set()); }}>
                   {GROUPS.map((g) => <option key={g} value={g}>{t(`groups.${g}`)}</option>)}
@@ -682,7 +686,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
                   <button type="button" className={styles.chv} aria-expanded aria-label={t("collapse", { name: ctxModule.name })} onClick={() => collapseStuck(ctxModule.id)}><ChevronDown size={16} /></button>
                   {ctxModule.color !== null && <span className={styles.swatch} style={{ background: ctxModule.color }} />}
                   <span className={styles.mname}>{ctxModule.name}</span>
-                  {moduleInfo(ctxModule)}
+                  {moduleInfo(ctxModule, false)}
                 </div>}
                 {ctxPhase && <div className={styles.ctxPhase} ref={ctxPhaseRef}>
                   <button type="button" className={styles.chv} aria-expanded aria-label={t("collapse", { name: ctxPhase.name })} onClick={() => collapseStuck(ctxPhase.id)}><ChevronDown size={16} /></button>
@@ -808,7 +812,7 @@ function MobileList({ display, collapsed, onToggle, ws, projectKey, year, canCre
   const href = (key: string) => `/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/table?issue=${encodeURIComponent(key)}`;
   const chevron = (id: string) => <ChevronDown size={18} aria-hidden="true" style={{ transform: collapsed.has(id) ? "rotate(-90deg)" : undefined }} />;
   return (
-    <section className={styles.mList} aria-label={t("listLabel")}>
+    <section className={`${styles.mList} motion-list`} aria-label={t("listLabel")}>
       {display.map((d) => {
         if (d.kind === "module")
           return (
@@ -819,7 +823,7 @@ function MobileList({ display, collapsed, onToggle, ws, projectKey, year, canCre
                 <b>{d.name}</b>
                 <span className={styles.muted}>{d.phases ? t("moduleTasks", { count: d.count, phases: d.phases }) : t("groupTasks", { count: d.count })}{d.from && d.to ? ` · ${formatDate(d.from, year)} – ${formatDate(d.to, year)}` : ""}</span>
               </span>
-              <span className={styles.mPct}><span><span style={{ width: `${d.pct}%`, background: d.color ?? "var(--primary)" }} /></span>{d.pct}%</span>
+              <span className={styles.mPct}><span><span className="motion-bar" style={{ width: `${d.pct}%`, background: d.color ?? "var(--primary)" }} /></span>{d.pct}%</span>
             </button>
           );
         if (d.kind === "phase")
@@ -965,7 +969,7 @@ function BulkBar({ count, options, statuses, canDelete, onApply, onStatus, onDel
     </Popover.Root>
   );
   return (
-    <div className={styles.bulk} role="region" aria-label={t("selected", { count })}>
+    <div className={`${styles.bulk} motion-in`} role="region" aria-label={t("selected", { count })}>
       <b style={{ marginRight: 8 }}>{t("selected", { count })}</b>
       {action(t("bulkStatus"), <>
         <select aria-label={t("bulkStatus")} value={status} onChange={(e) => setStatus(e.target.value)}><option value="">{t("bulkStatus")}</option>{statuses.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>

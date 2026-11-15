@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { PageEnter } from "@/components/shell/page-enter";
 import { ErrorState, LoadingState } from "@/components/ui";
 import { ApiError, api } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -61,15 +62,18 @@ export function LegalView({ type }: { type: LegalType }) {
             </Link>
           ))}
         </nav>
-        {doc.isPending ? (
-          <LoadingState />
-        ) : missing ? (
-          <Outline type={type} />
-        ) : doc.error ? (
-          <ErrorState error={doc.error} retry={() => doc.refetch()} />
-        ) : (
-          <Document doc={doc.data} onVersion={setVersion} />
-        )}
+        {/* แต่ละแท็บเป็นคนละหน้า เนื้อหาเอกสารจึงจางเข้าแบบเปลี่ยนหน้าในระบบ · หัวและแถบแท็บอยู่นอกกรอบจึงไม่ขยับ */}
+        <PageEnter>
+          {doc.isPending ? (
+            <LoadingState />
+          ) : missing ? (
+            <Outline type={type} />
+          ) : doc.error ? (
+            <ErrorState error={doc.error} retry={() => doc.refetch()} />
+          ) : (
+            <Document doc={doc.data} onVersion={setVersion} />
+          )}
+        </PageEnter>
       </main>
     </div>
   );

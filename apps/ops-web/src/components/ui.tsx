@@ -25,6 +25,7 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 import { ApiError } from "@/lib/api";
+import { useExitGhost } from "@/lib/motion";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 export const buttonClass = (variant: Variant = "secondary", size?: "small" | "icon") =>
@@ -91,11 +92,14 @@ export function Pill({ children, tone = "neu", className }: { children: ReactNod
 // Dialog ------------------------------------------------------------------------
 export function Dialog({ open, onOpenChange, title, description, children }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; description?: string; children?: ReactNode }) {
   const t = useTranslations("ops.ui");
+  // ปิดด้วยการเลิก render (เช่น หน้าธงฟีเจอร์) ยังได้ animation ปิด · ดู useExitGhost
+  const overlayGhost = useExitGhost<HTMLDivElement>();
+  const contentGhost = useExitGhost<HTMLDivElement>();
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="overlay" />
-        <RadixDialog.Content className="dialog" {...(!description ? { "aria-describedby": undefined } : {})}>
+        <RadixDialog.Overlay ref={overlayGhost} className="overlay" />
+        <RadixDialog.Content ref={contentGhost} className="dialog" {...(!description ? { "aria-describedby": undefined } : {})}>
           <div className="dialog-heading">
             <RadixDialog.Title>{title}</RadixDialog.Title>
             <RadixDialog.Close asChild>

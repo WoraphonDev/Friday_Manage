@@ -8,6 +8,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ui";
+import { useSlidingIndicator } from "@/lib/motion";
 import { api, ApiError, supportId } from "@/lib/api";
 import type { YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
@@ -34,6 +35,8 @@ export interface LocaleSwitchProps {
   /** เรียกหลังเปลี่ยนสำเร็จ เช่น ปิดเมนู */
   onChange?: (value: { locale: AppLocale; yearFormat: YearFormat }) => void;
   className?: string;
+  /** true = พื้นตัวที่เลือกเลื่อนตาม (.motion-pill) · เปิดเฉพาะที่ใช้หน้าตาเดิมของ locale-switch.module.css (หัวหน้าสาธารณะเขียนสีทับเอง) */
+  sliding?: boolean;
 }
 
 export function LocaleSwitch({
@@ -41,6 +44,7 @@ export function LocaleSwitch({
   showYearFormat = false,
   onChange,
   className,
+  sliding = false,
 }: LocaleSwitchProps) {
   const intlLocale = useLocale();
   const locale: AppLocale = isLocale(intlLocale) ? intlLocale : DEFAULT_LOCALE;
@@ -55,6 +59,10 @@ export function LocaleSwitch({
     enabled: signedIn,
   }).data;
   const [pending, setPending] = useState(false);
+  // พื้นตัวที่เลือกเลื่อนตาม (เฉพาะเมื่อผู้เรียกเปิด sliding) · ภาษาและรูปแบบปีเป็นคนละกลุ่ม จึงแยก ref
+  const localeRef = useSlidingIndicator<HTMLDivElement>("button");
+  const yearRef = useSlidingIndicator<HTMLDivElement>("button");
+  const segClass = sliding ? `${styles.seg} ${styles.sliding} motion-pill` : styles.seg;
   const year = effectiveYearFormat(locale, signedIn ? me?.yearFormat : null);
 
   const save = async (next: AppLocale, nextYear: YearFormat) => {
@@ -95,7 +103,8 @@ export function LocaleSwitch({
   return (
     <div className={[styles.root, className].filter(Boolean).join(" ")}>
       <div
-        className={styles.seg}
+        ref={sliding ? localeRef : undefined}
+        className={segClass}
         role="group"
         aria-label={t("language")}
         aria-busy={pending || undefined}
@@ -118,7 +127,8 @@ export function LocaleSwitch({
       </div>
       {showYearFormat && signedIn && (
         <div
-          className={styles.seg}
+          ref={sliding ? yearRef : undefined}
+          className={segClass}
           role="group"
           aria-label={t("yearFormat")}
           aria-busy={pending || undefined}

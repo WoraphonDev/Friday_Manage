@@ -145,3 +145,23 @@
   .page { padding: 8px 12px 24px; gap: 12px; }
   .card { border-radius: 16px; box-shadow: var(--shadow-card); }
 }
+
+/* การเคลื่อนไหว (.motion-pill · useSlidingIndicator): พื้นที่เลื่อนหน้าตาเดียวกับตัวที่เลือกเดิมของแต่ละกลุ่ม */
+/* กรอบเนื้อหาของขั้นตอน: ระยะห่างเท่ากรอบนอก (หน้าสร้างจาก Excel หรือ Popup Import / Export) */
+.stepBody { display:flex; flex-direction:column; gap:inherit; min-width:0; }
+/* แถบขั้นตอน: ม่วงอ่อน มุม 8 (ขั้นที่เลือกใช้ data-state="active" ให้ตัววัดหาเจอ เพราะ aria-current="step" ไม่อยู่ในรูปแบบที่วัด) */
+.steps { --ind-bg:var(--primary-soft); --ind-radius:8px; }
+/* วิธีนำเข้า: กรอบม่วงพื้นอ่อน · ระหว่างเลื่อนการ์ดอื่นโปร่ง (อยู่บนพื้นการ์ดสีเดียวกัน) */
+.kinds { --ind-bg:var(--hover); --ind-border:1px solid var(--primary); --ind-shadow:0 0 0 1px var(--primary); --ind-radius:10px; }
+.kinds[data-indicator] .kind { background:transparent; }
+/* ชิปกรองผลตรวจ: พื้นเข้ม (มือถือม่วงอ่อน) */
+.chipOne { --ind-bg:var(--contrast-bg); --ind-border:1px solid var(--contrast-bg); --ind-radius:999px; }
+.chipOne[data-indicator] .chip { background:transparent; }
+@media (max-width: 760px) {
+  .chipOne { --ind-bg:var(--primary-soft); --ind-border:1px solid var(--primary-border); --ind-radius:22px; }
+}
+/* แท็บผลเทียบแผน: กล่องตัดมุมเอง จึงไม่ต้องมีมุมโค้ง · global ล้างสีเส้นของแท็บที่เลือก จึงคืนเส้นคั่นด้านซ้ายให้ (ซ้ำ class เพื่อชนะ) */
+.diffTabs { --ind-bg:var(--primary-soft); --ind-radius:0; }
+.diffTabs.diffTabs[data-indicator] button + button[aria-selected="true"] { border-left-color:var(--input); }
+/* ช่วง Day / Week ของ Export */
+.seg { --ind-bg:var(--primary-soft); --ind-radius:0; }

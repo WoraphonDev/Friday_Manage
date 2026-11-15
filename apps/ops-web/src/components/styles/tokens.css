@@ -108,6 +108,8 @@
   --overlay: rgb(18 14 38 / 0.45);
   --shadow-card: 0 1px 2px rgb(20 16 40 / 0.06);
   --shadow-menu: 0 16px 40px rgb(20 16 40 / 0.18);
+  /* การ์ดที่ยกขึ้นตอนชี้ (.motion-lift) · ค่าโหมดมืดของแอปลูกค้าคือ 0 10px 24px rgb(0 0 0 / 0.5) */
+  --shadow-lift: 0 8px 20px rgb(20 16 40 / 0.12);
 
   --radius-control: 8px;
   --radius-card: 12px;
@@ -126,6 +128,14 @@
   --text-caption: 11px;
   --text-title: 20px;
   --font-sans: "IBM Plex Sans Thai", system-ui, sans-serif;
+  /* การเคลื่อนไหวแบบ "นุ่มเรียบ" ชุดเดียวกับแอปลูกค้า (ผู้ใช้เลือกจากตัวอย่าง 2026-11-15 และขอให้ช้าลงจาก 200ms สามรอบ) · ไม่มีเด้ง
+     dur = เปิด/ปิด/เลื่อน · dur-s = hover และเปลี่ยนสี · pop = ติ๊ก · long = ตัวเลขและแถบความคืบหน้า · stagger = ระยะห่างแถวที่โผล่ไล่กัน */
+  --motion-dur: 550ms;
+  --motion-dur-s: 350ms;
+  --motion-dur-pop: 600ms;
+  --motion-dur-long: 1500ms;
+  --motion-stagger: 85ms;
+  --motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 
   /* --- Friday Ops: เมนูซ้ายพื้นเข้มตาม Canvas Sidebar --- */
   --side-bg: #141619;

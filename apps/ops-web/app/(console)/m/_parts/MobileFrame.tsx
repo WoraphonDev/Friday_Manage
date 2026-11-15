@@ -9,6 +9,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { hasAny } from "@/components/access";
 import { Button, errorToast, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { useMe } from "@/lib/query";
 
 const TABS = [
@@ -28,11 +29,13 @@ export function MobileFrame({ children }: { children: ReactNode }) {
   const t = useTranslations("mob.tabs");
   const path = usePathname();
   const tabs = useMobileTabs();
+  // พื้นม่วงอ่อนหลังไอคอนของแท็บที่เลือกเลื่อนไปหาแท็บใหม่ (วัดที่ไอคอน ไม่ใช่ทั้งแท็บ)
+  const indicator = useSlidingIndicator<HTMLElement>(".m-tab", "svg");
   return (
     <div className="m-app">
       <PushCard />
       {children}
-      <nav className="m-tabs" aria-label={t("label")}>
+      <nav ref={indicator} className="m-tabs motion-pill" aria-label={t("label")}>
         {tabs.map(({ key, href, icon: Icon }) => (
           <Link key={key} href={href} className="m-tab" aria-current={path?.startsWith(href) ? "page" : undefined}>
             <Icon size={20} aria-hidden="true" />

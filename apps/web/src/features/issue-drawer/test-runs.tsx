@@ -8,6 +8,7 @@ import { Badge, Button, Input, Select, LoadingState, ErrorState } from '@/compon
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import type { UploadedFile } from '@/lib/upload';
+import { useSlidingIndicator } from '@/lib/motion';
 import { Failure } from './shared';
 import { AttachButton } from './task-v2';
 import { filesPageHref, issuePath, issueQuery, previewBase, type Issue, type Scope } from './types';
@@ -35,6 +36,8 @@ export function TestRuns({ scope, issue, kind = 'qa', embedded = false }: { scop
   const query = useQuery({ queryKey, queryFn: () => api.get<{ items: TestRun[] }>(endpoint) });
   const [editing, setEditing] = useState(false);
   const [result, setResult] = useState<TestRun['result']>('passed');
+  // ผลการทดสอบ: กรอบสีเลื่อนไปตัวที่เลือก (สีตาม data-result ของกล่อง)
+  const pickRef = useSlidingIndicator<HTMLDivElement>('button');
   const [environment, setEnvironment] = useState('sit');
   // ผู้ตรวจ: ค่าเริ่มต้น = QA / Reviewer ของงาน ถ้าไม่มี = คนที่บันทึก
   // QA หลายคน: ฉันเป็นหนึ่งใน QA ก็บันทึกในชื่อฉัน · ไม่ใช่ใช้ QA คนแรก
@@ -93,9 +96,9 @@ export function TestRuns({ scope, issue, kind = 'qa', embedded = false }: { scop
       {run.bugs.map((bug) => <Button key={bug.key} size="small" onClick={() => scope.navigate(bug.key)}>{bug.key} · {bug.title}</Button>)}
       {!unit && run.result === 'failed' && !run.bugs.length && scope.access.permissions.includes('issue.create') && scope.project?.status !== 'archived' && <Button size="small" disabled={pending} onClick={() => void createBug(run)}>{t('createBug')}</Button>}
     </article>)}
-    {editing && <form onSubmit={save} className={`${styles.stack} ${styles.runForm}`}>
+    {editing && <form onSubmit={save} className={`${styles.stack} ${styles.runForm} motion-in`}>
       <div className="field"><span>{t('result')}</span>
-        <div className={styles.resultPick} role="radiogroup" aria-label={t('result')}>
+        <div ref={pickRef} className={`${styles.resultPick} motion-pill`} data-result={result} role="radiogroup" aria-label={t('result')}>
           {(unit ? (['passed', 'failed', 'blocked'] as const) : (['passed', 'failed'] as const)).map((value) => (
             <button key={value} type="button" role="radio" aria-checked={result === value} data-result={value} className={styles.resultOpt} disabled={pending} onClick={() => setResult(value)}>{t(value)}</button>
           ))}

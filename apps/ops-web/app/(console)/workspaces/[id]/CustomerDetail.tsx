@@ -8,6 +8,7 @@ import { useState } from "react";
 import { hasAny, initials } from "@/components/access";
 import { ConfirmDialog, useApprovalFlow } from "@/components/dialogs";
 import { ErrorBlock, Notice, Tabs } from "@/components/kit";
+import { MotionSwap } from "@/components/shell/page-enter";
 import { Button, LoadingState, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -126,15 +127,18 @@ export function CustomerDetail({ id }: { id: string }) {
         ]}
       />
       <div role="tabpanel" aria-label={t(`detail.tabs.${tab}` as "detail.tabs.overview", { n: "" })}>
-        {tab === "overview" && <OverviewPanel ws={ws} />}
-        {tab === "usage" && <UsagePanel id={id} />}
-        {tab === "projects" && <ProjectsPanel id={id} />}
-        {tab === "users" && <MembersPanel id={id} guests={ws.usage.guests} onTransfer={can.transfer ? () => setDialog("transfer") : undefined} />}
-        {tab === "integrations" && <IntegrationsPanel id={id} />}
-        {tab === "security" && <SecurityPanel id={id} />}
-        {tab === "billing" && <BillingPanel id={id} />}
-        {tab === "support" && <SupportPanel id={id} />}
-        {tab === "audit" && <AuditPanel id={id} />}
+        {/* เปลี่ยนแท็บ: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}
+        <MotionSwap key={tab}>
+          {tab === "overview" && <OverviewPanel ws={ws} />}
+          {tab === "usage" && <UsagePanel id={id} />}
+          {tab === "projects" && <ProjectsPanel id={id} />}
+          {tab === "users" && <MembersPanel id={id} guests={ws.usage.guests} onTransfer={can.transfer ? () => setDialog("transfer") : undefined} />}
+          {tab === "integrations" && <IntegrationsPanel id={id} />}
+          {tab === "security" && <SecurityPanel id={id} />}
+          {tab === "billing" && <BillingPanel id={id} />}
+          {tab === "support" && <SupportPanel id={id} />}
+          {tab === "audit" && <AuditPanel id={id} />}
+        </MotionSwap>
       </div>
 
       {dialog === "enter" && <EnterDialog ws={ws} onOpenChange={close} onRequest={() => setDialog("request")} onDone={(n) => (close(), toast(t("c1.done", { n })), refresh())} />}

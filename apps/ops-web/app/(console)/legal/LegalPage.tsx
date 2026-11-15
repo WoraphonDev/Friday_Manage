@@ -8,10 +8,13 @@ import { hasAny } from "@/components/access";
 import { ConfirmDialog, useReauth } from "@/components/dialogs";
 import { Drawer, Empty, ErrorBlock, NoAccess, Notice, PageHead, Seg, TableSkeleton } from "@/components/kit";
 import { Button, buttonClass, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
+import { MotionSwap } from "@/components/shell/page-enter";
 import { api, OPS_BASE } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { useMe } from "@/lib/query";
 import { useFmt } from "../workspaces/_parts/format";
 import { lineDiff } from "./diff";
+import { CountUp } from "@/components/count-up";
 
 const DOC_TYPES = ["terms", "privacy", "dpa", "cookie", "subprocessors"] as const;
 type DocType = (typeof DOC_TYPES)[number];
@@ -56,6 +59,8 @@ const key = ["ops", "legal"] as const;
 /** หน้า 11 · เอกสารกฎหมาย (Legal.dc.html · A7) · Owner สร้าง / ยกเลิกเวอร์ชัน (แตะกุญแจ) · ผู้ตรวจอ่าน */
 export function LegalPage() {
   const t = useTranslations("pl.legal");
+  // รายการที่เลือกได้อันเดียว: พื้นม่วงอ่อนของอันที่เลือกเลื่อนไปหาอันใหม่ (.menu-pill ใน ops.css)
+  const menuPill = useSlidingIndicator<HTMLUListElement>(".menu-item");
   const me = useMe().data;
   const owner = hasAny(me, "owner");
   const read = hasAny(me, "owner", "auditor");
@@ -90,14 +95,15 @@ export function LegalPage() {
         <>
           <div className="legal-split">
             <section className="card" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-              <ul className="stack" style={{ listStyle: "none", margin: 0, padding: 10, gap: 6 }} aria-label={t("title")}>
+              <ul ref={menuPill} className="stack motion-list motion-pill menu-pill" style={{ listStyle: "none", margin: 0, padding: 10, gap: 6 }} aria-label={t("title")}>
                 {groups.map((x, i) => (
                   <li key={`${x.docType}-${x.locale}`}>
                     <button
                       type="button"
                       className="menu-item"
                       aria-current={g === x ? "true" : undefined}
-                      style={{ alignItems: "flex-start", border: "1px solid var(--border)", background: g === x ? "var(--primary-soft)" : undefined }}
+                      data-state={g === x ? "active" : undefined}
+                      style={{ alignItems: "flex-start", border: "1px solid var(--border)" }}
                       onClick={() => setSel(i)}
                     >
                       <DocLabel g={x} />
@@ -114,7 +120,12 @@ export function LegalPage() {
                 )}
               </div>
             </section>
-            {g && <DocPanel g={g} owner={owner} />}
+            {/* เลือกเอกสารอื่น: รายละเอียดเคลื่อนเข้าแบบเปลี่ยนหน้า · min0 แทน min-width: 0 ของการ์ดเดิมที่เป็นช่องของ grid */}
+            {g && (
+              <MotionSwap key={`${g.docType}-${g.locale}`} className="min0">
+                <DocPanel g={g} owner={owner} />
+              </MotionSwap>
+            )}
           </div>
           <AcceptStats groups={groups} activeUsers={q.data.activeUsers} />
         </>
@@ -261,22 +272,22 @@ function AcceptStats({ groups, activeUsers }: { groups: Group[]; activeUsers: nu
     <section className="stats">
       <div className="stat">
         <span className="muted small">{terms ? t("stats.accepted", { name: t("types.terms"), version: terms.version }) : t("types.terms")}</span>
-        <b>{pct == null ? "—" : `${pct}%`}</b>
+        <b><CountUp value={pct == null ? "—" : `${pct}%`} /></b>
         <span className="muted small">{terms ? t("stats.acceptedNote", { n: fmt.num(terms.accepted), total: fmt.num(activeUsers) }) : t("noneYet")}</span>
       </div>
       <div className={terms?.pendingUsers ? "stat stat-warn" : "stat"}>
         <span className="muted small">{t("stats.pending")}</span>
-        <b>{terms?.pendingUsers == null ? "—" : fmt.num(terms.pendingUsers)}</b>
+        <b><CountUp value={terms?.pendingUsers == null ? "—" : fmt.num(terms.pendingUsers)} /></b>
         <span className="muted small">{t("stats.pendingNote")}</span>
       </div>
       <div className="stat">
         <span className="muted small">{t("stats.dpa")}</span>
-        <b>{fmt.num(dpa)}</b>
+        <b><CountUp value={fmt.num(dpa)} /></b>
         <span className="muted small">{t("stats.dpaNote")}</span>
       </div>
       <div className="stat">
         <span className="muted small">{t("stats.scheduled")}</span>
-        <b>{scheduled}</b>
+        <b><CountUp value={scheduled} /></b>
         <span className="muted small">{t("stats.scheduledNote")}</span>
       </div>
     </section>

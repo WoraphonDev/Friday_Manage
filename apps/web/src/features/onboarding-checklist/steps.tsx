@@ -102,7 +102,7 @@ function StepRow({ ws, step, index, data, compact = false, onNavigate }: { ws: s
 
 export function StepList({ ws, data, compact, onNavigate }: { ws: string; data: Checklist; compact?: boolean; onNavigate?: () => void }) {
   return (
-    <ol className={cn(styles.list, compact && styles.listCompact)}>
+    <ol className={cn(styles.list, compact && styles.listCompact, "motion-list")}>
       {data.steps.map((s, i) => (
         <StepRow key={s.key} ws={ws} step={s} index={i} data={data} compact={compact} onNavigate={onNavigate} />
       ))}
@@ -113,7 +113,7 @@ export function StepList({ ws, data, compact, onNavigate }: { ws: string; data: 
 export function ProgressBar({ done, total, label }: { done: number; total: number; label: string }) {
   return (
     <span className={styles.bar} role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-label={label}>
-      <span style={{ width: `${Math.round((done * 100) / Math.max(total, 1))}%` }} />
+      <span className="motion-bar" style={{ width: `${Math.round((done * 100) / Math.max(total, 1))}%` }} />
     </span>
   );
 }

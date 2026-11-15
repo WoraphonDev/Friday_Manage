@@ -250,7 +250,8 @@ function Lookup({ workspaceId }: { workspaceId: string }) {
       </form>
       <InlineError error={m.error} />
       {r && r.status === "purged" && (
-        <div className="state" style={{ alignItems: "flex-start", textAlign: "left" }}>
+        // ผลค้นขึ้นหลังกดค้น: เลื่อนเข้าแบบนุ่ม (key = คำค้น ค้นใหม่แล้วเล่นใหม่)
+        <div key={r.q} className="state motion-in" style={{ alignItems: "flex-start", textAlign: "left" }}>
           <span className="state-icon" aria-hidden="true">
             <TriangleAlert size={20} />
           </span>
@@ -264,7 +265,11 @@ function Lookup({ workspaceId }: { workspaceId: string }) {
           </Button>
         </div>
       )}
-      {r && r.status !== "purged" && <Notice tone={r.status === "not_found" ? "warn" : "info"} title={t(r.status === "live" ? "live" : r.status === "in_trash" ? "inTrash" : "notFound", { q: r.q })} />}
+      {r && r.status !== "purged" && (
+        <div key={`${r.q}-${r.status}`} className="motion-in">
+          <Notice tone={r.status === "not_found" ? "warn" : "info"} title={t(r.status === "live" ? "live" : r.status === "in_trash" ? "inTrash" : "notFound", { q: r.q })} />
+        </div>
+      )}
     </section>
   );
 }

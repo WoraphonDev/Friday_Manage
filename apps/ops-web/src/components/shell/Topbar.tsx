@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import type { Staff } from "@/lib/types";
 import { hasAny, initials, rolesOf } from "../access";
 import { Modal, Popover, RoleChips } from "../kit";
@@ -28,6 +29,8 @@ export function SearchPalette({ staff, open, onOpenChange, onApprovals }: { staf
   const router = useRouter();
   const [q, setQ] = useState("");
   const [index, setIndex] = useState(0);
+  // แถบไฮไลต์ผลที่เลือก (ลูกศร / ชี้) เลื่อนตามไป · สีตาม .menu-item[aria-selected]
+  const highlight = useSlidingIndicator<HTMLDivElement>(".menu-item");
   const query = useDeferredValue(q.trim());
   const enabled = open && query.length >= 2;
   const enc = encodeURIComponent(query);
@@ -90,7 +93,7 @@ export function SearchPalette({ staff, open, onOpenChange, onApprovals }: { staf
         />
         <kbd>Esc</kbd>
       </div>
-      <div className="palette-results" id="ops-palette-results" role="listbox" aria-label={t("search.title")}>
+      <div ref={highlight} className="palette-results motion-pill palette-pill" id="ops-palette-results" role="listbox" aria-label={t("search.title")}>
         {query.length > 0 && query.length < 2 && <p className="muted small" style={{ padding: 10 }}>{t("search.minChars")}</p>}
         {loading && <p className="muted small" style={{ padding: 10 }}>{t("search.searching")}</p>}
         {enabled && !loading && hits.length === 0 && <p className="muted small" style={{ padding: 10 }}>{t("search.noResult", { q: query })}</p>}

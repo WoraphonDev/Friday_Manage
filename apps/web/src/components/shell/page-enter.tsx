@@ -41,7 +41,8 @@ export function MotionSwap({ children, className, style }: { children: ReactNode
   const [withPage] = useState(pageEntering);
   return (
     <div className={`${withPage ? "motion-swap-static" : "motion-swap"}${className ? ` ${className}` : ""}`} style={style} data-entering={entering ? "" : undefined}>
-      {children}
+      {/* MotionSwap ข้างในที่ขึ้นพร้อมกรอบนี้ (เช่น สัปดาห์ในรายงานที่สลับมาพร้อมหัวข้อ) ก็ไม่เลื่อนซ้อนเช่นกัน */}
+      <PageEntering.Provider value={entering}>{children}</PageEntering.Provider>
     </div>
   );
 }

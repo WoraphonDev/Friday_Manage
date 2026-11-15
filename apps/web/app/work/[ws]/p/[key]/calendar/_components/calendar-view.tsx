@@ -5,12 +5,13 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button, buttonVariants, Dialog, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
+import { Button, buttonVariants, Dialog, ErrorState, Forbidden, Input, LoadingState, MotionSwap, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat, intlLocale } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import { useIsMobile } from "@/lib/use-mobile";
+import { useSlidingIndicator } from "@/lib/motion";
 import type { Permissions, Person } from "@/lib/types";
 import { SubscribeDialog } from "./subscribe-dialog";
 import styles from "./cal.module.css";
@@ -91,6 +92,10 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
   const [needRequest, setNeedRequest] = useState<Pending | null>(null);
   const [subscribe, setSubscribe] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(true);
+  // แผงตัวกรองที่เปิดเองหลังเปิดหน้า = ค่อย ๆ โผล่ (motion-in) · ที่เปิดอยู่ตั้งแต่แรกไม่ต้อง
+  const [filtersToggled, setFiltersToggled] = useState(false);
+  // พื้นปุ่มมุมมองที่เลือก (Month / Week / Day / Agenda) เลื่อนตามปุ่มที่กด
+  const viewRef = useSlidingIndicator<HTMLDivElement>("button");
   const dragged = useRef<string | null>(null);
 
   const month = anchor ? anchor.slice(0, 7) : null;
@@ -221,22 +226,24 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
         <h2 className={styles.title}>{title}</h2>
       </div>
       <div className={styles.bar} style={{ justifyContent: "flex-start" }}>
-        <div className={styles.seg} role="group" aria-label={t("view.label")}>
+        <div ref={viewRef} className={`${styles.seg} motion-pill`} role="group" aria-label={t("view.label")}>
           {(["month", "week", "day", "agenda"] as const).map((v) => (
             <button key={v} type="button" aria-pressed={view === v} onClick={() => { picked.current = true; setView(v); }}>{t(`view.${v}`)}</button>
           ))}
         </div>
-        <Button aria-expanded={filtersOpen} onClick={() => setFiltersOpen((x) => !x)}>{t("filter")}</Button>
+        <Button aria-expanded={filtersOpen} onClick={() => { setFiltersToggled(true); setFiltersOpen((x) => !x); }}>{t("filter")}</Button>
         {canCreate && <Link className={buttonVariants({ variant: "primary" })} href={`/work/${encodeURIComponent(ws)}/p/${encodeURIComponent(projectKey)}/calendar?new=1&type=task`}>{t("newTask")}</Link>}
       </div>
 
       <div className={styles.layout}>
         <section className={styles.card} aria-label={title}>
           {!hasTasks && <p className={styles.empty} role="status"><b>{t("empty")}</b> <span className="muted">{t("emptyHint")}</span></p>}
+          {/* เปลี่ยนมุมมองหรือเลื่อนเดือน / สัปดาห์ / วัน: ตารางชุดใหม่เลื่อนเข้าแบบเดียวกับเปลี่ยนหน้า */}
+          <MotionSwap key={`${view}:${days[0]}`}>
           {view === "agenda" ? (
             <div className={styles.agenda}>
               {days.filter((day) => day.startsWith(shownMonth) && ((items.get(day) ?? []).length || (tags.get(day) ?? []).length)).map((day) => (
-                <div key={day} className={`${styles.agendaDay} ${day === d.today ? styles.agendaToday : ""}`} data-testid={`day-${day}`}>
+                <div key={day} className={`${styles.agendaDay} motion-item ${day === d.today ? styles.agendaToday : ""}`} data-testid={`day-${day}`}>
                   <div className={styles.agendaDate}><b>{Number(day.slice(8))}</b><span>{dow[(new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7]}</span></div>
                   <div className={styles.agendaItems}>
                     {(tags.get(day) ?? []).map((x) => <span key={x.text} className={`${styles.tag} ${x.hol ? styles.tagHol : ""}`}>{x.text}</span>)}
@@ -250,7 +257,7 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
             {(view === "day" ? [dow[(new Date(`${at}T00:00:00Z`).getUTCDay() + 6) % 7]] : dow).map((name, i) => <div key={name}><span className={styles.long}>{name}</span><span className={styles.short} aria-hidden="true">{dowShort[i]}</span></div>)}
           </div>
           {weeks.map((week) => (
-            <div key={week[0]} className={styles.week} style={view === "day" ? { gridTemplateColumns: "1fr" } : undefined}>
+            <div key={week[0]} className={`${styles.week} motion-item`} style={view === "day" ? { gridTemplateColumns: "1fr" } : undefined}>
               {week.map((day, c) => {
                 const out = view === "month" && !day.startsWith(shownMonth);
                 const isToday = day === d.today;
@@ -288,6 +295,7 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
             </div>
           ))}
           </>}
+          </MotionSwap>
         </section>
 
         <aside className={styles.aside}>
@@ -295,7 +303,7 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
             <section className={styles.panel} aria-label={t("unscheduled")}>
               <h2>{t("unscheduled")}</h2>
               <p className="muted" style={{ fontSize: 11, margin: "-6px 0 8px" }}>{t("unscheduledHint")}</p>
-              <div className={styles.unsched}>
+              <div className={`${styles.unsched} motion-list`}>
                 {unscheduled.data.unscheduled.slice(0, 5).map((u) => (
                   <span key={u.key} className={styles.uItem} draggable={canEdit} data-testid={`unscheduled-${u.key}`} onDragStart={(e) => { dragged.current = u.key; e.dataTransfer?.setData("text/plain", u.key); }} title={u.title}>
                     <span className={styles.grip} aria-hidden="true">⋮⋮</span><span className={styles.evDot} aria-hidden="true" /><span className={styles.t}>{u.key} {u.title}</span>
@@ -305,7 +313,7 @@ export function CalendarView({ ws, projectKey }: { ws: string; projectKey: strin
               </div>
             </section>
           )}
-          {filtersOpen && <section className={styles.panel}>
+          {filtersOpen && <section className={`${styles.panel}${filtersToggled ? " motion-in" : ""}`}>
             <h2>{t("show.title")}</h2>
             <div className={styles.checks}>
               {(["tasks", "milestones", "sprints", "holidays", "leaves", "done"] as const).map((k) => (

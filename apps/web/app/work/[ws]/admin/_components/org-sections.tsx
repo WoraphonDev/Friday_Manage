@@ -49,7 +49,7 @@ export function TeamsSection({ ws }: { ws: string }) {
       ) : teams.data.items.length === 0 ? (
         <EmptyState title={t("empty")} description={t("emptyHint")} />
       ) : (
-        <div className={styles.teams}>
+        <div className={`${styles.teams} motion-list`}>
           {teams.data.items.map((team) => (
             <div key={team.id} className={styles.team}>
               <div className={styles.teamBar} style={{ background: team.color ?? FALLBACK_PROJECT_COLOR }} />
@@ -313,7 +313,7 @@ function CalendarCard({ ws, settings }: { ws: string; settings: WorkspaceSetting
           {holidays.data && (holidays.data.items.length === 0 ? (
             <span className={styles.muted}>{t("noUpcoming")}</span>
           ) : (
-            <div>
+            <div className="motion-list">
               {holidays.data.items.map((h) => (
                 <div key={h.id} className={styles.row}>
                   <span style={{ width: 130 }}>{formatDate(h.date, me.yearFormat, true)}</span>
@@ -450,7 +450,7 @@ function TemplatesCard({ ws }: { ws: string }) {
       ) : templates.data.items.length === 0 ? (
         <span className={styles.muted}>{t("empty")}</span>
       ) : (
-        <div>
+        <div className="motion-list">
           {templates.data.items.map((tpl) => (
             <div key={tpl.id} className={styles.row}>
               <span className={styles.grow}><b>{tpl.name}</b><div className={styles.muted}>{tpl.description ?? ""}</div></span>
@@ -550,7 +550,7 @@ export function WorkloadSection({ ws }: { ws: string }) {
             {w.buckets.map((b) => <div key={b.start}>{formatDateRange(b.start, b.end, me.yearFormat)}</div>)}
           </div>
           {w.people.map((p) => (
-            <div key={p.person.id} className={styles.wl} style={{ "--cols": w.buckets.length } as React.CSSProperties}>
+            <div key={p.person.id} className={`${styles.wl} motion-item`} style={{ "--cols": w.buckets.length } as React.CSSProperties}>
               <div className={styles.chips} style={{ flexWrap: "nowrap" }}>
                 <Avatar person={p.person} size="small" />
                 <span style={{ minWidth: 0 }}>

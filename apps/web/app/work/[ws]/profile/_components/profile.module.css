@@ -115,3 +115,17 @@
 @media (max-width: 760px) {
   :global(.page-back):has(+ .mobile) { display: none; }
 }
+
+/* มือถือ: แท็บเป็นชิป จึงใช้พื้นม่วงอ่อนที่เลื่อนตามแท็บที่เลือกแทนเส้นใต้ของ Tabs (ตำแหน่ง --ind-* จาก useSlidingIndicator ใน Tabs)
+   หน้าตาเดียวกับชิปที่เลือกด้านบน · ระหว่างเลื่อนชิปอื่นโปร่ง (อยู่บนพื้นการ์ดสีเดียวกัน) */
+@media (max-width: 760px) {
+  .mobile .main :global(.tabs[data-indicator]) { isolation: isolate; }
+  .mobile .main :global(.tabs[data-indicator])::after { content: none; }
+  .mobile .main :global(.tabs[data-indicator])::before {
+    content: ""; position: absolute; left: 0; top: 0; z-index: -1; width: var(--ind-w); height: var(--ind-h); translate: var(--ind-x) var(--ind-y);
+    box-sizing: border-box; border: 1px solid var(--primary-border); border-radius: 22px; background: var(--primary-soft); pointer-events: none;
+  }
+  .mobile .main :global(.tabs[data-indicator="on"])::before { transition: translate var(--motion-dur) var(--motion-ease), width var(--motion-dur) var(--motion-ease), height var(--motion-dur) var(--motion-ease); }
+  .mobile .main :global(.tabs[data-indicator] .tab) { background: transparent; }
+  .mobile .main :global(.tabs[data-indicator] .tab[data-state="active"]) { border-color: transparent; }
+}

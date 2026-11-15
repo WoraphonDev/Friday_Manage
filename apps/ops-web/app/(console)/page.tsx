@@ -12,6 +12,7 @@ import { useMe } from "@/lib/query";
 import { ColumnChart, HBars } from "./business/_parts/charts";
 import { PLAN_LABEL, planLabel, useFmt } from "./workspaces/_parts/format";
 import { FeedCard, UsageCard } from "./_main/UsageFeed";
+import { CountUp } from "@/components/count-up";
 
 interface Movement {
   count: number;
@@ -118,26 +119,26 @@ function Kpis({ d }: { d: MainOverview }) {
         <>
           <div className="stat">
             <span className="muted small">{t("mrr")}</span>
-            <b>{fmt.money(m.mrr)}</b>
+            <b><CountUp value={fmt.money(m.mrr)} /></b>
             <span className="small">
               {growth != null && <span className={growth >= 0 ? "pill ok" : "pill bad"}>{`${growth >= 0 ? "+" : ""}${growth}%`}</span>} <span className="muted">{t("mrrNote", { start: fmt.money(start) })}</span>
             </span>
           </div>
           <div className="stat">
             <span className="muted small">{t("arr")}</span>
-            <b>{fmt.money(m.arr)}</b>
+            <b><CountUp value={fmt.money(m.arr)} /></b>
             <span className="muted small">{t("arrNote")}</span>
           </div>
           <div className="stat">
             <span className="muted small">{t("paying")}</span>
-            <b>{fmt.num(m.payingWorkspaces)}</b>
+            <b><CountUp value={fmt.num(m.payingWorkspaces)} /></b>
             <span className="muted small">{t("payingNote", { arpa: fmt.money(m.arpa) })}</span>
           </div>
         </>
       )}
       <div className="stat">
         <span className="muted small">{t("trialing")}</span>
-        <b>{fmt.num(d.trialing)}</b>
+        <b><CountUp value={fmt.num(d.trialing)} /></b>
         <span className="small">
           {d.tasks.trialEndingSoon > 0 && <span className="pill warn">{t("trialEnding", { n: d.tasks.trialEndingSoon })}</span>} <span className="muted">{t("trialNote")}</span>
         </span>
@@ -146,12 +147,12 @@ function Kpis({ d }: { d: MainOverview }) {
         <>
           <div className={(m.churn.revenuePct ?? 0) > 3 ? "stat stat-warn" : "stat"}>
             <span className="muted small">{t("churn")}</span>
-            <b>{pct(m.churn.revenuePct)}</b>
+            <b><CountUp value={pct(m.churn.revenuePct)} /></b>
             <span className="muted small">{t("churnNote", { logo: pct(m.churn.logoPct), revenue: pct(m.churn.revenuePct) })}</span>
           </div>
           <div className="stat">
             <span className="muted small">{t("nrr")}</span>
-            <b>{pct(m.nrrPct)}</b>
+            <b><CountUp value={pct(m.nrrPct)} /></b>
             <span className="muted small">{t("nrrNote")}</span>
           </div>
         </>
@@ -197,13 +198,13 @@ function MrrCard({ d }: { d: MainOverview }) {
           <span key={x.key} className="stack" style={{ gap: 0 }}>
             <span className="muted small">{t(`moves.${x.key}` as "moves.new")}</span>
             <b className="mono" style={{ color: x.value > 0 ? "var(--success-text)" : x.value < 0 ? "var(--danger-text)" : undefined }}>
-              {signed(x.value)}
+              <CountUp value={signed(x.value)} />
             </b>
           </span>
         ))}
         <span className="stack" style={{ gap: 0 }}>
           <span className="muted small">{t("moves.net")}</span>
-          <b className="mono">{signed(m.netNewMrr)}</b>
+          <b className="mono"><CountUp value={signed(m.netNewMrr)} /></b>
         </span>
       </div>
     </section>
@@ -224,7 +225,7 @@ function Todo({ tasks }: { tasks: MainOverview["tasks"] }) {
       {!items.length ? (
         <Notice tone="ok" title={t("todoEmpty")} />
       ) : (
-        <ul className="stack" style={{ listStyle: "none", margin: 0, padding: 0, gap: 6 }}>
+        <ul className="stack motion-list" style={{ listStyle: "none", margin: 0, padding: 0, gap: 6 }}>
           {items.map((x) => (
             <li key={x.task}>
               <Link className="menu-item" href={x.href} style={{ alignItems: "flex-start", border: "1px solid var(--border)" }}>

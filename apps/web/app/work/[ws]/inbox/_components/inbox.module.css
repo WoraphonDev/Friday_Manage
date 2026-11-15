@@ -79,6 +79,12 @@
   .showDetail .list { display:none; }
   .layout:not(.showDetail) .detail { display:none; }
   .dHead .back { display:inline-flex; }
+  /* popup รายละเอียดบนมือถือ: พื้นหัวชิดขอบ sheet · ปุ่มตัดบรรทัดได้ ไม่ล้นแนวนอน · ใช้เฉพาะ ≤760px */
+  .popup { overflow-x:hidden; margin:0 -16px; }
+  .popup .hero { padding:12px 16px; }
+  .popup .dHead { flex-wrap:wrap; }
+  .popup .actions { flex-wrap:wrap; }
+  .popup .dBody { padding:16px 16px 0; overflow-wrap:anywhere; }
 }
 
 /* ===== ลูกเล่น (ผู้ใช้เลือกแบบ A+C จากตัวอย่าง 2026-11-15): แต่ละส่วนของรายละเอียดเลื่อนเข้าจากขวาไล่กัน =====

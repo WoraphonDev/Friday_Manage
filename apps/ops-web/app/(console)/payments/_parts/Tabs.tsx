@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
 import { hasAny } from "@/components/access";
 import { ConfirmDialog, useApprovalFlow, useReauth } from "@/components/dialogs";
-import { Chip, Drawer, Empty, ErrorBlock, Modal, Notice, Seg, TableSkeleton } from "@/components/kit";
+import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, Seg, TableSkeleton } from "@/components/kit";
 import { Button, buttonClass, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
 import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -125,7 +125,7 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
         <h2 className="card-title">{t("tabs.invoices")}</h2>
         <span className="card-sub">{t("invoices.note")}</span>
       </div>
-      <div className="row">
+      <ChipGroup className="row">
         <div style={{ flex: "1 1 240px" }}>
           <Input aria-label={t("invoices.search")} placeholder={t("invoices.search")} value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
@@ -134,7 +134,7 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
             {s ? t(`invoices.status.${s}`) : t("invoices.statusAll")}
           </Chip>
         ))}
-      </div>
+      </ChipGroup>
       {list.isPending ? (
         <TableSkeleton rows={5} cols={8} />
       ) : list.error ? (

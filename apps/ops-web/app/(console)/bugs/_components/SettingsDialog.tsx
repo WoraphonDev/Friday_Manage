@@ -130,16 +130,19 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
           </div>
           <p className="muted small">{t("resolutionNote")}</p>
         </fieldset>
+        {/* ผลทดสอบการเชื่อมต่อขึ้นหลังกดทดสอบ: เลื่อนเข้าแบบนุ่ม */}
         {result && (
-          <Notice tone={result.ok ? "ok" : "bad"} title={result.ok ? t("testOk") : t("testFail")}>
-            <ul className={styles.checks}>
-              {result.checks.map((c) => (
-                <li key={c.key}>
-                  {c.ok ? <Check size={14} aria-label="ok" /> : <X size={14} aria-label="fail" />} <b>{t(`check.${c.key}`)}</b> · {c.message}
-                </li>
-              ))}
-            </ul>
-          </Notice>
+          <div className="motion-in">
+            <Notice tone={result.ok ? "ok" : "bad"} title={result.ok ? t("testOk") : t("testFail")}>
+              <ul className={styles.checks}>
+                {result.checks.map((c) => (
+                  <li key={c.key}>
+                    {c.ok ? <Check size={14} aria-label="ok" /> : <X size={14} aria-label="fail" />} <b>{t(`check.${c.key}`)}</b> · {c.message}
+                  </li>
+                ))}
+              </ul>
+            </Notice>
+          </div>
         )}
         <InlineError error={save.error ?? test.error} />
         <div className="dialog-actions">

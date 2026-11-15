@@ -4,12 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { IrreversibleDialog, useApprovalFlow, useReauth } from "@/components/dialogs";
-import { Chip, Drawer, Empty, ErrorBlock, Modal, Notice, TableSkeleton } from "@/components/kit";
+import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, TableSkeleton } from "@/components/kit";
 import { Button, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useFmt } from "../../workspaces/_parts/format";
 import { dsr, type Identity, type PrivacyRequest, REQUEST_TYPES, type RequestDetail, type RequestType, todayBkk } from "./types";
 import { type PickedWs, WorkspacePicker } from "./WorkspacePicker";
+import { CountUp } from "@/components/count-up";
 
 const key = ["ops", "privacy", "requests"] as const;
 const invalidate = (cache: ReturnType<typeof useQueryClient>) => void cache.invalidateQueries({ queryKey: ["ops"] });
@@ -43,19 +44,19 @@ export function RequestStats({ items }: { items: PrivacyRequest[] }) {
     <section className="stats">
       <div className="stat">
         <span className="muted small">{t("open")}</span>
-        <b>{open.length}</b>
+        <b><CountUp value={open.length} /></b>
       </div>
       <div className={soon ? "stat stat-warn" : "stat"}>
         <span className="muted small">{t("dueSoon")}</span>
-        <b>{soon}</b>
+        <b><CountUp value={soon} /></b>
       </div>
       <div className={late ? "stat stat-bad" : "stat stat-ok"}>
         <span className="muted small">{t("overdue")}</span>
-        <b>{late}</b>
+        <b><CountUp value={late} /></b>
       </div>
       <div className="stat">
         <span className="muted small">{t("avg")}</span>
-        <b>{avg == null ? "—" : t("days", { n: avg })}</b>
+        <b><CountUp value={avg == null ? "—" : t("days", { n: avg })} /></b>
       </div>
     </section>
   );
@@ -73,13 +74,13 @@ export function RequestsTable({ query, onOpen }: { query: ReturnType<typeof useR
         <h2 className="card-title">{t("requests")}</h2>
         <span className="card-sub">{t("requestsSub")}</span>
         <span className="spacer" />
-        <div className="row">
+        <ChipGroup className="row">
           {(["open", "completed", "rejected", "all"] as const).map((v) => (
             <Chip key={v} pressed={filter === v} onClick={() => setFilter(v)}>
               {t(`filter.${v}`)}
             </Chip>
           ))}
-        </div>
+        </ChipGroup>
       </div>
       {query.isPending ? (
         <TableSkeleton rows={4} cols={7} />

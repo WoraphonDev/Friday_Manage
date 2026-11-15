@@ -55,11 +55,11 @@
 .embedded { padding:0; background:none; border:0; }
 .embedded .wrap { max-width:none; padding:0; }
 .pricingHead { text-align:center; display:flex; flex-direction:column; gap:8px; align-items:center; }
-.seg { position:relative; display:inline-flex; border:1px solid var(--input); border-radius:999px; padding:3px; background:var(--card); }
-/* แถบทึบเลื่อนตามปุ่มที่เลือก (ตำแหน่งตั้งจาก pricing.tsx) */
-.segInd { position:absolute; top:3px; bottom:3px; left:0; width:0; border-radius:999px; background:var(--contrast-bg); transition:transform .45s cubic-bezier(.2,.8,.2,1), width .45s cubic-bezier(.2,.8,.2,1); }
-.seg button { position:relative; z-index:1; min-height:34px; padding:0 14px; border:0; border-radius:999px; background:transparent; font-size:14px; color:var(--foreground-soft); transition:color .3s; }
-.seg button[aria-pressed="true"] { color:var(--contrast-ink); font-weight:600; }
+/* พื้นทึบใต้ปุ่มที่เลือกเป็น .motion-pill (useSlidingIndicator ใน pricing.tsx) · สีและมุมตั้งด้วย --ind-* ให้ตรงกับปุ่มที่เลือก
+   ปุ่มที่เลือกมีพื้นของตัวเองไว้ด้วย (ก่อน JavaScript วัดตำแหน่งเสร็จ) · CSS กลางล้างพื้นนี้ออกเมื่อแถบเลื่อนเปิดแล้ว */
+.seg { position:relative; display:inline-flex; border:1px solid var(--input); border-radius:999px; padding:3px; background:var(--card); --ind-bg:var(--contrast-bg); --ind-radius:999px; }
+.seg button { position:relative; z-index:1; min-height:34px; padding:0 14px; border:0; border-radius:999px; background:transparent; font-size:14px; color:var(--foreground-soft); transition:color var(--motion-dur-s); }
+.seg button[aria-pressed="true"] { background:var(--contrast-bg); color:var(--contrast-ink); font-weight:600; }
 .save { font-weight:700; color:var(--success-text); }
 .seg button[aria-pressed="true"] .save { color:var(--inverse-success); }
 .team { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 20px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
@@ -68,15 +68,15 @@
 .team > b { min-width:70px; font-size:18px; }
 .pill { display:inline-flex; align-items:center; padding:1px 10px; border-radius:999px; font-size:12px; font-weight:600; white-space:nowrap; background:var(--primary-soft); color:var(--primary-text); }
 .plans { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; }
-.plan { display:flex; flex-direction:column; gap:10px; padding:20px; border:1px solid var(--border); border-radius:14px; background:var(--card); position:relative; transition:border-color .35s, box-shadow .35s, transform .45s cubic-bezier(.34,1.56,.64,1); }
+.plan { display:flex; flex-direction:column; gap:10px; padding:20px; border:1px solid var(--border); border-radius:14px; background:var(--card); position:relative; transition:border-color var(--motion-dur-s), box-shadow var(--motion-dur) ease, transform var(--motion-dur) var(--motion-ease); }
 .plan:not(.hot):hover { transform:translateY(-3px); }
-/* แพ็กเกจที่เหมาะกับทีมยกขึ้น เลื่อน slider แล้วย้ายแบบเด้ง */
+/* แพ็กเกจที่เหมาะกับทีมยกขึ้น เลื่อน slider แล้วย้ายแบบนุ่มเรียบ (ความเร็วตาม --motion-*) */
 .plan.hot { border-color:var(--primary); box-shadow:0 0 0 1px var(--primary), var(--shadow-menu); transform:translateY(-6px); }
 .plan ul { margin:0; padding-left:18px; font-size:14px; line-height:1.9; }
 .plan > b { font-size:17px; }
-.fitTag { position:absolute; top:-11px; left:16px; background:var(--primary); color:var(--on-primary); animation:pop .46s cubic-bezier(.34,1.56,.64,1) both; }
+.fitTag { position:absolute; top:-11px; left:16px; background:var(--primary); color:var(--on-primary); animation:pop var(--motion-dur) var(--motion-ease) both; }
 @keyframes pop { from { opacity:0; transform:translateY(8px) scale(.7); } }
-.price { display:inline-block; font-size:28px; font-weight:700; line-height:1.2; font-variant-numeric:tabular-nums; animation:price-in .34s cubic-bezier(.2,.8,.2,1) both; }
+.price { display:inline-block; font-size:28px; font-weight:700; line-height:1.2; font-variant-numeric:tabular-nums; animation:price-in var(--motion-dur) var(--motion-ease) both; }
 /* เปลี่ยนรายเดือน/รายปีแล้วตัวเลขเลื่อนขึ้นมาแทน (span ถูกสร้างใหม่ตามราคา) */
 @keyframes price-in { from { opacity:0; transform:translateY(14px); } }
 .sub { font-size:12px; min-height:18px; }
@@ -84,11 +84,11 @@
 .cmpBox { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:4px 0; }
 .cmpBox summary { cursor:pointer; padding:12px 20px; font-weight:600; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:12px; }
 .cmpBox summary::-webkit-details-marker { display:none; }
-.cmpBox summary::after { content:"+"; font-size:20px; line-height:1; transition:transform .4s cubic-bezier(.34,1.56,.64,1); }
+.cmpBox summary::after { content:"+"; font-size:20px; line-height:1; transition:transform var(--motion-dur) var(--motion-ease); }
 .cmpBox[open] summary::after { transform:rotate(135deg); }
 /* เปิดปิดแบบยืด: เบราว์เซอร์ที่รองรับ ::details-content เล่นนุ่ม ที่ไม่รองรับเปิดทันทีเหมือนเดิม */
 .cmpBox, .faq { interpolate-size:allow-keywords; }
-.cmpBox::details-content, .faq::details-content { height:0; overflow:clip; transition:height .4s cubic-bezier(.2,.8,.2,1), content-visibility .4s allow-discrete; }
+.cmpBox::details-content, .faq::details-content { height:0; overflow:clip; transition:height var(--motion-dur) var(--motion-ease), content-visibility var(--motion-dur) allow-discrete; }
 .cmpBox[open]::details-content, .faq[open]::details-content { height:auto; }
 .cmpScroll { overflow-x:auto; padding:0 8px 12px; }
 /* ตารางเปรียบเทียบ (แบบ A): เส้นบาง ป้ายชิดซ้าย 4 หมวด · คอลัมน์ที่เหมาะกับทีมเป็นกรอบม่วง · มือถือเลื่อนข้างโดยชื่อแถวค้างไว้ */
@@ -117,7 +117,7 @@
 .faq { border-bottom:1px solid var(--border); padding:14px 0; }
 .faq summary { cursor:pointer; font-weight:600; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:12px; transition:color .2s; }
 .faq summary:hover { color:var(--primary-text); }
-.plus { position:relative; width:14px; height:14px; flex:none; transition:transform .4s cubic-bezier(.34,1.56,.64,1); }
+.plus { position:relative; width:14px; height:14px; flex:none; transition:transform var(--motion-dur) var(--motion-ease); }
 .plus::before, .plus::after { content:""; position:absolute; left:0; right:0; top:6px; height:2px; border-radius:2px; background:currentColor; }
 .plus::after { transform:rotate(90deg); }
 .faq[open] .plus { transform:rotate(135deg); }
@@ -212,7 +212,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .header, .nav a::after, .menuButton span, .menuButton span::before, .menuButton span::after, .menu, .menuScrim, .shine, .shine::after, .footerCol a::after, .linkButton::after, .segInd, .seg button, .plan, .fitTag, .price, .plus, .cmpBox summary::after, .cmpBox::details-content, .faq::details-content { transition:none; animation:none; }
+  .header, .nav a::after, .menuButton span, .menuButton span::before, .menuButton span::after, .menu, .menuScrim, .shine, .shine::after, .footerCol a::after, .linkButton::after, .seg button, .plan, .fitTag, .price, .plus, .cmpBox summary::after, .cmpBox::details-content, .faq::details-content { transition:none; animation:none; }
 }
 
 @media (max-width: 640px) {

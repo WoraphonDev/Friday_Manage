@@ -4,9 +4,10 @@ import { useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { ErrorState, Forbidden, LoadingState } from "@/components/ui";
+import { ErrorState, Forbidden, LoadingState, MotionSwap } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { queryKeys } from "@/lib/query";
 import type { Permissions } from "@/lib/types";
 import { projectEndpoint } from "../../dashboard/_components/types";
@@ -32,6 +33,8 @@ function ScopedReports({ ws, projectKey }: ViewProps) {
   const [report, setReport] = useState<ReportKind>(REPORTS.includes(initial as ReportKind) ? (initial as ReportKind) : "weekly");
   const endpoint = projectEndpoint(ws, projectKey);
   const permissions = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${endpoint}/my-permissions`) });
+  // พื้นไฮไลต์เลื่อนตามรายงานที่เลือกในเมนูซ้าย (ต้องเรียกก่อน return ระหว่างโหลด)
+  const navRef = useSlidingIndicator<HTMLElement>(`.${styles.navItem}`);
 
   const issueHref = (key: string) => {
     const next = new URLSearchParams(search);
@@ -49,14 +52,17 @@ function ScopedReports({ ws, projectKey }: ViewProps) {
 
   const common = { ws, projectKey, yearFormat: me.yearFormat, issueHref };
   return <div className={styles.page}>
-    <nav className={`${styles.card} ${styles.nav}`} aria-label={t("reports.nav")}>
+    <nav ref={navRef} className={`${styles.card} ${styles.nav} motion-pill`} aria-label={t("reports.nav")}>
       {REPORTS.map((kind) => <button key={kind} type="button" className={`${styles.navItem} ${report === kind ? styles.navOn : ""}`} aria-current={report === kind ? "page" : undefined} onClick={() => setReport(kind)}>{t(`reports.kind.${kind}`)}</button>)}
       <p className={styles.navNote}>{t("reports.navNote")}</p>
     </nav>
     <section className={styles.main} aria-label={t(`reports.kind.${report}`)}>
-      {report === "weekly" && <WeeklyReportView {...common} canSend={perms.includes("project.settings")} />}
-      {report === "pva" && <PlanVsActual {...common} />}
-      {report === "trace" && <Traceability {...common} />}
+      {/* สลับรายงาน: เนื้อหาเคลื่อนเข้าแบบเดียวกับการเปลี่ยนหน้า · กรอบ flex เดิมอยู่ที่ .swap */}
+      <MotionSwap key={report} className={styles.swap}>
+        {report === "weekly" && <WeeklyReportView {...common} canSend={perms.includes("project.settings")} />}
+        {report === "pva" && <PlanVsActual {...common} />}
+        {report === "trace" && <Traceability {...common} />}
+      </MotionSwap>
     </section>
   </div>;
 }

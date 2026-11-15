@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { clsx } from "clsx";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { hasAny, rolesOf } from "@/components/access";
-import { Chip, Empty, ErrorBlock, NoAccess, PageHead, Seg, TableSkeleton } from "@/components/kit";
+import { Chip, ChipGroup, Empty, ErrorBlock, NoAccess, PageHead, Seg, TableSkeleton } from "@/components/kit";
 import { Button, Pill } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -14,6 +15,7 @@ import { canFollow, canRead } from "./access";
 import { FollowDrawer } from "./FollowDrawer";
 import { onbKey, type OnboardingOverview, STEPS, type StuckRow } from "./types";
 import styles from "./onboarding.module.css";
+import { CountUp } from "@/components/count-up";
 
 type Days = "7" | "30" | "90";
 type Filter = "over3" | "trial7" | "unassigned" | "step" | "all" | "inactive";
@@ -101,22 +103,22 @@ export function OnboardingPage() {
           <section className="stats" aria-label="KPI">
             <div className="stat">
               <span className="muted small">{t("kpi.new")}</span>
-              <b>{fmt.num(d.kpis.newWorkspaces)}</b>
+              <b><CountUp value={fmt.num(d.kpis.newWorkspaces)} /></b>
               <span className="muted small">{t("kpi.newNote", { trial: d.kpis.trial, free: d.kpis.free })}</span>
             </div>
             <div className="stat">
               <span className="muted small">{t("kpi.complete")}</span>
-              <b>{d.kpis.completedPct}%</b>
+              <b><CountUp value={`${d.kpis.completedPct}%`} /></b>
               <span className="muted small">{d.kpis.avgDaysToComplete != null ? t("kpi.completeNote", { days: d.kpis.avgDaysToComplete }) : "—"}</span>
             </div>
             <div className="stat">
               <span className="muted small">{t("kpi.activated")}</span>
-              <b>{d.kpis.activatedPct}%</b>
+              <b><CountUp value={`${d.kpis.activatedPct}%`} /></b>
               <span className="muted small">{t("kpi.activatedNote")}</span>
             </div>
             <div className="stat">
               <span className="muted small">{t("kpi.stuck")}</span>
-              <b>{fmt.num(d.kpis.stuckOver3)}</b>
+              <b><CountUp value={fmt.num(d.kpis.stuckOver3)} /></b>
               <span className="muted small">{t("kpi.stuckNote", { n: d.kpis.stuckUnassigned })}</span>
             </div>
           </section>
@@ -134,7 +136,7 @@ export function OnboardingPage() {
                     <li key={f.key}>
                       <span className={styles.fLabel}>{stepLabel(f.key)}</span>
                       <span className={styles.track} aria-hidden="true">
-                        <span className={worst ? styles.fillBad : styles.fill} style={{ width: `${f.pct}%` }} />
+                        <span className={clsx(worst ? styles.fillBad : styles.fill, "motion-bar")} style={{ width: `${f.pct}%` }} />
                       </span>
                       <b className={styles.fPct}>{f.pct}%</b>
                       <span className={worst ? styles.fDropBad : styles.fDrop}>{i === 0 || f.drop == null ? "—" : f.drop === 0 ? "0" : `−${Math.abs(f.drop)}`}</span>
@@ -167,7 +169,7 @@ export function OnboardingPage() {
           <section className="card">
             <div className={styles.tableHead}>
               <h2 className="card-title">{t("stuckTitle")}</h2>
-              <div className="row" role="group" aria-label={t("filters")}>
+              <ChipGroup className="row" role="group" aria-label={t("filters")}>
                 <Chip pressed={filter === "over3"} onClick={() => setFilter("over3")}>
                   {t("filter.over3", { n: rowsOf("over3").length })}
                 </Chip>
@@ -188,7 +190,7 @@ export function OnboardingPage() {
                 <Chip pressed={filter === "inactive"} onClick={() => setFilter("inactive")}>
                   {t("filter.inactive", { n: d.inactive.length })}
                 </Chip>
-              </div>
+              </ChipGroup>
             </div>
             {!rows.length ? (
               <Empty title={t("empty")} description={t("emptyDesc")} />

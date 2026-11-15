@@ -7,6 +7,7 @@ import { ErrorBlock, TableSkeleton } from "@/components/kit";
 import { api } from "@/lib/api";
 import { HBars } from "../business/_parts/charts";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
+import { CountUp } from "@/components/count-up";
 
 export interface Usage {
   days: number;
@@ -69,7 +70,7 @@ export function UsageCard() {
             {tiles.map((x) => (
               <li key={x.key} className="usage-tile">
                 <span className="muted small">{t(`tile.${x.key}` as "tile.projects")}</span>
-                <b className="num">{x.value}</b>
+                <b className="num"><CountUp value={x.value} /></b>
                 <span className="muted small">{x.note}</span>
               </li>
             ))}

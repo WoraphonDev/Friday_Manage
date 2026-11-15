@@ -108,7 +108,7 @@ export function PlanLimitDialog({
               <b>{content.bar.value}</b>
             </div>
             <div className={styles.bar} role="presentation">
-              <span style={{ width: `${width}%`, background: content.bar.color }} />
+              <span className="motion-bar" style={{ width: `${width}%`, background: content.bar.color }} />
             </div>
           </div>
         )}

@@ -90,7 +90,7 @@ export function SecurityTab({ ws }: { ws: string }) {
         <SectionError error={sessions.error} retry={() => sessions.refetch()} />
       ) : (
         <>
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }} aria-label={t("devices")}>
+          <ul className="motion-list" style={{ listStyle: "none", margin: 0, padding: 0 }} aria-label={t("devices")}>
             {sessions.data.items.map((s) => (
               <li className={styles.kv} key={s.id}>
                 <span>

@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { hasAny, initials } from "@/components/access";
 import { ExportDialog } from "@/components/dialogs";
 import { Chip, Empty, ErrorBlock, Notice, PageHead, RoleChips, TableSkeleton, Tabs } from "@/components/kit";
+import { MotionSwap } from "@/components/shell/page-enter";
 import { BreakGlassDialog } from "@/components/shell/BreakGlass";
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -37,7 +38,10 @@ export function StaffPage() {
           { value: "audit", label: t("tabs.audit") },
         ]}
       />
-      {tab === "staff" ? <StaffTab /> : <AuditTab initialStaff={params?.get("staff") ?? ""} />}
+      {/* เปลี่ยนแท็บในหน้าเดียวกัน: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}
+      <MotionSwap key={tab} className="motion-stack">
+        {tab === "staff" ? <StaffTab /> : <AuditTab initialStaff={params?.get("staff") ?? ""} />}
+      </MotionSwap>
     </>
   );
 }

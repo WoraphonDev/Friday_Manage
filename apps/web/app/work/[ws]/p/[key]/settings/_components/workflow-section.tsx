@@ -5,7 +5,7 @@ import * as Popover from "@radix-ui/react-popover";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Check } from "lucide-react";
-import { Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
+import { Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, MotionSwap, Select, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { SectionHead, projectEndpoint } from "./shared";
 import { errorText, isForbidden, move, patchPlain, type Category, type ProjectDetail, type Status, type Workflow } from "./types";
@@ -190,7 +190,8 @@ export function WorkflowSection({ ws, projectKey, project }: { ws: string; proje
           </div>
         )}
       </SectionHead>
-      <div className={styles.sb}>
+      {/* สลับ Workflow (Task / Bug): เนื้อหาเคลื่อนเข้าใหม่ · แถวสถานะเป็นของ Workflow นั้นอยู่แล้ว ไม่มีค่าที่แก้ค้างหาย */}
+      <MotionSwap key={wf.id} className={styles.sb}>
         {wf.kind === "standard" && project && (
           <div className={styles.switchRow}>
             <button type="button" role="switch" className={styles.switch} aria-checked={project.progressSplit} aria-label={t("devQa.split")} onClick={() => void toggleSplit(!project.progressSplit)}>
@@ -248,7 +249,7 @@ export function WorkflowSection({ ws, projectKey, project }: { ws: string; proje
             <span />
           </div>
           {wf.statuses.map((s, i) => (
-            <div key={`${s.id}:${s.name}:${s.wipLimit}`} className={`${styles.row} ${styles.statusRow} ${phased ? styles.phasedRow : ""}`} data-testid={`status-${s.name}`}>
+            <div key={`${s.id}:${s.name}:${s.wipLimit}`} className={`${styles.row} ${styles.statusRow} ${phased ? styles.phasedRow : ""} motion-item`} data-testid={`status-${s.name}`}>
               <span className={styles.order}>
                 {/* Canvas: ที่จับ + สีสถานะ · ปุ่มเลื่อนขึ้น/ลงแสดงเมื่อชี้หรือโฟกัส (ใช้แทนการลากด้วยแป้นพิมพ์) */}
                 <span className={styles.grip} aria-hidden="true">⋮⋮</span>
@@ -327,7 +328,7 @@ export function WorkflowSection({ ws, projectKey, project }: { ws: string; proje
           </div>
         </div>
         <div className={styles.muted}>{t("footer")}</div>
-      </div>
+      </MotionSwap>
 
       <Dialog open={adding} onOpenChange={setAdding} title={t("addTitle")}>
         <form className={styles.dialogForm} onSubmit={(e) => { e.preventDefault(); void add(); }}>

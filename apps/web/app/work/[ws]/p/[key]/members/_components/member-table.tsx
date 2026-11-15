@@ -73,7 +73,7 @@ export function MemberTable({
           const cap = week?.capacity ?? null;
           const pct = week && cap ? (week.value / cap) * 100 : 0;
           return (
-            <div className={styles.mt} key={m.userId} data-testid={`member-${m.userId}`}>
+            <div className={cn(styles.mt, "motion-item")} key={m.userId} data-testid={`member-${m.userId}`}>
               <div className={styles.person}>
                 <Avatar person={{ id: m.userId, displayName: m.displayName, initials: m.initials, avatarUrl: m.avatarUrl }} />
                 <div>
@@ -103,7 +103,7 @@ export function MemberTable({
               <div>
                 {week && cap !== null ? (
                   <>
-                    <span className={styles.meter}><span className={pct > 100 ? styles.over : pct >= 80 ? styles.mid : styles.low} style={{ width: `${Math.min(100, pct)}%` }} /></span>
+                    <span className={styles.meter}><span className={cn(pct > 100 ? styles.over : pct >= 80 ? styles.mid : styles.low, "motion-bar")} style={{ width: `${Math.min(100, pct)}%` }} /></span>
                     <span className={pct > 100 ? styles.up : undefined}>{t("week", { value: num.format(week.value), capacity: num.format(cap) })}</span>
                   </>
                 ) : (

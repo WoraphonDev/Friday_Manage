@@ -91,6 +91,8 @@ export function RuleEditor({
   const [dry, setDry] = useState<DryRun | null>(null);
   const [issueKey, setIssueKey] = useState("");
   const [removeOpen, setRemoveOpen] = useState(false);
+  // จำนวนเงื่อนไข / การกระทำตอนเปิดตัวแก้ · แถวที่กดเพิ่มทีหลัง (ลำดับเกินจำนวนนี้) ค่อย ๆ โผล่เข้ามา
+  const [firstCount] = useState(() => ({ conditions: r.conditions.length, actions: r.actions.length }));
   const dirty = !rule || JSON.stringify(toBody(r)) !== JSON.stringify(toBody(shape(rule)));
   const set = (p: Partial<RuleShape>) => {
     setR((x) => ({ ...x, ...p }));
@@ -189,7 +191,7 @@ export function RuleEditor({
             const opts = valueOptions(c.field, options, t);
             const needsValue = c.op !== "empty" && c.op !== "not_empty";
             return (
-              <div key={i} className={styles.row}>
+              <div key={i} className={`${styles.row} ${i >= firstCount.conditions ? "motion-in" : ""}`}>
                 <select className={styles.in} aria-label={t("condField", { n: i + 1 })} value={c.field} onChange={(e) => { const field = e.target.value as ConditionField; setCond(i, { field, op: opsFor(field)[0], value: undefined }); }}>
                   {CONDITION_FIELDS.map((f) => <option key={f} value={f}>{t(`field_${f}`)}</option>)}
                 </select>
@@ -229,7 +231,7 @@ export function RuleEditor({
         <div className={styles.blk}>
           <div className={`${styles.bh} ${styles.thenC}`}><span className={`${styles.pill} ${styles.thenPill}`}>{t("thenTag")}</span>{t("thenTitle")}</div>
           {r.actions.map((a, i) => (
-            <div key={i} className={styles.row}>
+            <div key={i} className={`${styles.row} ${i >= firstCount.actions ? "motion-in" : ""}`}>
               <span className={styles.idx}>{i + 1}</span>
               <select className={styles.in} aria-label={t("actType", { n: i + 1 })} value={a.type} onChange={(e) => setAct(i, blankAction(e.target.value as ActionType))}>
                 {ACTION_TYPES.map((x) => <option key={x} value={x}>{t(`act_${x}`)}</option>)}
@@ -249,7 +251,7 @@ export function RuleEditor({
         )}
         {(!rule || dirty) && <span className={styles.muted}>{t("saveFirst")}</span>}
         {dry && (
-          <div role="status" className={styles.dry}>
+          <div role="status" className={`${styles.dry} motion-in`}>
             <b className={styles.dryTitle}>{t("dryTitle")}</b>
             <span>{t("dryMatched", { matched: dry.matched, checked: dry.checked })}</span>
             {dry.items.map((it) => (

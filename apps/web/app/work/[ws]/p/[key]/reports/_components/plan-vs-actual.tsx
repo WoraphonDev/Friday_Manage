@@ -89,8 +89,8 @@ function WeeklyChart({ weeks, yearFormat }: { weeks: WeekPoint[]; yearFormat: Ye
       {weeks.map((w, index) => {
         const cx = PAD.left + slot * index + slot / 2;
         return <g key={w.weekStart} data-testid="pva-week">
-          <rect x={cx - bar - 1} y={y(w.plannedMd)} width={bar} height={Math.max(0, y(0) - y(w.plannedMd))} fill="var(--chart-primary-soft)" rx="2"><title>{t("pva.barPlan", { week: formatDate(w.weekStart, yearFormat), value: w.plannedMd })}</title></rect>
-          <rect x={cx + 1} y={y(w.doneMd)} width={bar} height={Math.max(0, y(0) - y(w.doneMd))} fill="var(--chart-primary)" rx="2"><title>{t("pva.barDone", { week: formatDate(w.weekStart, yearFormat), value: w.doneMd })}</title></rect>
+          <rect x={cx - bar - 1} y={y(w.plannedMd)} width={bar} height={Math.max(0, y(0) - y(w.plannedMd))} fill="var(--chart-primary-soft)" rx="2" className="motion-bar-v"><title>{t("pva.barPlan", { week: formatDate(w.weekStart, yearFormat), value: w.plannedMd })}</title></rect>
+          <rect x={cx + 1} y={y(w.doneMd)} width={bar} height={Math.max(0, y(0) - y(w.doneMd))} fill="var(--chart-primary)" rx="2" className="motion-bar-v"><title>{t("pva.barDone", { week: formatDate(w.weekStart, yearFormat), value: w.doneMd })}</title></rect>
           <text x={cx} y={H - 8} fontSize="10" fill="var(--muted)" textAnchor="middle">{`${Number(w.weekStart.slice(8, 10))}/${Number(w.weekStart.slice(5, 7))}`}</text>
         </g>;
       })}

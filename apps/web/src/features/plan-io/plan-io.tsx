@@ -5,7 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
+import { MotionSwap } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { queryKeys } from "@/lib/query";
 import type { Permissions } from "@/lib/types";
 import { ExportPanel } from "../../../app/work/[ws]/import/_components/export-panel";
@@ -49,6 +51,8 @@ export function PlanIoDialog({ ws, projectKey }: { ws: string; projectKey: strin
   const router = useRouter();
   const pathname = usePathname();
   const sections = usePlanIoSections(ws, projectKey);
+  // พื้นไฮไลต์เลื่อนตามเมนูที่เลือก (ต้องเรียกก่อน return null)
+  const navRef = useSlidingIndicator<HTMLElement>(`.${styles.item}`);
   const wanted = search.get("io");
   if (!isPlanIoSection(wanted) || !sections.length) return null;
   // ขอเมนูที่ไม่มีสิทธิ์ (เช่น สมาชิกทั่วไปกดลิงก์การแก้ไขแผน) → เปิดเมนูแรกที่ใช้ได้
@@ -71,7 +75,7 @@ export function PlanIoDialog({ ws, projectKey }: { ws: string; projectKey: strin
             <Dialog.Close className={styles.close} aria-label={t("close")}><X size={18} aria-hidden="true" /></Dialog.Close>
           </header>
           <div className={styles.body}>
-            <nav className={styles.nav} aria-label={t("sections")}>
+            <nav ref={navRef} className={`${styles.nav} motion-pill`} aria-label={t("sections")}>
               {sections.map((s) => (
                 <button key={s} type="button" className={`${styles.item} ${section === s ? styles.on : ""}`} aria-current={section === s ? "page" : undefined} onClick={() => go(s)}>
                   {t(`section__${s}`)}
@@ -79,9 +83,10 @@ export function PlanIoDialog({ ws, projectKey }: { ws: string; projectKey: strin
               ))}
               <p className={styles.note}>{t("sectionNote")}</p>
             </nav>
-            <div className={styles.main}>
+            {/* เปลี่ยนเมนู: เนื้อหาเคลื่อนเข้าใหม่ · PlanIoContent สร้างใหม่ตามเมนูอยู่แล้ว จึงไม่เสียค่าที่กรอกเพิ่ม */}
+            <MotionSwap key={section} className={styles.main}>
               <PlanIoContent key={section} ws={ws} projectKey={projectKey} section={section} changesHref={changesHref} />
-            </div>
+            </MotionSwap>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

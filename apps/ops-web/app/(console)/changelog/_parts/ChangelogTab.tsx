@@ -5,13 +5,14 @@ import { clsx } from "clsx";
 import { MoreHorizontal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
-import { Chip, Empty, ErrorBlock, Popover, TableSkeleton } from "@/components/kit";
+import { Chip, ChipGroup, Empty, ErrorBlock, Popover, TableSkeleton } from "@/components/kit";
 import { Button, Pill } from "@/components/ui";
 import { useFmt } from "../../workspaces/_parts/format";
 import styles from "../changelog.module.css";
 import { HideDialog } from "./HideDialog";
 import { PanelPreview, useAudienceLabel, useStatusLabel } from "./labels";
 import { type ChangelogData, type Entry, type EntryStatus, KIND_TONE, type NpsSummary, npsTone, signed, STATUS_TONE } from "./types";
+import { CountUp } from "@/components/count-up";
 
 type Filter = "all" | Exclude<EntryStatus, "hidden">;
 
@@ -43,26 +44,26 @@ export function ChangelogTab({
   const k = data?.kpis;
   return (
     <>
-      <section className={styles.kpis} aria-label="KPI">
+      <section className={clsx(styles.kpis, "motion-list")} aria-label="KPI">
         <div className={clsx("card", styles.kpi)}>
           <span className={styles.kpiLabel}>{t("kpi.published")}</span>
-          <b className={styles.kpiValue}>{k ? fmt.num(k.published30) : "—"}</b>
+          <b className={styles.kpiValue}><CountUp value={k ? fmt.num(k.published30) : "—"} /></b>
           <span className={styles.kpiSub}>{k ? t("kpi.publishedSub", k.byKind) : ""}</span>
         </div>
         <div className={clsx("card", styles.kpi)}>
           <span className={styles.kpiLabel}>{t("kpi.readers")}</span>
-          <b className={styles.kpiValue}>{k?.readersPct != null ? `${k.readersPct}%` : "—"}</b>
+          <b className={styles.kpiValue}><CountUp value={k?.readersPct != null ? `${k.readersPct}%` : "—"} /></b>
           <span className={styles.kpiSub}>{t("kpi.readersSub")}</span>
         </div>
         <div className={clsx("card", styles.kpi)}>
           <span className={styles.kpiLabel}>{t("kpi.clicks")}</span>
-          <b className={styles.kpiValue}>{k?.clickPct != null ? `${k.clickPct}%` : "—"}</b>
+          <b className={styles.kpiValue}><CountUp value={k?.clickPct != null ? `${k.clickPct}%` : "—"} /></b>
           <span className={styles.kpiSub}>{t("kpi.clicksSub")}</span>
         </div>
         {nps !== undefined && (
           <div className={clsx("card", styles.kpi)}>
             <span className={styles.kpiLabel}>{t("kpi.nps")}</span>
-            <b className={styles.kpiValue}>{signed(nps?.score ?? null)}</b>
+            <b className={styles.kpiValue}><CountUp value={signed(nps?.score ?? null)} /></b>
             <span className={styles.kpiSub}>
               {nps?.delta != null ? (
                 <>
@@ -77,7 +78,7 @@ export function ChangelogTab({
       </section>
       <div className={styles.split}>
         <section className={clsx("card", styles.flush, styles.main)}>
-          <div className={styles.cardHead}>
+          <ChipGroup className={styles.cardHead}>
             <h2 className="card-title">{t("table.title")}</h2>
             {(["all", "published", "scheduled", "draft"] as const).map((f) => (
               <Chip key={f} pressed={filter === f} onClick={() => setFilter(f)}>
@@ -85,7 +86,7 @@ export function ChangelogTab({
               </Chip>
             ))}
             <span className="muted small push-end">{t("table.spotlightNote")}</span>
-          </div>
+          </ChipGroup>
           {query.isPending ? (
             <TableSkeleton rows={4} cols={7} />
           ) : query.error ? (

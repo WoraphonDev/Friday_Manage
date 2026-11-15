@@ -54,3 +54,19 @@
 .card { width:100%; display:flex; align-items:center; gap:10px; font:inherit; color:inherit; text-align:left; cursor:pointer; }
 .card:hover { border-color:var(--primary); }
 .cardPill { margin-left:auto; }
+
+/* เปิด / ปิดแผงแบบเดียวกับ .popover ของระบบ (ความเร็วจาก --motion-* · ปิดเองเมื่อลดการเคลื่อนไหว) */
+.pop { transform-origin:var(--radix-popover-content-transform-origin); }
+.pop[data-state="open"] { animation:popIn var(--motion-dur-s) var(--motion-ease); }
+.pop[data-state="closed"] { animation:popOut 200ms ease both; }
+@keyframes popIn { from { opacity:0; scale:0.96; } }
+@keyframes popOut { to { opacity:0; scale:0.96; } }
+/* Spotlight เปิดแบบ Dialog ของระบบ · หน้าเต็มจอบนมือถือเลื่อนขึ้นแบบ Bottom sheet */
+.spot[data-state="open"] { animation:spotIn var(--motion-dur) var(--motion-ease); }
+.spot[data-state="closed"] { animation:spotOut var(--motion-dur-s) var(--motion-ease) both; }
+.full[data-state="open"] { animation:fullIn var(--motion-dur) var(--motion-ease); }
+.full[data-state="closed"] { animation:fullOut var(--motion-dur-s) var(--motion-ease) both; }
+@keyframes spotIn { from { opacity:0; translate:0 10px; scale:0.98; } }
+@keyframes spotOut { to { opacity:0; translate:0 6px; scale:0.98; } }
+@keyframes fullIn { from { translate:0 100%; } }
+@keyframes fullOut { to { translate:0 100%; } }

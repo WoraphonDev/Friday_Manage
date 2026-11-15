@@ -123,6 +123,10 @@
 .toggle { display:inline-flex; border:1px solid var(--input); border-radius:8px; overflow:hidden; }
 .toggle button { min-height:32px; padding:0 12px; border:0; background:var(--card); font:inherit; font-size:12px; font-weight:600; color:var(--foreground-soft); cursor:pointer; }
 .toggle button[aria-pressed=true] { background:var(--primary); color:var(--on-primary); }
+/* พื้นที่เลื่อน (.motion-pill) = สีปุ่มที่เลือกเดิม · กล่องตัดมุมเอง (overflow:hidden) จึงไม่ต้องมีมุมโค้ง
+   ระหว่างเลื่อน ปุ่มที่ไม่ได้เลือกโปร่งให้เห็นพื้นที่เลื่อนผ่าน (พื้นขาวย้ายไปที่กล่อง หน้าตาตอนนิ่งเท่าเดิม) */
+.toggle { --ind-bg:var(--primary); --ind-radius:0; background:var(--card); }
+.toggle[data-indicator] button { background:transparent; }
 .createDrawer { padding:16px 24px 0; }
 .createModal { padding-top:4px; }
 .createDrawer .createFooter,.createModal .createFooter { bottom:0; }
@@ -291,6 +295,11 @@
 .resultOpt[aria-checked="true"][data-result="passed"] { border-color:var(--success-solid); background:var(--success-soft); color:var(--success-text); }
 .resultOpt[aria-checked="true"][data-result="failed"] { border-color:var(--danger); background:var(--danger-soft); color:var(--danger-text); }
 .resultOpt[aria-checked="true"][data-result="blocked"] { border-color:var(--warning-solid); background:var(--warning-soft); color:var(--warning-text); }
+/* กรอบที่เลื่อน (.motion-pill) ใช้สีของผลที่เลือกอยู่ ให้ตรงกับปุ่มที่เลือกเดิม */
+.resultPick { --ind-radius:6px; }
+.resultPick[data-result="passed"] { --ind-bg:var(--success-soft); --ind-border:1px solid var(--success-solid); }
+.resultPick[data-result="failed"] { --ind-bg:var(--danger-soft); --ind-border:1px solid var(--danger); }
+.resultPick[data-result="blocked"] { --ind-bg:var(--warning-soft); --ind-border:1px solid var(--warning-solid); }
 .resultOpt:disabled { opacity:.6; cursor:default; }
 .runForm { border:1px dashed var(--input); border-radius:8px; padding:12px; }
 .unitBox { display:flex; flex-direction:column; gap:8px; border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
@@ -361,6 +370,7 @@ a.chipSoft:hover { background:var(--subtle); color:var(--foreground); }
   .tabs { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 4px; gap: 4px; margin-top: 12px; }
   .tabs button { flex: 1; min-height: 40px; border: 0; border-radius: 10px; font-size: 13px; }
   .tabs button[aria-selected=true] { background: var(--primary-soft); color: var(--primary-text); border-bottom-color: transparent; }
+  .tabs { --ind-bg: var(--primary-soft); --ind-radius: 10px; }
   .sidebar :global(.input), .sidebar :global(.picker-trigger) { min-height: 40px; font-size: 14px; }
   .createForm { background: var(--background); }
   .createForm > .createFooter { background: var(--card); box-shadow: 0 -1px 0 var(--border); }

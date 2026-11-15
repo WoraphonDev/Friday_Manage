@@ -8,6 +8,7 @@ import { hasAny, rolesOf } from "@/components/access";
 import { ErrorBlock, Modal, NoAccess, Notice, PageHead, Switch, TableSkeleton } from "@/components/kit";
 import { Button, errorToast, Input, Pill, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useSlidingIndicator } from "@/lib/motion";
 import { useMe } from "@/lib/query";
 import { PLAN_LABEL, useFmt } from "../../workspaces/_parts/format";
 import { AccountsDialog } from "./_parts/AccountsDialog";
@@ -22,6 +23,8 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 /** ตั้งค่าการแจกงาน Support (Canvas › SupportSettings · เฟส 2 · O22) · Support ดูได้ แก้ได้เฉพาะ Owner */
 export function SupportSettingsPage() {
   const t = useTranslations("sset");
+  // การ์ดตัวเลือกแบบเลือกได้อันเดียว: กรอบม่วงของอันที่เลือกเลื่อนไปหาอันใหม่ (.opt-pill ใน ops.css)
+  const optPill = useSlidingIndicator<HTMLDivElement>(".opt");
   const fmt = useFmt();
   const toast = useToast();
   const cache = useQueryClient();
@@ -96,9 +99,9 @@ export function SupportSettingsPage() {
             <h2 className="card-title" id="sset-mode">
               {t("mode.title")}
             </h2>
-            <div className="opt-grid" role="radiogroup" aria-labelledby="sset-mode">
+            <div ref={optPill} className="opt-grid motion-pill opt-pill" role="radiogroup" aria-labelledby="sset-mode">
               {(["least", "round", "manual"] as const).map((m) => (
-                <label key={m} className={config.mode === m ? "opt opt-on" : "opt"}>
+                <label key={m} className={config.mode === m ? "opt opt-on" : "opt"} data-state={config.mode === m ? "active" : undefined}>
                   <input type="radio" name="sset-mode" checked={config.mode === m} disabled={!edit} onChange={() => set("mode", m)} />
                   <span>
                     <b>{t(`mode.${m}`)}</b>

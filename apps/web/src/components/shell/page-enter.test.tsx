@@ -34,6 +34,19 @@ describe("MotionSwap", () => {
     expect(next).toHaveAttribute("data-entering");
   });
 
+  it("MotionSwap ซ้อนที่ขึ้นพร้อมกรอบนอกไม่เลื่อนซ้ำ", () => {
+    render(
+      <MotionSwap>
+        <MotionSwap>
+          <p>inner</p>
+        </MotionSwap>
+      </MotionSwap>,
+    );
+    const inner = screen.getByText("inner").parentElement!;
+    expect(inner.className).toBe("motion-swap-static");
+    expect(inner.parentElement!.className).toBe("motion-swap");
+  });
+
   it("ส่ง className ต่อให้กรอบ", () => {
     render(<MotionSwap className="main"><p>x</p></MotionSwap>);
     expect(screen.getByText("x").parentElement!.className).toBe("motion-swap main");

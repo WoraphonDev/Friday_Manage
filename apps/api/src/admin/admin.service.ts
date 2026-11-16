@@ -16,6 +16,20 @@ const s = schema;
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'เวลาต้องเป็น HH:MM');
 const SIZES = ['XS', 'S', 'M', 'L', 'XL'] as const;
 
+/** ระบบติดตามงานภายนอก · ชื่อใช้นำหน้าเลขในหมายเหตุ ("Redmine # : 111004") จึงห้ามมี # และ : */
+export const IssueTracker = z
+  .object({
+    name: z.string().trim().min(1, 'กรุณาใส่ชื่อระบบ').max(30).regex(/^[\p{L}\p{N}][\p{L}\p{N} ._-]*$/u, 'ชื่อระบบใช้ได้เฉพาะตัวอักษร ตัวเลข ช่องว่าง . _ -'),
+    urlTemplate: z
+      .string()
+      .trim()
+      .max(500)
+      .refine((v) => v.includes('{id}'), 'รูปแบบ URL ต้องมี {id} แทนเลขงาน')
+      .refine((v) => /^https?:\/\/[^\s/]+/i.test(v) && URL.canParse(v.replaceAll('{id}', '1')), 'รูปแบบ URL ต้องขึ้นต้นด้วย http:// หรือ https://'),
+  })
+  .strict();
+export type IssueTracker = z.infer<typeof IssueTracker>;
+
 export const PatchSettingsBody = z
   .object({
     workStart: time,
@@ -30,6 +44,10 @@ export const PatchSettingsBody = z
     archiveRetentionYears: z.number().int().min(1).max(10).nullable(),
     requireConsentOnFirstLogin: z.boolean(),
     holidayCalendarId: z.uuid().nullable(),
+    issueTrackers: z
+      .array(IssueTracker)
+      .max(5, 'ตั้งระบบติดตามงานได้สูงสุด 5 ระบบ')
+      .refine((v) => new Set(v.map((x) => x.name.toLowerCase())).size === v.length, 'ชื่อระบบติดตามงานซ้ำกัน'),
   })
   .partial()
   .strict();
@@ -258,6 +276,15 @@ export class AdminService {
     return result;
   }
 
+  /** ระบบติดตามงานภายนอก สำหรับทุกคนใน Workspace (แสดงลิงก์ในหมายเหตุ / เมนูแทรกลิงก์) · Guest ไม่เห็นหมายเหตุจึงได้รายการว่าง */
+  async issueTrackers(auth: AuthInfo, tenant: TenantInfo) {
+    if (tenant.role === 'guest') return { items: [] as IssueTracker[] };
+    return this.db.run(auth, tenant, async (tx) => {
+      const [r] = await tx.select({ issueTrackers: s.workspaceSettings.issueTrackers }).from(s.workspaceSettings).where(eq(s.workspaceSettings.workspaceId, tenant.workspaceId));
+      return { items: (r?.issueTrackers ?? []) as IssueTracker[] };
+    });
+  }
+
   private async settingsDto(tx: Tx, tenant: TenantInfo) {
     const [r] = await tx.select().from(s.workspaceSettings).where(eq(s.workspaceSettings.workspaceId, tenant.workspaceId));
     if (!r) throw notFound('การตั้งค่า Workspace');
@@ -272,6 +299,7 @@ export class AdminService {
       archiveRetentionYears: r.archiveRetentionYears,
       requireConsentOnFirstLogin: r.requireConsentOnFirstLogin,
       holidayCalendarId: r.holidayCalendarId,
+      issueTrackers: r.issueTrackers as IssueTracker[],
       dataRegion: 'th-bangkok',
     };
   }

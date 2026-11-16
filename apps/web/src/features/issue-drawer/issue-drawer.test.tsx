@@ -53,6 +53,40 @@ describe('Issue drawer details', () => {
     expect(mutations('/issues/DE-1')[1]).toMatchObject({body:{priority:'high'},etag:'"4"'});
   });
 
+  it('หมายเหตุ: แทรกเลขงานของระบบที่ Admin ตั้ง และลิงก์ภายนอก แล้วแสดงเป็นลิงก์', async () => {
+    server.use(http.get('*/api/v1/w/:ws/issue-trackers',()=>HttpResponse.json({items:[{name:'Redmine',urlTemplate:'https://redmine.example.com/issues/{id}'}]})));
+    f.state.issues.get('DE-1')!.remark='Redmine # : 111000';
+    const user=userEvent.setup();mount();await loaded();
+    expect(await screen.findByRole('link',{name:'111000'})).toHaveAttribute('href','https://redmine.example.com/issues/111000');
+    await user.click(screen.getByRole('button',{name:'แก้ไขหมายเหตุ'}));
+    const box=screen.getByRole('textbox',{name:'แก้ไขหมายเหตุ'});
+    await user.click(screen.getByRole('button',{name:'แทรกลิงก์'}));
+    await user.click(await screen.findByRole('button',{name:'Redmine'}));
+    const ids=screen.getByLabelText('เลขงาน Redmine (หลายเลขคั่นด้วยจุลภาค)');
+    await user.type(ids,'abc');await user.click(within(screen.getByRole('group',{name:'แทรกลิงก์'})).getByRole('button',{name:'เพิ่ม'}));
+    expect(within(screen.getByRole('group',{name:'แทรกลิงก์'})).getByRole('alert')).toHaveTextContent('ใส่เลขงาน');
+    await user.clear(ids);await user.type(ids,'111004, 111005{Enter}');
+    expect(box).toHaveValue('Redmine # : 111000 , 111004 , 111005');
+    expect(mutations('/issues/DE-1')).toHaveLength(0);
+    await user.click(screen.getByRole('button',{name:'แทรกลิงก์'}));
+    await user.click(await screen.findByRole('button',{name:'ลิงก์ภายนอก (URL)'}));
+    await user.type(screen.getByLabelText('URL'),'https://docs.example.com/spec');
+    await user.type(screen.getByLabelText('ชื่อที่แสดง (ไม่ใส่ก็ได้)'),'สเปก{Enter}');
+    expect(box).toHaveValue('Redmine # : 111000 , 111004 , 111005 [สเปก](https://docs.example.com/spec)');
+    await user.click(screen.getByRole('button',{name:'บันทึก'}));
+    await waitFor(()=>expect(mutations('/issues/DE-1')[0]).toMatchObject({body:{remark:'Redmine # : 111000 , 111004 , 111005 [สเปก](https://docs.example.com/spec)'}}));
+    expect(await screen.findByRole('link',{name:'สเปก'})).toHaveAttribute('href','https://docs.example.com/spec');
+    expect(screen.getByRole('link',{name:'111005'})).toHaveAttribute('href','https://redmine.example.com/issues/111005');
+  });
+
+  it('หมายเหตุ: ไม่ได้ตั้งระบบ = เมนูมีเฉพาะลิงก์ภายนอก', async () => {
+    const user=userEvent.setup();mount();await loaded();
+    await user.click(screen.getByRole('button',{name:'+ เพิ่มหมายเหตุ'}));
+    await user.click(screen.getByRole('button',{name:'แทรกลิงก์'}));
+    expect(await screen.findByRole('button',{name:'ลิงก์ภายนอก (URL)'})).toBeInTheDocument();
+    expect(screen.queryByText('เลขงาน')).not.toBeInTheDocument();
+  });
+
   it('หมายเหตุ: เพิ่มด้วย Textarea คงการขึ้นบรรทัด · ล้างข้อความแล้วส่ง null', async () => {
     const user=userEvent.setup();mount();await loaded();
     await user.click(screen.getByRole('button',{name:'+ เพิ่มหมายเหตุ'}));

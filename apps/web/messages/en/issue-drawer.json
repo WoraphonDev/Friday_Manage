@@ -444,5 +444,16 @@
   "previewFile": "Preview {name}",
   "groupCustom": "More fields",
   "requiredMissing": "Fill in the required fields: {fields}",
-  "viewOnlyStatus": "Someone else's task: view only · you can change status only on tasks assigned to you"
+  "viewOnlyStatus": "Someone else's task: view only · you can change status only on tasks assigned to you",
+  "remarkLinks": {
+    "insert": "Insert link",
+    "trackersGroup": "Issue numbers",
+    "externalLink": "External link (URL)",
+    "idsLabel": "{name} issue numbers (comma-separated)",
+    "linkLabel": "Display text (optional)",
+    "add": "Add",
+    "close": "Close",
+    "invalidIds": "Enter issue numbers such as 111004 or ABC-123, separated by commas",
+    "invalidUrl": "The URL must start with http:// or https://"
+  }
 }

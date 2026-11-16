@@ -57,6 +57,8 @@ export interface WorkspaceSettings {
   archiveRetentionYears: number | null;
   requireConsentOnFirstLogin: boolean;
   holidayCalendarId: string | null;
+  /** ระบบติดตามงานภายนอก (Redmine, Jira ฯลฯ) · urlTemplate มี {id} */
+  issueTrackers: { name: string; urlTemplate: string }[];
   dataRegion: string;
   recalculated?: { projects: number; issues: number };
 }

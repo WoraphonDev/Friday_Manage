@@ -11,7 +11,7 @@ import { formatDate } from "@/lib/format";
 import { Card, patch, Switch, usePatchSettings, useSettings } from "./shared";
 import {
   adminKey, errorText, formatBytes, WEBHOOK_FORMATS, workPath, wsPath,
-  type AdminOverview, type ApiToken, type EmailConfig, type GitIntegrations, type LineConfig, type Webhook, type WebhookFormat,
+  type AdminOverview, type ApiToken, type EmailConfig, type WorkspaceSettings, type GitIntegrations, type LineConfig, type Webhook, type WebhookFormat,
 } from "./types";
 import styles from "./admin.module.css";
 
@@ -365,8 +365,114 @@ export function IntegrationsSection({ ws }: { ws: string }) {
           <Link className="button button-secondary button-small" href={`${workPath(ws)}/admin/notify`}>{t("open")}</Link>
         </div>
       </Card>
+      <IssueTrackersCard ws={ws} />
       <ApiTokensCard ws={ws} />
     </>
+  );
+}
+
+type Tracker = WorkspaceSettings["issueTrackers"][number];
+/** แบบสำเร็จรูป · โดเมนเป็นตัวอย่าง ผู้ใช้แก้เป็นของตัวเอง */
+const TRACKER_PRESETS: Tracker[] = [
+  { name: "Redmine", urlTemplate: "https://redmine.example.com/issues/{id}" },
+  { name: "Jira", urlTemplate: "https://your-team.atlassian.net/browse/{id}" },
+  { name: "GitHub", urlTemplate: "https://github.com/owner/repo/issues/{id}" },
+  { name: "GitLab", urlTemplate: "https://gitlab.com/group/project/-/issues/{id}" },
+];
+const MAX_TRACKERS = 5;
+const validTemplate = (v: string) => {
+  if (!v.includes("{id}")) return false;
+  try {
+    const u = new URL(v.replaceAll("{id}", "1"));
+    return (u.protocol === "http:" || u.protocol === "https:") && !!u.hostname;
+  } catch {
+    return false;
+  }
+};
+
+/** ระบบติดตามงานภายนอก · เลขงานในหมายเหตุ ("Redmine # : 111004") เป็นลิงก์ตามรูปแบบ URL ที่ตั้ง */
+function IssueTrackersCard({ ws }: { ws: string }) {
+  const t = useTranslations("admin-automation.admin.trackers");
+  const settings = useSettings(ws);
+  const save = usePatchSettings(ws);
+  const cache = useQueryClient();
+  const [editing, setEditing] = useState<{ index: number | null; name: string; urlTemplate: string } | null>(null);
+  const [removing, setRemoving] = useState<number | null>(null);
+  const list = settings.data?.issueTrackers ?? [];
+  async function commit(next: Tracker[]) {
+    const ok = await save({ issueTrackers: next });
+    // เมนูแทรกลิงก์ / การแสดงหมายเหตุใช้ cache แยก
+    if (ok) await cache.invalidateQueries({ queryKey: ["issue-trackers", ws] });
+    return ok;
+  }
+  const name = editing?.name.trim() ?? "";
+  const nameError = editing && name && (!/^[\p{L}\p{N}][\p{L}\p{N} ._-]*$/u.test(name) ? t("nameInvalid") : list.some((x, i) => i !== editing.index && x.name.toLowerCase() === name.toLowerCase()) ? t("nameTaken") : null);
+  const templateError = editing && editing.urlTemplate.trim() && !validTemplate(editing.urlTemplate.trim()) ? t("templateInvalid") : null;
+  const ready = !!editing && !!name && !!editing.urlTemplate.trim() && !nameError && !templateError;
+  const sample = editing && ready ? editing.urlTemplate.trim().replaceAll("{id}", "111004") : null;
+  async function submit() {
+    if (!editing || !ready) return;
+    const item = { name, urlTemplate: editing.urlTemplate.trim() };
+    const next = editing.index === null ? [...list, item] : list.map((x, i) => (i === editing.index ? item : x));
+    if (await commit(next)) setEditing(null);
+  }
+  return (
+    <Card title={t("title")} label={t("title")} actions={list.length < MAX_TRACKERS && settings.data ? <Button onClick={() => setEditing({ index: null, name: "", urlTemplate: "" })}>{t("add")}</Button> : undefined}>
+      <span className={styles.muted}>{t("hint")}</span>
+      {settings.error ? (
+        <ErrorState error={settings.error} retry={() => void settings.refetch()} />
+      ) : !settings.data ? (
+        <LoadingState />
+      ) : list.length === 0 ? (
+        <span className={styles.muted}>{t("empty")}</span>
+      ) : (
+        <div className="motion-list">
+          {list.map((x, i) => (
+            <div key={x.name} className={styles.row}>
+              <span className={styles.grow}>
+                <b>{x.name}</b>
+                <div className={styles.muted}><code className={styles.trackerUrl}>{x.urlTemplate}</code></div>
+              </span>
+              <Button size="small" variant="ghost" aria-label={t("editOne", { name: x.name })} onClick={() => setEditing({ index: i, ...x })}>{t("edit")}</Button>
+              <Button size="small" variant="ghost" aria-label={t("removeOne", { name: x.name })} onClick={() => setRemoving(i)}>{t("remove")}</Button>
+            </div>
+          ))}
+        </div>
+      )}
+      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)} title={editing?.index === null ? t("addTitle") : t("editTitle")}>
+        {editing && (
+          <form className={styles.dialogForm} onSubmit={(e) => { e.preventDefault(); void submit(); }}>
+            <div className={styles.trackerPresets} role="group" aria-label={t("presets")}>
+              <span className={styles.muted}>{t("presets")}</span>
+              {TRACKER_PRESETS.map((p) => (
+                <Button key={p.name} size="small" variant={editing.name === p.name ? "primary" : "secondary"} aria-pressed={editing.name === p.name} onClick={() => setEditing({ ...editing, ...p })}>{p.name}</Button>
+              ))}
+            </div>
+            <Input label={t("name")} hint={t("nameHint")} error={nameError || undefined} value={editing.name} maxLength={30} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+            <Input label={t("template")} hint={t("templateHint")} error={templateError || undefined} value={editing.urlTemplate} maxLength={500} placeholder="https://redmine.example.com/issues/{id}" onChange={(e) => setEditing({ ...editing, urlTemplate: e.target.value })} />
+            {sample && <span className={styles.muted}>{t("sample", { name })} <code className={styles.trackerUrl}>{sample}</code></span>}
+            <div className="dialog-actions">
+              <Button onClick={() => setEditing(null)}>{t("cancel")}</Button>
+              <Button type="submit" variant="primary" disabled={!ready}>{t("save")}</Button>
+            </div>
+          </form>
+        )}
+      </Dialog>
+      <ConfirmDialog
+        open={removing !== null}
+        onOpenChange={(v) => !v && setRemoving(null)}
+        title={t("removeConfirm", { name: removing === null ? "" : (list[removing]?.name ?? "") })}
+        description={t("removeHint")}
+        confirmLabel={t("remove")}
+        successMessage={t("removed")}
+        onConfirm={async () => {
+          // ยิงตรงเพื่อให้กล่องยืนยันแสดง error เอง และแจ้ง "ลบแล้ว" ครั้งเดียว
+          const next = await patch<WorkspaceSettings>(`${wsPath(ws)}/settings`, { issueTrackers: list.filter((_, i) => i !== removing) });
+          cache.setQueryData(adminKey(ws, "settings"), next);
+          await cache.invalidateQueries({ queryKey: ["issue-trackers", ws] });
+        }}
+      />
+    </Card>
   );
 }
 

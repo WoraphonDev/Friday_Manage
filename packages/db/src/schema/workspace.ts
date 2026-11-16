@@ -93,6 +93,8 @@ export const workspaceSettings = pgTable('workspace_settings', {
   trashDays: smallint().notNull().default(30),
   archiveRetentionYears: smallint(),
   requireConsentOnFirstLogin: boolean().notNull().default(true),
+  /** ระบบติดตามงานภายนอก (Redmine, Jira ฯลฯ) ให้เลขงานในหมายเหตุเป็นลิงก์ · [{ name, urlTemplate }] · urlTemplate มี {id} */
+  issueTrackers: jsonb().notNull().default(sql`'[]'::jsonb`),
   updatedAt: updatedAt(),
 });
 

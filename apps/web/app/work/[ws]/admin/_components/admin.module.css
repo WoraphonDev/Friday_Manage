@@ -128,3 +128,5 @@ textarea.in { padding:8px 10px; min-height:64px; }
 @media (max-width: 760px) {
   .chipOne { --ind-bg:var(--primary-soft); --ind-border:1px solid var(--primary-border); --ind-radius:22px; }
 }
+.trackerUrl { font-size:12px; overflow-wrap:anywhere; }
+.trackerPresets { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }

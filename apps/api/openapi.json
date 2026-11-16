@@ -10490,6 +10490,44 @@
         }
       }
     },
+    "/api/v1/w/{ws}/issue-trackers": {
+      "get": {
+        "operationId": "Admin_issueTrackers",
+        "summary": "ทุกคนใน Workspace อ่านได้ · แก้ผ่าน PATCH settings (Admin)",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/api/v1/w/{ws}/issues/{issueKey}": {
       "delete": {
         "operationId": "Issues_remove",
@@ -29261,6 +29299,30 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "issueTrackers": {
+                    "maxItems": 5,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 30,
+                          "pattern": "^[\\p{L}\\p{N}][\\p{L}\\p{N} ._-]*$"
+                        },
+                        "urlTemplate": {
+                          "type": "string",
+                          "maxLength": 500
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "urlTemplate"
+                      ],
+                      "additionalProperties": false
+                    }
                   }
                 },
                 "additionalProperties": false

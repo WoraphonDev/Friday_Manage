@@ -15,6 +15,7 @@ import { ActivityPanel } from './activity';
 import { Checklist, DependencyPanel } from './issue-parts';
 import { DueRequest } from './due-request';
 import { BodyText, Failure, InlineText } from './shared';
+import { RemarkLinkTools, RemarkText, useIssueTrackers } from './remark-text';
 import { Attachments, BugDetails, Development, PropRow, QuickSubtask, SubtaskRow } from './detail-parts';
 import { CodeChips, LabelChips } from './refs';
 import { issuePath, issueQuery, projectPath, type Issue, type Named, type PublicPerson, type Scope } from './types';
@@ -58,6 +59,8 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
   const [allProps, setAllProps] = useState(false);
   const [cancelDue, setCancelDue] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
+  // ระบบติดตามงานของ Workspace (Admin › Integrations) ให้เลขงานในหมายเหตุเป็นลิงก์ · Guest ไม่เห็นหมายเหตุจึงไม่ต้องโหลด
+  const trackers = useIssueTrackers(scope.ws, issue.remark !== undefined);
   const watchers = useQuery({ queryKey: [...key, 'watchers'], queryFn: ({ signal }) => api.get<{ items: { person: PublicPerson | null }[]; watching: boolean }>(`${endpoint}/watchers`, { signal }) });
   // รายการ Label ของโปรเจกต์ใช้เฉพาะตอนแก้ · การแสดงผลใช้ชื่อ/สีที่มากับงาน
   const labelOptions = useQuery({ queryKey: ['issue-options', scope.ws, scope.projectKey, 'labels'], queryFn: ({ signal }) => api.get<{ items: Named[] }>(`${projectPath(scope.ws, scope.projectKey)}/labels`, { signal }), enabled: canEdit });
@@ -229,8 +232,8 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
       {/* หมายเหตุ (Remark) ของ Task / Sub-task แยกจากคำอธิบาย · ข้อความธรรมดา แก้ด้วย Textarea */}
       {issue.remark !== undefined && show('remark') && <div className={styles.blk}>
         <h3>{star('remark', t('remark'))}</h3>
-        {issue.remark ? <p className={styles.remark}>{issue.remark}</p> : !canEdit && <p className="muted">{t('noRemark')}</p>}
-        {canEdit && <InlineText label={t(issue.remark ? 'editRemark' : 'addRemark')} displayValue={t(issue.remark ? 'editRemark' : 'addRemark')} value={issue.remark ?? ''} enabled busy={disabled} multiline onSave={(remark) => patch({ remark: remark.trim() ? remark : null })} />}
+        {issue.remark ? <RemarkText className={styles.remark} text={issue.remark} trackers={trackers.data ?? []} /> : !canEdit && <p className="muted">{t('noRemark')}</p>}
+        {canEdit && <InlineText label={t(issue.remark ? 'editRemark' : 'addRemark')} displayValue={t(issue.remark ? 'editRemark' : 'addRemark')} value={issue.remark ?? ''} enabled busy={disabled} multiline onSave={(remark) => patch({ remark: remark.trim() ? remark : null })} tools={(ctx) => <RemarkLinkTools trackers={trackers.data ?? []} {...ctx} />} />}
       </div>}
       {awaitingRetest && canMove && passStatus && <div className={styles.verify} role="group" aria-label={t('verifyGroup')}>
         <div><strong>{t('verifyTitle', { status: issue.status.name })}</strong><p>{t('verifyDescription', { name: qas.map((person) => person.displayName).join(', ') || scope.people.find((person) => person.id === issue.testerId)?.displayName || t('qaReviewer') })}</p></div>

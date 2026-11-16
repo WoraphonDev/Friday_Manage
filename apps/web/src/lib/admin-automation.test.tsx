@@ -52,6 +52,7 @@ const overview = (over: Record<string, unknown> = {}) => ({
 const settings = () => ({
   workStart: "09:00", workEnd: "18:00", workDays: [1, 2, 3, 4, 5], sizeMdMap: { XS: 1, S: 3, M: 5, L: 8, XL: 12 },
   allowProjectOverride: true, safeMode: true, trashDays: 30, archiveRetentionYears: null, requireConsentOnFirstLogin: true, holidayCalendarId: null, dataRegion: "th-bangkok",
+  issueTrackers: [] as { name: string; urlTemplate: string }[],
 });
 const members = [
   { userId: "sample-lead", displayName: "หัวหน้าทีมตัวอย่าง", email: "lead@example.com", role: "owner", status: "active" },
@@ -532,6 +533,40 @@ describe("Admin Console (N1) · ระบบ", () => {
     const confirm = await screen.findByRole("dialog", { name: "ยกเลิก token ระบบรายงานตัวอย่าง?" });
     await user.click(within(confirm).getByRole("button", { name: "ยกเลิก token" }));
     await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "DELETE", path: "/w/sample/api-tokens/k1" }));
+  });
+
+  it("Integrations: ระบบติดตามงานภายนอก · แบบสำเร็จรูป · ตรวจรูปแบบ URL · แก้ไข · ลบ", async () => {
+    server.use(http.get(`${W}/integrations/git`, () => HttpResponse.json({ configured: false, items: [] })), http.get(`${W}/api-tokens`, () => HttpResponse.json({ items: [] })));
+    const user = userEvent.setup();
+    admin("integ");
+    const card = await screen.findByRole("region", { name: "ระบบติดตามงานภายนอก" });
+    expect(within(card).getByText("ยังไม่มีระบบ")).toBeInTheDocument();
+    await user.click(within(card).getByRole("button", { name: "+ เพิ่มระบบ" }));
+    const dialog = await screen.findByRole("dialog", { name: "เพิ่มระบบติดตามงาน" });
+    await user.click(within(dialog).getByRole("button", { name: "Redmine" }));
+    const template = within(dialog).getByLabelText(/รูปแบบ URL/);
+    expect(template).toHaveValue("https://redmine.example.com/issues/{id}");
+    await user.clear(template);
+    await user.type(template, "redmine.example.com/issues/");
+    expect(within(dialog).getByText("ต้องขึ้นต้นด้วย http:// หรือ https:// และมี {id}")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "บันทึก" })).toBeDisabled();
+    await user.clear(template);
+    await user.type(template, "http://redmine.example.com/redmine/issues/{{id}");
+    expect(within(dialog).getByText("http://redmine.example.com/redmine/issues/111004")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "บันทึก" }));
+    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "PATCH", path: "/w/sample/settings", body: { issueTrackers: [{ name: "Redmine", urlTemplate: "http://redmine.example.com/redmine/issues/{id}" }] } }));
+    expect(await within(card).findByText("http://redmine.example.com/redmine/issues/{id}")).toBeInTheDocument();
+    await user.click(within(card).getByRole("button", { name: "แก้ไข Redmine" }));
+    const edit = await screen.findByRole("dialog", { name: "แก้ไขระบบติดตามงาน" });
+    await user.clear(within(edit).getByLabelText(/ชื่อที่ใช้ในหมายเหตุ/));
+    await user.type(within(edit).getByLabelText(/ชื่อที่ใช้ในหมายเหตุ/), "Red#mine");
+    expect(within(edit).getByText("ใช้ได้เฉพาะตัวอักษร ตัวเลข ช่องว่าง . _ -")).toBeInTheDocument();
+    await user.click(within(edit).getByRole("button", { name: "ยกเลิก" }));
+    await user.click(within(card).getByRole("button", { name: "ลบ Redmine" }));
+    const confirm = await screen.findByRole("dialog", { name: "ลบระบบ Redmine?" });
+    await user.click(within(confirm).getByRole("button", { name: "ลบ" }));
+    await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "PATCH", path: "/w/sample/settings", body: { issueTrackers: [] } }));
+    expect(await within(card).findByText("ยังไม่มีระบบ")).toBeInTheDocument();
   });
 });
 

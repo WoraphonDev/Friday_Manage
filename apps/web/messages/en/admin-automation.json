@@ -547,6 +547,33 @@
       "guestsFree": "Guests (clients) aren't counted",
       "storage": "File storage",
       "hint": "Pricing, payment methods, tax invoices and 50 Tawi are on the Plans & Billing page"
+    },
+    "trackers": {
+      "title": "External issue trackers",
+      "hint": "Type issue numbers in a remark, such as Redmine # : 111004, and open them in one click · up to 5 trackers",
+      "empty": "No trackers yet",
+      "add": "+ Add tracker",
+      "addTitle": "Add issue tracker",
+      "editTitle": "Edit issue tracker",
+      "edit": "Edit",
+      "editOne": "Edit {name}",
+      "remove": "Remove",
+      "removeOne": "Remove {name}",
+      "presets": "Start from",
+      "name": "Name used in remarks",
+      "nameHint": "Text before the issue number, such as Redmine",
+      "nameInvalid": "Use letters, numbers, spaces, . _ - only",
+      "nameTaken": "A tracker with this name already exists",
+      "template": "URL pattern",
+      "templateHint": "Put '{id}' where the issue number goes",
+      "templateInvalid": "Must start with http:// or https:// and contain '{id}'",
+      "sample": "Example: {name} # : 111004 →",
+      "save": "Save",
+      "cancel": "Cancel",
+      "removeConfirm": "Remove {name}?",
+      "removeHint": "Remarks keep their text; issue numbers for this tracker just stop being links",
+      "removed": "Tracker removed",
+      "failed": "Something went wrong"
     }
   },
   "templates": {

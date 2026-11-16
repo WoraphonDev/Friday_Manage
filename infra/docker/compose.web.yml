@@ -7,6 +7,8 @@ services:
       context: ../..
       dockerfile: Dockerfile.web
       args:
+        # กุญแจสาธารณะ Stripe จาก infra/docker/.env (set-stripe.sh) · ว่าง = โหมดทดสอบ
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${WEB_STRIPE_PUBLISHABLE_KEY:-}
         API_ORIGIN: ${WEB_API_ORIGIN:-http://host.docker.internal:3001}
     ports:
       - "127.0.0.1:${WEB_PORT:-3000}:3000"

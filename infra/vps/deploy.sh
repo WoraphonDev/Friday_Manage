@@ -23,10 +23,13 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 echo "== deploy $(git branch --show-current) @ $TAG → $VPS_HOST"
 
+# กุญแจสาธารณะ Stripe อยู่ใน /opt/friday/.env ของเครื่อง (set-stripe.sh) · ไม่ใช่ความลับ แต่เว็บต้องฝังตอน build
+STRIPE_PK=$("${SSH[@]}" "grep -s '^STRIPE_PUBLISHABLE_KEY=' $APP_DIR/.env | tail -1 | cut -d= -f2-" || true)
 build() { # build <ชื่อ> <Dockerfile> [build-arg...]
   local name=$1 file=$2; shift 2
   local args=()
   for a in "$@"; do args+=(--build-arg "$a"); done
+  [ "$name" = web ] && args+=(--build-arg "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${STRIPE_PK:-}")
   docker buildx build --platform linux/amd64 --load -f "$file" -t "friday-$name:$TAG" ${args[@]+"${args[@]}"} .
 }
 build api Dockerfile.api
@@ -39,13 +42,13 @@ docker save "friday-api:$TAG" "friday-web:$TAG" "friday-ops-api:$TAG" "friday-op
 
 echo "== ไฟล์ตั้งค่า"
 "${SSH[@]}" "test -f $APP_DIR/.env" || { echo "ยังไม่มี $APP_DIR/.env · รัน setup-server.sh ก่อน" >&2; exit 1; }
-scp -i "$VPS_KEY" -o IdentitiesOnly=yes -q infra/vps/compose.yml infra/vps/Caddyfile infra/vps/backup.sh infra/vps/set-smtp.sh "$VPS_HOST:$APP_DIR/"
+scp -i "$VPS_KEY" -o IdentitiesOnly=yes -q infra/vps/compose.yml infra/vps/Caddyfile infra/vps/backup.sh infra/vps/set-smtp.sh infra/vps/set-stripe.sh "$VPS_HOST:$APP_DIR/"
 
 echo "== migrate แล้วเปิด service"
 "${SSH[@]}" bash -s -- "$TAG" <<'REMOTE'
 set -euo pipefail
 cd /opt/friday
-chmod 700 backup.sh set-smtp.sh
+chmod 700 backup.sh set-smtp.sh set-stripe.sh
 prev=$(grep '^TAG=' .env | cut -d= -f2)
 sed -i "s/^TAG=.*/TAG=$1/" .env
 # กุญแจ VAPID ของ Web Push สร้างครั้งเดียวบนเครื่อง (กุญแจลับไม่ออกจากเครื่อง · เติม 0 ข้างหน้าให้ครบ 32 byte ตามที่ web-push ต้องการ) · เปลี่ยนกุญแจ = การสมัครรับแจ้งเตือนเดิมใช้ไม่ได้

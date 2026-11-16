@@ -168,7 +168,7 @@ describe('เปลี่ยนแพ็กเกจ', () => {
     const r = await finance.agent.post(`/ops/workspaces/${a.id}/change-plan`).send({ plan: 'team_l', cycle: 'yearly', reason: 'ลูกค้าขอเปลี่ยนเป็นรายปี' });
     expect(r.status, JSON.stringify(r.body)).toBe(200);
     expect(r.body).toMatchObject({ effective: 'now', warnings: [], invoice: { number: expect.any(String) } });
-    const inv = (await t.owner.query(`SELECT subtotal::int, status, due_date - current_date AS days FROM invoices WHERE id = $1`, [r.body.invoice.id])).rows[0];
+    const inv = (await t.owner.query(`SELECT subtotal::int, status, due_date - (now() at time zone 'Asia/Bangkok')::date AS days FROM invoices WHERE id = $1`, [r.body.invoice.id])).rows[0];
     expect(inv).toMatchObject({ subtotal: pv.subtotalSatang, status: 'open' });
     expect(Number(inv.days)).toBeGreaterThanOrEqual(6);
     // ไม่มีข้อมูลออกใบกำกับ: เปลี่ยนสำเร็จ แต่บอกให้การเงินออกเอง

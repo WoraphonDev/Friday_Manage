@@ -4,8 +4,19 @@ import { type OpsRequest, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
 import { ConfirmBody, CreditBody, ExceptionsQuery, FlagBody, IncomingQuery, MatchBody, OpsPaymentsService, PaymentsQuery, RejectBody } from './ops-payments.service.js';
 
+/** ชนิดที่ API ลูกค้ารับตอนแนบ (ตรวจจากไบต์แรกแล้ว จึงเชื่อนามสกุลที่บันทึกไว้ได้) · นอกนี้ให้ดาวน์โหลดอย่างเดียว */
+const VIEWABLE: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', pdf: 'application/pdf' };
+
+/** แสดงในหน้าได้ (inline) เพื่อให้ทีมดูสลิปใน Ops ได้เลย · nosniff กันเบราว์เซอร์เดาชนิดเป็น HTML */
 const stream = (res: Response, f: { stream: NodeJS.ReadableStream; size: number; filename: string }) => {
-  res.set({ 'Content-Type': 'application/octet-stream', 'Content-Length': String(f.size), 'Content-Disposition': `attachment; filename="${f.filename}"`, 'Cache-Control': 'private, no-store' });
+  const type = VIEWABLE[f.filename.split('.').pop()?.toLowerCase() ?? ''];
+  res.set({
+    'Content-Type': type ?? 'application/octet-stream',
+    'Content-Length': String(f.size),
+    'Content-Disposition': `${type ? 'inline' : 'attachment'}; filename="${f.filename}"`,
+    'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': 'private, no-store',
+  });
   return new StreamableFile(f.stream as never);
 };
 

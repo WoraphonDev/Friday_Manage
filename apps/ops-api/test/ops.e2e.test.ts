@@ -386,7 +386,7 @@ describe('ตรวจสลิปและ 50 ทวิ', () => {
     expect(await subOf(a.c.sub)).toEqual({ code: 'team_l', status: 'active', source_invoice_id: b.inv.id });
   });
 
-  it('รายการรอตรวจ + ดาวน์โหลดสลิป · เฉพาะ finance / admin', async () => {
+  it('รายการรอตรวจ + เปิดดูสลิป · เฉพาะ finance / admin', async () => {
     const p = await pending('review-me');
     await t.owner.query(`INSERT INTO wht_certificates (workspace_id, invoice_id, file_key, uploaded_by) VALUES ($1,$2,'wht/x.pdf',$3)`, [p.c.id, p.inv.id, p.c.owner]);
     const list = await finance.agent.get('/ops/payments?status=pending_review');
@@ -397,6 +397,10 @@ describe('ตรวจสลิปและ 50 ทวิ', () => {
     const file = await finance.agent.get(`/ops/payments/${p.pay}/slip`).buffer(true).parse((r, cb) => { const ch: Buffer[] = []; r.on('data', (x: Buffer) => ch.push(x)); r.on('end', () => cb(null, Buffer.concat(ch))); });
     expect(file.status).toBe(200);
     expect((file.body as Buffer).toString()).toBe('fake slip bytes');
+    // แสดงในหน้า Ops ได้เลย ไม่บังคับดาวน์โหลด
+    expect(file.headers['content-type']).toBe('image/png');
+    expect(file.headers['content-disposition']).toMatch(/^inline;/);
+    expect(file.headers['x-content-type-options']).toBe('nosniff');
     expect((await support.agent.get(`/ops/payments/${p.pay}/slip`)).status).toBe(403);
     const none = await pending('no-slip', { slip: false });
     expect((await finance.agent.get(`/ops/payments/${none.pay}/slip`)).status).toBe(404);

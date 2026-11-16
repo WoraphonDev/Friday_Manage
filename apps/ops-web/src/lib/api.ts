@@ -41,21 +41,35 @@ export class OpsClient {
       throw new ApiError(0, "network_error", ops.ui.networkError);
     }
     const data = response.status === 204 ? undefined : await response.json().catch(() => undefined);
-    if (!response.ok) {
-      const payload = data?.error;
-      const error = new ApiError(
-        response.status,
-        payload?.code ?? "unknown_error",
-        payload?.message ?? ops.ui.unknownError,
-        payload?.details && typeof payload.details === "object" && !Array.isArray(payload.details) ? payload.details : { issues: payload?.details },
-        // ops-api ยังไม่ใส่ requestId ใน body (คำขอนอก lane) · รองรับทั้งใน body และ header ของ reverse proxy
-        payload?.requestId ?? response.headers.get("x-request-id") ?? undefined,
-      );
-      // reauth_required (ต้องแตะกุญแจซ้ำ) ก็ตอบ 401 แต่ session ยังอยู่ → ให้ useReauth จัดการ ไม่ใช่เซสชันหมดอายุ
-      if (response.status === 401 && error.code !== "reauth_required" && redirectOnUnauthorized && typeof window !== "undefined") window.dispatchEvent(new CustomEvent(OPS_UNAUTHORIZED));
-      throw error;
-    }
+    if (!response.ok) throw this.failure(response, data, redirectOnUnauthorized);
     return data as T;
+  }
+  /** ไฟล์แนบ (สลิป, 50 ทวิ) เป็น Blob · ใช้แสดงในหน้าโดยไม่ต้องฝัง iframe ของ ops-api (X-Frame-Options: DENY) */
+  async file(path: string): Promise<Blob> {
+    if (!path.startsWith("/") || path.startsWith("//") || path.includes("\\")) throw new TypeError("path ต้องเป็น relative ของ /ops-api");
+    let response: Response;
+    try {
+      response = await this.fetcher(`${OPS_BASE}${path}`, { credentials: "include" });
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") throw error;
+      throw new ApiError(0, "network_error", ops.ui.networkError);
+    }
+    if (!response.ok) throw this.failure(response, await response.json().catch(() => undefined), true);
+    return response.blob();
+  }
+  private failure(response: Response, data: { error?: { code?: string; message?: string; details?: unknown; requestId?: string } } | undefined, redirectOnUnauthorized: boolean) {
+    const payload = data?.error;
+    const error = new ApiError(
+      response.status,
+      payload?.code ?? "unknown_error",
+      payload?.message ?? ops.ui.unknownError,
+      payload?.details && typeof payload.details === "object" && !Array.isArray(payload.details) ? (payload.details as Record<string, unknown>) : { issues: payload?.details },
+      // ops-api ยังไม่ใส่ requestId ใน body (คำขอนอก lane) · รองรับทั้งใน body และ header ของ reverse proxy
+      payload?.requestId ?? response.headers.get("x-request-id") ?? undefined,
+    );
+    // reauth_required (ต้องแตะกุญแจซ้ำ) ก็ตอบ 401 แต่ session ยังอยู่ → ให้ useReauth จัดการ ไม่ใช่เซสชันหมดอายุ
+    if (response.status === 401 && error.code !== "reauth_required" && redirectOnUnauthorized && typeof window !== "undefined") window.dispatchEvent(new CustomEvent(OPS_UNAUTHORIZED));
+    return error;
   }
   get<T>(path: string) {
     return this.request<T>(path);

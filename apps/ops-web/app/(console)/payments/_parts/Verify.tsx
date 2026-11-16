@@ -6,9 +6,10 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { hasAny } from "@/components/access";
 import { useApprovalFlow } from "@/components/dialogs";
+import { FileThumb, FileViewer } from "@/components/file-viewer";
 import { Drawer, Empty, ErrorBlock, Modal, Notice, TableSkeleton } from "@/components/kit";
 import { Button, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
-import { api, OPS_BASE } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { useFmt } from "../../workspaces/_parts/format";
 
@@ -40,12 +41,14 @@ export const exceptionsKey = ["ops", "payments", "exceptions"] as const;
 /** แท็บกรณีผิดปกติ (Billing › verify) · เฉพาะรายการที่ระบบยืนยันเองไม่ได้ + สลิปรอตรวจปกติ */
 export function VerifyTab() {
   const t = useTranslations("money");
+  const tc = useTranslations("common.dialog");
   const fmt = useFmt();
   const me = useMe().data;
   const q = useQuery({ queryKey: exceptionsKey, queryFn: () => api.get<{ items: ExceptionItem[]; payments30d: number }>("/payments/exceptions") });
   const slips = useQuery({ queryKey: ["ops", "payments", "pending"], queryFn: () => api.get<{ items: SlipItem[] }>("/payments?status=pending_review") });
   const [open, setOpen] = useState<ExceptionItem | null>(null);
   const [flagging, setFlagging] = useState<SlipItem | null>(null);
+  const [viewing, setViewing] = useState<SlipItem | null>(null);
   const decide = hasAny(me, "finance");
   const normal = (slips.data?.items ?? []).filter((s) => !s.exceptionReason && s.hasSlip);
   return (
@@ -119,9 +122,9 @@ export function VerifyTab() {
                     <td className="small">{fmt.ago(s.createdAt)}</td>
                     <td>
                       <span className="row">
-                        <a className="button button-small button-ghost" href={`${OPS_BASE}/payments/${s.id}/slip`} target="_blank" rel="noreferrer">
+                        <Button size="small" variant="ghost" onClick={() => setViewing(s)}>
                           <FileImage size={14} /> {t("verify.slip")}
-                        </a>
+                        </Button>
                         {decide && (
                           <>
                             <SlipPass id={s.id} />
@@ -141,17 +144,64 @@ export function VerifyTab() {
       </section>
       {open && <DecisionDrawer item={open} canDecide={decide} onClose={() => setOpen(null)} />}
       {flagging && <FlagDialog item={flagging} onClose={() => setFlagging(null)} />}
+      {viewing && (
+        <FileViewer
+          path={`/payments/${viewing.id}/slip`}
+          title={t("verify.slipTitle", { ws: viewing.workspace.name })}
+          description={<span className="mono">{viewing.invoice.number}</span>}
+          filename={`slip-${viewing.invoice.number}`}
+          onClose={() => setViewing(null)}
+          aside={
+            <>
+              <table className="tbl">
+                <tbody>
+                  <tr>
+                    <td className="muted">{t("verify.col.expected")}</td>
+                    <td className="num">
+                      <b>{fmt.money(viewing.invoice.amountDue)}</b>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="muted">{t("verify.col.received")}</td>
+                    <td className="num">{fmt.money(viewing.amount)}</td>
+                  </tr>
+                  <tr>
+                    <td className="muted">{t("verify.col.channel")}</td>
+                    <td className="num">{t(`methods.${viewing.method}` as "methods.transfer")}</td>
+                  </tr>
+                  <tr>
+                    <td className="muted">{t("verify.uploaded")}</td>
+                    <td className="num">{fmt.dateTime(viewing.createdAt)}</td>
+                  </tr>
+                </tbody>
+              </table>
+              {decide && <p className="muted small">{t("verify.compare")}</p>}
+            </>
+          }
+          footer={
+            decide && (
+              <>
+                <Button onClick={() => setViewing(null)}>{tc("close")}</Button>
+                <span className="row">
+                  <Button onClick={() => (setViewing(null), setFlagging(viewing))}>{t("verify.flag")}</Button>
+                  <SlipPass id={viewing.id} onDone={() => setViewing(null)} />
+                </span>
+              </>
+            )
+          }
+        />
+      )}
     </>
   );
 }
 
-function SlipPass({ id }: { id: string }) {
+function SlipPass({ id, onDone }: { id: string; onDone?: () => void }) {
   const t = useTranslations("money.verify");
   const toast = useToast();
   const cache = useQueryClient();
   const m = useMutation({
     mutationFn: () => api.post(`/payments/${id}/confirm`, {}),
-    onSuccess: () => (toast(t("passed")), void cache.invalidateQueries({ queryKey: ["ops"] })),
+    onSuccess: () => (toast(t("passed")), void cache.invalidateQueries({ queryKey: ["ops"] }), onDone?.()),
     onError: (e) => toast(errorToast(e)),
   });
   return (
@@ -207,7 +257,7 @@ function DecisionDrawer({ item, canDecide, onClose }: { item: ExceptionItem; can
   const cache = useQueryClient();
   const { handle } = useApprovalFlow();
   const [reason, setReason] = useState("");
-  const [modal, setModal] = useState<"fail" | "match" | null>(null);
+  const [modal, setModal] = useState<"fail" | "match" | "slip" | null>(null);
   const done = (message: string) => {
     toast(message);
     void cache.invalidateQueries({ queryKey: ["ops"] });
@@ -248,11 +298,7 @@ function DecisionDrawer({ item, canDecide, onClose }: { item: ExceptionItem; can
             </tr>
           </tbody>
         </table>
-        {item.hasSlip && (
-          <a className="button button-small" href={`${OPS_BASE}/payments/${item.id}/slip`} target="_blank" rel="noreferrer">
-            <FileImage size={14} /> {t("verify.slip")}
-          </a>
-        )}
+        {item.hasSlip && <FileThumb path={`/payments/${item.id}/slip`} label={t("verify.slipThumb")} hint={t("verify.slipThumbHint")} onOpen={() => setModal("slip")} />}
         <Notice tone="info" title={t("verify.suggestion")}>
           {item.suggestion}
         </Notice>
@@ -297,6 +343,35 @@ function DecisionDrawer({ item, canDecide, onClose }: { item: ExceptionItem; can
       )}
       {modal === "fail" && <FailDialog item={item} onClose={() => setModal(null)} onDone={() => done(t("verify.failed"))} />}
       {modal === "match" && <MatchDialog item={item} onClose={() => setModal(null)} onDone={() => done(t("verify.matched"))} />}
+      {modal === "slip" && (
+        <FileViewer
+          path={`/payments/${item.id}/slip`}
+          title={t("verify.slipTitle", { ws: item.workspace.name })}
+          description={<span className="mono">{item.invoice.number}</span>}
+          filename={`slip-${item.invoice.number}`}
+          onClose={() => setModal(null)}
+          aside={
+            <table className="tbl">
+              <tbody>
+                <tr>
+                  <td className="muted">{t("verify.col.expected")}</td>
+                  <td className="num">{fmt.money(item.expectedSatang)}</td>
+                </tr>
+                <tr>
+                  <td className="muted">{t("verify.col.received")}</td>
+                  <td className="num">
+                    <b>{fmt.money(item.receivedSatang)}</b>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="muted">{t("verify.col.channel")}</td>
+                  <td className="num">{t(`methods.${item.method}`)}</td>
+                </tr>
+              </tbody>
+            </table>
+          }
+        />
+      )}
     </Drawer>
   );
 }

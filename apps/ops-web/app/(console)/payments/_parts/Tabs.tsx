@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
 import { hasAny } from "@/components/access";
 import { ConfirmDialog, useApprovalFlow, useReauth } from "@/components/dialogs";
+import { FileViewer } from "@/components/file-viewer";
 import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, Seg, TableSkeleton } from "@/components/kit";
 import { Button, buttonClass, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
 import { api, OPS_BASE } from "@/lib/api";
@@ -691,6 +692,7 @@ export function TaxTab() {
   const me = useMe().data;
   const finance = hasAny(me, "finance");
   const [month, setMonth] = useState(thisMonth());
+  const [viewing, setViewing] = useState<{ id: string; number: string; ws: string } | null>(null);
   const q = useQuery({ queryKey: ["ops", "tax", month], queryFn: () => api.get<Tax>(`/tax?month=${month}`), placeholderData: keepPreviousData });
   const retry = useMutation({ mutationFn: (id: string) => api.post(`/tax-documents/${id}/retry`), onSuccess: () => (toast(t("retried")), invalidate(cache)), onError: (e) => toast(errorToast(e)) });
   const review = useMutation({ mutationFn: ({ id, ok }: { id: string; ok: boolean }) => api.post(`/wht-certificates/${id}/${ok ? "confirm" : "reject"}`, ok ? {} : { reason: "เอกสารไม่ถูกต้อง" }), onSuccess: () => invalidate(cache), onError: (e) => toast(errorToast(e)) });
@@ -749,9 +751,9 @@ export function TaxTab() {
                 <td>
                   {w.certificateId && (
                     <span className="row" style={{ flexWrap: "nowrap" }}>
-                      <a className={buttonClass("ghost", "small")} href={`${OPS_BASE}/wht-certificates/${w.certificateId}/file`} target="_blank" rel="noreferrer">
+                      <Button size="small" variant="ghost" onClick={() => setViewing({ id: w.certificateId!, number: w.number, ws: w.workspace.name })}>
                         <FileText size={14} /> {t("file")}
-                      </a>
+                      </Button>
                       {finance && w.certificateStatus === "pending_review" && (
                         <>
                           <Button size="small" variant="primary" onClick={() => review.mutate({ id: w.certificateId!, ok: true })}>
@@ -810,6 +812,7 @@ export function TaxTab() {
           </tbody>
         </table>
       </section>
+      {viewing && <FileViewer path={`/wht-certificates/${viewing.id}/file`} title={t("fileTitle", { ws: viewing.ws })} description={<span className="mono">{viewing.number}</span>} filename={`wht-${viewing.number}`} onClose={() => setViewing(null)} />}
     </div>
   );
 }

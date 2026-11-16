@@ -49,6 +49,8 @@
   "progressAuto": "from sub-tasks",
   "checklistProgressNote": "Progress is the share of checklist items ticked",
   "progressFromChecklist": "from checklist",
+  "bothProgressNote": "Each sub-task and the task checklist count as one equal part",
+  "progressFromBoth": "from sub-tasks + checklist",
   "dev": "Dev",
   "plan": "Plan",
   "actual": "Actual",

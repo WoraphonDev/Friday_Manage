@@ -8,6 +8,7 @@ import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { type DomainEvent, EventBus } from '../core/events.js';
 import { IssuesService } from '../issues/issues.service.js';
+import { withChecklistPart } from '../issues/table.js';
 import type { ProjectRow } from '../projects/projects.service.js';
 import { ProjectsService } from '../projects/projects.service.js';
 import { assertFullOrder, audit, color, type Context, issueEvent, loadContext, type Mode, name, nextSort, nonEmpty, ReorderBody } from './context.js';
@@ -313,6 +314,7 @@ export class ModulesService {
       parentId: s.issues.parentId,
       estimateMd: s.issues.estimateMd,
       progressPct: s.issues.progressPct,
+      checklistPct: s.issues.checklistPct,
       category: s.workflowStatuses.category,
       type: s.issueTypes.name,
     };
@@ -342,7 +344,7 @@ export class ModulesService {
     const pctOf = (i: Row): number => {
       if (i.category === 'done') return 100;
       const c = childrenOf.get(i.id)?.filter((k) => k.category !== 'cancelled');
-      return c?.length ? weightedPct(c.map((k) => ({ md: mdOf(k), pct: pctOf(k) }))) : (i.progressPct ?? 0);
+      return c?.length ? weightedPct(withChecklistPart(c.map((k) => ({ md: mdOf(k), pct: pctOf(k) })), i.checklistPct)) : (i.progressPct ?? 0);
     };
     const mods = await tx.select({ id: s.modules.id, name: s.modules.name, color: s.modules.color }).from(s.modules).where(eq(s.modules.projectId, ctx.project.id));
     return rows.map((m) => {

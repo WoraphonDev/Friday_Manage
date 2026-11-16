@@ -328,13 +328,13 @@ export class IssuesService {
         const statusIds = [...new Set(subtasks.map((x) => x.statusId))];
         const categories = new Map((await tx.select({ id: s.workflowStatuses.id, category: s.workflowStatuses.category }).from(s.workflowStatuses).where(inArray(s.workflowStatuses.id, statusIds))).map((x) => [x.id, x.category]));
         const subs = subtasks.map((x) => ({ category: categories.get(x.statusId), md: x.estimateMd, pct: issueProgress(categories.get(x.statusId), x.progressPct, [], false) }));
-        progressPct = issueProgress(base.status.category, issue.progressPct, subs, project.progressMethod === 'weighted');
+        progressPct = issueProgress(base.status.category, issue.progressPct, subs, project.progressMethod === 'weighted', issue.checklistPct);
       }
       return {
         ...base,
         progressPct,
         progressFromSubtasks: subtasks.length > 0,
-        progressFromChecklist: !subtasks.length && (await hasChecklist(tx, issue.id)),
+        progressFromChecklist: hasChecklist(issue),
         group: group ?? null,
         subtasks: await this.dtos(tx, project, visibleSubs, access),
         pendingDueRequest: pending
@@ -603,7 +603,7 @@ export class IssuesService {
       // ความคืบหน้ากรอกเองได้เฉพาะงานที่ไม่มีลูก
       if (input.progressPct !== undefined) {
         if (await this.hasChildren(tx, issue.id)) throw new AppError(422, 'progress_from_subtasks', 'ความคืบหน้าของ Task คำนวณจาก Sub-task');
-        if (await hasChecklist(tx, issue.id)) throw new AppError(422, 'progress_from_checklist', 'ความคืบหน้าของงานนี้คำนวณจาก Checklist');
+        if (hasChecklist(issue)) throw new AppError(422, 'progress_from_checklist', 'ความคืบหน้าของงานนี้คำนวณจาก Checklist');
         set.progressPct = input.progressPct;
       }
 

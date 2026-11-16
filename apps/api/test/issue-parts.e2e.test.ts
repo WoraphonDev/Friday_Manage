@@ -86,8 +86,8 @@ describe('Checklist และ Acceptance criteria', () => {
     expect(await activityCount()).toBe(before + 6);
     expect(seen).toHaveLength(6);
     expect(seen.every((e) => e.issueId === sub.id && e.data.issueKey === sub.key && (e.data.fields as string[])[0] === 'checklist')).toBe(true);
-    // Progress ขยับตาม Checklist: เพิ่ม (0%) · ติ๊ก (100%) · ย้ายไป Acceptance (ไม่นับ) → ค่าเดิมคงอยู่
-    expect(seen.map((e) => (e.data.fields as string[]).includes('progressPct'))).toEqual([true, false, true, false, false, false]);
+    // Progress ขยับตาม Checklist: เพิ่ม (0%) · ติ๊ก (100%) · ย้ายข้อสุดท้ายไป Acceptance = ไม่มี Checklist แล้ว (checklist_pct ล้าง)
+    expect(seen.map((e) => (e.data.fields as string[]).includes('progressPct'))).toEqual([true, false, true, false, true, false]);
     expect(committed).toEqual(Array(6).fill(true));
     const audit = await t.owner.query('SELECT old_value, new_value FROM activities WHERE issue_id=$1 AND field=\'checklist\' ORDER BY created_at', [sub.id]);
     expect(audit.rows[0]).toMatchObject({ old_value: null, new_value: { text: 'ตรวจรูปแบบข้อมูล' } });
@@ -129,6 +129,24 @@ describe('Checklist และ Acceptance criteria', () => {
     const after = await progress();
     expect(after).toMatchObject({ progressPct: 100, progressFromChecklist: false });
     expect((await team.lead.patch(path(i.key), { progressPct: 90 }, after.version)).status).toBe(200);
+  });
+
+  it('Task ที่มีทั้ง Sub-task และ Checklist: Checklist ของ Task นับเป็นอีกหนึ่งส่วนเท่ากับ Sub-task หนึ่งตัว', async () => {
+    const parent = await issue();
+    const subs = [await issue({ parentKey: parent.key }), await issue({ parentKey: parent.key }), await issue({ parentKey: parent.key })];
+    const read = async () => (await team.lead.get(path(parent.key))).body as { progressPct: number; progressFromSubtasks: boolean; progressFromChecklist: boolean };
+    expect(await read()).toMatchObject({ progressPct: 0, progressFromSubtasks: true, progressFromChecklist: false });
+    const a = await checklist(parent.key, { text: 'ตรวจภาพรวม' });
+    await checklist(parent.key, { text: 'สรุปงาน' });
+    await team.dev.patch(`${path(parent.key)}/checklist/${a.id}`, { done: true });
+    // Sub-task 0, 0, 0 + Checklist 50% = 4 ส่วน → 12.5 ปัดเป็น 13
+    expect(await read()).toMatchObject({ progressPct: 13, progressFromSubtasks: true, progressFromChecklist: true });
+    // Sub-task ตัวแรกติ๊ก Checklist ของตัวเองครบ → 100 + 0 + 0 + 50 = 150 / 4 → 38
+    const s1 = await checklist(subs[0].key, { text: 'ทำครบ' });
+    await team.dev.patch(`${path(subs[0].key)}/checklist/${s1.id}`, { done: true });
+    expect((await read()).progressPct).toBe(38);
+    const table = await team.lead.get(`${team.ws}/projects/DP/issues?view=table&q=${encodeURIComponent(parent.key)}`);
+    expect(table.body.items.find((x: { key: string }) => x.key === parent.key)?.progressPct).toBe(38);
   });
 
   it('จัดลำดับทั้งรายการหรือเฉพาะชนิด และรองรับ action route ตามสเปก', async () => {

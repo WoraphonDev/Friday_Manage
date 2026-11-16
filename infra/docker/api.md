@@ -16,3 +16,4 @@ docker compose -f infra/docker/compose.api.yml logs --tail 50 api
 - Webhook ส่งเข้าที่อยู่ภายในได้ (`WEBHOOK_ALLOW_PRIVATE=1`) เพื่อให้โปรเจกต์ FM ส่งสถานะงานเข้า ops-api ที่ `http://host.docker.internal:4001/ops/hooks/fm` (O36) · ปิดด้วย `API_WEBHOOK_ALLOW_PRIVATE=0`
 - เปลี่ยนพอร์ต / ฐานข้อมูล: `API_PORT`, `API_DATABASE_APP_URL`, `API_DATABASE_SYSTEM_URL` · Origin ของเว็บ: `APP_URL`, `WEB_URL`, `REALTIME_ALLOWED_ORIGINS`
 - แก้โค้ด API แล้วต้อง build image ใหม่ด้วยคำสั่งด้านบน (dev server / `node dist/main.js` ไม่ใช่ผลทดสอบสุดท้าย)
+- Stripe โหมดทดสอบ: ใส่ `STRIPE_SECRET_KEY` (+ `WEB_STRIPE_PUBLISHABLE_KEY` ให้เว็บ) ใน `infra/docker/.env` แล้ว build API และเว็บใหม่ · Stripe ส่ง Webhook เข้า localhost ไม่ได้ ต้องรัน `stripe listen --forward-to localhost:3001/api/v1/hooks/stripe` (Stripe CLI) แล้วตั้ง `STRIPE_WEBHOOK_SECRET` เป็น whsec ที่ CLI พิมพ์ · ทดสอบบนเครื่อง VPS ง่ายกว่า (ดู infra/vps/README.md)

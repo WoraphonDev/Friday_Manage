@@ -9,6 +9,9 @@ COPY apps/web ./apps/web
 # Next บันทึก rewrite ลง standalone ตอน build จึงต้องส่งปลายทาง API ในขั้นนี้
 ARG API_ORIGIN=http://host.docker.internal:3001
 ENV API_ORIGIN=${API_ORIGIN}
+# กุญแจสาธารณะของ Stripe (pk_test_ / pk_live_) ฝังตอน build · ว่าง = หน้าชำระด้วยบัตรขึ้นโหมดทดสอบ
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
 # GlitchTip ฝั่งเบราว์เซอร์ฝังตอน build · ว่าง = ปิด
 ARG NEXT_PUBLIC_SENTRY_DSN=
 ARG NEXT_PUBLIC_APP_VERSION=

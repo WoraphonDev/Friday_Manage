@@ -84,6 +84,21 @@ export interface Invoice {
   whtDueBy: string | null;
 }
 
+export interface TransferInfo {
+  bank: string;
+  accountNo: string;
+  accountName: string;
+  reference: string;
+  dueDate: string;
+  amount: number;
+}
+
+/** `GET w/billing/invoices/:id` · ใบเดียวมีแพ็กเกจของใบ + บัญชีรับโอน (ใบโอนที่ยังไม่ปิด) */
+export interface InvoiceDetail extends Invoice {
+  plan: { code: PlanCode; name: string; cycle: Cycle } | null;
+  transfer: TransferInfo | null;
+}
+
 /** `POST w/billing/checkout` */
 export interface CheckoutResult {
   invoice: Omit<Invoice, "method" | "paymentStatus" | "hasSlip" | "pdfUrl" | "taxDocument" | "whtCertificate" | "whtDueBy">;
@@ -92,6 +107,6 @@ export interface CheckoutResult {
   free?: boolean;
   card?: { clientSecret: string };
   promptpay?: { qrPayload: string; expiresAt: string };
-  transfer?: { bank: string; accountNo: string; accountName: string; reference: string; dueDate: string; amount: number };
+  transfer?: TransferInfo;
   replayed: boolean;
 }

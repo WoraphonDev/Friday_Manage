@@ -217,6 +217,9 @@ describe('โอนเงิน + สลิป + 50 ทวิ', () => {
     expect(days).toBe(7);
     expect((await sub()).code).toBe('team_s');
     expect(r.body.invoice.status).toBe('open');
+    // หน้าชำระใบแจ้งหนี้: เปิดใหม่ทีหลังยังเห็นบัญชีรับโอนและแพ็กเกจของใบ
+    const one = await team.lead.agent.get(`/api/v1${ws}/billing/invoices/${invoiceId}`);
+    expect(one.body).toMatchObject({ id: invoiceId, method: 'transfer', plan: { code: 'team_l', name: 'Team L', cycle: 'monthly' }, transfer: { reference: r.body.invoice.number, amount: 572_000, dueDate: r.body.transfer.dueDate } });
   });
 
   it('แนบสลิป → pending_review แต่ใช้แพ็กเกจใหม่ได้ทันที · ตรวจชนิด / ขนาดไฟล์ · แนบใหม่ได้', async () => {
@@ -264,6 +267,7 @@ describe('โอนเงิน + สลิป + 50 ทวิ', () => {
     expect((await upload(team.lead, `${ws}/billing/invoices/${card.body.invoice.id}/slip`, PNG, 's.png')).body.error.code).toBe('slip_not_applicable');
     await t.owner.query(`UPDATE invoices SET status = 'paid' WHERE id = $1`, [invoiceId]);
     expect((await upload(team.lead, `${ws}/billing/invoices/${invoiceId}/slip`, PNG, 's.png')).body.error.code).toBe('invoice_closed');
+    expect((await team.lead.agent.get(`/api/v1${ws}/billing/invoices/${invoiceId}`)).body.transfer).toBeNull(); // ปิดแล้วไม่แสดงบัญชีรับโอน
     expect((await upload(team.lead, `${ws}/billing/invoices/${randomUUID()}/slip`, PNG, 's.png')).status).toBe(404);
   });
 });

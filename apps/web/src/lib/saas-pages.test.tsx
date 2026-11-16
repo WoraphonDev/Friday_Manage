@@ -394,7 +394,7 @@ describe("แพ็กเกจ & Billing", () => {
     );
   });
 
-  it("แพ็กเกจ + การใช้งาน + ใบแจ้งหนี้ · แนบสลิป, อัปโหลด 50 ทวิ, ยกเลิกแพ็กเกจ (Owner)", async () => {
+  it("แพ็กเกจ + การใช้งาน + ใบแจ้งหนี้ · ลิงก์ชำระใบโอน, อัปโหลด 50 ทวิ, ยกเลิกแพ็กเกจ (Owner)", async () => {
     const user = userEvent.setup();
     mountBilling();
     expect(await screen.findByRole("heading", { level: 2, name: "Team S · เหลือ 13 วัน" })).toBeInTheDocument();
@@ -425,14 +425,12 @@ describe("แพ็กเกจ & Billing", () => {
     expect(within(paid).getByRole("link", { name: "ใบกำกับภาษี" })).toHaveAttribute("href", "/api/v1/w/sample/billing/tax-documents/tx-1.pdf");
     expect(within(paid).queryByRole("button")).not.toBeInTheDocument();
 
-    const input = screen.getByLabelText("แนบสลิป", { selector: "input" });
-    await user.click(within(open).getByRole("button", { name: "แนบสลิป" }));
-    await user.upload(input, new File(["slip"], "slip.pdf", { type: "application/pdf" }));
-    expect(await screen.findByText(/แนบสลิปของ FRI-2611-0001 แล้ว/)).toBeInTheDocument();
+    // ใบโอนที่รอชำระ: ไปหน้าชำระใบแจ้งหนี้ (เลขบัญชี + แนบสลิป) แทนการเลือกไฟล์ทันที
+    expect(within(open).getByRole("link", { name: "ชำระ" })).toHaveAttribute("href", `/work/sample/billing/invoices/${INV}`);
     await user.click(within(open).getByRole("button", { name: "อัปโหลด 50 ทวิ" }));
     await user.upload(screen.getByLabelText("อัปโหลด 50 ทวิ", { selector: "input" }), new File(["wht"], "wht.pdf", { type: "application/pdf" }));
     expect(await screen.findByText(/อัปโหลด 50 ทวิ ของ FRI-2611-0001 แล้ว/)).toBeInTheDocument();
-    expect(calls.map((c) => c.path)).toEqual([`/w/sample/billing/invoices/${INV}/slip`, `/w/sample/billing/invoices/${INV}/wht-certificate`]);
+    expect(calls.map((c) => c.path)).toEqual([`/w/sample/billing/invoices/${INV}/wht-certificate`]);
 
     // W22: ยกเลิกผ่านแบบสอบถาม (ไม่ตอบก็ยกเลิกได้)
     await user.click(screen.getByRole("button", { name: "ยกเลิกแพ็กเกจ" }));

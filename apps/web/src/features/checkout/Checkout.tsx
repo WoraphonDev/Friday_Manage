@@ -1,8 +1,9 @@
 "use client";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Lock, X } from "lucide-react";
+import { Lock, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, CountUp, ErrorState, Forbidden, Input, LoadingState, MotionSwap, Select, buttonVariants } from "@/components/ui";
@@ -36,7 +37,6 @@ interface Form {
 /** ใบเสนอราคาจาก API (A35a เพิ่มสถานะจด VAT) */
 type QuoteVat = Quote & { vatRegistered?: boolean; documentType?: "tax_invoice_receipt" | "receipt" };
 const EMPTY: Form = { companyName: "", taxId: "", branchType: "head", branchNo: "", address: "", taxEmail: "", poNumber: "" };
-const SLIP_MAX = 5 * 1024 * 1024;
 /** poll สถานะใบแจ้งหนี้จน `paid` (Webhook ของผู้ให้บริการยืนยันฝั่ง API) · หน้าเปลี่ยนเองเมื่อเงินเข้า */
 export const POLL_MS = 3000;
 const METHODS: Method[] = ["promptpay", "card", "transfer"];
@@ -55,13 +55,15 @@ const periodFrom = (cycle: Cycle, freeMonths?: number | null) => {
 
 /**
  * W22 · หน้าชำระเงินฝั่งลูกค้า (Checkout 4b)
- * 1. ข้อมูลออกใบกำกับภาษี + หัก ณ ที่จ่าย 3% (ปิดบัตร) · 2. วิธีชำระ PromptPay QR / บัตร / โอน + สลิป · สรุปยอดด้านขวา
+ * 1. ข้อมูลออกใบกำกับภาษี + หัก ณ ที่จ่าย 3% (ปิดบัตร) · 2. วิธีชำระ PromptPay QR / บัตร / โอน · สรุปยอดด้านขวา
+ * โอน: ขอเลขบัญชีแล้วไปหน้าชำระใบแจ้งหนี้ (InvoicePay) ที่มี URL กลับมาแนบสลิปทีหลังได้
  * ยังไม่จด VAT: ซ่อนบรรทัด VAT และเรียกเอกสารว่า "ใบเสร็จ" ตาม `quote.documentType`
  */
 export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initialPlan?: string; initialCycle?: string }) {
   const t = useTranslations("checkout");
   const { workspace } = useWorkspace();
   const cache = useQueryClient();
+  const router = useRouter();
   const base = `/w/${encodeURIComponent(ws)}`;
   const home = `/work/${encodeURIComponent(ws)}`;
   const canBill = workspace.role === "owner" || workspace.role === "admin";
@@ -80,8 +82,6 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
   const [phase, setPhase] = useState<Phase>({ kind: "form" });
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<unknown>(null);
-  const [slip, setSlip] = useState<File | null>(null);
-  const [slipAmount, setSlipAmount] = useState("");
   const [now, setNow] = useState(() => Date.now());
   // โค้ดส่วนลด (O20): coupon = โค้ดที่ส่งไปคิดยอด · couponInput = ที่พิมพ์อยู่ · couponError = ข้อความจาก API เมื่อใช้ไม่ได้
   const [coupon, setCoupon] = useState<string | null>(null);
@@ -267,6 +267,12 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
         void cache.invalidateQueries({ queryKey: ["usage", ws] });
         return;
       }
+      // โอน: ไปหน้าของใบแจ้งหนี้ (เลขบัญชี + แนบสลิป) · ค้างปุ่มไว้ระหว่างเปลี่ยนหน้า
+      if (result.payment.method === "transfer") {
+        void cache.invalidateQueries({ queryKey: ["billing-invoices", ws] });
+        router.push(`${home}/billing/invoices/${result.invoice.id}`);
+        return;
+      }
       setPhase({ kind: "pending", result: result as PayResult });
       if (current === "card") await confirmCard(result as PayResult);
     } catch (e) {
@@ -282,35 +288,10 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
     }
   }
 
-  async function sendSlip(result: PayResult) {
-    if (!slip) return;
-    if (slip.size > SLIP_MAX) {
-      setProblem(t("transfer.tooLarge"));
-      return;
-    }
-    setBusy(true);
-    setProblem(null);
-    try {
-      const body = new FormData();
-      body.append("file", slip);
-      // ยอดที่ลูกค้าบอก (สตางค์) ให้ API เทียบกับใบแจ้งหนี้ (A35a) · ไม่กรอกก็ส่งได้
-      const declared = Math.round(Number(slipAmount.replace(/,/g, "")) * 100);
-      if (slipAmount.trim() && declared > 0) body.append("amount", String(declared));
-      const inv = await api.request<Invoice>(`${base}/billing/invoices/${result.invoice.id}/slip`, { method: "POST", body });
-      setPhase({ kind: "done", invoice: inv, method: "transfer" });
-      void cache.invalidateQueries({ queryKey: ["usage", ws] });
-    } catch (e) {
-      setProblem(e);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function primary() {
     if (phase.kind === "form") return startCheckout();
     if (phase.kind !== "pending") return;
     const r = phase.result;
-    if (r.payment.method === "transfer") return sendSlip(r);
     setProblem(null);
     if (r.payment.method === "card" && stripe.current) {
       setBusy(true);
@@ -457,12 +438,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
               </div>
             )}
 
-            {!freeQuote && payMethod === "transfer" &&
-              (pending?.transfer ? (
-                <TransferPanel base={base} result={pending} slip={slip} setSlip={setSlip} slipAmount={slipAmount} setSlipAmount={setSlipAmount} />
-              ) : (
-                <div className={cn(styles.panel, styles.muted, styles.small)}>{t("transfer.before")}</div>
-              ))}
+            {!freeQuote && payMethod === "transfer" && <div className={cn(styles.panel, styles.muted, styles.small)}>{t("transfer.before")}</div>}
             </MotionSwap>
           </section>
         </div>
@@ -610,7 +586,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
               {t("qr.renew")}
             </Button>
           ) : (
-            <Button variant="primary" className={styles.payBtn} disabled={busy || !amounts || (pending?.payment.method === "transfer" && !slip)} onClick={primary}>
+            <Button variant="primary" className={styles.payBtn} disabled={busy || !amounts} onClick={primary}>
               {busy ? t("summary.processing") : payLabel}
             </Button>
           )}
@@ -726,71 +702,6 @@ function PromptPayPanel({ number, payload, amount, expiresIn }: { number: string
             {t("save")}
           </a>
         )}
-      </div>
-    </div>
-  );
-}
-
-function CopyValue({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  const t = useTranslations("checkout.transfer");
-  const [copied, setCopied] = useState(false);
-  return (
-    <div>
-      <div className={styles.label}>{label}</div>
-      <div className={styles.copyRow}>
-        <b className={mono ? styles.mono : undefined}>{value}</b>
-        <Button
-          size="icon"
-          variant="ghost"
-          aria-label={`${t("copy")} ${label}`}
-          onClick={() => {
-            void navigator.clipboard?.writeText(value).then(() => {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            });
-          }}
-        >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/** โอนเข้าบัญชี: เลขบัญชี + เลขอ้างอิง (คัดลอกได้) · ใบแจ้งหนี้ PDF · แนบสลิปพร้อมยอดที่โอน */
-function TransferPanel({ base, result, slip, setSlip, slipAmount, setSlipAmount }: { base: string; result: CheckoutResult; slip: File | null; setSlip: (f: File | null) => void; slipAmount: string; setSlipAmount: (v: string) => void }) {
-  const t = useTranslations("checkout.transfer");
-  const tr = result.transfer!;
-  return (
-    <div className={styles.panel}>
-      <div className={styles.bank}>
-        <CopyValue label={t("bank")} value={tr.bank} />
-        <CopyValue label={t("accountName")} value={tr.accountName} />
-        <CopyValue label={t("accountNo")} value={tr.accountNo} mono />
-        <CopyValue label={t("reference")} value={tr.reference} mono />
-        <div>
-          <div className={styles.label}>{t("amount")}</div>
-          <b>฿{baht(tr.amount)}</b>
-        </div>
-        <div>
-          <div className={styles.label}>{t("dueDate")}</div>
-          <b>{formatDate(tr.dueDate, "BE", true)}</b>
-        </div>
-      </div>
-      <a href={`/api/v1${base}/billing/invoices/${result.invoice.id}.pdf`} target="_blank" rel="noreferrer" className={styles.small}>
-        {t("invoicePdf", { number: result.invoice.number })}
-      </a>
-      <b className={styles.small}>{t("already")}</b>
-      <span className={cn(styles.muted, styles.small)}>{t("alreadyHint")}</span>
-      <div className={styles.grid}>
-        <div className="field">
-          <label htmlFor="slip">{t("slip")}</label>
-          <div className={styles.drop}>
-            <input id="slip" type="file" accept="image/png,image/jpeg,application/pdf" onChange={(e) => setSlip(e.target.files?.[0] ?? null)} />
-            <span className={styles.muted}>{slip ? slip.name : t("slipHint")}</span>
-          </div>
-        </div>
-        <Input label={t("slipAmount")} hint={t("slipAmountHint")} inputMode="decimal" value={slipAmount} onChange={(e) => setSlipAmount(e.target.value)} />
       </div>
     </div>
   );

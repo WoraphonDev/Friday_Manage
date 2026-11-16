@@ -14,7 +14,7 @@ import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { type BillDoc, renderBill, thaiDate } from './pdf.js';
-import { type CheckoutMeta, invoiceDto, PaymentsService } from './payments.service.js';
+import { bankInfo, type CheckoutMeta, invoiceDto, PaymentsService } from './payments.service.js';
 
 const s = schema;
 const DAY = 86_400_000;
@@ -86,15 +86,20 @@ export class InvoicesService {
     });
   }
 
+  /** ใบเดียว = ข้อมูลในรายการ + แพ็กเกจของใบ + บัญชีรับโอน (ถ้าโอนและยังไม่ปิด) */
   async get(auth: AuthInfo, tenant: TenantInfo, id: string) {
     this.requireBilling(tenant);
-    return this.db.run(auth, tenant, async (tx) => {
+    const { view, i, p } = await this.db.run(auth, tenant, async (tx) => {
       const i = await this.find(tx, id);
       const [p] = await tx.select().from(s.payments).where(eq(s.payments.invoiceId, i.id));
       const [d] = await tx.select().from(s.taxDocuments).where(eq(s.taxDocuments.invoiceId, i.id));
       const [w] = await tx.select().from(s.whtCertificates).where(eq(s.whtCertificates.invoiceId, i.id)).orderBy(desc(s.whtCertificates.createdAt));
-      return this.view(tenant, i, p, d, w);
+      return { view: this.view(tenant, i, p, d, w), i, p };
     });
+    const meta = await this.payments.meta(i.id).catch(() => null);
+    // หน้าชำระใบแจ้งหนี้ (W22b): ลูกค้ากลับมาโอนทีหลังจึงต้องเห็นบัญชีรับโอนอีกครั้ง · ใบที่ปิดแล้วไม่ส่ง
+    const transfer = p?.method === 'transfer' && (i.status === 'open' || i.status === 'pending_review') ? { ...bankInfo(), reference: i.number, dueDate: i.dueDate, amount: i.amountDue } : null;
+    return { ...view, plan: meta ? { code: meta.plan, name: PLAN_NAMES[meta.plan] ?? meta.plan, cycle: meta.cycle } : null, transfer };
   }
 
   private view(tenant: TenantInfo, i: typeof s.invoices.$inferSelect, p?: typeof s.payments.$inferSelect, d?: typeof s.taxDocuments.$inferSelect, w?: typeof s.whtCertificates.$inferSelect) {

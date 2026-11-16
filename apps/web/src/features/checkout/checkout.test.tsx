@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { renderWithProviders } from "@/test/render";
 import { server } from "@/test/server";
-import { navigation } from "@/test/router";
+import { navigation, router } from "@/test/router";
 import { workspaces } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import type { Usage } from "@/features/plan-limits";
@@ -232,27 +232,17 @@ describe("ชำระเงิน (W22)", () => {
     expect(screen.getByText(/ส่ง 50 ทวิ ภายใน 30 วัน/)).toBeInTheDocument();
   });
 
-  it("โอนเข้าบัญชี: เลขบัญชีคัดลอกได้ · ใบแจ้งหนี้ PDF · แนบสลิปพร้อมยอด → รอตรวจและใช้งานได้ทันที", async () => {
+  it("โอนเข้าบัญชี: ขอเลขบัญชี → ไปหน้าชำระใบแจ้งหนี้ของใบนั้น (แนบสลิปที่หน้านั้น)", async () => {
     const user = userEvent.setup();
     mount({ plan: "team_m", cycle: "yearly" });
     await user.click(await screen.findByRole("radio", { name: /โอนเข้าบัญชี/ }));
     expect(within(summary()).getByText("Team M · รายปี")).toBeInTheDocument();
     expect((await within(summary()).findAllByText("฿32,100")).length).toBe(2);
+    expect(screen.getByText(/กด "ขอเลขบัญชี" เพื่อออกใบแจ้งหนี้/)).toBeInTheDocument();
     await user.click(within(summary()).getByRole("button", { name: "ขอเลขบัญชี" }));
-    expect(await screen.findByText("ธนาคารตัวอย่าง")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "คัดลอก เลขที่บัญชี" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ดาวน์โหลดใบแจ้งหนี้ FRI-2611-0001 (PDF)" })).toHaveAttribute("href", `/api/v1/w/sample/billing/invoices/${INV}.pdf`);
-    const send = within(summary()).getByRole("button", { name: "อัปโหลดสลิป" });
-    expect(send).toBeDisabled();
-    await user.upload(screen.getByLabelText("สลิปการโอน"), new File(["slip"], "slip.png", { type: "image/png" }));
-    await user.type(screen.getByLabelText("ยอดที่โอน (บาท)"), "3,210");
-    await user.click(send);
-    expect(await screen.findByRole("heading", { level: 1, name: "ได้รับสลิปแล้ว ใช้งานได้ทันที" })).toBeInTheDocument();
-    expect(screen.getByText("ใบกำกับภาษีส่งไปที่ account@example.com หลังตรวจสลิปผ่าน")).toBeInTheDocument();
-    const slip = calls.find((c) => c.path.endsWith("/slip"))!;
-    expect(slip.path).toBe(`/w/sample/billing/invoices/${INV}/slip`);
-    expect(slip.body).toMatchObject({ amount: "321000" });
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(`/work/sample/billing/invoices/${INV}`));
     expect(calls.find((c) => c.path.endsWith("/checkout"))!.body).toMatchObject({ method: "transfer", cycle: "yearly", wht: false });
+    expect(screen.queryByLabelText("สลิปการโอน")).not.toBeInTheDocument();
   });
 
   it("บริษัทยังไม่จด VAT: ซ่อนบรรทัด VAT และใช้คำว่าใบเสร็จ", async () => {

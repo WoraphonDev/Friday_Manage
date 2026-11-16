@@ -91,7 +91,7 @@
     "slipAmount": "Amount transferred (THB)",
     "slipAmountHint": "Helps us check faster · if it doesn't match the invoice we'll contact you",
     "tooLarge": "The file is larger than 5 MB",
-    "send": "Upload slip"
+    "send": "Send slip"
   },
   "summary": {
     "title": "Summary",
@@ -187,5 +187,38 @@
     "confirm": "Cancel plan",
     "done": "Canceled · you can use it until the end of the cycle",
     "kept": "Thanks for staying with Friday"
+  },
+  "invoicePay": {
+    "back": "Plan & Billing",
+    "title": "Pay invoice {number}",
+    "planLine": "{plan} · {cycle} · due {date}",
+    "dueLine": "Due {date}",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "toPay": "Amount to transfer",
+    "step1": "Transfer to this account",
+    "step2": "Transferred? Attach the slip",
+    "referenceShort": "Reference",
+    "referenceHint": "Put the reference in your banking app's transfer note so we can match it faster",
+    "drop": "Drop the slip here or choose a file",
+    "change": "Change file",
+    "badType": "Only JPG, PNG or PDF files",
+    "amountHint": "Pre-filled with the invoice amount · change it if you transferred a different amount and we'll contact you",
+    "later": "You don't have to transfer now. Come back to this page from Plan & Billing",
+    "reviewTitle": "Slip received. You can use {plan} now",
+    "reviewTitleNoPlan": "Slip received. You can use the plan now",
+    "reviewAgain": "Wrong slip? You can attach a new one until our team finishes checking",
+    "slipAgain": "Attach a new slip",
+    "cancelAgain": "Cancel",
+    "paidTitle": "This invoice is paid",
+    "voidTitle": "This invoice was cancelled",
+    "voidHint": "To renew, choose a plan again on the checkout page",
+    "otherMethod": "This invoice is paid by {method}. See its status on Plan & Billing",
+    "methods": {
+      "card": "card",
+      "promptpay": "PromptPay",
+      "transfer": "bank transfer"
+    },
+    "checkout": "Go to checkout"
   }
 }

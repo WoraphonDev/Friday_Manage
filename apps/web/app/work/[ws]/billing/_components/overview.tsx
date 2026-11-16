@@ -118,10 +118,11 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
   const items = invoices.data?.items ?? [];
   const needWhtFor = (inv: Invoice) => inv.whtAmount > 0 && !inv.whtCertificate && !!inv.whtDueBy && inv.whtDueBy >= now && inv.status !== "void";
   const needSlipFor = (inv: Invoice) => inv.method === "transfer" && (inv.status === "open" || inv.status === "pending_review");
+  // โอน: ไปหน้าชำระใบแจ้งหนี้ (เห็นเลขบัญชีอีกครั้ง + แนบสลิป) · รอตรวจแล้วเปิดช่องแนบสลิปใหม่ทันที
   const slipButton = (inv: Invoice) => (
-    <Button size="small" onClick={() => pick(inv, "slip")}>
-      {inv.hasSlip ? t("slipAgain") : t("slip")}
-    </Button>
+    <Link className={buttonVariants({ size: "small", variant: inv.status === "open" ? "primary" : undefined })} href={`/work/${encodeURIComponent(ws)}/billing/invoices/${inv.id}${inv.hasSlip ? "?slip=new" : ""}`}>
+      {inv.hasSlip ? t("slipAgain") : t("payInvoice")}
+    </Link>
   );
   const todos: Todo[] = items.flatMap((inv) => {
     const list: Todo[] = [];

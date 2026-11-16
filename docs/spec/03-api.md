@@ -508,6 +508,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | POST | `w/billing/invoices/{id}/slip` | `ws.billing` | แนบสลิป · สถานะ `pending_review` แต่ใช้แพ็กเกจใหม่ได้ทันที |
 | POST | `w/billing/invoices/{id}/wht-certificate` | `ws.billing` | 50 ทวิ ภายใน 30 วัน |
 | GET | `w/billing/invoices` · `{id}.pdf` · `w/billing/tax-documents/{id}.pdf` | `ws.billing` | |
+| GET | `w/billing/invoices/{id}` | `ws.billing` | ใบเดียว + `plan { code, name, cycle }` + `transfer` (บัญชีรับโอน · เฉพาะใบโอนที่ยังไม่ปิด ไม่งั้น `null`) ให้หน้าชำระใบแจ้งหนี้ |
 | POST | `w/billing/subscription:cancel` | Owner | ใช้ต่อได้ถึงสิ้นรอบ |
 
 ### 3.11 Webhook ขาเข้า

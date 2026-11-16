@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { type Db, isGrantSource, schema, type Tx } from '@friday/db';
+import { type Db, isGrantSource, replaceTaxDocument, schema, type Tx } from '@friday/db';
+import { creditNotePdf, debitNotePdf, invoicePdf, renderSalesReport, salesReportData, salesReportXlsx, taxDocumentPdf } from '@friday/docs';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApprovalsService, type ApprovalContext } from '../approvals/approvals.service.js';
@@ -73,10 +74,16 @@ export const CreditGrantBody = z.object({ workspaceId: z.uuid(), amountSatang: z
 export const TaxQuery = z.object({ month: Month.optional() });
 export const RevenueQuery = z.object({ months: z.coerce.number().int().min(1).max(24).default(6) });
 export const CloseBody = z.object({ month: Month }).strict();
-export const EXPORT_TYPES = ['sales', 'credit_notes', 'wht'] as const;
-export const ExportQuery = z.object({ month: Month, type: z.enum(EXPORT_TYPES).default('sales') });
-export const SendExportBody = z.object({ month: Month, types: z.array(z.enum(EXPORT_TYPES)).min(1).max(3).default([...EXPORT_TYPES]) }).strict();
-const EXPORT_LABEL: Record<(typeof EXPORT_TYPES)[number], string> = { sales: 'รายการขาย', credit_notes: 'ใบลดหนี้', wht: '50 ทวิ ที่ได้รับ' };
+/** ไฟล์ให้สำนักงานบัญชี: รายงานภาษีขาย (PDF + Excel · รวมใบลด / เพิ่มหนี้) และ 50 ทวิ ที่ได้รับ (CSV) */
+export const EXPORT_TYPES = ['sales_tax', 'wht'] as const;
+export const ExportQuery = z.object({ month: Month, type: z.enum(['wht']).default('wht') });
+export const SendExportBody = z.object({ month: Month, types: z.array(z.enum(EXPORT_TYPES)).min(1).max(2).default([...EXPORT_TYPES]) }).strict();
+const EXPORT_LABEL: Record<(typeof EXPORT_TYPES)[number], string> = { sales_tax: 'รายงานภาษีขาย (PDF + Excel)', wht: '50 ทวิ ที่ได้รับ' };
+export const SalesReportQuery = z.object({ month: Month, format: z.enum(['pdf', 'xlsx']).default('pdf') });
+/** ใบเพิ่มหนี้ (ม.86/9): ยอดที่คิดขาดก่อน VAT · ออกใบแจ้งหนี้ส่วนเพิ่มให้ลูกค้าจ่าย */
+export const DebitNoteBody = z.object({ amountSatang: z.number().int().positive().max(100_000_000), reason: Reason, dueDays: z.number().int().min(1).max(90).default(7) }).strict();
+/** ออกใบกำกับภาษีฉบับใหม่แทนฉบับที่ยกเลิก (ข้อมูลผู้ซื้อผิด · ลูกค้าแก้ข้อมูลภาษีแล้ว) */
+export const ReplaceTaxDocBody = z.object({ reason: Reason }).strict();
 
 /** ขั้นตอนเตือนอัตโนมัติหลังเลยกำหนด (วัน) · วันที่ 14 ระงับ */
 export const DUNNING_STEPS = [
@@ -153,7 +160,8 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     if (!ws) throw new AppError(404, 'not_found', 'ไม่พบ Workspace');
     return ws;
   }
-  private payLink = (slug: string, invoiceId: string) => `${config.appUrl}/work/${slug}/billing?invoice=${invoiceId}`;
+  /** หน้าชำระใบแจ้งหนี้ของลูกค้า (W22b · โอน / บัตร / PromptPay ของใบนั้น) */
+  private payLink = (slug: string, invoiceId: string) => `${config.appUrl}/work/${slug}/billing/invoices/${invoiceId}`;
 
   // ---------------------------------------------------------------- ใบแจ้งหนี้
 
@@ -169,6 +177,9 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
         i.po_number as "poNumber", i.due_date as "dueDate", i.paid_at as "paidAt", i.created_at as "createdAt",
         json_build_object('id', w.id, 'slug', w.slug, 'name', w.name) as workspace,
         (select d.status from tax_documents d where d.invoice_id = i.id order by d.created_at desc limit 1) as "taxDocumentStatus",
+        (select json_build_object('id', d.id, 'number', d.number, 'status', d.status, 'docType', d.doc_type) from tax_documents d where d.invoice_id = i.id and d.status <> 'cancelled' order by d.created_at desc limit 1) as "taxDocument",
+        coalesce((select json_agg(json_build_object('id', c.id, 'number', c.number) order by c.created_at) from credit_notes c where c.invoice_id = i.id), '[]') as "creditNotes",
+        coalesce((select json_agg(json_build_object('id', x.id, 'number', x.number) order by x.created_at) from debit_notes x where x.invoice_id = i.id), '[]') as "debitNotes",
         exists(select 1 from credit_notes c where c.invoice_id = i.id) as "hasCreditNote"
       from invoices i join workspaces w on w.id = i.workspace_id where ${where}
       order by i.created_at desc limit ${q.limit} offset ${q.offset}`);
@@ -255,6 +266,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
       await audit(tx, staff, inv.workspaceId, 'plan', 'ops.invoice_voided', `ยกเลิกใบแจ้งหนี้ ${inv.number} · ออกใบลดหนี้ ${cn.number} (ไม่คืนเงิน) · ${input.reason}`, { type: 'invoice', id: inv.id });
       return cn;
     });
+    await this.sendNote('credit', note.id, inv.workspaceId, `ใบลดหนี้ ${note.number} · ยกเลิกใบแจ้งหนี้ ${inv.number}`, `อ้างถึงใบแจ้งหนี้ ${inv.number}\nเหตุผล: ${input.reason}`);
     return { id: inv.id, status: 'void' as const, creditNote: { id: note.id, number: note.number } };
   }
 
@@ -515,7 +527,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
       await audit(tx, staff, inv.workspaceId, 'plan', 'ops.refund_issued', `คืนเงิน ${baht(p.amountSatang)} (${inv.number}) · ใบลดหนี้ ${note.number} · ${p.method === 'original' ? 'คืนช่องทางเดิม' : 'โอนคืน'}${p.voidInvoice ? ' · ยกเลิกใบแจ้งหนี้' : ''} · ${p.reason}`, { type: 'credit_note', id: note.id }, approvalOf(ctx));
       return note;
     });
-    await mailAll(this.mail, await billingContacts(this.db, inv.workspaceId), `ใบลดหนี้ ${cn.number} · คืนเงิน ${baht(p.amountSatang)}`, `อ้างถึงใบแจ้งหนี้ ${inv.number}\nเหตุผล: ${p.reason}\nทีมการเงินจะคืนเงิน${p.method === 'original' ? 'ผ่านช่องทางเดิม' : 'ทางการโอน'}ภายใน 7 วันทำการ`);
+    await this.sendNote('credit', cn.id, inv.workspaceId, `ใบลดหนี้ ${cn.number} · คืนเงิน ${baht(p.amountSatang)}`, `อ้างถึงใบแจ้งหนี้ ${inv.number}\nเหตุผล: ${p.reason}\nทีมการเงินจะคืนเงิน${p.method === 'original' ? 'ผ่านช่องทางเดิม' : 'ทางการโอน'}ภายใน 7 วันทำการ`);
     return { creditNote: { id: cn.id, number: cn.number, kind: cn.kind, amountSatang: cn.amountSatang, vatSatang: cn.vatSatang }, invoiceStatus: p.voidInvoice ? 'void' : inv.status };
   }
 
@@ -548,8 +560,131 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
       return note;
     });
     const [bal] = await this.rows<{ b: number }>(sql`select coalesce(sum(amount_satang), 0)::float8 as b from workspace_credits where workspace_id = ${p.workspaceId}`);
-    await mailAll(this.mail, await billingContacts(this.db, p.workspaceId), `คุณได้รับเครดิต ${baht(p.amountSatang)} · Friday Work Management`, `เหตุผล: ${p.reason}\nเครดิตคงเหลือ ${baht(Number(bal.b))} ใช้หักรอบถัดไปอัตโนมัติ`);
+    const subject = `คุณได้รับเครดิต ${baht(p.amountSatang)} · Friday Work Management`;
+    const text = `เหตุผล: ${p.reason}\nเครดิตคงเหลือ ${baht(Number(bal.b))} ใช้หักรอบถัดไปอัตโนมัติ`;
+    if (result) await this.sendNote('credit', result.id, p.workspaceId, subject, `${text}\nแนบใบลดหนี้ ${result.number}`);
+    else await mailAll(this.mail, await billingContacts(this.db, p.workspaceId), subject, text);
     return { creditSatang: p.amountSatang, balanceSatang: Number(bal.b), creditNote: result ? { id: result.id, number: result.number } : null };
+  }
+
+  // ---------------------------------------------------------------- ใบลด / เพิ่มหนี้ · ใบกำกับภาษีฉบับแทน
+
+  /**
+   * ส่งใบลด / เพิ่มหนี้ให้ผู้ติดต่อเรื่องเงินของลูกค้า แนบ PDF (แม่แบบเดียวกับที่ลูกค้าดาวน์โหลดในหน้า Billing)
+   * ส่งได้อย่างน้อย 1 อีเมล → สถานะ sent · ส่งไม่ได้ไม่ทำให้รายการล้ม (ลูกค้ายังดาวน์โหลดเองได้)
+   */
+  private async sendNote(kind: 'credit' | 'debit', id: string, workspaceId: string, subject: string, text: string) {
+    const file = kind === 'credit' ? await creditNotePdf(this.db, id, { vatRegistered: vatRegistered() }) : await debitNotePdf(this.db, id, { vatRegistered: vatRegistered() });
+    if (!file) return 0;
+    const ws = await this.workspace(workspaceId);
+    let sent = 0;
+    for (const to of await billingContacts(this.db, workspaceId)) {
+      try {
+        await this.mail.send({ to, subject, text: `${text}\nดาวน์โหลดเอกสารได้ที่ ${config.appUrl}/work/${ws.slug}/billing`, attachments: [{ filename: file.filename, content: file.buffer, contentType: 'application/pdf' }] });
+        sent++;
+      } catch {
+        /* Mailer บันทึก log แล้ว */
+      }
+    }
+    if (sent) {
+      const table = kind === 'credit' ? s.creditNotes : s.debitNotes;
+      await this.db.update(table).set({ status: 'sent', updatedAt: new Date() }).where(eq(table.id, id));
+    }
+    return sent;
+  }
+
+  /**
+   * ใบเพิ่มหนี้ (ม.86/9): เก็บเงินขาดในใบที่ออกใบกำกับภาษีแล้ว · อ้างใบกำกับภาษีเดิม
+   * ออกใบแจ้งหนี้ส่วนเพิ่ม (โอน · ลูกค้าจ่ายที่หน้าชำระใบแจ้งหนี้) แล้วผูกกับใบเพิ่มหนี้
+   */
+  async issueDebitNote(staff: Staff, id: string, input: z.infer<typeof DebitNoteBody>) {
+    const inv = await this.invoice(id);
+    if (inv.status !== 'paid') throw new AppError(409, 'invoice_not_paid', 'ออกใบเพิ่มหนี้ได้เฉพาะใบที่ชำระแล้ว (มีใบกำกับภาษี)', { status: inv.status });
+    const [doc] = await this.db.select().from(s.taxDocuments).where(and(eq(s.taxDocuments.invoiceId, inv.id), sql`${s.taxDocuments.status} <> 'cancelled'`)).orderBy(desc(s.taxDocuments.createdAt)).limit(1);
+    if (!doc) throw new AppError(409, 'no_tax_document', 'ใบนี้ยังไม่มีใบกำกับภาษี / ใบเสร็จให้อ้างอิง');
+    if (await this.isClosed(todayBkk().slice(0, 7))) throw new AppError(409, 'period_closed', 'งวดเดือนนี้ปิดแล้ว ออกเอกสารใหม่ไม่ได้');
+    const [sub] = await this.db.select().from(s.subscriptions).where(eq(s.subscriptions.workspaceId, inv.workspaceId));
+    const ws = await this.workspace(inv.workspaceId);
+    const amount = input.amountSatang;
+    const vat = vatRegistered() && doc.docType !== 'receipt' ? Math.round(amount * 0.07) : 0;
+    // ลูกค้าหัก ณ ที่จ่ายในใบเดิม → ส่วนเพิ่มก็หักแบบเดียวกัน
+    const whtAmount = inv.whtAmount > 0 ? Math.round(amount * 0.03) : 0;
+    const amountDue = amount + vat - whtAmount;
+    const start = todayBkk();
+    const result = await this.db.transaction(async (tx) => {
+      const number = await nextNumber(tx, 'debit_note');
+      const invoiceNumber = await nextNumber(tx, 'invoice', start);
+      const [charge] = await tx
+        .insert(s.invoices)
+        .values({ workspaceId: inv.workspaceId, subscriptionId: sub?.id ?? inv.subscriptionId, number: invoiceNumber, periodStart: start, periodEnd: start, subtotal: amount, vat, total: amount + vat, whtAmount, amountDue, poNumber: inv.poNumber, status: 'open', dueDate: addDays(start, input.dueDays) })
+        .returning();
+      await tx.insert(s.payments).values({ workspaceId: inv.workspaceId, invoiceId: charge.id, method: 'transfer', amount: amountDue });
+      await tx.insert(s.auditLogs).values({
+        workspaceId: inv.workspaceId, actorId: staff.id, actorKind: 'friday_staff', category: 'plan', action: 'billing.checkout', targetType: 'invoice', targetId: charge.id,
+        summary: JSON.stringify({ method: 'transfer', wht: whtAmount > 0, manual: true, items: [{ description: `ส่วนเพิ่มตามใบเพิ่มหนี้ ${number}`, qty: 1, unitSatang: amount }], note: input.reason, key: `ops-${randomUUID()}`, payload: '' }),
+      });
+      const [dn] = await tx
+        .insert(s.debitNotes)
+        .values({ workspaceId: inv.workspaceId, invoiceId: inv.id, number, amountSatang: amount, vatSatang: vat, reason: input.reason, status: 'issued', chargeInvoiceId: charge.id, createdByStaff: staff.id, issuedAt: new Date() })
+        .returning();
+      await audit(tx, staff, inv.workspaceId, 'plan', 'ops.debit_note_issued', `ใบเพิ่มหนี้ ${number} อ้าง ${doc.number} (${inv.number}) · เพิ่ม ${baht(amount + vat)} · ใบแจ้งหนี้ ${invoiceNumber} · ${input.reason}`, { type: 'debit_note', id: dn.id });
+      return { dn, charge };
+    });
+    const sent = await this.sendNote('debit', result.dn.id, inv.workspaceId, `ใบเพิ่มหนี้ ${result.dn.number} · Friday Work Management`, [
+      `อ้างถึง${doc.docType === 'receipt' ? 'ใบเสร็จ' : 'ใบกำกับภาษี'} ${doc.number} (ใบแจ้งหนี้ ${inv.number})`,
+      `เหตุผล: ${input.reason}`,
+      `ยอดเพิ่ม ${baht(amount + vat)} · ชำระ ${baht(amountDue)} ภายใน ${result.charge.dueDate}`,
+      `ชำระได้ที่ ${this.payLink(ws.slug, result.charge.id)}`,
+    ].join('\n'));
+    return {
+      debitNote: { id: result.dn.id, number: result.dn.number, amountSatang: amount, vatSatang: vat },
+      invoice: { id: result.charge.id, number: result.charge.number, amountDue, dueDate: result.charge.dueDate },
+      sent,
+    };
+  }
+
+  /**
+   * ใบกำกับภาษีฉบับใหม่แทนฉบับที่ยกเลิก: ฉบับเดิม cancelled · ฉบับใหม่เลขถัดไป ลงวันที่ตามฉบับเดิม ข้อมูลผู้ซื้อปัจจุบัน
+   * ใบกำกับภาษี (จด VAT) อยู่ pending ให้งานกวาด e-Tax ของ API ลูกค้าส่ง · งวดของฉบับเดิมปิดแล้วทำไม่ได้
+   */
+  async replaceTaxDocument(staff: Staff, id: string, input: z.infer<typeof ReplaceTaxDocBody>) {
+    if (!z.uuid().safeParse(id).success) throw new AppError(404, 'not_found', 'ไม่พบใบกำกับภาษี');
+    const [d] = await this.db.select().from(s.taxDocuments).where(eq(s.taxDocuments.id, id));
+    if (!d) throw new AppError(404, 'not_found', 'ไม่พบใบกำกับภาษี');
+    if (d.status === 'cancelled') throw new AppError(409, 'already_cancelled', 'ใบนี้ยกเลิกแล้ว');
+    const inv = await this.invoice(d.invoiceId);
+    if (inv.status !== 'paid') throw new AppError(409, 'invoice_not_paid', 'ใบแจ้งหนี้ของเอกสารนี้ไม่ได้อยู่ในสถานะชำระแล้ว', { status: inv.status });
+    const docMonth = (d.issuedOn ?? todayBkk()).slice(0, 7);
+    if (await this.isClosed(docMonth)) throw new AppError(409, 'period_closed', `งวด ${docMonth} ปิดแล้ว ยกเลิกเอกสารของงวดนี้ไม่ได้`);
+    const r = await this.db.transaction(async (tx) => {
+      const out = await replaceTaxDocument(tx, id, input.reason);
+      if (!out || out.alreadyCancelled || !out.replacement) throw new AppError(409, 'already_cancelled', 'ใบนี้ยกเลิกแล้ว');
+      await audit(tx, staff, d.workspaceId, 'plan', 'ops.tax_document_replaced', `ยกเลิก ${d.number} · ออกฉบับใหม่ ${out.replacement.number} แทน · ${input.reason}`, { type: 'tax_document', id: out.replacement.id });
+      return out.replacement;
+    });
+    const file = await taxDocumentPdf(this.db, r.id);
+    if (file) {
+      await mailAll(this.mail, await billingContacts(this.db, d.workspaceId), `${d.docType === 'receipt' ? 'ใบเสร็จ' : 'ใบกำกับภาษี'}ฉบับใหม่ ${r.number} แทน ${d.number}`, `ยกเลิก ${d.number} และออก ${r.number} แทน เนื่องจาก${input.reason}\nฉบับเดิมใช้อ้างอิงไม่ได้อีก`);
+    }
+    return { cancelled: { id: d.id, number: d.number }, replacement: { id: r.id, number: r.number, status: r.status, issuedOn: r.issuedOn } };
+  }
+
+  /** PDF ของเอกสารให้ทีมดู / ส่งต่อ (แม่แบบเดียวกับลูกค้า) */
+  async documentPdf(kind: 'invoice' | 'tax_document' | 'credit_note' | 'debit_note', id: string) {
+    if (!z.uuid().safeParse(id).success) throw new AppError(404, 'not_found', 'ไม่พบเอกสาร');
+    const opts = { vatRegistered: vatRegistered() };
+    const file = kind === 'invoice' ? await invoicePdf(this.db, id, opts) : kind === 'tax_document' ? await taxDocumentPdf(this.db, id) : kind === 'credit_note' ? await creditNotePdf(this.db, id, opts) : await debitNotePdf(this.db, id, opts);
+    if (!file) throw new AppError(404, 'not_found', 'ไม่พบเอกสาร');
+    return file;
+  }
+
+  /** รายงานภาษีขายรายเดือน (ม.87) · PDF 2 หน้า (ตามแบบ + รายละเอียด) หรือ Excel 2 แท็บ · งวดที่ยังไม่ปิด = ฉบับร่าง */
+  async salesReport(q: z.infer<typeof SalesReportQuery>) {
+    const [year, month] = q.month.split('-').map(Number);
+    const closed = await this.isClosed(q.month);
+    const data = await salesReportData(this.db, year, month, { closed });
+    const buffer = q.format === 'xlsx' ? await salesReportXlsx(data) : await renderSalesReport(data);
+    return { buffer, filename: `friday-sales-tax-${q.month}${closed ? '' : '-draft'}.${q.format}`, draft: !closed, rows: data.rows.length };
   }
 
   // ---------------------------------------------------------------- รายงานรายได้ / ปิดงวด / ส่งออก
@@ -624,42 +759,22 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     return { month: input.month, closed: true };
   }
 
-  /** ส่งออกให้สำนักงานบัญชี (B8) เป็น CSV (มี BOM ให้ Excel อ่านภาษาไทยได้) · งวดที่ยังไม่ปิด = ฉบับร่าง */
+  /** 50 ทวิ ที่ได้รับของงวดเป็น CSV (มี BOM ให้ Excel อ่านภาษาไทยได้) · รายการขาย / ใบลดหนี้ย้ายไปอยู่ในรายงานภาษีขาย */
   async export(q: z.infer<typeof ExportQuery>) {
     const esc = (v: unknown) => {
       const t = v == null ? '' : String(v);
       return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
     };
     const money = (v: unknown) => (Number(v ?? 0) / 100).toFixed(2);
-    let header: string[] = [];
-    let lines: unknown[][] = [];
-    if (q.type === 'sales') {
-      header = ['เลขที่ใบแจ้งหนี้', 'เลขที่ใบกำกับ / ใบเสร็จ', 'วันที่ชำระ', 'ลูกค้า', 'เลขผู้เสียภาษี', 'สาขา', 'ก่อน VAT', 'VAT', 'รวม', 'หัก ณ ที่จ่าย', 'รับชำระ', 'ช่องทาง', 'สถานะ'];
-      const rows = await this.rows<Row>(sql`
-        select i.number, (select d.number from tax_documents d where d.invoice_id = i.id order by d.created_at limit 1) as doc,
-          to_char(i.paid_at at time zone 'Asia/Bangkok', 'YYYY-MM-DD') as paid, b.company_name, b.tax_id, b.branch_type, b.branch_no,
-          i.subtotal, i.vat, i.total, i.wht_amount, i.amount_due, (select p.method::text from payments p where p.invoice_id = i.id and p.status = 'confirmed' limit 1) as method, i.status
-        from invoices i left join billing_profiles b on b.workspace_id = i.workspace_id
-        where i.paid_at is not null and to_char(i.paid_at at time zone 'Asia/Bangkok', 'YYYY-MM') = ${q.month} order by i.number`);
-      lines = rows.map((r) => [r.number, r.doc, r.paid, r.company_name, r.tax_id, r.branch_type === 'head' ? 'สำนักงานใหญ่' : r.branch_no, money(r.subtotal), money(r.vat), money(r.total), money(r.wht_amount), money(r.amount_due), r.method, r.status]);
-    } else if (q.type === 'credit_notes') {
-      header = ['เลขที่ใบลดหนี้', 'อ้างถึงใบแจ้งหนี้', 'วันที่', 'ลูกค้า', 'เลขผู้เสียภาษี', 'ประเภท', 'ก่อน VAT', 'VAT', 'รวม', 'เหตุผล'];
-      const rows = await this.rows<Row>(sql`
-        select c.number, i.number as invoice, to_char(c.issued_at at time zone 'Asia/Bangkok', 'YYYY-MM-DD') as date, b.company_name, b.tax_id, c.kind, c.amount_satang, c.vat_satang, c.reason
-        from credit_notes c join invoices i on i.id = c.invoice_id left join billing_profiles b on b.workspace_id = c.workspace_id
-        where to_char(c.issued_at at time zone 'Asia/Bangkok', 'YYYY-MM') = ${q.month} order by c.number`);
-      lines = rows.map((r) => [r.number, r.invoice, r.date, r.company_name, r.tax_id, r.kind, money(r.amount_satang), money(r.vat_satang), money(Number(r.amount_satang) + Number(r.vat_satang)), r.reason]);
-    } else {
-      header = ['ใบแจ้งหนี้', 'วันที่ชำระ', 'ลูกค้า', 'เลขผู้เสียภาษี', 'ภาษีที่ถูกหัก', 'สถานะ 50 ทวิ'];
-      const rows = await this.rows<Row>(sql`
-        select i.number, to_char(i.paid_at at time zone 'Asia/Bangkok', 'YYYY-MM-DD') as paid, b.company_name, b.tax_id, i.wht_amount,
-          coalesce((select c.status from wht_certificates c where c.invoice_id = i.id order by c.created_at desc limit 1), 'missing') as cert
-        from invoices i left join billing_profiles b on b.workspace_id = i.workspace_id
-        where i.wht_amount > 0 and i.paid_at is not null and to_char(i.paid_at at time zone 'Asia/Bangkok', 'YYYY-MM') = ${q.month} order by i.number`);
-      lines = rows.map((r) => [r.number, r.paid, r.company_name, r.tax_id, money(r.wht_amount), r.cert]);
-    }
+    const header = ['ใบแจ้งหนี้', 'วันที่ชำระ', 'ลูกค้า', 'เลขผู้เสียภาษี', 'ภาษีที่ถูกหัก', 'สถานะ 50 ทวิ'];
+    const rows = await this.rows<Row>(sql`
+      select i.number, to_char(i.paid_at at time zone 'Asia/Bangkok', 'YYYY-MM-DD') as paid, b.company_name, b.tax_id, i.wht_amount,
+        coalesce((select c.status from wht_certificates c where c.invoice_id = i.id order by c.created_at desc limit 1), 'missing') as cert
+      from invoices i left join billing_profiles b on b.workspace_id = i.workspace_id
+      where i.wht_amount > 0 and i.paid_at is not null and to_char(i.paid_at at time zone 'Asia/Bangkok', 'YYYY-MM') = ${q.month} order by i.number`);
+    const lines = rows.map((r) => [r.number, r.paid, r.company_name, r.tax_id, money(r.wht_amount), r.cert]);
     const draft = !(await this.isClosed(q.month));
-    const csv = '﻿' + [header, ...lines].map((l) => l.map(esc).join(',')).join('\r\n') + '\r\n';
+    const csv = '\ufeff' + [header, ...lines].map((l) => l.map(esc).join(',')).join('\r\n') + '\r\n';
     return { csv, filename: `friday-${q.type}-${q.month}${draft ? '-draft' : ''}.csv`, draft, rows: lines.length };
   }
 
@@ -706,15 +821,29 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
   async sendExport(staff: Staff | null, input: z.infer<typeof SendExportBody>) {
     if (!config.accountingEmails.length) throw new AppError(409, 'accounting_email_not_set', 'ยังไม่ได้ตั้งอีเมลสำนักงานบัญชี (OPS_ACCOUNTING_EMAIL)');
     const types = input.types ?? [...EXPORT_TYPES];
-    const files = await Promise.all(types.map((type) => this.export({ month: input.month, type })));
+    // รายงานภาษีขายแนบทั้ง PDF (ตามแบบ) และ Excel (กระทบยอด) · 50 ทวิ เป็น CSV
+    type Attachment = { filename: string; content: string | Buffer; contentType: string };
+    const files = await Promise.all(
+      types.map(async (type): Promise<{ draft: boolean; rows: number; filename: string; attachments: Attachment[] }> => {
+        if (type === 'wht') {
+          const f = await this.export({ month: input.month, type: 'wht' });
+          return { draft: f.draft, rows: f.rows, filename: f.filename, attachments: [{ filename: f.filename, content: f.csv, contentType: 'text/csv; charset=utf-8' }] };
+        }
+        const [pdf, xlsx] = await Promise.all([this.salesReport({ month: input.month, format: 'pdf' }), this.salesReport({ month: input.month, format: 'xlsx' })]);
+        return {
+          draft: pdf.draft, rows: pdf.rows, filename: `${pdf.filename}, ${xlsx.filename}`,
+          attachments: [{ filename: pdf.filename, content: pdf.buffer, contentType: 'application/pdf' }, { filename: xlsx.filename, content: xlsx.buffer, contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }],
+        };
+      }),
+    );
     const draft = files.some((f) => f.draft);
     const subject = `Friday Work Management · ไฟล์บัญชีงวด ${input.month}${draft ? ' (ฉบับร่าง ยังไม่ปิดงวด)' : ''}`;
     const text = [
       `ไฟล์ประกอบการบันทึกบัญชีงวด ${input.month}${draft ? ' · ฉบับร่าง: งวดนี้ยังไม่ปิด ตัวเลขอาจเปลี่ยน' : ''}`,
       ...types.map((t, i) => `- ${EXPORT_LABEL[t]}: ${files[i]!.rows} รายการ (${files[i]!.filename})`),
-      'จำนวนเงินเป็นบาท · ไฟล์ CSV (UTF-8) เปิดด้วย Excel ได้',
+      'จำนวนเงินเป็นบาท · รายงานภาษีขายมี PDF (ตามแบบ) และ Excel (รายละเอียดกระทบยอด) · 50 ทวิ เป็น CSV (UTF-8)',
     ].join('\n');
-    const attachments = files.map((f) => ({ filename: f.filename, content: f.csv, contentType: 'text/csv; charset=utf-8' }));
+    const attachments = files.flatMap((f) => f.attachments);
     let sent = 0;
     for (const to of config.accountingEmails) {
       try {

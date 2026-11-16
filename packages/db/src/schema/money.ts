@@ -23,6 +23,21 @@ export const creditNotes = pgTable('credit_notes', {
   check('credit_notes_refund_method_valid', sql`${t.refundMethod} IS NULL OR ${t.refundMethod} IN ('original', 'bank_transfer')`),
   check('credit_notes_amounts', sql`${t.amountSatang} > 0 AND ${t.vatSatang} >= 0`)]);
 
+/**
+ * ใบเพิ่มหนี้ (ม.86/9) · เก็บเงินขาดในใบกำกับภาษีที่ออกไปแล้ว · ออกจากหลังบ้านเท่านั้น
+ * `invoiceId` = ใบแจ้งหนี้ของใบกำกับภาษีเดิม · `chargeInvoiceId` = ใบแจ้งหนี้ใบใหม่ที่ให้ลูกค้าจ่ายส่วนเพิ่ม
+ */
+export const debitNotes = pgTable('debit_notes', {
+  id: pk(), workspaceId: workspaceId(), invoiceId: uuid().notNull(), number: text().notNull().unique(),
+  amountSatang: bigint({ mode: 'number' }).notNull(), vatSatang: bigint({ mode: 'number' }).notNull().default(0),
+  reason: text().notNull(), status: text().notNull().default('issued'), chargeInvoiceId: uuid(),
+  createdByStaff: uuid().references(() => staffUsers.id), approvalRequestId: uuid().references(() => approvalRequests.id),
+  issuedAt: tstz(), createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [tenantKey('debit_notes', t), tenantFk('debit_notes_invoice_fk', t.workspaceId, t.invoiceId, invoices),
+  index('debit_notes_invoice_idx').on(t.invoiceId),
+  check('debit_notes_status_valid', sql`${t.status} IN ('issued', 'sent')`),
+  check('debit_notes_amounts', sql`${t.amountSatang} > 0 AND ${t.vatSatang} >= 0`)]);
+
 /** สมุดเครดิตของ Workspace · ยอดคงเหลือ = ผลรวม amount (บวก = ได้เครดิต · ลบ = ใช้หักใบแจ้งหนี้) */
 export const workspaceCredits = pgTable('workspace_credits', {
   id: pk(), workspaceId: workspaceId(), amountSatang: bigint({ mode: 'number' }).notNull(), source: text().notNull(),

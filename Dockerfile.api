@@ -8,8 +8,10 @@ RUN npm install --global pnpm@10.34.5
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/db/package.json packages/db/package.json
+COPY packages/docs/package.json packages/docs/package.json
 RUN pnpm --filter @friday/api... install --frozen-lockfile
 COPY packages/db packages/db
+COPY packages/docs packages/docs
 COPY apps/api apps/api
 RUN pnpm --filter @friday/api build
 # CA ของ RDS สำหรับตรวจใบรับรองตอนต่อฐานข้อมูลแบบ TLS (sslmode=verify-full) · โหลดในขั้น build เพราะ image รันไม่มี curl
@@ -23,6 +25,7 @@ RUN npm install --global pnpm@10.34.5
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/db/package.json packages/db/package.json
+COPY packages/docs/package.json packages/docs/package.json
 RUN pnpm --filter @friday/api... install --frozen-lockfile --prod
 
 FROM node:22-bookworm-slim AS runtime
@@ -36,6 +39,8 @@ COPY --from=deps --chown=node:node /app ./
 COPY --from=build --chown=node:node /app/apps/api/dist ./apps/api/dist
 COPY --chown=node:node apps/api/openapi.json ./apps/api/openapi.json
 COPY --chown=node:node packages/db/src ./packages/db/src
+# @friday/docs (เอกสารการเงิน PDF) ใช้ไฟล์ .ts ตรงแบบเดียวกับ @friday/db
+COPY --chown=node:node packages/docs/src ./packages/docs/src
 COPY --chown=node:node packages/db/migrations ./packages/db/migrations
 COPY --chown=node:node infra/docker/deploy-migrate.mjs ./packages/db/deploy-migrate.mjs
 COPY --chmod=755 infra/docker/api-entrypoint.sh /usr/local/bin/friday-entrypoint

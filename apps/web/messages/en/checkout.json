@@ -49,7 +49,7 @@
   "qr": {
     "title": "Thai QR · PromptPay",
     "hint": "Scan with any banking app · the amount is already in the QR",
-    "before": "Press \"Create QR\" to issue the invoice and show the QR · each QR works once and expires in 15 minutes",
+    "before": "Press \"Create QR\" and scan it with your banking app on the next page · confirmed automatically, no slip needed",
     "waiting": "Waiting for payment… this page updates by itself when the bank confirms · no slip needed",
     "expires": "QR expires in {time} min · create a new one after it expires · one payment per QR",
     "expired": "The QR has expired · create a new QR to pay",
@@ -70,7 +70,9 @@
     "note": "The card form comes from the payment provider · Friday never sees or stores your card number · your bank may ask for 3-D Secure (OTP)",
     "pay": "Pay {amount}",
     "failed": "Card payment failed · try again or choose another method",
-    "waiting": "Waiting for confirmation from the payment provider"
+    "waiting": "Waiting for confirmation from the payment provider",
+    "before": "Press \"Pay by card\" and enter your card on the next page",
+    "next": "Pay by card"
   },
   "transfer": {
     "before": "Press \"Get bank details\" to issue the invoice with the account number and reference · you can send the invoice to accounting first",
@@ -91,7 +93,7 @@
     "slipAmount": "Amount transferred (THB)",
     "slipAmountHint": "Helps us check faster · if it doesn't match the invoice we'll contact you",
     "tooLarge": "The file is larger than 5 MB",
-    "send": "Upload slip"
+    "send": "Send slip"
   },
   "summary": {
     "title": "Summary",
@@ -116,7 +118,8 @@
     "terms": "By paying you accept the <terms>Terms of Service</terms> and <dpa>DPA</dpa> · cancel anytime and keep using it until the cycle ends",
     "edit": "Change details",
     "processing": "Processing…",
-    "requestId": "Reference {id}"
+    "requestId": "Reference {id}",
+    "quotation": "Download quotation (PDF)"
   },
   "coupon": {
     "label": "Discount code",
@@ -187,5 +190,73 @@
     "confirm": "Cancel plan",
     "done": "Canceled · you can use it until the end of the cycle",
     "kept": "Thanks for staying with Friday"
+  },
+  "invoicePay": {
+    "title": "Pay invoice {number}",
+    "planLine": "{plan} · {cycle} · due {date}",
+    "dueLine": "Due {date}",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "toPay": "Amount to transfer",
+    "step1": "Transfer to this account",
+    "step2": "Transferred? Attach the slip",
+    "referenceShort": "Reference",
+    "referenceHint": "Put the reference in your banking app's transfer note so we can match it faster",
+    "drop": "Drop the slip here or choose a file",
+    "change": "Change file",
+    "badType": "Only JPG, PNG or PDF files",
+    "amountHint": "Pre-filled with the invoice amount · change it if you transferred a different amount and we'll contact you",
+    "later": "You don't have to transfer now. Come back to this page from Plan & Billing",
+    "reviewTitle": "Slip received. You can use {plan} now",
+    "reviewTitleNoPlan": "Slip received. You can use the plan now",
+    "reviewAgain": "Wrong slip? You can attach a new one until our team finishes checking",
+    "slipAgain": "Attach a new slip",
+    "cancelAgain": "Cancel",
+    "paidTitle": "This invoice is paid",
+    "voidTitle": "This invoice was cancelled",
+    "voidHint": "To renew, choose a plan again on the checkout page",
+    "otherMethod": "This invoice is paid by {method}. See its status on Plan & Billing",
+    "methods": {
+      "card": "card",
+      "promptpay": "PromptPay",
+      "transfer": "bank transfer"
+    },
+    "checkout": "Go to checkout",
+    "toPayCard": "Amount to pay",
+    "qrStep": "Scan the QR with your banking app",
+    "qrAmount": "Amount in the QR",
+    "qrExpires": "Expires in {time}",
+    "qrExpired": "QR expired",
+    "qrExpiredHint": "A QR lasts 15 minutes · create a new one on this same invoice",
+    "waitStep": "Confirmed automatically",
+    "waiting": "Waiting for the payment…",
+    "waitHint": "No slip needed. The bank confirms to us directly, usually within a minute. This page updates by itself",
+    "checkAgain": "I've paid, check again",
+    "renewFirst": "Create a new QR and scan again",
+    "cardStep": "Card details",
+    "cardNumber": "Card number",
+    "cardExpiry": "Expiry date",
+    "cardCvc": "CVC",
+    "cardCvcHint": "3 digits on the back",
+    "cardName": "Name on card",
+    "cardEmail": "Email",
+    "cardEmailHint": "For receipts / tax invoices and reminders before the next charge · editable",
+    "cardSecure": "Card details stay with the payment provider and never reach Friday's servers · your bank may ask for 3-D Secure (OTP)",
+    "confirmStep": "Confirm payment",
+    "chargeTotal": "Charge",
+    "payCard": "Pay {amount}",
+    "verifying": "Confirming with your bank…",
+    "autoRenew": "Renews every {cycle} on this card · cancel any time",
+    "month": "month",
+    "year": "year",
+    "required": "Required",
+    "emailInvalid": "Invalid email",
+    "paidHeading": "Payment complete. You can use {plan} now",
+    "paidHeadingNoPlan": "Payment complete",
+    "paidVia": "Received via {method} at {time}",
+    "paidUntil": "Valid until {date}",
+    "slipPaidAt": "Transfer date and time",
+    "slipPaidAtHint": "As shown on the slip · used as the tax invoice date",
+    "notesTitle": "Credit / debit notes"
   }
 }

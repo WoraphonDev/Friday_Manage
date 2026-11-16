@@ -1,0 +1,310 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ชุดเอกสารการเงิน Friday</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* เอกสาร A4 กระดาษขาวทั้งสองโหมด (ตั้งใจ) · หน้ารอบนอกตามธีม · ซ้าย = เอกสาร ขวา = คำอธิบายหมายเลข */
+:root {
+  --bg: #eef0f2; --fg: #24272c; --soft: #3a3f45; --muted: #5f656d; --panel: #fff; --line: #e3e6e9;
+  --primary: #5b3fc4; --primary-soft: #efe9fd; --mark: #e0244e;
+  /* กระดาษ: ไม่เปลี่ยนตามธีม */
+  --paper: #ffffff; --ink: #1d2025; --ink-2: #4a5058; --ink-3: #7a8088; --rule: #d9dde2; --tint: #f4f2fb; --brand: #5b3fc4; --paid: #157a46; --warn-bg: #fdf3dc; --warn-ink: #8a5a00;
+  --sans: "IBM Plex Sans Thai", "Sukhumvit Set", "Thonburi", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #141517; --fg: #e8eaed; --soft: #cdd1d6; --muted: #a1a7ae; --panel: #1c1e21; --line: #2e3237; --primary: #9d86f5; --primary-soft: #2a2442; --mark: #ff5c7c; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #141517; --fg: #e8eaed; --soft: #cdd1d6; --muted: #a1a7ae; --panel: #1c1e21; --line: #2e3237; --primary: #9d86f5; --primary-soft: #2a2442; --mark: #ff5c7c; color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 36px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 40px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+.intro { max-width: 760px; display: flex; flex-direction: column; gap: 10px; }
+.intro h1 { font-size: 26px; line-height: 1.3; }
+.intro p { margin: 0; color: var(--soft); }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { font-size: 13px; padding: 3px 12px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+
+.doc-row { display: grid; grid-template-columns: minmax(0, 820px) minmax(0, 1fr); gap: 28px; align-items: start; }
+.doc-title { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.doc-title h2 { font-size: 20px; }
+.doc-title span { color: var(--muted); font-size: 14px; }
+.scroller { overflow-x: auto; border-radius: 6px; }
+.legend { position: sticky; top: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+.legend h3 { font-size: 15px; }
+.legend ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.legend li { display: grid; grid-template-columns: 24px minmax(0,1fr); gap: 10px; font-size: 13.5px; color: var(--soft); }
+.legend li b { color: var(--fg); }
+.legend .law { display: inline-block; font-size: 11px; font-weight: 700; color: var(--primary); background: var(--primary-soft); border-radius: 4px; padding: 0 6px; margin-left: 4px; }
+.pin { width: 22px; height: 22px; border-radius: 50%; background: var(--mark); color: #fff; font: 700 11.5px var(--sans); display: inline-grid; place-items: center; flex: none; }
+
+/* ---------- กระดาษ A4 (210 × 297 มม. ≈ 794 × 1123 px) ---------- */
+.a4 { width: 794px; min-height: 1123px; background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.10); padding: 44px 52px 36px; display: flex; flex-direction: column; gap: 18px; font-size: 11.5px; line-height: 1.5; position: relative; box-sizing: border-box; }
+.a4 .pin { position: relative; left: -38px; margin-bottom: -40px; z-index: 2; box-shadow: 0 0 0 3px rgba(224,36,78,.18); }
+.a4 .pin.abs { position: absolute; left: auto; margin: 0; }
+.a4 table { font-size: inherit; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.hdr { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; }
+.seller { display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
+.logo { display: grid; grid-template-columns: 13px 13px; gap: 3px; flex: none; margin-top: 4px; }
+.logo i { width: 13px; height: 13px; border-radius: 3px; display: block; }
+.logo i:nth-child(1) { background: #f59e0b; } .logo i:nth-child(2) { background: #ef4444; } .logo i:nth-child(3) { background: #22c55e; } .logo i:nth-child(4) { background: #3b82f6; }
+.seller b { font-size: 14px; display: block; }
+.seller .wm { color: var(--brand); font-weight: 700; font-size: 12px; letter-spacing: .01em; }
+.seller div { color: var(--ink-2); }
+.dtitle { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.dtitle h4 { margin: 0; white-space: nowrap; font-size: 22px; line-height: 1.2; color: var(--ink); }
+.dtitle .en { font-size: 11px; letter-spacing: .14em; color: var(--ink-3); font-weight: 600; }
+.badge { margin-top: 6px; border: 1.5px solid var(--ink); border-radius: 4px; padding: 1px 10px; font-weight: 700; font-size: 11px; }
+.rule { height: 2px; background: var(--ink); }
+.two { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 14px; }
+.box { border: 1px solid var(--rule); border-radius: 6px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+.lbl { color: var(--ink-3); font-size: 10.5px; }
+.box b { font-size: 13px; }
+.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px 12px; }
+.kv span:nth-child(odd) { color: var(--ink-3); }
+.kv span:nth-child(even) { text-align: right; font-weight: 600; }
+table { width: 100%; border-collapse: collapse; }
+th { background: var(--tint); text-align: left; font-weight: 600; font-size: 10.5px; padding: 7px 8px; border-bottom: 1px solid var(--rule); }
+th small { display: block; font-weight: 500; color: var(--ink-3); font-size: 9.5px; }
+td { padding: 9px 8px; vertical-align: top; border-bottom: 1px solid var(--rule); }
+td.r, th.r { text-align: right; } td.c, th.c { text-align: center; }
+td .sub { color: var(--ink-2); font-size: 10.5px; }
+td.neg { color: var(--ink-2); }
+.totals { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+.words { background: var(--tint); border-radius: 6px; padding: 10px 12px; }
+.words b { font-size: 12.5px; }
+.sum { display: flex; flex-direction: column; }
+.sum div { display: flex; justify-content: space-between; padding: 4px 8px; }
+.sum .grand { background: var(--ink); color: #fff; border-radius: 4px; font-weight: 700; font-size: 13px; padding: 7px 8px; margin: 4px 0; }
+.sum .net { border-top: 1.5px solid var(--ink); font-weight: 700; font-size: 13px; padding-top: 7px; margin-top: 2px; }
+.sum .muted { color: var(--ink-2); }
+.payrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 150px; gap: 12px; }
+.pay { border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
+.pay h5, .sec h5 { margin: 0 0 3px; font-size: 11.5px; }
+.qrmini { display: flex; gap: 10px; align-items: center; }
+.qr { width: 64px; height: 64px; flex: none; background: repeating-conic-gradient(#1d2025 0 25%, #fff 0 50%) 0 0 / 8px 8px; border: 4px solid #fff; outline: 1px solid var(--rule); }
+.ref { background: var(--tint); border-radius: 4px; padding: 2px 6px; font-weight: 700; }
+.sec ul { margin: 0; padding-left: 16px; color: var(--ink-2); }
+.sign { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding-top: 6px; }
+.sig { text-align: center; display: flex; flex-direction: column; gap: 3px; color: var(--ink-2); }
+.sig .line { border-bottom: 1px dotted var(--ink-3); height: 34px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3px; color: var(--brand); font-weight: 600; }
+.foot { border-top: 1px solid var(--rule); padding-top: 8px; display: flex; justify-content: space-between; gap: 16px; color: var(--ink-3); font-size: 9.5px; }
+.sec { position: relative; }
+.paid-stamp { position: absolute; top: -4px; right: 24px; transform: rotate(-12deg); border: 3px solid var(--paid); color: var(--paid); border-radius: 8px; padding: 4px 14px; font: 700 20px var(--sans); letter-spacing: .08em; opacity: .85; text-align: center; line-height: 1.1; }
+.paid-stamp small { display: block; font-size: 10px; letter-spacing: 0; font-weight: 600; }
+.received { border: 1.5px solid var(--paid); border-radius: 6px; padding: 10px 14px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 14px; }
+.received h5 { grid-column: 1 / -1; margin: 0; font-size: 11.5px; color: var(--paid); }
+.received span { display: flex; flex-direction: column; }
+.received b { font-size: 12px; }
+
+.ask { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; display: flex; flex-direction: column; gap: 10px; max-width: 820px; }
+.ask h2 { font-size: 18px; }
+.ask ol { margin: 0; padding-left: 20px; color: var(--soft); display: flex; flex-direction: column; gap: 6px; }
+
+@media (max-width: 1100px) { .doc-row { grid-template-columns: minmax(0, 1fr); } .legend { position: static; } }
+/* ---- ส่วนประกอบมาตรฐานเพิ่มเติม ---- */
+.hq { font-weight: 600; font-size: 12px; }
+.dsub { color: var(--ink-3); font-size: 10px; margin-top: 2px; }
+.a4 > .sign { margin-top: auto; }
+.a4 .pin + .sign { margin-top: 0; }
+.remark { border-left: 3px solid var(--ink); background: var(--tint); border-radius: 0 6px 6px 0; padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+.remark b { font-size: 12px; }
+.band { border: 1px solid var(--rule); border-radius: 6px; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.band h5 { margin: 0; font-size: 11.5px; }
+.band .cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 14px; }
+.band .cells > span { display: flex; flex-direction: column; min-width: 0; }
+.band b { font-size: 12px; overflow-wrap: anywhere; }
+.bandnote { color: var(--ink-2); font-size: 10.5px; border-top: 1px dashed var(--rule); padding-top: 5px; }
+.legend ol { gap: 8px; }
+.fine { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+.toc { display: flex; flex-wrap: wrap; gap: 6px; }
+.toc a { font-size: 13px; padding: 3px 12px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-weight: 600; text-decoration: none; }
+.toc a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.standard { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; max-width: 980px; }
+.standard h2 { font-size: 17px; }
+.standard ol { margin: 0; padding-left: 22px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 28px; font-size: 13.5px; color: var(--soft); }
+.standard li b { color: var(--fg); margin-right: 6px; }
+/* รายงาน A4 แนวนอน: เต็มความกว้าง คำอธิบายอยู่ใต้ */
+.doc-row.wide { grid-template-columns: minmax(0, 1fr); }
+.doc-row.wide .legend { position: static; max-width: 1123px; }
+.a4.land { width: 1123px; min-height: 794px; padding: 36px 44px 28px; gap: 14px; }
+.rhead { display: flex; flex-direction: column; gap: 6px; }
+.rhead h4 { margin: 0; text-align: center; font-size: 20px; }
+.rmeta { display: flex; justify-content: center; gap: 14px; align-items: center; font-size: 12px; }
+.rgrid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 4px 24px; font-size: 11.5px; border: 1px solid var(--rule); border-radius: 6px; padding: 8px 12px; }
+.rtable th, .rtable td { border: 1px solid var(--rule); }
+.rtable th { text-align: center; vertical-align: middle; }
+.rtable tr.void td { color: var(--ink-3); }
+.rtable tfoot td { background: var(--tint); font-size: 12px; }
+.dtable { font-size: 10.5px; }
+.dtable td, .dtable th { padding: 6px 5px; }
+.dtable .mono { white-space: nowrap; font-size: 9.5px; }
+.tag { display: inline-block; font-size: 9.5px; font-weight: 700; border-radius: 4px; padding: 0 5px; margin-left: 4px; }
+.tag.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.sumgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+table.mini th { background: none; padding: 4px 6px; }
+table.mini td { padding: 5px 6px; }
+table.mini tr.tot td { font-weight: 700; border-top: 1.5px solid var(--ink); border-bottom: 0; }
+.checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.checks li { padding-left: 20px; position: relative; }
+.checks li::before { position: absolute; left: 0; top: 0; font-weight: 700; }
+.checks li.ok::before { content: "✓"; color: var(--paid); }
+.checks li.warn::before { content: "!"; color: var(--warn-ink); left: 4px; }
+@media (max-width: 700px) { .standard ol { grid-template-columns: minmax(0, 1fr); } }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <h1>ชุดเอกสารการเงิน Friday · 7 ใบ มาตรฐานเดียวกัน</h1>
+    <p>ทุกใบสร้างจากแม่แบบเดียว ส่วนประกอบอยู่ตำแหน่งเดิมทุกใบ ต่างกันแค่เนื้อหา หมุดแดงอธิบายสิ่งเฉพาะของแต่ละใบ ข้อมูลทั้งหมดสมมติ</p>
+    <nav class="toc" aria-label="เอกสาร"><a href="#qt">1. ใบเสนอราคา</a><a href="#inv">2. ใบแจ้งหนี้ / ใบวางบิล</a><a href="#tx">3. ใบเสร็จรับเงิน / ใบกำกับภาษี</a><a href="#rep">4. ใบกำกับภาษีฉบับใหม่ แทนฉบับที่ยกเลิก</a><a href="#cn">5. ใบลดหนี้</a><a href="#dn">6. ใบเพิ่มหนี้</a><a href="#rpt">7. รายงานภาษีขายรายเดือน</a></nav>
+  </header>
+  <section class="standard" aria-labelledby="t-std"><h2 id="t-std">โครงมาตรฐานที่ทุกใบใช้ (เรียงจากบนลงล่าง)</h2><ol><li><b>หัวกระดาษ</b><span>โลโก้ · ผู้ขาย (สำนักงานใหญ่) · เลขผู้เสียภาษี · ติดต่อ · ชื่อเอกสารไทย/อังกฤษ · ป้ายฉบับ</span></li><li><b>แถบเหตุผล</b><span>เฉพาะใบที่แก้ไขเอกสารเดิม: ใบลดหนี้ ใบเพิ่มหนี้ ฉบับใหม่แทนฉบับที่ยกเลิก</span></li><li><b>กล่องคู่</b><span>ซ้าย = ลูกค้า (สาขา 5 หลัก + เลขผู้เสียภาษี) · ขวา = เลขที่ วันที่ และเอกสารอ้างอิง</span></li><li><b>ตาราง</b><span>แบบขาย: จำนวน หน่วย ราคาต่อหน่วย · แบบปรับยอด: มูลค่าเดิม ที่ถูกต้อง ผลต่าง</span></li><li><b>สรุปยอด</b><span>จำนวนเงินตัวอักษรซ้าย · ยอดขวา · ยอดหลักในแถบเข้ม</span></li><li><b>แถบข้อมูล</b><span>4 ช่อง: สิ่งที่ได้ / วิธีชำระ / การรับเงิน / การคืนเงิน</span></li><li><b>หมายเหตุ</b><span>ข้อความ e-Tax ในเอกสารภาษีทุกใบ</span></li><li><b>ลงนาม + ท้ายหน้า</b><span>สองช่องเสมอ · เลขที่เอกสาร + เลขหน้า</span></li></ol></section>
+  
+<section class="doc-row" id="qt" aria-labelledby="t-qt">
+  <div><div class="doc-title"><h2 id="t-qt">1. ใบเสนอราคา (ใหม่)</h2><span>ดาวน์โหลดได้จากหน้าชำระเงินและหน้าเปรียบเทียบแพ็กเกจ · ให้ฝ่ายจัดซื้อออก PO · ไม่ใช่เอกสารภาษี</span></div><div class="scroller"><article class="a4" aria-label="1. ใบเสนอราคา (ใหม่)"><span class="pin">1</span><div class="hdr">
+<div class="seller">
+  <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+  <div>
+    <span class="wm">Friday Work Management</span>
+    <b>บริษัท ฟรายเดย์ จำกัด <span class="hq">(สำนักงานใหญ่)</span></b>
+    <div>99 ถนนตัวอย่าง แขวงตัวอย่าง เขตตัวอย่าง กรุงเทพมหานคร 10000</div>
+    <div>เลขประจำตัวผู้เสียภาษี <span class="mono">0105500000000</span></div>
+    <div>โทร 02-000-0000 · billing@example.com</div>
+  </div>
+</div>
+<div class="dtitle"><h4>ใบเสนอราคา</h4><span class="en">QUOTATION</span><span class="badge">ใช้ได้ถึง 15 ธ.ค. 2569</span></div></div><div class="rule"></div><span class="pin">2</span><div class="two"><div class="box"><span class="lbl">เสนอราคาแก่ / Prepared for</span><b>บริษัท ทดสอบเอกสาร จำกัด</b><span>สาขาที่ 00002 · 1 ถนนทดสอบ แขวงทดสอบ เขตทดสอบ กรุงเทพมหานคร 10110</span><span>เลขประจำตัวผู้เสียภาษี <span class="mono">1234567890123</span></span><span>ผู้ติดต่อ: ฝ่ายจัดซื้อ · billing@example.com</span></div><div class="box kv"><span>เลขที่ / No.</span><span class="mono">QT-2611-0012</span><span>วันที่ / Date</span><span>15 พ.ย. 2569</span><span>ยืนราคาถึง / Valid until</span><span>15 ธ.ค. 2569</span><span>ผู้เสนอ / Prepared by</span><span>ระบบ Friday</span></div></div><span class="pin">3</span><table><thead><tr><th class="c" style="width:38px">ลำดับ<small>No.</small></th><th class="">รายการ<small>Description</small></th><th class="r" style="width:58px">จำนวน<small>Qty</small></th><th class="c" style="width:52px">หน่วย<small>Unit</small></th><th class="r" style="width:96px">ราคาต่อหน่วย<small>Unit price</small></th><th class="r" style="width:96px">จำนวนเงิน<small>Amount</small></th></tr></thead><tbody><tr><td class="c">1</td><td class=""><b>ค่าบริการ Friday Work Management แพ็กเกจ Team M (รายเดือน)</b><div class="sub">เริ่มรอบวันที่ชำระ · ต่ออายุทุกเดือน ยกเลิกได้ตลอด</div></td><td class="r num">1</td><td class="c">เดือน</td><td class="r num">3,000.00</td><td class="r num">3,000.00</td></tr><tr><td class="c">2</td><td class=""><b>ส่วนลด โค้ด WELCOME10 (10%)</b><div class="sub">3 รอบบิลแรก</div></td><td class="r num">1</td><td class="c">รายการ</td><td class="r num neg">-300.00</td><td class="r num neg">-300.00</td></tr></tbody></table><div class="totals"><div class="words"><span class="lbl">จำนวนเงินตัวอักษร / Amount in words</span><br><b>(สองพันแปดร้อยแปดสิบเก้าบาทถ้วน)</b></div><div class="sum"><div class=""><span>มูลค่าบริการ / Value</span><span class="num">2,700.00</span></div><div class=""><span>ภาษีมูลค่าเพิ่ม 7% / VAT</span><span class="num">189.00</span></div><div class="grand"><span>รวมทั้งสิ้น / Total</span><span class="num">2,889.00</span></div><div class="muted"><span>ถ้าหัก ณ ที่จ่าย 3% ชำระสุทธิ</span><span class="num">฿2,808.00</span></div></div></div><span class="pin">4</span><div class="band"><h5>สิ่งที่ได้ในแพ็กเกจ / Included</h5><div class="cells"><span><span class="lbl">สมาชิก</span><b>สูงสุด 25 คน</b></span><span><span class="lbl">Guest (ลูกค้า)</span><b>ไม่นับที่นั่ง</b></span><span><span class="lbl">พื้นที่ไฟล์</span><b>10 GB ต่อสมาชิก</b></span><span><span class="lbl">รายปี</span><b>฿30,000 (จ่าย 10 เดือน)</b></span></div></div><span class="pin">5</span><div class="sec"><h5>หมายเหตุ / Notes</h5><ul><li>เอกสารนี้ไม่ใช่ใบแจ้งหนี้และไม่ใช่ใบกำกับภาษี · ราคายังไม่รวม VAT ในตาราง VAT แสดงแยกในสรุปยอด</li><li>ชำระด้วยบัตร PromptPay หรือโอนเงิน · ออกใบแจ้งหนี้ได้ทันทีที่หน้า แพ็กเกจ &amp; Billing โดยใส่เลข PO</li><li>ราคาตามใบเสนอราคานี้ใช้ได้ถึงวันที่ยืนราคาเท่านั้น</li></ul></div><span class="pin" style="margin-top:auto">6</span><div class="sign"><div class="sig"><span class="line">ออกโดยระบบ Friday</span><span>ผู้เสนอราคา / Quoted by</span><span>15 พ.ย. 2569</span></div><div class="sig"><span class="line"></span><span>ผู้อนุมัติสั่งซื้อ / Accepted by</span><span>วันที่ ........ / ........ / ........</span></div></div><div class="foot"><span>เอกสารนี้ออกโดยระบบคอมพิวเตอร์ · สอบถาม billing@example.com · 02-000-0000</span><span class="mono">QT-2611-0012 · หน้า 1/1</span></div></article></div></div>
+  <aside class="legend"><ol><li><span class="pin">1</span><span>หัวกระดาษมาตรฐาน + ป้าย <b>ยืนราคาถึง</b> แทนป้ายต้นฉบับ</span></li><li><span class="pin">2</span><span>ลูกค้าจากข้อมูลออกใบกำกับภาษีที่กรอกไว้ (ไม่กรอกก็ออกได้ แสดงช่องว่างให้เติม) · เลข QT- ไม่ต้องเรียงต่อเนื่อง</span></li><li><span class="pin">3</span><span>ตารางเดียวกับใบแจ้งหนี้ ยอดตรงกับที่จะเรียกเก็บจริง รวมยอดหลังหัก ณ ที่จ่าย</span></li><li><span class="pin">4</span><span>สิ่งที่ได้ในแพ็กเกจและราคารายปี ให้ฝ่ายจัดซื้อเทียบได้</span></li><li><span class="pin">5</span><span>ระบุว่าไม่ใช่ใบแจ้งหนี้/ใบกำกับภาษี และวิธีสั่งซื้อ</span></li><li><span class="pin">6</span><span>ช่องผู้อนุมัติสั่งซื้อ ลูกค้าเซ็นแล้วใช้แทน PO ได้</span></li></ol><p class="fine">กฎหมายไม่ได้กำหนดรูปแบบใบเสนอราคา</p></aside>
+</section>
+<section class="doc-row" id="inv" aria-labelledby="t-inv">
+  <div><div class="doc-title"><h2 id="t-inv">2. ใบแจ้งหนี้ / ใบวางบิล</h2><span>ออกเมื่อลูกค้ากดชำระ · ไม่ใช่เอกสารภาษี</span></div><div class="scroller"><article class="a4" aria-label="2. ใบแจ้งหนี้ / ใบวางบิล"><span class="pin">1</span><div class="hdr">
+<div class="seller">
+  <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+  <div>
+    <span class="wm">Friday Work Management</span>
+    <b>บริษัท ฟรายเดย์ จำกัด <span class="hq">(สำนักงานใหญ่)</span></b>
+    <div>99 ถนนตัวอย่าง แขวงตัวอย่าง เขตตัวอย่าง กรุงเทพมหานคร 10000</div>
+    <div>เลขประจำตัวผู้เสียภาษี <span class="mono">0105500000000</span></div>
+    <div>โทร 02-000-0000 · billing@example.com</div>
+  </div>
+</div>
+<div class="dtitle"><h4>ใบแจ้งหนี้ / ใบวางบิล</h4><span class="en">INVOICE / BILLING NOTE</span><span class="badge">ต้นฉบับ / ORIGINAL</span></div></div><div class="rule"></div><span class="pin">2</span><div class="two"><div class="box"><span class="lbl">ลูกค้า / Bill to</span><b>บริษัท ทดสอบเอกสาร จำกัด</b><span>สาขาที่ 00002 · 1 ถนนทดสอบ แขวงทดสอบ เขตทดสอบ กรุงเทพมหานคร 10110</span><span>เลขประจำตัวผู้เสียภาษี <span class="mono">1234567890123</span></span><span>ผู้ติดต่อ: ฝ่ายบัญชี · Workspace: ทดสอบเอกสาร</span></div><div class="box kv"><span>เลขที่ / No.</span><span class="mono">FRI-2611-0007</span><span>วันที่ / Date</span><span>16 พ.ย. 2569</span><span>ครบกำหนด / Due</span><span>23 พ.ย. 2569</span><span>ใบเสนอราคา / Quote</span><span class="mono">QT-2611-0012</span><span>ใบสั่งซื้อ / PO</span><span class="mono">PO-2026-0118</span></div></div><span class="pin">3</span><table><thead><tr><th class="c" style="width:38px">ลำดับ<small>No.</small></th><th class="">รายการ<small>Description</small></th><th class="r" style="width:58px">จำนวน<small>Qty</small></th><th class="c" style="width:52px">หน่วย<small>Unit</small></th><th class="r" style="width:96px">ราคาต่อหน่วย<small>Unit price</small></th><th class="r" style="width:96px">จำนวนเงิน<small>Amount</small></th></tr></thead><tbody><tr><td class="c">1</td><td class=""><b>ค่าบริการ Friday Work Management แพ็กเกจ Team M (รายเดือน)</b><div class="sub">รอบบริการ 16 พ.ย. 2569 – 15 ธ.ค. 2569 · สมาชิกสูงสุด 25 คน (ใช้อยู่ 12 คน)</div></td><td class="r num">1</td><td class="c">เดือน</td><td class="r num">3,000.00</td><td class="r num">3,000.00</td></tr><tr><td class="c">2</td><td class=""><b>ส่วนลด โค้ด WELCOME10 (10%)</b><div class="sub">เหลืออีก 2 รอบบิล</div></td><td class="r num">1</td><td class="c">รายการ</td><td class="r num neg">-300.00</td><td class="r num neg">-300.00</td></tr></tbody></table><span class="pin">4</span><div class="totals"><div class="words"><span class="lbl">จำนวนเงินตัวอักษร / Amount in words</span><br><b>(สองพันแปดร้อยแปดสิบเก้าบาทถ้วน)</b></div><div class="sum"><div class=""><span>มูลค่าบริการ / Value</span><span class="num">2,700.00</span></div><div class=""><span>ภาษีมูลค่าเพิ่ม 7% / VAT</span><span class="num">189.00</span></div><div class="grand"><span>รวมทั้งสิ้น / Total</span><span class="num">2,889.00</span></div><div class="muted"><span>หัก ณ ที่จ่าย 3% / WHT</span><span class="num">-81.00</span></div><div class="net"><span>ยอดชำระสุทธิ / Net payable</span><span class="num">฿2,808.00</span></div></div></div><span class="pin">5</span><div class="band"><h5>วิธีชำระ / How to pay</h5><div class="cells"><span><span class="lbl">โอนเข้าบัญชี</span><b>ธนาคารตัวอย่าง 000-0-00000-0</b></span><span><span class="lbl">ชื่อบัญชี</span><b>บริษัท ฟรายเดย์ จำกัด</b></span><span><span class="lbl">เลขอ้างอิง</span><b class="mono">FRI-2611-0007</b></span><span><span class="lbl">ชำระออนไลน์</span><b>แพ็กเกจ &amp; Billing › ชำระ</b></span></div><span class="bandnote">โอนแล้วแนบสลิปที่หน้าเดียวกัน · มีหัก ณ ที่จ่ายจึงชำระด้วยบัตรไม่ได้ · ลิงก์หน้าชำระอยู่ในอีเมลแจ้งหนี้</span></div><span class="pin">6</span><div class="sec"><h5>หมายเหตุ / Notes</h5><ul><li>เอกสารนี้ไม่ใช่ใบกำกับภาษี · ใบเสร็จรับเงิน/ใบกำกับภาษีออกเมื่อได้รับชำระ ลงวันที่ที่ได้รับเงิน</li><li>ผู้ซื้อหักภาษี ณ ที่จ่าย 3% ของมูลค่าก่อน VAT กรุณาส่ง 50 ทวิ ภายใน 30 วันที่หน้า แพ็กเกจ &amp; Billing</li><li>ไม่ชำระภายในกำหนด Workspace จะกลับเป็นแพ็กเกจ Free ข้อมูลไม่หาย</li></ul></div><span class="pin" style="margin-top:auto">7</span><div class="sign"><div class="sig"><span class="line"></span><span>ผู้รับวางบิล / Received by</span><span>วันที่ ........ / ........ / ........</span></div><div class="sig"><span class="line">ออกโดยระบบ Friday</span><span>ผู้วางบิล / Issued by</span><span>16 พ.ย. 2569</span></div></div><div class="foot"><span>เอกสารนี้ออกโดยระบบคอมพิวเตอร์ · สอบถาม billing@example.com · 02-000-0000</span><span class="mono">FRI-2611-0007 · หน้า 1/1</span></div></article></div></div>
+  <aside class="legend"><ol><li><span class="pin">1</span><span>หัวกระดาษมาตรฐาน · ป้ายต้นฉบับ/สำเนา</span></li><li><span class="pin">2</span><span>อ้างเลขใบเสนอราคาและ PO · สาขาเลข 5 หลัก</span></li><li><span class="pin">3</span><span>ตารางมาตรฐาน · ส่วนลดแยกบรรทัด</span></li><li><span class="pin">4</span><span>VAT แยก · หัก ณ ที่จ่ายจากยอดก่อน VAT · ยอดสุทธิ<span class="law">ท.ป.4/2528</span> ไม่ถึง 1,000 บาทไม่แสดงบรรทัดนี้ (รอนักบัญชียืนยันเกณฑ์)</span></li><li><span class="pin">5</span><span>วิธีชำระอยู่ในแถบข้อมูลมาตรฐาน (เดิมเป็น 3 กล่องแยก)</span></li><li><span class="pin">6</span><span>ระบุว่าไม่ใช่ใบกำกับภาษี</span></li><li><span class="pin">7</span><span>ผู้รับวางบิลเซ็นตอนรับเอกสาร</span></li></ol><p class="fine">กฎหมายไม่ได้กำหนดรูปแบบใบแจ้งหนี้</p></aside>
+</section>
+<section class="doc-row" id="tx" aria-labelledby="t-tx">
+  <div><div class="doc-title"><h2 id="t-tx">3. ใบเสร็จรับเงิน / ใบกำกับภาษี (เต็มรูป)</h2><span>ออกเมื่อได้รับเงิน · ส่งผ่านผู้ให้บริการ e-Tax Invoice &amp; e-Receipt</span></div><div class="scroller"><article class="a4" aria-label="3. ใบเสร็จรับเงิน / ใบกำกับภาษี (เต็มรูป)"><span class="pin">A</span><div class="hdr">
+<div class="seller">
+  <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+  <div>
+    <span class="wm">Friday Work Management</span>
+    <b>บริษัท ฟรายเดย์ จำกัด <span class="hq">(สำนักงานใหญ่)</span></b>
+    <div>99 ถนนตัวอย่าง แขวงตัวอย่าง เขตตัวอย่าง กรุงเทพมหานคร 10000</div>
+    <div>เลขประจำตัวผู้เสียภาษี <span class="mono">0105500000000</span></div>
+    <div>โทร 02-000-0000 · billing@example.com</div>
+  </div>
+</div>
+<div class="dtitle"><h4>ใบเสร็จรับเงิน / ใบกำกับภาษี</h4><span class="en">RECEIPT / TAX INVOICE</span><span class="badge">ต้นฉบับ / ORIGINAL</span><span class="dsub">เอกสารออกเป็นชุด</span></div></div><div class="rule"></div><span class="pin">B</span><div class="two"><div class="box"><span class="lbl">ผู้ซื้อ / Customer</span><b>บริษัท ทดสอบเอกสาร จำกัด</b><span>สาขาที่ 00002 · 1 ถนนทดสอบ แขวงทดสอบ เขตทดสอบ กรุงเทพมหานคร 10110</span><span>เลขประจำตัวผู้เสียภาษี <span class="mono">1234567890123</span></span></div><div class="box kv"><span>เลขที่ / No.</span><span class="mono">TX-2611-0003</span><span>วันที่ / Date</span><span>17 พ.ย. 2569</span><span>อ้างอิงใบแจ้งหนี้</span><span class="mono">FRI-2611-0007</span><span>ใบสั่งซื้อ / PO</span><span class="mono">PO-2026-0118</span></div></div><span class="pin">C</span><table><thead><tr><th class="c" style="width:38px">ลำดับ<small>No.</small></th><th class="">รายการ<small>Description</small></th><th class="r" style="width:58px">จำนวน<small>Qty</small></th><th class="c" style="width:52px">หน่วย<small>Unit</small></th><th class="r" style="width:96px">ราคาต่อหน่วย<small>Unit price</small></th><th class="r" style="width:96px">จำนวนเงิน<small>Amount</small></th></tr></thead><tbody><tr><td class="c">1</td><td class=""><b>ค่าบริการ Friday Work Management แพ็กเกจ Team M (รายเดือน)</b><div class="sub">รอบบริการ 16 พ.ย. 2569 – 15 ธ.ค. 2569 · สมาชิกสูงสุด 25 คน</div></td><td class="r num">1</td><td class="c">เดือน</td><td class="r num">3,000.00</td><td class="r num">3,000.00</td></tr><tr><td class="c">2</td><td class=""><b>ส่วนลด โค้ด WELCOME10 (10%)</b></td><td class="r num">1</td><td class="c">รายการ</td><td class="r num neg">-300.00</td><td class="r num neg">-300.00</td></tr></tbody></table><span class="pin">D</span><div class="totals"><div class="words"><span class="lbl">จำนวนเงินตัวอักษร / Amount in words</span><br><b>(สองพันแปดร้อยแปดสิบเก้าบาทถ้วน)</b></div><div class="sum"><div class=""><span>มูลค่าบริการ / Value</span><span class="num">2,700.00</span></div><div class=""><span>ภาษีมูลค่าเพิ่ม 7% / VAT</span><span class="num">189.00</span></div><div class="grand"><span>รวมทั้งสิ้น / Total</span><span class="num">2,889.00</span></div></div></div><span class="pin">E</span><div class="band"><h5>รายละเอียดการรับชำระ / Payment received</h5><div class="cells"><span><span class="lbl">วันที่ได้รับเงิน (ตามสลิป)</span><b>17 พ.ย. 2569 10:42</b></span><span><span class="lbl">ช่องทาง</span><b>โอนเข้าบัญชีธนาคาร</b></span><span><span class="lbl">อ้างอิงการโอน</span><b class="mono">FRI-2611-0007</b></span><span><span class="lbl">รับชำระ</span><b>฿2,808.00</b></span></div><span class="bandnote">ยอดรวม ฿2,889.00 = รับชำระ ฿2,808.00 + ผู้ซื้อหัก ณ ที่จ่าย 3% ฿81.00 (รอ 50 ทวิ)</span></div><span class="pin">F</span><div class="sec"><div class="paid-stamp">ชำระแล้ว<small>PAID · 17 พ.ย. 2569</small></div><h5>หมายเหตุ / Notes</h5><ul><li>เอกสารนี้ได้จัดทำและส่งข้อมูลให้แก่กรมสรรพากรด้วยวิธีการทางอิเล็กทรอนิกส์ (e-Tax Invoice &amp; e-Receipt)</li><li>รอบถัดไปส่งใบแจ้งหนี้ทางอีเมลล่วงหน้า 7 วัน (16 ธ.ค. 2569)</li></ul></div><span class="pin" style="margin-top:auto">G</span><div class="sign"><div class="sig"><span class="line"></span><span>ผู้จ่ายเงิน / Payer</span><span>(ไม่ต้องลงนาม)</span></div><div class="sig"><span class="line">ลงลายมือชื่อดิจิทัลแล้ว</span><span>ผู้รับเงิน / Collector</span><span>บริษัท ฟรายเดย์ จำกัด</span></div></div><div class="foot"><span>เอกสารนี้ออกโดยระบบคอมพิวเตอร์ · สอบถาม billing@example.com · 02-000-0000</span><span class="mono">TX-2611-0003 · หน้า 1/1</span></div></article></div></div>
+  <aside class="legend"><ol><li><span class="pin">A</span><span>คำว่า "ใบกำกับภาษี"<span class="law">ม.86/4(1)</span> · ผู้ขาย ชื่อ ที่อยู่ เลขผู้เสียภาษี<span class="law">ม.86/4(2)</span> + สำนักงานใหญ่<span class="law">ฉบับ 199</span> · ป้าย ต้นฉบับ / สำเนา / ใบแทน<span class="law">ม.86/12</span></span></li><li><span class="pin">B</span><span>ผู้ซื้อ<span class="law">ม.86/4(3)</span> + เลขผู้เสียภาษีและสาขา 5 หลัก<span class="law">ฉบับ 199</span> · เลข TX เดินแยกไม่ข้าม<span class="law">ม.86/4(4)</span> · วันที่ = วันได้รับเงิน<span class="law">ม.86/4(7)</span></span></li><li><span class="pin">C</span><span>ชื่อ ชนิด ปริมาณ มูลค่าบริการ<span class="law">ม.86/4(5)</span></span></li><li><span class="pin">D</span><span>VAT แยกชัดเจน<span class="law">ม.86/4(6)</span></span></li><li><span class="pin">E</span><span>รับชำระ: โอนใช้วันที่ตามสลิป · บัตรแสดง 4 หลักท้าย · ยอดหัก ณ ที่จ่าย</span></li><li><span class="pin">F</span><span>ข้อความ e-Tax Invoice &amp; e-Receipt + ตราชำระแล้ว</span></li><li><span class="pin">G</span><span>ลงลายมือชื่อดิจิทัลผ่านผู้ให้บริการ</span></li></ol><p class="fine">"เอกสารออกเป็นชุด" ใส่ตามแนวปฏิบัติ ยังไม่ได้ยืนยันกับตัวบท · ถ้ายังไม่จด VAT ใช้ "ใบเสร็จรับเงิน" ไม่มี VAT</p></aside>
+</section>
+<section class="doc-row" id="rep" aria-labelledby="t-rep">
+  <div><div class="doc-title"><h2 id="t-rep">4. ใบกำกับภาษีฉบับใหม่ แทนฉบับที่ยกเลิก (ใหม่)</h2><span>เมื่อข้อมูลผู้ซื้อในใบเดิมผิด · ลูกค้าแก้ข้อมูลแล้วขอออกใหม่ · ทีมงานอนุมัติในหลังบ้าน</span></div><div class="scroller"><article class="a4" aria-label="4. ใบกำกับภาษีฉบับใหม่ แทนฉบับที่ยกเลิก (ใหม่)"><span class="pin">ก</span><div class="hdr">
+<div class="seller">
+  <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+  <div>
+    <span class="wm">Friday Work Management</span>
+    <b>บริษัท ฟรายเดย์ จำกัด <span class="hq">(สำนักงานใหญ่)</span></b>
+    <div>99 ถนนตัวอย่าง แขวงตัวอย่าง เขตตัวอย่าง กรุงเทพมหานคร 10000</div>
+    <div>เลขประจำตัวผู้เสียภาษี <span class="mono">0105500000000</span></div>
+    <div>โทร 02-000-0000 · billing@example.com</div>
+  </div>
+</div>
+<div class="dtitle"><h4>ใบเสร็จรับเงิน / ใบกำกับภาษี</h4><span class="en">RECEIPT / TAX INVOICE</span><span class="badge">ต้นฉบับ / ORIGINAL</span><span class="dsub">เอกสารออกเป็นชุด</span></div></div><div class="rule"></div><span class="pin">ข</span><div class="remark"><span class="lbl">ออกแทนฉบับที่ยกเลิก / Replaces cancelled document</span><b>ยกเลิกใบกำกับภาษีเลขที่ TX-2612-0002 ลงวันที่ 5 ธ.ค. 2569 และออกฉบับนี้แทน เนื่องจากเลขประจำตัวผู้เสียภาษีของผู้ซื้อในฉบับเดิมไม่ถูกต้อง (ลูกค้าแจ้ง 8 ธ.ค. 2569)</b></div><span class="pin">ค</span><div class="two"><div class="box"><span class="lbl">ผู้ซื้อ / Customer</span><b>บริษัท ตัวอย่างสอง จำกัด</b><span>สำนักงานใหญ่ · 2 ถนนตัวอย่าง แขวงตัวอย่าง เขตตัวอย่าง กรุงเทพมหานคร 10200</span><span>เลขประจำตัวผู้เสียภาษี <span class="mono">0105560000002</span></span></div><div class="box kv"><span>เลขที่ / No.</span><span class="mono">TX-2612-0003</span><span>วันที่ / Date</span><span>5 ธ.ค. 2569</span><span>ออกเมื่อ / Issued</span><span>8 ธ.ค. 2569</span><span>แทนฉบับ</span><span class="mono">TX-2612-0002</span><span>อ้างอิงใบแจ้งหนี้</span><span class="mono">FRI-2612-0004</span></div></div><table><thead><tr><th class="c" style="width:38px">ลำดับ<small>No.</small></th><th class="">รายการ<small>Description</small></th><th class="r" style="width:58px">จำนวน<small>Qty</small></th><th class="c" style="width:52px">หน่วย<small>Unit</small></th><th class="r" style="width:96px">ราคาต่อหน่วย<small>Unit price</small></th><th class="r" style="width:96px">จำนวนเงิน<small>Amount</small></th></tr></thead><tbody><tr><td class="c">1</td><td class=""><b>ค่าบริการ Friday Work Management แพ็กเกจ Team M (รายเดือน)</b><div class="sub">รอบบริการ 5 ธ.ค. 2569 – 4 ม.ค. 2570 · สมาชิกสูงสุด 25 คน</div></td><td class="r num">1</td><td class="c">เดือน</td><td class="r num">3,000.00</td><td class="r num">3,000.00</td></tr></tbody></table><div class="totals"><div class="words"><span class="lbl">จำนวนเงินตัวอักษร / Amount in words</span><br><b>(สามพันสองร้อยสิบบาทถ้วน)</b></div><div class="sum"><div class=""><span>มูลค่าบริการ / Value</span><span class="num">3,000.00</span></div><div class=""><span>ภาษีมูลค่าเพิ่ม 7% / VAT</span><span class="num">210.00</span></div><div class="grand"><span>รวมทั้งสิ้น / Total</span><span class="num">3,210.00</span></div></div></div><span class="pin">ง</span><div class="band"><h5>รายละเอียดการรับชำระ / Payment received</h5><div class="cells"><span><span class="lbl">วันที่ได้รับเงิน</span><b>5 ธ.ค. 2569 09:15</b></span><span><span class="lbl">ช่องทาง</span><b>บัตร VISA •••• 4242</b></span><span><span class="lbl">อ้างอิงการชำระ</span><b class="mono">pi_3QzB…2mL8</b></span><span><span class="lbl">รับชำระ</span><b>฿3,210.00</b></span></div></div><span class="pin">จ</span><div class="sec"><h5>หมายเหตุ / Notes</h5><ul><li>เอกสารนี้ได้จัดทำและส่งข้อมูลให้แก่กรมสรรพากรด้วยวิธีการทางอิเล็กทรอนิกส์ (e-Tax Invoice &amp; e-Receipt) · แจ้งยกเลิกฉบับเดิมผ่านระบบ e-Tax แล้ว</li><li>ฉบับเดิม TX-2612-0002 ใช้อ้างอิงภาษีซื้อไม่ได้อีก กรุณาใช้ฉบับนี้แทน</li></ul></div><div class="sign"><div class="sig"><span class="line"></span><span>ผู้จ่ายเงิน / Payer</span><span>(ไม่ต้องลงนาม)</span></div><div class="sig"><span class="line">ลงลายมือชื่อดิจิทัลแล้ว</span><span>ผู้รับเงิน / Collector</span><span>บริษัท ฟรายเดย์ จำกัด</span></div></div><div class="foot"><span>เอกสารนี้ออกโดยระบบคอมพิวเตอร์ · สอบถาม billing@example.com · 02-000-0000</span><span class="mono">TX-2612-0003 · หน้า 1/1</span></div></article></div></div>
+  <aside class="legend"><ol><li><span class="pin">ก</span><span>หน้าตาเดียวกับใบกำกับภาษีปกติทุกส่วน</span></li><li><span class="pin">ข</span><span>แถบเหตุผลมาตรฐาน: เลขที่และวันที่ฉบับที่ยกเลิก + สาเหตุ</span></li><li><span class="pin">ค</span><span>ข้อมูลผู้ซื้อที่ถูกต้อง · ได้เลข TX ใหม่ต่อจากลำดับ · <b>วันที่ = วันที่ของฉบับเดิม</b> (จุดเกิดภาษีไม่เปลี่ยน) และแสดงวันที่ออกจริงแยก</span></li><li><span class="pin">ง</span><span>รายละเอียดการรับชำระเดิม</span></li><li><span class="pin">จ</span><span>แจ้งยกเลิกฉบับเดิมผ่าน e-Tax และบอกผู้ซื้อว่าใช้ฉบับไหน</span></li></ol><p class="fine"><b>ต้องให้นักบัญชียืนยัน:</b> ลงวันที่ตามฉบับเดิมหรือวันที่ออกใหม่ · ขั้นตอนยกเลิกฉบับเดิมในระบบ e-Tax ของผู้ให้บริการ · ต่างจาก <b>ใบแทน</b> (ม.86/12) ที่ใช้เมื่อใบเดิมหายแต่ข้อมูลถูกต้อง</p></aside>
+</section>
+<section class="doc-row" id="cn" aria-labelledby="t-cn">
+  <div><div class="doc-title"><h2 id="t-cn">5. ใบลดหนี้</h2><span>ออกเมื่อหลังบ้านอนุมัติคืนเงิน ให้เครดิต หรือยกเลิกใบที่ออกใบกำกับภาษีแล้ว</span></div><div class="scroller"><article class="a4" aria-label="5. ใบลดหนี้"><span class="pin">ก</span><div class="hdr">
+<div class="seller">
+  <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+  <div>
+    <span class="wm">Friday Work Management</span>
+    <b>บริษัท ฟรายเดย์ จำกัด <span class="hq">(สำนักงานใหญ่)</span></b>
+    <div>99 ถนนตัวอย่าง แขวงตัวอย่าง เขตตัวอย่าง กรุงเทพมหานคร 10000</div>
+    <div>เลขประจำตัวผู้เสียภาษี <span class="mono">0105500000000</span></div>
+    <div>โทร 02-000-0000 · billing@example.com</div>
+  </div>
+</div>
+<div class="dtitle"><h4>ใบลดหนี้</h4><span class="en">CREDIT NOTE</span><span class="badge">ต้นฉบับ / ORIGINAL</span></div></div><div class="rule"></div><span class="pin">ข</span><div class="remark"><span class="lbl">เหตุที่ลดหนี้ / Reason</span><b>ยกเลิกแพ็กเกจ Team M วันที่ 26 พ.ย. 2569 · ทีมงานอนุมัติคืนส่วนที่ยังไม่ได้ใช้ 20 จาก 30 วัน (26 พ.ย. – 15 ธ.ค. 2569)</b></div><span class="pin">ค</span><div class="two"><div class="box"><span class="lbl">ผู้ซื้อ / Customer</span><b>บริษัท ทดสอบเอกสาร จำกัด</b><span>สาขาที่ 00002 · 1 ถนนทดสอบ แขวงทดสอบ เขตทดสอบ กรุงเทพมหานคร 10110</span><span>เลขประจำตัวผู้เสียภาษี <span class="mono">1234567890123</span></span></div><div class="box kv"><span>เลขที่ / No.</span><span class="mono">CN-2612-0001</span><span>วันที่ / Date</span><span>2 ธ.ค. 2569</span><span>อ้างอิงใบกำกับภาษี</span><span class="mono">TX-2611-0003</span><span>ลงวันที่</span><span>17 พ.ย. 2569</span></div></div><span class="pin">ง</span><table><thead><tr><th class="c" style="width:38px">ลำดับ<small>No.</small></th><th class="">รายการ<small>Description</small></th><th class="r" style="width:104px">มูลค่าเดิม<small>Original</small></th><th class="r" style="width:110px">มูลค่าที่ถูกต้อง<small>Correct</small></th><th class="r" style="width:96px">ผลต่าง<small>Difference</small></th></tr></thead><tbody><tr><td class="c">1</td><td class=""><b>ค่าบริการ Friday Work Management แพ็กเกจ Team M (รายเดือน)</b><div class="sub">รอบบริการ 16 พ.ย. 2569 – 15 ธ.ค. 2569 · หลังหักส่วนลด WELCOME10</div></td><td class="r num">2,700.00</td><td class="r num">900.00</td><td class="r num">1,800.00</td></tr></tbody></table><span class="pin">จ</span><div class="totals"><div class="words"><span class="lbl">จำนวนเงินตัวอักษร / Amount in words</span><br><b>(หนึ่งพันเก้าร้อยยี่สิบหกบาทถ้วน)</b></div><div class="sum"><div class=""><span>มูลค่าตามใบกำกับภาษีเดิม</span><span class="num">2,700.00</span></div><div class=""><span>มูลค่าที่ถูกต้อง</span><span class="num">900.00</span></div><div class=""><span>ผลต่าง / Difference</span><span class="num">1,800.00</span></div><div class=""><span>ภาษีมูลค่าเพิ่ม 7% ของผลต่าง</span><span class="num">126.00</span></div><div class="grand"><span>รวมลดหนี้ / Total credit</span><span class="num">1,926.00</span></div></div></div><span class="pin">ฉ</span><div class="band"><h5>การคืนเงิน / Settlement</h5><div class="cells"><span><span class="lbl">วิธี</span><b>โอนคืนเข้าบัญชีลูกค้า</b></span><span><span class="lbl">วันที่คืน</span><b>3 ธ.ค. 2569</b></span><span><span class="lbl">อ้างอิง</span><b class="mono">RF-2612-0001</b></span><span><span class="lbl">จำนวน</span><b>฿1,926.00</b></span></div></div><div class="sec"><h5>หมายเหตุ / Notes</h5><ul><li>ใบลดหนี้นี้ใช้ลดภาษีขายของผู้ขายและภาษีซื้อของผู้ซื้อตามใบกำกับภาษีเลขที่ TX-2611-0003</li><li>เอกสารนี้ได้จัดทำและส่งข้อมูลให้แก่กรมสรรพากรด้วยวิธีการทางอิเล็กทรอนิกส์ (e-Tax Invoice &amp; e-Receipt)</li></ul></div><div class="sign"><div class="sig"><span class="line"></span><span>ผู้รับใบลดหนี้ / Received by</span><span>(ไม่ต้องลงนาม)</span></div><div class="sig"><span class="line">ลงลายมือชื่อดิจิทัลแล้ว</span><span>ผู้ออกใบลดหนี้ / Issued by</span><span>บริษัท ฟรายเดย์ จำกัด</span></div></div><div class="foot"><span>เอกสารนี้ออกโดยระบบคอมพิวเตอร์ · สอบถาม billing@example.com · 02-000-0000</span><span class="mono">CN-2612-0001 · หน้า 1/1</span></div></article></div></div>
+  <aside class="legend"><ol><li><span class="pin">ก</span><span>คำว่า "ใบลดหนี้" เห็นชัด<span class="law">ม.86/10</span> ใช้คำอื่นไม่ได้ (มีโทษ ม.90(12))</span></li><li><span class="pin">ข</span><span>แถบเหตุผลมาตรฐาน: สาเหตุที่ลดหนี้</span></li><li><span class="pin">ค</span><span>ผู้ซื้อ · เลข CN- เดินแยก · อ้างเลขที่และวันที่ใบกำกับภาษีเดิม</span></li><li><span class="pin">ง</span><span>ตารางปรับยอดมาตรฐาน: มูลค่าเดิม / ที่ถูกต้อง / ผลต่าง</span></li><li><span class="pin">จ</span><span>VAT ของผลต่างแยกชัดเจน</span></li><li><span class="pin">ฉ</span><span>การคืนเงิน: โอนคืน · คืนเข้าบัตรเดิม · หรือเครดิตใช้รอบถัดไป</span></li></ol><p class="fine"><b>ต้องให้นักบัญชียืนยัน:</b> รายการครบตาม ม.86/10 และประกาศฉบับที่ 195 · ถ้าใบเดิมมีหัก ณ ที่จ่าย ยอดคืนจริงต้องหักส่วนนั้นหรือไม่</p></aside>
+</section>
+<section class="doc-row" id="dn" aria-labelledby="t-dn">
+  <div><div class="doc-title"><h2 id="t-dn">6. ใบเพิ่มหนี้ (ใหม่)</h2><span>เมื่อเก็บเงินขาดในใบกำกับภาษีที่ออกไปแล้ว · ออกจากหลังบ้านเท่านั้น</span></div><div class="scroller"><article class="a4" aria-label="6. ใบเพิ่มหนี้ (ใหม่)"><span class="pin">ก</span><div class="hdr">
+<div class="seller">
+  <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+  <div>
+    <span class="wm">Friday Work Management</span>
+    <b>บริษัท ฟรายเดย์ จำกัด <span class="hq">(สำนักงานใหญ่)</span></b>
+    <div>99 ถนนตัวอย่าง แขวงตัวอย่าง เขตตัวอย่าง กรุงเทพมหานคร 10000</div>
+    <div>เลขประจำตัวผู้เสียภาษี <span class="mono">0105500000000</span></div>
+    <div>โทร 02-000-0000 · billing@example.com</div>
+  </div>
+</div>
+<div class="dtitle"><h4>ใบเพิ่มหนี้</h4><span class="en">DEBIT NOTE</span><span class="badge">ต้นฉบับ / ORIGINAL</span></div></div><div class="rule"></div><span class="pin">ข</span><div class="remark"><span class="lbl">เหตุที่เพิ่มหนี้ / Reason</span><b>ส่วนลดโค้ด PARTNER20 ถูกใช้หลังโค้ดหมดอายุ (15 ต.ค. 2569) · เรียกเก็บส่วนลดที่ให้เกินสิทธิ์</b></div><span class="pin">ค</span><div class="two"><div class="box"><span class="lbl">ผู้ซื้อ / Customer</span><b>บริษัท ตัวอย่างสาม จำกัด</b><span>สาขาที่ 00001 · 3 ถนนตัวอย่าง แขวงตัวอย่าง เขตตัวอย่าง กรุงเทพมหานคร 10400</span><span>เลขประจำตัวผู้เสียภาษี <span class="mono">0105560000003</span></span></div><div class="box kv"><span>เลขที่ / No.</span><span class="mono">DN-2612-0001</span><span>วันที่ / Date</span><span>4 ธ.ค. 2569</span><span>อ้างอิงใบกำกับภาษี</span><span class="mono">TX-2610-0009</span><span>ลงวันที่</span><span>16 ต.ค. 2569</span></div></div><span class="pin">ง</span><table><thead><tr><th class="c" style="width:38px">ลำดับ<small>No.</small></th><th class="">รายการ<small>Description</small></th><th class="r" style="width:104px">มูลค่าเดิม<small>Original</small></th><th class="r" style="width:110px">มูลค่าที่ถูกต้อง<small>Correct</small></th><th class="r" style="width:96px">ผลต่าง<small>Difference</small></th></tr></thead><tbody><tr><td class="c">1</td><td class=""><b>ค่าบริการ Friday Work Management แพ็กเกจ Team M (รายเดือน)</b><div class="sub">รอบบริการ 16 ต.ค. 2569 – 15 พ.ย. 2569</div></td><td class="r num">2,400.00</td><td class="r num">3,000.00</td><td class="r num">600.00</td></tr></tbody></table><span class="pin">จ</span><div class="totals"><div class="words"><span class="lbl">จำนวนเงินตัวอักษร / Amount in words</span><br><b>(หกร้อยสี่สิบสองบาทถ้วน)</b></div><div class="sum"><div class=""><span>มูลค่าตามใบกำกับภาษีเดิม</span><span class="num">2,400.00</span></div><div class=""><span>มูลค่าที่ถูกต้อง</span><span class="num">3,000.00</span></div><div class=""><span>ผลต่าง / Difference</span><span class="num">600.00</span></div><div class=""><span>ภาษีมูลค่าเพิ่ม 7% ของผลต่าง</span><span class="num">42.00</span></div><div class="grand"><span>รวมเพิ่มหนี้ / Total debit</span><span class="num">642.00</span></div></div></div><span class="pin">ฉ</span><div class="band"><h5>การชำระ / Payment</h5><div class="cells"><span><span class="lbl">ครบกำหนด</span><b>11 ธ.ค. 2569</b></span><span><span class="lbl">ใบแจ้งหนี้</span><b class="mono">FRI-2612-0006</b></span><span><span class="lbl">ชำระที่</span><b>แพ็กเกจ &amp; Billing › ชำระ</b></span><span><span class="lbl">ยอด</span><b>฿642.00</b></span></div></div><div class="sec"><h5>หมายเหตุ / Notes</h5><ul><li>ใบเพิ่มหนี้นี้เพิ่มภาษีขายของผู้ขายและภาษีซื้อของผู้ซื้อตามใบกำกับภาษีเลขที่ TX-2610-0009</li><li>เอกสารนี้ได้จัดทำและส่งข้อมูลให้แก่กรมสรรพากรด้วยวิธีการทางอิเล็กทรอนิกส์ (e-Tax Invoice &amp; e-Receipt)</li></ul></div><div class="sign"><div class="sig"><span class="line"></span><span>ผู้รับใบเพิ่มหนี้ / Received by</span><span>(ไม่ต้องลงนาม)</span></div><div class="sig"><span class="line">ลงลายมือชื่อดิจิทัลแล้ว</span><span>ผู้ออกใบเพิ่มหนี้ / Issued by</span><span>บริษัท ฟรายเดย์ จำกัด</span></div></div><div class="foot"><span>เอกสารนี้ออกโดยระบบคอมพิวเตอร์ · สอบถาม billing@example.com · 02-000-0000</span><span class="mono">DN-2612-0001 · หน้า 1/1</span></div></article></div></div>
+  <aside class="legend"><ol><li><span class="pin">ก</span><span>คำว่า "ใบเพิ่มหนี้" เห็นชัด<span class="law">ม.86/9</span> · โครงเดียวกับใบลดหนี้ทุกส่วน</span></li><li><span class="pin">ข</span><span>เหตุที่เพิ่มหนี้</span></li><li><span class="pin">ค</span><span>อ้างเลขที่และวันที่ใบกำกับภาษีเดิม · เลข DN- เดินแยก</span></li><li><span class="pin">ง</span><span>มูลค่าเดิม / ที่ถูกต้อง / ผลต่าง</span></li><li><span class="pin">จ</span><span>VAT ของผลต่างแยก</span></li><li><span class="pin">ฉ</span><span>ลูกค้าจ่ายส่วนเพิ่มผ่านใบแจ้งหนี้ใบใหม่ที่หน้าชำระเดิม</span></li></ol><p class="fine">การอัปเกรดแพ็กเกจปกติไม่ใช้ใบนี้ (ระบบออกใบแจ้งหนี้ใบใหม่อยู่แล้ว) · ใช้เฉพาะแก้ยอดที่คิดขาด · ต้องให้นักบัญชียืนยันรายการตาม ม.86/9</p></aside>
+</section>
+<section class="doc-row wide" id="rpt" aria-labelledby="t-rpt">
+  <div><div class="doc-title"><h2 id="t-rpt">7. รายงานภาษีขายรายเดือน (ใหม่ · หลังบ้าน)</h2><span>ทีมบัญชีของ Friday ใช้ยื่น ภ.พ.30 · ไม่ได้ส่งลูกค้า · A4 แนวนอน</span></div><div class="scroller"><article class="a4 land" aria-label="ตัวอย่างรายงานภาษีขาย">
+<span class="pin">1</span>
+<div class="rhead">
+  <h4>รายงานภาษีขาย</h4>
+  <div class="rmeta"><span>เดือนภาษี <b>ธันวาคม</b> ปี <b>2569</b></span><span class="badge">ฉบับร่าง · ปิดเดือนแล้วล็อก</span></div>
+  <div class="rgrid">
+    <span>ชื่อผู้ประกอบการ <b>บริษัท ฟรายเดย์ จำกัด</b></span><span>เลขประจำตัวผู้เสียภาษีอากร <b class="mono">0105500000000</b></span>
+    <span>ชื่อสถานประกอบการ <b>บริษัท ฟรายเดย์ จำกัด</b></span><span><b>☑ สำนักงานใหญ่</b> &nbsp; ☐ สาขาที่ .....</span>
+  </div>
+</div>
+<span class="pin">2</span>
+<table class="rtable"><thead><tr>
+<th class="c" style="width:40px">ลำดับ</th><th class="c" style="width:74px">วัน เดือน ปี</th><th style="width:104px">เลขที่ใบกำกับภาษี</th><th>ชื่อผู้ซื้อสินค้า/ผู้รับบริการ</th><th style="width:118px">เลขประจำตัวผู้เสียภาษีอากรของผู้ซื้อ</th><th class="c" style="width:92px">สถานประกอบการ<small>สำนักงานใหญ่ / สาขาที่</small></th><th class="r" style="width:110px">มูลค่าสินค้าหรือบริการ</th><th class="r" style="width:104px">จำนวนเงินภาษีมูลค่าเพิ่ม</th>
+</tr></thead><tbody><tr><td class="c">1</td><td class="c">01/12/69</td><td class="mono">TX-2612-0001</td><td>บริษัท ตัวอย่างหนึ่ง จำกัด</td><td class="mono">0105560000001</td><td class="c">สำนักงานใหญ่</td><td class="r num">1,500.00</td><td class="r num">105.00</td></tr><tr><td class="c">2</td><td class="c">02/12/69</td><td class="mono">CN-2612-0001</td><td>บริษัท ทดสอบเอกสาร จำกัด<div class="sub">ใบลดหนี้ อ้างถึง TX-2611-0003</div></td><td class="mono">1234567890123</td><td class="c">00002</td><td class="r num neg">-1,800.00</td><td class="r num neg">-126.00</td></tr><tr><td class="c">3</td><td class="c">04/12/69</td><td class="mono">DN-2612-0001</td><td>บริษัท ตัวอย่างสาม จำกัด<div class="sub">ใบเพิ่มหนี้ อ้างถึง TX-2610-0009</div></td><td class="mono">0105560000003</td><td class="c">00001</td><td class="r num">600.00</td><td class="r num">42.00</td></tr><tr class="void"><td class="c">4</td><td class="c">05/12/69</td><td class="mono">TX-2612-0002</td><td>บริษัท ตัวอย่างสอง จำกัด<div class="sub">ยกเลิก · ออกใหม่เป็น TX-2612-0003</div></td><td class="mono">0105560000002</td><td class="c">สำนักงานใหญ่</td><td class="r num">0.00</td><td class="r num">0.00</td></tr><tr><td class="c">5</td><td class="c">05/12/69</td><td class="mono">TX-2612-0003</td><td>บริษัท ตัวอย่างสอง จำกัด<div class="sub">ออกแทน TX-2612-0002</div></td><td class="mono">0105560000002</td><td class="c">สำนักงานใหญ่</td><td class="r num">3,000.00</td><td class="r num">210.00</td></tr><tr><td class="c">6</td><td class="c">16/12/69</td><td class="mono">TX-2612-0004</td><td>บริษัท ตัวอย่างสี่ จำกัด</td><td class="mono">0105560000004</td><td class="c">สำนักงานใหญ่</td><td class="r num">2,700.00</td><td class="r num">189.00</td></tr></tbody>
+<tfoot><tr><td colspan="6" class="r"><b>รวม</b></td><td class="r num"><b>6,000.00</b></td><td class="r num"><b>420.00</b></td></tr></tfoot></table>
+<span class="pin">3</span>
+<div class="band"><h5>ใช้ยื่น ภ.พ.30</h5><div class="cells">
+<span><span class="lbl">ยอดขาย (หลังลด/เพิ่มหนี้)</span><b>6,000.00</b></span><span><span class="lbl">ภาษีขาย</span><b>420.00</b></span><span><span class="lbl">ใบกำกับภาษีที่ยกเลิก</span><b>1 ใบ</b></span><span><span class="lbl">ไฟล์</span><b>PDF · Excel</b></span></div></div>
+<div class="foot" style="margin-top:auto"><span>จัดทำโดยระบบ Friday Ops เมื่อ 1 ม.ค. 2570 09:00 · ลำดับตามวันที่และเลขที่เอกสาร</span><span class="mono">หน้า 1/2</span></div>
+</article><div style="height:24px"></div><article class="a4 land" aria-label="ตัวอย่างรายละเอียดประกอบรายงานภาษีขาย">
+<span class="pin">4</span>
+<div class="rhead"><h4>รายละเอียดประกอบรายงานภาษีขาย</h4><div class="rmeta"><span>เดือนภาษี <b>ธันวาคม</b> ปี <b>2569</b> · สำหรับกระทบยอดภายใน ไม่ต้องยื่น</span></div></div>
+<table class="rtable dtable"><thead><tr>
+<th style="width:88px">เลขที่เอกสาร</th><th style="width:84px">ประเภท</th><th style="width:88px">อ้างอิง</th><th>แพ็กเกจ · รอบ</th><th class="r" style="width:66px">ก่อน VAT</th><th class="r" style="width:54px">VAT</th><th class="r" style="width:66px">รวม</th><th class="r" style="width:52px">หัก ณ ที่จ่าย</th><th class="r" style="width:66px">รับจริง</th><th class="c" style="width:58px">วันที่ได้รับเงิน</th><th style="width:104px">ช่องทาง</th><th style="width:70px">e-Tax</th>
+</tr></thead><tbody><tr><td class="mono">TX-2612-0001</td><td>ใบกำกับภาษี</td><td class="mono">FRI-2612-0001</td><td>Team S · รายเดือน</td><td class="r num">1,500.00</td><td class="r num">105.00</td><td class="r num">1,605.00</td><td class="r num">0.00</td><td class="r num">1,605.00</td><td class="c">01/12/69</td><td>PromptPay</td><td>ส่งแล้ว</td></tr><tr><td class="mono">CN-2612-0001</td><td>ใบลดหนี้</td><td class="mono">TX-2611-0003</td><td>Team M · รายเดือน</td><td class="r num neg">-1,800.00</td><td class="r num neg">-126.00</td><td class="r num neg">-1,926.00</td><td class="r num">–</td><td class="r num neg">-1,926.00</td><td class="c">03/12/69</td><td>โอนคืน</td><td>ส่งแล้ว</td></tr><tr><td class="mono">DN-2612-0001</td><td>ใบเพิ่มหนี้</td><td class="mono">TX-2610-0009</td><td>Team M · รายเดือน</td><td class="r num">600.00</td><td class="r num">42.00</td><td class="r num">642.00</td><td class="r num">0.00</td><td class="r num">0.00</td><td class="c">–</td><td>รอชำระ <span class="tag warn">ค้างรับ</span></td><td>ส่งแล้ว</td></tr><tr class="void"><td class="mono">TX-2612-0002</td><td>ยกเลิก</td><td class="mono">FRI-2612-0004</td><td>Team M · รายเดือน</td><td class="r num">0.00</td><td class="r num">0.00</td><td class="r num">0.00</td><td class="r num">–</td><td class="r num">–</td><td class="c">–</td><td>–</td><td>แจ้งยกเลิกแล้ว</td></tr><tr><td class="mono">TX-2612-0003</td><td>ใบกำกับภาษี (ออกแทน)</td><td class="mono">FRI-2612-0004</td><td>Team M · รายเดือน</td><td class="r num">3,000.00</td><td class="r num">210.00</td><td class="r num">3,210.00</td><td class="r num">0.00</td><td class="r num">3,210.00</td><td class="c">05/12/69</td><td>บัตร •••• 4242</td><td>ส่งแล้ว</td></tr><tr><td class="mono">TX-2612-0004</td><td>ใบกำกับภาษี</td><td class="mono">FRI-2612-0009</td><td>Team M · รายเดือน</td><td class="r num">2,700.00</td><td class="r num">189.00</td><td class="r num">2,889.00</td><td class="r num">81.00</td><td class="r num">2,808.00</td><td class="c">16/12/69</td><td>โอน (สลิป) <span class="tag warn">รอ 50 ทวิ</span></td><td>ส่งแล้ว</td></tr></tbody>
+<tfoot><tr><td colspan="4" class="r"><b>รวม</b></td><td class="r num"><b>6,000.00</b></td><td class="r num"><b>420.00</b></td><td class="r num"><b>6,420.00</b></td><td class="r num"><b>81.00</b></td><td class="r num"><b>5,697.00</b></td><td colspan="3"></td></tr></tfoot></table>
+<span class="pin">5</span>
+<div class="sumgrid">
+  <div class="band"><h5>แยกตามประเภทเอกสาร</h5>
+    <table class="mini"><thead><tr><th>ประเภท</th><th class="r">จำนวน</th><th class="r">มูลค่า</th><th class="r">VAT</th></tr></thead><tbody>
+    <tr><td>ใบกำกับภาษี</td><td class="r">4 ใบ (ยกเลิก 1)</td><td class="r num">7,200.00</td><td class="r num">504.00</td></tr>
+    <tr><td>ใบลดหนี้</td><td class="r">1 ใบ</td><td class="r num neg">-1,800.00</td><td class="r num neg">-126.00</td></tr>
+    <tr><td>ใบเพิ่มหนี้</td><td class="r">1 ใบ</td><td class="r num">600.00</td><td class="r num">42.00</td></tr>
+    <tr class="tot"><td>สุทธิ (กรอก ภ.พ.30)</td><td></td><td class="r num">6,000.00</td><td class="r num">420.00</td></tr></tbody></table>
+  </div>
+  <div class="band"><h5>ตรวจอัตโนมัติก่อนปิดเดือน</h5>
+    <ul class="checks">
+      <li class="ok">เลขใบกำกับภาษีต่อเนื่อง TX-2612-0001 ถึง 0004 ไม่มีเลขขาด</li>
+      <li class="ok">ส่ง e-Tax ครบ 6 จาก 6 เอกสาร · ใบที่ยกเลิกแจ้งยกเลิกแล้ว</li>
+      <li class="ok">ใบที่ยกเลิกมีฉบับใหม่ออกแทนครบ</li>
+      <li class="ok">ยอดรวม = รับจริง ฿5,697 + หัก ณ ที่จ่าย ฿81 + ค้างรับ ฿642</li>
+      <li class="warn">รอ 50 ทวิ 1 ใบ (TX-2612-0004 · ฿81.00 · ครบกำหนด 15 ม.ค. 2570)</li>
+      <li class="warn">ค้างรับ 1 ใบ (DN-2612-0001 · ฿642.00 · ครบกำหนด 11 ธ.ค. 2569)</li>
+    </ul>
+  </div>
+</div>
+<div class="foot" style="margin-top:auto"><span>จัดทำโดยระบบ Friday Ops เมื่อ 1 ม.ค. 2570 09:00 · Excel มีทุกคอลัมน์นี้ + แท็บรายงานตามแบบ</span><span class="mono">หน้า 2/2</span></div>
+</article></div></div>
+  <aside class="legend"><ol><li><span class="pin">1</span><span>หัวรายงาน: เดือนภาษี ชื่อผู้ประกอบการ เลขผู้เสียภาษี สถานประกอบการ สำนักงานใหญ่/สาขา<span class="law">ม.87</span></span></li><li><span class="pin">2</span><span>เรียงตามวันที่และเลขที่ · ใบลดหนี้เป็นยอดติดลบ · ใบเพิ่มหนี้เป็นยอดบวก · ใบที่ยกเลิกยังอยู่ในรายงานแต่ยอดเป็น 0 เพื่อให้เลขไม่ขาดช่วง</span></li><li><span class="pin">3</span><span>ยอดสรุปสำหรับกรอก ภ.พ.30 · ปิดเดือนแล้วแก้ไม่ได้</span></li><li><span class="pin">4</span><span><b>หน้า 2 รายละเอียดประกอบ</b> (ใหม่): ประเภท · เอกสารอ้างอิง · แพ็กเกจ · ยอดรวม VAT · หัก ณ ที่จ่าย · เงินที่รับจริง · วันที่ได้รับเงิน · ช่องทาง · สถานะ e-Tax ใช้กระทบยอดกับบัญชีธนาคารและ Stripe</span></li><li><span class="pin">5</span><span>สรุปแยกตามประเภทเอกสาร และรายการตรวจอัตโนมัติก่อนปิดเดือน: เลขขาด · e-Tax ส่งไม่ครบ · ใบยกเลิกไม่มีฉบับแทน · ยอดไม่ลงกัน · รอ 50 ทวิ · ค้างรับ</span></li></ol><p class="fine">หน้า 1 คงคอลัมน์ตามแบบรายงานภาษีขายไว้ตรง ๆ (เป็นหน้าที่ใช้ตอนสรรพากรตรวจ) ข้อมูลเพิ่มอยู่หน้า 2 · Excel มี 2 แท็บ: ตามแบบ + รายละเอียด · แทนไฟล์ CSV "รายการขาย" และ "ใบลดหนี้" ที่แยกกันตอนนี้ · รูปแบบคอลัมน์ต้องให้นักบัญชียืนยัน</p></aside>
+</section>
+  <section class="ask"><h2>ขอให้ยืนยัน</h2><ol>
+    <li>เอกสาร 7 ใบและโครงมาตรฐานนี้ใช้ได้ไหม</li>
+    <li>เรื่องที่ต้องให้นักบัญชียืนยันรวมไว้ในกล่องเทาใต้คำอธิบายแต่ละใบ ระหว่างรอ ผมทำตามแบบนี้ไปก่อนได้ แล้วแก้ทีหลังที่แม่แบบจุดเดียว</li>
+  </ol></section>
+</div>

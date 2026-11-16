@@ -1,10 +1,11 @@
 "use client";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Lock, X } from "lucide-react";
+import { Lock, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, CountUp, ErrorState, Forbidden, Input, LoadingState, MotionSwap, Select, buttonVariants } from "@/components/ui";
 import { useSlidingIndicator } from "@/lib/motion";
 import { useWorkspace } from "@/components/shell/workspace-shell";
@@ -13,17 +14,11 @@ import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PAID_PLANS, baht, fitPlan, isPaidPlan, type Cycle, type PaidPlan, type PublicPlans, type Usage } from "@/features/plan-limits";
 import type { BillingProfile, CheckoutResult, Invoice, Method, Quote, QuoteDiscount } from "../../../app/work/[ws]/billing/_components/types";
-import { useQrDataUrl } from "./qr";
-import { loadStripe, type StripeCardElement, type StripeLike } from "./stripe";
 import styles from "./checkout.module.css";
 
 type Entity = "corp" | "person";
-/** ผลที่ต้องชำระต่อ (มีรายการชำระ) · ไม่มียอดชำระ (คูปองใช้ฟรี) ไปหน้าชำระแล้วทันที */
-type PayResult = CheckoutResult & { payment: NonNullable<CheckoutResult["payment"]> };
-type Phase =
-  | { kind: "form" }
-  | { kind: "pending"; result: PayResult }
-  | { kind: "done"; invoice: Invoice | (CheckoutResult["invoice"] & Partial<Invoice>); method: Method; free?: boolean };
+/** ไม่มียอดชำระ (คูปองใช้ฟรี) จบที่หน้านี้ · มียอดชำระไปหน้าชำระใบแจ้งหนี้ (InvoicePay) ทุกวิธี */
+type Phase = { kind: "form" } | { kind: "done"; invoice: Invoice | (CheckoutResult["invoice"] & Partial<Invoice>); method: Method; free?: boolean };
 interface Form {
   companyName: string;
   taxId: string;
@@ -36,9 +31,6 @@ interface Form {
 /** ใบเสนอราคาจาก API (A35a เพิ่มสถานะจด VAT) */
 type QuoteVat = Quote & { vatRegistered?: boolean; documentType?: "tax_invoice_receipt" | "receipt" };
 const EMPTY: Form = { companyName: "", taxId: "", branchType: "head", branchNo: "", address: "", taxEmail: "", poNumber: "" };
-const SLIP_MAX = 5 * 1024 * 1024;
-/** poll สถานะใบแจ้งหนี้จน `paid` (Webhook ของผู้ให้บริการยืนยันฝั่ง API) · หน้าเปลี่ยนเองเมื่อเงินเข้า */
-export const POLL_MS = 3000;
 const METHODS: Method[] = ["promptpay", "card", "transfer"];
 
 /** Idempotency-Key ใหม่ต่อการกดชำระหนึ่งครั้ง · ใช้ซ้ำเมื่อ retry หลังเครือข่ายล้มหรือ 5xx (A33) */
@@ -55,13 +47,16 @@ const periodFrom = (cycle: Cycle, freeMonths?: number | null) => {
 
 /**
  * W22 · หน้าชำระเงินฝั่งลูกค้า (Checkout 4b)
- * 1. ข้อมูลออกใบกำกับภาษี + หัก ณ ที่จ่าย 3% (ปิดบัตร) · 2. วิธีชำระ PromptPay QR / บัตร / โอน + สลิป · สรุปยอดด้านขวา
+ * 1. ข้อมูลออกใบกำกับภาษี + หัก ณ ที่จ่าย 3% (ปิดบัตร) · 2. เลือกวิธีชำระ PromptPay QR / บัตร / โอน · สรุปยอดด้านขวา
+ * กดปุ่มแล้วออกใบแจ้งหนี้และไปหน้าชำระใบแจ้งหนี้ (InvoicePay) ของใบนั้นทุกวิธี: QR / ฟอร์มบัตร / เลขบัญชีอยู่ที่หน้านั้น
+ * (ผู้ใช้เลือกจาก storyboard 16 พ.ย. 2026 · design/proposals/billing)
  * ยังไม่จด VAT: ซ่อนบรรทัด VAT และเรียกเอกสารว่า "ใบเสร็จ" ตาม `quote.documentType`
  */
 export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initialPlan?: string; initialCycle?: string }) {
   const t = useTranslations("checkout");
   const { workspace } = useWorkspace();
   const cache = useQueryClient();
+  const router = useRouter();
   const base = `/w/${encodeURIComponent(ws)}`;
   const home = `/work/${encodeURIComponent(ws)}`;
   const canBill = workspace.role === "owner" || workspace.role === "admin";
@@ -80,19 +75,12 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
   const [phase, setPhase] = useState<Phase>({ kind: "form" });
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<unknown>(null);
-  const [slip, setSlip] = useState<File | null>(null);
-  const [slipAmount, setSlipAmount] = useState("");
-  const [now, setNow] = useState(() => Date.now());
   // โค้ดส่วนลด (O20): coupon = โค้ดที่ส่งไปคิดยอด · couponInput = ที่พิมพ์อยู่ · couponError = ข้อความจาก API เมื่อใช้ไม่ได้
   const [coupon, setCoupon] = useState<string | null>(null);
   const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
   const key = useRef<string | null>(null);
-  const stripe = useRef<{ stripe: StripeLike; card: StripeCardElement } | null>(null);
   const prefilled = useRef(false);
-  const onCardReady = useCallback((s: { stripe: StripeLike; card: StripeCardElement } | null) => {
-    stripe.current = s;
-  }, []);
   // ตัวเลือกทีละอัน (นิติบุคคล / บุคคล · วิธีชำระ): พื้น / กรอบของตัวที่เลือกเลื่อนตาม
   const entityRef = useSlidingIndicator<HTMLDivElement>("button");
   const methodRef = useSlidingIndicator<HTMLDivElement>("button");
@@ -116,7 +104,8 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
   const whtOn = entity === "corp" && wht;
   // หัก ณ ที่จ่าย = ตัดบัตรเต็มยอดไม่ได้ จึงย้ายไป PromptPay ให้
   const current: Method = whtOn && method === "card" ? "promptpay" : method;
-  const locked = phase.kind === "pending";
+  // ระหว่างออกใบแจ้งหนี้ล็อกช่องไว้ (กันแก้ข้อมูลหลังกดแล้ว)
+  const locked = busy;
 
   const quote = useQuery({
     queryKey: ["billing-quote", ws, selected, cycle, whtOn, coupon],
@@ -132,33 +121,9 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
     setCoupon(null);
     key.current = null;
   }, [couponFailed, coupon, quote.error]);
-  // จำส่วนลดของใบเสนอราคาล่าสุดไว้แสดงชื่อโค้ดระหว่างรอชำระ (ใบแจ้งหนี้มีแค่ยอดส่วนลดรวม)
-  const lastDiscounts = useRef<QuoteDiscount[]>([]);
-  if (quote.data && !quote.isPlaceholderData) lastDiscounts.current = quote.data.discounts ?? [];
   const vatRegistered = quote.data?.vatRegistered !== false;
   const lastVat = useRef(vatRegistered);
   if (quote.data) lastVat.current = vatRegistered;
-
-  const pending = phase.kind === "pending" ? phase.result : null;
-  const watching = !!pending && pending.payment.method !== "transfer";
-  const invoice = useQuery({
-    queryKey: ["billing-invoice", ws, pending?.invoice.id],
-    queryFn: () => api.get<Invoice>(`${base}/billing/invoices/${pending!.invoice.id}`),
-    enabled: watching,
-    refetchInterval: watching ? POLL_MS : false,
-  });
-  useEffect(() => {
-    if (pending && invoice.data?.status === "paid") {
-      setPhase({ kind: "done", invoice: invoice.data, method: pending.payment.method });
-      void cache.invalidateQueries({ queryKey: ["usage", ws] });
-    }
-  }, [invoice.data, pending, cache, ws]);
-  // นับถอยหลัง QR (หมดอายุ 15 นาที)
-  useEffect(() => {
-    if (!pending?.promptpay) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [pending]);
 
   if (!canBill)
     return (
@@ -228,16 +193,6 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
     return Object.keys(e).length === 0;
   }
 
-  async function confirmCard(result: PayResult) {
-    const s = stripe.current;
-    // ไม่ได้ตั้งกุญแจผู้ให้บริการ (โหมดพัฒนา) → รอสถานะจาก API อย่างเดียว
-    if (!s || !result.card) return;
-    const r = await s.stripe.confirmCardPayment(result.card.clientSecret, {
-      payment_method: { card: s.card, billing_details: { name: form.companyName.trim(), email: form.taxEmail.trim() } },
-    });
-    if (r.error) setProblem(r.error.message ?? t("card.failed"));
-  }
-
   async function startCheckout() {
     if (!validate()) return;
     setBusy(true);
@@ -267,8 +222,9 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
         void cache.invalidateQueries({ queryKey: ["usage", ws] });
         return;
       }
-      setPhase({ kind: "pending", result: result as PayResult });
-      if (current === "card") await confirmCard(result as PayResult);
+      // ไปหน้าของใบแจ้งหนี้: QR / ฟอร์มบัตร / เลขบัญชี + แนบสลิป · กลับมาจ่ายทีหลังได้จาก URL นี้
+      void cache.invalidateQueries({ queryKey: ["billing-invoices", ws] });
+      router.push(`${home}/billing/invoices/${result.invoice.id}`);
     } catch (e) {
       // 4xx = คำขอนี้จบแล้ว (เช่นข้อมูลผิด) → ครั้งหน้าใช้ key ใหม่ · เครือข่ายล้ม / 5xx = ลองซ้ำด้วย key เดิม
       if (e instanceof ApiError && e.status >= 400 && e.status < 500) key.current = null;
@@ -282,74 +238,30 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
     }
   }
 
-  async function sendSlip(result: PayResult) {
-    if (!slip) return;
-    if (slip.size > SLIP_MAX) {
-      setProblem(t("transfer.tooLarge"));
-      return;
-    }
-    setBusy(true);
-    setProblem(null);
-    try {
-      const body = new FormData();
-      body.append("file", slip);
-      // ยอดที่ลูกค้าบอก (สตางค์) ให้ API เทียบกับใบแจ้งหนี้ (A35a) · ไม่กรอกก็ส่งได้
-      const declared = Math.round(Number(slipAmount.replace(/,/g, "")) * 100);
-      if (slipAmount.trim() && declared > 0) body.append("amount", String(declared));
-      const inv = await api.request<Invoice>(`${base}/billing/invoices/${result.invoice.id}/slip`, { method: "POST", body });
-      setPhase({ kind: "done", invoice: inv, method: "transfer" });
-      void cache.invalidateQueries({ queryKey: ["usage", ws] });
-    } catch (e) {
-      setProblem(e);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function primary() {
-    if (phase.kind === "form") return startCheckout();
-    if (phase.kind !== "pending") return;
-    const r = phase.result;
-    if (r.payment.method === "transfer") return sendSlip(r);
-    setProblem(null);
-    if (r.payment.method === "card" && stripe.current) {
-      setBusy(true);
-      try {
-        await confirmCard(r);
-      } finally {
-        setBusy(false);
-      }
-    }
-    const latest = await invoice.refetch();
-    if (latest.data && latest.data.status !== "paid") setProblem(r.payment.method === "promptpay" ? t("qr.notYet") : t("card.waiting"));
-  }
-
   const planName = selectedSpec?.name ?? selected;
   if (phase.kind === "done") return <Done ws={ws} phase={phase} planName={planName} seats={seats} email={form.taxEmail.trim()} vatRegistered={lastVat.current} whtOn={whtOn} />;
 
   // ระหว่างคิดยอดใหม่หลังโค้ดใช้ไม่ได้ ไม่ใช้ข้อมูลของคำขอที่ล้ม
-  const q = pending || couponFailed ? null : (quote.data ?? null);
-  const amounts = pending ? pending.invoice : (q ?? undefined);
+  const q = couponFailed ? null : (quote.data ?? null);
+  const amounts = q ?? undefined;
   const freeMonths = q?.freeMonths ?? null;
   // ไม่มียอดชำระ: ไม่ต้องสร้าง QR / ตัดบัตร / ขอเลขบัญชี
   const freeQuote = !!q && (q.amountDue === 0 || !!freeMonths);
-  const discountTotal = pending ? (pending.invoice.discount ?? 0) : (q?.discount ?? 0);
-  const discountLines: QuoteDiscount[] = pending ? lastDiscounts.current : (q?.discounts ?? []);
-  const listPrice = pending ? pending.invoice.subtotal + discountTotal : (q?.listPrice ?? (q ? q.subtotal + discountTotal : 0));
+  const discountTotal = q?.discount ?? 0;
+  const discountLines: QuoteDiscount[] = q?.discounts ?? [];
+  const listPrice = q?.listPrice ?? (q ? q.subtotal + discountTotal : 0);
   const pay = amounts ? `฿${baht(amounts.amountDue)}` : "–";
-  const expiresIn = pending?.promptpay ? Math.max(0, Date.parse(pending.promptpay.expiresAt) - now) : 0;
-  const expired = !!pending?.promptpay && expiresIn <= 0;
-  const payMethod = pending?.payment.method ?? current;
-  const payLabel = !pending
-    ? freeQuote
-      ? freeMonths
-        ? t("coupon.startFree", { n: freeMonths })
-        : t("coupon.confirmFree")
-      : { promptpay: t("qr.create"), card: t("card.pay", { amount: pay }), transfer: t("transfer.request") }[current]
-    : { promptpay: t("qr.check"), card: t("card.pay", { amount: pay }), transfer: t("transfer.send") }[pending.payment.method];
+  const payMethod = current;
+  const payLabel = freeQuote
+    ? freeMonths
+      ? t("coupon.startFree", { n: freeMonths })
+      : t("coupon.confirmFree")
+    : { promptpay: t("qr.create"), card: t("card.next"), transfer: t("transfer.request") }[current];
+  // ใบเสนอราคาของตัวเลือกตอนนี้ (ฝ่ายจัดซื้อใช้ออก PO ก่อนชำระ)
+  const quotationHref = `/api/v1${base}/billing/quotation.pdf?plan=${selected}&cycle=${cycle}&wht=${whtOn}${coupon ? `&coupon=${encodeURIComponent(coupon)}` : ""}`;
   const problemText = problem instanceof Error ? problem.message : typeof problem === "string" ? problem : null;
   const receipt = !vatRegistered;
-  const period = pending ? { start: pending.invoice.periodStart, end: pending.invoice.periodEnd } : periodFrom(cycle, freeMonths);
+  const period = periodFrom(cycle, freeMonths);
 
   return (
     <div className={styles.page}>
@@ -359,7 +271,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
             {t("title", { plan: planName })}
             <span className={cn(styles.pill, styles.pillWait)}>{t("status.unpaid")}</span>
           </h1>
-          <div className={styles.sub}>{pending ? t("invoiceLine", { number: pending.invoice.number, date: formatDate(pending.invoice.dueDate, "BE", true) }) : t("draftLine")}</div>
+          <div className={styles.sub}>{t("draftLine")}</div>
         </div>
         <span className={styles.secure}>
           <Lock size={14} aria-hidden="true" />
@@ -442,27 +354,16 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
             <MotionSwap key={freeQuote ? "free" : payMethod}>
             {freeQuote && <div className={cn(styles.panel, styles.muted, styles.small)}>{freeMonths ? t("coupon.freeNote", { n: freeMonths }) : t("coupon.zeroNote")}</div>}
 
-            {!freeQuote && payMethod === "promptpay" &&
-              (pending?.promptpay ? (
-                <PromptPayPanel number={pending.invoice.number} payload={pending.promptpay.qrPayload} amount={pay} expiresIn={expiresIn} />
-              ) : (
-                <div className={cn(styles.panel, styles.muted, styles.small)}>{t("qr.before")}</div>
-              ))}
+            {!freeQuote && payMethod === "promptpay" && <div className={cn(styles.panel, styles.muted, styles.small)}>{t("qr.before")}</div>}
 
             {!freeQuote && payMethod === "card" && (
-              <div className={styles.panel}>
-                <CardField onReady={onCardReady} />
-                <span className={styles.small}>{t("card.auto")}</span>
-                <span className={cn(styles.muted, styles.small)}>{t("card.note")}</span>
+              <div className={cn(styles.panel, styles.small)}>
+                <span>{t("card.before")}</span>
+                <span className={styles.muted}>{t("card.auto")}</span>
               </div>
             )}
 
-            {!freeQuote && payMethod === "transfer" &&
-              (pending?.transfer ? (
-                <TransferPanel base={base} result={pending} slip={slip} setSlip={setSlip} slipAmount={slipAmount} setSlipAmount={setSlipAmount} />
-              ) : (
-                <div className={cn(styles.panel, styles.muted, styles.small)}>{t("transfer.before")}</div>
-              ))}
+            {!freeQuote && payMethod === "transfer" && <div className={cn(styles.panel, styles.muted, styles.small)}>{t("transfer.before")}</div>}
             </MotionSwap>
           </section>
         </div>
@@ -605,25 +506,13 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
               {problem instanceof ApiError && supportId(problem) && <div className={styles.mono}>{t("summary.requestId", { id: supportId(problem) ?? "" })}</div>}
             </div>
           )}
-          {expired ? (
-            <Button variant="primary" className={styles.payBtn} onClick={() => setPhase({ kind: "form" })}>
-              {t("qr.renew")}
-            </Button>
-          ) : (
-            <Button variant="primary" className={styles.payBtn} disabled={busy || !amounts || (pending?.payment.method === "transfer" && !slip)} onClick={primary}>
-              {busy ? t("summary.processing") : payLabel}
-            </Button>
-          )}
-          {pending && (
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setProblem(null);
-                setPhase({ kind: "form" });
-              }}
-            >
-              {t("summary.edit")}
-            </Button>
+          <Button variant="primary" className={styles.payBtn} disabled={busy || !amounts} onClick={startCheckout}>
+            {busy ? t("summary.processing") : payLabel}
+          </Button>
+          {amounts && !freeQuote && (
+            <a className={cn(buttonVariants({ variant: "ghost" }), styles.quoteLink)} href={quotationHref} target="_blank" rel="noreferrer">
+              {t("summary.quotation")}
+            </a>
           )}
           <ul className={styles.bullets}>
             <li>{receipt ? t("summary.receiptNow") : t("summary.taxDocNow")}</li>
@@ -645,152 +534,6 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
             })}
           </div>
         </aside>
-      </div>
-    </div>
-  );
-}
-
-/** ช่องบัตรของผู้ให้บริการ (iframe) · ไม่ได้ตั้งกุญแจ = บอกว่าเป็นโหมดทดสอบ */
-function CardField({ onReady }: { onReady: (s: { stripe: StripeLike; card: StripeCardElement } | null) => void }) {
-  const t = useTranslations("checkout.card");
-  const box = useRef<HTMLDivElement>(null);
-  const [state, setState] = useState<"loading" | "ready" | "none" | "error">("loading");
-  const [cardError, setCardError] = useState<string | null>(null);
-  useEffect(() => {
-    let card: StripeCardElement | null = null;
-    let alive = true;
-    loadStripe()
-      .then((stripe) => {
-        if (!alive) return;
-        if (!stripe || !box.current) {
-          setState("none");
-          onReady(null);
-          return;
-        }
-        card = stripe.elements({ locale: "th" }).create("card", { hidePostalCode: true });
-        card.mount(box.current);
-        card.on("change", (e) => setCardError(e.error?.message ?? null));
-        onReady({ stripe, card });
-        setState("ready");
-      })
-      .catch(() => alive && setState("error"));
-    return () => {
-      alive = false;
-      card?.destroy();
-      onReady(null);
-    };
-  }, [onReady]);
-  return (
-    <div className="field">
-      <label>{t("field")}</label>
-      <div ref={box} className={styles.cardBox} data-testid="stripe-card" hidden={state !== "ready"} />
-      {state === "loading" && <div className={cn(styles.cardBox, styles.muted)}>{t("loading")}</div>}
-      {state === "none" && <div className={cn(styles.muted, styles.small)}>{t("testMode")}</div>}
-      {state === "error" && (
-        <div className={cn(styles.warn, styles.small)} role="alert">
-          {t("unavailable")}
-        </div>
-      )}
-      {cardError && (
-        <span className="field-error" role="alert">
-          {cardError}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function PromptPayPanel({ number, payload, amount, expiresIn }: { number: string; payload: string; amount: string; expiresIn: number }) {
-  const t = useTranslations("checkout.qr");
-  const qr = useQrDataUrl(payload);
-  const mm = Math.floor(expiresIn / 60000);
-  const ss = Math.floor((expiresIn % 60000) / 1000);
-  return (
-    <div className={cn(styles.panel, styles.qrRow)}>
-      <div className={styles.qr}>{qr ? <img src={qr} alt={t("alt", { amount })} /> : t("loading")}</div>
-      <div className={styles.qrText}>
-        <b>{t("title")}</b>
-        <span className={styles.muted}>{t("hint")}</span>
-        <span className={styles.qrAmount}>{amount}</span>
-        {expiresIn > 0 && (
-          <span className={styles.waiting} role="status">
-            <span className={styles.dot} aria-hidden="true" />
-            {t("waiting")}
-          </span>
-        )}
-        <span className={styles.muted} role="timer" aria-live="off">
-          {expiresIn > 0 ? t("expires", { time: `${mm}:${String(ss).padStart(2, "0")}` }) : t("expired")}
-        </span>
-        {qr && expiresIn > 0 && (
-          <a className={cn(buttonVariants({ size: "small" }))} style={{ alignSelf: "flex-start" }} href={qr} download={`promptpay-${number}.svg`}>
-            {t("save")}
-          </a>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CopyValue({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  const t = useTranslations("checkout.transfer");
-  const [copied, setCopied] = useState(false);
-  return (
-    <div>
-      <div className={styles.label}>{label}</div>
-      <div className={styles.copyRow}>
-        <b className={mono ? styles.mono : undefined}>{value}</b>
-        <Button
-          size="icon"
-          variant="ghost"
-          aria-label={`${t("copy")} ${label}`}
-          onClick={() => {
-            void navigator.clipboard?.writeText(value).then(() => {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            });
-          }}
-        >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/** โอนเข้าบัญชี: เลขบัญชี + เลขอ้างอิง (คัดลอกได้) · ใบแจ้งหนี้ PDF · แนบสลิปพร้อมยอดที่โอน */
-function TransferPanel({ base, result, slip, setSlip, slipAmount, setSlipAmount }: { base: string; result: CheckoutResult; slip: File | null; setSlip: (f: File | null) => void; slipAmount: string; setSlipAmount: (v: string) => void }) {
-  const t = useTranslations("checkout.transfer");
-  const tr = result.transfer!;
-  return (
-    <div className={styles.panel}>
-      <div className={styles.bank}>
-        <CopyValue label={t("bank")} value={tr.bank} />
-        <CopyValue label={t("accountName")} value={tr.accountName} />
-        <CopyValue label={t("accountNo")} value={tr.accountNo} mono />
-        <CopyValue label={t("reference")} value={tr.reference} mono />
-        <div>
-          <div className={styles.label}>{t("amount")}</div>
-          <b>฿{baht(tr.amount)}</b>
-        </div>
-        <div>
-          <div className={styles.label}>{t("dueDate")}</div>
-          <b>{formatDate(tr.dueDate, "BE", true)}</b>
-        </div>
-      </div>
-      <a href={`/api/v1${base}/billing/invoices/${result.invoice.id}.pdf`} target="_blank" rel="noreferrer" className={styles.small}>
-        {t("invoicePdf", { number: result.invoice.number })}
-      </a>
-      <b className={styles.small}>{t("already")}</b>
-      <span className={cn(styles.muted, styles.small)}>{t("alreadyHint")}</span>
-      <div className={styles.grid}>
-        <div className="field">
-          <label htmlFor="slip">{t("slip")}</label>
-          <div className={styles.drop}>
-            <input id="slip" type="file" accept="image/png,image/jpeg,application/pdf" onChange={(e) => setSlip(e.target.files?.[0] ?? null)} />
-            <span className={styles.muted}>{slip ? slip.name : t("slipHint")}</span>
-          </div>
-        </div>
-        <Input label={t("slipAmount")} hint={t("slipAmountHint")} inputMode="decimal" value={slipAmount} onChange={(e) => setSlipAmount(e.target.value)} />
       </div>
     </div>
   );

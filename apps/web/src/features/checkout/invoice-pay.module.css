@@ -1,0 +1,90 @@
+/* หน้าชำระใบแจ้งหนี้ (W22b · storyboard 16 พ.ย. 2026) · สีจาก token เท่านั้น */
+.page { width:100%; max-width:1040px; margin:0 auto; padding:22px 24px 48px; display:flex; flex-direction:column; gap:16px; }
+.head { display:flex; justify-content:space-between; align-items:flex-end; gap:12px 24px; flex-wrap:wrap; }
+.headText { min-width:0; }
+.head h1 { margin:0; font-size:22px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.sub { color:var(--muted); font-size:var(--text-label); margin-top:4px; }
+.amount { display:flex; flex-direction:column; align-items:flex-end; font-size:var(--text-label); }
+.amount b { font-size:28px; line-height:1.2; font-variant-numeric:tabular-nums; }
+.muted { color:var(--muted); }
+.hint { color:var(--muted); font-size:12px; }
+.mono { font-family:"IBM Plex Mono", ui-monospace, monospace; font-variant-numeric:tabular-nums; }
+
+.pill { display:inline-flex; align-items:center; padding:1px 8px; border-radius:999px; font-size:12px; font-weight:600; white-space:nowrap; background:var(--subtle); color:var(--foreground-soft); }
+.pillOk { background:var(--success-soft); color:var(--success-text); }
+.pillWait { background:var(--warning-soft); color:var(--warning-text); }
+.pillInfo { background:var(--primary-soft); color:var(--primary-text); }
+
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; }
+/* ① กับ ② เรียงซ้าย-ขวา · มือถือเรียงลงมา */
+.steps { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px; align-items:start; }
+.step { padding:18px; display:flex; flex-direction:column; gap:14px; min-width:0; }
+.stepHead { display:flex; align-items:center; gap:10px; }
+.stepHead h2 { margin:0; font-size:15px; }
+.num { width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:var(--primary); color:var(--on-primary); font-size:12px; font-weight:700; flex:none; }
+
+.rows { margin:0; display:flex; flex-direction:column; }
+.copyRow { display:grid; grid-template-columns:104px minmax(0,1fr) auto; gap:10px; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); font-size:14px; }
+.copyRow:last-child { border-bottom:0; }
+.copyRow dt { color:var(--muted); font-size:var(--text-label); }
+.copyRow dd { margin:0; font-weight:600; overflow-wrap:anywhere; }
+.ref { background:var(--primary-soft); border-radius:8px; border-bottom:0; margin-top:6px; padding:6px 10px; }
+.ref dt { color:var(--primary-text); font-weight:600; }
+
+.drop { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center; min-height:132px; padding:18px 14px; border:1.5px dashed var(--input); border-radius:10px; background:var(--surface-2); color:var(--foreground); font:inherit; font-size:13px; cursor:pointer; width:100%; transition:border-color .2s, background-color .2s; }
+.drop svg { color:var(--muted); }
+.drop:hover, .drop[data-dragging] { border-color:var(--primary); background:var(--primary-soft); }
+.drop:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+
+.file { display:flex; align-items:center; gap:12px; padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); }
+.thumb { width:52px; height:68px; flex:none; border-radius:6px; border:1px solid var(--border); background:var(--card); display:flex; align-items:center; justify-content:center; overflow:hidden; color:var(--muted); }
+.thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+.fileMeta { flex:1; min-width:0; display:flex; flex-direction:column; font-size:13px; }
+.fileMeta b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.send { width:100%; min-height:38px; }
+.problem { border-radius:8px; padding:8px 10px; background:var(--danger-soft); color:var(--danger-text); font-size:12px; }
+
+.later { grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; gap:8px 16px; flex-wrap:wrap; border-top:1px solid var(--border); padding-top:12px; font-size:var(--text-label); color:var(--muted); }
+
+.done { max-width:680px; padding:24px 28px; display:flex; flex-direction:column; gap:12px; align-items:flex-start; }
+.done h2 { margin:0; font-size:20px; }
+.done ul { margin:0; padding-left:20px; line-height:1.9; color:var(--foreground-soft); }
+.row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+/* PromptPay: QR + นับถอยหลัง · หมดอายุ = จางลง + ข้อความทับ */
+.qrRow { display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
+.qrBox { position:relative; width:168px; height:168px; flex:none; border:1px solid var(--input); border-radius:10px; background:var(--card); display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:12px; }
+.qrBox img { width:100%; height:100%; display:block; }
+.qrBox[data-expired] { background:var(--surface-2); }
+.qrOver { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--foreground); font-size:13px; }
+.qrText { flex:1 1 180px; display:flex; flex-direction:column; gap:6px; font-size:13px; min-width:0; }
+.qrAmount { font-size:24px; font-variant-numeric:tabular-nums; }
+.waiting { display:flex; gap:10px; align-items:center; color:var(--primary-text); font-weight:600; font-size:14px; }
+.dot { width:9px; height:9px; border-radius:50%; background:var(--primary); box-shadow:0 0 0 5px var(--primary-soft); animation:pulse 1.4s ease-in-out infinite; flex:none; }
+@keyframes pulse { 50% { opacity:.35; } }
+@media (prefers-reduced-motion: reduce) { .dot { animation:none; } }
+.note { background:var(--surface-2); border-radius:8px; padding:10px 12px; font-size:13px; color:var(--foreground-soft); }
+
+/* บัตร: ช่องของผู้ให้บริการหน้าตาเดียวกับ .input */
+.cardGrid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; }
+.full { grid-column:1/-1; }
+.stripeBox { display:flex; align-items:center; gap:8px; min-height:40px; border:1px solid var(--input); border-radius:8px; padding:0 12px; background:var(--card); }
+.stripeBox:focus-within { border-color:var(--focus); box-shadow:0 0 0 1px var(--focus); }
+.stripeBad { border-color:var(--danger); }
+.stripeMount { flex:1; min-width:0; }
+.brands { display:flex; gap:6px; flex-wrap:wrap; }
+.brand { font-size:10.5px; font-weight:700; letter-spacing:.04em; padding:2px 6px; border-radius:4px; border:1px solid var(--border-strong); color:var(--foreground-soft); white-space:nowrap; }
+.sumRows { display:flex; flex-direction:column; gap:6px; font-size:13.5px; }
+.sumRows > div { display:flex; justify-content:space-between; gap:10px; }
+.sumDue { font-weight:700; font-size:16px; border-top:1px solid var(--border); padding-top:10px; }
+
+@media (max-width: 760px) {
+  .page { padding:16px 16px 40px; }
+  .steps { grid-template-columns:minmax(0,1fr); }
+  .amount { align-items:flex-start; }
+  .copyRow { grid-template-columns:84px minmax(0,1fr) auto; font-size:13px; }
+  .done { padding:20px; }
+  .cardGrid { grid-template-columns:minmax(0,1fr); }
+  .qrBox { width:150px; height:150px; }
+}

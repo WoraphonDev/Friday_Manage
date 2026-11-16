@@ -58,8 +58,15 @@ describe('สถานะ VAT ของบริษัท', () => {
     const { invoice, ref } = await checkout(w.lead, w.ws, { plan: 'team_m', cycle: 'monthly', method: 'card' });
     expect(invoice).toMatchObject({ vat: 21_000, amountDue: 321_000 });
     expect((await hook('payment_intent.succeeded', ref!, invoice.id)).body).toEqual({ received: true });
-    const [doc] = (await t.owner.query('SELECT doc_type, number, status FROM tax_documents WHERE invoice_id = $1', [invoice.id])).rows;
-    expect(doc).toMatchObject({ doc_type: 'tax_invoice_receipt', number: `TX-${invoice.number.slice(4)}` });
+    const [doc] = (await t.owner.query(`SELECT doc_type, number, status, issued_on IS NOT NULL AS dated FROM tax_documents WHERE invoice_id = $1`, [invoice.id])).rows;
+    // เลขใบกำกับภาษีเดินแยกจากเลขใบแจ้งหนี้ · ลงวันที่ที่ได้รับเงิน
+    expect(doc).toMatchObject({ doc_type: 'tax_invoice_receipt', number: expect.stringMatching(/^TX-\d{4}-\d{4}$/), dated: true });
+    // ใบแจ้งหนี้ที่ไม่ได้จ่ายไม่ทำให้เลขใบกำกับภาษีข้าม: จ่ายใบถัดไป = เลขถัดไปพอดี
+    await checkout(w.lead, w.ws, { plan: 'team_m', cycle: 'monthly', method: 'card' });
+    const next = await checkout(w.lead, w.ws, { plan: 'team_m', cycle: 'monthly', method: 'card' });
+    await hook('payment_intent.succeeded', next.ref!, next.invoice.id);
+    const [doc2] = (await t.owner.query('SELECT number FROM tax_documents WHERE invoice_id = $1', [next.invoice.id])).rows;
+    expect(Number(doc2.number.slice(-4))).toBe(Number(doc.number.slice(-4)) + 1);
     expect((await payment(invoice.id))[0]).toMatchObject({ status: 'confirmed', verified_by: 'webhook' });
   });
 
@@ -73,7 +80,7 @@ describe('สถานะ VAT ของบริษัท', () => {
       expect(invoice).toMatchObject({ vat: 0, amountDue: 300_000 });
       await hook('payment_intent.succeeded', ref!, invoice.id);
       const [doc] = (await t.owner.query('SELECT doc_type, number, status, sent_at FROM tax_documents WHERE invoice_id = $1', [invoice.id])).rows;
-      expect(doc).toMatchObject({ doc_type: 'receipt', number: `RC-${invoice.number.slice(4)}`, status: 'issued' });
+      expect(doc).toMatchObject({ doc_type: 'receipt', number: expect.stringMatching(/^RC-\d{4}-\d{4}$/), status: 'issued' });
       expect(doc.sent_at).not.toBeNull();
       // งานกวาดส่ง e-Tax ไม่หยิบใบเสร็จ
       await t.owner.query(`UPDATE tax_documents SET status = 'pending', created_at = now() - interval '1 hour' WHERE invoice_id = $1`, [invoice.id]);

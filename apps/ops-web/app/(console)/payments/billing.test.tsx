@@ -160,6 +160,38 @@ describe("ใบแจ้งหนี้ ค้างชำระ ภาษี �
     expect(await screen.findByText("ส่งขออนุมัติแล้ว")).toBeInTheDocument();
   });
 
+  it("เอกสารของใบ: PDF ใบแจ้งหนี้ / ใบกำกับภาษี / ใบลด-เพิ่มหนี้ · ออกใบเพิ่มหนี้ · ออกใบกำกับภาษีฉบับใหม่แทน", async () => {
+    asRole("finance");
+    base();
+    let debit: Record<string, unknown> = {};
+    let replace: Record<string, unknown> = {};
+    server.use(
+      http.get(`${OPS}/invoices`, () => HttpResponse.json({ items: [{ id: "i3", number: "FRI-2611-0003", status: "paid", total: 321_000, whtAmount: 0, amountDue: 321_000, poNumber: null, dueDate: "2026-11-01", paidAt: "2026-10-30", workspace: ws, taxDocumentStatus: "issued", taxDocument: { id: "d3", number: "TX-2611-0003", status: "issued", docType: "tax_invoice_receipt" }, creditNotes: [{ id: "c1", number: "CN-2612-0001" }], debitNotes: [], hasCreditNote: true }], total: 1 })),
+      http.post(`${OPS}/invoices/i3/debit-note`, async ({ request }) => ((debit = (await request.json()) as Record<string, unknown>), HttpResponse.json({ debitNote: { number: "DN-2612-0001" }, invoice: { number: "FRI-2612-0006" } }))),
+      http.post(`${OPS}/tax-documents/d3/replace`, async ({ request }) => ((replace = (await request.json()) as Record<string, unknown>), HttpResponse.json({ replacement: { number: "TX-2612-0004" } }))),
+    );
+    page("tab=invoices");
+    const rowEl = (await screen.findByText("FRI-2611-0003")).closest("tr")!;
+    expect(within(rowEl).getByRole("link", { name: /ใบแจ้งหนี้ PDF/ }).getAttribute("href")).toBe("/ops-api/invoices/i3/pdf");
+    expect(within(rowEl).getByRole("link", { name: /TX-2611-0003/ }).getAttribute("href")).toBe("/ops-api/tax-documents/d3/pdf");
+    expect(within(rowEl).getByRole("link", { name: /CN-2612-0001/ }).getAttribute("href")).toBe("/ops-api/credit-notes/c1/pdf");
+
+    await userEvent.click(within(rowEl).getByRole("button", { name: "ใบเพิ่มหนี้" }));
+    const d = await screen.findByRole("dialog", { name: "ออกใบเพิ่มหนี้ อ้าง TX-2611-0003" });
+    await userEvent.type(within(d).getByLabelText("ยอดที่คิดขาด (บาท · ก่อน VAT)"), "600");
+    await userEvent.type(within(d).getByLabelText("เหตุที่เพิ่มหนี้"), "ส่วนลดเกินสิทธิ์");
+    await userEvent.click(within(d).getByRole("button", { name: "ออกใบเพิ่มหนี้" }));
+    await waitFor(() => expect(debit).toEqual({ amountSatang: 60_000, reason: "ส่วนลดเกินสิทธิ์", dueDays: 7 }));
+    expect(await screen.findByText("ออกใบเพิ่มหนี้ DN-2612-0001 · ใบแจ้งหนี้ส่วนเพิ่ม FRI-2612-0006")).toBeInTheDocument();
+
+    await userEvent.click(within(rowEl).getByRole("button", { name: "ออกใบกำกับใหม่" }));
+    const r = await screen.findByRole("dialog", { name: "ออกฉบับใหม่แทน TX-2611-0003" });
+    await userEvent.type(within(r).getByLabelText("เหตุที่ยกเลิกฉบับเดิม"), "เลขผู้เสียภาษีผิด");
+    await userEvent.click(within(r).getByRole("button", { name: "ยกเลิกและออกฉบับใหม่" }));
+    await waitFor(() => expect(replace).toEqual({ reason: "เลขผู้เสียภาษีผิด" }));
+    expect(await screen.findByText("ยกเลิก TX-2611-0003 · ออก TX-2612-0004 แทนแล้ว")).toBeInTheDocument();
+  });
+
   it("ค้างชำระ: บันทึกการโทรต้องมีผล (B3) · ขยายเวลา (B4)", async () => {
     asRole("finance");
     base();
@@ -226,11 +258,14 @@ describe("ใบแจ้งหนี้ ค้างชำระ ภาษี �
     expect(await within(d).findByText("ส่งถึง acc@office.example.com")).toBeInTheDocument();
     expect(within(d).getByText(/ส่งอัตโนมัติทุกวันที่ 5/)).toBeInTheDocument();
     expect(within(d).getByText(/โดย ระบบอัตโนมัติ/)).toBeInTheDocument();
-    expect(within(d).getByRole("link", { name: "ดาวน์โหลดใบลดหนี้ (CSV)" }).getAttribute("href")).toMatch(/^\/ops-api\/revenue\/export\?month=\d{4}-\d{2}&type=credit_notes$/);
-    // ส่งเฉพาะรายการขายและใบลดหนี้
+    // รายงานภาษีขาย (รวมใบลด / เพิ่มหนี้) มีทั้ง PDF ตามแบบและ Excel · 50 ทวิ ยังเป็น CSV
+    expect(within(d).getByRole("link", { name: "ดาวน์โหลดรายงานภาษีขาย (PDF)" }).getAttribute("href")).toMatch(/^\/ops-api\/revenue\/sales-report\?month=\d{4}-\d{2}&format=pdf$/);
+    expect(within(d).getByRole("link", { name: "ดาวน์โหลดรายงานภาษีขาย (Excel)" }).getAttribute("href")).toMatch(/^\/ops-api\/revenue\/sales-report\?month=\d{4}-\d{2}&format=xlsx$/);
+    expect(within(d).getByRole("link", { name: "ดาวน์โหลด50 ทวิ ที่ได้รับ (CSV)" }).getAttribute("href")).toMatch(/type=wht$/);
+    // ส่งเฉพาะรายงานภาษีขาย
     await userEvent.click(within(d).getByLabelText("50 ทวิ ที่ได้รับ (CSV)"));
     await userEvent.click(within(d).getByRole("button", { name: "ส่งอีเมล" }));
-    await waitFor(() => expect(sent).toMatchObject({ types: ["sales", "credit_notes"] }));
+    await waitFor(() => expect(sent).toMatchObject({ types: ["sales_tax"] }));
     expect(await screen.findByText("ส่งไฟล์ถึง acc@office.example.com แล้ว")).toBeInTheDocument();
   });
 

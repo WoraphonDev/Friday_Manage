@@ -1,13 +1,15 @@
-// Stripe.js โหลดจาก js.stripe.com ตอนเลือกชำระด้วยบัตรเท่านั้น (ข้อมูลบัตรไม่ผ่านเซิร์ฟเวอร์ของ Friday)
-// ไม่ใช้แพ็กเกจ @stripe/stripe-js เพื่อไม่เพิ่ม dependency · ใช้เฉพาะส่วนที่หน้า Checkout เรียก
+// Stripe.js โหลดจาก js.stripe.com ตอนชำระด้วยบัตรเท่านั้น (ข้อมูลบัตรไม่ผ่านเซิร์ฟเวอร์ของ Friday)
+// ไม่ใช้แพ็กเกจ @stripe/stripe-js เพื่อไม่เพิ่ม dependency · ใช้เฉพาะส่วนที่หน้าชำระใบแจ้งหนี้เรียก
 
 export interface StripeCardElement {
   mount(el: HTMLElement): void;
   destroy(): void;
-  on(event: "change", handler: (e: { complete: boolean; error?: { message: string } }) => void): void;
+  on(event: "change", handler: (e: { complete: boolean; empty?: boolean; brand?: string; error?: { message: string } }) => void): void;
 }
+/** ช่องบัตรแยก 3 ช่องตาม Canvas (หมายเลขบัตร · วันหมดอายุ · CVC) · `card` = ช่องรวมแบบเดิม */
+export type StripeElementType = "card" | "cardNumber" | "cardExpiry" | "cardCvc";
 export interface StripeLike {
-  elements(options?: { locale?: string }): { create(type: "card", options?: Record<string, unknown>): StripeCardElement };
+  elements(options?: { locale?: string }): { create(type: StripeElementType, options?: Record<string, unknown>): StripeCardElement };
   confirmCardPayment(
     clientSecret: string,
     data: { payment_method: { card: StripeCardElement; billing_details?: { name?: string; email?: string } } },

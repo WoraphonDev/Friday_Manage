@@ -1,0 +1,392 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>หน้าโอนเงินและแนบสลิป</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Storyboard: เล่าทีละขั้นจากบนลงล่าง · แต่ละขั้น = คำบรรยายซ้าย + จอจำลองขวา · วงแดง = จุดที่กด */
+:root {
+  --bg: #f5f6f7; --fg: #24272c; --soft: #3a3f45; --card: #fff; --muted: #5f656d; --faint: #7a8088;
+  --subtle: #eef0f2; --surface-2: #f8f9fa; --border: #e3e6e9; --border-strong: #cfd4d9;
+  --primary: #5b3fc4; --primary-soft: #efe9fd; --primary-border: #cbbcf6; --on-primary: #fff;
+  --tap: #e0244e; --tap-soft: rgba(224,36,78,.14);
+  --ok: #157a46; --ok-soft: #e3f5ea; --warn: #8a5a00; --warn-soft: #fdf3dc; --info: #1f5fbf; --info-soft: #e6effc;
+  --frame: #1c1f23;
+  --sans: "IBM Plex Sans Thai", "Sukhumvit Set", "Thonburi", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141517; --fg: #e8eaed; --soft: #cdd1d6; --card: #1c1e21; --muted: #a1a7ae; --faint: #868c94;
+  --subtle: #25282c; --surface-2: #202326; --border: #2e3237; --border-strong: #41464c;
+  --primary: #9d86f5; --primary-soft: #2a2442; --primary-border: #4d3f86; --on-primary: #141517;
+  --tap: #ff5c7c; --tap-soft: rgba(255,92,124,.18);
+  --ok: #7bd8a0; --ok-soft: #173525; --warn: #f0c56a; --warn-soft: #3a2f14; --info: #8fb8f5; --info-soft: #18293f;
+  --frame: #000; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #141517; --fg: #e8eaed; --soft: #cdd1d6; --card: #1c1e21; --muted: #a1a7ae; --faint: #868c94;
+  --subtle: #25282c; --surface-2: #202326; --border: #2e3237; --border-strong: #41464c;
+  --primary: #9d86f5; --primary-soft: #2a2442; --primary-border: #4d3f86; --on-primary: #141517;
+  --tap: #ff5c7c; --tap-soft: rgba(255,92,124,.18);
+  --ok: #7bd8a0; --ok-soft: #173525; --warn: #f0c56a; --warn-soft: #3a2f14; --info: #8fb8f5; --info-soft: #18293f;
+  --frame: #000; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 40px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 48px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+.intro { display: flex; flex-direction: column; gap: 12px; max-width: 720px; }
+.intro h1 { font-size: 28px; line-height: 1.3; }
+.verdict { display: inline-flex; gap: 8px; align-items: center; background: var(--primary-soft); color: var(--primary); border: 1px solid var(--primary-border); border-radius: 999px; padding: 4px 14px; font-weight: 600; font-size: 14px; align-self: flex-start; }
+.intro p { margin: 0; color: var(--soft); }
+.why { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.why div { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.why b { font-size: 14px; }
+.why span { color: var(--muted); font-size: 13.5px; }
+
+.step { display: grid; grid-template-columns: 260px minmax(0,1fr); gap: 28px; align-items: start; }
+.cap { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 16px; }
+.cap .n { width: 32px; height: 32px; border-radius: 50%; background: var(--fg); color: var(--bg); display: grid; place-items: center; font-weight: 700; }
+.cap h2 { font-size: 18px; line-height: 1.4; }
+.cap p { margin: 0; color: var(--muted); font-size: 14px; }
+.cap .new { font-size: 12px; font-weight: 600; color: var(--primary); letter-spacing: .02em; }
+
+/* จอจำลอง */
+.screen { background: var(--frame); border-radius: 12px; padding: 0 0 6px; overflow: hidden; min-width: 0; }
+.bar { display: flex; gap: 6px; align-items: center; padding: 9px 12px; }
+.bar i { width: 9px; height: 9px; border-radius: 50%; background: #4b5057; display: block; }
+.url { margin-left: 10px; flex: 1; min-width: 0; background: #2b2f35; color: #b4b9bf; font-family: var(--mono); font-size: 12px; padding: 3px 10px; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.url em { color: #e4dcff; font-style: normal; }
+.view { background: var(--bg); margin: 0 6px; border-radius: 8px; padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+.crumb { font-size: 13px; color: var(--muted); }
+.crumb a { color: var(--primary); text-decoration: none; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+.p-wait { background: var(--warn-soft); color: var(--warn); }
+.p-info { background: var(--info-soft); color: var(--info); }
+.p-ok { background: var(--ok-soft); color: var(--ok); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; padding: 9px 16px; font: 600 14px var(--sans); border: 1px solid var(--border-strong); background: var(--card); color: var(--fg); white-space: nowrap; }
+.btn.pri { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--primary); }
+.btn.wide { width: 100%; }
+
+/* วงแดงจุดที่กด */
+.tap { position: relative; display: inline-flex; }
+.tap.block { display: flex; }
+.tap::after { content: ""; position: absolute; inset: -7px; border: 3px solid var(--tap); border-radius: 14px; box-shadow: 0 0 0 6px var(--tap-soft); pointer-events: none; }
+.tap .tl { position: absolute; top: -13px; right: -12px; background: var(--tap); color: #fff; font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; z-index: 1; white-space: nowrap; }
+
+/* ขั้น 1 checkout แบบย่อ */
+.co { display: grid; grid-template-columns: minmax(0,1fr) 250px; gap: 16px; }
+.dim { opacity: .55; }
+.methods { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.m { border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 13px; display: flex; flex-direction: column; }
+.m.on { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.m b { font-size: 13.5px; }
+.sr { display: flex; justify-content: space-between; font-size: 13.5px; }
+.sr.due { font-weight: 700; font-size: 16px; border-top: 1px solid var(--border); padding-top: 10px; }
+.sec { display: flex; gap: 10px; align-items: center; }
+.num { width: 22px; height: 22px; border-radius: 50%; background: var(--subtle); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.lines { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lines span { height: 30px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); }
+
+/* ขั้น 2 หน้าใหม่ */
+.pay-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.pay-head h3 { font-size: 21px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.amount { text-align: right; }
+.amount .big { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.pay { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; }
+.k { display: flex; gap: 10px; align-items: center; }
+.k .num { background: var(--primary); color: var(--on-primary); }
+.k b { font-size: 15.5px; }
+.rows { display: flex; flex-direction: column; }
+.row { display: grid; grid-template-columns: 96px minmax(0,1fr) 28px; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.row:last-child { border-bottom: 0; }
+.row .lb { color: var(--muted); font-size: 13px; }
+.row b { font-weight: 600; overflow-wrap: anywhere; }
+.copy { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); display: grid; place-items: center; color: var(--muted); }
+.copy svg { width: 14px; height: 14px; }
+.row.ref { background: var(--primary-soft); margin: 4px -10px 0; padding: 10px; border-radius: 8px; border: 0; }
+.row.ref .lb { color: var(--primary); font-weight: 600; }
+.drop { border: 1.5px dashed var(--border-strong); border-radius: 10px; padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; background: var(--surface-2); }
+.drop svg { width: 28px; height: 28px; color: var(--faint); }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; }
+.field label { font-weight: 600; }
+.input { border: 1px solid var(--input, var(--border-strong)); border-radius: 8px; padding: 8px 12px; background: var(--card); display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.later { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 12px; }
+.later a { color: var(--primary); text-decoration: none; }
+.file { display: flex; gap: 12px; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--surface-2); }
+.thumb { width: 52px; height: 68px; border-radius: 6px; background: linear-gradient(180deg, var(--ok-soft) 0 30%, var(--card) 30%); border: 1px solid var(--border); display: grid; place-items: center; }
+.thumb i { width: 20px; height: 20px; border-radius: 50%; background: var(--ok); display: block; opacity: .8; }
+.file .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 13.5px; }
+.file .meta b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* มือถือ */
+.duo { display: grid; grid-template-columns: minmax(0,1fr) 250px; gap: 20px; align-items: start; }
+.phone { background: var(--frame); border-radius: 26px; padding: 10px; }
+.phone .view { margin: 0; border-radius: 18px; padding: 14px; gap: 12px; font-size: 13px; }
+.phone .card { padding: 12px; gap: 10px; }
+.phone .row { grid-template-columns: 74px minmax(0,1fr) 26px; font-size: 12.5px; padding: 7px 0; }
+.phone .row.ref { margin: 2px -6px 0; padding: 8px 6px; }
+.phone .big { font-size: 22px; font-weight: 700; }
+.phone .drop { padding: 14px 10px; }
+.phone-cap { font-size: 12.5px; color: var(--muted); text-align: center; margin-top: 8px; }
+
+/* ขั้น 4 สำเร็จ */
+.done { align-items: flex-start; max-width: 560px; }
+.done h3 { font-size: 20px; }
+.done ul { margin: 0; padding-left: 20px; color: var(--soft); font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ขั้น 5 billing */
+.todo { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border: 1px solid var(--border); border-left: 3px solid var(--warn); border-radius: 8px; padding: 12px 14px; background: var(--card); }
+.todo div { display: flex; flex-direction: column; font-size: 14px; }
+
+.ask { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; display: flex; flex-direction: column; gap: 10px; max-width: 760px; }
+.ask h2 { font-size: 18px; }
+.ask ol { margin: 0; padding-left: 20px; color: var(--soft); display: flex; flex-direction: column; gap: 6px; }
+
+@media (max-width: 900px) {
+  .step { grid-template-columns: 1fr; gap: 14px; }
+  .cap { position: static; }
+  .duo { grid-template-columns: 1fr; }
+  .phone { max-width: 280px; margin: 0 auto; }
+  .why { grid-template-columns: 1fr; }
+}
+@media (max-width: 680px) {
+  .co, .pay { grid-template-columns: 1fr; }
+  .view { padding: 14px; }
+  .methods { grid-template-columns: 1fr; }
+  .amount { text-align: left; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ic-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="ic-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7 9l5-5 5 5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+</svg>
+
+<div class="wrap">
+
+  <header class="intro">
+    <span class="verdict">แนะนำ: เปลี่ยนไปหน้าใหม่ (ไม่ใช้ popup)</span>
+    <h1>ขอเลขบัญชีแล้ว ไปต่อที่หน้า "ชำระใบแจ้งหนี้" ของใบนั้น</h1>
+    <p>ตอนนี้ข้อมูลบัญชีกับช่องแนบสลิปต่อท้ายอยู่ในกล่อง "วิธีชำระ" ของหน้าชำระเงินซึ่งยาวมาก storyboard นี้แยกออกเป็นหน้าของใบแจ้งหนี้เอง มี URL ของตัวเอง เหลือแค่ 2 อย่างที่ต้องทำ: โอน แล้วแนบสลิป</p>
+  </header>
+
+  <section class="why" aria-label="เหตุผลที่ไม่ใช้ popup">
+    <div><b>คนโอนมักออกไปแอปธนาคารก่อน</b><span>ถ้าเป็น popup พอกลับมา รีเฟรช หรือปิดแท็บ popup ก็หาย ส่วนหน้าที่มี URL กลับมาที่เดิมได้เสมอ</span></div>
+    <div><b>หลายคนโอนวันหลัง</b><span>เช่น ส่งใบแจ้งหนี้ให้ฝ่ายบัญชีก่อน หน้านี้จึงเปิดจากหน้า Billing และลิงก์ในอีเมลได้ด้วย</span></div>
+    <div><b>บนมือถือ popup อึดอัด</b><span>มีข้อมูล 6 ช่อง ปุ่มคัดลอก และช่องอัปโหลด ถ้าเป็นหน้าเต็ม เลื่อนอ่านได้สบายกว่า</span></div>
+  </section>
+
+  <!-- ขั้น 1 -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">1</span>
+      <h2>หน้าชำระเงิน: เลือก "โอนเข้าบัญชี" แล้วกด "ขอเลขบัญชี"</h2>
+      <p>ส่วนนี้คงไว้แบบเดิม ระบบออกใบแจ้งหนี้ตอนกดปุ่มนี้</p>
+    </div>
+    <div class="screen">
+      <div class="bar"><i></i><i></i><i></i><span class="url">/work/acme/billing/checkout?plan=team_pro</span></div>
+      <div class="view">
+        <div class="co">
+          <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+            <div class="card dim">
+              <div class="sec"><span class="num">1</span><b>ข้อมูลใบกำกับภาษี</b></div>
+              <div class="lines"><span></span><span></span><span></span><span></span></div>
+            </div>
+            <div class="card">
+              <div class="sec"><span class="num">2</span><b>วิธีชำระ</b></div>
+              <div class="methods">
+                <div class="m"><b>PromptPay</b><span class="muted">สแกน QR</span></div>
+                <div class="m"><b>บัตร</b><span class="muted">ต่ออายุอัตโนมัติ</span></div>
+                <div class="m on"><b>โอนเข้าบัญชี</b><span class="muted">แนบสลิปภายหลัง</span></div>
+              </div>
+              <span class="muted small">กด "ขอเลขบัญชี" เพื่อออกใบแจ้งหนี้ พร้อมเลขบัญชีและเลขอ้างอิง</span>
+            </div>
+          </div>
+          <div class="card">
+            <b>สรุปรายการ</b>
+            <div class="sr"><span>Team Pro · รายเดือน</span><span class="mono">฿9,159</span></div>
+            <div class="sr"><span class="muted">VAT 7%</span><span class="mono">฿641</span></div>
+            <div class="sr due"><span>ยอดชำระ</span><span class="mono">฿9,800</span></div>
+            <span class="tap block"><span class="tl">กด</span><span class="btn pri wide">ขอเลขบัญชี</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ขั้น 2 -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">2</span>
+      <span class="new">หน้าใหม่</span>
+      <h2>ไปที่หน้า "ชำระใบแจ้งหนี้ FRI-2611-0001"</h2>
+      <p>ด้านบนเป็นยอดกับวันครบกำหนด ถัดมาเป็นกล่องที่ต้องทำ 2 อย่างเรียงซ้าย-ขวา คือ ① โอน ② แนบสลิป</p>
+      <p>เลขอ้างอิงทำพื้นสีไว้ เพราะเป็นช่องที่คนลืมใส่บ่อยที่สุด ช่องยอดที่โอนกรอกยอดในใบแจ้งหนี้ไว้ให้แล้ว ถ้าโอนไม่เท่านี้ค่อยแก้</p>
+    </div>
+    <div class="screen">
+      <div class="bar"><i></i><i></i><i></i><span class="url">/work/acme/billing/<em>invoices/FRI-2611-0001</em></span></div>
+      <div class="view">
+        <div class="crumb"><a href="#">← แพ็กเกจ &amp; Billing</a></div>
+        <div class="pay-head">
+          <div>
+            <h3>ชำระใบแจ้งหนี้ FRI-2611-0001 <span class="pill p-wait">รอชำระ</span></h3>
+            <span class="muted small">Team Pro · รายเดือน · 12 ที่นั่ง · ครบกำหนด 23 พ.ย. 2569</span>
+          </div>
+          <div class="amount"><span class="muted small">ยอดที่ต้องโอน</span><div class="big">฿9,800</div></div>
+        </div>
+        <div class="pay">
+          <div class="card">
+            <div class="k"><span class="num">1</span><b>โอนเข้าบัญชีนี้</b></div>
+            <div class="rows">
+              <div class="row"><span class="lb">ธนาคาร</span><b>ธนาคารตัวอย่าง</b><span class="copy"><svg><use href="#ic-copy"/></svg></span></div>
+              <div class="row"><span class="lb">ชื่อบัญชี</span><b>บริษัท ฟรายเดย์ จำกัด (ตัวอย่าง)</b><span class="copy"><svg><use href="#ic-copy"/></svg></span></div>
+              <div class="row"><span class="lb">เลขที่บัญชี</span><b class="mono">000-0-00000-0</b><span class="copy"><svg><use href="#ic-copy"/></svg></span></div>
+              <div class="row"><span class="lb">ยอดโอน</span><b class="mono">9,800.00</b><span class="copy"><svg><use href="#ic-copy"/></svg></span></div>
+              <div class="row ref"><span class="lb">เลขอ้างอิง</span><b class="mono">FRI-2611-0001</b><span class="copy"><svg><use href="#ic-copy"/></svg></span></div>
+            </div>
+            <span class="muted small">ใส่เลขอ้างอิงในบันทึกช่วยจำของแอปธนาคาร ทีมงานจะจับคู่ยอดได้เร็วขึ้น</span>
+          </div>
+          <div class="card">
+            <div class="k"><span class="num">2</span><b>โอนแล้ว? แนบสลิป</b></div>
+            <span class="tap block"><span class="tl">กด / ลากไฟล์มาวาง</span>
+              <span class="drop" style="width:100%">
+                <svg><use href="#ic-up"/></svg>
+                <b>ลากสลิปมาวาง หรือ เลือกไฟล์</b>
+                <span class="muted small">JPG, PNG หรือ PDF ไม่เกิน 5 MB</span>
+              </span>
+            </span>
+            <div class="field">
+              <label>ยอดที่โอน (บาท)</label>
+              <span class="input"><span class="mono">9,800.00</span><span class="muted small">แก้ได้</span></span>
+            </div>
+            <span class="btn pri wide" style="opacity:.45">ส่งสลิป</span>
+            <span class="muted small">ทีมงานตรวจภายใน 4 ชม. ทำการ · ระหว่างรอใช้แพ็กเกจใหม่ได้ทันที</span>
+          </div>
+        </div>
+        <div class="later">
+          <span>ยังไม่โอนตอนนี้ก็ได้ กลับมาที่หน้านี้ได้จากหน้า Billing หรือลิงก์ในอีเมล</span>
+          <span class="btns"><a href="#">ดาวน์โหลดใบแจ้งหนี้ (PDF)</a> · <a href="#">ส่งใบแจ้งหนี้ให้ฝ่ายบัญชี</a></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ขั้น 2 มือถือ -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">2</span>
+      <h2>หน้าเดียวกันบนมือถือ</h2>
+      <p>กล่อง ① กับ ② เรียงลงมา กดคัดลอกเลขบัญชี สลับไปแอปธนาคาร แล้วกลับมาก็ยังอยู่ที่หน้าเดิม</p>
+    </div>
+    <div class="duo">
+      <div class="phone">
+        <div class="view">
+          <div class="crumb"><a href="#">← Billing</a></div>
+          <div><b>FRI-2611-0001</b> <span class="pill p-wait">รอชำระ</span><div class="big">฿9,800</div><span class="muted small">ครบกำหนด 23 พ.ย. 2569</span></div>
+          <div class="card">
+            <div class="k"><span class="num">1</span><b>โอนเข้าบัญชีนี้</b></div>
+            <div class="rows">
+              <div class="row"><span class="lb">ธนาคาร</span><b>ธนาคารตัวอย่าง</b><span class="copy"><svg><use href="#ic-copy"/></svg></span></div>
+              <div class="row"><span class="lb">เลขบัญชี</span><b class="mono">000-0-00000-0</b><span class="tap"><span class="copy"><svg><use href="#ic-copy"/></svg></span></span></div>
+              <div class="row ref"><span class="lb">อ้างอิง</span><b class="mono">FRI-2611-0001</b><span class="copy"><svg><use href="#ic-copy"/></svg></span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="k"><span class="num">2</span><b>แนบสลิป</b></div>
+            <span class="drop"><svg><use href="#ic-up"/></svg><b>เลือกรูปสลิป</b></span>
+          </div>
+        </div>
+      </div>
+      <div class="phone-cap" style="align-self:center;text-align:left;font-size:14px">ชื่อบัญชีกับยอดโอนอยู่ในกล่อง ① เหมือนบน desktop (ย่อไว้ในภาพนี้)</div>
+    </div>
+  </section>
+
+  <!-- ขั้น 3 -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">3</span>
+      <h2>แนบไฟล์แล้วจะเห็นภาพสลิป จากนั้นกด "ส่งสลิป"</h2>
+      <p>มีภาพตัวอย่างให้ตรวจว่าเลือกถูกไฟล์ และกด "เปลี่ยนไฟล์" ได้ ปุ่มส่งกดได้เมื่อแนบไฟล์แล้ว</p>
+    </div>
+    <div class="screen">
+      <div class="bar"><i></i><i></i><i></i><span class="url">/work/acme/billing/<em>invoices/FRI-2611-0001</em></span></div>
+      <div class="view">
+        <div class="pay">
+          <div class="card dim">
+            <div class="k"><span class="num">1</span><b>โอนเข้าบัญชีนี้</b></div>
+            <div class="lines" style="grid-template-columns:1fr"><span></span><span></span><span></span></div>
+          </div>
+          <div class="card">
+            <div class="k"><span class="num">2</span><b>โอนแล้ว? แนบสลิป</b></div>
+            <div class="file">
+              <span class="thumb"><i></i></span>
+              <span class="meta"><b>slip-2026-11-16.jpg</b><span class="muted small">412 KB</span></span>
+              <span class="btn ghost">เปลี่ยนไฟล์</span>
+            </div>
+            <div class="field">
+              <label>ยอดที่โอน (บาท)</label>
+              <span class="input"><span class="mono">9,800.00</span><span class="muted small">แก้ได้</span></span>
+            </div>
+            <span class="tap block"><span class="tl">กด</span><span class="btn pri wide">ส่งสลิป</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ขั้น 4 -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">4</span>
+      <h2>ส่งแล้ว: หน้าเดิมเปลี่ยนเป็น "รอตรวจสลิป"</h2>
+      <p>ใช้หน้าสำเร็จแบบที่มีอยู่แล้ว ถ้าเปิด URL นี้อีกครั้งจะเห็นสถานะนี้ ไม่ใช่ฟอร์มแนบสลิป</p>
+    </div>
+    <div class="screen">
+      <div class="bar"><i></i><i></i><i></i><span class="url">/work/acme/billing/<em>invoices/FRI-2611-0001</em></span></div>
+      <div class="view">
+        <div class="card done">
+          <span class="pill p-info">รอตรวจสลิป</span>
+          <h3>ได้รับสลิปแล้ว ใช้งาน Team Pro ได้เลย</h3>
+          <ul>
+            <li>ทีมงานตรวจภายใน 4 ชม. ทำการ</li>
+            <li>ตรวจแล้วส่งใบกำกับภาษีไปที่อีเมลฝ่ายบัญชี</li>
+            <li>แนบสลิปผิด? กด "แนบสลิปใหม่" ได้จนกว่าจะตรวจเสร็จ</li>
+          </ul>
+          <div class="btns"><span class="btn pri">กลับไปทำงาน</span><span class="btn">แนบสลิปใหม่</span><span class="btn ghost">ไปหน้า Billing</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ขั้น 5 -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">5</span>
+      <h2>ถ้ายังไม่โอน กลับมาทีหลังจากหน้า Billing</h2>
+      <p>ตอนนี้ปุ่ม "แนบสลิป" ในรายการที่ต้องทำเปิดหน้าต่างเลือกไฟล์เลย จะเปลี่ยนเป็นปุ่ม "ชำระ" ที่เปิดหน้าจากขั้น 2 แทน คนที่ลืมเลขบัญชีจะได้เห็นอีกครั้ง</p>
+    </div>
+    <div class="screen">
+      <div class="bar"><i></i><i></i><i></i><span class="url">/work/acme/billing</span></div>
+      <div class="view">
+        <b>รายการที่ต้องทำ</b>
+        <div class="todo">
+          <div><b>ใบแจ้งหนี้ FRI-2611-0001 รอชำระ ฿9,800</b><span class="muted small">ครบกำหนด 23 พ.ย. 2569 · โอนเข้าบัญชี</span></div>
+          <span class="tap"><span class="tl">กด → ขั้น 2</span><span class="btn pri">ชำระ</span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ask">
+    <h2>ขอให้ยืนยัน</h2>
+    <ol>
+      <li>ใช้หน้าใหม่ตาม storyboard นี้ได้ไหม (ไม่ใช้ popup)</li>
+      <li>PromptPay ใช้หน้าเดียวกันไหม (QR อยู่ในกล่อง ① แทนเลขบัญชี) หรือให้ QR อยู่ในหน้าชำระเงินแบบเดิม</li>
+    </ol>
+  </section>
+</div>

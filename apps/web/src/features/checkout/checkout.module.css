@@ -83,6 +83,7 @@
 .minus { color:var(--muted); }
 .due { font-size:17px; font-weight:700; border-top:1px solid var(--border); padding-top:10px; }
 .payBtn { width:100%; margin-top:8px; min-height:36px; }
+.quoteLink { width:100%; }
 .bullets { margin:8px 0 0; padding-left:18px; color:var(--muted); font-size:12px; line-height:1.8; }
 .problem { border-radius:8px; padding:8px 10px; background:var(--danger-soft); color:var(--danger-text); font-size:12px; }
 

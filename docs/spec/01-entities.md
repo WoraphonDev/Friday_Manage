@@ -205,12 +205,14 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `subscription` | แพ็กเกจของ Workspace | workspace_id, plan_id, cycle (monthly · yearly), status (trialing · active · past_due · canceled), trial_ends_at, current_period_start, current_period_end, payment_method (card · promptpay · transfer), stripe_customer_id, stripe_subscription_id, discount, price_version_id (เวอร์ชันราคาที่จ่ายล่าสุด · O20) | N1, R2 |
 | `billing_profile` | ข้อมูลออกใบกำกับภาษี (1:1) | workspace_id, company_name, tax_id, branch_type (head · branch), branch_no, address, tax_email, wht_enabled | N1, R2 |
 | `invoice` | ใบแจ้งหนี้ | workspace_id, subscription_id, number, period_start, period_end, subtotal (หลังหักส่วนลด), discount, vat, total, wht_amount, amount_due (สตางค์ทั้งหมด), po_number, status (open · pending_review · paid · void), due_date, paid_at | N1, R2, Q3 |
-| `payment` | การชำระ | invoice_id, method, amount, provider_ref, slip_file_key, status (pending_review · confirmed · rejected), reviewed_by, reviewed_at | R2, Q3 |
-| `tax_document` | e-Tax Invoice & e-Receipt | invoice_id, doc_type, number, provider_ref, status, sent_at | Q3 |
+| `payment` | การชำระ | invoice_id, method, amount, provider_ref, slip_file_key, status (pending_review · confirmed · rejected), reviewed_by, reviewed_at, paid_at (เวลาเงินเข้าจริง · โอน = เวลาที่ลูกค้าแจ้งในสลิป) | R2, Q3 |
+| `tax_document` | e-Tax Invoice & e-Receipt · เลข TX- / RC- เดินแยกจากเลขใบแจ้งหนี้ | invoice_id, doc_type, number, provider_ref, status (pending · submitted · issued · failed · cancelled), sent_at, issued_on (= วันที่ได้รับเงิน), replaces_id (ฉบับใหม่แทนฉบับที่ยกเลิก), cancelled_at, cancel_reason | Q3 |
+| `quotation` | ใบเสนอราคา (ไม่ใช่เอกสารภาษี) · เลข QT- | workspace_id, number, plan, cycle, wht, coupon, subtotal, discount, vat, total, wht_amount, amount_due, valid_until, created_by | Q3 |
 | `wht_certificate` | หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) | invoice_id, file_key, uploaded_by, status, reviewed_by | R2, Q3 |
 | `legal_document` | ข้อกำหนด, นโยบาย, DPA (ระดับระบบ) · ทุกเวอร์ชันเก็บถาวร | doc_type, version, effective_at, summary, requires_acceptance (ต้องยอมรับใหม่ · false = แจ้งให้ทราบ), created_by_staff | R4, Ops A7 |
 | `legal_acceptance` | ใครรับทราบฉบับไหน | user_id, workspace_id, document_id, accepted_at, ip | R4, J2 |
 | `credit_note` | ใบลดหนี้ · คืนเงิน ให้เครดิต หรือยกเลิกใบที่ออกใบกำกับแล้ว (Friday Ops เฟส 1) | workspace_id, invoice_id, number, kind (refund · credit · void), amount_satang, vat_satang, reason, status (draft · issued · sent), refund_method, approval_request_id, issued_at | Ops 4, 13 |
+| `debit_note` | ใบเพิ่มหนี้ (ม.86/9) · เก็บเงินขาดในใบกำกับภาษีที่ออกแล้ว · ออกจากหลังบ้าน | workspace_id, invoice_id (ใบเดิม), number (DN-), amount_satang, vat_satang, reason, status (issued · sent), charge_invoice_id (ใบแจ้งหนี้ส่วนเพิ่ม), approval_request_id, issued_at | Ops 4, 13 |
 | `workspace_credit` | สมุดเครดิต · ยอดคงเหลือ = ผลรวม (บวกได้ · ลบใช้หัก) | workspace_id, amount_satang, source (credit_note · overpayment · goodwill · applied), credit_note_id, invoice_id, note | Ops 4, 13 |
 | `dunning_event` | ประวัติการตามหนี้ | workspace_id, invoice_id, step, channel, result, by_staff | Ops 4 |
 

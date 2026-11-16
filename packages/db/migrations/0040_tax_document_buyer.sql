@@ -1,0 +1,1 @@
+ALTER TABLE "tax_documents" ADD COLUMN "buyer" jsonb;

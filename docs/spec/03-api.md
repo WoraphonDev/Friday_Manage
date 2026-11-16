@@ -505,9 +505,13 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET | `w/billing/quote?plan&cycle&wht&coupon` | `ws.billing` | subtotal (หลังหักส่วนลด), VAT 7%, หัก ณ ที่จ่าย 3%, ยอดชำระ · ใช้แสดงสรุปในหน้า R2 · O20: `listPrice`, `discount`, `discounts[]` (โค้ด, ยอด, รอบที่เหลือ, ได้ต่อจากรอบก่อน), `coupon`, `freeMonths`, `grandfathered` · โค้ดใช้ไม่ได้ → 422 `coupon_*` · แพ็กเกจปิดรับสมัครใหม่ → 422 `plan_not_open` |
 | GET / PUT | `w/billing/profile` | `ws.billing` | ข้อมูลใบกำกับภาษี |
 | POST | `w/billing/checkout` | `ws.billing` | ต้องมี `Idempotency-Key` · บัตร: ได้ Stripe client secret · PromptPay: ได้ QR (หมดอายุ 15 นาที) · โอน: ได้ใบแจ้งหนี้ · หัก ณ ที่จ่ายเลือกได้เฉพาะ PromptPay / โอน · `coupon` (O20) หักส่วนลดก่อน VAT ในใบแจ้งหนี้ ผู้ให้บริการตัดยอดสุทธิ · ยอด 0 (ใช้ฟรี N เดือน / ลด 100%) → ใบชำระแล้วทันที `payment: null, free: true` |
-| POST | `w/billing/invoices/{id}/slip` | `ws.billing` | แนบสลิป · สถานะ `pending_review` แต่ใช้แพ็กเกจใหม่ได้ทันที |
+| POST | `w/billing/invoices/{id}/slip` | `ws.billing` | แนบสลิป (`amount`, `paidAt` = เวลาโอน → วันที่ของใบกำกับภาษี) · สถานะ `pending_review` แต่ใช้แพ็กเกจใหม่ได้ทันที |
 | POST | `w/billing/invoices/{id}/wht-certificate` | `ws.billing` | 50 ทวิ ภายใน 30 วัน |
 | GET | `w/billing/invoices` · `{id}.pdf` · `w/billing/tax-documents/{id}.pdf` | `ws.billing` | |
+| GET | `w/billing/invoices/{id}` | `ws.billing` | ใบเดียว + `plan { code, name, cycle }` + `transfer` (บัญชีรับโอน · เฉพาะใบโอนที่ยังไม่ปิด ไม่งั้น `null`) ให้หน้าชำระใบแจ้งหนี้ |
+| POST | `w/billing/invoices/{id}/pay` | `ws.billing` | หน้าชำระใบแจ้งหนี้: client secret ของบัตร / QR PromptPay ของใบเดิม · `{ renew: true }` = QR หมดอายุ สร้างรายการใหม่ในใบเดิม · ใบโอน → 409 `pay_not_applicable` |
+| GET | `w/billing/credit-notes/{id}.pdf` · `w/billing/debit-notes/{id}.pdf` | `ws.billing` | ใบลดหนี้ / ใบเพิ่มหนี้ (หลังบ้านออก) · รายการอยู่ใน `invoices[].notes` |
+| GET | `w/billing/quotation.pdf?plan=&cycle=&wht=&coupon=` | `ws.billing` | ใบเสนอราคา (เลข QT- ใหม่ทุกครั้ง · ยืนราคา 30 วัน) |
 | POST | `w/billing/subscription:cancel` | Owner | ใช้ต่อได้ถึงสิ้นรอบ |
 
 ### 3.11 Webhook ขาเข้า

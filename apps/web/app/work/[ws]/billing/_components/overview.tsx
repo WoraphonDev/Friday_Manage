@@ -117,11 +117,12 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
   const now = today();
   const items = invoices.data?.items ?? [];
   const needWhtFor = (inv: Invoice) => inv.whtAmount > 0 && !inv.whtCertificate && !!inv.whtDueBy && inv.whtDueBy >= now && inv.status !== "void";
-  const needSlipFor = (inv: Invoice) => inv.method === "transfer" && (inv.status === "open" || inv.status === "pending_review");
+  // ใบที่ยังไม่จ่ายทุกวิธี → หน้าชำระใบแจ้งหนี้ (QR / บัตร / เลขบัญชี) · โอนที่รอตรวจ → แนบสลิปใหม่
+  const needSlipFor = (inv: Invoice) => inv.status === "open" || (inv.method === "transfer" && inv.status === "pending_review");
   const slipButton = (inv: Invoice) => (
-    <Button size="small" onClick={() => pick(inv, "slip")}>
-      {inv.hasSlip ? t("slipAgain") : t("slip")}
-    </Button>
+    <Link className={buttonVariants({ size: "small", variant: inv.status === "open" ? "primary" : undefined })} href={`/work/${encodeURIComponent(ws)}/billing/invoices/${inv.id}${inv.hasSlip ? "?slip=new" : ""}`}>
+      {inv.hasSlip ? t("slipAgain") : t("payInvoice")}
+    </Link>
   );
   const todos: Todo[] = items.flatMap((inv) => {
     const list: Todo[] = [];
@@ -313,6 +314,11 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
                                 {t("taxPdf")}
                               </a>
                             )}
+                            {inv.notes?.map((n) => (
+                              <a key={n.id} className={buttonVariants({ size: "small" })} href={n.pdfUrl} target="_blank" rel="noreferrer" title={n.number}>
+                                {t(n.kind === "credit" ? "creditNote" : "debitNote")}
+                              </a>
+                            ))}
                             {needSlipFor(inv) && slipButton(inv)}
                             {needWht && (
                               <Button size="small" onClick={() => pick(inv, "wht-certificate")}>

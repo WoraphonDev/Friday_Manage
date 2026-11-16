@@ -267,6 +267,27 @@
       "when": 1794762548498,
       "tag": "0037_project_pause",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794820693833,
+      "tag": "0038_billing_documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794820711867,
+      "tag": "0039_billing_documents_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794821503909,
+      "tag": "0040_tax_document_buyer",
+      "breakpoints": true
     }
   ]
 }

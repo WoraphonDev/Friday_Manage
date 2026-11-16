@@ -72,6 +72,7 @@ beforeAll(async () => {
   for (const [ws, inv, n] of [[W.one, invoice.one, '1'], [W.two, invoice.two, '2']]) {
     const note = await insert('credit_notes', { workspace_id: ws, invoice_id: inv, number: `CN-O00-${n}`, kind: 'credit', amount_satang: 500, reason: 'ทดสอบ' });
     await insert('workspace_credits', { workspace_id: ws, amount_satang: 500, source: 'credit_note', credit_note_id: note });
+    await insert('debit_notes', { workspace_id: ws, invoice_id: inv, number: `DN-O00-${n}`, amount_satang: 600, vat_satang: 42, reason: 'ทดสอบ' });
     await insert('product_events', { workspace_id: ws, name: 'feature.used', props: { feature: 'gantt' } });
     await insert('subscription_changes', { workspace_id: ws, kind: 'new', plan_to: 'team_s', mrr_before_satang: 0, mrr_after_satang: 100000, actor_kind: 'user', effective_at: new Date() });
   }
@@ -153,7 +154,7 @@ describe('สิทธิ์ของแอปลูกค้า', () => {
     });
   });
 
-  it.each(['credit_notes', 'workspace_credits'])('%s ลูกค้าอ่านของตัวเองได้แต่เขียนไม่ได้', async (table) => {
+  it.each(['credit_notes', 'workspace_credits', 'debit_notes'])('%s ลูกค้าอ่านของตัวเองได้แต่เขียนไม่ได้', async (table) => {
     await as(U.lead, W.one, async (c) => {
       const found = await rows(c, `SELECT workspace_id FROM ${table}`);
       expect(found.map((r) => r.workspace_id)).toEqual([W.one]);
@@ -171,6 +172,23 @@ describe('สิทธิ์ของแอปลูกค้า', () => {
 });
 
 describe('เงิน', () => {
+  it('ใบเสนอราคา: ลูกค้าสร้างและอ่านของตัวเองได้ · แก้ / ลบไม่ได้ · ไม่เห็นของ Workspace อื่น', async () => {
+    const quote = { plan: 'team_m', cycle: 'monthly', subtotal: 300000, vat: 21000, total: 321000, amount_due: 321000, valid_until: '2026-12-15' };
+    await insert('quotations', { workspace_id: W.two, number: 'QT-O00-2', ...quote });
+    await as(U.lead, W.one, async (c) => {
+      await insert('quotations', { workspace_id: W.one, number: 'QT-O00-1', created_by: U.lead, ...quote }, c);
+      expect((await rows(c, 'SELECT number FROM quotations')).map((r) => r.number)).toEqual(['QT-O00-1']);
+    });
+    await as(U.lead, W.one, (c) => expect(c.query(`UPDATE quotations SET total = 1`)).rejects.toThrow(/permission denied/));
+    await as(U.lead, W.one, (c) => expect(c.query(`DELETE FROM quotations`)).rejects.toThrow(/permission denied/));
+    await as(U.lead, W.one, (c) => expect(insert('quotations', { workspace_id: W.two, number: 'QT-O00-X', ...quote }, c)).rejects.toThrow(/row-level security/));
+  });
+
+  it('ใบเพิ่มหนี้ต้องอ้างใบแจ้งหนี้ใน Workspace เดียวกัน', async () => {
+    await expect(insert('debit_notes', { workspace_id: W.one, invoice_id: invoice.two, number: 'DN-O00-X', amount_satang: 100, reason: 'ข้าม tenant' }))
+      .rejects.toThrow(/debit_notes_invoice_fk/);
+  });
+
   it('ใบลดหนี้ต้องอ้างใบแจ้งหนี้ใน Workspace เดียวกัน', async () => {
     await expect(insert('credit_notes', { workspace_id: W.one, invoice_id: invoice.two, number: 'CN-O00-X', kind: 'refund', amount_satang: 100, reason: 'ข้าม tenant' }))
       .rejects.toThrow(/credit_notes_invoice_fk/);

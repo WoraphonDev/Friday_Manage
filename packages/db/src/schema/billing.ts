@@ -64,6 +64,8 @@ export const payments = pgTable('payments', {
   exceptionReason: text(),
   /** ใบแจ้งหนี้ที่พนักงานผูกให้เมื่อเงินเข้าไม่ตรงใบเดิม */
   matchedInvoiceId: uuid(),
+  /** เวลาที่เงินเข้าจริง (บัตร / PromptPay = เวลาที่ผู้ให้บริการยืนยัน · โอน = เวลาโอนที่ลูกค้าแจ้งตอนแนบสลิป) · วันที่ของใบกำกับภาษี = วันนี้ */
+  paidAt: tstz(),
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [tenantFk('payments_invoice_fk', t.workspaceId, t.invoiceId, invoices),
   tenantFk('payments_matched_invoice_fk', t.workspaceId, t.matchedInvoiceId, invoices),
@@ -76,8 +78,25 @@ export const payments = pgTable('payments', {
 export const taxDocuments = pgTable('tax_documents', {
   id: pk(), workspaceId: workspaceId(), invoiceId: uuid().notNull(), docType: text().notNull(),
   number: text().notNull().unique(), providerRef: text(), status: text().notNull().default('pending'), sentAt: tstz(),
+  /** วันที่ของใบกำกับภาษี = วันที่ได้รับเงิน (ม.86/4(7)) · null = เอกสารก่อนมีคอลัมน์นี้ ใช้ invoices.paid_at */
+  issuedOn: date(),
+  /** ฉบับใหม่ที่ออกแทนฉบับที่ยกเลิก (ข้อมูลผู้ซื้อผิด) · ชี้ไปฉบับเดิม */
+  replacesId: uuid(),
+  /** ยกเลิกแล้ว (status = 'cancelled') · เก็บเหตุผลไว้แสดงในรายงานภาษีขายและฉบับใหม่ */
+  cancelledAt: tstz(), cancelReason: text(),
+  /** ข้อมูลผู้ซื้อ ณ วันที่ออก (ชื่อ เลขผู้เสียภาษี สาขา ที่อยู่) · ลูกค้าแก้ข้อมูลภาษีภายหลัง เอกสารเดิมต้องไม่เปลี่ยนตาม · null = เอกสารเก่า ใช้ข้อมูลปัจจุบัน */
+  buyer: jsonb(),
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [tenantFk('tax_documents_invoice_fk', t.workspaceId, t.invoiceId, invoices), index('tax_documents_invoice_idx').on(t.invoiceId)]);
+
+/** ใบเสนอราคา (ไม่ใช่เอกสารภาษี) · เก็บไว้ให้ใบแจ้งหนี้อ้างอิงและตรวจย้อนได้ว่าเสนอราคาอะไรไป */
+export const quotations = pgTable('quotations', {
+  id: pk(), workspaceId: workspaceId(), number: text().notNull().unique(), plan: text().notNull(), cycle: billingCycle().notNull(),
+  wht: boolean().notNull().default(false), coupon: text(),
+  subtotal: bigint({ mode: 'number' }).notNull(), discount: bigint({ mode: 'number' }).notNull().default(0), vat: bigint({ mode: 'number' }).notNull(),
+  total: bigint({ mode: 'number' }).notNull(), whtAmount: bigint({ mode: 'number' }).notNull().default(0), amountDue: bigint({ mode: 'number' }).notNull(),
+  validUntil: date().notNull(), createdBy: uuid().references(() => users.id), createdAt: createdAt(),
+}, (t) => [tenantKey('quotations', t), index('quotations_workspace_idx').on(t.workspaceId)]);
 
 export const whtCertificates = pgTable('wht_certificates', {
   id: pk(), workspaceId: workspaceId(), invoiceId: uuid().notNull(), fileKey: text().notNull(),

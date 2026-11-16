@@ -3,7 +3,8 @@ import { AnalyticsService } from '../analytics/analytics.service.js';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { Inject, Injectable } from '@nestjs/common';
-import { type Db, schema, type Tx } from '@friday/db';
+import { bkkDate, type Db, nextDocNumber, schema, type Tx } from '@friday/db';
+import { bankFromEnv, creditNotePdf, debitNotePdf, invoicePdf, planTitle, quotationPdf, taxDocumentPdf } from '@friday/docs';
 import { and, desc, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { config } from '../config.js';
@@ -13,18 +14,21 @@ import { parse } from '../common/validate.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { SYSTEM_DB } from '../db/db.module.js';
-import { type BillDoc, renderBill, thaiDate } from './pdf.js';
-import { bankInfo, type CheckoutMeta, invoiceDto, PaymentsService } from './payments.service.js';
+import { BillingService, QuoteQuery } from '../billing/billing.service.js';
+import { invoiceDto, PaymentsService } from './payments.service.js';
 
 const s = schema;
 const DAY = 86_400_000;
 export const SLIP_MAX_BYTES = 5 * 1024 * 1024;
 /** 50 ทวิ ต้องส่งภายใน 30 วัน */
 export const WHT_DEADLINE_DAYS = 30;
-const PLAN_NAMES: Record<string, string> = { team_s: 'Team S', team_m: 'Team M', team_l: 'Team L' };
 
-/** ยอดที่ลูกค้าแจ้งตอนแนบสลิป (สตางค์) · ไม่บังคับ */
-const SlipBody = z.object({ amount: z.coerce.number().int().positive().optional() });
+/** ยอดที่ลูกค้าแจ้งตอนแนบสลิป (สตางค์) และเวลาที่โอน (= วันที่ของใบกำกับภาษี) · ไม่บังคับ */
+const SlipBody = z.object({ amount: z.coerce.number().int().positive().optional(), paidAt: z.coerce.date().optional() });
+/** ใบกำกับภาษีที่ยังมีผลของใบแจ้งหนี้ (ฉบับใหม่แทนฉบับที่ยกเลิก) */
+const activeDoc = <T extends { status: string; createdAt: Date }>(docs: T[]) => docs.filter((d) => d.status !== 'cancelled').sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0] ?? docs[0];
+/** ใบเสนอราคายืนราคา 30 วัน */
+const QUOTE_VALID_DAYS = 30;
 /** ยอดคลาดได้ไม่เกิน 1 บาท (ปัดเศษของธนาคาร) */
 const AMOUNT_TOLERANCE = 100;
 
@@ -47,14 +51,6 @@ export function sniff(buf: Buffer): { ext: string; mime: string } | null {
   return null;
 }
 
-const seller = () => ({
-  name: process.env.SELLER_NAME ?? 'บริษัท ฟรายเดย์ จำกัด (ตัวอย่าง)',
-  taxId: process.env.SELLER_TAX_ID ?? '0105500000000',
-  address: process.env.SELLER_ADDRESS ?? '99 ถนนตัวอย่าง แขวงตัวอย่าง เขตตัวอย่าง กรุงเทพมหานคร 10000',
-  branch: process.env.SELLER_BRANCH ?? 'สำนักงานใหญ่',
-});
-/** ยังไม่ได้ตั้งข้อมูลผู้ขายจริง → บอกในเอกสารว่าเป็นตัวอย่าง */
-const sellerIsSample = () => !process.env.SELLER_NAME;
 
 /** ใบแจ้งหนี้, สลิป, 50 ทวิ, PDF และการยกเลิกแพ็กเกจ */
 @Injectable()
@@ -64,6 +60,7 @@ export class InvoicesService {
     @Inject(SYSTEM_DB) private readonly sys: Db,
     private readonly payments: PaymentsService,
     private readonly analytics: AnalyticsService,
+    private readonly billing: BillingService,
   ) {}
 
   private requireBilling(tenant: TenantInfo) {
@@ -74,13 +71,19 @@ export class InvoicesService {
     this.requireBilling(tenant);
     return this.db.run(auth, tenant, async (tx) => {
       const rows = await tx.select().from(s.invoices).orderBy(desc(s.invoices.createdAt));
-      const [pays, docs, whts] = await Promise.all([tx.select().from(s.payments), tx.select().from(s.taxDocuments), tx.select().from(s.whtCertificates)]);
+      const [pays, docs, whts, credits, debits] = await Promise.all([tx.select().from(s.payments), tx.select().from(s.taxDocuments), tx.select().from(s.whtCertificates), tx.select().from(s.creditNotes), tx.select().from(s.debitNotes)]);
+      const base = `/api/v1/w/${tenant.slug}/billing`;
       return {
         items: rows.map((i) => {
-          const p = pays.find((x) => x.invoiceId === i.id);
-          const d = docs.find((x) => x.invoiceId === i.id);
+          const p = pays.filter((x) => x.invoiceId === i.id).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+          const d = activeDoc(docs.filter((x) => x.invoiceId === i.id));
           const w = whts.filter((x) => x.invoiceId === i.id).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
-          return this.view(tenant, i, p, d, w);
+          // ใบลด / เพิ่มหนี้ของใบนี้ (ลูกค้าดาวน์โหลดได้จากหน้า Billing)
+          const notes = [
+            ...credits.filter((c) => c.invoiceId === i.id && c.status !== 'draft').map((c) => ({ kind: 'credit' as const, id: c.id, number: c.number, amount: c.amountSatang + c.vatSatang, issuedAt: c.issuedAt ?? c.createdAt, pdfUrl: `${base}/credit-notes/${c.id}.pdf` })),
+            ...debits.filter((x) => x.invoiceId === i.id).map((x) => ({ kind: 'debit' as const, id: x.id, number: x.number, amount: x.amountSatang + x.vatSatang, issuedAt: x.issuedAt ?? x.createdAt, pdfUrl: `${base}/debit-notes/${x.id}.pdf` })),
+          ];
+          return { ...this.view(tenant, i, p, d, w), notes };
         }),
       };
     });
@@ -91,15 +94,15 @@ export class InvoicesService {
     this.requireBilling(tenant);
     const { view, i, p } = await this.db.run(auth, tenant, async (tx) => {
       const i = await this.find(tx, id);
-      const [p] = await tx.select().from(s.payments).where(eq(s.payments.invoiceId, i.id));
-      const [d] = await tx.select().from(s.taxDocuments).where(eq(s.taxDocuments.invoiceId, i.id));
+      const [p] = await tx.select().from(s.payments).where(eq(s.payments.invoiceId, i.id)).orderBy(desc(s.payments.createdAt)).limit(1);
+      const d = activeDoc(await tx.select().from(s.taxDocuments).where(eq(s.taxDocuments.invoiceId, i.id)));
       const [w] = await tx.select().from(s.whtCertificates).where(eq(s.whtCertificates.invoiceId, i.id)).orderBy(desc(s.whtCertificates.createdAt));
       return { view: this.view(tenant, i, p, d, w), i, p };
     });
     const meta = await this.payments.meta(i.id).catch(() => null);
     // หน้าชำระใบแจ้งหนี้ (W22b): ลูกค้ากลับมาโอนทีหลังจึงต้องเห็นบัญชีรับโอนอีกครั้ง · ใบที่ปิดแล้วไม่ส่ง
-    const transfer = p?.method === 'transfer' && (i.status === 'open' || i.status === 'pending_review') ? { ...bankInfo(), reference: i.number, dueDate: i.dueDate, amount: i.amountDue } : null;
-    return { ...view, plan: meta ? { code: meta.plan, name: PLAN_NAMES[meta.plan] ?? meta.plan, cycle: meta.cycle } : null, transfer };
+    const transfer = p?.method === 'transfer' && (i.status === 'open' || i.status === 'pending_review') ? { ...bankFromEnv(), reference: i.number, dueDate: i.dueDate, amount: i.amountDue } : null;
+    return { ...view, plan: meta?.plan ? { code: meta.plan, name: planTitle(meta.plan), cycle: meta.cycle } : null, transfer };
   }
 
   private view(tenant: TenantInfo, i: typeof s.invoices.$inferSelect, p?: typeof s.payments.$inferSelect, d?: typeof s.taxDocuments.$inferSelect, w?: typeof s.whtCertificates.$inferSelect) {
@@ -108,9 +111,10 @@ export class InvoicesService {
       ...invoiceDto(i),
       method: p?.method ?? null,
       paymentStatus: p?.status ?? null,
+      paymentPaidAt: p?.paidAt ?? null,
       hasSlip: !!p?.slipFileKey,
       pdfUrl: `${base}/invoices/${i.id}.pdf`,
-      taxDocument: d ? { id: d.id, number: d.number, status: d.status, sentAt: d.sentAt, pdfUrl: `${base}/tax-documents/${d.id}.pdf` } : null,
+      taxDocument: d ? { id: d.id, number: d.number, status: d.status, sentAt: d.sentAt, issuedOn: d.issuedOn, replacesId: d.replacesId, pdfUrl: `${base}/tax-documents/${d.id}.pdf` } : null,
       whtCertificate: w ? { id: w.id, status: w.status, uploadedAt: w.createdAt } : null,
       whtDueBy: i.whtAmount > 0 ? new Date(i.createdAt.getTime() + WHT_DEADLINE_DAYS * DAY).toISOString().slice(0, 10) : null,
     };
@@ -120,69 +124,56 @@ export class InvoicesService {
   // PDF
   // ---------------------------------------------------------------------------
 
+  // เอกสารทุกใบสร้างจากแม่แบบเดียวใน @friday/docs · ตรวจว่าเอกสารเป็นของ Workspace นี้ผ่าน RLS ก่อน แล้วให้ตัวสร้างอ่านด้วย SYSTEM_DB
   async invoicePdf(auth: AuthInfo, tenant: TenantInfo, id: string) {
     this.requireBilling(tenant);
-    const { i, profile, meta, p } = await this.db.run(auth, tenant, async (tx) => {
-      const i = await this.find(tx, id);
-      const [profile] = await tx.select().from(s.billingProfiles);
-      const [p] = await tx.select().from(s.payments).where(eq(s.payments.invoiceId, i.id));
-      return { i, profile, p, meta: await this.payments.meta(i.id).catch(() => null) };
-    });
-    return { filename: `${i.number}.pdf`, buffer: await renderBill(this.doc(i, profile, meta, p, false, i.number)) };
+    const i = await this.db.run(auth, tenant, (tx) => this.find(tx, id));
+    return (await invoicePdf(this.sys, i.id, { vatRegistered: config.vatRegistered }))!;
   }
 
   async taxDocumentPdf(auth: AuthInfo, tenant: TenantInfo, id: string) {
     this.requireBilling(tenant);
-    const { d, i, profile, meta, p } = await this.db.run(auth, tenant, async (tx) => {
-      if (!z.uuid().safeParse(id).success) throw notFound('เอกสารภาษี');
-      const [d] = await tx.select().from(s.taxDocuments).where(eq(s.taxDocuments.id, id));
-      if (!d) throw notFound('เอกสารภาษี');
-      const i = await this.find(tx, d.invoiceId);
-      const [profile] = await tx.select().from(s.billingProfiles);
-      const [p] = await tx.select().from(s.payments).where(eq(s.payments.invoiceId, i.id));
-      return { d, i, profile, p, meta: await this.payments.meta(i.id).catch(() => null) };
-    });
-    return { filename: `${d.number}.pdf`, buffer: await renderBill(this.doc(i, profile, meta, p, true, d.number)) };
+    await this.owned(auth, tenant, s.taxDocuments, id, 'เอกสารภาษี');
+    return (await taxDocumentPdf(this.sys, id))!;
   }
 
-  private doc(i: typeof s.invoices.$inferSelect, profile: typeof s.billingProfiles.$inferSelect | undefined, meta: CheckoutMeta | null, p: typeof s.payments.$inferSelect | undefined, tax: boolean, number: string): BillDoc {
-    const planName = meta ? (PLAN_NAMES[meta.plan] ?? meta.plan) : 'Friday Work Management';
-    const cycle = meta?.cycle === 'yearly' ? 'รายปี' : 'รายเดือน';
-    return {
-      title: tax ? 'ใบเสร็จรับเงิน / ใบกำกับภาษี' : 'ใบแจ้งหนี้',
-      subtitle: tax ? 'Receipt / Tax Invoice' : 'Invoice',
-      number,
-      date: (tax ? (i.paidAt ?? i.createdAt) : i.createdAt).toISOString().slice(0, 10),
-      seller: seller(),
-      buyer: {
-        companyName: profile?.companyName ?? '-',
-        taxId: profile?.taxId ?? '-',
-        branch: profile ? (profile.branchType === 'head' ? 'สำนักงานใหญ่' : `สาขาที่ ${profile.branchNo}`) : '',
-        address: profile?.address ?? '-',
-        email: profile?.taxEmail ?? '',
-      },
-      // มีคูปอง (O20): แสดงราคาแพ็กเกจเต็มแล้วหักส่วนลดเป็นอีกบรรทัด · ยอดก่อนภาษี = หลังหักส่วนลด
-      lines: [
-        { description: `ค่าบริการ Friday Work Management แพ็กเกจ ${planName} (${cycle})\nรอบวันที่ ${thaiDate(i.periodStart, true)} – ${thaiDate(i.periodEnd, true)}`, amount: i.subtotal + i.discount },
-        ...(i.discount > 0 ? [{ description: `ส่วนลด${meta?.coupon ? ` (โค้ด ${meta.coupon})` : ''} / Discount`, amount: -i.discount }] : []),
-      ],
-      subtotal: i.subtotal,
-      vat: i.vat,
-      total: i.total,
-      whtAmount: i.whtAmount,
-      amountDue: i.amountDue,
-      status: i.status === 'paid' ? 'ชำระแล้ว / Paid' : i.status === 'pending_review' ? 'รอตรวจสลิป / Pending review' : i.status === 'void' ? 'ยกเลิก / Void' : 'รอชำระเงิน / Unpaid',
-      dueDate: !tax && i.status === 'open' ? i.dueDate : null,
-      notes: [
-        ...(i.poNumber ? [`เลขที่ใบสั่งซื้อ (PO): ${i.poNumber}`] : []),
-        ...(p ? [`ช่องทางชำระเงิน: ${p.method === 'card' ? 'บัตรเครดิต / เดบิต' : p.method === 'promptpay' ? 'PromptPay' : 'โอนเงินเข้าบัญชีธนาคาร'}`] : []),
-        ...(i.whtAmount > 0 ? ['ผู้ซื้อหักภาษี ณ ที่จ่าย 3% กรุณาส่งหนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ) ภายใน 30 วัน'] : []),
-      ],
-      footer: [
-        'เอกสารนี้ออกโดยระบบคอมพิวเตอร์ ไม่ต้องมีลายมือชื่อ · This document is computer-generated and requires no signature.',
-        ...(sellerIsSample() ? ['ข้อมูลผู้ขายเป็นตัวอย่าง (ยังไม่ได้ตั้งค่า SELLER_NAME)'] : []),
-      ],
-    };
+  async creditNotePdf(auth: AuthInfo, tenant: TenantInfo, id: string) {
+    this.requireBilling(tenant);
+    await this.owned(auth, tenant, s.creditNotes, id, 'ใบลดหนี้');
+    return (await creditNotePdf(this.sys, id, { vatRegistered: config.vatRegistered }))!;
+  }
+
+  async debitNotePdf(auth: AuthInfo, tenant: TenantInfo, id: string) {
+    this.requireBilling(tenant);
+    await this.owned(auth, tenant, s.debitNotes, id, 'ใบเพิ่มหนี้');
+    return (await debitNotePdf(this.sys, id, { vatRegistered: config.vatRegistered }))!;
+  }
+
+  /** ใบเสนอราคา: คิดราคาแบบเดียวกับหน้าชำระเงิน แล้วเก็บไว้อ้างอิง (เลข QT- ต่อเนื่อง) · ยืนราคา 30 วัน */
+  async quotationPdf(auth: AuthInfo, tenant: TenantInfo, query: unknown) {
+    this.requireBilling(tenant);
+    const q = parse(QuoteQuery, query);
+    const { internal, ...quote } = await this.billing.price(auth, tenant, q);
+    void internal;
+    const date = today();
+    const id = await this.db.run(auth, tenant, async (tx) => {
+      const number = await nextDocNumber(tx, 'quotation', date, this.sys);
+      const [row] = await tx
+        .insert(s.quotations)
+        .values({ workspaceId: tenant.workspaceId, number, plan: q.plan, cycle: q.cycle, wht: quote.wht, coupon: quote.coupon ?? null, subtotal: quote.subtotal, discount: quote.discount ?? 0, vat: quote.vat, total: quote.total, whtAmount: quote.whtAmount, amountDue: quote.amountDue, validUntil: bkkDate(new Date(Date.parse(`${date}T00:00:00+07:00`) + QUOTE_VALID_DAYS * DAY)), createdBy: auth.userId })
+        .returning({ id: s.quotations.id });
+      return row.id;
+    });
+    return (await quotationPdf(this.sys, id, { vatRegistered: config.vatRegistered }))!;
+  }
+
+  /** เอกสารนี้อยู่ใน Workspace ของผู้ขอ (RLS ซ่อนของ Workspace อื่น → 404) */
+  private async owned(auth: AuthInfo, tenant: TenantInfo, table: typeof s.taxDocuments | typeof s.creditNotes | typeof s.debitNotes, id: string, label: string) {
+    await this.db.run(auth, tenant, async (tx) => {
+      if (!z.uuid().safeParse(id).success) throw notFound(label);
+      const [row] = await tx.select({ id: table.id }).from(table).where(eq(table.id, id));
+      if (!row) throw notFound(label);
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -209,12 +200,14 @@ export class InvoicesService {
   async slip(auth: AuthInfo, tenant: TenantInfo, id: string, file: { buffer: Buffer } | undefined, body: unknown = {}) {
     this.requireBilling(tenant);
     const type = this.validateUpload(file);
-    const { amount: declared } = parse(SlipBody, body ?? {});
+    const { amount: declared, paidAt: declaredAt } = parse(SlipBody, body ?? {});
     const { invoice, payment } = await this.db.run(auth, tenant, async (tx) => {
       const invoice = await this.find(tx, id);
       if (invoice.status === 'paid' || invoice.status === 'void') throw new AppError(409, 'invoice_closed', 'ใบแจ้งหนี้นี้ปิดแล้ว แนบสลิปไม่ได้', { status: invoice.status });
       const [payment] = await tx.select().from(s.payments).where(and(eq(s.payments.invoiceId, invoice.id), eq(s.payments.method, 'transfer')));
       if (!payment) throw new AppError(409, 'slip_not_applicable', 'แนบสลิปได้เฉพาะใบแจ้งหนี้ที่เลือกชำระด้วยการโอน');
+      // เวลาโอนเป็นวันที่ของใบกำกับภาษี: ต้องไม่ล่วงหน้า และไม่ก่อนออกใบแจ้งหนี้ (ต้องได้เลขบัญชีจากใบนี้ก่อน · เผื่อ 1 วัน)
+      if (declaredAt && (declaredAt.getTime() > Date.now() + 5 * 60_000 || declaredAt.getTime() < invoice.createdAt.getTime() - DAY)) throw new AppError(400, 'invalid_paid_at', 'เวลาที่โอนต้องอยู่ระหว่างวันที่ออกใบแจ้งหนี้ถึงตอนนี้', { min: invoice.createdAt });
       return { invoice, payment };
     });
     const slipFileKey = await this.save('slips', invoice.id, file!.buffer, type.ext);
@@ -226,7 +219,7 @@ export class InvoicesService {
     // payments / invoices / subscriptions แก้ผ่านแอปไม่ได้ (เงิน) จึงเขียนด้วย SYSTEM_DB หลังตรวจเจ้าของใบแจ้งหนี้ด้านบนแล้ว
     await this.sys.transaction(async (tx) => {
       // ช่วงแรกทีมตรวจสลิปเองทุกใบ (pending_review) · exception_reason ทำให้ขึ้นคิวกรณีผิดปกติของ Friday Ops
-      await tx.update(s.payments).set({ slipFileKey, providerRef: dupe ? payment.providerRef : ref, exceptionReason: exception, status: 'pending_review', updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
+      await tx.update(s.payments).set({ slipFileKey, providerRef: dupe ? payment.providerRef : ref, exceptionReason: exception, status: 'pending_review', paidAt: declaredAt ?? new Date(), updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
       await tx.update(s.invoices).set({ status: 'pending_review', updatedAt: new Date() }).where(eq(s.invoices.id, invoice.id));
       // เก็บสลิปเสมอ แต่เปิดสิทธิ์ชั่วคราวเฉพาะเมื่อใบนี้ยังไม่ถูกแทนที่ด้วยใบที่ใหม่กว่า (N02) และสลิปไม่ซ้ำ
       const granted = exception === 'duplicate_slip' ? false : await this.payments.activate(tx, invoice, meta);

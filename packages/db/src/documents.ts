@@ -3,6 +3,13 @@ import { and, eq, isNull, like, ne, sql } from 'drizzle-orm';
 import type { Db, Tx } from './client.ts';
 import * as s from './schema/index.ts';
 
+/** ข้อมูลผู้ซื้อที่พิมพ์บนเอกสารภาษี (เก็บไว้กับเอกสารตอนออก) */
+export interface BuyerSnapshot { companyName: string; taxId: string; branchType: string; branchNo: string | null; address: string; email: string | null }
+export async function buyerSnapshot(db: Db | Tx, workspaceId: string): Promise<BuyerSnapshot | null> {
+  const [p] = await db.select().from(s.billingProfiles).where(eq(s.billingProfiles.workspaceId, workspaceId));
+  return p ? { companyName: p.companyName, taxId: p.taxId, branchType: p.branchType, branchNo: p.branchNo, address: p.address, email: p.taxEmail } : null;
+}
+
 export type DocKind = 'invoice' | 'tax_invoice' | 'receipt' | 'credit_note' | 'debit_note' | 'quotation';
 
 const PREFIX: Record<DocKind, string> = { invoice: 'FRI', tax_invoice: 'TX', receipt: 'RC', credit_note: 'CN', debit_note: 'DN', quotation: 'QT' };
@@ -49,18 +56,20 @@ export async function issueReceipt(tx: Tx, inv: { id: string; workspaceId: strin
   const issuedOn = bkkDate(opts.paidAt);
   const kind: DocKind = opts.vatRegistered ? 'tax_invoice' : 'receipt';
   const number = await nextDocNumber(tx, kind, issuedOn);
+  const buyer = await buyerSnapshot(tx, inv.workspaceId);
   const [doc] = await tx
     .insert(s.taxDocuments)
     .values(opts.vatRegistered
-      ? { workspaceId: inv.workspaceId, invoiceId: inv.id, docType: 'tax_invoice_receipt', number, issuedOn }
+      ? { workspaceId: inv.workspaceId, invoiceId: inv.id, docType: 'tax_invoice_receipt', number, issuedOn, buyer }
       // ยังไม่จด VAT: ไม่ต้องส่ง e-Tax จึงถือว่าออกแล้ว
-      : { workspaceId: inv.workspaceId, invoiceId: inv.id, docType: 'receipt', number, issuedOn, status: 'issued', sentAt: new Date() })
+      : { workspaceId: inv.workspaceId, invoiceId: inv.id, docType: 'receipt', number, issuedOn, buyer, status: 'issued', sentAt: new Date() })
     .returning();
   return { doc, created: true };
 }
 
 /**
  * ออกใบกำกับภาษีฉบับใหม่แทนฉบับที่ยกเลิก (ข้อมูลผู้ซื้อผิด) · ฉบับเดิมเป็น `cancelled` · ฉบับใหม่ได้เลขถัดไปแต่ลงวันที่ตามฉบับเดิม
+ * ข้อมูลผู้ซื้อของฉบับใหม่ = ข้อมูลภาษีปัจจุบัน (ลูกค้าแก้ให้ถูกก่อนขอออกใหม่)
  * (จุดเกิดภาษีไม่เปลี่ยน · รอนักบัญชียืนยัน ดู design/proposals/billing/README.md)
  */
 export async function replaceTaxDocument(tx: Tx, docId: string, reason: string) {
@@ -74,7 +83,7 @@ export async function replaceTaxDocument(tx: Tx, docId: string, reason: string) 
   await tx.update(s.taxDocuments).set({ status: 'cancelled', cancelledAt: new Date(), cancelReason: reason, updatedAt: new Date() }).where(eq(s.taxDocuments.id, old.id));
   const [replacement] = await tx
     .insert(s.taxDocuments)
-    .values({ workspaceId: old.workspaceId, invoiceId: old.invoiceId, docType: old.docType, number, issuedOn, replacesId: old.id, ...(kind === 'receipt' ? { status: 'issued', sentAt: new Date() } : {}) })
+    .values({ workspaceId: old.workspaceId, invoiceId: old.invoiceId, docType: old.docType, number, issuedOn, replacesId: old.id, buyer: await buyerSnapshot(tx, old.workspaceId), ...(kind === 'receipt' ? { status: 'issued', sentAt: new Date() } : {}) })
     .returning();
   return { old, replacement, alreadyCancelled: false };
 }

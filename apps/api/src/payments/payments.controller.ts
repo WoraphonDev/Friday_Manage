@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, HttpCode, Param, Post, Req, Res, StreamableFile, UploadedFile, UseGuards, UseInterceptors, type RawBodyRequest } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Param, Post, Query, Req, Res, StreamableFile, UploadedFile, UseGuards, UseInterceptors, type RawBodyRequest } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
 import { Auth, type AuthInfo, Public, Tenant, type TenantInfo } from '../common/request.js';
@@ -6,7 +6,7 @@ import { TenantGuard } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
 import { AppError } from '../common/errors.js';
 import { InvoicesService, SLIP_MAX_BYTES } from './invoices.service.js';
-import { CheckoutBody, PaymentsService } from './payments.service.js';
+import { CheckoutBody, PayBody, PaymentsService } from './payments.service.js';
 
 const upload = () => FileInterceptor('file', { limits: { fileSize: SLIP_MAX_BYTES + 1, files: 1 } });
 const pdf = (res: Response, f: { filename: string; buffer: Buffer }) => {
@@ -39,6 +39,32 @@ export class PaymentsController {
   async invoice(@Auth() a: AuthInfo, @Tenant() t: TenantInfo, @Param('file') file: string, @Res({ passthrough: true }) res: Response) {
     const f = split(file);
     return f.pdf ? pdf(res, await this.invoices.invoicePdf(a, t, f.id)) : this.invoices.get(a, t, f.id);
+  }
+
+  @Post('invoices/:id/pay')
+  @HttpCode(200)
+  pay(@Auth() a: AuthInfo, @Tenant() t: TenantInfo, @Param('id') id: string, @Body() body: unknown) {
+    return this.payments.pay(a, t, id, parse(PayBody, body ?? {}));
+  }
+
+  @Get('credit-notes/:file')
+  async creditNote(@Auth() a: AuthInfo, @Tenant() t: TenantInfo, @Param('file') file: string, @Res({ passthrough: true }) res: Response) {
+    const f = split(file);
+    if (!f.pdf) throw new AppError(404, 'not_found', 'ขอไฟล์ .pdf');
+    return pdf(res, await this.invoices.creditNotePdf(a, t, f.id));
+  }
+
+  @Get('debit-notes/:file')
+  async debitNote(@Auth() a: AuthInfo, @Tenant() t: TenantInfo, @Param('file') file: string, @Res({ passthrough: true }) res: Response) {
+    const f = split(file);
+    if (!f.pdf) throw new AppError(404, 'not_found', 'ขอไฟล์ .pdf');
+    return pdf(res, await this.invoices.debitNotePdf(a, t, f.id));
+  }
+
+  /** ใบเสนอราคา PDF ตามแพ็กเกจที่เลือก (?plan=&cycle=&wht=&coupon=) · ทุกครั้งที่ขอได้เลข QT- ใหม่ */
+  @Get('quotation.pdf')
+  async quotation(@Auth() a: AuthInfo, @Tenant() t: TenantInfo, @Query() query: unknown, @Res({ passthrough: true }) res: Response) {
+    return pdf(res, await this.invoices.quotationPdf(a, t, query));
   }
 
   @Get('tax-documents/:file')

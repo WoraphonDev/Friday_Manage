@@ -281,6 +281,13 @@
       "when": 1794820711867,
       "tag": "0039_billing_documents_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794821503909,
+      "tag": "0040_tax_document_buyer",
+      "breakpoints": true
     }
   ]
 }

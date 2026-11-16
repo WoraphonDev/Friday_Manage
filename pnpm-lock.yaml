@@ -22,6 +22,9 @@ importers:
       '@friday/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@friday/docs':
+        specifier: workspace:*
+        version: link:../../packages/docs
       '@nestjs/common':
         specifier: ^11.2.8
         version: 11.2.8(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -405,6 +408,37 @@ importers:
       drizzle-kit:
         specifier: ^0.31.11
         version: 0.31.11
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.1.0
+        version: 5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(jsdom@27.4.0(@noble/hashes@1.8.0))(msw@2.15.0(@types/node@26.6.6)(typescript@7.0.2))(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+
+  packages/docs:
+    dependencies:
+      '@fontsource/ibm-plex-sans-thai':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@friday/db':
+        specifier: workspace:*
+        version: link:../db
+      drizzle-orm:
+        specifier: ^0.45.4
+        version: 0.45.4(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)
+      exceljs:
+        specifier: ^4.4.0
+        version: 4.4.0
+      pdfkit:
+        specifier: ^0.20.2
+        version: 0.20.2
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.6
+        version: 26.6.6
+      '@types/pdfkit':
+        specifier: ^0.17.7
+        version: 0.17.7
       typescript:
         specifier: ^7.0.2
         version: 7.0.2

@@ -84,6 +84,8 @@ export const taxDocuments = pgTable('tax_documents', {
   replacesId: uuid(),
   /** ยกเลิกแล้ว (status = 'cancelled') · เก็บเหตุผลไว้แสดงในรายงานภาษีขายและฉบับใหม่ */
   cancelledAt: tstz(), cancelReason: text(),
+  /** ข้อมูลผู้ซื้อ ณ วันที่ออก (ชื่อ เลขผู้เสียภาษี สาขา ที่อยู่) · ลูกค้าแก้ข้อมูลภาษีภายหลัง เอกสารเดิมต้องไม่เปลี่ยนตาม · null = เอกสารเก่า ใช้ข้อมูลปัจจุบัน */
+  buyer: jsonb(),
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [tenantFk('tax_documents_invoice_fk', t.workspaceId, t.invoiceId, invoices), index('tax_documents_invoice_idx').on(t.invoiceId)]);
 

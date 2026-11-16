@@ -5,8 +5,10 @@ RUN npm install --global pnpm@10.34.5
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/ops-api/package.json apps/ops-api/package.json
 COPY packages/db/package.json packages/db/package.json
+COPY packages/docs/package.json packages/docs/package.json
 RUN pnpm --filter @friday/ops-api... install --frozen-lockfile
 COPY packages/db packages/db
+COPY packages/docs packages/docs
 COPY apps/ops-api apps/ops-api
 RUN pnpm --filter @friday/ops-api build
 
@@ -17,6 +19,7 @@ RUN npm install --global pnpm@10.34.5
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/ops-api/package.json apps/ops-api/package.json
 COPY packages/db/package.json packages/db/package.json
+COPY packages/docs/package.json packages/docs/package.json
 RUN pnpm --filter @friday/ops-api... install --frozen-lockfile --prod
 
 FROM node:22-bookworm-slim AS runtime
@@ -26,6 +29,8 @@ WORKDIR /app
 COPY --from=deps --chown=node:node /app ./
 COPY --from=build --chown=node:node /app/apps/ops-api/dist ./apps/ops-api/dist
 COPY --chown=node:node packages/db/src ./packages/db/src
+# @friday/docs (เอกสารการเงิน PDF) ใช้ไฟล์ .ts ตรงแบบเดียวกับ @friday/db
+COPY --chown=node:node packages/docs/src ./packages/docs/src
 USER node
 WORKDIR /app/apps/ops-api
 EXPOSE 4001

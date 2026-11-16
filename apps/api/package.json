@@ -36,6 +36,7 @@
     "@aws-sdk/s3-request-presigner": "3.1156.0",
     "@fontsource/ibm-plex-sans-thai": "^5.3.0",
     "@friday/db": "workspace:*",
+    "@friday/docs": "workspace:*",
     "@nestjs/common": "^11.2.8",
     "@nestjs/core": "^11.2.8",
     "@nestjs/platform-express": "^11.2.8",

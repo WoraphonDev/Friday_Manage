@@ -2,10 +2,11 @@ import { createHash } from 'node:crypto';
 import { AnalyticsService, classifyChange } from '../analytics/analytics.service.js';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { canGrant, commitCouponUses, type Db, issueReceipt, nextDocNumber, resumeIfPaid, schema, type Tx } from '@friday/db';
-import { and, eq, inArray, ne, sql } from 'drizzle-orm';
+import { bankFromEnv } from '@friday/docs';
+import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { today } from '../common/dates.js';
-import { AppError, forbidden } from '../common/errors.js';
+import { AppError, forbidden, notFound } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { BillingService } from '../billing/billing.service.js';
@@ -56,11 +57,9 @@ const addMonths = (iso: string, n: number) => {
   return d.toISOString().slice(0, 10);
 };
 const addDays = (iso: string, n: number) => new Date(Date.parse(iso) + n * DAY).toISOString().slice(0, 10);
-export const bankInfo = () => ({
-  bank: process.env.BANK_NAME ?? 'ธนาคารตัวอย่าง',
-  accountNo: process.env.BANK_ACCOUNT_NO ?? '000-0-00000-0',
-  accountName: process.env.BANK_ACCOUNT_NAME ?? 'บริษัท ฟรายเดย์ จำกัด (ตัวอย่าง)',
-});
+/** บัญชีรับโอน (env) · ที่เดียวกับที่พิมพ์ในใบแจ้งหนี้ PDF */
+export const bankInfo = bankFromEnv;
+export const PayBody = z.object({ renew: z.boolean().default(false) }).strict();
 
 type Invoice = typeof s.invoices.$inferSelect;
 type Payment = typeof s.payments.$inferSelect;
@@ -237,6 +236,41 @@ export class PaymentsService implements OnModuleInit {
     // ใบที่ไม่มียอดชำระปิดเองทันที · ส่งซ้ำแล้วใบยังเปิดอยู่ (ปิดครั้งก่อนไม่สำเร็จ) ก็ปิดให้
     await this.settleFree(out.invoiceId);
     return this.db.run(auth, tenant, async (tx) => ({ ...(await this.respond(tx, out.invoiceId, key)), replayed: out.replayed }));
+  }
+
+  /**
+   * POST w/billing/invoices/:id/pay · หน้าชำระใบแจ้งหนี้ (W22b) ขอ client secret ของบัตร หรือ QR PromptPay ของใบเดิม
+   * ใช้ key เดิมของ checkout → ผู้ให้บริการคืนรายการชำระเดิม (บัตรที่ไม่ผ่านยืนยันซ้ำได้) · `renew` = QR หมดอายุ สร้างรายการใหม่ในใบเดิม
+   */
+  async pay(auth: AuthInfo, tenant: TenantInfo, id: string, input: z.infer<typeof PayBody>) {
+    this.requireBilling(tenant);
+    const { invoice, payment } = await this.db.run(auth, tenant, async (tx) => {
+      if (!z.uuid().safeParse(id).success) throw notFound('ใบแจ้งหนี้');
+      const [invoice] = await tx.select().from(s.invoices).where(eq(s.invoices.id, id));
+      if (!invoice) throw notFound('ใบแจ้งหนี้');
+      const [payment] = await tx.select().from(s.payments).where(eq(s.payments.invoiceId, id)).orderBy(desc(s.payments.createdAt)).limit(1);
+      return { invoice, payment };
+    });
+    if (invoice.status !== 'open') throw new AppError(409, 'invoice_closed', 'ใบแจ้งหนี้นี้ไม่ได้รอชำระแล้ว', { status: invoice.status });
+    if (!payment || payment.method === 'transfer') throw new AppError(409, 'pay_not_applicable', 'ใบนี้ชำระด้วยการโอน · แนบสลิปที่หน้าเดียวกัน');
+    if (input.renew && payment.method !== 'promptpay') throw new AppError(409, 'renew_not_applicable', 'สร้างรายการใหม่ได้เฉพาะ QR PromptPay');
+    const meta = await this.meta(invoice.id);
+    // key ของรายการชำระปัจจุบัน: สร้าง QR ใหม่ครั้งล่าสุด หรือ key ของ checkout
+    const [renewed] = await this.sys.select({ summary: s.auditLogs.summary }).from(s.auditLogs).where(and(eq(s.auditLogs.action, 'billing.qr_renewed'), eq(s.auditLogs.targetId, invoice.id))).orderBy(desc(s.auditLogs.createdAt)).limit(1);
+    let key = renewed?.summary ? (JSON.parse(renewed.summary) as { key: string }).key : meta.key;
+    if (input.renew) {
+      // ผูกกับเลขอ้างอิงเดิม: กดซ้ำระหว่างรอได้ QR ชุดเดียวกัน ไม่สร้างรายการซ้อน
+      key = sha(`${key}:renew:${payment.providerRef}`);
+      const [profile] = await this.sys.select({ email: s.billingProfiles.taxEmail }).from(s.billingProfiles).where(eq(s.billingProfiles.workspaceId, invoice.workspaceId));
+      const gw = await this.gateway.createPromptPay({ amount: invoice.amountDue, invoiceId: invoice.id, invoiceNumber: invoice.number, email: profile?.email ?? null, idempotencyKey: key });
+      if (gw.providerRef !== payment.providerRef) {
+        await this.sys.transaction(async (tx) => {
+          await tx.update(s.payments).set({ providerRef: gw.providerRef, status: 'pending_review', updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
+          await tx.insert(s.auditLogs).values({ workspaceId: invoice.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'plan', action: 'billing.qr_renewed', targetType: 'invoice', targetId: invoice.id, summary: JSON.stringify({ key, providerRef: gw.providerRef, previous: payment.providerRef }) });
+        });
+      }
+    }
+    return this.db.run(auth, tenant, (tx) => this.respond(tx, invoice.id, key));
   }
 
   /**

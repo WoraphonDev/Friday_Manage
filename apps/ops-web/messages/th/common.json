@@ -220,7 +220,7 @@
     "selfTitle": "อนุมัติรายการของตัวเอง?",
     "selfDesc": "ตอนนี้มีผู้อนุมัติคนเดียว ระบบจึงให้อนุมัติตัวเองได้ · รายการจะติดป้าย \"อนุมัติตัวเอง\" ใน Audit log และส่งสรุปถึงอีเมลส่วนตัวของ Owner ทุกวัน",
     "selfReason": "เหตุผล (บังคับ)",
-    "selfNot": "ใช้ไม่ได้กับ: เข้าบัญชีลูกค้าโหมดแก้ไข · ลบข้อมูล PDPA (ต้องมีคนที่สองเสมอ)",
+    "selfNot": "ใช้ไม่ได้กับ: เข้าบัญชีลูกค้าโหมดแก้ไข · ลบข้อมูล PDPA · ลบ Workspace ถาวรทันที (ต้องมีคนที่สองเสมอ)",
     "selfApprove": "อนุมัติตัวเองและทำรายการ",
     "selfLater": "รอคนอื่นอนุมัติ",
     "selfDone": "อนุมัติตัวเองและทำรายการแล้ว"
@@ -240,7 +240,11 @@
     "promotions_plan_price": "เปลี่ยนราคาแพ็กเกจ",
     "promotions_coupon_activate": "เปิดใช้คูปอง",
     "restore_extend_purge": "ยืดเวลาก่อนลบถาวรเกิน 30 วัน",
-    "restore_workspace": "กู้คืน Workspace แทนลูกค้า"
+    "restore_workspace": "กู้คืน Workspace แทนลูกค้า",
+    "workspace_coupon": "ให้คูปอง",
+    "privacy_purge_now": "ลบ Workspace ถาวรทันที",
+    "privacy_release_hold": "ยกเลิก Legal hold",
+    "privacy_retention_shorten": "ลดระยะเก็บข้อมูล"
   },
   "export": {
     "title": "ส่งออกข้อมูล",

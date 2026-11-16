@@ -13,11 +13,12 @@ import { MotionSwap } from "@/components/shell/page-enter";
 import { api } from "@/lib/api";
 import { useSlidingIndicator } from "@/lib/motion";
 import { useMe } from "@/lib/query";
-import type { OpenSession } from "@/lib/types";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
 import { DevCard } from "../bugs/_components/DevCard";
 import { EscalateDialog } from "../bugs/_components/EscalateDialog";
 import { CannedPicker, MyPresence, SettingsLink, TeamNow } from "./settings/_parts/Live";
+// ตารางการเข้าช่วยเหลือย้ายไปอยู่กับหน้า support/sessions (O42 · H8)
+import { Sessions } from "./sessions/SessionsTable";
 import { CATEGORIES, type Dur } from "./settings/_parts/types";
 
 interface TicketRow {
@@ -667,68 +668,6 @@ export function Stats() {
                   <td className="num">{s.resolutionHours == null ? "—" : t("hours", { n: s.resolutionHours })}</td>
                   <td className="num">{s.withinSlaPct == null ? "—" : `${s.withinSlaPct}%`}</td>
                   <td className="num">{s.csat ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  );
-}
-
-export function Sessions() {
-  const t = useTranslations("ss.support");
-  const fmt = useFmt();
-  const toast = useToast();
-  const cache = useQueryClient();
-  const q = useQuery({
-    queryKey: ["ops", "support-sessions"],
-    queryFn: () => api.get<{ items: OpenSession[] }>("/support-sessions"),
-  });
-  const end = useMutation({
-    mutationFn: (id: string) => api.post(`/support-sessions/${id}/end`),
-    onSuccess: () => (toast(t("ended")), invalidate(cache)),
-    onError: (e) => toast(errorToast(e)),
-  });
-  return (
-    <section className="card" id="sessions">
-      <div className="card-head">
-        <h2 className="card-title">{t("sessions")}</h2>
-        {q.data && <span className="card-sub">{t("sessionsOpen", { n: q.data.items.length })}</span>}
-      </div>
-      {q.isPending ? (
-        <TableSkeleton rows={1} cols={5} />
-      ) : q.error ? (
-        <ErrorBlock error={q.error} retry={() => void q.refetch()} />
-      ) : !q.data.items.length ? (
-        <p className="muted small">{t("noSessions")}</p>
-      ) : (
-        <div className="tbl-wrap">
-          <table className="tbl">
-            <thead>
-              <tr>
-                {(["ws", "ticket", "staff", "time", "mode"] as const).map((c) => (
-                  <th key={c}>{t(`sessionCol.${c}`)}</th>
-                ))}
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {q.data.items.map((s) => (
-                <tr key={s.id}>
-                  <td>{s.workspace.name}</td>
-                  <td>{s.ticketNo}</td>
-                  <td>{s.staffName}</td>
-                  <td>{fmt.ago(s.startedAt)}</td>
-                  <td>
-                    <span className="pill inf">{s.mode === "write" ? t("write") : t("read")}</span>
-                  </td>
-                  <td>
-                    <Button size="small" disabled={end.isPending} onClick={() => end.mutate(s.id)}>
-                      {t("end")}
-                    </Button>
-                  </td>
                 </tr>
               ))}
             </tbody>

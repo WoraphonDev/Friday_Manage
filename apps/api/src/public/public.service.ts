@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type Db, schema, versionAt } from '@friday/db';
-import { and, desc, eq, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { AppError, notFound } from '../common/errors.js';
 import type { AuthInfo } from '../common/request.js';
@@ -31,7 +31,10 @@ const TEAM_FEATURES = [...FREE_FEATURES, 'gantt', 'workload', 'sprints', 'report
 const featuresOf = (code: string) => (code === 'free' ? FREE_FEATURES : TEAM_FEATURES);
 
 type Doc = typeof s.legalDocuments.$inferSelect;
-const docDto = (d: Doc) => ({ id: d.id, type: d.docType, version: d.version, locale: d.locale, effectiveAt: d.effectiveAt, summary: d.summary });
+const docDto = (d: Doc) => ({ id: d.id, type: d.docType, version: d.version, locale: d.locale, effectiveAt: d.effectiveAt, summary: d.summary, requiresAcceptance: d.requiresAcceptance });
+/** ฉบับ "แจ้งให้ทราบ" (ไม่ต้องยอมรับ) แสดงแบนเนอร์ต่อ 14 วันหลังมีผลแล้วหายเอง (O42 · H16) */
+export const NOTICE_BANNER_DAYS = 14;
+const DAY = 86_400_000;
 
 /** R1 · ราคา และ R4 · กฎหมาย */
 @Injectable()
@@ -141,11 +144,33 @@ export class PublicService {
     });
   }
 
-  /** เอกสารล่าสุดของแต่ละชนิดและฉันรับทราบแล้วหรือยัง (ใช้ขึ้นแบนเนอร์ "ข้อกำหนดเปลี่ยน") */
+  /**
+   * เอกสารล่าสุดของแต่ละชนิดและฉันรับทราบแล้วหรือยัง (ใช้ขึ้นแบนเนอร์ / หน้าต่างยอมรับ · O42 · H16–H17)
+   * - items: ฉบับที่มีผลแล้ว · ฉบับแจ้งให้ทราบมี `noticeUntil` = วันมีผล + 14 วัน (แสดงแบนเนอร์ถึงวันนั้น)
+   * - upcoming: ฉบับถัดไปที่ตั้งเวลาไว้และเปิดแบนเนอร์ (notify_banner) · แสดงถึงผู้ใช้ทุกคนก่อนวันมีผล
+   */
   async myAcceptances(auth: AuthInfo, locale: 'th' | 'en') {
     const index = await this.legalIndex(locale);
     const mine = await this.db.run(auth, null, (tx) => tx.select({ documentId: s.legalAcceptances.documentId, acceptedAt: s.legalAcceptances.acceptedAt }).from(s.legalAcceptances).where(eq(s.legalAcceptances.userId, auth.userId)));
     const at = new Map(mine.map((m) => [m.documentId, m.acceptedAt]));
-    return { items: index.items.map((d) => ({ ...d, accepted: at.has(d.id), acceptedAt: at.get(d.id) ?? null })) };
+    const upcoming = [];
+    for (const type of LEGAL_TYPES) {
+      const [next] = await this.appDb
+        .select()
+        .from(s.legalDocuments)
+        .where(and(eq(s.legalDocuments.docType, type), eq(s.legalDocuments.locale, locale), gt(s.legalDocuments.effectiveAt, new Date()), eq(s.legalDocuments.notifyBanner, true)))
+        .orderBy(asc(s.legalDocuments.effectiveAt))
+        .limit(1);
+      if (next) upcoming.push(docDto(next));
+    }
+    return {
+      items: index.items.map((d) => ({
+        ...d,
+        accepted: at.has(d.id),
+        acceptedAt: at.get(d.id) ?? null,
+        noticeUntil: d.requiresAcceptance ? null : new Date(d.effectiveAt.getTime() + NOTICE_BANNER_DAYS * DAY),
+      })),
+      upcoming,
+    };
   }
 }

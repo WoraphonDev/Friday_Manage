@@ -7,6 +7,8 @@ export interface WsRow {
   slug: string;
   name: string;
   status: "trial" | "active" | "suspended" | "pending_delete";
+  /** โหมดระงับ (C6) · null = ไม่ได้ระงับ */
+  suspensionMode?: "read_only" | "full" | null;
   createdAt: string;
   plan: string | null;
   subStatus: "trialing" | "active" | "past_due" | "canceled" | null;
@@ -77,3 +79,58 @@ export interface Member {
 export const ROLE_NEEDS: Record<string, OpsRole[]> = {
   money: ["owner", "finance", "auditor"],
 };
+
+/** ทำหลายราย (H4–H7) · ops-api › workspaces/bulk.service */
+export type BulkAction = "extend_trial" | "coupon" | "discount";
+export interface BulkFilter {
+  plan?: string;
+  status?: string;
+  q?: string;
+  feature?: string;
+}
+/** เลือกเป็นรายการ id หรือตามตัวกรอง (เซิร์ฟเวอร์หารายการ ณ เวลายืนยัน) */
+export type BulkTarget = { ids: string[] } | { filter: BulkFilter };
+export interface BulkPreviewRow {
+  workspaceId: string;
+  name: string;
+  slug: string;
+  verdict: "ok" | "approval" | "skip";
+  reason: string | null;
+  code: string | null;
+}
+export interface BulkPreview {
+  action: BulkAction;
+  total: number;
+  counts: { ok: number; approval: number; skip: number };
+  rows: BulkPreviewRow[];
+  limits: { discountPct: number; discountCycles: number; trialDays: number; trialTimes: number };
+  coupon: { id: string; code: string } | null;
+}
+export interface BulkResultRow {
+  workspaceId: string;
+  name: string;
+  slug: string;
+  result: "done" | "pending" | "skipped" | "failed";
+  detail: string | null;
+  approvalId: string | null;
+}
+export interface BulkResult {
+  batchId: string;
+  startedAt: string;
+  finishedAt: string;
+  counts: { done: number; pending: number; skipped: number; failed: number };
+  rows: BulkResultRow[];
+}
+/** คูปองจาก GET ops/promotions (O20) */
+export interface CouponOption {
+  id: string;
+  code: string;
+  kind: "percent" | "amount" | "free_months";
+  value: number;
+  duration: "once" | "repeating" | "forever";
+  durationCycles: number | null;
+  maxRedemptions: number | null;
+  expiresOn: string | null;
+  state: string;
+  used: number;
+}

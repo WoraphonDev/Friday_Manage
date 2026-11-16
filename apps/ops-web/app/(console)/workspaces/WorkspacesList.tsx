@@ -4,17 +4,18 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { hasAny, initials, seesMoney } from "@/components/access";
-import { ExportDialog, useApprovalFlow } from "@/components/dialogs";
+import { ExportDialog } from "@/components/dialogs";
 import { Chip, ChipGroup, Empty, ErrorBlock, PageHead, TableSkeleton } from "@/components/kit";
-import { Button, buttonClass, Input, useToast } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { Button, buttonClass, Input } from "@/components/ui";
+import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
-import { DiscountDialog, TrialDialog } from "./_parts/Actions";
 import { AnnounceDrawer } from "./_parts/Announce";
+import { BulkCouponDialog, BulkResultDrawer, BulkTrialDialog, namesOf } from "./_parts/Bulk";
+import styles from "./_parts/bulk.module.css";
 import { healthTone, planLabel, useFmt } from "./_parts/format";
-import type { WsList, WsRow } from "./_parts/types";
+import type { BulkAction, BulkFilter, BulkResult, BulkTarget, WsList } from "./_parts/types";
 
 const PLANS = ["", "free", "team_s", "team_m", "team_l", "enterprise"] as const;
 const SORTS = ["recent_activity", "mrr", "health", "newest"] as const;
@@ -29,8 +30,7 @@ export function WorkspacesList() {
   const fmt = useFmt();
   const me = useMe().data;
   const money = seesMoney(me);
-  const toast = useToast();
-  const { handle } = useApprovalFlow();
+  const tbulk = useTranslations("customers.bulk");
   // ลิงก์เดิมจากค้นหาทั้งระบบ (`?id=`) → หน้ารายละเอียด
   useEffect(() => {
     const id = params?.get("id");
@@ -42,36 +42,62 @@ export function WorkspacesList() {
   const [sort, setSort] = useState<(typeof SORTS)[number]>(money ? "recent_activity" : "recent_activity");
   const [feature, setFeature] = useState("");
   const [offset, setOffset] = useState(0);
-  const [selected, setSelected] = useState<string[]>([]);
+  // เลือกข้ามหน้า (H4): เก็บเป็นรายการ id + ชื่อ ไม่ผูกกับหน้า · "filter" = เลือกทั้งหมดตามตัวกรอง (เซิร์ฟเวอร์หารายการตอนยืนยัน)
+  const [selected, setSelected] = useState<Map<string, string>>(new Map());
+  const [byFilter, setByFilter] = useState(false);
   const [bulk, setBulk] = useState<"trial" | "coupon" | "announce" | null>(null);
+  const [done, setDone] = useState<{ action: BulkAction; result: BulkResult } | null>(null);
   const [exporting, setExporting] = useState(false);
   const search = useDeferredValue(q.trim());
   const filter = new URLSearchParams({ limit: String(PAGE), offset: String(offset), sort, ...(search ? { q: search } : {}), ...(plan ? { plan } : {}), ...(status ? { status } : {}), ...(feature ? { feature } : {}) });
   const list = useQuery({ queryKey: ["ops", "workspaces", filter.toString()], queryFn: () => api.get<WsList>(`/workspaces?${filter}`), placeholderData: keepPreviousData });
   useEffect(() => setOffset(0), [search, plan, sort, feature]);
+  // เปลี่ยนตัวกรองแล้วล้างการเลือก (รายการที่เลือกไว้อาจไม่อยู่ในตัวกรองใหม่) · เปลี่ยนการเรียงไม่ล้าง
+  const filterKey = `${search}|${plan}|${status}|${feature}`;
+  const lastFilter = useRef(filterKey);
+  useEffect(() => {
+    if (lastFilter.current === filterKey) return;
+    lastFilter.current = filterKey;
+    setSelected(new Map());
+    setByFilter(false);
+  }, [filterKey]);
   const rows = list.data?.items ?? [];
   const total = list.data?.total ?? 0;
   const filtered = !!(search || plan || feature || status);
   const clear = () => (setQ(""), setPlan(""), setFeature(""));
-  const picked = rows.filter((r) => selected.includes(r.id));
-
-  /** ทำรายการหลายราย: เรียกทีละราย · เกินวงเงินขึ้นคำขออนุมัติรายตัว */
-  const runBulk = async (fn: (row: WsRow) => Promise<unknown>) => {
-    let ok = 0;
-    let pending = 0;
-    let failed = 0;
-    for (const r of picked) {
-      try {
-        const res = (await fn(r)) as { pendingApproval?: unknown };
-        if (res?.pendingApproval) pending++;
-        else ok++;
-      } catch (e) {
-        if (!(e instanceof ApiError)) throw e;
-        failed++;
-      }
+  const pageAll = rows.length > 0 && rows.every((r) => selected.has(r.id));
+  const pageSome = rows.some((r) => selected.has(r.id));
+  const headBox = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (headBox.current) headBox.current.indeterminate = pageSome && !pageAll;
+  }, [pageSome, pageAll]);
+  const toggle = (id: string, name: string, on: boolean) => {
+    const next = new Map(selected);
+    if (on) next.set(id, name);
+    else next.delete(id);
+    setSelected(next);
+    setByFilter(false);
+  };
+  const togglePage = (on: boolean) => {
+    const next = new Map(selected);
+    for (const r of rows) {
+      if (on) next.set(r.id, r.name);
+      else next.delete(r.id);
     }
-    toast({ message: t("list.bulkDone", { ok, pending, failed }), tone: failed ? "error" : "ok" });
-    setSelected([]);
+    setSelected(next);
+    setByFilter(false);
+  };
+  const resetSelection = () => (setSelected(new Map()), setByFilter(false));
+  const serverFilter: BulkFilter = { ...(plan ? { plan } : {}), ...(status ? { status } : {}), ...(search ? { q: search } : {}), ...(feature ? { feature } : {}) };
+  const target: BulkTarget = byFilter ? { filter: serverFilter } : { ids: [...selected.keys()] };
+  const count = byFilter ? total : selected.size;
+  const filterText = [plan && planLabel(plan), status && (t.has(`wsStatus.${status}` as "wsStatus.trial") ? t(`wsStatus.${status}` as "wsStatus.trial") : t.has(`subStatus.${status}` as "subStatus.trialing") ? t(`subStatus.${status}` as "subStatus.trialing") : status), feature && t(`list.features.${feature}` as "list.features.line"), search && `"${search}"`].filter(Boolean).join(" · ");
+  const tb = (key: "byFilter" | "byFilterAll") => (key === "byFilter" ? t("bulk.byFilter", { filter: filterText }) : t("bulk.byFilterAll"));
+  const scope = byFilter ? tb(filterText ? "byFilter" : "byFilterAll") : namesOf(tbulk, [...selected.values()], selected.size);
+  const finish = (action: BulkAction, result: BulkResult) => {
+    setBulk(null);
+    setDone({ action, result });
+    resetSelection();
     void list.refetch();
   };
 
@@ -121,16 +147,43 @@ export function WorkspacesList() {
             </Chip>
           ))}
         </ChipGroup>
-        {/* แถบทำรายการหลายแถวขึ้นเมื่อเริ่มติ๊กเลือก: เลื่อนเข้าแบบนุ่ม */}
-        {selected.length > 0 && (
-          <div className="notice notice-info motion-in" role="status">
-            <b>{t("list.selected", { count: selected.length })}</b>
-            <span className="muted small">{t("list.bulkNote")}</span>
-            <span className="spacer" />
-            {/* ประกาศถึงลูกค้า: เฉพาะ Owner ของทีม (ops-api ตรวจซ้ำ) · ส่งถึงทุกแถวที่เลือก รวมหน้าอื่น */}
-            {hasAny(me, "owner") && <Button onClick={() => setBulk("announce")}>{t("list.bulkAnnounce")}</Button>}
-            {hasAny(me, "support") && <Button onClick={() => setBulk("trial")}>{t("list.bulkTrial")}</Button>}
-            {hasAny(me, "finance") && <Button onClick={() => setBulk("coupon")}>{t("list.bulkCoupon")}</Button>}
+        {/* แถบทำรายการหลายแถว (H4) ขึ้นเมื่อเริ่มติ๊กเลือก: เลื่อนเข้าแบบนุ่ม */}
+        {(selected.size > 0 || byFilter) && (
+          <div className={`${styles.bar} motion-in`} role="status">
+            <b>{byFilter ? t("list.selectedByFilter", { total }) : pageAll && selected.size === rows.length ? t("list.selectedPage", { count: selected.size }) : t("list.selectedAll", { count: selected.size })}</b>
+            {byFilter ? (
+              <button type="button" className={styles.link} onClick={() => setByFilter(false)}>
+                {t("list.selectOnlyPage")}
+              </button>
+            ) : (
+              total > selected.size && (
+                <button type="button" className={styles.link} onClick={() => setByFilter(true)}>
+                  {t("list.selectByFilter", { total })}
+                </button>
+              )
+            )}
+            <span className={styles.hint}>{t("list.bulkNote")}</span>
+            <span className={styles.actions}>
+              {/* ประกาศถึงลูกค้า: เฉพาะ Owner ของทีม (ops-api ตรวจซ้ำ) · ตามตัวกรองยังไม่รองรับ (รอ O43) จึงปิดไว้พร้อมเหตุผล */}
+              {hasAny(me, "owner") && (
+                <Button size="small" disabled={byFilter} title={byFilter ? t("list.announceFilterHint") : undefined} onClick={() => setBulk("announce")}>
+                  {t("list.bulkAnnounce")}
+                </Button>
+              )}
+              {hasAny(me, "support") && (
+                <Button size="small" onClick={() => setBulk("trial")}>
+                  {t("list.bulkTrial")}
+                </Button>
+              )}
+              {hasAny(me, "finance") && (
+                <Button size="small" onClick={() => setBulk("coupon")}>
+                  {t("list.bulkCoupon")}
+                </Button>
+              )}
+              <Button size="small" variant="ghost" onClick={resetSelection}>
+                {t("list.clear")}
+              </Button>
+            </span>
           </div>
         )}
         {list.isPending ? (
@@ -146,7 +199,7 @@ export function WorkspacesList() {
                 <thead>
                   <tr>
                     <th>
-                      <span className="sr-only">{t("list.col.select")}</span>
+                      <input ref={headBox} type="checkbox" aria-label={t("list.selectPage")} checked={pageAll || (byFilter && rows.length > 0)} disabled={byFilter} onChange={(e) => togglePage(e.target.checked)} />
                     </th>
                     <th>{t("list.col.ws")}</th>
                     <th>{t("list.col.status")}</th>
@@ -163,7 +216,7 @@ export function WorkspacesList() {
                   {rows.map((r) => (
                     <tr key={r.id}>
                       <td>
-                        <input type="checkbox" aria-label={`${t("list.col.select")} ${r.name}`} checked={selected.includes(r.id)} onChange={(e) => setSelected(e.target.checked ? [...selected, r.id] : selected.filter((x) => x !== r.id))} />
+                        <input type="checkbox" aria-label={`${t("list.col.select")} ${r.name}`} checked={byFilter || selected.has(r.id)} disabled={byFilter} onChange={(e) => toggle(r.id, r.name, e.target.checked)} />
                       </td>
                       <td>
                         <Link href={`/workspaces/${r.id}`} className="row" style={{ flexWrap: "nowrap", textDecoration: "none", color: "inherit" }}>
@@ -180,7 +233,7 @@ export function WorkspacesList() {
                       </td>
                       <td>
                         <span className={r.status === "suspended" ? "pill bad" : r.paymentState === "overdue" || r.subStatus === "past_due" ? "pill warn" : r.subStatus === "active" ? "pill ok" : "pill"}>
-                          {r.status === "suspended" ? t("wsStatus.suspended") : t(`subStatus.${r.subStatus ?? "none"}`)}
+                          {r.status === "suspended" ? (r.suspensionMode ? t(`list.suspendedMode.${r.suspensionMode}`) : t("wsStatus.suspended")) : t(`subStatus.${r.subStatus ?? "none"}`)}
                         </span>
                       </td>
                       <td className="num">{r.seatLimit ? `${r.seats} / ${r.seatLimit}` : r.seats}</td>
@@ -220,26 +273,15 @@ export function WorkspacesList() {
       </section>
       {bulk === "announce" && (
         <AnnounceDrawer
-          workspaceIds={selected}
-          sampleName={rows.find((r) => r.id === selected[0])?.name}
+          workspaceIds={[...selected.keys()]}
+          sampleName={[...selected.values()][0]}
           onClose={() => setBulk(null)}
-          onDone={() => (setBulk(null), setSelected([]))}
+          onDone={() => (setBulk(null), resetSelection())}
         />
       )}
-      {bulk === "trial" && (
-        <TrialDialog
-          names={picked.map((p) => p.name)}
-          onOpenChange={() => setBulk(null)}
-          submit={(body) => runBulk((r) => api.post(`/workspaces/${r.id}/extend-trial`, body))}
-        />
-      )}
-      {bulk === "coupon" && (
-        <DiscountDialog
-          names={picked.map((p) => p.name)}
-          onOpenChange={() => setBulk(null)}
-          submit={(body) => runBulk((r) => api.post(`/workspaces/${r.id}/discount`, body).then(handle))}
-        />
-      )}
+      {bulk === "trial" && <BulkTrialDialog target={target} count={count} subtitle={t(byFilter ? "bulk.trialSub" : "bulk.trialSubPicked", byFilter ? { scope } : { names: scope })} onOpenChange={() => setBulk(null)} onDone={(r) => finish("extend_trial", r)} />}
+      {bulk === "coupon" && <BulkCouponDialog target={target} count={count} subtitle={t("bulk.couponSub", { names: scope })} onOpenChange={() => setBulk(null)} onDone={(r, action) => finish(action, r)} />}
+      {done && <BulkResultDrawer action={done.action} result={done.result} onOpenChange={() => setDone(null)} />}
       <ExportDialog
         open={exporting}
         onOpenChange={setExporting}

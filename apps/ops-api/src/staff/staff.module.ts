@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, Module, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { type OpsRequest, Reauth, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
-import { AuditQuery, ElevateBody, InviteBody, StaffService, StatusBody, UpdateStaffBody } from './staff.service.js';
+import { DigestService } from './digest.service.js';
+import { AuditQuery, ElevateBody, InviteBody, PersonalEmailBody, PersonalEmailVerifyBody, StaffService, StatusBody, UpdateStaffBody } from './staff.service.js';
 
 @Controller('ops')
 export class StaffController {
@@ -9,8 +10,25 @@ export class StaffController {
 
   @Roles('owner', 'auditor')
   @Get('staff')
-  list() {
-    return this.staff.list();
+  list(@Req() req: OpsRequest) {
+    return this.staff.list(req.staff!);
+  }
+
+  /** อีเมลส่วนตัวของตัวเอง (H1) · ทุกบทบาท · แก้ได้เฉพาะเจ้าของบัญชีและต้องแตะกุญแจ */
+  @Get('staff/me/personal-email')
+  personalEmail(@Req() req: OpsRequest) {
+    return this.staff.personalEmail(req.staff!);
+  }
+  @Reauth()
+  @Post('staff/me/personal-email')
+  @HttpCode(200)
+  requestPersonalEmail(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.staff.requestPersonalEmail(req.staff!, parse(PersonalEmailBody, body));
+  }
+  @Post(['staff/me/personal-email/verify', 'staff/me/personal-email\\:verify'])
+  @HttpCode(200)
+  verifyPersonalEmail(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.staff.verifyPersonalEmail(req.staff!, parse(PersonalEmailVerifyBody, body));
   }
 
   @Roles('owner')
@@ -67,5 +85,5 @@ export class StaffController {
   }
 }
 
-@Module({ controllers: [StaffController], providers: [StaffService] })
+@Module({ controllers: [StaffController], providers: [StaffService, DigestService], exports: [DigestService] })
 export class StaffModule {}

@@ -1,0 +1,57 @@
+/* แถบเข้าบัญชีลูกค้า (H8): นับถอยหลัง · สีจาก token เท่านั้น */
+.timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 15px;
+}
+/* เหลือ ≤ 5 นาที: กะพริบช้า ๆ ครั้งเดียว */
+.pulse {
+  animation: session-pulse var(--motion-dur-long) var(--motion-ease) 1;
+}
+@keyframes session-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+  }
+}
+.until {
+  opacity: 0.85;
+}
+.solid {
+  background: var(--banner-session-ink) !important;
+  color: var(--banner-session-bg) !important;
+}
+/* Toast เตือนเหลือ 5 นาที (มีปุ่มขยาย) · วางเหนือกล่อง Toast ปกติ */
+.warnRegion {
+  position: fixed;
+  z-index: 61;
+  right: 20px;
+  bottom: 96px;
+  max-width: min(420px, calc(100vw - 32px));
+}
+.warnActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+@media (max-width: 760px) {
+  .warnRegion {
+    right: 16px;
+    left: 16px;
+    max-width: none;
+  }
+}

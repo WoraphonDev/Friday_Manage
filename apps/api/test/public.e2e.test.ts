@@ -154,4 +154,36 @@ describe('me/legal-acceptances', () => {
     expect((await outsider.post('/me/legal-acceptances', {})).status).toBe(400);
     expect((await outsider.post('/me/legal-acceptances', { documentId: 'abc' })).status).toBe(400);
   });
+
+  it('O42: ส่ง requiresAcceptance · ฉบับแจ้งให้ทราบมี noticeUntil (+14 วัน) · upcoming = ฉบับที่ตั้งเวลาไว้และเปิดแบนเนอร์', async () => {
+    const now = Date.now();
+    await t.owner.query(
+      `INSERT INTO legal_documents (doc_type, version, effective_at, summary, body, requires_acceptance) VALUES ('cookie', '1.0', $1, 'ปรับรายชื่อคุกกี้ (สมมติ)', 'เนื้อหาสมมติ', false)`,
+      [new Date(now - 2 * 86_400_000)],
+    );
+    await t.owner.query(
+      `INSERT INTO legal_documents (doc_type, version, effective_at, summary, body, requires_acceptance) VALUES ('privacy', '1.1', $1, 'เพิ่มข้อกำหนดการใช้ AI (สมมติ)', 'เนื้อหาสมมติ', true)`,
+      [new Date(now + 30 * 86_400_000)],
+    );
+    await t.owner.query(
+      `INSERT INTO legal_documents (doc_type, version, effective_at, summary, body, requires_acceptance, notify_banner) VALUES ('dpa', '2.0', $1, 'ไม่ขึ้นแบนเนอร์ (สมมติ)', 'เนื้อหาสมมติ', true, false)`,
+      [new Date(now + 40 * 86_400_000)],
+    );
+    const index = await anon().get('/api/v1/public/legal');
+    expect(index.body.items.find((d: { type: string }) => d.type === 'cookie')).toMatchObject({ requiresAcceptance: false });
+    expect(index.body.items.find((d: { type: string }) => d.type === 'terms')).toMatchObject({ requiresAcceptance: true });
+
+    const mine = (await team.dev.get('/me/legal-acceptances')).body;
+    const cookie = mine.items.find((d: { type: string }) => d.type === 'cookie');
+    expect(cookie).toMatchObject({ requiresAcceptance: false, accepted: false });
+    expect(Date.parse(cookie.noticeUntil) - Date.parse(cookie.effectiveAt)).toBe(14 * 86_400_000);
+    expect(mine.items.find((d: { type: string }) => d.type === 'terms')).toMatchObject({ requiresAcceptance: true, noticeUntil: null });
+    // terms 2.0 (ปี 2999) และ privacy 1.1 อยู่ในอนาคต · dpa 2.0 ปิดแบนเนอร์จึงไม่ส่ง
+    expect(mine.upcoming.map((d: { type: string; version: string }) => `${d.type}@${d.version}`)).toEqual(['terms@2.0', 'privacy@1.1']);
+    expect(mine.upcoming[1]).toMatchObject({ summary: 'เพิ่มข้อกำหนดการใช้ AI (สมมติ)', requiresAcceptance: true });
+    // สมาชิกทั่วไป (ไม่ใช่ Owner / Admin) ก็ยอมรับได้
+    const ok = await team.dev.post('/me/legal-acceptances', { type: 'terms', version: '1.2', workspace: team.slug });
+    expect(ok.status, JSON.stringify(ok.body)).toBe(201);
+    expect(ok.body.document).toMatchObject({ type: 'terms', requiresAcceptance: true });
+  });
 });

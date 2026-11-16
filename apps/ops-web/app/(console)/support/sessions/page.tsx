@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { hasAny } from "@/components/access";
 import { NoAccess, PageHead } from "@/components/kit";
 import { useMe } from "@/lib/query";
-import { Sessions } from "../SupportPage";
+import { Sessions } from "./SessionsTable";
 
 /** เมนู "การเข้าช่วยเหลือ" · ใครอยู่ในบัญชีลูกค้าตอนนี้ และจบการเข้าช่วยเหลือได้ (หน้าของตัวเองแทนลิงก์ #) */
 export default function Page() {

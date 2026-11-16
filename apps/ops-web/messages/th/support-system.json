@@ -102,7 +102,26 @@
     },
     "sessionsDesc": "พนักงานที่อยู่ในบัญชีลูกค้าตอนนี้ · ทุกครั้งต้องมี Ticket และเหตุผล · จบได้ทันทีจากหน้านี้",
     "slaNone": "ไม่กำหนด",
-    "accountManager": "ผู้ดูแลประจำบัญชี"
+    "accountManager": "ผู้ดูแลประจำบัญชี",
+    "sessionsRecent": "เปิดอยู่ {open} · 30 วันล่าสุด {n} ครั้ง",
+    "noSessionsRecent": "ยังไม่มีการเข้าช่วยเหลือใน 30 วันล่าสุด",
+    "sessionTable": {
+      "who": "ผู้เข้า",
+      "customer": "ลูกค้า",
+      "ticket": "Ticket",
+      "mode": "โหมด",
+      "start": "เริ่ม",
+      "end": "หมดเวลา / จบ",
+      "used": "ใช้ไป",
+      "status": "สถานะ",
+      "whoRole": "{name} ({role})",
+      "endManual": "{time} · ออกเอง",
+      "endExpired": "{time} · หมดเวลา",
+      "usedMin": "{n} นาที",
+      "open": "เปิดอยู่ · เหลือ {n} นาที",
+      "ended": "จบแล้ว",
+      "expired": "หมดเวลา"
+    }
   },
   "t1": {
     "title": "สร้าง Ticket",
@@ -303,5 +322,28 @@
     "note": "ทีม Friday ยังเข้าได้ตามปกติเพื่อตรวจระบบ · ปลดได้ทันทีจากหน้านี้ · ต้องให้ Owner อนุมัติทุกครั้ง",
     "submit": "ส่งขออนุมัติ",
     "open": "ขอปิดปรับปรุง"
+  },
+  "session": {
+    "inside": "อยู่ในบัญชี",
+    "detail": "{mode} · Ticket {ticket}",
+    "left": "เหลือ",
+    "until": "ถึง {time}",
+    "extend": "ขยายเวลา",
+    "warn": "เหลือ 5 นาทีในบัญชี {workspace}",
+    "warnExtend": "ขยาย 30 นาที",
+    "dismiss": "ปิด",
+    "expired": "หมดเวลาเข้าบัญชี {workspace} แล้ว · ใช้เวลา {minutes} นาที · บันทึกใน Audit log ของลูกค้าแล้ว",
+    "extended": "ขยายเวลาถึง {time} แล้ว",
+    "extendTitle": "ขยายเวลาในบัญชี {workspace}",
+    "extendDesc": "เริ่ม {start} · หมดเดิม {end}",
+    "extendDescGrant": "เริ่ม {start} · หมดเดิม {end} · ลูกค้าอนุญาตถึง {until}",
+    "extendBy": "ขยายเพิ่ม",
+    "minutes": "{n} นาที",
+    "newEnd": "ใหม่: หมด {time} · รวมได้ไม่เกิน 2 ชม. ต่อครั้งที่เข้า",
+    "reason": "เหตุผล",
+    "reasonMin": "ระบุเหตุผลอย่างน้อย 5 ตัวอักษร",
+    "notifyInfo": "Owner และ Admin ของลูกค้าได้อีเมลแจ้งการขยาย (เหมือนตอนเริ่ม)",
+    "cancel": "ยกเลิก",
+    "submit": "ขยายเวลา"
   }
 }

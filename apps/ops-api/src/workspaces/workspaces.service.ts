@@ -133,7 +133,7 @@ export class WorkspacesService implements OnModuleInit {
     return { times: rows.length, days: rows.reduce((n, r) => n + Number(/ต่อช่วงทดลอง (\d+) วัน/.exec(r.summary ?? '')?.[1] ?? 0), 0) };
   }
 
-  private async applyExtendTrial(staff: Staff, id: string, input: z.infer<typeof ExtendTrialBody>, ctx?: ApprovalContext) {
+  async applyExtendTrial(staff: Staff, id: string, input: z.infer<typeof ExtendTrialBody>, ctx?: ApprovalContext) {
     const { sub } = await this.sub(id);
     if (!sub) throw new AppError(409, 'no_subscription', 'Workspace นี้ยังไม่มีแพ็กเกจ');
     if (sub.status !== 'trialing') throw new AppError(409, 'not_trialing', 'ต่อช่วงทดลองได้เฉพาะ Workspace ที่อยู่ในช่วงทดลอง', { status: sub.status });
@@ -160,7 +160,7 @@ export class WorkspacesService implements OnModuleInit {
     return this.applyDiscount(staff, id, input);
   }
 
-  private async applyDiscount(staff: Staff, id: string, input: z.infer<typeof DiscountBody>, ctx?: ApprovalContext) {
+  async applyDiscount(staff: Staff, id: string, input: z.infer<typeof DiscountBody>, ctx?: ApprovalContext) {
     const { sub } = await this.sub(id);
     if (!sub) throw new AppError(409, 'no_subscription', 'Workspace นี้ยังไม่มีแพ็กเกจ');
     const discount = { percent: input.percent, months: input.months ?? null, reason: input.reason, setBy: staff.id, setAt: new Date().toISOString() };

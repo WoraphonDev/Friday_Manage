@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
 import { hasAny } from "@/components/access";
 import { ConfirmDialog, useReauth } from "@/components/dialogs";
-import { Drawer, Empty, ErrorBlock, NoAccess, Notice, PageHead, Seg, TableSkeleton } from "@/components/kit";
+import { Drawer, Empty, ErrorBlock, Modal, NoAccess, Notice, PageHead, Seg, Switch, TableSkeleton } from "@/components/kit";
 import { Button, buttonClass, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { MotionSwap } from "@/components/shell/page-enter";
 import { api, OPS_BASE } from "@/lib/api";
@@ -14,6 +14,7 @@ import { useSlidingIndicator } from "@/lib/motion";
 import { useMe } from "@/lib/query";
 import { useFmt } from "../workspaces/_parts/format";
 import { lineDiff } from "./diff";
+import styles from "./legal.module.css";
 import { CountUp } from "@/components/count-up";
 
 const DOC_TYPES = ["terms", "privacy", "dpa", "cookie", "subprocessors"] as const;
@@ -33,6 +34,22 @@ interface DocRow {
   createdAt: string;
   createdBy: string | null;
   accepted: number;
+  /** แจ้งลูกค้าทางอีเมล (H14 · H15) */
+  notifyAudience?: "all" | "admins" | null;
+  notifyAt?: string | null;
+  remindAt?: string | null;
+  notifiedAt?: string | null;
+  remindedAt?: string | null;
+  noticeSent?: number;
+  noticeBounced?: number;
+  noticeTotal?: number;
+  reminderSent?: number;
+}
+interface Audience {
+  all: number;
+  workspaces: number;
+  admins: number;
+  suppressed: number;
 }
 interface Group {
   docType: DocType;
@@ -183,6 +200,7 @@ function DocPanel({ g, owner }: { g: Group; owner: boolean }) {
         <div className="field">
           <span className="field-label">{doc.requiresAcceptance ? t("requires") : t("notify")}</span>
           <span className="muted small">{t("acceptedN", { n: doc.accepted })}</span>
+          <NoticeStats doc={doc} />
         </div>
       </div>
       {doc.summary && (
@@ -257,6 +275,20 @@ function DocPanel({ g, owner }: { g: Group; owner: boolean }) {
         />
       )}
     </section>
+  );
+}
+
+/** สถิติอีเมลแจ้งเอกสาร (H15): ส่งแล้ว / ทั้งหมด · ตีกลับ · รอส่ง · เตือนซ้ำ */
+function NoticeStats({ doc }: { doc: DocRow }) {
+  const t = useTranslations("pl.legal");
+  const fmt = useFmt();
+  if (doc.notifyAudience === undefined) return null;
+  if (!doc.notifyAudience) return <span className="muted small">{t("noticeNone")}</span>;
+  return (
+    <span className="muted small">
+      {doc.noticeTotal || doc.notifiedAt ? t("noticeStats", { sent: fmt.num(doc.noticeSent ?? 0), total: fmt.num(doc.noticeTotal ?? 0), bounced: fmt.num(doc.noticeBounced ?? 0) }) : t("noticeQueued", { date: fmt.dateTime(doc.notifyAt) })}
+      {doc.remindAt && !doc.remindedAt && ` · ${t("reminderAt", { date: fmt.date(doc.remindAt) })}`}
+    </span>
   );
 }
 
@@ -361,10 +393,12 @@ function AcceptanceLog() {
 const nextVersion = (v: string | undefined) => (v ? String(Math.floor(Number(v.split(".")[0])) + 1) : "1");
 /** วันที่มีผลเร็วสุด (เวลาไทย): ต้องยอมรับใหม่ = อีก 31 วัน · แจ้งให้ทราบ = วันนี้ */
 const minEffective = (requires: boolean) => new Date(Date.now() + 7 * 3_600_000 + (requires ? 31 : 0) * 86_400_000).toISOString().slice(0, 10);
+/** ค่าสำหรับ `<input type="datetime-local">` ตามเวลาเครื่อง */
+const localInput = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 /** วันนี้ = มีผลทันที · วันอื่น = เที่ยงคืนเวลาไทย */
 const effectiveIso = (date: string) => (date === minEffective(false) ? new Date().toISOString() : new Date(`${date}T00:00:00+07:00`).toISOString());
 
-/** A7 · สร้างเวอร์ชันใหม่และตั้งเวลาเผยแพร่ (Owner · แตะกุญแจ) */
+/** A7 · สร้างเวอร์ชันใหม่และตั้งเวลาเผยแพร่ (Owner · แตะกุญแจ) · รอบ 4 H14: ส่วนแจ้งลูกค้า (อีเมล เตือนซ้ำ แบนเนอร์) */
 function NewVersion({ groups, onClose }: { groups: Group[]; onClose: () => void }) {
   const t = useTranslations("pl.a7");
   const tl = useTranslations("pl.legal");
@@ -382,15 +416,43 @@ function NewVersion({ groups, onClose }: { groups: Group[]; onClose: () => void 
   const [body, setBody] = useState("");
   const [requires, setRequires] = useState(true);
   const [effective, setEffective] = useState(minEffective(true));
+  // แจ้งลูกค้า (H14) · ค่าเริ่มต้นส่งถึงผู้ใช้ทุกคน (คำตัดสินข้อ 5) ทันทีที่เผยแพร่ เตือน 7 วันก่อนมีผล และแสดงแบนเนอร์
+  const [audience, setAudience] = useState<"all" | "admins" | "none">("all");
+  const [sendLater, setSendLater] = useState(false);
+  const [sendAt, setSendAt] = useState(localInput(new Date(Date.now() + 3_600_000)));
+  const [remind, setRemind] = useState(true);
+  const [banner, setBanner] = useState(true);
+  const [preview, setPreview] = useState(false);
+  const counts = useQuery({ queryKey: [...key, "audience"], queryFn: () => api.get<Audience>("/legal/audience") });
+  const effectiveAt = effective ? new Date(effectiveIso(effective)) : null;
+  const remindDate = effectiveAt ? new Date(effectiveAt.getTime() - 7 * 86_400_000) : null;
+  const n = (v: number | undefined) => (v == null ? "…" : fmt.num(v));
   const pick = (d: DocType, l: Locale) => {
     setDocType(d);
     setLocale(l);
     const x = groups.find((y) => y.docType === d && y.locale === l);
     setVersion(nextVersion((x?.scheduled[0] ?? x?.current)?.version));
   };
-  const ok = /^\d+(\.\d+)*$/.test(version.trim()) && summary.trim().length >= 10 && body.trim().length >= 50 && !!effective;
+  const ok = /^\d+(\.\d+)*$/.test(version.trim()) && summary.trim().length >= 10 && body.trim().length >= 50 && !!effective && (!sendLater || audience === "none" || !!sendAt);
   const m = useMutation({
-    mutationFn: () => run(() => api.post("/legal/documents", { docType, locale, version: version.trim(), summary: summary.trim(), body: body.trim(), requiresAcceptance: requires, effectiveAt: effectiveIso(effective) }), t("reauth")),
+    mutationFn: () =>
+      run(
+        () =>
+          api.post("/legal/documents", {
+            docType,
+            locale,
+            version: version.trim(),
+            summary: summary.trim(),
+            body: body.trim(),
+            requiresAcceptance: requires,
+            effectiveAt: effectiveIso(effective),
+            notifyAudience: audience,
+            ...(audience !== "none" && sendLater ? { notifyAt: new Date(sendAt).toISOString() } : {}),
+            remind: audience !== "none" && remind,
+            notifyBanner: banner,
+          }),
+        t("reauth"),
+      ),
     onSuccess: () => (toast(t("done", { name: tl(`types.${docType}`), version: version.trim() })), void cache.invalidateQueries({ queryKey: key }), onClose()),
   });
   return (
@@ -423,35 +485,108 @@ function NewVersion({ groups, onClose }: { groups: Group[]; onClose: () => void 
             }}
           />
         </label>
-        <Textarea label={t("summary")} value={summary} onChange={(e) => setSummary(e.target.value)} />
-        <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
-          <legend className="field-label">{t("existing")}</legend>
-          {([true, false] as const).map((v) => (
-            <label key={String(v)} className="check">
-              <input
-                type="radio"
-                name="a7-requires"
-                checked={requires === v}
-                onChange={() => {
+        <div className="grid-2">
+          <Input label={t("effective")} type="date" min={minEffective(requires)} hint={requires ? t("minNotice") : undefined} value={effective} onChange={(e) => setEffective(e.target.value)} />
+          <div className="field">
+            <span className="field-label">{t("requiresToggle")}</span>
+            <span className="row">
+              <Switch
+                checked={requires}
+                label={t("requiresToggle")}
+                onChange={(v) => {
                   setRequires(v);
                   if (effective < minEffective(v)) setEffective(minEffective(v));
                 }}
               />
+              <span className="small">{requires ? t("requires") : t("notify")}</span>
+            </span>
+            <span className="muted small">{t("requiresToggleHint")}</span>
+          </div>
+        </div>
+        <Textarea label={t("summary")} value={summary} onChange={(e) => setSummary(e.target.value)} />
+        <div className={styles.section}>{t("notifySection")}</div>
+        <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
+          <legend className="sr-only">{t("notifySection")}</legend>
+          {(["all", "admins", "none"] as const).map((v) => (
+            <label key={v} className="check">
+              <input type="radio" name="a7-audience" checked={audience === v} onChange={() => setAudience(v)} />
               <span>
-                <b>{v ? t("requires") : t("notify")}</b> <span className="muted small">{v ? t("requiresDesc") : t("notifyDesc")}</span>
+                <b>{v === "all" ? t("audAll") : v === "admins" ? t("audAdmins") : t("audNone")}</b>{" "}
+                <span className="muted small">
+                  {v === "all"
+                    ? t("audAllDesc", { all: n(counts.data?.all), workspaces: n(counts.data?.workspaces), suppressed: n(counts.data?.suppressed) })
+                    : v === "admins"
+                      ? t("audAdminsDesc", { admins: n(counts.data?.admins) })
+                      : t("audNoneDesc")}
+                </span>
               </span>
             </label>
           ))}
         </fieldset>
-        <Input label={t("effective")} type="date" min={minEffective(requires)} hint={requires ? t("minNotice") : undefined} value={effective} onChange={(e) => setEffective(e.target.value)} />
+        {audience !== "none" && (
+          <div className="grid-2">
+            <Select label={t("sendAt")} value={sendLater ? "later" : "now"} onChange={(e) => setSendLater(e.target.value === "later")}>
+              <option value="now">{t("sendNow", { date: fmt.date(new Date().toISOString()) })}</option>
+              <option value="later">{t("sendLater")}</option>
+            </Select>
+            <Select label={t("remind")} value={remind ? "yes" : "no"} onChange={(e) => setRemind(e.target.value === "yes")}>
+              <option value="yes">{t("remindYes", { date: fmt.date(remindDate?.toISOString()) })}</option>
+              <option value="no">{t("remindNo")}</option>
+            </Select>
+          </div>
+        )}
+        {audience !== "none" && sendLater && <Input label={t("sendAtTime")} type="datetime-local" value={sendAt} onChange={(e) => setSendAt(e.target.value)} />}
+        <label className="check">
+          <input type="checkbox" checked={banner} onChange={(e) => setBanner(e.target.checked)} />
+          <span>{t("banner")}</span>
+        </label>
+        <p className="muted small">{t("note")}</p>
         <InlineError error={m.error} />
         <div className="dialog-actions">
           <Button onClick={onClose}>{tc("cancel")}</Button>
+          <Button onClick={() => setPreview(true)}>{t("preview")}</Button>
           <Button type="submit" variant="primary" disabled={!ok || m.isPending}>
             {t("submit")}
           </Button>
         </div>
       </form>
+      {preview && <MailPreview name={tl(`types.${docType}`)} date={fmt.date(effectiveAt?.toISOString())} summary={summary} requires={requires} onClose={() => setPreview(false)} />}
     </Drawer>
+  );
+}
+
+/** ตัวอย่างอีเมลแจ้งเอกสารใหม่ (H15) · ข้อความเดียวกับที่ ops-api ส่ง (legal.service › sendBatch) */
+function MailPreview({ name, date, summary, requires, onClose }: { name: string; date: string; summary: string; requires: boolean; onClose: () => void }) {
+  const t = useTranslations("pl.a7");
+  const tc = useTranslations("common.dialog");
+  const changes = summary
+    .split(/\n|·/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const subject = t("mailSubject", { name, date });
+  return (
+    <Modal open onOpenChange={(o) => !o && onClose()} title={t("previewTitle")} description={`${t("previewSubject")}: ${subject}`}>
+      <div className="dialog-body">
+        <div className={styles.mail} aria-label={t("previewTitle")}>
+          <p>{t("mailHello", { name, date })}</p>
+          <b>{t("mailChanges")}</b>
+          <ul>
+            {changes.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
+          <p>{requires ? t("mailRequires") : t("mailNotice")}</p>
+          <p>
+            <u>{t("mailLink")}</u>
+          </p>
+          <p className="muted small">{t("mailFoot")}</p>
+        </div>
+        <div className="dialog-actions">
+          <Button variant="primary" onClick={onClose}>
+            {tc("close")}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

@@ -1,0 +1,25 @@
+/* เอกสารกฎหมาย · ส่วนแจ้งลูกค้า (รอบ 4 · H14–H15) · สีจาก token ใน styles/tokens.css เท่านั้น */
+
+.section {
+  font-weight: 600;
+  font-size: 13px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.mail {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--card);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.mail p {
+  margin: 0 0 8px;
+}
+.mail ul {
+  margin: 4px 0 8px;
+  padding-left: 18px;
+}

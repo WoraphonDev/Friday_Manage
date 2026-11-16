@@ -71,10 +71,21 @@ export interface SupportSession {
   secondApproverId: string | null;
   startedAt: string;
   endedAt: string | null;
+  /** เวลาหมดของเซิร์ฟเวอร์ (H8) · นับถอยหลังจากค่านี้ ไม่ใช่นาฬิกาเครื่อง */
+  expiresAt?: string | null;
+  /** จบเพราะหมดเวลา / ออกเอง · null = ยังเปิดอยู่ */
+  endReason?: "expired" | "manual" | null;
+  usedMinutes?: number;
 }
 export interface OpenSession extends SupportSession {
   workspace: { name: string; slug: string };
   staffName: string;
+  staffRoles?: OpsRole[];
+}
+/** GET ops/support-sessions · serverTime ใช้ปรับนาฬิกาเครื่องให้ตรงเซิร์ฟเวอร์ */
+export interface SessionsResponse {
+  items: OpenSession[];
+  serverTime?: string;
 }
 
 export interface WorkspaceDetail {

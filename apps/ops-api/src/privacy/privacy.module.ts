@@ -1,6 +1,8 @@
-import { Body, Controller, Get, HttpCode, Module, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Module, Param, Patch, Post, Put, Query, Req, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { type OpsRequest, Reauth, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
+import { HoldBody, HoldsService, PurgeNowBody, ReleaseBody, RetentionBody, RetentionEstimateQuery } from './holds.service.js';
 import { AdvanceBody, BreachBody, BreachMarkBody, BreachPatchBody, CreateRequestBody, EraseBody, PrivacyService, RejectBody, RequestsQuery, VerifyBody } from './privacy.service.js';
 
 /**
@@ -10,7 +12,10 @@ import { AdvanceBody, BreachBody, BreachMarkBody, BreachPatchBody, CreateRequest
  */
 @Controller('ops/privacy')
 export class PrivacyController {
-  constructor(private readonly privacy: PrivacyService) {}
+  constructor(
+    private readonly privacy: PrivacyService,
+    private readonly holds: HoldsService,
+  ) {}
 
   @Roles('owner', 'support', 'auditor')
   @Get('requests')
@@ -56,7 +61,60 @@ export class PrivacyController {
   @Roles('owner', 'support', 'auditor')
   @Get('pending-deletes')
   pendingDeletes() {
-    return this.privacy.pendingDeletes();
+    return this.holds.pendingDeletes();
+  }
+  /** ลบถาวรทันที (H13) · สิ่งที่จะลบ / Ticket ให้เลือก / เงื่อนไข */
+  @Roles('owner')
+  @Get('pending-deletes/:id')
+  purgePreview(@Param('id') id: string) {
+    return this.holds.purgePreview(id);
+  }
+  /** ต้องมีคนที่สองอนุมัติเสมอ → 202 */
+  @Roles('owner')
+  @Reauth()
+  @Post(['pending-deletes/:id/purge-now', 'pending-deletes/:id\\:purge-now'])
+  @HttpCode(202)
+  purgeNow(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.holds.requestPurgeNow(req.staff!, id, parse(PurgeNowBody, body));
+  }
+
+  /** Legal hold (H11) · อ่าน: Owner / Support / วิศวกร / ผู้ตรวจ · ตั้ง: Owner + แตะกุญแจ · ยกเลิก: ขออนุมัติ */
+  @Roles('owner', 'support', 'engineer', 'auditor')
+  @Get('legal-holds')
+  legalHolds() {
+    return this.holds.holds();
+  }
+  @Roles('owner')
+  @Reauth()
+  @Post('legal-holds')
+  createHold(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.holds.createHold(req.staff!, parse(HoldBody, body));
+  }
+  @Roles('owner')
+  @Post(['legal-holds/:id/release', 'legal-holds/:id\\:release'])
+  @HttpCode(202)
+  releaseHold(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.holds.requestRelease(req.staff!, id, parse(ReleaseBody, body));
+  }
+
+  /** นโยบายการเก็บข้อมูล (H12) · แก้ได้เฉพาะ Owner · สั้นลง → 202 รออนุมัติ */
+  @Roles('owner', 'support', 'engineer', 'auditor')
+  @Get('retention')
+  retention() {
+    return this.holds.retention();
+  }
+  @Roles('owner')
+  @Get('retention/estimate')
+  estimate(@Query() q: unknown) {
+    return this.holds.estimate(parse(RetentionEstimateQuery, q));
+  }
+  @Roles('owner')
+  @Reauth()
+  @Put('retention')
+  async setRetention(@Req() req: OpsRequest, @Body() body: unknown, @Res({ passthrough: true }) res: Response) {
+    const r = await this.holds.setRetention(req.staff!, parse(RetentionBody, body));
+    if ('pendingApproval' in r) res.status(202);
+    return r;
   }
 
   @Roles('owner', 'engineer', 'auditor')
@@ -104,5 +162,5 @@ export class PrivacyController {
   }
 }
 
-@Module({ controllers: [PrivacyController], providers: [PrivacyService] })
+@Module({ controllers: [PrivacyController], providers: [PrivacyService, HoldsService] })
 export class PrivacyModule {}

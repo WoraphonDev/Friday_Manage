@@ -117,7 +117,9 @@ export function RequestsTable({ query, onOpen }: { query: ReturnType<typeof useR
                   <td>
                     <DuePill r={r} />
                   </td>
-                  <td className="small">{r.status === "open" ? (r.approvalRequestId && r.step === 3 ? tr("erasePending") : r.stepLabel) : t(`filter.${r.status}`)}</td>
+                  <td className="small">
+                    {r.status === "open" ? r.legalHold ? <span className="pill warn">{t("eraseHeld")}</span> : r.approvalRequestId && r.step === 3 ? tr("erasePending") : r.stepLabel : t(`filter.${r.status}`)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -164,11 +166,13 @@ function RequestBody({ d, canAct, verify, setModal }: { d: RequestDetail; canAct
   const erase = r.requestType === "erase";
   const unverified = r.identity === "unverified";
   const eraseStep = erase && r.step === 3;
-  const blocked = (d.erasePlan?.blockers.length ?? 0) > 0;
+  const held = !!r.legalHold;
+  const blocked = (d.erasePlan?.blockers.length ?? 0) > 0 || held;
   return (
     <div className="stack">
       <div className="row">
         <DuePill r={r} />
+        {held && <span className="pill warn">{t("privacy.eraseHeld")}</span>}
         <span className={unverified ? "pill" : "pill ok"}>{t(`privacy.identity.${r.identity}`)}</span>
         <span className="muted small">{t("req.received", { date: fmt.date(r.receivedAt), due: fmt.date(r.dueDate) })}</span>
       </div>
@@ -216,6 +220,7 @@ function RequestBody({ d, canAct, verify, setModal }: { d: RequestDetail; canAct
                 </div>
               </div>
             )}
+            {held && erase && <Notice tone="warn" title={t("privacy.eraseHeld")}>{t("req.eraseHeld")}</Notice>}
             <div className="row">
               {eraseStep ? (
                 <Button variant="danger" disabled={blocked || !r.userId} onClick={() => setModal("erase")}>
@@ -275,9 +280,11 @@ function ErasePlan({ plan }: { plan: NonNullable<RequestDetail["erasePlan"]> }) 
         </div>
       ))}
       <span className="muted small">{t("backup", { n: plan.backupDays })}</span>
-      {plan.blockers.map((b) => (
-        <Notice key={b.workspace} tone="bad" title={t("blocker", { ws: b.workspace })} />
-      ))}
+      {plan.blockers
+        .filter((b) => b.code === "sole_owner")
+        .map((b) => (
+          <Notice key={b.workspace} tone="bad" title={t("blocker", { ws: b.workspace ?? "" })} />
+        ))}
     </section>
   );
 }

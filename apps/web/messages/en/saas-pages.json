@@ -276,11 +276,17 @@
       "cta": "View frequently run rules"
     },
     "legal": {
-      "title": "We've updated our {names}",
-      "and": "and",
-      "effective": "Effective {date}",
-      "read": "Read in full",
-      "accept": "Acknowledge",
+      "upcomingTitle": "New {name} takes effect on {date}",
+      "noticeTitle": "New {name} in effect since {date}",
+      "more": "and {count} more",
+      "changes": "See what changed",
+      "dismiss": "Dismiss",
+      "modalTitle": "Accept {name} version {version}",
+      "effectiveToday": "In effect today, {date}",
+      "effectiveSince": "In effect since {date}",
+      "readFull": "Read the full text and compare with the previous version",
+      "declineNote": "Don't agree? Contact your Workspace Owner or close your account from your profile",
+      "acceptContinue": "Accept and continue",
       "accepted": "Acknowledgement recorded"
     }
   },

@@ -2,12 +2,13 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Button, buttonVariants, useToast } from "@/components/ui";
-import { ApiError, api } from "@/lib/api";
+import { Button, buttonVariants } from "@/components/ui";
+import { api } from "@/lib/api";
 import { formatDate, appLocale } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { LegalNotices } from "@/features/legal";
 import { RequestUpgradeButton } from "./PlanLimitDialog";
 import styles from "./plan-limits.module.css";
 import { checkoutHref, fitPlan, type PublicPlans, type Usage } from "./types";
@@ -190,60 +191,12 @@ export function FeatureLock({
   );
 }
 
-interface LegalItem {
-  id: string;
-  type: string;
-  version: string;
-  effectiveAt: string;
-  summary: string | null;
-  accepted: boolean;
-}
-
 /**
- * "เมื่อข้อกำหนดเปลี่ยน" (R4) · แสดงกับ Owner / Admin เท่านั้น (สมาชิกทั่วไปไม่ต้องกดยอมรับ)
- * กดรับทราบบันทึก `POST me/legal-acceptances` ในนาม Workspace
+ * "เมื่อข้อกำหนดเปลี่ยน" (R4 · O42 H16–H17) · ผู้ใช้ทุกคนใน Workspace เห็น (เดิมเฉพาะ Owner / Admin)
+ * แบนเนอร์ก่อนวันมีผล · ฉบับแจ้งให้ทราบแสดง 14 วัน · ฉบับที่ต้องยอมรับขึ้นหน้าต่างยอมรับ → อยู่ใน features/legal
  */
-export function LegalUpdateBanner({ ws, canManage }: { ws: string; canManage: boolean }) {
-  const t = useTranslations("saas-pages.banners.legal");
-  const tl = useTranslations("saas-pages.legal.types");
-  const cache = useQueryClient();
-  const toast = useToast();
-  const [busy, setBusy] = useState(false);
-  const mine = useQuery({ queryKey: ["legal-acceptances"], queryFn: () => api.get<{ items: LegalItem[] }>("/me/legal-acceptances"), enabled: canManage, retry: false, staleTime: 300_000 });
-  const pending = (mine.data?.items ?? []).filter((d) => !d.accepted && ["terms", "privacy", "dpa"].includes(d.type));
-  if (!canManage || !pending.length) return null;
-  const names = pending.map((d) => tl(d.type as "terms")).join(t("and"));
-  const latest = pending.reduce((a, b) => (a.effectiveAt > b.effectiveAt ? a : b));
-  const summary = pending.map((d) => d.summary).filter(Boolean).join(" · ");
-  async function accept() {
-    setBusy(true);
-    try {
-      for (const d of pending) await api.post("/me/legal-acceptances", { documentId: d.id, workspace: ws });
-      await cache.invalidateQueries({ queryKey: ["legal-acceptances"] });
-      toast({ message: t("accepted") });
-    } catch (e) {
-      toast({ message: e instanceof ApiError ? e.message : String(e) });
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <Banner
-      tone="gray"
-      title={t("title", { names })}
-      description={[t("effective", { date: formatDate(latest.effectiveAt, "BE", true) }), summary].filter(Boolean).join(" · ")}
-      action={
-        <span className={styles.row}>
-          <Link className={buttonVariants({ size: "small" })} href={`/legal/${pending[0].type}`} target="_blank">
-            {t("read")}
-          </Link>
-          <Button size="small" variant="primary" disabled={busy} onClick={accept}>
-            {t("accept")}
-          </Button>
-        </span>
-      }
-    />
-  );
+export function LegalUpdateBanner({ ws }: { ws: string }) {
+  return <LegalNotices ws={ws} />;
 }
 
 /** แบนเนอร์ทั้งหมดของ Workspace รวมเป็นชิ้นเดียว ให้ shell วางจุดเดียว */
@@ -251,7 +204,7 @@ export function WorkspaceBanners({ ws, role }: { ws: string; role: "owner" | "ad
   return (
     <>
       <UsageBanner ws={ws} isGuest={role === "guest"} />
-      <LegalUpdateBanner ws={ws} canManage={role === "owner" || role === "admin"} />
+      <LegalUpdateBanner ws={ws} />
     </>
   );
 }

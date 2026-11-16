@@ -1,12 +1,12 @@
 import { startAuthentication } from "@simplewebauthn/browser";
-import { screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { AppShell } from "@/components/shell/AppShell";
 import { staff } from "@/test/fixtures";
 import { renderWithProviders } from "@/test/render";
-import { navigation } from "@/test/router";
+import { navigation, router } from "@/test/router";
 import { asRole, OPS, opsError, server } from "@/test/server";
 import { StaffPage } from "./StaffPage";
 import { DEFAULT_LIMITS, type StaffMember } from "./types";
@@ -21,15 +21,16 @@ const team = [
   member({ id: "s-2", email: "support.b@friday.example.com", name: "Support B", roles: ["support"], department: "ปฏิบัติการ" }),
   member({ id: "s-3", email: "audit@office.example.com", name: "สำนักงานบัญชี", roles: ["auditor"], department: "ภายนอก", status: "invited", keys: [], expiresAt: "2027-02-09T16:59:59.000Z" }),
 ];
-const page = () => {
+const page = (extra: Record<string, unknown> = {}) => {
   navigation.pathname = "/staff";
-  server.use(http.get(`${OPS}/staff`, () => HttpResponse.json({ items: team, singleApprover: true })));
+  server.use(http.get(`${OPS}/staff`, () => HttpResponse.json({ items: team, singleApprover: true, ...extra })));
   return renderWithProviders(
     <AppShell>
       <StaffPage />
     </AppShell>,
   );
 };
+const cleanupPage = () => cleanup();
 const reauthOk = () => {
   let reauthed = false;
   server.use(
@@ -44,7 +45,7 @@ describe("หน้าพนักงาน (Owner)", () => {
   it("แถบเตือนผู้อนุมัติคนเดียว · หลายบทบาท · แผนก · กุญแจ · สถานะ", async () => {
     page();
     const table = (await screen.findByText("Support B")).closest("table")!;
-    expect(screen.getByText("มีผู้อนุมัติคนเดียว (Owner)")).toBeInTheDocument();
+    expect(screen.getByText("ตอนนี้มี Owner คนเดียว")).toBeInTheDocument();
     const owner = within(table).getByText(staff.admin.name).closest("tr")!;
     for (const r of ["Owner", "การเงิน", "Support"]) expect(within(owner).getByText(r)).toBeInTheDocument();
     const auditor = within(table).getByText("สำนักงานบัญชี").closest("tr")!;
@@ -65,7 +66,7 @@ describe("หน้าพนักงาน (Owner)", () => {
       }),
     );
     page();
-    await userEvent.click(await screen.findByRole("button", { name: "เพิ่ม Owner คนที่สอง" }));
+    await userEvent.click(await screen.findByRole("button", { name: "เชิญ Owner คนที่สอง" }));
     const drawer = await screen.findByRole("dialog", { name: "เชิญพนักงาน" });
     expect(within(drawer).getByRole("checkbox", { name: /Owner/ })).toBeChecked();
     expect(within(drawer).getByText("ต้องแตะกุญแจ")).toBeInTheDocument();
@@ -127,7 +128,87 @@ describe("หน้าพนักงาน (Owner)", () => {
   });
 });
 
+describe("สรุปรายการที่อนุมัติตัวเอง (H1–H3)", () => {
+  const digest = (over: Record<string, unknown> = {}) => ({ staffId: staff.admin.id, personalEmail: "f•••@mail.example", personalEmailVerified: true, lastSentAt: new Date().toISOString(), lastCount: 3, failedAt: null, failedText: null, ...over });
+
+  it("H3: แถบ Owner คนเดียวบอกการส่งสรุปล่าสุด · ดูรายการไปที่ Audit ที่กรองอนุมัติตัวเอง · คอลัมน์อีเมลส่วนตัว", async () => {
+    const items = [{ ...team[0], personalEmail: "fah.personal@mail.example", personalEmailStatus: "verified", personalEmailVerifiedAt: "2026-11-16T02:00:00.000Z" }, { ...team[1], personalEmail: null, personalEmailStatus: "none" }, team[2]];
+    page({ items, digest: [digest()] });
+    expect(await screen.findByText(/สรุปล่าสุดส่งถึง f•••@mail.example วันนี้ .+ \(3 รายการ\)/)).toBeInTheDocument();
+    expect(screen.queryByText("ยังไม่มีอีเมลส่วนตัว สรุปรายวันจึงส่งไม่ได้")).not.toBeInTheDocument();
+    const table = screen.getByText("Support B").closest("table")!;
+    expect(within(table).getByText("อีเมลส่วนตัว")).toBeInTheDocument();
+    expect(within(within(table).getByText(staff.admin.name).closest("tr")!).getByText("ยืนยันแล้ว")).toBeInTheDocument();
+    expect(within(within(table).getByText("Support B").closest("tr")!).queryByRole("button", { name: /อีเมลส่วนตัว|แก้/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "ดูรายการ" }));
+    expect(router.replace).toHaveBeenCalledWith("/staff?tab=audit&selfApproved=true");
+  });
+
+  it("H3: ยังไม่ตั้งอีเมลส่วนตัว → แถบแดง · ส่งไม่สำเร็จ → แถบแดงพร้อมสาเหตุ", async () => {
+    page({ digest: [digest({ personalEmail: null, personalEmailVerified: false, lastSentAt: null, lastCount: null })] });
+    expect(await screen.findByText("ยังไม่มีอีเมลส่วนตัว สรุปรายวันจึงส่งไม่ได้")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ตั้งอีเมลส่วนตัว" })).toBeInTheDocument();
+    cleanupPage();
+    page({ digest: [digest({ failedAt: new Date().toISOString(), failedText: "ส่งสรุปไม่สำเร็จ: SMTP timeout" })] });
+    expect(await screen.findByText("ส่งสรุปไม่สำเร็จ")).toBeInTheDocument();
+    expect(screen.getByText("ส่งสรุปไม่สำเร็จ: SMTP timeout")).toBeInTheDocument();
+  });
+
+  it("H1: ตั้งอีเมลส่วนตัว · ห้ามโดเมนบริษัท · แตะกุญแจ · ยืนยันรหัส 6 หลัก", async () => {
+    const reauthed = reauthOk();
+    let pending: string | null = null;
+    let sent: Record<string, unknown> = {};
+    let verified: Record<string, unknown> = {};
+    server.use(
+      http.get(`${OPS}/staff/me/personal-email`, () => HttpResponse.json({ email: null, verifiedAt: null, pending, pendingExpiresAt: pending ? new Date(Date.now() + 15 * 60_000).toISOString() : null, workEmail: staff.admin.email })),
+      http.post(`${OPS}/staff/me/personal-email`, async ({ request }) => {
+        if (!reauthed()) return opsError(401, "reauth_required", "แตะ Security key");
+        sent = (await request.json()) as Record<string, unknown>;
+        pending = String(sent.email);
+        return HttpResponse.json({ pending, expiresAt: new Date(Date.now() + 15 * 60_000).toISOString() });
+      }),
+      http.post(`${OPS}/staff/me/personal-email/verify`, async ({ request }) => {
+        verified = (await request.json()) as Record<string, unknown>;
+        if (verified.code !== "123456") return opsError(422, "code_invalid", "รหัสไม่ถูกต้อง");
+        return HttpResponse.json({ email: pending, verifiedAt: new Date().toISOString(), notifiedOld: false });
+      }),
+    );
+    page({ digest: [digest({ personalEmail: null, personalEmailVerified: false, lastSentAt: null })] });
+    await userEvent.click(await screen.findByRole("button", { name: "ตั้งอีเมลส่วนตัว" }));
+    const drawer = await screen.findByRole("dialog", { name: staff.admin.name });
+    expect(within(drawer).getByText("แก้ได้เฉพาะเจ้าของบัญชีเอง · แตะกุญแจยืนยัน")).toBeInTheDocument();
+    const input = await within(drawer).findByLabelText("อีเมลส่วนตัว");
+    await userEvent.type(input, "me@example.com");
+    await userEvent.click(within(drawer).getByRole("button", { name: "บันทึก" }));
+    expect(await within(drawer).findByText("ใช้อีเมลโดเมนบริษัท (@example.com) ไม่ได้")).toBeInTheDocument();
+    await userEvent.clear(input);
+    await userEvent.type(input, "fah.personal@mail.example");
+    await userEvent.click(within(drawer).getByRole("button", { name: "บันทึก" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await waitFor(() => expect(sent).toEqual({ email: "fah.personal@mail.example" }));
+    const code = await within(drawer).findByLabelText("รหัส 6 หลัก");
+    expect(within(drawer).getByText(/ส่งรหัสไปที่ fah.personal@mail.example แล้ว/)).toBeInTheDocument();
+    await userEvent.type(code, "999999");
+    await userEvent.click(within(drawer).getByRole("button", { name: "ยืนยัน" }));
+    expect(await within(drawer).findByText("รหัสไม่ถูกต้อง")).toBeInTheDocument();
+    await userEvent.clear(code);
+    await userEvent.type(code, "123456");
+    await userEvent.click(within(drawer).getByRole("button", { name: "ยืนยัน" }));
+    expect(await screen.findByText("ยืนยันอีเมลส่วนตัวแล้ว")).toBeInTheDocument();
+    expect(verified).toEqual({ code: "123456" });
+  });
+});
+
 describe("Audit log", () => {
+  it("เปิดจากแถบ Owner คนเดียว (?selfApproved=true) กรองเฉพาะอนุมัติตัวเองตั้งแต่แรก", async () => {
+    const asked: string[] = [];
+    server.use(http.get(`${OPS}/audit`, ({ request }) => (asked.push(new URL(request.url).searchParams.toString()), HttpResponse.json({ items: [] }))));
+    navigation.search = "tab=audit&selfApproved=true";
+    page();
+    await waitFor(() => expect(asked.at(-1)).toContain("selfApproved=true"));
+    expect(screen.getByRole("button", { name: 'เฉพาะ "อนุมัติตัวเอง"' })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("ผู้ตรวจ: อ่านได้ ไม่มีปุ่มจัดการ · กรองเฉพาะอนุมัติตัวเอง · ว่างเพราะตัวกรองล้างได้", async () => {
     asRole("auditor");
     const asked: string[] = [];

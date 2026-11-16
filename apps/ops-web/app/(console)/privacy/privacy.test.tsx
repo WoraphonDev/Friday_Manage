@@ -45,6 +45,45 @@ const doneReq = {
   receivedAt: iso(-20),
   completedAt: iso(-14),
 };
+const pd = { requestedAt: iso(-26), system: false, legalHold: false, unpaidInvoices: 0, purgeApproval: null, purgeApproved: false };
+const pendingDeletes = [
+  { ...pd, id: "w9", slug: "old-demo", name: "โอลด์เดโม", purgeAt: iso(4), daysLeft: 4, requestedBy: { name: "นที ส.", email: "owner@old-demo.example.com", role: "owner" } },
+  { ...pd, id: "w8", slug: "held-demo", name: "เฮลด์เดโม", purgeAt: iso(10), daysLeft: 10, requestedBy: null, system: true, legalHold: true },
+];
+const hold = {
+  id: "h1",
+  workspaceId: "w8",
+  scope: "workspace",
+  userIds: [],
+  userEmails: [],
+  reason: "ข้อพิพาทการชำระเงิน",
+  reference: "คดีสมมติ 1/2569",
+  reviewOn: iso(80).slice(0, 10),
+  notifyCustomer: false,
+  createdAt: iso(-3),
+  createdByName: "แอดมินตัวอย่าง",
+  releasedAt: null,
+  releaseReason: null,
+  workspace: { id: "w8", name: "เฮลด์เดโม", slug: "held-demo" },
+  active: true,
+  releaseApproval: null,
+};
+const rrow = (key: string, label: string, days: number, min: number, max: number, enforced = true) => ({ key, label, enforced, note: enforced ? null : "ยังไม่มีงานลบอัตโนมัติ · ใช้เป็นนโยบายที่ประกาศ", days, defaultDays: days, min, max, pendingApproval: null });
+const retention = {
+  rows: [
+    rrow("workspaceDataDays", "ข้อมูลงานของ Workspace ที่ยกเลิก", 90, 30, 365, false),
+    rrow("trashDays", "ถังขยะ (งาน / ไฟล์ที่ลบ)", 30, 7, 90),
+    rrow("systemLogDays", "Log ระบบ (IP, User agent)", 90, 30, 365),
+    rrow("staffAuditDays", "Audit log ของทีม Friday", 730, 365, 3650, false),
+  ],
+  taxYears: 5,
+  lastRun: { at: iso(-0.3), logRows: 12000, sessionRows: 430, systemLogDays: 90 },
+};
+const reauthHandlers = (onVerify: () => void) => [
+  http.post(`${OPS}/auth/reauth/options`, () => HttpResponse.json({ options: { challenge: "c" }, challengeToken: "re" })),
+  http.post(`${OPS}/auth/reauth/verify`, () => (onVerify(), HttpResponse.json({ reauthed: true }))),
+];
+const pendingApproval = (kind: string, rule: string) => HttpResponse.json({ pendingApproval: { id: "ap-9", kind, reason: "x", expiresAt: iso(1), amountSatang: null, payload: { rule }, canSelfApprove: false } }, { status: 202 });
 const steps = (cur: number) => ["รับคำขอ", "ยืนยันตัวตน", "ตรวจขอบเขต", "ดำเนินการ", "แจ้งผล"].map((label, i) => ({ step: i + 1, label, done: cur > i + 1 }));
 const scope = { memberships: [{ id: "w1", slug: "lumen", name: "ลูเมนสตูดิโอ", role: "member", status: "active", soleOwner: false }], soleOwner: [], invoicesKept: 0 };
 const breach = {
@@ -83,7 +122,9 @@ const page = (search = "") => {
         erasePlan: { remove: ["บัญชีผู้ใช้ รูปโปรไฟล์"], anonymize: ["งานและคอมเมนต์: เปลี่ยนชื่อ"], keep: [], backupDays: 35, blockers: [] },
       }),
     ),
-    http.get(`${OPS}/privacy/pending-deletes`, () => HttpResponse.json({ items: [{ id: "w9", slug: "old-demo", name: "โอลด์เดโม", requestedAt: iso(-26), purgeAt: iso(4), requestedBy: "owner@old-demo.example.com" }] })),
+    http.get(`${OPS}/privacy/pending-deletes`, () => HttpResponse.json({ items: pendingDeletes, graceDays: 30 })),
+    http.get(`${OPS}/privacy/legal-holds`, () => HttpResponse.json({ items: [hold] })),
+    http.get(`${OPS}/privacy/retention`, () => HttpResponse.json(retention)),
     http.get(`${OPS}/privacy/breaches`, () => HttpResponse.json({ items: [breach] })),
     http.get(`${OPS}/privacy/breaches/${B}`, () => HttpResponse.json({ breach, workspaces: [{ id: "w1", slug: "lumen", name: "ลูเมนสตูดิโอ" }], log: [] })),
   );
@@ -115,7 +156,11 @@ describe("คำขอ PDPA", () => {
     await userEvent.click(screen.getByRole("button", { name: "เสร็จแล้ว" }));
     expect(screen.getByText("DSR-0012")).toBeInTheDocument();
     expect(screen.getByText("โอลด์เดโม")).toBeInTheDocument();
-    expect(screen.getByText("อีก 4 วัน")).toBeInTheDocument();
+    expect(screen.getByText(/· อีก 4 วัน$/)).toBeInTheDocument();
+    // Support อ่านได้ แต่ไม่เห็นปุ่มของ Owner
+    expect(screen.queryByRole("button", { name: "ลบทันที" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ตั้ง Legal hold" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /แก้ระยะเก็บ/ })).not.toBeInTheDocument();
     // Support ไม่เห็นเหตุละเมิด (Owner / วิศวกร / ผู้ตรวจ)
     expect(screen.queryByText("ลิงก์ส่งออกข้อมูลถูกส่งผิดอีเมล (ข้อมูลสมมติ)")).not.toBeInTheDocument();
   });
@@ -181,6 +226,148 @@ describe("คำขอ PDPA", () => {
     await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
     expect(await screen.findByText("ส่งขออนุมัติแล้ว")).toBeInTheDocument();
     expect(body).toEqual({ confirm: "ลบข้อมูล", reason: "ผู้ขอยืนยันตัวตนแล้ว" });
+  });
+});
+
+describe("Legal hold · การเก็บข้อมูล · Workspace ที่รอลบ (H10–H13)", () => {
+  it("H10 การ์ดที่รอลบแสดงข้อมูลจริง · Legal hold · นโยบาย · ตัวเลขสรุป", async () => {
+    asRole("admin");
+    page();
+    const card = (await screen.findByRole("heading", { name: "Workspace ที่รอลบ" })).closest("section")!;
+    expect(await within(card as HTMLElement).findByText("โอลด์เดโม")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("นที ส. (owner)")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("ระบบ")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("หยุดไว้ · Legal hold")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByRole("button", { name: "ดู Legal hold" })).toBeInTheDocument();
+    // ลบทันทีเฉพาะแถวที่ไม่ติด hold
+    expect(within(card as HTMLElement).getAllByRole("button", { name: "ลบทันที" })).toHaveLength(1);
+    expect(within(card as HTMLElement).getByRole("link", { name: "ยืดเวลา" })).toHaveAttribute("href", "/restore?tab=pending");
+    const holds = screen.getByRole("heading", { name: "Legal hold" }).closest("section")!;
+    expect(within(holds as HTMLElement).getByText("ข้อพิพาทการชำระเงิน · คดีสมมติ 1/2569")).toBeInTheDocument();
+    expect(within(holds as HTMLElement).getByText("ทั้ง Workspace")).toBeInTheDocument();
+    const policy = screen.getByRole("heading", { name: "นโยบายการเก็บข้อมูล" }).closest("section")!;
+    expect(within(policy as HTMLElement).getByText("2 ปี")).toBeInTheDocument();
+    expect(within(policy as HTMLElement).getByText("ตามกฎหมาย แก้ไม่ได้")).toBeInTheDocument();
+    expect(within(policy as HTMLElement).getAllByText("ยังไม่มีงานลบอัตโนมัติ · ใช้เป็นนโยบายที่ประกาศ")).toHaveLength(2);
+    const kpi = screen.getByText("ข้อมูลที่ลบตามนโยบายเมื่อคืน").closest(".stat")!;
+    expect(await within(kpi as HTMLElement).findByText("12,430 แถว")).toBeInTheDocument();
+    expect(within(kpi as HTMLElement).getByText("Log ระบบเก่ากว่า 90 วัน")).toBeInTheDocument();
+    expect(within(screen.getByText("Workspace รอลบ").closest(".stat") as HTMLElement).getByText("ลบคืนนี้ 0")).toBeInTheDocument();
+  });
+
+  it("H11 ตั้ง Legal hold เฉพาะผู้ใช้บางคน · แตะกุญแจ · ไม่แจ้งลูกค้าเป็นค่าเริ่มต้น", async () => {
+    asRole("admin");
+    let reauthed = false;
+    let body: unknown = null;
+    server.use(
+      http.get(`${OPS}/workspaces`, () => HttpResponse.json({ items: [{ id: "w1", name: "ลูเมนสตูดิโอ", slug: "lumen" }] })),
+      http.post(`${OPS}/privacy/legal-holds`, async ({ request }) => {
+        if (!reauthed) return opsError(401, "reauth_required", "ต้องแตะกุญแจอีกครั้ง");
+        body = await request.json();
+        return HttpResponse.json({ hold: { id: "h2" }, notified: 0, heldRequests: 1 });
+      }),
+      ...reauthHandlers(() => (reauthed = true)),
+    );
+    vi.mocked(startAuthentication).mockResolvedValue({ id: "cred" } as never);
+    page();
+    await userEvent.click(await screen.findByRole("button", { name: "ตั้ง Legal hold" }));
+    const drawer = await screen.findByRole("dialog", { name: "ตั้ง Legal hold" });
+    await userEvent.type(within(drawer).getByLabelText("Workspace"), "lu");
+    await userEvent.click(await within(drawer).findByRole("option", { name: "ลูเมนสตูดิโอ" }));
+    await userEvent.click(within(drawer).getByLabelText(/เฉพาะผู้ใช้บางคน/));
+    await userEvent.type(within(drawer).getByLabelText("อีเมลสมาชิก"), "dev@lumen.example.com{Enter}");
+    expect(within(drawer).getByText("dev@lumen.example.com")).toBeInTheDocument();
+    await userEvent.type(within(drawer).getByLabelText("เลขอ้างอิง"), "หนังสือสมมติ 12");
+    expect(within(drawer).getByLabelText(/แจ้งลูกค้า/)).not.toBeChecked();
+    await userEvent.click(within(drawer).getByRole("button", { name: "ตั้ง Legal hold" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await waitFor(() => expect(body).toEqual({ workspaceId: "w1", scope: "users", userEmails: ["dev@lumen.example.com"], reason: "ข้อพิพาทการชำระเงิน", reference: "หนังสือสมมติ 12", notifyCustomer: false }));
+  });
+
+  it("H12 ลดระยะเก็บ: ประมาณจำนวนแถว → ส่งขออนุมัติ (202)", async () => {
+    asRole("admin");
+    let reauthed = false;
+    let body: unknown = null;
+    server.use(
+      http.get(`${OPS}/privacy/retention/estimate`, ({ request }) => HttpResponse.json({ key: "systemLogDays", days: Number(new URL(request.url).searchParams.get("days")), rows: 1800000 })),
+      http.put(`${OPS}/privacy/retention`, async ({ request }) => {
+        if (!reauthed) return opsError(401, "reauth_required", "ต้องแตะกุญแจอีกครั้ง");
+        body = await request.json();
+        return pendingApproval("privacy.retention_shorten", "ลดระยะเก็บข้อมูลต้องมีคนที่สองอนุมัติ");
+      }),
+      ...reauthHandlers(() => (reauthed = true)),
+    );
+    vi.mocked(startAuthentication).mockResolvedValue({ id: "cred" } as never);
+    page();
+    await userEvent.click(await screen.findByRole("button", { name: "แก้ระยะเก็บ Log ระบบ (IP, User agent)" }));
+    const dlg = await screen.findByRole("dialog", { name: "แก้ระยะเก็บ · Log ระบบ (IP, User agent)" });
+    const input = within(dlg).getByLabelText("เก็บนาน (วัน)");
+    await userEvent.clear(input);
+    await userEvent.type(input, "30");
+    expect(await within(dlg).findByText(/คืนนี้ 04:00 จะลบข้อมูลที่เก่ากว่า 30 วัน ประมาณ 1,800,000 แถว/)).toBeInTheDocument();
+    await userEvent.type(within(dlg).getByLabelText(/เหตุผล/), "ลดข้อมูลส่วนบุคคลตามผลตรวจ DPO");
+    await userEvent.click(within(dlg).getByRole("button", { name: "ส่งขออนุมัติ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    expect(await screen.findByText("ส่งขออนุมัติแล้ว")).toBeInTheDocument();
+    expect(body).toEqual({ key: "systemLogDays", days: 30, reason: "ลดข้อมูลส่วนบุคคลตามผลตรวจ DPO" });
+  });
+
+  it("H13 ลบถาวรทันที: Ticket จาก Owner · พิมพ์ slug · ส่งให้คนที่สองอนุมัติ", async () => {
+    asRole("admin");
+    let reauthed = false;
+    let body: unknown = null;
+    server.use(
+      http.get(`${OPS}/privacy/pending-deletes/w9`, () =>
+        HttpResponse.json({
+          workspace: { id: "w9", slug: "old-demo", name: "โอลด์เดโม", purgeAt: iso(4) },
+          remove: { projects: 4, issues: 312, bytes: 1.2 * 1024 ** 3, members: 6 },
+          keepYears: 5,
+          tickets: [
+            { id: "t1", number: 541, subject: "ขอให้ลบข้อมูลทันที (สมมติ)", status: "open", fromOwner: true },
+            { id: "t2", number: 530, subject: "สอบถามทั่วไป", status: "open", fromOwner: false },
+          ],
+          checks: { legalHold: false, unpaidInvoices: 0 },
+        }),
+      ),
+      http.post(`${OPS}/privacy/pending-deletes/w9/purge-now`, async ({ request }) => {
+        if (!reauthed) return opsError(401, "reauth_required", "ต้องแตะกุญแจอีกครั้ง");
+        body = await request.json();
+        return pendingApproval("privacy.purge_now", "ลบถาวรทันทีต้องมีคนที่สองอนุมัติเสมอ");
+      }),
+      ...reauthHandlers(() => (reauthed = true)),
+    );
+    vi.mocked(startAuthentication).mockResolvedValue({ id: "cred" } as never);
+    page();
+    await userEvent.click(await screen.findByRole("button", { name: "ลบทันที" }));
+    const dlg = await screen.findByRole("dialog", { name: "ลบ โอลด์เดโม ถาวรทันที" });
+    expect(await within(dlg).findByText("มี Ticket จาก Owner ขอให้ลบทันที")).toBeInTheDocument();
+    expect(within(dlg).getByText(/โปรเจกต์ 4 · งาน 312 · ไฟล์ 1.2 GB · สมาชิก 6 คน/)).toBeInTheDocument();
+    expect(within(dlg).getAllByRole("option")).toHaveLength(1);
+    const submit = within(dlg).getByRole("button", { name: "ส่งขออนุมัติลบถาวร" });
+    await userEvent.type(within(dlg).getByLabelText(/เหตุผล/), "Owner ขอทาง Ticket #541");
+    await userEvent.type(within(dlg).getByLabelText(/พิมพ์ old-demo/), "old-dem");
+    expect(submit).toBeDisabled();
+    await userEvent.type(within(dlg).getByLabelText(/พิมพ์ old-demo/), "o");
+    await userEvent.click(submit);
+    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    expect(await screen.findByText("ส่งขออนุมัติแล้ว")).toBeInTheDocument();
+    expect(body).toEqual({ ticketId: "t1", confirmSlug: "old-demo", reason: "Owner ขอทาง Ticket #541" });
+  });
+
+  it("คำขอลบของผู้ใช้ที่ติด Legal hold ขึ้น \"รอ Legal hold\" และปุ่มลบใช้ไม่ได้", async () => {
+    asRole("support");
+    const held = { ...eraseReq, legalHold: true };
+    page(`request=${E}`);
+    server.use(
+      http.get(`${OPS}/privacy/requests`, () => HttpResponse.json({ items: [held, exportReq] })),
+      http.get(`${OPS}/privacy/requests/${E}`, () =>
+        HttpResponse.json({ request: held, steps: steps(3), history: [], scope, erasePlan: { remove: ["บัญชีผู้ใช้"], anonymize: [], keep: [], backupDays: 35, blockers: [{ code: "legal_hold", workspace: null }] } }),
+      ),
+    );
+    const drawer = await screen.findByRole("dialog", { name: /DSR-0019/ });
+    expect(await within(drawer).findByRole("button", { name: "ลบตามคำขอ (ต้องมีคนที่สองอนุมัติ)" })).toBeDisabled();
+    expect(within(drawer).getAllByText("รอ Legal hold").length).toBeGreaterThan(0);
+    expect(within(document.querySelector("table")!).getByText("รอ Legal hold")).toBeInTheDocument();
   });
 });
 

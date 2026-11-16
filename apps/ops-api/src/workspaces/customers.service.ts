@@ -51,7 +51,7 @@ export class CustomersService {
   /** ตัวเลขสรุปต่อ Workspace ที่ทั้งรายการและหน้ารายละเอียดใช้ */
   private summary(where: SQL) {
     return this.rows<Row>(sql`
-      select w.id, w.slug, w.name, w.status, w.data_region as "dataRegion", w.created_at as "createdAt",
+      select w.id, w.slug, w.name, w.status, w.suspension_mode as "suspensionMode", w.data_region as "dataRegion", w.created_at as "createdAt",
         p.code as plan, p.seat_limit as "seatLimit", p.storage_gb_per_member as "storageGbPerMember",
         p.price_monthly_satang::float8 as "priceMonthlySatang", p.price_yearly_satang::float8 as "priceYearlySatang",
         sub.status as "subStatus", sub.cycle, sub.trial_ends_at as "trialEndsAt", sub.current_period_end as "periodEnd", sub.discount, sub.payment_method as "paymentMethod",
@@ -93,6 +93,8 @@ export class CustomersService {
       slug: r.slug as string,
       name: r.name as string,
       status: r.status as string,
+      /** โหมดระงับ (C6) · ป้ายในรายการบอกว่า "อ่านอย่างเดียว" หรือ "ปิดทั้งหมด" */
+      suspensionMode: (r.suspensionMode as string | null) ?? null,
       createdAt: r.createdAt,
       plan: (r.plan as string | null) ?? null,
       subStatus: (r.subStatus as string | null) ?? null,
@@ -120,7 +122,8 @@ export class CustomersService {
     };
   }
 
-  async list(staff: Staff, q: z.infer<typeof ListQuery>) {
+  /** เงื่อนไขของตัวกรองหน้า Workspaces · ใช้ทั้งรายการและการทำหลายรายตามตัวกรอง (H4) */
+  where(q: Pick<z.infer<typeof ListQuery>, 'plan' | 'status' | 'q' | 'feature'>) {
     const parts: SQL[] = [sql`w.deleted_at is null`];
     if (q.q) parts.push(sql`(w.name ilike ${`%${q.q}%`} or w.slug ilike ${`%${q.q}%`})`);
     if (q.plan) parts.push(sql`p.code = ${q.plan}`);
@@ -135,8 +138,20 @@ export class CustomersService {
       no_project: sql`not exists(select 1 from projects x where x.workspace_id = w.id and x.deleted_at is null)`,
     };
     if (q.feature) parts.push(feature[q.feature]);
+    return sql.join(parts, sql` and `);
+  }
+
+  /** รหัส Workspace ตามตัวกรอง ณ ตอนนี้ (เรียงใหม่สุดก่อน) · `limit` กันดึงเกินเพดานของงานหลายราย */
+  async idsFor(q: Pick<z.infer<typeof ListQuery>, 'plan' | 'status' | 'q' | 'feature'>, limit: number) {
+    const rows = await this.rows<{ id: string }>(sql`
+      select w.id from workspaces w left join subscriptions sub on sub.workspace_id = w.id left join plans p on p.id = sub.plan_id
+      where ${this.where(q)} order by w.created_at desc limit ${limit}`);
+    return rows.map((r) => r.id);
+  }
+
+  async list(staff: Staff, q: z.infer<typeof ListQuery>) {
     // เรียงด้วยคะแนนที่คำนวณใน JS จึงดึงทั้งชุดที่ผ่านตัวกรองก่อน (ลูกค้าระดับหลักพันยังเร็วพอ)
-    const all = (await this.summary(sql.join(parts, sql` and `))).map((r) => this.shape(r, staff));
+    const all = (await this.summary(this.where(q))).map((r) => this.shape(r, staff));
     const time = (v: unknown) => (v ? new Date(v as string).getTime() : 0);
     const by: Record<typeof q.sort, (a: (typeof all)[number], b: (typeof all)[number]) => number> = {
       newest: (a, b) => time(b.createdAt) - time(a.createdAt),

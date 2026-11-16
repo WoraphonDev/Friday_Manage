@@ -1,6 +1,6 @@
 import { rm } from 'node:fs/promises';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { type Db, schema } from '@friday/db';
+import { type Db, heldScope, schema } from '@friday/db';
 import { and, eq, isNotNull, lt, lte, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { webUrl } from '../auth/auth.config.js';
@@ -40,6 +40,9 @@ export class WorkspaceLifecycleService implements OnModuleInit {
     // เตือนก่อน แล้วค่อยลบ: รอบเดียวกันจะไม่เตือน Workspace ที่กำลังจะลบไปแล้ว
     this.jobs.define('privacy.purge-workspaces', async () => ({ ...(await this.remind()), ...(await this.purge()) }));
     await this.jobs.every('privacy.purge-workspaces', '0 4 * * *');
+    // ลบถาวรทันทีที่ทีม Friday อนุมัติ 2 คนแล้ว (H13 · "ลบภายใน 10 นาทีหลังอนุมัติ") ใช้ purge() ชุดเดียวกับงานตี 4
+    this.jobs.define('privacy.purge-approved', () => this.purge(new Date(), { approvedOnly: true }));
+    await this.jobs.every('privacy.purge-approved', '*/5 * * * *');
   }
 
   /** Owner เท่านั้น · ต้องพิมพ์ slug ยืนยัน · แพ็กเกจที่ชำระอยู่ต้องยกเลิกก่อน */
@@ -133,15 +136,39 @@ export class WorkspaceLifecycleService implements OnModuleInit {
     return { reminded };
   }
 
-  /** ลบถาวรเมื่อพ้น purge_after (cascade ลบข้อมูลทั้งหมดของ Workspace) + ไฟล์ในที่เก็บ · รันด้วย SYSTEM_DB เพราะไม่มีผู้ใช้ในบริบท */
-  async purge(now = new Date()) {
-    const old = await this.sys.select({ id: s.workspaces.id, slug: s.workspaces.slug }).from(s.workspaces).where(and(isNotNull(s.workspaces.deletedAt), lt(s.workspaces.purgeAfter, now)));
+  /**
+   * ลบถาวรเมื่อพ้น purge_after (cascade ลบข้อมูลทั้งหมดของ Workspace) + ไฟล์ในที่เก็บ · รันด้วย SYSTEM_DB เพราะไม่มีผู้ใช้ในบริบท
+   * Workspace ที่ติด Legal hold (ขอบเขตใดก็ได้) ข้ามไปจนกว่าจะยกเลิก hold (H11) · `approvedOnly` = เฉพาะที่ทีม Friday อนุมัติลบทันที (ops-api เขียน
+   * audit_logs `ops.workspace_purge_approved` และตั้ง purge_after = now())
+   */
+  async purge(now = new Date(), opts: { approvedOnly?: boolean } = {}) {
+    const old = await this.sys
+      .select({ id: s.workspaces.id, slug: s.workspaces.slug })
+      .from(s.workspaces)
+      .where(
+        and(
+          isNotNull(s.workspaces.deletedAt),
+          lt(s.workspaces.purgeAfter, now),
+          opts.approvedOnly
+            ? sql`exists (select 1 from ${s.auditLogs} a where a.workspace_id = ${s.workspaces.id} and a.action = 'ops.workspace_purge_approved')`
+            : undefined,
+        ),
+      );
+    const holds = old.length ? await heldScope(this.sys) : null;
     const storage = new LocalStorage();
     let purged = 0;
+    let held = 0;
     for (const ws of old) {
+      if (holds?.anyHold.has(ws.id)) {
+        held++;
+        this.log.warn(`ข้ามการลบถาวร ${ws.slug}: ติด Legal hold`);
+        continue;
+      }
       try {
         const keys = await this.sys.select({ key: s.fileVersions.storageKey }).from(s.fileVersions).where(eq(s.fileVersions.workspaceId, ws.id));
         await this.sys.transaction(async (tx) => {
+          // legal_holds อ้าง Workspace แบบ ON DELETE NO ACTION · hold ที่ยังใช้อยู่ทำให้ข้ามไปแล้วข้างบน เหลือแต่ประวัติ hold ที่ยกเลิกแล้วซึ่งต้องลบก่อน ไม่งั้นลบ Workspace ไม่ได้
+          await tx.delete(s.legalHolds).where(and(eq(s.legalHolds.workspaceId, ws.id), isNotNull(s.legalHolds.releasedAt)));
           // audit_logs เป็น append-only สำหรับแอป แต่ cascade จากการลบ Workspace ต้องเก็บกวาดด้วย
           await tx.delete(s.workspaces).where(and(eq(s.workspaces.id, ws.id), isNotNull(s.workspaces.deletedAt)));
         });
@@ -152,7 +179,7 @@ export class WorkspaceLifecycleService implements OnModuleInit {
         this.log.error(`ลบถาวร ${ws.slug} ไม่สำเร็จ: ${(err as Error).message}`);
       }
     }
-    return { purged };
+    return { purged, held };
   }
 }
 

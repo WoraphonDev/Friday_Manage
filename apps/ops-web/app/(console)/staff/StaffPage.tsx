@@ -1,7 +1,7 @@
 "use client";
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { ShieldAlert, UserPlus } from "lucide-react";
+import { Mail, ShieldAlert, UserPlus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
@@ -14,8 +14,9 @@ import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import type { OpsRole } from "@/lib/types";
+import { PersonalEmailDrawer } from "./PersonalEmail";
 import { InviteDrawer, ManageDrawer } from "./StaffDrawers";
-import { type AuditRow, DEFAULT_LIMITS, staffKey, type StaffList, type StaffMember } from "./types";
+import { type AuditRow, DEFAULT_LIMITS, type DigestStatus, staffKey, type StaffList, type StaffMember } from "./types";
 
 const STATUS_TONE: Record<StaffMember["status"], string> = { active: "pill ok", invited: "pill warn", suspended: "pill", disabled: "pill bad" };
 const CATEGORIES = { workspace: "ops.", support: "support.", billing: "billing.", system: "system.", staff: "staff.", privacy: "privacy.", approval: "approval." } as const;
@@ -40,7 +41,7 @@ export function StaffPage() {
       />
       {/* เปลี่ยนแท็บในหน้าเดียวกัน: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}
       <MotionSwap key={tab} className="motion-stack">
-        {tab === "staff" ? <StaffTab /> : <AuditTab initialStaff={params?.get("staff") ?? ""} />}
+        {tab === "staff" ? <StaffTab /> : <AuditTab initialStaff={params?.get("staff") ?? ""} initialSelf={params?.get("selfApproved") === "true"} />}
       </MotionSwap>
     </>
   );
@@ -56,6 +57,7 @@ function StaffTab() {
   const [invite, setInvite] = useState<OpsRole[] | null>(null);
   const [manage, setManage] = useState<StaffMember | null>(null);
   const [glass, setGlass] = useState(false);
+  const [personal, setPersonal] = useState(false);
   const money = (s: number) => format.number(s / 100, { style: "currency", currency: "THB", maximumFractionDigits: 0 });
   const ownersLeft = list.data?.items.filter((s) => s.roles.includes("owner") && s.status === "active").length ?? 0;
   const departments = useMemo(() => {
@@ -79,9 +81,14 @@ function StaffTab() {
         </div>
       )}
       {list.data?.singleApprover && (
-        <Notice tone="warn" icon={<ShieldAlert size={18} />} title={t("single.title")} action={owner ? <Button onClick={() => setInvite(["owner"])}>{t("single.add")}</Button> : undefined}>
-          {t("single.desc")}
-        </Notice>
+        <SingleOwnerNotices
+          digest={list.data.digest?.[0] ?? null}
+          members={list.data.items}
+          meId={me?.id}
+          canInvite={owner}
+          onInvite={() => setInvite(["owner"])}
+          onSetEmail={() => setPersonal(true)}
+        />
       )}
       {list.isPending ? (
         <TableSkeleton rows={4} cols={7} />
@@ -99,6 +106,7 @@ function StaffTab() {
                 <th>{t("col.department")}</th>
                 <th>{t("col.limits")}</th>
                 <th>{t("col.keys")}</th>
+                <th>{t("col.personalEmail")}</th>
                 <th>{t("col.lastUsed")}</th>
                 <th>{t("col.status")}</th>
                 {owner && <th>{t("col.actions")}</th>}
@@ -124,6 +132,9 @@ function StaffTab() {
                   <td>{s.department ?? <span className="muted">{t("depts.none")}</span>}</td>
                   <td className="small">{s.roles.some((r) => r === "finance" || r === "owner") ? t("limitsShort", { refund: money(s.limits.refundSatang), pct: s.limits.discountPct }) : t("noMoney")}</td>
                   <td>{s.keys.length ? t("keysCount", { count: s.keys.length }) : <span className="pill warn">{t("noKeys")}</span>}</td>
+                  <td>
+                    <PersonalEmailCell member={s} mine={s.id === me?.id} onEdit={() => setPersonal(true)} />
+                  </td>
                   <td className="small">{lastUsed(s)}</td>
                   <td>
                     <span className={STATUS_TONE[s.status]}>{t(`status.${s.status}`)}</span>
@@ -223,18 +234,98 @@ function StaffTab() {
       <InviteDrawer key={invite?.join() ?? "closed"} open={!!invite} onOpenChange={(o) => !o && setInvite(null)} initialRoles={invite ?? ["support"]} />
       <ManageDrawer key={managed?.id ?? "none"} member={managed} onOpenChange={(o) => !o && setManage(null)} ownersLeft={ownersLeft} />
       {me && <BreakGlassDialog staff={me} open={glass} onOpenChange={setGlass} />}
+      {me && <PersonalEmailDrawer open={personal} onOpenChange={setPersonal} name={me.name} roleLabel={(me.roles ?? []).map((r) => tc(`roles.${r}`)).join(", ")} />}
     </>
   );
 }
 
-function AuditTab({ initialStaff }: { initialStaff: string }) {
+/** คอลัมน์อีเมลส่วนตัว: คนอื่นเห็นแค่สถานะ · แถวของตัวเองเปิดหน้าแก้ (H1) */
+function PersonalEmailCell({ member, mine, onEdit }: { member: StaffMember; mine: boolean; onEdit: () => void }) {
+  const t = useTranslations("staff.personal");
+  const status = member.personalEmailStatus ?? "none";
+  const pill = status === "verified" ? <span className="pill ok">{t("verified")}</span> : status === "pending" ? <span className="pill warn">{t("pending")}</span> : <span className="muted">—</span>;
+  if (!mine) return pill;
+  return (
+    <span className="row" style={{ flexWrap: "nowrap", gap: 6 }}>
+      {pill}
+      <Button size="small" variant="ghost" onClick={onEdit}>
+        {status === "none" ? t("setShort") : t("edit")}
+      </Button>
+    </span>
+  );
+}
+
+/** H3 · แถบ Owner คนเดียว: บอกการส่งสรุปล่าสุด · แถบแดงเมื่อยังไม่ตั้งอีเมลส่วนตัว / ส่งไม่สำเร็จ */
+function SingleOwnerNotices({ digest, members, meId, canInvite, onInvite, onSetEmail }: { digest: DigestStatus | null; members: StaffMember[]; meId?: string; canInvite: boolean; onInvite: () => void; onSetEmail: () => void }) {
+  const t = useTranslations("staff.single");
+  const format = useFormatter();
+  const router = useRouter();
+  const self = !!digest && digest.staffId === meId;
+  const name = members.find((m) => m.id === digest?.staffId)?.name ?? "";
+  const when = (iso: string) => {
+    const d = new Date(iso);
+    const time = format.dateTime(d, { timeStyle: "short" });
+    return d.toDateString() === new Date().toDateString() ? t("today", { time }) : format.dateTime(d, { dateStyle: "medium", timeStyle: "short" });
+  };
+  const line = !digest
+    ? null
+    : digest.lastSentAt && digest.personalEmail
+      ? t("lastSent", { email: digest.personalEmail, when: when(digest.lastSentAt), count: digest.lastCount ?? 0 })
+      : digest.personalEmailVerified && digest.personalEmail
+        ? `${t("schedule", { email: digest.personalEmail })} · ${t("neverSent")}`
+        : null;
+  return (
+    <>
+      <Notice
+        tone="warn"
+        icon={<ShieldAlert size={18} />}
+        title={t("title")}
+        action={
+          <span className="row" style={{ gap: 8 }}>
+            <Button size="small" onClick={() => router.replace("/staff?tab=audit&selfApproved=true")}>
+              {t("view")}
+            </Button>
+            {canInvite && (
+              <Button size="small" onClick={onInvite}>
+                {t("add")}
+              </Button>
+            )}
+          </span>
+        }
+      >
+        {[t("desc"), line].filter(Boolean).join(" · ")}
+      </Notice>
+      {digest && !digest.personalEmailVerified && (
+        <Notice
+          tone="bad"
+          icon={<Mail size={18} />}
+          title={self ? t("noEmail") : t("noEmailOther", { name })}
+          action={
+            self ? (
+              <Button size="small" onClick={onSetEmail}>
+                {t("setEmail")}
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
+      {digest?.failedAt && digest.personalEmailVerified && (
+        <Notice tone="bad" icon={<Mail size={18} />} title={t("failed")}>
+          {digest.failedText}
+        </Notice>
+      )}
+    </>
+  );
+}
+
+function AuditTab({ initialStaff, initialSelf = false }: { initialStaff: string; initialSelf?: boolean }) {
   const t = useTranslations("staff.audit");
   const tc = useTranslations("common");
   const format = useFormatter();
   const staff = useQuery({ queryKey: staffKey, queryFn: () => api.get<StaffList>("/staff") });
   const [who, setWho] = useState(initialStaff);
   const [cat, setCat] = useState<keyof typeof CATEGORIES | "">("");
-  const [selfOnly, setSelfOnly] = useState(false);
+  const [selfOnly, setSelfOnly] = useState(initialSelf);
   const [exporting, setExporting] = useState(false);
   const filter = new URLSearchParams({ limit: "50", ...(who ? { staffId: who } : {}), ...(cat ? { action: CATEGORIES[cat] } : {}), ...(selfOnly ? { selfApproved: "true" } : {}) });
   const log = useInfiniteQuery({

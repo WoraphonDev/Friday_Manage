@@ -14,6 +14,12 @@ export class LegalController {
   documents() {
     return this.legal.documents();
   }
+  /** จำนวนผู้รับก่อนเผยแพร่ (H14) */
+  @Roles()
+  @Get('audience')
+  audience() {
+    return this.legal.audience();
+  }
   @Roles('owner', 'auditor')
   @Get('documents/:id')
   get(@Param('id') id: string) {

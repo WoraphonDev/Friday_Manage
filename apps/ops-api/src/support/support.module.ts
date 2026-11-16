@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, Module, Param, Patch, Post, Pu
 import { type OpsRequest, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
 import { AccountsBody, CannedBody, PresenceBody, ReorderBody, RuleBody, RulePatch, SaveSettingsBody, SupportSettingsService } from './settings.service.js';
-import { StartSessionBody, SupportService } from './support.service.js';
+import { ExtendSessionBody, SessionsQuery, StartSessionBody, SupportService } from './support.service.js';
 import { AssignBody, CreateTicketBody, CsatBody, EscalateBody, MessageBody, SolveBody, TicketsQuery, TicketsService } from './tickets.service.js';
 
 /** เข้าบัญชีลูกค้าเพื่อช่วยเหลือ (Q3 · C1) */
@@ -17,8 +17,15 @@ export class SupportController {
   }
   @Roles('support', 'owner')
   @Get('support-sessions')
-  openSessions() {
-    return this.support.open();
+  openSessions(@Query() q: unknown) {
+    return this.support.open(parse(SessionsQuery, q));
+  }
+  /** ขยายเวลา (O42 · H9) */
+  @Roles('support', 'owner')
+  @Post(['support-sessions/:id/extend', 'support-sessions/:id\\:extend'])
+  @HttpCode(200)
+  extendSession(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.support.extend(req.staff!, id, parse(ExtendSessionBody, body));
   }
   @Roles('support', 'owner')
   @Post(['support-sessions/:id/end', 'support-sessions/:id\\:end'])

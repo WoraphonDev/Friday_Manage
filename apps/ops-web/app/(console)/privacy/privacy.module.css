@@ -1,0 +1,105 @@
+/* Legal hold นโยบายการเก็บข้อมูล และ Workspace ที่รอลบ (รอบ 4 · H10–H13) · สีจาก token ใน styles/tokens.css เท่านั้น */
+
+.lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.checks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+}
+.ok {
+  color: var(--success-text);
+  flex: none;
+}
+.bad {
+  color: var(--danger-text);
+  flex: none;
+}
+.warn {
+  color: var(--warning-text);
+  flex: none;
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 12px;
+  font-size: 13px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--subtle);
+}
+.kvKey {
+  color: var(--muted);
+}
+
+.section {
+  font-weight: 600;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.released td {
+  color: var(--muted);
+}
+
+.mail {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--card);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.flash {
+  animation: flash var(--motion-dur-long) var(--motion-ease);
+}
+@keyframes flash {
+  0%,
+  40% {
+    box-shadow: 0 0 0 3px var(--primary-border);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flash {
+    animation: none;
+  }
+}

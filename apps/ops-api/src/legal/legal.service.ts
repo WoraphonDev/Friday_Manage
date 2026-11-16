@@ -1,11 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { type Db, schema } from '@friday/db';
-import { and, desc, eq, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { staffAudit } from '../audit.js';
 import type { Staff } from '../auth/auth.guard.js';
+import { config } from '../config.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
+import { Mailer } from '../mail.js';
 
 const s = schema;
 const DAY = 86_400_000;
@@ -14,6 +16,12 @@ type Row = Record<string, unknown>;
 export const LEGAL_TYPES = ['terms', 'privacy', 'dpa', 'cookie', 'subprocessors'] as const;
 /** เปลี่ยนสาระสำคัญต้องแจ้งล่วงหน้าอย่างน้อย 30 วัน (A7) */
 export const NOTICE_DAYS = 30;
+/** เตือนซ้ำก่อนวันมีผล (H14) */
+export const REMIND_DAYS = 7;
+/** ส่งอีเมลแจ้งเอกสารทีละชุด (แบบประกาศ) · งานทุก 1 นาที */
+export const NOTICE_BATCH = 50;
+const DOC_NAME: Record<string, string> = { terms: 'ข้อกำหนดการใช้งาน', privacy: 'นโยบายความเป็นส่วนตัว', dpa: 'ข้อตกลงการประมวลผลข้อมูล (DPA)', cookie: 'นโยบายคุกกี้', subprocessors: 'รายชื่อผู้ประมวลผลข้อมูลช่วง' };
+const thaiDate = (d: Date) => new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' }).format(d);
 
 export const CreateVersionBody = z
   .object({
@@ -26,6 +34,14 @@ export const CreateVersionBody = z
     effectiveAt: z.iso.datetime({ offset: true }),
     /** true = ต้องกดยอมรับใหม่ · false = แจ้งให้ทราบ */
     requiresAcceptance: z.boolean(),
+    /** แจ้งลูกค้าทางอีเมล (H14) · all = ผู้ใช้ทุกคนที่ใช้งานอยู่ (ค่าเริ่มต้น · คำตัดสินข้อ 5) · admins = Owner / Admin · none = ไม่ส่ง */
+    notifyAudience: z.enum(['all', 'admins', 'none']).default('all'),
+    /** เวลาส่งอีเมล · ไม่ระบุ = ทันทีที่เผยแพร่ */
+    notifyAt: z.iso.datetime({ offset: true }).optional(),
+    /** เตือนอีกครั้ง 7 วันก่อนมีผล */
+    remind: z.boolean().default(true),
+    /** แบนเนอร์ในแอปตั้งแต่วันนี้ถึงวันที่มีผล */
+    notifyBanner: z.boolean().default(true),
   })
   .strict();
 export const AcceptancesQuery = z.object({
@@ -40,8 +56,25 @@ export const AcceptancesQuery = z.object({
  * เผยแพร่ตามเวลา = API ลูกค้าแสดงเฉพาะฉบับที่ effective_at ผ่านแล้ว (public.service › latest)
  */
 @Injectable()
-export class LegalService {
-  constructor(@Inject(OPS_DB) private readonly db: Db) {}
+export class LegalService implements OnModuleInit, OnModuleDestroy {
+  private readonly log = new Logger('LegalNotices');
+  private timer?: NodeJS.Timeout;
+
+  constructor(
+    @Inject(OPS_DB) private readonly db: Db,
+    private readonly mail: Mailer,
+  ) {}
+
+  onModuleInit() {
+    // ส่งอีเมลแจ้งเอกสารที่ถึงเวลา ทุก 1 นาที ชุดละ 50 (H15) · test เรียก tick() เอง
+    if (!process.env.VITEST && process.env.OPS_JOBS !== 'off') {
+      this.timer = setInterval(() => void this.tick().catch((e) => this.log.error(String(e))), 60_000);
+      this.timer.unref();
+    }
+  }
+  onModuleDestroy() {
+    if (this.timer) clearInterval(this.timer);
+  }
 
   private async rows<T = Row>(q: SQL) {
     const r = await this.db.execute(q);
@@ -53,7 +86,12 @@ export class LegalService {
     const docs = await this.rows<Row>(sql`
       select d.id, d.doc_type as "docType", d.version, d.locale, d.effective_at as "effectiveAt", d.summary, d.requires_acceptance as "requiresAcceptance",
         d.created_at as "createdAt", st.name as "createdBy",
-        (select count(*)::int from legal_acceptances a where a.document_id = d.id) as accepted
+        d.notify_audience as "notifyAudience", d.notify_at as "notifyAt", d.remind_at as "remindAt", d.notified_at as "notifiedAt", d.reminded_at as "remindedAt", d.notify_banner as "notifyBanner",
+        (select count(*)::int from legal_acceptances a where a.document_id = d.id) as accepted,
+        (select count(*)::int from legal_notices n where n.document_id = d.id and n.kind = 'notice' and n.status = 'sent') as "noticeSent",
+        (select count(*)::int from legal_notices n where n.document_id = d.id and n.kind = 'notice' and n.status in ('failed', 'suppressed')) as "noticeBounced",
+        (select count(*)::int from legal_notices n where n.document_id = d.id and n.kind = 'notice') as "noticeTotal",
+        (select count(*)::int from legal_notices n where n.document_id = d.id and n.kind = 'reminder' and n.status = 'sent') as "reminderSent"
       from legal_documents d left join staff_users st on st.id = d.created_by_staff
       order by d.doc_type, d.locale, d.effective_at desc`);
     const [{ users }] = await this.rows<{ users: number }>(sql`select count(*)::int as users from users where disabled_at is null`);
@@ -72,6 +110,100 @@ export class LegalService {
       }),
     ).filter((g) => g.current || g.scheduled.length);
     return { items: groups, activeUsers: users };
+  }
+
+  /** ผู้รับที่จะได้อีเมล (H14): ผู้ใช้ทุกคนที่ใช้งานอยู่ / Owner และ Admin · ข้ามอีเมลที่ตีกลับถาวร */
+  async audience() {
+    const [r] = await this.rows<{ all: number; workspaces: number; admins: number; suppressed: number }>(sql`
+      with people as (
+        select u.id, u.email, bool_or(m.role in ('owner', 'admin')) as admin
+        from users u join workspace_members m on m.user_id = u.id and m.status = 'active' join workspaces w on w.id = m.workspace_id and w.deleted_at is null
+        where u.disabled_at is null group by u.id, u.email)
+      select (select count(*)::int from people) as "all",
+             (select count(distinct m.workspace_id)::int from workspace_members m join workspaces w on w.id = m.workspace_id and w.deleted_at is null where m.status = 'active') as workspaces,
+             (select count(*)::int from people where admin) as admins,
+             (select count(*)::int from people p where exists (select 1 from email_suppressions x where lower(x.email) = lower(p.email) and x.removed_at is null and x.reason = 'hard_bounce')) as suppressed`);
+    return r;
+  }
+
+  /**
+   * ส่งอีเมลแจ้งเอกสารฉบับใหม่ (H15) ชุดละ 50 ต่อรอบ · ฉบับที่ถึง notify_at แล้วก่อน แล้วค่อยเตือนซ้ำเมื่อถึง remind_at
+   * legal_notices กันส่งซ้ำ (document, user, kind) · อีเมลกฎหมายเป็นการแจ้งเรื่องบริการ จึงส่งแม้ผู้ใช้ปิดอีเมลข่าวสาร · ข้ามเฉพาะที่ตีกลับถาวร
+   */
+  async tick(now = new Date()) {
+    let sent = 0;
+    let budget = NOTICE_BATCH;
+    for (const kind of ['notice', 'reminder'] as const) {
+      const at = kind === 'notice' ? s.legalDocuments.notifyAt : s.legalDocuments.remindAt;
+      const done = kind === 'notice' ? s.legalDocuments.notifiedAt : s.legalDocuments.remindedAt;
+      const due = await this.db
+        .select()
+        .from(s.legalDocuments)
+        .where(and(isNotNull(s.legalDocuments.notifyAudience), isNotNull(at), lte(at, now), isNull(done), kind === 'reminder' ? sql`${s.legalDocuments.effectiveAt} > ${now}` : undefined))
+        .orderBy(at)
+        .limit(5);
+      for (const d of due) {
+        if (budget <= 0) return { sent };
+        const r = await this.sendBatch(d, kind, budget, now);
+        sent += r.sent;
+        budget -= r.processed;
+      }
+    }
+    return { sent };
+  }
+
+  private async sendBatch(d: typeof s.legalDocuments.$inferSelect, kind: 'notice' | 'reminder', limit: number, now: Date) {
+    const admins = d.notifyAudience === 'admins' ? sql`and m.role in ('owner', 'admin')` : sql``;
+    const people = await this.rows<{ id: string; email: string; name: string; suppressed: boolean }>(sql`
+      select u.id, u.email, u.display_name as name,
+        exists (select 1 from email_suppressions x where lower(x.email) = lower(u.email) and x.removed_at is null and x.reason = 'hard_bounce') as suppressed
+      from users u
+      where u.disabled_at is null
+        and exists (select 1 from workspace_members m join workspaces w on w.id = m.workspace_id and w.deleted_at is null where m.user_id = u.id and m.status = 'active' ${admins})
+        and not exists (select 1 from legal_notices n where n.document_id = ${d.id} and n.user_id = u.id and n.kind = ${kind})
+      order by u.created_at, u.id limit ${limit}`);
+    if (!people.length) {
+      const set = kind === 'notice' ? { notifiedAt: now } : { remindedAt: now };
+      const [row] = await this.db.update(s.legalDocuments).set(set).where(and(eq(s.legalDocuments.id, d.id), kind === 'notice' ? isNull(s.legalDocuments.notifiedAt) : isNull(s.legalDocuments.remindedAt))).returning({ id: s.legalDocuments.id });
+      if (row) {
+        const [c] = await this.rows<{ sent: number; bounced: number }>(sql`select count(*) filter (where status = 'sent')::int as sent, count(*) filter (where status <> 'sent')::int as bounced from legal_notices where document_id = ${d.id} and kind = ${kind}`);
+        await staffAudit(this.db, null, kind === 'notice' ? 'legal.notice_sent' : 'legal.reminder_sent', `${d.docType} v${d.version} (${d.locale}) ${kind === 'notice' ? 'แจ้ง' : 'เตือนซ้ำ'}ทางอีเมลแล้ว ${c.sent} คน · ตีกลับ / ข้าม ${c.bounced}`, { type: 'legal_document', id: d.id });
+      }
+      return { sent: 0, processed: 0 };
+    }
+    let sent = 0;
+    const name = DOC_NAME[d.docType] ?? d.docType;
+    const changes = d.summary.split(/\n|·/).map((x) => x.trim()).filter(Boolean);
+    for (const p of people) {
+      let status: 'sent' | 'failed' | 'suppressed' = 'sent';
+      let error: string | null = null;
+      if (p.suppressed) status = 'suppressed';
+      else {
+        try {
+          await this.mail.send({
+            to: p.email,
+            subject: `${kind === 'reminder' ? 'เตือน: ' : ''}${name}ฉบับใหม่มีผล ${thaiDate(d.effectiveAt)}`,
+            text: [
+              `คุณ${p.name} · เราปรับ${name} Friday Work Management มีผลวันที่ ${thaiDate(d.effectiveAt)}`,
+              '',
+              'สิ่งที่เปลี่ยน',
+              ...changes.map((c) => `- ${c}`),
+              '',
+              d.requiresAcceptance ? 'ตั้งแต่วันที่มีผล คุณต้องกดยอมรับครั้งแรกที่เข้าใช้งาน' : 'ฉบับนี้แจ้งให้ทราบ ไม่ต้องกดยอมรับ',
+              `อ่านฉบับเต็มและเทียบกับฉบับเดิม: ${config.appUrl}/legal/${d.docType}`,
+              '',
+              'อีเมลแจ้งเรื่องข้อกำหนดของบริการ ส่งถึงผู้ใช้ทุกคน',
+            ].join('\n'),
+          });
+          sent++;
+        } catch (e) {
+          status = 'failed';
+          error = (e as Error).message.slice(0, 300);
+        }
+      }
+      await this.db.insert(s.legalNotices).values({ documentId: d.id, userId: p.id, email: p.email, kind, status, error }).onConflictDoNothing();
+    }
+    return { sent, processed: people.length };
   }
 
   async get(id: string) {
@@ -110,11 +242,24 @@ export class LegalService {
     };
     if (latest && cmp(input.version, latest.version) <= 0) throw new AppError(409, 'version_not_newer', `เวอร์ชันต้องใหม่กว่า ${latest.version}`, { latest: latest.version });
     if (latest && effective.getTime() <= latest.effectiveAt.getTime()) throw new AppError(422, 'effective_before_latest', 'วันที่มีผลต้องหลังฉบับล่าสุด');
+    const notifyAt = input.notifyAt ? new Date(input.notifyAt) : new Date();
+    if (input.notifyAudience !== 'none' && input.notifyAt && notifyAt.getTime() > effective.getTime()) throw new AppError(422, 'notify_after_effective', 'เวลาส่งอีเมลต้องไม่หลังวันที่มีผล');
+    const remindAt = new Date(effective.getTime() - REMIND_DAYS * DAY);
+    const notify = input.notifyAudience === 'none' ? null : input.notifyAudience;
     const [row] = await this.db
       .insert(s.legalDocuments)
-      .values({ docType: input.docType, version: input.version, locale: input.locale, summary: input.summary, body: input.body, effectiveAt: effective, requiresAcceptance: input.requiresAcceptance, createdByStaff: staff.id })
+      .values({
+        docType: input.docType, version: input.version, locale: input.locale, summary: input.summary, body: input.body, effectiveAt: effective, requiresAcceptance: input.requiresAcceptance, createdByStaff: staff.id,
+        notifyAudience: notify, notifyAt: notify ? notifyAt : null,
+        // เตือนซ้ำเมื่อวันเตือนยังอยู่หลังวันส่งครั้งแรก (มีผลเร็วกว่า 7 วัน = ไม่ต้องเตือน)
+        remindAt: notify && input.remind && remindAt.getTime() > notifyAt.getTime() ? remindAt : null,
+        notifyBanner: input.notifyBanner,
+      })
       .returning();
-    await staffAudit(this.db, staff, 'legal.version_scheduled', `${input.docType} v${input.version} (${input.locale}) มีผล ${effective.toISOString()} · ${input.requiresAcceptance ? 'ต้องยอมรับใหม่' : 'แจ้งให้ทราบ'} · ${input.summary}`, { type: 'legal_document', id: row.id });
+    const how = notify ? `แจ้งอีเมล${notify === 'all' ? 'ผู้ใช้ทุกคน' : ' Owner / Admin'} ${input.notifyAt ? thaiDate(notifyAt) : 'ทันที'}${row.remindAt ? ` · เตือน ${thaiDate(row.remindAt)}` : ''}` : 'ไม่แจ้งทางอีเมล';
+    await staffAudit(this.db, staff, 'legal.version_scheduled', `${input.docType} v${input.version} (${input.locale}) มีผล ${effective.toISOString()} · ${input.requiresAcceptance ? 'ต้องยอมรับใหม่' : 'แจ้งให้ทราบ'} · ${how} · ${input.summary}`, { type: 'legal_document', id: row.id });
+    // ส่งทันที: ชุดแรกออกเลย ชุดถัดไปตามงานทุกนาที
+    if (notify && !input.notifyAt) await this.tick().catch((e) => this.log.error(String(e)));
     return { document: row };
   }
 

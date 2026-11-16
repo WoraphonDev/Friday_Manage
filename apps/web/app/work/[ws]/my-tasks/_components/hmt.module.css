@@ -220,7 +220,8 @@
   .toolsCompact .ddRow { width:100%; display:grid; grid-template-columns:1fr 1fr; }
   .toolsCompact .dd { width:100%; max-width:none; justify-content:space-between; height:var(--m-tap, 40px); }
   .toolsCompact .shown { margin-left:0; }
-  .toolsCompact .menu { position:fixed; top:auto; left:0; right:0; bottom:0; width:auto; border-radius:var(--m-radius-sheet, 16px) var(--m-radius-sheet, 16px) 0 0; padding:12px 12px calc(12px + env(safe-area-inset-bottom, 0px)); z-index:60; }
+  /* เงาขนาดใหญ่ทำหน้าที่เป็นพื้นหลังทึบ แตะนอกแผ่นเพื่อปิด */
+  .toolsCompact .menu { position:fixed; top:auto; left:0; right:0; bottom:0; width:auto; border-radius:var(--m-radius-sheet, 16px) var(--m-radius-sheet, 16px) 0 0; padding:12px 12px calc(12px + env(safe-area-inset-bottom, 0px)); z-index:60; box-shadow:0 0 0 100vmax var(--overlay); }
   .toolsCompact .menuList { max-height:50vh; }
   .toolsCompact .opt { min-height:var(--m-tap, 40px); font-size:14px; }
 }

@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, FileText, Upload } from "lucide-react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { Button, ErrorState, Forbidden, Input, LoadingState, buttonVariants } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { baht } from "@/features/plan-limits";
 import type { BillingProfile, InvoiceDetail, TransferInfo } from "../../../app/work/[ws]/billing/_components/types";
+import { CardPay, QrPay } from "./pay-methods";
 import styles from "./invoice-pay.module.css";
 
 const SLIP_MAX = 5 * 1024 * 1024;
@@ -20,10 +21,18 @@ const SLIP_TYPES = ["image/png", "image/jpeg", "application/pdf"];
 const amountText = (satang: number) => (satang / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fileSize = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
+/** poll สถานะใบแจ้งหนี้บัตร / PromptPay ที่รอชำระ (Webhook ของผู้ให้บริการยืนยันฝั่ง API) · หน้าเปลี่ยนเองเมื่อเงินเข้า */
+export const POLL_MS = 3000;
+/** เวลาตอนนี้ในรูปแบบของช่อง datetime-local (เวลาเครื่องผู้ใช้) */
+const localNow = () => {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+};
+
 /**
- * W22b · หน้าชำระใบแจ้งหนี้ (โอนเข้าบัญชี) `/work/:ws/billing/invoices/:id`
+ * W22b · หน้าชำระใบแจ้งหนี้ `/work/:ws/billing/invoices/:id` · ทุกวิธีชำระมาที่หน้านี้หลังออกใบแจ้งหนี้
  * แยกจากหน้าชำระเงินเพราะคนโอนมักออกไปแอปธนาคารหรือโอนวันหลัง จึงต้องมี URL กลับมาได้ (ผู้ใช้เลือกจาก storyboard 16 พ.ย. 2026)
- * ① บัญชีรับโอน (คัดลอกได้) ② แนบสลิป + ยอดที่โอน · แนบแล้ว = รอตรวจ ใช้แพ็กเกจได้ทันที และแนบใหม่ได้จนกว่าจะตรวจเสร็จ
+ * โอน: ① บัญชีรับโอน ② แนบสลิป + ยอด + เวลาโอน · PromptPay: ① QR ② รอเงินเข้า · บัตร: ① ข้อมูลบัตร ② ยืนยันชำระ
  */
 export function InvoicePay({ ws, id, replace = false }: { ws: string; id: string; replace?: boolean }) {
   const t = useTranslations("checkout.invoicePay");
@@ -36,7 +45,14 @@ export function InvoicePay({ ws, id, replace = false }: { ws: string; id: string
   const home = `/work/${encodeURIComponent(ws)}`;
   const canBill = workspace.role === "owner" || workspace.role === "admin";
 
-  const invoice = useQuery({ queryKey: ["billing-invoice", ws, id], queryFn: () => api.get<InvoiceDetail>(`${base}/billing/invoices/${encodeURIComponent(id)}`), enabled: canBill, retry: false });
+  const invoice = useQuery({
+    queryKey: ["billing-invoice", ws, id],
+    queryFn: () => api.get<InvoiceDetail>(`${base}/billing/invoices/${encodeURIComponent(id)}`),
+    enabled: canBill,
+    retry: false,
+    refetchInterval: (q) => (q.state.data?.status === "open" && (q.state.data.method === "card" || q.state.data.method === "promptpay") ? POLL_MS : false),
+  });
+  const f = useFormatter();
   const profile = useQuery({ queryKey: ["billing-profile", ws], queryFn: () => api.get<{ profile: BillingProfile | null }>(`${base}/billing/profile`), enabled: canBill, retry: false });
   // แนบสลิปใหม่ระหว่างรอตรวจ (มาจากปุ่ม "แนบสลิปใหม่" ในหน้า Billing ได้ด้วย ?slip=new)
   const [replacing, setReplacing] = useState(replace);
@@ -68,6 +84,20 @@ export function InvoicePay({ ws, id, replace = false }: { ws: string; id: string
   const statusClass = inv.status === "paid" ? styles.pillOk : inv.status === "pending_review" ? styles.pillInfo : inv.status === "void" ? undefined : styles.pillWait;
   const due = formatDate(inv.dueDate, "BE", true);
   const showForm = !!tr && (inv.status === "open" || (inv.status === "pending_review" && replacing));
+  const online = inv.status === "open" && (inv.method === "card" || inv.method === "promptpay");
+  const refresh = async () => {
+    const latest = (await invoice.refetch()).data;
+    if (latest?.status === "paid") void cache.invalidateQueries({ queryKey: ["usage", ws] });
+    return latest;
+  };
+  const later = (
+    <div className={styles.later}>
+      <span>{t("later")}</span>
+      <a href={inv.pdfUrl} target="_blank" rel="noreferrer">
+        {tt("invoicePdf", { number: inv.number })}
+      </a>
+    </div>
+  );
 
   const sent = (next: InvoiceDetail) => {
     cache.setQueryData(["billing-invoice", ws, id], next);
@@ -105,12 +135,12 @@ export function InvoicePay({ ws, id, replace = false }: { ws: string; id: string
             onSent={sent}
             onCancel={inv.status === "pending_review" ? () => setReplacing(false) : undefined}
           />
-          <div className={styles.later}>
-            <span>{t("later")}</span>
-            <a href={inv.pdfUrl} target="_blank" rel="noreferrer">
-              {tt("invoicePdf", { number: inv.number })}
-            </a>
-          </div>
+          {later}
+        </div>
+      ) : online ? (
+        <div className={cn(styles.steps, "motion-in")}>
+          {inv.method === "promptpay" ? <QrPay base={base} invoice={inv} refresh={refresh} /> : <CardPay base={base} invoice={inv} email={email} cycle={inv.plan?.cycle ?? null} refresh={refresh} />}
+          {later}
         </div>
       ) : inv.status === "pending_review" ? (
         <section className={cn(styles.card, styles.done, "motion-in")} aria-labelledby="review-title">
@@ -132,8 +162,12 @@ export function InvoicePay({ ws, id, replace = false }: { ws: string; id: string
         </section>
       ) : inv.status === "paid" ? (
         <section className={cn(styles.card, styles.done, "motion-in")} aria-labelledby="paid-title">
-          <h2 id="paid-title">{t("paidTitle")}</h2>
-          {inv.paidAt && <div className={styles.muted}>{formatDate(inv.paidAt, "BE", true)}</div>}
+          <h2 id="paid-title">{inv.plan ? t("paidHeading", { plan: inv.plan.name }) : t("paidHeadingNoPlan")}</h2>
+          <ul>
+            {inv.paidAt && <li>{t("paidVia", { method: t(`methods.${inv.method ?? "transfer"}`), time: f.dateTime(new Date(inv.paymentPaidAt ?? inv.paidAt), { dateStyle: "medium", timeStyle: "short" }) })}</li>}
+            {email && <li>{vatRegistered ? td("taxDoc", { email }) : td("receipt", { email })}</li>}
+            {inv.plan && <li>{t("paidUntil", { date: formatDate(inv.periodEnd, "BE", true) })}</li>}
+          </ul>
           <div className={styles.row}>
             {inv.taxDocument ? (
               <a className={buttonVariants()} href={inv.taxDocument.pdfUrl} target="_blank" rel="noreferrer">
@@ -146,6 +180,9 @@ export function InvoicePay({ ws, id, replace = false }: { ws: string; id: string
             )}
             <Link className={buttonVariants({ variant: "primary" })} href={home}>
               {td("back")}
+            </Link>
+            <Link className={buttonVariants({ variant: "ghost" })} href={`${home}/billing`}>
+              {td("billing")}
             </Link>
           </div>
         </section>
@@ -231,6 +268,7 @@ function SlipCard({ base, invoice, onSent, onCancel }: { base: string; invoice: 
   const tt = useTranslations("checkout.transfer");
   const [file, setFile] = useState<File | null>(null);
   const [amount, setAmount] = useState(() => amountText(invoice.amountDue));
+  const [paidAt, setPaidAt] = useState(localNow);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<unknown>(null);
@@ -266,6 +304,8 @@ function SlipCard({ base, invoice, onSent, onCancel }: { base: string; invoice: 
       // ยอดที่ลูกค้าบอก (สตางค์) ให้ API เทียบกับใบแจ้งหนี้ (A35a) · ลบออกก็ส่งได้
       const declared = Math.round(Number(amount.replace(/,/g, "")) * 100);
       if (amount.trim() && declared > 0) body.append("amount", String(declared));
+      // เวลาที่โอน = วันที่ของใบกำกับภาษี (ไม่ใช่วันที่ทีมงานตรวจ)
+      if (paidAt) body.append("paidAt", new Date(paidAt).toISOString());
       onSent(await api.request<InvoiceDetail>(`${base}/billing/invoices/${invoice.id}/slip`, { method: "POST", body }));
     } catch (e) {
       setProblem(e);
@@ -330,7 +370,10 @@ function SlipCard({ base, invoice, onSent, onCancel }: { base: string; invoice: 
           <span className={styles.muted}>{tt("slipHint")}</span>
         </button>
       )}
-      <Input label={tt("slipAmount")} hint={t("amountHint")} inputMode="decimal" className={styles.mono} value={amount} onChange={(e) => setAmount(e.target.value)} />
+      <div className={styles.cardGrid}>
+        <Input label={tt("slipAmount")} hint={t("amountHint")} inputMode="decimal" className={styles.mono} value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <Input label={t("slipPaidAt")} hint={t("slipPaidAtHint")} type="datetime-local" max={localNow()} value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
+      </div>
       {problemText && (
         <div role="alert" className={cn(styles.problem, "motion-in")}>
           {problemText}

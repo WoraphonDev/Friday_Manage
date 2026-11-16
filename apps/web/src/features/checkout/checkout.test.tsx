@@ -129,29 +129,24 @@ describe("ชำระเงิน (W22)", () => {
     expect(within(s).getByText("ได้ e-Tax invoice ทางอีเมลทันทีที่ชำระ")).toBeInTheDocument();
   });
 
-  it("บัตร: ส่ง profile + checkout พร้อม Idempotency-Key ยืนยันกับผู้ให้บริการแล้ว poll จนชำระแล้ว", async () => {
-    server.use(http.get("*/api/v1/w/:ws/billing/invoices/:id", () => HttpResponse.json(invoice({ status: "paid", paidAt: "2026-11-06T03:01:00Z", taxDocument: { id: "tx-1", number: "TX-1", status: "issued", sentAt: null, pdfUrl: "/api/v1/w/sample/billing/tax-documents/tx-1.pdf" } }))));
+  it("บัตร: ส่ง profile + checkout พร้อม Idempotency-Key แล้วไปกรอกบัตรที่หน้าชำระใบแจ้งหนี้", async () => {
     const user = userEvent.setup();
     mount({ plan: "team_m" });
     await user.click(await screen.findByRole("radio", { name: /บัตรเครดิต/ }));
-    await waitFor(() => expect(stripe.mount).toHaveBeenCalled());
+    // ช่องกรอกบัตรย้ายไปหน้าถัดไป · หน้านี้บอกแค่ว่าตัดบัตรอัตโนมัติ
     expect(screen.getByText("ตัดบัตรนี้อัตโนมัติทุกรอบบิล (ยกเลิกได้ทุกเมื่อ)")).toBeInTheDocument();
+    expect(stripe.mount).not.toHaveBeenCalled();
     await user.type(screen.getByLabelText("เลขที่ใบสั่งซื้อ (PO) ถ้ามี"), "PO-001");
-    await user.click(await within(summary()).findByRole("button", { name: "ชำระ ฿3,210" }));
-    expect(await screen.findByRole("heading", { level: 1, name: "ชำระเงินเรียบร้อย" })).toBeInTheDocument();
-    expect(screen.getByText(/ได้รับยืนยันจากผู้ให้บริการบัตรเมื่อ/)).toBeInTheDocument();
-    expect(screen.getByText("ใบกำกับภาษี e-Tax invoice ส่งไปที่ account@example.com แล้ว")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ดาวน์โหลดใบเสร็จ / ใบกำกับภาษี" })).toHaveAttribute("href", "/api/v1/w/sample/billing/tax-documents/tx-1.pdf");
-    expect(screen.getByRole("link", { name: "กลับไปที่ Workspace" })).toHaveAttribute("href", "/work/sample");
+    await user.click(await within(summary()).findByRole("button", { name: "ไปชำระด้วยบัตร" }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(`/work/sample/billing/invoices/${INV}`));
     const [put, post] = calls;
     expect(put).toMatchObject({ method: "PUT", path: "/w/sample/billing/profile", body: { companyName: "บริษัท ตัวอย่าง จำกัด", branchType: "head", branchNo: null, whtEnabled: false } });
     expect(post).toMatchObject({ method: "POST", path: "/w/sample/billing/checkout", body: { plan: "team_m", cycle: "monthly", method: "card", wht: false, poNumber: "PO-001" } });
     expect(post!.key).toMatch(/^[A-Za-z0-9_.:-]{8,128}$/);
-    expect(stripe.confirm).toHaveBeenCalledWith("pi_sample_secret_sample", expect.objectContaining({ payment_method: expect.objectContaining({ billing_details: { name: "บริษัท ตัวอย่าง จำกัด", email: "account@example.com" } }) }));
   });
 
   it("Idempotency-Key: ใช้ซ้ำเมื่อ retry หลัง 5xx · ได้ key ใหม่เมื่อเปลี่ยนรายละเอียด", async () => {
-    let fail = 1;
+    let fail = 2;
     server.use(
       http.post("*/api/v1/w/:ws/billing/checkout", async ({ request }) => {
         await record(request);
@@ -159,26 +154,23 @@ describe("ชำระเงิน (W22)", () => {
         return HttpResponse.json(checkoutResult("card", {}));
       }),
     );
-    stripe.confirm.mockResolvedValue({ error: { message: "บัตรถูกปฏิเสธ (ทดสอบ)" } });
     const user = userEvent.setup();
     mount({ plan: "team_s" });
     await user.click(await screen.findByRole("radio", { name: /บัตรเครดิต/ }));
-    await user.click(await within(summary()).findByRole("button", { name: "ชำระ ฿1,605" }));
+    await user.click(await within(summary()).findByRole("button", { name: "ไปชำระด้วยบัตร" }));
     expect(await within(summary()).findByText(/req_w22_checkout/)).toBeInTheDocument();
-    await user.click(within(summary()).getByRole("button", { name: "ชำระ ฿1,605" }));
-    expect(await within(summary()).findByText("บัตรถูกปฏิเสธ (ทดสอบ)")).toBeInTheDocument();
+    await user.click(within(summary()).getByRole("button", { name: "ไปชำระด้วยบัตร" }));
+    await waitFor(() => expect(calls.filter((c) => c.path.endsWith("/checkout"))).toHaveLength(2));
     const posts = calls.filter((c) => c.path.endsWith("/checkout"));
-    expect(posts).toHaveLength(2);
     expect(posts[1]!.key).toBe(posts[0]!.key);
-    // ระหว่างรอชำระเลือกแพ็กเกจไม่ได้ · เปลี่ยนรายละเอียดแล้วเลือกใหม่ = คำขอใหม่
-    expect(within(summary()).queryByLabelText("แพ็กเกจ")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "เปลี่ยนรายละเอียด" }));
+    // เปลี่ยนแพ็กเกจ = คำขอใหม่ ได้ key ใหม่
     await user.selectOptions(within(summary()).getByLabelText("แพ็กเกจ"), "team_m");
-    await user.click(await within(summary()).findByRole("button", { name: "ชำระ ฿3,210" }));
+    await user.click(await within(summary()).findByRole("button", { name: "ไปชำระด้วยบัตร" }));
     await waitFor(() => expect(calls.filter((c) => c.path.endsWith("/checkout"))).toHaveLength(3));
     const third = calls.filter((c) => c.path.endsWith("/checkout"))[2]!;
     expect(third.key).not.toBe(posts[0]!.key);
     expect(third.body).toMatchObject({ plan: "team_m" });
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(`/work/sample/billing/invoices/${INV}`));
   });
 
   it("ตรวจข้อมูลภาษีก่อนส่ง · ไม่มี profile = ฟอร์มว่าง · บุคคลธรรมดาหัก ณ ที่จ่ายไม่ได้", async () => {
@@ -203,7 +195,7 @@ describe("ชำระเงิน (W22)", () => {
     expect(screen.getByText("บุคคลธรรมดาไม่หักภาษี ณ ที่จ่าย")).toBeInTheDocument();
   });
 
-  it("หัก ณ ที่จ่าย 3% ปิดบัตร · PromptPay QR หน้าเปลี่ยนเองเมื่อเงินเข้า", async () => {
+  it("หัก ณ ที่จ่าย 3% ปิดบัตร · PromptPay สร้าง QR แล้วไปหน้าชำระใบแจ้งหนี้ · ดาวน์โหลดใบเสนอราคาได้", async () => {
     const user = userEvent.setup();
     mount({ plan: "team_m" });
     await user.click(await screen.findByRole("radio", { name: /บัตรเครดิต/ }));
@@ -215,21 +207,11 @@ describe("ชำระเงิน (W22)", () => {
     expect(screen.getByRole("radio", { name: /PromptPay QR/ })).toHaveAttribute("aria-checked", "true");
     expect(await within(summary()).findByText("−฿90")).toBeInTheDocument();
     expect(within(summary()).getByText("฿3,120")).toBeInTheDocument();
+    expect(within(summary()).getByRole("link", { name: "ดาวน์โหลดใบเสนอราคา (PDF)" })).toHaveAttribute("href", "/api/v1/w/sample/billing/quotation.pdf?plan=team_m&cycle=monthly&wht=true");
     await user.click(within(summary()).getByRole("button", { name: "สร้าง QR" }));
-    expect(await screen.findByRole("img", { name: "QR PromptPay ยอด ฿3,120" })).toHaveAttribute("src", expect.stringMatching(/^data:image\/svg\+xml/));
-    expect(screen.getByRole("status")).toHaveTextContent("รอรับเงิน… หน้านี้จะเปลี่ยนเองเมื่อธนาคารแจ้งยอด ไม่ต้องส่งสลิป");
-    expect(screen.getByRole("timer")).toHaveTextContent(/QR หมดอายุใน 1[45]:\d\d นาที/);
-    expect(screen.getByRole("link", { name: "บันทึกรูป QR" })).toHaveAttribute("download", "promptpay-FRI-2611-0001.svg");
-    expect(screen.getByText(/ใบแจ้งหนี้ FRI-2611-0001/)).toBeInTheDocument();
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(`/work/sample/billing/invoices/${INV}`));
     expect(calls.find((c) => c.path.endsWith("/checkout"))!.body).toMatchObject({ method: "promptpay", wht: true });
     expect(calls.find((c) => c.method === "PUT")!.body).toMatchObject({ whtEnabled: true });
-    await user.click(within(summary()).getByRole("button", { name: "ฉันสแกนจ่ายแล้ว" }));
-    expect(await within(summary()).findByText(/ยังไม่ได้รับเงิน/)).toBeInTheDocument();
-    // ธนาคารแจ้งยอด → poll เห็น paid แล้วเปลี่ยนหน้าเองโดยไม่ต้องกด
-    currentInvoice = invoice({ status: "paid", method: "promptpay", paidAt: "2026-11-06T03:05:00Z" });
-    expect(await screen.findByRole("heading", { level: 1, name: "ชำระเงินเรียบร้อย" }, { timeout: 5000 })).toBeInTheDocument();
-    expect(screen.getByText(/ได้รับยืนยันจากธนาคารผ่าน PromptPay/)).toBeInTheDocument();
-    expect(screen.getByText(/ส่ง 50 ทวิ ภายใน 30 วัน/)).toBeInTheDocument();
   });
 
   it("โอนเข้าบัญชี: ขอเลขบัญชี → ไปหน้าชำระใบแจ้งหนี้ของใบนั้น (แนบสลิปที่หน้านั้น)", async () => {
@@ -247,8 +229,6 @@ describe("ชำระเงิน (W22)", () => {
 
   it("บริษัทยังไม่จด VAT: ซ่อนบรรทัด VAT และใช้คำว่าใบเสร็จ", async () => {
     vatRegistered = false;
-    server.use(http.get("*/api/v1/w/:ws/billing/invoices/:id", () => HttpResponse.json(invoice({ status: "paid", vat: 0, total: 300_000, amountDue: 300_000, paidAt: "2026-11-06T03:01:00Z" }))));
-    const user = userEvent.setup();
     mount({ plan: "team_m" });
     const s = await screen.findByRole("complementary", { name: "สรุปยอด" });
     expect(await within(s).findByText("ราคาแพ็กเกจ")).toBeInTheDocument();
@@ -257,16 +237,6 @@ describe("ชำระเงิน (W22)", () => {
     expect(screen.getByRole("heading", { level: 2, name: "ข้อมูลออกใบเสร็จ" })).toBeInTheDocument();
     expect(screen.getByLabelText("อีเมลรับใบเสร็จ")).toBeInTheDocument();
     expect(within(summary()).getByText("ได้ใบเสร็จทางอีเมลทันทีที่ชำระ")).toBeInTheDocument();
-    await user.click(within(summary()).getByRole("button", { name: "สร้าง QR" }));
-    expect(await screen.findByText("ใบเสร็จส่งไปที่ account@example.com แล้ว", undefined, { timeout: 5000 })).toBeInTheDocument();
-  });
-
-  it("ไม่ได้ตั้งกุญแจผู้ให้บริการบัตร: บอกโหมดทดสอบ", async () => {
-    stripe.enabled = false;
-    const user = userEvent.setup();
-    mount();
-    await user.click(await screen.findByRole("radio", { name: /บัตรเครดิต/ }));
-    expect(await screen.findByText(/โหมดทดสอบ/)).toBeInTheDocument();
   });
 
   it("สิทธิ์: Member ไม่มีสิทธิ์โดยไม่เรียก API · 403 · 500 มี requestId", async () => {

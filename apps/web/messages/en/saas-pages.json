@@ -350,6 +350,8 @@
     "taxPdf": "Tax invoice",
     "slip": "Attach slip",
     "slipAgain": "Attach new slip",
+    "creditNote": "Credit note",
+    "debitNote": "Debit note",
     "payInvoice": "Pay",
     "wht": "Upload 50 Tawi",
     "slipSent": "Attached the slip for {number} · You can use the new plan right away while it's being checked",

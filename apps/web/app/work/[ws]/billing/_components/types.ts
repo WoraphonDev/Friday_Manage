@@ -79,7 +79,11 @@ export interface Invoice {
   paymentStatus: "pending" | "pending_review" | "confirmed" | "rejected" | null;
   hasSlip: boolean;
   pdfUrl: string;
-  taxDocument: { id: string; number: string; status: string; sentAt: string | null; pdfUrl: string } | null;
+  taxDocument: { id: string; number: string; status: string; sentAt: string | null; issuedOn?: string | null; replacesId?: string | null; pdfUrl: string } | null;
+  /** เวลาเงินเข้าจริง (โอน = เวลาที่ลูกค้าแจ้งในสลิป) */
+  paymentPaidAt?: string | null;
+  /** ใบลดหนี้ / ใบเพิ่มหนี้ของใบนี้ (หลังบ้านออก) */
+  notes?: { kind: "credit" | "debit"; id: string; number: string; amount: number; issuedAt: string; pdfUrl: string }[];
   whtCertificate: { id: string; status: string; uploadedAt: string } | null;
   whtDueBy: string | null;
 }

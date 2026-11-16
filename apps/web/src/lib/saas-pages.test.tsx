@@ -381,7 +381,7 @@ describe("แพ็กเกจ & Billing", () => {
     navigation.pathname = "/work/sample/billing";
     items = [
       invoice({ method: "transfer", whtAmount: 9_000, amountDue: 312_000, whtDueBy: "2099-12-06" }),
-      invoice({ id: "inv-paid", number: "FRI-2610-0002", status: "paid", method: "card", taxDocument: { id: "tx-1", number: "TX-2610-0002", status: "issued", sentAt: null, pdfUrl: "/api/v1/w/sample/billing/tax-documents/tx-1.pdf" } }),
+      invoice({ id: "inv-paid", number: "FRI-2610-0002", status: "paid", method: "card", taxDocument: { id: "tx-1", number: "TX-2610-0002", status: "issued", sentAt: null, pdfUrl: "/api/v1/w/sample/billing/tax-documents/tx-1.pdf" }, notes: [{ kind: "credit", id: "cn-1", number: "CN-2611-0001", amount: 107_000, issuedAt: "2026-11-02T03:00:00Z", pdfUrl: "/api/v1/w/sample/billing/credit-notes/cn-1.pdf" }] }),
     ];
     usageBody = usage({ status: "trialing", trial: { endsAt: "2026-11-19T00:00:00Z", daysLeft: 13, expired: false }, seats: { used: 9, limit: 25, ratio: 0.36, over: false } });
     server.use(
@@ -423,6 +423,8 @@ describe("แพ็กเกจ & Billing", () => {
     expect(within(open).getByRole("link", { name: "ใบแจ้งหนี้" })).toHaveAttribute("href", `/api/v1/w/sample/billing/invoices/${INV}.pdf`);
     const paid = rows.find((r) => r.textContent?.includes("FRI-2610-0002"))!;
     expect(within(paid).getByRole("link", { name: "ใบกำกับภาษี" })).toHaveAttribute("href", "/api/v1/w/sample/billing/tax-documents/tx-1.pdf");
+    // ใบลดหนี้ที่ทีม Friday ออกให้ ดาวน์โหลดได้จากแถวของใบแจ้งหนี้
+    expect(within(paid).getByRole("link", { name: "ใบลดหนี้" })).toHaveAttribute("href", "/api/v1/w/sample/billing/credit-notes/cn-1.pdf");
     expect(within(paid).queryByRole("button")).not.toBeInTheDocument();
 
     // ใบโอนที่รอชำระ: ไปหน้าชำระใบแจ้งหนี้ (เลขบัญชี + แนบสลิป) แทนการเลือกไฟล์ทันที

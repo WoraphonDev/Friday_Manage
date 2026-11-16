@@ -1,6 +1,51 @@
 {
   "c8": {
-    "title": "ส่งประกาศถึง {count} Workspace",
+    "title": "ส่งประกาศถึงลูกค้า",
+    "subtitle": "ถึง Owner และ Admin",
+    "to": "ส่งถึง",
+    "mode": {
+      "selected": "ที่เลือกไว้",
+      "selectedHint": "{count} Workspace",
+      "filter": "ทุก Workspace ตามตัวกรอง",
+      "filterHint": "{filter} · ตอนนี้ {count} ราย · นับใหม่ตอนส่ง",
+      "all": "ลูกค้าทุกราย",
+      "allHint": "{count} Workspace ที่ใช้งานอยู่",
+      "counting": "กำลังนับ…"
+    },
+    "filterNone": "ไม่มีตัวกรอง",
+    "notSuspended": "ไม่รวมที่ระงับ",
+    "filterQ": "ค้นหา \"{q}\"",
+    "filterLabels": {
+      "plan": {
+        "free": "Free",
+        "team_s": "Team S",
+        "team_m": "Team M",
+        "team_l": "Team L",
+        "enterprise": "Enterprise"
+      },
+      "status": {
+        "trial": "ทดลองใช้",
+        "active": "ใช้งาน",
+        "suspended": "ระงับ",
+        "pending_delete": "รอลบ",
+        "trialing": "ทดลองใช้",
+        "canceled": "ยกเลิกแพ็กเกจ",
+        "past_due": "ค้างชำระ"
+      },
+      "feature": {
+        "line": "ใช้ LINE",
+        "webhook": "ใช้ Webhook",
+        "github": "ใช้ GitHub",
+        "api_token": "ใช้ API token",
+        "automation": "ใช้ Automation",
+        "import": "เคยนำเข้าข้อมูล",
+        "no_project": "ยังไม่มีโปรเจกต์"
+      }
+    },
+    "estimate": "ผู้รับ {ws} Workspace ≈ {people} คน · ส่งชุดละ 50 ใช้เวลาประมาณ {minutes} นาที",
+    "estimateBanner": "ผู้รับ {ws} Workspace ≈ {people} คน",
+    "reauthNote": "Owner · เกิน 1,000 รายต้องแตะกุญแจ",
+    "reauthLabel": "ส่งประกาศถึง {count} Workspace",
     "counting": "กำลังนับผู้รับ…",
     "people": "Owner และ Admin รวม {count} คน",
     "suppressed": "ไม่ส่งอีเมลถึง {count} คนที่อยู่ในรายชื่อไม่ส่ง (ยังเห็นแบนเนอร์ในแอป)",
@@ -41,8 +86,14 @@
   },
   "page": {
     "title": "ประกาศถึงลูกค้า",
-    "desc": "ประกาศที่ส่งและตั้งเวลาไว้ถึง Owner / Admin ของ Workspace ที่เลือก",
+    "desc": "ประกาศที่ส่งและตั้งเวลาไว้ถึง Owner / Admin ของ Workspace ที่เลือก ตามตัวกรอง หรือลูกค้าทุกราย",
     "new": "ส่งประกาศใหม่",
+    "newAll": "ประกาศถึงลูกค้าทุกราย",
+    "target": {
+      "filter": "ตามตัวกรอง",
+      "all": "ลูกค้าทุกราย",
+      "pending": "หารายชื่อตอนส่ง"
+    },
     "ownerOnly": "ประวัติประกาศถึงลูกค้าเปิดให้ Owner เท่านั้น",
     "empty": "ยังไม่มีประกาศ",
     "emptyDesc": "เลือก Workspace ในหน้า Workspaces แล้วกด \"ส่งประกาศ\"",

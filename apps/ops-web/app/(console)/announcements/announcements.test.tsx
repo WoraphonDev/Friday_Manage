@@ -101,3 +101,16 @@ describe("ประกาศถึงลูกค้า", () => {
     expect(screen.queryByRole("link", { name: "ประกาศถึงลูกค้า" })).not.toBeInTheDocument();
   });
 });
+
+describe("S8 · ประกาศตามตัวกรอง / ทุกราย ในประวัติ", () => {
+  it("ตั้งเวลาตามตัวกรองยังไม่มีรายชื่อ · ปุ่มประกาศถึงลูกค้าทุกรายเปิด Drawer", async () => {
+    server.use(http.post(`${OPS}/announcements/audience`, () => HttpResponse.json({ workspaces: 1108, people: 3020, emails: 3000, suppressed: 0, noRecipients: [], minutes: 60, needsReauth: true })));
+    view({ items: [{ ...items[0], id: "a-filter", title: "ปรับปรุงระบบ", workspaces: { count: 0, names: [], ids: [] }, target: { mode: "filter", filter: { plan: "team_s" } } }], bannerDays: 30 });
+    expect(await screen.findByText("หารายชื่อตอนส่ง")).toBeInTheDocument();
+    expect(screen.getByText("ตามตัวกรอง")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "ประกาศถึงลูกค้าทุกราย" }));
+    const dlg = await screen.findByRole("dialog", { name: "ส่งประกาศถึงลูกค้า" });
+    expect(await within(dlg).findByText("1,108 Workspace ที่ใช้งานอยู่")).toBeInTheDocument();
+    expect(within(dlg).getByLabelText(/ลูกค้าทุกราย/)).toBeChecked();
+  });
+});

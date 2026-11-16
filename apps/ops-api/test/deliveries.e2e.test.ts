@@ -146,3 +146,60 @@ describe('รายชื่อไม่ส่งอีเมล', () => {
     expect((await support.agent.post(`/ops/deliveries/${ids.blocked}/resend`).send({})).status).toBe(200);
   });
 });
+
+describe('S7 · ค้นด้วย #เลข Ticket และ requestId', () => {
+  let b: Customer;
+  let other: string;
+  let ticket: { id: string; number: number };
+  const s7: Record<string, string> = {};
+  /** แจ้งเตือน + การส่งของ Workspace b · ระบุผู้รับ requestId และเวลา */
+  async function send(name: string, o: { recipient: string; channel: string; target: string; daysAgo: number; requestId?: string; title?: string }) {
+    const n = (await t.owner.query(`INSERT INTO notifications (workspace_id, recipient_id, event_type, payload, reason, request_id) VALUES ($1,$2,'issue.assigned',$3,'ทดสอบ',$4) RETURNING id`, [b.id, o.recipient, JSON.stringify({ issueKey: 'DP-41', title: o.title ?? 'งานสมมติ' }), o.requestId ?? null])).rows[0].id;
+    s7[name] = (await t.owner.query(
+      `INSERT INTO notification_deliveries (workspace_id, notification_id, channel, target_ref, target_label, status, attempts, log, created_at) VALUES ($1,$2,$3,$4,$4,'sent',1,'[]', now() - make_interval(hours => $5)) RETURNING id`,
+      [b.id, n, o.channel, o.target, Math.round(o.daysAgo * 24)],
+    )).rows[0].id;
+  }
+
+  beforeAll(async () => {
+    b = await customer(t, 'sathorn-s7', { plan: 'team_s', status: 'active' });
+    other = (await t.owner.query(`INSERT INTO users (email, display_name) VALUES ('nid@sathorn-s7.example.com', 'นิด') RETURNING id`)).rows[0].id;
+    ticket = (await t.owner.query(`INSERT INTO support_tickets (workspace_id, requester_user_id, channel, category, priority, subject, status, created_at) VALUES ($1, $2, 'in_app', 'bug', 'high', 'กดบันทึกงานแล้วขึ้นเกิดข้อผิดพลาด', 'open', now() - interval '1 day') RETURNING id, number`, [b.id, b.owner])).rows[0];
+    await t.owner.query(`INSERT INTO support_ticket_messages (ticket_id, author_kind, author_user_id, body, attachments) VALUES ($1, 'customer', $2, 'บันทึกงานไม่ได้', $3)`, [ticket.id, b.owner, JSON.stringify([{ kind: 'context', page: '/work/sathorn-s7/p/DP/board', requestId: 'req_7f3a9c2e', impact: 'blocked' }])]);
+    const mail = 'owner@sathorn-s7.example.com';
+    await send('recent', { recipient: b.owner, channel: 'email', target: mail, daysAgo: 3, title: 'สรุปงานประจำวัน' });
+    await send('tooOld', { recipient: b.owner, channel: 'email', target: mail, daysAgo: 10 });
+    await send('line', { recipient: b.owner, channel: 'line', target: 'U-sathorn-owner', daysAgo: 0.1 });
+    await send('byRequest', { recipient: other, channel: 'email', target: 'nid@sathorn-s7.example.com', daysAgo: 1.1, requestId: 'req_7f3a9c2e' });
+    await send('unrelated', { recipient: other, channel: 'email', target: 'nid@sathorn-s7.example.com', daysAgo: 0.5, requestId: 'req_00000001' });
+  });
+
+  it('#เลข Ticket: การส่งถึงผู้เปิด 7 วันก่อนเปิดจนถึงตอนนี้ + requestId จากบริบท + รายการที่แนบไว้ · แถบสรุป Ticket', async () => {
+    const r = await support.agent.get(`/ops/deliveries?q=${encodeURIComponent(`#${ticket.number}`)}`);
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body.items.map((i: { id: string }) => i.id)).toEqual([s7.line, s7.byRequest, s7.recent]);
+    expect(r.body.search).toMatchObject({ kind: 'ticket', number: ticket.number, ticket: { number: ticket.number, workspace: { id: b.id, name: 'Co sathorn-s7' }, requesterEmail: 'owner@sathorn-s7.example.com', requestId: 'req_7f3a9c2e' } });
+    const by = Object.fromEntries(r.body.items.map((i: { id: string; linkedTo: unknown }) => [i.id, i.linkedTo]));
+    expect(by[s7.byRequest]).toEqual({ kind: 'request', requestId: 'req_7f3a9c2e' });
+    expect(by[s7.recent]).toBeNull();
+    // แนบรายการที่ไม่เกี่ยว → ขึ้นในผลค้นของ Ticket และผูกกับ Ticket
+    expect((await support.agent.post(`/ops/deliveries/${s7.unrelated}/attach`).send({ ticketNumber: ticket.number })).status).toBe(200);
+    const again = await support.agent.get(`/ops/deliveries?q=${encodeURIComponent(`#${ticket.number}`)}&channel=email`);
+    expect(again.body.items.map((i: { id: string }) => i.id)).toEqual([s7.unrelated, s7.byRequest, s7.recent]);
+    expect(again.body.items[0].linkedTo).toEqual({ kind: 'ticket', number: ticket.number });
+  });
+
+  it('วิศวกรเห็นอีเมลผู้เปิดแบบซ่อน · Ticket ที่ไม่มีได้ผลว่าง', async () => {
+    const r = await engineer.agent.get(`/ops/deliveries?q=${encodeURIComponent(`#${ticket.number}`)}`);
+    expect(r.body.search.ticket.requesterEmail).toBe('o•••@sathorn-s7.example.com');
+    const none = await support.agent.get(`/ops/deliveries?q=${encodeURIComponent('#999999')}`);
+    expect(none.body).toMatchObject({ items: [], search: { kind: 'ticket', number: 999999, ticket: null } });
+  });
+
+  it('req_…: เฉพาะการส่งที่เกิดจากคำขอนั้น', async () => {
+    const r = await engineer.agent.get('/ops/deliveries?q=req_7f3a9c2e');
+    expect(r.body.items.map((i: { id: string }) => i.id)).toEqual([s7.byRequest]);
+    expect(r.body.search).toEqual({ kind: 'request', requestId: 'req_7f3a9c2e' });
+    expect(r.body.items[0].requestId).toBe('req_7f3a9c2e');
+  });
+});

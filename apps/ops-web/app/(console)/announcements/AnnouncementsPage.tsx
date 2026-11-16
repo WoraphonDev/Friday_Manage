@@ -9,10 +9,11 @@ import { Empty, ErrorBlock, Modal, NoAccess, Notice, PageHead, TableSkeleton } f
 import { Button, buttonClass, InlineError, Pill, Textarea, type Tone, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
-import type { AnnouncementItem } from "../workspaces/_parts/Announce";
+import { AnnounceDrawer, type AnnouncementItem } from "../workspaces/_parts/Announce";
 import { useFmt } from "../workspaces/_parts/format";
 
 export const ANN_KEY = ["ops", "announcements"] as const;
+const NONE: string[] = [];
 const TONE: Record<AnnouncementItem["status"], Tone> = { scheduled: "inf", sent: "ok", cancelled: "neu", stopped: "warn", draft: "neu" };
 
 /**
@@ -25,13 +26,19 @@ export function AnnouncementsPage({ embedded = false }: { embedded?: boolean } =
   const me = useMe().data;
   const owner = hasAny(me, "owner");
   const [cancelling, setCancelling] = useState<AnnouncementItem | null>(null);
+  const [composing, setComposing] = useState(false);
+  const cache = useQueryClient();
   const q = useQuery({ queryKey: ANN_KEY, queryFn: () => api.get<{ items: AnnouncementItem[]; bannerDays: number }>("/announcements"), enabled: !!me && owner });
   if (me && !owner) return embedded ? <Notice tone="info" title={t("ownerOnly")} /> : <NoAccess need={["owner"]} mine={rolesOf(me)} />;
   const items = q.data?.items ?? [];
+  // S8: ส่งถึงที่เลือก / ตามตัวกรองเริ่มจากหน้า Workspaces · ลูกค้าทุกรายส่งจากหน้านี้ได้เลย
   const toWorkspaces = (
-    <Link className={buttonClass("primary")} href="/workspaces">
-      {t("new")}
-    </Link>
+    <span className="row">
+      <Button onClick={() => setComposing(true)}>{t("newAll")}</Button>
+      <Link className={buttonClass("primary")} href="/workspaces">
+        {t("new")}
+      </Link>
+    </span>
   );
   return (
     <>
@@ -80,7 +87,8 @@ export function AnnouncementsPage({ embedded = false }: { embedded?: boolean } =
                           </span>
                         </td>
                         <td>
-                          <span className="cell-main">{a.workspaces.count > a.workspaces.names.length ? t("wsMore", { names, more: a.workspaces.count - a.workspaces.names.length }) : names || "—"}</span>
+                          {a.target && a.target.mode !== "selected" && <span className="cell-sub" style={{ display: "block" }}>{a.target.mode === "all" ? t("target.all") : t("target.filter")}</span>}
+                          <span className="cell-main">{a.workspaces.count > a.workspaces.names.length ? t("wsMore", { names, more: a.workspaces.count - a.workspaces.names.length }) : names || (a.target && a.target.mode !== "selected" && !a.sentAt ? t("target.pending") : "—")}</span>
                           {a.recipients != null && (
                             <span className="cell-sub" style={{ display: "block" }}>
                               {t("people", { count: a.recipients })}
@@ -119,6 +127,7 @@ export function AnnouncementsPage({ embedded = false }: { embedded?: boolean } =
         )}
       </section>
       {cancelling && <CancelDialog item={cancelling} onClose={() => setCancelling(null)} />}
+      {composing && <AnnounceDrawer workspaceIds={NONE} onClose={() => setComposing(false)} onDone={() => (setComposing(false), void cache.invalidateQueries({ queryKey: ANN_KEY }))} />}
     </>
   );
 }

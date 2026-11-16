@@ -45,14 +45,14 @@ async function openDrawer() {
   await userEvent.click(await screen.findByLabelText("เลือก สยามเดโม"));
   await userEvent.click(screen.getByLabelText("เลือก Orbit Labs"));
   await userEvent.click(screen.getByRole("button", { name: "ส่งประกาศ" }));
-  return screen.findByRole("dialog", { name: "ส่งประกาศถึง 2 Workspace" });
+  return screen.findByRole("dialog", { name: "ส่งประกาศถึงลูกค้า" });
 }
 
 describe("C8 · ส่งประกาศถึงลูกค้าที่เลือก", () => {
   it("นับผู้รับ · เตือนรายชื่อไม่ส่ง · ดูตัวอย่างแทนตัวแปร · ส่งตอนนี้ทั้งสองช่องทาง", async () => {
     const posted = setup();
     const dlg = await openDrawer();
-    expect(await within(dlg).findByText("Owner และ Admin รวม 5 คน")).toBeInTheDocument();
+    expect(await within(dlg).findByText("C8 · ถึง Owner และ Admin · Owner และ Admin รวม 5 คน")).toBeInTheDocument();
     expect(posted[0]).toEqual({ path: "audience", body: { workspaceIds: [WS, W2] } });
     expect(within(dlg).getByText("ไม่ส่งอีเมลถึง 1 คนที่อยู่ในรายชื่อไม่ส่ง (ยังเห็นแบนเนอร์ในแอป)")).toBeInTheDocument();
     expect(within(dlg).getByRole("button", { name: "ทั้งสอง" })).toHaveAttribute("aria-pressed", "true");
@@ -81,7 +81,7 @@ describe("C8 · ส่งประกาศถึงลูกค้าที่�
   it("ตั้งเวลา (เวลาไทย) · แบนเนอร์อย่างเดียวไม่มีตัวอย่างอีเมล · เวลาในอดีตส่งไม่ได้", async () => {
     const posted = setup();
     const dlg = await openDrawer();
-    await within(dlg).findByText("Owner และ Admin รวม 5 คน");
+    await within(dlg).findByText("C8 · ถึง Owner และ Admin · Owner และ Admin รวม 5 คน");
     await userEvent.click(within(dlg).getByRole("button", { name: "แบนเนอร์ในแอป" }));
     // แบนเนอร์อย่างเดียว: ไม่เตือนเรื่องรายชื่อไม่ส่งอีเมล
     expect(within(dlg).queryByText(/ไม่ส่งอีเมลถึง/)).not.toBeInTheDocument();
@@ -104,7 +104,7 @@ describe("C8 · ส่งประกาศถึงลูกค้าที่�
   it("ส่งทดสอบถึงฉัน · error จาก ops-api แสดงใน Drawer", async () => {
     const posted = setup({ create: () => opsError(404, "workspace_not_found", "ไม่พบ Workspace บางแห่ง (อาจถูกลบไปแล้ว)") });
     const dlg = await openDrawer();
-    await within(dlg).findByText("Owner และ Admin รวม 5 คน");
+    await within(dlg).findByText("C8 · ถึง Owner และ Admin · Owner และ Admin รวม 5 คน");
     expect(within(dlg).getByRole("button", { name: "ส่งทดสอบถึงฉัน" })).toBeDisabled();
     await userEvent.type(within(dlg).getByLabelText("หัวข้อ *"), "ทดสอบ");
     await userEvent.type(within(dlg).getByLabelText("ข้อความ *"), "ข้อความทดสอบ");

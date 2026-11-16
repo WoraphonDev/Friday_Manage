@@ -210,3 +210,50 @@ describe("สิทธิ์และขีดจำกัด (O21)", () => {
     await waitFor(() => expect(calls.find((c) => c.path === "/entitlements/versions/2/restore")?.body).toEqual({ reason: "ย้อนกลับ" }));
   });
 });
+
+describe("S9 · ประกาศถึงลูกค้าที่ถูกกระทบ (C8)", () => {
+  it("รายชื่อครบ · ติ๊กส่งประกาศแล้วร่างไปกับคำขออนุมัติ · ตรวจแจ้งล่วงหน้า 30 วัน", async () => {
+    handlers();
+    server.use(
+      http.post(`${OPS}/entitlements/preview`, async ({ request }) => {
+        const body = (await request.json()) as { matrix: Matrix };
+        return HttpResponse.json({
+          fromVersion: 3,
+          nextVersion: 4,
+          changes: [{ plan: "team_s", key: "seats", from: 10, to: body.matrix.team_s.seats, reduced: true }],
+          affected: [{ plan: "team_s", key: "seats", from: 10, to: body.matrix.team_s.seats, workspaces: 2, examples: [{ id: "w-4", name: "เชียงใหม่คราฟต์เดโม" }] }],
+          affectedTotal: 2,
+          affectedWorkspaces: [
+            { id: "w-4", name: "เชียงใหม่คราฟต์เดโม", slug: "cm-craft", plan: "team_s", keys: ["seats"] },
+            { id: "w-5", name: "สาทรคลินิกเดโม", slug: "sathorn", plan: "team_s", keys: ["seats"] },
+          ],
+          noticeDays: 30,
+        });
+      }),
+    );
+    asRole("finance");
+    view();
+    await userEvent.click(await screen.findByRole("button", { name: /แก้ไขสิทธิ์/ }));
+    const input = screen.getByLabelText("ที่นั่ง · Team S");
+    await userEvent.clear(input);
+    await userEvent.type(input, "5");
+    await userEvent.click(screen.getByRole("button", { name: /บันทึกเป็นเวอร์ชันใหม่ · แก้ 1 ช่อง/ }));
+    const dlg = await screen.findByRole("dialog", { name: "บันทึกเป็นเวอร์ชัน 4" });
+    expect(await within(dlg).findByText(/ใช้เกินค่าใหม่หรือใช้ฟีเจอร์ที่ถูกปิด/)).toHaveTextContent("2 Workspace ใช้เกินค่าใหม่หรือใช้ฟีเจอร์ที่ถูกปิด");
+    await userEvent.click(within(dlg).getByRole("button", { name: "ดูรายชื่อทั้งหมด" }));
+    expect(within(within(dlg).getByRole("list", { name: "รายชื่อลูกค้าที่ถูกกระทบ" })).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(dlg).getByText(/มีผลทันทีเมื่ออนุมัติ ยังไม่ได้แจ้งล่วงหน้า/)).toBeInTheDocument();
+    await userEvent.click(within(dlg).getByRole("button", { name: "วันที่กำหนด" }));
+    const d = new Date(Date.now() + 46 * 86_400_000 + 7 * 3_600_000).toISOString().slice(0, 10);
+    await userEvent.type(within(dlg).getByLabelText("วันที่มีผล"), d);
+    expect(await within(dlg).findByText(/ห่างจากวันนี้ \d+ วัน ผ่าน/)).toBeInTheDocument();
+    await userEvent.click(within(dlg).getByLabelText(/ส่งประกาศถึงลูกค้าที่ถูกกระทบ \(C8\)/));
+    expect(within(dlg).getByText("ส่งเมื่อคำขอได้รับอนุมัติ · ถ้าถูกปฏิเสธ ร่างประกาศถูกยกเลิก")).toBeInTheDocument();
+    await userEvent.type(within(dlg).getByLabelText("เหตุผล"), "ลด Team S เหลือ 5 ที่นั่ง");
+    expect(within(dlg).getByRole("button", { name: "ส่งขออนุมัติ" })).toBeDisabled();
+    await userEvent.type(within(dlg).getByLabelText("หัวข้อ *"), "Team S จะรองรับ 5 ที่นั่ง");
+    await userEvent.type(within(dlg).getByLabelText("ข้อความ *"), "อัปเกรดเป็น Team M ก่อนวันที่มีผล");
+    await userEvent.click(within(dlg).getByRole("button", { name: "ส่งขออนุมัติ" }));
+    await waitFor(() => expect(calls.find((c) => c.path === "/entitlements/versions")?.body).toMatchObject({ announcement: { title: "Team S จะรองรับ 5 ที่นั่ง", message: "อัปเกรดเป็น Team M ก่อนวันที่มีผล" } }));
+  });
+});

@@ -5,14 +5,14 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
 import { hasAny, rolesOf } from "@/components/access";
-import { Chip, Empty, ErrorBlock, NoAccess, PageHead, TableSkeleton } from "@/components/kit";
+import { Chip, Empty, ErrorBlock, NoAccess, Notice, PageHead, TableSkeleton } from "@/components/kit";
 import { Button, errorToast, Input, Pill, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { useFmt } from "../workspaces/_parts/format";
 import { AttachDialog, MessageDialog } from "./_parts/Dialogs";
 import { Suppressions } from "./_parts/Suppressions";
-import { type Channel, type Detail, type Item, type ListResponse, STATUS_TONE, useEventText } from "./_parts/types";
+import { type Channel, type Detail, type Item, type ListResponse, type Search, STATUS_TONE, useEventText } from "./_parts/types";
 import { CountUp } from "@/components/count-up";
 import { MotionSwap } from "@/components/shell/page-enter";
 
@@ -26,7 +26,8 @@ export function DeliveriesPage() {
   const me = useMe().data;
   const params = useSearchParams();
   const read = hasAny(me, "owner", "support", "engineer");
-  const [query, setQuery] = useState("");
+  // ?q= เปิดจากหน้า Ticket (S6 "ค้นในประวัติการส่ง") ได้ผลค้นทันที
+  const [query, setQuery] = useState(params?.get("q") ?? "");
   const [channel, setChannel] = useState<"all" | "email" | "line" | "webhook">("all");
   const [status, setStatus] = useState<"all" | "ok" | "fail" | "quiet" | "blocked">("all");
   const [picked, setPicked] = useState<string | null>(params?.get("id") ?? null);
@@ -48,6 +49,8 @@ export function DeliveriesPage() {
   });
   const items = list.data?.pages.flatMap((p) => p.items) ?? [];
   const stats = list.data?.pages[0]?.stats;
+  const search = list.data?.pages[0]?.search ?? null;
+  const kind = /^#\s*\d+$/.test(query.trim()) ? "ticket" : /^req_/.test(query.trim()) ? "request" : null;
   const current = picked ?? items[0]?.id ?? null;
   const eventText = useEventText();
   if (me && !read) return <NoAccess need={["owner", "support", "engineer"]} mine={rolesOf(me)} />;
@@ -65,8 +68,9 @@ export function DeliveriesPage() {
       </section>
       <section className="card">
         <div className="row">
-          <div style={{ flex: "1 1 260px", maxWidth: 380 }}>
+          <div className="row" style={{ flex: "1 1 260px", maxWidth: 420, gap: 8 }}>
             <Input type="search" aria-label={t("search")} placeholder={t("searchPlaceholder")} value={query} onChange={(e) => setQuery(e.target.value)} />
+            {kind && <span className="muted small">{t(`searchKind.${kind}`)}</span>}
           </div>
           <div className="row" role="group" aria-label={t("channels")}>
             {(["all", "email", "line", "webhook"] as const).map((c) => (
@@ -86,6 +90,7 @@ export function DeliveriesPage() {
             </select>
           </label>
         </div>
+        {search && <SearchNotice s={search} />}
         <div className="split">
           <div className="split-main">
             {list.isPending ? (
@@ -105,6 +110,7 @@ export function DeliveriesPage() {
                         <th scope="col">{t("col.to")}</th>
                         <th scope="col">{t("col.event")}</th>
                         <th scope="col">{t("col.status")}</th>
+                        <th scope="col">{t("col.linked")}</th>
                         <th scope="col" className="num">
                           {t("col.attempts")}
                         </th>
@@ -112,7 +118,7 @@ export function DeliveriesPage() {
                     </thead>
                     <tbody>
                       {items.map((r) => (
-                        <Row key={r.id} r={r} on={r.id === current} onPick={() => setPicked(r.id)} event={eventText(r.event)} />
+                        <Row key={r.id} r={r} on={r.id === current} onPick={() => setPicked(r.id)} event={eventText(r.event)} onSearch={setQuery} />
                       ))}
                     </tbody>
                   </table>
@@ -145,7 +151,35 @@ function Stat({ label, value, note, tone }: { label: string; value: string; note
   );
 }
 
-function Row({ r, on, onPick, event }: { r: Item; on: boolean; onPick: () => void; event: string }) {
+/** แถบบอกว่ากำลังดูผลค้นแบบไหน (S7): Ticket = ผู้เปิด + ช่วงเวลา · requestId = การส่งที่เกิดจากคำขอนั้น */
+function SearchNotice({ s }: { s: Search }) {
+  const t = useTranslations("dlv.found");
+  const code = (c: React.ReactNode) => <code className="mono">{c}</code>;
+  if (s.kind === "request") return <Notice tone="info">{t.rich("request", { requestId: s.requestId, code })}</Notice>;
+  if (!s.ticket) return <Notice tone="warn">{t("ticketMissing", { number: s.number })}</Notice>;
+  const k = s.ticket;
+  const who = [k.requesterName, k.requesterEmail ? `(${k.requesterEmail})` : null].filter(Boolean).join(" ") || "—";
+  return (
+    <Notice tone="info">
+      {t.rich("ticket", { number: k.number, ws: k.workspace?.name ?? t("noWorkspace"), who, b: (c) => <b>{c}</b> })}
+      {k.requestId && t.rich("ticketRequest", { requestId: k.requestId, code })}
+    </Notice>
+  );
+}
+
+function Linked({ r, onSearch }: { r: Item; onSearch: (q: string) => void }) {
+  const t = useTranslations("dlv.linked");
+  const l = r.linkedTo;
+  if (!l) return <span className="muted">{t("none")}</span>;
+  if (l.kind === "ticket") return <span>{t("ticket", { number: l.number })}</span>;
+  return (
+    <button type="button" className="link-button mono small" aria-label={t("searchRequest", { requestId: l.requestId })} onClick={(e) => (e.stopPropagation(), onSearch(l.requestId))}>
+      {l.requestId}
+    </button>
+  );
+}
+
+function Row({ r, on, onPick, event, onSearch }: { r: Item; on: boolean; onPick: () => void; event: string; onSearch: (q: string) => void }) {
   const t = useTranslations("dlv");
   const f = useFmt();
   return (
@@ -165,6 +199,9 @@ function Row({ r, on, onPick, event }: { r: Item; on: boolean; onPick: () => voi
       <td>{event}</td>
       <td>
         <Pill tone={STATUS_TONE[r.status]}>{t(`status.${r.status}`)}</Pill>
+      </td>
+      <td>
+        <Linked r={r} onSearch={onSearch} />
       </td>
       <td className="num muted">{r.attempts}</td>
     </tr>

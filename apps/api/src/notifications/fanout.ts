@@ -97,6 +97,8 @@ export class NotificationFanout implements OnModuleInit {
         payload: { ...base, ...send.payload },
         reason: (id) => send.reasons.get(id)!,
         inAppOff: muted,
+        // S7: Event ผ่านคิวแล้วไม่มีบริบทคำขอ จึงส่ง requestId ที่ติดมากับ Event ตรง ๆ
+        requestId: event.requestId,
       });
     }
   }

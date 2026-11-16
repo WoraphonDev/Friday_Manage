@@ -160,3 +160,40 @@ describe("ประวัติการส่งแจ้งเตือน (O2
     expect(await screen.findByText(/req-dlv-1/)).toBeInTheDocument();
   });
 });
+
+describe("S7 · ค้นด้วย #เลข Ticket / requestId", () => {
+  const found: Item[] = [
+    { id: "d-9", createdAt: at, channel: "email", to: "mali@orbit.example", workspace: ws, event: { type: "issue.assigned", issueKey: "DP-41" }, status: "ok", attempts: 1, requestId: "req_7f3a9c2e", linkedTo: { kind: "request", requestId: "req_7f3a9c2e" } },
+    { id: "d-8", createdAt: at, channel: "email", to: "mali@orbit.example", workspace: ws, event: { type: "digest.daily", issueKey: null }, status: "ok", attempts: 1, linkedTo: { kind: "ticket", number: 546 } },
+    { id: "d-7", createdAt: at, channel: "line", to: "มาลี", workspace: ws, event: { type: "digest.daily", issueKey: null }, status: "fail", attempts: 4, linkedTo: null },
+  ];
+  it("ข้อความในช่องค้นตาม Canvas · #546 แสดงแถบ Ticket และคอลัมน์ผูกกับ · กด requestId แล้วค้นต่อ", async () => {
+    handlers();
+    server.use(
+      http.get(`${OPS}/deliveries`, ({ request }) => {
+        const q = new URL(request.url).searchParams.get("q");
+        lastQuery = new URL(request.url).search;
+        if (q === "#546") return HttpResponse.json({ ...list, items: found, search: { kind: "ticket", number: 546, ticket: { id: "t-1", number: 546, createdAt: at, since: at, workspace: { id: "w-1", name: "Orbit Apps" }, requesterName: "มาลี", requesterEmail: "mali@orbit.example", requestId: "req_7f3a9c2e" } } });
+        if (q === "req_7f3a9c2e") return HttpResponse.json({ ...list, items: found.slice(0, 1), search: { kind: "request", requestId: "req_7f3a9c2e" } });
+        return HttpResponse.json(list);
+      }),
+    );
+    view();
+    const box = await screen.findByPlaceholderText("อีเมลผู้รับ, Workspace, เลข Ticket, requestId");
+    await userEvent.type(box, "#546");
+    expect(await screen.findByText(/แสดงการส่งถึงผู้เปิด Ticket 7 วันก่อนเปิดเรื่อง/)).toHaveTextContent("Ticket #546 · Orbit Apps · มาลี (mali@orbit.example)");
+    expect(screen.getByRole("columnheader", { name: "ผูกกับ" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Ticket #546" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "ค้นด้วย req_7f3a9c2e" }));
+    expect(await screen.findByText(/แสดงการส่งที่เกิดจากคำขอ/)).toBeInTheDocument();
+    expect(box).toHaveValue("req_7f3a9c2e");
+  });
+
+  it("Ticket ที่ไม่มี: บอกให้ตรวจเลข", async () => {
+    handlers();
+    server.use(http.get(`${OPS}/deliveries`, () => HttpResponse.json({ ...list, items: [], search: { kind: "ticket", number: 9, ticket: null } })));
+    view();
+    await userEvent.type(await screen.findByPlaceholderText("อีเมลผู้รับ, Workspace, เลข Ticket, requestId"), "#9");
+    expect(await screen.findByText("ไม่พบ Ticket #9 · ตรวจเลขอีกครั้ง")).toBeInTheDocument();
+  });
+});

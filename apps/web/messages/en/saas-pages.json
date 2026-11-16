@@ -351,6 +351,8 @@
     "noInvoicesHint": "Invoices appear here after your first payment",
     "period": "{from} – {to}",
     "whtDue": "Send 50 Tawi by {date}",
+    "whtLate": "50 Tawi overdue ({date}) · you can still send it",
+    "whtSend": "Send 50 Tawi",
     "invoiceStatus": { "open": "Awaiting payment", "pending_review": "Slip under review", "paid": "Paid", "void": "Void" },
     "invoicePdf": "Invoice",
     "taxPdf": "Tax invoice",
@@ -377,7 +379,9 @@
       "open": "Invoice {number} awaiting payment of ฿{amount}",
       "openHint": "Due {date}",
       "wht": "Send the 50 Tawi for {number} by {date}",
-      "whtHint": "It confirms the withholding tax you deducted"
+      "whtHint": "It confirms the withholding tax you deducted",
+      "whtLate": "50 Tawi for {number} is overdue ({date}) · you can still send it",
+      "whtRejected": "The 50 Tawi was not accepted: {reason} · send a new one or tell us it was withheld via e-WHT"
     },
     "col": {
       "number": "Number",

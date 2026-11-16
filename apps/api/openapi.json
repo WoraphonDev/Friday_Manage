@@ -6140,6 +6140,66 @@
         }
       }
     },
+    "/api/v1/w/{ws}/billing/invoices/{id}/wht-ewht": {
+      "post": {
+        "operationId": "Payments_whtEwht",
+        "summary": "หักผ่าน e-Withholding Tax แทนการอัปโหลด 50 ทวิ (รอบ 4 · E11)",
+        "tags": [
+          "Payments"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/w/{ws}/billing/profile": {
       "get": {
         "operationId": "Billing_getProfile",

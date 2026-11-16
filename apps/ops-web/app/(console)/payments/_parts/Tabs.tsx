@@ -7,21 +7,17 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
 import { hasAny } from "@/components/access";
-import { ConfirmDialog, useApprovalFlow, useReauth } from "@/components/dialogs";
-import { FileViewer } from "@/components/file-viewer";
+import { useApprovalFlow } from "@/components/dialogs";
 import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, Seg, TableSkeleton } from "@/components/kit";
-import { Button, buttonClass, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
+import { Button, buttonClass, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { planLabel, useFmt } from "../../workspaces/_parts/format";
+import { useDelivery } from "./Accounting";
+import { ClosePeriodDialog, EtaxDrawer, useEtaxDetail, useTaxFmt } from "./Tax";
 
 const todayBkk = () => new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
 const thisMonth = () => todayBkk().slice(0, 7);
-const lastMonth = () => {
-  const d = new Date(`${thisMonth()}-01T00:00:00Z`);
-  d.setUTCMonth(d.getUTCMonth() - 1);
-  return d.toISOString().slice(0, 7);
-};
 function Table({ head, children, label }: { head: (string | { label: string; num?: boolean })[]; children: React.ReactNode; label?: string }) {
   return (
     <div className="tbl-wrap">
@@ -133,6 +129,8 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
   const [linking, setLinking] = useState<InvoiceRow | null>(null);
   const [debiting, setDebiting] = useState<InvoiceRow | null>(null);
   const [replacing, setReplacing] = useState<InvoiceRow | null>(null);
+  const [etaxDoc, setEtaxDoc] = useState<string | null>(null);
+  const tt = useTranslations("money.tax");
   const filter = new URLSearchParams({ limit: "100", ...(status ? { status } : {}), ...(search ? { q: search } : {}) });
   const list = useQuery({ queryKey: ["ops", "invoices", filter.toString()], queryFn: () => api.get<{ items: InvoiceRow[]; total: number }>(`/invoices?${filter}`), placeholderData: keepPreviousData });
   return (
@@ -179,7 +177,11 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
                   <DocLink path={`/invoices/${i.id}/pdf`} label={t("invoices.invoicePdf")} />
                   {i.taxDocument && (
                     <span>
-                      <DocLink path={`/tax-documents/${i.taxDocument.id}/pdf`} label={i.taxDocument.number} /> <span className="muted">· {i.taxDocument.status}</span>
+                      <DocLink path={`/tax-documents/${i.taxDocument.id}/pdf`} label={i.taxDocument.number} />{" "}
+                      {/* เปิดรายละเอียด e-Tax (E2) จากแท็บใบแจ้งหนี้ */}
+                      <button type="button" className="link-button small" onClick={() => setEtaxDoc(i.taxDocument!.id)}>
+                        · {tt.has(`state.${i.taxDocument.status}`) ? tt(`state.${i.taxDocument.status}` as "state.issued") : i.taxDocument.status}
+                      </button>
                     </span>
                   )}
                   {(i.creditNotes ?? []).map((n) => (
@@ -225,6 +227,7 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
       {linking && <SendLinkDialog inv={linking} onClose={() => setLinking(null)} />}
       {debiting && <DebitNoteDialog inv={debiting} onClose={() => setDebiting(null)} />}
       {replacing && <ReplaceTaxDocDialog inv={replacing} onClose={() => setReplacing(null)} />}
+      {etaxDoc && <EtaxDrawer kind="tax_document" id={etaxDoc} onClose={() => setEtaxDoc(null)} />}
     </section>
   );
 }
@@ -498,27 +501,98 @@ function DebitNoteDialog({ inv, onClose }: { inv: InvoiceRow; onClose: () => voi
   );
 }
 
-/** ใบกำกับภาษีฉบับใหม่แทนฉบับที่ยกเลิก (ข้อมูลผู้ซื้อผิด · ให้ลูกค้าแก้ข้อมูลภาษีก่อน) */
+const CAUSES = ["buyer", "taxId", "branch", "other"] as const;
+/** E3 · ออกฉบับใหม่แทน: แก้ข้อมูลผู้ซื้อในหน้าจอ · แจ้งยกเลิกฉบับเดิมที่ผู้ให้บริการและส่งฉบับใหม่อ้างฉบับเดิมอัตโนมัติ */
 function ReplaceTaxDocDialog({ inv, onClose }: { inv: InvoiceRow; onClose: () => void }) {
   const t = useTranslations("money.replace");
   const tc = useTranslations("common.dialog");
+  const tf = useTaxFmt();
   const toast = useToast();
   const cache = useQueryClient();
-  const [reason, setReason] = useState("");
   const doc = inv.taxDocument!;
+  const detail = useEtaxDetail("tax_document", doc.id);
+  const base = detail.data?.currentBuyer ?? detail.data?.buyer ?? null;
+  const [cause, setCause] = useState<(typeof CAUSES)[number]>("buyer");
+  const [other, setOther] = useState("");
+  const [buyer, setBuyer] = useState<{ companyName: string; taxId: string; branchType: string; branchNo: string; address: string } | null>(null);
+  const b = buyer ?? (base ? { companyName: base.companyName, taxId: base.taxId, branchType: base.branchType, branchNo: base.branchNo ?? "", address: base.address } : null);
+  const edit = (patch: Partial<NonNullable<typeof b>>) => b && setBuyer({ ...b, ...patch });
+  const reason = cause === "other" ? other.trim() : t(`causes.${cause}`);
+  const ok = !!b && reason.length >= 3 && /^\d{13}$/.test(b.taxId) && !!b.companyName.trim() && !!b.address.trim() && (b.branchType === "head" || /^\d{5}$/.test(b.branchNo));
   const m = useMutation({
-    mutationFn: () => api.post<{ replacement: { number: string } }>(`/tax-documents/${doc.id}/replace`, { reason: reason.trim() }),
+    mutationFn: () => api.post<{ replacement: { number: string } }>(`/tax-documents/${doc.id}/replace`, { reason, buyer: { companyName: b!.companyName.trim(), taxId: b!.taxId, branchType: b!.branchType, branchNo: b!.branchType === "head" ? null : b!.branchNo, address: b!.address.trim() } }),
     onSuccess: (r) => (toast(t("done", { old: doc.number, number: r.replacement.number })), invalidate(cache), onClose()),
   });
+  const date = tf.dateYear(detail.data?.issuedOn);
   return (
-    <Modal open onOpenChange={(o) => !o && onClose()} title={t("title", { number: doc.number })} description={t("desc", { ws: inv.workspace.name })}>
-      <form className="dialog-body" onSubmit={(e) => (e.preventDefault(), reason.trim().length >= 3 && m.mutate())}>
-        <Textarea label={t("reason")} placeholder={t("placeholder")} value={reason} onChange={(e) => setReason(e.target.value)} />
+    <Modal open onOpenChange={(o) => !o && onClose()} title={t("title", { number: doc.number })} description={t("desc")} className="dialog-wide">
+      <form className="dialog-body" onSubmit={(e) => (e.preventDefault(), ok && m.mutate())}>
+        <Select label={t("cause")} value={cause} onChange={(e) => setCause(e.target.value as (typeof CAUSES)[number])}>
+          {CAUSES.map((c) => (
+            <option key={c} value={c}>
+              {t(`causes.${c}`)}
+            </option>
+          ))}
+        </Select>
+        {cause === "other" && <Textarea label={t("reason")} placeholder={t("placeholder")} value={other} onChange={(e) => setOther(e.target.value)} />}
+        {!b ? (
+          detail.error ? <InlineError error={detail.error} /> : <TableSkeleton rows={3} cols={2} />
+        ) : (
+          <div className="stack">
+            <Input label={t("company")} value={b.companyName} onChange={(e) => edit({ companyName: e.target.value })} />
+            <Input label={t("taxId")} inputMode="numeric" className="mono" value={b.taxId} onChange={(e) => edit({ taxId: e.target.value.replace(/\D/g, "").slice(0, 13) })} />
+            <div className="row" style={{ gap: 12, alignItems: "flex-end" }}>
+              <Select label={t("branch")} value={b.branchType} onChange={(e) => edit({ branchType: e.target.value })}>
+                <option value="head">{t("head")}</option>
+                <option value="branch">{t("branchOther")}</option>
+              </Select>
+              {b.branchType === "branch" && <Input label={t("branchNo")} inputMode="numeric" className="mono" value={b.branchNo} onChange={(e) => edit({ branchNo: e.target.value.replace(/\D/g, "").slice(0, 5) })} />}
+            </div>
+            <Textarea label={t("address")} value={b.address} onChange={(e) => edit({ address: e.target.value })} />
+          </div>
+        )}
+        <h3 className="field-label">{t("next")}</h3>
+        <ol className="timeline">
+          <li className="timeline-item tone-warn">
+            <span className="mono small">1</span>
+            <span className="small">
+              <b>{t("steps.cancel", { number: doc.number })}</b>
+              <div className="cell-sub">{t("steps.cancelHint")}</div>
+            </span>
+          </li>
+          <li className="timeline-item">
+            <span className="mono small">2</span>
+            <span className="small">
+              <b>{t("steps.notify")}</b>
+              <div className="cell-sub">{t("steps.notifyHint")}</div>
+            </span>
+          </li>
+          <li className="timeline-item">
+            <span className="mono small">3</span>
+            <span className="small">
+              <b>{t("steps.issue", { date })}</b>
+              <div className="cell-sub">{t("steps.issueHint")}</div>
+            </span>
+          </li>
+          <li className="timeline-item">
+            <span className="mono small">4</span>
+            <span className="small">
+              <b>{t("steps.send")}</b>
+            </span>
+          </li>
+          <li className="timeline-item">
+            <span className="mono small">5</span>
+            <span className="small">
+              <b>{t("steps.mail")}</b>
+            </span>
+          </li>
+        </ol>
+        <Notice tone="warn">{t("closedInfo")}</Notice>
         <p className="muted small">{t("note")}</p>
         <InlineError error={m.error} />
         <div className="dialog-actions">
           <Button onClick={onClose}>{tc("cancel")}</Button>
-          <Button type="submit" variant="danger" disabled={reason.trim().length < 3 || m.isPending}>
+          <Button type="submit" variant="primary" disabled={!ok || m.isPending}>
             {t("submit")}
           </Button>
         </div>
@@ -678,145 +752,6 @@ function ExtendDialog({ row, onClose }: { row: OverdueRow; onClose: () => void }
 
 // ---------------------------------------------------------------- ภาษี
 
-interface Tax {
-  etax: { id: string; number: string; docType: string; status: string; createdAt: string; invoice: string; workspace: { name: string } }[];
-  wht: { id: string; number: string; whtAmount: number; paidAt: string; daysSincePaid: number; certificateStatus: string | null; certificateId: string | null; workspace: { name: string } }[];
-  whtPendingSatang: number;
-  salesVat: { month: string; vatRegistered: boolean; invoices: number; subtotalSatang: number; vatSatang: number; whtSatang: number; creditNoteVatSatang: number; netVatSatang: number };
-}
-export function TaxTab() {
-  const t = useTranslations("money.tax");
-  const fmt = useFmt();
-  const toast = useToast();
-  const cache = useQueryClient();
-  const me = useMe().data;
-  const finance = hasAny(me, "finance");
-  const [month, setMonth] = useState(thisMonth());
-  const [viewing, setViewing] = useState<{ id: string; number: string; ws: string } | null>(null);
-  const q = useQuery({ queryKey: ["ops", "tax", month], queryFn: () => api.get<Tax>(`/tax?month=${month}`), placeholderData: keepPreviousData });
-  const retry = useMutation({ mutationFn: (id: string) => api.post(`/tax-documents/${id}/retry`), onSuccess: () => (toast(t("retried")), invalidate(cache)), onError: (e) => toast(errorToast(e)) });
-  const review = useMutation({ mutationFn: ({ id, ok }: { id: string; ok: boolean }) => api.post(`/wht-certificates/${id}/${ok ? "confirm" : "reject"}`, ok ? {} : { reason: "เอกสารไม่ถูกต้อง" }), onSuccess: () => invalidate(cache), onError: (e) => toast(errorToast(e)) });
-  if (q.isPending) return <TableSkeleton rows={4} cols={5} />;
-  if (q.error) return <ErrorBlock error={q.error} retry={() => void q.refetch()} />;
-  const d = q.data;
-  return (
-    <div className="stack">
-      <section className="card">
-        <div className="card-head">
-          <h2 className="card-title">{t("etax")}</h2>
-          <span className="card-sub">{t("etaxNote")}</span>
-        </div>
-        {!d.etax.length ? (
-          <Empty ok title={t("noEtax")} />
-        ) : (
-          <Table head={[t("doc"), "ใบแจ้งหนี้", "Workspace", t("status"), ""]}>
-            {d.etax.map((x) => (
-              <tr key={x.id}>
-                <td className="mono small">{x.number}</td>
-                <td className="mono small">{x.invoice}</td>
-                <td>{x.workspace.name}</td>
-                <td>
-                  <span className={x.status === "failed" ? "pill bad" : "pill warn"}>{x.status}</span>
-                </td>
-                <td>
-                  {finance && x.status === "failed" && (
-                    <Button size="small" disabled={retry.isPending} onClick={() => retry.mutate(x.id)}>
-                      {t("retry")}
-                    </Button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </Table>
-        )}
-      </section>
-      <section className="card">
-        <div className="card-head">
-          <h2 className="card-title">{t("wht")}</h2>
-          <span className="card-sub">{t("whtPending", { amount: fmt.money(d.whtPendingSatang) })}</span>
-        </div>
-        <p className="muted small">{t("whtNote")}</p>
-        {!d.wht.length ? (
-          <p className="muted small">{t("noWht")}</p>
-        ) : (
-          <Table head={["ใบแจ้งหนี้", "Workspace", { label: "ภาษีที่หัก", num: true }, t("status"), ""]}>
-            {d.wht.map((w) => (
-              <tr key={w.id}>
-                <td className="mono small">{w.number}</td>
-                <td>{w.workspace.name}</td>
-                <td className="num">{fmt.money(w.whtAmount)}</td>
-                <td>
-                  <span className={w.certificateStatus === "pending_review" ? "pill warn" : "pill"}>{t(`certStatus.${w.certificateStatus ?? "missing"}` as "certStatus.missing")}</span> <span className="muted small">{t("days", { n: w.daysSincePaid })}</span>
-                </td>
-                <td>
-                  {w.certificateId && (
-                    <span className="row" style={{ flexWrap: "nowrap" }}>
-                      <Button size="small" variant="ghost" onClick={() => setViewing({ id: w.certificateId!, number: w.number, ws: w.workspace.name })}>
-                        <FileText size={14} /> {t("file")}
-                      </Button>
-                      {finance && w.certificateStatus === "pending_review" && (
-                        <>
-                          <Button size="small" variant="primary" onClick={() => review.mutate({ id: w.certificateId!, ok: true })}>
-                            {t("confirm")}
-                          </Button>
-                          <Button size="small" onClick={() => review.mutate({ id: w.certificateId!, ok: false })}>
-                            {t("reject")}
-                          </Button>
-                        </>
-                      )}
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </Table>
-        )}
-      </section>
-      <section className="card">
-        <div className="card-head">
-          <h2 className="card-title">{t("sales")}</h2>
-          <span className="spacer" />
-          <input type="month" className="input" style={{ width: "auto" }} aria-label={t("month")} value={month} onChange={(e) => setMonth(e.target.value || thisMonth())} />
-          <a className={buttonClass("ghost", "small")} href={`${OPS_BASE}/revenue/sales-report?month=${month}&format=pdf`} download>
-            <FileText size={14} aria-hidden="true" /> {t("reportPdf")}
-          </a>
-          <a className={buttonClass("ghost", "small")} href={`${OPS_BASE}/revenue/sales-report?month=${month}&format=xlsx`} download>
-            {t("reportXlsx")}
-          </a>
-        </div>
-        {!d.salesVat.vatRegistered && <Notice tone="warn">{t("notRegistered")}</Notice>}
-        <table className="tbl" aria-label={t("sales")}>
-          <tbody>
-            <tr>
-              <td>{t("invoicesN", { n: d.salesVat.invoices })}</td>
-              <td className="num">
-                {t("base")} {fmt.money(d.salesVat.subtotalSatang)}
-              </td>
-            </tr>
-            <tr>
-              <td>{t("vat")}</td>
-              <td className="num">{fmt.money(d.salesVat.vatSatang)}</td>
-            </tr>
-            <tr>
-              <td>{t("cnVat")}</td>
-              <td className="num">−{fmt.money(d.salesVat.creditNoteVatSatang)}</td>
-            </tr>
-            <tr>
-              <td className="cell-main">{t("net")}</td>
-              <td className="num cell-main">{fmt.money(d.salesVat.netVatSatang)}</td>
-            </tr>
-            <tr>
-              <td className="muted">{t("whtTotal")}</td>
-              <td className="num">{fmt.money(d.salesVat.whtSatang)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-      {viewing && <FileViewer path={`/wht-certificates/${viewing.id}/file`} title={t("fileTitle", { ws: viewing.ws })} description={<span className="mono">{viewing.number}</span>} filename={`wht-${viewing.number}`} onClose={() => setViewing(null)} />}
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------- คืนเงิน (สรุป)
 
 interface RefundsData {
@@ -875,13 +810,13 @@ interface RevenueRow {
 export function RevenueTab() {
   const t = useTranslations("money.revenue");
   const fmt = useFmt();
-  const toast = useToast();
-  const cache = useQueryClient();
   const me = useMe().data;
-  const { run } = useReauth();
+  const tf = useTaxFmt();
   const [closing, setClosing] = useState<string | null>(null);
   const q = useQuery({ queryKey: ["ops", "revenue"], queryFn: () => api.get<{ months: RevenueRow[] }>("/revenue?months=6") });
+  const delivery = useDelivery();
   const canClose = hasAny(me, "owner", "finance");
+  const set = delivery.data?.settings;
   return (
     <section className="card">
       <div className="card-head">
@@ -919,95 +854,9 @@ export function RevenueTab() {
           ))}
         </Table>
       )}
-      <p className="muted small">{t("accountant")}</p>
-      {closing && (
-        <ConfirmDialog
-          open
-          minReason={0}
-          onOpenChange={() => setClosing(null)}
-          title={t("closeTitle", { month: closing })}
-          description={t("closeDesc")}
-          onConfirm={async () => {
-            await run(() => api.post("/revenue/close", { month: closing }), t("closeTitle", { month: closing }));
-            toast(t("closedDone", { month: closing }));
-            invalidate(cache);
-          }}
-        />
-      )}
+      {/* อ่านจากค่าตั้งจริง (E6) ไม่เขียนวันที่ตายตัว */}
+      {set && <p className="muted small">{set.auto && delivery.data?.next ? t("accountant", { day: set.day, time: set.time, next: tf.date(delivery.data.next.date) }) : t("accountantOff")}</p>}
+      {closing && <ClosePeriodDialog month={closing} onClose={() => setClosing(null)} />}
     </section>
-  );
-}
-
-/** B8 · ส่งออกให้สำนักงานบัญชี: ดาวน์โหลดทีละไฟล์ หรือส่งอีเมลพร้อมไฟล์แนบ · ส่งอัตโนมัติทุกเดือน (ops-api) */
-type ExportType = "sales_tax" | "wht";
-/** ลิงก์ดาวน์โหลดของแต่ละไฟล์: รายงานภาษีขายมี PDF (ตามแบบ) + Excel · 50 ทวิ เป็น CSV */
-const exportFiles = (type: ExportType, month: string) =>
-  type === "sales_tax"
-    ? [{ key: "pdf", href: `${OPS_BASE}/revenue/sales-report?month=${month}&format=pdf` }, { key: "xlsx", href: `${OPS_BASE}/revenue/sales-report?month=${month}&format=xlsx` }]
-    : [{ key: "csv", href: `${OPS_BASE}/revenue/export?month=${month}&type=wht` }];
-interface Delivery {
-  recipients: string[];
-  autoDay: number;
-  history: { at: string; month: string; detail: string; staffName: string | null }[];
-}
-export function AccountantExport({ onClose }: { onClose: () => void }) {
-  const t = useTranslations("money.b8");
-  const tc = useTranslations("common.dialog");
-  const me = useMe().data;
-  const toast = useToast();
-  const fmt = useFmt();
-  const [month, setMonth] = useState(lastMonth());
-  const [types, setTypes] = useState<ExportType[]>(["sales_tax", "wht"]);
-  const revenue = useQuery({ queryKey: ["ops", "revenue"], queryFn: () => api.get<{ months: RevenueRow[] }>("/revenue?months=6") });
-  const delivery = useQuery({ queryKey: ["ops", "revenue", "delivery"], queryFn: () => api.get<Delivery>("/revenue/export/delivery") });
-  const closed = revenue.data?.months.find((m) => m.month === month)?.closed;
-  const canSend = !!me && hasAny(me, "owner", "finance");
-  const to = delivery.data?.recipients ?? [];
-  const send = useMutation({
-    mutationFn: () => api.post<{ sent: number; to: string[] }>("/revenue/export/send", { month, types }),
-    onSuccess: (r) => (toast(t("sent", { to: r.to.join(", ") })), onClose()),
-  });
-  const last = delivery.data?.history[0];
-  return (
-    <Modal open onOpenChange={(o) => !o && onClose()} title={t("title")} description={delivery.data ? t("descAuto", { day: delivery.data.autoDay }) : t("desc")}>
-      <form className="dialog-body" onSubmit={(e) => (e.preventDefault(), types.length && to.length && send.mutate())}>
-        <Input label={t("month")} type="month" value={month} onChange={(e) => setMonth(e.target.value || lastMonth())} />
-        <span className={closed ? "pill ok" : "pill warn"}>{closed ? t("closedLabel") : t("draft")}</span>
-        <fieldset className="stack" style={{ border: 0, padding: 0, margin: 0 }}>
-          <legend className="field-label">{t("type")}</legend>
-          {(["sales_tax", "wht"] as const).map((v) => (
-            <div key={v} className="row" style={{ justifyContent: "space-between" }}>
-              <label className="check">
-                <input type="checkbox" checked={types.includes(v)} onChange={() => setTypes(types.includes(v) ? types.filter((x) => x !== v) : [...types, v])} />
-                <span>{t(`types.${v}`)}</span>
-              </label>
-              <span className="row" style={{ gap: 8 }}>
-                {exportFiles(v, month).map((f) => (
-                  <a key={f.key} className="link-button small" href={f.href} download aria-label={t("downloadOne", { file: t(`files.${v}_${f.key}` as "files.wht_csv") })}>
-                    {t(`format.${f.key}` as "format.csv")}
-                  </a>
-                ))}
-              </span>
-            </div>
-          ))}
-        </fieldset>
-        <p className="muted small">{t("notYet")}</p>
-        {delivery.isPending ? null : to.length ? (
-          <p className="small">{t("to", { to: to.join(", ") })}</p>
-        ) : (
-          <Notice tone="warn" title={t("noRecipient")} />
-        )}
-        {last && <p className="muted small">{t("lastSent", { month: last.month, at: fmt.dateTime(last.at), who: last.staffName ?? t("auto") })}</p>}
-        <InlineError error={send.error ?? delivery.error} />
-        <div className="dialog-actions">
-          <Button onClick={onClose}>{tc("cancel")}</Button>
-          {canSend && (
-            <Button type="submit" variant="primary" disabled={!types.length || !to.length || send.isPending}>
-              {send.isPending ? tc("saving") : t("send")}
-            </Button>
-          )}
-        </div>
-      </form>
-    </Modal>
   );
 }

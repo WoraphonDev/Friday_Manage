@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { baht } from "@/features/plan-limits";
 import type { BillingProfile, InvoiceDetail, TransferInfo } from "../../../app/work/[ws]/billing/_components/types";
 import { CardPay, QrPay } from "./pay-methods";
+import { WhtSection } from "./wht-section";
 import styles from "./invoice-pay.module.css";
 
 const SLIP_MAX = 5 * 1024 * 1024;
@@ -126,6 +127,9 @@ export function InvoicePay({ ws, id, replace = false }: { ws: string; id: string
         )}
       </div>
 
+      {/* E11 · ใบที่ชำระแล้วแสดง 50 ทวิ ก่อน (สิ่งที่ต้องทำ) · ใบที่ยังไม่ชำระแสดงหลังขั้นชำระ */}
+      {inv.status === "paid" && <WhtSection base={base} invoice={inv} onSent={sent} />}
+
       {showForm && tr ? (
         <div className={cn(styles.steps, "motion-in")}>
           <BankCard tr={tr} />
@@ -210,6 +214,7 @@ export function InvoicePay({ ws, id, replace = false }: { ws: string; id: string
           </div>
         </section>
       )}
+      {inv.status !== "paid" && <WhtSection base={base} invoice={inv} onSent={sent} />}
     </div>
   );
 }

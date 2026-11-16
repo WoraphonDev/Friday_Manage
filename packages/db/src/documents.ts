@@ -77,7 +77,8 @@ export type ETaxDocKind = 'tax_document' | 'credit_note' | 'debit_note';
  * งานเดิมของเอกสาร + การกระทำเดียวกันมีอยู่แล้ว → ไม่สร้างซ้ำ · `db` ต้องเป็น role หลังบ้าน / งานเบื้องหลัง (ลูกค้าเขียนตารางนี้ไม่ได้)
  */
 export async function queueETax(db: Db | Tx, job: { workspaceId: string; docKind: ETaxDocKind; docId: string; action: 'issue' | 'cancel'; byStaff?: string | null }) {
-  await db.insert(s.etaxJobs).values({ ...job, byStaff: job.byStaff ?? null, status: 'pending', nextAttemptAt: new Date() }).onConflictDoNothing();
+  // ใช้เวลาของฐานข้อมูล (now()) ไม่ใช่นาฬิกาของโปรเซส: ตอนส่งเทียบกับ now() ของฐานข้อมูล ถ้าเครื่องเดินเร็วกว่าไม่กี่ ms งานแรกจะถูกข้าม
+  await db.insert(s.etaxJobs).values({ ...job, byStaff: job.byStaff ?? null, status: 'pending', nextAttemptAt: sql`now()` }).onConflictDoNothing();
 }
 
 /**

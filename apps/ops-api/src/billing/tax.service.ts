@@ -225,7 +225,7 @@ export class TaxService implements OnModuleInit, OnModuleDestroy {
       if (kind === 'tax_document' && action === 'issue' && d.status === 'failed') {
         await this.db.transaction(async (tx) => {
           await tx.update(s.taxDocuments).set({ status: 'pending', providerRef: null, updatedAt: new Date() }).where(eq(s.taxDocuments.id, id));
-          await tx.insert(s.etaxJobs).values({ workspaceId: d.workspaceId, docKind: kind, docId: id, action, status: 'pending', nextAttemptAt: new Date(), byStaff: staff.id }).onConflictDoNothing();
+          await tx.insert(s.etaxJobs).values({ workspaceId: d.workspaceId, docKind: kind, docId: id, action, status: 'pending', nextAttemptAt: sql`now()`, byStaff: staff.id }).onConflictDoNothing();
           await audit(tx, staff, d.workspaceId, 'plan', 'ops.etax_retry', `ส่ง e-Tax ใหม่ ${d.number}`, { type: kind, id });
         });
         return { id, action, status: 'pending' as const };
@@ -235,7 +235,7 @@ export class TaxService implements OnModuleInit, OnModuleDestroy {
     if (job.status !== 'failed' && !(job.status === 'pending' && job.attempts > 0 && job.lastError)) throw new AppError(409, 'not_failed', action === 'cancel' ? 'แจ้งอีกครั้งได้เฉพาะงานที่ยังไม่สำเร็จ' : 'ส่งใหม่ได้เฉพาะเอกสารที่ส่งไม่สำเร็จ', { status: job.status });
     if (action === 'issue' && kind === 'tax_document' && d.status === 'cancelled') throw new AppError(409, 'already_cancelled', 'ใบนี้ยกเลิกแล้ว ไม่ต้องส่ง');
     await this.db.transaction(async (tx) => {
-      await tx.update(s.etaxJobs).set({ status: 'pending', attempts: 0, nextAttemptAt: new Date(), byStaff: staff.id, updatedAt: new Date() }).where(eq(s.etaxJobs.id, job.id));
+      await tx.update(s.etaxJobs).set({ status: 'pending', attempts: 0, nextAttemptAt: sql`now()`, byStaff: staff.id, updatedAt: new Date() }).where(eq(s.etaxJobs.id, job.id));
       if (kind === 'tax_document' && action === 'issue') await tx.update(s.taxDocuments).set({ status: 'pending', providerRef: null, updatedAt: new Date() }).where(and(eq(s.taxDocuments.id, id), eq(s.taxDocuments.status, 'failed')));
       await audit(tx, staff, d.workspaceId, 'plan', action === 'cancel' ? 'ops.etax_cancel_retry' : 'ops.etax_retry', `${action === 'cancel' ? 'แจ้งยกเลิก e-Tax อีกครั้ง' : 'ส่ง e-Tax ใหม่'} ${d.number}`, { type: kind, id });
     });
@@ -247,7 +247,7 @@ export class TaxService implements OnModuleInit, OnModuleDestroy {
     const d = await this.doc(kind, id);
     const jobs = await this.db.select().from(s.etaxJobs).where(and(eq(s.etaxJobs.docKind, kind), eq(s.etaxJobs.docId, id), eq(s.etaxJobs.status, 'submitted')));
     if (!jobs.length) throw new AppError(409, 'not_waiting', 'เอกสารนี้ไม่ได้รอผลจากผู้ให้บริการ');
-    await this.db.update(s.etaxJobs).set({ nextAttemptAt: new Date(), updatedAt: new Date() }).where(inArray(s.etaxJobs.id, jobs.map((j) => j.id)));
+    await this.db.update(s.etaxJobs).set({ nextAttemptAt: sql`now()`, updatedAt: new Date() }).where(inArray(s.etaxJobs.id, jobs.map((j) => j.id)));
     await staffAudit(this.db, staff, 'ops.etax_check', `ตรวจสถานะ e-Tax ${d.number}`, { type: kind, id }, d.workspaceId);
     return { id, queued: jobs.length };
   }

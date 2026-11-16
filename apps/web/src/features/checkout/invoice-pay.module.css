@@ -79,6 +79,26 @@
 .sumRows > div { display:flex; justify-content:space-between; gap:10px; }
 .sumDue { font-weight:700; font-size:16px; border-top:1px solid var(--border); padding-top:10px; }
 
+/* E11 · 50 ทวิ (รอบ 4): แบนเนอร์กำหนดส่ง + การ์ดส่ง 50 ทวิ ข้างสรุปใบแจ้งหนี้ */
+.whtWrap { display:flex; flex-direction:column; gap:12px; }
+.banner { display:flex; gap:8px; align-items:flex-start; border-radius:10px; padding:10px 12px; font-size:13.5px; }
+.banner svg { flex:none; margin-top:2px; }
+.bannerWarn { background:var(--warning-soft); color:var(--warning-text); }
+.bannerBad { background:var(--danger-soft); color:var(--danger-text); }
+.whtGrid { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:16px; align-items:start; }
+.choices { border:0; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+.choice { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border:1px solid var(--border); border-radius:10px; cursor:pointer; transition:border-color .2s, background-color .2s; }
+.choice[data-on] { border-color:var(--primary); background:var(--primary-soft); }
+.choice input { margin-top:3px; accent-color:var(--primary); }
+.choice > span { display:flex; flex-direction:column; gap:2px; font-size:13.5px; min-width:0; }
+.kv { margin:0; display:grid; grid-template-columns:150px minmax(0,1fr); gap:6px 12px; font-size:13.5px; }
+.kv dt { color:var(--muted); }
+.kv dd { margin:0; overflow-wrap:anywhere; }
+.whtActions { display:flex; justify-content:flex-end; }
+.whtState { display:flex; flex-direction:column; gap:6px; align-items:flex-start; font-size:14px; }
+.whtState .pill { gap:4px; }
+.sumTotal { font-weight:600; border-top:1px solid var(--border); padding-top:6px; }
+
 @media (max-width: 760px) {
   .page { padding:16px 16px 40px; }
   .steps { grid-template-columns:minmax(0,1fr); }
@@ -87,4 +107,7 @@
   .done { padding:20px; }
   .cardGrid { grid-template-columns:minmax(0,1fr); }
   .qrBox { width:150px; height:150px; }
+  .whtGrid { grid-template-columns:minmax(0,1fr); }
+  .kv { grid-template-columns:minmax(0,1fr); gap:2px; }
+  .kv dd { margin-bottom:6px; }
 }

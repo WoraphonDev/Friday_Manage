@@ -7,6 +7,7 @@ import { and, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { audit } from '../audit.js';
 import type { Staff } from '../auth/auth.guard.js';
+import { config } from '../config.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
@@ -38,6 +39,14 @@ export const RejectBody = z
     message: z.string().trim().max(2000).optional(),
   })
   .strict();
+/** 50 ทวิ ไม่ผ่าน (E8): เลือกสาเหตุ (ลูกค้าเห็น) · other ต้องกรอกเอง · `reason` อย่างเดียว = รูปแบบเดิม */
+export const WhtRejectBody = z
+  .object({
+    code: z.enum(['name_mismatch', 'amount_mismatch', 'no_signature', 'unreadable', 'other']).optional(),
+    reason: z.string().trim().min(3).max(300).optional(),
+  })
+  .strict()
+  .refine((b) => (b.code && b.code !== 'other') || !!b.reason, { message: 'เลือกสาเหตุ หรือกรอกสาเหตุเอง', path: ['reason'] });
 export const ExceptionsQuery = z.object({ reason: z.enum(EXCEPTION_REASONS).optional(), limit: z.coerce.number().int().min(1).max(200).default(100) });
 export const FlagBody = z.object({ reason: z.enum(EXCEPTION_REASONS), note: z.string().trim().min(3).max(300) }).strict();
 export const MatchBody = z.object({ invoiceId: z.uuid(), reason: z.string().trim().min(3).max(300) }).strict();
@@ -270,17 +279,29 @@ export class OpsPaymentsService {
     return { date: day, items, totalSatang: items.filter((i) => i.status === 'confirmed').reduce((n, i) => n + i.amount, 0) };
   }
 
+  /**
+   * ตรวจ 50 ทวิ: ผ่าน / ไม่ผ่าน (E8 · สาเหตุที่ลูกค้าเห็น) · ไม่ผ่าน → อีเมลบอกสาเหตุ ลิงก์อัปโหลดใหม่ และกำหนดส่งเดิม (30 วันหลังชำระ)
+   */
   async reviewWht(staff: Staff, id: string, decision: 'confirmed' | 'rejected', note?: string) {
     if (!z.uuid().safeParse(id).success) throw new AppError(404, 'not_found', 'ไม่พบ 50 ทวิ');
     const [w] = await this.db.select().from(s.whtCertificates).where(eq(s.whtCertificates.id, id));
     if (!w) throw new AppError(404, 'not_found', 'ไม่พบ 50 ทวิ');
     if (w.status !== 'pending_review') throw new AppError(409, 'already_reviewed', 'ตรวจ 50 ทวิ ฉบับนี้แล้ว', { status: w.status });
+    const [inv] = await this.db.select().from(s.invoices).where(eq(s.invoices.id, w.invoiceId));
     await this.db.transaction(async (tx) => {
-      await tx.update(s.whtCertificates).set({ status: decision, reviewedBy: staff.id, updatedAt: new Date() }).where(eq(s.whtCertificates.id, id));
-      await audit(tx, staff, w.workspaceId, 'plan', decision === 'confirmed' ? 'ops.wht_confirmed' : 'ops.wht_rejected', `${decision === 'confirmed' ? 'ยืนยัน' : 'ปฏิเสธ'} 50 ทวิ${note ? ` · ${note}` : ''}`, { type: 'wht_certificate', id });
+      await tx.update(s.whtCertificates).set({ status: decision, reviewedBy: staff.id, decidedAt: new Date(), ...(decision === 'rejected' ? { rejectReason: note ?? null } : {}), updatedAt: new Date() }).where(eq(s.whtCertificates.id, id));
+      await audit(tx, staff, w.workspaceId, 'plan', decision === 'confirmed' ? 'ops.wht_confirmed' : 'ops.wht_rejected', `${decision === 'confirmed' ? 'ยืนยัน' : 'ไม่ผ่าน'} 50 ทวิ ${inv?.number ?? ''}${note ? ` · ${note}` : ''}`, { type: 'wht_certificate', id });
     });
-    if (decision === 'rejected') await this.notifyAdmins(w.workspaceId, 'หนังสือรับรองการหักภาษี (50 ทวิ) ไม่ผ่านการตรวจ', `เหตุผล: ${note ?? '-'}\nส่งใหม่ภายใน 30 วันนับจากออกใบแจ้งหนี้`);
-    return { id, status: decision };
+    if (decision === 'rejected' && inv) {
+      const [ws] = await this.db.select({ slug: s.workspaces.slug }).from(s.workspaces).where(eq(s.workspaces.id, w.workspaceId));
+      const due = inv.paidAt ? new Date(inv.paidAt.getTime() + 7 * 3_600_000 + 30 * 86_400_000).toISOString().slice(0, 10) : null;
+      await this.notifyAdmins(
+        w.workspaceId,
+        `50 ทวิ ของ ${inv.number} ไม่ผ่านการตรวจ · กรุณาส่งใหม่`,
+        [`สาเหตุ: ${note ?? '-'}`, `อัปโหลด 50 ทวิ ฉบับใหม่ได้ที่ ${config.appUrl}/work/${ws?.slug}/billing/invoices/${inv.id}`, ...(due ? [`กำหนดส่งเดิม ${due} (30 วันหลังชำระ)`] : [])].join('\n'),
+      );
+    }
+    return { id, status: decision, reason: decision === 'rejected' ? (note ?? null) : null };
   }
 
   // ---------------------------------------------------------------------------

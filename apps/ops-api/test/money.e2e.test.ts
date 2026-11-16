@@ -2,6 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import ExcelJS from 'exceljs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { AccountingService } from '../src/billing/accounting.service.js';
 import { BillingService } from '../src/billing/billing.service.js';
 import { Mailer } from '../src/mail.js';
 import { customer, type Customer, reauth, staff, type Staff, startOps, type TestOps } from './helpers.js';
@@ -295,11 +296,11 @@ describe('ภาษี', () => {
     const doc = (await t.owner.query(`INSERT INTO tax_documents (workspace_id, invoice_id, doc_type, number, status) VALUES ($1,$2,'tax_invoice_receipt',$3,'failed') RETURNING id`, [c.id, a.inv.id, `TX-${randomUUID().slice(0, 8)}`])).rows[0].id;
     const r = await finance.agent.get('/ops/tax');
     expect(r.status).toBe(200);
-    expect(r.body.etax.map((e: { id: string }) => e.id)).toContain(doc);
-    expect(r.body.wht.find((w: { id: string }) => w.id === a.inv.id)).toMatchObject({ whtAmount: 9_000, certificateStatus: null });
-    expect(r.body.salesVat).toMatchObject({ vatRegistered: true, invoices: expect.any(Number) });
-    expect(r.body.salesVat.vatSatang).toBeGreaterThan(0);
-    expect((await finance.agent.post(`/ops/tax-documents/${doc}/retry`).send({})).body).toEqual({ id: doc, status: 'pending' });
+    expect(r.body.etax.items.map((e: { docId: string }) => e.docId)).toContain(doc);
+    expect(r.body.wht.items.find((w: { invoice: { id: string } }) => w.invoice.id === a.inv.id)).toMatchObject({ whtAmount: 9_000, certificate: null, state: 'waiting' });
+    expect(r.body).toMatchObject({ vatRegistered: true, kpi: { sales: { tx: expect.any(Number) } } });
+    expect(r.body.kpi.sales.vat).toBeGreaterThan(0);
+    expect((await finance.agent.post(`/ops/tax-documents/${doc}/retry`).send({})).body).toMatchObject({ id: doc, status: 'pending' });
     expect((await finance.agent.post(`/ops/tax-documents/${doc}/retry`).send({})).body.error.code).toBe('not_failed');
     expect((await support.agent.get('/ops/tax')).status).toBe(403);
   });
@@ -456,7 +457,7 @@ describe('รายงานรายได้ ปิดงวด และส�
     expect(csv.text.charCodeAt(0)).toBe(0xfeff);
     // รายการขาย / ใบลดหนี้ย้ายไปอยู่ในรายงานภาษีขายแล้ว
     expect((await finance.agent.get(`/ops/revenue/export?month=${month}&type=credit_notes`)).status).toBe(400);
-    expect((await fresh.agent.post('/ops/revenue/close').send({ month: last })).body).toEqual({ month: last, closed: true });
+    expect((await fresh.agent.post('/ops/revenue/close').send({ month: last })).body).toEqual({ month: last, closed: true, etaxOpen: 0 });
     expect((await fresh.agent.post('/ops/revenue/close').send({ month: last })).body.error.code).toBe('already_closed');
     expect((await finance.agent.get(`/ops/revenue/export?month=${last}&type=wht`)).headers['x-report-status']).toBe('closed');
     expect((await finance.agent.get('/ops/revenue?months=2')).body.months[0]).toMatchObject({ month: last, closed: true });
@@ -469,6 +470,7 @@ describe('รายงานรายได้ ปิดงวด และส�
     const last = prev.toISOString().slice(0, 7);
     delete process.env.OPS_ACCOUNTING_EMAIL;
     expect((await finance.agent.post('/ops/revenue/export/send').send({ month })).body.error.code).toBe('accounting_email_not_set');
+    // ยังไม่เคยตั้งในหน้าจอ = อ่านจาก environment เดิม
     process.env.OPS_ACCOUNTING_EMAIL = 'acc@office.example.com';
     try {
       const before = mail.sent.length;
@@ -484,7 +486,7 @@ describe('รายงานรายได้ ปิดงวด และส�
       expect(d.body).toMatchObject({ recipients: ['acc@office.example.com'], autoDay: 5, history: [{ month, staffName: 'Fin Finance' }] });
       expect((await auditor.agent.post('/ops/revenue/export/send').send({ month })).status).toBe(403);
       // อัตโนมัติ: ก่อนวันที่ 5 ไม่ส่ง · ตั้งแต่วันที่ 5 ส่งเดือนก่อน (ปิดงวดแล้ว) ครั้งเดียว
-      const svc = t.app.get(BillingService);
+      const svc = t.app.get(AccountingService);
       expect(await svc.autoSendExport(`${month}-04`)).toBeNull();
       const auto = await svc.autoSendExport(`${month}-05`);
       expect(auto).toMatchObject({ month: last, draft: false });

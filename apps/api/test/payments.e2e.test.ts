@@ -245,21 +245,39 @@ describe('โอนเงิน + สลิป + 50 ทวิ', () => {
     expect((await t.owner.query(`SELECT count(*)::int AS n FROM tax_documents WHERE invoice_id = $1`, [invoiceId])).rows[0].n).toBe(0); // ใบกำกับภาษีออกหลังเจ้าหน้าที่ยืนยัน
   });
 
-  it('50 ทวิ: ใบแจ้งหนี้ที่หักภาษีเท่านั้น · ภายใน 30 วัน · เป็นไฟล์ที่ถูกต้อง', async () => {
+  it('50 ทวิ: ใบแจ้งหนี้ที่หักภาษีเท่านั้น · กำหนดส่ง 30 วันหลังชำระ · เลยกำหนดยังส่งได้ · หักผ่าน e-WHT', async () => {
     const url = `${ws}/billing/invoices/${invoiceId}/wht-certificate`;
     expect((await upload(team.lead, url, Buffer.from('plain text'), 'wht.pdf')).body.error.code).toBe('invalid_file');
     const ok = await upload(team.lead, url, PDF, 'wht.pdf');
     expect(ok.status, JSON.stringify(ok.body)).toBe(201);
-    expect(ok.body.whtCertificate).toMatchObject({ status: 'pending_review' });
-    expect(ok.body.whtDueBy).toBeTruthy();
+    expect(ok.body.whtCertificate).toMatchObject({ status: 'pending_review', source: 'upload', rejectReason: null });
+    expect(ok.body.whtDueBy).toBeNull(); // ยังไม่ชำระ = ยังไม่มีกำหนดส่ง
     expect((await t.owner.query(`SELECT count(*)::int AS n FROM wht_certificates WHERE invoice_id = $1`, [invoiceId])).rows[0].n).toBe(1);
 
     const noWht = await post(team.lead, `${ws}/billing/checkout`, { plan: 'team_s', method: 'transfer' }, key());
     expect((await upload(team.lead, `${ws}/billing/invoices/${noWht.body.invoice.id}/wht-certificate`, PDF, 'wht.pdf')).body.error.code).toBe('wht_not_applicable');
-    await t.owner.query(`UPDATE invoices SET created_at = now() - interval '31 days' WHERE id = $1`, [invoiceId]);
+
+    // ออกใบแจ้งหนี้ 40 วันก่อน ชำระ 31 วันก่อน → กำหนดส่ง = วันชำระ + 30 (เมื่อวาน) · ไม่ผ่านแล้วเห็นสาเหตุ
+    await t.owner.query(`UPDATE invoices SET created_at = now() - interval '40 days', paid_at = now() - interval '31 days' WHERE id = $1`, [invoiceId]);
+    await t.owner.query(`UPDATE wht_certificates SET status = 'rejected', reject_reason = 'ยอดเงินได้หรือภาษีที่หักไม่ตรงกับใบแจ้งหนี้' WHERE invoice_id = $1`, [invoiceId]);
+    const yesterday = new Date(Date.now() + 7 * 3_600_000 - 86_400_000).toISOString().slice(0, 10);
+    const view = await team.lead.get(`${ws}/billing/invoices/${invoiceId}`);
+    expect(view.body).toMatchObject({ whtDueBy: yesterday, whtOverdue: true, whtCertificate: { status: 'rejected', rejectReason: 'ยอดเงินได้หรือภาษีที่หักไม่ตรงกับใบแจ้งหนี้' } });
     const late = await upload(team.lead, url, PDF, 'wht.pdf');
-    expect(late.status).toBe(409);
-    expect(late.body.error.code).toBe('wht_deadline_passed');
+    expect(late.status, JSON.stringify(late.body)).toBe(201);
+    expect(late.body).toMatchObject({ whtOverdue: false, whtCertificate: { status: 'pending_review' } });
+    expect((await t.owner.query(`SELECT summary FROM audit_logs WHERE action = 'billing.wht_uploaded' AND target_id = $1 ORDER BY created_at DESC LIMIT 1`, [invoiceId])).rows[0].summary).toContain(`เลยกำหนด ${yesterday}`);
+
+    // หักผ่าน e-Withholding Tax: ไม่มีไฟล์ · รอยืนยันจากกรมสรรพากร · Member ทำไม่ได้
+    const ewht = `${ws}/billing/invoices/${invoiceId}/wht-ewht`;
+    expect((await post(team.lead, ewht, { reference: '' })).status).toBe(400);
+    expect((await post(team.dev, ewht, { reference: 'EWHT-2611-0001' })).status).toBe(403);
+    const e = await post(team.lead, ewht, { reference: 'EWHT-2611-0001' });
+    expect(e.status, JSON.stringify(e.body)).toBe(201);
+    expect(e.body.whtCertificate).toMatchObject({ status: 'pending_ewht', source: 'ewht', ewhtRef: 'EWHT-2611-0001' });
+    expect((await t.owner.query(`SELECT file_key, uploaded_by IS NOT NULL AS by FROM wht_certificates WHERE invoice_id = $1 ORDER BY created_at DESC LIMIT 1`, [invoiceId])).rows[0]).toEqual({ file_key: null, by: true });
+    await t.owner.query(`UPDATE wht_certificates SET status = 'confirmed' WHERE invoice_id = $1 AND status = 'pending_ewht'`, [invoiceId]);
+    expect((await upload(team.lead, url, PDF, 'wht.pdf')).body.error.code).toBe('wht_already_confirmed');
   });
 
   it('สลิปใช้ได้เฉพาะใบแจ้งหนี้ที่โอน และยังไม่ปิด', async () => {

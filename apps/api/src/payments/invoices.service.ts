@@ -20,8 +20,12 @@ import { invoiceDto, PaymentsService } from './payments.service.js';
 const s = schema;
 const DAY = 86_400_000;
 export const SLIP_MAX_BYTES = 5 * 1024 * 1024;
-/** 50 ทวิ ต้องส่งภายใน 30 วัน */
+/** 50 ทวิ ต้องส่งภายใน 30 วันหลังชำระ (รอบ 4 · เดิมนับจากวันออกใบแจ้งหนี้ ลูกค้าที่จ่ายช้าเหลือเวลาน้อย) */
 export const WHT_DEADLINE_DAYS = 30;
+/** กำหนดส่ง 50 ทวิ = วันที่ชำระ + 30 วัน (เวลาไทย) · ยังไม่ชำระ = ยังไม่มีกำหนด */
+export const whtDueBy = (i: { whtAmount: number; paidAt: Date | null }) => (i.whtAmount > 0 && i.paidAt ? bkkDate(new Date(i.paidAt.getTime() + WHT_DEADLINE_DAYS * DAY)) : null);
+/** หักผ่าน e-Withholding Tax: เลขอ้างอิงที่ธนาคาร / ระบบสรรพากรให้ */
+export const EwhtBody = z.object({ reference: z.string().trim().min(3, 'กรอกเลขอ้างอิง e-WHT').max(60) }).strict();
 
 /** ยอดที่ลูกค้าแจ้งตอนแนบสลิป (สตางค์) และเวลาที่โอน (= วันที่ของใบกำกับภาษี) · ไม่บังคับ */
 const SlipBody = z.object({ amount: z.coerce.number().int().positive().optional(), paidAt: z.coerce.date().optional() });
@@ -115,8 +119,11 @@ export class InvoicesService {
       hasSlip: !!p?.slipFileKey,
       pdfUrl: `${base}/invoices/${i.id}.pdf`,
       taxDocument: d ? { id: d.id, number: d.number, status: d.status, sentAt: d.sentAt, issuedOn: d.issuedOn, replacesId: d.replacesId, pdfUrl: `${base}/tax-documents/${d.id}.pdf` } : null,
-      whtCertificate: w ? { id: w.id, status: w.status, uploadedAt: w.createdAt } : null,
-      whtDueBy: i.whtAmount > 0 ? new Date(i.createdAt.getTime() + WHT_DEADLINE_DAYS * DAY).toISOString().slice(0, 10) : null,
+      // ลูกค้าเห็นสาเหตุที่ไม่ผ่าน (E8) และเลขอ้างอิง e-WHT ที่แจ้งไว้
+      whtCertificate: w ? { id: w.id, status: w.status, source: w.source, rejectReason: w.status === 'rejected' ? w.rejectReason : null, ewhtRef: w.ewhtRef, uploadedAt: w.createdAt } : null,
+      whtDueBy: whtDueBy(i),
+      /** เลยกำหนดแล้วยังอัปโหลดได้ (หน้าจอขึ้น "เลยกำหนด") */
+      whtOverdue: !!whtDueBy(i) && whtDueBy(i)! < today() && (!w || w.status === 'rejected'),
     };
   }
 
@@ -229,21 +236,42 @@ export class InvoicesService {
     return this.get(auth, tenant, id);
   }
 
-  async whtCertificate(auth: AuthInfo, tenant: TenantInfo, id: string, file: { buffer: Buffer } | undefined) {
-    this.requireBilling(tenant);
-    const type = this.validateUpload(file);
-    const invoice = await this.db.run(auth, tenant, async (tx) => {
+  /** ใบที่ส่ง 50 ทวิ ได้: มีหัก ณ ที่จ่าย · ไม่ถูกยกเลิก · ยังไม่ผ่านการตรวจ (เลยกำหนดแล้วยังส่งได้ ไม่ให้ลูกค้าเสียเครดิตภาษี) */
+  private async whtInvoice(auth: AuthInfo, tenant: TenantInfo, id: string) {
+    return this.db.run(auth, tenant, async (tx) => {
       const invoice = await this.find(tx, id);
       if (invoice.whtAmount <= 0) throw new AppError(409, 'wht_not_applicable', 'ใบแจ้งหนี้นี้ไม่มีการหักภาษี ณ ที่จ่าย');
       if (invoice.status === 'void') throw new AppError(409, 'invoice_closed', 'ใบแจ้งหนี้นี้ถูกยกเลิก');
-      const deadline = new Date(invoice.createdAt.getTime() + WHT_DEADLINE_DAYS * DAY);
-      if (Date.now() > deadline.getTime()) throw new AppError(409, 'wht_deadline_passed', `ส่ง 50 ทวิ ได้ภายใน ${WHT_DEADLINE_DAYS} วันนับจากออกใบแจ้งหนี้`, { dueBy: deadline.toISOString().slice(0, 10) });
+      const [last] = await tx.select({ status: s.whtCertificates.status }).from(s.whtCertificates).where(eq(s.whtCertificates.invoiceId, invoice.id)).orderBy(desc(s.whtCertificates.createdAt)).limit(1);
+      if (last?.status === 'confirmed') throw new AppError(409, 'wht_already_confirmed', 'ทีมได้รับ 50 ทวิ ของใบนี้แล้ว');
       return invoice;
     });
+  }
+
+  async whtCertificate(auth: AuthInfo, tenant: TenantInfo, id: string, file: { buffer: Buffer } | undefined) {
+    this.requireBilling(tenant);
+    const type = this.validateUpload(file);
+    const invoice = await this.whtInvoice(auth, tenant, id);
     const fileKey = await this.save('wht', invoice.id, file!.buffer, type.ext);
+    const due = whtDueBy(invoice);
     await this.sys.transaction(async (tx) => {
-      await tx.insert(s.whtCertificates).values({ workspaceId: tenant.workspaceId, invoiceId: invoice.id, fileKey, uploadedBy: auth.userId });
-      await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'plan', action: 'billing.wht_uploaded', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · 50 ทวิ ${invoice.whtAmount / 100} บาท` });
+      await tx.insert(s.whtCertificates).values({ workspaceId: tenant.workspaceId, invoiceId: invoice.id, fileKey, uploadedBy: auth.userId, source: 'upload' });
+      await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'plan', action: 'billing.wht_uploaded', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · 50 ทวิ ${invoice.whtAmount / 100} บาท${due && due < today() ? ` · เลยกำหนด ${due}` : ''}` });
+    });
+    return this.get(auth, tenant, id);
+  }
+
+  /**
+   * หักผ่าน e-Withholding Tax (E11): ไม่มีไฟล์ · ใบขึ้น "รอยืนยันจากกรมสรรพากร" และหยุดอีเมลขอ 50 ทวิ
+   * ทีมการเงินปิดรายการเมื่อนำเข้าไฟล์ e-WHT ที่จับคู่ได้ (E9)
+   */
+  async whtEwht(auth: AuthInfo, tenant: TenantInfo, id: string, body: unknown) {
+    this.requireBilling(tenant);
+    const { reference } = parse(EwhtBody, body ?? {});
+    const invoice = await this.whtInvoice(auth, tenant, id);
+    await this.sys.transaction(async (tx) => {
+      await tx.insert(s.whtCertificates).values({ workspaceId: tenant.workspaceId, invoiceId: invoice.id, fileKey: null, uploadedBy: auth.userId, source: 'ewht', status: 'pending_ewht', ewhtRef: reference });
+      await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'plan', action: 'billing.wht_ewht_declared', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · หักผ่าน e-WHT ${invoice.whtAmount / 100} บาท · อ้างอิง ${reference}` });
     });
     return this.get(auth, tenant, id);
   }

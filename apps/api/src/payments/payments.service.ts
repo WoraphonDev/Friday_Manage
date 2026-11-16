@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { AnalyticsService, classifyChange } from '../analytics/analytics.service.js';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { canGrant, commitCouponUses, type Db, issueReceipt, nextDocNumber, resumeIfPaid, schema, type Tx } from '@friday/db';
+import { bkkDate, type BuyerSnapshot, canGrant, cancelETax, commitCouponUses, type Db, issueReceipt, nextDocNumber, queueETax, resumeIfPaid, schema, type Tx } from '@friday/db';
 import { bankFromEnv } from '@friday/docs';
 import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -16,10 +16,14 @@ import { SYSTEM_DB } from '../db/db.module.js';
 import { config } from '../config.js';
 import { Jobs } from '../queue/jobs.js';
 import { CouponCode, recordDiscount } from './coupons.js';
-import { ETAX_PROVIDER, type ETaxProvider, PAYMENT_GATEWAY, type PaymentGateway, verifyETaxSignature } from './providers.js';
+import { ETAX_PROVIDER, type ETaxCancelInput, type ETaxInput, type ETaxProvider, etaxErrorText, PAYMENT_GATEWAY, type PaymentGateway, verifyETaxSignature } from './providers.js';
 
 const s = schema;
 const DAY = 86_400_000;
+/** คิว e-Tax: ลอง 3 ครั้ง ห่าง 10 นาที · ส่งแล้วรอผลเกิน 1 ชม. ถามผู้ให้บริการเอง (หน้าจอ E1) */
+export const ETAX_MAX_ATTEMPTS = 3;
+const ETAX_RETRY_MS = 10 * 60_000;
+const ETAX_CHECK_AFTER_MS = 60 * 60_000;
 
 export const CheckoutBody = z
   .object({
@@ -139,19 +143,32 @@ export class PaymentsService implements OnModuleInit {
     });
   }
 
-  /** ส่ง e-Tax ของเอกสารที่ค้างสถานะ pending เกิน 1 นาที (ให้ผู้สร้างเอกสารมีเวลาส่งงานเอง) */
+  /**
+   * งานกวาด e-Tax ทุก 10 นาที (คิวเดียว `etax_jobs`: ส่ง TX / CN / DN และแจ้งยกเลิก)
+   * ① เอกสารเก่าที่ยังไม่มีงานในคิว (สร้างก่อนมีคิว / ops-api รุ่นก่อน) เข้าคิว · รอ 1 นาทีให้ผู้สร้างส่งเอง
+   * ② งานที่ถึงเวลา: ส่ง / ลองใหม่ (3 ครั้ง ห่าง 10 นาที) · ③ งานที่รอผลและทีมกด "ตรวจสถานะ" หรือครบ 1 ชม. → ถามผู้ให้บริการ
+   */
   async sweepETax() {
-    const rows = await this.sys.select({ id: s.taxDocuments.id }).from(s.taxDocuments).where(and(eq(s.taxDocuments.status, 'pending'), ne(s.taxDocuments.docType, 'receipt'), sql`${s.taxDocuments.createdAt} < now() - interval '1 minute'`)).limit(50);
-    let submitted = 0;
-    for (const r of rows) {
-      try {
-        await this.submitETax(r.id);
-        submitted++;
-      } catch (e) {
-        this.log.error(`ส่ง e-Tax ${r.id} ไม่สำเร็จ: ${(e as Error).message}`);
-      }
+    await this.sys.execute(sql`
+      insert into etax_jobs (workspace_id, doc_kind, doc_id, action, status, next_attempt_at)
+      select d.workspace_id, 'tax_document', d.id, 'issue', 'pending', now() from tax_documents d
+      where d.status = 'pending' and d.doc_type <> 'receipt' and d.created_at < now() - interval '1 minute'
+      on conflict do nothing`);
+    const due = await this.sys
+      .select({ id: s.etaxJobs.id, status: s.etaxJobs.status })
+      .from(s.etaxJobs)
+      .where(sql`(${s.etaxJobs.status} = 'pending' and ${s.etaxJobs.attempts} < ${ETAX_MAX_ATTEMPTS} and coalesce(${s.etaxJobs.nextAttemptAt}, now()) <= now())
+        or (${s.etaxJobs.status} = 'submitted' and ${s.etaxJobs.nextAttemptAt} <= now())`)
+      .orderBy(s.etaxJobs.createdAt)
+      .limit(50);
+    const result = { submitted: 0, checked: 0, errors: 0 };
+    for (const j of due) {
+      const r = j.status === 'submitted' ? await this.checkETaxJob(j.id) : await this.runETaxJob(j.id);
+      if (r === 'submitted') result.submitted++;
+      else if (r === 'checked') result.checked++;
+      else if (r === 'error') result.errors++;
     }
-    return { submitted };
+    return result;
   }
 
   private requireBilling(tenant: TenantInfo) {
@@ -399,36 +416,193 @@ export class PaymentsService implements OnModuleInit {
   // e-Tax
   // ---------------------------------------------------------------------------
 
-  /** งานเบื้องหลัง: ส่งคำขอออกใบกำกับภาษีไปยังผู้ให้บริการ (ผลจริงมาทาง hooks/etax) */
+  /** งานเบื้องหลังหลังรับเงิน: ส่งใบกำกับภาษีใบนี้ทันที (งานในคิวสร้างพร้อมเอกสารแล้ว · เอกสารเก่าสร้างให้ที่นี่) */
   async submitETax(taxDocumentId: string) {
     const [doc] = await this.sys.select().from(s.taxDocuments).where(eq(s.taxDocuments.id, taxDocumentId));
-    if (!doc || doc.status !== 'pending') return;
-    const [invoice] = await this.sys.select().from(s.invoices).where(eq(s.invoices.id, doc.invoiceId));
-    const [profile] = await this.sys.select().from(s.billingProfiles).where(eq(s.billingProfiles.workspaceId, doc.workspaceId));
-    if (!profile) return;
-    const { providerRef } = await this.etax.issue({
-      taxDocumentId: doc.id,
-      number: doc.number,
-      invoiceNumber: invoice.number,
-      amounts: { subtotal: invoice.subtotal, vat: invoice.vat, total: invoice.total },
-      buyer: { companyName: profile.companyName, taxId: profile.taxId, branchType: profile.branchType, branchNo: profile.branchNo, address: profile.address, email: profile.taxEmail },
-    });
-    await this.sys.update(s.taxDocuments).set({ providerRef, status: 'submitted', updatedAt: new Date() }).where(eq(s.taxDocuments.id, doc.id));
+    if (!doc || doc.status !== 'pending' || doc.docType === 'receipt') return;
+    await queueETax(this.sys, { workspaceId: doc.workspaceId, docKind: 'tax_document', docId: doc.id, action: 'issue' });
+    const [job] = await this.sys.select({ id: s.etaxJobs.id }).from(s.etaxJobs).where(and(eq(s.etaxJobs.docKind, 'tax_document'), eq(s.etaxJobs.docId, doc.id), eq(s.etaxJobs.action, 'issue')));
+    if (job) await this.runETaxJob(job.id);
   }
 
+  /**
+   * ส่งงานหนึ่งงานถึงผู้ให้บริการ · จองงานก่อนด้วยการเลื่อน next_attempt_at ไป 10 นาที (งานกวาดกับงานหลังรับเงินชนกันไม่ส่งซ้ำ ·
+   * โปรเซสล้มกลางทางก็ลองใหม่เองรอบถัดไป) · ล้มครบ 3 ครั้ง → failed ขึ้นตาราง "เอกสาร e-Tax ที่ต้องดู"
+   */
+  async runETaxJob(id: string): Promise<'submitted' | 'error' | 'skipped'> {
+    const [job] = await this.sys
+      .update(s.etaxJobs)
+      .set({ attempts: sql`${s.etaxJobs.attempts} + 1`, lastAttemptAt: new Date(), nextAttemptAt: new Date(Date.now() + ETAX_RETRY_MS), updatedAt: new Date() })
+      .where(and(eq(s.etaxJobs.id, id), eq(s.etaxJobs.status, 'pending'), sql`${s.etaxJobs.attempts} < ${ETAX_MAX_ATTEMPTS}`, sql`coalesce(${s.etaxJobs.nextAttemptAt}, now()) <= now()`))
+      .returning();
+    if (!job) return 'skipped';
+    try {
+      let providerRef: string;
+      let number: string;
+      if (job.action === 'issue') {
+        const input = await this.etaxInput(job);
+        if (!input) {
+          await this.sys.update(s.etaxJobs).set({ status: 'manual', nextAttemptAt: null, note: 'ไม่ต้องส่ง: เอกสารถูกยกเลิกหรือไม่พบ', updatedAt: new Date() }).where(eq(s.etaxJobs.id, job.id));
+          return 'skipped';
+        }
+        number = input.number;
+        ({ providerRef } = await this.etax.issue(input));
+      } else {
+        const input = await this.etaxCancelInput(job);
+        if (!input) {
+          await this.sys.update(s.etaxJobs).set({ status: 'manual', nextAttemptAt: null, note: 'ไม่ต้องแจ้งยกเลิก: ฉบับนี้ไม่ได้ออกที่ผู้ให้บริการ', updatedAt: new Date() }).where(eq(s.etaxJobs.id, job.id));
+          return 'skipped';
+        }
+        number = input.number;
+        ({ providerRef } = await this.etax.cancel(input));
+      }
+      await this.sys.transaction(async (tx) => {
+        // รอผลทาง webhook · ครบ 1 ชม. ยังไม่มาถามผู้ให้บริการเองหนึ่งครั้ง
+        await tx.update(s.etaxJobs).set({ status: 'submitted', providerRef, lastError: null, nextAttemptAt: new Date(Date.now() + ETAX_CHECK_AFTER_MS), updatedAt: new Date() }).where(eq(s.etaxJobs.id, job.id));
+        // สถานะของใบกำกับภาษีอยู่ที่ tax_documents · ฉบับที่ยกเลิกระหว่างส่งไม่เปลี่ยนกลับ
+        if (job.docKind === 'tax_document' && job.action === 'issue') await tx.update(s.taxDocuments).set({ providerRef, status: 'submitted', updatedAt: new Date() }).where(and(eq(s.taxDocuments.id, job.docId), inArray(s.taxDocuments.status, ['pending', 'failed'])));
+        await tx.insert(s.auditLogs).values({ workspaceId: job.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: job.action === 'issue' ? 'billing.etax_submitted' : 'billing.etax_cancel_submitted', targetType: job.docKind, targetId: job.docId, summary: `${number} · ${providerRef}` });
+      });
+      return 'submitted';
+    } catch (e) {
+      const final = job.attempts >= ETAX_MAX_ATTEMPTS;
+      const error = etaxErrorText(e);
+      await this.sys.transaction(async (tx) => {
+        await tx.update(s.etaxJobs).set({ status: final ? 'failed' : 'pending', lastError: error, nextAttemptAt: final ? null : new Date(Date.now() + ETAX_RETRY_MS), updatedAt: new Date() }).where(eq(s.etaxJobs.id, job.id));
+        if (final && job.docKind === 'tax_document' && job.action === 'issue') await tx.update(s.taxDocuments).set({ status: 'failed', updatedAt: new Date() }).where(and(eq(s.taxDocuments.id, job.docId), eq(s.taxDocuments.status, 'pending')));
+        if (final) await tx.insert(s.auditLogs).values({ workspaceId: job.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: job.action === 'issue' ? 'billing.etax_failed' : 'billing.etax_cancel_failed', targetType: job.docKind, targetId: job.docId, summary: `ลอง ${job.attempts} ครั้งไม่สำเร็จ · ${error}` });
+      });
+      this.log.error(`ส่ง e-Tax (${job.action} ${job.docKind} ${job.docId}) ครั้งที่ ${job.attempts} ไม่สำเร็จ: ${error}`);
+      return 'error';
+    }
+  }
+
+  /** ถามผลของงานที่ส่งแล้ว (ครบ 1 ชม. หรือทีมกด "ตรวจสถานะ") · ยังไม่มีผล = รอต่อ (ขึ้นตาราง "รอผลเกิน 1 ชม.") */
+  private async checkETaxJob(id: string): Promise<'checked' | 'error' | 'skipped'> {
+    const [job] = await this.sys.update(s.etaxJobs).set({ nextAttemptAt: null, updatedAt: new Date() }).where(and(eq(s.etaxJobs.id, id), eq(s.etaxJobs.status, 'submitted'), sql`${s.etaxJobs.nextAttemptAt} <= now()`)).returning();
+    if (!job?.providerRef) return 'skipped';
+    try {
+      const r = await this.etax.status(job.providerRef);
+      if (r.status !== 'pending') await this.applyETaxResult(job, r.status, r.code, r.message);
+      return 'checked';
+    } catch (e) {
+      await this.sys.update(s.etaxJobs).set({ lastError: `ตรวจสถานะไม่ได้ · ${etaxErrorText(e)}`, updatedAt: new Date() }).where(eq(s.etaxJobs.id, job.id));
+      return 'error';
+    }
+  }
+
+  /** ข้อมูลที่ส่งผู้ให้บริการ · ผู้ซื้อ = ข้อมูลที่ล็อกไว้ในเอกสาร (ไม่ใช่โปรไฟล์ปัจจุบัน) · null = ไม่ต้องส่ง */
+  private async etaxInput(job: typeof s.etaxJobs.$inferSelect): Promise<ETaxInput | null> {
+    const ref = async (d: typeof s.taxDocuments.$inferSelect | undefined) => {
+      if (!d) return null;
+      const [j] = await this.sys.select({ providerRef: s.etaxJobs.providerRef }).from(s.etaxJobs).where(and(eq(s.etaxJobs.docKind, 'tax_document'), eq(s.etaxJobs.docId, d.id), eq(s.etaxJobs.action, 'issue')));
+      return { number: d.number, issuedOn: d.issuedOn ?? bkkDate(d.createdAt), providerRef: d.providerRef ?? j?.providerRef ?? null };
+    };
+    if (job.docKind === 'tax_document') {
+      const [doc] = await this.sys.select().from(s.taxDocuments).where(eq(s.taxDocuments.id, job.docId));
+      if (!doc || doc.status === 'cancelled' || doc.docType === 'receipt') return null;
+      const [invoice] = await this.sys.select().from(s.invoices).where(eq(s.invoices.id, doc.invoiceId));
+      const [old] = doc.replacesId ? await this.sys.select().from(s.taxDocuments).where(eq(s.taxDocuments.id, doc.replacesId)) : [];
+      return {
+        documentId: doc.id, taxDocumentId: doc.id, kind: 'tax_invoice', number: doc.number, issuedOn: doc.issuedOn ?? bkkDate(doc.createdAt), invoiceNumber: invoice.number,
+        amounts: { subtotal: invoice.subtotal, vat: invoice.vat, total: invoice.total },
+        buyer: await this.lockedBuyer(doc.workspaceId, doc.buyer),
+        replaces: await ref(old), reason: old?.cancelReason ?? null,
+      };
+    }
+    const note = job.docKind === 'credit_note' ? (await this.sys.select().from(s.creditNotes).where(eq(s.creditNotes.id, job.docId)))[0] : (await this.sys.select().from(s.debitNotes).where(eq(s.debitNotes.id, job.docId)))[0];
+    if (!note) return null;
+    const [invoice] = await this.sys.select().from(s.invoices).where(eq(s.invoices.id, note.invoiceId));
+    // ใบลด / เพิ่มหนี้อ้างใบกำกับภาษีที่ยังมีผลของใบแจ้งหนี้เดิม (ม.86/9 · 86/10)
+    const docs = await this.sys.select().from(s.taxDocuments).where(eq(s.taxDocuments.invoiceId, note.invoiceId)).orderBy(desc(s.taxDocuments.createdAt));
+    const tax = docs.find((d) => d.status !== 'cancelled') ?? docs[0];
+    if (!tax || tax.docType === 'receipt') return null;
+    return {
+      documentId: note.id, kind: job.docKind === 'credit_note' ? 'credit_note' : 'debit_note', number: note.number, issuedOn: bkkDate(note.issuedAt ?? note.createdAt), invoiceNumber: invoice.number,
+      amounts: { subtotal: note.amountSatang, vat: note.vatSatang, total: note.amountSatang + note.vatSatang },
+      buyer: await this.lockedBuyer(note.workspaceId, tax.buyer), references: await ref(tax), reason: note.reason,
+    };
+  }
+
+  private async etaxCancelInput(job: typeof s.etaxJobs.$inferSelect): Promise<ETaxCancelInput | null> {
+    const [issue] = await this.sys.select().from(s.etaxJobs).where(and(eq(s.etaxJobs.docKind, job.docKind), eq(s.etaxJobs.docId, job.docId), eq(s.etaxJobs.action, 'issue')));
+    if (job.docKind !== 'tax_document') return null;
+    const [doc] = await this.sys.select().from(s.taxDocuments).where(eq(s.taxDocuments.id, job.docId));
+    const providerRef = doc?.providerRef ?? issue?.providerRef;
+    if (!doc || !providerRef) return null;
+    return { documentId: doc.id, kind: 'tax_invoice', number: doc.number, providerRef, reason: doc.cancelReason ?? 'ยกเลิกและออกฉบับใหม่แทน' };
+  }
+
+  /** ผู้ซื้อที่ล็อกในเอกสาร · เอกสารเก่าที่ยังไม่มี snapshot ใช้โปรไฟล์ปัจจุบัน */
+  private async lockedBuyer(workspaceId: string, snapshot: unknown): Promise<ETaxInput['buyer']> {
+    const [profile] = await this.sys.select().from(s.billingProfiles).where(eq(s.billingProfiles.workspaceId, workspaceId));
+    const b = (snapshot && typeof snapshot === 'object' ? snapshot : profile ? { companyName: profile.companyName, taxId: profile.taxId, branchType: profile.branchType, branchNo: profile.branchNo, address: profile.address, email: profile.taxEmail } : null) as BuyerSnapshot | null;
+    if (!b) throw new Error('ไม่พบข้อมูลผู้ซื้อ');
+    return { companyName: b.companyName, taxId: b.taxId, branchType: b.branchType, branchNo: b.branchNo, address: b.address, email: b.email ?? profile?.taxEmail ?? '' };
+  }
+
+  /**
+   * hooks/etax · ผลของงานในคิว (ออกเอกสาร TX / CN / DN หรือแจ้งยกเลิก) · ค้นจากเลขอ้างอิงของผู้ให้บริการ
+   * `{ providerRef, status: issued | cancelled | failed, code?, message? }`
+   */
   async handleETax(raw: Buffer, signature: string | undefined) {
     if (!verifyETaxSignature(raw, signature)) throw new AppError(400, 'invalid_signature', 'ลายเซ็น Webhook ไม่ถูกต้อง');
-    const body = z.object({ providerRef: z.string().min(1), status: z.enum(['issued', 'failed']) }).safeParse(JSON.parse(raw.toString('utf8') || '{}'));
-    if (!body.success) throw new AppError(400, 'invalid_payload', 'รูปแบบข้อมูลไม่ถูกต้อง');
-    const [doc] = await this.sys.select().from(s.taxDocuments).where(eq(s.taxDocuments.providerRef, body.data.providerRef));
-    if (!doc) return { received: true, unknown: true };
-    if (doc.status === body.data.status) return { received: true, duplicate: true };
-    await this.sys.update(s.taxDocuments).set({ status: body.data.status, ...(body.data.status === 'issued' ? { sentAt: new Date() } : {}), updatedAt: new Date() }).where(eq(s.taxDocuments.id, doc.id));
-    await this.sys.insert(s.auditLogs).values({ workspaceId: doc.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: `billing.etax_${body.data.status}`, targetType: 'tax_document', targetId: doc.id, summary: doc.number });
-    if (body.data.status === 'issued') {
-      const [profile] = await this.sys.select({ email: s.billingProfiles.taxEmail }).from(s.billingProfiles).where(eq(s.billingProfiles.workspaceId, doc.workspaceId));
-      if (profile) await this.mailer.send({ to: profile.email, subject: `ใบกำกับภาษีอิเล็กทรอนิกส์ ${doc.number}`, text: `ออกใบกำกับภาษีอิเล็กทรอนิกส์เลขที่ ${doc.number} เรียบร้อยแล้ว · ดาวน์โหลดได้ที่หน้า การเรียกเก็บเงิน` }).catch((e) => this.log.error(`ส่งอีเมล e-Tax ไม่สำเร็จ: ${(e as Error).message}`));
+    let json: unknown;
+    try {
+      json = JSON.parse(raw.toString('utf8') || '{}');
+    } catch {
+      throw new AppError(400, 'invalid_payload', 'รูปแบบข้อมูลไม่ถูกต้อง');
     }
-    return { received: true };
+    const body = z.object({ providerRef: z.string().min(1), status: z.enum(['issued', 'failed', 'cancelled']), code: z.string().max(50).optional(), message: z.string().max(500).optional() }).safeParse(json);
+    if (!body.success) throw new AppError(400, 'invalid_payload', 'รูปแบบข้อมูลไม่ถูกต้อง');
+    const { providerRef, status, code, message } = body.data;
+    // งานแจ้งยกเลิกที่ทีมบันทึกเองได้เลขอ้างอิงของการยกเลิก → ค้นงานก่อน แล้วค่อยค้นใบกำกับภาษี (เอกสารก่อนมีคิว)
+    let [job] = await this.sys.select().from(s.etaxJobs).where(eq(s.etaxJobs.providerRef, providerRef)).orderBy(desc(s.etaxJobs.updatedAt)).limit(1);
+    if (!job) {
+      const [doc] = await this.sys.select().from(s.taxDocuments).where(eq(s.taxDocuments.providerRef, providerRef));
+      if (!doc) return { received: true, unknown: true };
+      await queueETax(this.sys, { workspaceId: doc.workspaceId, docKind: 'tax_document', docId: doc.id, action: 'issue' });
+      await this.sys.update(s.etaxJobs).set({ status: 'submitted', providerRef, nextAttemptAt: null }).where(and(eq(s.etaxJobs.docKind, 'tax_document'), eq(s.etaxJobs.docId, doc.id), eq(s.etaxJobs.action, 'issue'), eq(s.etaxJobs.status, 'pending')));
+      [job] = await this.sys.select().from(s.etaxJobs).where(and(eq(s.etaxJobs.docKind, 'tax_document'), eq(s.etaxJobs.docId, doc.id), eq(s.etaxJobs.action, 'issue')));
+    }
+    return { received: true, ...(await this.applyETaxResult(job, status, code, message)) };
+  }
+
+  /**
+   * บันทึกผลจากผู้ให้บริการลงคิวและเอกสาร
+   * ใบกำกับภาษีที่ยกเลิกแล้ว: ผลที่มาช้าเก็บในประวัติ แต่ไม่เปลี่ยนสถานะกลับ (และต้องแจ้งยกเลิกฉบับที่ผู้ให้บริการเพิ่งออก)
+   */
+  private async applyETaxResult(job: typeof s.etaxJobs.$inferSelect, status: 'issued' | 'failed' | 'cancelled', code?: string, message?: string) {
+    const ok = job.action === 'issue' ? status === 'issued' : status === 'cancelled';
+    const nextStatus = ok ? 'done' : status === 'failed' ? 'failed' : null;
+    const error = status === 'failed' ? [code, message].filter(Boolean).join(' · ') || 'ผู้ให้บริการปฏิเสธ' : null;
+    if (!nextStatus) {
+      // ผลไม่ตรงกับงาน (เช่น "cancelled" ของงานออกเอกสาร) · เก็บไว้ให้ทีมดู ไม่เปลี่ยนอะไร
+      await this.sys.insert(s.auditLogs).values({ workspaceId: job.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.etax_unexpected', targetType: job.docKind, targetId: job.docId, summary: `${job.action} · ผู้ให้บริการแจ้ง ${status}` });
+      return { ignored: true };
+    }
+    if (job.status === nextStatus && (nextStatus === 'done' || job.lastError === error)) return { duplicate: true };
+    const [doc] = job.docKind === 'tax_document' ? await this.sys.select().from(s.taxDocuments).where(eq(s.taxDocuments.id, job.docId)) : [];
+    const late = job.action === 'issue' && doc?.status === 'cancelled';
+    await this.sys.transaction(async (tx) => {
+      await tx.update(s.etaxJobs).set({ status: nextStatus, lastError: error, nextAttemptAt: null, updatedAt: new Date() }).where(eq(s.etaxJobs.id, job.id));
+      const label = doc?.number ?? job.docId;
+      if (late) {
+        await tx.insert(s.auditLogs).values({ workspaceId: job.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.etax_late_result', targetType: job.docKind, targetId: job.docId, summary: `${label} · ผู้ให้บริการแจ้ง ${status} หลังยกเลิกในระบบแล้ว (ไม่เปลี่ยนสถานะ)${error ? ` · ${error}` : ''}` });
+        // ผู้ให้บริการเพิ่งออกฉบับที่ยกเลิกไปแล้ว → ต้องแจ้งยกเลิก
+        if (ok) await cancelETax(tx, { id: doc.id, workspaceId: doc.workspaceId, providerRef: doc.providerRef ?? job.providerRef, status: 'issued' });
+        return;
+      }
+      if (doc && job.action === 'issue') await tx.update(s.taxDocuments).set({ status: ok ? 'issued' : 'failed', ...(ok ? { sentAt: new Date() } : {}), updatedAt: new Date() }).where(eq(s.taxDocuments.id, doc.id));
+      const action = job.action === 'issue' ? (ok ? 'billing.etax_issued' : 'billing.etax_failed') : ok ? 'billing.etax_cancelled' : 'billing.etax_cancel_failed';
+      await tx.insert(s.auditLogs).values({ workspaceId: job.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action, targetType: job.docKind, targetId: job.docId, summary: `${label}${error ? ` · ${error}` : ''}` });
+    });
+    if (late) return { late: true };
+    if (doc && job.action === 'issue' && ok) {
+      const [profile] = await this.sys.select({ email: s.billingProfiles.taxEmail }).from(s.billingProfiles).where(eq(s.billingProfiles.workspaceId, doc.workspaceId));
+      const to = (doc.buyer as BuyerSnapshot | null)?.email ?? profile?.email;
+      if (to) await this.mailer.send({ to, subject: `ใบกำกับภาษีอิเล็กทรอนิกส์ ${doc.number}`, text: `ออกใบกำกับภาษีอิเล็กทรอนิกส์เลขที่ ${doc.number} เรียบร้อยแล้ว · ดาวน์โหลดได้ที่หน้า การเรียกเก็บเงิน` }).catch((e) => this.log.error(`ส่งอีเมล e-Tax ไม่สำเร็จ: ${(e as Error).message}`));
+    }
+    return {};
   }
 }

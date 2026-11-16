@@ -288,6 +288,13 @@
       "when": 1794821503909,
       "tag": "0040_tax_document_buyer",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794824398683,
+      "tag": "0041_issue_trackers",
+      "breakpoints": true
     }
   ]
 }

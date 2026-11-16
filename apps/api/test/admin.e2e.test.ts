@@ -8,6 +8,7 @@ let team: Awaited<ReturnType<typeof seedTeam>>;
 let wsId: string;
 let moduleId: string;
 let guestId: string;
+let guest: Awaited<ReturnType<typeof client>>;
 let outsiderId: string;
 let ws: string;
 let botCalendarId: string;
@@ -21,6 +22,7 @@ beforeAll(async () => {
   wsId = (await t.owner.query('SELECT id FROM workspaces WHERE slug = $1', [team.slug])).rows[0].id;
   moduleId = team.project.modules[0].id;
   const g = await client(t.app);
+  guest = g;
   guestId = await signup(g, 'guest@admin.example.com', 'Guest');
   await addMember(t.owner, team.slug, guestId, 'guest', { key: team.key, role: 'viewer' });
   const o = await client(t.app);
@@ -370,5 +372,26 @@ describe('Audit log', () => {
     expect(csvCell('a,b')).toBe('"a,b"');
     expect(csvCell(null)).toBe('');
     expect(csvCell('ปกติ')).toBe('ปกติ');
+  });
+});
+
+describe('ระบบติดตามงานภายนอก', () => {
+  it('ระบบติดตามงานภายนอก: Admin ตั้งผ่าน PATCH settings · สมาชิกอ่านได้ · Guest ได้รายการว่าง', async () => {
+    expect((await team.dev.get(`${ws}/issue-trackers`)).body).toEqual({ items: [] });
+    const trackers = [{ name: 'Redmine', urlTemplate: 'http://redmine.example.com/redmine/issues/{id}' }, { name: 'Jira', urlTemplate: 'https://acme.example.com/browse/{id}' }];
+    const bad = async (issueTrackers: unknown) => expect((await team.lead.patch(`${ws}/settings`, { issueTrackers })).status, JSON.stringify(issueTrackers)).toBe(400);
+    await bad([{ name: 'Redmine', urlTemplate: 'http://redmine.example.com/issues/' }]);
+    await bad([{ name: 'Redmine', urlTemplate: 'javascript:alert({id})' }]);
+    await bad([{ name: 'Red#mine', urlTemplate: 'http://x.example.com/{id}' }]);
+    await bad([trackers[0], { ...trackers[1], name: 'redmine' }]);
+    await bad(Array.from({ length: 6 }, (_, i) => ({ name: `T${i}`, urlTemplate: `http://x.example.com/${i}/{id}` })));
+    expect((await team.dev.patch(`${ws}/settings`, { issueTrackers: trackers })).status).toBe(403);
+    const r = await team.lead.patch(`${ws}/settings`, { issueTrackers: [{ ...trackers[0], name: ' Redmine ' }, trackers[1]] });
+    expect(r.status).toBe(200);
+    expect(r.body.issueTrackers).toEqual(trackers);
+    expect((await team.dev.get(`${ws}/issue-trackers`)).body).toEqual({ items: trackers });
+    expect((await guest.get(`${ws}/issue-trackers`)).body).toEqual({ items: [] });
+    expect((await audit('workspace.settings_updated'))[0].summary).toContain('issueTrackers');
+    expect((await team.lead.patch(`${ws}/settings`, { issueTrackers: [] })).body.issueTrackers).toEqual([]);
   });
 });

@@ -174,6 +174,16 @@
 .taSteps { min-height:84px; }.taShort { min-height:60px; }
 /* หมายเหตุเป็นข้อความธรรมดา คงการขึ้นบรรทัดตามที่พิมพ์ */
 .remark { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.6; }
+.remark a { color:var(--primary-text); text-decoration:underline; text-underline-offset:2px; }
+/* แทรกลิงก์ในหมายเหตุ: ปุ่มอยู่แถวเดียวกับบันทึก / ยกเลิก · แผงกรอกขึ้นบรรทัดใหม่ใต้ปุ่ม */
+.inlineField .actions:has(.remarkInsert) { flex-wrap:wrap; }
+.remarkSep { width:1px; height:22px; background:var(--border); }
+.remarkInsert { color:var(--primary-text); gap:4px; }
+.remarkPanel { flex-basis:100%; display:grid; gap:8px; padding:10px; border:1px solid var(--border-strong); border-radius:8px; background:var(--surface-2); }
+.remarkPanel .actions { margin-top:0; }
+.remarkError { color:var(--danger-text); font-size:12px; }
+.menuLabel { padding:6px 12px 2px; color:var(--muted); font-size:11px; letter-spacing:.04em; }
+.menuSep { border:0; border-top:1px solid var(--border); margin:4px 6px; }
 .multiline { white-space:pre-wrap; overflow-wrap:anywhere; }
 .footLeft { margin-right:auto; }
 .editor { min-height:140px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; }

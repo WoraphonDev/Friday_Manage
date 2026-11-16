@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslations } from 'next-intl';
@@ -27,18 +27,21 @@ export function PersonView({ person }: { person: PublicPerson | null }) {
   const t = useTranslations('issue-drawer');
   return <span className={styles.person}>{person && <Avatar size="small" person={{ ...person, id: person.id ?? 'hidden-team' }} />}<span>{person?.displayName ?? t('system')}</span></span>;
 }
-export function InlineText({ label, value, enabled, multiline = false, type = 'text', min, max, step, displayValue, busy, onSave }: {
-  label: string; value: string; enabled: boolean; multiline?: boolean; type?: string; min?: string | number; max?: string | number; step?: string | number; displayValue?: string; busy?: boolean; onSave: (value: string) => Promise<boolean>;
+/** เครื่องมือเสริมท้ายปุ่มบันทึก / ยกเลิก (เช่น แทรกลิงก์ในหมายเหตุ) · แก้ข้อความร่างและเลื่อนเคอร์เซอร์ได้ */
+export type InlineTools = (ctx: { draft: string; setDraft: (value: string) => void; textarea: () => HTMLTextAreaElement | null }) => ReactNode;
+export function InlineText({ label, value, enabled, multiline = false, type = 'text', min, max, step, displayValue, busy, onSave, tools }: {
+  label: string; value: string; enabled: boolean; multiline?: boolean; type?: string; min?: string | number; max?: string | number; step?: string | number; displayValue?: string; busy?: boolean; onSave: (value: string) => Promise<boolean>; tools?: InlineTools;
 }) {
   const t = useTranslations('issue-drawer');
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
+  const area = useRef<HTMLTextAreaElement>(null);
   useEffect(() => { if (editing && draft === value) setEditing(false); }, [value]);
   async function save() { if (await onSave(draft)) setEditing(false); }
   if (!editing) return <div className={styles.inlineField}>{!displayValue && <span className={styles.label}>{label}</span>}<button className={displayValue ? `${styles.editValue} ${styles.editAction}` : styles.editValue} disabled={!enabled || busy} onClick={() => { setDraft(value); setEditing(true); }}>{displayValue ?? (value || t('notSet'))}</button></div>;
   return <form className={multiline ? styles.inlineField : `${styles.inlineField} ${styles.inlineRow}`} onSubmit={(event) => { event.preventDefault(); void save(); }}>
-    {multiline ? <label className="field">{label}<textarea className="input" autoFocus value={draft} maxLength={50000} onChange={(event) => setDraft(event.target.value)} disabled={busy} /></label> : <Input label={label} autoFocus type={type} min={min} max={max} step={step} value={draft} onChange={(event) => setDraft(event.target.value)} disabled={busy} />}
-    <div className={styles.actions}><Button size="small" type="submit" variant="primary" disabled={busy}>{t('save')}</Button><Button size="small" disabled={busy} onClick={() => setEditing(false)}>{t('cancel')}</Button></div>
+    {multiline ? <label className="field">{label}<textarea ref={area} className="input" autoFocus value={draft} maxLength={50000} onChange={(event) => setDraft(event.target.value)} disabled={busy} /></label> : <Input label={label} autoFocus type={type} min={min} max={max} step={step} value={draft} onChange={(event) => setDraft(event.target.value)} disabled={busy} />}
+    <div className={styles.actions}><Button size="small" type="submit" variant="primary" disabled={busy}>{t('save')}</Button><Button size="small" disabled={busy} onClick={() => setEditing(false)}>{t('cancel')}</Button>{tools?.({ draft, setDraft, textarea: () => area.current })}</div>
   </form>;
 }
 export function Section({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {

@@ -251,7 +251,8 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | Method | Path | หมายเหตุ |
 |---|---|---|
 | GET | `w/admin/overview` | ผู้ใช้ active, งานทั้งหมด, เรื่องที่ต้องดำเนินการ |
-| GET / PATCH | `w/settings` | เวลาทำงาน, Size → MD, อนุญาต override, Safe mode, ถังขยะ, การเก็บรักษา |
+| GET / PATCH | `w/settings` | เวลาทำงาน, Size → MD, อนุญาต override, Safe mode, ถังขยะ, การเก็บรักษา, `issueTrackers` (ระบบติดตามงานภายนอก: `name` ห้ามมี `#` `:` · `urlTemplate` เป็น http/https และมี `{id}` · ชื่อไม่ซ้ำ · สูงสุด 5) |
+| GET | `w/issue-trackers` | **ทุกคนใน Workspace** อ่านได้ `{ items: [{ name, urlTemplate }] }` · Guest ได้รายการว่าง · หมายเหตุ "<name> # : 111004 , 111005" แสดงเลขเป็นลิงก์ตาม `urlTemplate` |
 | GET / POST / DELETE | `w/holiday-calendars` · `w/holidays` | เปลี่ยนวันหยุดแล้วเข้าคิว `recalculate-plan-end` |
 | CRUD | `w/project-templates` | |
 | GET / PATCH | `w/security-policy` | |

@@ -33,6 +33,12 @@ export class AdminController {
     return this.admin.patchSettings(a, t, parse(PatchSettingsBody, body));
   }
 
+  /** ทุกคนใน Workspace อ่านได้ · แก้ผ่าน PATCH settings (Admin) */
+  @Get('issue-trackers')
+  issueTrackers(@Auth() a: AuthInfo, @Tenant() t: TenantInfo) {
+    return this.admin.issueTrackers(a, t);
+  }
+
   @Get('security-policy')
   security(@Auth() a: AuthInfo, @Tenant() t: TenantInfo) {
     return this.admin.getSecurity(a, t);

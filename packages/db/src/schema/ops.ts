@@ -24,6 +24,12 @@ export const staffUsers = pgTable('staff_users', {
   /** ผู้ตรวจภายนอก (เช่น สำนักงานบัญชี) หมดสิทธิ์อัตโนมัติ */
   expiresAt: tstz(),
   webauthnCredentials: jsonb().notNull().default(sql`'[]'::jsonb`),
+  /**
+   * อีเมลส่วนตัว (รอบ 4 · H1) · รับสรุปรายการที่อนุมัติตัวเองและแจ้งสิทธิ์ฉุกเฉิน (06-ops-roles ข้อ 4–5)
+   * pending + code_hash = รอยืนยันด้วยรหัส 6 หลัก · ระหว่างรอยังส่งถึงอีเมลที่ยืนยันแล้ว
+   */
+  personalEmail: text(), personalEmailVerifiedAt: tstz(), personalEmailPending: text(),
+  personalEmailCodeHash: text(), personalEmailCodeExpiresAt: tstz(),
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [uniqueIndex('staff_users_email_key').on(sql`lower(${t.email})`),
   check('staff_users_roles_valid', sql`cardinality(${t.roles}) >= 1 AND ${t.roles} <@ ARRAY[${sql.raw(STAFF_ROLES.map((r) => `'${r}'`).join(', '))}]::text[]`),
@@ -134,10 +140,15 @@ export const supportAgents = pgTable('support_agents', {
   /** null = ใช้เพดานค่าเริ่มต้นใน support_settings */
   cap: smallint(),
   presence: text().notNull().default('online'), presenceNote: text(), presenceAt: tstz(),
+  /** ทำไมเปลี่ยนสถานะล่าสุด (รอบ 4 · S3): manual = ตั้งเอง · logout / idle / session = ระบบเปลี่ยนเป็นออฟไลน์ */
+  presenceReason: text(),
+  /** เปิดหน้า Ops ครั้งล่าสุด · ใช้ตัดสิน "ไม่มีการใช้งาน" */
+  lastSeenAt: tstz(),
   updatedAt: updatedAt(),
 }, (t) => [check('support_agents_groups_valid', sql`${t.groups} <@ ARRAY[${sql.raw(SUPPORT_GROUPS.map((g) => `'${g}'`).join(', '))}]::text[]`),
   check('support_agents_presence_valid', oneOf(t.presence, SUPPORT_PRESENCE)),
-  check('support_agents_cap', sql`${t.cap} IS NULL OR ${t.cap} BETWEEN 1 AND 99`)]);
+  check('support_agents_cap', sql`${t.cap} IS NULL OR ${t.cap} BETWEEN 1 AND 99`),
+  check('support_agents_presence_reason_valid', sql`${t.presenceReason} IS NULL OR ${t.presenceReason} IN ('manual', 'logout', 'idle', 'session')`)]);
 
 /** ผู้ดูแลประจำบัญชี (Enterprise) · 1 Workspace มีผู้ดูแล 1 คน · กฎที่ส่งไป "acct" แจกให้คนนี้ */
 export const supportAccountManagers = pgTable('support_account_managers', {
@@ -197,10 +208,13 @@ export const announcements = pgTable('announcements', {
   channels: text().array().notNull().default(sql`'{banner}'`), scheduledAt: tstz(), sentAt: tstz(),
   /** หัวข้อ (หัวเรื่องอีเมล / หัวแบนเนอร์) · ประกาศเดิมก่อน O24 ไม่มี */
   title: text(),
+  /** ผู้รับ (รอบ 4 · S8): selected = Workspace ที่เลือก (announcement_targets) · filter = ตามตัวกรอง หาตอนส่ง · all = ลูกค้าที่ใช้งานอยู่ทุกราย */
+  targetMode: text().notNull().default('selected'), targetFilter: jsonb(),
   createdBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
   cancelledAt: tstz(), cancelledBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
   createdAt: createdAt(), updatedAt: updatedAt(),
-}, (t) => [index('announcements_due_idx').on(t.scheduledAt).where(sql`${t.sentAt} IS NULL AND ${t.cancelledAt} IS NULL`)]);
+}, (t) => [index('announcements_due_idx').on(t.scheduledAt).where(sql`${t.sentAt} IS NULL AND ${t.cancelledAt} IS NULL`),
+  check('announcements_target_mode_valid', oneOf(t.targetMode, ['selected', 'filter', 'all']))]);
 
 /**
  * Workspace ที่ได้รับประกาศ · ตอนส่ง ops-api ใส่ข้อความที่แทนตัวแปรของ Workspace นั้นแล้ว (banner_*) ให้ API ลูกค้าอ่านผ่าน RLS
@@ -337,10 +351,42 @@ export const entitlementOverrides = pgTable('entitlement_overrides', {
 export const staffPushSubscriptions = pgTable('staff_push_subscriptions', {
   id: pk(), staffId: uuid().notNull().references(() => staffUsers.id, { onDelete: 'cascade' }),
   endpoint: text().notNull(), p256dh: text().notNull(), auth: text().notNull(), userAgent: text(),
-  lastSentAt: tstz(), createdAt: createdAt(),
+  lastSentAt: tstz(),
+  /** ผลการส่งครั้งล่าสุด (รอบ 4 · S12) · เดิม log อย่างเดียว */
+  lastOkAt: tstz(), lastError: text(), lastErrorAt: tstz(),
+  createdAt: createdAt(),
 }, (t) => [uniqueIndex('staff_push_subscriptions_endpoint_key').on(t.endpoint), index('staff_push_subscriptions_staff_idx').on(t.staffId)]);
 
 /** กันส่งแจ้งเตือนเรื่องเดิมซ้ำ (เช่น คิวชำระใกล้ครบ SLA) · key = ประเภท:รหัสรายการ */
 export const staffPushNotices = pgTable('staff_push_notices', {
   key: text().primaryKey(), sentAt: createdAt(),
 });
+
+/**
+ * ค่าตั้งของ Friday Ops แบบ key → JSON (รอบ 4) · ค่าว่าง = ใช้ค่าเริ่มต้นในโค้ด
+ * accounting = ส่งรายงานสำนักงานบัญชี (E6) · retention = ระยะเก็บข้อมูล (H12) · alerts = เกณฑ์ Error rate (S11)
+ */
+export const opsSettings = pgTable('ops_settings', {
+  key: text().primaryKey(), value: jsonb().notNull().default(sql`'{}'::jsonb`),
+  updatedBy: uuid().references(() => staffUsers.id), updatedAt: updatedAt(),
+});
+
+/** Legal hold (รอบ 4 · H11) · ระหว่างนี้งานลบถาวรทุกชนิดข้ามข้อมูลในขอบเขต · ยกเลิก = ใส่ released_* (ต้องมีคนที่สองอนุมัติ) */
+export const legalHolds = pgTable('legal_holds', {
+  id: pk(), workspaceId: uuid().notNull().references(() => workspaces.id),
+  scope: text().notNull().default('workspace'), userIds: uuid().array().notNull().default(sql`'{}'`),
+  reason: text().notNull(), reference: text().notNull(), reviewOn: date(), notifyCustomer: boolean().notNull().default(false),
+  createdBy: uuid().notNull().references(() => staffUsers.id), createdAt: createdAt(),
+  releasedAt: tstz(), releasedBy: uuid().references(() => staffUsers.id), releaseReason: text(),
+}, (t) => [index('legal_holds_active_idx').on(t.workspaceId).where(sql`${t.releasedAt} IS NULL`),
+  check('legal_holds_scope_valid', oneOf(t.scope, ['workspace', 'users'])),
+  check('legal_holds_users_when_scoped', sql`${t.scope} = 'workspace' OR cardinality(${t.userIds}) > 0`)]);
+
+/** การแจ้งเตือนของระบบที่เปิดอยู่ / เคยเกิด (รอบ 4 · S10) · kind = error_rate · 1 แถวต่อช่วงที่เกินเกณฑ์ */
+export const systemAlerts = pgTable('system_alerts', {
+  id: pk(), kind: text().notNull(), startedAt: tstz().notNull().defaultNow(), resolvedAt: tstz(),
+  details: jsonb().notNull().default(sql`'{}'::jsonb`), lastNotifiedAt: tstz(),
+  acknowledgedBy: uuid().references(() => staffUsers.id), acknowledgedAt: tstz(),
+  incidentId: uuid().references((): AnyPgColumn => incidents.id), createdAt: createdAt(),
+}, (t) => [index('system_alerts_open_idx').on(t.kind).where(sql`${t.resolvedAt} IS NULL`),
+  check('system_alerts_kind_valid', oneOf(t.kind, ['error_rate']))]);

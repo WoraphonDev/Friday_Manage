@@ -59,7 +59,7 @@ describe('Migration T00', () => {
     await withDatabase(async (client) => {
       const db = drizzle(client);
       await migrate(db, { migrationsFolder: folder });
-      expect(Number((await client.query(`SELECT count(*) AS n FROM pg_tables WHERE schemaname = 'public'`)).rows[0].n)).toBe(168);
+      expect(Number((await client.query(`SELECT count(*) AS n FROM pg_tables WHERE schemaname = 'public'`)).rows[0].n)).toBe(174);
       await expectPlanSeed(client);
       const before = (await client.query('SELECT * FROM plans ORDER BY code')).rows;
       await migrate(db, { migrationsFolder: folder });
@@ -92,7 +92,7 @@ describe('Migration T00', () => {
         // issues.sa_id (0013) และ issues.remark (0014) เป็น null สำหรับงานเดิม · projects.field_profile (0015) = {} คือชุดฟิลด์มาตรฐาน
         // deleted_by / purge_after (0032) เป็น null สำหรับแถวที่ไม่ได้อยู่ในถังขยะ · paused_at / paused_by (0037) เป็น null = ไม่ได้พัก
         // issues.checklist_pct (0043) เป็น null สำหรับงานที่ไม่มี Checklist
-        const added: Record<string, Record<string, unknown>> = { notifications: { in_app: true }, issues: { sa_id: null, remark: null, qa_end: null, reviewer_ids: [], deleted_by: null, checklist_pct: null }, projects: { field_profile: {}, progress_split: false, qa_buffer_days: 2, deleted_by: null, paused_at: null, paused_by: null }, workspaces: { suspension_mode: null, suspension_message: null, suspension_auto_resume: false, deleted_by: null, purge_after: null, purge_reminded_at: null } };
+        const added: Record<string, Record<string, unknown>> = { notifications: { in_app: true, request_id: null }, issues: { sa_id: null, remark: null, qa_end: null, reviewer_ids: [], deleted_by: null, checklist_pct: null }, projects: { field_profile: {}, progress_split: false, qa_buffer_days: 2, deleted_by: null, paused_at: null, paused_by: null }, workspaces: { suspension_mode: null, suspension_message: null, suspension_auto_resume: false, deleted_by: null, purge_after: null, purge_reminded_at: null } };
         for (const [i, table] of tables.entries()) expect((await client.query(`SELECT * FROM ${table} ORDER BY id`)).rows, table).toEqual(before[i].map((r: Record<string, unknown>) => ({ ...r, ...added[table] })));
         await expectPlanSeed(client);
         // ตรวจด้วยข้อมูลเดิมจริงว่า FK ของตารางใหม่ผูกกับ notification ที่มีอยู่แล้วได้

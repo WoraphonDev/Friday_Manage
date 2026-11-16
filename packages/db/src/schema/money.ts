@@ -1,6 +1,6 @@
 // M (ต่อ). เงินฝั่งหลังบ้าน: ใบลดหนี้ เครดิต และประวัติการตามหนี้ (Friday Ops เฟส 1 · O00)
 import { sql } from 'drizzle-orm';
-import { bigint, check, index, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { bigint, check, index, pgTable, smallint, text, unique, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, pk, tstz, updatedAt } from './_common.ts';
 import { invoices } from './billing.ts';
 import { approvalRequests, staffUsers } from './ops.ts';
@@ -46,9 +46,10 @@ export const workspaceCredits = pgTable('workspace_credits', {
 }, (t) => [index('workspace_credits_workspace_idx').on(t.workspaceId, t.createdAt),
   tenantFk('workspace_credits_credit_note_fk', t.workspaceId, t.creditNoteId, creditNotes),
   tenantFk('workspace_credits_invoice_fk', t.workspaceId, t.invoiceId, invoices),
-  check('workspace_credits_source_valid', sql`${t.source} IN ('credit_note', 'overpayment', 'goodwill', 'applied')`),
+  // applied = ใช้ชำระใบแจ้งหนี้ · refunded = คืนเครดิตเป็นเงิน · reversal = คืนเครดิตจากใบที่ยกเลิกหลังหักเครดิต (รอบ 4 · R)
+  check('workspace_credits_source_valid', sql`${t.source} IN ('credit_note', 'overpayment', 'goodwill', 'applied', 'refunded', 'reversal')`),
   check('workspace_credits_nonzero', sql`${t.amountSatang} <> 0`),
-  check('workspace_credits_applied_negative', sql`(${t.source} = 'applied') = (${t.amountSatang} < 0)`)]);
+  check('workspace_credits_applied_negative', sql`(${t.source} IN ('applied', 'refunded')) = (${t.amountSatang} < 0)`)]);
 
 /** ประวัติการตามหนี้ (เตือนอัตโนมัติ, โทร, ระงับ) · ใช้แสดงในแท็บค้างชำระ */
 export const dunningEvents = pgTable('dunning_events', {
@@ -57,3 +58,28 @@ export const dunningEvents = pgTable('dunning_events', {
 }, (t) => [tenantFk('dunning_events_invoice_fk', t.workspaceId, t.invoiceId, invoices), index('dunning_events_invoice_idx').on(t.invoiceId, t.createdAt),
   check('dunning_events_step_valid', sql`${t.step} IN ('invoice_sent', 'reminder', 'final_notice', 'call', 'extended', 'suspended', 'delete_notice')`),
   check('dunning_events_channel_valid', sql`${t.channel} IN ('email', 'line', 'phone', 'banner', 'system')`)]);
+
+/**
+ * คิวงานกับผู้ให้บริการ e-Tax (รอบ 4 · E) · 1 แถว = 1 การกระทำต่อเอกสาร 1 ฉบับ
+ * doc_kind: tax_document | credit_note | debit_note · action: issue = ส่งออกเอกสาร · cancel = แจ้งยกเลิก
+ * status: pending → submitted → done | failed · manual = ทีมบันทึกเองว่าทำที่ผู้ให้บริการแล้ว
+ * สถานะของใบกำกับภาษียังอยู่ที่ tax_documents.status · ตารางนี้เก็บจำนวนครั้ง สาเหตุ และเวลาลองครั้งถัดไป
+ */
+export const etaxJobs = pgTable('etax_jobs', {
+  id: pk(), workspaceId: workspaceId(), docKind: text().notNull(), docId: uuid().notNull(), action: text().notNull(),
+  status: text().notNull().default('pending'), providerRef: text(), attempts: smallint().notNull().default(0),
+  lastError: text(), lastAttemptAt: tstz(), nextAttemptAt: tstz(), note: text(),
+  byStaff: uuid().references(() => staffUsers.id), createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [unique('etax_jobs_doc_action_key').on(t.docKind, t.docId, t.action),
+  index('etax_jobs_open_idx').on(t.status, t.nextAttemptAt).where(sql`${t.status} IN ('pending', 'submitted', 'failed')`),
+  check('etax_jobs_doc_kind_valid', sql`${t.docKind} IN ('tax_document', 'credit_note', 'debit_note')`),
+  check('etax_jobs_action_valid', sql`${t.action} IN ('issue', 'cancel')`),
+  check('etax_jobs_status_valid', sql`${t.status} IN ('pending', 'submitted', 'done', 'failed', 'manual')`)]);
+
+/** การขอ 50 ทวิ จากลูกค้าแต่ละครั้ง (รอบ 4 · E7) · auto_7 / auto_30 = งานอัตโนมัติหลังชำระ · manual = ทีมกดขอ */
+export const whtRequests = pgTable('wht_requests', {
+  id: pk(), workspaceId: workspaceId(), invoiceId: uuid().notNull(), kind: text().notNull(),
+  recipients: text().array().notNull().default(sql`'{}'`), message: text(),
+  sentBy: uuid().references(() => staffUsers.id), createdAt: createdAt(),
+}, (t) => [tenantFk('wht_requests_invoice_fk', t.workspaceId, t.invoiceId, invoices), index('wht_requests_invoice_idx').on(t.invoiceId, t.createdAt),
+  check('wht_requests_kind_valid', sql`${t.kind} IN ('auto_7', 'auto_30', 'manual')`)]);

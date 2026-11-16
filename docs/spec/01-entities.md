@@ -215,6 +215,9 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `debit_note` | ใบเพิ่มหนี้ (ม.86/9) · เก็บเงินขาดในใบกำกับภาษีที่ออกแล้ว · ออกจากหลังบ้าน | workspace_id, invoice_id (ใบเดิม), number (DN-), amount_satang, vat_satang, reason, status (issued · sent), charge_invoice_id (ใบแจ้งหนี้ส่วนเพิ่ม), approval_request_id, issued_at | Ops 4, 13 |
 | `workspace_credit` | สมุดเครดิต · ยอดคงเหลือ = ผลรวม (บวกได้ · ลบใช้หัก) | workspace_id, amount_satang, source (credit_note · overpayment · goodwill · applied), credit_note_id, invoice_id, note | Ops 4, 13 |
 | `dunning_event` | ประวัติการตามหนี้ | workspace_id, invoice_id, step, channel, result, by_staff | Ops 4 |
+| `etax_job` | คิวงานกับผู้ให้บริการ e-Tax 1 แถวต่อการกระทำต่อเอกสาร (รอบ 4) · ส่ง TX / CN / DN และแจ้งยกเลิก | workspace_id, doc_kind (tax_document · credit_note · debit_note), doc_id, action (issue · cancel), status (pending · submitted · done · failed · manual), provider_ref, attempts, last_error, last_attempt_at, next_attempt_at, by_staff | Ops E1–E4 |
+| `wht_request` | การขอ 50 ทวิ จากลูกค้าแต่ละครั้ง (รอบ 4) | workspace_id, invoice_id, kind (auto_7 · auto_30 · manual), recipients, message, sent_by | Ops E7 |
+| `legal_notice` | อีเมลแจ้งเอกสารกฎหมายฉบับใหม่ทีละผู้ใช้ (รอบ 4) · กันส่งซ้ำ | document_id, user_id, email, kind (notice · reminder), status (sent · failed · suppressed), error, sent_at | Ops H14–H15 |
 
 ## N. หลังบ้านทีม Friday (ระดับระบบ · แยกฐานสิทธิ์จากลูกค้า)
 
@@ -254,6 +257,9 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `coupon_use` | ส่วนลดของคูปองในใบแจ้งหนี้แต่ละใบ · paid = นับเป็นรอบที่ใช้ไป | workspace_id, redemption_id, coupon_id, invoice_id, amount, status (pending · paid), paid_at | R2 |
 | `email_suppression` | อีเมลที่ระบบไม่ส่งให้ (bounce ถาวร / รายงานสแปม / bounce ชั่วคราวซ้ำ / ทีม Friday เพิ่มเอง) · ระดับระบบ (O23) | email, reason, detail, workspace_id (ที่มา · แสดงผล), source, removed_at, removed_by, remove_reason | Ops Deliveries, Y7 |
 | `email_feedback_event` | เหตุการณ์ bounce / complaint จากผู้ให้บริการอีเมล · เก็บ 90 วัน | email, kind (bounce_permanent · bounce_transient · complaint), detail, raw | Ops Deliveries |
+| `ops_setting` | ค่าตั้งของ Friday Ops แบบ key → JSON (รอบ 4) · ค่าว่างใช้ค่าเริ่มต้นในโค้ด | key (accounting · retention · alerts), value, updated_by | Ops E6, H12, S11 |
+| `legal_hold` | Legal hold: หยุดการลบถาวรของข้อมูลในขอบเขต (รอบ 4) · ยกเลิกต้องมีคนที่สองอนุมัติ | workspace_id, scope (workspace · users), user_ids, reason, reference, review_on, notify_customer, created_by, released_at, released_by, release_reason | Ops H10–H11 |
+| `system_alert` | ช่วงที่ตัวชี้วัดของระบบเกินเกณฑ์ (รอบ 4) · 1 แถวต่อช่วง | kind (error_rate), started_at, resolved_at, details, last_notified_at, acknowledged_by, acknowledged_at, incident_id | Ops S10–S12 |
 
 `staff_users` (Friday Ops เฟส 1 · [06-ops-roles](06-ops-roles.md)): `roles` (owner · finance · support · engineer · auditor, อย่างน้อย 1), `department`, `limits`, `status`, `expires_at` · `role` เดิมลบแล้วใน migration 0019 (O01) · `payments` เพิ่ม `verified_by`, `exception_reason`, `matched_invoice_id` · `support_sessions` เพิ่ม `ticket_id` · `notification_deliveries` เพิ่ม `target_label`, `content`, `response`, `log`, `resend_requested_at` และสถานะ `suppressed` (O23 · เก็บ 90 วัน)
 

@@ -2,9 +2,9 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { AlertCircle, CalendarClock, Clock, CreditCard, Landmark, QrCode } from "lucide-react";
+import { AlertCircle, CalendarClock, Clock, CreditCard, Landmark, QrCode, Wallet } from "lucide-react";
 import { Badge, Button, CountUp, Dialog, EmptyState, ErrorState, Forbidden, LoadingState, buttonVariants, useToast, type Tone } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { ApiError, api } from "@/lib/api";
@@ -61,6 +61,15 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
   const [comparing, setComparing] = useState(false);
   const [upload, setUpload] = useState<{ invoice: Invoice; kind: "slip" | "wht-certificate" } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  // R7 ยกเลิกการลดแพ็กเกจ / เปลี่ยนรอบที่ตั้งไว้
+  const cancelChange = useMutation({
+    mutationFn: () => api.request(`${base}/billing/scheduled-change`, { method: "DELETE" }),
+    onSuccess: async () => {
+      toast({ message: t("pending.cancelled") });
+      await cache.invalidateQueries({ queryKey: ["billing", ws] });
+    },
+    onError: (e) => toast({ message: e instanceof Error ? e.message : String(e) }),
+  });
 
   const overview = useQuery({ queryKey: ["billing", ws], queryFn: () => api.get<BillingOverview>(`${base}/billing`), enabled: canBill });
   const usage = useQuery({ queryKey: ["usage", ws], queryFn: () => api.get<Usage>(`${base}/usage`), enabled: canBill, retry: false });
@@ -218,6 +227,28 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
         <Button onClick={() => setComparing(true)}>{t("compare")}</Button>
       </div>
 
+      {o.pendingChange && (
+        <div className={cn(styles.todo, styles.todoInfo)} role="status">
+          <Clock size={18} aria-hidden="true" />
+          <p>
+            <b>{t("pending.title", { plan: o.pendingChange.plan === sub.planCode ? t(o.pendingChange.cycle === "yearly" ? "yearly" : "monthly") : (plans.data?.items.find((p) => p.code === o.pendingChange!.plan)?.name ?? o.pendingChange.plan), date: formatDate(o.pendingChange.effectiveAt, "BE", true) })}</b>
+            {o.pendingChange.blockers.length > 0
+              ? ` · ${o.pendingChange.blockers.map((b) => t(b.key === "seats" ? "pending.seats" : "pending.projects", { used: b.used, limit: b.limit })).join(" · ")}`
+              : ` · ${t("pending.ok")}`}
+          </p>
+          <span className={styles.docs}>
+            {o.pendingChange.blockers.some((b) => b.key === "seats") && (
+              <Link className={buttonVariants({ size: "small" })} href={`/work/${encodeURIComponent(ws)}/members`}>
+                {t("pending.members")}
+              </Link>
+            )}
+            <Button size="small" disabled={cancelChange.isPending} onClick={() => cancelChange.mutate()}>
+              {t("pending.cancel")}
+            </Button>
+          </span>
+        </div>
+      )}
+
       {todos.map((todo) => (
         <div key={todo.key} className={cn(styles.todo, todo.tone === "info" && styles.todoInfo)} role="status">
           {todo.tone === "info" ? <Clock size={18} aria-hidden="true" /> : <AlertCircle size={18} aria-hidden="true" />}
@@ -278,6 +309,16 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
           )}
         </div>
       </section>
+
+      {!!o.creditSatang && (
+        <section className={cn(styles.card, styles.credit)} aria-label={t("credit.title")}>
+          <span className={styles.methodIcon}><Wallet size={17} aria-hidden="true" /></span>
+          <span className={styles.methodText}>
+            <b>{t("credit.title")} ฿<CountUp value={baht(o.creditSatang)} /></b>
+            <span className={cn(styles.muted, styles.small)}>{t("credit.hint")}</span>
+          </span>
+        </section>
+      )}
 
       <div className={styles.split}>
         <section className={styles.card} aria-labelledby="bill-invoices">

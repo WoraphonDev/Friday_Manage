@@ -105,3 +105,14 @@
   .page { padding:16px 16px 40px; }
   .aside { position:static; }
 }
+
+/* O41 · R6 ยืนยันการตั้งลดแพ็กเกจ */
+.agree {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+}
+.agree input {
+  margin-top: 3px;
+}

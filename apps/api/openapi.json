@@ -6470,6 +6470,131 @@
         }
       }
     },
+    "/api/v1/w/{ws}/billing/scheduled-change": {
+      "post": {
+        "operationId": "Billing_scheduleChange",
+        "summary": "POST w/{ws}/billing/scheduled-change",
+        "tags": [
+          "Billing"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "plan": {
+                    "type": "string",
+                    "enum": [
+                      "team_s",
+                      "team_m",
+                      "team_l"
+                    ]
+                  },
+                  "cycle": {
+                    "type": "string",
+                    "enum": [
+                      "monthly",
+                      "yearly"
+                    ]
+                  }
+                },
+                "required": [
+                  "plan",
+                  "cycle"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "Billing_cancelScheduledChange",
+        "summary": "DELETE w/{ws}/billing/scheduled-change",
+        "tags": [
+          "Billing"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/w/{ws}/billing/subscription:cancel": {
       "post": {
         "operationId": "Payments_cancel_2",

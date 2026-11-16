@@ -20,6 +20,10 @@ export interface BillingOverview {
   subscription: { status: SubscriptionStatus; cycle: Cycle; trialEndsAt: string | null; currentPeriodEnd: string | null; planCode: PlanCode };
   limits: { seats: number | null; projects: number | null; storage_bytes: number | null };
   profile: BillingProfile | null;
+  /** O41 · R4 เครดิตคงเหลือ (สตางค์) · หักใบถัดไปอัตโนมัติ */
+  creditSatang?: number;
+  /** O41 · R7 ลดแพ็กเกจ / เปลี่ยนรอบที่ตั้งไว้ มีผลเมื่อจบรอบ · blockers = ต้องลดก่อนวันที่มีผล */
+  pendingChange?: { plan: PlanCode; cycle: Cycle; effectiveAt: string | null; blockers: { key: "seats" | "projects"; used: number; limit: number }[] } | null;
 }
 
 /** `GET w/billing/quote` */

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { type Db, isGrantSource, queueETax, replaceTaxDocument, schema, type Tx } from '@friday/db';
+import { applyCreditToInvoice, creditBalance, type Db, downgradeBlockers, isGrantSource, queueETax, replaceTaxDocument, reverseCreditOfInvoice, schema, type Tx } from '@friday/db';
 import { creditNotePdf, debitNotePdf, invoicePdf, renderSalesReport, salesReportData, salesReportXlsx, salesTaxSummary, taxDocumentPdf } from '@friday/docs';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
@@ -11,7 +11,7 @@ import { config } from '../config.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
-import { addDays, baht, billingContacts, DAY, type Invoice, mailAll, nextNumber, todayBkk, vatRegistered } from './ledger.js';
+import { addDays, baht, billingContacts, DAY, type Invoice, mailAll, nextNumber, settleInvoice, todayBkk, vatRegistered } from './ledger.js';
 
 const s = schema;
 type Row = Record<string, unknown>;
@@ -71,6 +71,9 @@ export const RefundBody = z
   })
   .strict();
 export const CreditGrantBody = z.object({ workspaceId: z.uuid(), amountSatang: z.number().int().positive(), reason: Reason, invoiceId: z.uuid().optional() }).strict();
+/** คืนเครดิตคงเหลือเป็นเงิน (O41 · R1) · เกินวงเงินคืนเงินต้องอนุมัติ */
+export const CreditRefundBody = z.object({ workspaceId: z.uuid(), amountSatang: z.number().int().positive(), reason: Reason }).strict();
+export const CreditLedgerQuery = z.object({ workspaceId: z.uuid() });
 export const RevenueQuery = z.object({ months: z.coerce.number().int().min(1).max(24).default(6) });
 /** ปิดงวด · e-Tax ของเดือนยังไม่ครบก็ปิดได้ แต่ต้องกรอกเหตุผล (E1) */
 export const CloseBody = z.object({ month: Month, reason: z.string().trim().min(3).max(500).optional() }).strict();
@@ -143,6 +146,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
   onModuleInit() {
     this.approvals.register('billing.refund', (p, ctx) => this.applyRefund(ctx.requester, p as RefundPayload, ctx));
     this.approvals.register('billing.credit', (p, ctx) => this.applyCredit(ctx.requester, p as CreditPayload, ctx));
+    this.approvals.register('billing.credit_refund', (p, ctx) => this.applyCreditRefund(ctx.requester, p as z.infer<typeof CreditRefundBody>, ctx));
     // เตือนค้างชำระทุกชั่วโมง (ทำซ้ำได้ ไม่ส่งซ้ำ) · test เรียก runDunning เอง · ปิดด้วย OPS_JOBS=off
     if (!process.env.VITEST && process.env.OPS_JOBS !== 'off') {
       this.timer = setInterval(() => {
@@ -220,7 +224,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     const amountDue = total - whtAmount;
     if (amountDue <= 0) throw new AppError(422, 'amount_zero', 'ยอดชำระต้องมากกว่า 0');
     const start = todayBkk();
-    const inv = await this.db.transaction(async (tx) => {
+    const { inv, credit } = await this.db.transaction(async (tx) => {
       const number = await nextNumber(tx, 'invoice', start);
       const [row] = await tx
         .insert(s.invoices)
@@ -230,26 +234,44 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
           subtotal, vat, total, whtAmount, amountDue, poNumber: input.poNumber ?? null, status: 'open', dueDate: addDays(start, input.dueDays),
         })
         .returning();
-      await tx.insert(s.payments).values({ workspaceId: ws.id, invoiceId: row.id, method: 'transfer', amount: amountDue });
       // รูปแบบเดียวกับ API ลูกค้า: แพ็กเกจ / รอบ / วิธีชำระ เป็น JSON (PDF และการต่ออายุอ่านจากแถวนี้)
       await tx.insert(s.auditLogs).values({
         workspaceId: ws.id, actorId: staff.id, actorKind: 'friday_staff', category: 'plan', action: 'billing.checkout', targetType: 'invoice', targetId: row.id,
         summary: JSON.stringify({ plan: input.plan?.code, cycle: input.plan?.cycle, method: 'transfer', wht: input.wht, manual: true, items: input.items, discountPct: input.discountPct, note: input.note, key: `ops-${randomUUID()}`, payload: '' }),
       });
-      await audit(tx, staff, ws.id, 'plan', 'ops.invoice_created', `ออกใบแจ้งหนี้ ${number} ยอดชำระ ${baht(amountDue)}${input.poNumber ? ` · PO ${input.poNumber}` : ''}${input.plan ? ` · ต่ออายุ ${input.plan.code}` : ''}`, { type: 'invoice', id: row.id });
-      if (input.send) await tx.insert(s.dunningEvents).values({ workspaceId: ws.id, invoiceId: row.id, step: 'invoice_sent', channel: 'email', byStaff: staff.id });
-      return row;
+      const used = await this.creditOrPay(tx, row);
+      await audit(tx, staff, ws.id, 'plan', 'ops.invoice_created', `ออกใบแจ้งหนี้ ${number} ยอด ${baht(amountDue)}${used ? ` · หักเครดิต ${baht(used)}${used === amountDue ? ' (ชำระครบด้วยเครดิต)' : ''}` : ''}${input.poNumber ? ` · PO ${input.poNumber}` : ''}${input.plan ? ` · ต่ออายุ ${input.plan.code}` : ''}`, { type: 'invoice', id: row.id });
+      if (input.send && used < amountDue) await tx.insert(s.dunningEvents).values({ workspaceId: ws.id, invoiceId: row.id, step: 'invoice_sent', channel: 'email', byStaff: staff.id });
+      const [fresh] = await tx.select().from(s.invoices).where(eq(s.invoices.id, row.id));
+      return { inv: fresh, credit: used };
     });
     let sent = 0;
-    if (input.send) {
+    if (input.send && inv.status === 'paid') {
+      sent = await mailAll(this.mail, await billingContacts(this.db, ws.id), `ใบแจ้งหนี้ ${inv.number} ชำระด้วยเครดิตแล้ว · Friday Work Management`, [
+        `ใบแจ้งหนี้ ${inv.number} ยอด ${baht(amountDue)} ชำระครบด้วยเครดิตคงเหลือในบัญชี`,
+        `เอกสารภาษีดาวน์โหลดได้ที่ ${config.appUrl}/work/${ws.slug}/billing`,
+      ].join('\n'));
+    } else if (input.send) {
       sent = await mailAll(this.mail, await billingContacts(this.db, ws.id), `ใบแจ้งหนี้ ${inv.number} · Friday Work Management`, [
-        `ใบแจ้งหนี้ ${inv.number} ยอดชำระ ${baht(amountDue)} ครบกำหนด ${inv.dueDate}`,
+        `ใบแจ้งหนี้ ${inv.number} ยอดชำระ ${baht(inv.amountDue)}${credit ? ` (หักเครดิต ${baht(credit)} แล้ว)` : ''} ครบกำหนด ${inv.dueDate}`,
         ...(input.poNumber ? [`อ้างอิง PO ${input.poNumber}`] : []),
         ...(input.note ? [input.note] : []),
         `ดูและชำระได้ที่ ${this.payLink(ws.slug, inv.id)}`,
       ].join('\n'));
     }
-    return { invoice: { id: inv.id, number: inv.number, subtotal, vat, total, whtAmount, amountDue, dueDate: inv.dueDate, status: inv.status }, sent };
+    return { invoice: { id: inv.id, number: inv.number, subtotal, vat, total, whtAmount, creditApplied: credit, amountDue: inv.amountDue, dueDate: inv.dueDate, status: inv.status }, sent };
+  }
+
+  /**
+   * หักเครดิตคงเหลือจากใบที่เพิ่งออก (O41 · กติกาเดียวกับ checkout ของลูกค้า) · เครดิตพอทั้งใบ → ชำระแล้วทันที ออกเอกสารภาษีวันนี้
+   * ไม่พอ / ไม่มีเครดิต → สร้างรายการรอโอนตามยอดที่เหลือ · คืนยอดที่หัก
+   */
+  private async creditOrPay(tx: Tx, row: Invoice) {
+    const used = await applyCreditToInvoice(tx, row.id);
+    const [inv] = await tx.select().from(s.invoices).where(eq(s.invoices.id, row.id));
+    if (inv.amountDue > 0) await tx.insert(s.payments).values({ workspaceId: inv.workspaceId, invoiceId: inv.id, method: 'transfer', amount: inv.amountDue });
+    else await settleInvoice(tx, inv, new Date());
+    return used;
   }
 
   /**
@@ -264,7 +286,9 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
       await this.db.transaction(async (tx) => {
         await tx.update(s.invoices).set({ status: 'void', updatedAt: new Date() }).where(eq(s.invoices.id, inv.id));
         await tx.update(s.payments).set({ status: 'rejected', reviewedBy: staff.id, reviewedAt: new Date(), updatedAt: new Date() }).where(and(eq(s.payments.invoiceId, inv.id), eq(s.payments.status, 'pending_review')));
-        await audit(tx, staff, inv.workspaceId, 'plan', 'ops.invoice_voided', `ยกเลิกใบแจ้งหนี้ ${inv.number} (ยังไม่ชำระ) · ${input.reason}`, { type: 'invoice', id: inv.id });
+        // ใบนี้หักเครดิตไปแล้ว → คืนเครดิต (O41)
+        const back = await reverseCreditOfInvoice(tx, inv.id, `คืนจากใบที่ยกเลิก ${inv.number}`);
+        await audit(tx, staff, inv.workspaceId, 'plan', 'ops.invoice_voided', `ยกเลิกใบแจ้งหนี้ ${inv.number} (ยังไม่ชำระ)${back ? ` · คืนเครดิต ${baht(back)}` : ''} · ${input.reason}`, { type: 'invoice', id: inv.id });
       });
       return { id: inv.id, status: 'void' as const, creditNote: null };
     }
@@ -284,12 +308,14 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
   /** ยอดที่ยังคืน / ลดหนี้ได้ = ยอดที่ลูกค้าจ่าย − ใบลดหนี้ที่ออกไปแล้ว */
   private async refundable(inv: Invoice) {
     const [r] = await this.rows<{ used: number }>(sql`select coalesce(sum(amount_satang + vat_satang), 0)::float8 as used from credit_notes where invoice_id = ${inv.id}`);
-    return Math.max(0, inv.amountDue - Number(r.used));
+    // ยอดที่ลูกค้าจ่ายจริง = เงิน + เครดิตที่ใช้ชำระ (O41) · เครดิตเป็นวิธีชำระ จึงคืน / ลดหนี้ได้เท่ากัน
+    return Math.max(0, inv.amountDue + inv.creditApplied - Number(r.used));
   }
 
   /** ใบลดหนี้: แยกยอดก่อน VAT / VAT ตามสัดส่วนของใบเดิม · เลข CN- ต่อเนื่องทั้งระบบ */
   private async creditNote(tx: Tx, staff: Staff, inv: Invoice, kind: 'refund' | 'credit' | 'void', cash: number, reason: string, extra: { refundMethod?: string; approvalId?: string } = {}) {
-    const ratio = inv.amountDue > 0 ? cash / inv.amountDue : 1;
+    const paid = inv.amountDue + inv.creditApplied;
+    const ratio = paid > 0 ? cash / paid : 1;
     const vat = Math.round(inv.vat * ratio);
     const amount = Math.max(1, Math.round(inv.subtotal * ratio));
     const number = await nextNumber(tx, 'credit_note');
@@ -591,11 +617,12 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
         .insert(s.invoices)
         .values({ workspaceId: inv.workspaceId, subscriptionId: sub?.id ?? inv.subscriptionId, number: invoiceNumber, periodStart: start, periodEnd: start, subtotal: amount, vat, total: amount + vat, whtAmount, amountDue, poNumber: inv.poNumber, status: 'open', dueDate: addDays(start, input.dueDays) })
         .returning();
-      await tx.insert(s.payments).values({ workspaceId: inv.workspaceId, invoiceId: charge.id, method: 'transfer', amount: amountDue });
       await tx.insert(s.auditLogs).values({
         workspaceId: inv.workspaceId, actorId: staff.id, actorKind: 'friday_staff', category: 'plan', action: 'billing.checkout', targetType: 'invoice', targetId: charge.id,
         summary: JSON.stringify({ method: 'transfer', wht: whtAmount > 0, manual: true, items: [{ description: `ส่วนเพิ่มตามใบเพิ่มหนี้ ${number}`, qty: 1, unitSatang: amount }], note: input.reason, key: `ops-${randomUUID()}`, payload: '' }),
       });
+      // เครดิตคงเหลือหักใบส่วนเพิ่มด้วย (O41)
+      await this.creditOrPay(tx, charge);
       const [dn] = await tx
         .insert(s.debitNotes)
         .values({ workspaceId: inv.workspaceId, invoiceId: inv.id, number, amountSatang: amount, vatSatang: vat, reason: input.reason, status: 'issued', chargeInvoiceId: charge.id, createdByStaff: staff.id, issuedAt: new Date() })
@@ -772,6 +799,82 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
   // ---------------------------------------------------------------- ลดแพ็กเกจที่ตั้งไว้ (C4)
 
   /** จบรอบบิลแล้ว → เปลี่ยนเป็นแพ็กเกจที่ตั้งไว้ · บันทึก MRR movement และ Audit ของลูกค้า (ระบบทำ) · เรียกซ้ำได้ */
+  // ---------------------------------------------------------------- บัญชีเครดิต (O41 · R1)
+
+  /** ประวัติเครดิตของลูกค้า ใหม่สุดก่อน พร้อมยอดคงเหลือหลังแต่ละบรรทัด และใบถัดไปที่จะหักเครดิต */
+  async creditLedger(q: z.infer<typeof CreditLedgerQuery>) {
+    const rows = await this.rows<{ id: string; created_at: Date; amount: number; source: string; note: string | null; invoice_id: string | null; invoice: string | null; credit_note_id: string | null; credit_note: string | null; staff: string | null }>(sql`
+      select k.id, k.created_at, k.amount_satang::float8 as amount, k.source, k.note, k.invoice_id, i.number as invoice, k.credit_note_id, c.number as credit_note, st.name as staff
+      from workspace_credits k left join invoices i on i.id = k.invoice_id left join credit_notes c on c.id = k.credit_note_id left join staff_users st on st.id = k.created_by_staff
+      where k.workspace_id = ${q.workspaceId} order by k.created_at asc, k.id asc`);
+    let run = 0;
+    const items = rows.map((r) => ((run += Number(r.amount)), { id: r.id, at: r.created_at, amountSatang: Number(r.amount), balanceSatang: run, source: r.source, note: r.note, invoice: r.invoice_id ? { id: r.invoice_id, number: r.invoice } : null, creditNote: r.credit_note_id ? { id: r.credit_note_id, number: r.credit_note } : null, staff: r.staff }));
+    const balance = await creditBalance(this.db, q.workspaceId);
+    const [sub] = await this.db.select().from(s.subscriptions).where(eq(s.subscriptions.workspaceId, q.workspaceId));
+    const [plan] = sub ? await this.db.select().from(s.plans).where(eq(s.plans.id, sub.pendingPlanId ?? sub.planId)) : [];
+    const cycle = sub?.pendingCycle ?? sub?.cycle ?? 'monthly';
+    const price = plan ? (cycle === 'yearly' ? plan.priceYearlySatang : plan.priceMonthlySatang) : null;
+    const total = price == null ? null : price + (vatRegistered() ? Math.round(price * 0.07) : 0);
+    return {
+      balanceSatang: balance,
+      items: items.reverse(),
+      next: sub?.currentPeriodEnd && total != null && sub.status === 'active' ? { date: sub.currentPeriodEnd, plan: plan!.code, totalSatang: total, creditSatang: Math.min(balance, total), payableSatang: total - Math.min(balance, total) } : null,
+    };
+  }
+
+  /** คืนเครดิตคงเหลือเป็นเงิน (R1 "คืนเป็นเงิน") · เกินวงเงินคืนเงินของพนักงานต้องอนุมัติ */
+  async requestCreditRefund(staff: Staff, input: z.infer<typeof CreditRefundBody>) {
+    await this.workspace(input.workspaceId);
+    const balance = await creditBalance(this.db, input.workspaceId);
+    if (input.amountSatang > balance) throw new AppError(422, 'credit_exceeds_balance', `คืนได้ไม่เกินเครดิตคงเหลือ ${baht(balance)}`, { balanceSatang: balance });
+    const pending = await this.approvals.gate(staff, {
+      kind: 'billing.credit_refund', workspaceId: input.workspaceId, target: { type: 'workspace', id: input.workspaceId }, payload: input, amountSatang: input.amountSatang, reason: input.reason,
+      exceeds: input.amountSatang > staff.limits.refundSatang,
+      rule: `คืนเงินเกิน ${baht(staff.limits.refundSatang)}`,
+    });
+    if (pending) return { pendingApproval: pending };
+    return this.applyCreditRefund(staff, input);
+  }
+
+  private async applyCreditRefund(staff: Staff, p: z.infer<typeof CreditRefundBody>, ctx?: ApprovalContext) {
+    await this.db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'credit:' + p.workspaceId}, 0))`);
+      if (p.amountSatang > (await creditBalance(tx, p.workspaceId))) throw new AppError(422, 'credit_exceeds_balance', 'เครดิตคงเหลือไม่พอ (อาจถูกใช้ไปแล้ว)');
+      await tx.insert(s.workspaceCredits).values({ workspaceId: p.workspaceId, amountSatang: -p.amountSatang, source: 'refunded', note: p.reason, createdByStaff: staff.id });
+      await audit(tx, staff, p.workspaceId, 'plan', 'ops.credit_refunded', `คืนเครดิตเป็นเงิน ${baht(p.amountSatang)} · ${p.reason}`, { type: 'workspace', id: p.workspaceId }, approvalOf(ctx));
+    });
+    const balance = await creditBalance(this.db, p.workspaceId);
+    await mailAll(this.mail, await billingContacts(this.db, p.workspaceId), `คืนเครดิตเป็นเงิน ${baht(p.amountSatang)} · Friday Work Management`, `ทีมการเงินจะโอนคืน ${baht(p.amountSatang)} ภายใน 7 วันทำการ\nเหตุผล: ${p.reason}\nเครดิตคงเหลือ ${baht(balance)}`);
+    return { refundedSatang: p.amountSatang, balanceSatang: balance };
+  }
+
+  /**
+   * ส่วนที่ยังไม่ได้ใช้ของรอบที่จ่ายแล้ว (เปลี่ยนรอบบิล / ส่วนต่างติดลบ · O41 · R3) → ใบลดหนี้อ้างใบที่เปิดรอบนี้ แล้วเข้าเครดิต
+   * ยอดคิดจากที่จ่ายจริงของใบนั้นตามสัดส่วนวันที่เหลือ · ไม่ต้องอนุมัติ (ระบบคำนวณ ไม่ใช่การให้เครดิตตามดุลยพินิจ)
+   */
+  async creditUnused(staff: Staff, invoiceId: string, ratio: number, reason: string) {
+    const inv = await this.invoice(invoiceId);
+    if (inv.status !== 'paid' || ratio <= 0) return null;
+    const cash = Math.min(await this.refundable(inv), Math.round((inv.amountDue + inv.creditApplied) * Math.min(1, ratio)));
+    if (cash <= 0) return null;
+    return this.db.transaction(async (tx) => {
+      const note = await this.creditNote(tx, staff, inv, 'credit', cash, reason);
+      await tx.insert(s.workspaceCredits).values({ workspaceId: inv.workspaceId, amountSatang: cash, source: 'credit_note', creditNoteId: note.id, invoiceId: inv.id, note: reason, createdByStaff: staff.id });
+      await audit(tx, staff, inv.workspaceId, 'plan', 'ops.credit_granted', `เครดิตส่วนที่ยังไม่ได้ใช้ ${baht(cash)} · ใบลดหนี้ ${note.number} (${inv.number}) · ${reason}`, { type: 'credit_note', id: note.id });
+      return { creditNote: { id: note.id, number: note.number }, creditSatang: cash };
+    });
+  }
+
+  /** อีเมล Owner ของ Workspace (แจ้งเรื่องแพ็กเกจที่เจ้าของต้องตัดสิน) */
+  private async owners(workspaceId: string) {
+    const rows = await this.db
+      .select({ email: s.users.email })
+      .from(s.workspaceMembers)
+      .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
+      .where(and(eq(s.workspaceMembers.workspaceId, workspaceId), eq(s.workspaceMembers.status, 'active'), eq(s.workspaceMembers.role, 'owner')));
+    return rows.map((r) => r.email);
+  }
+
   async applyScheduledPlans(now = new Date()) {
     const due = await this.db
       .select({ sub: s.subscriptions, from: s.plans.code })
@@ -782,6 +885,17 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     for (const { sub, from } of due) {
       const [to] = await this.db.select().from(s.plans).where(eq(s.plans.id, sub.pendingPlanId!));
       if (!to) continue;
+      // วันที่มีผลยังใช้เกินขีดจำกัดของแพ็กเกจใหม่ → คงแพ็กเกจเดิมอีก 1 รอบ และอีเมล Owner (คำตัดสิน 16 พ.ย. 2569 ข้อ 2)
+      const blockers = await downgradeBlockers(this.db, sub.workspaceId, to.code, now);
+      if (blockers.length) {
+        const key = `downgrade-held:${sub.id}:${sub.currentPeriodEnd?.toISOString().slice(0, 10)}`;
+        const [first] = await this.db.insert(s.staffPushNotices).values({ key }).onConflictDoNothing().returning();
+        if (first) {
+          await this.db.insert(s.auditLogs).values({ workspaceId: sub.workspaceId, actorKind: 'system', category: 'plan', action: 'billing.downgrade_held', targetType: 'subscription', targetId: sub.id, summary: `ยังไม่ลดเป็น ${to.code}: ${blockers.map((b) => `${b.key === 'seats' ? 'สมาชิก' : 'โปรเจกต์'} ${b.used}/${b.limit}`).join(' · ')} · ใช้ ${from} ต่ออีก 1 รอบ` });
+          await mailAll(this.mail, await this.owners(sub.workspaceId), `ยังไม่ได้ลดเป็น ${to.code} · Friday Work Management`, `ถึงวันลดแพ็กเกจแล้ว แต่ Workspace ยังใช้เกินขีดจำกัดของ ${to.code}\n${blockers.map((b) => `- ${b.key === 'seats' ? 'สมาชิก' : 'โปรเจกต์'} ${b.used} จากที่รับได้ ${b.limit}`).join('\n')}\nระบบใช้ ${from} ต่ออีก 1 รอบ · ลดให้ไม่เกินขีดจำกัดแล้วระบบจะเปลี่ยนให้ในรอบถัดไป หรือยกเลิกการลดแพ็กเกจได้ที่หน้า แพ็กเกจ & Billing`);
+        }
+        continue;
+      }
       const cycle = sub.pendingCycle ?? sub.cycle;
       const price = (p: { priceMonthlySatang: number | null; priceYearlySatang: number | null }, c: string) => (c === 'yearly' ? Math.round((p.priceYearlySatang ?? 0) / 12) : (p.priceMonthlySatang ?? 0));
       const [last] = await this.rows<{ mrr: number }>(sql`select mrr_after_satang::float8 as mrr from subscription_changes where workspace_id = ${sub.workspaceId} order by effective_at desc, created_at desc limit 1`);

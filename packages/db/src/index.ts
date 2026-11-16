@@ -6,3 +6,4 @@ export * from './plan-entitlements.ts';
 export * from './promotions.ts';
 export * from './documents.ts';
 export * from './retention.ts';
+export * from './credit.ts';

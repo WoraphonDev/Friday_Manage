@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { AnalyticsService, classifyChange } from '../analytics/analytics.service.js';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { bkkDate, type BuyerSnapshot, canGrant, cancelETax, commitCouponUses, type Db, issueReceipt, nextDocNumber, queueETax, resumeIfPaid, schema, type Tx } from '@friday/db';
+import { bkkDate, type BuyerSnapshot, canGrant, cancelETax, commitCouponUses, type Db, issueReceipt, nextDocNumber, queueETax, recordCreditUse, reserveCredit, resumeIfPaid, schema, type Tx } from '@friday/db';
 import { bankFromEnv } from '@friday/docs';
 import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -52,6 +52,10 @@ export interface CheckoutMeta {
   priceVersionId?: string | null;
   /** โค้ดส่วนลดที่ใส่ตอน checkout */
   coupon?: string | null;
+  /** อัปเกรดกลางรอบ (O41 · R5): ใบนี้เป็นส่วนต่างของวันที่เหลือ เปิดแพ็กเกจใหม่โดยไม่เปลี่ยนรอบบิล */
+  proration?: boolean;
+  /** เครดิตที่หักจากใบนี้ (สตางค์) */
+  credit?: number;
 }
 
 const sha = (v: string) => createHash('sha256').update(v).digest('hex');
@@ -205,6 +209,10 @@ export class PaymentsService implements OnModuleInit {
       // คูปองที่จำกัดจำนวนสิทธิ์: หลาย Workspace ใช้โค้ดเดียวกันพร้อมกันต้องต่อคิว ไม่ให้เกินสิทธิ์ (O20)
       if (input.coupon) await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'coupon:' + input.coupon}, 0))`);
       const { internal, ...quote } = await this.billing.price(auth, tenant, { plan: input.plan, cycle: input.cycle, wht: input.wht, coupon: input.coupon }, tx);
+      // ลดแพ็กเกจ / เปลี่ยนรอบบิลระหว่างรอบที่จ่ายแล้ว ไม่เริ่มรอบใหม่ทับเงินที่จ่ายไป → ตั้งให้มีผลรอบถัดไป (O41 · R6)
+      if (quote.change.kind === 'next_cycle')
+        throw new AppError(409, 'change_next_cycle', quote.change.reason === 'cycle' ? 'เปลี่ยนรอบบิลมีผลเมื่อจบรอบที่จ่ายแล้ว · ตั้งการเปลี่ยนไว้ล่วงหน้าได้' : 'ลดแพ็กเกจมีผลเมื่อจบรอบที่จ่ายแล้ว · ตั้งการเปลี่ยนไว้ล่วงหน้าได้', { effectiveAt: quote.change.effectiveAt, reason: quote.change.reason });
+      const upgrade = quote.change.kind === 'upgrade' ? quote.change : null;
       const [subRow] = await tx.select({ id: s.subscriptions.id }).from(s.subscriptions);
 
       // เลขใบแจ้งหนี้ออกต่อเนื่องทั้งระบบ (ใบกำกับภาษีต้องเรียงเลข) จึงล็อกระดับระบบ แล้วนับด้วย SYSTEM_DB ซึ่งเห็นทุก Workspace
@@ -212,8 +220,11 @@ export class PaymentsService implements OnModuleInit {
       const number = await nextDocNumber(tx, 'invoice', start, this.sys);
       // คูปองใช้ฟรี N เดือน: ใบนี้ครอบคลุม N เดือน แล้วรอบถัดไปจ่ายราคาปกติตามรอบที่เลือก
       const months = quote.freeMonths ?? (input.cycle === 'yearly' ? 12 : 1);
-      // ไม่มียอดชำระ (ฟรี / ส่วนลด 100%): ไม่ส่งไปผู้ให้บริการรับชำระ ปิดใบทันทีหลัง commit
-      const free = quote.amountDue === 0;
+      // เครดิตคงเหลือหักใบนี้ก่อน (O41 · R) · ใบกำกับภาษียังออกเต็มยอด
+      const credit = await reserveCredit(tx, tenant.workspaceId, quote.amountDue);
+      const amountDue = quote.amountDue - credit;
+      // ไม่มียอดชำระ (ฟรี / ส่วนลด 100% / เครดิตพอทั้งใบ): ไม่ส่งไปผู้ให้บริการรับชำระ ปิดใบทันทีหลัง commit
+      const free = amountDue === 0;
 
       const [invoice] = await tx
         .insert(s.invoices)
@@ -222,18 +233,21 @@ export class PaymentsService implements OnModuleInit {
           subscriptionId: subRow.id,
           number,
           periodStart: start,
-          periodEnd: addDays(addMonths(start, months), -1),
+          // อัปเกรดกลางรอบ: ใบนี้ครอบคลุมถึงวันสิ้นรอบเดิม
+          periodEnd: upgrade ? addDays(bkkDate(upgrade.effectiveAt), -1) : addDays(addMonths(start, months), -1),
           subtotal: quote.subtotal,
           discount: quote.discount,
           vat: quote.vat,
           total: quote.total,
           whtAmount: quote.whtAmount,
-          amountDue: quote.amountDue,
+          amountDue,
+          creditApplied: credit,
           poNumber: input.poNumber ?? null,
           dueDate: input.method === 'transfer' && !free ? addDays(start, 7) : start,
         })
         .returning();
       await recordDiscount(tx, { workspaceId: tenant.workspaceId, userId: auth.userId, invoiceId: invoice.id, apply: internal.apply });
+      await recordCreditUse(tx, invoice, credit);
 
       if (!free) {
         const gwReq = { amount: invoice.amountDue, invoiceId: invoice.id, invoiceNumber: invoice.number, email: profile.taxEmail, idempotencyKey: key };
@@ -241,9 +255,9 @@ export class PaymentsService implements OnModuleInit {
         await tx.insert(s.payments).values({ workspaceId: tenant.workspaceId, invoiceId: invoice.id, method: input.method, amount: invoice.amountDue, providerRef: gw?.providerRef ?? null });
       }
 
-      const meta: CheckoutMeta = { plan: input.plan, cycle: input.cycle, method: input.method, wht: input.wht, key, payload, priceVersionId: internal.priceVersionId, coupon: quote.coupon };
+      const meta: CheckoutMeta = { plan: input.plan, cycle: input.cycle, method: input.method, wht: input.wht, key, payload, priceVersionId: internal.priceVersionId, coupon: quote.coupon, ...(upgrade ? { proration: true } : {}), ...(credit ? { credit } : {}) };
       const log = { workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user' as const, category: 'plan' as const, targetType: 'invoice', targetId: invoice.id };
-      const off = quote.discount ? ` · ส่วนลด ${quote.discounts.map((d) => d.code).join(', ')} ${quote.discount / 100} บาท` : '';
+      const off = `${quote.discount ? ` · ส่วนลด ${quote.discounts.map((d) => d.code).join(', ')} ${quote.discount / 100} บาท` : ''}${credit ? ` · หักเครดิต ${credit / 100} บาท` : ''}${upgrade ? ` · ส่วนต่างอัปเกรดจาก ${upgrade.fromPlan} (${upgrade.proration.left}/${upgrade.proration.total} วัน)` : ''}`;
       await tx.insert(s.auditLogs).values([
         { ...log, action: 'billing.checkout', summary: JSON.stringify(meta) },
         { ...log, action: 'billing.invoice_created', summary: `${invoice.number} · ${quote.planName} ${input.cycle === 'yearly' ? 'รายปี' : 'รายเดือน'} · ${input.method} · ${invoice.amountDue / 100} บาท${off}` },
@@ -295,7 +309,7 @@ export class PaymentsService implements OnModuleInit {
    * ไม่ออกใบกำกับภาษี / ใบเสร็จ เพราะไม่มีการรับเงิน · เขียนด้วย SYSTEM_DB (invoices / subscriptions แก้ผ่านแอปไม่ได้) · เรียกซ้ำได้
    */
   private async settleFree(invoiceId: string) {
-    await this.sys.transaction(async (tx) => {
+    const doc = await this.sys.transaction(async (tx) => {
       const [invoice] = await tx.select().from(s.invoices).where(eq(s.invoices.id, invoiceId)).for('update');
       if (!invoice || invoice.status !== 'open' || invoice.amountDue !== 0) return;
       const [hasPayment] = await tx.select({ id: s.payments.id }).from(s.payments).where(eq(s.payments.invoiceId, invoiceId)).limit(1);
@@ -307,8 +321,13 @@ export class PaymentsService implements OnModuleInit {
       await commitCouponUses(tx, invoice.id);
       const kind = granted ? classifyChange({ plan: prev?.plan ?? null, status: prev?.status ?? null, cycle: prev?.cycle ?? null }, { plan: meta.plan, cycle: meta.cycle }) : null;
       if (kind) await this.analytics.subscriptionChanged(tx, { workspaceId: invoice.workspaceId, kind, planFrom: prev?.plan ?? null, planTo: meta.plan, mrrAfterSatang: 0, actorKind: 'system', actorId: null });
-      await tx.insert(s.auditLogs).values({ workspaceId: invoice.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.payment_confirmed', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · ไม่มียอดชำระ (คูปอง ${meta.coupon ?? '-'}) · ${granted ? `เปิดแพ็กเกจ ${meta.plan}` : 'ไม่เปลี่ยนแพ็กเกจ (มีใบที่ใหม่กว่าเปิดสิทธิ์อยู่)'}` });
+      // ชำระด้วยเครดิตทั้งใบ (มียอดจริง): ออกใบกำกับภาษี / ใบเสร็จเต็มยอด ลงวันที่วันนี้ (O41 · R4)
+      const issued = invoice.total > 0 ? await issueReceipt(tx, invoice, { vatRegistered: config.vatRegistered, paidAt: new Date() }) : null;
+      const why = invoice.creditApplied > 0 ? `ชำระด้วยเครดิต ${invoice.creditApplied / 100} บาท` : `ไม่มียอดชำระ (คูปอง ${meta.coupon ?? '-'})`;
+      await tx.insert(s.auditLogs).values({ workspaceId: invoice.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.payment_confirmed', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · ${why} · ${granted ? `เปิดแพ็กเกจ ${meta.plan}` : 'ไม่เปลี่ยนแพ็กเกจ (มีใบที่ใหม่กว่าเปิดสิทธิ์อยู่)'}` });
+      return issued?.created ? issued.doc : null;
     });
+    if (doc?.docType === 'tax_invoice_receipt') await this.jobs.enqueue('payments.etax', { taxDocumentId: doc.id });
   }
 
   /** ผลของ checkout (ใช้ทั้งครั้งแรกและตอนส่งซ้ำ) · บัตร / PromptPay ถามผู้ให้บริการอีกครั้งด้วย key เดิม ได้ intent เดิม */
@@ -349,7 +368,14 @@ export class PaymentsService implements OnModuleInit {
     if (!plan) throw new AppError(409, 'plan_not_found', `ไม่พบแพ็กเกจ ${meta.plan}`);
     await tx
       .update(s.subscriptions)
-      .set({ planId: plan.id, cycle: meta.cycle, status: 'active', trialEndsAt: null, currentPeriodStart: new Date(`${invoice.periodStart}T00:00:00+07:00`), currentPeriodEnd: new Date(`${addDays(invoice.periodEnd, 1)}T00:00:00+07:00`), paymentMethod: meta.method, sourceInvoiceId: invoice.id, ...(meta.priceVersionId !== undefined ? { priceVersionId: meta.priceVersionId } : {}), updatedAt: new Date() })
+      .set({
+        planId: plan.id, cycle: meta.cycle, status: 'active', trialEndsAt: null,
+        // อัปเกรดกลางรอบ: รอบบิลเดิม (เริ่ม / สิ้นสุดเท่าเดิม) · ใบอื่นเริ่มรอบใหม่ตามใบ
+        ...(meta.proration ? {} : { currentPeriodStart: new Date(`${invoice.periodStart}T00:00:00+07:00`), currentPeriodEnd: new Date(`${addDays(invoice.periodEnd, 1)}T00:00:00+07:00`) }),
+        // ลดแพ็กเกจที่ตั้งไว้ไม่ใช้แล้วเมื่อซื้อแพ็กเกจใหม่
+        pendingPlanId: null, pendingCycle: null,
+        paymentMethod: meta.method, sourceInvoiceId: invoice.id, ...(meta.priceVersionId !== undefined ? { priceVersionId: meta.priceVersionId } : {}), updatedAt: new Date(),
+      })
       .where(eq(s.subscriptions.id, invoice.subscriptionId));
     return true;
   }

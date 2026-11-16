@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lock, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -29,7 +29,18 @@ interface Form {
   poNumber: string;
 }
 /** ใบเสนอราคาจาก API (A35a เพิ่มสถานะจด VAT) */
-type QuoteVat = Quote & { vatRegistered?: boolean; documentType?: "tax_invoice_receipt" | "receipt" };
+type QuoteVat = Quote & {
+  vatRegistered?: boolean;
+  documentType?: "tax_invoice_receipt" | "receipt";
+  /** O41 · R5–R6: อัปเกรดกลางรอบคิดส่วนต่าง · ลดแพ็กเกจ / เปลี่ยนรอบมีผลรอบถัดไป */
+  change?:
+    | { kind: "new" }
+    | { kind: "upgrade"; fromPlan: string; effectiveAt: string; proration: { left: number; total: number; newPartSatang: number; oldPartSatang: number; diffSatang: number } }
+    | { kind: "next_cycle"; reason: "cycle" | "downgrade"; effectiveAt: string };
+  /** เครดิตคงเหลือที่หักใบนี้ · payNowSatang = ยอดที่ต้องชำระหลังหักเครดิต */
+  credit?: { balanceSatang: number; applySatang: number };
+  payNowSatang?: number;
+};
 const EMPTY: Form = { companyName: "", taxId: "", branchType: "head", branchNo: "", address: "", taxEmail: "", poNumber: "" };
 const METHODS: Method[] = ["promptpay", "card", "transfer"];
 
@@ -245,17 +256,23 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
   const q = couponFailed ? null : (quote.data ?? null);
   const amounts = q ?? undefined;
   const freeMonths = q?.freeMonths ?? null;
-  // ไม่มียอดชำระ: ไม่ต้องสร้าง QR / ตัดบัตร / ขอเลขบัญชี
-  const freeQuote = !!q && (q.amountDue === 0 || !!freeMonths);
+  const upgrade = q?.change?.kind === "upgrade" ? q.change : null;
+  const scheduled = q?.change?.kind === "next_cycle" ? q.change : null;
+  const creditUse = q?.credit?.applySatang ?? 0;
+  const payNow = q ? (q.payNowSatang ?? q.amountDue) : 0;
+  // ไม่มียอดชำระ (คูปอง / เครดิตพอทั้งใบ): ไม่ต้องสร้าง QR / ตัดบัตร / ขอเลขบัญชี
+  const freeQuote = !!q && (payNow === 0 || !!freeMonths);
   const discountTotal = q?.discount ?? 0;
   const discountLines: QuoteDiscount[] = q?.discounts ?? [];
   const listPrice = q?.listPrice ?? (q ? q.subtotal + discountTotal : 0);
-  const pay = amounts ? `฿${baht(amounts.amountDue)}` : "–";
+  const pay = amounts ? `฿${baht(payNow)}` : "–";
   const payMethod = current;
   const payLabel = freeQuote
     ? freeMonths
       ? t("coupon.startFree", { n: freeMonths })
-      : t("coupon.confirmFree")
+      : creditUse > 0
+        ? t("credit.confirm")
+        : t("coupon.confirmFree")
     : { promptpay: t("qr.create"), card: t("card.next"), transfer: t("transfer.request") }[current];
   // ใบเสนอราคาของตัวเลือกตอนนี้ (ฝ่ายจัดซื้อใช้ออก PO ก่อนชำระ)
   const quotationHref = `/api/v1${base}/billing/quotation.pdf?plan=${selected}&cycle=${cycle}&wht=${whtOn}${coupon ? `&coupon=${encodeURIComponent(coupon)}` : ""}`;
@@ -352,7 +369,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
 
             {/* เปลี่ยนวิธีชำระ = กล่องรายละเอียดชุดใหม่เคลื่อนเข้า (แสดงทีละกล่อง ห่อแล้วระยะห่างจึงเท่าเดิม) */}
             <MotionSwap key={freeQuote ? "free" : payMethod}>
-            {freeQuote && <div className={cn(styles.panel, styles.muted, styles.small)}>{freeMonths ? t("coupon.freeNote", { n: freeMonths }) : t("coupon.zeroNote")}</div>}
+            {freeQuote && <div className={cn(styles.panel, styles.muted, styles.small)}>{freeMonths ? t("coupon.freeNote", { n: freeMonths }) : creditUse > 0 ? t("credit.paidNote") : t("coupon.zeroNote")}</div>}
 
             {!freeQuote && payMethod === "promptpay" && <div className={cn(styles.panel, styles.muted, styles.small)}>{t("qr.before")}</div>}
 
@@ -406,6 +423,21 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
           ) : (
             <>
               {q?.grandfathered && <div className={cn(styles.muted, styles.small)}>{t("coupon.grandfathered")}</div>}
+              {upgrade && (
+                <>
+                  <div className={styles.sr}>
+                    <span>
+                      {t("upgrade.newPart", { plan: planName })}
+                      <small className={cn(styles.muted, styles.small)} style={{ display: "block" }}>{t("upgrade.days", { left: upgrade.proration.left, total: upgrade.proration.total })}</small>
+                    </span>
+                    <span>฿{baht(upgrade.proration.newPartSatang)}</span>
+                  </div>
+                  <div className={cn(styles.sr, styles.minus)}>
+                    <span>{t("upgrade.oldPart")}</span>
+                    <span>−฿{baht(upgrade.proration.oldPartSatang)}</span>
+                  </div>
+                </>
+              )}
               {discountTotal > 0 && (
                 <>
                   <div className={styles.sr}>
@@ -431,7 +463,7 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
                 </>
               )}
               <div className={styles.sr}>
-                <span>{receipt ? (discountTotal > 0 ? t("coupon.afterDiscount") : t("summary.price")) : t("summary.priceNote")}</span>
+                <span>{upgrade ? t("upgrade.diff") : receipt ? (discountTotal > 0 ? t("coupon.afterDiscount") : t("summary.price")) : t("summary.priceNote")}</span>
                 <span>฿{baht(amounts.subtotal)}</span>
               </div>
               {!receipt && (
@@ -450,6 +482,15 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
                 <div className={cn(styles.sr, styles.minus)}>
                   <span>{t("summary.wht")}</span>
                   <span>−฿{baht(amounts.whtAmount)}</span>
+                </div>
+              )}
+              {creditUse > 0 && (
+                <div className={cn(styles.sr, styles.minus)}>
+                  <span>
+                    {t("credit.line")}
+                    <small className={cn(styles.muted, styles.small)} style={{ display: "block" }}>{t("credit.left", { from: baht(q?.credit?.balanceSatang ?? 0), to: baht((q?.credit?.balanceSatang ?? 0) - creditUse) })}</small>
+                  </span>
+                  <span>−฿{baht(creditUse)}</span>
                 </div>
               )}
               <div className={cn(styles.sr, styles.due)}>
@@ -506,9 +547,14 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
               {problem instanceof ApiError && supportId(problem) && <div className={styles.mono}>{t("summary.requestId", { id: supportId(problem) ?? "" })}</div>}
             </div>
           )}
-          <Button variant="primary" className={styles.payBtn} disabled={busy || !amounts} onClick={startCheckout}>
-            {busy ? t("summary.processing") : payLabel}
-          </Button>
+          {upgrade && <div className={cn(styles.muted, styles.small)}>{t("upgrade.after", { date: formatDate(upgrade.effectiveAt, "BE", true) })}</div>}
+          {scheduled ? (
+            <ScheduleChange ws={ws} plan={selected} cycle={cycle} change={scheduled} planName={planName} />
+          ) : (
+            <Button variant="primary" className={styles.payBtn} disabled={busy || !amounts} onClick={startCheckout}>
+              {busy ? t("summary.processing") : payLabel}
+            </Button>
+          )}
           {amounts && !freeQuote && (
             <a className={cn(buttonVariants({ variant: "ghost" }), styles.quoteLink)} href={quotationHref} target="_blank" rel="noreferrer">
               {t("summary.quotation")}
@@ -535,6 +581,36 @@ export function Checkout({ ws, initialPlan, initialCycle }: { ws: string; initia
           </div>
         </aside>
       </div>
+    </div>
+  );
+}
+
+/**
+ * O41 · R6: ลดแพ็กเกจ / เปลี่ยนรอบบิลระหว่างรอบที่จ่ายแล้ว → ตั้งให้มีผลรอบถัดไป (ไม่มีเงินคืนรอบนี้)
+ * แสดงสิ่งที่ต้องลดก่อนวันที่มีผล · ถึงวันนั้นยังเกิน ระบบคงแพ็กเกจเดิมอีก 1 รอบ
+ */
+function ScheduleChange({ ws, plan, cycle, change, planName }: { ws: string; plan: string; cycle: string; change: { reason: "cycle" | "downgrade"; effectiveAt: string }; planName: string }) {
+  const t = useTranslations("checkout.schedule");
+  const router = useRouter();
+  const base = `/w/${encodeURIComponent(ws)}`;
+  const [agree, setAgree] = useState(false);
+  const save = useMutation({
+    mutationFn: () => api.post<{ pendingChange: { blockers: { key: "seats" | "projects"; used: number; limit: number }[] } }>(`${base}/billing/scheduled-change`, { plan, cycle }),
+    onSuccess: () => router.push(`/work/${encodeURIComponent(ws)}/billing?scheduled=1`),
+  });
+  const date = formatDate(change.effectiveAt, "BE", true);
+  return (
+    <div className={cn(styles.panel, styles.small)} role="status">
+      <b>{t(change.reason === "cycle" ? "titleCycle" : "title", { plan: planName, date })}</b>
+      <span className={styles.muted}>{t("hint", { date })}</span>
+      <label className={styles.agree}>
+        <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
+        <span>{t("agree", { date })}</span>
+      </label>
+      {save.error && <span role="alert">{save.error instanceof Error ? save.error.message : String(save.error)}</span>}
+      <Button variant="primary" className={styles.payBtn} disabled={!agree || save.isPending} onClick={() => save.mutate()}>
+        {save.isPending ? t("saving") : t("submit")}
+      </Button>
     </div>
   );
 }

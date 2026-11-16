@@ -148,3 +148,10 @@
   .section { padding: 14px; }
   .panel { border-radius: 14px; }
 }
+
+/* O41 · R4 เครดิตคงเหลือ */
+.credit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

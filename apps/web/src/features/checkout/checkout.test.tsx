@@ -388,6 +388,45 @@ describe("โค้ดส่วนลดในหน้าชำระเงิ�
   });
 });
 
+describe("เปลี่ยนแพ็กเกจกลางรอบและเครดิต (O41 · R5–R6)", () => {
+  it("อัปเกรดกลางรอบ: ส่วนที่เหลือของรอบ − ค่าแพ็กเกจเดิมที่ยังไม่ได้ใช้ · หักเครดิต · ยอดที่ต้องชำระหลังหักเครดิต", async () => {
+    server.use(
+      http.get("*/api/v1/w/:ws/billing/quote", () =>
+        HttpResponse.json({
+          plan: "team_m", planName: "team_m", cycle: "monthly", wht: false, subtotal: 90_000, vat: 6_300, total: 96_300, whtAmount: 0, amountDue: 96_300, currentPlan: "team_s", vatRegistered: true, documentType: "tax_invoice_receipt",
+          change: { kind: "upgrade", fromPlan: "team_s", effectiveAt: "2026-11-30T17:00:00.000Z", proration: { left: 18, total: 30, newPartSatang: 180_000, oldPartSatang: 90_000, diffSatang: 90_000 } },
+          credit: { balanceSatang: 45_000, applySatang: 45_000 }, payNowSatang: 51_300,
+        }),
+      ),
+    );
+    mount({ plan: "team_m" });
+    const s = await screen.findByRole("complementary", { name: "สรุปยอด" });
+    expect(await within(s).findByText("Team M ส่วนที่เหลือของรอบนี้")).toBeInTheDocument();
+    expect(within(s).getByText("18 จาก 30 วัน")).toBeInTheDocument();
+    expect(within(s).getByText("−฿900")).toBeInTheDocument();
+    expect(within(s).getByText("ส่วนต่างก่อน VAT")).toBeInTheDocument();
+    expect(within(s).getByText("เครดิตคงเหลือ")).toBeInTheDocument();
+    expect(within(s).getByText("−฿450")).toBeInTheDocument();
+    expect(within(s).getByText("฿513")).toBeInTheDocument();
+  });
+
+  it("ลดแพ็กเกจระหว่างรอบที่จ่ายแล้ว: ไม่มีปุ่มชำระ · ต้องติ๊กยอมรับ · ตั้งให้เปลี่ยนแล้วกลับหน้า Billing", async () => {
+    server.use(
+      http.get("*/api/v1/w/:ws/billing/quote", ({ request }) => HttpResponse.json({ ...quoteFor(new URL(request.url)), change: { kind: "next_cycle", reason: "downgrade", effectiveAt: "2026-11-30T17:00:00.000Z" } })),
+      http.post("*/api/v1/w/:ws/billing/scheduled-change", async ({ request }) => (await record(request), HttpResponse.json({ pendingChange: { plan: "team_s", cycle: "monthly", effectiveAt: "2026-11-30T17:00:00.000Z", blockers: [] } }, { status: 201 }))),
+    );
+    mount({ plan: "team_s" });
+    const s = await screen.findByRole("complementary", { name: "สรุปยอด" });
+    expect(await within(s).findByText(/ลดเป็น Team S มีผล/)).toBeInTheDocument();
+    const submit = within(s).getByRole("button", { name: "ตั้งให้เปลี่ยนแพ็กเกจ" });
+    expect(submit).toBeDisabled();
+    await userEvent.click(within(s).getByRole("checkbox"));
+    await userEvent.click(submit);
+    await waitFor(() => expect(calls.find((c) => c.path.endsWith("/billing/scheduled-change"))?.body).toEqual({ plan: "team_s", cycle: "monthly" }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/work/sample/billing?scheduled=1"));
+  });
+});
+
 describe("แบบสอบถามตอนยกเลิก (W22)", () => {
   const open = (isOwner = true) => {
     const onCancelled = vi.fn();

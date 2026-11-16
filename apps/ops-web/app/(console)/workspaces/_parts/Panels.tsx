@@ -10,6 +10,7 @@ import { Chip, Empty, ErrorBlock, TableSkeleton } from "@/components/kit";
 import { Button, buttonClass, errorToast, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { CreditCard } from "./Credit";
 import { healthTone, planLabel, useFmt } from "./format";
 import type { Member, Overview } from "./types";
 
@@ -580,6 +581,8 @@ export function BillingPanel({ id }: { id: string }) {
               )}
             </Card>
           </div>
+          {/* บัญชีเครดิต (O41 · R1) · เฉพาะบทบาทที่เห็นเงิน (API ซ่อนยอดเครดิตจากบทบาทอื่น) */}
+          {d.creditBalanceSatang != null && <CreditCard id={id} name={d.profile?.companyName ?? id} />}
           <Card title={t("invoices")}>
             <Table head={[t("number"), t("period"), t("amount"), t("status"), t("channel"), t("doc")]}>
               {d.invoices.map((i) => (

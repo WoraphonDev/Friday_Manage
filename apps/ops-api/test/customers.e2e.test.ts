@@ -144,8 +144,10 @@ describe('เปลี่ยนแพ็กเกจ', () => {
     const down = await finance.agent.get(`/ops/workspaces/${a.id}/change-plan/preview?plan=team_s`);
     expect(down.body).toMatchObject({ effective: 'next_cycle', blocked: { code: 'seats_exceed_plan' }, totalSatang: 0 });
     const yearly = await finance.agent.get(`/ops/workspaces/${a.id}/change-plan/preview?plan=team_m&cycle=yearly`);
-    expect(yearly.body.lines).toHaveLength(2);
-    expect(yearly.body.lines[1].satang).toBeLessThan(0);
+    // เปลี่ยนรอบบิล (O41 · R3): ใบใหม่เต็มรอบ 1 บรรทัด · ส่วนที่ยังไม่ได้ใช้ไปเป็นใบลดหนี้ + เครดิต ไม่ใช่บรรทัดติดลบ
+    expect(yearly.body.lines).toHaveLength(1);
+    expect(yearly.body.lines[0].satang).toBeGreaterThan(0);
+    expect(yearly.body.payNowSatang).toBe(yearly.body.totalSatang - yearly.body.creditApplySatang);
     expect((await support.agent.get(`/ops/workspaces/${a.id}/change-plan/preview?plan=team_l`)).status).toBe(403);
   });
 

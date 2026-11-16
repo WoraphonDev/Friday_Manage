@@ -6,6 +6,7 @@ import { AppError, notFound } from '../common/errors.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { type DomainEvent, EventBus } from '../core/events.js';
+import { syncChecklistProgress } from '../issues/checklist-progress.js';
 import { IssuesService } from '../issues/issues.service.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
 import { requirePerm } from '../projects/permissions.js';
@@ -66,7 +67,7 @@ export class IssuePartsService {
         doneBy: input.done ? auth.userId : null,
         doneAt: input.done ? new Date() : null,
       }).returning();
-      await this.record(tx, auth, tenant, ctx, events, 'checklist', null, item);
+      await this.recordChecklist(tx, auth, tenant, ctx, events, null, item);
       return item;
     });
   }
@@ -85,7 +86,7 @@ export class IssuePartsService {
         set.sort = target.reduce((max, i) => Math.max(max, i.sort), -1) + 1;
       }
       const [item] = await tx.update(s.checklistItems).set(set).where(and(eq(s.checklistItems.id, id), eq(s.checklistItems.issueId, ctx.issue.id))).returning();
-      await this.record(tx, auth, tenant, ctx, events, 'checklist', before, item);
+      await this.recordChecklist(tx, auth, tenant, ctx, events, before, item);
       return item;
     });
   }
@@ -94,7 +95,7 @@ export class IssuePartsService {
     return this.mutate(auth, tenant, key, async (tx, ctx, events) => {
       const before = await this.item(tx, ctx.issue.id, id);
       await tx.delete(s.checklistItems).where(and(eq(s.checklistItems.id, id), eq(s.checklistItems.issueId, ctx.issue.id)));
-      await this.record(tx, auth, tenant, ctx, events, 'checklist', before, null);
+      await this.recordChecklist(tx, auth, tenant, ctx, events, before, null);
     });
   }
 
@@ -246,12 +247,18 @@ export class IssuePartsService {
     return { blockedBy, blocking };
   }
 
-  private async record(tx: Tx, auth: AuthInfo, tenant: TenantInfo, ctx: Context, events: DomainEvent[], field: 'checklist' | 'dependencies', oldValue: unknown, newValue: unknown) {
+  private async record(tx: Tx, auth: AuthInfo, tenant: TenantInfo, ctx: Context, events: DomainEvent[], field: 'checklist' | 'dependencies', oldValue: unknown, newValue: unknown, also: string[] = []) {
     await tx.insert(s.activities).values({ workspaceId: tenant.workspaceId, projectId: ctx.project.id, issueId: ctx.issue.id, actorId: auth.userId, verb: 'updated', field, oldValue, newValue });
     events.push({
       type: 'issue.updated', workspaceId: tenant.workspaceId, projectId: ctx.project.id, issueId: ctx.issue.id, actorId: auth.userId,
-      data: { issueKey: `${ctx.project.key}-${ctx.issue.number}`, title: ctx.issue.title, fields: [field] }, at: new Date(),
+      data: { issueKey: `${ctx.project.key}-${ctx.issue.number}`, title: ctx.issue.title, fields: [field, ...also] }, at: new Date(),
     });
+  }
+
+  /** เพิ่ม / ติ๊ก / ลบ Checklist แล้ว Progress ของงานขยับตาม · บอกใน Event ให้หน้าอื่นโหลดค่าใหม่ */
+  private async recordChecklist(tx: Tx, auth: AuthInfo, tenant: TenantInfo, ctx: Context, events: DomainEvent[], oldValue: unknown, newValue: unknown) {
+    const moved = await syncChecklistProgress(tx, [ctx.issue.id]);
+    await this.record(tx, auth, tenant, ctx, events, 'checklist', oldValue, newValue, moved.length ? ['progressPct'] : []);
   }
 
   private async recordDependency(tx: Tx, auth: AuthInfo, tenant: TenantInfo, ctx: Context, other: Context, events: DomainEvent[], before: Dependency | null, after: Dependency | null) {

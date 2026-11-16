@@ -2,6 +2,7 @@ import { schema, type Tx } from '@friday/db';
 import { eq, inArray, sql } from 'drizzle-orm';
 import type { DomainEvent } from '../core/events.js';
 import type { PlanRow } from './plan.js';
+import { syncChecklistProgress } from '../issues/checklist-progress.js';
 
 const s = schema;
 
@@ -148,6 +149,8 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
     return r.checklist.map((c) => ({ ...ws, issueId: idOf.get(r)!, kind: c.kind, text: c.text, sort: sort[c.kind]++ }));
   });
   for (const c of chunks(checklist, 500)) await tx.insert(s.checklistItems).values(c);
+  // Progress ของงานที่มี Checklist มาจากสัดส่วนที่ติ๊ก (ไฟล์นำเข้ารายการเป็นยังไม่ทำ จึงเริ่ม 0%)
+  await syncChecklistProgress(tx, [...new Set(checklist.map((c) => c.issueId))]);
   for (const c of chunks(rows, 500)) {
     await tx.insert(s.activities).values(c.map((r) => ({ ...base, issueId: idOf.get(r)!, actorId: ctx.actorId, actorKind: 'import' as const, verb: 'imported', newValue: { fileName: ctx.fileName, ...(ctx.keepRowNo ? { no: r.no } : { row: r.rowNo }) } })));
   }

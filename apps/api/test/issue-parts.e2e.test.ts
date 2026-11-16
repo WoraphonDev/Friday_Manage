@@ -85,11 +85,50 @@ describe('Checklist และ Acceptance criteria', () => {
     expect((await team.lead.get(`${path(parent.key)}/checklist`)).body.items).toEqual([]);
     expect(await activityCount()).toBe(before + 6);
     expect(seen).toHaveLength(6);
-    expect(seen.every((e) => e.issueId === sub.id && e.data.issueKey === sub.key && JSON.stringify(e.data.fields) === '["checklist"]')).toBe(true);
+    expect(seen.every((e) => e.issueId === sub.id && e.data.issueKey === sub.key && (e.data.fields as string[])[0] === 'checklist')).toBe(true);
+    // Progress ขยับตาม Checklist: เพิ่ม (0%) · ติ๊ก (100%) · ย้ายไป Acceptance (ไม่นับ) → ค่าเดิมคงอยู่
+    expect(seen.map((e) => (e.data.fields as string[]).includes('progressPct'))).toEqual([true, false, true, false, false, false]);
     expect(committed).toEqual(Array(6).fill(true));
     const audit = await t.owner.query('SELECT old_value, new_value FROM activities WHERE issue_id=$1 AND field=\'checklist\' ORDER BY created_at', [sub.id]);
     expect(audit.rows[0]).toMatchObject({ old_value: null, new_value: { text: 'ตรวจรูปแบบข้อมูล' } });
     expect(audit.rows.at(-1)).toMatchObject({ old_value: { id: first.id }, new_value: null });
+  });
+
+  it('Progress ของงานขึ้นลงตามสัดส่วน Checklist ที่ติ๊ก (ไม่นับ Acceptance) และกรอกเองไม่ได้', async () => {
+    const i = await issue();
+    const progress = async () => (await team.lead.get(path(i.key))).body as { progressPct: number | null; progressFromChecklist: boolean; version: number };
+    expect(await progress()).toMatchObject({ progressPct: null, progressFromChecklist: false });
+    const a = await checklist(i.key, { text: 'A' });
+    const b = await checklist(i.key, { text: 'B' });
+    await checklist(i.key, { text: 'C' });
+    await checklist(i.key, { text: 'เกณฑ์ QA', kind: 'acceptance', done: true });
+    expect(await progress()).toMatchObject({ progressPct: 0, progressFromChecklist: true });
+    await team.dev.patch(`${path(i.key)}/checklist/${a.id}`, { done: true });
+    expect((await progress()).progressPct).toBe(33);
+    await team.dev.patch(`${path(i.key)}/checklist/${b.id}`, { done: true });
+    expect((await progress()).progressPct).toBe(67);
+    await team.dev.patch(`${path(i.key)}/checklist/${a.id}`, { done: false });
+    expect((await progress()).progressPct).toBe(33);
+    // ลบรายการที่ยังไม่ติ๊ก: เหลือ B (ติ๊ก) กับ C → 50%
+    const c = (await team.lead.get(`${path(i.key)}/checklist?kind=checklist`)).body.items.find((x: { text: string }) => x.text === 'C');
+    await team.dev.delete(`${path(i.key)}/checklist/${c.id}`);
+    expect((await progress()).progressPct).toBe(50);
+    // ตารางเห็นค่าเดียวกัน
+    const table = await team.lead.get(`${team.ws}/projects/DP/issues?q=${encodeURIComponent(i.key)}`);
+    expect(table.body.items.find((x: { key: string }) => x.key === i.key)?.progressPct).toBe(50);
+
+    const current = await progress();
+    const manual = await team.lead.patch(path(i.key), { progressPct: 90 }, current.version);
+    expect(manual.status).toBe(422);
+    expect(manual.body.error.code).toBe('progress_from_checklist');
+
+    // ลบ Checklist หมด: ค่าล่าสุดคงอยู่และกลับมากรอกเองได้
+    await team.dev.delete(`${path(i.key)}/checklist/${a.id}`);
+    expect((await progress()).progressPct).toBe(100);
+    await team.dev.delete(`${path(i.key)}/checklist/${b.id}`);
+    const after = await progress();
+    expect(after).toMatchObject({ progressPct: 100, progressFromChecklist: false });
+    expect((await team.lead.patch(path(i.key), { progressPct: 90 }, after.version)).status).toBe(200);
   });
 
   it('จัดลำดับทั้งรายการหรือเฉพาะชนิด และรองรับ action route ตามสเปก', async () => {

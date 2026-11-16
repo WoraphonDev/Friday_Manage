@@ -47,6 +47,8 @@
   "metaLine": "สร้างโดย {name} · {created} · แก้ไขล่าสุด {updated}",
   "subtaskProgressNote": "Progress ของ Task คำนวณจาก Sub-task",
   "progressAuto": "คำนวณจาก Sub-task",
+  "checklistProgressNote": "Progress คำนวณจากสัดส่วน Checklist ที่ติ๊กแล้ว",
+  "progressFromChecklist": "คำนวณจาก Checklist",
   "dev": "Dev",
   "plan": "แผน",
   "actual": "จริง",

@@ -75,9 +75,12 @@ export class SnsVerifier {
     if (!res.ok) throw new Error(`ยืนยันการสมัครไม่ได้ (${res.status})`);
   };
 
+  /**
+   * เปิดเมื่อตั้ง SNS_VERIFY=on เท่านั้น (ตอนขึ้น AWS · I01 พร้อม SNS_ALLOWED_TOPIC_ARNS)
+   * ไม่เปิดเองตาม NODE_ENV เพราะ staging บน VPS ยังไม่มี Topic · เปิดแล้วจะปฏิเสธทุกข้อความ
+   */
   get enabled() {
-    const flag = process.env.SNS_VERIFY;
-    return flag === 'on' || (process.env.NODE_ENV === 'production' && flag !== 'off');
+    return process.env.SNS_VERIFY === 'on';
   }
 
   /** TopicArn ที่รับ (คั่นด้วยจุลภาค) · ว่าง = ไม่รับเลยเมื่อเปิดตรวจ เพราะใครก็สร้าง Topic ของตัวเองแล้วเซ็นถูกต้องได้ */

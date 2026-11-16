@@ -29655,6 +29655,14 @@
             }
           },
           {
+            "name": "user-agent",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "$ref": "#/components/parameters/CsrfToken"
           }
         ],

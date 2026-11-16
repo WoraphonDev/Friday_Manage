@@ -1,7 +1,11 @@
-import { Body, Controller, Delete, Get, HttpCode, Module, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Module, Param, ParseIntPipe, Patch, Post, Put, Query, Req, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { type OpsRequest, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
-import { AccountsBody, CannedBody, PresenceBody, ReorderBody, RuleBody, RulePatch, SaveSettingsBody, SupportSettingsService } from './settings.service.js';
+import { BotHolidaysClient } from './bot-holidays.js';
+import { AddHolidayBody, BotApplyBody, BotPreviewBody, HolidaysQuery, HolidaysService, ImpactBody, RemoveHolidayQuery } from './holidays.service.js';
+import { PresenceBody, PresenceService, TeamQuery } from './presence.service.js';
+import { AccountsBody, CannedBody, ReorderBody, RuleBody, RulePatch, SaveSettingsBody, SupportSettingsService } from './settings.service.js';
 import { ExtendSessionBody, SessionsQuery, StartSessionBody, SupportService } from './support.service.js';
 import { AssignBody, CreateTicketBody, CsatBody, EscalateBody, MessageBody, SolveBody, TicketsQuery, TicketsService } from './tickets.service.js';
 
@@ -58,6 +62,21 @@ export class TicketsController {
   get(@Param('id') id: string) {
     return this.tickets.get(id);
   }
+  /** ไฟล์แนบที่ลูกค้าส่งมากับ Ticket (S6) · รูปและ PDF เปิดในหน้าได้ นอกนั้นดาวน์โหลด · nosniff กันเดาชนิดเป็น HTML */
+  @Roles('support', 'owner')
+  @Get(':id/messages/:messageId/files/:index')
+  async file(@Param('id') id: string, @Param('messageId') messageId: string, @Param('index', ParseIntPipe) index: number, @Res({ passthrough: true }) res: Response) {
+    const f = await this.tickets.file(id, messageId, index);
+    const inline = /^(image\/(png|jpeg|webp|gif)|application\/pdf)$/.test(f.mime);
+    res.set({
+      'Content-Type': inline ? f.mime : 'application/octet-stream',
+      'Content-Length': String(f.size),
+      'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(f.filename)}`,
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'private, no-store',
+    });
+    return new StreamableFile(f.stream);
+  }
   @Roles('support')
   @Post()
   create(@Req() req: OpsRequest, @Body() body: unknown) {
@@ -112,7 +131,11 @@ export class TicketsController {
  */
 @Controller('ops/support')
 export class SupportSettingsController {
-  constructor(private readonly settings: SupportSettingsService) {}
+  constructor(
+    private readonly settings: SupportSettingsService,
+    private readonly presenceSvc: PresenceService,
+    private readonly holidays: HolidaysService,
+  ) {}
 
   @Roles('support', 'owner')
   @Get('settings')
@@ -156,15 +179,51 @@ export class SupportSettingsController {
   accounts(@Req() req: OpsRequest, @Param('staffId') staffId: string, @Body() body: unknown) {
     return this.settings.setAccounts(req.staff!, staffId, parse(AccountsBody, body));
   }
+  /** ทีมตอนนี้ + คิวกลาง · หน้า Support เรียกทุก 1 นาที (seen=1 เมื่อแท็บแสดงอยู่ = มีการใช้งาน) */
   @Roles('support', 'owner')
   @Get('team')
-  team() {
-    return this.settings.team();
+  team(@Req() req: OpsRequest, @Query() q: unknown) {
+    return this.presenceSvc.team(req.staff!, parse(TeamQuery, q).seen === '1');
   }
   @Roles('support')
   @Put('presence')
   presence(@Req() req: OpsRequest, @Body() body: unknown) {
-    return this.settings.setPresence(req.staff!, parse(PresenceBody, body));
+    return this.presenceSvc.setPresence(req.staff!, parse(PresenceBody, body));
+  }
+
+  // ── ปฏิทินวันหยุดของระบบ (รอบ 4 · S1–S2) · Owner / Support ──
+  @Roles('support', 'owner')
+  @Get('holidays')
+  holidayList(@Query() q: unknown) {
+    return this.holidays.list(parse(HolidaysQuery, q));
+  }
+  @Roles('support', 'owner')
+  @Post('holidays/impact')
+  @HttpCode(200)
+  holidayImpact(@Body() body: unknown) {
+    return this.holidays.impact(parse(ImpactBody, body).dates);
+  }
+  @Roles('support', 'owner')
+  @Post('holidays/bot/preview')
+  @HttpCode(200)
+  botPreview(@Body() body: unknown) {
+    return this.holidays.botPreview(parse(BotPreviewBody, body).year);
+  }
+  @Roles('support', 'owner')
+  @Post('holidays/bot/apply')
+  @HttpCode(200)
+  botApply(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.holidays.botApply(req.staff!, parse(BotApplyBody, body));
+  }
+  @Roles('support', 'owner')
+  @Post('holidays')
+  addHoliday(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.holidays.add(req.staff!, parse(AddHolidayBody, body));
+  }
+  @Roles('support', 'owner')
+  @Delete('holidays/:date')
+  removeHoliday(@Req() req: OpsRequest, @Param('date') date: string, @Query() q: unknown) {
+    return this.holidays.remove(req.staff!, date, parse(RemoveHolidayQuery, q));
   }
   @Roles('support', 'owner')
   @Get('canned-replies')
@@ -201,5 +260,9 @@ export class SupportSettingsController {
   }
 }
 
-@Module({ controllers: [SupportController, TicketsController, SupportSettingsController], providers: [SupportService, TicketsService, SupportSettingsService], exports: [TicketsService, SupportSettingsService] })
+@Module({
+  controllers: [SupportController, TicketsController, SupportSettingsController],
+  providers: [SupportService, TicketsService, SupportSettingsService, PresenceService, HolidaysService, BotHolidaysClient],
+  exports: [TicketsService, SupportSettingsService, PresenceService],
+})
 export class SupportModule {}

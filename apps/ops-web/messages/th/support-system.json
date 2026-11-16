@@ -121,7 +121,25 @@
       "open": "เปิดอยู่ · เหลือ {n} นาที",
       "ended": "จบแล้ว",
       "expired": "หมดเวลา"
-    }
+    },
+    "context": {
+      "title": "บริบทจากแอปลูกค้า",
+      "page": "หน้า",
+      "requestId": "requestId",
+      "search": "ค้นในประวัติการส่ง",
+      "article": "บทความ",
+      "articleRead": "อ่าน \"{title}\" ก่อนเปิด Ticket",
+      "browser": "เบราว์เซอร์",
+      "impact": "ผลกระทบ",
+      "impacts": {
+        "me": "กระทบเฉพาะคนแจ้ง",
+        "team": "กระทบทั้งทีม",
+        "blocked": "ทำงานต่อไม่ได้"
+      }
+    },
+    "files": "ไฟล์แนบ",
+    "file": "{name} · {size}",
+    "auto": "ระบบ"
   },
   "t1": {
     "title": "สร้าง Ticket",

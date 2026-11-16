@@ -1,3 +1,6 @@
+import { createReadStream } from 'node:fs';
+import { stat } from 'node:fs/promises';
+import { resolve, sep } from 'node:path';
 import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { type Db, schema } from '@friday/db';
 import { and, eq, sql, type SQL } from 'drizzle-orm';
@@ -8,6 +11,7 @@ import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
 import { BusinessClock } from './clock.js';
+import { PresenceService } from './presence.service.js';
 import { SLA_WARN_PCT, SupportSettingsService } from './settings.service.js';
 
 const s = schema;
@@ -87,6 +91,7 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     @Inject(OPS_DB) private readonly db: Db,
     private readonly mail: Mailer,
     private readonly settings: SupportSettingsService,
+    private readonly presence: PresenceService,
   ) {}
 
   onModuleInit() {
@@ -191,7 +196,41 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     }
     const [assignee] = t.assigneeId ? await this.db.select({ id: s.staffUsers.id, name: s.staffUsers.name }).from(s.staffUsers).where(eq(s.staffUsers.id, t.assigneeId)) : [];
     const [requester] = t.requesterUserId ? await this.db.select({ name: s.users.displayName }).from(s.users).where(eq(s.users.id, t.requesterUserId)) : [];
-    return { ticket: { ...t, assignee: assignee ?? null, requesterName: requester?.name ?? null }, messages, customer };
+    // S6 · ไฟล์แนบและบริบทที่ลูกค้าส่งมา (A44 เก็บใน attachments ของข้อความ) · ไม่ส่ง key ของที่เก็บไฟล์ออกไป ใช้ลิงก์ดาวน์โหลดผ่าน ops-api แทน
+    let context: Row | null = null;
+    let article: Row | null = null;
+    const out = messages.map(({ attachments, ...m }) => {
+      const list = Array.isArray(attachments) ? (attachments as Row[]) : [];
+      context ??= (list.find((x) => x.kind === 'context') as Row | undefined) ?? null;
+      article ??= (list.find((x) => x.kind === 'article') as Row | undefined) ?? null;
+      const files = list.flatMap((x, index) => (x.kind === 'file' ? [{ index, name: String(x.name ?? 'file'), size: Number(x.size ?? 0), mime: String(x.mime ?? '') }] : []));
+      return { ...m, files };
+    });
+    const ctx = context as Row | null;
+    const art = article as Row | null;
+    return {
+      ticket: { ...t, assignee: assignee ?? null, requesterName: requester?.name ?? null },
+      messages: out,
+      customer,
+      context: ctx || art ? { page: ctx?.page ?? null, path: ctx?.path ?? null, requestId: ctx?.requestId ?? null, impact: ctx?.impact ?? null, browser: ctx?.browser ?? null, article: art ? { slug: art.slug ?? null, title: art.title ?? null } : null } : null,
+    };
+  }
+
+  /** ไฟล์แนบของข้อความใน Ticket (S6) · อ่านจากที่เก็บไฟล์ในเครื่องของ API ลูกค้า (แบบเดียวกับสลิปการชำระ · S3 ยังไม่รองรับในหลังบ้าน) */
+  async file(id: string, messageId: string, index: number) {
+    const t = await this.find(id);
+    if (!z.uuid().safeParse(messageId).success) throw new AppError(404, 'not_found', 'ไม่พบไฟล์');
+    const [m] = await this.db.select({ attachments: s.supportTicketMessages.attachments }).from(s.supportTicketMessages).where(and(eq(s.supportTicketMessages.id, messageId), eq(s.supportTicketMessages.ticketId, t.id)));
+    const f = Array.isArray(m?.attachments) ? ((m.attachments as Row[])[index] as Row | undefined) : undefined;
+    if (!f || f.kind !== 'file' || typeof f.key !== 'string') throw new AppError(404, 'not_found', 'ไม่พบไฟล์');
+    // A44 เก็บไฟล์ของ Ticket ไว้ใต้ support/<workspace>/ เท่านั้น · กันอ่านไฟล์อื่นในที่เก็บ
+    if (!t.workspaceId || !f.key.startsWith(`support/${t.workspaceId}/`)) throw new AppError(404, 'not_found', 'ไม่พบไฟล์');
+    const root = resolve(process.env.UPLOAD_DIR ?? '../api/var/uploads', 'files');
+    const path = resolve(root, f.key);
+    if (!path.startsWith(root + sep)) throw new AppError(400, 'invalid_key', 'ตำแหน่งไฟล์ไม่ถูกต้อง');
+    const info = await stat(path).catch(() => null);
+    if (!info) throw new AppError(404, 'file_missing', 'ไม่พบไฟล์ในที่เก็บ (ที่เก็บ S3 ยังไม่รองรับในหลังบ้าน)');
+    return { stream: createReadStream(path), size: info.size, filename: String(f.name ?? 'file'), mime: String(f.mime ?? '') };
   }
 
   /** สร้าง Ticket (T1) สำหรับเรื่องที่มาทางโทรศัพท์ / LINE / อีเมล · SLA ตามแพ็กเกจของ Workspace */
@@ -285,7 +324,10 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     return { message: m, sent };
   }
 
-  /** ลูกค้าตอบ: รอลูกค้า → เปิด · แก้แล้วไม่เกิน N วัน (ตั้งค่า O22) → เปิดใหม่ที่คนเดิม · ปิดถาวรแล้ว → 409 ให้เปิดเรื่องใหม่ */
+  /**
+   * ลูกค้าตอบ: รอลูกค้า → เปิด · แก้แล้วไม่เกิน N วัน (ตั้งค่า O22) → เปิดใหม่ที่คนเดิม · ปิดถาวรแล้ว → 409 ให้เปิดเรื่องใหม่
+   * เปิดใหม่แต่คนเดิมออฟไลน์ / ลา → คืนเข้าคิวและแจกใหม่ (รอบ 4 · S4 · ตั้งค่า reopenToQueue)
+   */
   async customerReplied(t: Ticket, body: string, staff?: Staff) {
     const { reopenDays } = await this.settings.config();
     if (t.status === 'closed' || (t.status === 'solved' && t.solvedAt && Date.now() - t.solvedAt.getTime() > reopenDays * DAY)) throw new AppError(409, 'ticket_closed', 'Ticket นี้ปิดถาวรแล้ว เปิด Ticket ใหม่แทน');
@@ -294,8 +336,9 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
       await tx.insert(s.supportTicketMessages).values({ ticketId: t.id, authorKind: 'customer', authorUserId: t.requesterUserId, body });
       if (t.status !== 'open' && t.status !== 'pending_dev') await tx.update(s.supportTickets).set({ status: 'open', solvedAt: null, updatedAt: new Date() }).where(eq(s.supportTickets.id, t.id));
     });
-    if (reopened && staff) await this.trace(t, staff, 'support.ticket_reopened', 'ลูกค้าตอบหลังปิดเรื่อง เปิดใหม่');
-    return { id: t.id, status: t.status === 'pending_dev' ? 'pending_dev' : 'open', reopened };
+    const requeued = reopened ? await this.presence.requeueIfAway(t.id, t.assigneeId) : false;
+    if (reopened && staff) await this.trace(t, staff, 'support.ticket_reopened', `ลูกค้าตอบหลังปิดเรื่อง เปิดใหม่${requeued ? ' · คนเดิมไม่อยู่ คืนเข้าคิว' : ''}`);
+    return { id: t.id, status: t.status === 'pending_dev' ? 'pending_dev' : 'open', reopened, requeued };
   }
 
   /** ส่งต่อระดับ 2 (T3): เปลี่ยนเป็นรอทีมพัฒนา · รายละเอียดสำหรับทีมพัฒนาเก็บเป็นบันทึกภายใน */

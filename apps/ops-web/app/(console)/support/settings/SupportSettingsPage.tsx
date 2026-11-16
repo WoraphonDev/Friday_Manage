@@ -13,6 +13,7 @@ import { useMe } from "@/lib/query";
 import { PLAN_LABEL, useFmt } from "../../workspaces/_parts/format";
 import { AccountsDialog } from "./_parts/AccountsDialog";
 import { CannedReplies } from "./_parts/Canned";
+import { SystemHolidays } from "./_parts/Holidays";
 import { RuleDrawer } from "./_parts/RuleDrawer";
 import { type Agent, type Config, type Dur, GROUPS, type Group, PLANS, PRIORITY_TONE, type Rule, SETTINGS_KEY, type SettingsView, TARGET_TONE } from "./_parts/types";
 
@@ -125,13 +126,64 @@ export function SupportSettingsPage() {
                 <input id="sset-reopen" className="input input-cell" type="number" min={1} max={30} disabled={!edit} value={config.reopenDays} onChange={(e) => set("reopenDays", clamp(e.target.value, 1, 30))} />
                 <span className="muted">{t("mode.reopenUnit")}</span>
               </div>
-              <div className="setting-row">
-                <label htmlFor="sset-away">{t("mode.away")}</label>
-                <select id="sset-away" className="input select-inline" disabled={!edit} value={config.onAway} onChange={(e) => set("onAway", e.target.value as Config["onAway"])}>
-                  <option value="queue">{t("mode.awayQueue")}</option>
-                  <option value="ask_lead">{t("mode.awayLead")}</option>
-                  <option value="keep">{t("mode.awayKeep")}</option>
+            </div>
+          </section>
+
+          {/* รอบ 4 · S4 เมื่อพนักงานไม่อยู่: ออฟไลน์อัตโนมัติ · เรื่องที่ถืออยู่ · แจกคิวกลางใหม่ · ลูกค้าตอบเรื่องที่ปิดแล้ว */}
+          <section className="card" aria-labelledby="sset-away">
+            <h2 className="card-title" id="sset-away">
+              {t("away.title")}
+            </h2>
+            <div className="setting-rows">
+              <fieldset className="stack-tight" disabled={!edit}>
+                <legend className="cell-strong">{t("away.auto")}</legend>
+                <label className="row">
+                  <input type="checkbox" checked={config.offlineOnLogout} onChange={(e) => set("offlineOnLogout", e.target.checked)} />
+                  {t("away.logout")}
+                </label>
+                <label className="row">
+                  <input type="checkbox" checked={config.idleOffline} onChange={(e) => set("idleOffline", e.target.checked)} />
+                  {t("away.idle")}
+                </label>
+                <select className="input select-inline idle-minutes" aria-label={t("away.idleMinutes")} disabled={!edit || !config.idleOffline} value={config.idleMinutes} onChange={(e) => set("idleMinutes", Number(e.target.value))}>
+                  {[...new Set([10, 15, 30, 60, config.idleMinutes])]
+                    .sort((a, b) => a - b)
+                    .map((n) => (
+                      <option key={n} value={n}>
+                        {t("away.minutes", { n })}
+                      </option>
+                    ))}
                 </select>
+                <span className="muted small">{t("away.idleNote")}</span>
+              </fieldset>
+              <fieldset className="stack-tight" disabled={!edit}>
+                <legend className="cell-strong">{t("away.held")}</legend>
+                {(
+                  [
+                    ["queue", "mode.awayQueue"],
+                    ["ask_lead", "mode.awayLead"],
+                    ["keep", "mode.awayKeep"],
+                  ] as const
+                ).map(([v, label]) => (
+                  <label key={v} className="row">
+                    <input type="radio" name="sset-onaway" checked={config.onAway === v} onChange={() => set("onAway", v)} />
+                    {t(label)}
+                  </label>
+                ))}
+              </fieldset>
+              <div className="setting-row">
+                <Switch checked={config.redispatch} disabled={!edit} label={t("away.redispatch")} onChange={(v) => set("redispatch", v)} />
+                <span>
+                  <b>{t("away.redispatch")}</b>
+                  <span className="cell-sub">{t("away.redispatchText")}</span>
+                </span>
+              </div>
+              <div className="setting-row">
+                <Switch checked={config.reopenToQueue} disabled={!edit} label={t("away.reopen")} onChange={(v) => set("reopenToQueue", v)} />
+                <span>
+                  <b>{t("away.reopen")}</b>
+                  <span className="cell-sub">{t("away.reopenText")}</span>
+                </span>
               </div>
             </div>
           </section>
@@ -273,11 +325,9 @@ export function SupportSettingsPage() {
                   <span>{t("hours.holidays")}</span>
                 </div>
               </div>
-              <p className="muted small">
-                {data.holidays.upcoming.length ? t("hours.upcoming", { list: data.holidays.upcoming.map((h) => `${fmt.date(h.date)} ${h.name}`).join(" · ") }) : t("hours.noHolidays")}
-                <br />
-                {t("hours.holidaysNote")}
-              </p>
+              <p className="muted small">{t("hours.holidaysNote")}</p>
+              {/* รอบ 4 · S1 ปฏิทินวันหยุดของระบบ · Owner และ Support แก้ได้ (แยกจากปุ่มบันทึกของหน้า) */}
+              <SystemHolidays canEdit={hasAny(me, "owner", "support")} />
             </section>
           </div>
 

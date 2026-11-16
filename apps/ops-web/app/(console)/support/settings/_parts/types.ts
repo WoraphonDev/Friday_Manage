@@ -29,6 +29,12 @@ export interface Config {
   sla: Record<Plan, { first: Dur | null; resolve: Dur | null }>;
   hours: DayHours[];
   thaiHolidays: boolean;
+  /** รอบ 4 · S4 เมื่อพนักงานไม่อยู่ */
+  offlineOnLogout: boolean;
+  idleOffline: boolean;
+  idleMinutes: number;
+  redispatch: boolean;
+  reopenToQueue: boolean;
 }
 export interface Rule {
   id: string;

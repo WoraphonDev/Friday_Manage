@@ -65,10 +65,12 @@ const canned = [
   { id: "c-1", title: "ขอข้อมูลเพิ่ม", body: "สวัสดีครับคุณ{ชื่อผู้แจ้ง} ขอ requestId ของเรื่อง {เลข Ticket} ที่ {ชื่อ Workspace}", tag: "ทั่วไป", uses: 88, archivedAt: null, updatedAt: "2026-11-01T00:00:00.000Z", updatedBy: "เจ้าของ" },
   { id: "c-2", title: "Webhook ล้ม: ปลายทางถูกลบ", body: "ตรวจ URL ใน Discord", tag: "webhook", uses: 41, archivedAt: null, updatedAt: "2026-11-01T00:00:00.000Z", updatedBy: "เจ้าของ" },
 ];
-const page = (search = "") => {
+const page = (search = "", extra: Parameters<typeof server.use> = []) => {
   navigation.pathname = "/support";
   navigation.search = search;
+  // handler ของแต่ละ test มาก่อนค่าเริ่มต้น (MSW ใช้ตัวแรกที่ตรง)
   server.use(
+    ...extra,
     http.get(`${OPS}/tickets`, ({ request }) => {
       const q = new URL(request.url).searchParams;
       const items = q.get("assignee") === "none" || q.get("status") === "closed" ? [] : [row];
@@ -179,8 +181,8 @@ describe("Support", () => {
     );
     page(`ticket=${T}`);
     const strip = await screen.findByRole("region", { name: "ทีมตอนนี้" });
-    expect(within(strip).getByText("งานเปิด 8/8")).toBeInTheDocument();
-    expect(within(strip).getByText(/ไม่ว่าง · ประชุมถึง 11:00/)).toBeInTheDocument();
+    expect(within(strip).getByText("8 / 8")).toBeInTheDocument();
+    expect(within(strip).getByText("ประชุมถึง 11:00")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "ตั้งค่าการแจกงาน" })).toHaveAttribute("href", "/support/settings");
     await userEvent.selectOptions(await screen.findByLabelText("สถานะของฉัน"), "busy");
     await waitFor(() => expect(presence).toEqual({ presence: "busy" }));
@@ -209,5 +211,81 @@ describe("Support", () => {
     await userEvent.click(within(drawer).getByRole("button", { name: "สร้าง" }));
     await waitFor(() => expect(sent).toMatchObject({ category: "bug", subject: "Gantt ไม่ขยับ" }));
     expect(sent).not.toHaveProperty("priority");
+  });
+
+  it("S3 ทีมตอนนี้ + คิวกลาง: เหตุที่ออฟไลน์ · คืนเข้าคิว · แจกอัตโนมัติ · รอคนออนไลน์ · S5 ข้อความตอนกลับมา", async () => {
+    asRole("support");
+    let presence: unknown = null;
+    let seen = "";
+    const me = "00000000-0000-4000-8000-000000000002";
+    const extra = [
+      http.get(`${OPS}/support/team`, ({ request }) => {
+        seen = new URL(request.url).search;
+        return HttpResponse.json({
+          mode: "least",
+          idleMinutes: 15,
+          items: [
+            { staffId: "s-1", name: "มิว ศิริ", groups: ["l1"], cap: 8, presence: "online", presenceNote: null, presenceReason: "manual", presenceAt: "2026-11-16T02:02:00.000Z", load: 6, released: 0 },
+            { staffId: me, name: "นิด ใจดี", groups: ["l1"], cap: 8, presence: "offline", presenceNote: "ไม่มีการใช้งาน 15 นาที", presenceReason: "idle", presenceAt: "2026-11-16T05:40:00.000Z", load: 0, released: 3 },
+            { staffId: "s-3", name: "ฟ้า พรหมมา", groups: [], cap: 8, presence: "offline", presenceNote: null, presenceReason: "logout", presenceAt: "2026-11-16T04:15:00.000Z", load: 0, released: 0 },
+          ],
+          me: { presence: "offline", presenceReason: "idle", presenceAt: "2026-11-16T05:40:00.000Z", released: 3 },
+          queue: {
+            redispatch: true,
+            waiting: "all_full",
+            items: [
+              { id: "k-1", number: 544, subject: "ชำระแล้วแต่แพ็กเกจยังไม่เปลี่ยน", priority: "high", firstResponseDueAt: null, workspace: "Sathorn Clinic", autoAssigned: { name: "มิว ศิริ", at: "2026-11-16T05:41:00.000Z" } },
+              { id: "k-2", number: 545, subject: "ส่งออก Excel ไม่ได้", priority: "normal", firstResponseDueAt: null, workspace: "Orbit Apps", autoAssigned: null },
+            ],
+          },
+        });
+      }),
+      http.put(`${OPS}/support/presence`, async ({ request }) => ((presence = await request.json()), HttpResponse.json({ presence: "online", released: 0, leadsNotified: 0, redispatched: 1 }))),
+    ];
+    page("", extra);
+    const teamCard = await screen.findByRole("region", { name: "ทีมตอนนี้" });
+    expect(seen).toBe("?seen=1");
+    expect(within(teamCard).getByText("ออฟไลน์ · อัตโนมัติ")).toBeInTheDocument();
+    expect(within(teamCard).getByText("ไม่มีการใช้งาน 15 นาที")).toBeInTheDocument();
+    expect(within(teamCard).getByText("0 · คืนเข้าคิว 3")).toBeInTheDocument();
+    expect(within(teamCard).getByText("ออฟไลน์ · ออกจากระบบ")).toBeInTheDocument();
+    expect(within(teamCard).getByText("6 / 8")).toBeInTheDocument();
+    const queue = screen.getByRole("region", { name: "คิวกลาง" });
+    expect(within(queue).getByText("เรื่องที่คืนเข้าคิวแจกใหม่อัตโนมัติทุก 1 นาที")).toBeInTheDocument();
+    expect(within(queue).getByText("แจกให้ มิว ศิริ อัตโนมัติ 12:41")).toBeInTheDocument();
+    expect(within(queue).getByText("รอคนออนไลน์ · ทุกคนเต็ม")).toBeInTheDocument();
+    expect(within(queue).getByRole("link", { name: /#545 ส่งออก Excel ไม่ได้/ })).toHaveAttribute("href", "/support?ticket=k-2");
+    // S5
+    expect(screen.getByText(/ระบบเปลี่ยนคุณเป็น/)).toHaveTextContent("ระบบเปลี่ยนคุณเป็น ออฟไลน์ เมื่อ 12:40 เพราะไม่มีการใช้งาน 15 นาที · คืนเรื่อง 3 เรื่องเข้าคิวแล้ว");
+    await userEvent.click(screen.getByRole("button", { name: "กลับมาออนไลน์" }));
+    await waitFor(() => expect(presence).toEqual({ presence: "online" }));
+  });
+
+  it("S6 ไฟล์แนบและบริบทจากแอปลูกค้า · requestId ลิงก์ไปค้นในประวัติการส่ง · บันทึกของระบบไม่แสดงอีเมลลูกค้า", async () => {
+    asRole("support");
+    const extra = [
+      http.get(`${OPS}/tickets/${T}`, () =>
+        HttpResponse.json({
+          ...detail,
+          messages: [
+            { ...detail.messages[0], id: "m-ctx", files: [{ index: 0, name: "ภาพหน้าจอ.png", size: 245_760, mime: "image/png" }, { index: 1, name: "export-error.xlsx", size: 18_432, mime: "application/octet-stream" }] },
+            { id: "m-sys", authorKind: "staff", body: "แจกให้ มิว ศิริ อัตโนมัติจากคิวกลาง", internal: true, createdAt: "2026-11-09T02:01:00.000Z", authorName: null },
+          ],
+          context: { page: "บอร์ด", path: "/work/orbit-apps/p/DP/board", requestId: "req_7f3a9c2e", impact: "blocked", browser: "Chrome 131 · macOS", article: { slug: "save-failed", title: "บันทึกงานไม่ได้" } },
+        }),
+      ),
+    ];
+    page(`ticket=${T}`, extra);
+    const ctx = await screen.findByRole("complementary", { name: "บริบทจากแอปลูกค้า" });
+    expect(within(ctx).getByText("/work/orbit-apps/p/DP/board")).toBeInTheDocument();
+    expect(within(ctx).getByRole("link", { name: "ค้นในประวัติการส่ง" })).toHaveAttribute("href", "/deliveries?q=req_7f3a9c2e");
+    expect(within(ctx).getByText('อ่าน "บันทึกงานไม่ได้" ก่อนเปิด Ticket')).toBeInTheDocument();
+    expect(within(ctx).getByText("Chrome 131 · macOS")).toBeInTheDocument();
+    expect(within(ctx).getByText("ทำงานต่อไม่ได้")).toBeInTheDocument();
+    const files = screen.getByRole("list", { name: "ไฟล์แนบ" });
+    expect(within(files).getByRole("link", { name: /ภาพหน้าจอ\.png · 240 KB/ })).toHaveAttribute("href", `/ops-api/tickets/${T}/messages/m-ctx/files/0`);
+    expect(within(files).getByRole("link", { name: /export-error\.xlsx · 18 KB/ })).toBeInTheDocument();
+    const sys = screen.getByText("แจกให้ มิว ศิริ อัตโนมัติจากคิวกลาง").closest("li")!;
+    expect(within(sys).getByText("ระบบ")).toBeInTheDocument();
   });
 });

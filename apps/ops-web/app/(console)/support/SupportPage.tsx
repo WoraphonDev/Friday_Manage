@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Paperclip, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -10,13 +10,13 @@ import { hasAny } from "@/components/access";
 import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, PageHead, Seg, TableSkeleton } from "@/components/kit";
 import { Button, buttonClass, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { MotionSwap } from "@/components/shell/page-enter";
-import { api } from "@/lib/api";
+import { api, OPS_BASE } from "@/lib/api";
 import { useSlidingIndicator } from "@/lib/motion";
 import { useMe } from "@/lib/query";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
 import { DevCard } from "../bugs/_components/DevCard";
 import { EscalateDialog } from "../bugs/_components/EscalateDialog";
-import { CannedPicker, MyPresence, SettingsLink, TeamNow } from "./settings/_parts/Live";
+import { BackNotice, CannedPicker, MyPresence, SettingsLink, TeamNow } from "./settings/_parts/Live";
 // ตารางการเข้าช่วยเหลือย้ายไปอยู่กับหน้า support/sessions (O42 · H8)
 import { Sessions } from "./sessions/SessionsTable";
 import { CATEGORIES, type Dur } from "./settings/_parts/types";
@@ -59,7 +59,18 @@ interface TicketDetail {
     internal: boolean;
     createdAt: string;
     authorName: string | null;
+    /** S6 · ไฟล์แนบที่ลูกค้าส่งมา (ไม่มี key ของที่เก็บ · ดาวน์โหลดผ่าน ops-api) */
+    files?: { index: number; name: string; size: number; mime: string }[];
   }[];
+  /** S6 · บริบทจากแอปลูกค้า (A44) */
+  context?: {
+    page: string | null;
+    path: string | null;
+    requestId: string | null;
+    impact: "me" | "team" | "blocked" | null;
+    browser: string | null;
+    article: { slug: string | null; title: string | null } | null;
+  } | null;
   customer: {
     id: string;
     slug: string;
@@ -135,6 +146,7 @@ export function SupportPage() {
           </>
         }
       />
+      <BackNotice />
       <TeamNow />
       <div className="support-split">
         <section className="card" style={{ alignSelf: "start" }}>
@@ -262,7 +274,7 @@ function TicketView({ id }: { id: string }) {
         <ErrorBlock error={q.error} retry={() => void q.refetch()} />
       </section>
     );
-  const { ticket: k, messages, customer } = q.data;
+  const { ticket: k, messages, customer, context } = q.data;
   const categoryLabel = (c: string) => ((CATEGORIES as readonly string[]).includes(c) ? tset(`category.${c as (typeof CATEGORIES)[number]}`) : c);
   const closed = k.status === "closed";
   const mine = k.assignee?.id === me?.id;
@@ -316,9 +328,20 @@ function TicketView({ id }: { id: string }) {
             <li key={m.id} className={m.internal ? "notice notice-warn" : m.authorKind === "customer" ? "notice" : m.authorKind === "system" ? "notice notice-info" : "notice notice-ok"}>
               <div className="notice-body">
                 <span className="small">
-                  <b>{m.authorKind === "system" ? t("support.system") : (m.authorName ?? k.requesterEmail)}</b> <span className="muted">· {fmt.dateTime(m.createdAt)}</span> {m.internal && <span className="pill warn">{t("support.internalTag")}</span>}
+                  <b>{m.authorKind === "system" ? t("support.system") : m.authorKind === "staff" && !m.authorName ? t("support.auto") : (m.authorName ?? k.requesterEmail)}</b> <span className="muted">· {fmt.dateTime(m.createdAt)}</span> {m.internal && <span className="pill warn">{t("support.internalTag")}</span>}
                 </span>
                 <span style={{ whiteSpace: "pre-wrap" }}>{m.body}</span>
+                {!!m.files?.length && (
+                  <ul className="ticket-files" aria-label={t("support.files")}>
+                    {m.files.map((f) => (
+                      <li key={f.index}>
+                        <a href={`${OPS_BASE}/tickets/${k.id}/messages/${m.id}/files/${f.index}`} target="_blank" rel="noreferrer">
+                          <Paperclip size={14} aria-hidden="true" /> {t("support.file", { name: f.name, size: fileSize(f.size) })}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </li>
           ))}
@@ -348,6 +371,7 @@ function TicketView({ id }: { id: string }) {
         )}
       </section>
       <div className="stack" style={{ alignSelf: "start" }}>
+        {context && <ContextCard context={context} />}
         <aside className="card" aria-label={t("support.customer")}>
         <h3 className="card-title">{customer?.name ?? t("support.customer")}</h3>
         {customer ? (
@@ -409,6 +433,58 @@ function TicketView({ id }: { id: string }) {
       {modal === "escalate" && <EscalateDialog ticket={{ id, number: k.number, subject: k.subject }} onClose={() => setModal(null)} />}
       {modal === "solve" && <SolveDialog id={id} number={k.number} onClose={() => setModal(null)} />}
     </div>
+  );
+}
+
+const fileSize = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+
+/** S6 · บริบทที่ลูกค้าส่งมากับ Ticket: หน้า · requestId (ค้นในประวัติการส่ง) · บทความ · เบราว์เซอร์ · ผลกระทบ */
+function ContextCard({ context: c }: { context: NonNullable<TicketDetail["context"]> }) {
+  const t = useTranslations("ss.support.context");
+  return (
+    <aside className="card" aria-label={t("title")}>
+      <h3 className="card-title">{t("title")}</h3>
+      <table className="tbl">
+        <tbody>
+          {(c.path || c.page) && (
+            <tr>
+              <td className="muted">{t("page")}</td>
+              <td className="cell-wrap">
+                <span className="mono small">{c.path ?? c.page}</span>
+              </td>
+            </tr>
+          )}
+          {c.requestId && (
+            <tr>
+              <td className="muted">{t("requestId")}</td>
+              <td>
+                <span className="mono small">{c.requestId}</span> <Link href={`/deliveries?q=${encodeURIComponent(c.requestId)}`}>{t("search")}</Link>
+              </td>
+            </tr>
+          )}
+          {c.article?.title && (
+            <tr>
+              <td className="muted">{t("article")}</td>
+              <td className="cell-wrap">{t("articleRead", { title: c.article.title })}</td>
+            </tr>
+          )}
+          {c.browser && (
+            <tr>
+              <td className="muted">{t("browser")}</td>
+              <td>{c.browser}</td>
+            </tr>
+          )}
+          {c.impact && (
+            <tr>
+              <td className="muted">{t("impact")}</td>
+              <td>
+                <span className={c.impact === "blocked" ? "pill bad" : c.impact === "team" ? "pill warn" : "pill"}>{t(`impacts.${c.impact}`)}</span>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </aside>
   );
 }
 

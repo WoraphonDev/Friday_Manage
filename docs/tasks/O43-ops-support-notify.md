@@ -23,11 +23,31 @@
 
 ## เสร็จเมื่อ
 
-- [ ] หน้าตรงกับข้อเสนอที่ 1440 px · ใช้งานได้ที่ 390 px
-- [ ] e2e ops-api + API ลูกค้า (ดึงวันหยุดจาก API จำลอง, ออฟไลน์อัตโนมัติ + แจกใหม่, ค้นด้วย Ticket / requestId, ประกาศตามตัวกรอง, C8 หลังอนุมัติ, Error rate เกิน / กลับปกติ, SNS) + component test ด้วย MSW · `help.e2e` ผ่าน
-- [ ] `pnpm typecheck` และ test ของแพ็กเกจที่แก้ผ่าน
+- [x] หน้าตรงกับข้อเสนอที่ 1440 px · ใช้งานได้ที่ 390 px
+- [x] e2e ops-api + API ลูกค้า (ดึงวันหยุดจาก API จำลอง, ออฟไลน์อัตโนมัติ + แจกใหม่, ค้นด้วย Ticket / requestId, ประกาศตามตัวกรอง, C8 หลังอนุมัติ, Error rate เกิน / กลับปกติ, SNS) + component test ด้วย MSW · `help.e2e` ผ่าน
+- [x] `pnpm typecheck` และ test ของแพ็กเกจที่แก้ผ่าน
 - [ ] deploy Docker ในเครื่องตาม CLAUDE.md และตรวจผ่าน :4000 / :3000 · ทดสอบ Push บนเครื่องจริงผ่าน staging (บันทึกผล)
 
 ## บันทึกผล
 
-<!-- ผู้ทำงานเขียนตอนส่งงาน -->
+**ทำแล้ว (S1–S12)**
+- S1–S2 วันหยุด: `apps/ops-api/src/support/bot-holidays.ts` ดึง `https://gateway.api.bot.or.th/financial-institutions-holidays/?year=` ทุก 06:00 (ธ.ค. ดึงปีถัดไป) · ไม่ตั้ง `BOT_API_CLIENT_ID` = ปิดตัวดึง หน้าจอขึ้น "ยังไม่เชื่อม API ธปท." · เพิ่ม / ลบเองได้ (`origin='manual'`) · หน้าต่างตรวจก่อนบันทึกพร้อมจำนวนที่กระทบ
+- Plan End ของลูกค้า: ops-api เรียก `recalculatePlanEnds` ไม่ได้ จึงเขียนวันที่เปลี่ยนเข้า `ops_settings › holiday_recalc` แล้วงานทุก 1 นาทีของ API ลูกค้า (`apps/api/src/help/system-calendar.ts`) รับไปคำนวณและส่ง Event `plan.changed`
+- S3–S5 สถานะ: ออฟไลน์อัตโนมัติเมื่อออกจากระบบ / cookie หมดอายุ / ไม่มีการใช้งาน 15 นาที (ตั้งได้) · แจกคิวกลางใหม่ทุก 1 นาทีและทันทีที่มีคนออนไลน์ · ลูกค้าตอบเรื่องที่ปิดแล้วแต่คนเดิมออฟไลน์ → คืนเข้าคิว (ทั้ง ops-api และ API ลูกค้า)
+- S6 บริบทใน Ticket (หน้า, requestId ลิงก์ไปค้นในประวัติการส่ง, บทความ, เบราว์เซอร์, ผลกระทบ, ไฟล์แนบ)
+- S7 เก็บ requestId กับ `notifications` · ค้นด้วย `#เลข Ticket` และ `req_…`
+- S8–S9 ประกาศ: ผู้รับตามตัวกรอง / ทุกราย (หาตอนส่ง) · `Announce.tsx` รับ prop `filter` · P2 ติ๊กประกาศถึงลูกค้าที่ถูกกระทบ ส่งเมื่ออนุมัติ ยกเลิกเมื่อปฏิเสธ · ตรวจแจ้งล่วงหน้า ≥ 30 วัน
+- S10–S12 Error rate: ตัวนับ 5xx ใน API ลูกค้า (`GET /api/v1/internal/traffic`, header `x-ops-metrics-token`) · `system_alerts` · Push + อีเมล วิศวกร / Owner · แจ้งซ้ำ 30 นาที · ปกติ 10 นาทีแจ้งกลับ · รับทราบจากมือถือ · บันทึกผลการส่ง Push
+- SNS: ตรวจลายเซ็น (v1 / v2) · TopicArn ใน `SNS_ALLOWED_TOPIC_ARNS` · ยืนยัน SubscriptionConfirmation อัตโนมัติ
+- แก้ `help.e2e` ให้ใช้ฐานข้อมูลเดียวกับ test อื่น
+
+**ตัดสินเอง / ต่างจากข้อเสนอ**
+- ตรวจลายเซ็น SNS เปิดเมื่อ `SNS_VERIFY=on` เท่านั้น (ไม่เปิดเองตาม NODE_ENV) เพราะ staging ยังไม่มี Topic · เปิดตอนขึ้น AWS (I01)
+- รูปข้อมูลของ API ธปท. อ่านแบบยืดหยุ่น (ยังเข้า Portal ดู spec ไม่ได้) · ตรวจกับ spec จริงเมื่อได้ Client ID แล้วแก้ที่ `bot-holidays.ts` ไฟล์เดียว
+- production ต้องตั้ง `OPS_METRICS_TOKEN` ค่าเดียวกันทั้ง api และ ops-api (เพิ่มใน `infra/vps/compose.yml` แล้ว) · ไม่ตั้ง = การ์ด Error rate ขึ้น "อ่านค่าไม่ได้"
+
+**คำขอนอก lane**: `infra/vps/compose.yml` (OPS_METRICS_TOKEN, BOT_API_CLIENT_ID) · `apps/api/src/notifications/*` (requestId)
+
+**ยังไม่ทำ**: ทดสอบ Push บนเครื่องจริง (ทำบน staging หลัง deploy)
+
+**Test** (ฐาน friday_o43): ops-api 247 ผ่าน / 1 ข้าม · ops-web 232 · api 806 ผ่าน / 7 ข้าม · `pnpm typecheck` ผ่าน

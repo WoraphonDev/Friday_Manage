@@ -69,6 +69,7 @@ function handlers() {
     http.post(`${OPS}/auth/reauth/options`, () => HttpResponse.json({ options: { challenge: "c" }, challengeToken: "re" })),
     http.post(`${OPS}/auth/reauth/verify`, record()),
     http.get(`${OPS}/incidents`, () => HttpResponse.json({ items: [incident], subscribers: 214 })),
+    http.get(`${OPS}/system/alerts`, () => HttpResponse.json({ open: null, items: [] })),
     http.post(`${OPS}/incidents/:id/updates`, async (ctx) => (await record()(ctx), HttpResponse.json({ id: "in-1", status: "identified", notified: 214 }))),
     http.get(`${OPS}/m/payments`, () =>
       HttpResponse.json({
@@ -195,5 +196,64 @@ describe("Friday Ops บนมือถือ (O25)", () => {
     server.use(http.get(`${OPS}/m/payments`, () => opsError(500, "internal", "ระบบขัดข้อง", undefined, "req-m-1")));
     renderWithProviders(<PaymentsMobile />);
     expect(await screen.findByText(/req-m-1/)).toBeInTheDocument();
+  });
+
+  // S12 · Push "Error rate เกิน" → หน้าเหตุขัดข้องบนมือถือ · ข้อมูลสมมติ
+  const alert = {
+    id: "al-1",
+    startedAt: ago(6),
+    details: { ratePct: 3.4, errors: 214, total: 6290, windowMin: 5, topRoute: "POST /w/:ws/issues", p95Ms: 1800, peakPct: 3.4, normalSince: null },
+    lastNotifiedAt: ago(5),
+    acknowledgedAt: null,
+    acknowledgedBy: null,
+    incidentId: null,
+  };
+
+  it("S12 การแจ้งเตือน Error rate: ข้อมูลตอนนี้ · รับทราบ · เปิดเหตุขัดข้อง", async () => {
+    handlers();
+    asRole("admin");
+    server.use(
+      http.get(`${OPS}/system/alerts`, () => HttpResponse.json({ open: alert, items: [alert] })),
+      http.post(`${OPS}/system/alerts/:id/acknowledge`, record()),
+      http.post(`${OPS}/system/alerts/:id/incident`, async (ctx) => (await record()(ctx), HttpResponse.json({ incidentId: "in-1", created: true }, { status: 201 }))),
+    );
+    at("/m/incidents", "alert=al-1");
+    renderWithProviders(<IncidentsMobile />);
+    const card = await screen.findByRole("region", { name: "การแจ้งเตือน Error rate" });
+    expect(within(card).getByText("Error rate 3.4%")).toBeInTheDocument();
+    expect(within(card).getByText("เกินมา 6 นาที")).toBeInTheDocument();
+    expect(within(card).getByText("214 / 6,290")).toBeInTheDocument();
+    expect(within(card).getByText("POST /w/:ws/issues")).toBeInTheDocument();
+    expect(within(card).getByText("1.8 วินาที")).toBeInTheDocument();
+    await userEvent.click(await within(card).findByRole("button", { name: "รับทราบ · ฉันดูอยู่" }));
+    await waitFor(() => expect(calls.some((c) => c.path === "/system/alerts/al-1/acknowledge")).toBe(true));
+    await userEvent.click(within(card).getByRole("button", { name: "เปิดเหตุขัดข้อง" }));
+    await waitFor(() => expect(calls.some((c) => c.path === "/system/alerts/al-1/incident")).toBe(true));
+  });
+
+  it("S12 รับทราบแล้วแสดงชื่อ · Support เปิดเหตุได้แต่รับทราบไม่ได้", async () => {
+    handlers();
+    asRole("support");
+    server.use(http.get(`${OPS}/system/alerts`, () => HttpResponse.json({ open: { ...alert, acknowledgedAt: ago(2), acknowledgedBy: { id: "e", name: "วิศวกรตัวอย่าง" } }, items: [] })));
+    at("/m/incidents", "alert=al-1");
+    renderWithProviders(<IncidentsMobile />);
+    const card = await screen.findByRole("region", { name: "การแจ้งเตือน Error rate" });
+    expect(await within(card).findByText(/วิศวกรตัวอย่าง รับทราบแล้ว .* · ระบบไม่แจ้งซ้ำ/)).toBeInTheDocument();
+    expect(await within(card).findByRole("button", { name: "เปิดเหตุขัดข้อง" })).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "รับทราบ · ฉันดูอยู่" })).toBeNull();
+  });
+
+  it("แจ้งเตือนในมือถือแสดงเครื่องที่ส่งไม่ถึงล่าสุด", async () => {
+    handlers();
+    asRole("engineer");
+    server.use(http.get(`${OPS}/push`, () => HttpResponse.json({ enabled: true, publicKey: "BElq", devices: 1, failing: [{ id: "s-1", userAgent: "Android Chrome (ทดสอบ)", lastError: "503: Service Unavailable", lastErrorAt: ago(3) }] })));
+    at("/m/incidents");
+    renderWithProviders(
+      <MobileFrame>
+        <span />
+      </MobileFrame>,
+    );
+    expect(await screen.findByText("ส่งไม่ถึง 1 เครื่องล่าสุด")).toBeInTheDocument();
+    expect(screen.getByText(/Android Chrome \(ทดสอบ\) · 503: Service Unavailable/)).toBeInTheDocument();
   });
 });

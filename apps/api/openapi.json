@@ -84,6 +84,9 @@
       "name": "Imports"
     },
     {
+      "name": "InternalMetrics"
+    },
+    {
       "name": "Invitations"
     },
     {
@@ -1441,6 +1444,36 @@
           },
           "404": {
             "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/v1/internal/traffic": {
+      "get": {
+        "operationId": "InternalMetrics_traffic",
+        "summary": "GET internal/traffic",
+        "tags": [
+          "InternalMetrics"
+        ],
+        "parameters": [
+          {
+            "name": "x-ops-metrics-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
           }
         },
         "security": []

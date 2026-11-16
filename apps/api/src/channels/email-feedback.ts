@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'node:crypto';
+import { createPublicKey, type KeyObject, timingSafeEqual, verify, X509Certificate } from 'node:crypto';
 import { Controller, HttpCode, Inject, Injectable, Logger, Post, Query, type RawBodyRequest, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { type Db, schema } from '@friday/db';
@@ -16,7 +16,7 @@ const SOFT_BOUNCE_DAYS = 5;
 /**
  * token ของ URL ที่ผู้ให้บริการอีเมลเรียก (SNS subscription: `.../hooks/email-feedback?token=...`)
  * production ต้องตั้ง EMAIL_FEEDBACK_TOKEN · dev / test ใช้ค่าคงที่ให้ตัวจำลองในเครื่องเรียกได้
- * TODO(I01): ตรวจลายเซ็นของ SNS และยืนยัน SubscriptionConfirmation เมื่อขึ้น AWS จริง
+ * ลายเซ็น SNS ตรวจเพิ่มใน SnsVerifier (token อย่างเดียวรั่วจาก log ได้)
  */
 function expectedToken() {
   return process.env.EMAIL_FEEDBACK_TOKEN || (process.env.NODE_ENV === 'production' ? '' : 'dev-email-feedback');
@@ -31,6 +31,92 @@ interface SesNotification {
 
 type Kind = 'bounce_permanent' | 'bounce_transient' | 'complaint';
 
+type SnsEnvelope = Record<string, unknown> & { Type?: string };
+const SNS_TYPES = ['Notification', 'SubscriptionConfirmation', 'UnsubscribeConfirmation'];
+/** ใบรับรองและ SubscribeURL ต้องมาจาก SNS ของ AWS เท่านั้น (กันชี้ไปเซิร์ฟเวอร์อื่น / SSRF) */
+const SNS_HOST = /^sns\.[a-z0-9-]+\.amazonaws\.com(\.cn)?$/;
+
+/** URL ของ SNS จริง: https + host sns.<region>.amazonaws.com */
+export function isSnsUrl(raw: unknown, pem = false) {
+  if (typeof raw !== 'string') return false;
+  try {
+    const u = new URL(raw);
+    return u.protocol === 'https:' && SNS_HOST.test(u.hostname) && !u.port && (!pem || u.pathname.endsWith('.pem'));
+  } catch {
+    return false;
+  }
+}
+
+/** ข้อความที่ SNS เซ็น (เรียงตามชื่อ field · Subject มีเฉพาะ Notification ที่ใส่หัวข้อ) */
+export function snsStringToSign(m: SnsEnvelope) {
+  const keys = m.Type === 'Notification' ? ['Message', 'MessageId', 'Subject', 'Timestamp', 'TopicArn', 'Type'] : ['Message', 'MessageId', 'SubscribeURL', 'Timestamp', 'Token', 'TopicArn', 'Type'];
+  return keys
+    .filter((k) => !(k === 'Subject' && (m.Subject === undefined || m.Subject === null)))
+    .map((k) => `${k}\n${String(m[k] ?? '')}\n`)
+    .join('');
+}
+
+/**
+ * ตรวจลายเซ็นของข้อความ SNS (SignatureVersion 1 = SHA1withRSA · 2 = SHA256withRSA) และ TopicArn ที่อนุญาต
+ * เปิดเมื่อ SNS_VERIFY=on หรือ production (ปิดได้ด้วย SNS_VERIFY=off ตอนทดสอบในเครื่องที่ไม่มี AWS)
+ * test แทน `fetchCert` / `confirm` ด้วยกุญแจที่สร้างเองได้
+ */
+@Injectable()
+export class SnsVerifier {
+  private readonly log = new Logger('SnsVerifier');
+  private readonly certs = new Map<string, KeyObject>();
+  fetchCert = async (url: string) => {
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000), redirect: 'error' });
+    if (!res.ok) throw new Error(`ดึงใบรับรองไม่ได้ (${res.status})`);
+    return res.text();
+  };
+  confirm = async (url: string) => {
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000), redirect: 'error' });
+    if (!res.ok) throw new Error(`ยืนยันการสมัครไม่ได้ (${res.status})`);
+  };
+
+  get enabled() {
+    const flag = process.env.SNS_VERIFY;
+    return flag === 'on' || (process.env.NODE_ENV === 'production' && flag !== 'off');
+  }
+
+  /** TopicArn ที่รับ (คั่นด้วยจุลภาค) · ว่าง = ไม่รับเลยเมื่อเปิดตรวจ เพราะใครก็สร้าง Topic ของตัวเองแล้วเซ็นถูกต้องได้ */
+  get allowedTopics() {
+    return (process.env.SNS_ALLOWED_TOPIC_ARNS ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+  }
+
+  private async key(url: string) {
+    const hit = this.certs.get(url);
+    if (hit) return hit;
+    const pem = await this.fetchCert(url);
+    // ใบรับรอง X.509 ของ AWS · test ส่ง public key PEM มาแทนได้
+    const key = pem.includes('BEGIN CERTIFICATE') ? new X509Certificate(pem).publicKey : createPublicKey(pem);
+    // ใบรับรองของ SNS เปลี่ยนไม่บ่อย · จำไว้ทั้งโปรเซส (จำกัดจำนวนกันโตไม่หยุด)
+    if (this.certs.size > 50) this.certs.clear();
+    this.certs.set(url, key);
+    return key;
+  }
+
+  async check(m: SnsEnvelope) {
+    if (!SNS_TYPES.includes(String(m.Type))) throw new AppError(400, 'sns_required', 'ต้องเป็นข้อความจาก Amazon SNS');
+    const version = String(m.SignatureVersion ?? '');
+    if (version !== '1' && version !== '2') throw new AppError(400, 'sns_signature_version', 'ไม่รองรับ SignatureVersion นี้');
+    if (!isSnsUrl(m.SigningCertURL, true)) throw new AppError(400, 'sns_cert_url', 'SigningCertURL ต้องเป็น https ของ sns.*.amazonaws.com');
+    if (typeof m.Signature !== 'string' || !m.Signature) throw new AppError(400, 'sns_signature_missing', 'ไม่มีลายเซ็น');
+    let key: KeyObject;
+    try {
+      key = await this.key(String(m.SigningCertURL));
+    } catch (e) {
+      this.log.warn(`SNS cert: ${(e as Error).message}`);
+      throw new AppError(502, 'sns_cert_unavailable', 'ดึงใบรับรองของ SNS ไม่ได้');
+    }
+    const ok = verify(version === '1' ? 'RSA-SHA1' : 'RSA-SHA256', Buffer.from(snsStringToSign(m), 'utf8'), key, Buffer.from(m.Signature, 'base64'));
+    if (!ok) throw new AppError(401, 'sns_signature_invalid', 'ลายเซ็นของ SNS ไม่ถูกต้อง');
+    if (!this.allowedTopics.includes(String(m.TopicArn ?? ''))) throw new AppError(403, 'sns_topic_not_allowed', 'TopicArn นี้ไม่อยู่ในรายการที่อนุญาต (SNS_ALLOWED_TOPIC_ARNS)');
+  }
+}
+
+
 /**
  * รับ bounce / complaint จากผู้ให้บริการอีเมล (รูปแบบ Amazon SES ผ่าน SNS · ตัวจำลองในเครื่องส่งรูปเดียวกัน)
  * bounce ถาวร / รายงานสแปม → เพิ่มในรายชื่อไม่ส่งทันที · bounce ชั่วคราวซ้ำหลายวัน → เพิ่มเช่นกัน
@@ -40,7 +126,10 @@ type Kind = 'bounce_permanent' | 'bounce_transient' | 'complaint';
 export class EmailFeedbackService {
   private readonly log = new Logger('EmailFeedback');
 
-  constructor(@Inject(SYSTEM_DB) private readonly db: Db) {}
+  constructor(
+    @Inject(SYSTEM_DB) private readonly db: Db,
+    private readonly sns: SnsVerifier,
+  ) {}
 
   async receive(raw: string, token: string | undefined) {
     const want = expectedToken();
@@ -54,11 +143,24 @@ export class EmailFeedbackService {
     } catch {
       throw new AppError(400, 'invalid_body', 'ต้องเป็น JSON');
     }
-    // ซอง SNS: Notification ห่อข้อความของ SES ไว้ใน Message · SubscriptionConfirmation ยืนยันเองตอนตั้งค่า AWS (I01)
+    // ซอง SNS: Notification ห่อข้อความของ SES ไว้ใน Message
+    if (this.sns.enabled) await this.sns.check(body);
     if (body.Type === 'SubscriptionConfirmation') {
-      this.log.warn(`SNS SubscriptionConfirmation · ยืนยันที่ ${String(body.SubscribeURL ?? '')}`);
-      return { accepted: 0, subscription: 'pending' };
+      // ยืนยันอัตโนมัติเฉพาะเมื่อตรวจลายเซ็นแล้ว · ปิดตรวจ (dev) = log URL ไว้ให้กดเอง กันถูกหลอกให้เรียก URL ภายนอก
+      if (!this.sns.enabled || !isSnsUrl(body.SubscribeURL)) {
+        this.log.warn(`SNS SubscriptionConfirmation · ยืนยันที่ ${String(body.SubscribeURL ?? '')}`);
+        return { accepted: 0, subscription: 'pending' };
+      }
+      try {
+        await this.sns.confirm(String(body.SubscribeURL));
+      } catch (e) {
+        this.log.error(`ยืนยัน SNS ไม่ได้: ${(e as Error).message}`);
+        throw new AppError(502, 'sns_confirm_failed', 'ยืนยันการสมัคร SNS ไม่สำเร็จ');
+      }
+      this.log.log(`ยืนยัน SNS แล้ว · ${String(body.TopicArn ?? '')}`);
+      return { accepted: 0, subscription: 'confirmed' };
     }
+    if (body.Type === 'UnsubscribeConfirmation') return { accepted: 0, subscription: 'unsubscribed' };
     const n = (typeof body.Message === 'string' ? JSON.parse(body.Message) : body) as SesNotification;
     const type = n.notificationType ?? n.eventType;
     const items: { email: string; kind: Kind; detail: string | null }[] = [];

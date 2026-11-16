@@ -10,6 +10,7 @@ import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
 import { PushService } from '../push/push.service.js';
+import { AlertsService } from './alerts.service.js';
 import { JobQueue } from './job-queue.js';
 
 const s = schema;
@@ -82,6 +83,7 @@ export class SystemService implements OnModuleInit, OnModuleDestroy {
     private readonly approvals: ApprovalsService,
     private readonly jobs: JobQueue,
     private readonly push: PushService,
+    private readonly alerts: AlertsService,
   ) {}
 
   onModuleInit() {
@@ -117,6 +119,8 @@ export class SystemService implements OnModuleInit, OnModuleDestroy {
     this.probes.push({ at: start, ok, ms: Date.now() - start });
     const cutoff = Date.now() - 24 * HOUR;
     while (this.probes.length && this.probes[0].at < cutoff) this.probes.shift();
+    // Error rate (S10): อ่านตัวนับ 5xx ของ API ในรอบเดียวกัน · API ล่มทั้งตัวเห็นจาก uptime อยู่แล้ว
+    if (ok) await this.alerts.pull().catch((e) => this.log.error(`Error rate: ${e}`));
     return { ok, ms: Date.now() - start };
   }
 
@@ -153,8 +157,8 @@ export class SystemService implements OnModuleInit, OnModuleDestroy {
         p95Ms: p95,
         last: this.probes.at(-1) ?? null,
         hours,
-        /** อัตรา error ของคำขอจริงต้องมาจาก GlitchTip / CloudWatch (ยังไม่เชื่อม) */
-        errorRate: null,
+        // Error rate จากตัวนับ 5xx ของ API (S10) · null = ยังอ่านไม่ได้
+        ...(await this.alerts.summary()),
       },
       database: { ok: true, ms: dbMs },
       queue: counts ? { configured: true, ...counts } : { configured: false },

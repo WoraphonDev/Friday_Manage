@@ -3,10 +3,12 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { ErrorBlock, Notice, PageHead } from "@/components/kit";
 import { buttonClass, LoadingState } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useFmt } from "../workspaces/_parts/format";
+import { type AlertSettings, AlertSettingsDialog, type ErrorHour, ErrorRateChart, ErrorRateKpi, ErrorRateNotice, type ErrorRateNow, type SystemAlert } from "./ErrorRate";
 
 interface Status {
   versions: { web: string | null; api: string | null; ops: string | null };
@@ -17,7 +19,11 @@ interface Status {
     p95Ms: number | null;
     last: { ok: boolean; ms: number; at: number } | null;
     hours: { from: string; probes: number; up: number; avgMs: number | null }[];
-    errorRate: number | null;
+    /** ตัวนับ 5xx ของ API (S10) · null = ยังอ่านไม่ได้ */
+    errorRate: ErrorRateNow | null;
+    errorHours: ErrorHour[];
+    alert: SystemAlert | null;
+    alertSettings: AlertSettings;
   };
   database: { ok: boolean; ms: number };
   queue:
@@ -62,6 +68,7 @@ export function SystemPage() {
   const t = useTranslations("ss.system");
   const to = useTranslations("ss.ops");
   const fmt = useFmt();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const q = useQuery({
     queryKey: ["ops", "system"],
     queryFn: () => api.get<Status>("/system/status"),
@@ -83,7 +90,7 @@ export function SystemPage() {
           </Link>
         }
       />
-      {down ? <Notice tone="bad" title={t("down")} /> : d.api.probes > 0 && <Notice tone="ok" title={t("ok")} />}
+      {down ? <Notice tone="bad" title={t("down")} /> : d.api.alert ? <ErrorRateNotice alert={d.api.alert} settings={d.api.alertSettings} /> : d.api.probes > 0 && <Notice tone="ok" title={t("ok")} />}
       <div className="grid-3">
         <section className="card">
           <span className="muted small">{t("uptime")}</span>
@@ -99,12 +106,10 @@ export function SystemPage() {
             {t("p95")} {ms(d.api.p95Ms)} · {t("db")} {ms(d.database.ms)}
           </span>
         </section>
-        <section className="card">
-          <span className="muted small">{t("errorRate")}</span>
-          <span className="page-title">{d.api.errorRate == null ? "—" : `${d.api.errorRate}%`}</span>
-          <span className="muted small">{d.api.errorRate == null ? t("notConnected") : ""}</span>
-        </section>
+        <ErrorRateKpi now={d.api.errorRate} settings={d.api.alertSettings} />
       </div>
+      <ErrorRateChart hours={d.api.errorHours} settings={d.api.alertSettings} onSettings={() => setSettingsOpen(true)} />
+      {settingsOpen && <AlertSettingsDialog initial={d.api.alertSettings} onClose={() => setSettingsOpen(false)} />}
       <section className="card">
         <h2 className="card-title">{t("hours")}</h2>
         <div

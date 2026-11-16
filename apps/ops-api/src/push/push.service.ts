@@ -60,8 +60,13 @@ export class PushService {
   constructor(@Inject(OPS_DB) private readonly db: Db) {}
 
   async status(staff: Staff) {
-    const [r] = await this.db.select({ n: sql<number>`count(*)::int` }).from(s.staffPushSubscriptions).where(eq(s.staffPushSubscriptions.staffId, staff.id));
-    return { enabled: !!this.keys, publicKey: this.keys?.publicKey ?? null, devices: r.n };
+    const subs = await this.db
+      .select({ id: s.staffPushSubscriptions.id, userAgent: s.staffPushSubscriptions.userAgent, lastOkAt: s.staffPushSubscriptions.lastOkAt, lastError: s.staffPushSubscriptions.lastError, lastErrorAt: s.staffPushSubscriptions.lastErrorAt })
+      .from(s.staffPushSubscriptions)
+      .where(eq(s.staffPushSubscriptions.staffId, staff.id));
+    // เครื่องที่ครั้งล่าสุดส่งไม่ถึง (S12) · ส่งสำเร็จทีหลังแล้วไม่นับ
+    const failing = subs.filter((x) => x.lastErrorAt && (!x.lastOkAt || x.lastErrorAt > x.lastOkAt)).map(({ lastOkAt: _ok, ...x }) => x);
+    return { enabled: !!this.keys, publicKey: this.keys?.publicKey ?? null, devices: subs.length, failing };
   }
 
   async subscribe(staff: Staff, input: z.infer<typeof SubscribeBody>) {
@@ -91,13 +96,19 @@ export class PushService {
     for (const sub of subs) {
       try {
         await this.sender({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload);
-        await this.db.update(s.staffPushSubscriptions).set({ lastSentAt: new Date() }).where(eq(s.staffPushSubscriptions.id, sub.id));
+        const at = new Date();
+        await this.db.update(s.staffPushSubscriptions).set({ lastSentAt: at, lastOkAt: at }).where(eq(s.staffPushSubscriptions.id, sub.id));
         ok++;
       } catch (e) {
         const code = (e as { statusCode?: number }).statusCode;
         // เครื่องยกเลิกการสมัครแล้ว
         if (code === 404 || code === 410) await this.db.delete(s.staffPushSubscriptions).where(eq(s.staffPushSubscriptions.id, sub.id));
-        else this.log.warn(`ส่ง Web Push ไม่ได้ (${code ?? 'network'}): ${String((e as Error).message).slice(0, 200)}`);
+        else {
+          // บันทึกผลไว้กับเครื่อง (เดิม log อย่างเดียว) ให้หน้าแจ้งเตือนบนมือถือบอกว่าเครื่องไหนส่งไม่ถึง
+          const error = `${code ?? 'network'}: ${String((e as Error).message ?? e).slice(0, 200)}`;
+          await this.db.update(s.staffPushSubscriptions).set({ lastError: error, lastErrorAt: new Date() }).where(eq(s.staffPushSubscriptions.id, sub.id)).catch(() => undefined);
+          this.log.warn(`ส่ง Web Push ไม่ได้ (${error})`);
+        }
       }
     }
     return ok;

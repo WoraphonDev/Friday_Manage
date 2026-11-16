@@ -12,6 +12,7 @@ import { Button, InlineError, Pill, Textarea } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { MobileHead } from "../_parts/MobileFrame";
+import { AlertCard } from "./AlertCard";
 
 const STATES = ["investigating", "identified", "monitoring", "resolved"] as const;
 type State = (typeof STATES)[number];
@@ -68,6 +69,8 @@ export function IncidentsMobile() {
   return (
     <>
       <MobileHead title={t("title")} sub={q.data ? <Pill tone={open.length ? "bad" : "ok"}>{t("open", { n: open.length })}</Pill> : undefined} />
+      {/* S12 · การแจ้งเตือน Error rate ที่เปิดอยู่ (เปิดจาก Push) อยู่เหนือรายการเหตุขัดข้อง */}
+      <AlertCard />
       {q.isPending ? (
         <TableSkeleton rows={4} cols={1} />
       ) : q.error ? (

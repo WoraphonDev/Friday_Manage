@@ -4,9 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, BellRing, CheckCircle2, Menu, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useState, type ReactNode } from "react";
 import { hasAny } from "@/components/access";
+import { Notice } from "@/components/kit";
 import { Button, errorToast, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useSlidingIndicator } from "@/lib/motion";
@@ -55,12 +56,13 @@ const b64ToBytes = (b64: string) => {
   const s = atob(b64.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(b64.length / 4) * 4, "="));
   return Uint8Array.from(s, (c) => c.charCodeAt(0));
 };
-type PushStatus = { enabled: boolean; publicKey: string | null; devices: number };
+type PushStatus = { enabled: boolean; publicKey: string | null; devices: number; failing?: { id: string; userAgent: string | null; lastError: string | null; lastErrorAt: string | null }[] };
 const supported = () => typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 
 /** เปิด / ปิดแจ้งเตือนในเครื่องนี้ (Web Push) */
 export function PushCard() {
   const t = useTranslations("mob.push");
+  const f = useFormatter();
   const toast = useToast();
   const cache = useQueryClient();
   const q = useQuery({ queryKey: ["ops", "push"], queryFn: () => api.get<PushStatus>("/push") });
@@ -98,34 +100,51 @@ export function PushCard() {
   });
   const test = useMutation({ mutationFn: () => api.post<{ devices: number }>("/push/test", {}), onSuccess: (r) => toast(t("tested", { n: r.devices })), onError: (e) => toast(errorToast(e)) });
   if (!q.data) return null;
+  // เครื่องที่ครั้งล่าสุดส่งไม่ถึง (S12) · เดิม log อย่างเดียว
+  const failing = q.data.failing ?? [];
+  const failed = failing.length > 0 && (
+    <Notice tone="warn" title={t("failing", { n: failing.length })}>
+      {failing.map((x) => (
+        <span key={x.id} className="small" style={{ display: "block" }}>
+          {t("failingRow", { device: (x.userAgent ?? t("unknownDevice")).slice(0, 40), error: x.lastError ?? "—", time: x.lastErrorAt ? f.dateTime(new Date(x.lastErrorAt), { dateStyle: "short", timeStyle: "short" }) : "—" })}
+        </span>
+      ))}
+    </Notice>
+  );
   if (here) {
     return (
-      <div className="m-push m-push-on">
-        <BellRing size={16} aria-hidden="true" />
-        <span className="spacer small">{t("on", { n: q.data.devices })}</span>
-        <Button size="small" onClick={() => test.mutate()} disabled={test.isPending}>
-          {t("test")}
-        </Button>
-        <Button size="small" variant="ghost" onClick={() => off.mutate()} disabled={off.isPending}>
-          {t("disable")}
-        </Button>
-      </div>
+      <>
+        <div className="m-push m-push-on">
+          <BellRing size={16} aria-hidden="true" />
+          <span className="spacer small">{t("on", { n: q.data.devices })}</span>
+          <Button size="small" onClick={() => test.mutate()} disabled={test.isPending}>
+            {t("test")}
+          </Button>
+          <Button size="small" variant="ghost" onClick={() => off.mutate()} disabled={off.isPending}>
+            {t("disable")}
+          </Button>
+        </div>
+        {failed}
+      </>
     );
   }
   return (
-    <section className="m-push" aria-label={t("title")}>
-      <BellRing size={18} aria-hidden="true" />
-      <span className="spacer small">
-        <b>{t("title")}</b>
-        <br />
-        <span className="muted">{!q.data.enabled ? t("disabled") : !can ? t("unsupported") : t("off")}</span>
-      </span>
-      {q.data.enabled && can && here !== undefined && (
-        <Button variant="primary" className="m-btn" onClick={() => on.mutate()} disabled={on.isPending}>
-          {t("enable")}
-        </Button>
-      )}
-    </section>
+    <>
+      <section className="m-push" aria-label={t("title")}>
+        <BellRing size={18} aria-hidden="true" />
+        <span className="spacer small">
+          <b>{t("title")}</b>
+          <br />
+          <span className="muted">{!q.data.enabled ? t("disabled") : !can ? t("unsupported") : t("off")}</span>
+        </span>
+        {q.data.enabled && can && here !== undefined && (
+          <Button variant="primary" className="m-btn" onClick={() => on.mutate()} disabled={on.isPending}>
+            {t("enable")}
+          </Button>
+        )}
+      </section>
+      {failed}
+    </>
   );
 }
 

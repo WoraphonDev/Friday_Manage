@@ -16,6 +16,9 @@ vi.mock("@simplewebauthn/browser", () => ({
   browserSupportsWebAuthn: vi.fn(() => true),
 }));
 
+// หน้าต่างดูสลิปแสดงไฟล์ผ่าน blob: · เผื่อสภาพแวดล้อมที่ไม่มี object URL
+if (!URL.createObjectURL) Object.assign(URL, { createObjectURL: () => "blob:test", revokeObjectURL: () => undefined });
+
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   cleanup();

@@ -20,6 +20,7 @@ const base = (items = [exc()]) =>
   server.use(
     http.get(`${OPS}/payments/exceptions`, () => HttpResponse.json({ items, payments30d: 120 })),
     http.get(`${OPS}/payments`, () => HttpResponse.json({ items: [{ id: "p9", method: "transfer", amount: 107_000, hasSlip: true, createdAt: new Date().toISOString(), exceptionReason: null, invoice: { id: "i9", number: "FRI-2611-0009", amountDue: 107_000 }, workspace: { id: "w9", name: "Kanit Labs" } }] })),
+    http.get(`${OPS}/payments/:id/slip`, () => new HttpResponse(new Blob(["png"], { type: "image/png" }), { headers: { "Content-Type": "image/png" } })),
     http.get(`${OPS}/overdue`, () => HttpResponse.json({ items: [{ id: "i5", number: "FRI-2611-0005", amountDue: 321_000, dueDate: "2026-11-02", daysOverdue: 8, workspace: { name: "Pixel Forge" }, events: [], reminders: { email: 3, line: 1, phone: 0 }, nextStep: { day: 14, step: "suspended", on: "2026-11-16" }, needsHuman: true }], totalSatang: 321_000 })),
   );
 const page = (search = "") => {
@@ -56,6 +57,37 @@ describe("กรณีผิดปกติ", () => {
     expect(within(panel).getByText(/แนบสลิป/)).toBeInTheDocument();
     await userEvent.click(within(panel).getByRole("button", { name: "ผ่าน" }));
     await waitFor(() => expect(confirmed).toBe(true));
+  });
+
+  it("ดูสลิปในหน้าต่างบนหน้าเดิม · ดาวน์โหลดเป็นปุ่มเสริม · ผ่านจากหน้าต่างได้", async () => {
+    asRole("finance");
+    base([]);
+    let confirmed = false;
+    server.use(http.post(`${OPS}/payments/p9/confirm`, () => ((confirmed = true), HttpResponse.json({ status: "confirmed" }))));
+    page();
+    await userEvent.click(await screen.findByRole("button", { name: "ดูสลิป" }));
+    const viewer = await screen.findByRole("dialog", { name: "สลิป · Kanit Labs" });
+    expect(within(viewer).getByText("FRI-2611-0009")).toBeInTheDocument();
+    expect(await within(viewer).findByRole("img", { name: "สลิป · Kanit Labs" })).toHaveAttribute("src", expect.stringMatching(/^blob:/));
+    const download = within(viewer).getByRole("link", { name: "ดาวน์โหลด" });
+    expect(download).toHaveAttribute("download", "slip-FRI-2611-0009.png");
+    expect(within(viewer).getByText("ต้องได้")).toBeInTheDocument();
+    await userEvent.click(within(viewer).getByRole("button", { name: "หมุน" }));
+    await userEvent.click(within(viewer).getByRole("button", { name: "ผ่าน" }));
+    await waitFor(() => expect(confirmed).toBe(true));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "สลิป · Kanit Labs" })).not.toBeInTheDocument());
+  });
+
+  it("แผงตัดสินแสดงสลิปย่อ กดแล้วเปิดหน้าต่างดูสลิป · ไฟล์หายแจ้งเหตุผล", async () => {
+    asRole("finance");
+    base();
+    server.use(http.get(`${OPS}/payments/p1/slip`, () => opsError(404, "file_missing", "ไม่พบไฟล์ในที่เก็บ")));
+    page();
+    await userEvent.click(await screen.findByRole("button", { name: "หัก ณ ที่จ่ายไม่ได้แจ้ง" }));
+    const panel = await screen.findByRole("dialog", { name: /หัก ณ ที่จ่ายไม่ได้แจ้ง · Orbit Apps/ });
+    await userEvent.click(within(panel).getByRole("button", { name: /สลิปที่ลูกค้าแนบ/ }));
+    const viewer = await screen.findByRole("dialog", { name: "สลิป · Orbit Apps" });
+    expect(await within(viewer).findByText("ไม่พบไฟล์ในที่เก็บ")).toBeInTheDocument();
   });
 
   it("ไม่ผ่าน (B6) ส่งข้อความถึงลูกค้า · ผูกใบอื่น (B7) บอกยอดเกิน / ขาด", async () => {

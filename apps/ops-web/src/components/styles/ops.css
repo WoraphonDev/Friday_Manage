@@ -877,6 +877,154 @@ textarea.input {
   gap: 8px;
   padding-top: 4px;
 }
+
+/* หน้าต่างดูไฟล์แนบ (สลิป / 50 ทวิ) · ภาพซ้าย ข้อมูลที่ต้องเทียบขวา */
+.dialog-file {
+  width: min(780px, calc(100vw - 32px));
+}
+.dialog-file.has-aside {
+  width: min(980px, calc(100vw - 32px));
+}
+.file-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.has-aside .file-body {
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+}
+.file-viewer {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--surface-2);
+}
+.file-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+.file-zoom {
+  min-width: 44px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+/* flex + margin:auto จัดกลางแต่ยังเลื่อนดูส่วนที่ล้นได้ครบทุกด้าน (grid place-items:center ตัดขอบซ้าย/บน) */
+.file-stage {
+  display: flex;
+  height: min(62vh, 640px);
+  overflow: auto;
+  padding: 16px;
+}
+.file-canvas {
+  position: relative;
+  flex: none;
+  margin: auto;
+}
+.file-canvas img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: none;
+  border-radius: 4px;
+  box-shadow: var(--shadow-card);
+  transition: transform var(--motion-dur) var(--motion-ease);
+}
+.file-pdf {
+  display: block;
+  width: 100%;
+  height: min(62vh, 640px);
+  border: 0;
+  background: var(--card);
+}
+.file-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: min(62vh, 640px);
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+}
+.file-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 18px;
+  border-left: 1px solid var(--border);
+  background: var(--card);
+}
+.file-footer {
+  justify-content: space-between;
+}
+.file-thumb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.file-thumb:hover {
+  background: var(--hover);
+}
+.file-thumb:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.file-thumb-img {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 76px;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+}
+.file-thumb-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+@media (max-width: 760px) {
+  .has-aside .file-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .file-aside {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .file-stage,
+  .file-pdf,
+  .file-message {
+    height: 52vh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .file-canvas img {
+    transition: none;
+  }
+}
 .drawer {
   position: fixed;
   z-index: 50;

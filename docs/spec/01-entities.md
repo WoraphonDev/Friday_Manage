@@ -126,7 +126,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | ตำแหน่งในแผน | module_id, phase_id, sprint_id, rank (ลำดับใน Backlog / Kanban แบบ LexoRank) |
 | เนื้อหา | title, description (markdown), status_id, priority (urgent · high · medium · low) |
 | คน | ba_id, reviewer_ids (QA / Reviewer หลายคน · migration 0035), reviewer_id (= คนแรกของ reviewer_ids), tester_id, reporter_id, created_by · Dev อยู่ใน `issue_assignee` |
-| ประเมิน | size (XS–XL, null = ยังไม่ประเมิน), estimate_md (ของทั้งทีม), progress_pct (กรอกเองได้เฉพาะงานที่ไม่มีลูกและไม่มี Checklist · มี Checklist = สัดส่วนที่ติ๊กแล้ว · migration 0042) |
+| ประเมิน | size (XS–XL, null = ยังไม่ประเมิน), estimate_md (ของทั้งทีม), progress_pct (กรอกเองได้เฉพาะงานที่ไม่มีลูกและไม่มี Checklist · มี Checklist = สัดส่วนที่ติ๊กแล้ว · migration 0042), checklist_pct (สัดส่วน Checklist ที่ติ๊ก · null = ไม่มี Checklist · migration 0043) |
 | วันที่ | plan_start, plan_end (= Due · โปรเจกต์แยก Dev / QA = วันที่ Dev ต้องส่ง QA), qa_end (QA Due ของโปรเจกต์แยก Dev / QA · null = plan_end + qa_buffer_days วันทำการ · migration 0034), actual_start, actual_end (บันทึกอัตโนมัติเมื่อสถานะเปลี่ยน), completed_at |
 | Bug | severity (critical · major · minor), environment, reopen_count, found_in_test_run_id |
 | ตามประเภท | details (jsonb): Bug = browser, found_in_commit, steps, expected, actual · Story = as_a, i_want, so_that · Spike = question, deliverables[], timebox_hours |
@@ -304,7 +304,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 
 | ค่า | คำนวณจาก | หน้าจอ |
 |---|---|---|
-| Progress ของ Task | Sub-task (ถ้ามี) ตาม `progress_method` ของโปรเจกต์ · ไม่มี Sub-task แต่มี Checklist = รายการ Checklist ที่ติ๊ก ÷ ทั้งหมด (ไม่นับ Acceptance criteria · ผู้ใช้ขอ 2026-11-16) · Done = 100 | C, 2 |
+| Progress ของ Task | Sub-task (ถ้ามี) ตาม `progress_method` ของโปรเจกต์ · ไม่มี Sub-task แต่มี Checklist = รายการ Checklist ที่ติ๊ก ÷ ทั้งหมด (ไม่นับ Acceptance criteria · ผู้ใช้ขอ 2026-11-16) · มีทั้งสองอย่าง = Checklist ของ Task นับเป็นอีกหนึ่งส่วนเท่ากับ Sub-task หนึ่งตัว (แบบถ่วง Man-Day ใช้น้ำหนักเท่า MD เฉลี่ยของ Sub-task) · Done = 100 | C, 2 |
 | Estimate ของ Task ที่มี Sub-task | ผลรวม Sub-task | B |
 | Workload / Utilization | Man-Day กระจายเท่ากันตามวันทำการระหว่าง Plan Start–End ÷ จำนวน Dev · capacity หักวันหยุดและวันลา | 7, O1, N1 |
 | Health (On track / At risk / Off track) | งานช้ากว่าแผน, Overdue, Workload เกิน capacity | 1, E |

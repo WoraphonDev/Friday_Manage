@@ -108,8 +108,10 @@ export const issues = pgTable(
     size: size(),
     /** Man-Day ของทั้งทีม */
     estimateMd: manDay(),
-    /** กรอกเองได้เฉพาะงานที่ไม่มีลูก */
+    /** กรอกเองได้เฉพาะงานที่ไม่มีลูกและไม่มี Checklist */
     progressPct: smallint(),
+    /** สัดส่วน Checklist ที่ติ๊ก (ไม่นับ Acceptance) · null = ไม่มี Checklist · Task ที่มี Sub-task นับค่านี้เป็นอีกหนึ่งส่วน */
+    checklistPct: smallint(),
 
     planStart: date(),
     /** = Due · โปรเจกต์ที่แยก Dev / QA (progress_split) = วันที่ Dev ต้องส่งให้ QA */
@@ -163,6 +165,7 @@ export const issues = pgTable(
     index('issues_plan_end_idx').on(t.projectId, t.planEnd),
     uniqueIndex('issues_excel_row_key').on(t.projectId, t.excelRowNo),
     check('issues_progress_range', sql`${t.progressPct} between 0 and 100`),
+    check('issues_checklist_pct_range', sql`${t.checklistPct} between 0 and 100`),
     check('issues_plan_dates', sql`${t.planEnd} >= ${t.planStart}`),
     check('issues_actual_dates', sql`${t.actualEnd} >= ${t.actualStart}`),
     check('issues_not_own_parent', sql`${t.parentId} <> ${t.id}`),

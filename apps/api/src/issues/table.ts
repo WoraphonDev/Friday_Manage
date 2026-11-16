@@ -169,19 +169,28 @@ function progressCalculator(rows: { issue: Issue; category: string }[], weighted
   const categories = new Map(rows.map((r) => [r.issue.id, r.category]));
   for (const { issue } of rows) if (issue.parentId) children.set(issue.parentId, [...children.get(issue.parentId) ?? [], issue]);
   const progress = (issue: Issue): number => issueProgress(categories.get(issue.id), issue.progressPct,
-    (children.get(issue.id) ?? []).map((sub) => ({ category: categories.get(sub.id), md: sub.estimateMd, pct: progress(sub) })), weighted);
+    (children.get(issue.id) ?? []).map((sub) => ({ category: categories.get(sub.id), md: sub.estimateMd, pct: progress(sub) })), weighted, issue.checklistPct);
   return progress;
 }
 
-/** Progress ของงานหนึ่งตัว: เสร็จแล้ว = 100 · มี Sub-task (ไม่นับที่ยกเลิก) = เฉลี่ยจาก Sub-task · ไม่มี = ค่าที่กรอกเอง
- *  ใช้ทั้งตารางและหน้ารายละเอียดงาน เพื่อให้ตัวเลขตรงกันทุกที่ */
-export function issueProgress(category: string | undefined, ownPct: number | null, subs: { category: string | undefined; md: number | null; pct: number }[], weighted: boolean) {
+/** Progress ของงานหนึ่งตัว: เสร็จแล้ว = 100 · มี Sub-task (ไม่นับที่ยกเลิก) = เฉลี่ยจาก Sub-task · ไม่มี = ค่าที่เก็บไว้ (กรอกเองหรือจาก Checklist)
+ *  Task ที่มีทั้ง Sub-task และ Checklist ของตัวเอง: Checklist นับเป็นอีกหนึ่งส่วนเท่ากับ Sub-task หนึ่งตัว (ผู้ใช้ขอ 2026-11-16)
+ *  แบบถ่วง Man-Day ให้ส่วนนี้หนักเท่าค่าเฉลี่ยของ Sub-task · ใช้ทุกที่ที่รวม Progress เพื่อให้ตัวเลขตรงกัน */
+export function issueProgress(category: string | undefined, ownPct: number | null, subs: { category: string | undefined; md: number | null; pct: number }[], weighted: boolean, checklistPct: number | null = null) {
   if (category === 'done') return 100;
   const counted = subs.filter((sub) => countsForProgress(sub.category));
-  return counted.length ? rollup(counted, weighted) : ownPct ?? 0;
+  if (!counted.length) return ownPct ?? 0;
+  return rollup(withChecklistPart(counted, checklistPct), weighted);
 }
 
-function rollup(rows: { md: number | null; pct: number }[], weighted: boolean) {
+/** เพิ่ม Checklist ของ Task แม่เป็นอีกหนึ่งส่วน · น้ำหนัก = Man-Day เฉลี่ยของ Sub-task */
+export function withChecklistPart<T extends { md: number | null; pct: number }>(subs: T[], checklistPct: number | null): (T | { md: number; pct: number })[] {
+  if (checklistPct === null || !subs.length) return subs;
+  const md = subs.reduce((sum, sub) => sum + (sub.md ?? 0), 0) / subs.length;
+  return [...subs, { md, pct: checklistPct }];
+}
+
+export function rollup(rows: { md: number | null; pct: number }[], weighted: boolean) {
   if (!rows.length) return 0;
   const weight = rows.reduce((sum, row) => sum + (weighted ? row.md ?? 0 : 1), 0);
   return Math.round(weight ? rows.reduce((sum, row) => sum + row.pct * (weighted ? row.md ?? 0 : 1), 0) / weight : rows.reduce((sum, row) => sum + row.pct, 0) / rows.length);

@@ -49,6 +49,8 @@
   "progressAuto": "คำนวณจาก Sub-task",
   "checklistProgressNote": "Progress คำนวณจากสัดส่วน Checklist ที่ติ๊กแล้ว",
   "progressFromChecklist": "คำนวณจาก Checklist",
+  "bothProgressNote": "Sub-task แต่ละตัวกับ Checklist ของ Task นับเป็นส่วนละเท่ากัน",
+  "progressFromBoth": "คำนวณจาก Sub-task + Checklist",
   "dev": "Dev",
   "plan": "แผน",
   "actual": "จริง",

@@ -11,6 +11,7 @@ import { addDays, WorkCalendar } from '../projects/calendar.js';
 import { dueOf, loadDueRule, qaDueOf, type DueRule } from '../projects/due-stage.js';
 import { canMoveIssue } from '../projects/permissions.js';
 import { ProjectsService } from '../projects/projects.service.js';
+import { withChecklistPart } from '../issues/table.js';
 
 const s = schema;
 const uuid = z.uuid();
@@ -235,7 +236,7 @@ export class ViewsService {
       const progressOf = (i: Issue): number => {
         if (isDone(i)) return 100;
         const subs = subsOf.get(i.id)?.filter((x) => d.statuses.get(x.statusId)!.category !== 'cancelled');
-        if (subs?.length) return rollup(subs.map((x) => ({ md: x.estimateMd, pct: progressOf(x) })), weighted);
+        if (subs?.length) return rollup(withChecklistPart(subs.map((x) => ({ md: x.estimateMd, pct: progressOf(x) })), i.checklistPct), weighted);
         return i.progressPct ?? 0;
       };
       // โปรเจกต์แยก Dev / QA: งานที่รอ QA เลยกำหนดเมื่อเลย QA Due (projects/due-stage.ts)

@@ -28,6 +28,8 @@ export interface SupportConfig {
   sla: Record<string, PlanSla>;
   hours: DayHours[];
   thaiHolidays: boolean;
+  /** รอบ 4 · S4: ลูกค้าตอบเรื่องที่ปิดแล้ว แต่คนเดิมออฟไลน์ / ลา → คืนเข้าคิว */
+  reopenToQueue: boolean;
 }
 
 const DEFAULT_HOURS: DayHours[] = [0, 1, 2, 3, 4, 5, 6].map((i) => ({ open: i < 5, from: '09:00', to: '18:00' }));
@@ -45,6 +47,7 @@ export const DEFAULT_CONFIG: SupportConfig = {
   },
   hours: DEFAULT_HOURS,
   thaiHolidays: true,
+  reopenToQueue: true,
 };
 
 const mins = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
@@ -200,4 +203,26 @@ export async function routeTicket(db: Db, cfg: SupportConfig, ctx: { plan: strin
     await tx.insert(s.supportSettings).values({ id: 1, roundRobinLast: next.staffId }).onConflictDoUpdate({ target: s.supportSettings.id, set: { roundRobinLast: next.staffId } });
     return { ...out, assigneeId: next.staffId };
   });
+}
+
+/**
+ * ลูกค้าเปิดเรื่องที่ปิดแล้วอีกครั้ง (ตอบ / "ยังพบปัญหาอยู่") แต่ผู้รับผิดชอบเดิมออฟไลน์ / ลา
+ * → คืนเข้าคิวแล้วแจกใหม่ทันทีตามกฎเดิม (ไม่มีใครว่างก็อยู่ในคิวกลาง ops-api แจกใหม่ทุก 1 นาที)
+ * สูตรเดียวกับ PresenceService.requeueIfAway ของ ops-api · คืน assignee ใหม่ หรือ undefined ถ้าไม่ต้องย้าย
+ */
+export async function requeueIfAway(db: Db, cfg: SupportConfig, t: { id: string; assigneeId: string | null; workspaceId: string | null; category: string | null; priority: string }, plan: string) {
+  if (!t.assigneeId || !cfg.reopenToQueue) return undefined;
+  const [a] = rowsOf<{ presence: string | null; name: string }>(
+    await db.execute(sql`select a.presence, st.name from staff_users st left join support_agents a on a.staff_id = st.id where st.id = ${t.assigneeId}`),
+  );
+  const presence = a?.presence ?? 'online';
+  if (presence !== 'offline' && presence !== 'leave') return undefined;
+  const route = t.workspaceId ? await routeTicket(db, cfg, { plan, category: t.category, workspaceId: t.workspaceId, minPriority: t.priority }) : null;
+  const next = route?.assigneeId && route.assigneeId !== t.assigneeId ? route.assigneeId : null;
+  // บันทึกภายในต้องเป็นข้อความฝั่งทีม (CHECK support_ticket_messages_internal) · ไม่มีผู้เขียน = ระบบ
+  await db.transaction(async (tx) => {
+    await tx.update(s.supportTickets).set({ assigneeId: next, updatedAt: new Date() }).where(eq(s.supportTickets.id, t.id));
+    await tx.insert(s.supportTicketMessages).values({ ticketId: t.id, authorKind: 'staff', internal: true, body: `ลูกค้าตอบหลังปิดเรื่อง · ${a?.name ?? 'ผู้รับผิดชอบเดิม'} ${presence === 'leave' ? 'ลา' : 'ออฟไลน์'} จึงคืนเข้าคิวกลาง` });
+  });
+  return next;
 }

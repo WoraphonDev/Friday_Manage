@@ -12,7 +12,18 @@ export interface Item {
   event: { type: string | null; issueKey: string | null };
   status: UiStatus;
   attempts: number;
+  /** requestId ของคำขอที่ทำให้เกิดการส่ง (S7) · ไม่มีใน API เก่า */
+  requestId?: string | null;
+  /** "ผูกกับ": แนบใน Ticket / แจ้งเตือนของ Ticket หรือคำขอที่ทำให้เกิดการส่ง */
+  linkedTo?: { kind: "ticket"; number: number } | { kind: "request"; requestId: string } | null;
 }
+export type Search =
+  | { kind: "request"; requestId: string }
+  | {
+      kind: "ticket";
+      number: number;
+      ticket: { id: string; number: number; createdAt: string; since: string; workspace: { id: string; name: string } | null; requesterName: string | null; requesterEmail: string | null; requestId: string | null } | null;
+    };
 export interface Stats {
   total: number;
   byChannel: { email: number; line: number; webhook: number };
@@ -24,6 +35,7 @@ export interface Stats {
 }
 export interface ListResponse {
   stats: Stats;
+  search?: Search | null;
   items: Item[];
   nextBefore: string | null;
 }

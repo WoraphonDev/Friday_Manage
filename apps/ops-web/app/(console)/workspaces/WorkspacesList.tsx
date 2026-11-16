@@ -11,7 +11,7 @@ import { Chip, ChipGroup, Empty, ErrorBlock, PageHead, TableSkeleton } from "@/c
 import { Button, buttonClass, Input } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
-import { AnnounceDrawer } from "./_parts/Announce";
+import { type AnnounceFilter, AnnounceDrawer } from "./_parts/Announce";
 import { BulkCouponDialog, BulkResultDrawer, BulkTrialDialog, namesOf } from "./_parts/Bulk";
 import styles from "./_parts/bulk.module.css";
 import { healthTone, planLabel, useFmt } from "./_parts/format";
@@ -274,6 +274,8 @@ export function WorkspacesList() {
       {bulk === "announce" && (
         <AnnounceDrawer
           workspaceIds={[...selected.keys()]}
+          // ตัวกรองปัจจุบันของรายการ ให้เลือกส่ง "ทุกรายตามตัวกรอง" ได้ (O43 · S8)
+          filter={filtered ? ({ ...(plan ? { plan } : {}), ...(status ? { status } : {}), ...(search ? { q: search } : {}), ...(feature ? { feature } : {}) } as AnnounceFilter) : undefined}
           sampleName={[...selected.values()][0]}
           onClose={() => setBulk(null)}
           onDone={() => (setBulk(null), resetSelection())}

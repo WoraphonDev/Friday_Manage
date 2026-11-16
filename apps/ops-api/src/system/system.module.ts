@@ -1,6 +1,7 @@
-import { Body, Controller, Get, HttpCode, Module, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Module, Param, Post, Put, Req } from '@nestjs/common';
 import { type OpsRequest, Public, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
+import { AlertSettings, AlertsService } from './alerts.service.js';
 import { JobQueue } from './job-queue.js';
 import { DiscardBody, IncidentBody, IncidentUpdateBody, MaintenanceBody, RetryManyBody, SubscribeBody, SystemService, TokenBody } from './system.service.js';
 
@@ -10,12 +11,46 @@ import { DiscardBody, IncidentBody, IncidentUpdateBody, MaintenanceBody, RetryMa
  */
 @Controller('ops')
 export class SystemController {
-  constructor(private readonly system: SystemService) {}
+  constructor(
+    private readonly system: SystemService,
+    private readonly alerts: AlertsService,
+  ) {}
 
   @Roles('engineer', 'owner')
   @Get('system/status')
   status() {
     return this.system.status();
+  }
+
+  /** เกณฑ์แจ้งเตือน Error rate (S11) · Owner / วิศวกร */
+  @Roles('engineer', 'owner')
+  @Get('system/alert-settings')
+  alertSettings() {
+    return this.alerts.settings().then((settings) => ({ settings }));
+  }
+  @Roles('engineer', 'owner')
+  @Put('system/alert-settings')
+  saveAlertSettings(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.alerts.saveSettings(req.staff!, parse(AlertSettings, body));
+  }
+  /** การแจ้งเตือนของระบบ (หน้าเหตุขัดข้องบนมือถือ · S12) */
+  @Roles('engineer', 'support', 'owner')
+  @Get('system/alerts')
+  alertList() {
+    return this.alerts.list();
+  }
+  /** "รับทราบ · ฉันดูอยู่" = คนที่ได้รับแจ้ง (วิศวกร / Owner) */
+  @Roles('engineer', 'owner')
+  @Post(['system/alerts/:id/acknowledge', 'system/alerts/:id\\:acknowledge'])
+  @HttpCode(200)
+  acknowledge(@Req() req: OpsRequest, @Param('id') id: string) {
+    return this.alerts.acknowledge(req.staff!, id);
+  }
+  /** เปิดเหตุขัดข้องภายในจากการแจ้งเตือน · สิทธิ์เดียวกับเปิดเหตุขัดข้อง */
+  @Roles('engineer', 'support')
+  @Post('system/alerts/:id/incident')
+  openAlertIncident(@Req() req: OpsRequest, @Param('id') id: string) {
+    return this.alerts.openIncident(req.staff!, id);
   }
 
   @Roles('engineer', 'support', 'owner')
@@ -111,5 +146,5 @@ export class PublicStatusController {
   }
 }
 
-@Module({ controllers: [SystemController, PublicStatusController], providers: [SystemService, JobQueue] })
+@Module({ controllers: [SystemController, PublicStatusController], providers: [SystemService, AlertsService, JobQueue] })
 export class SystemModule {}

@@ -16,7 +16,23 @@
     "none": "—"
   },
   "search": "ค้นหา",
-  "searchPlaceholder": "อีเมลผู้รับ, Workspace, Issue key, รหัสการส่ง",
+  "searchPlaceholder": "อีเมลผู้รับ, Workspace, เลข Ticket, requestId",
+  "searchKind": {
+    "ticket": "Ticket",
+    "request": "requestId"
+  },
+  "found": {
+    "ticket": "<b>Ticket #{number}</b> · {ws} · {who} · แสดงการส่งถึงผู้เปิด Ticket 7 วันก่อนเปิดเรื่อง และรายการที่ผูกกับ Ticket นี้",
+    "ticketRequest": " · requestId <code>{requestId}</code>",
+    "ticketMissing": "ไม่พบ Ticket #{number} · ตรวจเลขอีกครั้ง",
+    "request": "แสดงการส่งที่เกิดจากคำขอ <code>{requestId}</code> · requestId มาจากหน้า Error ของลูกค้า หรือบริบทใน Ticket",
+    "noWorkspace": "ไม่ระบุ Workspace"
+  },
+  "linked": {
+    "ticket": "Ticket #{number}",
+    "none": "—",
+    "searchRequest": "ค้นด้วย {requestId}"
+  },
   "channels": "ช่องทาง",
   "channel": {
     "all": "ทั้งหมด",
@@ -47,6 +63,7 @@
     "to": "ผู้รับ",
     "event": "เหตุการณ์",
     "status": "สถานะ",
+    "linked": "ผูกกับ",
     "attempts": "ครั้งที่"
   },
   "empty": "ไม่มีการส่งตามตัวกรองนี้",

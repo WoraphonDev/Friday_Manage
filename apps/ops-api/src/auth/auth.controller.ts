@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common'
 import type { Response } from 'express';
 import { config } from '../config.js';
 import { parse } from '../errors.js';
+import { PresenceService } from '../support/presence.service.js';
 import { AuthService, EnrollBody, LoginOptionsBody, VerifyBody } from './auth.service.js';
 import { effectiveRoles, type OpsRequest, Public, REAUTH_COOKIE, REAUTH_SECONDS } from './auth.guard.js';
 import { legacyRole } from './roles.js';
@@ -9,7 +10,10 @@ import { verify } from './tokens.js';
 
 @Controller('ops/auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly presence: PresenceService,
+  ) {}
 
   /** เริ่มลงทะเบียน Security key · Public เพราะพนักงานใหม่ยังไม่มี session (ใช้ enrollToken) */
   @Public()
@@ -68,7 +72,9 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(200)
-  logout(@Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: OpsRequest, @Res({ passthrough: true }) res: Response) {
+    // S3 · พนักงาน Support ที่ออกจากระบบเป็นออฟไลน์อัตโนมัติ (ตั้งค่าได้) · เปลี่ยนไม่ได้ไม่ให้การออกจากระบบล้ม
+    if (req.staff) await this.presence.loggedOut(req.staff).catch(() => undefined);
     res.clearCookie(config.cookie, { path: '/' });
     res.clearCookie(REAUTH_COOKIE, { path: '/' });
     return { ok: true };

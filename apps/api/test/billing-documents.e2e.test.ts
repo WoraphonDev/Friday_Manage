@@ -116,7 +116,7 @@ describe('เอกสาร PDF', () => {
 
     // ใบเสนอราคา: ทุกครั้งได้เลข QT- ใหม่ เก็บไว้อ้างอิง · ยืนราคา 30 วัน
     expect(isPdf(await binary(w.lead, `${w.ws}/billing/quotation.pdf?plan=team_l&cycle=yearly&wht=true`))).toBe(true);
-    const quotes = (await t.owner.query(`SELECT number, plan, cycle, wht, amount_due, valid_until - current_date AS days FROM quotations WHERE workspace_id = $1`, [w.wsId])).rows;
+    const quotes = (await t.owner.query(`SELECT number, plan, cycle, wht, amount_due, valid_until - (now() at time zone 'Asia/Bangkok')::date AS days FROM quotations WHERE workspace_id = $1`, [w.wsId])).rows;
     expect(quotes).toEqual([expect.objectContaining({ number: expect.stringMatching(/^QT-\d{4}-\d{4}$/), plan: 'team_l', cycle: 'yearly', wht: true, days: 30 })]);
     expect((await binary(w.lead, `${w.ws}/billing/quotation.pdf?plan=nope`)).status).toBe(400);
   });

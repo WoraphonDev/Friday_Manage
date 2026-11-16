@@ -117,6 +117,8 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
       ETAX_WEBHOOK_SECRET: ${ETAX_WEBHOOK_SECRET}
       EMAIL_FEEDBACK_TOKEN: ${EMAIL_FEEDBACK_TOKEN}
+      # ตัวนับ Error rate ที่ Friday Ops อ่าน (O43 · S10) · ค่าเดียวกับ ops-api
+      OPS_METRICS_TOKEN: ${OPS_METRICS_TOKEN}
       VAT_REGISTERED: ${VAT_REGISTERED:-false}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -186,6 +188,8 @@ services:
       OPS_RP_ID: ${OPS_HOST}
       APP_URL: https://${APP_HOST}
       API_HEALTH_URL: http://api:3001/healthz
+      OPS_METRICS_TOKEN: ${OPS_METRICS_TOKEN}
+      BOT_API_CLIENT_ID: ${BOT_API_CLIENT_ID:-}
       UPLOAD_DIR: /data/uploads
       VALKEY_URL: redis://valkey:6379
       OPS_JOBS: ${OPS_JOBS:-on}

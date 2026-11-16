@@ -26,6 +26,35 @@ const config: Config = {
   },
   hours,
   thaiHolidays: true,
+  offlineOnLogout: true,
+  idleOffline: true,
+  idleMinutes: 15,
+  redispatch: true,
+  reopenToQueue: true,
+};
+// รอบ 4 · S1 ปฏิทินวันหยุดของระบบ (ข้อมูลสมมติ)
+let holidayList = {
+  configured: true,
+  syncedAt: "2026-11-15T23:00:00.000Z",
+  failure: null as null | { since: string | null; message: string },
+  year: null,
+  items: [
+    { date: "2026-12-05", name: "วันพ่อแห่งชาติ", origin: "bot" },
+    { date: "2027-01-02", name: "หยุดพิเศษ (ครม.)", origin: "manual" },
+  ],
+};
+const preview = {
+  year: 2027,
+  total: 19,
+  items: [
+    { kind: "new", date: "2027-01-01", name: "วันขึ้นปีใหม่" },
+    { kind: "new", date: "2027-02-12", name: "วันมาฆบูชา" },
+    { kind: "changed", date: "2027-04-07", name: "วันจักรี (ชดเชย)", from: "2027-04-06" },
+    { kind: "same", date: "2027-05-01", name: "วันแรงงาน" },
+  ],
+  counts: { new: 2, changed: 1, removed: 0, renamed: 0, origin: 0, same: 1 },
+  impact: { projects: 41, workspaces: 18, issues: 230 },
+  changedDates: 4,
 };
 const view = (canEdit: boolean): SettingsView => ({
   config,
@@ -66,6 +95,12 @@ function handlers(canEdit = true) {
     http.delete(`${OPS}/support/rules/:id`, record()),
     http.post(`${OPS}/support/canned-replies`, record(201, { item: {} })),
     http.post(`${OPS}/support/canned-replies/:id/archive`, record()),
+    http.get(`${OPS}/support/holidays`, () => HttpResponse.json(holidayList)),
+    http.post(`${OPS}/support/holidays/impact`, () => HttpResponse.json({ projects: 41, workspaces: 18, issues: 12 })),
+    http.post(`${OPS}/support/holidays/bot/preview`, () => HttpResponse.json(preview)),
+    http.post(`${OPS}/support/holidays/bot/apply`, record(200, { saved: 19, added: [], removed: [], changed: 3, slaUpdated: 2 })),
+    http.post(`${OPS}/support/holidays`, record(201, { holiday: {} })),
+    http.delete(`${OPS}/support/holidays/:date`, record(200, { deleted: true })),
   );
 }
 const render = () => {
@@ -89,7 +124,7 @@ describe("ตั้งค่าการแจกงาน Support (O22)", () =>
     expect(screen.getByRole("switch", { name: "เปิดใช้กฎข้อ 3" })).toHaveAttribute("aria-checked", "false");
     expect(screen.getByText("ทุกช่องทาง + LINE ของผู้ดูแลบัญชี")).toBeInTheDocument();
     expect(screen.getByText(/เตือนผู้รับผิดชอบเมื่อเหลือเวลา 25%/)).toBeInTheDocument();
-    expect(screen.getByText(/วันพ่อแห่งชาติ/)).toBeInTheDocument();
+    expect(await screen.findByText(/วันพ่อแห่งชาติ/)).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "ซัพพอร์ตเอ อยู่กลุ่มหัวหน้าทีม" })).toBeChecked();
     expect(screen.getByText("เทคโนวาเดโม")).toBeInTheDocument();
     expect(await screen.findByText("ขอข้อมูลเพิ่ม")).toBeInTheDocument();
@@ -160,6 +195,76 @@ describe("ตั้งค่าการแจกงาน Support (O22)", () =>
     await waitFor(() => expect(calls.find((c) => c.path === "/support/canned-replies")?.body).toEqual({ title: "ขอบคุณ", body: "ขอบคุณคุณ{ชื่อผู้แจ้ง}" }));
     await userEvent.click(screen.getByRole("button", { name: "เลิกใช้" }));
     await waitFor(() => expect(calls.some((c) => c.path === "/support/canned-replies/c-1/archive")).toBe(true));
+  });
+
+  it("S4 เมื่อพนักงานไม่อยู่: ออฟไลน์อัตโนมัติ · นาที · เรื่องที่ถืออยู่ · แจกใหม่ · ลูกค้าตอบเรื่องที่ปิดแล้ว", async () => {
+    handlers();
+    asRole("admin");
+    render();
+    const card = await screen.findByRole("region", { name: "เมื่อพนักงานไม่อยู่" });
+    expect(within(card).getByRole("checkbox", { name: "ออกจากระบบ หรือหมดเวลาเข้าระบบ (8 ชม.)" })).toBeChecked();
+    expect(within(card).getByRole("radio", { name: "คืนงานเข้าคิวกลางอัตโนมัติ" })).toBeChecked();
+    await userEvent.selectOptions(within(card).getByLabelText("นานกี่นาทีถึงถือว่าไม่มีการใช้งาน"), "30");
+    await userEvent.click(within(card).getByRole("radio", { name: "ถามหัวหน้าทีมก่อน" }));
+    await userEvent.click(within(card).getByRole("switch", { name: "แจกเรื่องในคิวกลางใหม่อัตโนมัติ" }));
+    await userEvent.click(screen.getByRole("button", { name: "บันทึก" }));
+    await waitFor(() => expect(calls.find((c) => c.method === "PUT")).toBeTruthy());
+    expect((calls.find((c) => c.method === "PUT")!.body as { config: Config }).config).toMatchObject({ idleMinutes: 30, onAway: "ask_lead", redispatch: false, reopenToQueue: true, offlineOnLogout: true });
+    await userEvent.click(within(card).getByRole("checkbox", { name: "ไม่มีการใช้งานนาน" }));
+    expect(within(card).getByLabelText("นานกี่นาทีถึงถือว่าไม่มีการใช้งาน")).toBeDisabled();
+  });
+
+  it("S1–S2 ปฏิทินวันหยุดของระบบ: ป้ายที่มา · ดึงจาก ธปท. ตรวจก่อนบันทึก · เพิ่ม / ลบเอง (Support แก้ได้)", async () => {
+    handlers(false);
+    asRole("support");
+    render();
+    const cal = await screen.findByRole("group", { name: "ปฏิทินวันหยุดของระบบ" });
+    expect(await within(cal).findByText("วันพ่อแห่งชาติ")).toBeInTheDocument();
+    expect(within(cal).getByText(/5 ธ\.ค\. 2569 \(ส\.\)/)).toBeInTheDocument();
+    expect(within(cal).getByText("เพิ่มเอง")).toBeInTheDocument();
+    expect(within(cal).getByText(/^ตรงกับ ธปท\. · ดึงล่าสุด/)).toBeInTheDocument();
+
+    await userEvent.click(within(cal).getByRole("button", { name: "ดึงจาก ธปท. ตอนนี้" }));
+    const dlg = await screen.findByRole("dialog", { name: "ดึงวันหยุดจาก ธปท." });
+    expect(await within(dlg).findByText("วันมาฆบูชา")).toBeInTheDocument();
+    expect(within(dlg).getByText(/6 เม\.ย\. 2570 \(อ\.\) → 7 เม\.ย\. 2570 \(พ\.\)/)).toBeInTheDocument();
+    expect(within(dlg).queryByText("วันแรงงาน")).toBeNull();
+    expect(within(dlg).getByText(/41 โปรเจกต์ใน 18 Workspace ใช้ปฏิทินของระบบ/)).toBeInTheDocument();
+    await userEvent.click(within(dlg).getByRole("checkbox", { name: "SLA ของ Ticket ที่เปิดอยู่คิดตามปฏิทินใหม่" }));
+    await userEvent.click(within(dlg).getByRole("button", { name: "บันทึก 19 วัน" }));
+    await waitFor(() => expect(calls.find((c) => c.path === "/support/holidays/bot/apply")?.body).toMatchObject({ recalc: true, sla: false }));
+
+    await userEvent.click(within(cal).getByRole("button", { name: "เพิ่มวันหยุดเอง" }));
+    const add = await screen.findByRole("dialog", { name: "เพิ่มวันหยุดเอง" });
+    await userEvent.type(within(add).getByLabelText("วันที่"), "2027-03-03");
+    await userEvent.type(within(add).getByLabelText("ชื่อวันหยุด"), "หยุดพิเศษสมมติ");
+    expect(await within(add).findByText(/งาน 12 งานจะคำนวณใหม่/)).toBeInTheDocument();
+    await userEvent.click(within(add).getByRole("button", { name: "เพิ่มวันหยุด" }));
+    await waitFor(() => expect(calls.find((c) => c.path === "/support/holidays" && c.method === "POST")?.body).toEqual({ date: "2027-03-03", name: "หยุดพิเศษสมมติ", recalc: true, sla: true }));
+
+    await userEvent.click(within(cal).getByRole("button", { name: "ลบ หยุดพิเศษ (ครม.)" }));
+    const del = await screen.findByRole("dialog", { name: "ลบวันหยุด หยุดพิเศษ (ครม.)?" });
+    await userEvent.click(within(del).getByRole("checkbox", { name: "คำนวณ Plan End ใหม่และแจ้ง PM ของโปรเจกต์ที่มีงานเลื่อน" }));
+    await userEvent.click(within(del).getByRole("button", { name: "ลบวันหยุด" }));
+    await waitFor(() => expect(calls.find((c) => c.method === "DELETE" && c.path.startsWith("/support/holidays"))?.path).toBe("/support/holidays/2027-01-02"));
+  });
+
+  it("S1 ยังไม่ตั้ง Client ID / ดึงไม่สำเร็จ: บอกสถานะ · ปุ่มดึงปิด · เพิ่มเองได้", async () => {
+    handlers();
+    holidayList = { ...holidayList, configured: false };
+    asRole("admin");
+    const { unmount } = render();
+    const cal = await screen.findByRole("group", { name: "ปฏิทินวันหยุดของระบบ" });
+    expect(await within(cal).findByText("ยังไม่เชื่อม API ธปท.")).toBeInTheDocument();
+    expect(within(cal).getByRole("button", { name: "ดึงจาก ธปท. ตอนนี้" })).toBeDisabled();
+    expect(within(cal).getByRole("button", { name: "เพิ่มวันหยุดเอง" })).toBeEnabled();
+    unmount();
+    holidayList = { ...holidayList, configured: true, failure: { since: "2026-11-14T23:00:00.000Z", message: "ธปท. ตอบ HTTP 500" } };
+    render();
+    const again = await screen.findByRole("group", { name: "ปฏิทินวันหยุดของระบบ" });
+    expect(await within(again).findByText(/^ดึงไม่สำเร็จตั้งแต่/)).toBeInTheDocument();
+    expect(within(again).getByText(/ใช้ข้อมูลเดิมต่อ · เพิ่มวันหยุดเองได้เสมอ · สาเหตุ: ธปท\. ตอบ HTTP 500/)).toBeInTheDocument();
+    holidayList = { ...holidayList, failure: null };
   });
 
   it("Support ดูได้อย่างเดียว · การเงินเข้าไม่ได้ · error ตาม M1", async () => {

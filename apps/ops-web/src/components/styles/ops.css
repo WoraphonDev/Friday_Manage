@@ -2000,6 +2000,33 @@ pre.code-box {
 .person-dot-busy {
   background: var(--warning-solid);
 }
+/* รอบ 4 · S6 ไฟล์แนบที่ลูกค้าส่งมากับข้อความใน Ticket */
+.ticket-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ticket-files a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+}
+/* รอบ 4 · S1 ปฏิทินวันหยุดของระบบในการ์ดเวลาทำการ */
+.holiday-cal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
 .canned-item {
   display: flex;
   flex-direction: column;

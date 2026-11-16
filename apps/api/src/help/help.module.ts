@@ -1,10 +1,11 @@
-import { Body, Controller, Get, HttpCode, Module, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Module, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { Auth, type AuthInfo, Public, Tenant, type TenantInfo } from '../common/request.js';
 import { TenantGuard } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
 import { LocalStorage, S3Storage } from '../files/storage.js';
 import { ArticleQuery, ArticlesQuery, FeedbackBody, HelpArticlesService } from './articles.service.js';
 import { HelpRateLimit } from './rate-limit.js';
+import { SystemHolidaysJob } from './system-calendar.js';
 import { SupportRepliesJob } from './replies.js';
 import { CreateTicketBody, HelpTicketsService, ReplyBody, TicketsQuery, UploadBody } from './tickets.service.js';
 import { z } from 'zod';
@@ -64,8 +65,8 @@ export class SupportTicketsController {
 
   /** เปิด Ticket ถึงทีม Friday (ช่องทาง in_app) · คำนวณ SLA ตามกฎการแจกงาน · อีเมลยืนยันพร้อมเลข */
   @Post('tickets')
-  create(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Body() body: unknown) {
-    return this.tickets.create(auth, tenant, parse(CreateTicketBody, body));
+  create(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Body() body: unknown, @Headers('user-agent') userAgent?: string) {
+    return this.tickets.create(auth, tenant, parse(CreateTicketBody, body), userAgent);
   }
 
   /** ขอลิงก์อัปโหลดไฟล์แนบ (ไม่เกิน 10 MB) · ส่ง uploadToken กลับมาพร้อม Ticket หรือข้อความ */
@@ -104,6 +105,6 @@ export class SupportTicketsController {
 /** A44 · ศูนย์ช่วยเหลือ และ Ticket จากในแอปลูกค้า (docs/tasks/A44-help-center-api.md) */
 @Module({
   controllers: [HelpController, SupportTicketsController],
-  providers: [HelpArticlesService, HelpTicketsService, HelpRateLimit, SupportRepliesJob, LocalStorage, S3Storage],
+  providers: [HelpArticlesService, HelpTicketsService, HelpRateLimit, SupportRepliesJob, SystemHolidaysJob, LocalStorage, S3Storage],
 })
 export class HelpModule {}

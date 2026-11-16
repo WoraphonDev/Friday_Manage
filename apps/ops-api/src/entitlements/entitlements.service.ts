@@ -18,6 +18,7 @@ import {
 } from '@friday/db';
 import { and, asc, desc, eq, gt, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import { AnnouncementsService } from '../announcements/announcements.service.js';
 import { ApprovalsService, type ApprovalContext } from '../approvals/approvals.service.js';
 import { type Approval, audit, staffAudit } from '../audit.js';
 import type { Staff } from '../auth/auth.guard.js';
@@ -33,6 +34,8 @@ const NEAR = 0.85;
 /** เกินแพ็กเกจเกิน 20% ต้องให้ Owner อนุมัติ (06 › 3) */
 const OVERRIDE_HEADROOM = 1.2;
 const WARN_DAYS = 7;
+/** เปลี่ยนสิทธิ์ที่เกี่ยวกับราคาหรือขีดจำกัด ต้องแจ้งลูกค้าล่วงหน้าอย่างน้อยกี่วัน (S9) */
+export const NOTICE_DAYS = 30;
 
 const PLAN_NAMES: Record<EntitlementPlan, string> = { free: 'Free', team_s: 'Team S', team_m: 'Team M', team_l: 'Team L', enterprise: 'Enterprise' };
 /** ชื่อไทยของคีย์ (ใช้ในเหตุผล Audit log ที่ลูกค้าเห็น และอีเมล) */
@@ -62,12 +65,21 @@ export const MatrixBody = z
     }
   });
 export const PreviewBody = z.object({ matrix: MatrixBody }).strict();
+/** S9 · ร่างประกาศ C8 ถึงลูกค้าที่ถูกกระทบ · ไปกับคำขออนุมัติ ส่งเมื่ออนุมัติ ปฏิเสธ = ไม่ส่ง */
+export const AnnouncementDraft = z
+  .object({
+    title: z.string().trim().min(1, 'กรอกหัวข้อประกาศ').max(150),
+    message: z.string().trim().min(1, 'กรอกข้อความประกาศ').max(2000),
+    channels: z.array(z.enum(['email', 'banner'])).min(1).default(['email', 'banner']),
+  })
+  .strict();
 export const VersionBody = z
   .object({
     matrix: MatrixBody,
     /** ไม่ส่ง = มีผลทันทีเมื่ออนุมัติ */
     effectiveAt: z.iso.datetime({ offset: true }).nullish(),
     reason: z.string().trim().min(3).max(500),
+    announcement: AnnouncementDraft.nullish(),
   })
   .strict();
 export const RestoreBody = z.object({ effectiveAt: z.iso.datetime({ offset: true }).nullish(), reason: z.string().trim().min(3).max(500) }).strict();
@@ -136,6 +148,7 @@ export class EntitlementsService implements OnModuleInit, OnModuleDestroy {
     @Inject(OPS_DB) private readonly db: Db,
     private readonly approvals: ApprovalsService,
     private readonly mail: Mailer,
+    private readonly announcements: AnnouncementsService,
   ) {}
 
   onModuleInit() {
@@ -191,17 +204,41 @@ export class EntitlementsService implements OnModuleInit, OnModuleDestroy {
     const current = await versionAt(this.db, now);
     const next = normalizeMatrix(input.matrix);
     const diff = changes(current.matrix, next);
+    const { affected, workspaces, usage } = await this.affected(current.matrix, next, now);
+    return {
+      fromVersion: current.version,
+      nextVersion: (await this.maxVersion()) + 1,
+      changes: diff,
+      affected: affected.map(({ hit, ...r }) => ({ ...r, workspaces: hit.length, examples: hit.slice(0, 5).map((u) => ({ id: u.id, name: u.name })) })),
+      affectedTotal: new Set(affected.flatMap((a) => usage.filter((u) => u.plan === a.plan && this.hurts(u, a.key, a.to)).map((u) => u.id))).size,
+      /** S9 · รายชื่อลูกค้าที่ถูกกระทบครบทุกราย (ไม่นับรายที่ปรับเฉพาะรายไว้แล้ว) พร้อมรายการที่กระทบ */
+      affectedWorkspaces: workspaces,
+      noticeDays: NOTICE_DAYS,
+    };
+  }
+
+  /** ลูกค้าที่ถูกลดสิทธิ์จากเวอร์ชัน from → to ณ เวลานี้ · ข้ามรายที่ปรับเฉพาะรายไว้สำหรับคีย์นั้น */
+  private async affected(from: Matrix, to: Matrix, now: Date) {
     const usage = await this.usage(now);
     const overridden = await this.db
       .select({ ws: s.entitlementOverrides.workspaceId, key: s.entitlementOverrides.key })
       .from(s.entitlementOverrides)
       .where(and(isNull(s.entitlementOverrides.revokedAt), sql`(${s.entitlementOverrides.expiresAt} IS NULL OR ${s.entitlementOverrides.expiresAt} > ${now})`));
     const has = new Set(overridden.map((o) => `${o.ws}:${o.key}`));
-    const affected = reductions(current.matrix, next).map((r) => {
-      const hit = usage.filter((u) => u.plan === r.plan && !has.has(`${u.id}:${r.key === 'storage_gb_per_member' ? 'storage_gb' : r.key}`) && this.hurts(u, r.key, r.to));
-      return { ...r, workspaces: hit.length, examples: hit.slice(0, 5).map((u) => ({ id: u.id, name: u.name })) };
-    });
-    return { fromVersion: current.version, nextVersion: (await this.maxVersion()) + 1, changes: diff, affected, affectedTotal: new Set(affected.flatMap((a) => usage.filter((u) => u.plan === a.plan && this.hurts(u, a.key, a.to)).map((u) => u.id))).size };
+    const affected = reductions(from, to).map((r) => ({ ...r, hit: usage.filter((u) => u.plan === r.plan && !has.has(`${u.id}:${r.key === 'storage_gb_per_member' ? 'storage_gb' : r.key}`) && this.hurts(u, r.key, r.to)) }));
+    const byWs = new Map<string, { id: string; name: string; slug: string; plan: EntitlementPlan; keys: string[] }>();
+    for (const a of affected)
+      for (const u of a.hit) {
+        const w = byWs.get(u.id) ?? { id: u.id, name: u.name, slug: u.slug, plan: u.plan, keys: [] };
+        w.keys.push(a.key);
+        byWs.set(u.id, w);
+      }
+    return { affected, usage, workspaces: [...byWs.values()].sort((a, b) => a.name.localeCompare(b.name, 'th')) };
+  }
+
+  /** วันที่มีผลห่างจากวันนี้กี่วัน (ปัดลง) · ทันที = 0 */
+  private noticeDays(effectiveAt: string | null | undefined, now = new Date()) {
+    return effectiveAt ? Math.floor((new Date(effectiveAt).getTime() - now.getTime()) / DAY) : 0;
   }
 
   /** ลูกค้ารายนี้ใช้เกินค่าใหม่ หรือใช้ฟีเจอร์ที่ถูกปิดอยู่ไหม */
@@ -243,16 +280,20 @@ export class EntitlementsService implements OnModuleInit, OnModuleDestroy {
     const diff = changes(current.matrix, matrix);
     if (!diff.length) throw new AppError(422, 'no_changes', 'ไม่มีอะไรต่างจากเวอร์ชันที่ใช้อยู่');
     if (input.effectiveAt && new Date(input.effectiveAt).getTime() < Date.now() - 60_000) throw new AppError(422, 'effective_in_past', 'วันที่มีผลต้องไม่อยู่ในอดีต');
-    const payload: VersionPayload = { matrix, effectiveAt: input.effectiveAt ?? null, reason: input.reason, restoredFrom: restoredFrom ?? null };
+    const announcement = input.announcement ?? null;
+    const payload: VersionPayload = { matrix, effectiveAt: input.effectiveAt ?? null, reason: input.reason, restoredFrom: restoredFrom ?? null, announcement };
     const summary = diff.map((c) => `${PLAN_NAMES[c.plan]} ${KEY_NAMES[c.key]} ${show(c.key, c.from)} → ${show(c.key, c.to)}`).join(' · ');
     const pending = await this.approvals.gate(staff, {
       kind: 'entitlements.version',
       payload: payload as unknown as Record<string, unknown>,
       reason: input.reason,
       exceeds: true,
-      rule: `บันทึกสิทธิ์เป็นเวอร์ชันใหม่ต้องมีคนอนุมัติ · ${summary}`,
+      rule: `บันทึกสิทธิ์เป็นเวอร์ชันใหม่ต้องมีคนอนุมัติ · ${summary}${announcement ? ` · ส่งประกาศ "${announcement.title}" ถึงลูกค้าที่ถูกกระทบเมื่ออนุมัติ` : ''}`,
     });
-    return { pendingApproval: pending! };
+    // S9: ลดขีดจำกัด / ฟีเจอร์ที่ขายอยู่ ต้องแจ้งล่วงหน้า ≥ 30 วัน · เตือนแต่ไม่บล็อก (Owner ตัดสินตอนอนุมัติ)
+    const days = this.noticeDays(input.effectiveAt);
+    const warnings = reductions(current.matrix, matrix).length && days < NOTICE_DAYS ? [{ code: 'notice_short', message: `ลดสิทธิ์ที่ขายอยู่ควรแจ้งลูกค้าล่วงหน้าอย่างน้อย ${NOTICE_DAYS} วัน · วันที่มีผลห่างจากวันนี้ ${days} วัน` }] : [];
+    return { pendingApproval: pending!, ...(warnings.length ? { warnings } : {}) };
   }
 
   async restore(staff: Staff, version: number, input: z.infer<typeof RestoreBody>) {
@@ -264,6 +305,8 @@ export class EntitlementsService implements OnModuleInit, OnModuleDestroy {
   private async applyVersion(staff: Staff, p: VersionPayload, ctx: ApprovalContext) {
     const matrix = normalizeMatrix(p.matrix);
     const effectiveAt = p.effectiveAt ? new Date(p.effectiveAt) : new Date();
+    // S9: ลูกค้าที่ถูกกระทบ ณ วันที่อนุมัติ (เทียบกับเวอร์ชันที่ใช้อยู่ก่อนบันทึก)
+    const hit = p.announcement ? (await this.affected((await versionAt(this.db, new Date())).matrix, matrix, new Date())).workspaces : [];
     const row = await this.db.transaction(async (tx) => {
       // ล็อกตารางสั้น ๆ กันเลขเวอร์ชันชนกันเมื่ออนุมัติพร้อมกัน
       await tx.execute(sql`LOCK TABLE ${s.entitlementVersions} IN SHARE ROW EXCLUSIVE MODE`);
@@ -276,7 +319,24 @@ export class EntitlementsService implements OnModuleInit, OnModuleDestroy {
       return v;
     });
     await this.syncPlans();
-    return { version: row.version, effectiveAt: row.effectiveAt };
+    return { version: row.version, effectiveAt: row.effectiveAt, announcement: p.announcement ? await this.announceAffected(staff, p.announcement, hit, row) : null };
+  }
+
+  /**
+   * ส่งประกาศ C8 ที่ร่างไว้กับคำขอ ถึงลูกค้าที่ถูกกระทบ · อยู่ในประวัติประกาศเหมือนประกาศอื่น
+   * เวอร์ชันบันทึกแล้วจึงไม่ให้ประกาศที่ล้มทำให้การอนุมัติล้ม · บันทึกเหตุใน Audit ให้ส่งเองจากหน้า Workspaces
+   */
+  private async announceAffected(staff: Staff, draft: z.infer<typeof AnnouncementDraft>, hit: { id: string }[], version: { id: string; version: number }) {
+    if (!hit.length) return { sent: false, workspaces: 0, id: null };
+    try {
+      // ผ่านการอนุมัติมาแล้ว จึงไม่ต้องแตะกุญแจซ้ำแม้เกิน 1,000 ราย
+      const a = await this.announcements.create(staff, { targetMode: 'selected', workspaceIds: hit.map((w) => w.id), title: draft.title, message: draft.message, channels: draft.channels }, new Date(), true);
+      return { sent: true, workspaces: a.workspaces.count, id: a.id };
+    } catch (e) {
+      this.log.error(`announce affected (version ${version.version}) failed: ${String(e)}`);
+      await staffAudit(this.db, staff, 'entitlements.announcement_failed', `ส่งประกาศถึงลูกค้าที่ถูกกระทบจากเวอร์ชัน ${version.version} ไม่สำเร็จ · ${(e as Error).message}`, { type: 'entitlement_version', id: version.id });
+      return { sent: false, workspaces: hit.length, id: null, error: (e as Error).message };
+    }
   }
 
   /** P3 · ทุกเวอร์ชัน พร้อมความต่างจากเวอร์ชันก่อนหน้า */
@@ -572,5 +632,7 @@ interface VersionPayload {
   effectiveAt: string | null;
   reason: string;
   restoredFrom: number | null;
+  /** S9 · ร่างประกาศถึงลูกค้าที่ถูกกระทบ · คำขอเดิมก่อน O43 ไม่มี */
+  announcement?: z.infer<typeof AnnouncementDraft> | null;
 }
 

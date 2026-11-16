@@ -12,7 +12,7 @@ import { Mailer } from '../core/mail.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { finalKeyOf, LocalStorage, S3Storage, StagingGone, stagingKeyFor, type StorageDriver } from '../files/storage.js';
 import { HelpArticlesService } from './articles.service.js';
-import { dueOf, loadConfig, routeTicket } from './routing.js';
+import { dueOf, loadConfig, requeueIfAway, routeTicket } from './routing.js';
 
 const s = schema;
 const k = s.supportTickets;
@@ -269,7 +269,7 @@ export class HelpTicketsService {
 
   // ── สร้าง / ตอบ / ปิด / เปิดใหม่ ─────────────────────────
 
-  async create(auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof CreateTicketBody>) {
+  async create(auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof CreateTicketBody>, userAgent?: string) {
     this.assertCanContact(tenant);
     const [user] = await this.db.select({ email: s.users.email, name: s.users.displayName }).from(s.users).where(eq(s.users.id, auth.userId));
     const article = input.articleSlug ? await this.articles.find(auth, input.articleSlug) : null;
@@ -281,7 +281,7 @@ export class HelpTicketsService {
     const due = await dueOf(this.db, cfg, plan.code, route.priority, now);
     const files = await this.commitFiles(auth, tenant, input.attachments);
     const attachments: Row[] = [...files];
-    if (input.context || input.impact !== 'me') attachments.push({ kind: 'context', page: input.context?.page ?? null, path: input.context?.path ?? null, requestId: input.context?.requestId ?? null, impact: input.impact });
+    if (input.context || input.impact !== 'me') attachments.push({ kind: 'context', page: input.context?.page ?? null, path: input.context?.path ?? null, requestId: input.context?.requestId ?? null, impact: input.impact, browser: browserOf(userAgent) });
     if (article) attachments.push({ kind: 'article', slug: article.slug, title: article.title });
     const t = await this.db.transaction(async (tx) => {
       const [row] = await tx
@@ -334,6 +334,7 @@ export class HelpTicketsService {
       await tx.update(k).set({ status, solvedAt: status === 'open' ? null : t.solvedAt, updatedAt: new Date() }).where(eq(k.id, t.id));
       return row;
     });
+    if (t.status === 'solved') await this.requeue(t);
     return { message: { id: m.id, createdAt: m.createdAt }, status, reopened: t.status === 'solved' };
   }
 
@@ -354,6 +355,26 @@ export class HelpTicketsService {
     if (t.status !== 'solved' && t.status !== 'closed') throw new AppError(409, 'ticket_open', 'เรื่องนี้ยังเปิดอยู่');
     if (!this.reopenable(t, await this.reopenDays())) throw new AppError(409, 'ticket_closed', 'ปิดเรื่องนานเกินกำหนดแล้ว · เปิด Ticket ใหม่แทน');
     await this.db.update(k).set({ status: 'open', solvedAt: null, closedAt: null, updatedAt: new Date() }).where(eq(k.id, t.id));
+    await this.requeue(t);
     return { id: t.id, status: 'open' as const };
   }
+
+  /** เปิดใหม่แต่คนเดิมไม่อยู่ → คืนเข้าคิว / แจกใหม่ (รอบ 4 · S4) · ล้มไม่ให้คำตอบของลูกค้าล้ม */
+  private async requeue(t: Ticket) {
+    try {
+      const cfg = await loadConfig(this.db);
+      await requeueIfAway(this.db, cfg, t, (await this.plan(t.workspaceId!)).code);
+    } catch {
+      // เรื่องยังอยู่กับคนเดิม · ทีมโอนเองได้
+    }
+  }
+}
+
+/** เบราว์เซอร์และระบบปฏิบัติการแบบย่อ ("Chrome 131 · macOS") ให้ทีม Support เห็นในบริบทของ Ticket (รอบ 4 · S6) */
+export function browserOf(ua: string | undefined) {
+  if (!ua) return null;
+  const pick = (re: RegExp) => ua.match(re)?.[1]?.split('.')[0];
+  const browser = pick(/Edg\/([\d.]+)/) ? `Edge ${pick(/Edg\/([\d.]+)/)}` : pick(/Firefox\/([\d.]+)/) ? `Firefox ${pick(/Firefox\/([\d.]+)/)}` : pick(/Chrome\/([\d.]+)/) ? `Chrome ${pick(/Chrome\/([\d.]+)/)}` : pick(/Version\/([\d.]+).*Safari/) ? `Safari ${pick(/Version\/([\d.]+).*Safari/)}` : null;
+  const os = /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac OS X/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : null;
+  return [browser, os].filter(Boolean).join(' · ') || null;
 }

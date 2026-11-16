@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AnnouncementsService, BANNER_DAYS } from '../src/announcements/announcements.service.js';
 import { Mailer } from '../src/mail.js';
-import { customer, type Customer, staff, type Staff, startOps, type TestOps } from './helpers.js';
+import { customer, type Customer, reauth, staff, type Staff, startOps, type TestOps } from './helpers.js';
 
 let t: TestOps;
 let mail: Mailer;
@@ -66,7 +66,7 @@ describe('นับผู้รับ (C8 หัว Drawer)', () => {
     const r = await owner.agent.post('/ops/announcements/audience').send({ workspaceIds: [a.id, b.id] });
     expect(r.status, JSON.stringify(r.body)).toBe(200);
     // a: owner, pm (ไม่ส่ง), owner@river (Admin) · b: owner@river → 3 คน 4 ฉบับ (ไม่ส่ง 1)
-    expect(r.body).toEqual({ workspaces: 2, people: 3, emails: 3, suppressed: 1, noRecipients: [] });
+    expect(r.body).toEqual({ workspaces: 2, people: 3, emails: 3, suppressed: 1, noRecipients: [], minutes: 1, needsReauth: false });
   });
 
   it('Workspace ที่ไม่พบหรือถูกลบ → 404 ทั้งคำขอ · ข้อมูลผิดรูป 400', async () => {
@@ -219,5 +219,63 @@ describe('ประวัติ', () => {
     expect(times).toEqual([...times].sort().reverse());
     expect((await owner.agent.get(`/ops/announcements/${randomUUID()}`)).status).toBe(404);
     expect((await owner.agent.get('/ops/announcements/nope')).status).toBe(404);
+  });
+});
+
+describe('S8 · ผู้รับตามตัวกรอง และลูกค้าทุกราย', () => {
+  let d: Customer;
+  let e: Customer;
+  beforeAll(async () => {
+    // d: Team S ที่ถูกระงับ (ไม่ได้รับเว้นแต่กรองสถานะระงับเอง) · e: Team S ทดลองใช้
+    d = await customer(t, 'paused-demo', { plan: 'team_s', status: 'active' });
+    await t.owner.query(`UPDATE workspaces SET status = 'suspended' WHERE id = $1`, [d.id]);
+    e = await customer(t, 'sprout-demo', { plan: 'team_s', status: 'trialing' });
+  });
+
+  it('นับผู้รับตามตัวกรอง · ไม่รวมที่ระงับ เว้นแต่กรองสถานะระงับเอง · ทุกราย = ที่ใช้งานอยู่ · ประมาณเวลาส่ง', async () => {
+    const f = await owner.agent.post('/ops/announcements/audience').send({ targetMode: 'filter', filter: { plan: 'team_s' } });
+    expect(f.status, JSON.stringify(f.body)).toBe(200);
+    expect(f.body).toMatchObject({ workspaces: 2, people: 2, needsReauth: false, minutes: 1 });
+    expect((await owner.agent.post('/ops/announcements/audience').send({ targetMode: 'filter', filter: { status: 'suspended' } })).body.workspaces).toBe(1);
+    const all = await owner.agent.post('/ops/announcements/audience').send({ targetMode: 'all' });
+    expect(all.body.workspaces).toBe(3); // a, b, e · ไม่รวม c (ลบ) และ d (ระงับ)
+    // ตัวกรองที่ไม่รู้จัก / ไม่มีตัวกรอง → 400 กันส่งผิดกลุ่ม
+    expect((await owner.agent.post('/ops/announcements/audience').send({ targetMode: 'filter', filter: { region: 'th' } })).status).toBe(400);
+    expect((await owner.agent.post('/ops/announcements/audience').send({ targetMode: 'filter' })).status).toBe(400);
+    expect((await owner.agent.post('/ops/announcements/audience').send({ targetMode: 'selected' })).status).toBe(400);
+  });
+
+  it('ตั้งเวลาตามตัวกรอง: หารายชื่อตอนถึงเวลา · Workspace ที่เพิ่งเข้าเกณฑ์ได้รับ · ประวัติแสดงจำนวนจริง', async () => {
+    const at = new Date(Date.now() + 2 * 86_400_000);
+    const r = await owner.agent.post('/ops/announcements').send({ targetMode: 'filter', filter: { plan: 'team_s' }, title: 'ปรับปรุงระบบคืนวันเสาร์', message: 'ระหว่างนี้เข้าใช้งานไม่ได้ประมาณ 2 ชั่วโมง', channels: ['banner', 'email'], scheduledAt: at.toISOString() });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(r.body).toMatchObject({ status: 'scheduled', target: { mode: 'filter', filter: { plan: 'team_s' } }, workspaces: { count: 0 } });
+    expect(await targets(r.body.id)).toEqual([]);
+    const late = await customer(t, 'latecomer-demo', { plan: 'team_s', status: 'active' });
+    expect(await svc.tick(new Date(at.getTime() + 1000))).toEqual({ sent: 1 });
+    const got = (await targets(r.body.id)).map((x) => x.workspace_id).sort();
+    expect(got).toEqual([b.id, e.id, late.id].sort());
+    expect((await owner.agent.get(`/ops/announcements/${r.body.id}`)).body).toMatchObject({ status: 'sent', workspaces: { count: 3 }, recipients: 3 });
+    expect((await auditOf(late.id, 'ops.announcement')).at(-1)).toContain('[Friday Olive Owner] ประกาศ "ปรับปรุงระบบคืนวันเสาร์"');
+    expect((await deliveries(r.body.id)).map((x) => x.target_ref).sort()).toEqual(['owner@latecomer-demo.example.com', 'owner@river-demo.example.com', 'owner@sprout-demo.example.com']);
+    const st = (await t.owner.query(`SELECT reason FROM staff_audit_logs WHERE target_id = $1 AND action = 'ops.announcement'`, [r.body.id])).rows[0].reason;
+    expect(st).toContain('ทุก Workspace ตามตัวกรอง (Team S) (ตอนนี้ 2 Workspace)');
+  });
+
+  it('ลูกค้าทุกรายเกิน 1,000 Workspace ต้องแตะกุญแจ', async () => {
+    await t.owner.query(`INSERT INTO workspaces (slug, name, status) SELECT 'bulk-' || g, 'Bulk ' || g, 'active' FROM generate_series(1, 1001) g`);
+    const n = await owner.agent.post('/ops/announcements/audience').send({ targetMode: 'all' });
+    expect(n.body).toMatchObject({ needsReauth: true });
+    expect(n.body.workspaces).toBeGreaterThan(1000);
+    const body = { targetMode: 'all', title: 'ประกาศถึงทุกคน', message: 'ข้อความสมมติ', channels: ['banner'] };
+    const no = await owner.agent.post('/ops/announcements').send(body);
+    expect(no.status).toBe(401);
+    expect(no.body.error.code).toBe('reauth_required');
+    await reauth(owner);
+    const ok = await owner.agent.post('/ops/announcements').send(body);
+    expect(ok.status, JSON.stringify(ok.body)).toBe(201);
+    expect(ok.body).toMatchObject({ status: 'sent', target: { mode: 'all' } });
+    expect(ok.body.workspaces.count).toBe(n.body.workspaces);
+    await t.owner.query(`DELETE FROM workspaces WHERE slug LIKE 'bulk-%'`);
   });
 });

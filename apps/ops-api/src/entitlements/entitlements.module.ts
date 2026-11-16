@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, Module, Param, ParseIntPipe, Post, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
+import { AnnouncementsModule } from '../announcements/announcements.module.js';
 import { type OpsRequest, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
 import { EntitlementsService, type Gated, OverrideBody, PreviewBody, ReferBody, RestoreBody, RevokeBody, VersionBody } from './entitlements.service.js';
@@ -68,5 +69,5 @@ export class EntitlementsController {
   }
 }
 
-@Module({ controllers: [EntitlementsController], providers: [EntitlementsService] })
+@Module({ imports: [AnnouncementsModule], controllers: [EntitlementsController], providers: [EntitlementsService] })
 export class EntitlementsModule {}

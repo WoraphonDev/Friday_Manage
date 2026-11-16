@@ -10,11 +10,11 @@ import { Mailer } from '../mail.js';
 import { BusinessClock, DEFAULT_HOURS, type Dur } from './clock.js';
 
 const s = schema;
-const { SUPPORT_GROUPS, SUPPORT_PRESENCE, SUPPORT_RULE_TARGETS, TICKET_CATEGORIES } = schema;
+const { SUPPORT_GROUPS, SUPPORT_RULE_TARGETS, TICKET_CATEGORIES } = schema;
 type Row = Record<string, unknown>;
 const PLANS = ['free', 'team_s', 'team_m', 'team_l', 'enterprise'] as const;
 const PLAN_NAMES: Record<string, string> = { free: 'Free', team_s: 'Team S', team_m: 'Team M', team_l: 'Team L', enterprise: 'Enterprise' };
-const ACTIVE = sql.raw(`('open', 'pending_customer', 'pending_dev')`);
+export const ACTIVE = sql.raw(`('open', 'pending_customer', 'pending_dev')`);
 /** เตือนผู้รับผิดชอบเมื่อเหลือเวลา 25% (Canvas · ค่าคงที่) */
 export const SLA_WARN_PCT = 25;
 
@@ -33,13 +33,23 @@ export const SupportConfig = z
     sla: z.object(Object.fromEntries(PLANS.map((p) => [p, PlanSla])) as Record<(typeof PLANS)[number], typeof PlanSla>).strict(),
     hours: z.array(z.object({ open: z.boolean(), from: HHMM, to: HHMM }).strict()).length(7),
     thaiHolidays: z.boolean(),
+    // รอบ 4 · S4 เมื่อพนักงานไม่อยู่ (ค่าที่บันทึกก่อนรอบ 4 ไม่มี จึงใช้ค่าเริ่มต้น)
+    /** ออกจากระบบ / หมดเวลาเข้าระบบ (8 ชม.) → ออฟไลน์ */
+    offlineOnLogout: z.boolean().default(true),
+    /** ไม่มีการใช้งานนาน → ออฟไลน์ */
+    idleOffline: z.boolean().default(true),
+    idleMinutes: z.number().int().min(5).max(240).default(15),
+    /** แจกเรื่องในคิวกลางใหม่ทุก 1 นาที และทันทีที่มีคนกลับมาออนไลน์ */
+    redispatch: z.boolean().default(true),
+    /** ลูกค้าตอบเรื่องที่ปิดแล้ว แต่คนเดิมออฟไลน์ / ลา → คืนเข้าคิว */
+    reopenToQueue: z.boolean().default(true),
   })
   .strict()
   .superRefine((c, ctx) => {
     c.hours.forEach((h, i) => h.open && h.to <= h.from && ctx.addIssue({ code: 'custom', path: ['hours', i, 'to'], message: 'เวลาปิดต้องหลังเวลาเปิด' }));
     if (!c.hours.some((h) => h.open)) ctx.addIssue({ code: 'custom', path: ['hours'], message: 'ต้องเปิดทำการอย่างน้อย 1 วัน' });
   });
-export type SupportConfig = z.infer<typeof SupportConfig>;
+export type SupportConfig = z.output<typeof SupportConfig>;
 
 /** ค่าเริ่มต้นตาม Canvas (SupportSettings) · แถวในฐานเก็บเฉพาะค่าที่ Owner บันทึก */
 export const DEFAULT_CONFIG: SupportConfig = {
@@ -57,6 +67,11 @@ export const DEFAULT_CONFIG: SupportConfig = {
   },
   hours: DEFAULT_HOURS,
   thaiHolidays: true,
+  offlineOnLogout: true,
+  idleOffline: true,
+  idleMinutes: 15,
+  redispatch: true,
+  reopenToQueue: true,
 };
 
 const AgentInput = z.object({ staffId: z.uuid(), groups: z.array(z.enum(SUPPORT_GROUPS)).max(4), cap: z.number().int().min(1).max(99).nullable() }).strict();
@@ -73,7 +88,6 @@ export const RuleBody = z
   .strict();
 export const RulePatch = z.object({ enabled: z.boolean() }).strict();
 export const ReorderBody = z.object({ ids: z.array(z.uuid()).min(1).max(200) }).strict();
-export const PresenceBody = z.object({ presence: z.enum(SUPPORT_PRESENCE), note: z.string().trim().max(80).optional() }).strict();
 export const AccountsBody = z.object({ workspaceIds: z.array(z.uuid()).max(200) }).strict();
 export const CannedBody = z
   .object({ title: z.string().trim().min(2).max(80), body: z.string().trim().min(2).max(5000), tag: z.string().trim().max(30).optional() })
@@ -128,6 +142,11 @@ export class SupportSettingsService {
     return this.holidayCache;
   }
 
+  /** ปฏิทินของระบบเปลี่ยน (S1) → อ่านใหม่ทันที */
+  forgetHolidays() {
+    this.holidayCache = undefined;
+  }
+
   async clock(cfg?: SupportConfig) {
     const c = cfg ?? (await this.config());
     return new BusinessClock(c.hours, c.thaiHolidays ? (await this.holidays()).days : new Set());
@@ -149,9 +168,10 @@ export class SupportSettingsService {
 
   // ── หน้าตั้งค่า ──────────────────────────────────────────
 
-  private async agents() {
-    return this.rows<{ staffId: string; name: string; email: string; groups: string[]; cap: number | null; presence: string; presenceNote: string | null; presenceAt: string | null; load: number; accounts: { id: string; name: string }[] }>(sql`
+  async agents() {
+    return this.rows<{ staffId: string; name: string; email: string; groups: string[]; cap: number | null; presence: string; presenceNote: string | null; presenceAt: string | null; presenceReason: string | null; lastSeenAt: string | null; load: number; accounts: { id: string; name: string }[] }>(sql`
       select st.id as "staffId", st.name, st.email, coalesce(a.groups, '{}') as groups, a.cap, coalesce(a.presence, 'online') as presence, a.presence_note as "presenceNote", a.presence_at as "presenceAt",
+        a.presence_reason as "presenceReason", a.last_seen_at as "lastSeenAt",
         (select count(*)::int from support_tickets k where k.assignee_id = st.id and k.status in ${ACTIVE}) as load,
         coalesce((select json_agg(json_build_object('id', w.id, 'name', w.name) order by w.name) from support_account_managers m join workspaces w on w.id = m.workspace_id where m.staff_id = st.id), '[]') as accounts
       from staff_users st left join support_agents a on a.staff_id = st.id
@@ -196,6 +216,10 @@ export class SupportSettingsService {
     }
     if (JSON.stringify(before.hours) !== JSON.stringify(next.hours)) diff.push('เวลาทำการ');
     if (before.thaiHolidays !== next.thaiHolidays) diff.push(next.thaiHolidays ? 'ใช้วันหยุดราชการไทย' : 'ไม่ใช้วันหยุดราชการไทย');
+    if (before.offlineOnLogout !== next.offlineOnLogout) diff.push(next.offlineOnLogout ? 'ออกจากระบบแล้วเป็นออฟไลน์อัตโนมัติ' : 'ออกจากระบบแล้วไม่เปลี่ยนสถานะ');
+    if (before.idleOffline !== next.idleOffline || before.idleMinutes !== next.idleMinutes) diff.push(next.idleOffline ? `ไม่มีการใช้งาน ${next.idleMinutes} นาทีเป็นออฟไลน์` : 'ไม่เปลี่ยนเป็นออฟไลน์เมื่อไม่มีการใช้งาน');
+    if (before.redispatch !== next.redispatch) diff.push(next.redispatch ? 'แจกเรื่องในคิวกลางใหม่อัตโนมัติ' : 'ไม่แจกเรื่องในคิวกลางใหม่');
+    if (before.reopenToQueue !== next.reopenToQueue) diff.push(next.reopenToQueue ? 'ลูกค้าตอบเรื่องที่ปิดแล้วแต่คนเดิมออฟไลน์ → คืนเข้าคิว' : 'ลูกค้าตอบเรื่องที่ปิดแล้ว → คนเดิมเสมอ');
 
     const current = new Map((await this.agents()).map((a) => [a.staffId, a]));
     const agentChanges = input.agents.filter((a) => {
@@ -308,42 +332,6 @@ export class SupportSettingsService {
   }
 
   // ── สถานะพนักงานและการแจกงาน ──────────────────────────────
-
-  /** ทีมตอนนี้ (หน้า Support) */
-  async team() {
-    const [cfg, agents] = await Promise.all([this.config(), this.agents()]);
-    return { mode: cfg.mode, defaultCap: cfg.defaultCap, items: agents.map(({ accounts: _a, email: _e, ...a }) => ({ ...a, cap: a.cap ?? cfg.defaultCap })) };
-  }
-
-  /** เปลี่ยนสถานะของตัวเอง · ออฟไลน์/ลา ทำตามที่ตั้งไว้ (คืนงานเข้าคิว / แจ้งหัวหน้าทีม / คงไว้) */
-  async setPresence(staff: Staff, input: z.infer<typeof PresenceBody>) {
-    const before = (await this.agents()).find((a) => a.staffId === staff.id);
-    if (!before) throw new AppError(403, 'not_support_agent', 'ตั้งสถานะได้เฉพาะพนักงาน Support');
-    const note = input.note || null;
-    await this.db
-      .insert(s.supportAgents)
-      .values({ staffId: staff.id, presence: input.presence, presenceNote: note, presenceAt: new Date() })
-      .onConflictDoUpdate({ target: s.supportAgents.staffId, set: { presence: input.presence, presenceNote: note, presenceAt: new Date() } });
-    let released = 0;
-    let leadsNotified = 0;
-    const away = (p: string) => p === 'offline' || p === 'leave';
-    if (away(input.presence) && !away(before.presence) && before.load > 0) {
-      const cfg = await this.config();
-      if (cfg.onAway === 'queue') {
-        // คืนเฉพาะเรื่องที่รอทีม Friday ตอบ · เรื่องที่รอลูกค้า/ทีมพัฒนายังอยู่กับคนเดิม
-        const r = await this.db
-          .update(s.supportTickets)
-          .set({ assigneeId: null, updatedAt: new Date() })
-          .where(and(eq(s.supportTickets.assigneeId, staff.id), eq(s.supportTickets.status, 'open')))
-          .returning({ id: s.supportTickets.id });
-        released = r.length;
-      } else if (cfg.onAway === 'ask_lead') {
-        leadsNotified = await this.notifyLeads(`[Support] ${staff.name} ${input.presence === 'leave' ? 'ลา' : 'ออฟไลน์'} · มีงานค้าง ${before.load} เรื่อง`, `${staff.name} เปลี่ยนสถานะเป็น${input.presence === 'leave' ? 'ลา' : 'ออฟไลน์'} และยังมีงานค้าง ${before.load} เรื่อง\nตรวจและโอนงานได้ที่หน้า Support`, staff.id);
-      }
-    }
-    await staffAudit(this.db, staff, 'support.presence_changed', `สถานะ ${before.presence} → ${input.presence}${note ? ` · ${note}` : ''}${released ? ` · คืนงานเข้าคิว ${released} เรื่อง` : ''}`, { type: 'staff_user', id: staff.id });
-    return { presence: input.presence, note, released, leadsNotified };
-  }
 
   /** อีเมลถึงหัวหน้าทีม (กลุ่ม lead) · ไม่มีหัวหน้าทีม = Owner */
   async notifyLeads(subject: string, text: string, except?: string) {

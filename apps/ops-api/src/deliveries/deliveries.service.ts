@@ -12,6 +12,8 @@ const d = s.notificationDeliveries;
 const HOUR = 3_600_000;
 /** API ลูกค้าลองส่งรวมกี่ครั้ง (JOB_ATTEMPTS ใน apps/api/src/queue/jobs.ts) */
 const ATTEMPTS = 4;
+/** ข้อความภายในที่ปุ่ม "แนบใน Ticket" สร้าง (attach) ขึ้นต้นด้วยเลขการส่ง */
+const ATTACH_RE = '^แนบประวัติการส่ง ([0-9a-f-]{36})';
 
 export const STATUSES = ['ok', 'fail', 'retry', 'quiet', 'blocked', 'queued'] as const;
 export type UiStatus = (typeof STATUSES)[number];
@@ -89,26 +91,41 @@ export class DeliveriesService {
   constructor(@Inject(OPS_DB) private readonly db: Db) {}
 
   async list(staff: Staff, q: z.infer<typeof ListQuery>) {
-    const like = q.q ? `%${q.q.replace(/[%_\\]/g, (c) => `\\${c}`)}%` : null;
+    // S7: ช่องค้นรับ "#เลข Ticket" และ "req_…" นอกจากอีเมล / Workspace / Issue key / เลขการส่ง
+    const ticketNo = q.q?.match(/^#\s*(\d{1,9})$/)?.[1];
+    const requestId = q.q && /^req_[A-Za-z0-9_-]{1,80}$/.test(q.q) ? q.q : null;
+    const ticket = ticketNo ? await this.ticketSummary(staff, Number(ticketNo)) : null;
+    const like = q.q && !ticketNo && !requestId ? `%${q.q.replace(/[%_\\]/g, (c) => `\\${c}`)}%` : null;
+    let search: SQL | undefined;
+    if (ticketNo) search = ticket ? this.ticketWhere(ticket) : sql`false`;
+    else if (requestId) search = eq(s.notifications.requestId, requestId);
+    else if (like)
+      search = or(
+        // ชื่อปลายทางของอีเมลคืออีเมลเอง · วิศวกรค้นด้วยอีเมลไม่ได้
+        seesEmail(staff) ? ilike(d.targetLabel, like) : and(ilike(d.targetLabel, like), sql`${d.channel} <> 'email'`),
+        seesEmail(staff) ? ilike(d.targetRef, like) : undefined,
+        ilike(s.workspaces.name, like),
+        ilike(s.workspaces.slug, like),
+        sql`${s.notifications.payload}->>'issueKey' ILIKE ${like}`,
+        sql`${d.id}::text ILIKE ${like}`,
+      );
     const where = and(
       q.channel ? (q.channel === 'line' ? inArray(d.channel, ['line', 'line_group']) : eq(d.channel, q.channel)) : undefined,
       statusWhere(q.status),
       q.workspaceId ? eq(d.workspaceId, q.workspaceId) : undefined,
       q.before ? lt(d.createdAt, new Date(q.before)) : undefined,
-      like
-        ? or(
-            // ชื่อปลายทางของอีเมลคืออีเมลเอง · วิศวกรค้นด้วยอีเมลไม่ได้
-            seesEmail(staff) ? ilike(d.targetLabel, like) : and(ilike(d.targetLabel, like), sql`${d.channel} <> 'email'`),
-            seesEmail(staff) ? ilike(d.targetRef, like) : undefined,
-            ilike(s.workspaces.name, like),
-            ilike(s.workspaces.slug, like),
-            sql`${s.notifications.payload}->>'issueKey' ILIKE ${like}`,
-            sql`${d.id}::text ILIKE ${like}`,
-          )
-        : undefined,
+      search,
     );
     const rows = await this.db
-      .select({ d, ws: { id: s.workspaces.id, name: s.workspaces.name, slug: s.workspaces.slug }, eventType: s.notifications.eventType, issueKey: sql<string | null>`${s.notifications.payload}->>'issueKey'` })
+      .select({
+        d,
+        ws: { id: s.workspaces.id, name: s.workspaces.name, slug: s.workspaces.slug },
+        eventType: s.notifications.eventType,
+        issueKey: sql<string | null>`${s.notifications.payload}->>'issueKey'`,
+        title: sql<string | null>`coalesce(${s.notifications.payload}->>'title', ${s.notifications.payload}->>'subject')`,
+        requestId: s.notifications.requestId,
+        payloadTicketId: sql<string | null>`${s.notifications.payload}->>'ticketId'`,
+      })
       .from(d)
       .innerJoin(s.workspaces, eq(s.workspaces.id, d.workspaceId))
       .innerJoin(s.notifications, eq(s.notifications.id, d.notificationId))
@@ -116,20 +133,84 @@ export class DeliveriesService {
       .orderBy(desc(d.createdAt), desc(d.id))
       .limit(q.limit + 1);
     const page = rows.slice(0, q.limit);
+    const links = await this.ticketLinks(page.map((r) => ({ id: r.d.id, ticketId: r.payloadTicketId })));
     return {
       stats: await this.stats(),
+      search: ticketNo ? { kind: 'ticket' as const, number: Number(ticketNo), ticket: ticket && { id: ticket.id, number: ticket.number, createdAt: ticket.createdAt, since: ticket.since, workspace: ticket.workspaceId ? { id: ticket.workspaceId, name: ticket.workspaceName } : null, requesterName: ticket.requesterName, requesterEmail: ticket.requesterEmail, requestId: ticket.requestId } } : requestId ? { kind: 'request' as const, requestId } : null,
       items: page.map((r) => ({
         id: r.d.id,
         createdAt: r.d.createdAt,
         channel: r.d.channel,
         to: this.label(staff, r.d),
         workspace: r.ws,
-        event: { type: r.eventType, issueKey: r.issueKey },
+        event: { type: r.eventType, issueKey: r.issueKey, title: r.title },
         status: uiStatus(r.d),
         attempts: r.d.attempts,
+        requestId: r.requestId,
+        // "ผูกกับ": แนบใน Ticket / เกิดจาก Ticket ก่อน แล้วค่อยเป็นคำขอที่ทำให้เกิดการส่ง
+        linkedTo: links.get(r.d.id) ?? (r.requestId ? { kind: 'request' as const, requestId: r.requestId } : null),
       })),
       nextBefore: rows.length > q.limit ? page.at(-1)!.d.createdAt : null,
     };
+  }
+
+  /** สรุป Ticket สำหรับแถบข้อมูลเหนือผลค้น (S7) · requestId มาจากบริบทที่ลูกค้าส่งมากับข้อความแรก */
+  private async ticketSummary(staff: Staff, number: number) {
+    const [t] = await this.db
+      .select({ id: s.supportTickets.id, number: s.supportTickets.number, createdAt: s.supportTickets.createdAt, workspaceId: s.supportTickets.workspaceId, workspaceName: s.workspaces.name, requesterUserId: s.supportTickets.requesterUserId, requesterEmail: sql<string | null>`coalesce(${s.users.email}, ${s.supportTickets.requesterEmail})`, requesterName: s.users.displayName })
+      .from(s.supportTickets)
+      .leftJoin(s.workspaces, eq(s.workspaces.id, s.supportTickets.workspaceId))
+      .leftJoin(s.users, eq(s.users.id, s.supportTickets.requesterUserId))
+      .where(eq(s.supportTickets.number, number));
+    if (!t) return null;
+    const [ctx] = (
+      await this.db.execute(sql`
+        select a->>'requestId' as "requestId" from support_ticket_messages m, jsonb_array_elements(m.attachments) a
+        where m.ticket_id = ${t.id} and m.author_kind = 'customer' and a->>'kind' = 'context' and a->>'requestId' is not null
+        order by m.created_at limit 1`)
+    ).rows as { requestId: string }[];
+    return {
+      ...t,
+      requesterEmail: t.requesterEmail && !seesEmail(staff) ? maskEmail(t.requesterEmail) : t.requesterEmail,
+      rawEmail: t.requesterEmail,
+      requestId: ctx?.requestId ?? null,
+      since: new Date(t.createdAt.getTime() - 7 * 24 * HOUR),
+    };
+  }
+
+  /** การส่งที่เกี่ยวกับ Ticket: ถึงผู้เปิดตั้งแต่ 7 วันก่อนเปิดเรื่อง + ที่แนบไว้ใน Ticket + เกิดจาก Ticket / requestId เดียวกัน */
+  private ticketWhere(t: NonNullable<Awaited<ReturnType<DeliveriesService['ticketSummary']>>>) {
+    const toRequester = or(
+      t.requesterUserId ? eq(s.notifications.recipientId, t.requesterUserId) : undefined,
+      t.rawEmail ? and(eq(d.channel, 'email'), sql`lower(${d.targetRef}) = lower(${t.rawEmail})`) : undefined,
+    );
+    return or(
+      toRequester ? and(toRequester, sql`${d.createdAt} >= ${t.since}`) : undefined,
+      sql`${d.id} in (select substring(m.body from ${ATTACH_RE})::uuid from support_ticket_messages m where m.ticket_id = ${t.id} and m.internal and m.body ~ ${ATTACH_RE})`,
+      sql`${s.notifications.payload}->>'ticketId' = ${t.id}`,
+      t.requestId ? eq(s.notifications.requestId, t.requestId) : undefined,
+    );
+  }
+
+  /** เลข Ticket ที่ผูกกับการส่ง: แนบด้วยปุ่ม "แนบใน Ticket" หรือเป็นแจ้งเตือนของ Ticket นั้นเอง */
+  private async ticketLinks(items: { id: string; ticketId: string | null }[]) {
+    const out = new Map<string, { kind: 'ticket'; number: number }>();
+    if (!items.length) return out;
+    const ids = items.map((i) => i.id);
+    const attached = (
+      await this.db.execute(sql`
+        select substring(m.body from ${ATTACH_RE}) as "deliveryId", min(t.number)::int as number
+        from support_ticket_messages m join support_tickets t on t.id = m.ticket_id
+        where m.internal and m.body ~ ${ATTACH_RE} and substring(m.body from ${ATTACH_RE}) in (${sql.join(ids.map((x) => sql`${x}`), sql`, `)})
+        group by 1`)
+    ).rows as { deliveryId: string; number: number }[];
+    for (const a of attached) out.set(a.deliveryId, { kind: 'ticket', number: a.number });
+    const own = [...new Set(items.filter((i) => i.ticketId && !out.has(i.id) && z.uuid().safeParse(i.ticketId).success).map((i) => i.ticketId!))];
+    if (own.length) {
+      const nums = new Map((await this.db.select({ id: s.supportTickets.id, number: s.supportTickets.number }).from(s.supportTickets).where(inArray(s.supportTickets.id, own))).map((r) => [r.id, r.number]));
+      for (const i of items) if (i.ticketId && !out.has(i.id) && nums.has(i.ticketId)) out.set(i.id, { kind: 'ticket', number: nums.get(i.ticketId)! });
+    }
+    return out;
   }
 
   private label(staff: Staff, r: Pick<Row, 'channel' | 'targetLabel' | 'targetRef'>) {

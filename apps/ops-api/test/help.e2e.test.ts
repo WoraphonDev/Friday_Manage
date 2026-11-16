@@ -2,7 +2,7 @@
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { HelpService } from '../src/help/help.service.js';
-import { customer, staff, type Staff, startOps, type TestOps } from './helpers.js';
+import { customer, OWNER_URL, staff, type Staff, startOps, type TestOps } from './helpers.js';
 
 let t: TestOps;
 let owner: Staff;
@@ -12,14 +12,19 @@ let engineer: Staff;
 const cat: Record<string, string> = {};
 let articleId: string;
 
-const APP_URL = process.env.DATABASE_APP_URL ?? 'postgres://friday_api:friday_api_dev@localhost:54329/friday';
-/** อ่านบทความแบบลูกค้า (friday_app ภายใต้ RLS และ grant รายคอลัมน์) */
+/**
+ * อ่านบทความแบบลูกค้า (friday_app ภายใต้ RLS และ grant รายคอลัมน์) · ใช้ฐานข้อมูลเดียวกับ test อื่น (OWNER_URL)
+ * แล้ว SET ROLE friday_app แทนการต่อ DATABASE_APP_URL ซึ่งอาจชี้ฐานข้อมูลอื่น (เคยล้ม 4 ข้อเมื่อฐานข้อมูลในเครื่องไม่ใช่ friday)
+ */
 async function asCustomer(q: string, params: unknown[] = []) {
-  const c = new pg.Client({ connectionString: APP_URL });
+  const c = new pg.Client({ connectionString: OWNER_URL });
   await c.connect();
   try {
+    await c.query('BEGIN');
+    await c.query('SET LOCAL ROLE friday_app');
     return (await c.query(q, params)).rows;
   } finally {
+    await c.query('ROLLBACK').catch(() => undefined);
     await c.end();
   }
 }

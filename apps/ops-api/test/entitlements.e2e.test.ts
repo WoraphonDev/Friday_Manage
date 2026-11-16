@@ -186,3 +186,44 @@ describe('ปรับเฉพาะราย', () => {
     expect((await svc.tick()).warned).toBe(0);
   });
 });
+
+describe('S9 · ประกาศถึงลูกค้าที่ถูกกระทบ (C8) ไปกับคำขออนุมัติ', () => {
+  // เทียบกับเวอร์ชัน 1 ที่ใช้อยู่ · ปิด Guest ของ Team S: craft-demo มี Guest จึงถูกกระทบ
+  const draft = () => matrix({ team_s: { seats: 12, automation_runs: 6000, guests: false } });
+  const announcement = { title: 'Team S จะไม่รองรับ Guest ตั้งแต่ 1 ม.ค. 2570', message: 'Workspace {ชื่อ Workspace} มี Guest อยู่ · อัปเกรดเป็น Team M ก่อนวันที่มีผล' };
+  const count = async () => Number((await t.owner.query(`SELECT count(*) FROM announcements`)).rows[0].count);
+
+  it('ดูก่อนบันทึก: รายชื่อลูกค้าที่ถูกกระทบครบทุกราย และเกณฑ์แจ้งล่วงหน้า 30 วัน', async () => {
+    await customer(t, 'calm-demo', { plan: 'team_s', status: 'active' });
+    const r = await finance.agent.post('/ops/entitlements/preview').send({ matrix: draft() });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body.affectedWorkspaces).toEqual([{ id: a.id, name: 'Co craft-demo', slug: 'craft-demo', plan: 'team_s', keys: ['guests'] }]);
+    expect(r.body.noticeDays).toBe(30);
+  });
+
+  it('แจ้งล่วงหน้าไม่ถึง 30 วัน = คำเตือน · ปฏิเสธแล้วร่างประกาศถูกยกเลิก (ไม่ส่ง)', async () => {
+    const before = await count();
+    const r = await finance.agent.post('/ops/entitlements/versions').send({ matrix: draft(), effectiveAt: iso(5), reason: 'เลิกขาย Guest ใน Team S', announcement });
+    expect(r.status, JSON.stringify(r.body)).toBe(202);
+    expect(r.body.warnings).toEqual([expect.objectContaining({ code: 'notice_short' })]);
+    expect(r.body.pendingApproval.payload?.announcement ?? (await t.owner.query(`SELECT payload FROM approval_requests WHERE id = $1`, [r.body.pendingApproval.id])).rows[0].payload.announcement).toMatchObject({ title: announcement.title });
+    const no = await owner.agent.post(`/ops/approvals/${r.body.pendingApproval.id}/reject`).send({ note: 'แจ้งล่วงหน้าไม่พอ' });
+    expect(no.status, JSON.stringify(no.body)).toBe(200);
+    expect(await count()).toBe(before);
+  });
+
+  it('อนุมัติแล้วส่งประกาศถึงลูกค้าที่ถูกกระทบ ณ วันที่อนุมัติ · อยู่ในประวัติประกาศ', async () => {
+    const before = await count();
+    const r = await finance.agent.post('/ops/entitlements/versions').send({ matrix: draft(), effectiveAt: iso(46), reason: 'เลิกขาย Guest ใน Team S', announcement: { ...announcement, channels: ['banner'] } });
+    expect(r.status).toBe(202);
+    expect(r.body.warnings).toBeUndefined();
+    expect(await count()).toBe(before);
+    const done = await approve(owner2, r.body.pendingApproval.id);
+    expect(done.result.announcement).toMatchObject({ sent: true, workspaces: 1 });
+    const list = await owner.agent.get('/ops/announcements');
+    const item = list.body.items.find((x: { id: string }) => x.id === done.result.announcement.id);
+    expect(item).toMatchObject({ title: announcement.title, status: 'sent', channels: ['banner'], workspaces: { count: 1, ids: [a.id] } });
+    const banner = (await t.owner.query(`SELECT banner_message FROM announcement_targets WHERE announcement_id = $1`, [item.id])).rows[0].banner_message;
+    expect(banner).toContain('Workspace Co craft-demo มี Guest อยู่');
+  });
+});

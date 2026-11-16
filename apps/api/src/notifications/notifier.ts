@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { type Db, schema } from '@friday/db';
 import { and, eq, inArray, sql } from 'drizzle-orm';
+import { currentRequestId } from '../core/events.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 
 export interface NotifyInput {
@@ -25,6 +26,8 @@ export interface NotifyInput {
    * ไม่ตัดผู้รับทิ้ง เพราะการปิด Inbox ต้องไม่ทำให้ช่องทางอื่นที่เปิดไว้หยุดตาม (BUG-13)
    */
   inAppOff?: Iterable<string>;
+  /** requestId ของคำขอที่ทำให้เกิดแจ้งเตือน (S7) · ไม่ส่ง = อ่านจากคำขอ HTTP ปัจจุบัน */
+  requestId?: string;
 }
 
 /**
@@ -53,6 +56,7 @@ export class Notifier {
       }
       const payload = n.dedupeKey ? { ...n.payload, dedupeKey: n.dedupeKey } : n.payload;
       const off = new Set(n.inAppOff ?? []);
+      const requestId = n.requestId ?? currentRequestId() ?? null;
       await this.system.insert(schema.notifications).values(
         recipients.map((recipientId) => ({
           workspaceId: n.workspaceId,
@@ -64,6 +68,7 @@ export class Notifier {
           payload,
           reason: typeof n.reason === 'function' ? n.reason(recipientId) : n.reason,
           inApp: !off.has(recipientId),
+          requestId,
         })),
       );
     } catch (err) {

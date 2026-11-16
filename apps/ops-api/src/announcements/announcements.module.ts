@@ -41,7 +41,8 @@ export class AnnouncementsController {
   @Roles('owner')
   @Post('announcements')
   create(@Req() req: OpsRequest, @Body() body: unknown) {
-    return this.announcements.create(req.staff!, parse(CreateBody, body));
+    // S8: ส่งถึงเกิน 1,000 Workspace ต้องแตะกุญแจ (ตรวจใน service เพราะรู้จำนวนหลังหารายชื่อ)
+    return this.announcements.create(req.staff!, parse(CreateBody, body), new Date(), !!req.reauthed);
   }
 
   @Roles('owner')

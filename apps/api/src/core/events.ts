@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { Injectable, Logger } from '@nestjs/common';
 
 /**
@@ -50,7 +51,16 @@ export interface DomainEvent {
   /** ข้อมูลของเหตุการณ์ เช่น { issueKey, title, field, from, to, userIds } */
   data: Record<string, unknown>;
   at: Date;
+  /** รอบ 4 · S7: requestId ของคำขอ HTTP ที่ทำให้เกิดเหตุการณ์ · ว่าง = Job / Worker · เติมให้เองใน publish */
+  requestId?: string;
 }
+
+/**
+ * บริบทของคำขอ HTTP ปัจจุบัน (รอบ 4 · S7) · middleware ใน NotificationsModule เปิดไว้ทุกคำขอ
+ * เก็บ req ทั้งก้อนแล้วอ่าน id ตอนใช้ เพราะ middleware ที่ตั้ง req.id (app.module) อาจทำงานทีหลัง
+ */
+export const requestContext = new AsyncLocalStorage<{ req: { id?: string } }>();
+export const currentRequestId = (): string | undefined => requestContext.getStore()?.req.id;
 
 export type EventHandler = (event: DomainEvent) => Promise<void> | void;
 
@@ -69,6 +79,7 @@ export class EventBus {
 
   async publish(events: DomainEvent | DomainEvent[]) {
     for (const e of Array.isArray(events) ? events : [events]) {
+      e.requestId ??= currentRequestId();
       for (const h of [...(this.handlers.get(e.type) ?? []), ...(this.handlers.get('*') ?? [])]) {
         try {
           await h(e);

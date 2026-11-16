@@ -1,0 +1,486 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>หน้าชำระบัตรและ PromptPay</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Storyboard: เล่าทีละขั้นจากบนลงล่าง · แต่ละขั้น = คำบรรยายซ้าย + จอจำลองขวา · วงแดง = จุดที่กด */
+:root {
+  --bg: #f5f6f7; --fg: #24272c; --soft: #3a3f45; --card: #fff; --muted: #5f656d; --faint: #7a8088;
+  --subtle: #eef0f2; --surface-2: #f8f9fa; --border: #e3e6e9; --border-strong: #cfd4d9;
+  --primary: #5b3fc4; --primary-soft: #efe9fd; --primary-border: #cbbcf6; --on-primary: #fff;
+  --tap: #e0244e; --tap-soft: rgba(224,36,78,.14);
+  --ok: #157a46; --ok-soft: #e3f5ea; --warn: #8a5a00; --warn-soft: #fdf3dc; --info: #1f5fbf; --info-soft: #e6effc;
+  --frame: #1c1f23;
+  --sans: "IBM Plex Sans Thai", "Sukhumvit Set", "Thonburi", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141517; --fg: #e8eaed; --soft: #cdd1d6; --card: #1c1e21; --muted: #a1a7ae; --faint: #868c94;
+  --subtle: #25282c; --surface-2: #202326; --border: #2e3237; --border-strong: #41464c;
+  --primary: #9d86f5; --primary-soft: #2a2442; --primary-border: #4d3f86; --on-primary: #141517;
+  --tap: #ff5c7c; --tap-soft: rgba(255,92,124,.18);
+  --ok: #7bd8a0; --ok-soft: #173525; --warn: #f0c56a; --warn-soft: #3a2f14; --info: #8fb8f5; --info-soft: #18293f;
+  --frame: #000; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #141517; --fg: #e8eaed; --soft: #cdd1d6; --card: #1c1e21; --muted: #a1a7ae; --faint: #868c94;
+  --subtle: #25282c; --surface-2: #202326; --border: #2e3237; --border-strong: #41464c;
+  --primary: #9d86f5; --primary-soft: #2a2442; --primary-border: #4d3f86; --on-primary: #141517;
+  --tap: #ff5c7c; --tap-soft: rgba(255,92,124,.18);
+  --ok: #7bd8a0; --ok-soft: #173525; --warn: #f0c56a; --warn-soft: #3a2f14; --info: #8fb8f5; --info-soft: #18293f;
+  --frame: #000; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 40px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 48px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+.intro { display: flex; flex-direction: column; gap: 12px; max-width: 720px; }
+.intro h1 { font-size: 28px; line-height: 1.3; }
+.verdict { display: inline-flex; gap: 8px; align-items: center; background: var(--primary-soft); color: var(--primary); border: 1px solid var(--primary-border); border-radius: 999px; padding: 4px 14px; font-weight: 600; font-size: 14px; align-self: flex-start; }
+.intro p { margin: 0; color: var(--soft); }
+.why { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.why div { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.why b { font-size: 14px; }
+.why span { color: var(--muted); font-size: 13.5px; }
+
+.step { display: grid; grid-template-columns: 260px minmax(0,1fr); gap: 28px; align-items: start; }
+.cap { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 16px; }
+.cap .n { width: 32px; height: 32px; border-radius: 50%; background: var(--fg); color: var(--bg); display: grid; place-items: center; font-weight: 700; }
+.cap h2 { font-size: 18px; line-height: 1.4; }
+.cap p { margin: 0; color: var(--muted); font-size: 14px; }
+.cap .new { font-size: 12px; font-weight: 600; color: var(--primary); letter-spacing: .02em; }
+
+/* จอจำลอง */
+.screen { background: var(--frame); border-radius: 12px; padding: 0 0 6px; overflow: hidden; min-width: 0; }
+.bar { display: flex; gap: 6px; align-items: center; padding: 9px 12px; }
+.bar i { width: 9px; height: 9px; border-radius: 50%; background: #4b5057; display: block; }
+.url { margin-left: 10px; flex: 1; min-width: 0; background: #2b2f35; color: #b4b9bf; font-family: var(--mono); font-size: 12px; padding: 3px 10px; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.url em { color: #e4dcff; font-style: normal; }
+.view { background: var(--bg); margin: 0 6px; border-radius: 8px; padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+.crumb { font-size: 13px; color: var(--muted); }
+.crumb a { color: var(--primary); text-decoration: none; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+.p-wait { background: var(--warn-soft); color: var(--warn); }
+.p-info { background: var(--info-soft); color: var(--info); }
+.p-ok { background: var(--ok-soft); color: var(--ok); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; padding: 9px 16px; font: 600 14px var(--sans); border: 1px solid var(--border-strong); background: var(--card); color: var(--fg); white-space: nowrap; }
+.btn.pri { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--primary); }
+.btn.wide { width: 100%; }
+
+/* วงแดงจุดที่กด */
+.tap { position: relative; display: inline-flex; }
+.tap.block { display: flex; }
+.tap::after { content: ""; position: absolute; inset: -7px; border: 3px solid var(--tap); border-radius: 14px; box-shadow: 0 0 0 6px var(--tap-soft); pointer-events: none; }
+.tap .tl { position: absolute; top: -13px; right: -12px; background: var(--tap); color: #fff; font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; z-index: 1; white-space: nowrap; }
+
+/* ขั้น 1 checkout แบบย่อ */
+.co { display: grid; grid-template-columns: minmax(0,1fr) 250px; gap: 16px; }
+.dim { opacity: .55; }
+.methods { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.m { border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 13px; display: flex; flex-direction: column; }
+.m.on { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.m b { font-size: 13.5px; }
+.sr { display: flex; justify-content: space-between; font-size: 13.5px; }
+.sr.due { font-weight: 700; font-size: 16px; border-top: 1px solid var(--border); padding-top: 10px; }
+.sec { display: flex; gap: 10px; align-items: center; }
+.num { width: 22px; height: 22px; border-radius: 50%; background: var(--subtle); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.lines { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lines span { height: 30px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); }
+
+/* ขั้น 2 หน้าใหม่ */
+.pay-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.pay-head h3 { font-size: 21px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.amount { text-align: right; }
+.amount .big { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.pay { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; }
+.k { display: flex; gap: 10px; align-items: center; }
+.k .num { background: var(--primary); color: var(--on-primary); }
+.k b { font-size: 15.5px; }
+.rows { display: flex; flex-direction: column; }
+.row { display: grid; grid-template-columns: 96px minmax(0,1fr) 28px; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.row:last-child { border-bottom: 0; }
+.row .lb { color: var(--muted); font-size: 13px; }
+.row b { font-weight: 600; overflow-wrap: anywhere; }
+.copy { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); display: grid; place-items: center; color: var(--muted); }
+.copy svg { width: 14px; height: 14px; }
+.row.ref { background: var(--primary-soft); margin: 4px -10px 0; padding: 10px; border-radius: 8px; border: 0; }
+.row.ref .lb { color: var(--primary); font-weight: 600; }
+.drop { border: 1.5px dashed var(--border-strong); border-radius: 10px; padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; background: var(--surface-2); }
+.drop svg { width: 28px; height: 28px; color: var(--faint); }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; }
+.field label { font-weight: 600; }
+.input { border: 1px solid var(--input, var(--border-strong)); border-radius: 8px; padding: 8px 12px; background: var(--card); display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.later { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 12px; }
+.later a { color: var(--primary); text-decoration: none; }
+.file { display: flex; gap: 12px; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--surface-2); }
+.thumb { width: 52px; height: 68px; border-radius: 6px; background: linear-gradient(180deg, var(--ok-soft) 0 30%, var(--card) 30%); border: 1px solid var(--border); display: grid; place-items: center; }
+.thumb i { width: 20px; height: 20px; border-radius: 50%; background: var(--ok); display: block; opacity: .8; }
+.file .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 13.5px; }
+.file .meta b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* มือถือ */
+.duo { display: grid; grid-template-columns: minmax(0,1fr) 250px; gap: 20px; align-items: start; }
+.phone { background: var(--frame); border-radius: 26px; padding: 10px; }
+.phone .view { margin: 0; border-radius: 18px; padding: 14px; gap: 12px; font-size: 13px; }
+.phone .card { padding: 12px; gap: 10px; }
+.phone .row { grid-template-columns: 74px minmax(0,1fr) 26px; font-size: 12.5px; padding: 7px 0; }
+.phone .row.ref { margin: 2px -6px 0; padding: 8px 6px; }
+.phone .big { font-size: 22px; font-weight: 700; }
+.phone .drop { padding: 14px 10px; }
+.phone-cap { font-size: 12.5px; color: var(--muted); text-align: center; margin-top: 8px; }
+
+/* ขั้น 4 สำเร็จ */
+.done { align-items: flex-start; max-width: 560px; }
+.done h3 { font-size: 20px; }
+.done ul { margin: 0; padding-left: 20px; color: var(--soft); font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ขั้น 5 billing */
+.todo { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border: 1px solid var(--border); border-left: 3px solid var(--warn); border-radius: 8px; padding: 12px 14px; background: var(--card); }
+.todo div { display: flex; flex-direction: column; font-size: 14px; }
+
+.ask { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; display: flex; flex-direction: column; gap: 10px; max-width: 760px; }
+.ask h2 { font-size: 18px; }
+.ask ol { margin: 0; padding-left: 20px; color: var(--soft); display: flex; flex-direction: column; gap: 6px; }
+
+@media (max-width: 900px) {
+  .step { grid-template-columns: 1fr; gap: 14px; }
+  .cap { position: static; }
+  .duo { grid-template-columns: 1fr; }
+  .phone { max-width: 280px; margin: 0 auto; }
+  .why { grid-template-columns: 1fr; }
+}
+@media (max-width: 680px) {
+  .co, .pay { grid-template-columns: 1fr; }
+  .view { padding: 14px; }
+  .methods { grid-template-columns: 1fr; }
+  .amount { text-align: left; }
+}
+/* เพิ่มสำหรับ QR / บัตร */
+.cf { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+.cf .full { grid-column: 1 / -1; }
+.cf .field label { font-size: 13px; }
+.in { border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 12px; background: var(--card); font-family: var(--mono); font-size: 13.5px; display: flex; align-items: center; gap: 8px; min-height: 38px; color: var(--fg); }
+.in.ph { color: var(--faint); }
+.in.sans { font-family: var(--sans); }
+.in.bad { border-color: var(--tap); box-shadow: 0 0 0 1px var(--tap); }
+.in .sp { flex: 1; }
+.brand { font: 700 10.5px var(--sans); letter-spacing: .04em; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-strong); color: var(--soft); }
+.brands { display: flex; gap: 6px; flex-wrap: wrap; }
+.fe { color: var(--tap); font-size: 12px; }
+.otp { max-width: 360px; margin: 0 auto; background: var(--card); border: 1px solid var(--border-strong); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.18); }
+.otp .bank { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); }
+.otp .digits { display: flex; gap: 6px; }
+.otp .digits span { flex: 1; height: 40px; border: 1px solid var(--border-strong); border-radius: 8px; display: grid; place-items: center; font: 600 16px var(--mono); }
+.scrim { background: rgba(20,21,23,.45); border-radius: 8px; padding: 28px 12px; }
+.qrbox { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+.qr { width: 150px; height: 150px; flex: none; border: 1px solid var(--border-strong); border-radius: 10px; background: #fff; padding: 10px; position: relative; }
+.qr i { display: block; width: 100%; height: 100%; background:
+  repeating-conic-gradient(#24272c 0 25%, #fff 0 50%) 0 0/16px 16px; border-radius: 2px; }
+.qr.exp i { filter: blur(3px); opacity: .35; }
+.qr .over { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font-weight: 700; font-size: 13px; color: #24272c; }
+.qrtext { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 160px; font-size: 13.5px; }
+.qrtext .big { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.timer { font-family: var(--mono); font-size: 13px; color: var(--soft); }
+.wait { display: flex; gap: 10px; align-items: center; color: var(--primary); font-weight: 600; }
+.wait i { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); display: block; box-shadow: 0 0 0 5px var(--primary-soft); }
+.cardfield { border: 1px solid var(--border-strong); border-radius: 8px; padding: 10px 12px; display: flex; gap: 10px; align-items: center; font-family: var(--mono); font-size: 13px; color: var(--faint); background: var(--card); }
+.cardfield b { color: var(--fg); font-weight: 500; }
+.cardfield .sp { flex: 1; }
+.sumrow { display: flex; justify-content: space-between; font-size: 13.5px; }
+.sumrow.due { font-weight: 700; font-size: 16px; border-top: 1px solid var(--border); padding-top: 10px; }
+.err { background: var(--tap-soft); color: var(--tap); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-weight: 600; }
+.note { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; font-size: 13px; color: var(--soft); }
+.mrow { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ic-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="ic-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7 9l5-5 5 5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+</svg>
+<div class="wrap">
+
+  <header class="intro">
+    <span class="verdict">ทุกวิธีชำระไปหน้าเดียวกัน: ชำระใบแจ้งหนี้</span>
+    <h1>บัตรและ PromptPay ใช้หน้าแบบเดียวกับการโอน</h1>
+    <p>หน้าชำระเงินเหลือแค่กรอกข้อมูลภาษี เลือกแพ็กเกจ และเลือกวิธีชำระ กดปุ่มแล้วระบบออกใบแจ้งหนี้และพาไปหน้าของใบนั้น ทุกวิธีมีหัวหน้า ยอด และกล่อง ① ② ตำแหน่งเดียวกัน ต่างกันแค่สิ่งที่อยู่ในกล่อง</p>
+  </header>
+
+  <section class="why" aria-label="สิ่งที่ได้">
+    <div><b>หน้าตาเดียวกันทุกวิธี</b><span>① คือวิธีจ่าย (QR / บัตร / เลขบัญชี) ② คือการยืนยัน (รอเงินเข้า / กดชำระ / แนบสลิป)</span></div>
+    <div><b>QR หมดอายุหรือบัตรไม่ผ่าน ลองใหม่ได้ที่เดิม</b><span>ไม่ต้องกลับไปกรอกหน้าชำระเงินใหม่ และไม่ได้ใบแจ้งหนี้ใบใหม่ทุกครั้งที่ลอง</span></div>
+    <div><b>กลับมาจ่ายทีหลังได้</b><span>ใบที่ยังไม่จ่ายทุกวิธีมีปุ่ม "ชำระ" ในหน้า Billing</span></div>
+  </section>
+
+  <!-- 1 -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">1</span>
+      <h2>หน้าชำระเงิน: เลือกวิธีแล้วกดปุ่มด้านขวา</h2>
+      <p>กล่องรายละเอียดใต้ตัวเลือกเหลือแค่คำอธิบายสั้น ๆ ช่องกรอกบัตรย้ายไปหน้าถัดไป</p>
+      <p>ปุ่ม: PromptPay = "สร้าง QR" · บัตร = "ไปชำระด้วยบัตร" · โอน = "ขอเลขบัญชี" (เหมือนเดิม)</p>
+    </div>
+    <div class="screen">
+      <div class="bar"><i></i><i></i><i></i><span class="url">/work/acme/billing/checkout?plan=team_m</span></div>
+      <div class="view">
+        <div class="co">
+          <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+            <div class="card dim">
+              <div class="sec"><span class="num">1</span><b>ข้อมูลใบกำกับภาษี</b></div>
+              <div class="lines"><span></span><span></span><span></span><span></span></div>
+            </div>
+            <div class="card">
+              <div class="sec"><span class="num">2</span><b>วิธีชำระ</b></div>
+              <div class="mrow">
+                <div class="m on"><b>PromptPay</b><span class="muted">สแกน QR</span></div>
+                <div class="m"><b>บัตร</b><span class="muted">ต่ออายุอัตโนมัติ</span></div>
+                <div class="m"><b>โอนเข้าบัญชี</b><span class="muted">แนบสลิป</span></div>
+              </div>
+              <span class="muted small">กด "สร้าง QR" แล้วสแกนด้วยแอปธนาคารในหน้าถัดไป · ยืนยันอัตโนมัติ ไม่ต้องส่งสลิป</span>
+            </div>
+          </div>
+          <div class="card">
+            <b>สรุปรายการ</b>
+            <div class="sr"><span>Team M · รายเดือน</span><span class="mono">฿3,000</span></div>
+            <div class="sr"><span class="muted">VAT 7%</span><span class="mono">฿210</span></div>
+            <div class="sr due"><span>ยอดชำระ</span><span class="mono">฿3,210</span></div>
+            <span class="tap block"><span class="tl">กด</span><span class="btn pri wide">สร้าง QR</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 PromptPay -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">2</span>
+      <span class="new">PromptPay</span>
+      <h2>หน้าชำระใบแจ้งหนี้: ① สแกน QR ② รอเงินเข้า</h2>
+      <p>QR ใช้ได้ 15 นาที มีนับถอยหลังและปุ่มบันทึก QR ไว้สแกนจากแอปในมือถือเครื่องเดียวกัน</p>
+      <p>เงินเข้าแล้วหน้านี้เปลี่ยนเป็น "ชำระเงินเรียบร้อย" เอง ไม่ต้องกดอะไร</p>
+    </div>
+    <div class="screen">
+      <div class="bar"><i></i><i></i><i></i><span class="url">/work/acme/billing/<em>invoices/FRI-2611-0008</em></span></div>
+      <div class="view">
+        <div class="pay-head">
+          <div>
+            <h3>ชำระใบแจ้งหนี้ FRI-2611-0008 <span class="pill p-wait">รอชำระ</span></h3>
+            <span class="muted small">Team M · รายเดือน · PromptPay</span>
+          </div>
+          <div class="amount"><span class="muted small">ยอดที่ต้องชำระ</span><div class="big">฿3,210</div></div>
+        </div>
+        <div class="pay">
+          <div class="card">
+            <div class="k"><span class="num">1</span><b>สแกน QR ด้วยแอปธนาคาร</b></div>
+            <div class="qrbox">
+              <span class="qr"><i></i></span>
+              <span class="qrtext">
+                <span class="muted">ยอดในรายการ</span>
+                <span class="big">฿3,210.00</span>
+                <span class="timer">หมดอายุใน 14:32</span>
+                <span class="btn" style="align-self:flex-start;margin-top:6px">บันทึก QR</span>
+              </span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="k"><span class="num">2</span><b>รอยืนยันอัตโนมัติ</b></div>
+            <span class="wait"><i></i>กำลังรอเงินเข้า…</span>
+            <span class="note">ไม่ต้องแนบสลิป ธนาคารแจ้งยืนยันมาที่ระบบเอง ปกติไม่เกิน 1 นาทีหลังโอน</span>
+            <span class="btn wide">จ่ายแล้ว ตรวจสอบอีกครั้ง</span>
+          </div>
+        </div>
+        <div class="later"><span>ยังไม่จ่ายตอนนี้ก็ได้ กลับมาที่หน้านี้ได้จากหน้าแพ็กเกจ &amp; Billing</span><a href="#">ดาวน์โหลดใบแจ้งหนี้ (PDF)</a></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 QR expired -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">3</span>
+      <span class="new">PromptPay</span>
+      <h2>QR หมดอายุ: กดสร้าง QR ใหม่ได้ในหน้าเดิม</h2>
+      <p>ใบแจ้งหนี้เป็นใบเดิม ได้ QR ใหม่อีก 15 นาที (ตอนนี้ต้องกลับไปหน้าชำระเงินและได้ใบแจ้งหนี้ใบใหม่)</p>
+    </div>
+    <div class="screen">
+      <div class="bar"><i></i><i></i><i></i><span class="url">/work/acme/billing/<em>invoices/FRI-2611-0008</em></span></div>
+      <div class="view">
+        <div class="pay">
+          <div class="card">
+            <div class="k"><span class="num">1</span><b>สแกน QR ด้วยแอปธนาคาร</b></div>
+            <div class="qrbox">
+              <span class="qr exp"><i></i><span class="over">QR หมดอายุ</span></span>
+              <span class="qrtext">
+                <span class="muted">QR ใช้ได้ 15 นาที</span>
+                <span class="tap" style="align-self:flex-start;margin-top:6px"><span class="tl">กด</span><span class="btn pri">สร้าง QR ใหม่</span></span>
+              </span>
+            </div>
+          </div>
+          <div class="card dim">
+            <div class="k"><span class="num">2</span><b>รอยืนยันอัตโนมัติ</b></div>
+            <span class="muted small">สร้าง QR ใหม่แล้วสแกนอีกครั้ง</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 Card -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">4</span>
+      <span class="new">บัตร</span>
+      <h2>หน้าชำระใบแจ้งหนี้: ① กรอกบัตร ② กดชำระ</h2>
+      <p>ช่องกรอกบัตรตาม Canvas: หมายเลขบัตร (ขึ้นโลโก้ประเภทบัตรให้เอง) · วันหมดอายุ · CVC · ชื่อบนบัตร · อีเมล ทุกช่องเป็นช่องของผู้ให้บริการ (Stripe) ยกเว้นชื่อบนบัตรกับอีเมล</p>
+      <p>อีเมลกรอกจากอีเมลรับเอกสารในข้อมูลใบกำกับภาษีไว้ให้ ใช้ส่งใบเสร็จและแจ้งเตือนก่อนตัดบัตรรอบถัดไป</p>
+      <p>ตอนนี้โค้ดใช้ช่องรวมบรรทัดเดียว จะแยกเป็น 4 ช่องให้ตรง Canvas</p>
+      <p>กล่อง ② บอกยอดและการตัดเงินอัตโนมัติก่อนกด</p>
+    </div>
+    <div class="screen">
+      <div class="bar"><i></i><i></i><i></i><span class="url">/work/acme/billing/<em>invoices/FRI-2611-0009</em></span></div>
+      <div class="view">
+        <div class="pay-head">
+          <div>
+            <h3>ชำระใบแจ้งหนี้ FRI-2611-0009 <span class="pill p-wait">รอชำระ</span></h3>
+            <span class="muted small">Team M · รายเดือน · บัตรเครดิต / เดบิต</span>
+          </div>
+          <div class="amount"><span class="muted small">ยอดที่ต้องชำระ</span><div class="big">฿3,210</div></div>
+        </div>
+        <div class="pay">
+          <div class="card">
+            <div class="k"><span class="num">1</span><b>ข้อมูลบัตร</b><span class="sp" style="flex:1"></span><span class="brands"><span class="brand">VISA</span><span class="brand">Mastercard</span><span class="brand">JCB</span><span class="brand">AMEX</span></span></div>
+            <div class="cf">
+              <div class="field full"><label>หมายเลขบัตร</label><span class="in"><span>4242 4242 4242 4242</span><span class="sp"></span><span class="brand">VISA</span></span></div>
+              <div class="field"><label>วันหมดอายุ</label><span class="in">12 / 28</span></div>
+              <div class="field"><label>CVC</label><span class="in">•••<span class="sp"></span><span class="muted small" style="font-family:var(--sans)">3 หลักหลังบัตร</span></span></div>
+              <div class="field full"><label>ชื่อบนบัตร</label><span class="in sans">SOMCHAI JAIDEE</span></div>
+              <div class="field full"><label>อีเมล</label><span class="in sans">account@example.com</span><span class="muted small">ส่งใบเสร็จ / ใบกำกับภาษี และแจ้งเตือนตัดบัตรรอบถัดไป · กรอกจากข้อมูลออกใบกำกับภาษีไว้ให้ แก้ได้</span></div>
+            </div>
+            <span class="muted small">ข้อมูลบัตรเก็บที่ผู้ให้บริการชำระเงิน ไม่ผ่านเซิร์ฟเวอร์ของ Friday · ธนาคารอาจขอยืนยัน 3-D Secure (OTP)</span>
+          </div>
+          <div class="card">
+            <div class="k"><span class="num">2</span><b>ยืนยันการชำระ</b></div>
+            <div class="sumrow"><span>Team M · รายเดือน</span><span class="mono">฿3,000</span></div>
+            <div class="sumrow"><span class="muted">VAT 7%</span><span class="mono">฿210</span></div>
+            <div class="sumrow due"><span>ตัดบัตร</span><span class="mono">฿3,210</span></div>
+            <span class="tap block"><span class="tl">กด</span><span class="btn pri wide">ชำระ ฿3,210</span></span>
+            <span class="muted small">ต่ออายุอัตโนมัติทุกเดือนด้วยบัตรนี้ · ยกเลิกได้ตลอด</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 3DS -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">5</span>
+      <span class="new">บัตร</span>
+      <h2>ธนาคารขอยืนยัน OTP (3-D Secure)</h2>
+      <p>กด "ชำระ" แล้วบางธนาคารเปิดหน้าต่างของธนาคารขึ้นมาให้กรอก OTP ที่ส่งไปทาง SMS หน้าต่างนี้มาจากธนาคาร Friday ไม่ได้ทำเอง</p>
+      <p>ระหว่างนั้นปุ่มขึ้น "กำลังยืนยันกับธนาคาร…" ยืนยันเสร็จไปขั้น 7 ทันที ถ้าปิดหน้าต่างหรือ OTP ผิดไปขั้น 6</p>
+    </div>
+    <div class="screen">
+      <div class="bar"><i></i><i></i><i></i><span class="url">/work/acme/billing/<em>invoices/FRI-2611-0009</em></span></div>
+      <div class="view">
+        <div class="scrim">
+          <div class="otp">
+            <div class="bank"><b style="color:var(--fg)">ธนาคารตัวอย่าง</b><span>Verified by VISA</span></div>
+            <b>ยืนยันการชำระ ฿3,210.00</b>
+            <span class="muted small">กรอกรหัส OTP ที่ส่งไปที่ 08x-xxx-1234 · ร้านค้า Friday</span>
+            <div class="digits"><span>4</span><span>8</span><span>2</span><span></span><span></span><span></span></div>
+            <span class="btn pri wide">ยืนยัน</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 Card error -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">6</span>
+      <span class="new">บัตร</span>
+      <h2>กรอกผิดหรือบัตรไม่ผ่าน: บอกตรงจุด แล้วลองใหม่ได้เลย</h2>
+      <p>กรอกผิด (เลขไม่ครบ หมดอายุ CVC ผิด) บอกใต้ช่องนั้นก่อนกดชำระ ส่วนบัตรถูกปฏิเสธหรือ OTP ไม่ผ่าน บอกในกล่อง ② แก้หรือเปลี่ยนบัตรแล้วกดชำระอีกครั้ง ยังเป็นใบแจ้งหนี้ใบเดิม</p>
+    </div>
+    <div class="screen">
+      <div class="bar"><i></i><i></i><i></i><span class="url">/work/acme/billing/<em>invoices/FRI-2611-0009</em></span></div>
+      <div class="view">
+        <div class="pay">
+          <div class="card">
+            <div class="k"><span class="num">1</span><b>ข้อมูลบัตร</b></div>
+            <div class="cf">
+              <div class="field full"><label>หมายเลขบัตร</label><span class="in bad"><span>4000 0000 0000 0002</span><span class="sp"></span><span class="brand">VISA</span></span></div>
+              <div class="field"><label>วันหมดอายุ</label><span class="in">12 / 28</span></div>
+              <div class="field"><label>CVC</label><span class="in">•••</span></div>
+              <div class="field full"><label>ชื่อบนบัตร</label><span class="in sans">SOMCHAI JAIDEE</span></div>
+              <div class="field full"><label>อีเมล</label><span class="in sans">account@example.com</span></div>
+            </div>
+            <span class="fe">กรอกผิดแต่ละช่องจะบอกใต้ช่องนั้นทันที เช่น "หมายเลขบัตรไม่ครบ" · "บัตรหมดอายุแล้ว"</span>
+          </div>
+          <div class="card">
+            <div class="k"><span class="num">2</span><b>ยืนยันการชำระ</b></div>
+            <span class="err">บัตรถูกปฏิเสธ ลองบัตรอื่น หรือติดต่อธนาคารผู้ออกบัตร</span>
+            <span class="btn pri wide">ชำระ ฿3,210</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 Done -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">7</span>
+      <h2>จ่ายสำเร็จ: หน้าเดิมเปลี่ยนเป็น "ชำระเงินเรียบร้อย"</h2>
+      <p>ใช้แบบเดียวกันทุกวิธี (โอนจะเป็น "รอตรวจสลิป" แบบที่ทำไปแล้ว) เปิด URL นี้อีกครั้งก็ยังเห็นสถานะนี้</p>
+    </div>
+    <div class="screen">
+      <div class="bar"><i></i><i></i><i></i><span class="url">/work/acme/billing/<em>invoices/FRI-2611-0008</em></span></div>
+      <div class="view">
+        <div class="card done">
+          <span class="pill p-ok">ชำระแล้ว</span>
+          <h3>ชำระเงินเรียบร้อย ใช้งาน Team M ได้เลย</h3>
+          <ul>
+            <li>ได้รับยืนยันจากธนาคารผ่าน PromptPay เมื่อ 14:02:11</li>
+            <li>ใบกำกับภาษี e-Tax invoice ส่งไปที่ account@example.com แล้ว</li>
+            <li>แพ็กเกจ Team M · 12 ที่นั่ง · ใช้ได้ถึง 15 ธ.ค. 2569</li>
+          </ul>
+          <div class="btns"><span class="btn">ดาวน์โหลดใบกำกับภาษี</span><span class="btn pri">กลับไปที่ Workspace</span><span class="btn ghost">ไปหน้า Billing</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 Billing -->
+  <section class="step">
+    <div class="cap">
+      <span class="n">8</span>
+      <h2>หน้า Billing: ใบที่ยังไม่จ่ายทุกวิธีมีปุ่ม "ชำระ"</h2>
+      <p>กดแล้วไปหน้าของใบนั้นตามวิธีที่เลือกไว้</p>
+    </div>
+    <div class="screen">
+      <div class="bar"><i></i><i></i><i></i><span class="url">/work/acme/billing</span></div>
+      <div class="view">
+        <b>รายการที่ต้องทำ</b>
+        <div class="todo">
+          <div><b>ใบแจ้งหนี้ FRI-2611-0008 รอชำระ ฿3,210</b><span class="muted small">ครบกำหนด 16 พ.ย. 2569 · PromptPay</span></div>
+          <span class="tap"><span class="tl">กด → ขั้น 2</span><span class="btn pri">ชำระ</span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ask">
+    <h2>ขอให้ยืนยัน</h2>
+    <ol>
+      <li>ใช้ flow นี้กับบัตรและ PromptPay ได้ไหม</li>
+      <li>ข้อนี้ผมเสนอเพิ่มเอง: ทำปุ่ม "สร้าง QR ใหม่" กับ "ลองบัตรใหม่" ให้ใช้ใบแจ้งหนี้ใบเดิม ต้องเพิ่ม API ให้ขอ QR ใหม่ของใบเดิมได้ ถ้าไม่อยากเพิ่ม API ก็ใช้วิธีเดิม คือกลับไปหน้าชำระเงินแล้วได้ใบแจ้งหนี้ใบใหม่</li>
+    </ol>
+  </section>
+</div>

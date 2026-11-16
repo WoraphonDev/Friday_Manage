@@ -330,7 +330,8 @@ describe('ตรวจสลิปและ 50 ทวิ', () => {
       await mkdir(dirname(join(uploadRoot, slipKey)), { recursive: true });
       await writeFile(join(uploadRoot, slipKey), Buffer.from('fake slip bytes'));
     }
-    const pay = (await t.owner.query(`INSERT INTO payments (workspace_id, invoice_id, method, amount, slip_file_key) VALUES ($1,$2,'transfer',572000,$3) RETURNING id`, [c.id, inv.id, opts.slip === false ? null : slipKey])).rows[0].id as string;
+    // ลูกค้าแจ้งเวลาโอนตอนแนบสลิป (2 วันก่อน) · ใบกำกับภาษีต้องลงวันที่นี้ ไม่ใช่วันที่ทีมงานตรวจ
+    const pay = (await t.owner.query(`INSERT INTO payments (workspace_id, invoice_id, method, amount, slip_file_key, paid_at) VALUES ($1,$2,'transfer',572000,$3, now() - interval '2 days') RETURNING id`, [c.id, inv.id, opts.slip === false ? null : slipKey])).rows[0].id as string;
     await t.owner.query(`INSERT INTO audit_logs (workspace_id, actor_kind, category, action, target_type, target_id, summary) VALUES ($1,'user','plan','billing.checkout','invoice',$2,$3)`, [c.id, inv.id, JSON.stringify({ plan: 'team_l', cycle: 'monthly', method: 'transfer', wht: true, key: 'k', payload: 'p' })]);
     if (opts.activated) {
       const plan = (await t.owner.query(`SELECT id FROM plans WHERE code = 'team_l'`)).rows[0].id;
@@ -410,7 +411,11 @@ describe('ตรวจสลิปและ 50 ทวิ', () => {
     expect((await t.owner.query(`SELECT status, reviewed_by FROM payments WHERE id = $1`, [p.pay])).rows[0]).toEqual({ status: 'confirmed', reviewed_by: finance.id });
     expect((await t.owner.query(`SELECT status, paid_at FROM invoices WHERE id = $1`, [p.inv.id])).rows[0].status).toBe('paid');
     expect((await t.owner.query(`SELECT p.code, s.status, s.payment_method FROM subscriptions s JOIN plans p ON p.id = s.plan_id WHERE s.id = $1`, [p.c.sub])).rows[0]).toEqual({ code: 'team_l', status: 'active', payment_method: 'transfer' });
-    expect((await t.owner.query(`SELECT doc_type, status, number FROM tax_documents WHERE invoice_id = $1`, [p.inv.id])).rows).toEqual([{ doc_type: 'tax_invoice_receipt', status: 'pending', number: 'TX-confirm-me-1' }]);
+    const docs = (await t.owner.query(`SELECT doc_type, status, number, to_char(issued_on, 'YYYY-MM-DD') AS issued_on, to_char((now() - interval '2 days') AT TIME ZONE 'Asia/Bangkok', 'YYYY-MM-DD') AS transferred FROM tax_documents WHERE invoice_id = $1`, [p.inv.id])).rows;
+    expect(docs).toHaveLength(1);
+    // เลขใบกำกับภาษีเดินแยก (ไม่ผูกกับเลขใบแจ้งหนี้) · ลงวันที่ตามเวลาโอนที่ลูกค้าแจ้ง
+    expect(docs[0]).toMatchObject({ doc_type: 'tax_invoice_receipt', status: 'pending', number: expect.stringMatching(/^TX-\d{4}-\d{4}$/) });
+    expect(docs[0].issued_on).toBe(docs[0].transferred);
     expect((await audit(p.c.id, 'ops.payment_confirmed'))[0]).toMatchObject({ actor_kind: 'friday_staff', actor_id: finance.id });
     expect((await finance.agent.post(`/ops/payments/${p.pay}:confirm`).send({})).body.error.code).toBe('already_confirmed');
     expect((await finance.agent.post(`/ops/payments/${p.pay}:reject`).send({ reason: 'ยืนยันไปแล้ว' })).body.error.code).toBe('already_confirmed');

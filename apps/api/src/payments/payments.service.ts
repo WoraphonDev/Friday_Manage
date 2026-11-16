@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { AnalyticsService, classifyChange } from '../analytics/analytics.service.js';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { canGrant, commitCouponUses, type Db, resumeIfPaid, schema, type Tx } from '@friday/db';
-import { and, count, eq, inArray, like, ne, sql } from 'drizzle-orm';
+import { canGrant, commitCouponUses, type Db, issueReceipt, nextDocNumber, resumeIfPaid, schema, type Tx } from '@friday/db';
+import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { today } from '../common/dates.js';
 import { AppError, forbidden } from '../common/errors.js';
@@ -192,11 +192,8 @@ export class PaymentsService implements OnModuleInit {
       const [subRow] = await tx.select({ id: s.subscriptions.id }).from(s.subscriptions);
 
       // เลขใบแจ้งหนี้ออกต่อเนื่องทั้งระบบ (ใบกำกับภาษีต้องเรียงเลข) จึงล็อกระดับระบบ แล้วนับด้วย SYSTEM_DB ซึ่งเห็นทุก Workspace
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('invoice-number', 0))`);
       const start = today();
-      const prefix = `FRI-${start.slice(2, 4)}${start.slice(5, 7)}-`;
-      const [seq] = await this.sys.select({ n: count() }).from(s.invoices).where(like(s.invoices.number, `${prefix}%`));
-      const number = `${prefix}${String(seq.n + 1).padStart(4, '0')}`;
+      const number = await nextDocNumber(tx, 'invoice', start, this.sys);
       // คูปองใช้ฟรี N เดือน: ใบนี้ครอบคลุม N เดือน แล้วรอบถัดไปจ่ายราคาปกติตามรอบที่เลือก
       const months = quote.freeMonths ?? (input.cycle === 'yearly' ? 12 : 1);
       // ไม่มียอดชำระ (ฟรี / ส่วนลด 100%): ไม่ส่งไปผู้ให้บริการรับชำระ ปิดใบทันทีหลัง commit
@@ -308,11 +305,12 @@ export class PaymentsService implements OnModuleInit {
 
   /** ชำระสำเร็จ (Stripe หรือเจ้าหน้าที่ยืนยัน) → ปิดใบแจ้งหนี้, เปิดแพ็กเกจ, ขอออกใบกำกับภาษี */
   private async settle(payment: Payment) {
+    const paidAt = new Date();
     const created = await this.sys.transaction(async (tx) => {
       const [invoice] = await tx.select().from(s.invoices).where(eq(s.invoices.id, payment.invoiceId));
       const meta = await this.meta(invoice.id);
-      await tx.update(s.payments).set({ status: 'confirmed', verifiedBy: 'webhook', updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
-      await tx.update(s.invoices).set({ status: 'paid', paidAt: new Date(), updatedAt: new Date() }).where(eq(s.invoices.id, invoice.id));
+      await tx.update(s.payments).set({ status: 'confirmed', verifiedBy: 'webhook', paidAt, updatedAt: new Date() }).where(eq(s.payments.id, payment.id));
+      await tx.update(s.invoices).set({ status: 'paid', paidAt, updatedAt: new Date() }).where(eq(s.invoices.id, invoice.id));
       const [prev] = await tx.select({ status: s.subscriptions.status, cycle: s.subscriptions.cycle, plan: s.plans.code }).from(s.subscriptions).leftJoin(s.plans, eq(s.plans.id, s.subscriptions.planId)).where(eq(s.subscriptions.id, invoice.subscriptionId));
       const granted = await this.activate(tx, invoice, meta);
       // ส่วนลดคูปองในใบนี้นับเป็นรอบที่ใช้ไป (O20)
@@ -320,14 +318,9 @@ export class PaymentsService implements OnModuleInit {
       // A34: MRR movement · MRR = ยอดก่อน VAT หลังส่วนลด (รายปีหาร 12)
       const kind = granted ? classifyChange({ plan: prev?.plan ?? null, status: prev?.status ?? null, cycle: prev?.cycle ?? null }, { plan: meta.plan, cycle: meta.cycle }) : null;
       if (kind) await this.analytics.subscriptionChanged(tx, { workspaceId: invoice.workspaceId, kind, planFrom: prev?.plan ?? null, planTo: meta.plan, mrrAfterSatang: meta.cycle === 'yearly' ? invoice.subtotal / 12 : invoice.subtotal, actorKind: 'system', actorId: null });
-      // ยังไม่จด VAT: ออกใบเสร็จ (ไม่ต้องส่ง e-Tax จึงถือว่าออกแล้ว)
-      const [doc] = await tx
-        .insert(s.taxDocuments)
-        .values(config.vatRegistered
-          ? { workspaceId: invoice.workspaceId, invoiceId: invoice.id, docType: 'tax_invoice_receipt', number: `TX-${invoice.number.slice(4)}` }
-          : { workspaceId: invoice.workspaceId, invoiceId: invoice.id, docType: 'receipt', number: `RC-${invoice.number.slice(4)}`, status: 'issued', sentAt: new Date() })
-        .onConflictDoNothing()
-        .returning();
+      // ใบกำกับภาษี (จด VAT) หรือใบเสร็จ (ยังไม่จด) · เลขเดินแยกไม่ผูกกับเลขใบแจ้งหนี้ · วันที่ = วันที่ได้รับเงิน
+      const { doc: issued, created: isNew } = await issueReceipt(tx, invoice, { vatRegistered: config.vatRegistered, paidAt });
+      const doc = isNew ? issued : undefined;
       // ระงับเพราะค้างชำระ + เปิดเองเมื่อชำระ (C6) → เปิดถ้าไม่เหลือใบเลยกำหนด
       await resumeIfPaid(tx, invoice.workspaceId);
       await tx.insert(s.auditLogs).values({ workspaceId: invoice.workspaceId, actorId: null, actorKind: 'system', category: 'plan', action: 'billing.payment_confirmed', targetType: 'invoice', targetId: invoice.id, summary: `${invoice.number} · ${payment.method} · ${payment.amount / 100} บาท · ${granted ? `เปิดแพ็กเกจ ${meta.plan}` : 'ไม่เปลี่ยนแพ็กเกจ (มีใบที่ใหม่กว่าเปิดสิทธิ์อยู่)'}` });

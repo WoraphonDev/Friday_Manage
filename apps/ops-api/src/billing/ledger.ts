@@ -1,5 +1,5 @@
-import { canGrant, commitCouponUses, type Db, resumeIfPaid, schema, type Tx } from '@friday/db';
-import { and, count, eq, inArray, like, sql } from 'drizzle-orm';
+import { canGrant, commitCouponUses, type Db, issueReceipt, nextDocNumber, resumeIfPaid, schema, type Tx } from '@friday/db';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { AppError } from '../errors.js';
 import type { Mailer } from '../mail.js';
 
@@ -26,16 +26,10 @@ export const todayBkk = () => new Date(Date.now() + 7 * 3_600_000).toISOString()
 export const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * DAY).toISOString().slice(0, 10);
 
 /**
- * เลขเอกสารต่อเนื่องทั้งระบบ (ใบกำกับภาษี / ใบลดหนี้ต้องเรียงเลข) · ล็อกระดับระบบด้วยชื่อเดียวกับ API ลูกค้า
- * `FRI-2611-0001` (ใบแจ้งหนี้) · `CN-2611-0001` (ใบลดหนี้)
+ * เลขเอกสารต่อเนื่องทั้งระบบ (ใบกำกับภาษี / ใบลดหนี้ / ใบเพิ่มหนี้ต้องเรียงเลข) · กติกาเดียวกับ API ลูกค้า (@friday/db › nextDocNumber)
+ * `FRI-2611-0001` (ใบแจ้งหนี้) · `CN-2611-0001` (ใบลดหนี้) · `DN-2611-0001` (ใบเพิ่มหนี้)
  */
-export async function nextNumber(tx: Tx, kind: 'invoice' | 'credit_note', date = todayBkk()) {
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${kind === 'invoice' ? 'invoice-number' : 'credit-note-number'}, 0))`);
-  const prefix = `${kind === 'invoice' ? 'FRI' : 'CN'}-${date.slice(2, 4)}${date.slice(5, 7)}-`;
-  const table = kind === 'invoice' ? s.invoices : s.creditNotes;
-  const [row] = await tx.select({ n: count() }).from(table).where(like(table.number, `${prefix}%`));
-  return `${prefix}${String(row.n + 1).padStart(4, '0')}`;
-}
+export const nextNumber = (tx: Tx, kind: 'invoice' | 'credit_note' | 'debit_note', date = todayBkk()) => nextDocNumber(tx, kind, date);
 
 export async function metaOf(db: Db | Tx, invoiceId: string): Promise<CheckoutMeta | null> {
   const [row] = await db.select({ summary: s.auditLogs.summary }).from(s.auditLogs).where(and(eq(s.auditLogs.action, 'billing.checkout'), eq(s.auditLogs.targetId, invoiceId)));
@@ -62,20 +56,18 @@ export async function activate(tx: Tx, inv: Invoice, meta: CheckoutMeta): Promis
 
 /**
  * ใบแจ้งหนี้ได้รับเงินครบ: paid → เปิดแพ็กเกจ (ถ้ามี) → ออกใบกำกับภาษี (จด VAT · รอ e-Tax) หรือใบเสร็จ (ยังไม่จด)
+ * วันที่ของเอกสาร = วันที่ได้รับเงิน: `paidAt` ที่ส่งมา หรือเวลาโอนที่ลูกค้าแจ้งในสลิป ไม่ใช่วันที่ทีมงานตรวจ (VAT จะได้ไม่ตกผิดเดือน)
  * คืน true ถ้าเปิดแพ็กเกจ
  */
-export async function settleInvoice(tx: Tx, inv: Invoice) {
-  await tx.update(s.invoices).set({ status: 'paid', paidAt: new Date(), updatedAt: new Date() }).where(eq(s.invoices.id, inv.id));
+export async function settleInvoice(tx: Tx, inv: Invoice, paidAt?: Date) {
+  const [declared] = await tx.select({ paidAt: s.payments.paidAt }).from(s.payments).where(eq(s.payments.invoiceId, inv.id)).orderBy(desc(s.payments.createdAt)).limit(1);
+  const receivedAt = paidAt ?? declared?.paidAt ?? new Date();
+  await tx.update(s.invoices).set({ status: 'paid', paidAt: receivedAt, updatedAt: new Date() }).where(eq(s.invoices.id, inv.id));
   const meta = await metaOf(tx, inv.id);
   const granted = meta ? await activate(tx, inv, meta) : false;
   // ส่วนลดคูปองในใบนี้นับเป็นรอบที่ใช้ไป (O20 · ทางเดียวกับที่ API ลูกค้ารับเงินผ่าน Gateway)
   await commitCouponUses(tx, inv.id);
-  await tx
-    .insert(s.taxDocuments)
-    .values(vatRegistered()
-      ? { workspaceId: inv.workspaceId, invoiceId: inv.id, docType: 'tax_invoice_receipt', number: `TX-${inv.number.slice(4)}` }
-      : { workspaceId: inv.workspaceId, invoiceId: inv.id, docType: 'receipt', number: `RC-${inv.number.slice(4)}`, status: 'issued', sentAt: new Date() })
-    .onConflictDoNothing();
+  await issueReceipt(tx, inv, { vatRegistered: vatRegistered(), paidAt: receivedAt });
   // ระงับเพราะค้างชำระ + เปิดเองเมื่อชำระ → เปิดถ้าไม่เหลือใบเลยกำหนด
   await resumeIfPaid(tx, inv.workspaceId);
   return granted;

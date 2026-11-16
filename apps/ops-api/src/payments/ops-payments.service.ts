@@ -121,7 +121,7 @@ export class OpsPaymentsService {
     let granted = false;
     await this.db.transaction(async (tx) => {
       await tx.update(s.payments).set({ status: 'confirmed', verifiedBy: 'staff', exceptionReason: null, reviewedBy: staff.id, reviewedAt: new Date(), updatedAt: new Date() }).where(eq(s.payments.id, p.id));
-      granted = await settleInvoice(tx, inv);
+      granted = await settleInvoice(tx, inv, p.paidAt ?? undefined);
       await audit(tx, staff, inv.workspaceId, 'plan', 'ops.payment_confirmed', `ยืนยันการชำระ ${inv.number} · ${p.method} · ${p.amount / 100} บาท${p.exceptionReason ? ` · กรณี ${p.exceptionReason}` : ''}${granted ? '' : ' · ไม่เปลี่ยนแพ็กเกจ'}${input.note ? ` · ${input.note}` : ''}`, { type: 'payment', id: p.id });
     });
     return { id: p.id, status: 'confirmed' as const, invoice: inv.number, granted };
@@ -219,7 +219,7 @@ export class OpsPaymentsService {
       // ใบเดิมที่ถูกตั้งเป็นรอตรวจเพราะรายการนี้ กลับเป็นค้างชำระ
       if (inv.id !== target.id && inv.status === 'pending_review') await tx.update(s.invoices).set({ status: 'open', updatedAt: new Date() }).where(eq(s.invoices.id, inv.id));
       if (over >= 0) {
-        await settleInvoice(tx, target);
+        await settleInvoice(tx, target, p.paidAt ?? undefined);
         if (over > 0) await tx.insert(s.workspaceCredits).values({ workspaceId: p.workspaceId, amountSatang: over, source: 'overpayment', invoiceId: target.id, note: `ส่วนเกินจากเงินเข้า ${p.amount / 100} บาท`, createdByStaff: staff.id });
         result = { settled: true, creditSatang: over, remainingSatang: 0 };
       } else result = { settled: false, creditSatang: 0, remainingSatang: -over };

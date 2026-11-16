@@ -71,6 +71,8 @@ export interface TaskItem {
   type: string | null;
   project: { key: string; name: string; color: string | null };
   status: { id: string; name: string; category: StatusCategory };
+  /** Module ของงาน · null = ไม่มี Module */
+  module?: { id: string; name: string; color: string | null } | null;
   priority: "urgent" | "high" | "medium" | "low";
   planStart: string | null;
   planEnd: string | null;

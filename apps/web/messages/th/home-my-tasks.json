@@ -204,6 +204,7 @@
     "empty": "ไม่มีงานในมุมมองนี้",
     "emptyHint": "งานที่ได้รับมอบหมายจะแสดงที่นี่",
     "emptyFiltered": "ไม่พบงานตามตัวกรองนี้",
+    "emptyFilteredHint": "ลองเปลี่ยนคำค้นหา หรือกด \"ล้างตัวกรอง\"",
     "loading": "กำลังโหลดงานของคุณ",
     "closed": "ปิดงาน {key} แล้ว",
     "reopened": "เปิดงาน {key} อีกครั้งแล้ว",
@@ -248,7 +249,22 @@
       "qaLong": "ฉันเป็น QA / Reviewer ของงานนี้"
     },
     "mobileSubtitle": "{count} งานที่เปิดอยู่",
-    "mobileTitle": "งานของฉัน"
+    "mobileTitle": "งานของฉัน",
+    "filters": {
+      "status": "สถานะ",
+      "module": "Module",
+      "noModule": "ไม่มี Module",
+      "searchLabel": "ค้นหางาน",
+      "searchPlaceholder": "ค้นหาชื่องานหรือรหัส เช่น KLF-1156",
+      "clearSearch": "ล้างคำค้นหา",
+      "searchIn": "ค้นหา {name}",
+      "noOptions": "ไม่พบรายการ",
+      "clear": "ล้าง",
+      "selectAll": "เลือกทั้งหมด",
+      "clearAll": "ล้างตัวกรอง",
+      "shownAll": "แสดง <b>{total}</b> งาน",
+      "shownOf": "แสดง <b>{shown}</b> จาก {total} งาน"
+    }
   },
   "projectsPage": {
     "title": "โปรเจกต์",

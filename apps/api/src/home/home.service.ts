@@ -265,6 +265,11 @@ export class HomeService {
       const rows = sc.issues.filter((i) => me(i, q.tab) && (!project || i.projectId === project.id) && (!q.assignee || (sc.assignees.get(i.id) ?? []).includes(q.assignee)));
       const guest = tenant.role === 'guest';
       const people = guest ? new Map<string, Person>() : await loadPeople(tx, rows.flatMap((i) => sc.assignees.get(i.id) ?? []));
+      // Module ของแต่ละงาน ใช้กับตัวกรอง Module และป้ายในแถวของ My Tasks
+      const moduleIds = [...new Set(rows.map((i) => i.moduleId).filter((x): x is string => !!x))];
+      const modules = new Map(
+        (moduleIds.length ? await tx.select({ id: s.modules.id, name: s.modules.name, color: s.modules.color }).from(s.modules).where(inArray(s.modules.id, moduleIds)) : []).map((m) => [m.id, m]),
+      );
       const parentKey = new Map(sc.issues.map((i) => [i.id, sc.keyOf(i)]));
       const subCounts = new Map<string, { total: number; done: number }>();
       for (const i of sc.issues) if (i.parentId) {
@@ -282,6 +287,7 @@ export class HomeService {
           type: sc.typeNames.get(i.issueTypeId) ?? null,
           project: { key: p.key, name: p.name, color: p.color },
           status: { id: st.id, name: st.name, category: st.category },
+          module: (i.moduleId && modules.get(i.moduleId)) || null,
           priority: i.priority,
           planStart: i.planStart,
           planEnd: i.planEnd,

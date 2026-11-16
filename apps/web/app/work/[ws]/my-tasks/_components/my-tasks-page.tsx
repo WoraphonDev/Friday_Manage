@@ -15,8 +15,9 @@ import { api, ApiError } from "@/lib/api";
 import { formatDate, formatManDay, type YearFormat } from "@/lib/format";
 import type { FormOptions, GroupBy, MyIssues, Tab, TaskGroup, TaskItem } from "./types";
 import { StatusBadge, taskHref, useDueText } from "./shared";
+import { FilterBar, Highlight, isFiltering, matchesFilter, useTaskFilter, type TaskFilter } from "./task-filters";
 import styles from "./hmt.module.css";
-import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
+import { DEFAULT_ITEM_COLOR, FALLBACK_PROJECT_COLOR, readableColor, tint } from "@/lib/colors";
 import { isClosedCategory } from "@/lib/status";
 
 const TABS: Tab[] = ["assigned", "reviewer", "watching", "created"];
@@ -84,6 +85,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
   // M2 มือถือจัดกลุ่มตาม Due เสมอ
   const group: GroupBy = mobile ? "due" : groupChoice;
   const [project, setProject] = useState("");
+  const [filter, setFilter] = useTaskFilter(ws);
   const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({ "due:later": true, "due:none": true });
   // กลุ่มที่กด "ดูอีก" แล้ว แสดงครบทุกงาน
   const [fullGroups, setFullGroups] = useState<Record<string, boolean>>({});
@@ -135,7 +137,11 @@ export function MyTasksPage({ ws }: { ws: string }) {
   if (list.isPending) return <div className={styles.body}><LoadingState /></div>;
   if (list.error) return <div className={styles.body}>{list.error instanceof ApiError && list.error.status === 403 ? <Forbidden /> : <ErrorState error={list.error} retry={() => list.refetch()} />}</div>;
   const data = list.data;
-  if (mobile) return <MobileTasks data={data} ws={ws} name={me.displayName} year={year} tab={tab} setTab={(k) => { setTab(k); setProject(""); }} busy={busy} onToggle={(item, done) => void setDone(item, done)} />;
+  // ตัวกรองสถานะ / Module / คำค้นกรองเฉพาะรายการงาน · ตัวเลขบนแท็บและแผงสรุปยังนับทุกงาน
+  const filtering = isFiltering(filter);
+  const shownGroups = filtering ? data.groups.map((g) => { const items = g.items.filter((i) => matchesFilter(i, filter)); return { ...g, items, count: items.length }; }) : data.groups;
+  const shownCount = shownGroups.reduce((n, g) => n + g.items.length, 0);
+  if (mobile) return <MobileTasks data={{ ...data, groups: shownGroups }} allItems={data.groups.flatMap((g) => g.items)} filter={filter} setFilter={setFilter} ws={ws} name={me.displayName} year={year} tab={tab} setTab={(k) => { setTab(k); setProject(""); }} busy={busy} onToggle={(item, done) => void setDone(item, done)} />;
   const everything = data.groups.flatMap((g) => g.items);
   const open = everything.filter((i) => !isClosedCategory(i.status.category));
   const estSum = open.filter(countsMyMd).reduce((n, i) => n + (i.estimateMd ?? 0) / Math.max(1, i.assignees.length), 0);
@@ -190,11 +196,14 @@ export function MyTasksPage({ ws }: { ws: string }) {
             </div>
           </div>
         </div>
+        <FilterBar items={everything} filter={filter} onChange={setFilter} shown={shownCount} total={everything.length} />
       </header>
       <div className={`${styles.body} ${styles.tasksBody}`}>
         <section className={`${styles.card} ${styles.taskList}`} aria-label={t("title")}>
           {everything.length === 0 && <EmptyState title={project ? t("emptyFiltered") : t("empty")} description={t("emptyHint")} />}
-          {everything.length > 0 && data.groups.map((g) => {
+          {everything.length > 0 && filtering && shownCount === 0 && <EmptyState title={t("emptyFiltered")} description={t("emptyFilteredHint")} />}
+          {/* ขณะกรอง ซ่อนกลุ่มที่ไม่มีงานตรง */}
+          {everything.length > 0 && shownGroups.filter((g) => !filtering || g.items.length).map((g) => {
             const id = `${group}:${g.key}`;
             const isClosed = !!closedGroups[id];
             const target = group === "due" ? dropTarget(g) : null;
@@ -225,7 +234,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
                   <span className={styles.ghSub}>{sub}</span>
                 </button>
                 {!isClosed && (fullGroups[id] ? g.items : g.items.slice(0, GROUP_LIMIT)).map((i) => (
-                  <TaskRow key={i.key} item={i} ws={ws} year={year} busy={busy === i.key} onToggle={(done) => setDone(i, done)} onMove={() => setDueFor({ item: i, date: i.planEnd ?? data.today })} onDragStart={() => { dragKey.current = i.key; }} />
+                  <TaskRow key={i.key} item={i} q={filter.q} ws={ws} year={year} busy={busy === i.key} onToggle={(done) => setDone(i, done)} onMove={() => setDueFor({ item: i, date: i.planEnd ?? data.today })} onDragStart={() => { dragKey.current = i.key; }} />
                 ))}
                 {!isClosed && g.items.length > GROUP_LIMIT && (
                   <button type="button" className={styles.groupMore} aria-expanded={!!fullGroups[id]} onClick={() => setFullGroups((f) => ({ ...f, [id]: !f[id] }))}>
@@ -292,8 +301,8 @@ const CHIP_PILL = { "--ind-bg": "var(--primary-soft)", "--ind-border": "1px soli
 
 /** M2 → W29 · มือถือแบบต้นแบบ (หัว B + รายการกะทัดรัดฐาน A): หัวข้อใหญ่ · ชิปช่วงเวลามีตัวเลข · กลุ่มตาม Due ในกล่องขอบมน · ปุ่มสร้างงานลอย
  *  คงช่องติ๊กปิดงานไว้แทนรูปผู้รับผิดชอบในต้นแบบ (ทุกแถวเป็นงานของฉันอยู่แล้ว) */
-function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
-  data: MyIssues; ws: string; name: string; year: YearFormat; tab: Tab; setTab: (tab: Tab) => void;
+function MobileTasks({ data, allItems, filter, setFilter, ws, name, year, tab, setTab, busy, onToggle }: {
+  data: MyIssues; allItems: TaskItem[]; filter: TaskFilter; setFilter: (f: TaskFilter) => void; ws: string; name: string; year: YearFormat; tab: Tab; setTab: (tab: Tab) => void;
   busy: string | null; onToggle: (item: TaskItem, done: boolean) => void;
 }) {
   const t = useTranslations("home-my-tasks.tasks");
@@ -315,6 +324,8 @@ function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
         subtitle={<>{t("mobileSubtitle", { count: count(MOBILE_FILTERS.all) })} · {name}</>}
         actions={<button type="button" className="m-icon" aria-label={t("filter")} aria-expanded={showTabs} onClick={() => setShowTabs((v) => !v)}><Filter size={20} aria-hidden="true" /></button>}
       />
+      {/* แผงตัวกรอง: ชิปแท็บ + ค้นหา / สถานะ / Module · เปิดค้างไว้เมื่อมีตัวกรองอยู่ จะได้รู้ว่ารายการถูกกรอง */}
+      {(showTabs || isFiltering(filter)) && <FilterBar items={allItems} filter={filter} onChange={setFilter} shown={data.groups.reduce((n, g) => n + g.items.length, 0)} total={allItems.length} compact />}
       {showTabs && (
         <div ref={tabsRef} className="m-chips motion-pill motion-in" style={CHIP_PILL} role="group" aria-label={t("title")}>
           {TABS.map((k) => <button key={k} type="button" className="m-chip" aria-pressed={tab === k} onClick={() => setTab(k)}>{t(`tabs.${k}`)} <small>{data.counts[k]}</small></button>)}
@@ -338,8 +349,8 @@ function MobileTasks({ data, ws, name, year, tab, setTab, busy, onToggle }: {
                 <div key={i.key} className="m-row">
                   <input className="m-check" type="checkbox" checked={done} disabled={busy === i.key || i.canMove === false} title={i.canMove === false ? t("cannotMove") : undefined} aria-label={t(done ? "markUndone" : "markDone", { title: i.title })} onChange={(e) => onToggle(i, e.target.checked)} />
                   <Link href={taskHref(ws, i.project.key, i.key)} className="m-row-main">
-                    <b style={done ? { textDecoration: "line-through", color: "var(--muted)" } : undefined}><span className="m-key">{i.key}</span> {i.title}</b>
-                    <small>{i.project.name}{i.estimateMd != null ? ` · ${formatManDay(i.estimateMd)}` : ""}<RoleBadges item={i} /></small>
+                    <b style={done ? { textDecoration: "line-through", color: "var(--muted)" } : undefined}><span className="m-key">{i.key}</span> <Highlight text={i.title} q={filter.q} /></b>
+                    <small>{i.project.name}{i.module ? ` · ${i.module.name}` : ""}{i.estimateMd != null ? ` · ${formatManDay(i.estimateMd)}` : ""}<RoleBadges item={i} /></small>
                   </Link>
                   <span className={`m-row-meta ${due.cls}`}>{due.text}</span>
                   <ChevronRight className="m-row-chev" size={16} aria-hidden="true" />
@@ -367,7 +378,7 @@ function RoleBadges({ item }: { item: TaskItem }) {
   return <>{roles.map((r) => <span key={r} title={t(`${r}Long`)}><Badge tone="purple">{t(r)}</Badge></span>)}</>;
 }
 
-function TaskRow({ item, ws, year, busy, onToggle, onMove, onDragStart }: { item: TaskItem; ws: string; year: YearFormat; busy: boolean; onToggle: (done: boolean) => void; onMove: () => void; onDragStart: () => void }) {
+function TaskRow({ item, q, ws, year, busy, onToggle, onMove, onDragStart }: { item: TaskItem; q: string; ws: string; year: YearFormat; busy: boolean; onToggle: (done: boolean) => void; onMove: () => void; onDragStart: () => void }) {
   const t = useTranslations("home-my-tasks.tasks");
   const tp = useTranslations("common.priority");
   const dueText = useDueText();
@@ -389,10 +400,11 @@ function TaskRow({ item, ws, year, busy, onToggle, onMove, onDragStart }: { item
     <div className={`${styles.tr} motion-item`} draggable={!done} onDragStart={onDragStart} onTouchStart={touchStart} onTouchEnd={touchEnd} data-testid={`task-${item.key}`}>
       <input type="checkbox" checked={done} disabled={busy || locked} title={locked ? t("cannotMove") : undefined} aria-label={t(done ? "markUndone" : "markDone", { title: item.title })} onChange={(e) => onToggle(e.target.checked)} style={{ width: 18, height: 18, margin: 0 }} />
       <div style={{ minWidth: 0 }}>
-        <Link className={`${styles.rowTitle} ${done ? styles.strike : ""}`} href={taskHref(ws, item.project.key, item.key)}>{item.title}</Link>
+        <Link className={`${styles.rowTitle} ${done ? styles.strike : ""}`} href={taskHref(ws, item.project.key, item.key)}><Highlight text={item.title} q={q} /></Link>
         <div className={styles.rowMeta}>
           <span style={{ width: 8, height: 8, borderRadius: 2, background: item.project.color ?? FALLBACK_PROJECT_COLOR }} />
-          <span>{item.key}</span><span>·</span><span>{item.project.name}</span>
+          <span><Highlight text={item.key} q={q} /></span><span>·</span><span>{item.project.name}</span>
+          {item.module && <span className={styles.modTag} style={{ color: readableColor(item.module.color ?? DEFAULT_ITEM_COLOR), background: tint(item.module.color ?? DEFAULT_ITEM_COLOR, 14) }}>{item.module.name}</span>}
           {item.parentKey && <Badge>{t("subtask")}</Badge>}
           <RoleBadges item={item} />
         </div>

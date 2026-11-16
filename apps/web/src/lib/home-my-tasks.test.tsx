@@ -248,6 +248,59 @@ describe("My Tasks (F / M2)", () => {
     expect(screen.queryByTestId("task-DE-23")).not.toBeInTheDocument();
   });
 
+  it("ตัวกรอง: ค้นหาชื่อ/รหัส + สถานะ + Module กรองรายการ ซ่อนกลุ่มที่ว่าง แผงสรุปยังนับทุกงาน และจำไว้ในเบราว์เซอร์", async () => {
+    localStorage.clear();
+    const credit = { id: "mod-credit", name: "วงเงินตัวอย่าง", color: "#2563eb" };
+    const report = { id: "mod-report", name: "รายงานตัวอย่าง", color: null };
+    const data = tasks();
+    data.groups[0].items = [task("DE-23", { title: "บันทึกวงเงินตัวอย่าง", module: credit })];
+    data.groups[1].items = [task("DE-35", { title: "หน้ารายงานตัวอย่าง", module: report, status: { id: "st-todo", name: "To do", category: "todo" }, planEnd: "2026-12-02", due: { state: "today", days: 0 } })];
+    data.groups[2].items = [task("DE-50", { title: "ค้นหาวงเงินตัวอย่าง", module: credit, status: { id: "st-todo", name: "To do", category: "todo" }, planEnd: "2026-12-04", due: { state: "later", days: 2 } })];
+    data.groups[3].items = [task("DE-40", { title: "งานไม่มีโมดูล", module: null, planEnd: "2026-12-09", due: { state: "later", days: 7 } })];
+    server.use(http.get("*/api/v1/w/:ws/my-issues", () => HttpResponse.json(data)));
+    const user = userEvent.setup();
+    const view = mount(<MyTasksPage ws="sample" />);
+    expect(await screen.findByText("แสดง", { exact: false })).toHaveTextContent("แสดง 4 งาน");
+    expect(within(screen.getByTestId("task-DE-23")).getByText("วงเงินตัวอย่าง")).toBeInTheDocument();
+
+    await user.type(screen.getByRole("searchbox", { name: "ค้นหางาน" }), "วงเงิน");
+    expect(screen.getByTestId("task-DE-23")).toBeInTheDocument();
+    expect(screen.getByTestId("task-DE-50")).toBeInTheDocument();
+    expect(screen.queryByTestId("task-DE-35")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /กลุ่ม วันนี้/ })).not.toBeInTheDocument();
+    expect(screen.getAllByText("วงเงิน", { selector: "mark" })).toHaveLength(2);
+    expect(screen.getByText("แสดง", { exact: false })).toHaveTextContent("แสดง 2 จาก 4 งาน");
+
+    // สถานะ: เหลือ In progress ที่ตรงคำค้น = DE-23
+    await user.click(screen.getByRole("button", { name: "สถานะ" }));
+    const statusMenu = screen.getByRole("group", { name: "สถานะ" });
+    expect(within(statusMenu).getAllByRole("checkbox").map((c) => c.closest("label")!.textContent)).toEqual(["To do2", "In progress2"]);
+    await user.click(within(statusMenu).getByRole("checkbox", { name: /In progress/ }));
+    expect(screen.getByRole("button", { name: "สถานะ: In progress" })).toBeInTheDocument();
+    expect(screen.queryByTestId("task-DE-50")).not.toBeInTheDocument();
+    expect(screen.getByTestId("task-DE-23")).toBeInTheDocument();
+    // แผงสรุปยังนับทุกงาน
+    expect(within(screen.getByRole("region", { name: "สรุปของฉัน" })).getByText("วันนี้").nextSibling).toHaveTextContent("1");
+
+    // ล้างตัวกรอง แล้วกรองเฉพาะงานที่ไม่มี Module
+    await user.click(screen.getByRole("button", { name: "ล้างตัวกรอง" }));
+    expect(screen.getByText("แสดง", { exact: false })).toHaveTextContent("แสดง 4 งาน");
+    await user.click(screen.getByRole("button", { name: "Module" }));
+    await user.type(screen.getByRole("textbox", { name: "ค้นหา Module" }), "ไม่มี");
+    await user.click(screen.getByRole("checkbox", { name: /ไม่มี Module/ }));
+    expect(screen.getByTestId("task-DE-40")).toBeInTheDocument();
+    expect(screen.queryByTestId("task-DE-23")).not.toBeInTheDocument();
+    await waitFor(() => expect(JSON.parse(localStorage.getItem("friday:my-tasks-filter:sample") ?? "{}")).toEqual({ q: "", statuses: [], modules: ["none"] }));
+
+    // เปิดหน้าใหม่ ตัวกรองยังอยู่ · กรองแล้วไม่เหลืองาน = ข้อความไม่พบ
+    view.unmount();
+    localStorage.setItem("friday:my-tasks-filter:sample", JSON.stringify({ q: "ไม่มีงานนี้", statuses: [], modules: [] }));
+    mount(<MyTasksPage ws="sample" />);
+    expect(await screen.findByText("ไม่พบงานตามตัวกรองนี้")).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "ค้นหางาน" })).toHaveValue("ไม่มีงานนี้");
+    localStorage.clear();
+  });
+
   it("ติ๊กเพื่อปิดงาน = PATCH statusId ของสถานะ Done พร้อม If-Match", async () => {
     const user = userEvent.setup();
     mount(<MyTasksPage ws="sample" />);

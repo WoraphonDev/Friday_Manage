@@ -47,6 +47,8 @@
   "metaLine": "Created by {name} · {created} · Last edited {updated}",
   "subtaskProgressNote": "Task progress is calculated from sub-tasks",
   "progressAuto": "from sub-tasks",
+  "checklistProgressNote": "Progress is the share of checklist items ticked",
+  "progressFromChecklist": "from checklist",
   "dev": "Dev",
   "plan": "Plan",
   "actual": "Actual",

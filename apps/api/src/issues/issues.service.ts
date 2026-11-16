@@ -15,6 +15,7 @@ import { type DomainEvent, EventBus, type EventType } from '../core/events.js';
 import { isLegacyRank, PLAIN_RANK, rankAfter, rankBetween, spreadRanks } from './rank.js';
 import { type ProjectRow, ProjectsService } from '../projects/projects.service.js';
 import { issueProgress, listIssues, TableListQuery } from './table.js';
+import { hasChecklist } from './checklist-progress.js';
 import { enforceWorkflowRules, workflowRuleEnabled } from './rules.js';
 import { checkCustomValues, checkProfile, type CustomFieldDef, type CustomValues, CustomValuesBody, displayValue, readCustomValues, writeCustomValues } from './custom-values.js';
 import type { Level, ProfileValues } from '../projects/field-profile.js';
@@ -333,6 +334,7 @@ export class IssuesService {
         ...base,
         progressPct,
         progressFromSubtasks: subtasks.length > 0,
+        progressFromChecklist: !subtasks.length && (await hasChecklist(tx, issue.id)),
         group: group ?? null,
         subtasks: await this.dtos(tx, project, visibleSubs, access),
         pendingDueRequest: pending
@@ -601,6 +603,7 @@ export class IssuesService {
       // ความคืบหน้ากรอกเองได้เฉพาะงานที่ไม่มีลูก
       if (input.progressPct !== undefined) {
         if (await this.hasChildren(tx, issue.id)) throw new AppError(422, 'progress_from_subtasks', 'ความคืบหน้าของ Task คำนวณจาก Sub-task');
+        if (await hasChecklist(tx, issue.id)) throw new AppError(422, 'progress_from_checklist', 'ความคืบหน้าของงานนี้คำนวณจาก Checklist');
         set.progressPct = input.progressPct;
       }
 

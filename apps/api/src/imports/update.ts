@@ -7,6 +7,7 @@ import { parseCustomCell } from './custom.js';
 import { insertRows } from './insert.js';
 import { type ChecklistEntry, checklistMatchKey, type Field, personKey, type PlanCheck, type PlanRow } from './plan.js';
 import { reviewerList } from '../issues/rules.js';
+import { syncChecklistProgress } from '../issues/checklist-progress.js';
 
 const s = schema;
 
@@ -578,6 +579,7 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
       if (checklist.remove.length) await tx.delete(s.checklistItems).where(and(eq(s.checklistItems.issueId, issue.id), inArray(s.checklistItems.id, checklist.remove)));
       const sort = { ...checklist.nextSort };
       if (checklist.add.length) await tx.insert(s.checklistItems).values(checklist.add.map((c) => ({ ...w, issueId: issue.id, kind: c.kind, text: c.text, sort: sort[c.kind]++ })));
+      await syncChecklistProgress(tx, [issue.id]);
     }
     // ย้าย Module / กลุ่มของ Task แล้ว Sub-task ย้ายตาม
     if ((has('module') || has('group')) && !issue.parentId && set.phaseId !== undefined) await tx.update(s.issues).set({ moduleId: mid, phaseId: set.phaseId }).where(eq(s.issues.parentId, issue.id));

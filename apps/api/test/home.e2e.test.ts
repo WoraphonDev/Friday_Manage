@@ -89,6 +89,8 @@ describe('GET w/my-issues', () => {
     const late = g('late').items[0];
     expect(late.myRoles).toEqual(['dev']);
     expect(late).toMatchObject({ key: expect.stringMatching(/^DP-\d+$/), project: { key: 'DP' }, status: { category: 'todo' }, planEnd: '2026-11-27', due: { state: 'overdue', days: 5 } });
+    // Module ส่งมากับงานเพื่อใช้กรองในหน้า My Tasks
+    expect(late.module).toMatchObject({ id: moduleId, name: expect.any(String) });
     expect(g('today').items[0].due).toEqual({ state: 'today', days: 0 });
     expect(g('done_today').items[0].due.state).toBe('done');
     expect(g('none').items[0].due).toEqual({ state: 'none', days: null });

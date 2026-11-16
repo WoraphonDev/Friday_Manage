@@ -204,6 +204,7 @@
     "empty": "No tasks in this view",
     "emptyHint": "Tasks assigned to you appear here",
     "emptyFiltered": "No tasks match these filters",
+    "emptyFilteredHint": "Try another search or clear the filters",
     "loading": "Loading your tasks",
     "closed": "Closed {key}",
     "reopened": "Reopened {key}",
@@ -248,7 +249,22 @@
       "qaLong": "I'm the QA / Reviewer on this task"
     },
     "mobileSubtitle": "{count} open tasks",
-    "mobileTitle": "My tasks"
+    "mobileTitle": "My tasks",
+    "filters": {
+      "status": "Status",
+      "module": "Module",
+      "noModule": "No module",
+      "searchLabel": "Search tasks",
+      "searchPlaceholder": "Search title or key, e.g. KLF-1156",
+      "clearSearch": "Clear search",
+      "searchIn": "Search {name}",
+      "noOptions": "No matches",
+      "clear": "Clear",
+      "selectAll": "Select all",
+      "clearAll": "Clear filters",
+      "shownAll": "Showing <b>{total}</b> tasks",
+      "shownOf": "Showing <b>{shown}</b> of {total} tasks"
+    }
   },
   "projectsPage": {
     "title": "Projects",

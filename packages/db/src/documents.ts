@@ -53,6 +53,9 @@ export async function issueReceipt(tx: Tx, inv: { id: string; workspaceId: strin
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'receipt:' + inv.id}, 0))`);
   const [existing] = await tx.select().from(s.taxDocuments).where(and(eq(s.taxDocuments.invoiceId, inv.id), ne(s.taxDocuments.status, 'cancelled'), isNull(s.taxDocuments.cancelledAt)));
   if (existing) return { doc: existing, created: false };
+  // ใบแจ้งหนี้ส่วนเพิ่มของใบเพิ่มหนี้: ใบเพิ่มหนี้เป็นเอกสารภาษีของส่วนต่างอยู่แล้ว (ม.86/9) · ออกใบกำกับภาษีอีกใบ = VAT ซ้ำ
+  const [debit] = await tx.select({ id: s.debitNotes.id }).from(s.debitNotes).where(eq(s.debitNotes.chargeInvoiceId, inv.id)).limit(1);
+  if (debit) return { doc: null, created: false };
   const issuedOn = bkkDate(opts.paidAt);
   const kind: DocKind = opts.vatRegistered ? 'tax_invoice' : 'receipt';
   const number = await nextDocNumber(tx, kind, issuedOn);

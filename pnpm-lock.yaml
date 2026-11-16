@@ -131,6 +131,9 @@ importers:
       '@friday/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@friday/docs':
+        specifier: workspace:*
+        version: link:../../packages/docs
       '@nestjs/common':
         specifier: ^11.2.8
         version: 11.2.8(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -195,6 +198,9 @@ importers:
       '@types/web-push':
         specifier: 3.6.4
         version: 3.6.4
+      exceljs:
+        specifier: ^4.4.0
+        version: 4.4.0
       pg:
         specifier: ^8.23.1
         version: 8.23.1

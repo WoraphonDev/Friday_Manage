@@ -8,7 +8,7 @@ import { hasAny } from "@/components/access";
 import { kindText, useApprovalFlow, useReauth } from "@/components/dialogs";
 import { Drawer, Empty, ErrorBlock, Modal, PageHead, Seg, TableSkeleton } from "@/components/kit";
 import { Button, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { useFmt } from "../workspaces/_parts/format";
 
@@ -134,7 +134,14 @@ export function RefundsPage() {
                     <td>{t(`types.${h.type}` as "types.refund")}</td>
                     <td>{h.workspace.name}</td>
                     <td className="mono small">
-                      {h.ref ?? "—"}
+                      {/* ใบลดหนี้ (คืนเงิน / เครดิต / ยกเลิก) เปิด PDF ได้ · เครดิตน้ำใจไม่มีเอกสาร */}
+                      {h.ref && h.type !== "goodwill_credit" ? (
+                        <a className="link-button small mono" href={`${OPS_BASE}/credit-notes/${h.id}/pdf`} target="_blank" rel="noreferrer" aria-label={t("pdf", { number: h.ref })}>
+                          {h.ref}
+                        </a>
+                      ) : (
+                        (h.ref ?? "—")
+                      )}
                       {h.invoice && <div className="cell-sub">{h.invoice}</div>}
                     </td>
                     <td className="num">{fmt.money(h.amountSatang)}</td>

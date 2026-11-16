@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Module, Param, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Module, Param, Post, Query, Req, Res, StreamableFile } from '@nestjs/common';
 import type { Response } from 'express';
 import { type OpsRequest, Reauth, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
@@ -8,16 +8,26 @@ import {
   ContactBody,
   CreateInvoiceBody,
   CreditGrantBody,
+  DebitNoteBody,
   ExportQuery,
   ExtendBody,
   InvoicesQuery,
   RefundBody,
+  ReplaceTaxDocBody,
   RevenueQuery,
+  SalesReportQuery,
   SendExportBody,
   SendLinkBody,
   TaxQuery,
   VoidBody,
 } from './billing.service.js';
+
+/** ไฟล์เอกสาร (PDF / Excel) · ไม่เก็บในแคชของเบราว์เซอร์ */
+function file(res: Response, f: { filename: string; buffer: Buffer }, contentType: string, disposition: 'inline' | 'attachment' = 'inline') {
+  res.set({ 'Content-Type': contentType, 'Content-Disposition': `${disposition}; filename="${f.filename}"`, 'Cache-Control': 'private, no-store' });
+  return new StreamableFile(f.buffer);
+}
+const PDF = 'application/pdf';
 
 /** เกินวงเงิน → 202 พร้อมคำขออนุมัติ */
 async function respond<T extends object>(res: Response, p: Promise<T>) {
@@ -57,6 +67,28 @@ export class BillingController {
     return this.billing.sendLink(req.staff!, id, parse(SendLinkBody, body ?? {}));
   }
 
+  @Roles('finance')
+  @Post(['invoices/:id/debit-note', 'invoices/:id\\:debit-note'])
+  @HttpCode(200)
+  debitNote(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.billing.issueDebitNote(req.staff!, id, parse(DebitNoteBody, body));
+  }
+  @Roles('finance', 'owner', 'auditor')
+  @Get('invoices/:id/pdf')
+  async invoicePdf(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
+    return file(res, await this.billing.documentPdf('invoice', id), PDF);
+  }
+  @Roles('finance', 'owner', 'auditor')
+  @Get('credit-notes/:id/pdf')
+  async creditNotePdf(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
+    return file(res, await this.billing.documentPdf('credit_note', id), PDF);
+  }
+  @Roles('finance', 'owner', 'auditor')
+  @Get('debit-notes/:id/pdf')
+  async debitNotePdf(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
+    return file(res, await this.billing.documentPdf('debit_note', id), PDF);
+  }
+
   @Roles('finance', 'owner', 'auditor')
   @Get('overdue')
   overdue() {
@@ -85,6 +117,18 @@ export class BillingController {
   @HttpCode(200)
   retry(@Req() req: OpsRequest, @Param('id') id: string) {
     return this.billing.retryTaxDocument(req.staff!, id);
+  }
+
+  @Roles('finance')
+  @Post(['tax-documents/:id/replace', 'tax-documents/:id\\:replace'])
+  @HttpCode(200)
+  replace(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.billing.replaceTaxDocument(req.staff!, id, parse(ReplaceTaxDocBody, body));
+  }
+  @Roles('finance', 'owner', 'auditor')
+  @Get('tax-documents/:id/pdf')
+  async taxDocumentPdf(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
+    return file(res, await this.billing.documentPdf('tax_document', id), PDF);
   }
 
   @Roles('finance', 'owner', 'auditor')
@@ -127,6 +171,15 @@ export class BillingController {
   @HttpCode(200)
   send(@Req() req: OpsRequest, @Body() body: unknown) {
     return this.billing.sendExport(req.staff!, parse(SendExportBody, body ?? {}));
+  }
+  /** รายงานภาษีขายรายเดือน (?month=YYYY-MM&format=pdf|xlsx) */
+  @Roles('finance', 'owner', 'auditor')
+  @Get('revenue/sales-report')
+  async salesReport(@Query() q: unknown, @Res({ passthrough: true }) res: Response) {
+    const query = parse(SalesReportQuery, q);
+    const r = await this.billing.salesReport(query);
+    res.set('X-Report-Status', r.draft ? 'draft' : 'closed');
+    return file(res, r, query.format === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : PDF, 'attachment');
   }
   @Roles('finance', 'owner', 'auditor')
   @Get('revenue/export')

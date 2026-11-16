@@ -103,7 +103,20 @@ interface InvoiceRow {
   paidAt: string | null;
   workspace: { id: string; slug: string; name: string };
   taxDocumentStatus: string | null;
+  /** ใบกำกับภาษี / ใบเสร็จที่ยังมีผล (ฉบับแทนฉบับที่ยกเลิก) */
+  taxDocument: { id: string; number: string; status: string; docType: string } | null;
+  /** ไม่มีใน ops-api รุ่นก่อน (ระหว่าง deploy ทีละ service) */
+  creditNotes?: { id: string; number: string }[];
+  debitNotes?: { id: string; number: string }[];
   hasCreditNote: boolean;
+}
+/** ลิงก์ PDF ของเอกสาร (แม่แบบเดียวกับที่ลูกค้าได้) */
+function DocLink({ path, label }: { path: string; label: string }) {
+  return (
+    <a className="link-button small mono" href={`${OPS_BASE}${path}`} target="_blank" rel="noreferrer">
+      <FileText size={12} aria-hidden="true" /> {label}
+    </a>
+  );
 }
 const STATUSES = ["", "open", "pending_review", "overdue", "paid", "void"] as const;
 export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean; onCreatingChange: (o: boolean) => void }) {
@@ -117,6 +130,8 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
   const search = useDeferredValue(q.trim());
   const [voiding, setVoiding] = useState<InvoiceRow | null>(null);
   const [linking, setLinking] = useState<InvoiceRow | null>(null);
+  const [debiting, setDebiting] = useState<InvoiceRow | null>(null);
+  const [replacing, setReplacing] = useState<InvoiceRow | null>(null);
   const filter = new URLSearchParams({ limit: "100", ...(status ? { status } : {}), ...(search ? { q: search } : {}) });
   const list = useQuery({ queryKey: ["ops", "invoices", filter.toString()], queryFn: () => api.get<{ items: InvoiceRow[]; total: number }>(`/invoices?${filter}`), placeholderData: keepPreviousData });
   return (
@@ -142,7 +157,7 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
       ) : !list.data.items.length ? (
         <Empty title={t("invoices.empty")} onClearFilters={status || search ? () => (setStatus(""), setQ("")) : undefined} />
       ) : (
-        <Table head={[t("invoices.number"), t("invoices.ws"), { label: t("invoices.total"), num: true }, { label: t("invoices.wht"), num: true }, { label: t("invoices.due"), num: true }, t("invoices.dueDate"), t("incoming.status"), t("invoices.etax"), ...(finance ? [t("invoices.actions")] : [])]}>
+        <Table head={[t("invoices.number"), t("invoices.ws"), { label: t("invoices.total"), num: true }, { label: t("invoices.wht"), num: true }, { label: t("invoices.due"), num: true }, t("invoices.dueDate"), t("incoming.status"), t("invoices.docs"), ...(finance ? [t("invoices.actions")] : [])]}>
           {list.data.items.map((i) => (
             <tr key={i.id}>
               <td className="mono small">
@@ -158,7 +173,22 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
                 <span className={i.status === "paid" ? "pill ok" : i.status === "void" ? "pill" : i.dueDate < todayBkk() ? "pill bad" : "pill warn"}>{t(`invoices.status.${i.status}` as "invoices.status.open")}</span>
                 {i.hasCreditNote && <span className="pill inf">{t("invoices.cn")}</span>}
               </td>
-              <td className="small">{i.taxDocumentStatus ?? "—"}</td>
+              <td className="small">
+                <span className="stack" style={{ gap: 2 }}>
+                  <DocLink path={`/invoices/${i.id}/pdf`} label={t("invoices.invoicePdf")} />
+                  {i.taxDocument && (
+                    <span>
+                      <DocLink path={`/tax-documents/${i.taxDocument.id}/pdf`} label={i.taxDocument.number} /> <span className="muted">· {i.taxDocument.status}</span>
+                    </span>
+                  )}
+                  {(i.creditNotes ?? []).map((n) => (
+                    <DocLink key={n.id} path={`/credit-notes/${n.id}/pdf`} label={n.number} />
+                  ))}
+                  {(i.debitNotes ?? []).map((n) => (
+                    <DocLink key={n.id} path={`/debit-notes/${n.id}/pdf`} label={n.number} />
+                  ))}
+                </span>
+              </td>
               {finance && (
                 <td>
                   <span className="row" style={{ flexWrap: "nowrap" }}>
@@ -166,6 +196,16 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
                       <Button size="small" onClick={() => setLinking(i)}>
                         {t("invoices.link")}
                       </Button>
+                    )}
+                    {i.status === "paid" && i.taxDocument && i.taxDocument.status !== "cancelled" && (
+                      <>
+                        <Button size="small" onClick={() => setDebiting(i)}>
+                          {t("invoices.debit")}
+                        </Button>
+                        <Button size="small" variant="ghost" onClick={() => setReplacing(i)}>
+                          {t("invoices.replace")}
+                        </Button>
+                      </>
                     )}
                     {i.status !== "void" && (
                       <Button size="small" variant="ghost" onClick={() => setVoiding(i)}>
@@ -182,6 +222,8 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
       {creating && <CreateInvoiceDrawer onClose={() => onCreatingChange(false)} />}
       {voiding && <VoidDialog inv={voiding} onClose={() => setVoiding(null)} />}
       {linking && <SendLinkDialog inv={linking} onClose={() => setLinking(null)} />}
+      {debiting && <DebitNoteDialog inv={debiting} onClose={() => setDebiting(null)} />}
+      {replacing && <ReplaceTaxDocDialog inv={replacing} onClose={() => setReplacing(null)} />}
     </section>
   );
 }
@@ -413,6 +455,69 @@ function SendLinkDialog({ inv, onClose }: { inv: InvoiceRow; onClose: () => void
         <div className="dialog-actions">
           <Button onClick={onClose}>{tc("cancel")}</Button>
           <Button type="submit" variant="primary" disabled={m.isPending}>
+            {t("submit")}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/** ใบเพิ่มหนี้ (ม.86/9): ยอดที่คิดขาดก่อน VAT · ระบบออกใบแจ้งหนี้ส่วนเพิ่มให้ลูกค้าจ่ายที่หน้าชำระใบแจ้งหนี้ */
+function DebitNoteDialog({ inv, onClose }: { inv: InvoiceRow; onClose: () => void }) {
+  const t = useTranslations("money.debit");
+  const tc = useTranslations("common.dialog");
+  const toast = useToast();
+  const cache = useQueryClient();
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const [dueDays, setDueDays] = useState("7");
+  const satang = Math.round(Number(amount.replace(/,/g, "")) * 100);
+  const valid = satang > 0 && reason.trim().length >= 3 && Number(dueDays) >= 1 && Number(dueDays) <= 90;
+  const m = useMutation({
+    mutationFn: () => api.post<{ debitNote: { number: string }; invoice: { number: string } }>(`/invoices/${inv.id}/debit-note`, { amountSatang: satang, reason: reason.trim(), dueDays: Number(dueDays) }),
+    onSuccess: (r) => (toast(t("done", { number: r.debitNote.number, invoice: r.invoice.number })), invalidate(cache), onClose()),
+  });
+  return (
+    <Modal open onOpenChange={(o) => !o && onClose()} title={t("title", { number: inv.taxDocument?.number ?? inv.number })} description={t("desc", { ws: inv.workspace.name })}>
+      <form className="dialog-body" onSubmit={(e) => (e.preventDefault(), valid && m.mutate())}>
+        <Input label={t("amount")} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <Input label={t("dueDays")} type="number" min={1} max={90} value={dueDays} onChange={(e) => setDueDays(e.target.value)} />
+        <Textarea label={t("reason")} value={reason} onChange={(e) => setReason(e.target.value)} />
+        <p className="muted small">{t("note")}</p>
+        <InlineError error={m.error} />
+        <div className="dialog-actions">
+          <Button onClick={onClose}>{tc("cancel")}</Button>
+          <Button type="submit" variant="primary" disabled={!valid || m.isPending}>
+            {t("submit")}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/** ใบกำกับภาษีฉบับใหม่แทนฉบับที่ยกเลิก (ข้อมูลผู้ซื้อผิด · ให้ลูกค้าแก้ข้อมูลภาษีก่อน) */
+function ReplaceTaxDocDialog({ inv, onClose }: { inv: InvoiceRow; onClose: () => void }) {
+  const t = useTranslations("money.replace");
+  const tc = useTranslations("common.dialog");
+  const toast = useToast();
+  const cache = useQueryClient();
+  const [reason, setReason] = useState("");
+  const doc = inv.taxDocument!;
+  const m = useMutation({
+    mutationFn: () => api.post<{ replacement: { number: string } }>(`/tax-documents/${doc.id}/replace`, { reason: reason.trim() }),
+    onSuccess: (r) => (toast(t("done", { old: doc.number, number: r.replacement.number })), invalidate(cache), onClose()),
+  });
+  return (
+    <Modal open onOpenChange={(o) => !o && onClose()} title={t("title", { number: doc.number })} description={t("desc", { ws: inv.workspace.name })}>
+      <form className="dialog-body" onSubmit={(e) => (e.preventDefault(), reason.trim().length >= 3 && m.mutate())}>
+        <Textarea label={t("reason")} placeholder={t("placeholder")} value={reason} onChange={(e) => setReason(e.target.value)} />
+        <p className="muted small">{t("note")}</p>
+        <InlineError error={m.error} />
+        <div className="dialog-actions">
+          <Button onClick={onClose}>{tc("cancel")}</Button>
+          <Button type="submit" variant="danger" disabled={reason.trim().length < 3 || m.isPending}>
             {t("submit")}
           </Button>
         </div>
@@ -670,6 +775,12 @@ export function TaxTab() {
           <h2 className="card-title">{t("sales")}</h2>
           <span className="spacer" />
           <input type="month" className="input" style={{ width: "auto" }} aria-label={t("month")} value={month} onChange={(e) => setMonth(e.target.value || thisMonth())} />
+          <a className={buttonClass("ghost", "small")} href={`${OPS_BASE}/revenue/sales-report?month=${month}&format=pdf`} download>
+            <FileText size={14} aria-hidden="true" /> {t("reportPdf")}
+          </a>
+          <a className={buttonClass("ghost", "small")} href={`${OPS_BASE}/revenue/sales-report?month=${month}&format=xlsx`} download>
+            {t("reportXlsx")}
+          </a>
         </div>
         {!d.salesVat.vatRegistered && <Notice tone="warn">{t("notRegistered")}</Notice>}
         <table className="tbl" aria-label={t("sales")}>
@@ -825,7 +936,12 @@ export function RevenueTab() {
 }
 
 /** B8 · ส่งออกให้สำนักงานบัญชี: ดาวน์โหลดทีละไฟล์ หรือส่งอีเมลพร้อมไฟล์แนบ · ส่งอัตโนมัติทุกเดือน (ops-api) */
-type ExportType = "sales" | "credit_notes" | "wht";
+type ExportType = "sales_tax" | "wht";
+/** ลิงก์ดาวน์โหลดของแต่ละไฟล์: รายงานภาษีขายมี PDF (ตามแบบ) + Excel · 50 ทวิ เป็น CSV */
+const exportFiles = (type: ExportType, month: string) =>
+  type === "sales_tax"
+    ? [{ key: "pdf", href: `${OPS_BASE}/revenue/sales-report?month=${month}&format=pdf` }, { key: "xlsx", href: `${OPS_BASE}/revenue/sales-report?month=${month}&format=xlsx` }]
+    : [{ key: "csv", href: `${OPS_BASE}/revenue/export?month=${month}&type=wht` }];
 interface Delivery {
   recipients: string[];
   autoDay: number;
@@ -838,7 +954,7 @@ export function AccountantExport({ onClose }: { onClose: () => void }) {
   const toast = useToast();
   const fmt = useFmt();
   const [month, setMonth] = useState(lastMonth());
-  const [types, setTypes] = useState<ExportType[]>(["sales", "credit_notes", "wht"]);
+  const [types, setTypes] = useState<ExportType[]>(["sales_tax", "wht"]);
   const revenue = useQuery({ queryKey: ["ops", "revenue"], queryFn: () => api.get<{ months: RevenueRow[] }>("/revenue?months=6") });
   const delivery = useQuery({ queryKey: ["ops", "revenue", "delivery"], queryFn: () => api.get<Delivery>("/revenue/export/delivery") });
   const closed = revenue.data?.months.find((m) => m.month === month)?.closed;
@@ -856,15 +972,19 @@ export function AccountantExport({ onClose }: { onClose: () => void }) {
         <span className={closed ? "pill ok" : "pill warn"}>{closed ? t("closedLabel") : t("draft")}</span>
         <fieldset className="stack" style={{ border: 0, padding: 0, margin: 0 }}>
           <legend className="field-label">{t("type")}</legend>
-          {(["sales", "credit_notes", "wht"] as const).map((v) => (
+          {(["sales_tax", "wht"] as const).map((v) => (
             <div key={v} className="row" style={{ justifyContent: "space-between" }}>
               <label className="check">
                 <input type="checkbox" checked={types.includes(v)} onChange={() => setTypes(types.includes(v) ? types.filter((x) => x !== v) : [...types, v])} />
                 <span>{t(`types.${v}`)}</span>
               </label>
-              <a className="link-button small" href={`${OPS_BASE}/revenue/export?month=${month}&type=${v}`} download aria-label={t("downloadOne", { file: t(`types.${v}`) })}>
-                {t("download")}
-              </a>
+              <span className="row" style={{ gap: 8 }}>
+                {exportFiles(v, month).map((f) => (
+                  <a key={f.key} className="link-button small" href={f.href} download aria-label={t("downloadOne", { file: t(`files.${v}_${f.key}` as "files.wht_csv") })}>
+                    {t(`format.${f.key}` as "format.csv")}
+                  </a>
+                ))}
+              </span>
             </div>
           ))}
         </fieldset>

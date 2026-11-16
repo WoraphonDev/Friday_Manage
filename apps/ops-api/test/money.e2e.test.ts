@@ -1,5 +1,6 @@
 // O03 · งานเงินในหลังบ้าน · ข้อมูลสมมติเท่านั้น
 import { randomUUID } from 'node:crypto';
+import ExcelJS from 'exceljs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BillingService } from '../src/billing/billing.service.js';
 import { Mailer } from '../src/mail.js';
@@ -35,6 +36,18 @@ async function invoice(ws: Customer, o: { amountDue?: number; subtotal?: number;
     payment = (await t.owner.query(`INSERT INTO payments (workspace_id, invoice_id, method, amount, status, exception_reason, slip_file_key) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`, [ws.id, inv.id, p.method ?? 'transfer', p.amount ?? due, p.status ?? (paid ? 'confirmed' : 'pending_review'), p.exception ?? null, p.slip ? 'slips/x.png' : null])).rows[0].id;
   }
   return { inv, payment: payment! };
+}
+/** ไฟล์ PDF / Excel จาก supertest */
+const binary = (req: import('supertest').Test) =>
+  req.buffer(true).parse((res, cb) => {
+    const chunks: Buffer[] = [];
+    res.on('data', (d: Buffer) => chunks.push(d));
+    res.on('end', () => cb(null, Buffer.concat(chunks)));
+  }) as unknown as Promise<{ status: number; body: Buffer; headers: Record<string, string> }>;
+const isPdf = (b: Buffer) => b.subarray(0, 4).toString('latin1') === '%PDF';
+/** ใบกำกับภาษีที่ออกแล้วของใบแจ้งหนี้ (ข้อมูลสมมติ) */
+async function taxDoc(invoiceId: string, ws: Customer) {
+  return (await t.owner.query(`INSERT INTO tax_documents (workspace_id, invoice_id, doc_type, number, status, issued_on, sent_at) VALUES ($1,$2,'tax_invoice_receipt',$3,'issued',current_date,now()) RETURNING *, to_char(issued_on, 'YYYY-MM-DD') AS day`, [ws.id, invoiceId, `TX-T${++seq}-${randomUUID().slice(0, 4)}`])).rows[0];
 }
 const audit = async (ws: string, action: string) => (await t.owner.query(`SELECT summary FROM audit_logs WHERE workspace_id = $1 AND action = $2 ORDER BY created_at`, [ws, action])).rows;
 
@@ -207,7 +220,7 @@ describe('ใบแจ้งหนี้', () => {
     const open = await invoice(c, {});
     expect((await finance.agent.post(`/ops/invoices/${open.inv.id}/send-link`).send({ to: 'stranger@example.com' })).body.error.code).toBe('recipient_not_contact');
     const r = await finance.agent.post(`/ops/invoices/${open.inv.id}/send-link`).send({ to: 'acc@money-demo.example.com' });
-    expect(r.body).toMatchObject({ sent: 1, link: expect.stringContaining('/work/money-demo/billing?invoice=') });
+    expect(r.body).toMatchObject({ sent: 1, link: expect.stringContaining(`/work/money-demo/billing/invoices/${open.inv.id}`) });
   });
 });
 
@@ -317,6 +330,102 @@ describe('คืนเงินและเครดิต', () => {
   });
 });
 
+describe('ใบลด / เพิ่มหนี้ และใบกำกับภาษีฉบับแทน', () => {
+  it('ใบลดหนี้: ส่งอีเมลแนบ PDF แล้วเป็น sent · ทีมดาวน์โหลด PDF ได้', async () => {
+    const paid = await invoice(c, { status: 'paid' });
+    await taxDoc(paid.inv.id, c);
+    const before = mail.sent.length;
+    const v = await finance.agent.post(`/ops/invoices/${paid.inv.id}/void`).send({ reason: 'ออกเอกสารซ้ำ', money: 'none' });
+    expect(v.status, JSON.stringify(v.body)).toBe(200);
+    const sent = mail.sent.slice(before);
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent[0].attachments).toEqual([expect.objectContaining({ filename: `${v.body.creditNote.number}.pdf`, contentType: 'application/pdf' })]);
+    expect(isPdf(sent[0].attachments![0].content as Buffer)).toBe(true);
+    expect((await t.owner.query(`SELECT status FROM credit_notes WHERE id = $1`, [v.body.creditNote.id])).rows[0].status).toBe('sent');
+    const pdf = await binary(auditor.agent.get(`/ops/credit-notes/${v.body.creditNote.id}/pdf`));
+    expect(pdf.status).toBe(200);
+    expect(isPdf(pdf.body)).toBe(true);
+    expect((await support.agent.get(`/ops/credit-notes/${v.body.creditNote.id}/pdf`)).status).toBe(403);
+    expect((await finance.agent.get(`/ops/credit-notes/${randomUUID()}/pdf`)).status).toBe(404);
+  });
+
+  it('ใบเพิ่มหนี้ (ม.86/9): เลข DN- · ใบแจ้งหนี้ส่วนเพิ่มให้ลูกค้าจ่าย · อีเมลแนบ PDF · ต้องชำระแล้วและมีใบกำกับภาษี', async () => {
+    const open = await invoice(c, {});
+    expect((await finance.agent.post(`/ops/invoices/${open.inv.id}/debit-note`).send({ amountSatang: 60_000, reason: 'คิดส่วนลดเกินสิทธิ์' })).body.error.code).toBe('invoice_not_paid');
+    const noDoc = await invoice(c, { status: 'paid' });
+    expect((await finance.agent.post(`/ops/invoices/${noDoc.inv.id}/debit-note`).send({ amountSatang: 60_000, reason: 'คิดส่วนลดเกินสิทธิ์' })).body.error.code).toBe('no_tax_document');
+    const paid = await invoice(c, { status: 'paid' });
+    const doc = await taxDoc(paid.inv.id, c);
+    expect((await support.agent.post(`/ops/invoices/${paid.inv.id}/debit-note`).send({ amountSatang: 60_000, reason: 'x' })).status).toBe(403);
+    const before = mail.sent.length;
+    const r = await finance.agent.post(`/ops/invoices/${paid.inv.id}/debit-note`).send({ amountSatang: 60_000, reason: 'คิดส่วนลดเกินสิทธิ์', dueDays: 7 });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body.debitNote).toMatchObject({ number: expect.stringMatching(/^DN-\d{4}-\d{4}$/), amountSatang: 60_000, vatSatang: 4_200 });
+    expect(r.body.invoice).toMatchObject({ number: expect.stringMatching(/^FRI-\d{4}-\d{4}$/), amountDue: 64_200, dueDate: daysAgo(-7) });
+    const dn = (await t.owner.query(`SELECT invoice_id, charge_invoice_id, status FROM debit_notes WHERE id = $1`, [r.body.debitNote.id])).rows[0];
+    expect(dn).toEqual({ invoice_id: paid.inv.id, charge_invoice_id: r.body.invoice.id, status: 'sent' });
+    const charge = (await t.owner.query(`SELECT status, subtotal::int AS s, vat::int AS v, amount_due::int AS d FROM invoices WHERE id = $1`, [r.body.invoice.id])).rows[0];
+    expect(charge).toEqual({ status: 'open', s: 60_000, v: 4_200, d: 64_200 });
+    expect((await t.owner.query(`SELECT method, amount::int AS a FROM payments WHERE invoice_id = $1`, [r.body.invoice.id])).rows).toEqual([{ method: 'transfer', a: 64_200 }]);
+    const m = mail.sent.slice(before)[0];
+    expect(m.text).toContain(doc.number);
+    expect(m.text).toContain(`/work/money-demo/billing/invoices/${r.body.invoice.id}`);
+    expect(m.attachments?.[0]).toMatchObject({ filename: `${r.body.debitNote.number}.pdf`, contentType: 'application/pdf' });
+    expect((await audit(c.id, 'ops.debit_note_issued')).at(-1).summary).toContain(r.body.debitNote.number);
+    // ลูกค้าเห็นใบเพิ่มหนี้ของตัวเอง (RLS อ่านได้) ผ่าน debit_notes
+    const pdf = await binary(finance.agent.get(`/ops/debit-notes/${r.body.debitNote.id}/pdf`));
+    expect(isPdf(pdf.body)).toBe(true);
+    // ลูกค้าจ่ายส่วนเพิ่ม: ใบเพิ่มหนี้เป็นเอกสารภาษีของส่วนต่างแล้ว จึงไม่ออกใบกำกับภาษีซ้ำ (VAT จะซ้ำ)
+    const pay = (await t.owner.query(`SELECT id FROM payments WHERE invoice_id = $1`, [r.body.invoice.id])).rows[0].id;
+    expect((await finance.agent.post(`/ops/payments/${pay}:confirm`).send({})).status).toBe(200);
+    expect((await t.owner.query(`SELECT status FROM invoices WHERE id = $1`, [r.body.invoice.id])).rows[0].status).toBe('paid');
+    expect((await t.owner.query(`SELECT count(*)::int AS n FROM tax_documents WHERE invoice_id = $1`, [r.body.invoice.id])).rows[0].n).toBe(0);
+  });
+
+  it('ใบกำกับภาษีฉบับใหม่แทนฉบับที่ยกเลิก: ฉบับเดิม cancelled · ฉบับใหม่เลขใหม่ ลงวันที่เดิม รอส่ง e-Tax · ยกเลิกซ้ำไม่ได้', async () => {
+    const paid = await invoice(c, { status: 'paid' });
+    const doc = await taxDoc(paid.inv.id, c);
+    const r = await finance.agent.post(`/ops/tax-documents/${doc.id}/replace`).send({ reason: 'เลขประจำตัวผู้เสียภาษีของผู้ซื้อผิด' });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body).toMatchObject({ cancelled: { id: doc.id, number: doc.number }, replacement: { number: expect.stringMatching(/^TX-\d{4}-\d{4}$/), status: 'pending', issuedOn: doc.day } });
+    const rows = (await t.owner.query(`SELECT id, status, cancel_reason, replaces_id, to_char(issued_on, 'YYYY-MM-DD') AS day, buyer->>'companyName' AS buyer FROM tax_documents WHERE invoice_id = $1 ORDER BY created_at`, [paid.inv.id])).rows;
+    expect(rows).toEqual([
+      expect.objectContaining({ id: doc.id, status: 'cancelled', cancel_reason: 'เลขประจำตัวผู้เสียภาษีของผู้ซื้อผิด' }),
+      expect.objectContaining({ id: r.body.replacement.id, status: 'pending', replaces_id: doc.id, day: doc.day, buyer: 'บริษัท เงินเดโม จำกัด' }),
+    ]);
+    expect((await finance.agent.post(`/ops/tax-documents/${doc.id}/replace`).send({ reason: 'ซ้ำอีกครั้ง' })).body.error.code).toBe('already_cancelled');
+    expect(isPdf((await binary(auditor.agent.get(`/ops/tax-documents/${r.body.replacement.id}/pdf`))).body)).toBe(true);
+    expect((await audit(c.id, 'ops.tax_document_replaced')).at(-1).summary).toContain(doc.number);
+  });
+
+  it('รายงานภาษีขายรายเดือน: PDF (ตามแบบ + รายละเอียด) และ Excel 2 แท็บ · ใบลดหนี้ติดลบ ใบยกเลิกเป็น 0 · ฉบับร่างก่อนปิดงวด', async () => {
+    const month = today().slice(0, 7);
+    const pdf = await binary(auditor.agent.get(`/ops/revenue/sales-report?month=${month}`));
+    expect(pdf.status).toBe(200);
+    expect(pdf.headers['content-type']).toBe('application/pdf');
+    expect(pdf.headers['x-report-status']).toBe('draft');
+    expect(isPdf(pdf.body)).toBe(true);
+    const x = await binary(auditor.agent.get(`/ops/revenue/sales-report?month=${month}&format=xlsx`));
+    expect(x.headers['content-disposition']).toContain(`friday-sales-tax-${month}-draft.xlsx`);
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(x.body as unknown as ArrayBuffer);
+    expect(wb.worksheets.map((w) => w.name)).toEqual(['รายงานภาษีขาย', 'รายละเอียด']);
+    const sheet = wb.getWorksheet('รายงานภาษีขาย')!;
+    const rows: { number: string; value: number; vat: number }[] = [];
+    sheet.eachRow((row, i) => {
+      if (i > 6 && /^(TX|RC|CN|DN)-/.test(String(row.getCell(3).value ?? ''))) rows.push({ number: String(row.getCell(3).value), value: Number(row.getCell(7).value), vat: Number(row.getCell(8).value) });
+    });
+    const total = sheet.getRow(sheet.rowCount);
+    expect(total.getCell(6).value).toBe('รวม');
+    expect(Number(total.getCell(7).value)).toBeCloseTo(rows.reduce((n, r) => n + r.value, 0), 2);
+    expect(rows.some((r) => r.number.startsWith('CN-') && r.value < 0)).toBe(true);
+    expect(rows.some((r) => r.number.startsWith('DN-') && r.value === 600)).toBe(true);
+    expect(rows.filter((r) => r.number.startsWith('TX-T') && r.value === 0).length).toBeGreaterThan(0);
+    expect((await finance.agent.get(`/ops/revenue/sales-report?month=2026-13`)).status).toBe(400);
+    expect((await support.agent.get(`/ops/revenue/sales-report?month=${month}`)).status).toBe(403);
+  });
+});
+
 describe('รายงานรายได้ ปิดงวด และส่งออก', () => {
   it('รายปีกระจายรับรู้ 12 เดือน · มีรายได้รับล่วงหน้า', async () => {
     const r = await auditor.agent.get('/ops/revenue?months=3');
@@ -340,14 +449,13 @@ describe('รายงานรายได้ ปิดงวด และส�
     expect((await fresh.agent.post('/ops/revenue/close').send({ month: last })).body.error.code).toBe('reauth_required');
     await reauth(fresh);
     expect((await fresh.agent.post('/ops/revenue/close').send({ month })).body.error.code).toBe('month_not_ended');
-    const csv = await finance.agent.get(`/ops/revenue/export?month=${month}`);
+    const csv = await finance.agent.get(`/ops/revenue/export?month=${month}&type=wht`);
     expect(csv.status).toBe(200);
     expect(csv.headers['content-type']).toContain('text/csv');
     expect(csv.headers['x-report-status']).toBe('draft');
     expect(csv.text.charCodeAt(0)).toBe(0xfeff);
-    expect(csv.text).toContain('บริษัท เงินเดโม จำกัด');
-    const cn = await finance.agent.get(`/ops/revenue/export?month=${month}&type=credit_notes`);
-    expect(cn.text.split('\r\n').filter(Boolean).length).toBeGreaterThan(1);
+    // รายการขาย / ใบลดหนี้ย้ายไปอยู่ในรายงานภาษีขายแล้ว
+    expect((await finance.agent.get(`/ops/revenue/export?month=${month}&type=credit_notes`)).status).toBe(400);
     expect((await fresh.agent.post('/ops/revenue/close').send({ month: last })).body).toEqual({ month: last, closed: true });
     expect((await fresh.agent.post('/ops/revenue/close').send({ month: last })).body.error.code).toBe('already_closed');
     expect((await finance.agent.get(`/ops/revenue/export?month=${last}&type=wht`)).headers['x-report-status']).toBe('closed');
@@ -364,14 +472,14 @@ describe('รายงานรายได้ ปิดงวด และส�
     process.env.OPS_ACCOUNTING_EMAIL = 'acc@office.example.com';
     try {
       const before = mail.sent.length;
-      const r = await finance.agent.post('/ops/revenue/export/send').send({ month, types: ['sales', 'credit_notes'] });
+      const r = await finance.agent.post('/ops/revenue/export/send').send({ month, types: ['sales_tax'] });
       expect(r.status, JSON.stringify(r.body)).toBe(200);
       expect(r.body).toMatchObject({ month, to: ['acc@office.example.com'], sent: 1, draft: true });
       const m = mail.sent.at(-1)!;
       expect(mail.sent.length).toBe(before + 1);
       expect(m.subject).toContain('ฉบับร่าง');
-      expect(m.attachments?.map((a) => a.filename)).toEqual([`friday-sales-${month}-draft.csv`, `friday-credit_notes-${month}-draft.csv`]);
-      expect(m.attachments?.[0]!.content).toContain('บริษัท เงินเดโม จำกัด');
+      expect(m.attachments?.map((a) => a.filename)).toEqual([`friday-sales-tax-${month}-draft.pdf`, `friday-sales-tax-${month}-draft.xlsx`]);
+      expect(isPdf(m.attachments![0]!.content as Buffer)).toBe(true);
       const d = await auditor.agent.get('/ops/revenue/export/delivery');
       expect(d.body).toMatchObject({ recipients: ['acc@office.example.com'], autoDay: 5, history: [{ month, staffName: 'Fin Finance' }] });
       expect((await auditor.agent.post('/ops/revenue/export/send').send({ month })).status).toBe(403);

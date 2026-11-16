@@ -175,7 +175,7 @@ export async function quotationPdf(db: Reader, id: string, opts: { vatRegistered
 // ---------------------------------------------------------------------------
 
 const CHANNEL: Record<string, string> = { card: 'บัตร', promptpay: 'PromptPay', transfer: 'โอน (สลิป)' };
-const ETAX: Record<string, string> = { pending: 'รอส่ง', submitted: 'ส่งแล้ว รอผล', issued: 'ส่งแล้ว', failed: 'ส่งไม่สำเร็จ', cancelled: 'แจ้งยกเลิกแล้ว' };
+const ETAX: Record<string, string> = { pending: 'รอส่ง', submitted: 'ส่งแล้ว รอผล', issued: 'ส่งแล้ว', failed: 'ส่งไม่สำเร็จ', cancelled: 'ยกเลิก · ต้องแจ้งผู้ให้บริการ' };
 
 /** รวบรวมเอกสารภาษีของเดือน (ตามวันที่ของเอกสาร) เป็นแถวของรายงาน + รายการตรวจก่อนปิดเดือน */
 export async function salesReportData(db: Reader, year: number, month: number, opts: { closed: boolean }): Promise<SalesReportInput> {

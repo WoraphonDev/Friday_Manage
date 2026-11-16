@@ -199,7 +199,7 @@ export function receiptDoc(r: ReceiptInput): FinanceDoc {
       note: r.whtAmount > 0 ? `ยอดรวม ฿${baht(r.total)} = รับชำระ ฿${baht(r.payment.received)} + ผู้ซื้อหัก ณ ที่จ่าย 3% ฿${baht(r.whtAmount)}` : undefined,
     },
     notes: [
-      ...(r.vatRegistered ? [ETAX_NOTE + (r.replaces ? ' · แจ้งยกเลิกฉบับเดิมผ่านระบบ e-Tax แล้ว' : '')] : []),
+      ...(r.vatRegistered ? [ETAX_NOTE] : []),
       ...(r.replaces ? [`ฉบับเดิม ${r.replaces.number} ใช้อ้างอิงไม่ได้อีก กรุณาใช้ฉบับนี้แทน`] : []),
       ...(r.nextBillingDate ? [`รอบถัดไปส่งใบแจ้งหนี้ทางอีเมลล่วงหน้า 7 วัน (${thaiDate(r.nextBillingDate)})`] : []),
     ],

@@ -164,6 +164,8 @@ describe('จ่ายซ้ำและกระทบยอด', () => {
   });
 
   it('กระทบยอด: Webhook หลุด → ยืนยันให้ · ยอดไม่ตรง → amount_mismatch · ไม่รู้จัก → รายงาน · รันซ้ำไม่ทำซ้ำ', async () => {
+    // ใบที่เปิดรอบใหม่ (ไม่ใช่อัปเกรดกลางรอบ · O41)
+    await t.owner.query(`UPDATE subscriptions SET current_period_end = now() - interval '1 minute' WHERE workspace_id = $1`, [w.wsId]);
     const missed = await checkout(w.lead, w.ws, { plan: 'team_l', cycle: 'monthly', method: 'card' });
     const wrong = await checkout(w.lead, w.ws, { plan: 'team_l', cycle: 'yearly', method: 'card' });
     const now = new Date();

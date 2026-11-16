@@ -120,6 +120,8 @@ export interface InvoiceInput {
   total: number;
   whtAmount: number;
   amountDue: number;
+  /** เครดิตของลูกค้าที่ใช้ชำระใบนี้ (O41 · R4) · ไม่ใช่ส่วนลด */
+  creditApplied?: number;
   vatRegistered: boolean;
   method?: string | null;
   bank: { bank: string; accountName: string; accountNo: string };
@@ -133,7 +135,12 @@ export function invoiceDoc(i: InvoiceInput): FinanceDoc {
     party: party(i.buyer, [[i.buyer.email && `อีเมล ${i.buyer.email}`, i.workspaceName && `Workspace: ${i.workspaceName}`].filter(Boolean).join(' · ')].filter(Boolean)),
     meta: [['เลขที่ / No.', i.number], ['วันที่ / Date', thaiDate(i.date)], ['ครบกำหนด / Due', thaiDate(i.dueDate)], ...(i.poNumber ? [['ใบสั่งซื้อ / PO', i.poNumber] as [string, string]] : []), ['สถานะ / Status', STATUS[i.status]]],
     table: { kind: 'sale', lines: chargeLines(i.charge, { withUsage: true }) },
-    totals: [...vatTotals(i.charge.subtotal, i.vat, i.total, i.vatRegistered), ...(wht ? [{ label: 'หัก ณ ที่จ่าย 3% / WHT', value: -i.whtAmount, style: 'muted' as const }, { label: 'ยอดชำระสุทธิ / Net payable', value: `฿${baht(i.amountDue)}`, style: 'net' as const }] : [])],
+    totals: [
+      ...vatTotals(i.charge.subtotal, i.vat, i.total, i.vatRegistered),
+      ...(wht ? [{ label: 'หัก ณ ที่จ่าย 3% / WHT', value: -i.whtAmount, style: 'muted' as const }] : []),
+      ...(i.creditApplied ? [{ label: 'ชำระด้วยเครดิต / Paid by credit', value: -i.creditApplied, style: 'muted' as const }] : []),
+      ...(wht || i.creditApplied ? [{ label: 'ยอดชำระสุทธิ / Net payable', value: `฿${baht(i.amountDue)}`, style: 'net' as const }] : []),
+    ],
     words: i.total,
     band: {
       title: 'วิธีชำระ / How to pay',
@@ -166,7 +173,7 @@ export interface ReceiptInput {
   vat: number;
   total: number;
   whtAmount: number;
-  payment: { paidAt: Date; method: string; reference?: string | null; received: number; cardLast4?: string | null };
+  payment: { paidAt: Date; method: string; reference?: string | null; received: number; cardLast4?: string | null; credit?: number };
   /** ฉบับใหม่แทนฉบับที่ยกเลิก */
   replaces?: { number: string; date: string; reason: string; issuedOn: string } | null;
   /** ใบแทน (ม.86/12) เมื่อใบเดิมหาย */
@@ -195,8 +202,18 @@ export function receiptDoc(r: ReceiptInput): FinanceDoc {
     words: r.total,
     band: {
       title: 'รายละเอียดการรับชำระ / Payment received',
-      cells: [[r.payment.method === 'transfer' ? 'วันที่ได้รับเงิน (ตามสลิป)' : 'วันที่ได้รับเงิน', thaiDateTime(r.payment.paidAt)], ['ช่องทาง', method], ['อ้างอิงการชำระ', r.payment.reference || r.invoiceNumber], ['รับชำระ', `฿${baht(r.payment.received)}`]],
-      note: r.whtAmount > 0 ? `ยอดรวม ฿${baht(r.total)} = รับชำระ ฿${baht(r.payment.received)} + ผู้ซื้อหัก ณ ที่จ่าย 3% ฿${baht(r.whtAmount)}` : undefined,
+      cells: [
+        [r.payment.method === 'transfer' ? 'วันที่ได้รับเงิน (ตามสลิป)' : 'วันที่ได้รับเงิน', thaiDateTime(r.payment.paidAt)],
+        ['ช่องทาง', r.payment.credit && !r.payment.received ? 'เครดิตคงเหลือในบัญชี' : method],
+        ['อ้างอิงการชำระ', r.payment.reference || r.invoiceNumber],
+        ['รับชำระ', `฿${baht(r.payment.received)}`],
+        ...(r.payment.credit ? [['ชำระด้วยเครดิต', `฿${baht(r.payment.credit)}`] as [string, string]] : []),
+      ],
+      // ยอดรวมเต็มใบ = เงินที่รับ + เครดิตที่ใช้ + ภาษีที่ผู้ซื้อหักไว้ (O41: เครดิตเป็นวิธีชำระ ไม่ใช่ส่วนลด)
+      note:
+        r.whtAmount > 0 || r.payment.credit
+          ? `ยอดรวม ฿${baht(r.total)} = รับชำระ ฿${baht(r.payment.received)}${r.payment.credit ? ` + ชำระด้วยเครดิต ฿${baht(r.payment.credit)}` : ''}${r.whtAmount > 0 ? ` + ผู้ซื้อหัก ณ ที่จ่าย 3% ฿${baht(r.whtAmount)}` : ''}`
+          : undefined,
     },
     notes: [
       ...(r.vatRegistered ? [ETAX_NOTE] : []),

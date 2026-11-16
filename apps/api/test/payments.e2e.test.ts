@@ -33,6 +33,11 @@ const etaxHook = async (body: object, secret = 'etax_dev_fake') => {
   const raw = JSON.stringify(body);
   return (await import('supertest')).default(t.app.getHttpServer()).post('/api/v1/hooks/etax').set('content-type', 'application/json').set('x-etax-signature', `sha256=${createHmac('sha256', secret).update(raw).digest('hex')}`).send(raw);
 };
+/**
+ * จบรอบบิลปัจจุบัน (O41): ซื้อแพ็กเกจ / รอบอื่นระหว่างรอบที่จ่ายแล้วเป็นการอัปเกรดคิดส่วนต่าง หรือตั้งให้มีผลรอบถัดไป
+ * test ที่ต้องการ "ซื้อรอบใหม่" แบบเดิมจึงจบรอบก่อน · กติกาใหม่ทดสอบใน plan-change.e2e.test.ts
+ */
+const endPeriod = () => t.owner.query(`UPDATE subscriptions SET current_period_end = now() - interval '1 minute' WHERE workspace_id = $1`, [wsId]);
 const sub = async () => (await t.owner.query(`SELECT s.status, s.cycle, s.payment_method, p.code, s.current_period_end FROM subscriptions s JOIN plans p ON p.id = s.plan_id WHERE s.workspace_id = $1`, [wsId])).rows[0];
 const pdfBuffer = async (c: Client, url: string) => {
   const res = await c.get(url).buffer(true).parse((r, cb) => {
@@ -177,6 +182,7 @@ describe('บัตร (Stripe)', () => {
 
 describe('PromptPay', () => {
   it('QR หมดอายุ 15 นาที · หัก ณ ที่จ่าย 3% ลดยอดชำระ · ล้มเหลว = รอบใหม่ได้ · ยกเลิก = void', async () => {
+    await endPeriod();
     const r = await post(team.lead, `${ws}/billing/checkout`, { plan: 'team_s', cycle: 'yearly', method: 'promptpay', wht: true, poNumber: 'PO-2026-001' }, key());
     expect(r.status, JSON.stringify(r.body)).toBe(201);
     // รายปี = 10 เดือน: 1,500 × 10 = 15,000 บาท · VAT 7% = 1,050 · หัก 3% ของยอดก่อน VAT = 450
@@ -208,6 +214,7 @@ describe('โอนเงิน + สลิป + 50 ทวิ', () => {
   const idem = key();
 
   it('checkout → ใบแจ้งหนี้พร้อมบัญชีรับโอน (ครบกำหนด 7 วัน) · ยังไม่เปลี่ยนแพ็กเกจจนกว่าจะแนบสลิป', async () => {
+    await endPeriod();
     const r = await post(team.lead, `${ws}/billing/checkout`, { plan: 'team_l', cycle: 'monthly', method: 'transfer', wht: true }, idem);
     expect(r.status, JSON.stringify(r.body)).toBe(201);
     invoiceId = r.body.invoice.id;
@@ -254,6 +261,7 @@ describe('โอนเงิน + สลิป + 50 ทวิ', () => {
     expect(ok.body.whtDueBy).toBeNull(); // ยังไม่ชำระ = ยังไม่มีกำหนดส่ง
     expect((await t.owner.query(`SELECT count(*)::int AS n FROM wht_certificates WHERE invoice_id = $1`, [invoiceId])).rows[0].n).toBe(1);
 
+    await endPeriod();
     const noWht = await post(team.lead, `${ws}/billing/checkout`, { plan: 'team_s', method: 'transfer' }, key());
     expect((await upload(team.lead, `${ws}/billing/invoices/${noWht.body.invoice.id}/wht-certificate`, PDF, 'wht.pdf')).body.error.code).toBe('wht_not_applicable');
 
@@ -281,6 +289,7 @@ describe('โอนเงิน + สลิป + 50 ทวิ', () => {
   });
 
   it('สลิปใช้ได้เฉพาะใบแจ้งหนี้ที่โอน และยังไม่ปิด', async () => {
+    await endPeriod();
     const card = await post(team.lead, `${ws}/billing/checkout`, { plan: 'team_m', method: 'card' }, key());
     expect((await upload(team.lead, `${ws}/billing/invoices/${card.body.invoice.id}/slip`, PNG, 's.png')).body.error.code).toBe('slip_not_applicable');
     await t.owner.query(`UPDATE invoices SET status = 'paid' WHERE id = $1`, [invoiceId]);
@@ -293,6 +302,8 @@ describe('โอนเงิน + สลิป + 50 ทวิ', () => {
 describe('ยกเลิกแพ็กเกจ', () => {
   it('Owner เท่านั้น · ใช้ต่อได้ถึงสิ้นรอบ · ยกเลิกซ้ำไม่ได้', async () => {
     expect((await post(team.dev, `${ws}/billing/subscription:cancel`, {})).status).toBe(403);
+    // test ก่อนหน้าจบรอบไว้ (endPeriod) · ยกเลิกระหว่างรอบที่ยังใช้ได้
+    await t.owner.query(`UPDATE subscriptions SET current_period_end = now() + interval '20 days' WHERE workspace_id = $1`, [wsId]);
     const before = await sub();
     const r = await post(team.lead, `${ws}/billing/subscription:cancel`, {});
     expect(r.status, JSON.stringify(r.body)).toBe(200);
@@ -325,6 +336,8 @@ describe('กวาดส่งใบกำกับภาษีที่ค้�
 
 describe('ใบเก่าไม่ทับสิทธิ์ของใบใหม่ (N02 · full-system-audit)', () => {
   async function checkout(plan: string, method: 'transfer' | 'card') {
+    // ทดสอบลำดับของใบแจ้งหนี้ที่เปิดรอบใหม่ทั้งคู่ (ไม่ใช่การอัปเกรดกลางรอบ)
+    await endPeriod();
     const r = await post(team.lead, `${ws}/billing/checkout`, { plan, cycle: 'monthly', method }, key());
     expect(r.status, JSON.stringify(r.body)).toBe(201);
     return r.body.invoice as { id: string };

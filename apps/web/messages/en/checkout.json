@@ -301,5 +301,26 @@
     "whtLine": "Withholding tax {rate}%",
     "paidOn": "Paid {date}",
     "due": "Amount due"
+  },
+  "upgrade": {
+    "newPart": "{plan} for the rest of this period",
+    "days": "{left} of {total} days",
+    "oldPart": "Unused part of your current plan",
+    "diff": "Difference before VAT",
+    "after": "Takes effect right after payment · current period ends {date}"
+  },
+  "credit": {
+    "line": "Account credit",
+    "left": "Balance ฿{from} → ฿{to}",
+    "confirm": "Pay with credit",
+    "paidNote": "Your credit covers this invoice · nothing more to pay, the full tax invoice is issued now"
+  },
+  "schedule": {
+    "title": "Switch to {plan} on {date}",
+    "titleCycle": "Billing cycle changes on {date}",
+    "hint": "You keep your current plan until {date} · no refund for this period · if you are still over the new plan's limits on that day, your plan stays for one more period and the Owner is notified",
+    "agree": "I understand I keep my current plan until {date}",
+    "submit": "Schedule the change",
+    "saving": "Saving…"
   }
 }

@@ -148,6 +148,8 @@ describe('ใบแจ้งหนี้', () => {
   let manual = '';
 
   it('สร้างด้วยมือ (B1): ส่วนลด หัก ณ ที่จ่าย PO · ออกเลขต่อเนื่อง · ส่งอีเมล · ต้องมีข้อมูลออกใบกำกับ', async () => {
+    // เครดิตจาก test ก่อนหน้าจะหักใบใหม่อัตโนมัติ (O41) · test นี้ตรวจยอดของใบเอง จึงล้างเครดิตก่อน (การหักเครดิตอยู่ใน credit.e2e.test.ts)
+    await t.owner.query(`DELETE FROM workspace_credits WHERE workspace_id = $1`, [c.id]);
     const before = mail.sent.length;
     const r = await finance.agent.post('/ops/invoices').send({
       workspaceId: c.id, poNumber: 'PO-DEMO-0412', dueDays: 30, discountPct: 10, wht: true,
@@ -351,6 +353,8 @@ describe('ใบลด / เพิ่มหนี้ และใบกำกั
   });
 
   it('ใบเพิ่มหนี้ (ม.86/9): เลข DN- · ใบแจ้งหนี้ส่วนเพิ่มให้ลูกค้าจ่าย · อีเมลแนบ PDF · ต้องชำระแล้วและมีใบกำกับภาษี', async () => {
+    // เครดิตน้ำใจจาก test ก่อนหน้าจะหักใบส่วนเพิ่มอัตโนมัติ (O41) · ตรวจใบส่วนเพิ่มแบบไม่มีเครดิต
+    await t.owner.query(`DELETE FROM workspace_credits WHERE workspace_id = $1`, [c.id]);
     const open = await invoice(c, {});
     expect((await finance.agent.post(`/ops/invoices/${open.inv.id}/debit-note`).send({ amountSatang: 60_000, reason: 'คิดส่วนลดเกินสิทธิ์' })).body.error.code).toBe('invoice_not_paid');
     const noDoc = await invoice(c, { status: 'paid' });

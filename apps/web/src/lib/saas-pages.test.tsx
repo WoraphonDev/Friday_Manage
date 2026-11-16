@@ -495,6 +495,24 @@ describe("แพ็กเกจ & Billing", () => {
     expect(screen.getByRole("button", { name: /ย้อนกลับ/ })).toBeInTheDocument();
   });
 
+  it("O41 · R4 เครดิตคงเหลือ · R7 แถบการเปลี่ยนที่รออยู่ พร้อมสิ่งที่ต้องลดและยกเลิกได้", async () => {
+    const user = userEvent.setup();
+    let cancelled = false;
+    server.use(
+      http.get("*/api/v1/w/:ws/billing", () =>
+        HttpResponse.json({ ...overview("active"), creditSatang: 45_000, pendingChange: cancelled ? null : { plan: "team_s", cycle: "monthly", effectiveAt: "2026-12-01T00:00:00+07:00", blockers: [{ key: "seats", used: 14, limit: 10 }] } }),
+      ),
+      http.delete("*/api/v1/w/:ws/billing/scheduled-change", () => ((cancelled = true), HttpResponse.json({ pendingChange: null }))),
+    );
+    mountBilling();
+    expect(await screen.findByText(/จะเปลี่ยนเป็น .* วันที่/)).toBeInTheDocument();
+    expect(screen.getByText(/สมาชิก 14 \/ 10 คน ต้องลดก่อนวันนั้น/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "จัดการสมาชิก" })).toHaveAttribute("href", "/work/sample/members");
+    expect(screen.getByRole("region", { name: "เครดิตคงเหลือ" })).toHaveTextContent("฿450");
+    await user.click(screen.getByRole("button", { name: "ยกเลิกการเปลี่ยน" }));
+    await waitFor(() => expect(screen.queryByText(/จะเปลี่ยนเป็น/)).not.toBeInTheDocument());
+  });
+
   it("ใช้แพ็กเกจอยู่แล้ว (จ่ายรายเดือน) = แพ็กเกจปัจจุบัน ไม่มีปุ่ม · เปลี่ยนเป็นรายปียังชำระได้", async () => {
     const user = userEvent.setup();
     server.use(http.get("*/api/v1/w/:ws/billing", () => HttpResponse.json(overview("active"))));

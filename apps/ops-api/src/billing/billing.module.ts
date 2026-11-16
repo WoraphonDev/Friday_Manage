@@ -8,7 +8,7 @@ import {
   CloseBody,
   ContactBody,
   CreateInvoiceBody,
-  CreditGrantBody,
+  CreditGrantBody, CreditLedgerQuery, CreditRefundBody,
   DebitNoteBody,
   ExportQuery,
   ExtendBody,
@@ -221,6 +221,18 @@ export class BillingController {
   @HttpCode(200)
   credit(@Req() req: OpsRequest, @Body() body: unknown, @Res({ passthrough: true }) res: Response) {
     return respond(res, this.billing.requestCredit(req.staff!, parse(CreditGrantBody, body)));
+  }
+
+  @Roles('finance', 'owner', 'auditor', 'support')
+  @Get('credits')
+  creditLedger(@Query() q: unknown) {
+    return this.billing.creditLedger(parse(CreditLedgerQuery, q));
+  }
+  @Roles('finance')
+  @Post(['credits/refund', 'credits\\:refund'])
+  @HttpCode(200)
+  creditRefund(@Req() req: OpsRequest, @Body() body: unknown, @Res({ passthrough: true }) res: Response) {
+    return respond(res, this.billing.requestCreditRefund(req.staff!, parse(CreditRefundBody, body)));
   }
 
   @Roles('finance', 'owner', 'auditor')

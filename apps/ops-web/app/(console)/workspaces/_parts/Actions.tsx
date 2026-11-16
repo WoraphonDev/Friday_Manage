@@ -195,6 +195,12 @@ interface Preview {
   subtotalSatang: number;
   vatSatang: number;
   totalSatang: number;
+  /** O41 · R2–R3 */
+  creditBalanceSatang?: number;
+  unused?: { days: number; creditSatang: number } | null;
+  creditApplySatang?: number;
+  payNowSatang?: number;
+  leftoverCreditSatang?: number;
 }
 
 /** C4 · เปลี่ยนแพ็กเกจพร้อมตัวอย่างยอด */
@@ -203,7 +209,9 @@ export interface PlanChangeResult {
   plan: string;
   effective: "now" | "next_cycle" | "cancelled";
   effectiveAt?: string | null;
-  invoice: { id: string; number: string; amountDue: number } | null;
+  invoice: { id: string; number: string; amountDue: number; creditApplied?: number; status?: string } | null;
+  creditNote?: { id: string; number: string } | null;
+  refund?: { pendingApproval?: unknown; refundedSatang?: number } | null;
   warnings: { code: string; message: string }[];
 }
 export function PlanDialog({ ws, onOpenChange, onDone }: { ws: Overview; onOpenChange: (o: boolean) => void; onDone: (r: PlanChangeResult) => void }) {
@@ -213,8 +221,9 @@ export function PlanDialog({ ws, onOpenChange, onDone }: { ws: Overview; onOpenC
   const [plan, setPlan] = useState(cur?.plan === "team_l" ? "team_m" : "team_l");
   const [cycle, setCycle] = useState<"monthly" | "yearly">((cur?.cycle as "monthly" | "yearly") ?? "monthly");
   const [reason, setReason] = useState("");
+  const [remainder, setRemainder] = useState<"credit" | "refund">("credit");
   const preview = useQuery({ queryKey: ["ops", "plan-preview", ws.id, plan, cycle], queryFn: () => api.get<Preview>(`/workspaces/${ws.id}/change-plan/preview?plan=${plan}&cycle=${cycle}`) });
-  const change = useMutation({ mutationFn: () => api.post<PlanChangeResult>(`/workspaces/${ws.id}/change-plan`, { plan, cycle, reason: reason.trim() }), onSuccess: (r) => onDone(r) });
+  const change = useMutation({ mutationFn: () => api.post<PlanChangeResult>(`/workspaces/${ws.id}/change-plan`, { plan, cycle, reason: reason.trim(), remainder }), onSuccess: (r) => onDone(r) });
   const p = preview.data;
   const ok = !!p && !p.blocked && reason.trim().length >= 3;
   return (
@@ -259,8 +268,40 @@ export function PlanDialog({ ws, onOpenChange, onDone }: { ws: Overview; onOpenC
                     <td className="cell-main">{t("total")}</td>
                     <td className="num cell-main">{fmt.money(p.totalSatang)}</td>
                   </tr>
+                  {p.unused && (
+                    <tr>
+                      <td>
+                        {t("unused", { days: p.unused.days })}
+                        <div className="cell-sub">{t("unusedHint")}</div>
+                      </td>
+                      <td className="num">{fmt.money(p.unused.creditSatang)}</td>
+                    </tr>
+                  )}
+                  {!!p.creditApplySatang && (
+                    <tr>
+                      <td>
+                        {t("creditApply")}
+                        <div className="cell-sub">{t("creditLeft", { from: fmt.money((p.creditBalanceSatang ?? 0) + (p.unused?.creditSatang ?? 0)), to: fmt.money(p.leftoverCreditSatang ?? 0) })}</div>
+                      </td>
+                      <td className="num">−{fmt.money(p.creditApplySatang)}</td>
+                    </tr>
+                  )}
+                  {p.payNowSatang != null && (
+                    <tr>
+                      <td className="cell-main">{t("payNow")}</td>
+                      <td className="num cell-main">{fmt.money(p.payNowSatang)}</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
+            )}
+            {p.effective === "now" && p.totalSatang > 0 && p.payNowSatang === 0 && <Notice tone="ok" title={t("paidByCredit")} />}
+            {!!p.leftoverCreditSatang && p.unused && (
+              <div className="field">
+                <span className="field-label">{t("remainder", { amount: fmt.money(p.leftoverCreditSatang) })}</span>
+                <Seg label={t("remainder", { amount: "" })} value={remainder} onChange={setRemainder} options={[{ value: "credit", label: t("toCredit") }, { value: "refund", label: t("toRefund") }]} />
+                <span className="muted small">{remainder === "credit" ? t("toCreditHint") : t("toRefundHint")}</span>
+              </div>
             )}
             {cur?.pending && <Notice tone="warn" title={t("pendingNote", { plan: planLabel(cur.pending.plan), date: fmt.date(cur.pending.at) })} />}
             <p className="muted small">{plan === cur?.plan && cycle === cur?.cycle && cur?.pending ? t("cancelNote") : p.effective === "now" ? (p.contract ? t("contractInvoice") : p.totalSatang > 0 ? t("invoiceNote") : t("noCharge")) : t("nextNote")}</p>

@@ -1,5 +1,5 @@
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
-import { type Db, schema } from '@friday/db';
+import { creditBalance, type Db, periodDays, schema } from '@friday/db';
 import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApprovalsService, type ApprovalContext } from '../approvals/approvals.service.js';
@@ -26,7 +26,15 @@ export const DiscountBody = z
     reason: z.string().trim().min(3).max(300),
   })
   .strict();
-export const ChangePlanBody = z.object({ plan: z.enum(PLAN_CODES), cycle: z.enum(['monthly', 'yearly']).optional(), reason: z.string().trim().min(3).max(300) }).strict();
+export const ChangePlanBody = z
+  .object({
+    plan: z.enum(PLAN_CODES),
+    cycle: z.enum(['monthly', 'yearly']).optional(),
+    reason: z.string().trim().min(3).max(300),
+    /** ส่วนที่ยังไม่ได้ใช้เหลือหลังหักใบใหม่ (R3): เข้าเครดิต (ค่าเริ่มต้น) หรือคืนเงิน (เกินวงเงินขออนุมัติ) */
+    remainder: z.enum(['credit', 'refund']).default('credit'),
+  })
+  .strict();
 export const PreviewQuery = z.object({ plan: z.enum(PLAN_CODES), cycle: z.enum(['monthly', 'yearly']).optional() });
 export const TransferOwnerBody = z
   .object({
@@ -209,13 +217,21 @@ export class WorkspacesService implements OnModuleInit {
       const total = Math.max(1, Math.round((end - start) / DAY));
       const left = Math.max(0, Math.ceil((end - Date.now()) / DAY));
       if (cycle === sub.cycle) lines.push({ label: `${q.plan} ${left} วันที่เหลือของรอบนี้`, satang: Math.round(((newPrice - (oldPrice ?? 0)) * left) / total) });
-      else {
-        lines.push({ label: `${q.plan} ${cycle === 'yearly' ? 'รายปี' : 'รายเดือน'}`, satang: newPrice });
-        if (oldPrice) lines.push({ label: `เครดิตคืน ${cur.code} ที่ยังไม่ใช้ (${left} วัน)`, satang: -Math.round((oldPrice * left) / total) });
-      }
+      else lines.push({ label: `${q.plan} ${cycle === 'yearly' ? 'รายปี' : 'รายเดือน'}`, satang: newPrice });
+    }
+    // เปลี่ยนรอบบิลกลางรอบ (R3): ส่วนที่ยังไม่ได้ใช้ของใบที่เปิดรอบนี้ → ใบลดหนี้ + เครดิต (เดิมเป็นบรรทัดติดลบที่ถูกตัดเป็น ฿0)
+    let unused: { invoiceId: string; ratio: number; days: number; creditSatang: number } | null = null;
+    if (effective === 'now' && sub.status !== 'trialing' && cycle !== sub.cycle && sub.sourceInvoiceId && sub.currentPeriodStart && sub.currentPeriodEnd) {
+      const [src] = await this.db.select().from(s.invoices).where(eq(s.invoices.id, sub.sourceInvoiceId));
+      const { total, left } = periodDays(sub.currentPeriodStart, sub.currentPeriodEnd);
+      if (src?.status === 'paid' && left > 0) unused = { invoiceId: src.id, ratio: left / total, days: left, creditSatang: Math.round(((src.amountDue + src.creditApplied) * left) / total) };
     }
     const subtotal = Math.max(0, lines.reduce((n, l) => n + l.satang, 0));
     const vat = process.env.VAT_REGISTERED !== 'false' ? Math.round(subtotal * 0.07) : 0;
+    // เครดิตคงเหลือ + ส่วนที่ยังไม่ได้ใช้ หักใบใหม่อัตโนมัติ (R2) · ที่เหลือเข้าเครดิตหรือคืนเงินตามที่เลือก
+    const creditBalanceSatang = await creditBalance(this.db, id);
+    const available = creditBalanceSatang + (unused?.creditSatang ?? 0);
+    const creditApplySatang = Math.min(available, subtotal + vat);
     return {
       current: { plan: cur.code, cycle: sub.cycle, priceSatang: oldPrice, seatLimit: cur.seatLimit },
       next: { plan: next.code, cycle, priceSatang: newPrice, seatLimit: next.seatLimit },
@@ -227,6 +243,12 @@ export class WorkspacesService implements OnModuleInit {
       subtotalSatang: subtotal,
       vatSatang: vat,
       totalSatang: subtotal + vat,
+      creditBalanceSatang,
+      unused: unused ? { days: unused.days, creditSatang: unused.creditSatang } : null,
+      creditApplySatang,
+      payNowSatang: subtotal + vat - creditApplySatang,
+      leftoverCreditSatang: available - creditApplySatang,
+      internal: { unused },
     };
   }
   private async planRowById(planId: string) {
@@ -281,7 +303,16 @@ export class WorkspacesService implements OnModuleInit {
 
     // ใบแจ้งหนี้ส่วนต่าง (หรือเต็มรอบสำหรับช่วงทดลอง)
     const warnings: { code: string; message: string }[] = [];
-    let invoice: { id: string; number: string; amountDue: number } | null = null;
+    let invoice: { id: string; number: string; amountDue: number; creditApplied: number; status: string } | null = null;
+    // ส่วนที่ยังไม่ได้ใช้ → ใบลดหนี้ + เครดิต ก่อนออกใบใหม่ เพื่อให้ใบใหม่หักเครดิตนี้ได้
+    let unusedCredit: Awaited<ReturnType<BillingService['creditUnused']>> = null;
+    if (pv.internal.unused) {
+      try {
+        unusedCredit = await this.billing.creditUnused(staff, pv.internal.unused.invoiceId, pv.internal.unused.ratio, `ส่วนที่ยังไม่ได้ใช้ ${pv.internal.unused.days} วัน · เปลี่ยน ${prev.code} → ${input.plan}${cycle !== sub.cycle ? ` ${cycle === 'yearly' ? 'รายปี' : 'รายเดือน'}` : ''}`);
+      } catch (e) {
+        warnings.push({ code: e instanceof AppError ? e.code : 'credit_failed', message: `ออกใบลดหนี้ส่วนที่ยังไม่ได้ใช้ไม่ได้ (${e instanceof Error ? e.message : String(e)}) · ให้ทีมการเงินออกเอง` });
+      }
+    }
     if (!pv.contract && pv.subtotalSatang > 0) {
       const today = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
       const trial = sub.status === 'trialing';
@@ -303,13 +334,19 @@ export class WorkspacesService implements OnModuleInit {
           ...(trial ? { plan: { code: input.plan, cycle, periodStart: today, periodEnd } } : {}),
           note: `ส่วนต่างจากการเปลี่ยนแพ็กเกจ ${prev.code} → ${input.plan}`,
         });
-        invoice = { id: r.invoice.id, number: r.invoice.number, amountDue: r.invoice.amountDue };
+        invoice = { id: r.invoice.id, number: r.invoice.number, amountDue: r.invoice.amountDue, creditApplied: r.invoice.creditApplied, status: r.invoice.status };
       } catch (e) {
         const code = e instanceof AppError ? e.code : 'invoice_failed';
         warnings.push({ code, message: `เปลี่ยนแพ็กเกจแล้ว แต่ออกใบแจ้งหนี้ส่วนต่างไม่ได้ (${e instanceof Error ? e.message : String(e)}) · ให้ทีมการเงินออกเอง` });
       }
     }
-    return { plan: input.plan, cycle, previous: prev.code, effective: 'now' as const, invoice, warnings };
+    // คืนเครดิตที่เหลือเป็นเงิน (R3 · เลือก "คืนเงิน") · เกินวงเงินคืนเงินส่งขออนุมัติ
+    let refund: Awaited<ReturnType<BillingService['requestCreditRefund']>> | null = null;
+    if (input.remainder === 'refund') {
+      const left = await creditBalance(this.db, id);
+      if (left > 0) refund = await this.billing.requestCreditRefund(staff, { workspaceId: id, amountSatang: left, reason: `คืนส่วนที่ยังไม่ได้ใช้หลังเปลี่ยนแพ็กเกจ · ${input.reason}` });
+    }
+    return { plan: input.plan, cycle, previous: prev.code, effective: 'now' as const, invoice, creditNote: unusedCredit?.creditNote ?? null, refund, warnings };
   }
 
   /**

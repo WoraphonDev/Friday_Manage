@@ -508,6 +508,13 @@ kbd {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
+/* บัญชีเครดิต (O41 · R1): ตารางประวัติ + สรุปด้านขวา */
+.grid-credit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
 .grid-3 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1333,7 +1340,8 @@ textarea.input {
     padding: 10px 16px;
   }
   .grid-2,
-  .grid-3 {
+  .grid-3,
+  .grid-credit {
     grid-template-columns: minmax(0, 1fr);
   }
   .ops-search {

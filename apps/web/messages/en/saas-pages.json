@@ -300,6 +300,19 @@
     "memberNote": "Ask an Owner or Admin to change the plan on the Billing page"
   },
   "billing": {
+    "pending": {
+      "title": "Changing to {plan} on {date}",
+      "seats": "{used} / {limit} members · reduce before that day",
+      "projects": "{used} / {limit} projects · archive before that day",
+      "ok": "Usage already fits the new plan",
+      "members": "Manage members",
+      "cancel": "Cancel the change",
+      "cancelled": "Plan change cancelled"
+    },
+    "credit": {
+      "title": "Account credit",
+      "hint": "Applied to your next invoice automatically · the full tax invoice is still issued"
+    },
     "title": "Plans & Billing",
     "subtitle": "Plans by team size, payment methods and tax documents",
     "compare": "Compare plans",

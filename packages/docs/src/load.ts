@@ -80,7 +80,7 @@ export async function invoicePdf(db: Reader, invoiceId: string, opts: { vatRegis
   const doc = invoiceDoc({
     seller: sellerFromEnv(), buyer: await buyerOf(db, inv.workspaceId), edition: 'original', number: inv.number, date: bkkDate(inv.createdAt), dueDate: inv.dueDate,
     status: inv.status, poNumber: inv.poNumber, workspaceName: ws?.name ?? null, charge: await chargeOf(db, inv, meta),
-    vat: inv.vat, total: inv.total, whtAmount: inv.whtAmount, amountDue: inv.amountDue, vatRegistered: opts.vatRegistered, method: p?.method ?? null, bank: bankFromEnv(),
+    vat: inv.vat, total: inv.total, whtAmount: inv.whtAmount, amountDue: inv.amountDue, creditApplied: inv.creditApplied, vatRegistered: opts.vatRegistered, method: p?.method ?? null, bank: bankFromEnv(),
   });
   return { filename: `${inv.number}.pdf`, buffer: await renderDoc(doc) };
 }
@@ -102,7 +102,7 @@ export async function taxDocumentPdf(db: Reader, docId: string) {
     seller: sellerFromEnv(), buyer: await buyerOf(db, inv.workspaceId, d.buyer), edition, vatRegistered: vat,
     number: d.number, date: docDate(d), invoiceNumber: inv.number, poNumber: inv.poNumber, charge: await chargeOf(db, inv, meta),
     vat: inv.vat, total: inv.total, whtAmount: inv.whtAmount,
-    payment: { paidAt: p?.paidAt ?? inv.paidAt ?? d.createdAt, method: p?.method ?? 'transfer', reference: p && p.method !== 'transfer' ? p.providerRef : inv.number, received: inv.amountDue },
+    payment: { paidAt: p?.paidAt ?? inv.paidAt ?? d.createdAt, method: p?.method ?? 'transfer', reference: p && p.method !== 'transfer' ? p.providerRef : inv.number, received: inv.amountDue, credit: inv.creditApplied },
     replaces: old ? { number: old.number, date: docDate(old), reason: old.cancelReason ?? 'ข้อมูลผู้ซื้อในฉบับเดิมไม่ถูกต้อง', issuedOn: bkkDate(d.createdAt) } : null,
   });
   if (d.status === 'cancelled') {
@@ -303,8 +303,8 @@ export async function salesReportData(db: Reader, year: number, month: number, o
     const table = prefix.startsWith('CN') ? s.creditNotes : prefix.startsWith('DN') ? s.debitNotes : s.taxDocuments;
     for (const r of await db.select({ number: table.number }).from(table).where(like(table.number, `${prefix}-%`))) numbers.push(r.number);
   }
-  // ใบแจ้งหนี้ ฿0 (คูปอง) ไม่ออกเอกสารภาษี · เตือนให้รู้ว่าไม่อยู่ในรายงาน
-  const [zero] = await db.select({ n: sql<number>`count(*)::int` }).from(s.invoices).where(and(eq(s.invoices.status, 'paid'), eq(s.invoices.amountDue, 0), gte(s.invoices.paidAt, fromTs), lt(s.invoices.paidAt, toTs)));
+  // ใบแจ้งหนี้ ฿0 (คูปอง) ไม่ออกเอกสารภาษี · เตือนให้รู้ว่าไม่อยู่ในรายงาน · ใบที่ชำระด้วยเครดิตทั้งใบมียอดจริง (amount_due 0 แต่ total > 0) ไม่นับ
+  const [zero] = await db.select({ n: sql<number>`count(*)::int` }).from(s.invoices).where(and(eq(s.invoices.status, 'paid'), eq(s.invoices.total, 0), gte(s.invoices.paidAt, fromTs), lt(s.invoices.paidAt, toTs)));
   const checks = salesTaxChecks(rows, { series: numberSeries(numbers), zeroInvoices: Number(zero?.n ?? 0) });
   return { seller: sellerFromEnv(), year, month, rows, checks, closed: opts.closed, generatedAt: new Date() };
 }

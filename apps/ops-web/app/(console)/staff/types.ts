@@ -14,11 +14,35 @@ export interface StaffMember {
   keys: { id: string; name: string; createdAt: string; lastUsedAt: string | null }[];
   createdAt: string;
   elevations: { id: string; role: OpsRole; endsAt: string }[];
+  /** อีเมลส่วนตัว (H1) · เจ้าของบัญชีเห็นเต็ม · คนอื่นเห็นแบบปิดบางส่วน */
+  personalEmail?: string | null;
+  personalEmailStatus?: "verified" | "pending" | "none";
+  personalEmailVerifiedAt?: string | null;
+}
+/** สถานะสรุปรายการที่อนุมัติตัวเอง (H3) ของ Owner ที่ใช้งานอยู่ · มีเฉพาะช่วงมี Owner คนเดียว */
+export interface DigestStatus {
+  staffId: string;
+  personalEmail: string | null;
+  personalEmailVerified: boolean;
+  lastSentAt: string | null;
+  lastCount: number | null;
+  failedAt: string | null;
+  failedText: string | null;
 }
 export interface StaffList {
   items: StaffMember[];
   singleApprover: boolean;
+  digest?: DigestStatus[];
 }
+/** GET ops/staff/me/personal-email */
+export interface PersonalEmail {
+  email: string | null;
+  verifiedAt: string | null;
+  pending: string | null;
+  pendingExpiresAt: string | null;
+  workEmail: string;
+}
+export const personalEmailKey = ["ops", "staff", "me", "personal-email"] as const;
 export interface AuditRow {
   id: string;
   staffId: string | null;

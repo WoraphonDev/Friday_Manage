@@ -176,10 +176,12 @@ describe('เหตุละเมิดข้อมูล (A4) · 72 ชม.', 
     expect(log).toEqual(['privacy.breach_opened', 'privacy.breach_updated', 'privacy.breach_pdpc_notified', 'privacy.breach_subjects_notified', 'privacy.breach_closed']);
   });
 
-  it('Workspace ที่รอลบแสดงในหน้า Privacy', async () => {
+  it('Workspace ที่รอลบแสดงในหน้า Privacy (แหล่งเดียวกับหน้ากู้คืน: deleted_at + purge_after)', async () => {
     const gone = await customer(t, 'pdpa-gone', { plan: 'team_s', status: 'canceled' });
-    await t.owner.query(`UPDATE workspaces SET status = 'pending_delete' WHERE id = $1`, [gone.id]);
-    expect((await support.agent.get('/ops/privacy/pending-deletes')).body.items.map((w: { slug: string }) => w.slug)).toEqual(['pdpa-gone']);
+    await t.owner.query(`UPDATE workspaces SET status = 'pending_delete', deleted_at = now() - interval '5 days', deleted_by = $2, purge_after = now() + interval '25 days' WHERE id = $1`, [gone.id, gone.owner]);
+    const items = (await support.agent.get('/ops/privacy/pending-deletes')).body.items;
+    expect(items.map((w: { slug: string }) => w.slug)).toEqual(['pdpa-gone']);
+    expect(items[0]).toMatchObject({ daysLeft: 25, system: false, legalHold: false, requestedBy: { email: 'owner@pdpa-gone.example.com', role: 'owner' } });
   });
 });
 

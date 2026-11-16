@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import { type OpsRequest, Reauth, Roles } from '../auth/auth.guard.js';
 import { BillingModule } from '../billing/billing.module.js';
 import { parse } from '../errors.js';
+import { BulkBody, BulkService } from './bulk.service.js';
 import { AuditQuery, CustomersService, ListQuery } from './customers.service.js';
 import { AccessRequestBody, ChangePlanBody, DiscountBody, ExtendTrialBody, type Gated, NoteBody, PreviewQuery, ResumeBody, SuspendBody, TransferOwnerBody, WorkspacesService } from './workspaces.service.js';
 
@@ -22,7 +23,22 @@ export class WorkspacesController {
   constructor(
     private readonly workspaces: WorkspacesService,
     private readonly customers: CustomersService,
+    private readonly bulk: BulkService,
   ) {}
+
+  /** หลายราย (H4–H7): ตรวจก่อนทำ · Support ขยายทดลอง / การเงินคูปองและส่วนลด (ตรวจบทบาทตาม action ใน service) */
+  @Roles('support', 'finance')
+  @Post('workspaces/bulk/preview')
+  @HttpCode(200)
+  bulkPreview(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.bulk.preview(req.staff!, parse(BulkBody, body));
+  }
+  @Roles('support', 'finance')
+  @Post('workspaces/bulk/apply')
+  @HttpCode(200)
+  bulkApply(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.bulk.apply(req.staff!, parse(BulkBody, body));
+  }
 
   @Get('workspaces')
   list(@Req() req: OpsRequest, @Query() q: unknown) {
@@ -126,5 +142,5 @@ export class WorkspacesController {
   }
 }
 
-@Module({ imports: [BillingModule], controllers: [WorkspacesController], providers: [WorkspacesService, CustomersService], exports: [WorkspacesService] })
+@Module({ imports: [BillingModule], controllers: [WorkspacesController], providers: [WorkspacesService, CustomersService, BulkService], exports: [WorkspacesService] })
 export class WorkspacesModule {}

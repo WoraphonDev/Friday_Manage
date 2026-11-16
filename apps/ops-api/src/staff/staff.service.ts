@@ -1,3 +1,4 @@
+import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { type Db, schema } from '@friday/db';
 import { and, desc, eq, gt, isNull, lt, sql } from 'drizzle-orm';
@@ -11,6 +12,7 @@ import { config } from '../config.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
+import { DigestService, maskEmail } from './digest.service.js';
 
 const s = schema;
 const roles = z.array(StaffRoleEnum).min(1, 'ต้องมีอย่างน้อย 1 บทบาท').transform((r) => [...new Set(r)]);
@@ -20,6 +22,13 @@ export const InviteBody = z.object({ email: z.email(), name: z.string().trim().m
 export const UpdateStaffBody = z.object({ roles: roles.optional(), department: z.string().trim().max(60).nullish(), limits: LimitsBody.nullish(), expiresAt: z.iso.datetime({ offset: true }).nullish(), reason }).strict();
 export const StatusBody = z.object({ status: z.enum(['active', 'suspended', 'disabled']), reason }).strict();
 export const ElevateBody = z.object({ role: StaffRoleEnum, minutes: z.union([z.literal(30), z.literal(60)]), reason: z.string().trim().min(10, 'ระบุเหตุผลอย่างน้อย 10 ตัวอักษร').max(300) }).strict();
+export const PersonalEmailBody = z.object({ email: z.email('อีเมลไม่ถูกต้อง').trim().toLowerCase().max(254) }).strict();
+export const PersonalEmailVerifyBody = z.object({ code: z.string().trim().regex(/^\d{6}$/, 'รหัส 6 หลัก') }).strict();
+/** รหัสยืนยันอีเมลส่วนตัวหมดอายุใน 15 นาที (H1) · ผิดเกิน 5 ครั้งต้องขอรหัสใหม่ */
+export const PERSONAL_CODE_MINUTES = 15;
+const PERSONAL_CODE_TRIES = 5;
+const codeHash = (staffId: string, email: string, code: string) => createHmac('sha256', config.secret).update(`${staffId}:${email}:${code}`).digest('hex');
+
 export const AuditQuery = z.object({
   staffId: z.uuid().optional(),
   action: z.string().trim().max(60).optional(),
@@ -36,15 +45,103 @@ export class StaffService {
     @Inject(OPS_DB) private readonly db: Db,
     private readonly mail: Mailer,
     private readonly approvals: ApprovalsService,
+    private readonly digest: DigestService,
   ) {}
 
-  async list() {
+  async list(viewer: Staff) {
     const rows = await this.db.select().from(s.staffUsers).orderBy(s.staffUsers.createdAt);
     const elevations = await this.db.select().from(s.staffElevations).where(and(isNull(s.staffElevations.endedAt), gt(s.staffElevations.endsAt, new Date())));
+    const single = await this.approvals.singleApprover();
+    // แถบ Owner คนเดียว (H3): สรุปล่าสุด / ส่งไม่สำเร็จ / ยังไม่ตั้งอีเมลส่วนตัว ของ Owner ที่ใช้งานอยู่
+    const owners = single ? (await this.approvals.activeOwners()).map((o) => o.id) : [];
+    const status = await this.digest.status(owners);
+    const digest = owners.map((id) => {
+      const r = rows.find((x) => x.id === id)!;
+      const st = status.get(id)!;
+      return {
+        staffId: id,
+        personalEmail: maskEmail(r.personalEmail),
+        personalEmailVerified: !!r.personalEmailVerifiedAt,
+        lastSentAt: st.lastSentAt,
+        lastCount: DigestService.countOf(st.lastSentText),
+        failedAt: st.failedAt,
+        failedText: st.failedText,
+      };
+    });
     return {
-      items: rows.map((r) => ({ ...this.dto(r), elevations: elevations.filter((e) => e.staffId === r.id).map((e) => ({ id: e.id, role: e.role, endsAt: e.endsAt })) })),
-      singleApprover: await this.approvals.singleApprover(),
+      items: rows.map((r) => ({ ...this.dto(r, viewer), elevations: elevations.filter((e) => e.staffId === r.id).map((e) => ({ id: e.id, role: e.role, endsAt: e.endsAt })) })),
+      singleApprover: single,
+      digest,
     };
+  }
+
+  // ---------------------------------------------------------------- อีเมลส่วนตัว (H1)
+
+  async personalEmail(me: Staff) {
+    const r = await this.get(me.id);
+    return {
+      email: r.personalEmail,
+      verifiedAt: r.personalEmailVerifiedAt,
+      pending: r.personalEmailPending && r.personalEmailCodeExpiresAt && r.personalEmailCodeExpiresAt.getTime() > Date.now() ? r.personalEmailPending : null,
+      pendingExpiresAt: r.personalEmailPending ? r.personalEmailCodeExpiresAt : null,
+      workEmail: r.email,
+    };
+  }
+
+  /**
+   * เจ้าของบัญชีตั้ง / เปลี่ยนอีเมลส่วนตัว (แตะกุญแจแล้ว) · ส่งรหัส 6 หลักไปอีเมลใหม่ (หมด 15 นาที · เก็บเฉพาะ hash)
+   * ห้ามใช้โดเมนเดียวกับอีเมลงาน (อีเมลส่วนตัวมีไว้ให้รู้เรื่องแม้บัญชีงานถูกยึด) · ระหว่างรอยืนยันยังส่งถึงอีเมลเดิม
+   */
+  async requestPersonalEmail(me: Staff, input: z.infer<typeof PersonalEmailBody>) {
+    const r = await this.get(me.id);
+    const domain = (e: string) => e.split('@')[1]?.toLowerCase() ?? '';
+    if (domain(input.email) === domain(r.email)) throw new AppError(422, 'company_domain', `ใช้อีเมลโดเมนบริษัท (@${domain(r.email)}) ไม่ได้ · ใช้อีเมลส่วนตัวที่ไม่ผูกกับบริษัท`, { domain: domain(r.email) });
+    if (r.personalEmail && r.personalEmail.toLowerCase() === input.email && r.personalEmailVerifiedAt) throw new AppError(409, 'no_change', 'ใช้อีเมลนี้อยู่แล้ว');
+    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    const expiresAt = new Date(Date.now() + PERSONAL_CODE_MINUTES * 60_000);
+    await this.db.update(s.staffUsers).set({ personalEmailPending: input.email, personalEmailCodeHash: codeHash(r.id, input.email, code), personalEmailCodeExpiresAt: expiresAt, updatedAt: new Date() }).where(eq(s.staffUsers.id, r.id));
+    await staffAudit(this.db, me, 'staff.personal_email_requested', `ขอตั้งอีเมลส่วนตัว ${maskEmail(input.email)}`, { type: 'staff', id: r.id });
+    try {
+      await this.mail.send({ to: input.email, subject: '[Friday Ops] รหัสยืนยันอีเมลส่วนตัว', text: `รหัสยืนยันอีเมลส่วนตัวของ ${r.name}: ${code}\nหมดอายุใน ${PERSONAL_CODE_MINUTES} นาที · ถ้าคุณไม่ได้ขอ ไม่ต้องทำอะไร` });
+    } catch {
+      throw new AppError(502, 'mail_failed', 'ส่งรหัสยืนยันไม่สำเร็จ · ลองอีกครั้ง');
+    }
+    return { pending: input.email, expiresAt };
+  }
+
+  async verifyPersonalEmail(me: Staff, input: z.infer<typeof PersonalEmailVerifyBody>) {
+    const r = await this.get(me.id);
+    if (!r.personalEmailPending || !r.personalEmailCodeHash || !r.personalEmailCodeExpiresAt) throw new AppError(409, 'no_pending_email', 'ไม่มีอีเมลที่รอยืนยัน');
+    if (r.personalEmailCodeExpiresAt.getTime() <= Date.now()) throw new AppError(410, 'code_expired', 'รหัสหมดอายุแล้ว · ขอรหัสใหม่');
+    const [{ n }] = await this.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(s.staffAuditLogs)
+      .where(and(eq(s.staffAuditLogs.targetId, r.id), eq(s.staffAuditLogs.action, 'staff.personal_email_code_failed'), gt(s.staffAuditLogs.createdAt, new Date(r.personalEmailCodeExpiresAt.getTime() - PERSONAL_CODE_MINUTES * 60_000))));
+    if (n >= PERSONAL_CODE_TRIES) throw new AppError(429, 'too_many_attempts', 'ใส่รหัสผิดหลายครั้ง · ขอรหัสใหม่');
+    const a = Buffer.from(codeHash(r.id, r.personalEmailPending, input.code));
+    const b = Buffer.from(r.personalEmailCodeHash);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      await staffAudit(this.db, me, 'staff.personal_email_code_failed', 'ใส่รหัสยืนยันอีเมลส่วนตัวผิด', { type: 'staff', id: r.id });
+      throw new AppError(422, 'code_invalid', 'รหัสไม่ถูกต้อง');
+    }
+    const old = r.personalEmailVerifiedAt ? r.personalEmail : null;
+    const [row] = await this.db
+      .update(s.staffUsers)
+      .set({ personalEmail: r.personalEmailPending, personalEmailVerifiedAt: new Date(), personalEmailPending: null, personalEmailCodeHash: null, personalEmailCodeExpiresAt: null, updatedAt: new Date() })
+      .where(eq(s.staffUsers.id, r.id))
+      .returning();
+    await staffAudit(this.db, me, old ? 'staff.personal_email_changed' : 'staff.personal_email_set', old ? `เปลี่ยนอีเมลส่วนตัว ${maskEmail(old)} → ${maskEmail(row.personalEmail)}` : `ตั้งอีเมลส่วนตัว ${maskEmail(row.personalEmail)}`, { type: 'staff', id: r.id });
+    // แจ้งอีเมลเดิม: ถ้าบัญชีงานถูกยึดแล้วมีคนเปลี่ยนอีเมล เจ้าของตัวจริงยังรู้
+    let notifiedOld = false;
+    if (old && old.toLowerCase() !== row.personalEmail!.toLowerCase()) {
+      try {
+        await this.mail.send({ to: old, subject: '[Friday Ops] อีเมลส่วนตัวของคุณถูกเปลี่ยน', text: `อีเมลส่วนตัวของ ${r.name} ใน Friday Ops เปลี่ยนเป็น ${maskEmail(row.personalEmail)} แล้ว\nถ้าคุณไม่ได้เปลี่ยน ให้ติดต่อ Owner อีกคนหรือผู้ดูแลระบบทันที` });
+        notifiedOld = true;
+      } catch {
+        /* มีรอยใน staff_audit_logs แล้ว */
+      }
+    }
+    return { email: row.personalEmail, verifiedAt: row.personalEmailVerifiedAt, notifiedOld };
   }
 
   async invite(owner: Staff, reauthed: boolean, input: z.infer<typeof InviteBody>) {
@@ -183,9 +280,13 @@ export class StaffService {
     if (owners.filter((o) => o.id !== leavingId).length === 0) throw new AppError(409, 'last_owner', 'ต้องมี Owner อย่างน้อย 1 คน');
   }
 
-  private dto(r: typeof s.staffUsers.$inferSelect) {
+  private dto(r: typeof s.staffUsers.$inferSelect, viewer?: Staff) {
     const creds = (r.webauthnCredentials ?? []) as StoredCredential[];
     return {
+      /** คนอื่นเห็นแค่สถานะ · เจ้าของบัญชีเห็นอีเมลเต็ม */
+      personalEmail: viewer?.id === r.id ? r.personalEmail : maskEmail(r.personalEmail),
+      personalEmailStatus: r.personalEmailVerifiedAt ? ('verified' as const) : r.personalEmailPending ? ('pending' as const) : ('none' as const),
+      personalEmailVerifiedAt: r.personalEmailVerifiedAt,
       id: r.id,
       email: r.email,
       name: r.name,

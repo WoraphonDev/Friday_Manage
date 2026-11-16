@@ -1,0 +1,121 @@
+/* ทำหลาย Workspace (รอบ 4 · H4–H7) · สีจาก token ใน styles/tokens.css เท่านั้น */
+
+/* แถบดำเหนือตาราง: จำนวนที่เลือก · เลือกตามตัวกรอง · ปุ่มทำรายการ */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--inverse-bg);
+  color: var(--inverse-ink);
+}
+.bar .link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--inverse-link);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color var(--motion-dur-s) var(--motion-ease);
+}
+.bar .link:hover {
+  color: var(--inverse-link-hover);
+}
+.bar .hint {
+  color: var(--inverse-muted);
+  font-size: 12px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* หน้าต่าง: กว้าง 600 px บนจอใหญ่ · เต็มจอบนมือถือ */
+.dialog {
+  width: min(600px, calc(100vw - 32px));
+}
+
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.panelHead {
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 13px;
+}
+.panelBody {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+}
+.sumRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.choices {
+  display: grid;
+  gap: 8px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.indent {
+  display: grid;
+  gap: 6px;
+  padding-left: 28px;
+}
+.info {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--subtle);
+  color: var(--foreground-soft);
+  font-size: 13px;
+}
+
+/* แถบสัดส่วนผล: สำเร็จ / รออนุมัติ / ข้าม / ล้ม */
+.progress {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--subtle);
+}
+.progress > span {
+  transition: width var(--motion-dur) var(--motion-ease);
+}
+.barDone {
+  background: var(--success-solid);
+}
+.barPending {
+  background: var(--status-progress-dot);
+}
+.barSkipped {
+  background: var(--chart-neutral);
+}
+.barFailed {
+  background: var(--danger-solid);
+}
+
+@media (max-width: 760px) {
+  .actions {
+    margin-left: 0;
+    width: 100%;
+  }
+  .indent {
+    padding-left: 0;
+  }
+}

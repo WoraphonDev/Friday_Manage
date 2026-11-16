@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { type Db, schema } from '@friday/db';
+import { type Db, heldScope, readRetention, schema } from '@friday/db';
 import { and, eq, inArray, isNotNull, isNull, lt, notInArray } from 'drizzle-orm';
 import { EventBus } from '../core/events.js';
 import { SYSTEM_DB } from '../db/db.module.js';
@@ -12,6 +12,8 @@ const s = schema;
  * งานเบื้องหลัง `trash.purge` ทุกคืน 04:30 · ลบถาวรงาน โปรเจกต์ และไฟล์ที่พ้น trash_days ของแต่ละ Workspace + ไฟล์ในที่เก็บ
  * ใช้ SYSTEM_DB เพราะรวมทุก Workspace และไม่มีผู้ใช้ในบริบท (RLS ต้องมี app.workspace_id) · ทุกคำสั่งกรอง workspace_id เอง
  * Audit 1 แถวต่อ Workspace ที่มีของถูกลบ (ไม่ใช่ทุกแถว)
+ * Workspace ที่ติด Legal hold ข้ามทั้งก้อน (O42 · H11)
+ * ลูกค้าเลือกได้ 30 (ค่ามาตรฐาน) หรือ 90 วัน · คอลัมน์ไม่ว่าง จึงถือว่า 30 = ใช้ค่ามาตรฐานตามนโยบายที่ทีม Friday ตั้ง (ops_settings › retention.trashDays · H12)
  */
 @Injectable()
 export class TrashPurgeService implements OnModuleInit {
@@ -35,10 +37,12 @@ export class TrashPurgeService implements OnModuleInit {
       .from(s.workspaces)
       .leftJoin(s.workspaceSettings, eq(s.workspaceSettings.workspaceId, s.workspaces.id))
       .where(isNull(s.workspaces.deletedAt));
+    const [holds, retention] = await Promise.all([heldScope(this.sys), readRetention(this.sys)]);
     const total = { workspaces: 0, issues: 0, projects: 0, files: 0 };
     for (const ws of workspaces) {
+      if (holds.anyHold.has(ws.id)) continue;
       try {
-        const r = await this.purgeWorkspace(ws.id, ws.days ?? 30, now);
+        const r = await this.purgeWorkspace(ws.id, ws.days == null || ws.days === 30 ? retention.trashDays : ws.days, now);
         if (r.issues + r.projects + r.files === 0) continue;
         total.workspaces++;
         total.issues += r.issues;

@@ -12,8 +12,11 @@ export interface PickedWs {
   slug: string;
 }
 
-/** เลือก Workspace หลายแห่งด้วยการค้นหา (A3 · A4) */
-export function WorkspacePicker({ label, placeholder, hint, value, onChange }: { label: string; placeholder: string; hint?: string; value: PickedWs[]; onChange: (v: PickedWs[]) => void }) {
+/**
+ * เลือก Workspace หลายแห่งด้วยการค้นหา (A3 · A4)
+ * `extra` = รายการที่ค้นจาก GET workspaces ไม่เจอ (เช่น Workspace ที่รอลบ สำหรับตั้ง Legal hold · H11) กรองด้วยคำค้นเดียวกัน
+ */
+export function WorkspacePicker({ label, placeholder, hint, value, onChange, extra = [] }: { label: string; placeholder: string; hint?: string; value: PickedWs[]; onChange: (v: PickedWs[]) => void; extra?: PickedWs[] }) {
   const [q, setQ] = useState("");
   const search = useDeferredValue(q.trim());
   const found = useQuery({
@@ -21,7 +24,9 @@ export function WorkspacePicker({ label, placeholder, hint, value, onChange }: {
     queryFn: () => api.get<{ items: PickedWs[] }>(`/workspaces?q=${encodeURIComponent(search)}&limit=6`),
     enabled: search.length >= 2,
   });
-  const options = (found.data?.items ?? []).filter((w) => !value.some((v) => v.id === w.id));
+  const needle = search.toLowerCase();
+  const more = search.length >= 2 ? extra.filter((w) => w.name.toLowerCase().includes(needle) || w.slug.toLowerCase().includes(needle)) : [];
+  const options = [...(found.data?.items ?? []), ...more].filter((w, i, all) => !value.some((v) => v.id === w.id) && all.findIndex((x) => x.id === w.id) === i);
   return (
     <div className="field">
       <Input label={label} placeholder={placeholder} hint={hint} value={q} onChange={(e) => setQ(e.target.value)} />

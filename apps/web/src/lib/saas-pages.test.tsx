@@ -335,31 +335,30 @@ describe("กฎหมาย + Cookie (R4)", () => {
     expect(JSON.parse(localStorage.getItem(CONSENT_KEY)!)).toMatchObject({ analytics: true, marketing: true });
   });
 
-  it("แบนเนอร์ข้อกำหนดเปลี่ยน: Owner กดรับทราบในนาม Workspace · Member ไม่เห็น", async () => {
-    let accepted = false;
+  it("ข้อกำหนดเปลี่ยน (O42): ฉบับที่ต้องยอมรับขึ้นหน้าต่าง · ยอมรับทีละฉบับในนาม Workspace · ฉบับคุกกี้ไม่ต้องยอมรับ", async () => {
+    const accepted = new Set<string>();
     server.use(
       http.get("*/api/v1/me/legal-acceptances", () => HttpResponse.json({ items: [
-        { id: "doc-terms", type: "terms", version: "1.1", effectiveAt: "2026-12-01T00:00:00+07:00", summary: "เพิ่มผู้ให้บริการส่งอีเมล", accepted },
-        { id: "doc-dpa", type: "dpa", version: "1.1", effectiveAt: "2026-12-01T00:00:00+07:00", summary: null, accepted },
-        { id: "doc-cookie", type: "cookie", version: "1.0", effectiveAt: "2026-06-01T00:00:00+07:00", summary: null, accepted: false },
-      ] })),
+        { id: "doc-terms", type: "terms", version: "1.1", effectiveAt: "2026-12-01T00:00:00+07:00", summary: "เพิ่มผู้ให้บริการส่งอีเมล", requiresAcceptance: true, accepted: accepted.has("doc-terms") },
+        { id: "doc-dpa", type: "dpa", version: "1.1", effectiveAt: "2026-12-01T00:00:00+07:00", summary: null, requiresAcceptance: true, accepted: accepted.has("doc-dpa") },
+        { id: "doc-cookie", type: "cookie", version: "1.0", effectiveAt: "2026-06-01T00:00:00+07:00", summary: null, requiresAcceptance: true, accepted: false },
+      ], upcoming: [] })),
       http.post("*/api/v1/me/legal-acceptances", async ({ request }) => {
         await record(request);
-        if (calls.length === 2) accepted = true;
+        accepted.add((calls.at(-1)!.body as { documentId: string }).documentId);
         return HttpResponse.json({ alreadyAccepted: false }, { status: 201 });
       }),
     );
     const user = userEvent.setup();
-    const { unmount } = renderWithProviders(<LegalUpdateBanner ws="sample" canManage />, { messages });
-    expect(await screen.findByText("เราปรับปรุงข้อกำหนดการใช้งานและข้อตกลงการประมวลผลข้อมูล (DPA)")).toBeInTheDocument();
-    expect(screen.getByText(/เพิ่มผู้ให้บริการส่งอีเมล/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "อ่านฉบับเต็ม" })).toHaveAttribute("href", "/legal/terms");
-    await user.click(screen.getByRole("button", { name: "รับทราบ" }));
-    await waitFor(() => expect(screen.queryByText(/เราปรับปรุง/)).not.toBeInTheDocument());
+    renderWithProviders(<LegalUpdateBanner ws="sample" />, { messages });
+    expect(await screen.findByRole("dialog", { name: "ยอมรับข้อกำหนดการใช้งานฉบับ 1.1" })).toBeInTheDocument();
+    expect(screen.getByText("เพิ่มผู้ให้บริการส่งอีเมล")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "อ่านฉบับเต็มและเทียบกับฉบับเดิม" })).toHaveAttribute("href", "/legal/terms");
+    await user.click(screen.getByRole("button", { name: "ยอมรับและใช้งานต่อ" }));
+    expect(await screen.findByRole("dialog", { name: "ยอมรับข้อตกลงการประมวลผลข้อมูล (DPA)ฉบับ 1.1" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ยอมรับและใช้งานต่อ" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(calls.map((c) => c.body)).toEqual([{ documentId: "doc-terms", workspace: "sample" }, { documentId: "doc-dpa", workspace: "sample" }]);
-    unmount();
-    renderWithProviders(<LegalUpdateBanner ws="sample" canManage={false} />, { messages });
-    expect(screen.queryByText(/เราปรับปรุง/)).not.toBeInTheDocument();
   });
 });
 

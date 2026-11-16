@@ -20,11 +20,34 @@
 
 ## เสร็จเมื่อ
 
-- [ ] หน้าตรงกับข้อเสนอที่ 1440 px · ใช้งานได้ที่ 390 px · ซ่อนปุ่มตามบทบาท
-- [ ] e2e ops-api + API ลูกค้า (สรุปรายวัน, หลายราย, หมดเวลา / ขยาย, Legal hold กันลบ, ลบทันที, แจ้งเอกสารกฎหมาย) + component test ด้วย MSW
-- [ ] `pnpm typecheck` และ test ของแพ็กเกจที่แก้ผ่าน
+- [x] หน้าตรงกับข้อเสนอที่ 1440 px · ใช้งานได้ที่ 390 px · ซ่อนปุ่มตามบทบาท
+- [x] e2e ops-api + API ลูกค้า (สรุปรายวัน, หลายราย, หมดเวลา / ขยาย, Legal hold กันลบ, ลบทันที, แจ้งเอกสารกฎหมาย) + component test ด้วย MSW
+- [x] `pnpm typecheck` และ test ของแพ็กเกจที่แก้ผ่าน
 - [ ] deploy Docker ในเครื่องตาม CLAUDE.md และตรวจผ่าน :4000 / :3000
 
 ## บันทึกผล
 
-<!-- ผู้ทำงานเขียนตอนส่งงาน -->
+**Endpoint ใหม่ (ops-api)**
+- `GET|POST staff/me/personal-email` · `POST staff/me/personal-email:verify` (H1 · เจ้าของบัญชีเท่านั้น · แตะกุญแจ · รหัส 6 หลักเก็บเป็น hash หมด 15 นาที · ห้ามโดเมนเดียวกับอีเมลงาน · แจ้งอีเมลเดิมเมื่อเปลี่ยน)
+- `POST workspaces/bulk/preview|apply` (H4–H7 · id หรือตัวกรองเดียวกับ `GET ops/workspaces` · ≤ 1,000 · ผลรายแถว ทำได้ / ต้องอนุมัติ / ข้าม พร้อมเหตุผล)
+- `POST support-sessions/:id:extend` (H9 · 15/30/60 นาที · รวม ≤ 2 ชม. · ไม่เกิน grant.until)
+- `GET privacy/pending-deletes/:id` · `POST privacy/pending-deletes/:id:purge-now` (H13) · `GET|POST legal-holds` · `POST legal-holds/:id:release` · `GET|PUT retention` · `GET retention/estimate` · `GET legal/audience`
+
+**งานเบื้องหลัง**
+- ops-api: สรุปอนุมัติตัวเอง 08:00 (`staff/digest.service.ts`) · ปิดเซสชันเข้าบัญชีลูกค้าที่หมดเวลาทุก 1 นาที · ส่งอีเมลเอกสารกฎหมายเป็นชุด 50 ทุก 1 นาที
+- API ลูกค้า: `privacy.retention-logs` 04:15 (ล้าง IP / User agent ใน audit_logs และลบ session ที่จบแล้วตามนโยบาย) · `privacy.purge-approved` ทุก 5 นาที (ลบทันทีที่อนุมัติแล้ว ใช้ logic เดียวกับงานลบตี 4)
+
+**ทำต่างจากข้อเสนอ / ตัดสินเอง**
+- นับรายการในสรุปรายวันจาก `approval_requests` (1 คำขอ = 1 บรรทัด) · กันส่งซ้ำด้วย `staff_push_notices`
+- Legal hold: ทุกงานลบถาวร (ลบ Workspace, ถังขยะ, Log) ถาม `heldScope()` ใน `packages/db/src/retention.ts` · คำขอลบ PDPA ในขอบเขตขึ้น "รอ Legal hold" และแจ้งผู้ขอครั้งเดียว
+- ระยะเก็บที่แก้ได้จริง (มีงานลบอ่านค่า): Workspace ที่ยกเลิก, ถังขยะเริ่มต้น, Log ระบบ, Audit ของทีม · ภาษี 5 ปีล็อก · Activity ของลูกค้าตามแพ็กเกจอยู่ใน entitlements
+- ลบถาวรทันที: อยู่ใน `NO_SELF_APPROVAL` (ช่วงมี Owner คนเดียวใช้ไม่ได้ ตามคำตัดสินข้อ 4) · อนุมัติแล้วตั้ง `purge_after` = ตอนนี้ ให้งานของ API ลูกค้าลบ
+- C3 "ใช้คูปองที่มีอยู่": ย้าย logic การใช้คูปองไปที่ `packages/db/src/promotions.ts` (`grantCoupon`) ใช้ร่วมกับ API ลูกค้า
+- การ์ด "Workspace ที่รอลบ" อ่านจากแหล่งเดียวกับหน้ากู้คืน (แก้บั๊กค้น `deleted_at IS NULL`)
+- แบนเนอร์เอกสารกฎหมายเดิมใน `Banners.tsx` ย้ายไป `apps/web/src/features/legal/` · ผู้ใช้ทุกคนเห็น (ไม่ใช่แค่ Owner / Admin)
+
+**คำขอนอก lane**
+- `apps/api/src/trash/purge.service.ts` (ข้าม Workspace ที่ติด Legal hold) · `packages/db/src/index.ts`, `promotions.ts`
+- Announce.tsx (O43) ยังรับเฉพาะ id · รอ O43 เพิ่ม `filter` แล้วส่งตัวกรองจาก Workspaces
+
+**Test** (ฐาน friday_o42): ops-api 227 ผ่าน / 1 ข้าม · ops-web 237 · api 795 ผ่าน / 7 ข้าม · web 715 · db 167 · `pnpm typecheck` ผ่านทุกแพ็กเกจ

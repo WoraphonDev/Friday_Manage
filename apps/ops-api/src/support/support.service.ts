@@ -1,6 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { type Db, schema } from '@friday/db';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, isNotNull, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { audit } from '../audit.js';
 import { ApprovalsService } from '../approvals/approvals.service.js';
@@ -26,14 +26,36 @@ export const StartSessionBody = z
   .strict()
   .refine((b) => b.ticketNo || b.ticketId, { message: 'ระบุ Ticket ที่ผูกกับการเข้าบัญชี', path: ['ticketId'] });
 
+/** ขยายเวลา (H9): 15 / 30 / 60 นาที · รวมทั้งครั้งที่เข้าไม่เกิน 2 ชม. และไม่เกินวันหมดสิทธิ์ที่ลูกค้าให้ */
+export const ExtendSessionBody = z
+  .object({ minutes: z.union([z.literal(15), z.literal(30), z.literal(60)]), reason: z.string().trim().min(5, 'ระบุเหตุผล').max(500) })
+  .strict();
+export const SESSION_MAX_MINUTES = 120;
+export const SessionsQuery = z.object({ scope: z.enum(['open', 'recent']).default('open'), limit: z.coerce.number().int().min(1).max(200).default(50) });
+const bkkTime = (d: Date) => d.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' });
+
 /** การเข้าบัญชีลูกค้าเพื่อช่วยเหลือ (Q3) · ต้องมี grant จากลูกค้า, Ticket, เหตุผล และผู้อนุมัติคนที่ 2 ในโหมดแก้ไข */
 @Injectable()
-export class SupportService {
+export class SupportService implements OnModuleInit, OnModuleDestroy {
+  private readonly log = new Logger('SupportSessions');
+  private timer?: NodeJS.Timeout;
+
   constructor(
     @Inject(OPS_DB) private readonly db: Db,
     private readonly mail: Mailer,
     private readonly approvals: ApprovalsService,
   ) {}
+
+  onModuleInit() {
+    // ปิดเซสชันที่หมดเวลาทุก 1 นาที (H8) · เดิมปิดเฉพาะตอนมีคนเปิดรายการ ทำให้ค้างเป็น "เปิดอยู่" · test เรียก closeExpired() เอง
+    if (!process.env.VITEST && process.env.OPS_JOBS !== 'off') {
+      this.timer = setInterval(() => void this.closeExpired().catch((e) => this.log.error(String(e))), 60_000);
+      this.timer.unref();
+    }
+  }
+  onModuleDestroy() {
+    if (this.timer) clearInterval(this.timer);
+  }
 
   async start(staff: Staff, workspaceId: string, input: z.infer<typeof StartSessionBody>) {
     if (!z.uuid().safeParse(workspaceId).success) throw new AppError(404, 'not_found', 'ไม่พบ Workspace');
@@ -76,27 +98,66 @@ export class SupportService {
     });
 
     // แจ้ง Owner / Admin ทางอีเมลทันที (ถ้าลูกค้าเปิด "แจ้งเมื่อมีการเข้า") · ส่งไม่ได้ไม่ทำให้ session ล้ม
-    let notified = 0;
-    if (grant.notifyAdmins) {
-      const admins = await this.db
-        .select({ email: s.users.email })
-        .from(s.workspaceMembers)
-        .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
-        .where(and(eq(s.workspaceMembers.workspaceId, workspaceId), eq(s.workspaceMembers.status, 'active'), sql`${s.workspaceMembers.role} in ('owner', 'admin')`));
-      for (const a of admins) {
-        try {
-          await this.mail.send({
-            to: a.email,
-            subject: `ทีม Friday เข้าช่วยเหลือ Workspace ${ws.name} (Ticket ${ticketNo})`,
-            text: `ทีม Friday (${staff.name}) เริ่มเข้าช่วยเหลือ Workspace ${ws.name}\nTicket: ${ticketNo}\nเหตุผล: ${input.reason}\nสิ้นสุดอัตโนมัติ: ${expiresAt.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' })}\nโหมด: ${input.mode === 'write' ? 'แก้ไขได้ (อนุมัติโดยพนักงาน 2 คน)' : 'อ่านอย่างเดียว'}\n\nดูประวัติได้ที่ ${config.appUrl}/work/${ws.slug}/admin · ปิดสิทธิ์ได้ทุกเมื่อที่ Admin Console › การเข้าช่วยเหลือจากทีม Friday`,
-          });
-          notified++;
-        } catch {
-          /* บันทึกใน mail log แล้ว */
-        }
+    const notified = grant.notifyAdmins
+      ? await this.mailAdmins(
+          workspaceId,
+          `ทีม Friday เข้าช่วยเหลือ Workspace ${ws.name} (Ticket ${ticketNo})`,
+          `ทีม Friday (${staff.name}) เริ่มเข้าช่วยเหลือ Workspace ${ws.name}\nTicket: ${ticketNo}\nเหตุผล: ${input.reason}\nสิ้นสุดอัตโนมัติ: ${bkkTime(expiresAt)}\nโหมด: ${input.mode === 'write' ? 'แก้ไขได้ (อนุมัติโดยพนักงาน 2 คน)' : 'อ่านอย่างเดียว'}\n\nดูประวัติได้ที่ ${config.appUrl}/work/${ws.slug}/admin · ปิดสิทธิ์ได้ทุกเมื่อที่ Admin Console › การเข้าช่วยเหลือจากทีม Friday`,
+        )
+      : 0;
+    return { session: this.dto(session), notified };
+  }
+
+  /** อีเมลถึง Owner / Admin ที่ใช้งานอยู่ของลูกค้า · คืนจำนวนที่ส่งได้ */
+  private async mailAdmins(workspaceId: string, subject: string, text: string) {
+    const admins = await this.db
+      .select({ email: s.users.email })
+      .from(s.workspaceMembers)
+      .innerJoin(s.users, eq(s.users.id, s.workspaceMembers.userId))
+      .where(and(eq(s.workspaceMembers.workspaceId, workspaceId), eq(s.workspaceMembers.status, 'active'), sql`${s.workspaceMembers.role} in ('owner', 'admin')`));
+    let sent = 0;
+    for (const a of admins) {
+      try {
+        await this.mail.send({ to: a.email, subject, text });
+        sent++;
+      } catch {
+        /* บันทึกใน mail log แล้ว */
       }
     }
-    return { session: this.dto(session), notified };
+    return sent;
+  }
+
+  /**
+   * ขยายเวลา (H9) · เฉพาะผู้เข้า · รวมทั้งครั้งไม่เกิน 2 ชม. นับจากเวลาเริ่ม และไม่เกินวันหมดสิทธิ์ที่ลูกค้าให้
+   * บันทึกเหตุผลใน Audit ของลูกค้า และอีเมลแจ้ง Owner / Admin แบบเดียวกับตอนเริ่ม
+   */
+  async extend(staff: Staff, id: string, input: z.infer<typeof ExtendSessionBody>) {
+    if (!z.uuid().safeParse(id).success) throw new AppError(404, 'not_found', 'ไม่พบ session');
+    await this.closeExpired();
+    const [row] = await this.db.select().from(s.supportSessions).where(eq(s.supportSessions.id, id));
+    if (!row) throw new AppError(404, 'not_found', 'ไม่พบ session');
+    if (row.staffId !== staff.id) throw new AppError(403, 'forbidden', 'ขยายเวลาได้เฉพาะผู้ที่เข้าบัญชีอยู่');
+    if (row.endedAt) throw new AppError(409, 'session_ended', 'session นี้จบไปแล้ว');
+    const [ws] = await this.db.select().from(s.workspaces).where(eq(s.workspaces.id, row.workspaceId));
+    const [grant] = await this.db.select().from(s.supportAccessGrants).where(eq(s.supportAccessGrants.workspaceId, row.workspaceId));
+    if (!grant || (grant.until && grant.until.getTime() <= Date.now())) throw new AppError(403, 'support_access_not_granted', 'สิทธิ์ที่ลูกค้าให้หมดแล้ว ขยายเวลาไม่ได้');
+    const current = row.expiresAt ?? new Date();
+    const cap = Math.min(row.startedAt.getTime() + SESSION_MAX_MINUTES * 60_000, grant.until?.getTime() ?? Infinity);
+    const wanted = current.getTime() + input.minutes * 60_000;
+    if (current.getTime() >= cap - 60_000) {
+      throw new AppError(422, 'session_max_reached', grant.until && grant.until.getTime() < row.startedAt.getTime() + SESSION_MAX_MINUTES * 60_000 ? 'ขยายไม่ได้ · ถึงวันหมดสิทธิ์ที่ลูกค้าให้แล้ว' : 'รวมได้ไม่เกิน 2 ชม. ต่อครั้งที่เข้า · ออกแล้วเข้าใหม่พร้อมเหตุผล', { maxAt: new Date(cap) });
+    }
+    const expiresAt = new Date(Math.min(wanted, cap));
+    const [updated] = await this.db.transaction(async (tx) => {
+      const r = await tx.update(s.supportSessions).set({ expiresAt }).where(and(eq(s.supportSessions.id, id), isNull(s.supportSessions.endedAt))).returning();
+      await audit(tx, staff, row.workspaceId, 'secu', 'support.session_extended', `ขยายเวลาเข้าช่วยเหลือ ${Math.round((expiresAt.getTime() - current.getTime()) / 60_000)} นาที → ${bkkTime(expiresAt)} · Ticket ${row.ticketNo} · ${input.reason}`, { type: 'support_session', id });
+      return r;
+    });
+    if (!updated) throw new AppError(409, 'session_ended', 'session นี้จบไปแล้ว');
+    const notified = grant.notifyAdmins
+      ? await this.mailAdmins(row.workspaceId, `ทีม Friday ขยายเวลาช่วยเหลือ Workspace ${ws?.name ?? ''} (Ticket ${row.ticketNo})`, `ทีม Friday (${staff.name}) ขยายเวลาเข้าช่วยเหลือ Workspace ${ws?.name ?? ''}\nเหตุผล: ${input.reason}\nสิ้นสุดอัตโนมัติ: ${bkkTime(expiresAt)}\n\nปิดสิทธิ์ได้ทุกเมื่อที่ Admin Console › การเข้าช่วยเหลือจากทีม Friday`)
+      : 0;
+    return { session: this.dto(updated), notified, capped: wanted > cap, maxAt: new Date(cap) };
   }
 
   async end(staff: Staff, id: string) {
@@ -119,7 +180,7 @@ export class SupportService {
    * บันทึกใน audit ของลูกค้าว่าจบเพราะหมดเวลา
    */
   async closeExpired() {
-    await this.db.transaction(async (tx) => {
+    return this.db.transaction(async (tx) => {
       const rows = await tx
         .update(s.supportSessions)
         .set({ endedAt: sql`${s.supportSessions.expiresAt}` })
@@ -127,22 +188,32 @@ export class SupportService {
         .returning();
       for (const r of rows)
         await tx.insert(s.auditLogs).values({ workspaceId: r.workspaceId, actorKind: 'system', category: 'secu', action: 'support.session_expired', targetType: 'support_session', targetId: r.id, summary: `การเข้าช่วยเหลือหมดเวลา · Ticket ${r.ticketNo}` });
+      return { closed: rows.length };
     });
   }
 
-  async open() {
+  /** เปิดอยู่ (ค่าเริ่มต้น · แถบส้มใช้) หรือ recent = เปิดอยู่ + ที่จบใน 30 วัน (ตาราง Support › การเข้าช่วยเหลือ) */
+  async open(q: z.infer<typeof SessionsQuery> = { scope: 'open', limit: 50 }) {
     await this.closeExpired();
     const rows = await this.db
-      .select({ s: s.supportSessions, workspace: s.workspaces.name, slug: s.workspaces.slug, staff: s.staffUsers.name })
+      .select({ s: s.supportSessions, workspace: s.workspaces.name, slug: s.workspaces.slug, staff: s.staffUsers.name, roles: s.staffUsers.roles })
       .from(s.supportSessions)
       .innerJoin(s.workspaces, eq(s.workspaces.id, s.supportSessions.workspaceId))
       .innerJoin(s.staffUsers, eq(s.staffUsers.id, s.supportSessions.staffId))
-      .where(isNull(s.supportSessions.endedAt))
-      .orderBy(desc(s.supportSessions.startedAt));
-    return { items: rows.map((r) => ({ ...this.dto(r.s), workspace: { name: r.workspace, slug: r.slug }, staffName: r.staff })) };
+      .where(q.scope === 'open' ? isNull(s.supportSessions.endedAt) : or(isNull(s.supportSessions.endedAt), and(isNotNull(s.supportSessions.endedAt), sql`${s.supportSessions.endedAt} > now() - interval '30 days'`)))
+      .orderBy(desc(s.supportSessions.startedAt))
+      .limit(q.limit);
+    return { items: rows.map((r) => ({ ...this.dto(r.s), workspace: { name: r.workspace, slug: r.slug }, staffName: r.staff, staffRoles: r.roles })), serverTime: new Date() };
   }
 
   private dto(r: typeof s.supportSessions.$inferSelect) {
-    return { id: r.id, workspaceId: r.workspaceId, staffId: r.staffId, ticketNo: r.ticketNo, ticketId: r.ticketId, reason: r.reason, mode: r.mode, secondApproverId: r.secondApproverId, startedAt: r.startedAt, endedAt: r.endedAt, expiresAt: r.expiresAt };
+    const end = r.endedAt ?? new Date();
+    return {
+      id: r.id, workspaceId: r.workspaceId, staffId: r.staffId, ticketNo: r.ticketNo, ticketId: r.ticketId, reason: r.reason, mode: r.mode, secondApproverId: r.secondApproverId,
+      startedAt: r.startedAt, endedAt: r.endedAt, expiresAt: r.expiresAt,
+      /** จบเพราะหมดเวลา (งานปิดเองตั้ง ended_at = expires_at) หรือออกเอง */
+      endReason: r.endedAt ? (r.expiresAt && r.endedAt.getTime() >= r.expiresAt.getTime() ? ('expired' as const) : ('manual' as const)) : null,
+      usedMinutes: Math.max(0, Math.round((end.getTime() - r.startedAt.getTime()) / 60_000)),
+    };
   }
 }

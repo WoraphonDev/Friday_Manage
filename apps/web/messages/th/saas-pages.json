@@ -276,11 +276,17 @@
       "cta": "ดูกฎที่ทำงานบ่อย"
     },
     "legal": {
-      "title": "เราปรับปรุง{names}",
-      "and": "และ",
-      "effective": "มีผล {date}",
-      "read": "อ่านฉบับเต็ม",
-      "accept": "รับทราบ",
+      "upcomingTitle": "{name}ฉบับใหม่มีผล {date}",
+      "noticeTitle": "{name}ฉบับใหม่มีผลแล้วตั้งแต่ {date}",
+      "more": "และอีก {count} เรื่อง",
+      "changes": "ดูสิ่งที่เปลี่ยน",
+      "dismiss": "ปิด",
+      "modalTitle": "ยอมรับ{name}ฉบับ {version}",
+      "effectiveToday": "มีผลแล้ววันนี้ {date}",
+      "effectiveSince": "มีผลตั้งแต่ {date}",
+      "readFull": "อ่านฉบับเต็มและเทียบกับฉบับเดิม",
+      "declineNote": "ไม่ยอมรับ: ติดต่อ Owner ของ Workspace หรือยกเลิกบัญชีได้ที่โปรไฟล์",
+      "acceptContinue": "ยอมรับและใช้งานต่อ",
       "accepted": "บันทึกการรับทราบแล้ว"
     }
   },

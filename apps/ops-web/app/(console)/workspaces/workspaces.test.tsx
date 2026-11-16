@@ -72,22 +72,6 @@ describe("รายชื่อ Workspace", () => {
     expect(await screen.findByText("สยามเดโม")).toBeInTheDocument();
   });
 
-  it("เลือกหลายแถว → ขยายทดลองใช้ทุกราย (เรียกทีละราย) · โหลดไม่ได้แสดง requestId", async () => {
-    const called: string[] = [];
-    list();
-    server.use(http.post(`${OPS}/workspaces/:id/extend-trial`, ({ params }) => (called.push(String(params.id)), HttpResponse.json({ trialEndsAt: "2026-12-01" }))));
-    shell(<WorkspacesList />, "/workspaces");
-    await userEvent.click(await screen.findByLabelText("เลือก สยามเดโม"));
-    await userEvent.click(screen.getByLabelText("เลือก Orbit Labs"));
-    expect(screen.getByText("เลือก 2 Workspace")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "ขยายทดลองใช้" }));
-    const dlg = await screen.findByRole("dialog", { name: "ขยายทดลองใช้ 2 Workspace" });
-    await userEvent.type(within(dlg).getByLabelText("เหตุผล"), "รอฝ่ายจัดซื้ออนุมัติ PO");
-    await userEvent.click(within(dlg).getByRole("button", { name: "ขยายทดลองใช้" }));
-    await waitFor(() => expect(called.sort()).toEqual([WS, "w2"].sort()));
-    expect(await screen.findByText("ทำรายการแล้ว 2 ราย · ต้องอนุมัติ 0 · ไม่สำเร็จ 0")).toBeInTheDocument();
-  });
-
   it("ops-api ล้ม: แสดง requestId", async () => {
     server.use(http.get(`${OPS}/workspaces`, () => opsError(500, "internal_error", "ระบบขัดข้อง", undefined, "req-ws-500")));
     shell(<WorkspacesList />, "/workspaces");

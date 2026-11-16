@@ -7,6 +7,7 @@ import { useReauth } from "@/components/dialogs";
 import { Modal, Notice, Seg } from "@/components/kit";
 import { Button, InlineError, Input, Textarea } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useMe } from "@/lib/query";
 import { planLabel, useFmt } from "./format";
 import type { Member, Overview } from "./types";
 
@@ -126,6 +127,8 @@ export function RequestAccessDialog({ ws, onOpenChange, onDone }: { ws: Overview
 /** C3 · ให้ส่วนลด (รายเดียวหรือหลายราย) */
 export function DiscountDialog({ names, context, onOpenChange, submit }: { names: string[]; context?: ReactNode; onOpenChange: (o: boolean) => void; submit: (body: { percent: number; months?: number; reason: string }) => Promise<unknown> }) {
   const t = useTranslations("customers.c3");
+  // วงเงินจริงของพนักงาน (ops/auth/me) · ไม่เขียนค่าตายตัว
+  const limits = useMe().data?.limits;
   const [percent, setPercent] = useState("15");
   const [months, setMonths] = useState("6");
   const [forever, setForever] = useState(false);
@@ -145,7 +148,7 @@ export function DiscountDialog({ names, context, onOpenChange, submit }: { names
         </label>
         <p className="muted small">{t("noCombine")}</p>
         <Reason label={t("reason")} value={reason} onChange={setReason} />
-        <p className="muted small">{t("limit", { pct: 30, cycles: 12 })}</p>
+        {limits && <p className="muted small">{t("limit", { pct: limits.discountPct, cycles: limits.discountCycles })}</p>}
         <Actions busy={m.isPending} disabled={!ok} label={t("submit")} error={m.error} onCancel={() => onOpenChange(false)} />
       </form>
     </Modal>
@@ -156,6 +159,7 @@ export function DiscountDialog({ names, context, onOpenChange, submit }: { names
 export function TrialDialog({ names, trialEndsAt, context, onOpenChange, submit }: { names: string[]; trialEndsAt?: string | null; context?: ReactNode; onOpenChange: (o: boolean) => void; submit: (body: { days: number; reason: string }) => Promise<unknown> }) {
   const t = useTranslations("customers.c5");
   const fmt = useFmt();
+  const limits = useMe().data?.limits;
   const [preset, setPreset] = useState<"7" | "14" | "30" | "custom">("7");
   const [custom, setCustom] = useState("10");
   const [reason, setReason] = useState("");
@@ -173,7 +177,7 @@ export function TrialDialog({ names, trialEndsAt, context, onOpenChange, submit 
         {preset === "custom" && <Input label={t("days")} type="number" min={1} max={60} value={custom} onChange={(e) => setCustom(e.target.value)} />}
         {names.length === 1 && <p className="small">{t("newEnd", { date: fmt.date(new Date(base + days * 86_400_000).toISOString()) })}</p>}
         <Reason label={t("reason")} value={reason} onChange={setReason} />
-        <p className="muted small">{t("limit")}</p>
+        {limits && <p className="muted small">{t("limit", { days: limits.trialDays, next: limits.trialTimes + 1 })}</p>}
         <Actions busy={m.isPending} disabled={!ok} label={t("submit")} error={m.error} onCancel={() => onOpenChange(false)} />
       </form>
     </Modal>

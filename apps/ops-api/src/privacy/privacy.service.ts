@@ -8,6 +8,7 @@ import type { Staff } from '../auth/auth.guard.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
+import { HoldsService } from './holds.service.js';
 
 const s = schema;
 const DAY = 86_400_000;
@@ -75,6 +76,7 @@ export class PrivacyService implements OnModuleInit {
     @Inject(OPS_DB) private readonly db: Db,
     private readonly mail: Mailer,
     private readonly approvals: ApprovalsService,
+    private readonly holds: HoldsService,
   ) {}
 
   onModuleInit() {
@@ -113,7 +115,9 @@ export class PrivacyService implements OnModuleInit {
       .orderBy(s.privacyRequests.dueDate, s.privacyRequests.createdAt);
     const wsIds = [...new Set(rows.flatMap((r) => r.workspaceIds))];
     const ws = wsIds.length ? await this.db.select({ id: s.workspaces.id, name: s.workspaces.name, slug: s.workspaces.slug }).from(s.workspaces).where(inArray(s.workspaces.id, wsIds)) : [];
-    return { items: rows.map((r) => ({ ...this.dto(r), workspaces: ws.filter((w) => r.workspaceIds.includes(w.id)) })) };
+    // คำขอลบของผู้ใช้ที่ติด Legal hold แสดงเป็น "รอ Legal hold" (H11) · สถานะในตารางยังเป็น open
+    const held = await this.holds.heldUsers(rows.filter((r) => r.requestType === 'erase' && r.status === 'open' && r.userId).map((r) => r.userId!));
+    return { items: rows.map((r) => ({ ...this.dto(r), legalHold: !!r.userId && held.has(r.userId) && r.requestType === 'erase' && r.status === 'open', workspaces: ws.filter((w) => r.workspaceIds.includes(w.id)) })) };
   }
 
   private async find(id: string) {
@@ -148,8 +152,9 @@ export class PrivacyService implements OnModuleInit {
       .where(eq(s.staffAuditLogs.targetId, r.id))
       .orderBy(s.staffAuditLogs.createdAt);
     const scope = await this.scope(r);
+    const legalHold = r.requestType === 'erase' && r.status === 'open' && !!r.userId && (await this.holds.heldUsers([r.userId])).has(r.userId);
     return {
-      request: this.dto(r),
+      request: { ...this.dto(r), legalHold },
       steps: STEPS.map((label, i) => ({ step: i + 1, label, done: r.step > i + 1 || r.status === 'completed' })),
       history,
       scope,
@@ -159,7 +164,7 @@ export class PrivacyService implements OnModuleInit {
             anonymize: [`งานและคอมเมนต์ที่เคยทำ: เปลี่ยนชื่อเป็น "${ERASED_NAME}" (งานของลูกค้ายังอยู่)`],
             keep: scope.invoicesKept ? [`ใบกำกับภาษีที่ออกในชื่อบริษัท ${scope.invoicesKept} ฉบับ (ประมวลรัษฎากร 5 ปี)`] : [],
             backupDays: 35,
-            blockers: scope.soleOwner.map((w) => ({ code: 'sole_owner', workspace: w.slug })),
+            blockers: [...scope.soleOwner.map((w) => ({ code: 'sole_owner', workspace: w.slug })), ...(legalHold ? [{ code: 'legal_hold', workspace: null }] : [])],
           }
         : null,
     };
@@ -236,6 +241,7 @@ export class PrivacyService implements OnModuleInit {
       const [a] = await this.db.select({ status: s.approvalRequests.status }).from(s.approvalRequests).where(eq(s.approvalRequests.id, r.approvalRequestId));
       if (a?.status === 'pending') throw new AppError(409, 'erase_pending', 'มีคำขออนุมัติลบที่รออยู่แล้ว', { approvalId: r.approvalRequestId });
     }
+    await this.assertNotHeld(r);
     const scope = await this.scope(r);
     if (scope.soleOwner.length) throw new AppError(409, 'sole_owner', 'ผู้ขอเป็น Owner คนเดียวของ Workspace · ให้ลูกค้าโอนความเป็นเจ้าของก่อน', { workspaces: scope.soleOwner.map((w) => w.slug) });
     const pending = await this.approvals.gate(staff, {
@@ -255,6 +261,8 @@ export class PrivacyService implements OnModuleInit {
     const r = await this.find(id);
     this.open(r);
     const userId = r.userId!;
+    // hold อาจถูกตั้งระหว่างรออนุมัติ
+    await this.assertNotHeld(r);
     const scope = await this.scope(r);
     if (scope.soleOwner.length) throw new AppError(409, 'sole_owner', 'ผู้ขอเป็น Owner คนเดียวของ Workspace · ให้ลูกค้าโอนความเป็นเจ้าของก่อน', { workspaces: scope.soleOwner.map((w) => w.slug) });
     const wsIds = scope.memberships.map((m) => m.id);
@@ -287,6 +295,13 @@ export class PrivacyService implements OnModuleInit {
     await this.db.update(s.privacyRequests).set({ step: 4, handledBy: staff.id }).where(eq(s.privacyRequests.id, r.id));
     await this.log(staff, 'privacy.erased', `#${r.number} ลบข้อมูลของ ${r.requesterEmail} · ถอนจาก ${wsIds.length} Workspace${anonymized ? ' · บัญชีถูกทำให้ระบุตัวไม่ได้' : ''}`, { type: 'privacy_request', id: r.id }, ctx);
     return { requestId: r.id, workspaces: wsIds.length, anonymized };
+  }
+
+  /** ข้อมูลของผู้ขอติด Legal hold → ลบไม่ได้ ("รอ Legal hold") และแจ้งผู้ขอครั้งเดียวว่าเก็บไว้ตามกฎหมาย */
+  private async assertNotHeld(r: typeof s.privacyRequests.$inferSelect) {
+    if (!r.userId || !(await this.holds.heldUsers([r.userId])).has(r.userId)) return;
+    await this.holds.holdErasureRequests();
+    throw new AppError(409, 'legal_hold', 'ข้อมูลของผู้ขออยู่ในขอบเขต Legal hold · รอจนกว่าจะยกเลิก (แจ้งผู้ขอแล้วว่าเก็บไว้ตามกฎหมาย)');
   }
 
   // ---------------------------------------------------------------- เหตุละเมิดข้อมูล
@@ -416,13 +431,5 @@ export class PrivacyService implements OnModuleInit {
     return { breachId: b.id, deadline: new Date(b.discoveredAt.getTime() + BREACH_HOURS * HOUR), text: text.join('\n') };
   }
 
-  /** Workspace ที่รอลบ (ระยะผ่อนผัน 30 วัน) สำหรับหน้า Privacy */
-  async pendingDeletes() {
-    const rows = await this.rows(sql`
-      select w.id, w.slug, w.name, w.updated_at as "requestedAt", (w.updated_at + interval '30 days') as "purgeAt",
-        (select u.email from audit_logs a left join users u on u.id = a.actor_id where a.workspace_id = w.id and a.action like 'workspace.delete%' order by a.created_at desc limit 1) as "requestedBy"
-      from workspaces w where w.status = 'pending_delete' and w.deleted_at is null order by w.updated_at`);
-    return { items: rows };
-  }
 }
 

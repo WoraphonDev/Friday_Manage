@@ -73,9 +73,78 @@ describe("แถบแจ้งด้านบน (G11)", () => {
       http.post(`${OPS}/support-sessions/:id/end`, ({ params }) => ((ended = String(params.id)), HttpResponse.json({ session: {} }))),
     );
     shell();
-    expect(await screen.findByText("กำลังดูบัญชีลูกค้า")).toBeInTheDocument();
+    expect(await screen.findByText("อยู่ในบัญชี", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("ทีมตัวอย่าง")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "ออกจากบัญชีลูกค้า" }));
     await waitFor(() => expect(ended).toBe(mySessionId));
+  });
+
+  // H8 · นับถอยหลังจาก expires_at ของเซิร์ฟเวอร์ (นาฬิกาเครื่องเร็วไป 1 ชม. ก็ยังนับถูก)
+  const withExpiry = (leftMs: number, serverSkewMs = 0) => {
+    const serverNow = Date.now() - serverSkewMs;
+    return { items: openSessions(staff.support.id).map((x) => ({ ...x, startedAt: new Date(serverNow - 20 * 60_000).toISOString(), expiresAt: new Date(serverNow + leftMs).toISOString() })), serverTime: new Date(serverNow).toISOString() };
+  };
+
+  it("H8: นับถอยหลังตามนาฬิกาเซิร์ฟเวอร์ · บอกเวลาหมด · ยังไม่เตือนเมื่อเหลือมาก", async () => {
+    asRole("support");
+    server.use(http.get(`${OPS}/support-sessions`, () => HttpResponse.json(withExpiry(30 * 60_000, 3_600_000))));
+    shell();
+    const count = await screen.findByTestId("session-countdown");
+    expect(count.textContent).toMatch(/^(30:00|29:5\d)$/);
+    expect(screen.getByText(/^ถึง /)).toBeInTheDocument();
+    expect(screen.queryByText(/เหลือ 5 นาทีในบัญชี/)).not.toBeInTheDocument();
+  });
+
+  it("H8: เหลือ ≤ 5 นาที → Toast พร้อม \"ขยาย 30 นาที\" เปิดหน้าต่างขยายเวลา (H9) · ส่งจำนวนนาทีและเหตุผล", async () => {
+    asRole("support");
+    let body: Record<string, unknown> = {};
+    server.use(
+      http.get(`${OPS}/support-sessions`, () => HttpResponse.json(withExpiry(4 * 60_000))),
+      http.get(`${OPS}/workspaces/:id`, () => HttpResponse.json({ supportAccess: { until: "2026-11-20T10:00:00.000Z", maxMode: "read", notifyAdmins: true, active: true } })),
+      http.post(`${OPS}/support-sessions/:id/extend`, async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ session: { ...openSessions(staff.support.id)[0], expiresAt: new Date(Date.now() + 34 * 60_000).toISOString() }, notified: 1 });
+      }),
+    );
+    shell();
+    expect(await screen.findByText("เหลือ 5 นาทีในบัญชี ทีมตัวอย่าง")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "ขยาย 30 นาที" }));
+    const dlg = await screen.findByRole("dialog", { name: "ขยายเวลาในบัญชี ทีมตัวอย่าง" });
+    expect(await within(dlg).findByText(/ลูกค้าอนุญาตถึง/)).toBeInTheDocument();
+    expect(within(dlg).getByText(/รวมได้ไม่เกิน 2 ชม. ต่อครั้งที่เข้า/)).toBeInTheDocument();
+    expect(within(dlg).getByText("Owner และ Admin ของลูกค้าได้อีเมลแจ้งการขยาย (เหมือนตอนเริ่ม)")).toBeInTheDocument();
+    await userEvent.click(within(dlg).getByRole("button", { name: "ขยายเวลา" }));
+    expect(await within(dlg).findByText("ระบุเหตุผลอย่างน้อย 5 ตัวอักษร")).toBeInTheDocument();
+    await userEvent.click(within(dlg).getByRole("button", { name: "15 นาที" }));
+    await userEvent.type(within(dlg).getByLabelText("เหตุผล"), "ยังตรวจเรื่องสิทธิ์โปรเจกต์ไม่เสร็จ");
+    await userEvent.click(within(dlg).getByRole("button", { name: "ขยายเวลา" }));
+    await waitFor(() => expect(body).toEqual({ minutes: 15, reason: "ยังตรวจเรื่องสิทธิ์โปรเจกต์ไม่เสร็จ" }));
+    expect(await screen.findByText(/ขยายเวลาถึง .+ แล้ว/)).toBeInTheDocument();
+  });
+
+  it("H9: ขยายเกิน 2 ชม. → แสดงข้อความจากเซิร์ฟเวอร์", async () => {
+    asRole("support");
+    server.use(
+      http.get(`${OPS}/support-sessions`, () => HttpResponse.json(withExpiry(50 * 60_000))),
+      http.get(`${OPS}/workspaces/:id`, () => opsError(403, "forbidden", "ไม่มีสิทธิ์")),
+      http.post(`${OPS}/support-sessions/:id/extend`, () => opsError(422, "session_max_reached", "รวมได้ไม่เกิน 2 ชม. ต่อครั้งที่เข้า · ออกแล้วเข้าใหม่พร้อมเหตุผล")),
+    );
+    shell();
+    await userEvent.click(await screen.findByRole("button", { name: "ขยายเวลา" }));
+    const dlg = await screen.findByRole("dialog", { name: "ขยายเวลาในบัญชี ทีมตัวอย่าง" });
+    await userEvent.type(within(dlg).getByLabelText("เหตุผล"), "ต้องการเวลาเพิ่ม");
+    await userEvent.click(within(dlg).getByRole("button", { name: "ขยายเวลา" }));
+    expect(await within(dlg).findByText(/ออกแล้วเข้าใหม่พร้อมเหตุผล/)).toBeInTheDocument();
+  });
+
+  it("H8: ถึงเวลาหมด → Toast หมดเวลาพร้อมเวลาที่ใช้ · แถบหาย", async () => {
+    asRole("support");
+    let calls = 0;
+    server.use(http.get(`${OPS}/support-sessions`, () => (calls++ === 0 ? HttpResponse.json(withExpiry(1500)) : HttpResponse.json({ items: [], serverTime: new Date().toISOString() }))));
+    shell();
+    await screen.findByTestId("session-countdown");
+    expect(await screen.findByText(/หมดเวลาเข้าบัญชี ทีมตัวอย่าง แล้ว · ใช้เวลา 20 นาที/, undefined, { timeout: 4000 })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId("session-countdown")).not.toBeInTheDocument());
   });
 
   it("เปิดสิทธิ์ฉุกเฉินอยู่: แถบแดง · ปิดก่อนหมดเวลาได้", async () => {

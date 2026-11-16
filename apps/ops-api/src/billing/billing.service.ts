@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { type Db, isGrantSource, replaceTaxDocument, schema, type Tx } from '@friday/db';
-import { creditNotePdf, debitNotePdf, invoicePdf, renderSalesReport, salesReportData, salesReportXlsx, taxDocumentPdf } from '@friday/docs';
+import { type Db, isGrantSource, queueETax, replaceTaxDocument, schema, type Tx } from '@friday/db';
+import { creditNotePdf, debitNotePdf, invoicePdf, renderSalesReport, salesReportData, salesReportXlsx, salesTaxSummary, taxDocumentPdf } from '@friday/docs';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApprovalsService, type ApprovalContext } from '../approvals/approvals.service.js';
@@ -71,19 +71,31 @@ export const RefundBody = z
   })
   .strict();
 export const CreditGrantBody = z.object({ workspaceId: z.uuid(), amountSatang: z.number().int().positive(), reason: Reason, invoiceId: z.uuid().optional() }).strict();
-export const TaxQuery = z.object({ month: Month.optional() });
 export const RevenueQuery = z.object({ months: z.coerce.number().int().min(1).max(24).default(6) });
-export const CloseBody = z.object({ month: Month }).strict();
-/** ไฟล์ให้สำนักงานบัญชี: รายงานภาษีขาย (PDF + Excel · รวมใบลด / เพิ่มหนี้) และ 50 ทวิ ที่ได้รับ (CSV) */
-export const EXPORT_TYPES = ['sales_tax', 'wht'] as const;
+/** ปิดงวด · e-Tax ของเดือนยังไม่ครบก็ปิดได้ แต่ต้องกรอกเหตุผล (E1) */
+export const CloseBody = z.object({ month: Month, reason: z.string().trim().min(3).max(500).optional() }).strict();
+/** 50 ทวิ ของงวดเป็น CSV (รายงานภาษีขายแยกเป็น PDF / Excel) */
 export const ExportQuery = z.object({ month: Month, type: z.enum(['wht']).default('wht') });
-export const SendExportBody = z.object({ month: Month, types: z.array(z.enum(EXPORT_TYPES)).min(1).max(2).default([...EXPORT_TYPES]) }).strict();
-const EXPORT_LABEL: Record<(typeof EXPORT_TYPES)[number], string> = { sales_tax: 'รายงานภาษีขาย (PDF + Excel)', wht: '50 ทวิ ที่ได้รับ' };
 export const SalesReportQuery = z.object({ month: Month, format: z.enum(['pdf', 'xlsx']).default('pdf') });
 /** ใบเพิ่มหนี้ (ม.86/9): ยอดที่คิดขาดก่อน VAT · ออกใบแจ้งหนี้ส่วนเพิ่มให้ลูกค้าจ่าย */
 export const DebitNoteBody = z.object({ amountSatang: z.number().int().positive().max(100_000_000), reason: Reason, dueDays: z.number().int().min(1).max(90).default(7) }).strict();
-/** ออกใบกำกับภาษีฉบับใหม่แทนฉบับที่ยกเลิก (ข้อมูลผู้ซื้อผิด · ลูกค้าแก้ข้อมูลภาษีแล้ว) */
-export const ReplaceTaxDocBody = z.object({ reason: Reason }).strict();
+/** ออกใบกำกับภาษีฉบับใหม่แทนฉบับที่ยกเลิก (ข้อมูลผู้ซื้อผิด) · buyer = ข้อมูลผู้ซื้อที่แก้ในหน้าจอ (E3) ไม่ส่ง = ข้อมูลภาษีปัจจุบันของลูกค้า */
+export const ReplaceTaxDocBody = z
+  .object({
+    reason: Reason,
+    buyer: z
+      .object({
+        companyName: z.string().trim().min(1).max(200),
+        taxId: z.string().trim().regex(/^\d{13}$/, 'เลขประจำตัวผู้เสียภาษีต้องมี 13 หลัก'),
+        branchType: z.enum(['head', 'branch']),
+        branchNo: z.string().trim().regex(/^\d{5}$/, 'เลขสาขา 5 หลัก').nullable().optional(),
+        address: z.string().trim().min(1).max(500),
+        email: z.email().trim().nullable().optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
 
 /** ขั้นตอนเตือนอัตโนมัติหลังเลยกำหนด (วัน) · วันที่ 14 ระงับ */
 export const DUNNING_STEPS = [
@@ -135,7 +147,6 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     if (!process.env.VITEST && process.env.OPS_JOBS !== 'off') {
       this.timer = setInterval(() => {
         void this.runDunning().catch((e) => this.log.error(`เตือนค้างชำระล้ม: ${String(e)}`));
-        void this.autoSendExport().catch((e) => this.log.error(`ส่งไฟล์ให้สำนักงานบัญชีล้ม: ${String(e)}`));
         void this.applyScheduledPlans().catch((e) => this.log.error(`เปลี่ยนแพ็กเกจตามที่ตั้งไว้ล้ม: ${String(e)}`));
       }, 3_600_000);
       this.timer.unref();
@@ -286,7 +297,15 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
       .insert(s.creditNotes)
       .values({ workspaceId: inv.workspaceId, invoiceId: inv.id, number, kind, amountSatang: amount, vatSatang: vat, reason, status: 'issued', refundMethod: extra.refundMethod ?? null, createdByStaff: staff.id, approvalRequestId: extra.approvalId ?? null, issuedAt: new Date() })
       .returning();
+    await this.queueNoteETax(tx, staff, inv, 'credit_note', cn.id);
     return cn;
+  }
+
+  /** ใบลด / เพิ่มหนี้ที่อ้างใบกำกับภาษี (จด VAT) ส่ง e-Tax ด้วย (คิวเดียวกับใบกำกับภาษี) · อ้างใบเสร็จ (ยังไม่จด) ไม่ต้องส่ง */
+  private async queueNoteETax(tx: Tx, staff: Staff, inv: Invoice, kind: 'credit_note' | 'debit_note', id: string) {
+    if (!vatRegistered()) return;
+    const [doc] = await tx.select({ docType: s.taxDocuments.docType }).from(s.taxDocuments).where(and(eq(s.taxDocuments.invoiceId, inv.id), sql`${s.taxDocuments.status} <> 'cancelled'`)).orderBy(desc(s.taxDocuments.createdAt)).limit(1);
+    if (doc?.docType === 'tax_invoice_receipt') await queueETax(tx, { workspaceId: inv.workspaceId, docKind: kind, docId: id, action: 'issue', byStaff: staff.id });
   }
 
   /** ส่งลิงก์จ่ายเงิน (B5) · ลิงก์ไปหน้าเรียกเก็บเงินของลูกค้า (จ่าย QR / บัตรเมื่อเปิด Gateway ใน A35b) */
@@ -425,52 +444,6 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     }
     if (done.length) this.log.log(`เตือนค้างชำระ ${done.length} รายการ`);
     return { processed: done };
-  }
-
-  // ---------------------------------------------------------------- ภาษี
-
-  async tax(q: z.infer<typeof TaxQuery>) {
-    const month = q.month ?? todayBkk().slice(0, 7);
-    const etax = await this.rows(sql`
-      select d.id, d.number, d.doc_type as "docType", d.status, d.provider_ref as "providerRef", d.created_at as "createdAt", i.number as invoice,
-        json_build_object('id', w.id, 'slug', w.slug, 'name', w.name) as workspace
-      from tax_documents d join invoices i on i.id = d.invoice_id join workspaces w on w.id = d.workspace_id
-      where d.status = 'failed' or (d.status = 'pending' and d.created_at < now() - interval '1 hour')
-      order by d.created_at`);
-    const wht = await this.rows(sql`
-      select i.id, i.number, i.wht_amount::float8 as "whtAmount", i.paid_at as "paidAt", (${todayBkk()}::date - (i.paid_at at time zone 'Asia/Bangkok')::date)::int as "daysSincePaid",
-        (select c.status from wht_certificates c where c.invoice_id = i.id order by c.created_at desc limit 1) as "certificateStatus",
-        (select c.id from wht_certificates c where c.invoice_id = i.id order by c.created_at desc limit 1) as "certificateId",
-        json_build_object('id', w.id, 'slug', w.slug, 'name', w.name) as workspace
-      from invoices i join workspaces w on w.id = i.workspace_id
-      where i.status = 'paid' and i.wht_amount > 0
-        and not exists (select 1 from wht_certificates c where c.invoice_id = i.id and c.status = 'confirmed')
-      order by i.paid_at`);
-    const [sales] = await this.rows<Row>(sql`
-      select count(*)::int as invoices, coalesce(sum(subtotal), 0)::float8 as subtotal, coalesce(sum(vat), 0)::float8 as vat, coalesce(sum(wht_amount), 0)::float8 as wht
-      from invoices where status = 'paid' and to_char(paid_at at time zone 'Asia/Bangkok', 'YYYY-MM') = ${month}`);
-    const [cn] = await this.rows<Row>(sql`
-      select count(*)::int as notes, coalesce(sum(amount_satang), 0)::float8 as amount, coalesce(sum(vat_satang), 0)::float8 as vat
-      from credit_notes where to_char(issued_at at time zone 'Asia/Bangkok', 'YYYY-MM') = ${month}`);
-    return {
-      etax,
-      wht,
-      whtPendingSatang: wht.reduce((n, w) => n + Number(w.whtAmount), 0),
-      salesVat: { month, vatRegistered: vatRegistered(), invoices: sales.invoices, subtotalSatang: sales.subtotal, vatSatang: sales.vat, whtSatang: sales.wht, creditNotes: cn.notes, creditNoteVatSatang: cn.vat, netVatSatang: Number(sales.vat) - Number(cn.vat) },
-    };
-  }
-
-  /** ส่ง e-Tax ใหม่: ตั้งกลับเป็น pending ให้งานกวาดของ API ลูกค้าส่งซ้ำ */
-  async retryTaxDocument(staff: Staff, id: string) {
-    if (!z.uuid().safeParse(id).success) throw new AppError(404, 'not_found', 'ไม่พบใบกำกับภาษี');
-    const [d] = await this.db.select().from(s.taxDocuments).where(eq(s.taxDocuments.id, id));
-    if (!d) throw new AppError(404, 'not_found', 'ไม่พบใบกำกับภาษี');
-    if (d.status !== 'failed') throw new AppError(409, 'not_failed', 'ส่งใหม่ได้เฉพาะใบที่ส่งไม่สำเร็จ', { status: d.status });
-    await this.db.transaction(async (tx) => {
-      await tx.update(s.taxDocuments).set({ status: 'pending', providerRef: null, createdAt: new Date(Date.now() - 2 * 60_000), updatedAt: new Date() }).where(eq(s.taxDocuments.id, id));
-      await audit(tx, staff, d.workspaceId, 'plan', 'ops.etax_retry', `ส่ง e-Tax ใหม่ ${d.number}`, { type: 'tax_document', id });
-    });
-    return { id, status: 'pending' as const };
   }
 
   // ---------------------------------------------------------------- คืนเงิน / เครดิต
@@ -627,6 +600,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
         .insert(s.debitNotes)
         .values({ workspaceId: inv.workspaceId, invoiceId: inv.id, number, amountSatang: amount, vatSatang: vat, reason: input.reason, status: 'issued', chargeInvoiceId: charge.id, createdByStaff: staff.id, issuedAt: new Date() })
         .returning();
+      await this.queueNoteETax(tx, staff, inv, 'debit_note', dn.id);
       await audit(tx, staff, inv.workspaceId, 'plan', 'ops.debit_note_issued', `ใบเพิ่มหนี้ ${number} อ้าง ${doc.number} (${inv.number}) · เพิ่ม ${baht(amount + vat)} · ใบแจ้งหนี้ ${invoiceNumber} · ${input.reason}`, { type: 'debit_note', id: dn.id });
       return { dn, charge };
     });
@@ -644,8 +618,8 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * ใบกำกับภาษีฉบับใหม่แทนฉบับที่ยกเลิก: ฉบับเดิม cancelled · ฉบับใหม่เลขถัดไป ลงวันที่ตามฉบับเดิม ข้อมูลผู้ซื้อปัจจุบัน
-   * ใบกำกับภาษี (จด VAT) อยู่ pending ให้งานกวาด e-Tax ของ API ลูกค้าส่ง · งวดของฉบับเดิมปิดแล้วทำไม่ได้
+   * E3 · ใบกำกับภาษีฉบับใหม่แทนฉบับที่ยกเลิก: ฉบับเดิม cancelled · ฉบับใหม่เลขถัดไป ลงวันที่ตามฉบับเดิม · ผู้ซื้อตามที่แก้ในหน้าจอ (หรือข้อมูลปัจจุบัน)
+   * e-Tax: แจ้งยกเลิกฉบับเดิมที่ผู้ให้บริการอัตโนมัติ และส่งฉบับใหม่โดยอ้างฉบับเดิม (คิว etax_jobs) · งวดของฉบับเดิมปิดแล้วทำไม่ได้
    */
   async replaceTaxDocument(staff: Staff, id: string, input: z.infer<typeof ReplaceTaxDocBody>) {
     if (!z.uuid().safeParse(id).success) throw new AppError(404, 'not_found', 'ไม่พบใบกำกับภาษี');
@@ -657,7 +631,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     const docMonth = (d.issuedOn ?? todayBkk()).slice(0, 7);
     if (await this.isClosed(docMonth)) throw new AppError(409, 'period_closed', `งวด ${docMonth} ปิดแล้ว ยกเลิกเอกสารของงวดนี้ไม่ได้`);
     const r = await this.db.transaction(async (tx) => {
-      const out = await replaceTaxDocument(tx, id, input.reason);
+      const out = await replaceTaxDocument(tx, id, input.reason, { buyer: input.buyer ? { ...input.buyer, branchNo: input.buyer.branchType === 'head' ? null : (input.buyer.branchNo ?? null), email: input.buyer.email ?? (d.buyer as { email?: string | null } | null)?.email ?? null } : null, byStaff: staff.id });
       if (!out || out.alreadyCancelled || !out.replacement) throw new AppError(409, 'already_cancelled', 'ใบนี้ยกเลิกแล้ว');
       await audit(tx, staff, d.workspaceId, 'plan', 'ops.tax_document_replaced', `ยกเลิก ${d.number} · ออกฉบับใหม่ ${out.replacement.number} แทน · ${input.reason}`, { type: 'tax_document', id: out.replacement.id });
       return out.replacement;
@@ -689,11 +663,11 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
 
   // ---------------------------------------------------------------- รายงานรายได้ / ปิดงวด / ส่งออก
 
-  private async closedMonths() {
+  async closedMonths() {
     const rows = await this.db.select({ month: s.staffAuditLogs.reason }).from(s.staffAuditLogs).where(eq(s.staffAuditLogs.action, 'billing.period_closed'));
     return new Set(rows.map((r) => r.month ?? ''));
   }
-  private async isClosed(month: string) {
+  async isClosed(month: string) {
     return (await this.closedMonths()).has(month);
   }
 
@@ -718,6 +692,9 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     const rates = await this.db.select().from(s.costRates).orderBy(desc(s.costRates.effectiveFrom));
     const pct = (resource: string) => Number(rates.find((r) => r.resource === resource)?.pct ?? 0);
     const closed = await this.closedMonths();
+    // VAT ขายสุทธิของแต่ละเดือน: สูตรเดียวกับการ์ดภาษีและรายงาน PDF / Excel (ตามวันที่ของเอกสารภาษี)
+    const salesVat = new Map<string, number>();
+    for (const m of months) salesVat.set(m, salesTaxSummary((await salesReportData(this.db, Number(m.slice(0, 4)), Number(m.slice(5, 7)), { closed: closed.has(m) })).rows).net.vat);
     // แต่ละใบกระจายรายได้ตามจำนวนเดือนของรอบ (รายเดือน = 1, รายปี = 12)
     const spread = paid.map((i) => {
       const days = (Date.parse(i.pe) - Date.parse(i.ps)) / DAY + 1;
@@ -740,7 +717,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
         month: m,
         recognizedSatang: Math.round(recognized),
         cashSatang: inMonth.reduce((n, i) => n + i.due, 0),
-        vatSatang: inMonth.reduce((n, i) => n + i.vat, 0),
+        vatSatang: salesVat.get(m) ?? 0,
         whtSatang: inMonth.reduce((n, i) => n + i.wht, 0),
         feesSatang: Math.round(inMonth.reduce((n, i) => n + (i.method === 'card' ? (i.due * pct('payment_fee_card')) / 100 : i.method === 'promptpay' ? (i.due * pct('payment_fee_promptpay')) / 100 : 0), 0)),
         refundsSatang: notes.filter((c) => c.month === m).reduce((n, c) => n + c.total, 0),
@@ -751,12 +728,22 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     return { months: rows };
   }
 
-  /** ปิดงวด: เดือนที่จบแล้วเท่านั้น · ปิดแล้วแก้ไม่ได้ (รายการย้อนหลังออกเป็นใบลดหนี้ / เพิ่มหนี้ในเดือนปัจจุบัน) */
+  /**
+   * ปิดงวด: เดือนที่จบแล้วเท่านั้น · ปิดแล้วแก้ไม่ได้ (รายการย้อนหลังออกเป็นใบลดหนี้ / เพิ่มหนี้ในเดือนปัจจุบัน)
+   * e-Tax ยังไม่ครบก็ปิดได้ แต่ต้องกรอกเหตุผล (บันทึกคู่กับการปิด) · reason ของ billing.period_closed เก็บงวดไว้ให้ระบบอ่าน
+   */
   async close(staff: Staff, input: z.infer<typeof CloseBody>) {
     if (input.month >= todayBkk().slice(0, 7)) throw new AppError(422, 'month_not_ended', 'ปิดได้เฉพาะเดือนที่จบแล้ว');
     if (await this.isClosed(input.month)) throw new AppError(409, 'already_closed', 'งวดนี้ปิดแล้ว');
-    await staffAudit(this.db, staff, 'billing.period_closed', input.month);
-    return { month: input.month, closed: true };
+    const data = await salesReportData(this.db, Number(input.month.slice(0, 4)), Number(input.month.slice(5, 7)), { closed: false });
+    const etax = salesTaxSummary(data.rows).etax;
+    const open = etax.total - etax.done;
+    if (open && !input.reason) throw new AppError(422, 'etax_incomplete', `e-Tax ของงวดนี้ยังไม่ครบ ${open} ฉบับ กรอกเหตุผลเพื่อปิดงวด`, { open, numbers: etax.numbers });
+    await this.db.transaction(async (tx) => {
+      await staffAudit(tx, staff, 'billing.period_closed', input.month);
+      if (input.reason) await staffAudit(tx, staff, 'billing.period_closed_note', `${input.month} · ${open ? `e-Tax ยังไม่ครบ ${open} ฉบับ (${etax.numbers.join(', ')}) · ` : ''}${input.reason}`);
+    });
+    return { month: input.month, closed: true, etaxOpen: open };
   }
 
   /** 50 ทวิ ที่ได้รับของงวดเป็น CSV (มี BOM ให้ Excel อ่านภาษาไทยได้) · รายการขาย / ใบลดหนี้ย้ายไปอยู่ในรายงานภาษีขาย */
@@ -766,13 +753,17 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
       return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
     };
     const money = (v: unknown) => (Number(v ?? 0) / 100).toFixed(2);
-    const header = ['ใบแจ้งหนี้', 'วันที่ชำระ', 'ลูกค้า', 'เลขผู้เสียภาษี', 'ภาษีที่ถูกหัก', 'สถานะ 50 ทวิ'];
+    const header = ['ใบแจ้งหนี้', 'วันที่ชำระ', 'ลูกค้า', 'เลขผู้เสียภาษี', 'ภาษีที่ถูกหัก', 'สถานะ 50 ทวิ', 'ที่มา', 'เลขอ้างอิง e-WHT', 'หมายเหตุ'];
     const rows = await this.rows<Row>(sql`
       select i.number, to_char(i.paid_at at time zone 'Asia/Bangkok', 'YYYY-MM-DD') as paid, b.company_name, b.tax_id, i.wht_amount,
-        coalesce((select c.status from wht_certificates c where c.invoice_id = i.id order by c.created_at desc limit 1), 'missing') as cert
+        coalesce(c.status, 'missing') as cert, c.source, c.ewht_ref, c.reject_reason
       from invoices i left join billing_profiles b on b.workspace_id = i.workspace_id
+        left join lateral (select * from wht_certificates c where c.invoice_id = i.id order by c.created_at desc limit 1) c on true
       where i.wht_amount > 0 and i.paid_at is not null and to_char(i.paid_at at time zone 'Asia/Bangkok', 'YYYY-MM') = ${q.month} order by i.number`);
-    const lines = rows.map((r) => [r.number, r.paid, r.company_name, r.tax_id, money(r.wht_amount), r.cert]);
+    // ไม่ได้รับ (ปิดแล้ว) ใช้เป็นเครดิตภาษีไม่ได้ · e-WHT ไม่มีไฟล์แต่ตรงกับข้อมูลสรรพากรแล้ว
+    const STATUS: Record<string, string> = { confirmed: 'ได้รับแล้ว', pending_review: 'รอตรวจ', rejected: 'ไม่ผ่าน · รอส่งใหม่', pending_ewht: 'รอยืนยัน e-WHT', uncollected: 'ไม่ได้รับ', missing: 'ยังไม่ได้รับ' };
+    const SOURCE: Record<string, string> = { upload: 'ไฟล์', ewht: 'e-WHT', ops: 'ทีมบันทึก' };
+    const lines = rows.map((r) => [r.number, r.paid, r.company_name, r.tax_id, money(r.wht_amount), STATUS[String(r.cert)] ?? r.cert, r.source ? (SOURCE[String(r.source)] ?? r.source) : '', r.ewht_ref ?? '', r.cert === 'uncollected' || r.cert === 'rejected' ? (r.reject_reason ?? '') : '']);
     const draft = !(await this.isClosed(q.month));
     const csv = '\ufeff' + [header, ...lines].map((l) => l.map(esc).join(',')).join('\r\n') + '\r\n';
     return { csv, filename: `friday-${q.type}-${q.month}${draft ? '-draft' : ''}.csv`, draft, rows: lines.length };
@@ -802,71 +793,6 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
       done.push({ workspaceId: sub.workspaceId, from, to: to.code });
     }
     return done;
-  }
-
-  // ---------------------------------------------------------------- ส่งให้สำนักงานบัญชี (B8)
-
-  /** ผู้รับ วันส่งอัตโนมัติ และประวัติการส่ง 12 ครั้งล่าสุด */
-  async exportDelivery() {
-    const history = await this.rows<{ at: string; reason: string; staffName: string | null }>(sql`
-      select l.created_at as at, l.reason, st.name as "staffName" from staff_audit_logs l left join staff_users st on st.id = l.staff_id
-      where l.action = 'billing.export_sent' order by l.created_at desc limit 12`);
-    return { recipients: config.accountingEmails, autoDay: config.accountingSendDay, history: history.map((h) => ({ at: h.at, month: h.reason.slice(0, 7), detail: h.reason, staffName: h.staffName })) };
-  }
-
-  /**
-   * ส่ง CSV ของงวดเป็นไฟล์แนบถึงสำนักงานบัญชี · งวดที่ยังไม่ปิดเป็นฉบับร่าง (หัวเรื่องและชื่อไฟล์บอก)
-   * staff = null คืองานอัตโนมัติ
-   */
-  async sendExport(staff: Staff | null, input: z.infer<typeof SendExportBody>) {
-    if (!config.accountingEmails.length) throw new AppError(409, 'accounting_email_not_set', 'ยังไม่ได้ตั้งอีเมลสำนักงานบัญชี (OPS_ACCOUNTING_EMAIL)');
-    const types = input.types ?? [...EXPORT_TYPES];
-    // รายงานภาษีขายแนบทั้ง PDF (ตามแบบ) และ Excel (กระทบยอด) · 50 ทวิ เป็น CSV
-    type Attachment = { filename: string; content: string | Buffer; contentType: string };
-    const files = await Promise.all(
-      types.map(async (type): Promise<{ draft: boolean; rows: number; filename: string; attachments: Attachment[] }> => {
-        if (type === 'wht') {
-          const f = await this.export({ month: input.month, type: 'wht' });
-          return { draft: f.draft, rows: f.rows, filename: f.filename, attachments: [{ filename: f.filename, content: f.csv, contentType: 'text/csv; charset=utf-8' }] };
-        }
-        const [pdf, xlsx] = await Promise.all([this.salesReport({ month: input.month, format: 'pdf' }), this.salesReport({ month: input.month, format: 'xlsx' })]);
-        return {
-          draft: pdf.draft, rows: pdf.rows, filename: `${pdf.filename}, ${xlsx.filename}`,
-          attachments: [{ filename: pdf.filename, content: pdf.buffer, contentType: 'application/pdf' }, { filename: xlsx.filename, content: xlsx.buffer, contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }],
-        };
-      }),
-    );
-    const draft = files.some((f) => f.draft);
-    const subject = `Friday Work Management · ไฟล์บัญชีงวด ${input.month}${draft ? ' (ฉบับร่าง ยังไม่ปิดงวด)' : ''}`;
-    const text = [
-      `ไฟล์ประกอบการบันทึกบัญชีงวด ${input.month}${draft ? ' · ฉบับร่าง: งวดนี้ยังไม่ปิด ตัวเลขอาจเปลี่ยน' : ''}`,
-      ...types.map((t, i) => `- ${EXPORT_LABEL[t]}: ${files[i]!.rows} รายการ (${files[i]!.filename})`),
-      'จำนวนเงินเป็นบาท · รายงานภาษีขายมี PDF (ตามแบบ) และ Excel (รายละเอียดกระทบยอด) · 50 ทวิ เป็น CSV (UTF-8)',
-    ].join('\n');
-    const attachments = files.flatMap((f) => f.attachments);
-    let sent = 0;
-    for (const to of config.accountingEmails) {
-      try {
-        await this.mail.send({ to, subject, text, attachments });
-        sent++;
-      } catch (e) {
-        this.log.error(`ส่งไฟล์บัญชีถึง ${to} ไม่สำเร็จ: ${String(e)}`);
-      }
-    }
-    if (!sent) throw new AppError(502, 'mail_failed', 'ส่งอีเมลไม่สำเร็จ ลองใหม่อีกครั้ง');
-    await staffAudit(this.db, staff, 'billing.export_sent', `${input.month} · ${types.map((t) => EXPORT_LABEL[t]).join(', ')}${draft ? ' · ฉบับร่าง' : ''} · ถึง ${config.accountingEmails.join(', ')}${staff ? '' : ' · อัตโนมัติ'}`);
-    return { month: input.month, to: config.accountingEmails, sent, draft, files: files.map((f, i) => ({ type: types[i], filename: f.filename, rows: f.rows })) };
-  }
-
-  /** ตั้งแต่วันที่ส่งอัตโนมัติของเดือน: ส่งไฟล์ของเดือนก่อน ถ้ายังไม่เคยส่ง (ส่งเองแล้วก็ไม่ส่งซ้ำ) */
-  async autoSendExport(today = todayBkk()) {
-    if (!config.accountingEmails.length || Number(today.slice(8, 10)) < config.accountingSendDay) return null;
-    const d = new Date(`${today.slice(0, 7)}-01T00:00:00Z`);
-    d.setUTCMonth(d.getUTCMonth() - 1);
-    const month = d.toISOString().slice(0, 7);
-    const [done] = await this.rows(sql`select 1 from staff_audit_logs where action = 'billing.export_sent' and reason like ${`${month} ·%`} limit 1`);
-    if (done) return null;
-    return this.sendExport(null, { month, types: [...EXPORT_TYPES] });
   }
 }
 

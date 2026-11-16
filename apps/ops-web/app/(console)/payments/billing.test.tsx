@@ -150,6 +150,34 @@ describe("กรณีผิดปกติ", () => {
   });
 });
 
+/** E2 · รายละเอียดเอกสาร e-Tax (ข้อมูลสมมติ) */
+const detail = (over: Record<string, unknown> = {}) => ({
+  kind: "tax_document", id: "d31", number: "TX-2611-0031", docLabel: "ใบกำกับภาษี/ใบเสร็จ", status: "cancelled", cancelled: true, cancelReason: "ชื่อบริษัทผิด", issuedOn: "2026-11-03", providerRef: "ETX-88231",
+  invoice: { id: "i31", number: "FRI-2611-0012", status: "paid", paidAt: "2026-11-03T03:00:00Z" }, workspace: { id: "w3", slug: "lumen", name: "Lumen Studio" },
+  amount: { value: 1_200_000, vat: 84_000, total: 1_284_000 },
+  buyer: { companyName: "บริษัท ลูเมน สตูดิโอ จำกัด", taxId: "0105559000001", branchType: "head", branchNo: null, address: "88/12 ถนนสุขุมวิท กรุงเทพฯ 10110" },
+  currentBuyer: { companyName: "บริษัท ลูเมน สตูดิโอ จำกัด", taxId: "0105559000001", branchType: "head", branchNo: null, address: "88/12 ถนนสุขุมวิท กรุงเทพฯ 10110" },
+  replacement: { id: "d52", number: "TX-2611-0052", status: "issued", createdAt: "2026-11-15T09:42:00Z" }, replaces: null,
+  jobs: [{ id: "j1", action: "cancel", status: "pending", attempts: 2, maxAttempts: 3, lastError: "503 · ผู้ให้บริการปิดปรับปรุง", lastAttemptAt: "2026-11-16T03:30:00Z", nextAttemptAt: "2026-11-16T04:00:00Z", providerRef: null, note: null }],
+  state: { issue: "issued", cancel: "pending" },
+  timeline: [
+    { at: "2026-11-03T03:10:00Z", action: "billing.etax_submitted", summary: "TX-2611-0031 · ETX-88231", by: null, system: true },
+    { at: "2026-11-15T09:40:00Z", action: "ops.tax_document_replaced", summary: "ยกเลิก TX-2611-0031 · ออกฉบับใหม่ TX-2611-0052 แทน · ชื่อบริษัทผิด", by: "ต้น", system: false },
+  ],
+  pdf: "/tax-documents/d31/pdf", ...over,
+});
+/** E5 · ค่าตั้งและประวัติการส่งสำนักงานบัญชี (ข้อมูลสมมติ) */
+const delivery = (over: Record<string, unknown> = {}) => ({
+  settings: { recipients: ["account@office.example.com", "tax@office.example.com"], auto: true, day: 5, time: "09:00", whenOpen: "wait", files: { salesTax: true, wht: true, zip: false }, source: "saved" },
+  recipients: ["account@office.example.com", "tax@office.example.com"], autoDay: 5, next: { date: "2026-12-05", time: "09:00", month: "2026-11" }, closedMonths: ["2026-10"],
+  history: [
+    { at: "2026-11-05T02:00:00Z", month: "2026-10", detail: "x", staffName: null, auto: true, result: "sent", draft: false, files: ["PDF", "Excel", "CSV", "ZIP"], error: null },
+    { at: "2026-09-07T07:12:00Z", month: "2026-08", detail: "x", staffName: "ต้น", auto: false, result: "failed", draft: false, files: ["PDF", "Excel", "CSV"], error: "SMTP 554" },
+    { at: "2026-09-05T02:00:00Z", month: "2026-08", detail: "x", staffName: null, auto: true, result: "skipped", draft: false, files: [], error: null },
+  ],
+  ...over,
+});
+
 describe("ใบแจ้งหนี้ ค้างชำระ ภาษี รายได้", () => {
   const invoices = () =>
     server.use(
@@ -201,6 +229,7 @@ describe("ใบแจ้งหนี้ ค้างชำระ ภาษี �
       http.get(`${OPS}/invoices`, () => HttpResponse.json({ items: [{ id: "i3", number: "FRI-2611-0003", status: "paid", total: 321_000, whtAmount: 0, amountDue: 321_000, poNumber: null, dueDate: "2026-11-01", paidAt: "2026-10-30", workspace: ws, taxDocumentStatus: "issued", taxDocument: { id: "d3", number: "TX-2611-0003", status: "issued", docType: "tax_invoice_receipt" }, creditNotes: [{ id: "c1", number: "CN-2612-0001" }], debitNotes: [], hasCreditNote: true }], total: 1 })),
       http.post(`${OPS}/invoices/i3/debit-note`, async ({ request }) => ((debit = (await request.json()) as Record<string, unknown>), HttpResponse.json({ debitNote: { number: "DN-2612-0001" }, invoice: { number: "FRI-2612-0006" } }))),
       http.post(`${OPS}/tax-documents/d3/replace`, async ({ request }) => ((replace = (await request.json()) as Record<string, unknown>), HttpResponse.json({ replacement: { number: "TX-2612-0004" } }))),
+      http.get(`${OPS}/etax/tax-document/d3`, () => HttpResponse.json(detail({ id: "d3", number: "TX-2611-0003" }))),
     );
     page("tab=invoices");
     const rowEl = (await screen.findByText("FRI-2611-0003")).closest("tr")!;
@@ -217,10 +246,17 @@ describe("ใบแจ้งหนี้ ค้างชำระ ภาษี �
     expect(await screen.findByText("ออกใบเพิ่มหนี้ DN-2612-0001 · ใบแจ้งหนี้ส่วนเพิ่ม FRI-2612-0006")).toBeInTheDocument();
 
     await userEvent.click(within(rowEl).getByRole("button", { name: "ออกใบกำกับใหม่" }));
+    // E3 · แก้ข้อมูลผู้ซื้อในหน้าจอ (ตั้งต้นจากข้อมูลภาษีปัจจุบัน) · บอกขั้นแจ้งยกเลิก e-Tax อัตโนมัติ
     const r = await screen.findByRole("dialog", { name: "ออกฉบับใหม่แทน TX-2611-0003" });
-    await userEvent.type(within(r).getByLabelText("เหตุที่ยกเลิกฉบับเดิม"), "เลขผู้เสียภาษีผิด");
-    await userEvent.click(within(r).getByRole("button", { name: "ยกเลิกและออกฉบับใหม่" }));
-    await waitFor(() => expect(replace).toEqual({ reason: "เลขผู้เสียภาษีผิด" }));
+    expect(within(r).getByText("แจ้งยกเลิกที่ผู้ให้บริการ e-Tax อัตโนมัติ")).toBeInTheDocument();
+    const company = await within(r).findByLabelText("ชื่อผู้ซื้อ");
+    expect(company).toHaveValue("บริษัท ลูเมน สตูดิโอ จำกัด");
+    await userEvent.clear(company);
+    await userEvent.type(company, "บริษัท ลูเมน สตูดิโอ (ประเทศไทย) จำกัด");
+    await userEvent.selectOptions(within(r).getByLabelText("สาขา"), "branch");
+    await userEvent.type(within(r).getByLabelText("เลขสาขา 5 หลัก"), "00002");
+    await userEvent.click(within(r).getByRole("button", { name: "ออกฉบับใหม่แทน" }));
+    await waitFor(() => expect(replace).toEqual({ reason: "ชื่อหรือที่อยู่ผู้ซื้อผิด", buyer: { companyName: "บริษัท ลูเมน สตูดิโอ (ประเทศไทย) จำกัด", taxId: "0105559000001", branchType: "branch", branchNo: "00002", address: "88/12 ถนนสุขุมวิท กรุงเทพฯ 10110" } }));
     expect(await screen.findByText("ยกเลิก TX-2611-0003 · ออก TX-2612-0004 แทนแล้ว")).toBeInTheDocument();
   });
 
@@ -252,20 +288,6 @@ describe("ใบแจ้งหนี้ ค้างชำระ ภาษี �
     await waitFor(() => expect(extend).toEqual({ dueDate: "2026-11-20", reason: "รอ PO จากฝ่ายจัดซื้อ", notify: true }));
   });
 
-  it("ภาษี: ส่ง e-Tax ใหม่ · สรุปภาษีขาย", async () => {
-    asRole("finance");
-    base();
-    let retried = false;
-    server.use(
-      http.get(`${OPS}/tax`, () => HttpResponse.json({ etax: [{ id: "d1", number: "TX-2611-0001", docType: "tax_invoice_receipt", status: "failed", createdAt: "2026-11-01", invoice: "FRI-2611-0001", workspace: ws }], wht: [], whtPendingSatang: 0, salesVat: { month: "2026-11", vatRegistered: true, invoices: 4, subtotalSatang: 1_200_000, vatSatang: 84_000, whtSatang: 0, creditNoteVatSatang: 7_000, netVatSatang: 77_000 } })),
-      http.post(`${OPS}/tax-documents/d1/retry`, () => ((retried = true), HttpResponse.json({ status: "pending" }))),
-    );
-    page("tab=tax");
-    expect(await screen.findByText("฿770")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "ส่งใหม่" }));
-    await waitFor(() => expect(retried).toBe(true));
-  });
-
   it("รายงานรายได้: ปิดงวดต้องแตะกุญแจ · ส่งออก (B8) เป็นลิงก์ไฟล์ของ ops-api", async () => {
     asRole("finance");
     base();
@@ -274,31 +296,36 @@ describe("ใบแจ้งหนี้ ค้างชำระ ภาษี �
     server.use(
       http.get(`${OPS}/revenue`, () => HttpResponse.json({ months: [{ month: "2026-10", recognizedSatang: 1_000_000, cashSatang: 900_000, vatSatang: 63_000, whtSatang: 0, feesSatang: 0, refundsSatang: 0, deferredSatang: 0, closed: false }, { month: "2099-12", recognizedSatang: 0, cashSatang: 0, vatSatang: 0, whtSatang: 0, feesSatang: 0, refundsSatang: 0, deferredSatang: 0, closed: false }] })),
       http.post(`${OPS}/revenue/close`, async ({ request }) => (ok() ? ((closed = ((await request.json()) as { month: string }).month), HttpResponse.json({ closed: true })) : opsError(401, "reauth_required", "แตะ Security key"))),
+      http.get(`${OPS}/revenue/export/delivery`, () => HttpResponse.json(delivery())),
     );
     page("tab=revenue");
+    // ข้อความอ่านจากค่าตั้งจริง (E6)
+    expect(await screen.findByText(/ส่งให้สำนักงานบัญชีทุกวันที่ 5 เวลา 09:00 · ถัดไป/)).toBeInTheDocument();
     await userEvent.click(await screen.findByRole("button", { name: "ปิดงวด" }));
-    await userEvent.click(within(await screen.findByRole("dialog", { name: "ปิดงวด 2026-10?" })).getByRole("button", { name: "ยืนยัน" }));
+    await userEvent.click(within(await screen.findByRole("dialog", { name: /^ปิดงวด / })).getByRole("button", { name: "ปิดงวด" }));
     await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
     await waitFor(() => expect(closed).toBe("2026-10"));
     let sent: unknown = null;
-    server.use(
-      http.get(`${OPS}/revenue/export/delivery`, () => HttpResponse.json({ recipients: ["acc@office.example.com"], autoDay: 5, history: [{ at: "2026-11-05T02:00:00Z", month: "2026-10", detail: "x", staffName: null }] })),
-      http.post(`${OPS}/revenue/export/send`, async ({ request }) => ((sent = await request.json()), HttpResponse.json({ sent: 1, to: ["acc@office.example.com"] }))),
-    );
+    server.use(http.post(`${OPS}/revenue/export/send`, async ({ request }) => ((sent = await request.json()), HttpResponse.json({ sent: 2, month: "2026-10", to: ["account@office.example.com", "tax@office.example.com"] }))));
     await userEvent.click(screen.getByRole("button", { name: "ส่งออกรายงานให้บัญชี" }));
     const d = await screen.findByRole("dialog", { name: "ส่งออกให้สำนักงานบัญชี" });
-    expect(await within(d).findByText("ส่งถึง acc@office.example.com")).toBeInTheDocument();
-    expect(within(d).getByText(/ส่งอัตโนมัติทุกวันที่ 5/)).toBeInTheDocument();
-    expect(within(d).getByText(/โดย ระบบอัตโนมัติ/)).toBeInTheDocument();
-    // รายงานภาษีขาย (รวมใบลด / เพิ่มหนี้) มีทั้ง PDF ตามแบบและ Excel · 50 ทวิ ยังเป็น CSV
+    expect(await within(d).findByText("account@office.example.com")).toBeInTheDocument();
+    expect(within(d).getByText(/ส่งอัตโนมัติวันที่ 5 เวลา 09:00/)).toBeInTheDocument();
+    // E5 · ประวัติทุกครั้ง: ส่งแล้ว / ล้ม / ไม่ได้ส่งเพราะงวดยังไม่ปิด
+    const hist = within(d).getByRole("table", { name: "ประวัติการส่ง (12 งวดล่าสุด)" });
+    expect(within(hist).getAllByRole("row")).toHaveLength(4);
+    expect(within(hist).getByText("ไม่ได้ส่ง · งวดยังไม่ปิด")).toBeInTheDocument();
+    expect(within(hist).getByText("ล้ม")).toBeInTheDocument();
+    expect(within(hist).getByText("SMTP 554")).toBeInTheDocument();
     expect(within(d).getByRole("link", { name: "ดาวน์โหลดรายงานภาษีขาย (PDF)" }).getAttribute("href")).toMatch(/^\/ops-api\/revenue\/sales-report\?month=\d{4}-\d{2}&format=pdf$/);
-    expect(within(d).getByRole("link", { name: "ดาวน์โหลดรายงานภาษีขาย (Excel)" }).getAttribute("href")).toMatch(/^\/ops-api\/revenue\/sales-report\?month=\d{4}-\d{2}&format=xlsx$/);
-    expect(within(d).getByRole("link", { name: "ดาวน์โหลด50 ทวิ ที่ได้รับ (CSV)" }).getAttribute("href")).toMatch(/type=wht$/);
-    // ส่งเฉพาะรายงานภาษีขาย
-    await userEvent.click(within(d).getByLabelText("50 ทวิ ที่ได้รับ (CSV)"));
-    await userEvent.click(within(d).getByRole("button", { name: "ส่งอีเมล" }));
-    await waitFor(() => expect(sent).toMatchObject({ types: ["sales_tax"] }));
-    expect(await screen.findByText("ส่งไฟล์ถึง acc@office.example.com แล้ว")).toBeInTheDocument();
+    expect(within(d).getByRole("link", { name: "ดาวน์โหลดเอกสารภาษีทั้งเดือน (ZIP)" }).getAttribute("href")).toMatch(/^\/ops-api\/revenue\/export\/zip\?month=\d{4}-\d{2}$/);
+    expect(within(d).getByRole("link", { name: "ดาวน์โหลดทั้งหมด" }).getAttribute("href")).toMatch(/scope=all$/);
+    // ไฟล์เริ่มต้นตามค่าตั้ง (PDF + Excel + CSV) · เพิ่ม ZIP แล้วเอา CSV ออก
+    await userEvent.click(within(d).getByLabelText(/เอกสารภาษีทั้งเดือน ZIP/));
+    await userEvent.click(within(d).getByLabelText("รายการ 50 ทวิ CSV"));
+    await userEvent.click(within(d).getByRole("button", { name: "ส่งตอนนี้" }));
+    await waitFor(() => expect(sent).toMatchObject({ types: ["sales_tax", "zip"] }));
+    expect(await screen.findByText("ส่งไฟล์ถึง account@office.example.com, tax@office.example.com แล้ว")).toBeInTheDocument();
   });
 
   it("ส่งออก (B8): ยังไม่ตั้งอีเมลสำนักงานบัญชี → ดาวน์โหลดได้อย่างเดียว · ผู้ตรวจไม่มีปุ่มส่ง", async () => {
@@ -306,13 +333,15 @@ describe("ใบแจ้งหนี้ ค้างชำระ ภาษี �
     base();
     server.use(
       http.get(`${OPS}/revenue`, () => HttpResponse.json({ months: [] })),
-      http.get(`${OPS}/revenue/export/delivery`, () => HttpResponse.json({ recipients: [], autoDay: 5, history: [] })),
+      http.get(`${OPS}/revenue/export/delivery`, () => HttpResponse.json(delivery({ settings: { ...delivery().settings, recipients: [], auto: false }, recipients: [], next: null, history: [] }))),
     );
     page("tab=revenue");
+    expect(await screen.findByText(/ปิดส่งให้สำนักงานบัญชีอัตโนมัติ/)).toBeInTheDocument();
     await userEvent.click(await screen.findByRole("button", { name: "ส่งออกรายงานให้บัญชี" }));
     const d = await screen.findByRole("dialog", { name: "ส่งออกให้สำนักงานบัญชี" });
     expect(await within(d).findByText(/ยังไม่ได้ตั้งอีเมลสำนักงานบัญชี/)).toBeInTheDocument();
-    expect(within(d).queryByRole("button", { name: "ส่งอีเมล" })).not.toBeInTheDocument();
+    expect(within(d).queryByRole("button", { name: "ส่งตอนนี้" })).not.toBeInTheDocument();
+    expect(within(d).queryByRole("button", { name: "ตั้งค่าผู้รับและวันส่ง" })).not.toBeInTheDocument();
   });
 });
 

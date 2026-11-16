@@ -67,15 +67,38 @@ export async function issueReceipt(tx: Tx, inv: { id: string; workspaceId: strin
       // ยังไม่จด VAT: ไม่ต้องส่ง e-Tax จึงถือว่าออกแล้ว
       : { workspaceId: inv.workspaceId, invoiceId: inv.id, docType: 'receipt', number, issuedOn, buyer, status: 'issued', sentAt: new Date() })
     .returning();
+  if (opts.vatRegistered) await queueETax(tx, { workspaceId: inv.workspaceId, docKind: 'tax_document', docId: doc.id, action: 'issue' });
   return { doc, created: true };
+}
+
+export type ETaxDocKind = 'tax_document' | 'credit_note' | 'debit_note';
+/**
+ * เข้าคิวงาน e-Tax (ส่งเอกสาร / แจ้งยกเลิก) · คิวเดียวทุกชนิด งานกวาดของ API ลูกค้าส่งทุก 10 นาที (ลอง 3 ครั้ง ห่าง 10 นาที)
+ * งานเดิมของเอกสาร + การกระทำเดียวกันมีอยู่แล้ว → ไม่สร้างซ้ำ · `db` ต้องเป็น role หลังบ้าน / งานเบื้องหลัง (ลูกค้าเขียนตารางนี้ไม่ได้)
+ */
+export async function queueETax(db: Db | Tx, job: { workspaceId: string; docKind: ETaxDocKind; docId: string; action: 'issue' | 'cancel'; byStaff?: string | null }) {
+  // ใช้เวลาของฐานข้อมูล (now()) ไม่ใช่นาฬิกาของโปรเซส: ตอนส่งเทียบกับ now() ของฐานข้อมูล ถ้าเครื่องเดินเร็วกว่าไม่กี่ ms งานแรกจะถูกข้าม
+  await db.insert(s.etaxJobs).values({ ...job, byStaff: job.byStaff ?? null, status: 'pending', nextAttemptAt: sql`now()` }).onConflictDoNothing();
+}
+
+/**
+ * ยกเลิกเอกสารในระบบแล้ว → จัดการคิว e-Tax ของฉบับนั้น
+ * ส่งถึงผู้ให้บริการแล้ว (มีเลขอ้างอิง) = เข้าคิวแจ้งยกเลิก · ยังไม่ส่ง / ผู้ให้บริการปฏิเสธไปแล้ว = หยุดงานส่ง (ไม่มีอะไรต้องยกเลิกที่ผู้ให้บริการ)
+ */
+export async function cancelETax(tx: Tx, doc: { id: string; workspaceId: string; providerRef: string | null; status: string }, kind: ETaxDocKind = 'tax_document', byStaff?: string | null) {
+  const [issue] = await tx.select().from(s.etaxJobs).where(and(eq(s.etaxJobs.docKind, kind), eq(s.etaxJobs.docId, doc.id), eq(s.etaxJobs.action, 'issue')));
+  const sent = !!(doc.providerRef ?? issue?.providerRef) && doc.status !== 'failed' && issue?.status !== 'failed';
+  if (sent) return queueETax(tx, { workspaceId: doc.workspaceId, docKind: kind, docId: doc.id, action: 'cancel', byStaff });
+  if (issue && issue.status !== 'done') await tx.update(s.etaxJobs).set({ status: 'manual', nextAttemptAt: null, note: 'ยกเลิกในระบบก่อนผู้ให้บริการออก ไม่ต้องส่ง', updatedAt: new Date() }).where(eq(s.etaxJobs.id, issue.id));
 }
 
 /**
  * ออกใบกำกับภาษีฉบับใหม่แทนฉบับที่ยกเลิก (ข้อมูลผู้ซื้อผิด) · ฉบับเดิมเป็น `cancelled` · ฉบับใหม่ได้เลขถัดไปแต่ลงวันที่ตามฉบับเดิม
- * ข้อมูลผู้ซื้อของฉบับใหม่ = ข้อมูลภาษีปัจจุบัน (ลูกค้าแก้ให้ถูกก่อนขอออกใหม่)
+ * ข้อมูลผู้ซื้อของฉบับใหม่ = ที่ทีมแก้ในหน้าจอ (E3) หรือข้อมูลภาษีปัจจุบัน (ลูกค้าแก้ให้ถูกก่อนขอออกใหม่)
+ * e-Tax: แจ้งยกเลิกฉบับเดิมที่ผู้ให้บริการ และส่งฉบับใหม่โดยอ้างฉบับเดิม (เข้าคิวเดียวกัน)
  * (จุดเกิดภาษีไม่เปลี่ยน · รอนักบัญชียืนยัน ดู design/proposals/billing/README.md)
  */
-export async function replaceTaxDocument(tx: Tx, docId: string, reason: string) {
+export async function replaceTaxDocument(tx: Tx, docId: string, reason: string, opts: { buyer?: BuyerSnapshot | null; byStaff?: string | null } = {}) {
   const [old] = await tx.select().from(s.taxDocuments).where(eq(s.taxDocuments.id, docId)).for('update');
   if (!old) return null;
   if (old.status === 'cancelled') return { old, replacement: null as null | typeof s.taxDocuments.$inferSelect, alreadyCancelled: true };
@@ -86,7 +109,11 @@ export async function replaceTaxDocument(tx: Tx, docId: string, reason: string) 
   await tx.update(s.taxDocuments).set({ status: 'cancelled', cancelledAt: new Date(), cancelReason: reason, updatedAt: new Date() }).where(eq(s.taxDocuments.id, old.id));
   const [replacement] = await tx
     .insert(s.taxDocuments)
-    .values({ workspaceId: old.workspaceId, invoiceId: old.invoiceId, docType: old.docType, number, issuedOn, replacesId: old.id, buyer: await buyerSnapshot(tx, old.workspaceId), ...(kind === 'receipt' ? { status: 'issued', sentAt: new Date() } : {}) })
+    .values({ workspaceId: old.workspaceId, invoiceId: old.invoiceId, docType: old.docType, number, issuedOn, replacesId: old.id, buyer: opts.buyer ?? (await buyerSnapshot(tx, old.workspaceId)), ...(kind === 'receipt' ? { status: 'issued', sentAt: new Date() } : {}) })
     .returning();
+  if (kind === 'tax_invoice') {
+    await cancelETax(tx, old, 'tax_document', opts.byStaff);
+    await queueETax(tx, { workspaceId: old.workspaceId, docKind: 'tax_document', docId: replacement.id, action: 'issue', byStaff: opts.byStaff });
+  }
   return { old, replacement, alreadyCancelled: false };
 }

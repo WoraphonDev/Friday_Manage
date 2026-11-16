@@ -10,6 +10,7 @@ import { workspaces } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import checkoutMessages from "../../../messages/th/checkout.json";
 import type { InvoiceDetail } from "../../../app/work/[ws]/billing/_components/types";
+import { formatDate, today } from "@/lib/format";
 import { InvoicePay } from "./InvoicePay";
 
 // ผู้ให้บริการบัตรปลอม: ช่องแยก 3 ช่อง · confirmCardPayment ตั้งผลได้ต่อ test
@@ -247,5 +248,91 @@ describe("หน้าชำระใบแจ้งหนี้ (W22b)", () => 
     expect(await screen.findByText("คุณยังไม่มีสิทธิ์เข้าถึง")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 1, name: /ชำระใบแจ้งหนี้/ })).not.toBeInTheDocument();
     expect(urls).toHaveLength(0);
+  });
+});
+
+describe("50 ทวิ ในหน้าใบแจ้งหนี้ (E11 · รอบ 4)", () => {
+  // ใบที่ชำระแล้วแบบหัก ณ ที่จ่าย 3% · กำหนดส่ง = ชำระ + 30 วัน
+  const addDays = (n: number) => new Date(Date.parse(`${today()}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+  const paidWht = (over: Partial<InvoiceDetail> = {}) =>
+    invoice({ status: "paid", paymentStatus: "confirmed", paidAt: "2026-11-02T03:00:00Z", subtotal: 1_500_000, vat: 105_000, total: 1_605_000, whtAmount: 45_000, amountDue: 1_560_000, whtDueBy: addDays(16), whtOverdue: false, transfer: null, ...over });
+  let whts: { kind: "file" | "ewht"; body: unknown }[];
+  beforeEach(() => {
+    whts = [];
+    server.use(
+      http.post("*/api/v1/w/:ws/billing/invoices/:id/wht-certificate", async ({ request }) => {
+        whts.push({ kind: "file", body: Object.fromEntries((await request.formData()).entries()) });
+        current = paidWht({ whtCertificate: { id: "w1", status: "pending_review", source: "upload", rejectReason: null, ewhtRef: null, uploadedAt: "2026-11-16T07:20:00Z" } });
+        return HttpResponse.json(current, { status: 201 });
+      }),
+      http.post("*/api/v1/w/:ws/billing/invoices/:id/wht-ewht", async ({ request }) => {
+        const body = (await request.json()) as { reference: string };
+        whts.push({ kind: "ewht", body });
+        current = paidWht({ whtCertificate: { id: "w2", status: "pending_ewht", source: "ewht", rejectReason: null, ewhtRef: body.reference, uploadedAt: "2026-11-16T07:20:00Z" } });
+        return HttpResponse.json(current, { status: 201 });
+      }),
+    );
+  });
+
+  it("แบนเนอร์กำหนดส่ง · ภาษีที่หัก 3% · สรุปใบแจ้งหนี้ · อัปโหลดไฟล์ → รอตรวจ", async () => {
+    current = paidWht();
+    const user = userEvent.setup();
+    mount();
+    const banner = await screen.findByText(`กรุณาส่ง 50 ทวิ ของใบนี้ภายใน ${formatDate(addDays(16), "BE", true)} (อีก 16 วัน) · ยอดถูกหัก ฿450.00`);
+    expect(banner).toBeInTheDocument();
+    const card = screen.getByRole("region", { name: "หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)" });
+    expect(within(card).getByText("฿450.00 (3% ของ ฿15,000.00)")).toBeInTheDocument();
+    expect(within(card).getByRole("radio", { name: /อัปโหลดไฟล์ 50 ทวิ/ })).toBeChecked();
+    const summary = screen.getByRole("region", { name: "สรุปใบแจ้งหนี้" });
+    expect(within(summary).getByText("−฿450.00")).toBeInTheDocument();
+    expect(within(summary).getByText("ชำระแล้ว 2 พ.ย. 2569")).toBeInTheDocument();
+    const send = within(card).getByRole("button", { name: "ส่ง 50 ทวิ" });
+    expect(send).toBeDisabled();
+    await user.upload(screen.getByLabelText("ไฟล์ 50 ทวิ"), new File(["wht"], "wht.pdf", { type: "application/pdf" }));
+    expect(within(card).getByText("wht.pdf")).toBeInTheDocument();
+    await user.click(send);
+    expect(await within(card).findByText(/ได้รับไฟล์แล้ว รอตรวจ/)).toBeInTheDocument();
+    expect(whts.map((w) => [w.kind, Object.keys(w.body as object)])).toEqual([["file", ["file"]]]);
+    expect(screen.queryByText(/กรุณาส่ง 50 ทวิ/)).not.toBeInTheDocument();
+  });
+
+  it("หักผ่าน e-Withholding Tax: กรอกเลขอ้างอิง → รอยืนยันจากกรมสรรพากร", async () => {
+    current = paidWht();
+    const user = userEvent.setup();
+    mount();
+    const card = await screen.findByRole("region", { name: "หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)" });
+    await user.click(within(card).getByRole("radio", { name: /หักผ่าน e-Withholding Tax/ }));
+    expect(within(card).getByText("ธนาคารส่งข้อมูลให้กรมสรรพากรแล้ว ไม่ต้องอัปโหลด")).toBeInTheDocument();
+    const send = within(card).getByRole("button", { name: "ส่ง 50 ทวิ" });
+    await user.type(within(card).getByLabelText("เลขอ้างอิง e-WHT"), "EW");
+    expect(send).toBeDisabled();
+    await user.type(within(card).getByLabelText("เลขอ้างอิง e-WHT"), "HT-2611-0001");
+    await user.click(send);
+    expect(await within(card).findByText("รอยืนยันจากกรมสรรพากร")).toBeInTheDocument();
+    expect(within(card).getByText("เลขอ้างอิง EWHT-2611-0001")).toBeInTheDocument();
+    expect(whts).toEqual([{ kind: "ewht", body: { reference: "EWHT-2611-0001" } }]);
+  });
+
+  it("ไม่ผ่าน: เห็นสาเหตุและส่งใหม่ได้ · เลยกำหนดยังส่งได้", async () => {
+    current = paidWht({ whtDueBy: addDays(-2), whtOverdue: true, whtCertificate: { id: "w0", status: "rejected", source: "upload", rejectReason: "ยอดเงินได้หรือภาษีที่หักไม่ตรงกับใบแจ้งหนี้", ewhtRef: null, uploadedAt: "2026-11-10T03:00:00Z" } });
+    mount();
+    expect(await screen.findByText(`เลยกำหนดส่ง 50 ทวิ ของใบนี้ (${formatDate(addDays(-2), "BE", true)}) แล้ว · ยังส่งได้ · ยอดถูกหัก ฿450.00`)).toBeInTheDocument();
+    const card = screen.getByRole("region", { name: "หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)" });
+    expect(within(card).getByRole("alert")).toHaveTextContent("50 ทวิ ที่ส่งมาไม่ผ่าน: ยอดเงินได้หรือภาษีที่หักไม่ตรงกับใบแจ้งหนี้");
+    expect(within(card).getByRole("button", { name: "ส่ง 50 ทวิ" })).toBeInTheDocument();
+  });
+
+  it("ได้รับแล้ว / ปิดรายการ ไม่มีฟอร์ม · ใบที่ไม่หัก ณ ที่จ่ายไม่แสดง", async () => {
+    current = paidWht({ whtCertificate: { id: "w3", status: "confirmed", source: "ewht", rejectReason: null, ewhtRef: "EW-1", uploadedAt: "2026-11-10T03:00:00Z" } });
+    const { unmount } = mount();
+    const card = await screen.findByRole("region", { name: "หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)" });
+    expect(within(card).getByText(/e-WHT · ยืนยันแล้ว/)).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "ส่ง 50 ทวิ" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/กรุณาส่ง 50 ทวิ/)).not.toBeInTheDocument();
+    unmount();
+    current = invoice({ status: "paid", paidAt: "2026-11-02T03:00:00Z", transfer: null });
+    mount();
+    expect(await screen.findByRole("heading", { level: 1, name: /ชำระใบแจ้งหนี้/ })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)" })).not.toBeInTheDocument();
   });
 });

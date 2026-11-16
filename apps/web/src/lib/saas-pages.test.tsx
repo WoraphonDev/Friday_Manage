@@ -379,7 +379,9 @@ describe("แพ็กเกจ & Billing", () => {
   beforeEach(() => {
     navigation.pathname = "/work/sample/billing";
     items = [
-      invoice({ method: "transfer", whtAmount: 9_000, amountDue: 312_000, whtDueBy: "2099-12-06" }),
+      invoice({ method: "transfer", whtAmount: 9_000, amountDue: 312_000 }),
+      // ชำระแล้วแบบหัก ณ ที่จ่าย ยังไม่ส่ง 50 ทวิ (กำหนดส่ง = ชำระ + 30 วัน)
+      invoice({ id: "inv-wht", number: "FRI-2610-0007", status: "paid", method: "transfer", whtAmount: 9_000, amountDue: 312_000, paidAt: "2026-10-30T03:00:00Z", whtDueBy: "2099-12-06" }),
       invoice({ id: "inv-paid", number: "FRI-2610-0002", status: "paid", method: "card", taxDocument: { id: "tx-1", number: "TX-2610-0002", status: "issued", sentAt: null, pdfUrl: "/api/v1/w/sample/billing/tax-documents/tx-1.pdf" }, notes: [{ kind: "credit", id: "cn-1", number: "CN-2611-0001", amount: 107_000, issuedAt: "2026-11-02T03:00:00Z", pdfUrl: "/api/v1/w/sample/billing/credit-notes/cn-1.pdf" }] }),
     ];
     usageBody = usage({ status: "trialing", trial: { endsAt: "2026-11-19T00:00:00Z", daysLeft: 13, expired: false }, seats: { used: 9, limit: 25, ratio: 0.36, over: false } });
@@ -411,7 +413,9 @@ describe("แพ็กเกจ & Billing", () => {
     // สิ่งที่ต้องทำขึ้นบนสุด: ใบรอชำระ + ส่ง 50 ทวิ · วิธีชำระของใบล่าสุดติดป้าย "ใช้ล่าสุด"
     const todos = await screen.findAllByRole("status");
     expect(todos.some((el) => el.textContent?.includes("ใบแจ้งหนี้ FRI-2611-0001 รอชำระ ฿3,120"))).toBe(true);
-    expect(todos.some((el) => el.textContent?.includes("ส่ง 50 ทวิ ของ FRI-2611-0001"))).toBe(true);
+    const whtTodo = todos.find((el) => el.textContent?.includes("ส่ง 50 ทวิ ของ FRI-2610-0007"))!;
+    expect(within(whtTodo).getByRole("link", { name: "ส่ง 50 ทวิ" })).toHaveAttribute("href", "/work/sample/billing/invoices/inv-wht");
+    expect(todos.some((el) => el.textContent?.includes("50 ทวิ ของ FRI-2611-0001"))).toBe(false); // ยังไม่ชำระ ยังไม่ต้องส่ง
     const methods = screen.getByRole("region", { name: "วิธีชำระเงิน" });
     expect(within(methods).getAllByRole("listitem").find((li) => li.textContent?.includes("ใช้ล่าสุด"))).toHaveTextContent("โอนเงิน");
 
@@ -428,10 +432,12 @@ describe("แพ็กเกจ & Billing", () => {
 
     // ใบโอนที่รอชำระ: ไปหน้าชำระใบแจ้งหนี้ (เลขบัญชี + แนบสลิป) แทนการเลือกไฟล์ทันที
     expect(within(open).getByRole("link", { name: "ชำระ" })).toHaveAttribute("href", `/work/sample/billing/invoices/${INV}`);
-    await user.click(within(open).getByRole("button", { name: "อัปโหลด 50 ทวิ" }));
+    const whtRow = rows.find((r) => r.textContent?.includes("FRI-2610-0007"))!;
+    expect(within(whtRow).getByText("ส่ง 50 ทวิ ภายใน 6 ธ.ค. 2642")).toBeInTheDocument();
+    await user.click(within(whtRow).getByRole("button", { name: "อัปโหลด 50 ทวิ" }));
     await user.upload(screen.getByLabelText("อัปโหลด 50 ทวิ", { selector: "input" }), new File(["wht"], "wht.pdf", { type: "application/pdf" }));
-    expect(await screen.findByText(/อัปโหลด 50 ทวิ ของ FRI-2611-0001 แล้ว/)).toBeInTheDocument();
-    expect(calls.map((c) => c.path)).toEqual([`/w/sample/billing/invoices/${INV}/wht-certificate`]);
+    expect(await screen.findByText(/อัปโหลด 50 ทวิ ของ FRI-2610-0007 แล้ว/)).toBeInTheDocument();
+    expect(calls.map((c) => c.path)).toEqual([`/w/sample/billing/invoices/inv-wht/wht-certificate`]);
 
     // W22: ยกเลิกผ่านแบบสอบถาม (ไม่ตอบก็ยกเลิกได้)
     await user.click(screen.getByRole("button", { name: "ยกเลิกแพ็กเกจ" }));

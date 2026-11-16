@@ -1,7 +1,8 @@
-import { Body, Controller, Get, HttpCode, Module, Param, Post, Query, Req, Res, StreamableFile } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Module, Param, Post, Put, Query, Req, Res, StreamableFile } from '@nestjs/common';
 import type { Response } from 'express';
 import { type OpsRequest, Reauth, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
+import { AccountingService, AccountingSettingsBody, EXPORT_TYPES, ExportZipQuery, SendExportBody } from './accounting.service.js';
 import {
   BillingService,
   CloseBody,
@@ -16,11 +17,12 @@ import {
   ReplaceTaxDocBody,
   RevenueQuery,
   SalesReportQuery,
-  SendExportBody,
   SendLinkBody,
-  TaxQuery,
   VoidBody,
 } from './billing.service.js';
+import { kindFromPath, ManualCancelBody, RequestInfoBody, RetryETaxBody, TaxQuery, TaxService } from './tax.service.js';
+import { EwhtImportBody, WhtCloseBody, WhtRequestBody, WhtService } from './wht.service.js';
+import { z } from 'zod';
 
 /** ไฟล์เอกสาร (PDF / Excel) · ไม่เก็บในแคชของเบราว์เซอร์ */
 function file(res: Response, f: { filename: string; buffer: Buffer }, contentType: string, disposition: 'inline' | 'attachment' = 'inline') {
@@ -42,7 +44,12 @@ async function respond<T extends object>(res: Response, p: Promise<T>) {
  */
 @Controller('ops')
 export class BillingController {
-  constructor(private readonly billing: BillingService) {}
+  constructor(
+    private readonly billing: BillingService,
+    private readonly taxes: TaxService,
+    private readonly wht: WhtService,
+    private readonly accounting: AccountingService,
+  ) {}
 
   @Roles('finance', 'owner', 'auditor')
   @Get('invoices')
@@ -107,16 +114,83 @@ export class BillingController {
     return this.billing.extend(req.staff!, id, parse(ExtendBody, body));
   }
 
+  // ---------------------------------------------------------------- แท็บภาษี (รอบ 4 · E1–E4)
   @Roles('finance', 'owner', 'auditor')
   @Get('tax')
   tax(@Query() q: unknown) {
-    return this.billing.tax(parse(TaxQuery, q));
+    return this.taxes.overview(parse(TaxQuery, q));
   }
+  /** ประวัติ e-Tax ทั้งเดือน */
+  @Roles('finance', 'owner', 'auditor')
+  @Get('etax')
+  etaxHistory(@Query() q: unknown) {
+    return this.taxes.history(parse(TaxQuery, q));
+  }
+  /** E2 · รายละเอียดเอกสาร + ลำดับเหตุการณ์ (:kind = tax-document · credit-note · debit-note) */
+  @Roles('finance', 'owner', 'auditor')
+  @Get('etax/:kind/:id')
+  etaxDetail(@Param('kind') kind: string, @Param('id') id: string) {
+    return this.taxes.detail(kindFromPath(kind), id);
+  }
+  /** ส่งใหม่ / แจ้งอีกครั้ง (body.action = issue · cancel) */
+  @Roles('finance')
+  @Post(['etax/:kind/:id/retry', 'etax/:kind/:id\\:retry'])
+  @HttpCode(200)
+  etaxRetry(@Req() req: OpsRequest, @Param('kind') kind: string, @Param('id') id: string, @Body() body: unknown) {
+    return this.taxes.retry(req.staff!, kindFromPath(kind), id, parse(RetryETaxBody, body ?? {}).action);
+  }
+  @Roles('finance')
+  @Post(['etax/:kind/:id/check', 'etax/:kind/:id\\:check'])
+  @HttpCode(200)
+  etaxCheck(@Req() req: OpsRequest, @Param('kind') kind: string, @Param('id') id: string) {
+    return this.taxes.check(req.staff!, kindFromPath(kind), id);
+  }
+  /** E4 · ยกเลิกที่ผู้ให้บริการแล้ว (แตะกุญแจ) */
+  @Roles('finance')
+  @Reauth()
+  @Post(['etax/:kind/:id/cancel-manual', 'etax/:kind/:id\\:cancel-manual'])
+  @HttpCode(200)
+  etaxManualCancel(@Req() req: OpsRequest, @Param('kind') kind: string, @Param('id') id: string, @Body() body: unknown) {
+    return this.taxes.manualCancel(req.staff!, kindFromPath(kind), id, parse(ManualCancelBody, body));
+  }
+  /** ส่งใหม่ (ชื่อเดิม) */
   @Roles('finance')
   @Post(['tax-documents/:id/retry', 'tax-documents/:id\\:retry'])
   @HttpCode(200)
   retry(@Req() req: OpsRequest, @Param('id') id: string) {
-    return this.billing.retryTaxDocument(req.staff!, id);
+    return this.taxes.retry(req.staff!, 'tax_document', id, 'issue');
+  }
+  /** ขอข้อมูลใหม่: อีเมลผู้ติดต่อด้านบัญชีให้แก้ข้อมูลออกใบกำกับ */
+  @Roles('finance')
+  @Post(['tax-documents/:id/request-info', 'tax-documents/:id\\:request-info'])
+  @HttpCode(200)
+  requestInfo(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.taxes.requestInfo(req.staff!, id, parse(RequestInfoBody, body ?? {}));
+  }
+
+  // ---------------------------------------------------------------- 50 ทวิ (E7–E9)
+  @Roles('finance', 'owner', 'auditor')
+  @Get('wht/:invoiceId')
+  whtDetail(@Param('invoiceId') id: string) {
+    return this.wht.detail(id);
+  }
+  @Roles('finance')
+  @Post(['wht/:invoiceId/request', 'wht/:invoiceId\\:request'])
+  @HttpCode(200)
+  whtRequest(@Req() req: OpsRequest, @Param('invoiceId') id: string, @Body() body: unknown) {
+    return this.wht.request(req.staff!, id, parse(WhtRequestBody, body));
+  }
+  @Roles('finance')
+  @Post(['wht/:invoiceId/close', 'wht/:invoiceId\\:close'])
+  @HttpCode(200)
+  whtClose(@Req() req: OpsRequest, @Param('invoiceId') id: string, @Body() body: unknown) {
+    return this.wht.close(req.staff!, id, parse(WhtCloseBody, body));
+  }
+  @Roles('finance')
+  @Post('wht-ewht/import')
+  @HttpCode(200)
+  ewhtImport(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.wht.importEwht(req.staff!, parse(EwhtImportBody, body));
   }
 
   @Roles('finance')
@@ -158,19 +232,48 @@ export class BillingController {
   @Reauth()
   @Post(['revenue/close', 'revenue\\:close'])
   @HttpCode(200)
-  close(@Req() req: OpsRequest, @Body() body: unknown) {
-    return this.billing.close(req.staff!, parse(CloseBody, body));
+  async close(@Req() req: OpsRequest, @Body() body: unknown) {
+    const r = await this.billing.close(req.staff!, parse(CloseBody, body));
+    // ตั้งไว้ "รอจนปิดงวด แล้วส่งทันทีที่ปิด" → ส่งให้สำนักงานบัญชีเลย (ล้มไม่ทำให้การปิดงวดล้ม · งานรายชั่วโมงลองต่อ)
+    void this.accounting.autoSendExport().catch(() => null);
+    return r;
   }
   @Roles('finance', 'owner', 'auditor')
   @Get('revenue/export/delivery')
   delivery() {
-    return this.billing.exportDelivery();
+    return this.accounting.delivery();
   }
   @Roles('finance', 'owner')
   @Post(['revenue/export/send', 'revenue/export\\:send'])
   @HttpCode(200)
   send(@Req() req: OpsRequest, @Body() body: unknown) {
-    return this.billing.sendExport(req.staff!, parse(SendExportBody, body ?? {}));
+    return this.accounting.sendExport(req.staff!, parse(SendExportBody, body ?? {}));
+  }
+  /** เอกสารภาษีทั้งเดือน ZIP (?scope=all = ดาวน์โหลดทั้งหมด รวมรายงานและ CSV) */
+  @Roles('finance', 'owner', 'auditor')
+  @Get('revenue/export/zip')
+  async exportZip(@Query() q: unknown, @Res({ passthrough: true }) res: Response) {
+    const r = await this.accounting.zip(parse(ExportZipQuery, q));
+    res.set('X-Report-Status', r.draft ? 'draft' : 'closed');
+    return file(res, r, 'application/zip', 'attachment');
+  }
+  /** E6 · ตั้งค่าผู้รับและวันส่ง */
+  @Roles('finance', 'owner', 'auditor')
+  @Get('accounting/settings')
+  accountingSettings() {
+    return this.accounting.settings();
+  }
+  @Roles('finance', 'owner')
+  @Put('accounting/settings')
+  saveAccountingSettings(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.accounting.saveSettings(req.staff!, parse(AccountingSettingsBody, body));
+  }
+  /** ทดลองส่งถึงอีเมลของฉัน */
+  @Roles('finance', 'owner')
+  @Post(['accounting/settings/test', 'accounting/settings\\:test'])
+  @HttpCode(200)
+  testAccounting(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.accounting.test(req.staff!, parse(z.object({ types: z.array(z.enum(EXPORT_TYPES)).min(1).max(3).optional() }).strict(), body ?? {}).types);
   }
   /** รายงานภาษีขายรายเดือน (?month=YYYY-MM&format=pdf|xlsx) */
   @Roles('finance', 'owner', 'auditor')
@@ -190,5 +293,5 @@ export class BillingController {
   }
 }
 
-@Module({ controllers: [BillingController], providers: [BillingService], exports: [BillingService] })
+@Module({ controllers: [BillingController], providers: [BillingService, TaxService, WhtService, AccountingService], exports: [BillingService, TaxService, WhtService, AccountingService] })
 export class BillingModule {}

@@ -116,7 +116,10 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
 
   const now = today();
   const items = invoices.data?.items ?? [];
-  const needWhtFor = (inv: Invoice) => inv.whtAmount > 0 && !inv.whtCertificate && !!inv.whtDueBy && inv.whtDueBy >= now && inv.status !== "void";
+  // 50 ทวิ (รอบ 4): ต้องส่งหลังชำระ ยังไม่ส่งหรือไม่ผ่าน · เลยกำหนดยังส่งได้ (ขึ้น "เลยกำหนด") · แจ้ง e-WHT / รอตรวจ = ส่งแล้ว
+  const needWhtFor = (inv: Invoice) => inv.whtAmount > 0 && inv.status === "paid" && (!inv.whtCertificate || inv.whtCertificate.status === "rejected");
+  const whtLate = (inv: Invoice) => !!inv.whtDueBy && inv.whtDueBy < now;
+  const whtText = (inv: Invoice) => (whtLate(inv) ? t("whtLate", { date: formatDate(inv.whtDueBy, "BE", true) }) : t("whtDue", { date: formatDate(inv.whtDueBy, "BE", true) }));
   // ใบที่ยังไม่จ่ายทุกวิธี → หน้าชำระใบแจ้งหนี้ (QR / บัตร / เลขบัญชี) · โอนที่รอตรวจ → แนบสลิปใหม่
   const needSlipFor = (inv: Invoice) => inv.status === "open" || (inv.method === "transfer" && inv.status === "pending_review");
   const slipButton = (inv: Invoice) => (
@@ -131,7 +134,18 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
     else if (inv.status === "open")
       list.push({ key: `${inv.id}-open`, tone: "warn", title: t("todo.open", { number: inv.number, amount: baht(inv.amountDue) }), hint: t("todo.openHint", { date: formatDate(inv.dueDate, "BE", true) }), action: needSlipFor(inv) ? slipButton(inv) : undefined });
     if (needWhtFor(inv))
-      list.push({ key: `${inv.id}-wht`, tone: "warn", title: t("todo.wht", { number: inv.number, date: formatDate(inv.whtDueBy, "BE", true) }), hint: t("todo.whtHint"), action: <Button size="small" onClick={() => pick(inv, "wht-certificate")}>{t("wht")}</Button> });
+      list.push({
+        key: `${inv.id}-wht`,
+        tone: "warn",
+        title: whtLate(inv) ? t("todo.whtLate", { number: inv.number, date: formatDate(inv.whtDueBy, "BE", true) }) : t("todo.wht", { number: inv.number, date: formatDate(inv.whtDueBy, "BE", true) }),
+        hint: inv.whtCertificate?.status === "rejected" ? t("todo.whtRejected", { reason: inv.whtCertificate.rejectReason ?? "-" }) : t("todo.whtHint"),
+        // หน้าใบแจ้งหนี้มีทั้งอัปโหลดไฟล์และแจ้งว่าหักผ่าน e-WHT (E11)
+        action: (
+          <Link className={buttonVariants({ size: "small" })} href={`/work/${encodeURIComponent(ws)}/billing/invoices/${inv.id}`}>
+            {t("whtSend")}
+          </Link>
+        ),
+      });
     return list;
   });
   const lastMethod = items.find((inv) => inv.method)?.method ?? null;
@@ -298,7 +312,7 @@ export function BillingOverviewPage({ ws }: { ws: string }) {
                         <td>
                           {t("period", { from: formatDate(inv.periodStart, "BE", true), to: formatDate(inv.periodEnd, "BE", true) })}
                           {inv.method && <span className={styles.sub}>{t(`methods.${inv.method}`)}</span>}
-                          {needWht && <span className={cn(styles.sub, styles.warn)}>{t("whtDue", { date: formatDate(inv.whtDueBy, "BE", true) })}</span>}
+                          {needWht && inv.whtDueBy && <span className={cn(styles.sub, styles.warn)}>{whtText(inv)}</span>}
                         </td>
                         <td className={cn(styles.num, styles.amount)}>฿{baht(inv.amountDue)}</td>
                         <td>

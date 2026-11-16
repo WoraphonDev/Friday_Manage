@@ -46,17 +46,55 @@ export interface PaymentGateway {
 }
 export const PAYMENT_GATEWAY = Symbol('PAYMENT_GATEWAY');
 
-export interface ETaxInput {
-  taxDocumentId: string;
+export type ETaxKind = 'tax_invoice' | 'credit_note' | 'debit_note';
+/** เอกสารอ้างอิงที่ส่งคู่กัน: ฉบับเดิมของฉบับที่ออกแทน · ใบกำกับภาษีที่ใบลด / เพิ่มหนี้อ้างถึง */
+export interface ETaxReference {
   number: string;
+  issuedOn: string;
+  /** เลขอ้างอิงของผู้ให้บริการ (null = ฉบับเดิมไม่ได้ออกผ่าน e-Tax) */
+  providerRef: string | null;
+}
+export interface ETaxInput {
+  /** id ของเอกสารในระบบ (ใบกำกับภาษี / ใบลดหนี้ / ใบเพิ่มหนี้) */
+  documentId: string;
+  /** ใบกำกับภาษีเท่านั้น (ชื่อเดิมของ payload · คงไว้ให้ผู้ให้บริการที่ผูกไว้แล้ว) */
+  taxDocumentId?: string;
+  kind: ETaxKind;
+  number: string;
+  /** วันที่ของเอกสาร (YYYY-MM-DD) */
+  issuedOn: string;
   invoiceNumber: string;
+  /** ใบลด / เพิ่มหนี้: ยอดส่วนต่าง (ก่อน VAT · VAT · รวม) */
   amounts: { subtotal: number; vat: number; total: number };
+  /** ข้อมูลผู้ซื้อที่ล็อกไว้ในเอกสาร (ไม่ใช่โปรไฟล์ปัจจุบัน) */
   buyer: { companyName: string; taxId: string; branchType: string; branchNo: string | null; address: string; email: string };
+  /** ฉบับใหม่ที่ออกแทน: ฉบับเดิมที่ยกเลิก */
+  replaces?: ETaxReference | null;
+  /** ใบลด / เพิ่มหนี้: ใบกำกับภาษีเดิม (ม.86/9 · 86/10) */
+  references?: ETaxReference | null;
+  reason?: string | null;
+}
+export interface ETaxCancelInput {
+  documentId: string;
+  kind: ETaxKind;
+  number: string;
+  providerRef: string;
+  reason: string;
+}
+/** ผลของเอกสารที่ถามผู้ให้บริการ · pending = ยังไม่มีผล */
+export interface ETaxStatus {
+  status: 'pending' | 'issued' | 'cancelled' | 'failed';
+  code?: string;
+  message?: string;
 }
 export interface ETaxProvider {
   readonly name: string;
-  /** ส่งคำขอออกเอกสาร (ผลจริงมาทาง `hooks/etax`) · คืนเลขอ้างอิงของผู้ให้บริการ */
+  /** ส่งคำขอออกเอกสาร (ใบกำกับภาษี / ใบลดหนี้ / ใบเพิ่มหนี้ · ผลจริงมาทาง `hooks/etax`) · คืนเลขอ้างอิงของผู้ให้บริการ */
   issue(input: ETaxInput): Promise<{ providerRef: string }>;
+  /** แจ้งยกเลิกเอกสารที่ออกไปแล้ว (ผลมาทาง `hooks/etax` เช่นกัน) */
+  cancel(input: ETaxCancelInput): Promise<{ providerRef: string }>;
+  /** ถามผลของคำขอที่ส่งไปแล้วแต่ยังไม่ได้ webhook (ปุ่ม "ตรวจสถานะ") */
+  status(providerRef: string): Promise<ETaxStatus>;
 }
 export const ETAX_PROVIDER = Symbol('ETAX_PROVIDER');
 
@@ -182,28 +220,79 @@ export class StripeGateway implements PaymentGateway {
   }
 }
 
-/** ตัวปลอมของ e-Tax: บันทึกคำขอไว้ให้ test ตรวจ */
+/** ข้อผิดพลาดจากผู้ให้บริการ e-Tax (รหัส + ข้อความ) · เก็บใน etax_jobs.last_error ให้ทีมเห็น */
+export class ETaxError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+/** ข้อความที่เก็บในคิว: "E-102 · ข้อความ" */
+export const etaxErrorText = (e: unknown) => (e instanceof ETaxError ? `${e.code} · ${e.message}` : (e as Error)?.message ?? String(e)).slice(0, 500);
+
+/** ตัวปลอมของ e-Tax: บันทึกคำขอไว้ให้ test ตรวจ · `failNext` จำลองผู้ให้บริการล่ม */
 export class FakeETax implements ETaxProvider {
   readonly name = 'fake';
   readonly issued: ETaxInput[] = [];
+  readonly cancelled: ETaxCancelInput[] = [];
+  /** ผลที่ตอบเมื่อถามสถานะ (test ตั้งเอง) · ไม่ตั้ง = pending */
+  readonly statuses = new Map<string, ETaxStatus>();
+  private failures: ETaxError[] = [];
+  /** n ครั้งถัดไปตอบผิดพลาด */
+  failNext(n = 1, error = new ETaxError('503', 'ผู้ให้บริการปิดปรับปรุง')) {
+    this.failures.push(...Array.from({ length: n }, () => error));
+  }
+  private maybeFail() {
+    const e = this.failures.shift();
+    if (e) throw e;
+  }
   async issue(input: ETaxInput) {
+    this.maybeFail();
     this.issued.push(input);
     return { providerRef: `etax_${input.number}` };
   }
+  async cancel(input: ETaxCancelInput) {
+    this.maybeFail();
+    this.cancelled.push(input);
+    return { providerRef: `etax_cancel_${input.number}` };
+  }
+  async status(providerRef: string): Promise<ETaxStatus> {
+    this.maybeFail();
+    return this.statuses.get(providerRef) ?? { status: 'pending' as const };
+  }
 }
 
-/** ผู้ให้บริการ e-Tax จริง: ส่ง JSON ไป `ETAX_API_URL` (รูปแบบเฉพาะผู้ให้บริการปรับที่นี่ที่เดียวเมื่อเลือกเจ้า) */
+/**
+ * ผู้ให้บริการ e-Tax จริง: ส่ง JSON ไป `ETAX_API_URL` (รูปแบบเฉพาะผู้ให้บริการปรับที่นี่ที่เดียวเมื่อเลือกเจ้า)
+ * ออกเอกสาร POST {url} · แจ้งยกเลิก POST {url}/cancel · ถามผล GET {url}/{providerRef}
+ * ตอบผิดพลาด: `{ error: { code, message } }` หรือ `{ code, message }` → ETaxError
+ */
 export class HttpETax implements ETaxProvider {
   readonly name = 'http';
   constructor(
     private readonly url: string,
     private readonly key: string,
   ) {}
+  private async call(method: 'GET' | 'POST', path: string, body?: unknown) {
+    const res = await fetch(`${this.url.replace(/\/$/, '')}${path}`, { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.key}` }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const json = (await res.json().catch(() => ({}))) as { id?: string; reference?: string; status?: string; code?: string; message?: string; error?: { code?: string; message?: string } };
+    if (!res.ok) throw new ETaxError(json.error?.code ?? json.code ?? String(res.status), json.error?.message ?? json.message ?? `HTTP ${res.status}`);
+    return json;
+  }
   async issue(input: ETaxInput) {
-    const res = await fetch(this.url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.key}` }, body: JSON.stringify(input) });
-    const json = (await res.json().catch(() => ({}))) as { id?: string; reference?: string };
-    if (!res.ok) throw new Error(`etax_error: ${res.status}`);
+    const json = await this.call('POST', '', input);
     return { providerRef: json.id ?? json.reference ?? input.number };
+  }
+  async cancel(input: ETaxCancelInput) {
+    const json = await this.call('POST', '/cancel', input);
+    return { providerRef: json.id ?? json.reference ?? input.providerRef };
+  }
+  async status(providerRef: string): Promise<ETaxStatus> {
+    const json = await this.call('GET', `/${encodeURIComponent(providerRef)}`);
+    const status: ETaxStatus['status'] = (['issued', 'cancelled', 'failed'] as const).find((x) => x === json.status) ?? 'pending';
+    return { status, code: json.error?.code ?? json.code, message: json.error?.message ?? json.message };
   }
 }
 

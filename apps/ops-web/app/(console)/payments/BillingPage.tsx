@@ -12,7 +12,9 @@ import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { exceptionsKey, VerifyTab } from "./_parts/Verify";
-import { AccountantExport, IncomingTab, InvoicesTab, OverdueTab, RefundsSummaryTab, RevenueTab, TaxTab } from "./_parts/Tabs";
+import { AccountantExport } from "./_parts/Accounting";
+import { TaxTab } from "./_parts/Tax";
+import { IncomingTab, InvoicesTab, OverdueTab, RefundsSummaryTab, RevenueTab } from "./_parts/Tabs";
 
 const TABS = ["verify", "incoming", "invoices", "overdue", "tax", "refunds", "revenue"] as const;
 type Tab = (typeof TABS)[number];

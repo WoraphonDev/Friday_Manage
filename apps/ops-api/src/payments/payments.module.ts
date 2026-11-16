@@ -2,7 +2,8 @@ import { Body, Controller, Get, HttpCode, Module, Param, Post, Query, Req, Res, 
 import type { Response } from 'express';
 import { type OpsRequest, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
-import { ConfirmBody, CreditBody, ExceptionsQuery, FlagBody, IncomingQuery, MatchBody, OpsPaymentsService, PaymentsQuery, RejectBody } from './ops-payments.service.js';
+import { WHT_REJECT_REASONS } from '../billing/wht.service.js';
+import { ConfirmBody, CreditBody, ExceptionsQuery, FlagBody, IncomingQuery, MatchBody, OpsPaymentsService, PaymentsQuery, RejectBody, WhtRejectBody } from './ops-payments.service.js';
 
 /** ชนิดที่ API ลูกค้ารับตอนแนบ (ตรวจจากไบต์แรกแล้ว จึงเชื่อนามสกุลที่บันทึกไว้ได้) · นอกนี้ให้ดาวน์โหลดอย่างเดียว */
 const VIEWABLE: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', pdf: 'application/pdf' };
@@ -90,7 +91,9 @@ export class PaymentsController {
   @Post(['wht-certificates/:id/reject', 'wht-certificates/:id\\:reject'])
   @HttpCode(200)
   rejectWht(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
-    return this.payments.reviewWht(req.staff!, id, 'rejected', parse(RejectBody, body).reason);
+    const b = parse(WhtRejectBody, body);
+    const label = b.code && b.code !== 'other' ? WHT_REJECT_REASONS[b.code] : undefined;
+    return this.payments.reviewWht(req.staff!, id, 'rejected', label ? `${label}${b.reason ? ` · ${b.reason}` : ''}` : b.reason);
   }
 }
 

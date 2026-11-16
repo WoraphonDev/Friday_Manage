@@ -37,11 +37,25 @@
 
 ## เสร็จเมื่อ
 
-- [ ] หน้าตรงกับข้อเสนอที่ 1440 px · ใช้งานได้ที่ 390 px · ซ่อนปุ่มตามบทบาท (การเงินทำ · Owner / ผู้ตรวจอ่าน)
-- [ ] e2e ของ ops-api และ API ลูกค้า (e-Tax จำลอง, webhook ช้า, ยกเลิก, CN/DN, 50 ทวิ อัตโนมัติ, นำเข้า e-WHT) + test ของ packages/docs + component test ด้วย MSW
-- [ ] `pnpm typecheck` และ test ของแพ็กเกจที่แก้ผ่าน
+- [x] หน้าตรงกับข้อเสนอที่ 1440 px · ใช้งานได้ที่ 390 px · ซ่อนปุ่มตามบทบาท (การเงินทำ · Owner / ผู้ตรวจอ่าน)
+- [x] e2e ของ ops-api และ API ลูกค้า (e-Tax จำลอง, webhook ช้า, ยกเลิก, CN/DN, 50 ทวิ อัตโนมัติ, นำเข้า e-WHT) + test ของ packages/docs + component test ด้วย MSW
+- [x] `pnpm typecheck` และ test ของแพ็กเกจที่แก้ผ่าน
 - [ ] deploy Docker ในเครื่องตาม CLAUDE.md และตรวจผ่าน :4000 / :3000
 
 ## บันทึกผล
 
-<!-- ผู้ทำงานเขียนตอนส่งงาน -->
+**Backend**
+- `ETaxProvider` เพิ่ม `cancel()` · `issue()` รองรับใบลดหนี้ / ใบเพิ่มหนี้ และฉบับออกแทน (`replaces`) · `status()` ไว้ตรวจสถานะเมื่อ webhook ไม่มา · `FakeETax` ครบทุกอย่าง
+- คิว `etax_jobs` (API ลูกค้า `sweepETax` ทุก 10 นาที): ลอง 3 ครั้งห่าง 10 นาที → failed · ส่งแล้ว 1 ชม. ไม่มีผล → ถามสถานะเอง · `queueETax()` ใน `packages/db/src/documents.ts` ใช้ทั้งสองฝั่ง · เวลาในคิวใช้ `now()` ของฐานข้อมูล (นาฬิกาโปรเซสต่างกันไม่กี่ ms ทำให้งานแรกถูกข้าม)
+- บั๊กเดิม: webhook ที่มาหลังยกเลิกเก็บในประวัติแต่ไม่เปลี่ยนสถานะ · ส่งข้อมูลผู้ซื้อจาก `tax_documents.buyer`
+- ops-api แยก `billing/tax.service.ts` (E1–E4, ปิดงวด), `accounting.service.ts` (E5–E6 · `ops_settings › accounting` เริ่มจาก env เดิม · รอปิดงวด / ส่งฉบับร่าง · ประวัติ 12 งวด · ZIP), `wht.service.ts` (E7–E9 · งาน 08:00 ขอวัน 7 และ 30 · ไม่ผ่านพร้อมสาเหตุ · ปิดว่าไม่ได้รับ · นำเข้า e-WHT)
+- ภาษีขาย: `packages/docs/src/sales-tax.ts` ฟังก์ชันเดียวใช้กับการ์ด E1 รายงาน PDF / Excel และหน้ารายงานรายได้ · ตรวจเลขขาดแยกตามชุดเลข · 50 ทวิ ที่ไม่ผ่านไม่นับ · ไม่นับใบ ฿0
+- API ลูกค้า: กำหนดส่ง 50 ทวิ = 30 วันหลังชำระ · หลังกำหนดยังอัปโหลดได้ (ขึ้นเลยกำหนด) · แจ้ง "หักผ่าน e-WHT" พร้อมเลขอ้างอิง (`pending_ewht`, หยุดอีเมลขอ)
+
+**ไฟล์ e-WHT (E9)**: CSV มีหัวคอลัมน์ `payer_tax_id, payer_name, tax_amount, date, reference` (รองรับ BOM / เครื่องหมายคำพูด) · จับคู่เลขผู้เสียภาษี + ยอด + วันที่ชำระ ±3 วัน · ไม่บังคับ 3% สำหรับ e-WHT · ปรับหัวคอลัมน์ตามไฟล์จริงของสรรพากรเมื่อได้ตัวอย่าง
+
+**หน้าเว็บ**: `payments/_parts/Tax.tsx` (E1–E4, E7–E9, ปิดงวด) · `Accounting.tsx` (E5–E6) · `apps/web/src/features/checkout/wht-section.tsx` (E11) · หน้ารายงานรายได้อ่านวันส่งจากค่าจริง
+
+**คำขอนอก lane**: `packages/db/src/documents.ts` (คิว e-Tax ร่วม) · `apps/ops-api/src/payments/ops-payments.service.ts` (เก็บสาเหตุไม่ผ่าน · ตอบ `reason`)
+
+**Test** (ฐาน friday_o40): ops-api 234 ผ่าน / 1 ข้าม · api 796 ผ่าน / 7 ข้าม · ops-web 224 · web 715 · docs 12 · `pnpm typecheck` ผ่าน

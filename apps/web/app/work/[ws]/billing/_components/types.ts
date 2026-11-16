@@ -84,8 +84,23 @@ export interface Invoice {
   paymentPaidAt?: string | null;
   /** ใบลดหนี้ / ใบเพิ่มหนี้ของใบนี้ (หลังบ้านออก) */
   notes?: { kind: "credit" | "debit"; id: string; number: string; amount: number; issuedAt: string; pdfUrl: string }[];
-  whtCertificate: { id: string; status: string; uploadedAt: string } | null;
+  /** 50 ทวิ ล่าสุดของใบ · ไม่ผ่านแล้วเห็นสาเหตุ (rejectReason) · หักผ่าน e-WHT ไม่มีไฟล์ (ewhtRef) */
+  whtCertificate: WhtCertificate | null;
+  /** กำหนดส่ง 50 ทวิ = วันที่ชำระ + 30 วัน · ยังไม่ชำระ = null */
   whtDueBy: string | null;
+  /** เลยกำหนดแล้วยังไม่ได้ส่ง (ยังส่งได้) · ไม่มีใน API รุ่นก่อน */
+  whtOverdue?: boolean;
+}
+
+export type WhtStatus = "pending_review" | "confirmed" | "rejected" | "pending_ewht" | "uncollected";
+export interface WhtCertificate {
+  id: string;
+  status: WhtStatus | string;
+  /** upload = ไฟล์ · ewht = หักผ่าน e-Withholding Tax · ops = ทีมบันทึก (ไม่มีใน API รุ่นก่อน) */
+  source?: "upload" | "ewht" | "ops";
+  rejectReason?: string | null;
+  ewhtRef?: string | null;
+  uploadedAt: string;
 }
 
 export interface TransferInfo {
@@ -105,7 +120,7 @@ export interface InvoiceDetail extends Invoice {
 
 /** `POST w/billing/checkout` */
 export interface CheckoutResult {
-  invoice: Omit<Invoice, "method" | "paymentStatus" | "hasSlip" | "pdfUrl" | "taxDocument" | "whtCertificate" | "whtDueBy">;
+  invoice: Omit<Invoice, "method" | "paymentStatus" | "hasSlip" | "pdfUrl" | "taxDocument" | "whtCertificate" | "whtDueBy" | "whtOverdue">;
   /** null = ไม่มียอดชำระ (คูปองใช้ฟรี / ส่วนลด 100%) ใบแจ้งหนี้ชำระแล้วทันที */
   payment: { id: string; method: Method; status: string; amount: number } | null;
   free?: boolean;

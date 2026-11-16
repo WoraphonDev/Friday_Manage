@@ -3,6 +3,7 @@
 import ExcelJS from 'exceljs';
 import { baht, monthName, thaiDateTime, thaiNumericDate } from './format.ts';
 import { C, footers, heightOf, lh, pdf, text, type Seller } from './render.ts';
+import type { ETaxState, SalesCheck } from './sales-tax.ts';
 
 export type SalesDocKind = 'tax_invoice' | 'receipt' | 'credit_note' | 'debit_note';
 export interface SalesRow {
@@ -28,6 +29,8 @@ export interface SalesRow {
     receivedOn: string | null;
     channel: string;
     etax: string;
+    /** สถานะ e-Tax สำหรับสรุป (salesTaxSummary) · ไม่มี = ไม่ต้องส่ง */
+    etaxState?: ETaxState;
     flags: ('wht' | 'outstanding')[];
   };
 }
@@ -36,7 +39,7 @@ export interface SalesReportInput {
   year: number;
   month: number;
   rows: SalesRow[];
-  checks: { ok: boolean; text: string }[];
+  checks: SalesCheck[];
   closed: boolean;
   generatedAt: Date;
 }
@@ -248,6 +251,6 @@ export async function salesReportXlsx(input: SalesReportInput): Promise<Buffer> 
   t2.font = { bold: true };
   b.columns = [{ width: 16 }, { width: 16 }, { width: 16 }, { width: 24 }, ...Array.from({ length: 5 }, () => ({ width: 14, style: { numFmt: money } })), { width: 14 }, { width: 18 }, { width: 14 }, { width: 18 }];
   b.addRow([]);
-  for (const c of input.checks) b.addRow([c.ok ? 'ผ่าน' : 'ตรวจ', c.text]);
+  for (const c of input.checks) b.addRow([c.ok ? 'ผ่าน' : c.level === 'warn' ? 'เตือน' : 'ตรวจ', c.text]);
   return Buffer.from(await wb.xlsx.writeBuffer());
 }

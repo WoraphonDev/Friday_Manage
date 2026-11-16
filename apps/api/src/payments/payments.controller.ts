@@ -86,6 +86,12 @@ export class PaymentsController {
     return this.invoices.whtCertificate(a, t, id, file);
   }
 
+  /** หักผ่าน e-Withholding Tax แทนการอัปโหลด 50 ทวิ (รอบ 4 · E11) */
+  @Post('invoices/:id/wht-ewht')
+  whtEwht(@Auth() a: AuthInfo, @Tenant() t: TenantInfo, @Param('id') id: string, @Body() body: unknown) {
+    return this.invoices.whtEwht(a, t, id, body);
+  }
+
   @Post(['subscription/cancel', 'subscription\\:cancel'])
   @HttpCode(200)
   cancel(@Auth() a: AuthInfo, @Tenant() t: TenantInfo) {

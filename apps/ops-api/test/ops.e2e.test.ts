@@ -448,7 +448,7 @@ describe('ตรวจสลิปและ 50 ทวิ', () => {
     const p = await pending('wht-me');
     const w1 = (await t.owner.query(`INSERT INTO wht_certificates (workspace_id, invoice_id, file_key, uploaded_by) VALUES ($1,$2,'wht/a.pdf',$3) RETURNING id`, [p.c.id, p.inv.id, p.c.owner])).rows[0].id as string;
     const w2 = (await t.owner.query(`INSERT INTO wht_certificates (workspace_id, invoice_id, file_key, uploaded_by) VALUES ($1,$2,'wht/b.pdf',$3) RETURNING id`, [p.c.id, p.inv.id, p.c.owner])).rows[0].id as string;
-    expect((await finance.agent.post(`/ops/wht-certificates/${w1}:confirm`).send({})).body).toEqual({ id: w1, status: 'confirmed' });
+    expect((await finance.agent.post(`/ops/wht-certificates/${w1}:confirm`).send({})).body).toEqual({ id: w1, status: 'confirmed', reason: null });
     expect((await finance.agent.post(`/ops/wht-certificates/${w1}:confirm`).send({})).body.error.code).toBe('already_reviewed');
     expect((await finance.agent.post(`/ops/wht-certificates/${w2}:reject`).send({})).status).toBe(400);
     const before = mail.sent.length;

@@ -268,6 +268,8 @@ export const holidayCalendars = pgTable('holiday_calendars', {
   workspaceId: uuid().references(() => workspaces.id, { onDelete: 'cascade' }),
   name: text().notNull(),
   source: calendarSource().notNull().default('custom'),
+  /** ปฏิทินของระบบ: ดึงจาก ธปท. สำเร็จล่าสุด / สาเหตุที่ดึงไม่สำเร็จ (รอบ 4 · S1) */
+  syncedAt: tstz(), syncError: text(),
   createdAt: createdAt(),
 });
 
@@ -281,6 +283,8 @@ export const holidays = pgTable(
     date: date().notNull(),
     name: text().notNull(),
     kind: holidayKind().notNull().default('bank'),
+    /** ปฏิทินของระบบ: bot = จากประกาศ ธปท. · manual = ทีม Friday เพิ่มเอง (เช่น วันหยุดพิเศษตามมติ ครม.) · null = ปฏิทินของลูกค้า */
+    origin: text(),
   },
   (t) => [uniqueIndex('holidays_calendar_date_key').on(t.calendarId, t.date)],
 );

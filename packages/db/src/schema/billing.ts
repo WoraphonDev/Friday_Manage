@@ -47,12 +47,14 @@ export const invoices = pgTable('invoices', {
   whtAmount: bigint({ mode: 'number' }).notNull().default(0), amountDue: bigint({ mode: 'number' }).notNull(),
   /** ส่วนลดคูปองที่หักจากราคาแพ็กเกจแล้ว (O20) · subtotal = ราคาหลังหักส่วนลด ก่อน VAT */
   discount: bigint({ mode: 'number' }).notNull().default(0),
+  /** เครดิตของ Workspace ที่ใช้ชำระใบนี้ (รอบ 4 · R) · ไม่ใช่ส่วนลด: subtotal / VAT ไม่เปลี่ยน · amount_due หักส่วนนี้แล้ว */
+  creditApplied: bigint({ mode: 'number' }).notNull().default(0),
   poNumber: text(), status: invoiceStatus().notNull().default('open'), dueDate: date().notNull(), paidAt: tstz(),
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [tenantKey('invoices', t), tenantFk('invoices_subscription_fk', t.workspaceId, t.subscriptionId, subscriptions),
   index('invoices_workspace_status_idx').on(t.workspaceId, t.status), check('invoices_dates', sql`${t.periodEnd} >= ${t.periodStart}`),
   check('invoices_amounts_nonnegative', sql`${t.subtotal} >= 0 AND ${t.vat} >= 0 AND ${t.total} >= 0 AND ${t.whtAmount} >= 0 AND ${t.amountDue} >= 0`),
-  check('invoices_discount_nonnegative', sql`${t.discount} >= 0`)]);
+  check('invoices_discount_nonnegative', sql`${t.discount} >= 0`), check('invoices_credit_applied_nonnegative', sql`${t.creditApplied} >= 0`)]);
 
 export const payments = pgTable('payments', {
   id: pk(), workspaceId: workspaceId(), invoiceId: uuid().notNull(), method: paymentMethod().notNull(),
@@ -98,20 +100,46 @@ export const quotations = pgTable('quotations', {
   validUntil: date().notNull(), createdBy: uuid().references(() => users.id), createdAt: createdAt(),
 }, (t) => [tenantKey('quotations', t), index('quotations_workspace_idx').on(t.workspaceId)]);
 
+/**
+ * 50 ทวิ ของใบแจ้งหนี้ · status: pending_review | confirmed | rejected | pending_ewht | uncollected
+ * source: upload = ลูกค้าอัปโหลดไฟล์ · ewht = ลูกค้าแจ้งว่าหักผ่าน e-Withholding Tax (ไม่มีไฟล์) · ops = ทีมบันทึก (เช่น ปิดว่าไม่ได้รับ)
+ */
 export const whtCertificates = pgTable('wht_certificates', {
-  id: pk(), workspaceId: workspaceId(), invoiceId: uuid().notNull(), fileKey: text().notNull(),
-  uploadedBy: uuid().notNull().references(() => users.id), status: text().notNull().default('pending_review'),
-  reviewedBy: uuid().references(() => staffUsers.id), createdAt: createdAt(), updatedAt: updatedAt(),
-}, (t) => [tenantFk('wht_certificates_invoice_fk', t.workspaceId, t.invoiceId, invoices), index('wht_certificates_invoice_idx').on(t.invoiceId)]);
+  id: pk(), workspaceId: workspaceId(), invoiceId: uuid().notNull(), fileKey: text(),
+  uploadedBy: uuid().references(() => users.id), status: text().notNull().default('pending_review'),
+  reviewedBy: uuid().references(() => staffUsers.id),
+  source: text().notNull().default('upload'),
+  /** สาเหตุที่ไม่ผ่าน (ลูกค้าเห็น) หรือเหตุผลที่ปิดว่าไม่ได้รับ */
+  rejectReason: text(),
+  /** เลขอ้างอิง e-WHT ที่ลูกค้าแจ้ง / ที่ได้จากไฟล์สรรพากร */
+  ewhtRef: text(), decidedAt: tstz(),
+  createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [tenantFk('wht_certificates_invoice_fk', t.workspaceId, t.invoiceId, invoices), index('wht_certificates_invoice_idx').on(t.invoiceId),
+  check('wht_certificates_source_valid', sql`${t.source} IN ('upload', 'ewht', 'ops')`),
+  check('wht_certificates_file_when_upload', sql`${t.source} <> 'upload' OR ${t.fileKey} IS NOT NULL`)]);
 
 export const legalDocuments = pgTable('legal_documents', {
   id: pk(), docType: text().notNull(), version: text().notNull(), effectiveAt: tstz().notNull(),
   summary: text().notNull(), body: text().notNull(), locale: text().notNull().default('th'),
   /** true = เปลี่ยนสาระสำคัญ ผู้ใช้ต้องกดยอมรับใหม่ · false = แจ้งให้ทราบ (แบนเนอร์) อย่างเดียว (O05) */
   requiresAcceptance: boolean().notNull().default(true),
+  /** แจ้งลูกค้าทางอีเมล (รอบ 4 · H14) · null = ไม่ส่ง · all = ผู้ใช้ทุกคนที่ใช้งานอยู่ · admins = Owner และ Admin */
+  notifyAudience: text(), notifyAt: tstz(), remindAt: tstz(), notifiedAt: tstz(), remindedAt: tstz(),
+  /** แสดงแบนเนอร์ในแอปตั้งแต่เผยแพร่ถึงวันที่มีผล */
+  notifyBanner: boolean().notNull().default(true),
   /** พนักงานที่สร้างเวอร์ชัน · null = seed / ก่อนมีหลังบ้าน */
   createdByStaff: uuid(), createdAt: createdAt(),
-}, (t) => [uniqueIndex('legal_documents_version_key').on(t.docType, t.version, t.locale)]);
+}, (t) => [uniqueIndex('legal_documents_version_key').on(t.docType, t.version, t.locale),
+  check('legal_documents_notify_audience_valid', sql`${t.notifyAudience} IS NULL OR ${t.notifyAudience} IN ('all', 'admins')`)]);
+
+/** อีเมลแจ้งเอกสารกฎหมายฉบับใหม่ทีละผู้ใช้ (รอบ 4 · H15) · กันส่งซ้ำและนับส่งแล้ว / ตีกลับ */
+export const legalNotices = pgTable('legal_notices', {
+  id: pk(), documentId: uuid().notNull().references(() => legalDocuments.id, { onDelete: 'cascade' }),
+  userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }), email: text().notNull(),
+  kind: text().notNull(), status: text().notNull(), error: text(), sentAt: createdAt(),
+}, (t) => [unique('legal_notices_once_key').on(t.documentId, t.userId, t.kind),
+  check('legal_notices_kind_valid', sql`${t.kind} IN ('notice', 'reminder')`),
+  check('legal_notices_status_valid', sql`${t.status} IN ('sent', 'failed', 'suppressed')`)]);
 
 export const legalAcceptances = pgTable('legal_acceptances', {
   id: pk(), userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),

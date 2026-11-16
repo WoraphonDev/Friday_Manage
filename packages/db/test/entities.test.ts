@@ -13,7 +13,9 @@ const uncountable = new Set(['onboarding_progress', 'help_feedback']);
 const plural = (name: string) => uncountable.has(name) ? name : /[^aeiou]y$/.test(name) ? `${name.slice(0, -1)}ies` : /(?:s|x|ch|sh)$/.test(name) ? `${name}es` : `${name}s`;
 const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_flag_overrides', 'announcements', 'entitlement_versions', 'entitlement_overrides', 'email_suppressions', 'email_feedback_events', 'support_settings', 'support_rules', 'support_agents', 'support_account_managers', 'support_canned_replies', 'staff_push_subscriptions', 'staff_push_notices', 'plan_price_versions', 'coupons',
   'changelog_stats', 'onboarding_followups', 'help_article_versions', 'help_search_stats', 'help_search_misses', 'help_article_tickets',
-  'dev_issue_links', 'dev_issue_tickets', 'dev_bridge_settings'];
+  'dev_issue_links', 'dev_issue_tickets', 'dev_bridge_settings',
+  // รอบ 4 (งานค้าง Friday Ops · 0044)
+  'ops_settings', 'legal_holds', 'system_alerts', 'legal_notices', 'etax_jobs', 'wht_requests'];
 
 beforeAll(() => owner.connect());
 afterAll(() => owner.end());

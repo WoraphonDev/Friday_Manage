@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, Copy, FileText, Upload } from "lucide-react";
+import { Check, Copy, FileText, Upload } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
@@ -79,10 +79,7 @@ export function InvoicePay({ ws, id, replace = false }: { ws: string; id: string
 
   return (
     <div className={styles.page}>
-      <Link className={styles.back} href={`${home}/billing`}>
-        <ArrowLeft size={14} aria-hidden="true" />
-        {t("back")}
-      </Link>
+      {/* ปุ่มย้อนกลับมาจากกรอบหน้า (workspace shell) จึงไม่ทำซ้ำ */}
       <div className={styles.head}>
         <div className={styles.headText}>
           <h1>

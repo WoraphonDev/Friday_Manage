@@ -1,7 +1,5 @@
 /* หน้าชำระใบแจ้งหนี้ (W22b · storyboard 16 พ.ย. 2026) · สีจาก token เท่านั้น */
 .page { width:100%; max-width:1040px; margin:0 auto; padding:22px 24px 48px; display:flex; flex-direction:column; gap:16px; }
-.back { align-self:flex-start; display:inline-flex; align-items:center; gap:6px; font-size:var(--text-label); color:var(--muted); text-decoration:none; }
-.back:hover { color:var(--foreground); }
 .head { display:flex; justify-content:space-between; align-items:flex-end; gap:12px 24px; flex-wrap:wrap; }
 .headText { min-width:0; }
 .head h1 { margin:0; font-size:22px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
@@ -18,8 +16,8 @@
 .pillInfo { background:var(--primary-soft); color:var(--primary-text); }
 
 .card { background:var(--card); border:1px solid var(--border); border-radius:12px; }
-/* ① กับ ② เรียงซ้าย-ขวา · แคบแล้วเรียงลงมาเอง */
-.steps { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px; align-items:start; }
+/* ① กับ ② เรียงซ้าย-ขวา · มือถือเรียงลงมา */
+.steps { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px; align-items:start; }
 .step { padding:18px; display:flex; flex-direction:column; gap:14px; min-width:0; }
 .stepHead { display:flex; align-items:center; gap:10px; }
 .stepHead h2 { margin:0; font-size:15px; }

@@ -189,7 +189,6 @@
     "kept": "ขอบคุณที่ใช้ Friday ต่อ"
   },
   "invoicePay": {
-    "back": "แพ็กเกจ & Billing",
     "title": "ชำระใบแจ้งหนี้ {number}",
     "planLine": "{plan} · {cycle} · ครบกำหนด {date}",
     "dueLine": "ครบกำหนด {date}",

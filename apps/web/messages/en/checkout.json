@@ -189,7 +189,6 @@
     "kept": "Thanks for staying with Friday"
   },
   "invoicePay": {
-    "back": "Plan & Billing",
     "title": "Pay invoice {number}",
     "planLine": "{plan} · {cycle} · due {date}",
     "dueLine": "Due {date}",

@@ -63,7 +63,6 @@ describe("หน้าชำระใบแจ้งหนี้ (W22b)", () => 
     expect(within(bank).getByRole("button", { name: "คัดลอก เลขอ้างอิง" })).toBeInTheDocument();
     expect(within(bank).getByRole("button", { name: "คัดลอก เลขที่บัญชี" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "ดาวน์โหลดใบแจ้งหนี้ FRI-2611-0001 (PDF)" })).toHaveAttribute("href", `/api/v1/w/sample/billing/invoices/${INV}.pdf`);
-    expect(screen.getByRole("link", { name: "แพ็กเกจ & Billing" })).toHaveAttribute("href", "/work/sample/billing");
 
     const slip = screen.getByRole("region", { name: "โอนแล้ว? แนบสลิป" });
     const send = within(slip).getByRole("button", { name: "ส่งสลิป" });

@@ -9,6 +9,7 @@ import { TenantDb } from '../common/tenant.js';
 import { projectHealth } from '../overview/health.js';
 import { weekOf } from '../overview/workload.js';
 import { addDays } from '../projects/calendar.js';
+import { dueReport, type DueQuery } from './due-report.js';
 import { InsightsService, WEEKS_BACK } from './insights.service.js';
 import { isOpen, type Item, loadPlan, round1 } from './plan-data.js';
 
@@ -23,7 +24,7 @@ export const TraceQuery = z.object({
 const startOf = (date: string) => new Date(`${date}T00:00:00+07:00`);
 const inWeek = (d: Date | null, start: string, end: string) => !!d && d >= startOf(start) && d < startOf(addDays(end, 1));
 
-/** O2 · Reports: รายงานประจำสัปดาห์, พยากรณ์ Module, Traceability */
+/** O2 · Reports: รายงานประจำสัปดาห์, พยากรณ์ Module, งานที่จะเสร็จ, Traceability */
 @Injectable()
 export class ReportsService {
   constructor(
@@ -39,6 +40,8 @@ export class ReportsService {
     const week = weekOf(q.week ?? now);
     const next = weekOf(addDays(week.end, 1));
     return this.db.run(auth, tenant, async (tx) => {
+      // ใช้ project.view ไม่ใช่ project.reports.view เพราะการ์ด "เริ่มสัปดาห์นี้ / หน้า" ใน Overview อ่านตัวเลขจากรายงานนี้
+      // (Role ที่ปิดหน้า Reports ยังเห็นการ์ดนั้น) · หน้ารายงานประจำสัปดาห์ซ่อนตาม project.reports.view ที่หน้าเว็บ
       const project = await this.insights.guard(tx, auth, tenant, key, 'project.view');
       const plan = await loadPlan(tx, project);
       const asOf = week.end < now ? week.end : now;
@@ -133,7 +136,7 @@ export class ReportsService {
   async moduleForecast(auth: AuthInfo, tenant: TenantInfo, key: string, q: z.infer<typeof ForecastQuery>) {
     const now = today();
     return this.db.run(auth, tenant, async (tx) => {
-      const project = await this.insights.guard(tx, auth, tenant, key, 'project.view');
+      const project = await this.insights.guard(tx, auth, tenant, key, 'project.reports.view');
       const plan = await loadPlan(tx, project);
       const base = await this.insights.moduleStats(tx, project, plan, now);
       return {
@@ -145,11 +148,22 @@ export class ReportsService {
   }
 
   // ---------------------------------------------------------------------------
+  // GET p/reports/due?from=&to=&modules=&ba=&sa=&dev=
+  // ---------------------------------------------------------------------------
+  async due(auth: AuthInfo, tenant: TenantInfo, key: string, q: DueQuery) {
+    return this.db.run(auth, tenant, async (tx) => {
+      const project = await this.insights.guard(tx, auth, tenant, key, 'project.reports.due');
+      const plan = await loadPlan(tx, project);
+      return dueReport(tx, project, plan, q, today());
+    });
+  }
+
+  // ---------------------------------------------------------------------------
   // GET p/reports/traceability
   // ---------------------------------------------------------------------------
   async traceability(auth: AuthInfo, tenant: TenantInfo, key: string, q: z.infer<typeof TraceQuery>) {
     return this.db.run(auth, tenant, async (tx) => {
-      const project = await this.insights.guard(tx, auth, tenant, key, 'project.view');
+      const project = await this.insights.guard(tx, auth, tenant, key, 'project.reports.view');
       const plan = await loadPlan(tx, project);
       const byId = new Map(plan.items.map((i) => [i.id, i]));
       const runs = plan.items.length

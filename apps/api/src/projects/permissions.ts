@@ -6,9 +6,13 @@ import type { ProjectRole } from '../common/types.js';
 
 const { projectMembers, projectRolePermissions, projects, workspaceMembers } = schema;
 
-/** 10 แถวในหน้า L2 › สิทธิ์ของแต่ละ Role (docs/spec/04-permissions.md ข้อ 3.1) · ค่า = Member, Viewer */
+/** แถวในหน้า L2 › สิทธิ์ของแต่ละ Role (docs/spec/04-permissions.md ข้อ 3.1) · ค่า = Member, Viewer */
 export const L2_PERMISSIONS = {
   'project.view': [true, true],
+  // ผู้ใช้ขอ 2026-11-17: Admin เลือกได้ว่า Role ไหนเห็นหน้า Reports และรายงานงานที่จะเสร็จ (ปุ่มใน Overview) แยกกัน
+  // ค่าเริ่มต้นเปิดทั้งคู่ เท่ากับตอนที่ project.reports.view ยังตายตัวตาม Role
+  'project.reports.view': [true, true],
+  'project.reports.due': [true, true],
   'issue.comment': [true, true],
   'issue.create': [true, false],
   'issue.edit': [true, false],
@@ -30,9 +34,9 @@ export const L2_GROUPS: Record<string, (keyof typeof L2_PERMISSIONS)[]> = {
 
 /** ข้อ 3.2: ตายตัวตาม Role */
 const FIXED: Record<ProjectRole, string[]> = {
-  admin: ['project.workload.view', 'project.reports.view', 'issue.record_test', 'issue.time_log', 'project.baseline', 'project.automation', 'project.views.share', 'project.trash', 'project.archive'],
-  member: ['project.workload.view', 'project.reports.view', 'issue.record_test', 'issue.time_log'],
-  viewer: ['project.workload.view', 'project.reports.view'],
+  admin: ['project.workload.view', 'issue.record_test', 'issue.time_log', 'project.baseline', 'project.automation', 'project.views.share', 'project.trash', 'project.archive'],
+  member: ['project.workload.view', 'issue.record_test', 'issue.time_log'],
+  viewer: ['project.workload.view'],
 };
 
 export interface ProjectRef {
@@ -44,7 +48,7 @@ export interface ProjectRef {
 }
 
 /** สิทธิ์ที่ยังเหลือเมื่อโปรเจกต์ถูก Archive (04-permissions ข้อ 5 › 8) · project.archive ไว้กด Restore */
-const ARCHIVED_KEEP = new Set(['project.view', 'project.workload.view', 'project.reports.view', 'project.archive']);
+const ARCHIVED_KEEP = new Set(['project.view', 'project.workload.view', 'project.reports.view', 'project.reports.due', 'project.archive']);
 
 export interface ProjectAccess {
   /** ผู้ใช้ที่คำนวณสิทธิ์นี้ · ใช้ตรวจกติกาความเป็นเจ้าของ เช่น ย้ายการ์ดได้เฉพาะงานของตัวเอง */
@@ -91,7 +95,7 @@ export async function projectAccess(tx: Tx, auth: AuthInfo, tenant: TenantInfo, 
   const guestViewer = isGuest && role === 'viewer';
   if (isGuest) {
     perms.delete('project.invite');
-    if (guestViewer) ['project.workload.view', 'project.reports.view'].forEach((p) => perms.delete(p));
+    if (guestViewer) ['project.workload.view', 'project.reports.view', 'project.reports.due'].forEach((p) => perms.delete(p));
   }
 
   // ข้อ 8: Archive แล้วเหลือสิทธิ์อ่านอย่างเดียว · ตัดที่นี่ที่เดียว ทุก endpoint ที่ใช้ requirePerm จึงได้กติกานี้

@@ -9,11 +9,14 @@ import { errorText } from "./types";
 import styles from "./settings.module.css";
 
 /**
- * 10 แถวของ L2 › สิทธิ์ของแต่ละ Role · ค่า = [Member, Viewer] ตามค่าเริ่มต้นของ API (projects/permissions.ts › L2_PERMISSIONS)
+ * แถวของ L2 › สิทธิ์ของแต่ละ Role · ค่า = [Member, Viewer] ตามค่าเริ่มต้นของ API (projects/permissions.ts › L2_PERMISSIONS)
  * แถวที่คุม 2 สิทธิ์ (สร้าง/แก้งาน, อัปโหลด/ลบไฟล์) ส่งชื่อแรก API เปิดปิดทั้งคู่ให้
  */
 export const PERMISSION_ROWS = [
   ["project.view", true, true],
+  // ผู้ใช้ขอ 2026-11-17: แยกหน้า Reports กับรายงานงานที่จะเสร็จ (ปุ่มใน Overview)
+  ["project.reports.view", true, true],
+  ["project.reports.due", true, true],
   ["issue.comment", true, true],
   ["issue.create", true, false],
   ["issue.delete", false, false],

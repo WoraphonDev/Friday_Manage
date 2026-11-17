@@ -29,7 +29,8 @@ import { statusColorStyle, statusTone, useStatusColors, type StatusTone } from '
 /** API ขอเหตุผลการแก้แผน: ไม่ใช่ error ที่ต้องแสดง แต่เปิดกล่องให้กรอกเหตุผลแล้วบันทึกซ้ำ */
 class NeedsPlanReason extends Error {}
 
-export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: Scope; issue: Issue; siblings?: Issue[]; onDeleted: (parentKey: string | null) => void }) {
+/** onClose: วางแผงนอก Drawer (เช่น popup รายงานงานที่จะเสร็จ) ปุ่มปิดเรียกฟังก์ชันนี้แทนการปิด Drawer */
+export function IssuePanel({ scope, issue, siblings = [], onDeleted, onClose }: { scope: Scope; issue: Issue; siblings?: Issue[]; onDeleted: (parentKey: string | null) => void; onClose?: () => void }) {
   const t = useTranslations('issue-drawer');
   const mobile = useIsMobile() && !!issue.parentKey && !scope.access.guestViewer;
   const [mobileTab, setMobileTab] = useState<'details' | 'tests' | 'commits' | 'comments'>('details');
@@ -195,7 +196,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted }: { scope: 
             {canDelete && <Popover.Close asChild><button className="menu-item" style={{ color: 'var(--danger-text)' }} aria-label={t('deleteIssue')} disabled={disabled} onClick={() => setDeleteOpen(true)}><Trash2 size={15} />{t('deleteIssue')}</button></Popover.Close>}
           </Popover.Content></Popover.Portal>
         </Popover.Root>}
-        <DrawerClose asChild><Button size="icon" variant="ghost" aria-label={t('close')}><X size={18} /></Button></DrawerClose>
+        {onClose ? <Button size="icon" variant="ghost" aria-label={t('close')} onClick={onClose}><X size={18} /></Button> : <DrawerClose asChild><Button size="icon" variant="ghost" aria-label={t('close')}><X size={18} /></Button></DrawerClose>}
       </div>
     </div>
 

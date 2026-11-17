@@ -293,8 +293,8 @@ describe('Archive / Restore', () => {
     expect((await team.lead.post(p('ARC', '/archive'))).body.error.code).toBe('already_archived');
 
     const perms = (await team.dev.get(p('ARC', '/my-permissions'))).body.permissions;
-    expect(perms).toEqual(['project.reports.view', 'project.view', 'project.workload.view']);
-    expect((await team.lead.get(p('ARC', '/my-permissions'))).body.permissions).toEqual(['project.archive', 'project.reports.view', 'project.view', 'project.workload.view']);
+    expect(perms).toEqual(['project.reports.due', 'project.reports.view', 'project.view', 'project.workload.view']);
+    expect((await team.lead.get(p('ARC', '/my-permissions'))).body.permissions).toEqual(['project.archive', 'project.reports.due', 'project.reports.view', 'project.view', 'project.workload.view']);
     expect((await team.dev.get(p('ARC', '/board'))).status).toBe(200);
     expect((await team.lead.get(`${team.ws}/issues/${issue.key}`)).status).toBe(200);
 

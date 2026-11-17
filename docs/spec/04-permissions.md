@@ -37,11 +37,13 @@
 
 ### 3.1 ตารางที่ปรับได้รายโปรเจกต์ (หน้า L2)
 
-10 แถวตามหน้าจอ · คอลัมน์ Admin เปิดทุกอย่างเสมอ (ปิดไม่ได้) · Member และ Viewer เปิดปิดได้ทุกแถว · ค่าที่ต่างจากค่าเริ่มต้นเก็บใน `project_role_permission`
+12 แถว (10 แถวตามหน้าจอ + 2 แถวรายงานที่ผู้ใช้เพิ่ม 2026-11-17) · คอลัมน์ Admin เปิดทุกอย่างเสมอ (ปิดไม่ได้) · Member และ Viewer เปิดปิดได้ทุกแถว · ค่าที่ต่างจากค่าเริ่มต้นเก็บใน `project_role_permission`
 
 | แถวในหน้า L2 | สิทธิ์ | Admin | Member | Viewer |
 |---|---|:-:|:-:|:-:|
 | ดูทุก tab และงาน | `project.view` | ✓ | ✓ | ✓ |
+| ดูหน้า Reports (Weekly, Plan vs Actual, Traceability) | `project.reports.view` | ✓ | ✓ | ✓ |
+| ดูรายงานงานที่จะเสร็จ (ปุ่มในหน้า Overview และเมนูใน Reports) | `project.reports.due` | ✓ | ✓ | ✓ |
 | คอมเมนต์ | `issue.comment` | ✓ | ✓ | ✓ |
 | สร้างและแก้ไขงาน | `issue.create` + `issue.edit` | ✓ | ✓ | — |
 | ลบงาน | `issue.delete` | ✓ | — | — |
@@ -54,6 +56,8 @@
 
 ✓ = ค่าเริ่มต้นเปิด · — = ค่าเริ่มต้นปิด · การเปิดปิดทุกช่องบันทึกใน Audit log (หมวด perm)
 
+สองแถวรายงาน: Guest ที่เป็นลูกค้า (Viewer) ไม่ได้ทั้งคู่แม้เปิดไว้ · ปิด `project.reports.view` แล้ว API `reports/module-forecast` และ `reports/traceability` ตอบ 403 แต่ `reports/weekly` ยังอ่านได้ด้วย `project.view` เพราะการ์ด "เริ่มสัปดาห์นี้ / หน้า" ใน Overview ใช้ตัวเลขจากรายงานนี้ · การแก้ไขแผนใช้ `project.baseline` (Admin) ตามเดิม
+
 กติกาการเปลี่ยน Due ละเอียดอยู่ที่ [03-api.md › กติกาการเปลี่ยน Due](03-api.md#กติกาการเปลี่ยน-due)
 
 ### 3.2 สิทธิ์ที่ตายตัวตาม Role (ไม่อยู่ในหน้า L2)
@@ -61,7 +65,6 @@
 | สิทธิ์ | ทำอะไรได้ | Admin | Member | Viewer |
 |---|---|:-:|:-:|:-:|
 | `project.workload.view` | Workload, Lead Dashboard, Risk | ✓ | ✓ | ✓ (ยกเว้น Guest) |
-| `project.reports.view` | Reports, Traceability, การแก้ไขแผน | ✓ | ✓ | ✓ (ยกเว้น Guest) |
 | `issue.record_test` | บันทึกผลทดสอบ | ✓ | ✓ | — |
 | `issue.time_log` | บันทึกเวลา (เมื่อโปรเจกต์เปิด Time log) | ✓ | ✓ | — |
 | `due_request.create` | ขอเลื่อน Due | ✓ | ✓ เมื่อมี `issue.edit` แต่ไม่มี `issue.change_due_directly` | — |

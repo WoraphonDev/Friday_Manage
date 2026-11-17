@@ -2,6 +2,7 @@ import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { Auth, type AuthInfo, Tenant, type TenantInfo } from '../common/request.js';
 import { TenantGuard } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
+import { DueQuery } from './due-report.js';
 import { InsightsService } from './insights.service.js';
 import { ForecastQuery, ReportsService, TraceQuery, WeeklyQuery } from './reports.service.js';
 
@@ -32,6 +33,12 @@ export class ReportsController {
   @Get('reports/module-forecast')
   moduleForecast(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Query() query: unknown) {
     return this.reports.moduleForecast(auth, tenant, key, parse(ForecastQuery, query));
+  }
+
+  /** งานที่จะเสร็จ: งานและแผน Module › Phase ที่ Plan End อยู่ในช่วง กรองตาม Module / BA / SA / DEV */
+  @Get('reports/due')
+  due(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Query() query: unknown) {
+    return this.reports.due(auth, tenant, key, parse(DueQuery, query));
   }
 
   @Get('reports/traceability')

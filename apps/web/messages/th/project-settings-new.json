@@ -279,6 +279,10 @@
       },
       "rows": {
         "project__view": "ดูทุก tab และงาน",
+        "project__reports": {
+          "view": "ดูหน้า Reports (Weekly, Plan vs Actual, Traceability)",
+          "due": "ดูรายงานงานที่จะเสร็จ (ปุ่มในหน้า Overview)"
+        },
         "issue__comment": "คอมเมนต์",
         "issue__create": "สร้างและแก้ไขงาน",
         "issue__delete": "ลบงาน",

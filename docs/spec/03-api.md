@@ -132,7 +132,7 @@ API ตอบทันทีแล้วส่งงานเข้าคิว�
 | L2 · Project Settings | **`GET projects/{key}/settings`** (ทุกแท็บในครั้งเดียว) | แต่ละแท็บมี `PATCH`/`POST` ของตัวเอง (ดูหมวด 3.5) · Danger zone: `:archive`, `:transfer`, `DELETE` |
 | L3 · Import Excel | `POST import-jobs` (อัปโหลด) → **`GET import-jobs/{id}`** (คอลัมน์, ตัวอย่าง, ผลตรวจ) | `PATCH import-jobs/{id}` (จับคู่คอลัมน์ / คน) · `POST import-jobs/{id}:commit` · แท็บการแก้ไขแผน `GET projects/{key}/plan-changes` |
 | O1 · Lead Dashboard | **`GET projects/{key}/insights/risks`** + `GET projects/{key}/workload?group=week` + `GET projects/{key}/insights/modules` | — |
-| O2 · Reports | **`GET projects/{key}/reports/weekly?week=`** + `GET .../reports/module-forecast` + `GET .../reports/traceability` | `POST reports/weekly:send` · `PUT report-schedule` |
+| O2 · Reports | **`GET projects/{key}/reports/weekly?week=`** + `GET .../reports/module-forecast` + `GET .../reports/due?from=&to=` + `GET .../reports/traceability` | `POST reports/weekly:send` · `PUT report-schedule` |
 | P2 · Automation | **`GET projects/{key}/automations`** + `GET automation-templates` | `POST`/`PATCH` · `POST automations/{id}:dry-run` · `GET automations/runs` |
 
 ### หน้างาน
@@ -489,7 +489,9 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET | `w/search` | สมาชิก | ค้นชื่อ, รายละเอียด, คอมเมนต์, ข้อความในไฟล์ · กรองตามสิทธิ์ก่อนตอบ · `#DP-39` และ `@ชื่อ` |
 | CRUD | `w/saved-searches` | self | |
 | GET | `p/insights/risks` · `p/insights/modules` | `project.workload.view` | O1 |
-| GET | `p/reports/weekly` · `module-forecast` · `traceability` | `project.view` (ไม่ใช่ Guest) | |
+| GET | `p/reports/weekly` | `project.view` (ไม่ใช่ Guest) | การ์ดใน Overview ใช้ตัวเลขจากรายงานนี้ |
+| GET | `p/reports/module-forecast` · `traceability` | `project.reports.view` (ไม่ใช่ Guest) | |
+| GET | `p/reports/due` | `project.reports.due` (ไม่ใช่ Guest) | |
 | POST | `p/reports/weekly:send` · GET / PUT `p/report-schedule` | Admin | |
 | CRUD | `p/automations` | `project.settings` | |
 | POST | `p/automations/{id}:dry-run` | `project.settings` | คืนรายการงานที่ตรงเงื่อนไขและสิ่งที่จะทำ โดยไม่บันทึก |
@@ -574,6 +576,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET | `p/issue-types` · `p/workflows` | รายการสำหรับหน้า Settings (L2) |
 | GET | `p/plan-changes.xlsx` | Export การแก้แผนพร้อมไฮไลต์ |
 | GET | `p/reports/module-forecast` · `p/reports/traceability` | คาดการณ์วันจบราย Module · ตาราง FR / Screen → งาน (A09) |
+| GET | `p/reports/due?from=&to=&modules=&ba=&sa=&dev=` | งานที่จะเสร็จ (ผู้ใช้ขอ 2026-11-17): `tasks` = งานระดับล่างสุดที่ Plan End อยู่ในช่วง (สถานะ done / late / at_risk / on_track) · `plans` = กลุ่ม Module › Phase ที่ Plan End ของงานสุดท้ายในกลุ่มอยู่ในช่วง พร้อมคาดวันจบจากความเร็วจริงของ Module 28 วัน · ตัวกรองคั่นด้วย `,` (`modules=none` = ไม่มี Module) · `options` = ตัวเลือกตัวกรองจากงานทั้งโปรเจกต์ · ช่วงไม่เกิน 366 วัน |
 | POST | `p/files/{id}:restore` | กู้ไฟล์จากถังขยะ |
 | GET | `i/watchers` | รายชื่อผู้ติดตาม (คู่กับ `i/:watch`) |
 | PATCH · DELETE | `i/comments/{id}` · DELETE `i/time-logs/{id}` | แก้ / ลบรายการของตัวเอง |

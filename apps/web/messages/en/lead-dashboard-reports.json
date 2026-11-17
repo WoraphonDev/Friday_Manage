@@ -99,7 +99,8 @@
     "kind": {
       "weekly": "Weekly report",
       "pva": "Plan vs Actual by Module",
-      "trace": "Requirement Traceability"
+      "trace": "Requirement Traceability",
+      "due": "Due report"
     }
   },
   "weekday": {
@@ -218,5 +219,104 @@
     "showAll": "Show all"
   },
   "planTitle": "Whole-project plan",
-  "planSubtitle": "Is the plan feasible, risks, and workload in the weeks ahead"
+  "planSubtitle": "Is the plan feasible, risks, and workload in the weeks ahead",
+  "due": {
+    "viewLabel": "View",
+    "view": {
+      "task": "Tasks due",
+      "plan": "Plans due"
+    },
+    "module": "Module",
+    "ba": "BA",
+    "sa": "SA",
+    "dev": "DEV",
+    "noModule": "No module",
+    "clearFilters": "Clear filters",
+    "searchIn": "Search {name}",
+    "noOptions": "No options",
+    "clear": "Clear",
+    "selectAll": "Select all",
+    "rangeLabel": "Plan End range {range}",
+    "rangeTitle": "Plan End range",
+    "preset": {
+      "today": "Today",
+      "thisWeek": "This week",
+      "nextWeek": "Next week",
+      "twoWeeks": "2 weeks",
+      "thisMonth": "This month",
+      "nextMonth": "Next month"
+    },
+    "from": "From",
+    "to": "To",
+    "rangeInvalid": "Start date must not be after end date",
+    "cancel": "Cancel",
+    "apply": "Apply",
+    "export": "Export to Excel",
+    "stat": {
+      "tasks": "Tasks due",
+      "md": "Total man-days",
+      "done": "Done",
+      "atRisk": "At risk",
+      "lateNote": "{count} already overdue",
+      "plans": "Plans due",
+      "progress": "Overall progress",
+      "slip": "Expected to slip"
+    },
+    "unit": {
+      "tasks": "tasks",
+      "groups": "plans"
+    },
+    "emptyTitle": "No tasks with a Plan End in this range",
+    "emptyDescription": "Try a wider date range or clear the filters",
+    "emptyPlanTitle": "No plans end in this range",
+    "emptyPlanDescription": "A plan (Module › Phase) shows when the Plan End of its last task falls in the selected range",
+    "planNote": "Plan end = Plan End of the last task in the group · Forecast = remaining man-days of module tasks due on or before this group ÷ the module's actual velocity over the last {days} days · counted in working days",
+    "dayTotal": "{count} tasks · {md} MD",
+    "subOf": "Sub-task of {key}",
+    "state": {
+      "done": "Done",
+      "late": "Overdue",
+      "at_risk": "At risk",
+      "on_track": "On track"
+    },
+    "plan": {
+      "done": "Done",
+      "late": "Past plan end",
+      "onTrack": "On track",
+      "slip": "{days} working days late",
+      "reason": {
+        "no_estimate": "No man-days",
+        "no_velocity": "No forecast yet"
+      }
+    },
+    "col": {
+      "key": "Key",
+      "task": "Task",
+      "parent": "Parent",
+      "phase": "Phase",
+      "planStart": "Plan Start",
+      "planEnd": "Plan End",
+      "progress": "Progress",
+      "status": "Status",
+      "state": "Risk",
+      "plan": "Module › Phase",
+      "tasks": "Tasks (done / total)",
+      "md": "MD (done / plan)",
+      "forecast": "Forecast",
+      "diff": "Vs plan",
+      "doneTasks": "Done tasks",
+      "allTasks": "All tasks",
+      "doneMd": "Done MD",
+      "planMd": "Planned MD",
+      "slipDays": "Slip (working days)"
+    },
+    "popup": {
+      "open": "Due report",
+      "title": "Due report",
+      "close": "Close",
+      "back": "Back to list",
+      "openFull": "Open full view",
+      "listLabel": "Due tasks"
+    }
+  }
 }

@@ -9,6 +9,7 @@ import { TenantDb } from '../common/tenant.js';
 import { projectHealth } from '../overview/health.js';
 import { weekOf } from '../overview/workload.js';
 import { addDays } from '../projects/calendar.js';
+import { dueReport, type DueQuery } from './due-report.js';
 import { InsightsService, WEEKS_BACK } from './insights.service.js';
 import { isOpen, type Item, loadPlan, round1 } from './plan-data.js';
 
@@ -23,7 +24,7 @@ export const TraceQuery = z.object({
 const startOf = (date: string) => new Date(`${date}T00:00:00+07:00`);
 const inWeek = (d: Date | null, start: string, end: string) => !!d && d >= startOf(start) && d < startOf(addDays(end, 1));
 
-/** O2 · Reports: รายงานประจำสัปดาห์, พยากรณ์ Module, Traceability */
+/** O2 · Reports: รายงานประจำสัปดาห์, พยากรณ์ Module, งานที่จะเสร็จ, Traceability */
 @Injectable()
 export class ReportsService {
   constructor(
@@ -141,6 +142,17 @@ export class ReportsService {
         weekly: this.insights.weeklySeries(plan, now, q.weeks),
         modules: base.modules.map((m) => ({ ...m, weekly: this.insights.weeklySeries(plan, now, q.weeks, m.id) })),
       };
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // GET p/reports/due?from=&to=&modules=&ba=&sa=&dev=
+  // ---------------------------------------------------------------------------
+  async due(auth: AuthInfo, tenant: TenantInfo, key: string, q: DueQuery) {
+    return this.db.run(auth, tenant, async (tx) => {
+      const project = await this.insights.guard(tx, auth, tenant, key, 'project.reports.view');
+      const plan = await loadPlan(tx, project);
+      return dueReport(tx, project, plan, q, today());
     });
   }
 

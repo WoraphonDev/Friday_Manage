@@ -99,7 +99,8 @@
     "kind": {
       "weekly": "รายงานประจำสัปดาห์",
       "pva": "Plan vs Actual ราย Module",
-      "trace": "Requirement Traceability"
+      "trace": "Requirement Traceability",
+      "due": "งานที่จะเสร็จ"
     }
   },
   "weekday": {
@@ -218,5 +219,96 @@
     "showAll": "แสดงทั้งหมด"
   },
   "planTitle": "แผนทั้งโปรเจกต์",
-  "planSubtitle": "แผนไหวไหม ความเสี่ยง และ Workload สัปดาห์ข้างหน้า"
+  "planSubtitle": "แผนไหวไหม ความเสี่ยง และ Workload สัปดาห์ข้างหน้า",
+  "due": {
+    "viewLabel": "มุมมอง",
+    "view": {
+      "task": "Task ที่จะเสร็จ",
+      "plan": "Plan ที่จะเสร็จ"
+    },
+    "module": "Module",
+    "ba": "BA",
+    "sa": "SA",
+    "dev": "DEV",
+    "noModule": "ไม่ระบุ Module",
+    "clearFilters": "ล้างตัวกรอง",
+    "searchIn": "ค้นหา {name}",
+    "noOptions": "ไม่พบตัวเลือก",
+    "clear": "ล้าง",
+    "selectAll": "เลือกทั้งหมด",
+    "rangeLabel": "ช่วงวันที่ Plan End {range}",
+    "rangeTitle": "ช่วงวันที่ Plan End",
+    "preset": {
+      "today": "วันนี้",
+      "thisWeek": "สัปดาห์นี้",
+      "nextWeek": "สัปดาห์หน้า",
+      "twoWeeks": "2 สัปดาห์",
+      "thisMonth": "เดือนนี้",
+      "nextMonth": "เดือนหน้า"
+    },
+    "from": "จาก",
+    "to": "ถึง",
+    "rangeInvalid": "วันที่เริ่มต้องไม่เกินวันที่สิ้นสุด",
+    "cancel": "ยกเลิก",
+    "apply": "ใช้ช่วงนี้",
+    "export": "ส่งออก Excel",
+    "stat": {
+      "tasks": "งานที่จะเสร็จ",
+      "md": "Man-Day รวม",
+      "done": "เสร็จแล้ว",
+      "atRisk": "เสี่ยงไม่ทัน",
+      "lateNote": "เลยกำหนดแล้ว {count} งาน",
+      "plans": "แผนที่จะเสร็จ",
+      "progress": "ความคืบหน้ารวม",
+      "slip": "คาดว่าไม่ทันแผน"
+    },
+    "unit": {
+      "tasks": "งาน",
+      "groups": "แผน"
+    },
+    "emptyTitle": "ไม่มีงานที่ Plan End อยู่ในช่วงนี้",
+    "emptyDescription": "ลองขยายช่วงวันที่หรือล้างตัวกรอง",
+    "emptyPlanTitle": "ไม่มีแผนที่จบในช่วงนี้",
+    "emptyPlanDescription": "แผน (Module › Phase) จะแสดงเมื่อวันจบของงานสุดท้ายในกลุ่มอยู่ในช่วงที่เลือก",
+    "planNote": "วันจบของแผน = Plan End ของงานสุดท้ายในกลุ่ม · คาดว่าเสร็จคำนวณจาก Man-Day ที่เหลือของงานใน Module ที่ต้องเสร็จก่อนหรือพร้อมกลุ่มนี้ ÷ ความเร็วจริงของ Module ใน {days} วันล่าสุด · นับเป็นวันทำการ",
+    "dayTotal": "{count} งาน · {md} MD",
+    "subOf": "Sub-task ของ {key}",
+    "state": {
+      "done": "เสร็จแล้ว",
+      "late": "เลยกำหนด",
+      "at_risk": "เสี่ยง",
+      "on_track": "ตามแผน"
+    },
+    "plan": {
+      "done": "เสร็จแล้ว",
+      "late": "เลยวันจบแผน",
+      "onTrack": "ตามแผน",
+      "slip": "ช้า {days} วันทำการ",
+      "reason": {
+        "no_estimate": "ไม่มี Man-Day",
+        "no_velocity": "ยังคาดไม่ได้"
+      }
+    },
+    "col": {
+      "key": "รหัสงาน",
+      "task": "งาน",
+      "parent": "งานหลัก",
+      "phase": "Phase",
+      "planStart": "Plan Start",
+      "planEnd": "Plan End",
+      "progress": "ความคืบหน้า",
+      "status": "สถานะ",
+      "state": "ความเสี่ยง",
+      "plan": "Module › Phase",
+      "tasks": "งาน (เสร็จ / ทั้งหมด)",
+      "md": "MD (เสร็จ / แผน)",
+      "forecast": "คาดว่าเสร็จ",
+      "diff": "เทียบแผน",
+      "doneTasks": "งานที่เสร็จ",
+      "allTasks": "งานทั้งหมด",
+      "doneMd": "MD ที่เสร็จ",
+      "planMd": "MD ตามแผน",
+      "slipDays": "ช้ากว่าแผน (วันทำการ)"
+    }
+  }
 }

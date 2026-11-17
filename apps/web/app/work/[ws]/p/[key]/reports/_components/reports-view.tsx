@@ -11,13 +11,14 @@ import { useSlidingIndicator } from "@/lib/motion";
 import { queryKeys } from "@/lib/query";
 import type { Permissions } from "@/lib/types";
 import { projectEndpoint } from "../../dashboard/_components/types";
+import { DueReport } from "./due-report";
 import { PlanVsActual } from "./plan-vs-actual";
 import { Traceability } from "./traceability";
 import { WeeklyReportView } from "./weekly-report";
 import styles from "./reports.module.css";
 
 interface ViewProps { ws: string; projectKey: string }
-const REPORTS = ["weekly", "pva", "trace"] as const;
+const REPORTS = ["weekly", "pva", "trace", "due"] as const;
 export type ReportKind = (typeof REPORTS)[number];
 
 export function ReportsView(props: ViewProps) {
@@ -61,6 +62,7 @@ function ScopedReports({ ws, projectKey }: ViewProps) {
       <MotionSwap key={report} className={styles.swap}>
         {report === "weekly" && <WeeklyReportView {...common} canSend={perms.includes("project.settings")} />}
         {report === "pva" && <PlanVsActual {...common} />}
+        {report === "due" && <DueReport {...common} />}
         {report === "trace" && <Traceability {...common} />}
       </MotionSwap>
     </section>

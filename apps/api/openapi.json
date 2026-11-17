@@ -25255,6 +25255,127 @@
         }
       }
     },
+    "/api/v1/w/{ws}/projects/{key}/reports/due": {
+      "get": {
+        "operationId": "Reports_due",
+        "summary": "งานที่จะเสร็จ: งานและแผน Module › Phase ที่ Plan End อยู่ในช่วง กรองตาม Module / BA / SA / DEV",
+        "tags": [
+          "Reports"
+        ],
+        "parameters": [
+          {
+            "name": "ws",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          },
+          {
+            "name": "modules",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maxItems": 200,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 64
+              }
+            }
+          },
+          {
+            "name": "ba",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maxItems": 200,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 64
+              }
+            }
+          },
+          {
+            "name": "sa",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maxItems": 200,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 64
+              }
+            }
+          },
+          {
+            "name": "dev",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maxItems": 200,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 64
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/api/v1/w/{ws}/projects/{key}/reports/module-forecast": {
       "get": {
         "operationId": "Reports_moduleForecast",

@@ -15,6 +15,10 @@ export interface Item {
   type: string;
   isBug: boolean;
   moduleId: string | null;
+  phaseId: string | null;
+  parentId: string | null;
+  baId: string | null;
+  saId: string | null;
   estimateMd: number;
   planStart: string | null;
   planEnd: string | null;
@@ -68,6 +72,10 @@ export async function loadPlan(tx: Tx, project: Project): Promise<PlanData> {
     type,
     isBug: type === 'Bug',
     moduleId: i.moduleId,
+    phaseId: i.phaseId,
+    parentId: i.parentId,
+    baId: i.baId,
+    saId: i.saId,
     estimateMd: i.estimateMd ?? 0,
     planStart: i.planStart,
     planEnd: i.planEnd,

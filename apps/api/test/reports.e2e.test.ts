@@ -243,3 +243,84 @@ describe('GET p/reports/traceability', () => {
     expect((await get('reports/traceability', team.dev)).status).toBe(200);
   });
 });
+
+describe('GET p/reports/due', () => {
+  type Row = { key: string; state: string };
+  const keys = (rows: Row[]) => rows.map((r) => r.key);
+  beforeAll(async () => {
+    // BA / SA ของงาน: A3 = BA lead, SA dev · B1 = BA dev
+    await t.owner.query('UPDATE issues SET ba_id = $2, sa_id = $3 WHERE id = $1', [ids.A3.id, team.leadId, team.devId]);
+    await t.owner.query('UPDATE issues SET ba_id = $2 WHERE id = $1', [ids.B1.id, team.devId]);
+  });
+
+  it('มุมมอง Task: งานที่ Plan End อยู่ในช่วง เรียงตามวัน ไม่นับ Bug · ระบุเสร็จ / เลยกำหนด / เสี่ยง', async () => {
+    const r = await get('reports/due?from=2026-11-27&to=2026-12-11');
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body).toMatchObject({ asOf: '2026-12-02', range: { from: '2026-11-27', to: '2026-12-11' } });
+    expect(r.body.tasks.map((x: Row) => [x.key, x.state])).toEqual([
+      [ids.A3.key, 'late'],
+      [ids.A1.key, 'done'],
+      // เริ่ม 2 ธ.ค. จบ 3 ธ.ค.: ผ่านไป 1 ใน 2 วันทำการ (ควร 50%) แต่คืบหน้า 10%
+      [ids.B1.key, 'at_risk'],
+      [ids.B3.key, 'on_track'],
+    ]);
+    expect(r.body.summary).toEqual({ taskCount: 4, md: 31, doneCount: 1, atRiskCount: 1, lateCount: 1 });
+    const a3 = r.body.tasks[0];
+    expect(a3).toMatchObject({ module: { name: 'Alpha' }, ba: { id: team.leadId }, sa: { id: team.devId }, devs: [{ id: team.devId }], estimateMd: 10, progressPct: 40, planEnd: '2026-11-27' });
+  });
+
+  it('ตัวเลือกในตัวกรองมาจากงานทั้งโปรเจกต์ พร้อมจำนวนงาน', async () => {
+    const { options } = (await get('reports/due?from=2026-12-01&to=2026-12-01')).body;
+    expect(options.modules.map((m: { name: string; count: number }) => [m.name, m.count])).toEqual([['Alpha', 4], ['Beta', 3]]);
+    expect(options.ba.map((p: { id: string; count: number }) => [p.id, p.count]).sort()).toEqual([[team.devId, 1], [team.leadId, 1]].sort());
+    expect(options.sa).toMatchObject([{ id: team.devId, count: 1 }]);
+    expect(options.dev.map((p: { id: string; count: number }) => [p.id, p.count]).sort()).toEqual([[team.devId, 3], [team.leadId, 3]].sort());
+  });
+
+  it('กรอง Module · BA · SA · DEV (ตัวกรองต่างช่องต้องตรงทุกข้อ)', async () => {
+    const range = 'from=2026-11-27&to=2026-12-11';
+    const opts = (await get(`reports/due?${range}`)).body.options;
+    const alpha = opts.modules.find((m: { name: string }) => m.name === 'Alpha').id;
+    const beta = opts.modules.find((m: { name: string }) => m.name === 'Beta').id;
+    expect(keys((await get(`reports/due?${range}&dev=${team.devId}`)).body.tasks)).toEqual([ids.A3.key, ids.B1.key]);
+    expect(keys((await get(`reports/due?${range}&modules=${beta}`)).body.tasks)).toEqual([ids.B1.key, ids.B3.key]);
+    expect(keys((await get(`reports/due?${range}&modules=${alpha},${beta}&dev=${team.devId}`)).body.tasks)).toEqual([ids.A3.key, ids.B1.key]);
+    expect(keys((await get(`reports/due?${range}&ba=${team.leadId}`)).body.tasks)).toEqual([ids.A3.key]);
+    expect(keys((await get(`reports/due?${range}&sa=${team.devId}`)).body.tasks)).toEqual([ids.A3.key]);
+    expect(keys((await get(`reports/due?${range}&modules=${alpha}&ba=${team.devId}`)).body.tasks)).toEqual([]);
+  });
+
+  it('มุมมอง Plan: กลุ่ม Module › Phase ที่วันจบตามแผน (งานสุดท้ายของกลุ่ม) อยู่ในช่วง พร้อมคาดวันจบ', async () => {
+    const r = await get('reports/due?from=2026-11-27&to=2026-12-11');
+    // Alpha จบตามแผน 14 ธ.ค. (A4) จึงอยู่นอกช่วง · Beta จบ 11 ธ.ค. (B3)
+    expect(r.body.plans).toHaveLength(1);
+    const beta = r.body.plans[0];
+    expect(beta).toMatchObject({ module: { name: 'Beta' }, taskCount: 3, doneCount: 1, totalMd: 18, doneMd: 2, progressPct: 11, plannedEnd: '2026-12-11', status: 'off_track' });
+    // อัตราเสร็จจริงของ Beta ต่ำ (2 MD ใน 28 วัน) จึงคาดว่าจบหลังแผนมาก
+    expect(beta.forecastEnd > '2026-12-11').toBe(true);
+    expect(beta.slipDays).toBeGreaterThan(3);
+    expect(beta.tasks.map((x: Row) => x.key)).toEqual([ids.B2.key, ids.B1.key, ids.B3.key]);
+    expect(r.body.planSummary).toEqual({ groupCount: 1, md: 18, progressPct: 11, slipCount: 1 });
+
+    const wide = (await get('reports/due?from=2026-11-27&to=2026-12-14')).body.plans;
+    expect(wide.map((g: { module: { name: string } }) => g.module.name)).toEqual(['Beta', 'Alpha']);
+    expect(wide[1]).toMatchObject({ taskCount: 4, doneCount: 2, totalMd: 30, doneMd: 10, progressPct: 33, plannedEnd: '2026-12-14' });
+  });
+
+  it('มุมมอง Plan ตามตัวกรองคน: แผนของ Dev คนนั้นใน Module · กลุ่มที่เลยวันจบแล้วยังไม่เสร็จ = late', async () => {
+    const plans = (await get(`reports/due?from=2026-11-01&to=2026-12-31&dev=${team.devId}`)).body.plans;
+    expect(plans.map((g: { module: { name: string }; plannedEnd: string; status: string; taskCount: number }) => [g.module.name, g.plannedEnd, g.status, g.taskCount])).toEqual([
+      ['Alpha', '2026-11-27', 'late', 2],
+      ['Beta', '2026-12-03', expect.any(String), 1],
+    ]);
+  });
+
+  it('ตรวจข้อมูลขาเข้าและสิทธิ์: ช่วงกลับด้าน / ไม่ระบุวัน → 400 · Guest และคนนอกเข้าไม่ได้ · สมาชิกดูได้', async () => {
+    expect((await get('reports/due?from=2026-12-11&to=2026-12-01')).status).toBe(400);
+    expect((await get('reports/due?from=2026-12-01')).status).toBe(400);
+    expect((await get('reports/due?from=2026-01-01&to=2027-06-01')).status).toBe(400);
+    expect([403, 404]).toContain((await get('reports/due?from=2026-12-01&to=2026-12-31', guest)).status);
+    expect([403, 404]).toContain((await get('reports/due?from=2026-12-01&to=2026-12-31', outsider)).status);
+    expect((await get('reports/due?from=2026-12-01&to=2026-12-31', team.dev)).status).toBe(200);
+  });
+});

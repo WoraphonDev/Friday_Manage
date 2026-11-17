@@ -3,14 +3,12 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { X } from 'lucide-react';
-import { Badge, Button, Input, Select, LoadingState, ErrorState } from '@/components/ui';
+import { AttachmentList, Badge, Button, DropOverlay, Input, Select, LoadingState, ErrorState, pastedFiles, useFileDrop } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
-import type { UploadedFile } from '@/lib/upload';
 import { useSlidingIndicator } from '@/lib/motion';
 import { Failure } from './shared';
-import { AttachButton } from './task-v2';
+import { AttachButton, useProjectUploads } from './task-v2';
 import { filesPageHref, issuePath, issueQuery, previewBase, type Issue, type Scope } from './types';
 import { FilePreview, useFilePreview } from '@/components/file-preview';
 import styles from './issue-drawer.module.css';
@@ -46,20 +44,20 @@ export function TestRuns({ scope, issue, kind = 'qa', embedded = false }: { scop
   const [passed, setPassed] = useState(''); const [total, setTotal] = useState('');
   const [coverage, setCoverage] = useState('');
   const [note, setNote] = useState(''); const [commit, setCommit] = useState('');
-  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const uploads = useProjectUploads(scope, { draft: true });
   const [pending, setPending] = useState(false); const [error, setError] = useState<unknown>(null);
   const lock = useRef(false);
   const unit = kind === 'unit';
   const runs = (query.data?.items ?? []).filter((run) => (run.kind ?? 'qa') === kind);
-  function reset() { setEditing(false); setNote(''); setCommit(''); setPassed(''); setTotal(''); setCoverage(''); setFiles([]); setResult('passed'); setTester(defaultTester); }
+  function reset() { setEditing(false); setNote(''); setCommit(''); setPassed(''); setTotal(''); setCoverage(''); uploads.clear(); setResult('passed'); setTester(defaultTester); }
   async function save(event: React.FormEvent) {
     event.preventDefault();
-    if (!canRecord || lock.current) return;
+    if (!canRecord || lock.current || uploads.busy) return;
     lock.current = true; setPending(true); setError(null);
     try {
       // ผลตรวจของ Reviewer เก็บแค่ ผ่าน/ไม่ผ่าน, ผู้ตรวจ, Environment, บันทึก/ขั้นตอนที่พบปัญหา และไฟล์ · จำนวนเคส / Commit / Coverage เป็นของ Unit test
       await api.post(endpoint, {
-        kind, result, note: note.trim(), fileIds: files.map((file) => file.id),
+        kind, result, note: note.trim(), fileIds: uploads.files.map((file) => file.id),
         ...(unit
           ? {
               ...(commit.trim() ? { commitSha: commit.trim() } : {}),
@@ -83,6 +81,7 @@ export function TestRuns({ scope, issue, kind = 'qa', embedded = false }: { scop
     finally { lock.current = false; setPending(false); }
   }
   const preview = useFilePreview();
+  const drop = useFileDrop(uploads.add, editing && !pending);
   const body = <>
     {query.isPending && <LoadingState />}{query.error != null && <ErrorState error={query.error} retry={() => void query.refetch()} />}
     {query.data && runs.length === 0 && !editing && <p className="muted">{t(unit ? 'unitEmpty' : 'empty')}</p>}
@@ -96,7 +95,8 @@ export function TestRuns({ scope, issue, kind = 'qa', embedded = false }: { scop
       {run.bugs.map((bug) => <Button key={bug.key} size="small" onClick={() => scope.navigate(bug.key)}>{bug.key} · {bug.title}</Button>)}
       {!unit && run.result === 'failed' && !run.bugs.length && scope.access.permissions.includes('issue.create') && scope.project?.status !== 'archived' && <Button size="small" disabled={pending} onClick={() => void createBug(run)}>{t('createBug')}</Button>}
     </article>)}
-    {editing && <form onSubmit={save} className={`${styles.stack} ${styles.runForm} motion-in`}>
+    {editing && <form onSubmit={save} className={`${styles.stack} ${styles.runForm} file-drop-target motion-in`} {...drop.bind}>
+      <DropOverlay count={drop.dragging} hint={t(unit ? 'dropHintUnit' : 'dropHint')} />
       <div className="field"><span>{t('result')}</span>
         <div ref={pickRef} className={`${styles.resultPick} motion-pill`} data-result={result} role="radiogroup" aria-label={t('result')}>
           {(unit ? (['passed', 'failed', 'blocked'] as const) : (['passed', 'failed'] as const)).map((value) => (
@@ -116,13 +116,14 @@ export function TestRuns({ scope, issue, kind = 'qa', embedded = false }: { scop
         <Select label="Environment" value={environment} onChange={(e) => setEnvironment(e.target.value)} disabled={pending}>{['local', 'sit', 'uat', 'production'].map((value) => <option key={value} value={value}>{value.toUpperCase()}</option>)}</Select>
       </div>}
       <label className="field">{t(unit ? 'unitNote' : result === 'passed' ? 'noteLabel' : 'stepsLabel')}
-        <textarea className="input" style={{ width: '100%', minHeight: 70 }} value={note} maxLength={5000} required={!unit && result === 'failed'} placeholder={!unit && result === 'failed' ? t('stepsPlaceholder') : undefined} onChange={(e) => setNote(e.target.value)} disabled={pending} />
+        <textarea className="input" style={{ width: '100%', minHeight: 70 }} value={note} maxLength={5000} required={!unit && result === 'failed'} placeholder={!unit && result === 'failed' ? t('stepsPlaceholder') : undefined} onChange={(e) => setNote(e.target.value)} onPaste={(e) => uploads.add(pastedFiles(e))} disabled={pending} />
       </label>
+      <AttachmentList rows={uploads.rows} label={t(unit ? 'attachReport' : 'attachEvidence')} />
       <div className={styles.fileChips}>
-        {files.map((file) => <span key={file.id} className={styles.chipSoft}>{file.name}<button type="button" className={styles.chipX} aria-label={t('removeFile', { name: file.name })} onClick={() => setFiles(files.filter((item) => item.id !== file.id))}><X size={12} aria-hidden="true" /></button></span>)}
-        <AttachButton scope={scope} label={t(unit ? 'attachReport' : 'attachEvidence')} disabled={pending} onUploaded={(added) => setFiles((current) => [...current, ...added])} />
+        <AttachButton label={t(unit ? 'attachReport' : 'attachEvidence')} disabled={pending} onFiles={uploads.add} />
+        {uploads.status && <span className="muted" role="status">{uploads.status}</span>}
       </div>
-      <div className={styles.dialogActions}><Button type="button" onClick={reset} disabled={pending}>{t('cancel')}</Button><Button type="submit" variant="primary" disabled={pending}>{t('save')}</Button></div>
+      <div className={styles.dialogActions}><Button type="button" onClick={() => { uploads.discard(); reset(); }} disabled={pending}>{t('cancel')}</Button><Button type="submit" variant="primary" disabled={pending || uploads.busy}>{t('save')}</Button></div>
     </form>}
     {error != null && <Failure error={error} />}
     {preview.props && <FilePreview {...preview.props} base={previewBase(scope)} filesHref={filesPageHref(scope)} />}

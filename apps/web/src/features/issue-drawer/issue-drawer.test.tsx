@@ -616,5 +616,59 @@ describe('Task v2 (ผู้ใช้ตัดสิน 2026-11-08)', () => {
     expect(runs[0]).toMatchObject({ kind: 'unit', result: 'passed', passedCount: 48, totalCount: 48, coveragePct: 82.5 });
     expect(runs[0]).not.toHaveProperty('environment', 'sit');
   });
+
+  it('ลากหลายไฟล์มาวางในฟอร์มผลทดสอบ → รายการพร้อมรูปย่อ · ✕ ย้ายไฟล์ร่างเข้าถังขยะ · บันทึกส่งเฉพาะไฟล์ที่เหลือ', async () => {
+    const user = userEvent.setup(); const runs: Record<string, unknown>[] = []; const deleted: string[] = []; let n = 0;
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:รูปย่อ'), revokeObjectURL: vi.fn() }));
+    server.use(
+      http.get('*/api/v1/w/:ws/issues/DE-1/test-runs', () => HttpResponse.json({ items: runs })),
+      http.post('*/api/v1/w/:ws/issues/DE-1/test-runs', async ({ request }) => { const body = await request.json() as Record<string, unknown>; const run = { id: uid(402), runNo: 1, createdAt: '2026-11-17T00:00:00Z', tester: me, files: [], bugs: [], commitSha: null, environment: null, note: null, passedCount: null, totalCount: null, coveragePct: null, ...body }; runs.push(run); return HttpResponse.json(run, { status: 201 }); }),
+      http.post('*/api/v1/w/:ws/projects/:project/files/upload-url', () => { n += 1; return HttpResponse.json({ method: 'PUT', url: `/api/v1/storage/upload/token-${n}`, headers: {}, uploadToken: `token-${n}`, expiresAt: '2026-11-17T01:00:00Z', maxBytes: 1e8, storage: 'local' }); }),
+      http.put('*/api/v1/storage/upload/:token', () => new HttpResponse(null, { status: 200 })),
+      http.post('*/api/v1/w/:ws/projects/:project/files', async ({ request }) => { const { uploadToken } = await request.json() as { uploadToken: string }; return HttpResponse.json({ id: uid(500 + Number(uploadToken.split('-')[1])), name: `ไฟล์-${uploadToken}` }, { status: 201 }); }),
+      http.delete('*/api/v1/w/:ws/projects/:project/files/:id', ({ params }) => { deleted.push(String(params.id)); return HttpResponse.json({ deleted: true }); }),
+    );
+    mount(); await loaded();
+    await user.click(await screen.findByRole('button', { name: '+ แนบผล Unit test' }));
+    const form = screen.getByRole('button', { name: 'บันทึกผล' }).closest('form')!;
+    const files = [new File(['ก'], 'หน้าจอ-1.png', { type: 'image/png' }), new File(['ข'], 'หน้าจอ-2.png', { type: 'image/png' })];
+    fireEvent.dragEnter(form, { dataTransfer: { types: ['Files'], items: [{}, {}] } });
+    expect(within(form).getByText('ปล่อยเพื่อแนบ 2 ไฟล์')).toBeInTheDocument();
+    fireEvent.drop(form, { dataTransfer: { types: ['Files'], files } });
+    expect(within(form).queryByText('ปล่อยเพื่อแนบ 2 ไฟล์')).not.toBeInTheDocument();
+    const list = within(form).getByRole('list', { name: 'แนบรายงาน / รูป' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2);
+    expect(await screen.findByText('แนบไฟล์แล้ว 2 ไฟล์')).toBeInTheDocument();
+    expect(list.querySelector('img')).toHaveAttribute('src', 'blob:รูปย่อ');
+    await user.click(within(list).getByRole('button', { name: 'เอา หน้าจอ-2.png ออก' }));
+    await waitFor(() => expect(deleted).toEqual([uid(502)]));
+    expect(within(list).getAllByRole('listitem')).toHaveLength(1);
+    expect(await screen.findByText('นำ หน้าจอ-2.png ออกแล้ว')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'บันทึกผล' }));
+    await waitFor(() => expect(runs[0]).toMatchObject({ kind: 'unit', fileIds: [uid(501)] }));
+    vi.unstubAllGlobals();
+  });
+
+  it('ไฟล์แนบของงานแสดงเป็นรายการ · ✕ ถอดออกจากงาน (ไฟล์ยังอยู่ใน Files) และเลิกทำได้', async () => {
+    // Toast อยู่นอก Drawer ที่ตั้ง pointer-events: none ให้ body · ในเบราว์เซอร์ .toast-region > * คืน pointer-events: auto (jsdom ไม่โหลด CSS)
+    const user = userEvent.setup({ pointerEventsCheck: 0 }); const detached: unknown[] = []; const attached: unknown[] = [];
+    let items = [{ id: uid(601), name: 'สเปก.pdf', mime: 'application/pdf', size: 2048, kind: 'upload', linkUrl: null, uploader: me, createdAt: '2026-11-10T00:00:00Z' }, { id: uid(602), name: 'หน้าจอ.png', mime: 'image/png', size: 1024, kind: 'upload', linkUrl: null, uploader: me, createdAt: '2026-11-11T00:00:00Z' }];
+    const all = [...items];
+    server.use(
+      http.get('*/api/v1/w/:ws/projects/:project/files', ({ request }) => HttpResponse.json({ items: new URL(request.url).searchParams.get('target') ? items : [], nextCursor: null })),
+      http.delete('*/api/v1/w/:ws/projects/:project/files/:id/attachments', async ({ params, request }) => { detached.push({ id: params.id, ...(await request.json() as object) }); items = items.filter((i) => i.id !== params.id); return HttpResponse.json({ detached: true }); }),
+      http.post('*/api/v1/w/:ws/projects/:project/files/:id/attachments', async ({ params, request }) => { attached.push({ id: params.id, ...(await request.json() as object) }); items = all.filter((i) => i.id === params.id || items.includes(i)); return HttpResponse.json({ attached: true }); }),
+    );
+    mount(); await loaded();
+    const list = await screen.findByRole('list', { name: 'Attachments' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2);
+    expect(list.querySelector('img')).toHaveAttribute('src', expect.stringContaining(`/files/${uid(602)}/download`));
+    await user.click(within(list).getByRole('button', { name: 'เอา สเปก.pdf ออก' }));
+    await waitFor(() => expect(detached).toEqual([{ id: uid(601), targetType: 'issue', target: 'DE-1' }]));
+    await waitFor(() => expect(within(list).getAllByRole('listitem')).toHaveLength(1));
+    await user.click(await screen.findByRole('button', { name: 'เลิกทำ' }));
+    await waitFor(() => expect(attached).toEqual([{ id: uid(601), targetType: 'issue', target: 'DE-1' }]));
+    await waitFor(() => expect(within(screen.getByRole('list', { name: 'Attachments' })).getAllByRole('listitem')).toHaveLength(2));
+  });
 });
 

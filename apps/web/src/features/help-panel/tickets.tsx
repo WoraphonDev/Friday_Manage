@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Download, ImagePlus, X } from "lucide-react";
-import { Badge, Button, EmptyState, ErrorState, Forbidden, LoadingState, MotionSwap, NotFound, YearFormatContext, useToast, type Tone } from "@/components/ui";
+import { ArrowLeft, Download, ImagePlus } from "lucide-react";
+import { AttachmentList, Badge, Button, DropOverlay, EmptyState, ErrorState, Forbidden, LoadingState, MotionSwap, NotFound, YearFormatContext, pastedFiles, useFileDrop, useFileThumbs, useToast, type Tone } from "@/components/ui";
 import { useSlidingIndicator } from "@/lib/motion";
 import { ApiError } from "@/lib/api";
 import { formatDate, localeDateFormat } from "@/lib/format";
@@ -94,6 +94,7 @@ function Bubble({ m }: { m: TicketMessage }) {
 
 function Detail({ ws, id, onBack }: { ws: string; id: string; onBack?: () => void }) {
   const t = useTranslations("help.tickets");
+  const tc = useTranslations("help");
   const toast = useToast();
   const cache = useQueryClient();
   const when = useWhen();
@@ -127,6 +128,18 @@ function Detail({ ws, id, onBack }: { ws: string; id: string; onBack?: () => voi
     },
     onError,
   });
+
+  // ลากรูปมาวาง / วางภาพหน้าจอได้ (2026-11-17) · กติกาเดียวกับฟอร์มติดต่อ: ไฟล์ละไม่เกิน 10 MB และไม่เกิน 5 ไฟล์
+  function addFiles(list: File[]) {
+    if (!list.length) return;
+    const tooLarge = list.find((f) => f.size > MAX_FILE_BYTES);
+    if (tooLarge) toast({ message: tc("contact.tooLarge", { name: tooLarge.name }), tone: "error" });
+    const next = [...files, ...list.filter((f) => f.size <= MAX_FILE_BYTES)];
+    if (next.length > MAX_FILES) toast({ message: tc("contact.tooMany"), tone: "error" });
+    setFiles(next.slice(0, MAX_FILES));
+  }
+  const drop = useFileDrop(addFiles, !send.isPending);
+  const thumbs = useFileThumbs(files);
 
   if (detail.isPending) return <LoadingState />;
   if (detail.error) return detail.error instanceof ApiError && detail.error.status === 404 ? <NotFound /> : <ErrorState error={detail.error} retry={() => void detail.refetch()} />;
@@ -186,25 +199,19 @@ function Detail({ ws, id, onBack }: { ws: string; id: string; onBack?: () => voi
       )}
       {ticket.canReply && !solved && (
         <form
-          className={styles.replyBox}
+          className={cn(styles.replyBox, "file-drop-target")}
+          {...drop.bind}
           onSubmit={(e) => {
             e.preventDefault();
             if (body.trim() && !send.isPending) send.mutate();
           }}
         >
-          <textarea ref={reply} className="input" rows={3} placeholder={t("replyPlaceholder")} aria-label={t("replyLabel")} value={body} onChange={(e) => setBody(e.target.value)} maxLength={10000} />
-          {files.length > 0 && (
-            <ul className={styles.fileList}>
-              {files.map((f, i) => (
-                <li key={`${f.name}-${i}`}>
-                  <span>{f.name}</span>
-                  <Button variant="ghost" size="icon" aria-label={f.name} onClick={() => setFiles(files.filter((_, j) => j !== i))}>
-                    <X size={14} />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <DropOverlay count={drop.dragging} hint={tc("contact.tooMany")} />
+          <textarea ref={reply} className="input" rows={3} placeholder={t("replyPlaceholder")} aria-label={t("replyLabel")} value={body} onChange={(e) => setBody(e.target.value)} onPaste={(e) => addFiles(pastedFiles(e))} maxLength={10000} />
+          <AttachmentList
+            label={t("attach")}
+            rows={files.map((f, i) => ({ key: `${f.name}-${f.size}-${i}`, name: f.name, size: f.size, thumb: thumbs.get(f), onRemove: () => setFiles(files.filter((_, j) => j !== i)) }))}
+          />
           <div className={styles.replyActions}>
             <Button onClick={() => fileInput.current?.click()} disabled={files.length >= MAX_FILES}>
               <ImagePlus size={16} aria-hidden="true" />
@@ -217,8 +224,7 @@ function Detail({ ws, id, onBack }: { ws: string; id: string; onBack?: () => voi
               multiple
               aria-label={t("attach")}
               onChange={(e) => {
-                const picked = Array.from(e.target.files ?? []).filter((f) => f.size <= MAX_FILE_BYTES);
-                setFiles([...files, ...picked].slice(0, MAX_FILES));
+                addFiles(Array.from(e.target.files ?? []));
                 e.target.value = "";
               }}
             />

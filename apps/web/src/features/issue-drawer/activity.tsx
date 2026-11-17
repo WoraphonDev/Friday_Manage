@@ -2,15 +2,13 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Avatar, Button, Input, LoadingState, ErrorState, Dialog } from '@/components/ui';
+import { AttachmentList, Avatar, Button, DropOverlay, Input, LoadingState, ErrorState, Dialog, pastedFiles, useFileDrop } from '@/components/ui';
 import { api } from '@/lib/api';
 import { BodyText, Failure, PersonView, when } from './shared';
 import { type MentionPicks, toDisplay, toStored } from './mentions';
 import { filesPageHref, issuePath, issueQuery, previewBase, projectPath, type Activity, type Comment, type Feed, type Scope } from './types';
 import { FilePreview, useFilePreview } from '@/components/file-preview';
-import type { UploadedFile } from '@/lib/upload';
-import { AttachButton } from './task-v2';
-import { X } from 'lucide-react';
+import { AttachButton, useProjectUploads } from './task-v2';
 import styles from './issue-drawer.module.css';
 
 /**
@@ -38,7 +36,7 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
   const [picks, setPicks] = useState<MentionPicks>(new Map());
   const [editPicks, setEditPicks] = useState<MentionPicks>(new Map());
   // ไฟล์ / รูปที่แนบกับคอมเมนต์ (ผู้ใช้ขอ 2026-11-08): อัปโหลดก่อน แล้วผูกกับคอมเมนต์หลังส่ง
-  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const uploads = useProjectUploads(scope, { draft: true });
   const [editing, setEditing] = useState<Comment | null>(null);
   const [editBody, setEditBody] = useState('');
   const [deleting, setDeleting] = useState<Comment | null>(null);
@@ -47,6 +45,7 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
   const lock = useRef(false);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const preview = useFilePreview();
+  const drop = useFileDrop(uploads.add, !compact && !pending);
   const commentable = scope.access.permissions.includes('issue.comment');
   const tail = /@([^@\n]*)$/.exec(body);
   // กล่องเลือกคน: ลูกศรขึ้นลงเลือก · Enter / Tab ใส่ชื่อ · Esc ปิดจนกว่าจะพิมพ์ @ ใหม่
@@ -139,11 +138,12 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
     </li>)}</ol>
     {feed.hasNextPage && <Button disabled={feed.isFetchingNextPage} onClick={() => void feed.fetchNextPage()}>{t('loadMore')}</Button>}
     </>}
-    {showComposer && commentable && <form className={`${styles.composer}${compact ? ` ${styles.compactComposer}` : ''}`} onSubmit={(event) => { event.preventDefault(); void change(async () => { const created = await api.post<Comment>(`${endpoint}/comments`, { body: toStored(body, picks) }); for (const file of files) await api.post(`${projectPath(scope.ws, scope.projectKey)}/files/${file.id}/attachments`, { targetType: 'comment', target: created.id }); }, () => { setBody(''); setPicks(new Map()); setFiles([]); }); }}>
-      <label className="field"><span className={compact ? "sr-only" : undefined}>{t('writeComment')}</span><textarea ref={textarea} rows={compact ? 1 : undefined} placeholder={compact ? t('commentPlaceholder') : undefined} className="input" required maxLength={20000} value={body} onChange={(event) => { setBody(event.target.value); setActive(0); }} onKeyDown={mentionKeys} role={suggestions.length ? 'combobox' : undefined} aria-expanded={suggestions.length ? true : undefined} aria-controls={suggestions.length ? `${issueKey}-mentions` : undefined} aria-activedescendant={suggestions.length ? `${issueKey}-mention-${suggestions[current].id}` : undefined} disabled={pending} /></label>
+    {showComposer && commentable && <form className={`${styles.composer}${compact ? ` ${styles.compactComposer}` : ''} file-drop-target`} {...drop.bind} onSubmit={(event) => { event.preventDefault(); if (uploads.busy) return; void change(async () => { const created = await api.post<Comment>(`${endpoint}/comments`, { body: toStored(body, picks) }); for (const file of uploads.files) await api.post(`${projectPath(scope.ws, scope.projectKey)}/files/${file.id}/attachments`, { targetType: 'comment', target: created.id }); }, () => { setBody(''); setPicks(new Map()); uploads.clear(); }); }}>
+      <DropOverlay count={drop.dragging} hint={t('dropHintComment')} />
+      <label className="field"><span className={compact ? "sr-only" : undefined}>{t('writeComment')}</span><textarea ref={textarea} rows={compact ? 1 : undefined} placeholder={compact ? t('commentPlaceholder') : undefined} className="input" required maxLength={20000} value={body} onChange={(event) => { setBody(event.target.value); setActive(0); }} onKeyDown={mentionKeys} onPaste={compact ? undefined : (event) => uploads.add(pastedFiles(event))} role={suggestions.length ? 'combobox' : undefined} aria-expanded={suggestions.length ? true : undefined} aria-controls={suggestions.length ? `${issueKey}-mentions` : undefined} aria-activedescendant={suggestions.length ? `${issueKey}-mention-${suggestions[current].id}` : undefined} disabled={pending} /></label>
       {suggestions.length > 0 && <ul className={styles.mentionOptions} id={`${issueKey}-mentions`} role="listbox" aria-label={t('mentionMembers')}>{suggestions.map((person, index) => <li key={person.id} id={`${issueKey}-mention-${person.id}`} role="option" aria-label={person.displayName} aria-selected={index === current} className={styles.mentionOption} onMouseEnter={() => setActive(index)} onMouseDown={(event) => { event.preventDefault(); pick(person); }}><Avatar person={person} size="small" /><span>{person.displayName}</span></li>)}</ul>}
-      {files.length > 0 && <div className={styles.fileChips}>{files.map((file) => <span key={file.id} className={styles.chipSoft}>{file.name}<button type="button" className={styles.chipX} aria-label={t('removeItem', { text: file.name })} onClick={() => setFiles(files.filter((item) => item.id !== file.id))}><X size={12} aria-hidden="true" /></button></span>)}</div>}
-      <div className={styles.composerFooter}>{!compact && <AttachButton scope={scope} label={t('attachToComment')} disabled={pending} onUploaded={(added) => setFiles((current) => [...current, ...added])} />}<span className="muted">{t('markdownHint')}</span><Button type="submit" variant="primary" disabled={pending || !body.trim()}>{t('send')}</Button></div>
+      <AttachmentList rows={uploads.rows} label={t('attachToComment')} />
+      <div className={styles.composerFooter}>{!compact && <AttachButton label={t('attachToComment')} disabled={pending} onFiles={uploads.add} />}<span className="muted" role={uploads.status ? 'status' : undefined}>{uploads.status ?? t('markdownHint')}</span><Button type="submit" variant="primary" disabled={pending || uploads.busy || !body.trim()}>{t('send')}</Button></div>
     </form>}
     {!!error && <Failure error={error} />}
     {preview.props && <FilePreview {...preview.props} base={previewBase(scope)} filesHref={filesPageHref(scope)} />}

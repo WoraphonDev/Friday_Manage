@@ -1,12 +1,12 @@
 'use client';
 // ชิ้นส่วนของหน้า Task v2 (Canvas B2 / C2 / D2 · ผู้ใช้ตัดสิน 2026-11-08) ที่ใช้ทั้งหน้าดูและหน้าสร้างงาน
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
 import { Check, ChevronDown, Paperclip, X } from 'lucide-react';
-import { Button, Select, useToast } from '@/components/ui';
+import { Button, Select, isImageFile, useToast, type AttachmentRow } from '@/components/ui';
 import { api } from '@/lib/api';
 import { uploadToProject, type UploadedFile } from '@/lib/upload';
 import { projectPath, type Issue, type Scope } from './types';
@@ -62,33 +62,123 @@ export function IssuePicker({ label, value, issues, onChange, placeholder, disab
   </Popover.Root>;
 }
 
-/** ปุ่มแนบไฟล์: อัปโหลดเข้า Files ของโปรเจกต์ แล้วแนบกับงาน / คอมเมนต์ / ผลทดสอบทันที */
-export function AttachButton({ scope, attach, onUploaded, label, multiple = true, size = 'small', disabled = false }: {
-  scope: Scope; attach?: { targetType: 'issue' | 'comment' | 'test_run'; target: string };
-  onUploaded: (files: UploadedFile[]) => void | Promise<void>; label?: ReactNode; multiple?: boolean; size?: 'small' | 'default'; disabled?: boolean;
+type AttachTarget = { targetType: 'issue' | 'comment' | 'test_run'; target: string };
+interface QueuedFile { key: string; file: File; name: string; size: number; thumb: string | null; id?: string; progress?: number | null }
+
+/**
+ * คิวอัปโหลดเข้า Files ของโปรเจกต์ · ทีละไฟล์ตามลำดับ มีความคืบหน้าและยกเลิกได้ (ลากวางหลายไฟล์ · 2026-11-17)
+ * draft = ไฟล์รอแนบกับผลทดสอบ / คอมเมนต์ที่ยังไม่บันทึก: อยู่ในรายการจนบันทึก · เอาออก = ย้ายเข้าถังขยะ เพราะยังไม่มีงานไหนใช้
+ * ไม่ใช่ draft = แนบกับเป้าหมายทันที แล้วหายจากคิวเมื่อเสร็จ ให้รายการจริงจาก API แสดงแทน
+ */
+export function useProjectUploads(scope: Scope, { attach, onUploaded, draft = false }: { attach?: AttachTarget; onUploaded?: (files: UploadedFile[]) => void | Promise<void>; draft?: boolean } = {}) {
+  const t = useTranslations('issue-drawer');
+  const ta = useTranslations('common.attach');
+  const toast = useToast();
+  const [items, setItems] = useState<QueuedFile[]>([]);
+  const chain = useRef<Promise<void>>(Promise.resolve());
+  const aborts = useRef(new Map<string, () => void>());
+  const dropped = useRef(new Set<string>());
+  const thumbs = useRef(new Set<string>());
+  const done = useRef(onUploaded);
+  useEffect(() => { done.current = onUploaded; });
+  useEffect(() => () => {
+    for (const abort of aborts.current.values()) abort();
+    for (const url of thumbs.current) URL.revokeObjectURL(url);
+  }, []);
+  const base = projectPath(scope.ws, scope.projectKey);
+  const patch = (key: string, next: Partial<QueuedFile>) => setItems((current) => current.map((item) => item.key === key ? { ...item, ...next } : item));
+  const forget = (key: string) => setItems((current) => current.filter((item) => item.key !== key));
+  const trash = (id: string) => api.delete(`${base}/files/${encodeURIComponent(id)}`).catch(() => undefined);
+
+  function add(files: File[]) {
+    if (!files.length) return;
+    const batch: QueuedFile[] = files.map((file) => {
+      const thumb = isImageFile(file) ? URL.createObjectURL(file) : null;
+      if (thumb) thumbs.current.add(thumb);
+      return { key: `${Date.now()}-${Math.random().toString(36).slice(2)}`, file, name: file.name, size: file.size, thumb, progress: null };
+    });
+    setItems((current) => [...current, ...batch]);
+    chain.current = chain.current.then(async () => {
+      const uploaded: UploadedFile[] = [];
+      let failure: unknown = null;
+      for (const entry of batch) {
+        if (dropped.current.has(entry.key)) continue;
+        patch(entry.key, { progress: 0 });
+        try {
+          const file = await uploadToProject(scope.ws, scope.projectKey, entry.file, attach, {
+            onProgress: (loaded) => patch(entry.key, { progress: entry.size ? Math.min(1, loaded / entry.size) : 1 }),
+            register: (abort) => aborts.current.set(entry.key, abort),
+          });
+          // กด ✕ ตอนไฟล์ขึ้นเสร็จพอดี: ไฟล์ถูกสร้างแล้ว จึงย้ายเข้าถังขยะตามที่ผู้ใช้ตั้งใจ
+          if (dropped.current.has(entry.key)) { void trash(file.id); continue; }
+          uploaded.push(file);
+          if (draft) patch(entry.key, { id: file.id, progress: undefined });
+        } catch (error) {
+          if (!dropped.current.has(entry.key)) { failure = error; forget(entry.key); }
+        } finally { aborts.current.delete(entry.key); }
+      }
+      if (uploaded.length) {
+        try { await done.current?.(uploaded); } catch { /* รีเฟรชรายการไม่สำเร็จ ไฟล์ขึ้นแล้ว */ }
+        if (!draft) setItems((current) => current.filter((item) => !batch.some((entry) => entry.key === item.key)));
+        toast({ message: t('filesAttached', { count: uploaded.length }) });
+      }
+      if (failure) toast({ message: failure instanceof Error && failure.message ? failure.message : t('uploadFailed'), tone: 'error' });
+    }).catch(() => undefined);
+  }
+
+  function remove(key: string) {
+    const item = items.find((entry) => entry.key === key);
+    if (!item) return;
+    dropped.current.add(key);
+    aborts.current.get(key)?.();
+    forget(key);
+    if (!item.id) return;
+    const id = item.id;
+    void trash(id);
+    toast({
+      message: ta('removed', { name: item.name }),
+      undo: async () => {
+        await api.post(`${base}/files/${encodeURIComponent(id)}/restore`);
+        setItems((current) => [...current, { ...item, key: `${key}-r` }]);
+      },
+    });
+  }
+
+  const pending = items.filter((item) => item.progress !== undefined);
+  return {
+    add,
+    remove,
+    /** หลังบันทึกแล้ว: ไฟล์ผูกกับผลทดสอบ / คอมเมนต์แล้ว เคลียร์รายการอย่างเดียว */
+    clear: () => setItems([]),
+    /** กดยกเลิกฟอร์ม: ไฟล์ร่างที่ขึ้นแล้วไม่มีใครใช้ ย้ายเข้าถังขยะ */
+    discard() {
+      for (const item of items) {
+        dropped.current.add(item.key);
+        aborts.current.get(item.key)?.();
+        if (item.id) void trash(item.id);
+      }
+      setItems([]);
+    },
+    files: items.filter((item) => item.id).map((item) => ({ id: item.id!, name: item.name })),
+    busy: pending.length > 0,
+    status: pending.length ? ta('uploadingCount', { done: items.length - pending.length, total: items.length }) : null,
+    rows: items.map((item): AttachmentRow => ({ key: item.key, name: item.name, size: item.size, thumb: item.thumb, progress: item.progress, onRemove: () => remove(item.key) })),
+  };
+}
+
+/** ปุ่มแนบไฟล์: เปิดหน้าต่างเลือกไฟล์ (เลือกได้หลายไฟล์) · ลากวาง / วางจากคลิปบอร์ดอยู่ที่กล่องที่ครอบปุ่มนี้ */
+export function AttachButton({ onFiles, label, multiple = true, size = 'small', disabled = false }: {
+  onFiles: (files: File[]) => void; label?: ReactNode; multiple?: boolean; size?: 'small' | 'default'; disabled?: boolean;
 }) {
   const t = useTranslations('issue-drawer');
-  const toast = useToast();
+  const ta = useTranslations('common.attach');
   const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  async function upload(list: FileList | null) {
-    if (!list?.length || busy) return;
-    setBusy(true);
-    try {
-      const done: UploadedFile[] = [];
-      for (const file of Array.from(list)) done.push(await uploadToProject(scope.ws, scope.projectKey, file, attach));
-      await onUploaded(done);
-      toast({ message: t('filesAttached', { count: done.length }) });
-    } catch (error) { toast({ message: error instanceof Error && error.message ? error.message : t('uploadFailed') }); }
-    finally { setBusy(false); if (input.current) input.current.value = ''; }
-  }
   return <>
-    <input ref={input} type="file" hidden multiple={multiple} onChange={(event) => void upload(event.target.files)} aria-hidden="true" tabIndex={-1} />
-    <Button type="button" size={size === 'small' ? 'small' : undefined} disabled={busy || disabled} onClick={() => input.current?.click()}><Paperclip size={14} aria-hidden="true" />{busy ? t('uploading') : label ?? t('attach')}</Button>
+    <input ref={input} type="file" hidden multiple={multiple} onChange={(event) => { onFiles(Array.from(event.target.files ?? [])); event.target.value = ''; }} aria-hidden="true" tabIndex={-1} />
+    <Button type="button" size={size === 'small' ? 'small' : undefined} disabled={disabled} title={ta('pasteHint')} onClick={() => input.current?.click()}><Paperclip size={14} aria-hidden="true" />{label ?? t('attach')}</Button>
   </>;
 }
 
-/** รายการที่ยังไม่บันทึก (หน้าสร้างงาน): พิมพ์แล้ว Enter เพื่อเพิ่ม · แต่ละรายการมีป้ายบอกประเภท */
 export function DraftList({ label, placeholder, items, onChange, tag, tone }: {
   label: string; placeholder: string; items: string[]; onChange: (items: string[]) => void; tag: string; tone: 'acceptance' | 'checklist';
 }) {

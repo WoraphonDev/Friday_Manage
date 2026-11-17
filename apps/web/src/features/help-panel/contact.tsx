@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Check, ImagePlus, Info, X } from "lucide-react";
-import { Button, Dialog, Input, Select, useToast } from "@/components/ui";
+import { Check, ImagePlus, Info } from "lucide-react";
+import { AttachmentList, Button, Dialog, DropOverlay, Input, Select, pastedFiles, useFileDrop, useFileThumbs, useToast } from "@/components/ui";
 import { ApiError, lastRequestId } from "@/lib/api";
 import { useIsMobile } from "@/lib/use-mobile";
 import { helpApi, helpKeys, IMPACTS, MAX_FILE_BYTES, MAX_FILES, TICKET_CATEGORIES, uploadAttachment, type Duration, type TicketList } from "./shared";
@@ -113,10 +113,10 @@ export function ContactForm({ workspace, prefill = {}, onDone, onCancel, showMet
     if (missing || submit.isPending) return;
     submit.mutate();
   }
-  function addFiles(list: FileList | null) {
-    if (!list) return;
+  function addFiles(list: File[]) {
+    if (!list.length) return;
     const next = [...files];
-    for (const file of Array.from(list)) {
+    for (const file of list) {
       if (file.size > MAX_FILE_BYTES) {
         setFileError(t("contact.tooLarge", { name: file.name }));
         continue;
@@ -130,6 +130,7 @@ export function ContactForm({ workspace, prefill = {}, onDone, onCancel, showMet
     setFiles(next);
   }
 
+  const thumbs = useFileThumbs(files);
   const metaText = useContactMeta(workspace, info.data);
   if (sent) {
     const s = sla(sent.first);
@@ -195,7 +196,7 @@ export function ContactForm({ workspace, prefill = {}, onDone, onCancel, showMet
       </div>
       <div className="field">
         <label htmlFor="help-contact-body">{t("contact.body")} *</label>
-        <textarea id="help-contact-body" className="input" rows={4} maxLength={10000} value={body} onChange={(e) => setBody(e.target.value)} aria-invalid={touched && !body.trim() ? true : undefined} />
+        <textarea id="help-contact-body" className="input" rows={4} maxLength={10000} value={body} onChange={(e) => setBody(e.target.value)} onPaste={(e) => addFiles(pastedFiles(e))} aria-invalid={touched && !body.trim() ? true : undefined} />
         {touched && !body.trim() && (
           <span className="field-error" role="alert">
             {t("contact.required", { field: t("contact.body") })}
@@ -208,18 +209,10 @@ export function ContactForm({ workspace, prefill = {}, onDone, onCancel, showMet
           {fileError}
         </span>
       )}
-      {files.length > 0 && (
-        <ul className={styles.fileList}>
-          {files.map((f, i) => (
-            <li key={`${f.name}-${i}`}>
-              <span>{f.name}</span>
-              <Button variant="ghost" size="icon" aria-label={t("contact.attachRemove", { name: f.name })} onClick={() => setFiles(files.filter((_, j) => j !== i))}>
-                <X size={14} />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <AttachmentList
+        label={t("contact.attach")}
+        rows={files.map((f, i) => ({ key: `${f.name}-${f.size}-${i}`, name: f.name, size: f.size, thumb: thumbs.get(f), onRemove: () => setFiles(files.filter((_, j) => j !== i)) }))}
+      />
       <label className={styles.check}>
         <input type="checkbox" checked={withContext} onChange={(e) => setWithContext(e.target.checked)} />
         <span>{requestId ? t("contact.context", { page, requestId }) : t("contact.contextNoId", { page })}</span>
@@ -249,17 +242,12 @@ export function ContactForm({ workspace, prefill = {}, onDone, onCancel, showMet
   );
 }
 
-function FileDrop({ label, onFiles }: { label: string; onFiles: (files: FileList | null) => void }) {
+function FileDrop({ label, onFiles }: { label: string; onFiles: (files: File[]) => void }) {
   const input = useRef<HTMLInputElement>(null);
+  const drop = useFileDrop(onFiles);
   return (
-    <div
-      className={styles.drop}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => {
-        e.preventDefault();
-        onFiles(e.dataTransfer.files);
-      }}
-    >
+    <div className={`${styles.drop} file-drop-target`} {...drop.bind}>
+      <DropOverlay count={drop.dragging} />
       <button type="button" className={styles.dropButton} onClick={() => input.current?.click()}>
         <ImagePlus size={16} aria-hidden="true" />
         {label}
@@ -271,7 +259,7 @@ function FileDrop({ label, onFiles }: { label: string; onFiles: (files: FileList
         hidden
         aria-label={label}
         onChange={(e) => {
-          onFiles(e.target.files);
+          onFiles(Array.from(e.target.files ?? []));
           e.target.value = "";
         }}
       />

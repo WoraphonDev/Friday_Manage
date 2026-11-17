@@ -47,10 +47,17 @@ export interface UploadedFile { id: string; name: string }
  * อัปโหลดไฟล์เข้า Files ของโปรเจกต์ แล้วแนบกับงาน / คอมเมนต์ / ผลทดสอบตามที่ระบุ
  * ใช้ในหน้า Task (ไฟล์แนบ, คอมเมนต์, ผลทดสอบ) โดยไม่ต้องไปหน้า Files ก่อน
  */
-export async function uploadToProject(ws: string, projectKey: string, file: File, attach?: { targetType: "issue" | "comment" | "test_run"; target: string }): Promise<UploadedFile> {
+export async function uploadToProject(
+  ws: string,
+  projectKey: string,
+  file: File,
+  attach?: { targetType: "issue" | "comment" | "test_run"; target: string },
+  /** onProgress = ส่งไปแล้วกี่ไบต์ · register = รับฟังก์ชันยกเลิก (ใช้กับปุ่ม ✕ ระหว่างอัปโหลด) */
+  options: { onProgress?: (loaded: number) => void; register?: (abort: () => void) => void } = {},
+): Promise<UploadedFile> {
   const base = `/w/${encodeURIComponent(ws)}/projects/${encodeURIComponent(projectKey)}`;
   const target = await api.post<UploadTarget>(`${base}/files/upload-url`, { name: file.name, size: file.size, mime: file.type || undefined });
-  await putFile({ ...target, url: uploadUrl(target) }, file, () => undefined, () => undefined);
+  await putFile({ ...target, url: uploadUrl(target) }, file, options.onProgress ?? (() => undefined), options.register ?? (() => undefined));
   const created = await api.post<UploadedFile>(`${base}/files`, { uploadToken: target.uploadToken });
   if (attach) await api.post(`${base}/files/${created.id}/attachments`, attach);
   return { id: created.id, name: created.name ?? file.name };

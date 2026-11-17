@@ -291,5 +291,17 @@
       "qa": "Testing",
       "ops": "Operations"
     }
+  },
+  "attach": {
+    "drop": "Drop to attach",
+    "dropCount": "Drop to attach {count} files",
+    "queued": "Queued",
+    "uploadingName": "Uploading {name}",
+    "uploadingCount": "Uploading {done}/{total}",
+    "cancel": "Cancel uploading {name}",
+    "remove": "Remove {name}",
+    "open": "View {name}",
+    "removed": "Removed {name}",
+    "pasteHint": "Drag images here, or press ⌘V / Ctrl+V to paste a screenshot"
   }
 }

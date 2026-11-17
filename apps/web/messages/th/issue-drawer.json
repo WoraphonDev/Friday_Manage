@@ -366,7 +366,9 @@
     "noteLabel": "บันทึก",
     "stepsLabel": "ขั้นตอนที่พบปัญหา",
     "stepsPlaceholder": "1. เปิดหน้า …\n2. กด …\n3. ผลที่ได้ … / ผลที่ควรเป็น …",
-    "previewFile": "ดูตัวอย่าง {name}"
+    "previewFile": "ดูตัวอย่าง {name}",
+    "dropHint": "แนบเป็นหลักฐานของผลทดสอบรอบนี้",
+    "dropHintUnit": "แนบเป็นรายงานของผล Unit test รอบนี้"
   },
   "mobileComplete": "เสร็จ",
   "commentPlaceholder": "เขียนคอมเมนต์… @ เพื่อ mention",
@@ -459,5 +461,7 @@
     "close": "ปิด",
     "invalidIds": "ใส่เลขงาน เช่น 111004 หรือ ABC-123 คั่นด้วยจุลภาค",
     "invalidUrl": "URL ต้องขึ้นต้นด้วย http:// หรือ https://"
-  }
+  },
+  "dropHintIssue": "แนบกับงานนี้ และเก็บในหน้า Files ของโปรเจกต์",
+  "dropHintComment": "ไฟล์จะติดไปกับคอมเมนต์ตอนกดส่ง"
 }

@@ -148,9 +148,6 @@
 .drop { border:1px dashed var(--border-strong); border-radius:10px; }
 .dropButton { display:flex; align-items:center; gap:8px; width:100%; padding:10px 14px; border:0; background:transparent; color:var(--muted); font:inherit; font-size:12px; cursor:pointer; text-align:left; }
 .dropButton:hover { color:var(--primary-text); }
-.fileList { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; font-size:12px; }
-.fileList li { display:flex; align-items:center; gap:6px; padding:2px 6px 2px 10px; background:var(--surface-2); border-radius:8px; }
-.fileList span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .check { display:flex; gap:10px; align-items:flex-start; font-size:13px; cursor:pointer; }
 .check input { margin-top:3px; accent-color:var(--primary); width:16px; height:16px; flex:none; }
 .contactFoot { display:flex; gap:8px; align-items:center; border-top:1px solid var(--border); padding-top:12px; flex-wrap:wrap; }

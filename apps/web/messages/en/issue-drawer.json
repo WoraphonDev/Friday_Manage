@@ -366,7 +366,9 @@
     "noteLabel": "Notes",
     "stepsLabel": "Steps where it failed",
     "stepsPlaceholder": "1. Open …\n2. Click …\n3. Actual … / Expected …",
-    "previewFile": "Preview {name}"
+    "previewFile": "Preview {name}",
+    "dropHint": "Attach as evidence for this test round",
+    "dropHintUnit": "Attach as the report for this unit test round"
   },
   "mobileComplete": "Done",
   "commentPlaceholder": "Write a comment… @ to mention",
@@ -459,5 +461,7 @@
     "close": "Close",
     "invalidIds": "Enter issue numbers such as 111004 or ABC-123, separated by commas",
     "invalidUrl": "The URL must start with http:// or https://"
-  }
+  },
+  "dropHintIssue": "Attach to this task and keep in project Files",
+  "dropHintComment": "Files are attached when you send the comment"
 }

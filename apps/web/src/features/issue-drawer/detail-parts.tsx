@@ -4,12 +4,12 @@ import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { GitBranch } from 'lucide-react';
-import { Avatar, Button, useToast } from '@/components/ui';
+import { AttachmentList, Avatar, Button, DropOverlay, isImageFile, useFileDrop, useToast, type AttachmentRow } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import { BodyText, InlineText } from './shared';
 import { TestRuns } from './test-runs';
-import { AttachButton } from './task-v2';
+import { AttachButton, useProjectUploads } from './task-v2';
 import { filesPageHref, type Issue, issuePath, previewBase, projectPath, type Scope } from './types';
 import { FilePreview, useFilePreview } from '@/components/file-preview';
 import styles from './issue-drawer.module.css';
@@ -110,30 +110,48 @@ export function Development({ scope, issue }: { scope: Scope; issue: Issue }) {
   </div>;
 }
 
-interface Attached { id: string; name: string; mime: string | null; kind: 'upload' | 'link'; linkUrl: string | null; uploader: { displayName: string } | null; createdAt: string }
+interface Attached { id: string; name: string; mime: string | null; size?: number | null; kind: 'upload' | 'link'; linkUrl: string | null; uploader: { displayName: string } | null; createdAt: string }
+/** ไฟล์แนบของงาน: แสดงเป็นรายการพร้อมรูปย่อ · ลากไฟล์มาวางในหัวข้อนี้ได้ · ✕ = ถอดออกจากงาน (ไฟล์ยังอยู่ในหน้า Files) */
 export function Attachments({ scope, issue }: { scope: Scope; issue: Issue }) {
   const t = useTranslations('issue-drawer');
+  const ta = useTranslations('common.attach');
+  const toast = useToast();
   const canAttach = !scope.access.guestViewer && scope.access.permissions.includes('issue.edit') && scope.project?.status !== 'archived';
   const preview = useFilePreview();
   const files = useQuery({ queryKey: ['issue-files', scope.ws, issue.key], queryFn: ({ signal }) => api.get<{ items: Attached[] }>(`${projectPath(scope.ws, scope.projectKey)}/files?target=${encodeURIComponent(`issue:${issue.key}`)}`, { signal }), retry: false });
+  const target = { targetType: 'issue' as const, target: issue.key };
+  const uploads = useProjectUploads(scope, { attach: target, onUploaded: async () => { await files.refetch(); } });
+  const drop = useFileDrop(uploads.add, canAttach);
+  const [hidden, setHidden] = useState<string[]>([]);
   if (files.error) return null;
-  const items = files.data?.items ?? [];
-  const uploads = items.filter((f) => f.kind !== 'link');
-  const ext = (f: Attached) => (f.name.split('.').pop() ?? '').slice(0, 4).toUpperCase();
-  const tone = (e: string) => e === 'PDF' ? styles.fPdf : ['XLSX', 'XLS', 'CSV'].includes(e) ? styles.fXls : ['PNG', 'JPG', 'JPEG', 'GIF', 'MP4'].includes(e) ? styles.fImg : styles.fDoc;
-  return <div className={styles.blk}>
-    <h3>{t('attachments')} <span className="muted" style={{ fontWeight: 500 }}>{items.length}</span>{canAttach && <span style={{ marginLeft: 'auto' }}><AttachButton scope={scope} attach={{ targetType: 'issue', target: issue.key }} onUploaded={async () => { await files.refetch(); }} /></span>}</h3>
-    {!items.length && files.data && <p className="muted">{t('noAttachments')}</p>}
-    <div className={styles.files}>
-      {items.map((f) => {
-        const inner = <><span className={`${styles.fIcon} ${tone(ext(f))}`}>{ext(f) || 'FILE'}</span>
-          <span style={{ minWidth: 0 }}><b>{f.name}</b><small className="muted">{f.uploader?.displayName ?? ''} · {formatDate(f.createdAt, scope.yearFormat)}</small></span></>;
-        // ลิงก์ภายนอกเปิดแท็บใหม่ · ไฟล์ที่อัปโหลดเปิดป๊อปอัปดูตัวอย่าง
-        return f.kind === 'link' && f.linkUrl
-          ? <a key={f.id} className={styles.file} href={f.linkUrl} target="_blank" rel="noopener noreferrer">{inner}</a>
-          : <button type="button" key={f.id} className={`${styles.file} ${styles.fileButton}`} aria-label={t('previewFile', { name: f.name })} onClick={() => preview.open(uploads, uploads.findIndex((u) => u.id === f.id))}>{inner}</button>;
-      })}
-    </div>
+  const base = projectPath(scope.ws, scope.projectKey);
+  const items = (files.data?.items ?? []).filter((f) => !hidden.includes(f.id));
+  const uploadsList = items.filter((f) => f.kind !== 'link');
+  async function detach(file: Attached) {
+    const path = `${base}/files/${encodeURIComponent(file.id)}/attachments`;
+    setHidden((current) => [...current, file.id]);
+    try {
+      await api.delete(path, { body: target });
+      await files.refetch();
+      toast({ message: ta('removed', { name: file.name }), undo: async () => { await api.post(path, target); await files.refetch(); } });
+    } catch (error) {
+      toast({ message: error instanceof Error && error.message ? error.message : t('uploadFailed'), tone: 'error' });
+    } finally { setHidden((current) => current.filter((id) => id !== file.id)); }
+  }
+  const rows: AttachmentRow[] = items.map((f) => ({
+    key: f.id,
+    name: f.name,
+    thumb: f.kind !== 'link' && isImageFile(f) ? `${previewBase(scope)}/files/${encodeURIComponent(f.id)}/download?inline=1` : null,
+    meta: [f.uploader?.displayName, formatDate(f.createdAt, scope.yearFormat)].filter(Boolean).join(' · '),
+    // ลิงก์ภายนอกเปิดแท็บใหม่ · ไฟล์ที่อัปโหลดเปิดป๊อปอัปดูตัวอย่าง
+    onOpen: () => f.kind === 'link' && f.linkUrl ? void window.open(f.linkUrl, '_blank', 'noopener,noreferrer') : preview.open(uploadsList, uploadsList.findIndex((u) => u.id === f.id)),
+    onRemove: canAttach ? () => void detach(f) : undefined,
+  }));
+  return <div className={`${styles.blk} file-drop-target`} {...drop.bind}>
+    <DropOverlay count={drop.dragging} hint={t('dropHintIssue')} />
+    <h3>{t('attachments')} <span className="muted" style={{ fontWeight: 500 }}>{items.length}</span>{canAttach && <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 8, alignItems: 'center' }}>{uploads.status && <span className="muted" role="status" style={{ fontSize: 11, fontWeight: 500 }}>{uploads.status}</span>}<AttachButton onFiles={uploads.add} /></span>}</h3>
+    {!items.length && !uploads.rows.length && files.data && <p className="muted">{t('noAttachments')}</p>}
+    <AttachmentList rows={[...rows, ...uploads.rows]} label={t('attachments')} />
     {preview.props && <FilePreview {...preview.props} base={previewBase(scope)} filesHref={filesPageHref(scope)} />}
   </div>;
 }

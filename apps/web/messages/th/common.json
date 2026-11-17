@@ -291,5 +291,17 @@
       "qa": "ทดสอบ",
       "ops": "ปฏิบัติการ"
     }
+  },
+  "attach": {
+    "drop": "ปล่อยเพื่อแนบ",
+    "dropCount": "ปล่อยเพื่อแนบ {count} ไฟล์",
+    "queued": "รอคิว",
+    "uploadingName": "กำลังอัปโหลด {name}",
+    "uploadingCount": "กำลังอัปโหลด {done}/{total}",
+    "cancel": "ยกเลิกการอัปโหลด {name}",
+    "remove": "เอา {name} ออก",
+    "open": "ดู {name}",
+    "removed": "นำ {name} ออกแล้ว",
+    "pasteHint": "ลากรูปมาวาง หรือกด ⌘V / Ctrl+V เพื่อวางภาพหน้าจอได้"
   }
 }

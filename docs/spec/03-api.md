@@ -489,8 +489,9 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET | `w/search` | สมาชิก | ค้นชื่อ, รายละเอียด, คอมเมนต์, ข้อความในไฟล์ · กรองตามสิทธิ์ก่อนตอบ · `#DP-39` และ `@ชื่อ` |
 | CRUD | `w/saved-searches` | self | |
 | GET | `p/insights/risks` · `p/insights/modules` | `project.workload.view` | O1 |
-| GET | `p/reports/weekly` · `module-forecast` · `traceability` | `project.view` (ไม่ใช่ Guest) | |
-| GET | `p/reports/due` | `project.reports.view` (ไม่ใช่ Guest) | |
+| GET | `p/reports/weekly` | `project.view` (ไม่ใช่ Guest) | การ์ดใน Overview ใช้ตัวเลขจากรายงานนี้ |
+| GET | `p/reports/module-forecast` · `traceability` | `project.reports.view` (ไม่ใช่ Guest) | |
+| GET | `p/reports/due` | `project.reports.due` (ไม่ใช่ Guest) | |
 | POST | `p/reports/weekly:send` · GET / PUT `p/report-schedule` | Admin | |
 | CRUD | `p/automations` | `project.settings` | |
 | POST | `p/automations/{id}:dry-run` | `project.settings` | คืนรายการงานที่ตรงเงื่อนไขและสิ่งที่จะทำ โดยไม่บันทึก |

@@ -309,6 +309,14 @@
       "doneMd": "Done MD",
       "planMd": "Planned MD",
       "slipDays": "Slip (working days)"
+    },
+    "popup": {
+      "open": "Due report",
+      "title": "Due report",
+      "close": "Close",
+      "back": "Back to list",
+      "openFull": "Open full view",
+      "listLabel": "Due tasks"
     }
   }
 }

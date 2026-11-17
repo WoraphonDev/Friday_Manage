@@ -56,6 +56,7 @@ export const permissions: Permissions = {
     "project.settings",
     "project.workload.view",
     "project.reports.view",
+    "project.reports.due",
     "project.automation",
     "project.baseline",
   ],

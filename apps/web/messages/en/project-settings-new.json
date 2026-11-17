@@ -279,6 +279,10 @@
       },
       "rows": {
         "project__view": "View every tab and task",
+        "project__reports": {
+          "view": "View the Reports tab (Weekly, Plan vs Actual, Traceability)",
+          "due": "View the due report (button on Overview)"
+        },
         "issue__comment": "Comment",
         "issue__create": "Create and edit tasks",
         "issue__delete": "Delete tasks",

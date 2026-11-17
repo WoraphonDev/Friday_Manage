@@ -10,6 +10,9 @@ import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import messages from "../../messages/th/lead-dashboard-reports.json";
 import { ReportsView } from "../../app/work/[ws]/p/[key]/reports/_components/reports-view";
 import type { DueReportResponse } from "../../app/work/[ws]/p/[key]/reports/_components/due-report";
+import { DueButton, DuePopup } from "../../app/work/[ws]/p/[key]/reports/_components/due-popup";
+import { fixture } from "@/features/issue-drawer/fixtures.test-support";
+import { permissions } from "@/test/fixtures";
 
 // วันนี้สมมติ: อ. 17 พ.ย. 2569 → สัปดาห์นี้ 16–22 พ.ย.
 const NOW = new Date("2026-11-17T10:00:00+07:00");
@@ -152,5 +155,82 @@ describe("รายงานงานที่จะเสร็จ", () => {
     mount("report=due");
     await waitFor(() => expect(screen.queryByRole("table")).not.toBeInTheDocument());
     expect(await screen.findByText(/ไม่มีสิทธิ์/)).toBeInTheDocument();
+  });
+});
+
+describe("ปุ่มและ popup งานที่จะเสร็จจาก Overview", () => {
+  const mountPopup = (search: string) => { navigation.pathname = "/work/sample/p/DE"; navigation.search = search; return renderWithProviders(<WorkspaceShell ws="sample"><DueButton /><DuePopup ws="sample" projectKey="DE" projectName="แผนพัฒนาตัวอย่าง" /></WorkspaceShell>, { messages: { "lead-dashboard-reports": messages } }); };
+
+  it("กดปุ่มแล้วเปิด popup ผ่าน URL · ตัวกรองใช้ชื่อขึ้นต้นด้วย d ไม่ชนกับหน้า Overview", async () => {
+    const user = userEvent.setup({ advanceTimers: () => undefined });
+    mountPopup("");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "งานที่จะเสร็จ" }));
+    expect(lastUrl().get("due")).toBe("1");
+
+    const view = mountPopup("due=1&dfrom=2026-11-16&dto=2026-11-30&ddev=dev-a&view=board");
+    const dialog = await screen.findByRole("dialog", { name: "งานที่จะเสร็จ" });
+    await within(dialog).findByRole("table");
+    expect(requests.at(-1)).toBe("from=2026-11-16&to=2026-11-30&dev=dev-a");
+    await user.click(within(dialog).getByRole("radio", { name: "Plan ที่จะเสร็จ" }));
+    const url = lastUrl();
+    expect(url.get("dview")).toBe("plan");
+    expect(url.get("view")).toBe("board");
+    expect(url.has("report")).toBe(false);
+    view.unmount();
+  });
+
+  it("กดงานแล้วรายละเอียดเปิดใน popup เดียวกัน ไม่ใช้ Drawer", async () => {
+    const user = userEvent.setup({ advanceTimers: () => undefined });
+    mountPopup("due=1");
+    const dialog = await screen.findByRole("dialog", { name: "งานที่จะเสร็จ" });
+    await user.click(await within(dialog).findByRole("button", { name: /DE-20/ }));
+    expect(lastUrl().get("dissue")).toBe("DE-20");
+    expect(lastUrl().has("issue")).toBe(false);
+    expect(within(dialog).queryByRole("link", { name: "DE-12" })).not.toBeInTheDocument();
+  });
+
+  it("เปิดงานอยู่: ตารางย่อ, แผงรายละเอียด, ปิดแผง และเปิดเต็มหน้า", async () => {
+    const f = fixture();
+    server.use(...f.handlers, http.get("*/api/v1/w/:ws/projects/:key/reports/due", () => HttpResponse.json({ ...dueData(), tasks: dueData().tasks.map((x, i) => (i === 0 ? { ...x, key: "DE-1" } : x)) })));
+    const user = userEvent.setup({ advanceTimers: () => undefined });
+    mountPopup("due=1&dissue=DE-1&dfrom=2026-11-16&dto=2026-11-22");
+    const dialog = await screen.findByRole("dialog", { name: "งานที่จะเสร็จ" });
+    expect(await within(dialog).findByRole("button", { name: "งานตัวอย่าง DE-1" })).toBeInTheDocument();
+    const table = within(dialog).getByRole("table");
+    expect(within(table).getAllByRole("columnheader")).toHaveLength(3);
+    expect(within(table).getByRole("button", { name: /DE-1 / })).toHaveAttribute("aria-current", "true");
+
+    await user.click(within(dialog).getByRole("button", { name: "เปิดเต็มหน้า" }));
+    let url = lastUrl();
+    expect(url.get("issue")).toBe("DE-1");
+    expect(url.has("due")).toBe(false);
+    expect(url.has("dissue")).toBe(false);
+    expect(url.has("dfrom")).toBe(false);
+
+    const close = within(dialog).getAllByRole("button", { name: "ปิด" });
+    // ปุ่มปิดตัวแรกคือของ popup · ตัวที่สองคือของแผงงาน
+    await user.click(close[close.length - 1]);
+    url = lastUrl();
+    expect(url.get("due")).toBe("1");
+    expect(url.has("dissue")).toBe(false);
+  });
+});
+
+describe("เมนูรายงานตามสิทธิ์", () => {
+  const withPerms = (list: string[]) => server.use(http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () => HttpResponse.json({ ...permissions, role: "member", permissions: list })));
+
+  it("ปิดรายงานงานที่จะเสร็จ: เมนูไม่แสดง", async () => {
+    withPerms(["project.view", "project.workload.view", "project.reports.view"]);
+    mount("");
+    expect(await screen.findByRole("button", { name: "รายงานประจำสัปดาห์" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "งานที่จะเสร็จ" })).not.toBeInTheDocument();
+  });
+
+  it("เปิดเฉพาะรายงานงานที่จะเสร็จ: เมนูเหลือรายการเดียว", async () => {
+    withPerms(["project.view", "project.workload.view", "project.reports.due"]);
+    mount("report=weekly");
+    expect(await screen.findByRole("button", { name: "งานที่จะเสร็จ" })).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("button", { name: "รายงานประจำสัปดาห์" })).not.toBeInTheDocument();
   });
 });

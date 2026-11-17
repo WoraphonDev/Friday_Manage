@@ -323,4 +323,34 @@ describe('GET p/reports/due', () => {
     expect([403, 404]).toContain((await get('reports/due?from=2026-12-01&to=2026-12-31', outsider)).status);
     expect((await get('reports/due?from=2026-12-01&to=2026-12-31', team.dev)).status).toBe(200);
   });
+
+  it('สิทธิ์แยกตาม Role (ผู้ใช้ขอ 2026-11-17): ปิดหน้า Reports ของ Member ยังเปิดรายงานงานที่จะเสร็จได้ · ปิดรายงานนี้แยกได้', async () => {
+    const range = 'reports/due?from=2026-12-01&to=2026-12-31';
+    const set = async (permission: string, allowed: boolean) => {
+      const r = await team.lead.put(`${base}/role-permissions`, { role: 'member', permission, allowed });
+      expect(r.status, JSON.stringify(r.body)).toBeLessThan(300);
+    };
+    const perms = async () => (await get('my-permissions', team.dev)).body.permissions as string[];
+    expect(await perms()).toEqual(expect.arrayContaining(['project.reports.view', 'project.reports.due']));
+
+    await set('project.reports.view', false);
+    expect(await perms()).not.toContain('project.reports.view');
+    expect(await perms()).toContain('project.reports.due');
+    expect((await get(range, team.dev)).status).toBe(200);
+    expect((await get('reports/module-forecast', team.dev)).status).toBe(403);
+    expect((await get('reports/traceability', team.dev)).status).toBe(403);
+    // การ์ดใน Overview ยังอ่านรายงานประจำสัปดาห์ได้
+    expect((await get('reports/weekly', team.dev)).status).toBe(200);
+    // Admin ไม่โดนผล
+    expect((await get('reports/module-forecast')).status).toBe(200);
+
+    await set('project.reports.due', false);
+    expect((await get(range, team.dev)).status).toBe(403);
+    expect((await get(range)).status).toBe(200);
+
+    await set('project.reports.view', true);
+    await set('project.reports.due', true);
+    expect((await get(range, team.dev)).status).toBe(200);
+    expect((await get('reports/traceability', team.dev)).status).toBe(200);
+  });
 });

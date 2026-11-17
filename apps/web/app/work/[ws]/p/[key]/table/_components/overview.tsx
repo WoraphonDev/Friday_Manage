@@ -10,6 +10,7 @@ import { api, ApiError } from "@/lib/api";
 import { formatDate, type YearFormat } from "@/lib/format";
 import { useSlidingIndicator } from "@/lib/motion";
 import { PlanActions, PlanFacts, PlanModules, PlanRisks, PlanWorkload, usePlan } from "../../dashboard/_components/lead-dashboard";
+import { DueButton, DuePopup } from "../../reports/_components/due-popup";
 import type { Overview, OverviewItem } from "./types";
 import styles from "./ot.module.css";
 import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
@@ -154,9 +155,12 @@ export function OverviewPage({ ws, projectKey }: { ws: string; projectKey: strin
             <option value="">{t("allModules")}</option>
             {d.modules.filter((m) => m.id).map((m) => <option key={m.id} value={m.id!}>{m.name}</option>)}
           </Select>
+          {plan.canDue && <DueButton />}
           <PlanActions plan={plan} />
         </div>
       </div>
+      {plan.canDue && <div className={styles.mobileOnly}><DueButton /></div>}
+      {plan.canDue && <DuePopup ws={ws} projectKey={projectKey} projectName={d.project?.name} />}
 
       <MobileSummary d={d} time={`${String(updatedAt.getHours()).padStart(2, "0")}:${String(updatedAt.getMinutes()).padStart(2, "0")}`} year={year} />
 

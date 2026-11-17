@@ -40,7 +40,9 @@ export function usePlan(ws: string, projectKey: string) {
   const lastWeek = useQuery({ queryKey: ["reports", ws, projectKey, "weekly", addDays(weekStart(now), -7)], queryFn: () => api.get<WeeklyReport>(`${endpoint}/reports/weekly?week=${addDays(weekStart(now), -7)}`), enabled: allowed });
   // 403 จาก insights = ไม่มีสิทธิ์ส่วนนี้ ซ่อนเงียบ ๆ ไม่ขึ้นหน้าไม่มีสิทธิ์กลาง Overview
   const forbidden = [risks.error, modules.error].some((e) => e instanceof ApiError && e.status === 403);
-  return { ws, projectKey, now, allowed: allowed && !forbidden, risks, modules, thisWeek, lastWeek };
+  // สวิตช์ในหน้าสิทธิ์ของ Role (ผู้ใช้ขอ 2026-11-17): หน้า Reports กับรายงานงานที่จะเสร็จแยกกัน
+  const perms = permissions.data && !permissions.data.guestViewer ? permissions.data.permissions : [];
+  return { ws, projectKey, now, allowed: allowed && !forbidden, risks, modules, thisWeek, lastWeek, canReports: perms.includes("project.reports.view"), canDue: perms.includes("project.reports.due") };
 }
 export type Plan = ReturnType<typeof usePlan>;
 
@@ -61,7 +63,7 @@ export function PlanActions({ plan }: { plan: Plan }) {
   const t = useTranslations("lead-dashboard-reports");
   if (!plan.allowed) return null;
   return <>
-    <Link className="button button-secondary" href={`${projectBase(plan.ws, plan.projectKey)}/reports`}>{t("createWeekly")}</Link>
+    {plan.canReports && <Link className="button button-secondary" href={`${projectBase(plan.ws, plan.projectKey)}/reports`}>{t("createWeekly")}</Link>}
     <Link className="button button-secondary" href={`/work/${encodeURIComponent(plan.ws)}/p/${encodeURIComponent(plan.projectKey)}/table?io=import`}>{t("importExport")}</Link>
   </>;
 }

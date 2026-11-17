@@ -157,3 +157,23 @@
   .menuList { max-height:50vh; }
   .opt { min-height:40px; font-size:14px; }
 }
+/* เปิดงานในแผงข้างของ popup: ปุ่มหน้าตาเหมือนลิงก์ · แถวที่เปิดอยู่มีพื้นสีหลักอ่อน */
+.issueBtn { border:0; background:transparent; padding:0; font:inherit; color:inherit; text-align:left; cursor:pointer; }
+.issueBtn:hover .titleLink, .issueBtn:hover .key { text-decoration:underline; }
+.pickedRow td { background:var(--primary-soft); }
+/* popup งานที่จะเสร็จจาก Overview: เกือบเต็มจอ · เปิดงานแล้วแบ่งซ้ายรายการ / ขวารายละเอียด */
+.duePop { position:fixed; z-index:51; inset:24px; background:var(--card); border-radius:14px; box-shadow:var(--shadow-menu); display:flex; flex-direction:column; overflow:hidden; animation:fade-in .2s ease-out; }
+.duePop:focus { outline:none; }
+.duePopHead { display:flex; align-items:center; gap:10px; padding:12px 16px 12px 20px; border-bottom:1px solid var(--border); }
+.duePopTitle { margin:0; font-size:16px; font-weight:700; }
+.duePopBody { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0, 1fr); }
+.duePopSplit { grid-template-columns:minmax(0, 42fr) minmax(0, 58fr); }
+.dueList { min-width:0; overflow:auto; padding:16px 20px 24px; display:flex; flex-direction:column; gap:12px; background:var(--background); }
+.duePopSplit .dueList { border-right:1px solid var(--border); }
+.dueDetail { min-width:0; display:flex; flex-direction:column; overflow:auto; }
+.dueDetailBar { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:6px; padding:6px 10px; background:var(--card); border-bottom:1px solid var(--border); }
+@media (max-width:760px) {
+  .duePop { inset:0; border-radius:0; }
+  .duePopSplit { grid-template-columns:minmax(0, 1fr); }
+  .dueList { padding:12px; }
+}

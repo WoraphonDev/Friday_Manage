@@ -26249,6 +26249,8 @@
                     "type": "string",
                     "enum": [
                       "project.view",
+                      "project.reports.view",
+                      "project.reports.due",
                       "issue.comment",
                       "issue.create",
                       "issue.delete",

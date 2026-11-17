@@ -14,7 +14,17 @@ import type { Person } from "@/lib/types";
 import { addDays, projectEndpoint, round1, weekStart } from "../../dashboard/_components/types";
 import styles from "./reports.module.css";
 
-interface Props { ws: string; projectKey: string; yearFormat: YearFormat; issueHref: (key: string) => string }
+interface Props {
+  ws: string; projectKey: string; yearFormat: YearFormat; issueHref: (key: string) => string;
+  /** ชื่อ query ของตัวกรองขึ้นต้นด้วย prefix · popup ใน Overview ใช้ "d" ไม่ให้ชนกับ query ของหน้านั้น */
+  prefix?: string;
+  /** มีค่า = กดงานแล้วเปิดในหน้าเดียวกัน (popup แบ่งสองฝั่ง) แทนลิงก์ไป Drawer */
+  onOpenIssue?: (key: string) => void;
+  /** งานที่เปิดอยู่ทางขวา · ตารางย่อเหลือคอลัมน์สำคัญ */
+  selectedKey?: string | null;
+}
+/** วิธีเปิดงานจากแถว: ลิงก์ไป Drawer (หน้า Reports) หรือเปิดในแผงข้าง (popup) */
+interface Opener { href: (key: string) => string; onOpen?: (key: string) => void; selected?: string | null }
 
 type TaskState = "done" | "late" | "at_risk" | "on_track";
 type PlanStatus = "done" | "late" | "on_track" | "at_risk" | "off_track" | "no_forecast";
@@ -67,33 +77,37 @@ function presetRange(preset: Preset, now: string): [string, string] {
 }
 
 /** ตัวกรองอยู่ใน URL: คัดลอกลิงก์ส่งให้คนอื่นแล้วเห็นรายงานเดียวกัน */
-function readFilter(search: URLSearchParams, now: string): Filter {
-  const list = (name: string) => (search.get(name) ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+export const DUE_PARAMS = ["view", "from", "to", "m", "ba", "sa", "dev"] as const;
+function readFilter(search: URLSearchParams, now: string, prefix: string): Filter {
+  const get = (name: string) => search.get(`${prefix}${name}`) ?? "";
+  const list = (name: string) => get(name).split(",").map((x) => x.trim()).filter(Boolean);
   const [defFrom, defTo] = presetRange("thisWeek", now);
-  const from = search.get("from") ?? "";
-  const to = search.get("to") ?? "";
+  const from = get("from");
+  const to = get("to");
   const valid = ISO.test(from) && ISO.test(to) && from <= to;
-  return { view: search.get("view") === "plan" ? "plan" : "task", from: valid ? from : defFrom, to: valid ? to : defTo, modules: list("m"), ba: list("ba"), sa: list("sa"), dev: list("dev") };
+  return { view: get("view") === "plan" ? "plan" : "task", from: valid ? from : defFrom, to: valid ? to : defTo, modules: list("m"), ba: list("ba"), sa: list("sa"), dev: list("dev") };
 }
 
-export function DueReport({ ws, projectKey, yearFormat, issueHref }: Props) {
+export function DueReport({ ws, projectKey, yearFormat, issueHref, prefix = "", onOpenIssue, selectedKey = null }: Props) {
   const t = useTranslations("lead-dashboard-reports.due");
   const search = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const now = todayIso();
-  const filter = readFilter(search, now);
+  const filter = readFilter(search, now, prefix);
+  const opener: Opener = { href: issueHref, onOpen: onOpenIssue, selected: selectedKey };
+  const compact = !!selectedKey;
   const [open, setOpen] = useState<Set<string>>(new Set());
 
   const setFilter = (patch: Partial<Filter>) => {
     const f = { ...filter, ...patch };
     const next = new URLSearchParams(search);
-    next.set("report", "due");
-    next.set("view", f.view);
-    next.set("from", f.from);
-    next.set("to", f.to);
+    if (!prefix) next.set("report", "due");
+    next.set(`${prefix}view`, f.view);
+    next.set(`${prefix}from`, f.from);
+    next.set(`${prefix}to`, f.to);
     for (const [k, v] of [["m", f.modules], ["ba", f.ba], ["sa", f.sa], ["dev", f.dev]] as const) {
-      if (v.length) next.set(k, v.join(",")); else next.delete(k);
+      if (v.length) next.set(`${prefix}${k}`, v.join(",")); else next.delete(`${prefix}${k}`);
     }
     router.replace(`${pathname}?${next}`, { scroll: false });
   };
@@ -139,7 +153,7 @@ export function DueReport({ ws, projectKey, yearFormat, issueHref }: Props) {
               <Stat label={t("stat.atRisk")} value={data.summary.atRiskCount + data.summary.lateCount} unit={t("unit.tasks")} tone={data.summary.lateCount ? "bad" : data.summary.atRiskCount ? "warn" : undefined} note={data.summary.lateCount ? t("stat.lateNote", { count: data.summary.lateCount }) : undefined} />
             </dl>
             {!data.tasks.length ? <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} />
-              : <TaskTable tasks={data.tasks} yearFormat={yearFormat} issueHref={issueHref} noModule={noModule} />}
+              : <TaskTable tasks={data.tasks} yearFormat={yearFormat} opener={opener} compact={compact} noModule={noModule} />}
           </> : <>
             <dl className={styles.dueStats}>
               <Stat label={t("stat.plans")} value={data.planSummary.groupCount} unit={t("unit.groups")} />
@@ -148,7 +162,7 @@ export function DueReport({ ws, projectKey, yearFormat, issueHref }: Props) {
               <Stat label={t("stat.slip")} value={data.planSummary.slipCount} unit={t("unit.groups")} tone={data.planSummary.slipCount ? "bad" : undefined} />
             </dl>
             {!data.plans.length ? <EmptyState title={t("emptyPlanTitle")} description={t("emptyPlanDescription")} />
-              : <PlanTable plans={data.plans} yearFormat={yearFormat} issueHref={issueHref} noModule={noModule} open={open} toggle={(k) => setOpen((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; })} />}
+              : <PlanTable plans={data.plans} yearFormat={yearFormat} opener={opener} compact={compact} noModule={noModule} open={open} toggle={(k) => setOpen((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; })} />}
             <p className={styles.footNote}>{t("planNote", { days: data.velocity.windowDays })}</p>
           </>}
         </div>}
@@ -181,24 +195,37 @@ function ModuleName({ module, noModule }: { module: ModuleRef | null; noModule: 
   return <span className={styles.mod}>{module && <i style={{ background: module.color ?? DEFAULT_ITEM_COLOR }} aria-hidden="true" />}{module?.name ?? noModule}</span>;
 }
 
-function TaskTable({ tasks, yearFormat, issueHref, noModule }: { tasks: DueTask[]; yearFormat: YearFormat; issueHref: (key: string) => string; noModule: string }) {
+/** รหัส + ชื่องาน: ลิงก์เปิด Drawer หรือปุ่มเปิดในแผงข้าง */
+function IssueName({ issueKey, title, opener }: { issueKey: string; title: string; opener: Opener }) {
+  if (opener.onOpen) {
+    const open = opener.onOpen;
+    return <button type="button" className={styles.issueBtn} aria-current={opener.selected === issueKey ? "true" : undefined} onClick={() => open(issueKey)}><span className={styles.key}>{issueKey}</span> <span className={styles.titleLink}>{title}</span></button>;
+  }
+  return <><Link className={styles.key} href={opener.href(issueKey)}>{issueKey}</Link> <Link href={opener.href(issueKey)} className={styles.titleLink}>{title}</Link></>;
+}
+
+function TaskTable({ tasks, yearFormat, opener, compact, noModule }: { tasks: DueTask[]; yearFormat: YearFormat; opener: Opener; compact: boolean; noModule: string }) {
   const t = useTranslations("lead-dashboard-reports.due");
   const days = new Map<string, DueTask[]>();
   for (const task of tasks) days.set(task.planEnd, [...(days.get(task.planEnd) ?? []), task]);
+  // เปิดงานในแผงข้าง: ตารางเหลือ งาน / Plan End / สถานะ ให้พอดีครึ่งซ้าย
+  const cols = compact ? 3 : 9;
   return <div className={`${styles.card} ${styles.tableScroll}`}>
-    <table className={styles.table} style={{ minWidth: 960 }}>
-      <thead><tr><th>{t("col.task")}</th><th>{t("module")}</th><th>{t("ba")}</th><th>{t("sa")}</th><th>{t("dev")}</th><th>MD</th><th>{t("col.planEnd")}</th><th>{t("col.progress")}</th><th>{t("col.status")}</th></tr></thead>
+    <table className={styles.table} style={{ minWidth: compact ? 0 : 960 }}>
+      <thead><tr><th>{t("col.task")}</th>{!compact && <><th>{t("module")}</th><th>{t("ba")}</th><th>{t("sa")}</th><th>{t("dev")}</th><th>MD</th></>}<th>{t("col.planEnd")}</th>{!compact && <th>{t("col.progress")}</th>}<th>{t("col.status")}</th></tr></thead>
       <tbody>{[...days].map(([day, list]) => <Fragment key={day}>
-        <tr className={styles.dayRow}><td colSpan={9}>{formatWeekday(day, yearFormat)}<span>{t("dayTotal", { count: list.length, md: round1(list.reduce((n, x) => n + (x.estimateMd ?? 0), 0)) })}</span></td></tr>
-        {list.map((task) => <tr key={task.id}>
-          <td><Link className={styles.key} href={issueHref(task.key)}>{task.key}</Link> <Link href={issueHref(task.key)} className={styles.titleLink}>{task.title}</Link>{task.parentKey && <div className={styles.small}>{t("subOf", { key: task.parentKey })}</div>}</td>
-          <td><ModuleName module={task.module} noModule={noModule} />{task.phase && <div className={styles.small}>{task.phase}</div>}</td>
-          <td>{task.ba?.displayName ?? "—"}</td>
-          <td>{task.sa?.displayName ?? "—"}</td>
-          <td>{task.devs.length ? <AvatarStack people={task.devs} /> : "—"}</td>
-          <td>{task.estimateMd ?? "—"}</td>
+        <tr className={styles.dayRow}><td colSpan={cols}>{formatWeekday(day, yearFormat)}<span>{t("dayTotal", { count: list.length, md: round1(list.reduce((n, x) => n + (x.estimateMd ?? 0), 0)) })}</span></td></tr>
+        {list.map((task) => <tr key={task.id} className={opener.selected === task.key ? styles.pickedRow : undefined}>
+          <td><IssueName issueKey={task.key} title={task.title} opener={opener} />{task.parentKey && <div className={styles.small}>{t("subOf", { key: task.parentKey })}</div>}</td>
+          {!compact && <>
+            <td><ModuleName module={task.module} noModule={noModule} />{task.phase && <div className={styles.small}>{task.phase}</div>}</td>
+            <td>{task.ba?.displayName ?? "—"}</td>
+            <td>{task.sa?.displayName ?? "—"}</td>
+            <td>{task.devs.length ? <AvatarStack people={task.devs} /> : "—"}</td>
+            <td>{task.estimateMd ?? "—"}</td>
+          </>}
           <td>{formatDate(task.planEnd, yearFormat)}</td>
-          <td><Progress pct={task.progressPct} /></td>
+          {!compact && <td><Progress pct={task.progressPct} /></td>}
           <td><StateBadge task={task} /></td>
         </tr>)}
       </Fragment>)}</tbody>
@@ -208,7 +235,7 @@ function TaskTable({ tasks, yearFormat, issueHref, noModule }: { tasks: DueTask[
 
 const PLAN_TONE: Record<PlanStatus, Tone> = { done: "green", on_track: "green", at_risk: "amber", off_track: "red", late: "red", no_forecast: "neutral" };
 
-function PlanTable({ plans, yearFormat, issueHref, noModule, open, toggle }: { plans: DuePlan[]; yearFormat: YearFormat; issueHref: (key: string) => string; noModule: string; open: Set<string>; toggle: (key: string) => void }) {
+function PlanTable({ plans, yearFormat, opener, compact, noModule, open, toggle }: { plans: DuePlan[]; yearFormat: YearFormat; opener: Opener; compact: boolean; noModule: string; open: Set<string>; toggle: (key: string) => void }) {
   const t = useTranslations("lead-dashboard-reports.due");
   const diff = (p: DuePlan) => {
     if (p.status === "done") return t("plan.done");
@@ -217,8 +244,8 @@ function PlanTable({ plans, yearFormat, issueHref, noModule, open, toggle }: { p
     return p.slipDays > 0 ? t("plan.slip", { days: p.slipDays }) : t("plan.onTrack");
   };
   return <div className={`${styles.card} ${styles.tableScroll}`}>
-    <table className={styles.table} style={{ minWidth: 900 }}>
-      <thead><tr><th>{t("col.plan")}</th><th>{t("col.tasks")}</th><th>{t("col.md")}</th><th>{t("col.progress")}</th><th>{t("col.planEnd")}</th><th>{t("col.forecast")}</th><th>{t("col.diff")}</th></tr></thead>
+    <table className={styles.table} style={{ minWidth: compact ? 0 : 900 }}>
+      <thead><tr><th>{t("col.plan")}</th>{!compact && <><th>{t("col.tasks")}</th><th>{t("col.md")}</th></>}<th>{t("col.progress")}</th>{!compact && <><th>{t("col.planEnd")}</th><th>{t("col.forecast")}</th></>}<th>{t("col.diff")}</th></tr></thead>
       <tbody>{plans.map((p) => {
         const key = `${p.module?.id ?? NO_MODULE}|${p.phase?.id ?? ""}`;
         const expanded = open.has(key);
@@ -228,19 +255,17 @@ function PlanTable({ plans, yearFormat, issueHref, noModule, open, toggle }: { p
               {expanded ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronRight size={14} aria-hidden="true" />}
               <ModuleName module={p.module} noModule={noModule} />{p.phase && <span className={styles.muted}>› {p.phase.name}</span>}
             </button></td>
-            <td>{p.doneCount} / {p.taskCount}</td>
-            <td>{round1(p.doneMd)} / {round1(p.totalMd)}</td>
+            {!compact && <><td>{p.doneCount} / {p.taskCount}</td><td>{round1(p.doneMd)} / {round1(p.totalMd)}</td></>}
             <td><Progress pct={p.progressPct} /></td>
-            <td>{formatDate(p.plannedEnd, yearFormat)}</td>
-            <td>{p.forecastEnd ? formatDate(p.forecastEnd, yearFormat) : "—"}</td>
+            {!compact && <><td>{formatDate(p.plannedEnd, yearFormat)}</td><td>{p.forecastEnd ? formatDate(p.forecastEnd, yearFormat) : "—"}</td></>}
             <td><Badge tone={PLAN_TONE[p.status]}>{diff(p)}</Badge></td>
           </tr>
-          {expanded && p.tasks.map((task) => <tr key={task.key} className={styles.childRow}>
-            <td><Link className={styles.key} href={issueHref(task.key)}>{task.key}</Link> <Link href={issueHref(task.key)} className={styles.titleLink}>{task.title}</Link></td>
-            <td colSpan={2} className={styles.small}>{[task.devs.map((d) => d.displayName).join(", "), task.estimateMd !== null ? `${task.estimateMd} MD` : ""].filter(Boolean).join(" · ") || "—"}</td>
+          {expanded && p.tasks.map((task) => <tr key={task.key} className={`${styles.childRow} ${opener.selected === task.key ? styles.pickedRow : ""}`}>
+            <td><IssueName issueKey={task.key} title={task.title} opener={opener} /></td>
+            {!compact && <td colSpan={2} className={styles.small}>{[task.devs.map((d) => d.displayName).join(", "), task.estimateMd !== null ? `${task.estimateMd} MD` : ""].filter(Boolean).join(" · ") || "—"}</td>}
             <td><Progress pct={task.progressPct} /></td>
-            <td>{task.planEnd ? formatDate(task.planEnd, yearFormat) : "—"}</td>
-            <td colSpan={2}>{(task.state === "late" || task.state === "at_risk" || task.state === "done") && <StateBadge task={task} />}</td>
+            {!compact && <td>{task.planEnd ? formatDate(task.planEnd, yearFormat) : "—"}</td>}
+            <td colSpan={compact ? 1 : 2}>{(task.state === "late" || task.state === "at_risk" || task.state === "done") && <StateBadge task={task} />}</td>
           </tr>)}
         </Fragment>;
       })}</tbody>

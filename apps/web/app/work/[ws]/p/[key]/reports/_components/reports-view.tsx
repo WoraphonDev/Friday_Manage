@@ -49,21 +49,24 @@ function ScopedReports({ ws, projectKey }: ViewProps) {
   if (error) return <ErrorState error={error} retry={() => void permissions.refetch()} />;
   if (!permissions.data) return <LoadingState />;
   const perms = permissions.data.permissions;
-  if (!perms.includes("project.reports.view")) return <Forbidden />;
+  // รายงานงานที่จะเสร็จมีสวิตช์ของตัวเอง (project.reports.due) แยกจากรายงานอื่น (ผู้ใช้ขอ 2026-11-17)
+  const available = REPORTS.filter((kind) => perms.includes(kind === "due" ? "project.reports.due" : "project.reports.view"));
+  if (!available.length) return <Forbidden />;
+  const current = available.includes(report) ? report : available[0];
 
   const common = { ws, projectKey, yearFormat: me.yearFormat, issueHref };
   return <div className={styles.page}>
     <nav ref={navRef} className={`${styles.card} ${styles.nav} motion-pill`} aria-label={t("reports.nav")}>
-      {REPORTS.map((kind) => <button key={kind} type="button" className={`${styles.navItem} ${report === kind ? styles.navOn : ""}`} aria-current={report === kind ? "page" : undefined} onClick={() => setReport(kind)}>{t(`reports.kind.${kind}`)}</button>)}
+      {available.map((kind) => <button key={kind} type="button" className={`${styles.navItem} ${current === kind ? styles.navOn : ""}`} aria-current={current === kind ? "page" : undefined} onClick={() => setReport(kind)}>{t(`reports.kind.${kind}`)}</button>)}
       <p className={styles.navNote}>{t("reports.navNote")}</p>
     </nav>
-    <section className={styles.main} aria-label={t(`reports.kind.${report}`)}>
+    <section className={styles.main} aria-label={t(`reports.kind.${current}`)}>
       {/* สลับรายงาน: เนื้อหาเคลื่อนเข้าแบบเดียวกับการเปลี่ยนหน้า · กรอบ flex เดิมอยู่ที่ .swap */}
-      <MotionSwap key={report} className={styles.swap}>
-        {report === "weekly" && <WeeklyReportView {...common} canSend={perms.includes("project.settings")} />}
-        {report === "pva" && <PlanVsActual {...common} />}
-        {report === "due" && <DueReport {...common} />}
-        {report === "trace" && <Traceability {...common} />}
+      <MotionSwap key={current} className={styles.swap}>
+        {current === "weekly" && <WeeklyReportView {...common} canSend={perms.includes("project.settings")} />}
+        {current === "pva" && <PlanVsActual {...common} />}
+        {current === "due" && <DueReport {...common} />}
+        {current === "trace" && <Traceability {...common} />}
       </MotionSwap>
     </section>
   </div>;

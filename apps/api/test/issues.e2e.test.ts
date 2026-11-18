@@ -299,6 +299,17 @@ describe('Table และ form-options', () => {
     expect(subs.body.items.every((i: { parentKey: string | null }) => i.parentKey !== null)).toBe(true);
   });
 
+  it('ค้นหา q เจอข้อความใน description, remark และค่าใน details แต่ไม่เจอชื่อคีย์ของ details', async () => {
+    const byDescription = await create({ description: 'รายละเอียดสมมติ QZDESC' });
+    const byRemark = await create({ remark: 'หมายเหตุสมมติ QZREMARK' });
+    const bug = await create({ type: 'Bug', severity: 'minor', environment: 'sit', details: { steps: 'ขั้นตอนสมมติ QZSTEPS', expected: 'ผลที่คาด' } });
+    const keys = async (q: string) => (await team.lead.get(`${projectUrl()}/issues?view=table&fields=key&q=${encodeURIComponent(q)}`)).body.items.map((i: { key: string }) => i.key);
+    expect(await keys('qzdesc')).toEqual([byDescription.key]);
+    expect(await keys('QZREMARK')).toEqual([byRemark.key]);
+    expect(await keys('QZSTEPS')).toEqual([bug.key]);
+    expect(await keys('expected')).not.toContain(bug.key);
+  });
+
   it('เรียงหลายหน้าแบบ cursor: ค่าซ้ำและ null ไม่ตกหล่น, fields จำกัด payload และตรวจ input', async () => {
     const a = await create({ title: 'ZZ-pagination-synthetic', planEnd: '2090-01-01' });
     const b = await create({ title: 'ZZ-pagination-synthetic', planEnd: '2090-01-01' });

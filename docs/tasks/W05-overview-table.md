@@ -86,3 +86,4 @@
 
 - คอลัมน์ "FR / Screen" (124 px) ระหว่าง Actual กับ Progress ตาม Canvas แสดง `FR-01.2 · SCR-101` ตัดด้วย … · แก้ใน Drawer
 - ช่องค้นหาใช้ข้อความ Canvas "ค้นหางาน, รหัส DP-…, FR หรือ SCR" · API ค้นรหัส FR/SCR ใน `q` (นอก lane: `apps/api/src/issues/table.ts` ของ A03)
+- 2026-11-18 ผู้ใช้ขอให้ช่องค้นหาค้น Description / Remark / ข้อมูล Bug ด้วย · placeholder ต่างจาก Canvas เป็น "ค้นหาชื่องาน, รหัส, รายละเอียด, หมายเหตุ" (ข้อความเต็มอยู่ใน tooltip `searchHint`)

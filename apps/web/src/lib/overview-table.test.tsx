@@ -138,7 +138,7 @@ describe("Table (2)", () => {
     expect(screen.getByRole("columnheader", { name: "FR / Screen" })).toBeInTheDocument();
     expect(within(screen.getByTestId("row-DE-1")).getByText("FR-01.2 · SCR-101")).toBeInTheDocument();
     await user.keyboard("{Escape}");
-    expect(screen.getByRole("searchbox", { name: "ค้นหางาน, รหัส DP-…, FR หรือ SCR" })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "ค้นหาชื่องาน, รหัส, รายละเอียด, หมายเหตุ" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "ย่อ Module A" }));
     expect(screen.queryByTestId("row-DE-1")).not.toBeInTheDocument();
     expect(screen.getByTestId("row-DE-3")).toBeInTheDocument();

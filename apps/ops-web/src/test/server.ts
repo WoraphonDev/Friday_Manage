@@ -23,6 +23,8 @@ export const handlers = [
   // ช่วง 3: มุมมองที่บันทึก · ค่าเริ่มต้นว่าง (test ที่ต้องใช้ใส่ handler เอง)
   http.get(`${OPS}/views`, () => HttpResponse.json({ items: [], canManageTeam: false, maxPinned: 5 })),
   http.get(`${OPS}/views/counts`, () => HttpResponse.json({ items: [] })),
+  // ช่วง 3: บัญชีลูกค้า (ค้นหา ⌘K) · ค่าเริ่มต้นว่าง
+  http.get(`${OPS}/accounts`, () => HttpResponse.json({ items: [], total: 0, limit: 5, offset: 0 })),
   http.get(`${OPS}/auth/me`, () => HttpResponse.json({ staff: staff.admin, methods: keyOnly })),
   http.get(`${OPS}/metrics`, () => HttpResponse.json(metrics)),
   http.get(`${OPS}/support-sessions`, () => HttpResponse.json({ items: [] })),

@@ -93,6 +93,9 @@ interface TicketDetail {
     accessGranted: boolean;
     accountManager: string | null;
     sla: { first: Dur | null; resolve: Dur | null };
+    /** ช่วง 3 · contract = SLA ตามสัญญาของบัญชีลูกค้า */
+    slaSource?: "plan" | "contract";
+    account?: { id: string; name: string; kind: "standard" | "enterprise"; managerName: string | null; workspaces: number; openTickets: number } | null;
   } | null;
 }
 const key = ["ops", "tickets"] as const;
@@ -505,6 +508,7 @@ function TicketDrawer({ id, onClose, run }: { id: string | null; onClose: () => 
 function TicketView({ id, run }: { id: string; run?: RunView }) {
   const t = useTranslations("ss");
   const tset = useTranslations("sset");
+  const tAcc = useTranslations("customers.accounts");
   const fmt = useFmt();
   const toast = useToast();
   const cache = useQueryClient();
@@ -771,6 +775,21 @@ function TicketView({ id, run }: { id: string; run?: RunView }) {
           {context && <ContextCard context={context} />}
           <aside className="card" aria-label={t("support.customer")}>
             <h3 className="card-title">{customer?.name ?? t("support.customer")}</h3>
+            {customer?.account && (
+              <div className="stack small" style={{ gap: 2, marginBottom: 8 }}>
+                <Link className="link-button" href={`/accounts/${customer.account.id}`}>
+                  <b>{t("support.account.label", { name: customer.account.name })}</b>
+                </Link>
+                <span className="muted">{t("support.account.meta", { kind: tAcc(`kind.${customer.account.kind}`), n: customer.account.workspaces })}</span>
+                {customer.account.managerName && <span>{t("support.account.manager", { name: customer.account.managerName })}</span>}
+                {customer.slaSource === "contract" && customer.sla.first && <span>{t("support.account.slaContract", { n: customer.sla.first.n, unit: customer.sla.first.unit === "h" ? t("support.account.h") : t("support.account.d") })}</span>}
+                {customer.account.workspaces > 1 && (
+                  <Link className="muted" href={`/support?tab=all&account=${customer.account.id}`}>
+                    {t("support.account.open", { n: customer.account.openTickets })}
+                  </Link>
+                )}
+              </div>
+            )}
             {customer ? (
               <table className="tbl">
                 <tbody>
@@ -781,7 +800,7 @@ function TicketView({ id, run }: { id: string; run?: RunView }) {
                     </td>
                   </tr>
                   <tr>
-                    <td className="muted">{t("support.sla")}</td>
+                    <td className="muted">{customer.slaSource === "contract" ? t("support.slaContractLabel") : t("support.sla")}</td>
                     <td>{customer.sla.first ? t("support.slaValue", { n: customer.sla.first.n, unit: customer.sla.first.unit }) : t("support.slaNone")}</td>
                   </tr>
                   <tr>

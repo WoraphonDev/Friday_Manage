@@ -277,7 +277,17 @@
       "incidentPill": "เหตุขัดข้อง: {title}",
       "unlinkShort": "เลิกผูก",
       "linkIncident": "ผูกเหตุขัดข้อง…"
-    }
+    },
+    "account": {
+      "label": "บัญชี: {name}",
+      "meta": "{kind} · {n} Workspace",
+      "manager": "ผู้ดูแล: {name}",
+      "slaContract": "SLA ตามสัญญา: ตอบใน {n} {unit}",
+      "open": "Ticket เปิดของบัญชีนี้: {n}",
+      "h": "ชม.",
+      "d": "วัน"
+    },
+    "slaContractLabel": "SLA ตามสัญญา"
   },
   "t1": {
     "title": "สร้าง Ticket",

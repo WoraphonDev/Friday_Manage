@@ -17,6 +17,7 @@ import { useUrlFilters } from "@/lib/url-state";
 import { ActiveFilters, FilterButton, filterKeys, filterQuery } from "@/components/filters";
 import { ViewsBar } from "@/components/views-bar";
 import { useWorkspaceFilters } from "./_parts/filters";
+import { CreateAccountDialog } from "../accounts/_parts/CreateAccount";
 import { type AnnounceFilter, AnnounceDrawer } from "./_parts/Announce";
 import { BulkCouponDialog, BulkResultDrawer, BulkTrialDialog, namesOf } from "./_parts/Bulk";
 import styles from "./_parts/bulk.module.css";
@@ -125,6 +126,14 @@ export function WorkspacesList() {
     setByFilter(false);
   };
   const resetSelection = () => (setSelected(new Map()), setByFilter(false));
+  // สร้างบัญชีลูกค้าจากผู้ซื้อที่กรองอยู่: ดึงรหัสทุก Workspace ของผู้ซื้อ (ไม่ใช่เฉพาะหน้านี้)
+  const ta = useTranslations("customers.accounts");
+  const [making, setMaking] = useState<{ name: string; taxIds: string[]; workspaces: { id: string; name: string }[] } | null>(null);
+  const makeAccount = async () => {
+    const key = f.buyer;
+    const all = await api.get<{ items: { id: string; name: string }[] }>(`/workspaces?buyer=${encodeURIComponent(key)}&limit=200&sort=newest`);
+    setMaking({ name: list.data?.buyer?.name ?? "", taxIds: key.startsWith("t:") ? [key.slice(2)] : [], workspaces: all.items.map((w) => ({ id: w.id, name: w.name })) });
+  };
   const serverFilter: BulkFilter = {
     ...fq,
     ...(status ? { status } : {}),
@@ -257,8 +266,25 @@ export function WorkspacesList() {
           <span>
             {t("buyer.sumTickets")} <b>{list.data.buyer.openTickets}</b>
           </span>
+          {/* ช่วง 3 · บัญชีลูกค้า: ผู้ซื้อหลาย Workspace ที่ยังไม่มีบัญชี = เสนอให้สร้าง (คนยืนยัน) */}
+          {list.data.buyer.account ? (
+            <Link className="link-button" href={`/accounts/${list.data.buyer.account.id}`}>
+              {ta("buyer.open", { name: list.data.buyer.account.name })}
+            </Link>
+          ) : (
+            list.data.buyer.workspaces >= 2 &&
+            hasAny(me, "owner", "support") && (
+              <>
+                <span className="muted small">{ta("buyer.hint", { n: list.data.buyer.workspaces })}</span>
+                <Button size="small" onClick={() => void makeAccount()}>
+                  {ta("buyer.create")}
+                </Button>
+              </>
+            )
+          )}
         </div>
       )}
+      {making && <CreateAccountDialog name={making.name} taxIds={making.taxIds} workspaces={making.workspaces} onClose={() => setMaking(null)} />}
       <div className="stack">
         {/* แถบทำรายการหลายแถว (H4) ขึ้นเมื่อเริ่มติ๊กเลือก: เลื่อนเข้าแบบนุ่ม */}
         {(selected.size > 0 || byFilter) && (
@@ -349,7 +375,13 @@ export function WorkspacesList() {
                       <td onClick={(e) => e.stopPropagation()}>
                         {/* ผู้ซื้อ: ชื่อบริษัทจากข้อมูลภาษี หรืออีเมลเจ้าของ · มีหลาย Workspace กดเพื่อกรองเฉพาะผู้ซื้อรายนี้ */}
                         <span className="stack-tight">
-                          <span className={r.buyer?.company ? undefined : "muted small"}>{r.buyer?.name ?? "—"}</span>
+                          {r.account ? (
+                            <Link href={`/accounts/${r.account.id}`} className="link-button">
+                              {r.account.name}
+                            </Link>
+                          ) : (
+                            <span className={r.buyer?.company ? undefined : "muted small"}>{r.buyer?.name ?? "—"}</span>
+                          )}
                           {!!r.buyer?.key && r.buyer.count > 1 && !f.buyer && (
                             <button type="button" className="count-chip" onClick={() => setF({ buyer: r.buyer.key!, page: "0", suggest: "" })}>
                               {t("buyer.more", { n: r.buyer.count - 1 })}

@@ -35,6 +35,7 @@
   "nav": {
     "home": "ภาพรวม",
     "customers": "Workspaces",
+    "accounts": "บัญชีลูกค้า",
     "users": "ผู้ใช้ทั้งหมด",
     "success": "สุขภาพและ Playbook",
     "renewals": "วันต่อสัญญา",
@@ -89,6 +90,7 @@
     "placeholder": "พิมพ์ชื่อ Workspace, อีเมล, เลขใบแจ้งหนี้ หรือเลข Ticket",
     "hint": "↑↓ เลือก · Enter เปิด · Esc ปิด",
     "workspaces": "ลูกค้า (Workspace)",
+    "accounts": "บัญชีลูกค้า",
     "users": "ผู้ใช้",
     "invoices": "ใบแจ้งหนี้",
     "tickets": "Ticket",

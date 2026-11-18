@@ -6,6 +6,7 @@ import {
   Archive,
   BookOpen,
   Bookmark,
+  Building2,
   Bug,
   CalendarDays,
   ChartColumn,
@@ -52,7 +53,7 @@ import { hasAny, initials, rolesOf } from "../access";
 import { currentItem, isSoon, linkOf, NAV, type NavKey, type TaskKey } from "./nav";
 
 const ICONS: Record<NavKey, LucideIcon> = {
-  home: House, customers: Users, users: User, success: Heart, renewals: CalendarDays, leads: Target, quotes: FileText,
+  home: House, customers: Users, accounts: Building2, users: User, success: Heart, renewals: CalendarDays, leads: Target, quotes: FileText,
   billing: ChartLine, verify: ReceiptText, refunds: RotateCcw, accounting: Download, promotions: Tag, entitlements: SlidersHorizontal,
   announce: Megaphone, changelog: Star, onboarding: ListChecks, business: ChartColumn, funnel: Filter, adoption: ChartColumn,
   support: Inbox, sessions: Headphones, supportSettings: Settings2, help: BookOpen, bugs: Bug, system: Server, ops: TriangleAlert,

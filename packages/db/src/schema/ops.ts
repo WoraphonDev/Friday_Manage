@@ -164,6 +164,18 @@ export const supportAccountManagers = pgTable('support_account_managers', {
   createdAt: createdAt(),
 }, (t) => [index('support_account_managers_staff_idx').on(t.staffId)]);
 
+/**
+ * ป้าย "ทดสอบ" ของ Workspace (ช่วง 1 · ข้อมูลเยอะ) · ไม่มีแถว = ตามกฎอัตโนมัติ (เจ้าของใช้โดเมนสงวนไว้ทดสอบ เช่น example.com, .test)
+ * test = ทีมยืนยันว่าเป็นทดสอบ · not_test = ทีมยืนยันว่าเป็นลูกค้าจริงแม้เข้ากฎอัตโนมัติ · ลูกค้าไม่เห็นป้ายนี้
+ */
+export const opsWorkspaceFlags = pgTable('ops_workspace_flags', {
+  workspaceId: uuid().primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),
+  testFlag: text().notNull(), reason: text().notNull(),
+  flaggedBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+  createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [index('ops_workspace_flags_flag_idx').on(t.testFlag),
+  check('ops_workspace_flags_valid', oneOf(t.testFlag, ['test', 'not_test']))]);
+
 /** ข้อความสำเร็จรูป (T4) · ตัวแปร {ชื่อผู้แจ้ง} {ชื่อ Workspace} {เลข Ticket} แทนค่าตอนใส่ในช่องตอบ · เลิกใช้แล้วเก็บไว้ (archived_at) */
 export const supportCannedReplies = pgTable('support_canned_replies', {
   id: pk(), title: text().notNull(), body: text().notNull(), tag: text(), uses: integer().notNull().default(0),

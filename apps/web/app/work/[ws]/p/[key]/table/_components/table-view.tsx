@@ -512,7 +512,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
           <div className={styles.mToolRow}>
             <form className={styles.search} onSubmit={(e) => { e.preventDefault(); set("q", String(new FormData(e.currentTarget).get("q") ?? "")); }}>
               <Search size={16} aria-hidden="true" />
-              <input type="search" name="q" aria-label={t("search")} placeholder={t("search")} defaultValue={filters.q ?? ""} />
+              <input type="search" name="q" aria-label={t("search")} placeholder={t("search")} title={t("searchHint")} defaultValue={filters.q ?? ""} />
             </form>
             <Popover.Root>
               <Popover.Trigger asChild>
@@ -578,7 +578,7 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
           <div className={styles.bar} role="group" aria-label={t("filters")}>
             <form className={styles.search} onSubmit={(e) => { e.preventDefault(); set("q", String(new FormData(e.currentTarget).get("q") ?? "")); }}>
               <Search size={16} aria-hidden="true" />
-              <input type="search" name="q" aria-label={t("search")} placeholder={t("search")} defaultValue={filters.q ?? ""} />
+              <input type="search" name="q" aria-label={t("search")} placeholder={t("search")} title={t("searchHint")} defaultValue={filters.q ?? ""} />
             </form>
             <Popover.Root>
               <Popover.Trigger asChild>

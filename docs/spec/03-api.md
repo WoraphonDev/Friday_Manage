@@ -593,7 +593,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 
 #### ฟิลด์ของงานที่เพิ่มหลังร่างแรก
 
-- `requirements`, `screens` (รหัส), `labels` (`{ id, name, color }`) อยู่ในทุก DTO ของงาน · `PATCH i/` รับ `requirements`, `screens`, `labelIds` แบบแทนทั้งชุด · ตัวกรอง `q` ของ `p/issues` ค้นรหัส FR / SCR ด้วย · `p/form-options` คืน `requirements` และ `screens` ที่มีในโปรเจกต์
+- `requirements`, `screens` (รหัส), `labels` (`{ id, name, color }`) อยู่ในทุก DTO ของงาน · `PATCH i/` รับ `requirements`, `screens`, `labelIds` แบบแทนทั้งชุด · ตัวกรอง `q` ของ `p/issues` ค้นชื่องาน, รหัสงาน, รหัส FR / SCR, `description`, `remark` และค่าใน `details` (ไม่ค้นชื่อคีย์) · `p/form-options` คืน `requirements` และ `screens` ที่มีในโปรเจกต์
 - `DELETE i/?subtasks=keep` เก็บ Sub-task ไว้เป็น Task เดี่ยว (หน้า P3)
 
 ---

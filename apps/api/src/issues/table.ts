@@ -84,10 +84,13 @@ export async function listIssues<T extends { id: string; key: string; number: nu
   if (q.q) {
     // ข้อความค้นหาเป็น literal ไม่เปลี่ยน % / _ เป็น wildcard ของ SQL
     const text = `%${q.q.replace(/[\\%_]/g, '\\$&')}%`;
-    // Canvas Table: "ค้นหางาน, รหัส DP-…, FR หรือ SCR"
+    // ค้นจากชื่อ, รหัส DP-…, FR / SCR, รายละเอียด, หมายเหตุ และค่าใน details (Bug steps / expected / actual ฯลฯ · ผู้ใช้ขอ 2026-11-18)
+    // details ค้นเฉพาะค่า ไม่ค้นชื่อคีย์ของ JSON เพื่อไม่ให้คำอย่าง "steps" เจอทุกงาน
+    const byDetails = sql`exists (select 1 from jsonb_each_text(${s.issues.details}) d where d.value ilike ${text})`;
     const byRequirement = sql`exists (select 1 from ${s.issueRequirements} ir join ${s.requirements} r on r.id = ir.requirement_id where ir.issue_id = ${s.issues.id} and r.code ilike ${text})`;
     const byScreen = sql`exists (select 1 from ${s.issueScreens} isc join ${s.screens} sc on sc.id = isc.screen_id where isc.issue_id = ${s.issues.id} and sc.code ilike ${text})`;
-    where.push(or(ilike(s.issues.title, text), ilike(sql`${project.key} || '-' || ${s.issues.number}`, text), byRequirement, byScreen)!);
+    where.push(or(ilike(s.issues.title, text), ilike(sql`${project.key} || '-' || ${s.issues.number}`, text),
+      ilike(s.issues.description, text), ilike(s.issues.remark, text), byDetails, byRequirement, byScreen)!);
   }
   if (access.guestViewer) where.push(eq(s.issues.sharedWithGuests, true), ne(s.issueTypes.name, 'Bug'));
   const sortInput = q.sort ?? 'number';

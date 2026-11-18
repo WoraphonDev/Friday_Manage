@@ -82,7 +82,10 @@ export function AccountsPage() {
         </Notice>
       )}
       <ListBar>
-        <Input data-page-search aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />
+        {/* ข้อความในช่องยาว (ชื่อ เลขภาษี Workspace) · หน้านี้ไม่มีแท็บ จึงให้ช่องกว้างกว่าหน้าอื่น */}
+        <div style={{ width: "min(400px, 100%)" }}>
+          <Input data-page-search aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
         <FilterButton defs={defs} values={f} onChange={setFilters} />
       </ListBar>
       <ActiveFilters defs={defs} values={f} onChange={setFilters} />

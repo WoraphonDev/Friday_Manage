@@ -7,6 +7,8 @@ import { IrreversibleDialog, useApprovalFlow, useReauth } from "@/components/dia
 import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, Pager, TableSkeleton } from "@/components/kit";
 import { Button, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { usePresence, usePresenceOf } from "@/lib/presence";
+import { useRowNav } from "@/lib/shortcuts";
 import { useFmt } from "../../workspaces/_parts/format";
 import { dsr, type Identity, type PrivacyRequest, REQUEST_TYPES, type RequestDetail, type RequestType, todayBkk } from "./types";
 import { type PickedWs, WorkspacePicker } from "./WorkspacePicker";
@@ -52,13 +54,17 @@ export function RequestsTable({ enabled, onOpen }: { enabled: boolean; onOpen: (
   const qs = new URLSearchParams({ status: filter, limit: String(PAGE), offset: String(offset), ...(term ? { q: term } : {}) });
   const query = useQuery({ queryKey: [...key, "list", qs.toString()], queryFn: () => api.get<ListResponse>(`/privacy/requests?${qs}`), enabled, placeholderData: keepPreviousData });
   const items = query.data?.items ?? [];
+  // ช่วง 2: J / K / Enter · เห็นเพื่อนที่เปิดคำขอเดียวกัน
+  const tk = useTranslations("common.keys");
+  const nav = useRowNav(items, { onOpen: (r) => onOpen(r.id), labels: { down: tk("down"), open: tk("open") } });
+  const viewers = usePresenceOf("privacy", items.map((r) => r.id));
   return (
     <section className="card" style={{ padding: 0, overflow: "hidden" }}>
       <div className="card-head" style={{ padding: "14px 16px", margin: 0, borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
         <h2 className="card-title">{t("requests")}</h2>
         <span className="card-sub">{t("requestsSub")}</span>
         <span className="spacer" />
-        <Input type="search" aria-label={t("search")} placeholder={t("search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
+        <Input data-page-search type="search" aria-label={t("search")} placeholder={t("search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
         <ChipGroup className="row">
           {(["open", "completed", "rejected", "all"] as const).map((v) => (
             <Chip key={v} pressed={filter === v} onClick={() => setFilter(v)}>
@@ -85,12 +91,13 @@ export function RequestsTable({ enabled, onOpen }: { enabled: boolean; onOpen: (
               </tr>
             </thead>
             <tbody>
-              {items.map((r) => (
-                <tr key={r.id}>
+              {items.map((r, i) => (
+                <tr key={r.id} {...nav.rowProps(i)}>
                   <td>
                     <button type="button" className="link-button mono" onClick={() => onOpen(r.id)}>
                       {dsr(r.number)}
                     </button>
+                    {viewers.get(r.id)?.[0] && <span className="viewing">● {t("viewing", { name: viewers.get(r.id)![0].name })}</span>}
                   </td>
                   <td>
                     <span className={typeTone[r.requestType]}>{t(`types.${r.requestType}`)}</span>
@@ -114,7 +121,7 @@ export function RequestsTable({ enabled, onOpen }: { enabled: boolean; onOpen: (
       )}
       {query.data?.total != null && (
         <div style={{ padding: "10px 16px" }}>
-          <Pager offset={offset} limit={PAGE} shown={items.length} total={query.data.total} onChange={setOffset} />
+          <Pager hotkeys offset={offset} limit={PAGE} shown={items.length} total={query.data.total} onChange={setOffset} />
         </div>
       )}
     </section>
@@ -134,6 +141,7 @@ export function RequestDrawer({ id, canAct, onClose }: { id: string; canAct: boo
     onError: (e) => toast(errorToast(e)),
   });
   const r = q.data?.request;
+  const others = usePresence("privacy", id);
   return (
     <Drawer
       open
@@ -141,6 +149,7 @@ export function RequestDrawer({ id, canAct, onClose }: { id: string; canAct: boo
       title={r ? `${dsr(r.number)} · ${t(`privacy.types.${r.requestType}`)}` : t("privacy.requests")}
       description={r ? t("req.who", { email: r.requesterEmail, ws: r.workspaces?.length ? r.workspaces.map((w) => w.name).join(", ") : r.userId ? t("privacy.allWs") : t("privacy.noAccount") }) : undefined}
     >
+      {others[0] && <div className="presence-banner warn">● {t("privacy.othersHere", { name: others[0].name })}</div>}
       {q.isPending ? <TableSkeleton rows={5} cols={1} /> : q.error ? <ErrorBlock error={q.error} retry={() => void q.refetch()} /> : <RequestBody d={q.data} canAct={canAct} verify={verify} setModal={setModal} />}
       {r && modal === "advance" && <AdvanceDialog r={r} steps={q.data!.steps} onClose={() => setModal(null)} />}
       {r && modal === "reject" && <RejectDialog r={r} onClose={() => setModal(null)} />}

@@ -3028,3 +3028,36 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 .count-chip:hover { background: var(--primary-border); }
 .count-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .sum-row { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-2); font-size: 13px; }
+
+/* ---------------------------------------------------------------- ช่วง 2 · ทำงานเร็ว */
+.kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 5px; background: var(--card); color: var(--foreground-soft); font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; line-height: 1; }
+.key-help { display: flex; flex-direction: column; gap: 10px; }
+.key-help h3 { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.key-help dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 20px; }
+.key-help dl > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.key-help dd { margin: 0; }
+/* แถวที่ชี้อยู่ด้วย J / K */
+.tbl tr[data-active] td { background: var(--hover); }
+.tbl tr[data-active] td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
+.new-items { align-self: center; border: 0; border-radius: 999px; padding: 6px 14px; background: var(--primary); color: var(--on-primary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-card); }
+.new-items:hover { background: var(--primary-hover); }
+.new-items:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.run-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 20px; background: var(--primary-soft); border-bottom: 1px solid var(--primary-border); }
+.run-progress { flex: 1 1 120px; height: 6px; border-radius: 3px; background: var(--card); overflow: hidden; }
+.run-progress > i { display: block; height: 100%; background: var(--primary); transition: width var(--motion-dur) var(--motion-ease); }
+.run-note { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+.run-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.run-stats > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-2); }
+.run-stats b { font-size: 20px; }
+.presence-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius-control); font-size: 13px; }
+.presence-banner.warn { background: var(--warning-soft); color: var(--warning-text); border: 1px solid var(--warning-border); }
+.presence-banner.info { background: var(--primary-soft); color: var(--primary-text); border: 1px solid var(--primary-border); }
+.viewing { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 0 8px; height: 20px; border-radius: 999px; background: var(--warning-soft); color: var(--warning-text); font-size: 12px; white-space: nowrap; }
+.file-image { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 320px; max-height: 70vh; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface-2); overflow: auto; cursor: zoom-in; font: inherit; color: var(--muted); }
+.file-image img { max-width: 100%; height: auto; display: block; }
+.file-image-wait { cursor: default; }
+.drawer.drawer-run { width: min(1100px, 100vw); }
+.run-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .run-grid { grid-template-columns: minmax(0, 1fr); } }
+.reason-keys { display: flex; flex-wrap: wrap; gap: 6px; }
+.todo-row[data-active] { background: var(--hover); box-shadow: inset 3px 0 0 var(--primary); }

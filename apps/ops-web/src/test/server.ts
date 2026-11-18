@@ -16,6 +16,10 @@ export const opsError = (status: number, code: string, message: string, details?
   HttpResponse.json({ error: { code, message, ...(details !== undefined ? { details } : {}) } }, { status, headers: requestId ? { "x-request-id": requestId } : undefined });
 
 export const handlers = [
+  // ช่วง 2 · กำลังดูโดย: ค่าเริ่มต้นไม่มีเพื่อนอยู่ (test ที่ต้องการใส่ handler ของตัวเอง)
+  http.get(`${OPS}/presence`, () => HttpResponse.json({ items: [] })),
+  http.post(`${OPS}/presence`, () => HttpResponse.json({ others: [] })),
+  http.post(`${OPS}/presence/leave`, () => HttpResponse.json({ ok: true })),
   http.get(`${OPS}/auth/me`, () => HttpResponse.json({ staff: staff.admin, methods: keyOnly })),
   http.get(`${OPS}/metrics`, () => HttpResponse.json(metrics)),
   http.get(`${OPS}/support-sessions`, () => HttpResponse.json({ items: [] })),

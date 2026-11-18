@@ -11,6 +11,7 @@ import { Drawer, Empty, ErrorBlock, Modal, Notice, PageHead, Pager, TableSkeleto
 import { Button, InlineError, Input, LoadingState, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { useRowNav } from "@/lib/shortcuts";
 import { useUrlFilters } from "@/lib/url-state";
 import { useFmt } from "../workspaces/_parts/format";
 
@@ -81,13 +82,15 @@ export function UsersPage() {
   };
   const rows = list.data?.items ?? [];
   const total = list.data?.total ?? 0;
+  const tk = useTranslations("common.keys");
+  const nav = useRowNav(rows, { onOpen: (u) => setOpen(u.id), labels: { down: tk("down"), open: tk("open") } });
   return (
     <>
       <PageHead title={t("title")} desc={t("desc")} />
       <section className="card">
         <div className="row">
           <div style={{ flex: "1 1 260px" }}>
-            <Input aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => (setQ(e.target.value), setOffset(0))} />
+            <Input data-page-search aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => (setQ(e.target.value), setOffset(0))} />
           </div>
           <select className="input" style={{ width: "auto" }} aria-label={t("col.status")} value={status} onChange={(e) => (setStatus(e.target.value as Status | ""), setOffset(0))}>
             <option value="">{t("statusAll")}</option>
@@ -117,8 +120,8 @@ export function UsersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((u) => (
-                    <tr key={u.id} style={{ cursor: "pointer" }} onClick={() => setOpen(u.id)}>
+                  {rows.map((u, i) => (
+                    <tr key={u.id} style={{ cursor: "pointer" }} onClick={() => setOpen(u.id)} {...nav.rowProps(i)}>
                       <td>
                         <button type="button" className="link-button" onClick={(e) => (e.stopPropagation(), setOpen(u.id))}>
                           {u.email}
@@ -139,7 +142,7 @@ export function UsersPage() {
                 </tbody>
               </table>
             </div>
-            <Pager offset={offset} limit={50} shown={rows.length} total={total} onChange={setOffset} />
+            <Pager hotkeys offset={offset} limit={50} shown={rows.length} total={total} onChange={setOffset} />
           </>
         )}
       </section>

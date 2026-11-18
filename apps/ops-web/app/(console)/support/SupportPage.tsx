@@ -1,17 +1,22 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Paperclip, Plus } from "lucide-react";
+import { Paperclip, Play, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { useTranslations } from "next-intl";
 import { useDeferredValue, useEffect, useState } from "react";
+import { Kbd } from "@/components/shortcut-help";
+import { defer, UNDO_MS } from "@/lib/outbox";
+import { type Seen, usePresence, usePresenceOf } from "@/lib/presence";
 import { hasAny, initials } from "@/components/access";
 import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, ListBar, Modal, Notice, PageHead, Pager, Seg, TableSkeleton, Tabs } from "@/components/kit";
 import { Button, buttonClass, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { useRowNav, useShortcuts, useStableRows } from "@/lib/shortcuts";
+import { NewItemsBar } from "@/components/new-items";
 import { useUrlFilters } from "@/lib/url-state";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
 import { DevCard } from "../bugs/_components/DevCard";
@@ -93,6 +98,35 @@ const invalidate = (cache: ReturnType<typeof useQueryClient>) => void cache.inva
  * การเข้าช่วยเหลือมีเมนูของตัวเอง (/support/sessions) จึงไม่วางซ้ำที่นี่
  */
 type Queue = "mine" | "none" | "all" | "team";
+/** ช่วง 2 · ตอบต่อเนื่อง */
+interface RunItem {
+  id: string;
+  number: number;
+}
+interface RunState {
+  items: RunItem[];
+  i: number;
+  /** ข้ามเอง หรือข้ามเพราะเพื่อนเปิดอยู่ (by) */
+  skipped: (RunItem & { by?: string })[];
+  note: string | null;
+  replied: number;
+  closed: number;
+  started: number;
+  finished: boolean;
+  label: string;
+  draft?: { id: string; text: string } | null;
+}
+interface RunView {
+  pos: number;
+  total: number;
+  label: string;
+  note: string | null;
+  onEvent: (kind: "replied" | "closed" | "skipped") => void;
+  onStop: () => void;
+  /** กด "ย้อนกลับ" หลังส่ง: กลับไปเรื่องนั้นในลำดับเดิมพร้อมร่างเดิม */
+  onBack: (id: string, text: string) => void;
+  draft: { id: string; text: string } | null;
+}
 const PAGE = 50;
 export function SupportPage() {
   const t = useTranslations("ss.support");
@@ -132,7 +166,10 @@ export function SupportPage() {
     queryKey: [...key, filter.toString()],
     queryFn: () => api.get<{ items: TicketRow[]; total: number; counts: { mine: number; none: number; all: number }; summary: Summary }>(`/tickets?${filter}`),
     placeholderData: keepPreviousData,
+    // ช่วง 2: เช็กเรื่องใหม่ทุก 30 วินาที · แถวใหม่รอกด "แสดง" (ไม่แทรกเอง)
+    refetchInterval: 30_000,
   });
+  const stable = useStableRows(list.data?.items, filter.toString());
   const selected = params?.get("ticket") ?? null;
   // เปิด / ปิดแผง Ticket คงตัวกรองเดิมไว้ใน URL
   const select = (id: string | null) => {
@@ -143,6 +180,62 @@ export function SupportPage() {
     router.replace(s ? `/support?${s}` : "/support");
   };
   const s = list.data?.summary;
+  const tk = useTranslations("common.keys");
+  const tr = useTranslations("ss.support.run");
+  const toast = useToast();
+  // ---- ช่วง 2 · ตอบต่อเนื่อง: หยิบเรื่องตามลำดับในแท็บที่เปิดอยู่ (SLA ใกล้หมดก่อน) · ข้ามเรื่องที่เพื่อนเปิดอยู่
+  const [run, setRun] = useState<RunState | null>(null);
+  const goTo = async (r: RunState, from: number, extraSkipped: RunState["skipped"] = []) => {
+    const rest = r.items.slice(from, from + 50);
+    const seen = rest.length ? (await api.get<{ items: Seen[] }>(`/presence?type=ticket&ids=${rest.map((x) => x.id).join(",")}`).catch(() => ({ items: [] as Seen[] }))).items : [];
+    const busy = new Map(seen.map((x) => [x.id, x.name]));
+    let i = from;
+    const now: RunState["skipped"] = [];
+    while (i < r.items.length && busy.has(r.items[i].id)) {
+      now.push({ ...r.items[i], by: busy.get(r.items[i].id) });
+      i++;
+    }
+    const next: RunState = {
+      ...r,
+      i,
+      skipped: [...r.skipped, ...extraSkipped, ...now],
+      note: now.length ? tr("skippedViewed", { numbers: now.map((x) => `#${x.number}`).join(", "), name: now[0].by ?? "" }) : null,
+      finished: i >= r.items.length,
+    };
+    setRun(next);
+    if (next.finished) select(null);
+    else select(r.items[i].id);
+  };
+  const startRun = async (from: Queue = queue, items?: RunItem[]) => {
+    const asked = new URLSearchParams(filter);
+    asked.set("limit", "200");
+    asked.set("offset", "0");
+    if (from === "none") asked.set("assignee", "none");
+    const picked = items ?? (await api.get<{ items: TicketRow[] }>(`/tickets?${asked}`)).items.map((k) => ({ id: k.id, number: k.number }));
+    if (!picked.length) return toast(tr("empty"));
+    await goTo({ items: picked, i: 0, skipped: [], note: null, replied: 0, closed: 0, started: Date.now(), finished: false, label: t(`queues.${from === "team" ? "all" : from}`) }, 0);
+  };
+  const runEvent = (kind: "replied" | "closed" | "skipped") => {
+    if (!run) return;
+    const r = { ...run, replied: run.replied + (kind === "replied" ? 1 : 0), closed: run.closed + (kind === "closed" ? 1 : 0) };
+    void goTo(r, run.i + 1, kind === "skipped" ? [run.items[run.i]] : []);
+  };
+  const runBack = (id: string, text: string) => {
+    setRun((r) => {
+      if (!r) return r;
+      const i = r.items.findIndex((x) => x.id === id);
+      return i < 0 ? r : { ...r, i, finished: false, replied: Math.max(0, r.replied - 1), note: null, draft: { id, text } };
+    });
+    select(id);
+  };
+  const stopRun = () => {
+    if (!run) return;
+    select(null);
+    setRun({ ...run, finished: true });
+  };
+  useShortcuts([{ keys: "p", label: tr("start"), list: true, run: () => void (queue !== "team" && startRun()) }], support);
+  const viewers = usePresenceOf("ticket", queue === "team" ? [] : stable.rows.map((k) => k.id));
+  const nav = useRowNav(queue === "team" ? [] : stable.rows, { onOpen: (k) => select(k.id), labels: { down: tk("down"), open: tk("open") } });
   const count = (n: number | undefined) => (n ? <span className="tab-count">{n}</span> : null);
   return (
     <>
@@ -163,6 +256,11 @@ export function SupportPage() {
           <>
             <MyPresence />
             <SettingsLink />
+            {support && queue !== "team" && (
+              <Button onClick={() => void startRun()}>
+                <Play size={14} aria-hidden="true" /> {tr("start")}
+              </Button>
+            )}
             {support && (
               <Button variant="primary" onClick={() => setCreating(true)}>
                 <Plus size={16} /> {t("create")}
@@ -190,7 +288,7 @@ export function SupportPage() {
           />
         }
       >
-        {queue !== "team" && <Input aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />}
+        {queue !== "team" && <Input data-page-search aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />}
       </ListBar>
       {queue === "team" ? (
         <>
@@ -199,6 +297,7 @@ export function SupportPage() {
         </>
       ) : (
         <>
+          <NewItemsBar count={stable.fresh} onShow={stable.reveal} />
           <ChipGroup className="row">
             {(["active", "pending_dev", "solved", "closed"] as const).map((v) => (
               <Chip key={v} pressed={status === v} onClick={() => setStatus(v)}>
@@ -211,7 +310,7 @@ export function SupportPage() {
             <TableSkeleton rows={5} cols={6} />
           ) : list.error ? (
             <ErrorBlock error={list.error} retry={() => void list.refetch()} />
-          ) : !list.data.items.length ? (
+          ) : !stable.rows.length && !stable.fresh ? (
             <Empty ok={queue === "none" || queue === "mine"} title={queue === "none" ? t("emptyQueue") : queue === "mine" ? t("emptyMine") : t("empty")} />
           ) : (
             <div className="tbl-wrap">
@@ -226,8 +325,8 @@ export function SupportPage() {
                   </tr>
                 </thead>
                 <tbody className="motion-list">
-                  {list.data.items.map((k) => (
-                    <tr key={k.id} className="row-link" aria-selected={selected === k.id} onClick={() => select(k.id)}>
+                  {stable.rows.map((k, i) => (
+                    <tr key={k.id} className="row-link" aria-selected={selected === k.id} onClick={() => select(k.id)} {...nav.rowProps(i)}>
                       <td>
                         <button type="button" className="row-link-button" onClick={(e) => (e.stopPropagation(), select(k.id))}>
                           <span className="row nowrap">
@@ -235,6 +334,11 @@ export function SupportPage() {
                             <span>{k.subject}</span>
                           </span>
                         </button>
+                        {viewers.get(k.id)?.slice(0, 1).map((v) => (
+                          <span key={v.staffId} className="viewing">
+                            ● {t(v.mode === "typing" ? "presence.typing" : "presence.viewing", { name: v.name })}
+                          </span>
+                        ))}
                         {(k.priority === "urgent" || k.priority === "high") && (
                           <>
                             {" "}
@@ -254,28 +358,41 @@ export function SupportPage() {
               </table>
             </div>
           )}
-          {list.data?.total != null && <Pager offset={offset} limit={PAGE} shown={list.data.items.length} total={list.data.total} onChange={setOffset} />}
+          {list.data?.total != null && <Pager hotkeys offset={offset} limit={PAGE} shown={list.data.items.length} total={list.data.total} onChange={setOffset} />}
         </>
       )}
-      <TicketDrawer id={selected} onClose={() => select(null)} />
+      <TicketDrawer
+        id={selected}
+        onClose={() => (run && !run.finished ? stopRun() : select(null))}
+        run={run && !run.finished ? { pos: run.i + 1, total: run.items.length, label: run.label, note: run.note, onEvent: runEvent, onStop: stopRun, onBack: runBack, draft: run.draft ?? null } : undefined}
+      />
+      {run?.finished && (
+        <RunSummary
+          run={run}
+          unassigned={list.data?.counts?.none ?? 0}
+          onSkipped={() => void startRun(queue, run.skipped.map(({ id, number }) => ({ id, number })))}
+          onQueue={() => (setF({ tab: "none" }), void startRun("none"))}
+          onClose={() => setRun(null)}
+        />
+      )}
       {creating && <CreateTicket onClose={() => setCreating(false)} onCreated={(id) => select(id)} />}
     </>
   );
 }
 
 /** แผงขวาของ Ticket: หัวข้อเป็นชื่อแผง · เนื้อหาเป็นแชท */
-function TicketDrawer({ id, onClose }: { id: string | null; onClose: () => void }) {
+function TicketDrawer({ id, onClose, run }: { id: string | null; onClose: () => void; run?: RunView }) {
   const t = useTranslations("ss.support");
   // คีย์เดียวกับ TicketView จึงยิงครั้งเดียว · ใช้ทำชื่อแผง
   const detail = useQuery({ queryKey: [...key, "detail", id], queryFn: () => api.get<TicketDetail>(`/tickets/${id}`), enabled: !!id }).data;
   return (
     <Drawer open={!!id} onOpenChange={(o) => !o && onClose()} title={detail ? `#${detail.ticket.number} · ${detail.ticket.subject}` : t("ticket")} className="drawer-ticket">
-      {id && <TicketView id={id} />}
+      {id && <TicketView key={id} id={id} run={run} />}
     </Drawer>
   );
 }
 
-function TicketView({ id }: { id: string }) {
+function TicketView({ id, run }: { id: string; run?: RunView }) {
   const t = useTranslations("ss");
   const tset = useTranslations("sset");
   const fmt = useFmt();
@@ -286,9 +403,19 @@ function TicketView({ id }: { id: string }) {
   const q = useQuery({
     queryKey: [...key, "detail", id],
     queryFn: () => api.get<TicketDetail>(`/tickets/${id}`),
+    // ช่วง 2: ระหว่างเปิดอยู่ เช็กข้อความใหม่จากเพื่อน / ลูกค้า
+    refetchInterval: 10_000,
   });
+  const tr = useTranslations("ss.support.run");
   const [mode, setMode] = useState<"reply" | "internal" | "customer">("reply");
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(() => (run?.draft?.id === id ? run.draft.text : ""));
+  const typing = body.trim().length > 0;
+  // กำลังดูโดย: บอกเพื่อนว่าเปิด / พิมพ์อยู่ · เห็นเพื่อนที่อยู่เรื่องเดียวกัน
+  const others = usePresence("ticket", id, typing ? "typing" : "viewing");
+  const [watchOnly, setWatchOnly] = useState(false);
+  const [dismissedTyping, setDismissedTyping] = useState(false);
+  // ข้อความใหม่ของเพื่อนระหว่างที่เรากำลังพิมพ์ → เตือนให้อ่านก่อนส่ง
+  const [baseCount, setBaseCount] = useState<number | null>(null);
   const [modal, setModal] = useState<"assign" | "escalate" | "solve" | null>(null);
   const act = useMutation({
     mutationFn: (action: "claim" | "release") => api.post(`/tickets/${id}/${action}`),
@@ -302,8 +429,43 @@ function TicketView({ id }: { id: string }) {
         internal: mode === "internal",
         fromCustomer: mode === "customer",
       }),
-    onSuccess: (r) => (setBody(""), toast(r.reopened ? t("support.reopened") : t("support.sent")), invalidate(cache)),
+    onSuccess: (r) => (setBody(""), setBaseCount(null), toast(r.reopened ? t("support.reopened") : t("support.sent")), invalidate(cache)),
   });
+  // ตอบต่อเนื่อง (ข้อ 2 ก): ส่งจริงหลัง 10 วินาที ย้อนกลับได้ · ไปเรื่องถัดไปทันที
+  const sendInRun = () => {
+    const text = body.trim();
+    const payload = { body: text, internal: mode === "internal", fromCustomer: mode === "customer" };
+    const number = q.data?.ticket.number;
+    const job = defer(`ticket:${id}`, () => api.post(`/tickets/${id}/messages`, payload).then(() => invalidate(cache)), (e) => toast(errorToast(e)));
+    toast({
+      message: tr("sent", { n: number ?? "" }),
+      duration: UNDO_MS,
+      undo: () => {
+        // ยังไม่ถึงเวลา = ยกเลิกแล้วเปิดเรื่องเดิมพร้อมร่าง
+        if (job.cancel()) run!.onBack(id, text);
+      },
+    });
+    run!.onEvent("replied");
+  };
+  const submit = () => {
+    if (!body.trim() || send.isPending) return;
+    if (run && mode === "reply") sendInRun();
+    else send.mutate();
+  };
+  const unassigned = !!q.data && !q.data.ticket.assignee && q.data.ticket.status !== "closed";
+  const msgCount = q.data?.messages.length ?? 0;
+  useEffect(() => {
+    // ข้อ 1 ก: เริ่มพิมพ์ตอบเรื่องที่ยังไม่มีคนรับ = รับเรื่องให้อัตโนมัติ (เพื่อนจะไม่หยิบซ้ำ)
+    if (typing && unassigned && support && mode === "reply" && !act.isPending) act.mutate("claim");
+    if (typing && baseCount == null) setBaseCount(msgCount);
+    if (!typing && baseCount != null) setBaseCount(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typing]);
+  useShortcuts([
+    { keys: "mod+enter", label: t("support.send"), inInput: true, run: () => submit() },
+    { keys: "shift+mod+enter", label: tr("sendClose"), inInput: true, run: () => body.trim() && setModal("solve") },
+    ...(run ? [{ keys: "s", label: tr("skip"), run: () => run.onEvent("skipped") }] : []),
+  ]);
   if (q.isPending)
     return (
       <div className="ticket-head">
@@ -350,9 +512,43 @@ function TicketView({ id }: { id: string }) {
     </div>
   );
   const placeholder = mode === "reply" ? t("support.reply") : mode === "internal" ? t("support.internal") : t("support.fromCustomer");
+  const typer = others.find((o) => o.mode === "typing");
+  const viewer = others[0];
+  const fresh = baseCount != null ? messages.slice(baseCount).filter((m) => m.authorKind === "staff" && m.authorName && m.authorName !== me?.name) : [];
   return (
     <>
+      {run && (
+        <div className="run-bar" role="status">
+          <span className="muted small">{tr("progress", { label: run.label, pos: run.pos, total: run.total })}</span>
+          <span className="run-progress" aria-hidden="true">
+            <i style={{ width: `${Math.round((run.pos / run.total) * 100)}%` }} />
+          </span>
+          <Button size="small" onClick={() => run.onEvent("skipped")}>
+            {tr("skip")} <Kbd keys="s" />
+          </Button>
+          <Button size="small" onClick={run.onStop}>
+            {tr("stop")} <Kbd keys="escape" />
+          </Button>
+          {run.note && <span className="run-note">{run.note}</span>}
+        </div>
+      )}
       <div className="ticket-head">
+        {typer && !dismissedTyping ? (
+          <div className="presence-banner warn" role="status">
+            <span aria-hidden="true">●</span>
+            <span>{t("support.presence.typingBanner", { name: typer.name })}</span>
+            <span className="row" style={{ marginLeft: "auto" }}>
+              <Button size="small" onClick={() => (setWatchOnly(true), setDismissedTyping(true))}>
+                {t("support.presence.watch")}
+              </Button>
+              <Button size="small" onClick={() => setDismissedTyping(true)}>
+                {t("support.presence.replyAnyway")}
+              </Button>
+            </span>
+          </div>
+        ) : (
+          viewer && !typer && <p className="muted small">● {t("support.presence.viewingNote", { name: viewer.name })}</p>
+        )}
         <div className="row small">
           <span className="pill">{t(`support.status.${k.status}` as "support.status.open")}</span>
           <span className={k.priority === "urgent" || k.priority === "high" ? "pill bad" : "pill"}>{t(`support.priority.${k.priority}` as "support.priority.normal")}</span>
@@ -413,8 +609,24 @@ function TicketView({ id }: { id: string }) {
               );
             })}
           </ol>
-          {support && !closed && (
-            <form className={clsx("composer", mode === "internal" && "composer-note")} onSubmit={(e) => (e.preventDefault(), body.trim() && send.mutate())}>
+          {support && !closed && watchOnly && (
+            <div className="composer">
+              <Button size="small" onClick={() => setWatchOnly(false)}>
+                {t("support.presence.startReply")}
+              </Button>
+            </div>
+          )}
+          {support && !closed && !watchOnly && (
+            <form className={clsx("composer", mode === "internal" && "composer-note")} onSubmit={(e) => (e.preventDefault(), submit())}>
+              {fresh.length > 0 && typing && (
+                <div className="presence-banner info" role="status">
+                  <span aria-hidden="true">ⓘ</span>
+                  <span>{t("support.presence.newReply", { name: fresh[fresh.length - 1].authorName! })}</span>
+                  <Button size="small" variant="ghost" style={{ marginLeft: "auto" }} onClick={() => setBaseCount(msgCount)}>
+                    {t("support.presence.read")}
+                  </Button>
+                </div>
+              )}
               <div className="composer-tools">
                 <Seg label={t("support.reply")} value={mode} onChange={setMode} options={(["reply", "internal", "customer"] as const).map((v) => ({ value: v, label: t(`support.modes.${v}`) }))} />
                 {mode === "reply" ? (
@@ -433,13 +645,11 @@ function TicketView({ id }: { id: string }) {
                   value={body}
                   rows={2}
                   onChange={(e) => setBody(e.target.value)}
-                  // Ctrl/⌘ + Enter ส่ง · Enter อย่างเดียวขึ้นบรรทัดใหม่ (ข้อความตอบมักหลายบรรทัด)
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && body.trim() && !send.isPending) (e.preventDefault(), send.mutate());
-                  }}
+                  // ตอบต่อเนื่อง: เคอร์เซอร์อยู่ในช่องตอบทันที · ⌘↵ ส่ง (ปุ่มลัด) · Enter อย่างเดียวขึ้นบรรทัดใหม่
+                  autoFocus={!!run}
                 />
                 <Button type="submit" variant="primary" disabled={!body.trim() || send.isPending}>
-                  {t("support.send")}
+                  {t("support.send")} <Kbd keys="mod+enter" />
                 </Button>
               </div>
               <InlineError error={send.error} />
@@ -495,8 +705,53 @@ function TicketView({ id }: { id: string }) {
       {modal === "assign" && <AssignDialog id={id} onClose={() => setModal(null)} />}
       {/* O36 · T3 ปรับ: สร้าง / ผูกงานใน FM (ยังไม่ตั้งค่า = ส่งต่อแบบเดิม) */}
       {modal === "escalate" && <EscalateDialog ticket={{ id, number: k.number, subject: k.subject }} onClose={() => setModal(null)} />}
-      {modal === "solve" && <SolveDialog id={id} number={k.number} onClose={() => setModal(null)} />}
+      {modal === "solve" && (
+        <SolveDialog
+          id={id}
+          number={k.number}
+          initialOutcome={body.trim()}
+          onClose={() => setModal(null)}
+          onSolved={() => (setBody(""), run?.onEvent("closed"))}
+        />
+      )}
     </>
+  );
+}
+
+/** สรุปเมื่อจบการตอบต่อเนื่อง (ช่วง 2) */
+function RunSummary({ run, unassigned, onSkipped, onQueue, onClose }: { run: RunState; unassigned: number; onSkipped: () => void; onQueue: () => void; onClose: () => void }) {
+  const t = useTranslations("ss.support.run");
+  const minutes = Math.max(1, Math.round((Date.now() - run.started) / 60_000));
+  const done = run.i >= run.items.length;
+  return (
+    <Modal open onOpenChange={(o) => !o && onClose()} title={done ? t("doneTitle", { n: run.items.length }) : t("stoppedTitle", { n: run.replied + run.closed })}>
+      <div className="dialog-body">
+        <div className="run-stats">
+          <div>
+            <span className="muted small">{t("replied")}</span>
+            <b>{run.replied}</b>
+          </div>
+          <div>
+            <span className="muted small">{t("closed")}</span>
+            <b>{run.closed}</b>
+          </div>
+          <div>
+            <span className="muted small">{t("skipped")}</span>
+            <b>{run.skipped.length}</b>
+          </div>
+        </div>
+        <p className="muted small">{t("took", { minutes })}</p>
+        <div className="dialog-actions">
+          <Button onClick={onClose}>{t("back")}</Button>
+          {run.skipped.length > 0 && <Button onClick={onSkipped}>{t("doSkipped", { n: run.skipped.length })}</Button>}
+          {unassigned > 0 && (
+            <Button variant="primary" onClick={onQueue}>
+              {t("fromQueue", { n: unassigned })}
+            </Button>
+          )}
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -610,12 +865,13 @@ function AssignDialog({ id, onClose }: { id: string; onClose: () => void }) {
 }
 
 /** T5 · ปิดเรื่องพร้อมสาเหตุจริง */
-function SolveDialog({ id, number, onClose }: { id: string; number: number; onClose: () => void }) {
+function SolveDialog({ id, number, onClose, initialOutcome = "", onSolved }: { id: string; number: number; onClose: () => void; initialOutcome?: string; onSolved?: () => void }) {
   const t = useTranslations("ss.t5");
   const tc = useTranslations("common.dialog");
   const toast = useToast();
   const cache = useQueryClient();
-  const [outcome, setOutcome] = useState("");
+  // ส่งและปิดเรื่อง (⇧⌘↵): ใช้คำตอบที่พิมพ์ไว้เป็นผลลัพธ์ถึงลูกค้า
+  const [outcome, setOutcome] = useState(initialOutcome);
   const [cause, setCause] = useState("");
   const [csat, setCsat] = useState(true);
   // O35 · X8: ติ๊กแล้วเปิดหน้าศูนย์ช่วยเหลือพร้อม Modal สร้างบทความจากเรื่องนี้หลังปิดเรื่องสำเร็จ
@@ -629,7 +885,7 @@ function SolveDialog({ id, number, onClose }: { id: string; number: number; onCl
         cause: cause.trim(),
         sendCsat: csat,
       }),
-    onSuccess: () => (toast(t("done")), invalidate(cache), onClose(), kb && router.push(`/help?fromTicket=${id}`)),
+    onSuccess: () => (toast(t("done")), invalidate(cache), onClose(), onSolved?.(), kb && router.push(`/help?fromTicket=${id}`)),
   });
   const ok = outcome.trim().length >= 3 && cause.trim().length >= 3;
   return (

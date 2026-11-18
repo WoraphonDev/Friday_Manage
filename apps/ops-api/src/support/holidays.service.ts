@@ -254,13 +254,13 @@ export class HolidaysService implements OnModuleInit, OnModuleDestroy {
   /** SLA ของ Ticket ที่เปิดอยู่คิดตามปฏิทินใหม่ (ด่วนนับ 24 ชม. ไม่ขึ้นกับวันหยุด จึงข้าม) */
   async recomputeSla() {
     this.settings.forgetHolidays();
-    const list = await this.rows<{ id: string; priority: string; createdAt: Date; firstRespondedAt: Date | null; plan: string | null }>(sql`
-      select k.id, k.priority, k.created_at as "createdAt", k.first_responded_at as "firstRespondedAt", p.code as plan
+    const list = await this.rows<{ id: string; priority: string; createdAt: Date; firstRespondedAt: Date | null; plan: string | null; workspaceId: string | null }>(sql`
+      select k.id, k.priority, k.created_at as "createdAt", k.first_responded_at as "firstRespondedAt", p.code as plan, k.workspace_id as "workspaceId"
       from support_tickets k left join subscriptions sub on sub.workspace_id = k.workspace_id left join plans p on p.id = sub.plan_id
       where k.status in ('open', 'pending_customer', 'pending_dev') and k.priority <> 'urgent'`);
     let n = 0;
     for (const k of list) {
-      const due = await this.settings.due(k.plan ?? 'free', k.priority, new Date(k.createdAt));
+      const due = await this.settings.due(k.plan ?? 'free', k.priority, new Date(k.createdAt), k.workspaceId);
       await this.db
         .update(s.supportTickets)
         .set({ ...(k.firstRespondedAt ? {} : { firstResponseDueAt: due.first }), resolutionDueAt: due.resolve })

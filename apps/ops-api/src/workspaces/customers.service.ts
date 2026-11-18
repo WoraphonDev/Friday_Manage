@@ -102,7 +102,8 @@ export class CustomersService {
         ${flagOf(W)} as "testFlag", ${autoTest(W)} as "testAuto", ${suggestReason(W, sql`w.name`)} as "testSuggest",
         (select f.reason from ops_workspace_flags f where f.workspace_id = w.id) as "testReason",
         (select st.name from ops_workspace_flags f join staff_users st on st.id = f.flagged_by where f.workspace_id = w.id) as "testBy",
-        (select f.updated_at from ops_workspace_flags f where f.workspace_id = w.id) as "testAt"
+        (select f.updated_at from ops_workspace_flags f where f.workspace_id = w.id) as "testAt",
+        (select json_build_object('id', a.id, 'name', a.name, 'kind', a.kind) from customer_account_workspaces aw join customer_accounts a on a.id = aw.account_id where aw.workspace_id = w.id) as account
       from workspaces w
       left join subscriptions sub on sub.workspace_id = w.id
       left join plans p on p.id = sub.plan_id
@@ -159,6 +160,8 @@ export class CustomersService {
         by: (r.testBy as string | null) ?? null,
         at: r.testAt ?? null,
       },
+      /** บัญชีลูกค้าระดับบริษัท (ช่วง 3) · null = ยังไม่อยู่ในบัญชีใด */
+      account: (r.account as { id: string; name: string; kind: string } | null) ?? null,
       _mrr: mrr,
       _health: health,
     };
@@ -173,6 +176,7 @@ export class CustomersService {
     else if (q.test === 'only') parts.push(isTest(W));
     if (q.suggest) parts.push(q.suggest === 'any' ? sql`${suggestReason(W, sql`w.name`)} is not null` : sql`${suggestReason(W, sql`w.name`)} = ${q.suggest}`);
     if (q.buyer) parts.push(sql`${buyerKey(W)} = ${q.buyer}`);
+    if (q.account) parts.push(sql`exists(select 1 from customer_account_workspaces aw where aw.workspace_id = w.id and aw.account_id = ${q.account})`);
     if (q.plan?.length) parts.push(sql`p.code in (${sql.join(q.plan.map((x) => sql`${x}`), sql`, `)})`);
     // ---- ช่วง 3: ตัวกรองเพิ่ม (คำนวณใน SQL) · สุขภาพและ MRR กรองในโค้ดหลังคำนวณ (jsFilter)
     const seatsUsed = sql`(select count(*) from workspace_members m where m.workspace_id = w.id and m.status = 'active' and m.role <> 'guest')`;
@@ -204,6 +208,12 @@ export class CustomersService {
     };
     if (q.feature) parts.push(feature[q.feature]);
     return sql.join(parts, sql` and `);
+  }
+
+  /** ตัวเลขของ Workspace ชุดที่ระบุ (หน้าบัญชีลูกค้ารวมยอดจากตรงนี้ · ใช้สูตรสุขภาพ / MRR เดียวกับรายการ) */
+  async snapshot(staff: Staff, ids: string[]) {
+    if (!ids.length) return [];
+    return (await this.summary(sql`w.id in (${sql.join(ids.map((id) => sql`${id}`), sql`, `)}) and w.deleted_at is null`)).map((r) => this.shape(r, staff));
   }
 
   /** รหัส Workspace ตามตัวกรอง ณ ตอนนี้ (เรียงใหม่สุดก่อน) · `limit` กันดึงเกินเพดานของงานหลายราย */
@@ -288,6 +298,8 @@ export class CustomersService {
           seatLimit: buyerAll.reduce((n, x) => n + (x.seatLimit ?? 0), 0),
           mrr: seesMoney(staff) ? buyerAll.reduce((n, x) => n + x._mrr, 0) : null,
           openTickets: buyerAll.reduce((n, x) => n + x.openTickets, 0),
+          /** บัญชีลูกค้าที่ Workspace ของผู้ซื้อรายนี้อยู่แล้ว (ไม่มี = เสนอให้สร้าง) */
+          account: buyerAll.find((x) => x.account)?.account ?? null,
         }
       : null;
     return { items, total, limit: q.limit, offset: q.offset, sort, counts: c, tests: { hidden: t.hidden, suggested: t.suggested }, buyer };

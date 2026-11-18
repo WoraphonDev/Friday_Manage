@@ -208,6 +208,7 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     else if (q.sla === 'today') base.push(sql`(k.status in ('open', 'pending_dev') and (least(case when k.first_responded_at is null then k.first_response_due_at end, k.resolution_due_at) at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date)`);
     if (q.plan?.length) base.push(sql`exists(select 1 from subscriptions sub join plans p on p.id = sub.plan_id where sub.workspace_id = k.workspace_id and ${inList(sql`p.code`, q.plan)})`);
     if (q.buyer) base.push(sql`${buyerKey(sql`k.workspace_id`)} = ${q.buyer}`);
+    if (q.account) base.push(sql`exists(select 1 from customer_account_workspaces aw where aw.workspace_id = k.workspace_id and aw.account_id = ${q.account})`);
     if (q.created) base.push(sql`k.created_at > now() - make_interval(days => ${q.created})`);
     if (q.createdFrom) base.push(sql`k.created_at >= ${q.createdFrom}::date`);
     if (q.createdTo) base.push(sql`k.created_at < ${q.createdTo}::date + 1`);
@@ -261,7 +262,15 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
           exists(select 1 from support_access_grants g where g.workspace_id = w.id and (g.until is null or g.until > now())) as "accessGranted"
         from workspaces w left join subscriptions sub on sub.workspace_id = w.id left join plans p on p.id = sub.plan_id where w.id = ${t.workspaceId}`);
       const cfg = await this.settings.config();
-      customer = c ? { ...c, sla: cfg.sla[((c.plan as string) ?? 'free') as keyof typeof cfg.sla] ?? cfg.sla.free } : null;
+      // ช่วง 3 · บัญชีลูกค้า: ชื่อบัญชี ผู้ดูแล Ticket เปิดทั้งบัญชี และ SLA ตามสัญญา (ถ้ามี ใช้แทนของแพ็กเกจ)
+      const [account] = await this.rows(sql`
+        select a.id, a.name, a.kind, st.name as "managerName",
+          (select count(*)::int from customer_account_workspaces x where x.account_id = a.id) as workspaces,
+          (select count(*)::int from support_tickets k join customer_account_workspaces x on x.workspace_id = k.workspace_id where x.account_id = a.id and k.status in ('open', 'pending_customer', 'pending_dev')) as "openTickets"
+        from customer_account_workspaces aw join customer_accounts a on a.id = aw.account_id left join staff_users st on st.id = a.manager_id
+        where aw.workspace_id = ${t.workspaceId}`);
+      const contract = await this.settings.contractSla(t.workspaceId);
+      customer = c ? { ...c, sla: contract ?? cfg.sla[((c.plan as string) ?? 'free') as keyof typeof cfg.sla] ?? cfg.sla.free, slaSource: contract ? 'contract' : 'plan', account: account ?? null } : null;
     }
     const [assignee] = t.assigneeId ? await this.db.select({ id: s.staffUsers.id, name: s.staffUsers.name }).from(s.staffUsers).where(eq(s.staffUsers.id, t.assigneeId)) : [];
     const [requester] = t.requesterUserId ? await this.db.select({ name: s.users.displayName }).from(s.users).where(eq(s.users.id, t.requesterUserId)) : [];
@@ -315,7 +324,7 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     const route = await this.settings.route({ plan, category: input.category ?? null, workspaceId: input.workspaceId ?? null, priority: input.priority });
     const assigneeId = input.assignToMe ? staff.id : route.assigneeId;
     const now = new Date();
-    const due = await this.settings.due(plan, route.priority, now);
+    const due = await this.settings.due(plan, route.priority, now, input.workspaceId);
     const t = await this.db.transaction(async (tx) => {
       const [row] = await tx
         .insert(s.supportTickets)

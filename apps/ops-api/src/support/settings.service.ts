@@ -20,7 +20,7 @@ export const SLA_WARN_PCT = 25;
 
 const HHMM = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'เวลาต้องเป็น HH:MM');
 const DurSchema = z.object({ n: z.number().int().min(1).max(999), unit: z.enum(['h', 'd']) }).strict();
-const PlanSla = z.object({ first: DurSchema.nullable(), resolve: DurSchema.nullable() }).strict();
+export const PlanSla = z.object({ first: DurSchema.nullable(), resolve: DurSchema.nullable() }).strict();
 export const SupportConfig = z
   .object({
     /** least = งานน้อยที่สุดก่อน · round = วนตามลำดับ · manual = ไม่แจกอัตโนมัติ */
@@ -152,10 +152,21 @@ export class SupportSettingsService {
     return new BusinessClock(c.hours, c.thaiHolidays ? (await this.holidays()).days : new Set());
   }
 
-  /** กำหนด SLA ของ Ticket ใหม่ · ด่วนนับ 24 ชม. ทุกวัน ตอบครั้งแรกไม่เกิน 1 ชม. */
-  async due(plan: string, priority: string, from: Date) {
+  /** SLA ตามสัญญาของบัญชีลูกค้า (ช่วง 3) · null = ใช้ของแพ็กเกจ */
+  async contractSla(workspaceId: string | null | undefined) {
+    if (!workspaceId) return null;
+    const r = await this.db.execute(sql`
+      select a.contract_sla as sla from customer_account_workspaces aw join customer_accounts a on a.id = aw.account_id
+      where aw.workspace_id = ${workspaceId} and a.contract_sla is not null and (a.contract_end is null or a.contract_end >= (now() at time zone 'Asia/Bangkok')::date)`);
+    const row = ((r as unknown as { rows?: { sla: unknown }[] }).rows ?? (r as unknown as { sla: unknown }[]))[0];
+    const parsed = row ? PlanSla.safeParse(row.sla) : null;
+    return parsed?.success ? parsed.data : null;
+  }
+
+  /** กำหนด SLA ของ Ticket ใหม่ · ด่วนนับ 24 ชม. ทุกวัน ตอบครั้งแรกไม่เกิน 1 ชม. · บัญชีที่มีสัญญาใช้ SLA ตามสัญญาแทนของแพ็กเกจ */
+  async due(plan: string, priority: string, from: Date, workspaceId?: string | null) {
     const cfg = await this.config();
-    const sla = cfg.sla[plan as keyof SupportConfig['sla']] ?? cfg.sla.free;
+    const sla = (await this.contractSla(workspaceId)) ?? cfg.sla[plan as keyof SupportConfig['sla']] ?? cfg.sla.free;
     if (priority === 'urgent') {
       const h = (d: Dur | null) => (d ? d.n * (d.unit === 'd' ? 24 : 1) : null);
       const first = Math.min(h(sla.first) ?? 1, 1);

@@ -6,7 +6,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
 import { hasAny } from "@/components/access";
 import { kindText, useApprovalFlow, useReauth } from "@/components/dialogs";
-import { Drawer, Empty, ErrorBlock, Modal, PageHead, Seg, TableSkeleton } from "@/components/kit";
+import { Drawer, ErrorBlock, Modal, PageHead, Seg, SettingsButton, TableSkeleton, TodoCard } from "@/components/kit";
 import { Button, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
 import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -59,61 +59,73 @@ export function RefundsPage() {
         title={t("title")}
         desc={t("desc")}
         actions={
-          hasAny(me, "finance") && (
-            <Button variant="primary" onClick={() => setForm(true)}>
-              <Plus size={16} /> {t("new")}
-            </Button>
-          )
+          <>
+            {/* กฎอนุมัติเปิดดูนาน ๆ ครั้ง ย้ายมาไว้หลังปุ่มเฟือง (โครงหน้า Ops) */}
+            <SettingsButton title={t("rules")} description={t("rulesNote")}>
+              <table className="tbl">
+                <tbody>
+                  <tr>
+                    <td>{t("ruleRefund")}</td>
+                    <td>{t("approver")}</td>
+                    <td className="muted small">{t("expires")}</td>
+                  </tr>
+                  <tr>
+                    <td>{t("ruleCredit")}</td>
+                    <td>{t("approver")}</td>
+                    <td className="muted small">{t("expires")}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </SettingsButton>
+            {hasAny(me, "finance") && (
+              <Button variant="primary" onClick={() => setForm(true)}>
+                <Plus size={16} /> {t("new")}
+              </Button>
+            )}
+          </>
         }
       />
-      <section className="card">
-        <div className="card-head">
-          <h2 className="card-title">{t("pending")}</h2>
-          <span className="card-sub">{t("pendingNote")}</span>
-        </div>
-        {q.isPending ? (
-          <TableSkeleton rows={2} cols={4} />
-        ) : q.error ? (
-          <ErrorBlock error={q.error} retry={() => void q.refetch()} />
-        ) : !q.data.pending.length ? (
-          <Empty ok title={t("noPending")} />
-        ) : (
-          <div className="stack">
-            {q.data.pending.map((p) => {
-              const mine = p.requestedBy === me?.name;
-              return (
-                <article key={p.id} className="notice notice-warn" aria-label={kindText(tc, p.kind)}>
-                  <div className="notice-body">
-                    <b>
-                      {kindText(tc, p.kind)} · {p.amountSatang != null ? fmt.money(p.amountSatang) : "—"}
-                    </b>
-                    <span className="small">{p.reason}</span>
-                    <span className="muted small">{t("requestedBy", { name: p.requestedBy, time: f.dateTime(new Date(p.createdAt), { dateStyle: "medium", timeStyle: "short" }) })}</span>
-                  </div>
-                  {owner && (
-                    <span className="row" style={{ flexWrap: "nowrap" }}>
-                      {!mine && (
-                        <Button size="small" onClick={() => setRejecting(p)}>
-                          {t("reject")}
-                        </Button>
-                      )}
-                      <Button size="small" variant="primary" disabled={approve.isPending} onClick={() => approve.mutate(p)}>
-                        {t("approve")}
+      {q.isPending ? (
+        <TableSkeleton rows={2} cols={4} />
+      ) : q.error ? (
+        <ErrorBlock error={q.error} retry={() => void q.refetch()} />
+      ) : (
+        <TodoCard title={t("pending")} count={q.data.pending.length} hint={t("pendingNote")} clear={{ title: t("noPending") }}>
+          {q.data.pending.map((p) => {
+            const mine = p.requestedBy === me?.name;
+            return (
+              <article key={p.id} className="todo-row" aria-label={kindText(tc, p.kind)}>
+                <div className="todo-main">
+                  <b>
+                    {kindText(tc, p.kind)} · {p.amountSatang != null ? fmt.money(p.amountSatang) : "—"}
+                  </b>
+                  <span className="small">{p.reason}</span>
+                  <span className="muted small">{t("requestedBy", { name: p.requestedBy, time: f.dateTime(new Date(p.createdAt), { dateStyle: "medium", timeStyle: "short" }) })}</span>
+                </div>
+                {owner && (
+                  <span className="todo-actions">
+                    {!mine && (
+                      <Button size="small" onClick={() => setRejecting(p)}>
+                        {t("reject")}
                       </Button>
-                    </span>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
+                    )}
+                    <Button size="small" variant="primary" disabled={approve.isPending} onClick={() => approve.mutate(p)}>
+                      {t("approve")}
+                    </Button>
+                  </span>
+                )}
+              </article>
+            );
+          })}
+        </TodoCard>
+      )}
       <section className="card">
         <div className="card-head">
           <h2 className="card-title">{t("history")}</h2>
           <span className="card-sub">{t("historyNote")}</span>
         </div>
-        {q.data && (
+        {q.data && !q.data.history.length && <p className="muted small">{t("noHistory")}</p>}
+        {!!q.data?.history.length && (
           <div className="tbl-wrap">
             <table className="tbl">
               <thead>
@@ -156,26 +168,6 @@ export function RefundsPage() {
             </table>
           </div>
         )}
-      </section>
-      <section className="card">
-        <div className="card-head">
-          <h2 className="card-title">{t("rules")}</h2>
-          <span className="card-sub">{t("rulesNote")}</span>
-        </div>
-        <table className="tbl">
-          <tbody>
-            <tr>
-              <td>{t("ruleRefund")}</td>
-              <td>{t("approver")}</td>
-              <td className="muted small">{t("expires")}</td>
-            </tr>
-            <tr>
-              <td>{t("ruleCredit")}</td>
-              <td>{t("approver")}</td>
-              <td className="muted small">{t("expires")}</td>
-            </tr>
-          </tbody>
-        </table>
       </section>
       {form && <RefundForm onClose={() => setForm(false)} />}
       {rejecting && <RejectDialog p={rejecting} onClose={() => setRejecting(null)} />}

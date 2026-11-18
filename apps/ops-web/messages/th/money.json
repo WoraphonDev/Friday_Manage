@@ -554,7 +554,8 @@
     "approved": "อนุมัติแล้ว",
     "rejected": "ไม่อนุมัติแล้ว",
     "requestedBy": "{name} · {time}",
-    "pdf": "เปิดใบลดหนี้ {number} (PDF)"
+    "pdf": "เปิดใบลดหนี้ {number} (PDF)",
+    "noHistory": "ยังไม่มีการคืนเงิน ใบลดหนี้ หรือเครดิต"
   },
   "debit": {
     "title": "ออกใบเพิ่มหนี้ อ้าง {number}",

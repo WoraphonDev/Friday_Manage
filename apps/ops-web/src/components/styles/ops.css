@@ -3053,3 +3053,10 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 .presence-banner.warn { background: var(--warning-soft); color: var(--warning-text); border: 1px solid var(--warning-border); }
 .presence-banner.info { background: var(--primary-soft); color: var(--primary-text); border: 1px solid var(--primary-border); }
 .viewing { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 0 8px; height: 20px; border-radius: 999px; background: var(--warning-soft); color: var(--warning-text); font-size: 12px; white-space: nowrap; }
+.file-image { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 320px; max-height: 70vh; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface-2); overflow: auto; cursor: zoom-in; font: inherit; color: var(--muted); }
+.file-image img { max-width: 100%; height: auto; display: block; }
+.file-image-wait { cursor: default; }
+.drawer.drawer-run { width: min(1100px, 100vw); }
+.run-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .run-grid { grid-template-columns: minmax(0, 1fr); } }
+.reason-keys { display: flex; flex-wrap: wrap; gap: 6px; }

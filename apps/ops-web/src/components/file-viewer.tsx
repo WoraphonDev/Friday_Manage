@@ -160,3 +160,20 @@ export function FileThumb({ path, label, hint, onOpen }: { path: string; label: 
     </button>
   );
 }
+
+/** ภาพไฟล์แนบขนาดใหญ่ในหน้า (ตรวจสลิปต่อเนื่อง · ช่วง 2) · ไม่ใช่ภาพ = ปุ่มเปิดไฟล์ */
+export function FileImage({ path, alt, onOpen }: { path: string; alt: string; onOpen?: () => void }) {
+  const f = useFileUrl(path);
+  if (f.isPending) return <div className="file-image file-image-wait" aria-busy="true" />;
+  if (f.error || !f.url) return <div className="file-image file-image-wait">{alt}</div>;
+  return f.type.startsWith("image/") ? (
+    <button type="button" className="file-image" onClick={onOpen} aria-label={alt}>
+      {/* blob URL ใช้ img ธรรมดา */}
+      <img src={f.url} alt={alt} />
+    </button>
+  ) : (
+    <button type="button" className="file-image file-image-wait" onClick={onOpen}>
+      <FileText size={28} aria-hidden="true" /> {alt}
+    </button>
+  );
+}

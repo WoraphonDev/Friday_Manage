@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileImage } from "lucide-react";
+import { FileImage, Play } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { hasAny } from "@/components/access";
@@ -11,7 +11,8 @@ import { Drawer, Empty, ErrorBlock, Modal, Notice, Pager, TableSkeleton, TodoCar
 import { Button, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
-import { useStableRows } from "@/lib/shortcuts";
+import { useShortcuts, useStableRows } from "@/lib/shortcuts";
+import { SlipRun } from "./SlipRun";
 import { NewItemsBar } from "@/components/new-items";
 import { useFmt } from "../../workspaces/_parts/format";
 
@@ -58,8 +59,11 @@ export function VerifyTab() {
   const [open, setOpen] = useState<ExceptionItem | null>(null);
   const [flagging, setFlagging] = useState<SlipItem | null>(null);
   const [viewing, setViewing] = useState<SlipItem | null>(null);
+  // ช่วง 2 · ตรวจสลิปต่อเนื่อง
+  const [running, setRunning] = useState(false);
   const decide = hasAny(me, "finance");
   const normal = slipStable.rows;
+  useShortcuts([{ keys: "p", label: t("run.start"), list: true, run: () => decide && normal.length > 0 && setRunning(true) }], decide);
   const pending = q.isPending || slips.isPending;
   const error = q.error ?? slips.error;
   const exceptions = excStable.rows;
@@ -106,7 +110,17 @@ export function VerifyTab() {
               </TodoCard>
             )}
             {!!normal.length && (
-              <TodoCard title={t("verify.slipsTitle")} count={slips.data?.total ?? normal.length}>
+              <TodoCard
+                title={t("verify.slipsTitle")}
+                count={slips.data?.total ?? normal.length}
+                hint={
+                  decide && (
+                    <Button size="small" variant="primary" onClick={() => setRunning(true)}>
+                      <Play size={14} aria-hidden="true" /> {t("run.start")}
+                    </Button>
+                  )
+                }
+              >
           {normal.map((s) => (
             <TodoRow
               key={s.id}
@@ -142,6 +156,7 @@ export function VerifyTab() {
         )
       )}
       <p className="muted small">{t("verify.note")} · {t("verify.slipsNote")}</p>
+      {running && <SlipRun onClose={() => setRunning(false)} />}
       {open && <DecisionDrawer item={open} canDecide={decide} onClose={() => setOpen(null)} />}
       {flagging && <FlagDialog item={flagging} onClose={() => setFlagging(null)} />}
       {viewing && (

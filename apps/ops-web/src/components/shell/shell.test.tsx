@@ -182,6 +182,17 @@ describe("แถบบน", () => {
     expect(router.push).toHaveBeenCalledWith("/users?id=u1");
   });
 
+  it("ช่วง 2: ? แสดงปุ่มลัด · / โฟกัสช่องค้นหาของหน้า", async () => {
+    shell();
+    await screen.findByText("เนื้อหาของหน้า");
+    await userEvent.keyboard("?");
+    const help = await screen.findByRole("dialog", { name: "ปุ่มลัด" });
+    expect(within(help).getByText("เลื่อนลง")).toBeInTheDocument();
+    expect(within(help).getByText("ค้นทั้งระบบ")).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "ปุ่มลัด" })).not.toBeInTheDocument());
+  });
+
   it("Support ค้นไม่ถึงใบแจ้งหนี้", async () => {
     asRole("support");
     let invoices = false;

@@ -9,6 +9,7 @@ import { Chip, Drawer, Empty, ErrorBlock, NoAccess, Notice, PageHead, TableSkele
 import { Button, errorToast, Input, Pill, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { useRowNav } from "@/lib/shortcuts";
 import { useUrlFilters } from "@/lib/url-state";
 import { useFmt } from "../workspaces/_parts/format";
 import { AttachDialog, MessageDialog } from "./_parts/Dialogs";
@@ -64,6 +65,8 @@ export function DeliveriesPage() {
   // ไม่เลือกแถวแรกให้เอง: รายละเอียดเปิดในแผงขวาเมื่อกดแถว (โครงหน้า Ops 18 พ.ย. 2569)
   const current = picked;
   const eventText = useEventText();
+  const tk = useTranslations("common.keys");
+  const rowNav = useRowNav(items, { onOpen: (r) => setPicked(r.id), labels: { down: tk("down"), open: tk("open") } });
   if (me && !read) return <NoAccess need={["owner", "support", "engineer"]} mine={rolesOf(me)} />;
   const filtered = !!q || channel !== "all" || status !== "all";
   const pct = (n: number | null | undefined) => (!stats ? "…" : n == null ? t("stats.none") : `${n}%`);
@@ -80,7 +83,7 @@ export function DeliveriesPage() {
       <section className="card">
         <div className="row">
           <div className="row" style={{ flex: "1 1 260px", maxWidth: 420, gap: 8 }}>
-            <Input type="search" aria-label={t("search")} placeholder={t("searchPlaceholder")} value={query} onChange={(e) => setQuery(e.target.value)} />
+            <Input data-page-search type="search" aria-label={t("search")} placeholder={t("searchPlaceholder")} value={query} onChange={(e) => setQuery(e.target.value)} />
             {kind && <span className="muted small">{t(`searchKind.${kind}`)}</span>}
           </div>
           <div className="row" role="group" aria-label={t("channels")}>
@@ -128,8 +131,8 @@ export function DeliveriesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {items.map((r) => (
-                        <Row key={r.id} r={r} on={r.id === current} onPick={() => setPicked(r.id)} event={eventText(r.event)} onSearch={setQuery} />
+                      {items.map((r, i) => (
+                        <Row key={r.id} r={r} on={r.id === current} onPick={() => setPicked(r.id)} event={eventText(r.event)} onSearch={setQuery} nav={rowNav.rowProps(i)} />
                       ))}
                     </tbody>
                   </table>
@@ -192,11 +195,11 @@ function Linked({ r, onSearch }: { r: Item; onSearch: (q: string) => void }) {
   );
 }
 
-function Row({ r, on, onPick, event, onSearch }: { r: Item; on: boolean; onPick: () => void; event: string; onSearch: (q: string) => void }) {
+function Row({ r, on, onPick, event, onSearch, nav }: { r: Item; on: boolean; onPick: () => void; event: string; onSearch: (q: string) => void; nav?: Record<string, unknown> }) {
   const t = useTranslations("dlv");
   const f = useFmt();
   return (
-    <tr className={on ? "row-on" : undefined} onClick={onPick} aria-selected={on}>
+    <tr className={on ? "row-on" : undefined} onClick={onPick} aria-selected={on} {...nav}>
       <td className="num muted">
         <button type="button" className="link-button" aria-label={`${f.dateTime(r.createdAt)} · ${r.to}`} onClick={(e) => (e.stopPropagation(), onPick())}>
           {f.dateTime(r.createdAt)}

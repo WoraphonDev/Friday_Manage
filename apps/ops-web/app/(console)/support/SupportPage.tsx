@@ -12,6 +12,7 @@ import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, ListBar, Modal, Notice, Pag
 import { Button, buttonClass, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { useRowNav } from "@/lib/shortcuts";
 import { useUrlFilters } from "@/lib/url-state";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
 import { DevCard } from "../bugs/_components/DevCard";
@@ -143,6 +144,8 @@ export function SupportPage() {
     router.replace(s ? `/support?${s}` : "/support");
   };
   const s = list.data?.summary;
+  const tk = useTranslations("common.keys");
+  const nav = useRowNav(queue === "team" ? [] : (list.data?.items ?? []), { onOpen: (k) => select(k.id), labels: { down: tk("down"), open: tk("open") } });
   const count = (n: number | undefined) => (n ? <span className="tab-count">{n}</span> : null);
   return (
     <>
@@ -190,7 +193,7 @@ export function SupportPage() {
           />
         }
       >
-        {queue !== "team" && <Input aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />}
+        {queue !== "team" && <Input data-page-search aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />}
       </ListBar>
       {queue === "team" ? (
         <>
@@ -226,8 +229,8 @@ export function SupportPage() {
                   </tr>
                 </thead>
                 <tbody className="motion-list">
-                  {list.data.items.map((k) => (
-                    <tr key={k.id} className="row-link" aria-selected={selected === k.id} onClick={() => select(k.id)}>
+                  {list.data.items.map((k, i) => (
+                    <tr key={k.id} className="row-link" aria-selected={selected === k.id} onClick={() => select(k.id)} {...nav.rowProps(i)}>
                       <td>
                         <button type="button" className="row-link-button" onClick={(e) => (e.stopPropagation(), select(k.id))}>
                           <span className="row nowrap">
@@ -254,7 +257,7 @@ export function SupportPage() {
               </table>
             </div>
           )}
-          {list.data?.total != null && <Pager offset={offset} limit={PAGE} shown={list.data.items.length} total={list.data.total} onChange={setOffset} />}
+          {list.data?.total != null && <Pager hotkeys offset={offset} limit={PAGE} shown={list.data.items.length} total={list.data.total} onChange={setOffset} />}
         </>
       )}
       <TicketDrawer id={selected} onClose={() => select(null)} />

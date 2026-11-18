@@ -8,10 +8,11 @@ import { useTranslations } from "next-intl";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { hasAny, initials, seesMoney } from "@/components/access";
 import { ExportDialog } from "@/components/dialogs";
-import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, ListBar, Notice, PageHead, Popover, Switch, TableSkeleton, Tabs } from "@/components/kit";
+import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, ListBar, Notice, PageHead, Pager, Popover, Switch, TableSkeleton, Tabs } from "@/components/kit";
 import { Button, buttonClass, Input } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { useRowNav } from "@/lib/shortcuts";
 import { useUrlFilters } from "@/lib/url-state";
 import { type AnnounceFilter, AnnounceDrawer } from "./_parts/Announce";
 import { BulkCouponDialog, BulkResultDrawer, BulkTrialDialog, namesOf } from "./_parts/Bulk";
@@ -92,6 +93,8 @@ export function WorkspacesList() {
     setByFilter(false);
   }, [filterKey]);
   const rows = list.data?.items ?? [];
+  const tk = useTranslations("common.keys");
+  const nav = useRowNav(rows, { onOpen: (r) => setPeek(r.id), onToggle: (r) => toggle(r.id, r.name, !selected.has(r.id)), labels: { down: tk("down"), open: tk("open"), toggle: tk("toggle") } });
   const total = list.data?.total ?? 0;
   const filtered = !!(search || plan || feature || status || f.buyer || f.suggest);
   const clear = () => (setQ(""), setF({ q: "", plan: "", feature: "", status: "", page: "0", buyer: "", suggest: "" }));
@@ -191,7 +194,7 @@ export function WorkspacesList() {
           />
         }
       >
-        <Input aria-label={t("list.search")} placeholder={t("list.search")} value={q} onChange={(e) => setQ(e.target.value)} />
+        <Input data-page-search aria-label={t("list.search")} placeholder={t("list.search")} value={q} onChange={(e) => setQ(e.target.value)} />
         <Popover
           label={t("list.filters")}
           trigger={({ toggle, open }) => (
@@ -353,8 +356,8 @@ export function WorkspacesList() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.id} className="row-link" aria-selected={peek === r.id} onClick={() => setPeek(r.id)}>
+                  {rows.map((r, i) => (
+                    <tr key={r.id} className="row-link" aria-selected={peek === r.id} onClick={() => setPeek(r.id)} {...nav.rowProps(i)}>
                       <td onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" aria-label={`${t("list.col.select")} ${r.name}`} checked={byFilter || selected.has(r.id)} disabled={byFilter} onChange={(e) => toggle(r.id, r.name, e.target.checked)} />
                       </td>
@@ -401,16 +404,7 @@ export function WorkspacesList() {
                 </tbody>
               </table>
             </div>
-            <div className="row">
-              <span className="muted small">{t("list.range", { from: offset + 1, to: offset + rows.length, total })}</span>
-              <span className="spacer" />
-              <Button size="small" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>
-                {t("list.prev")}
-              </Button>
-              <Button size="small" disabled={offset + PAGE >= total} onClick={() => setOffset(offset + PAGE)}>
-                {t("list.next")}
-              </Button>
-            </div>
+            <Pager hotkeys offset={offset} limit={PAGE} shown={rows.length} total={total} onChange={setOffset} />
           </>
         )}
       </div>

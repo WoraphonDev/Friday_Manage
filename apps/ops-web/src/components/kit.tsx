@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from "react";
 import { ApiError } from "@/lib/api";
 import { exitDelay, useExitGhost, useSlidingIndicator } from "@/lib/motion";
+import { useShortcuts } from "@/lib/shortcuts";
 import type { OpsRole } from "@/lib/types";
 import { Button } from "./ui";
 
@@ -313,8 +314,17 @@ export function ListBar({ tabs, children }: { tabs?: ReactNode; children?: React
 /**
  * แถบแบ่งหน้าใต้ตาราง: บอกเสมอว่าเห็นกี่รายการจากทั้งหมด (ห้ามตัดเงียบ) · ข้อมูลเยอะดึงทีละหน้าจาก ops-api
  */
-export function Pager({ offset, limit, shown, total, onChange }: { offset: number; limit: number; shown: number; total: number; onChange: (offset: number) => void }) {
+export function Pager({ offset, limit, shown, total, onChange, hotkeys = false }: { offset: number; limit: number; shown: number; total: number; onChange: (offset: number) => void; hotkeys?: boolean }) {
   const t = useTranslations("common.pager");
+  const tk = useTranslations("common.keys");
+  // [ ] เปลี่ยนหน้า · เฉพาะตารางหลักของหน้า (hotkeys)
+  useShortcuts(
+    [
+      { keys: "]", label: tk("nextPage"), group: "global", list: true, run: () => offset + limit < total && onChange(offset + limit) },
+      { keys: "[", label: tk("prevPage"), group: "global", list: true, run: () => offset > 0 && onChange(Math.max(0, offset - limit)) },
+    ],
+    hotkeys && total > limit,
+  );
   if (!total) return null;
   return (
     <div className="pager">

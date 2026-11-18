@@ -3028,3 +3028,14 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 .count-chip:hover { background: var(--primary-border); }
 .count-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .sum-row { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-2); font-size: 13px; }
+
+/* ---------------------------------------------------------------- ช่วง 2 · ทำงานเร็ว */
+.kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 5px; background: var(--card); color: var(--foreground-soft); font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; line-height: 1; }
+.key-help { display: flex; flex-direction: column; gap: 10px; }
+.key-help h3 { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.key-help dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 20px; }
+.key-help dl > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.key-help dd { margin: 0; }
+/* แถวที่ชี้อยู่ด้วย J / K */
+.tbl tr[data-active] td { background: var(--hover); }
+.tbl tr[data-active] td:first-child { box-shadow: inset 3px 0 0 var(--primary); }

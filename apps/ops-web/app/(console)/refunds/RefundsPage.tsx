@@ -131,7 +131,7 @@ export function RefundsPage() {
           <h2 className="card-title">{t("history")}</h2>
           <span className="card-sub">{t("historyNote")}</span>
         </div>
-        <Input type="search" aria-label={t("search")} placeholder={t("search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
+        <Input data-page-search type="search" aria-label={t("search")} placeholder={t("search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
         {q.data && !q.data.history.length && <p className="muted small">{term ? t("noMatch") : t("noHistory")}</p>}
         {!!q.data?.history.length && (
           <div className="tbl-wrap">

@@ -149,6 +149,20 @@ describe("Support", () => {
     await waitFor(() => expect(asked.at(-1)?.get("offset")).toBe("0"));
   });
 
+  it("ช่วง 2: ปุ่มลัด J / Enter เปิดเรื่อง · พิมพ์ในช่องค้นหาแล้วปุ่มลัดไม่ทำงาน", async () => {
+    asRole("support");
+    page();
+    await screen.findByText("นำเข้า Excel ไม่ได้");
+    await userEvent.keyboard("j");
+    expect(screen.getByText("นำเข้า Excel ไม่ได้").closest("tr")).toHaveAttribute("data-active", "true");
+    await userEvent.keyboard("{Enter}");
+    expect(router.replace).toHaveBeenLastCalledWith(`/support?ticket=${T}`);
+    // พิมพ์ในช่องค้นหา ปุ่มลัดไม่ทำงาน
+    await userEvent.click(screen.getByLabelText("ค้นหัวข้อ อีเมล หรือเลข Ticket"));
+    await userEvent.keyboard("j");
+    expect(screen.getByLabelText("ค้นหัวข้อ อีเมล หรือเลข Ticket")).toHaveValue("j");
+  });
+
   it("บทสนทนาแบบแชท: ลูกค้าซ้าย · ทีมเราขวา · บันทึกภายในมีป้าย", async () => {
     asRole("support");
     const extra = [

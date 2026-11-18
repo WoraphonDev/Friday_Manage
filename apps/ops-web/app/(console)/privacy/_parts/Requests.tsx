@@ -58,7 +58,7 @@ export function RequestsTable({ enabled, onOpen }: { enabled: boolean; onOpen: (
         <h2 className="card-title">{t("requests")}</h2>
         <span className="card-sub">{t("requestsSub")}</span>
         <span className="spacer" />
-        <Input type="search" aria-label={t("search")} placeholder={t("search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
+        <Input data-page-search type="search" aria-label={t("search")} placeholder={t("search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
         <ChipGroup className="row">
           {(["open", "completed", "rejected", "all"] as const).map((v) => (
             <Chip key={v} pressed={filter === v} onClick={() => setFilter(v)}>

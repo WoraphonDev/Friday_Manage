@@ -20,31 +20,37 @@ export function checkPassword(value: string) {
   return { rules, valid, level };
 }
 
-/** แถบความปลอดภัย + รายการเงื่อนไขที่ติ๊กตามที่พิมพ์ (แบบหน้าสมัครของแอปลูกค้า) */
-function PasswordRules({ value }: { value: string }) {
+/** แบบ C ที่ผู้ใช้เลือก (19 พ.ย. · เหมือนหน้าต่างเปลี่ยนรหัสผ่านในโปรไฟล์ของแอปลูกค้า):
+ * ปิดอยู่เห็นแค่ข้อความสั้น · คลิกช่องหรือมีค่าแล้ว แถบความปลอดภัย + เงื่อนไขเลื่อนลงมา */
+function PasswordRules({ value, open }: { value: string; open: boolean }) {
   const t = useTranslations("ops.auth");
   const { rules, level } = checkPassword(value);
   const bars = level === "strong" ? 4 : level === "good" ? 3 : level === "fair" ? 2 : value ? 1 : 0;
   return (
     <>
-      <span className="pw-meter" aria-hidden="true">
-        {[0, 1, 2, 3].map((i) => (
-          <span key={i} data-on={i < bars} data-level={level} />
-        ))}
-      </span>
-      {value && (
-        <span className="pw-strength" data-level={level} aria-live="polite">
-          {t("passwordStrength", { level: t(`passwordLevels.${level}`) })}
-        </span>
-      )}
-      <ul className="pw-rules" aria-label={t("passwordRulesLabel")}>
-        {(["length", "upper", "digit", "special"] as const).map((rule) => (
-          <li key={rule} data-ok={rules[rule]}>
-            <span aria-hidden="true">{rules[rule] ? "✓" : "○"}</span>
-            {rule === "length" ? t("passwordRules.length", { n: PASSWORD_MIN }) : rule === "special" ? t("passwordRules.specialOptional") : t(`passwordRules.${rule}`)}
-          </li>
-        ))}
-      </ul>
+      <div className="pw-reveal" data-open={open}>
+        <div aria-hidden={!open}>
+          <span className="pw-meter" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} data-on={i < bars} data-level={level} />
+            ))}
+          </span>
+          {value && (
+            <span className="pw-strength" data-level={level} aria-live="polite">
+              {t("passwordStrength", { level: t(`passwordLevels.${level}`) })}
+            </span>
+          )}
+          <ul className="pw-rules" aria-label={t("passwordRulesLabel")}>
+            {(["length", "upper", "digit", "special"] as const).map((rule) => (
+              <li key={rule} data-ok={rules[rule]}>
+                <span aria-hidden="true">{rules[rule] ? "✓" : "○"}</span>
+                {rule === "length" ? t("passwordRules.length", { n: PASSWORD_MIN }) : rule === "special" ? t("passwordRules.specialOptional") : t(`passwordRules.${rule}`)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      {!open && <span className="pw-hint">{t("passwordHint", { min: PASSWORD_MIN })}</span>}
     </>
   );
 }
@@ -80,6 +86,7 @@ export function PasswordSetup({ mode, token: initialToken = "", onDone, onUseKey
   const [code, setCode] = useState("");
   const [setup, setSetup] = useState<TotpSetup | null>(null);
   const [checked, setChecked] = useState(false);
+  const [focused, setFocused] = useState(false);
   const qr = useQr(setup?.otpauthUrl);
 
   const start = useMutation({
@@ -185,11 +192,20 @@ export function PasswordSetup({ mode, token: initialToken = "", onDone, onUseKey
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           error={checked && weak ? (tooShort ? t("passwordShort", { min: PASSWORD_MIN }) : t("passwordWeak")) : undefined}
         />
-        <PasswordRules value={password} />
+        <PasswordRules value={password} open={focused || !!password} />
       </div>
-      <Input label={t("confirmPassword")} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} error={checked && !weak && mismatch ? t("passwordMismatch") : undefined} />
+      <div className="pw-field">
+        <Input label={t("confirmPassword")} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} error={checked && !weak && mismatch ? t("passwordMismatch") : undefined} />
+        {!!confirm && !mismatch && (
+          <span className="pw-match" role="status">
+            ✓ {t("passwordMatch")}
+          </span>
+        )}
+      </div>
       <InlineError error={start.error} />
       <Button type="submit" variant="primary" disabled={start.isPending || (mode === "token" && token.trim().length < 10)}>
         {start.isPending ? t("working") : t("next")}

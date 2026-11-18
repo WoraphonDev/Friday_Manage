@@ -133,7 +133,9 @@
       "digit": "มีตัวเลข",
       "specialOptional": "มีอักขระพิเศษ (แนะนำ)"
     },
-    "passwordRulesLabel": "เงื่อนไขรหัสผ่าน"
+    "passwordRulesLabel": "เงื่อนไขรหัสผ่าน",
+    "passwordHint": "อย่างน้อย {min} ตัว มีตัวพิมพ์ใหญ่และตัวเลข",
+    "passwordMatch": "ตรงกัน"
   },
   "session": {
     "banner": "คุณกำลังเข้าใช้ในฐานะทีมช่วยเหลือ",

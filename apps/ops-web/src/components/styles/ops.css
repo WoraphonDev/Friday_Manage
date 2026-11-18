@@ -1084,6 +1084,16 @@ textarea.input {
 .menu-item[aria-selected="true"] {
   background: var(--hover);
 }
+/* รายการที่ใช้ไม่ได้ (เช่น บัญชีถูกปิด) ยังแสดงพร้อมเหตุผลใต้ชื่อ */
+.menu-item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: transparent;
+}
+.menu-item-text {
+  display: grid;
+  gap: 1px;
+}
 .menu-sep {
   height: 1px;
   background: var(--border);

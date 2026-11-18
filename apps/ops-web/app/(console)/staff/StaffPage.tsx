@@ -15,6 +15,7 @@ import { useMe } from "@/lib/query";
 import type { OpsRole } from "@/lib/types";
 import { PersonalEmailDrawer } from "./PersonalEmail";
 import { InviteDrawer, ManageDrawer } from "./StaffDrawers";
+import { StaffRowMenu } from "./StaffRowMenu";
 import { type AuditRow, DEFAULT_LIMITS, type DigestStatus, staffKey, type StaffList, type StaffMember } from "./types";
 
 const STATUS_TONE: Record<StaffMember["status"], string> = { active: "pill ok", invited: "pill warn", suspended: "pill", disabled: "pill bad" };
@@ -215,9 +216,12 @@ function StaffTab() {
                   </td>
                   {owner && (
                     <td>
-                      <Button size="small" onClick={() => setManage(s)}>
-                        {t("manage")}
-                      </Button>
+                      <span className="row" style={{ gap: 4, flexWrap: "nowrap" }}>
+                        <Button size="small" onClick={() => setManage(s)}>
+                          {t("manage")}
+                        </Button>
+                        <StaffRowMenu member={s} mine={s.id === me?.id} onManage={() => setManage(s)} />
+                      </span>
                     </td>
                   )}
                 </tr>

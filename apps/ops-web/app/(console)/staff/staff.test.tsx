@@ -132,6 +132,43 @@ describe("หน้าพนักงาน (Owner)", () => {
     await waitFor(() => expect(meCalls).toBeGreaterThan(self));
   });
 
+  it("เมนู ⋯ ลืมรหัสผ่าน: ยืนยันก่อน → ได้ลิงก์พร้อมเวลาหมดอายุ · แถวตัวเองไม่มี · รอลงทะเบียนเป็นส่งลิงก์ใหม่ · บัญชีปิดกดไม่ได้", async () => {
+    let calls = 0;
+    server.use(http.post(`${OPS}/staff/s-2/enroll-link`, () => (calls++, HttpResponse.json({ enrollUrl: "http://localhost:4000/enroll?token=reset" }))));
+    team.push(member({ id: "s-4", email: "gone@friday.example.com", name: "ลาออกแล้ว", status: "disabled" }));
+    try {
+      page();
+      await userEvent.click(await screen.findByRole("button", { name: "เมนูของ Support B" }));
+      await userEvent.click(screen.getByRole("button", { name: /ลืมรหัสผ่าน \/ มือถือหาย/ }));
+      const confirm = await screen.findByRole("dialog", { name: "ออกลิงก์ตั้งค่าการเข้าระบบใหม่ให้ Support B?" });
+      expect(within(confirm).getByText(/รหัสผ่านเดิมยังใช้ได้/)).toBeInTheDocument();
+      expect(calls).toBe(0);
+      await userEvent.click(within(confirm).getByRole("button", { name: "ออกลิงก์" }));
+      expect(await screen.findByDisplayValue("http://localhost:4000/enroll?token=reset")).toBeInTheDocument();
+      const linkBox = screen.getByRole("dialog", { name: "ลิงก์ตั้งค่าการเข้าระบบของ Support B" });
+      expect(within(linkBox).getByText(/ใช้ได้ถึง/)).toBeInTheDocument();
+      expect(calls).toBe(1);
+      // ปุ่ม "ปิด" ท้ายกล่อง (ปุ่ม X มุมบนก็ชื่อเดียวกัน)
+      await userEvent.click(within(linkBox).getAllByRole("button", { name: "ปิด" }).at(-1)!);
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: /ลิงก์ตั้งค่า/ })).not.toBeInTheDocument());
+
+      // แถวของตัวเองยังเข้าระบบอยู่ จึงไม่มีรายการนี้
+      await userEvent.click(screen.getByRole("button", { name: `เมนูของ ${staff.admin.name}` }));
+      expect(screen.queryByRole("button", { name: /ลืมรหัสผ่าน/ })).not.toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "ดู Audit log ของคนนี้" })).toHaveAttribute("href", `/staff?tab=audit&staff=${staff.admin.id}`);
+      await userEvent.keyboard("{Escape}");
+
+      await userEvent.click(screen.getByRole("button", { name: "เมนูของ สำนักงานบัญชี" }));
+      expect(await screen.findByRole("button", { name: /ส่งลิงก์ลงทะเบียนใหม่/ })).toBeEnabled();
+      await userEvent.keyboard("{Escape}");
+
+      await userEvent.click(screen.getByRole("button", { name: "เมนูของ ลาออกแล้ว" }));
+      expect(await screen.findByRole("button", { name: /ลืมรหัสผ่าน.*บัญชีถูกปิดแล้ว/ })).toBeDisabled();
+    } finally {
+      team.pop();
+    }
+  });
+
   it("สิทธิ์ฉุกเฉิน (A12): เลือกบทบาทที่ไม่มี · เหตุผล ≥ 10 ตัว · แตะกุญแจ", async () => {
     const reauthed = reauthOk();
     let body: Record<string, unknown> = {};

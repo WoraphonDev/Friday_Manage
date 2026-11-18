@@ -310,6 +310,29 @@ export function ListBar({ tabs, children }: { tabs?: ReactNode; children?: React
   );
 }
 
+/**
+ * แถบแบ่งหน้าใต้ตาราง: บอกเสมอว่าเห็นกี่รายการจากทั้งหมด (ห้ามตัดเงียบ) · ข้อมูลเยอะดึงทีละหน้าจาก ops-api
+ */
+export function Pager({ offset, limit, shown, total, onChange }: { offset: number; limit: number; shown: number; total: number; onChange: (offset: number) => void }) {
+  const t = useTranslations("common.pager");
+  if (!total) return null;
+  return (
+    <div className="pager">
+      <span className="muted small">{t("range", { from: offset + 1, to: offset + shown, total })}</span>
+      {total > limit && (
+        <span className="row" style={{ gap: 6 }}>
+          <Button size="small" disabled={offset === 0} onClick={() => onChange(Math.max(0, offset - limit))}>
+            {t("prev")}
+          </Button>
+          <Button size="small" disabled={offset + limit >= total} onClick={() => onChange(offset + limit)}>
+            {t("next")}
+          </Button>
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function CopyButton({ text, label }: { text: string; label?: string }) {
   const t = useTranslations("common.state");
   const [done, setDone] = useState(false);

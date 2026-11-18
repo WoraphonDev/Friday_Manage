@@ -3018,3 +3018,6 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 .composer-input .field { flex: 1; min-width: 0; }
 .composer-input textarea { min-height: 44px; max-height: 180px; resize: vertical; }
 .composer-note .composer-input textarea { background: var(--warning-soft); }
+
+/* แถบแบ่งหน้า: บอก "แสดง x–y จาก n" เสมอ */
+.pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }

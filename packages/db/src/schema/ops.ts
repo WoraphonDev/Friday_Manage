@@ -188,6 +188,26 @@ export const opsPresence = pgTable('ops_presence', {
   check('ops_presence_type_valid', oneOf(t.targetType, ['ticket', 'payment', 'approval', 'privacy'])),
   check('ops_presence_mode_valid', oneOf(t.mode, ['viewing', 'typing']))]);
 
+/**
+ * มุมมองที่บันทึกไว้ (ช่วง 3) · roles ว่าง = ส่วนตัว · มีค่า = มุมมองของทีม (เห็นเฉพาะบทบาทที่เลือก · สร้างได้เฉพาะ Owner และหัวหน้าทีม Support)
+ * filters = ตัวกรองของหน้านั้น (คีย์เดียวกับ query ของรายการ) · sort / tab เก็บใน filters ด้วย
+ */
+export const opsSavedViews = pgTable('ops_saved_views', {
+  id: pk(), ownerId: uuid().notNull().references(() => staffUsers.id, { onDelete: 'cascade' }),
+  page: text().notNull(), name: text().notNull(), filters: jsonb().notNull().default({}),
+  roles: text().array().notNull().default(sql`'{}'`),
+  createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [index('ops_saved_views_page_idx').on(t.page),
+  check('ops_saved_views_page_valid', oneOf(t.page, ['workspaces', 'tickets', 'overdue', 'users', 'privacy', 'deliveries', 'invoices']))]);
+
+/** การตั้งค่ามุมมองของแต่ละคน: ปักที่เมนูซ้าย · ซ่อนมุมมองของทีม · ลำดับ · มุมมองเริ่มต้นของหน้า */
+export const opsViewPrefs = pgTable('ops_view_prefs', {
+  staffId: uuid().notNull().references(() => staffUsers.id, { onDelete: 'cascade' }),
+  viewId: uuid().notNull().references(() => opsSavedViews.id, { onDelete: 'cascade' }),
+  pinned: boolean().notNull().default(false), hidden: boolean().notNull().default(false),
+  position: integer().notNull().default(0), isDefault: boolean().notNull().default(false),
+}, (t) => [primaryKey({ columns: [t.staffId, t.viewId] })]);
+
 /** ข้อความสำเร็จรูป (T4) · ตัวแปร {ชื่อผู้แจ้ง} {ชื่อ Workspace} {เลข Ticket} แทนค่าตอนใส่ในช่องตอบ · เลิกใช้แล้วเก็บไว้ (archived_at) */
 export const supportCannedReplies = pgTable('support_canned_replies', {
   id: pk(), title: text().notNull(), body: text().notNull(), tag: text(), uses: integer().notNull().default(0),
@@ -281,6 +301,14 @@ export const incidents = pgTable('incidents', {
   check('incidents_impact_valid', oneOf(t.impact, ['minor', 'partial', 'major'])),
   check('incidents_status_valid', oneOf(t.status, INCIDENT_STATUSES)),
   check('incidents_resolved', sql`(${t.status} = 'resolved') = (${t.resolvedAt} IS NOT NULL)`)]);
+
+/** Ticket ที่ผูกกับเหตุขัดข้อง (ช่วง 3) · หนึ่ง Ticket ผูกได้เหตุเดียว · ปิดเหตุแล้วส่งข้อความปิดเรื่องให้ทุก Ticket ที่ผูกได้ */
+export const supportTicketIncidents = pgTable('support_ticket_incidents', {
+  ticketId: uuid().primaryKey().references(() => supportTickets.id, { onDelete: 'cascade' }),
+  incidentId: uuid().notNull().references(() => incidents.id, { onDelete: 'cascade' }),
+  linkedBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+  createdAt: createdAt(),
+}, (t) => [index('support_ticket_incidents_incident_idx').on(t.incidentId)]);
 
 export const incidentUpdates = pgTable('incident_updates', {
   id: pk(), incidentId: uuid().notNull().references(() => incidents.id, { onDelete: 'cascade' }),

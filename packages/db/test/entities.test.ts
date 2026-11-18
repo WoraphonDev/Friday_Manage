@@ -17,7 +17,9 @@ const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_
   // รอบ 4 (งานค้าง Friday Ops · 0044)
   'ops_settings', 'legal_holds', 'system_alerts', 'legal_notices', 'etax_jobs', 'wht_requests',
   // ป้าย Workspace ทดสอบ (ช่วง 1 · 0048) · กำลังดูโดย (ช่วง 2 · 0049)
-  'ops_workspace_flags', 'ops_presence'];
+  'ops_workspace_flags', 'ops_presence',
+  // มุมมองที่บันทึก · ผูก Ticket กับเหตุขัดข้อง (ช่วง 3 · 0050)
+  'ops_saved_views', 'ops_view_prefs', 'support_ticket_incidents'];
 
 beforeAll(() => owner.connect());
 afterAll(() => owner.end());

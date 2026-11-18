@@ -1,8 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Empty, ErrorBlock, TableSkeleton } from "@/components/kit";
+import { useState } from "react";
+import { Empty, ErrorBlock, Pager, TableSkeleton } from "@/components/kit";
 import { Pill } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useFmt } from "../../workspaces/_parts/format";
@@ -12,7 +13,9 @@ import type { HistoryItem } from "./types";
 export function History() {
   const t = useTranslations("rst.history");
   const fmt = useFmt();
-  const q = useQuery({ queryKey: ["ops", "restore", "history"], queryFn: () => api.get<{ items: HistoryItem[] }>("/restore/history") });
+  // เดิมตัดที่ 100 รายการ · ตอนนี้แบ่งหน้าและบอกจำนวนทั้งหมด
+  const [offset, setOffset] = useState(0);
+  const q = useQuery({ queryKey: ["ops", "restore", "history", offset], queryFn: () => api.get<{ items: HistoryItem[]; total: number }>(`/restore/history?limit=50&offset=${offset}`), placeholderData: keepPreviousData });
   const label = (action: string) => {
     const key = `actions.${action.replace(/\./g, "_")}` as "actions.restore_issue";
     return t.has(key) ? t(key) : action;
@@ -59,6 +62,11 @@ export function History() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {q.data?.total != null && (
+        <div style={{ padding: "10px 16px" }}>
+          <Pager offset={offset} limit={50} shown={q.data.items.length} total={q.data.total} onChange={setOffset} />
         </div>
       )}
     </section>

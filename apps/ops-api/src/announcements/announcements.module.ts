@@ -1,6 +1,7 @@
-import { Body, Controller, Get, HttpCode, Module, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Module, Param, Post, Query, Req } from '@nestjs/common';
 import { type OpsRequest, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
+import { PageQuery } from '../paging.js';
 import { AnnouncementsService, AudienceBody, CancelBody, CreateBody, TestBody } from './announcements.service.js';
 
 /**
@@ -13,8 +14,8 @@ export class AnnouncementsController {
 
   @Roles('owner')
   @Get('announcements')
-  list() {
-    return this.announcements.list();
+  list(@Query() q: unknown) {
+    return this.announcements.list(parse(PageQuery, q));
   }
 
   @Roles('owner')

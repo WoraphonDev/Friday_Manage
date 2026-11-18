@@ -1,6 +1,7 @@
-import { Body, Controller, Get, HttpCode, Module, Param, Post, Put, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Module, Param, Post, Put, Query, Req } from '@nestjs/common';
 import { type OpsRequest, Public, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
+import { PageQuery } from '../paging.js';
 import { AlertSettings, AlertsService } from './alerts.service.js';
 import { JobQueue } from './job-queue.js';
 import { DiscardBody, IncidentBody, IncidentUpdateBody, MaintenanceBody, RetryManyBody, SubscribeBody, SystemService, TokenBody } from './system.service.js';
@@ -55,8 +56,8 @@ export class SystemController {
 
   @Roles('engineer', 'support', 'owner')
   @Get('incidents')
-  incidents() {
-    return this.system.incidents();
+  incidents(@Query() q: unknown) {
+    return this.system.incidents(parse(PageQuery, q));
   }
   @Roles('engineer', 'support')
   @Post('incidents')

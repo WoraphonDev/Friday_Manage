@@ -1,11 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { hasAny, rolesOf } from "@/components/access";
-import { Empty, ErrorBlock, Modal, NoAccess, Notice, PageHead, TableSkeleton } from "@/components/kit";
+import { Empty, ErrorBlock, Modal, NoAccess, Notice, PageHead, Pager, TableSkeleton } from "@/components/kit";
 import { Button, buttonClass, InlineError, Pill, Textarea, type Tone, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -28,7 +28,9 @@ export function AnnouncementsPage({ embedded = false }: { embedded?: boolean } =
   const [cancelling, setCancelling] = useState<AnnouncementItem | null>(null);
   const [composing, setComposing] = useState(false);
   const cache = useQueryClient();
-  const q = useQuery({ queryKey: ANN_KEY, queryFn: () => api.get<{ items: AnnouncementItem[]; bannerDays: number }>("/announcements"), enabled: !!me && owner });
+  // เดิมตัดที่ 200 รายการโดยไม่บอก · ตอนนี้แบ่งหน้าและบอกจำนวนทั้งหมด
+  const [offset, setOffset] = useState(0);
+  const q = useQuery({ queryKey: [...ANN_KEY, offset], queryFn: () => api.get<{ items: AnnouncementItem[]; total: number; bannerDays: number }>(`/announcements?limit=50&offset=${offset}`), enabled: !!me && owner, placeholderData: keepPreviousData });
   if (me && !owner) return embedded ? <Notice tone="info" title={t("ownerOnly")} /> : <NoAccess need={["owner"]} mine={rolesOf(me)} />;
   const items = q.data?.items ?? [];
   // S8: ส่งถึงที่เลือก / ตามตัวกรองเริ่มจากหน้า Workspaces · ลูกค้าทุกรายส่งจากหน้านี้ได้เลย
@@ -122,6 +124,7 @@ export function AnnouncementsPage({ embedded = false }: { embedded?: boolean } =
                 </tbody>
               </table>
             </div>
+            {q.data?.total != null && <Pager offset={offset} limit={50} shown={items.length} total={q.data.total} onChange={setOffset} />}
             <p className="muted small">{t("bannerNote", { days: q.data?.bannerDays ?? 30 })}</p>
           </>
         )}

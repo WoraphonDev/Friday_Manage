@@ -141,8 +141,11 @@ export class ChangelogService {
     const recent = items.filter((i) => i.status === 'published' && i.publishedAt && new Date(i.publishedAt).getTime() >= since);
     const [readers] = await this.rows<{ n: number }>(sql`select count(*)::int as n from user_ui_states where whats_new_seen_at > now() - interval '30 days'`);
     const withCta = items.filter((i) => i.clickPct !== null);
+    // รายการเขียนโดยทีม Friday จึงจำกัด 500 รายการล่าสุด · ส่งจำนวนทั้งหมดให้หน้าเว็บบอกเมื่อมีมากกว่า (ไม่ตัดเงียบ)
+    const [{ total }] = await this.rows<{ total: number }>(sql`select count(*)::int as total from changelog_entries`);
     return {
       items,
+      total,
       kpis: {
         published30: recent.length,
         byKind: { new: recent.filter((i) => i.kind === 'new').length, improved: recent.filter((i) => i.kind === 'improved').length, fixed: recent.filter((i) => i.kind === 'fixed').length },

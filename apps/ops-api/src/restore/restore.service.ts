@@ -2,6 +2,7 @@ import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
 import { type Db, schema, type Tx } from '@friday/db';
 import { and, desc, eq, gt, inArray, isNotNull, isNull, like, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import type { Page } from '../paging.js';
 import { type ApprovalContext, ApprovalsService } from '../approvals/approvals.service.js';
 import { type Approval, audit } from '../audit.js';
 import type { Staff } from '../auth/auth.guard.js';
@@ -287,16 +288,19 @@ export class RestoreService implements OnModuleInit {
   }
 
   /** ประวัติการกู้คืนและยืดเวลาของทีม */
-  async history() {
+  async history(q: Page = { limit: 50, offset: 0 }) {
     const rows = await this.db
       .select({ id: s.staffAuditLogs.id, action: s.staffAuditLogs.action, reason: s.staffAuditLogs.reason, workspaceId: s.staffAuditLogs.workspaceId, workspaceName: s.workspaces.name, staffName: s.staffUsers.name, approvedBy: s.staffAuditLogs.approvedBy, selfApproved: s.staffAuditLogs.selfApproved, createdAt: s.staffAuditLogs.createdAt })
       .from(s.staffAuditLogs)
       .leftJoin(s.staffUsers, eq(s.staffUsers.id, s.staffAuditLogs.staffId))
       .leftJoin(s.workspaces, eq(s.workspaces.id, s.staffAuditLogs.workspaceId))
       .where(like(s.staffAuditLogs.action, 'restore.%'))
-      .orderBy(desc(s.staffAuditLogs.createdAt))
-      .limit(100);
-    return { items: rows };
+      .orderBy(desc(s.staffAuditLogs.createdAt), desc(s.staffAuditLogs.id))
+      .limit(q.limit)
+      .offset(q.offset);
+    // เดิมตัดที่ 100 รายการโดยไม่บอก
+    const [{ total }] = await this.db.select({ total: sql<number>`count(*)::int` }).from(s.staffAuditLogs).where(like(s.staffAuditLogs.action, 'restore.%'));
+    return { items: rows, total };
   }
 
   // ---------------------------------------------------------------- Z6 กู้คืนให้ลูกค้า

@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } f
 import { type Db, schema } from '@friday/db';
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
+import type { Page } from '../paging.js';
 import { ApprovalsService, type ApprovalContext } from '../approvals/approvals.service.js';
 import { staffAudit } from '../audit.js';
 import type { Staff } from '../auth/auth.guard.js';
@@ -170,11 +171,12 @@ export class SystemService implements OnModuleInit, OnModuleDestroy {
 
   // ---------------------------------------------------------------- เหตุขัดข้อง
 
-  async incidents() {
-    const list = await this.db.select().from(s.incidents).orderBy(desc(s.incidents.startedAt)).limit(50);
+  async incidents(q: Page = { limit: 50, offset: 0 }) {
+    const list = await this.db.select().from(s.incidents).orderBy(desc(s.incidents.startedAt), desc(s.incidents.id)).limit(q.limit).offset(q.offset);
+    const [{ total }] = await this.rows<{ total: number }>(sql`select count(*)::int as total from incidents`);
     const updates = list.length ? await this.db.select().from(s.incidentUpdates).where(inArray(s.incidentUpdates.incidentId, list.map((i) => i.id))).orderBy(desc(s.incidentUpdates.createdAt)) : [];
     const [{ subscribers }] = await this.rows<{ subscribers: number }>(sql`select count(*)::int as subscribers from status_subscribers where confirmed_at is not null and unsubscribed_at is null`);
-    return { items: list.map((i) => ({ ...i, updates: updates.filter((u) => u.incidentId === i.id) })), subscribers };
+    return { items: list.map((i) => ({ ...i, updates: updates.filter((u) => u.incidentId === i.id) })), total, subscribers };
   }
 
   /** เปิดเหตุขัดข้อง (Y3) · ไม่ใช่ภายใน = ขึ้นหน้าสถานะสาธารณะทันที และส่งอีเมลผู้ติดตาม */

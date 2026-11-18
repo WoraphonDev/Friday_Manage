@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } f
 import { type Db, schema, type Tx } from '@friday/db';
 import { and, asc, desc, eq, inArray, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
+import type { Page } from '../paging.js';
 import { staffAudit } from '../audit.js';
 import type { Staff } from '../auth/auth.guard.js';
 import { OPS_DB } from '../db.js';
@@ -428,18 +429,21 @@ export class AnnouncementsService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** ประวัติประกาศ ล่าสุดก่อน · สรุปผลการส่งอีเมลจากประวัติการส่ง (เก็บ 90 วัน) */
-  async list() {
-    return { items: await this.items(), bannerDays: BANNER_DAYS };
+  async list(q: Page = { limit: 50, offset: 0 }) {
+    // เดิมตัดที่ 200 รายการโดยไม่บอก
+    const [{ total }] = await this.db.select({ total: sql<number>`count(*)::int` }).from(a);
+    return { items: await this.items(undefined, q), total, bannerDays: BANNER_DAYS };
   }
 
-  private async items(ids?: string[]) {
+  private async items(ids?: string[], page: Page = { limit: 200, offset: 0 }) {
     const rows = await this.db
       .select({ a, by: s.staffUsers.name })
       .from(a)
       .leftJoin(s.staffUsers, eq(s.staffUsers.id, a.createdBy))
       .where(ids ? inArray(a.id, ids) : undefined)
       .orderBy(desc(a.createdAt), desc(a.id))
-      .limit(200);
+      .limit(page.limit)
+      .offset(page.offset);
     if (!rows.length) return [];
     const list = rows.map((r) => r.a.id);
     const targets = await this.db

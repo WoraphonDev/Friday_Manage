@@ -552,3 +552,22 @@ describe('ผู้ใช้ที่ยังไม่มี Workspace', () => 
     expect(ok.status).toBe(200);
   });
 });
+
+describe('ขั้นต่ำความยาวรหัสผ่านจาก Ops', () => {
+  it('บัญชีใหม่และสมาชิกทุก Workspace ใช้ค่าที่ทีม Friday ตั้ง (ไม่ต่ำกว่าของ Workspace)', async () => {
+    const c = await client(t.app);
+    expect((await c.get('/auth/password/policy')).body).toEqual({ minLength: 8, requireSpecial: false });
+    await t.owner.query(`INSERT INTO ops_settings (key, value) VALUES ('password_policy', '{"staffMinLength":12,"customerMinLength":12}')`);
+    try {
+      expect((await c.get('/auth/password/policy')).body).toEqual({ minLength: 12, requireSpecial: false });
+      const short = await c.post('/auth/signup', { email: 'floor@example.com', password: 'Friday2026', displayName: 'Floor', acceptTerms: true });
+      expect(short.status).toBe(400);
+      expect(short.body.error.details.fields[0].message).toBe('อย่างน้อย 12 ตัวอักษร');
+      expect((await c.post('/auth/signup', { email: 'floor@example.com', password: 'Friday-2026x', displayName: 'Floor', acceptTerms: true })).status).toBe(201);
+      // Workspace ของ lead ตั้งไว้ 10 · ค่าจาก Ops 12 จึงใช้ 12
+      expect((await team.lead.get('/me/password-policy')).body).toEqual({ minLength: 12, requireSpecial: true });
+    } finally {
+      await t.owner.query(`DELETE FROM ops_settings WHERE key = 'password_policy'`);
+    }
+  });
+});

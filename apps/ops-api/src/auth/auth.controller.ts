@@ -77,6 +77,13 @@ export class AuthController {
     return this.auth.passwordSetup(session ? { sid: session.sid, reauthed: reauthFresh(req, session.sid) } : undefined, b.enrollToken);
   }
 
+  /** ความยาวรหัสผ่านขั้นต่ำของพนักงาน · Public เพราะหน้าตั้งรหัสผ่านจากลิงก์เชิญยังไม่มี session · ไม่ใช่ข้อมูลลับ */
+  @Public()
+  @Get('password/policy')
+  passwordPolicy() {
+    return this.auth.passwordPolicy();
+  }
+
   @Public()
   @Post('password/verify')
   @HttpCode(200)

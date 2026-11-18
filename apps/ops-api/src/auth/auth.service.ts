@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import { type Db, schema } from '@friday/db';
+import { type Db, readPasswordPolicy, schema } from '@friday/db';
 import { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server';
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/server';
 import { eq, sql } from 'drizzle-orm';
@@ -10,7 +10,7 @@ import { config } from '../config.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 import { REAUTH_PURPOSE, REAUTH_SECONDS, SESSION_PURPOSE, type Staff } from './auth.guard.js';
-import { decryptSecret, encryptSecret, hashPassword, LOCK_ATTEMPTS, LOCK_MINUTES, newTotpSecret, otpauthUrl, PASSWORD_MIN, verifyPassword, verifyTotp } from './password.js';
+import { decryptSecret, encryptSecret, hashPassword, LOCK_ATTEMPTS, LOCK_MINUTES, newTotpSecret, otpauthUrl, verifyPassword, verifyTotp } from './password.js';
 import { sign, verify } from './tokens.js';
 
 const s = schema;
@@ -35,10 +35,10 @@ const Code = z.string().trim().regex(/^\d{6}$/, 'รหัสต้องเป�
 export const TotpLoginBody = z.object({ mfaToken: z.string().min(10), code: Code });
 export const TotpBody = z.object({ code: Code });
 export const PasswordSetupBody = z.object({ enrollToken: z.string().min(10).optional() });
-// กติกาเดียวกับรหัสผ่านของแอปลูกค้า (ตัวพิมพ์ใหญ่ + ตัวเลข) แต่ยาวกว่าเพราะเป็นบัญชีพนักงาน · หน้าเว็บแสดงรายการเดียวกันใน PasswordRules
+// กติกาเดียวกับรหัสผ่านของแอปลูกค้า (ตัวพิมพ์ใหญ่ + ตัวเลข) · ความยาวขั้นต่ำ Owner ตั้งใน Ops (8 / 12) ตรวจใน passwordVerify
 const NewPassword = z
   .string()
-  .min(PASSWORD_MIN, `รหัสผ่านต้องยาวอย่างน้อย ${PASSWORD_MIN} ตัว`)
+  .min(8, 'รหัสผ่านต้องยาวอย่างน้อย 8 ตัว')
   .max(200)
   .regex(/[A-Z]/, 'รหัสผ่านต้องมีตัวพิมพ์ใหญ่')
   .regex(/[0-9]/, 'รหัสผ่านต้องมีตัวเลข');
@@ -203,12 +203,19 @@ export class AuthService {
     return { secret, otpauthUrl: otpauthUrl(secret, row.email), email: row.email, setupToken: sign('ops-totp-setup', { sid, enc: encryptSecret(secret), via: viaToken ? 'enroll' : 'session' }, 15 * 60) };
   }
 
+  /** ความยาวขั้นต่ำของรหัสผ่านพนักงาน · หน้าตั้งรหัสผ่านใช้แสดงเงื่อนไขก่อนส่ง */
+  async passwordPolicy() {
+    return { minLength: (await readPasswordPolicy(this.db)).staffMinLength };
+  }
+
   /** บันทึกรหัสผ่าน + secret เมื่อรหัส 6 หลักจากแอปถูก · ค่าเดิมใช้ไม่ได้ทันที · พนักงานใหม่เปิดใช้งาน */
   async passwordVerify(body: z.infer<typeof PasswordVerifyBody>) {
     const t = verify<{ sid: string; enc: string; via: string }>('ops-totp-setup', body.setupToken);
     if (!t) throw new AppError(400, 'setup_expired', 'หมดเวลาตั้งค่า · เริ่มใหม่อีกครั้ง');
     const row = await this.staff(t.sid);
     if (!row || row.status === 'disabled') throw new AppError(404, 'not_found', 'ไม่พบพนักงาน');
+    const { staffMinLength } = await readPasswordPolicy(this.db);
+    if (body.password.length < staffMinLength) throw new AppError(400, 'password_too_short', `รหัสผ่านต้องยาวอย่างน้อย ${staffMinLength} ตัว`, { minLength: staffMinLength });
     const step = verifyTotp(decryptSecret(t.enc), body.code);
     if (step === null) throw new AppError(422, 'totp_invalid', 'รหัส 6 หลักไม่ตรง · ตรวจว่าสแกน QR แล้ว และเวลาในมือถือตรง');
     const activate = row.status === 'invited';

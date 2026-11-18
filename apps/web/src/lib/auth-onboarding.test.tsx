@@ -204,13 +204,26 @@ describe("J2 · สมัครและยืนยันอีเมล", () =
     await user.click(screen.getByRole("button", { name: "สร้างบัญชี" }));
     expect(screen.getByText("ต้องยอมรับข้อกำหนดก่อนสร้างบัญชี")).toBeInTheDocument();
     expect(screen.getByText("รหัสผ่านยังไม่ครบเงื่อนไข")).toBeInTheDocument();
-    expect(calls).toHaveLength(0);
+    // อ่านเงื่อนไขรหัสผ่านได้ (GET) แต่ยังไม่ส่งสมัคร
+    expect(calls.filter((c) => c.method !== "GET")).toHaveLength(0);
     await user.type(screen.getByLabelText("รหัสผ่าน"), "Friday2026");
     const rules = screen.getByRole("list", { name: "เงื่อนไขรหัสผ่าน" });
     expect(within(rules).getByText("อย่างน้อย 8 ตัวอักษร").closest("li")).toHaveAttribute("data-ok", "true");
     expect(within(rules).getByText("มีอักขระพิเศษ (แนะนำ)").closest("li")).toHaveAttribute("data-ok", "false");
     expect(screen.getByText("ความปลอดภัย: ดี")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "ข้อกำหนดการใช้งาน" })).toHaveAttribute("href", "/legal/terms");
+  });
+
+  it("ขั้นต่ำที่ทีม Friday ตั้งใน Ops (12 ตัว): รหัส 10 ตัวยังไม่ครบเงื่อนไข", async () => {
+    server.use(http.get("*/api/v1/auth/password/policy", () => HttpResponse.json({ minLength: 12, requireSpecial: false })));
+    const user = userEvent.setup();
+    render(<SignupForm />);
+    await user.type(screen.getByLabelText("รหัสผ่าน"), "Friday2026");
+    const rules = screen.getByRole("list", { name: "เงื่อนไขรหัสผ่าน" });
+    expect(await within(rules).findByText("อย่างน้อย 12 ตัวอักษร")).toBeInTheDocument();
+    expect(within(rules).getByText("อย่างน้อย 12 ตัวอักษร").closest("li")).toHaveAttribute("data-ok", "false");
+    await user.click(screen.getByRole("button", { name: "สร้างบัญชี" }));
+    expect(screen.getByText("รหัสผ่านยังไม่ครบเงื่อนไข")).toBeInTheDocument();
   });
 
   it("สมัครแล้วยืนยันด้วยรหัส 6 หลัก → Onboarding · นับถอยหลังก่อนส่งใหม่", async () => {

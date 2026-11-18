@@ -1,6 +1,6 @@
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import { type Db, schema } from '@friday/db';
+import { type Db, PASSWORD_LENGTH_CHOICES, PASSWORD_POLICY_KEY, passwordPolicyOf, readPasswordPolicy, schema } from '@friday/db';
 import { and, desc, eq, gt, isNull, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApprovalsService } from '../approvals/approvals.service.js';
@@ -25,6 +25,9 @@ export const ElevateBody = z.object({ role: StaffRoleEnum, minutes: z.union([z.l
 export const PersonalEmailBody = z.object({ email: z.email('อีเมลไม่ถูกต้อง').trim().toLowerCase().max(254) }).strict();
 export const PersonalEmailVerifyBody = z.object({ code: z.string().trim().regex(/^\d{6}$/, 'รหัส 6 หลัก') }).strict();
 /** รหัสยืนยันอีเมลส่วนตัวหมดอายุใน 15 นาที (H1) · ผิดเกิน 5 ครั้งต้องขอรหัสใหม่ */
+const PasswordLength = z.union(PASSWORD_LENGTH_CHOICES.map((n) => z.literal(n)) as [z.ZodLiteral<8>, z.ZodLiteral<12>]);
+/** ความยาวรหัสผ่านขั้นต่ำ (แบบ A) · พนักงาน Ops กับลูกค้าแยกกัน */
+export const PasswordPolicyBody = z.object({ staffMinLength: PasswordLength, customerMinLength: PasswordLength }).strict();
 export const PERSONAL_CODE_MINUTES = 15;
 const PERSONAL_CODE_TRIES = 5;
 const codeHash = (staffId: string, email: string, code: string) => createHmac('sha256', config.secret).update(`${staffId}:${email}:${code}`).digest('hex');
@@ -92,6 +95,33 @@ export class StaffService {
    * เจ้าของบัญชีตั้ง / เปลี่ยนอีเมลส่วนตัว (แตะกุญแจแล้ว) · ส่งรหัส 6 หลักไปอีเมลใหม่ (หมด 15 นาที · เก็บเฉพาะ hash)
    * ห้ามใช้โดเมนเดียวกับอีเมลงาน (อีเมลส่วนตัวมีไว้ให้รู้เรื่องแม้บัญชีงานถูกยึด) · ระหว่างรอยืนยันยังส่งถึงอีเมลเดิม
    */
+  // ---------------------------------------------------------------- นโยบายรหัสผ่าน (ปุ่มเฟืองหน้าพนักงาน)
+
+  /** ค่าปัจจุบัน + ใครแก้ล่าสุด · Owner / ผู้ตรวจดูได้ แก้ได้เฉพาะ Owner */
+  async passwordPolicy() {
+    const [row] = await this.db
+      .select({ value: s.opsSettings.value, updatedAt: s.opsSettings.updatedAt, by: s.staffUsers.name })
+      .from(s.opsSettings)
+      .leftJoin(s.staffUsers, eq(s.staffUsers.id, s.opsSettings.updatedBy))
+      .where(eq(s.opsSettings.key, PASSWORD_POLICY_KEY));
+    return { policy: passwordPolicyOf(row?.value), updatedAt: row?.updatedAt ?? null, updatedBy: row?.by ?? null };
+  }
+
+  /** มีผลกับการตั้งรหัสผ่านครั้งถัดไป · รหัสที่ใช้อยู่แล้วยังเข้าระบบได้ */
+  async savePasswordPolicy(me: Staff, input: z.infer<typeof PasswordPolicyBody>) {
+    const before = await readPasswordPolicy(this.db);
+    const diff: string[] = [];
+    if (before.staffMinLength !== input.staffMinLength) diff.push(`พนักงาน Ops ${before.staffMinLength} → ${input.staffMinLength} ตัว`);
+    if (before.customerMinLength !== input.customerMinLength) diff.push(`ลูกค้า ${before.customerMinLength} → ${input.customerMinLength} ตัว`);
+    if (diff.length) {
+      await this.db.transaction(async (tx) => {
+        await tx.insert(s.opsSettings).values({ key: PASSWORD_POLICY_KEY, value: input, updatedBy: me.id }).onConflictDoUpdate({ target: s.opsSettings.key, set: { value: input, updatedBy: me.id, updatedAt: new Date() } });
+        await staffAudit(tx, me, 'staff.password_policy_updated', `ความยาวรหัสผ่านขั้นต่ำ: ${diff.join(' · ')}`);
+      });
+    }
+    return { ...(await this.passwordPolicy()), saved: diff.length > 0 };
+  }
+
   async requestPersonalEmail(me: Staff, input: z.infer<typeof PersonalEmailBody>) {
     const r = await this.get(me.id);
     const domain = (e: string) => e.split('@')[1]?.toLowerCase() ?? '';

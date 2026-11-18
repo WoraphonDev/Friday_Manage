@@ -20,7 +20,7 @@ import { CSRF_COOKIE, newToken, SESSION_COOKIE, SessionService } from './session
 
 const { users, userIdentities } = schema;
 
-// J2: อย่างน้อย 8 ตัว มีตัวพิมพ์ใหญ่และตัวเลข
+// J2: อย่างน้อย 8 ตัว มีตัวพิมพ์ใหญ่และตัวเลข · ขั้นต่ำที่ทีม Friday ตั้งใน Ops (เช่น 12) ตรวจซ้ำใน signup
 const password = z
   .string()
   .min(8)
@@ -74,6 +74,7 @@ export class AuthController {
   @Post('signup')
   async signup(@Body() body: unknown, @Req() req: AppRequest, @Res({ passthrough: true }) res: Response) {
     const input = parse(SignupBody, body);
+    await this.security.assertPassword(null, input.password, 'password');
     const email = input.email.toLowerCase();
     const passwordHash = await hash(input.password);
 
@@ -211,6 +212,13 @@ export class AuthController {
       devToken(res, { token });
     }
     return { retryAfter: authTimes.resendSeconds };
+  }
+
+  /** เงื่อนไขรหัสผ่านของบัญชีใหม่ (หน้าสมัคร / รับคำเชิญ) · ขั้นต่ำมาจากค่าที่ทีม Friday ตั้งใน Ops */
+  @Public()
+  @Get('password/policy')
+  async passwordPolicy() {
+    return { minLength: await this.security.minLengthFloor(), requireSpecial: false };
   }
 
   /** J3 ขั้นตั้งรหัสใหม่ · บอกอีเมลของลิงก์ ("ตั้งรหัสผ่านใหม่ สำหรับ …") โดยยังไม่ใช้ลิงก์ */

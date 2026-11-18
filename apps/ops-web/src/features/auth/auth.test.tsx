@@ -193,6 +193,15 @@ describe("ตั้งรหัสผ่าน + แอป Authenticator", () =>
     expect(screen.getByRole("link", { name: "ไปหน้าเข้าสู่ระบบ" })).toHaveAttribute("href", "/login");
   });
 
+  it("Owner ตั้งขั้นต่ำพนักงานเป็น 8 ตัว: เงื่อนไขและข้อความสั้นใช้ 8 · รหัส 9 ตัวผ่าน", async () => {
+    server.use(http.get(`${OPS}/auth/password/policy`, () => HttpResponse.json({ minLength: 8 })));
+    renderWithProviders(<EnrollPage token="sample-enroll-token-123" />);
+    expect(await screen.findByText("อย่างน้อย 8 ตัว มีตัวพิมพ์ใหญ่และตัวเลข")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("รหัสผ่านใหม่"), "Short-pw9");
+    expect(screen.getByText("อย่างน้อย 8 ตัวอักษร").closest("li")).toHaveAttribute("data-ok", "true");
+    expect(screen.getByText("มีตัวพิมพ์ใหญ่").closest("li")).toHaveAttribute("data-ok", "true");
+  });
+
   it("ลิงก์หมดอายุ: แสดง error ของ ops-api", async () => {
     server.use(http.post(`${OPS}/auth/password/setup`, () => opsError(401, "enroll_token_invalid", "ลิงก์ตั้งค่าไม่ถูกต้องหรือหมดอายุ · ขอลิงก์ใหม่จาก Owner")));
     renderWithProviders(<EnrollPage token="expired-token-000" />);

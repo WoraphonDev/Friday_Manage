@@ -13,6 +13,7 @@ import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import type { OpsRole } from "@/lib/types";
+import { PasswordPolicySection } from "./PasswordPolicy";
 import { PersonalEmailDrawer } from "./PersonalEmail";
 import { InviteDrawer, ManageDrawer } from "./StaffDrawers";
 import { StaffRowMenu } from "./StaffRowMenu";
@@ -72,8 +73,9 @@ function StaffTab() {
         desc={t("desc")}
         actions={
           <>
-            {/* สิทธิ์ของบทบาท วงเงินเริ่มต้น แผนก และสิทธิ์ฉุกเฉิน เปิดดูนาน ๆ ครั้ง อยู่หลังปุ่มเฟือง */}
+            {/* นโยบายรหัสผ่าน สิทธิ์ของบทบาท วงเงินเริ่มต้น แผนก และสิทธิ์ฉุกเฉิน เปิดดูนาน ๆ ครั้ง อยู่หลังปุ่มเฟือง */}
             <SettingsButton title={t("reference")}>
+              <PasswordPolicySection canEdit={owner} />
               <section className="stack">
                 <h3 className="card-title">{t("matrix.title")}</h3>
                 <p className="muted small">{t("matrix.desc")}</p>

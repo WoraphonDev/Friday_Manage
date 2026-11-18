@@ -1,8 +1,8 @@
-import { Body, Controller, Delete, Get, HttpCode, Module, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Module, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
 import { type OpsRequest, Reauth, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
 import { DigestService } from './digest.service.js';
-import { AuditQuery, ElevateBody, InviteBody, PersonalEmailBody, PersonalEmailVerifyBody, StaffService, StatusBody, UpdateStaffBody } from './staff.service.js';
+import { AuditQuery, ElevateBody, InviteBody, PasswordPolicyBody, PersonalEmailBody, PersonalEmailVerifyBody, StaffService, StatusBody, UpdateStaffBody } from './staff.service.js';
 
 @Controller('ops')
 export class StaffController {
@@ -12,6 +12,18 @@ export class StaffController {
   @Get('staff')
   list(@Req() req: OpsRequest) {
     return this.staff.list(req.staff!);
+  }
+
+  /** ความยาวรหัสผ่านขั้นต่ำของพนักงาน Ops และลูกค้า (แบบ A · 19 พ.ย.) · อยู่หลังปุ่มเฟืองหน้าพนักงาน */
+  @Roles('owner', 'auditor')
+  @Get('staff/password-policy')
+  passwordPolicy() {
+    return this.staff.passwordPolicy();
+  }
+  @Roles('owner')
+  @Put('staff/password-policy')
+  savePasswordPolicy(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.staff.savePasswordPolicy(req.staff!, parse(PasswordPolicyBody, body));
   }
 
   /** อีเมลส่วนตัวของตัวเอง (H1) · ทุกบทบาท · แก้ได้เฉพาะเจ้าของบัญชีและต้องแตะกุญแจ */

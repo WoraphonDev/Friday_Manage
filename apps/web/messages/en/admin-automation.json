@@ -265,6 +265,7 @@
       "mfaMissing": "{n, plural, one {{n} person hasn't enabled it} other {{n} people haven't enabled it}}",
       "policyTitle": "Password · Session · Access",
       "minLength": "Minimum password length",
+      "minLengthFloor": "Friday requires at least {n} characters · you can choose a stricter value",
       "chars": "{n} characters",
       "requireSpecial": "Require a special character",
       "rotation": "Require password change",

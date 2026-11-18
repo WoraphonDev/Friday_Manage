@@ -19,6 +19,7 @@ import {
   OtpInput,
   PasswordField,
   PasswordStrength,
+  useNewAccountPolicy,
   SplitLayout,
   checkPassword,
   safeReturnTo,
@@ -72,13 +73,15 @@ function SignupFlow() {
   const [emailDelivery, setEmailDelivery] = useState(true);
   const countdown = useCountdown();
 
+  const policy = useNewAccountPolicy();
+
   function validate(): Errors {
     const out: Errors = {};
     if (!displayName.trim()) out.displayName = t("signup.required");
     // ไม่รับช่องว่าง , ; ในอีเมล (เช่น "tang@gg.co," จากการคัดลอก) · ว่าง = ต้องกรอก
     if (!email.trim()) out.email = t("signup.required");
     else if (!/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]{2,}$/.test(email.trim())) out.email = t("signup.invalidEmail");
-    if (!checkPassword(password).valid) out.password = t("password.tooWeak");
+    if (!checkPassword(password, policy).valid) out.password = t("password.tooWeak");
     if (!accept) out.acceptTerms = t("signup.mustAccept");
     return out;
   }
@@ -303,7 +306,7 @@ function SignupFlow() {
             autoComplete="new-password"
             error={errors.password}
           />
-          <PasswordStrength value={password} />
+          <PasswordStrength value={password} policy={policy} />
         </div>
         <div className={styles.field}>
           <label className={cn(styles.check, styles.small)}>

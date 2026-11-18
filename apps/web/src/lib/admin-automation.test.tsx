@@ -351,6 +351,14 @@ describe("Admin Console (N1) · ความปลอดภัยและกา
     expect(await screen.findByRole("alert")).toHaveTextContent("IP ปัจจุบันของคุณ (198.51.100.9) ไม่อยู่ในรายการ");
   });
 
+  it("ขั้นต่ำที่ทีม Friday ตั้งใน Ops: ตัวเลือกที่ต่ำกว่าไม่แสดง + บอกเหตุผล", async () => {
+    server.use(http.get(`${W}/security-policy`, () => HttpResponse.json({ ...policy(), passwordMinLength: 12, passwordMinFloor: 12 })));
+    admin("security");
+    const select = await screen.findByLabelText("ความยาวรหัสผ่านขั้นต่ำ");
+    expect([...(select as HTMLSelectElement).options].map((o) => o.value)).toEqual(["12"]);
+    expect(screen.getByText("Friday กำหนดขั้นต่ำไว้ 12 ตัว · เลือกให้เข้มกว่านี้ได้")).toBeInTheDocument();
+  });
+
   it("การเข้าช่วยเหลือ: Owner เปิดสิทธิ์ได้ · Admin ที่ไม่ใช่ Owner เปลี่ยนไม่ได้", async () => {
     const user = userEvent.setup();
     const a = admin("security");

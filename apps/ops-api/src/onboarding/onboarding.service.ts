@@ -212,8 +212,11 @@ export class OnboardingService {
       },
       funnel,
       insights,
+      // ส่ง 500 รายที่ติดนานสุด · บอกจำนวนจริงด้วย (ไม่ตัดเงียบ · ช่วง 1)
       stuck: stuckRows.sort(bySeverity).slice(0, 500).map(shape),
+      stuckTotal: stuckRows.length,
       inactive: open.filter((w) => prog.get(w.id)!.inactive).sort(bySeverity).slice(0, 500).map(shape),
+      inactiveTotal: open.filter((w) => prog.get(w.id)!.inactive).length,
     };
   }
 

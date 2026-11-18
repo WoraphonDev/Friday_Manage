@@ -50,7 +50,7 @@ export interface WsList {
   limit: number;
   offset: number;
   sort: string;
-  counts?: Record<"all" | "active" | "trialing" | "past_due" | "suspended", number>;
+  counts?: Record<"all" | "paying" | "trialing" | "past_due" | "suspended", number>;
   tests?: { hidden: number; suggested: number };
   /** กรองผู้ซื้อรายเดียว: ยอดรวมทุก Workspace ของผู้ซื้อ */
   buyer?: { key: string; name: string | null; workspaces: number; seats: number; seatLimit: number; mrr: number | null; openTickets: number } | null;

@@ -6,7 +6,7 @@ export const FEATURES = ['line', 'webhook', 'github', 'api_token', 'automation',
 export const BulkFilter = z
   .object({
     plan: z.enum(PLAN_CODES).optional(),
-    status: z.enum(['trial', 'active', 'suspended', 'pending_delete', 'trialing', 'canceled', 'past_due']).optional(),
+    status: z.enum(['trial', 'active', 'suspended', 'pending_delete', 'trialing', 'canceled', 'past_due', 'paying']).optional(),
     q: z.string().trim().max(100).optional(),
     feature: z.enum(FEATURES).optional(),
     buyer: z.string().trim().max(80).optional(),

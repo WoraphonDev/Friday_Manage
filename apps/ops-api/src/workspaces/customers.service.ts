@@ -15,7 +15,8 @@ export { FEATURES } from './bulk-filter.js';
 
 export const ListQuery = z.object({
   plan: z.enum(PLAN_CODES).optional(),
-  status: z.enum(['trial', 'active', 'suspended', 'pending_delete', 'trialing', 'canceled', 'past_due']).optional(),
+  /** paying = แพ็กเกจจ่ายเงินอยู่ (สถานะแพ็กเกจ active · แท็บ "จ่ายเงิน") */
+  status: z.enum(['trial', 'active', 'suspended', 'pending_delete', 'trialing', 'canceled', 'past_due', 'paying']).optional(),
   q: z.string().trim().max(100).optional(),
   /** ใช้ฟีเจอร์ / การเชื่อมต่อ (หน้าจอ: ตัวกรอง "ใช้ฟีเจอร์") */
   feature: z.enum(FEATURES).optional(),
@@ -56,7 +57,7 @@ export const seesEmail = (st: Staff) => has(st, 'owner', 'finance', 'support', '
 
 const W = sql`w.id`;
 /** เงื่อนไขของแท็บสถานะ (trialing / canceled / past_due = สถานะแพ็กเกจ · ที่เหลือ = สถานะ Workspace) */
-const statusWhere = (st: string) => (['trialing', 'canceled', 'past_due'].includes(st) ? sql`sub.status = ${st}` : sql`w.status = ${st}`);
+const statusWhere = (st: string) => (st === 'paying' ? sql`sub.status = 'active'` : ['trialing', 'canceled', 'past_due'].includes(st) ? sql`sub.status = ${st}` : sql`w.status = ${st}`);
 
 type Row = Record<string, unknown>;
 
@@ -238,7 +239,7 @@ export class CustomersService {
     const noStatus = this.where(q, { status: false });
     const [c] = await this.rows<Record<string, number>>(sql`
       select count(*)::int as "all",
-        count(*) filter (where ${statusWhere('active')})::int as active, count(*) filter (where ${statusWhere('trialing')})::int as trialing,
+        count(*) filter (where ${statusWhere('paying')})::int as paying, count(*) filter (where ${statusWhere('trialing')})::int as trialing,
         count(*) filter (where ${statusWhere('past_due')})::int as past_due, count(*) filter (where ${statusWhere('suspended')})::int as suspended
       from workspaces w left join subscriptions sub on sub.workspace_id = w.id left join plans p on p.id = sub.plan_id where ${noStatus}`);
     const [t] = await this.rows<{ hidden: number; suggested: number }>(sql`

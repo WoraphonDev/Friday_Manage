@@ -82,7 +82,7 @@ describe("รายชื่อ Workspace", () => {
       const items = [row({ buyer }), row({ id: "w2", slug: "siam-web", name: "สยามเดโม · เว็บ", buyer })];
       return u.searchParams.get("buyer")
         ? { items, total: 2, limit: 50, offset: 0, sort: "recent_activity", buyer: { key: buyer.key, name: buyer.name, workspaces: 2, seats: 42, seatLimit: 50, mrr: 600_000, openTickets: 1 } }
-        : { items: [items[0]], total: 1, limit: 50, offset: 0, sort: "recent_activity", counts: { all: 1, active: 1, trialing: 0, past_due: 0, suspended: 0 }, tests: { hidden: 3, suggested: 0 } };
+        : { items: [items[0]], total: 1, limit: 50, offset: 0, sort: "recent_activity", counts: { all: 1, paying: 1, trialing: 0, past_due: 0, suspended: 0 }, tests: { hidden: 3, suggested: 0 } };
     });
     shell(<WorkspacesList />, "/workspaces");
     expect(await screen.findByText("ลูกค้า 1 ราย · ซ่อน Workspace ทดสอบ 3")).toBeInTheDocument();

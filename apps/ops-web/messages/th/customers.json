@@ -59,10 +59,10 @@
       "full": "ระงับ · ปิดทั้งหมด"
     },
     "tabs": {
-      "active": "จ่ายเงิน",
       "trialing": "ทดลอง",
       "past_due": "ค้างชำระ",
-      "suspended": "ระงับ"
+      "suspended": "ระงับ",
+      "paying": "จ่ายเงิน"
     },
     "filters": "ตัวกรอง",
     "filtersOn": "ตัวกรอง ({n})",

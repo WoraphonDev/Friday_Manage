@@ -24,7 +24,7 @@ const PLANS = ["", "free", "team_s", "team_m", "team_l", "enterprise"] as const;
 const SORTS = ["recent_activity", "mrr", "health", "newest"] as const;
 const FEATURES = ["line", "webhook", "github", "api_token", "automation", "import", "no_project"] as const;
 /** แท็บสถานะ · ค่าเดียวกับตัวกรอง status ของ ops-api (trialing / past_due = สถานะแพ็กเกจ) */
-const STATUSES = ["", "active", "trialing", "past_due", "suspended"] as const;
+const STATUSES = ["", "paying", "trialing", "past_due", "suspended"] as const;
 /** ป้ายการเชื่อมต่อใช้ชื่อเดียวกับตัวกรองฟีเจอร์ (เคยแสดงคีย์ดิบ customers.integrations.import) */
 const FEATURE_OF: Record<Integration, (typeof FEATURES)[number]> = { line: "line", webhook: "webhook", github: "github", apiToken: "api_token", automation: "automation", import: "import" };
 const PAGE = 50;
@@ -130,7 +130,7 @@ export function WorkspacesList() {
   };
   const target: BulkTarget = byFilter ? { filter: serverFilter } : { ids: [...selected.keys()] };
   const count = byFilter ? total : selected.size;
-  const filterText = [plan && planLabel(plan), status && (t.has(`wsStatus.${status}` as "wsStatus.trial") ? t(`wsStatus.${status}` as "wsStatus.trial") : t.has(`subStatus.${status}` as "subStatus.trialing") ? t(`subStatus.${status}` as "subStatus.trialing") : status), feature && t(`list.features.${feature}` as "list.features.line"), search && `"${search}"`].filter(Boolean).join(" · ");
+  const filterText = [plan && planLabel(plan), status && (status === "paying" ? t("list.tabs.paying") : t.has(`wsStatus.${status}` as "wsStatus.trial") ? t(`wsStatus.${status}` as "wsStatus.trial") : t.has(`subStatus.${status}` as "subStatus.trialing") ? t(`subStatus.${status}` as "subStatus.trialing") : status), feature && t(`list.features.${feature}` as "list.features.line"), search && `"${search}"`].filter(Boolean).join(" · ");
   const tb = (key: "byFilter" | "byFilterAll") => (key === "byFilter" ? t("bulk.byFilter", { filter: filterText }) : t("bulk.byFilterAll"));
   const scope = byFilter ? tb(filterText ? "byFilter" : "byFilterAll") : namesOf(tbulk, [...selected.values()], selected.size);
   const finish = (action: BulkAction, result: BulkResult) => {

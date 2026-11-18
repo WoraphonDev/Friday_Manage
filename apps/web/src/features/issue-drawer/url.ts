@@ -1,5 +1,5 @@
 /** query ที่ใส่เพื่อเปิด Drawer หรือฟอร์มสร้างงาน ต้องล้างเมื่อปิด ไม่งั้นฟอร์มครั้งถัดไปได้บริบทเก่า */
-const DRAWER_PARAMS = ["issue", "new", "parent", "moduleId", "phaseId", "statusId"] as const;
+const DRAWER_PARAMS = ["issue", "new", "parent", "moduleId", "phaseId", "statusId", "files"] as const;
 
 export function withoutDrawerParams(search: URLSearchParams | string, pathname: string): URLSearchParams {
   const next = new URLSearchParams(search);

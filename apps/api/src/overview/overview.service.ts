@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { attachmentCounts, attachmentsOf, type AttachmentCount } from '../files/attachment-counts.js';
 import { schema as s, type Tx } from '@friday/db';
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -70,7 +71,7 @@ function resolveRange(q: { from?: string; to?: string }) {
 
 /** ชื่อคนที่ Guest เห็น (04-permissions ข้อ 4) */
 const hiddenPerson = { displayName: 'ทีมพัฒนา', initials: '', avatarUrl: null };
-const personFields = new Set(['assigneeIds', 'baId', 'reviewerId', 'reviewerIds', 'testerId', 'createdBy', 'deletedBy', 'ownerUserId']);
+const personFields = new Set(['assigneeIds', 'baId', 'baIds', 'reviewerId', 'reviewerIds', 'testerId', 'createdBy', 'deletedBy', 'ownerUserId']);
 const LIST_LIMIT = 10;
 const ACTIVITY_LIMIT = 10;
 /** กันโปรเจกต์ที่วันที่ในแผนยาวผิดปกติ (เช่น พิมพ์ปีผิด) ไม่ให้คำตอบใหญ่เกิน · 5 ปี */
@@ -246,6 +247,8 @@ export class OverviewService {
       const moduleOf = new Map(modules.map((m) => [m.id, m]));
       const phaseOf = new Map(phases.map((p) => [p.id, p]));
       const keyOf = new Map(allIssues.map((i) => [i.id, `${project.key}-${i.number}`]));
+      // ไอคอนคลิป · Guest Viewer เปิดไฟล์ไม่ได้จึงไม่ส่ง (files/attachment-counts.ts)
+      const files = guest ? new Map<string, AttachmentCount>() : await attachmentCounts(tx, [...overdueIssues, ...dueToday, ...laterThisWeek, ...doneLast7].map((i) => i.id));
       const item = (i: Issue) => {
         const st = statusOf.get(i.statusId)!;
         const mod = i.moduleId ? moduleOf.get(i.moduleId) : undefined;
@@ -262,7 +265,7 @@ export class OverviewService {
           ...(dueRule.split ? { qaDue: qaDueOf(dueRule, i), dueStage: dueOfIssue(i).stage } : {}),
           lateDays: overdue(i) ? daysBetween(dueDate(i)!, now) : 0,
           completedOn: completedOn(i),
-          ...(guest ? { canOpen: i.sharedWithGuests } : { assignees: (assignees.get(i.id) ?? []).map((id) => people.get(id)).filter((p): p is Person => !!p) }),
+          ...(guest ? { canOpen: i.sharedWithGuests } : { assignees: (assignees.get(i.id) ?? []).map((id) => people.get(id)).filter((p): p is Person => !!p), attachments: attachmentsOf(files, i.id) }),
         };
       };
       const byDue = (a: Issue, b: Issue) => (dueDate(a)! < dueDate(b)! ? -1 : dueDate(a)! > dueDate(b)! ? 1 : a.number - b.number);
@@ -535,6 +538,7 @@ export class OverviewService {
             isNull(s.issues.deletedAt),
             isNull(s.issues.parentId),
             isNull(s.issues.baId),
+            sql`cardinality(${s.issues.baIds}) = 0`,
             sql`${s.workflowStatuses.category} not in ('done', 'cancelled')`,
             sql`${s.issueTypes.name} <> 'Bug'`,
             q.moduleId ? eq(s.issues.moduleId, q.moduleId) : undefined,

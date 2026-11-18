@@ -16,6 +16,7 @@ import { useIsMobile } from "@/lib/use-mobile";
 import styles from "./hmt.module.css";
 import { FALLBACK_PROJECT_COLOR } from "@/lib/colors";
 import { OnboardingHomeCard } from "@/features/onboarding-checklist/home-card";
+import { AttachmentBadge } from "@/features/attachments/attachment-badge";
 
 const HEALTH_TONE = { on_track: "green", at_risk: "amber", off_track: "red", unknown: "neutral" } as const;
 const HEALTH_ORDER: Record<Health, number> = { off_track: 0, at_risk: 1, on_track: 2, unknown: 3 };
@@ -204,7 +205,7 @@ function MobileHome({ data, ws, greeting, year }: { data: HomeData; ws: string; 
             <Link key={r.key} className="m-card" href={taskHref(ws, r.project.key, r.key)}>
               <div className="m-card-top"><StatusBadge category={r.status.category} name={r.status.name} /><span className="m-key">{r.key}</span></div>
               <h3>{r.title}</h3>
-              <div className="m-sm m-muted">{r.project.name}</div>
+              <div className="m-sm m-muted">{r.project.name} <AttachmentBadge counts={r.attachments} /></div>
               <div className="m-card-bot">
                 {r.from && <><Avatar person={r.from} size="small" /><span>{r.from.displayName}</span></>}
                 <span className="m-spacer" />
@@ -347,7 +348,7 @@ function Recent({ data, ws }: { data: HomeData; ws: string }) {
       <div className={styles.chead}><h2>{t("recent")}</h2></div>
       {!data.recent.length ? <div className={styles.empty}>{t("recentEmpty")}</div> : (
         <div className={styles.chips}>
-          {data.recent.map((r) => <Link key={r.key} className={styles.chipLink} href={taskHref(ws, r.project.key, r.key)}><span className="muted">{r.key}</span> {r.title}</Link>)}
+          {data.recent.map((r) => <Link key={r.key} className={styles.chipLink} href={taskHref(ws, r.project.key, r.key)}><span className="muted">{r.key}</span> {r.title} <AttachmentBadge counts={r.attachments} /></Link>)}
         </div>
       )}
     </section>
@@ -363,7 +364,7 @@ function Reviews({ data, ws }: { data: HomeData; ws: string }) {
       {data.waiting.reviews.map((r) => (
         <Link className={styles.li} key={r.key} href={taskHref(ws, r.project.key, r.key)}>
           <StatusPill status="review" label={r.status.name} />
-          <div style={{ flex: 1, minWidth: 0 }}><div className={styles.liTitle}>{r.key} {r.title}</div><div className={`muted ${styles.small}`}>{r.from ? `${r.from.displayName} · ` : ""}{r.project.name}</div></div>
+          <div style={{ flex: 1, minWidth: 0 }}><div className={styles.liTitle}>{r.key} {r.title}</div><div className={`muted ${styles.small}`}>{r.from ? `${r.from.displayName} · ` : ""}{r.project.name} <AttachmentBadge counts={r.attachments} /></div></div>
           <DueText planEnd={r.planEnd} today={data.today} />
         </Link>
       ))}

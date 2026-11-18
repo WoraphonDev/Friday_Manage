@@ -276,7 +276,9 @@ describe("Table (2)", () => {
     await waitFor(() => expect(patches.at(-1)).toEqual({ key: "DE-1", body: { assigneeIds: ["u1", "u2"] }, etag: '"2"' }));
     await user.click(screen.getByRole("button", { name: "แก้ BA ของ DE-1" }));
     await user.click(within(await screen.findByRole("dialog")).getByRole("option", { name: /ผู้พัฒนาสอง/ }));
-    await waitFor(() => expect(patches.at(-1)?.body).toEqual({ baId: "u2" }));
+    // BA หลายคน (2026-11-18): เลือกแล้วกดเสร็จ ส่งเป็น baIds ครั้งเดียว
+    await user.click(screen.getByRole("button", { name: "เสร็จ" }));
+    await waitFor(() => expect(patches.at(-1)?.body).toEqual({ baIds: ["u2"] }));
     await user.click(screen.getByRole("button", { name: "แก้ Size · MD ของ DE-1" }));
     await user.click(await screen.findByRole("button", { name: "L" }));
     await waitFor(() => expect(patches.at(-1)?.body).toEqual({ size: "L" }));

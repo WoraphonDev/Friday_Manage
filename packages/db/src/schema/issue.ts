@@ -93,7 +93,10 @@ export const issues = pgTable(
     statusId: uuid().notNull(),
     priority: priority().notNull().default('medium'),
 
+    /** Business Analyst คนแรกของ baIds (เก็บไว้ให้โค้ดและ FK เดิมใช้ต่อ) */
     baId: uuid().references(() => users.id),
+    /** Business Analyst ทั้งหมดตามลำดับ (ผู้ใช้ขอ 2026-11-18: งานเดียวมี BA ได้หลายคน) · ตัวแรก = baId */
+    baIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     /** System Analyst ของงาน (ผู้ใช้เพิ่ม 2026-11-08) */
     saId: uuid().references(() => users.id),
     /** QA / Reviewer คนแรกของ reviewerIds (เก็บไว้ให้โค้ดและ FK เดิมใช้ต่อ) */

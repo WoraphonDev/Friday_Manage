@@ -68,5 +68,9 @@ export async function workflowRuleEnabled(tx: Tx, workflowId: string, ruleType: 
 }
 
 /** QA / Reviewer ทุกคนของงาน (เลือกได้หลายคน · ข้อมูลเก่ามีแค่ reviewerId) */
+/** BA ทั้งหมดของงาน · งานที่ยังไม่ผ่าน migration 0052 มีแค่ baId */
+export const baList = (i: { baId?: string | null; baIds?: readonly string[] | null }) =>
+  i.baIds?.length ? [...i.baIds] : i.baId ? [i.baId] : [];
+
 export const reviewerList = (i: { reviewerId?: string | null; reviewerIds?: readonly string[] | null }) =>
   i.reviewerIds?.length ? [...i.reviewerIds] : i.reviewerId ? [i.reviewerId] : [];

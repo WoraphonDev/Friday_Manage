@@ -15,6 +15,7 @@ import type { Overview, OverviewItem } from "./types";
 import styles from "./ot.module.css";
 import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 import { isClosedCategory, statusDotColor, useStatusColors } from "@/lib/status";
+import { AttachmentBadge } from "@/features/attachments/attachment-badge";
 
 type ListKey = keyof Overview["lists"];
 const LIST_KEYS: ListKey[] = ["overdue", "dueToday", "laterThisWeek", "doneLast7Days"];
@@ -466,6 +467,7 @@ function ListRow({ i, list, href, year, busy, onToggle }: { i: OverviewItem; lis
         <div className={styles.rowMeta}>
           {i.module && <span className={styles.modPill} style={{ background: tint(color, 10), color: readableColor(color) }}>{i.module.name}</span>}
           <span className={`${styles.muted} ${styles.small}`}>{sub}</span>
+          {open && <AttachmentBadge counts={i.attachments} href={href(i.key)} />}
         </div>
       </div>
       {date.text && <span className={`${styles.dt} ${date.cls}`}>{date.text}</span>}

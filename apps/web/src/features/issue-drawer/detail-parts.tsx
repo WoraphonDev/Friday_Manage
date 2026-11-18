@@ -106,7 +106,7 @@ export function Development({ scope, issue }: { scope: Scope; issue: Issue }) {
       </> : git.data && <div className="muted">{t('noGit')}</div>}
     </div>}
     {/* C2 / D2: ผล Unit test ที่ Dev แนบเอง (ผู้ใช้ตัดสิน 2026-11-08) */}
-    <TestRuns scope={scope} issue={issue} kind="unit" embedded />
+    <div id={`${issue.key}-unit-tests`}><TestRuns scope={scope} issue={issue} kind="unit" embedded /></div>
   </div>;
 }
 
@@ -147,7 +147,7 @@ export function Attachments({ scope, issue }: { scope: Scope; issue: Issue }) {
     onOpen: () => f.kind === 'link' && f.linkUrl ? void window.open(f.linkUrl, '_blank', 'noopener,noreferrer') : preview.open(uploadsList, uploadsList.findIndex((u) => u.id === f.id)),
     onRemove: canAttach ? () => void detach(f) : undefined,
   }));
-  return <div className={`${styles.blk} file-drop-target`} {...drop.bind}>
+  return <div id={`${issue.key}-files`} className={`${styles.blk} file-drop-target`} {...drop.bind}>
     <DropOverlay count={drop.dragging} hint={t('dropHintIssue')} />
     <h3>{t('attachments')} <span className="muted" style={{ fontWeight: 500 }}>{items.length}</span>{canAttach && <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 8, alignItems: 'center' }}>{uploads.status && <span className="muted" role="status" style={{ fontSize: 11, fontWeight: 500 }}>{uploads.status}</span>}<AttachButton onFiles={uploads.add} /></span>}</h3>
     {!items.length && !uploads.rows.length && files.data && <p className="muted">{t('noAttachments')}</p>}

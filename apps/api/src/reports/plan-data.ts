@@ -4,7 +4,7 @@ import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { WorkCalendar } from '../projects/calendar.js';
 import { dueOf, loadDueRule } from '../projects/due-stage.js';
 import type { StatusCategory } from '../common/status-category.js';
-import { reviewerList } from '../issues/rules.js';
+import { baList, reviewerList } from '../issues/rules.js';
 
 export type IssueRow = typeof s.issues.$inferSelect;
 
@@ -18,6 +18,8 @@ export interface Item {
   phaseId: string | null;
   parentId: string | null;
   baId: string | null;
+  /** BA ทั้งหมด (คนแรก = baId) */
+  baIds: string[];
   saId: string | null;
   estimateMd: number;
   planStart: string | null;
@@ -75,6 +77,7 @@ export async function loadPlan(tx: Tx, project: Project): Promise<PlanData> {
     phaseId: i.phaseId,
     parentId: i.parentId,
     baId: i.baId,
+    baIds: baList(i),
     saId: i.saId,
     estimateMd: i.estimateMd ?? 0,
     planStart: i.planStart,

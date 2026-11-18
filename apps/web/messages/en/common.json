@@ -302,7 +302,15 @@
     "remove": "Remove {name}",
     "open": "View {name}",
     "removed": "Removed {name}",
-    "pasteHint": "Drag images here, or press ⌘V / Ctrl+V to paste a screenshot"
+    "pasteHint": "Drag images here, or press ⌘V / Ctrl+V to paste a screenshot",
+    "badge": {
+      "label": "{count} files ({detail}) · open the task at its files",
+      "files": "Attachments {count}",
+      "unit": "Unit test reports {count}",
+      "qa": "QA evidence {count}",
+      "open": "Click to open",
+      "count": "{count} files ({detail})"
+    }
   },
   "passwordReveal": {
     "show": "Show",

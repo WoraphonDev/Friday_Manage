@@ -1,4 +1,4 @@
-import type { Person } from "@/lib/types";
+import type { AttachmentCount, Person } from "@/lib/types";
 import type { StatusCategory } from "@/lib/status";
 
 export type Health = "on_track" | "at_risk" | "off_track" | "unknown";
@@ -33,7 +33,7 @@ export interface HomeData {
     unreadMentions: { count: number; latestFrom: string | null };
     pendingApprovals: number;
   };
-  waiting: { approvals: ApprovalItem[]; reviews: (IssueRef & { from: Person | null })[] };
+  waiting: { approvals: ApprovalItem[]; reviews: (IssueRef & { from: Person | null; attachments?: AttachmentCount | null })[] };
   projects: {
     key: string;
     name: string;
@@ -45,7 +45,7 @@ export interface HomeData {
     myTasks: number;
     health: { level: Health; gapPct: number | null };
   }[];
-  recent: { key: string; title: string; project: { key: string; name: string }; verb: string; at: string }[];
+  recent: { key: string; title: string; project: { key: string; name: string }; verb: string; at: string; attachments?: AttachmentCount | null }[];
   upcoming: { date: string; type: "sprint_start" | "sprint_end" | "milestone" | "phase_end" | "holiday"; title: string; project: string | null }[];
   workload: {
     week: { start: string; end: string };
@@ -68,6 +68,8 @@ export type GroupBy = "due" | "project" | "status";
 export interface TaskItem {
   key: string;
   title: string;
+  /** ไอคอนคลิป: ไฟล์แนบ + Unit test + หลักฐาน QA · ไม่มีไฟล์ = null */
+  attachments?: AttachmentCount | null;
   type: string | null;
   project: { key: string; name: string; color: string | null };
   status: { id: string; name: string; category: StatusCategory };

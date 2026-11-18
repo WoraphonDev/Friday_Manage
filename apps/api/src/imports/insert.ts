@@ -114,7 +114,7 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
             remark: r.remark,
             statusId: ctx.statusIdOf(r.status),
             priority: r.priority ?? 'medium',
-            baId: ctx.userOf(r.ba),
+            ...basOf(r.bas.map(ctx.userOf)),
             saId: ctx.userOf(r.sa),
             ...reviewersOf(r.reviewers.map(ctx.userOf)),
             reporterId: ctx.actorId,
@@ -170,6 +170,12 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
 
 async function codes(tx: Tx, table: typeof s.requirements | typeof s.screens, projectId: string) {
   return new Map((await tx.select({ id: table.id, code: table.code }).from(table).where(eq(table.projectId, projectId))).map((x) => [x.code, x.id]));
+}
+
+/** BA หลายคน → baIds (ไม่ซ้ำ) + คนแรกเป็น baId */
+function basOf(ids: (string | null)[]) {
+  const baIds = [...new Set(ids.filter((u): u is string => !!u))];
+  return { baId: baIds[0] ?? null, baIds };
 }
 
 /** QA หลายคน → reviewerIds (ไม่ซ้ำ) + คนแรกเป็น reviewerId */

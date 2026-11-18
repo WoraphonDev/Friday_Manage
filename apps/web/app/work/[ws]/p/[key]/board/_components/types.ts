@@ -1,4 +1,4 @@
-import type { Person } from "@/lib/types";
+import type { AttachmentCount, Person } from "@/lib/types";
 import type { StatusCategory } from "@/lib/status";
 
 export interface BoardCard {
@@ -17,6 +17,10 @@ export interface BoardCard {
   due: { state: "overdue" | "today" | "soon"; days: number; stage?: "dev" | "qa" } | null;
   qaDue?: string | null;
   assignees: Person[];
+  /** BA ของงาน (หลายคนได้) · โปรเจกต์ที่ซ่อนช่อง BA ได้รายการว่าง */
+  bas?: Person[];
+  /** ไอคอนคลิป: ไฟล์แนบ + Unit test + หลักฐาน QA · ไม่มีไฟล์ = null */
+  attachments?: AttachmentCount | null;
   /** ย้ายการ์ดนี้ได้ไหม · false = งานของคนอื่น ดูได้อย่างเดียว (ไม่ส่งมา = ใช้สิทธิ์ issue.edit อย่างเดียว) */
   canMove?: boolean;
   subtasks: { total: number; done: number } | null;

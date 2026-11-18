@@ -43,6 +43,16 @@ export interface Person {
   avatarUrl?: string | null;
   color?: string;
 }
+/** จำนวนไฟล์ของงานสำหรับไอคอนคลิป (apps/api/src/files/attachment-counts.ts) · ไม่มีไฟล์ = null */
+export interface AttachmentCount {
+  total: number;
+  /** ไฟล์แนบของงาน */
+  files: number;
+  /** รายงานผล Unit test */
+  unit: number;
+  /** หลักฐานผลทดสอบ QA */
+  qa: number;
+}
 export interface NotificationSummary {
   total: number;
   workspaces: { id: string; slug: string; name: string; unread: number }[];

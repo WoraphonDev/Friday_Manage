@@ -251,7 +251,7 @@ export class ImportsService {
           seq: 0,
           parents: new Map(),
           details: (r) => {
-            const unmatched = { devs: r.devs.filter((d) => !userOf(d)), ba: r.ba && !userOf(r.ba) ? r.ba : null };
+            const unmatched = { devs: r.devs.filter((d) => !userOf(d)), ba: r.bas.filter((b) => !userOf(b)).join(', ') || null };
             return unmatched.devs.length || unmatched.ba ? { importedPeople: unmatched } : {};
           },
         },

@@ -269,7 +269,9 @@
     "labelIds": "Labels",
     "saId": "System Analyst",
     "parentKey": "Parent task",
-    "subtasks": "Sub-task"
+    "subtasks": "Sub-task",
+    "baIds": "BA",
+    "reviewerIds": "QA / Reviewer"
   },
   "priority": {
     "urgent": "Urgent",

@@ -6,7 +6,7 @@ import { addTimelineSheet, type TimelineInput, type TimelineRow } from './timeli
 import { dueOf, loadDueRule } from '../projects/due-stage.js';
 import type { ProfileField, ResolvedProfile } from '../projects/field-profile.js';
 import { type CustomFieldDef, displayValue, readCustomValues } from '../issues/custom-values.js';
-import { reviewerList } from '../issues/rules.js';
+import { baList, reviewerList } from '../issues/rules.js';
 import { acceptanceText } from './plan.js';
 
 const s = schema;
@@ -160,7 +160,7 @@ export async function buildPlanXlsx(
       firstCheck ?? null,
       statusName.get(i.statusId) ?? null,
       PRIORITY_LABEL[i.priority],
-      person(i.baId),
+      join(baList(i).map((u) => person(u)).filter((x): x is string => !!x)),
       person(i.saId),
       join(devsOf.get(i.id)),
       join(reviewerList(i).map((u) => person(u)).filter((x): x is string => !!x)),
@@ -325,7 +325,7 @@ const GUIDE: [string, string, string][] = [
   ['Checklist', '1 แถวต่อ 1 ข้อ: ข้อแรกใส่ในแถวของงาน ข้อถัดไปเพิ่มแถวใต้งานโดยใส่ Title (และ Key ถ้ามี) เดียวกัน ช่องอื่นเว้นว่าง · ขึ้นต้นด้วย [Acceptance] = Acceptance criteria · อัปเดตแผน: ข้อใหม่เพิ่มให้ ข้อที่ลบออกจากไฟล์ลบเฉพาะที่ยังไม่ติ๊ก', '—'],
   ['Status', 'สถานะตาม Workflow ของโปรเจกต์ (ดูชีตค่าที่ใช้ได้) · ว่าง = To do', '—'],
   ['Priority', 'Urgent / High / Medium / Low · ว่าง = Medium (งานใหม่) หรือคงค่าเดิม', '—'],
-  ['Business Analyst', 'ชื่อที่แสดงของสมาชิก 1 คน', '—'],
+  ['Business Analyst', 'ชื่อสมาชิก หลายคนคั่นด้วย ,', '—'],
   ['System Analyst', 'ชื่อที่แสดงของสมาชิก 1 คน', '—'],
   ['Developer', 'ชื่อสมาชิก หลายคนคั่นด้วย ,', '—'],
   ['QA / Reviewer', 'ชื่อสมาชิก หลายคนคั่นด้วย ,', '—'],

@@ -1,4 +1,4 @@
-import type { Person } from "@/lib/types";
+import type { AttachmentCount, Person } from "@/lib/types";
 import type { StatusCategory } from "@/lib/status";
 
 type Cat = StatusCategory;
@@ -15,6 +15,8 @@ export interface OverviewItem {
   completedOn: string | null;
   assignees?: Person[];
   canOpen?: boolean;
+  /** ไอคอนคลิป: ไฟล์แนบ + Unit test + หลักฐาน QA · ไม่มีไฟล์ = null */
+  attachments?: AttachmentCount | null;
 }
 export interface Overview {
   project: {
@@ -71,6 +73,10 @@ export interface Row {
   /** false = งานของคนอื่น เปลี่ยนสถานะไม่ได้ (04-permissions ข้อ 3.3) */
   canMove?: boolean;
   assignees?: Person[]; ba?: Person | null; sa?: Person | null; reviewer?: Person | null;
+  /** BA หลายคน (คนแรก = ba) */
+  bas?: Person[];
+  /** ไอคอนคลิป: ไฟล์แนบ + Unit test + หลักฐาน QA · ไม่มีไฟล์ = null */
+  attachments?: AttachmentCount | null;
   /** QA / Reviewer หลายคน (คนแรก = reviewer) */
   reviewers?: Person[];
   requirements?: string[]; screens?: string[]; labels?: { id: string; name: string; color: string | null }[];

@@ -125,7 +125,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | ตัวตน | workspace_id, project_id, number (DP-**39** · นำเข้าจาก Excel ใช้คอลัมน์ **ID** ตามเลขงานใน Prototype), issue_type_id, parent_id (null = ระดับ Task), excel_row_no (คอลัมน์ **No.** ใช้จับคู่แถวตอน Import อัปเดต) |
 | ตำแหน่งในแผน | module_id, phase_id, sprint_id, rank (ลำดับใน Backlog / Kanban แบบ LexoRank) |
 | เนื้อหา | title, description (markdown), status_id, priority (urgent · high · medium · low) |
-| คน | ba_id, reviewer_ids (QA / Reviewer หลายคน · migration 0035), reviewer_id (= คนแรกของ reviewer_ids), tester_id, reporter_id, created_by · Dev อยู่ใน `issue_assignee` |
+| คน | ba_ids (BA หลายคน · migration 0052), ba_id (= คนแรกของ ba_ids), reviewer_ids (QA / Reviewer หลายคน · migration 0035), reviewer_id (= คนแรกของ reviewer_ids), tester_id, reporter_id, created_by · Dev อยู่ใน `issue_assignee` |
 | ประเมิน | size (XS–XL, null = ยังไม่ประเมิน), estimate_md (ของทั้งทีม), progress_pct (กรอกเองได้เฉพาะงานที่ไม่มีลูกและไม่มี Checklist · มี Checklist = สัดส่วนที่ติ๊กแล้ว · migration 0042), checklist_pct (สัดส่วน Checklist ที่ติ๊ก · null = ไม่มี Checklist · migration 0043) |
 | วันที่ | plan_start, plan_end (= Due · โปรเจกต์แยก Dev / QA = วันที่ Dev ต้องส่ง QA), qa_end (QA Due ของโปรเจกต์แยก Dev / QA · null = plan_end + qa_buffer_days วันทำการ · migration 0034), actual_start, actual_end (บันทึกอัตโนมัติเมื่อสถานะเปลี่ยน), completed_at |
 | Bug | severity (critical · major · minor), environment, reopen_count, found_in_test_run_id |

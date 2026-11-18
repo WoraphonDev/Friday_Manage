@@ -9,7 +9,8 @@ import { lateSql, loadDueRule } from '../projects/due-stage.js';
 import type { ProjectAccess } from '../projects/permissions.js';
 import type { ProjectRow } from '../projects/projects.service.js';
 import { countsForProgress, openStatus, STATUS_CATEGORIES, type StatusCategory } from '../common/status-category.js';
-import { reviewerList } from './rules.js';
+import { attachmentCounts, attachmentsOf } from '../files/attachment-counts.js';
+import { baList, reviewerList } from './rules.js';
 
 type Issue = typeof s.issues.$inferSelect;
 const uuid = z.uuid();
@@ -76,7 +77,9 @@ export async function listIssues<T extends { id: string; key: string; number: nu
     where.push(q.assignee === 'none' ? sql`not exists (select 1 from ${s.issueAssignees} a where a.issue_id = ${s.issues.id})`
       : sql`exists (select 1 from ${s.issueAssignees} a where a.issue_id = ${s.issues.id} and a.user_id = ${who})`);
   }
-  if (q.ba) where.push(q.ba === 'none' ? isNull(s.issues.baId) : eq(s.issues.baId, q.ba === 'me' ? auth.userId : q.ba));
+  // BA หลายคน: กรองเจองานที่คนนั้นเป็น BA คนใดคนหนึ่ง
+  if (q.ba) where.push(q.ba === 'none' ? sql`cardinality(${s.issues.baIds}) = 0 and ${s.issues.baId} is null`
+    : sql`(${q.ba === 'me' ? auth.userId : q.ba})::uuid = any(${s.issues.baIds})`);
   // โปรเจกต์แยก Dev / QA: งานที่รอ QA เลยกำหนดตาม QA Due (projects/due-stage.ts)
   const dueRule = await loadDueRule(tx, project);
   const overdue = and(lateSql(dueRule, today()), openStatus())!;
@@ -121,11 +124,15 @@ export async function listIssues<T extends { id: string; key: string; number: nu
   if (q.view === 'table' && page.length) {
     const ids = page.map((r) => r.issue.id);
     const assignmentRows = await tx.select().from(s.issueAssignees).where(inArray(s.issueAssignees.issueId, ids)).orderBy(asc(s.issueAssignees.sort));
-    const people = await loadPeople(tx, [...assignmentRows.map((a) => a.userId), ...page.flatMap((r) => [r.issue.baId, r.issue.saId, ...reviewerList(r.issue)])]);
+    const people = await loadPeople(tx, [...assignmentRows.map((a) => a.userId), ...page.flatMap((r) => [...baList(r.issue), r.issue.saId, ...reviewerList(r.issue)])]);
+    const files = await attachmentCounts(tx, ids);
     const progress = progressCalculator(progressRows!, project.progressMethod === 'weighted');
     items = items.map((item, index) => ({ ...item, progressPct: progress(page[index].issue),
       assignees: assignmentRows.filter((a) => a.issueId === item.id).map((a) => people.get(a.userId)).filter(Boolean),
       ba: people.get(page[index].issue.baId ?? '') ?? null,
+      // BA หลายคน (คนแรก = ba)
+      bas: baList(page[index].issue).map((id) => people.get(id)).filter(Boolean),
+      attachments: attachmentsOf(files, page[index].issue.id),
       sa: people.get(page[index].issue.saId ?? '') ?? null,
       reviewer: people.get(page[index].issue.reviewerId ?? '') ?? null,
       // QA หลายคน (คนแรก = reviewer)
@@ -134,7 +141,7 @@ export async function listIssues<T extends { id: string; key: string; number: nu
   }
   if (q.fields) {
     const requested = new Set(q.fields.split(',').filter(Boolean));
-    const allowed = new Set(['id', 'key', 'number', 'projectKey', 'type', 'parentKey', 'title', 'description', 'remark', 'status', 'priority', 'moduleId', 'phaseId', 'sprintId', 'size', 'estimateMd', 'progressPct', 'planStart', 'planEnd', 'qaEnd', 'qaDue', 'dueDate', 'dueStage', 'actualStart', 'actualEnd', 'reopenCount', 'severity', 'environment', 'details', 'sharedWithGuests', 'version', 'createdAt', 'updatedAt', 'assigneeIds', 'baId', 'saId', 'reviewerId', 'reviewerIds', 'testerId', 'reporterId', 'canMove', 'assignees', 'ba', 'sa', 'reviewer', 'reviewers', 'labels', 'requirements', 'screens', 'customFields']);
+    const allowed = new Set(['id', 'key', 'number', 'projectKey', 'type', 'parentKey', 'title', 'description', 'remark', 'status', 'priority', 'moduleId', 'phaseId', 'sprintId', 'size', 'estimateMd', 'progressPct', 'planStart', 'planEnd', 'qaEnd', 'qaDue', 'dueDate', 'dueStage', 'actualStart', 'actualEnd', 'reopenCount', 'severity', 'environment', 'details', 'sharedWithGuests', 'version', 'createdAt', 'updatedAt', 'assigneeIds', 'baId', 'baIds', 'saId', 'reviewerId', 'reviewerIds', 'testerId', 'reporterId', 'canMove', 'assignees', 'ba', 'bas', 'attachments', 'sa', 'reviewer', 'reviewers', 'labels', 'requirements', 'screens', 'customFields']);
     if ([...requested].some((key) => !allowed.has(key))) throw new AppError(400, 'invalid_fields', 'ชื่อฟิลด์ที่ขอไม่ถูกต้อง');
     requested.add('key');
     items = items.map((item) => Object.fromEntries(Object.entries(item).filter(([key]) => requested.has(key))));

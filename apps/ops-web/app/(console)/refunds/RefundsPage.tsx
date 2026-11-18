@@ -1,12 +1,12 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
 import { hasAny } from "@/components/access";
 import { kindText, useApprovalFlow, useReauth } from "@/components/dialogs";
-import { Drawer, Empty, ErrorBlock, Modal, PageHead, Seg, TableSkeleton } from "@/components/kit";
+import { Drawer, ErrorBlock, Modal, PageHead, Pager, Seg, SettingsButton, TableSkeleton, TodoCard } from "@/components/kit";
 import { Button, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
 import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -34,6 +34,8 @@ interface History {
   workspace: { name: string };
 }
 
+const PAGE = 50;
+
 /** หน้า 13 · คืนเงิน เครดิต และการอนุมัติ (Refunds.dc.html) */
 export function RefundsPage() {
   const t = useTranslations("money.refunds");
@@ -47,7 +49,12 @@ export function RefundsPage() {
   const owner = (me?.roles ?? []).includes("owner") || hasAny(me, "owner");
   const [form, setForm] = useState(false);
   const [rejecting, setRejecting] = useState<Pending | null>(null);
-  const q = useQuery({ queryKey: ["ops", "refunds"], queryFn: () => api.get<{ pending: Pending[]; history: History[] }>("/refunds") });
+  // ช่วง 1 (ข้อมูลเยอะ): ประวัติค้นและแบ่งหน้าที่ ops-api (เดิมตัดที่ 100 รายการโดยไม่บอก)
+  const [search, setSearch] = useState("");
+  const [offset, setOffset] = useState(0);
+  const term = useDeferredValue(search.trim());
+  const qs = new URLSearchParams({ limit: String(PAGE), offset: String(offset), ...(term ? { q: term } : {}) });
+  const q = useQuery({ queryKey: ["ops", "refunds", qs.toString()], queryFn: () => api.get<{ pending: Pending[]; history: History[]; historyTotal: number }>(`/refunds?${qs}`), placeholderData: keepPreviousData });
   const approve = useMutation({
     mutationFn: (p: Pending) => run(() => api.post(`/approvals/${p.id}/approve`, {}), kindText(tc, p.kind)),
     onSuccess: () => (toast(t("approved")), void cache.invalidateQueries({ queryKey: ["ops"] })),
@@ -59,61 +66,74 @@ export function RefundsPage() {
         title={t("title")}
         desc={t("desc")}
         actions={
-          hasAny(me, "finance") && (
-            <Button variant="primary" onClick={() => setForm(true)}>
-              <Plus size={16} /> {t("new")}
-            </Button>
-          )
+          <>
+            {/* กฎอนุมัติเปิดดูนาน ๆ ครั้ง ย้ายมาไว้หลังปุ่มเฟือง (โครงหน้า Ops) */}
+            <SettingsButton title={t("rules")} description={t("rulesNote")}>
+              <table className="tbl">
+                <tbody>
+                  <tr>
+                    <td>{t("ruleRefund")}</td>
+                    <td>{t("approver")}</td>
+                    <td className="muted small">{t("expires")}</td>
+                  </tr>
+                  <tr>
+                    <td>{t("ruleCredit")}</td>
+                    <td>{t("approver")}</td>
+                    <td className="muted small">{t("expires")}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </SettingsButton>
+            {hasAny(me, "finance") && (
+              <Button variant="primary" onClick={() => setForm(true)}>
+                <Plus size={16} /> {t("new")}
+              </Button>
+            )}
+          </>
         }
       />
-      <section className="card">
-        <div className="card-head">
-          <h2 className="card-title">{t("pending")}</h2>
-          <span className="card-sub">{t("pendingNote")}</span>
-        </div>
-        {q.isPending ? (
-          <TableSkeleton rows={2} cols={4} />
-        ) : q.error ? (
-          <ErrorBlock error={q.error} retry={() => void q.refetch()} />
-        ) : !q.data.pending.length ? (
-          <Empty ok title={t("noPending")} />
-        ) : (
-          <div className="stack">
-            {q.data.pending.map((p) => {
-              const mine = p.requestedBy === me?.name;
-              return (
-                <article key={p.id} className="notice notice-warn" aria-label={kindText(tc, p.kind)}>
-                  <div className="notice-body">
-                    <b>
-                      {kindText(tc, p.kind)} · {p.amountSatang != null ? fmt.money(p.amountSatang) : "—"}
-                    </b>
-                    <span className="small">{p.reason}</span>
-                    <span className="muted small">{t("requestedBy", { name: p.requestedBy, time: f.dateTime(new Date(p.createdAt), { dateStyle: "medium", timeStyle: "short" }) })}</span>
-                  </div>
-                  {owner && (
-                    <span className="row" style={{ flexWrap: "nowrap" }}>
-                      {!mine && (
-                        <Button size="small" onClick={() => setRejecting(p)}>
-                          {t("reject")}
-                        </Button>
-                      )}
-                      <Button size="small" variant="primary" disabled={approve.isPending} onClick={() => approve.mutate(p)}>
-                        {t("approve")}
+      {q.isPending ? (
+        <TableSkeleton rows={2} cols={4} />
+      ) : q.error ? (
+        <ErrorBlock error={q.error} retry={() => void q.refetch()} />
+      ) : (
+        <TodoCard title={t("pending")} count={q.data.pending.length} hint={t("pendingNote")} clear={{ title: t("noPending") }}>
+          {q.data.pending.map((p) => {
+            const mine = p.requestedBy === me?.name;
+            return (
+              <article key={p.id} className="todo-row" aria-label={kindText(tc, p.kind)}>
+                <div className="todo-main">
+                  <b>
+                    {kindText(tc, p.kind)} · {p.amountSatang != null ? fmt.money(p.amountSatang) : "—"}
+                  </b>
+                  <span className="small">{p.reason}</span>
+                  <span className="muted small">{t("requestedBy", { name: p.requestedBy, time: f.dateTime(new Date(p.createdAt), { dateStyle: "medium", timeStyle: "short" }) })}</span>
+                </div>
+                {owner && (
+                  <span className="todo-actions">
+                    {!mine && (
+                      <Button size="small" onClick={() => setRejecting(p)}>
+                        {t("reject")}
                       </Button>
-                    </span>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
+                    )}
+                    <Button size="small" variant="primary" disabled={approve.isPending} onClick={() => approve.mutate(p)}>
+                      {t("approve")}
+                    </Button>
+                  </span>
+                )}
+              </article>
+            );
+          })}
+        </TodoCard>
+      )}
       <section className="card">
         <div className="card-head">
           <h2 className="card-title">{t("history")}</h2>
           <span className="card-sub">{t("historyNote")}</span>
         </div>
-        {q.data && (
+        <Input type="search" aria-label={t("search")} placeholder={t("search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
+        {q.data && !q.data.history.length && <p className="muted small">{term ? t("noMatch") : t("noHistory")}</p>}
+        {!!q.data?.history.length && (
           <div className="tbl-wrap">
             <table className="tbl">
               <thead>
@@ -156,26 +176,7 @@ export function RefundsPage() {
             </table>
           </div>
         )}
-      </section>
-      <section className="card">
-        <div className="card-head">
-          <h2 className="card-title">{t("rules")}</h2>
-          <span className="card-sub">{t("rulesNote")}</span>
-        </div>
-        <table className="tbl">
-          <tbody>
-            <tr>
-              <td>{t("ruleRefund")}</td>
-              <td>{t("approver")}</td>
-              <td className="muted small">{t("expires")}</td>
-            </tr>
-            <tr>
-              <td>{t("ruleCredit")}</td>
-              <td>{t("approver")}</td>
-              <td className="muted small">{t("expires")}</td>
-            </tr>
-          </tbody>
-        </table>
+        {q.data?.historyTotal != null && <Pager offset={offset} limit={PAGE} shown={q.data.history.length} total={q.data.historyTotal} onChange={setOffset} />}
       </section>
       {form && <RefundForm onClose={() => setForm(false)} />}
       {rejecting && <RejectDialog p={rejecting} onClose={() => setRejecting(null)} />}

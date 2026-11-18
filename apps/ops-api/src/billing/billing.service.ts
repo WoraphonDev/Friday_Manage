@@ -19,6 +19,16 @@ const PLAN_CODES = ['free', 'team_s', 'team_m', 'team_l', 'enterprise'] as const
 const Month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'รูปแบบเดือนต้องเป็น YYYY-MM');
 const Reason = z.string().trim().min(3).max(500);
 
+export const RefundsQuery = z.object({
+  q: z.string().trim().max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+export const OverdueQuery = z.object({
+  q: z.string().trim().max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
 export const InvoicesQuery = z.object({
   status: z.enum(['open', 'pending_review', 'paid', 'void', 'overdue']).optional(),
   month: Month.optional(),
@@ -367,8 +377,11 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
       order by i.due_date`);
   }
 
-  async overdue() {
-    const rows = await this.overdueRows();
+  async overdue(q: z.infer<typeof OverdueQuery> = { limit: 50, offset: 0 }) {
+    const all = await this.overdueRows(q.q ? sql`(w.name ilike ${`%${q.q}%`} or w.slug ilike ${`%${q.q}%`} or i.number ilike ${`%${q.q}%`})` : sql`true`);
+    // ช่วง 1 (ข้อมูลเยอะ): เรียงตามความเสี่ยง = ยอด × วันที่ค้าง · ดึงผู้ติดต่อ/ประวัติเฉพาะหน้าที่แสดง (เดิมทำทุกแถว)
+    const ranked = [...all].sort((a, b) => Number(b.amountDue) * Number(b.daysOverdue) - Number(a.amountDue) * Number(a.daysOverdue));
+    const rows = ranked.slice(q.offset, q.offset + q.limit);
     const ids = rows.map((r) => r.id as string);
     const events = ids.length ? await this.db.select().from(s.dunningEvents).where(inArray(s.dunningEvents.invoiceId, ids)).orderBy(s.dunningEvents.createdAt) : [];
     const items = await Promise.all(
@@ -387,7 +400,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
         };
       }),
     );
-    return { items, totalSatang: rows.reduce((n, r) => n + Number(r.amountDue), 0), steps: DUNNING_STEPS };
+    return { items, total: all.length, totalSatang: all.reduce((n, r) => n + Number(r.amountDue), 0), steps: DUNNING_STEPS };
   }
 
   /** ติดต่อลูกค้าค้างชำระ (B3) · อีเมลส่งจริง · LINE / โทร บันทึกผล (หลังบ้านยังส่ง LINE ไม่ได้) */
@@ -474,15 +487,16 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
 
   // ---------------------------------------------------------------- คืนเงิน / เครดิต
 
-  async refunds() {
+  async refunds(q: z.infer<typeof RefundsQuery> = { limit: 50, offset: 0 }) {
     const pending = await this.db
       .select({ r: s.approvalRequests, requester: s.staffUsers.name })
       .from(s.approvalRequests)
       .innerJoin(s.staffUsers, eq(s.staffUsers.id, s.approvalRequests.requestedBy))
       .where(and(inArray(s.approvalRequests.kind, ['billing.refund', 'billing.credit']), eq(s.approvalRequests.status, 'pending')))
       .orderBy(s.approvalRequests.createdAt);
-    const history = await this.rows(sql`
-      select * from (
+    const term = q.q ? `%${q.q}%` : null;
+    const match = term ? sql`((x.workspace->>'name') ilike ${term} or (x.workspace->>'slug') ilike ${term} or x.ref ilike ${term} or x.invoice ilike ${term})` : sql`true`;
+    const HISTORY = sql`
         select c.id, c.issued_at as "at", c.kind as type, c.number as ref, c.reason, (c.amount_satang + c.vat_satang)::float8 as "amountSatang", c.refund_method as "refundMethod",
           st.name as "requestedBy", ap.name as "approvedBy", c.status, json_build_object('id', w.id, 'slug', w.slug, 'name', w.name) as workspace, i.number as invoice
         from credit_notes c join workspaces w on w.id = c.workspace_id join invoices i on i.id = c.invoice_id
@@ -490,8 +504,12 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
         union all
         select k.id, k.created_at, 'goodwill_credit', null, k.note, k.amount_satang::float8, null, st.name, null, 'issued', json_build_object('id', w.id, 'slug', w.slug, 'name', w.name), null
         from workspace_credits k join workspaces w on w.id = k.workspace_id left join staff_users st on st.id = k.created_by_staff where k.source in ('goodwill', 'overpayment')
-      ) x order by "at" desc limit 100`);
-    return { pending: pending.map(({ r, requester }) => ({ id: r.id, kind: r.kind, workspaceId: r.workspaceId, amountSatang: r.amountSatang, reason: r.reason, requestedBy: requester, createdAt: r.createdAt, expiresAt: r.expiresAt, payload: r.payload })), history };
+`;
+    const history = await this.rows(sql`
+      select * from (${HISTORY}) x where ${match} order by "at" desc limit ${q.limit} offset ${q.offset}`);
+    // ช่วง 1 (ข้อมูลเยอะ): เดิมตัดที่ 100 รายการโดยไม่บอก · ค้นด้วย Workspace / เลขเอกสาร / ใบแจ้งหนี้ได้
+    const [{ n }] = await this.rows(sql`select count(*)::int as n from (${HISTORY}) x where ${match}`);
+    return { pending: pending.map(({ r, requester }) => ({ id: r.id, kind: r.kind, workspaceId: r.workspaceId, amountSatang: r.amountSatang, reason: r.reason, requestedBy: requester, createdAt: r.createdAt, expiresAt: r.expiresAt, payload: r.payload })), history, historyTotal: n as number };
   }
 
   /** ขอคืนเงิน · เกินวงเงินหรือชำระมาเกิน 30 วันต้องอนุมัติ (06 › 3) */

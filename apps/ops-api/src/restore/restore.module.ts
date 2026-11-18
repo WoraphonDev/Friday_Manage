@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, Module, Param, Post, Query, Req, Res }
 import type { Response } from 'express';
 import { type OpsRequest, Reauth, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
+import { PageQuery } from '../paging.js';
 import { SupportModule } from '../support/support.module.js';
 import { ExtendBody, LookupQuery, RestoreBody, RestoreService, RestoreWorkspaceBody, TicketsQuery, TrashQuery } from './restore.service.js';
 
@@ -42,8 +43,8 @@ export class RestoreController {
 
   @Roles('owner', 'support', 'engineer', 'auditor')
   @Get('history')
-  history() {
-    return this.restore.history();
+  history(@Query() q: unknown) {
+    return this.restore.history(parse(PageQuery, q));
   }
 
   /** Z6 · กู้คืนให้ลูกค้า (ไม่ต้องอนุมัติคนที่สอง) */

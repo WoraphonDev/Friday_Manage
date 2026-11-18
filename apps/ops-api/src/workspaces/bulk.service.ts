@@ -9,23 +9,13 @@ import { has, type Staff } from '../auth/auth.guard.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
-import { CustomersService, FEATURES } from './customers.service.js';
+import { BulkFilter } from './bulk-filter.js';
+import { CustomersService } from './customers.service.js';
 import { WorkspacesService } from './workspaces.service.js';
 
 const s = schema;
 /** สูงสุดต่อครั้ง (H4 · เลือกตามตัวกรอง) */
 export const BULK_MAX = 1000;
-const PLAN_CODES = ['free', 'team_s', 'team_m', 'team_l', 'enterprise'] as const;
-
-/** ตัวกรองชุดเดียวกับ GET ops/workspaces (ไม่รวมการเรียง / แบ่งหน้า) */
-export const BulkFilter = z
-  .object({
-    plan: z.enum(PLAN_CODES).optional(),
-    status: z.enum(['trial', 'active', 'suspended', 'pending_delete', 'trialing', 'canceled', 'past_due']).optional(),
-    q: z.string().trim().max(100).optional(),
-    feature: z.enum(FEATURES).optional(),
-  })
-  .strict();
 export const BulkBody = z
   .object({
     action: z.enum(['extend_trial', 'coupon', 'discount']),

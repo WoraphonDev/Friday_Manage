@@ -148,16 +148,16 @@ describe("ศูนย์ช่วยเหลือ · รายการบท
 
   it("คำค้นที่ไม่พบบ่อย → เขียนบทความ: สร้างร่างจากคำค้นแล้วเปิดตัวแก้ · แท็บคำค้นที่ไม่พบ / ต้องทบทวน", async () => {
     const calls = listPage();
-    const card = await screen.findByRole("complementary", { name: "คำค้นที่ไม่พบบ่อย" });
-    expect(await within(card).findByText("41 ครั้ง · เปิด Ticket ต่อ 6")).toBeInTheDocument();
-    expect(within(card).getByRole("link", { name: "มีบทความแล้ว" })).toHaveAttribute("href", `/help/${A1}`);
-    await userEvent.click(within(card).getByRole("button", { name: "เขียนบทความ" }));
+    // คำค้นที่ไม่พบอยู่แท็บของตัวเอง (ไม่มีการ์ดซ้ำข้างตารางบทความแล้ว)
+    expect(screen.queryByRole("complementary", { name: "คำค้นที่ไม่พบบ่อย" })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("tab", { name: /คำค้นที่ไม่พบ/ }));
+    const misses = (await screen.findByText("\"สีสถานะ\"")).closest("table")!;
+    expect(within(misses).getByRole("link", { name: "สีของสถานะงาน" })).toBeInTheDocument();
+    const row = within(misses).getByText("\"ลบ sprint\"").closest("tr")!;
+    await userEvent.click(within(row).getByRole("button", { name: "เขียนบทความ" }));
     await waitFor(() => expect(calls.find((c) => c.method === "POST")?.body).toEqual({ title: "ลบ sprint", categoryId: C1, fromQuery: "ลบ sprint" }));
     expect(router.push).toHaveBeenCalledWith("/help/new-1");
 
-    await userEvent.click(screen.getByRole("tab", { name: /คำค้นที่ไม่พบ/ }));
-    const misses = (await screen.findByText("\"สีสถานะ\"")).closest("table")!;
-    expect(within(misses).getByRole("link", { name: "สีของสถานะงาน" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("tab", { name: /ต้องทบทวน/ }));
     await waitFor(() => expect(calls.some((c) => c.path.includes("review=1"))).toBe(true));
     expect(await screen.findByText("LINE ไม่แจ้งเตือน: ตรวจ 4 จุด")).toBeInTheDocument();

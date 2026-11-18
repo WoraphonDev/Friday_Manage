@@ -201,7 +201,8 @@ export function HelpPage() {
             <p className="muted small">{t("missNote")}</p>
           </section>
         ) : (
-          <div className={styles.layout}>
+          // คำค้นที่ไม่พบมีแท็บของตัวเอง จึงไม่วางการ์ดซ้ำข้างตาราง ให้ตารางบทความเต็มความกว้าง (โครงหน้า Ops 18 พ.ย. 2569)
+          <div className="stack">
             <section className="card">
               {tab === "articles" && (
                 <ChipGroup className={styles.filters} role="group" aria-label={t("filter.label")}>
@@ -281,27 +282,6 @@ export function HelpPage() {
               )}
             </section>
 
-            <aside className="card" aria-label={t("missesTitle")}>
-              <div className="card-head">
-                <h2 className="card-title">{t("missesTitle")}</h2>
-                <span className="muted small push-end">{t("missesDays")}</span>
-              </div>
-              {overview.data && !overview.data.topMisses.length ? (
-                <p className="muted small">{t("missesEmpty")}</p>
-              ) : (
-                <ul className={`${styles.missList} motion-list`}>
-                  {(overview.data?.topMisses ?? []).map((m) => (
-                    <li key={m.query}>
-                      <div>
-                        <b>&quot;{m.query}&quot;</b>
-                        <span className="muted small">{t("missMeta", { searches: m.searches, tickets: m.tickets })}</span>
-                      </div>
-                      {missRow(m)}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </aside>
           </div>
         )}
       </MotionSwap>

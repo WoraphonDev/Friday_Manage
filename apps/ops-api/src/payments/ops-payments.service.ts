@@ -3,7 +3,7 @@ import { stat } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { Inject, Injectable } from '@nestjs/common';
 import { type Db, fallbackGrant, isGrantSource, schema } from '@friday/db';
-import { and, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { audit } from '../audit.js';
 import type { Staff } from '../auth/auth.guard.js';
@@ -30,7 +30,13 @@ const SUGGEST: Record<(typeof EXCEPTION_REASONS)[number], string> = {
   unreadable_slip: 'ไม่ผ่าน · ขอสลิปใหม่',
 };
 
-export const PaymentsQuery = z.object({ status: z.enum(['pending_review', 'confirmed', 'rejected']).default('pending_review'), limit: z.coerce.number().int().min(1).max(200).default(50) });
+export const PaymentsQuery = z.object({
+  status: z.enum(['pending_review', 'confirmed', 'rejected']).default('pending_review'),
+  /** slips = สลิปรอตรวจปกติ (แนบสลิปแล้ว ไม่ได้ติดเหตุผิดปกติ) · คิวที่หน้ากรณีชำระผิดปกติใช้ */
+  queue: z.enum(['slips']).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
 export const ConfirmBody = z.object({ note: z.string().trim().max(300).optional() }).strict();
 export const RejectBody = z
   .object({
@@ -47,7 +53,7 @@ export const WhtRejectBody = z
   })
   .strict()
   .refine((b) => (b.code && b.code !== 'other') || !!b.reason, { message: 'เลือกสาเหตุ หรือกรอกสาเหตุเอง', path: ['reason'] });
-export const ExceptionsQuery = z.object({ reason: z.enum(EXCEPTION_REASONS).optional(), limit: z.coerce.number().int().min(1).max(200).default(100) });
+export const ExceptionsQuery = z.object({ reason: z.enum(EXCEPTION_REASONS).optional(), limit: z.coerce.number().int().min(1).max(200).default(50), offset: z.coerce.number().int().min(0).default(0) });
 export const FlagBody = z.object({ reason: z.enum(EXCEPTION_REASONS), note: z.string().trim().min(3).max(300) }).strict();
 export const MatchBody = z.object({ invoiceId: z.uuid(), reason: z.string().trim().min(3).max(300) }).strict();
 export const CreditBody = z.object({ reason: z.string().trim().min(3).max(300) }).strict();
@@ -65,14 +71,18 @@ export class OpsPaymentsService {
   ) {}
 
   async list(q: z.infer<typeof PaymentsQuery>) {
+    const where = and(eq(s.payments.status, q.status), q.queue === 'slips' ? and(isNull(s.payments.exceptionReason), isNotNull(s.payments.slipFileKey)) : undefined);
     const rows = await this.db
       .select({ p: s.payments, inv: s.invoices, ws: { id: s.workspaces.id, slug: s.workspaces.slug, name: s.workspaces.name } })
       .from(s.payments)
       .innerJoin(s.invoices, eq(s.invoices.id, s.payments.invoiceId))
       .innerJoin(s.workspaces, eq(s.workspaces.id, s.payments.workspaceId))
-      .where(eq(s.payments.status, q.status))
-      .orderBy(desc(s.payments.createdAt))
-      .limit(q.limit);
+      .where(where)
+      // รอตรวจ: รอนานสุดขึ้นก่อน (ใกล้หลุด SLA) · ที่ตัดสินแล้ว: ล่าสุดก่อน
+      .orderBy(q.status === 'pending_review' ? s.payments.createdAt : desc(s.payments.createdAt), s.payments.id)
+      .limit(q.limit)
+      .offset(q.offset);
+    const [{ total }] = await this.db.select({ total: sql<number>`count(*)::int` }).from(s.payments).where(where);
     const wht = rows.length ? await this.db.select().from(s.whtCertificates).where(inArray(s.whtCertificates.invoiceId, rows.map((r) => r.inv.id))) : [];
     return {
       items: rows.map(({ p, inv, ws }) => ({
@@ -90,6 +100,7 @@ export class OpsPaymentsService {
         workspace: ws,
         whtCertificates: wht.filter((w) => w.invoiceId === inv.id).map((w) => ({ id: w.id, status: w.status, createdAt: w.createdAt })),
       })),
+      total,
     };
   }
 
@@ -164,14 +175,17 @@ export class OpsPaymentsService {
    * คิวกรณีผิดปกติ: เฉพาะรายการที่ระบบยืนยันเองไม่ได้ (A35a) · เรียงจากรอนานสุด · มีหลักฐาน ลำดับเหตุการณ์ และสิ่งที่ระบบแนะนำ
    */
   async exceptions(q: z.infer<typeof ExceptionsQuery>) {
+    const queue = and(eq(s.payments.status, 'pending_review'), isNotNull(s.payments.exceptionReason), q.reason ? eq(s.payments.exceptionReason, q.reason) : undefined);
     const rows = await this.db
       .select({ p: s.payments, inv: s.invoices, ws: { id: s.workspaces.id, slug: s.workspaces.slug, name: s.workspaces.name } })
       .from(s.payments)
       .innerJoin(s.invoices, eq(s.invoices.id, s.payments.invoiceId))
       .innerJoin(s.workspaces, eq(s.workspaces.id, s.payments.workspaceId))
-      .where(and(eq(s.payments.status, 'pending_review'), isNotNull(s.payments.exceptionReason), q.reason ? eq(s.payments.exceptionReason, q.reason) : undefined))
-      .orderBy(s.payments.updatedAt)
-      .limit(q.limit);
+      .where(queue)
+      .orderBy(s.payments.updatedAt, s.payments.id)
+      .limit(q.limit)
+      .offset(q.offset);
+    const [{ queued }] = await this.db.select({ queued: sql<number>`count(*)::int` }).from(s.payments).where(queue);
     const ids = rows.map((r) => r.inv.id);
     const timeline = ids.length
       ? await this.db
@@ -197,6 +211,8 @@ export class OpsPaymentsService {
       })),
       /** ยอดรวม 30 วันเทียบกับที่เหลือในคิว (หน้าจอ: "จาก N รายการ ยืนยันเอง") */
       payments30d: total,
+      /** จำนวนในคิวทั้งหมด (รายการแบ่งหน้า) */
+      total: queued,
     };
   }
 

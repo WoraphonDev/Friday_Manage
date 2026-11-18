@@ -43,6 +43,8 @@ export interface Entry {
 
 export interface ChangelogData {
   items: Entry[];
+  /** จำนวนทั้งหมด · ops-api ส่ง 500 รายการล่าสุด */
+  total?: number;
   kpis: {
     published30: number;
     byKind: Record<Kind, number>;

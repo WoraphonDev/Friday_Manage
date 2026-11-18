@@ -15,7 +15,7 @@ const W2 = "10000000-0000-4000-8000-00000000000b";
 const row = (over: Partial<WsRow>): WsRow => ({
   id: WS, slug: "siam-demo", name: "สยามเดโม", status: "active", createdAt: "2026-03-14T03:00:00.000Z", plan: "team_m", subStatus: "active", cycle: "monthly",
   trialEndsAt: null, periodEnd: null, seats: 21, seatLimit: 25, projects: 14, active30: 18, lastActiveAt: new Date().toISOString(), storageBytes: 12 * 1024 ** 3,
-  integrations: [], health: 86, mrr: 300_000, paymentState: "ok", ...over,
+  integrations: [], health: 86, mrr: 300_000, paymentState: "ok", buyer: { key: null, name: null, company: false, count: 1 }, test: { isTest: false, flag: null, auto: false, suggest: null, reason: null, by: null, at: null }, ...over,
 });
 const audience = { workspaces: 2, people: 5, emails: 4, suppressed: 1, noRecipients: [] };
 

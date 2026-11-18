@@ -5,8 +5,18 @@
   "settings": "ตั้งค่าแบบสำรวจ",
   "write": "เขียนรายการใหม่",
   "export": "ส่งออก",
-  "tabs": { "label": "Changelog และ NPS", "changelog": "Changelog", "nps": "NPS", "cancel": "คำตอบตอนยกเลิก ↗" },
-  "range": { "label": "ช่วงเวลา", "30d": "30 วัน", "90d": "90 วัน", "12m": "12 เดือน" },
+  "tabs": {
+    "label": "Changelog และ NPS",
+    "changelog": "Changelog",
+    "nps": "NPS",
+    "cancel": "คำตอบตอนยกเลิก ↗"
+  },
+  "range": {
+    "label": "ช่วงเวลา",
+    "30d": "30 วัน",
+    "90d": "90 วัน",
+    "12m": "12 เดือน"
+  },
   "kpi": {
     "published": "เผยแพร่ 30 วัน",
     "publishedSub": "ใหม่ {new} · ปรับปรุง {improved} · แก้ไข {fixed}",
@@ -18,13 +28,37 @@
     "npsSub": "จากไตรมาสก่อน",
     "npsNone": "ยังไม่มีคำตอบ"
   },
-  "kind": { "new": "ใหม่", "improved": "ปรับปรุง", "fixed": "แก้ไข" },
-  "status": { "draft": "ร่าง", "scheduled": "ตั้งเวลา {at}", "published": "เผยแพร่", "hidden": "ซ่อน" },
-  "filter": { "all": "ทั้งหมด", "published": "เผยแพร่", "scheduled": "ตั้งเวลา", "draft": "ร่าง", "hidden": "ซ่อน" },
+  "kind": {
+    "new": "ใหม่",
+    "improved": "ปรับปรุง",
+    "fixed": "แก้ไข"
+  },
+  "status": {
+    "draft": "ร่าง",
+    "scheduled": "ตั้งเวลา {at}",
+    "published": "เผยแพร่",
+    "hidden": "ซ่อน"
+  },
+  "filter": {
+    "all": "ทั้งหมด",
+    "published": "เผยแพร่",
+    "scheduled": "ตั้งเวลา",
+    "draft": "ร่าง",
+    "hidden": "ซ่อน"
+  },
   "table": {
     "title": "รายการทั้งหมด",
     "spotlightNote": "Spotlight ใช้ได้ทีละ 1 รายการ",
-    "col": { "title": "หัวข้อ", "kind": "ประเภท", "audience": "ใครเห็น", "status": "สถานะ", "published": "เผยแพร่", "views": "เห็นแล้ว", "clicks": "กดลองใช้", "actions": "การทำงาน" },
+    "col": {
+      "title": "หัวข้อ",
+      "kind": "ประเภท",
+      "audience": "ใครเห็น",
+      "status": "สถานะ",
+      "published": "เผยแพร่",
+      "views": "เห็นแล้ว",
+      "clicks": "กดลองใช้",
+      "actions": "การทำงาน"
+    },
     "spotlight": "Spotlight",
     "fromTicket": "มาจาก {key}",
     "flagSub": "ผูกกับ flag {flag}",
@@ -155,7 +189,15 @@
     "chipPromoter": "แนะนำต่อ 9–10 · {n}",
     "chipText": "มีข้อความ",
     "topics": "หัวข้อที่พูดถึงบ่อย: {list}",
-    "col": { "score": "คะแนน", "comment": "ความเห็น", "workspace": "Workspace", "role": "บทบาท", "plan": "แพ็กเกจ", "at": "ตอบเมื่อ", "follow": "การติดตาม" },
+    "col": {
+      "score": "คะแนน",
+      "comment": "ความเห็น",
+      "workspace": "Workspace",
+      "role": "บทบาท",
+      "plan": "แพ็กเกจ",
+      "at": "ตอบเมื่อ",
+      "follow": "การติดตาม"
+    },
     "follow": "ติดตาม",
     "followLabel": "ติดตามความเห็นคะแนน {score} ของ {ws}",
     "followed": "ติดตามแล้ว",
@@ -164,10 +206,28 @@
     "noComment": "—",
     "exportTitle": "ส่งออกความเห็น NPS",
     "exportTrend": "ส่งออกตัวเลข NPS รายเดือน",
-    "exportCol": { "month": "เดือน", "answered": "ตอบ", "score": "NPS", "comment": "ความเห็น", "workspace": "Workspace", "topics": "หัวข้อ" }
+    "exportCol": {
+      "month": "เดือน",
+      "answered": "ตอบ",
+      "score": "NPS",
+      "comment": "ความเห็น",
+      "workspace": "Workspace",
+      "topics": "หัวข้อ"
+    }
   },
-  "topic": { "speed": "ความเร็ว", "usability": "ใช้ยาก", "missing_feature": "ขาดฟีเจอร์", "price": "ราคา", "mobile": "มือถือ" },
-  "role": { "owner": "Owner", "admin": "Admin", "member": "สมาชิก", "guest": "Guest" },
+  "topic": {
+    "speed": "ความเร็ว",
+    "usability": "ใช้ยาก",
+    "missing_feature": "ขาดฟีเจอร์",
+    "price": "ราคา",
+    "mobile": "มือถือ"
+  },
+  "role": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "member": "สมาชิก",
+    "guest": "Guest"
+  },
   "followUp": {
     "title": "ความเห็นคะแนน {score} · {ws}",
     "desc": "{role} · {plan} · ตอบ {at}",
@@ -233,5 +293,6 @@
     "cancel": "ยกเลิก",
     "save": "บันทึก",
     "saved": "บันทึกตั้งค่าแบบสำรวจแล้ว"
-  }
+  },
+  "truncated": "แสดง {shown} รายการล่าสุดจากทั้งหมด {total} รายการ"
 }

@@ -3,12 +3,13 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { hasAny, rolesOf } from "@/components/access";
-import { Chip, Empty, ErrorBlock, NoAccess, Notice, PageHead, TableSkeleton } from "@/components/kit";
+import { Chip, Drawer, Empty, ErrorBlock, NoAccess, Notice, PageHead, TableSkeleton } from "@/components/kit";
 import { Button, errorToast, Input, Pill, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { useUrlFilters } from "@/lib/url-state";
 import { useFmt } from "../workspaces/_parts/format";
 import { AttachDialog, MessageDialog } from "./_parts/Dialogs";
 import { Suppressions } from "./_parts/Suppressions";
@@ -22,16 +23,25 @@ const CHANNEL_TONE: Record<Channel, "inf" | "ok" | "neu"> = { email: "inf", line
 /** ประวัติการส่งแจ้งเตือน (Canvas › Deliveries · เฟส 2 · O23) */
 export function DeliveriesPage() {
   const t = useTranslations("dlv");
+  const td = useTranslations("dlv.detail");
   const fmt = useFmt();
   const me = useMe().data;
   const params = useSearchParams();
   const read = hasAny(me, "owner", "support", "engineer");
   // ?q= เปิดจากหน้า Ticket (S6 "ค้นในประวัติการส่ง") ได้ผลค้นทันที
-  const [query, setQuery] = useState(params?.get("q") ?? "");
-  const [channel, setChannel] = useState<"all" | "email" | "line" | "webhook">("all");
-  const [status, setStatus] = useState<"all" | "ok" | "fail" | "quiet" | "blocked">("all");
+  // ตัวกรองอยู่ใน URL (ช่วง 1) · ลิงก์จาก Ticket ส่ง ?q= มาได้
+  const [f, setF] = useUrlFilters({ q: "", channel: "all", status: "all" });
+  const [query, setQuery] = useState(f.q);
+  const channel = f.channel as "all" | "email" | "line" | "webhook";
+  const setChannel = (v: typeof channel) => setF({ channel: v });
+  const status = f.status as "all" | "ok" | "fail" | "quiet" | "blocked";
+  const setStatus = (v: typeof status) => setF({ status: v });
   const [picked, setPicked] = useState<string | null>(params?.get("id") ?? null);
   const q = useDeferredValue(query.trim());
+  useEffect(() => {
+    if (q !== f.q) setF({ q });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
   const qs = (before?: string | null) => {
     const p = new URLSearchParams();
     if (q) p.set("q", q);
@@ -51,7 +61,8 @@ export function DeliveriesPage() {
   const stats = list.data?.pages[0]?.stats;
   const search = list.data?.pages[0]?.search ?? null;
   const kind = /^#\s*\d+$/.test(query.trim()) ? "ticket" : /^req_/.test(query.trim()) ? "request" : null;
-  const current = picked ?? items[0]?.id ?? null;
+  // ไม่เลือกแถวแรกให้เอง: รายละเอียดเปิดในแผงขวาเมื่อกดแถว (โครงหน้า Ops 18 พ.ย. 2569)
+  const current = picked;
   const eventText = useEventText();
   if (me && !read) return <NoAccess need={["owner", "support", "engineer"]} mine={rolesOf(me)} />;
   const filtered = !!q || channel !== "all" || status !== "all";
@@ -91,8 +102,8 @@ export function DeliveriesPage() {
           </label>
         </div>
         {search && <SearchNotice s={search} />}
-        <div className="split">
-          <div className="split-main">
+        <div>
+          <div>
             {list.isPending ? (
               <TableSkeleton rows={6} cols={6} />
             ) : list.error ? (
@@ -133,9 +144,11 @@ export function DeliveriesPage() {
               </>
             )}
           </div>
-          {(items.length > 0 || picked) && <DetailPanel id={current} />}
         </div>
       </section>
+      <Drawer open={!!picked} onOpenChange={(o) => !o && setPicked(null)} title={td("label")} wide>
+        {picked && <DetailPanel id={picked} />}
+      </Drawer>
       <Suppressions />
     </>
   );
@@ -227,7 +240,7 @@ function DetailPanel({ id }: { id: string | null }) {
   });
   const d = q.data;
   return (
-    <aside className="split-side" aria-label={t("label")}>
+    <aside className="stack" aria-label={t("label")}>
       {!id ? (
         <p className="muted small">{t("pick")}</p>
       ) : q.isPending ? (

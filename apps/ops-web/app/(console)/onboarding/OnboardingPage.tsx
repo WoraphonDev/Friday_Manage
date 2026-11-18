@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { hasAny, rolesOf } from "@/components/access";
-import { Chip, ChipGroup, Empty, ErrorBlock, NoAccess, PageHead, Seg, TableSkeleton } from "@/components/kit";
+import { Chip, ChipGroup, Empty, ErrorBlock, NoAccess, Notice, PageHead, Seg, TableSkeleton } from "@/components/kit";
 import { Button, Pill } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -185,13 +185,15 @@ export function OnboardingPage() {
                   </Chip>
                 )}
                 <Chip pressed={filter === "all"} onClick={() => setFilter("all")}>
-                  {t("filter.all", { n: d.stuck.length })}
+                  {t("filter.all", { n: d.stuckTotal ?? d.stuck.length })}
                 </Chip>
                 <Chip pressed={filter === "inactive"} onClick={() => setFilter("inactive")}>
-                  {t("filter.inactive", { n: d.inactive.length })}
+                  {t("filter.inactive", { n: d.inactiveTotal ?? d.inactive.length })}
                 </Chip>
               </ChipGroup>
             </div>
+            {/* ไม่ตัดเงียบ: บอกเมื่อมีมากกว่าที่โหลดมา (ตัวเลขบนชิปอื่นนับจากรายการที่โหลด) */}
+            {(d.stuckTotal ?? 0) > d.stuck.length && <Notice tone="info">{t("truncated", { shown: d.stuck.length, total: d.stuckTotal! })}</Notice>}
             {!rows.length ? (
               <Empty title={t("empty")} description={t("emptyDesc")} />
             ) : (

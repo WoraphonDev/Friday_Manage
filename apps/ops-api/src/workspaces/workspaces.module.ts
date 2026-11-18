@@ -4,7 +4,7 @@ import { type OpsRequest, Reauth, Roles } from '../auth/auth.guard.js';
 import { BillingModule } from '../billing/billing.module.js';
 import { parse } from '../errors.js';
 import { BulkBody, BulkService } from './bulk.service.js';
-import { AuditQuery, CustomersService, ListQuery } from './customers.service.js';
+import { AuditQuery, CustomersService, ListQuery, TestFlagBody } from './customers.service.js';
 import { AccessRequestBody, ChangePlanBody, DiscountBody, ExtendTrialBody, type Gated, NoteBody, PreviewQuery, ResumeBody, SuspendBody, TransferOwnerBody, WorkspacesService } from './workspaces.service.js';
 
 /** เกินวงเงิน → 202 พร้อมคำขออนุมัติ · ไม่เกิน → 200 พร้อมผล */
@@ -38,6 +38,14 @@ export class WorkspacesController {
   @HttpCode(200)
   bulkApply(@Req() req: OpsRequest, @Body() body: unknown) {
     return this.bulk.apply(req.staff!, parse(BulkBody, body));
+  }
+
+  /** ป้ายทดสอบทีละชุด (ช่วง 1) · Owner / Support · ลูกค้าไม่เห็น */
+  @Roles('owner', 'support')
+  @Post('workspaces/test-flag')
+  @HttpCode(200)
+  testFlag(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.customers.setTestFlag(req.staff!, parse(TestFlagBody, body));
   }
 
   @Get('workspaces')

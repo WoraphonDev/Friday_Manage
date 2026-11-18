@@ -91,54 +91,63 @@ export function SystemPage() {
         }
       />
       {down ? <Notice tone="bad" title={t("down")} /> : d.api.alert ? <ErrorRateNotice alert={d.api.alert} settings={d.api.alertSettings} /> : d.api.probes > 0 && <Notice tone="ok" title={t("ok")} />}
-      <div className="grid-3">
-        <section className="card">
-          <span className="muted small">{t("uptime")}</span>
-          <span className="page-title">{d.api.uptimePct == null ? "—" : `${d.api.uptimePct}%`}</span>
-          <span className="muted small">{d.api.probes ? `${d.api.probes} checks` : t("noProbe")}</span>
-        </section>
-        <section className="card">
-          <span className="muted small">
-            {t("avg")} · {t("p95")}
-          </span>
-          <span className="page-title">{ms(d.api.avgMs)}</span>
-          <span className="muted small">
-            {t("p95")} {ms(d.api.p95Ms)} · {t("db")} {ms(d.database.ms)}
-          </span>
-        </section>
-        <ErrorRateKpi now={d.api.errorRate} settings={d.api.alertSettings} />
-      </div>
-      <ErrorRateChart hours={d.api.errorHours} settings={d.api.alertSettings} onSettings={() => setSettingsOpen(true)} />
+      {/* ยังไม่มีผลตรวจ: บอกบรรทัดเดียวแทนกราฟว่างหลายกล่อง (โครงหน้า Ops 18 พ.ย. 2569) */}
+      {d.api.probes === 0 && !d.api.errorHours.length ? (
+        <Notice tone="info" title={t("noData")}>
+          {t("noDataHint")}
+        </Notice>
+      ) : (
+        <>
+          <div className="grid-3">
+            <section className="card">
+              <span className="muted small">{t("uptime")}</span>
+              <span className="page-title">{d.api.uptimePct == null ? "—" : `${d.api.uptimePct}%`}</span>
+              <span className="muted small">{d.api.probes ? `${d.api.probes} checks` : t("noProbe")}</span>
+            </section>
+            <section className="card">
+              <span className="muted small">
+                {t("avg")} · {t("p95")}
+              </span>
+              <span className="page-title">{ms(d.api.avgMs)}</span>
+              <span className="muted small">
+                {t("p95")} {ms(d.api.p95Ms)} · {t("db")} {ms(d.database.ms)}
+              </span>
+            </section>
+            <ErrorRateKpi now={d.api.errorRate} settings={d.api.alertSettings} />
+          </div>
+          <ErrorRateChart hours={d.api.errorHours} settings={d.api.alertSettings} onSettings={() => setSettingsOpen(true)} />
+          <section className="card">
+            <h2 className="card-title">{t("hours")}</h2>
+            <div
+              role="img"
+              aria-label={t("hours")}
+              style={{
+                display: "flex",
+                gap: 3,
+                alignItems: "flex-end",
+                height: 48,
+              }}
+            >
+              {d.api.hours.map((h) => {
+                const pct = h.probes ? h.up / h.probes : null;
+                return (
+                  <span
+                    key={h.from}
+                    title={`${fmt.dateTime(h.from)} · ${h.up}/${h.probes}`}
+                    style={{
+                      flex: 1,
+                      height: "100%",
+                      borderRadius: 3,
+                      background: pct == null ? "var(--subtle)" : pct === 1 ? "var(--status-done-dot)" : pct > 0.9 ? "var(--status-progress-dot)" : "var(--status-overdue-dot)",
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        </>
+      )}
       {settingsOpen && <AlertSettingsDialog initial={d.api.alertSettings} onClose={() => setSettingsOpen(false)} />}
-      <section className="card">
-        <h2 className="card-title">{t("hours")}</h2>
-        <div
-          role="img"
-          aria-label={t("hours")}
-          style={{
-            display: "flex",
-            gap: 3,
-            alignItems: "flex-end",
-            height: 48,
-          }}
-        >
-          {d.api.hours.map((h) => {
-            const pct = h.probes ? h.up / h.probes : null;
-            return (
-              <span
-                key={h.from}
-                title={`${fmt.dateTime(h.from)} · ${h.up}/${h.probes}`}
-                style={{
-                  flex: 1,
-                  height: "100%",
-                  borderRadius: 3,
-                  background: pct == null ? "var(--subtle)" : pct === 1 ? "var(--status-done-dot)" : pct > 0.9 ? "var(--status-progress-dot)" : "var(--status-overdue-dot)",
-                }}
-              />
-            );
-          })}
-        </div>
-      </section>
       <div className="grid-2">
         <section className="card">
           <div className="card-head">

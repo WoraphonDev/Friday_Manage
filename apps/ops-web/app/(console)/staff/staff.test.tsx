@@ -52,7 +52,10 @@ describe("หน้าพนักงาน (Owner)", () => {
     expect(within(auditor).getByText("ยังไม่ตั้งค่า")).toBeInTheDocument();
     expect(within(auditor).getByText("รอลงทะเบียน")).toBeInTheDocument();
     expect(within(auditor).getByText(/หมดอายุ/)).toBeInTheDocument();
-    expect(screen.getByText("ปฏิบัติการ · 1 คน")).toBeInTheDocument();
+    // แผนกอยู่ใต้อีเมลในตาราง · สรุปแผนกอยู่หลังปุ่มเฟือง
+    expect(screen.getByText(/support\.b@friday\.example\.com · ปฏิบัติการ/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "สิทธิ์ของบทบาท วงเงิน และแผนก" }));
+    expect(await screen.findByText("ปฏิบัติการ · 1 คน")).toBeInTheDocument();
   });
 
   it("เพิ่ม Owner คนที่สอง (A1): เลือก Owner ไว้ · ต้องแตะกุญแจ · ได้ลิงก์ลงทะเบียน", async () => {

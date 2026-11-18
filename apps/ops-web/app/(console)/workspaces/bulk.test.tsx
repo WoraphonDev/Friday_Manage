@@ -13,7 +13,7 @@ import { WorkspacesList } from "./WorkspacesList";
 
 const row = (i: number, over: Partial<WsRow> = {}): WsRow => ({
   id: `10000000-0000-4000-8000-0000000000${String(i).padStart(2, "0")}`, slug: `demo-${i}`, name: `เดโม ${i}`, status: "active", suspensionMode: null, createdAt: "2026-03-14T03:00:00.000Z", plan: "team_s", subStatus: "trialing", cycle: "monthly",
-  trialEndsAt: "2026-12-01T00:00:00.000Z", periodEnd: null, seats: 3, seatLimit: 10, projects: 1, active30: 2, lastActiveAt: null, storageBytes: 1024, integrations: [], health: 60, mrr: 0, paymentState: "ok", ...over,
+  trialEndsAt: "2026-12-01T00:00:00.000Z", periodEnd: null, seats: 3, seatLimit: 10, projects: 1, active30: 2, lastActiveAt: null, storageBytes: 1024, integrations: [], health: 60, mrr: 0, paymentState: "ok", buyer: { key: null, name: null, company: false, count: 1 }, test: { isTest: false, flag: null, auto: false, suggest: null, reason: null, by: null, at: null }, ...over,
 });
 /** หน้าแรก 3 ราย · หน้าสอง 2 ราย (ตอบตาม offset) */
 const PAGE1 = [row(1), row(2), row(3)];
@@ -76,6 +76,8 @@ describe("H4 · เลือกหลายราย", () => {
     expect(screen.getByText("เลือก 4 Workspace")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "ก่อนหน้า" }));
     expect(await screen.findByLabelText("เลือก เดโม 1")).toBeChecked();
+    // แพ็กเกจและฟีเจอร์อยู่ในปุ่ม "ตัวกรอง" (โครงหน้า Ops)
+    await userEvent.click(screen.getByRole("button", { name: /^ตัวกรอง/ }));
     await userEvent.click(screen.getByRole("button", { name: "Team M" }));
     await waitFor(() => expect(screen.queryByText(/^เลือก \d+ (Workspace|รายการ)/)).not.toBeInTheDocument());
   });
@@ -83,6 +85,8 @@ describe("H4 · เลือกหลายราย", () => {
   it("เลือกทั้งหมดตามตัวกรอง → ส่ง filter ไปตรวจและทำ (ไม่ส่ง ids) · ผลรายแถว + CSV + ไปคำขออนุมัติ", async () => {
     asRole("support");
     const { previews, applied } = setup();
+    // แพ็กเกจและฟีเจอร์อยู่ในปุ่ม "ตัวกรอง" (โครงหน้า Ops)
+    await userEvent.click(await screen.findByRole("button", { name: /^ตัวกรอง/ }));
     await userEvent.click(await screen.findByRole("button", { name: "Team S" }));
     await userEvent.click(await screen.findByLabelText("เลือกทุกแถวในหน้านี้"));
     await userEvent.click(screen.getByRole("button", { name: "เลือกทั้งหมด 5 รายการตามตัวกรอง" }));

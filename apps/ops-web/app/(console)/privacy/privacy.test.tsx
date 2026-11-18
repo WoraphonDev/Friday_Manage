@@ -111,7 +111,7 @@ const page = (search = "") => {
   navigation.pathname = "/privacy";
   navigation.search = search;
   server.use(
-    http.get(`${OPS}/privacy/requests`, () => HttpResponse.json({ items: [eraseReq, exportReq, doneReq] })),
+    http.get(`${OPS}/privacy/requests`, requestsRes([eraseReq, exportReq, doneReq])),
     http.get(`${OPS}/privacy/requests/${R}`, () => HttpResponse.json({ request: exportReq, steps: steps(1), history: [], scope, erasePlan: null })),
     http.get(`${OPS}/privacy/requests/${E}`, () =>
       HttpResponse.json({
@@ -141,6 +141,24 @@ const record = () => {
   return { calls, on };
 };
 
+
+/** จำลอง ops-api › privacy/requests: กรองสถานะที่ server + ตัวเลขสรุป (ช่วง 1) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const requestsRes = (all: any[]) => ({ request }: { request: Request }) => {
+  const st = new URL(request.url).searchParams.get("status") ?? "open";
+  const items = all.filter((r) => st === "all" || r.status === st);
+  const open = all.filter((r) => r.status === "open");
+  const done = all.filter((r) => r.status === "completed" && r.completedAt);
+  const avgDays = done.length ? Math.round(done.reduce((n, r) => n + (Date.parse(r.completedAt) - Date.parse(r.receivedAt)) / 86_400_000, 0) / done.length) : null;
+  const count = (x: string) => all.filter((r) => r.status === x).length;
+  return HttpResponse.json({
+    items,
+    total: items.length,
+    counts: { open: count("open"), completed: count("completed"), rejected: count("rejected"), all: all.length },
+    stats: { open: open.length, dueSoon: open.filter((r) => r.daysLeft >= 0 && r.daysLeft <= 7).length, overdue: open.filter((r) => r.daysLeft < 0).length, avgDays },
+  });
+};
+
 describe("คำขอ PDPA", () => {
   it("สรุป · ตาราง · กรอง · ครบกำหนด · Workspace ที่รอลบ", async () => {
     asRole("support");
@@ -153,8 +171,8 @@ describe("คำขอ PDPA", () => {
     expect(screen.queryByText("DSR-0012")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "DSR-0021" }));
     expect(router.replace).toHaveBeenCalledWith(`/privacy?request=${R}`);
-    await userEvent.click(screen.getByRole("button", { name: "เสร็จแล้ว" }));
-    expect(screen.getByText("DSR-0012")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^เสร็จแล้ว/ }));
+    expect(await screen.findByText("DSR-0012")).toBeInTheDocument();
     expect(screen.getByText("โอลด์เดโม")).toBeInTheDocument();
     expect(screen.getByText(/· อีก 4 วัน$/)).toBeInTheDocument();
     // Support อ่านได้ แต่ไม่เห็นปุ่มของ Owner
@@ -359,7 +377,7 @@ describe("Legal hold · การเก็บข้อมูล · Workspace ท
     const held = { ...eraseReq, legalHold: true };
     page(`request=${E}`);
     server.use(
-      http.get(`${OPS}/privacy/requests`, () => HttpResponse.json({ items: [held, exportReq] })),
+      http.get(`${OPS}/privacy/requests`, requestsRes([held, exportReq])),
       http.get(`${OPS}/privacy/requests/${E}`, () =>
         HttpResponse.json({ request: held, steps: steps(3), history: [], scope, erasePlan: { remove: ["บัญชีผู้ใช้"], anonymize: [], keep: [], backupDays: 35, blockers: [{ code: "legal_hold", workspace: null }] } }),
       ),

@@ -26,7 +26,10 @@ export interface OnboardingOverview {
   funnel: { key: StepKey; passed: number; pct: number; avgDays: number | null; drop: number | null }[];
   insights: { biggestDrop: { key: StepKey; drop: number; paidPassedPct: number; paidOtherPct: number } | null; notificationsPct: number };
   stuck: StuckRow[];
+  /** จำนวนจริง · ops-api ส่ง 500 รายที่ติดนานสุด */
+  stuckTotal?: number;
   inactive: StuckRow[];
+  inactiveTotal?: number;
 }
 
 export interface OnboardingDetail {

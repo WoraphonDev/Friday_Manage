@@ -73,9 +73,13 @@ const page = (search = "", extra: Parameters<typeof server.use> = []) => {
     ...extra,
     http.get(`${OPS}/tickets`, ({ request }) => {
       const q = new URL(request.url).searchParams;
+      // ค่าที่ ops-api รับจริง (tickets.service › ListQuery)
+      if (q.has("assignee") && !["me", "none"].includes(q.get("assignee")!)) return HttpResponse.json({ error: { code: "validation_failed", message: "ข้อมูลไม่ถูกต้อง" } }, { status: 400 });
       const items = q.get("assignee") === "none" || q.get("status") === "closed" ? [] : [row];
       return HttpResponse.json({
         items,
+        total: items.length,
+        counts: { mine: 1, none: 0, all: 1 },
         summary: {
           open: 4,
           unassigned: 2,
@@ -108,16 +112,65 @@ const page = (search = "", extra: Parameters<typeof server.use> = []) => {
 };
 
 describe("Support", () => {
-  it("คิว Ticket · สรุป · กรองคิวกลาง · กดเปิดรายละเอียด", async () => {
+  it("คิว Ticket เต็มความกว้าง · สรุป · กรองคิวกลาง · กดแถวเปิดแผง · ผลงานรายคนอยู่แท็บทีม", async () => {
     asRole("support");
     page();
+    // คนตอบ Ticket เริ่มที่ "ของฉัน"
+    expect(await screen.findByRole("tab", { name: /ของฉัน/, selected: true })).toBeInTheDocument();
     expect(await screen.findByText("นำเข้า Excel ไม่ได้")).toBeInTheDocument();
     expect(screen.getByText(/เปิดอยู่ 4 · ยังไม่มีคนรับ 2 · เกิน SLA 1 · ตอบครั้งแรกเฉลี่ย 42 นาที · ความพึงพอใจ 4.6\/5/)).toBeInTheDocument();
-    expect(screen.getByText("ซัพพอร์ตตัวอย่าง")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "ทีมตอนนี้" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /#512/ }));
     expect(router.replace).toHaveBeenCalledWith(`/support?ticket=${T}`);
-    await userEvent.click(screen.getByRole("button", { name: "คิวกลาง" }));
+    await userEvent.click(screen.getByRole("tab", { name: /คิวกลาง/ }));
     expect(await screen.findByText("คิวกลางว่าง")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: "ทีม" }));
+    expect(await screen.findByRole("region", { name: "ทีมตอนนี้" })).toBeInTheDocument();
+    expect(screen.getAllByText("ซัพพอร์ตตัวอย่าง").length).toBeGreaterThan(0);
+  });
+
+  it("ช่วง 1: บอกจำนวนทั้งหมด · แบ่งหน้าส่ง offset · ตัวกรองเขียนลง URL", async () => {
+    asRole("support");
+    const asked: URLSearchParams[] = [];
+    const many = Array.from({ length: 50 }, (_, i) => ({ ...row, id: `t-${i}`, number: 1000 + i, subject: `เรื่องที่ ${i}` }));
+    page("", [
+      http.get(`${OPS}/tickets`, ({ request }) => {
+        const q = new URL(request.url).searchParams;
+        asked.push(q);
+        return HttpResponse.json({ items: many, total: 486, counts: { mine: 23, none: 41, all: 486 }, summary: { open: 486, unassigned: 41, breached: 6, firstResponseMinutes: 4, csat: null } });
+      }),
+    ]);
+    expect(await screen.findByText("แสดง 1–50 จาก 486")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /คิวกลาง\s*41/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "ถัดไป" }));
+    await waitFor(() => expect(asked.at(-1)?.get("offset")).toBe("50"));
+    await userEvent.click(screen.getByRole("tab", { name: /ทั้งหมด/ }));
+    expect(router.replace).toHaveBeenLastCalledWith("/support?tab=all", { scroll: false });
+    await waitFor(() => expect(asked.at(-1)?.get("offset")).toBe("0"));
+  });
+
+  it("บทสนทนาแบบแชท: ลูกค้าซ้าย · ทีมเราขวา · บันทึกภายในมีป้าย", async () => {
+    asRole("support");
+    const extra = [
+      http.get(`${OPS}/tickets/${T}`, () =>
+        HttpResponse.json({
+          ...detail,
+          messages: [
+            detail.messages[0],
+            { id: "m-2", authorKind: "staff", body: "ขอไฟล์ตัวอย่างครับ", internal: false, createdAt: "2026-11-09T02:10:00.000Z", authorName: "ซัพพอร์ตตัวอย่าง" },
+            { id: "m-3", authorKind: "staff", body: "น่าจะแถวว่าง", internal: true, createdAt: "2026-11-09T02:11:00.000Z", authorName: "ซัพพอร์ตตัวอย่าง" },
+          ],
+        }),
+      ),
+    ];
+    page(`ticket=${T}`, extra);
+    const thread = await screen.findByRole("list", { name: "บทสนทนา" });
+    expect(within(thread).getByText("กดนำเข้าแล้วค้าง").closest("li")).toHaveClass("bubble-them");
+    expect(within(thread).getByText("ขอไฟล์ตัวอย่างครับ").closest("li")).toHaveClass("bubble-mine");
+    const note = within(thread).getByText("น่าจะแถวว่าง").closest("li")!;
+    expect(note).toHaveClass("bubble-mine", "bubble-note");
+    expect(within(note).getByText("บันทึกภายใน")).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "#512 · นำเข้า Excel ไม่ได้" })).toBeInTheDocument();
   });
 
   it("รับเรื่อง · บันทึกภายใน · ปิดเรื่อง (T5)", async () => {
@@ -179,11 +232,12 @@ describe("Support", () => {
       http.put(`${OPS}/support/presence`, async ({ request }) => ((presence = await request.json()), HttpResponse.json({ presence: "busy", released: 0, leadsNotified: 0 }))),
       http.post(`${OPS}/support/canned-replies/:id/use`, ({ params }) => ((used = String(params.id)), HttpResponse.json({ uses: 89 }))),
     );
-    page(`ticket=${T}`);
+    page(`tab=team&ticket=${T}`);
     const strip = await screen.findByRole("region", { name: "ทีมตอนนี้" });
     expect(within(strip).getByText("8 / 8")).toBeInTheDocument();
     expect(within(strip).getByText("ประชุมถึง 11:00")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ตั้งค่าการแจกงาน" })).toHaveAttribute("href", "/support/settings");
+    // แผง Ticket เปิดอยู่ (modal) ส่วนหน้าหลักจึงถูกซ่อนจากโปรแกรมอ่านจอชั่วคราว
+    expect(screen.getByRole("link", { name: "ตั้งค่าการแจกงาน", hidden: true })).toHaveAttribute("href", "/support/settings");
     await userEvent.selectOptions(await screen.findByLabelText("สถานะของฉัน"), "busy");
     await waitFor(() => expect(presence).toEqual({ presence: "busy" }));
 
@@ -242,7 +296,7 @@ describe("Support", () => {
       }),
       http.put(`${OPS}/support/presence`, async ({ request }) => ((presence = await request.json()), HttpResponse.json({ presence: "online", released: 0, leadsNotified: 0, redispatched: 1 }))),
     ];
-    page("", extra);
+    page("tab=team", extra);
     const teamCard = await screen.findByRole("region", { name: "ทีมตอนนี้" });
     expect(seen).toBe("?seen=1");
     expect(within(teamCard).getByText("ออฟไลน์ · อัตโนมัติ")).toBeInTheDocument();

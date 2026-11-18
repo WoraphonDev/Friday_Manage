@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import { useFmt } from "../../workspaces/_parts/format";
 import styles from "../privacy.module.css";
 import type { LegalHold, PendingDelete, PrivacyRequest, PurgePreview, RetentionInfo, RetentionKey, RetentionRow } from "./types";
+import type { RequestStatsT } from "./Requests";
 import { type PickedWs, WorkspacePicker } from "./WorkspacePicker";
 
 const keys = {
@@ -49,24 +50,33 @@ function useKeep() {
   return (days: number) => (days >= 365 && days % 365 === 0 ? t("years", { n: days / 365 }) : t("days", { n: days }));
 }
 
-/** ตัวเลข 4 ช่องของส่วนล่าง (H10): คำขอที่เปิด · Workspace รอลบ · Legal hold · ข้อมูลที่ลบตามนโยบายเมื่อคืน */
-export function LifecycleKpis({ requests }: { requests: PrivacyRequest[] }) {
+/**
+ * ตัวเลขสรุปแถวเดียวบนหัวหน้า (โครงหน้า Ops 18 พ.ย. 2569) · เคยมีสองแถวและ "คำขอที่เปิดอยู่" ซ้ำกัน
+ * คำขอที่เปิด (เกินกำหนด) · ใกล้ครบกำหนด · Workspace รอลบ · Legal hold · ข้อมูลที่ลบเมื่อคืน · เวลาตอบเฉลี่ย 90 วัน
+ */
+export function LifecycleKpis({ stats }: { stats: RequestStatsT }) {
   const t = useTranslations("pl.life.kpi");
+  const ts = useTranslations("pl.privacy.stats");
   const fmt = useFmt();
+  const last = useRetention().data?.lastRun ?? null;
+  const purged = last ? (last.logRows ?? 0) + (last.sessionRows ?? 0) : null;
   const pending = usePendingDeletes().data?.items ?? [];
   const holds = (useLegalHolds().data?.items ?? []).filter((h) => h.active);
-  const last = useRetention().data?.lastRun ?? null;
-  const open = requests.filter((r) => r.status === "open");
-  const soon = open.filter((r) => r.daysLeft >= 0 && r.daysLeft <= 7).length;
-  const purged = last ? (last.logRows ?? 0) + (last.sessionRows ?? 0) : null;
+  const { dueSoon: soon, overdue: late, avgDays: avg } = stats;
   return (
-    <section className="stats" aria-label={t("purged")}>
-      <div className="stat">
+    <section className="stats" aria-label={t("label")}>
+      <div className={late ? "stat stat-bad" : "stat"}>
         <span className="muted small">{t("open")}</span>
         <b>
-          <CountUp value={open.length} />
+          <CountUp value={stats.open} />
         </b>
-        <span className="muted small">{t("openNote", { n: soon })}</span>
+        <span className="muted small">{t("openLate", { late })}</span>
+      </div>
+      <div className={soon ? "stat stat-warn" : "stat"}>
+        <span className="muted small">{ts("dueSoon")}</span>
+        <b>
+          <CountUp value={soon} />
+        </b>
       </div>
       <div className="stat">
         <span className="muted small">{t("pending")}</span>
@@ -88,6 +98,12 @@ export function LifecycleKpis({ requests }: { requests: PrivacyRequest[] }) {
           <CountUp value={purged == null ? "—" : t("purgedRows", { n: fmt.num(purged) })} />
         </b>
         <span className="muted small">{last?.systemLogDays ? t("purgedNote", { days: last.systemLogDays }) : t("purgedNone")}</span>
+      </div>
+      <div className="stat">
+        <span className="muted small">{ts("avg")}</span>
+        <b>
+          <CountUp value={avg == null ? "—" : ts("days", { n: avg })} />
+        </b>
       </div>
     </section>
   );

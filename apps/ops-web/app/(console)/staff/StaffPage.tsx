@@ -7,8 +7,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { hasAny, initials } from "@/components/access";
 import { ExportDialog } from "@/components/dialogs";
-import { Chip, Empty, ErrorBlock, Notice, PageHead, RoleChips, TableSkeleton, Tabs } from "@/components/kit";
-import { MotionSwap } from "@/components/shell/page-enter";
+import { Chip, Empty, ErrorBlock, Notice, PageHead, RoleChips, SettingsButton, TableSkeleton } from "@/components/kit";
 import { BreakGlassDialog } from "@/components/shell/BreakGlass";
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -22,27 +21,21 @@ const STATUS_TONE: Record<StaffMember["status"], string> = { active: "pill ok", 
 const CATEGORIES = { workspace: "ops.", support: "support.", billing: "billing.", system: "system.", staff: "staff.", privacy: "privacy.", approval: "approval." } as const;
 
 /** หน้า 8 · พนักงาน สิทธิ์ และ Audit log (Staff.dc.html) · Owner จัดการ · ผู้ตรวจอ่านอย่างเดียว */
+/**
+ * พนักงานและ Audit log เป็นสองเมนู (โครงหน้า Ops 18 พ.ย. 2569: หนึ่งเมนู หนึ่งหน้า) จึงไม่มีแท็บซ้ำกับเมนูซ้าย
+ * ลิงก์เดิม /staff?tab=audit ยังใช้ได้
+ */
 export function StaffPage() {
   const t = useTranslations("staff");
+  const tn = useTranslations("common.nav");
   const params = useSearchParams();
-  const router = useRouter();
   const tab = params?.get("tab") === "audit" ? "audit" : "staff";
-  return (
+  return tab === "staff" ? (
+    <StaffTab />
+  ) : (
     <>
-      <PageHead title={t("title")} desc={t("desc")} />
-      <Tabs
-        label={t("title")}
-        value={tab}
-        onChange={(v) => router.replace(v === "audit" ? "/staff?tab=audit" : "/staff")}
-        tabs={[
-          { value: "staff", label: t("tabs.staff") },
-          { value: "audit", label: t("tabs.audit") },
-        ]}
-      />
-      {/* เปลี่ยนแท็บในหน้าเดียวกัน: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}
-      <MotionSwap key={tab} className="motion-stack">
-        {tab === "staff" ? <StaffTab /> : <AuditTab initialStaff={params?.get("staff") ?? ""} initialSelf={params?.get("selfApproved") === "true"} />}
-      </MotionSwap>
+      <PageHead title={tn("audit")} desc={t("audit.desc")} />
+      <AuditTab initialStaff={params?.get("staff") ?? ""} initialSelf={params?.get("selfApproved") === "true"} />
     </>
   );
 }
@@ -73,13 +66,86 @@ function StaffTab() {
 
   return (
     <>
-      {owner && (
-        <div className="page-actions">
-          <Button variant="primary" onClick={() => setInvite(["support"])}>
-            <UserPlus size={16} /> {t("invite")}
-          </Button>
-        </div>
-      )}
+      <PageHead
+        title={t("title")}
+        desc={t("desc")}
+        actions={
+          <>
+            {/* สิทธิ์ของบทบาท วงเงินเริ่มต้น แผนก และสิทธิ์ฉุกเฉิน เปิดดูนาน ๆ ครั้ง อยู่หลังปุ่มเฟือง */}
+            <SettingsButton title={t("reference")}>
+              <section className="stack">
+                <h3 className="card-title">{t("matrix.title")}</h3>
+                <p className="muted small">{t("matrix.desc")}</p>
+                <table className="tbl">
+                  <tbody>
+                    {(["owner", "finance", "support", "engineer", "auditor"] as OpsRole[]).map((r) => (
+                      <tr key={r}>
+                        <td className="cell-main">{tc(`roles.${r}`)}</td>
+                        <td className="small">{tc(`roleDesc.${r}`)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+              <section className="stack">
+                <h3 className="card-title">{t("defaults.title")}</h3>
+                <p className="muted small">{t("defaults.desc")}</p>
+                <table className="tbl">
+                  <tbody>
+                    <tr>
+                      <td>{t("defaults.refund")}</td>
+                      <td className="num">≤ {money(DEFAULT_LIMITS.refundSatang)}</td>
+                    </tr>
+                    <tr>
+                      <td>{t("defaults.credit")}</td>
+                      <td className="num">≤ {money(DEFAULT_LIMITS.creditSatang)}</td>
+                    </tr>
+                    <tr>
+                      <td>{t("defaults.discount")}</td>
+                      <td className="num">{t("defaults.discountValue", { pct: DEFAULT_LIMITS.discountPct, cycles: DEFAULT_LIMITS.discountCycles })}</td>
+                    </tr>
+                    <tr>
+                      <td>{t("defaults.trial")}</td>
+                      <td className="num">{t("defaults.trialValue", { days: DEFAULT_LIMITS.trialDays, times: DEFAULT_LIMITS.trialTimes })}</td>
+                    </tr>
+                    <tr>
+                      <td className="small">{t("defaults.always")}</td>
+                      <td className="num">
+                        <span className="pill warn">{t("defaults.alwaysValue")}</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </section>
+              <section className="stack">
+                <h3 className="card-title">{t("depts.title")}</h3>
+                <p className="muted small">{t("depts.desc")}</p>
+                <div className="row">
+                  {departments.map(([d, n]) => (
+                    <span key={d || "none"} className="pill">
+                      {d || t("depts.none")} · {t("depts.people", { count: n })}
+                    </span>
+                  ))}
+                </div>
+              </section>
+              <section className="stack">
+                <h3 className="card-title">{t("glass.title")}</h3>
+                <p className="muted small">{t("glass.desc")}</p>
+              </section>
+            </SettingsButton>
+            {owner && (
+              <Button variant="danger" onClick={() => setGlass(true)}>
+                {t("glass.open")}
+              </Button>
+            )}
+            {owner && (
+              <Button variant="primary" onClick={() => setInvite(["support"])}>
+                <UserPlus size={16} /> {t("invite")}
+              </Button>
+            )}
+          </>
+        }
+      />
       {list.data?.singleApprover && (
         <SingleOwnerNotices
           digest={list.data.digest?.[0] ?? null}
@@ -103,7 +169,6 @@ function StaffTab() {
               <tr>
                 <th>{t("col.staff")}</th>
                 <th>{t("col.roles")}</th>
-                <th>{t("col.department")}</th>
                 <th>{t("col.limits")}</th>
                 <th>{t("col.keys")}</th>
                 <th>{t("col.personalEmail")}</th>
@@ -122,14 +187,16 @@ function StaffTab() {
                       </span>
                       <span>
                         <div className="cell-main">{s.name}</div>
-                        <div className="cell-sub">{s.email}</div>
+                        <div className="cell-sub">
+                          {s.email}
+                          {s.department ? ` · ${s.department}` : ""}
+                        </div>
                       </span>
                     </span>
                   </td>
                   <td>
                     <RoleChips roles={s.roles} elevated={s.elevations.map((e) => e.role)} />
                   </td>
-                  <td>{s.department ?? <span className="muted">{t("depts.none")}</span>}</td>
                   <td className="small">{s.roles.some((r) => r === "finance" || r === "owner") ? t("limitsShort", { refund: money(s.limits.refundSatang), pct: s.limits.discountPct }) : t("noMoney")}</td>
                   <td>
                     {s.totpEnabledAt || s.keys.length ? (
@@ -160,83 +227,6 @@ function StaffTab() {
         </div>
       )}
 
-      <div className="grid-2">
-        <section className="card">
-          <div className="card-head">
-            <h2 className="card-title">{t("matrix.title")}</h2>
-            <span className="card-sub">{t("matrix.desc")}</span>
-          </div>
-          <table className="tbl">
-            <tbody>
-              {(["owner", "finance", "support", "engineer", "auditor"] as OpsRole[]).map((r) => (
-                <tr key={r}>
-                  <td className="cell-main">{tc(`roles.${r}`)}</td>
-                  <td className="small">{tc(`roleDesc.${r}`)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-        <section className="card">
-          <div className="card-head">
-            <h2 className="card-title">{t("defaults.title")}</h2>
-            <span className="card-sub">{t("defaults.desc")}</span>
-          </div>
-          <table className="tbl">
-            <tbody>
-              <tr>
-                <td>{t("defaults.refund")}</td>
-                <td className="num">≤ {money(DEFAULT_LIMITS.refundSatang)}</td>
-              </tr>
-              <tr>
-                <td>{t("defaults.credit")}</td>
-                <td className="num">≤ {money(DEFAULT_LIMITS.creditSatang)}</td>
-              </tr>
-              <tr>
-                <td>{t("defaults.discount")}</td>
-                <td className="num">{t("defaults.discountValue", { pct: DEFAULT_LIMITS.discountPct, cycles: DEFAULT_LIMITS.discountCycles })}</td>
-              </tr>
-              <tr>
-                <td>{t("defaults.trial")}</td>
-                <td className="num">{t("defaults.trialValue", { days: DEFAULT_LIMITS.trialDays, times: DEFAULT_LIMITS.trialTimes })}</td>
-              </tr>
-              <tr>
-                <td className="small">{t("defaults.always")}</td>
-                <td className="num">
-                  <span className="pill warn">{t("defaults.alwaysValue")}</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-        <section className="card">
-          <div className="card-head">
-            <h2 className="card-title">{t("glass.title")}</h2>
-          </div>
-          <p className="muted small">{t("glass.desc")}</p>
-          {owner && (
-            <div>
-              <Button variant="danger" onClick={() => setGlass(true)}>
-                {t("glass.open")}
-              </Button>
-            </div>
-          )}
-        </section>
-        <section className="card">
-          <div className="card-head">
-            <h2 className="card-title">{t("depts.title")}</h2>
-            <span className="card-sub">{t("depts.desc")}</span>
-          </div>
-          <div className="row">
-            {departments.map(([d, n]) => (
-              <span key={d || "none"} className="pill">
-                {d || t("depts.none")} · {t("depts.people", { count: n })}
-              </span>
-            ))}
-          </div>
-        </section>
-      </div>
-
       <InviteDrawer key={invite?.join() ?? "closed"} open={!!invite} onOpenChange={(o) => !o && setInvite(null)} initialRoles={invite ?? ["support"]} />
       <ManageDrawer key={managed?.id ?? "none"} member={managed} onOpenChange={(o) => !o && setManage(null)} ownersLeft={ownersLeft} />
       {me && <BreakGlassDialog staff={me} open={glass} onOpenChange={setGlass} />}
@@ -251,11 +241,18 @@ function PersonalEmailCell({ member, mine, onEdit }: { member: StaffMember; mine
   const status = member.personalEmailStatus ?? "none";
   const pill = status === "verified" ? <span className="pill ok">{t("verified")}</span> : status === "pending" ? <span className="pill warn">{t("pending")}</span> : <span className="muted">—</span>;
   if (!mine) return pill;
+  // ยังไม่ตั้ง: แสดงปุ่มอย่างเดียว (เคยวาง "—" คู่กับปุ่มจนล้นคอลัมน์)
+  if (status === "none")
+    return (
+      <Button size="small" onClick={onEdit}>
+        {t("setShort")}
+      </Button>
+    );
   return (
-    <span className="row" style={{ flexWrap: "nowrap", gap: 6 }}>
+    <span className="row" style={{ gap: 6 }}>
       {pill}
       <Button size="small" variant="ghost" onClick={onEdit}>
-        {status === "none" ? t("setShort") : t("edit")}
+        {t("edit")}
       </Button>
     </span>
   );

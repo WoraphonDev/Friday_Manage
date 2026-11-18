@@ -78,11 +78,11 @@ export function RestorePage() {
         ]}
       />
       {me && !canAct && <Notice tone="info" title={t("readOnly")} />}
-      {/* ตามบอร์ด 21: แท็บแรกแสดงการค้นและ Workspace ที่รอลบถาวรต่อกัน */}
+      {/* บอร์ด 21 วาง Workspace ที่รอลบถาวรต่อท้ายแท็บค้นด้วย แต่ซ้ำกับแท็บของตัวเอง จึงแสดงเฉพาะในแท็บนั้น (โครงหน้า Ops 18 พ.ย. 2569) */}
       {/* เปลี่ยนแท็บในหน้าเดียวกัน: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}
       <MotionSwap key={tab} className="motion-stack">
         {tab === "search" && <Search canAct={canAct} />}
-        {(tab === "search" || tab === "pending") && <Pending query={pending} canAct={canAct} />}
+        {tab === "pending" && <Pending query={pending} canAct={canAct} />}
         {tab === "history" && <History />}
       </MotionSwap>
     </>

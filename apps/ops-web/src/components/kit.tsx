@@ -6,7 +6,7 @@
  */
 import * as RadixDialog from "@radix-ui/react-dialog";
 import { clsx } from "clsx";
-import { Check, Copy, LockKeyhole, RefreshCw, TriangleAlert, X } from "lucide-react";
+import { Check, Copy, LockKeyhole, RefreshCw, Settings2, TriangleAlert, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from "react";
 import { ApiError } from "@/lib/api";
@@ -124,7 +124,7 @@ export function RoleChips({ roles, elevated = [] }: { roles: OpsRole[]; elevated
 // ---------------------------------------------------------------- Drawer · Popover · แถบเตือน
 
 /** Drawer / Modal เลื่อนและจางเข้า-ออกตาม data-state (ops.css) · หน้าที่ปิดด้วยการเลิก render ได้ animation ปิดจาก useExitGhost */
-export function Drawer({ open, onOpenChange, title, description, wide, children }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; description?: ReactNode; wide?: boolean; children?: ReactNode }) {
+export function Drawer({ open, onOpenChange, title, description, wide, className, children }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; description?: ReactNode; wide?: boolean; className?: string; children?: ReactNode }) {
   const t = useTranslations("common.dialog");
   const overlayGhost = useExitGhost<HTMLDivElement>();
   const contentGhost = useExitGhost<HTMLDivElement>();
@@ -132,7 +132,7 @@ export function Drawer({ open, onOpenChange, title, description, wide, children 
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay ref={overlayGhost} className="overlay" />
-        <RadixDialog.Content ref={contentGhost} className={clsx("drawer", wide && "drawer-wide")} {...(!description ? { "aria-describedby": undefined } : {})}>
+        <RadixDialog.Content ref={contentGhost} className={clsx("drawer", wide && "drawer-wide", className)} {...(!description ? { "aria-describedby": undefined } : {})}>
           <div className="dialog-heading">
             <RadixDialog.Title asChild>
               <h2>{title}</h2>
@@ -257,6 +257,82 @@ export function PageHead({ title, desc, actions }: { title: string; desc?: React
   );
 }
 
+/**
+ * โครงหน้า Ops (18 พ.ย. 2569): งานที่ต้องทำอยู่บนสุดของหน้า · แต่ละแถวกดทำได้เลย
+ * ไม่มีงาน = แสดง `clear` เป็นแถบเขียวบรรทัดเดียวแทน
+ */
+export function TodoCard({ title, count, hint, clear, children }: { title: ReactNode; count: number; hint?: ReactNode; clear?: { title: string; description?: string }; children?: ReactNode }) {
+  if (!count && clear) return <Empty ok title={clear.title} description={clear.description} />;
+  return (
+    <section className="todo-card" aria-label={typeof title === "string" ? title : undefined}>
+      <div className="todo-head">
+        <h2>{title}</h2>
+        <span className="todo-count">{count}</span>
+        {hint && <span className="muted small">{hint}</span>}
+      </div>
+      <div className="todo-rows">{children}</div>
+    </section>
+  );
+}
+
+/** แถวในแถบต้องทำ: ข้อความยืดเต็ม · ปุ่มชิดขวา */
+export function TodoRow({ children, actions }: { children: ReactNode; actions?: ReactNode }) {
+  return (
+    <div className="todo-row">
+      <div className="todo-main">{children}</div>
+      {actions && <div className="todo-actions">{actions}</div>}
+    </div>
+  );
+}
+
+/** ปุ่มเฟืองบนหัวหน้า: กฎ ตั้งค่า และข้อมูลอ้างอิงที่เปิดดูนาน ๆ ครั้ง ย้ายมาอยู่ในแผงนี้ ไม่ปนกับรายการงาน */
+export function SettingsButton({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button size="icon" aria-label={title} title={title} onClick={() => setOpen(true)}>
+        <Settings2 size={16} aria-hidden="true" />
+      </Button>
+      <Drawer open={open} onOpenChange={setOpen} title={title} description={description} wide>
+        {open && children}
+      </Drawer>
+    </>
+  );
+}
+
+/** หัวรายการหลัก: แท็บสถานะทางซ้าย · ค้นหา/ตัวกรองทางขวาบนเส้นเดียวกัน */
+export function ListBar({ tabs, children }: { tabs?: ReactNode; children?: ReactNode }) {
+  return (
+    <div className="list-bar">
+      <div className="list-bar-tabs">{tabs}</div>
+      {children && <div className="list-bar-tools">{children}</div>}
+    </div>
+  );
+}
+
+/**
+ * แถบแบ่งหน้าใต้ตาราง: บอกเสมอว่าเห็นกี่รายการจากทั้งหมด (ห้ามตัดเงียบ) · ข้อมูลเยอะดึงทีละหน้าจาก ops-api
+ */
+export function Pager({ offset, limit, shown, total, onChange }: { offset: number; limit: number; shown: number; total: number; onChange: (offset: number) => void }) {
+  const t = useTranslations("common.pager");
+  if (!total) return null;
+  return (
+    <div className="pager">
+      <span className="muted small">{t("range", { from: offset + 1, to: offset + shown, total })}</span>
+      {total > limit && (
+        <span className="row" style={{ gap: 6 }}>
+          <Button size="small" disabled={offset === 0} onClick={() => onChange(Math.max(0, offset - limit))}>
+            {t("prev")}
+          </Button>
+          <Button size="small" disabled={offset + limit >= total} onClick={() => onChange(offset + limit)}>
+            {t("next")}
+          </Button>
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function CopyButton({ text, label }: { text: string; label?: string }) {
   const t = useTranslations("common.state");
   const [done, setDone] = useState(false);
@@ -302,6 +378,16 @@ export function TableSkeleton({ rows = 5, cols = 5 }: { rows?: number; cols?: nu
 /** S5 · บอกว่าทำไมว่าง และพาไปที่ที่ควรไปต่อ · ว่างเพราะตัวกรองแสดงปุ่มล้างตัวกรอง */
 export function Empty({ title, description, ok, action, onClearFilters }: { title: string; description?: string; ok?: boolean; action?: ReactNode; onClearFilters?: () => void }) {
   const t = useTranslations("common.state");
+  // ไม่มีงานค้าง = ข่าวดี แสดงแถบเขียวบรรทัดเดียว ไม่ใช้กล่องว่างใหญ่ที่ดันงานจริงลงใต้จอ (โครงหน้า Ops · 18 พ.ย. 2569)
+  if (ok)
+    return (
+      <p className="all-clear" role="status">
+        <Check size={16} aria-hidden="true" />
+        <b>{title}</b>
+        {description && <span>{description}</span>}
+        {action}
+      </p>
+    );
   return (
     <section className={clsx("state", ok && "state-ok")}>
       <span className="state-icon" aria-hidden="true">

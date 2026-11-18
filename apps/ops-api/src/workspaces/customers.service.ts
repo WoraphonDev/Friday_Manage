@@ -2,25 +2,47 @@ import { Inject, Injectable } from '@nestjs/common';
 import { type Db, schema } from '@friday/db';
 import { and, desc, eq, inArray, lt, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
+import { BulkFilter, FEATURES, PLAN_CODES } from './bulk-filter.js';
+import { autoTest, buyerCompany, buyerEmail, buyerKey, flagOf, isReal, isTest, suggestReason } from './test-flag.js';
 import { has, type Staff } from '../auth/auth.guard.js';
+import { staffAudit } from '../audit.js';
 import { OPS_DB } from '../db.js';
 import { AppError } from '../errors.js';
 import { healthScore, mrrOf, profitOf, upgradeSignals } from '../metrics/economics.js';
 
 const s = schema;
-const PLAN_CODES = ['free', 'team_s', 'team_m', 'team_l', 'enterprise'] as const;
-export const FEATURES = ['line', 'webhook', 'github', 'api_token', 'automation', 'import', 'no_project'] as const;
+export { FEATURES } from './bulk-filter.js';
 
 export const ListQuery = z.object({
   plan: z.enum(PLAN_CODES).optional(),
-  status: z.enum(['trial', 'active', 'suspended', 'pending_delete', 'trialing', 'canceled', 'past_due']).optional(),
+  /** paying = แพ็กเกจจ่ายเงินอยู่ (สถานะแพ็กเกจ active · แท็บ "จ่ายเงิน") */
+  status: z.enum(['trial', 'active', 'suspended', 'pending_delete', 'trialing', 'canceled', 'past_due', 'paying']).optional(),
   q: z.string().trim().max(100).optional(),
   /** ใช้ฟีเจอร์ / การเชื่อมต่อ (หน้าจอ: ตัวกรอง "ใช้ฟีเจอร์") */
   feature: z.enum(FEATURES).optional(),
   sort: z.enum(['newest', 'recent_activity', 'mrr', 'health']).default('newest'),
+  /** ผู้ซื้อรายเดียวกัน (คีย์จาก buyer.key) */
+  buyer: z.string().trim().max(80).optional(),
+  /** hide = ซ่อน Workspace ทดสอบ (ค่าเริ่มต้น) · only = เฉพาะทดสอบ · all = ทั้งหมด */
+  test: z.enum(['hide', 'only', 'all']).default('hide'),
+  /** เฉพาะที่ระบบเสนอว่าน่าจะเป็นทดสอบ · ระบุเหตุผลเดียวได้ */
+  suggest: z.enum(['any', 'staff_domain', 'name_prefix']).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
+export const TEST_FLAG_MAX = 5000;
+export const TestFlagBody = z
+  .object({
+    ids: z.array(z.uuid()).min(1).max(TEST_FLAG_MAX).optional(),
+    filter: BulkFilter.optional(),
+    flag: z.enum(['test', 'not_test', 'clear']),
+    reason: z.string().trim().min(3).max(300),
+    /** ยืนยันแล้วว่าชุดนี้มี Workspace ที่จ่ายเงินอยู่ */
+    confirmPaying: z.boolean().default(false),
+  })
+  .strict()
+  .refine((b) => !!b.ids !== !!b.filter, { message: 'เลือกเป็นรายการ หรือตามตัวกรอง อย่างใดอย่างหนึ่ง', path: ['ids'] });
+type Filters = Pick<z.infer<typeof ListQuery>, 'plan' | 'status' | 'q' | 'feature' | 'buyer' | 'test' | 'suggest'>;
 export const AuditQuery = z.object({
   category: z.string().trim().max(20).optional(),
   fridayOnly: z.enum(['true', 'false']).optional(),
@@ -32,6 +54,10 @@ export const AuditQuery = z.object({
 export const seesMoney = (st: Staff) => has(st, 'owner', 'finance', 'auditor');
 /** วิศวกรเห็นรหัสและชื่อ Workspace แต่ไม่เห็นอีเมลลูกค้า */
 export const seesEmail = (st: Staff) => has(st, 'owner', 'finance', 'support', 'auditor');
+
+const W = sql`w.id`;
+/** เงื่อนไขของแท็บสถานะ (trialing / canceled / past_due = สถานะแพ็กเกจ · ที่เหลือ = สถานะ Workspace) */
+const statusWhere = (st: string) => (st === 'paying' ? sql`sub.status = 'active'` : ['trialing', 'canceled', 'past_due'].includes(st) ? sql`sub.status = ${st}` : sql`w.status = ${st}`);
 
 type Row = Record<string, unknown>;
 
@@ -72,7 +98,12 @@ export class CustomersService {
         (select count(*)::int from invoices i where i.workspace_id = w.id and i.status in ('open', 'pending_review') and i.due_date < current_date) as overdue,
         (select count(*)::int from invoices i where i.workspace_id = w.id and i.status = 'paid') as "paidTotal",
         (select count(*)::int from invoices i where i.workspace_id = w.id and i.status = 'paid' and (i.paid_at at time zone 'Asia/Bangkok')::date <= i.due_date) as "paidOnTime",
-        (select count(*)::int from support_tickets k where k.workspace_id = w.id and k.status in ('open', 'pending_customer', 'pending_dev')) as "openTickets"
+        (select count(*)::int from support_tickets k where k.workspace_id = w.id and k.status in ('open', 'pending_customer', 'pending_dev')) as "openTickets",
+        ${buyerKey(W)} as "buyerKey", ${buyerCompany(W)} as "buyerCompany", ${buyerEmail(W)} as "buyerEmail",
+        ${flagOf(W)} as "testFlag", ${autoTest(W)} as "testAuto", ${suggestReason(W, sql`w.name`)} as "testSuggest",
+        (select f.reason from ops_workspace_flags f where f.workspace_id = w.id) as "testReason",
+        (select st.name from ops_workspace_flags f join staff_users st on st.id = f.flagged_by where f.workspace_id = w.id) as "testBy",
+        (select f.updated_at from ops_workspace_flags f where f.workspace_id = w.id) as "testAt"
       from workspaces w
       left join subscriptions sub on sub.workspace_id = w.id
       left join plans p on p.id = sub.plan_id
@@ -117,17 +148,34 @@ export class CustomersService {
       /** Support / วิศวกรไม่เห็นยอดเงิน */
       mrr: seesMoney(staff) ? mrr : null,
       paymentState: n('overdue') > 0 ? 'overdue' : 'ok',
+      /** ผู้ซื้อ: ชื่อบริษัทจากข้อมูลภาษี หรืออีเมลเจ้าของ (วิศวกรไม่เห็นอีเมล) · count เติมใน list() */
+      buyer: { key: r.buyerKey as string | null, name: (r.buyerCompany as string | null) ?? (seesEmail(staff) ? ((r.buyerEmail as string | null) ?? null) : null), company: !!r.buyerCompany, count: 1 },
+      /** ป้ายทดสอบ: flag ที่ทีมตั้ง · auto = เข้ากฎโดเมนสงวน · suggest = เหตุผลที่ระบบเสนอให้ตรวจ */
+      test: {
+        isTest: r.testFlag === 'test' || (r.testFlag == null && !!r.testAuto),
+        flag: (r.testFlag as 'test' | 'not_test' | null) ?? null,
+        auto: !!r.testAuto,
+        suggest: (r.testSuggest as 'staff_domain' | 'name_prefix' | null) ?? null,
+        reason: (r.testReason as string | null) ?? null,
+        by: (r.testBy as string | null) ?? null,
+        at: r.testAt ?? null,
+      },
       _mrr: mrr,
       _health: health,
     };
   }
 
   /** เงื่อนไขของตัวกรองหน้า Workspaces · ใช้ทั้งรายการและการทำหลายรายตามตัวกรอง (H4) */
-  where(q: Pick<z.infer<typeof ListQuery>, 'plan' | 'status' | 'q' | 'feature'>) {
+  where(q: Filters, opts: { status?: boolean } = {}) {
     const parts: SQL[] = [sql`w.deleted_at is null`];
-    if (q.q) parts.push(sql`(w.name ilike ${`%${q.q}%`} or w.slug ilike ${`%${q.q}%`})`);
+    // ค้นด้วยชื่อ slug หรือผู้ซื้อ (ชื่อบริษัท / เลขผู้เสียภาษี)
+    if (q.q) parts.push(sql`(w.name ilike ${`%${q.q}%`} or w.slug ilike ${`%${q.q}%`} or exists(select 1 from billing_profiles bp where bp.workspace_id = w.id and (bp.company_name ilike ${`%${q.q}%`} or bp.tax_id = ${q.q})))`);
+    if ((q.test ?? 'hide') === 'hide') parts.push(isReal(W));
+    else if (q.test === 'only') parts.push(isTest(W));
+    if (q.suggest) parts.push(q.suggest === 'any' ? sql`${suggestReason(W, sql`w.name`)} is not null` : sql`${suggestReason(W, sql`w.name`)} = ${q.suggest}`);
+    if (q.buyer) parts.push(sql`${buyerKey(W)} = ${q.buyer}`);
     if (q.plan) parts.push(sql`p.code = ${q.plan}`);
-    if (q.status) parts.push(['trialing', 'canceled', 'past_due'].includes(q.status) ? sql`sub.status = ${q.status}` : sql`w.status = ${q.status}`);
+    if (q.status && opts.status !== false) parts.push(statusWhere(q.status));
     const feature: Record<(typeof FEATURES)[number], SQL> = {
       line: sql`exists(select 1 from line_oa_configs x where x.workspace_id = w.id)`,
       webhook: sql`exists(select 1 from webhook_endpoints x where x.workspace_id = w.id and x.status = 'active')`,
@@ -142,7 +190,7 @@ export class CustomersService {
   }
 
   /** รหัส Workspace ตามตัวกรอง ณ ตอนนี้ (เรียงใหม่สุดก่อน) · `limit` กันดึงเกินเพดานของงานหลายราย */
-  async idsFor(q: Pick<z.infer<typeof ListQuery>, 'plan' | 'status' | 'q' | 'feature'>, limit: number) {
+  async idsFor(q: Filters, limit: number) {
     const rows = await this.rows<{ id: string }>(sql`
       select w.id from workspaces w left join subscriptions sub on sub.workspace_id = w.id left join plans p on p.id = sub.plan_id
       where ${this.where(q)} order by w.created_at desc limit ${limit}`);
@@ -150,10 +198,9 @@ export class CustomersService {
   }
 
   async list(staff: Staff, q: z.infer<typeof ListQuery>) {
-    // เรียงด้วยคะแนนที่คำนวณใน JS จึงดึงทั้งชุดที่ผ่านตัวกรองก่อน (ลูกค้าระดับหลักพันยังเร็วพอ)
-    const all = (await this.summary(this.where(q))).map((r) => this.shape(r, staff));
     const time = (v: unknown) => (v ? new Date(v as string).getTime() : 0);
-    const by: Record<typeof q.sort, (a: (typeof all)[number], b: (typeof all)[number]) => number> = {
+    type Item = ReturnType<CustomersService['shape']>;
+    const by: Record<typeof q.sort, (a: Item, b: Item) => number> = {
       newest: (a, b) => time(b.createdAt) - time(a.createdAt),
       recent_activity: (a, b) => time(b.lastActiveAt) - time(a.lastActiveAt),
       mrr: (a, b) => b._mrr - a._mrr,
@@ -161,9 +208,82 @@ export class CustomersService {
     };
     // เรียงตาม MRR ใช้ยอดเงิน · คนที่ไม่เห็นเงินได้ลำดับใหม่สุดแทน (ไม่ให้เดายอดจากลำดับได้)
     const sort = q.sort === 'mrr' && !seesMoney(staff) ? 'newest' : q.sort;
-    all.sort(by[sort]);
-    const items = all.slice(q.offset, q.offset + q.limit).map(({ _mrr, _health, ...x }) => x);
-    return { items, total: all.length, limit: q.limit, offset: q.offset, sort };
+    const where = this.where(q);
+    let page: Item[];
+    let total: number;
+    let buyerAll: Item[] | null = null;
+    if ((sort === 'newest' || sort === 'recent_activity') && !q.buyer) {
+      // ช่วง 1 (ข้อมูลเยอะ): เรียงและแบ่งหน้าใน SQL แล้วคำนวณตัวเลขเฉพาะหน้าที่แสดง (เดิมคำนวณทุก Workspace ทุกครั้ง)
+      const order = sort === 'newest' ? sql`w.created_at desc, w.id` : sql`(select max(m.last_active_at) from workspace_members m where m.workspace_id = w.id) desc nulls last, w.id`;
+      const ids = await this.rows<{ id: string }>(sql`select w.id from workspaces w left join subscriptions sub on sub.workspace_id = w.id left join plans p on p.id = sub.plan_id where ${where} order by ${order} limit ${q.limit} offset ${q.offset}`);
+      const [{ n }] = await this.rows<{ n: number }>(sql`select count(*)::int as n from workspaces w left join subscriptions sub on sub.workspace_id = w.id left join plans p on p.id = sub.plan_id where ${where}`);
+      total = n;
+      const rows = ids.length ? (await this.summary(sql`w.id in (${sql.join(ids.map((r) => sql`${r.id}`), sql`, `)})`)).map((r) => this.shape(r, staff)) : [];
+      const pos = new Map(ids.map((r, i) => [r.id, i]));
+      page = rows.sort((a, b) => pos.get(a.id)! - pos.get(b.id)!);
+    } else {
+      // เรียงด้วยคะแนนที่คำนวณใน JS (สุขภาพ / MRR) หรือกรองผู้ซื้อรายเดียว (จำนวนน้อย) จึงดึงทั้งชุดที่ผ่านตัวกรอง
+      const all = (await this.summary(where)).map((r) => this.shape(r, staff));
+      all.sort(by[sort]);
+      total = all.length;
+      page = all.slice(q.offset, q.offset + q.limit);
+      if (q.buyer) buyerAll = all;
+    }
+    // จำนวน Workspace ของผู้ซื้อแต่ละราย (นับเฉพาะลูกค้าจริงที่ยังไม่ถูกลบ)
+    const keys = [...new Set(page.map((x) => x.buyer.key).filter((k): k is string => !!k))];
+    const counts = keys.length
+      ? new Map((await this.rows<{ k: string; n: number }>(sql`select k, count(*)::int as n from (select ${buyerKey(W)} as k from workspaces w where w.deleted_at is null and ${isReal(W)}) x where k in (${sql.join(keys.map((k) => sql`${k}`), sql`, `)}) group by k`)).map((r) => [r.k, r.n]))
+      : new Map<string, number>();
+    const items = page.map(({ _mrr, _health, ...x }) => ({ ...x, buyer: { ...x.buyer, count: (x.buyer.key && counts.get(x.buyer.key)) || 1 } }));
+    // ตัวเลขบนแท็บสถานะ (ไม่รวมตัวกรองสถานะ) และจำนวนที่ระบบเสนอให้ตรวจ / ที่ซ่อนอยู่
+    const noStatus = this.where(q, { status: false });
+    const [c] = await this.rows<Record<string, number>>(sql`
+      select count(*)::int as "all",
+        count(*) filter (where ${statusWhere('paying')})::int as paying, count(*) filter (where ${statusWhere('trialing')})::int as trialing,
+        count(*) filter (where ${statusWhere('past_due')})::int as past_due, count(*) filter (where ${statusWhere('suspended')})::int as suspended
+      from workspaces w left join subscriptions sub on sub.workspace_id = w.id left join plans p on p.id = sub.plan_id where ${noStatus}`);
+    const [t] = await this.rows<{ hidden: number; suggested: number }>(sql`
+      select count(*) filter (where ${isTest(W)})::int as hidden, count(*) filter (where ${suggestReason(W, sql`w.name`)} is not null)::int as suggested
+      from workspaces w where w.deleted_at is null`);
+    // ผู้ซื้อรายเดียว: ยอดรวมทุก Workspace ของผู้ซื้อ (ไม่ใช่เฉพาะหน้าที่เห็น)
+    const buyer = buyerAll
+      ? {
+          key: q.buyer!,
+          name: buyerAll[0]?.buyer.name ?? null,
+          workspaces: buyerAll.length,
+          seats: buyerAll.reduce((n, x) => n + x.seats, 0),
+          seatLimit: buyerAll.reduce((n, x) => n + (x.seatLimit ?? 0), 0),
+          mrr: seesMoney(staff) ? buyerAll.reduce((n, x) => n + x._mrr, 0) : null,
+          openTickets: buyerAll.reduce((n, x) => n + x.openTickets, 0),
+        }
+      : null;
+    return { items, total, limit: q.limit, offset: q.offset, sort, counts: c, tests: { hidden: t.hidden, suggested: t.suggested }, buyer };
+  }
+
+  /**
+   * ติด / เอาป้ายทดสอบทีละชุด (ช่วง 1) · เลือกเป็นรายการหรือตามตัวกรองเดียวกับหน้ารายการ · ทำที่ server ทั้งชุด
+   * test = ทดสอบ · not_test = ลูกค้าจริง (ยกเว้นกฎอัตโนมัติ) · clear = กลับไปตามกฎอัตโนมัติ
+   */
+  async setTestFlag(staff: Staff, input: z.infer<typeof TestFlagBody>) {
+    const ids = input.filter ? await this.idsFor(input.filter, TEST_FLAG_MAX + 1) : [...new Set(input.ids!)];
+    if (ids.length > TEST_FLAG_MAX) throw new AppError(422, 'too_many', `ตัวกรองนี้มีเกิน ${TEST_FLAG_MAX.toLocaleString('en-US')} รายการ · กรองให้แคบลงก่อน`, { max: TEST_FLAG_MAX });
+    if (!ids.length) return { updated: 0, paying: 0 };
+    const list = sql.join(ids.map((id) => sql`${id}`), sql`, `);
+    // เตือนเมื่อชุดนี้มี Workspace ที่จ่ายเงินอยู่ (หน้าเว็บถามยืนยันอีกครั้ง)
+    const [{ paying }] = await this.rows<{ paying: number }>(sql`select count(*)::int as paying from subscriptions where workspace_id in (${list}) and status = 'active'`);
+    if (input.flag === 'test' && paying > 0 && !input.confirmPaying) throw new AppError(409, 'has_paying', `มี ${paying} Workspace ที่จ่ายเงินอยู่ในชุดนี้ · ยืนยันอีกครั้งถ้าต้องการติดป้าย`, { paying });
+    const action = input.flag === 'clear' ? 'workspace.test_flag_cleared' : input.flag === 'test' ? 'workspace.test_flagged' : 'workspace.test_unflagged';
+    await this.db.transaction(async (tx) => {
+      if (input.flag === 'clear') await tx.execute(sql`delete from ops_workspace_flags where workspace_id in (${list})`);
+      else
+        await tx.execute(sql`
+          insert into ops_workspace_flags (workspace_id, test_flag, reason, flagged_by)
+          select id, ${input.flag}, ${input.reason}, ${staff.id} from workspaces where id in (${list})
+          on conflict (workspace_id) do update set test_flag = excluded.test_flag, reason = excluded.reason, flagged_by = excluded.flagged_by`);
+      // Audit ของทีมเท่านั้น (ลูกค้าไม่เห็นป้ายนี้) · ชุดใหญ่บันทึกแถวเดียวพร้อมจำนวน
+      await staffAudit(tx, staff, action, `${input.reason} · ${ids.length} Workspace`, ids.length === 1 ? { type: 'workspace', id: ids[0] } : undefined, ids.length === 1 ? ids[0] : undefined);
+    });
+    return { updated: ids.length, paying };
   }
 
   private async one(staff: Staff, id: string) {
@@ -244,7 +364,21 @@ export class CustomersService {
       economics: money ? { mrrSatang: x._mrr, ...(await profitOf(this.db, id, x._mrr, sub?.paymentMethod ?? null)) } : null,
       upgradeSignals: signals,
       notes,
+      test: x.test,
+      buyer: await this.buyerOf(staff, x),
     };
+  }
+
+  /** ผู้ซื้อของ Workspace + Workspace อื่นของผู้ซื้อรายเดียวกัน (แสดงไม่เกิน 5 · มีจำนวนทั้งหมด) */
+  private async buyerOf(staff: Staff, x: ReturnType<CustomersService['shape']>) {
+    if (!x.buyer.key) return { ...x.buyer, count: 1, others: [] };
+    const where = sql`w.deleted_at is null and w.id <> ${x.id} and ${isReal(W)} and ${buyerKey(W)} = ${x.buyer.key}`;
+    const others = await this.rows<{ id: string; name: string; slug: string; status: string; subStatus: string | null; plan: string | null }>(sql`
+      select w.id, w.name, w.slug, w.status, sub.status as "subStatus", p.code as plan
+      from workspaces w left join subscriptions sub on sub.workspace_id = w.id left join plans p on p.id = sub.plan_id
+      where ${where} order by w.created_at limit 5`);
+    const [{ n }] = await this.rows<{ n: number }>(sql`select count(*)::int as n from workspaces w where ${where}`);
+    return { ...x.buyer, count: n + 1, others };
   }
 
   /** แท็บการใช้งาน: ขีดจำกัดแพ็กเกจ ผู้ใช้รายวัน การใช้ฟีเจอร์ และการนำเข้า / ส่งออกล่าสุด */

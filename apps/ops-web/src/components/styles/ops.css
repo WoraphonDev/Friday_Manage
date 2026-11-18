@@ -1193,7 +1193,7 @@ textarea.input {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 40px 20px;
+  padding: 24px 20px;
   text-align: center;
 }
 .state h2 {
@@ -2873,3 +2873,158 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 .chip-pill[data-indicator] .chip:not(:hover) { background: transparent; }
 /* ผลค้นหาทั้งระบบ: แถบไฮไลต์พื้น --hover มุม 8 ตาม .menu-item[aria-selected] */
 .palette-pill { --ind-bg: var(--hover); --ind-radius: 8px; }
+
+/* ---------------------------------------------------------------- โครงหน้า Ops (18 พ.ย. 2569)
+ * หัวหน้า = ชื่อเมนู · "ต้องทำตอนนี้" บนสุด · รายการหลักเต็มความกว้าง · กดแถวเปิดแผงขวา · ตั้งค่าอยู่หลังปุ่มเฟือง */
+.all-clear {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-control);
+  background: var(--success-soft);
+  color: var(--success-text);
+  font-size: 13px;
+}
+.all-clear > svg { flex: none; }
+.all-clear > span { color: var(--foreground-soft); }
+.todo-card {
+  background: var(--card);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.todo-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 10px 16px;
+  background: var(--primary-soft);
+}
+.todo-head h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.todo-count {
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--danger-solid);
+  color: var(--on-primary);
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.todo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.todo-main { flex: 1 1 280px; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.todo-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.list-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.list-bar-tabs { flex: 1 1 auto; min-width: 0; }
+.list-bar-tabs > .tabs { border-bottom: 0; }
+.list-bar-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-bottom: 6px; }
+.list-bar-tools .field { min-width: 240px; }
+.tab-count {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--subtle);
+  color: var(--foreground-soft);
+  font-size: 11px;
+  text-align: center;
+}
+.tab[aria-selected="true"] .tab-count { background: var(--primary-soft); color: var(--primary-text); }
+/* แถวที่กดเปิดแผงได้ */
+.tbl tr.row-link { cursor: pointer; }
+.tbl tr.row-link:hover td { background: var(--hover); }
+.tbl tr.row-link[aria-selected="true"] td { background: var(--primary-soft); }
+.row-link-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.row-link-button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+/* ---------------------------------------------------------------- Ticket แบบแชท: ลูกค้าซ้าย ทีมเราขวา */
+.drawer.drawer-ticket { width: min(980px, 100vw); padding: 0; gap: 0; overflow: hidden; }
+.drawer-ticket > .dialog-heading { padding: 16px 20px 0; }
+.ticket-head { padding: 8px 20px 12px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--border); }
+.ticket-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; }
+.chat-col { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }
+.ticket-info { overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; background: var(--surface-2); }
+.ticket-info .card { padding: 14px; box-shadow: none; min-width: 0; }
+/* คอลัมน์แคบ: ตารางข้อมูลลูกค้า / บริบทตัดบรรทัดในช่อง ไม่ล้นแนวนอน */
+.ticket-info { overflow-x: hidden; }
+.ticket-info .tbl { table-layout: fixed; }
+.ticket-info .tbl td { white-space: normal; overflow-wrap: anywhere; padding: 8px 6px; vertical-align: top; }
+.ticket-info .tbl td:first-child { width: 40%; }
+@media (max-width: 860px) {
+  .drawer.drawer-ticket { overflow-y: auto; }
+  .ticket-body { grid-template-columns: minmax(0, 1fr); }
+  .chat-col { border-right: 0; }
+}
+.chat-thread {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--background);
+}
+.bubble { display: flex; gap: 8px; max-width: min(82%, 560px); align-items: flex-end; }
+.bubble-them { align-self: flex-start; }
+.bubble-mine { align-self: flex-end; flex-direction: row-reverse; }
+.bubble-who { font-size: 12px; color: var(--muted); margin-bottom: 3px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.bubble-mine .bubble-who { justify-content: flex-end; }
+.bubble-text { padding: 9px 13px; border-radius: 14px; font-size: 14px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bubble-them .bubble-text { background: var(--card); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.bubble-mine .bubble-text { background: var(--primary); color: var(--on-primary); border-bottom-right-radius: 4px; }
+.bubble-mine .bubble-text a { color: inherit; }
+.bubble-note .bubble-text { background: var(--warning-soft); color: var(--warning-text); border: 1px dashed var(--warning-border); }
+.bubble-files { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.chat-system { align-self: center; max-width: 90%; text-align: center; font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; }
+.chat-system b { font-weight: 600; color: var(--foreground-soft); }
+.composer { border-top: 1px solid var(--border); padding: 12px 20px 16px; display: flex; flex-direction: column; gap: 8px; background: var(--card); }
+.composer-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.composer-tools > :last-child { margin-left: auto; }
+.composer-input { display: flex; gap: 8px; align-items: flex-end; }
+.composer-input .field { flex: 1; min-width: 0; }
+.composer-input textarea { min-height: 44px; max-height: 180px; resize: vertical; }
+.composer-note .composer-input textarea { background: var(--warning-soft); }
+
+/* แถบแบ่งหน้า: บอก "แสดง x–y จาก n" เสมอ */
+.pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* ตัวกรองที่กำลังใช้ (ผู้ซื้อ / ตรวจรายการทดสอบ) · ป้ายจำนวน Workspace ของผู้ซื้อ · แถวสรุปยอดของผู้ซื้อ */
+.filter-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-text); font-size: 13px; font-weight: 600; }
+.count-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; border: 0; background: var(--primary-soft); color: var(--primary-text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; width: max-content; }
+.count-chip:hover { background: var(--primary-border); }
+.count-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.sum-row { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-2); font-size: 13px; }

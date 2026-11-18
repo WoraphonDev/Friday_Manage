@@ -298,7 +298,7 @@ describe("แพ็กเกจและโปรโมชัน (O20)", () => {
     expect(calls.find((c) => c.path === "/promotions/coupons/c-5/activate")).toBeTruthy();
   });
 
-  it("แท็บประวัติราคา · ประกาศถึงลูกค้า (Owner) · แคมเปญยังไม่เปิด", async () => {
+  it("แท็บประวัติราคา · แคมเปญยังไม่เปิด", async () => {
     handlers();
     view();
     await userEvent.click(await screen.findByRole("tab", { name: "ประวัติราคา" }));
@@ -307,18 +307,14 @@ describe("แพ็กเกจและโปรโมชัน (O20)", () => {
     expect(within(row).getByText("฿3,500")).toBeInTheDocument();
     expect(within(row).getByText("อนุมัติโดย แอดมินตัวอย่าง")).toBeInTheDocument();
     expect(screen.getByText("เวอร์ชันเริ่มต้น")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("tab", { name: "ประกาศถึงลูกค้า" }));
-    expect(await screen.findByText("ยังไม่มีประกาศ")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ส่งประกาศใหม่" })).toHaveAttribute("href", "/workspaces");
     await userEvent.click(screen.getByRole("tab", { name: "แคมเปญ" }));
     expect(screen.getByText("แคมเปญยังไม่เปิดใช้")).toBeInTheDocument();
   });
 
-  it("การเงินเปิดแท็บประกาศ: เห็นว่าเปิดให้ Owner เท่านั้น", async () => {
+  it("ไม่มีแท็บประกาศถึงลูกค้า เพราะมีเมนูของตัวเอง (หนึ่งเมนู หนึ่งหน้า)", async () => {
     handlers();
-    asRole("finance");
     view();
-    await userEvent.click(await screen.findByRole("tab", { name: "ประกาศถึงลูกค้า" }));
-    expect(await screen.findByText("ประวัติประกาศถึงลูกค้าเปิดให้ Owner เท่านั้น")).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "แพ็กเกจและคูปอง" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "ประกาศถึงลูกค้า" })).not.toBeInTheDocument();
   });
 });

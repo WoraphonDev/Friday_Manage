@@ -303,5 +303,11 @@
     "open": "View {name}",
     "removed": "Removed {name}",
     "pasteHint": "Drag images here, or press ⌘V / Ctrl+V to paste a screenshot"
+  },
+  "passwordReveal": {
+    "show": "Show",
+    "hide": "Hide",
+    "showLabel": "Show password",
+    "hideLabel": "Hide password"
   }
 }

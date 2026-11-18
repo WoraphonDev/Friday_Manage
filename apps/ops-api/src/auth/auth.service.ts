@@ -35,7 +35,14 @@ const Code = z.string().trim().regex(/^\d{6}$/, 'รหัสต้องเป�
 export const TotpLoginBody = z.object({ mfaToken: z.string().min(10), code: Code });
 export const TotpBody = z.object({ code: Code });
 export const PasswordSetupBody = z.object({ enrollToken: z.string().min(10).optional() });
-export const PasswordVerifyBody = z.object({ setupToken: z.string().min(10), password: z.string().min(PASSWORD_MIN, `รหัสผ่านต้องยาวอย่างน้อย ${PASSWORD_MIN} ตัว`).max(200), code: Code });
+// กติกาเดียวกับรหัสผ่านของแอปลูกค้า (ตัวพิมพ์ใหญ่ + ตัวเลข) แต่ยาวกว่าเพราะเป็นบัญชีพนักงาน · หน้าเว็บแสดงรายการเดียวกันใน PasswordRules
+const NewPassword = z
+  .string()
+  .min(PASSWORD_MIN, `รหัสผ่านต้องยาวอย่างน้อย ${PASSWORD_MIN} ตัว`)
+  .max(200)
+  .regex(/[A-Z]/, 'รหัสผ่านต้องมีตัวพิมพ์ใหญ่')
+  .regex(/[0-9]/, 'รหัสผ่านต้องมีตัวเลข');
+export const PasswordVerifyBody = z.object({ setupToken: z.string().min(10), password: NewPassword, code: Code });
 
 /** โทเค็นลงทะเบียนครั้งแรก (ออกโดยสคริปต์ `pnpm --filter @friday/ops-api enroll <email>` ใช้ได้ 1 ชั่วโมง) */
 export const signEnrollToken = (staffId: string) => sign('ops-enroll', { sid: staffId }, 3600);

@@ -133,7 +133,7 @@ describe('ล็อกอินด้วย Security key (WebAuthn)', () => {
 
 describe('ล็อกอินด้วยรหัสผ่าน + แอป Authenticator (ใช้ได้ทุกเครื่อง)', () => {
   const code = (secret: string, offset = 0) => totpAt(secret, Math.floor(Date.now() / 1000 / 30) + offset);
-  const PW = 'correct-horse-battery';
+  const PW = 'Correct-horse-battery-7';
 
   it('พนักงานใหม่ตั้งรหัสผ่าน + แอปด้วยลิงก์เชิญ → เปิดใช้งาน → เข้าระบบ 2 ขั้น · ไม่ต้องมี Security key', async () => {
     const row = await t.owner.query(`INSERT INTO staff_users (email, name, roles, status) VALUES ('pw@friday.example.com', 'Pim Password', '{support}', 'invited') RETURNING id`);
@@ -147,6 +147,9 @@ describe('ล็อกอินด้วยรหัสผ่าน + แอป 
     // ยังไม่บันทึก secret จนกว่าจะยืนยันรหัส
     expect((await t.owner.query(`SELECT totp_secret_enc FROM staff_users WHERE id = $1`, [id])).rows[0].totp_secret_enc).toBeNull();
     expect((await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: 'short', code: code(setup.body.secret) })).status).toBe(400);
+    // ยาวพอแต่ไม่มีตัวพิมพ์ใหญ่ / ตัวเลข ตามกติกาเดียวกับแอปลูกค้า
+    expect((await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: 'correct-horse-battery', code: code(setup.body.secret) })).status).toBe(400);
+    expect((await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: 'Correct-horse-battery', code: code(setup.body.secret) })).status).toBe(400);
     expect((await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: PW, code: '000000' })).status).toBe(422);
     const ok = await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: PW, code: code(setup.body.secret) });
     expect(ok.status, JSON.stringify(ok.body)).toBe(200);

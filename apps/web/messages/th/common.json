@@ -303,5 +303,11 @@
     "open": "ดู {name}",
     "removed": "นำ {name} ออกแล้ว",
     "pasteHint": "ลากรูปมาวาง หรือกด ⌘V / Ctrl+V เพื่อวางภาพหน้าจอได้"
+  },
+  "passwordReveal": {
+    "show": "แสดง",
+    "hide": "ซ่อน",
+    "showLabel": "แสดงรหัสผ่าน",
+    "hideLabel": "ซ่อนรหัสผ่าน"
   }
 }

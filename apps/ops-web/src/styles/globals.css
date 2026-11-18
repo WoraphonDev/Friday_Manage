@@ -584,6 +584,116 @@ textarea.input {
 .input[aria-invalid="true"] {
   border-color: var(--danger);
 }
+/* ตั้งรหัสผ่าน: แถบความปลอดภัย + เงื่อนไข (แบบหน้าสมัครของแอปลูกค้า) */
+.pw-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pw-meter {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+.pw-meter span {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--border);
+  transition: background-color 0.3s;
+}
+.pw-meter span[data-on="true"][data-level="weak"] {
+  background: var(--danger);
+}
+.pw-meter span[data-on="true"][data-level="fair"] {
+  background: #d97706;
+}
+.pw-meter span[data-on="true"][data-level="good"],
+.pw-meter span[data-on="true"][data-level="strong"] {
+  background: #16a34a;
+}
+.pw-strength {
+  font-size: 12px;
+  font-weight: 600;
+}
+.pw-strength[data-level="weak"] {
+  color: #991b1b;
+}
+.pw-strength[data-level="fair"] {
+  color: #92400e;
+}
+.pw-strength[data-level="good"],
+.pw-strength[data-level="strong"] {
+  color: #166534;
+}
+.pw-rules {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pw-rules li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pw-rules li[data-ok="true"] {
+  color: #166534;
+}
+@media (max-width: 480px) {
+  .pw-rules {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* ช่องรหัสผ่าน: ปุ่ม แสดง/ซ่อน อยู่ในกล่อง (แบบเดียวกับหน้า Login) */
+.password-wrap {
+  position: relative;
+  display: block;
+}
+.password-wrap > .input {
+  padding-right: 64px;
+}
+.password-reveal {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: calc(100% - 8px);
+  max-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  display: grid;
+  align-items: center;
+}
+.password-reveal:hover {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+/* คำว่า แสดง ↔ ซ่อน เลื่อนสลับกันแนวตั้ง */
+.password-reveal span {
+  grid-area: 1 / 1;
+  transition: opacity 0.2s, transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.password-reveal span:last-child,
+.password-reveal[aria-pressed="true"] span:first-child {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.password-reveal[aria-pressed="true"] span:first-child {
+  transform: translateY(-8px);
+}
+.password-reveal[aria-pressed="true"] span:last-child {
+  opacity: 1;
+  transform: none;
+}
 .select {
   padding-right: 28px;
 }

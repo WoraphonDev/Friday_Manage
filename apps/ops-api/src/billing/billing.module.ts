@@ -13,6 +13,8 @@ import {
   ExportQuery,
   ExtendBody,
   InvoicesQuery,
+  OverdueQuery,
+  RefundsQuery,
   RefundBody,
   ReplaceTaxDocBody,
   RevenueQuery,
@@ -98,8 +100,8 @@ export class BillingController {
 
   @Roles('finance', 'owner', 'auditor')
   @Get('overdue')
-  overdue() {
-    return this.billing.overdue();
+  overdue(@Query() q: unknown) {
+    return this.billing.overdue(parse(OverdueQuery, q));
   }
   @Roles('finance')
   @Post(['invoices/:id/contact', 'invoices/:id\\:contact'])
@@ -207,8 +209,8 @@ export class BillingController {
 
   @Roles('finance', 'owner', 'auditor')
   @Get('refunds')
-  refunds() {
-    return this.billing.refunds();
+  refunds(@Query() q: unknown) {
+    return this.billing.refunds(parse(RefundsQuery, q));
   }
   @Roles('finance')
   @Post('refunds')

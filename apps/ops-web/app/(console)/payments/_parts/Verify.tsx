@@ -1,13 +1,13 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileImage } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { hasAny } from "@/components/access";
 import { useApprovalFlow } from "@/components/dialogs";
 import { FileThumb, FileViewer } from "@/components/file-viewer";
-import { Drawer, ErrorBlock, Modal, Notice, TableSkeleton, TodoCard, TodoRow } from "@/components/kit";
+import { Drawer, Empty, ErrorBlock, Modal, Notice, Pager, TableSkeleton, TodoCard, TodoRow } from "@/components/kit";
 import { Button, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -37,6 +37,7 @@ interface SlipItem {
   workspace: { id: string; name: string };
 }
 export const exceptionsKey = ["ops", "payments", "exceptions"] as const;
+const PAGE = 50;
 
 /** แท็บกรณีผิดปกติ (Billing › verify) · เฉพาะรายการที่ระบบยืนยันเองไม่ได้ + สลิปรอตรวจปกติ */
 export function VerifyTab() {
@@ -44,13 +45,16 @@ export function VerifyTab() {
   const tc = useTranslations("common.dialog");
   const fmt = useFmt();
   const me = useMe().data;
-  const q = useQuery({ queryKey: exceptionsKey, queryFn: () => api.get<{ items: ExceptionItem[]; payments30d: number }>("/payments/exceptions") });
-  const slips = useQuery({ queryKey: ["ops", "payments", "pending"], queryFn: () => api.get<{ items: SlipItem[] }>("/payments?status=pending_review") });
+  // ช่วง 1 (ข้อมูลเยอะ): สองคิวแบ่งหน้าที่ ops-api · รอนานสุดขึ้นก่อน · สลิปปกติกรองที่ server (เดิมกรองในเบราว์เซอร์)
+  const [excOffset, setExcOffset] = useState(0);
+  const [slipOffset, setSlipOffset] = useState(0);
+  const q = useQuery({ queryKey: [...exceptionsKey, excOffset], queryFn: () => api.get<{ items: ExceptionItem[]; payments30d: number; total: number }>(`/payments/exceptions?limit=${PAGE}&offset=${excOffset}`), placeholderData: keepPreviousData });
+  const slips = useQuery({ queryKey: ["ops", "payments", "pending", slipOffset], queryFn: () => api.get<{ items: SlipItem[]; total: number }>(`/payments?status=pending_review&queue=slips&limit=${PAGE}&offset=${slipOffset}`), placeholderData: keepPreviousData });
   const [open, setOpen] = useState<ExceptionItem | null>(null);
   const [flagging, setFlagging] = useState<SlipItem | null>(null);
   const [viewing, setViewing] = useState<SlipItem | null>(null);
   const decide = hasAny(me, "finance");
-  const normal = (slips.data?.items ?? []).filter((s) => !s.exceptionReason && s.hasSlip);
+  const normal = slips.data?.items ?? [];
   const pending = q.isPending || slips.isPending;
   const error = q.error ?? slips.error;
   const exceptions = q.data?.items ?? [];
@@ -62,12 +66,12 @@ export function VerifyTab() {
       ) : error ? (
         <ErrorBlock error={error} retry={() => (void q.refetch(), void slips.refetch())} />
       ) : (
-        <TodoCard
-          title={t("verify.todo")}
-          count={exceptions.length + normal.length}
-          hint={q.data ? t("verify.summary", { total: q.data.payments30d, n: exceptions.length }) : undefined}
-          clear={{ title: t("verify.empty"), description: t("verify.emptyDesc") }}
-        >
+        !(q.data?.total ?? exceptions.length) && !(slips.data?.total ?? normal.length) ? (
+          <Empty ok title={t("verify.empty")} description={t("verify.emptyDesc")} />
+        ) : (
+          <>
+            {!!exceptions.length && (
+              <TodoCard title={t("verify.exceptionsTitle")} count={q.data?.total ?? exceptions.length} hint={q.data ? t("verify.summary", { total: q.data.payments30d, n: q.data.total ?? exceptions.length }) : undefined}>
           {exceptions.map((x) => (
             <TodoRow
               key={x.id}
@@ -90,6 +94,13 @@ export function VerifyTab() {
               </span>
             </TodoRow>
           ))}
+                <div className="todo-row">
+                  <Pager offset={excOffset} limit={PAGE} shown={exceptions.length} total={q.data?.total ?? exceptions.length} onChange={setExcOffset} />
+                </div>
+              </TodoCard>
+            )}
+            {!!normal.length && (
+              <TodoCard title={t("verify.slipsTitle")} count={slips.data?.total ?? normal.length}>
           {normal.map((s) => (
             <TodoRow
               key={s.id}
@@ -116,7 +127,13 @@ export function VerifyTab() {
               <span className="muted small">{fmt.ago(s.createdAt)}</span>
             </TodoRow>
           ))}
-        </TodoCard>
+                <div className="todo-row">
+                  <Pager offset={slipOffset} limit={PAGE} shown={normal.length} total={slips.data?.total ?? normal.length} onChange={setSlipOffset} />
+                </div>
+              </TodoCard>
+            )}
+          </>
+        )
       )}
       <p className="muted small">{t("verify.note")} · {t("verify.slipsNote")}</p>
       {open && <DecisionDrawer item={open} canDecide={decide} onClose={() => setOpen(null)} />}

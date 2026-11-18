@@ -73,7 +73,9 @@
     "todo": "ต้องทำตอนนี้",
     "decide": "ตัดสิน",
     "view": "ดูรายละเอียด",
-    "slipTag": "สลิปรอตรวจ"
+    "slipTag": "สลิปรอตรวจ",
+    "exceptionsTitle": "กรณีผิดปกติ",
+    "slipsTitle": "สลิปรอตรวจ"
   },
   "b6": {
     "title": "แจ้ง {ws} ว่าสลิปไม่ผ่าน",
@@ -223,7 +225,9 @@
       "final_notice": "เตือนครั้งสุดท้าย",
       "suspended": "ระงับ"
     },
-    "remindersValue": "อีเมล {email} · LINE {line} · โทร {phone}"
+    "remindersValue": "อีเมล {email} · LINE {line} · โทร {phone}",
+    "search": "ค้นชื่อ Workspace หรือเลขใบแจ้งหนี้",
+    "noMatch": "ไม่พบรายการค้างชำระที่ตรงกับคำค้น"
   },
   "b3": {
     "title": "ติดต่อ {ws}",
@@ -556,7 +560,9 @@
     "rejected": "ไม่อนุมัติแล้ว",
     "requestedBy": "{name} · {time}",
     "pdf": "เปิดใบลดหนี้ {number} (PDF)",
-    "noHistory": "ยังไม่มีการคืนเงิน ใบลดหนี้ หรือเครดิต"
+    "noHistory": "ยังไม่มีการคืนเงิน ใบลดหนี้ หรือเครดิต",
+    "search": "ค้นชื่อ Workspace เลขใบลดหนี้ หรือใบแจ้งหนี้",
+    "noMatch": "ไม่พบรายการที่ตรงกับคำค้น"
   },
   "debit": {
     "title": "ออกใบเพิ่มหนี้ อ้าง {number}",

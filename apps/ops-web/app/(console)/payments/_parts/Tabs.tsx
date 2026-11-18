@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
 import { hasAny } from "@/components/access";
 import { useApprovalFlow } from "@/components/dialogs";
-import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, Seg, TableSkeleton } from "@/components/kit";
+import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, Pager, Seg, TableSkeleton } from "@/components/kit";
 import { Button, buttonClass, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -615,12 +615,18 @@ interface OverdueRow {
   nextStep: { day: number; step: string; on: string } | null;
   needsHuman: boolean;
 }
+const OVERDUE_PAGE = 50;
 export function OverdueTab() {
   const t = useTranslations("money");
   const fmt = useFmt();
   const me = useMe().data;
   const finance = hasAny(me, "finance");
-  const q = useQuery({ queryKey: ["ops", "overdue"], queryFn: () => api.get<{ items: OverdueRow[]; totalSatang: number }>("/overdue") });
+  // ช่วง 1 (ข้อมูลเยอะ): ค้นและแบ่งหน้าที่ ops-api · เรียงตามยอด × วันที่ค้าง
+  const [search, setSearch] = useState("");
+  const [offset, setOffset] = useState(0);
+  const term = useDeferredValue(search.trim());
+  const qs = new URLSearchParams({ limit: String(OVERDUE_PAGE), offset: String(offset), ...(term ? { q: term } : {}) });
+  const q = useQuery({ queryKey: ["ops", "overdue", qs.toString()], queryFn: () => api.get<{ items: OverdueRow[]; total: number; totalSatang: number }>(`/overdue?${qs}`), placeholderData: keepPreviousData });
   const [contact, setContact] = useState<OverdueRow | null>(null);
   const [extend, setExtend] = useState<OverdueRow | null>(null);
   return (
@@ -630,12 +636,13 @@ export function OverdueTab() {
         <span className="card-sub">{t("overdue.steps")}</span>
       </div>
       <p className="muted small">{t("overdue.note")}</p>
+      <Input type="search" aria-label={t("overdue.search")} placeholder={t("overdue.search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
       {q.isPending ? (
         <TableSkeleton rows={4} cols={6} />
       ) : q.error ? (
         <ErrorBlock error={q.error} retry={() => void q.refetch()} />
       ) : !q.data.items.length ? (
-        <Empty ok title={t("overdue.empty")} />
+        term ? <Empty title={t("overdue.noMatch")} onClearFilters={() => setSearch("")} /> : <Empty ok title={t("overdue.empty")} />
       ) : (
         <Table head={[t("overdue.invoice"), t("verify.col.ws"), { label: t("incoming.amount"), num: true }, t("overdue.late"), t("overdue.reminded"), t("overdue.next"), ...(finance ? [t("invoices.actions")] : [])]}>
           {q.data.items.map((r) => (
@@ -666,6 +673,7 @@ export function OverdueTab() {
           ))}
         </Table>
       )}
+      {q.data?.total != null && <Pager offset={offset} limit={OVERDUE_PAGE} shown={q.data.items.length} total={q.data.total} onChange={setOffset} />}
       {contact && <ContactDrawer row={contact} onClose={() => setContact(null)} />}
       {extend && <ExtendDialog row={extend} onClose={() => setExtend(null)} />}
     </section>

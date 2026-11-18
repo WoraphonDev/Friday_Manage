@@ -43,7 +43,8 @@ export function BillingPage() {
   const group = groupOf(tab);
   const [creating, setCreating] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const over = useQuery({ queryKey: ["ops", "overdue"], queryFn: () => api.get<{ items: unknown[] }>("/overdue"), enabled: group === "billing" });
+  // ตัวเลขบนแท็บค้างชำระ: ขอแค่จำนวนทั้งหมด
+  const over = useQuery({ queryKey: ["ops", "overdue", "count"], queryFn: () => api.get<{ total: number }>("/overdue?limit=1"), enabled: group === "billing" });
   const finance = hasAny(me, "finance");
   const tabs = GROUPS[group];
   return (
@@ -80,7 +81,7 @@ export function BillingPage() {
           label={tn(group)}
           value={tab}
           onChange={(v) => router.replace(`/payments?tab=${v}`)}
-          tabs={tabs.map((v) => ({ value: v, label: v === "verify" ? t("tabs.todo") : t(`tabs.${v}`, { n: over.data?.items.length ?? 0 }) }))}
+          tabs={tabs.map((v) => ({ value: v, label: v === "verify" ? t("tabs.todo") : t(`tabs.${v}`, { n: over.data?.total ?? 0 }) }))}
         />
       )}
       {/* เปลี่ยนแท็บ (?tab=) ไม่เปลี่ยน route: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}

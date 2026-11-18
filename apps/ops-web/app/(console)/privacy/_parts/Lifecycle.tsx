@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import { useFmt } from "../../workspaces/_parts/format";
 import styles from "../privacy.module.css";
 import type { LegalHold, PendingDelete, PrivacyRequest, PurgePreview, RetentionInfo, RetentionKey, RetentionRow } from "./types";
+import type { RequestStatsT } from "./Requests";
 import { type PickedWs, WorkspacePicker } from "./WorkspacePicker";
 
 const keys = {
@@ -53,7 +54,7 @@ function useKeep() {
  * ตัวเลขสรุปแถวเดียวบนหัวหน้า (โครงหน้า Ops 18 พ.ย. 2569) · เคยมีสองแถวและ "คำขอที่เปิดอยู่" ซ้ำกัน
  * คำขอที่เปิด (เกินกำหนด) · ใกล้ครบกำหนด · Workspace รอลบ · Legal hold · ข้อมูลที่ลบเมื่อคืน · เวลาตอบเฉลี่ย 90 วัน
  */
-export function LifecycleKpis({ requests }: { requests: PrivacyRequest[] }) {
+export function LifecycleKpis({ stats }: { stats: RequestStatsT }) {
   const t = useTranslations("pl.life.kpi");
   const ts = useTranslations("pl.privacy.stats");
   const fmt = useFmt();
@@ -61,18 +62,13 @@ export function LifecycleKpis({ requests }: { requests: PrivacyRequest[] }) {
   const purged = last ? (last.logRows ?? 0) + (last.sessionRows ?? 0) : null;
   const pending = usePendingDeletes().data?.items ?? [];
   const holds = (useLegalHolds().data?.items ?? []).filter((h) => h.active);
-  const open = requests.filter((r) => r.status === "open");
-  const soon = open.filter((r) => r.daysLeft >= 0 && r.daysLeft <= 7).length;
-  const late = open.filter((r) => r.daysLeft < 0).length;
-  const since = Date.now() - 90 * 86_400_000;
-  const done = requests.filter((r) => r.status === "completed" && r.completedAt && Date.parse(r.completedAt) >= since);
-  const avg = done.length ? Math.round(done.reduce((sum, r) => sum + (Date.parse(r.completedAt!) - Date.parse(r.receivedAt)) / 86_400_000, 0) / done.length) : null;
+  const { dueSoon: soon, overdue: late, avgDays: avg } = stats;
   return (
     <section className="stats" aria-label={t("label")}>
       <div className={late ? "stat stat-bad" : "stat"}>
         <span className="muted small">{t("open")}</span>
         <b>
-          <CountUp value={open.length} />
+          <CountUp value={stats.open} />
         </b>
         <span className="muted small">{t("openLate", { late })}</span>
       </div>

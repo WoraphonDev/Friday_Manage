@@ -1,6 +1,6 @@
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
 import { type Db, schema } from '@friday/db';
-import { and, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApprovalsService, type ApprovalContext } from '../approvals/approvals.service.js';
 import { staffAudit } from '../audit.js';
@@ -21,7 +21,13 @@ const ERASED_NAME = 'ผู้ใช้ที่ถูกลบ';
 const TYPE_LABEL: Record<string, string> = { access: 'ขอดูข้อมูล', export: 'ขอสำเนาข้อมูล', rectify: 'ขอแก้ไขข้อมูล', erase: 'ขอลบข้อมูล', object: 'คัดค้านการใช้ข้อมูล', restrict: 'ขอระงับการใช้ข้อมูล' };
 const STEPS = ['รับคำขอ', 'ยืนยันตัวตน', 'ตรวจขอบเขต', 'ดำเนินการ', 'แจ้งผล'] as const;
 
-export const RequestsQuery = z.object({ status: z.enum(['open', 'completed', 'rejected', 'all']).default('open') });
+export const RequestsQuery = z.object({
+  status: z.enum(['open', 'completed', 'rejected', 'all']).default('open'),
+  /** อีเมลผู้ขอ หรือเลขคำขอ (DSR-0012 / 12) */
+  q: z.string().trim().max(120).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
 export const CreateRequestBody = z
   .object({
     requestType: z.enum(schema.PRIVACY_REQUEST_TYPES),
@@ -108,16 +114,35 @@ export class PrivacyService implements OnModuleInit {
   }
 
   async list(q: z.infer<typeof RequestsQuery>) {
+    // ช่วง 1 (ข้อมูลเยอะ): กรองสถานะ ค้น และแบ่งหน้าที่ server (เดิมหน้าเว็บโหลดคำขอทุกสถานะพร้อมอีเมลผู้ขอมากรองเอง)
+    const num = q.q?.replace(/^dsr-?/i, '');
+    const search = q.q ? or(ilike(s.privacyRequests.requesterEmail, `%${q.q}%`), /^\d+$/.test(num ?? '') ? eq(s.privacyRequests.number, Number(num)) : undefined) : undefined;
+    const where = and(q.status === 'all' ? undefined : eq(s.privacyRequests.status, q.status), search);
     const rows = await this.db
       .select()
       .from(s.privacyRequests)
-      .where(q.status === 'all' ? undefined : eq(s.privacyRequests.status, q.status))
-      .orderBy(s.privacyRequests.dueDate, s.privacyRequests.createdAt);
+      .where(where)
+      .orderBy(s.privacyRequests.dueDate, s.privacyRequests.createdAt)
+      .limit(q.limit)
+      .offset(q.offset);
+    const [c] = await this.rows<Record<string, number>>(sql`
+      select count(*) filter (where status = 'open')::int as open, count(*) filter (where status = 'completed')::int as completed,
+        count(*) filter (where status = 'rejected')::int as rejected, count(*)::int as "all",
+        count(*) filter (where status = 'open' and due_date between ${todayBkk()}::date and ${todayBkk()}::date + 7)::int as "dueSoon",
+        count(*) filter (where status = 'open' and due_date < ${todayBkk()}::date)::int as overdue,
+        round(avg(extract(epoch from completed_at - received_at) / 86400) filter (where status = 'completed' and completed_at > now() - interval '90 days'))::int as "avgDays"
+      from privacy_requests`);
+    const [{ total }] = await this.db.select({ total: sql<number>`count(*)::int` }).from(s.privacyRequests).where(where);
     const wsIds = [...new Set(rows.flatMap((r) => r.workspaceIds))];
     const ws = wsIds.length ? await this.db.select({ id: s.workspaces.id, name: s.workspaces.name, slug: s.workspaces.slug }).from(s.workspaces).where(inArray(s.workspaces.id, wsIds)) : [];
     // คำขอลบของผู้ใช้ที่ติด Legal hold แสดงเป็น "รอ Legal hold" (H11) · สถานะในตารางยังเป็น open
     const held = await this.holds.heldUsers(rows.filter((r) => r.requestType === 'erase' && r.status === 'open' && r.userId).map((r) => r.userId!));
-    return { items: rows.map((r) => ({ ...this.dto(r), legalHold: !!r.userId && held.has(r.userId) && r.requestType === 'erase' && r.status === 'open', workspaces: ws.filter((w) => r.workspaceIds.includes(w.id)) })) };
+    return {
+      items: rows.map((r) => ({ ...this.dto(r), legalHold: !!r.userId && held.has(r.userId) && r.requestType === 'erase' && r.status === 'open', workspaces: ws.filter((w) => r.workspaceIds.includes(w.id)) })),
+      total,
+      counts: { open: c.open, completed: c.completed, rejected: c.rejected, all: c.all },
+      stats: { open: c.open, dueSoon: c.dueSoon, overdue: c.overdue, avgDays: c.avgDays ?? null },
+    };
   }
 
   private async find(id: string) {

@@ -14,51 +14,76 @@ import { useMe } from "@/lib/query";
 import { exceptionsKey, VerifyTab } from "./_parts/Verify";
 import { AccountantExport } from "./_parts/Accounting";
 import { TaxTab } from "./_parts/Tax";
-import { IncomingTab, InvoicesTab, OverdueTab, RefundsSummaryTab, RevenueTab } from "./_parts/Tabs";
+import { IncomingTab, InvoicesTab, OverdueTab, RevenueTab } from "./_parts/Tabs";
 
-const TABS = ["verify", "incoming", "invoices", "overdue", "tax", "refunds", "revenue"] as const;
-type Tab = (typeof TABS)[number];
+type Tab = "verify" | "incoming" | "invoices" | "overdue" | "tax" | "revenue";
+type Group = "verify" | "billing" | "accounting";
 
-/** หน้า 4 · รายได้และการชำระเงิน 7 แท็บ (Billing.dc.html) · เปิดให้ Owner การเงิน ผู้ตรวจ (ทำรายการเฉพาะการเงิน) */
+/**
+ * หนึ่งเมนู หนึ่งหน้า (โครงหน้า Ops 18 พ.ย. 2569): เมนูซ้าย 3 รายการในกลุ่มเงินเคยพามาหน้าเดียวกันที่มี 7 แท็บ
+ * ตอนนี้แต่ละเมนูเห็นเฉพาะแท็บของตัวเอง · ชื่อหน้าตรงกับเมนู · คืนเงินมีเมนูของตัวเอง (/refunds) จึงไม่มีแท็บซ้ำ
+ */
+const GROUPS: Record<Group, Tab[]> = {
+  verify: ["verify", "incoming"],
+  billing: ["invoices", "overdue", "tax"],
+  accounting: ["revenue"],
+};
+const groupOf = (tab: Tab): Group => (Object.keys(GROUPS) as Group[]).find((g) => GROUPS[g].includes(tab))!;
+
+/** หน้า 4 · เงิน (Billing.dc.html) · เปิดให้ Owner การเงิน ผู้ตรวจ (ทำรายการเฉพาะการเงิน) */
 export function BillingPage() {
   const t = useTranslations("money");
+  const tn = useTranslations("common.nav");
   const params = useSearchParams();
   const router = useRouter();
   const me = useMe().data;
-  const tab: Tab = (TABS as readonly string[]).includes(params?.get("tab") ?? "") ? (params!.get("tab") as Tab) : "verify";
+  const asked = params?.get("tab") ?? "";
+  // ลิงก์เดิม ?tab=refunds พาไปแท็บแรกของกรณีผิดปกติ (คืนเงินอยู่เมนูคืนเงินและอนุมัติ)
+  const tab: Tab = (Object.values(GROUPS).flat() as string[]).includes(asked) ? (asked as Tab) : "verify";
+  const group = groupOf(tab);
   const [creating, setCreating] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const exc = useQuery({ queryKey: exceptionsKey, queryFn: () => api.get<{ items: unknown[] }>("/payments/exceptions") });
-  const over = useQuery({ queryKey: ["ops", "overdue"], queryFn: () => api.get<{ items: unknown[] }>("/overdue") });
+  const exc = useQuery({ queryKey: exceptionsKey, queryFn: () => api.get<{ items: unknown[] }>("/payments/exceptions"), enabled: group === "verify" });
+  const over = useQuery({ queryKey: ["ops", "overdue"], queryFn: () => api.get<{ items: unknown[] }>("/overdue"), enabled: group === "billing" });
   const finance = hasAny(me, "finance");
+  const tabs = GROUPS[group];
   return (
     <>
       <PageHead
-        title={t("title")}
-        desc={t("desc")}
+        title={tn(group)}
+        desc={t(`groups.${group}.desc`)}
         actions={
-          <>
-            <Button onClick={() => setExporting(true)}>{t("export")}</Button>
-            {finance && (
-              <Button
-                variant="primary"
-                onClick={() => {
-                  if (tab !== "invoices") router.replace("/payments?tab=invoices");
-                  setCreating(true);
-                }}
-              >
-                <Plus size={16} /> {t("create")}
-              </Button>
-            )}
-          </>
+          group === "billing" ? (
+            <>
+              {/* ใบกำกับภาษีและ 50 ทวิ ส่งให้สำนักงานบัญชีด้วย จึงส่งออกจากหน้านี้ได้ (ปุ่มรอง) */}
+              <Button onClick={() => setExporting(true)}>{t("export")}</Button>
+              {finance && (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    if (tab !== "invoices") router.replace("/payments?tab=invoices");
+                    setCreating(true);
+                  }}
+                >
+                  <Plus size={16} /> {t("create")}
+                </Button>
+              )}
+            </>
+          ) : group === "accounting" ? (
+            <Button variant="primary" onClick={() => setExporting(true)}>
+              {t("export")}
+            </Button>
+          ) : undefined
         }
       />
-      <Tabs
-        label={t("title")}
-        value={tab}
-        onChange={(v) => router.replace(`/payments?tab=${v}`)}
-        tabs={TABS.map((v) => ({ value: v, label: t(`tabs.${v}`, { n: v === "verify" ? (exc.data?.items.length ?? 0) : (over.data?.items.length ?? 0) }) }))}
-      />
+      {tabs.length > 1 && (
+        <Tabs
+          label={tn(group)}
+          value={tab}
+          onChange={(v) => router.replace(`/payments?tab=${v}`)}
+          tabs={tabs.map((v) => ({ value: v, label: t(`tabs.${v}`, { n: v === "verify" ? (exc.data?.items.length ?? 0) : (over.data?.items.length ?? 0) }) }))}
+        />
+      )}
       {/* เปลี่ยนแท็บ (?tab=) ไม่เปลี่ยน route: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}
       <MotionSwap key={tab} className="motion-stack">
         {tab === "verify" && <VerifyTab />}
@@ -66,7 +91,6 @@ export function BillingPage() {
         {tab === "invoices" && <InvoicesTab creating={creating} onCreatingChange={setCreating} />}
         {tab === "overdue" && <OverdueTab />}
         {tab === "tax" && <TaxTab />}
-        {tab === "refunds" && <RefundsSummaryTab />}
         {tab === "revenue" && <RevenueTab />}
       </MotionSwap>
       {exporting && <AccountantExport onClose={() => setExporting(false)} />}

@@ -4,21 +4,18 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { Paperclip, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { clsx } from "clsx";
 import { useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
-import { hasAny } from "@/components/access";
-import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, PageHead, Seg, TableSkeleton } from "@/components/kit";
+import { hasAny, initials } from "@/components/access";
+import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, ListBar, Modal, Notice, PageHead, Seg, TableSkeleton, Tabs } from "@/components/kit";
 import { Button, buttonClass, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
-import { MotionSwap } from "@/components/shell/page-enter";
 import { api, OPS_BASE } from "@/lib/api";
-import { useSlidingIndicator } from "@/lib/motion";
 import { useMe } from "@/lib/query";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
 import { DevCard } from "../bugs/_components/DevCard";
 import { EscalateDialog } from "../bugs/_components/EscalateDialog";
 import { BackNotice, CannedPicker, MyPresence, SettingsLink, TeamNow } from "./settings/_parts/Live";
-// ตารางการเข้าช่วยเหลือย้ายไปอยู่กับหน้า support/sessions (O42 · H8)
-import { Sessions } from "./sessions/SessionsTable";
 import { CATEGORIES, type Dur } from "./settings/_parts/types";
 
 interface TicketRow {
@@ -89,24 +86,33 @@ interface TicketDetail {
 const key = ["ops", "tickets"] as const;
 const invalidate = (cache: ReturnType<typeof useQueryClient>) => void cache.invalidateQueries({ queryKey: ["ops"] });
 
-/** หน้า 6 · Support (Support.dc.html): คิว Ticket · รายละเอียดและข้อความ · ผลงานรายคน · การเข้าช่วยเหลือ */
+/**
+ * หน้า 6 · Ticket (Support.dc.html · ปรับตามโครงหน้า Ops 18 พ.ย. 2569):
+ * คิวของฉันเต็มความกว้าง · กดแถวเปิดบทสนทนาแบบแชทในแผงขวา · ทีมตอนนี้ / คิวกลาง / ผลงานรายคนอยู่แท็บ "ทีม"
+ * การเข้าช่วยเหลือมีเมนูของตัวเอง (/support/sessions) จึงไม่วางซ้ำที่นี่
+ */
+type Queue = "mine" | "none" | "all" | "team";
 export function SupportPage() {
   const t = useTranslations("ss.support");
-  // รายการที่เลือกได้อันเดียว: พื้นม่วงอ่อนของอันที่เลือกเลื่อนไปหาอันใหม่ (.menu-pill ใน ops.css)
-  const menuPill = useSlidingIndicator<HTMLUListElement>(".menu-item");
   const tb = useTranslations("bugs.support");
   const params = useSearchParams();
   const router = useRouter();
+  const fmt = useFmt();
   const me = useMe().data;
-  const [queue, setQueue] = useState<"mine" | "none" | "all">("all");
+  const support = hasAny(me, "support");
+  // คนตอบ Ticket เริ่มที่คิวของตัวเอง · บทบาทอื่น (Owner / ผู้ตรวจ) เริ่มที่ทั้งหมด
+  const [picked, setQueue] = useState<Queue | null>(() => (params?.get("tab") === "team" ? "team" : null));
+  // ยังไม่ได้เลือกเอง: ตามบทบาท (โปรไฟล์โหลดทีหลังได้)
+  const queue: Queue = picked ?? (support ? "mine" : "all");
   const [status, setStatus] = useState<"active" | "pending_dev" | "solved" | "closed">("active");
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
   const search = useDeferredValue(q.trim());
+  const listQueue = queue === "team" ? "all" : queue;
   const filter = new URLSearchParams({
     status,
     limit: "100",
-    ...(queue !== "all" ? { assignee: queue } : {}),
+    ...(listQueue !== "all" ? { assignee: listQueue } : {}),
     ...(search ? { q: search } : {}),
     ...(params?.get("workspace") ? { workspaceId: params.get("workspace")! } : {}),
   });
@@ -118,7 +124,7 @@ export function SupportPage() {
   const selected = params?.get("ticket") ?? null;
   const select = (id: string | null) => router.replace(id ? `/support?ticket=${id}` : "/support");
   const s = list.data?.summary;
-  const support = hasAny(me, "support");
+  const count = (n: number | undefined) => (n ? <span className="tab-count">{n}</span> : null);
   return (
     <>
       <PageHead
@@ -147,18 +153,33 @@ export function SupportPage() {
         }
       />
       <BackNotice />
-      <TeamNow />
-      <div className="support-split">
-        <section className="card" style={{ alignSelf: "start" }}>
-          <Seg
+      <ListBar
+        tabs={
+          <Tabs
             label={t("title")}
             value={queue}
             onChange={setQueue}
-            options={(["all", "mine", "none"] as const).map((v) => ({
+            tabs={(support ? (["mine", "none", "all", "team"] as const) : (["all", "none", "team"] as const)).map((v) => ({
               value: v,
-              label: t(`queues.${v}`),
+              label: (
+                <>
+                  {t(`queues.${v}`)}
+                  {v === "none" && count(s?.unassigned)}
+                </>
+              ),
             }))}
           />
+        }
+      >
+        {queue !== "team" && <Input aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />}
+      </ListBar>
+      {queue === "team" ? (
+        <>
+          <TeamNow />
+          <Stats />
+        </>
+      ) : (
+        <>
           <ChipGroup className="row">
             {(["active", "pending_dev", "solved", "closed"] as const).map((v) => (
               <Chip key={v} pressed={status === v} onClick={() => setStatus(v)}>
@@ -167,69 +188,70 @@ export function SupportPage() {
               </Chip>
             ))}
           </ChipGroup>
-          <Input aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />
           {list.isPending ? (
-            <TableSkeleton rows={5} cols={1} />
+            <TableSkeleton rows={5} cols={6} />
           ) : list.error ? (
             <ErrorBlock error={list.error} retry={() => void list.refetch()} />
           ) : !list.data.items.length ? (
-            <Empty ok={queue === "none"} title={queue === "none" ? t("emptyQueue") : t("empty")} />
+            <Empty ok={queue === "none" || queue === "mine"} title={queue === "none" ? t("emptyQueue") : queue === "mine" ? t("emptyMine") : t("empty")} />
           ) : (
-            <ul ref={menuPill} className="stack motion-list motion-pill menu-pill" style={{ listStyle: "none", margin: 0, padding: 0, gap: 6 }} aria-label={t("title")}>
-              {list.data.items.map((k) => (
-                <li key={k.id}>
-                  <button
-                    type="button"
-                    className="menu-item"
-                    aria-current={selected === k.id ? "true" : undefined}
-                    data-state={selected === k.id ? "active" : undefined}
-                    style={{
-                      alignItems: "flex-start",
-                      border: "1px solid var(--border)",
-                    }}
-                    onClick={() => select(k.id)}
-                  >
-                    <span
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 2,
-                        minWidth: 0,
-                      }}
-                    >
-                      <span className="row">
-                        <b className="mono">#{k.number}</b>
-                        {k.priority === "urgent" || k.priority === "high" ? <span className="pill bad">{t(`priority.${k.priority}`)}</span> : null}
-                        {k.slaBreached && <span className="pill warn">{t("breached")}</span>}
-                      </span>
-                      <span>{k.subject}</span>
-                      <span className="muted small">
-                        {k.workspace?.name ?? k.requesterEmail} · {t(`status.${k.status}` as "status.open")} · {k.assigneeName ?? t("unassigned")}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="tbl-wrap">
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th scope="col">{t("col.ticket")}</th>
+                    <th scope="col">{t("col.customer")}</th>
+                    <th scope="col">{t("col.status")}</th>
+                    <th scope="col">{t("col.assignee")}</th>
+                    <th scope="col">{t("col.due")}</th>
+                  </tr>
+                </thead>
+                <tbody className="motion-list">
+                  {list.data.items.map((k) => (
+                    <tr key={k.id} className="row-link" aria-selected={selected === k.id} onClick={() => select(k.id)}>
+                      <td>
+                        <button type="button" className="row-link-button" onClick={(e) => (e.stopPropagation(), select(k.id))}>
+                          <span className="row nowrap">
+                            <b className="mono">#{k.number}</b>
+                            <span>{k.subject}</span>
+                          </span>
+                        </button>
+                        {(k.priority === "urgent" || k.priority === "high") && (
+                          <>
+                            {" "}
+                            <span className="pill bad">{t(`priority.${k.priority}`)}</span>
+                          </>
+                        )}
+                      </td>
+                      <td className="muted">{k.workspace?.name ?? k.requesterEmail}</td>
+                      <td>
+                        <span className="pill">{t(`status.${k.status}` as "status.open")}</span>
+                      </td>
+                      <td className={k.assigneeName ? undefined : "muted"}>{k.assigneeName ?? t("unassigned")}</td>
+                      <td>{k.slaBreached ? <span className="pill warn">{t("breached")}</span> : k.firstResponseDueAt ? <span className="muted">{fmt.dateTime(k.firstResponseDueAt)}</span> : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </section>
-        <div>
-          {selected ? (
-            // เลือก Ticket อื่น: รายละเอียดเคลื่อนเข้าแบบเปลี่ยนหน้า
-            <MotionSwap key={selected}>
-              <TicketView id={selected} />
-            </MotionSwap>
-          ) : (
-            <section className="card">
-              <Empty title={t("pick")} />
-            </section>
-          )}
-        </div>
-      </div>
-      <Stats />
-      <Sessions />
+        </>
+      )}
+      <TicketDrawer id={selected} onClose={() => select(null)} />
       {creating && <CreateTicket onClose={() => setCreating(false)} onCreated={(id) => select(id)} />}
     </>
+  );
+}
+
+/** แผงขวาของ Ticket: หัวข้อเป็นชื่อแผง · เนื้อหาเป็นแชท */
+function TicketDrawer({ id, onClose }: { id: string | null; onClose: () => void }) {
+  const t = useTranslations("ss.support");
+  // คีย์เดียวกับ TicketView จึงยิงครั้งเดียว · ใช้ทำชื่อแผง
+  const detail = useQuery({ queryKey: [...key, "detail", id], queryFn: () => api.get<TicketDetail>(`/tickets/${id}`), enabled: !!id }).data;
+  return (
+    <Drawer open={!!id} onOpenChange={(o) => !o && onClose()} title={detail ? `#${detail.ticket.number} · ${detail.ticket.subject}` : t("ticket")} className="drawer-ticket">
+      {id && <TicketView id={id} />}
+    </Drawer>
   );
 }
 
@@ -264,28 +286,53 @@ function TicketView({ id }: { id: string }) {
   });
   if (q.isPending)
     return (
-      <section className="card">
+      <div className="ticket-head">
         <TableSkeleton rows={4} cols={1} />
-      </section>
+      </div>
     );
   if (q.error)
     return (
-      <section className="card">
+      <div className="ticket-head">
         <ErrorBlock error={q.error} retry={() => void q.refetch()} />
-      </section>
+      </div>
     );
   const { ticket: k, messages, customer, context } = q.data;
   const categoryLabel = (c: string) => ((CATEGORIES as readonly string[]).includes(c) ? tset(`category.${c as (typeof CATEGORIES)[number]}`) : c);
   const closed = k.status === "closed";
   const mine = k.assignee?.id === me?.id;
+  const actions = support && !closed && (
+    <div className="row">
+      {!k.assignee && (
+        <Button variant="primary" size="small" disabled={act.isPending} onClick={() => act.mutate("claim")}>
+          {t("support.claim")}
+        </Button>
+      )}
+      {(mine || hasAny(me, "owner") || !k.assignee) && (
+        <Button size="small" onClick={() => setModal("assign")}>
+          {t("support.assign")}
+        </Button>
+      )}
+      {k.status !== "pending_dev" && k.status !== "solved" && (
+        <Button size="small" onClick={() => setModal("escalate")}>
+          {t("support.escalate")}
+        </Button>
+      )}
+      {mine && (
+        <Button variant="ghost" size="small" disabled={act.isPending} onClick={() => act.mutate("release")}>
+          {t("support.release")}
+        </Button>
+      )}
+      {k.status !== "solved" && (
+        <Button size="small" onClick={() => setModal("solve")}>
+          {t("support.solve")}
+        </Button>
+      )}
+    </div>
+  );
+  const placeholder = mode === "reply" ? t("support.reply") : mode === "internal" ? t("support.internal") : t("support.fromCustomer");
   return (
-    <div className="ticket-grid">
-      <section className="card">
-        <div className="card-head">
-          <h2 className="card-title">
-            #{k.number} · {k.subject}
-          </h2>
-        </div>
+    <>
+      <div className="ticket-head">
         <div className="row small">
           <span className="pill">{t(`support.status.${k.status}` as "support.status.open")}</span>
           <span className={k.priority === "urgent" || k.priority === "high" ? "pill bad" : "pill"}>{t(`support.priority.${k.priority}` as "support.priority.normal")}</span>
@@ -294,145 +341,142 @@ function TicketView({ id }: { id: string }) {
           {k.slaBreached ? (
             <span className="pill warn">{t("support.breached")}</span>
           ) : (
-            k.firstResponseDueAt && (
-              <span className="muted">
-                {t("support.dueIn", {
-                  time: fmt.dateTime(k.firstResponseDueAt),
-                })}
-              </span>
-            )
+            k.firstResponseDueAt && <span className="muted">{t("support.dueIn", { time: fmt.dateTime(k.firstResponseDueAt) })}</span>
           )}
           <span className="muted">
             {t("support.assignee")}: {k.assignee?.name ?? t("support.unassigned")}
           </span>
         </div>
-        {support && !closed && (
-          <div className="row">
-            {!k.assignee && (
-              <Button variant="primary" disabled={act.isPending} onClick={() => act.mutate("claim")}>
-                {t("support.claim")}
-              </Button>
-            )}
-            {(mine || hasAny(me, "owner") || !k.assignee) && <Button onClick={() => setModal("assign")}>{t("support.assign")}</Button>}
-            {k.status !== "pending_dev" && k.status !== "solved" && <Button onClick={() => setModal("escalate")}>{t("support.escalate")}</Button>}
-            {mine && (
-              <Button variant="ghost" disabled={act.isPending} onClick={() => act.mutate("release")}>
-                {t("support.release")}
-              </Button>
-            )}
-            {k.status !== "solved" && <Button onClick={() => setModal("solve")}>{t("support.solve")}</Button>}
-          </div>
-        )}
-        <ol className="stack" style={{ listStyle: "none", margin: 0, padding: 0 }} aria-label="messages">
-          {messages.map((m) => (
-            <li key={m.id} className={m.internal ? "notice notice-warn" : m.authorKind === "customer" ? "notice" : m.authorKind === "system" ? "notice notice-info" : "notice notice-ok"}>
-              <div className="notice-body">
-                <span className="small">
-                  <b>{m.authorKind === "system" ? t("support.system") : m.authorKind === "staff" && !m.authorName ? t("support.auto") : (m.authorName ?? k.requesterEmail)}</b> <span className="muted">· {fmt.dateTime(m.createdAt)}</span> {m.internal && <span className="pill warn">{t("support.internalTag")}</span>}
-                </span>
-                <span style={{ whiteSpace: "pre-wrap" }}>{m.body}</span>
-                {!!m.files?.length && (
-                  <ul className="ticket-files" aria-label={t("support.files")}>
-                    {m.files.map((f) => (
-                      <li key={f.index}>
-                        <a href={`${OPS_BASE}/tickets/${k.id}/messages/${m.id}/files/${f.index}`} target="_blank" rel="noreferrer">
-                          <Paperclip size={14} aria-hidden="true" /> {t("support.file", { name: f.name, size: fileSize(f.size) })}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
+        {actions}
+      </div>
+      <div className="ticket-body">
+        <div className="chat-col">
+          {/* แชท: ลูกค้าซ้าย · ทีมเราขวาสีม่วง · บันทึกภายในขวาสีเหลือง · เหตุการณ์ของระบบเป็นบรรทัดกลาง */}
+          <ol className="chat-thread" aria-label={t("support.thread")}>
+            {messages.map((m) => {
+              const systemLine = m.authorKind === "system" || (m.authorKind === "staff" && !m.authorName && m.internal);
+              if (systemLine)
+                return (
+                  <li key={m.id} className="chat-system">
+                    <b>{t("support.system")}</b>
+                    <span>{m.body}</span>
+                    <span>· {fmt.dateTime(m.createdAt)}</span>
+                  </li>
+                );
+              const them = m.authorKind === "customer";
+              const who = m.authorKind === "staff" && !m.authorName ? t("support.auto") : (m.authorName ?? k.requesterName ?? k.requesterEmail);
+              return (
+                <li key={m.id} className={clsx("bubble", them ? "bubble-them" : "bubble-mine", m.internal && "bubble-note")}>
+                  <span className="avatar avatar-sm" aria-hidden="true">
+                    {initials(who ?? "?")}
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="bubble-who">
+                      {m.internal && <span className="pill warn">{t("support.internalTag")}</span>}
+                      <b>{who}</b>
+                      <span>{fmt.dateTime(m.createdAt)}</span>
+                    </div>
+                    <div className="bubble-text">{m.body}</div>
+                    {!!m.files?.length && (
+                      <ul className="bubble-files" aria-label={t("support.files")}>
+                        {m.files.map((f) => (
+                          <li key={f.index}>
+                            <a href={`${OPS_BASE}/tickets/${k.id}/messages/${m.id}/files/${f.index}`} target="_blank" rel="noreferrer">
+                              <Paperclip size={14} aria-hidden="true" /> {t("support.file", { name: f.name, size: fileSize(f.size) })}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+          {support && !closed && (
+            <form className={clsx("composer", mode === "internal" && "composer-note")} onSubmit={(e) => (e.preventDefault(), body.trim() && send.mutate())}>
+              <div className="composer-tools">
+                <Seg label={t("support.reply")} value={mode} onChange={setMode} options={(["reply", "internal", "customer"] as const).map((v) => ({ value: v, label: t(`support.modes.${v}`) }))} />
+                {mode === "reply" ? (
+                  <CannedPicker
+                    vars={{ requester: k.requesterName ?? k.requesterEmail ?? "", workspace: customer?.name ?? "", ticket: k.number }}
+                    onInsert={(text) => setBody((b) => (b.trim() ? `${b.trimEnd()}\n\n${text}` : text))}
+                  />
+                ) : (
+                  <span />
                 )}
               </div>
-            </li>
-          ))}
-        </ol>
-        {support && !closed && (
-          <form className="stack" onSubmit={(e) => (e.preventDefault(), body.trim() && send.mutate())}>
-            <Seg label={t("support.reply")} value={mode} onChange={setMode} options={(["reply", "internal", "customer"] as const).map((v) => ({ value: v, label: t(`support.modes.${v}`) }))} />
-            <Textarea
-              aria-label={mode === "reply" ? t("support.reply") : mode === "internal" ? t("support.internal") : t("support.fromCustomer")}
-              placeholder={mode === "reply" ? t("support.reply") : mode === "internal" ? t("support.internal") : t("support.fromCustomer")}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-            />
-            <InlineError error={send.error} />
-            <div className="row">
-              {mode === "reply" && (
-                <CannedPicker
-                  vars={{ requester: k.requesterName ?? k.requesterEmail ?? "", workspace: customer?.name ?? "", ticket: k.number }}
-                  onInsert={(text) => setBody((b) => (b.trim() ? `${b.trimEnd()}\n\n${text}` : text))}
+              <div className="composer-input">
+                <Textarea
+                  aria-label={placeholder}
+                  placeholder={placeholder}
+                  value={body}
+                  rows={2}
+                  onChange={(e) => setBody(e.target.value)}
+                  // Ctrl/⌘ + Enter ส่ง · Enter อย่างเดียวขึ้นบรรทัดใหม่ (ข้อความตอบมักหลายบรรทัด)
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && body.trim() && !send.isPending) (e.preventDefault(), send.mutate());
+                  }}
                 />
-              )}
-              <Button type="submit" variant="primary" disabled={!body.trim() || send.isPending}>
-                {t("support.send")}
-              </Button>
-            </div>
-          </form>
-        )}
-      </section>
-      <div className="stack" style={{ alignSelf: "start" }}>
-        {context && <ContextCard context={context} />}
-        <aside className="card" aria-label={t("support.customer")}>
-        <h3 className="card-title">{customer?.name ?? t("support.customer")}</h3>
-        {customer ? (
-          <table className="tbl">
-            <tbody>
-              <tr>
-                <td className="muted">{t("support.plan")}</td>
-                <td>
-                  {planLabel(customer.plan)} ·{" "}
-                  {t("support.seats", {
-                    seats: customer.seats,
-                    limit: customer.seatLimit ?? "∞",
-                  })}
-                </td>
-              </tr>
-              <tr>
-                <td className="muted">{t("support.sla")}</td>
-                <td>{customer.sla.first ? t("support.slaValue", { n: customer.sla.first.n, unit: customer.sla.first.unit }) : t("support.slaNone")}</td>
-              </tr>
-              <tr>
-                <td className="muted">{t("support.accountManager")}</td>
-                <td>{customer.accountManager ?? "—"}</td>
-              </tr>
-              <tr>
-                <td className="muted">{t("support.tickets90")}</td>
-                <td>
-                  {t("support.tickets90Value", {
-                    n: customer.tickets90d,
-                    bad: customer.unhappy90d,
-                  })}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        ) : (
-          <p className="muted small">{t("support.noWs")}</p>
-        )}
-        {customer &&
-          (customer.accessGranted ? (
-            <Notice tone="info">
-              {t("support.access", {
-                until: customer.accessUntil ? fmt.date(customer.accessUntil) : t("support.accessForever"),
-              })}
-            </Notice>
-          ) : (
-            <Notice tone="warn">{t("support.noAccess")}</Notice>
-          ))}
-        {customer && (
-          <Link className={buttonClass("ghost", "small")} href={`/workspaces/${customer.id}`}>
-            {t("support.openCustomer")}
-          </Link>
-        )}
-        </aside>
-        {/* O36 · T8 งานของทีมพัฒนาที่ผูกกับ Ticket นี้ */}
-        <DevCard ticketId={id} number={k.number} />
+                <Button type="submit" variant="primary" disabled={!body.trim() || send.isPending}>
+                  {t("support.send")}
+                </Button>
+              </div>
+              <InlineError error={send.error} />
+            </form>
+          )}
+        </div>
+        <div className="ticket-info">
+          {context && <ContextCard context={context} />}
+          <aside className="card" aria-label={t("support.customer")}>
+            <h3 className="card-title">{customer?.name ?? t("support.customer")}</h3>
+            {customer ? (
+              <table className="tbl">
+                <tbody>
+                  <tr>
+                    <td className="muted">{t("support.plan")}</td>
+                    <td>
+                      {planLabel(customer.plan)} · {t("support.seats", { seats: customer.seats, limit: customer.seatLimit ?? "∞" })}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="muted">{t("support.sla")}</td>
+                    <td>{customer.sla.first ? t("support.slaValue", { n: customer.sla.first.n, unit: customer.sla.first.unit }) : t("support.slaNone")}</td>
+                  </tr>
+                  <tr>
+                    <td className="muted">{t("support.accountManager")}</td>
+                    <td>{customer.accountManager ?? "—"}</td>
+                  </tr>
+                  <tr>
+                    <td className="muted">{t("support.tickets90")}</td>
+                    <td>{t("support.tickets90Value", { n: customer.tickets90d, bad: customer.unhappy90d })}</td>
+                  </tr>
+                </tbody>
+              </table>
+            ) : (
+              <p className="muted small">{t("support.noWs")}</p>
+            )}
+            {customer &&
+              (customer.accessGranted ? (
+                <Notice tone="info">{t("support.access", { until: customer.accessUntil ? fmt.date(customer.accessUntil) : t("support.accessForever") })}</Notice>
+              ) : (
+                <Notice tone="warn">{t("support.noAccess")}</Notice>
+              ))}
+            {customer && (
+              <Link className={buttonClass("ghost", "small")} href={`/workspaces/${customer.id}`}>
+                {t("support.openCustomer")}
+              </Link>
+            )}
+          </aside>
+          {/* O36 · T8 งานของทีมพัฒนาที่ผูกกับ Ticket นี้ */}
+          <DevCard ticketId={id} number={k.number} />
+        </div>
       </div>
       {modal === "assign" && <AssignDialog id={id} onClose={() => setModal(null)} />}
       {/* O36 · T3 ปรับ: สร้าง / ผูกงานใน FM (ยังไม่ตั้งค่า = ส่งต่อแบบเดิม) */}
       {modal === "escalate" && <EscalateDialog ticket={{ id, number: k.number, subject: k.subject }} onClose={() => setModal(null)} />}
       {modal === "solve" && <SolveDialog id={id} number={k.number} onClose={() => setModal(null)} />}
-    </div>
+    </>
   );
 }
 

@@ -162,7 +162,10 @@ describe("ตั้งรหัสผ่าน + แอป Authenticator", () =>
     );
     renderWithProviders(<EnrollPage token="sample-enroll-token-123" />);
     expect(screen.getByRole("heading", { name: "ตั้งค่าการเข้าระบบ" })).toBeInTheDocument();
+    // แบบ C: ก่อนคลิกช่องเห็นแค่ข้อความสั้น · พิมพ์แล้วเงื่อนไขเลื่อนลงมา
+    expect(screen.getByText("อย่างน้อย 12 ตัว มีตัวพิมพ์ใหญ่และตัวเลข")).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("รหัสผ่านใหม่"), "short");
+    expect(screen.queryByText("อย่างน้อย 12 ตัว มีตัวพิมพ์ใหญ่และตัวเลข")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "ถัดไป" }));
     expect(screen.getByText("รหัสผ่านต้องยาวอย่างน้อย 12 ตัว")).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("รหัสผ่านใหม่"), "-but-long-now");
@@ -179,6 +182,7 @@ describe("ตั้งรหัสผ่าน + แอป Authenticator", () =>
     expect(setupBody).toBeUndefined();
     await userEvent.clear(screen.getByLabelText("ยืนยันรหัสผ่าน"));
     await userEvent.type(screen.getByLabelText("ยืนยันรหัสผ่าน"), "short-but-long-now-X9");
+    expect(screen.getByText("✓ ตรงกัน")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "ถัดไป" }));
     expect(await screen.findByText("JBSW Y3DP EHPK 3PXP")).toBeInTheDocument();
     expect(setupBody).toEqual({ enrollToken: "sample-enroll-token-123" });

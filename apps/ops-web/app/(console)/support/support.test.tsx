@@ -149,6 +149,67 @@ describe("Support", () => {
     await waitFor(() => expect(asked.at(-1)?.get("offset")).toBe("0"));
   });
 
+  it("ช่วง 3: แผงตัวกรอง Ticket (ความสำคัญหลายค่า · SLA · ผู้รับ) และเรียงส่งไป ops-api · ว่างเพราะตัวกรองไม่ขึ้นข้อความคิวว่าง", async () => {
+    asRole("support");
+    const asked: URLSearchParams[] = [];
+    page("", [
+      http.get(`${OPS}/tickets`, ({ request }) => {
+        const q = new URL(request.url).searchParams;
+        asked.push(q);
+        const items = q.has("priority") ? [] : [row];
+        return HttpResponse.json({ items, total: items.length, counts: { mine: 1, none: 0, all: 1 }, summary: { open: 1, unassigned: 0, breached: 0, firstResponseMinutes: null, csat: null } });
+      }),
+    ]);
+    await screen.findByText("นำเข้า Excel ไม่ได้");
+    await userEvent.click(screen.getByRole("button", { name: /^ตัวกรอง/ }));
+    const prio = screen.getByRole("group", { name: "ความสำคัญ" });
+    await userEvent.click(within(prio).getByRole("button", { name: "ด่วน" }));
+    await userEvent.click(within(prio).getByRole("button", { name: "สูง" }));
+    await userEvent.click(screen.getByRole("button", { name: "เกิน SLA แล้ว" }));
+    await userEvent.click(await screen.findByRole("button", { name: "ซัพพอร์ตสอง" }));
+    await userEvent.selectOptions(screen.getByLabelText("เรียงตาม"), "waiting");
+    await waitFor(() => expect(asked.at(-1)?.get("sort")).toBe("waiting"));
+    expect(asked.at(-1)?.get("priority")).toBe("urgent,high");
+    expect(asked.at(-1)?.get("sla")).toBe("breached");
+    expect(asked.at(-1)?.get("assignees")).toBe("s-2");
+    expect(await screen.findByText("ไม่มี Ticket")).toBeInTheDocument();
+    expect(screen.queryByText("ไม่มี Ticket ค้างในมือคุณ")).not.toBeInTheDocument();
+  });
+
+  it("ช่วง 3: ติ๊กหลายเรื่องแล้วตอบทีเดียว · ดูตัวอย่าง · ต้องพิมพ์จำนวนให้ตรงจึงส่ง · เห็นความคืบหน้าและผล", async () => {
+    asRole("support");
+    const two = [row, { ...row, id: "t-2", number: 513, subject: "LINE ไม่เด้ง" }];
+    const sent: Record<string, unknown>[] = [];
+    page("", [
+      http.get(`${OPS}/tickets`, () => HttpResponse.json({ items: two, total: 2, counts: { mine: 2, none: 0, all: 2 }, summary: { open: 2, unassigned: 0, breached: 0, firstResponseMinutes: null, csat: null } })),
+      http.post(`${OPS}/tickets/bulk/preview`, () =>
+        HttpResponse.json({ total: 2, eligible: 1, customerFacing: true, skipped: [{ id: "t-2", number: 513, reason: "typing", message: "ซัพพอร์ตสอง กำลังพิมพ์ตอบ" }], sample: { number: 512, subject: row.subject, body: "เรียนคุณพิม เรื่อง #512" } }),
+      ),
+      http.post(`${OPS}/tickets/bulk`, async ({ request }) => {
+        sent.push((await request.json()) as Record<string, unknown>);
+        return HttpResponse.json({ id: "job-1", action: "reply", total: 1, done: 0, ok: [], skipped: [], failed: [], status: "running" }, { status: 202 });
+      }),
+      http.get(`${OPS}/tickets/bulk/job-1`, () => HttpResponse.json({ id: "job-1", action: "reply", total: 1, done: 1, ok: [{ id: T, number: 512 }], skipped: [{ id: "t-2", number: 513, reason: "typing", message: "ซัพพอร์ตสอง กำลังพิมพ์ตอบ" }], failed: [], status: "done" })),
+    ]);
+    await screen.findByText("LINE ไม่เด้ง");
+    await userEvent.click(screen.getByLabelText("เลือก #512"));
+    await userEvent.click(screen.getByLabelText("เลือก #513"));
+    expect(screen.getByText("เลือก 2 เรื่อง")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "ตอบ" }));
+    const dialog = await screen.findByRole("dialog", { name: "ทำกับ 2 เรื่อง" });
+    await userEvent.type(within(dialog).getByLabelText("ข้อความ"), "เรียนคุณ{{ชื่อผู้แจ้ง} เรื่อง {{เลข Ticket}");
+    await userEvent.click(within(dialog).getByRole("button", { name: "ดูตัวอย่าง" }));
+    expect(await within(dialog).findByText("เรียนคุณพิม เรื่อง #512")).toBeInTheDocument();
+    expect(within(dialog).getByText(/ซัพพอร์ตสอง กำลังพิมพ์ตอบ/)).toBeInTheDocument();
+    const go = within(dialog).getByRole("button", { name: "ส่ง 1 เรื่อง" });
+    expect(go).toBeDisabled();
+    await userEvent.type(within(dialog).getByLabelText("พิมพ์ 1 เพื่อยืนยันการส่งถึงลูกค้า"), "1");
+    await userEvent.click(go);
+    expect(await within(dialog).findByText("สำเร็จ 1 · ข้าม 1 · ไม่สำเร็จ 0")).toBeInTheDocument();
+    expect(sent[0]).toEqual({ ids: [T, "t-2"], action: { type: "reply", body: "เรียนคุณ{ชื่อผู้แจ้ง} เรื่อง {เลข Ticket}", internal: false }, confirmCount: 1 });
+    expect(within(dialog).getByRole("button", { name: "ดาวน์โหลดผล (CSV)" })).toBeEnabled();
+  });
+
   it("ช่วง 2: ปุ่มลัด J / Enter เปิดเรื่อง · พิมพ์ในช่องค้นหาแล้วปุ่มลัดไม่ทำงาน", async () => {
     asRole("support");
     page();
@@ -319,7 +380,8 @@ describe("Support", () => {
     const me = "00000000-0000-4000-8000-000000000002";
     const extra = [
       http.get(`${OPS}/support/team`, ({ request }) => {
-        seen = new URL(request.url).search;
+        // ตัวเลือกในแผงตัวกรอง (ผู้รับ) เรียกแบบไม่มี seen · ตรวจเฉพาะการเรียกของแผงทีม
+        if (new URL(request.url).search) seen = new URL(request.url).search;
         return HttpResponse.json({
           mode: "least",
           idleMinutes: 15,

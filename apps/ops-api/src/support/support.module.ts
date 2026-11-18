@@ -7,7 +7,8 @@ import { AddHolidayBody, BotApplyBody, BotPreviewBody, HolidaysQuery, HolidaysSe
 import { PresenceBody, PresenceService, TeamQuery } from './presence.service.js';
 import { AccountsBody, CannedBody, ReorderBody, RuleBody, RulePatch, SaveSettingsBody, SupportSettingsService } from './settings.service.js';
 import { ExtendSessionBody, SessionsQuery, StartSessionBody, SupportService } from './support.service.js';
-import { AssignBody, CreateTicketBody, CsatBody, EscalateBody, MessageBody, SolveBody, TicketsQuery, TicketsService } from './tickets.service.js';
+import { BulkPreviewBody, BulkStartBody, BulkTicketsService } from './bulk.service.js';
+import { AssignBody, CreateTicketBody, CsatBody, EscalateBody, IncidentLinkBody, MessageBody, PriorityBody, SolveBody, TicketsQuery, TicketsService } from './tickets.service.js';
 
 /** เข้าบัญชีลูกค้าเพื่อช่วยเหลือ (Q3 · C1) */
 @Controller('ops')
@@ -45,7 +46,29 @@ export class SupportController {
  */
 @Controller('ops/tickets')
 export class TicketsController {
-  constructor(private readonly tickets: TicketsService) {}
+  constructor(
+    private readonly tickets: TicketsService,
+    private readonly bulk: BulkTicketsService,
+  ) {}
+
+  // ---- ช่วง 3: ทำทีละหลายเรื่อง (ประกาศก่อน :id ให้ path ไม่ชนกัน) · คนตอบ Ticket เท่านั้น
+  @Roles('support')
+  @Post('bulk/preview')
+  @HttpCode(200)
+  bulkPreview(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.bulk.preview(req.staff!, parse(BulkPreviewBody, body));
+  }
+  @Roles('support')
+  @Post('bulk')
+  @HttpCode(202)
+  bulkStart(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.bulk.start(req.staff!, parse(BulkStartBody, body));
+  }
+  @Roles('support')
+  @Get('bulk/:jobId')
+  bulkJob(@Req() req: OpsRequest, @Param('jobId') id: string) {
+    return this.bulk.job(req.staff!, id);
+  }
 
   @Roles('support', 'owner')
   @Get()
@@ -116,6 +139,17 @@ export class TicketsController {
   @HttpCode(200)
   solve(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
     return this.tickets.solve(req.staff!, id, parse(SolveBody, body));
+  }
+  @Roles('support', 'owner')
+  @Post([':id/priority', ':id\\:priority'])
+  @HttpCode(200)
+  priority(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.tickets.setPriority(req.staff!, id, parse(PriorityBody, body));
+  }
+  @Roles('support', 'owner')
+  @Put(':id/incident')
+  incident(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
+    return this.tickets.linkIncident(req.staff!, id, parse(IncidentLinkBody, body));
   }
   @Roles('support')
   @Post([':id/csat', ':id\\:csat'])
@@ -262,7 +296,7 @@ export class SupportSettingsController {
 
 @Module({
   controllers: [SupportController, TicketsController, SupportSettingsController],
-  providers: [SupportService, TicketsService, SupportSettingsService, PresenceService, HolidaysService, BotHolidaysClient],
+  providers: [SupportService, TicketsService, BulkTicketsService, SupportSettingsService, PresenceService, HolidaysService, BotHolidaysClient],
   exports: [TicketsService, SupportSettingsService, PresenceService],
 })
 export class SupportModule {}

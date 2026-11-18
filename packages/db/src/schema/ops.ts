@@ -1,6 +1,6 @@
 // N. หลังบ้าน Friday · ยกเว้น support_access_grants ที่ลูกค้าเปิด/ปิดสิทธิ์เองผ่าน A31
 import { sql } from 'drizzle-orm';
-import { type AnyPgColumn, bigint, boolean, check, date, foreignKey, index, integer, jsonb, pgTable, primaryKey, smallint, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { type AnyPgColumn, bigint, boolean, check, customType, date, foreignKey, index, integer, jsonb, pgTable, primaryKey, smallint, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, pk, tstz, updatedAt } from './_common.ts';
 import { users } from './identity.ts';
 import { workspaceId } from './project.ts';
@@ -188,6 +188,59 @@ export const opsPresence = pgTable('ops_presence', {
   check('ops_presence_type_valid', oneOf(t.targetType, ['ticket', 'payment', 'approval', 'privacy'])),
   check('ops_presence_mode_valid', oneOf(t.mode, ['viewing', 'typing']))]);
 
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
+
+/**
+ * บัญชีลูกค้าระดับบริษัท (ช่วง 3) · รวม Workspace ของผู้ซื้อเดียวกันและบริษัทในเครือ (เลขภาษีหลายเลข)
+ * ระบบเสนอจากผู้ซื้อที่มีตั้งแต่ 2 Workspace คนยืนยัน (ไม่สร้างเอง) · enterprise มีสัญญา: SLA ตามสัญญาใช้แทนของแพ็กเกจ
+ * contacts = [{ name, email, phone, role: signer | billing | it }] · contract_value เป็นสตางค์ต่อปี
+ * contract_sla = { first, resolve } รูปแบบเดียวกับ SLA ของแพ็กเกจ · renewal_reminded = เตือนต่อสัญญาไปแล้วที่กี่วัน (90 / 60 / 30) ของวันหมดปัจจุบัน
+ */
+export const customerAccounts = pgTable('customer_accounts', {
+  id: pk(), name: text().notNull(), taxIds: text().array().notNull().default(sql`'{}'`),
+  managerId: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+  kind: text().notNull().default('standard'), contacts: jsonb().notNull().default(sql`'[]'::jsonb`), notes: text(),
+  contractStart: date(), contractEnd: date(), contractValue: bigint({ mode: 'number' }), contractSeats: integer(), contractSla: jsonb(),
+  renewalReminded: smallint(),
+  createdBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }), createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [index('customer_accounts_contract_end_idx').on(t.contractEnd),
+  check('customer_accounts_kind_valid', oneOf(t.kind, ['standard', 'enterprise'])),
+  check('customer_accounts_contract_range', sql`${t.contractEnd} IS NULL OR ${t.contractStart} IS NULL OR ${t.contractEnd} >= ${t.contractStart}`)]);
+
+/** Workspace ในบัญชีลูกค้า · หนึ่ง Workspace อยู่ได้บัญชีเดียว */
+export const customerAccountWorkspaces = pgTable('customer_account_workspaces', {
+  workspaceId: uuid().primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),
+  accountId: uuid().notNull().references(() => customerAccounts.id, { onDelete: 'cascade' }),
+  addedBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }), createdAt: createdAt(),
+}, (t) => [index('customer_account_workspaces_account_idx').on(t.accountId)]);
+
+/** ไฟล์สัญญา (PDF ไม่เกิน 10 MB) · เก็บในฐานข้อมูลเพราะ ops-api ไม่มีที่เก็บไฟล์ของตัวเอง · บัญชีละหนึ่งไฟล์ (อัปโหลดใหม่ = แทนที่) */
+export const customerAccountFiles = pgTable('customer_account_files', {
+  accountId: uuid().primaryKey().references(() => customerAccounts.id, { onDelete: 'cascade' }),
+  name: text().notNull(), mime: text().notNull(), size: integer().notNull(), data: bytea().notNull(),
+  uploadedBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }), createdAt: createdAt(),
+});
+
+/**
+ * มุมมองที่บันทึกไว้ (ช่วง 3) · roles ว่าง = ส่วนตัว · มีค่า = มุมมองของทีม (เห็นเฉพาะบทบาทที่เลือก · สร้างได้เฉพาะ Owner และหัวหน้าทีม Support)
+ * filters = ตัวกรองของหน้านั้น (คีย์เดียวกับ query ของรายการ) · sort / tab เก็บใน filters ด้วย
+ */
+export const opsSavedViews = pgTable('ops_saved_views', {
+  id: pk(), ownerId: uuid().notNull().references(() => staffUsers.id, { onDelete: 'cascade' }),
+  page: text().notNull(), name: text().notNull(), filters: jsonb().notNull().default({}),
+  roles: text().array().notNull().default(sql`'{}'`),
+  createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [index('ops_saved_views_page_idx').on(t.page),
+  check('ops_saved_views_page_valid', oneOf(t.page, ['workspaces', 'tickets', 'overdue', 'users', 'privacy', 'deliveries', 'invoices']))]);
+
+/** การตั้งค่ามุมมองของแต่ละคน: ปักที่เมนูซ้าย · ซ่อนมุมมองของทีม · ลำดับ · มุมมองเริ่มต้นของหน้า */
+export const opsViewPrefs = pgTable('ops_view_prefs', {
+  staffId: uuid().notNull().references(() => staffUsers.id, { onDelete: 'cascade' }),
+  viewId: uuid().notNull().references(() => opsSavedViews.id, { onDelete: 'cascade' }),
+  pinned: boolean().notNull().default(false), hidden: boolean().notNull().default(false),
+  position: integer().notNull().default(0), isDefault: boolean().notNull().default(false),
+}, (t) => [primaryKey({ columns: [t.staffId, t.viewId] })]);
+
 /** ข้อความสำเร็จรูป (T4) · ตัวแปร {ชื่อผู้แจ้ง} {ชื่อ Workspace} {เลข Ticket} แทนค่าตอนใส่ในช่องตอบ · เลิกใช้แล้วเก็บไว้ (archived_at) */
 export const supportCannedReplies = pgTable('support_canned_replies', {
   id: pk(), title: text().notNull(), body: text().notNull(), tag: text(), uses: integer().notNull().default(0),
@@ -281,6 +334,14 @@ export const incidents = pgTable('incidents', {
   check('incidents_impact_valid', oneOf(t.impact, ['minor', 'partial', 'major'])),
   check('incidents_status_valid', oneOf(t.status, INCIDENT_STATUSES)),
   check('incidents_resolved', sql`(${t.status} = 'resolved') = (${t.resolvedAt} IS NOT NULL)`)]);
+
+/** Ticket ที่ผูกกับเหตุขัดข้อง (ช่วง 3) · หนึ่ง Ticket ผูกได้เหตุเดียว · ปิดเหตุแล้วส่งข้อความปิดเรื่องให้ทุก Ticket ที่ผูกได้ */
+export const supportTicketIncidents = pgTable('support_ticket_incidents', {
+  ticketId: uuid().primaryKey().references(() => supportTickets.id, { onDelete: 'cascade' }),
+  incidentId: uuid().notNull().references(() => incidents.id, { onDelete: 'cascade' }),
+  linkedBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+  createdAt: createdAt(),
+}, (t) => [index('support_ticket_incidents_incident_idx').on(t.incidentId)]);
 
 export const incidentUpdates = pgTable('incident_updates', {
   id: pk(), incidentId: uuid().notNull().references(() => incidents.id, { onDelete: 'cascade' }),

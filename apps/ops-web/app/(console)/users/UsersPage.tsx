@@ -13,6 +13,8 @@ import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { useRowNav } from "@/lib/shortcuts";
 import { useUrlFilters } from "@/lib/url-state";
+import { ActiveFilters, FilterButton, type FilterDef, filterKeys, filterQuery } from "@/components/filters";
+import { ViewsBar } from "@/components/views-bar";
 import { useFmt } from "../workspaces/_parts/format";
 
 type Status = "active" | "locked" | "unverified" | "disabled";
@@ -58,7 +60,21 @@ export function UsersPage() {
   const params = useSearchParams();
   const router = useRouter();
   // ตัวกรองอยู่ใน URL (ช่วง 1): เปิด / ปิดผู้ใช้แล้วกลับมาที่เดิม
-  const [f, setF] = useUrlFilters({ q: "", status: "", page: "0" });
+  // ช่วง 3: ตัวกรองเพิ่ม · คีย์ตรงกับ ops-api › users.service UsersQuery
+  const tf = useTranslations("customers.users.f");
+  const one = (key: "login" | "mfa" | "line" | "lang" | "activity" | "multi", group: string, values: string[]): FilterDef => ({ key, label: tf(key), kind: "single", options: values.map((v) => ({ value: v, label: tf(`${group}.${v}` as "mfas.on") })) });
+  const defs: FilterDef[] = [
+    one("login", "logins", ["password", "google", "line", "microsoft", "apple"]),
+    one("mfa", "mfas", ["on", "off"]),
+    one("line", "lines", ["bound", "unbound"]),
+    one("lang", "langs", ["th", "en"]),
+    one("activity", "activities", ["active7", "idle30", "never"]),
+    one("multi", "multis", ["yes"]),
+  ];
+  const defaults = { q: "", status: "", page: "0", ...filterKeys(defs) };
+  const [f, setF] = useUrlFilters(defaults);
+  const fq = filterQuery(defs, f);
+  const setFilters = (patch: Record<string, string>) => setF({ ...patch, page: "0" });
   const [q, setQ] = useState(f.q);
   const status = f.status as Status | "";
   const setStatus = (v: Status | "") => setF({ status: v, page: "0" });
@@ -69,7 +85,7 @@ export function UsersPage() {
     if (search !== f.q) setF({ q: search, page: "0" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
-  const filter = new URLSearchParams({ limit: "50", offset: String(offset), ...(search ? { q: search } : {}), ...(status ? { status } : {}) });
+  const filter = new URLSearchParams({ limit: "50", offset: String(offset), ...(search ? { q: search } : {}), ...(status ? { status } : {}), ...fq });
   const list = useQuery({ queryKey: ["ops", "users", filter.toString()], queryFn: () => api.get<{ items: UserRow[]; total: number }>(`/users?${filter}`), placeholderData: keepPreviousData });
   const open = params?.get("id") ?? null;
   // เปิด / ปิดผู้ใช้คงตัวกรองเดิมไว้
@@ -100,14 +116,17 @@ export function UsersPage() {
               </option>
             ))}
           </select>
+          <FilterButton defs={defs} values={f} onChange={setFilters} />
         </div>
+        <ViewsBar page="users" values={f} defaults={defaults} onApply={(v) => (setQ(v.q ?? ""), setF({ ...defaults, ...v }))} />
+        <ActiveFilters defs={defs} values={f} onChange={setFilters} />
         <p className="muted small">{t("hint")}</p>
         {list.isPending ? (
           <TableSkeleton rows={6} cols={7} />
         ) : list.error ? (
           <ErrorBlock error={list.error} retry={() => void list.refetch()} />
         ) : !rows.length ? (
-          <Empty title={t("empty")} onClearFilters={search || status ? () => (setQ(""), setStatus("")) : undefined} />
+          <Empty title={t("empty")} onClearFilters={search || status || Object.keys(fq).length ? () => (setQ(""), setF({ ...filterKeys(defs), status: "", page: "0" })) : undefined} />
         ) : (
           <>
             <div className="tbl-wrap">

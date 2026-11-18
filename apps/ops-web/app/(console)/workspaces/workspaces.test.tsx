@@ -62,6 +62,24 @@ describe("รายชื่อ Workspace", () => {
     expect(asked.at(-1)?.get("feature")).toBe("line");
   });
 
+  it("ช่วง 3: แผงตัวกรองเลือกหลายแพ็กเกจ · สุขภาพ · MRR เป็นบาทส่งเป็นสตางค์ · ชิปเหนือตารางเอาออกได้", async () => {
+    const asked: URLSearchParams[] = [];
+    list((u) => (asked.push(u.searchParams), undefined));
+    shell(<WorkspacesList />, "/workspaces");
+    await screen.findByText("สยามเดโม");
+    await userEvent.click(screen.getByRole("button", { name: /^ตัวกรอง/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Team M" }));
+    await userEvent.click(screen.getByRole("button", { name: "Team L" }));
+    await userEvent.click(screen.getByRole("button", { name: "ต่ำ (<40)" }));
+    await userEvent.type(screen.getByLabelText("MRR (บาท) ต่ำสุด"), "1000");
+    await waitFor(() => expect(asked.at(-1)?.get("mrrMin")).toBe("100000"));
+    expect(asked.at(-1)?.get("plan")).toBe("team_m,team_l");
+    expect(asked.at(-1)?.get("health")).toBe("low");
+    expect(screen.getByRole("button", { name: /^ตัวกรอง \(3\)/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "เอาตัวกรอง สุขภาพ ออก" }));
+    await waitFor(() => expect(asked.at(-1)?.get("health")).toBeNull());
+  });
+
   it("ช่วง 1: ตัวกรองอ่านจาก URL (กดย้อนกลับแล้วยังอยู่ที่เดิม) และเขียนกลับเมื่อเปลี่ยน", async () => {
     const asked: URLSearchParams[] = [];
     list((u) => (asked.push(u.searchParams), undefined));
@@ -71,7 +89,7 @@ describe("รายชื่อ Workspace", () => {
     expect(asked.at(-1)?.get("offset")).toBe("50");
     expect(asked.at(-1)?.get("sort")).toBe("health");
     await userEvent.click(screen.getByRole("tab", { name: "ทดลอง" }));
-    expect(router.replace).toHaveBeenLastCalledWith("/workspaces?plan=team_m&status=trialing&sort=health", { scroll: false });
+    expect(router.replace).toHaveBeenLastCalledWith("/workspaces?status=trialing&sort=health&plan=team_m", { scroll: false });
   });
 
   it("ช่วง 1: คอลัมน์ผู้ซื้อ · กด +1 Workspace แล้วกรองผู้ซื้อพร้อมแถวสรุปยอด", async () => {

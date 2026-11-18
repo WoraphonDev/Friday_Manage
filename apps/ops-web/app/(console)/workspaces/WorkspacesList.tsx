@@ -8,12 +8,16 @@ import { useTranslations } from "next-intl";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { hasAny, initials, seesMoney } from "@/components/access";
 import { ExportDialog } from "@/components/dialogs";
-import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, ListBar, Notice, PageHead, Pager, Popover, Switch, TableSkeleton, Tabs } from "@/components/kit";
+import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, ListBar, Notice, PageHead, Pager, Switch, TableSkeleton, Tabs } from "@/components/kit";
 import { Button, buttonClass, Input } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { useRowNav } from "@/lib/shortcuts";
 import { useUrlFilters } from "@/lib/url-state";
+import { ActiveFilters, FilterButton, filterKeys, filterQuery } from "@/components/filters";
+import { ViewsBar } from "@/components/views-bar";
+import { useWorkspaceFilters } from "./_parts/filters";
+import { CreateAccountDialog } from "../accounts/_parts/CreateAccount";
 import { type AnnounceFilter, AnnounceDrawer } from "./_parts/Announce";
 import { BulkCouponDialog, BulkResultDrawer, BulkTrialDialog, namesOf } from "./_parts/Bulk";
 import styles from "./_parts/bulk.module.css";
@@ -21,8 +25,7 @@ import { healthTone, planLabel, useFmt } from "./_parts/format";
 import { type TestFlag, TestLabelDialog } from "./_parts/TestLabel";
 import type { BulkAction, BulkFilter, BulkResult, BulkTarget, Integration, Overview, WsList, WsRow } from "./_parts/types";
 
-const PLANS = ["", "free", "team_s", "team_m", "team_l", "enterprise"] as const;
-const SORTS = ["recent_activity", "mrr", "health", "newest"] as const;
+const SORTS = ["recent_activity", "mrr", "health", "newest", "overdue_risk", "trial_ending"] as const;
 const FEATURES = ["line", "webhook", "github", "api_token", "automation", "import", "no_project"] as const;
 /** แท็บสถานะ · ค่าเดียวกับตัวกรอง status ของ ops-api (trialing / past_due = สถานะแพ็กเกจ) */
 const STATUSES = ["", "paying", "trialing", "past_due", "suspended"] as const;
@@ -45,14 +48,17 @@ export function WorkspacesList() {
     if (id) router.replace(`/workspaces/${id}`);
   }, [params, router]);
   // ตัวกรองอยู่ใน URL: กดย้อนกลับจากหน้ารายละเอียดแล้วยังอยู่ที่เดิม · ส่งลิงก์ให้เพื่อนได้ (ช่วง 1)
-  const [f, setF] = useUrlFilters({ q: "", plan: "", status: "", sort: "recent_activity", feature: "", page: "0", buyer: "", test: "", suggest: "" });
+  // ช่วง 3: ตัวกรองทั้งหมดของหน้า (แผงตัวกรองกลาง) · ค่าอยู่ใน URL · ใส่คีย์ MRR ไว้เสมอ เพราะสิทธิ์เห็นเงินรู้หลังโหลด me
+  const defs = useWorkspaceFilters(money);
+  const defaults = { q: "", status: "", sort: "recent_activity", page: "0", buyer: "", test: "", suggest: "", ...filterKeys(defs), plan: "", feature: "", mrrMin: "", mrrMax: "" };
+  const [f, setF] = useUrlFilters(defaults);
   const [q, setQ] = useState(f.q);
   const { plan, status, feature } = f;
+  const fq = filterQuery(defs, f);
+  const setFilters = (patch: Record<string, string>) => setF({ ...patch, page: "0" });
   const sort = ((SORTS as readonly string[]).includes(f.sort) ? f.sort : "recent_activity") as (typeof SORTS)[number];
   const offset = Number(f.page) * PAGE || 0;
-  const setPlan = (v: string) => setF({ plan: v, page: "0" });
   const setStatus = (v: string) => setF({ status: v, page: "0" });
-  const setFeature = (v: string) => setF({ feature: v, page: "0" });
   const setSort = (v: string) => setF({ sort: v });
   const setOffset = (v: number) => setF({ page: String(Math.floor(v / PAGE)) });
   const [peek, setPeek] = useState<string | null>(null);
@@ -69,9 +75,8 @@ export function WorkspacesList() {
     offset: String(offset),
     sort,
     ...(search ? { q: search } : {}),
-    ...(plan ? { plan } : {}),
+    ...fq,
     ...(status ? { status } : {}),
-    ...(feature ? { feature } : {}),
     ...(f.buyer ? { buyer: f.buyer } : {}),
     // ตรวจรายการที่ระบบเสนอ: ดูเฉพาะที่ยังไม่ติดป้าย (ค่าเริ่มต้นของ ops-api ซ่อน Workspace ทดสอบ)
     ...(f.test ? { test: f.test } : {}),
@@ -84,7 +89,7 @@ export function WorkspacesList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
   // เปลี่ยนตัวกรองแล้วล้างการเลือก (รายการที่เลือกไว้อาจไม่อยู่ในตัวกรองใหม่) · เปลี่ยนการเรียงไม่ล้าง
-  const filterKey = `${search}|${plan}|${status}|${feature}|${f.buyer}|${f.test}|${f.suggest}`;
+  const filterKey = `${search}|${JSON.stringify(fq)}|${status}|${f.buyer}|${f.test}|${f.suggest}`;
   const lastFilter = useRef(filterKey);
   useEffect(() => {
     if (lastFilter.current === filterKey) return;
@@ -96,9 +101,8 @@ export function WorkspacesList() {
   const tk = useTranslations("common.keys");
   const nav = useRowNav(rows, { onOpen: (r) => setPeek(r.id), onToggle: (r) => toggle(r.id, r.name, !selected.has(r.id)), labels: { down: tk("down"), open: tk("open"), toggle: tk("toggle") } });
   const total = list.data?.total ?? 0;
-  const filtered = !!(search || plan || feature || status || f.buyer || f.suggest);
-  const clear = () => (setQ(""), setF({ q: "", plan: "", feature: "", status: "", page: "0", buyer: "", suggest: "" }));
-  const extraFilters = (plan ? 1 : 0) + (feature ? 1 : 0);
+  const filtered = !!(search || Object.keys(fq).length || status || f.buyer || f.suggest);
+  const clear = () => (setQ(""), setF({ ...filterKeys(defs), q: "", status: "", page: "0", buyer: "", suggest: "" }));
   const pageAll = rows.length > 0 && rows.every((r) => selected.has(r.id));
   const pageSome = rows.some((r) => selected.has(r.id));
   const headBox = useRef<HTMLInputElement>(null);
@@ -122,18 +126,25 @@ export function WorkspacesList() {
     setByFilter(false);
   };
   const resetSelection = () => (setSelected(new Map()), setByFilter(false));
+  // สร้างบัญชีลูกค้าจากผู้ซื้อที่กรองอยู่: ดึงรหัสทุก Workspace ของผู้ซื้อ (ไม่ใช่เฉพาะหน้านี้)
+  const ta = useTranslations("customers.accounts");
+  const [making, setMaking] = useState<{ name: string; taxIds: string[]; workspaces: { id: string; name: string }[] } | null>(null);
+  const makeAccount = async () => {
+    const key = f.buyer;
+    const all = await api.get<{ items: { id: string; name: string }[] }>(`/workspaces?buyer=${encodeURIComponent(key)}&limit=200&sort=newest`);
+    setMaking({ name: list.data?.buyer?.name ?? "", taxIds: key.startsWith("t:") ? [key.slice(2)] : [], workspaces: all.items.map((w) => ({ id: w.id, name: w.name })) });
+  };
   const serverFilter: BulkFilter = {
-    ...(plan ? { plan } : {}),
+    ...fq,
     ...(status ? { status } : {}),
     ...(search ? { q: search } : {}),
-    ...(feature ? { feature } : {}),
     ...(f.buyer ? { buyer: f.buyer } : {}),
     ...(f.test ? { test: f.test as BulkFilter["test"] } : {}),
     ...(f.suggest ? { suggest: f.suggest as BulkFilter["suggest"] } : {}),
   };
   const target: BulkTarget = byFilter ? { filter: serverFilter } : { ids: [...selected.keys()] };
   const count = byFilter ? total : selected.size;
-  const filterText = [plan && planLabel(plan), status && (status === "paying" ? t("list.tabs.paying") : t.has(`wsStatus.${status}` as "wsStatus.trial") ? t(`wsStatus.${status}` as "wsStatus.trial") : t.has(`subStatus.${status}` as "subStatus.trialing") ? t(`subStatus.${status}` as "subStatus.trialing") : status), feature && t(`list.features.${feature}` as "list.features.line"), search && `"${search}"`].filter(Boolean).join(" · ");
+  const filterText = [plan && plan.split(",").map(planLabel).join(", "), status && (status === "paying" ? t("list.tabs.paying") : t.has(`wsStatus.${status}` as "wsStatus.trial") ? t(`wsStatus.${status}` as "wsStatus.trial") : t.has(`subStatus.${status}` as "subStatus.trialing") ? t(`subStatus.${status}` as "subStatus.trialing") : status), feature && t(`list.features.${feature}` as "list.features.line"), search && `"${search}"`].filter(Boolean).join(" · ");
   const tb = (key: "byFilter" | "byFilterAll") => (key === "byFilter" ? t("bulk.byFilter", { filter: filterText }) : t("bulk.byFilterAll"));
   const scope = byFilter ? tb(filterText ? "byFilter" : "byFilterAll") : namesOf(tbulk, [...selected.values()], selected.size);
   const finish = (action: BulkAction, result: BulkResult) => {
@@ -195,39 +206,7 @@ export function WorkspacesList() {
         }
       >
         <Input data-page-search aria-label={t("list.search")} placeholder={t("list.search")} value={q} onChange={(e) => setQ(e.target.value)} />
-        <Popover
-          label={t("list.filters")}
-          trigger={({ toggle, open }) => (
-            <Button aria-expanded={open} onClick={toggle}>
-              <SlidersHorizontal size={14} aria-hidden="true" /> {extraFilters ? t("list.filtersOn", { n: extraFilters }) : t("list.filters")}
-            </Button>
-          )}
-        >
-          {() => (
-            <div className="stack" style={{ padding: 8, gap: 12 }}>
-              <ChipGroup className="row" role="group" aria-label={t("list.plan")}>
-                <span className="muted small" style={{ width: "100%" }}>
-                  {t("list.plan")}
-                </span>
-                {PLANS.map((p) => (
-                  <Chip key={p || "all"} pressed={plan === p} onClick={() => setPlan(p)}>
-                    {p ? planLabel(p) : t("list.all")}
-                  </Chip>
-                ))}
-              </ChipGroup>
-              <div className="row" role="group" aria-label={t("list.feature")}>
-                <span className="muted small" style={{ width: "100%" }}>
-                  {t("list.feature")}
-                </span>
-                {FEATURES.map((f) => (
-                  <Chip key={f} pressed={feature === f} onClick={() => setFeature(feature === f ? "" : f)}>
-                    {t(`list.features.${f}`)}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-          )}
-        </Popover>
+        <FilterButton defs={defs} values={f} onChange={setFilters} />
         <label className="row small muted" style={{ gap: 6 }}>
           <Switch checked={f.test === "all"} onChange={(on) => setF({ test: on ? "all" : "", page: "0" })} label={t("test.showTests")} />
           {t("test.showTests")}
@@ -240,6 +219,8 @@ export function WorkspacesList() {
           ))}
         </select>
       </ListBar>
+      <ViewsBar page="workspaces" values={f} defaults={defaults} onApply={(v) => (setQ(v.q ?? ""), setF({ ...defaults, ...v }))} />
+      <ActiveFilters defs={defs} values={f} onChange={setFilters} />
       {(f.buyer || f.suggest) && (
         <div className="row">
           {f.suggest && (
@@ -285,8 +266,25 @@ export function WorkspacesList() {
           <span>
             {t("buyer.sumTickets")} <b>{list.data.buyer.openTickets}</b>
           </span>
+          {/* ช่วง 3 · บัญชีลูกค้า: ผู้ซื้อหลาย Workspace ที่ยังไม่มีบัญชี = เสนอให้สร้าง (คนยืนยัน) */}
+          {list.data.buyer.account ? (
+            <Link className="link-button" href={`/accounts/${list.data.buyer.account.id}`}>
+              {ta("buyer.open", { name: list.data.buyer.account.name })}
+            </Link>
+          ) : (
+            list.data.buyer.workspaces >= 2 &&
+            hasAny(me, "owner", "support") && (
+              <>
+                <span className="muted small">{ta("buyer.hint", { n: list.data.buyer.workspaces })}</span>
+                <Button size="small" onClick={() => void makeAccount()}>
+                  {ta("buyer.create")}
+                </Button>
+              </>
+            )
+          )}
         </div>
       )}
+      {making && <CreateAccountDialog name={making.name} taxIds={making.taxIds} workspaces={making.workspaces} onClose={() => setMaking(null)} />}
       <div className="stack">
         {/* แถบทำรายการหลายแถว (H4) ขึ้นเมื่อเริ่มติ๊กเลือก: เลื่อนเข้าแบบนุ่ม */}
         {(selected.size > 0 || byFilter) && (
@@ -377,7 +375,13 @@ export function WorkspacesList() {
                       <td onClick={(e) => e.stopPropagation()}>
                         {/* ผู้ซื้อ: ชื่อบริษัทจากข้อมูลภาษี หรืออีเมลเจ้าของ · มีหลาย Workspace กดเพื่อกรองเฉพาะผู้ซื้อรายนี้ */}
                         <span className="stack-tight">
-                          <span className={r.buyer?.company ? undefined : "muted small"}>{r.buyer?.name ?? "—"}</span>
+                          {r.account ? (
+                            <Link href={`/accounts/${r.account.id}`} className="link-button">
+                              {r.account.name}
+                            </Link>
+                          ) : (
+                            <span className={r.buyer?.company ? undefined : "muted small"}>{r.buyer?.name ?? "—"}</span>
+                          )}
                           {!!r.buyer?.key && r.buyer.count > 1 && !f.buyer && (
                             <button type="button" className="count-chip" onClick={() => setF({ buyer: r.buyer.key!, page: "0", suggest: "" })}>
                               {t("buyer.more", { n: r.buyer.count - 1 })}
@@ -413,7 +417,7 @@ export function WorkspacesList() {
         <AnnounceDrawer
           workspaceIds={[...selected.keys()]}
           // ตัวกรองปัจจุบันของรายการ ให้เลือกส่ง "ทุกรายตามตัวกรอง" ได้ (O43 · S8)
-          filter={filtered ? ({ ...(plan ? { plan } : {}), ...(status ? { status } : {}), ...(search ? { q: search } : {}), ...(feature ? { feature } : {}) } as AnnounceFilter) : undefined}
+          filter={filtered ? ({ ...(plan && !plan.includes(",") ? { plan } : {}), ...(status ? { status } : {}), ...(search ? { q: search } : {}), ...(feature ? { feature } : {}) } as AnnounceFilter) : undefined}
           sampleName={[...selected.values()][0]}
           onClose={() => setBulk(null)}
           onDone={() => (setBulk(null), resetSelection())}

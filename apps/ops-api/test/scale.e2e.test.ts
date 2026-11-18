@@ -107,3 +107,35 @@ describe('ป้าย Workspace ทดสอบ', () => {
     expect(after.items).toEqual([expect.objectContaining({ slug: 'solo-trial', test: expect.objectContaining({ isTest: false, flag: 'not_test' }) })]);
   });
 });
+
+describe('ตัวกรองเพิ่ม (ช่วง 3)', () => {
+  it('แพ็กเกจหลายค่า · ทดลองหมดภายใน · ที่นั่ง · ค้างชำระ · ใช้งานล่าสุด · สุขภาพ · MRR · เรียงทดลองใกล้หมด / ยอดค้าง', async () => {
+    expect(slugs(await list(support, '?plan=team_m,team_s&test=all'))).toEqual(['buyer-app', 'buyer-web', 'qa-sprint', 'solo-trial']);
+    expect(slugs(await list(support, '?plan=team_m'))).toEqual(['buyer-app']);
+    await t.owner.query(`UPDATE subscriptions SET trial_ends_at = now() + interval '2 days' WHERE workspace_id = $1`, [solo.id]);
+    await t.owner.query(`UPDATE subscriptions SET trial_ends_at = now() + interval '10 days' WHERE workspace_id = $1`, [qa.id]);
+    expect(slugs(await list(support, '?trialEnds=3'))).toEqual(['solo-trial']);
+    expect(slugs(await list(support, '?trialEnds=14'))).toEqual(['qa-sprint', 'solo-trial']);
+    expect((await list(support, '?sort=trial_ending&status=trialing')).items.map((x) => x.slug)).toEqual(['solo-trial', 'qa-sprint']);
+    // ที่นั่ง: team_s ในเทสต์มี seat_limit ตามที่ seed ไว้ · ใส่สมาชิกให้เกิน 80%
+    await t.owner.query(`UPDATE plans SET seat_limit = 2 WHERE code = 'team_s'`);
+    expect(slugs(await list(support, '?seats=near'))).toEqual([]);
+    const u = (await t.owner.query(`INSERT INTO users (email, display_name) VALUES ('m2@buyer-web.example.com', 'm2') RETURNING id`)).rows[0].id;
+    await t.owner.query(`INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'member')`, [b.id, u]);
+    expect(slugs(await list(support, '?seats=full'))).toEqual(['buyer-web']);
+    await t.owner.query(`INSERT INTO invoices (workspace_id, subscription_id, number, period_start, period_end, subtotal, vat, total, amount_due, status, due_date) VALUES ($1,$2,'FRI-S3-0001',current_date - 60,current_date - 30,150000,10500,160500,160500,'open',current_date - 40)`, [b.id, b.sub]);
+    expect(slugs(await list(support, '?overdueDays=30'))).toEqual(['buyer-web']);
+    expect(slugs(await list(support, '?overdueDays=60'))).toEqual([]);
+    expect((await list(finance, '?sort=overdue_risk')).items[0].slug).toBe('buyer-web');
+    await t.owner.query(`UPDATE workspace_members SET last_active_at = now() - interval '1 day' WHERE workspace_id = $1`, [a.id]);
+    expect(slugs(await list(support, '?activity=active7'))).toEqual(['buyer-app']);
+    expect(slugs(await list(support, '?activity=idle14'))).toEqual([]);
+    // MRR: เฉพาะคนที่เห็นเงิน · Support ส่งมาก็ไม่กรอง
+    expect(slugs(await list(finance, '?mrrMin=200000'))).toEqual(['buyer-app']);
+    expect((await list(support, '?mrrMin=200000')).total).toBe(4);
+    const health = await list(support, '?health=low,mid,high');
+    expect(health.total).toBe(4);
+    expect((await support.agent.get('/ops/workspaces?plan=nope')).status).toBe(400);
+  });
+});
+

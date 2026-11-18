@@ -25,6 +25,13 @@ export const RequestsQuery = z.object({
   status: z.enum(['open', 'completed', 'rejected', 'all']).default('open'),
   /** อีเมลผู้ขอ หรือเลขคำขอ (DSR-0012 / 12) */
   q: z.string().trim().max(120).optional(),
+  // ---- ช่วง 3: ตัวกรองเพิ่ม
+  type: z.enum(schema.PRIVACY_REQUEST_TYPES).optional(),
+  identity: z.enum(['verified', 'unverified']).optional(),
+  /** soon = ครบกำหนดใน 7 วัน · overdue = เกินกำหนด */
+  due: z.enum(['soon', 'overdue']).optional(),
+  handler: z.uuid().optional(),
+  hold: z.enum(['yes']).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -117,7 +124,17 @@ export class PrivacyService implements OnModuleInit {
     // ช่วง 1 (ข้อมูลเยอะ): กรองสถานะ ค้น และแบ่งหน้าที่ server (เดิมหน้าเว็บโหลดคำขอทุกสถานะพร้อมอีเมลผู้ขอมากรองเอง)
     const num = q.q?.replace(/^dsr-?/i, '');
     const search = q.q ? or(ilike(s.privacyRequests.requesterEmail, `%${q.q}%`), /^\d+$/.test(num ?? '') ? eq(s.privacyRequests.number, Number(num)) : undefined) : undefined;
-    const where = and(q.status === 'all' ? undefined : eq(s.privacyRequests.status, q.status), search);
+    const pr = s.privacyRequests;
+    const where = and(
+      q.status === 'all' ? undefined : eq(pr.status, q.status),
+      search,
+      q.type ? eq(pr.requestType, q.type) : undefined,
+      q.identity === 'verified' ? sql`${pr.identity} <> 'unverified'` : q.identity === 'unverified' ? eq(pr.identity, 'unverified') : undefined,
+      q.due === 'soon' ? sql`${pr.status} = 'open' and ${pr.dueDate} between ${todayBkk()}::date and ${todayBkk()}::date + 7` : q.due === 'overdue' ? sql`${pr.status} = 'open' and ${pr.dueDate} < ${todayBkk()}::date` : undefined,
+      q.handler ? eq(pr.handledBy, q.handler) : undefined,
+      // ติด Legal hold: ผู้ขอเป็นผู้ใช้ที่อยู่ในขอบเขต hold ที่ยังมีผล
+      q.hold ? sql`${pr.userId} is not null and exists(select 1 from legal_holds h where h.released_at is null and (h.scope = 'workspace' and exists(select 1 from workspace_members m where m.user_id = ${pr.userId} and m.workspace_id = h.workspace_id) or ${pr.userId} = any(h.user_ids)))` : undefined,
+    );
     const rows = await this.db
       .select()
       .from(s.privacyRequests)

@@ -5,7 +5,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { AppShell } from "@/components/shell/AppShell";
 import { renderWithProviders } from "@/test/render";
-import { navigation } from "@/test/router";
+import { navigation, router } from "@/test/router";
 import { asRole, OPS, opsError, server } from "@/test/server";
 import { CustomerDetail } from "./[id]/CustomerDetail";
 import type { Overview, WsRow } from "./_parts/types";
@@ -37,8 +37,9 @@ const members = { seats: 21, items: [
 
 const list = (handler?: (u: URL) => unknown) =>
   server.use(http.get(`${OPS}/workspaces`, ({ request }) => HttpResponse.json(handler?.(new URL(request.url)) ?? { items: [row({}), row({ id: "w2", slug: "orbit-labs", name: "Orbit Labs", plan: "team_s", subStatus: "trialing", health: 35, mrr: 0, integrations: [] })], total: 2, limit: 50, offset: 0, sort: "recent_activity" })));
-const shell = (ui: React.ReactElement, path: string) => {
+const shell = (ui: React.ReactElement, path: string, search = "") => {
   navigation.pathname = path;
+  navigation.search = search;
   return renderWithProviders(<AppShell>{ui}</AppShell>);
 };
 
@@ -59,6 +60,18 @@ describe("รายชื่อ Workspace", () => {
     await waitFor(() => expect(asked.at(-1)?.toString()).toContain("sort=health"));
     expect(asked.at(-1)?.get("plan")).toBe("team_m");
     expect(asked.at(-1)?.get("feature")).toBe("line");
+  });
+
+  it("ช่วง 1: ตัวกรองอ่านจาก URL (กดย้อนกลับแล้วยังอยู่ที่เดิม) และเขียนกลับเมื่อเปลี่ยน", async () => {
+    const asked: URLSearchParams[] = [];
+    list((u) => (asked.push(u.searchParams), undefined));
+    shell(<WorkspacesList />, "/workspaces", "plan=team_m&page=1&sort=health");
+    await screen.findByText("สยามเดโม");
+    expect(asked.at(-1)?.get("plan")).toBe("team_m");
+    expect(asked.at(-1)?.get("offset")).toBe("50");
+    expect(asked.at(-1)?.get("sort")).toBe("health");
+    await userEvent.click(screen.getByRole("tab", { name: "ทดลอง" }));
+    expect(router.replace).toHaveBeenLastCalledWith("/workspaces?plan=team_m&status=trialing&sort=health", { scroll: false });
   });
 
   it("Support ไม่เห็นคอลัมน์ MRR และเรียงตาม MRR ไม่ได้ · ว่างเพราะตัวกรองล้างได้", async () => {

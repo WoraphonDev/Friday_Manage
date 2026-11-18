@@ -4,13 +4,14 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { hasAny } from "@/components/access";
 import { ConfirmDialog, useReauth } from "@/components/dialogs";
-import { Drawer, Empty, ErrorBlock, Modal, Notice, PageHead, TableSkeleton } from "@/components/kit";
+import { Drawer, Empty, ErrorBlock, Modal, Notice, PageHead, Pager, TableSkeleton } from "@/components/kit";
 import { Button, InlineError, Input, LoadingState, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { useUrlFilters } from "@/lib/url-state";
 import { useFmt } from "../workspaces/_parts/format";
 
 type Status = "active" | "locked" | "unverified" | "disabled";
@@ -55,14 +56,29 @@ export function UsersPage() {
   const fmt = useFmt();
   const params = useSearchParams();
   const router = useRouter();
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState<Status | "">("");
-  const [offset, setOffset] = useState(0);
+  // ตัวกรองอยู่ใน URL (ช่วง 1): เปิด / ปิดผู้ใช้แล้วกลับมาที่เดิม
+  const [f, setF] = useUrlFilters({ q: "", status: "", page: "0" });
+  const [q, setQ] = useState(f.q);
+  const status = f.status as Status | "";
+  const setStatus = (v: Status | "") => setF({ status: v, page: "0" });
+  const offset = Number(f.page) * 50 || 0;
+  const setOffset = (v: number) => setF({ page: String(Math.floor(v / 50)) });
   const search = useDeferredValue(q.trim());
+  useEffect(() => {
+    if (search !== f.q) setF({ q: search, page: "0" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
   const filter = new URLSearchParams({ limit: "50", offset: String(offset), ...(search ? { q: search } : {}), ...(status ? { status } : {}) });
   const list = useQuery({ queryKey: ["ops", "users", filter.toString()], queryFn: () => api.get<{ items: UserRow[]; total: number }>(`/users?${filter}`), placeholderData: keepPreviousData });
   const open = params?.get("id") ?? null;
-  const setOpen = (id: string | null) => router.replace(id ? `/users?id=${id}` : "/users");
+  // เปิด / ปิดผู้ใช้คงตัวกรองเดิมไว้
+  const setOpen = (id: string | null) => {
+    const next = new URLSearchParams(params?.toString() ?? "");
+    if (id) next.set("id", id);
+    else next.delete("id");
+    const s = next.toString();
+    router.replace(s ? `/users?${s}` : "/users");
+  };
   const rows = list.data?.items ?? [];
   const total = list.data?.total ?? 0;
   return (
@@ -123,16 +139,7 @@ export function UsersPage() {
                 </tbody>
               </table>
             </div>
-            <div className="row">
-              <span className="muted small">{`${offset + 1}–${offset + rows.length} / ${total}`}</span>
-              <span className="spacer" />
-              <Button size="small" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 50))}>
-                ‹
-              </Button>
-              <Button size="small" disabled={offset + 50 >= total} onClick={() => setOffset(offset + 50)}>
-                ›
-              </Button>
-            </div>
+            <Pager offset={offset} limit={50} shown={rows.length} total={total} onChange={setOffset} />
           </>
         )}
       </section>

@@ -3,12 +3,13 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { hasAny, rolesOf } from "@/components/access";
 import { Chip, Drawer, Empty, ErrorBlock, NoAccess, Notice, PageHead, TableSkeleton } from "@/components/kit";
 import { Button, errorToast, Input, Pill, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { useUrlFilters } from "@/lib/url-state";
 import { useFmt } from "../workspaces/_parts/format";
 import { AttachDialog, MessageDialog } from "./_parts/Dialogs";
 import { Suppressions } from "./_parts/Suppressions";
@@ -28,11 +29,19 @@ export function DeliveriesPage() {
   const params = useSearchParams();
   const read = hasAny(me, "owner", "support", "engineer");
   // ?q= เปิดจากหน้า Ticket (S6 "ค้นในประวัติการส่ง") ได้ผลค้นทันที
-  const [query, setQuery] = useState(params?.get("q") ?? "");
-  const [channel, setChannel] = useState<"all" | "email" | "line" | "webhook">("all");
-  const [status, setStatus] = useState<"all" | "ok" | "fail" | "quiet" | "blocked">("all");
+  // ตัวกรองอยู่ใน URL (ช่วง 1) · ลิงก์จาก Ticket ส่ง ?q= มาได้
+  const [f, setF] = useUrlFilters({ q: "", channel: "all", status: "all" });
+  const [query, setQuery] = useState(f.q);
+  const channel = f.channel as "all" | "email" | "line" | "webhook";
+  const setChannel = (v: typeof channel) => setF({ channel: v });
+  const status = f.status as "all" | "ok" | "fail" | "quiet" | "blocked";
+  const setStatus = (v: typeof status) => setF({ status: v });
   const [picked, setPicked] = useState<string | null>(params?.get("id") ?? null);
   const q = useDeferredValue(query.trim());
+  useEffect(() => {
+    if (q !== f.q) setF({ q });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
   const qs = (before?: string | null) => {
     const p = new URLSearchParams();
     if (q) p.set("q", q);

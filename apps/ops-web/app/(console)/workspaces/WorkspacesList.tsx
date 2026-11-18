@@ -12,6 +12,7 @@ import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, ListBar, Notice, PageHead, 
 import { Button, buttonClass, Input } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { useUrlFilters } from "@/lib/url-state";
 import { type AnnounceFilter, AnnounceDrawer } from "./_parts/Announce";
 import { BulkCouponDialog, BulkResultDrawer, BulkTrialDialog, namesOf } from "./_parts/Bulk";
 import styles from "./_parts/bulk.module.css";
@@ -41,13 +42,18 @@ export function WorkspacesList() {
     const id = params?.get("id");
     if (id) router.replace(`/workspaces/${id}`);
   }, [params, router]);
-  const [q, setQ] = useState("");
-  const [plan, setPlan] = useState(params?.get("plan") ?? "");
-  const [status, setStatus] = useState(params?.get("status") ?? "");
+  // ตัวกรองอยู่ใน URL: กดย้อนกลับจากหน้ารายละเอียดแล้วยังอยู่ที่เดิม · ส่งลิงก์ให้เพื่อนได้ (ช่วง 1)
+  const [f, setF] = useUrlFilters({ q: "", plan: "", status: "", sort: "recent_activity", feature: "", page: "0" });
+  const [q, setQ] = useState(f.q);
+  const { plan, status, feature } = f;
+  const sort = ((SORTS as readonly string[]).includes(f.sort) ? f.sort : "recent_activity") as (typeof SORTS)[number];
+  const offset = Number(f.page) * PAGE || 0;
+  const setPlan = (v: string) => setF({ plan: v, page: "0" });
+  const setStatus = (v: string) => setF({ status: v, page: "0" });
+  const setFeature = (v: string) => setF({ feature: v, page: "0" });
+  const setSort = (v: string) => setF({ sort: v });
+  const setOffset = (v: number) => setF({ page: String(Math.floor(v / PAGE)) });
   const [peek, setPeek] = useState<string | null>(null);
-  const [sort, setSort] = useState<(typeof SORTS)[number]>(money ? "recent_activity" : "recent_activity");
-  const [feature, setFeature] = useState("");
-  const [offset, setOffset] = useState(0);
   // เลือกข้ามหน้า (H4): เก็บเป็นรายการ id + ชื่อ ไม่ผูกกับหน้า · "filter" = เลือกทั้งหมดตามตัวกรอง (เซิร์ฟเวอร์หารายการตอนยืนยัน)
   const [selected, setSelected] = useState<Map<string, string>>(new Map());
   const [byFilter, setByFilter] = useState(false);
@@ -57,7 +63,11 @@ export function WorkspacesList() {
   const search = useDeferredValue(q.trim());
   const filter = new URLSearchParams({ limit: String(PAGE), offset: String(offset), sort, ...(search ? { q: search } : {}), ...(plan ? { plan } : {}), ...(status ? { status } : {}), ...(feature ? { feature } : {}) });
   const list = useQuery({ queryKey: ["ops", "workspaces", filter.toString()], queryFn: () => api.get<WsList>(`/workspaces?${filter}`), placeholderData: keepPreviousData });
-  useEffect(() => setOffset(0), [search, plan, sort, feature, status]);
+  useEffect(() => {
+    // เขียนคำค้นลง URL เมื่อพิมพ์นิ่งแล้ว
+    if (search !== f.q) setF({ q: search, page: "0" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
   // เปลี่ยนตัวกรองแล้วล้างการเลือก (รายการที่เลือกไว้อาจไม่อยู่ในตัวกรองใหม่) · เปลี่ยนการเรียงไม่ล้าง
   const filterKey = `${search}|${plan}|${status}|${feature}`;
   const lastFilter = useRef(filterKey);
@@ -70,7 +80,7 @@ export function WorkspacesList() {
   const rows = list.data?.items ?? [];
   const total = list.data?.total ?? 0;
   const filtered = !!(search || plan || feature || status);
-  const clear = () => (setQ(""), setPlan(""), setFeature(""), setStatus(""));
+  const clear = () => (setQ(""), setF({ q: "", plan: "", feature: "", status: "", page: "0" }));
   const extraFilters = (plan ? 1 : 0) + (feature ? 1 : 0);
   const pageAll = rows.length > 0 && rows.every((r) => selected.has(r.id));
   const pageSome = rows.some((r) => selected.has(r.id));

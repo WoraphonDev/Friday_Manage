@@ -5,13 +5,14 @@ import { FileText } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { hasAny } from "@/components/access";
 import { useApprovalFlow } from "@/components/dialogs";
 import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, Pager, Seg, TableSkeleton } from "@/components/kit";
 import { Button, buttonClass, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { useUrlFilters } from "@/lib/url-state";
 import { planLabel, useFmt } from "../../workspaces/_parts/format";
 import { useDelivery } from "./Accounting";
 import { ClosePeriodDialog, EtaxDrawer, useEtaxDetail, useTaxFmt } from "./Tax";
@@ -116,22 +117,31 @@ function DocLink({ path, label }: { path: string; label: string }) {
   );
 }
 const STATUSES = ["", "open", "pending_review", "overdue", "paid", "void"] as const;
+const INVOICE_PAGE = 50;
 export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean; onCreatingChange: (o: boolean) => void }) {
   const t = useTranslations("money");
   const fmt = useFmt();
   const me = useMe().data;
   const finance = hasAny(me, "finance");
   const params = useSearchParams();
-  const [status, setStatus] = useState<(typeof STATUSES)[number]>("");
-  const [q, setQ] = useState(params?.get("q") ?? "");
+  // ตัวกรองและหน้าอยู่ใน URL (ช่วง 1) · เดิมดึง 100 ใบแรกโดยไม่บอกว่ามีมากกว่านั้น
+  const [f, setF] = useUrlFilters({ status: "", q: "", page: "0" });
+  const status = f.status as (typeof STATUSES)[number];
+  const setStatus = (v: (typeof STATUSES)[number]) => setF({ status: v, page: "0" });
+  const [q, setQ] = useState(f.q || (params?.get("q") ?? ""));
   const search = useDeferredValue(q.trim());
+  useEffect(() => {
+    if (search !== f.q) setF({ q: search, page: "0" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+  const offset = Number(f.page) * INVOICE_PAGE || 0;
   const [voiding, setVoiding] = useState<InvoiceRow | null>(null);
   const [linking, setLinking] = useState<InvoiceRow | null>(null);
   const [debiting, setDebiting] = useState<InvoiceRow | null>(null);
   const [replacing, setReplacing] = useState<InvoiceRow | null>(null);
   const [etaxDoc, setEtaxDoc] = useState<string | null>(null);
   const tt = useTranslations("money.tax");
-  const filter = new URLSearchParams({ limit: "100", ...(status ? { status } : {}), ...(search ? { q: search } : {}) });
+  const filter = new URLSearchParams({ limit: String(INVOICE_PAGE), offset: String(offset), ...(status ? { status } : {}), ...(search ? { q: search } : {}) });
   const list = useQuery({ queryKey: ["ops", "invoices", filter.toString()], queryFn: () => api.get<{ items: InvoiceRow[]; total: number }>(`/invoices?${filter}`), placeholderData: keepPreviousData });
   return (
     <section className="card">
@@ -222,6 +232,7 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
           ))}
         </Table>
       )}
+      {list.data?.total != null && <Pager offset={offset} limit={INVOICE_PAGE} shown={list.data.items.length} total={list.data.total} onChange={(o) => setF({ page: String(Math.floor(o / INVOICE_PAGE)) })} />}
       {creating && <CreateInvoiceDrawer onClose={() => onCreatingChange(false)} />}
       {voiding && <VoidDialog inv={voiding} onClose={() => setVoiding(null)} />}
       {linking && <SendLinkDialog inv={linking} onClose={() => setLinking(null)} />}

@@ -8,6 +8,7 @@ import { ConfirmDialog, useReauth } from "@/components/dialogs";
 import { CopyButton, Drawer, Notice, RolePicker } from "@/components/kit";
 import { Button, errorToast, InlineError, Input, Pill, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { keys, useMe } from "@/lib/query";
 import type { Limits, OpsRole } from "@/lib/types";
 import { DEFAULT_LIMITS, staffKey, type StaffMember } from "./types";
 
@@ -110,9 +111,12 @@ export function ManageDrawer({ member, onOpenChange, ownersLeft }: { member: Sta
   const [reason, setReason] = useState("");
   const [status, setStatus] = useState<null | "suspended" | "active" | "disabled">(null);
   const [link, setLink] = useState<string | null>(null);
+  const me = useMe().data;
   const done = (message: string) => {
     toast(message);
     void cache.invalidateQueries({ queryKey: staffKey });
+    // แก้บทบาทของตัวเอง: ปุ่มทุกหน้าซ่อน/แสดงตาม me จึงต้องโหลดใหม่ทันที ไม่งั้นต้อง refresh เอง
+    if (member?.id === me?.id) void cache.invalidateQueries({ queryKey: keys.me, exact: true });
   };
   const save = useMutation({
     mutationFn: () =>

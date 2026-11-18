@@ -12,7 +12,8 @@ import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, ListBar, Modal, Notice, Pag
 import { Button, buttonClass, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
-import { useRowNav } from "@/lib/shortcuts";
+import { useRowNav, useStableRows } from "@/lib/shortcuts";
+import { NewItemsBar } from "@/components/new-items";
 import { useUrlFilters } from "@/lib/url-state";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
 import { DevCard } from "../bugs/_components/DevCard";
@@ -133,7 +134,10 @@ export function SupportPage() {
     queryKey: [...key, filter.toString()],
     queryFn: () => api.get<{ items: TicketRow[]; total: number; counts: { mine: number; none: number; all: number }; summary: Summary }>(`/tickets?${filter}`),
     placeholderData: keepPreviousData,
+    // ช่วง 2: เช็กเรื่องใหม่ทุก 30 วินาที · แถวใหม่รอกด "แสดง" (ไม่แทรกเอง)
+    refetchInterval: 30_000,
   });
+  const stable = useStableRows(list.data?.items, filter.toString());
   const selected = params?.get("ticket") ?? null;
   // เปิด / ปิดแผง Ticket คงตัวกรองเดิมไว้ใน URL
   const select = (id: string | null) => {
@@ -145,7 +149,7 @@ export function SupportPage() {
   };
   const s = list.data?.summary;
   const tk = useTranslations("common.keys");
-  const nav = useRowNav(queue === "team" ? [] : (list.data?.items ?? []), { onOpen: (k) => select(k.id), labels: { down: tk("down"), open: tk("open") } });
+  const nav = useRowNav(queue === "team" ? [] : stable.rows, { onOpen: (k) => select(k.id), labels: { down: tk("down"), open: tk("open") } });
   const count = (n: number | undefined) => (n ? <span className="tab-count">{n}</span> : null);
   return (
     <>
@@ -202,6 +206,7 @@ export function SupportPage() {
         </>
       ) : (
         <>
+          <NewItemsBar count={stable.fresh} onShow={stable.reveal} />
           <ChipGroup className="row">
             {(["active", "pending_dev", "solved", "closed"] as const).map((v) => (
               <Chip key={v} pressed={status === v} onClick={() => setStatus(v)}>
@@ -214,7 +219,7 @@ export function SupportPage() {
             <TableSkeleton rows={5} cols={6} />
           ) : list.error ? (
             <ErrorBlock error={list.error} retry={() => void list.refetch()} />
-          ) : !list.data.items.length ? (
+          ) : !stable.rows.length && !stable.fresh ? (
             <Empty ok={queue === "none" || queue === "mine"} title={queue === "none" ? t("emptyQueue") : queue === "mine" ? t("emptyMine") : t("empty")} />
           ) : (
             <div className="tbl-wrap">
@@ -229,7 +234,7 @@ export function SupportPage() {
                   </tr>
                 </thead>
                 <tbody className="motion-list">
-                  {list.data.items.map((k, i) => (
+                  {stable.rows.map((k, i) => (
                     <tr key={k.id} className="row-link" aria-selected={selected === k.id} onClick={() => select(k.id)} {...nav.rowProps(i)}>
                       <td>
                         <button type="button" className="row-link-button" onClick={(e) => (e.stopPropagation(), select(k.id))}>

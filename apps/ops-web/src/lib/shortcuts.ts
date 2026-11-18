@@ -102,3 +102,19 @@ export function useRowNav<T>(rows: T[], opts: { onOpen?: (row: T) => void; onTog
   ]);
   return { active: index, setActive, rowProps: (i: number) => ({ "data-row-index": i, "data-active": i === index ? true : undefined }) };
 }
+
+/**
+ * แถวไม่กระโดดเมื่อรายการรีเฟรชเอง (ช่วง 2): แถวใหม่ยังไม่แสดงจนกว่าจะกด "แสดง" · แถวที่หายไป (มีคนรับ / ปิดแล้ว) เอาออกตามปกติ
+ * resetKey เปลี่ยน (ตัวกรอง / หน้า) = เริ่มนับใหม่
+ */
+export function useStableRows<T extends { id: string }>(items: T[] | undefined, resetKey: string) {
+  const [known, setKnown] = useState<{ key: string; ids: Set<string> } | null>(null);
+  const current = known && known.key === resetKey ? known.ids : null;
+  useEffect(() => {
+    if (items && !current) setKnown({ key: resetKey, ids: new Set(items.map((i) => i.id)) });
+  }, [items, current, resetKey]);
+  const rows = !items ? [] : current ? items.filter((i) => current.has(i.id)) : items;
+  const fresh = items && current ? items.filter((i) => !current.has(i.id)).length : 0;
+  const reveal = () => items && setKnown({ key: resetKey, ids: new Set(items.map((i) => i.id)) });
+  return { rows, fresh, reveal };
+}

@@ -11,6 +11,8 @@ import { Drawer, Empty, ErrorBlock, Modal, Notice, Pager, TableSkeleton, TodoCar
 import { Button, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { useStableRows } from "@/lib/shortcuts";
+import { NewItemsBar } from "@/components/new-items";
 import { useFmt } from "../../workspaces/_parts/format";
 
 export interface ExceptionItem {
@@ -48,16 +50,19 @@ export function VerifyTab() {
   // ช่วง 1 (ข้อมูลเยอะ): สองคิวแบ่งหน้าที่ ops-api · รอนานสุดขึ้นก่อน · สลิปปกติกรองที่ server (เดิมกรองในเบราว์เซอร์)
   const [excOffset, setExcOffset] = useState(0);
   const [slipOffset, setSlipOffset] = useState(0);
-  const q = useQuery({ queryKey: [...exceptionsKey, excOffset], queryFn: () => api.get<{ items: ExceptionItem[]; payments30d: number; total: number }>(`/payments/exceptions?limit=${PAGE}&offset=${excOffset}`), placeholderData: keepPreviousData });
-  const slips = useQuery({ queryKey: ["ops", "payments", "pending", slipOffset], queryFn: () => api.get<{ items: SlipItem[]; total: number }>(`/payments?status=pending_review&queue=slips&limit=${PAGE}&offset=${slipOffset}`), placeholderData: keepPreviousData });
+  const q = useQuery({ queryKey: [...exceptionsKey, excOffset], queryFn: () => api.get<{ items: ExceptionItem[]; payments30d: number; total: number }>(`/payments/exceptions?limit=${PAGE}&offset=${excOffset}`), placeholderData: keepPreviousData, refetchInterval: 30_000 });
+  const slips = useQuery({ queryKey: ["ops", "payments", "pending", slipOffset], queryFn: () => api.get<{ items: SlipItem[]; total: number }>(`/payments?status=pending_review&queue=slips&limit=${PAGE}&offset=${slipOffset}`), placeholderData: keepPreviousData, refetchInterval: 30_000 });
+  // ช่วง 2: รายการใหม่ไม่แทรกเอง · รอกด "แสดง"
+  const excStable = useStableRows(q.data?.items, `exc:${excOffset}`);
+  const slipStable = useStableRows(slips.data?.items, `slip:${slipOffset}`);
   const [open, setOpen] = useState<ExceptionItem | null>(null);
   const [flagging, setFlagging] = useState<SlipItem | null>(null);
   const [viewing, setViewing] = useState<SlipItem | null>(null);
   const decide = hasAny(me, "finance");
-  const normal = slips.data?.items ?? [];
+  const normal = slipStable.rows;
   const pending = q.isPending || slips.isPending;
   const error = q.error ?? slips.error;
-  const exceptions = q.data?.items ?? [];
+  const exceptions = excStable.rows;
   return (
     <>
       {/* โครงหน้า Ops: กรณีผิดปกติ + สลิปรอตรวจ = งานที่ต้องทำ อยู่บนสุดในแถบเดียว · ไม่มีงาน = แถบเขียวบรรทัดเดียว */}
@@ -66,10 +71,11 @@ export function VerifyTab() {
       ) : error ? (
         <ErrorBlock error={error} retry={() => (void q.refetch(), void slips.refetch())} />
       ) : (
-        !(q.data?.total ?? exceptions.length) && !(slips.data?.total ?? normal.length) ? (
+        !(q.data?.total ?? exceptions.length) && !(slips.data?.total ?? normal.length) && !excStable.fresh && !slipStable.fresh ? (
           <Empty ok title={t("verify.empty")} description={t("verify.emptyDesc")} />
         ) : (
           <>
+            <NewItemsBar count={excStable.fresh + slipStable.fresh} onShow={() => (excStable.reveal(), slipStable.reveal())} />
             {!!exceptions.length && (
               <TodoCard title={t("verify.exceptionsTitle")} count={q.data?.total ?? exceptions.length} hint={q.data ? t("verify.summary", { total: q.data.payments30d, n: q.data.total ?? exceptions.length }) : undefined}>
           {exceptions.map((x) => (

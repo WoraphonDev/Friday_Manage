@@ -3039,3 +3039,6 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 /* แถวที่ชี้อยู่ด้วย J / K */
 .tbl tr[data-active] td { background: var(--hover); }
 .tbl tr[data-active] td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
+.new-items { align-self: center; border: 0; border-radius: 999px; padding: 6px 14px; background: var(--primary); color: var(--on-primary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-card); }
+.new-items:hover { background: var(--primary-hover); }
+.new-items:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

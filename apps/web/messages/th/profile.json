@@ -337,12 +337,28 @@
     "setDescription": "ใช้เข้าสู่ระบบด้วยอีเมลได้อีกทาง นอกจาก Google / Microsoft",
     "current": "รหัสผ่านปัจจุบัน",
     "new": "รหัสผ่านใหม่",
-    "hint": "ตามนโยบายรหัสผ่านของ Workspace",
+    "hint": "อย่างน้อย {n} ตัว มีตัวพิมพ์ใหญ่และตัวเลข{special, select, true { และอักขระพิเศษ} other {}}",
     "confirm": "ยืนยันรหัสผ่านใหม่",
     "mismatch": "รหัสผ่านไม่ตรงกัน",
     "logoutOthers": "ออกจากระบบอุปกรณ์อื่นทั้งหมด",
     "changed": "เปลี่ยนรหัสผ่านแล้ว",
-    "changedLoggedOut": "เปลี่ยนรหัสผ่านแล้ว · ออกจากระบบอุปกรณ์อื่น {count} เครื่อง"
+    "changedLoggedOut": "เปลี่ยนรหัสผ่านแล้ว · ออกจากระบบอุปกรณ์อื่น {count} เครื่อง",
+    "strength": "ความปลอดภัย: {level}",
+    "levels": {
+      "weak": "อ่อน",
+      "fair": "พอใช้",
+      "good": "ดี",
+      "strong": "ดีมาก"
+    },
+    "rules": {
+      "length": "อย่างน้อย {n} ตัวอักษร",
+      "upper": "มีตัวพิมพ์ใหญ่",
+      "digit": "มีตัวเลข",
+      "special": "มีอักขระพิเศษ",
+      "specialOptional": "มีอักขระพิเศษ (แนะนำ)"
+    },
+    "rulesLabel": "เงื่อนไขรหัสผ่าน",
+    "match": "ตรงกัน"
   },
   "mfa": {
     "setupTitle": "เปิด Two-factor authentication",

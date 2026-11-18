@@ -53,11 +53,32 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   return (
     <div className="field">
       {label && <label htmlFor={inputId}>{label}</label>}
-      <input ref={ref} id={inputId} className={clsx("input", className)} aria-invalid={error ? true : undefined} aria-describedby={error || hint ? `${inputId}-d` : undefined} {...props} />
+      {props.type === "password" ? (
+        <PasswordReveal>
+          {(type) => <input ref={ref} id={inputId} className={clsx("input", className)} aria-invalid={error ? true : undefined} aria-describedby={error || hint ? `${inputId}-d` : undefined} {...props} type={type} />}
+        </PasswordReveal>
+      ) : (
+        <input ref={ref} id={inputId} className={clsx("input", className)} aria-invalid={error ? true : undefined} aria-describedby={error || hint ? `${inputId}-d` : undefined} {...props} />
+      )}
       <Described id={`${inputId}-d`} error={error} hint={hint} />
     </div>
   );
 });
+/** ปุ่มแสดง/ซ่อนในช่องรหัสผ่านทุกช่อง ให้ตรวจสิ่งที่พิมพ์ได้ · หน้าตาเดียวกับหน้า Login ของเว็บลูกค้า */
+function PasswordReveal({ children }: { children: (type: string) => ReactNode }) {
+  const t = useTranslations("common.passwordReveal");
+  const [show, setShow] = useState(false);
+  return (
+    <span className="password-wrap">
+      {children(show ? "text" : "password")}
+      <button type="button" className="password-reveal" aria-label={show ? t("hideLabel") : t("showLabel")} aria-pressed={show} onClick={() => setShow(!show)}>
+        {/* ซ้อนสองคำแล้วเลื่อนสลับกัน ชื่อปุ่มสำหรับโปรแกรมอ่านหน้าจอมาจาก aria-label */}
+        <span aria-hidden="true">{t("show")}</span>
+        <span aria-hidden="true">{t("hide")}</span>
+      </button>
+    </span>
+  );
+}
 export function Textarea({ label, error, hint, className, id, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & FieldProps) {
   const generated = useId();
   const inputId = id ?? generated;

@@ -404,6 +404,8 @@ describe('เปลี่ยนรหัสผ่านและอีเมล'
     const other = await client(t.app);
     await other.post('/auth/login', { email: 'lead@friday-dev.example.com', password: 'Friday2026' });
 
+    // หน้าเว็บใช้ค่าเดียวกับที่ password:change ตรวจ
+    expect((await lead.get('/me/password-policy')).body).toEqual({ minLength: 10, requireSpecial: true });
     expect((await lead.post('/me/password:change', { currentPassword: 'nope', newPassword: 'Friday-2027!' })).body.error.code).toBe('wrong_password');
     const weak = await lead.post('/me/password:change', { currentPassword: 'Friday2026', newPassword: 'Short1!' });
     expect(weak.body.error.details.fields[0].message).toBe('อย่างน้อย 10 ตัวอักษร');
@@ -545,6 +547,7 @@ describe('ผู้ใช้ที่ยังไม่มี Workspace', () => 
   it('ใช้กติการหัสผ่านพื้นฐาน (J2) และไม่มี Audit', async () => {
     const c = await client(t.app);
     await signup(c, 'solo@example.com', 'Solo');
+    expect((await c.get('/me/password-policy')).body).toEqual({ minLength: 8, requireSpecial: false });
     const ok = await c.post('/me/password:change', { currentPassword: 'Friday2026', newPassword: 'Friday2027' });
     expect(ok.status).toBe(200);
   });

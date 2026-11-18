@@ -211,6 +211,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET / PATCH | `me` | self | ชื่อ, ภาษา, ปี พ.ศ./ค.ศ., timezone |
 | POST | `me/email:change` | self | ยืนยันอีเมลใหม่ก่อนเปลี่ยน |
 | POST | `me/password:change` | self | Audit `secu.password_changed` |
+| GET | `me/password-policy` | self | `{ minLength, requireSpecial }` ของ Workspace ที่เข้มที่สุด · ค่าเดียวกับที่ `me/password:change` ตรวจ |
 | GET / DELETE | `me/sessions` · `me/sessions/{id}` | self | |
 | POST | `me/mfa:setup` → `me/mfa:enable` · `me/mfa:disable` · `me/mfa/backup-codes:regenerate` | self | ปิดไม่ได้ถ้า Workspace บังคับ 2FA |
 | GET / DELETE | `me/identities` · `me/identities/{id}` | self | ลบวิธีสุดท้ายไม่ได้ |

@@ -80,6 +80,28 @@
 .backupCodes li { background: var(--surface-2); border-radius: 6px; padding: 6px 8px; text-align: center; }
 .danger { color: var(--danger-text); }
 .check { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+/* เปลี่ยนรหัสผ่าน (แบบ C): เงื่อนไขเลื่อนลงมาเมื่อคลิกช่อง · สีเดียวกับหน้าสมัคร */
+.pwField { display: flex; flex-direction: column; gap: 6px; }
+.pwReveal { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--motion-dur) var(--motion-ease), opacity var(--motion-dur) var(--motion-ease); }
+.pwReveal[data-open="true"] { grid-template-rows: 1fr; opacity: 1; }
+.pwReveal > div { overflow: hidden; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.pwMeter { display: flex; gap: 4px; margin-top: 2px; }
+.pwMeter span { flex: 1; height: 5px; border-radius: 3px; background: var(--border); transition: background-color 0.3s; }
+.pwMeter span[data-on="true"][data-level="weak"] { background: var(--danger-solid); }
+.pwMeter span[data-on="true"][data-level="fair"] { background: var(--warning-solid); }
+.pwMeter span[data-on="true"][data-level="good"],
+.pwMeter span[data-on="true"][data-level="strong"] { background: var(--success-solid); }
+.pwStrength { font-size: 12px; font-weight: 600; }
+.pwStrength[data-level="weak"] { color: var(--danger-text); }
+.pwStrength[data-level="fair"] { color: var(--warning-text); }
+.pwStrength[data-level="good"], .pwStrength[data-level="strong"] { color: var(--success-text); }
+.pwRules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 12px; margin: 0; padding: 0; list-style: none; }
+.pwRules li { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); transition: color 0.25s; }
+.pwRules li[data-ok="true"] { color: var(--success-text); }
+.pwHint { font-size: var(--text-caption); color: var(--muted); }
+.pwMatch { font-size: 12px; font-weight: 600; color: var(--success-text); }
+@media (max-width: 480px) { .pwRules { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .pwReveal { transition: none; } }
 
 @media (max-width: 760px) {
   .page { padding: 16px; }

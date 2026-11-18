@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import { Badge, Button, ConfirmDialog, Dialog, Input, LoadingState, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { checkPassword, DEFAULT_POLICY, type PasswordPolicy } from "@/lib/password";
 import { cn } from "@/lib/utils";
 import { copyText, errorText, SectionError, workPath, wsPath } from "./shared";
 import { type Identity, type MfaStatus, type Session, profileKeys } from "./types";
@@ -173,6 +174,10 @@ function PasswordDialog({ open, onOpenChange, hasPassword }: { open: boolean; on
     setLogoutOthers(true);
     onOpenChange(false);
   };
+  const [focused, setFocused] = useState(false);
+  // ดึงเมื่อเปิดหน้าต่าง · ระหว่างโหลดหรือดึงไม่ได้ใช้ค่าพื้นฐาน (API ตรวจซ้ำตอนบันทึกอยู่แล้ว)
+  const policy = useQuery({ queryKey: profileKeys.passwordPolicy, queryFn: () => api.get<PasswordPolicy>("/me/password-policy"), enabled: open }).data ?? DEFAULT_POLICY;
+  const strong = checkPassword(next, policy).valid;
   const mismatch = !!confirm && next !== confirm;
   async function submit() {
     setPending(true);
@@ -192,13 +197,19 @@ function PasswordDialog({ open, onOpenChange, hasPassword }: { open: boolean; on
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : !pending && close())} title={hasPassword ? t("title") : t("setTitle")} description={hasPassword ? undefined : t("setDescription")}>
       {hasPassword && <Input label={t("current")} type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />}
-      <Input label={t("new")} type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} hint={t("hint")} />
-      <Input label={t("confirm")} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} error={mismatch ? t("mismatch") : undefined} />
+      <div className={styles.pwField}>
+        <Input label={t("new")} type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+        <PasswordRules value={next} policy={policy} open={focused || !!next} />
+      </div>
+      <div className={styles.pwField}>
+        <Input label={t("confirm")} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} error={mismatch ? t("mismatch") : undefined} />
+        {!!confirm && !mismatch && <span className={styles.pwMatch} role="status">✓ {t("match")}</span>}
+      </div>
       <label className={styles.check}><input type="checkbox" checked={logoutOthers} onChange={(e) => setLogoutOthers(e.target.checked)} />{t("logoutOthers")}</label>
       {error && <p className="field-error" role="alert">{error}</p>}
       <div className="dialog-actions">
         <Button disabled={pending} onClick={close}>{tc("cancel")}</Button>
-        <Button variant="primary" disabled={pending || !next || next !== confirm || (hasPassword && !current)} onClick={() => void submit()}>{pending ? tc("saving") : tc("save")}</Button>
+        <Button variant="primary" disabled={pending || !strong || next !== confirm || (hasPassword && !current)} onClick={() => void submit()}>{pending ? tc("saving") : tc("save")}</Button>
       </div>
     </Dialog>
   );
@@ -319,5 +330,39 @@ function MfaDialog({ mode, onClose }: { mode: "setup" | "disable" | "regenerate"
         </>
       )}
     </Dialog>
+  );
+}
+
+/** แบบ C ที่ผู้ใช้เลือก (18 พ.ย.): ปิดอยู่เห็นแค่ข้อความสั้น · คลิกช่องหรือมีค่าแล้ว แถบความปลอดภัย + เงื่อนไขเลื่อนลงมา */
+function PasswordRules({ value, policy, open }: { value: string; policy: PasswordPolicy; open: boolean }) {
+  const t = useTranslations("profile.password");
+  const { rules, level } = checkPassword(value, policy);
+  const bars = level === "strong" ? 4 : level === "good" ? 3 : level === "fair" ? 2 : value ? 1 : 0;
+  return (
+    <>
+      <div className={styles.pwReveal} data-open={open}>
+        <div aria-hidden={!open}>
+          <span className={styles.pwMeter} aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} data-on={i < bars} data-level={level} />
+            ))}
+          </span>
+          {value && (
+            <span className={styles.pwStrength} data-level={level} aria-live="polite">
+              {t("strength", { level: t(`levels.${level}`) })}
+            </span>
+          )}
+          <ul className={styles.pwRules} aria-label={t("rulesLabel")}>
+            {(["length", "upper", "digit", "special"] as const).map((rule) => (
+              <li key={rule} data-ok={rules[rule]}>
+                <span aria-hidden="true">{rules[rule] ? "✓" : "○"}</span>
+                {rule === "length" ? t("rules.length", { n: policy.minLength }) : rule === "special" && !policy.requireSpecial ? t("rules.specialOptional") : t(`rules.${rule}`)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      {!open && <span className={styles.pwHint}>{t("hint", { n: policy.minLength, special: String(policy.requireSpecial) })}</span>}
+    </>
   );
 }

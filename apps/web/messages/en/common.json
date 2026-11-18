@@ -311,5 +311,11 @@
       "open": "Click to open",
       "count": "{count} files ({detail})"
     }
+  },
+  "passwordReveal": {
+    "show": "Show",
+    "hide": "Hide",
+    "showLabel": "Show password",
+    "hideLabel": "Hide password"
   }
 }

@@ -114,4 +114,5 @@ export const profileKeys = {
   sessions: ["me", "sessions"] as const,
   mfa: ["me", "mfa"] as const,
   identities: ["me", "identities"] as const,
+  passwordPolicy: ["me", "password-policy"] as const,
 };

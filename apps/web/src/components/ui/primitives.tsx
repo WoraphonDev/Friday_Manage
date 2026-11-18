@@ -4,6 +4,7 @@ import {
   createElement,
   forwardRef,
   useId,
+  useState,
   useSyncExternalStore,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
@@ -56,19 +57,23 @@ export const Input = forwardRef<
   const generated = useId();
   const inputId = id ?? generated;
   const descriptionId = `${inputId}-description`;
+  const input = (type?: string) => (
+    <input
+      ref={ref}
+      id={inputId}
+      className={cn("input", className)}
+      aria-invalid={error ? true : undefined}
+      aria-describedby={
+        error || hint ? descriptionId : props["aria-describedby"]
+      }
+      {...props}
+      type={type ?? props.type}
+    />
+  );
   return (
     <div className="field">
       {label && <label htmlFor={inputId}>{label}</label>}
-      <input
-        ref={ref}
-        id={inputId}
-        className={cn("input", className)}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={
-          error || hint ? descriptionId : props["aria-describedby"]
-        }
-        {...props}
-      />
+      {props.type === "password" ? <PasswordReveal>{input}</PasswordReveal> : input()}
       {(error || hint) && (
         <span
           id={descriptionId}
@@ -81,6 +86,28 @@ export const Input = forwardRef<
     </div>
   );
 });
+
+/** ปุ่มแสดง/ซ่อนในช่องรหัสผ่านทุกช่อง ให้ตรวจสิ่งที่พิมพ์ได้ · หน้าตาเดียวกับ PasswordField ของหน้า Login */
+function PasswordReveal({ children }: { children: (type: string) => ReactNode }) {
+  const t = useTranslations("common.passwordReveal");
+  const [show, setShow] = useState(false);
+  return (
+    <span className="password-wrap">
+      {children(show ? "text" : "password")}
+      <button
+        type="button"
+        className="password-reveal"
+        aria-label={show ? t("hideLabel") : t("showLabel")}
+        aria-pressed={show}
+        onClick={() => setShow(!show)}
+      >
+        {/* ซ้อนสองคำแล้วเลื่อนสลับกัน ชื่อปุ่มสำหรับโปรแกรมอ่านหน้าจอมาจาก aria-label */}
+        <span aria-hidden="true">{t("show")}</span>
+        <span aria-hidden="true">{t("hide")}</span>
+      </button>
+    </span>
+  );
+}
 
 type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "size" | "prefix"> &
   FieldProps & {

@@ -13,6 +13,8 @@ import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { useShortcuts, useStableRows } from "@/lib/shortcuts";
 import { SlipRun } from "./SlipRun";
+import { Kbd } from "@/components/shortcut-help";
+import { usePresence } from "@/lib/presence";
 import { NewItemsBar } from "@/components/new-items";
 import { useFmt } from "../../workspaces/_parts/format";
 
@@ -157,7 +159,17 @@ export function VerifyTab() {
       )}
       <p className="muted small">{t("verify.note")} · {t("verify.slipsNote")}</p>
       {running && <SlipRun onClose={() => setRunning(false)} />}
-      {open && <DecisionDrawer item={open} canDecide={decide} onClose={() => setOpen(null)} />}
+      {open && (
+        <DecisionDrawer
+          key={open.id}
+          item={open}
+          canDecide={decide}
+          onClose={() => setOpen(null)}
+          // ช่วง 2: ตัดสินแล้วเปิดรายการถัดไป (ตำแหน่งเดิมในคิวที่เหลือ) · หมดคิว = ปิด
+          onDecided={() => setOpen(exceptions.filter((x) => x.id !== open.id)[exceptions.findIndex((x) => x.id === open.id)] ?? null)}
+          pos={{ at: exceptions.findIndex((x) => x.id === open.id) + 1, total: exceptions.length, onNext: () => setOpen(exceptions[exceptions.findIndex((x) => x.id === open.id) + 1] ?? null) }}
+        />
+      )}
       {flagging && <FlagDialog item={flagging} onClose={() => setFlagging(null)} />}
       {viewing && (
         <FileViewer
@@ -265,7 +277,11 @@ function FlagDialog({ item, onClose }: { item: SlipItem; onClose: () => void }) 
 }
 
 /** แผงตัดสิน: หลักฐาน · ลำดับเหตุการณ์ · ผ่าน / ไม่ผ่าน (B6) / ผูกใบอื่น (B7) / เครดิต / คืนเงิน */
-function DecisionDrawer({ item, canDecide, onClose }: { item: ExceptionItem; canDecide: boolean; onClose: () => void }) {
+function DecisionDrawer({ item, canDecide, onClose, onDecided, pos }: { item: ExceptionItem; canDecide: boolean; onClose: () => void; onDecided?: () => void; pos?: { at: number; total: number; onNext: () => void } }) {
+  const tr = useTranslations("money.run");
+  // ช่วง 2: บอกเพื่อนว่ากำลังตัดสินรายการนี้ · เห็นเพื่อนที่เปิดอยู่
+  const others = usePresence("payment", item.id);
+  useShortcuts([{ keys: "s", label: tr("skip"), run: () => pos && pos.at < pos.total && pos.onNext() }]);
   const t = useTranslations("money");
   const fmt = useFmt();
   const toast = useToast();
@@ -276,7 +292,9 @@ function DecisionDrawer({ item, canDecide, onClose }: { item: ExceptionItem; can
   const done = (message: string) => {
     toast(message);
     void cache.invalidateQueries({ queryKey: ["ops"] });
-    onClose();
+    // ช่วง 2: ตัดสินแล้วไปรายการถัดไปในคิว (ถ้ามี)
+    if (onDecided) onDecided();
+    else onClose();
   };
   const pass = useMutation({ mutationFn: () => api.post(`/payments/${item.id}/confirm`, { note: reason.trim() || undefined }), onSuccess: () => done(t("verify.passed")) });
   const credit = useMutation({ mutationFn: () => api.post(`/payments/${item.id}/to-credit`, { reason: reason.trim() }), onSuccess: () => done(t("verify.credited")) });
@@ -289,6 +307,24 @@ function DecisionDrawer({ item, canDecide, onClose }: { item: ExceptionItem; can
   const err = pass.error ?? credit.error ?? refund.error;
   return (
     <Drawer open onOpenChange={(o) => !o && onClose()} wide title={`${t(`reasons.${item.reason}` as "reasons.amount_mismatch")} · ${item.workspace.name}`} description={t("verify.panel")}>
+      {pos && (
+        <div className="run-bar" role="status" style={{ margin: "0 -22px" }}>
+          <span className="muted small">{tr("exceptionProgress", { pos: pos.at, total: pos.total })}</span>
+          <span className="run-progress" aria-hidden="true">
+            <i style={{ width: `${Math.round((pos.at / pos.total) * 100)}%` }} />
+          </span>
+          {pos.at < pos.total && (
+            <Button size="small" onClick={pos.onNext}>
+              {tr("skip")} <Kbd keys="s" />
+            </Button>
+          )}
+        </div>
+      )}
+      {others[0] && (
+        <div className="presence-banner warn" role="status">
+          ● {tr("othersHere", { name: others[0].name })}
+        </div>
+      )}
       <section className="stack">
         <h3 className="card-title">{t("verify.evidence")}</h3>
         <table className="tbl">

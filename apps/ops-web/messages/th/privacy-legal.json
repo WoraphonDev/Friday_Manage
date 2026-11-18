@@ -63,7 +63,9 @@
     "retentionSub": "ระบบลบเองเมื่อครบ ยกเว้นมี Legal hold",
     "eraseHeld": "รอ Legal hold",
     "search": "ค้นอีเมลผู้ขอหรือเลขคำขอ",
-    "noMatch": "ไม่พบคำขอที่ตรงกับคำค้น"
+    "noMatch": "ไม่พบคำขอที่ตรงกับคำค้น",
+    "othersHere": "{name} กำลังเปิดคำขอนี้อยู่ · ตกลงกันก่อนดำเนินการ",
+    "viewing": "{name} กำลังดู"
   },
   "req": {
     "who": "ผู้ขอ: {email} · Workspace: {ws}",

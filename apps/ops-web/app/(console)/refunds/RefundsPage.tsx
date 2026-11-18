@@ -10,6 +10,8 @@ import { Drawer, ErrorBlock, Modal, PageHead, Pager, Seg, SettingsButton, TableS
 import { Button, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
 import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { usePresence, usePresenceOf } from "@/lib/presence";
+import { useRowNav, useShortcuts } from "@/lib/shortcuts";
 import { useFmt } from "../workspaces/_parts/format";
 
 interface Pending {
@@ -55,6 +57,20 @@ export function RefundsPage() {
   const term = useDeferredValue(search.trim());
   const qs = new URLSearchParams({ limit: String(PAGE), offset: String(offset), ...(term ? { q: term } : {}) });
   const q = useQuery({ queryKey: ["ops", "refunds", qs.toString()], queryFn: () => api.get<{ pending: Pending[]; history: History[]; historyTotal: number }>(`/refunds?${qs}`), placeholderData: keepPreviousData });
+  // ช่วง 2: J / K เลื่อนในรายการรออนุมัติ · A อนุมัติ · R ปฏิเสธ · เห็นเพื่อนที่กำลังดูรายการเดียวกัน
+  const pending = q.data?.pending ?? [];
+  const tk = useTranslations("common.keys");
+  const nav = useRowNav(pending, { labels: { down: tk("down"), open: tk("open") } });
+  const focused = nav.active >= 0 ? pending[nav.active] : null;
+  usePresence("approval", focused?.id ?? null);
+  const viewers = usePresenceOf("approval", pending.map((p) => p.id));
+  useShortcuts(
+    [
+      { keys: "a", label: t("approve"), list: true, run: () => focused && !approve.isPending && approve.mutate(focused) },
+      { keys: "r", label: t("reject"), list: true, run: () => focused && focused.requestedBy !== me?.name && setRejecting(focused) },
+    ],
+    owner,
+  );
   const approve = useMutation({
     mutationFn: (p: Pending) => run(() => api.post(`/approvals/${p.id}/approve`, {}), kindText(tc, p.kind)),
     onSuccess: () => (toast(t("approved")), void cache.invalidateQueries({ queryKey: ["ops"] })),
@@ -98,11 +114,13 @@ export function RefundsPage() {
         <ErrorBlock error={q.error} retry={() => void q.refetch()} />
       ) : (
         <TodoCard title={t("pending")} count={q.data.pending.length} hint={t("pendingNote")} clear={{ title: t("noPending") }}>
-          {q.data.pending.map((p) => {
+          {q.data.pending.map((p, i) => {
             const mine = p.requestedBy === me?.name;
+            const seen = viewers.get(p.id)?.[0];
             return (
-              <article key={p.id} className="todo-row" aria-label={kindText(tc, p.kind)}>
+              <article key={p.id} className="todo-row" aria-label={kindText(tc, p.kind)} {...nav.rowProps(i)}>
                 <div className="todo-main">
+                  {seen && <span className="viewing">● {t("viewing", { name: seen.name })}</span>}
                   <b>
                     {kindText(tc, p.kind)} · {p.amountSatang != null ? fmt.money(p.amountSatang) : "—"}
                   </b>

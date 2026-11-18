@@ -3060,3 +3060,4 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 .run-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
 @media (max-width: 860px) { .run-grid { grid-template-columns: minmax(0, 1fr); } }
 .reason-keys { display: flex; flex-wrap: wrap; gap: 6px; }
+.todo-row[data-active] { background: var(--hover); box-shadow: inset 3px 0 0 var(--primary); }

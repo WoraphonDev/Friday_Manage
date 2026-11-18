@@ -63,7 +63,7 @@ describe("S8 · ผู้รับตามตัวกรอง / ทุกร�
     await userEvent.type(within(dlg).getByLabelText("หัวข้อ *"), "ประกาศถึงทุกคน");
     await userEvent.type(within(dlg).getByLabelText("ข้อความ *"), "ข้อความสมมติ");
     await userEvent.click(within(dlg).getByRole("button", { name: "ส่งประกาศ" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     await waitFor(() => expect(posted[0]).toMatchObject({ targetMode: "all" }));
   });
 });

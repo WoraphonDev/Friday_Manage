@@ -15,6 +15,7 @@ export const createQueryClient = () =>
 
 export const keys = {
   me: ["ops", "me"] as const,
+  methods: ["ops", "me", "methods"] as const,
   metrics: ["ops", "metrics"] as const,
   workspaces: (filter: Record<string, string>) => ["ops", "workspaces", filter] as const,
   workspace: (id: string) => ["ops", "workspace", id] as const,

@@ -185,7 +185,7 @@ describe("หน้า 20 · ส่งบั๊กให้ทีมพัฒน
     await userEvent.type(within(dlg).getByLabelText("API token (สิทธิ์ write) *"), "fm_tok_sample_new_token_0001");
     await userEvent.selectOptions(within(dlg).getByLabelText("ความรุนแรง S3 → Priority"), "high");
     await userEvent.click(within(dlg).getByRole("button", { name: "บันทึก" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     await waitFor(() =>
       expect(calls.find((c) => c.path === "settings")?.body).toEqual({
         apiBaseUrl: "http://api:3001", workspaceSlug: "friday-dev", projectKey: "FM", token: "fm_tok_sample_new_token_0001", tokenExpiresAt: "2027-01-09",

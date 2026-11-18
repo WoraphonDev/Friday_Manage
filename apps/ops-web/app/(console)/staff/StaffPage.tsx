@@ -131,7 +131,13 @@ function StaffTab() {
                   </td>
                   <td>{s.department ?? <span className="muted">{t("depts.none")}</span>}</td>
                   <td className="small">{s.roles.some((r) => r === "finance" || r === "owner") ? t("limitsShort", { refund: money(s.limits.refundSatang), pct: s.limits.discountPct }) : t("noMoney")}</td>
-                  <td>{s.keys.length ? t("keysCount", { count: s.keys.length }) : <span className="pill warn">{t("noKeys")}</span>}</td>
+                  <td>
+                    {s.totpEnabledAt || s.keys.length ? (
+                      [s.totpEnabledAt ? t("methodShort") : null, s.keys.length ? t("keysCount", { count: s.keys.length }) : null].filter(Boolean).join(" · ")
+                    ) : (
+                      <span className="pill warn">{t("noKeys")}</span>
+                    )}
+                  </td>
                   <td>
                     <PersonalEmailCell member={s} mine={s.id === me?.id} onEdit={() => setPersonal(true)} />
                   </td>

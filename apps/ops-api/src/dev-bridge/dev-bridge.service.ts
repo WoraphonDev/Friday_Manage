@@ -168,7 +168,7 @@ export class DevBridgeService implements OnModuleInit, OnModuleDestroy {
   /** บันทึกการเชื่อมต่อ · เปลี่ยน token / secret ต้องยืนยันตัวตนซ้ำด้วย Security key ภายใน 15 นาที */
   async saveSettings(req: OpsRequest, input: z.infer<typeof SettingsBody>) {
     const staff = req.staff!;
-    if ((input.token || input.webhookSecret) && !req.reauthed) throw new AppError(401, 'reauth_required', 'แตะ Security key เพื่อยืนยันตัวตนก่อนเปลี่ยน token');
+    if ((input.token || input.webhookSecret) && !req.reauthed) throw new AppError(401, 'reauth_required', 'ยืนยันตัวตนอีกครั้งก่อนเปลี่ยน token');
     const cur = await this.settingsRow();
     if (!input.token && !cur?.tokenEnc) throw new AppError(422, 'token_required', 'ใส่ API token ของบัญชีบอท');
     const values = {

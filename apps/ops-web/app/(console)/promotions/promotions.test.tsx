@@ -164,7 +164,7 @@ describe("แพ็กเกจและโปรโมชัน (O20)", () => {
     await userEvent.click(within(d).getByLabelText(/ลูกค้าเดิมเปลี่ยนตามรอบถัดไป/));
     await userEvent.type(within(d).getByLabelText("เหตุผล *"), "ปรับราคาตามต้นทุน");
     await userEvent.click(within(d).getByRole("button", { name: "บันทึก" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     expect(await screen.findByText("ส่งขออนุมัติแล้ว")).toBeInTheDocument();
     expect(calls.find((c) => c.path === "/promotions/plans/team_m")!.body).toEqual({
       displayName: "Team M", monthlySatang: 350_000, yearlySatang: null, listed: true, openForSignup: true, existingPolicy: "next_cycle", reason: "ปรับราคาตามต้นทุน",
@@ -242,7 +242,7 @@ describe("แพ็กเกจและโปรโมชัน (O20)", () => {
     expect(within(d).getByLabelText("ใช้คู่กับคูปองอื่นได้")).toBeDisabled();
     await userEvent.click(within(d).getByLabelText("Team L"));
     await userEvent.click(within(d).getByRole("button", { name: "เปิดใช้คูปอง" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     expect(await within(d).findByText("ใช้ฟรีได้ไม่เกิน 24 เดือน")).toBeInTheDocument();
     invalid = false;
     await userEvent.click(within(d).getByRole("button", { name: "เปิดใช้คูปอง" }));

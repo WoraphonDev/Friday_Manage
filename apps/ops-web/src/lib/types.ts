@@ -26,6 +26,14 @@ export interface Staff {
   limits?: Limits;
 }
 
+/** วิธีเข้าระบบของบัญชีที่ล็อกอินอยู่ (GET /auth/me › methods) */
+export interface LoginMethods {
+  /** ตั้งรหัสผ่าน + แอป Authenticator แล้ว */
+  totp: boolean;
+  totpEnabledAt: string | null;
+  keys: { id: string; name: string; createdAt: string; lastUsedAt: string | null }[];
+}
+
 export interface Metrics {
   mrr: number;
   payingWorkspaces: number;

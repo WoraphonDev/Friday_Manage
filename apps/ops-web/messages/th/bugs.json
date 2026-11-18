@@ -181,7 +181,7 @@
   },
   "t11": {
     "title": "ตั้งค่าการเชื่อมต่อกับ Friday Work Management",
-    "desc": "Owner และวิศวกร · ต้องแตะ Security key (G4) เมื่อเปลี่ยน token",
+    "desc": "Owner และวิศวกร · ต้องยืนยันตัวตนซ้ำ (G4) เมื่อเปลี่ยน token",
     "readOnly": "ดูได้อย่างเดียว · Owner และวิศวกรแก้การเชื่อมต่อได้",
     "workspace": "Workspace ของทีมพัฒนา",
     "workspaceHint": "slug ใน app.fridaymanage.com/work/<slug>",

@@ -25,6 +25,13 @@ export const staffUsers = pgTable('staff_users', {
   expiresAt: tstz(),
   webauthnCredentials: jsonb().notNull().default(sql`'[]'::jsonb`),
   /**
+   * ทางเลือกแทน Security key (ใช้ได้ทุกเครื่อง/โหมดไม่ระบุตัวตน): รหัสผ่าน (scrypt) + TOTP จากแอป Authenticator
+   * ตั้งพร้อมกันเสมอ · totp_enabled_at ไม่ว่าง = ใช้วิธีนี้ได้ · totp_last_step กันใช้รหัสเดิมซ้ำ
+   */
+  passwordHash: text(), totpSecretEnc: text(), totpEnabledAt: tstz(), totpLastStep: bigint({ mode: 'number' }),
+  /** ใส่รหัสผ่าน/รหัส 6 หลักผิดติดกัน · ครบ 5 ครั้งล็อก 15 นาที */
+  failedLoginCount: integer().notNull().default(0), lockedUntil: tstz(),
+  /**
    * อีเมลส่วนตัว (รอบ 4 · H1) · รับสรุปรายการที่อนุมัติตัวเองและแจ้งสิทธิ์ฉุกเฉิน (06-ops-roles ข้อ 4–5)
    * pending + code_hash = รอยืนยันด้วยรหัส 6 หลัก · ระหว่างรอยังส่งถึงอีเมลที่ยืนยันแล้ว
    */

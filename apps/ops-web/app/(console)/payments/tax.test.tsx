@@ -126,7 +126,7 @@ describe("E1 · การ์ดสรุปและรายงานภาษ�
     expect(submit).toBeDisabled();
     await userEvent.type(within(d).getByLabelText("เหตุผลที่ปิดงวดทั้งที่ e-Tax ยังไม่ครบ"), "ผู้ให้บริการปิดปรับปรุง ตามส่งเดือนหน้า");
     await userEvent.click(submit);
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     await waitFor(() => expect(body).toEqual({ month: last, reason: "ผู้ให้บริการปิดปรับปรุง ตามส่งเดือนหน้า" }));
   });
 });
@@ -201,7 +201,7 @@ describe("E1–E4 · เอกสาร e-Tax ที่ต้องดู", () =
     await userEvent.type(within(e4).getByLabelText("เลขอ้างอิงการยกเลิกจากผู้ให้บริการ"), "CNL-2611-00418");
     await userEvent.type(within(e4).getByLabelText("เหตุผล"), "ผู้ให้บริการปิดปรับปรุงนาน ยกเลิกผ่านหน้าเว็บแทน");
     await userEvent.click(within(e4).getByRole("button", { name: "บันทึก" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     await waitFor(() => expect(manual).toEqual({ reference: "CNL-2611-00418", reason: "ผู้ให้บริการปิดปรับปรุงนาน ยกเลิกผ่านหน้าเว็บแทน" }));
   });
 

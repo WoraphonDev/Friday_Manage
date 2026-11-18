@@ -6,7 +6,8 @@ import { KeyRound, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { EnrollForm } from "@/features/auth/EnrollForm";
+import { LoginMethods } from "@/features/auth/LoginMethods";
+import { loginWithCode, loginWithPassword } from "@/features/auth/password";
 import { keyErrorKind, loginWithKey } from "@/features/auth/webauthn";
 import { api, ApiError, OPS_UNAUTHORIZED } from "@/lib/api";
 import { keys, useMe } from "@/lib/query";
@@ -14,7 +15,7 @@ import type { OpenSession, SessionsResponse, Staff } from "@/lib/types";
 import { hasAny, rolesOf } from "../access";
 import { ApprovalFlowProvider, ApprovalsDrawer, ReauthProvider } from "../dialogs";
 import { ErrorBlock, Modal, NoAccess, Notice, Seg } from "../kit";
-import { Button, InlineError, LoadingState, Textarea, useToast } from "../ui";
+import { Button, InlineError, Input, LoadingState, Textarea, useToast } from "../ui";
 import { BreakGlassDialog } from "./BreakGlass";
 import { currentItem } from "./nav";
 import { Sidebar } from "./Sidebar";
@@ -248,39 +249,58 @@ function ElevationBanner({ staff }: { staff: Staff }) {
   );
 }
 
-/** S3 · เซสชันหมดอายุระหว่างใช้งาน: แตะกุญแจเพื่อทำต่อจากหน้าเดิม (ข้อความที่พิมพ์ไว้ยังอยู่) */
+/** S3 · เซสชันหมดอายุระหว่างใช้งาน: ใส่รหัสผ่าน + รหัส 6 หลัก หรือแตะ Passkey เพื่อทำต่อจากหน้าเดิม (ข้อความที่พิมพ์ไว้ยังอยู่) */
 function SessionExpired({ staff, onSignOut }: { staff: Staff; onSignOut: () => void }) {
   const t = useTranslations("common.expired");
   const ta = useTranslations("ops.auth");
   const toast = useToast();
   const cache = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
   useEffect(() => {
     const on = () => setOpen(true);
     window.addEventListener(OPS_UNAUTHORIZED, on);
     return () => window.removeEventListener(OPS_UNAUTHORIZED, on);
   }, []);
-  const resume = useMutation({
-    mutationFn: () => loginWithKey(staff.email),
-    onSuccess: () => {
-      setOpen(false);
-      toast(t("resumed"));
-      void cache.invalidateQueries();
-    },
+  const resumed = () => {
+    setOpen(false);
+    setPassword("");
+    setCode("");
+    toast(t("resumed"));
+    void cache.invalidateQueries();
+  };
+  const withPassword = useMutation({
+    mutationFn: async () => loginWithCode((await loginWithPassword(staff.email, password)).mfaToken, code),
+    onSuccess: resumed,
   });
-  const kind = keyErrorKind(resume.error);
+  const withKey = useMutation({ mutationFn: () => loginWithKey(staff.email), onSuccess: resumed });
+  const busy = withPassword.isPending || withKey.isPending;
+  const kind = keyErrorKind(withKey.error);
   return (
     <Modal open={open} onOpenChange={() => undefined} title={t("title")} description={t("desc")}>
-      <div className="dialog-body">
-        {kind ? <InlineError error={new Error(ta(kind))} /> : <InlineError error={resume.error} />}
+      <form
+        className="dialog-body"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (password && /^\d{6}$/.test(code)) withPassword.mutate();
+        }}
+      >
+        <Input label={ta("password")} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <Input label={ta("code")} className="auth-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
+        {kind ? <InlineError error={new Error(ta(kind))} /> : <InlineError error={withPassword.error ?? withKey.error} />}
         <div className="dialog-actions">
           <Button onClick={onSignOut}>{t("signOut")}</Button>
-          <Button variant="primary" disabled={resume.isPending} onClick={() => resume.mutate()}>
+          <Button disabled={busy} onClick={() => withKey.mutate()}>
             <KeyRound size={16} />
-            {resume.isPending ? ta("waiting") : t("resume")}
+            {withKey.isPending ? ta("waiting") : ta("useKey")}
+          </Button>
+          <Button type="submit" variant="primary" disabled={busy || !password || code.length !== 6}>
+            {withPassword.isPending ? ta("working") : t("resume")}
           </Button>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 }
@@ -365,8 +385,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         <SearchPalette staff={staff} open={searchOpen} onOpenChange={setSearchOpen} onApprovals={openApprovals} />
         <ApprovalsDrawer open={approvals} onOpenChange={setApprovals} />
         <BreakGlassDialog staff={staff} open={glass} onOpenChange={setGlass} initialRole={current && !allowed ? current.roles.find((r) => r !== "owner") : undefined} />
-        <Modal open={addKey} onOpenChange={setAddKey} title={t("account.addKey")} description={ta("addKeyDesc")}>
-          <EnrollForm mode="session" />
+        <Modal open={addKey} onOpenChange={setAddKey} title={t("account.methods")} description={ta("methodsDesc")}>
+          <LoginMethods />
         </Modal>
         <SessionExpired staff={staff} onSignOut={() => logout.mutate()} />
       </ApprovalFlowProvider>

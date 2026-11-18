@@ -223,7 +223,7 @@ describe("คำขอ PDPA", () => {
     await userEvent.type(within(dlg).getByLabelText(/พิมพ์ ลบข้อมูล/), "ลบข้อมูล");
     await userEvent.type(within(dlg).getByLabelText(/เหตุผล/), "ผู้ขอยืนยันตัวตนแล้ว");
     await userEvent.click(submit);
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     expect(await screen.findByText("ส่งขออนุมัติแล้ว")).toBeInTheDocument();
     expect(body).toEqual({ confirm: "ลบข้อมูล", reason: "ผู้ขอยืนยันตัวตนแล้ว" });
   });
@@ -280,7 +280,7 @@ describe("Legal hold · การเก็บข้อมูล · Workspace ท
     await userEvent.type(within(drawer).getByLabelText("เลขอ้างอิง"), "หนังสือสมมติ 12");
     expect(within(drawer).getByLabelText(/แจ้งลูกค้า/)).not.toBeChecked();
     await userEvent.click(within(drawer).getByRole("button", { name: "ตั้ง Legal hold" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     await waitFor(() => expect(body).toEqual({ workspaceId: "w1", scope: "users", userEmails: ["dev@lumen.example.com"], reason: "ข้อพิพาทการชำระเงิน", reference: "หนังสือสมมติ 12", notifyCustomer: false }));
   });
 
@@ -307,7 +307,7 @@ describe("Legal hold · การเก็บข้อมูล · Workspace ท
     expect(await within(dlg).findByText(/คืนนี้ 04:00 จะลบข้อมูลที่เก่ากว่า 30 วัน ประมาณ 1,800,000 แถว/)).toBeInTheDocument();
     await userEvent.type(within(dlg).getByLabelText(/เหตุผล/), "ลดข้อมูลส่วนบุคคลตามผลตรวจ DPO");
     await userEvent.click(within(dlg).getByRole("button", { name: "ส่งขออนุมัติ" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     expect(await screen.findByText("ส่งขออนุมัติแล้ว")).toBeInTheDocument();
     expect(body).toEqual({ key: "systemLogDays", days: 30, reason: "ลดข้อมูลส่วนบุคคลตามผลตรวจ DPO" });
   });
@@ -349,7 +349,7 @@ describe("Legal hold · การเก็บข้อมูล · Workspace ท
     expect(submit).toBeDisabled();
     await userEvent.type(within(dlg).getByLabelText(/พิมพ์ old-demo/), "o");
     await userEvent.click(submit);
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     expect(await screen.findByText("ส่งขออนุมัติแล้ว")).toBeInTheDocument();
     expect(body).toEqual({ ticketId: "t1", confirmSlug: "old-demo", reason: "Owner ขอทาง Ticket #541" });
   });

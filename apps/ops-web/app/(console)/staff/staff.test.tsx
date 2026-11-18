@@ -49,7 +49,7 @@ describe("หน้าพนักงาน (Owner)", () => {
     const owner = within(table).getByText(staff.admin.name).closest("tr")!;
     for (const r of ["Owner", "การเงิน", "Support"]) expect(within(owner).getByText(r)).toBeInTheDocument();
     const auditor = within(table).getByText("สำนักงานบัญชี").closest("tr")!;
-    expect(within(auditor).getByText("ยังไม่ลงทะเบียน")).toBeInTheDocument();
+    expect(within(auditor).getByText("ยังไม่ตั้งค่า")).toBeInTheDocument();
     expect(within(auditor).getByText("รอลงทะเบียน")).toBeInTheDocument();
     expect(within(auditor).getByText(/หมดอายุ/)).toBeInTheDocument();
     expect(screen.getByText("ปฏิบัติการ · 1 คน")).toBeInTheDocument();
@@ -69,11 +69,11 @@ describe("หน้าพนักงาน (Owner)", () => {
     await userEvent.click(await screen.findByRole("button", { name: "เชิญ Owner คนที่สอง" }));
     const drawer = await screen.findByRole("dialog", { name: "เชิญพนักงาน" });
     expect(within(drawer).getByRole("checkbox", { name: /Owner/ })).toBeChecked();
-    expect(within(drawer).getByText("ต้องแตะกุญแจ")).toBeInTheDocument();
+    expect(within(drawer).getByText("ต้องยืนยันตัวตนซ้ำ")).toBeInTheDocument();
     await userEvent.type(within(drawer).getByLabelText("อีเมลบริษัท"), "owner2@friday.example.com");
     await userEvent.type(within(drawer).getByLabelText("ชื่อที่แสดง"), "Owner สอง");
     await userEvent.click(within(drawer).getByRole("button", { name: "ส่งคำเชิญ" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     expect(await screen.findByDisplayValue("http://localhost:3003/enroll?token=abc")).toBeInTheDocument();
     expect(body).toMatchObject({ email: "owner2@friday.example.com", name: "Owner สอง", roles: ["owner"] });
   });
@@ -123,7 +123,7 @@ describe("หน้าพนักงาน (Owner)", () => {
     await userEvent.click(within(dlg).getByRole("button", { name: "30 นาที" }));
     await userEvent.type(within(dlg).getByLabelText("เหตุผล (บันทึกใน Audit log)"), "ระบบนำเข้าล่มนอกเวลา วิศวกรติดต่อไม่ได้");
     await userEvent.click(within(dlg).getByRole("button", { name: "เปิดสิทธิ์" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     await waitFor(() => expect(body).toEqual({ role: "auditor", minutes: 30, reason: "ระบบนำเข้าล่มนอกเวลา วิศวกรติดต่อไม่ได้" }));
   });
 });
@@ -176,7 +176,7 @@ describe("สรุปรายการที่อนุมัติตัว�
     page({ digest: [digest({ personalEmail: null, personalEmailVerified: false, lastSentAt: null })] });
     await userEvent.click(await screen.findByRole("button", { name: "ตั้งอีเมลส่วนตัว" }));
     const drawer = await screen.findByRole("dialog", { name: staff.admin.name });
-    expect(within(drawer).getByText("แก้ได้เฉพาะเจ้าของบัญชีเอง · แตะกุญแจยืนยัน")).toBeInTheDocument();
+    expect(within(drawer).getByText("แก้ได้เฉพาะเจ้าของบัญชีเอง · ยืนยันตัวตนซ้ำ")).toBeInTheDocument();
     const input = await within(drawer).findByLabelText("อีเมลส่วนตัว");
     await userEvent.type(input, "me@example.com");
     await userEvent.click(within(drawer).getByRole("button", { name: "บันทึก" }));
@@ -184,7 +184,7 @@ describe("สรุปรายการที่อนุมัติตัว�
     await userEvent.clear(input);
     await userEvent.type(input, "fah.personal@mail.example");
     await userEvent.click(within(drawer).getByRole("button", { name: "บันทึก" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     await waitFor(() => expect(sent).toEqual({ email: "fah.personal@mail.example" }));
     const code = await within(drawer).findByLabelText("รหัส 6 หลัก");
     expect(within(drawer).getByText(/ส่งรหัสไปที่ fah.personal@mail.example แล้ว/)).toBeInTheDocument();

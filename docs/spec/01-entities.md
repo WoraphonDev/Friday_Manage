@@ -223,7 +223,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 
 | Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
 |---|---|---|---|
-| `staff_user` | ทีม Friday · ล็อกอินด้วย Security key | email, name, role, webauthn_credentials | Q3 |
+| `staff_user` | ทีม Friday · ล็อกอินด้วยรหัสผ่าน + TOTP (แอป Authenticator) หรือ Security key / Passkey (ทางเลือก) | email, name, role, password_hash, totp_secret_enc, totp_enabled_at, webauthn_credentials, failed_login_count, locked_until | Q3 |
 | `support_access_grant` | ลูกค้าเปิดสิทธิ์ให้ทีม Friday ล่วงหน้า | workspace_id, granted_by, until (null = จนกว่าจะปิด), max_mode (read · write), notify_admins | N1, Q3 |
 | `support_session` | การเข้าบัญชีลูกค้าแต่ละครั้ง | workspace_id, staff_id, ticket_no, reason, mode, second_approver_id (โหมดแก้ไข), started_at, ended_at | Q3, N1 |
 | `feature_flag` | | key, description, default_on | Q3 |

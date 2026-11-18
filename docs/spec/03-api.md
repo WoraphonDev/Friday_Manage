@@ -529,10 +529,17 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 
 ### 3.12 หลังบ้านทีม Friday (`ops.friday.app`)
 
-แยกแอป, แยกโดเมน, ล็อกอินด้วย Security key · ไม่ใช้ RLS ของลูกค้า แต่ทุกคำขอเขียน `audit_log` ของ Workspace ที่ถูกแตะ
+แยกแอป, แยกโดเมน · ไม่ใช้ RLS ของลูกค้า แต่ทุกคำขอเขียน `audit_log` ของ Workspace ที่ถูกแตะ
+
+เข้าระบบ: วิธีหลักคือรหัสผ่าน (≥ 12 ตัว) + รหัส 6 หลักจากแอป Authenticator ใช้ได้ทุกเครื่องและโหมดไม่ระบุตัวตน · Security key / Passkey เป็นทางเลือก (ผูกกับเบราว์เซอร์ จึงใช้ข้ามเครื่องไม่ได้ · ผู้ใช้สั่งให้เป็นทางเลือก 18 พ.ย. 2569) · ใส่รหัสผิด 5 ครั้งล็อก 15 นาที · บัญชีใหม่ใช้งานได้เมื่อตั้งรหัสผ่าน + แอป หรือมี key 2 อัน · ยืนยันตัวตนซ้ำ (G4) ใช้รหัส 6 หลักหรือ key
 
 | Method | Path | หมายเหตุ |
 |---|---|---|
+| POST | `ops/auth/login/password` · `login/totp` | ขั้นที่ 1 ได้ `mfaToken` (5 นาที) · ขั้นที่ 2 รหัส 6 หลักแล้วได้ cookie `fm_ops` · รหัสเดิมใช้ซ้ำไม่ได้ |
+| POST | `ops/auth/login/options` · `login/verify` | เข้าด้วย Security key / Passkey |
+| POST | `ops/auth/password/setup` · `password/verify` | ตั้งรหัสผ่าน + แอป ด้วย `enrollToken` (ลิงก์เชิญ / Owner ออกลิงก์ใหม่) หรือ session ที่ยืนยันตัวตนซ้ำแล้ว · บันทึกเมื่อรหัส 6 หลักจากแอปถูก · ค่าเดิมใช้ไม่ได้ทันที |
+| POST | `ops/auth/reauth/totp` · `reauth/options` · `reauth/verify` | ยืนยันตัวตนซ้ำ 15 นาที (G4) |
+| GET / DELETE | `ops/auth/me` (มี `methods`) · `ops/auth/keys/{credentialId}` | ลบ key ของตัวเองต้องยืนยันซ้ำ และต้องเหลือวิธีเข้าระบบอย่างน้อย 1 วิธี |
 | GET | `ops/metrics` | MRR, จ่ายเงิน, ทดลอง, ยกเลิก |
 | GET | `ops/workspaces?plan&status` · `{id}` | |
 | POST | `ops/workspaces/{id}/support-sessions` | ต้องมี grant จากลูกค้า, เลข Ticket, เหตุผล · โหมดแก้ไขต้องมีผู้อนุมัติคนที่ 2 · แจ้งลูกค้าทางอีเมลทันที |

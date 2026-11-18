@@ -330,6 +330,13 @@
       "when": 1794848687160,
       "tag": "0046_credit_apply_policy",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1794971952506,
+      "tag": "0047_ops_staff_password",
+      "breakpoints": true
     }
   ]
 }

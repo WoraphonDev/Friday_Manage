@@ -57,7 +57,15 @@
     "suspendedMode": {
       "read_only": "ระงับ · อ่านอย่างเดียว",
       "full": "ระงับ · ปิดทั้งหมด"
-    }
+    },
+    "tabs": {
+      "active": "จ่ายเงิน",
+      "trialing": "ทดลอง",
+      "past_due": "ค้างชำระ",
+      "suspended": "ระงับ"
+    },
+    "filters": "ตัวกรอง",
+    "filtersOn": "ตัวกรอง ({n})"
   },
   "subStatus": {
     "trialing": "ทดลอง",
@@ -708,5 +716,17 @@
     "submitRefund": "คืนเป็นเงิน",
     "added": "เพิ่มเครดิตแล้ว",
     "refunded": "บันทึกคืนเครดิตเป็นเงินแล้ว"
+  },
+  "peek": {
+    "health": "สุขภาพ {n}",
+    "noAccess": "ลูกค้ายังไม่เปิดสิทธิ์ให้ทีม Friday เข้าบัญชี",
+    "owner": "เจ้าของ",
+    "trialEnds": "ทดลองถึง",
+    "next": "รอบบิลถัดไป",
+    "active": "{n} คน · ล่าสุด {last}",
+    "usage": "การใช้งาน",
+    "usageValue": "{projects} โปรเจกต์ · {storage}",
+    "tickets": "Ticket ของลูกค้านี้",
+    "open": "เปิดหน้าเต็ม"
   }
 }

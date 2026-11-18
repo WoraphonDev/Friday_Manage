@@ -115,6 +115,9 @@ export const SolveBody = z
   })
   .strict();
 export const CsatBody = z.object({ score: z.number().int().min(1).max(5) }).strict();
+export const PriorityBody = z.object({ priority: Priority }).strict();
+/** ผูก / เลิกผูกเหตุขัดข้อง (ช่วง 3) · null = เลิกผูก */
+export const IncidentLinkBody = z.object({ incidentId: z.uuid().nullable() }).strict();
 
 /**
  * Ticket ของ Support (O04) · แจกตามกฎและวิธีแจกที่ตั้งไว้ (O22) · ยังไม่มีคนรับ = อยู่ในคิวกลาง ใครก็ "รับเรื่องนี้" ได้
@@ -222,7 +225,8 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
         k.first_response_due_at as "firstResponseDueAt", k.resolution_due_at as "resolutionDueAt", k.first_responded_at as "firstRespondedAt",
         st.id as "assigneeId", st.name as "assigneeName",
         case when w.id is null then null else json_build_object('id', w.id, 'slug', w.slug, 'name', w.name) end as workspace,
-        (k.status in ('open', 'pending_dev') and ((k.first_responded_at is null and k.first_response_due_at < now()) or k.resolution_due_at < now())) as "slaBreached"
+        (k.status in ('open', 'pending_dev') and ((k.first_responded_at is null and k.first_response_due_at < now()) or k.resolution_due_at < now())) as "slaBreached",
+        (select json_build_object('id', i.id, 'title', i.title, 'status', i.status) from support_ticket_incidents ti join incidents i on i.id = ti.incident_id where ti.ticket_id = k.id) as incident
       from support_tickets k left join staff_users st on st.id = k.assignee_id left join workspaces w on w.id = k.workspace_id
       where ${sql.join(parts, sql` and `)}
       order by ${ORDERS[q.sort]}
@@ -261,6 +265,7 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     }
     const [assignee] = t.assigneeId ? await this.db.select({ id: s.staffUsers.id, name: s.staffUsers.name }).from(s.staffUsers).where(eq(s.staffUsers.id, t.assigneeId)) : [];
     const [requester] = t.requesterUserId ? await this.db.select({ name: s.users.displayName }).from(s.users).where(eq(s.users.id, t.requesterUserId)) : [];
+    const [incident] = await this.rows(sql`select i.id, i.title, i.status from support_ticket_incidents ti join incidents i on i.id = ti.incident_id where ti.ticket_id = ${t.id}`);
     // S6 · ไฟล์แนบและบริบทที่ลูกค้าส่งมา (A44 เก็บใน attachments ของข้อความ) · ไม่ส่ง key ของที่เก็บไฟล์ออกไป ใช้ลิงก์ดาวน์โหลดผ่าน ops-api แทน
     let context: Row | null = null;
     let article: Row | null = null;
@@ -274,7 +279,7 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     const ctx = context as Row | null;
     const art = article as Row | null;
     return {
-      ticket: { ...t, assignee: assignee ?? null, requesterName: requester?.name ?? null },
+      ticket: { ...t, assignee: assignee ?? null, requesterName: requester?.name ?? null, incident: incident ?? null },
       messages: out,
       customer,
       context: ctx || art ? { page: ctx?.page ?? null, path: ctx?.path ?? null, requestId: ctx?.requestId ?? null, impact: ctx?.impact ?? null, browser: ctx?.browser ?? null, article: art ? { slug: art.slug ?? null, title: art.title ?? null } : null } : null,
@@ -441,6 +446,34 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
       `${input.outcome}\n\nถ้ายังมีปัญหา ตอบกลับอีเมลนี้ภายใน ${reopenDays} วัน เรื่องจะเปิดใหม่ให้อัตโนมัติ${input.sendCsat ? '\nช่วยให้คะแนนความพึงพอใจ 1–5 โดยตอบกลับอีเมลนี้เป็นตัวเลข' : ''}`,
     );
     return { id: t.id, status: 'solved' as const, sent };
+  }
+
+  /** เปลี่ยนความสำคัญ (ช่วง 3 · ทำทีละหลายเรื่องได้) · ไม่แจ้งลูกค้า */
+  async setPriority(staff: Staff, id: string, input: z.infer<typeof PriorityBody>) {
+    const t = await this.find(id);
+    this.open(t);
+    if (t.priority === input.priority) return { id: t.id, priority: t.priority, changed: false };
+    await this.db.update(s.supportTickets).set({ priority: input.priority, updatedAt: new Date() }).where(eq(s.supportTickets.id, t.id));
+    await this.trace(t, staff, 'support.ticket_priority', `ความสำคัญ ${t.priority} → ${input.priority}`);
+    return { id: t.id, priority: input.priority, changed: true };
+  }
+
+  /** ผูกกับเหตุขัดข้อง (ช่วง 3) · เรื่องเดียวกันหลายลูกค้าตามที่เดียว · ปิดเหตุแล้วปิดเรื่องที่ผูกได้ทีเดียว */
+  async linkIncident(staff: Staff, id: string, input: z.infer<typeof IncidentLinkBody>) {
+    const t = await this.find(id);
+    if (!input.incidentId) {
+      const r = await this.rows(sql`delete from support_ticket_incidents where ticket_id = ${t.id} returning incident_id`);
+      if (r.length) await this.trace(t, staff, 'support.ticket_incident_unlinked', 'เลิกผูกเหตุขัดข้อง');
+      return { id: t.id, incident: null };
+    }
+    this.open(t);
+    const [i] = await this.db.select({ id: s.incidents.id, title: s.incidents.title, status: s.incidents.status }).from(s.incidents).where(eq(s.incidents.id, input.incidentId));
+    if (!i) throw new AppError(404, 'incident_not_found', 'ไม่พบเหตุขัดข้องนี้');
+    await this.db.execute(sql`
+      insert into support_ticket_incidents (ticket_id, incident_id, linked_by) values (${t.id}, ${i.id}, ${staff.id})
+      on conflict (ticket_id) do update set incident_id = excluded.incident_id, linked_by = excluded.linked_by, created_at = now()`);
+    await this.trace(t, staff, 'support.ticket_incident_linked', `ผูกกับเหตุขัดข้อง "${i.title}"`);
+    return { id: t.id, incident: i };
   }
 
   /** บันทึกคะแนนความพึงพอใจที่ลูกค้าตอบกลับ (ช่วงแรกทีมกรอกจากอีเมล) */

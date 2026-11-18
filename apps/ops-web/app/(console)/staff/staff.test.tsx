@@ -103,6 +103,32 @@ describe("หน้าพนักงาน (Owner)", () => {
     await waitFor(() => expect(status).toEqual({ status: "suspended", reason: "ลาพักร้อน 2 สัปดาห์" }));
   });
 
+  it("แก้บทบาทของตัวเอง (A2): โหลดข้อมูลตัวเองใหม่ทันที ไม่ต้อง refresh หน้า · แก้คนอื่นไม่โหลด", async () => {
+    reauthOk();
+    let meCalls = 0;
+    server.use(
+      http.get(`${OPS}/auth/me`, () => (meCalls++, HttpResponse.json({ staff: staff.admin }))),
+      http.patch(`${OPS}/staff/:id`, () => HttpResponse.json({ staff: team[0] })),
+    );
+    page();
+    const save = async (name: string) => {
+      const row = (await screen.findAllByText(name)).find((el) => el.closest("tr"))!.closest("tr")!;
+      await userEvent.click(within(row).getByRole("button", { name: "จัดการ" }));
+      const drawer = await screen.findByRole("dialog", { name: `จัดการ ${name}` });
+      await userEvent.type(within(drawer).getByLabelText("เหตุผลที่เปลี่ยน"), "ทำงานการเงินเองด้วย");
+      const before = meCalls;
+      await userEvent.click(within(drawer).getByRole("button", { name: "บันทึก" }));
+      await waitFor(() => expect(screen.getAllByText("บันทึกแล้ว").length).toBeGreaterThan(0));
+      return before;
+    };
+    await screen.findByText("Support B");
+    const other = await save("Support B");
+    expect(meCalls).toBe(other);
+    await userEvent.keyboard("{Escape}");
+    const self = await save(staff.admin.name);
+    await waitFor(() => expect(meCalls).toBeGreaterThan(self));
+  });
+
   it("สิทธิ์ฉุกเฉิน (A12): เลือกบทบาทที่ไม่มี · เหตุผล ≥ 10 ตัว · แตะกุญแจ", async () => {
     const reauthed = reauthOk();
     let body: Record<string, unknown> = {};

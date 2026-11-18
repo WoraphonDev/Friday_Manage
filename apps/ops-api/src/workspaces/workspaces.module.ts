@@ -150,5 +150,5 @@ export class WorkspacesController {
   }
 }
 
-@Module({ imports: [BillingModule], controllers: [WorkspacesController], providers: [WorkspacesService, CustomersService, BulkService], exports: [WorkspacesService] })
+@Module({ imports: [BillingModule], controllers: [WorkspacesController], providers: [WorkspacesService, CustomersService, BulkService], exports: [WorkspacesService, CustomersService] })
 export class WorkspacesModule {}

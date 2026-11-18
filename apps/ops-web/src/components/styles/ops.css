@@ -3061,3 +3061,85 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 @media (max-width: 860px) { .run-grid { grid-template-columns: minmax(0, 1fr); } }
 .reason-keys { display: flex; flex-wrap: wrap; gap: 6px; }
 .todo-row[data-active] { background: var(--hover); box-shadow: inset 3px 0 0 var(--primary); }
+
+/* ---- ช่วง 3: แผงตัวกรองกลาง · หัวข้อเยอะจึงเลื่อนในแผงได้ ไม่ดันหน้า ---- */
+.popover:has(.filter-panel) {
+  width: min(460px, calc(100vw - 24px));
+  max-width: min(460px, calc(100vw - 24px));
+}
+.filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  padding: 6px;
+}
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.filter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.filter-group .row input {
+  flex: 1;
+  min-width: 0;
+}
+.active-filters {
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 12px;
+}
+
+/* ---- ช่วง 3: แถบมุมมองที่บันทึก ---- */
+.views-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 8px;
+}
+.view-chip {
+  display: inline-flex;
+  align-items: center;
+}
+.view-chip .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.view-more {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.view-more:hover {
+  background: var(--hover);
+  color: var(--foreground);
+}
+.view-more:focus-visible {
+  outline: 2px solid var(--focus);
+}
+.menu-item.danger {
+  color: var(--danger-text);
+}

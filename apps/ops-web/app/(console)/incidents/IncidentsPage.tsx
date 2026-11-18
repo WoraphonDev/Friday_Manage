@@ -12,6 +12,8 @@ import { Button, errorToast, InlineError, Input, Textarea, useToast } from "@/co
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { useFmt } from "../workspaces/_parts/format";
+import Link from "next/link";
+import { BulkDialog } from "../support/_parts/Bulk";
 
 const SERVICES = ["web", "api", "import_export", "notifications_email", "notifications_line", "realtime", "files", "billing"] as const;
 const STATES = ["investigating", "identified", "monitoring", "resolved"] as const;
@@ -24,6 +26,8 @@ interface Incident {
   internal: boolean;
   startedAt: string;
   resolvedAt: string | null;
+  /** ช่วง 3 · Ticket ที่ผูกกับเหตุนี้ */
+  tickets?: { total: number; open: number };
   updates: {
     id: string;
     status: string;
@@ -103,6 +107,9 @@ function IncidentCard({ incident: i, subscribers, canUpdate }: { incident: Incid
   const [message, setMessage] = useState("");
   const [notify, setNotify] = useState(!i.internal);
   const [banner, setBanner] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const me = useMe().data;
+  const linked = i.tickets ?? { total: 0, open: 0 };
   const m = useMutation({
     mutationFn: () =>
       api.post<{ notified: number }>(`/incidents/${i.id}/updates`, {
@@ -127,6 +134,21 @@ function IncidentCard({ incident: i, subscribers, canUpdate }: { incident: Incid
           services: i.services.map((s) => (t.has(`services.${s}` as "services.web") ? t(`services.${s}` as "services.web") : s)).join(", "),
         })}
       </p>
+      {linked.total > 0 && (
+        <div className="row small" style={{ gap: 10 }}>
+          <span>{t("linked.label", linked)}</span>
+          <Link className="link-button small" href={`/support?tab=all&incident=${i.id}`}>
+            {t("linked.open")}
+          </Link>
+          {hasAny(me, "support") && linked.open > 0 && (
+            <Button size="small" onClick={() => setClosing(true)}>
+              {t("linked.solve", { n: linked.open })}
+            </Button>
+          )}
+        </div>
+      )}
+      {linked.open > 0 && status === "resolved" && canUpdate && <p className="muted small">{t("linked.hint")}</p>}
+      {closing && <BulkDialog target={{ filter: { incident: i.id, tab: "all" } }} count={linked.open} initial="solve" onClose={() => setClosing(false)} onDone={() => (setClosing(false), invalidate(cache))} />}
       {canUpdate && (
         <form className="stack" onSubmit={(e) => (e.preventDefault(), message.trim().length >= 3 && m.mutate())}>
           <Seg label={t("update")} value={status} onChange={setStatus} options={STATES.map((s) => ({ value: s, label: t(`state.${s}`) }))} />

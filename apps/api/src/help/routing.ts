@@ -19,7 +19,7 @@ export interface Dur {
   n: number;
   unit: 'h' | 'd';
 }
-type PlanSla = { first: Dur | null; resolve: Dur | null };
+export type PlanSla = { first: Dur | null; resolve: Dur | null };
 export interface SupportConfig {
   mode: 'least' | 'round' | 'manual';
   defaultCap: number;
@@ -147,8 +147,22 @@ async function holidays(db: Db) {
 }
 
 /** กำหนดตอบครั้งแรก / ปิดเรื่อง · ด่วนนับ 24 ชม. ทุกวัน ตอบครั้งแรกไม่เกิน 1 ชม. (เหมือน O22) */
-export async function dueOf(db: Db, cfg: SupportConfig, plan: string, priority: string, from: Date) {
-  const sla = cfg.sla[plan] ?? cfg.sla.free;
+/**
+ * SLA ตามสัญญาของบัญชีลูกค้า (ช่วง 3 ของ Friday Ops · customer_accounts) · ใช้แทน SLA ของแพ็กเกจเมื่อสัญญายังไม่หมด
+ * ต้นฉบับ: apps/ops-api/src/support/settings.service.ts › contractSla · db ต้องเป็น SYSTEM_DB (ตารางของหลังบ้าน)
+ */
+export async function contractSla(db: Db, workspaceId: string): Promise<PlanSla | null> {
+  const r = await db.execute(sql`
+    select a.contract_sla as sla from customer_account_workspaces aw join customer_accounts a on a.id = aw.account_id
+    where aw.workspace_id = ${workspaceId} and a.contract_sla is not null and (a.contract_end is null or a.contract_end >= (now() at time zone 'Asia/Bangkok')::date)`);
+  const row = ((r as unknown as { rows?: { sla: unknown }[] }).rows ?? (r as unknown as { sla: unknown }[]))[0];
+  const sla = row?.sla as PlanSla | undefined;
+  const ok = (d: unknown) => d === null || (!!d && typeof d === 'object' && Number.isInteger((d as Dur).n) && ['h', 'd'].includes((d as Dur).unit));
+  return sla && ok(sla.first) && ok(sla.resolve) ? sla : null;
+}
+
+export async function dueOf(db: Db, cfg: SupportConfig, plan: string, priority: string, from: Date, override?: PlanSla | null) {
+  const sla = override ?? cfg.sla[plan] ?? cfg.sla.free;
   if (priority === 'urgent') {
     const h = (d: Dur | null) => (d ? d.n * (d.unit === 'd' ? 24 : 1) : null);
     const first = Math.min(h(sla.first) ?? 1, 1);

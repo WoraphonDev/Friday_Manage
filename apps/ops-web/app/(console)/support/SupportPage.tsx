@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { useTranslations } from "next-intl";
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { Kbd } from "@/components/shortcut-help";
 import { defer, UNDO_MS } from "@/lib/outbox";
 import { type Seen, usePresence, usePresenceOf } from "@/lib/presence";
@@ -18,6 +18,11 @@ import { useMe } from "@/lib/query";
 import { useRowNav, useShortcuts, useStableRows } from "@/lib/shortcuts";
 import { NewItemsBar } from "@/components/new-items";
 import { useUrlFilters } from "@/lib/url-state";
+import { ActiveFilters, FilterButton, filterKeys, filterQuery } from "@/components/filters";
+import { ViewsBar } from "@/components/views-bar";
+import { TICKET_SORTS, useTicketFilters } from "./_parts/filters";
+import { BulkDialog, type BulkKind, IncidentLink } from "./_parts/Bulk";
+import bulkStyles from "../workspaces/_parts/bulk.module.css";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
 import { DevCard } from "../bugs/_components/DevCard";
 import { EscalateDialog } from "../bugs/_components/EscalateDialog";
@@ -38,6 +43,7 @@ interface TicketRow {
   assigneeName: string | null;
   workspace: { id: string; slug: string; name: string } | null;
   slaBreached: boolean;
+  incident?: { id: string; title: string; status: string } | null;
 }
 interface Summary {
   open: number;
@@ -87,6 +93,9 @@ interface TicketDetail {
     accessGranted: boolean;
     accountManager: string | null;
     sla: { first: Dur | null; resolve: Dur | null };
+    /** ช่วง 3 · contract = SLA ตามสัญญาของบัญชีลูกค้า */
+    slaSource?: "plan" | "contract";
+    account?: { id: string; name: string; kind: "standard" | "enterprise"; managerName: string | null; workspaces: number; openTickets: number } | null;
   } | null;
 }
 const key = ["ops", "tickets"] as const;
@@ -138,7 +147,12 @@ export function SupportPage() {
   const support = hasAny(me, "support");
   // คนตอบ Ticket เริ่มที่คิวของตัวเอง · บทบาทอื่น (Owner / ผู้ตรวจ) เริ่มที่ทั้งหมด
   // ตัวกรองอยู่ใน URL (กดย้อนกลับแล้วยังอยู่ที่เดิม · ส่งลิงก์ได้) · queue ว่าง = ตามบทบาท
-  const [f, setF] = useUrlFilters({ tab: "", status: "active", q: "" });
+  // ช่วง 3: แผงตัวกรอง + เรียง · อยู่ใน URL เหมือนกันจึงบันทึกเป็นมุมมองได้
+  const defs = useTicketFilters();
+  const defaults = { tab: "", status: "active", q: "", sort: "sla", ...filterKeys(defs) };
+  const [f, setF] = useUrlFilters(defaults);
+  const fq = filterQuery(defs, f);
+  const setFilters = (patch: Record<string, string>) => (setF(patch), setOffset(0));
   const queue: Queue = (["mine", "none", "all", "team"] as const).includes(f.tab as Queue) ? (f.tab as Queue) : support ? "mine" : "all";
   const setQueue = (v: Queue) => (setF({ tab: v }), setOffset(0));
   const status = f.status as "active" | "pending_dev" | "solved" | "closed";
@@ -160,6 +174,8 @@ export function SupportPage() {
     // ops-api รับ assignee = me | none | uuid (เคยส่ง "mine" จนแท็บ "ของฉัน" โหลดไม่ได้)
     ...(listQueue !== "all" ? { assignee: listQueue === "mine" ? "me" : listQueue } : {}),
     ...(search ? { q: search } : {}),
+    ...fq,
+    ...(f.sort !== "sla" ? { sort: f.sort } : {}),
     ...(params?.get("workspace") ? { workspaceId: params.get("workspace")! } : {}),
   });
   const list = useQuery({
@@ -235,6 +251,40 @@ export function SupportPage() {
   };
   useShortcuts([{ keys: "p", label: tr("start"), list: true, run: () => void (queue !== "team" && startRun()) }], support);
   const viewers = usePresenceOf("ticket", queue === "team" ? [] : stable.rows.map((k) => k.id));
+  // ---- ช่วง 3 · เลือกหลายเรื่อง: ติ๊กทีละแถว / ทั้งหน้า / ทั้งหมดตามตัวกรอง (ไม่เกิน 1,000) · เปลี่ยนตัวกรองแล้วล้างที่เลือก
+  const [picked, setPicked] = useState<Map<string, number>>(new Map());
+  const [byFilter, setByFilter] = useState(false);
+  const [bulk, setBulk] = useState<BulkKind | null>(null);
+  const scope = JSON.stringify({ fq, status, search, queue });
+  useEffect(() => (setPicked(new Map()), setByFilter(false)), [scope]);
+  const pageRows = stable.rows;
+  const pageAll = pageRows.length > 0 && pageRows.every((k) => picked.has(k.id));
+  const pageSome = pageRows.some((k) => picked.has(k.id));
+  const headBox = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (headBox.current) headBox.current.indeterminate = pageSome && !pageAll;
+  }, [pageSome, pageAll]);
+  const pick = (k: { id: string; number: number }, on: boolean) => {
+    const next = new Map(picked);
+    if (on) next.set(k.id, k.number);
+    else next.delete(k.id);
+    setPicked(next);
+    setByFilter(false);
+  };
+  const pickPage = (on: boolean) => {
+    const next = new Map(picked);
+    for (const k of pageRows) {
+      if (on) next.set(k.id, k.number);
+      else next.delete(k.id);
+    }
+    setPicked(next);
+    setByFilter(false);
+  };
+  const totalRows = list.data?.total ?? 0;
+  const bulkFilter: Record<string, string> = { ...fq, status, ...(search ? { q: search } : {}), ...(queue !== "team" ? { tab: queue } : {}), ...(params?.get("workspace") ? { workspaceId: params.get("workspace")! } : {}) };
+  const bulkTarget = byFilter ? { filter: bulkFilter } : { ids: [...picked.keys()] };
+  const bulkCount = byFilter ? totalRows : picked.size;
+  const tbk = useTranslations("ss.support.bulk");
   const nav = useRowNav(queue === "team" ? [] : stable.rows, { onOpen: (k) => select(k.id), labels: { down: tk("down"), open: tk("open") } });
   const count = (n: number | undefined) => (n ? <span className="tab-count">{n}</span> : null);
   return (
@@ -288,7 +338,19 @@ export function SupportPage() {
           />
         }
       >
-        {queue !== "team" && <Input data-page-search aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />}
+        {queue !== "team" && (
+          <>
+            <Input data-page-search aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />
+            <FilterButton defs={defs} values={f} onChange={setFilters} />
+            <select className="input" style={{ width: "auto" }} aria-label={t("sortLabel")} value={f.sort} onChange={(e) => setFilters({ sort: e.target.value })}>
+              {TICKET_SORTS.map((v) => (
+                <option key={v} value={v}>
+                  {t(`sorts.${v}`)}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
       </ListBar>
       {queue === "team" ? (
         <>
@@ -297,7 +359,36 @@ export function SupportPage() {
         </>
       ) : (
         <>
+          <ViewsBar page="tickets" values={f} defaults={defaults} onApply={(v) => (setQ(v.q ?? ""), setF({ ...defaults, ...v }), setOffset(0))} />
+          <ActiveFilters defs={defs} values={f} onChange={setFilters} />
           <NewItemsBar count={stable.fresh} onShow={stable.reveal} />
+          {support && (picked.size > 0 || byFilter) && (
+            <div className={`${bulkStyles.bar} motion-in`} role="status">
+              <b>{byFilter ? tbk("selectedFilter", { n: totalRows }) : tbk("selected", { n: picked.size })}</b>
+              {byFilter ? (
+                <button type="button" className={bulkStyles.link} onClick={() => setByFilter(false)}>
+                  {tbk("onlyPicked")}
+                </button>
+              ) : (
+                totalRows > picked.size && (
+                  <button type="button" className={bulkStyles.link} disabled={totalRows > 1000} title={totalRows > 1000 ? tbk("max") : undefined} onClick={() => setByFilter(true)}>
+                    {tbk("selectByFilter", { n: totalRows })}
+                  </button>
+                )
+              )}
+              {totalRows > 1000 && !byFilter && <span className={bulkStyles.hint}>{tbk("max")}</span>}
+              <span className={bulkStyles.actions}>
+                {(["reply", "assign", "solve", "priority", "incident"] as const).map((k) => (
+                  <Button key={k} size="small" onClick={() => setBulk(k)}>
+                    {tbk(`kinds.${k}`)}
+                  </Button>
+                ))}
+                <Button size="small" variant="ghost" onClick={() => (setPicked(new Map()), setByFilter(false))}>
+                  {tbk("clear")}
+                </Button>
+              </span>
+            </div>
+          )}
           <ChipGroup className="row">
             {(["active", "pending_dev", "solved", "closed"] as const).map((v) => (
               <Chip key={v} pressed={status === v} onClick={() => setStatus(v)}>
@@ -311,12 +402,22 @@ export function SupportPage() {
           ) : list.error ? (
             <ErrorBlock error={list.error} retry={() => void list.refetch()} />
           ) : !stable.rows.length && !stable.fresh ? (
-            <Empty ok={queue === "none" || queue === "mine"} title={queue === "none" ? t("emptyQueue") : queue === "mine" ? t("emptyMine") : t("empty")} />
+            // มีตัวกรองอยู่ = ไม่ใช่ "คิวว่าง" จริง จึงไม่ขึ้นข้อความแบบเสร็จงาน
+            Object.keys(fq).length ? (
+              <Empty title={t("empty")} />
+            ) : (
+              <Empty ok={queue === "none" || queue === "mine"} title={queue === "none" ? t("emptyQueue") : queue === "mine" ? t("emptyMine") : t("empty")} />
+            )
           ) : (
             <div className="tbl-wrap">
               <table className="tbl">
                 <thead>
                   <tr>
+                    {support && (
+                      <th>
+                        <input ref={headBox} type="checkbox" aria-label={tbk("selectPage")} checked={pageAll || (byFilter && pageRows.length > 0)} disabled={byFilter} onChange={(e) => pickPage(e.target.checked)} />
+                      </th>
+                    )}
                     <th scope="col">{t("col.ticket")}</th>
                     <th scope="col">{t("col.customer")}</th>
                     <th scope="col">{t("col.status")}</th>
@@ -327,6 +428,11 @@ export function SupportPage() {
                 <tbody className="motion-list">
                   {stable.rows.map((k, i) => (
                     <tr key={k.id} className="row-link" aria-selected={selected === k.id} onClick={() => select(k.id)} {...nav.rowProps(i)}>
+                      {support && (
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" aria-label={tbk("selectRow", { number: k.number })} checked={byFilter || picked.has(k.id)} disabled={byFilter} onChange={(e) => pick(k, e.target.checked)} />
+                        </td>
+                      )}
                       <td>
                         <button type="button" className="row-link-button" onClick={(e) => (e.stopPropagation(), select(k.id))}>
                           <span className="row nowrap">
@@ -339,6 +445,12 @@ export function SupportPage() {
                             ● {t(v.mode === "typing" ? "presence.typing" : "presence.viewing", { name: v.name })}
                           </span>
                         ))}
+                        {k.incident && (
+                          <>
+                            {" "}
+                            <span className="pill inf">{tbk("incidentPill", { title: k.incident.title })}</span>
+                          </>
+                        )}
                         {(k.priority === "urgent" || k.priority === "high") && (
                           <>
                             {" "}
@@ -361,6 +473,7 @@ export function SupportPage() {
           {list.data?.total != null && <Pager hotkeys offset={offset} limit={PAGE} shown={list.data.items.length} total={list.data.total} onChange={setOffset} />}
         </>
       )}
+      {bulk && <BulkDialog target={bulkTarget} count={bulkCount} initial={bulk} onClose={() => setBulk(null)} onDone={() => (setBulk(null), setPicked(new Map()), setByFilter(false), void list.refetch())} />}
       <TicketDrawer
         id={selected}
         onClose={() => (run && !run.finished ? stopRun() : select(null))}
@@ -395,6 +508,7 @@ function TicketDrawer({ id, onClose, run }: { id: string | null; onClose: () => 
 function TicketView({ id, run }: { id: string; run?: RunView }) {
   const t = useTranslations("ss");
   const tset = useTranslations("sset");
+  const tAcc = useTranslations("customers.accounts");
   const fmt = useFmt();
   const toast = useToast();
   const cache = useQueryClient();
@@ -562,6 +676,7 @@ function TicketView({ id, run }: { id: string; run?: RunView }) {
           <span className="muted">
             {t("support.assignee")}: {k.assignee?.name ?? t("support.unassigned")}
           </span>
+          <IncidentLink ticketId={k.id} incident={k.incident ?? null} canEdit={hasAny(me, "support", "owner") && k.status !== "closed"} />
         </div>
         {actions}
       </div>
@@ -660,6 +775,21 @@ function TicketView({ id, run }: { id: string; run?: RunView }) {
           {context && <ContextCard context={context} />}
           <aside className="card" aria-label={t("support.customer")}>
             <h3 className="card-title">{customer?.name ?? t("support.customer")}</h3>
+            {customer?.account && (
+              <div className="stack small" style={{ gap: 2, marginBottom: 8 }}>
+                <Link className="link-button" href={`/accounts/${customer.account.id}`}>
+                  <b>{t("support.account.label", { name: customer.account.name })}</b>
+                </Link>
+                <span className="muted">{t("support.account.meta", { kind: tAcc(`kind.${customer.account.kind}`), n: customer.account.workspaces })}</span>
+                {customer.account.managerName && <span>{t("support.account.manager", { name: customer.account.managerName })}</span>}
+                {customer.slaSource === "contract" && customer.sla.first && <span>{t("support.account.slaContract", { n: customer.sla.first.n, unit: customer.sla.first.unit === "h" ? t("support.account.h") : t("support.account.d") })}</span>}
+                {customer.account.workspaces > 1 && (
+                  <Link className="muted" href={`/support?tab=all&account=${customer.account.id}`}>
+                    {t("support.account.open", { n: customer.account.openTickets })}
+                  </Link>
+                )}
+              </div>
+            )}
             {customer ? (
               <table className="tbl">
                 <tbody>
@@ -670,7 +800,7 @@ function TicketView({ id, run }: { id: string; run?: RunView }) {
                     </td>
                   </tr>
                   <tr>
-                    <td className="muted">{t("support.sla")}</td>
+                    <td className="muted">{customer.slaSource === "contract" ? t("support.slaContractLabel") : t("support.sla")}</td>
                     <td>{customer.sla.first ? t("support.slaValue", { n: customer.sla.first.n, unit: customer.sla.first.unit }) : t("support.slaNone")}</td>
                   </tr>
                   <tr>

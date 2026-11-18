@@ -199,6 +199,18 @@ describe('Ticket จากในแอป', () => {
     expect(audit).toHaveLength(1);
   });
 
+  it('บัญชีลูกค้าที่มีสัญญา (Friday Ops ช่วง 3): Ticket ใหม่ใช้ SLA ตามสัญญาแทนของแพ็กเกจ · สัญญาหมดแล้วกลับไปใช้ของแพ็กเกจ', async () => {
+    const acc = (await t.owner.query(`INSERT INTO customer_accounts (name, kind, contract_end, contract_sla) VALUES ('บจก. ออร์บิทสมมติ', 'enterprise', current_date + 30, '{"first":{"n":1,"unit":"h"},"resolve":{"n":2,"unit":"d"}}') RETURNING id`)).rows[0].id;
+    await t.owner.query('INSERT INTO customer_account_workspaces (workspace_id, account_id) VALUES ($1, $2)', [wsId, acc]);
+    const r = await team.dev.post(`${team.ws}/support/tickets`, { subject: 'สัญญา SLA', category: 'other', body: 'ทดสอบ SLA ตามสัญญา' });
+    expect(r.body.sla.first).toEqual({ n: 1, unit: 'h' });
+    await t.owner.query(`UPDATE customer_accounts SET contract_end = current_date - 1 WHERE id = $1`, [acc]);
+    const old = await team.dev.post(`${team.ws}/support/tickets`, { subject: 'หลังหมดสัญญา', category: 'other', body: 'ทดสอบ' });
+    expect(old.body.sla.first).toEqual({ n: 4, unit: 'h' });
+    await t.owner.query('DELETE FROM customer_accounts WHERE id = $1', [acc]);
+    await t.owner.query(`DELETE FROM support_tickets WHERE subject IN ('สัญญา SLA', 'หลังหมดสัญญา')`);
+  });
+
   it('รายละเอียด: ไม่มีบันทึกภายใน · พนักงานแสดงเป็นทีม Friday · ไฟล์แนบมีลิงก์ดาวน์โหลด', async () => {
     await t.owner.query(`INSERT INTO support_ticket_messages (ticket_id, author_kind, author_staff_id, body, internal) VALUES ($1, 'staff', $2, 'บันทึกภายใน: ลูกค้ารายนี้ใช้แพ็กเกจเก่า', true)`, [ticketId, staffId]);
     await t.owner.query(`INSERT INTO support_ticket_messages (ticket_id, author_kind, author_staff_id, body) VALUES ($1, 'staff', $2, 'ได้รับเรื่องแล้วครับ กำลังตรวจประวัติการส่ง')`, [ticketId, staffId]);

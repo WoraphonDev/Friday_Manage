@@ -176,7 +176,14 @@ export class SystemService implements OnModuleInit, OnModuleDestroy {
     const [{ total }] = await this.rows<{ total: number }>(sql`select count(*)::int as total from incidents`);
     const updates = list.length ? await this.db.select().from(s.incidentUpdates).where(inArray(s.incidentUpdates.incidentId, list.map((i) => i.id))).orderBy(desc(s.incidentUpdates.createdAt)) : [];
     const [{ subscribers }] = await this.rows<{ subscribers: number }>(sql`select count(*)::int as subscribers from status_subscribers where confirmed_at is not null and unsubscribed_at is null`);
-    return { items: list.map((i) => ({ ...i, updates: updates.filter((u) => u.incidentId === i.id) })), total, subscribers };
+    // ช่วง 3: จำนวน Ticket ที่ผูก (ทั้งหมด / ยังไม่ปิด) ใช้ในปุ่ม "ปิดเรื่องที่ผูกไว้"
+    const linked = list.length
+      ? await this.rows<{ id: string; total: number; open: number }>(sql`
+          select ti.incident_id as id, count(*)::int as total, count(*) filter (where k.status in ('open', 'pending_customer', 'pending_dev'))::int as open
+          from support_ticket_incidents ti join support_tickets k on k.id = ti.ticket_id
+          where ti.incident_id in (${sql.join(list.map((i) => sql`${i.id}`), sql`, `)}) group by ti.incident_id`)
+      : [];
+    return { items: list.map((i) => ({ ...i, updates: updates.filter((u) => u.incidentId === i.id), tickets: (({ total, open }) => ({ total, open }))(linked.find((x) => x.id === i.id) ?? { total: 0, open: 0 }) })), total, subscribers };
   }
 
   /** เปิดเหตุขัดข้อง (Y3) · ไม่ใช่ภายใน = ขึ้นหน้าสถานะสาธารณะทันที และส่งอีเมลผู้ติดตาม */

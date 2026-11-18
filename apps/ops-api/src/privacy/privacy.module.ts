@@ -162,5 +162,5 @@ export class PrivacyController {
   }
 }
 
-@Module({ controllers: [PrivacyController], providers: [PrivacyService, HoldsService] })
+@Module({ controllers: [PrivacyController], providers: [PrivacyService, HoldsService], exports: [PrivacyService] })
 export class PrivacyModule {}

@@ -5,6 +5,7 @@ import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } f
 import { type Db, schema } from '@friday/db';
 import { and, eq, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
+import { buyerKey } from '../workspaces/test-flag.js';
 import { audit, staffAudit } from '../audit.js';
 import { has, type Staff } from '../auth/auth.guard.js';
 import { OPS_DB } from '../db.js';
@@ -19,16 +20,52 @@ const DAY = 86_400_000;
 type Row = Record<string, unknown>;
 type Ticket = typeof s.supportTickets.$inferSelect;
 
+const BREACHED = sql`(k.status in ('open', 'pending_dev') and ((k.first_responded_at is null and k.first_response_due_at < now()) or k.resolution_due_at < now()))`;
+const ORDERS = {
+  sla: sql`${BREACHED} desc, (k.priority = 'urgent') desc, (k.priority = 'high') desc, coalesce(k.first_response_due_at, k.created_at), k.number`,
+  newest: sql`k.created_at desc, k.number desc`,
+  waiting: sql`k.updated_at asc, k.number`,
+  priority: sql`(k.priority = 'urgent') desc, (k.priority = 'high') desc, (k.priority = 'normal') desc, coalesce(k.first_response_due_at, k.created_at), k.number`,
+};
+
 /** บวกชั่วโมงทำการตามค่าเริ่มต้น (จ.–ศ. 09:00–18:00 เวลาไทย ไม่นับวันหยุด) · SLA จริงใช้เวลาทำการที่ตั้งใน O22 */
 export const addBusinessHours = (start: Date, hours: number) => new BusinessClock().addHours(start, hours);
 
 const Priority = z.enum(['low', 'normal', 'high', 'urgent']);
+/** "a,b" → ["a","b"] (ว่าง = ไม่กรอง) */
+const list = <T extends z.ZodType<string, string>>(item: T) =>
+  z
+    .union([z.string(), z.array(z.string())])
+    .transform((v) => (Array.isArray(v) ? v : v.split(',')).map((x) => x.trim()).filter(Boolean))
+    .pipe(z.array(item).max(50) as unknown as z.ZodType<z.output<T>[], string[]>)
+    .optional();
 export const TicketsQuery = z.object({
   status: z.enum(['open', 'pending_customer', 'pending_dev', 'solved', 'closed', 'active']).default('active'),
   /** me = ของฉัน · none = คิวกลาง (ยังไม่มีคนรับ) */
   assignee: z.union([z.enum(['me', 'none']), z.uuid()]).optional(),
   workspaceId: z.uuid().optional(),
   q: z.string().trim().max(100).optional(),
+  // ---- ช่วง 3: ตัวกรองเพิ่ม (หลายค่าส่งคั่นด้วยจุลภาค)
+  assignees: list(z.uuid()),
+  priority: list(Priority),
+  category: list(z.string().trim().max(40)),
+  channel: list(z.enum(['email', 'phone', 'line', 'in_app'])),
+  /** breached = เกิน SLA · soon = เหลือไม่ถึง 1 ชม. · today = ครบกำหนดวันนี้ */
+  sla: z.enum(['breached', 'soon', 'today']).optional(),
+  plan: list(z.enum(['free', 'team_s', 'team_m', 'team_l', 'enterprise'])),
+  buyer: z.string().trim().max(80).optional(),
+  account: z.uuid().optional(),
+  created: z.coerce.number().pipe(z.union([z.literal(1), z.literal(7), z.literal(30)])).optional(),
+  createdFrom: z.iso.date().optional(),
+  createdTo: z.iso.date().optional(),
+  /** เงียบนานเกิน (ชั่วโมง): 24 · 72 · 168 */
+  quiet: z.coerce.number().pipe(z.union([z.literal(24), z.literal(72), z.literal(168)])).optional(),
+  /** ผูกกับเหตุขัดข้อง (รหัส) หรือ none */
+  incident: z.union([z.uuid(), z.literal('none')]).optional(),
+  /** ความพึงพอใจ (เรื่องที่แก้แล้ว): low 1–2 · high 4–5 · none ยังไม่ตอบ */
+  csat: z.enum(['low', 'high', 'none']).optional(),
+  /** sla = SLA ใกล้หมดก่อน (ค่าเริ่มต้น) · newest · waiting = รอนานสุด · priority */
+  sort: z.enum(['sla', 'newest', 'waiting', 'priority']).default('sla'),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -78,6 +115,9 @@ export const SolveBody = z
   })
   .strict();
 export const CsatBody = z.object({ score: z.number().int().min(1).max(5) }).strict();
+export const PriorityBody = z.object({ priority: Priority }).strict();
+/** ผูก / เลิกผูกเหตุขัดข้อง (ช่วง 3) · null = เลิกผูก */
+export const IncidentLinkBody = z.object({ incidentId: z.uuid().nullable() }).strict();
 
 /**
  * Ticket ของ Support (O04) · แจกตามกฎและวิธีแจกที่ตั้งไว้ (O22) · ยังไม่มีคนรับ = อยู่ในคิวกลาง ใครก็ "รับเรื่องนี้" ได้
@@ -156,7 +196,27 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     // ตัวกรองที่ไม่ใช่ผู้รับ ใช้ร่วมกับตัวเลขบนแท็บ (ของฉัน / คิวกลาง / ทั้งหมด)
     const base: SQL[] = [q.status === 'active' ? sql`k.status in ('open', 'pending_customer', 'pending_dev')` : sql`k.status = ${q.status}`];
     if (q.workspaceId) base.push(sql`k.workspace_id = ${q.workspaceId}`);
-    if (q.q) base.push(sql`(k.subject ilike ${`%${q.q}%`} or k.requester_email ilike ${`%${q.q}%`} or k.number::text = ${q.q.replace(/^#/, '')})`);
+    // ค้นหัวข้อ อีเมล เลข Ticket และข้อความในบทสนทนา (ช่วง 3)
+    if (q.q) base.push(sql`(k.subject ilike ${`%${q.q}%`} or k.requester_email ilike ${`%${q.q}%`} or k.number::text = ${q.q.replace(/^#/, '')} or exists(select 1 from support_ticket_messages m where m.ticket_id = k.id and m.body ilike ${`%${q.q}%`}))`);
+    const inList = (col: SQL, xs: string[]) => sql`${col} in (${sql.join(xs.map((x) => sql`${x}`), sql`, `)})`;
+    if (q.assignees?.length) base.push(inList(sql`k.assignee_id`, q.assignees));
+    if (q.priority?.length) base.push(inList(sql`k.priority`, q.priority));
+    if (q.category?.length) base.push(inList(sql`k.category`, q.category));
+    if (q.channel?.length) base.push(inList(sql`k.channel`, q.channel));
+    if (q.sla === 'breached') base.push(BREACHED);
+    else if (q.sla === 'soon') base.push(sql`(not ${BREACHED} and k.status in ('open', 'pending_dev') and least(case when k.first_responded_at is null then k.first_response_due_at end, k.resolution_due_at) < now() + interval '1 hour')`);
+    else if (q.sla === 'today') base.push(sql`(k.status in ('open', 'pending_dev') and (least(case when k.first_responded_at is null then k.first_response_due_at end, k.resolution_due_at) at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date)`);
+    if (q.plan?.length) base.push(sql`exists(select 1 from subscriptions sub join plans p on p.id = sub.plan_id where sub.workspace_id = k.workspace_id and ${inList(sql`p.code`, q.plan)})`);
+    if (q.buyer) base.push(sql`${buyerKey(sql`k.workspace_id`)} = ${q.buyer}`);
+    if (q.account) base.push(sql`exists(select 1 from customer_account_workspaces aw where aw.workspace_id = k.workspace_id and aw.account_id = ${q.account})`);
+    if (q.created) base.push(sql`k.created_at > now() - make_interval(days => ${q.created})`);
+    if (q.createdFrom) base.push(sql`k.created_at >= ${q.createdFrom}::date`);
+    if (q.createdTo) base.push(sql`k.created_at < ${q.createdTo}::date + 1`);
+    if (q.quiet) base.push(sql`k.updated_at < now() - make_interval(hours => ${q.quiet})`);
+    if (q.incident) base.push(q.incident === 'none' ? sql`not exists(select 1 from support_ticket_incidents ti where ti.ticket_id = k.id)` : sql`exists(select 1 from support_ticket_incidents ti where ti.ticket_id = k.id and ti.incident_id = ${q.incident})`);
+    if (q.csat === 'low') base.push(sql`k.csat <= 2`);
+    else if (q.csat === 'high') base.push(sql`k.csat >= 4`);
+    else if (q.csat === 'none') base.push(sql`k.csat is null and k.status in ('solved', 'closed')`);
     const parts = [...base];
     if (q.assignee === 'me') parts.push(sql`k.assignee_id = ${staff.id}`);
     else if (q.assignee === 'none') parts.push(sql`k.assignee_id is null`);
@@ -166,11 +226,11 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
         k.first_response_due_at as "firstResponseDueAt", k.resolution_due_at as "resolutionDueAt", k.first_responded_at as "firstRespondedAt",
         st.id as "assigneeId", st.name as "assigneeName",
         case when w.id is null then null else json_build_object('id', w.id, 'slug', w.slug, 'name', w.name) end as workspace,
-        (k.status in ('open', 'pending_dev') and ((k.first_responded_at is null and k.first_response_due_at < now()) or k.resolution_due_at < now())) as "slaBreached"
+        (k.status in ('open', 'pending_dev') and ((k.first_responded_at is null and k.first_response_due_at < now()) or k.resolution_due_at < now())) as "slaBreached",
+        (select json_build_object('id', i.id, 'title', i.title, 'status', i.status) from support_ticket_incidents ti join incidents i on i.id = ti.incident_id where ti.ticket_id = k.id) as incident
       from support_tickets k left join staff_users st on st.id = k.assignee_id left join workspaces w on w.id = k.workspace_id
       where ${sql.join(parts, sql` and `)}
-      order by (k.status in ('open', 'pending_dev') and ((k.first_responded_at is null and k.first_response_due_at < now()) or k.resolution_due_at < now())) desc,
-        (k.priority = 'urgent') desc, (k.priority = 'high') desc, coalesce(k.first_response_due_at, k.created_at), k.number
+      order by ${ORDERS[q.sort]}
       limit ${q.limit} offset ${q.offset}`);
     // ช่วง 1 (ข้อมูลเยอะ): เคยตัดที่ limit โดยไม่บอก · ตอนนี้ส่งจำนวนทั้งหมดและตัวเลขของแต่ละแท็บ
     const [c] = await this.rows(sql`
@@ -202,10 +262,19 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
           exists(select 1 from support_access_grants g where g.workspace_id = w.id and (g.until is null or g.until > now())) as "accessGranted"
         from workspaces w left join subscriptions sub on sub.workspace_id = w.id left join plans p on p.id = sub.plan_id where w.id = ${t.workspaceId}`);
       const cfg = await this.settings.config();
-      customer = c ? { ...c, sla: cfg.sla[((c.plan as string) ?? 'free') as keyof typeof cfg.sla] ?? cfg.sla.free } : null;
+      // ช่วง 3 · บัญชีลูกค้า: ชื่อบัญชี ผู้ดูแล Ticket เปิดทั้งบัญชี และ SLA ตามสัญญา (ถ้ามี ใช้แทนของแพ็กเกจ)
+      const [account] = await this.rows(sql`
+        select a.id, a.name, a.kind, st.name as "managerName",
+          (select count(*)::int from customer_account_workspaces x where x.account_id = a.id) as workspaces,
+          (select count(*)::int from support_tickets k join customer_account_workspaces x on x.workspace_id = k.workspace_id where x.account_id = a.id and k.status in ('open', 'pending_customer', 'pending_dev')) as "openTickets"
+        from customer_account_workspaces aw join customer_accounts a on a.id = aw.account_id left join staff_users st on st.id = a.manager_id
+        where aw.workspace_id = ${t.workspaceId}`);
+      const contract = await this.settings.contractSla(t.workspaceId);
+      customer = c ? { ...c, sla: contract ?? cfg.sla[((c.plan as string) ?? 'free') as keyof typeof cfg.sla] ?? cfg.sla.free, slaSource: contract ? 'contract' : 'plan', account: account ?? null } : null;
     }
     const [assignee] = t.assigneeId ? await this.db.select({ id: s.staffUsers.id, name: s.staffUsers.name }).from(s.staffUsers).where(eq(s.staffUsers.id, t.assigneeId)) : [];
     const [requester] = t.requesterUserId ? await this.db.select({ name: s.users.displayName }).from(s.users).where(eq(s.users.id, t.requesterUserId)) : [];
+    const [incident] = await this.rows(sql`select i.id, i.title, i.status from support_ticket_incidents ti join incidents i on i.id = ti.incident_id where ti.ticket_id = ${t.id}`);
     // S6 · ไฟล์แนบและบริบทที่ลูกค้าส่งมา (A44 เก็บใน attachments ของข้อความ) · ไม่ส่ง key ของที่เก็บไฟล์ออกไป ใช้ลิงก์ดาวน์โหลดผ่าน ops-api แทน
     let context: Row | null = null;
     let article: Row | null = null;
@@ -219,7 +288,7 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     const ctx = context as Row | null;
     const art = article as Row | null;
     return {
-      ticket: { ...t, assignee: assignee ?? null, requesterName: requester?.name ?? null },
+      ticket: { ...t, assignee: assignee ?? null, requesterName: requester?.name ?? null, incident: incident ?? null },
       messages: out,
       customer,
       context: ctx || art ? { page: ctx?.page ?? null, path: ctx?.path ?? null, requestId: ctx?.requestId ?? null, impact: ctx?.impact ?? null, browser: ctx?.browser ?? null, article: art ? { slug: art.slug ?? null, title: art.title ?? null } : null } : null,
@@ -255,7 +324,7 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     const route = await this.settings.route({ plan, category: input.category ?? null, workspaceId: input.workspaceId ?? null, priority: input.priority });
     const assigneeId = input.assignToMe ? staff.id : route.assigneeId;
     const now = new Date();
-    const due = await this.settings.due(plan, route.priority, now);
+    const due = await this.settings.due(plan, route.priority, now, input.workspaceId);
     const t = await this.db.transaction(async (tx) => {
       const [row] = await tx
         .insert(s.supportTickets)
@@ -386,6 +455,34 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
       `${input.outcome}\n\nถ้ายังมีปัญหา ตอบกลับอีเมลนี้ภายใน ${reopenDays} วัน เรื่องจะเปิดใหม่ให้อัตโนมัติ${input.sendCsat ? '\nช่วยให้คะแนนความพึงพอใจ 1–5 โดยตอบกลับอีเมลนี้เป็นตัวเลข' : ''}`,
     );
     return { id: t.id, status: 'solved' as const, sent };
+  }
+
+  /** เปลี่ยนความสำคัญ (ช่วง 3 · ทำทีละหลายเรื่องได้) · ไม่แจ้งลูกค้า */
+  async setPriority(staff: Staff, id: string, input: z.infer<typeof PriorityBody>) {
+    const t = await this.find(id);
+    this.open(t);
+    if (t.priority === input.priority) return { id: t.id, priority: t.priority, changed: false };
+    await this.db.update(s.supportTickets).set({ priority: input.priority, updatedAt: new Date() }).where(eq(s.supportTickets.id, t.id));
+    await this.trace(t, staff, 'support.ticket_priority', `ความสำคัญ ${t.priority} → ${input.priority}`);
+    return { id: t.id, priority: input.priority, changed: true };
+  }
+
+  /** ผูกกับเหตุขัดข้อง (ช่วง 3) · เรื่องเดียวกันหลายลูกค้าตามที่เดียว · ปิดเหตุแล้วปิดเรื่องที่ผูกได้ทีเดียว */
+  async linkIncident(staff: Staff, id: string, input: z.infer<typeof IncidentLinkBody>) {
+    const t = await this.find(id);
+    if (!input.incidentId) {
+      const r = await this.rows(sql`delete from support_ticket_incidents where ticket_id = ${t.id} returning incident_id`);
+      if (r.length) await this.trace(t, staff, 'support.ticket_incident_unlinked', 'เลิกผูกเหตุขัดข้อง');
+      return { id: t.id, incident: null };
+    }
+    this.open(t);
+    const [i] = await this.db.select({ id: s.incidents.id, title: s.incidents.title, status: s.incidents.status }).from(s.incidents).where(eq(s.incidents.id, input.incidentId));
+    if (!i) throw new AppError(404, 'incident_not_found', 'ไม่พบเหตุขัดข้องนี้');
+    await this.db.execute(sql`
+      insert into support_ticket_incidents (ticket_id, incident_id, linked_by) values (${t.id}, ${i.id}, ${staff.id})
+      on conflict (ticket_id) do update set incident_id = excluded.incident_id, linked_by = excluded.linked_by, created_at = now()`);
+    await this.trace(t, staff, 'support.ticket_incident_linked', `ผูกกับเหตุขัดข้อง "${i.title}"`);
+    return { id: t.id, incident: i };
   }
 
   /** บันทึกคะแนนความพึงพอใจที่ลูกค้าตอบกลับ (ช่วงแรกทีมกรอกจากอีเมล) */

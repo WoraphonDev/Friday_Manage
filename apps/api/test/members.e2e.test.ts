@@ -271,6 +271,22 @@ describe('คำเชิญ · ส่งซ้ำ, Seat, Event', () => {
       expect(mails[1].text).toContain(re.body.inviteUrl);
       expect(mails[1].html).toContain('&lt;b&gt;Acme&lt;/b&gt;');
       expect(mails[1].html).not.toContain('<b>Acme</b>');
+
+      // บันทึกผลส่งลงคำเชิญ ให้ตรวจย้อนหลังได้โดยไม่ต้องพึ่ง log
+      const emailOf = async (email: string) =>
+        (await t.owner.query('SELECT email_status, email_error, email_attempted_at FROM invitations WHERE email = $1 AND status = $2', [email, 'pending'])).rows[0];
+      expect(await emailOf('nomail@invite.example.com')).toMatchObject({ email_status: 'disabled', email_error: null });
+      expect(await emailOf('mail@invite.example.com')).toMatchObject({ email_status: 'sent', email_error: null });
+      const bounced = await emailOf('bounce@invite.example.com');
+      expect(bounced).toMatchObject({ email_status: 'failed', email_error: 'smtp down' });
+      expect(bounced.email_attempted_at).toBeInstanceOf(Date);
+      const pending = (await team.lead.get(`${team.ws}/invitations`)).body.items;
+      expect(pending.find((i: { email: string }) => i.email === 'bounce@invite.example.com')).toMatchObject({ emailStatus: 'failed', emailError: 'smtp down' });
+      // ส่งซ้ำสำเร็จ = แทนที่ผลเดิม
+      failFor = null;
+      const fixed = await team.lead.post(`${team.ws}/invitations/${byEmail['bounce@invite.example.com'].invitationId}/resend`);
+      expect(fixed.body).toMatchObject({ emailSent: true });
+      expect(await emailOf('bounce@invite.example.com')).toMatchObject({ email_status: 'sent', email_error: null });
     } finally {
       mailer.transportFactory = original;
       if (prevHost === undefined) delete process.env.SMTP_HOST;

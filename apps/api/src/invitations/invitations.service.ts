@@ -16,6 +16,9 @@ import { type InvitationMail, renderInvitationEmail } from './invitation-mail.js
 
 const s = schema;
 
+/** ผลส่งอีเมลคำเชิญ · บันทึกลง invitations.email_status */
+type EmailResult = { status: 'sent' | 'failed' | 'disabled'; error: string | null };
+
 export const CreateInvitationsBody = z.object({
   emails: z.array(z.email().max(254)).min(1).max(50),
   workspaceRole: z.enum(['admin', 'member', 'guest']).default('member'),
@@ -50,18 +53,35 @@ export class InvitationsService {
   }
 
   /**
-   * ส่งอีเมลคำเชิญหลัง commit · ส่งไม่ได้ไม่ทำให้คำเชิญล้ม (ผู้เชิญยังคัดลอกลิงก์ส่งเองได้) จึงคืนแค่ว่าส่งแล้วหรือไม่
+   * ส่งอีเมลคำเชิญหลัง commit · ส่งไม่ได้ไม่ทำให้คำเชิญล้ม (ผู้เชิญยังคัดลอกลิงก์ส่งเองได้) จึงคืนผลแทนการ throw
    * ตอบกลับไปหาผู้เชิญ (Reply-To) เพราะผู้รับมักถามกลับคนที่เชิญ ไม่ใช่ระบบ
    */
-  private async sendInvite(m: InvitationMail, replyTo: string | null): Promise<boolean> {
-    if (!this.mailer.enabled) return false;
+  private async sendInvite(m: InvitationMail, replyTo: string | null): Promise<EmailResult> {
+    if (!this.mailer.enabled) return { status: 'disabled', error: null };
     try {
       await this.mailer.send({ to: m.to, ...renderInvitationEmail(m), replyTo: replyTo ?? undefined });
-      return true;
+      return { status: 'sent', error: null };
     } catch (err) {
-      this.log.warn(`ส่งอีเมลคำเชิญถึง ${m.to} ไม่สำเร็จ: ${(err as Error).message}`);
-      return false;
+      const error = (err as Error).message.slice(0, 500);
+      this.log.warn(`ส่งอีเมลคำเชิญถึง ${m.to} ไม่สำเร็จ: ${error}`);
+      return { status: 'failed', error };
     }
+  }
+
+  /**
+   * บันทึกผลส่งลงคำเชิญ ให้ตรวจย้อนหลังได้ว่าอีเมลออกไปหรือไม่ (log หายเมื่อสร้าง container ใหม่)
+   * บันทึกไม่ได้แค่ log ไว้ เพราะคำเชิญสร้างและอีเมลส่งไปแล้ว ไม่ควรตอบผู้เชิญว่าล้ม
+   */
+  private async recordEmail(auth: AuthInfo, tenant: TenantInfo, results: Array<{ id: string; result: EmailResult }>) {
+    if (!results.length) return;
+    const at = new Date();
+    await this.db
+      .run(auth, tenant, async (tx) => {
+        for (const { id, result } of results) {
+          await tx.update(s.invitations).set({ emailStatus: result.status, emailError: result.error, emailAttemptedAt: at }).where(eq(s.invitations.id, id));
+        }
+      })
+      .catch((err) => this.log.error(`บันทึกผลส่งอีเมลคำเชิญไม่สำเร็จ: ${(err as Error).message}`));
   }
 
   /**
@@ -121,6 +141,10 @@ export class InvitationsService {
           tokenHash: hashToken(token),
           expiresAt: new Date(Date.now() + input.expiresInDays * 86_400_000),
           invitedBy: auth.userId,
+          // ส่งใหม่ = ล้างผลส่งครั้งก่อน จนกว่าจะส่งรอบนี้เสร็จ
+          emailStatus: null,
+          emailError: null,
+          emailAttemptedAt: null,
         };
         // มีคำเชิญที่รออยู่แล้ว = ส่งใหม่ (ออก token ใหม่ ของเดิมใช้ไม่ได้)
         const [pending] = await tx
@@ -148,15 +172,17 @@ export class InvitationsService {
       return { items: results, invited, projectId: project?.id, ctx };
     }).then(async (r) => {
       // ส่งทีละ 5 ฉบับ ไม่ให้เปิด SMTP พร้อมกันหลายสิบเส้น (เชิญได้ครั้งละ 50 อีเมล)
-      const sent = new Set<string>();
+      const outcomes: Array<{ id: string; result: EmailResult }> = [];
       for (let i = 0; r.ctx && i < r.invited.length; i += 5) {
         await Promise.all(
           r.invited.slice(i, i + 5).map(async (inv) => {
-            const ok = await this.sendInvite({ ...r.ctx!, to: inv.email, inviteUrl: inv.inviteUrl, expiresAt: inv.expiresAt, message: input.message ?? null }, r.ctx!.inviterEmail);
-            if (ok) sent.add(inv.id);
+            const result = await this.sendInvite({ ...r.ctx!, to: inv.email, inviteUrl: inv.inviteUrl, expiresAt: inv.expiresAt, message: input.message ?? null }, r.ctx!.inviterEmail);
+            outcomes.push({ id: inv.id, result });
           }),
         );
       }
+      await this.recordEmail(auth, tenant, outcomes);
+      const sent = new Set(outcomes.filter((o) => o.result.status === 'sent').map((o) => o.id));
       for (const item of r.items) if (item.status === 'invited') item.emailSent = sent.has(item.invitationId);
       // Event member.invited หลัง commit · ส่งต่อให้ PM ของโปรเจกต์ (A23 fan-out)
       for (const i of r.invited) {
@@ -179,6 +205,9 @@ export class InvitationsService {
           invitedBy: s.invitations.invitedBy,
           expiresAt: s.invitations.expiresAt,
           createdAt: s.invitations.createdAt,
+          emailStatus: s.invitations.emailStatus,
+          emailError: s.invitations.emailError,
+          emailAttemptedAt: s.invitations.emailAttemptedAt,
         })
         .from(s.invitations)
         .where(eq(s.invitations.status, 'pending'))
@@ -199,11 +228,15 @@ export class InvitationsService {
       // ต่ออายุเท่ากับที่ตั้งตอนเชิญ (ขั้นต่ำ 7 วัน)
       const days = Math.max(7, Math.round((inv.expiresAt.getTime() - inv.createdAt.getTime()) / 86_400_000));
       const expiresAt = new Date(Date.now() + days * 86_400_000);
-      await tx.update(s.invitations).set({ tokenHash: hashToken(token), expiresAt, createdAt: new Date() }).where(eq(s.invitations.id, id));
+      await tx.update(s.invitations).set({ tokenHash: hashToken(token), expiresAt, createdAt: new Date(), emailStatus: null, emailError: null, emailAttemptedAt: null }).where(eq(s.invitations.id, id));
       await tx.insert(s.auditLogs).values({ workspaceId: tenant.workspaceId, actorId: auth.userId, actorKind: 'user', category: 'perm', action: 'member.invite_resent', targetType: 'invitation', targetId: id, summary: inv.email });
       const ctx = await this.mailContext(tx, auth, tenant, inv.projectId);
       return { id, email: inv.email, inviteUrl: `${baseUrl}/join/${token}`, expiresAt, ctx, message: inv.message };
-    }).then(async ({ ctx, message, ...r }) => ({ ...r, emailSent: await this.sendInvite({ ...ctx, to: r.email, inviteUrl: r.inviteUrl, expiresAt: r.expiresAt, message }, ctx.inviterEmail) }));
+    }).then(async ({ ctx, message, ...r }) => {
+      const result = await this.sendInvite({ ...ctx, to: r.email, inviteUrl: r.inviteUrl, expiresAt: r.expiresAt, message }, ctx.inviterEmail);
+      await this.recordEmail(auth, tenant, [{ id: r.id, result }]);
+      return { ...r, emailSent: result.status === 'sent' };
+    });
   }
 
   async revoke(auth: AuthInfo, tenant: TenantInfo, id: string) {

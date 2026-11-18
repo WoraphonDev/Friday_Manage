@@ -197,6 +197,8 @@ describe("Support", () => {
     expect(screen.getByText("เลือก 2 เรื่อง")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "ตอบ" }));
     const dialog = await screen.findByRole("dialog", { name: "ทำกับ 2 เรื่อง" });
+    // ตัวแปรในคำอธิบายต้องแสดงเป็นข้อความ (ไม่ถูกอ่านเป็นตัวแปรของ ICU)
+    expect(within(dialog).getByText("ใส่ {ชื่อผู้แจ้ง} {ชื่อ Workspace} {เลข Ticket} ได้ ระบบแทนค่าทีละเรื่อง")).toBeInTheDocument();
     await userEvent.type(within(dialog).getByLabelText("ข้อความ"), "เรียนคุณ{{ชื่อผู้แจ้ง} เรื่อง {{เลข Ticket}");
     await userEvent.click(within(dialog).getByRole("button", { name: "ดูตัวอย่าง" }));
     expect(await within(dialog).findByText("เรียนคุณพิม เรื่อง #512")).toBeInTheDocument();

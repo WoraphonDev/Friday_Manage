@@ -6,7 +6,7 @@ import type { OpsRole } from "@/lib/types";
  * `badge` = ชื่อตัวเลขจาก ops/overview › tasks
  */
 export type NavKey =
-  | "home" | "customers" | "users" | "success" | "renewals" | "leads" | "quotes"
+  | "home" | "customers" | "accounts" | "users" | "success" | "renewals" | "leads" | "quotes"
   | "billing" | "verify" | "refunds" | "accounting" | "promotions" | "entitlements" | "announce" | "changelog" | "onboarding"
   | "business" | "funnel" | "adoption" | "support" | "sessions" | "supportSettings" | "help" | "bugs"
   | "system" | "ops" | "deliveries" | "flags" | "ratelimit" | "scripts"
@@ -33,9 +33,11 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
     group: "customers",
     items: [
       { key: "customers", href: "/workspaces", built: true, roles: ALL },
+      // ช่วง 3 · บัญชีลูกค้าระดับบริษัท: ทุกคนอ่านได้ · วันต่อสัญญาเปิดให้ทีมที่ดูแลลูกค้า (Support ไม่เห็นยอดเงิน)
+      { key: "accounts", href: "/accounts", built: true, roles: ALL },
       { key: "users", href: "/users", built: true, roles: ["owner", "support"] },
       { key: "success", roles: ["owner", "support"] },
-      { key: "renewals", roles: ["owner", "finance"] },
+      { key: "renewals", href: "/renewals", built: true, roles: ["owner", "finance", "support", "auditor"] },
     ],
   },
   { group: "sales", items: [{ key: "leads", roles: ["owner"] }, { key: "quotes", roles: ["owner", "finance"] }] },

@@ -12,7 +12,7 @@ import { Mailer } from '../core/mail.js';
 import { SYSTEM_DB } from '../db/db.module.js';
 import { finalKeyOf, LocalStorage, S3Storage, StagingGone, stagingKeyFor, type StorageDriver } from '../files/storage.js';
 import { HelpArticlesService } from './articles.service.js';
-import { dueOf, loadConfig, requeueIfAway, routeTicket } from './routing.js';
+import { contractSla, dueOf, loadConfig, requeueIfAway, routeTicket } from './routing.js';
 
 const s = schema;
 const k = s.supportTickets;
@@ -278,7 +278,8 @@ export class HelpTicketsService {
     const cfg = await loadConfig(this.db);
     const route = await routeTicket(this.db, cfg, { plan: plan.code, category: input.category, workspaceId: tenant.workspaceId, minPriority: input.impact === 'me' ? undefined : 'high' });
     const now = new Date();
-    const due = await dueOf(this.db, cfg, plan.code, route.priority, now);
+    // บัญชีลูกค้าที่มีสัญญา: SLA ตามสัญญาแทนของแพ็กเกจ
+    const due = await dueOf(this.db, cfg, plan.code, route.priority, now, await contractSla(this.db, tenant.workspaceId));
     const files = await this.commitFiles(auth, tenant, input.attachments);
     const attachments: Row[] = [...files];
     if (input.context || input.impact !== 'me') attachments.push({ kind: 'context', page: input.context?.page ?? null, path: input.context?.path ?? null, requestId: input.context?.requestId ?? null, impact: input.impact, browser: browserOf(userAgent) });

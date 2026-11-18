@@ -14,7 +14,9 @@
       "newest": "สมัครล่าสุด",
       "recent_activity": "ใช้งานล่าสุด",
       "mrr": "MRR มากสุด",
-      "health": "สุขภาพต่ำสุด"
+      "health": "สุขภาพต่ำสุด",
+      "overdue_risk": "เสี่ยงค้างชำระ",
+      "trial_ending": "ทดลองใกล้หมด"
     },
     "features": {
       "line": "LINE OA",
@@ -66,7 +68,50 @@
     },
     "filters": "ตัวกรอง",
     "filtersOn": "ตัวกรอง ({n})",
-    "summaryHidden": "ลูกค้า {total} ราย · ซ่อน Workspace ทดสอบ {hidden}"
+    "summaryHidden": "ลูกค้า {total} ราย · ซ่อน Workspace ทดสอบ {hidden}",
+    "f": {
+      "plan": "แพ็กเกจ",
+      "feature": "ใช้ฟีเจอร์",
+      "healthLabel": "สุขภาพ",
+      "health": {
+        "low": "ต่ำ (<40)",
+        "mid": "กลาง (40–69)",
+        "high": "ดี (70+)"
+      },
+      "seatsLabel": "ที่นั่ง",
+      "seats": {
+        "near": "ใกล้เต็ม (≥80%)",
+        "full": "เต็ม",
+        "under": "ใช้ไม่ถึงครึ่ง"
+      },
+      "activityLabel": "การใช้งาน",
+      "activity": {
+        "active7": "ใช้ใน 7 วัน",
+        "idle14": "เงียบ 14 วัน+",
+        "idle30": "เงียบ 30 วัน+"
+      },
+      "trialEnds": "ทดลองจะหมดใน",
+      "days": "{n} วัน",
+      "overdueDays": "ค้างชำระ",
+      "moreThan": "เกิน {n} วัน",
+      "cycleLabel": "รอบบิล",
+      "cycle": {
+        "monthly": "รายเดือน",
+        "yearly": "รายปี"
+      },
+      "created": "สมัครเมื่อ",
+      "lastDays": "{n} วันล่าสุด",
+      "source": "ช่องทางที่มา",
+      "sourceHint": "เช่น google, partner",
+      "manager": "ผู้ดูแลบัญชี",
+      "noManager": "ยังไม่มีผู้ดูแล",
+      "ticketsLabel": "Ticket",
+      "tickets": {
+        "open": "มี Ticket เปิดอยู่",
+        "none": "ไม่มี Ticket เปิด"
+      },
+      "mrr": "MRR (บาท)"
+    }
   },
   "subStatus": {
     "trialing": "ทดลอง",
@@ -604,6 +649,41 @@
       "line": "LINE",
       "microsoft": "Microsoft",
       "apple": "Apple"
+    },
+    "f": {
+      "login": "วิธีเข้าระบบ",
+      "logins": {
+        "password": "รหัสผ่าน",
+        "google": "Google",
+        "line": "LINE",
+        "microsoft": "Microsoft",
+        "apple": "Apple"
+      },
+      "mfa": "ยืนยัน 2 ชั้น",
+      "mfas": {
+        "on": "เปิด",
+        "off": "ยังไม่เปิด"
+      },
+      "line": "ผูก LINE",
+      "lines": {
+        "bound": "ผูกแล้ว",
+        "unbound": "ยังไม่ผูก"
+      },
+      "lang": "ภาษา",
+      "langs": {
+        "th": "ไทย",
+        "en": "อังกฤษ"
+      },
+      "activity": "ใช้งานล่าสุด",
+      "activities": {
+        "active7": "ใน 7 วัน",
+        "idle30": "เงียบ 30 วัน+",
+        "never": "ยังไม่เคยเข้า"
+      },
+      "multi": "Workspace",
+      "multis": {
+        "yes": "อยู่หลาย Workspace"
+      }
     }
   },
   "bulk": {
@@ -795,5 +875,162 @@
       "clear": "เอาป้ายทดสอบออก",
       "not_test": "นี่คือลูกค้าจริง"
     }
+  },
+  "accounts": {
+    "title": "บัญชีลูกค้า",
+    "desc": "บริษัทลูกค้าที่รวมหลาย Workspace · ผู้ดูแล สัญญา และวันต่อสัญญาในที่เดียว",
+    "summary": "บัญชีลูกค้า {total} ราย",
+    "search": "ค้นชื่อบัญชี เลขผู้เสียภาษี หรือ Workspace",
+    "empty": "ยังไม่มีบัญชีลูกค้า",
+    "emptyDesc": "ระบบจะเสนอเมื่อผู้ซื้อรายเดียวกันมีตั้งแต่ 2 Workspace",
+    "emptyFiltered": "ไม่มีบัญชีที่ตรงกับตัวกรอง",
+    "col": {
+      "name": "บัญชี",
+      "workspaces": "Workspace",
+      "seats": "ที่นั่ง",
+      "mrr": "MRR รวม",
+      "health": "สุขภาพต่ำสุด",
+      "tickets": "Ticket เปิด",
+      "manager": "ผู้ดูแล",
+      "contractEnd": "หมดสัญญา",
+      "value": "มูลค่า/ปี",
+      "lastContact": "ติดต่อล่าสุด",
+      "overdue": "ค้างชำระ"
+    },
+    "kind": {
+      "standard": "ทั่วไป",
+      "enterprise": "Enterprise"
+    },
+    "f": {
+      "manager": "ผู้ดูแล",
+      "noManager": "ยังไม่มีผู้ดูแล",
+      "kind": "ประเภท",
+      "health": "สุขภาพ",
+      "healthLow": "มี Workspace สุขภาพต่ำ (<40)",
+      "renew": "ต่อสัญญาภายใน",
+      "days": "{n} วัน",
+      "overdue": "ค้างชำระ",
+      "overdueYes": "มีค้างชำระ"
+    },
+    "suggest": {
+      "title": "ระบบเสนอให้รวมเป็นบัญชี {n} ราย",
+      "desc": "ผู้ซื้อเลขภาษีเดียวกันมีตั้งแต่ 2 Workspace · ตรวจแล้วกดสร้าง ระบบไม่สร้างเอง",
+      "row": "{name} · เลขภาษี {tax} · {n} Workspace",
+      "create": "สร้างบัญชี",
+      "more": "และอีก {n} ราย"
+    },
+    "create": {
+      "title": "สร้างบัญชีลูกค้า",
+      "desc": "รวม {n} Workspace ไว้ในบัญชีเดียว · เพิ่มบริษัทในเครือที่เลขภาษีต่างกันได้ทีหลัง",
+      "name": "ชื่อบัญชี",
+      "taxIds": "เลขผู้เสียภาษี (คั่นด้วยจุลภาค)",
+      "manager": "ผู้ดูแลบัญชี",
+      "none": "— ยังไม่กำหนด —",
+      "kind": "ประเภท",
+      "workspaces": "Workspace ที่รวม",
+      "do": "สร้างบัญชี",
+      "done": "สร้างบัญชี {name} แล้ว"
+    },
+    "detail": {
+      "tax": "เลขภาษี {tax}",
+      "taxMore": "(+{n} บริษัทในเครือ)",
+      "manager": "ผู้ดูแล: {name}",
+      "noManager": "ยังไม่มีผู้ดูแล",
+      "renew": "ต่อสัญญา {date}",
+      "edit": "แก้บัญชี",
+      "contract": "สัญญา",
+      "add": "เพิ่ม Workspace",
+      "delete": "ลบบัญชี",
+      "deleteTitle": "ลบบัญชี {name}?",
+      "deleteDesc": "Workspace ทั้งหมดยังอยู่ครบ แค่เลิกรวมเป็นบัญชี · สัญญาและไฟล์สัญญาจะหายไป",
+      "deleted": "ลบบัญชีแล้ว",
+      "numbers": "ตัวเลขรวมของบัญชี",
+      "workspaces": "Workspace",
+      "seats": "ที่นั่ง",
+      "seatsOf": "{used} / {limit}",
+      "mrr": "MRR รวม",
+      "minHealth": "สุขภาพต่ำสุด",
+      "minHealthNote": "{name}",
+      "tickets": "Ticket เปิด",
+      "overdue": "ค้างชำระรวม",
+      "active30": "ใช้งาน 30 วัน",
+      "wsTitle": "Workspace ในบัญชี",
+      "wsSearch": "ค้น Workspace ในบัญชีนี้",
+      "remove": "เอาออกจากบัญชี",
+      "removeAsk": "เอา {name} ออกจากบัญชีนี้?",
+      "removed": "เอา {name} ออกแล้ว",
+      "contacts": "ผู้ติดต่อ",
+      "noContacts": "ยังไม่มีผู้ติดต่อ",
+      "notes": "บันทึกของทีม",
+      "noNotes": "ยังไม่มีบันทึก",
+      "contractTitle": "สัญญา",
+      "noContract": "ยังไม่มีสัญญา (ใช้ SLA ของแพ็กเกจ)",
+      "period": "{start} – {end}",
+      "valueYear": "{value} ต่อปี",
+      "contractSeats": "ที่นั่งตามสัญญา {n}",
+      "sla": "SLA ตามสัญญา: ตอบครั้งแรก {first} · แก้เสร็จ {resolve}",
+      "file": "ไฟล์สัญญา",
+      "noFile": "ยังไม่แนบไฟล์",
+      "upload": "แนบไฟล์ PDF",
+      "uploaded": "แนบไฟล์สัญญาแล้ว",
+      "lastContact": "ติดต่อล่าสุด {when}",
+      "open": "เปิดบัญชี {name}",
+      "colPlan": "แพ็กเกจ",
+      "colHealth": "สุขภาพ"
+    },
+    "contactRole": {
+      "signer": "ผู้เซ็นสัญญา",
+      "billing": "ฝ่ายบัญชี",
+      "it": "IT",
+      "other": "อื่น ๆ"
+    },
+    "edit": {
+      "title": "แก้บัญชีลูกค้า",
+      "contacts": "ผู้ติดต่อ",
+      "addContact": "เพิ่มผู้ติดต่อ",
+      "cName": "ชื่อ",
+      "cEmail": "อีเมล",
+      "cPhone": "โทร",
+      "cRole": "บทบาท",
+      "cRemove": "ลบผู้ติดต่อ {n}",
+      "saved": "บันทึกบัญชีแล้ว"
+    },
+    "contract": {
+      "title": "สัญญาของบัญชี",
+      "desc": "SLA ตามสัญญาใช้แทนของแพ็กเกจกับ Ticket ใหม่ของทุก Workspace ในบัญชีจนถึงวันหมดสัญญา",
+      "start": "วันเริ่ม",
+      "end": "วันสิ้นสุด",
+      "value": "มูลค่าต่อปี (บาท)",
+      "seats": "ที่นั่งตามสัญญา",
+      "useSla": "กำหนด SLA ตามสัญญา",
+      "first": "ตอบครั้งแรกภายใน",
+      "resolve": "แก้เสร็จภายใน",
+      "unitH": "ชั่วโมงทำการ",
+      "unitD": "วันทำการ",
+      "saved": "บันทึกสัญญาแล้ว"
+    },
+    "add": {
+      "title": "เพิ่ม Workspace เข้าบัญชี",
+      "search": "ค้น Workspace (ชื่อ slug หรือเลขภาษี)",
+      "inAccount": "อยู่ในบัญชี {name}",
+      "do": "เพิ่ม {n} Workspace",
+      "done": "เพิ่มแล้ว"
+    },
+    "buyer": {
+      "create": "สร้างบัญชีลูกค้า",
+      "hint": "ผู้ซื้อรายนี้มี {n} Workspace · รวมเป็นบัญชีลูกค้าเพื่อดูสัญญา ผู้ดูแล และวันต่อสัญญาในที่เดียว",
+      "open": "บัญชี: {name}"
+    }
+  },
+  "renewals": {
+    "title": "วันต่อสัญญา",
+    "desc": "บัญชีที่สัญญาจะหมด เรียงใกล้หมดก่อน · ระบบเตือนผู้ดูแลก่อนหมด 90 / 60 / 30 วัน",
+    "within": "หมดภายใน",
+    "days": "{n} วัน",
+    "empty": "ไม่มีสัญญาที่จะหมดในช่วงนี้",
+    "left": "อีก {n} วัน",
+    "expired": "หมดแล้ว {n} วัน",
+    "today": "หมดวันนี้",
+    "seatsUse": "{used} / {limit}"
   }
 }

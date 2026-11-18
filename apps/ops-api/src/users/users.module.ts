@@ -64,5 +64,5 @@ export class UsersController {
 }
 
 /** O01 เตรียม module ไว้ใน app.module แล้ว · งานนี้เพิ่ม controller / provider */
-@Module({ controllers: [UsersController], providers: [UsersService] })
+@Module({ controllers: [UsersController], providers: [UsersService], exports: [UsersService] })
 export class UsersModule {}

@@ -16,7 +16,7 @@ import { useOverview } from "./Sidebar";
 
 interface Hit {
   id: string;
-  group: "workspaces" | "users" | "invoices" | "tickets" | "commands";
+  group: "workspaces" | "accounts" | "users" | "invoices" | "tickets" | "commands";
   title: string;
   sub?: string;
   href?: string;
@@ -35,6 +35,8 @@ export function SearchPalette({ staff, open, onOpenChange, onApprovals }: { staf
   const enabled = open && query.length >= 2;
   const enc = encodeURIComponent(query);
   const ws = useQuery({ queryKey: ["ops", "search", "ws", query], queryFn: () => api.get<{ items: { id: string; name: string; slug: string; plan: string | null; subStatus: string | null }[] }>(`/workspaces?q=${enc}&limit=5`), enabled });
+  // ช่วง 3 · บัญชีลูกค้าระดับบริษัท (ทุกบทบาทอ่านได้)
+  const accounts = useQuery({ queryKey: ["ops", "search", "accounts", query], queryFn: () => api.get<{ items: { id: string; name: string; taxIds: string[]; numbers: { workspaces: number } }[] }>(`/accounts?q=${enc}&limit=5`), enabled });
   const users = useQuery({ queryKey: ["ops", "search", "users", query], queryFn: () => api.get<{ items: { id: string; email: string; displayName: string; firstWorkspace: string | null }[] }>(`/users?q=${enc}&limit=5`), enabled: enabled && hasAny(staff, "owner", "support") });
   const invoices = useQuery({ queryKey: ["ops", "search", "inv", query], queryFn: () => api.get<{ items: { id: string; number: string; status: string; workspace: { name: string } }[] }>(`/invoices?q=${enc}&limit=5`), enabled: enabled && hasAny(staff, "owner", "finance", "auditor") });
   const tickets = useQuery({ queryKey: ["ops", "search", "tickets", query], queryFn: () => api.get<{ items: { id: string; number: number; subject: string; status: string }[] }>(`/tickets?q=${enc}&status=active&limit=5`), enabled: enabled && hasAny(staff, "owner", "support") });
@@ -50,12 +52,13 @@ export function SearchPalette({ staff, open, onOpenChange, onApprovals }: { staf
 
   const hits: Hit[] = [
     ...(ws.data?.items ?? []).map((w) => ({ id: `w-${w.id}`, group: "workspaces" as const, title: w.name, sub: `${w.slug}${w.plan ? ` · ${w.plan}` : ""}`, href: `/workspaces/${w.id}` })),
+    ...(accounts.data?.items ?? []).map((a) => ({ id: `a-${a.id}`, group: "accounts" as const, title: a.name, sub: `${a.numbers.workspaces} Workspace${a.taxIds[0] ? ` · ${a.taxIds[0]}` : ""}`, href: `/accounts/${a.id}` })),
     ...(users.data?.items ?? []).map((u) => ({ id: `u-${u.id}`, group: "users" as const, title: u.email, sub: u.firstWorkspace ?? u.displayName, href: `/users?id=${u.id}` })),
     ...(invoices.data?.items ?? []).map((i) => ({ id: `i-${i.id}`, group: "invoices" as const, title: i.number, sub: `${i.workspace.name} · ${i.status}`, href: `/payments?tab=invoices&q=${encodeURIComponent(i.number)}` })),
     ...(tickets.data?.items ?? []).map((k) => ({ id: `t-${k.id}`, group: "tickets" as const, title: `#${k.number} · ${k.subject}`, sub: k.status, href: `/support?ticket=${k.id}` })),
     ...commands,
   ];
-  const loading = enabled && [ws, users, invoices, tickets].some((r) => r.isFetching);
+  const loading = enabled && [ws, accounts, users, invoices, tickets].some((r) => r.isFetching);
   useEffect(() => setIndex(0), [query]);
   const go = (h: Hit) => {
     onOpenChange(false);
@@ -63,7 +66,7 @@ export function SearchPalette({ staff, open, onOpenChange, onApprovals }: { staf
     if (h.action) h.action();
     else if (h.href) router.push(h.href);
   };
-  const groups = (["workspaces", "users", "invoices", "tickets", "commands"] as const).filter((g) => hits.some((h) => h.group === g));
+  const groups = (["workspaces", "accounts", "users", "invoices", "tickets", "commands"] as const).filter((g) => hits.some((h) => h.group === g));
   return (
     <Modal open={open} onOpenChange={(o) => (onOpenChange(o), !o && setQ(""))} title={t("search.title")} hideTitle className="palette">
       <div className="palette-input">

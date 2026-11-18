@@ -28,6 +28,8 @@ export interface WsRow {
   /** ผู้ซื้อ (เลขภาษีเดียวกัน หรือเจ้าของคนเดียวกัน) · count = จำนวน Workspace ของผู้ซื้อ (ลูกค้าจริง) */
   buyer: Buyer;
   test: TestInfo;
+  /** บัญชีลูกค้าระดับบริษัท (ช่วง 3) */
+  account?: { id: string; name: string; kind: string } | null;
 }
 export interface Buyer {
   key: string | null;
@@ -53,7 +55,7 @@ export interface WsList {
   counts?: Record<"all" | "paying" | "trialing" | "past_due" | "suspended", number>;
   tests?: { hidden: number; suggested: number };
   /** กรองผู้ซื้อรายเดียว: ยอดรวมทุก Workspace ของผู้ซื้อ */
-  buyer?: { key: string; name: string | null; workspaces: number; seats: number; seatLimit: number; mrr: number | null; openTickets: number } | null;
+  buyer?: { key: string; name: string | null; workspaces: number; seats: number; seatLimit: number; mrr: number | null; openTickets: number; account?: { id: string; name: string } | null } | null;
 }
 export interface Signal {
   code: string;

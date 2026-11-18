@@ -16,6 +16,16 @@ type Row = Record<string, unknown>;
 export const UsersQuery = z.object({
   q: z.string().trim().max(100).optional(),
   status: z.enum(['active', 'locked', 'unverified', 'disabled']).optional(),
+  // ---- ช่วง 3: ตัวกรองเพิ่ม
+  /** วิธีเข้าระบบ: password · google · line · microsoft · apple */
+  login: z.string().trim().max(20).optional(),
+  mfa: z.enum(['on', 'off']).optional(),
+  line: z.enum(['bound', 'unbound']).optional(),
+  lang: z.enum(['th', 'en']).optional(),
+  /** ใช้งานล่าสุด: active7 · idle30 · never */
+  activity: z.enum(['active7', 'idle30', 'never']).optional(),
+  /** อยู่หลาย Workspace */
+  multi: z.enum(['yes']).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -59,6 +69,15 @@ export class UsersService {
     const parts: SQL[] = [sql`true`];
     if (q.q) parts.push(sql`(u.email ilike ${`%${q.q}%`} or u.display_name ilike ${`%${q.q}%`})`);
     if (q.status) parts.push(sql`${UsersService.status} = ${q.status}`);
+    if (q.login) parts.push(q.login === 'password' ? sql`u.password_hash is not null` : sql`exists(select 1 from user_identities i where i.user_id = u.id and i.provider::text = ${q.login})`);
+    if (q.mfa) parts.push(sql`${q.mfa === 'on' ? sql`` : sql`not`} exists(select 1 from mfa_factors f where f.user_id = u.id and f.enabled_at is not null)`);
+    if (q.line) parts.push(sql`${q.line === 'bound' ? sql`` : sql`not`} exists(select 1 from line_bindings l where l.user_id = u.id and l.unbound_at is null)`);
+    if (q.lang) parts.push(sql`u.locale = ${q.lang}`);
+    const seen = sql`(select max(x.last_seen_at) from user_sessions x where x.user_id = u.id)`;
+    if (q.activity === 'active7') parts.push(sql`${seen} > now() - interval '7 days'`);
+    else if (q.activity === 'idle30') parts.push(sql`${seen} < now() - interval '30 days'`);
+    else if (q.activity === 'never') parts.push(sql`${seen} is null`);
+    if (q.multi) parts.push(sql`(select count(*) from workspace_members m where m.user_id = u.id and m.status = 'active') > 1`);
     const where = sql.join(parts, sql` and `);
     const items = await this.rows(sql`
       select u.id, u.email, u.display_name as "displayName", u.locale, u.year_format as "yearFormat", u.timezone, u.created_at as "createdAt",

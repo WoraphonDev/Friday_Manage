@@ -25,6 +25,10 @@ export const ListQuery = z.object({
   status: z.enum(['ok', 'fail', 'quiet', 'blocked']).optional(),
   workspaceId: z.uuid().optional(),
   before: z.iso.datetime({ offset: true }).optional(),
+  // ---- ช่วง 3: ช่วงเวลา · ประเภทเหตุการณ์
+  from: z.iso.date().optional(),
+  to: z.iso.date().optional(),
+  event: z.string().trim().max(60).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 export const ResendBody = z.object({ reason: z.string().trim().max(500).optional() }).strict();
@@ -114,6 +118,9 @@ export class DeliveriesService {
       statusWhere(q.status),
       q.workspaceId ? eq(d.workspaceId, q.workspaceId) : undefined,
       q.before ? lt(d.createdAt, new Date(q.before)) : undefined,
+      q.from ? sql`${d.createdAt} >= ${q.from}::date` : undefined,
+      q.to ? sql`${d.createdAt} < ${q.to}::date + 1` : undefined,
+      q.event ? eq(s.notifications.eventType, q.event) : undefined,
       search,
     );
     const rows = await this.db

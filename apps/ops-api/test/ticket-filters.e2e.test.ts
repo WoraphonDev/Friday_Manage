@@ -53,3 +53,24 @@ describe('ตัวกรอง Ticket (ช่วง 3)', () => {
     expect((await sam.agent.get('/ops/tickets?priority=nope')).status).toBe(400);
   });
 });
+
+describe('ตัวกรองหน้าอื่น (ช่วง 3) · ตอบได้และกรองจริง', () => {
+  it('ผู้ใช้ · ค้างชำระ · ใบแจ้งหนี้ · PDPA · ประวัติการส่ง', async () => {
+    const ok = async (path: string) => {
+      const r = await sam.agent.get(path);
+      expect(r.status, `${path} ${JSON.stringify(r.body)}`).toBe(200);
+      return r.body;
+    };
+    expect((await ok('/ops/users?activity=never&mfa=off&login=password&lang=th&multi=yes')).items).toEqual([]);
+    expect((await ok('/ops/users?line=unbound')).total).toBeGreaterThan(0);
+    const fin = await staff(t, 'fin@friday.example.com', 'Fin', 'finance');
+    await t.owner.query(`INSERT INTO invoices (workspace_id, subscription_id, number, period_start, period_end, subtotal, vat, total, amount_due, status, due_date) VALUES ($1,$2,'FRI-F3-0001',current_date - 60,current_date - 30,300000,21000,321000,321000,'open',current_date - 40)`, [m.id, m.sub]);
+    const r = (path: string) => fin.agent.get(path).then((x) => (expect(x.status, JSON.stringify(x.body)).toBe(200), x.body));
+    expect((await r('/ops/overdue?age=31%2B&human=yes&contacted=no&plan=team_m')).total).toBe(1);
+    expect((await r('/ops/overdue?age=1-7')).total).toBe(0);
+    expect((await r('/ops/invoices?amountMin=300000&dueTo=2099-01-01')).total).toBe(1);
+    expect((await r('/ops/invoices?wht=yes')).total).toBe(0);
+    expect((await ok('/ops/privacy/requests?status=all&due=overdue&identity=unverified&hold=yes')).total).toBe(0);
+    await ok('/ops/deliveries?from=2026-01-01&to=2099-01-01&event=issue.assigned');
+  });
+});

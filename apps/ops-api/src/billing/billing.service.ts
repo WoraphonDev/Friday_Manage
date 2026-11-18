@@ -26,6 +26,15 @@ export const RefundsQuery = z.object({
 });
 export const OverdueQuery = z.object({
   q: z.string().trim().max(100).optional(),
+  // ---- ช่วง 3: ค้างมา · ยอด · แพ็กเกจ · รอบบิล · ติดต่อแล้ว · ต้องให้คนดู · ผู้ดูแล
+  age: z.enum(['1-7', '8-30', '31+']).optional(),
+  amountMin: z.coerce.number().int().min(0).optional(),
+  amountMax: z.coerce.number().int().min(0).optional(),
+  plan: z.enum(['free', 'team_s', 'team_m', 'team_l', 'enterprise']).optional(),
+  cycle: z.enum(['monthly', 'yearly']).optional(),
+  contacted: z.enum(['yes', 'no']).optional(),
+  human: z.enum(['yes']).optional(),
+  manager: z.union([z.uuid(), z.literal('none')]).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -33,6 +42,13 @@ export const InvoicesQuery = z.object({
   status: z.enum(['open', 'pending_review', 'paid', 'void', 'overdue']).optional(),
   month: Month.optional(),
   q: z.string().trim().max(100).optional(),
+  // ---- ช่วง 3: ครบกำหนด · วิธีชำระ · มี 50 ทวิ · ยอด (สตางค์)
+  dueFrom: z.iso.date().optional(),
+  dueTo: z.iso.date().optional(),
+  method: z.enum(['card', 'promptpay', 'transfer']).optional(),
+  wht: z.enum(['yes']).optional(),
+  amountMin: z.coerce.number().int().min(0).optional(),
+  amountMax: z.coerce.number().int().min(0).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -196,6 +212,12 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     else if (q.status) parts.push(sql`i.status = ${q.status}`);
     if (q.month) parts.push(sql`to_char(i.created_at at time zone 'Asia/Bangkok', 'YYYY-MM') = ${q.month}`);
     if (q.q) parts.push(sql`(i.number ilike ${`%${q.q}%`} or w.name ilike ${`%${q.q}%`} or i.po_number ilike ${`%${q.q}%`})`);
+    if (q.dueFrom) parts.push(sql`i.due_date >= ${q.dueFrom}::date`);
+    if (q.dueTo) parts.push(sql`i.due_date <= ${q.dueTo}::date`);
+    if (q.method) parts.push(sql`exists(select 1 from payments p where p.invoice_id = i.id and p.method = ${q.method})`);
+    if (q.wht) parts.push(sql`i.wht_amount > 0`);
+    if (q.amountMin != null) parts.push(sql`i.amount_due >= ${q.amountMin}`);
+    if (q.amountMax != null) parts.push(sql`i.amount_due <= ${q.amountMax}`);
     const where = sql.join(parts, sql` and `);
     const items = await this.rows(sql`
       select i.id, i.number, i.status, i.subtotal::float8 as subtotal, i.vat::float8 as vat, i.total::float8 as total, i.wht_amount::float8 as "whtAmount", i.amount_due::float8 as "amountDue",
@@ -378,7 +400,20 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
   }
 
   async overdue(q: z.infer<typeof OverdueQuery> = { limit: 50, offset: 0 }) {
-    const all = await this.overdueRows(q.q ? sql`(w.name ilike ${`%${q.q}%`} or w.slug ilike ${`%${q.q}%`} or i.number ilike ${`%${q.q}%`})` : sql`true`);
+    const days = sql`(${todayBkk()}::date - i.due_date)`;
+    const extra: SQL[] = [sql`true`];
+    if (q.q) extra.push(sql`(w.name ilike ${`%${q.q}%`} or w.slug ilike ${`%${q.q}%`} or i.number ilike ${`%${q.q}%`})`);
+    if (q.age === '1-7') extra.push(sql`${days} between 1 and 7`);
+    else if (q.age === '8-30') extra.push(sql`${days} between 8 and 30`);
+    else if (q.age === '31+') extra.push(sql`${days} > 30`);
+    if (q.amountMin != null) extra.push(sql`i.amount_due >= ${q.amountMin}`);
+    if (q.amountMax != null) extra.push(sql`i.amount_due <= ${q.amountMax}`);
+    if (q.plan) extra.push(sql`exists(select 1 from plans p where p.id = sub.plan_id and p.code = ${q.plan})`);
+    if (q.cycle) extra.push(sql`sub.cycle = ${q.cycle}`);
+    if (q.contacted) extra.push(sql`${q.contacted === 'yes' ? sql`` : sql`not`} exists(select 1 from dunning_events e where e.invoice_id = i.id and e.by_staff is not null)`);
+    if (q.human) extra.push(sql`(${days} > 7 or sub.cycle = 'yearly')`);
+    if (q.manager) extra.push(q.manager === 'none' ? sql`not exists(select 1 from support_account_managers am where am.workspace_id = i.workspace_id)` : sql`exists(select 1 from support_account_managers am where am.workspace_id = i.workspace_id and am.staff_id = ${q.manager})`);
+    const all = await this.overdueRows(sql.join(extra, sql` and `));
     // ช่วง 1 (ข้อมูลเยอะ): เรียงตามความเสี่ยง = ยอด × วันที่ค้าง · ดึงผู้ติดต่อ/ประวัติเฉพาะหน้าที่แสดง (เดิมทำทุกแถว)
     const ranked = [...all].sort((a, b) => Number(b.amountDue) * Number(b.daysOverdue) - Number(a.amountDue) * Number(a.daysOverdue));
     const rows = ranked.slice(q.offset, q.offset + q.limit);

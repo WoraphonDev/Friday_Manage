@@ -149,6 +149,33 @@ describe("Support", () => {
     await waitFor(() => expect(asked.at(-1)?.get("offset")).toBe("0"));
   });
 
+  it("ช่วง 3: แผงตัวกรอง Ticket (ความสำคัญหลายค่า · SLA · ผู้รับ) และเรียงส่งไป ops-api · ว่างเพราะตัวกรองไม่ขึ้นข้อความคิวว่าง", async () => {
+    asRole("support");
+    const asked: URLSearchParams[] = [];
+    page("", [
+      http.get(`${OPS}/tickets`, ({ request }) => {
+        const q = new URL(request.url).searchParams;
+        asked.push(q);
+        const items = q.has("priority") ? [] : [row];
+        return HttpResponse.json({ items, total: items.length, counts: { mine: 1, none: 0, all: 1 }, summary: { open: 1, unassigned: 0, breached: 0, firstResponseMinutes: null, csat: null } });
+      }),
+    ]);
+    await screen.findByText("นำเข้า Excel ไม่ได้");
+    await userEvent.click(screen.getByRole("button", { name: /^ตัวกรอง/ }));
+    const prio = screen.getByRole("group", { name: "ความสำคัญ" });
+    await userEvent.click(within(prio).getByRole("button", { name: "ด่วน" }));
+    await userEvent.click(within(prio).getByRole("button", { name: "สูง" }));
+    await userEvent.click(screen.getByRole("button", { name: "เกิน SLA แล้ว" }));
+    await userEvent.click(await screen.findByRole("button", { name: "ซัพพอร์ตสอง" }));
+    await userEvent.selectOptions(screen.getByLabelText("เรียงตาม"), "waiting");
+    await waitFor(() => expect(asked.at(-1)?.get("sort")).toBe("waiting"));
+    expect(asked.at(-1)?.get("priority")).toBe("urgent,high");
+    expect(asked.at(-1)?.get("sla")).toBe("breached");
+    expect(asked.at(-1)?.get("assignees")).toBe("s-2");
+    expect(await screen.findByText("ไม่มี Ticket")).toBeInTheDocument();
+    expect(screen.queryByText("ไม่มี Ticket ค้างในมือคุณ")).not.toBeInTheDocument();
+  });
+
   it("ช่วง 2: ปุ่มลัด J / Enter เปิดเรื่อง · พิมพ์ในช่องค้นหาแล้วปุ่มลัดไม่ทำงาน", async () => {
     asRole("support");
     page();
@@ -319,7 +346,8 @@ describe("Support", () => {
     const me = "00000000-0000-4000-8000-000000000002";
     const extra = [
       http.get(`${OPS}/support/team`, ({ request }) => {
-        seen = new URL(request.url).search;
+        // ตัวเลือกในแผงตัวกรอง (ผู้รับ) เรียกแบบไม่มี seen · ตรวจเฉพาะการเรียกของแผงทีม
+        if (new URL(request.url).search) seen = new URL(request.url).search;
         return HttpResponse.json({
           mode: "least",
           idleMinutes: 15,

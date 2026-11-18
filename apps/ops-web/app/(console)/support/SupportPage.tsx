@@ -18,6 +18,8 @@ import { useMe } from "@/lib/query";
 import { useRowNav, useShortcuts, useStableRows } from "@/lib/shortcuts";
 import { NewItemsBar } from "@/components/new-items";
 import { useUrlFilters } from "@/lib/url-state";
+import { ActiveFilters, FilterButton, filterKeys, filterQuery } from "@/components/filters";
+import { TICKET_SORTS, useTicketFilters } from "./_parts/filters";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
 import { DevCard } from "../bugs/_components/DevCard";
 import { EscalateDialog } from "../bugs/_components/EscalateDialog";
@@ -138,7 +140,11 @@ export function SupportPage() {
   const support = hasAny(me, "support");
   // คนตอบ Ticket เริ่มที่คิวของตัวเอง · บทบาทอื่น (Owner / ผู้ตรวจ) เริ่มที่ทั้งหมด
   // ตัวกรองอยู่ใน URL (กดย้อนกลับแล้วยังอยู่ที่เดิม · ส่งลิงก์ได้) · queue ว่าง = ตามบทบาท
-  const [f, setF] = useUrlFilters({ tab: "", status: "active", q: "" });
+  // ช่วง 3: แผงตัวกรอง + เรียง · อยู่ใน URL เหมือนกันจึงบันทึกเป็นมุมมองได้
+  const defs = useTicketFilters();
+  const [f, setF] = useUrlFilters({ tab: "", status: "active", q: "", sort: "sla", ...filterKeys(defs) });
+  const fq = filterQuery(defs, f);
+  const setFilters = (patch: Record<string, string>) => (setF(patch), setOffset(0));
   const queue: Queue = (["mine", "none", "all", "team"] as const).includes(f.tab as Queue) ? (f.tab as Queue) : support ? "mine" : "all";
   const setQueue = (v: Queue) => (setF({ tab: v }), setOffset(0));
   const status = f.status as "active" | "pending_dev" | "solved" | "closed";
@@ -160,6 +166,8 @@ export function SupportPage() {
     // ops-api รับ assignee = me | none | uuid (เคยส่ง "mine" จนแท็บ "ของฉัน" โหลดไม่ได้)
     ...(listQueue !== "all" ? { assignee: listQueue === "mine" ? "me" : listQueue } : {}),
     ...(search ? { q: search } : {}),
+    ...fq,
+    ...(f.sort !== "sla" ? { sort: f.sort } : {}),
     ...(params?.get("workspace") ? { workspaceId: params.get("workspace")! } : {}),
   });
   const list = useQuery({
@@ -288,7 +296,19 @@ export function SupportPage() {
           />
         }
       >
-        {queue !== "team" && <Input data-page-search aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />}
+        {queue !== "team" && (
+          <>
+            <Input data-page-search aria-label={t("search")} placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />
+            <FilterButton defs={defs} values={f} onChange={setFilters} />
+            <select className="input" style={{ width: "auto" }} aria-label={t("sortLabel")} value={f.sort} onChange={(e) => setFilters({ sort: e.target.value })}>
+              {TICKET_SORTS.map((v) => (
+                <option key={v} value={v}>
+                  {t(`sorts.${v}`)}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
       </ListBar>
       {queue === "team" ? (
         <>
@@ -297,6 +317,7 @@ export function SupportPage() {
         </>
       ) : (
         <>
+          <ActiveFilters defs={defs} values={f} onChange={setFilters} />
           <NewItemsBar count={stable.fresh} onShow={stable.reveal} />
           <ChipGroup className="row">
             {(["active", "pending_dev", "solved", "closed"] as const).map((v) => (
@@ -311,7 +332,12 @@ export function SupportPage() {
           ) : list.error ? (
             <ErrorBlock error={list.error} retry={() => void list.refetch()} />
           ) : !stable.rows.length && !stable.fresh ? (
-            <Empty ok={queue === "none" || queue === "mine"} title={queue === "none" ? t("emptyQueue") : queue === "mine" ? t("emptyMine") : t("empty")} />
+            // มีตัวกรองอยู่ = ไม่ใช่ "คิวว่าง" จริง จึงไม่ขึ้นข้อความแบบเสร็จงาน
+            Object.keys(fq).length ? (
+              <Empty title={t("empty")} />
+            ) : (
+              <Empty ok={queue === "none" || queue === "mine"} title={queue === "none" ? t("emptyQueue") : queue === "mine" ? t("emptyMine") : t("empty")} />
+            )
           ) : (
             <div className="tbl-wrap">
               <table className="tbl">

@@ -92,7 +92,7 @@ export function useRowNav<T>(rows: T[], opts: { onOpen?: (row: T) => void; onTog
   const move = (d: number) => {
     const next = Math.max(0, Math.min(max, (index < 0 ? -1 : index) + d));
     setActive(next);
-    requestAnimationFrame(() => document.querySelector(`[data-row-index="${next}"]`)?.scrollIntoView({ block: "nearest" }));
+    requestAnimationFrame(() => document.querySelector(`[data-row-index="${next}"]`)?.scrollIntoView?.({ block: "nearest" }));
   };
   useShortcuts([
     { keys: "j", label: opts.labels.down, group: "global", list: true, run: () => move(1) },

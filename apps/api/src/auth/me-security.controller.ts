@@ -118,6 +118,13 @@ export class MeSecurityController {
   // รหัสผ่านและอีเมล
   // ---------------------------------------------------------------------------
 
+  /** เงื่อนไขรหัสผ่านที่ password:change ใช้ตรวจ (Workspace ที่เข้มที่สุด) ให้หน้าเว็บติ๊กเงื่อนไขก่อนกดบันทึก */
+  @Get('password-policy')
+  async passwordPolicy(@Auth() auth: AuthInfo) {
+    const p = await this.security.policyFor(auth.userId);
+    return { minLength: p.passwordMinLength, requireSpecial: p.passwordRequireSpecial };
+  }
+
   /** บัญชีที่ใช้แค่ Google / Microsoft ตั้งรหัสผ่านครั้งแรกได้โดยไม่ต้องใส่รหัสเดิม */
   @Post('password\\:change')
   @HttpCode(200)

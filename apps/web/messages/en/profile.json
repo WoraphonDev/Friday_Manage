@@ -337,12 +337,28 @@
     "setDescription": "Lets you sign in with email as well as Google / Microsoft",
     "current": "Current password",
     "new": "New password",
-    "hint": "Follows the Workspace password policy",
+    "hint": "At least {n} characters with an uppercase letter and a number{special, select, true { and a special character} other {}}",
     "confirm": "Confirm new password",
     "mismatch": "Passwords don't match",
     "logoutOthers": "Sign out all other devices",
     "changed": "Password changed",
-    "changedLoggedOut": "Password changed · Signed out {count, plural, one {{count} other device} other {{count} other devices}}"
+    "changedLoggedOut": "Password changed · Signed out {count, plural, one {{count} other device} other {{count} other devices}}",
+    "strength": "Strength: {level}",
+    "levels": {
+      "weak": "Weak",
+      "fair": "Fair",
+      "good": "Good",
+      "strong": "Strong"
+    },
+    "rules": {
+      "length": "At least {n} characters",
+      "upper": "An uppercase letter",
+      "digit": "A number",
+      "special": "A special character",
+      "specialOptional": "A special character (recommended)"
+    },
+    "rulesLabel": "Password requirements",
+    "match": "Passwords match"
   },
   "mfa": {
     "setupTitle": "Enable Two-factor authentication",

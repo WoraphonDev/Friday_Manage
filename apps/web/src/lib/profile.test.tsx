@@ -95,6 +95,7 @@ beforeEach(() => {
     http.delete("*/api/v1/me/sessions/:id", ok(undefined, 204)),
     http.delete("*/api/v1/me/sessions", ok({ revoked: 1 })),
     // path ที่มี ":" (Nest custom method) ใช้ RegExp เพราะ MSW อ่าน ":" เป็นพารามิเตอร์
+    http.get("*/api/v1/me/password-policy", () => HttpResponse.json({ minLength: 10, requireSpecial: true })),
     http.post(/\/api\/v1\/me\/password:change$/, ok({ ok: true, loggedOutSessions: 1 })),
     http.post(/\/api\/v1\/me\/email:change$/, ok({ pendingEmail: "new@example.com", retryAfter: 60 }, 202)),
     http.post(/\/api\/v1\/me\/email:confirm$/, ok({ emailVerified: true })),
@@ -332,14 +333,25 @@ describe("Profile (I)", () => {
     expect(screen.getByText(/รหัสผ่าน · เปลี่ยนล่าสุด/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "เปลี่ยนรหัสผ่าน" }));
     dialog = await screen.findByRole("dialog", { name: "เปลี่ยนรหัสผ่าน" });
+    // ก่อนคลิกช่องเห็นแค่ข้อความสั้นตามนโยบาย Workspace · คลิกแล้วเงื่อนไขเลื่อนลงมา (แบบ C)
+    expect(await within(dialog).findByText("อย่างน้อย 10 ตัว มีตัวพิมพ์ใหญ่และตัวเลข และอักขระพิเศษ")).toBeInTheDocument();
     await user.type(within(dialog).getByLabelText("รหัสผ่านปัจจุบัน"), "old-sample");
     await user.type(within(dialog).getByLabelText("รหัสผ่านใหม่"), "new-sample-123");
-    await user.type(within(dialog).getByLabelText("ยืนยันรหัสผ่านใหม่"), "new-sample-12");
+    expect(within(dialog).getByText("อย่างน้อย 10 ตัวอักษร").closest("li")).toHaveAttribute("data-ok", "true");
+    expect(within(dialog).getByText("มีตัวพิมพ์ใหญ่").closest("li")).toHaveAttribute("data-ok", "false");
+    expect(within(dialog).getByText("มีอักขระพิเศษ").closest("li")).toHaveAttribute("data-ok", "true");
+    await user.type(within(dialog).getByLabelText("ยืนยันรหัสผ่านใหม่"), "new-sample-123");
+    expect(within(dialog).getByText("✓ ตรงกัน")).toBeInTheDocument();
+    // ไม่ครบเงื่อนไข (ไม่มีตัวพิมพ์ใหญ่) กดบันทึกไม่ได้แม้สองช่องตรงกัน
+    expect(within(dialog).getByRole("button", { name: "บันทึก" })).toBeDisabled();
+    await user.clear(within(dialog).getByLabelText("รหัสผ่านใหม่"));
+    await user.type(within(dialog).getByLabelText("รหัสผ่านใหม่"), "New-sample-123");
     expect(within(dialog).getByText("รหัสผ่านไม่ตรงกัน")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "บันทึก" })).toBeDisabled();
-    await user.type(within(dialog).getByLabelText("ยืนยันรหัสผ่านใหม่"), "3");
+    await user.clear(within(dialog).getByLabelText("ยืนยันรหัสผ่านใหม่"));
+    await user.type(within(dialog).getByLabelText("ยืนยันรหัสผ่านใหม่"), "New-sample-123");
     await user.click(within(dialog).getByRole("button", { name: "บันทึก" }));
-    await waitFor(() => expect(calls.at(-1)).toEqual({ method: "POST", path: "/me/password:change", body: { currentPassword: "old-sample", newPassword: "new-sample-123", logoutOthers: true } }));
+    await waitFor(() => expect(calls.at(-1)).toEqual({ method: "POST", path: "/me/password:change", body: { currentPassword: "old-sample", newPassword: "New-sample-123", logoutOthers: true } }));
     expect(await screen.findByText("เปลี่ยนรหัสผ่านแล้ว · ออกจากระบบอุปกรณ์อื่น 1 เครื่อง")).toBeInTheDocument();
 
     expect(screen.getByText("เข้าสู่ระบบด้วย Google").closest("div")).toHaveTextContent("เชื่อมแล้ว");

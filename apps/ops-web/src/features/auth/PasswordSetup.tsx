@@ -10,6 +10,45 @@ import { finishPasswordSetup, startPasswordSetup, type TotpSetup } from "./passw
 
 const PASSWORD_MIN = 12;
 
+type StrengthLevel = "weak" | "fair" | "good" | "strong";
+/** กติกาเดียวกับ ops-api (PasswordVerifyBody) · รูปแบบเดียวกับ checkPassword ของแอปลูกค้า แต่ขั้นต่ำ 12 ตัว */
+export function checkPassword(value: string) {
+  const rules = { length: value.length >= PASSWORD_MIN, upper: /[A-Z]/.test(value), digit: /[0-9]/.test(value), special: /[^A-Za-z0-9]/.test(value) };
+  const valid = rules.length && rules.upper && rules.digit;
+  const score = Object.values(rules).filter(Boolean).length;
+  const level: StrengthLevel = !valid ? (score <= 2 ? "weak" : "fair") : score === 4 && value.length >= 16 ? "strong" : "good";
+  return { rules, valid, level };
+}
+
+/** แถบความปลอดภัย + รายการเงื่อนไขที่ติ๊กตามที่พิมพ์ (แบบหน้าสมัครของแอปลูกค้า) */
+function PasswordRules({ value }: { value: string }) {
+  const t = useTranslations("ops.auth");
+  const { rules, level } = checkPassword(value);
+  const bars = level === "strong" ? 4 : level === "good" ? 3 : level === "fair" ? 2 : value ? 1 : 0;
+  return (
+    <>
+      <span className="pw-meter" aria-hidden="true">
+        {[0, 1, 2, 3].map((i) => (
+          <span key={i} data-on={i < bars} data-level={level} />
+        ))}
+      </span>
+      {value && (
+        <span className="pw-strength" data-level={level} aria-live="polite">
+          {t("passwordStrength", { level: t(`passwordLevels.${level}`) })}
+        </span>
+      )}
+      <ul className="pw-rules" aria-label={t("passwordRulesLabel")}>
+        {(["length", "upper", "digit", "special"] as const).map((rule) => (
+          <li key={rule} data-ok={rules[rule]}>
+            <span aria-hidden="true">{rules[rule] ? "✓" : "○"}</span>
+            {rule === "length" ? t("passwordRules.length", { n: PASSWORD_MIN }) : rule === "special" ? t("passwordRules.specialOptional") : t(`passwordRules.${rule}`)}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 /** วาด QR ของ otpauth:// เป็น SVG · โหลดไลบรารีเมื่อใช้จริงเท่านั้น (แบบเดียวกับ QR PromptPay ของแอปลูกค้า) */
 function useQr(payload: string | undefined) {
   const [url, setUrl] = useState<string | null>(null);
@@ -50,6 +89,7 @@ export function PasswordSetup({ mode, token: initialToken = "", onDone, onUseKey
   const finish = useMutation({ mutationFn: () => finishPasswordSetup(setup!.setupToken, password, code) });
 
   const tooShort = password.length < PASSWORD_MIN;
+  const weak = !checkPassword(password).valid;
   const mismatch = confirm !== password;
   const step = finish.data ? 2 : setup ? 1 : 0;
   const steps = (
@@ -133,21 +173,23 @@ export function PasswordSetup({ mode, token: initialToken = "", onDone, onUseKey
       onSubmit={(e) => {
         e.preventDefault();
         setChecked(true);
-        if (!tooShort && !mismatch && (mode === "session" || token.trim().length >= 10)) start.mutate();
+        if (!weak && !mismatch && (mode === "session" || token.trim().length >= 10)) start.mutate();
       }}
     >
       {steps}
       {mode === "token" && !initialToken && <Input label={t("token")} className="mono" value={token} onChange={(e) => setToken(e.target.value)} autoComplete="off" />}
-      <Input
-        label={t("newPassword")}
-        type="password"
-        autoComplete="new-password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        hint={t("passwordHint", { min: PASSWORD_MIN })}
-        error={checked && tooShort ? t("passwordShort", { min: PASSWORD_MIN }) : undefined}
-      />
-      <Input label={t("confirmPassword")} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} error={checked && !tooShort && mismatch ? t("passwordMismatch") : undefined} />
+      <div className="pw-field">
+        <Input
+          label={t("newPassword")}
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          error={checked && weak ? (tooShort ? t("passwordShort", { min: PASSWORD_MIN }) : t("passwordWeak")) : undefined}
+        />
+        <PasswordRules value={password} />
+      </div>
+      <Input label={t("confirmPassword")} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} error={checked && !weak && mismatch ? t("passwordMismatch") : undefined} />
       <InlineError error={start.error} />
       <Button type="submit" variant="primary" disabled={start.isPending || (mode === "token" && token.trim().length < 10)}>
         {start.isPending ? t("working") : t("next")}

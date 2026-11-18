@@ -147,7 +147,7 @@ describe("Login ด้วย Passkey (ทางเลือก)", () => {
 describe("ตั้งรหัสผ่าน + แอป Authenticator", () => {
   const setup = { secret: "JBSWY3DPEHPK3PXP", otpauthUrl: "otpauth://totp/Friday%20Ops:new@example.com?secret=JBSWY3DPEHPK3PXP", email: "new@example.com", setupToken: "signed-setup-token" };
 
-  it("ลิงก์เชิญ: รหัสผ่าน ≥ 12 ตัวและตรงกัน → สแกน QR + รหัส 6 หลัก → เปิดใช้งาน", async () => {
+  it("ลิงก์เชิญ: รหัสผ่าน ≥ 12 ตัว มีตัวพิมพ์ใหญ่ + ตัวเลข และตรงกัน → สแกน QR + รหัส 6 หลัก → เปิดใช้งาน", async () => {
     let setupBody: unknown;
     let verifyBody: unknown;
     server.use(
@@ -166,27 +166,34 @@ describe("ตั้งรหัสผ่าน + แอป Authenticator", () =>
     await userEvent.click(screen.getByRole("button", { name: "ถัดไป" }));
     expect(screen.getByText("รหัสผ่านต้องยาวอย่างน้อย 12 ตัว")).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("รหัสผ่านใหม่"), "-but-long-now");
+    await userEvent.click(screen.getByRole("button", { name: "ถัดไป" }));
+    expect(screen.getByText("รหัสผ่านยังไม่ครบเงื่อนไข")).toBeInTheDocument();
+    expect(screen.getByText("อย่างน้อย 12 ตัวอักษร").closest("li")).toHaveAttribute("data-ok", "true");
+    expect(screen.getByText("มีตัวพิมพ์ใหญ่").closest("li")).toHaveAttribute("data-ok", "false");
+    await userEvent.type(screen.getByLabelText("รหัสผ่านใหม่"), "-X9");
+    await userEvent.click(screen.getAllByRole("button", { name: "แสดงรหัสผ่าน" })[0]);
+    expect(screen.getByLabelText("รหัสผ่านใหม่")).toHaveAttribute("type", "text");
     await userEvent.type(screen.getByLabelText("ยืนยันรหัสผ่าน"), "different-value!");
     await userEvent.click(screen.getByRole("button", { name: "ถัดไป" }));
     expect(screen.getByText("รหัสผ่านทั้งสองช่องไม่ตรงกัน")).toBeInTheDocument();
     expect(setupBody).toBeUndefined();
     await userEvent.clear(screen.getByLabelText("ยืนยันรหัสผ่าน"));
-    await userEvent.type(screen.getByLabelText("ยืนยันรหัสผ่าน"), "short-but-long-now");
+    await userEvent.type(screen.getByLabelText("ยืนยันรหัสผ่าน"), "short-but-long-now-X9");
     await userEvent.click(screen.getByRole("button", { name: "ถัดไป" }));
     expect(await screen.findByText("JBSW Y3DP EHPK 3PXP")).toBeInTheDocument();
     expect(setupBody).toEqual({ enrollToken: "sample-enroll-token-123" });
     await userEvent.type(screen.getByLabelText("รหัส 6 หลัก"), "135702");
     await userEvent.click(screen.getByRole("button", { name: "เปิดใช้งานบัญชี" }));
     expect(await screen.findByText("ตั้งค่าเสร็จแล้ว · เข้าสู่ระบบได้เลย")).toBeInTheDocument();
-    expect(verifyBody).toEqual({ setupToken: "signed-setup-token", password: "short-but-long-now", code: "135702" });
+    expect(verifyBody).toEqual({ setupToken: "signed-setup-token", password: "short-but-long-now-X9", code: "135702" });
     expect(screen.getByRole("link", { name: "ไปหน้าเข้าสู่ระบบ" })).toHaveAttribute("href", "/login");
   });
 
   it("ลิงก์หมดอายุ: แสดง error ของ ops-api", async () => {
     server.use(http.post(`${OPS}/auth/password/setup`, () => opsError(401, "enroll_token_invalid", "ลิงก์ตั้งค่าไม่ถูกต้องหรือหมดอายุ · ขอลิงก์ใหม่จาก Owner")));
     renderWithProviders(<EnrollPage token="expired-token-000" />);
-    await userEvent.type(screen.getByLabelText("รหัสผ่านใหม่"), "long-enough-pass");
-    await userEvent.type(screen.getByLabelText("ยืนยันรหัสผ่าน"), "long-enough-pass");
+    await userEvent.type(screen.getByLabelText("รหัสผ่านใหม่"), "Long-enough-pass-1");
+    await userEvent.type(screen.getByLabelText("ยืนยันรหัสผ่าน"), "Long-enough-pass-1");
     await userEvent.click(screen.getByRole("button", { name: "ถัดไป" }));
     expect(await screen.findByText(/ลิงก์ตั้งค่าไม่ถูกต้องหรือหมดอายุ/)).toBeInTheDocument();
   });
@@ -270,8 +277,8 @@ describe("เมนูบัญชี › วิธีเข้าระบบ",
     expect(await screen.findByText("ยังไม่ได้ตั้ง · ตอนนี้เข้าได้เฉพาะเครื่องที่มี Passkey")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ลบ MacBook" })).toBeDisabled();
     await userEvent.click(screen.getByRole("button", { name: "ตั้งค่า" }));
-    await userEvent.type(screen.getByLabelText("รหัสผ่านใหม่"), "long-enough-pass");
-    await userEvent.type(screen.getByLabelText("ยืนยันรหัสผ่าน"), "long-enough-pass");
+    await userEvent.type(screen.getByLabelText("รหัสผ่านใหม่"), "Long-enough-pass-1");
+    await userEvent.type(screen.getByLabelText("ยืนยันรหัสผ่าน"), "Long-enough-pass-1");
     await userEvent.click(screen.getByRole("button", { name: "ถัดไป" }));
     expect(await screen.findByText("JBSW Y3DP EHPK 3PXP")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "บันทึก" })).toBeDisabled();

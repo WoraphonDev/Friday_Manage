@@ -92,7 +92,6 @@
     "stepApp": "ผูกแอป Authenticator",
     "newPassword": "รหัสผ่านใหม่",
     "confirmPassword": "ยืนยันรหัสผ่าน",
-    "passwordHint": "อย่างน้อย {min} ตัว",
     "passwordShort": "รหัสผ่านต้องยาวอย่างน้อย {min} ตัว",
     "passwordMismatch": "รหัสผ่านทั้งสองช่องไม่ตรงกัน",
     "qrAlt": "QR สำหรับแอป Authenticator",
@@ -119,7 +118,22 @@
     "noKeys": "ยังไม่มี Passkey",
     "addKey": "เพิ่ม Passkey",
     "onlyKeysWarn": "ตั้งรหัสผ่าน + แอป เพื่อเข้าจากเครื่องอื่นได้",
-    "useKey": "แตะ Passkey แทน"
+    "useKey": "แตะ Passkey แทน",
+    "passwordWeak": "รหัสผ่านยังไม่ครบเงื่อนไข",
+    "passwordStrength": "ความปลอดภัย: {level}",
+    "passwordLevels": {
+      "weak": "อ่อน",
+      "fair": "พอใช้",
+      "good": "ดี",
+      "strong": "ดีมาก"
+    },
+    "passwordRules": {
+      "length": "อย่างน้อย {n} ตัวอักษร",
+      "upper": "มีตัวพิมพ์ใหญ่",
+      "digit": "มีตัวเลข",
+      "specialOptional": "มีอักขระพิเศษ (แนะนำ)"
+    },
+    "passwordRulesLabel": "เงื่อนไขรหัสผ่าน"
   },
   "session": {
     "banner": "คุณกำลังเข้าใช้ในฐานะทีมช่วยเหลือ",

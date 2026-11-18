@@ -65,7 +65,23 @@
     "search": "ค้นอีเมลผู้ขอหรือเลขคำขอ",
     "noMatch": "ไม่พบคำขอที่ตรงกับคำค้น",
     "othersHere": "{name} กำลังเปิดคำขอนี้อยู่ · ตกลงกันก่อนดำเนินการ",
-    "viewing": "{name} กำลังดู"
+    "viewing": "{name} กำลังดู",
+    "f": {
+      "type": "ประเภทคำขอ",
+      "identity": "ยืนยันตัวตน",
+      "identities": {
+        "verified": "ยืนยันแล้ว",
+        "unverified": "ยังไม่ยืนยัน"
+      },
+      "due": "กำหนดตอบ",
+      "dues": {
+        "soon": "ครบใน 7 วัน",
+        "overdue": "เกินกำหนดแล้ว"
+      },
+      "handler": "ผู้ดำเนินการ",
+      "hold": "Legal hold",
+      "holdYes": "ติด Legal hold"
+    }
   },
   "req": {
     "who": "ผู้ขอ: {email} · Workspace: {ws}",

@@ -13,6 +13,8 @@ import { Button, buttonClass, errorToast, InlineError, Input, Select, Textarea, 
 import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { useUrlFilters } from "@/lib/url-state";
+import { useSupportStaff } from "@/lib/staff-options";
+import { ActiveFilters, FilterButton, type FilterDef, filterKeys, filterQuery } from "@/components/filters";
 import { planLabel, useFmt } from "../../workspaces/_parts/format";
 import { useDelivery } from "./Accounting";
 import { ClosePeriodDialog, EtaxDrawer, useEtaxDetail, useTaxFmt } from "./Tax";
@@ -125,7 +127,17 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
   const finance = hasAny(me, "finance");
   const params = useSearchParams();
   // ตัวกรองและหน้าอยู่ใน URL (ช่วง 1) · เดิมดึง 100 ใบแรกโดยไม่บอกว่ามีมากกว่านั้น
-  const [f, setF] = useUrlFilters({ status: "", q: "", page: "0" });
+  // ช่วง 3: ครบกำหนด · วิธีชำระ · 50 ทวิ · ยอด (คีย์ตรงกับ ops-api › billing.service InvoicesQuery)
+  const tf = useTranslations("money.invoices.f");
+  const defs: FilterDef[] = [
+    { key: "due", label: tf("due"), kind: "dates", fromKey: "dueFrom", toKey: "dueTo" },
+    { key: "method", label: tf("method"), kind: "single", options: (["card", "promptpay", "transfer"] as const).map((m) => ({ value: m, label: tf(`methods.${m}`) })) },
+    { key: "wht", label: tf("wht"), kind: "single", options: [{ value: "yes", label: tf("whtYes") }] },
+    { key: "amount", label: tf("amount"), kind: "range", minKey: "amountMin", maxKey: "amountMax", unit: "baht" },
+  ];
+  const [f, setF] = useUrlFilters({ status: "", q: "", page: "0", ...filterKeys(defs) });
+  const fq = filterQuery(defs, f);
+  const setFilters = (patch: Record<string, string>) => setF({ ...patch, page: "0" });
   const status = f.status as (typeof STATUSES)[number];
   const setStatus = (v: (typeof STATUSES)[number]) => setF({ status: v, page: "0" });
   const [q, setQ] = useState(f.q || (params?.get("q") ?? ""));
@@ -141,7 +153,7 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
   const [replacing, setReplacing] = useState<InvoiceRow | null>(null);
   const [etaxDoc, setEtaxDoc] = useState<string | null>(null);
   const tt = useTranslations("money.tax");
-  const filter = new URLSearchParams({ limit: String(INVOICE_PAGE), offset: String(offset), ...(status ? { status } : {}), ...(search ? { q: search } : {}) });
+  const filter = new URLSearchParams({ limit: String(INVOICE_PAGE), offset: String(offset), ...(status ? { status } : {}), ...(search ? { q: search } : {}), ...fq });
   const list = useQuery({ queryKey: ["ops", "invoices", filter.toString()], queryFn: () => api.get<{ items: InvoiceRow[]; total: number }>(`/invoices?${filter}`), placeholderData: keepPreviousData });
   return (
     <section className="card">
@@ -158,13 +170,15 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
             {s ? t(`invoices.status.${s}`) : t("invoices.statusAll")}
           </Chip>
         ))}
+        <FilterButton defs={defs} values={f} onChange={setFilters} />
       </ChipGroup>
+      <ActiveFilters defs={defs} values={f} onChange={setFilters} />
       {list.isPending ? (
         <TableSkeleton rows={5} cols={8} />
       ) : list.error ? (
         <ErrorBlock error={list.error} retry={() => void list.refetch()} />
       ) : !list.data.items.length ? (
-        <Empty title={t("invoices.empty")} onClearFilters={status || search ? () => (setStatus(""), setQ("")) : undefined} />
+        <Empty title={t("invoices.empty")} onClearFilters={status || search || Object.keys(fq).length ? () => (setQ(""), setF({ ...filterKeys(defs), status: "", page: "0" })) : undefined} />
       ) : (
         <Table head={[t("invoices.number"), t("invoices.ws"), { label: t("invoices.total"), num: true }, { label: t("invoices.wht"), num: true }, { label: t("invoices.due"), num: true }, t("invoices.dueDate"), t("incoming.status"), t("invoices.docs"), ...(finance ? [t("invoices.actions")] : [])]}>
           {list.data.items.map((i) => (
@@ -633,10 +647,30 @@ export function OverdueTab() {
   const me = useMe().data;
   const finance = hasAny(me, "finance");
   // ช่วง 1 (ข้อมูลเยอะ): ค้นและแบ่งหน้าที่ ops-api · เรียงตามยอด × วันที่ค้าง
-  const [search, setSearch] = useState("");
-  const [offset, setOffset] = useState(0);
+  // ช่วง 3: ตัวกรองอยู่ใน URL (บันทึกเป็นมุมมองได้) · คีย์ตรงกับ ops-api › billing.service OverdueQuery
+  const tf = useTranslations("money.overdue.f");
+  const staff = useSupportStaff();
+  const defs: FilterDef[] = [
+    { key: "age", label: tf("age"), kind: "single", options: (["1-7", "8-30", "31+"] as const).map((v) => ({ value: v, label: tf(`ages.${v}`) })) },
+    { key: "amount", label: tf("amount"), kind: "range", minKey: "amountMin", maxKey: "amountMax", unit: "baht" },
+    { key: "plan", label: tf("plan"), kind: "single", options: (["team_s", "team_m", "team_l", "enterprise"] as const).map((p) => ({ value: p, label: planLabel(p) })) },
+    { key: "cycle", label: tf("cycle"), kind: "single", options: (["monthly", "yearly"] as const).map((c) => ({ value: c, label: tf(`cycles.${c}`) })) },
+    { key: "contacted", label: tf("contacted"), kind: "single", options: (["yes", "no"] as const).map((c) => ({ value: c, label: tf(`contactedOpts.${c}`) })) },
+    { key: "human", label: tf("human"), kind: "single", options: [{ value: "yes", label: tf("humanYes") }] },
+    { key: "manager", label: tf("manager"), kind: "single", options: [{ value: "none", label: tf("noManager") }, ...staff] },
+  ];
+  const [f, setF] = useUrlFilters({ q: "", page: "0", ...filterKeys(defs) });
+  const fq = filterQuery(defs, f);
+  const setFilters = (patch: Record<string, string>) => setF({ ...patch, page: "0" });
+  const [search, setSearch] = useState(f.q);
+  const offset = Number(f.page) * OVERDUE_PAGE || 0;
+  const setOffset = (v: number) => setF({ page: String(Math.floor(v / OVERDUE_PAGE)) });
   const term = useDeferredValue(search.trim());
-  const qs = new URLSearchParams({ limit: String(OVERDUE_PAGE), offset: String(offset), ...(term ? { q: term } : {}) });
+  useEffect(() => {
+    if (term !== f.q) setF({ q: term, page: "0" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [term]);
+  const qs = new URLSearchParams({ limit: String(OVERDUE_PAGE), offset: String(offset), ...(term ? { q: term } : {}), ...fq });
   const q = useQuery({ queryKey: ["ops", "overdue", qs.toString()], queryFn: () => api.get<{ items: OverdueRow[]; total: number; totalSatang: number }>(`/overdue?${qs}`), placeholderData: keepPreviousData });
   const [contact, setContact] = useState<OverdueRow | null>(null);
   const [extend, setExtend] = useState<OverdueRow | null>(null);
@@ -647,13 +681,19 @@ export function OverdueTab() {
         <span className="card-sub">{t("overdue.steps")}</span>
       </div>
       <p className="muted small">{t("overdue.note")}</p>
-      <Input data-page-search type="search" aria-label={t("overdue.search")} placeholder={t("overdue.search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
+      <div className="row">
+        <div style={{ flex: "1 1 240px" }}>
+          <Input data-page-search type="search" aria-label={t("overdue.search")} placeholder={t("overdue.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <FilterButton defs={defs} values={f} onChange={setFilters} />
+      </div>
+      <ActiveFilters defs={defs} values={f} onChange={setFilters} />
       {q.isPending ? (
         <TableSkeleton rows={4} cols={6} />
       ) : q.error ? (
         <ErrorBlock error={q.error} retry={() => void q.refetch()} />
       ) : !q.data.items.length ? (
-        term ? <Empty title={t("overdue.noMatch")} onClearFilters={() => setSearch("")} /> : <Empty ok title={t("overdue.empty")} />
+        term || Object.keys(fq).length ? <Empty title={t("overdue.noMatch")} onClearFilters={() => (setSearch(""), setF({ ...filterKeys(defs), q: "", page: "0" }))} /> : <Empty ok title={t("overdue.empty")} />
       ) : (
         <Table head={[t("overdue.invoice"), t("verify.col.ws"), { label: t("incoming.amount"), num: true }, t("overdue.late"), t("overdue.reminded"), t("overdue.next"), ...(finance ? [t("invoices.actions")] : [])]}>
           {q.data.items.map((r) => (

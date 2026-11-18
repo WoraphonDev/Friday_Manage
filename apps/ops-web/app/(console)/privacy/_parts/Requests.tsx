@@ -2,13 +2,16 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { IrreversibleDialog, useApprovalFlow, useReauth } from "@/components/dialogs";
 import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, Pager, TableSkeleton } from "@/components/kit";
 import { Button, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { usePresence, usePresenceOf } from "@/lib/presence";
 import { useRowNav } from "@/lib/shortcuts";
+import { useUrlFilters } from "@/lib/url-state";
+import { useSupportStaff } from "@/lib/staff-options";
+import { ActiveFilters, FilterButton, type FilterDef, filterKeys, filterQuery } from "@/components/filters";
 import { useFmt } from "../../workspaces/_parts/format";
 import { dsr, type Identity, type PrivacyRequest, REQUEST_TYPES, type RequestDetail, type RequestType, todayBkk } from "./types";
 import { type PickedWs, WorkspacePicker } from "./WorkspacePicker";
@@ -46,12 +49,30 @@ export function useRequestStats(enabled: boolean) {
 export function RequestsTable({ enabled, onOpen }: { enabled: boolean; onOpen: (id: string) => void }) {
   const t = useTranslations("pl.privacy");
   const tr = useTranslations("pl.req");
-  const [filter, setFilterState] = useState<"open" | "completed" | "rejected" | "all">("open");
-  const [search, setSearch] = useState("");
-  const [offset, setOffset] = useState(0);
+  // ช่วง 3: ตัวกรองอยู่ใน URL (บันทึกเป็นมุมมองได้) · คีย์ตรงกับ ops-api › privacy.service RequestsQuery
+  const tf = useTranslations("pl.privacy.f");
+  const staff = useSupportStaff();
+  const defs: FilterDef[] = [
+    { key: "type", label: tf("type"), kind: "single", options: REQUEST_TYPES.map((v) => ({ value: v, label: t(`types.${v}`) })) },
+    { key: "identity", label: tf("identity"), kind: "single", options: (["verified", "unverified"] as const).map((v) => ({ value: v, label: tf(`identities.${v}`) })) },
+    { key: "due", label: tf("due"), kind: "single", options: (["soon", "overdue"] as const).map((v) => ({ value: v, label: tf(`dues.${v}`) })) },
+    { key: "handler", label: tf("handler"), kind: "single", options: staff },
+    { key: "hold", label: tf("hold"), kind: "single", options: [{ value: "yes", label: tf("holdYes") }] },
+  ];
+  const [f, setF] = useUrlFilters({ status: "open", q: "", page: "0", ...filterKeys(defs) });
+  const fq = filterQuery(defs, f);
+  const setFilters = (patch: Record<string, string>) => setF({ ...patch, page: "0" });
+  const filter = f.status as "open" | "completed" | "rejected" | "all";
+  const [search, setSearch] = useState(f.q);
+  const offset = Number(f.page) * PAGE || 0;
+  const setOffset = (v: number) => setF({ page: String(Math.floor(v / PAGE)) });
   const term = useDeferredValue(search.trim());
-  const setFilter = (v: typeof filter) => (setFilterState(v), setOffset(0));
-  const qs = new URLSearchParams({ status: filter, limit: String(PAGE), offset: String(offset), ...(term ? { q: term } : {}) });
+  useEffect(() => {
+    if (term !== f.q) setF({ q: term, page: "0" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [term]);
+  const setFilter = (v: typeof filter) => setF({ status: v, page: "0" });
+  const qs = new URLSearchParams({ status: filter, limit: String(PAGE), offset: String(offset), ...(term ? { q: term } : {}), ...fq });
   const query = useQuery({ queryKey: [...key, "list", qs.toString()], queryFn: () => api.get<ListResponse>(`/privacy/requests?${qs}`), enabled, placeholderData: keepPreviousData });
   const items = query.data?.items ?? [];
   // ช่วง 2: J / K / Enter · เห็นเพื่อนที่เปิดคำขอเดียวกัน
@@ -64,7 +85,8 @@ export function RequestsTable({ enabled, onOpen }: { enabled: boolean; onOpen: (
         <h2 className="card-title">{t("requests")}</h2>
         <span className="card-sub">{t("requestsSub")}</span>
         <span className="spacer" />
-        <Input data-page-search type="search" aria-label={t("search")} placeholder={t("search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
+        <Input data-page-search type="search" aria-label={t("search")} placeholder={t("search")} value={search} onChange={(e) => setSearch(e.target.value)} />
+        <FilterButton defs={defs} values={f} onChange={setFilters} />
         <ChipGroup className="row">
           {(["open", "completed", "rejected", "all"] as const).map((v) => (
             <Chip key={v} pressed={filter === v} onClick={() => setFilter(v)}>
@@ -74,12 +96,15 @@ export function RequestsTable({ enabled, onOpen }: { enabled: boolean; onOpen: (
           ))}
         </ChipGroup>
       </div>
+      <div style={{ padding: "0 16px" }}>
+        <ActiveFilters defs={defs} values={f} onChange={setFilters} />
+      </div>
       {query.isPending ? (
         <TableSkeleton rows={4} cols={7} />
       ) : query.error ? (
         <ErrorBlock error={query.error} retry={() => void query.refetch()} />
       ) : !items.length ? (
-        term ? <Empty title={t("noMatch")} onClearFilters={() => setSearch("")} /> : <Empty ok={filter === "open"} title={filter === "open" ? t("emptyOpen") : t("empty")} />
+        term || Object.keys(fq).length ? <Empty title={t("noMatch")} onClearFilters={() => (setSearch(""), setF({ ...filterKeys(defs), q: "", page: "0" }))} /> : <Empty ok={filter === "open"} title={filter === "open" ? t("emptyOpen") : t("empty")} />
       ) : (
         <div className="tbl-wrap">
           <table className="tbl">

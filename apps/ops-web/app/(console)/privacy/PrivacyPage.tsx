@@ -28,7 +28,15 @@ export function PrivacyPage() {
   const owner = hasAny(me, "owner");
   const stats = useRequestStats(!!me && readRequests);
   const [creating, setCreating] = useState<"request" | "breach" | null>(null);
-  const open = (kind: "request" | "breach", id: string | null) => router.replace(id ? `/privacy?${kind}=${id}` : "/privacy");
+  // เปิด / ปิดรายละเอียดคงตัวกรองของตารางไว้ใน URL (ช่วง 3)
+  const open = (kind: "request" | "breach", id: string | null) => {
+    const next = new URLSearchParams(params?.toString() ?? "");
+    next.delete("request");
+    next.delete("breach");
+    if (id) next.set(kind, id);
+    const s = next.toString();
+    router.replace(s ? `/privacy?${s}` : "/privacy");
+  };
   const reqId = params?.get("request") ?? null;
   const breachId = params?.get("breach") ?? null;
   if (me && !readRequests && !readBreaches) return <NoAccess need={["owner", "support", "engineer", "auditor"]} />;

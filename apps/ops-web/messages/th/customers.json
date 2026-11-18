@@ -649,6 +649,41 @@
       "line": "LINE",
       "microsoft": "Microsoft",
       "apple": "Apple"
+    },
+    "f": {
+      "login": "วิธีเข้าระบบ",
+      "logins": {
+        "password": "รหัสผ่าน",
+        "google": "Google",
+        "line": "LINE",
+        "microsoft": "Microsoft",
+        "apple": "Apple"
+      },
+      "mfa": "ยืนยัน 2 ชั้น",
+      "mfas": {
+        "on": "เปิด",
+        "off": "ยังไม่เปิด"
+      },
+      "line": "ผูก LINE",
+      "lines": {
+        "bound": "ผูกแล้ว",
+        "unbound": "ยังไม่ผูก"
+      },
+      "lang": "ภาษา",
+      "langs": {
+        "th": "ไทย",
+        "en": "อังกฤษ"
+      },
+      "activity": "ใช้งานล่าสุด",
+      "activities": {
+        "active7": "ใน 7 วัน",
+        "idle30": "เงียบ 30 วัน+",
+        "never": "ยังไม่เคยเข้า"
+      },
+      "multi": "Workspace",
+      "multis": {
+        "yes": "อยู่หลาย Workspace"
+      }
     }
   },
   "bulk": {

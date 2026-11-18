@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { useRowNav } from "@/lib/shortcuts";
 import { useUrlFilters } from "@/lib/url-state";
+import { ActiveFilters, FilterButton, type FilterDef, filterKeys, filterQuery } from "@/components/filters";
 import { useFmt } from "../workspaces/_parts/format";
 import { AttachDialog, MessageDialog } from "./_parts/Dialogs";
 import { Suppressions } from "./_parts/Suppressions";
@@ -22,6 +23,9 @@ export const DLV_KEY = ["ops", "deliveries"] as const;
 const CHANNEL_TONE: Record<Channel, "inf" | "ok" | "neu"> = { email: "inf", line: "ok", line_group: "ok", webhook: "neu" };
 
 /** ประวัติการส่งแจ้งเตือน (Canvas › Deliveries · เฟส 2 · O23) */
+/** ประเภทเหตุการณ์ที่ส่งแจ้งเตือน (notifications.event_type) · ชื่อไทยมาจาก dlv.events */
+const EVENT_TYPES = ["issue.assigned", "issue.mentioned", "issue.review_requested", "issue.overdue", "issue.status_changed", "issue.created", "bug.created", "due_request.created", "due_request.decided", "member.joined", "project.health_changed", "digest.daily", "report.weekly", "sprint.started", "sprint.completed", "channel.webhook_paused", "ops.announcement"];
+
 export function DeliveriesPage() {
   const t = useTranslations("dlv");
   const td = useTranslations("dlv.detail");
@@ -31,7 +35,15 @@ export function DeliveriesPage() {
   const read = hasAny(me, "owner", "support", "engineer");
   // ?q= เปิดจากหน้า Ticket (S6 "ค้นในประวัติการส่ง") ได้ผลค้นทันที
   // ตัวกรองอยู่ใน URL (ช่วง 1) · ลิงก์จาก Ticket ส่ง ?q= มาได้
-  const [f, setF] = useUrlFilters({ q: "", channel: "all", status: "all" });
+  // ช่วง 3: ช่วงเวลา · ประเภทเหตุการณ์ (คีย์ตรงกับ ops-api › deliveries.service ListQuery)
+  const tf = useTranslations("dlv.f");
+  const eventText = useEventText();
+  const defs: FilterDef[] = [
+    { key: "when", label: tf("when"), kind: "dates", fromKey: "from", toKey: "to" },
+    { key: "event", label: tf("event"), kind: "single", options: EVENT_TYPES.map((e) => ({ value: e, label: eventText({ type: e, issueKey: null }) })) },
+  ];
+  const [f, setF] = useUrlFilters({ q: "", channel: "all", status: "all", ...filterKeys(defs) });
+  const fq = filterQuery(defs, f);
   const [query, setQuery] = useState(f.q);
   const channel = f.channel as "all" | "email" | "line" | "webhook";
   const setChannel = (v: typeof channel) => setF({ channel: v });
@@ -48,11 +60,12 @@ export function DeliveriesPage() {
     if (q) p.set("q", q);
     if (channel !== "all") p.set("channel", channel);
     if (status !== "all") p.set("status", status);
+    for (const [k, v] of Object.entries(fq)) p.set(k, v);
     if (before) p.set("before", before);
     return p.toString();
   };
   const list = useInfiniteQuery({
-    queryKey: [...DLV_KEY, "list", q, channel, status],
+    queryKey: [...DLV_KEY, "list", q, channel, status, fq],
     queryFn: ({ pageParam }) => api.get<ListResponse>(`/deliveries?${qs(pageParam)}`),
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextBefore,
@@ -64,11 +77,10 @@ export function DeliveriesPage() {
   const kind = /^#\s*\d+$/.test(query.trim()) ? "ticket" : /^req_/.test(query.trim()) ? "request" : null;
   // ไม่เลือกแถวแรกให้เอง: รายละเอียดเปิดในแผงขวาเมื่อกดแถว (โครงหน้า Ops 18 พ.ย. 2569)
   const current = picked;
-  const eventText = useEventText();
   const tk = useTranslations("common.keys");
   const rowNav = useRowNav(items, { onOpen: (r) => setPicked(r.id), labels: { down: tk("down"), open: tk("open") } });
   if (me && !read) return <NoAccess need={["owner", "support", "engineer"]} mine={rolesOf(me)} />;
-  const filtered = !!q || channel !== "all" || status !== "all";
+  const filtered = !!q || channel !== "all" || status !== "all" || Object.keys(fq).length > 0;
   const pct = (n: number | null | undefined) => (!stats ? "…" : n == null ? t("stats.none") : `${n}%`);
   return (
     <>
@@ -103,7 +115,9 @@ export function DeliveriesPage() {
               ))}
             </select>
           </label>
+          <FilterButton defs={defs} values={f} onChange={setF} />
         </div>
+        <ActiveFilters defs={defs} values={f} onChange={setF} />
         {search && <SearchNotice s={search} />}
         <div>
           <div>
@@ -112,7 +126,7 @@ export function DeliveriesPage() {
             ) : list.error ? (
               <ErrorBlock error={list.error} retry={() => void list.refetch()} />
             ) : !items.length ? (
-              <Empty title={filtered ? t("empty") : t("emptyAll")} onClearFilters={filtered ? () => (setQuery(""), setChannel("all"), setStatus("all")) : undefined} />
+              <Empty title={filtered ? t("empty") : t("emptyAll")} onClearFilters={filtered ? () => (setQuery(""), setF({ ...filterKeys(defs), channel: "all", status: "all" })) : undefined} />
             ) : (
               <>
                 <div className="tbl-wrap">

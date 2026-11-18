@@ -206,6 +206,7 @@
     "emptyFiltered": "No tasks match these filters",
     "emptyFilteredHint": "Try another search or clear the filters",
     "loading": "Loading your tasks",
+    "confirmClose": {"title": "Close {key}?", "description": "\"{title}\" will be moved to Done", "confirm": "Close task"},
     "closed": "Closed {key}",
     "reopened": "Reopened {key}",
     "dueChanged": "Moved the Due date of {key} to {date}",

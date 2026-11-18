@@ -1,14 +1,15 @@
 "use client";
 
-import { useRef, useState, type DragEvent, type TouchEvent } from "react";
+import { useRef, useState, type DragEvent, type MouseEvent, type ReactNode, type TouchEvent } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Filter, Flag, Plus } from "lucide-react";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useSlidingIndicator } from "@/lib/motion";
 import { CalendarClock, ChevronDown, ChevronRight } from "lucide-react";
-import { Badge, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
+import { Badge, Button, ConfirmDialog, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { MobileHeader } from "@/components/shell/mobile-header";
 import { api, ApiError } from "@/lib/api";
@@ -19,6 +20,8 @@ import { FilterBar, Highlight, isFiltering, matchesFilter, useTaskFilter, type T
 import styles from "./hmt.module.css";
 import { DEFAULT_ITEM_COLOR, FALLBACK_PROJECT_COLOR, readableColor, tint } from "@/lib/colors";
 import { isClosedCategory } from "@/lib/status";
+import { IssueDrawer } from "@/features/issue-drawer/IssueDrawer";
+import { withoutDrawerParams } from "@/features/issue-drawer/url";
 
 const TABS: Tab[] = ["assigned", "reviewer", "watching", "created"];
 const GROUPS: GroupBy[] = ["due", "project", "status"];
@@ -91,6 +94,13 @@ export function MyTasksPage({ ws }: { ws: string }) {
   const [fullGroups, setFullGroups] = useState<Record<string, boolean>>({});
   const [dueFor, setDueFor] = useState<{ item: TaskItem; date: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // ผู้ใช้จริงติ๊กเพราะคิดว่าเป็นช่องเลือก แล้วงานถูกปิดทันที · การปิดงานจึงถามยืนยันก่อน (เปิดงานกลับไม่ต้องถาม)
+  const [confirmClose, setConfirmClose] = useState<TaskItem | null>(null);
+  // รายละเอียดงานเปิดเป็น Drawer ในหน้านี้ (?issue=) ไม่ต้องย้ายไปหน้าโปรเจกต์แล้วกดกลับ
+  const router = useRouter();
+  const pathname = usePathname();
+  const search = useSearchParams();
+  const openKey = search.get("issue");
   const dragKey = useRef<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
   // จัดกลุ่มตาม: พื้นม่วงอ่อนเลื่อนตามตัวที่เลือก (ชิปแท็บกับชิปโปรเจกต์อยู่กล่องเดียวกันและเลือกพร้อมกันได้ 2 อัน จึงไม่ใช้)
@@ -103,6 +113,34 @@ export function MyTasksPage({ ws }: { ws: string }) {
   // ชิปโปรเจกต์ใช้ข้อมูลทั้งแท็บ (ไม่กรอง) เพื่อให้ชิปยังอยู่เมื่อเลือกโปรเจกต์ใดโปรเจกต์หนึ่ง
   const all = useQuery({ queryKey: ["my-tasks", ws, `${tab}:projects`], queryFn: () => api.get<MyIssues>(`${base}/my-issues?tab=${tab}&group=project`) });
   const refresh = () => cache.invalidateQueries({ queryKey: ["my-tasks", ws] });
+  const toggle = (item: TaskItem, done: boolean) => (done ? setConfirmClose(item) : void setDone(item, false));
+  function openIssue(key: string) {
+    const next = withoutDrawerParams(search, pathname);
+    next.set("issue", key);
+    router.push(`${pathname}?${next}`, { scroll: false });
+  }
+  function closeIssue() {
+    const next = withoutDrawerParams(search, pathname);
+    router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
+    // งานอาจถูกแก้สถานะ / Due ใน Drawer
+    void refresh();
+  }
+  const overlays = (
+    <>
+      {confirmClose && (
+        <ConfirmDialog
+          open
+          onOpenChange={(open) => { if (!open) setConfirmClose(null); }}
+          title={t("confirmClose.title", { key: confirmClose.key })}
+          description={t("confirmClose.description", { title: confirmClose.title })}
+          confirmLabel={t("confirmClose.confirm")}
+          destructive={false}
+          onConfirm={() => setDone(confirmClose, true)}
+        />
+      )}
+      {openKey && <IssueDrawer issueKey={openKey} onClose={closeIssue} />}
+    </>
+  );
 
   async function setDone(item: TaskItem, done: boolean) {
     if (busy) return;
@@ -141,7 +179,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
   const filtering = isFiltering(filter);
   const shownGroups = filtering ? data.groups.map((g) => { const items = g.items.filter((i) => matchesFilter(i, filter)); return { ...g, items, count: items.length }; }) : data.groups;
   const shownCount = shownGroups.reduce((n, g) => n + g.items.length, 0);
-  if (mobile) return <MobileTasks data={{ ...data, groups: shownGroups }} allItems={data.groups.flatMap((g) => g.items)} filter={filter} setFilter={setFilter} ws={ws} name={me.displayName} year={year} tab={tab} setTab={(k) => { setTab(k); setProject(""); }} busy={busy} onToggle={(item, done) => void setDone(item, done)} />;
+  if (mobile) return <MobileTasks data={{ ...data, groups: shownGroups }} allItems={data.groups.flatMap((g) => g.items)} filter={filter} setFilter={setFilter} ws={ws} name={me.displayName} year={year} tab={tab} setTab={(k) => { setTab(k); setProject(""); }} busy={busy} onToggle={toggle} onOpen={openIssue} overlays={overlays} />;
   const everything = data.groups.flatMap((g) => g.items);
   const open = everything.filter((i) => !isClosedCategory(i.status.category));
   const estSum = open.filter(countsMyMd).reduce((n, i) => n + (i.estimateMd ?? 0) / Math.max(1, i.assignees.length), 0);
@@ -234,7 +272,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
                   <span className={styles.ghSub}>{sub}</span>
                 </button>
                 {!isClosed && (fullGroups[id] ? g.items : g.items.slice(0, GROUP_LIMIT)).map((i) => (
-                  <TaskRow key={i.key} item={i} q={filter.q} ws={ws} year={year} busy={busy === i.key} onToggle={(done) => setDone(i, done)} onMove={() => setDueFor({ item: i, date: i.planEnd ?? data.today })} onDragStart={() => { dragKey.current = i.key; }} />
+                  <TaskRow key={i.key} item={i} q={filter.q} ws={ws} year={year} busy={busy === i.key} onToggle={(done) => toggle(i, done)} onOpen={() => openIssue(i.key)} onMove={() => setDueFor({ item: i, date: i.planEnd ?? data.today })} onDragStart={() => { dragKey.current = i.key; }} />
                 ))}
                 {!isClosed && g.items.length > GROUP_LIMIT && (
                   <button type="button" className={styles.groupMore} aria-expanded={!!fullGroups[id]} onClick={() => setFullGroups((f) => ({ ...f, [id]: !f[id] }))}>
@@ -285,6 +323,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
           </section>
         </aside>
       </div>
+      {overlays}
       {dueFor && <DueDialog ws={ws} item={dueFor.item} initial={dueFor.date} onClose={() => setDueFor(null)} onDone={async () => { setDueFor(null); await refresh(); }} />}
     </div>
   );
@@ -301,9 +340,9 @@ const CHIP_PILL = { "--ind-bg": "var(--primary-soft)", "--ind-border": "1px soli
 
 /** M2 → W29 · มือถือแบบต้นแบบ (หัว B + รายการกะทัดรัดฐาน A): หัวข้อใหญ่ · ชิปช่วงเวลามีตัวเลข · กลุ่มตาม Due ในกล่องขอบมน · ปุ่มสร้างงานลอย
  *  คงช่องติ๊กปิดงานไว้แทนรูปผู้รับผิดชอบในต้นแบบ (ทุกแถวเป็นงานของฉันอยู่แล้ว) */
-function MobileTasks({ data, allItems, filter, setFilter, ws, name, year, tab, setTab, busy, onToggle }: {
+function MobileTasks({ data, allItems, filter, setFilter, ws, name, year, tab, setTab, busy, onToggle, onOpen, overlays }: {
   data: MyIssues; allItems: TaskItem[]; filter: TaskFilter; setFilter: (f: TaskFilter) => void; ws: string; name: string; year: YearFormat; tab: Tab; setTab: (tab: Tab) => void;
-  busy: string | null; onToggle: (item: TaskItem, done: boolean) => void;
+  busy: string | null; onToggle: (item: TaskItem, done: boolean) => void; onOpen: (key: string) => void; overlays: ReactNode;
 }) {
   const t = useTranslations("home-my-tasks.tasks");
   const th = useTranslations("home-my-tasks.home");
@@ -348,7 +387,7 @@ function MobileTasks({ data, allItems, filter, setFilter, ws, name, year, tab, s
               return (
                 <div key={i.key} className="m-row">
                   <input className="m-check" type="checkbox" checked={done} disabled={busy === i.key || i.canMove === false} title={i.canMove === false ? t("cannotMove") : undefined} aria-label={t(done ? "markUndone" : "markDone", { title: i.title })} onChange={(e) => onToggle(i, e.target.checked)} />
-                  <Link href={taskHref(ws, i.project.key, i.key)} className="m-row-main">
+                  <Link href={taskHref(ws, i.project.key, i.key)} className="m-row-main" onClick={(e) => openInPlace(e, () => onOpen(i.key))}>
                     <b style={done ? { textDecoration: "line-through", color: "var(--muted)" } : undefined}><span className="m-key">{i.key}</span> <Highlight text={i.title} q={filter.q} /></b>
                     <small>{i.project.name}{i.module ? ` · ${i.module.name}` : ""}{i.estimateMd != null ? ` · ${formatManDay(i.estimateMd)}` : ""}<RoleBadges item={i} /></small>
                   </Link>
@@ -366,6 +405,7 @@ function MobileTasks({ data, allItems, filter, setFilter, ws, name, year, tab, s
           <Plus size={22} aria-hidden="true" />{th("mobileNewTask")}
         </Link>
       )}
+      {overlays}
     </div>
   );
 }
@@ -378,7 +418,14 @@ function RoleBadges({ item }: { item: TaskItem }) {
   return <>{roles.map((r) => <span key={r} title={t(`${r}Long`)}><Badge tone="purple">{t(r)}</Badge></span>)}</>;
 }
 
-function TaskRow({ item, q, ws, year, busy, onToggle, onMove, onDragStart }: { item: TaskItem; q: string; ws: string; year: YearFormat; busy: boolean; onToggle: (done: boolean) => void; onMove: () => void; onDragStart: () => void }) {
+/** คลิกปกติเปิด Drawer ในหน้า · Ctrl/⌘/Shift/คลิกกลาง ยังเปิดแท็บใหม่ตามลิงก์เดิมได้ */
+function openInPlace(e: MouseEvent, open: () => void) {
+  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  open();
+}
+
+function TaskRow({ item, q, ws, year, busy, onToggle, onOpen, onMove, onDragStart }: { item: TaskItem; q: string; ws: string; year: YearFormat; busy: boolean; onToggle: (done: boolean) => void; onOpen: () => void; onMove: () => void; onDragStart: () => void }) {
   const t = useTranslations("home-my-tasks.tasks");
   const tp = useTranslations("common.priority");
   const dueText = useDueText();
@@ -400,7 +447,7 @@ function TaskRow({ item, q, ws, year, busy, onToggle, onMove, onDragStart }: { i
     <div className={`${styles.tr} motion-item`} draggable={!done} onDragStart={onDragStart} onTouchStart={touchStart} onTouchEnd={touchEnd} data-testid={`task-${item.key}`}>
       <input type="checkbox" checked={done} disabled={busy || locked} title={locked ? t("cannotMove") : undefined} aria-label={t(done ? "markUndone" : "markDone", { title: item.title })} onChange={(e) => onToggle(e.target.checked)} style={{ width: 18, height: 18, margin: 0 }} />
       <div style={{ minWidth: 0 }}>
-        <Link className={`${styles.rowTitle} ${done ? styles.strike : ""}`} href={taskHref(ws, item.project.key, item.key)}><Highlight text={item.title} q={q} /></Link>
+        <Link className={`${styles.rowTitle} ${done ? styles.strike : ""}`} href={taskHref(ws, item.project.key, item.key)} onClick={(e) => openInPlace(e, onOpen)}><Highlight text={item.title} q={q} /></Link>
         <div className={styles.rowMeta}>
           <span style={{ width: 8, height: 8, borderRadius: 2, background: item.project.color ?? FALLBACK_PROJECT_COLOR }} />
           <span><Highlight text={item.key} q={q} /></span><span>·</span><span>{item.project.name}</span>

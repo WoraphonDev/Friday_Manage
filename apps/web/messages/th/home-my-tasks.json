@@ -206,6 +206,7 @@
     "emptyFiltered": "ไม่พบงานตามตัวกรองนี้",
     "emptyFilteredHint": "ลองเปลี่ยนคำค้นหา หรือกด \"ล้างตัวกรอง\"",
     "loading": "กำลังโหลดงานของคุณ",
+    "confirmClose": {"title": "ปิดงาน {key}?", "description": "\"{title}\" จะเปลี่ยนเป็นสถานะ Done", "confirm": "ปิดงาน"},
     "closed": "ปิดงาน {key} แล้ว",
     "reopened": "เปิดงาน {key} อีกครั้งแล้ว",
     "dueChanged": "เลื่อน Due ของ {key} เป็น {date} แล้ว",

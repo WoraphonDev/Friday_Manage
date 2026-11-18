@@ -6,6 +6,7 @@ import { http, HttpResponse } from "msw";
 import { renderWithProviders } from "@/test/render";
 import { asMobile } from "@/test/mobile";
 import { server } from "@/test/server";
+import { navigation, router } from "@/test/router";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import hmt from "../../messages/th/home-my-tasks.json";
 import { HomePage } from "../../app/work/[ws]/my-tasks/_components/home-page";
@@ -301,12 +302,32 @@ describe("My Tasks (F / M2)", () => {
     localStorage.clear();
   });
 
-  it("ติ๊กเพื่อปิดงาน = PATCH statusId ของสถานะ Done พร้อม If-Match", async () => {
+  it("ติ๊กเพื่อปิดงาน = ถามยืนยันก่อน แล้ว PATCH statusId ของสถานะ Done พร้อม If-Match", async () => {
     const user = userEvent.setup();
     mount(<MyTasksPage ws="sample" />);
-    await user.click(await screen.findByRole("checkbox", { name: "ทำเครื่องหมายว่าเสร็จ: งานตัวอย่าง DE-35" }));
+    const box = await screen.findByRole("checkbox", { name: "ทำเครื่องหมายว่าเสร็จ: งานตัวอย่าง DE-35" });
+    // ยกเลิก = ยังไม่ปิดงาน
+    await user.click(box);
+    await user.click(within(await screen.findByRole("dialog", { name: "ปิดงาน DE-35?" })).getByRole("button", { name: "ยกเลิก" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(patches).toEqual([]);
+    expect(box).not.toBeChecked();
+    await user.click(box);
+    await user.click(within(await screen.findByRole("dialog", { name: "ปิดงาน DE-35?" })).getByRole("button", { name: "ปิดงาน" }));
     await waitFor(() => expect(patches).toEqual([{ key: "DE-35", body: { statusId: "st-done" }, etag: '"3"' }]));
     expect(await screen.findByText("ปิดงาน DE-35 แล้ว")).toBeInTheDocument();
+  });
+
+  it("กดชื่องาน = เปิดรายละเอียดเป็น Drawer ในหน้านี้ (?issue=) ไม่ย้ายไปหน้าโปรเจกต์", async () => {
+    const user = userEvent.setup();
+    navigation.pathname = "/work/sample/my-tasks";
+    mount(<MyTasksPage ws="sample" />);
+    const row = await screen.findByTestId("task-DE-35");
+    const link = within(row).getByRole("link", { name: "งานตัวอย่าง DE-35" });
+    // ลิงก์เดิมยังอยู่ เปิดแท็บใหม่ (Ctrl/⌘) ได้
+    expect(link).toHaveAttribute("href", "/work/sample/p/DE/board?issue=DE-35");
+    await user.click(link);
+    expect(router.push).toHaveBeenCalledWith("/work/sample/my-tasks?issue=DE-35", { scroll: false });
   });
 
   it("BA / SA ที่เปลี่ยนสถานะไม่ได้ (canMove: false) = ช่องติ๊กปิดพร้อมคำอธิบาย", async () => {

@@ -89,8 +89,8 @@ describe("กู้คืนข้อมูลลูกค้า (บอร์�
     await userEvent.click(screen.getByRole("button", { name: "โปรเจกต์" }));
     expect(screen.queryByText("ชุด 37 งาน")).not.toBeInTheDocument();
     expect(screen.getByText("MKT · Marketing Site 2026")).toBeInTheDocument();
-    // Workspace ที่รอลบถาวรอยู่ต่อท้ายในแท็บแรก (ตามบอร์ด)
-    expect(screen.getByText("TechNova")).toBeInTheDocument();
+    // Workspace ที่รอลบถาวรอยู่แท็บของตัวเองเท่านั้น (ไม่ซ้ำท้ายแท็บค้น)
+    expect(screen.queryByText("TechNova")).not.toBeInTheDocument();
   });
 
   it("Ticket จากสมาชิกธรรมดา: แจ้งเหตุผลและปิดปุ่มกู้คืน", async () => {

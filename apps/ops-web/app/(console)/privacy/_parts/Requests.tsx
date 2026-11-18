@@ -10,7 +10,6 @@ import { api } from "@/lib/api";
 import { useFmt } from "../../workspaces/_parts/format";
 import { dsr, type Identity, type PrivacyRequest, REQUEST_TYPES, type RequestDetail, type RequestType, todayBkk } from "./types";
 import { type PickedWs, WorkspacePicker } from "./WorkspacePicker";
-import { CountUp } from "@/components/count-up";
 
 const key = ["ops", "privacy", "requests"] as const;
 const invalidate = (cache: ReturnType<typeof useQueryClient>) => void cache.invalidateQueries({ queryKey: ["ops"] });
@@ -29,37 +28,6 @@ export function DuePill({ r }: { r: PrivacyRequest }) {
 
 export function useRequests(enabled: boolean) {
   return useQuery({ queryKey: [...key, "all"], queryFn: () => api.get<{ items: PrivacyRequest[] }>("/privacy/requests?status=all"), enabled });
-}
-
-/** ตัวเลขสรุป 4 ช่องบนหัวหน้า (Privacy.dc.html) */
-export function RequestStats({ items }: { items: PrivacyRequest[] }) {
-  const t = useTranslations("pl.privacy.stats");
-  const open = items.filter((r) => r.status === "open");
-  const soon = open.filter((r) => r.daysLeft >= 0 && r.daysLeft <= 7).length;
-  const late = open.filter((r) => r.daysLeft < 0).length;
-  const since = Date.now() - 90 * 86_400_000;
-  const done = items.filter((r) => r.status === "completed" && r.completedAt && Date.parse(r.completedAt) >= since);
-  const avg = done.length ? Math.round(done.reduce((s, r) => s + (Date.parse(r.completedAt!) - Date.parse(r.receivedAt)) / 86_400_000, 0) / done.length) : null;
-  return (
-    <section className="stats">
-      <div className="stat">
-        <span className="muted small">{t("open")}</span>
-        <b><CountUp value={open.length} /></b>
-      </div>
-      <div className={soon ? "stat stat-warn" : "stat"}>
-        <span className="muted small">{t("dueSoon")}</span>
-        <b><CountUp value={soon} /></b>
-      </div>
-      <div className={late ? "stat stat-bad" : "stat stat-ok"}>
-        <span className="muted small">{t("overdue")}</span>
-        <b><CountUp value={late} /></b>
-      </div>
-      <div className="stat">
-        <span className="muted small">{t("avg")}</span>
-        <b><CountUp value={avg == null ? "—" : t("days", { n: avg })} /></b>
-      </div>
-    </section>
-  );
 }
 
 /** ตารางคำขอจากเจ้าของข้อมูล · กดเลขคำขอเปิดรายละเอียด */

@@ -7,7 +7,7 @@ import { useState } from "react";
 import { hasAny } from "@/components/access";
 import { useApprovalFlow } from "@/components/dialogs";
 import { FileThumb, FileViewer } from "@/components/file-viewer";
-import { Drawer, Empty, ErrorBlock, Modal, Notice, TableSkeleton } from "@/components/kit";
+import { Drawer, ErrorBlock, Modal, Notice, TableSkeleton, TodoCard, TodoRow } from "@/components/kit";
 import { Button, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -51,97 +51,74 @@ export function VerifyTab() {
   const [viewing, setViewing] = useState<SlipItem | null>(null);
   const decide = hasAny(me, "finance");
   const normal = (slips.data?.items ?? []).filter((s) => !s.exceptionReason && s.hasSlip);
+  const pending = q.isPending || slips.isPending;
+  const error = q.error ?? slips.error;
+  const exceptions = q.data?.items ?? [];
   return (
     <>
-      <section className="card">
-        <div className="card-head">
-          <h2 className="card-title">{t("tabs.verify", { n: q.data?.items.length ?? 0 })}</h2>
-          {q.data && <span className="card-sub">{t("verify.summary", { total: q.data.payments30d, n: q.data.items.length })}</span>}
-        </div>
-        <p className="muted small">{t("verify.note")}</p>
-        {q.isPending ? (
-          <TableSkeleton rows={4} cols={7} />
-        ) : q.error ? (
-          <ErrorBlock error={q.error} retry={() => void q.refetch()} />
-        ) : !q.data.items.length ? (
-          <Empty ok title={t("verify.empty")} description={t("verify.emptyDesc")} />
-        ) : (
-          <div className="tbl-wrap">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  {(["problem", "ws", "invoice", "expected", "received", "channel", "waiting", "suggest"] as const).map((c) => (
-                    <th key={c} className={c === "expected" || c === "received" ? "num" : undefined}>
-                      {t(`verify.col.${c}`)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {q.data.items.map((x) => (
-                  <tr key={x.id} style={{ cursor: "pointer" }} onClick={() => setOpen(x)}>
-                    <td>
-                      <button type="button" className="link-button" onClick={(e) => (e.stopPropagation(), setOpen(x))}>
-                        {t(`reasons.${x.reason}` as "reasons.amount_mismatch")}
-                      </button>
-                    </td>
-                    <td>{x.workspace.name}</td>
-                    <td className="mono small">{x.invoice.number}</td>
-                    <td className="num">{fmt.money(x.expectedSatang)}</td>
-                    <td className="num">{fmt.money(x.receivedSatang)}</td>
-                    <td>{t(`methods.${x.method}`)}</td>
-                    <td className="small">{fmt.ago(x.waitingSince)}</td>
-                    <td className="small">{x.suggestion}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-      <section className="card">
-        <div className="card-head">
-          <h2 className="card-title">{t("verify.slips")}</h2>
-          <span className="card-sub">{t("verify.slipsNote")}</span>
-        </div>
-        {slips.isPending ? (
-          <TableSkeleton rows={2} cols={5} />
-        ) : slips.error ? (
-          <ErrorBlock error={slips.error} retry={() => void slips.refetch()} />
-        ) : !normal.length ? (
-          <p className="muted small">{t("verify.noSlips")}</p>
-        ) : (
-          <div className="tbl-wrap">
-            <table className="tbl">
-              <tbody>
-                {normal.map((s) => (
-                  <tr key={s.id}>
-                    <td>{s.workspace.name}</td>
-                    <td className="mono small">{s.invoice.number}</td>
-                    <td className="num">{fmt.money(s.amount)}</td>
-                    <td className="small">{fmt.ago(s.createdAt)}</td>
-                    <td>
-                      <span className="row">
-                        <Button size="small" variant="ghost" onClick={() => setViewing(s)}>
-                          <FileImage size={14} /> {t("verify.slip")}
-                        </Button>
-                        {decide && (
-                          <>
-                            <SlipPass id={s.id} />
-                            <Button size="small" onClick={() => setFlagging(s)}>
-                              {t("verify.flag")}
-                            </Button>
-                          </>
-                        )}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      {/* โครงหน้า Ops: กรณีผิดปกติ + สลิปรอตรวจ = งานที่ต้องทำ อยู่บนสุดในแถบเดียว · ไม่มีงาน = แถบเขียวบรรทัดเดียว */}
+      {pending ? (
+        <TableSkeleton rows={3} cols={5} />
+      ) : error ? (
+        <ErrorBlock error={error} retry={() => (void q.refetch(), void slips.refetch())} />
+      ) : (
+        <TodoCard
+          title={t("verify.todo")}
+          count={exceptions.length + normal.length}
+          hint={q.data ? t("verify.summary", { total: q.data.payments30d, n: exceptions.length }) : undefined}
+          clear={{ title: t("verify.empty"), description: t("verify.emptyDesc") }}
+        >
+          {exceptions.map((x) => (
+            <TodoRow
+              key={x.id}
+              actions={
+                <Button size="small" variant={decide ? "primary" : "secondary"} onClick={() => setOpen(x)}>
+                  {decide ? t("verify.decide") : t("verify.view")}
+                </Button>
+              }
+            >
+              <button type="button" className="link-button" onClick={() => setOpen(x)}>
+                {t(`reasons.${x.reason}` as "reasons.amount_mismatch")}
+              </button>
+              <b>{x.workspace.name}</b>
+              <span className="mono small muted">{x.invoice.number}</span>
+              <span className="num">
+                {t("verify.col.expected")} <b>{fmt.money(x.expectedSatang)}</b> · {t("verify.col.received")} <b>{fmt.money(x.receivedSatang)}</b>
+              </span>
+              <span className="muted small">
+                {t(`methods.${x.method}`)} · {fmt.ago(x.waitingSince)}
+              </span>
+            </TodoRow>
+          ))}
+          {normal.map((s) => (
+            <TodoRow
+              key={s.id}
+              actions={
+                <>
+                  <Button size="small" variant="ghost" onClick={() => setViewing(s)}>
+                    <FileImage size={14} /> {t("verify.slip")}
+                  </Button>
+                  {decide && (
+                    <>
+                      <Button size="small" onClick={() => setFlagging(s)}>
+                        {t("verify.flag")}
+                      </Button>
+                      <SlipPass id={s.id} />
+                    </>
+                  )}
+                </>
+              }
+            >
+              <span className="pill warn">{t("verify.slipTag")}</span>
+              <b>{s.workspace.name}</b>
+              <span className="mono small muted">{s.invoice.number}</span>
+              <b className="num">{fmt.money(s.amount)}</b>
+              <span className="muted small">{fmt.ago(s.createdAt)}</span>
+            </TodoRow>
+          ))}
+        </TodoCard>
+      )}
+      <p className="muted small">{t("verify.note")} · {t("verify.slipsNote")}</p>
       {open && <DecisionDrawer item={open} canDecide={decide} onClose={() => setOpen(null)} />}
       {flagging && <FlagDialog item={flagging} onClose={() => setFlagging(null)} />}
       {viewing && (

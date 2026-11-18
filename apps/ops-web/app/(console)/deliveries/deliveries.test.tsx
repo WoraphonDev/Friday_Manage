@@ -71,8 +71,15 @@ const view = () => {
   );
 };
 
+// รายละเอียดเปิดในแผงขวาเมื่อกดแถว (โครงหน้า Ops) · ไม่เลือกแถวแรกให้เอง
+const openFirst = async () => {
+  const row = (await screen.findByText("Bug ใหม่ DP-118")).closest("tr")!;
+  await userEvent.click(row);
+  return screen.findByRole("complementary", { name: "รายละเอียดการส่ง" });
+};
+
 describe("ประวัติการส่งแจ้งเตือน (O23)", () => {
-  it("สรุป 24 ชม. · ตาราง · รายละเอียดของรายการแรก ตาม Canvas", async () => {
+  it("สรุป 24 ชม. · ตาราง · กดแถวเปิดรายละเอียดในแผงขวา", async () => {
     handlers();
     view();
     expect(await screen.findByText("18,402")).toBeInTheDocument();
@@ -80,12 +87,13 @@ describe("ประวัติการส่งแจ้งเตือน (O2
     expect(screen.getByText("99.4%")).toBeInTheDocument();
     expect(screen.getByText("Bug ใหม่ DP-118")).toBeInTheDocument();
     expect(screen.getByText("รอช่วงงดส่ง")).toBeInTheDocument();
-    const aside = screen.getByRole("complementary", { name: "รายละเอียดการส่ง" });
+    expect(await screen.findByText("Bounce ถาวร (กล่องไม่มีอยู่)")).toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "รายละเอียดการส่ง" })).not.toBeInTheDocument();
+    const aside = await openFirst();
     expect(await within(aside).findByText("ล้ม 4/4")).toBeInTheDocument();
     expect(within(aside).getByText('HTTP 404 {"message": "Unknown Webhook", "code": 10015}')).toBeInTheDocument();
     expect(within(aside).getByText(/ครั้งที่ 4 · HTTP 404 · Webhook ตอบ HTTP 404 · หยุดลอง/)).toBeInTheDocument();
     expect(within(aside).getByText(/น่าจะถูกลบที่ปลายทางแล้ว/)).toBeInTheDocument();
-    expect(await screen.findByText("Bounce ถาวร (กล่องไม่มีอยู่)")).toBeInTheDocument();
   });
 
   it("ค้นหา · กรองช่องทาง · กรองสถานะ ส่งเป็น query", async () => {
@@ -103,7 +111,7 @@ describe("ประวัติการส่งแจ้งเตือน (O2
   it("Y6 ดูข้อความ: Request ซ่อน URL / เนื้อหา · บอกว่าลูกค้ายังไม่เปิดสิทธิ์", async () => {
     handlers();
     view();
-    const aside = await screen.findByRole("complementary", { name: "รายละเอียดการส่ง" });
+    const aside = await openFirst();
     await userEvent.click(await within(aside).findByRole("button", { name: "ดูข้อความที่ส่ง" }));
     const dlg = await screen.findByRole("dialog", { name: "ข้อความที่ส่ง · Webhook" });
     expect(within(dlg).getByText(/POST https:\/\/discord\.com\/api\/webhooks\/••••\/••••/)).toBeInTheDocument();
@@ -115,7 +123,7 @@ describe("ประวัติการส่งแจ้งเตือน (O2
   it("ส่งซ้ำ · แนบใน Ticket", async () => {
     handlers();
     view();
-    const aside = await screen.findByRole("complementary", { name: "รายละเอียดการส่ง" });
+    const aside = await openFirst();
     await userEvent.click(await within(aside).findByRole("button", { name: "ส่งซ้ำ" }));
     await waitFor(() => expect(calls.some((c) => c.path === "/deliveries/d-1/resend")).toBe(true));
     await userEvent.click(within(aside).getByRole("button", { name: "แนบใน Ticket" }));
@@ -129,11 +137,11 @@ describe("ประวัติการส่งแจ้งเตือน (O2
     handlers();
     asRole("engineer");
     const { unmount } = view();
-    const aside = await screen.findByRole("complementary", { name: "รายละเอียดการส่ง" });
-    await within(aside).findByRole("button", { name: "ดูข้อความที่ส่ง" });
-    expect(within(aside).queryByRole("button", { name: "แนบใน Ticket" })).toBeNull();
     await screen.findByText("Bounce ถาวร (กล่องไม่มีอยู่)");
     expect(screen.queryByRole("button", { name: "เอาออกจากรายการ" })).toBeNull();
+    const aside = await openFirst();
+    await within(aside).findByRole("button", { name: "ดูข้อความที่ส่ง" });
+    expect(within(aside).queryByRole("button", { name: "แนบใน Ticket" })).toBeNull();
     unmount();
     asRole("finance");
     view();

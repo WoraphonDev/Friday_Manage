@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
 import { hasAny, rolesOf } from "@/components/access";
-import { Chip, Empty, ErrorBlock, NoAccess, Notice, PageHead, TableSkeleton } from "@/components/kit";
+import { Chip, Drawer, Empty, ErrorBlock, NoAccess, Notice, PageHead, TableSkeleton } from "@/components/kit";
 import { Button, errorToast, Input, Pill, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
@@ -22,6 +22,7 @@ const CHANNEL_TONE: Record<Channel, "inf" | "ok" | "neu"> = { email: "inf", line
 /** ประวัติการส่งแจ้งเตือน (Canvas › Deliveries · เฟส 2 · O23) */
 export function DeliveriesPage() {
   const t = useTranslations("dlv");
+  const td = useTranslations("dlv.detail");
   const fmt = useFmt();
   const me = useMe().data;
   const params = useSearchParams();
@@ -51,7 +52,8 @@ export function DeliveriesPage() {
   const stats = list.data?.pages[0]?.stats;
   const search = list.data?.pages[0]?.search ?? null;
   const kind = /^#\s*\d+$/.test(query.trim()) ? "ticket" : /^req_/.test(query.trim()) ? "request" : null;
-  const current = picked ?? items[0]?.id ?? null;
+  // ไม่เลือกแถวแรกให้เอง: รายละเอียดเปิดในแผงขวาเมื่อกดแถว (โครงหน้า Ops 18 พ.ย. 2569)
+  const current = picked;
   const eventText = useEventText();
   if (me && !read) return <NoAccess need={["owner", "support", "engineer"]} mine={rolesOf(me)} />;
   const filtered = !!q || channel !== "all" || status !== "all";
@@ -91,8 +93,8 @@ export function DeliveriesPage() {
           </label>
         </div>
         {search && <SearchNotice s={search} />}
-        <div className="split">
-          <div className="split-main">
+        <div>
+          <div>
             {list.isPending ? (
               <TableSkeleton rows={6} cols={6} />
             ) : list.error ? (
@@ -133,9 +135,11 @@ export function DeliveriesPage() {
               </>
             )}
           </div>
-          {(items.length > 0 || picked) && <DetailPanel id={current} />}
         </div>
       </section>
+      <Drawer open={!!picked} onOpenChange={(o) => !o && setPicked(null)} title={td("label")} wide>
+        {picked && <DetailPanel id={picked} />}
+      </Drawer>
       <Suppressions />
     </>
   );
@@ -227,7 +231,7 @@ function DetailPanel({ id }: { id: string | null }) {
   });
   const d = q.data;
   return (
-    <aside className="split-side" aria-label={t("label")}>
+    <aside className="stack" aria-label={t("label")}>
       {!id ? (
         <p className="muted small">{t("pick")}</p>
       ) : q.isPending ? (

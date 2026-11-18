@@ -76,6 +76,8 @@ describe("H4 · เลือกหลายราย", () => {
     expect(screen.getByText("เลือก 4 Workspace")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "ก่อนหน้า" }));
     expect(await screen.findByLabelText("เลือก เดโม 1")).toBeChecked();
+    // แพ็กเกจและฟีเจอร์อยู่ในปุ่ม "ตัวกรอง" (โครงหน้า Ops)
+    await userEvent.click(screen.getByRole("button", { name: /^ตัวกรอง/ }));
     await userEvent.click(screen.getByRole("button", { name: "Team M" }));
     await waitFor(() => expect(screen.queryByText(/^เลือก \d+ (Workspace|รายการ)/)).not.toBeInTheDocument());
   });
@@ -83,6 +85,8 @@ describe("H4 · เลือกหลายราย", () => {
   it("เลือกทั้งหมดตามตัวกรอง → ส่ง filter ไปตรวจและทำ (ไม่ส่ง ids) · ผลรายแถว + CSV + ไปคำขออนุมัติ", async () => {
     asRole("support");
     const { previews, applied } = setup();
+    // แพ็กเกจและฟีเจอร์อยู่ในปุ่ม "ตัวกรอง" (โครงหน้า Ops)
+    await userEvent.click(await screen.findByRole("button", { name: /^ตัวกรอง/ }));
     await userEvent.click(await screen.findByRole("button", { name: "Team S" }));
     await userEvent.click(await screen.findByLabelText("เลือกทุกแถวในหน้านี้"));
     await userEvent.click(screen.getByRole("button", { name: "เลือกทั้งหมด 5 รายการตามตัวกรอง" }));

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui";
 import { useMe } from "@/lib/query";
 import { BreachDrawer, BreachesCard, NewBreach } from "./_parts/Breaches";
 import { Lifecycle, LifecycleKpis } from "./_parts/Lifecycle";
-import { CreateRequest, RequestDrawer, RequestStats, RequestsTable, useRequests } from "./_parts/Requests";
+import { CreateRequest, RequestDrawer, RequestsTable, useRequests } from "./_parts/Requests";
 
 /**
  * หน้า 10 · คำขอ PDPA และการเก็บข้อมูล (Privacy.dc.html · A3–A6 · รอบ 4 H10–H13)
@@ -52,11 +52,10 @@ export function PrivacyPage() {
           </>
         }
       />
-      {readRequests && (requests.data ? <RequestStats items={requests.data.items} /> : null)}
+      {readRequests && requests.data && <LifecycleKpis requests={requests.data.items} />}
       {readRequests && <RequestsTable query={requests} onOpen={(id) => open("request", id)} />}
       {readBreaches && <BreachesCard onOpen={(id) => open("breach", id)} />}
       {/* ส่วนล่าง (H10): Workspace ที่รอลบ · Legal hold · นโยบายการเก็บข้อมูล · Owner แก้ / คนอื่นอ่าน */}
-      {readRequests && <LifecycleKpis requests={requests.data?.items ?? []} />}
       {readRequests && <Lifecycle owner={owner} />}
       {reqId && readRequests && <RequestDrawer id={reqId} canAct={actRequests} onClose={() => open("request", null)} />}
       {breachId && readBreaches && <BreachDrawer id={breachId} canEdit={editBreaches} isOwner={owner} onClose={() => open("breach", null)} />}

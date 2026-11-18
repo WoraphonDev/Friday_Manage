@@ -125,7 +125,7 @@ const NOTIFY: { task: TaskKey; key: string; tag: "tagApprove" | "tagMoney" | "ta
   { task: "approvals", key: "approvals", tag: "tagApprove", roles: ["owner"] },
   { task: "paymentExceptions", key: "exceptions", tag: "tagMoney", roles: ["owner", "finance"], href: "/payments" },
   { task: "slipsToReview", key: "slips", tag: "tagMoney", roles: ["owner", "finance"], href: "/payments" },
-  { task: "invoicesOverdue", key: "overdue", tag: "tagMoney", roles: ["owner", "finance"], href: "/payments" },
+  { task: "invoicesOverdue", key: "overdue", tag: "tagMoney", roles: ["owner", "finance"], href: "/payments?tab=overdue" },
   { task: "ticketsBreached", key: "ticketsBreached", tag: "tagSla", roles: ["owner", "support"], href: "/support" },
   { task: "ticketsUnassigned", key: "ticketsUnassigned", tag: "tagSla", roles: ["support"], href: "/support" },
   { task: "incidentsOpen", key: "incidents", tag: "tagIncident", roles: ["owner", "engineer", "support"], href: "/incidents" },

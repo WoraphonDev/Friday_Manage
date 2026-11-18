@@ -20,6 +20,8 @@ export interface NavItem {
   built?: boolean;
   roles: OpsRole[];
   badge?: TaskKey[];
+  /** ลิงก์อื่นที่นับเป็นเมนูนี้ (แท็บภายในหน้าเดียวกัน) · ใช้ทำ breadcrumb และ aria-current */
+  also?: string[];
 }
 
 const ALL: OpsRole[] = [];
@@ -40,8 +42,8 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
   {
     group: "money",
     items: [
-      { key: "billing", href: "/payments?tab=invoices", built: true, roles: MONEY },
-      { key: "verify", href: "/payments", built: true, roles: MONEY, badge: ["paymentExceptions"] },
+      { key: "billing", href: "/payments?tab=invoices", also: ["/payments?tab=overdue", "/payments?tab=tax"], built: true, roles: MONEY },
+      { key: "verify", href: "/payments", also: ["/payments?tab=verify", "/payments?tab=incoming"], built: true, roles: MONEY, badge: ["paymentExceptions"] },
       { key: "refunds", href: "/refunds", built: true, roles: MONEY, badge: ["approvals"] },
       { key: "accounting", href: "/payments?tab=revenue", built: true, roles: MONEY },
     ],
@@ -114,7 +116,11 @@ export const isSoon = (item: NavItem) => !item.href || !item.built;
 /** หาเมนูของหน้าปัจจุบัน (ใช้ทำ breadcrumb และ aria-current) */
 export function currentItem(pathname: string, search: string) {
   const all = NAV.flatMap((g) => g.items.map((i) => ({ ...i, group: g.group }))).filter((i) => i.href && i.built);
-  const exact = all.find((i) => i.href === `${pathname}${search ? `?${search}` : ""}`);
+  const here = `${pathname}${search ? `?${search}` : ""}`;
+  // เทียบเฉพาะ ?tab= (ลิงก์ค้นหาอาจมี &q=… ต่อท้าย)
+  const tab = new URLSearchParams(search).get("tab");
+  const key = tab ? `${pathname}?tab=${tab}` : here;
+  const exact = all.find((i) => i.href === here || i.href === key || i.also?.includes(key));
   if (exact) return exact;
   return all.filter((i) => !i.href!.includes("?") && (i.href === "/" ? pathname === "/" : pathname === i.href || pathname.startsWith(`${i.href}/`))).pop() ?? null;
 }

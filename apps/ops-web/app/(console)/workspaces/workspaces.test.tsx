@@ -51,6 +51,8 @@ describe("รายชื่อ Workspace", () => {
     expect(within(table).getByRole("columnheader", { name: "MRR" })).toBeInTheDocument();
     expect(within(table).getByText("฿3,000")).toBeInTheDocument();
     expect(within(table).getAllByText("21 / 25")).toHaveLength(2);
+    // แพ็กเกจและฟีเจอร์อยู่ในปุ่ม "ตัวกรอง" (โครงหน้า Ops)
+    await userEvent.click(screen.getByRole("button", { name: /^ตัวกรอง/ }));
     await userEvent.click(screen.getByRole("button", { name: "Team M" }));
     await userEvent.click(screen.getByRole("button", { name: "LINE OA" }));
     await userEvent.selectOptions(screen.getByLabelText("เรียงตาม"), "health");

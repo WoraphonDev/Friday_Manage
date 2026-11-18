@@ -359,7 +359,8 @@ describe("Support · ส่งต่อทีมพัฒนา (T3 · T7 · T8)
     const calls = supportPage();
     expect(await screen.findByRole("button", { name: "ส่งต่อระดับ 2" })).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "งานของทีมพัฒนา" })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "รอทีมพัฒนา" }));
+    // แผง Ticket เปิดอยู่ (modal) ส่วนรายการจึงถูกซ่อนจากโปรแกรมอ่านจอชั่วคราว
+    await userEvent.setup({ pointerEventsCheck: 0 }).click(screen.getByRole("button", { name: "รอทีมพัฒนา", hidden: true }));
     await waitFor(() => expect(calls.some((c) => c.path.includes("status=pending_dev"))).toBe(true));
   });
 

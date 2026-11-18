@@ -73,7 +73,7 @@ export class UsersService {
       from users u where ${where}
       order by u.created_at desc limit ${q.limit} offset ${q.offset}`);
     const [{ total }] = await this.rows<{ total: number }>(sql`select count(*)::int as total from users u where ${where}`);
-    return { items: items.map(({ hasPassword, providers, ...r }) => ({ ...r, login: loginMethods(hasPassword, providers as string[]) })), total, limit: q.limit, offset: q.offset };
+    return { items: items.map(({ hasPassword, providers, ...r }) => ({ ...r, login: loginMethods(!!hasPassword, providers as string[]) })), total, limit: q.limit, offset: q.offset };
   }
 
   private async find(id: string) {

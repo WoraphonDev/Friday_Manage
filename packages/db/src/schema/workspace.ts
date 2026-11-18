@@ -161,10 +161,18 @@ export const invitations = pgTable(
       .references(() => users.id),
     status: invitationStatus().notNull().default('pending'),
     acceptedUserId: uuid().references(() => users.id),
+    /**
+     * ผลส่งอีเมลคำเชิญครั้งล่าสุด (เชิญ / ส่งซ้ำ) · ผลอยู่ใน log อย่างเดียวจะหายเมื่อสร้าง container ใหม่
+     * sent = SMTP รับแล้ว · failed = ส่งไม่สำเร็จ (ดู email_error) · disabled = ยังไม่ได้ตั้ง SMTP · null = ยังไม่ได้ส่ง / คำเชิญก่อนมีคอลัมน์นี้
+     */
+    emailStatus: text(),
+    emailError: text(),
+    emailAttemptedAt: tstz(),
     createdAt: createdAt(),
   },
   (t) => [
     index('invitations_workspace_idx').on(t.workspaceId, t.status),
+    check('invitations_email_status', sql`${t.emailStatus} IN ('sent', 'failed', 'disabled')`),
     uniqueIndex('invitations_pending_email_key')
       .on(t.workspaceId, sql`lower(${t.email})`)
       .where(sql`${t.status} = 'pending'`),

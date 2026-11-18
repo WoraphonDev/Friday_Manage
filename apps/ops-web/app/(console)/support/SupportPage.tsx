@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { useTranslations } from "next-intl";
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { Kbd } from "@/components/shortcut-help";
 import { defer, UNDO_MS } from "@/lib/outbox";
 import { type Seen, usePresence, usePresenceOf } from "@/lib/presence";
@@ -21,6 +21,8 @@ import { useUrlFilters } from "@/lib/url-state";
 import { ActiveFilters, FilterButton, filterKeys, filterQuery } from "@/components/filters";
 import { ViewsBar } from "@/components/views-bar";
 import { TICKET_SORTS, useTicketFilters } from "./_parts/filters";
+import { BulkDialog, type BulkKind, IncidentLink } from "./_parts/Bulk";
+import bulkStyles from "../workspaces/_parts/bulk.module.css";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
 import { DevCard } from "../bugs/_components/DevCard";
 import { EscalateDialog } from "../bugs/_components/EscalateDialog";
@@ -41,6 +43,7 @@ interface TicketRow {
   assigneeName: string | null;
   workspace: { id: string; slug: string; name: string } | null;
   slaBreached: boolean;
+  incident?: { id: string; title: string; status: string } | null;
 }
 interface Summary {
   open: number;
@@ -245,6 +248,40 @@ export function SupportPage() {
   };
   useShortcuts([{ keys: "p", label: tr("start"), list: true, run: () => void (queue !== "team" && startRun()) }], support);
   const viewers = usePresenceOf("ticket", queue === "team" ? [] : stable.rows.map((k) => k.id));
+  // ---- ช่วง 3 · เลือกหลายเรื่อง: ติ๊กทีละแถว / ทั้งหน้า / ทั้งหมดตามตัวกรอง (ไม่เกิน 1,000) · เปลี่ยนตัวกรองแล้วล้างที่เลือก
+  const [picked, setPicked] = useState<Map<string, number>>(new Map());
+  const [byFilter, setByFilter] = useState(false);
+  const [bulk, setBulk] = useState<BulkKind | null>(null);
+  const scope = JSON.stringify({ fq, status, search, queue });
+  useEffect(() => (setPicked(new Map()), setByFilter(false)), [scope]);
+  const pageRows = stable.rows;
+  const pageAll = pageRows.length > 0 && pageRows.every((k) => picked.has(k.id));
+  const pageSome = pageRows.some((k) => picked.has(k.id));
+  const headBox = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (headBox.current) headBox.current.indeterminate = pageSome && !pageAll;
+  }, [pageSome, pageAll]);
+  const pick = (k: { id: string; number: number }, on: boolean) => {
+    const next = new Map(picked);
+    if (on) next.set(k.id, k.number);
+    else next.delete(k.id);
+    setPicked(next);
+    setByFilter(false);
+  };
+  const pickPage = (on: boolean) => {
+    const next = new Map(picked);
+    for (const k of pageRows) {
+      if (on) next.set(k.id, k.number);
+      else next.delete(k.id);
+    }
+    setPicked(next);
+    setByFilter(false);
+  };
+  const totalRows = list.data?.total ?? 0;
+  const bulkFilter: Record<string, string> = { ...fq, status, ...(search ? { q: search } : {}), ...(queue !== "team" ? { tab: queue } : {}), ...(params?.get("workspace") ? { workspaceId: params.get("workspace")! } : {}) };
+  const bulkTarget = byFilter ? { filter: bulkFilter } : { ids: [...picked.keys()] };
+  const bulkCount = byFilter ? totalRows : picked.size;
+  const tbk = useTranslations("ss.support.bulk");
   const nav = useRowNav(queue === "team" ? [] : stable.rows, { onOpen: (k) => select(k.id), labels: { down: tk("down"), open: tk("open") } });
   const count = (n: number | undefined) => (n ? <span className="tab-count">{n}</span> : null);
   return (
@@ -322,6 +359,33 @@ export function SupportPage() {
           <ViewsBar page="tickets" values={f} defaults={defaults} onApply={(v) => (setQ(v.q ?? ""), setF({ ...defaults, ...v }), setOffset(0))} />
           <ActiveFilters defs={defs} values={f} onChange={setFilters} />
           <NewItemsBar count={stable.fresh} onShow={stable.reveal} />
+          {support && (picked.size > 0 || byFilter) && (
+            <div className={`${bulkStyles.bar} motion-in`} role="status">
+              <b>{byFilter ? tbk("selectedFilter", { n: totalRows }) : tbk("selected", { n: picked.size })}</b>
+              {byFilter ? (
+                <button type="button" className={bulkStyles.link} onClick={() => setByFilter(false)}>
+                  {tbk("onlyPicked")}
+                </button>
+              ) : (
+                totalRows > picked.size && (
+                  <button type="button" className={bulkStyles.link} disabled={totalRows > 1000} title={totalRows > 1000 ? tbk("max") : undefined} onClick={() => setByFilter(true)}>
+                    {tbk("selectByFilter", { n: totalRows })}
+                  </button>
+                )
+              )}
+              {totalRows > 1000 && !byFilter && <span className={bulkStyles.hint}>{tbk("max")}</span>}
+              <span className={bulkStyles.actions}>
+                {(["reply", "assign", "solve", "priority", "incident"] as const).map((k) => (
+                  <Button key={k} size="small" onClick={() => setBulk(k)}>
+                    {tbk(`kinds.${k}`)}
+                  </Button>
+                ))}
+                <Button size="small" variant="ghost" onClick={() => (setPicked(new Map()), setByFilter(false))}>
+                  {tbk("clear")}
+                </Button>
+              </span>
+            </div>
+          )}
           <ChipGroup className="row">
             {(["active", "pending_dev", "solved", "closed"] as const).map((v) => (
               <Chip key={v} pressed={status === v} onClick={() => setStatus(v)}>
@@ -346,6 +410,11 @@ export function SupportPage() {
               <table className="tbl">
                 <thead>
                   <tr>
+                    {support && (
+                      <th>
+                        <input ref={headBox} type="checkbox" aria-label={tbk("selectPage")} checked={pageAll || (byFilter && pageRows.length > 0)} disabled={byFilter} onChange={(e) => pickPage(e.target.checked)} />
+                      </th>
+                    )}
                     <th scope="col">{t("col.ticket")}</th>
                     <th scope="col">{t("col.customer")}</th>
                     <th scope="col">{t("col.status")}</th>
@@ -356,6 +425,11 @@ export function SupportPage() {
                 <tbody className="motion-list">
                   {stable.rows.map((k, i) => (
                     <tr key={k.id} className="row-link" aria-selected={selected === k.id} onClick={() => select(k.id)} {...nav.rowProps(i)}>
+                      {support && (
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" aria-label={tbk("selectRow", { number: k.number })} checked={byFilter || picked.has(k.id)} disabled={byFilter} onChange={(e) => pick(k, e.target.checked)} />
+                        </td>
+                      )}
                       <td>
                         <button type="button" className="row-link-button" onClick={(e) => (e.stopPropagation(), select(k.id))}>
                           <span className="row nowrap">
@@ -368,6 +442,12 @@ export function SupportPage() {
                             ● {t(v.mode === "typing" ? "presence.typing" : "presence.viewing", { name: v.name })}
                           </span>
                         ))}
+                        {k.incident && (
+                          <>
+                            {" "}
+                            <span className="pill inf">{tbk("incidentPill", { title: k.incident.title })}</span>
+                          </>
+                        )}
                         {(k.priority === "urgent" || k.priority === "high") && (
                           <>
                             {" "}
@@ -390,6 +470,7 @@ export function SupportPage() {
           {list.data?.total != null && <Pager hotkeys offset={offset} limit={PAGE} shown={list.data.items.length} total={list.data.total} onChange={setOffset} />}
         </>
       )}
+      {bulk && <BulkDialog target={bulkTarget} count={bulkCount} initial={bulk} onClose={() => setBulk(null)} onDone={() => (setBulk(null), setPicked(new Map()), setByFilter(false), void list.refetch())} />}
       <TicketDrawer
         id={selected}
         onClose={() => (run && !run.finished ? stopRun() : select(null))}
@@ -591,6 +672,7 @@ function TicketView({ id, run }: { id: string; run?: RunView }) {
           <span className="muted">
             {t("support.assignee")}: {k.assignee?.name ?? t("support.unassigned")}
           </span>
+          <IncidentLink ticketId={k.id} incident={k.incident ?? null} canEdit={hasAny(me, "support", "owner") && k.status !== "closed"} />
         </div>
         {actions}
       </div>

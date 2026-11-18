@@ -5,7 +5,7 @@ import { clsx } from "clsx";
 import { MoreHorizontal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
-import { Chip, ChipGroup, Empty, ErrorBlock, Popover, TableSkeleton } from "@/components/kit";
+import { Chip, ChipGroup, Empty, ErrorBlock, Notice, Popover, TableSkeleton } from "@/components/kit";
 import { Button, Pill } from "@/components/ui";
 import { useFmt } from "../../workspaces/_parts/format";
 import styles from "../changelog.module.css";
@@ -78,6 +78,12 @@ export function ChangelogTab({
       </section>
       <div className={styles.split}>
         <section className={clsx("card", styles.flush, styles.main)}>
+          {/* ไม่ตัดเงียบ: บอกเมื่อมีรายการเก่ากว่าที่โหลดมา */}
+          {query.data?.total != null && query.data.total > query.data.items.length && (
+            <div style={{ padding: "10px 16px 0" }}>
+              <Notice tone="info">{t("truncated", { shown: query.data.items.length, total: query.data.total })}</Notice>
+            </div>
+          )}
           <ChipGroup className={styles.cardHead}>
             <h2 className="card-title">{t("table.title")}</h2>
             {(["all", "published", "scheduled", "draft"] as const).map((f) => (

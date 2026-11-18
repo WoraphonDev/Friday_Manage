@@ -30,6 +30,7 @@ export const TicketsQuery = z.object({
   workspaceId: z.uuid().optional(),
   q: z.string().trim().max(100).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 export const CreateTicketBody = z
   .object({
@@ -152,12 +153,14 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
   }
 
   async list(staff: Staff, q: z.infer<typeof TicketsQuery>) {
-    const parts: SQL[] = [q.status === 'active' ? sql`k.status in ('open', 'pending_customer', 'pending_dev')` : sql`k.status = ${q.status}`];
+    // ตัวกรองที่ไม่ใช่ผู้รับ ใช้ร่วมกับตัวเลขบนแท็บ (ของฉัน / คิวกลาง / ทั้งหมด)
+    const base: SQL[] = [q.status === 'active' ? sql`k.status in ('open', 'pending_customer', 'pending_dev')` : sql`k.status = ${q.status}`];
+    if (q.workspaceId) base.push(sql`k.workspace_id = ${q.workspaceId}`);
+    if (q.q) base.push(sql`(k.subject ilike ${`%${q.q}%`} or k.requester_email ilike ${`%${q.q}%`} or k.number::text = ${q.q.replace(/^#/, '')})`);
+    const parts = [...base];
     if (q.assignee === 'me') parts.push(sql`k.assignee_id = ${staff.id}`);
     else if (q.assignee === 'none') parts.push(sql`k.assignee_id is null`);
     else if (q.assignee) parts.push(sql`k.assignee_id = ${q.assignee}`);
-    if (q.workspaceId) parts.push(sql`k.workspace_id = ${q.workspaceId}`);
-    if (q.q) parts.push(sql`(k.subject ilike ${`%${q.q}%`} or k.requester_email ilike ${`%${q.q}%`} or k.number::text = ${q.q.replace(/^#/, '')})`);
     const items = await this.rows(sql`
       select k.id, k.number, k.subject, k.status, k.priority, k.channel, k.category, k.requester_email as "requesterEmail", k.created_at as "createdAt", k.updated_at as "updatedAt",
         k.first_response_due_at as "firstResponseDueAt", k.resolution_due_at as "resolutionDueAt", k.first_responded_at as "firstRespondedAt",
@@ -167,9 +170,16 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
       from support_tickets k left join staff_users st on st.id = k.assignee_id left join workspaces w on w.id = k.workspace_id
       where ${sql.join(parts, sql` and `)}
       order by (k.status in ('open', 'pending_dev') and ((k.first_responded_at is null and k.first_response_due_at < now()) or k.resolution_due_at < now())) desc,
-        (k.priority = 'urgent') desc, (k.priority = 'high') desc, coalesce(k.first_response_due_at, k.created_at)
-      limit ${q.limit}`);
-    return { items, summary: await this.summary() };
+        (k.priority = 'urgent') desc, (k.priority = 'high') desc, coalesce(k.first_response_due_at, k.created_at), k.number
+      limit ${q.limit} offset ${q.offset}`);
+    // ช่วง 1 (ข้อมูลเยอะ): เคยตัดที่ limit โดยไม่บอก · ตอนนี้ส่งจำนวนทั้งหมดและตัวเลขของแต่ละแท็บ
+    const [c] = await this.rows(sql`
+      select count(*) filter (where ${sql.join(parts, sql` and `)})::int as total,
+        count(*) filter (where k.assignee_id = ${staff.id})::int as mine,
+        count(*) filter (where k.assignee_id is null)::int as none,
+        count(*)::int as "all"
+      from support_tickets k where ${sql.join(base, sql` and `)}`);
+    return { items, total: c.total as number, counts: { mine: c.mine as number, none: c.none as number, all: c.all as number }, summary: await this.summary() };
   }
 
   /** รายละเอียด + ข้อความทั้งหมด (รวมบันทึกภายใน) + ข้อมูลลูกค้าด้านข้าง */

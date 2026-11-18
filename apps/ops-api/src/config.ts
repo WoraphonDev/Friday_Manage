@@ -23,6 +23,14 @@ export const config = {
   get accountingEmails() {
     return (process.env.OPS_ACCOUNTING_EMAIL ?? '').split(',').map((x) => x.trim()).filter(Boolean);
   },
+  /**
+   * โดเมนอีเมลที่สงวนไว้ทดสอบ (RFC 2606 / 6761) · เจ้าของใช้โดเมนเหล่านี้ (รวมโดเมนย่อย) = Workspace ทดสอบอัตโนมัติ
+   * ขึ้นต้นด้วย "." = ทั้ง TLD · ตั้งเป็นค่าว่าง = ปิดกฎอัตโนมัติ (ชุดเทสต์ใช้ *.example.com เป็นลูกค้าสมมติ)
+   */
+  get testEmailDomains() {
+    const raw = process.env.OPS_TEST_EMAIL_DOMAINS ?? 'example.com,example.org,example.net,.test,.example,.invalid,.localhost';
+    return raw.split(',').map((x) => x.trim().toLowerCase()).filter((x) => /^\.?[a-z0-9.-]+$/.test(x));
+  },
   /** วันที่ของเดือนที่ส่งไฟล์ของเดือนก่อนให้สำนักงานบัญชีอัตโนมัติ */
   get accountingSendDay() {
     return Number(process.env.OPS_ACCOUNTING_SEND_DAY ?? 5);

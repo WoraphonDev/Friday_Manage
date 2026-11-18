@@ -29,7 +29,7 @@ export const ListQuery = z.object({
 });
 export const ResendBody = z.object({ reason: z.string().trim().max(500).optional() }).strict();
 export const AttachBody = z.object({ ticketNumber: z.coerce.number().int().positive() }).strict();
-export const SuppressionQuery = z.object({ q: z.string().trim().max(120).optional(), limit: z.coerce.number().int().min(1).max(200).default(100) });
+export const SuppressionQuery = z.object({ q: z.string().trim().max(120).optional(), limit: z.coerce.number().int().min(1).max(200).default(50), offset: z.coerce.number().int().min(0).default(0) });
 export const RemoveBody = z.object({ reason: z.string().trim().min(5).max(500) }).strict();
 
 interface LogEntry {
@@ -340,13 +340,16 @@ export class DeliveriesService {
 
   async suppressions(staff: Staff, q: z.infer<typeof SuppressionQuery>) {
     const like = q.q ? `%${q.q.replace(/[%_\\]/g, (c) => `\\${c}`)}%` : null;
+    const where = and(isNull(s.emailSuppressions.removedAt), like ? or(seesEmail(staff) ? ilike(s.emailSuppressions.email, like) : undefined, ilike(s.workspaces.name, like)) : undefined);
     const rows = await this.db
       .select({ x: s.emailSuppressions, ws: { id: s.workspaces.id, name: s.workspaces.name } })
       .from(s.emailSuppressions)
       .leftJoin(s.workspaces, eq(s.workspaces.id, s.emailSuppressions.workspaceId))
-      .where(and(isNull(s.emailSuppressions.removedAt), like ? or(seesEmail(staff) ? ilike(s.emailSuppressions.email, like) : undefined, ilike(s.workspaces.name, like)) : undefined))
-      .orderBy(desc(s.emailSuppressions.createdAt))
-      .limit(q.limit);
+      .where(where)
+      .orderBy(desc(s.emailSuppressions.createdAt), desc(s.emailSuppressions.id))
+      .limit(q.limit)
+      .offset(q.offset);
+    const [{ total }] = await this.db.select({ total: sql<number>`count(*)::int` }).from(s.emailSuppressions).leftJoin(s.workspaces, eq(s.workspaces.id, s.emailSuppressions.workspaceId)).where(where);
     return {
       items: rows.map((r) => ({
         id: r.x.id,
@@ -357,6 +360,7 @@ export class DeliveriesService {
         workspace: r.ws?.id ? r.ws : null,
         since: r.x.createdAt,
       })),
+      total,
     };
   }
 

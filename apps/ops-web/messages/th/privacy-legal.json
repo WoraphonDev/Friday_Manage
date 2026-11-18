@@ -61,7 +61,9 @@
     "noPendingDeletes": "ไม่มี Workspace ที่รอลบ",
     "retention": "นโยบายการเก็บข้อมูล",
     "retentionSub": "ระบบลบเองเมื่อครบ ยกเว้นมี Legal hold",
-    "eraseHeld": "รอ Legal hold"
+    "eraseHeld": "รอ Legal hold",
+    "search": "ค้นอีเมลผู้ขอหรือเลขคำขอ",
+    "noMatch": "ไม่พบคำขอที่ตรงกับคำค้น"
   },
   "req": {
     "who": "ผู้ขอ: {email} · Workspace: {ws}",

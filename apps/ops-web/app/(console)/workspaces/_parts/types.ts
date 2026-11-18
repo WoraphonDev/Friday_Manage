@@ -25,6 +25,24 @@ export interface WsRow {
   health: number;
   mrr: number | null;
   paymentState: "ok" | "overdue";
+  /** ผู้ซื้อ (เลขภาษีเดียวกัน หรือเจ้าของคนเดียวกัน) · count = จำนวน Workspace ของผู้ซื้อ (ลูกค้าจริง) */
+  buyer: Buyer;
+  test: TestInfo;
+}
+export interface Buyer {
+  key: string | null;
+  name: string | null;
+  company: boolean;
+  count: number;
+}
+export interface TestInfo {
+  isTest: boolean;
+  flag: "test" | "not_test" | null;
+  auto: boolean;
+  suggest: "staff_domain" | "name_prefix" | null;
+  reason: string | null;
+  by: string | null;
+  at: string | null;
 }
 export interface WsList {
   items: WsRow[];
@@ -32,6 +50,10 @@ export interface WsList {
   limit: number;
   offset: number;
   sort: string;
+  counts?: Record<"all" | "paying" | "trialing" | "past_due" | "suspended", number>;
+  tests?: { hidden: number; suggested: number };
+  /** กรองผู้ซื้อรายเดียว: ยอดรวมทุก Workspace ของผู้ซื้อ */
+  buyer?: { key: string; name: string | null; workspaces: number; seats: number; seatLimit: number; mrr: number | null; openTickets: number } | null;
 }
 export interface Signal {
   code: string;
@@ -61,6 +83,8 @@ export interface Overview {
   economics: { mrrSatang: number; revenueSatang: number; costSatang: number; grossSatang: number; marginPct: number | null; costs: Record<string, { satang: number; qty?: number; gb?: number }> } | null;
   upgradeSignals: Signal[];
   notes: { id: string; text: string; staffName: string | null; createdAt: string }[];
+  test?: TestInfo;
+  buyer?: Buyer & { others: { id: string; name: string; slug: string; status: string; subStatus: string | null; plan: string | null }[] };
 }
 export interface Member {
   id: string;
@@ -87,6 +111,9 @@ export interface BulkFilter {
   status?: string;
   q?: string;
   feature?: string;
+  buyer?: string;
+  test?: "hide" | "only" | "all";
+  suggest?: "any" | "staff_domain" | "name_prefix";
 }
 /** เลือกเป็นรายการ id หรือตามตัวกรอง (เซิร์ฟเวอร์หารายการ ณ เวลายืนยัน) */
 export type BulkTarget = { ids: string[] } | { filter: BulkFilter };

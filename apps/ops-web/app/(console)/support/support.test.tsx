@@ -78,6 +78,8 @@ const page = (search = "", extra: Parameters<typeof server.use> = []) => {
       const items = q.get("assignee") === "none" || q.get("status") === "closed" ? [] : [row];
       return HttpResponse.json({
         items,
+        total: items.length,
+        counts: { mine: 1, none: 0, all: 1 },
         summary: {
           open: 4,
           unassigned: 2,
@@ -114,7 +116,7 @@ describe("Support", () => {
     asRole("support");
     page();
     // คนตอบ Ticket เริ่มที่ "ของฉัน"
-    expect(await screen.findByRole("tab", { name: "ของฉัน", selected: true })).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: /ของฉัน/, selected: true })).toBeInTheDocument();
     expect(await screen.findByText("นำเข้า Excel ไม่ได้")).toBeInTheDocument();
     expect(screen.getByText(/เปิดอยู่ 4 · ยังไม่มีคนรับ 2 · เกิน SLA 1 · ตอบครั้งแรกเฉลี่ย 42 นาที · ความพึงพอใจ 4.6\/5/)).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "ทีมตอนนี้" })).not.toBeInTheDocument();
@@ -125,6 +127,26 @@ describe("Support", () => {
     await userEvent.click(screen.getByRole("tab", { name: "ทีม" }));
     expect(await screen.findByRole("region", { name: "ทีมตอนนี้" })).toBeInTheDocument();
     expect(screen.getAllByText("ซัพพอร์ตตัวอย่าง").length).toBeGreaterThan(0);
+  });
+
+  it("ช่วง 1: บอกจำนวนทั้งหมด · แบ่งหน้าส่ง offset · ตัวกรองเขียนลง URL", async () => {
+    asRole("support");
+    const asked: URLSearchParams[] = [];
+    const many = Array.from({ length: 50 }, (_, i) => ({ ...row, id: `t-${i}`, number: 1000 + i, subject: `เรื่องที่ ${i}` }));
+    page("", [
+      http.get(`${OPS}/tickets`, ({ request }) => {
+        const q = new URL(request.url).searchParams;
+        asked.push(q);
+        return HttpResponse.json({ items: many, total: 486, counts: { mine: 23, none: 41, all: 486 }, summary: { open: 486, unassigned: 41, breached: 6, firstResponseMinutes: 4, csat: null } });
+      }),
+    ]);
+    expect(await screen.findByText("แสดง 1–50 จาก 486")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /คิวกลาง\s*41/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "ถัดไป" }));
+    await waitFor(() => expect(asked.at(-1)?.get("offset")).toBe("50"));
+    await userEvent.click(screen.getByRole("tab", { name: /ทั้งหมด/ }));
+    expect(router.replace).toHaveBeenLastCalledWith("/support?tab=all", { scroll: false });
+    await waitFor(() => expect(asked.at(-1)?.get("offset")).toBe("0"));
   });
 
   it("บทสนทนาแบบแชท: ลูกค้าซ้าย · ทีมเราขวา · บันทึกภายในมีป้าย", async () => {

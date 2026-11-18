@@ -15,7 +15,9 @@ const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_
   'changelog_stats', 'onboarding_followups', 'help_article_versions', 'help_search_stats', 'help_search_misses', 'help_article_tickets',
   'dev_issue_links', 'dev_issue_tickets', 'dev_bridge_settings',
   // รอบ 4 (งานค้าง Friday Ops · 0044)
-  'ops_settings', 'legal_holds', 'system_alerts', 'legal_notices', 'etax_jobs', 'wht_requests'];
+  'ops_settings', 'legal_holds', 'system_alerts', 'legal_notices', 'etax_jobs', 'wht_requests',
+  // ป้าย Workspace ทดสอบ (ช่วง 1 · 0048)
+  'ops_workspace_flags'];
 
 beforeAll(() => owner.connect());
 afterAll(() => owner.end());

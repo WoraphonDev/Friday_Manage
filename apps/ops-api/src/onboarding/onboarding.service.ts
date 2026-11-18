@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { type Db, schema, type Tx } from '@friday/db';
 import { and, eq, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
+import { isReal } from '../workspaces/test-flag.js';
 import { ANNOUNCEMENT_EVENT } from '../announcements/announcements.service.js';
 import { audit, staffAudit } from '../audit.js';
 import type { Staff } from '../auth/auth.guard.js';
@@ -156,7 +157,8 @@ export class OnboardingService {
   /** `GET ops/onboarding?days` · KPI · แถบผ่านแต่ละขั้น · ข้อสังเกต · ลูกค้าที่ติด / หยุดใช้ */
   async overview(q: z.infer<typeof OverviewQuery>, now = new Date()) {
     const since = new Date(now.getTime() - q.days * DAY);
-    const all = await this.workspaces(sql`w.created_at > ${since}`);
+    // ไม่นับ Workspace ทดสอบ (ช่วง 1)
+    const all = await this.workspaces(sql`w.created_at > ${since} and ${isReal(sql`w.id`)}`);
     const prog = new Map(all.map((w) => [w.id, progressOf(w, now)]));
     const complete = all.filter((w) => prog.get(w.id)!.complete);
     const open = all.filter((w) => !prog.get(w.id)!.complete);
@@ -212,8 +214,11 @@ export class OnboardingService {
       },
       funnel,
       insights,
+      // ส่ง 500 รายที่ติดนานสุด · บอกจำนวนจริงด้วย (ไม่ตัดเงียบ · ช่วง 1)
       stuck: stuckRows.sort(bySeverity).slice(0, 500).map(shape),
+      stuckTotal: stuckRows.length,
       inactive: open.filter((w) => prog.get(w.id)!.inactive).sort(bySeverity).slice(0, 500).map(shape),
+      inactiveTotal: open.filter((w) => prog.get(w.id)!.inactive).length,
     };
   }
 

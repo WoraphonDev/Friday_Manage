@@ -6,12 +6,13 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { useTranslations } from "next-intl";
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { hasAny, initials } from "@/components/access";
-import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, ListBar, Modal, Notice, PageHead, Seg, TableSkeleton, Tabs } from "@/components/kit";
+import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, ListBar, Modal, Notice, PageHead, Pager, Seg, TableSkeleton, Tabs } from "@/components/kit";
 import { Button, buttonClass, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api, OPS_BASE } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { useUrlFilters } from "@/lib/url-state";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
 import { DevCard } from "../bugs/_components/DevCard";
 import { EscalateDialog } from "../bugs/_components/EscalateDialog";
@@ -92,6 +93,7 @@ const invalidate = (cache: ReturnType<typeof useQueryClient>) => void cache.inva
  * การเข้าช่วยเหลือมีเมนูของตัวเอง (/support/sessions) จึงไม่วางซ้ำที่นี่
  */
 type Queue = "mine" | "none" | "all" | "team";
+const PAGE = 50;
 export function SupportPage() {
   const t = useTranslations("ss.support");
   const tb = useTranslations("bugs.support");
@@ -101,17 +103,26 @@ export function SupportPage() {
   const me = useMe().data;
   const support = hasAny(me, "support");
   // คนตอบ Ticket เริ่มที่คิวของตัวเอง · บทบาทอื่น (Owner / ผู้ตรวจ) เริ่มที่ทั้งหมด
-  const [picked, setQueue] = useState<Queue | null>(() => (params?.get("tab") === "team" ? "team" : null));
-  // ยังไม่ได้เลือกเอง: ตามบทบาท (โปรไฟล์โหลดทีหลังได้)
-  const queue: Queue = picked ?? (support ? "mine" : "all");
-  const [status, setStatus] = useState<"active" | "pending_dev" | "solved" | "closed">("active");
-  const [q, setQ] = useState("");
+  // ตัวกรองอยู่ใน URL (กดย้อนกลับแล้วยังอยู่ที่เดิม · ส่งลิงก์ได้) · queue ว่าง = ตามบทบาท
+  const [f, setF] = useUrlFilters({ tab: "", status: "active", q: "" });
+  const queue: Queue = (["mine", "none", "all", "team"] as const).includes(f.tab as Queue) ? (f.tab as Queue) : support ? "mine" : "all";
+  const setQueue = (v: Queue) => (setF({ tab: v }), setOffset(0));
+  const status = f.status as "active" | "pending_dev" | "solved" | "closed";
+  const setStatus = (v: typeof status) => (setF({ status: v }), setOffset(0));
+  const [q, setQ] = useState(f.q);
+  const [offset, setOffset] = useState(0);
   const [creating, setCreating] = useState(false);
   const search = useDeferredValue(q.trim());
+  useEffect(() => {
+    if (search !== f.q) (setF({ q: search }), setOffset(0));
+    // เขียน URL เมื่อคำค้นนิ่งแล้วเท่านั้น
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
   const listQueue = queue === "team" ? "all" : queue;
   const filter = new URLSearchParams({
     status,
-    limit: "100",
+    limit: String(PAGE),
+    offset: String(offset),
     // ops-api รับ assignee = me | none | uuid (เคยส่ง "mine" จนแท็บ "ของฉัน" โหลดไม่ได้)
     ...(listQueue !== "all" ? { assignee: listQueue === "mine" ? "me" : listQueue } : {}),
     ...(search ? { q: search } : {}),
@@ -119,11 +130,18 @@ export function SupportPage() {
   });
   const list = useQuery({
     queryKey: [...key, filter.toString()],
-    queryFn: () => api.get<{ items: TicketRow[]; summary: Summary }>(`/tickets?${filter}`),
+    queryFn: () => api.get<{ items: TicketRow[]; total: number; counts: { mine: number; none: number; all: number }; summary: Summary }>(`/tickets?${filter}`),
     placeholderData: keepPreviousData,
   });
   const selected = params?.get("ticket") ?? null;
-  const select = (id: string | null) => router.replace(id ? `/support?ticket=${id}` : "/support");
+  // เปิด / ปิดแผง Ticket คงตัวกรองเดิมไว้ใน URL
+  const select = (id: string | null) => {
+    const next = new URLSearchParams(params?.toString() ?? "");
+    if (id) next.set("ticket", id);
+    else next.delete("ticket");
+    const s = next.toString();
+    router.replace(s ? `/support?${s}` : "/support");
+  };
   const s = list.data?.summary;
   const count = (n: number | undefined) => (n ? <span className="tab-count">{n}</span> : null);
   return (
@@ -165,7 +183,7 @@ export function SupportPage() {
               label: (
                 <>
                   {t(`queues.${v}`)}
-                  {v === "none" && count(s?.unassigned)}
+                  {v !== "team" && count(list.data?.counts?.[v])}
                 </>
               ),
             }))}
@@ -236,6 +254,7 @@ export function SupportPage() {
               </table>
             </div>
           )}
+          {list.data?.total != null && <Pager offset={offset} limit={PAGE} shown={list.data.items.length} total={list.data.total} onChange={setOffset} />}
         </>
       )}
       <TicketDrawer id={selected} onClose={() => select(null)} />

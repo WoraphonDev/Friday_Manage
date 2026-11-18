@@ -1,11 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useDeferredValue, useState } from "react";
 import { hasAny } from "@/components/access";
-import { Empty, ErrorBlock, Modal, Notice, TableSkeleton } from "@/components/kit";
-import { Button, InlineError, Pill, Textarea, useToast } from "@/components/ui";
+import { Empty, ErrorBlock, Modal, Notice, Pager, TableSkeleton } from "@/components/kit";
+import { Button, InlineError, Input, Pill, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
 import { useFmt } from "../../workspaces/_parts/format";
@@ -18,19 +18,25 @@ export function Suppressions() {
   const me = useMe().data;
   const canRemove = hasAny(me, "owner", "support");
   const [removing, setRemoving] = useState<Suppression | null>(null);
-  const q = useQuery({ queryKey: ["ops", "deliveries", "suppressions"], queryFn: () => api.get<{ items: Suppression[] }>("/email-suppressions"), enabled: !!me });
+  // ค้นและแบ่งหน้าที่ ops-api (ช่วง 1 · ข้อมูลเยอะ)
+  const [search, setSearch] = useState("");
+  const [offset, setOffset] = useState(0);
+  const term = useDeferredValue(search.trim());
+  const qs = new URLSearchParams({ limit: "50", offset: String(offset), ...(term ? { q: term } : {}) });
+  const q = useQuery({ queryKey: ["ops", "deliveries", "suppressions", qs.toString()], queryFn: () => api.get<{ items: Suppression[]; total: number }>(`/email-suppressions?${qs}`), enabled: !!me, placeholderData: keepPreviousData });
   return (
     <section className="card">
       <div className="card-head">
         <h2 className="card-title">{t("title")}</h2>
         <span className="card-sub">{t("note")}</span>
       </div>
+      <Input type="search" aria-label={t("search")} placeholder={t("search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
       {q.isPending ? (
         <TableSkeleton rows={3} cols={5} />
       ) : q.error ? (
         <ErrorBlock error={q.error} retry={() => void q.refetch()} />
       ) : !q.data.items.length ? (
-        <Empty ok title={t("empty")} />
+        term ? <Empty title={t("noMatch")} onClearFilters={() => setSearch("")} /> : <Empty ok title={t("empty")} />
       ) : (
         <div className="tbl-wrap">
           <table className="tbl">
@@ -70,6 +76,7 @@ export function Suppressions() {
           </table>
         </div>
       )}
+      {q.data?.total != null && <Pager offset={offset} limit={50} shown={q.data.items.length} total={q.data.total} onChange={setOffset} />}
       {removing && <RemoveDialog s={removing} onClose={() => setRemoving(null)} />}
     </section>
   );

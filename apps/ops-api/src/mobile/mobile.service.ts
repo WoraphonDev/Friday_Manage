@@ -75,7 +75,7 @@ export class MobileService implements OnModuleInit, OnModuleDestroy {
 
   /** M6.3 · คิวกรณีชำระผิดปกติ: เวลาที่เหลือตาม SLA · ทำบนมือถือได้ไหม · สถิติวันนี้ */
   async payments(now = new Date()) {
-    const { items } = await this.paymentsSvc.exceptions({ limit: 100 });
+    const { items } = await this.paymentsSvc.exceptions({ limit: 100, offset: 0 });
     const clock = new BusinessClock();
     const list = items
       .map((x) => {

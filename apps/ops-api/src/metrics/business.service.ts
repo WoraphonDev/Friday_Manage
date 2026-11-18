@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } f
 import { type Db, schema } from '@friday/db';
 import { desc, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
+import { isReal } from '../workspaces/test-flag.js';
 import { staffAudit } from '../audit.js';
 import { has, type Staff } from '../auth/auth.guard.js';
 import { OPS_DB } from '../db.js';
@@ -87,14 +88,14 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
       select s.workspace_id as "workspaceId", p.code as plan, s.cycle, s.payment_method as "paymentMethod",
         coalesce(l.mrr_after_satang, (select case when s.cycle = 'yearly' then i.subtotal / 12 else i.subtotal end from invoices i where i.workspace_id = s.workspace_id and i.status = 'paid' order by i.created_at desc limit 1), 0)::float8 as mrr
       from subscriptions s join plans p on p.id = s.plan_id join workspaces w on w.id = s.workspace_id left join latest l on l.workspace_id = s.workspace_id
-      where s.status in ('active', 'past_due') and w.deleted_at is null`);
+      where s.status in ('active', 'past_due') and w.deleted_at is null and ${isReal(sql`s.workspace_id`)}`);
   }
 
   /** MRR ต่อ Workspace ณ เวลาหนึ่ง (จากประวัติ subscription_changes เท่านั้น) */
   private async mrrAt(at: Date) {
     const rows = await this.rows<{ workspaceId: string; mrr: number }>(sql`
       select distinct on (workspace_id) workspace_id as "workspaceId", mrr_after_satang::float8 as mrr
-      from subscription_changes where effective_at < ${at} order by workspace_id, effective_at desc, created_at desc`);
+      from subscription_changes where effective_at < ${at} and ${isReal(sql`workspace_id`)} order by workspace_id, effective_at desc, created_at desc`);
     return new Map(rows.filter((r) => r.mrr > 0).map((r) => [r.workspaceId, r.mrr]));
   }
 
@@ -111,7 +112,7 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
     const startMrr = [...atStart.values()].reduce((n, v) => n + v, 0);
     const moves = await this.rows<{ kind: string; n: number; delta: number; lost: number }>(sql`
       select kind, count(*)::int as n, coalesce(sum(mrr_after_satang - mrr_before_satang), 0)::float8 as delta, coalesce(sum(mrr_before_satang), 0)::float8 as lost
-      from subscription_changes where effective_at >= ${start} group by kind`);
+      from subscription_changes where effective_at >= ${start} and ${isReal(sql`workspace_id`)} group by kind`);
     const churned = moves.filter((m) => m.kind === 'cancel' || m.kind === 'churn_payment');
     const yearAgo = await this.mrrAt(new Date(Date.now() - 365 * DAY));
     const nowMap = new Map(current.map((r) => [r.workspaceId, r.mrr]));
@@ -119,8 +120,8 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
     const kept12 = [...yearAgo.keys()].reduce((n, id) => n + (nowMap.get(id) ?? 0), 0);
     const [counts] = await this.rows<Row>(sql`
       select
-        (select count(*)::int from subscriptions where status = 'trialing' and trial_ends_at > now()) as trialing,
-        (select count(*)::int from subscriptions where status = 'trialing' and trial_ends_at between now() and now() + interval '3 days') as "trialEndingSoon",
+        (select count(*)::int from subscriptions where status = 'trialing' and trial_ends_at > now() and ${isReal(sql`workspace_id`)}) as trialing,
+        (select count(*)::int from subscriptions where status = 'trialing' and trial_ends_at between now() and now() + interval '3 days' and ${isReal(sql`workspace_id`)}) as "trialEndingSoon",
         (select count(*)::int from payments where status = 'pending_review' and exception_reason is not null) as "paymentExceptions",
         (select count(*)::int from payments where status = 'pending_review' and exception_reason is null and slip_file_key is not null) as "slipsToReview",
         (select count(*)::int from approval_requests where status = 'pending' and expires_at > now()) as approvals,
@@ -231,7 +232,7 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
 
     // ---- Funnel 90 วัน: สมัคร → ยืนยันอีเมล → โปรเจกต์แรก → สมาชิกคนที่ 2 → เริ่มใช้จริง (≥ 3 คน และ ≥ 10 งานใน 7 วัน) → จ่ายเงิน
     const [funnel] = await this.rows<Row>(sql`
-      with ws as (select id, created_at from workspaces where created_at > ${since} and deleted_at is null)
+      with ws as (select id, created_at from workspaces where created_at > ${since} and deleted_at is null and ${isReal(sql`id`)})
       select count(*)::int as signups,
         count(*) filter (where exists (select 1 from workspace_members m join users u on u.id = m.user_id where m.workspace_id = ws.id and m.role = 'owner' and u.email_verified_at is not null))::int as "emailVerified",
         count(*) filter (where exists (select 1 from projects p where p.workspace_id = ws.id))::int as "firstProject",
@@ -243,12 +244,12 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
     const [trial] = await this.rows<{ ended: number; converted: number }>(sql`
       select count(*)::int as ended,
         count(*) filter (where exists (select 1 from subscription_changes c where c.workspace_id = s.workspace_id and c.kind = 'new' and c.effective_at <= s.trial_ends_at + interval '14 days'))::int as converted
-      from subscriptions s where s.trial_ends_at between ${since} and now()`);
+      from subscriptions s where s.trial_ends_at between ${since} and now() and ${isReal(sql`s.workspace_id`)}`);
 
     // ---- Cohort ตามเดือนที่เริ่มจ่าย · % ที่ยังจ่ายเมื่อสิ้นเดือนที่ n
     const changes = await this.rows<{ workspaceId: string; kind: string; mrr: number; at: string }>(sql`
       select workspace_id as "workspaceId", kind, mrr_after_satang::float8 as mrr, to_char(effective_at at time zone 'Asia/Bangkok', 'YYYY-MM') as at
-      from subscription_changes where effective_at > now() - interval '13 months' order by effective_at, created_at`);
+      from subscription_changes where effective_at > now() - interval '13 months' and ${isReal(sql`workspace_id`)} order by effective_at, created_at`);
     const firstPaid = new Map<string, string>();
     for (const c of changes) if (c.kind === 'new' && !firstPaid.has(c.workspaceId)) firstPaid.set(c.workspaceId, c.at);
     const payingAtEnd = (id: string, m: string) => {
@@ -267,17 +268,17 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
     const channels = await this.rows<{ source: string; newPaying: number }>(sql`
       select coalesce(a.source, 'direct') as source, count(*)::int as "newPaying"
       from subscription_changes c left join workspace_acquisitions a on a.workspace_id = c.workspace_id
-      where c.kind = 'new' and c.effective_at > ${since} group by 1`);
+      where c.kind = 'new' and c.effective_at > ${since} and ${isReal(sql`c.workspace_id`)} group by 1`);
     // สมัครใหม่ตามช่องทางในช่วงเดียวกัน → อัตราแปลงเป็นลูกค้าที่จ่าย
     const signups = await this.rows<{ source: string; n: number }>(sql`
       select coalesce(a.source, 'direct') as source, count(*)::int as n
       from workspaces w left join workspace_acquisitions a on a.workspace_id = w.id
-      where w.created_at > ${since} and w.deleted_at is null group by 1`);
+      where w.created_at > ${since} and w.deleted_at is null and ${isReal(sql`w.id`)} group by 1`);
     const spend = await this.rows<{ source: string; amount: number }>(sql`
       select source, sum(amount_satang)::float8 as amount from marketing_costs where month > (date_trunc('month', now()) - make_interval(months => ${months}))::date group by source`);
     const churnRows = await this.rows<{ lost: number; base: number }>(sql`
       select coalesce(sum(mrr_before_satang) filter (where kind in ('cancel', 'churn_payment')), 0)::float8 as lost, 1 as base
-      from subscription_changes where effective_at > ${since}`);
+      from subscription_changes where effective_at > ${since} and ${isReal(sql`workspace_id`)}`);
     const monthlyRevenueChurn = mrr > 0 ? Number(churnRows[0].lost) / months / mrr : 0;
     const arpa = paying.length ? mrr / paying.length : 0;
     const marginRatio = (marginPct ?? 0) / 100;
@@ -376,7 +377,8 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
   /** รวมทุก Workspace ที่ยังไม่ถูกลบ · นับจากตารางของแอปลูกค้าโดยตรง (ไม่อ่านเนื้อหางาน) · การใช้ฟีเจอร์คิดเฉพาะลูกค้าที่จ่ายเงิน */
   async usage() {
     const since = sql`now() - interval '30 days'`;
-    const live = (alias: string) => sql.raw(`${alias}.workspace_id in (select id from workspaces where deleted_at is null)`);
+    // ลูกค้าจริงที่ยังไม่ถูกลบ (ไม่นับ Workspace ทดสอบ · ช่วง 1)
+    const live = (alias: string) => sql`${sql.raw(alias)}.workspace_id in (select w.id from workspaces w where w.deleted_at is null and ${isReal(sql`w.id`)})`;
     const [u] = await this.rows<Record<string, number>>(sql`
       select
         (select count(distinct a.project_id)::int from activities a where a.created_at > ${since} and a.project_id is not null and ${live('a')}) as "activeProjects",
@@ -428,7 +430,7 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
       sql`select 'signup' as kind, w.created_at as at, w.id as "workspaceId", w.name as "workspaceName",
             json_build_object('plan', p.code, 'trial', s.status = 'trialing', 'members', (select count(*)::int from workspace_members m where m.workspace_id = w.id and m.status = 'active' and m.role <> 'guest')) as data
           from workspaces w left join subscriptions s on s.workspace_id = w.id left join plans p on p.id = s.plan_id
-          where w.deleted_at is null order by w.created_at desc limit ${limit}`,
+          where w.deleted_at is null and ${isReal(sql`w.id`)} order by w.created_at desc limit ${limit}`,
       sql`select c.kind, c.effective_at as at, w.id, w.name, json_build_object('from', c.plan_from, 'to', c.plan_to, 'seatsFrom', c.seats_from, 'seatsTo', c.seats_to, 'reason', (select r.reason from cancellation_responses r where r.workspace_id = c.workspace_id and r.outcome = 'canceled' and r.created_at between c.effective_at - interval '1 day' and c.effective_at + interval '1 day' order by r.created_at desc limit 1))
           from subscription_changes c join workspaces w on w.id = c.workspace_id
           where c.kind in ('new', 'upgrade', 'downgrade', 'cancel', 'reactivate', 'churn_payment') and c.effective_at <= now() order by c.effective_at desc limit ${limit}`,

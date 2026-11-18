@@ -1,10 +1,10 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useDeferredValue, useState } from "react";
 import { IrreversibleDialog, useApprovalFlow, useReauth } from "@/components/dialogs";
-import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, TableSkeleton } from "@/components/kit";
+import { Chip, ChipGroup, Drawer, Empty, ErrorBlock, Modal, Notice, Pager, TableSkeleton } from "@/components/kit";
 import { Button, errorToast, InlineError, Input, Select, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useFmt } from "../../workspaces/_parts/format";
@@ -26,26 +26,44 @@ export function DuePill({ r }: { r: PrivacyRequest }) {
   return <span className={r.daysLeft <= 7 ? "pill warn" : "pill"}>{t("left", { n: r.daysLeft })}</span>;
 }
 
-export function useRequests(enabled: boolean) {
-  return useQuery({ queryKey: [...key, "all"], queryFn: () => api.get<{ items: PrivacyRequest[] }>("/privacy/requests?status=all"), enabled });
+export interface RequestStatsT {
+  open: number;
+  dueSoon: number;
+  overdue: number;
+  avgDays: number | null;
+}
+type ListResponse = { items: PrivacyRequest[]; total: number; counts: Record<"open" | "completed" | "rejected" | "all", number>; stats: RequestStatsT };
+const PAGE = 50;
+
+/** ตัวเลขสรุปจาก ops-api (ไม่ต้องโหลดคำขอทั้งหมดมานับ) */
+export function useRequestStats(enabled: boolean) {
+  return useQuery({ queryKey: [...key, "stats"], queryFn: () => api.get<ListResponse>("/privacy/requests?status=open&limit=1"), enabled, select: (d) => d.stats });
 }
 
-/** ตารางคำขอจากเจ้าของข้อมูล · กดเลขคำขอเปิดรายละเอียด */
-export function RequestsTable({ query, onOpen }: { query: ReturnType<typeof useRequests>; onOpen: (id: string) => void }) {
+/** ตารางคำขอจากเจ้าของข้อมูล · กดเลขคำขอเปิดรายละเอียด · กรอง ค้น แบ่งหน้าที่ ops-api (ช่วง 1 · ข้อมูลเยอะ) */
+export function RequestsTable({ enabled, onOpen }: { enabled: boolean; onOpen: (id: string) => void }) {
   const t = useTranslations("pl.privacy");
   const tr = useTranslations("pl.req");
-  const [filter, setFilter] = useState<"open" | "completed" | "rejected" | "all">("open");
-  const items = (query.data?.items ?? []).filter((r) => filter === "all" || r.status === filter);
+  const [filter, setFilterState] = useState<"open" | "completed" | "rejected" | "all">("open");
+  const [search, setSearch] = useState("");
+  const [offset, setOffset] = useState(0);
+  const term = useDeferredValue(search.trim());
+  const setFilter = (v: typeof filter) => (setFilterState(v), setOffset(0));
+  const qs = new URLSearchParams({ status: filter, limit: String(PAGE), offset: String(offset), ...(term ? { q: term } : {}) });
+  const query = useQuery({ queryKey: [...key, "list", qs.toString()], queryFn: () => api.get<ListResponse>(`/privacy/requests?${qs}`), enabled, placeholderData: keepPreviousData });
+  const items = query.data?.items ?? [];
   return (
     <section className="card" style={{ padding: 0, overflow: "hidden" }}>
       <div className="card-head" style={{ padding: "14px 16px", margin: 0, borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
         <h2 className="card-title">{t("requests")}</h2>
         <span className="card-sub">{t("requestsSub")}</span>
         <span className="spacer" />
+        <Input type="search" aria-label={t("search")} placeholder={t("search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
         <ChipGroup className="row">
           {(["open", "completed", "rejected", "all"] as const).map((v) => (
             <Chip key={v} pressed={filter === v} onClick={() => setFilter(v)}>
               {t(`filter.${v}`)}
+              {query.data?.counts ? ` · ${query.data.counts[v]}` : ""}
             </Chip>
           ))}
         </ChipGroup>
@@ -55,7 +73,7 @@ export function RequestsTable({ query, onOpen }: { query: ReturnType<typeof useR
       ) : query.error ? (
         <ErrorBlock error={query.error} retry={() => void query.refetch()} />
       ) : !items.length ? (
-        <Empty ok={filter === "open"} title={filter === "open" ? t("emptyOpen") : t("empty")} />
+        term ? <Empty title={t("noMatch")} onClearFilters={() => setSearch("")} /> : <Empty ok={filter === "open"} title={filter === "open" ? t("emptyOpen") : t("empty")} />
       ) : (
         <div className="tbl-wrap">
           <table className="tbl">
@@ -92,6 +110,11 @@ export function RequestsTable({ query, onOpen }: { query: ReturnType<typeof useR
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {query.data?.total != null && (
+        <div style={{ padding: "10px 16px" }}>
+          <Pager offset={offset} limit={PAGE} shown={items.length} total={query.data.total} onChange={setOffset} />
         </div>
       )}
     </section>

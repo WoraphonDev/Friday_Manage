@@ -10,7 +10,7 @@ import { Button } from "@/components/ui";
 import { useMe } from "@/lib/query";
 import { BreachDrawer, BreachesCard, NewBreach } from "./_parts/Breaches";
 import { Lifecycle, LifecycleKpis } from "./_parts/Lifecycle";
-import { CreateRequest, RequestDrawer, RequestsTable, useRequests } from "./_parts/Requests";
+import { CreateRequest, RequestDrawer, RequestsTable, useRequestStats } from "./_parts/Requests";
 
 /**
  * หน้า 10 · คำขอ PDPA และการเก็บข้อมูล (Privacy.dc.html · A3–A6 · รอบ 4 H10–H13)
@@ -26,7 +26,7 @@ export function PrivacyPage() {
   const readBreaches = hasAny(me, "owner", "engineer", "auditor");
   const editBreaches = hasAny(me, "owner", "engineer");
   const owner = hasAny(me, "owner");
-  const requests = useRequests(!!me && readRequests);
+  const stats = useRequestStats(!!me && readRequests);
   const [creating, setCreating] = useState<"request" | "breach" | null>(null);
   const open = (kind: "request" | "breach", id: string | null) => router.replace(id ? `/privacy?${kind}=${id}` : "/privacy");
   const reqId = params?.get("request") ?? null;
@@ -52,8 +52,8 @@ export function PrivacyPage() {
           </>
         }
       />
-      {readRequests && requests.data && <LifecycleKpis requests={requests.data.items} />}
-      {readRequests && <RequestsTable query={requests} onOpen={(id) => open("request", id)} />}
+      {readRequests && stats.data && <LifecycleKpis stats={stats.data} />}
+      {readRequests && <RequestsTable enabled={!!me && readRequests} onOpen={(id) => open("request", id)} />}
       {readBreaches && <BreachesCard onOpen={(id) => open("breach", id)} />}
       {/* ส่วนล่าง (H10): Workspace ที่รอลบ · Legal hold · นโยบายการเก็บข้อมูล · Owner แก้ / คนอื่นอ่าน */}
       {readRequests && <Lifecycle owner={owner} />}

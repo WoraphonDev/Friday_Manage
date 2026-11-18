@@ -15,7 +15,7 @@ export interface Issue {
   group?: { id: string; name: string } | null;
   /** ย้าย / เปลี่ยนสถานะได้ไหม · false = งานของคนอื่น ดูได้อย่างเดียว (04-permissions ข้อ 3.3) */
   canMove?: boolean;
-  assigneeIds?: string[]; baId?: string | null; saId?: string | null; reviewerId?: string | null;
+  assigneeIds?: string[]; baId?: string | null; baIds?: string[]; saId?: string | null; reviewerId?: string | null;
   /** QA / Reviewer หลายคน (คนแรก = reviewerId) */
   reviewerIds?: string[]; testerId?: string | null; reporterId?: string;
   size: string | null; estimateMd: number | null; progressPct: number | null;

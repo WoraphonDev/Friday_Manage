@@ -18,6 +18,7 @@ import { listOf, placement, remainingWorkingDays, round, type BacklogData, type 
 import styles from "./backlog.module.css";
 import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 import { isClosedCategory } from "@/lib/status";
+import { AttachmentBadge } from "@/features/attachments/attachment-badge";
 
 type Notice = { message: string; undo?: () => Promise<void> };
 type TypeFilter = "all" | "Task" | "Bug";
@@ -176,6 +177,7 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
       <span className={styles.title}>
         <Link href={href(issue.key)} draggable={false}>{issue.title}</Link>
         {!!issue.subtasks?.length && <span className={styles.subtasks}>{t("subtaskCount", { count: issue.subtasks.length })}</span>}
+        <AttachmentBadge counts={issue.attachments} href={href(issue.key)} />
       </span>
       <span className={styles.hideSmall}>{module && <span className={styles.module} style={{ color: readableColor(module.color ?? DEFAULT_ITEM_COLOR), background: tint(module.color ?? DEFAULT_ITEM_COLOR, 10) }}>{module.name}</span>}</span>
       <span className={`${styles.md} ${issue.estimateMd === null ? styles.noEstimate : ""}`} title={issue.estimateMd === null ? t("unestimated") : t("manDay")}>{issue.estimateMd ?? "?"}</span>

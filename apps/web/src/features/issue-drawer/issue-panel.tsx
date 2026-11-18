@@ -1,5 +1,6 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import * as Popover from '@radix-ui/react-popover';
@@ -39,6 +40,19 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted, onClose }: 
   const [tabSwitched, setTabSwitched] = useState(false);
   const pickTab = (tab: typeof mobileTab) => { setMobileTab(tab); setTabSwitched(true); };
   const tabMotion = mobile && tabSwitched ? 'motion-in' : undefined;
+  // กดไอคอนคลิปบนการ์ด / แถวงาน (?files=) → เลื่อนไปส่วนไฟล์ที่มีไฟล์ · ทำครั้งเดียวต่องาน ไม่ดึงกลับเมื่อผู้ใช้เลื่อนเอง
+  const fileSection = useSearchParams()?.get('files');
+  const focusedFiles = useRef<string | null>(null);
+  useEffect(() => {
+    if (!fileSection || focusedFiles.current === `${issue.key}:${fileSection}`) return;
+    focusedFiles.current = `${issue.key}:${fileSection}`;
+    const tab = fileSection === 'qa' ? 'tests' : fileSection === 'unit' ? 'commits' : 'details';
+    if (mobile) setMobileTab(tab);
+    const id = fileSection === 'qa' ? `${issue.key}-panel-tests` : fileSection === 'unit' ? `${issue.key}-unit-tests` : `${issue.key}-files`;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const frame = requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }));
+    return () => cancelAnimationFrame(frame);
+  }, [fileSection, issue.key, mobile]);
   const cache = useQueryClient(); const toast = useToast();
   const endpoint = issuePath(scope.ws, issue.key);
   const key = issueQuery(scope.ws, issue.key);
@@ -130,6 +144,9 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted, onClose }: 
   // รายชื่อในช่อง BA / SA / Dev / QA กรองตามตำแหน่งของสมาชิก (lib/positions) · คนที่เลือกไว้แล้วยังอยู่เสมอ
   const pick = (role: PickRole, selected: (string | null | undefined)[]) => peopleForRole(role, scope.people, selected).map((person) => ({ id: person.id, name: person.displayName }));
   const reviewerIds = issue.reviewerIds ?? (issue.reviewerId ? [issue.reviewerId] : []);
+  // BA หลายคน (ผู้ใช้ขอ 2026-11-18) · API รุ่นเก่ามีแค่ baId
+  const baIds = issue.baIds ?? (issue.baId ? [issue.baId] : []);
+  const bas = baIds.map((id) => scope.people.find((person) => person.id === id)).filter((person): person is NonNullable<typeof person> => !!person);
   const qas = reviewerIds.map((id) => scope.people.find((person) => person.id === id)).filter((person): person is NonNullable<typeof person> => !!person);
   // BA / SA แสดงรูปโปรไฟล์คนที่เลือกหน้าชื่อเหมือนช่อง Developer · ยังเป็น Select เดิมจึงเลือก "ยังไม่ระบุ" เพื่อล้างค่าได้
   const personSelect = (field: 'baId' | 'saId', value: string | null | undefined, values: { id: string; name: string }[]) => {
@@ -276,7 +293,7 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted, onClose }: 
         {/* C2 / D2: ผู้รับผิดชอบ / แผนงาน / กลุ่มงาน · QA กับ Reviewer รวมเป็นช่องเดียว (ผู้ใช้ตัดสิน 2026-11-08) */}
         {!guest && <section className={styles.pgroup} aria-label={t('groupPeople')}>
           <h4 className={styles.pgTitle}>{t('groupPeople')}</h4>
-          {show('ba') && <PropRow k={star('ba', 'Business Analyst')}>{personSelect('baId', issue.baId, pick('ba', [issue.baId]))}</PropRow>}
+          {show('ba') && <PropRow k={star('ba', 'Business Analyst')}>{canEdit ? <Combobox label="Business Analyst" multiple options={peopleForRole('ba', scope.people, baIds)} value={baIds} onValueChange={(ids) => { if (!disabled) void patch({ baIds: ids }); }} /> : <span className={styles.who}>{bas.length ? <AvatarStack people={bas} /> : <span className="muted">—</span>}</span>}</PropRow>}
           {show('sa') && <PropRow k={star('sa', 'System Analyst')}>{personSelect('saId', issue.saId, pick('sa', [issue.saId]))}</PropRow>}
           <PropRow keep k="Developer">{canEdit ? <Combobox label={t('fields.assigneeIds')} multiple options={peopleForRole('dev', scope.people, issue.assigneeIds ?? [])} value={issue.assigneeIds ?? []} onValueChange={(ids) => { if (!disabled) void patch({ assigneeIds: ids }); }} /> : <span className={styles.who}><AvatarStack people={devs} /></span>}</PropRow>
           {show('reviewer') && <PropRow k={star('reviewer', t('qaReviewer'))}>{canEdit ? <Combobox label={t('qaReviewer')} multiple options={peopleForRole('qa', scope.people, reviewerIds)} value={reviewerIds} onValueChange={(ids) => { if (!disabled) void patch({ reviewerIds: ids }); }} /> : <span className={styles.who}>{qas.length ? <AvatarStack people={qas} /> : <span className="muted">—</span>}</span>}</PropRow>}

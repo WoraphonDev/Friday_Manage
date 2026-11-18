@@ -1,0 +1,5 @@
+/* ไอคอนคลิปบนการ์ด / แถวงาน · สีตามข้อความรองแบบเดียวกับจำนวนคอมเมนต์ */
+.badge { display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:500; color:var(--muted); text-decoration:none; border-radius:5px; padding:1px 3px; font-variant-numeric:tabular-nums; flex:none; white-space:nowrap; }
+.badge:hover { color:var(--primary-text); background:var(--primary-soft); }
+.badge:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
+.still:hover { color:var(--muted); background:none; }

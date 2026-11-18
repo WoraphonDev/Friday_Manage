@@ -302,6 +302,14 @@
     "remove": "เอา {name} ออก",
     "open": "ดู {name}",
     "removed": "นำ {name} ออกแล้ว",
-    "pasteHint": "ลากรูปมาวาง หรือกด ⌘V / Ctrl+V เพื่อวางภาพหน้าจอได้"
+    "pasteHint": "ลากรูปมาวาง หรือกด ⌘V / Ctrl+V เพื่อวางภาพหน้าจอได้",
+    "badge": {
+      "label": "ไฟล์ {count} ไฟล์ ({detail}) · เปิดงานที่ส่วนไฟล์",
+      "files": "ไฟล์แนบ {count}",
+      "unit": "รายงาน Unit test {count}",
+      "qa": "หลักฐาน QA {count}",
+      "open": "คลิกเพื่อเปิด",
+      "count": "ไฟล์ {count} ไฟล์ ({detail})"
+    }
   }
 }

@@ -106,8 +106,9 @@ type Drag = { key: string; mode: "move" | "start" | "end"; x0: number; start: st
 /** ตัวกรอง (ผู้ใช้ขอ 2026-11-14) · ค่าว่าง = ไม่กรอง · module = id ของ Module ("none" = ไม่ระบุ Module) · คนเป็น userId */
 export interface TLFilters { q: string; module: string; ba: string; sa: string; dev: string }
 const NO_FILTERS: TLFilters = { q: "", module: "", ba: "", sa: "", dev: "" };
-type Who = { assignees?: Person[]; ba?: Person | null; sa?: Person | null };
-const hasPerson = (f: TLFilters, r: Who) => (!f.ba || r.ba?.id === f.ba) && (!f.sa || r.sa?.id === f.sa) && (!f.dev || !!r.assignees?.some((p) => p.id === f.dev));
+type Who = { assignees?: Person[]; ba?: Person | null; bas?: Person[]; sa?: Person | null };
+const basOf = (r: Who) => r.bas ?? (r.ba ? [r.ba] : []);
+const hasPerson = (f: TLFilters, r: Who) => (!f.ba || basOf(r).some((p) => p.id === f.ba)) && (!f.sa || r.sa?.id === f.sa) && (!f.dev || !!r.assignees?.some((p) => p.id === f.dev));
 const hasText = (q: string, r: { key: string; title: string }) => !q || r.key.toLowerCase().includes(q) || r.title.toLowerCase().includes(q);
 
 /**
@@ -346,7 +347,7 @@ export function TimelineView({ ws, projectKey }: { ws: string; projectKey: strin
     d.unscheduled.forEach((u) => pick(u).forEach((p) => p && map.set(p.id, p)));
     return [...map.values()].sort((a, b) => a.displayName.localeCompare(b.displayName, "th"));
   };
-  const baList = guest ? [] : everyone((r) => [r.ba]);
+  const baList = guest ? [] : everyone((r) => basOf(r));
   const saList = guest ? [] : everyone((r) => [r.sa]);
   const devList = guest ? [] : everyone((r) => r.assignees ?? []);
   const fq = filters.q.trim().toLowerCase();

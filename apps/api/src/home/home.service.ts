@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { attachmentCounts, attachmentsOf, type AttachmentCount } from '../files/attachment-counts.js';
 import { schema as s, type Tx } from '@friday/db';
 import { and, asc, desc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 import { z } from 'zod';
@@ -91,15 +92,16 @@ export class HomeService {
       };
 
       const recent = await this.recent(tx, auth, sc);
+      const reviewFiles = await attachmentCounts(tx, reviews.map((i) => i.id));
       const projects = await this.projectCards(tx, auth, sc, now);
       const upcoming = await this.upcoming(tx, tenant, sc, now);
       const workload = guest ? null : await this.workload(tx, auth, tenant, week);
-      return { sc, reviews, summary, recent, projects, upcoming, workload };
+      return { sc, reviews, reviewFiles, summary, recent, projects, upcoming, workload };
     });
 
     // รออนุมัติ: Guest ไม่มีสิทธิ์อนุมัติ
     const approvals = guest ? { items: [] as Array<{ canDecide: boolean }> } : await this.dueRequests.list(auth, tenant, ListDueRequestsQuery.parse({ scope: 'to_approve', status: 'pending' }));
-    const { sc, reviews, summary } = core;
+    const { sc, reviews, reviewFiles, summary } = core;
     const reviewPeople = await this.db.run(auth, tenant, (tx) => loadPeople(tx, guest ? [] : reviews.map((i) => i.createdBy)));
     return {
       today: now,
@@ -107,7 +109,7 @@ export class HomeService {
       summary: { ...summary, pendingApprovals: approvals.items.length },
       waiting: {
         approvals: approvals.items,
-        reviews: reviews.map((i) => ({ ...this.issueRef(sc, i), from: i.createdBy ? (reviewPeople.get(i.createdBy) ?? null) : null })),
+        reviews: reviews.map((i) => ({ ...this.issueRef(sc, i), attachments: fileOf(sc, reviewFiles, i), from: i.createdBy ? (reviewPeople.get(i.createdBy) ?? null) : null })),
       },
       projects: core.projects,
       recent: core.recent,
@@ -140,7 +142,7 @@ export class HomeService {
       .orderBy(desc(s.activities.createdAt))
       .limit(80);
     const seen = new Set<string>();
-    const out: Array<{ key: string; title: string; project: { key: string; name: string }; verb: string; at: Date }> = [];
+    const out: Array<{ id: string; key: string; title: string; project: { key: string; name: string }; verb: string; at: Date; attachments?: AttachmentCount | null }> = [];
     const visible = new Map(sc.issues.map((i) => [i.id, i]));
     for (const r of rows) {
       if (!r.issueId || seen.has(r.issueId)) continue;
@@ -148,10 +150,11 @@ export class HomeService {
       if (!i) continue; // งานที่เสร็จนานแล้ว / ลบแล้ว / ไม่มีสิทธิ์เห็น
       seen.add(r.issueId);
       const ref = this.issueRef(sc, i);
-      out.push({ key: ref.key, title: ref.title, project: ref.project, verb: r.verb, at: r.at });
+      out.push({ id: i.id, key: ref.key, title: ref.title, project: ref.project, verb: r.verb, at: r.at });
       if (out.length >= 8) break;
     }
-    return out;
+    const files = await attachmentCounts(tx, out.map((x) => x.id));
+    return out.map(({ id, ...x }) => ({ ...x, attachments: fileOf(sc, files, visible.get(id)!) }));
   }
 
   /** โปรเจกต์ของฉัน: ความคืบหน้า, Overdue, งานของฉัน, Go-live และ Health */
@@ -278,12 +281,14 @@ export class HomeService {
         if (sc.isDone(i)) c.done++;
         subCounts.set(i.parentId, c);
       }
+      let files = new Map<string, AttachmentCount>();
       const item = (i: Issue) => {
         const st = sc.statuses.get(i.statusId)!;
         const p = sc.projects.find((x) => x.id === i.projectId)!;
         return {
           key: sc.keyOf(i),
           title: i.title,
+          attachments: fileOf(sc, files, i),
           type: sc.typeNames.get(i.issueTypeId) ?? null,
           project: { key: p.key, name: p.name, color: p.color },
           status: { id: st.id, name: st.name, category: st.category },
@@ -348,6 +353,7 @@ export class HomeService {
           .sort((a, b) => a.cat - b.cat || a.sort - b.sort || a.name.localeCompare(b.name))
           .map((o) => ({ key: o.name, label: o.name, items: rows.filter((i) => sc.statuses.get(i.statusId)!.name === o.name).sort(byDue) }));
       }
+      files = await attachmentCounts(tx, groups.flatMap((g) => g.items).map((i) => i.id));
       return {
         today: now,
         tab: q.tab,
@@ -363,4 +369,9 @@ export class HomeService {
 /** ศุกร์ของสัปดาห์ (วันทำการสุดท้ายแบบจันทร์–ศุกร์) ใช้แสดง "ถึง ศ. 4 ธ.ค." */
 function lastWorkday(weekEnd: string) {
   return addDays(weekEnd, -2);
+}
+
+/** ไอคอนคลิป · Guest Viewer ของโปรเจกต์นั้นเปิดไฟล์ไม่ได้จึงไม่ส่ง */
+function fileOf(sc: Scope, files: Map<string, AttachmentCount>, i: Issue) {
+  return sc.access.get(i.projectId)?.guestViewer ? null : attachmentsOf(files, i.id);
 }

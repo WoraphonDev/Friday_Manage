@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { today } from '../common/dates.js';
 import { AppError } from '../common/errors.js';
 import { loadPeople, type Person } from '../common/people.js';
+import { baList } from '../issues/rules.js';
+import { attachmentCounts, attachmentsOf } from '../files/attachment-counts.js';
 import type { AuthInfo, TenantInfo } from '../common/request.js';
 import { TenantDb } from '../common/tenant.js';
 import { addDays, WorkCalendar } from '../projects/calendar.js';
@@ -124,6 +126,7 @@ export class ViewsService {
         .where(and(eq(s.issues.projectId, project.id), isNull(s.comments.deletedAt)))
         .groupBy(s.comments.issueId);
       const commentCount = new Map(comments.map((c) => [c.issueId, c.n]));
+      const { fieldProfile } = await this.projects.fieldsOf(tx, project);
 
       const card = (i: Issue, st: Status) => {
         const type = d.types.get(i.issueTypeId)!;
@@ -144,6 +147,9 @@ export class ViewsService {
           ...(dueRule.split ? { qaDue: qaDueOf(dueRule, i) } : {}),
           due: dueState(dueRule, i, st, now),
           assigneeIds: d.assignees.get(i.id) ?? [],
+          // ซ่อนช่อง BA ในชุดฟิลด์ของโปรเจกต์ = ไม่แสดง BA บนการ์ดระดับนั้น
+          baIds: fieldProfile.fields.ba[i.parentId ? 'subtask' : 'task'] === 'hidden' ? [] : baList(i),
+          issueId: i.id,
           // งานของคนอื่นลากไม่ได้ ดูได้อย่างเดียว (04-permissions ข้อ 3.3)
           canMove: canMoveIssue(access, { ...i, assigneeIds: d.assignees.get(i.id) ?? [] }),
           subtasks: subtaskStats.get(i.id) ?? null,
@@ -176,7 +182,9 @@ export class ViewsService {
         cards.push({ ...c, columnId });
       }
 
-      const people = await loadPeople(tx, cards.flatMap((c) => c.assigneeIds));
+      const people = await loadPeople(tx, cards.flatMap((c) => [...c.assigneeIds, ...c.baIds]));
+      // ไอคอนคลิป: ไฟล์แนบ + Unit test + หลักฐาน QA (files/attachment-counts.ts)
+      const files = await attachmentCounts(tx, cards.map((c) => c.issueId));
       return {
         project: { key: project.key, name: project.name, progressSplit: project.progressSplit },
         board: q.type === 'bug' ? 'bug' : 'standard',
@@ -190,7 +198,12 @@ export class ViewsService {
             category: col.category,
             count: items.length,
             wip: { limit: col.wipLimit, current, exceeded: !!col.wipLimit && current > col.wipLimit },
-            cards: items.map(({ columnId: _, assigneeIds, ...c }) => ({ ...c, assignees: assigneeIds.map((id) => people.get(id)).filter((p): p is Person => !!p) })),
+            cards: items.map(({ columnId: _, assigneeIds, baIds, issueId, ...c }) => ({
+              ...c,
+              assignees: assigneeIds.map((id) => people.get(id)).filter((p): p is Person => !!p),
+              bas: baIds.map((id) => people.get(id)).filter((p): p is Person => !!p),
+              attachments: attachmentsOf(files, issueId),
+            })),
           };
         }),
         hiddenDone,
@@ -230,9 +243,9 @@ export class ViewsService {
       const byDate = (a: Issue, b: Issue) => (a.planStart! < b.planStart! ? -1 : a.planStart! > b.planStart! ? 1 : a.number - b.number);
 
       // BA / SA ใช้กรองใน Timeline ด้วย (ผู้ใช้ขอ 2026-11-14) · Guest ไม่เห็นชื่อคน
-      const people = guest ? new Map<string, Person>() : await loadPeople(tx, [...[...d.assignees.values()].flat(), ...issues.flatMap((i) => [i.baId, i.saId])]);
+      const people = guest ? new Map<string, Person>() : await loadPeople(tx, [...[...d.assignees.values()].flat(), ...issues.flatMap((i) => [...baList(i), i.saId])]);
       const personOf = (id: string | null) => (id ? (people.get(id) ?? null) : null);
-      const peopleOf = (i: Issue) => ({ assignees: (d.assignees.get(i.id) ?? []).map((id) => people.get(id)).filter((p): p is Person => !!p), ba: personOf(i.baId), sa: personOf(i.saId) });
+      const peopleOf = (i: Issue) => ({ assignees: (d.assignees.get(i.id) ?? []).map((id) => people.get(id)).filter((p): p is Person => !!p), ba: personOf(i.baId), bas: baList(i).map((id) => people.get(id)).filter((p): p is Person => !!p), sa: personOf(i.saId) });
       const progressOf = (i: Issue): number => {
         if (isDone(i)) return 100;
         const subs = subsOf.get(i.id)?.filter((x) => d.statuses.get(x.statusId)!.category !== 'cancelled');

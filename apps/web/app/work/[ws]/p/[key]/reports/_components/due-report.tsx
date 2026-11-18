@@ -31,7 +31,7 @@ type PlanStatus = "done" | "late" | "on_track" | "at_risk" | "off_track" | "no_f
 interface ModuleRef { id: string; name: string; color: string | null }
 interface DueTask {
   id: string; key: string; title: string; type: string; parentKey: string | null;
-  module: ModuleRef | null; phase: string | null; ba: Person | null; sa: Person | null; devs: Person[];
+  module: ModuleRef | null; phase: string | null; ba: Person | null; bas?: Person[]; sa: Person | null; devs: Person[];
   estimateMd: number | null; planStart: string | null; planEnd: string; progressPct: number;
   status: { name: string; category: string }; state: TaskState;
 }
@@ -54,6 +54,8 @@ export interface DueReportResponse {
 }
 
 type View = "task" | "plan";
+/** BA หลายคน · API รุ่นเก่ามีแค่ ba */
+const baNames = (x: { ba: Person | null; bas?: Person[] }) => (x.bas ?? (x.ba ? [x.ba] : [])).map((p) => p.displayName).join(", ");
 const PEOPLE = ["ba", "sa", "dev"] as const;
 type Filter = { view: View; from: string; to: string; modules: string[]; ba: string[]; sa: string[]; dev: string[] };
 const NO_MODULE = "none";
@@ -219,7 +221,7 @@ function TaskTable({ tasks, yearFormat, opener, compact, noModule }: { tasks: Du
           <td><IssueName issueKey={task.key} title={task.title} opener={opener} />{task.parentKey && <div className={styles.small}>{t("subOf", { key: task.parentKey })}</div>}</td>
           {!compact && <>
             <td><ModuleName module={task.module} noModule={noModule} />{task.phase && <div className={styles.small}>{task.phase}</div>}</td>
-            <td>{task.ba?.displayName ?? "—"}</td>
+            <td>{baNames(task) || "—"}</td>
             <td>{task.sa?.displayName ?? "—"}</td>
             <td>{task.devs.length ? <AvatarStack people={task.devs} /> : "—"}</td>
             <td>{task.estimateMd ?? "—"}</td>
@@ -371,7 +373,7 @@ function downloadCsv(data: DueReportResponse, view: View, projectKey: string, t:
   const rows: Array<Array<string | number | null>> = view === "task"
     ? [
       [t("col.key"), t("col.task"), t("col.parent"), t("module"), t("col.phase"), t("ba"), t("sa"), t("dev"), "MD", t("col.planStart"), t("col.planEnd"), t("col.progress"), t("col.status"), t("col.state")],
-      ...data.tasks.map((x) => [x.key, x.title, x.parentKey, x.module?.name ?? noModule, x.phase, x.ba?.displayName ?? null, x.sa?.displayName ?? null, x.devs.map((d) => d.displayName).join(", "), x.estimateMd, x.planStart, x.planEnd, x.progressPct, x.status.name, t(`state.${x.state}`)]),
+      ...data.tasks.map((x) => [x.key, x.title, x.parentKey, x.module?.name ?? noModule, x.phase, baNames(x) || null, x.sa?.displayName ?? null, x.devs.map((d) => d.displayName).join(", "), x.estimateMd, x.planStart, x.planEnd, x.progressPct, x.status.name, t(`state.${x.state}`)]),
     ]
     : [
       [t("module"), t("col.phase"), t("col.doneTasks"), t("col.allTasks"), t("col.doneMd"), t("col.planMd"), t("col.progress"), t("col.planEnd"), t("col.forecast"), t("col.slipDays")],

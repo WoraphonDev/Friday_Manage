@@ -22,6 +22,7 @@ import { DEFAULT_ITEM_COLOR, FALLBACK_PROJECT_COLOR, readableColor, tint } from 
 import { isClosedCategory } from "@/lib/status";
 import { IssueDrawer } from "@/features/issue-drawer/IssueDrawer";
 import { withoutDrawerParams } from "@/features/issue-drawer/url";
+import { AttachmentBadge } from "@/features/attachments/attachment-badge";
 
 const TABS: Tab[] = ["assigned", "reviewer", "watching", "created"];
 const GROUPS: GroupBy[] = ["due", "project", "status"];
@@ -114,9 +115,11 @@ export function MyTasksPage({ ws }: { ws: string }) {
   const all = useQuery({ queryKey: ["my-tasks", ws, `${tab}:projects`], queryFn: () => api.get<MyIssues>(`${base}/my-issues?tab=${tab}&group=project`) });
   const refresh = () => cache.invalidateQueries({ queryKey: ["my-tasks", ws] });
   const toggle = (item: TaskItem, done: boolean) => (done ? setConfirmClose(item) : void setDone(item, false));
-  function openIssue(key: string) {
+  function openIssue(key: string, files?: string | null) {
     const next = withoutDrawerParams(search, pathname);
     next.set("issue", key);
+    // กดคลิปของแถว: Drawer เลื่อนไปส่วนไฟล์ (issue-panel.tsx)
+    if (files) next.set("files", files);
     router.push(`${pathname}?${next}`, { scroll: false });
   }
   function closeIssue() {
@@ -272,7 +275,7 @@ export function MyTasksPage({ ws }: { ws: string }) {
                   <span className={styles.ghSub}>{sub}</span>
                 </button>
                 {!isClosed && (fullGroups[id] ? g.items : g.items.slice(0, GROUP_LIMIT)).map((i) => (
-                  <TaskRow key={i.key} item={i} q={filter.q} ws={ws} year={year} busy={busy === i.key} onToggle={(done) => toggle(i, done)} onOpen={() => openIssue(i.key)} onMove={() => setDueFor({ item: i, date: i.planEnd ?? data.today })} onDragStart={() => { dragKey.current = i.key; }} />
+                  <TaskRow key={i.key} item={i} q={filter.q} ws={ws} year={year} busy={busy === i.key} onToggle={(done) => toggle(i, done)} onOpen={(files) => openIssue(i.key, files)} onMove={() => setDueFor({ item: i, date: i.planEnd ?? data.today })} onDragStart={() => { dragKey.current = i.key; }} />
                 ))}
                 {!isClosed && g.items.length > GROUP_LIMIT && (
                   <button type="button" className={styles.groupMore} aria-expanded={!!fullGroups[id]} onClick={() => setFullGroups((f) => ({ ...f, [id]: !f[id] }))}>
@@ -389,7 +392,7 @@ function MobileTasks({ data, allItems, filter, setFilter, ws, name, year, tab, s
                   <input className="m-check" type="checkbox" checked={done} disabled={busy === i.key || i.canMove === false} title={i.canMove === false ? t("cannotMove") : undefined} aria-label={t(done ? "markUndone" : "markDone", { title: i.title })} onChange={(e) => onToggle(i, e.target.checked)} />
                   <Link href={taskHref(ws, i.project.key, i.key)} className="m-row-main" onClick={(e) => openInPlace(e, () => onOpen(i.key))}>
                     <b style={done ? { textDecoration: "line-through", color: "var(--muted)" } : undefined}><span className="m-key">{i.key}</span> <Highlight text={i.title} q={filter.q} /></b>
-                    <small>{i.project.name}{i.module ? ` · ${i.module.name}` : ""}{i.estimateMd != null ? ` · ${formatManDay(i.estimateMd)}` : ""}<RoleBadges item={i} /></small>
+                    <small>{i.project.name}{i.module ? ` · ${i.module.name}` : ""}{i.estimateMd != null ? ` · ${formatManDay(i.estimateMd)}` : ""}<RoleBadges item={i} /><AttachmentBadge counts={i.attachments} /></small>
                   </Link>
                   <span className={`m-row-meta ${due.cls}`}>{due.text}</span>
                   <ChevronRight className="m-row-chev" size={16} aria-hidden="true" />
@@ -425,7 +428,7 @@ function openInPlace(e: MouseEvent, open: () => void) {
   open();
 }
 
-function TaskRow({ item, q, ws, year, busy, onToggle, onOpen, onMove, onDragStart }: { item: TaskItem; q: string; ws: string; year: YearFormat; busy: boolean; onToggle: (done: boolean) => void; onOpen: () => void; onMove: () => void; onDragStart: () => void }) {
+function TaskRow({ item, q, ws, year, busy, onToggle, onOpen, onMove, onDragStart }: { item: TaskItem; q: string; ws: string; year: YearFormat; busy: boolean; onToggle: (done: boolean) => void; onOpen: (files?: string | null) => void; onMove: () => void; onDragStart: () => void }) {
   const t = useTranslations("home-my-tasks.tasks");
   const tp = useTranslations("common.priority");
   const dueText = useDueText();
@@ -447,13 +450,14 @@ function TaskRow({ item, q, ws, year, busy, onToggle, onOpen, onMove, onDragStar
     <div className={`${styles.tr} motion-item`} draggable={!done} onDragStart={onDragStart} onTouchStart={touchStart} onTouchEnd={touchEnd} data-testid={`task-${item.key}`}>
       <input type="checkbox" checked={done} disabled={busy || locked} title={locked ? t("cannotMove") : undefined} aria-label={t(done ? "markUndone" : "markDone", { title: item.title })} onChange={(e) => onToggle(e.target.checked)} style={{ width: 18, height: 18, margin: 0 }} />
       <div style={{ minWidth: 0 }}>
-        <Link className={`${styles.rowTitle} ${done ? styles.strike : ""}`} href={taskHref(ws, item.project.key, item.key)} onClick={(e) => openInPlace(e, onOpen)}><Highlight text={item.title} q={q} /></Link>
+        <Link className={`${styles.rowTitle} ${done ? styles.strike : ""}`} href={taskHref(ws, item.project.key, item.key)} onClick={(e) => openInPlace(e, () => onOpen())}><Highlight text={item.title} q={q} /></Link>
         <div className={styles.rowMeta}>
           <span style={{ width: 8, height: 8, borderRadius: 2, background: item.project.color ?? FALLBACK_PROJECT_COLOR }} />
           <span><Highlight text={item.key} q={q} /></span><span>·</span><span>{item.project.name}</span>
           {item.module && <span className={styles.modTag} style={{ color: readableColor(item.module.color ?? DEFAULT_ITEM_COLOR), background: tint(item.module.color ?? DEFAULT_ITEM_COLOR, 14) }}>{item.module.name}</span>}
           {item.parentKey && <Badge>{t("subtask")}</Badge>}
           <RoleBadges item={item} />
+          <AttachmentBadge counts={item.attachments} href={taskHref(ws, item.project.key, item.key)} onClick={(e, target) => openInPlace(e, () => onOpen(new URLSearchParams(target.split("?")[1]).get("files")))} />
         </div>
       </div>
       <span className="hideMobile"><StatusBadge category={item.status.category} name={item.status.name} /></span>

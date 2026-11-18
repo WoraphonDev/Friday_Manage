@@ -30,7 +30,7 @@ type Project = { id: string; key: string; name: string };
 /** ตรงกับตัวกรองทุกข้อ · ตัวกรองว่าง = ไม่กรอง · DEV ตรงเมื่อมีผู้รับผิดชอบคนใดคนหนึ่งที่เลือก */
 function matches(i: Item, q: DueQuery) {
   if (q.modules?.length && !q.modules.includes(i.moduleId ?? NO_MODULE)) return false;
-  if (q.ba?.length && !(i.baId && q.ba.includes(i.baId))) return false;
+  if (q.ba?.length && !i.baIds.some((id) => q.ba!.includes(id))) return false;
   if (q.sa?.length && !(i.saId && q.sa.includes(i.saId))) return false;
   if (q.dev?.length && !i.assigneeIds.some((id) => q.dev!.includes(id))) return false;
   return true;
@@ -52,7 +52,7 @@ export async function dueReport(tx: Tx, project: Project, plan: PlanData, q: Due
 
   // ตัวเลือกในตัวกรองมาจากงานทั้งโปรเจกต์ (ไม่ใช่แค่ช่วงวันที่) เลือกค้างไว้แล้วเปลี่ยนช่วงได้โดยตัวเลือกไม่หาย
   const work = plan.work;
-  const people = await loadPeople(tx, work.flatMap((i) => [i.baId, i.saId, ...i.assigneeIds]));
+  const people = await loadPeople(tx, work.flatMap((i) => [...i.baIds, i.saId, ...i.assigneeIds]));
   const person = (id: string | null) => (id ? (people.get(id) ?? null) : null);
   const count = (ids: Array<string | null>) => {
     const n = new Map<string, number>();
@@ -66,7 +66,7 @@ export async function dueReport(tx: Tx, project: Project, plan: PlanData, q: Due
       ...moduleRows.map((m) => ({ id: m.id, name: m.name, color: m.color, count: moduleCount.get(m.id) ?? 0 })),
       ...(moduleCount.has(NO_MODULE) ? [{ id: NO_MODULE, name: null, color: null, count: moduleCount.get(NO_MODULE)! }] : []),
     ],
-    ba: count(work.map((i) => i.baId)),
+    ba: count(work.flatMap((i) => i.baIds)),
     sa: count(work.map((i) => i.saId)),
     dev: count(work.flatMap((i) => i.assigneeIds)),
   };
@@ -101,6 +101,7 @@ export async function dueReport(tx: Tx, project: Project, plan: PlanData, q: Due
     module: moduleDto(i.moduleId),
     phase: i.phaseId ? (phaseOf.get(i.phaseId)?.name ?? null) : null,
     ba: person(i.baId),
+    bas: i.baIds.map(person).filter((p): p is Person => !!p),
     sa: person(i.saId),
     devs: i.assigneeIds.map(person).filter((p): p is Person => !!p),
     estimateMd: i.estimateMd || null,

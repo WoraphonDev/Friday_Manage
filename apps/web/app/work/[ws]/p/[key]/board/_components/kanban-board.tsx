@@ -15,6 +15,7 @@ import type { Permissions } from "@/lib/types";
 import { moveLocal, positionIntent, type BoardCard, type BoardColumn, type BoardData, type MoveBody, type MoveIntent, type MoveResult, type Swimlane } from "./types";
 import styles from "./kanban.module.css";
 import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
+import { AttachmentBadge } from "@/features/attachments/attachment-badge";
 import { isClosedCategory, phaseRuns, statusDotColor, statusPhase, useStatusColors } from "@/lib/status";
 
 type Notice = { message: string; undo?: () => Promise<void> };
@@ -316,9 +317,10 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
       <Link className={styles.cardTitle} href={href(card.key)} draggable={false}>{card.title}</Link>
       <div className={styles.cardMeta}>
         <span className={`${styles.due} ${card.due?.state === "overdue" ? styles.late : card.due?.state === "today" ? styles.today : ""}`} title={card.qaDue && card.status.category === "review" ? t("qaDueDate", { date: formatDate(card.qaDue, yearFormat, true) }) : card.planEnd ? t("dueDate", { date: formatDate(card.planEnd, yearFormat, true) }) : undefined}>{dueText(card)}</span>
+        <AttachmentBadge counts={card.attachments} href={href(card.key)} />
         {card.subtasks && <span className={styles.meta} title={t("subtaskProgress", card.subtasks)}><ListChecks size={14} aria-hidden="true" />{card.subtasks.done}/{card.subtasks.total}</span>}
         {card.comments > 0 && <span className={styles.meta} title={t("comments", { count: card.comments })}><MessageCircle size={14} aria-hidden="true" />{card.comments}</span>}
-        <span className={styles.avatars}><AvatarStack people={card.assignees} /></span>
+        <CardPeople card={card} />
         {movable(card) && <Button size="small" className={styles.mobileMove} aria-haspopup="dialog" onClick={() => setPicker(card)} disabled={moving}>{t("moveTo")}</Button>}
       </div>
       {movable(card) && <div className={styles.moveActions}>
@@ -385,4 +387,20 @@ function ScopedBoard({ ws, projectKey, yearFormat = "BE" }: BoardProps) {
       <div className={styles.dialogActions}><Button disabled={moving} onClick={() => setConfirmation(null)}>{t("cancel")}</Button><Button variant="primary" disabled={moving} onClick={() => { if (confirmation) void performMove(confirmation.intent, true, confirmation.undoAction); }}>{t("confirm")}</Button></div>
     </Dialog>
   </section>;
+}
+
+/**
+ * คนในการ์ด: BA กับ Dev เป็นกลุ่ม avatar แยกกัน มีป้ายบทบาทนำหน้า (ผู้ใช้ขอ 2026-11-18)
+ * งานที่ไม่มี BA แสดง Dev แบบเดิมไม่มีป้าย · ชี้ที่กลุ่มเห็นชื่อทุกคนในบทบาทนั้น
+ */
+function CardPeople({ card }: { card: BoardCard }) {
+  const bas = card.bas ?? [];
+  if (!bas.length) return <span className={styles.avatars}><AvatarStack people={card.assignees} /></span>;
+  const names = (people: BoardCard["assignees"]) => people.map((p) => p.displayName).join(", ");
+  return (
+    <span className={`${styles.avatars} ${styles.people}`}>
+      <span className={styles.who} title={`BA: ${names(bas)}`}><span className={styles.role}>BA</span><AvatarStack people={bas} max={2} /></span>
+      {card.assignees.length > 0 && <span className={styles.who} title={`Dev: ${names(card.assignees)}`}><span className={styles.role}>DEV</span><AvatarStack people={card.assignees} max={3} /></span>}
+    </span>
+  );
 }

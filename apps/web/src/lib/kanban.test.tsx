@@ -68,6 +68,23 @@ describe("Kanban", () => {
     expect(screen.getAllByRole("link", { name: "+ เพิ่มการ์ด" })).toHaveLength(4);
   });
 
+  it("BA / Dev แยกกลุ่มบนการ์ด และคลิปจำนวนไฟล์พาไปส่วนไฟล์ของงาน (2026-11-18)", async () => {
+    const ba = [{ id: "ba-one", displayName: "นักวิเคราะห์หนึ่ง", initials: "ว1" }, { id: "ba-two", displayName: "นักวิเคราะห์สอง", initials: "ว2" }];
+    data.columns[0].cards[0] = card("DE-1", { bas: ba, attachments: { total: 3, files: 0, unit: 1, qa: 2 } });
+    mount();
+    await screen.findByRole("article", { name: "การ์ด DE-1" });
+    const first = within(article("DE-1"));
+    expect(first.getByTitle("BA: นักวิเคราะห์หนึ่ง, นักวิเคราะห์สอง")).toHaveTextContent("BA");
+    expect(first.getByTitle(`Dev: ${person.displayName}`)).toHaveTextContent("DEV");
+    const clip = first.getByRole("link", { name: /ไฟล์ 3 ไฟล์/ });
+    expect(clip).toHaveAttribute("title", "รายงาน Unit test 1 · หลักฐาน QA 2 · คลิกเพื่อเปิด");
+    // ไม่มีไฟล์แนบของงาน → ไปส่วน Unit test ก่อน
+    expect(clip).toHaveAttribute("href", "/work/sample/p/DE/board?issue=DE-1&files=unit");
+    // การ์ดที่ไม่มี BA ไม่มีป้าย และไม่มีไฟล์ไม่มีคลิป
+    expect(within(article("DE-4")).queryByText("BA")).toBeNull();
+    expect(within(article("DE-4")).queryByRole("link", { name: /ไฟล์/ })).toBeNull();
+  });
+
   it("แยก Dev / QA: แถบหัวช่วงคร่อมคอลัมน์ตามหมวด · ปิดอยู่ไม่มีแถบ", async () => {
     // Review หมวด review = ช่วง QA · To do / In progress = ช่วง Dev
     data.columns[2].category = "review";

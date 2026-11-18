@@ -158,13 +158,13 @@ export class NotificationFanout implements OnModuleInit {
 
       case 'bug.created':
         // สร้าง Bug พร้อมผู้รับผิดชอบจะมี issue.assigned ตามมาในคำขอเดียวกันเสมอ · Assignee จึงได้แค่รายการนั้น ไม่ซ้ำ 2 รายการ
-        return [new Send('bug.created', { severity: d.severity }).add([issue?.baId], REASONS.ba)];
+        return [new Send('bug.created', { severity: d.severity }).add(issue?.baIds ?? [], REASONS.ba)];
 
       case 'bug.reopened':
         return [
           new Send('bug.reopened', { reopenCount: d.reopenCount })
             .add(await assignees(), REASONS.bugAssignee)
-            .add([issue?.baId], REASONS.ba),
+            .add(issue?.baIds ?? [], REASONS.ba),
         ];
 
       case 'test_run.failed':

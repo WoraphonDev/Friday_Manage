@@ -9,7 +9,7 @@ import { Audience, type IssueCtx, type ProjectCtx } from './audience.js';
 import { Notifier } from './notifier.js';
 import { DAILY_EVENT, REASONS } from './rules.js';
 import { openStatus } from '../common/status-category.js';
-import { reviewerList } from '../issues/rules.js';
+import { baList, reviewerList } from '../issues/rules.js';
 
 const s = schema;
 export type DueReminder = '1d_and_today' | '3d' | 'today_only';
@@ -200,6 +200,7 @@ export class Reminders {
         reviewerId: s.issues.reviewerId,
         reviewerIds: s.issues.reviewerIds,
         baId: s.issues.baId,
+        baIds: s.issues.baIds,
         sharedWithGuests: s.issues.sharedWithGuests,
         type: s.issueTypes.name,
         statusName: s.workflowStatuses.name,
@@ -232,6 +233,7 @@ export class Reminders {
         reviewerId: r.reviewerId,
         reviewerIds: reviewerList(r),
         baId: r.baId,
+        baIds: baList(r),
         sharedWithGuests: r.sharedWithGuests,
         isBug: r.type === 'Bug',
         deleted: false,

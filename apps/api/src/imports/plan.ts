@@ -19,7 +19,7 @@ export const FIELDS = {
   checklist: { label: 'Checklist (1 แถวต่อ 1 ข้อ)', aliases: ['checklist', 'check list', 'เช็กลิสต์', 'checklist (brd recheck)'] },
   status: { label: 'Status', aliases: ['status', 'สถานะ'] },
   priority: { label: 'Priority', aliases: ['priority', 'ความสำคัญ'] },
-  ba: { label: 'Business Analyst', aliases: ['business analyst', 'ba'] },
+  ba: { label: 'Business Analyst (หลายคน คั่นด้วย ,)', aliases: ['business analyst', 'ba'] },
   sa: { label: 'System Analyst', aliases: ['system analyst', 'sa'] },
   devs: { label: 'Developer (หลายคน คั่นด้วย ,)', aliases: ['developer', 'developers', 'dev', 'assignee'] },
   reviewer: { label: 'QA / Reviewer (หลายคน คั่นด้วย ,)', aliases: ['qa / reviewer', 'reviewer', 'reviewers', 'qa', 'tester'] },
@@ -154,7 +154,8 @@ export interface PlanRow {
   requirements: string[];
   /** ค่าในคอลัมน์ FR ที่ไม่ใช่รหัส FR / NFR เช่น "SRS" */
   requirementText: string | null;
-  ba: string | null;
+  /** BA หลายคน (ผู้ใช้ขอ 2026-11-18) */
+  bas: string[];
   sa: string | null;
   /** QA / Reviewer หลายคน (ผู้ใช้ขอ 2026-11-13) */
   reviewers: string[];
@@ -370,7 +371,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
       screens: list(get(cells, 'screen')).filter((x) => /^SCR-/i.test(x)),
       requirements: reqs.filter((x) => /^N?FR-/i.test(x)).map((x) => x.toUpperCase()),
       requirementText: reqs.filter((x) => !/^N?FR-/i.test(x)).join(', ') || null,
-      ba: person(get(cells, 'ba')),
+      bas: [...new Set(list(get(cells, 'ba')).filter((x) => x !== '-' && x !== '—'))],
       sa: person(get(cells, 'sa')),
       reviewers: [...new Set(list(get(cells, 'reviewer')).filter((x) => x !== '-' && x !== '—'))],
       status: resolveStatus(statusRaw) ?? 'To do',
@@ -408,7 +409,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     const scheduled = !!(row.planStart || row.planEnd);
     // BA บังคับเฉพาะ Task ที่ลงแผนแล้วในไฟล์รูปแบบเดิม (หน้า L3) · รูปแบบใหม่และ Sub-task เป็นแค่คำเตือน
     const baRequired = !opts.baOptional && !keyed;
-    if (scheduled && !row.ba && baRequired && !parent) blocking.push(['ไม่มี BA', 'ระบุ BA ใน Excel']);
+    if (scheduled && !row.bas.length && baRequired && !parent) blocking.push(['ไม่มี BA', 'ระบุ BA ใน Excel']);
     if (blocking.length) {
       blocking.forEach(([p, f]) => err(p, f));
       skip.add(no);
@@ -417,7 +418,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
     }
 
     // เตือน (นำเข้าได้)
-    if (scheduled && !row.ba && !baRequired && !parent && mapped.has('ba')) warn('ไม่มี BA', 'ยังไม่ระบุ BA');
+    if (scheduled && !row.bas.length && !baRequired && !parent && mapped.has('ba')) warn('ไม่มี BA', 'ยังไม่ระบุ BA');
     if (!scheduled) warn('ไม่มี Plan Start / End', 'นำเข้าเป็น Backlog ยังไม่ลงแผน');
     if (statusRaw === null) warn('ไม่มีค่า Status', 'ใช้ To do');
     else if (!resolveStatus(statusRaw)) warn(`Status "${statusRaw}" ไม่รู้จัก`, 'ใช้ To do');
@@ -474,7 +475,7 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
   for (const r of rows) {
     if (skip.has(r.no)) continue;
     r.devs.forEach((d) => addPerson(d, 'dev'));
-    if (r.ba) addPerson(r.ba, 'ba');
+    r.bas.forEach((b) => addPerson(b, 'ba'));
     if (r.sa) addPerson(r.sa, 'sa');
     r.reviewers.forEach((q) => addPerson(q, 'qa'));
   }

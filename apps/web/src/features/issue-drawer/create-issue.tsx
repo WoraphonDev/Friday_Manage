@@ -21,7 +21,7 @@ import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 type ChildDraft = { id: string; title: string; size: string; assigneeId: string; planEnd: string };
 type Draft = {
   type: IssueType; subtask: boolean; parentKey: string; title: string; description: string; remark: string; moduleId: string; phaseId: string; statusId: string; priority: string;
-  assigneeIds: string[]; baId: string; saId: string; reviewerIds: string[]; size: string; estimateMd: string; planStart: string; planEnd: string;
+  assigneeIds: string[]; baIds: string[]; saId: string; reviewerIds: string[]; size: string; estimateMd: string; planStart: string; planEnd: string;
   severity: string; environment: string; details: Record<string, string>; acceptance: string[]; checklist: string[]; blockedBy: string[]; children: ChildDraft[];
   shared: boolean; requirements: string[]; screens: string[]; labelIds: string[]; watcherIds: string[];
   /** ค่า Custom field ของโปรเจกต์ { [fieldId]: ค่า } */
@@ -29,11 +29,11 @@ type Draft = {
 };
 const supported: IssueType[] = ['Task', 'Story', 'Bug', 'Spike'];
 const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL'];
-const LIST_FIELDS = ['assigneeIds', 'reviewerIds', 'requirements', 'screens', 'labelIds', 'watcherIds', 'acceptance', 'checklist', 'blockedBy'] as const;
+const LIST_FIELDS = ['assigneeIds', 'baIds', 'reviewerIds', 'requirements', 'screens', 'labelIds', 'watcherIds', 'acceptance', 'checklist', 'blockedBy'] as const;
 function removeDraft(key: string) { try { localStorage.removeItem(key); } catch { /* storage access must not block server writes */ } }
 const defaultDraft = (type: IssueType, parent?: Issue | null): Draft => ({
   type, subtask: !!parent, parentKey: parent?.key ?? '', title: '', description: '', remark: '', moduleId: parent?.moduleId ?? '', phaseId: parent?.phaseId ?? '', statusId: '', priority: 'medium',
-  assigneeIds: [], baId: '', saId: '', reviewerIds: [], size: 'M', estimateMd: '', planStart: '', planEnd: '', severity: 'major', environment: 'sit', details: {},
+  assigneeIds: [], baIds: [], saId: '', reviewerIds: [], size: 'M', estimateMd: '', planStart: '', planEnd: '', severity: 'major', environment: 'sit', details: {},
   acceptance: [], checklist: [], blockedBy: [], children: [], shared: false, requirements: [], screens: [], labelIds: [], watcherIds: [], custom: {},
 });
 function readDraft(key: string, fallback: Draft): Draft | null {
@@ -119,7 +119,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
     if (!created.current && required.has('acceptance_criteria') && !draft.acceptance.length) { setError(new Error(t('acceptanceRequired'))); return; }
     // ฟิลด์บังคับที่เบราว์เซอร์ตรวจเองไม่ได้ (Chips / คน / หลายตัวเลือก) ตรวจก่อนส่ง
     if (!created.current && draft.type !== 'Bug') {
-      const filled: Record<ProfileField, boolean> = { ba: !!draft.baId, sa: !!draft.saId, reviewer: draft.reviewerIds.length > 0, size: !!draft.size, requirements: draft.requirements.length > 0, screens: draft.screens.length > 0, labels: draft.labelIds.length > 0, remark: !!draft.remark.trim(), priority: true, actual: true, progress: true };
+      const filled: Record<ProfileField, boolean> = { ba: draft.baIds.length > 0, sa: !!draft.saId, reviewer: draft.reviewerIds.length > 0, size: !!draft.size, requirements: draft.requirements.length > 0, screens: draft.screens.length > 0, labels: draft.labelIds.length > 0, remark: !!draft.remark.trim(), priority: true, actual: true, progress: true };
       const sent = customPayload(customFields, level, draft.custom);
       const missing = [
         ...(Object.keys(filled) as ProfileField[]).filter((f) => must(f) && !filled[f]).map((f) => API_FIELD_LABELS[f]),
@@ -139,7 +139,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
           type: draft.type, title: draft.title.trim(), description: draft.description, remark: show('remark') && draft.remark.trim() ? draft.remark : undefined, ...(show('priority') ? { priority: draft.priority } : {}),
           // Sprint ไม่อยู่ในหน้า Task แล้ว (ผู้ใช้ตัดสิน 2026-11-08) งานใหม่เข้า Backlog แล้วจัดเข้า Sprint ที่หน้า Backlog
           ...(draft.subtask ? { parentKey: draft.parentKey.trim() } : { moduleId: draft.moduleId || undefined, phaseId: draft.phaseId || undefined }),
-          statusId: draft.statusId || undefined, assigneeIds: draft.assigneeIds, baId: show('ba') ? draft.baId || undefined : undefined, saId: show('sa') ? draft.saId || undefined : undefined, reviewerIds: show('reviewer') && draft.reviewerIds.length ? draft.reviewerIds : undefined,
+          statusId: draft.statusId || undefined, assigneeIds: draft.assigneeIds, baIds: show('ba') && draft.baIds.length ? draft.baIds : undefined, saId: show('sa') ? draft.saId || undefined : undefined, reviewerIds: show('reviewer') && draft.reviewerIds.length ? draft.reviewerIds : undefined,
           size: sizeOn ? draft.size || undefined : undefined, estimateMd: estimateMd || undefined, planStart: draft.planStart || undefined, planEnd: draft.planEnd || undefined,
           ...((draft.type === 'Bug' || required.has('severity') || required.has('environment')) ? { severity: draft.severity, environment: draft.environment } : {}), details, sharedWithGuests: draft.shared,
           requirements: show('requirements') ? draft.requirements : [], screens: show('screens') ? draft.screens : [],
@@ -179,7 +179,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
   const modColor = mod?.color ?? DEFAULT_ITEM_COLOR;
   // รายชื่อกรองตามตำแหน่งของสมาชิก (lib/positions) · ยังไม่มีใครตั้งตำแหน่งนั้น = แสดงทุกคน
   const forRole = (role: PickRole, selected: string[]) => peopleForRole(role, options.members, selected);
-  const personSelect = (name: 'baId' | 'saId', role: PickRole, label: string, isRequired = false) => <Select label={label} required={isRequired} value={draft[name]} onChange={(event) => set(name, event.target.value)}><option value="">{t('notSet')}</option>{forRole(role, [draft[name]]).map((person) => <option value={person.id} key={person.id}>{person.displayName}</option>)}</Select>;
+  const personSelect = (name: 'saId', role: PickRole, label: string, isRequired = false) => <Select label={label} required={isRequired} value={draft[name]} onChange={(event) => set(name, event.target.value)}><option value="">{t('notSet')}</option>{forRole(role, [draft[name]]).map((person) => <option value={person.id} key={person.id}>{person.displayName}</option>)}</Select>;
   const sizeOptions = Object.entries(options.sizeMdMap).sort(([a], [b]) => SIZE_ORDER.indexOf(a) - SIZE_ORDER.indexOf(b));
   const mdValue = draft.type === 'Spike' ? (draft.details.timebox_hours ? Number(draft.details.timebox_hours) / 8 : '') : draft.estimateMd || (options.sizeMdMap[draft.size] ?? '').toString();
   const bugSection = <div className={styles.typeSection}>
@@ -264,7 +264,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
           <aside className={styles.sidebar} aria-label={t('properties')}><div className={`${styles.props} ${styles.propsAll}`}>
             <section className={styles.pgroup} aria-label={t('groupPeople')}>
               <h4 className={styles.pgTitle}>{t('groupPeople')}</h4>
-              {show('ba') && <PropRow k={star('ba', 'Business Analyst')}>{personSelect('baId', 'ba', 'Business Analyst', must('ba'))}</PropRow>}
+              {show('ba') && <PropRow k={star('ba', 'Business Analyst')}><Combobox label="Business Analyst" multiple options={forRole('ba', draft.baIds)} value={draft.baIds} onValueChange={(ids) => { if (!lock.current && !created.current) set('baIds', ids); }} /></PropRow>}
               {show('sa') && <PropRow k={star('sa', 'System Analyst')}>{personSelect('saId', 'sa', 'System Analyst', must('sa'))}</PropRow>}
               <PropRow k="Developer"><Combobox label={t('fields.assigneeIds')} multiple options={forRole('dev', draft.assigneeIds)} value={draft.assigneeIds} onValueChange={(ids) => { if (!lock.current && !created.current) set('assigneeIds', ids); }} /></PropRow>
               {show('reviewer') && <PropRow k={star('reviewer', t('qaReviewer'))}><Combobox label={t('qaReviewer')} multiple options={forRole('qa', draft.reviewerIds)} value={draft.reviewerIds} onValueChange={(ids) => { if (!lock.current && !created.current) set('reviewerIds', ids); }} /></PropRow>}

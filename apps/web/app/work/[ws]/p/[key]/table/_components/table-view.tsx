@@ -21,6 +21,7 @@ import type { Options, Row, SavedView, TableData } from "./types";
 import styles from "./ot.module.css";
 import { StructureDialog, type StructureAction } from "./structure-dialog";
 import { CustomCell, DateCell, PeopleCell, RemarkCell, SizeCell, SubtaskAdd } from "./cell-editors";
+import { AttachmentBadge } from "@/features/attachments/attachment-badge";
 import { availableColumns, columnShowsAt, customText, DEFAULT_PROFILE, type CustomFieldDef, type FieldProfile, type Level } from "@/lib/field-profile";
 import { isClosedCategory, STATUS_CATEGORIES, statusColorStyle, type StatusTone, statusTone, useStatusColors } from "@/lib/status";
 
@@ -39,7 +40,7 @@ const SORTS = ["rank", "number", "planEnd", "priority"] as const;
 // คอลัมน์มาจากชุดฟิลด์ของโปรเจกต์ (Template · ผู้ใช้ตัดสิน 2026-11-09) · แต่ละคนซ่อน / เปิดเพิ่มได้จากเมนู Columns (จำในเครื่อง)
 type Col = string;
 /** ความกว้างคอลัมน์ตาม Canvas Table (.gr grid-template-columns) · คอลัมน์ใหม่ / Custom field ใช้ค่ากลาง */
-const COL_W: Record<string, number> = { dev: 84, ba: 40, sa: 40, reviewer: 56, status: 112, qaDue: 96, priority: 84, size: 78, start: 74, end: 82, actualStart: 84, actualEnd: 110, refs: 124, labels: 124, progress: 96, remark: 220 };
+const COL_W: Record<string, number> = { dev: 84, ba: 56, sa: 40, reviewer: 56, status: 112, qaDue: 96, priority: 84, size: 78, start: 74, end: 82, actualStart: 84, actualEnd: 110, refs: 124, labels: 124, progress: 96, remark: 220 };
 const colWidth = (c: Col) => COL_W[c] ?? 140;
 const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
 type ProjectFields = { fieldProfile?: FieldProfile; customFields?: CustomFieldDef[]; progressSplit?: boolean };
@@ -881,7 +882,9 @@ function IssueRow({ index, row, statusColor, sub, cols, profile, customFields, w
   const edit = (field: string) => t("edit", { field, key: row.key });
   const empty = <span className={styles.muted}>—</span>;
   const devView = row.assignees?.length ? <span className={styles.avs}><AvatarStack people={row.assignees} max={3} /></span> : empty;
-  const baView = row.ba ? <span className={styles.avs}><Avatar size="small" person={row.ba} /></span> : empty;
+  // BA หลายคน · API รุ่นเก่าส่งแค่ ba
+  const baList = row.bas ?? (row.ba ? [row.ba] : []);
+  const baView = baList.length ? <span className={styles.avs}><AvatarStack people={baList} max={2} /></span> : empty;
   const saView = row.sa ? <span className={styles.avs}><Avatar size="small" person={row.sa} /></span> : empty;
   const sizeView = <span style={{ whiteSpace: "nowrap" }}>{row.size ? <span className={`${styles.pill} ${styles.sTodo}`} style={{ fontWeight: 700 }}>{row.size}</span> : empty}{row.estimateMd !== null ? ` ${row.estimateMd}` : ""}</span>;
   const refs = [...(row.requirements ?? []), ...(row.screens ?? [])].join(" · ");
@@ -897,7 +900,7 @@ function IssueRow({ index, row, statusColor, sub, cols, profile, customFields, w
   const cell: Record<string, React.ReactNode> = {
     // รายชื่อกรองตามตำแหน่งของสมาชิก (lib/positions) · คนที่เลือกไว้แล้วยังอยู่ในรายการ
     dev: canEdit ? <PeopleCell multiple label={edit(t("cols.dev"))} people={peopleForRole("dev", people, row.assignees?.map((p) => p.id))} value={row.assignees?.map((p) => p.id) ?? []} onChange={(ids) => onPatch({ assigneeIds: ids })}>{devView}</PeopleCell> : devView,
-    ba: canEdit ? <PeopleCell label={edit(t("cols.ba"))} people={peopleForRole("ba", people, [row.ba?.id])} value={row.ba ? [row.ba.id] : []} onChange={(ids) => onPatch({ baId: ids[0] ?? null })}>{baView}</PeopleCell> : baView,
+    ba: canEdit ? <PeopleCell multiple label={edit(t("cols.ba"))} people={peopleForRole("ba", people, baList.map((p) => p.id))} value={baList.map((p) => p.id)} onChange={(ids) => onPatch({ baIds: ids })}>{baView}</PeopleCell> : baView,
     sa: canEdit ? <PeopleCell label={edit(t("cols.sa"))} people={peopleForRole("sa", people, [row.sa?.id])} value={row.sa ? [row.sa.id] : []} onChange={(ids) => onPatch({ saId: ids[0] ?? null })}>{saView}</PeopleCell> : saView,
     reviewer: canEdit ? <PeopleCell multiple label={edit(t("cols.reviewer"))} people={peopleForRole("qa", people, reviewerList.map((p) => p.id))} value={reviewerList.map((p) => p.id)} onChange={(ids) => onPatch({ reviewerIds: ids })}>{reviewerView}</PeopleCell> : reviewerView,
     qaDue: canEdit ? <DateCell label={edit(t("cols.qaDue"))} value={row.qaEnd ?? null} className={qaCls} onChange={(v) => onPatch({ qaEnd: v || null })}>{qaView}</DateCell> : qaView,
@@ -943,6 +946,7 @@ function IssueRow({ index, row, statusColor, sub, cols, profile, customFields, w
           <span className={styles.key}>{row.key}</span>
           {/* เปิด Drawer โดยไม่เด้งหน้ากลับบนสุด (ตารางใช้ scroll ของหน้าหลัก) */}
           <Link href={href} scroll={false} className={`${styles.nm}${done ? ` ${styles.nmDone}` : ""}`} title={row.title}>{row.title}</Link>
+          <AttachmentBadge counts={row.attachments} href={href} />
           {onAddSub && <button type="button" className={styles.subAddBtn} aria-label={t("cell.addSubtaskTo", { key: row.key })} onClick={onAddSub}><Plus size={13} aria-hidden="true" />Sub-task</button>}
         </div>
       </td>

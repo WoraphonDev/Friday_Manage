@@ -44,6 +44,8 @@
 .parent,.phase { font-size:11px; color:var(--muted); }.parent { text-decoration:none; }.completed .cardTitle { color:var(--muted); text-decoration:line-through; }
 .due { font-size:11px; padding:1px 7px; border-radius:6px; background:var(--hover); color:var(--foreground-soft); font-weight:500; }.late { background:var(--danger-soft); color:var(--danger-text); }.today { background:var(--warning-soft); color:var(--warning-text); }
 .meta { display:inline-flex; align-items:center; gap:3px; font-size:11px; color:var(--muted); }.avatars { margin-left:auto; }
+/* BA / Dev บนการ์ด: กลุ่ม avatar ตามบทบาท มีป้ายเล็กนำหน้า · ไม่พอที่ขึ้นแถวใหม่ชิดขวา (flex-wrap ของ cardMeta) */
+.people { display:inline-flex; align-items:center; gap:8px; }.who { display:inline-flex; align-items:center; gap:3px; }.role { font-size:9.5px; font-weight:700; letter-spacing:.05em; color:var(--muted); }
 .moveActions { gap:4px; }.moveActions button { min-height:26px; padding:0 5px; }.dragHint { margin-left:auto; font-size:10px; color:var(--muted); }
 .reorder { opacity:0; }.card:hover .reorder,.card:focus-within .reorder { opacity:1; }
 /* ปุ่มย้ายการ์ดแสดงเมื่อชี้หรือโฟกัส (Canvas ไม่โชว์ค้าง) · ค่อย ๆ ขยายและหุบแทนการโผล่ทันที (ผู้ใช้ขอ 2026-11-13)

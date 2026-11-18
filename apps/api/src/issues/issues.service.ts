@@ -16,7 +16,7 @@ import { isLegacyRank, PLAIN_RANK, rankAfter, rankBetween, spreadRanks } from '.
 import { type ProjectRow, ProjectsService } from '../projects/projects.service.js';
 import { issueProgress, listIssues, TableListQuery } from './table.js';
 import { hasChecklist } from './checklist-progress.js';
-import { enforceWorkflowRules, workflowRuleEnabled } from './rules.js';
+import { baList, enforceWorkflowRules, workflowRuleEnabled } from './rules.js';
 import { checkCustomValues, checkProfile, type CustomFieldDef, type CustomValues, CustomValuesBody, displayValue, readCustomValues, writeCustomValues } from './custom-values.js';
 import type { Level, ProfileValues } from '../projects/field-profile.js';
 import { openStatus } from '../common/status-category.js';
@@ -50,6 +50,8 @@ export const CreateIssueBody = z.object({
   priority: z.enum(['urgent', 'high', 'medium', 'low']).default('medium'),
   assigneeIds: z.array(uuid).max(20).default([]),
   baId: uuid.optional(),
+  /** Business Analyst หลายคน (แทน baId · ผู้ใช้ขอ 2026-11-18) · ตัวแรกเก็บเป็น baId ด้วย */
+  baIds: z.array(uuid).max(20).refine((ids) => new Set(ids).size === ids.length, 'รายชื่อ BA ซ้ำ').optional(),
   /** System Analyst (ผู้ใช้เพิ่ม 2026-11-08) */
   saId: uuid.optional(),
   reviewerId: uuid.optional(),
@@ -90,6 +92,8 @@ export const PatchIssueBody = z
     sprintId: uuid.nullable(),
     assigneeIds: z.array(uuid).max(20).refine((ids) => new Set(ids).size === ids.length, 'รายชื่อผู้รับผิดชอบซ้ำ'),
     baId: uuid.nullable(),
+    /** แทนที่ทั้งชุด · ตัวแรกเก็บเป็น baId ด้วย */
+    baIds: z.array(uuid).max(20).refine((ids) => new Set(ids).size === ids.length, 'รายชื่อ BA ซ้ำ'),
     saId: uuid.nullable(),
     reviewerId: uuid.nullable(),
     /** แทนที่ทั้งชุด · ตัวแรกเก็บเป็น reviewerId ด้วย */
@@ -220,7 +224,8 @@ export class IssuesService {
       await this.checkPeople(tx, customPeople(defs as CustomFieldDef[], custom));
       await this.checkInProject(tx, project.id, { moduleId, phaseId, sprintId });
       const reviewers = reviewersFrom(input) ?? { reviewerId: null, reviewerIds: [] };
-      await this.checkPeople(tx, [...input.assigneeIds, input.baId, input.saId, ...reviewers.reviewerIds, input.testerId, ...input.watcherIds]);
+      const bas = basFrom(input) ?? { baId: null, baIds: [] };
+      await this.checkPeople(tx, [...input.assigneeIds, ...bas.baIds, input.saId, ...reviewers.reviewerIds, input.testerId, ...input.watcherIds]);
       await this.checkLabels(tx, project.id, input.labelIds);
 
       const statusId = input.statusId ?? (await this.firstStatus(tx, type.workflowId));
@@ -260,7 +265,7 @@ export class IssuesService {
           remark: input.remark || null,
           statusId,
           priority: input.priority,
-          baId: input.baId,
+          ...bas,
           saId: input.saId,
           ...reviewers,
           testerId: input.testerId,
@@ -556,10 +561,12 @@ export class IssuesService {
       const warnings: Warning[] = [];
       const [type] = await tx.select().from(s.issueTypes).where(eq(s.issueTypes.id, issue.issueTypeId));
       const set: Partial<typeof s.issues.$inferInsert> = {};
-      const copy = ['title', 'description', 'remark', 'priority', 'baId', 'saId', 'testerId', 'severity', 'environment', 'details', 'sharedWithGuests', 'size'] as const;
+      const copy = ['title', 'description', 'remark', 'priority', 'saId', 'testerId', 'severity', 'environment', 'details', 'sharedWithGuests', 'size'] as const;
       for (const k of copy) if (input[k] !== undefined) (set as Record<string, unknown>)[k] = input[k];
       const reviewers = reviewersFrom(input);
       if (reviewers) Object.assign(set, reviewers);
+      const bas = basFrom(input);
+      if (bas) Object.assign(set, bas);
       if (set.remark === '') set.remark = null;
 
       // Sub-task สืบทอด Module / กลุ่มงาน / Sprint จากงานแม่
@@ -570,7 +577,7 @@ export class IssuesService {
       if (input.phaseId !== undefined) set.phaseId = input.phaseId;
       if (input.sprintId !== undefined && input.sprintId !== issue.sprintId) set.sprintId = input.sprintId;
       await this.checkInProject(tx, project.id, { moduleId: set.moduleId, phaseId: set.phaseId, sprintId: set.sprintId });
-      await this.checkPeople(tx, [...(input.assigneeIds ?? []), input.baId, input.saId, ...(reviewers?.reviewerIds ?? []), input.testerId]);
+      await this.checkPeople(tx, [...(input.assigneeIds ?? []), ...(bas?.baIds ?? []), input.saId, ...(reviewers?.reviewerIds ?? []), input.testerId]);
 
       // ย้าย Sub-task ไปใต้ Task อื่น: เฉพาะ Task ใน Module เดียวกัน (ผู้ใช้ตัดสิน 2026-11-08) · สืบทอดกลุ่มงาน / Sprint จากแม่ใหม่
       let newParent: Issue | null = null;
@@ -1231,6 +1238,7 @@ export class IssuesService {
         // หน้างานปิดตัวเลือกสถานะเมื่อเป็นงานของคนอื่น (กติกาเดียวกับ move / PATCH statusId)
         canMove: canMoveIssue(access, { ...i, assigneeIds: people.filter((p) => p.issueId === i.id).map((p) => p.userId) }),
         baId: i.baId,
+        baIds: baList(i),
         saId: i.saId,
         reviewerId: i.reviewerId,
         reviewerIds: i.reviewerIds,
@@ -1245,7 +1253,7 @@ export class IssuesService {
 /** ค่าของฟิลด์ในชุดฟิลด์จากคำขอสร้างงาน · Priority มีค่าเริ่มต้นเสมอจึงไม่นับเป็นการเขียนฟิลด์ที่ซ่อน */
 function profileValues(input: CreateIssueInput): ProfileValues {
   return {
-    ba: input.baId, sa: input.saId, reviewer: reviewersFrom(input)?.reviewerId ?? undefined, size: input.size,
+    ba: basFrom(input)?.baId ?? undefined, sa: input.saId, reviewer: reviewersFrom(input)?.reviewerId ?? undefined, size: input.size,
     requirements: input.requirements, screens: input.screens, labels: input.labelIds, remark: input.remark,
   };
 }
@@ -1256,7 +1264,8 @@ function changedProfileValues(issue: Issue, refs: { requirements: string[]; scre
   const scalar = (key: keyof ProfileValues, value: unknown, current: unknown) => {
     if (value !== undefined && value !== current) out[key] = value;
   };
-  scalar('ba', input.baId, issue.baId);
+  const bas = basFrom(input);
+  if (bas && !sameList(bas.baIds, baList(issue))) out.ba = bas.baId;
   scalar('sa', input.saId, issue.saId);
   const reviewers = reviewersFrom(input);
   if (reviewers && !sameList(reviewers.reviewerIds, issue.reviewerIds)) out.reviewer = reviewers.reviewerId;
@@ -1324,12 +1333,14 @@ export function outsideParent(parent: Issue, start?: string | null, end?: string
 /** ข้อมูลอ้างอิงที่อยู่ตารางเชื่อม แก้ผ่าน PATCH แบบแทนทั้งชุด */
 const REF_FIELDS = ['requirements', 'screens', 'labelIds'] as const;
 
-const DIFF_FIELDS = ['title', 'description', 'remark', 'statusId', 'priority', 'moduleId', 'phaseId', 'sprintId', 'baId', 'saId', 'testerId', 'size', 'estimateMd', 'planStart', 'planEnd', 'qaEnd', 'actualStart', 'progressPct', 'severity', 'environment', 'sharedWithGuests'] as const;
+const DIFF_FIELDS = ['title', 'description', 'remark', 'statusId', 'priority', 'moduleId', 'phaseId', 'sprintId', 'saId', 'testerId', 'size', 'estimateMd', 'planStart', 'planEnd', 'qaEnd', 'actualStart', 'progressPct', 'severity', 'environment', 'sharedWithGuests'] as const;
 
 function diff(a: Issue, b: Issue) {
   const out = DIFF_FIELDS.filter((f) => a[f] !== b[f]).map((f) => ({ field: f as string, oldValue: a[f] as unknown, newValue: b[f] as unknown }));
   // QA หลายคนเก็บเป็นรายการ · reviewerId (คนแรก) เปลี่ยนตามจึงไม่บันทึกซ้ำ
   if (!sameList(a.reviewerIds, b.reviewerIds)) out.push({ field: 'reviewerIds', oldValue: a.reviewerIds, newValue: b.reviewerIds });
+  // BA หลายคนเหมือน QA · บันทึกเป็นรายการเดียว
+  if (!sameList(baList(a), baList(b))) out.push({ field: 'baIds', oldValue: baList(a), newValue: baList(b) });
   return out;
 }
 
@@ -1348,6 +1359,13 @@ function sameList(a: readonly string[], b: readonly string[]) {
 export function reviewersFrom(input: { reviewerIds?: string[]; reviewerId?: string | null }): { reviewerId: string | null; reviewerIds: string[] } | undefined {
   if (input.reviewerIds !== undefined) return { reviewerId: input.reviewerIds[0] ?? null, reviewerIds: input.reviewerIds };
   if (input.reviewerId !== undefined) return { reviewerId: input.reviewerId, reviewerIds: input.reviewerId ? [input.reviewerId] : [] };
+  return undefined;
+}
+
+/** Business Analyst จากคำขอ: baIds (หลายคน) หรือ baId (แบบเดิม) · undefined = ไม่แก้ · คนแรกเก็บเป็น ba_id ด้วย */
+export function basFrom(input: { baIds?: string[]; baId?: string | null }): { baId: string | null; baIds: string[] } | undefined {
+  if (input.baIds !== undefined) return { baId: input.baIds[0] ?? null, baIds: input.baIds };
+  if (input.baId !== undefined) return { baId: input.baId, baIds: input.baId ? [input.baId] : [] };
   return undefined;
 }
 

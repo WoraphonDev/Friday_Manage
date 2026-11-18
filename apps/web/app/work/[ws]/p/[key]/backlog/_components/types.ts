@@ -1,4 +1,4 @@
-import type { Person } from "@/lib/types";
+import type { AttachmentCount, Person } from "@/lib/types";
 import type { StatusCategory } from "@/lib/status";
 
 /** งานในหน้า Backlog ตาม issueDto ของ A06 (ส่ง assigneeIds เท่านั้น ชื่อคนมาจากสมาชิกโปรเจกต์) */
@@ -13,6 +13,8 @@ export interface BacklogIssue {
   moduleId: string | null;
   size: string | null;
   estimateMd: number | null;
+  /** ไอคอนคลิป: ไฟล์แนบ + Unit test + หลักฐาน QA · ไม่มีไฟล์ = null */
+  attachments?: AttachmentCount | null;
   priority: "urgent" | "high" | "medium" | "low";
   planStart: string | null;
   planEnd: string | null;

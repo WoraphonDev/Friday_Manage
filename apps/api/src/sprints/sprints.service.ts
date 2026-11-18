@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { attachmentCounts, attachmentsOf } from '../files/attachment-counts.js';
 import { schema as s, type Db, type Tx } from '@friday/db';
 import { and, asc, eq, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -113,16 +114,19 @@ export class SprintsService {
       await this.lockProject(tx, project.id);
       const sprints = await tx.select().from(s.sprints).where(and(eq(s.sprints.projectId, project.id), ne(s.sprints.status, 'completed'))).orderBy(asc(s.sprints.number));
       const rows = await loadIssues(tx, project.id);
+      // ไอคอนคลิปในรายการ Backlog / Sprint (files/attachment-counts.ts)
+      const files = await attachmentCounts(tx, rows.map((issue) => issue.id));
+      const dto = (issue: (typeof rows)[number]) => ({ ...issueDto(issue, project.key, access), attachments: attachmentsOf(files, issue.id) });
       const date = today();
       const result = [];
       for (const sprint of sprints) {
         const assigned = rows.filter((issue) => issue.sprintId === sprint.id);
         const cal = await WorkCalendar.load(tx, project, sprint.startDate);
         if (sprint.status === 'active' && !access.archived) await saveSnapshot(tx, sprint, assigned, date);
-        result.push({ ...sprint, issues: assigned.filter((issue) => !issue.parentId).map((issue) => ({ ...issueDto(issue, project.key, access), subtasks: assigned.filter((child) => child.parentId === issue.id).map((child) => issueDto(child, project.key, access)) })), stats: totals(assigned), capacity: await capacity(tx, project, sprint, assigned, cal), burndown: sprint.status === 'active' ? await burndown(tx, sprint, assigned, cal, date) : null });
+        result.push({ ...sprint, issues: assigned.filter((issue) => !issue.parentId).map((issue) => ({ ...dto(issue), subtasks: assigned.filter((child) => child.parentId === issue.id).map(dto) })), stats: totals(assigned), capacity: await capacity(tx, project, sprint, assigned, cal), burndown: sprint.status === 'active' ? await burndown(tx, sprint, assigned, cal, date) : null });
       }
       const unsprinted = rows.filter((issue) => !issue.sprintId);
-      return { projectKey: project.key, asOf: date, permissions: { canManageSprints: access.perms.has('sprint.manage'), canMoveIssues: access.perms.has('issue.edit') }, sprints: result, backlog: { issues: unsprinted.filter((issue) => !issue.parentId).map((issue) => ({ ...issueDto(issue, project.key, access), subtasks: unsprinted.filter((child) => child.parentId === issue.id).map((child) => issueDto(child, project.key, access)) })), stats: totals(unsprinted) } };
+      return { projectKey: project.key, asOf: date, permissions: { canManageSprints: access.perms.has('sprint.manage'), canMoveIssues: access.perms.has('issue.edit') }, sprints: result, backlog: { issues: unsprinted.filter((issue) => !issue.parentId).map((issue) => ({ ...dto(issue), subtasks: unsprinted.filter((child) => child.parentId === issue.id).map(dto) })), stats: totals(unsprinted) } };
     });
   }
 

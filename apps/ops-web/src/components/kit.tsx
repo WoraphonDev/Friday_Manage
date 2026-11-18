@@ -124,6 +124,11 @@ export function RoleChips({ roles, elevated = [] }: { roles: OpsRole[]; elevated
 
 // ---------------------------------------------------------------- Drawer · Popover · แถบเตือน
 
+/** กดปุ่มบน toast (เช่น "ย้อนกลับ") ไม่นับเป็นคลิกนอกแผง · แผงจึงไม่ปิดเอง */
+const keepOpenOnToast = (e: { target: EventTarget | null; preventDefault: () => void }) => {
+  if (e.target instanceof Element && e.target.closest(".toast-region")) e.preventDefault();
+};
+
 /** Drawer / Modal เลื่อนและจางเข้า-ออกตาม data-state (ops.css) · หน้าที่ปิดด้วยการเลิก render ได้ animation ปิดจาก useExitGhost */
 export function Drawer({ open, onOpenChange, title, description, wide, className, children }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; description?: ReactNode; wide?: boolean; className?: string; children?: ReactNode }) {
   const t = useTranslations("common.dialog");
@@ -133,7 +138,7 @@ export function Drawer({ open, onOpenChange, title, description, wide, className
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay ref={overlayGhost} className="overlay" />
-        <RadixDialog.Content ref={contentGhost} className={clsx("drawer", wide && "drawer-wide", className)} {...(!description ? { "aria-describedby": undefined } : {})}>
+        <RadixDialog.Content ref={contentGhost} className={clsx("drawer", wide && "drawer-wide", className)} onInteractOutside={keepOpenOnToast} {...(!description ? { "aria-describedby": undefined } : {})}>
           <div className="dialog-heading">
             <RadixDialog.Title asChild>
               <h2>{title}</h2>
@@ -161,7 +166,7 @@ export function Modal({ open, onOpenChange, title, description, className, hideT
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay ref={overlayGhost} className="overlay" />
-        <RadixDialog.Content ref={contentGhost} className={clsx("dialog", className)} {...(!description ? { "aria-describedby": undefined } : {})}>
+        <RadixDialog.Content ref={contentGhost} className={clsx("dialog", className)} onInteractOutside={keepOpenOnToast} {...(!description ? { "aria-describedby": undefined } : {})}>
           {hideTitle ? (
             <RadixDialog.Title className="sr-only">{title}</RadixDialog.Title>
           ) : (

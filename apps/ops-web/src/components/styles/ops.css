@@ -3042,3 +3042,14 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 .new-items { align-self: center; border: 0; border-radius: 999px; padding: 6px 14px; background: var(--primary); color: var(--on-primary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-card); }
 .new-items:hover { background: var(--primary-hover); }
 .new-items:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.run-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 20px; background: var(--primary-soft); border-bottom: 1px solid var(--primary-border); }
+.run-progress { flex: 1 1 120px; height: 6px; border-radius: 3px; background: var(--card); overflow: hidden; }
+.run-progress > i { display: block; height: 100%; background: var(--primary); transition: width var(--motion-dur) var(--motion-ease); }
+.run-note { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+.run-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.run-stats > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-2); }
+.run-stats b { font-size: 20px; }
+.presence-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius-control); font-size: 13px; }
+.presence-banner.warn { background: var(--warning-soft); color: var(--warning-text); border: 1px solid var(--warning-border); }
+.presence-banner.info { background: var(--primary-soft); color: var(--primary-text); border: 1px solid var(--primary-border); }
+.viewing { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 0 8px; height: 20px; border-radius: 999px; background: var(--warning-soft); color: var(--warning-text); font-size: 12px; white-space: nowrap; }

@@ -14,8 +14,13 @@ export function keyLabel(keys: string) {
     .join(mac ? "" : "+");
 }
 
-export function Kbd({ keys }: { keys: string }) {
-  return <kbd className="kbd">{keyLabel(keys)}</kbd>;
+/** ป้ายปุ่มลัดบนปุ่ม: ตกแต่งอย่างเดียว ไม่รวมในชื่อปุ่มที่โปรแกรมอ่านจออ่าน (ดูปุ่มลัดได้ที่ "?") */
+export function Kbd({ keys, label = false }: { keys: string; label?: boolean }) {
+  return (
+    <kbd className="kbd" aria-hidden={label ? undefined : true}>
+      {keyLabel(keys)}
+    </kbd>
+  );
 }
 
 /**
@@ -58,7 +63,7 @@ export function ShortcutHelp() {
             <div key={s.keys}>
               <dt>{s.label}</dt>
               <dd>
-                <Kbd keys={s.keys} />
+                <Kbd label keys={s.keys} />
               </dd>
             </div>
           ))}
@@ -71,7 +76,7 @@ export function ShortcutHelp() {
                 <div key={s.keys}>
                   <dt>{s.label}</dt>
                   <dd>
-                    <Kbd keys={s.keys} />
+                    <Kbd label keys={s.keys} />
                   </dd>
                 </div>
               ))}

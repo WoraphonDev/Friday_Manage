@@ -12,6 +12,8 @@ export interface StaffMember {
   status: "invited" | "active" | "suspended" | "disabled";
   expiresAt: string | null;
   keys: { id: string; name: string; createdAt: string; lastUsedAt: string | null }[];
+  /** ตั้งรหัสผ่าน + แอป Authenticator เมื่อไร · null = ยังไม่ตั้ง */
+  totpEnabledAt?: string | null;
   createdAt: string;
   elevations: { id: string; role: OpsRole; endsAt: string }[];
   /** อีเมลส่วนตัว (H1) · เจ้าของบัญชีเห็นเต็ม · คนอื่นเห็นแบบปิดบางส่วน */

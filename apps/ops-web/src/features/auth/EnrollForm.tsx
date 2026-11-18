@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Button, buttonClass, InlineError, Input } from "@/components/ui";
+import { PasswordSetup } from "./PasswordSetup";
 import { keyErrorKind, registerKey } from "./webauthn";
 
 /** mode `token` = พนักงานใหม่ใช้ enrollToken จากสคริปต์ `enroll` · mode `session` = เพิ่ม key สำรองขณะล็อกอินอยู่ */
@@ -90,16 +91,27 @@ export function EnrollForm({ mode, token: initialToken = "" }: { mode: "token" |
   );
 }
 
+/** ลิงก์เชิญ / ลิงก์ตั้งค่าใหม่ · ค่าเริ่มต้นคือรหัสผ่าน + แอป Authenticator · เลือกใช้ Security key 2 อันแทนได้ */
 export function EnrollPage({ token }: { token?: string }) {
   const t = useTranslations("ops.auth");
+  const [useKeys, setUseKeys] = useState(false);
   return (
     <main className="auth-page">
       <section className="card auth-card">
         <div>
-          <h1 className="page-title">{t("enrollTitle")}</h1>
-          <p className="muted">{t("enrollDesc")}</p>
+          <h1 className="page-title">{useKeys ? t("enrollTitle") : t("setupTitle")}</h1>
+          <p className="muted">{useKeys ? t("enrollDesc") : t("setupDesc")}</p>
         </div>
-        <EnrollForm mode="token" token={token} />
+        {useKeys ? (
+          <>
+            <EnrollForm mode="token" token={token} />
+            <button type="button" className="auth-link" onClick={() => setUseKeys(false)}>
+              {t("usePasswordInstead")}
+            </button>
+          </>
+        ) : (
+          <PasswordSetup mode="token" token={token} onUseKey={() => setUseKeys(true)} />
+        )}
         <Link href="/login" className="small">
           {t("backLogin")}
         </Link>

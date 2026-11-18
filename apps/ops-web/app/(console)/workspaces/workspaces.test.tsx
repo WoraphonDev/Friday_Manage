@@ -253,7 +253,7 @@ describe("รายละเอียดลูกค้า", () => {
     await userEvent.type(within(dlg).getByLabelText("Ticket"), "#503");
     await userEvent.type(within(dlg).getByLabelText("เหตุผล"), "Owner เดิมลาออก บริษัทแจ้งผ่าน Ticket");
     await userEvent.click(within(dlg).getByRole("button", { name: "ส่งให้คนที่สองอนุมัติ" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     expect(await screen.findByText("ส่งขออนุมัติแล้ว")).toBeInTheDocument();
     expect(body).toEqual({ newOwnerUserId: "u-pm", ticketNo: "#503", reason: "Owner เดิมลาออก บริษัทแจ้งผ่าน Ticket", evidence: { companyLetter: true, legalNameMatches: true } });
   });

@@ -221,10 +221,41 @@ describe("แถบบน", () => {
     const card = await screen.findByRole("article", { name: "คืนเงิน" });
     expect(within(card).getByText("฿14,000.00")).toBeInTheDocument();
     await userEvent.click(within(card).getByRole("button", { name: "อนุมัติ" }));
-    expect(await screen.findByText("แตะ Security key เพื่อยืนยัน")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "แตะกุญแจ" }));
+    expect(await screen.findByText("แตะ Passkey เพื่อยืนยัน")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "แตะ Passkey" }));
     expect(await screen.findByText("อนุมัติแล้ว")).toBeInTheDocument();
     expect(approveCalls).toBe(2);
+  });
+
+  it("ยืนยันตัวตนซ้ำ (G4) ด้วยรหัส 6 หลักเมื่อตั้งแอป Authenticator แล้ว · Passkey เป็นปุ่มรอง", async () => {
+    let approveCalls = 0;
+    let code: unknown;
+    server.use(
+      http.get(`${OPS}/auth/me`, () => HttpResponse.json({ staff: staff.admin, methods: { totp: true, totpEnabledAt: "2026-11-18T00:00:00Z", keys: [] } })),
+      http.get(`${OPS}/approvals`, () =>
+        HttpResponse.json({
+          items: [{ id: "ap-1", kind: "billing.refund", reason: "ลูกค้าย้ายไปใช้เครื่องมืออื่น", amountSatang: 1_400_000, payload: {}, requestedBy: "someone", requesterName: "การเงินตัวอย่าง", createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86_400_000).toISOString(), status: "pending", canSelfApprove: false }],
+          singleApprover: false,
+        }),
+      ),
+      http.post(`${OPS}/approvals/ap-1/approve`, () => (++approveCalls === 1 ? opsError(401, "reauth_required", "ยืนยันตัวตนอีกครั้ง") : HttpResponse.json({ approval: {}, result: {} }))),
+      http.post(`${OPS}/auth/reauth/totp`, async ({ request }) => ((code = await request.json()), HttpResponse.json({ reauthed: true, expiresInSeconds: 900 }))),
+    );
+    shell();
+    await screen.findByText("เนื้อหาของหน้า");
+    await userEvent.click(await screen.findByRole("button", { name: /การแจ้งเตือน/ }));
+    await userEvent.click(screen.getByRole("button", { name: /รออนุมัติ/ }));
+    const card = await screen.findByRole("article", { name: "คืนเงิน" });
+    await userEvent.click(within(card).getByRole("button", { name: "อนุมัติ" }));
+    expect(await screen.findByText("ยืนยันตัวตนอีกครั้ง")).toBeInTheDocument();
+    // ไม่มี Passkey ในบัญชี: ไม่มีปุ่มแตะ Passkey
+    expect(screen.queryByRole("button", { name: "แตะ Passkey แทน" })).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("รหัส 6 หลักจากแอป Authenticator"), "135790");
+    await userEvent.click(screen.getByRole("button", { name: "ยืนยัน" }));
+    expect(await screen.findByText("อนุมัติแล้ว")).toBeInTheDocument();
+    expect(code).toEqual({ code: "135790" });
+    expect(approveCalls).toBe(2);
+    expect(startAuthentication).not.toHaveBeenCalled();
   });
 
   it("เมนูบัญชี (G3): ออกจากระบบ", async () => {
@@ -252,8 +283,26 @@ describe("เซสชันหมดอายุ (S3)", () => {
     act(() => void window.dispatchEvent(new CustomEvent(OPS_UNAUTHORIZED)));
     expect(await screen.findByText("เซสชันหมดอายุ")).toBeInTheDocument();
     expect(router.replace).not.toHaveBeenCalledWith("/login");
-    await userEvent.click(screen.getByRole("button", { name: "แตะ Security key เพื่อทำต่อจากหน้าเดิม" }));
+    await userEvent.click(screen.getByRole("button", { name: "แตะ Passkey แทน" }));
     await waitFor(() => expect(screen.queryByText("เซสชันหมดอายุ")).not.toBeInTheDocument());
     expect(screen.getByText("เนื้อหาของหน้า")).toBeInTheDocument();
+  });
+
+  it("ทำต่อด้วยรหัสผ่าน + รหัส 6 หลัก (เครื่องที่ไม่มี Passkey)", async () => {
+    const sent: unknown[] = [];
+    server.use(
+      http.post(`${OPS}/auth/login/password`, async ({ request }) => (sent.push(await request.json()), HttpResponse.json({ mfaToken: "mfa-token-123", email: staff.admin.email }))),
+      http.post(`${OPS}/auth/login/totp`, async ({ request }) => (sent.push(await request.json()), HttpResponse.json({ staff: staff.admin }))),
+    );
+    shell();
+    await screen.findByText("เนื้อหาของหน้า");
+    act(() => void window.dispatchEvent(new CustomEvent(OPS_UNAUTHORIZED)));
+    await screen.findByText("เซสชันหมดอายุ");
+    await userEvent.type(screen.getByLabelText("รหัสผ่าน"), "correct-horse-battery");
+    await userEvent.type(screen.getByLabelText("รหัส 6 หลัก"), "246810");
+    await userEvent.click(screen.getByRole("button", { name: "ทำต่อจากหน้าเดิม" }));
+    await waitFor(() => expect(screen.queryByText("เซสชันหมดอายุ")).not.toBeInTheDocument());
+    expect(sent).toEqual([{ email: staff.admin.email, password: "correct-horse-battery" }, { mfaToken: "mfa-token-123", code: "246810" }]);
+    expect(startAuthentication).not.toHaveBeenCalled();
   });
 });

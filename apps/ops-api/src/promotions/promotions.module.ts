@@ -42,7 +42,7 @@ export class PromotionsController {
   createCoupon(@Req() req: OpsRequest, @Body() body: unknown, @Res({ passthrough: true }) res: Response) {
     const input = parse(CouponBody, body);
     // ตรวจก่อนบันทึก: หน้าเว็บส่งคำขอเดิมซ้ำหลังแตะ key ถ้าบันทึกร่างไปก่อนจะชนโค้ดซ้ำ
-    if (input.activate && !req.reauthed) throw new AppError(401, 'reauth_required', 'แตะ Security key เพื่อยืนยันตัวตนอีกครั้ง');
+    if (input.activate && !req.reauthed) throw new AppError(401, 'reauth_required', 'ยืนยันตัวตนอีกครั้ง (รหัส 6 หลักหรือ Security key)');
     return respond(res, this.promo.createCoupon(req.staff!, input), 201);
   }
 

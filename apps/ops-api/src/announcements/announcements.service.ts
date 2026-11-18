@@ -238,7 +238,7 @@ export class AnnouncementsService implements OnModuleInit, OnModuleDestroy {
     const id = await this.db.transaction(async (tx) => {
       const ws = await this.targetsOf(tx, input);
       if (!ws.length) throw new AppError(422, 'no_workspaces', 'ไม่มี Workspace ตรงกับผู้รับที่เลือก');
-      if (ws.length > REAUTH_OVER && !reauthed) throw new AppError(401, 'reauth_required', `ส่งถึงเกิน ${REAUTH_OVER.toLocaleString('en-US')} Workspace · แตะ Security key เพื่อยืนยันตัวตนอีกครั้ง`);
+      if (ws.length > REAUTH_OVER && !reauthed) throw new AppError(401, 'reauth_required', `ส่งถึงเกิน ${REAUTH_OVER.toLocaleString('en-US')} Workspace · ยืนยันตัวตนอีกครั้ง (รหัส 6 หลักหรือ Security key)`);
       const selected = input.targetMode === 'selected';
       const [row] = await tx
         .insert(a)

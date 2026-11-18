@@ -106,7 +106,7 @@ describe("เอกสารกฎหมาย", () => {
     expect(within(mail).getByText("ตั้งแต่วันที่มีผล คุณต้องกดยอมรับครั้งแรกที่เข้าใช้งาน")).toBeInTheDocument();
     await userEvent.click(within(mail).getAllByRole("button", { name: "ปิด" }).at(-1)!);
     await userEvent.click(within(drawer).getByRole("button", { name: "เผยแพร่" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     await waitFor(() => expect(body).toMatchObject({ docType: "terms", locale: "th", version: "4", requiresAcceptance: true, summary: "เพิ่มเงื่อนไขการใช้ LINE OA", notifyAudience: "all", remind: true, notifyBanner: true }));
     expect(body.notifyAt).toBeUndefined();
     expect(Date.parse(body.effectiveAt as string) - Date.now()).toBeGreaterThan(29 * day);
@@ -138,7 +138,7 @@ describe("เอกสารกฎหมาย", () => {
     await userEvent.selectOptions(within(drawer).getByLabelText("เตือนอีกครั้ง"), "no");
     await userEvent.click(within(drawer).getByLabelText("แบนเนอร์ในแอปตั้งแต่วันนี้ถึงวันที่มีผล"));
     await userEvent.click(within(drawer).getByRole("button", { name: "เผยแพร่" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     await waitFor(() => expect(body).toMatchObject({ requiresAcceptance: false, notifyAudience: "admins", remind: false, notifyBanner: false }));
     expect(Date.parse(body.notifyAt as string)).toBeGreaterThan(Date.now());
   });

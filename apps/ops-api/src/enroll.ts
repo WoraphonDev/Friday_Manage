@@ -1,4 +1,4 @@
-// ออกโทเค็นลงทะเบียน Security key ครั้งแรกของพนักงาน: pnpm --filter @friday/ops-api enroll <email> [ชื่อ] [บทบาท คั่นด้วย , เช่น owner,finance]
+// ออกโทเค็นตั้งค่าการเข้าระบบครั้งแรกของพนักงาน (รหัสผ่าน + Authenticator หรือ Security key): pnpm --filter @friday/ops-api enroll <email> [ชื่อ] [บทบาท คั่นด้วย , เช่น owner,finance]
 // ใช้ตั้ง Owner คนแรก · พนักงานคนต่อไปเชิญจากหน้าพนักงาน (POST ops/staff)
 import { createDb, schema } from '@friday/db';
 
@@ -21,5 +21,7 @@ const db = createDb(config.dbUrl, 1);
 let [row] = await db.select().from(schema.staffUsers).where(sql`lower(${schema.staffUsers.email}) = ${email.toLowerCase()}`);
 if (!row) [row] = await db.insert(schema.staffUsers).values({ email, name: name ?? email.split('@')[0], roles }).returning();
 console.log(`พนักงาน: ${row.email} (${row.roles.join(', ')})`);
-console.log(`โทเค็นลงทะเบียน (ใช้ได้ 1 ชั่วโมง):\n${signEnrollToken(row.id)}`);
+const token = signEnrollToken(row.id);
+console.log(`โทเค็นลงทะเบียน (ใช้ได้ 1 ชั่วโมง):\n${token}`);
+console.log(`ลิงก์ตั้งรหัสผ่าน + แอป Authenticator:\n${config.origin}/enroll?token=${encodeURIComponent(token)}`);
 await db.$client.end();

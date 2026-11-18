@@ -12,7 +12,8 @@ import { KeyRound, ShieldAlert } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import { api, ApiError } from "@/lib/api";
-import { useMe } from "@/lib/query";
+import { fetchMethods, reauthWithCode } from "@/features/auth/password";
+import { keys, useMe } from "@/lib/query";
 import { hasAny } from "./access";
 import { Drawer, Empty, ErrorBlock, Modal, Notice, TableSkeleton } from "./kit";
 import { Button, errorToast, InlineError, Input, Textarea, useToast } from "./ui";
@@ -43,6 +44,9 @@ export function ReauthProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<Pending | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<unknown>(null);
+  const [code, setCode] = useState("");
+  // วิธีที่บัญชีนี้มี: ตั้งแอป Authenticator แล้ว → ใส่รหัส 6 หลัก (ใช้ได้ทุกเครื่อง) · Passkey เป็นทางเลือก
+  const methods = useQuery({ queryKey: keys.methods, queryFn: fetchMethods, enabled: !!pending });
 
   const run = useCallback(async <T,>(fn: () => Promise<T>, label?: string): Promise<T> => {
     try {
@@ -54,14 +58,15 @@ export function ReauthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const tap = async () => {
+  const confirm = async (how: () => Promise<unknown>) => {
     if (!pending) return;
     setBusy(true);
     setFailed(null);
     try {
-      await reauthenticate();
+      await how();
       const p = pending;
       setPending(null);
+      setCode("");
       p.resolve();
     } catch (e) {
       setFailed(e);
@@ -73,31 +78,66 @@ export function ReauthProvider({ children }: { children: ReactNode }) {
     pending?.reject(pending.error);
     setPending(null);
     setFailed(null);
+    setCode("");
   };
   const cancelled = failed instanceof Error && !(failed instanceof ApiError);
+  const totp = !!methods.data?.totp;
+  const hasKeys = !methods.data || methods.data.keys.length > 0;
 
   return (
     <ReauthContext.Provider value={{ run }}>
       {children}
-      <Modal open={!!pending} onOpenChange={(o) => !o && close()} title={t("title")} description={t("desc")}>
-        <div className="dialog-body">
+      <Modal open={!!pending} onOpenChange={(o) => !o && close()} title={totp ? t("titleCode") : t("title")} description={t("desc")}>
+        <form
+          className="dialog-body"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (/^\d{6}$/.test(code)) void confirm(() => reauthWithCode(code));
+          }}
+        >
           {pending?.label && (
             <div className="row">
               <span className="muted">{t("action")}</span>
               <b>{pending.label}</b>
             </div>
           )}
-          <Notice tone="info" icon={<KeyRound size={18} />} title={busy ? t("waiting") : t("hint")} />
+          {totp ? (
+            <Input
+              label={t("code")}
+              className="auth-code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              autoFocus
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            />
+          ) : (
+            <Notice tone="info" icon={<KeyRound size={18} />} title={busy ? t("waiting") : t("hint")} />
+          )}
           {cancelled ? <InlineError error={new Error(t("cancelled"))} /> : <InlineError error={failed} />}
-          <p className="muted small">{t("noBackup")}</p>
+          {!totp && methods.data && <p className="muted small">{t("setupHint")}</p>}
           <div className="dialog-actions">
             <Button onClick={close}>{td("cancel")}</Button>
-            <Button variant="primary" disabled={busy} onClick={() => void tap()}>
-              <KeyRound size={16} />
-              {failed ? t("retry") : t("start")}
-            </Button>
+            {totp && hasKeys && (
+              <Button disabled={busy} onClick={() => void confirm(reauthenticate)}>
+                <KeyRound size={16} />
+                {t("useKey")}
+              </Button>
+            )}
+            {totp ? (
+              <Button type="submit" variant="primary" disabled={busy || code.length !== 6}>
+                {busy ? t("checking") : t("confirm")}
+              </Button>
+            ) : (
+              <Button variant="primary" disabled={busy || methods.isPending} onClick={() => void confirm(reauthenticate)}>
+                <KeyRound size={16} />
+                {failed ? t("retry") : t("start")}
+              </Button>
+            )}
           </div>
-        </div>
+        </form>
       </Modal>
     </ReauthContext.Provider>
   );

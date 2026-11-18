@@ -8,6 +8,7 @@ import { signEnrollToken } from '../src/auth/auth.service.js';
 import { signToken } from './token.js';
 import { Mailer } from '../src/mail.js';
 import { SoftKey } from './authenticator.js';
+import { totpAt } from '../src/auth/password.js';
 import { customer, type Customer, reauth, signIn, staff, type Staff, startOps, type TestOps } from './helpers.js';
 
 let t: TestOps;
@@ -127,6 +128,88 @@ describe('ล็อกอินด้วย Security key (WebAuthn)', () => {
     await t.owner.query(`UPDATE approval_requests SET status = 'cancelled' WHERE id = $1`, [sus.body.pendingApproval.id]);
     expect((await admin.agent.get('/ops/payments')).status).toBe(200);
     expect((await support.agent.get('/ops/workspaces')).status).toBe(200);
+  });
+});
+
+describe('ล็อกอินด้วยรหัสผ่าน + แอป Authenticator (ใช้ได้ทุกเครื่อง)', () => {
+  const code = (secret: string, offset = 0) => totpAt(secret, Math.floor(Date.now() / 1000 / 30) + offset);
+  const PW = 'correct-horse-battery';
+
+  it('พนักงานใหม่ตั้งรหัสผ่าน + แอปด้วยลิงก์เชิญ → เปิดใช้งาน → เข้าระบบ 2 ขั้น · ไม่ต้องมี Security key', async () => {
+    const row = await t.owner.query(`INSERT INTO staff_users (email, name, roles, status) VALUES ('pw@friday.example.com', 'Pim Password', '{support}', 'invited') RETURNING id`);
+    const id = row.rows[0].id;
+    const agent = request.agent(t.app.getHttpServer());
+    expect((await agent.post('/ops/auth/password/setup').send({})).status).toBe(401);
+    expect((await agent.post('/ops/auth/password/setup').send({ enrollToken: signToken('ops-enroll', { sid: id }, -10) })).status).toBe(401);
+    const setup = await agent.post('/ops/auth/password/setup').send({ enrollToken: signEnrollToken(id) });
+    expect(setup.status, JSON.stringify(setup.body)).toBe(200);
+    expect(setup.body.otpauthUrl).toMatch(/^otpauth:\/\/totp\/.+secret=/);
+    // ยังไม่บันทึก secret จนกว่าจะยืนยันรหัส
+    expect((await t.owner.query(`SELECT totp_secret_enc FROM staff_users WHERE id = $1`, [id])).rows[0].totp_secret_enc).toBeNull();
+    expect((await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: 'short', code: code(setup.body.secret) })).status).toBe(400);
+    expect((await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: PW, code: '000000' })).status).toBe(422);
+    const ok = await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: PW, code: code(setup.body.secret) });
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    expect(ok.body.status).toBe('active');
+    const stored = (await t.owner.query(`SELECT password_hash, totp_secret_enc FROM staff_users WHERE id = $1`, [id])).rows[0];
+    expect(stored.password_hash).toMatch(/^scrypt\$/);
+    expect(stored.totp_secret_enc).not.toContain(setup.body.secret);
+
+    // เครื่องใหม่ (agent ใหม่ ไม่มี cookie / ไม่มี key)
+    const other = request.agent(t.app.getHttpServer());
+    expect((await other.post('/ops/auth/login/password').send({ email: 'pw@friday.example.com', password: 'wrong-password-123' })).status).toBe(401);
+    expect((await other.post('/ops/auth/login/password').send({ email: 'nobody@friday.example.com', password: PW })).status).toBe(401);
+    const step1 = await other.post('/ops/auth/login/password').send({ email: 'PW@friday.example.com', password: PW });
+    expect(step1.status, JSON.stringify(step1.body)).toBe(200);
+    expect(step1.headers['set-cookie']).toBeUndefined(); // ยังไม่ได้ session จนกว่าใส่รหัส 6 หลัก
+    expect((await other.get('/ops/auth/me')).status).toBe(401);
+    // รหัสที่ใช้ตอนตั้งค่าแล้วใช้ซ้ำไม่ได้ · รหัสของ step ถัดไปใช้ได้
+    expect((await other.post('/ops/auth/login/totp').send({ mfaToken: step1.body.mfaToken, code: code(setup.body.secret) })).status).toBe(401);
+    expect((await other.post('/ops/auth/login/totp').send({ mfaToken: 'bad.token.value', code: '123456' })).status).toBe(400);
+    const step2 = await other.post('/ops/auth/login/totp').send({ mfaToken: step1.body.mfaToken, code: code(setup.body.secret, 1) });
+    expect(step2.status, JSON.stringify(step2.body)).toBe(200);
+    expect(step2.body.staff).toMatchObject({ email: 'pw@friday.example.com' });
+    const me = await other.get('/ops/auth/me');
+    expect(me.body.methods).toMatchObject({ totp: true, keys: [] });
+  });
+
+  it('ใส่รหัสผ่านผิด 5 ครั้ง → ล็อก 15 นาที (รหัสถูกก็เข้าไม่ได้) + บันทึก Audit', async () => {
+    const row = await t.owner.query(`INSERT INTO staff_users (email, name, roles, status) VALUES ('lock@friday.example.com', 'Lock', '{support}', 'invited') RETURNING id`);
+    const id = row.rows[0].id;
+    const agent = request.agent(t.app.getHttpServer());
+    const setup = await agent.post('/ops/auth/password/setup').send({ enrollToken: signEnrollToken(id) });
+    await agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: PW, code: code(setup.body.secret) }).expect(200);
+    const statuses: number[] = [];
+    for (let i = 0; i < 5; i++) statuses.push((await agent.post('/ops/auth/login/password').send({ email: 'lock@friday.example.com', password: `nope-${i}-xxxxxxxx` })).status);
+    expect(statuses).toEqual([401, 401, 401, 401, 429]);
+    const locked = await agent.post('/ops/auth/login/password').send({ email: 'lock@friday.example.com', password: PW });
+    expect(locked.status).toBe(429);
+    expect(locked.body.error.code).toBe('account_locked');
+    expect((await t.owner.query(`SELECT 1 FROM staff_audit_logs WHERE action = 'staff.locked' AND target_id = $1`, [id])).rowCount).toBe(1);
+  });
+
+  it('บัญชีที่มีแต่ Security key ตั้งรหัสผ่านเองได้หลังยืนยันตัวตนซ้ำ · ยืนยันซ้ำด้วยรหัส 6 หลัก · ลบกุญแจอันสุดท้ายได้เมื่อมีรหัสผ่านแล้ว', async () => {
+    const st = await staff(t, 'keyonly@friday.example.com', 'Key Only', 'support');
+    expect((await st.agent.get('/ops/auth/me')).body.methods).toMatchObject({ totp: false });
+    expect((await st.agent.post('/ops/auth/login/password').send({ email: st.email, password: PW })).status).toBe(401);
+    const keyId = (await st.agent.get('/ops/auth/me')).body.methods.keys[0].id;
+    // ยังไม่มีรหัสผ่าน: ลบกุญแจอันสุดท้ายไม่ได้
+    await reauth(st);
+    expect((await st.agent.delete(`/ops/auth/keys/${encodeURIComponent(keyId)}`)).status).toBe(422);
+    const fresh = request.agent(t.app.getHttpServer());
+    await signIn(fresh, st.email, st.key).then((r) => expect(r.status).toBe(200));
+    const noReauth = await fresh.post('/ops/auth/password/setup').send({});
+    expect(noReauth.body.error.code).toBe('reauth_required');
+    const setup = await st.agent.post('/ops/auth/password/setup').send({});
+    expect(setup.status, JSON.stringify(setup.body)).toBe(200);
+    await st.agent.post('/ops/auth/password/verify').send({ setupToken: setup.body.setupToken, password: PW, code: code(setup.body.secret) }).expect(200);
+    // ยืนยันตัวตนซ้ำด้วยรหัส 6 หลัก (agent ใหม่ยังไม่เคยยืนยัน)
+    expect((await fresh.post('/ops/auth/reauth/totp').send({ code: '000000' })).status).toBe(401);
+    const re = await fresh.post('/ops/auth/reauth/totp').send({ code: code(setup.body.secret, 1) });
+    expect(re.status, JSON.stringify(re.body)).toBe(200);
+    expect((await fresh.get('/ops/auth/me')).body.reauthed).toBe(true);
+    expect((await fresh.delete(`/ops/auth/keys/${encodeURIComponent(keyId)}`)).status).toBe(200);
+    expect((await fresh.get('/ops/auth/me')).body.methods).toMatchObject({ totp: true, keys: [] });
   });
 });
 

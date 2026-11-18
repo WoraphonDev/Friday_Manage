@@ -303,7 +303,7 @@ describe("ใบแจ้งหนี้ ค้างชำระ ภาษี �
     expect(await screen.findByText(/ส่งให้สำนักงานบัญชีทุกวันที่ 5 เวลา 09:00 · ถัดไป/)).toBeInTheDocument();
     await userEvent.click(await screen.findByRole("button", { name: "ปิดงวด" }));
     await userEvent.click(within(await screen.findByRole("dialog", { name: /^ปิดงวด / })).getByRole("button", { name: "ปิดงวด" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     await waitFor(() => expect(closed).toBe("2026-10"));
     let sent: unknown = null;
     server.use(http.post(`${OPS}/revenue/export/send`, async ({ request }) => ((sent = await request.json()), HttpResponse.json({ sent: 2, month: "2026-10", to: ["account@office.example.com", "tax@office.example.com"] }))));
@@ -378,7 +378,7 @@ describe("คืนเงินและอนุมัติ", () => {
     expect(within(card).getByText("คืนเงิน · ฿14,000")).toBeInTheDocument();
     expect(screen.getByText("CN-2611-0001")).toBeInTheDocument();
     await userEvent.click(within(card).getByRole("button", { name: "อนุมัติ" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     await waitFor(() => expect(approved).toBe(true));
     await userEvent.click(within(card).getByRole("button", { name: "ไม่อนุมัติ" }));
     const d = await screen.findByRole("dialog", { name: /ไม่อนุมัติ/ });

@@ -145,7 +145,7 @@ export class StaffService {
   }
 
   async invite(owner: Staff, reauthed: boolean, input: z.infer<typeof InviteBody>) {
-    if (input.roles.includes('owner') && !reauthed) throw new AppError(401, 'reauth_required', 'เพิ่มบทบาท Owner ต้องแตะ Security key อีกครั้ง');
+    if (input.roles.includes('owner') && !reauthed) throw new AppError(401, 'reauth_required', 'เพิ่มบทบาท Owner ต้องยืนยันตัวตนอีกครั้ง');
     const [dup] = await this.db.select({ id: s.staffUsers.id }).from(s.staffUsers).where(sql`lower(${s.staffUsers.email}) = ${input.email.toLowerCase()}`);
     if (dup) throw new AppError(409, 'staff_exists', 'อีเมลนี้เป็นพนักงานอยู่แล้ว');
     const [row] = await this.db
@@ -155,7 +155,7 @@ export class StaffService {
     const enrollUrl = this.enrollUrl(row.id);
     await staffAudit(this.db, owner, 'staff.invited', `${input.email} · ${input.roles.join(', ')}`, { type: 'staff', id: row.id });
     try {
-      await this.mail.send({ to: input.email, subject: 'เชิญเข้าใช้ Friday Ops', text: `${owner.name} เชิญคุณเข้าใช้ Friday Ops\nลงทะเบียน Security key 2 อันภายใน 1 ชั่วโมงที่ ${enrollUrl}` });
+      await this.mail.send({ to: input.email, subject: 'เชิญเข้าใช้ Friday Ops', text: `${owner.name} เชิญคุณเข้าใช้ Friday Ops\nตั้งรหัสผ่านและแอป Authenticator (หรือ Security key) ภายใน 1 ชั่วโมงที่ ${enrollUrl}` });
     } catch {
       /* Owner ส่งลิงก์ให้เองได้จาก enrollUrl */
     }
@@ -166,7 +166,7 @@ export class StaffService {
     const row = await this.get(id);
     const wasOwner = row.roles.includes('owner');
     const nextRoles = input.roles ?? (row.roles as StaffRole[]);
-    if (!wasOwner && nextRoles.includes('owner') && !reauthed) throw new AppError(401, 'reauth_required', 'เพิ่มบทบาท Owner ต้องแตะ Security key อีกครั้ง');
+    if (!wasOwner && nextRoles.includes('owner') && !reauthed) throw new AppError(401, 'reauth_required', 'เพิ่มบทบาท Owner ต้องยืนยันตัวตนอีกครั้ง');
     if (wasOwner && !nextRoles.includes('owner')) await this.keepOneOwner(id);
     const patch: Partial<typeof s.staffUsers.$inferInsert> = { roles: nextRoles, updatedAt: new Date() };
     if (input.department !== undefined) patch.department = input.department;
@@ -195,7 +195,7 @@ export class StaffService {
     return { staff: this.dto(r) };
   }
 
-  /** ลิงก์ลงทะเบียนกุญแจใหม่ (กุญแจหาย) */
+  /** ลิงก์ตั้งค่าการเข้าระบบใหม่ (ลืมรหัสผ่าน / มือถือหรือกุญแจหาย) */
   async enrollLink(owner: Staff, id: string) {
     const row = await this.get(id);
     if (row.status === 'disabled') throw new AppError(409, 'staff_disabled', 'บัญชีนี้ถูกปิดแล้ว');
@@ -208,7 +208,8 @@ export class StaffService {
     const creds = (row.webauthnCredentials ?? []) as StoredCredential[];
     const key = creds.find((c) => c.id === credentialId);
     if (!key) throw new AppError(404, 'not_found', 'ไม่พบ Security key');
-    if (creds.length === 1 && row.status === 'active') throw new AppError(422, 'last_key', 'ต้องเหลือ Security key อย่างน้อย 1 อัน · ออกลิงก์ลงทะเบียนใหม่ก่อน');
+    // ต้องเหลือวิธีเข้าระบบอย่างน้อย 1 วิธี · มีรหัสผ่าน + แอปแล้วลบกุญแจอันสุดท้ายได้
+    if (creds.length === 1 && row.status === 'active' && !row.totpEnabledAt) throw new AppError(422, 'last_key', 'ต้องเหลือ Security key อย่างน้อย 1 อัน เพราะยังไม่ได้ตั้งรหัสผ่าน + แอป · ออกลิงก์ตั้งค่าใหม่ก่อน');
     await this.db.update(s.staffUsers).set({ webauthnCredentials: creds.filter((c) => c.id !== credentialId), updatedAt: new Date() }).where(eq(s.staffUsers.id, id));
     await staffAudit(this.db, owner, 'staff.key_removed', `${row.email} · ${key.name}`, { type: 'staff', id });
     return { keys: creds.length - 1 };
@@ -297,6 +298,8 @@ export class StaffService {
       status: r.status,
       expiresAt: r.expiresAt,
       keys: creds.map((c) => ({ id: c.id, name: c.name, createdAt: c.createdAt, lastUsedAt: c.lastUsedAt ?? null })),
+      /** ตั้งรหัสผ่าน + แอป Authenticator เมื่อไร (null = ยังไม่ตั้ง) */
+      totpEnabledAt: r.totpEnabledAt,
       createdAt: r.createdAt,
     };
   }

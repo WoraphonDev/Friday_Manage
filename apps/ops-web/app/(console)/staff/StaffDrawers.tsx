@@ -1,12 +1,12 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Trash2 } from "lucide-react";
+import { KeyRound, Smartphone, Trash2 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { ConfirmDialog, useReauth } from "@/components/dialogs";
 import { CopyButton, Drawer, Notice, RolePicker } from "@/components/kit";
-import { Button, errorToast, InlineError, Input, useToast } from "@/components/ui";
+import { Button, errorToast, InlineError, Input, Pill, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { Limits, OpsRole } from "@/lib/types";
 import { DEFAULT_LIMITS, staffKey, type StaffMember } from "./types";
@@ -204,6 +204,16 @@ export function ManageDrawer({ member, onOpenChange, ownersLeft }: { member: Sta
 
       <section className="stack">
         <h3 className="card-title">{t("keys")}</h3>
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <span className="row">
+            <Smartphone size={16} aria-hidden="true" />
+            <span>
+              <b>{t("methodPassword")}</b>
+              <div className="muted small">{member.totpEnabledAt ? t("methodSetAt", { date: date(member.totpEnabledAt) }) : t("methodNotSet")}</div>
+            </span>
+          </span>
+          {member.totpEnabledAt ? <Pill tone="ok">{t("methodOn")}</Pill> : <Pill>{t("methodOff")}</Pill>}
+        </div>
         {member.keys.map((k) => (
           <div key={k.id} className="row" style={{ justifyContent: "space-between" }}>
             <span className="row">
@@ -213,7 +223,7 @@ export function ManageDrawer({ member, onOpenChange, ownersLeft }: { member: Sta
                 <div className="muted small">{t("keyMeta", { created: date(k.createdAt), used: date(k.lastUsedAt) })}</div>
               </span>
             </span>
-            <Button size="small" variant="ghost" disabled={member.keys.length <= 1 || removeKey.isPending} aria-label={`${t("removeKey")} ${k.name}`} onClick={() => removeKey.mutate(k.id)}>
+            <Button size="small" variant="ghost" disabled={(member.keys.length <= 1 && !member.totpEnabledAt) || removeKey.isPending} aria-label={`${t("removeKey")} ${k.name}`} onClick={() => removeKey.mutate(k.id)}>
               <Trash2 size={14} /> {t("removeKey")}
             </Button>
           </div>

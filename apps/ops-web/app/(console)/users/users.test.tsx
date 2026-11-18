@@ -77,7 +77,7 @@ describe("ผู้ใช้ทั้งหมด", () => {
     expect(within(dlg).getByRole("button", { name: "รีเซ็ต 2FA" })).toBeDisabled();
     await userEvent.click(within(dlg).getByLabelText("Owner ของ Workspace ยืนยันใน Ticket"));
     await userEvent.click(within(dlg).getByRole("button", { name: "รีเซ็ต 2FA" }));
-    await userEvent.click(await screen.findByRole("button", { name: "แตะกุญแจ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "แตะ Passkey" }));
     await waitFor(() => expect(body).toEqual({ ticketNo: "#515", reason: "เปลี่ยนโทรศัพท์", proofs: ["email_reply", "workspace_owner"] }));
   });
 

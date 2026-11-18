@@ -30,14 +30,14 @@ export const effectiveRoles = (staff: Staff) => [...new Set([...staff.roles, ...
 export const PUBLIC = 'ops:public';
 export const ROLES = 'ops:roles';
 export const REAUTH = 'ops:reauth';
-/** ไม่ต้องล็อกอิน (เฉพาะขั้นตอน WebAuthn) */
+/** ไม่ต้องล็อกอิน (เฉพาะขั้นตอนเข้าระบบ / ตั้งค่าการเข้าระบบ) */
 export const Public = () => SetMetadata(PUBLIC, true);
 /**
  * จำกัดตามบทบาท · ผ่านเมื่อมีบทบาทใดบทบาทหนึ่ง · ไม่มี role ไหนผ่านทุกข้ออัตโนมัติ (Owner ก็ต้องมีบทบาทนั้น)
  * ไม่ใส่ decorator = พนักงานที่ล็อกอินแล้วทุกคน · `@Roles()` ว่าง = เฉพาะ Owner
  */
 export const Roles = (...roles: StaffRole[]) => SetMetadata(ROLES, roles);
-/** ต้องยืนยันตัวตนซ้ำด้วย Security key ภายใน 15 นาที (G4) */
+/** ต้องยืนยันตัวตนซ้ำ (รหัส 6 หลักหรือ Security key) ภายใน 15 นาที (G4) */
 export const Reauth = () => SetMetadata(REAUTH, true);
 
 export const SESSION_PURPOSE = 'ops-session';
@@ -66,7 +66,7 @@ export class AuthGuard implements CanActivate {
     if (this.reflector.getAllAndOverride<boolean>(PUBLIC, [ctx.getHandler(), ctx.getClass()])) return true;
     const token = (req.cookies as Record<string, string> | undefined)?.[config.cookie];
     const session = verify<{ sid: string }>(SESSION_PURPOSE, token);
-    const unauthorized = () => new AppError(401, 'unauthorized', 'ต้องเข้าสู่ระบบด้วย Security key');
+    const unauthorized = () => new AppError(401, 'unauthorized', 'ต้องเข้าสู่ระบบก่อน');
     if (!session) throw unauthorized();
     // ตรวจกับฐานข้อมูลทุกครั้ง: ถอดสิทธิ์ / ระงับ / ปิดบัญชีแล้วใช้ session เดิมต่อไม่ได้
     const [row] = await this.db.select().from(schema.staffUsers).where(eq(schema.staffUsers.id, session.sid));
@@ -91,7 +91,7 @@ export class AuthGuard implements CanActivate {
     const need = roles && roles.length === 0 ? (['owner'] as StaffRole[]) : roles;
     if (need && !has(staff, ...need)) throw new AppError(403, 'forbidden', 'ไม่มีสิทธิ์ทำรายการนี้', { roles: staff.roles, need });
     if (this.reflector.getAllAndOverride<boolean>(REAUTH, [ctx.getHandler(), ctx.getClass()]) && !req.reauthed) {
-      throw new AppError(401, 'reauth_required', 'แตะ Security key เพื่อยืนยันตัวตนอีกครั้ง');
+      throw new AppError(401, 'reauth_required', 'ยืนยันตัวตนอีกครั้งด้วยรหัส 6 หลักหรือ Security key');
     }
     return true;
   }

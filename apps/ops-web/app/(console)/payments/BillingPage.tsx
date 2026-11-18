@@ -11,7 +11,7 @@ import { MotionSwap } from "@/components/shell/page-enter";
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
-import { exceptionsKey, VerifyTab } from "./_parts/Verify";
+import { VerifyTab } from "./_parts/Verify";
 import { AccountantExport } from "./_parts/Accounting";
 import { TaxTab } from "./_parts/Tax";
 import { IncomingTab, InvoicesTab, OverdueTab, RevenueTab } from "./_parts/Tabs";
@@ -43,7 +43,6 @@ export function BillingPage() {
   const group = groupOf(tab);
   const [creating, setCreating] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const exc = useQuery({ queryKey: exceptionsKey, queryFn: () => api.get<{ items: unknown[] }>("/payments/exceptions"), enabled: group === "verify" });
   const over = useQuery({ queryKey: ["ops", "overdue"], queryFn: () => api.get<{ items: unknown[] }>("/overdue"), enabled: group === "billing" });
   const finance = hasAny(me, "finance");
   const tabs = GROUPS[group];
@@ -81,7 +80,7 @@ export function BillingPage() {
           label={tn(group)}
           value={tab}
           onChange={(v) => router.replace(`/payments?tab=${v}`)}
-          tabs={tabs.map((v) => ({ value: v, label: t(`tabs.${v}`, { n: v === "verify" ? (exc.data?.items.length ?? 0) : (over.data?.items.length ?? 0) }) }))}
+          tabs={tabs.map((v) => ({ value: v, label: v === "verify" ? t("tabs.todo") : t(`tabs.${v}`, { n: over.data?.items.length ?? 0 }) }))}
         />
       )}
       {/* เปลี่ยนแท็บ (?tab=) ไม่เปลี่ยน route: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}

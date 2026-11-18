@@ -112,7 +112,8 @@ export function SupportPage() {
   const filter = new URLSearchParams({
     status,
     limit: "100",
-    ...(listQueue !== "all" ? { assignee: listQueue } : {}),
+    // ops-api รับ assignee = me | none | uuid (เคยส่ง "mine" จนแท็บ "ของฉัน" โหลดไม่ได้)
+    ...(listQueue !== "all" ? { assignee: listQueue === "mine" ? "me" : listQueue } : {}),
     ...(search ? { q: search } : {}),
     ...(params?.get("workspace") ? { workspaceId: params.get("workspace")! } : {}),
   });

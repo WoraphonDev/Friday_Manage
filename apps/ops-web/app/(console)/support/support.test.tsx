@@ -73,6 +73,8 @@ const page = (search = "", extra: Parameters<typeof server.use> = []) => {
     ...extra,
     http.get(`${OPS}/tickets`, ({ request }) => {
       const q = new URL(request.url).searchParams;
+      // ค่าที่ ops-api รับจริง (tickets.service › ListQuery)
+      if (q.has("assignee") && !["me", "none"].includes(q.get("assignee")!)) return HttpResponse.json({ error: { code: "validation_failed", message: "ข้อมูลไม่ถูกต้อง" } }, { status: 400 });
       const items = q.get("assignee") === "none" || q.get("status") === "closed" ? [] : [row];
       return HttpResponse.json({
         items,

@@ -261,6 +261,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `legal_hold` | Legal hold: หยุดการลบถาวรของข้อมูลในขอบเขต (รอบ 4) · ยกเลิกต้องมีคนที่สองอนุมัติ | workspace_id, scope (workspace · users), user_ids, reason, reference, review_on, notify_customer, created_by, released_at, released_by, release_reason | Ops H10–H11 |
 | `system_alert` | ช่วงที่ตัวชี้วัดของระบบเกินเกณฑ์ (รอบ 4) · 1 แถวต่อช่วง | kind (error_rate), started_at, resolved_at, details, last_notified_at, acknowledged_by, acknowledged_at, incident_id | Ops S10–S12 |
 | `ops_workspace_flag` | ป้าย Workspace ทดสอบที่ทีม Friday ตั้ง (ช่วง 1 · ข้อมูลเยอะ) · ไม่มีแถว = ตามกฎอัตโนมัติ (เจ้าของใช้โดเมนสงวนไว้ทดสอบ) · ลูกค้าไม่เห็น · ไม่นับใน MRR และตัวเลขธุรกิจ | workspace_id (PK), test_flag (test · not_test), reason, flagged_by | Ops Workspaces |
+| `ops_presence` | ใครกำลังเปิด / พิมพ์อยู่ที่รายการไหนของ Friday Ops (ช่วง 2 · กันตอบซ้ำ) · ชั่วคราว เกิน 30 วินาทีถือว่าไม่อยู่ · ลูกค้าไม่เห็น | staff_id, target_type (ticket · payment · approval · privacy), target_id, mode (viewing · typing), seen_at | Ops Ticket, สลิป |
 
 `staff_users` (Friday Ops เฟส 1 · [06-ops-roles](06-ops-roles.md)): `roles` (owner · finance · support · engineer · auditor, อย่างน้อย 1), `department`, `limits`, `status`, `expires_at` · `role` เดิมลบแล้วใน migration 0019 (O01) · `payments` เพิ่ม `verified_by`, `exception_reason`, `matched_invoice_id` · `support_sessions` เพิ่ม `ticket_id` · `notification_deliveries` เพิ่ม `target_label`, `content`, `response`, `log`, `resend_requested_at` และสถานะ `suppressed` (O23 · เก็บ 90 วัน)
 

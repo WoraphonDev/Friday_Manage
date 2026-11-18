@@ -176,6 +176,18 @@ export const opsWorkspaceFlags = pgTable('ops_workspace_flags', {
 }, (t) => [index('ops_workspace_flags_flag_idx').on(t.testFlag),
   check('ops_workspace_flags_valid', oneOf(t.testFlag, ['test', 'not_test']))]);
 
+/**
+ * ใครกำลังเปิด / พิมพ์อยู่ที่รายการไหน (ช่วง 2 · กันตอบซ้ำ) · หน้าเว็บส่งสัญญาณทุก 15 วินาที · เกิน 30 วินาที = ไม่อยู่แล้ว
+ * ข้อมูลชั่วคราว ลบแถวเก่าเองตอนรับสัญญาณใหม่
+ */
+export const opsPresence = pgTable('ops_presence', {
+  staffId: uuid().notNull().references(() => staffUsers.id, { onDelete: 'cascade' }),
+  targetType: text().notNull(), targetId: uuid().notNull(), mode: text().notNull(),
+  seenAt: tstz().notNull().default(sql`now()`),
+}, (t) => [primaryKey({ columns: [t.staffId, t.targetType, t.targetId] }), index('ops_presence_target_idx').on(t.targetType, t.targetId),
+  check('ops_presence_type_valid', oneOf(t.targetType, ['ticket', 'payment', 'approval', 'privacy'])),
+  check('ops_presence_mode_valid', oneOf(t.mode, ['viewing', 'typing']))]);
+
 /** ข้อความสำเร็จรูป (T4) · ตัวแปร {ชื่อผู้แจ้ง} {ชื่อ Workspace} {เลข Ticket} แทนค่าตอนใส่ในช่องตอบ · เลิกใช้แล้วเก็บไว้ (archived_at) */
 export const supportCannedReplies = pgTable('support_canned_replies', {
   id: pk(), title: text().notNull(), body: text().notNull(), tag: text(), uses: integer().notNull().default(0),

@@ -10,7 +10,6 @@ import { MotionSwap } from "@/components/shell/page-enter";
 import { Button, Pill } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
-import { AnnouncementsPage } from "../announcements/AnnouncementsPage";
 import { useFmt } from "../workspaces/_parts/format";
 import { CouponDrawer, formOf } from "./_parts/CouponDrawer";
 import { type CouponAction, CouponMenu } from "./_parts/CouponMenu";
@@ -18,7 +17,8 @@ import { PlanDrawer } from "./_parts/PlanDrawer";
 import { PriceHistory } from "./_parts/PriceHistory";
 import { type Overview, PLAN_NAME, type PlanRow, PROMO_KEY, STATE_TONE, useCouponText } from "./_parts/types";
 
-type Tab = "plans" | "campaigns" | "announce" | "history";
+// ประกาศถึงลูกค้ามีเมนูของตัวเอง (/announcements) จึงไม่มีแท็บซ้ำที่นี่ (โครงหน้า Ops 18 พ.ย. 2569)
+type Tab = "plans" | "campaigns" | "history";
 type CouponDrawerState = { kind: "create" } | CouponAction | null;
 
 /** หน้าแพ็กเกจและโปรโมชัน (Canvas › Promotions · เฟส 2 · O20) · Owner / การเงิน */
@@ -40,7 +40,7 @@ export function PromotionsPage() {
         label={t("tabs.label")}
         value={tab}
         onChange={setTab}
-        tabs={(["plans", "campaigns", "announce", "history"] as const).map((v) => ({ value: v, label: t(`tabs.${v}`) }))}
+        tabs={(["plans", "campaigns", "history"] as const).map((v) => ({ value: v, label: t(`tabs.${v}`) }))}
       />
       {/* เปลี่ยนแท็บในหน้าเดียวกัน: เนื้อหาแท็บเคลื่อนเข้าแบบเปลี่ยนหน้า */}
       <MotionSwap key={tab} className="motion-stack">
@@ -78,7 +78,6 @@ export function PromotionsPage() {
             <Empty title={t("campaigns.title")} description={t("campaigns.desc")} />
           </section>
         )}
-        {tab === "announce" && <AnnouncementsPage embedded />}
         {tab === "history" && <PriceHistory />}
       </MotionSwap>
       {editing && <PlanDrawer key={editing.code} plan={editing} onClose={() => setEditing(null)} />}

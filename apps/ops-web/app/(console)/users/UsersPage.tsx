@@ -110,7 +110,7 @@ export function UsersPage() {
                         <div className="cell-sub">{u.displayName}</div>
                       </td>
                       <td className="small">{u.firstWorkspace ? (u.workspaces > 1 ? t("wsCount", { first: u.firstWorkspace, more: u.workspaces - 1 }) : u.firstWorkspace) : <span className="muted">{t("noWs")}</span>}</td>
-                      <td className="small">{u.login.join(", ") || "—"}</td>
+                      <td className="small">{[...new Set(u.login)].map((m) => (t.has(`loginMethods.${m}` as "loginMethods.password") ? t(`loginMethods.${m}` as "loginMethods.password") : m)).join(", ") || "—"}</td>
                       <td>{u.mfaEnabled ? "✓" : "—"}</td>
                       <td>{u.lineBound ? "✓" : "—"}</td>
                       <td className="small">{u.locale}</td>

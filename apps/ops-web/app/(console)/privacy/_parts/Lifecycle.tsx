@@ -49,24 +49,38 @@ function useKeep() {
   return (days: number) => (days >= 365 && days % 365 === 0 ? t("years", { n: days / 365 }) : t("days", { n: days }));
 }
 
-/** ตัวเลข 4 ช่องของส่วนล่าง (H10): คำขอที่เปิด · Workspace รอลบ · Legal hold · ข้อมูลที่ลบตามนโยบายเมื่อคืน */
+/**
+ * ตัวเลขสรุปแถวเดียวบนหัวหน้า (โครงหน้า Ops 18 พ.ย. 2569) · เคยมีสองแถวและ "คำขอที่เปิดอยู่" ซ้ำกัน
+ * คำขอที่เปิด (เกินกำหนด) · ใกล้ครบกำหนด · Workspace รอลบ · Legal hold · ข้อมูลที่ลบเมื่อคืน · เวลาตอบเฉลี่ย 90 วัน
+ */
 export function LifecycleKpis({ requests }: { requests: PrivacyRequest[] }) {
   const t = useTranslations("pl.life.kpi");
+  const ts = useTranslations("pl.privacy.stats");
   const fmt = useFmt();
+  const last = useRetention().data?.lastRun ?? null;
+  const purged = last ? (last.logRows ?? 0) + (last.sessionRows ?? 0) : null;
   const pending = usePendingDeletes().data?.items ?? [];
   const holds = (useLegalHolds().data?.items ?? []).filter((h) => h.active);
-  const last = useRetention().data?.lastRun ?? null;
   const open = requests.filter((r) => r.status === "open");
   const soon = open.filter((r) => r.daysLeft >= 0 && r.daysLeft <= 7).length;
-  const purged = last ? (last.logRows ?? 0) + (last.sessionRows ?? 0) : null;
+  const late = open.filter((r) => r.daysLeft < 0).length;
+  const since = Date.now() - 90 * 86_400_000;
+  const done = requests.filter((r) => r.status === "completed" && r.completedAt && Date.parse(r.completedAt) >= since);
+  const avg = done.length ? Math.round(done.reduce((sum, r) => sum + (Date.parse(r.completedAt!) - Date.parse(r.receivedAt)) / 86_400_000, 0) / done.length) : null;
   return (
-    <section className="stats" aria-label={t("purged")}>
-      <div className="stat">
+    <section className="stats" aria-label={t("label")}>
+      <div className={late ? "stat stat-bad" : "stat"}>
         <span className="muted small">{t("open")}</span>
         <b>
           <CountUp value={open.length} />
         </b>
-        <span className="muted small">{t("openNote", { n: soon })}</span>
+        <span className="muted small">{t("openLate", { late })}</span>
+      </div>
+      <div className={soon ? "stat stat-warn" : "stat"}>
+        <span className="muted small">{ts("dueSoon")}</span>
+        <b>
+          <CountUp value={soon} />
+        </b>
       </div>
       <div className="stat">
         <span className="muted small">{t("pending")}</span>
@@ -88,6 +102,12 @@ export function LifecycleKpis({ requests }: { requests: PrivacyRequest[] }) {
           <CountUp value={purged == null ? "—" : t("purgedRows", { n: fmt.num(purged) })} />
         </b>
         <span className="muted small">{last?.systemLogDays ? t("purgedNote", { days: last.systemLogDays }) : t("purgedNone")}</span>
+      </div>
+      <div className="stat">
+        <span className="muted small">{ts("avg")}</span>
+        <b>
+          <CountUp value={avg == null ? "—" : ts("days", { n: avg })} />
+        </b>
       </div>
     </section>
   );

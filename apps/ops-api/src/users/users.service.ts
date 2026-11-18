@@ -34,6 +34,9 @@ const PROOF_LABEL: Record<string, string> = { email_reply: 'ตอบจาก�
 /** อายุลิงก์ (นาที) ให้เท่ากับฝั่ง API ลูกค้าโดยประมาณ */
 const LINK_MINUTES = { verify_email: 24 * 60, change_email: 60 } as const;
 
+/** วิธีเข้าระบบไม่ซ้ำ: บัญชีที่มีรหัสผ่านมีแถว provider "password" ใน user_identities ด้วย (เคยแสดง "password, password") */
+const loginMethods = (hasPassword: boolean, providers: string[]) => [...new Set([...(hasPassword ? ['password'] : []), ...providers])];
+
 /**
  * ผู้ใช้ทั้งระบบ (O02 · หน้า "ผู้ใช้ทั้งหมด" และ C10) · ข้าม Workspace จึงใช้ OPS_DB
  * ทุกการกระทำ: แจ้งผู้ใช้ทางอีเมล, เขียน audit_logs ของทุก Workspace ที่ผู้ใช้เป็นสมาชิก (ลูกค้าเห็น) และ staff_audit_logs
@@ -70,7 +73,7 @@ export class UsersService {
       from users u where ${where}
       order by u.created_at desc limit ${q.limit} offset ${q.offset}`);
     const [{ total }] = await this.rows<{ total: number }>(sql`select count(*)::int as total from users u where ${where}`);
-    return { items: items.map(({ hasPassword, providers, ...r }) => ({ ...r, login: [...(hasPassword ? ['password'] : []), ...(providers as string[])] })), total, limit: q.limit, offset: q.offset };
+    return { items: items.map(({ hasPassword, providers, ...r }) => ({ ...r, login: loginMethods(hasPassword, providers as string[]) })), total, limit: q.limit, offset: q.offset };
   }
 
   private async find(id: string) {
@@ -110,7 +113,7 @@ export class UsersService {
       failedLoginCount: u.failedLoginCount,
       disabledAt: u.disabledAt,
       status: extra.status,
-      login: [...(u.passwordHash ? ['password'] : []), ...(extra.providers as string[])],
+      login: loginMethods(!!u.passwordHash, extra.providers as string[]),
       mfaEnabled: extra.mfaEnabled,
       line: extra.lineName === undefined || extra.lineName === null ? null : { displayName: extra.lineName },
       memberships,

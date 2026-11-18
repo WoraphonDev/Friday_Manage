@@ -596,7 +596,14 @@
     "soleOwner": "เป็น Owner คนเดียว · ต้องโอนความเป็นเจ้าของก่อน",
     "c12Note": "งานและคอมเมนต์ยังอยู่",
     "c12Submit": "ปิดบัญชี",
-    "confirmEmail": "พิมพ์อีเมลของบัญชีเพื่อยืนยัน"
+    "confirmEmail": "พิมพ์อีเมลของบัญชีเพื่อยืนยัน",
+    "loginMethods": {
+      "password": "รหัสผ่าน",
+      "google": "Google",
+      "line": "LINE",
+      "microsoft": "Microsoft",
+      "apple": "Apple"
+    }
   },
   "bulk": {
     "byFilter": "ตามตัวกรอง \"{filter}\" (ณ เวลาที่กดยืนยัน)",

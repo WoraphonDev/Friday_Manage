@@ -19,6 +19,7 @@ import { useRowNav, useShortcuts, useStableRows } from "@/lib/shortcuts";
 import { NewItemsBar } from "@/components/new-items";
 import { useUrlFilters } from "@/lib/url-state";
 import { ActiveFilters, FilterButton, filterKeys, filterQuery } from "@/components/filters";
+import { ViewsBar } from "@/components/views-bar";
 import { TICKET_SORTS, useTicketFilters } from "./_parts/filters";
 import { planLabel, useFmt } from "../workspaces/_parts/format";
 import { DevCard } from "../bugs/_components/DevCard";
@@ -142,7 +143,8 @@ export function SupportPage() {
   // ตัวกรองอยู่ใน URL (กดย้อนกลับแล้วยังอยู่ที่เดิม · ส่งลิงก์ได้) · queue ว่าง = ตามบทบาท
   // ช่วง 3: แผงตัวกรอง + เรียง · อยู่ใน URL เหมือนกันจึงบันทึกเป็นมุมมองได้
   const defs = useTicketFilters();
-  const [f, setF] = useUrlFilters({ tab: "", status: "active", q: "", sort: "sla", ...filterKeys(defs) });
+  const defaults = { tab: "", status: "active", q: "", sort: "sla", ...filterKeys(defs) };
+  const [f, setF] = useUrlFilters(defaults);
   const fq = filterQuery(defs, f);
   const setFilters = (patch: Record<string, string>) => (setF(patch), setOffset(0));
   const queue: Queue = (["mine", "none", "all", "team"] as const).includes(f.tab as Queue) ? (f.tab as Queue) : support ? "mine" : "all";
@@ -317,6 +319,7 @@ export function SupportPage() {
         </>
       ) : (
         <>
+          <ViewsBar page="tickets" values={f} defaults={defaults} onApply={(v) => (setQ(v.q ?? ""), setF({ ...defaults, ...v }), setOffset(0))} />
           <ActiveFilters defs={defs} values={f} onChange={setFilters} />
           <NewItemsBar count={stable.fresh} onShow={stable.reveal} />
           <ChipGroup className="row">

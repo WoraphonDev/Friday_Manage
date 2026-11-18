@@ -28,7 +28,8 @@ export function useUrlFilters<T extends Record<string, string>>(defaults: T) {
       setState(next);
       const q = new URLSearchParams();
       params?.forEach((v, k) => {
-        if (!(k in defaults)) q.set(k, v);
+        // ?view= ใช้ครั้งเดียวตอนเปิดมุมมอง (แถบมุมมอง) · ใส่ตัวกรองแล้วไม่ต้องค้างใน URL
+        if (!(k in defaults) && k !== "view") q.set(k, v);
       });
       for (const k of Object.keys(next)) if (next[k] !== "" && next[k] !== defaults[k]) q.set(k, next[k]);
       const s = q.toString();

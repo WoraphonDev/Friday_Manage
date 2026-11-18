@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Archive,
   BookOpen,
+  Bookmark,
   Bug,
   CalendarDays,
   ChartColumn,
@@ -45,6 +46,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { useSlidingIndicator } from "@/lib/motion";
+import { useViewCounts, useViews, viewHref } from "@/lib/views";
 import type { Staff } from "@/lib/types";
 import { hasAny, initials, rolesOf } from "../access";
 import { currentItem, isSoon, linkOf, NAV, type NavKey, type TaskKey } from "./nav";
@@ -73,6 +75,11 @@ export function Sidebar({ staff, pathname, search, open, onNavigate }: { staff: 
   const mine = rolesOf(staff);
   // พื้นม่วงของเมนูที่เลือกเลื่อนไปหาเมนูใหม่ (ข้ามกลุ่มได้) · สีตาม .ops-nav[aria-current] ดู ops.css ส่วนการเคลื่อนไหว
   const indicator = useSlidingIndicator<HTMLElement>(".ops-nav");
+  // ช่วง 3: มุมมองที่ปัก (ไม่เกิน 5) อยู่บนสุด พร้อมจำนวนรายการ (ถามทุก 2 นาที)
+  const views = useViews();
+  const pinned = (views.data?.items ?? []).filter((v) => v.pinned && !v.hidden);
+  const counts = useViewCounts(pinned.length > 0);
+  const viewId = new URLSearchParams(search).get("view");
   return (
     <aside className="ops-side" aria-label={t("app.navLabel")} data-open={open}>
       <div className="ops-brand">
@@ -88,6 +95,25 @@ export function Sidebar({ staff, pathname, search, open, onNavigate }: { staff: 
         <span className="ops-env-region">{t("app.region")}</span>
       </div>
       <nav ref={indicator} className="motion-pill" aria-label={t("app.navLabel")} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {pinned.length > 0 && (
+          <div className="ops-group" role="group" aria-label={t("views.navGroup")}>
+            <span className="ops-glabel">{t("views.navGroup")}</span>
+            {pinned.map((v) => {
+              const count = counts.data?.items.find((c) => c.id === v.id)?.count ?? null;
+              return (
+                <Link key={v.id} href={viewHref(v)} className="ops-nav" aria-current={viewId === v.id ? "page" : undefined} onClick={onNavigate}>
+                  <Bookmark size={16} strokeWidth={1.8} aria-hidden="true" />
+                  <span className="ops-nav-label">{v.name}</span>
+                  {count != null && count > 0 && (
+                    <span className="ops-badge" aria-label={t("views.navCount", { count })}>
+                      {count > 999 ? "999+" : count}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        )}
         {NAV.map((g) => {
           const items = g.items.filter((i) => hasAny(staff, ...i.roles));
           if (!items.length) return null;

@@ -12,6 +12,7 @@ import { useMe } from "@/lib/query";
 import { useRowNav } from "@/lib/shortcuts";
 import { useUrlFilters } from "@/lib/url-state";
 import { ActiveFilters, FilterButton, type FilterDef, filterKeys, filterQuery } from "@/components/filters";
+import { ViewsBar } from "@/components/views-bar";
 import { useFmt } from "../workspaces/_parts/format";
 import { AttachDialog, MessageDialog } from "./_parts/Dialogs";
 import { Suppressions } from "./_parts/Suppressions";
@@ -42,7 +43,8 @@ export function DeliveriesPage() {
     { key: "when", label: tf("when"), kind: "dates", fromKey: "from", toKey: "to" },
     { key: "event", label: tf("event"), kind: "single", options: EVENT_TYPES.map((e) => ({ value: e, label: eventText({ type: e, issueKey: null }) })) },
   ];
-  const [f, setF] = useUrlFilters({ q: "", channel: "all", status: "all", ...filterKeys(defs) });
+  const defaults = { q: "", channel: "all", status: "all", ...filterKeys(defs) };
+  const [f, setF] = useUrlFilters(defaults);
   const fq = filterQuery(defs, f);
   const [query, setQuery] = useState(f.q);
   const channel = f.channel as "all" | "email" | "line" | "webhook";
@@ -117,6 +119,7 @@ export function DeliveriesPage() {
           </label>
           <FilterButton defs={defs} values={f} onChange={setF} />
         </div>
+        <ViewsBar page="deliveries" values={f} defaults={defaults} onApply={(v) => (setQuery(v.q ?? ""), setF({ ...defaults, ...v }))} />
         <ActiveFilters defs={defs} values={f} onChange={setF} />
         {search && <SearchNotice s={search} />}
         <div>

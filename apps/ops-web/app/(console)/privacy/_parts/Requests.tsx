@@ -12,6 +12,7 @@ import { useRowNav } from "@/lib/shortcuts";
 import { useUrlFilters } from "@/lib/url-state";
 import { useSupportStaff } from "@/lib/staff-options";
 import { ActiveFilters, FilterButton, type FilterDef, filterKeys, filterQuery } from "@/components/filters";
+import { ViewsBar } from "@/components/views-bar";
 import { useFmt } from "../../workspaces/_parts/format";
 import { dsr, type Identity, type PrivacyRequest, REQUEST_TYPES, type RequestDetail, type RequestType, todayBkk } from "./types";
 import { type PickedWs, WorkspacePicker } from "./WorkspacePicker";
@@ -59,7 +60,8 @@ export function RequestsTable({ enabled, onOpen }: { enabled: boolean; onOpen: (
     { key: "handler", label: tf("handler"), kind: "single", options: staff },
     { key: "hold", label: tf("hold"), kind: "single", options: [{ value: "yes", label: tf("holdYes") }] },
   ];
-  const [f, setF] = useUrlFilters({ status: "open", q: "", page: "0", ...filterKeys(defs) });
+  const defaults = { status: "open", q: "", page: "0", ...filterKeys(defs) };
+  const [f, setF] = useUrlFilters(defaults);
   const fq = filterQuery(defs, f);
   const setFilters = (patch: Record<string, string>) => setF({ ...patch, page: "0" });
   const filter = f.status as "open" | "completed" | "rejected" | "all";
@@ -97,6 +99,7 @@ export function RequestsTable({ enabled, onOpen }: { enabled: boolean; onOpen: (
         </ChipGroup>
       </div>
       <div style={{ padding: "0 16px" }}>
+        <ViewsBar page="privacy" values={f} defaults={defaults} onApply={(v) => (setSearch(v.q ?? ""), setF({ ...defaults, ...v }))} />
         <ActiveFilters defs={defs} values={f} onChange={setFilters} />
       </div>
       {query.isPending ? (

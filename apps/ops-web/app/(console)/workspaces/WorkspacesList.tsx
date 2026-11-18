@@ -15,6 +15,7 @@ import { useMe } from "@/lib/query";
 import { useRowNav } from "@/lib/shortcuts";
 import { useUrlFilters } from "@/lib/url-state";
 import { ActiveFilters, FilterButton, filterKeys, filterQuery } from "@/components/filters";
+import { ViewsBar } from "@/components/views-bar";
 import { useWorkspaceFilters } from "./_parts/filters";
 import { type AnnounceFilter, AnnounceDrawer } from "./_parts/Announce";
 import { BulkCouponDialog, BulkResultDrawer, BulkTrialDialog, namesOf } from "./_parts/Bulk";
@@ -48,7 +49,8 @@ export function WorkspacesList() {
   // ตัวกรองอยู่ใน URL: กดย้อนกลับจากหน้ารายละเอียดแล้วยังอยู่ที่เดิม · ส่งลิงก์ให้เพื่อนได้ (ช่วง 1)
   // ช่วง 3: ตัวกรองทั้งหมดของหน้า (แผงตัวกรองกลาง) · ค่าอยู่ใน URL · ใส่คีย์ MRR ไว้เสมอ เพราะสิทธิ์เห็นเงินรู้หลังโหลด me
   const defs = useWorkspaceFilters(money);
-  const [f, setF] = useUrlFilters({ q: "", status: "", sort: "recent_activity", page: "0", buyer: "", test: "", suggest: "", ...filterKeys(defs), plan: "", feature: "", mrrMin: "", mrrMax: "" });
+  const defaults = { q: "", status: "", sort: "recent_activity", page: "0", buyer: "", test: "", suggest: "", ...filterKeys(defs), plan: "", feature: "", mrrMin: "", mrrMax: "" };
+  const [f, setF] = useUrlFilters(defaults);
   const [q, setQ] = useState(f.q);
   const { plan, status, feature } = f;
   const fq = filterQuery(defs, f);
@@ -208,6 +210,7 @@ export function WorkspacesList() {
           ))}
         </select>
       </ListBar>
+      <ViewsBar page="workspaces" values={f} defaults={defaults} onApply={(v) => (setQ(v.q ?? ""), setF({ ...defaults, ...v }))} />
       <ActiveFilters defs={defs} values={f} onChange={setFilters} />
       {(f.buyer || f.suggest) && (
         <div className="row">

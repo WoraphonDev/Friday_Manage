@@ -15,6 +15,7 @@ import { useMe } from "@/lib/query";
 import { useUrlFilters } from "@/lib/url-state";
 import { useSupportStaff } from "@/lib/staff-options";
 import { ActiveFilters, FilterButton, type FilterDef, filterKeys, filterQuery } from "@/components/filters";
+import { ViewsBar } from "@/components/views-bar";
 import { planLabel, useFmt } from "../../workspaces/_parts/format";
 import { useDelivery } from "./Accounting";
 import { ClosePeriodDialog, EtaxDrawer, useEtaxDetail, useTaxFmt } from "./Tax";
@@ -135,7 +136,8 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
     { key: "wht", label: tf("wht"), kind: "single", options: [{ value: "yes", label: tf("whtYes") }] },
     { key: "amount", label: tf("amount"), kind: "range", minKey: "amountMin", maxKey: "amountMax", unit: "baht" },
   ];
-  const [f, setF] = useUrlFilters({ status: "", q: "", page: "0", ...filterKeys(defs) });
+  const defaults = { status: "", q: "", page: "0", ...filterKeys(defs) };
+  const [f, setF] = useUrlFilters(defaults);
   const fq = filterQuery(defs, f);
   const setFilters = (patch: Record<string, string>) => setF({ ...patch, page: "0" });
   const status = f.status as (typeof STATUSES)[number];
@@ -172,6 +174,7 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
         ))}
         <FilterButton defs={defs} values={f} onChange={setFilters} />
       </ChipGroup>
+      <ViewsBar page="invoices" values={f} defaults={defaults} onApply={(v) => (setQ(v.q ?? ""), setF({ ...defaults, ...v }))} />
       <ActiveFilters defs={defs} values={f} onChange={setFilters} />
       {list.isPending ? (
         <TableSkeleton rows={5} cols={8} />
@@ -659,7 +662,8 @@ export function OverdueTab() {
     { key: "human", label: tf("human"), kind: "single", options: [{ value: "yes", label: tf("humanYes") }] },
     { key: "manager", label: tf("manager"), kind: "single", options: [{ value: "none", label: tf("noManager") }, ...staff] },
   ];
-  const [f, setF] = useUrlFilters({ q: "", page: "0", ...filterKeys(defs) });
+  const defaults = { q: "", page: "0", ...filterKeys(defs) };
+  const [f, setF] = useUrlFilters(defaults);
   const fq = filterQuery(defs, f);
   const setFilters = (patch: Record<string, string>) => setF({ ...patch, page: "0" });
   const [search, setSearch] = useState(f.q);
@@ -687,6 +691,7 @@ export function OverdueTab() {
         </div>
         <FilterButton defs={defs} values={f} onChange={setFilters} />
       </div>
+      <ViewsBar page="overdue" values={f} defaults={defaults} onApply={(v) => (setSearch(v.q ?? ""), setF({ ...defaults, ...v }))} />
       <ActiveFilters defs={defs} values={f} onChange={setFilters} />
       {q.isPending ? (
         <TableSkeleton rows={4} cols={6} />

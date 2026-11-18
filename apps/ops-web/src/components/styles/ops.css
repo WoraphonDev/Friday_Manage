@@ -3104,3 +3104,42 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
   background: var(--surface-2);
   font-size: 12px;
 }
+
+/* ---- ช่วง 3: แถบมุมมองที่บันทึก ---- */
+.views-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 8px;
+}
+.view-chip {
+  display: inline-flex;
+  align-items: center;
+}
+.view-chip .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.view-more {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.view-more:hover {
+  background: var(--hover);
+  color: var(--foreground);
+}
+.view-more:focus-visible {
+  outline: 2px solid var(--focus);
+}
+.menu-item.danger {
+  color: var(--danger-text);
+}

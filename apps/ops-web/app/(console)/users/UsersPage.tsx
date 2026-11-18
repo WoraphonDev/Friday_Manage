@@ -14,6 +14,7 @@ import { useMe } from "@/lib/query";
 import { useRowNav } from "@/lib/shortcuts";
 import { useUrlFilters } from "@/lib/url-state";
 import { ActiveFilters, FilterButton, type FilterDef, filterKeys, filterQuery } from "@/components/filters";
+import { ViewsBar } from "@/components/views-bar";
 import { useFmt } from "../workspaces/_parts/format";
 
 type Status = "active" | "locked" | "unverified" | "disabled";
@@ -70,7 +71,8 @@ export function UsersPage() {
     one("activity", "activities", ["active7", "idle30", "never"]),
     one("multi", "multis", ["yes"]),
   ];
-  const [f, setF] = useUrlFilters({ q: "", status: "", page: "0", ...filterKeys(defs) });
+  const defaults = { q: "", status: "", page: "0", ...filterKeys(defs) };
+  const [f, setF] = useUrlFilters(defaults);
   const fq = filterQuery(defs, f);
   const setFilters = (patch: Record<string, string>) => setF({ ...patch, page: "0" });
   const [q, setQ] = useState(f.q);
@@ -116,6 +118,7 @@ export function UsersPage() {
           </select>
           <FilterButton defs={defs} values={f} onChange={setFilters} />
         </div>
+        <ViewsBar page="users" values={f} defaults={defaults} onApply={(v) => (setQ(v.q ?? ""), setF({ ...defaults, ...v }))} />
         <ActiveFilters defs={defs} values={f} onChange={setFilters} />
         <p className="muted small">{t("hint")}</p>
         {list.isPending ? (

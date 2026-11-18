@@ -1,17 +1,5 @@
 /* ศูนย์ช่วยเหลือ (O35 · บอร์ด 19 / 19b) · สีจาก token ใน styles/tokens.css เท่านั้น */
 
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 16px;
-  align-items: start;
-}
-@media (max-width: 1100px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -51,27 +39,6 @@
   margin-top: 2px;
   color: var(--muted);
   font-size: 12px;
-}
-
-.missList {
-  list-style: none;
-  margin: 8px 0 0;
-  padding: 0;
-}
-.missList li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  border-top: 1px solid var(--border);
-}
-.missList li > div {
-  flex: 1;
-  min-width: 0;
-}
-.missList b {
-  display: block;
-  overflow-wrap: anywhere;
 }
 
 /* ---------------------------------------------------------------- ตัวแก้บทความ (19b) */

@@ -298,6 +298,39 @@ describe("Audit log", () => {
     expect(await screen.findByText("approval.self_approved")).toBeInTheDocument();
   });
 
+  it("นโยบายรหัสผ่าน (ปุ่มเฟือง · แบบ A): Owner เลือก 8 / 12 แยกพนักงานกับลูกค้า · ยืนยันก่อนบันทึก · ผู้ตรวจดูได้อย่างเดียว", async () => {
+    let body: unknown;
+    const current = { policy: { staffMinLength: 12, customerMinLength: 8 }, updatedAt: null, updatedBy: null };
+    server.use(
+      http.get(`${OPS}/staff/password-policy`, () => HttpResponse.json(current)),
+      http.put(`${OPS}/staff/password-policy`, async ({ request }) => ((body = await request.json()), HttpResponse.json({ policy: body, updatedAt: "2026-11-19T01:00:00Z", updatedBy: staff.admin.name, saved: true }))),
+    );
+    page();
+    await userEvent.click(await screen.findByRole("button", { name: "สิทธิ์ของบทบาท วงเงิน และแผนก" }));
+    const panel = await screen.findByRole("dialog");
+    expect(await within(panel).findByText("นโยบายรหัสผ่าน")).toBeInTheDocument();
+    const save = within(panel).getByRole("button", { name: "บันทึก" });
+    expect(save).toBeDisabled();
+    await userEvent.click(within(within(panel).getByRole("group", { name: "พนักงาน Ops" })).getByRole("button", { name: "8 ตัว" }));
+    await userEvent.click(within(within(panel).getByRole("group", { name: "ลูกค้า (แอป)" })).getByRole("button", { name: "12 ตัว" }));
+    await userEvent.click(save);
+    // ขั้นยืนยัน: ยังไม่ส่งจนกดยืนยัน
+    expect(within(panel).getByText("พนักงาน Ops 12 → 8 ตัว · ลูกค้า 8 → 12 ตัว · ระบบบันทึกชื่อคนแก้และค่าเดิมไว้ใน Audit")).toBeInTheDocument();
+    expect(body).toBeUndefined();
+    await userEvent.click(within(panel).getByRole("button", { name: "ยืนยันบันทึก" }));
+    await waitFor(() => expect(body).toEqual({ staffMinLength: 8, customerMinLength: 12 }));
+    expect(await screen.findByText("บันทึกนโยบายรหัสผ่านแล้ว · มีผลทันที")).toBeInTheDocument();
+    cleanupPage();
+
+    asRole("auditor");
+    page();
+    await userEvent.click(await screen.findByRole("button", { name: "สิทธิ์ของบทบาท วงเงิน และแผนก" }));
+    const ro = await screen.findByRole("dialog");
+    expect(await within(ro).findByText("ความยาวขั้นต่ำตอนตั้งหรือเปลี่ยนรหัสผ่าน · แก้ได้เฉพาะ Owner")).toBeInTheDocument();
+    expect(within(ro).queryByRole("group", { name: "พนักงาน Ops" })).not.toBeInTheDocument();
+    expect(within(ro).queryByRole("button", { name: "บันทึก" })).not.toBeInTheDocument();
+  });
+
   it("Support เปิด /staff ตรง ๆ ไม่ได้", async () => {
     asRole("support");
     page();

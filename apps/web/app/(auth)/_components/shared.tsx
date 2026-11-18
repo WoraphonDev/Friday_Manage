@@ -12,11 +12,12 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
 import { FridayLoader, FridayLogo, FridayMark } from "@/components/brand/friday-logo";
 import { Button, MotionSwap, buttonVariants } from "@/components/ui";
-import { ApiError, supportId } from "@/lib/api";
+import { api, ApiError, supportId } from "@/lib/api";
 import { useIsMobile } from "@/lib/use-mobile";
 import { checkPassword, DEFAULT_POLICY, type PasswordPolicy } from "@/lib/password";
 import { cn } from "@/lib/utils";
@@ -560,6 +561,12 @@ export function PasswordField({
 }
 
 export { checkPassword, DEFAULT_POLICY, type PasswordPolicy, type StrengthLevel } from "@/lib/password";
+
+/** เงื่อนไขรหัสผ่านของบัญชีใหม่ · ขั้นต่ำมาจากค่าที่ทีม Friday ตั้งใน Ops · ระหว่างโหลดหรือดึงไม่ได้ใช้ J2 (API ตรวจซ้ำตอนส่ง) */
+export function useNewAccountPolicy(): PasswordPolicy {
+  const q = useQuery({ queryKey: ["auth", "password-policy"], queryFn: () => api.get<PasswordPolicy>("/auth/password/policy"), staleTime: 5 * 60_000 });
+  return q.data ?? DEFAULT_POLICY;
+}
 
 export function PasswordStrength({
   value,

@@ -6,6 +6,8 @@ export const handlers = [
   http.get("*/api/v1/auth/csrf", () =>
     HttpResponse.json({ csrfToken: "test-csrf" }),
   ),
+  // เงื่อนไขรหัสผ่านของบัญชีใหม่ (หน้าสมัคร / รับคำเชิญ) · ค่าเริ่มต้น = J2 (ทีม Friday ยังไม่ได้ตั้งใน Ops)
+  http.get("*/api/v1/auth/password/policy", () => HttpResponse.json({ minLength: 8, requireSpecial: false })),
   http.get("*/api/v1/me", () => HttpResponse.json(me)),
   http.get("*/api/v1/me/workspaces", () =>
     HttpResponse.json({ items: workspaces }),

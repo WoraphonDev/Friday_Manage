@@ -260,6 +260,21 @@ describe('นโยบายความปลอดภัย', () => {
     await team.lead.patch(`${ws}/security-policy`, { passwordMinLength: 10, passwordRotationDays: null, lockoutAttempts: 5, sessionIdleHours: 8, mfaEnforcement: 'none', allowedEmailDomains: [] });
   });
 
+  it('ขั้นต่ำที่ทีม Friday ตั้งใน Ops: ค่าที่ใช้จริงไม่ต่ำกว่า และตั้งต่ำกว่าไม่ได้', async () => {
+    await t.owner.query(`INSERT INTO ops_settings (key, value) VALUES ('password_policy', '{"staffMinLength":12,"customerMinLength":12}')`);
+    try {
+      const g = await team.lead.get(`${ws}/security-policy`);
+      expect(g.body).toMatchObject({ passwordMinLength: 12, passwordMinFloor: 12 });
+      const low = await team.lead.patch(`${ws}/security-policy`, { passwordMinLength: 10 });
+      expect(low.status).toBe(400);
+      expect(low.body.error.code).toBe('password_min_below_floor');
+      expect((await team.lead.patch(`${ws}/security-policy`, { passwordMinLength: 12 })).status).toBe(200);
+    } finally {
+      await t.owner.query(`DELETE FROM ops_settings WHERE key = 'password_policy'`);
+      await team.lead.patch(`${ws}/security-policy`, { passwordMinLength: 10 });
+    }
+  });
+
   it('IP Allowlist: ต้องมี IP ของผู้แก้เอง (กันล็อกตัวเองออก) · รองรับ CIDR', async () => {
     const locked = await team.lead.patch(`${ws}/security-policy`, { ipAllowlist: ['203.0.113.10'] });
     expect(locked.status).toBe(422);

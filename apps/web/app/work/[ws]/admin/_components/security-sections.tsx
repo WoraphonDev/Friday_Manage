@@ -27,7 +27,7 @@ const withCurrent = <T,>(list: T[], current: T) => (list.includes(current) ? lis
 // ความปลอดภัย & SSO
 // ---------------------------------------------------------------------------
 
-type PolicyForm = Omit<SecurityPolicy, "mfa">;
+type PolicyForm = Omit<SecurityPolicy, "mfa" | "passwordMinFloor">;
 const toForm = (p: SecurityPolicy): PolicyForm => ({
   passwordMinLength: p.passwordMinLength,
   passwordRequireSpecial: p.passwordRequireSpecial,
@@ -76,6 +76,8 @@ function PolicyForm({ ws, policy }: { ws: string; policy: SecurityPolicy }) {
   const changes = Object.fromEntries((Object.keys(next) as (keyof PolicyForm)[]).filter((k) => JSON.stringify(next[k]) !== JSON.stringify(before[k])).map((k) => [k, next[k]]));
   const dirty = Object.keys(changes).length > 0;
   const mfa = policy.mfa;
+  // ทีม Friday ตั้งขั้นต่ำของทุก Workspace ใน Ops · ตัวเลือกที่ต่ำกว่าไม่แสดง
+  const floor = policy.passwordMinFloor ?? 8;
 
   async function save() {
     setBusy(true);
@@ -106,8 +108,8 @@ function PolicyForm({ ws, policy }: { ws: string; policy: SecurityPolicy }) {
       </Card>
       <Card title={t("policyTitle")}>
         <div className={styles.grid}>
-          <Select label={t("minLength")} value={String(form.passwordMinLength)} onChange={(e) => set("passwordMinLength", Number(e.target.value))}>
-            {withCurrent([8, 10, 12], form.passwordMinLength).map((n) => <option key={n} value={n}>{t("chars", { n })}</option>)}
+          <Select label={t("minLength")} value={String(form.passwordMinLength)} hint={floor > 8 ? t("minLengthFloor", { n: floor }) : undefined} onChange={(e) => set("passwordMinLength", Number(e.target.value))}>
+            {withCurrent([8, 10, 12].filter((n) => n >= floor), form.passwordMinLength).map((n) => <option key={n} value={n}>{t("chars", { n })}</option>)}
           </Select>
           <Select label={t("rotation")} value={form.passwordRotationDays === null ? "" : String(form.passwordRotationDays)} onChange={(e) => set("passwordRotationDays", e.target.value ? Number(e.target.value) : null)}>
             {withCurrent<number | null>([null, 90, 180], form.passwordRotationDays).map((n) => <option key={String(n)} value={n ?? ""}>{n === null ? t("noRotation") : t("everyDays", { n })}</option>)}

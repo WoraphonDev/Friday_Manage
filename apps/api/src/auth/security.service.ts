@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { type Db, schema } from '@friday/db';
+import { type Db, readPasswordPolicy, schema } from '@friday/db';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { AppError } from '../common/errors.js';
 import type { AppRequest } from '../common/request.js';
@@ -18,8 +18,6 @@ export interface EffectivePolicy {
   mfaRequired: boolean;
 }
 
-/** J2: กติกาขั้นต่ำของรหัสผ่านทุกบัญชี (ก่อนมี Workspace) */
-const BASE_MIN_LENGTH = 8;
 
 /**
  * นโยบายความปลอดภัยของผู้ใช้ = ค่าที่เข้มที่สุดจากทุก Workspace ที่เป็นสมาชิก active
@@ -29,7 +27,13 @@ const BASE_MIN_LENGTH = 8;
 export class SecurityService {
   constructor(@Inject(SYSTEM_DB) private readonly db: Db) {}
 
+  /** J2 + ค่าที่ทีม Friday ตั้งใน Ops (8 / 12): ขั้นต่ำของทุกบัญชี รวมผู้ใช้ที่ยังไม่มี Workspace · Workspace ตั้งให้เข้มกว่าได้เท่านั้น */
+  async minLengthFloor() {
+    return (await readPasswordPolicy(this.db)).customerMinLength;
+  }
+
   async policyFor(userId: string): Promise<EffectivePolicy> {
+    const floor = await this.minLengthFloor();
     const [row] = await this.db
       .select({
         attempts: sql<number | null>`min(${securityPolicies.lockoutAttempts})`,
@@ -46,16 +50,16 @@ export class SecurityService {
     return {
       lockoutAttempts: Number(row?.attempts ?? config.lockoutAttempts),
       lockoutMinutes: Number(row?.minutes ?? config.lockoutMinutes),
-      passwordMinLength: Math.max(BASE_MIN_LENGTH, Number(row?.minLength ?? BASE_MIN_LENGTH)),
+      passwordMinLength: Math.max(floor, Number(row?.minLength ?? floor)),
       passwordRequireSpecial: !!row?.special,
       sessionIdleHours: Number(row?.idle ?? config.sessionIdleHours),
       mfaRequired: !!row?.mfa,
     };
   }
 
-  /** ตรวจรหัสผ่านใหม่ตามนโยบาย · ผิดตอบ 400 รูปแบบเดียวกับ parse() */
-  async assertPassword(userId: string, password: string, field: string) {
-    const p = await this.policyFor(userId);
+  /** ตรวจรหัสผ่านใหม่ตามนโยบาย · ผิดตอบ 400 รูปแบบเดียวกับ parse() · userId = null คือบัญชีใหม่ (ยังไม่มี Workspace) */
+  async assertPassword(userId: string | null, password: string, field: string) {
+    const p = userId ? await this.policyFor(userId) : { passwordMinLength: await this.minLengthFloor(), passwordRequireSpecial: false };
     const problems: string[] = [];
     if (password.length < p.passwordMinLength) problems.push(`อย่างน้อย ${p.passwordMinLength} ตัวอักษร`);
     if (!/[A-Z]/.test(password)) problems.push('ต้องมีตัวพิมพ์ใหญ่');

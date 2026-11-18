@@ -17,6 +17,7 @@ import {
   OAuthLink,
   PasswordField,
   PasswordStrength,
+  useNewAccountPolicy,
   checkPassword,
   styles,
 } from "../../../_components/shared";
@@ -45,6 +46,7 @@ export function JoinInvite({ token }: { token: string }) {
   const t = useTranslations(NS);
   const router = useRouter();
   const cache = useQueryClient();
+  const policy = useNewAccountPolicy();
   const path = `/join/${encodeURIComponent(token)}`;
   const invite = useQuery({
     queryKey: ["invitation", token],
@@ -289,7 +291,7 @@ export function JoinInvite({ token }: { token: string }) {
     );
   } else {
     const emailTaken = error instanceof ApiError && error.code === "email_taken";
-    const ready = displayName.trim() && checkPassword(password).valid && accept;
+    const ready = displayName.trim() && checkPassword(password, policy).valid && accept;
     body = (
       <form className={styles.form} style={{ gap: 14 }} onSubmit={signupAndJoin} noValidate>
         <div className={styles.sectionTitle}>{t("join.newTitle")}</div>
@@ -315,7 +317,7 @@ export function JoinInvite({ token }: { token: string }) {
             autoComplete="new-password"
             placeholder={t("join.passwordPlaceholder")}
           />
-          {password && <PasswordStrength value={password} showMeter={false} />}
+          {password && <PasswordStrength value={password} policy={policy} showMeter={false} />}
         </div>
         <label className={cn(styles.check, styles.small)}>
           <input type="checkbox" checked={accept} onChange={(event) => setAccept(event.target.checked)} />

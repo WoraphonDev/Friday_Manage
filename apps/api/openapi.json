@@ -512,6 +512,27 @@
         "security": []
       }
     },
+    "/api/v1/auth/password/policy": {
+      "get": {
+        "operationId": "Auth_passwordPolicy",
+        "summary": "เงื่อนไขรหัสผ่านของบัญชีใหม่ (หน้าสมัคร / รับคำเชิญ) · ขั้นต่ำมาจากค่าที่ทีม Friday ตั้งใน Ops",
+        "tags": [
+          "Auth"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
     "/api/v1/auth/password/reset": {
       "get": {
         "operationId": "Auth_resetInfo",

@@ -133,6 +133,8 @@ export interface WorkspaceWorkload {
 export type MfaEnforcement = "none" | "admin" | "all";
 export interface SecurityPolicy {
   passwordMinLength: number;
+  /** ขั้นต่ำที่ทีม Friday ตั้งใน Ops · เลือกต่ำกว่านี้ไม่ได้ */
+  passwordMinFloor?: number;
   passwordRequireSpecial: boolean;
   passwordRotationDays: number | null;
   lockoutAttempts: number;

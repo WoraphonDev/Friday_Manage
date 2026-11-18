@@ -208,10 +208,11 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | POST | `auth/sso/discover` | สาธารณะ | ตอบว่าโดเมนนี้บังคับ SSO ไหม (ทำทีหลัง) |
 | POST | `auth/logout` | self | |
 | POST | `auth/password/forgot` · `auth/password/reset` | สาธารณะ | reset แล้วเลือกออกจากระบบทุกเครื่องได้ · ส่งอีเมลแจ้ง |
+| GET | `auth/password/policy` | สาธารณะ | `{ minLength, requireSpecial: false }` เงื่อนไขของบัญชีใหม่ (หน้าสมัคร / รับคำเชิญ) · minLength = ขั้นต่ำที่ทีม Friday ตั้งใน Ops (8 / 12) ตรวจซ้ำใน `auth/signup` |
 | GET / PATCH | `me` | self | ชื่อ, ภาษา, ปี พ.ศ./ค.ศ., timezone |
 | POST | `me/email:change` | self | ยืนยันอีเมลใหม่ก่อนเปลี่ยน |
 | POST | `me/password:change` | self | Audit `secu.password_changed` |
-| GET | `me/password-policy` | self | `{ minLength, requireSpecial }` ของ Workspace ที่เข้มที่สุด · ค่าเดียวกับที่ `me/password:change` ตรวจ |
+| GET | `me/password-policy` | self | `{ minLength, requireSpecial }` ของ Workspace ที่เข้มที่สุด (ไม่ต่ำกว่าขั้นต่ำที่ทีม Friday ตั้งใน Ops) · ค่าเดียวกับที่ `me/password:change` ตรวจ |
 | GET / DELETE | `me/sessions` · `me/sessions/{id}` | self | |
 | POST | `me/mfa:setup` → `me/mfa:enable` · `me/mfa:disable` · `me/mfa/backup-codes:regenerate` | self | ปิดไม่ได้ถ้า Workspace บังคับ 2FA |
 | GET / DELETE | `me/identities` · `me/identities/{id}` | self | ลบวิธีสุดท้ายไม่ได้ |
@@ -256,7 +257,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | GET | `w/issue-trackers` | **ทุกคนใน Workspace** อ่านได้ `{ items: [{ name, urlTemplate }] }` · Guest ได้รายการว่าง · หมายเหตุ "<name> # : 111004 , 111005" แสดงเลขเป็นลิงก์ตาม `urlTemplate` |
 | GET / POST / DELETE | `w/holiday-calendars` · `w/holidays` | เปลี่ยนวันหยุดแล้วเข้าคิว `recalculate-plan-end` |
 | CRUD | `w/project-templates` | |
-| GET / PATCH | `w/security-policy` | |
+| GET / PATCH | `w/security-policy` | `passwordMinLength` ตั้งต่ำกว่าขั้นต่ำที่ทีม Friday ตั้งใน Ops ไม่ได้ (400 `password_min_below_floor`) · GET ส่ง `passwordMinFloor` |
 | CRUD | `w/sso-connections` · `w/domains` · `w/domains/{id}:verify` | ทำทีหลัง |
 | GET / PUT | `w/support-access` | เปิดสิทธิ์ทีม Friday · Audit |
 | GET | `w/audit-log?category&user&from&to` · `w/audit-log.csv` | `ws.audit.view` |

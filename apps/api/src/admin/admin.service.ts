@@ -1,6 +1,6 @@
 import { BlockList, isIP } from 'node:net';
 import { Inject, Injectable } from '@nestjs/common';
-import { type Db, schema, type Tx } from '@friday/db';
+import { type Db, readPasswordPolicy, schema, type Tx } from '@friday/db';
 import { and, desc, eq, gte, inArray, isNull, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { AppError, notFound } from '../common/errors.js';
@@ -316,6 +316,10 @@ export class AdminService {
 
   async patchSecurity(auth: AuthInfo, tenant: TenantInfo, input: z.infer<typeof PatchSecurityBody>, requestIp: string | undefined) {
     assertAdmin(tenant);
+    const floor = (await readPasswordPolicy(this.sys)).customerMinLength;
+    if (input.passwordMinLength !== undefined && input.passwordMinLength < floor) {
+      throw new AppError(400, 'password_min_below_floor', `ความยาวรหัสผ่านต้องไม่น้อยกว่า ${floor} ตัวตามที่ Friday กำหนด`, { passwordMinFloor: floor });
+    }
     return this.db.run(auth, tenant, async (tx) => {
       const cur = await this.securityRow(tx, tenant);
       if (input.ipAllowlist) {
@@ -344,8 +348,11 @@ export class AdminService {
 
   private async securityDto(tx: Tx, tenant: TenantInfo) {
     const r = await this.securityRow(tx, tenant);
+    // ops_settings อ่านด้วย sys (เป็นของทีม Friday) · ค่าที่ใช้จริงไม่ต่ำกว่าขั้นต่ำของ Friday
+    const floor = (await readPasswordPolicy(this.sys)).customerMinLength;
     return {
-      passwordMinLength: r.passwordMinLength,
+      passwordMinLength: Math.max(r.passwordMinLength, floor),
+      passwordMinFloor: floor,
       passwordRequireSpecial: r.passwordRequireSpecial,
       passwordRotationDays: r.passwordRotationDays,
       lockoutAttempts: r.lockoutAttempts,

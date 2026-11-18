@@ -216,6 +216,42 @@ describe('ล็อกอินด้วยรหัสผ่าน + แอป 
   });
 });
 
+describe('นโยบายความยาวรหัสผ่าน (ปุ่มเฟืองหน้าพนักงาน · แบบ A)', () => {
+  const code = (secret: string) => totpAt(secret, Math.floor(Date.now() / 1000 / 30));
+
+  it('Owner ตั้งพนักงาน / ลูกค้าแยกกัน (8 หรือ 12) · มี Audit · หน้าตั้งรหัสผ่านใช้ค่าใหม่ทันที', async () => {
+    const pub = request.agent(t.app.getHttpServer());
+    expect((await pub.get('/ops/auth/password/policy')).body).toEqual({ minLength: 12 });
+    expect((await support.agent.get('/ops/staff/password-policy')).status).toBe(403);
+    expect((await admin.agent.get('/ops/staff/password-policy')).body).toMatchObject({ policy: { staffMinLength: 12, customerMinLength: 8 }, updatedBy: null });
+    expect((await support.agent.put('/ops/staff/password-policy').send({ staffMinLength: 8, customerMinLength: 8 })).status).toBe(403);
+    expect((await admin.agent.put('/ops/staff/password-policy').send({ staffMinLength: 10, customerMinLength: 8 })).status).toBe(400);
+    try {
+      const saved = await admin.agent.put('/ops/staff/password-policy').send({ staffMinLength: 8, customerMinLength: 12 });
+      expect(saved.status, JSON.stringify(saved.body)).toBe(200);
+      expect(saved.body).toMatchObject({ saved: true, policy: { staffMinLength: 8, customerMinLength: 12 }, updatedBy: 'Ada Admin' });
+      expect((await admin.agent.put('/ops/staff/password-policy').send({ staffMinLength: 8, customerMinLength: 12 })).body.saved).toBe(false);
+      const logs = (await t.owner.query(`SELECT reason FROM staff_audit_logs WHERE action = 'staff.password_policy_updated'`)).rows;
+      expect(logs.map((r) => r.reason)).toEqual(['ความยาวรหัสผ่านขั้นต่ำ: พนักงาน Ops 12 → 8 ตัว · ลูกค้า 8 → 12 ตัว']);
+      expect((await pub.get('/ops/auth/password/policy')).body).toEqual({ minLength: 8 });
+
+      // พนักงานใหม่ตั้งรหัส 9 ตัวได้เมื่อขั้นต่ำเป็น 8 · กลับเป็น 12 แล้วรหัสเดิมยาวไม่พอ
+      const id = (await t.owner.query(`INSERT INTO staff_users (email, name, roles, status) VALUES ('len@friday.example.com', 'Len Length', '{auditor}', 'invited') RETURNING id`)).rows[0].id;
+      const a = request.agent(t.app.getHttpServer());
+      const s1 = await a.post('/ops/auth/password/setup').send({ enrollToken: signEnrollToken(id) });
+      await admin.agent.put('/ops/staff/password-policy').send({ staffMinLength: 12, customerMinLength: 12 });
+      const tooShort = await a.post('/ops/auth/password/verify').send({ setupToken: s1.body.setupToken, password: 'Short-pw9', code: code(s1.body.secret) });
+      expect(tooShort.status).toBe(400);
+      expect(tooShort.body.error).toMatchObject({ code: 'password_too_short', message: 'รหัสผ่านต้องยาวอย่างน้อย 12 ตัว' });
+      await admin.agent.put('/ops/staff/password-policy').send({ staffMinLength: 8, customerMinLength: 12 });
+      const ok = await a.post('/ops/auth/password/verify').send({ setupToken: s1.body.setupToken, password: 'Short-pw9', code: code(s1.body.secret) });
+      expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    } finally {
+      await t.owner.query(`DELETE FROM ops_settings WHERE key = 'password_policy'`);
+    }
+  });
+});
+
 describe('ตัวเลขและรายการ Workspace', () => {
   let a: Customer;
   let b: Customer;

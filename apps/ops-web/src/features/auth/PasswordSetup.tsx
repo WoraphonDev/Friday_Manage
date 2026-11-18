@@ -1,19 +1,26 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useReauth } from "@/components/dialogs";
 import { Button, buttonClass, InlineError, Input } from "@/components/ui";
+import { api } from "@/lib/api";
 import { finishPasswordSetup, startPasswordSetup, type TotpSetup } from "./password";
 
-const PASSWORD_MIN = 12;
+/** ค่าเดิมก่อนมีหน้าตั้งค่า · ใช้ระหว่างโหลด (ops-api ตรวจซ้ำตอนบันทึกอยู่แล้ว) */
+const DEFAULT_MIN = 12;
+/** ความยาวขั้นต่ำที่ Owner ตั้งใน Ops (ปุ่มเฟืองหน้าพนักงาน · 8 / 12) */
+function useStaffMinLength() {
+  const q = useQuery({ queryKey: ["ops", "auth", "password-policy"], queryFn: () => api.get<{ minLength: number }>("/auth/password/policy"), staleTime: 60_000 });
+  return q.data?.minLength ?? DEFAULT_MIN;
+}
 
 type StrengthLevel = "weak" | "fair" | "good" | "strong";
 /** กติกาเดียวกับ ops-api (PasswordVerifyBody) · รูปแบบเดียวกับ checkPassword ของแอปลูกค้า แต่ขั้นต่ำ 12 ตัว */
-export function checkPassword(value: string) {
-  const rules = { length: value.length >= PASSWORD_MIN, upper: /[A-Z]/.test(value), digit: /[0-9]/.test(value), special: /[^A-Za-z0-9]/.test(value) };
+export function checkPassword(value: string, min = DEFAULT_MIN) {
+  const rules = { length: value.length >= min, upper: /[A-Z]/.test(value), digit: /[0-9]/.test(value), special: /[^A-Za-z0-9]/.test(value) };
   const valid = rules.length && rules.upper && rules.digit;
   const score = Object.values(rules).filter(Boolean).length;
   const level: StrengthLevel = !valid ? (score <= 2 ? "weak" : "fair") : score === 4 && value.length >= 16 ? "strong" : "good";
@@ -22,9 +29,9 @@ export function checkPassword(value: string) {
 
 /** แบบ C ที่ผู้ใช้เลือก (19 พ.ย. · เหมือนหน้าต่างเปลี่ยนรหัสผ่านในโปรไฟล์ของแอปลูกค้า):
  * ปิดอยู่เห็นแค่ข้อความสั้น · คลิกช่องหรือมีค่าแล้ว แถบความปลอดภัย + เงื่อนไขเลื่อนลงมา */
-function PasswordRules({ value, open }: { value: string; open: boolean }) {
+function PasswordRules({ value, open, min }: { value: string; open: boolean; min: number }) {
   const t = useTranslations("ops.auth");
-  const { rules, level } = checkPassword(value);
+  const { rules, level } = checkPassword(value, min);
   const bars = level === "strong" ? 4 : level === "good" ? 3 : level === "fair" ? 2 : value ? 1 : 0;
   return (
     <>
@@ -44,13 +51,13 @@ function PasswordRules({ value, open }: { value: string; open: boolean }) {
             {(["length", "upper", "digit", "special"] as const).map((rule) => (
               <li key={rule} data-ok={rules[rule]}>
                 <span aria-hidden="true">{rules[rule] ? "✓" : "○"}</span>
-                {rule === "length" ? t("passwordRules.length", { n: PASSWORD_MIN }) : rule === "special" ? t("passwordRules.specialOptional") : t(`passwordRules.${rule}`)}
+                {rule === "length" ? t("passwordRules.length", { n: min }) : rule === "special" ? t("passwordRules.specialOptional") : t(`passwordRules.${rule}`)}
               </li>
             ))}
           </ul>
         </div>
       </div>
-      {!open && <span className="pw-hint">{t("passwordHint", { min: PASSWORD_MIN })}</span>}
+      {!open && <span className="pw-hint">{t("passwordHint", { min })}</span>}
     </>
   );
 }
@@ -95,8 +102,9 @@ export function PasswordSetup({ mode, token: initialToken = "", onDone, onUseKey
   });
   const finish = useMutation({ mutationFn: () => finishPasswordSetup(setup!.setupToken, password, code) });
 
-  const tooShort = password.length < PASSWORD_MIN;
-  const weak = !checkPassword(password).valid;
+  const min = useStaffMinLength();
+  const tooShort = password.length < min;
+  const weak = !checkPassword(password, min).valid;
   const mismatch = confirm !== password;
   const step = finish.data ? 2 : setup ? 1 : 0;
   const steps = (
@@ -194,9 +202,9 @@ export function PasswordSetup({ mode, token: initialToken = "", onDone, onUseKey
           onChange={(e) => setPassword(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          error={checked && weak ? (tooShort ? t("passwordShort", { min: PASSWORD_MIN }) : t("passwordWeak")) : undefined}
+          error={checked && weak ? (tooShort ? t("passwordShort", { min }) : t("passwordWeak")) : undefined}
         />
-        <PasswordRules value={password} open={focused || !!password} />
+        <PasswordRules value={password} open={focused || !!password} min={min} />
       </div>
       <div className="pw-field">
         <Input label={t("confirmPassword")} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} error={checked && !weak && mismatch ? t("passwordMismatch") : undefined} />

@@ -7,3 +7,4 @@ export * from './promotions.ts';
 export * from './documents.ts';
 export * from './retention.ts';
 export * from './credit.ts';
+export * from './password-policy.ts';

@@ -7,7 +7,6 @@ const scryptAsync = promisify(scrypt) as (pw: string, salt: Buffer, len: number,
 /** ค่าตาม OWASP สำหรับ scrypt (N=2^17, r=8, p=1) */
 const SCRYPT = { N: 1 << 17, r: 8, p: 1, maxmem: 256 * 1024 * 1024 };
 
-export const PASSWORD_MIN = 12;
 export const LOCK_ATTEMPTS = 5;
 export const LOCK_MINUTES = 15;
 

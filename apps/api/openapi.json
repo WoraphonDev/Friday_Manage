@@ -3737,6 +3737,32 @@
         }
       }
     },
+    "/api/v1/me/password-policy": {
+      "get": {
+        "operationId": "MeSecurity_passwordPolicy",
+        "summary": "เงื่อนไขรหัสผ่านที่ password:change ใช้ตรวจ (Workspace ที่เข้มที่สุด) ให้หน้าเว็บติ๊กเงื่อนไขก่อนกดบันทึก",
+        "tags": [
+          "MeSecurity"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/api/v1/me/password:change": {
       "post": {
         "operationId": "MeSecurity_changePassword",

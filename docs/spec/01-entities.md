@@ -265,6 +265,9 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `ops_saved_view` | มุมมองที่บันทึกไว้ของหน้ารายการใน Friday Ops (ช่วง 3) · roles ว่าง = ส่วนตัว · มีค่า = ของทีม (Owner / หัวหน้าทีม Support สร้าง) | owner_id, page, name, filters (JSON ตัวกรอง + การเรียง + แท็บ), roles | Ops ทุกหน้ารายการ |
 | `ops_view_pref` | การตั้งค่ามุมมองของแต่ละคน: ปักที่เมนูซ้าย ซ่อน ลำดับ มุมมองเริ่มต้น | staff_id, view_id, pinned, hidden, position, is_default | Ops ทุกหน้ารายการ |
 | `support_ticket_incident` | Ticket ที่ผูกกับเหตุขัดข้อง (ช่วง 3) · หนึ่ง Ticket ผูกได้เหตุเดียว | ticket_id (PK), incident_id, linked_by | Ops Ticket, เหตุขัดข้อง |
+| `customer_account` | บัญชีลูกค้าระดับบริษัท (ช่วง 3) · รวม Workspace ของผู้ซื้อเดียวกันและบริษัทในเครือ · ระบบเสนอ คนยืนยัน · Enterprise มีสัญญาและ SLA ตามสัญญาแทนของแพ็กเกจ | name, tax_ids[], manager_id, kind (standard · enterprise), contacts, notes, contract_start, contract_end, contract_value (สตางค์/ปี), contract_seats, contract_sla, renewal_reminded | Ops บัญชีลูกค้า, วันต่อสัญญา, Ticket |
+| `customer_account_workspace` | Workspace ในบัญชีลูกค้า · หนึ่ง Workspace อยู่ได้บัญชีเดียว | workspace_id (PK), account_id, added_by | Ops บัญชีลูกค้า, Workspaces |
+| `customer_account_file` | ไฟล์สัญญา PDF ของบัญชี (บัญชีละหนึ่งไฟล์ · ไม่เกิน 10 MB) | account_id (PK), name, mime, size, data | Ops บัญชีลูกค้า |
 
 `staff_users` (Friday Ops เฟส 1 · [06-ops-roles](06-ops-roles.md)): `roles` (owner · finance · support · engineer · auditor, อย่างน้อย 1), `department`, `limits`, `status`, `expires_at` · `role` เดิมลบแล้วใน migration 0019 (O01) · `payments` เพิ่ม `verified_by`, `exception_reason`, `matched_invoice_id` · `support_sessions` เพิ่ม `ticket_id` · `notification_deliveries` เพิ่ม `target_label`, `content`, `response`, `log`, `resend_requested_at` และสถานะ `suppressed` (O23 · เก็บ 90 วัน)
 

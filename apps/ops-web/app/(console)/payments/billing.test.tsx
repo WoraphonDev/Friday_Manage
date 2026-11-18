@@ -387,6 +387,18 @@ describe("คืนเงินและอนุมัติ", () => {
     await waitFor(() => expect(note).toBe("ให้เป็นเครดิตแทน"));
   });
 
+  it("ช่วง 2: J เลือกคำขอ · R เปิดหน้าต่างไม่อนุมัติ · เห็นเพื่อนที่กำลังดู", async () => {
+    refunds();
+    server.use(http.get(`${OPS}/presence`, () => HttpResponse.json({ items: [{ id: "ap-1", staffId: "s-9", name: "ฟ้า พรหมมา", mode: "viewing" }] })));
+    view();
+    const card = await screen.findByRole("article", { name: "คืนเงิน" });
+    expect(await within(card).findByText("● ฟ้า พรหมมา กำลังดู")).toBeInTheDocument();
+    await userEvent.keyboard("j");
+    expect(card).toHaveAttribute("data-active", "true");
+    await userEvent.keyboard("r");
+    expect(await screen.findByRole("dialog", { name: /ไม่อนุมัติ/ })).toBeInTheDocument();
+  });
+
   it("การเงินขอคืนเงินอ้างใบแจ้งหนี้ที่ชำระแล้ว · ไม่มีปุ่มอนุมัติ", async () => {
     asRole("finance");
     refunds();

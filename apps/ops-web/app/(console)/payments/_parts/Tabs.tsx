@@ -151,7 +151,7 @@ export function InvoicesTab({ creating, onCreatingChange }: { creating: boolean;
       </div>
       <ChipGroup className="row">
         <div style={{ flex: "1 1 240px" }}>
-          <Input aria-label={t("invoices.search")} placeholder={t("invoices.search")} value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input data-page-search aria-label={t("invoices.search")} placeholder={t("invoices.search")} value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         {STATUSES.map((s) => (
           <Chip key={s || "all"} pressed={status === s} onClick={() => setStatus(s)}>
@@ -647,7 +647,7 @@ export function OverdueTab() {
         <span className="card-sub">{t("overdue.steps")}</span>
       </div>
       <p className="muted small">{t("overdue.note")}</p>
-      <Input type="search" aria-label={t("overdue.search")} placeholder={t("overdue.search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
+      <Input data-page-search type="search" aria-label={t("overdue.search")} placeholder={t("overdue.search")} value={search} onChange={(e) => (setSearch(e.target.value), setOffset(0))} />
       {q.isPending ? (
         <TableSkeleton rows={4} cols={6} />
       ) : q.error ? (

@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from "react";
 import { ApiError } from "@/lib/api";
 import { exitDelay, useExitGhost, useSlidingIndicator } from "@/lib/motion";
+import { useShortcuts } from "@/lib/shortcuts";
 import type { OpsRole } from "@/lib/types";
 import { Button } from "./ui";
 
@@ -123,6 +124,11 @@ export function RoleChips({ roles, elevated = [] }: { roles: OpsRole[]; elevated
 
 // ---------------------------------------------------------------- Drawer · Popover · แถบเตือน
 
+/** กดปุ่มบน toast (เช่น "ย้อนกลับ") ไม่นับเป็นคลิกนอกแผง · แผงจึงไม่ปิดเอง */
+const keepOpenOnToast = (e: { target: EventTarget | null; preventDefault: () => void }) => {
+  if (e.target instanceof Element && e.target.closest(".toast-region")) e.preventDefault();
+};
+
 /** Drawer / Modal เลื่อนและจางเข้า-ออกตาม data-state (ops.css) · หน้าที่ปิดด้วยการเลิก render ได้ animation ปิดจาก useExitGhost */
 export function Drawer({ open, onOpenChange, title, description, wide, className, children }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; description?: ReactNode; wide?: boolean; className?: string; children?: ReactNode }) {
   const t = useTranslations("common.dialog");
@@ -132,7 +138,7 @@ export function Drawer({ open, onOpenChange, title, description, wide, className
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay ref={overlayGhost} className="overlay" />
-        <RadixDialog.Content ref={contentGhost} className={clsx("drawer", wide && "drawer-wide", className)} {...(!description ? { "aria-describedby": undefined } : {})}>
+        <RadixDialog.Content ref={contentGhost} className={clsx("drawer", wide && "drawer-wide", className)} onInteractOutside={keepOpenOnToast} {...(!description ? { "aria-describedby": undefined } : {})}>
           <div className="dialog-heading">
             <RadixDialog.Title asChild>
               <h2>{title}</h2>
@@ -160,7 +166,7 @@ export function Modal({ open, onOpenChange, title, description, className, hideT
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay ref={overlayGhost} className="overlay" />
-        <RadixDialog.Content ref={contentGhost} className={clsx("dialog", className)} {...(!description ? { "aria-describedby": undefined } : {})}>
+        <RadixDialog.Content ref={contentGhost} className={clsx("dialog", className)} onInteractOutside={keepOpenOnToast} {...(!description ? { "aria-describedby": undefined } : {})}>
           {hideTitle ? (
             <RadixDialog.Title className="sr-only">{title}</RadixDialog.Title>
           ) : (
@@ -313,8 +319,17 @@ export function ListBar({ tabs, children }: { tabs?: ReactNode; children?: React
 /**
  * แถบแบ่งหน้าใต้ตาราง: บอกเสมอว่าเห็นกี่รายการจากทั้งหมด (ห้ามตัดเงียบ) · ข้อมูลเยอะดึงทีละหน้าจาก ops-api
  */
-export function Pager({ offset, limit, shown, total, onChange }: { offset: number; limit: number; shown: number; total: number; onChange: (offset: number) => void }) {
+export function Pager({ offset, limit, shown, total, onChange, hotkeys = false }: { offset: number; limit: number; shown: number; total: number; onChange: (offset: number) => void; hotkeys?: boolean }) {
   const t = useTranslations("common.pager");
+  const tk = useTranslations("common.keys");
+  // [ ] เปลี่ยนหน้า · เฉพาะตารางหลักของหน้า (hotkeys)
+  useShortcuts(
+    [
+      { keys: "]", label: tk("nextPage"), group: "global", list: true, run: () => offset + limit < total && onChange(offset + limit) },
+      { keys: "[", label: tk("prevPage"), group: "global", list: true, run: () => offset > 0 && onChange(Math.max(0, offset - limit)) },
+    ],
+    hotkeys && total > limit,
+  );
   if (!total) return null;
   return (
     <div className="pager">

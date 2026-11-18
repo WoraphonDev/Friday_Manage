@@ -145,6 +145,8 @@ export interface ToastInput {
   tone?: "ok" | "error";
   requestId?: string;
   undo?: () => void;
+  /** มิลลิวินาทีก่อนหายเอง (ค่าเริ่มต้น 5 วินาที) · งานที่ย้อนได้ 10 วินาทีใช้ 10000 */
+  duration?: number;
 }
 type ToastItem = ToastInput & { id: number };
 const ToastContext = createContext<(input: string | ToastInput) => void>(() => undefined);
@@ -169,7 +171,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (input: string | ToastInput) => {
       const item: ToastItem = { ...(typeof input === "string" ? { message: input } : input), id: ++next.current };
       setItems((prev) => [...prev, item]);
-      if (item.tone !== "error") timers.current.set(item.id, setTimeout(() => dismiss(item.id), 5000));
+      if (item.tone !== "error") timers.current.set(item.id, setTimeout(() => dismiss(item.id), item.duration ?? 5000));
     },
     [dismiss],
   );

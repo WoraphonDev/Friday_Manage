@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileImage } from "lucide-react";
+import { FileImage, Play } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { hasAny } from "@/components/access";
@@ -11,6 +11,11 @@ import { Drawer, Empty, ErrorBlock, Modal, Notice, Pager, TableSkeleton, TodoCar
 import { Button, errorToast, InlineError, Input, Textarea, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/query";
+import { useShortcuts, useStableRows } from "@/lib/shortcuts";
+import { SlipRun } from "./SlipRun";
+import { Kbd } from "@/components/shortcut-help";
+import { usePresence } from "@/lib/presence";
+import { NewItemsBar } from "@/components/new-items";
 import { useFmt } from "../../workspaces/_parts/format";
 
 export interface ExceptionItem {
@@ -48,16 +53,22 @@ export function VerifyTab() {
   // ช่วง 1 (ข้อมูลเยอะ): สองคิวแบ่งหน้าที่ ops-api · รอนานสุดขึ้นก่อน · สลิปปกติกรองที่ server (เดิมกรองในเบราว์เซอร์)
   const [excOffset, setExcOffset] = useState(0);
   const [slipOffset, setSlipOffset] = useState(0);
-  const q = useQuery({ queryKey: [...exceptionsKey, excOffset], queryFn: () => api.get<{ items: ExceptionItem[]; payments30d: number; total: number }>(`/payments/exceptions?limit=${PAGE}&offset=${excOffset}`), placeholderData: keepPreviousData });
-  const slips = useQuery({ queryKey: ["ops", "payments", "pending", slipOffset], queryFn: () => api.get<{ items: SlipItem[]; total: number }>(`/payments?status=pending_review&queue=slips&limit=${PAGE}&offset=${slipOffset}`), placeholderData: keepPreviousData });
+  const q = useQuery({ queryKey: [...exceptionsKey, excOffset], queryFn: () => api.get<{ items: ExceptionItem[]; payments30d: number; total: number }>(`/payments/exceptions?limit=${PAGE}&offset=${excOffset}`), placeholderData: keepPreviousData, refetchInterval: 30_000 });
+  const slips = useQuery({ queryKey: ["ops", "payments", "pending", slipOffset], queryFn: () => api.get<{ items: SlipItem[]; total: number }>(`/payments?status=pending_review&queue=slips&limit=${PAGE}&offset=${slipOffset}`), placeholderData: keepPreviousData, refetchInterval: 30_000 });
+  // ช่วง 2: รายการใหม่ไม่แทรกเอง · รอกด "แสดง"
+  const excStable = useStableRows(q.data?.items, `exc:${excOffset}`);
+  const slipStable = useStableRows(slips.data?.items, `slip:${slipOffset}`);
   const [open, setOpen] = useState<ExceptionItem | null>(null);
   const [flagging, setFlagging] = useState<SlipItem | null>(null);
   const [viewing, setViewing] = useState<SlipItem | null>(null);
+  // ช่วง 2 · ตรวจสลิปต่อเนื่อง
+  const [running, setRunning] = useState(false);
   const decide = hasAny(me, "finance");
-  const normal = slips.data?.items ?? [];
+  const normal = slipStable.rows;
+  useShortcuts([{ keys: "p", label: t("run.start"), list: true, run: () => decide && normal.length > 0 && setRunning(true) }], decide);
   const pending = q.isPending || slips.isPending;
   const error = q.error ?? slips.error;
-  const exceptions = q.data?.items ?? [];
+  const exceptions = excStable.rows;
   return (
     <>
       {/* โครงหน้า Ops: กรณีผิดปกติ + สลิปรอตรวจ = งานที่ต้องทำ อยู่บนสุดในแถบเดียว · ไม่มีงาน = แถบเขียวบรรทัดเดียว */}
@@ -66,10 +77,11 @@ export function VerifyTab() {
       ) : error ? (
         <ErrorBlock error={error} retry={() => (void q.refetch(), void slips.refetch())} />
       ) : (
-        !(q.data?.total ?? exceptions.length) && !(slips.data?.total ?? normal.length) ? (
+        !(q.data?.total ?? exceptions.length) && !(slips.data?.total ?? normal.length) && !excStable.fresh && !slipStable.fresh ? (
           <Empty ok title={t("verify.empty")} description={t("verify.emptyDesc")} />
         ) : (
           <>
+            <NewItemsBar count={excStable.fresh + slipStable.fresh} onShow={() => (excStable.reveal(), slipStable.reveal())} />
             {!!exceptions.length && (
               <TodoCard title={t("verify.exceptionsTitle")} count={q.data?.total ?? exceptions.length} hint={q.data ? t("verify.summary", { total: q.data.payments30d, n: q.data.total ?? exceptions.length }) : undefined}>
           {exceptions.map((x) => (
@@ -100,7 +112,17 @@ export function VerifyTab() {
               </TodoCard>
             )}
             {!!normal.length && (
-              <TodoCard title={t("verify.slipsTitle")} count={slips.data?.total ?? normal.length}>
+              <TodoCard
+                title={t("verify.slipsTitle")}
+                count={slips.data?.total ?? normal.length}
+                hint={
+                  decide && (
+                    <Button size="small" variant="primary" onClick={() => setRunning(true)}>
+                      <Play size={14} aria-hidden="true" /> {t("run.start")}
+                    </Button>
+                  )
+                }
+              >
           {normal.map((s) => (
             <TodoRow
               key={s.id}
@@ -136,7 +158,18 @@ export function VerifyTab() {
         )
       )}
       <p className="muted small">{t("verify.note")} · {t("verify.slipsNote")}</p>
-      {open && <DecisionDrawer item={open} canDecide={decide} onClose={() => setOpen(null)} />}
+      {running && <SlipRun onClose={() => setRunning(false)} />}
+      {open && (
+        <DecisionDrawer
+          key={open.id}
+          item={open}
+          canDecide={decide}
+          onClose={() => setOpen(null)}
+          // ช่วง 2: ตัดสินแล้วเปิดรายการถัดไป (ตำแหน่งเดิมในคิวที่เหลือ) · หมดคิว = ปิด
+          onDecided={() => setOpen(exceptions.filter((x) => x.id !== open.id)[exceptions.findIndex((x) => x.id === open.id)] ?? null)}
+          pos={{ at: exceptions.findIndex((x) => x.id === open.id) + 1, total: exceptions.length, onNext: () => setOpen(exceptions[exceptions.findIndex((x) => x.id === open.id) + 1] ?? null) }}
+        />
+      )}
       {flagging && <FlagDialog item={flagging} onClose={() => setFlagging(null)} />}
       {viewing && (
         <FileViewer
@@ -244,7 +277,11 @@ function FlagDialog({ item, onClose }: { item: SlipItem; onClose: () => void }) 
 }
 
 /** แผงตัดสิน: หลักฐาน · ลำดับเหตุการณ์ · ผ่าน / ไม่ผ่าน (B6) / ผูกใบอื่น (B7) / เครดิต / คืนเงิน */
-function DecisionDrawer({ item, canDecide, onClose }: { item: ExceptionItem; canDecide: boolean; onClose: () => void }) {
+function DecisionDrawer({ item, canDecide, onClose, onDecided, pos }: { item: ExceptionItem; canDecide: boolean; onClose: () => void; onDecided?: () => void; pos?: { at: number; total: number; onNext: () => void } }) {
+  const tr = useTranslations("money.run");
+  // ช่วง 2: บอกเพื่อนว่ากำลังตัดสินรายการนี้ · เห็นเพื่อนที่เปิดอยู่
+  const others = usePresence("payment", item.id);
+  useShortcuts([{ keys: "s", label: tr("skip"), run: () => pos && pos.at < pos.total && pos.onNext() }]);
   const t = useTranslations("money");
   const fmt = useFmt();
   const toast = useToast();
@@ -255,7 +292,9 @@ function DecisionDrawer({ item, canDecide, onClose }: { item: ExceptionItem; can
   const done = (message: string) => {
     toast(message);
     void cache.invalidateQueries({ queryKey: ["ops"] });
-    onClose();
+    // ช่วง 2: ตัดสินแล้วไปรายการถัดไปในคิว (ถ้ามี)
+    if (onDecided) onDecided();
+    else onClose();
   };
   const pass = useMutation({ mutationFn: () => api.post(`/payments/${item.id}/confirm`, { note: reason.trim() || undefined }), onSuccess: () => done(t("verify.passed")) });
   const credit = useMutation({ mutationFn: () => api.post(`/payments/${item.id}/to-credit`, { reason: reason.trim() }), onSuccess: () => done(t("verify.credited")) });
@@ -268,6 +307,24 @@ function DecisionDrawer({ item, canDecide, onClose }: { item: ExceptionItem; can
   const err = pass.error ?? credit.error ?? refund.error;
   return (
     <Drawer open onOpenChange={(o) => !o && onClose()} wide title={`${t(`reasons.${item.reason}` as "reasons.amount_mismatch")} · ${item.workspace.name}`} description={t("verify.panel")}>
+      {pos && (
+        <div className="run-bar" role="status" style={{ margin: "0 -22px" }}>
+          <span className="muted small">{tr("exceptionProgress", { pos: pos.at, total: pos.total })}</span>
+          <span className="run-progress" aria-hidden="true">
+            <i style={{ width: `${Math.round((pos.at / pos.total) * 100)}%` }} />
+          </span>
+          {pos.at < pos.total && (
+            <Button size="small" onClick={pos.onNext}>
+              {tr("skip")} <Kbd keys="s" />
+            </Button>
+          )}
+        </div>
+      )}
+      {others[0] && (
+        <div className="presence-banner warn" role="status">
+          ● {tr("othersHere", { name: others[0].name })}
+        </div>
+      )}
       <section className="stack">
         <h3 className="card-title">{t("verify.evidence")}</h3>
         <table className="tbl">

@@ -149,6 +149,51 @@ describe("Support", () => {
     await waitFor(() => expect(asked.at(-1)?.get("offset")).toBe("0"));
   });
 
+  it("ช่วง 2: ปุ่มลัด J / Enter เปิดเรื่อง · พิมพ์ในช่องค้นหาแล้วปุ่มลัดไม่ทำงาน", async () => {
+    asRole("support");
+    page();
+    await screen.findByText("นำเข้า Excel ไม่ได้");
+    await userEvent.keyboard("j");
+    expect(screen.getByText("นำเข้า Excel ไม่ได้").closest("tr")).toHaveAttribute("data-active", "true");
+    await userEvent.keyboard("{Enter}");
+    expect(router.replace).toHaveBeenLastCalledWith(`/support?ticket=${T}`);
+    // พิมพ์ในช่องค้นหา ปุ่มลัดไม่ทำงาน
+    await userEvent.click(screen.getByLabelText("ค้นหัวข้อ อีเมล หรือเลข Ticket"));
+    await userEvent.keyboard("j");
+    expect(screen.getByLabelText("ค้นหัวข้อ อีเมล หรือเลข Ticket")).toHaveValue("j");
+  });
+
+  it("ช่วง 2: ตอบต่อเนื่อง · ข้ามเรื่องที่เพื่อนเปิดอยู่ · ส่งแล้วย้อนกลับได้ 10 วินาที · เริ่มพิมพ์ = รับเรื่อง", async () => {
+    asRole("support");
+    const T2 = "70000000-0000-4000-8000-000000000002";
+    const T3 = "70000000-0000-4000-8000-000000000003";
+    const posted: string[] = [];
+    page(`ticket=${T}`, [
+      http.get(`${OPS}/tickets`, () =>
+        HttpResponse.json({ items: [row, { ...row, id: T2, number: 513, subject: "เรื่องที่สอง" }, { ...row, id: T3, number: 514, subject: "เรื่องที่สาม" }], total: 3, counts: { mine: 3, none: 0, all: 3 }, summary: { open: 3, unassigned: 0, breached: 0, firstResponseMinutes: 4, csat: null } }),
+      ),
+      http.get(`${OPS}/presence`, () => HttpResponse.json({ items: [{ id: T2, staffId: "s-9", name: "มิว ศิริ", mode: "viewing" }] })),
+      http.post(`${OPS}/tickets/:id/:action`, ({ params }) => (posted.push(`${params.action}:${params.id}`), HttpResponse.json({ ok: true }))),
+    ]);
+    // แผง Ticket เปิดอยู่แล้ว (เรื่องแรกในคิว) จึงกดปุ่มหลังแผงผ่าน pointerEventsCheck: 0
+    await userEvent.setup({ pointerEventsCheck: 0 }).click(await screen.findByRole("button", { name: "ตอบต่อเนื่อง", hidden: true }));
+    await waitFor(() => expect(router.replace).toHaveBeenLastCalledWith(`/support?ticket=${T}`));
+    const dlg = await screen.findByRole("dialog", { name: /#512/ });
+    expect(await within(dlg).findByText(/ตอบต่อเนื่อง · ของฉัน 1 จาก 3/)).toBeInTheDocument();
+    // เรื่องยังไม่มีคนรับ: เริ่มพิมพ์ = รับเรื่องให้อัตโนมัติ (ข้อ 1 ก)
+    await userEvent.type(within(dlg).getByPlaceholderText("ตอบลูกค้า"), "แก้ให้แล้วครับ");
+    await waitFor(() => expect(posted).toContain(`claim:${T}`));
+    await userEvent.click(within(dlg).getByRole("button", { name: "ส่ง" }));
+    // ไปเรื่องถัดไปทันที · #513 มีเพื่อนเปิดอยู่จึงข้ามไป #514
+    await waitFor(() => expect(router.replace).toHaveBeenLastCalledWith(`/support?ticket=${T3}`));
+    expect(await within(dlg).findByText(/ข้าม #513 เพราะ มิว ศิริ กำลังเปิดอยู่/)).toBeInTheDocument();
+    // ยังไม่ส่งจริง (รอ 10 วินาที) · กดย้อนกลับ = ยกเลิกและกลับเรื่องเดิม (ข้อ 2 ก)
+    expect(posted).not.toContain(`messages:${T}`);
+    await userEvent.setup({ pointerEventsCheck: 0 }).click(screen.getByRole("button", { name: "ย้อนกลับ", hidden: true }));
+    expect(router.replace).toHaveBeenLastCalledWith(`/support?ticket=${T}`);
+    expect(posted).not.toContain(`messages:${T}`);
+  });
+
   it("บทสนทนาแบบแชท: ลูกค้าซ้าย · ทีมเราขวา · บันทึกภายในมีป้าย", async () => {
     asRole("support");
     const extra = [

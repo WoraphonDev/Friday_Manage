@@ -344,6 +344,13 @@
       "when": 1795000512072,
       "tag": "0048_ops_workspace_flags",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1795003737591,
+      "tag": "0049_ops_presence",
+      "breakpoints": true
     }
   ]
 }

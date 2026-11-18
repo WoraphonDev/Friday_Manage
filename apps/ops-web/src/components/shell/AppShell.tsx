@@ -5,6 +5,7 @@ import { clsx } from "clsx";
 import { KeyRound, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
+import { ShortcutHelp } from "../shortcut-help";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { LoginMethods } from "@/features/auth/LoginMethods";
 import { loginWithCode, loginWithPassword } from "@/features/auth/password";
@@ -384,6 +385,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <SearchPalette staff={staff} open={searchOpen} onOpenChange={setSearchOpen} onApprovals={openApprovals} />
         <ApprovalsDrawer open={approvals} onOpenChange={setApprovals} />
+        <ShortcutHelp />
         <BreakGlassDialog staff={staff} open={glass} onOpenChange={setGlass} initialRole={current && !allowed ? current.roles.find((r) => r !== "owner") : undefined} />
         <Modal open={addKey} onOpenChange={setAddKey} title={t("account.methods")} description={ta("methodsDesc")}>
           <LoginMethods />

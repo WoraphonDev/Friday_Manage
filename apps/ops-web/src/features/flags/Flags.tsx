@@ -5,8 +5,9 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button, Dialog, EmptyState, ErrorState, InlineError, Input, LoadingState, Pill, Select, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { type PickedWs, WorkspacePicker } from "@/components/workspace-picker";
 import { keys } from "@/lib/query";
-import type { Flag, WorkspaceRow } from "@/lib/types";
+import type { Flag } from "@/lib/types";
 import { PageHeader } from "../shell/Shell";
 
 export function FlagsPage() {
@@ -128,14 +129,15 @@ function Overrides({ flag }: { flag: Flag }) {
   const t = useTranslations("ops");
   const toast = useToast();
   const cache = useQueryClient();
-  const [ws, setWs] = useState("");
+  // พิมพ์ค้น Workspace (เดิมโหลด 200 รายการใส่ dropdown · Workspace ที่ 201 เลือกไม่ได้)
+  const [picked, setPicked] = useState<PickedWs[]>([]);
+  const ws = picked[0]?.id ?? "";
   const [enabled, setEnabled] = useState("true");
-  const workspaces = useQuery({ queryKey: keys.workspaces({ limit: "200" }), queryFn: () => api.get<{ items: WorkspaceRow[] }>("/workspaces?limit=200") });
   const done = () => {
     toast(t("flags.overrideSaved"));
     void cache.invalidateQueries({ queryKey: keys.flags });
   };
-  const put = useMutation({ mutationFn: () => api.put(`/feature-flags/${flag.id}/overrides/${ws}`, { enabled: enabled === "true" }), onSuccess: done });
+  const put = useMutation({ mutationFn: () => api.put(`/feature-flags/${flag.id}/overrides/${ws}`, { enabled: enabled === "true" }), onSuccess: () => (done(), setPicked([])) });
   const del = useMutation({ mutationFn: (workspaceId: string) => api.delete(`/feature-flags/${flag.id}/overrides/${workspaceId}`), onSuccess: done });
   return (
     <div className="stack-10 overrides">
@@ -158,14 +160,7 @@ function Overrides({ flag }: { flag: Flag }) {
         ))
       )}
       <div className="override-add">
-        <Select label={t("flags.workspace")} value={ws} onChange={(e) => setWs(e.target.value)}>
-          <option value="">{t("flags.pickWorkspace")}</option>
-          {workspaces.data?.items.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.name} ({w.slug})
-            </option>
-          ))}
-        </Select>
+        <WorkspacePicker single label={t("flags.workspace")} placeholder={t("flags.searchWorkspace")} value={picked} onChange={setPicked} />
         <Select label={t("flags.value")} value={enabled} onChange={(e) => setEnabled(e.target.value)}>
           <option value="true">{t("flags.on")}</option>
           <option value="false">{t("flags.offShort")}</option>
@@ -174,7 +169,7 @@ function Overrides({ flag }: { flag: Flag }) {
           {t("flags.addOverride")}
         </Button>
       </div>
-      <InlineError error={put.error ?? del.error ?? workspaces.error} />
+      <InlineError error={put.error ?? del.error} />
     </div>
   );
 }

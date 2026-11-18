@@ -330,6 +330,7 @@
     "created": "สร้าง flag แล้ว",
     "saved": "บันทึก flag แล้ว",
     "deleted": "ลบ flag แล้ว",
-    "overrideSaved": "บันทึกการกำหนดแล้ว · ลูกค้าเห็นใน Audit Log"
+    "overrideSaved": "บันทึกการกำหนดแล้ว · ลูกค้าเห็นใน Audit Log",
+    "searchWorkspace": "พิมพ์ชื่อหรือ slug อย่างน้อย 2 ตัว"
   }
 }

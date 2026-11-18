@@ -77,8 +77,9 @@ describe("Feature flags", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "ลบการกำหนด ทีมตัวอย่าง" }));
     await waitFor(() => expect(calls).toContainEqual({ method: "DELETE", path: `/ops-api/feature-flags/${flagId}/overrides/${wsA}`, body: undefined }));
 
-    await within(dialog).findByRole("option", { name: "ทีมทดลอง (trial-team)" });
-    await userEvent.selectOptions(within(dialog).getByLabelText("Workspace"), wsB);
+    // พิมพ์ค้น Workspace แทน dropdown ที่โหลด 200 รายการ
+    await userEvent.type(within(dialog).getByLabelText("Workspace"), "ทีมทดลอง");
+    await userEvent.click(await within(dialog).findByRole("option", { name: "ทีมทดลอง" }));
     await userEvent.selectOptions(within(dialog).getByLabelText("ค่า"), "false");
     await userEvent.click(within(dialog).getByRole("button", { name: "เพิ่มการกำหนด" }));
     await waitFor(() => expect(calls).toContainEqual({ method: "PUT", path: `/ops-api/feature-flags/${flagId}/overrides/${wsB}`, body: { enabled: false } }));

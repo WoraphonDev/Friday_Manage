@@ -3021,3 +3021,10 @@ input[type="checkbox"]:checked:focus { animation: motion-check var(--motion-dur-
 
 /* แถบแบ่งหน้า: บอก "แสดง x–y จาก n" เสมอ */
 .pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* ตัวกรองที่กำลังใช้ (ผู้ซื้อ / ตรวจรายการทดสอบ) · ป้ายจำนวน Workspace ของผู้ซื้อ · แถวสรุปยอดของผู้ซื้อ */
+.filter-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-text); font-size: 13px; font-weight: 600; }
+.count-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; border: 0; background: var(--primary-soft); color: var(--primary-text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; width: max-content; }
+.count-chip:hover { background: var(--primary-border); }
+.count-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.sum-row { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-2); font-size: 13px; }

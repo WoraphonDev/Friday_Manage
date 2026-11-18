@@ -15,7 +15,7 @@ const WS = "10000000-0000-4000-8000-00000000000a";
 const row = (over: Partial<WsRow>): WsRow => ({
   id: WS, slug: "siam-demo", name: "สยามเดโม", status: "active", createdAt: "2026-03-14T03:00:00.000Z", plan: "team_m", subStatus: "active", cycle: "monthly",
   trialEndsAt: null, periodEnd: null, seats: 21, seatLimit: 25, projects: 14, active30: 18, lastActiveAt: new Date().toISOString(), storageBytes: 12 * 1024 ** 3,
-  integrations: ["line", "webhook"], health: 86, mrr: 300_000, paymentState: "ok", ...over,
+  integrations: ["line", "webhook"], health: 86, mrr: 300_000, paymentState: "ok", buyer: { key: null, name: null, company: false, count: 1 }, test: { isTest: false, flag: null, auto: false, suggest: null, reason: null, by: null, at: null }, ...over,
 });
 const overview = (over: Partial<Overview> = {}): Overview => ({
   id: WS, slug: "siam-demo", name: "สยามเดโม", status: "active", createdAt: "2026-03-14T03:00:00.000Z", dataRegion: "th", legalName: "บริษัท สยามเดโม จำกัด",
@@ -72,6 +72,59 @@ describe("รายชื่อ Workspace", () => {
     expect(asked.at(-1)?.get("sort")).toBe("health");
     await userEvent.click(screen.getByRole("tab", { name: "ทดลอง" }));
     expect(router.replace).toHaveBeenLastCalledWith("/workspaces?plan=team_m&status=trialing&sort=health", { scroll: false });
+  });
+
+  it("ช่วง 1: คอลัมน์ผู้ซื้อ · กด +1 Workspace แล้วกรองผู้ซื้อพร้อมแถวสรุปยอด", async () => {
+    const asked: URLSearchParams[] = [];
+    const buyer = { key: "t:0105500000009", name: "บจก. สยามเดโม", company: true, count: 2 };
+    list((u) => {
+      asked.push(u.searchParams);
+      const items = [row({ buyer }), row({ id: "w2", slug: "siam-web", name: "สยามเดโม · เว็บ", buyer })];
+      return u.searchParams.get("buyer")
+        ? { items, total: 2, limit: 50, offset: 0, sort: "recent_activity", buyer: { key: buyer.key, name: buyer.name, workspaces: 2, seats: 42, seatLimit: 50, mrr: 600_000, openTickets: 1 } }
+        : { items: [items[0]], total: 1, limit: 50, offset: 0, sort: "recent_activity", counts: { all: 1, active: 1, trialing: 0, past_due: 0, suspended: 0 }, tests: { hidden: 3, suggested: 0 } };
+    });
+    shell(<WorkspacesList />, "/workspaces");
+    expect(await screen.findByText("ลูกค้า 1 ราย · ซ่อน Workspace ทดสอบ 3")).toBeInTheDocument();
+    expect(screen.getByText("บจก. สยามเดโม")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "+1 Workspace" }));
+    await waitFor(() => expect(asked.at(-1)?.get("buyer")).toBe(buyer.key));
+    const sum = await screen.findByRole("status", { name: "" });
+    expect(sum).toHaveTextContent("MRR รวม ฿6,000");
+    expect(screen.getByText("ผู้ซื้อ: บจก. สยามเดโม")).toBeInTheDocument();
+  });
+
+  it("ช่วง 1: ตรวจรายการที่ระบบเสนอ · เลือกทั้งหมดตามตัวกรอง · ชุดที่มีลูกค้าจ่ายเงินต้องยืนยันอีกครั้ง", async () => {
+    asRole("support");
+    const bodies: unknown[] = [];
+    let first = true;
+    list((u) =>
+      u.searchParams.get("suggest")
+        ? { items: [row({ id: "q1", slug: "qa-1", name: "QA Sprint", test: { isTest: false, flag: null, auto: false, suggest: "staff_domain", reason: null, by: null, at: null } })], total: 60, limit: 50, offset: 0, sort: "recent_activity" }
+        : { items: [row({})], total: 1, limit: 50, offset: 0, sort: "recent_activity", tests: { hidden: 0, suggested: 60 } },
+    );
+    server.use(
+      http.post(`${OPS}/workspaces/test-flag`, async ({ request }) => {
+        const b = await request.json();
+        bodies.push(b);
+        if (first) return ((first = false), HttpResponse.json({ error: { code: "has_paying", message: "มี 1 Workspace ที่จ่ายเงินอยู่", details: { paying: 1 } } }, { status: 409 }));
+        return HttpResponse.json({ updated: 60, paying: 1 });
+      }),
+    );
+    shell(<WorkspacesList />, "/workspaces");
+    await userEvent.click(await screen.findByRole("button", { name: "ตรวจในตาราง" }));
+    expect(await screen.findByText("อีเมลทีม Friday", { selector: ".pill" })).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText("เลือกทุกแถวในหน้านี้"));
+    await userEvent.click(screen.getByRole("button", { name: "เลือกทั้งหมด 60 รายการตามตัวกรอง" }));
+    await userEvent.click(screen.getByRole("button", { name: "ติดป้ายทดสอบ" }));
+    const dlg = await screen.findByRole("dialog", { name: 'ติดป้าย "ทดสอบ" 60 Workspace?' });
+    await userEvent.type(within(dlg).getByLabelText("เหตุผล (บันทึกใน Audit log ของทีม)"), "รอบทดสอบ Sprint");
+    await userEvent.click(within(dlg).getByRole("button", { name: "ติดป้าย 60 รายการ" }));
+    expect(await within(dlg).findByText("มี 1 Workspace ที่จ่ายเงินอยู่ในชุดนี้")).toBeInTheDocument();
+    await userEvent.click(within(dlg).getByRole("button", { name: "ยืนยันติดป้าย 60 รายการ" }));
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies[0]).toEqual({ filter: { suggest: "any" }, flag: "test", reason: "รอบทดสอบ Sprint", confirmPaying: false });
+    expect(bodies[1]).toMatchObject({ confirmPaying: true });
   });
 
   it("Support ไม่เห็นคอลัมน์ MRR และเรียงตาม MRR ไม่ได้ · ว่างเพราะตัวกรองล้างได้", async () => {

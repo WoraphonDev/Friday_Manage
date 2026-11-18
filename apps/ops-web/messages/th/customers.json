@@ -65,7 +65,8 @@
       "suspended": "ระงับ"
     },
     "filters": "ตัวกรอง",
-    "filtersOn": "ตัวกรอง ({n})"
+    "filtersOn": "ตัวกรอง ({n})",
+    "summaryHidden": "ลูกค้า {total} ราย · ซ่อน Workspace ทดสอบ {hidden}"
   },
   "subStatus": {
     "trialing": "ทดลอง",
@@ -735,5 +736,64 @@
     "usageValue": "{projects} โปรเจกต์ · {storage}",
     "tickets": "Ticket ของลูกค้านี้",
     "open": "เปิดหน้าเต็ม"
+  },
+  "buyer": {
+    "col": "ผู้ซื้อ",
+    "more": "+{n} Workspace",
+    "chip": "ผู้ซื้อ: {name}",
+    "unknown": "ผู้ซื้อรายนี้",
+    "clear": "ล้างตัวกรองผู้ซื้อ",
+    "sumWorkspaces": "Workspace",
+    "sumSeats": "ที่นั่งรวม",
+    "sumMrr": "MRR รวม",
+    "sumTickets": "Ticket เปิด",
+    "others": "Workspace อื่นของผู้ซื้อนี้",
+    "seeAll": "ดูทั้งหมด {n} Workspace"
+  },
+  "test": {
+    "pill": "ทดสอบ",
+    "suggestTitle": "{n} Workspace น่าจะเป็นข้อมูลทดสอบ",
+    "suggestWhy": "เจ้าของใช้อีเมลโดเมนของทีม Friday หรือชื่อขึ้นต้นด้วย QA / Demo / Test · ที่ใช้โดเมนสงวนไว้ทดสอบ (example.com, .test) ติดป้ายให้อัตโนมัติแล้ว",
+    "review": "ตรวจในตาราง",
+    "suggestChip": "น่าจะเป็นทดสอบ {n}",
+    "clearSuggest": "ออกจากการตรวจ",
+    "reasonLabel": "เหตุผลที่ระบบเดา",
+    "reasonCol": "เหตุผลที่เดา",
+    "reasons": {
+      "any": "ทุกเหตุผล",
+      "staff_domain": "อีเมลทีม Friday",
+      "name_prefix": "ชื่อขึ้นต้น QA / Demo"
+    },
+    "showTests": "แสดงทดสอบ",
+    "labelAction": "ติดป้ายทดสอบ",
+    "confirm": {
+      "test": "ติดป้าย \"ทดสอบ\" {n} Workspace?",
+      "not_test": "ยืนยันว่าเป็นลูกค้าจริง {n} Workspace?",
+      "clear": "เอาป้ายออก {n} Workspace?"
+    },
+    "submit": {
+      "test": "ติดป้าย {n} รายการ",
+      "not_test": "ยืนยันเป็นลูกค้าจริง",
+      "clear": "เอาป้ายออก"
+    },
+    "done": {
+      "test": "ติดป้ายทดสอบแล้ว {n} รายการ",
+      "not_test": "บันทึกเป็นลูกค้าจริงแล้ว",
+      "clear": "เอาป้ายออกแล้ว"
+    },
+    "sample": "{names}{more, plural, =0 {} other { และอีก # รายการ}}",
+    "byFilter": "ทั้งหมด {n} รายการตามตัวกรอง · ops-api ทำทั้งชุด",
+    "effect": "ซ่อนจากรายการ MRR และกราฟธุรกิจ · ลูกค้าไม่เห็นป้าย · เอาป้ายออกได้ทุกเมื่อ",
+    "payingTitle": "มี {n} Workspace ที่จ่ายเงินอยู่ในชุดนี้",
+    "payingHint": "ถ้าติดป้าย ยอดเหล่านี้จะไม่นับใน MRR · ตรวจว่าไม่ใช่ลูกค้าจริงก่อนยืนยัน",
+    "confirmPaying": "ยืนยันติดป้าย {n} รายการ",
+    "reason": "เหตุผล (บันทึกใน Audit log ของทีม)",
+    "labeledBy": "ติดป้ายโดย {by} · {reason}",
+    "autoNote": "ติดป้ายอัตโนมัติ: เจ้าของใช้อีเมลโดเมนที่สงวนไว้ทดสอบ",
+    "actions": {
+      "test": "ติดป้ายทดสอบ",
+      "clear": "เอาป้ายทดสอบออก",
+      "not_test": "นี่คือลูกค้าจริง"
+    }
   }
 }

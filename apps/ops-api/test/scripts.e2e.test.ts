@@ -84,7 +84,7 @@ describe('สคริปต์ดูแลข้อมูล', () => {
     expect((await eng.agent.post(`/ops/scripts/runs/${runId}/undo`).send({ reason: 'ย้อนซ้ำอีกครั้งหนึ่งนะ' })).body.error.code).toBe('not_undoable');
   });
 
-  it('เลื่อนวันแผนของงานในโปรเจกต์ (เริ่ม / จบเท่ากัน) · ปฏิเสธคำขอแล้วไม่รัน · ประวัติการรันค้นได้', async () => {
+  it('เลื่อนวันแผนของงานในโปรเจกต์ (เริ่ม / จบเท่ากัน) · ปฏิเสธคำขอแล้วไม่รัน (สถานะ "ไม่อนุมัติ" ไม่ค้างในงานต้องทำ) · ประวัติการรันค้นได้', async () => {
     const wf = await t.owner.query(`INSERT INTO projects (workspace_id, key, name, start_date, golive_date, owner_user_id) VALUES ($1, 'NLO', 'Ops', '2026-11-01', '2027-03-01', $2) RETURNING id`, [nord.id, nord.owner]);
     const pid = wf.rows[0].id;
     const flow = (await t.owner.query(`INSERT INTO workflows (workspace_id, project_id, name) VALUES ($1, $2, 'w') RETURNING id`, [nord.id, pid])).rows[0].id;
@@ -96,9 +96,13 @@ describe('สคริปต์ดูแลข้อมูล', () => {
     const r = (await eng.agent.post(`/ops/scripts/runs/${dry.id}/request`).send({ reason: 'ลูกค้านำเข้าวันผิดไปหนึ่งสัปดาห์' }).expect(202)).body;
     await boss.agent.post(`/ops/approvals/${r.pendingApproval.id}/reject`).send({ note: 'ให้ลูกค้าแก้เองใน Gantt' }).expect(200);
     expect((await t.owner.query(`SELECT plan_start::text FROM issues WHERE project_id = $1 ORDER BY number`, [pid])).rows[0].plan_start).toBe('2026-11-10');
+    // ปฏิเสธแล้วไม่ค้างในงานต้องทำและตัวนับ
+    expect((await boss.agent.get('/ops/scripts')).body.todo).toEqual([]);
+    expect((await boss.agent.get('/ops/overview')).body.tasks.scriptsPending).toBe(0);
+    expect((await eng.agent.get(`/ops/scripts/runs/${dry.id}`)).body).toMatchObject({ status: 'rejected', decisionNote: 'ให้ลูกค้าแก้เองใน Gantt' });
     const hist = (await eng.agent.get('/ops/scripts/runs?q=nordlight').expect(200)).body;
     expect(hist.items.map((x: { scriptKey: string; status: string }) => [x.scriptKey, x.status])).toEqual([
-      ['shift_plan_dates', 'pending_approval'],
+      ['shift_plan_dates', 'rejected'],
       ['revoke_stale_sessions', 'done'],
       ['revoke_stale_sessions', 'undone'],
     ]);

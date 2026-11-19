@@ -37,7 +37,8 @@ interface Run {
   workspaceName: string | null;
   workspaceSlug: string | null;
   params: Record<string, unknown>;
-  status: "dry_run" | "pending_approval" | "running" | "stopping" | "done" | "failed" | "stopped" | "undone";
+  status: "dry_run" | "pending_approval" | "running" | "stopping" | "done" | "failed" | "stopped" | "undone" | "rejected" | "expired" | "cancelled";
+  decisionNote?: string | null;
   dryResult: { count: number; ms: number; sample: { id: string; label: string; before: Record<string, unknown>; after: Record<string, unknown> }[] } | null;
   reason: string | null;
   ticketRef: string | null;
@@ -223,8 +224,9 @@ export function ScriptsPage() {
                           {r.requestedBy} / {r.approvedBy ?? "—"}
                         </td>
                         <td>
-                          <Pill tone={r.status === "done" ? "ok" : r.status === "failed" ? "bad" : r.status === "undone" ? "neu" : "inf"}>{result(r)}</Pill>
+                          <Pill tone={r.status === "done" ? "ok" : r.status === "failed" ? "bad" : ["undone", "rejected", "expired", "cancelled"].includes(r.status) ? "neu" : "inf"}>{result(r)}</Pill>
                           {r.error && <div className="cell-sub">{r.error}</div>}
+                          {r.status === "rejected" && r.decisionNote && <div className="cell-sub">“{r.decisionNote}”</div>}
                         </td>
                         <td className="num">
                           {r.status === "running" && (

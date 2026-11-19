@@ -14,6 +14,12 @@ import { type MaintenanceScript, scriptOf, SCRIPTS, type Target } from './regist
 
 const s = schema;
 const BATCH = 500;
+/**
+ * ขั้นอนุมัติไม่มี hook ตอนปฏิเสธ / หมดอายุ / ยกเลิก จึงอ่านสถานะจากคำขออนุมัติแทน (แบบเดียวกับใบเสนอราคา)
+ * ไม่งั้นการรันที่ถูกปฏิเสธค้าง "รออนุมัติ" ในงานต้องทำตลอดไป · ต้อง join approval_requests เป็น ar
+ */
+const STATUS = sql.raw(`case when r.status = 'pending_approval' and ar.status in ('rejected', 'expired', 'cancelled') then ar.status else r.status end`);
+export const OPEN = sql.raw(`(r.status in ('running', 'stopping') or (r.status = 'pending_approval' and ar.status = 'pending'))`);
 const KEEP_DAYS = 30;
 const SAMPLE = 5;
 
@@ -93,18 +99,19 @@ export class ScriptsService implements OnModuleInit, OnModuleDestroy {
       select count(*) filter (where status in ('done', 'undone', 'running', 'stopped', 'failed') and created_at > now() - interval '30 days' and undo_of is null)::int as runs,
         count(*) filter (where status = 'undone' and updated_at > now() - interval '30 days')::int as undone from script_runs`);
     const todo = await this.rows<Record<string, unknown>>(sql`
-      select ${this.COLS} ${this.FROM} where r.status in ('pending_approval', 'running', 'stopping') order by r.created_at`);
+      select ${this.COLS} ${this.FROM} where ${OPEN} order by r.created_at`);
     return {
       scripts: SCRIPTS.map((sc) => ({ key: sc.key, table: sc.table, columns: sc.columns, undoable: sc.undoable, fields: sc.fields, lastRunAt: last.find((l) => l.key === sc.key)?.at ?? null, runs30: last.find((l) => l.key === sc.key)?.n ?? 0 })),
       runs30: n.runs, undone30: n.undone, todo, canApprove: staff.roles.includes('owner'),
     };
   }
 
-  private readonly COLS = sql`r.id, r.script_key as "scriptKey", r.workspace_id as "workspaceId", w.name as "workspaceName", w.slug as "workspaceSlug", r.params, r.status, r.dry_result as "dryResult",
+  private readonly COLS = sql`r.id, r.script_key as "scriptKey", r.workspace_id as "workspaceId", w.name as "workspaceName", w.slug as "workspaceSlug", r.params, ${STATUS} as status, r.dry_result as "dryResult", ar.decision_note as "decisionNote",
     r.reason, r.ticket_ref as "ticketRef", rq.name as "requestedBy", r.requested_by as "requestedById", ap.name as "approvedBy", r.approval_request_id as "approvalRequestId",
     r.undo_of as "undoOf", r.total, r.progress, r.changed, r.error, r.started_at as "startedAt", r.finished_at as "finishedAt", r.created_at as "createdAt",
     exists (select 1 from script_run_changes c where c.run_id = r.id) as "hasChanges"`;
-  private readonly FROM = sql`from script_runs r left join workspaces w on w.id = r.workspace_id join staff_users rq on rq.id = r.requested_by left join staff_users ap on ap.id = r.approved_by`;
+  private readonly FROM = sql`from script_runs r left join workspaces w on w.id = r.workspace_id join staff_users rq on rq.id = r.requested_by left join staff_users ap on ap.id = r.approved_by
+    left join approval_requests ar on ar.id = r.approval_request_id`;
 
   async runs(q: z.infer<typeof RunsQuery>) {
     const w: SQL[] = [sql`r.status <> 'dry_run'`];

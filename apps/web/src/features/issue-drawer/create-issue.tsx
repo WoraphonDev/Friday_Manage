@@ -12,6 +12,7 @@ import { Failure } from './shared';
 import { CodeChips, LabelChips } from './refs';
 import { PropRow } from './detail-parts';
 import { DraftList, GroupSelect, IssuePicker, useProjectIssues } from './task-v2';
+import { SprintSelect } from '@/features/sprints/sprint-ui';
 import { CustomFieldInputs, customPayload, visibleCustomFields } from './custom-fields';
 import { API_FIELD_LABELS, customModeOf, requires, shows, type Level, type ProfileField } from '@/lib/field-profile';
 import { issuePath, projectPath, type FormOptions, type Issue, type IssueType, type Scope } from './types';
@@ -20,7 +21,7 @@ import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 
 type ChildDraft = { id: string; title: string; size: string; assigneeId: string; planEnd: string };
 type Draft = {
-  type: IssueType; subtask: boolean; parentKey: string; title: string; description: string; remark: string; moduleId: string; phaseId: string; statusId: string; priority: string;
+  type: IssueType; subtask: boolean; parentKey: string; title: string; description: string; remark: string; moduleId: string; phaseId: string; sprintId: string; statusId: string; priority: string;
   assigneeIds: string[]; baIds: string[]; saId: string; reviewerIds: string[]; size: string; estimateMd: string; planStart: string; planEnd: string;
   severity: string; environment: string; details: Record<string, string>; acceptance: string[]; checklist: string[]; blockedBy: string[]; children: ChildDraft[];
   shared: boolean; requirements: string[]; screens: string[]; labelIds: string[]; watcherIds: string[];
@@ -32,7 +33,7 @@ const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL'];
 const LIST_FIELDS = ['assigneeIds', 'baIds', 'reviewerIds', 'requirements', 'screens', 'labelIds', 'watcherIds', 'acceptance', 'checklist', 'blockedBy'] as const;
 function removeDraft(key: string) { try { localStorage.removeItem(key); } catch { /* storage access must not block server writes */ } }
 const defaultDraft = (type: IssueType, parent?: Issue | null): Draft => ({
-  type, subtask: !!parent, parentKey: parent?.key ?? '', title: '', description: '', remark: '', moduleId: parent?.moduleId ?? '', phaseId: parent?.phaseId ?? '', statusId: '', priority: 'medium',
+  type, subtask: !!parent, parentKey: parent?.key ?? '', title: '', description: '', remark: '', moduleId: parent?.moduleId ?? '', phaseId: parent?.phaseId ?? '', sprintId: '', statusId: '', priority: 'medium',
   assigneeIds: [], baIds: [], saId: '', reviewerIds: [], size: 'M', estimateMd: '', planStart: '', planEnd: '', severity: 'major', environment: 'sit', details: {},
   acceptance: [], checklist: [], blockedBy: [], children: [], shared: false, requirements: [], screens: [], labelIds: [], watcherIds: [], custom: {},
 });
@@ -137,8 +138,8 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
         const estimateMd = draft.type === 'Spike' ? Number(details.timebox_hours) / 8 : draft.estimateMd ? Number(draft.estimateMd) : sizeOn ? options.sizeMdMap[draft.size] : undefined;
         const input = {
           type: draft.type, title: draft.title.trim(), description: draft.description, remark: show('remark') && draft.remark.trim() ? draft.remark : undefined, ...(show('priority') ? { priority: draft.priority } : {}),
-          // Sprint ไม่อยู่ในหน้า Task แล้ว (ผู้ใช้ตัดสิน 2026-11-08) งานใหม่เข้า Backlog แล้วจัดเข้า Sprint ที่หน้า Backlog
-          ...(draft.subtask ? { parentKey: draft.parentKey.trim() } : { moduleId: draft.moduleId || undefined, phaseId: draft.phaseId || undefined }),
+          // Sprint เลือกได้ในหน้า Task อีกครั้ง (ผู้ใช้ขอ 2026-11-19) · ไม่เลือก = เข้า Backlog · Sub-task ใช้ Sprint ของแม่
+          ...(draft.subtask ? { parentKey: draft.parentKey.trim() } : { moduleId: draft.moduleId || undefined, phaseId: draft.phaseId || undefined, sprintId: draft.sprintId || undefined }),
           statusId: draft.statusId || undefined, assigneeIds: draft.assigneeIds, baIds: show('ba') && draft.baIds.length ? draft.baIds : undefined, saId: show('sa') ? draft.saId || undefined : undefined, reviewerIds: show('reviewer') && draft.reviewerIds.length ? draft.reviewerIds : undefined,
           size: sizeOn ? draft.size || undefined : undefined, estimateMd: estimateMd || undefined, planStart: draft.planStart || undefined, planEnd: draft.planEnd || undefined,
           ...((draft.type === 'Bug' || required.has('severity') || required.has('environment')) ? { severity: draft.severity, environment: draft.environment } : {}), details, sharedWithGuests: draft.shared,
@@ -272,6 +273,7 @@ export function CreateIssue({ scope, options, parent, initialType = 'Task', init
             </section>
             <section className={styles.pgroup} aria-label={t('groupPlan')}>
               <h4 className={styles.pgTitle}>{t('groupPlan')}</h4>
+              {!draft.subtask && <PropRow k="Sprint"><SprintSelect ws={scope.ws} projectKey={scope.projectKey} label="Sprint" value={draft.sprintId || null} year={scope.yearFormat} canCreate={scope.access.permissions.includes('sprint.manage')} onChange={(id) => set('sprintId', id ?? '')} /></PropRow>}
               <PropRow k={show('size') ? star('size', 'Size') : 'Man-Day'}><div className={styles.sizeRow}>
                 {show('size') && <Select label={t('fields.size')} required={required.has('size') || must('size')} disabled={draft.type === 'Spike'} value={draft.size} onChange={(event) => { set('size', event.target.value); set('estimateMd', ''); }}>{sizeOptions.map(([size]) => <option value={size} key={size}>{size}</option>)}</Select>}
                 <Input label={t('fields.estimateMd')} type="number" min={0.25} max={9999} step={0.25} readOnly={draft.type === 'Spike'} value={show('size') ? mdValue : draft.type === 'Spike' ? mdValue : draft.estimateMd} onChange={(event) => set('estimateMd', event.target.value)} />

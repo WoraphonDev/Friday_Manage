@@ -49,6 +49,8 @@ export function fixture() {
     http.get(`${base}/projects/:project/files`, () => HttpResponse.json({ items: [], nextCursor: null })),
     http.get(`${base}/issues/:key/test-runs`, () => HttpResponse.json({ items: [], latest: null })),
     http.get(`${base}/projects/:project/my-permissions`, () => HttpResponse.json(state.access)),
+    // รายการ Sprint ของช่อง Sprint ในหน้า Task
+    http.get(`${base}/projects/:project/sprints`, () => HttpResponse.json({ sprintLengthWeeks: 2, items: [{ id: uid(12), number: 1, name: 'Sprint ตัวอย่าง', startDate: '2026-11-02', endDate: '2026-11-13', status: 'active' }] })),
     http.get(`${base}/projects/:project`, () => HttpResponse.json(project)),
     http.get(`${base}/projects/:project/members`, ({ request }) => { state.reads.push(new URL(request.url).pathname); return HttpResponse.json({ items:[{...me,userId:me.id},{...dev,userId:dev.id}] }); }),
     http.get(`${base}/projects/:project/form-options`, () => HttpResponse.json(formOptions)),

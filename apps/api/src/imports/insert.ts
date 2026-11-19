@@ -8,6 +8,14 @@ const s = schema;
 
 const chunks = <T>(list: T[], size: number): T[][] => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size));
 
+export interface ParentRef { id: string; phaseId: string | null; sprintId?: string | null }
+
+/** Sprint ของโปรเจกต์ที่ยังรับงานได้ (ไม่ใช่ที่ปิดแล้ว) · ชื่อตัวพิมพ์เล็ก → id */
+export async function openSprints(tx: Tx, projectId: string) {
+  const rows = await tx.select({ id: s.sprints.id, name: s.sprints.name, status: s.sprints.status }).from(s.sprints).where(eq(s.sprints.projectId, projectId));
+  return { open: new Map(rows.filter((r) => r.status !== 'completed').map((r) => [r.name.trim().toLowerCase(), r.id])), name: new Map(rows.map((r) => [r.id, r.name])) };
+}
+
 export interface InsertContext {
   workspaceId: string;
   projectId: string;
@@ -24,8 +32,8 @@ export interface InsertContext {
   /** เลขงานที่ใช้ไปแล้วในโปรเจกต์ (รวมงานที่ลบ) และเลขล่าสุด */
   taken: Set<number>;
   seq: number;
-  /** Task ระดับบนที่มีอยู่ในระบบ (เลขงาน → id และกลุ่ม) ให้ Sub-task ใหม่อ้างถึง */
-  parents: Map<number, { id: string; phaseId: string | null }>;
+  /** Task ระดับบนที่มีอยู่ในระบบ (เลขงาน → id, กลุ่ม และ Sprint) ให้ Sub-task ใหม่อ้างถึง */
+  parents: Map<number, ParentRef>;
   /** ข้อมูลเพิ่มใน details ของแต่ละแถว (เช่น ชื่อคนที่ยังไม่จับคู่) */
   details?: (row: PlanRow) => Record<string, unknown>;
   /** ออกเลขงานใหม่ต่อจากเลขล่าสุดทุกแถว ไม่ใช้ Key / No. ในไฟล์ (โหมดเพิ่มเติมแผน: เลขในไฟล์เป็นของแผนอีกชุด) */
@@ -79,6 +87,9 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
     phaseId.set(phaseKey(mid, r.phase!), made.id);
   }
   const phaseOf = (r: PlanRow) => (r.phase ? (phaseId.get(phaseKey(ctx.moduleId.get(r.module)!, r.phase)) ?? null) : null);
+  // Sprint ตามชื่อ (เฉพาะ Task · Sub-task ตามแม่) · ชื่อที่ไม่มีหรือปิดแล้ว = ไม่เข้า Sprint (plan check เตือนไว้แล้ว)
+  const sprints = rows.some((r) => r.sprint) ? (await openSprints(tx, ctx.projectId)).open : new Map<string, string>();
+  const sprintOf = (r: PlanRow) => (r.sprint ? (sprints.get(r.sprint.trim().toLowerCase()) ?? null) : null);
 
   if (ctx.keepRowNo) {
     // No. ที่เคยใช้กับงานที่ลบแล้ว: ปล่อยเลขแถวให้ใช้ซ้ำได้ (unique ต่อโปรเจกต์)
@@ -89,9 +100,9 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
   const idOf = new Map<PlanRow, string>();
   // แม่ในไฟล์ใช้เลขงานเดิมในไฟล์อ้างถึง
   const fileParent = new Map(rows.filter((r) => r.number !== null && r.parentNumber === null).map((r) => [r.number!, r]));
-  const parentOf = (r: PlanRow): { id: string; phaseId: string | null } | null => {
+  const parentOf = (r: PlanRow): ParentRef | null => {
     const p = fileParent.get(r.parentNumber!);
-    if (p && idOf.get(p)) return { id: idOf.get(p)!, phaseId: phaseOf(p) };
+    if (p && idOf.get(p)) return { id: idOf.get(p)!, phaseId: phaseOf(p), sprintId: sprintOf(p) };
     return ctx.parents.get(r.parentNumber!) ?? null;
   };
   const tops = rows.filter((r) => r.parentNumber === null);
@@ -109,6 +120,7 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
             parentId: r.parentNumber === null ? null : (parentOf(r)?.id ?? null),
             moduleId: ctx.moduleId.get(r.module)!,
             phaseId: r.parentNumber === null ? phaseOf(r) : (parentOf(r)?.phaseId ?? null),
+            sprintId: r.parentNumber === null ? sprintOf(r) : (parentOf(r)?.sprintId ?? null),
             title: r.title,
             description: r.description,
             remark: r.remark,
@@ -165,7 +177,8 @@ export async function insertRows(tx: Tx, ctx: InsertContext, rows: PlanRow[]) {
   }));
   await tx.update(s.projects).set({ issueSeq: seq }).where(eq(s.projects.id, ctx.projectId));
   const phaseIdOf = new Map(rows.map((r) => [r, r.parentNumber === null ? phaseOf(r) : (parentOf(r)?.phaseId ?? null)]));
-  return { idOf, numberOf: assigned, phaseIdOf, assignees, events, seq, checklist: checklist.length };
+  const sprintIdOf = new Map(rows.map((r) => [r, r.parentNumber === null ? sprintOf(r) : (parentOf(r)?.sprintId ?? null)]));
+  return { idOf, numberOf: assigned, phaseIdOf, sprintIdOf, assignees, events, seq, checklist: checklist.length };
 }
 
 async function codes(tx: Tx, table: typeof s.requirements | typeof s.screens, projectId: string) {

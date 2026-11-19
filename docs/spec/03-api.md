@@ -51,6 +51,7 @@ GET .../issues?status=in_progress&assignee=me&module=<id>&sprint=current&limit=5
 
 - แบ่งหน้าด้วย `cursor` (ไม่ใช้ offset เพราะตารางงานเปลี่ยนตลอด) · ตอบ `{ items, nextCursor }`
 - เลือกฟิลด์ด้วย `fields=` เมื่อหน้าจอต้องการเฉพาะบางคอลัมน์ (Table, Timeline มีหลายร้อยแถว)
+- `module` / `sprint` ใส่ได้หลายค่าคั่นด้วย `,` (เช่น `sprint=current,none,<id>`) · `none` = ไม่มีค่า · `current` = Sprint ที่กำลังทำ · `size=XS…XL` (2026-11-19)
 
 ### แก้ข้อมูลพร้อมกัน
 
@@ -351,6 +352,8 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | Method | Path | สิทธิ์ | Event / หมายเหตุ |
 |---|---|---|---|
 | POST / PATCH | `p/sprints` · `{id}` | `sprint.manage` | |
+| GET | `p/sprints` | `project.view` (ไม่ใช่ Guest Viewer) | Sprint ทั้งหมดรวมที่ปิดแล้ว เรียงตามเลข + `sprintLengthWeeks` · ใช้กับตัวเลือก Sprint ในตาราง / หน้า Task / Export (2026-11-19) |
+| POST | `p/sprints/series` | `sprint.manage` | body: `{ startDate, weeks: 1–8, count: 1–26 }` · สร้าง Sprint ต่อกันชื่อ "Sprint <เลข>" · วันจบถอยจากเสาร์-อาทิตย์มาวันศุกร์ (2026-11-19) |
 | POST | `p/sprints/{id}:start` | `sprint.manage` | มี Sprint active ได้ทีละ 1 · Event `sprint.started` |
 | POST | `p/sprints/{id}:complete` | `sprint.manage` | body: `{ moveIncompleteTo: "<sprintId>" \| "backlog", retrospective }` · Event `sprint.completed` |
 | GET | `p/baselines` · POST `p/baselines` | ดู: `project.view` · ตั้ง: `project.settings` | |
@@ -359,7 +362,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | POST | `w/import-jobs` | `ws.project.create` (ใหม่) หรือ `project.settings` (อัปเดต) | อัปโหลดไฟล์แล้วอ่านหัวคอลัมน์ · จับคู่อัตโนมัติ · โหมดอัปเดตเลือก `updateKind`: `replace` (แทนที่แผนเดิม · Task เดิมทุกงานพร้อม Sub-task ย้ายถังขยะ 30 วันแล้วสร้างทุกแถวใหม่ เลขงานต่อจากเลขล่าสุด · Sub-task ต้องมีแม่ในไฟล์ · งานที่จะลบอยู่ใน `diff.missing` · Module / กลุ่มงานที่ไม่มีในไฟล์และไม่เหลืองานถูกลบด้วย (`diff.removedModules` / `removedGroups`)) หรือ `sync` (ค่าเริ่มต้นเมื่อไม่ส่ง · ไม่มีในหน้าเว็บ · จับคู่และแก้งานเดิม งานที่หายจากไฟล์เลือกลบ/เก็บ) หรือ `append` (ทุกแถวเป็นงานใหม่ ออกเลขต่อจากเดิม ไม่แตะงานเดิม) หรือ `unstarted` (แก้เฉพาะงาน To do ที่ยังไม่มี Actual Start · งานที่เริ่มแล้วอยู่ใน `diff.locked` · ไม่ลบงาน · งานใหม่เพิ่มเมื่อ PATCH `addNew: true`) · เปลี่ยนภายหลังด้วย PATCH ได้ |
 | GET / PATCH | `w/import-jobs/{id}` | ผู้สร้าง | แก้การจับคู่คอลัมน์และคน · ระบบตรวจซ้ำทุกครั้ง |
 | POST | `w/import-jobs/{id}:commit` | ผู้สร้าง | 202 · ความคืบหน้าทาง WebSocket · ตั้ง Baseline v1 ถ้าเลือก · โหมดอัปเดตจับคู่ด้วย Key (ไฟล์รูปแบบเดิม: `excel_row_no`) และเขียน `plan_change` · Event `import.completed` · **รอบแรก (apps/api) ทำแบบ synchronous ตอบ 201** เพราะแผน 334 แถวใช้ไม่ถึง 1 วินาที · รองรับเฉพาะโหมดสร้างโปรเจกต์ใหม่ |
-| GET | `p/export.xlsx` | `project.view` (ไม่ใช่ Guest) | ชีต Tasks (Key / Parent Key …) + Timeline + คำแนะนำ + ค่าที่ใช้ได้ + Holidays · `?timeline=week` = ชีต Timeline ช่องละสัปดาห์ · นำเข้ากลับโหมดอัปเดตได้ |
+| GET | `p/export.xlsx` | `project.view` (ไม่ใช่ Guest) | ชีต Tasks (Key / Parent Key …) + Timeline + คำแนะนำ + ค่าที่ใช้ได้ + Holidays · `?timeline=week` = ชีต Timeline ช่องละสัปดาห์ · นำเข้ากลับโหมดอัปเดตได้ · ใส่ตัวกรองชุดเดียวกับ Table (`sprint`, `module`, `assignee`, `ba`, `status`, `priority`, `level`, `overdue`, `q`, `size`) = เฉพาะงานที่ตรง เรียง Module → กลุ่ม → Task + ชีตซ่อน `Scope` · ไฟล์นี้นำเข้าแบบแทนที่แผนไม่ได้ (`422 partial_file_replace`) (2026-11-19) |
 | GET | `w/import-template.xlsx` | สมาชิกที่ไม่ใช่ Guest | Template เปล่า คอลัมน์เดียวกับ Export · รายชื่อสมาชิกและวันหยุดของ Workspace |
 
 ### 3.7 งาน

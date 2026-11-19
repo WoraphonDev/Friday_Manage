@@ -27,6 +27,14 @@ import styles from './issue-drawer.module.css';
 import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 import { statusColorStyle, statusTone, useStatusColors, type StatusTone } from '@/lib/status';
 import { IssueDiagrams } from '@/features/diagrams/issue-diagrams';
+import { SprintBadge, SprintSelect } from '@/features/sprints/sprint-ui';
+import { useSprints } from '@/features/sprints/sprints';
+
+/** ชื่อ Sprint ของงาน (ดูอย่างเดียว / Sub-task ที่ตามแม่) */
+function SprintName({ scope, id }: { scope: Scope; id: string | null }) {
+  const sprints = useSprints(scope.ws, scope.projectKey);
+  return <SprintBadge full sprint={sprints.data?.items.find((s) => s.id === id) ?? null} />;
+}
 
 /** API ขอเหตุผลการแก้แผน: ไม่ใช่ error ที่ต้องแสดง แต่เปิดกล่องให้กรอกเหตุผลแล้วบันทึกซ้ำ */
 class NeedsPlanReason extends Error {}
@@ -303,6 +311,11 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted, onClose }: 
         </section>}
         <section className={styles.pgroup} aria-label={t('groupPlan')}>
           <h4 className={styles.pgTitle}>{t('groupPlan')}</h4>
+          {/* Sprint กลับมาในหน้า Task (ผู้ใช้ขอ 2026-11-19) · Sub-task ใช้ Sprint ของแม่ · Guest Viewer ไม่เห็นรายการ Sprint */}
+          {!guest && <PropRow k="Sprint">{issue.parentKey
+            ? <span><SprintName scope={scope} id={issue.sprintId} /> <span className="muted" style={{ fontSize: 11 }}>{t('fromParent')}</span></span>
+            : canEdit ? <SprintSelect ws={scope.ws} projectKey={scope.projectKey} label="Sprint" value={issue.sprintId} year={scope.yearFormat} disabled={disabled} canCreate={scope.access.permissions.includes('sprint.manage')} onChange={(id) => { if (id !== issue.sprintId) void patch({ sprintId: id }); }} />
+            : <SprintName scope={scope} id={issue.sprintId} />}</PropRow>}
           {isBug && <PropRow k="Due">{canEdit ? <DatePicker compact label={t('fields.planEnd')} value={issue.planEnd ?? undefined} yearFormat={scope.yearFormat} onValueChange={(value) => { if (!disabled) void patch({ planEnd: value || null }); }} /> : formatDate(issue.planEnd, scope.yearFormat)}</PropRow>}
           {!isBug && <><PropRow k={show('size') ? star('size', 'Size') : 'Man-Day'}><div className={styles.sizeRow}>{show('size') && fieldSelect('size', issue.size, ['XS','S','M','L','XL'].map((id) => ({ id, name: id })))}<InlineText label={t('fields.estimateMd')} type="number" step={0.25} min={0.25} max={9999} value={issue.estimateMd?.toString() ?? ''} enabled={canEdit} busy={disabled} onSave={(value) => patch({ estimateMd: value ? Number(value) : null })} />{devs.length > 0 && <span className="muted">· {t('devCount', { count: devs.length })}</span>}</div></PropRow>
           <div className={`${styles.planBox}${show('actual') ? '' : ` ${styles.noActual}`}`}>

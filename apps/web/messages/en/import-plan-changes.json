@@ -232,7 +232,15 @@
     "sheetHint__holidays": "Holidays used for working days",
     "template": "Blank template",
     "download": "Download Excel",
-    "noPermission": "You can't export this project's plan"
+    "noPermission": "You can't export this project's plan",
+    "scope": "Scope",
+    "scope__all": "Whole project",
+    "scope__sprint": "Pick a sprint",
+    "scope__filters": "Current table filters ({count})",
+    "scopeCurrent": "Current sprint",
+    "scopeNoSprint": "Tasks not in a sprint",
+    "scopeFiltered": "the current table filters",
+    "partialNote": "The file only contains tasks from {scope}, ordered Module → Group → Task. It can be imported back with Update only, not Replace, so tasks outside the file are never deleted."
   },
   "create": {
     "crumb": "Projects / New project",

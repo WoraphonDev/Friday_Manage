@@ -21,6 +21,7 @@ import { applyUpdate, computeUpdate, parentTasks, statusNames, type UpdateDiff, 
 import { buildPlanXlsx, buildTemplateXlsx } from './export.js';
 import type { CustomFieldDef } from '../issues/custom-values.js';
 import { insertRows } from './insert.js';
+import { issueFilters, TableListQuery } from '../issues/table.js';
 import { autoMap, type CheckOptions, checkPlan, type ColumnMapping, FIELDS, type Field, type MappingTarget, personKey, type PlanCheck } from './plan.js';
 
 const s = schema;
@@ -85,6 +86,16 @@ interface JobState {
 }
 
 type Job = typeof s.importJobs.$inferSelect;
+/** ตัวกรองของ Export (ชุดเดียวกับแท็บ Table) */
+export const ExportFilters = TableListQuery.pick({ status: true, assignee: true, ba: true, module: true, sprint: true, priority: true, overdue: true, q: true, level: true, size: true });
+
+/** ไฟล์ที่ Export ตาม Sprint / ตัวกรองมีงานไม่ครบ: แทนที่แผนจะลบงานนอกขอบเขตทั้งหมด จึงไม่ให้ใช้ */
+function assertWholePlan(wb: ParsedWorkbook, kind: string) {
+  if (wb.partial && kind === 'replace') {
+    throw new AppError(422, 'partial_file_replace', `ไฟล์นี้มีเฉพาะงานบางส่วน (${wb.partial}) จึงใช้แทนที่แผนไม่ได้ เพราะงานที่ไม่อยู่ในไฟล์จะถูกลบ · เลือกโหมดอัปเดตแทน`, { scope: wb.partial });
+  }
+}
+
 const KIND_LABEL: Record<UpdateKind, string> = { replace: 'แทนที่แผน', sync: 'อัปเดต', append: 'เพิ่มเติมแผน', unstarted: 'อัปเดตงานที่ยังไม่เริ่ม' };
 
 @Injectable()
@@ -107,6 +118,7 @@ export class ImportsService {
     if (!UPDATE_KINDS.includes(updateKind)) throw new AppError(400, 'update_kind_not_supported', 'updateKind ต้องเป็น replace (แทนที่แผนเดิม), sync (จับคู่และแก้งานเดิม), append (เพิ่มเติมแผน) หรือ unstarted (อัปเดตเฉพาะงานที่ยังไม่เริ่ม)');
     if (mode === 'update') await this.limits.assertFeature(tenant.workspaceId, 'import_update');
     const wb = await this.parse(file.buffer);
+    if (mode === 'update') assertWholePlan(wb, updateKind);
     // อัปเดตแผนต้องมี project.baseline · ตรวจก่อนเก็บไฟล์ลงดิสก์
     if (mode === 'update') await this.db.run(auth, tenant, async (tx) => void (await this.updateProject(tx, auth, tenant, targetKey!)));
 
@@ -169,6 +181,7 @@ export class ImportsService {
       if (job.mode === 'update') {
         const project = await this.updateProject(tx, auth, tenant, job);
         const keep = { missingChoice: { ...(prev.missingChoice ?? {}), ...(input.missing ?? {}) }, missingAll: input.missingAll ?? prev.missingAll, planChangeReason: input.planChangeReason ?? prev.planChangeReason, updateKind: input.updateKind ?? prev.updateKind, addNew: input.addNew ?? prev.addNew };
+        assertWholePlan(wb, keep.updateKind ?? 'sync');
         const ev = await this.evaluateUpdate(tx, tenant, project, wb, columnMapping, personMapping, await this.members(tx), keep, false);
         const [done] = await tx.update(s.importJobs).set({ columnMapping, personMapping, validation: ev.state, rowTotal: ev.state.summary.rows }).where(eq(s.importJobs.id, job.id)).returning();
         return view(done, ev.state);
@@ -400,14 +413,31 @@ export class ImportsService {
     return { mode: 'update' as const, project: { key: project.key, name: project.name }, ...counts, skipped, emails, events, projectId: project.id, fileName: job.fileName };
   }
 
-  /** `GET projects/:key/export.xlsx` · เห็นโปรเจกต์ได้ก็ export ได้ ยกเว้น Guest */
-  async exportXlsx(auth: AuthInfo, tenant: TenantInfo, key: string, scale: 'day' | 'week' = 'day') {
+  /** `GET projects/:key/export.xlsx` · เห็นโปรเจกต์ได้ก็ export ได้ ยกเว้น Guest
+   *  ใส่ตัวกรองชุดเดียวกับแท็บ Table (sprint, module, assignee …) = Export เฉพาะงานที่ตรง เรียง Module → กลุ่ม → Task (ผู้ใช้ขอ 2026-11-19) */
+  async exportXlsx(auth: AuthInfo, tenant: TenantInfo, key: string, scale: 'day' | 'week' = 'day', filters: z.infer<typeof ExportFilters> = {}) {
     return this.db.run(auth, tenant, async (tx) => {
       const { project, access } = await this.projects.load(tx, auth, tenant, key);
       requirePerm(access, 'project.view');
       if (access.guestViewer || tenant.role === 'guest') throw new AppError(403, 'guest_view_limited', 'Guest export แผนงานไม่ได้', { allowed: ['overview', 'timeline'] });
+      const scoped = Object.values(filters).some((v) => v !== undefined);
+      let only: { ids: Set<string>; label: string } | undefined;
+      let name = `${project.key}-plan`;
+      if (scoped) {
+        const where = await issueFilters(tx, auth, project, filters);
+        const rows = await tx.select({ id: schema.issues.id }).from(schema.issues)
+          .innerJoin(schema.workflowStatuses, eq(schema.workflowStatuses.id, schema.issues.statusId))
+          .innerJoin(schema.issueTypes, eq(schema.issueTypes.id, schema.issues.issueTypeId))
+          .where(and(...where));
+        // Export ตาม Sprint เดียว: ชื่อไฟล์และขอบเขตบอกชื่อ Sprint
+        const single = filters.sprint?.length === 1 && Object.entries(filters).every(([k, v]) => k === 'sprint' || v === undefined) ? filters.sprint[0] : null;
+        const [sprint] = single && single !== 'none' ? await tx.select({ number: schema.sprints.number, name: schema.sprints.name }).from(schema.sprints)
+          .where(and(eq(schema.sprints.projectId, project.id), single === 'current' ? eq(schema.sprints.status, 'active') : eq(schema.sprints.id, single))) : [];
+        only = { ids: new Set(rows.map((r) => r.id)), label: sprint ? sprint.name : single === 'none' ? 'งานที่ยังไม่เข้า Sprint' : 'ตามตัวกรองในแท็บ Table' };
+        name = sprint ? `${project.key}-sprint-${sprint.number}` : single === 'none' ? `${project.key}-backlog` : `${project.key}-filtered`;
+      }
       // ชื่อไฟล์บอกวันที่ Export (แผน ณ วันนั้น)
-      return { filename: `${project.key}-plan-${today()}.xlsx`, buffer: await buildPlanXlsx(tx, project, { scale, ...(await this.projects.fieldsOf(tx, project).then((f) => ({ profile: f.fieldProfile, customFields: f.customFields as CustomFieldDef[] }))) }) };
+      return { filename: `${name}-${today()}.xlsx`, buffer: await buildPlanXlsx(tx, project, { scale, only, ...(await this.projects.fieldsOf(tx, project).then((f) => ({ profile: f.fieldProfile, customFields: f.customFields as CustomFieldDef[] }))) }) };
     });
   }
 

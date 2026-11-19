@@ -16,16 +16,25 @@ type Issue = typeof s.issues.$inferSelect;
 const uuid = z.uuid();
 const filterId = z.union([uuid, z.literal('none')]);
 const filterList = z.string().trim().min(1).max(1000);
+/** รายการ id คั่นด้วย , · none = ไม่มีค่า · current = Sprint ที่กำลังทำ (เฉพาะ Sprint) */
+const idList = (withCurrent: boolean) => z.string().trim().min(1).max(2000).transform((v, ctx) => {
+  const values = [...new Set(v.split(',').map((x) => x.trim()).filter(Boolean))];
+  const ok = values.length > 0 && values.length <= 50 && values.every((x) => x === 'none' || (withCurrent && x === 'current') || uuid.safeParse(x).success);
+  if (!ok) ctx.addIssue({ code: 'custom', message: 'ตัวกรองไม่ถูกต้อง' });
+  return values;
+});
 const booleanQuery = z.enum(['true', 'false', '1', '0']).transform((x) => x === 'true' || x === '1');
 export const TableListQuery = z.object({
   status: filterList.optional(),
   type: z.enum(['Story', 'Task', 'Bug', 'Spike', 'story', 'task', 'bug', 'spike']).optional(),
   assignee: z.union([uuid, z.literal('me'), z.literal('none')]).optional(),
   ba: z.union([uuid, z.literal('me'), z.literal('none')]).optional(),
-  module: filterId.optional(), moduleId: filterId.optional(),
+  // Module / Sprint เลือกได้หลายค่า คั่นด้วย , (ตัวกรองหลายตัวเลือกในแท็บ Table · ผู้ใช้ขอ 2026-11-19)
+  module: idList(false).optional(), moduleId: filterId.optional(),
   phase: filterId.optional(), phaseId: filterId.optional(),
-  sprint: z.union([uuid, z.literal('current'), z.literal('none')]).optional(),
+  sprint: idList(true).optional(),
   sprintId: filterId.optional(),
+  size: z.enum(['XS', 'S', 'M', 'L', 'XL']).optional(),
   priority: z.enum(['urgent', 'high', 'medium', 'low']).optional(),
   overdue: booleanQuery.optional(),
   q: z.string().trim().max(300).optional(),
@@ -49,52 +58,7 @@ export async function listIssues<T extends { id: string; key: string; number: nu
   tx: Tx, auth: AuthInfo, project: ProjectRow, access: ProjectAccess, q: z.infer<typeof TableListQuery>, dto: (rows: Issue[]) => Promise<T[]>,
 ) {
   if (access.guestViewer && q.view === 'table') throw new AppError(403, 'forbidden', 'Guest Viewer เปิดได้เฉพาะ Overview และ Timeline');
-  const where: SQL[] = [eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt)];
-  const moduleId = q.module ?? q.moduleId;
-  const phaseId = q.phase ?? q.phaseId;
-  const sprint = q.sprint ?? q.sprintId;
-  if (moduleId) where.push(moduleId === 'none' ? isNull(s.issues.moduleId) : eq(s.issues.moduleId, moduleId));
-  if (phaseId) where.push(phaseId === 'none' ? isNull(s.issues.phaseId) : eq(s.issues.phaseId, phaseId));
-  if (sprint === 'current') where.push(sql`${s.issues.sprintId} in (select id from ${s.sprints} where ${s.sprints.projectId} = ${project.id} and ${s.sprints.status} = 'active')`);
-  else if (sprint) where.push(sprint === 'none' ? isNull(s.issues.sprintId) : eq(s.issues.sprintId, sprint));
-  if (q.level === 'task') where.push(isNull(s.issues.parentId));
-  if (q.level === 'subtask') where.push(sql`${s.issues.parentId} is not null`);
-  if (q.status) {
-    const values = q.status.split(',');
-    const conditions = values.map((value) => {
-      if ((STATUS_CATEGORIES as readonly string[]).includes(value)) return eq(s.workflowStatuses.category, value as StatusCategory);
-      // open = งานค้างทุกหมวด (ซ่อนงานที่เสร็จ / ยกเลิก)
-      if (value === 'open') return openStatus();
-      if (uuid.safeParse(value).success) return eq(s.issues.statusId, value);
-      throw new AppError(400, 'invalid_filter', 'ตัวกรองสถานะไม่ถูกต้อง');
-    });
-    where.push(or(...conditions)!);
-  }
-  if (q.type) where.push(eq(s.issueTypes.name, q.type[0].toUpperCase() + q.type.slice(1).toLowerCase()));
-  if (q.priority) where.push(eq(s.issues.priority, q.priority));
-  if (q.assignee) {
-    const who = q.assignee === 'me' ? auth.userId : q.assignee;
-    where.push(q.assignee === 'none' ? sql`not exists (select 1 from ${s.issueAssignees} a where a.issue_id = ${s.issues.id})`
-      : sql`exists (select 1 from ${s.issueAssignees} a where a.issue_id = ${s.issues.id} and a.user_id = ${who})`);
-  }
-  // BA หลายคน: กรองเจองานที่คนนั้นเป็น BA คนใดคนหนึ่ง
-  if (q.ba) where.push(q.ba === 'none' ? sql`cardinality(${s.issues.baIds}) = 0 and ${s.issues.baId} is null`
-    : sql`(${q.ba === 'me' ? auth.userId : q.ba})::uuid = any(${s.issues.baIds})`);
-  // โปรเจกต์แยก Dev / QA: งานที่รอ QA เลยกำหนดตาม QA Due (projects/due-stage.ts)
-  const dueRule = await loadDueRule(tx, project);
-  const overdue = and(lateSql(dueRule, today()), openStatus())!;
-  if (q.overdue !== undefined) where.push(q.overdue ? overdue : sql`not coalesce((${overdue}), false)`);
-  if (q.q) {
-    // ข้อความค้นหาเป็น literal ไม่เปลี่ยน % / _ เป็น wildcard ของ SQL
-    const text = `%${q.q.replace(/[\\%_]/g, '\\$&')}%`;
-    // ค้นจากชื่อ, รหัส DP-…, FR / SCR, รายละเอียด, หมายเหตุ และค่าใน details (Bug steps / expected / actual ฯลฯ · ผู้ใช้ขอ 2026-11-18)
-    // details ค้นเฉพาะค่า ไม่ค้นชื่อคีย์ของ JSON เพื่อไม่ให้คำอย่าง "steps" เจอทุกงาน
-    const byDetails = sql`exists (select 1 from jsonb_each_text(${s.issues.details}) d where d.value ilike ${text})`;
-    const byRequirement = sql`exists (select 1 from ${s.issueRequirements} ir join ${s.requirements} r on r.id = ir.requirement_id where ir.issue_id = ${s.issues.id} and r.code ilike ${text})`;
-    const byScreen = sql`exists (select 1 from ${s.issueScreens} isc join ${s.screens} sc on sc.id = isc.screen_id where isc.issue_id = ${s.issues.id} and sc.code ilike ${text})`;
-    where.push(or(ilike(s.issues.title, text), ilike(sql`${project.key} || '-' || ${s.issues.number}`, text),
-      ilike(s.issues.description, text), ilike(s.issues.remark, text), byDetails, byRequirement, byScreen)!);
-  }
+  const where = await issueFilters(tx, auth, project, q);
   if (access.guestViewer) where.push(eq(s.issues.sharedWithGuests, true), ne(s.issueTypes.name, 'Bug'));
   const sortInput = q.sort ?? 'number';
   const parsed = /^(-?)([A-Za-z]+)(?::(asc|desc))?$/.exec(sortInput);
@@ -164,6 +128,69 @@ export async function listIssues<T extends { id: string; key: string; number: nu
     phases: [...phases.filter((p) => p.moduleId === module.id), { id: null, name: null, moduleId: module.id }].map((phase) => ({ ...phase, ...aggregate(totals.filter((r) => r.issue.moduleId === module.id && r.issue.phaseId === phase.id)) })),
   }));
   return { items, nextCursor, summary: aggregate(totals), modules: grouped };
+}
+
+type FilterQuery = Omit<z.infer<typeof TableListQuery>, 'limit'> & { limit?: number };
+
+/** เงื่อนไขกรองงานชุดเดียวกับแท็บ Table · ใช้ซ้ำตอน Export ตามตัวกรอง (ต้องได้งานชุดเดียวกับที่เห็นในตาราง) */
+export async function issueFilters(tx: Tx, auth: AuthInfo, project: ProjectRow, q: FilterQuery): Promise<SQL[]> {
+  const where: SQL[] = [eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt)];
+  const modules = q.module ?? (q.moduleId ? [q.moduleId] : undefined);
+  const phaseId = q.phase ?? q.phaseId;
+  const sprints = q.sprint ?? (q.sprintId ? [q.sprintId] : undefined);
+  if (modules) where.push(anyOf(s.issues.moduleId, modules, () => sql`false`));
+  if (phaseId) where.push(phaseId === 'none' ? isNull(s.issues.phaseId) : eq(s.issues.phaseId, phaseId));
+  if (sprints) where.push(anyOf(s.issues.sprintId, sprints, () => sql`${s.issues.sprintId} in (select id from ${s.sprints} where ${s.sprints.projectId} = ${project.id} and ${s.sprints.status} = 'active')`));
+  if (q.size) where.push(eq(s.issues.size, q.size));
+  if (q.level === 'task') where.push(isNull(s.issues.parentId));
+  if (q.level === 'subtask') where.push(sql`${s.issues.parentId} is not null`);
+  if (q.status) {
+    const values = q.status.split(',');
+    const conditions = values.map((value) => {
+      if ((STATUS_CATEGORIES as readonly string[]).includes(value)) return eq(s.workflowStatuses.category, value as StatusCategory);
+      // open = งานค้างทุกหมวด (ซ่อนงานที่เสร็จ / ยกเลิก)
+      if (value === 'open') return openStatus();
+      if (uuid.safeParse(value).success) return eq(s.issues.statusId, value);
+      throw new AppError(400, 'invalid_filter', 'ตัวกรองสถานะไม่ถูกต้อง');
+    });
+    where.push(or(...conditions)!);
+  }
+  if (q.type) where.push(eq(s.issueTypes.name, q.type[0].toUpperCase() + q.type.slice(1).toLowerCase()));
+  if (q.priority) where.push(eq(s.issues.priority, q.priority));
+  if (q.assignee) {
+    const who = q.assignee === 'me' ? auth.userId : q.assignee;
+    where.push(q.assignee === 'none' ? sql`not exists (select 1 from ${s.issueAssignees} a where a.issue_id = ${s.issues.id})`
+      : sql`exists (select 1 from ${s.issueAssignees} a where a.issue_id = ${s.issues.id} and a.user_id = ${who})`);
+  }
+  // BA หลายคน: กรองเจองานที่คนนั้นเป็น BA คนใดคนหนึ่ง
+  if (q.ba) where.push(q.ba === 'none' ? sql`cardinality(${s.issues.baIds}) = 0 and ${s.issues.baId} is null`
+    : sql`(${q.ba === 'me' ? auth.userId : q.ba})::uuid = any(${s.issues.baIds})`);
+  // โปรเจกต์แยก Dev / QA: งานที่รอ QA เลยกำหนดตาม QA Due (projects/due-stage.ts)
+  const dueRule = await loadDueRule(tx, project);
+  const overdue = and(lateSql(dueRule, today()), openStatus())!;
+  if (q.overdue !== undefined) where.push(q.overdue ? overdue : sql`not coalesce((${overdue}), false)`);
+  if (q.q) {
+    // ข้อความค้นหาเป็น literal ไม่เปลี่ยน % / _ เป็น wildcard ของ SQL
+    const text = `%${q.q.replace(/[\\%_]/g, '\\$&')}%`;
+    // ค้นจากชื่อ, รหัส DP-…, FR / SCR, รายละเอียด, หมายเหตุ และค่าใน details (Bug steps / expected / actual ฯลฯ · ผู้ใช้ขอ 2026-11-18)
+    // details ค้นเฉพาะค่า ไม่ค้นชื่อคีย์ของ JSON เพื่อไม่ให้คำอย่าง "steps" เจอทุกงาน
+    const byDetails = sql`exists (select 1 from jsonb_each_text(${s.issues.details}) d where d.value ilike ${text})`;
+    const byRequirement = sql`exists (select 1 from ${s.issueRequirements} ir join ${s.requirements} r on r.id = ir.requirement_id where ir.issue_id = ${s.issues.id} and r.code ilike ${text})`;
+    const byScreen = sql`exists (select 1 from ${s.issueScreens} isc join ${s.screens} sc on sc.id = isc.screen_id where isc.issue_id = ${s.issues.id} and sc.code ilike ${text})`;
+    where.push(or(ilike(s.issues.title, text), ilike(sql`${project.key} || '-' || ${s.issues.number}`, text),
+      ilike(s.issues.description, text), ilike(s.issues.remark, text), byDetails, byRequirement, byScreen)!);
+  }
+  return where;
+}
+
+/** คอลัมน์ตรงกับค่าใดค่าหนึ่ง: none = ว่าง · current = เงื่อนไขพิเศษ */
+function anyOf(column: typeof s.issues.moduleId | typeof s.issues.sprintId, values: string[], current: () => SQL): SQL {
+  const ids = values.filter((v) => v !== 'none' && v !== 'current');
+  return or(
+    ...(ids.length ? [inArray(column, ids)] : []),
+    ...(values.includes('none') ? [isNull(column)] : []),
+    ...(values.includes('current') ? [current()] : []),
+  )!;
 }
 
 function decodeCursor(value: string, sort: string): { value: string | number | null; number: number } {

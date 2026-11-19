@@ -5,7 +5,7 @@ import { config } from '../config.js';
 import { Auth, type AuthInfo, Tenant, type TenantInfo } from '../common/request.js';
 import { TenantGuard } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
-import { ImportsService, PatchImportBody } from './imports.service.js';
+import { ExportFilters, ImportsService, PatchImportBody } from './imports.service.js';
 import { webUrl } from '../auth/auth.config.js';
 
 /** L3 · Import Excel */
@@ -62,9 +62,10 @@ export class PlanExportController {
 
   /** ดาวน์โหลดแผนงานของโปรเจกต์เป็น .xlsx (ชีต Tasks + คำแนะนำ + ค่าที่ใช้ได้ + Holidays) นำเข้ากลับโหมดอัปเดตได้ */
   @Get('export.xlsx')
-  async export(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Query('timeline') timeline: string | undefined, @Res({ passthrough: true }) res: Response) {
-    // timeline=week: ชีต Timeline ช่องละสัปดาห์ (ค่าเริ่มต้น ช่องละวัน)
-    const file = await this.imports.exportXlsx(auth, tenant, key, timeline === 'week' ? 'week' : 'day');
+  async export(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Query() query: Record<string, unknown>, @Res({ passthrough: true }) res: Response) {
+    // timeline=week: ชีต Timeline ช่องละสัปดาห์ (ค่าเริ่มต้น ช่องละวัน) · ที่เหลือคือตัวกรองแบบแท็บ Table (sprint, module …)
+    const { timeline, ...filters } = query;
+    const file = await this.imports.exportXlsx(auth, tenant, key, timeline === 'week' ? 'week' : 'day', parse(ExportFilters, filters));
     res.set({
       'Content-Type': XLSX,
       'Content-Disposition': `attachment; filename="${file.filename}"`,

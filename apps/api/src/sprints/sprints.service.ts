@@ -13,12 +13,23 @@ import { SYSTEM_DB } from '../db/db.module.js';
 import { WorkCalendar } from '../projects/calendar.js';
 import { requirePerm } from '../projects/permissions.js';
 import { ProjectsService } from '../projects/projects.service.js';
-import { CompleteSprintBody, CreateSprintBody, PatchSprintBody } from './sprint-input.js';
+import { CompleteSprintBody, CreateSprintBody, CreateSprintSeriesBody, PatchSprintBody, sprintSeries } from './sprint-input.js';
 import { burndown, capacity, issueDto, loadIssues, saveSnapshot, totals, type SprintRow } from './sprint-metrics.js';
 
 @Injectable()
 export class SprintsService {
   constructor(private readonly db: TenantDb, private readonly projects: ProjectsService, private readonly events: EventBus, @Inject(SYSTEM_DB) private readonly system: Db) {}
+
+  async list(auth: AuthInfo, tenant: TenantInfo, key: string) {
+    return this.db.run(auth, tenant, async (tx) => {
+      const { project, access } = await this.projects.load(tx, auth, tenant, key);
+      requirePerm(access, 'project.view');
+      if (access.guestViewer) throw new AppError(403, 'forbidden', 'Guest Viewer เปิดได้เฉพาะ Overview และ Timeline');
+      const items = await tx.select({ id: s.sprints.id, number: s.sprints.number, name: s.sprints.name, startDate: s.sprints.startDate, endDate: s.sprints.endDate, status: s.sprints.status })
+        .from(s.sprints).where(eq(s.sprints.projectId, project.id)).orderBy(asc(s.sprints.number));
+      return { items, sprintLengthWeeks: project.sprintLengthWeeks ?? null };
+    });
+  }
 
   async create(auth: AuthInfo, tenant: TenantInfo, key: string, input: z.infer<typeof CreateSprintBody>) {
     return this.db.run(auth, tenant, async (tx) => {
@@ -29,6 +40,22 @@ export class SprintsService {
       const [sprint] = await tx.insert(s.sprints).values({ ...input, workspaceId: tenant.workspaceId, projectId: project.id, number: last.number + 1 }).returning();
       await this.audit(tx, auth, sprint, 'sprint.created');
       return sprint;
+    });
+  }
+
+  /** สร้าง Sprint ต่อกันหลายตัว (ตั้งความยาวเป็นสัปดาห์) · ชื่อ "Sprint <เลข>" */
+  async createSeries(auth: AuthInfo, tenant: TenantInfo, key: string, input: z.infer<typeof CreateSprintSeriesBody>) {
+    return this.db.run(auth, tenant, async (tx) => {
+      const { project, access } = await this.projects.load(tx, auth, tenant, key);
+      requirePerm(access, 'sprint.manage');
+      await this.lockProject(tx, project.id);
+      const [last] = await tx.select({ number: sql<number>`coalesce(max(${s.sprints.number}), 0)::int` }).from(s.sprints).where(eq(s.sprints.projectId, project.id));
+      const values = sprintSeries(input.startDate, input.weeks, input.count).map((range, i) => ({
+        ...range, workspaceId: tenant.workspaceId, projectId: project.id, number: last.number + i + 1, name: `Sprint ${last.number + i + 1}`,
+      }));
+      const created = await tx.insert(s.sprints).values(values).returning();
+      for (const sprint of created) await this.audit(tx, auth, sprint, 'sprint.created');
+      return { items: created };
     });
   }
 

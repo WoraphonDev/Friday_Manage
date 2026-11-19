@@ -18,6 +18,7 @@
     "sa": "SA",
     "reviewer": "QA / Reviewer",
     "status": "Status",
+    "sprint": "Sprint",
     "priority": "Priority",
     "size": "Size / Man-Day",
     "start": "Plan Start",

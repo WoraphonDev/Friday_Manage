@@ -10,6 +10,7 @@ import { baList, reviewerList } from '../issues/rules.js';
 import { acceptanceText } from './plan.js';
 
 const s = schema;
+type Issue = typeof schema.issues.$inferSelect;
 
 /**
  * คอลัมน์ของชีต Tasks (รูปแบบใหม่) · หัวคอลัมน์ต้องตรง alias ใน plan.ts (autoMap) เพื่อให้นำเข้ากลับได้
@@ -21,6 +22,7 @@ export const EXPORT_HEADERS = [
   'Parent Key',
   'Module',
   'Group',
+  'Sprint',
   'Title',
   'Checklist',
   'Status',
@@ -43,7 +45,7 @@ export const EXPORT_HEADERS = [
   'Remark',
 ] as const;
 type Header = (typeof EXPORT_HEADERS)[number];
-const WIDTH = [10, 11, 22, 18, 44, 48, 13, 10, 18, 18, 24, 24, 7, 9, 12, 12, 12, 12, 12, 18, 16, 16, 40, 32];
+const WIDTH = [10, 11, 22, 18, 12, 44, 48, 13, 10, 18, 18, 24, 24, 7, 9, 12, 12, 12, 12, 12, 18, 16, 16, 40, 32];
 const WIDTH_OF = Object.fromEntries(EXPORT_HEADERS.map((h, i) => [h, WIDTH[i]])) as Record<Header, number>;
 /** คอลัมน์ที่ขึ้นกับชุดฟิลด์ของโปรเจกต์ · ฟิลด์ที่ซ่อนทั้ง Task และ Sub-task ไม่ส่งออก (นำเข้ากลับแล้วไม่แตะค่าเดิม) */
 const HEADER_FIELD: Partial<Record<Header, ProfileField>> = {
@@ -58,6 +60,9 @@ const VALUES = 'ค่าที่ใช้ได้';
 const MAX_ROWS = 5000;
 /** คอลัมน์ที่แถวต่อท้ายของ Checklist ใส่ซ้ำ (plan.ts ใช้ระบุว่าเป็นงานเดิม) */
 const CHECKLIST_IDENTITY = new Set<Header>(['Key', 'Parent Key', 'Module', 'Group', 'Title']);
+/** ชีตซ่อนที่บอกว่าไฟล์มีงานไม่ครบทั้งโปรเจกต์ (Export ตาม Sprint / ตัวกรอง) · readPlanWorkbook อ่านเพื่อห้ามโหมดแทนที่แผน */
+export const SCOPE_SHEET = 'Scope';
+export const PARTIAL_MARK = 'partial';
 
 const asDate = (d: string | null) => (d ? new Date(`${d}T00:00:00Z`) : null);
 
@@ -75,37 +80,52 @@ interface SheetData {
   holidays: { date: string; name: string }[];
   /** ชีต Timeline (เฉพาะ Export แผนของโปรเจกต์) */
   timeline?: TimelineInput;
+  /** ชื่อ Sprint ที่เลือกได้ในคอลัมน์ Sprint */
+  sprints?: string[];
+  /** ไฟล์มีงานบางส่วน (ตาม Sprint / ตัวกรอง) · ข้อความบอกขอบเขต */
+  partial?: string | null;
 }
 
 /** แผนงานของโปรเจกต์เป็น .xlsx: Task + Sub-task (ไม่รวม Bug) เรียง Task แล้วตามด้วย Sub-task ของมัน */
 export async function buildPlanXlsx(
   tx: Tx,
   project: { id: string; key: string; name: string; startDate: string; goliveDate: string; workspaceId: string; holidayCalendarId: string | null; progressSplit?: boolean; qaBufferDays?: number },
-  options: { scale?: 'day' | 'week'; today?: string; profile?: ResolvedProfile; customFields?: CustomFieldDef[] } = {},
+  options: {
+    scale?: 'day' | 'week'; today?: string; profile?: ResolvedProfile; customFields?: CustomFieldDef[];
+    /** Export บางส่วน (ตาม Sprint / ตัวกรองในตาราง): id งานที่ต้องการ + ข้อความบอกขอบเขต · Sub-task ที่ตรงจะพา Task แม่มาด้วย */
+    only?: { ids: Set<string>; label: string };
+  } = {},
 ): Promise<Buffer> {
   const shown = (h: Header) => {
     // QA Due มีเฉพาะโปรเจกต์แยก Dev / QA · โปรเจกต์อื่นได้ไฟล์แบบเดิม
     if (h === 'QA Due') return !!project.progressSplit;
+    // โปรเจกต์ที่ยังไม่มี Sprint ไม่ต้องมีคอลัมน์ว่าง
+    if (h === 'Sprint') return hasSprints;
     const f = HEADER_FIELD[h];
     const rule = f ? options.profile?.fields[f] : undefined;
     return !rule || rule.task !== 'hidden' || rule.subtask !== 'hidden';
   };
-  const standard = EXPORT_HEADERS.filter(shown);
+  let hasSprints = false;
   // Custom field ที่ซ่อนทั้งสองระดับไม่ส่งออก · ชื่อชนกับคอลัมน์มาตรฐานต่อท้าย (Custom)
   const customs = (options.customFields ?? []).filter((f) => f.taskMode !== 'hidden' || f.subtaskMode !== 'hidden');
   const taken = new Set(EXPORT_HEADERS.map((h) => h.toLowerCase()));
   const customHeaders = customs.map((f) => (taken.has(f.name.toLowerCase()) ? `${f.name} (Custom)` : f.name));
   const [taskType] = await tx.select({ id: s.issueTypes.id, workflowId: s.issueTypes.workflowId }).from(s.issueTypes).where(and(eq(s.issueTypes.projectId, project.id), eq(s.issueTypes.name, 'Task')));
-  const issues = await tx
+  const all = await tx
     .select()
     .from(s.issues)
     .where(and(eq(s.issues.projectId, project.id), isNull(s.issues.deletedAt), eq(s.issues.issueTypeId, taskType.id)))
     .orderBy(asc(s.issues.number));
+  const only = options.only;
+  // Sub-task ที่ตรงตัวกรองต้องมี Task แม่อยู่ในไฟล์ด้วย ไม่อย่างนั้นนำเข้ากลับไม่ได้
+  const wanted = only ? new Set([...only.ids, ...all.filter((i) => only.ids.has(i.id) && i.parentId).map((i) => i.parentId!)]) : null;
+  const issues = wanted ? all.filter((i) => wanted.has(i.id)) : all;
   const ids = issues.map((i) => i.id);
   const some = <T>(q: () => Promise<T[]>) => (ids.length ? q() : Promise.resolve([] as T[]));
-  const [mods, phs, sts, users, asg, reqs, scrs, lbls, checks] = await Promise.all([
+  const [mods, phs, sps, sts, users, asg, reqs, scrs, lbls, checks] = await Promise.all([
     tx.select({ id: s.modules.id, name: s.modules.name }).from(s.modules).where(eq(s.modules.projectId, project.id)).orderBy(asc(s.modules.sort)),
-    tx.select({ id: s.phases.id, name: s.phases.name }).from(s.phases).where(eq(s.phases.projectId, project.id)),
+    tx.select({ id: s.phases.id, name: s.phases.name }).from(s.phases).where(eq(s.phases.projectId, project.id)).orderBy(asc(s.phases.sort)),
+    tx.select({ id: s.sprints.id, name: s.sprints.name, status: s.sprints.status }).from(s.sprints).where(eq(s.sprints.projectId, project.id)).orderBy(asc(s.sprints.number)),
     tx.select({ id: s.workflowStatuses.id, name: s.workflowStatuses.name, category: s.workflowStatuses.category }).from(s.workflowStatuses).where(eq(s.workflowStatuses.workflowId, taskType.workflowId)).orderBy(asc(s.workflowStatuses.sort)),
     tx.select({ id: s.users.id, name: s.users.displayName }).from(s.users),
     some(() => tx.select({ issueId: s.issueAssignees.issueId, userId: s.issueAssignees.userId }).from(s.issueAssignees).where(inArray(s.issueAssignees.issueId, ids)).orderBy(asc(s.issueAssignees.sort))),
@@ -117,6 +137,9 @@ export async function buildPlanXlsx(
   ]);
   const moduleName = new Map(mods.map((x) => [x.id, x.name]));
   const groupName = new Map(phs.map((x) => [x.id, x.name]));
+  const sprintName = new Map(sps.map((x) => [x.id, x.name]));
+  hasSprints = sps.length > 0;
+  const standard = EXPORT_HEADERS.filter(shown);
   const userName = new Map(users.map((x) => [x.id, x.name]));
   const statusName = new Map(sts.map((x) => [x.id, x.name]));
   const group = <T extends { issueId: string }>(list: T[], pick: (r: T) => string) => {
@@ -130,7 +153,13 @@ export async function buildPlanXlsx(
   const person = (id: string | null) => (id ? (userName.get(id) ?? null) : null);
 
   // Task เรียงตามลำดับในแผนเดิม (ถ้ามี) แล้วตามเลขงาน · Sub-task ต่อท้าย Task แม่
-  const tops = issues.filter((i) => !i.parentId).sort((a, b) => (a.excelRowNo ?? Infinity) - (b.excelRowNo ?? Infinity) || a.number - b.number);
+  // Export บางส่วนเรียง Module → กลุ่ม → Task (ผู้ใช้ขอ 2026-11-19) ให้อ่านเป็นรายงานของ Sprint ได้
+  const position = (list: { id: string }[]) => new Map(list.map((x, n) => [x.id, n]));
+  const [modulePos, groupPos] = [position(mods), position(phs)];
+  const byStructure = (a: Issue, b: Issue) => (modulePos.get(a.moduleId ?? '') ?? Infinity) - (modulePos.get(b.moduleId ?? '') ?? Infinity)
+    || (a.phaseId ? 1 : 0) - (b.phaseId ? 1 : 0) || (groupPos.get(a.phaseId ?? '') ?? Infinity) - (groupPos.get(b.phaseId ?? '') ?? Infinity);
+  const byPlan = (a: Issue, b: Issue) => (a.excelRowNo ?? Infinity) - (b.excelRowNo ?? Infinity) || a.number - b.number;
+  const tops = issues.filter((i) => !i.parentId).sort((a, b) => (only ? byStructure(a, b) : 0) || byPlan(a, b));
   const kids = group(issues.filter((i) => i.parentId && byId.has(i.parentId)).map((i) => ({ issueId: i.parentId!, id: i.id })), (r) => r.id);
   const ordered = tops.flatMap((t) => [t, ...(kids.get(t.id) ?? []).map((id) => byId.get(id)!)]);
 
@@ -156,6 +185,7 @@ export async function buildPlanXlsx(
       parent ? `${project.key}-${parent.number}` : null,
       i.moduleId ? (moduleName.get(i.moduleId) ?? null) : null,
       i.phaseId ? (groupName.get(i.phaseId) ?? null) : null,
+      i.sprintId ? (sprintName.get(i.sprintId) ?? null) : null,
       i.title,
       firstCheck ?? null,
       statusName.get(i.statusId) ?? null,
@@ -210,6 +240,7 @@ export async function buildPlanXlsx(
   }
   return render({
     headers: [...standard, ...customHeaders], rows, subRows, checklistRows, statuses: sts.map((x) => x.name), modules: mods.map((m) => m.name), people: await memberNames(tx), holidays,
+    sprints: sps.filter((x) => x.status !== 'completed').map((x) => x.name), partial: only?.label ?? null,
     timeline: { projectName: project.name, today: options.today ?? today(), from: project.startDate, to: project.goliveDate, scale: options.scale ?? 'day', holidays: new Set(holidays.map((h) => h.date)), rows: timelineRows },
   });
 }
@@ -236,8 +267,8 @@ const KEY_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { a
 const SUB_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
 
 async function render(d: SheetData): Promise<Buffer> {
-  // Template เปล่าใช้ได้กับทุกโปรเจกต์ จึงไม่มีคอลัมน์ QA Due (เพิ่มเองได้ ระบบจับคู่จากชื่อหัวคอลัมน์)
-  const headers = d.headers ?? EXPORT_HEADERS.filter((h) => h !== 'QA Due');
+  // Template เปล่าใช้ได้กับทุกโปรเจกต์ จึงไม่มีคอลัมน์ QA Due / Sprint (เพิ่มเองได้ ระบบจับคู่จากชื่อหัวคอลัมน์)
+  const headers = d.headers ?? EXPORT_HEADERS.filter((h) => h !== 'QA Due' && h !== 'Sprint');
   // คอลัมน์ที่ไม่ได้ส่งออกได้เลข 0 · ใช้กับการจัดรูปแบบที่ข้ามคอลัมน์ที่ไม่มี
   const COL = Object.fromEntries(EXPORT_HEADERS.map((h) => [h, headers.indexOf(h) + 1])) as Record<Header, number>;
   const wb = new ExcelJS.Workbook();
@@ -267,6 +298,7 @@ async function render(d: SheetData): Promise<Buffer> {
     ['Size', SIZES],
     ['Module', d.modules],
     ['สมาชิก', d.people],
+    ['Sprint', d.sprints ?? []],
   ];
   const vs = wb.addWorksheet(VALUES);
   vs.addRow(lists.map(([h]) => h)).font = { bold: true };
@@ -291,6 +323,7 @@ async function render(d: SheetData): Promise<Buffer> {
   pick(COL.Size, 2);
   pick(COL.Module, 3);
   for (const c of [COL['Business Analyst'], COL['System Analyst'], COL['QA / Reviewer']]) pick(c, 4);
+  pick(COL.Sprint, 5);
 
   const guide = wb.addWorksheet('คำแนะนำ');
   guide.addRow(['คอลัมน์', 'ความหมาย', 'จำเป็น']).font = { bold: true };
@@ -311,6 +344,14 @@ async function render(d: SheetData): Promise<Buffer> {
   hs.getColumn(1).numFmt = 'yyyy-mm-dd';
   hs.columns.forEach((c, n) => (c.width = [12, 36][n]));
 
+  if (d.partial) {
+    // ซ่อนไว้แต่ยังอยู่เมื่อเปิด / บันทึกใน Excel · ใช้กันการนำเข้าแบบแทนที่แผนที่จะลบงานนอกขอบเขต
+    const scope = wb.addWorksheet(SCOPE_SHEET, { state: 'hidden' });
+    scope.addRow([PARTIAL_MARK]);
+    scope.addRow([d.partial]);
+    scope.addRow(['ไฟล์นี้มีงานบางส่วนของโปรเจกต์ นำเข้ากลับได้เฉพาะโหมดอัปเดต (ไม่ใช่แทนที่แผน)']);
+  }
+
   // เปิดไฟล์มาเจอชีต Tasks ก่อน
   wb.views = [{ x: 0, y: 0, width: 20000, height: 12000, firstSheet: 0, activeTab: 0, visibility: 'visible' }];
   return Buffer.from(await wb.xlsx.writeBuffer());
@@ -321,6 +362,7 @@ const GUIDE: [string, string, string][] = [
   ['Parent Key', 'Key ของ Task แม่ ถ้าแถวนี้เป็น Sub-task · Task แม่ต้องอยู่ในไฟล์หรือในโปรเจกต์ และต้องไม่เป็น Sub-task เอง', '—'],
   ['Module', 'ชื่อ Module · ยังไม่มีในโปรเจกต์ = สร้างให้ · Sub-task ใช้ Module ของ Task แม่เสมอ', 'Task'],
   ['Group', 'กลุ่มของ Task ใต้ Module (ไม่บังคับ) · ยังไม่มี = สร้างให้ · ว่าง = ไม่มีกลุ่ม · Sub-task อยู่กลุ่มเดียวกับ Task แม่เสมอ', '—'],
+  ['Sprint', 'ชื่อ Sprint ของโปรเจกต์ (ดูชีตค่าที่ใช้ได้) · ว่าง = ยังไม่เข้า Sprint · ชื่อที่ไม่มีในโปรเจกต์หรือ Sprint ที่ปิดแล้วจะถูกข้าม · Sub-task ใช้ Sprint ของ Task แม่เสมอ', '—'],
   ['Title', 'ชื่องาน', 'ใช่'],
   ['Checklist', '1 แถวต่อ 1 ข้อ: ข้อแรกใส่ในแถวของงาน ข้อถัดไปเพิ่มแถวใต้งานโดยใส่ Title (และ Key ถ้ามี) เดียวกัน ช่องอื่นเว้นว่าง · ขึ้นต้นด้วย [Acceptance] = Acceptance criteria · อัปเดตแผน: ข้อใหม่เพิ่มให้ ข้อที่ลบออกจากไฟล์ลบเฉพาะที่ยังไม่ติ๊ก', '—'],
   ['Status', 'สถานะตาม Workflow ของโปรเจกต์ (ดูชีตค่าที่ใช้ได้) · ว่าง = To do', '—'],
@@ -346,4 +388,5 @@ const NOTES = [
   'อัปเดตแผน: งานที่อยู่ในระบบแต่ลบแถวออกจากไฟล์ ระบบจะถามก่อนว่าเก็บไว้หรือลบ · คอลัมน์ที่ลบออกจากไฟล์ = ไม่แตะค่าเดิมในระบบ',
   'ชีต Holidays: วันหยุดที่ใช้คำนวณ Plan End · วันที่ไม่มีในปฏิทินของ Workspace จะเพิ่มเป็นวันหยุดของโปรเจกต์ (ตอนสร้างโปรเจกต์)',
   'ไฟล์รูปแบบเดิม (มีคอลัมน์ No.) ยังนำเข้าได้ ระบบจับคู่ด้วย No. เหมือนเดิม',
+  'ไฟล์ที่ Export ตาม Sprint หรือตามตัวกรอง มีงานไม่ครบทั้งโปรเจกต์ จึงนำเข้ากลับได้เฉพาะโหมดอัปเดต ใช้แทนที่แผนไม่ได้',
 ];

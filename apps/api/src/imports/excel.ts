@@ -10,6 +10,8 @@ export interface Sheet {
 export interface ParsedWorkbook {
   table: Sheet;
   holidays: { date: string; name: string }[];
+  /** ไฟล์ Export บางส่วน (ตาม Sprint / ตัวกรอง) · ห้ามนำเข้าแบบแทนที่แผน */
+  partial: string | null;
 }
 
 /** ค่าจริงของเซลล์: สูตร → ผลลัพธ์ · ข้อความจัดรูปแบบ / ลิงก์ → ข้อความ */
@@ -68,7 +70,11 @@ export async function readPlanWorkbook(buffer: Buffer): Promise<ParsedWorkbook> 
     if (d) holidays.push({ date: d, name: String(plain(row.getCell(2).value) ?? 'วันหยุด') });
   });
 
-  return { table: { name: ws.name, headers, rows }, holidays };
+  // ชีตซ่อน Scope (export.ts) บอกว่าไฟล์มีงานไม่ครบทั้งโปรเจกต์
+  const scope = wb.worksheets.find((w) => w.name.toLowerCase() === 'scope');
+  const partial = scope && plain(scope.getRow(1).getCell(1).value) === 'partial' ? String(plain(scope.getRow(2).getCell(1).value) ?? 'บางส่วน') : null;
+
+  return { table: { name: ws.name, headers, rows }, holidays, partial };
 }
 
 /** วันที่จาก Excel → YYYY-MM-DD · null = ว่าง · undefined = รูปแบบไม่ถูกต้อง */

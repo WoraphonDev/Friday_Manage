@@ -1,6 +1,6 @@
 "use client";
 
-import { type DragEvent, type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { type DragEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -9,8 +9,10 @@ import { Bookmark, Bug, CheckSquare, ChevronDown, MoreHorizontal, Zap } from "lu
 import { AvatarStack, Button, CountUp, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useDismissToasts, useToast } from "@/components/ui";
 import { useSlidingIndicator } from "@/lib/motion";
 import { useWorkspace } from "@/components/shell/workspace-shell";
+import { CreateSprintDialog } from "@/features/sprints/sprint-ui";
+import { useSprints } from "@/features/sprints/sprints";
 import { api, ApiError, supportId } from "@/lib/api";
-import { formatDateRange, today as todayIso, type YearFormat } from "@/lib/format";
+import { formatDateRange, type YearFormat } from "@/lib/format";
 import { queryKeys } from "@/lib/query";
 import type { Permissions, Person } from "@/lib/types";
 import { BurndownChart } from "./burndown-chart";
@@ -29,11 +31,6 @@ const TYPE_ICON: Record<string, { icon: typeof Bug; color: string }> = {
   Task: { icon: CheckSquare, color: "#5B3FC4" },
   Bug: { icon: Bug, color: "#DC2626" },
   Spike: { icon: Zap, color: "#7C3AED" },
-};
-const addDays = (date: string, days: number) => {
-  const value = new Date(`${date}T00:00:00Z`);
-  value.setUTCDate(value.getUTCDate() + days);
-  return value.toISOString().slice(0, 10);
 };
 const errorText = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
 
@@ -84,6 +81,9 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
   const permissions = useQuery({ queryKey: queryKeys.permissions(ws, projectKey), queryFn: () => api.get<Permissions>(`${endpoint}/my-permissions`) });
   const allowed = !!permissions.data && !permissions.data.guestViewer;
   const backlog = useQuery({ queryKey: backlogKey, queryFn: () => api.get<BacklogData>(`${endpoint}/backlog`), enabled: allowed });
+  // Sprint ทั้งหมด (รวมที่ปิดแล้ว) ใช้ตั้งเลข / วันเริ่มของ Sprint ใหม่
+  const allSprints = useSprints(ws, projectKey, allowed);
+  const ts = useTranslations("sprints");
   // ชื่อ Module และคนไม่อยู่ใน issueDto ของ A06 · โหลดแยกและไม่บล็อกหน้าเมื่อโหลดไม่ได้
   const modules = useQuery({ queryKey: ["backlog-meta", ws, projectKey, "modules"], queryFn: () => api.get<{ items: ModuleItem[] }>(`${endpoint}/modules`), enabled: allowed });
   const members = useQuery({ queryKey: ["backlog-meta", ws, projectKey, "members"], queryFn: () => api.get<{ items: MemberItem[] }>(`${endpoint}/members`), enabled: allowed });
@@ -302,7 +302,9 @@ function ScopedBacklog({ ws, projectKey }: ViewProps) {
         })}
       </div>}
     </Dialog>
-    {creating && <CreateSprintDialog endpoint={endpoint} data={data} onClose={() => setCreating(false)} onCreated={async (name) => { setCreating(false); setNotice({ message: t("created", { name }) }); await cache.invalidateQueries({ queryKey: backlogKey }); }} />}
+    {/* สร้าง Sprint: ผู้ใช้กำหนดวันเริ่ม + Sprint ละกี่สัปดาห์ สร้างหลายตัวต่อกันได้ (ผู้ใช้ตัดสิน 2026-11-19) · ชุดเดียวกับในแท็บ Table / หน้า Task */}
+    {creating && <CreateSprintDialog ws={ws} projectKey={projectKey} sprints={allSprints.data?.items ?? []} defaultWeeks={allSprints.data?.sprintLengthWeeks} year={yearFormat} onClose={() => setCreating(false)}
+      onCreated={async (created) => { setCreating(false); setNotice({ message: created.length === 1 ? t("created", { name: created[0]!.name }) : ts("created", { count: created.length }) }); await cache.invalidateQueries({ queryKey: backlogKey }); }} />}
     {starting && <StartSprintDialog endpoint={endpoint} sprint={starting} onClose={() => setStarting(null)} onStarted={async () => { const name = starting.name; setStarting(null); setNotice({ message: t("started", { name }) }); await cache.invalidateQueries({ queryKey: backlogKey }); }} />}
     {completing && <CompleteSprintDialog endpoint={endpoint} sprint={completing} planning={planning} onClose={() => setCompleting(null)} onCompleted={async (result) => {
       setCompleting(null);
@@ -378,42 +380,6 @@ function DialogError({ error }: { error: unknown }) {
   const t = useTranslations("backlog");
   if (!error) return null;
   return <div className={styles.dialogError} role="alert"><span>{errorText(error, t("saveFailed"))}</span>{error instanceof ApiError && supportId(error) && <code>{t("requestId", { id: supportId(error) ?? "" })}</code>}</div>;
-}
-
-function CreateSprintDialog({ endpoint, data, onClose, onCreated }: { endpoint: string; data: BacklogData; onClose: () => void; onCreated: (name: string) => Promise<void> }) {
-  const t = useTranslations("backlog");
-  const last = data.sprints.at(-1);
-  const nextNumber = Math.max(0, ...data.sprints.map((sprint) => sprint.number)) + 1;
-  // เริ่มวันถัดจาก Sprint ล่าสุด ยาว 2 สัปดาห์ตามธรรมเนียมทั่วไป ผู้ใช้แก้ได้
-  const start = last && last.endDate >= data.asOf ? addDays(last.endDate, 1) : data.asOf || todayIso();
-  const [name, setName] = useState(`Sprint ${nextNumber}`);
-  const [startDate, setStartDate] = useState(start);
-  const [endDate, setEndDate] = useState(addDays(start, 13));
-  const [goal, setGoal] = useState("");
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-  const invalidRange = !!startDate && !!endDate && endDate < startDate;
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (!name.trim() || !startDate || !endDate || invalidRange) return;
-    setPending(true); setError(null);
-    try {
-      await api.post(`${endpoint}/sprints`, { name: name.trim(), startDate, endDate, goal: goal.trim() || null });
-      await onCreated(name.trim());
-    } catch (failure) { setError(failure); } finally { setPending(false); }
-  }
-  return <Dialog open onOpenChange={(open) => { if (!open && !pending) onClose(); }} title={t("createTitle")}>
-    <form className={styles.form} onSubmit={submit}>
-      <Input label={t("sprintName")} value={name} required maxLength={200} onChange={(event) => setName(event.target.value)} />
-      <div className={styles.dateRow}>
-        <Input label={t("startDate")} type="date" value={startDate} required onChange={(event) => setStartDate(event.target.value)} />
-        <Input label={t("endDate")} type="date" value={endDate} required min={startDate} onChange={(event) => setEndDate(event.target.value)} error={invalidRange ? t("invalidRange") : undefined} />
-      </div>
-      <Input label={t("goal")} value={goal} maxLength={10000} placeholder={t("goalPlaceholder")} onChange={(event) => setGoal(event.target.value)} />
-      <DialogError error={error} />
-      <div className="dialog-actions"><Button disabled={pending} onClick={onClose}>{t("cancel")}</Button><Button type="submit" variant="primary" disabled={pending || !name.trim() || invalidRange}>{t("create")}</Button></div>
-    </form>
-  </Dialog>;
 }
 
 function StartSprintDialog({ endpoint, sprint, onClose, onStarted }: { endpoint: string; sprint: Sprint; onClose: () => void; onStarted: () => Promise<void> }) {

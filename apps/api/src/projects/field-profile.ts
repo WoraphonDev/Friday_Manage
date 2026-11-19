@@ -35,6 +35,8 @@ export const STANDARD_COLUMNS = {
   sa: ['sa'],
   reviewer: ['reviewer'],
   status: null,
+  /** Sprint ของงาน (ผู้ใช้ขอ 2026-11-19) */
+  sprint: null,
   priority: ['priority'],
   size: ['size'],
   start: null,
@@ -52,7 +54,7 @@ export type StandardColumn = keyof typeof STANDARD_COLUMNS;
 const STANDARD_COLUMN_KEYS = Object.keys(STANDARD_COLUMNS) as StandardColumn[];
 
 /** คอลัมน์ Table เริ่มต้น = ชุดของ Development Plan (Task v2) · FR / Screen เปิดเองได้จากเมนู Columns */
-export const DEFAULT_COLUMNS: string[] = ['dev', 'ba', 'sa', 'status', 'size', 'start', 'end', 'actualStart', 'actualEnd', 'progress', 'remark'];
+export const DEFAULT_COLUMNS: string[] = ['dev', 'ba', 'sa', 'status', 'sprint', 'size', 'start', 'end', 'actualStart', 'actualEnd', 'progress', 'remark'];
 
 const mode = z.enum(FIELD_MODES);
 const rule = z.object({ task: mode.optional(), subtask: mode.optional() }).strict();

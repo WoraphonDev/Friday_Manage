@@ -65,6 +65,8 @@ export interface Row {
   status: { id: string; name: string; category: Cat };
   priority: "urgent" | "high" | "medium" | "low";
   moduleId: string | null; phaseId: string | null;
+  /** null = ยังไม่เข้า Sprint · Sub-task ใช้ Sprint ของ Task แม่ */
+  sprintId?: string | null;
   size: string | null; estimateMd: number | null; progressPct: number | null;
   planStart: string | null; planEnd: string | null; actualStart: string | null; actualEnd: string | null;
   /** โปรเจกต์แยก Dev / QA: วันที่ใช้ตัดสินเลยกำหนด (งานรอ QA = QA Due) · โปรเจกต์อื่นไม่มีค่า ใช้ planEnd */
@@ -95,7 +97,7 @@ export interface TableData {
 export interface SavedView { id: string; name: string; filters: Record<string, string>; shared: boolean; mine?: boolean }
 export interface Options {
   issueTypes: { name: string; statuses?: { id: string; name: string; category: Cat }[] }[];
-  modules: { id: string; name: string }[];
+  modules: { id: string; name: string; color?: string | null }[];
   /** positions = ตำแหน่งในโปรเจกต์ ใช้กรองช่อง BA / SA / Dev / QA */
   members: (Person & { positions?: string[] })[];
 }

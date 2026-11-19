@@ -9,6 +9,7 @@ import { navigation } from "@/test/router";
 import { permissions } from "@/test/fixtures";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import backlog from "../../messages/th/backlog.json";
+import sprintsMessages from "../../messages/th/sprints.json";
 import { BacklogView } from "../../app/work/[ws]/p/[key]/backlog/_components/backlog-view";
 import type { BacklogData, BacklogIssue, MoveBody, Sprint } from "../../app/work/[ws]/p/[key]/backlog/_components/types";
 
@@ -75,7 +76,14 @@ beforeEach(() => {
       target.splice(index, 0, item);
       return HttpResponse.json({ key, version: item.version, warnings: [] });
     }),
-    http.post("*/api/v1/w/:ws/projects/:key/sprints", async ({ request }) => { posts.push({ path: "create", body: await request.json() }); return HttpResponse.json({ id: "sp-3" }, { status: 201 }); }),
+    // รายการ Sprint ทั้งหมด (หน้าต่างสร้าง Sprint ใช้ตั้งเลข / วันเริ่ม)
+    http.get("*/api/v1/w/:ws/projects/:key/sprints", () => HttpResponse.json({ sprintLengthWeeks: 2, items: data.sprints.map(({ id, number, name, startDate, endDate, status }) => ({ id, number, name, startDate, endDate, status })) })),
+    http.post("*/api/v1/w/:ws/projects/:key/sprints", async ({ request }) => { const body = await request.json() as { name: string; startDate: string; endDate: string }; posts.push({ path: "create", body }); return HttpResponse.json({ id: "sp-3", number: 3, status: "planning", ...body }, { status: 201 }); }),
+    http.post("*/api/v1/w/:ws/projects/:key/sprints/series", async ({ request }) => {
+      const body = await request.json() as { count: number };
+      posts.push({ path: "series", body });
+      return HttpResponse.json({ items: Array.from({ length: body.count }, (_, i) => ({ id: `sp-${3 + i}`, number: 3 + i, name: `Sprint ${3 + i}`, startDate: "2026-11-30", endDate: "2026-12-04", status: "planning" })) }, { status: 201 });
+    }),
     http.post("*/api/v1/w/:ws/projects/:key/sprints/:id/start", ({ params }) => { posts.push({ path: `start:${params.id}`, body: null }); return HttpResponse.json({ id: params.id, status: "active" }); }),
     http.post("*/api/v1/w/:ws/projects/:key/sprints/:id/complete", async ({ request, params }) => {
       posts.push({ path: `complete:${params.id}`, body: await request.json() });
@@ -84,7 +92,7 @@ beforeEach(() => {
     http.patch("*/api/v1/w/:ws/projects/:key/sprints/:id", async ({ request, params }) => { posts.push({ path: `patch:${params.id}`, body: await request.json() }); return HttpResponse.json({ id: params.id }); }),
   );
 });
-const mount = () => renderWithProviders(<WorkspaceShell ws="sample"><BacklogView ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: { backlog } });
+const mount = () => renderWithProviders(<WorkspaceShell ws="sample"><BacklogView ws="sample" projectKey="DE" /></WorkspaceShell>, { messages: { backlog, sprints: sprintsMessages } });
 const row = (key: string) => screen.getByRole("listitem", { name: `งาน ${key}` });
 const list = (name: string) => screen.getByRole("list", { name: `รายการงานใน ${name}` });
 const keysIn = (name: string) => within(list(name)).queryAllByRole("listitem").map((item) => item.getAttribute("data-key"));
@@ -216,16 +224,35 @@ describe("Backlog + Sprint planning (W12)", () => {
     await waitFor(() => expect(posts).toContainEqual({ path: "patch:sp-2", body: { goal: "เป้าหมายตัวอย่าง" } }));
   });
 
-  it("สร้าง Sprint ใหม่ต่อจาก Sprint ล่าสุด", async () => {
+  it("สร้าง Sprint ใหม่ต่อจาก Sprint ล่าสุด · วันจบตามจำนวนสัปดาห์", async () => {
     const user = userEvent.setup(); mount();
     await user.click(await screen.findByRole("button", { name: "+ สร้าง Sprint" }));
-    const dialog = await screen.findByRole("dialog", { name: "สร้าง Sprint ใหม่" });
-    expect(within(dialog).getByLabelText("ชื่อ Sprint")).toHaveValue("Sprint 3");
-    expect(within(dialog).getByLabelText("วันเริ่ม")).toHaveValue("2026-11-28");
+    const dialog = await screen.findByRole("dialog", { name: "สร้าง Sprint" });
+    // มี Sprint แล้ว = สร้างทีละตัว · เริ่มวันจันทร์ถัดจาก Sprint 2 (จบศุกร์ 27 พ.ย.) · 2 สัปดาห์จบวันศุกร์
+    expect(await within(dialog).findByLabelText("ชื่อ Sprint")).toHaveValue("Sprint 3");
+    expect(within(dialog).getByLabelText("จำนวน")).toHaveValue(1);
+    expect(within(dialog).getByLabelText("วันเริ่ม")).toHaveValue("2026-11-30");
     expect(within(dialog).getByLabelText("วันจบ")).toHaveValue("2026-12-11");
+    await user.selectOptions(within(dialog).getByLabelText("Sprint ละ"), "1");
+    expect(within(dialog).getByLabelText("วันจบ")).toHaveValue("2026-12-04");
     await user.click(within(dialog).getByRole("button", { name: "สร้าง Sprint" }));
     await screen.findByText("สร้าง Sprint 3 แล้ว");
-    expect(posts).toContainEqual({ path: "create", body: { name: "Sprint 3", startDate: "2026-11-28", endDate: "2026-12-11", goal: null } });
+    expect(posts).toContainEqual({ path: "create", body: { name: "Sprint 3", startDate: "2026-11-30", endDate: "2026-12-04", goal: null } });
+  });
+
+  it("สร้างหลาย Sprint ต่อกันตามจำนวนสัปดาห์ที่เลือก", async () => {
+    const user = userEvent.setup(); mount();
+    await user.click(await screen.findByRole("button", { name: "+ สร้าง Sprint" }));
+    const dialog = await screen.findByRole("dialog", { name: "สร้าง Sprint" });
+    await within(dialog).findByLabelText("ชื่อ Sprint");
+    const count = within(dialog).getByLabelText("จำนวน");
+    await user.clear(count); await user.type(count, "3");
+    await user.selectOptions(within(dialog).getByLabelText("Sprint ละ"), "3");
+    const preview = within(dialog).getByLabelText("Sprint ที่จะสร้าง");
+    expect(within(preview).getAllByRole("listitem").map((li) => li.querySelector("b")?.textContent)).toEqual(["Sprint 3", "Sprint 4", "Sprint 5"]);
+    await user.click(within(dialog).getByRole("button", { name: "สร้าง 3 Sprint" }));
+    await screen.findByText("สร้าง 3 Sprint แล้ว");
+    expect(posts).toContainEqual({ path: "series", body: { startDate: "2026-11-30", weeks: 3, count: 3 } });
   });
 
   it("ตัวกรองประเภทงานและ Module", async () => {

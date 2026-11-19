@@ -175,9 +175,13 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
               {!closed && (
                 <>
                   <Button onClick={() => setLosing(true)}>{td("lost")}</Button>
-                  <Button variant="primary" disabled={patch.isPending} onClick={() => patch.mutate({ stage: "won" })}>
+                  <Button disabled={patch.isPending} onClick={() => patch.mutate({ stage: "won" })}>
                     {td("won")}
                   </Button>
+                  {/* O55: ปุ่มหลักของดีลคือสร้างใบเสนอราคา (storyboard ขั้น 2) */}
+                  <Link className="button button-primary" href={`/quotes?new=1&lead=${d.id}&company=${encodeURIComponent(d.company)}`}>
+                    {td("quote")}
+                  </Link>
                 </>
               )}
               {d.accountId && (

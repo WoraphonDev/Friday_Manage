@@ -615,3 +615,29 @@ export const leadNotes = pgTable('lead_notes', {
   kind: text().notNull(), body: text().notNull(), nextAction: text(), nextAt: date(),
   createdBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }), createdAt: createdAt(),
 }, (t) => [index('lead_notes_lead_idx').on(t.leadId, t.createdAt), check('lead_notes_kind_valid', oneOf(t.kind, ['call', 'email', 'meeting', 'note', 'system']))]);
+
+export const QUOTE_STATUSES = ['draft', 'sent', 'accepted', 'declined', 'expired'] as const;
+
+/**
+ * ใบเสนอราคา / สัญญารายปี (O55) · เลขที่ QT-ปปดด-nnnn (ปี ค.ศ. 2 หลัก แบบเดียวกับใบแจ้งหนี้) · ราคาเป็นสตางค์ต่อที่นั่งต่อเดือน
+ * ส่วนลดเกินวงเงินของคนทำ = ต้องอนุมัติก่อนส่ง (approved_at) · แก้ราคาหลังอนุมัติ = ล้างการอนุมัติ
+ * ลูกค้าเปิดลิงก์ด้วย token (เก็บ hash) ไม่ต้องล็อกอิน · ตอบรับแล้ว ops-api ตั้งสัญญา สิทธิ์ SLA ใบแจ้งหนี้ ให้ทีละขั้น (setup = { step: { status, at, error } })
+ */
+export const quotes = pgTable('quotes', {
+  id: pk(), number: text().notNull().unique(),
+  accountId: uuid().notNull().references(() => customerAccounts.id), leadId: uuid().references(() => leads.id, { onDelete: 'set null' }),
+  workspaceId: uuid().references(() => workspaces.id, { onDelete: 'set null' }),
+  status: text().notNull().default('draft'),
+  planCode: text().notNull().default('enterprise'), seats: integer().notNull(), months: smallint().notNull(),
+  pricePerSeatSatang: bigint({ mode: 'number' }).notNull(), listPerSeatSatang: bigint({ mode: 'number' }).notNull(),
+  subtotalSatang: bigint({ mode: 'number' }).notNull(), vatSatang: bigint({ mode: 'number' }).notNull(), totalSatang: bigint({ mode: 'number' }).notNull(),
+  entitlements: jsonb().notNull().default(sql`'{}'::jsonb`), sla: jsonb(), contractStart: date(), validUntil: date().notNull(),
+  approvedAt: tstz(), approvedBy: uuid().references(() => staffUsers.id), approvalRequestId: uuid().references((): AnyPgColumn => approvalRequests.id),
+  tokenHash: text().unique(), sentAt: tstz(), viewCount: integer().notNull().default(0), lastViewedAt: tstz(),
+  acceptedAt: tstz(), acceptance: jsonb(), changeRequest: text(), setup: jsonb().notNull().default(sql`'{}'::jsonb`),
+  createdBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }), createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [index('quotes_status_idx').on(t.status, t.validUntil), index('quotes_account_idx').on(t.accountId),
+  check('quotes_status_valid', oneOf(t.status, QUOTE_STATUSES)),
+  check('quotes_months_valid', sql`${t.months} IN (12, 24, 36)`),
+  check('quotes_amounts', sql`${t.seats} > 0 AND ${t.pricePerSeatSatang} >= 0 AND ${t.totalSatang} = ${t.subtotalSatang} + ${t.vatSatang}`),
+  check('quotes_accepted', sql`(${t.status} = 'accepted') = (${t.acceptedAt} IS NOT NULL)`)]);

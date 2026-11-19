@@ -252,3 +252,11 @@
 @media (max-width: 760px) {
   .contactGrid, .contactPair, .contactNeeds { grid-template-columns:1fr; }
 }
+/* ใบเสนอราคาสำหรับลูกค้า (O55) */
+.quoteTable { width:100%; border-collapse:collapse; font-size:14px; }
+.quoteTable td, .quoteTable th { padding:10px 0; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+.num { text-align:right !important; white-space:nowrap; font-variant-numeric:tabular-nums; }
+@media print {
+  .noPrint { display:none !important; }
+  .contactGrid { grid-template-columns:1fr; }
+}

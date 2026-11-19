@@ -30,9 +30,31 @@ export function PlaybooksPanel({ canEdit }: { canEdit: boolean }) {
   return (
     <div className="stack">
       {!canEdit && <p className="muted small">{t("ownerOnly")}</p>}
+      {canEdit && <RunNow />}
       {q.data.items.map((p) => (
         <PlaybookEditor key={p.id} pb={p} canEdit={canEdit} />
       ))}
+    </div>
+  );
+}
+
+/** รันรอบเช้าเดี๋ยวนี้ (เก็บคะแนน → เริ่ม Playbook → เดินขั้นอัตโนมัติ) */
+function RunNow() {
+  const t = useTranslations("success.pb");
+  const toast = useToast();
+  const cache = useQueryClient();
+  const m = useMutation({
+    mutationFn: () => api.post<{ scored: number; started: number; advanced: number; churned: number }>("/success/run"),
+    onSuccess: (r) => (toast(t("ran", r)), void cache.invalidateQueries({ queryKey: SUCCESS_KEY })),
+  });
+  return (
+    <div className="row">
+      <span className="muted small">{t("runHint")}</span>
+      <span className="spacer" />
+      <Button size="small" disabled={m.isPending} onClick={() => m.mutate()}>
+        {t("run")}
+      </Button>
+      <InlineError error={m.error} />
     </div>
   );
 }

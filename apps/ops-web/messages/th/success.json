@@ -74,6 +74,9 @@
     "matching": "มีลูกค้าตรงเงื่อนไขตอนนี้ {n} ราย · อยู่ใน Playbook {active}",
     "save": "บันทึก",
     "saved": "บันทึก Playbook แล้ว",
-    "ownerOnly": "แก้ได้เฉพาะ Owner"
+    "ownerOnly": "แก้ได้เฉพาะ Owner",
+    "run": "รันตอนนี้",
+    "runHint": "ระบบรันเองทุกเช้า 07:00 · กดเพื่อเก็บคะแนนและเริ่ม Playbook เดี๋ยวนี้",
+    "ran": "เก็บคะแนน {scored} ราย · เริ่ม Playbook {started} · เดินขั้นอัตโนมัติ {advanced} · ยกเลิกแพ็กเกจ {churned}"
   }
 }

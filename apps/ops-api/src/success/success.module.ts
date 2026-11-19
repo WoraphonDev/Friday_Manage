@@ -47,6 +47,13 @@ export class SuccessController {
   snooze(@Req() req: OpsRequest, @Param('id') id: string, @Body() body: unknown) {
     return this.success.snooze(req.staff!, id, parse(SnoozeBody, body).days);
   }
+  /** รันรอบเช้าเดี๋ยวนี้ (เครื่องที่ปิดงานเบื้องหลัง OPS_JOBS=off หรือหลังแก้ Playbook) · ทุกขั้นรันซ้ำได้ */
+  @Roles('owner')
+  @Post('run')
+  @HttpCode(200)
+  run() {
+    return this.success.daily();
+  }
   @Roles('owner', 'support')
   @Get('playbooks')
   playbooks() {

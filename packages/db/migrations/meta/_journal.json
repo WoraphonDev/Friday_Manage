@@ -414,6 +414,13 @@
       "when": 1795115488167,
       "tag": "0058_success_playbooks",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1795116239756,
+      "tag": "0059_sales_leads",
+      "breakpoints": true
     }
   ]
 }

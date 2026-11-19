@@ -25,7 +25,9 @@ const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_
   // สถิติ API ต่อลูกค้า (เฟส 3 · 0056)
   'api_usage_minutes', 'api_usage_hours',
   // สุขภาพและ Playbook (เฟส 3 · 0058)
-  'health_daily', 'playbooks', 'playbook_runs', 'playbook_run_steps'];
+  'health_daily', 'playbooks', 'playbook_runs', 'playbook_run_steps',
+  // Lead และดีล (เฟส 3 · 0059)
+  'leads', 'lead_notes'];
 
 beforeAll(() => owner.connect());
 afterAll(() => owner.end());

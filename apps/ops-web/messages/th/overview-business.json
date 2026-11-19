@@ -53,7 +53,8 @@
       "abuseOpen": "เคสใช้ผิดรอตรวจ / ระงับอัตโนมัติรอยืนยัน",
       "rateLimitStreak": "ลูกค้าชนเพดาน API ติดกันเกิน 15 นาที",
       "jitPending": "คำขอสิทธิ์ชั่วคราวรออนุมัติ",
-      "playbookDue": "งาน Playbook ที่ครบกำหนดวันนี้"
+      "playbookDue": "งาน Playbook ที่ครบกำหนดวันนี้",
+      "leadsDue": "Lead ใหม่ / นัดทำต่อถึงวันนี้"
     },
     "who": {
       "approvals": "Owner",

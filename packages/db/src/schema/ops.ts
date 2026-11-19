@@ -581,3 +581,37 @@ export const playbookRunSteps = pgTable('playbook_run_steps', {
   check('playbook_run_steps_kind_valid', oneOf(t.kind, ['email', 'task', 'wait'])),
   check('playbook_run_steps_status_valid', oneOf(t.status, ['pending', 'done', 'skipped'])),
   check('playbook_run_steps_outcome_valid', sql`${t.outcome} IS NULL OR ${t.outcome} IN ('reached', 'no_answer', 'will_cancel', 'sent', 'recovered', 'waited')`)]);
+
+export const LEAD_STAGES = ['new', 'contacted', 'demo', 'proposal', 'won', 'lost'] as const;
+export const LEAD_LOST_REASONS = ['price', 'missing_feature', 'competitor', 'no_budget', 'silent'] as const;
+
+/**
+ * Lead และดีลขายองค์กร (O54) · source: form = ฟอร์มติดต่อฝ่ายขายบนเว็บ · trial = ลูกค้าทดลองที่เข้าเกณฑ์ · manual = ทีมเพิ่มเอง
+ * value_satang = มูลค่าคาดการณ์ต่อปี · next_* = ทำต่อเมื่อไร (บังคับทุกครั้งที่บันทึก กันดีลค้างเงียบ) · consent_at = ยินยอมให้ติดต่อกลับ (PDPA)
+ * แพ้แล้วเก็บ 2 ปีแล้วลบ (นโยบายการเก็บข้อมูล)
+ */
+export const leads = pgTable('leads', {
+  id: pk(), number: integer().generatedAlwaysAsIdentity().notNull().unique(),
+  company: text().notNull(), contactName: text(), contactTitle: text(), email: text(), phone: text(),
+  teamSize: integer(), needs: text().array().notNull().default(sql`'{}'`), message: text(),
+  source: text().notNull(), stage: text().notNull().default('new'), lostReason: text(),
+  valueSatang: bigint({ mode: 'number' }), seats: integer(),
+  ownerId: uuid().references(() => staffUsers.id, { onDelete: 'set null' }),
+  nextAction: text(), nextAt: date(),
+  workspaceId: uuid().references(() => workspaces.id, { onDelete: 'set null' }),
+  accountId: uuid().references(() => customerAccounts.id, { onDelete: 'set null' }),
+  consentAt: tstz(), ip: text(),
+  contactedAt: tstz(), closedAt: tstz(), createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [index('leads_stage_idx').on(t.stage, t.nextAt), uniqueIndex('leads_workspace_key').on(t.workspaceId).where(sql`${t.workspaceId} IS NOT NULL`),
+  index('leads_email_idx').on(sql`lower(${t.email})`),
+  check('leads_source_valid', oneOf(t.source, ['form', 'trial', 'manual'])),
+  check('leads_stage_valid', oneOf(t.stage, LEAD_STAGES)),
+  check('leads_lost_reason', sql`(${t.stage} = 'lost') = (${t.lostReason} IS NOT NULL) AND (${t.lostReason} IS NULL OR ${t.lostReason} IN (${sql.raw(LEAD_LOST_REASONS.map((r) => `'${r}'`).join(', '))}))`),
+  check('leads_closed', sql`(${t.stage} IN ('won', 'lost')) = (${t.closedAt} IS NOT NULL)`)]);
+
+/** บันทึกการคุยของ Lead · system = ระบบบันทึกเอง (เปลี่ยนขั้น ฟอร์มซ้ำ) */
+export const leadNotes = pgTable('lead_notes', {
+  id: pk(), leadId: uuid().notNull().references(() => leads.id, { onDelete: 'cascade' }),
+  kind: text().notNull(), body: text().notNull(), nextAction: text(), nextAt: date(),
+  createdBy: uuid().references(() => staffUsers.id, { onDelete: 'set null' }), createdAt: createdAt(),
+}, (t) => [index('lead_notes_lead_idx').on(t.leadId, t.createdAt), check('lead_notes_kind_valid', oneOf(t.kind, ['call', 'email', 'meeting', 'note', 'system']))]);

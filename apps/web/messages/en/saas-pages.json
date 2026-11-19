@@ -403,5 +403,34 @@
       "status": "Status",
       "documents": "Documents"
     }
+  },
+  "contactSales": {
+    "title": "Contact sales",
+    "lead": "Enterprise plan for larger teams · SSO · annual contract · full tax invoice · we reply within 1 business day",
+    "company": "Company name",
+    "name": "Your name",
+    "jobTitle": "Job title (optional)",
+    "email": "Work email",
+    "phone": "Phone (optional)",
+    "teamSize": "Team size (people)",
+    "needs": "What do you need? (choose any)",
+    "needOpts": {
+      "sso": "SSO / sign in with company account",
+      "annual_contract": "Annual contract",
+      "tax_invoice": "Full tax invoice / e-Tax",
+      "onboarding": "Setup and training",
+      "api": "API and integrations",
+      "security_review": "Security documents",
+      "other": "Other"
+    },
+    "message": "Anything else (optional)",
+    "consent": "I agree that the Friday team may contact me with these details and keep them under the privacy policy",
+    "privacy": "Privacy policy",
+    "submit": "Send",
+    "sending": "Sending…",
+    "done": "Thanks, we got it",
+    "doneLead": "Our sales team will reply within 1 business day · meanwhile you can start a free 14-day trial",
+    "trial": "Start free trial",
+    "back": "Back to pricing"
   }
 }

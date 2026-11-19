@@ -27,7 +27,7 @@ async function sourceWorkbook() {
 }
 
 // ไฟล์ส่งออกรูปแบบใหม่ (ชีต Tasks) · อ้างคอลัมน์ด้วยชื่อผ่าน col() เพื่อไม่ผูกกับลำดับ
-const TASK_HEADERS = ['Key', 'Parent Key', 'Module', 'Group', 'Title', 'Checklist', 'Status', 'Priority', 'Business Analyst', 'System Analyst', 'Developer', 'QA / Reviewer', 'Size', 'Man-Day', 'Plan Start', 'Plan End', 'Actual Start', 'Actual End', 'Requirement', 'Screen', 'Label', 'Description', 'Remark'];
+const TASK_HEADERS = ['Key', 'Parent Key', 'Module', 'Group', 'Sprint', 'Title', 'Checklist', 'Status', 'Priority', 'Business Analyst', 'System Analyst', 'Developer', 'QA / Reviewer', 'Size', 'Man-Day', 'Plan Start', 'Plan End', 'Actual Start', 'Actual End', 'Requirement', 'Screen', 'Label', 'Description', 'Remark'];
 const col = (name: string) => TASK_HEADERS.indexOf(name) + 1;
 async function edit(buf: Buffer, fn: (ws: ExcelJS.Worksheet) => void) {
   const wb = new ExcelJS.Workbook();
@@ -92,7 +92,7 @@ describe('สร้างโปรเจกต์จากไฟล์แล้�
     expect(header).toEqual(TASK_HEADERS);
     expect(table.rowCount).toBe(5);
     const row = table.getRow(3).values as unknown[];
-    expect(Array.from({ length: 15 }, (_, i) => row[i + 1] ?? null)).toEqual(['IMP-2', null, 'Drawdown', null, 'Approve', null, 'In progress', 'Medium', 'Mick', null, 'Kaijeaw', null, 'S', 2, d('2026-11-12')]);
+    expect(Array.from({ length: 16 }, (_, i) => row[i + 1] ?? null)).toEqual(['IMP-2', null, 'Drawdown', null, null, 'Approve', null, 'In progress', 'Medium', 'Mick', null, 'Kaijeaw', null, 'S', 2, d('2026-11-12')]);
     expect(wb.worksheets.map((w) => w.name)).toEqual(['Tasks', 'Timeline', 'ค่าที่ใช้ได้', 'คำแนะนำ', 'Holidays']);
     // Timeline: หัวคอลัมน์ข้อมูล + ช่องวัน · แถว Module แล้วงานในนั้น · ช่องในช่วง Plan ถูกระบายสี
     const tl = wb.getWorksheet('Timeline')!;
@@ -108,7 +108,7 @@ describe('สร้างโปรเจกต์จากไฟล์แล้�
     await wbw.xlsx.load(weekly.body as unknown as ArrayBuffer);
     expect(String(wbw.getWorksheet('Timeline')!.getCell(1, 1).value)).toContain('ช่องละสัปดาห์');
     const values = wb.getWorksheet('ค่าที่ใช้ได้')!;
-    expect((values.getRow(1).values as unknown[]).slice(1)).toEqual(['Status', 'Priority', 'Size', 'Module', 'สมาชิก']);
+    expect((values.getRow(1).values as unknown[]).slice(1)).toEqual(['Status', 'Priority', 'Size', 'Module', 'สมาชิก', 'Sprint']);
     expect(values.getColumn(1).values.slice(2)).toEqual(['To do', 'In progress', 'Review', 'Done']);
     expect(wb.getWorksheet('Holidays')!.rowCount).toBeGreaterThan(1);
     expect((await team.dev.get(`${team.ws}/projects/IMP/export.xlsx`)).status).toBe(404); // dev ไม่ได้เป็นสมาชิกโปรเจกต์ IMP
@@ -193,7 +193,7 @@ describe('อัปเดตแผนจากไฟล์', () => {
 
   it('งานใหม่ในไฟล์ถูกเพิ่ม · งานที่หายไปไม่ถูกลบเอง ให้เลือก keep / delete', async () => {
     const file = await edit(await exportOf('IMP'), (ws) => {
-      ws.addRow(['IMP-9', null, 'Drawdown', null, 'งานใหม่จากไฟล์', null, 'Not Start', null, 'Mick', null, 'Kaijeaw', null, null, 2, d('2026-11-24'), d('2026-11-25'), null, null, 'FR-009', 'SCR-009', null, null]);
+      ws.addRow(['IMP-9', null, 'Drawdown', null, null, 'งานใหม่จากไฟล์', null, 'Not Start', null, 'Mick', null, 'Kaijeaw', null, null, 2, d('2026-11-24'), d('2026-11-25'), null, null, 'FR-009', 'SCR-009', null, null]);
       ws.spliceRows(5, 1); // ลบแถว IMP-4 (Backlog item) ออกจากไฟล์
     });
     const job = await updateJob('IMP', file);
@@ -321,14 +321,15 @@ describe('ไฟล์รูปแบบใหม่: Template, Sub-task แล�
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(res.body as unknown as ArrayBuffer);
     const tasks = wb.getWorksheet('Tasks')!;
-    expect((tasks.getRow(1).values as unknown[]).slice(1)).toEqual(TASK_HEADERS);
+    // Template เปล่าไม่มีคอลัมน์ Sprint (โปรเจกต์ใหม่ยังไม่มี Sprint ให้จับคู่)
+    expect((tasks.getRow(1).values as unknown[]).slice(1)).toEqual(TASK_HEADERS.filter((h) => h !== 'Sprint'));
     expect(tasks.rowCount).toBe(1);
     expect(wb.getWorksheet('ค่าที่ใช้ได้')!.getColumn(5).values.slice(2)).toEqual(expect.arrayContaining(['Mick', 'Kaijeaw']));
     expect(wb.getWorksheet('คำแนะนำ')!.rowCount).toBeGreaterThan(10);
     // Template ว่างอัปโหลดได้ (ไม่มีแถวงาน) โดยไม่ต้องแก้หัวคอลัมน์
     const up = await team.lead.upload(`${team.ws}/import-jobs`, res.body, 'template.xlsx', { mode: 'create' });
     expect(up.status, JSON.stringify(up.body)).toBe(201);
-    expect(up.body.columns.filter((c: { field: string | null }) => c.field)).toHaveLength(TASK_HEADERS.length);
+    expect(up.body.columns.filter((c: { field: string | null }) => c.field)).toHaveLength(TASK_HEADERS.length - 1);
   });
 
   it('สร้างโปรเจกต์: Key ว่าง = ออกเลขให้ · Parent Key = Sub-task (Module ตามแม่) · SA / QA / Priority / Label', async () => {

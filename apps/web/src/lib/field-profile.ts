@@ -27,11 +27,11 @@ export interface CustomFieldDef {
 
 /** คอลัมน์ Table มาตรฐาน → ฟิลด์ที่คุม (null = คอลัมน์แกนกลาง) */
 export const STANDARD_COLUMNS: Record<string, ProfileField[] | null> = {
-  dev: null, ba: ["ba"], sa: ["sa"], reviewer: ["reviewer"], status: null, priority: ["priority"], size: ["size"],
+  dev: null, ba: ["ba"], sa: ["sa"], reviewer: ["reviewer"], status: null, sprint: null, priority: ["priority"], size: ["size"],
   start: null, end: null, qaDue: null, actualStart: ["actual"], actualEnd: ["actual"], refs: ["requirements", "screens"],
   labels: ["labels"], progress: ["progress"], remark: ["remark"],
 };
-export const DEFAULT_COLUMNS = ["dev", "ba", "sa", "status", "size", "start", "end", "actualStart", "actualEnd", "progress", "remark"];
+export const DEFAULT_COLUMNS = ["dev", "ba", "sa", "status", "sprint", "size", "start", "end", "actualStart", "actualEnd", "progress", "remark"];
 
 const OPTIONAL: FieldRule = { task: "optional", subtask: "optional" };
 /** ค่าเริ่มต้นเมื่อยังไม่ได้โหลดชุดฟิลด์ (เหมือนโปรเจกต์ก่อนมีฟีเจอร์) */

@@ -248,6 +248,31 @@ describe("Import Excel (L3)", () => {
     expect(router.replace).toHaveBeenLastCalledWith("/work/sample/p/DE/table", { scroll: false });
   });
 
+  it("Export ตาม Sprint / ตามตัวกรองในตาราง: เลือกขอบเขตแล้วลิงก์ส่งตัวกรอง · เตือนว่านำเข้ากลับได้เฉพาะโหมดอัปเดต", async () => {
+    const user = userEvent.setup();
+    server.use(http.get("*/api/v1/w/:ws/projects/:key/sprints", () => HttpResponse.json({ sprintLengthWeeks: 2, items: [
+      { id: "sp-1", number: 1, name: "Sprint 1", startDate: "2026-11-02", endDate: "2026-11-13", status: "active" },
+      { id: "sp-2", number: 2, name: "Sprint 2", startDate: "2026-11-16", endDate: "2026-11-27", status: "planning" },
+    ] })));
+    navigation.pathname = "/work/sample/p/DE/table"; navigation.search = "io=export";
+    renderWithProviders(<WorkspaceShell ws="sample"><PlanIoDialog ws="sample" projectKey="DE" tableFilters={{ query: "module=m-a&sprint=sp-2", count: 2 }} /></WorkspaceShell>, { messages: ns });
+    const dialog = await screen.findByRole("dialog");
+    const link = () => within(dialog).getByRole("link", { name: /ดาวน์โหลด Excel/ });
+    // มีตัวกรองในตาราง = เริ่มที่ "ตามตัวกรองในตาราง"
+    expect(await within(dialog).findByRole("radio", { name: "ตามตัวกรองในตาราง (2)" })).toHaveAttribute("aria-checked", "true");
+    expect(link()).toHaveAttribute("href", "/api/v1/w/sample/projects/DE/export.xlsx?module=m-a&sprint=sp-2");
+    expect(within(dialog).getByRole("note")).toHaveTextContent("นำเข้ากลับได้เฉพาะโหมดอัปเดต");
+    await user.click(within(dialog).getByRole("radio", { name: "เลือก Sprint" }));
+    await within(dialog).findByRole("option", { name: /Sprint 2/ });
+    await user.selectOptions(within(dialog).getByRole("combobox", { name: "Sprint" }), "sp-2");
+    await user.click(within(dialog).getByRole("radio", { name: "ช่องละสัปดาห์" }));
+    expect(link()).toHaveAttribute("href", "/api/v1/w/sample/projects/DE/export.xlsx?sprint=sp-2&timeline=week");
+    expect(within(dialog).getByRole("note")).toHaveTextContent("Sprint 2");
+    await user.click(within(dialog).getByRole("radio", { name: "ทั้งโปรเจกต์" }));
+    expect(link()).toHaveAttribute("href", "/api/v1/w/sample/projects/DE/export.xlsx?timeline=week");
+    expect(within(dialog).queryByRole("note")).not.toBeInTheDocument();
+  });
+
   it("นำเข้ารอบที่ 2 เลือกเพิ่มเติมแผน: ส่ง updateKind=append · เปลี่ยนตัวเลือก = อัปโหลดใหม่", async () => {
     importHandlers(updateJob);
     const user = userEvent.setup();

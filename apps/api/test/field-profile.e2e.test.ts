@@ -67,7 +67,7 @@ describe('สร้างโปรเจกต์จาก Template', () => {
     expect(r.body.sprintLengthWeeks).toBe(2);
     const p = (await team.lead.get(`${team.ws}/projects/DVT`)).body;
     expect(p.fieldProfile.template).toEqual({ id: 'development', name: 'Development', builtin: true });
-    expect(p.fieldProfile.columns).toEqual(['dev', 'ba', 'sa', 'status', 'size', 'start', 'end', 'actualStart', 'actualEnd', 'progress', 'remark']);
+    expect(p.fieldProfile.columns).toEqual(['dev', 'ba', 'sa', 'status', 'sprint', 'size', 'start', 'end', 'actualStart', 'actualEnd', 'progress', 'remark']);
     expect(p.fieldProfile.fields.ba).toEqual({ task: 'optional', subtask: 'optional' });
     expect(p.statuses.filter((s: { workflowId: string }) => s.workflowId === p.statuses[0].workflowId).map((s: { name: string }) => s.name)).toEqual(['To do', 'In progress', 'Review', 'Done']);
   });
@@ -235,7 +235,7 @@ describe('แก้ชุดฟิลด์ใน Settings', () => {
     await t.owner.query(`UPDATE projects SET field_profile = '{}'::jsonb WHERE key = $1`, [team.key]);
     const r = await team.dev.get(`${P()}/field-profile`);
     expect(r.status).toBe(200);
-    expect(r.body.fieldProfile).toMatchObject({ columns: ['dev', 'ba', 'sa', 'status', 'size', 'start', 'end', 'actualStart', 'actualEnd', 'progress', 'remark'], template: null });
+    expect(r.body.fieldProfile).toMatchObject({ columns: ['dev', 'ba', 'sa', 'status', 'sprint', 'size', 'start', 'end', 'actualStart', 'actualEnd', 'progress', 'remark'], template: null });
     expect(Object.values(r.body.fieldProfile.fields).every((v) => JSON.stringify(v) === JSON.stringify({ task: 'optional', subtask: 'optional' }))).toBe(true);
   });
 
@@ -266,6 +266,6 @@ describe('Export ตามชุดฟิลด์', () => {
   it('โปรเจกต์ที่ไม่ได้ซ่อนอะไร ส่งออกคอลัมน์มาตรฐานครบเหมือนเดิม', async () => {
     const r = await download(team.lead, `${P()}/export.xlsx`);
     const { headers } = await sheetHeaders(r.body);
-    expect(headers.slice(0, 23)).toEqual(['Key', 'Parent Key', 'Module', 'Group', 'Title', 'Checklist', 'Status', 'Priority', 'Business Analyst', 'System Analyst', 'Developer', 'QA / Reviewer', 'Size', 'Man-Day', 'Plan Start', 'Plan End', 'Actual Start', 'Actual End', 'Requirement', 'Screen', 'Label', 'Description', 'Remark']);
+    expect(headers.slice(0, 24)).toEqual(['Key', 'Parent Key', 'Module', 'Group', 'Sprint', 'Title', 'Checklist', 'Status', 'Priority', 'Business Analyst', 'System Analyst', 'Developer', 'QA / Reviewer', 'Size', 'Man-Day', 'Plan Start', 'Plan End', 'Actual Start', 'Actual End', 'Requirement', 'Screen', 'Label', 'Description', 'Remark']);
   });
 });

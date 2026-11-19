@@ -33,8 +33,11 @@ beforeAll(async () => {
   moduleId = team.project.modules[0].id;
   workspaceId = (await t.owner.query('SELECT workspace_id FROM projects WHERE id=$1', [team.project.id])).rows[0].workspace_id;
   phaseId = (await t.owner.query(`INSERT INTO phases (workspace_id,project_id,module_id,name) VALUES ($1,$2,$3,'กลุ่มงานสมมติ') RETURNING id`, [workspaceId, team.project.id, moduleId])).rows[0].id;
-  sprintId = team.project.sprints[0].id;
-  otherSprintId = team.project.sprints[1].id;
+  // โปรเจกต์ใหม่ไม่มี Sprint อัตโนมัติแล้ว (2026-11-19) จึงสร้างเอง 2 ตัว
+  const made = await team.lead.post(`${team.ws}/projects/${team.key}/sprints/series`, { startDate: '2026-11-09', weeks: 2, count: 2 });
+  expect(made.status, JSON.stringify(made.body)).toBe(201);
+  sprintId = made.body.items[0].id;
+  otherSprintId = made.body.items[1].id;
   await t.owner.query("UPDATE sprints SET status='active' WHERE id=$1", [sprintId]);
   viewer = await client(t.app);
   const viewerId = await signup(viewer, 'viewer@issues-synthetic.example.com', 'ผู้ดูสมมติ');

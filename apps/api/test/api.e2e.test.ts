@@ -95,11 +95,13 @@ describe('Workspace และโปรเจกต์', () => {
     });
     expect(r.status).toBe(201);
     expect(r.body).toMatchObject({ key: 'DP', myRole: 'admin', visibility: 'private', created: { modules: 2, statuses: 4, milestones: 1 } });
-    expect(r.body.created.sprints).toBeGreaterThan(10);
+    // ไม่สร้าง Sprint ให้อัตโนมัติ (ผู้ใช้ตัดสิน 2026-11-19)
+    expect(r.body.created.sprints).toBeUndefined();
+    expect((await t.owner.query('SELECT count(*)::int AS n FROM sprints s JOIN projects p ON p.id = s.project_id WHERE p.key = $1', ['DP'])).rows[0].n).toBe(0);
 
     const p = await mick.get('/w/friday-dev/projects/DP');
     expect(p.body.issueTypes.map((t: { name: string }) => t.name)).toEqual(['Story', 'Task', 'Bug', 'Spike']);
-    expect(p.body.sprints[0]).toMatchObject({ name: 'Sprint 1', startDate: '2026-11-09', endDate: '2026-11-20' });
+    expect(p.body.sprints).toEqual([]);
     // Bug: Fixed อยู่คอลัมน์ Review ของบอร์ด
     const review = p.body.statuses.find((x: { name: string; boardColumnId: string | null }) => x.name === 'Review' && !x.boardColumnId);
     const fixed = p.body.statuses.find((x: { name: string }) => x.name === 'Fixed');
@@ -768,7 +770,7 @@ describe('Kanban (3) และ Timeline (4)', () => {
     expect(dp1).toHaveProperty('sa');
     expect(r.body.unscheduled.map((x: { key: string }) => x.key)).toEqual(['DP-7']);
     expect(r.body.milestones).toEqual([expect.objectContaining({ name: 'Credit Line Go-live', date: '2027-01-26' })]);
-    expect(r.body.sprints.length).toBeGreaterThan(5);
+    expect(r.body.sprints).toEqual([]);
     expect(r.body.range).toEqual({ from: '2026-11-25', to: '2027-04-21' });
     // ปฏิทินวันทำการให้หน้าเว็บทำแถบบางลงช่วงวันหยุด
     expect(r.body.calendar.workDays).toEqual([1, 2, 3, 4, 5]);

@@ -599,7 +599,7 @@ describe('Task v2 (ผู้ใช้ตัดสิน 2026-11-08)', () => {
     await waitFor(() => expect(mutations('/issues/DE-2').at(-1)).toMatchObject({ body: { parentKey: 'DE-9' } }));
   });
 
-  it('แผงขวาแบ่งผู้รับผิดชอบ / แผนงาน / หมวดหมู่ (มีช่องกลุ่ม) และไม่มีช่อง Sprint และ Tester', async () => {
+  it('แผงขวาแบ่งผู้รับผิดชอบ / แผนงาน / หมวดหมู่ (มีช่องกลุ่มและ Sprint) และไม่มีช่อง Tester', async () => {
     mount(); await loaded();
     const props = screen.getByRole('complementary', { name: /คุณสมบัติ|Properties/ });
     for (const name of ['ผู้รับผิดชอบ', 'แผนงาน', 'หมวดหมู่']) expect(within(props).getByRole('region', { name })).toBeInTheDocument();
@@ -607,7 +607,9 @@ describe('Task v2 (ผู้ใช้ตัดสิน 2026-11-08)', () => {
     expect(within(props).getByRole('combobox', { name: 'System Analyst' })).toBeInTheDocument();
     // QA เลือกได้หลายคนเหมือน Dev (ผู้ใช้ขอ 2026-11-13)
     expect(within(props).getByRole('button', { name: 'QA / Reviewer' })).toBeInTheDocument();
-    expect(within(props).queryByText('Sprint')).not.toBeInTheDocument();
+    // Sprint กลับมาอยู่ในหมวดแผนงาน (ผู้ใช้ขอ 2026-11-19)
+    const sprint = await within(within(props).getByRole('region', { name: 'แผนงาน' })).findByRole('combobox', { name: 'Sprint' });
+    await waitFor(() => expect(sprint).toHaveValue(uid(12)));
     expect(within(props).queryByText('Tester')).not.toBeInTheDocument();
   });
 

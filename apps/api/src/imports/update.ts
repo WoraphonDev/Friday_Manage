@@ -4,7 +4,7 @@ import type { AuthInfo, TenantInfo } from '../common/request.js';
 import type { DomainEvent } from '../core/events.js';
 import { type CustomFieldDef, displayValue, readCustomValues, writeCustomValues } from '../issues/custom-values.js';
 import { parseCustomCell } from './custom.js';
-import { insertRows } from './insert.js';
+import { insertRows, openSprints } from './insert.js';
 import { type ChecklistEntry, checklistMatchKey, type Field, personKey, type PlanCheck, type PlanRow } from './plan.js';
 import { baList, reviewerList } from '../issues/rules.js';
 import { syncChecklistProgress } from '../issues/checklist-progress.js';
@@ -17,6 +17,7 @@ const LABELS = {
   parent: 'Task แม่',
   module: 'Module',
   group: 'กลุ่ม',
+  sprint: 'Sprint',
   status: 'Status',
   priority: 'Priority',
   size: 'Size',
@@ -42,6 +43,7 @@ const COLUMN: Record<DiffField, Field> = {
   parent: 'parentKey',
   module: 'module',
   group: 'group',
+  sprint: 'sprint',
   status: 'status',
   priority: 'priority',
   size: 'size',
@@ -61,7 +63,7 @@ const COLUMN: Record<DiffField, Field> = {
   checklist: 'checklist',
 };
 /** ชื่อฟิลด์ใน activities / plan_changes */
-const ACTIVITY_FIELD: Partial<Record<DiffField, string>> = { group: 'phaseId', devs: 'assigneeIds', ba: 'baIds', sa: 'saId', reviewer: 'reviewerIds', parent: 'parentKey', labels: 'labelIds' };
+const ACTIVITY_FIELD: Partial<Record<DiffField, string>> = { group: 'phaseId', sprint: 'sprintId', devs: 'assigneeIds', ba: 'baIds', sa: 'saId', reviewer: 'reviewerIds', parent: 'parentKey', labels: 'labelIds' };
 const PLAN_FIELDS = new Set<DiffField>(['planStart', 'planEnd', 'estimateMd', 'devs']);
 
 export interface FieldChange {
@@ -100,6 +102,8 @@ interface Existing {
   labels: Map<string, string[]>;
   labelName: Map<string, string>;
   userName: Map<string, string>;
+  /** Sprint ที่ยังรับงานได้ (ชื่อตัวพิมพ์เล็ก → id) และชื่อของทุก Sprint */
+  sprints: Awaited<ReturnType<typeof openSprints>>;
   /** หมวดของทุกสถานะที่งานใช้อยู่ (ตัดสินว่างานเริ่มแล้วหรือยัง) */
   statusCategory: Map<string, string>;
   taskTypeId: string;
@@ -139,6 +143,7 @@ async function loadExisting(tx: Tx, projectId: string): Promise<Existing> {
     labels: group(lbl.map((a) => ({ issueId: a.issueId, v: a.labelId }))),
     labelName: new Map(lblNames.map((l) => [l.id, l.name])),
     userName: new Map(users.map((u) => [u.id, u.name])),
+    sprints: await openSprints(tx, projectId),
     taskTypeId: taskType.id,
   };
 }
@@ -295,6 +300,9 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
       }
     }
     if (!issue) {
+      if (has('sprint') && row.sprint && row.parentNumber === null && !ex.sprints.open.has(row.sprint.trim().toLowerCase())) {
+        check.findings.push({ level: 'warn', no: check.keyed ? null : row.no, rowNo: row.rowNo, module: row.module, title: row.title, problem: `ไม่พบ Sprint "${row.sprint}" ที่ยังเปิดอยู่ในโปรเจกต์`, fix: 'งานใหม่นี้จะยังไม่เข้า Sprint · สร้าง Sprint ก่อนหรือแก้ชื่อใน Excel' });
+      }
       adds.push(row);
       if (defs.length) addCustom.set(row, customOf(row, row.parentNumber === null ? 'task' : 'subtask'));
       // เพิ่มเติม / แทนที่แผนออกเลขงานใหม่ทั้งหมด เลขในไฟล์จึงไม่ใช่เลขที่จะได้
@@ -318,6 +326,16 @@ export async function computeUpdate(tx: Tx, project: { id: string; key: string }
     // กลุ่มเทียบเฉพาะ Task (Sub-task ตามกลุ่มของแม่)
     const oldGroup = issue.phaseId ? (ex.phases.find((p) => p.id === issue.phaseId)?.name ?? null) : null;
     if (!issue.parentId && row.parentNumber === null && (oldGroup ?? '').toLowerCase() !== (row.phase ?? '').toLowerCase()) add('group', oldGroup, row.phase);
+    // Sprint เทียบเฉพาะ Task ด้วยชื่อ · ชื่อที่ไม่มี / Sprint ที่ปิดแล้ว = ไม่แตะค่าเดิม (เตือนไว้)
+    if (has('sprint') && !issue.parentId && row.parentNumber === null) {
+      const oldSprint = issue.sprintId ? (ex.sprints.name.get(issue.sprintId) ?? null) : null;
+      const wanted = row.sprint ? ex.sprints.open.get(row.sprint.trim().toLowerCase()) : null;
+      if (row.sprint && !wanted) {
+        if ((oldSprint ?? '').trim().toLowerCase() !== row.sprint.trim().toLowerCase()) {
+          check.findings.push({ level: 'warn', no: check.keyed ? null : row.no, rowNo: row.rowNo, module: row.module, title: row.title, problem: `ไม่พบ Sprint "${row.sprint}" ที่ยังเปิดอยู่ในโปรเจกต์`, fix: 'ไม่แก้ Sprint ของงานนี้ · สร้าง Sprint ก่อนหรือแก้ชื่อใน Excel' });
+        }
+      } else if ((wanted ?? null) !== issue.sprintId) add('sprint', oldSprint, row.sprint);
+    }
     if (!eq0(ex.statusName.get(issue.statusId), row.status)) add('status', ex.statusName.get(issue.statusId) ?? null, row.status);
     // Priority ว่างในไฟล์ = คงค่าเดิม (ทุกงานต้องมี Priority)
     if (row.priority && issue.priority !== row.priority) add('priority', issue.priority, row.priority);
@@ -479,7 +497,7 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
   if (plan.wipe) await removeMissing();
 
   // งานใหม่ในไฟล์ก่อน: งานเดิมที่ย้ายไปอยู่ใต้ Task ใหม่ต้องรู้ id ของแม่ · แทนที่แผน: แม่ต้องอยู่ในไฟล์ (งานเดิมถูกลบแล้ว)
-  const parents = new Map(plan.wipe ? [] : live.filter((r) => !r.parentId && r.issueTypeId === ex.taskTypeId).map((r) => [r.number, { id: r.id, phaseId: r.phaseId }]));
+  const parents = new Map(plan.wipe ? [] : live.filter((r) => !r.parentId && r.issueTypeId === ex.taskTypeId).map((r) => [r.number, { id: r.id, phaseId: r.phaseId, sprintId: r.sprintId }]));
   if (plan.adds.length) {
     const made = await insertRows(
       tx,
@@ -507,7 +525,7 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
       const id = made.idOf.get(r);
       if (id && Object.values(values).some((v) => v !== null)) await writeCustomValues(tx, tenant.workspaceId, id, cfValues(Object.fromEntries(Object.entries(values).filter(([, v]) => v !== null)), {}));
     }
-    for (const r of plan.adds) if (r.parentNumber === null && r.number !== null) parents.set(r.number, { id: made.idOf.get(r)!, phaseId: made.phaseIdOf.get(r) ?? null });
+    for (const r of plan.adds) if (r.parentNumber === null && r.number !== null) parents.set(r.number, { id: made.idOf.get(r)!, phaseId: made.phaseIdOf.get(r) ?? null, sprintId: made.sprintIdOf.get(r) ?? null });
   }
 
   // การแก้ไขแผนเทียบ Baseline ล่าสุด (ถ้ามี) · ไม่มี Baseline = ไม่มีอะไรให้เทียบ ตามกติกาเดียวกับการแก้งานทีละงาน
@@ -549,6 +567,9 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
       if (nested) { if (has('parent')) set.phaseId = newParent?.phaseId ?? null; }
       else set.phaseId = plan.groupMapped ? await phaseIdOf(mid, row.phase) : null;
     }
+    // Sprint: Task ใช้ค่าในไฟล์ · ย้ายไปเป็น Sub-task = ตาม Sprint ของแม่ใหม่
+    if (has('sprint')) set.sprintId = row.sprint ? (ex.sprints.open.get(row.sprint.trim().toLowerCase()) ?? null) : null;
+    if (has('parent') && newParent) set.sprintId = newParent.sprintId ?? null;
     if (has('status')) set.statusId = statusIdOf(row.status);
     if (has('priority')) set.priority = row.priority!;
     if (has('size')) set.size = row.size;
@@ -587,6 +608,7 @@ export async function applyUpdate(tx: Tx, input: ApplyInput) {
     }
     // ย้าย Module / กลุ่มของ Task แล้ว Sub-task ย้ายตาม
     if ((has('module') || has('group')) && !issue.parentId && set.phaseId !== undefined) await tx.update(s.issues).set({ moduleId: mid, phaseId: set.phaseId }).where(eq(s.issues.parentId, issue.id));
+    if (has('sprint') && !issue.parentId && set.sprintId !== undefined) await tx.update(s.issues).set({ sprintId: set.sprintId }).where(eq(s.issues.parentId, issue.id));
 
     await tx.insert(s.activities).values(fields.map((f) => ({ ...base, issueId: issue.id, actorId: auth.userId, actorKind: 'import' as const, verb: 'updated', field: ACTIVITY_FIELD[f.field as DiffField] ?? f.field, oldValue: f.old, newValue: f.new })));
     const planFields = fields.filter((f) => PLAN_FIELDS.has(f.field as DiffField) && (f.field !== 'devs' || idsChanged));

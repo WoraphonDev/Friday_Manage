@@ -12,6 +12,7 @@ import { overview } from "@/test/overview-fixture";
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
 import ot from "../../messages/th/overview-table.json";
 import ldr from "../../messages/th/lead-dashboard-reports.json";
+import sprintsMessages from "../../messages/th/sprints.json";
 import { OverviewPage } from "../../app/work/[ws]/p/[key]/table/_components/overview";
 import { TableView, buildDisplay, stuckGroups } from "../../app/work/[ws]/p/[key]/table/_components/table-view";
 import type { Overview, Row, TableData } from "../../app/work/[ws]/p/[key]/table/_components/types";
@@ -52,7 +53,7 @@ beforeEach(() => {
     http.post("*/api/v1/w/:ws/projects/:key/issues/bulk", async ({ request }) => { const b = (await request.json()) as { keys: string[] }; bulks.push(b); return HttpResponse.json({ results: b.keys.map((key) => ({ key, ok: true })) }); }),
   );
 });
-const mount = (ui: React.ReactElement) => renderWithProviders(<WorkspaceShell ws="sample">{ui}</WorkspaceShell>, { messages: { "overview-table": ot, "lead-dashboard-reports": ldr } });
+const mount = (ui: React.ReactElement) => renderWithProviders(<WorkspaceShell ws="sample">{ui}</WorkspaceShell>, { messages: { "overview-table": ot, "lead-dashboard-reports": ldr, sprints: sprintsMessages } });
 
 describe("Overview (1 / M6)", () => {
   it("ความคืบหน้า, Health, KPI พร้อมรายการ, Module, Status, Milestone, Workload, Activity", async () => {
@@ -538,4 +539,77 @@ it("เพิ่ม Module ในตาราง 450 แถวแล้วเล
   }));
   mount(<TableView ws="sample" projectKey="DE" />); await user.click(await screen.findByRole("button", { name: "+ Module" })); await user.type(screen.getByLabelText("ชื่อ Module"), "กลุ่มท้ายตาราง"); await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "เพิ่ม" }));
   expect(await screen.findByRole("link", { name: "+ เพิ่ม Task ใน กลุ่มท้ายตาราง" })).toBeInTheDocument();
+});
+
+describe("Sprint ในแท็บ Table (ผู้ใช้ขอ 2026-11-19)", () => {
+  const sprintItems = [
+    { id: "sp-1", number: 1, name: "Sprint 1", startDate: "2026-11-02", endDate: "2026-11-13", status: "completed" },
+    { id: "sp-2", number: 2, name: "Sprint 2", startDate: "2026-11-16", endDate: "2026-11-27", status: "active" },
+    { id: "sp-3", number: 3, name: "Sprint 3", startDate: "2026-11-30", endDate: "2026-12-11", status: "planning" },
+  ];
+  beforeEach(() => {
+    tableData = table([row("DE-1", { sprintId: "sp-2" }), row("DE-2", { parentKey: "DE-1", sprintId: "sp-2" }), row("DE-3", { moduleId: "m-b", sprintId: null })]);
+    server.use(
+      http.get("*/api/v1/w/:ws/projects/:key/sprints", () => HttpResponse.json({ sprintLengthWeeks: 2, items: sprintItems })),
+      http.get("*/api/v1/w/:ws/projects/:key/my-permissions", () => HttpResponse.json({ ...permissions, permissions: [...permissions.permissions, "sprint.manage"] })),
+    );
+  });
+
+  it("คอลัมน์ Sprint ต่อจาก Status · เปลี่ยน Sprint จากช่อง · Sub-task ตามแม่ (แก้ไม่ได้)", async () => {
+    const user = userEvent.setup();
+    window.localStorage.clear();
+    mount(<TableView ws="sample" projectKey="DE" />);
+    await screen.findByTestId("row-DE-1");
+    const headers = await waitFor(() => {
+      const names = screen.getAllByRole("columnheader").map((h) => h.textContent);
+      expect(names).toContain("Sprint");
+      return names;
+    });
+    expect(headers.indexOf("Sprint")).toBe(headers.indexOf("Status") + 1);
+    expect(within(screen.getByTestId("row-DE-2")).queryByRole("button", { name: /Sprint/ })).not.toBeInTheDocument();
+    await user.click(within(screen.getByTestId("row-DE-1")).getByRole("button", { name: /Sprint/ }));
+    // Sprint ที่ปิดแล้วเลือกไม่ได้
+    expect(screen.getByRole("option", { name: /Sprint 1/ })).toHaveAttribute("aria-disabled", "true");
+    await user.click(screen.getByRole("option", { name: /Sprint 3/ }));
+    await waitFor(() => expect(patches).toContainEqual(expect.objectContaining({ key: "DE-1", body: { sprintId: "sp-3" } })));
+  });
+
+  it("ตัวกรอง Module และ Sprint เลือกได้หลายค่า ส่ง query เป็นรายการคั่นด้วย ,", async () => {
+    const user = userEvent.setup();
+    mount(<TableView ws="sample" projectKey="DE" />);
+    await screen.findByTestId("row-DE-1");
+    await user.click(screen.getByRole("button", { name: "Module: ทั้งหมด" }));
+    await user.click(await screen.findByRole("option", { name: /Module A/ }));
+    await user.click(screen.getByRole("option", { name: /ไม่ระบุ Module/ }));
+    await waitFor(() => expect(urls.at(-1)?.searchParams.get("module")).toBe("m-a,none"));
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Sprint: ทั้งหมด" }));
+    await user.click(await screen.findByRole("option", { name: /Sprint ปัจจุบัน/ }));
+    await user.click(screen.getByRole("option", { name: /Sprint 3/ }));
+    await waitFor(() => expect(urls.at(-1)?.searchParams.get("sprint")).toBe("current,sp-3"));
+    expect(screen.getByRole("button", { name: /^Sprint: / })).toHaveTextContent("Sprint ปัจจุบัน +1");
+  });
+
+  it("Group by Sprint เรียงตามเลข Sprint · ยังไม่เข้า Sprint ไว้ท้าย", async () => {
+    const user = userEvent.setup();
+    tableData = table([row("DE-3", { sprintId: null }), row("DE-1", { sprintId: "sp-3" }), row("DE-4", { sprintId: "sp-2" })]);
+    mount(<TableView ws="sample" projectKey="DE" />);
+    await screen.findByTestId("row-DE-1");
+    await user.selectOptions(screen.getByLabelText("Group by"), "sprint");
+    await waitFor(() => expect(screen.getByRole("button", { name: "ย่อ Sprint 2" })).toBeInTheDocument());
+    const order = ["Sprint 2", "Sprint 3", "ยังไม่เข้า Sprint"].map((name) => screen.getAllByRole("row").findIndex((r) => r.querySelector(`[aria-label="ย่อ ${name}"]`)));
+    expect(order.every((n, i) => n >= 0 && (i === 0 || n > order[i - 1]!))).toBe(true);
+  });
+
+  it("เลือกหลายงานแล้วย้ายเข้า Sprint: ส่งเฉพาะ Task (Sub-task ตามแม่)", async () => {
+    const user = userEvent.setup();
+    mount(<TableView ws="sample" projectKey="DE" />);
+    await screen.findByTestId("row-DE-1");
+    await user.click(screen.getByRole("checkbox", { name: "เลือก DE-1" }));
+    await user.click(screen.getByRole("checkbox", { name: "เลือก DE-2" }));
+    await user.click(screen.getByRole("checkbox", { name: "เลือก DE-3" }));
+    await user.click(screen.getByRole("button", { name: "ย้ายเข้า Sprint" }));
+    await user.click(await screen.findByRole("option", { name: /Sprint 3/ }));
+    await waitFor(() => expect(bulks).toContainEqual({ keys: ["DE-1", "DE-3"], set: { sprintId: "sp-3" } }));
+  });
 });

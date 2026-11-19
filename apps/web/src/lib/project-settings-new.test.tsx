@@ -13,7 +13,7 @@ import { ProjectSettings, generalChanges } from "../../app/work/[ws]/p/[key]/set
 import { bugColumns, matchesDevQa, suggestDevQa } from "../../app/work/[ws]/p/[key]/settings/_components/workflow-section";
 import type { ProjectDetail, Workflow } from "../../app/work/[ws]/p/[key]/settings/_components/types";
 import { NewProjectWizard } from "../../app/work/[ws]/new-project/_components/new-project-wizard";
-import { insertAt, spanDays, sprintCount, suggestKey, TEMPLATE_PRESETS, workflowBody } from "../../app/work/[ws]/new-project/_components/plan";
+import { insertAt, spanDays, suggestKey, TEMPLATE_PRESETS, workflowBody } from "../../app/work/[ws]/new-project/_components/plan";
 
 const project = (over: Partial<ProjectDetail> = {}): ProjectDetail => ({
   id: "p1", key: "DE", name: "แผนพัฒนาผลิตภัณฑ์", clientName: null, description: null, color: "#334155",
@@ -505,12 +505,13 @@ describe("สร้างโปรเจกต์ (Wizard 5 ขั้น)", () =
     expect(await screen.findByText("วัน Go-live ต้องไม่ก่อนวันเริ่ม")).toBeInTheDocument();
     expect(created).toBeNull();
     fireEvent.change(screen.getByLabelText("วันสิ้นสุดเป้าหมาย (Go-live) *"), { target: { value: "2026-12-21" } });
-    expect(screen.getByText(/รวม 4 Sprint/)).toBeInTheDocument();
-    expect(screen.getByText("Sprint 1–4 (2 สัปดาห์)")).toBeInTheDocument();
+    // ไม่สร้าง Sprint ให้อัตโนมัติ (ผู้ใช้ตัดสิน 2026-11-19): ความยาวเป็นค่าตั้งต้นตอนสร้าง Sprint เอง
+    expect(screen.getByText(/ใช้เป็นค่าตั้งต้นตอนสร้าง Sprint/)).toBeInTheDocument();
+    expect(screen.queryByText(/Sprint 1–/)).not.toBeInTheDocument();
     server.use(http.post("*/api/v1/w/:ws/projects", () => errorBody(500)));
     await user.click(screen.getByRole("button", { name: "สร้างเลย (ตั้งค่าที่เหลือทีหลัง)" }));
     expect(await screen.findByText(/req_w13_001/)).toBeInTheDocument();
-    server.use(http.post("*/api/v1/w/:ws/projects", async ({ request }) => { created = (await request.json()) as Record<string, unknown>; return HttpResponse.json({ key: "SP", created: { modules: 0, statuses: 4, milestones: 0, sprints: 4, members: 1 } }, { status: 201 }); }));
+    server.use(http.post("*/api/v1/w/:ws/projects", async ({ request }) => { created = (await request.json()) as Record<string, unknown>; return HttpResponse.json({ key: "SP", created: { modules: 0, statuses: 4, milestones: 0, members: 1 } }, { status: 201 }); }));
     await user.click(screen.getByRole("button", { name: "สร้างเลย (ตั้งค่าที่เหลือทีหลัง)" }));
     // ค่าเริ่มต้น = Template Development (ชุดฟิลด์ของแผนพัฒนา) · Sprint 2 สัปดาห์ · ความคืบหน้าถ่วงน้ำหนัก
     await waitFor(() => expect(created).toMatchObject({ key: "SP", sprintLengthWeeks: 2, workflow: ["To do", "In progress", "Review", "Done"], builtinTemplate: "development", progressMethod: "weighted" }));
@@ -557,9 +558,6 @@ describe("สร้างโปรเจกต์ (Wizard 5 ขั้น)", () =
     expect(suggestKey("Booking")).toBe("BOO");
     expect(spanDays("2026-11-02", "2026-11-15")).toEqual({ calendar: 14, working: 10 });
     expect(spanDays("2026-11-15", "2026-11-02")).toBeNull();
-    expect(sprintCount("2026-11-04", "2026-12-21", 2)).toBe(4);
-    expect(sprintCount("2026-11-04", "2026-12-20", 2)).toBe(3);
-    expect(sprintCount("2026-11-04", "2026-12-20", null)).toBe(0);
   });
 });
 

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { NextIntlClientProvider, useLocale, useMessages, useTranslations } from 'next-intl';
 import drawerMessages from '../../../messages/th/issue-drawer.json';
+import sprintMessages from '../../../messages/th/sprints.json';
 import { useWorkspace } from '@/components/shell/workspace-shell';
 import { Button, Dialog, Drawer, ErrorState, Forbidden, LoadingState, NotFound } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
@@ -33,7 +34,7 @@ export function IssueDrawerHost({ ws, projectKey, meId, yearFormat = 'BE', issue
   // ทุก state รวม draft/Undo ผูกกับผู้ใช้และโปรเจกต์ผ่าน key ของ wrapper
   const messages = useMessages();
   const locale = useLocale();
-  return <NextIntlClientProvider locale={locale} messages={{ ...messages, 'issue-drawer': messages['issue-drawer'] ?? drawerMessages }}><ScopedDrawer key={`${ws}/${projectKey}/${meId}`} {...{ ws, projectKey, meId, yearFormat, issueKey, onClose }} /></NextIntlClientProvider>;
+  return <NextIntlClientProvider locale={locale} messages={{ ...messages, 'issue-drawer': messages['issue-drawer'] ?? drawerMessages, sprints: messages['sprints'] ?? sprintMessages }}><ScopedDrawer key={`${ws}/${projectKey}/${meId}`} {...{ ws, projectKey, meId, yearFormat, issueKey, onClose }} /></NextIntlClientProvider>;
 }
 function ScopedDrawer({ ws, projectKey, meId, yearFormat, issueKey, onClose }: {
   ws: string; projectKey: string; meId: string; yearFormat: 'BE' | 'CE'; issueKey?: string; onClose: () => void;

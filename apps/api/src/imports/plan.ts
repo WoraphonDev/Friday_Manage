@@ -14,6 +14,7 @@ export const FIELDS = {
   module: { label: 'Module', aliases: ['module'] },
   /** กลุ่มของ Task ใต้ Module (ไม่บังคับ) · Sub-task ใช้กลุ่มของ Task แม่ */
   group: { label: 'Group (กลุ่ม · ไม่บังคับ)', aliases: ['group', 'กลุ่ม'] },
+  sprint: { label: 'Sprint (ชื่อ Sprint ของโปรเจกต์)', aliases: ['sprint'] },
   title: { label: 'ชื่องาน', aliases: ['title', 'ชื่องาน', 'module task', 'task', 'งาน'] },
   /** 1 แถวต่อ 1 ข้อ · แถวต่อท้ายที่ Title เดียวกัน = ข้อถัดไปของงานเดิม (ผู้ใช้ตัดสิน 2026-11-13) */
   checklist: { label: 'Checklist (1 แถวต่อ 1 ข้อ)', aliases: ['checklist', 'check list', 'เช็กลิสต์', 'checklist (brd recheck)'] },
@@ -61,6 +62,8 @@ export function autoMap(headers: string[], customFields: { id: string; name: str
     out[h] = target;
     if (target) used.add(target);
   }
+  // คอลัมน์ Sprint ของไฟล์แผนรูปแบบเดิม (มี No. / ไม่มี Key) คือรอบงานแบบ S1 / S2 ไม่ใช่ชื่อ Sprint ในระบบ จึงไม่จับคู่ให้เอง (เลือกเองได้)
+  if (!used.has('key') || used.has('no')) for (const h of Object.keys(out)) if (out[h] === 'sprint') out[h] = null;
   return out;
 }
 
@@ -149,6 +152,8 @@ export interface PlanRow {
   parentNumber: number | null;
   module: string;
   phase: string | null;
+  /** ชื่อ Sprint ในไฟล์ · จับคู่กับ Sprint ของโปรเจกต์ตอนนำเข้า (ไม่มี / ปิดแล้ว = ข้าม) */
+  sprint: string | null;
   title: string;
   screens: string[];
   requirements: string[];
@@ -365,8 +370,10 @@ export function checkPlan(wb: ParsedWorkbook, mapping: ColumnMapping, cal: WorkC
       number,
       parentNumber: parent?.number ?? null,
       module: module ?? '',
-      // กลุ่มจากคอลัมน์ Group (ไม่บังคับ) · คอลัมน์ Sprint ของไฟล์แผนเดิมไม่ถูกนำเข้า
+      // กลุ่มจากคอลัมน์ Group (ไม่บังคับ)
       phase: text(get(cells, 'group')),
+      // Sprint จับคู่ด้วยชื่อ (ผู้ใช้ขอ 2026-11-19) · ไฟล์แผนเดิมที่มีคอลัมน์ Sprint ชื่อไม่ตรงก็แค่ถูกข้ามพร้อมคำเตือน
+      sprint: text(get(cells, 'sprint')),
       title: title ?? '',
       screens: list(get(cells, 'screen')).filter((x) => /^SCR-/i.test(x)),
       requirements: reqs.filter((x) => /^N?FR-/i.test(x)).map((x) => x.toUpperCase()),

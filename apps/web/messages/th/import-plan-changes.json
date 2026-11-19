@@ -232,7 +232,15 @@
     "sheetHint__holidays": "วันหยุดที่ใช้คำนวณวันทำงาน",
     "template": "Template เปล่า",
     "download": "ดาวน์โหลด Excel",
-    "noPermission": "ไม่มีสิทธิ์ Export แผนของโปรเจกต์นี้"
+    "noPermission": "ไม่มีสิทธิ์ Export แผนของโปรเจกต์นี้",
+    "scope": "ขอบเขต",
+    "scope__all": "ทั้งโปรเจกต์",
+    "scope__sprint": "เลือก Sprint",
+    "scope__filters": "ตามตัวกรองในตาราง ({count})",
+    "scopeCurrent": "Sprint ปัจจุบัน",
+    "scopeNoSprint": "งานที่ยังไม่เข้า Sprint",
+    "scopeFiltered": "ตัวกรองที่ใช้อยู่ในตาราง",
+    "partialNote": "ไฟล์มีเฉพาะงานของ {scope} เรียง Module → กลุ่ม → Task · นำเข้ากลับได้เฉพาะโหมดอัปเดต ใช้แทนที่แผนไม่ได้ เพื่อไม่ให้งานนอกไฟล์ถูกลบ"
   },
   "create": {
     "crumb": "Projects / New project",

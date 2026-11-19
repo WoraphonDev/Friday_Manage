@@ -35,8 +35,11 @@ export function usePlanIoSections(ws: string, projectKey: string): PlanIoSection
   return PLAN_IO_SECTIONS.filter((s) => s === "export" || baseline);
 }
 
-export function PlanIoContent({ ws, projectKey, section, changesHref }: { ws: string; projectKey: string; section: PlanIoSection; changesHref?: string }) {
-  if (section === "export") return <ExportPanel ws={ws} projectKey={projectKey} />;
+/** ตัวกรองที่ใช้อยู่ในแท็บ Table (query string ชุดเดียวกับ API) ให้ Export เฉพาะงานที่เห็น */
+export type TableFilters = { query: string; count: number } | null;
+
+export function PlanIoContent({ ws, projectKey, section, changesHref, tableFilters }: { ws: string; projectKey: string; section: PlanIoSection; changesHref?: string; tableFilters?: TableFilters }) {
+  if (section === "export") return <ExportPanel ws={ws} projectKey={projectKey} tableFilters={tableFilters ?? null} />;
   if (section === "changes") return <PlanChangesView ws={ws} projectKey={projectKey} embedded />;
   return <ImportWizard ws={ws} projectKey={projectKey} changesHref={changesHref} />;
 }
@@ -45,7 +48,7 @@ export function PlanIoContent({ ws, projectKey, section, changesHref }: { ws: st
  * Popup ในแท็บ Table · เปิด / ปิด / เปลี่ยนเมนูผ่าน ?io= ใน URL
  * (ลิงก์จาก Dashboard / Reports / ข้อความหลังนำเข้า เปิดเมนูที่ต้องการได้ และกดงานในรายการแก้ไขแผนแล้ว Drawer งานเปิดแทน)
  */
-export function PlanIoDialog({ ws, projectKey }: { ws: string; projectKey: string }) {
+export function PlanIoDialog({ ws, projectKey, tableFilters }: { ws: string; projectKey: string; tableFilters?: TableFilters }) {
   const t = useTranslations("import-plan-changes.import");
   const search = useSearchParams();
   const router = useRouter();
@@ -85,7 +88,7 @@ export function PlanIoDialog({ ws, projectKey }: { ws: string; projectKey: strin
             </nav>
             {/* เปลี่ยนเมนู: เนื้อหาเคลื่อนเข้าใหม่ · PlanIoContent สร้างใหม่ตามเมนูอยู่แล้ว จึงไม่เสียค่าที่กรอกเพิ่ม */}
             <MotionSwap key={section} className={styles.main}>
-              <PlanIoContent key={section} ws={ws} projectKey={projectKey} section={section} changesHref={changesHref} />
+              <PlanIoContent key={section} ws={ws} projectKey={projectKey} section={section} changesHref={changesHref} tableFilters={tableFilters} />
             </MotionSwap>
           </div>
         </Dialog.Content>

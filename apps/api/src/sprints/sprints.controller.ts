@@ -2,7 +2,7 @@ import { Body, Controller, Get, HttpCode, Param, Patch, Post, UseGuards } from '
 import { Auth, type AuthInfo, Tenant, type TenantInfo } from '../common/request.js';
 import { TenantGuard } from '../common/tenant.js';
 import { parse } from '../common/validate.js';
-import { CompleteSprintBody, CreateSprintBody, PatchSprintBody, SprintId } from './sprint-input.js';
+import { CompleteSprintBody, CreateSprintBody, CreateSprintSeriesBody, PatchSprintBody, SprintId } from './sprint-input.js';
 import { SprintsService } from './sprints.service.js';
 
 @Controller('w/:ws/projects/:key')
@@ -15,9 +15,20 @@ export class SprintsController {
     return this.sprints.backlog(auth, tenant, key);
   }
 
+  /** Sprint ทั้งหมดของโปรเจกต์ (รวมที่ปิดแล้ว) เรียงตามเลข · ใช้กับตัวเลือก Sprint ในตาราง / หน้า Task / Export */
+  @Get('sprints')
+  list(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string) {
+    return this.sprints.list(auth, tenant, key);
+  }
+
   @Post('sprints')
   create(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Body() body: unknown) {
     return this.sprints.create(auth, tenant, key, parse(CreateSprintBody, body));
+  }
+
+  @Post('sprints/series')
+  createSeries(@Auth() auth: AuthInfo, @Tenant() tenant: TenantInfo, @Param('key') key: string, @Body() body: unknown) {
+    return this.sprints.createSeries(auth, tenant, key, parse(CreateSprintSeriesBody, body));
   }
 
   @Patch('sprints/:id')

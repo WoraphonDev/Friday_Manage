@@ -7,7 +7,7 @@ import { PlanIoDialog, usePlanIoSections } from "@/features/plan-io/plan-io";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import * as Popover from "@radix-ui/react-popover";
-import { Check, ChevronDown, LayoutList, Plus, Search, SlidersHorizontal, X } from "lucide-react";
+import { Check, ChevronDown, Filter, LayoutList, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { AvatarStack, Avatar, Button, Dialog, EmptyState, ErrorState, Forbidden, Input, LoadingState, Select, useToast } from "@/components/ui";
 import { useWorkspace } from "@/components/shell/workspace-shell";
 import { api, ApiError } from "@/lib/api";
@@ -35,6 +35,7 @@ const PAGE = 500;
 const MAX_PAGES = 4;
 // module / sprint เป็นรายการ id คั่นด้วย , (เลือกได้หลายค่า · ผู้ใช้ขอ 2026-11-19)
 const FILTER_KEYS = ["q", "status", "assignee", "ba", "size", "priority", "level", "overdue", "hideDone", "module", "sprint"] as const;
+const CHIP_KEYS = ["assignee", "ba", "module", "sprint", "status", "priority", "size", "level", "overdue"] as const;
 type Filters = Partial<Record<(typeof FILTER_KEYS)[number], string>>;
 const SIZES = ["XS", "S", "M", "L", "XL"] as const;
 const GROUPS = ["module", "sprint", "status", "assignee", "priority", "none"] as const;
@@ -529,6 +530,32 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
     <MultiFilter className={styles.tbtn} label="Sprint" allLabel={t("allSprints")} value={list("sprint")} onChange={(v) => set("sprint", v.join(","))}
       options={sprintFilterOptions(sprints, year, ts)} />
   );
+  const moduleOptions = [...(options.data?.modules ?? []).map((m) => ({ id: m.id, name: m.name, swatch: m.color ?? null })), { id: "none", name: t("noModule"), swatch: null }];
+  const sprintOptions = sprintFilterOptions(sprints, year, ts);
+  const moduleField = <MultiFilter field className={styles.fieldBtn} label={t("moduleFilter")} allLabel={t("allModules")} value={list("module")} onChange={(v) => set("module", v.join(","))} options={moduleOptions} />;
+  const sprintField = <MultiFilter field className={styles.fieldBtn} label="Sprint" allLabel={t("allSprints")} value={list("sprint")} onChange={(v) => set("sprint", v.join(","))} options={sprintOptions} />;
+  // ตัวกรองที่นับในปุ่ม Filter และแสดงเป็นชิป · คำค้นอยู่ในช่องค้นหา และ Show completed อยู่ในปุ่มแสดงผล จึงไม่นับ
+  const active = CHIP_KEYS.filter((k) => filters[k]);
+  const clearFilters = () => { setFilters((f) => ({ q: f.q, hideDone: f.hideDone })); setSelected(new Set()); };
+  const names = (k: "module" | "sprint") => {
+    const opts: { id: string; name: string }[] = k === "module" ? moduleOptions : sprintOptions;
+    return list(k).map((id) => opts.find((o) => o.id === id)?.name ?? id).join(", ");
+  };
+  const person = (id: string) => members.find((m) => m.id === id)?.displayName ?? id;
+  const chipText = (k: (typeof CHIP_KEYS)[number]) => {
+    const v = filters[k] ?? "";
+    switch (k) {
+      case "assignee": return `${t("assignee")}: ${v === "me" ? t("me") : v === "none" ? t("none") : person(v)}`;
+      case "ba": return `${t("ba")}: ${person(v)}`;
+      case "module": return `${t("moduleFilter")}: ${names("module")}`;
+      case "sprint": return `Sprint: ${names("sprint")}`;
+      case "status": return `${t("status")}: ${t(`statusCategory.${v}`)}`;
+      case "level": return `${t("level")}: ${v === "task" ? t("tasks") : t("subtasks")}`;
+      case "overdue": return t("overdue");
+      case "priority": return `${t("priority")}: ${v}`;
+      case "size": return `${t("size")}: ${v}`;
+    }
+  };
   return (
     <div className={styles.page}>
       <div ref={viewsRef} className={`${mobile ? styles.mViews : styles.bar} ${styles.views} motion-pill`} role="group" aria-label={t("views")}>
@@ -616,81 +643,109 @@ export function TableView({ ws, projectKey }: { ws: string; projectKey: string }
           )}
         </div>
       ) : (
-        <div className={styles.toolbar}>
-          <div className={styles.bar} role="group" aria-label={t("filters")}>
-            <form className={styles.search} onSubmit={(e) => { e.preventDefault(); set("q", String(new FormData(e.currentTarget).get("q") ?? "")); }}>
-              <Search size={16} aria-hidden="true" />
-              <input type="search" name="q" aria-label={t("search")} placeholder={t("search")} title={t("searchHint")} defaultValue={filters.q ?? ""} />
-            </form>
-            <Popover.Root>
-              <Popover.Trigger asChild>
-                <button type="button" className={styles.tbtn}><SlidersHorizontal size={16} aria-hidden="true" />{t("filter")}{extra > 0 && <span className={`${styles.pill} ${styles.sProg}`}>{extra}</span>}</button>
-              </Popover.Trigger>
-              <Popover.Content className={`popover ${styles.pop}`} sideOffset={6} align="start">
-                <Select label={t("status")} size="small" value={filters.status ?? ""} onChange={(e) => set("status", e.target.value)}>
-                  <option value="">{t("allStatus")}</option>
-                  {STATUS_CATEGORIES.map((c) => <option key={c} value={c}>{t(`statusCategory.${c}`)}</option>)}
-                </Select>
-                <Select label={t("priority")} size="small" value={filters.priority ?? ""} onChange={(e) => set("priority", e.target.value)}>
-                  <option value="">{t("anyPriority")}</option>
-                  {(["urgent", "high", "medium", "low"] as const).map((p) => <option key={p} value={p}>{p}</option>)}
-                </Select>
-                <Select label={t("level")} size="small" value={filters.level ?? ""} onChange={(e) => set("level", e.target.value)}>
-                  <option value="">{t("allLevels")}</option><option value="task">{t("tasks")}</option><option value="subtask">{t("subtasks")}</option>
-                </Select>
-                {filtered && <Button size="small" variant="ghost" onClick={() => setFilters({})}>{t("clear")}</Button>}
-              </Popover.Content>
-            </Popover.Root>
-            {moduleFilter}
-            {sprintFilter}
-            <label className={styles.tbtn}>{t("groupBy")}
-              <select className={styles.tsel} aria-label={t("groupBy")} value={groupBy} onChange={(e) => { setGroupBy(e.target.value as GroupBy); setCollapsed(new Set()); }}>
-                {GROUPS.map((g) => <option key={g} value={g}>{t(`groups.${g}`)}</option>)}
-              </select>
-            </label>
-            {usedField("ba") && <select className={styles.tbtn} aria-label={t("ba")} value={filters.ba ?? ""} onChange={(e) => set("ba", e.target.value)}>
-              <option value="">{t("ba")}: {t("anyone")}</option>
-              {baPeople.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
-            </select>}
-            <select className={styles.tbtn} aria-label={t("assignee")} value={filters.assignee ?? ""} onChange={(e) => set("assignee", e.target.value)}>
-              <option value="">{t("assignee")}: {t("anyone")}</option>
-              <option value="me">{t("me")}</option>
-              <option value="none">{t("none")}</option>
-              {devPeople.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
-            </select>
-            {usedField("size") && <select className={styles.tbtn} aria-label={t("size")} value={filters.size ?? ""} onChange={(e) => set("size", e.target.value)}>
-              <option value="">{t("size")}: {t("allSizes")}</option>
-              {SIZES.map((z) => <option key={z} value={z}>{z}</option>)}
-            </select>}
-            <label className={styles.tbtn}>{t("sort")}:
-              <select className={styles.tsel} aria-label={t("sort")} value={sort} onChange={(e) => setSort(e.target.value as (typeof SORTS)[number])}>
-                {SORTS.map((o) => <option key={o} value={o}>{t(`sorts.${o}`)}</option>)}
-              </select>
-            </label>
-            <Popover.Root>
-              <Popover.Trigger asChild><button type="button" className={styles.tbtn}>{t("columns")}</button></Popover.Trigger>
-              <Popover.Content className={`popover ${styles.pop}`} sideOffset={6} align="start">
-                {available.map((c) => (
-                  <label key={c} className={styles.colCheck}>
-                    <input type="checkbox" checked={cols.includes(c)} onChange={() => chooseCols(cols.includes(c) ? cols.filter((x) => x !== c) : [...cols, c])} />{colLabel(c)}
+        <div className={styles.toolbarWrap}>
+          {/* แบบ A (ผู้ใช้เลือก 2026-11-19): แถวเดียว · ตัวกรองทุกอย่างอยู่ในปุ่ม Filter · หน้าตาตารางอยู่ในปุ่มแสดงผล · ชิปบอกสิ่งที่กรองอยู่ */}
+          <div className={styles.toolbar}>
+            <div className={styles.bar} role="group" aria-label={t("filters")}>
+              <form className={styles.search} onSubmit={(e) => { e.preventDefault(); set("q", String(new FormData(e.currentTarget).get("q") ?? "")); }}>
+                <Search size={16} aria-hidden="true" />
+                <input type="search" name="q" aria-label={t("search")} placeholder={t("search")} title={t("searchHint")} defaultValue={filters.q ?? ""} />
+              </form>
+              <Popover.Root>
+                <Popover.Trigger asChild>
+                  <button type="button" className={`${styles.tbtn} ${active.length ? styles.tbtnOn : ""}`}><Filter size={16} aria-hidden="true" />{t("filter")}{active.length > 0 && <span className={styles.count}>{active.length}</span>}</button>
+                </Popover.Trigger>
+                <Popover.Content className={`popover ${styles.pop} ${styles.filterPop}`} sideOffset={6} align="start">
+                  <p className={styles.popHead}>{t("filterWho")}</p>
+                  <div className={styles.popGrid}>
+                    <Select label={t("assignee")} size="small" value={filters.assignee ?? ""} onChange={(e) => set("assignee", e.target.value)}>
+                      <option value="">{t("anyone")}</option>
+                      <option value="me">{t("me")}</option>
+                      <option value="none">{t("none")}</option>
+                      {devPeople.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
+                    </Select>
+                    {usedField("ba") && <Select label={t("ba")} size="small" value={filters.ba ?? ""} onChange={(e) => set("ba", e.target.value)}>
+                      <option value="">{t("anyone")}</option>
+                      {baPeople.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
+                    </Select>}
+                  </div>
+                  <p className={styles.popHead}>{t("filterWhere")}</p>
+                  <div className={styles.popGrid}>
+                    <div className="field"><span className={styles.fieldLabel}>{t("moduleFilter")}</span>{moduleField}</div>
+                    <div className="field"><span className={styles.fieldLabel}>Sprint</span>{sprintField}</div>
+                  </div>
+                  <p className={styles.popHead}>{t("filterState")}</p>
+                  <div className={styles.popGrid}>
+                    <Select label={t("status")} size="small" value={filters.status ?? ""} onChange={(e) => set("status", e.target.value)}>
+                      <option value="">{t("allStatus")}</option>
+                      {STATUS_CATEGORIES.map((c) => <option key={c} value={c}>{t(`statusCategory.${c}`)}</option>)}
+                    </Select>
+                    <Select label={t("priority")} size="small" value={filters.priority ?? ""} onChange={(e) => set("priority", e.target.value)}>
+                      <option value="">{t("anyPriority")}</option>
+                      {(["urgent", "high", "medium", "low"] as const).map((p) => <option key={p} value={p}>{p}</option>)}
+                    </Select>
+                    {usedField("size") && <Select label={t("size")} size="small" value={filters.size ?? ""} onChange={(e) => set("size", e.target.value)}>
+                      <option value="">{t("allSizes")}</option>
+                      {SIZES.map((z) => <option key={z} value={z}>{z}</option>)}
+                    </Select>}
+                    <Select label={t("level")} size="small" value={filters.level ?? ""} onChange={(e) => set("level", e.target.value)}>
+                      <option value="">{t("allLevels")}</option><option value="task">{t("tasks")}</option><option value="subtask">{t("subtasks")}</option>
+                    </Select>
+                  </div>
+                  {active.length > 0 && <Button size="small" variant="ghost" onClick={clearFilters}>{t("clear")}</Button>}
+                </Popover.Content>
+              </Popover.Root>
+              <Popover.Root>
+                <Popover.Trigger asChild>
+                  <button type="button" className={styles.tbtn}><LayoutList size={16} aria-hidden="true" />{t("display")}<ChevronDown size={14} aria-hidden="true" /></button>
+                </Popover.Trigger>
+                <Popover.Content className={`popover ${styles.pop} ${styles.displayPop}`} sideOffset={6} align="start">
+                  <div className={styles.popGrid}>
+                    <Select label={t("groupBy")} size="small" value={groupBy} onChange={(e) => { setGroupBy(e.target.value as GroupBy); setCollapsed(new Set()); }}>
+                      {GROUPS.map((g) => <option key={g} value={g}>{t(`groups.${g}`)}</option>)}
+                    </Select>
+                    <Select label={t("sort")} size="small" value={sort} onChange={(e) => setSort(e.target.value as (typeof SORTS)[number])}>
+                      {SORTS.map((o) => <option key={o} value={o}>{t(`sorts.${o}`)}</option>)}
+                    </Select>
+                  </div>
+                  <label className={styles.colCheck}>
+                    <input type="checkbox" checked={!filters.hideDone} onChange={() => set("hideDone", filters.hideDone ? "" : "1")} />{t("showCompleted")}
                   </label>
-                ))}
-                <p className={styles.popHint}>{t("columnsHint")}</p>
-                {userCols && <Button size="small" variant="ghost" onClick={() => chooseCols(null)}>{t("columnsReset")}</Button>}
-              </Popover.Content>
-            </Popover.Root>
-            <label className={styles.tbtn} style={{ cursor: "pointer" }}>
-              <input type="checkbox" className={styles.cb} checked={!filters.hideDone} onChange={() => set("hideDone", filters.hideDone ? "" : "1")} />{t("showCompleted")}
-            </label>
+                  <div className={styles.popRow}>
+                    <Button size="small" variant="secondary" onClick={() => setCollapsed(new Set())}>{t("expandAll")}</Button>
+                    <Button size="small" variant="secondary" onClick={() => setCollapsed(new Set(groupIds))}>{t("collapseAll")}</Button>
+                  </div>
+                  <p className={styles.popHead}>{t("columns")}</p>
+                  <div className={styles.colGrid} role="group" aria-label={t("columns")}>
+                    {available.map((c) => (
+                      <label key={c} className={styles.colCheck}>
+                        <input type="checkbox" checked={cols.includes(c)} onChange={() => chooseCols(cols.includes(c) ? cols.filter((x) => x !== c) : [...cols, c])} />{colLabel(c)}
+                      </label>
+                    ))}
+                  </div>
+                  <p className={styles.popHint}>{t("columnsHint")}</p>
+                  {userCols && <Button size="small" variant="ghost" onClick={() => chooseCols(null)}>{t("columnsReset")}</Button>}
+                </Popover.Content>
+              </Popover.Root>
+            </div>
+            <div className={styles.bar}>
+              {/* Import / Export เปิดเป็น Popup (ผู้ใช้ตัดสิน 2026-11-09) · สมาชิกทั่วไปเห็นเฉพาะ Export */}
+              {ioSections.length > 0 && <button type="button" className={styles.tbtn} onClick={() => openIo(ioSections[0])}>{t("importExport")}</button>}
+              {canSettings && <button type="button" className={styles.tbtn} onClick={() => setStructure({ kind: "createModule" })}>{t("addModule")}</button>}
+              {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={taskHref()} scroll={false}>{t("addTask")}</Link>}
+            </div>
           </div>
-          <div className={styles.bar}>
-            <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set())}>{t("expandAll")}</button>
-            <button type="button" className={`${styles.tbtn} ${styles.ghost}`} onClick={() => setCollapsed(new Set(groupIds))}>{t("collapseAll")}</button>
-            {/* Import / Export เปิดเป็น Popup (ผู้ใช้ตัดสิน 2026-11-09) · สมาชิกทั่วไปเห็นเฉพาะ Export */}
-            {ioSections.length > 0 && <button type="button" className={styles.tbtn} onClick={() => openIo(ioSections[0])}>{t("importExport")}</button>}
-            {canSettings && <button type="button" className={styles.tbtn} onClick={() => setStructure({ kind: "createModule" })}>{t("addModule")}</button>}
-            {canCreate && <Link className={`${styles.tbtn} ${styles.pri}`} href={taskHref()} scroll={false}>{t("addTask")}</Link>}
-          </div>
+          {active.length > 0 && (
+            <div className={`${styles.bar} ${styles.chips} motion-in`} role="group" aria-label={t("activeFilters")}>
+              {active.map((k) => (
+                <span key={k} className={styles.fchip}>
+                  <span className={styles.fchipText} title={chipText(k)}>{chipText(k)}</span>
+                  <button type="button" aria-label={t("removeFilter", { name: chipText(k) })} onClick={() => set(k, "")}><X size={14} aria-hidden="true" /></button>
+                </span>
+              ))}
+              <button type="button" className={styles.addb} onClick={clearFilters}>{t("clearAll")}</button>
+            </div>
+          )}
         </div>
       )}
 

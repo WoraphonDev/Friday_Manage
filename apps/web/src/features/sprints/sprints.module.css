@@ -17,6 +17,7 @@
 .check { width:15px; height:15px; flex:none; display:inline-grid; place-items:center; border:1.5px solid var(--border-strong); border-radius:4px; }
 .checked { background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
 .swatch { width:10px; height:10px; border-radius:3px; flex:none; background:var(--faint); }
+.fieldValue { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; }
 .filterValue { color:var(--primary-text); font-weight:600; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 .form { display:flex; flex-direction:column; gap:12px; }

@@ -39,6 +39,8 @@ const DELETE_KEYS = ["Backspace", "Delete"];
 const PRO_OPTIONS = { hideAttribution: true };
 const EDGE_OPTIONS = { type: "diagram" };
 const PAN_BUTTONS = [1, 2];
+/** มี onNodeClick = React Flow เปิด pointer events ของกล่องในโหมดดู (ป้ายงานใต้กล่องจึงกดได้) */
+const NOOP = () => {};
 /** คลิปบอร์ดของ Diagram (คัดลอกข้าม Diagram ในโปรเจกต์เดียวกันได้ ใน session นี้) */
 let clipboard: { project: string; content: Content } | null = null;
 
@@ -888,6 +890,7 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
                   onSelectionChange={onSelectionChange}
                   onEdgeDoubleClick={focusEdgeLabel}
                   onPaneClick={onPaneClick}
+                  onNodeClick={NOOP}
                   connectionMode={ConnectionMode.Loose}
                   nodesDraggable={editing && tool === "select"}
                   nodesConnectable={editing}

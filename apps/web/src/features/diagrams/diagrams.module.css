@@ -119,7 +119,7 @@ a.card:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
 .paletteItem:hover { border-color:var(--primary-border); background:var(--primary-soft); color:var(--primary-text); }
 .paletteItem:active { cursor:grabbing; }
 .paletteIcon { width:34px; height:22px; overflow:visible; }
-.paletteIcon > g > * { fill:var(--node-bg, var(--card)); stroke:var(--node-border, currentColor); stroke-width:6; vector-effect:non-scaling-stroke; }
+.paletteIcon > g > * { fill:var(--node-bg, var(--card)); stroke:var(--node-border, currentColor); stroke-width:1.4; vector-effect:non-scaling-stroke; }
 .paletteIcon .outlineInner { fill:none; }
 .paletteGlyph { height:22px; display:grid; place-items:center; color:var(--foreground-soft); }
 .paletteGlyph .actorIcon { width:20px; height:20px; }

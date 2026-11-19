@@ -226,3 +226,8 @@ button.chip:focus-visible { outline:2px solid var(--focus); outline-offset:1px; 
 @media (prefers-reduced-motion:reduce) {
   .card, .handle { transition:none; }
 }
+
+/* บรรทัด "Diagram" ในแผงรายละเอียดงาน */
+.issueDiagrams { display:flex; flex-wrap:wrap; gap:4px 10px; }
+.issueDiagram { display:inline-flex; align-items:center; gap:4px; color:var(--primary-text); font-size:12.5px; text-decoration:none; }
+.issueDiagram:hover { text-decoration:underline; }

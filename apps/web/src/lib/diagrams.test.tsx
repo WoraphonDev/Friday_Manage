@@ -160,3 +160,18 @@ describe("หน้าแก้ไข Diagram", () => {
     for (const shape of ["เงื่อนไข", "ตาราง", "Database", "โน้ต"]) expect(screen.getByRole("button", { name: new RegExp(shape) })).toBeInTheDocument();
   });
 });
+
+describe("บรรทัด Diagram ในแผงรายละเอียดงาน", () => {
+  it("แสดงลิงก์ Diagram ที่ผูกงานนี้ · ไม่มีก็ไม่แสดงแถว", async () => {
+    const { IssueDiagrams } = await import("@/features/diagrams/issue-diagrams");
+    const row = (links: React.ReactNode) => <div data-testid="row">{links}</div>;
+    const { unmount } = renderWithProviders(<IssueDiagrams ws="sample" projectKey="DE" issueId={ISSUE} render={row} />);
+    expect(await screen.findByRole("link", { name: "Workflow อนุมัติวงเงิน" })).toHaveAttribute("href", `/work/sample/p/DE/diagrams/${ID}`);
+    await waitFor(() => expect(listUrls.at(-1)?.searchParams.get("issue")).toBe(ISSUE));
+    unmount();
+    listResponse = () => HttpResponse.json({ items: [], permissions: { edit: true, takeover: false, delete: false } });
+    renderWithProviders(<IssueDiagrams ws="sample" projectKey="DE" issueId={ISSUE} render={row} />);
+    await waitFor(() => expect(listUrls).toHaveLength(2));
+    expect(screen.queryByTestId("row")).not.toBeInTheDocument();
+  });
+});

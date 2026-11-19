@@ -26,6 +26,7 @@ import { levelOf, requires, shows, type ProfileField } from '@/lib/field-profile
 import styles from './issue-drawer.module.css';
 import { DEFAULT_ITEM_COLOR, readableColor, tint } from "@/lib/colors";
 import { statusColorStyle, statusTone, useStatusColors, type StatusTone } from '@/lib/status';
+import { IssueDiagrams } from '@/features/diagrams/issue-diagrams';
 
 /** API ขอเหตุผลการแก้แผน: ไม่ใช่ error ที่ต้องแสดง แต่เปิดกล่องให้กรอกเหตุผลแล้วบันทึกซ้ำ */
 class NeedsPlanReason extends Error {}
@@ -347,6 +348,8 @@ export function IssuePanel({ scope, issue, siblings = [], onDeleted, onClose }: 
           {show('requirements') && <PropRow k={star('requirements', t('refs.requirement'))}><CodeChips kinds={['requirement']} editable={canEdit} busy={disabled} values={{ requirement: issue.requirements ?? [], screen: [] }} suggestions={{ requirement: refOptions.data?.requirements?.map((r) => r.code) }} onChange={(_, codes) => void patch({ requirements: codes })} hrefOf={refHref} /></PropRow>}
           {show('screens') && <PropRow k={star('screens', t('refs.screen'))}><CodeChips kinds={['screen']} editable={canEdit} busy={disabled} values={{ requirement: [], screen: issue.screens ?? [] }} suggestions={{ screen: refOptions.data?.screens?.map((r) => r.code) }} onChange={(_, codes) => void patch({ screens: codes })} hrefOf={refHref} /></PropRow>}
           {show('labels') && <PropRow k={star('labels', t('refs.labels'))}><LabelChips options={labelOptions.data?.items ?? issue.labels ?? []} value={(issue.labels ?? []).map((label) => label.id)} editable={canEdit} busy={disabled} onChange={(ids) => void patch({ labelIds: ids })} /></PropRow>}
+          {/* Diagram ที่มีกล่องผูกกับงานนี้ (แท็บ Diagram 2026-11-19) · ไม่มีก็ไม่แสดงแถว */}
+          {!guest && <IssueDiagrams ws={scope.ws} projectKey={scope.projectKey} issueId={issue.id} render={(links) => <PropRow k={t('refs.diagrams')}>{links}</PropRow>} />}
           {!guest && canEdit && <label className={styles.checkboxLabel}><input type="checkbox" checked={issue.sharedWithGuests} disabled={disabled} onChange={(event) => void patch({ sharedWithGuests: event.target.checked })} />{t('sharedWithGuests')}</label>}
         </section>
         {customFields.length > 0 && <section className={styles.pgroup} aria-label={t('groupCustom')}>

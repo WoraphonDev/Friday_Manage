@@ -45,6 +45,9 @@
       "name": "Comments"
     },
     {
+      "name": "ContactSales"
+    },
+    {
       "name": "DeletedWorkspace"
     },
     {
@@ -4244,6 +4247,108 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/v1/public/contact-sales": {
+      "post": {
+        "operationId": "ContactSales_submit",
+        "summary": "POST public/contact-sales",
+        "tags": [
+          "ContactSales"
+        ],
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "company": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 200
+                  },
+                  "contactName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 120
+                  },
+                  "contactTitle": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "email": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "format": "email",
+                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "teamSize": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000
+                  },
+                  "needs": {
+                    "default": [],
+                    "maxItems": 7,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "sso",
+                        "annual_contract",
+                        "tax_invoice",
+                        "onboarding",
+                        "api",
+                        "security_review",
+                        "other"
+                      ]
+                    }
+                  },
+                  "message": {
+                    "type": "string",
+                    "maxLength": 3000
+                  },
+                  "consent": {
+                    "type": "boolean",
+                    "const": true
+                  },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "company",
+                  "contactName",
+                  "email",
+                  "teamSize",
+                  "consent"
+                ],
+                "additionalProperties": false
               }
             }
           }

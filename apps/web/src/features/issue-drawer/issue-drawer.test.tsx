@@ -292,12 +292,26 @@ describe('Due request',()=>{
 });
 
 describe('Issue parts and comments',()=>{
-  it('creates and toggles acceptance items, reorders and deletes checklist entries',async()=>{
+  it('ติ๊กแล้วพับข้อที่เสร็จ · กล่องที่ครบเหลือบรรทัดเดียว · เพิ่ม เลื่อนเฉพาะข้อที่ยังไม่เสร็จ และลบ',async()=>{
     const user=userEvent.setup();mount();await loaded();await screen.findByLabelText('ตรวจสอบข้อมูล');
+    // Acceptance มีข้อเดียวและเสร็จแล้ว → เหลือบรรทัดเดียว ไม่แสดงรายการ
+    const acceptance=screen.getByRole('region',{name:'Acceptance criteria'});
+    expect(within(acceptance).getByRole('button',{name:/Acceptance criteria ครบ 1\/1/})).toBeInTheDocument();expect(screen.queryByLabelText('ยืนยันผลลัพธ์')).not.toBeInTheDocument();
+    // ติ๊กข้อสุดท้ายของ Checklist: ค้างที่เดิมครู่หนึ่ง แล้วกล่องย่อเป็นบรรทัดเดียว
     await user.click(screen.getByLabelText('ตรวจสอบข้อมูล'));await waitFor(()=>expect(f.state.checklist[0].done).toBe(true));
-    await user.click(screen.getByRole('button',{name:'เลื่อน ยืนยันผลลัพธ์ ขึ้น'}));await waitFor(()=>expect(f.state.checklist[0].text).toBe('ยืนยันผลลัพธ์'));
-    const acceptance=screen.getByRole('region',{name:'Acceptance criteria'});await user.type(within(acceptance).getByLabelText('เพิ่ม Acceptance criteria'),'ตรวจรับงานใหม่');await user.click(within(acceptance).getByRole('button',{name:'เพิ่ม'}));await screen.findByLabelText('ตรวจรับงานใหม่');
-    expect(mutations('/checklist').at(-1)?.body).toEqual({text:'ตรวจรับงานใหม่',kind:'acceptance'});
+    expect(screen.getByLabelText('ตรวจสอบข้อมูล')).toBeChecked();
+    const checklist=screen.getByRole('region',{name:'Checklist'});
+    await within(checklist).findByRole('button',{name:/Checklist ครบ 1\/1/},{timeout:3000});expect(screen.queryByLabelText('ตรวจสอบข้อมูล')).not.toBeInTheDocument();
+    // กาง Acceptance แล้วเพิ่มสองข้อ · ข้อที่เสร็จอยู่ในกลุ่ม "ผ่านแล้ว" ที่กางอยู่
+    await user.click(within(acceptance).getByRole('button',{name:/ดูรายการ/}));
+    expect(within(acceptance).getByRole('button',{name:/ผ่านแล้ว 1 รายการ/})).toHaveAttribute('aria-expanded','true');expect(screen.getByLabelText('ยืนยันผลลัพธ์')).toBeChecked();
+    for(const text of ['ตรวจรับงานใหม่','ตรวจรับงานสอง']){await user.type(within(acceptance).getByLabelText('เพิ่ม Acceptance criteria'),text);await user.click(within(acceptance).getByRole('button',{name:'เพิ่ม'}));await screen.findByLabelText(text);}
+    expect(mutations('/checklist').at(-1)?.body).toEqual({text:'ตรวจรับงานสอง',kind:'acceptance'});
+    // ข้อที่ยังไม่เสร็จอยู่บน · ข้อที่เสร็จไม่มีลูกศร และพับได้
+    expect(within(acceptance).getByRole('button',{name:'เลื่อน ตรวจรับงานใหม่ ขึ้น'})).toBeDisabled();expect(within(acceptance).queryByRole('button',{name:'เลื่อน ยืนยันผลลัพธ์ ขึ้น'})).not.toBeInTheDocument();
+    await user.click(within(acceptance).getByRole('button',{name:/ผ่านแล้ว 1 รายการ/}));expect(screen.queryByLabelText('ยืนยันผลลัพธ์')).not.toBeInTheDocument();
+    await user.click(within(acceptance).getByRole('button',{name:'เลื่อน ตรวจรับงานสอง ขึ้น'}));
+    await waitFor(()=>expect(f.state.checklist.map((c:{text:string})=>c.text)).toEqual(['ตรวจสอบข้อมูล','ยืนยันผลลัพธ์','ตรวจรับงานสอง','ตรวจรับงานใหม่']));
     await user.click(screen.getByRole('button',{name:'ลบ Checklist ตรวจรับงานใหม่'}));await waitFor(()=>expect(screen.queryByLabelText('ตรวจรับงานใหม่')).not.toBeInTheDocument());
   });
   it('adds typed dependency with lag, displays cycle failure and removes an edge',async()=>{

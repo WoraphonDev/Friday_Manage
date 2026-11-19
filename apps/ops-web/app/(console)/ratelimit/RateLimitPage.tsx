@@ -70,7 +70,7 @@ export function RateLimitPage() {
             <article key={r.id} className="todo-row" aria-label={r.name}>
               <div className="todo-main">
                 <b>{r.name}</b>
-                <span className="muted small">{t("todoLine", { plan: planLabel(r.plan), limit: lim(r.limit), token: r.topToken ?? "—" })}</span>
+                <span className="muted small">{r.topToken ? t("todoLine", { plan: planLabel(r.plan), limit: lim(r.limit), token: r.topToken }) : t("todoLineNoToken", { plan: planLabel(r.plan), limit: lim(r.limit) })}</span>
               </div>
               <span className="todo-actions">
                 <span className={styles.streak}>{t("streak", { n: r.curStreak })}</span>

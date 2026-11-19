@@ -6,6 +6,7 @@
   "clear": "ไม่มีลูกค้าที่ชนเพดานต่อเนื่อง",
   "clearNote": "แสดงเมื่อถูกปฏิเสธติดกันเกิน 15 นาที ซึ่งมักแปลว่าระบบของลูกค้าวนเรียกซ้ำ",
   "todoLine": "{plan} · {limit}/นาที · token \"{token}\"",
+  "todoLineNoToken": "{plan} · {limit}/นาที",
   "streak": "{n} นาที",
   "rejectedN": "{n} ครั้ง",
   "notify": "แจ้ง Owner",

@@ -133,7 +133,7 @@ export function RlDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                           <td className="num">{fmt.num(b.peak)}</td>
                           <td className="num">{fmt.num(b.rejected)}</td>
                           <td className="num">
-                            {first && !b.revoked && (
+                            {first && b.token && !b.revoked && (
                               <Button size="small" variant="ghost" onClick={() => setDialog({ tokenId: b.tokenId, token: b.token ?? b.tokenId })}>
                                 {td("blockToken")}
                               </Button>

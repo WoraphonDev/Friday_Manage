@@ -223,6 +223,20 @@
 | [W29](W29-mobile-workspace.md) | เว็บมือถือ: หน้าหลัก งานของฉัน กล่องข้อความ | มือถือ-3 | W28 | `my-tasks/_components` (ส่วนมือถือ) · `inbox-page.tsx` · `shell/mobile-header.tsx` |
 | [W30](W30-mobile-all.md) | เว็บมือถือ: หน้าที่เหลือทั้งหมด (Workspace · งาน · โปรเจกต์ · Admin · Billing · Help · สาธารณะ · Ops) | มือถือ-4 | W29 | CSS module ทุกหน้า (ใน media มือถือ) · `project-shell.tsx` · `projects/**` · `ops.css` |
 
+## Friday Ops เฟส 3 (ผู้ใช้อนุมัติ storyboard 20 พ.ย. 2569)
+
+หน้าจอ: storyboard "Ops เฟส 3" (https://claude.ai/artifact/7fVGf3E4QXQZsxdnQ7H8Dq) · Canvas มีเฉพาะ `design/canvas/ops/Abuse.dc.html` · ทุกหน้าใช้โครงหน้า Ops (งานที่ต้องทำบนสุด · แท็บ · แผงขวา · ปุ่มเฟือง) และค้น / กรอง / แบ่งหน้าที่ server · ทำตามลำดับ 1 งาน = 1 PR
+
+| งาน | ชื่อ | รอ merge | Lane หลัก |
+|---|---|---|---|
+| [O50](O50-ops-abuse.md) | ตรวจจับการใช้ผิด | — | `apps/ops-api/src/abuse` · `app/(console)/abuse` · `apps/api/src/auth` (บล็อกตอนสมัคร) |
+| [O51](O51-ops-rate-limit.md) | Rate limit ต่อลูกค้า | O50 | `apps/api/src/core/plan-limits.ts` · `apps/ops-api/src/ratelimit` · `app/(console)/ratelimit` |
+| [O52](O52-ops-jit.md) | ขอสิทธิ์ชั่วคราว | O51 | `apps/ops-api/src/staff` · `app/(console)/jit` · `AppShell.tsx` (แถบนับถอยหลัง) |
+| [O53](O53-ops-success.md) | สุขภาพและ Playbook | O52 | `apps/ops-api/src/success` · `app/(console)/success` |
+| [O54](O54-ops-leads.md) | Lead และดีล | O53 | `apps/ops-api/src/sales` · `app/(console)/leads` · `apps/web/app/(public)/contact-sales` |
+| [O55](O55-ops-quotes.md) | ใบเสนอราคาและสัญญา | O54 | `apps/ops-api/src/sales` · `app/(console)/quotes` · `apps/web/app/(public)/quote` |
+| [O56](O56-ops-scripts.md) | สคริปต์ดูแลข้อมูล | O55 | `apps/ops-api/src/scripts` · `app/(console)/scripts` |
+
 ## ตั้ง environment ของ Codex
 
 ตั้งไว้แล้วที่ chatgpt.com/codex › Environment `Friday_Manage` · Codex ไม่มี root, ไม่มี Docker และ home ของผู้ใช้ไม่มีอยู่จริง

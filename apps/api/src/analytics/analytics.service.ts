@@ -96,8 +96,8 @@ export class AnalyticsService implements OnModuleInit {
     await this.jobs.every('analytics.daily_usage', '0 1 * * *');
   }
 
-  /** ช่องทางที่ผู้ใช้มาครั้งแรก · เรียกใน transaction ของการสมัคร (SYSTEM_DB) */
-  async recordSignup(tx: Tx | Db, userId: string, a?: z.infer<typeof AttributionBody>) {
+  /** ช่องทางที่ผู้ใช้มาครั้งแรก · เรียกใน transaction ของการสมัคร (SYSTEM_DB) · ip = IP ตอนสมัคร ใช้ตรวจสมัครถี่ (O50) */
+  async recordSignup(tx: Tx | Db, userId: string, a?: z.infer<typeof AttributionBody>, ip?: string | null) {
     await tx
       .insert(s.signupAttributions)
       .values({
@@ -109,6 +109,7 @@ export class AnalyticsService implements OnModuleInit {
         referrerHost: referrerHost(a?.referrer),
         landingPath: a?.landingPath?.split('?')[0] ?? null,
         firstSeenAt: a?.firstSeenAt ? new Date(a.firstSeenAt) : null,
+        signupIp: ip ?? null,
       })
       .onConflictDoNothing();
   }

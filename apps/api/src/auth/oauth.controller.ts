@@ -7,6 +7,8 @@ import { AppError } from '../common/errors.js';
 import { type AppRequest, Public } from '../common/request.js';
 import { config } from '../config.js';
 import { SYSTEM_DB } from '../db/db.module.js';
+import { AnalyticsService } from '../analytics/analytics.service.js';
+import { clientIp, signupBlocked } from './abuse-blocks.js';
 import { apiPublicUrl, authTimes, type OAuthProvider, oauthProvider, webUrl } from './auth.config.js';
 import { pkceChallenge, signToken, verifyToken } from './crypto.js';
 import { LoginService } from './login.service.js';
@@ -54,6 +56,7 @@ export class OAuthController {
     @Inject(SYSTEM_DB) private readonly db: Db,
     private readonly login: LoginService,
     private readonly security: SecurityService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   /** ?next=/work/... กลับไปหน้าเดิม · ?remember=true จำ 30 วัน · ?mode=link ผูกกับบัญชีที่ล็อกอินอยู่ (หน้า Profile) */
@@ -191,12 +194,15 @@ export class OAuthController {
         await this.db.update(users).set({ emailVerifiedAt: sql`coalesce(${users.emailVerifiedAt}, now())` }).where(eq(users.id, byEmail.id));
         user = byEmail;
       } else {
+        // สมัครใหม่ผ่าน Google / Microsoft ตรวจรายชื่อที่ถูกบล็อกแบบเดียวกับสมัครด้วยรหัสผ่าน (O50)
+        if (await signupBlocked(this.db, info.email, req.ip)) throw new OAuthFail('signup_blocked');
         user = await this.db.transaction(async (tx) => {
           const [u] = await tx
             .insert(users)
             .values({ email: info.email, displayName: (info.name?.trim() || info.email.split('@')[0]).slice(0, 80), emailVerifiedAt: info.emailVerified === false ? null : new Date() })
             .returning(cols);
           await tx.insert(userIdentities).values({ userId: u.id, provider, providerSubject: info.sub });
+          await this.analytics.recordSignup(tx, u.id, undefined, clientIp(req.ip));
           return u;
         });
       }

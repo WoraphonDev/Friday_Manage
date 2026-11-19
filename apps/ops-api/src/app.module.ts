@@ -32,6 +32,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
 import { PresenceModule } from './presence/presence.module.js';
 import { ViewsModule } from './views/views.module.js';
 import { AccountsModule } from './accounts/accounts.module.js';
+import { AbuseModule } from './abuse/abuse.module.js';
 
 /**
  * หลังบ้านทีม Friday (ops.fridaymanage.com) · แอปแยกจาก apps/api: โดเมน, session และบัญชีฐานข้อมูลของตัวเอง
@@ -42,7 +43,7 @@ import { AccountsModule } from './accounts/accounts.module.js';
     DbModule, MailModule, PushModule, ApprovalsModule, StaffModule, MetricsModule,
     WorkspacesModule, UsersModule, SupportModule, SystemModule,
     PaymentsModule, BillingModule, PrivacyModule, LegalModule, FlagsModule, EntitlementsModule, DeliveriesModule, MobileModule, AnnouncementsModule, PromotionsModule, ChangelogModule, OnboardingModule, RestoreModule,
-    HelpModule, DevBridgeModule, PresenceModule, ViewsModule, AccountsModule,
+    HelpModule, DevBridgeModule, PresenceModule, ViewsModule, AccountsModule, AbuseModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, { provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_FILTER, useClass: ErrorFilter }],

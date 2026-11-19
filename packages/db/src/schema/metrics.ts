@@ -12,8 +12,12 @@ export const signupAttributions = pgTable('signup_attributions', {
   userId: uuid().primaryKey().references(() => users.id, { onDelete: 'cascade' }),
   utmSource: text(), utmMedium: text(), utmCampaign: text(), utmTerm: text(), referrerHost: text(), landingPath: text(),
   via: text().notNull().default('direct'), invitedByUserId: uuid(), invitedWorkspaceId: uuid(),
-  firstSeenAt: tstz(), createdAt: createdAt(),
-}, (t) => [check('signup_attributions_via_valid', sql`${t.via} IN ('direct', 'invited', 'ops_created')`)]);
+  firstSeenAt: tstz(),
+  /** IP ตอนสมัคร (O50 · ตรวจสมัครถี่จาก IP เดียว) · สมัครก่อนมีคอลัมน์นี้ = null */
+  signupIp: text(),
+  createdAt: createdAt(),
+}, (t) => [check('signup_attributions_via_valid', sql`${t.via} IN ('direct', 'invited', 'ops_created')`),
+  index('signup_attributions_ip_idx').on(t.signupIp, t.createdAt).where(sql`${t.signupIp} IS NOT NULL`)]);
 
 /** ที่มาของ Workspace (คัดลอกจากผู้สร้างตอนสร้าง) */
 export const workspaceAcquisitions = pgTable('workspace_acquisitions', {

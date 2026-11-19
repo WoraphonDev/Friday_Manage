@@ -116,6 +116,7 @@
       "oauth_email_missing": "The provider didn't share an email · Use email and password instead",
       "oauth_email_unverified": "The email on your provider account isn't verified · Verify it first and try again",
       "account_disabled": "This account has been deactivated · Contact your Workspace Admin",
+      "signup_blocked": "Sign-up from this email or network is not allowed · Contact the Friday team if you think this is a mistake",
       "oauth_failed": "Couldn't sign in with the provider · Please try again"
     }
   },

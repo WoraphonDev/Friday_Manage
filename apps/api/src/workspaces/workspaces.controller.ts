@@ -1,9 +1,10 @@
 import { Body, Controller, Get, Inject, Post, Query } from '@nestjs/common';
 import { AnalyticsService } from '../analytics/analytics.service.js';
-import { type Db, schema } from '@friday/db';
+import { type Db, schema, type Tx } from '@friday/db';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { SYSTEM_DB } from '../db/db.module.js';
+import { slugBlocked } from '../auth/abuse-blocks.js';
 import { AppError } from '../common/errors.js';
 import { Auth, type AuthInfo } from '../common/request.js';
 import { parse } from '../common/validate.js';
@@ -52,8 +53,10 @@ export class WorkspacesController {
     });
   }
 
-  private async isFree(db: Pick<Db, 'select'>, s: string) {
+  private async isFree(db: Db | Tx, s: string) {
     if (RESERVED.has(s)) return false;
+    // slug ที่ทีม Friday บล็อก (O50) ตอบเหมือนมีคนใช้แล้ว
+    if (await slugBlocked(db, s)) return false;
     const [row] = await db.select({ id: workspaces.id }).from(workspaces).where(sql`lower(${workspaces.slug}) = ${s}`);
     return !row;
   }

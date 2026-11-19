@@ -1,0 +1,173 @@
+{
+  "title": "ตรวจจับการใช้ผิด",
+  "desc": "สมัครใหม่ 7 วัน {signups} · ระงับอัตโนมัติ 7 วัน {auto} · แจ้งผิด (false positive) {fp} ใน 90 วัน",
+  "descNoFp": "ยังไม่มีการตัดสิน",
+  "todo": "ต้องทำตอนนี้",
+  "todoHint": "รอตรวจ {open} · ระงับอัตโนมัติรอยืนยัน {auto} · เก่าสุด {age}",
+  "clear": "ไม่มีเคสรอตรวจ",
+  "clearNote": "ระบบตรวจทุก 5 นาที · เคสใหม่ขึ้นที่นี่และแจ้งทางมือถือ",
+  "dismiss": "ไม่ใช่การใช้ผิด",
+  "suspendedLeft": "ระงับแล้ว · เหลือ {left}",
+  "suspendedOver": "ระงับแล้ว · เกิน 24 ชม. ยังไม่มีคนยืนยัน",
+  "select": "เลือกเคส {label}",
+  "selectAll": "เลือกทั้งหมดในหน้านี้",
+  "selected": "เลือก {count} เคส",
+  "clearSelection": "ล้างที่เลือก",
+  "bulkTitle": "ตัดสิน {count} เคสพร้อมกัน",
+  "tabs": {
+    "label": "รายการ",
+    "history": "ตัดสินแล้ว 30 วัน",
+    "historyRange": "ตัดสินแล้ว",
+    "blocks": "รายชื่อที่ถูกบล็อก"
+  },
+  "search": "ค้น Workspace อีเมล IP",
+  "searchBlocks": "ค้นค่า เหตุผล",
+  "kind": {
+    "fake_signup": "สมัครปลอม",
+    "invite_spam": "สแปมคำเชิญ",
+    "api_abuse": "API ผิดปกติ",
+    "payment": "การชำระเงิน"
+  },
+  "outcome": {
+    "dismissed": "ไม่ใช่การใช้ผิด",
+    "verify_identity": "ขอยืนยันตัวตน",
+    "suspended": "ระงับ",
+    "blocked": "ลบและบล็อก"
+  },
+  "status": {
+    "open": "รอตรวจ",
+    "auto_suspended": "ระงับอัตโนมัติ"
+  },
+  "f": {
+    "kind": "ประเภท",
+    "outcome": "ผล",
+    "decidedBy": "ตัดสินโดย",
+    "when": "วันที่ตัดสิน",
+    "minScore": "คะแนนขั้นต่ำ",
+    "score": "{n} ขึ้นไป"
+  },
+  "col": {
+    "date": "วันที่",
+    "kind": "ประเภท",
+    "who": "ใคร",
+    "score": "คะแนน",
+    "outcome": "ผล",
+    "by": "ตัดสินโดย",
+    "value": "ค่า",
+    "reason": "เหตุผล",
+    "expires": "หมด",
+    "addedBy": "เพิ่มโดย"
+  },
+  "empty": "ไม่มีเคสที่ตรงตัวกรอง",
+  "emptyHistory": "ยังไม่มีเคสที่ตัดสินใน 30 วัน",
+  "system": "ระบบ",
+  "drawer": {
+    "title": "เคส #{number}",
+    "signals": "ที่มาของคะแนน",
+    "total": "รวม",
+    "workspace": "Workspace",
+    "workspaces": "Workspace ({count})",
+    "more": "และอีก {count}",
+    "users": "บัญชีที่สมัคร ({count})",
+    "verified": "ยืนยันอีเมลแล้ว",
+    "unverified": "ยังไม่ยืนยันอีเมล",
+    "created": "สมัครเมื่อ",
+    "ip": "IP",
+    "plan": "แพ็กเกจ",
+    "paidEver": "เคยจ่ายแล้ว",
+    "neverPaid": "ยังไม่เคยจ่าย",
+    "paying": "จ่ายเงินอยู่",
+    "members": "สมาชิก {n} คน",
+    "invites": "คำเชิญค้าง {n}",
+    "projects": "โปรเจกต์ {n}",
+    "wsStatus": "สถานะ",
+    "deleted": "ลบแล้ว",
+    "open": "เปิดหน้า Workspace",
+    "payingNote": "{name} จ่ายเงินอยู่ · ระงับได้จากหน้า Workspace ซึ่งมีขั้นอนุมัติ",
+    "reason": "เหตุผล (บันทึกใน Audit log)",
+    "willBlock": "จะบล็อก: {what}",
+    "willBlockIp": "IP {ip} 90 วัน",
+    "willBlockDomain": "โดเมน {domain} ถาวร",
+    "nothingToBlock": "ไม่มี IP หรือโดเมนชั่วคราวให้บล็อก · ลบ Workspace อย่างเดียว",
+    "decided": "{outcome} · {by} · {at}",
+    "nextDone": "ตัดสินแล้ว · ไปเคสถัดไป",
+    "allDone": "ตัดสินครบทุกเคสแล้ว",
+    "suspended": "ถูกระงับ"
+  },
+  "action": {
+    "verify": "ขอยืนยันตัวตน",
+    "suspend": "ระงับ",
+    "suspendInvites": "ระงับและลบคำเชิญ",
+    "block": "ลบและบล็อก",
+    "label": "ตัดสินเคสใช้ผิด"
+  },
+  "toast": {
+    "dismissed": "ปลดแล้ว · ไม่เปิดเคสเรื่องนี้ซ้ำ 30 วัน",
+    "verify_identity": "ระงับแบบอ่านอย่างเดียวและส่งอีเมลขอเอกสารแล้ว",
+    "suspended": "ระงับแล้ว",
+    "blocked": "ลบ Workspace แล้ว (กู้คืนได้ 30 วัน) · บล็อก {count} รายการ"
+  },
+  "blocks": {
+    "add": "เพิ่มรายชื่อ",
+    "addTitle": "บล็อกเพิ่ม",
+    "kind": "ชนิด",
+    "value": "ค่า",
+    "valueHint": {
+      "email_domain": "เช่น tempmail.example · ระบบนับเป็นโดเมนชั่วคราวด้วย",
+      "ip": "IP เดี่ยว หรือช่วง CIDR เช่น 203.0.113.0/24",
+      "workspace_slug": "slug ที่ห้ามใช้สร้าง Workspace",
+      "api_token": "รหัส token"
+    },
+    "kinds": {
+      "email_domain": "โดเมนอีเมล",
+      "ip": "IP / ช่วง IP",
+      "workspace_slug": "slug ของ Workspace",
+      "api_token": "API token"
+    },
+    "expires": "นานเท่าไร",
+    "forever": "ถาวร",
+    "days": "{n} วัน",
+    "remove": "เลิกบล็อก",
+    "removeTitle": "เลิกบล็อก {value}",
+    "added": "เพิ่มในรายชื่อที่ถูกบล็อกแล้ว",
+    "removed": "เลิกบล็อกแล้ว",
+    "empty": "ยังไม่มีรายชื่อที่ถูกบล็อก",
+    "emptySearch": "ไม่พบรายชื่อที่ตรงกับคำค้น",
+    "fromCase": "จากเคส #{n}"
+  },
+  "rules": {
+    "title": "กฎตรวจจับ",
+    "desc": "คะแนนรวมถึงเกณฑ์รอตรวจ = เปิดเคส · ถึงเกณฑ์ระงับ = ระบบระงับไปก่อน แล้วรอคนยืนยันภายใน 24 ชม. · ทุกการแก้ต้องแตะกุญแจ",
+    "review": "เกณฑ์รอตรวจ",
+    "autoSuspend": "เกณฑ์ระงับอัตโนมัติ",
+    "signal": "สัญญาณ",
+    "points": "คะแนน",
+    "hits": "เจอ 7 วัน",
+    "fp": "จับผิด",
+    "on": "เปิด",
+    "fpHigh": "จับผิดบ่อย ควรลดคะแนน",
+    "save": "บันทึก",
+    "saved": "บันทึกกฎแล้ว",
+    "noChange": "ไม่มีอะไรเปลี่ยน",
+    "waiting": {
+      "A35b": "รอเชื่อม Gateway จริง (A35b)",
+      "geoip": "รอฐานข้อมูล GeoIP",
+      "O51": "รอสถิติ Rate limit (O51)"
+    },
+    "names": {
+      "temp_email": "อีเมลจากโดเมนชั่วคราว",
+      "ip_burst": "สมัครจาก IP เดียวเกิน 5 ครั้ง/ชม.",
+      "invite_burst": "เชิญอีเมลภายนอกเกิน 50/ชม.",
+      "invite_links": "ข้อความเชิญมีลิงก์ภายนอก",
+      "unverified_heavy": "ไม่ยืนยันอีเมลใน 24 ชม. แต่ใช้งานหนัก",
+      "card_declines": "บัตรถูกปฏิเสธติดกัน 3 ใบขึ้นไป",
+      "geo_mismatch": "ประเทศของ IP ไม่ตรงที่อยู่ออกใบกำกับ",
+      "api_ratelimit": "ชนเพดาน API เกิน 15 นาทีติดกัน"
+    }
+  },
+  "dur": {
+    "d": "{n} วัน",
+    "h": "{n} ชม.",
+    "m": "{n} นาที"
+  }
+}

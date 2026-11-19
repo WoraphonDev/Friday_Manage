@@ -12,7 +12,7 @@ export type NavKey =
   | "system" | "ops" | "deliveries" | "flags" | "ratelimit" | "scripts"
   | "privacy" | "abuse" | "legal" | "restore" | "jit" | "staff" | "audit" | "roadmap";
 export type GroupKey = "" | "customers" | "sales" | "money" | "marketing" | "analytics" | "support" | "system" | "security" | "team";
-export type TaskKey = "paymentExceptions" | "slipsToReview" | "approvals" | "ticketsBreached" | "ticketsUnassigned" | "incidentsOpen" | "invoicesOverdue" | "trialEndingSoon" | "privacyDueSoon" | "breachesOpen";
+export type TaskKey = "paymentExceptions" | "slipsToReview" | "approvals" | "ticketsBreached" | "ticketsUnassigned" | "incidentsOpen" | "invoicesOverdue" | "trialEndingSoon" | "privacyDueSoon" | "breachesOpen" | "abuseOpen";
 
 export interface NavItem {
   key: NavKey;
@@ -95,7 +95,7 @@ export const NAV: { group: GroupKey; items: NavItem[] }[] = [
     group: "security",
     items: [
       { key: "privacy", href: "/privacy", built: true, roles: ["owner", "support", "engineer", "auditor"], badge: ["privacyDueSoon"] },
-      { key: "abuse", roles: ["owner", "engineer"] },
+      { key: "abuse", href: "/abuse", built: true, roles: ["owner", "engineer"], badge: ["abuseOpen"] },
       { key: "legal", href: "/legal", built: true, roles: ["owner", "auditor"] },
       { key: "restore", href: "/restore", built: true, roles: ["owner", "support", "engineer", "auditor"] },
       { key: "jit", roles: ["owner"] },

@@ -62,8 +62,8 @@ export function autoMap(headers: string[], customFields: { id: string; name: str
     out[h] = target;
     if (target) used.add(target);
   }
-  // คอลัมน์ Sprint ของไฟล์แผนรูปแบบเดิม (ไม่มี Key) คือรอบงานแบบ S1 / S2 ไม่ใช่ชื่อ Sprint ในระบบ จึงไม่จับคู่ให้เอง (เลือกเองได้)
-  if (!used.has('key')) for (const h of Object.keys(out)) if (out[h] === 'sprint') out[h] = null;
+  // คอลัมน์ Sprint ของไฟล์แผนรูปแบบเดิม (มี No. / ไม่มี Key) คือรอบงานแบบ S1 / S2 ไม่ใช่ชื่อ Sprint ในระบบ จึงไม่จับคู่ให้เอง (เลือกเองได้)
+  if (!used.has('key') || used.has('no')) for (const h of Object.keys(out)) if (out[h] === 'sprint') out[h] = null;
   return out;
 }
 

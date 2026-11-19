@@ -488,6 +488,7 @@ Path ในตารางตัด `/api/v1` ออก · `w/` = `w/{workspace}
 | DELETE | `p/diagrams/{id}` | `diagram.edit` · Member ลบได้เฉพาะที่ตัวเองสร้าง | ย้ายไปถังขยะ · คนอื่นกำลังแก้ → 409 (Admin ลบได้) |
 | POST | `p/diagrams/{id}/restore` | `project.trash` | |
 | GET | `p/diagram-issues?q&module&phase&status&type&assignee&sprint&overdue&page` | `diagram.edit` | หน้าต่างผูกงาน / แท็บ "งาน" (รอบ 2) · ค้นเลขงาน ชื่อ FR และ Screen · ตัวกรองชุดเดียวกับหน้า Table + ประเภท (task · subtask · bug) · เรียง Module › กลุ่ม › Task › Sub-task · หน้าละ 50 · เลยกำหนดตามกฎของโปรเจกต์ (แยก Dev / QA) |
+| GET | `w/search?type=diagram` | สมาชิก | ค้นชื่อ คำอธิบาย และข้อความในกล่อง / Lane / ป้ายบนเส้น · `matchedIn` + `boxText` · `features.diagrams` บอกว่าแพ็กเกจค้น Diagram ได้ไหม (Free = false, ไม่ตอบ 402) |
 | GET | `p/diagram-issue-filters` | `diagram.edit` | ตัวเลือกของตัวกรอง: Module, กลุ่ม, Sprint, คนในโปรเจกต์ |
 
 ### 3.9 แจ้งเตือน, ค้นหา, รายงาน และ Automation

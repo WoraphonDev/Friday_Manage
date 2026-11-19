@@ -7,10 +7,12 @@
     "comment": "Comment",
     "file": "File",
     "person": "Person",
-    "command": "Command"
+    "command": "Command",
+    "diagram": "Diagram"
   },
   "groups": {
     "issues": "Tasks",
+    "diagrams": "Diagrams",
     "projects": "Projects",
     "content": "Files and comments",
     "people": "People",
@@ -27,7 +29,11 @@
     "archived": "Archived",
     "commentIn": "Comment on {key} {title}",
     "files": "{project} · Files",
-    "command": "Command"
+    "command": "Command",
+    "inBox": "Found in box \"{text}\" · {project}",
+    "inBoxSnippet": "Found in box: {text}",
+    "linked": "{n} linked tasks",
+    "editedBy": "Edited by {name} {date}"
   },
   "palette": {
     "label": "Search and commands",
@@ -66,7 +72,9 @@
     "newProject": "Create new project",
     "import": "Import Excel",
     "profile": "Profile and notification settings",
-    "search": "Go to search page"
+    "search": "Go to search page",
+    "diagrams": "Open this project's diagrams",
+    "newDiagram": "New diagram"
   },
   "page": {
     "title": "Search results for \"{q}\"",
@@ -74,7 +82,7 @@
     "inputLabel": "Search term",
     "placeholder": "Search tasks, projects, files, people · #DP-39 · @name",
     "submit": "Search",
-    "summary": "{count, plural, one {{count} result} other {{count} results}} · Searches titles, descriptions, comments and file names",
+    "summary": "{count, plural, one {{count} result} other {{count} results}} · Searches titles, descriptions, comments, file names and diagrams",
     "capped": "Showing the first {count} results. Add filters to narrow it down",
     "sortLabel": "Sort by",
     "sort": {
@@ -91,7 +99,8 @@
       "file": "File",
       "comment": "Comment",
       "project": "Project",
-      "person": "Person"
+      "person": "Person",
+      "diagram": "Diagram"
     },
     "projectHeading": "Project",
     "allProjects": "All projects",
@@ -118,5 +127,12 @@
     "noResultsHint": "Try removing filters, or search archived projects",
     "startTitle": "Type a search term to start",
     "startHint": "Search tasks, projects, comments, files and people · Type #DP-39 to jump to a task, or @name to find a person"
+  },
+  "templates": {
+    "blank": "Blank",
+    "flowchart": "Flowchart",
+    "er": "ER",
+    "architecture": "Architecture",
+    "whiteboard": "Whiteboard"
   }
 }

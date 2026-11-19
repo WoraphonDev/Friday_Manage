@@ -30190,7 +30190,7 @@
             "required": false,
             "schema": {
               "minItems": 1,
-              "maxItems": 7,
+              "maxItems": 8,
               "type": "array",
               "items": {
                 "type": "string",
@@ -30201,7 +30201,8 @@
                   "project",
                   "comment",
                   "file",
-                  "person"
+                  "person",
+                  "diagram"
                 ]
               }
             }

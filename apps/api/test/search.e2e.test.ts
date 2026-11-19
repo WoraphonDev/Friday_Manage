@@ -145,6 +145,39 @@ describe('GET w/search', () => {
   });
 });
 
+describe('ค้น Diagram (แท็บ Diagram 2026-11-19)', () => {
+  it('ค้นชื่อ คำอธิบาย และข้อความในกล่อง / Lane / ป้ายบนเส้น · บอกว่าเจอที่ไหน · Guest ไม่เห็น · ลบแล้วไม่ขึ้น · Free ไม่ค้น', async () => {
+    const base = `${team.ws}/projects/${team.key}/diagrams`;
+    const byName = (await team.lead.post(base, { name: 'Flow อนุมัติวงเงินสินเชื่อ', template: 'blank' })).body;
+    const byBox = (await team.lead.post(base, { name: 'สถาปัตยกรรมระบบ', description: 'ภาพรวม', template: 'blank' })).body;
+    const save = await team.lead.put(`${base}/${byBox.id}/content`, {
+      revision: byBox.revision,
+      content: { nodes: [{ id: 'a', type: 'process', position: { x: 0, y: 0 }, data: { label: 'Payment Gateway (ตรวจวงเงิน)' } }, { id: 'p', type: 'pool', position: { x: 0, y: 200 }, data: { label: 'pool', lanes: ['Maker', 'Approver ลับ'] } }], edges: [{ id: 'e', source: 'a', target: 'p', label: 'ส่งต่อพิเศษ' }] },
+    });
+    expect(save.status, JSON.stringify(save.body)).toBe(200);
+    const r = await search('q=' + encodeURIComponent('วงเงิน') + '&type=diagram');
+    expect(r.body.features).toEqual({ diagrams: true });
+    const hits = r.body.items as { id: string; matchedIn: string; boxText: string | null; project: { key: string } }[];
+    expect(hits.map((h) => [h.id, h.matchedIn, h.boxText])).toEqual([[byName.id, 'name', null], [byBox.id, 'box', 'Payment Gateway (ตรวจวงเงิน)']]);
+    expect(r.body.counts.diagram).toBe(2);
+    expect((await search('q=' + encodeURIComponent('Approver') + '&type=diagram')).body.items[0].boxText).toBe('Approver ลับ');
+    expect((await search('q=' + encodeURIComponent('ส่งต่อพิเศษ') + '&type=diagram')).body.items[0].id).toBe(byBox.id);
+    expect((await search('q=' + encodeURIComponent('ภาพรวม') + '&type=diagram')).body.items[0].matchedIn).toBe('description');
+    // Guest ที่เป็น Viewer ไม่เห็นแท็บ Diagram
+    expect((await search('q=' + encodeURIComponent('วงเงิน') + '&type=diagram', guest)).body.items).toEqual([]);
+    await team.lead.delete(`${base}/${byName.id}/lock`);
+    await team.lead.delete(`${base}/${byName.id}`);
+    expect((await search('q=' + encodeURIComponent('อนุมัติวงเงิน') + '&type=diagram')).body.items).toEqual([]);
+    await team.lead.get(`${team.ws}/usage`);
+    await t.owner.query(`UPDATE subscriptions SET plan_id = (SELECT id FROM plans WHERE code = 'free'), status = 'active', trial_ends_at = NULL WHERE workspace_id = $1`, [wsId]);
+    const free = await search('q=' + encodeURIComponent('วงเงิน'));
+    expect(free.status).toBe(200);
+    expect(free.body.features).toEqual({ diagrams: false });
+    expect(free.body.counts.diagram).toBe(0);
+    await t.owner.query(`UPDATE subscriptions SET plan_id = (SELECT id FROM plans WHERE code = 'team_s'), status = 'trialing', trial_ends_at = now() + interval '7 days' WHERE workspace_id = $1`, [wsId]);
+  });
+});
+
 describe('saved-searches', () => {
   let id = '';
   it('CRUD เฉพาะของตัวเอง', async () => {

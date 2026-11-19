@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Lock, Plus, RotateCcw, Trash2 } from "lucide-react";
@@ -45,6 +45,7 @@ export function DiagramListPage({ ws, projectKey }: { ws: string; projectKey: st
   const [sort, setSort] = useState<Sort>("updated");
   const [trash, setTrash] = useState(false);
   const [creating, setCreating] = useState(false);
+  const params$ = useSearchParams();
 
   useEffect(() => {
     const h = setTimeout(() => setQ(qInput.trim()), 300);
@@ -65,6 +66,14 @@ export function DiagramListPage({ ws, projectKey }: { ws: string; projectKey: st
   });
   const planBlocked = list.error instanceof ApiError && list.error.code === "plan_feature_unavailable";
   const usage = useQuery({ queryKey: ["usage", ws], queryFn: () => api.get<Usage>(`/w/${encodeURIComponent(ws)}/usage`), enabled: planBlocked });
+  // คำสั่ง "Diagram ใหม่" ใน Ctrl K เปิดหน้านี้ด้วย ?new=1 → เปิดหน้าต่างสร้างทันที แล้วล้าง query ทิ้ง
+  const wantNew = params$?.get("new") === "1";
+  const canCreate = !!list.data?.permissions.edit;
+  useEffect(() => {
+    if (!wantNew || !list.data) return;
+    if (canCreate) setCreating(true);
+    router.replace(pageHref, { scroll: false });
+  }, [wantNew, canCreate, list.data, router, pageHref]);
 
   if (planBlocked) {
     return (

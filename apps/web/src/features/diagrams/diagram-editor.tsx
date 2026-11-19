@@ -3,7 +3,7 @@
 import "@xyflow/react/dist/base.css";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
@@ -57,6 +57,7 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
   const { me } = useWorkspace();
   const router = useRouter();
   const pathname = usePathname();
+  const params$ = useSearchParams();
   const cache = useQueryClient();
   const toast = useToast();
   const mobile = useIsMobile();
@@ -635,6 +636,21 @@ function Editor({ ws, projectKey, id }: { ws: string; projectKey: string; id: st
     },
     [findMatches, flow, setNodes],
   );
+
+  // เปิดจากผลค้นหาที่เจอในกล่อง (?find=คำค้น): เปิดช่องค้นหาในภาพพร้อมคำค้น แล้วพาไปที่กล่องแรกที่ตรง
+  const pendingFind = useRef(params$?.get("find") ?? "");
+  useEffect(() => {
+    const q = pendingFind.current;
+    if (!q || !nodes.length) return;
+    if (findQ !== q) {
+      setFinding(true);
+      setFindQ(q);
+      return;
+    }
+    if (!findMatches.length) return;
+    pendingFind.current = "";
+    setTimeout(() => goToMatch(0), 120);
+  }, [nodes.length, findQ, findMatches, goToMatch]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

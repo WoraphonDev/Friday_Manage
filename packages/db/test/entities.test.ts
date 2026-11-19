@@ -69,7 +69,7 @@ describe('Entity ทุกหมวดตามสเปก', () => {
 
   it('GIN trigram index ครบและใช้ได้จริง', async () => {
     const { rows } = await owner.query(`SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = 'public' AND indexname LIKE '%_trgm_idx'`);
-    expect(rows.map((r) => r.indexname).sort()).toEqual(['comments_body_trgm_idx', 'files_name_trgm_idx', 'help_articles_search_trgm_idx', 'issues_description_trgm_idx', 'issues_title_trgm_idx']);
+    expect(rows.map((r) => r.indexname).sort()).toEqual(['comments_body_trgm_idx', 'diagrams_name_trgm_idx', 'files_name_trgm_idx', 'help_articles_search_trgm_idx', 'issues_description_trgm_idx', 'issues_title_trgm_idx']);
     for (const row of rows) expect(row.indexdef).toContain('USING gin');
     expect((await owner.query(`SELECT similarity('Friday', 'Friday') AS score`)).rows[0].score).toBe(1);
   });

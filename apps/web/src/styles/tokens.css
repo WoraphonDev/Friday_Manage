@@ -108,6 +108,14 @@
   --chart-neutral: #a3a9b0;
   --chart-strong: #3a3f45;
 
+  /* สีกล่องใน Diagram ที่ไม่มีในชุดความหมาย (น้ำเงิน ส้ม) · ผู้ใช้ขอเพิ่มเครื่องมือแต่งกล่อง 2026-11-19 */
+  --diagram-blue-bg: #e7f0fd;
+  --diagram-blue-border: #a8c6f0;
+  --diagram-orange-bg: #ffefe0;
+  --diagram-orange-border: #f3c194;
+  --diagram-blue-line: #2f6fd1;
+  --diagram-orange-line: #c45f14;
+
   --module-auth: #efe9fd;
   --module-appointment: #e3f6ec;
   --module-payment: #fff6d9;
@@ -232,6 +240,13 @@
   --chart-primary-soft: #4f4690;
   --chart-neutral: #5f656d;
   --chart-strong: #c4c9cf;
+
+  --diagram-blue-bg: #172a40;
+  --diagram-blue-border: #33598a;
+  --diagram-orange-bg: #3a2715;
+  --diagram-orange-border: #7d4d22;
+  --diagram-blue-line: #6ea2ee;
+  --diagram-orange-line: #f09a52;
 
   --module-auth: #2c2650;
   --module-appointment: #17332a;

@@ -323,11 +323,13 @@ describe("Project Settings (L2)", () => {
     await waitFor(() => expect(calls.at(-1)).toMatchObject({ method: "PATCH", path: "/w/sample/projects/DE/modules/m-a", body: { color: "#a8325a" } }));
   });
 
-  it("สิทธิ์ของ Role: ตาราง 12 แถว · Admin เปิดเสมอ · เปลี่ยนแล้ว PUT · ล้มเหลวคืนค่าเดิม", async () => {
+  it("สิทธิ์ของ Role: ตาราง 13 แถว (รวม Diagram) · Admin เปิดเสมอ · เปลี่ยนแล้ว PUT · ล้มเหลวคืนค่าเดิม", async () => {
     const user = userEvent.setup();
     settings("perms");
     const table = await screen.findByRole("table", { name: "สิทธิ์ของแต่ละ Role" });
-    expect(within(table).getAllByRole("row")).toHaveLength(13);
+    expect(within(table).getAllByRole("row")).toHaveLength(14);
+    expect(within(table).getByRole("checkbox", { name: "สร้าง / แก้ Diagram สำหรับ Member" })).toBeChecked();
+    expect(within(table).getByRole("checkbox", { name: "สร้าง / แก้ Diagram สำหรับ Viewer" })).not.toBeChecked();
     // แถวรายงาน (ผู้ใช้ขอ 2026-11-17): เปิดไว้ทั้ง Member และ Viewer เท่ากับก่อนมีสวิตช์
     expect(within(table).getByRole("checkbox", { name: "ดูหน้า Reports (Weekly, Plan vs Actual, Traceability) สำหรับ Member" })).toBeChecked();
     expect(within(table).getByRole("checkbox", { name: "ดูรายงานงานที่จะเสร็จ (ปุ่มในหน้า Overview) สำหรับ Viewer" })).toBeChecked();

@@ -21,6 +21,8 @@ export const L2_PERMISSIONS = {
   'due_request.approve': [false, false],
   'file.upload': [true, false],
   'file.delete': [true, false],
+  // แท็บ Diagram (2026-11-19): สร้าง แก้ และผูกงาน · ลบได้เฉพาะ Diagram ที่ตัวเองสร้าง (Admin ลบได้ทุกอัน)
+  'diagram.edit': [true, false],
   'sprint.manage': [false, false],
   'project.invite': [false, false],
   'project.settings': [false, false],
@@ -34,7 +36,7 @@ export const L2_GROUPS: Record<string, (keyof typeof L2_PERMISSIONS)[]> = {
 
 /** ข้อ 3.2: ตายตัวตาม Role */
 const FIXED: Record<ProjectRole, string[]> = {
-  admin: ['project.workload.view', 'issue.record_test', 'issue.time_log', 'project.baseline', 'project.automation', 'project.views.share', 'project.trash', 'project.archive'],
+  admin: ['project.workload.view', 'issue.record_test', 'issue.time_log', 'project.baseline', 'project.automation', 'project.views.share', 'project.trash', 'project.archive', 'diagram.takeover'],
   member: ['project.workload.view', 'issue.record_test', 'issue.time_log'],
   viewer: ['project.workload.view'],
 };

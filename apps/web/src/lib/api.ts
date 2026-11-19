@@ -42,6 +42,8 @@ export interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   etag?: string | number;
   redirectOnUnauthorized?: boolean;
+  /** false = หน้าแสดงข้อความแพ็กเกจเอง ไม่เปิด Dialog 402 กลาง (เช่น แท็บ Diagram ของแพ็กเกจ Free) */
+  planDialog?: boolean;
 }
 
 /** API ที่ตอบ 422 พร้อม details.confirmable + confirmField ให้ถามผู้ใช้แล้วส่งคำขอเดิมซ้ำพร้อมช่องยืนยัน */
@@ -109,6 +111,7 @@ export class ApiClient {
       body,
       etag,
       redirectOnUnauthorized = !path.startsWith("/auth/"),
+      planDialog = true,
       ...init
     } = options;
     const method = (init.method ?? "GET").toUpperCase();
@@ -154,7 +157,7 @@ export class ApiClient {
       );
       if (response.status === 401 && redirectOnUnauthorized)
         emit(API_UNAUTHORIZED, error);
-      if (response.status === 402) emit(API_PLAN_LIMIT, error);
+      if (response.status === 402 && planDialog) emit(API_PLAN_LIMIT, error);
       // เช่น Sub-task วันที่เกินช่วง Task แม่ หรือ Acceptance criteria ยังไม่ครบ: ทุกหน้าใช้กล่องยืนยันเดียวกัน
       const field = error.details.confirmField;
       const plain = typeof body === "object" && body !== null && !form && !blob && !Array.isArray(body);

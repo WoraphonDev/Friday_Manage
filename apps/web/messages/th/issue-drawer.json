@@ -381,6 +381,7 @@
   "noDependenciesYet": "ยังไม่มี Dependency",
   "addDescription": "+ เพิ่มคำอธิบาย",
   "refs": {
+    "diagrams": "Diagram",
     "requirement": "Requirement",
     "screen": "Screen",
     "labels": "Labels",

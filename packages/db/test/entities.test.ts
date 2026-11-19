@@ -29,7 +29,9 @@ const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_
   // Lead และดีล (เฟส 3 · 0059)
   'leads', 'lead_notes',
   // ใบเสนอราคา (เฟส 3 · 0060)
-  'quotes'];
+  'quotes',
+  // สคริปต์ดูแลข้อมูล (เฟส 3 · 0061)
+  'script_runs', 'script_run_changes'];
 
 beforeAll(() => owner.connect());
 afterAll(() => owner.end());

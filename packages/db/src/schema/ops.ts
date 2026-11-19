@@ -641,3 +641,28 @@ export const quotes = pgTable('quotes', {
   check('quotes_months_valid', sql`${t.months} IN (12, 24, 36)`),
   check('quotes_amounts', sql`${t.seats} > 0 AND ${t.pricePerSeatSatang} >= 0 AND ${t.totalSatang} = ${t.subtotalSatang} + ${t.vatSatang}`),
   check('quotes_accepted', sql`(${t.status} = 'accepted') = (${t.acceptedAt} IS NOT NULL)`)]);
+
+export const SCRIPT_RUN_STATUSES = ['dry_run', 'pending_approval', 'running', 'stopping', 'done', 'failed', 'stopped', 'undone'] as const;
+
+/**
+ * การรันสคริปต์ดูแลข้อมูล (O56) · สคริปต์อยู่ในโค้ด (apps/ops-api/src/scripts) ไม่มีช่องพิมพ์ SQL
+ * ทุกครั้งเริ่มจากทดลองรัน (dry_run · ไม่เขียนข้อมูล) → ขออนุมัติคนที่สอง → รันเป็นชุดในพื้นหลัง · หยุดกลางทางได้ · ย้อนกลับด้วยค่าเดิมใน script_run_changes
+ * undo_of = การรันนี้คือการย้อนกลับของการรันไหน
+ */
+export const scriptRuns = pgTable('script_runs', {
+  id: pk(), scriptKey: text().notNull(), workspaceId: uuid().references(() => workspaces.id, { onDelete: 'set null' }),
+  params: jsonb().notNull().default(sql`'{}'::jsonb`), status: text().notNull().default('dry_run'),
+  dryResult: jsonb(), reason: text(), ticketRef: text(),
+  requestedBy: uuid().notNull().references(() => staffUsers.id), approvalRequestId: uuid().references((): AnyPgColumn => approvalRequests.id),
+  approvedBy: uuid().references(() => staffUsers.id), undoOf: uuid().references((): AnyPgColumn => scriptRuns.id),
+  total: integer(), progress: integer().notNull().default(0), changed: integer().notNull().default(0), error: text(),
+  startedAt: tstz(), finishedAt: tstz(), createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [index('script_runs_status_idx').on(t.status, t.createdAt), index('script_runs_workspace_idx').on(t.workspaceId),
+  check('script_runs_status_valid', oneOf(t.status, SCRIPT_RUN_STATUSES))]);
+
+/** ค่าก่อน / หลังของทุกแถวที่สคริปต์เปลี่ยน · เก็บ 30 วันเพื่อย้อนกลับ · table / คอลัมน์มาจากโค้ดของสคริปต์เท่านั้น */
+export const scriptRunChanges = pgTable('script_run_changes', {
+  id: pk(), runId: uuid().notNull().references(() => scriptRuns.id, { onDelete: 'cascade' }),
+  tableName: text().notNull(), rowId: uuid().notNull(), workspaceId: uuid(), before: jsonb().notNull(), after: jsonb().notNull(),
+  createdAt: createdAt(),
+}, (t) => [index('script_run_changes_run_idx').on(t.runId), index('script_run_changes_created_idx').on(t.createdAt)]);

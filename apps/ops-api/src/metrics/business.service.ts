@@ -139,7 +139,8 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
         (select count(*)::int from leads where stage = 'new' or (stage in ('contacted', 'demo', 'proposal') and next_at <= ${todayBkk()}::date)) as "leadsDue",
         (select count(*)::int from quotes q where (q.status = 'sent' and q.valid_until <= ${todayBkk()}::date + 3)
           or (q.status = 'draft' and exists (select 1 from approval_requests r where r.id = q.approval_request_id and r.status = 'pending'))
-          or (q.status = 'accepted' and exists (select 1 from jsonb_each(q.setup) e(k, v) where v->>'status' in ('failed', 'waiting')))) as "quotesDue"`);
+          or (q.status = 'accepted' and exists (select 1 from jsonb_each(q.setup) e(k, v) where v->>'status' in ('failed', 'waiting')))) as "quotesDue",
+        (select count(*)::int from script_runs where status in ('pending_approval', 'running', 'stopping')) as "scriptsPending"`);
     const movement = Object.fromEntries(moves.map((m) => [m.kind, { count: m.n, mrrDelta: m.delta }]));
     // MRR สิ้นเดือนย้อนหลัง 11 เดือน (จากประวัติ subscription_changes) + เดือนนี้ = ตอนนี้ · ไว้วาดกราฟ 12 เดือนหน้าภาพรวม
     const mrrHistory: { month: string; mrrSatang: number }[] = [];
@@ -172,7 +173,7 @@ export class BusinessService implements OnModuleInit, OnModuleDestroy {
         paymentExceptions: counts.paymentExceptions, slipsToReview: counts.slipsToReview, approvals: counts.approvals,
         ticketsBreached: counts.ticketsBreached, ticketsUnassigned: counts.ticketsUnassigned, incidentsOpen: counts.incidentsOpen,
         invoicesOverdue: counts.invoicesOverdue, trialEndingSoon: counts.trialEndingSoon, privacyDueSoon: counts.privacyDueSoon, breachesOpen: counts.breachesOpen,
-        abuseOpen: counts.abuseOpen, rateLimitStreak: counts.rateLimitStreak, jitPending: counts.jitPending, playbookDue: counts.playbookDue, leadsDue: counts.leadsDue, quotesDue: counts.quotesDue,
+        abuseOpen: counts.abuseOpen, rateLimitStreak: counts.rateLimitStreak, jitPending: counts.jitPending, playbookDue: counts.playbookDue, leadsDue: counts.leadsDue, quotesDue: counts.quotesDue, scriptsPending: counts.scriptsPending,
       },
     };
   }

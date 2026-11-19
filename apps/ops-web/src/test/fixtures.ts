@@ -19,7 +19,7 @@ export const overview = {
   month: "2026-11",
   money: { mrr: 18_450_000, arr: 221_400_000, payingWorkspaces: 7, arpa: 2_635_714, movement: {}, netNewMrr: 0, churn: { logoPct: 0, revenuePct: 0, paymentFailures: 0 }, nrrPct: null },
   trialing: 3,
-  tasks: { paymentExceptions: 7, slipsToReview: 1, approvals: 2, ticketsBreached: 0, ticketsUnassigned: 6, incidentsOpen: 3, invoicesOverdue: 0, trialEndingSoon: 0, privacyDueSoon: 2, breachesOpen: 0, abuseOpen: 0, rateLimitStreak: 0, jitPending: 0, playbookDue: 0, leadsDue: 0, quotesDue: 0 },
+  tasks: { paymentExceptions: 7, slipsToReview: 1, approvals: 2, ticketsBreached: 0, ticketsUnassigned: 6, incidentsOpen: 3, invoicesOverdue: 0, trialEndingSoon: 0, privacyDueSoon: 2, breachesOpen: 0, abuseOpen: 0, rateLimitStreak: 0, jitPending: 0, playbookDue: 0, leadsDue: 0, quotesDue: 0, scriptsPending: 0 },
 };
 
 export const metrics: Metrics = {

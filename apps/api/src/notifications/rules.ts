@@ -41,6 +41,12 @@ export const isReviewStatus = (name: unknown) => typeof name === 'string' && nam
 export const REASONS = {
   assignee: 'คุณได้รับมอบหมายงานนี้',
   unassigned: 'คุณถูกถอดออกจากงานนี้',
+  assignedBa: 'คุณได้รับมอบหมายเป็น BA ของงานนี้',
+  assignedSa: 'คุณได้รับมอบหมายเป็น SA ของงานนี้',
+  assignedQa: 'คุณได้รับมอบหมายเป็น QA / Reviewer ของงานนี้',
+  unassignedBa: 'คุณไม่ได้เป็น BA ของงานนี้แล้ว',
+  unassignedSa: 'คุณไม่ได้เป็น SA ของงานนี้แล้ว',
+  unassignedQa: 'คุณไม่ได้เป็น QA / Reviewer ของงานนี้แล้ว',
   watcher: 'คุณติดตาม (Watch) งานนี้',
   parentAssignee: 'คุณรับผิดชอบงานแม่ของ Sub-task นี้',
   reviewer: 'คุณเป็น Reviewer ของงานนี้',
@@ -80,6 +86,12 @@ export const RETIRED_JOBS = ['notifications.due-reminders', 'notifications.overd
 const REASONS_EN: Record<string, string> = {
   [REASONS.assignee]: 'you are assigned to this task',
   [REASONS.unassigned]: 'you were removed from this task',
+  [REASONS.assignedBa]: 'you were assigned as the BA of this task',
+  [REASONS.assignedSa]: 'you were assigned as the SA of this task',
+  [REASONS.assignedQa]: 'you were assigned as QA / Reviewer of this task',
+  [REASONS.unassignedBa]: 'you are no longer the BA of this task',
+  [REASONS.unassignedSa]: 'you are no longer the SA of this task',
+  [REASONS.unassignedQa]: 'you are no longer QA / Reviewer of this task',
   [REASONS.watcher]: 'you watch this task',
   [REASONS.parentAssignee]: 'you own the parent task of this sub-task',
   [REASONS.reviewer]: 'you are the reviewer of this task',
@@ -106,5 +118,14 @@ const REASONS_EN: Record<string, string> = {
   'คุณมอบหมายงาน หรือเป็น PM ของงานที่ผู้ลารับผิดชอบอยู่': 'you assigned work to, or are the PM of, someone taking leave',
   'มีเหตุการณ์ที่เกี่ยวข้องกับคุณ': 'something related to you happened',
 };
+
+/** บทบาทที่มากับ issue.assigned (BA / SA / QA) · ไม่มี = Dev */
+export type AssignRole = 'ba' | 'sa' | 'qa';
+export const ASSIGN_ROLES: Record<AssignRole, { label: string; added: string; removed: string }> = {
+  ba: { label: 'BA', added: REASONS.assignedBa, removed: REASONS.unassignedBa },
+  sa: { label: 'SA', added: REASONS.assignedSa, removed: REASONS.unassignedSa },
+  qa: { label: 'QA / Reviewer', added: REASONS.assignedQa, removed: REASONS.unassignedQa },
+};
+export const assignRoleOf = (v: unknown): AssignRole | null => (v === 'ba' || v === 'sa' || v === 'qa' ? v : null);
 
 export const reasonIn = (locale: 'th' | 'en', why: string) => (locale === 'en' ? (REASONS_EN[why] ?? why) : why);

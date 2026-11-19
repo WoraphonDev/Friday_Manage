@@ -14,6 +14,7 @@ import { queryKeys } from "@/lib/query";
 import type { List, Me, NotificationSummary, Workspace } from "@/lib/types";
 import styles from "./bell.module.css";
 import { DAILY_EVENT, useDailyTitle } from "@/features/daily-summary/daily-title";
+import { assignVerb } from "./assign-verb";
 
 type Tab = "all" | "unread" | "mention";
 interface BellItem {
@@ -105,7 +106,7 @@ export function Bell({ workspace, unread = 0 }: { workspace: string; unread?: nu
       const who = latest.actor?.displayName ?? (latest.payload.actorName as string | undefined) ?? "Friday";
       const key = typeof latest.payload.issueKey === "string" ? latest.payload.issueKey : null;
       const typeKey = latest.eventType.replace(/\./g, "__");
-      const verb = ti.has(`verbs.${typeKey}` as never) ? ti(`verbs.${typeKey}` as never) : ti("verbs.other");
+      const verb = assignVerb(ti, latest) ?? (ti.has(`verbs.${typeKey}` as never) ? ti(`verbs.${typeKey}` as never) : ti("verbs.other"));
       const inbox = `/work/${encodeURIComponent(slug)}/inbox?n=${latest.id}`;
       toast({
         actor: { id: latest.actor?.id ?? latest.id, displayName: who },

@@ -1,4 +1,5 @@
 // ข้อความแจ้งเตือนที่ส่งออกนอกแอป (N2) · โครงสร้างเดียวกันทุกช่องทาง แล้ว render ตามช่องทางอีกที
+import { ASSIGN_ROLES, assignRoleOf } from '../notifications/rules.js';
 
 export type Locale = 'th' | 'en';
 /** ภาษาที่รองรับ · ค่าอื่นใช้ไทย */
@@ -55,7 +56,14 @@ const nameOf = (v: unknown) => {
 
 /** หัวข้อและสีของแต่ละเหตุการณ์ · ชื่อผู้ทำใส่ในหัวข้อเมื่อมี */
 const HEADS: Record<string, { head: (p: Record<string, unknown>, who: string) => string; color: string }> = {
-  'issue.assigned': { head: (p, who) => (p.removed ? `${who} ถอดคุณออกจากงาน` : `${who} มอบหมายงานให้คุณ`), color: '#1D4ED8' },
+  'issue.assigned': {
+    head: (p, who) => {
+      const role = assignRoleOf(p.role);
+      if (role) return p.removed ? `${who} ถอดคุณออกจาก ${ASSIGN_ROLES[role].label} ของงาน` : `${who} มอบหมายให้คุณเป็น ${ASSIGN_ROLES[role].label}`;
+      return p.removed ? `${who} ถอดคุณออกจากงาน` : `${who} มอบหมายงานให้คุณ`;
+    },
+    color: '#1D4ED8',
+  },
   'issue.review_requested': { head: (_p, who) => `${who} ขอให้คุณ Review`, color: '#1D4ED8' },
   'issue.mentioned': { head: (_p, who) => `${who} กล่าวถึงคุณในคอมเมนต์`, color: '#1D4ED8' },
   'issue.commented': { head: (_p, who) => `${who} คอมเมนต์ในงานที่คุณติดตาม`, color: '#3D4550' },
@@ -83,7 +91,11 @@ const HEADS: Record<string, { head: (p: Record<string, unknown>, who: string) =>
 
 /** หัวข้อภาษาอังกฤษ (W21) · เหตุการณ์ที่ไม่มีในนี้ใช้ชื่อเหตุการณ์ */
 const HEADS_EN: Record<string, (p: Record<string, unknown>, who: string) => string> = {
-  'issue.assigned': (p, who) => (p.removed ? `${who} removed you from a task` : `${who} assigned you a task`),
+  'issue.assigned': (p, who) => {
+    const role = assignRoleOf(p.role);
+    if (role) return p.removed ? `${who} removed you as ${ASSIGN_ROLES[role].label}` : `${who} assigned you as ${ASSIGN_ROLES[role].label}`;
+    return p.removed ? `${who} removed you from a task` : `${who} assigned you a task`;
+  },
   'issue.review_requested': (_p, who) => `${who} asked you to review`,
   'issue.mentioned': (_p, who) => `${who} mentioned you in a comment`,
   'issue.commented': (_p, who) => `${who} commented on a task you watch`,

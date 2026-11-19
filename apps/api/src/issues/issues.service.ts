@@ -16,7 +16,7 @@ import { isLegacyRank, PLAIN_RANK, rankAfter, rankBetween, spreadRanks } from '.
 import { type ProjectRow, ProjectsService } from '../projects/projects.service.js';
 import { issueProgress, listIssues, TableListQuery } from './table.js';
 import { hasChecklist } from './checklist-progress.js';
-import { baList, enforceWorkflowRules, workflowRuleEnabled } from './rules.js';
+import { baList, enforceWorkflowRules, reviewerList, workflowRuleEnabled } from './rules.js';
 import { checkCustomValues, checkProfile, type CustomFieldDef, type CustomValues, CustomValuesBody, displayValue, readCustomValues, writeCustomValues } from './custom-values.js';
 import type { Level, ProfileValues } from '../projects/field-profile.js';
 import { openStatus } from '../common/status-category.js';
@@ -298,6 +298,8 @@ export class IssuesService {
       events.push(ev('issue.created', { type: type.name, parentKey: parent ? `${project.key}-${parent.number}` : null }));
       if (type.name === 'Bug') events.push(ev('bug.created', { severity: issue.severity }));
       if (input.assigneeIds.length) events.push(ev('issue.assigned', { userIds: input.assigneeIds, removedUserIds: [] }));
+      // Bug แจ้ง BA ด้วย bug.created อยู่แล้ว จึงไม่ส่งรายการมอบหมาย BA ซ้ำ
+      events.push(...roleEvents(ev, null, issue, input.assigneeIds, type.name === 'Bug' ? ['ba'] : []));
       return { ...(await this.dto(tx, project, issue, access)), warnings };
     });
     await this.events.publish(events);
@@ -916,6 +918,8 @@ export class IssuesService {
       const removed = assignees.before.filter((x) => !assignees.after.includes(x));
       if (added.length || removed.length) out.push(ev('issue.assigned', { userIds: added, removedUserIds: removed }));
     }
+    const devAdded = assignees ? assignees.after.filter((x) => !assignees.before.includes(x)) : [];
+    out.push(...roleEvents(ev, before, after, devAdded));
     return out;
   }
 
@@ -1303,6 +1307,32 @@ function eventFor(auth: AuthInfo, tenant: TenantInfo, project: ProjectRow, issue
     data: { issueKey: `${project.key}-${issue.number}`, title: issue.title, ...data },
     at: new Date(),
   });
+}
+
+/** บทบาทในงานที่นับเป็น "มอบหมายให้ฉัน" นอกจาก Dev (ตรงกับ rolesOf ของ My Tasks) */
+const ROLE_LISTS = {
+  ba: baList,
+  sa: (i: Issue) => (i.saId ? [i.saId] : []),
+  qa: reviewerList,
+} as const;
+
+/**
+ * ตั้ง BA / SA / QA ให้ใคร = มอบหมายงานให้คนนั้น จึงส่ง issue.assigned พร้อม role ให้เข้า Inbox แท็บ "มอบหมาย"
+ * คนที่ได้เป็น Dev หรือบทบาทอื่นในคำสั่งเดียวกันแล้วไม่ได้ซ้ำ · before = null คือสร้างงานใหม่
+ */
+function roleEvents(ev: ReturnType<typeof eventFor>, before: Issue | null, after: Issue, alreadyAdded: readonly string[], skip: readonly (keyof typeof ROLE_LISTS)[] = []) {
+  const notified = new Set(alreadyAdded);
+  const out: DomainEvent[] = [];
+  for (const [role, list] of Object.entries(ROLE_LISTS)) {
+    if (skip.includes(role as keyof typeof ROLE_LISTS)) continue;
+    const was = before ? list(before) : [];
+    const now = list(after);
+    const added = now.filter((x) => !was.includes(x) && !notified.has(x));
+    const removed = was.filter((x) => !now.includes(x));
+    added.forEach((x) => notified.add(x));
+    if (added.length || removed.length) out.push(ev('issue.assigned', { userIds: added, removedUserIds: removed, role }));
+  }
+  return out;
 }
 
 /** Actual Start / End ตั้งอัตโนมัติเมื่อเปลี่ยนสถานะ */

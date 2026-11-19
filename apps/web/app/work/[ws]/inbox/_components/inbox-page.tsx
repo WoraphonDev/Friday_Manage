@@ -18,6 +18,7 @@ import { inboxKey, type Filter, type InboxNotification, type InboxPage as Page }
 import styles from "./inbox.module.css";
 import { statusTone } from "@/lib/status";
 import { DAILY_EVENT, DailySummary, useDailyTitle } from "@/features/daily-summary/daily-summary";
+import { assignVerb } from "@/features/bell/assign-verb";
 
 const FILTERS: Filter[] = ["all", "unread", "assign", "mention", "activity", "due"];
 /** มือถือตามต้นแบบ: ยังไม่อ่าน · ทั้งหมด · ถึงฉัน · มอบหมาย (ตัวกรองอื่นอยู่บน desktop) */
@@ -42,7 +43,7 @@ export function useLabels() {
   const has = (group: "types" | "verbs", type: string) => t.has(`${group}.${k(type)}` as never);
   return {
     type: (n: InboxNotification) => (has("types", n.eventType) ? t(`types.${k(n.eventType)}` as never) : t("types.other")),
-    verb: (n: InboxNotification) => (has("verbs", n.eventType) ? t(`verbs.${k(n.eventType)}` as never) : t("verbs.other")),
+    verb: (n: InboxNotification) => assignVerb(t, n) ?? (has("verbs", n.eventType) ? t(`verbs.${k(n.eventType)}` as never) : t("verbs.other")),
     actor: (n: InboxNotification) => n.actor?.displayName ?? (n.payload.actorName as string | undefined) ?? t("system"),
   };
 }

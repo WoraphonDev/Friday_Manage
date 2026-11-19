@@ -91,6 +91,30 @@ describe('ผู้รับตาม 03-api › Event ที่ระบบส�
     expect(rows.find((r) => r.recipient === 'dev')).toMatchObject({ reason: 'คุณถูกถอดออกจากงานนี้', payload: expect.objectContaining({ removed: true }) });
   });
 
+  it('ตั้ง BA / SA / QA = มอบหมายงาน (issue.assigned พร้อม role) · Sub-task ก็แจ้ง · คนที่ได้เป็น Dev ในคำสั่งเดียวกันได้รายการเดียว', async () => {
+    const parent = await createIssue({ title: 'หน้าตรวจสอบเอกสาร' });
+    const m = await mark();
+    const sub = await createIssue({ title: 'ตรวจรหัสตัวแทน', parentKey: parent.key, assigneeIds: [team.devId], saId: people.ba.id, reviewerIds: [people.reviewer.id, team.devId] });
+    let rows = await since(m);
+    expect(pairs(rows)).toEqual(['issue.assigned→ba', 'issue.assigned→dev', 'issue.assigned→reviewer']);
+    expect(rows.find((r) => r.recipient === 'ba')).toMatchObject({ reason: 'คุณได้รับมอบหมายเป็น SA ของงานนี้', issue_key: sub.key, payload: expect.objectContaining({ role: 'sa' }) });
+    expect(rows.find((r) => r.recipient === 'reviewer')).toMatchObject({ reason: 'คุณได้รับมอบหมายเป็น QA / Reviewer ของงานนี้', payload: expect.objectContaining({ role: 'qa' }) });
+    expect(rows.find((r) => r.recipient === 'dev')!.payload.role).toBeUndefined();
+
+    // แก้ SA ของ Sub-task: คนใหม่ได้มอบหมาย · คนเดิมได้แจ้งว่าไม่ได้เป็น SA แล้ว
+    const m2 = await mark();
+    await patch(sub.key, { saId: people.watcher.id });
+    rows = await since(m2);
+    expect(pairs(rows)).toEqual(['issue.assigned→ba', 'issue.assigned→watcher']);
+    expect(rows.find((r) => r.recipient === 'watcher')).toMatchObject({ reason: 'คุณได้รับมอบหมายเป็น SA ของงานนี้', payload: expect.objectContaining({ role: 'sa' }) });
+    expect(rows.find((r) => r.recipient === 'ba')).toMatchObject({ reason: 'คุณไม่ได้เป็น SA ของงานนี้แล้ว', payload: expect.objectContaining({ role: 'sa', removed: true }) });
+
+    // ตั้งตัวเองเป็น BA ไม่แจ้งตัวเอง
+    const m3 = await mark();
+    await patch(sub.key, { baIds: [team.leadId] });
+    expect(await since(m3)).toEqual([]);
+  });
+
   it('issue.status_changed → Watcher และผู้รับผิดชอบ Task แม่เมื่อ Sub-task เปลี่ยน', async () => {
     const parent = await createIssue({ title: 'งานแม่', assigneeIds: [people.ba.id] });
     const child = await createIssue({ title: 'งานลูก', parentKey: parent.key, assigneeIds: [team.devId] });

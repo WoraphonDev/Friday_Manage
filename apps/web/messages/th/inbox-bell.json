@@ -73,6 +73,11 @@
       "other": "แจ้งเตือน",
       "digest__daily": "สรุปประจำวัน"
     },
+    "assignVerbs": {
+      "removed": "ถอดคุณออกจากงาน",
+      "addedRole": "มอบหมายให้คุณเป็น {role} ใน",
+      "removedRole": "ถอดคุณออกจาก {role} ใน"
+    },
     "verbs": {
       "project__paused": "พักโปรเจกต์ชั่วคราว",
       "project__resumed": "เปิดใช้งานโปรเจกต์ต่อ",

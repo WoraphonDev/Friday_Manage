@@ -6,7 +6,7 @@ import { Jobs } from '../queue/jobs.js';
 import { Audience, type IssueCtx, type ProjectCtx } from './audience.js';
 import { Notifier } from './notifier.js';
 import { Reminders } from './reminders.js';
-import { IN_APP_LOCKED, isReviewStatus, JOBS, NO_INBOX, REASONS, RETIRED_JOBS, SCHEDULES, SENT_AT_SOURCE, WATCHED_FIELDS } from './rules.js';
+import { ASSIGN_ROLES, assignRoleOf, IN_APP_LOCKED, isReviewStatus, JOBS, NO_INBOX, REASONS, RETIRED_JOBS, SCHEDULES, SENT_AT_SOURCE, WATCHED_FIELDS } from './rules.js';
 
 /** Event ที่ผ่านคิว (JSON) · at เป็น string */
 type QueuedEvent = Omit<DomainEvent, 'at'> & { at: string | Date };
@@ -115,11 +115,15 @@ export class NotificationFanout implements OnModuleInit {
     };
 
     switch (event.type) {
-      case 'issue.assigned':
+      case 'issue.assigned': {
+        // BA / SA / QA ถูกมอบหมายผ่านช่องบทบาท · ส่ง role ไปให้ Inbox / Email / LINE บอกว่าได้บทบาทอะไร
+        const role = assignRoleOf(d.role);
+        const extra = role ? { role } : {};
         return [
-          new Send('issue.assigned').add(ids(d.userIds), REASONS.assignee),
-          new Send('issue.assigned', { removed: true }).add(ids(d.removedUserIds), REASONS.unassigned),
+          new Send('issue.assigned', extra).add(ids(d.userIds), role ? ASSIGN_ROLES[role].added : REASONS.assignee),
+          new Send('issue.assigned', { ...extra, removed: true }).add(ids(d.removedUserIds), role ? ASSIGN_ROLES[role].removed : REASONS.unassigned),
         ];
+      }
 
       case 'issue.status_changed': {
         const changed = new Send('issue.status_changed', { from: d.from, to: d.to }).add(await watchers(), REASONS.watcher);

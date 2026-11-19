@@ -262,8 +262,8 @@
 
 /* ---- Task v2 (Canvas B2 / C2 / D2 · ผู้ใช้ตัดสิน 2026-11-08) ---- */
 /* Acceptance criteria / Checklist สองกล่อง · ข้อที่เสร็จพับไว้ท้ายกล่อง (แบบ C ผู้ใช้เลือก 2026-11-19) */
-.checkBox { display:flex; flex-direction:column; gap:6px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; }
-.checkBoxAcceptance { background:var(--surface-2); }
+.checkBox { --check-bg:var(--card); display:flex; flex-direction:column; gap:6px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; }
+.checkBoxAcceptance { --check-bg:var(--surface-2); background:var(--check-bg); }
 .checkBox .checkHead { display:flex; align-items:center; gap:8px; margin:0; font-size:13px; font-weight:700; color:var(--foreground); }
 .checkHint { margin-left:auto; font-size:11px; font-weight:400; color:var(--muted); }
 .checkWarn { margin:0; font-size:11px; color:var(--warning-text); }
@@ -283,7 +283,13 @@
 .checkBar { height:4px; border-radius:4px; background:var(--subtle); overflow:hidden; }
 .checkBar>i { display:block; height:100%; border-radius:4px; background:var(--primary); transition:width var(--motion-dur) var(--motion-ease); }
 .clamp2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.checkMore { flex:none; border:0; background:transparent; padding:0; font:inherit; font-size:11px; font-weight:600; line-height:20px; color:var(--primary-text); cursor:pointer; }
+.checkBody { position:relative; flex:1; min-width:0; }
+.checkBody>.checkText { width:100%; }
+.checkMore { display:block; border:0; background:transparent; padding:0; font:inherit; font-weight:600; line-height:20px; color:var(--primary-text); cursor:pointer; }
+.checkMore:hover { text-decoration:underline; }
+/* "… เพิ่มเติม" ทับท้ายบรรทัดที่ 2 ของข้อความที่ถูกตัด · พื้นจางจากข้อความเข้าสีกล่อง */
+.checkMoreInline { position:absolute; right:0; top:calc(var(--clamp-end, 40px) - 20px); padding-left:24px; background:linear-gradient(to right, transparent, var(--check-bg, var(--card)) 18px); }
+.checkMoreInline::before { content:'… '; color:var(--foreground); font-weight:400; }
 .checkFold { display:flex; align-items:center; gap:6px; width:100%; padding:5px 8px; margin-top:2px; border:0; border-radius:6px; background:var(--subtle); font:inherit; font-size:12px; font-weight:600; color:var(--foreground); text-align:left; cursor:pointer; transition:background var(--motion-dur-s) var(--motion-ease); }
 .checkFold:hover { background:var(--primary-soft); }
 .checkFold>svg { color:var(--muted); flex:none; }

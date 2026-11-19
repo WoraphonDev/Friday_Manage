@@ -18,14 +18,18 @@ const SETTLE_HOLD_MS = 700;
 const SETTLE_LEAVE_MS = 550;
 const foldKey = (kind: CheckKind) => `friday:checklist-done-open:${kind}`;
 
-/** ข้อความยาวเกิน 2 บรรทัดตัดไว้ · ปุ่ม "ดูทั้งหมด" แสดงเฉพาะเมื่อถูกตัดจริง */
+/** ข้อความยาวเกิน 2 บรรทัดตัดไว้ · ปุ่ม "เพิ่มเติม" แสดงเฉพาะเมื่อถูกตัดจริง
+ *  บอกตำแหน่งท้ายบรรทัดที่ 2 ให้กรอบแถว (--clamp-end) เพื่อวางปุ่มต่อจาก "…" (ผู้ใช้ขอ 2026-11-19) · ปุ่มซ้อนในปุ่มข้อความไม่ได้ จึงวางทับแทน */
 function useClamped(expanded: boolean) {
   const ref = useRef<HTMLSpanElement>(null);
   const [overflow, setOverflow] = useState(false);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || expanded) return;
-    const measure = () => setOverflow(el.scrollHeight > el.clientHeight + 1);
+    const measure = () => {
+      setOverflow(el.scrollHeight > el.clientHeight + 1);
+      el.closest<HTMLElement>('[data-check-body]')?.style.setProperty('--clamp-end', `${el.offsetTop + el.offsetHeight}px`);
+    };
     measure();
     if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(measure);
@@ -66,7 +70,7 @@ export function Checklist({ scope, issueKey }: { scope: Scope; issueKey: string 
     try { setDoneOpen({ acceptance: localStorage.getItem(foldKey('acceptance')) === '1', checklist: localStorage.getItem(foldKey('checklist')) === '1' }); } catch { /* ใช้ค่าเริ่มต้น: พับ */ }
   }, []);
   useEffect(() => () => { timers.current.forEach((id) => window.clearTimeout(id)); }, []);
-  // ปุ่ม "ดูทั้งหมด" ขึ้นกับว่าข้อความถูกตัดจริงไหม · วัดจาก data-overflow ที่ CheckText ตั้งไว้
+  // ปุ่ม "เพิ่มเติม" ขึ้นกับว่าข้อความถูกตัดจริงไหม · วัดจาก data-overflow ที่ CheckText ตั้งไว้
   useLayoutEffect(() => {
     const ids = new Set([...(listRef.current?.querySelectorAll<HTMLElement>('[data-check-id]') ?? [])].filter((el) => el.querySelector('[data-overflow]')).map((el) => el.dataset.checkId!));
     if (ids.size !== overflowing.size || [...ids].some((id) => !overflowing.has(id))) setOverflowing(ids);
@@ -114,12 +118,12 @@ export function Checklist({ scope, issueKey }: { scope: Scope; issueKey: string 
             <Button type="submit" size="small" variant="primary" disabled={pending || !edit.text.trim()}>{t('save')}</Button>
             <Button size="small" onClick={() => setEdit(null)} disabled={pending}>{t('cancel')}</Button>
           </form>
-          : <button disabled={!canEdit} className={styles.checkText} onClick={() => setEdit({ id: item.id, text: item.text })}>
+          : <div className={styles.checkBody} data-check-body=""><button disabled={!canEdit} className={styles.checkText} onClick={() => setEdit({ id: item.id, text: item.text })}>
             {/* ขีดฆ่าเฉพาะข้อความ · คนติ๊กและวันที่ไม่ขีดฆ่า */}
             <CheckText text={item.text} done={item.done} expanded={open} className={styles.checked} />
             {item.done && item.doneAt && <small className={styles.checkMeta}>{doneByName(item.doneBy) ? t('checkDoneBy', { name: doneByName(item.doneBy)!, date: formatDate(item.doneAt, scope.yearFormat) }) : formatDate(item.doneAt, scope.yearFormat)}</small>}
-          </button>}
-        {!editing && (open || overflowing.has(item.id)) && <button type="button" className={styles.checkMore} aria-expanded={open} aria-label={t(open ? 'checkShowLessOf' : 'checkShowMoreOf', { text: item.text })} onClick={() => setExpanded((now) => { const nextSet = new Set(now); if (open) nextSet.delete(item.id); else nextSet.add(item.id); return nextSet; })}>{t(open ? 'checkShowLess' : 'checkShowMore')}</button>}
+          </button>
+          {(open || overflowing.has(item.id)) && <button type="button" className={open ? styles.checkMore : `${styles.checkMore} ${styles.checkMoreInline}`} aria-expanded={open} aria-label={t(open ? 'checkShowLessOf' : 'checkShowMoreOf', { text: item.text })} onClick={() => setExpanded((now) => { const nextSet = new Set(now); if (open) nextSet.delete(item.id); else nextSet.add(item.id); return nextSet; })}>{t(open ? 'checkShowLess' : 'checkShowMore')}</button>}</div>}
         {canEdit && !editing && <div className={styles.actions}>
           {!item.done && <>
           <Button variant="ghost" size="icon" aria-label={t('itemUp', { text: item.text })} disabled={pending || !prev} onClick={() => prev && swap(prev.id, item.id)}><ArrowUp size={14} /></Button>

@@ -189,7 +189,7 @@ a.card:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
 .selected { --node-border:var(--primary); box-shadow:0 0 0 1px var(--primary); }
 .svgShape.selected, .kind_stick.selected, .kind_text.selected { box-shadow:none; }
 .dropTarget { --node-border:var(--primary); outline:2px dashed var(--primary); outline-offset:4px; }
-.shapeIcon { color:var(--node-border, var(--foreground-soft)); flex:none; position:relative; z-index:1; }
+.shapeIcon { color:var(--foreground-soft); flex:none; position:relative; z-index:1; }
 .kind_icon .shapeIcon { color:var(--primary-text); }
 .variant_pill { border-radius:999px; background:var(--node-bg, var(--subtle)); }
 .variant_round { border-radius:18px; }

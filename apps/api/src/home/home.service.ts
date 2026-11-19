@@ -59,8 +59,8 @@ export class HomeService {
       const open = sc.issues.filter((i) => !sc.isDone(i));
       // สถิติ "ทีม" นับเฉพาะโปรเจกต์ที่ฉันเป็นสมาชิก · "ของฉัน" นับทุกโปรเจกต์ที่เข้าถึงได้
       const team = open.filter((i) => sc.mine.has(i.projectId) && sc.due(i).date);
-      // "ของฉัน" นับทุกบทบาทในงาน (Dev, BA, SA, QA / Reviewer) ให้ตรงกับแท็บ "มอบหมายให้ฉัน"
-      const myOpen = open.filter((i) => sc.rolesOf(i, auth.userId).length > 0);
+      // "ของฉัน" นับเฉพาะงานที่ฉันเป็นผู้รับผิดชอบ (Dev) ให้ตรงกับแท็บ "มอบหมายให้ฉัน"
+      const myOpen = open.filter((i) => sc.rolesOf(i, auth.userId).includes('dev'));
       const weekLast = lastWorkday(week.end);
       const count = (list: Issue[], pred: (i: Issue) => boolean) => list.filter(pred).length;
       // วันครบกำหนดตามขั้นของงาน: งานที่ส่ง QA แล้วในโปรเจกต์แยก Dev / QA ใช้ QA Due
@@ -185,7 +185,7 @@ export class HomeService {
           daysToGolive: p.goliveDate ? daysBetween(now, p.goliveDate) : null,
           progressPct: total ? Math.round((finished / total) * 100) : 0,
           overdue: open.filter((i) => { const d = sc.due(i).date; return d && d < now; }).length,
-          myTasks: open.filter((i) => sc.rolesOf(i, auth.userId).length > 0).length,
+          myTasks: open.filter((i) => sc.rolesOf(i, auth.userId).includes('dev')).length,
           health: { level: health.level, gapPct: health.gapPct },
         };
       }),
@@ -256,8 +256,8 @@ export class HomeService {
         (await tx.select({ issueId: s.issueWatchers.issueId }).from(s.issueWatchers).where(and(eq(s.issueWatchers.userId, auth.userId), eq(s.issueWatchers.workspaceId, tenant.workspaceId)))).map((w) => w.issueId),
       );
       const me = (i: Issue, tab: z.infer<typeof MyIssuesQuery>['tab']) =>
-        // มอบหมายให้ฉัน = ทุกบทบาท ไม่ใช่แค่ผู้รับผิดชอบ (BA ที่ถูกตั้งเป็น QA ต้องเห็นงานด้วย)
-        tab === 'assigned' ? sc.rolesOf(i, auth.userId).length > 0 : tab === 'reviewer' ? reviewerList(i).includes(auth.userId) : tab === 'watching' ? watched.has(i.id) : i.createdBy === auth.userId;
+        // มอบหมายให้ฉัน = งานที่ฉันเป็นผู้รับผิดชอบ (Dev) จริง ๆ · BA / SA ไม่นับ (ผู้ใช้สั่ง 19 พ.ย. 2026) · QA อยู่แท็บของตัวเอง
+        tab === 'assigned' ? sc.rolesOf(i, auth.userId).includes('dev') : tab === 'reviewer' ? reviewerList(i).includes(auth.userId) : tab === 'watching' ? watched.has(i.id) : i.createdBy === auth.userId;
       const open = (i: Issue) => !sc.isDone(i);
       // จำนวนบนแต่ละแท็บนับเฉพาะงานที่ยังไม่เสร็จ
       const counts = Object.fromEntries((['assigned', 'reviewer', 'watching', 'created'] as const).map((t) => [t, sc.issues.filter((i) => open(i) && me(i, t)).length]));
@@ -304,7 +304,7 @@ export class HomeService {
           subtasks: subCounts.get(i.id) ?? null,
           assignees: (sc.assignees.get(i.id) ?? []).map((u) => people.get(u)).filter((x): x is Person => !!x),
           myRoles: sc.rolesOf(i, auth.userId),
-          // แท็บ "มอบหมายให้ฉัน" รวม BA / SA ที่เปลี่ยนสถานะไม่ได้ · หน้าเว็บซ่อนช่องติ๊กเสร็จตามค่านี้
+          // แท็บอื่น (เช่น ฉันสร้าง, Watching) มีงานที่ฉันเปลี่ยนสถานะไม่ได้ · หน้าเว็บซ่อนช่องติ๊กเสร็จตามค่านี้
           canMove: canMoveIssue(sc.access.get(i.projectId)!, { ...i, assigneeIds: sc.assignees.get(i.id) ?? [] }),
           version: i.version,
         };

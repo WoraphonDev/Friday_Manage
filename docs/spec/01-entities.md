@@ -274,6 +274,8 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 | `customer_account` | บัญชีลูกค้าระดับบริษัท (ช่วง 3) · รวม Workspace ของผู้ซื้อเดียวกันและบริษัทในเครือ · ระบบเสนอ คนยืนยัน · Enterprise มีสัญญาและ SLA ตามสัญญาแทนของแพ็กเกจ | name, tax_ids[], manager_id, kind (standard · enterprise), contacts, notes, contract_start, contract_end, contract_value (สตางค์/ปี), contract_seats, contract_sla, renewal_reminded | Ops บัญชีลูกค้า, วันต่อสัญญา, Ticket |
 | `customer_account_workspace` | Workspace ในบัญชีลูกค้า · หนึ่ง Workspace อยู่ได้บัญชีเดียว | workspace_id (PK), account_id, added_by | Ops บัญชีลูกค้า, Workspaces |
 | `customer_account_file` | ไฟล์สัญญา PDF ของบัญชี (บัญชีละหนึ่งไฟล์ · ไม่เกิน 10 MB) | account_id (PK), name, mime, size, data | Ops บัญชีลูกค้า |
+| `abuse_case` | เคสตรวจจับการใช้ผิด (O50 · เฟส 3) · ระบบให้คะแนน คนตัดสิน · เปิดได้ครั้งละหนึ่งเคสต่อเรื่อง (`ws:<id>` / `ip:<address>`) · ตัดสินแล้วไม่เปิดเรื่องเดิมซ้ำ 30 วัน | number, kind (fake_signup · invite_spam · api_abuse · payment), subject, label, workspace_ids[], user_ids[], ip, score, signals [{ rule, points, detail, values }], status (open · auto_suspended · closed), auto_suspended_at, suspended_ids[], reminded_at, outcome (dismissed · verify_identity · suspended · blocked), reason, decided_by, decided_at | Ops ตรวจจับการใช้ผิด |
+| `abuse_block` | รายชื่อที่ถูกบล็อก (O50) · API ลูกค้าตรวจตอนสมัคร / สร้าง Workspace · api_token = ยกเลิก token ทันที | kind (email_domain · ip (IP / CIDR) · workspace_slug · api_token), value, label, reason, case_id, expires_at (null = ถาวร), created_by (null = ระบบ), removed_at, removed_by | Ops ตรวจจับการใช้ผิด |
 
 `staff_users` (Friday Ops เฟส 1 · [06-ops-roles](06-ops-roles.md)): `roles` (owner · finance · support · engineer · auditor, อย่างน้อย 1), `department`, `limits`, `status`, `expires_at` · `role` เดิมลบแล้วใน migration 0019 (O01) · `payments` เพิ่ม `verified_by`, `exception_reason`, `matched_invoice_id` · `support_sessions` เพิ่ม `ticket_id` · `notification_deliveries` เพิ่ม `target_label`, `content`, `response`, `log`, `resend_requested_at` และสถานะ `suppressed` (O23 · เก็บ 90 วัน)
 
@@ -281,7 +283,7 @@ Task, Sub-task, Story, Bug และ Spike อยู่ใน**ตาราง�
 
 | Entity | ใช้ทำอะไร | ฟิลด์หลัก | หน้าจอ |
 |---|---|---|---|
-| `signup_attribution` | ช่องทางที่ผู้ใช้มาครั้งแรก (1:1) | user_id, utm_*, referrer_host, landing_path, via, invited_by_user_id, invited_workspace_id | Ops 16 |
+| `signup_attribution` | ช่องทางที่ผู้ใช้มาครั้งแรก (1:1) | user_id, utm_*, referrer_host, landing_path, via, invited_by_user_id, invited_workspace_id, signup_ip (O50 · ตรวจสมัครถี่จาก IP เดียว) | Ops 16 |
 | `workspace_acquisition` | ที่มาของ Workspace | workspace_id, source, medium, campaign, referrer_host, via, referring_workspace_id | Ops 16 |
 | `product_event` | เหตุการณ์ในแอปที่หาจากตารางอื่นไม่ได้ · append-only | workspace_id, user_id, name, props, occurred_at | Ops 16 |
 | `subscription_change` | ทุกครั้งที่ MRR เปลี่ยน · append-only | workspace_id, kind, plan_from / to, seats_from / to, mrr_before / after_satang, actor_kind, effective_at | Ops 1, 16 |

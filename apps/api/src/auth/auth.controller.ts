@@ -7,6 +7,7 @@ import type { Response } from 'express';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { SYSTEM_DB } from '../db/db.module.js';
+import { clientIp, SIGNUP_BLOCKED, signupBlocked } from './abuse-blocks.js';
 import { AppError } from '../common/errors.js';
 import { type AppRequest, Auth, type AuthInfo, Public } from '../common/request.js';
 import { parse } from '../common/validate.js';
@@ -76,6 +77,7 @@ export class AuthController {
     const input = parse(SignupBody, body);
     await this.security.assertPassword(null, input.password, 'password');
     const email = input.email.toLowerCase();
+    if (await signupBlocked(this.db, email, req.ip)) throw new AppError(403, 'signup_blocked', SIGNUP_BLOCKED);
     const passwordHash = await hash(input.password);
 
     const userId = await this.db.transaction(async (tx) => {
@@ -83,7 +85,7 @@ export class AuthController {
       if (exists) throw new AppError(409, 'email_taken', 'อีเมลนี้มีบัญชีแล้ว · เข้าสู่ระบบแทน');
       const [user] = await tx.insert(users).values({ email, displayName: input.displayName, passwordHash, passwordChangedAt: new Date() }).returning({ id: users.id });
       await tx.insert(userIdentities).values({ userId: user.id, provider: 'password', providerSubject: user.id });
-      await this.analytics.recordSignup(tx, user.id, input.attribution);
+      await this.analytics.recordSignup(tx, user.id, input.attribution, clientIp(req.ip));
       return user.id;
     });
 

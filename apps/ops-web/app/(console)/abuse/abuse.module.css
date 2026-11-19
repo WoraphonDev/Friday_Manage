@@ -1,0 +1,142 @@
+/* ตรวจจับการใช้ผิด (O50) · สีจาก token เท่านั้น */
+.score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: var(--hover);
+  color: var(--foreground);
+}
+.scoreWarn {
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+.scoreBad {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+.big {
+  min-width: 52px;
+  height: 40px;
+  font-size: 20px;
+}
+.caseRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.caseText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.caseTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.signals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.signals li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+}
+.signals li + li {
+  border-top: 1px solid var(--border);
+}
+.points {
+  font-weight: 700;
+  color: var(--danger-text);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+}
+.facts dt {
+  color: var(--muted);
+}
+.facts dd {
+  margin: 0;
+}
+.wsCard {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin: 0;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--hover);
+}
+.pointsInput {
+  width: 72px;
+}
+.fpHigh {
+  color: var(--danger-text);
+  font-weight: 600;
+}
+.thresholds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.thresholds > * {
+  flex: 1 1 160px;
+}
+@media (max-width: 760px) {
+  .caseRow {
+    align-items: flex-start;
+  }
+  .actions {
+    justify-content: stretch;
+  }
+  .actions > * {
+    flex: 1 1 auto;
+  }
+}

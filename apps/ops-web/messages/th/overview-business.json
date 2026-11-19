@@ -49,7 +49,8 @@
       "incidentsOpen": "เหตุขัดข้องที่เปิดอยู่",
       "trialEndingSoon": "ทดลองใช้หมดใน 3 วัน",
       "privacyDueSoon": "คำขอ PDPA ใกล้ครบกำหนด",
-      "breachesOpen": "เหตุละเมิดข้อมูลที่เปิดอยู่"
+      "breachesOpen": "เหตุละเมิดข้อมูลที่เปิดอยู่",
+      "abuseOpen": "เคสใช้ผิดรอตรวจ / ระงับอัตโนมัติรอยืนยัน"
     },
     "who": {
       "approvals": "Owner",

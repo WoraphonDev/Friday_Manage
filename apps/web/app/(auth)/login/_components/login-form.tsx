@@ -44,6 +44,7 @@ const OAUTH_ERRORS = [
   "oauth_email_missing",
   "oauth_email_unverified",
   "account_disabled",
+  "signup_blocked",
   "oauth_failed",
 ] as const;
 

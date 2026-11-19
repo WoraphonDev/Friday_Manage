@@ -122,7 +122,9 @@
     "tagIncident": "เหตุขัดข้อง",
     "tagMoney": "เงิน",
     "tagPrivacy": "PDPA",
-    "openApprovals": "เปิดคำขอที่ส่งถึงฉัน"
+    "openApprovals": "เปิดคำขอที่ส่งถึงฉัน",
+    "abuse": "เคสใช้ผิดรอตรวจ {count}",
+    "tagAbuse": "ใช้ผิด"
   },
   "account": {
     "name": "ชื่อ",

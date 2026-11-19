@@ -124,7 +124,7 @@ export function SearchPalette({ staff, open, onOpenChange, onApprovals }: { staf
 }
 
 /** G2 · แผงแจ้งเตือน: งานที่บทบาทของฉันต้องทำวันนี้ (จาก ops/overview › tasks) */
-const NOTIFY: { task: TaskKey; key: string; tag: "tagApprove" | "tagMoney" | "tagSla" | "tagIncident" | "tagPrivacy"; roles: Parameters<typeof hasAny>[1][]; href?: string }[] = [
+const NOTIFY: { task: TaskKey; key: string; tag: "tagApprove" | "tagMoney" | "tagSla" | "tagIncident" | "tagPrivacy" | "tagAbuse"; roles: Parameters<typeof hasAny>[1][]; href?: string }[] = [
   { task: "approvals", key: "approvals", tag: "tagApprove", roles: ["owner"] },
   { task: "paymentExceptions", key: "exceptions", tag: "tagMoney", roles: ["owner", "finance"], href: "/payments" },
   { task: "slipsToReview", key: "slips", tag: "tagMoney", roles: ["owner", "finance"], href: "/payments" },
@@ -135,6 +135,7 @@ const NOTIFY: { task: TaskKey; key: string; tag: "tagApprove" | "tagMoney" | "ta
   { task: "trialEndingSoon", key: "trialEnding", tag: "tagSla", roles: ["support"], href: "/workspaces?status=trialing" },
   { task: "privacyDueSoon", key: "privacy", tag: "tagPrivacy", roles: ["owner", "support"], href: "/privacy" },
   { task: "breachesOpen", key: "breaches", tag: "tagPrivacy", roles: ["owner", "engineer"], href: "/privacy" },
+  { task: "abuseOpen", key: "abuse", tag: "tagAbuse", roles: ["owner", "engineer"], href: "/abuse" },
 ];
 
 export function useNotifications(staff: Staff) {

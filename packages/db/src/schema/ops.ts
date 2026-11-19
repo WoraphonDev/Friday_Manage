@@ -482,3 +482,47 @@ export const systemAlerts = pgTable('system_alerts', {
   incidentId: uuid().references((): AnyPgColumn => incidents.id), createdAt: createdAt(),
 }, (t) => [index('system_alerts_open_idx').on(t.kind).where(sql`${t.resolvedAt} IS NULL`),
   check('system_alerts_kind_valid', oneOf(t.kind, ['error_rate']))]);
+
+export const ABUSE_KINDS = ['fake_signup', 'invite_spam', 'api_abuse', 'payment'] as const;
+export const ABUSE_OUTCOMES = ['dismissed', 'verify_identity', 'suspended', 'blocked'] as const;
+
+/**
+ * เคสตรวจจับการใช้ผิด (O50 · เฟส 3) · subject = เรื่องที่ถูกให้คะแนน (`ws:<uuid>` หรือ `ip:<address>`) เปิดได้ครั้งละหนึ่งเคส
+ * signals = [{ rule, points, detail }] ที่มาของคะแนน · status: open = รอตรวจ · auto_suspended = ระบบระงับไปก่อน รอคนยืนยัน · closed = ตัดสินแล้ว
+ * suspended_ids = Workspace ที่ระบบ / การตัดสินนี้ระงับ ใช้ปลดคืนเมื่อตัดสินว่าไม่ใช่การใช้ผิด (ไม่ปลด Workspace ที่ถูกระงับด้วยเหตุอื่น)
+ */
+export const abuseCases = pgTable('abuse_cases', {
+  id: pk(), number: integer().generatedAlwaysAsIdentity().notNull().unique(),
+  kind: text().notNull(), subject: text().notNull(), label: text().notNull(),
+  workspaceIds: uuid().array().notNull().default(sql`'{}'`), userIds: uuid().array().notNull().default(sql`'{}'`), ip: text(),
+  score: smallint().notNull(), signals: jsonb().notNull().default(sql`'[]'::jsonb`),
+  status: text().notNull().default('open'),
+  autoSuspendedAt: tstz(), suspendedIds: uuid().array().notNull().default(sql`'{}'`),
+  /** แจ้ง Owner ครั้งล่าสุดว่าระงับอัตโนมัติแล้วยังไม่มีคนยืนยันเกิน 24 ชม. */
+  remindedAt: tstz(),
+  outcome: text(), reason: text(), decidedBy: uuid().references(() => staffUsers.id), decidedAt: tstz(),
+  createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [uniqueIndex('abuse_cases_open_subject_key').on(t.subject).where(sql`${t.status} <> 'closed'`),
+  index('abuse_cases_status_idx').on(t.status, t.score), index('abuse_cases_decided_idx').on(t.decidedAt),
+  check('abuse_cases_kind_valid', oneOf(t.kind, ABUSE_KINDS)),
+  check('abuse_cases_status_valid', oneOf(t.status, ['open', 'auto_suspended', 'closed'])),
+  check('abuse_cases_outcome_valid', sql`${t.outcome} IS NULL OR ${t.outcome} IN (${sql.raw(ABUSE_OUTCOMES.map((o) => `'${o}'`).join(', '))})`),
+  check('abuse_cases_closed', sql`(${t.status} = 'closed') = (${t.outcome} IS NOT NULL AND ${t.decidedAt} IS NOT NULL)`),
+  check('abuse_cases_score', sql`${t.score} BETWEEN 0 AND 999`)]);
+
+export const ABUSE_BLOCK_KINDS = ['email_domain', 'ip', 'workspace_slug', 'api_token'] as const;
+
+/**
+ * รายชื่อที่ถูกบล็อก (O50) · API ลูกค้าอ่านผ่าน SYSTEM_DB ตอนสมัคร / สร้าง Workspace · ip เก็บเป็น IP เดี่ยวหรือ CIDR
+ * api_token: value = id ของ token (ops-api ยกเลิก token ทันทีตอนเพิ่ม) · expires_at ว่าง = ถาวร · เลิกบล็อก = ใส่ removed_*
+ */
+export const abuseBlocks = pgTable('abuse_blocks', {
+  id: pk(), kind: text().notNull(), value: text().notNull(), label: text(), reason: text().notNull(),
+  caseId: uuid().references(() => abuseCases.id, { onDelete: 'set null' }), expiresAt: tstz(),
+  /** null = ระบบเพิ่มเอง */
+  createdBy: uuid().references(() => staffUsers.id), createdAt: createdAt(),
+  removedAt: tstz(), removedBy: uuid().references(() => staffUsers.id),
+}, (t) => [uniqueIndex('abuse_blocks_active_key').on(t.kind, sql`lower(${t.value})`).where(sql`${t.removedAt} IS NULL`),
+  index('abuse_blocks_created_idx').on(t.createdAt),
+  check('abuse_blocks_kind_valid', oneOf(t.kind, ABUSE_BLOCK_KINDS)),
+  check('abuse_blocks_ip_valid', sql`${t.kind} <> 'ip' OR ${t.value}::inet IS NOT NULL`)]);

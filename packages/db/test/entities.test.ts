@@ -19,7 +19,9 @@ const opsTables = ['staff_users', 'support_sessions', 'feature_flags', 'feature_
   // ป้าย Workspace ทดสอบ (ช่วง 1 · 0048) · กำลังดูโดย (ช่วง 2 · 0049)
   'ops_workspace_flags', 'ops_presence',
   // มุมมองที่บันทึก · ผูก Ticket กับเหตุขัดข้อง (ช่วง 3 · 0050)
-  'ops_saved_views', 'ops_view_prefs', 'support_ticket_incidents', 'customer_accounts', 'customer_account_workspaces', 'customer_account_files'];
+  'ops_saved_views', 'ops_view_prefs', 'support_ticket_incidents', 'customer_accounts', 'customer_account_workspaces', 'customer_account_files',
+  // ตรวจจับการใช้ผิด (เฟส 3 · 0055)
+  'abuse_cases', 'abuse_blocks'];
 
 beforeAll(() => owner.connect());
 afterAll(() => owner.end());

@@ -1,11 +1,12 @@
 'use client';
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useRef, useState } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { AttachmentList, Avatar, Button, DropOverlay, Input, LoadingState, ErrorState, Dialog, pastedFiles, useFileDrop } from '@/components/ui';
+import { AttachmentList, Button, DropOverlay, Input, LoadingState, ErrorState, Dialog, pastedFiles, useFileDrop } from '@/components/ui';
 import { api } from '@/lib/api';
 import { BodyText, Failure, PersonView, when } from './shared';
-import { type MentionPicks, toDisplay, toStored } from './mentions';
+import { toDisplay, toStored } from './mentions';
+import { useMentionInput } from './mention-input';
 import { filesPageHref, issuePath, issueQuery, previewBase, projectPath, type Activity, type Comment, type Feed, type Scope } from './types';
 import { FilePreview, useFilePreview } from '@/components/file-preview';
 import { AttachButton, useProjectUploads } from './task-v2';
@@ -31,40 +32,20 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
     },
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
-  const [body, setBody] = useState('');
   // ชื่อที่เลือกจากรายการ mention → userId · แปลงเป็นรูปแบบที่ API ต้องการตอนส่ง
-  const [picks, setPicks] = useState<MentionPicks>(new Map());
-  const [editPicks, setEditPicks] = useState<MentionPicks>(new Map());
+  const draft = useMentionInput(scope.people, t('mentionMembers'));
+  const edit = useMentionInput(scope.people, t('mentionMembers'));
+  const body = draft.text;
   // ไฟล์ / รูปที่แนบกับคอมเมนต์ (ผู้ใช้ขอ 2026-11-08): อัปโหลดก่อน แล้วผูกกับคอมเมนต์หลังส่ง
   const uploads = useProjectUploads(scope, { draft: true });
   const [editing, setEditing] = useState<Comment | null>(null);
-  const [editBody, setEditBody] = useState('');
   const [deleting, setDeleting] = useState<Comment | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const lock = useRef(false);
-  const textarea = useRef<HTMLTextAreaElement>(null);
   const preview = useFilePreview();
   const drop = useFileDrop(uploads.add, !compact && !pending);
   const commentable = scope.access.permissions.includes('issue.comment');
-  const tail = /@([^@\n]*)$/.exec(body);
-  // กล่องเลือกคน: ลูกศรขึ้นลงเลือก · Enter / Tab ใส่ชื่อ · Esc ปิดจนกว่าจะพิมพ์ @ ใหม่
-  const [active, setActive] = useState(0);
-  const [closedAt, setClosedAt] = useState<number | null>(null);
-  const suggestions = tail && closedAt !== tail.index && ![...picks.keys()].some((name) => tail[1].startsWith(`${name} `)) ? scope.people.filter((person) => person.displayName.toLocaleLowerCase().includes(tail[1].toLocaleLowerCase())).slice(0, 8) : [];
-  const current = suggestions.length ? Math.min(active, suggestions.length - 1) : 0;
-  function pick(person: (typeof scope.people)[number]) {
-    setBody(body.slice(0, body.lastIndexOf('@')) + `@${person.displayName} `);
-    setPicks((now) => new Map(now).set(person.displayName, person.id));
-    setActive(0);
-    textarea.current?.focus();
-  }
-  function mentionKeys(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (!suggestions.length) return;
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setActive((current + (event.key === 'ArrowDown' ? 1 : suggestions.length - 1)) % suggestions.length); }
-    else if (event.key === 'Enter' || event.key === 'Tab') { event.preventDefault(); pick(suggestions[current]); }
-    else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setClosedAt(tail?.index ?? null); }
-  }
   async function change(action: () => Promise<unknown>, success?: () => void) {
     if (lock.current) return;
     lock.current = true; setPending(true); setError(null);
@@ -133,23 +114,23 @@ export function ActivityPanel({ scope, issueKey, mode = 'comments', showFeed = t
         {/* กดไฟล์แนบ = ป๊อปอัปดูตัวอย่าง (ผู้ใช้ขอ 2026-11-08) */}
         {!item.deletedAt && !!item.files?.length && <div className={styles.fileChips}>{item.files.map((file, index) => <button type="button" key={file.id} className={`${styles.chipSoft} ${styles.chipButton}`} aria-label={t('previewFile', { name: file.name })} onClick={() => preview.open(item.files!, index)}>{file.name}</button>)}</div>}
         {item.editedAt && !item.deletedAt && <small className="muted">{t('edited')}</small>}
-        <div className={styles.actions}>{item.canEdit && <Button size="small" variant="ghost" disabled={pending} onClick={() => { const shown = toDisplay(item.body ?? ''); setEditing(item); setEditBody(shown.text); setEditPicks(shown.picks); }}>{t('editComment')}</Button>}{item.canDelete && <Button size="small" variant="ghost" disabled={pending} onClick={() => setDeleting(item)}>{t('deleteComment')}</Button>}</div>
+        <div className={styles.actions}>{item.canEdit && <Button size="small" variant="ghost" disabled={pending} onClick={() => { const shown = toDisplay(item.body ?? ''); setEditing(item); edit.reset(shown.text, shown.picks); }}>{t('editComment')}</Button>}{item.canDelete && <Button size="small" variant="ghost" disabled={pending} onClick={() => setDeleting(item)}>{t('deleteComment')}</Button>}</div>
       </div>}
     </li>)}</ol>
     {feed.hasNextPage && <Button disabled={feed.isFetchingNextPage} onClick={() => void feed.fetchNextPage()}>{t('loadMore')}</Button>}
     </>}
-    {showComposer && commentable && <form className={`${styles.composer}${compact ? ` ${styles.compactComposer}` : ''} file-drop-target`} {...drop.bind} onSubmit={(event) => { event.preventDefault(); if (uploads.busy) return; void change(async () => { const created = await api.post<Comment>(`${endpoint}/comments`, { body: toStored(body, picks) }); for (const file of uploads.files) await api.post(`${projectPath(scope.ws, scope.projectKey)}/files/${file.id}/attachments`, { targetType: 'comment', target: created.id }); }, () => { setBody(''); setPicks(new Map()); uploads.clear(); }); }}>
+    {showComposer && commentable && <form className={`${styles.composer}${compact ? ` ${styles.compactComposer}` : ''} file-drop-target`} {...drop.bind} onSubmit={(event) => { event.preventDefault(); if (uploads.busy) return; void change(async () => { const created = await api.post<Comment>(`${endpoint}/comments`, { body: toStored(body, draft.picks) }); for (const file of uploads.files) await api.post(`${projectPath(scope.ws, scope.projectKey)}/files/${file.id}/attachments`, { targetType: 'comment', target: created.id }); }, () => { draft.reset(); uploads.clear(); }); }}>
       <DropOverlay count={drop.dragging} hint={t('dropHintComment')} />
-      <label className="field"><span className={compact ? "sr-only" : undefined}>{t('writeComment')}</span><textarea ref={textarea} rows={compact ? 1 : undefined} placeholder={compact ? t('commentPlaceholder') : undefined} className="input" required maxLength={20000} value={body} onChange={(event) => { setBody(event.target.value); setActive(0); }} onKeyDown={mentionKeys} onPaste={compact ? undefined : (event) => uploads.add(pastedFiles(event))} role={suggestions.length ? 'combobox' : undefined} aria-expanded={suggestions.length ? true : undefined} aria-controls={suggestions.length ? `${issueKey}-mentions` : undefined} aria-activedescendant={suggestions.length ? `${issueKey}-mention-${suggestions[current].id}` : undefined} disabled={pending} /></label>
-      {suggestions.length > 0 && <ul className={styles.mentionOptions} id={`${issueKey}-mentions`} role="listbox" aria-label={t('mentionMembers')}>{suggestions.map((person, index) => <li key={person.id} id={`${issueKey}-mention-${person.id}`} role="option" aria-label={person.displayName} aria-selected={index === current} className={styles.mentionOption} onMouseEnter={() => setActive(index)} onMouseDown={(event) => { event.preventDefault(); pick(person); }}><Avatar person={person} size="small" /><span>{person.displayName}</span></li>)}</ul>}
+      <label className="field"><span className={compact ? "sr-only" : undefined}>{t('writeComment')}</span><textarea {...draft.inputProps} rows={compact ? 1 : undefined} placeholder={compact ? t('commentPlaceholder') : undefined} className="input" required maxLength={20000} onPaste={compact ? undefined : (event) => uploads.add(pastedFiles(event))} disabled={pending} /></label>
+      {draft.menu()}
       <AttachmentList rows={uploads.rows} label={t('attachToComment')} />
       <div className={styles.composerFooter}>{!compact && <AttachButton label={t('attachToComment')} disabled={pending} onFiles={uploads.add} />}<span className="muted" role={uploads.status ? 'status' : undefined}>{uploads.status ?? t('markdownHint')}</span><Button type="submit" variant="primary" disabled={pending || uploads.busy || !body.trim()}>{t('send')}</Button></div>
     </form>}
     {!!error && <Failure error={error} />}
     {preview.props && <FilePreview {...preview.props} base={previewBase(scope)} filesHref={filesPageHref(scope)} />}
     <Dialog open={!!editing} title={t('editComment')} onOpenChange={(open) => { if (!open && !pending) setEditing(null); }}>
-      <form className={styles.stack} onSubmit={(event) => { event.preventDefault(); if (editing) void change(() => api.request(`${endpoint}/comments/${editing.id}`, { method: 'PATCH', body: { body: toStored(editBody, editPicks) } }), () => setEditing(null)); }}>
-        <label className="field">{t('comment')}<textarea className="input" required maxLength={20000} value={editBody} onChange={(event) => setEditBody(event.target.value)} /></label><Button type="submit" variant="primary" disabled={pending || !editBody.trim()}>{t('save')}</Button>{!!error && <Failure error={error} />}
+      <form className={styles.stack} onSubmit={(event) => { event.preventDefault(); if (editing) void change(() => api.request(`${endpoint}/comments/${editing.id}`, { method: 'PATCH', body: { body: toStored(edit.text, edit.picks) } }), () => setEditing(null)); }}>
+        <label className="field">{t('comment')}<textarea {...edit.inputProps} className="input" required maxLength={20000} disabled={pending} /></label>{edit.menu(`${styles.mentionOptions} ${styles.mentionInline}`)}<Button type="submit" variant="primary" disabled={pending || !edit.text.trim()}>{t('save')}</Button>{!!error && <Failure error={error} />}
       </form>
     </Dialog>
     <Dialog open={!!deleting} title={t('deleteComment')} description={t('deleteCommentDescription')} onOpenChange={(open) => { if (!open && !pending) setDeleting(null); }}>

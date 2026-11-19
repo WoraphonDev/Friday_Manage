@@ -15,6 +15,10 @@ export interface OverlayProps {
   description?: string;
   children?: ReactNode;
 }
+/** Esc ขณะกล่องเลือก (เช่น @mention) เปิดอยู่ ให้ปิดแค่กล่องนั้น ไม่ปิดทั้งหน้าต่าง · Radix ดัก Esc ที่ document ก่อนช่องพิมพ์ */
+function keepOpenForPopup(event: KeyboardEvent) {
+  if ((event.target as HTMLElement | null)?.closest?.('[role="combobox"][aria-expanded="true"]')) event.preventDefault();
+}
 function useReturnFocus(open: boolean) {
   const opener = useRef<HTMLElement | null>(null);
   const previous = useRef(false);
@@ -50,6 +54,7 @@ export function Dialog({
         <RadixDialog.Content
           className={cn("dialog", size && `dialog-${size}`)}
           onCloseAutoFocus={returnFocus}
+          onEscapeKeyDown={keepOpenForPopup}
           {...(!description ? { "aria-describedby": undefined } : {})}
         >
           <div className="dialog-heading">
@@ -155,6 +160,7 @@ export function Drawer({
           />
         )}
         <RadixDialog.Content
+          onEscapeKeyDown={keepOpenForPopup}
           onPointerDownOutside={(event) => {
             // กดขอบลากไม่นับเป็นการกดนอก Drawer (ไม่ปิด)
             if ((event.target as HTMLElement | null)?.closest?.("[data-drawer-resize]")) event.preventDefault();

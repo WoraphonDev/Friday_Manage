@@ -329,6 +329,26 @@ describe('Issue parts and comments',()=>{
     const name=second.getAttribute('aria-label')!;await user.keyboard('{Enter}');
     expect(box).toHaveValue(`รอ @ @${name} `);expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
+  it('แก้คอมเมนต์แล้ว @ เลือกคนได้ · แทรกกลางข้อความตรงเคอร์เซอร์ · Esc ปิดแค่กล่องเลือก ไม่ปิดหน้าต่าง',async()=>{
+    const user=userEvent.setup();
+    const comment={id:uid(98),kind:'comment',body:'ฝากดู ด้วยครับ',author:me,createdAt:'2026-11-06T03:00:00Z',editedAt:null,deletedAt:null,deletionReason:null,canEdit:true,canDelete:true,files:[]};
+    let saved:unknown=null;
+    server.use(http.get(`${issueEndpoint}/comments`,()=>HttpResponse.json({items:[comment],nextCursor:null})),http.patch(`${issueEndpoint}/comments/${uid(98)}`,async({request})=>{saved=await request.json();return HttpResponse.json({...comment,body:(saved as {body:string}).body,editedAt:'2026-11-06T04:00:00Z'});}));
+    mount();await loaded();
+    await user.click(await screen.findByRole('button',{name:'แก้คอมเมนต์'}));
+    const box=screen.getByLabelText('คอมเมนต์') as HTMLTextAreaElement;
+    // วางเคอร์เซอร์หลัง "ฝากดู " แล้วพิมพ์ @
+    box.setSelectionRange(6,6);await user.type(box,'@',{initialSelectionStart:6,initialSelectionEnd:6});
+    const dialog=screen.getByRole('dialog',{name:'แก้คอมเมนต์'});
+    within(dialog).getByRole('listbox',{name:'เลือกสมาชิกที่ต้องการ mention'});
+    await user.keyboard('{Escape}');
+    expect(within(dialog).queryByRole('listbox')).not.toBeInTheDocument();expect(screen.getByRole('dialog',{name:'แก้คอมเมนต์'})).toBeInTheDocument();
+    await user.type(box,'@',{initialSelectionStart:7,initialSelectionEnd:7});
+    await user.click(within(within(dialog).getByRole('listbox')).getByRole('option',{name:dev.displayName}));
+    expect(box).toHaveValue(`ฝากดู @@${dev.displayName} ด้วยครับ`);
+    await user.click(within(dialog).getByRole('button',{name:'บันทึก'}));
+    await waitFor(()=>expect(saved).toEqual({body:`ฝากดู @@[${dev.displayName}](${dev.id}) ด้วยครับ`}));
+  });
   it('กดไฟล์แนบในคอมเมนต์ → ป๊อปอัปดูตัวอย่าง (รูปแสดงเลย · ไฟล์ที่ดูไม่ได้มีปุ่มดาวน์โหลด) เลื่อนไฟล์ถัดไปได้',async()=>{
     const user=userEvent.setup();
     const comment={id:uid(95),kind:'comment',body:'แนบหลักฐาน',author:me,createdAt:'2026-11-06T03:00:00Z',editedAt:null,deletedAt:null,deletionReason:null,canEdit:true,canDelete:true,files:[{id:uid(96),name:'หน้าจอ.png',mime:'image/png'},{id:uid(97),name:'สัญญา.docx',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}]};

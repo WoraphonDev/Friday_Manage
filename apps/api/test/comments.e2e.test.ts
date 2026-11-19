@@ -259,6 +259,21 @@ describe('Comments / mentions / watchers', () => {
     expect((await stranger.get(`/w/comments-other/issues/${a.key}/comments`)).status).toBe(404);
   });
 
+  it('คนที่อยู่หลาย Workspace @ ตัวเองได้ ทั้งตอนเขียนและแก้คอมเมนต์', async () => {
+    // RLS ให้เห็นแถวสมาชิกของตัวเองทุก Workspace · เดิมชื่อซ้ำจนได้ invalid_mention
+    const host = await client(t.app);
+    await signup(host, 'host@comments.example.com', 'Host Tenant');
+    await host.post('/workspaces', { name: 'Workspace สมมติสอง', slug: 'comments-second' });
+    await addMember(t.owner, 'comments-second', team.devId, 'member');
+    const i = await issue(false, team.dev);
+    const c = await team.dev.post(`${path(i.key)}/comments`, { body: 'ฝากตัวเอง @Kaijeaw' });
+    expect(c.status).toBe(201);
+    expect(c.body.mentions).toEqual([expect.objectContaining({ id: team.devId })]);
+    const e = await team.dev.patch(`${path(i.key)}/comments/${c.body.id}`, { body: `แก้แล้ว @[Kaijeaw](${team.devId})` });
+    expect(e.status).toBe(200);
+    expect(e.body.mentions).toEqual([expect.objectContaining({ id: team.devId })]);
+  });
+
   it('ตรวจ project.view และ issue.comment ทุกเส้นทาง รวมผู้เขียนที่สิทธิ์ถูกปิด', async () => {
     const i = await issue();
     const own = await team.dev.post(`${path(i.key)}/comments`, { body: 'ก่อนปิดสิทธิ์' });

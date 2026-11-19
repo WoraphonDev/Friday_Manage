@@ -115,7 +115,7 @@ export class TrashService {
 
     const more = rows.length > q.limit;
     const page = rows.slice(0, q.limit);
-    const people = await this.deleters(tx, await this.deleterIds(tx, cutoff, scope.projectId, scope.workspace));
+    const people = await this.deleters(tx, tenant, await this.deleterIds(tx, cutoff, scope.projectId, scope.workspace));
     const items = page.map((r) => {
       const purgeAt = purgeAtOf(r.deletedAt, days);
       return { type: q.type, ...r, deletedBy: r.deletedBy ? (people.get(r.deletedBy) ?? null) : null, purgeAt, daysLeft: daysLeftOf(purgeAt) };
@@ -345,14 +345,15 @@ export class TrashService {
   }
 
   /** ชื่อและบทบาทใน Workspace ของผู้ลบ ("ดนัย (Admin)") */
-  private async deleters(tx: Tx, ids: (string | null)[]) {
+  private async deleters(tx: Tx, tenant: TenantInfo, ids: (string | null)[]) {
     const want = [...new Set(ids.filter((x): x is string => !!x))];
     const map = new Map<string, Deleter>();
     if (!want.length) return map;
     const rows = await tx
       .select({ id: s.users.id, displayName: s.users.displayName, avatarUrl: s.users.avatarUrl, role: s.workspaceMembers.role })
       .from(s.users)
-      .leftJoin(s.workspaceMembers, eq(s.workspaceMembers.userId, s.users.id))
+      // บทบาทใน Workspace นี้เท่านั้น (RLS ให้เห็นแถวของตัวเองทุก Workspace)
+      .leftJoin(s.workspaceMembers, and(eq(s.workspaceMembers.userId, s.users.id), eq(s.workspaceMembers.workspaceId, tenant.workspaceId)))
       .where(inArray(s.users.id, want));
     for (const r of rows) map.set(r.id, { id: r.id, displayName: r.displayName, initials: initials(r.displayName), avatarUrl: r.avatarUrl, role: r.role ?? null });
     return map;

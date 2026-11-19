@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, Module, Param, Patch, Post, Pu
 import { type OpsRequest, Reauth, Roles } from '../auth/auth.guard.js';
 import { parse } from '../errors.js';
 import { DigestService } from './digest.service.js';
+import { HistoryQuery, JitService, RequestBody } from './jit.service.js';
 import { AuditQuery, ElevateBody, InviteBody, PasswordPolicyBody, PersonalEmailBody, PersonalEmailVerifyBody, StaffService, StatusBody, UpdateStaffBody } from './staff.service.js';
 
 @Controller('ops')
@@ -97,5 +98,33 @@ export class StaffController {
   }
 }
 
-@Module({ controllers: [StaffController], providers: [StaffService, DigestService], exports: [DigestService] })
+/** ขอสิทธิ์ชั่วคราว (O52) · ทุกบทบาทขอได้ · อนุมัติ / ปฏิเสธผ่าน /ops/approvals เดิม (Owner) */
+@Controller('ops/jit')
+export class JitController {
+  constructor(private readonly jit: JitService) {}
+
+  @Roles('owner', 'finance', 'support', 'engineer', 'auditor')
+  @Get()
+  overview(@Req() req: OpsRequest) {
+    return this.jit.overview(req.staff!);
+  }
+  @Roles('owner', 'finance', 'support', 'engineer', 'auditor')
+  @Get('me')
+  mine(@Req() req: OpsRequest) {
+    return this.jit.mine(req.staff!);
+  }
+  @Roles('owner', 'finance', 'support', 'engineer', 'auditor')
+  @Get('elevations')
+  list(@Req() req: OpsRequest, @Query() q: unknown) {
+    return this.jit.list(req.staff!, parse(HistoryQuery, q));
+  }
+  @Roles('owner', 'finance', 'support', 'engineer', 'auditor')
+  @Post('requests')
+  @HttpCode(202)
+  request(@Req() req: OpsRequest, @Body() body: unknown) {
+    return this.jit.request(req.staff!, parse(RequestBody, body));
+  }
+}
+
+@Module({ controllers: [StaffController, JitController], providers: [StaffService, DigestService, JitService], exports: [DigestService] })
 export class StaffModule {}

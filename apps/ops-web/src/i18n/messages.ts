@@ -1,5 +1,6 @@
 import abuse from "../../messages/th/abuse.json";
 import ratelimit from "../../messages/th/ratelimit.json";
+import jit from "../../messages/th/jit.json";
 import announcements from "../../messages/th/announcements.json";
 import changelog from "../../messages/th/changelog.json";
 import bugs from "../../messages/th/bugs.json";
@@ -20,5 +21,5 @@ import staff from "../../messages/th/staff.json";
 import supportSettings from "../../messages/th/support-settings.json";
 import supportSystem from "../../messages/th/support-system.json";
 
-// namespace: `cl` (Changelog และ NPS · O33) · `promo` (แพ็กเกจและโปรโมชัน · O20) · `ann` (ประกาศถึงลูกค้า · O24) · `onb` (Onboarding checklist · O34) · `ops` (หน้าเดิมของ A32 ที่ O11–O15 จะย้าย) · `common` (โครงหน้า สถานะ Modal กลาง · O10) · `staff` (หน้าพนักงาน · O10) · `rst` (กู้คืนข้อมูลลูกค้า · O31) · `help` (บทความช่วยเหลือ · O35) · `bugs` (ส่งบั๊กให้ทีมพัฒนา · O36) · `abuse` (ตรวจจับการใช้ผิด · O50) · `rl` (Rate limit ต่อลูกค้า · O51)
-export const messages = { ops, common, staff, customers, money, ss: supportSystem, pl: privacyLegal, ob: overviewBusiness, ent: entitlements, dlv: deliveries, sset: supportSettings, mob: mobile, ann: announcements, promo: promotions, cl: changelog, onb: onboarding, rst: restore, help, bugs, abuse, rl: ratelimit };
+// namespace: `cl` (Changelog และ NPS · O33) · `promo` (แพ็กเกจและโปรโมชัน · O20) · `ann` (ประกาศถึงลูกค้า · O24) · `onb` (Onboarding checklist · O34) · `ops` (หน้าเดิมของ A32 ที่ O11–O15 จะย้าย) · `common` (โครงหน้า สถานะ Modal กลาง · O10) · `staff` (หน้าพนักงาน · O10) · `rst` (กู้คืนข้อมูลลูกค้า · O31) · `help` (บทความช่วยเหลือ · O35) · `bugs` (ส่งบั๊กให้ทีมพัฒนา · O36) · `abuse` (ตรวจจับการใช้ผิด · O50) · `rl` (Rate limit ต่อลูกค้า · O51) · `jit` (ขอสิทธิ์ชั่วคราว · O52)
+export const messages = { ops, common, staff, customers, money, ss: supportSystem, pl: privacyLegal, ob: overviewBusiness, ent: entitlements, dlv: deliveries, sset: supportSettings, mob: mobile, ann: announcements, promo: promotions, cl: changelog, onb: onboarding, rst: restore, help, bugs, abuse, rl: ratelimit, jit };

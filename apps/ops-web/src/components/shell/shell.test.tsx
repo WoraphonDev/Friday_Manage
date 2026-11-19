@@ -147,16 +147,23 @@ describe("แถบแจ้งด้านบน (G11)", () => {
     await waitFor(() => expect(screen.queryByTestId("session-countdown")).not.toBeInTheDocument());
   });
 
-  it("เปิดสิทธิ์ฉุกเฉินอยู่: แถบแดง · ปิดก่อนหมดเวลาได้", async () => {
+  it("สิทธิ์ชั่วคราว (A12 + O52): แถบนับถอยหลังบอกผู้อนุมัติและ Ticket · คืนสิทธิ์ได้ · ได้รับอนุมัติแล้วแจ้งทันที", async () => {
     let ended = false;
+    let active: unknown[] = [];
     server.use(
-      http.get(`${OPS}/auth/me`, () => HttpResponse.json({ staff: { ...staff.admin, roles: ["owner"], elevated: ["engineer"], effectiveRoles: ["owner", "engineer"] } })),
-      http.get(`${OPS}/staff`, () => HttpResponse.json({ items: [{ id: staff.admin.id, elevations: [{ id: "el-1", role: "engineer", endsAt: new Date(Date.now() + 3_600_000).toISOString() }] }], singleApprover: true })),
-      http.post(`${OPS}/staff/me/elevations/el-1/end`, () => ((ended = true), HttpResponse.json({ ended: true }))),
+      http.get(`${OPS}/auth/me`, () => HttpResponse.json({ staff: { ...staff.admin, roles: ["support"], elevated: active.length ? ["finance"] : [], effectiveRoles: ["support"] } })),
+      http.get(`${OPS}/jit/me`, () => HttpResponse.json({ active, pending: [] })),
+      http.post(`${OPS}/staff/me/elevations/el-1/end`, () => ((ended = true), (active = []), HttpResponse.json({ ended: true }))),
     );
-    shell();
-    expect(await screen.findByText("สิทธิ์ฉุกเฉิน: วิศวกร")).toBeInTheDocument();
-    await userEvent.click(await screen.findByRole("button", { name: "ปิดสิทธิ์ฉุกเฉิน" }));
+    const { client } = shell();
+    await screen.findByText("เนื้อหาของหน้า");
+    await waitFor(() => expect(client.getQueryData(["ops", "jit", "me"])).toBeTruthy());
+    active = [{ id: "el-1", role: "finance", kind: "approved", startedAt: new Date().toISOString(), endsAt: new Date(Date.now() + 52 * 60_000).toISOString(), ticketRef: "#1842", approvedBy: "บอส ตัวอย่าง" }];
+    await client.invalidateQueries({ queryKey: ["ops", "jit", "me"] });
+    expect(await screen.findByText("ได้รับสิทธิ์การเงินชั่วคราวแล้ว")).toBeInTheDocument();
+    expect(await screen.findByText("⏱ สิทธิ์การเงินชั่วคราว เหลือ 52 นาที")).toBeInTheDocument();
+    expect(screen.getByText("อนุมัติโดย บอส ตัวอย่าง · Ticket #1842")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "คืนสิทธิ์" }));
     await waitFor(() => expect(ended).toBe(true));
   });
 });

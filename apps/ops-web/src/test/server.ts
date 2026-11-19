@@ -31,6 +31,8 @@ export const handlers = [
   http.get(`${OPS}/metrics`, () => HttpResponse.json(metrics)),
   http.get(`${OPS}/support-sessions`, () => HttpResponse.json({ items: [] })),
   http.get(`${OPS}/overview`, () => HttpResponse.json(overview)),
+  // O52: แถบนับถอยหลังสิทธิ์ชั่วคราวใน AppShell · ค่าเริ่มต้นไม่มีสิทธิ์ที่เปิดอยู่
+  http.get(`${OPS}/jit/me`, () => HttpResponse.json({ active: [], pending: [] })),
   http.get(`${OPS}/approvals`, () => HttpResponse.json({ items: [], singleApprover: true })),
   // การ์ด Onboarding ในรายละเอียดลูกค้า (O34 · V7) · ค่าเริ่มต้น = ครบแล้ว (ไม่แสดงการ์ด)
   http.get(`${OPS}/onboarding/workspaces/:id`, () => HttpResponse.json({ complete: true, steps: [], done: 6, total: 6 })),

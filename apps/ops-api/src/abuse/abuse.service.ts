@@ -8,6 +8,7 @@ import type { Staff } from '../auth/auth.guard.js';
 import { billingContacts, mailAll } from '../billing/ledger.js';
 import { config } from '../config.js';
 import { OPS_DB } from '../db.js';
+import { sqlRows } from '../sql-rows.js';
 import { AppError } from '../errors.js';
 import { Mailer } from '../mail.js';
 import { PageQuery } from '../paging.js';
@@ -140,9 +141,8 @@ export class AbuseService implements OnModuleInit, OnModuleDestroy {
     if (this.timer) clearInterval(this.timer);
   }
 
-  private async rows<T>(q: SQL, db: Db | Tx = this.db) {
-    const r = await db.execute(q);
-    return ((r as unknown as { rows?: unknown[] }).rows ?? (r as unknown as unknown[])) as T[];
+  private rows<T>(q: SQL, db: Db | Tx = this.db) {
+    return sqlRows<T>(db, q);
   }
 
   async tick(now = new Date()) {

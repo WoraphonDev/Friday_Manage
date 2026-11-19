@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Mail, ShieldAlert, UserPlus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -335,8 +336,10 @@ function AuditTab({ initialStaff, initialSelf = false }: { initialStaff: string;
   const [who, setWho] = useState(initialStaff);
   const [cat, setCat] = useState<keyof typeof CATEGORIES | "">("");
   const [selfOnly, setSelfOnly] = useState(initialSelf);
+  const tj = useTranslations("jit.audit");
+  const [jitOnly, setJitOnly] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const filter = new URLSearchParams({ limit: "50", ...(who ? { staffId: who } : {}), ...(cat ? { action: CATEGORIES[cat] } : {}), ...(selfOnly ? { selfApproved: "true" } : {}) });
+  const filter = new URLSearchParams({ limit: "50", ...(who ? { staffId: who } : {}), ...(cat ? { action: CATEGORIES[cat] } : {}), ...(selfOnly ? { selfApproved: "true" } : {}), ...(jitOnly ? { elevated: "true" } : {}) });
   const log = useInfiniteQuery({
     queryKey: ["ops", "audit", filter.toString()],
     queryFn: ({ pageParam }) => api.get<{ items: AuditRow[] }>(`/audit?${filter}${pageParam ? `&before=${encodeURIComponent(pageParam)}` : ""}`),
@@ -344,7 +347,7 @@ function AuditTab({ initialStaff, initialSelf = false }: { initialStaff: string;
     getNextPageParam: (last) => (last.items.length === 50 ? last.items[last.items.length - 1].createdAt : undefined),
   });
   const rows = log.data?.pages.flatMap((p) => p.items) ?? [];
-  const filtered = !!(who || cat || selfOnly);
+  const filtered = !!(who || cat || selfOnly || jitOnly);
   return (
     <section className="card">
       <div className="card-head">
@@ -375,13 +378,16 @@ function AuditTab({ initialStaff, initialSelf = false }: { initialStaff: string;
         <Chip pressed={selfOnly} onClick={() => setSelfOnly(!selfOnly)}>
           {t("selfOnly")}
         </Chip>
+        <Chip pressed={jitOnly} onClick={() => setJitOnly(!jitOnly)}>
+          {tj("only")}
+        </Chip>
       </div>
       {log.isPending ? (
         <TableSkeleton rows={5} cols={5} />
       ) : log.error ? (
         <ErrorBlock error={log.error} retry={() => void log.refetch()} />
       ) : !rows.length ? (
-        <Empty title={filtered ? tc("state.emptyFiltered") : t("empty")} onClearFilters={filtered ? () => (setWho(""), setCat(""), setSelfOnly(false)) : undefined} />
+        <Empty title={filtered ? tc("state.emptyFiltered") : t("empty")} onClearFilters={filtered ? () => (setWho(""), setCat(""), setSelfOnly(false), setJitOnly(false)) : undefined} />
       ) : (
         <>
           <div className="tbl-wrap">
@@ -404,6 +410,11 @@ function AuditTab({ initialStaff, initialSelf = false }: { initialStaff: string;
                     <td>{r.staffName}</td>
                     <td>
                       <code className="mono small">{r.action}</code> {r.selfApproved && <span className="pill warn">{t("selfTag")}</span>}
+                      {r.elevationId && (
+                        <Link className="pill inf" href="/jit?tab=history">
+                          {tj("tag")}
+                        </Link>
+                      )}
                     </td>
                     <td className="small">{r.reason}</td>
                     <td className="small">{r.roles.map((x) => tc(`roles.${x}`)).join(", ")}</td>

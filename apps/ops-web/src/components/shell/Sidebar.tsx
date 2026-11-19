@@ -124,7 +124,8 @@ export function Sidebar({ staff, pathname, search, open, onNavigate }: { staff: 
               {items.map((i) => {
                 const Icon = ICONS[i.key];
                 const soon = isSoon(i);
-                const count = (i.badge ?? []).reduce((n, k) => n + (overview.data?.tasks[k] ?? 0), 0);
+                // คำขอสิทธิ์ชั่วคราวรออนุมัติ (O52) เป็นงานของ Owner · คนอื่นเห็นเมนูไว้ขอสิทธิ์ ไม่ต้องเห็นตัวเลข
+                const count = i.key === "jit" && !hasAny(staff, "owner") ? 0 : (i.badge ?? []).reduce((n, k) => n + (overview.data?.tasks[k] ?? 0), 0);
                 const on = current?.key === i.key;
                 return (
                   <Link key={i.key} href={linkOf(i)} className={soon ? "ops-nav ops-nav-soon" : "ops-nav"} aria-current={on ? "page" : undefined} onClick={onNavigate}>
